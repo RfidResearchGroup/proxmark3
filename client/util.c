@@ -163,7 +163,7 @@ char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t brea
 	if ( breaks > 0 && len % breaks != 0) 
 		rowlen = ( len+(len/breaks) > MAX_BIN_BREAK_LENGTH ) ? MAX_BIN_BREAK_LENGTH : len+(len/breaks);
 	
-	printf("(sprint_bin_break) rowlen %d\n", rowlen);
+	//printf("(sprint_bin_break) rowlen %d\n", rowlen);
 	
 	static char buf[MAX_BIN_BREAK_LENGTH]; // 3072 + end of line characters if broken at 8 bits
 	//clear memory

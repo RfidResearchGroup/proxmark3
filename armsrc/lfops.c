@@ -549,8 +549,13 @@ static void fcAll(uint8_t fc, int *n, uint8_t clock, uint16_t *modCnt)
 
 // prepare a waveform pattern in the buffer based on the ID given then
 // simulate a HID tag until the button is pressed
-void CmdHIDsimTAG(int hi, int lo, int ledcontrol)
-{
+void CmdHIDsimTAG(int hi, int lo, int ledcontrol) {
+
+	if (hi > 0xFFF) {
+		DbpString("Tags can only have 44 bits. - USE lf simfsk for larger tags");
+		return;
+	}
+	
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	set_tracing(false);
 		
@@ -565,11 +570,7 @@ void CmdHIDsimTAG(int hi, int lo, int ledcontrol)
 	 nor 1 bits, they are special patterns (a = set of 12 fc8 and b = set of 10 fc10)
 	*/
 
-	if (hi > 0xFFF) {
-		DbpString("Tags can only have 44 bits. - USE lf simfsk for larger tags");
-		return;
-	}
-	fc(0,&n);
+	fc(0, &n);
 	// special start of frame marker containing invalid bit sequences
 	fc(8,  &n);	fc(8,  &n); // invalid
 	fc(8,  &n);	fc(10, &n); // logical 0
@@ -579,8 +580,10 @@ void CmdHIDsimTAG(int hi, int lo, int ledcontrol)
 	WDT_HIT();
 	// manchester encode bits 43 to 32
 	for (i=11; i>=0; i--) {
-		if ((i%4)==3) fc(0,&n);
-		if ((hi>>i)&1) {
+		
+		if ((i%4)==3) fc(0, &n);
+		
+		if ((hi>>i) & 1) {
 			fc(10, &n); fc(8,  &n);		// low-high transition
 		} else {
 			fc(8,  &n); fc(10, &n);		// high-low transition
@@ -590,8 +593,10 @@ void CmdHIDsimTAG(int hi, int lo, int ledcontrol)
 	WDT_HIT();
 	// manchester encode bits 31 to 0
 	for (i=31; i>=0; i--) {
-		if ((i%4)==3) fc(0,&n);
-		if ((lo>>i)&1) {
+		
+		if ((i%4)==3) fc(0, &n);
+		
+		if ((lo>>i) & 1) {
 			fc(10, &n); fc(8,  &n);		// low-high transition
 		} else {
 			fc(8,  &n); fc(10, &n);		// high-low transition

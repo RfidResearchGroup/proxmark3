@@ -128,13 +128,15 @@ int CmdHIDDemod(const char *Cmd) {
 	//raw fsk demod no manchester decoding no start bit finding just get binary from wave
 	uint32_t hi2=0, hi=0, lo=0;
 
-	uint8_t BitStream[MAX_GRAPH_TRACE_LEN] = {0};
-	size_t BitLen = getFromGraphBuf(BitStream);
-	if (BitLen==0) return 0;
+	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
+	size_t size = getFromGraphBuf(bits);
+	if (size==0) {
+		PrintAndLog("DEBUG: Error - HID not enough samples");
+		return 0;
+	}
 	//get binary from fsk wave
 	int waveIdx = 0;
-	int idx = HIDdemodFSK(BitStream,&BitLen,&hi2,&hi,&lo, &waveIdx);
-
+	int idx = HIDdemodFSK(bits, &size, &hi2, &hi, &lo, &waveIdx);
 	if (idx < 0) {
 		if (g_debugMode){
 			if (idx==-1){
@@ -146,13 +148,16 @@ int CmdHIDDemod(const char *Cmd) {
 			} else if (idx == -4) {
 				PrintAndLog("DEBUG: Error - HID preamble not found");
 			} else if (idx == -5) {				
-				PrintAndLog("DEBUG: Error - HID error in Manchester data, SIZE: %d", BitLen);
+				PrintAndLog("DEBUG: Error - HID error in Manchester data, size %d", size);
 			} else {
 				PrintAndLog("DEBUG: Error - HID error demoding fsk %d", idx);
 			}   
 		}
 		return 0;
 	}
+
+	setDemodBuf(bits, size, idx);
+	setClockGrid(50, waveIdx + (idx*50));
 	
 	if (hi2==0 && hi==0 && lo==0) {
 		if (g_debugMode) PrintAndLog("DEBUG: Error - HID no values found");
@@ -201,11 +206,8 @@ int CmdHIDDemod(const char *Cmd) {
 		PrintAndLog("HID Prox TAG ID: %x%08x (%u) - Format Len: %ubit - FC: %u - Card: %u", hi, lo, (lo>>1) & 0xFFFF, fmtLen, fc, cardnum);
 	}
 
-	setDemodBuf(BitStream, BitLen, idx);
-	setClockGrid(50, waveIdx + (idx*50));
-
 	if (g_debugMode){ 
-		PrintAndLog("DEBUG: HID idx: %d, Len: %d, Printing Demod Buffer:", idx, BitLen);
+		PrintAndLog("DEBUG: HID idx: %d, Len: %d, Printing Demod Buffer:", idx, size);
 		printDemodBuff();
 	}
 	return 1;

@@ -248,7 +248,6 @@ int CmdAWIDDemod(const char *Cmd) {
 	}
 	//get binary from fsk wave
 	int waveIdx = 0;
-
 	int idx = detectAWID(bits, &size, &waveIdx);
 	if (idx <= 0){
 		if (g_debugMode){
@@ -261,9 +260,9 @@ int CmdAWIDDemod(const char *Cmd) {
 			else if (idx == -4)
 				PrintAndLog("DEBUG: Error - AWID preamble not found");
 			else if (idx == -5)
-				PrintAndLog("DEBUG: Error - AWID size not correct: %d", size);
+				PrintAndLog("DEBUG: Error - AWID size not correct, size %d", size);
 			else
-				PrintAndLog("DEBUG: Error - AWID error %d",idx);
+				PrintAndLog("DEBUG: Error - AWID error demoding fsk %d",idx);
 		}
 		return 0;
 	}
@@ -364,7 +363,7 @@ int CmdAWIDDemod(const char *Cmd) {
 	}
 
 	if (g_debugMode){
-		PrintAndLog("DEBUG: AWID idx: %d, Len: %d Printing Demod Buffer:", idx, 96);
+		PrintAndLog("DEBUG: AWID idx: %d, Len: %d Printing Demod Buffer:", idx, size);
 		printDemodBuff();
 	}
 	return 1;

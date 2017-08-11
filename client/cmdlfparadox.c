@@ -38,31 +38,37 @@ int usage_lf_paradox_sim(void) {
 
 // loop to get raw paradox waveform then FSK demodulate the TAG ID from it
 int detectParadox(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo, int *waveStartIdx) {
-	if (justNoise(dest, *size)) return -1;
+	//make sure buffer has data
+	if (*size < 96*50) return -1;
 	
-	size_t numStart = 0, startIdx = 0;
+	if (justNoise(dest, *size)) return -2;
+	
 	// FSK demodulator
-	*size = fskdemod(dest, *size, 50, 1, 10, 8, waveStartIdx); //fsk2a
-	if (*size < 96) return -2;
+	*size = fskdemod(dest, *size, 50, 1, 10, 8, waveStartIdx); // paradox fsk2a
+
+	//did we get a good demod?	
+	if (*size < 96) return -3;
 
 	// 00001111 bit pattern represent start of frame, 01 pattern represents a 0 and 10 represents a 1
+	size_t startIdx = 0;	
 	uint8_t preamble[] = {0,0,0,0,1,1,1,1};
 	if (preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx)) 
-		return -3; //preamble not found
+		return -4; //preamble not found
 
-	numStart = startIdx + sizeof(preamble);
+	size_t numStart = startIdx + sizeof(preamble);
 	// final loop, go over previously decoded FSK data and manchester decode into usable tag ID
 	for (size_t idx = numStart; (idx-numStart) < *size - sizeof(preamble); idx+=2){
 		if (dest[idx] == dest[idx+1]) 
-			return -4; //not manchester data
+			return -5; //not manchester data
 		
 		*hi2 = (*hi2 << 1) | (*hi >> 31);
 		*hi = (*hi << 1) | (*lo >> 31);
 		//Then, shift in a 0 or one into low
+		*lo <<= 1;
 		if (dest[idx] && !dest[idx+1])	// 1 0
-			*lo = (*lo << 1) | 1;
+			*lo |= 1;
 		else // 0 1
-			*lo = (*lo << 1) | 0;
+			*lo |= 0;
 	}
 	return (int)startIdx;
 }
@@ -73,33 +79,43 @@ int detectParadox(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint
 int CmdParadoxDemod(const char *Cmd) {
 	//raw fsk demod no manchester decoding no start bit finding just get binary from wave
 	uint8_t bits[MAX_GRAPH_TRACE_LEN]={0};
-	size_t BitLen = getFromGraphBuf(bits);
-	if (BitLen==0) return 0;
-
+	size_t size = getFromGraphBuf(bits);
+	if (size==0) {
+		PrintAndLog("DEBUG: Error - Paradox not enough samples");
+		return 0;
+	}
+	
 	uint32_t hi2=0, hi=0, lo=0;	
 	int waveIdx=0;
 	//get binary from fsk wave
-	int idx = detectParadox(bits, &BitLen, &hi2, &hi, &lo, &waveIdx);
+	int idx = detectParadox(bits, &size, &hi2, &hi, &lo, &waveIdx);
 	if (idx < 0){
 		if (g_debugMode){
 			if (idx == -1){
-				PrintAndLog("DEBUG: Error - Paradox just noise detected");     
+				PrintAndLog("DEBUG: Error - Paradox not enough samples");
 			} else if (idx == -2) {
-				PrintAndLog("DEBUG: Error - Paradox error demoding fsk");
+				PrintAndLog("DEBUG: Error - Paradox just noise detected");     
 			} else if (idx == -3) {
-				PrintAndLog("DEBUG: Error - Paradox preamble not found");
+				PrintAndLog("DEBUG: Error - Paradox problem during FSK demod");
 			} else if (idx == -4) {
-				PrintAndLog("DEBUG: Error - Paradox error in Manchester data");
+				PrintAndLog("DEBUG: Error - Paradox preamble not found");
+			} else if (idx == -5) {
+				PrintAndLog("DEBUG: Error - Paradox error in Manchester data, size %d", size);
 			} else {
 				PrintAndLog("DEBUG: Error - Paradox error demoding fsk %d", idx);
 			}
 		}
 		return 0;
 	}
+
+	setDemodBuf(bits, size, idx);
+	setClockGrid(50, waveIdx + (idx*50));	
+	
 	if (hi2==0 && hi==0 && lo==0){
 		if (g_debugMode) PrintAndLog("DEBUG: Error - Paradox no value found");
 		return 0;
 	}
+		
 	uint32_t fc = ((hi & 0x3)<<6) | (lo>>26);
 	uint32_t cardnum = (lo>>10) & 0xFFFF;
 	uint32_t rawLo = bytebits_to_byte(bits + idx + 64, 32);
@@ -115,12 +131,9 @@ int CmdParadoxDemod(const char *Cmd) {
 		rawHi,
 		rawLo
 	);
-
-	setDemodBuf(bits, BitLen, idx);
-	setClockGrid(50, waveIdx + (idx*50));
 	
 	if (g_debugMode){ 
-		PrintAndLog("DEBUG: Paradox idx: %d, len: %d, Printing Demod Buffer:", idx, BitLen);
+		PrintAndLog("DEBUG: Paradox idx: %d, len: %d, Printing Demod Buffer:", idx, size);
 		printDemodBuff();
 	}
 	return 1;

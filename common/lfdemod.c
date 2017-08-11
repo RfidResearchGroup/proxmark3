@@ -1428,16 +1428,19 @@ int nrzRawDemod(uint8_t *dest, size_t *size, int *clk, int *invert, int *startId
 
 //translate wave to 11111100000 (1 for each short wave [higher freq] 0 for each long wave [lower freq])
 size_t fsk_wave_demod(uint8_t * dest, size_t size, uint8_t fchigh, uint8_t fclow, int *startIdx) {
-	size_t last_transition = 0;
-	size_t idx = 1;
+	
+	if ( size < 1024 ) return 0; // not enough samples
+	
 	if (fchigh == 0) fchigh = 10;
 	if (fclow == 0) fclow = 8;
+
 	//set the threshold close to 0 (graph) or 128 std to avoid static
 	size_t preLastSample = 0;
 	size_t LastSample = 0;
 	size_t currSample = 0;
-	if ( size < 1024 ) return 0; // not enough samples
-
+	size_t last_transition = 0;
+	size_t idx = 1;
+	
 	//find start of modulating data in trace 
 	idx = findModStart(dest, size, fchigh);
 	// Need to threshold first sample
@@ -1685,16 +1688,19 @@ int detectAWID(uint8_t *dest, size_t *size, int *waveStartIdx) {
 	if (justNoise(dest, *size)) return -2;
 
 	// FSK2a demodulator  clock 50, invert 1, fcHigh 10, fcLow 8
-	*size = fskdemod(dest, *size, 50, 1, 10, 8, waveStartIdx);
+	*size = fskdemod(dest, *size, 50, 1, 10, 8, waveStartIdx); //awid fsk2a
 
 	//did we get a good demod?
 	if (*size < 96) return -3;
 
-	uint8_t preamble[] = {0,0,0,0,0,0,0,1};
 	size_t startIdx = 0;
+	uint8_t preamble[] = {0,0,0,0,0,0,0,1};
 	if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
 		return -4; //preamble not found
+	
+	// wrong size?  (between to preambles)
 	if (*size != 96) return -5;
+	
 	return (int)startIdx;
 }
 
@@ -1746,19 +1752,18 @@ int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32
 	if (justNoise(dest, *size)) return -2;
 		
 	// FSK demodulator  fsk2a so invert and fc/10/8
-	*size = fskdemod(dest, *size, 50, 1, 10, 8, waveStartIdx);
+	*size = fskdemod(dest, *size, 50, 1, 10, 8, waveStartIdx); //hid fsk2a
 
 	//did we get a good demod?
 	if (*size < 96*2) return -3;
 
 	// 00011101 bit pattern represent start of frame, 01 pattern represents a 0 and 10 represents a 1
-	uint8_t preamble[] = {0,0,0,1,1,1,0,1};
 	size_t startIdx = 0;	
+	uint8_t preamble[] = {0,0,0,1,1,1,0,1};
 	if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx)) 
 		return -4; //preamble not found
 
-	size_t numStart = 0; 
-	numStart = startIdx + sizeof(preamble);
+	size_t numStart = startIdx + sizeof(preamble);
 	// final loop, go over previously decoded FSK data and manchester decode into usable tag ID
 	for (size_t idx = numStart; (idx-numStart) < *size - sizeof(preamble); idx+=2){
 		if (dest[idx] == dest[idx+1]){
@@ -1796,7 +1801,7 @@ int detectIOProx(uint8_t *dest, size_t *size, int *waveStartIdx) {
 	if (justNoise(dest, *size)) return -2;
 	
 	// FSK demodulator  RF/64, fsk2a so invert, and fc/10/8
-	*size = fskdemod(dest, *size, 64, 1, 10, 8, waveStartIdx); 
+	*size = fskdemod(dest, *size, 64, 1, 10, 8, waveStartIdx);  //io fsk2a
 	
 	//did we get a good demod?
 	if (*size < 64) return -3;
@@ -1810,15 +1815,18 @@ int detectIOProx(uint8_t *dest, size_t *size, int *waveStartIdx) {
 	//
 	//XSF(version)facility:codeone+codetwo
 
-	uint8_t preamble[] = {0,0,0,0,0,0,0,0,0,1};
 	size_t startIdx = 0;
+	uint8_t preamble[] = {0,0,0,0,0,0,0,0,0,1};
 	if (! preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
 		return -4; //preamble not found
 
+	// wrong size?  (between to preambles)
+	if (*size != 64) return -5;
+	
 	if (!dest[startIdx+8] && dest[startIdx+17]==1 && dest[startIdx+26]==1 && dest[startIdx+35]==1 && dest[startIdx+44]==1 && dest[startIdx+53]==1){
 		//confirmed proper separator bits found
 		//return start position
 		return (int) startIdx;
 	}
-	return -5;
+	return -6;
 }

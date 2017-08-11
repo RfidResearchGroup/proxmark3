@@ -83,21 +83,15 @@ int CmdIOProxRead_device(const char *Cmd) {
 int CmdIOProxDemod(const char *Cmd) {
 	int retval = 0;
 	int idx = 0;
-	char crcStr[20];
-	memset(crcStr, 0x00, sizeof(crcStr) );
-
-	//something in graphbuffer?
-	if (GraphTraceLen < 65) {
-		if (g_debugMode)PrintAndLog("DEBUG: Error - IO prox not enough samples in GraphBuffer");
-		return retval;
-	}
 	uint8_t bits[MAX_GRAPH_TRACE_LEN]={0};
-	size_t bitlen = getFromGraphBuf(bits);
-	if (bitlen == 0) return retval;
-
+	size_t size = getFromGraphBuf(bits);
+	if (size < 65) {
+		if (g_debugMode)PrintAndLog("DEBUG: Error - IO prox not enough samples in GraphBuffer");
+		return 0;
+	}	
+	//get binary from fsk wave	
 	int waveIdx = 0;
-	//get binary from fsk wave
-	idx = detectIOProx(bits, &bitlen, &waveIdx);
+	idx = detectIOProx(bits, &size, &waveIdx);
 	if (idx < 0){
 		if (g_debugMode){
 			if (idx == -1){
@@ -109,22 +103,25 @@ int CmdIOProxDemod(const char *Cmd) {
 			} else if (idx == -4) {
 				PrintAndLog("DEBUG: Error - IO prox preamble not found");
 			} else if (idx == -5) {
+				PrintAndLog("DEBUG: Error - IO size not correct, size %d", size);
+			} else if (idx == -6) {
 				PrintAndLog("DEBUG: Error - IO prox separator bits not found");
 			} else {
 				PrintAndLog("DEBUG: Error - IO prox error demoding fsk %d", idx);
 			}
 		}
-		return retval;
+		return 0;
 	}
+	setDemodBuf(bits, size, idx);
+	setClockGrid(64, waveIdx + (idx*64));
+	
 	if (idx==0){
 		if (g_debugMode){
-			PrintAndLog("DEBUG: Error - IO prox data not found - FSK Bits: %d", bitlen);
-			if (bitlen > 92) PrintAndLog("%s", sprint_bin_break(bits,92,16));
+			PrintAndLog("DEBUG: Error - IO prox data not found - FSK Bits: %d", size);
+			if (size > 92) PrintAndLog("%s", sprint_bin_break(bits, 92, 16));
 		} 
 		return retval;
 	}
-	setDemodBuf(bits, bitlen, idx);
-	setClockGrid(64, waveIdx + (idx*64));
 	
 	//Index map
 	//0           10          20          30          40          50          60
@@ -159,6 +156,9 @@ int CmdIOProxDemod(const char *Cmd) {
 	calccrc &= 0xff;
 	calccrc = 0xff - calccrc;
 
+	char crcStr[20];
+	memset(crcStr, 0x00, sizeof(crcStr) );
+	
 	if (crc == calccrc) {
 		snprintf(crcStr, 3, "ok");
 		retval = 1;
@@ -172,7 +172,7 @@ int CmdIOProxDemod(const char *Cmd) {
 	PrintAndLog("IO Prox XSF(%02d)%02x:%05d (%08x%08x) [crc %s]", version, facilitycode, number, code, code2, crcStr);
 
 	if (g_debugMode){
-		PrintAndLog("DEBUG: IO prox idx: %d, Len: %d, Printing demod buffer:", idx, 64);
+		PrintAndLog("DEBUG: IO prox idx: %d, Len: %d, Printing demod buffer:", idx, size);
 		printDemodBuff();
 	}	
 	return retval;
