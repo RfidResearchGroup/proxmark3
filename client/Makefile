@@ -80,6 +80,7 @@ POSTCOMPILE = $(MV) -f $(OBJDIR)/$*.Td $(OBJDIR)/$*.d
 
 CORESRCS =  uart_posix.c \
 			uart_win32.c \
+			ui.c \
 			util.c \
 			util_posix.c \
 			scandir.c
@@ -105,7 +106,6 @@ CMDSRCS =	crapto1/crapto1.c \
 			iso15693tools.c \
 			data.c \
 			graph.c \
-			ui.c \
 			cmddata.c \
 			lfdemod.c \
 			cmdanalyse.c \

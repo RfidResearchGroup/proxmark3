@@ -607,7 +607,7 @@ void CmdHIDsimTAG(int hi, int lo, int ledcontrol)
 // prepare a waveform pattern in the buffer based on the ID given then
 // simulate a FSK tag until the button is pressed
 // arg1 contains fcHigh and fcLow, arg2 contains invert and clock
-void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
+void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *bits)
 {
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
@@ -625,7 +625,7 @@ void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 
 	for (i=0; i<size; i++){
 		
-		if (BitStream[i] == invert)
+		if (bits[i] == invert)
 			fcAll(fcLow, &n, clk, &modCnt);
 		else
 			fcAll(fcHigh, &n, clk, &modCnt);

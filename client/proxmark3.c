@@ -27,7 +27,7 @@
 #include "whereami.h"
 
 // a global mutex to prevent interlaced printing from different threads
-pthread_mutex_t print_lock;
+extern pthread_mutex_t print_lock;
 
 static serial_port sp;
 static UsbCommand txcmd;
