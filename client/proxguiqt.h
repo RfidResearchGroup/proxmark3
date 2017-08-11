@@ -40,6 +40,7 @@ class Plot: public QWidget
 		int valueOf_yCoord(int y, QRect r, int maxVal);
 		void setMaxAndStart(int *buffer, int len, QRect plotRect);
 		QColor getColor(int graphNum);
+
 	public:
 		Plot(QWidget *parent = 0);
 
@@ -49,7 +50,6 @@ class Plot: public QWidget
 		void mouseMoveEvent(QMouseEvent *event);
 		void mousePressEvent(QMouseEvent *event) { mouseMoveEvent(event); }
 		void keyPressEvent(QKeyEvent *event);
-
 };
 class ProxGuiQT;
 
@@ -98,7 +98,7 @@ class ProxGuiQT : public QObject
 		int argc;
 		char **argv;
 		void (*main_func)(void);
-	
+		
 	public:
 		ProxGuiQT(int argc, char **argv);
 		~ProxGuiQT(void);
@@ -107,11 +107,13 @@ class ProxGuiQT : public QObject
 		void HideGraphWindow(void);
 		void MainLoop(void);
 		void Exit(void);
+		
 	private slots:
 		void _ShowGraphWindow(void);
 		void _RepaintGraphWindow(void);
 		void _HideGraphWindow(void);
 		void _Exit(void);
+		
 	signals:
 		void ShowGraphWindowSignal(void);
 		void RepaintGraphWindowSignal(void);
@@ -119,16 +121,17 @@ class ProxGuiQT : public QObject
 		void ExitSignal(void);
 };
 
-
 class WorkerThread : public QThread {
 	Q_OBJECT;
-public:
-	WorkerThread(char*, bool);
-	~WorkerThread();
-	void run();
-private:
-	char *script_cmds_file = NULL;
-	bool usb_present;
+
+	public:
+		WorkerThread(char*, bool);
+		~WorkerThread();
+		void run();
+		
+	private:
+		char *script_cmds_file = NULL;
+		bool usb_present;
 };
 
 #endif // PROXGUI_QT

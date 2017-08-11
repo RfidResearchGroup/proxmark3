@@ -26,7 +26,6 @@
 #include <string.h>
 #include "proxgui.h"
 #include <QtGui>
-// #include <ctime>
 
 bool g_useOverlays = false;
 int g_absVMax = 0;
@@ -434,24 +433,22 @@ void Plot::plotGridLines(QPainter* painter,QRect r) {
 
 void Plot::paintEvent(QPaintEvent *event)
 {
-
 	QPainter painter(this);
 	QBrush brush(QColor(100, 255, 100));
 	QPen pen(QColor(100, 255, 100));
 
 	painter.setFont(QFont("Courier New", 10));
 
-	if(GraphStart < 0) {
+	if(GraphStart < 0)
 		GraphStart = 0;
-	}
 
 	if (CursorAPos > GraphTraceLen)
 		CursorAPos= 0;
-	if(CursorBPos > GraphTraceLen)
+	if (CursorBPos > GraphTraceLen)
 		CursorBPos= 0;
-	if(CursorCPos > GraphTraceLen)
+	if (CursorCPos > GraphTraceLen)
 		CursorCPos= 0;
-	if(CursorDPos > GraphTraceLen)
+	if (CursorDPos > GraphTraceLen)
 		CursorDPos= 0;
 
 	QRect plotRect(WIDTH_AXES, 0, width()-WIDTH_AXES, height()-HEIGHT_INFO);
@@ -485,23 +482,19 @@ void Plot::paintEvent(QPaintEvent *event)
 	// End graph drawing
 
 	//Draw the cursors
-	if(CursorAPos > GraphStart && xCoordOf(CursorAPos, plotRect) < plotRect.right())
-	{
+	if (CursorAPos > GraphStart && xCoordOf(CursorAPos, plotRect) < plotRect.right()) {
 		painter.setPen(QColor(255, 255, 0));
 		painter.drawLine(xCoordOf(CursorAPos, plotRect),plotRect.top(),xCoordOf(CursorAPos, plotRect),plotRect.bottom());
 	}
-	if(CursorBPos > GraphStart && xCoordOf(CursorBPos, plotRect) < plotRect.right())
-	{
+	if (CursorBPos > GraphStart && xCoordOf(CursorBPos, plotRect) < plotRect.right()) {
 		painter.setPen(QColor(255, 0, 255));
 		painter.drawLine(xCoordOf(CursorBPos, plotRect),plotRect.top(),xCoordOf(CursorBPos, plotRect),plotRect.bottom());
 	}
-	if(CursorCPos > GraphStart && xCoordOf(CursorCPos, plotRect) < plotRect.right())
-	{
+	if (CursorCPos > GraphStart && xCoordOf(CursorCPos, plotRect) < plotRect.right()) {
 		painter.setPen(QColor(255, 153, 0)); //orange
 		painter.drawLine(xCoordOf(CursorCPos, plotRect),plotRect.top(),xCoordOf(CursorCPos, plotRect),plotRect.bottom());
 	}
-	if(CursorDPos > GraphStart && xCoordOf(CursorDPos, plotRect) < plotRect.right())
-	{
+	if (CursorDPos > GraphStart && xCoordOf(CursorDPos, plotRect) < plotRect.right()) {
 		painter.setPen(QColor(0, 0, 205)); //light blue
 		painter.drawLine(xCoordOf(CursorDPos, plotRect),plotRect.top(),xCoordOf(CursorDPos, plotRect),plotRect.bottom());
 	}
@@ -509,11 +502,19 @@ void Plot::paintEvent(QPaintEvent *event)
 	//Draw annotations
 	char str[200];
 	sprintf(str, "@%d  dt=%d [%2.2f] zoom=%2.2f  CursorAPos=%d  CursorBPos=%d  GridX=%d  GridY=%d (%s) GridXoffset=%d",
-			GraphStart,	CursorBPos - CursorAPos, (CursorBPos - CursorAPos)/CursorScaleFactor,
-			GraphPixelsPerPoint,CursorAPos,CursorBPos,PlotGridXdefault,PlotGridYdefault,GridLocked?"Locked":"Unlocked",GridOffset);
+			GraphStart,
+			CursorBPos - CursorAPos,
+			(CursorBPos - CursorAPos)/CursorScaleFactor,
+			GraphPixelsPerPoint,
+			CursorAPos,
+			CursorBPos,
+			PlotGridXdefault,
+			PlotGridYdefault,
+			GridLocked ? "Locked" : "Unlocked",
+			GridOffset
+		);
 	painter.setPen(QColor(255, 255, 255));
 	painter.drawText(20, infoRect.bottom() - 3, str);
-
 }
 
 Plot::Plot(QWidget *parent) : QWidget(parent), GraphStart(0), GraphPixelsPerPoint(1)
@@ -552,8 +553,6 @@ void Plot::mouseMoveEvent(QMouseEvent *event)
 	} else if (event->buttons() & Qt::RightButton) {
 		CursorBPos = x;
 	}
-
-
 	this->update();
 }
 

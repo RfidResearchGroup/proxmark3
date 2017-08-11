@@ -29,48 +29,46 @@ void WorkerThread::run() {
 
 extern "C" void ShowGraphWindow(void)
 {
-  if (!gui)
-    return;
-
-  gui->ShowGraphWindow();
+	if (!gui)
+		return;
+	gui->ShowGraphWindow();
 }
 
 extern "C" void HideGraphWindow(void)
 {
-  if (!gui)
-    return;
-
-  gui->HideGraphWindow();
+	if (!gui)
+		return;
+	gui->HideGraphWindow();
 }
 
 extern "C" void RepaintGraphWindow(void)
 {
-  if (!gui)
-    return;
+	if (!gui)
+		return;
 
-  gui->RepaintGraphWindow();
+	gui->RepaintGraphWindow();
 }
 
 extern "C" void MainGraphics(void)
 {
-  if (!gui)
-    return;
+	if (!gui)
+		return;
 
 	main_loop_thread->start();
-  gui->MainLoop();
+	gui->MainLoop();
 }
 
 extern "C" void InitGraphics(int argc, char **argv, char *script_cmds_file, bool usb_present)
 {
 #ifdef Q_WS_X11
-  bool useGUI = getenv("DISPLAY") != 0;
+	bool useGUI = getenv("DISPLAY") != 0;
 #else
-  bool useGUI = true;
+	bool useGUI = true;
 #endif
-  if (!useGUI)
-    return;
+	if (!useGUI)
+		return;
 
-  gui = new ProxGuiQT(argc, argv);
+	gui = new ProxGuiQT(argc, argv);
 	main_loop_thread = new WorkerThread(script_cmds_file, usb_present);
 	QObject::connect(main_loop_thread, SIGNAL(finished()), main_loop_thread, SLOT(deleteLater()));
 	QObject::connect(main_loop_thread, SIGNAL(finished()), gui, SLOT(_Exit()));
@@ -79,9 +77,9 @@ extern "C" void InitGraphics(int argc, char **argv, char *script_cmds_file, bool
 
 extern "C" void ExitGraphics(void)
 {
-  if (!gui)
-    return;
+	if (!gui)
+		return;
 
-  gui->Exit();
-  gui = NULL;
+	gui->Exit();
+	gui = NULL;
 }
