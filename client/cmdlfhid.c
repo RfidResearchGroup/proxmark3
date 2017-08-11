@@ -65,8 +65,8 @@ int usage_lf_hid_clone(void){
 	PrintAndLog("       ID  - HID id");
 	PrintAndLog("       L   - 84bit ID");
 	PrintAndLog("Samples:");
-	PrintAndLog("      lf hid clone 224");
-	PrintAndLog("      lf hid clone 224 L");
+	PrintAndLog("      lf hid clone 2006ec0c86");
+	PrintAndLog("      lf hid clone 2006ec0c86 L");
 	return 0;
 }
 int usage_lf_hid_brute(void){
@@ -74,21 +74,23 @@ int usage_lf_hid_brute(void){
 	PrintAndLog("This is a attack against reader. if cardnumber is given, it starts with it and goes up / down one step");
 	PrintAndLog("if cardnumber is not given, it starts with 1 and goes up to 65535");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf hid brute [h] a <format> f <facility-code> c <cardnumber> d <delay>");
+	PrintAndLog("Usage:  lf hid brute [h] [v] a <format> f <facility-code> c <cardnumber> d <delay>");
 	PrintAndLog("Options :");
 	PrintAndLog("       h                 :  This help");	
 	PrintAndLog("       a <format>        :  26|33|34|35|37|40|44|84");
 	PrintAndLog("       f <facility-code> :  8-bit value HID facility code");
 	PrintAndLog("       c <cardnumber>    :  (optional) cardnumber to start with, max 65535");
 	PrintAndLog("       d <delay>         :  delay betweens attempts in ms. Default 1000ms");
+	PrintAndLog("       v                 :  verbose logging, show all tries");
 	PrintAndLog("");
 	PrintAndLog("Samples:");
 	PrintAndLog("       lf hid brute a 26 f 224");
 	PrintAndLog("       lf hid brute a 26 f 21 d 2000");
-	PrintAndLog("       lf hid brute a 26 f 21 c 200 d 2000");
+	PrintAndLog("       lf hid brute v a 26 f 21 c 200 d 2000");
 	return 0;
 }
 
+// sending three times.  Didn't seem to break the previous sim?
 static int sendPing(void){
 	UsbCommand ping = {CMD_PING, {1, 2, 3}};
 	SendCommand(&ping);
@@ -100,17 +102,20 @@ static int sendPing(void){
 		return 0;
 	return 1;
 }
-static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, uint8_t *bs){
+static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, uint8_t *bits, bool verbose){
 
-	PrintAndLog("Trying FC: %u; CN: %u", fc, cn);
+	// this should be optional.
+	if ( verbose )
+		PrintAndLog("Trying FC: %u; CN: %u", fc, cn);
 	
-	calcWiegand( fmtlen, fc, cn, bs);
+	calcWiegand( fmtlen, fc, cn, bits);
 
-	uint64_t arg1 = bytebits_to_byte(bs,32);
-	uint64_t arg2 = bytebits_to_byte(bs+32,32);
+	uint64_t arg1 = bytebits_to_byte(bits, 32);
+	uint64_t arg2 = bytebits_to_byte(bits + 32, 32);
 	UsbCommand c = {CMD_HID_SIM_TAG, {arg1, arg2, 0}}; 
 	clearCommandBuffer();
 	SendCommand(&c);
+
 	msleep(delay);
 	sendPing();
 	return true;
@@ -195,6 +200,7 @@ int CmdHIDDemod(const char *Cmd) {
 		}
 		PrintAndLog("HID Prox TAG ID: %x%08x (%u) - Format Len: %ubit - FC: %u - Card: %u", hi, lo, (lo>>1) & 0xFFFF, fmtLen, fc, cardnum);
 	}
+
 	setDemodBuf(BitStream, BitLen, idx);
 	setClockGrid(50, waveIdx + (idx*50));
 
@@ -268,9 +274,7 @@ int CmdHIDClone(const char *Cmd) {
 			hi = (hi << 4) | (lo >> 28);
 			lo = (lo << 4) | (n & 0xf);
 		}
-
 		PrintAndLog("Cloning tag with ID %x%08x", hi, lo);
-
 		hi2 = 0;
 		c.d.asBytes[0] = 0;
 	}
@@ -471,12 +475,11 @@ int CmdHIDWiegand(const char *Cmd) {
 
 int CmdHIDBrute(const char *Cmd){
 	
-	bool errors = false;
+	bool errors = false, verbose = false;
 	uint32_t fc = 0, cn = 0, delay = 1000;
 	uint8_t fmtlen = 0;
 	uint8_t bits[96];
-	uint8_t *bs = bits;
-	memset(bs, 0, sizeof(bits));
+	memset(bits, 0, sizeof(bits));
 	uint8_t cmdp = 0;
 		
 	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
@@ -506,10 +509,10 @@ int CmdHIDBrute(const char *Cmd){
 			break;
 		case 'a':
 		case 'A':
-			fmtlen = param_get8(Cmd, cmdp+1);			
+			fmtlen = param_get8(Cmd, cmdp+1);
 			cmdp += 2;
 			bool is_ftm_ok = false;
-			uint8_t ftms[] = {26,33,34,35,37};
+			uint8_t ftms[] = {26, 33, 34, 35, 37};
 			for ( uint8_t i = 0; i < sizeof(ftms); i++){
 				if ( ftms[i] == fmtlen ) {
 					is_ftm_ok = true;
@@ -517,6 +520,11 @@ int CmdHIDBrute(const char *Cmd){
 			}
 			// negated
 			errors = !is_ftm_ok;
+			break;
+		case 'v':		
+		case 'V':
+			verbose = true;
+			cmdp++;
 			break;
 		default:
 			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
@@ -533,6 +541,7 @@ int CmdHIDBrute(const char *Cmd){
 	uint16_t up = cn;
 	uint16_t down = cn;
 	
+	// main loop
 	for (;;){
 		
 		if ( offline ) {
@@ -548,12 +557,12 @@ int CmdHIDBrute(const char *Cmd){
 		
 		// Do one up
 		if ( up < 0xFFFF )
-			if ( !sendTry(fmtlen, fc, up++, delay, bs)) return 1;
+			if ( !sendTry(fmtlen, fc, up++, delay, bits, verbose)) return 1;
 		
 		// Do one down  (if cardnumber is given)
 		if ( cn > 1 )
 			if ( down > 1 )
-				if ( !sendTry(fmtlen, fc, --down, delay, bs)) return 1;
+				if ( !sendTry(fmtlen, fc, --down, delay, bits, verbose)) return 1;
 	}
 	return 0;
 }
