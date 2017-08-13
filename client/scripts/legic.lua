@@ -317,7 +317,7 @@ end
 ---
 -- put a string into a bytes-table
 function str2bytes(s)
-	if (string.len(s)%2~=0) then
+	if (string.len(s)%2 ~= 0) then
 		return print("stamp should be a even hexstring e.g.: deadbeef or 0badc0de")
 	end
   local res={}
@@ -330,11 +330,11 @@ end
 ---
 -- put certain bytes into a new table
 function bytesToTable(bytes, bstart, bend)
-  local t={}
-  for i=0, (bend-bstart) do
-    t[i]=bytes[bstart+i]
-  end
-  return t
+	local t={}
+	for i=0, (bend-bstart) do
+		t[i]=bytes[bstart+i]
+	end
+	return t
 end
 
 ---
@@ -345,14 +345,13 @@ function getInputBytes(infile)
 	local fhi,err = io.open(infile,"rb")
 	if err then oops("faild to read from file ".. infile); return false; end
 
-  file_data = fhi:read("*a");
-  for i = 1, #file_data
-  do
-    bytes[i] = string.format("%x",file_data:byte(i))
-  end
+	file_data = fhi:read("*a");
+	for i = 1, #file_data do
+		bytes[i] = string.format("%x",file_data:byte(i))
+	end
 	fhi:close()
-  if (bytes[7]=='00') then return false end
-  print(#bytes .. " bytes from "..infile.." loaded")
+	if (bytes[7]=='00') then return false end
+	print(#bytes .. " bytes from "..infile.." loaded")
 	return bytes
 end
 
@@ -386,9 +385,7 @@ end
 ---
 -- put bytes into tag-table
 function bytesToTag(bytes, tag)
-	if ~istable(tag) then
-		return oops("tag is no table in: bytesToTag ("..type(tag)..")")
-	end
+	if istable(tag) == false then return oops("tag is no table in: bytesToTag ("..type(tag)..")") end
 	
     tag.MCD =bytes[1];
     tag.MSN0=bytes[2];
@@ -456,9 +453,7 @@ end
 ---
 -- read Tag-Table in bytes-table
 function tagToBytes(tag)
-	if ~istable(tag) then
-		return oops("tag is no table in tagToBytes ("..type(tag)..")")
-	end 
+	if istable(tag) == false then return oops("tag is no table in tagToBytes ("..type(tag)..")") end 
 	
     local bytes = {}
     local i, i2
@@ -559,7 +554,7 @@ function writeToTag(tag)
   end
   bytes=tagToBytes(tag)
   -- master-token-crc
-  if (tag.Type~="SAM") then bytes[22]=calcMtCrc(bytes) end
+  if (tag.Type ~= "SAM") then bytes[22] = calcMtCrc(bytes) end
   if (bytes) then
     print("write temp-file '"..filename.."'")
     print(accyan)
@@ -572,7 +567,7 @@ function writeToTag(tag)
 	if (taglen > 0) then
 		WriteBytes = utils.input(acyellow.."enter number of bytes to write?"..acoff, taglen)
 		-- load file into pm3-buffer
-    if (type(filename)~="string") then filename=input(acyellow.."filename to load to pm3-buffer?"..acoff,"legic.temp") end
+    if (type(filename) ~= "string") then filename=input(acyellow.."filename to load to pm3-buffer?"..acoff,"legic.temp") end
 		cmd = 'hf legic load '..filename
 		core.console(cmd)
 		-- write pm3-buffer to Tag
@@ -602,20 +597,20 @@ function readFile(filename)
   print(accyan)
   local bytes = {}
   local tag = {}
-	if  ~file_check(filename) then return oops("input file: "..filename.." not found") end 
+	if  file_check(filename) == false then return oops("input file: "..filename.." not found") end 
 	
 		bytes = getInputBytes(filename)
 	
-	if ~bytes then return oops('couldnt get input bytes') end
+		if bytes == false then return oops('couldnt get input bytes') end
 
-      -- make plain bytes
-      bytes = xorBytes(bytes,bytes[5])
-      print("create virtual tag from ".. #bytes .. " bytes")
-      -- create Tag for plain bytes
-      tag=createTagTable()
-      -- load plain bytes to tag-table
-      print(acoff)
-      tag=bytesToTag(bytes, tag)
+		-- make plain bytes
+		bytes = xorBytes(bytes,bytes[5])
+		print("create virtual tag from ".. #bytes .. " bytes")
+		-- create Tag for plain bytes
+		tag=createTagTable()
+		-- load plain bytes to tag-table
+		print(acoff)
+		tag=bytesToTag(bytes, tag)
 	
   return tag
 end
@@ -623,31 +618,31 @@ end
 ---
 -- write bytes to file
 function writeFile(bytes, filename)
-  if (filename~='MylegicClone.hex') then
-    if (file_check(filename)) then
-	    local answer = confirm("\nthe output-file "..filename.." alredy exists!\nthis will delete the previous content!\ncontinue?")
-      if (answer==false) then return print("user abort") end
-    end
-  end
-  local line
+	if (filename ~= 'MylegicClone.hex') then
+		if (file_check(filename)) then
+			local answer = confirm("\nthe output-file "..filename.." alredy exists!\nthis will delete the previous content!\ncontinue?")
+			if (answer==false) then return print("user abort") end
+		end
+	end
+	local line
 	local bcnt=0
 	local fho,err = io.open(filename, "w")
 	if err then oops("OOps ... faild to open output-file ".. filename) end
-  bytes=xorBytes(bytes, bytes[5])
+	bytes=xorBytes(bytes, bytes[5])
 	for i = 1, #bytes do
 		if (bcnt == 0) then
-			line=bytes[i]
+			line = bytes[i]
 		elseif (bcnt <= 7) then
-			line=line.." "..bytes[i]
+			line = line.." "..bytes[i]
 		end
 		if (bcnt == 7) then
 			-- write line to new file
 			fho:write(line.."\n")
 			-- reset counter & line
-			bcnt=-1
-			line=""
+			bcnt = -1
+			line = ""
 		end
-		bcnt=bcnt+1
+		bcnt = bcnt + 1
 	end
 	fho:close()
 	print("\nwrote ".. #bytes .." bytes to " .. filename)
@@ -659,8 +654,8 @@ end
 -- make tagMap
 function makeTagMap()
   local tagMap={}
-  if (#tagMap==0) then
-    tagMap['name']=input(accyan.."enter Name for this Map: "..acoff , "newTagMap")
+  if (#tagMap == 0) then
+    tagMap['name'] = input(accyan.."enter Name for this Map: "..acoff , "newTagMap")
     tagMap['mappings']={}
     tagMap['crc8']={}
     -- insert fixed Tag-CRC
@@ -990,18 +985,18 @@ end
 ---
 -- show bytes used for crc-calculation
 function getSequences(bytes, seqstr)
-  if (type(seqstr)~="string") then seqstr=input("enter comma-seperated sequences (e.g.: '1-4,23-26')", '1-4,23-26') end
-  local seqs=split(seqstr, ',')
+  if (type(seqstr) ~= "string") then seqstr = input("enter comma-seperated sequences (e.g.: '1-4,23-26')", '1-4,23-26') end
+  local seqs = split(seqstr, ',')
   local res = ""
   if(#seqs>0) then
     for k, v in pairs(seqs) do
       local seq = split(v,'-')
-      if (#seq>=2) then
-        for i=seq[1], seq[2] do
-          res=res..bytes[i].." "
+      if (#seq >= 2) then
+        for i = seq[1], seq[2] do
+          res = res..bytes[i].." "
         end
       end
-      if(string.len(res)>0) then res=res.."  " end
+      if(string.len(res)>0) then res = res.."  " end
     end
   else
     oops("no sequence found in '"..seqstr.."'")
@@ -1060,13 +1055,13 @@ end
 ---
 -- add interactive mapping
 function addMapping(tag, tagMap, x)
-  if (type(x)~="number") then x=#tagMap.mappings+1 end
-  local bytes=tagToBytes(tag)
+  if (type(x) ~= "number") then x = #tagMap.mappings + 1 end
+  local bytes = tagToBytes(tag)
   local myMapping={}
-  myMapping['name'] =input(accyan.."enter Maping-Name:"..acoff, string.format("mapping %d", #tagMap.mappings+1))
-  myMapping['start']=tonumber(input(accyan.."enter start-addr:"..acoff, '1'), 10)
-  myMapping['end']  =tonumber(input(accyan.."enter end-addr:"..acoff, #bytes), 10)
-  myMapping['highlight']=confirm("set highlighted")
+  myMapping['name']  = input(accyan.."enter Maping-Name:"..acoff, string.format("mapping %d", #tagMap.mappings+1))
+  myMapping['start'] = tonumber(input(accyan.."enter start-addr:"..acoff, '1'), 10)
+  myMapping['end']   = tonumber(input(accyan.."enter end-addr:"..acoff, #bytes), 10)
+  myMapping['highlight'] = confirm("set highlighted")
   table.insert(tagMap.mappings, x, myMapping)
   return tagMap
 end
@@ -1087,7 +1082,7 @@ end
 ---
 -- select a mapping from a tagmap
 function selectTableEntry(table, action)
-  if (type(action)~="string") then action="select number of item:" end
+  if (type(action) ~= "string") then action = "select number of item:" end
   for k, v in pairs(table) do
     print(accyan..k..acoff.."\t-> "..accyan..v['name']..acoff)
   end
@@ -1357,7 +1352,7 @@ end
 -- dump Legic-Cash data
 function dumpLegicCash(tag, x)
 	
-	if ~istable(tag.SEG[x]) then return end
+	if istable(tag.SEG[x]) == false then return end
 	
      io.write("in Segment "..tag.SEG[x].index.." :\n")
      print("--------------------------------\n\tLegic-Cash Values\n--------------------------------")
@@ -1383,7 +1378,7 @@ function dumpLegicCash(tag, x)
 --  raw 3rd-party
 function print3rdPartyCash1(tag, x)
 
-	if ~istable(tag.SEG[x]) then return end
+	if istable(tag.SEG[x]) == false then return end
 	
     local uid=tag.MCD..tag.MSN0..tag.MSN1..tag.MSN2
      print("\n\t\tStamp  :  "..dumpTable(tag.SEG[x].data, "", 0 , 2))
@@ -1437,31 +1432,34 @@ function makeToken()
   }
   ttype=""
   for k, v in pairs(mt.Type) do
-    ttype=ttype..k..") "..v.."  "
+    ttype = ttype..k..") "..v.."  "
   end
-  mtq=tonumber(input("select number for Token-Type\n"..ttype, '1'), 10)
-  if (type(mtq)~="number") then return print("selection invalid!")
-  elseif (mtq>#mt.Type) then return print("selection invalid!")
+  mtq = tonumber(input("select number for Token-Type\n"..ttype, '1'), 10)
+  if (type(mtq) ~= "number") then return print("selection invalid!")
+  elseif (mtq > #mt.Type) then return print("selection invalid!")
   else print("Token-Type '"..mt.Type[mtq].."' selected") end
-  local raw=calcHeaderRaw(mt.WRP[mtq], mt.WRC[mtq], mt.RD[mtq])
-  local mtCRC="00"
+  local raw = calcHeaderRaw(mt.WRP[mtq], mt.WRC[mtq], mt.RD[mtq])
+  local mtCRC = "00"
 
-  bytes={"01", "02", "03", "04", "cb", string.sub(mt.DCF[mtq], 0, 2), string.sub(mt.DCF[mtq], 3), raw,
+  bytes = {"01", "02", "03", "04", "cb", string.sub(mt.DCF[mtq], 0, 2), string.sub(mt.DCF[mtq], 3), raw,
          "00", "00", "00", "00", "00", "00", "00", "00",
          "00", "00", "00", "00", "00", "00"}
-  if (mtq==1) then
-    for i=0, #mt.Segment do
+  if (mtq == 1) then
+    for i = 0, #mt.Segment do
       table.insert(bytes, mt.Segment[i])
     end
-    bytes[9]="ff"
+    bytes[9] = "ff"
   end
   -- fill bytes
-  for i=#bytes, 1023 do table.insert(bytes, "00") end
+  for i = #bytes, 1023 do table.insert(bytes, "00") end
+
   -- if Master-Token -> calc Master-Token-CRC
-  if (mtq>1) then bytes[22]=calcMtCrc(bytes) end
-  local tempTag=createTagTable()
+  if (mtq>1) then bytes[22] = calcMtCrc(bytes) end
+  
+  local tempTag = createTagTable()
   -- remove segment if MasterToken
-  if (mtq>1) then tempTag.SEG[0]=nil end
+  if (mtq>1) then tempTag.SEG[0] = nil end
+  
   return bytesToTag(bytes, tempTag)
 end
 
@@ -1469,72 +1467,71 @@ end
 -- edit token-data
 function editTag(tag)
   -- for simulation it makes sense to edit everything
-  local edit_sim="MCD MSN0 MSN1 MSN2 MCC DCFl DCFh WRP WRC RD"
+  local edit_sim = "MCD MSN0 MSN1 MSN2 MCC DCFl DCFh WRP WRC RD"
   -- on real tags it makes only sense to edit DCF, WRP, WRC, RD
-  local edit_real="DCFl DCFh WRP WRC RD"
+  local edit_real = "DCFl DCFh WRP WRC RD"
   if (confirm(acyellow.."do you want to edit non-writeable values (e.g. for simulation)?"..acoff)) then
-    edit_tag=edit_sim
-  else edit_tag=edit_real end
+    edit_tag = edit_sim
+  else edit_tag = edit_real end
 
   if(istable(tag)) then
     for k,v in pairs(tag) do
-      if(type(v)~="table" and type(v)~="boolean" and string.find(edit_tag, k)) then
-        tag[k]=input("value for: "..accyan..k..acoff, v)
+      if(type(v) ~= "table" and type(v) ~= "boolean" and string.find(edit_tag, k)) then
+        tag[k] = input("value for: "..accyan..k..acoff, v)
       end
     end
 
-    if (tag.Type=="SAM") then ttype="Header"; else ttype="Stamp"; end
+    if (tag.Type == "SAM") then ttype = "Header"; else ttype = "Stamp"; end
       if (confirm(acyellow.."do you want to edit "..ttype.." Data?"..acoff)) then
       -- master-token specific
-      if(istable(tag.Bck)==false) then
+      if(istable(tag.Bck) == false) then
         -- stamp-data length=(0xfc-DCFh)
         -- on MT: SSC holds the Starting Stamp Character (Stamp0)
         tag.SSC=input(ttype.."0: ", tag.SSC)
         -- rest of stamp-bytes are in tag.data 0..n
         for i=0, (tonumber(0xfc ,10)-("%d"):format('0x'..tag.DCFh))-2 do
-        tag.data[i]=input(ttype.. i+1 ..": ", tag.data[i])
+        tag.data[i] = input(ttype.. i+1 ..": ", tag.data[i])
         end
       else
         --- on credentials byte7 should always be 9f and byte8 ff
         -- on Master-Token not (even on SAM63/64 not)
         -- tag.SSC=input(ttype.."0: ", tag.SSC)
         for i=0, #tag.data do
-           tag.data[i]=input(ttype.. i ..": ", tag.data[i])
+           tag.data[i] = input(ttype.. i ..": ", tag.data[i])
         end
       end
     end
 
-    bytes=tagToBytes(tag)
+    bytes = tagToBytes(tag)
 
     --- check data-consistency (calculate tag.raw)
-    bytes[8]=calcHeaderRaw(tag.WRP, tag.WRC, tag.RD)
+    bytes[8] = calcHeaderRaw(tag.WRP, tag.WRC, tag.RD)
 
     --- Master-Token specific
     -- should be triggered if a SAM was converted to a non-SAM (user-Token to Master-Token)
     -- or a Master-Token has being edited (also SAM64 & SAM63 - which are in fact Master-Token)
-    if(tag.Type~="SAM" or bytes[6]..bytes[7]~="60ea") then
+    if(tag.Type ~= "SAM" or bytes[6]..bytes[7] ~= "60ea") then
       -- calc new Master-Token crc
-      bytes[22]=calcMtCrc(bytes)
+      bytes[22] = calcMtCrc(bytes)
     else
       -- ensure tag.SSC set to 'ff' on credential-token (SAM)
-      bytes[9]='ff'
+      bytes[9] = 'ff'
       -- if a Master-Token was converted to a Credential-Token
       -- lets unset the Time-Area to 00 00 (will contain Stamp-Data on MT)
-      bytes[21]='00'
-      bytes[22]='00'
+      bytes[21] = '00'
+      bytes[22] = '00'
     end
 
-    tag=bytesToTag(bytes, tag)
+    tag = bytesToTag(bytes, tag)
   end
 end
 
 ---
 -- calculates header-byte (addr 0x07)
 function calcHeaderRaw(wrp, wrc, rd)
-  local res
-  wrp=("%02x"):format(tonumber(wrp, 10))
-  rd=tonumber(rd, 16)
-  res=("%02x"):format(tonumber(wrp, 16)+tonumber(wrc.."0", 16)+((rd>0) and tonumber("8"..(rd-1), 16) or 0))
+  wrp = ("%02x"):format(tonumber(wrp, 10))
+  rd = tonumber(rd, 16)
+  local res = ("%02x"):format(tonumber(wrp, 16)+tonumber(wrc.."0", 16)+((rd>0) and tonumber("8"..(rd-1), 16) or 0))
   return res
 end
 
@@ -1699,19 +1696,17 @@ end
 ---
 -- edit Segment Data
 function editSegmentData(data)
-  io.write("\n")
-	if ~istable(data) then
-		print("no Segment-Data found")
-	end
+	io.write("\n")
+	if istable(data) == false then print("no Segment-Data found") end
 
 	local lc = check4LegicCash(data)
 
     for i=0, #data-1 do
-      data[i]=input(accyan.."Data"..i..acoff..": ", data[i])
+		data[i]=input(accyan.."Data"..i..acoff..": ", data[i])
     end
 	if (lc) then 
 		data = fixLegicCash(data)
-  end
+	end
 	return data
 end
 
@@ -2686,7 +2681,7 @@ function main(args)
   end
 
   -- file conversion (output to file)
-	if ~ofs then return end
+	if ofs == false then return end
   
     -- dump infile / tag-read
     if (dfs) then
