@@ -58,7 +58,7 @@ local function help()
 	print('Example usage')
 	print(example)
 end
---
+---
 -- Exit message
 local function exitMsg(msg)
 	print( string.rep('--',20) )
@@ -66,7 +66,34 @@ local function exitMsg(msg)
 	print(msg)
 	print()
 end
+---
+-- dumps all keys to file
+local function dumptofile(keys)
+	dbg('dumping keys to file')
 
+	if utils.confirm('Do you wish to save the keys to dumpfile?') then 
+		local destination = utils.input('Select a filename to store to', 'dumpkeys.bin')
+		local file = io.open(destination, 'wb')
+		if file == nil then 
+			print('Could not write to file ', destination)
+			return
+		end
+
+		-- Mifare Mini has 5 sectors, 
+		local key_a = ''
+		local key_b = ''
+		
+		for sector = 0, #keys do
+			local keyA, keyB = unpack(keys[sector])
+			key_a = key_a .. bin.pack('H', keyA);
+			key_b = key_b .. bin.pack('H', keyB);
+		end
+		file:write(key_a)
+		file:write(key_b)
+		file:close()
+	end
+end
+---
 -- create key
 local function keygen(uid)
 	local data = MIS..uid..BAR
@@ -81,21 +108,26 @@ local function keygen(uid)
 		)
 end
 ---
--- print one row with keys
-local function printRow(sector, keyA, keyB)
-	print('|'..sector..'|  '..keyA..'  |  '..keyB..'  |' )
+-- print keys
+local function printKeys(keys)
+	print('|---|----------------|---|----------------|---|')
+	print('|sec|key A           |res|key B           |res|')
+	print('|---|----------------|---|----------------|---|')
+	for sector = 0, #keys do
+		local keyA, keyB = unpack(keys[sector])
+		print(('|%03d|  %s  | %s |  %s  | %s |'):format(sector, keyA, 1, keyB, 1))
+	end	
+	print('|---|----------------|---|----------------|---|')
 end
 ---
--- print keys
-local function printKeys(key)
-	print('|---|----------------|----------------|')
-	print('|sec|key A           |key B           |')
-	print('|---|----------------|----------------|')
-    for i=0,4 do
-		local s = ("02X"):format(i) 
-		printRow( s, key, key)
+-- createfull set of keys
+local function createKeys(uid)
+	local key = keygen(uid)
+	local k = {}
+	for i = 0,4 do
+		k[i] = { key, key }
 	end
-	print('|---|----------------|----------------|')
+	return k
 end
 ---
 -- main
@@ -134,8 +166,10 @@ local function main(args)
 	end
 	
 	print('|UID|', uid)	
-	local key = keygen(uid)
-	printKeys(key)
+	
+	local keys, err = createKeys( uid )	
+	printKeys( keys )
+	dumptofile( keys )
 end
 
 main(args)

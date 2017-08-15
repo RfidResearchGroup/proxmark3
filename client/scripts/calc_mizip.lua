@@ -28,14 +28,15 @@ local bxor = bit32.bxor
 local _xortable = {
     --[[ sector key A/B, 6byte xor
     --]]
-	{"001","09125a2589e5","F12C8453D821"},
-	{"002","AB75C937922F","73E799FE3241"},
-	{"003","E27241AF2C09","AA4D137656AE"},
-	{"004","317AB72F4490","B01327272DFD"},
+	{1, "09125a2589e5", "F12C8453D821"},
+	{2, "AB75C937922F", "73E799FE3241"},
+	{3, "E27241AF2C09", "AA4D137656AE"},
+	{4, "317AB72F4490", "B01327272DFD"},
 }
 --- 
 -- A debug printout-function
 local function dbg(args)
+    if not DEBUG then return end
     if type(args) == "table" then
 		local i = 1
 		while args[i] do
@@ -69,6 +70,33 @@ local function exitMsg(msg)
 	print(msg)
 	print()
 end
+--
+-- dumps all keys to file
+local function dumptofile(keys)
+	dbg('dumping keys to file')
+
+	if utils.confirm('Do you wish to save the keys to dumpfile?') then 
+		local destination = utils.input('Select a filename to store to', 'dumpkeys.bin')
+		local file = io.open(destination, 'wb')
+		if file == nil then 
+			print('Could not write to file ', destination)
+			return
+		end
+
+		-- Mifare Mini has 5 sectors, 
+		local key_a = ''
+		local key_b = ''
+		
+		for sector = 0, #keys do
+			local keyA, keyB = unpack(keys[sector])
+			key_a = key_a .. bin.pack('H', keyA);
+			key_b = key_b .. bin.pack('H', keyB);
+		end
+		file:write(key_a)
+		file:write(key_b)
+		file:close()
+	end
+end
 ---
 -- key bytes to string
 local function keyStr(p1, p2, p3, p4, p5, p6)
@@ -96,25 +124,31 @@ local function calckey(uid, xorkey, keytype)
 	return keyStr(p1,p2,p3,p4,p5,p6)
 end 
 ---
--- print one row with keys
-local function printRow(sector, keyA, keyB)
-	print('|'..sector..'|  '..keyA..'  |  '..keyB..'  |' )
+-- print keys
+local function printKeys(keys)
+	print('|---|----------------|---|----------------|---|')
+	print('|sec|key A           |res|key B           |res|')
+	print('|---|----------------|---|----------------|---|')
+	for sector = 0, #keys do
+		local keyA, keyB = unpack(keys[sector])
+		print(('|%03d|  %s  | %s |  %s  | %s |'):format(sector, keyA, 1, keyB, 1))
+	end	
+	print('|---|----------------|---|----------------|---|')
 end
 ---
--- print keys
-local function printKeys(uid)
-	print('|---|----------------|----------------|')
-	print('|sec|key A           |key B           |')
-	print('|---|----------------|----------------|')
-	printRow('000', keyStr(0xA0,0xA1,0xA2,0xA3,0xA4,0xA5), keyStr(0xB4,0xC1,0x32,0x43,0x9e,0xef) )
-
+-- create a full set of keys
+local function createKeys(uid)
 	local uidbytes = utils.ConvertHexToBytes(uid)
-    for k, v in pairs(_xortable) do
+	
+	local k = {}
+	k[0] = { keyStr(0xA0,0xA1,0xA2,0xA3,0xA4,0xA5), keyStr(0xB4,0xC1,0x32,0x43,0x9e,0xef) }
+
+    for _, v in pairs(_xortable) do
 		local keyA = calckey(uidbytes, utils.ConvertHexToBytes(v[2]), 'A')
 		local keyB = calckey(uidbytes, utils.ConvertHexToBytes(v[3]), 'B')
-		printRow(v[1], keyA, keyB  )
+		k[v[1]] = { keyA, keyB }
 	end
-	print('|---|----------------|----------------|')	
+	return k
 end
 ---
 -- main
@@ -151,8 +185,12 @@ local function main(args)
 		end		
 		uid = tag.uid
 	end	
+	
 	print('|UID|', uid)
-	printKeys(uid)
+	
+	local keys, err = createKeys( uid )
+	printKeys( keys )
+	dumptofile( keys )
 end
 
 main(args)
