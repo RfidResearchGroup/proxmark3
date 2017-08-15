@@ -53,8 +53,10 @@ end
 --- 
 -- Usage help
 function help()
+	print(copyright)
+	print(version)	
 	print(desc)
-	print("Example usage")
+	print('Example usage')
 	print(example)
 end
 --
