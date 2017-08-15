@@ -1,25 +1,41 @@
 local bin = require('bin')
 local getopt = require('getopt')
+local lib14a = require('read14a')
 local utils =  require('utils')
 
-local bxor=bit32.bxor
-
-example =[[
-	 script run calc_mizip
-	 script run calc_mizip -u 11223344
-]]
-author = "Iceman"
-usage = "script run calc_mizip -u <uid>"
-desc =[[
+author = 'Iceman'
+version = 'v1.0.0'
+desc = [[
 This script calculates mifare keys based on uid diversification for mizip. 
 Algo not found by me.
+]]
+example = [[
+	 -- if called without, it reads tag uid
+	 script run calc_mizip
+	 
+	 --
+	 script run calc_mizip -u 11223344
+]]
+usage = [[
+script run calc_mizip -h -u <uid>
+
 Arguments:
 	-h             : this help
 	-u <UID>       : UID
 ]]
+local DEBUG = true
+local bxor = bit32.bxor
+local _xortable = {
+    --[[ sector key A/B, 6byte xor
+    --]]
+	{"001","09125a2589e5","F12C8453D821"},
+	{"002","AB75C937922F","73E799FE3241"},
+	{"003","E27241AF2C09","AA4D137656AE"},
+	{"004","317AB72F4490","B01327272DFD"},
+}
 --- 
 -- A debug printout-function
-function dbg(args)
+local function dbg(args)
     if type(args) == "table" then
 		local i = 1
 		while args[i] do
@@ -32,40 +48,34 @@ function dbg(args)
 end	
 --- 
 -- This is only meant to be used when errors occur
-function oops(err)
+local function oops(err)
 	print("ERROR: ",err)
 	return nil,err
 end
 --- 
 -- Usage help
-function help()
+local function help()
+	print(copyright)
+	print(version)	
 	print(desc)
 	print("Example usage")
 	print(example)
 end
 --
 -- Exit message
-function exitMsg(msg)
+local function exitMsg(msg)
 	print( string.rep('--',20) )
 	print( string.rep('--',20) )
 	print(msg)
 	print()
 end
-
-local _xortable = {
-    --[[ sector key A/B, 6byte xor
-    --]]
-	{"001","09125a2589e5","F12C8453D821"},
-	{"002","AB75C937922F","73E799FE3241"},
-	{"003","E27241AF2C09","AA4D137656AE"},
-	{"004","317AB72F4490","B01327272DFD"},
-}
-local function printRow(sector, keyA, keyB)
-	print('|'..sector..'|  '..keyA..'  |  '..keyB..'  |' )
-end
+---
+-- key bytes to string
 local function keyStr(p1, p2, p3, p4, p5, p6)
 	return string.format('%02X%02X%02X%02X%02X%02X',p1, p2, p3, p4, p5, p6)
 end
+---
+-- create key
 local function calckey(uid, xorkey, keytype)
 	local p1,p2,p3,p4,p5,p6
 	if keytype == 'A' then 
@@ -85,39 +95,64 @@ local function calckey(uid, xorkey, keytype)
 	end
 	return keyStr(p1,p2,p3,p4,p5,p6)
 end 
-local function main(args)
-
-	print( string.rep('==', 30) )
-	print()
-			
-	local i,j, pwd
-	local uid = '11223344'
-	
-	-- Arguments for the script
-	for o, a in getopt.getopt(args, 'hu:') do
-		if o == "h" then return help() end		
-		if o == "u" then uid = a end		
-	end
-
-	-- uid string checks
-	if uid == nil then return oops('empty uid string') end
-	if #uid == 0 then return oops('empty uid string') end
-	if #uid ~= 8 then return oops('uid wrong length. Should be 4 hex bytes') end
-
-	local uidbytes = utils.ConvertHexToBytes(uid)
-
-	print('|UID|', uid)
+---
+-- print one row with keys
+local function printRow(sector, keyA, keyB)
+	print('|'..sector..'|  '..keyA..'  |  '..keyB..'  |' )
+end
+---
+-- print keys
+local function printKeys(uid)
 	print('|---|----------------|----------------|')
 	print('|sec|key A           |key B           |')
 	print('|---|----------------|----------------|')
 	printRow('000', keyStr(0xA0,0xA1,0xA2,0xA3,0xA4,0xA5), keyStr(0xB4,0xC1,0x32,0x43,0x9e,0xef) )
 
+	local uidbytes = utils.ConvertHexToBytes(uid)
     for k, v in pairs(_xortable) do
 		local keyA = calckey(uidbytes, utils.ConvertHexToBytes(v[2]), 'A')
 		local keyB = calckey(uidbytes, utils.ConvertHexToBytes(v[3]), 'B')
 		printRow(v[1], keyA, keyB  )
 	end
 	print('|---|----------------|----------------|')	
+end
+---
+-- main
+local function main(args)
+
+	print( string.rep('==', 30) )
+	print()
+			
+	local uid = '11223344'
+	local useUID = false
+	
+	-- Arguments for the script
+	for o, a in getopt.getopt(args, 'hu:') do
+		if o == "h" then return help() end		
+		if o == "u" then uid = a ; useUID = true end		
+	end
+
+	if useUID then
+		-- uid string checks
+		if uid == nil then return oops('empty uid string') end
+		if #uid == 0 then return oops('empty uid string') end
+		if #uid ~= 8 then return oops('uid wrong length. Should be 4 hex bytes') end
+	else
+		-- GET TAG UID	
+		local tag, err = lib14a.read1443a(false)
+		if not tag then return oops(err) end
+		core.clearCommandBuffer()
+
+		-- simple tag check
+		if 0x09 ~= tag.sak then
+			if 0x4400 ~= tag.atqa then 
+				return oops(('[fail] found tag %s :: looking for Mifare Mini 0.3k'):format(tag.name)) 
+			end
+		end		
+		uid = tag.uid
+	end	
+	print('|UID|', uid)
+	printKeys(uid)
 end
 
 main(args)

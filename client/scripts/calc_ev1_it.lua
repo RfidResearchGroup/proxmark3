@@ -1,23 +1,35 @@
 local bin = require('bin')
 local getopt = require('getopt')
+local lib14a = require('read14a')
 local utils =  require('utils')
 
-local bxor=bit32.bxor
-
+copyright = ''
+author = "Iceman"
+version = 'v1.0.0'
+desc = [[
+This script calculates mifare Ultralight-EV1 pwd based on uid diversification for an Italian ticketsystem
+Algo not found by me.
+]]
 example =[[
+     -- if called without, it reads tag uid
 	 script run calc_ev1_it
+	 
+	 --
 	 script run calc_ev1_it -u 11223344556677
 ]]
-author = "Iceman"
-usage = "script run calc_ev1_it -u <uid> "
-desc =[[
+usage = [[
+script run calc_ev1_it -h -u <uid> "
+
 Arguments:
 	-h             : this help
 	-u <UID>       : UID
 ]]
+
+local DEBUG = true
+local bxor = bit32.bxor
 --- 
 -- A debug printout-function
-function dbg(args)
+local function dbg(args)
     if type(args) == "table" then
 		local i = 1
 		while args[i] do
@@ -30,13 +42,15 @@ function dbg(args)
 end	
 --- 
 -- This is only meant to be used when errors occur
-function oops(err)
+local function oops(err)
 	print("ERROR: ",err)
 	return nil,err
 end
 --- 
 -- Usage help
-function help()
+local function help()
+	print(copyright)
+	print(version)	
 	print(desc)
 	print("Example usage")
 	print(example)
@@ -103,45 +117,59 @@ local function findEntryByUid( uid )
 	end
 	return nil
 end
+---
+-- create pwd
+local function pwdgen(uid)
+	--  PWD CALC	
+	--	PWD0  =  T0 xor B xor C xor D
+	--	PWD1  =  T1 xor A xor C xor E 
+	--	PWD2  =  T2 xor A xor B xor F 
+	--	PWD3  =  T3 xor G 
+	local uidbytes = utils.ConvertHexToBytes(uid)
+    local entry = findEntryByUid(uidbytes)
+	if entry == nil then return nil, "Can't find a xor entry" end
 
+    local pwd0 = bxor( bxor( bxor( entry[1], uidbytes[2]), uidbytes[3]), uidbytes[4])
+	local pwd1 = bxor( bxor( bxor( entry[2], uidbytes[1]), uidbytes[3]), uidbytes[5])
+	local pwd2 = bxor( bxor( bxor( entry[3], uidbytes[1]), uidbytes[2]), uidbytes[6])
+	local pwd3 = bxor( entry[4], uidbytes[7])
+	return string.format('%02X%02X%02X%02X', pwd0, pwd1, pwd2, pwd3)
+end
+--
+-- main
 local function main(args)
 
 	print( string.rep('--',20) )
 	print( string.rep('--',20) )	
 	print()
 			
-	local i,j, pwd
 	local uid = '04111211121110'
+	local useUID = false
 	
 	-- Arguments for the script
 	for o, a in getopt.getopt(args, 'hu:') do
 		if o == "h" then return help() end		
-		if o == "u" then uid = a end		
+		if o == "u" then uid = a; useUID = true end		
 	end
 
-	-- uid string checks
-	if uid == nil then return oops('empty uid string') end
-	if #uid == 0 then return oops('empty uid string') end
-	if #uid ~= 14 then return oops('uid wrong length. Should be 7 hex bytes') end
-
-	local uidbytes = utils.ConvertHexToBytes(uid)
-
-    local entry = findEntryByUid(uidbytes)
-	if entry == nil then return oops("Can't find a xor entry") end
-
-	--  PWD CALC	
-	--	PWD0  =  T0 xor B xor C xor D
-	--	PWD1  =  T1 xor A xor C xor E 
-	--	PWD2  =  T2 xor A xor B xor F 
-	--	PWD3  =  T3 xor G 
-  
-    local pwd0 = bxor( bxor( bxor( entry[1], uidbytes[2]), uidbytes[3]), uidbytes[4])
-	local pwd1 = bxor( bxor( bxor( entry[2], uidbytes[1]), uidbytes[3]), uidbytes[5])
-	local pwd2 = bxor( bxor( bxor( entry[3], uidbytes[1]), uidbytes[2]), uidbytes[6])
-	local pwd3 = bxor( entry[4], uidbytes[7])
+	if useUID then
+		-- uid string checks
+		if uid == nil then return oops('empty uid string') end
+		if #uid == 0 then return oops('empty uid string') end
+		if #uid ~= 14 then return oops('uid wrong length. Should be 7 hex bytes') end
+	else
+		-- GET TAG UID	
+		local tag, err = lib14a.read1443a(false)
+		if not tag then return oops(err) end
+		core.clearCommandBuffer()
+		uid = tag.uid	
+	end
 	
 	print('UID | '..uid)
-	print(string.format('PWD | %02X%02X%02X%02X', pwd0, pwd1, pwd2, pwd3))
+	local pwd, err = pwdgen(uid)
+	if not pwd then return ooops(err) end
+	
+	print(string.format('PWD | %s', pwd))
 end
 
 main(args)

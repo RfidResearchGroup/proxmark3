@@ -3,22 +3,21 @@ local getopt = require('getopt')
 local lib14a = require('read14a')
 local utils =  require('utils')
 
-copyright = 'Copyright (c) 2017 IceSQL AB. All rights reserved.'
+copyright = ''
 author = "Iceman"
 version = 'v1.0.0'
-desc = [[ This script calculates mifare keys based on uid diversification for DI. 
+desc = [[
+This script calculates mifare keys based on uid diversification for DI. 
 Algo not found by me.
 ]]
-example =
-[[
-	-- if called without, it reads tag uid
+example = [[
+	 -- if called without, it reads tag uid
 	 script run calc_di
 	 
 	 -- 
 	 script run calc_di -u 11223344556677
 ]]
-usage =
-[[
+usage = [[
 script run calc_di -h -u <uid>
 
 Arguments:
@@ -29,7 +28,7 @@ Arguments:
 local DEBUG = true
 local BAR = '286329204469736E65792032303133'
 local MIS = '0A14FD0507FF4BCD026BA83F0A3B89A9'
-local bxor=bit32.bxor
+local bxor = bit32.bxor
 --- 
 -- A debug printout-function
 local function dbg(args)
@@ -52,7 +51,7 @@ local function oops(err)
 end
 --- 
 -- Usage help
-function help()
+local function help()
 	print(copyright)
 	print(version)	
 	print(desc)
@@ -61,7 +60,7 @@ function help()
 end
 --
 -- Exit message
-function exitMsg(msg)
+local function exitMsg(msg)
 	print( string.rep('--',20) )
 	print( string.rep('--',20) )
 	print(msg)
@@ -105,7 +104,7 @@ local function main(args)
 	print( string.rep('==', 30) )
 	print()
 			
-	local i, uid, key
+	local uid
 	local useUID = false
 	
 	-- Arguments for the script
@@ -119,10 +118,9 @@ local function main(args)
 		if uid == nil then return oops('empty uid string') end
 		if #uid == 0 then return oops('empty uid string') end
 		if #uid ~= 14 then return oops('uid wrong length. Should be 7 hex bytes') end
-		key = keygen(uid)
 	else
 		-- GET TAG UID	
-		tag, err = lib14a.read1443a(false)
+		local tag, err = lib14a.read1443a(false)
 		if not tag then return oops(err) end
 		core.clearCommandBuffer()
 
@@ -134,8 +132,9 @@ local function main(args)
 		end		
 		uid = tag.uid
 	end
-
-	print('|UID|', uid)
+	
+	print('|UID|', uid)	
+	local key = keygen(uid)
 	printKeys(key)
 end
 
