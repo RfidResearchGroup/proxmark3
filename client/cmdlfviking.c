@@ -147,7 +147,7 @@ int CmdVikingSim(const char *Cmd) {
 	arg1 = clk << 8 | encoding;
 	arg2 = invert << 8 | separator;
 
-	PrintAndLog("Simulating - ID: %08X, Raw: %08X%08X",id,(uint32_t)(rawID >> 32),(uint32_t) (rawID & 0xFFFFFFFF));
+	PrintAndLog("Simulating Viking - ID: %08X, Raw: %08X%08X",id,(uint32_t)(rawID >> 32),(uint32_t) (rawID & 0xFFFFFFFF));
 	
 	UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};
 	num_to_bytebits(rawID, size, c.d.asBytes);

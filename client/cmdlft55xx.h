@@ -34,10 +34,10 @@
 #define REGULAR_READ_MODE_BLOCK 0xFF
 
 // config blocks
-#define T55X7_DEFAULT_CONFIG_BLOCK      0x000880E8      // compat mode, data rate 32, manchester, ST, 7 data blocks
-#define T55X7_RAW_CONFIG_BLOCK          0x000880E0      // compat mode, data rate 32, manchester, 7 data blocks
-#define T55X7_EM_UNIQUE_CONFIG_BLOCK    0x00148040      // emulate em4x02/unique - compat mode, manchester, data rate 64, 2 data blocks
-// FDXB requires data inversion and BiPhase 57 is simply BipHase 50 inverted, so we can either do it using the modulation scheme or the inversion flag
+#define T55X7_DEFAULT_CONFIG_BLOCK      0x000880E8      // ASK, compat mode, data rate 32, manchester, STT, 7 data blocks
+#define T55X7_RAW_CONFIG_BLOCK          0x000880E0      // ASK, compat mode, data rate 32, manchester, 7 data blocks
+#define T55X7_EM_UNIQUE_CONFIG_BLOCK    0x00148040      // ASK, emulate em4x02/unique - compat mode, manchester, data rate 64, 2 data blocks
+// FDXB requires data inversion and BiPhase 57 is simply BiPhase 50 inverted, so we can either do it using the modulation scheme or the inversion flag
 // we've done both below to prove that it works either way, and the modulation value for BiPhase 50 in the Atmel data sheet of binary "10001" (17) is a typo,
 // and it should actually be "10000" (16)
 // #define T55X7_FDXB_CONFIG_BLOCK         903F8080  // emulate fdx-b - xtended mode, BiPhase ('57), data rate 32, 4 data blocks
@@ -47,10 +47,10 @@
 #define T55X7_INDALA_64_CONFIG_BLOCK    0x00081040  // emulate indala 64 bit - compat mode, PSK1, psk carrier FC * 2, data rate 32, maxblock 2
 #define T55X7_INDALA_224_CONFIG_BLOCK   0x000810E0  // emulate indala 224 bit - compat mode, PSK1, psk carrier FC * 2, data rate 32, maxblock 7
 #define T55X7_GUARDPROXII_CONFIG_BLOCK	0x00150060	// bitrate 64pcb, Direct modulation, Biphase, 3 data blocks
-#define T55X7_VIKING_CONFIG_BLOCK		0x00088040	// compat mode, data rate 32, Manchester, 2 data blocks
-#define T55X7_NORALYS_CONFIG_BLOCK		0x00088C6A	// compat mode,   (NORALYS - KCP3000)
-#define T55X7_IOPROX_CONFIG_BLOCK		0x00147040  // maxblock 2
-#define T55X7_PRESCO_CONFIG_BLOCK		0x00088088  // data rate 32, Manchester, 5 data blocks, STT
+#define T55X7_VIKING_CONFIG_BLOCK		0x00088040	// ASK, compat mode, data rate 32, Manchester, 2 data blocks
+#define T55X7_NORALYS_CONFIG_BLOCK		0x00088C6A	// ASK, compat mode,   (NORALYS - KCP3000)
+#define T55X7_IOPROX_CONFIG_BLOCK		0x00147040  // ioprox - FSK2a, data rate 64, 2 data blocks
+#define T55X7_PRESCO_CONFIG_BLOCK		0x00088088  // ASK, data rate 32, Manchester, 5 data blocks, STT
 #define T55X7_bin 0b0010
 
 #define T5555_DEFAULT_CONFIG_BLOCK		0x6001F004  // data rate 64 , ask, manchester, 2 data blocks?
