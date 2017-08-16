@@ -175,7 +175,7 @@ cpu_arch = $(shell uname -m)
 ifneq ($(findstring 86, $(cpu_arch)), )
 	MULTIARCHSRCS = hardnested/hardnested_bf_core.c hardnested/hardnested_bitarray_core.c
 endif
-ifneq ($(findstring 64, $(cpu_arch)), )
+ifneq ($(findstring amd64, $(cpu_arch)), )
 	MULTIARCHSRCS = hardnested/hardnested_bf_core.c hardnested/hardnested_bitarray_core.c
 endif
 ifeq ($(MULTIARCHSRCS), )
