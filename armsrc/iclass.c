@@ -994,20 +994,17 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 	//Use the emulator memory for SIM
 	uint8_t *emulator = BigBuf_get_EM_addr();
 
-	if(simType == 0) {
+	if (simType == 0) {
 		// Use the CSN from commandline
 		memcpy(emulator, datain, 8);
 		doIClassSimulation(MODE_SIM_CSN,NULL);
-	}else if(simType == 1)
-	{
+	} else if (simType == 1) {
 		//Default CSN
 		uint8_t csn_crc[] = { 0x03, 0x1f, 0xec, 0x8a, 0xf7, 0xff, 0x12, 0xe0, 0x00, 0x00 };
 		// Use the CSN from commandline
 		memcpy(emulator, csn_crc, 8);
 		doIClassSimulation(MODE_SIM_CSN,NULL);
-	}
-	else if(simType == 2)
-	{
+	} else if(simType == 2) {
 
 		uint8_t mac_responses[USB_CMD_DATA_SIZE] = { 0 };
 		Dbprintf("Going into attack mode, %d CSNS sent", numberOfCSNS);
@@ -1015,30 +1012,28 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 		// in order to collect MAC's from the reader. This can later be used in an offlne-attack
 		// in order to obtain the keys, as in the "dismantling iclass"-paper.
 		int i = 0;
-		for( ; i < numberOfCSNS && i*8+8 < USB_CMD_DATA_SIZE; i++)
-		{
+		for( ; i < numberOfCSNS && i*8+8 < USB_CMD_DATA_SIZE; i++) {
 			// The usb data is 512 bytes, fitting 65 8-byte CSNs in there.
 
 			memcpy(emulator, datain+(i*8), 8);
-			if(doIClassSimulation(MODE_EXIT_AFTER_MAC,mac_responses+i*8))
-			{
+			if (doIClassSimulation(MODE_EXIT_AFTER_MAC,mac_responses+i*8)) {
 				cmd_send(CMD_ACK,CMD_SIMULATE_TAG_ICLASS,i,0,mac_responses,i*8);
 				return; // Button pressed
 			}
 		}
 		cmd_send(CMD_ACK,CMD_SIMULATE_TAG_ICLASS,i,0,mac_responses,i*8);
 
-	}else if(simType == 3){
+	} else if (simType == 3){
 		//This is 'full sim' mode, where we use the emulator storage for data.
 		doIClassSimulation(MODE_FULLSIM, NULL);
-	}
-	else{
+	} else {
 		// We may want a mode here where we hardcode the csns to use (from proxclone).
 		// That will speed things up a little, but not required just yet.
 		Dbprintf("The mode is not implemented, reserved for future use");
 	}
 	Dbprintf("Done...");
-	set_tracing(false);	
+	set_tracing(false);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);	
 }
 void AppendCrc(uint8_t* data, int len)
 {
@@ -1562,16 +1557,18 @@ static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *samples, 
 
 int ReaderReceiveIClass(uint8_t* receivedAnswer)
 {
-  int samples = 0;
-  if (!GetIClassAnswer(receivedAnswer,160,&samples,0)) return false;
-  rsamples += samples;
-  if (tracing) {
-	uint8_t parity[MAX_PARITY_SIZE];
-	GetParity(receivedAnswer, Demod.len, parity);
-	LogTrace(receivedAnswer,Demod.len,rsamples,rsamples,parity,false);
-  }
-  if(samples == 0) return false;
-  return Demod.len;
+	int samples = 0;
+	if (!GetIClassAnswer(receivedAnswer,160,&samples,0)) return false;
+
+	rsamples += samples;
+
+	if (tracing) {
+		uint8_t parity[MAX_PARITY_SIZE];
+		GetParity(receivedAnswer, Demod.len, parity);
+		LogTrace(receivedAnswer,Demod.len,rsamples,rsamples,parity,false);
+	}
+	if(samples == 0) return false;
+	return Demod.len;
 }
 
 void setupIclassReader()

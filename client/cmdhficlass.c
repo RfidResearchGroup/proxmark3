@@ -14,7 +14,8 @@
 
 static int CmdHelp(const char *Cmd);
 
-#define NUM_CSNS 15
+#define NUM_CSNS 8
+
 #define ICLASS_KEYS_MAX 8
 static uint8_t iClass_Key_Table[ICLASS_KEYS_MAX][8] = {
 		{ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },
@@ -182,7 +183,7 @@ int usage_hf_iclass_reader(void) {
 	PrintAndLog("        hf iclass reader 1");
 	return 0;
 }
-int usage_hf_iclass_replay(void){
+int usage_hf_iclass_replay(void) {
 	PrintAndLog("HELP:   Replay a collected mac message");
 	PrintAndLog("Usage:  hf iclass replay [h] <mac>");
 	PrintAndLog("Options:");
@@ -192,13 +193,29 @@ int usage_hf_iclass_replay(void){
 	PrintAndLog("        hf iclass replay 00112233");	
 	return 0;
 }
-int usage_hf_iclass_snoop(void){
+int usage_hf_iclass_snoop(void) {
 	PrintAndLog("HELP:   Snoops the communication between reader and tag");
 	PrintAndLog("Usage:  hf iclass snoop [h]");
 	PrintAndLog("Samples:");
 	PrintAndLog("		 hf iclass snoop");	
 	return 0;
 }
+int usage_hf_iclass_loclass(void) {
+	PrintAndLog("Usage: hf iclass loclass [options]");
+	PrintAndLog("Options:");
+	PrintAndLog("h             Show this help");
+	PrintAndLog("t             Perform self-test");
+	PrintAndLog("f <filename>  Bruteforce iclass dumpfile");
+	PrintAndLog("                   An iclass dumpfile is assumed to consist of an arbitrary number of");
+	PrintAndLog("                   malicious CSNs, and their protocol responses");
+	PrintAndLog("                   The binary format of the file is expected to be as follows: ");
+	PrintAndLog("                   <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
+	PrintAndLog("                   <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
+	PrintAndLog("                   <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
+	PrintAndLog("                  ... totalling N*24 bytes");
+	return 0;
+}
+
 int xorbits_8(uint8_t val) {
 	uint8_t res = val ^ (val >> 1); //1st pass
 	res = res ^ (res >> 1); 		// 2nd pass
@@ -252,8 +269,26 @@ int CmdHFiClassSim(const char *Cmd) {
 		UsbCommand c = {CMD_SIMULATE_TAG_ICLASS, {simType,NUM_CSNS}};
 		UsbCommand resp = {0};
 
+		// pre-defined 8 CSN by Holiman
+		// but new entry[0] by iceman
+		uint8_t csns[8*NUM_CSNS] = {		
+			//0X00, 0X0B, 0X0F, 0XFF, 0XF7, 0XFF, 0X12, 0XE0, // 0,1,69
+			0x00, 0x8b, 0x8f, 0x7f, 0xf7, 0xff, 0x12, 0xe0,
+			0X00, 0X13, 0X94, 0X7E, 0X76, 0XFF, 0X12, 0XE0, // 2,12
+			0X2A, 0X99, 0XAC, 0X79, 0XEC, 0XFF, 0X12, 0XE0,	// 7,11
+			0X17, 0X12, 0X01, 0XFD, 0XF7, 0XFF, 0X12, 0XE0, // 3,15
+			0XCD, 0X56, 0X01, 0X7C, 0X6F, 0XFF, 0X12, 0XE0, // 4,8
+			0X4B, 0X5E, 0X0B, 0X72, 0XEF, 0XFF, 0X12, 0XE0, // 6,14
+			0X00, 0X73, 0XD8, 0X75, 0X58, 0XFF, 0X12, 0XE0, // 9,5
+			0X0C, 0X90, 0X32, 0XF3, 0X5D, 0XFF, 0X12, 0XE0  // 10,13
+		};
+		
+/*		
+		// pre-defined 15 CSN by Carl55
+		// but new entry[0] by iceman
 		uint8_t csns[8*NUM_CSNS] = {
-			0x00, 0x0B, 0x0F, 0xFF, 0xF7, 0xFF, 0x12, 0xE0,
+			//0x00, 0x0B, 0x0F, 0xFF, 0xF7, 0xFF, 0x12, 0xE0,
+			0x00, 0x8b, 0x8f, 0x7f, 0xf7, 0xff, 0x12, 0xe0,
 			0x00, 0x04, 0x0E, 0x08, 0xF7, 0xFF, 0x12, 0xE0,
 			0x00, 0x09, 0x0D, 0x05, 0xF7, 0xFF, 0x12, 0xE0,
 			0x00, 0x0A, 0x0C, 0x06, 0xF7, 0xFF, 0x12, 0xE0,
@@ -267,8 +302,9 @@ int CmdHFiClassSim(const char *Cmd) {
 			0x00, 0x02, 0x04, 0x1E, 0xF7, 0xFF, 0x12, 0xE0,
 			0x00, 0x07, 0x03, 0x1B, 0xF7, 0xFF, 0x12, 0xE0,
 			0x00, 0x00, 0x02, 0x24, 0xF7, 0xFF, 0x12, 0xE0,
-			0x00, 0x05, 0x01, 0x21, 0xF7, 0xFF, 0x12, 0xE0 };
-
+			0x00, 0x05, 0x01, 0x21, 0xF7, 0xFF, 0x12, 0xE0 
+		};		
+*/
 		memcpy(c.d.asBytes, csns, 8*NUM_CSNS);
 		clearCommandBuffer();
 		SendCommand(&c);
@@ -1284,23 +1320,11 @@ int CmdHFiClass_ReadBlock(const char *Cmd) {
 int CmdHFiClass_loclass(const char *Cmd) {
 	char opt = param_getchar(Cmd, 0);
 
-	if (strlen(Cmd)<1 || opt == 'h') {
-		PrintAndLog("Usage: hf iclass loclass [options]");
-		PrintAndLog("Options:");
-		PrintAndLog("h             Show this help");
-		PrintAndLog("t             Perform self-test");
-		PrintAndLog("f <filename>  Bruteforce iclass dumpfile");
-		PrintAndLog("                   An iclass dumpfile is assumed to consist of an arbitrary number of");
-		PrintAndLog("                   malicious CSNs, and their protocol responses");
-		PrintAndLog("                   The binary format of the file is expected to be as follows: ");
-		PrintAndLog("                   <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
-		PrintAndLog("                   <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
-		PrintAndLog("                   <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
-		PrintAndLog("                  ... totalling N*24 bytes");
-		return 0;
-	}
+	if (strlen(Cmd)<1 || opt == 'h')
+		usage_hf_iclass_loclass();
+	
 	char fileName[FILE_PATH_SIZE] = {0};
-	if(opt == 'f') 	{
+	if (opt == 'f') {
 		if(param_getstr(Cmd, 1, fileName) > 0) {
 			return bruteforceFileNoKeys(fileName);
 		} else {
@@ -1308,7 +1332,7 @@ int CmdHFiClass_loclass(const char *Cmd) {
 			// no return?
 		}
 	}
-	else if(opt == 't') {
+	else if (opt == 't') {
 		int errors = testCipherUtils();
 		errors += testMAC();
 		errors += doKeyTests(0);
