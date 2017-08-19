@@ -50,6 +50,12 @@
 static int timeout = 4096;
 static int SendIClassAnswer(uint8_t *resp, int respLen, int delay);
 
+#define MODE_SIM_CSN        0
+#define MODE_EXIT_AFTER_MAC 1
+#define MODE_FULLSIM        2
+
+int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf);
+
 //-----------------------------------------------------------------------------
 // The software UART that receives commands from the reader, and its state
 // variables.
@@ -584,6 +590,7 @@ static RAMFUNC int ManchesterDecoding(int v) {
 // triggering so that we start recording at the point that the tag is moved
 // near the reader.
 //-----------------------------------------------------------------------------
+// turn off afterwards
 void RAMFUNC SnoopIClass(void) {
 
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
@@ -771,6 +778,7 @@ done:
 	Dbprintf("%x %x %x", Uart.byteCntMax, BigBuf_get_traceLen(), (int)Uart.output[0]);
 	LEDsoff();
 	set_tracing(false);	
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 }
 
 void rotateCSN(uint8_t* originalCSN, uint8_t* rotatedCSN) {
@@ -884,17 +892,17 @@ static void CodeIClassTagAnswer(const uint8_t *cmd, int len) {
 	ToSendReset();
 
 	// Send SOF
-	ToSend[ToSendMax++] = 0x1D;
+	ToSend[++ToSendMax] = 0x1D;
 	
 	int i;
 	for(i = 0; i < len; i++) {
 		uint8_t b = cmd[i];
-		ToSend[ToSendMax++] = encode4Bits(b & 0xF); //Least significant half
-		ToSend[ToSendMax++] = encode4Bits((b >> 4) & 0xF);//Most significant half
+		ToSend[++ToSendMax] = encode4Bits(b & 0xF); //Least significant half
+		ToSend[++ToSendMax] = encode4Bits((b >> 4) & 0xF);//Most significant half
 	}
 
 	// Send EOF
-	ToSend[ToSendMax++] = 0xB8;
+	ToSend[++ToSendMax] = 0xB8;
 	//lastProxToAirDuration  = 8*ToSendMax - 3*8 - 3*8;//Not counting zeroes in the beginning or end
 	// Convert from last byte pos to length
 	ToSendMax++;
@@ -913,11 +921,7 @@ static void CodeIClassTagSOF() {
 	// Convert from last byte pos to length
 	ToSendMax++;
 }
-#define MODE_SIM_CSN        0
-#define MODE_EXIT_AFTER_MAC 1
-#define MODE_FULLSIM        2
 
-int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf);
 /**
  * @brief SimulateIClass simulates an iClass card.
  * @param arg0 type of simulation
@@ -930,6 +934,7 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf);
  * @param arg2
  * @param datain
  */
+// turn off afterwards
 void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
 	uint32_t simType = arg0;
 	uint32_t numberOfCSNS = arg1;
@@ -1287,8 +1292,8 @@ static int SendIClassAnswer(uint8_t *resp, int respLen, int delay) {
 	int i = 0, d = 0;
 	uint8_t b = 0;
 
-	//FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR|FPGA_HF_SIMULATOR_MODULATE_424K);
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR|FPGA_HF_SIMULATOR_MODULATE_424K_8BIT);
+	//FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_424K);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_424K_8BIT);
 	
 	AT91C_BASE_SSC->SSC_THR = 0x00;
 	FpgaSetupSsc();
@@ -1390,10 +1395,10 @@ void CodeIClassCommand(const uint8_t * cmd, int len) {
 	ToSendReset();
 
 	// Start of Communication: 1 out of 4
-	ToSend[ToSendMax++] = 0xf0;
-	ToSend[ToSendMax++] = 0x00;
-	ToSend[ToSendMax++] = 0x0f;
-	ToSend[ToSendMax++] = 0x00;
+	ToSend[++ToSendMax] = 0xf0;
+	ToSend[++ToSendMax] = 0x00;
+	ToSend[++ToSendMax] = 0x0f;
+	ToSend[++ToSendMax] = 0x00;
 
 	// Modulate the bytes 
 	for (i = 0; i < len; i++) {
@@ -1402,19 +1407,19 @@ void CodeIClassCommand(const uint8_t * cmd, int len) {
 			for (k = 0; k < 4; k++) {
 
 				if (k == (b & 3))
-					ToSend[ToSendMax++] = 0xf0;
+					ToSend[++ToSendMax] = 0xf0;
 				else
-					ToSend[ToSendMax++] = 0x00;			
+					ToSend[++ToSendMax] = 0x00;			
 			}
 			b >>= 2;
 		}
 	}
 
 	// End of Communication
-	ToSend[ToSendMax++] = 0x00;
-	ToSend[ToSendMax++] = 0x00;
-	ToSend[ToSendMax++] = 0xf0;
-	ToSend[ToSendMax++] = 0x00;
+	ToSend[++ToSendMax] = 0x00;
+	ToSend[++ToSendMax] = 0x00;
+	ToSend[++ToSendMax] = 0xf0;
+	ToSend[++ToSendMax] = 0x00;
 
 	// Convert from last character reference to length
 	ToSendMax++;
@@ -1609,6 +1614,7 @@ uint8_t handshakeIclassTag(uint8_t *card_data){
 }
 
 // Reader iClass Anticollission
+// turn off afterwards
 void ReaderIClass(uint8_t arg0) {
 
 	uint8_t card_data[6 * 8] = {0};
@@ -1703,11 +1709,9 @@ void ReaderIClass(uint8_t arg0) {
 			// If caller requires that we get Conf, CC, AA, continue until we got it
 			if ( (result_status ^ FLAG_ICLASS_READER_CSN ^ flagReadConfig ^ flagReadCC ^ flagReadAA) == 0) {
 				cmd_send(CMD_ACK, result_status, 0, 0, card_data, sizeof(card_data) );
-				if (abort_after_read) {
-					LEDsoff();
-					set_tracing(false);	
-					return;
-				}
+				if (abort_after_read) 
+					goto out;
+
 				//Save that we already sent this....
 				memcpy(last_csn, card_data, 8);
 			}
@@ -1719,11 +1723,14 @@ void ReaderIClass(uint8_t arg0) {
 		cmd_send(CMD_ACK, 0xFF, 0, 0, card_data, 0);
 	else
 		cmd_send(CMD_ACK, 0, 0, 0, card_data, 0);		
-    
+
+out:    
     LEDsoff();
-	set_tracing(false);		
+	set_tracing(false);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 }
 
+// turn off afterwards
 void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 
 	uint8_t card_data[USB_CMD_DATA_SIZE] = {0};
@@ -1801,7 +1808,8 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 		memset(card_data, 0x0, USB_CMD_DATA_SIZE);
 		uint8_t failedRead = 0;
 		uint32_t stored_data_length = 0;
-				//then loop around remaining blocks
+
+		//then loop around remaining blocks
 		for (int block=0; block < cardsize; block++) {
 
 			read[1] = block;
@@ -1862,17 +1870,22 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 	);
 
 	LED_A_OFF();
-	set_tracing(false);		
+	set_tracing(false);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 }
 
+// turn off afterwards
 void iClass_ReadCheck(uint8_t	blockNo, uint8_t keyType) {
 	uint8_t readcheck[] = { keyType, blockNo };
 	uint8_t resp[] = {0,0,0,0,0,0,0,0};
 	size_t isOK = 0;
 	isOK = sendCmdGetResponseWithRetries(readcheck, sizeof(readcheck), resp, sizeof(resp), 6);
 	cmd_send(CMD_ACK,isOK,0,0,0,0);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 }
 
+// used with function select_and_auth (cmdhficlass.c) 
+// which needs to authenticate before doing more things like read/write
 void iClass_Authentication(uint8_t *MAC) {
 	uint8_t check[] = { ICLASS_CMD_CHECK, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 	uint8_t resp[ICLASS_BUFFER_SIZE];
@@ -1881,6 +1894,7 @@ void iClass_Authentication(uint8_t *MAC) {
 	isOK = sendCmdGetResponseWithRetries(check, sizeof(check), resp, 4, 6);
 	cmd_send(CMD_ACK,isOK,0,0,0,0);
 }
+
 bool iClass_ReadBlock(uint8_t blockNo, uint8_t *readdata) {
 	uint8_t readcmd[] = {ICLASS_CMD_READ_OR_IDENTIFY, blockNo, 0x00, 0x00}; //0x88, 0x00 // can i use 0C?
 	char bl = blockNo;
@@ -1888,21 +1902,22 @@ bool iClass_ReadBlock(uint8_t blockNo, uint8_t *readdata) {
 	readcmd[2] = rdCrc >> 8;
 	readcmd[3] = rdCrc & 0xff;
 	uint8_t resp[] = {0,0,0,0,0,0,0,0,0,0};
-	bool isOK = false;
 
-	//readcmd[1] = blockNo;
-	isOK = sendCmdGetResponseWithRetries(readcmd, sizeof(readcmd), resp, 10, 10);
+	bool isOK = sendCmdGetResponseWithRetries(readcmd, sizeof(readcmd), resp, 10, 10);
 	memcpy(readdata, resp, sizeof(resp));
 	return isOK;
 }
 
+// turn off afterwards
 void iClass_ReadBlk(uint8_t blockno) {
 	uint8_t readblockdata[] = {0,0,0,0,0,0,0,0,0,0};
 	bool isOK = false;
 	isOK = iClass_ReadBlock(blockno, readblockdata);
 	cmd_send(CMD_ACK, isOK, 0, 0, readblockdata, 8);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 }
 
+// turn off afterwards
 void iClass_Dump(uint8_t blockno, uint8_t numblks) {
 	uint8_t readblockdata[] = {0,0,0,0,0,0,0,0,0,0};
 	bool isOK = false;
@@ -1964,6 +1979,7 @@ bool iClass_WriteBlock_ext(uint8_t blockNo, uint8_t *data) {
 	return isOK;
 }
 
+// turn off afterwards
 void iClass_WriteBlock(uint8_t blockNo, uint8_t *data) {
 	bool isOK = iClass_WriteBlock_ext(blockNo, data);
 	if (isOK)
@@ -1971,9 +1987,13 @@ void iClass_WriteBlock(uint8_t blockNo, uint8_t *data) {
     else
 		Dbprintf("Write block [%02x] failed", blockNo);		
 	
-	cmd_send(CMD_ACK,isOK,0,0,0,0);	
+	cmd_send(CMD_ACK,isOK,0,0,0,0);
+    LEDsoff();
+	set_tracing(false);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);	
 }
 
+// turn off afterwards
 void iClass_Clone(uint8_t startblock, uint8_t endblock, uint8_t *data) {
 	int i, written = 0;
 	int total_block = (endblock - startblock) + 1;
