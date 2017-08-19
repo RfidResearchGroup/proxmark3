@@ -689,7 +689,6 @@ int readKeyFile(uint8_t key[8]) {
 	return retval;
 }
 
-
 int doKeyTests(uint8_t debuglevel)
 {
 	debug_print = debuglevel;

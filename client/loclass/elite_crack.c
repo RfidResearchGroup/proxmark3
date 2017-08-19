@@ -426,7 +426,6 @@ int bruteforceItem(dumpdata item, uint16_t keytable[])
 	return errors;
 }
 
-
 /**
  * From dismantling iclass-paper:
  *	Assume that an adversary somehow learns the first 16 bytes of hash2(K_cus ), i.e., y [0] and z [0] .
@@ -516,7 +515,7 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[])
 	free(attack);
 	t1 = msclock() - t1;
 	float diff = ((float)t1 / CLOCKS_PER_SEC );
-	prnlog("\nPerformed full crack in %.1f seconds",diff);
+	prnlog("\nPerformed full crack in %.1f seconds", diff);
 
 	// Pick out the first 16 bytes of the keytable.
 	// The keytable is now in 16-bit ints, where the upper 8 bits
@@ -524,8 +523,7 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[])
 	// master key calculation
 	uint8_t first16bytes[16] = {0};
 
-	for(i = 0 ; i < 16 ; i++)
-	{
+	for (i = 0 ; i < 16 ; i++) {
 		first16bytes[i] = keytable[i] & 0xFF;
 		
 		if(!(keytable[i] & CRACKED))
@@ -565,9 +563,9 @@ int bruteforceFile(const char *filename, uint16_t keytable[])
 	if (f) fclose(f);
 	
     if (bytes_read < fsize) {
-        prnlog("Error, could only read %d bytes (should be %d)",bytes_read, fsize );
+        prnlog("Error, could only read %d bytes (should be %d)", bytes_read, fsize );
     }
-	uint8_t res = bruteforceDump(dump,fsize,keytable);
+	uint8_t res = bruteforceDump(dump, fsize, keytable);
 	free(dump);
 	return res;
 }
@@ -589,11 +587,10 @@ int bruteforceFileNoKeys(const char *filename)
 // ----------------------------------------------------------------------------
 // TEST CODE BELOW
 // ----------------------------------------------------------------------------
-
 int _testBruteforce()
 {
 	int errors = 0;
-	if(true){
+	if (true) {
 		// First test
 		prnlog("[+] Testing crack from dumpfile...");
 
@@ -616,11 +613,11 @@ int _testBruteforce()
 
 		//Test a few variants
 		if (fileExists("iclass_dump.bin")){
-			errors |= bruteforceFile("iclass_dump.bin",keytable);
+			errors |= bruteforceFile("iclass_dump.bin", keytable);
 		} else if (fileExists("loclass/iclass_dump.bin")){
-			errors |= bruteforceFile("loclass/iclass_dump.bin",keytable);
+			errors |= bruteforceFile("loclass/iclass_dump.bin", keytable);
 		} else if (fileExists("client/loclass/iclass_dump.bin")){
-			errors |= bruteforceFile("client/loclass/iclass_dump.bin",keytable);
+			errors |= bruteforceFile("client/loclass/iclass_dump.bin", keytable);
 		} else {
 			prnlog("Error: The file iclass_dump.bin was not found!");
 		}
@@ -637,16 +634,14 @@ int _test_iclass_key_permutation()
 	permutekey(testcase, testcase_output);
 	permutekey_rev(testcase_output, testcase_output_rev);
 
-	if(memcmp(testcase_output, testcase_output_correct,8) != 0)
-	{
+	if (memcmp(testcase_output, testcase_output_correct,8) != 0) {
 		prnlog("Error with iclass key permute!");
 		printarr("testcase_output", testcase_output, 8);
 		printarr("testcase_output_correct", testcase_output_correct, 8);
 		return 1;
 
 	}
-	if(memcmp(testcase, testcase_output_rev, 8) != 0)
-	{
+	if (memcmp(testcase, testcase_output_rev, 8) != 0) {
 		prnlog("Error with reverse iclass key permute");
 		printarr("testcase", testcase, 8);
 		printarr("testcase_output_rev", testcase_output_rev, 8);
@@ -658,12 +653,12 @@ int _test_iclass_key_permutation()
 }
 int _testHash1()
 {
-    uint8_t csn[8]= {0x01,0x02,0x03,0x04,0xF7,0xFF,0x12,0xE0};
+    uint8_t expected[8] = {0x7E,0x72,0x2F,0x40,0x2D,0x02,0x51,0x42};
+    uint8_t csn[8] = {0x01,0x02,0x03,0x04,0xF7,0xFF,0x12,0xE0};
     uint8_t k[8] = {0};
     hash1(csn, k);
-    uint8_t expected[8] = {0x7E,0x72,0x2F,0x40,0x2D,0x02,0x51,0x42};
-    if(memcmp(k,expected,8) != 0)
-    {
+
+    if (memcmp(k,expected,8) != 0) {
         prnlog("Error with hash1!");
         printarr("calculated", k, 8);
         printarr("expected", expected, 8);
