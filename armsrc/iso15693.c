@@ -219,33 +219,38 @@ static void TransmitTo15693Tag(const uint8_t *cmd, int len, int *samples, int *w
     int c;
 	volatile uint32_t r;
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_TX);
-	if(*wait < 10) { *wait = 10; }
-
-//    for(c = 0; c < *wait;) {
-//        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-//            AT91C_BASE_SSC->SSC_THR = 0x00;		// For exact timing!
-//            ++c;
-//        }
-//        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-//            r = AT91C_BASE_SSC->SSC_RHR;
-//            (void)r;
-//        }
-//        WDT_HIT();
-//    }
+	
+	if (wait) {
+		if (*wait < 10) { *wait = 10; }
+		for (c = 0; c < *wait;) {
+			if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+				AT91C_BASE_SSC->SSC_THR = 0x00;		// For exact timing!
+				++c;
+			}
+			if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+				r = AT91C_BASE_SSC->SSC_RHR; (void)r;
+			}
+			WDT_HIT();
+		}
+	}
 
     c = 0;
     for(;;) {
-        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
             AT91C_BASE_SSC->SSC_THR = cmd[c];
             if( ++c >= len) break;
         }
-        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            r = AT91C_BASE_SSC->SSC_RHR;
-            (void)r;
+        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+            r = AT91C_BASE_SSC->SSC_RHR; (void)r;
         }
         WDT_HIT();
     }
-	*samples = (c + *wait) << 3;
+	if (samples) {
+		if (wait)
+			*samples = (c + *wait) << 3;
+		else
+			*samples = c << 3;	
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -256,20 +261,36 @@ static void TransmitTo15693Reader(const uint8_t *cmd, int len, int *samples, int
     int c = 0;
 	volatile uint32_t r;
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR|FPGA_HF_SIMULATOR_MODULATE_424K);
-	if(*wait < 10) { *wait = 10; }
-
+	if (wait) {
+		if (*wait < 10) { *wait = 10; }
+		for (c = 0; c < *wait;) {
+			if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+				AT91C_BASE_SSC->SSC_THR = 0x00;		// For exact timing!
+				++c;
+			}
+			if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+				r = AT91C_BASE_SSC->SSC_RHR; (void)r;
+			}
+			WDT_HIT();
+		}
+	}
+	
     for(;;) {
         if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
             AT91C_BASE_SSC->SSC_THR = cmd[c];
             if( ++c >= len) break;
         }
         if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            r = AT91C_BASE_SSC->SSC_RHR;
-            (void)r;
+            r = AT91C_BASE_SSC->SSC_RHR; (void)r;
         }
         WDT_HIT();
     }
-	*samples = (c + *wait) << 3;
+	if (samples) {
+		if (wait)
+			*samples = (c + *wait) << 3;
+		else
+			*samples = c << 3;	
+	}
 }
 
 

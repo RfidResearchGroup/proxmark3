@@ -240,32 +240,29 @@ int CmdHFiClassSnoop(const char *Cmd) {
 }
 
 int CmdHFiClassSim(const char *Cmd) {
-	uint8_t simType = 0;
-	uint8_t CSN[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
 	if (strlen(Cmd)<1) return usage_hf_iclass_sim();
 
+	uint8_t simType = 0;
+	uint8_t CSN[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+
 	simType = param_get8ex(Cmd, 0, 0, 10);
 
-	if(simType == 0)
-	{
+	if (simType == 0) {
 		if (param_gethex(Cmd, 1, CSN, 16)) {
 			PrintAndLog("A CSN should consist of 16 HEX symbols");
 			return usage_hf_iclass_sim();
 		}
-
 		PrintAndLog("--simtype:%02x csn:%s", simType, sprint_hex(CSN, 8));
 	}
 
-	if(simType > 3)
-	{
+	if (simType > 3) {
 		PrintAndLog("Undefined simptype %d", simType);
 		return usage_hf_iclass_sim();
 	}
 
-	uint8_t numberOfCSNs=0;
-	if(simType == 2)
-	{
+	uint8_t numberOfCSNs = 0;
+	if (simType == 2) {
 		UsbCommand c = {CMD_SIMULATE_TAG_ICLASS, {simType,NUM_CSNS}};
 		UsbCommand resp = {0};
 
@@ -283,7 +280,7 @@ int CmdHFiClassSim(const char *Cmd) {
 			0X0C, 0X90, 0X32, 0XF3, 0X5D, 0XFF, 0X12, 0XE0  // 10,13
 		};
 		
-/*		
+/*		00  13  94  7e  76  ff  12  e0
 		// pre-defined 15 CSN by Carl55
 		// but new entry[0] by iceman
 		uint8_t csns[8*NUM_CSNS] = {
@@ -328,13 +325,13 @@ int CmdHFiClassSim(const char *Cmd) {
 		 * CC are all zeroes, CSN is the same as was sent in
 		 **/
 		void* dump = malloc(datalen);
-		memset(dump,0,datalen);//<-- Need zeroes for the CC-field
+		memset(dump, 0, datalen);//<-- Need zeroes for the CC-field
 		uint8_t i = 0;
-		for(i = 0 ; i < NUM_CSNS ; i++) {
-			memcpy(dump+i*24, csns+i*8, 8); //CSN
+		for (i = 0 ; i < NUM_CSNS ; i++) {
+			memcpy(dump + i*24, csns + i*8, 8); //CSN
 			//8 zero bytes here...
 			//Then comes NR_MAC (eight bytes from the response)
-			memcpy(dump+i*24+16, resp.d.asBytes+i*8, 8);
+			memcpy(dump + i*24 + 16, resp.d.asBytes + i*8, 8);
 		}
 		/** Now, save to dumpfile **/
 		saveFile("iclass_mac_attack", "bin", dump, datalen);

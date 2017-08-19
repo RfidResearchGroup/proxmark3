@@ -236,7 +236,7 @@ int getUID(uint8_t *buf)
 // get a product description based on the UID
 //		uid[8] 	tag uid
 // returns description of the best match	
-static char* getTagInfo(uint8_t *uid) {
+static char* getTagInfo_15(uint8_t *uid) {
 	uint64_t myuid, mask;
 	int i = 0, best = -1;	
 	memcpy(&myuid, uid, sizeof(uint64_t));
@@ -381,8 +381,8 @@ int HF15Reader(const char *Cmd, bool verbose)
 		return 0;
 	}
 
-	PrintAndLog("Tag UID : %s",sprintUID(NULL,uid));
-	PrintAndLog("Tag Info: %s",getTagInfo(uid));
+	PrintAndLog("Tag UID : %s", sprintUID(NULL,uid));
+	PrintAndLog("Tag Info: %s", getTagInfo_15(uid));
 	return 1;
 }
 
@@ -447,18 +447,18 @@ int CmdHF15DumpMem(const char*Cmd) {
 		return 0;
 	}
 	
-	PrintAndLog("Reading memory from tag UID=%s",sprintUID(NULL,uid));
-	PrintAndLog("Tag Info: %s",getTagInfo(uid));
+	PrintAndLog("Reading memory from tag UID=%s", sprintUID(NULL, uid));
+	PrintAndLog("Tag Info: %s", getTagInfo_15(uid));
 
 	for (int retry=0; retry<5; retry++) {
 		
 		req[0]= ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | 
 		        ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS;
 		req[1]=ISO15_CMD_READ;
-		memcpy(&req[2],uid,8);
-		req[10]=blocknum;
-		reqlen=AddCrc(req,11);
-		c.arg[0]=reqlen;
+		memcpy(&req[2], uid, 8);
+		req[10] = blocknum;
+		reqlen = AddCrc(req, 11);
+		c.arg[0] = reqlen;
 	
 		SendCommand(&c);
 		
@@ -549,10 +549,10 @@ int CmdHF15CmdInquiry(const char *Cmd)
 	if (WaitForResponseTimeout(CMD_ACK,&resp,1000)) {
 		if (resp.arg[0]>=12) {
 		   recv = resp.d.asBytes;
-		   PrintAndLog("UID=%s",sprintUID(NULL,&recv[2]));
-		   PrintAndLog("Tag Info: %s",getTagInfo(&recv[2]));	
+		   PrintAndLog("UID=%s", sprintUID(NULL, &recv[2]));
+		   PrintAndLog("Tag Info: %s", getTagInfo_15(&recv[2]));	
 		} else {
-			PrintAndLog("Response to short, just %i bytes. No tag?\n",resp.arg[0]);
+			PrintAndLog("Response to short, just %i bytes. No tag?\n", resp.arg[0]);
 		}
 	} else {
 		PrintAndLog("timeout.");
@@ -813,14 +813,14 @@ int CmdHF15CmdSysinfo(const char *Cmd) {
 			if (!(recv[0] & ISO15_RES_ERROR)) {
 				*output=0; // reset outputstring
 				for ( i=1; i<resp.arg[0]-2; i++) {
-					sprintf(output+strlen(output),"%02X ",recv[i]);
+					sprintf(output+strlen(output), "%02X ", recv[i]);
 				}					
-				strcat(output,"\n\r");
-				strcat(output,"UID = ");
-				strcat(output,sprintUID(NULL,recv+2));
-				strcat(output,"\n\r");
-				strcat(output,getTagInfo(recv+2)); //ABC
-				strcat(output,"\n\r");
+				strcat(output, "\n\r");
+				strcat(output, "UID = ");
+				strcat(output, sprintUID(NULL, recv+2));
+				strcat(output, "\n\r");
+				strcat(output, getTagInfo_15(recv+2)); //ABC
+				strcat(output, "\n\r");
 				i=10;
 				if (recv[1] & 0x01) 
 					sprintf(output+strlen(output),"DSFID supported, set to %02X\n\r",recv[i++]);
