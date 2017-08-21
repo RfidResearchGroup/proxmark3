@@ -707,9 +707,10 @@ void RAMFUNC SnoopIClass(void) {
 
 				//if(!LogTrace(Uart.output,Uart.byteCnt, rsamples, Uart.parityBits,true)) break;
 				//if(!LogTrace(NULL, 0, Uart.endTime*16 - DELAY_READER_AIR2ARM_AS_SNIFFER, 0, true)) break;
-				uint8_t parity[Uart.byteCnt/8];
-				GetParity(Uart.output, Uart.byteCnt, parity);
-				LogTrace(Uart.output, Uart.byteCnt, time_start, time_stop, parity, true);
+				//uint8_t parity[Uart.byteCnt/8];
+				//GetParity(Uart.output, Uart.byteCnt, parity);
+				//LogTrace(Uart.output, Uart.byteCnt, time_start, time_stop, parity, true);
+				LogTrace(Uart.output, Uart.byteCnt, time_start, time_stop, NULL, true);
 
 				/* And ready to receive another command. */
 				Uart.state = STATE_UNSYNCD;
@@ -732,9 +733,10 @@ void RAMFUNC SnoopIClass(void) {
 				rsamples = samples - Demod.samples;
 				LED_B_ON();
 
-				uint8_t parity[Demod.len/8];
-				GetParity(Demod.output, Demod.len, parity);
-				LogTrace(Demod.output, Demod.len, time_start, time_stop, parity, false);
+				//uint8_t parity[Demod.len/8];
+				//GetParity(Demod.output, Demod.len, parity);
+				//LogTrace(Demod.output, Demod.len, time_start, time_stop, parity, false);
+				LogTrace(Demod.output, Demod.len, time_start, time_stop, NULL, false);
 
 				// And ready to receive another response.
 				memset(&Demod, 0, sizeof(Demod));
@@ -1474,9 +1476,10 @@ void ReaderTransmitIClass(uint8_t* frame, int len) {
 		LED_A_ON();
 
 	// Store reader command in buffer
-	uint8_t par[len/8];
-	GetParity(frame, len, par);
-	LogTrace(frame, len, rsamples, rsamples, par, true);
+	//uint8_t par[len/8];
+	//GetParity(frame, len, par);
+	//LogTrace(frame, len, rsamples, rsamples, par, true);
+	LogTrace(frame, len, rsamples, rsamples, NULL, true);
 }
 
 //-----------------------------------------------------------------------------
