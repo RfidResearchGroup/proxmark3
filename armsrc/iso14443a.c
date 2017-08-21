@@ -146,7 +146,6 @@ void iso14a_set_ATS_timeout(uint8_t *ats) {
 
 //-----------------------------------------------------------------------------
 // Generate the parity value for a byte sequence
-//
 //-----------------------------------------------------------------------------
 void GetParity(const uint8_t *pbtCmd, uint16_t iLen, uint8_t *par) {
 	uint16_t paritybit_cnt = 0;
@@ -777,11 +776,9 @@ int GetIso14443aCommandFromReader(uint8_t *received, uint8_t *parity, int *len) 
 	// clear RXRDY:
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
-    for(;;) {
+    while (!BUTTON_PRESS()) {
         WDT_HIT();
 
-        if(BUTTON_PRESS()) return false;
-		
         if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 			if(MillerDecoding(b, 0)) {
@@ -790,6 +787,7 @@ int GetIso14443aCommandFromReader(uint8_t *received, uint8_t *parity, int *len) 
 			}
  		}
     }
+	return false;
 }
 
 bool prepare_tag_modulation(tag_response_info_t* response_info, size_t max_buffer_size) {
