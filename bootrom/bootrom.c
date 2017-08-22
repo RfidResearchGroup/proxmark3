@@ -80,7 +80,7 @@ static void ConfigClocks(void)
 }
 
 static void Fatal(void) {
-  for(;;);
+  for(;;) {};
 }
 
 void UsbPacketReceived(uint8_t *packet, int len) {
@@ -265,37 +265,40 @@ void BootROM(void)
 		GPIO_LED_C			|
 		GPIO_LED_D;
 
-//    USB_D_PLUS_PULLUP_OFF();
+	// USB_D_PLUS_PULLUP_OFF();
 	usb_disable();
 	LED_D_OFF();
 	LED_C_ON();
 	LED_B_OFF();
 	LED_A_OFF();
 
+	// Set the first 256kb memory flashspeed
 	AT91C_BASE_EFC0->EFC_FMR = AT91C_MC_FWS_1FWS | MC_FLASH_MODE_MASTER_CLK_IN_MHZ(48);
-#ifdef HAS_512_FLASH
-	AT91C_BASE_EFC1->EFC_FMR = AT91C_MC_FWS_1FWS | MC_FLASH_MODE_MASTER_CLK_IN_MHZ(48);
-#endif	
+
+	// 9 = 256, 10+ is 512kb
+	uint8_t id = ( *(AT91C_DBGU_CIDR) & 0xF00) >> 8;	
+	if ( id > 9 )
+		AT91C_BASE_EFC1->EFC_FMR = AT91C_MC_FWS_1FWS | MC_FLASH_MODE_MASTER_CLK_IN_MHZ(48);
+
     // Initialize all system clocks
     ConfigClocks();
 
     LED_A_ON();
 
     int common_area_present = 0;
-    switch(AT91C_BASE_RSTC->RSTC_RSR & AT91C_RSTC_RSTTYP) {
+    switch (AT91C_BASE_RSTC->RSTC_RSR & AT91C_RSTC_RSTTYP) {
     case AT91C_RSTC_RSTTYP_WATCHDOG:
     case AT91C_RSTC_RSTTYP_SOFTWARE:
     case AT91C_RSTC_RSTTYP_USER:
 	    /* In these cases the common_area in RAM should be ok, retain it if it's there */
-	    if(common_area.magic == COMMON_AREA_MAGIC && common_area.version == 1) {
+	    if(common_area.magic == COMMON_AREA_MAGIC && common_area.version == 1)
 		    common_area_present = 1;
-	    }
 	    break;
     default: /* Otherwise, initialize it from scratch */
 	    break;
     }
 
-    if(!common_area_present){
+    if (!common_area_present){
 	    /* Common area not ok, initialize it */
 	    int i; 
 		/* Makeshift memset, no need to drag util.c into this */
@@ -308,12 +311,12 @@ void BootROM(void)
     }
 
     common_area.flags.bootrom_present = 1;
-    if(common_area.command == COMMON_AREA_COMMAND_ENTER_FLASH_MODE) {
+    if (common_area.command == COMMON_AREA_COMMAND_ENTER_FLASH_MODE) {
 	    common_area.command = COMMON_AREA_COMMAND_NONE;
 	    flash_mode(1);
-    } else if(BUTTON_PRESS()) {
+    } else if (BUTTON_PRESS()) {
 	    flash_mode(0);
-    } else if(_osimage_entry == 0xffffffffU) {
+    } else if (_osimage_entry == 0xffffffffU) {
 	    flash_mode(1);
     } else {
 	    // jump to Flash address of the osimage entry point (LSBit set for thumb mode)
