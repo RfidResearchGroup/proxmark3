@@ -222,7 +222,7 @@ int CmdLegicInfo(const char *Cmd) {
 	dcf = ((int)data[6] << 8) | (int)data[5];
 
 	// New unwritten media?
-	if(dcf == 0xFFFF) {
+	if (dcf == 0xFFFF) {
 
 		PrintAndLog("DCF: %d (%02x %02x), Token Type=NM (New Media)",
 			dcf,
@@ -234,7 +234,7 @@ int CmdLegicInfo(const char *Cmd) {
 
 		int fl = 0;
 
-		if(data[6] == 0xec) {
+		if (data[6] == 0xec) {
 			strncpy(token_type, "XAM", sizeof(token_type));
 			fl = 1;
 			stamp_len = 0x0c - (data[5] >> 4);
@@ -269,7 +269,7 @@ int CmdLegicInfo(const char *Cmd) {
 
 	} else {	// Is IM(-S) type of card...
 
-		if(data[7] == 0x9F && data[8] == 0xFF) {
+		if (data[7] == 0x9F && data[8] == 0xFF) {
 			bIsSegmented = 1;
 			strncpy(token_type, "IM-S", sizeof(token_type));
 		} else {
@@ -286,9 +286,9 @@ int CmdLegicInfo(const char *Cmd) {
 	}
 
 	// Makes no sence to show this on blank media...
-	if(dcf != 0xFFFF) {
+	if (dcf != 0xFFFF) {
 
-		if(bIsSegmented) {
+		if (bIsSegmented) {
 			PrintAndLog("WRP=%02u, WRC=%01u, RD=%01u, SSC=%02x",
 				data[7] & 0x0f,
 				(data[7] & 0x70) >> 4,
@@ -298,8 +298,8 @@ int CmdLegicInfo(const char *Cmd) {
 		}
 
 		// Header area is only available on IM-S cards, on master tokens this data is the master token data itself
-		if(bIsSegmented || dcf > 60000) {
-			if(dcf > 60000) {
+		if (bIsSegmented || dcf > 60000) {
+			if (dcf > 60000) {
 				PrintAndLog("Master token data");
 				PrintAndLog("%s", sprint_hex(data+8, 14));
 			} else {
@@ -317,155 +317,155 @@ int CmdLegicInfo(const char *Cmd) {
 	if (dcf > 60000)
 		goto out;
 	
-		PrintAndLog("\nADF: User Area");
-		PrintAndLog("------------------------------------------------------");
+	PrintAndLog("\nADF: User Area");
+	PrintAndLog("------------------------------------------------------");
 
-		if(bIsSegmented) {
+	if(bIsSegmented) {
 
-			// Data start point on segmented cards
-			i = 22;  
+		// Data start point on segmented cards
+		i = 22;  
 
-			// decode segments
-			for (segmentNum=1; segmentNum < 128; segmentNum++ )
-			{
-				segment_len = ((data[i+1] ^ crc) & 0x0f) * 256 + (data[i] ^ crc);
-				segment_flag = ((data[i+1] ^ crc) & 0xf0) >> 4;
-				wrp = (data[i+2] ^ crc);
-				wrc = ((data[i+3] ^ crc) & 0x70) >> 4;
-
-				bool hasWRC = (wrc > 0);
-				bool hasWRP = (wrp > wrc);
-				int wrp_len = (wrp - wrc);
-				int remain_seg_payload_len = (segment_len - wrp - 5);
-		
-				// validate segment-crc
-				segCrcBytes[0]=data[0];			//uid0
-				segCrcBytes[1]=data[1];			//uid1
-				segCrcBytes[2]=data[2];			//uid2
-				segCrcBytes[3]=data[3];			//uid3
-				segCrcBytes[4]=(data[i] ^ crc);   //hdr0
-				segCrcBytes[5]=(data[i+1] ^ crc); //hdr1
-				segCrcBytes[6]=(data[i+2] ^ crc); //hdr2
-				segCrcBytes[7]=(data[i+3] ^ crc); //hdr3
-
-				segCalcCRC = CRC8Legic(segCrcBytes, 8);
-				segCRC = data[i+4] ^ crc;
-
-				PrintAndLog("Segment %02u \nraw header | 0x%02X 0x%02X 0x%02X 0x%02X \nSegment len: %u,  Flag: 0x%X (valid:%01u, last:%01u), WRP: %02u, WRC: %02u, RD: %01u, CRC: 0x%02X (%s)",
-					segmentNum,
-					data[i] ^ crc,
-					data[i+1] ^ crc,
-					data[i+2] ^ crc,
-					data[i+3] ^ crc,
-					segment_len, 
-					segment_flag,
-					(segment_flag & 0x4) >> 2,
-					(segment_flag & 0x8) >> 3,
-					wrp,
-					wrc,
-					((data[i+3]^crc) & 0x80) >> 7,
-					segCRC,
-					( segCRC == segCalcCRC ) ? "OK" : "fail"
-				);
-
-				i += 5;
-    
-				if ( hasWRC ) {
-					PrintAndLog("WRC protected area:   (I %d | K %d| WRC %d)", i, k, wrc);
-					PrintAndLog("\nrow  | data");
-					PrintAndLog("-----+------------------------------------------------");
-
-					for ( k=i; k < (i + wrc); ++k)
-						data[k] ^= crc;
-
-					print_hex_break( data+i, wrc, 16);
-			
-					i += wrc;
-				}
-    
-				if ( hasWRP ) {
-					PrintAndLog("Remaining write protected area:  (I %d | K %d | WRC %d | WRP %d  WRP_LEN %d)",i, k, wrc, wrp, wrp_len);
-					PrintAndLog("\nrow  | data");
-					PrintAndLog("-----+------------------------------------------------");
-
-					for (k=i; k < (i+wrp_len); ++k)
-						data[k] ^= crc;
-			
-					print_hex_break( data+i, wrp_len, 16);
-			
-					i += wrp_len;
-			
-					// does this one work? (Answer: Only if KGH/BGH is used with BCD encoded card number! So maybe this will show just garbage...)
-					if( wrp_len == 8 )
-						PrintAndLog("Card ID: %2X%02X%02X", data[i-4]^crc, data[i-3]^crc, data[i-2]^crc);			
-				}
-    
-				PrintAndLog("Remaining segment payload:  (I %d | K %d | Remain LEN %d)", i, k, remain_seg_payload_len);
-				PrintAndLog("\nrow  | data");
-				PrintAndLog("-----+------------------------------------------------");
-
-				for ( k=i; k < (i+remain_seg_payload_len); ++k)
-					data[k] ^= crc;
-		
-				print_hex_break( data+i, remain_seg_payload_len, 16);
-    
-				i += remain_seg_payload_len;
-		
-				PrintAndLog("-----+------------------------------------------------\n");
-
-				// end with last segment
-			if (segment_flag & 0x8) 
-				goto out;
-
-			} // end for loop
-		
-		} else {
-
-			// Data start point on unsegmented cards
-			i = 8;
-
-			wrp = data[7] & 0x0F;
-			wrc = (data[7] & 0x70) >> 4;
+		// decode segments
+		for (segmentNum=1; segmentNum < 128; segmentNum++ )
+		{
+			segment_len = ((data[i+1] ^ crc) & 0x0f) * 256 + (data[i] ^ crc);
+			segment_flag = ((data[i+1] ^ crc) & 0xf0) >> 4;
+			wrp = (data[i+2] ^ crc);
+			wrc = ((data[i+3] ^ crc) & 0x70) >> 4;
 
 			bool hasWRC = (wrc > 0);
 			bool hasWRP = (wrp > wrc);
 			int wrp_len = (wrp - wrc);
-			int remain_seg_payload_len = (1024 - 22 - wrp);	// Any chance to get physical card size here!?
+			int remain_seg_payload_len = (segment_len - wrp - 5);
+	
+			// validate segment-crc
+			segCrcBytes[0]=data[0];			//uid0
+			segCrcBytes[1]=data[1];			//uid1
+			segCrcBytes[2]=data[2];			//uid2
+			segCrcBytes[3]=data[3];			//uid3
+			segCrcBytes[4]=(data[i] ^ crc);   //hdr0
+			segCrcBytes[5]=(data[i+1] ^ crc); //hdr1
+			segCrcBytes[6]=(data[i+2] ^ crc); //hdr2
+			segCrcBytes[7]=(data[i+3] ^ crc); //hdr3
 
-			PrintAndLog("Unsegmented card - WRP: %02u, WRC: %02u, RD: %01u",
+			segCalcCRC = CRC8Legic(segCrcBytes, 8);
+			segCRC = data[i+4] ^ crc;
+
+			PrintAndLog("Segment %02u \nraw header | 0x%02X 0x%02X 0x%02X 0x%02X \nSegment len: %u,  Flag: 0x%X (valid:%01u, last:%01u), WRP: %02u, WRC: %02u, RD: %01u, CRC: 0x%02X (%s)",
+				segmentNum,
+				data[i] ^ crc,
+				data[i+1] ^ crc,
+				data[i+2] ^ crc,
+				data[i+3] ^ crc,
+				segment_len, 
+				segment_flag,
+				(segment_flag & 0x4) >> 2,
+				(segment_flag & 0x8) >> 3,
 				wrp,
 				wrc,
-				(data[7] & 0x80) >> 7
+				((data[i+3]^crc) & 0x80) >> 7,
+				segCRC,
+				( segCRC == segCalcCRC ) ? "OK" : "fail"
 			);
 
+			i += 5;
+
 			if ( hasWRC ) {
-				PrintAndLog("WRC protected area:   (I %d | WRC %d)", i, wrc);
+				PrintAndLog("WRC protected area:   (I %d | K %d| WRC %d)", i, k, wrc);
 				PrintAndLog("\nrow  | data");
 				PrintAndLog("-----+------------------------------------------------");
+
+				for ( k=i; k < (i + wrc); ++k)
+					data[k] ^= crc;
+
 				print_hex_break( data+i, wrc, 16);
+		
 				i += wrc;
 			}
-    
+
 			if ( hasWRP ) {
-				PrintAndLog("Remaining write protected area:  (I %d | WRC %d | WRP %d | WRP_LEN %d)", i, wrc, wrp, wrp_len);
+				PrintAndLog("Remaining write protected area:  (I %d | K %d | WRC %d | WRP %d  WRP_LEN %d)",i, k, wrc, wrp, wrp_len);
 				PrintAndLog("\nrow  | data");
 				PrintAndLog("-----+------------------------------------------------");
-				print_hex_break( data + i, wrp_len, 16);
+
+				for (k=i; k < (i+wrp_len); ++k)
+					data[k] ^= crc;
+		
+				print_hex_break( data+i, wrp_len, 16);
+		
 				i += wrp_len;
-			
+		
 				// does this one work? (Answer: Only if KGH/BGH is used with BCD encoded card number! So maybe this will show just garbage...)
 				if( wrp_len == 8 )
-					PrintAndLog("Card ID: %2X%02X%02X", data[i-4], data[i-3], data[i-2]);
+					PrintAndLog("Card ID: %2X%02X%02X", data[i-4]^crc, data[i-3]^crc, data[i-2]^crc);			
 			}
-    
-			PrintAndLog("Remaining segment payload:  (I %d | Remain LEN %d)", i, remain_seg_payload_len);
+
+			PrintAndLog("Remaining segment payload:  (I %d | K %d | Remain LEN %d)", i, k, remain_seg_payload_len);
 			PrintAndLog("\nrow  | data");
 			PrintAndLog("-----+------------------------------------------------");
-			print_hex_break( data + i, remain_seg_payload_len, 16);
+
+			for ( k=i; k < (i+remain_seg_payload_len); ++k)
+				data[k] ^= crc;
+	
+			print_hex_break( data+i, remain_seg_payload_len, 16);
+
 			i += remain_seg_payload_len;
-		
+	
 			PrintAndLog("-----+------------------------------------------------\n");
+
+			// end with last segment
+			if (segment_flag & 0x8) 
+				goto out;
+
+		} // end for loop
+	
+	} else {
+
+		// Data start point on unsegmented cards
+		i = 8;
+
+		wrp = data[7] & 0x0F;
+		wrc = (data[7] & 0x70) >> 4;
+
+		bool hasWRC = (wrc > 0);
+		bool hasWRP = (wrp > wrc);
+		int wrp_len = (wrp - wrc);
+		int remain_seg_payload_len = (1024 - 22 - wrp);	// Any chance to get physical card size here!?
+
+		PrintAndLog("Unsegmented card - WRP: %02u, WRC: %02u, RD: %01u",
+			wrp,
+			wrc,
+			(data[7] & 0x80) >> 7
+		);
+
+		if ( hasWRC ) {
+			PrintAndLog("WRC protected area:   (I %d | WRC %d)", i, wrc);
+			PrintAndLog("\nrow  | data");
+			PrintAndLog("-----+------------------------------------------------");
+			print_hex_break( data+i, wrc, 16);
+			i += wrc;
 		}
+
+		if ( hasWRP ) {
+			PrintAndLog("Remaining write protected area:  (I %d | WRC %d | WRP %d | WRP_LEN %d)", i, wrc, wrp, wrp_len);
+			PrintAndLog("\nrow  | data");
+			PrintAndLog("-----+------------------------------------------------");
+			print_hex_break( data + i, wrp_len, 16);
+			i += wrp_len;
+		
+			// does this one work? (Answer: Only if KGH/BGH is used with BCD encoded card number! So maybe this will show just garbage...)
+			if( wrp_len == 8 )
+				PrintAndLog("Card ID: %2X%02X%02X", data[i-4], data[i-3], data[i-2]);
+		}
+
+		PrintAndLog("Remaining segment payload:  (I %d | Remain LEN %d)", i, remain_seg_payload_len);
+		PrintAndLog("\nrow  | data");
+		PrintAndLog("-----+------------------------------------------------");
+		print_hex_break( data + i, remain_seg_payload_len, 16);
+		i += remain_seg_payload_len;
+	
+		PrintAndLog("-----+------------------------------------------------\n");
+	}
 
 out:
 	free(data);

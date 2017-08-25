@@ -95,12 +95,14 @@ int GetWiegandFromPresco(const char *Cmd, uint32_t *sitecode, uint32_t *usercode
 		for (int index =0; index < strlen(id); ++index) {
 		
 			// Get value from number string.
-			if ( id[index] == '*' ) val = 10;
-			if ( id[index] == '#')	val = 11;		
+			if ( id[index] == '*' )
+				val = 10;
+			if ( id[index] == '#')
+				val = 11;
 			if ( id[index] >= 0x30 && id[index] <= 0x39 )
 				val = id[index] - 0x30;
 			
-				*fullcode += val;
+			*fullcode += val;
 			
 			// last digit is only added, not multipled.
 			if ( index < strlen(id)-1 ) 

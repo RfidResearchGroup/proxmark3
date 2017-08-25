@@ -205,8 +205,8 @@ int CmdHF14BCmdRaw (const char *Cmd) {
 	if (!power)
         flags |= ISO14B_DISCONNECT;
 
-    if (datalen>0)
-        flags |= ISO14B_RAW;
+    if (datalen > 0)
+		flags |= ISO14B_RAW;
 
 	// Max buffer is USB_CMD_DATA_SIZE
 	datalen = (datalen > USB_CMD_DATA_SIZE) ? USB_CMD_DATA_SIZE : datalen;
