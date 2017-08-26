@@ -62,15 +62,19 @@ struct receiver_arg {
 byte_t rx[sizeof(UsbCommand)];
 byte_t* prx = rx;
 
+#if defined(__linux__)
 static void showBanner(void){
+	printf("\n\n");
 	printf("██████╗ ███╗   ███╗ ████╗     ...Iceman fork\n");
 	printf("██╔══██╗████╗ ████║   ══█║\n");
 	printf("██████╔╝██╔████╔██║ ████╔╝\n");
 	printf("██╔═══╝ ██║╚██╔╝██║   ══█║    iceman@icesql.net\n");
 	printf("██║     ██║ ╚═╝ ██║ ████╔╝ https://github.com/iceman1001/proxmark3\n");
 	printf("╚═╝     ╚═╝     ╚═╝ ╚═══╝v3.0.0\n");
+	printf("\nKeep icemanfork alive, donate to: https://paypal.me/iceman1001/");
 	printf("\n\n");
 }
+#endif
 
 static void *uart_receiver(void *targ) {
 	struct receiver_arg *arg = (struct receiver_arg*)targ;
@@ -258,6 +262,11 @@ int main(int argc, char* argv[]) {
 		return 0;
 	}
 
+#if defined(__linux__)
+# ascii art doesn't work well on mingw :( 
+	showBanner();  
+#endif
+	
 	set_my_executable_path();
 	
 	bool usb_present = false;
