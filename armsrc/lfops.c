@@ -397,13 +397,16 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc)
 
 void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 {
-	#define BREAK_OUT_LIMIT 	
-	int i = 0;
-	uint8_t *buf = BigBuf_get_addr();
-
+	// note this may destroy the bigbuf so be sure this is called before now...
+	//FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+	
 	//FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_TOGGLE_MODE );
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
 	SpinDelay(20);
+
+	#define BREAK_OUT_LIMIT 	
+	int i = 0;
+	uint8_t *buf = BigBuf_get_addr();
 	
 	// set frequency,  get values from 'lf config' command
 	sample_config *sc = getSamplingConfig();
@@ -415,12 +418,10 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 	else
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, sc->divisor);
 	
-	
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;
 	AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
 	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
 
-	
 	for(;;) {
 
 		if (ledcontrol) LED_D_ON();
@@ -467,8 +468,10 @@ OUT:
 void SimulateTagLowFrequencyBidir(int divisor, int t0)
 {
 }
+// compose fc/5 fc/8  waveform (FSK1)
 
 // compose fc/8 fc/10 waveform (FSK2)
+// also manchester, 
 static void fc(int c, int *n)
 {
 	uint8_t *dest = BigBuf_get_addr();
@@ -516,6 +519,16 @@ static void fc(int c, int *n)
 		}
 	}
 }
+
+// special start of frame marker containing invalid bit sequences
+// this one is focused on HID,  with manchester encoding.
+static void fcSTT(int *n) {	
+	fc(8,  n);	fc(8,  n); // invalid   
+	fc(8,  n);	fc(10, n); // logical 0
+	fc(10, n);	fc(10, n); // invalid
+	fc(8,  n);	fc(10, n); // logical 0
+}
+
 // compose fc/X fc/Y waveform (FSKx)
 static void fcAll(uint8_t fc, int *n, uint8_t clock, uint16_t *modCnt) 
 {
@@ -525,6 +538,7 @@ static void fcAll(uint8_t fc, int *n, uint8_t clock, uint16_t *modCnt)
 	uint8_t mod = clock % fc;    //modifier
 	uint8_t modAdj = fc/mod;     //how often to apply modifier
 	bool modAdjOk = !(fc % mod); //if (fc % mod==0) modAdjOk = true;
+
 	// loop through clock - step field clock
 	for (uint8_t idx=0; idx < wavesPerClock; idx++){
 		// put 1/2 FC length 1's and 1/2 0's per field clock wave (to create the wave)
@@ -563,21 +577,22 @@ void CmdHIDsimTAG(int hi, int lo, int ledcontrol) {
 	/*
 	 HID tag bitstream format
 	 The tag contains a 44bit unique code. This is sent out MSB first in sets of 4 bits
-	 A 1 bit is represented as 6 fc8 and 5 fc10 patterns
-	 A 0 bit is represented as 5 fc10 and 6 fc8 patterns
+	 A 1 bit is represented as 6 fc8 and 5 fc10 patterns  (manchester 10) during 2 clock periods. (1bit = 1clock period)  
+	 A 0 bit is represented as 5 fc10 and 6 fc8 patterns  (manchester 01)
 	 A fc8 is inserted before every 4 bits
 	 A special start of frame pattern is used consisting a0b0 where a and b are neither 0
 	 nor 1 bits, they are special patterns (a = set of 12 fc8 and b = set of 10 fc10)
+
+	 FSK2a
+	 bit 1 = fc10
+	 bit 0 = fc8
 	*/
 
 	fc(0, &n);
-	// special start of frame marker containing invalid bit sequences
-	fc(8,  &n);	fc(8,  &n); // invalid
-	fc(8,  &n);	fc(10, &n); // logical 0
-	fc(10, &n);	fc(10, &n); // invalid
-	fc(8,  &n);	fc(10, &n); // logical 0
 
-	WDT_HIT();
+	// special start of frame marker containing invalid bit sequences
+	fcSTT(&n);
+	
 	// manchester encode bits 43 to 32
 	for (i=11; i>=0; i--) {
 		
@@ -590,7 +605,6 @@ void CmdHIDsimTAG(int hi, int lo, int ledcontrol) {
 		}
 	}
 
-	WDT_HIT();
 	// manchester encode bits 31 to 0
 	for (i=31; i>=0; i--) {
 		
@@ -602,8 +616,7 @@ void CmdHIDsimTAG(int hi, int lo, int ledcontrol) {
 			fc(8,  &n); fc(10, &n);		// high-low transition
 		}
 	}
-	WDT_HIT();
-	
+
 	if (ledcontrol)	LED_A_ON();
 	SimulateTagLowFrequency(n, 0, ledcontrol);
 	if (ledcontrol)	LED_A_OFF();
@@ -611,9 +624,8 @@ void CmdHIDsimTAG(int hi, int lo, int ledcontrol) {
 
 // prepare a waveform pattern in the buffer based on the ID given then
 // simulate a FSK tag until the button is pressed
-// arg1 contains fcHigh and fcLow, arg2 contains invert and clock
-void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *bits)
-{
+// arg1 contains fcHigh and fcLow, arg2 contains STT marker and clock
+void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *bits) {
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
 	// free eventually allocated BigBuf memory
@@ -626,18 +638,23 @@ void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *bits)
 	uint8_t fcLow = arg1 & 0xFF;
 	uint16_t modCnt = 0;
 	uint8_t clk = arg2 & 0xFF;
-	uint8_t invert = (arg2 >> 8) & 1;
+	uint8_t stt = (arg2 >> 8) & 1;
 
+	if ( stt ) {
+		//int fsktype = ( fcHigh == 8 && fcLow == 5) ? 1 : 2;			
+		//fcSTT(&n);
+	}
+	
 	for (i=0; i<size; i++){
-		
-		if (bits[i] == invert)
+		if (bits[i])
 			fcAll(fcLow, &n, clk, &modCnt);
 		else
 			fcAll(fcHigh, &n, clk, &modCnt);
 	}
+	
 	WDT_HIT();
 	
-	Dbprintf("Simulating with fcHigh: %d, fcLow: %d, clk: %d, invert: %d, n: %d", fcHigh, fcLow, clk, invert, n);
+	Dbprintf("Simulating with fcHigh: %d, fcLow: %d, clk: %d, STT: %d, n: %d", fcHigh, fcLow, clk, stt, n);
 
 	if (ledcontrol)	LED_A_ON();
 	SimulateTagLowFrequency(n, 0, ledcontrol);
@@ -1438,13 +1455,13 @@ void CopyIOtoT55x7(uint32_t hi, uint32_t lo) {
 // Clone Indala 64-bit tag by UID to T55x7
 void CopyIndala64toT55x7(uint32_t hi, uint32_t lo) {
 	//Program the 2 data blocks for supplied 64bit UID
-	// and the Config for Indala 64 format (RF/32;PSK1 with RF/2;Maxblock=2)
-	uint32_t data[] = { T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK1 | (2 << T55x7_MAXBLOCK_SHIFT), hi, lo};
+	// and the Config for Indala 64 format (RF/32;PSK2 with RF/2;Maxblock=2)
+	uint32_t data[] = { T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK2 | (2 << T55x7_MAXBLOCK_SHIFT), hi, lo};
 	//TODO add selection of chip for Q5 or T55x7
-	// data[0] = T5555_SET_BITRATE(32 | T5555_MODULATION_PSK1 | 2 << T5555_MAXBLOCK_SHIFT;
+	// data[0] = T5555_SET_BITRATE(32 | T5555_MODULATION_PSK2 | 2 << T5555_MAXBLOCK_SHIFT;
 
 	WriteT55xx(data, 0, 3);
-	//Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=2;Inverse data)
+	//Alternative config for Indala (Extended mode;RF/32;PSK2 with RF/2;Maxblock=2;Inverse data)
 	//	T5567WriteBlock(0x603E1042,0);
 }
 // Clone Indala 224-bit tag by UID to T55x7
@@ -1452,12 +1469,12 @@ void CopyIndala224toT55x7(uint32_t uid1, uint32_t uid2, uint32_t uid3, uint32_t 
 	//Program the 7 data blocks for supplied 224bit UID
 	uint32_t data[] = {0, uid1, uid2, uid3, uid4, uid5, uid6, uid7};
 	// and the block 0 for Indala224 format	
-	//Config for Indala (RF/32;PSK1 with RF/2;Maxblock=7)
-	data[0] = T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK1 | (7 << T55x7_MAXBLOCK_SHIFT);
+	//Config for Indala (RF/32;PSK2 with RF/2;Maxblock=7)
+	data[0] = T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK2 | (7 << T55x7_MAXBLOCK_SHIFT);
 	//TODO add selection of chip for Q5 or T55x7
-	// data[0] =  T5555_SET_BITRATE(32 | T5555_MODULATION_PSK1 | 7 << T5555_MAXBLOCK_SHIFT;
+	// data[0] =  T5555_SET_BITRATE(32 | T5555_MODULATION_PSK2 | 7 << T5555_MAXBLOCK_SHIFT;
 	WriteT55xx(data, 0, 8);
-	//Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=7;Inverse data)
+	//Alternative config for Indala (Extended mode;RF/32;PSK2 with RF/2;Maxblock=7;Inverse data)
 	//	T5567WriteBlock(0x603E10E2,0);
 }
 // clone viking tag to T55xx

@@ -467,8 +467,8 @@ uint8_t iclass_CRC_check(bool isResponse, uint8_t* data, uint8_t len)
 
 	uint8_t b1, b2;
 
-	if(!isResponse)//Commands to tag
-	{
+	//Commands to tag
+	if (!isResponse) {
 		/**
 		  These commands should have CRC. Total length leftmost
 		  4	READ
@@ -477,40 +477,39 @@ uint8_t iclass_CRC_check(bool isResponse, uint8_t* data, uint8_t len)
 		  14 UPDATE - secured, ends with signature instead
 		  4 PAGESEL
 		  **/
-		if(len == 4 || len == 12)//Covers three of them
-		{
+		//Covers three of them
+		if(len == 4 || len == 12) {
 			//Don't include the command byte
 			ComputeCrc14443(CRC_ICLASS, (data+1), len-3, &b1, &b2);
 			return b1 == data[len -2] && b2 == data[len-1];
 		}
 		return 2;
-	}else{
-		/**
-		These tag responses should have CRC. Total length leftmost
+	} 
+	/**
+	These tag responses should have CRC. Total length leftmost
 
-		10  READ		data[8] crc[2]
-		34  READ4		data[32]crc[2]
-		10  UPDATE	data[8] crc[2]
-		10 SELECT	csn[8] crc[2]
-		10  IDENTIFY  asnb[8] crc[2]
-		10  PAGESEL   block1[8] crc[2]
-		10  DETECT    csn[8] crc[2]
+	10  READ		data[8] crc[2]
+	34  READ4		data[32]crc[2]
+	10  UPDATE	data[8] crc[2]
+	10 SELECT	csn[8] crc[2]
+	10  IDENTIFY  asnb[8] crc[2]
+	10  PAGESEL   block1[8] crc[2]
+	10  DETECT    csn[8] crc[2]
 
-		These should not
+	These should not
 
-		4  CHECK		chip_response[4]
-		8  READCHECK data[8]
-		1  ACTALL    sof[1]
-		1  ACT	     sof[1]
+	4  CHECK		chip_response[4]
+	8  READCHECK data[8]
+	1  ACTALL    sof[1]
+	1  ACT	     sof[1]
 
-		In conclusion, without looking at the command; any response
-		of length 10 or 34 should have CRC
-		  **/
-		if(len != 10 && len != 34) return true;
+	In conclusion, without looking at the command; any response
+	of length 10 or 34 should have CRC
+	  **/
+	if(len != 10 && len != 34) return true;
 
-		ComputeCrc14443(CRC_ICLASS, data, len-2, &b1, &b2);
-		return b1 == data[len -2] && b2 == data[len-1];
-	}
+	ComputeCrc14443(CRC_ICLASS, data, len-2, &b1, &b2);
+	return b1 == data[len -2] && b2 == data[len-1];
 }
 
 bool is_last_record(uint16_t tracepos, uint8_t *trace, uint16_t traceLen)
@@ -568,21 +567,22 @@ bool merge_topaz_reader_frames(uint32_t timestamp, uint32_t *duration, uint16_t 
 
 uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, uint8_t protocol, bool showWaitCycles, bool markCRCBytes)
 {
+	// sanity check
+	if (tracepos + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint16_t) > traceLen) return traceLen;
+
 	bool isResponse;
 	uint16_t data_len, parity_len;
-	uint32_t duration;
+	uint32_t duration, timestamp, first_timestamp, EndOfTransmissionTimestamp;
 	uint8_t topaz_reader_command[9];
-	uint32_t timestamp, first_timestamp, EndOfTransmissionTimestamp;
 	char explanation[30] = {0};
-
-	if (tracepos + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint16_t) > traceLen) return traceLen;
 	
 	first_timestamp = *((uint32_t *)(trace));
 	timestamp = *((uint32_t *)(trace + tracepos));
-
 	tracepos += 4;
+
 	duration = *((uint16_t *)(trace + tracepos));
 	tracepos += 2;
+
 	data_len = *((uint16_t *)(trace + tracepos));
 	tracepos += 2;
 
@@ -640,7 +640,11 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 	for (int j = 0; j < data_len && j/16 < 16; j++) {
 
 		uint8_t parityBits = parityBytes[j>>3];
-		if (protocol != LEGIC && protocol != ISO_14443B && protocol != ISO_7816_4 &&  (isResponse || protocol == ISO_14443A)  && (oddparity8(frame[j]) != ((parityBits >> (7-(j&0x0007))) & 0x01))) {
+		if (protocol != LEGIC &&
+			protocol != ISO_14443B && 
+			protocol != ISO_7816_4 &&
+			(isResponse || protocol == ISO_14443A) &&
+			(oddparity8(frame[j]) != ((parityBits >> (7-(j&0x0007))) & 0x01))) {
 			snprintf(line[j/16]+(( j % 16) * 4),110, "%02x! ", frame[j]);
 		} else {
 			snprintf(line[j/16]+(( j % 16) * 4),110, "%02x  ", frame[j]);
