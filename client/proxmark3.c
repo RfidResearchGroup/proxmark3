@@ -263,7 +263,7 @@ int main(int argc, char* argv[]) {
 	}
 
 #if defined(__linux__)
-# ascii art doesn't work well on mingw :( 
+// ascii art doesn't work well on mingw :( 
 	showBanner();  
 #endif
 	
