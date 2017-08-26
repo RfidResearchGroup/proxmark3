@@ -11,10 +11,6 @@
 
 // MIFARE
 static int compare_uint64(const void *a, const void *b) {
-	// didn't work: (the result is truncated to 32 bits)
-	//return (*(int64_t*)b - *(int64_t*)a);
-
-	// better:
 	if (*(uint64_t*)b == *(uint64_t*)a) return 0;
 	if (*(uint64_t*)b < *(uint64_t*)a) return 1;
 	return -1;
@@ -35,8 +31,8 @@ static uint32_t intersection(uint64_t *list1, uint64_t *list2) {
 			p2++;
 		}
 		else {
-			while (compare_uint64(p1, p2) < 0) ++p1;
-			while (compare_uint64(p1, p2) > 0) ++p2;
+			while (compare_uint64(p1, p2) == -1) ++p1;
+			while (compare_uint64(p1, p2) == 1) ++p2;
 		}
 	}
 	*p3 = -1;
@@ -256,7 +252,7 @@ int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultk
 // Compare 16 Bits out of cryptostate
 int Compare16Bits(const void * a, const void * b) {
 	if ((*(uint64_t*)b & 0x00ff000000ff0000) == (*(uint64_t*)a & 0x00ff000000ff0000)) return 0;
-	if ((*(uint64_t*)b & 0x00ff000000ff0000) < (*(uint64_t*)a & 0x00ff000000ff0000)) return 1;
+	if ((*(uint64_t*)b & 0x00ff000000ff0000) > (*(uint64_t*)a & 0x00ff000000ff0000)) return 1;
 	return -1;
 }
 
@@ -345,8 +341,8 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 		}
 	}
 
-	p3->even = 0; p3->odd = 0;
-	p4->even = 0; p4->odd = 0;
+	*(uint64_t*)p3 = -1;
+	*(uint64_t*)p4 = -1;
 	statelists[0].len = p3 - statelists[0].head.slhead;
 	statelists[1].len = p4 - statelists[1].head.slhead;
 	statelists[0].tail.sltail = --p3;
