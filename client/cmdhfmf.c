@@ -1100,14 +1100,16 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 		}
 	}
 	
-	uint64_t key64 = 0;
-	// check if we can authenticate to sector
-	int res = mfCheckKeys(blockNo, keyType, true, 1, key, &key64);
-	if (res) {
-		PrintAndLog("Key is wrong. Can't authenticate to block:%3d key type:%c", blockNo, keyType ? 'B' : 'A');
-		return 3;
-	}	
-
+	if ( !know_target_key ) {
+		uint64_t key64 = 0;
+		// check if we can authenticate to sector
+		int res = mfCheckKeys(blockNo, keyType, true, 1, key, &key64);
+		if (res) {
+			PrintAndLog("Key is wrong. Can't authenticate to block:%3d key type:%c", blockNo, keyType ? 'B' : 'A');
+			return 3;
+		}	
+	}
+	
 	PrintAndLog("--target block no:%3d, target key type:%c, known target key: 0x%02x%02x%02x%02x%02x%02x%s, file action: %s, Slow: %s, Tests: %d ", 
 			trgBlockNo, 
 			trgKeyType?'B':'A', 
@@ -2444,7 +2446,7 @@ int CmdHF14AMfCSave(const char *Cmd) {
 }
 
 //needs nt, ar, at, Data to decrypt
-int CmdHf14MfDecryptBytes(const char *Cmd){
+int CmdHf14AMfDecryptBytes(const char *Cmd){
 	uint8_t data[50];
 	uint32_t nt 	= param_get32ex(Cmd,0,0,16);
 	uint32_t ar_enc = param_get32ex(Cmd,1,0,16);
@@ -2498,6 +2500,83 @@ int CmdHf14AMfSetMod(const char *Cmd) {
 	return 0;
 }
 
+int CmdHF14AMfice(const char *Cmd) {
+
+	uint8_t blockNo = 0;
+	uint8_t keyType = 0;
+	uint8_t trgBlockNo = 0;
+	uint8_t trgKeyType = 1;
+	bool slow = false;
+	bool initialize = true;
+	bool acquisition_completed = false;
+	uint32_t flags = 0;
+	uint32_t total_num_nonces = 0;
+	FILE *fnonces = NULL;
+	UsbCommand resp;
+
+	uint32_t part_limit = 3000;
+	uint32_t limit = param_get32ex(Cmd, 0, 50000, 10);
+	
+	printf("Collecting %u nonces \n", limit);
+	
+	if ((fnonces = fopen("nonces.bin","wb")) == NULL) { 
+		PrintAndLog("Could not create file nonces.bin");
+		return 3;
+	}
+
+	clearCommandBuffer();
+
+	uint64_t t1 = msclock();
+	
+	do {
+		if (ukbhit()) {
+			int gc = getchar(); (void)gc;
+			printf("\naborted via keyboard!\n");
+			break;
+		}
+		
+		flags = 0;
+		flags |= initialize ? 0x0001 : 0;
+		flags |= slow ? 0x0002 : 0;
+		UsbCommand c = {CMD_MIFARE_ACQUIRE_NONCES, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, flags}};
+		clearCommandBuffer();
+		SendCommand(&c);		
+	
+		if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) goto out;
+		if (resp.arg[0])  goto out;
+
+		uint32_t items = resp.arg[2];
+		if (fnonces) {
+			fwrite(resp.d.asBytes, 1, items*4, fnonces);
+			fflush(fnonces);
+		}
+	
+		total_num_nonces += items;
+		if ( total_num_nonces > part_limit ) {
+			printf("Total nonces %u\n", total_num_nonces);
+			part_limit += 3000;
+		}
+		
+		acquisition_completed = ( total_num_nonces > limit); 
+
+		initialize = false;
+		
+	} while (!acquisition_completed);
+
+out:
+	printf("time: %" PRIu64 " seconds\n", (msclock()-t1)/1000);
+	
+	if ( fnonces ) {
+		fflush(fnonces);
+		fclose(fnonces);
+	}
+
+	UsbCommand c = {CMD_MIFARE_ACQUIRE_NONCES, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, 4}};
+	clearCommandBuffer();
+	SendCommand(&c);
+	return 0;
+}
+
 static command_t CommandTable[] = {
 	{"help",		CmdHelp,				1, "This help"},
 	{"dbg",			CmdHF14AMfDbg,			0, "Set default debug mode"},
@@ -2526,8 +2605,9 @@ static command_t CommandTable[] = {
 	{"cgetsc",		CmdHF14AMfCGetSc,		0, "Read sector - Magic Chinese card"},
 	{"cload",		CmdHF14AMfCLoad,		0, "Load dump into magic Chinese card"},
 	{"csave",		CmdHF14AMfCSave,		0, "Save dump from magic Chinese card into file or emulator"},
-	{"decrypt",		CmdHf14MfDecryptBytes,  1, "[nt] [ar_enc] [at_enc] [data] - to decrypt snoop or trace"},
+	{"decrypt",		CmdHf14AMfDecryptBytes,  1, "[nt] [ar_enc] [at_enc] [data] - to decrypt snoop or trace"},
 	{"setmod",		CmdHf14AMfSetMod, 		0, "Set MIFARE Classic EV1 load modulation strength"},
+	{"ice",			CmdHF14AMfice,			0, "collect Mifare Classic nonces to file"},
 	{NULL, NULL, 0, NULL}
 };
 

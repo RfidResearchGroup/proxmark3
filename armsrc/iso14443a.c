@@ -213,8 +213,7 @@ void UartReset() {
 	Uart.parityBits = 0;				// holds 8 parity bits
 	Uart.startTime = 0;
 	Uart.endTime = 0;
-	
-	Uart.byteCntMax = 0;
+
 	Uart.posCnt = 0;
 	Uart.syncBit = 9999;
 }
@@ -344,14 +343,10 @@ static RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time) {
 					}
 				}
 			}
-		}
-			
+		}			
 	} 
-
     return false;	// not finished yet, need more data
 }
-
-
 
 //=============================================================================
 // ISO 14443 Type A - Manchester decoder
@@ -425,7 +420,7 @@ static RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non
 			else if ((Demod.twoBits & 0x01DC) == 0x01C0) Demod.syncBit = 1;
 			else if ((Demod.twoBits & 0x00EE) == 0x00E0) Demod.syncBit = 0;
 			if (Demod.syncBit != 0xFFFF) {
-				Demod.startTime = non_real_time?non_real_time:(GetCountSspClk() & 0xfffffff8);
+				Demod.startTime = non_real_time ? non_real_time : (GetCountSspClk() & 0xfffffff8);
 				Demod.startTime -= Demod.syncBit;
 				Demod.bitCount = offset;			// number of decoded data bits
 				Demod.state = DEMOD_MANCHESTER_DATA;
@@ -505,11 +500,10 @@ static RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non
 // "hf 14a sniff"
 //-----------------------------------------------------------------------------
 void RAMFUNC SniffIso14443a(uint8_t param) {
+	LEDsoff();
 	// param:
 	// bit 0 - trigger from first card answer
 	// bit 1 - trigger from first reader 7-bit request
-	LEDsoff();
-
 	iso14443a_setup(FPGA_HF_ISO14443A_SNIFFER);
 	
 	// Allocate memory from BigBuf for some buffers
@@ -528,8 +522,8 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 	
 	// The DMA buffer, used to stream samples from the FPGA
 	uint8_t *dmaBuf = BigBuf_malloc(DMA_BUFFER_SIZE);
-
 	uint8_t *data = dmaBuf;
+
 	uint8_t previous_data = 0;
 	int maxDataLen = 0;
 	int dataLen = 0;
@@ -554,33 +548,31 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 	// triggered == false -- to wait first for card
 	bool triggered = !(param & 0x03); 
 	
-	// And now we loop, receiving samples.
-	for(uint32_t rsamples = 0; true; ) {
+	uint32_t rsamples = 0;
 
-		if(BUTTON_PRESS()) {
-			DbpString("cancelled by button");
-			break;
-		}
-
-		LED_A_ON();
-		WDT_HIT();
+	DbpString("Starting to sniff");
+	
+	// loop and listen
+	while (!BUTTON_PRESS()) {
+        WDT_HIT();
+        LED_A_ON();
 
 		int register readBufDataP = data - dmaBuf;
 		int register dmaBufDataP = DMA_BUFFER_SIZE - AT91C_BASE_PDC_SSC->PDC_RCR;
-		if (readBufDataP <= dmaBufDataP){
+		if (readBufDataP <= dmaBufDataP)
 			dataLen = dmaBufDataP - readBufDataP;
-		} else {
+		else
 			dataLen = DMA_BUFFER_SIZE - readBufDataP + dmaBufDataP;
-		}
+		
 		// test for length of buffer
-		if(dataLen > maxDataLen) {
+		if (dataLen > maxDataLen) {
 			maxDataLen = dataLen;
-			if(dataLen > (9 * DMA_BUFFER_SIZE / 10)) {
+			if (dataLen > (9 * DMA_BUFFER_SIZE / 10)) {
 				Dbprintf("blew circular buffer! dataLen=%d", dataLen);
 				break;
 			}
 		}
-		if(dataLen < 1) continue;
+		if (dataLen < 1) continue;
 
 		// primary buffer was stopped( <-- we lost data!
 		if (!AT91C_BASE_PDC_SSC->PDC_RCR) {
@@ -596,9 +588,9 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 
 		LED_A_OFF();
 		
-		if (rsamples & 0x01) {				// Need two samples to feed Miller and Manchester-Decoder
+		if (rsamples & 0x01) {		// Need two samples to feed Miller and Manchester-Decoder
 
-			if(!TagIsActive) {		// no need to try decoding reader data if the tag is sending
+			if (!TagIsActive) {		// no need to try decoding reader data if the tag is sending
 				uint8_t readerdata = (previous_data & 0xF0) | (*data >> 4);
 				if (MillerDecoding(readerdata, (rsamples-1)*4)) {
 					LED_C_ON();
@@ -606,7 +598,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 					// check - if there is a short 7bit request from reader
 					if ((!triggered) && (param & 0x02) && (Uart.len == 1) && (Uart.bitCount == 7)) triggered = true;
 
-					if(triggered) {
+					if (triggered) {
 						if (!LogTrace(receivedCmd, 
 										Uart.len, 
 										Uart.startTime*16 - DELAY_READER_AIR2ARM_AS_SNIFFER,
@@ -614,9 +606,9 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 										Uart.parity, 
 										true)) break;
 					}
-					/* And ready to receive another command. */
+					/* ready to receive another command. */
 					UartReset();
-					/* And also reset the demod code, which might have been */
+					/* reset the demod code, which might have been */
 					/* false-triggered by the commands from the reader. */
 					DemodReset();
 					LED_B_OFF();
@@ -624,9 +616,10 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 				ReaderIsActive = (Uart.state != STATE_UNSYNCD);
 			}
 
-			if(!ReaderIsActive) {		// no need to try decoding tag data if the reader is sending - and we cannot afford the time
+			// no need to try decoding tag data if the reader is sending - and we cannot afford the time
+			if (!ReaderIsActive) {		
 				uint8_t tagdata = (previous_data << 4) | (*data & 0x0F);
-				if(ManchesterDecoding(tagdata, 0, (rsamples-1)*4)) {
+				if (ManchesterDecoding(tagdata, 0, (rsamples-1)*4)) {
 					LED_B_ON();
 
 					if (!LogTrace(receivedResponse, 
@@ -638,9 +631,9 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 
 					if ((!triggered) && (param & 0x01)) triggered = true;
 
-					// And ready to receive another response.
+					// ready to receive another response.
 					DemodReset();
-					// And reset the Miller decoder including itS (now outdated) input buffer
+					// reset the Miller decoder including its (now outdated) input buffer
 					UartInit(receivedCmd, receivedCmdPar);
 					LED_C_OFF();
 				} 
@@ -651,19 +644,16 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 		previous_data = *data;
 		rsamples++;
 		data++;
-		if(data == dmaBuf + DMA_BUFFER_SIZE) {
+		if (data == dmaBuf + DMA_BUFFER_SIZE) {
 			data = dmaBuf;
 		}
-	} // main cycle
+	} // end main loop
 
 	if (MF_DBGLEVEL >= 1) {
 		Dbprintf("maxDataLen=%d, Uart.state=%x, Uart.len=%d", maxDataLen, Uart.state, Uart.len);
 		Dbprintf("traceLen=%d, Uart.output[0]=%08x", BigBuf_get_traceLen(), (uint32_t)Uart.output[0]);
 	}
-	FpgaDisableSscDma();
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	LEDsoff();
-	set_tracing(false);	
+	switch_off(); 
 }
 
 //-----------------------------------------------------------------------------
@@ -779,9 +769,9 @@ int GetIso14443aCommandFromReader(uint8_t *received, uint8_t *parity, int *len) 
     while (!BUTTON_PRESS()) {
         WDT_HIT();
 
-        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-			if(MillerDecoding(b, 0)) {
+			if (MillerDecoding(b, 0)) {
 				*len = Uart.len;
 				return true;
 			}
@@ -1050,11 +1040,11 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t* data) {
 	tag_response_info_t* p_response;
 
 	LED_A_ON();
-	for(;;) {	
+	for (;;) {	
 		WDT_HIT();
 		
 		// Clean receive command buffer
-		if(!GetIso14443aCommandFromReader(receivedCmd, receivedCmdPar, &len)) {
+		if (!GetIso14443aCommandFromReader(receivedCmd, receivedCmdPar, &len)) {
 			Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ", tracing, BigBuf_get_traceLen());
 			break;
 		}	
@@ -1062,19 +1052,19 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t* data) {
 		
 		// Okay, look at the command now.
 		lastorder = order;
-		if(receivedCmd[0] == ISO14443A_CMD_REQA) { // Received a REQUEST
+		if (receivedCmd[0] == ISO14443A_CMD_REQA) { // Received a REQUEST
 			p_response = &responses[0]; order = 1;
-		} else if(receivedCmd[0] == ISO14443A_CMD_WUPA) { // Received a WAKEUP
+		} else if (receivedCmd[0] == ISO14443A_CMD_WUPA) { // Received a WAKEUP
 			p_response = &responses[0]; order = 6;
-		} else if(receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT) {	// Received request for UID (cascade 1)
+		} else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT) {	// Received request for UID (cascade 1)
 			p_response = &responses[1]; order = 2;
-		} else if(receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2) { 	// Received request for UID (cascade 2)
+		} else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2) { 	// Received request for UID (cascade 2)
 			p_response = &responses[2]; order = 20;
-		} else if(receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT) {	// Received a SELECT (cascade 1)
+		} else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT) {	// Received a SELECT (cascade 1)
 			p_response = &responses[3]; order = 3;
-		} else if(receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2) {	// Received a SELECT (cascade 2)
+		} else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2) {	// Received a SELECT (cascade 2)
 			p_response = &responses[4]; order = 30;		
-		} else if(receivedCmd[0] == ISO14443A_CMD_READBLOCK) {	// Received a (plain) READ
+		} else if (receivedCmd[0] == ISO14443A_CMD_READBLOCK) {	// Received a (plain) READ
 			uint8_t block = receivedCmd[1];
 			// if Ultralight or NTAG (4 byte blocks)
 			if ( tagType == 7 || tagType == 2 ) {
@@ -1096,7 +1086,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t* data) {
 				// We already responded, do not send anything with the EmSendCmd14443aRaw() that is called below
 				p_response = NULL;
 			}
-		} else if(receivedCmd[0] == MIFARE_ULEV1_FASTREAD) {	// Received a FAST READ (ranged read)				
+		} else if (receivedCmd[0] == MIFARE_ULEV1_FASTREAD) {	// Received a FAST READ (ranged read)				
 			uint8_t emdata[MAX_FRAME_SIZE];
 			// first 12 blocks of emu are [getversion answer - check tearing - pack - 0x00 - signature]
 			int start =  (receivedCmd[1]+12) * 4; 
@@ -1105,7 +1095,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t* data) {
 			AppendCrc14443a(emdata, len);
 			EmSendCmd(emdata, len+2);				
 			p_response = NULL;		
-		} else if(receivedCmd[0] == MIFARE_ULEV1_READSIG && tagType == 7) {	// Received a READ SIGNATURE -- 
+		} else if (receivedCmd[0] == MIFARE_ULEV1_READSIG && tagType == 7) {	// Received a READ SIGNATURE -- 
 			// first 12 blocks of emu are [getversion answer - check tearing - pack - 0x00 - signature]
 			uint16_t start = 4 * 4;
 			uint8_t emdata[34];
@@ -1149,7 +1139,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t* data) {
 				}
 			}
 			p_response = NULL;			
-		} else if(receivedCmd[0] == MIFARE_ULEV1_CHECKTEAR && tagType == 7) {	// Received a CHECK_TEARING_EVENT -- 
+		} else if (receivedCmd[0] == MIFARE_ULEV1_CHECKTEAR && tagType == 7) {	// Received a CHECK_TEARING_EVENT -- 
 			// first 12 blocks of emu are [getversion answer - check tearing - pack - 0x00 - signature]
 			uint8_t emdata[3];
 			uint8_t index = receivedCmd[1];
@@ -1163,10 +1153,10 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t* data) {
 			EmSendCmd(emdata, sizeof(emdata));	
 			}
 			p_response = NULL;		
-		} else if(receivedCmd[0] == ISO14443A_CMD_HALT) {	// Received a HALT
+		} else if (receivedCmd[0] == ISO14443A_CMD_HALT) {	// Received a HALT
 			LogTrace(receivedCmd, Uart.len, Uart.startTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
 			p_response = NULL;
-		} else if(receivedCmd[0] == MIFARE_AUTH_KEYA || receivedCmd[0] == MIFARE_AUTH_KEYB) {	// Received an authentication request				
+		} else if (receivedCmd[0] == MIFARE_AUTH_KEYA || receivedCmd[0] == MIFARE_AUTH_KEYB) {	// Received an authentication request				
 			if ( tagType == 7 ) {   // IF NTAG /EV1  0x60 == GET_VERSION, not a authentication request.
 				uint8_t emdata[10];
 				emlGetMemBt( emdata, 0, 8 );
@@ -1190,7 +1180,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t* data) {
 				//p_response = &responses[5]; 
 				order = 7;
 			}
-		} else if(receivedCmd[0] == ISO14443A_CMD_RATS) {	// Received a RATS request
+		} else if (receivedCmd[0] == ISO14443A_CMD_RATS) {	// Received a RATS request
 			if (tagType == 1 || tagType == 2) {	// RATS not supported
 				EmSend4bit(CARD_NACK_NA);
 				p_response = NULL;
@@ -1345,21 +1335,11 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t* data) {
 		}
 
 		// Count number of wakeups received after a halt
-		if(order == 6 && lastorder == 5) { happened++; }
+		if (order == 6 && lastorder == 5) { happened++; }
 
 		// Count number of other messages after a halt
-		if(order != 6 && lastorder == 5) { happened2++; }
+		if (order != 6 && lastorder == 5) { happened2++; }
 
-		// comment this limit if you want to simulation longer		
-		if (!tracing) {
-			DbpString("Trace Full. Simulation stopped.");
-			break;
-		}
-		// comment this limit if you want to simulation longer
-		if(cmdsRecvd > 999) {
-			DbpString("1000 commands later...");
-			break;
-		}
 		cmdsRecvd++;
 
 		if (p_response != NULL) {
@@ -1381,19 +1361,17 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t* data) {
 		}
 	}
 
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	set_tracing(false);
+	cmd_send(CMD_ACK,1,0,0,0,0);
+	switch_off(); 
+	
 	BigBuf_free_keep_EM();
-	LED_A_OFF();
-
+	
 	if (MF_DBGLEVEL >= 4){
 		Dbprintf("-[ Wake ups after halt  [%d]", happened);
 		Dbprintf("-[ Messages after halt  [%d]", happened2);
 		Dbprintf("-[ Num of received cmd  [%d]", cmdsRecvd);
 		Dbprintf("-[ Num of moebius tries [%d]", moebius_count);
 	}
-	
-	cmd_send(CMD_ACK,1,0,0,0,0);
 }
 
 // prepare a delayed transfer. This simply shifts ToSend[] by a number
@@ -1433,21 +1411,23 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
 
-	uint32_t ThisTransferTime = 0;
-
 	if (timing) {
-		if(*timing == 0) {										// Measure time
+		if (*timing == 0)										// Measure time
 			*timing = (GetCountSspClk() + 8) & 0xfffffff8;
-		} else {
+		else
 			PrepareDelayedTransfer(*timing & 0x00000007);		// Delay transfer (fine tuning - up to 7 MF clock ticks)
-		}
-		if(MF_DBGLEVEL >= 4 && GetCountSspClk() >= (*timing & 0xfffffff8)) Dbprintf("TransmitFor14443a: Missed timing");
-		while(GetCountSspClk() < (*timing & 0xfffffff8));		// Delay transfer (multiple of 8 MF clock ticks)
+		
+		if(MF_DBGLEVEL >= 4 && GetCountSspClk() >= (*timing & 0xfffffff8))
+			Dbprintf("TransmitFor14443a: Missed timing");
+		while (GetCountSspClk() < (*timing & 0xfffffff8)) {};		// Delay transfer (multiple of 8 MF clock ticks)
 		LastTimeProxToAirStart = *timing;
 	} else {
+		
+		uint32_t ThisTransferTime = 0;
+		
 		ThisTransferTime = ((MAX(NextTransferTime, GetCountSspClk()) & 0xfffffff8) + 8);
 
-		while(GetCountSspClk() < ThisTransferTime);
+		while (GetCountSspClk() < ThisTransferTime);
 
 		LastTimeProxToAirStart = ThisTransferTime;
 	}
@@ -1455,13 +1435,11 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
 	// clear TXRDY
 	AT91C_BASE_SSC->SSC_THR = SEC_Y;
 
-	uint16_t c = 0;
-	for(;;) {
+	uint16_t c = 0; 
+	while (c < len) {
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
 			AT91C_BASE_SSC->SSC_THR = cmd[c];
 			c++;
-			if(c >= len)
-				break;
 		}
 	}
 	
@@ -3087,21 +3065,17 @@ void RAMFUNC SniffMifare(uint8_t param) {
 		return;
 	}
 
+	// Signal field is off with the appropriate LED
 	LED_D_OFF();
 
 	MfSniffInit();
-
-	// And now we loop, receiving samples.
-	for(uint32_t sniffCounter = 0;; ) {
-
-		LED_A_ON();
+	
+	uint32_t sniffCounter = 0;
+    // loop and listen
+	while (!BUTTON_PRESS()) {		
 		WDT_HIT();
-	
-		if(BUTTON_PRESS()) {
-			DbpString("cancelled by button");
-			break;
-		}
-	
+		LED_A_ON();
+
  		if ((sniffCounter & 0x0000FFFF) == 0) {	// from time to time
 			// check if a transaction is completed (timeout after 2000ms).
 			// if yes, stop the DMA transfer and send what we have so far to the client
@@ -3119,9 +3093,11 @@ void RAMFUNC SniffMifare(uint8_t param) {
 				}				
 			}
 		}
-		
-		int register readBufDataP = data - dmaBuf;	// number of bytes we have processed so far
-		int register dmaBufDataP = DMA_BUFFER_SIZE - AT91C_BASE_PDC_SSC->PDC_RCR; // number of bytes already transferred
+
+		// number of bytes we have processed so far		
+		int register readBufDataP = data - dmaBuf;	
+		// number of bytes already transferred		
+		int register dmaBufDataP = DMA_BUFFER_SIZE - AT91C_BASE_PDC_SSC->PDC_RCR;
 
 		if (readBufDataP <= dmaBufDataP)			// we are processing the same block of data which is currently being transferred
 			dataLen = dmaBufDataP - readBufDataP;	// number of bytes still to be processed
@@ -3155,21 +3131,21 @@ void RAMFUNC SniffMifare(uint8_t param) {
 		if (sniffCounter & 0x01) {
 
 			// no need to try decoding tag data if the reader is sending
-			if(!TagIsActive) {		
+			if (!TagIsActive) {		
 				uint8_t readerdata = (previous_data & 0xF0) | (*data >> 4);
 				if(MillerDecoding(readerdata, (sniffCounter-1)*4)) {
 					LED_C_INV();
 
 					if (MfSniffLogic(receivedCmd, Uart.len, Uart.parity, Uart.bitCount, true)) break;
 
-					UartInit(receivedCmd, receivedCmdPar);
 					DemodReset();
+					UartInit(receivedCmd, receivedCmdPar);
 				}
 				ReaderIsActive = (Uart.state != STATE_UNSYNCD);
 			}
 			
 			// no need to try decoding tag data if the reader is sending
-			if(!ReaderIsActive) {		
+			if (!ReaderIsActive) {		
 				uint8_t tagdata = (previous_data << 4) | (*data & 0x0F);
 				if(ManchesterDecoding(tagdata, 0, (sniffCounter-1)*4)) {
 					LED_C_INV();
@@ -3192,11 +3168,9 @@ void RAMFUNC SniffMifare(uint8_t param) {
 
 	} // main cycle
 	
-	if (MF_DBGLEVEL >= 1) Dbprintf("maxDataLen=%x, Uart.state=%x, Uart.len=%x", maxDataLen, Uart.state, Uart.len);
+	if (MF_DBGLEVEL >= 1) 
+		Dbprintf("maxDataLen=%x, Uart.state=%x, Uart.len=%x", maxDataLen, Uart.state, Uart.len);
 	
-	FpgaDisableSscDma();
 	MfSniffEnd();
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	LEDsoff();
-	set_tracing(false);
+	switch_off(); 
 }

@@ -45,12 +45,10 @@
 
 static void iso14b_set_timeout(uint32_t timeout);
 static void iso14b_set_maxframesize(uint16_t size);
-static void switch_off(void);
 
 // the block number for the ISO14443-4 PCB  (used with APDUs)
 static uint8_t pcb_blocknum = 0;
 static uint32_t iso14b_timeout = FWT_TIMEOUT_14B;
-
 
 //=============================================================================
 // An ISO 14443 Type B tag. We listen for commands from the reader, using
@@ -169,14 +167,6 @@ static void iso14b_set_maxframesize(uint16_t size) {
 	
 	Uart.byteCntMax = size;
 	if(MF_DBGLEVEL >= 3) Dbprintf("ISO14443B Max frame size set to %d bytes", Uart.byteCntMax);
-}
-static void switch_off(void){	
-	if (MF_DBGLEVEL > 3) Dbprintf("switch_off");
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	SpinDelay(100);
-	FpgaDisableSscDma();
-	set_tracing(false);
-	LEDsoff();	
 }
 
 void AppendCrc14443b(uint8_t* data, int len) {
@@ -543,8 +533,7 @@ static void TransmitFor14443b_AsTag( uint8_t *response, uint16_t len) {
 			AT91C_BASE_SSC->SSC_THR = response[++i];
 		}
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-			b = AT91C_BASE_SSC->SSC_RHR;
-			(void)b;
+			b = AT91C_BASE_SSC->SSC_RHR;(void)b;
 		}			
 	}
 	
@@ -560,18 +549,18 @@ void SimulateIso14443bTag(uint32_t pupi) {
 	///////////// setup device.
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
-	// allocate command receive buffer
-	BigBuf_free();
-	BigBuf_Clear_ext(false);
-	clear_trace(); //sim
-	set_tracing(true);
-	
 	// connect Demodulated Signal to ADC:
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 
 	// Set up the synchronous serial port
 	FpgaSetupSsc();
 	/////////////
+	
+	// allocate command receive buffer
+	BigBuf_free();
+	BigBuf_Clear_ext(false);
+	clear_trace(); //sim
+	set_tracing(true);
 
 	uint16_t len, cmdsReceived = 0;
 	int cardSTATE = SIM_NOFIELD;
@@ -712,13 +701,9 @@ void SimulateIso14443bTag(uint32_t pupi) {
 		}
 			
 		++cmdsReceived;
-		// iceman, could add a switch to turn this on/off (if off, no logging?)
-		if(cmdsReceived > 1000) {
-			DbpString("14B Simulate, 1000 commands later...");
-			break;
-		}
 	}
-	if (MF_DBGLEVEL >= 1) Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ", tracing, BigBuf_get_traceLen());
+	if (MF_DBGLEVEL >= 2) 
+		Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ", tracing, BigBuf_get_traceLen());
 	switch_off(); //simulate
 }
 
@@ -1021,7 +1006,6 @@ static void GetTagSamplesFor14443bDemod() {
 	if ( Demod.len > 0 )
 		LogTrace(Demod.output, Demod.len, time_0, time_stop, NULL, false);
 }
-
 
 //-----------------------------------------------------------------------------
 // Transmit the command (to the tag) that was placed in ToSend[].
@@ -1382,17 +1366,16 @@ void iso14443b_setup() {
 //-----------------------------------------------------------------------------
 void ReadSTMemoryIso14443b(uint8_t numofblocks)
 {
-	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-
 	// Make sure that we start from off, since the tags are stateful;
 	// confusing things will happen if we don't reset them between reads.
-	switch_off();  // before ReadStMemory
+	switch_off();
+	
+	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
 	set_tracing(true);
 
-	uint8_t i = 0x00;
-
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+	
 	FpgaSetupSsc();
 
 	// Now give it time to spin up.
@@ -1400,6 +1383,8 @@ void ReadSTMemoryIso14443b(uint8_t numofblocks)
 	LED_D_ON();
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR | FPGA_HF_READER_RX_XCORR_848_KHZ);
 	SpinDelay(20);
+	
+	uint8_t i = 0x00;
 
 	// First command: wake up the tag using the INITIATE command
 	uint8_t cmd1[] = {ISO14443B_INITIATE, 0x00, 0x97, 0x5b};
@@ -1673,12 +1658,13 @@ void RAMFUNC SnoopIso14443b(void) {
 		}
 	}
 
-	switch_off(); // Snoop
+	switch_off();
 	
-	DbpString("Snoop statistics:");
-	Dbprintf("  Uart State: %x  ByteCount: %i  ByteCountMax: %i", Uart.state,  Uart.byteCnt,  Uart.byteCntMax);
-	Dbprintf("  Trace length: %i", BigBuf_get_traceLen());
-
+	if (MF_DBGLEVEL >= 2) {
+		DbpString("Snoop statistics:");
+		Dbprintf("  Uart State: %x  ByteCount: %i  ByteCountMax: %i", Uart.state,  Uart.byteCnt,  Uart.byteCntMax);
+		Dbprintf("  Trace length: %i", BigBuf_get_traceLen());
+	}
 	// free mem refs.
 	if ( upTo ) upTo = NULL;
 	

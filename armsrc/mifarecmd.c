@@ -598,6 +598,109 @@ int valid_nonce(uint32_t Nt, uint32_t NtEnc, uint32_t Ks1, uint8_t *parity) {
 	(oddparity8((Nt >> 8) & 0xFF) == ((parity[2]) ^ oddparity8((NtEnc >> 8) & 0xFF) ^ BIT(Ks1,0)))) ? 1 : 0;
 }
 
+#define AUTHENTICATION_TIMEOUT  848 //848			// card times out 1ms after wrong authentication (according to NXP documentation)
+#define PRE_AUTHENTICATION_LEADTIME 400		// some (non standard) cards need a pause after select before they are ready for first authentication 
+
+void MifareAcquireNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *datain) {
+
+	uint32_t cuid = 0;
+	uint8_t uid[10] = {0x00};
+	uint8_t cascade_levels = 0;	
+	uint8_t answer[MAX_MIFARE_FRAME_SIZE] = {0x00};
+	uint8_t par[1] = {0x00};
+	int16_t isOK = 0;
+	uint8_t buf[USB_CMD_DATA_SIZE] = {0x00};
+	uint32_t timeout = 0;
+	uint8_t blockNo = arg0 & 0xff;
+	uint8_t keyType = (arg0 >> 8) & 0xff;
+	bool initialize = flags & 0x0001;
+	bool field_off = flags & 0x0004;
+	
+	LED_A_ON();
+	LED_C_OFF();
+
+	BigBuf_free(); BigBuf_Clear_ext(false);	
+	clear_trace();
+	set_tracing(true);
+	
+	if (initialize) {
+		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+	}
+	
+	LED_C_ON();
+	
+	uint8_t dummy_answer = 0;	
+	uint16_t num_nonces = 0;
+	bool have_uid = false;
+	for (uint16_t i = 0; i <= USB_CMD_DATA_SIZE-4; i += 4 ) {
+
+		// Test if the action was cancelled
+		if(BUTTON_PRESS()) {
+			isOK = 2;
+			field_off = true;
+			break;
+		}
+
+		if (!have_uid) { // need a full select cycle to get the uid first
+			iso14a_card_select_t card_info;		
+			if(!iso14443a_select_card(uid, &card_info, &cuid, true, 0)) {
+				if (MF_DBGLEVEL >= 1)	Dbprintf("AcquireNonces: Can't select card (ALL)");
+				continue;
+			}
+			switch (card_info.uidlen) {
+				case 4 : cascade_levels = 1; break;
+				case 7 : cascade_levels = 2; break;
+				case 10: cascade_levels = 3; break;
+				default: break;
+			}
+			have_uid = true;	
+		} else { // no need for anticollision. We can directly select the card
+			if(!iso14443a_select_card(uid, NULL, NULL, false, cascade_levels)) {
+				if (MF_DBGLEVEL >= 1)	Dbprintf("AcquireNonces: Can't select card (UID)");
+				continue;
+			}
+		}
+		
+		// Transmit MIFARE_CLASSIC_AUTH	
+		uint8_t dcmd[4] = {0x60 + (keyType & 0x01), blockNo, 0x00, 0x00};
+		AppendCrc14443a(dcmd, 2);
+		ReaderTransmit(dcmd, sizeof(dcmd), NULL);
+		int len = ReaderReceive(answer, par);		
+
+		// send a dummy byte as reader response in order to trigger the cards authentication timeout
+		ReaderTransmit(&dummy_answer, 1, NULL);
+		timeout = GetCountSspClk() + AUTHENTICATION_TIMEOUT;
+
+		if (len != 4) {
+			if (MF_DBGLEVEL >= 1)	Dbprintf("AcquireNonces: Auth1 error");
+			continue;
+		}
+		
+		num_nonces++;
+		
+		// Save the tag nonce (nt)	
+		buf[i]   = answer[0];
+		buf[i+1] = answer[1];
+		buf[i+2] = answer[2];
+		buf[i+3] = answer[3];
+
+		// wait for the card to become ready again
+		while (GetCountSspClk() < timeout) {};	
+	}
+
+	LED_C_OFF();
+	LED_B_ON();
+	cmd_send(CMD_ACK, isOK, cuid, num_nonces-1, buf, sizeof(buf));
+	LED_B_OFF();
+
+	if (MF_DBGLEVEL >= 3)	DbpString("AcquireNonces finished");
+
+	if (field_off) {
+		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+		LEDsoff();
+		set_tracing(false);
+	}
+}
 
 //-----------------------------------------------------------------------------
 // acquire encrypted nonces in order to perform the attack described in
@@ -605,8 +708,6 @@ int valid_nonce(uint32_t Nt, uint32_t NtEnc, uint32_t Ks1, uint8_t *parity) {
 // Mifare Classic Cards" in Proceedings of the 22nd ACM SIGSAC Conference on 
 // Computer and Communications Security, 2015
 //-----------------------------------------------------------------------------
-#define AUTHENTICATION_TIMEOUT  848 //848			// card times out 1ms after wrong authentication (according to NXP documentation)
-#define PRE_AUTHENTICATION_LEADTIME 400		// some (non standard) cards need a pause after select before they are ready for first authentication 
 
 void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *datain)
 {
@@ -691,15 +792,16 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 
 		// nested authentication
 		uint16_t len = mifare_sendcmd_short(pcs, AUTH_NESTED, 0x60 + (targetKeyType & 0x01), targetBlockNo, receivedAnswer, par_enc, NULL);
+
+		// send a dummy byte as reader response in order to trigger the cards authentication timeout
+		ReaderTransmit(&dummy_answer, 1, NULL);
+		timeout = GetCountSspClk() + AUTHENTICATION_TIMEOUT;
+
 		if (len != 4) {
 			if (MF_DBGLEVEL >= 1)	Dbprintf("AcquireNonces: Auth2 error len=%d", len);
 			continue;
 		}
 	
-		// send a dummy byte as reader response in order to trigger the cards authentication timeout
-		ReaderTransmit(&dummy_answer, 1, NULL);
-		timeout = GetCountSspClk() + AUTHENTICATION_TIMEOUT;
-		
 		num_nonces++;
 		if (num_nonces % 2) {
 			memcpy(buf+i, receivedAnswer, 4);
@@ -1019,7 +1121,7 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 			timeout = GetCountSspClk() + AUTHENTICATION_TIMEOUT;
 			
 			// wait for the card to become ready again
-			while(GetCountSspClk() < timeout);
+			while(GetCountSspClk() < timeout) {};
 			
 			continue;
 		}

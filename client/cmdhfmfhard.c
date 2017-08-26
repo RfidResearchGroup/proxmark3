@@ -119,7 +119,7 @@ void hardnested_print_progress(uint32_t nonces, char *activity, float brute_forc
 		} else {
 			sprintf(brute_force_time_string, "%2.0fd", brute_force_time/(60*60*24));
 		}
-		PrintAndLog(" %7.0f | %7d | %-55s | %15.0f | %5s", (float)total_time/1000.0, nonces, activity, brute_force, brute_force_time_string);
+		PrintAndLog(" %7.0f | %7u | %-55s | %15.0f | %5s", (float)total_time/1000.0, nonces, activity, brute_force, brute_force_time_string);
 	}
 }
 

@@ -26,12 +26,6 @@
  #include "LCD.h"
 #endif
 
-// Craig Young - 14a stand-alone code
-#ifdef WITH_HF_YOUNG
- #include "iso14443a.h"
- #include "protocols.h"
-#endif
-
 //=============================================================================
 // A buffer where we can queue things up to be sent through the FPGA, for
 // any purpose (fake tag, as reader, whatever). We go MSB first, since that
@@ -44,8 +38,7 @@ int ToSendMax = -1;
 static int ToSendBit;
 struct common_area common_area __attribute__((section(".commonarea")));
 
-void ToSendReset(void)
-{
+void ToSendReset(void) {
 	ToSendMax = -1;
 	ToSendBit = 8;
 }
@@ -68,7 +61,7 @@ void ToSendStuffBit(int b) {
 	}
 }
 
-void PrintToSendBuffer(void){
+void PrintToSendBuffer(void) {
 	DbpString("Printing ToSendBuffer:");
 	Dbhexdump(ToSendMax, ToSend, 0);
 }
@@ -99,7 +92,7 @@ void print_result(char *name, uint8_t *buf, size_t len) {
 // Debug print functions, to go out over USB, to the usual PC-side client.
 //=============================================================================
 
-void DbpStringEx(char *str, uint32_t cmd){
+void DbpStringEx(char *str, uint32_t cmd) {
 	byte_t len = strlen(str);
 	cmd_send(CMD_DEBUG_PRINT_STRING,len, cmd,0,(byte_t*)str,len);
 }
@@ -168,8 +161,7 @@ void Dbhexdump(int len, uint8_t *d, bool bAsci) {
 // in ADC units (0 to 1023). Also a routine to average 32 samples and
 // return that.
 //-----------------------------------------------------------------------------
-static int ReadAdc(int ch)
-{
+static int ReadAdc(int ch) {
 	uint32_t d;
 
 	AT91C_BASE_ADC->ADC_CR = AT91C_ADC_SWRST;
@@ -199,15 +191,14 @@ static int ReadAdc(int ch)
 	return d;
 }
 
-int AvgAdc(int ch) // was static - merlok
-{
+// was static - merlok 
+int AvgAdc(int ch) {
 	int i, a = 0;
 	for(i = 0; i < 32; i++)
 		a += ReadAdc(ch);
 
 	return (a + 15) >> 5;
 }
-
 
 void MeasureAntennaTuning(void) {
 
@@ -275,7 +266,6 @@ void MeasureAntennaTuningHf(void) {
 	DbpString("cancelled");
 }
 
-
 void ReadMem(int addr) {
 	const uint8_t *data = ((uint8_t *)addr);
 
@@ -287,8 +277,7 @@ void ReadMem(int addr) {
 extern struct version_information version_information;
 /* bootrom version information is pointed to from _bootphase1_version_pointer */
 extern char *_bootphase1_version_pointer, _flash_start, _flash_end, _bootrom_start, _bootrom_end, __data_src_start__;
-void SendVersion(void)
-{
+void SendVersion(void) {
 	char temp[USB_CMD_DATA_SIZE]; /* Limited data payload in USB packets */
 	char VersionString[USB_CMD_DATA_SIZE] = { '\0' };
 
@@ -320,41 +309,9 @@ void SendVersion(void)
 	cmd_send(CMD_ACK, *(AT91C_DBGU_CIDR), text_and_rodata_section_size + compressed_data_section_size, 0, VersionString, strlen(VersionString));
 }
 
-// detection of which Standalone Modes is installed
-// (iceman)
-void printStandAloneModes(void){
-	#if defined(WITH_HF_YOUNG) || defined(WITH_LF_SAMYRUN)
-	DbpString("Installed StandAlone Mods");
-	#endif
-	#if defined(WITH_ICEMAN)
-	DbpString("LF sniff/clone/simulation -  aka IceRun (iceman)");
-	#endif
-	#if defined(WITH_HF_YOUNG) // WITH_HF_YOUNG
-	DbpString("HF Mifare sniff/simulation - (Craig Young)");
-	#endif
-	#if defined(WITH_LF_SAMYRUN)  // 
-	DbpString("LF HID26 standalone - aka SamyRun (Samy Kamkar)");
-	#endif
-	#if defined(WITH_LF_PROXBRUTE)
-	DbpString("LF HID ProxII bruteforce - aka Proxbrute (Brad Antoniewicz)");
-	#endif 
-	#if defined(WITH_LF_HIDCORP)
-	DbpString("LF HID corporate 1000 bruteforce - (Federi Codotta)");
-	#endif 
-	#if defined(WITH_HF_MATTYRUN)
-	DbpString("HF Mifare sniff/clone - aka MattyRun (Matta Real)");
-	#endif 
-	
-	//.. add your own standalone detection based on with compiler directive you are used.
-	// don't "reuse" the already taken ones, this will make things easier when trying to detect the different modes
-	// 2017-08-06  must adapt the makefile and have individual compilation flags for all mods
-	// 
-}
-
 // measure the USB Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
 // Note: this mimics GetFromBigbuf(), i.e. we have the overhead of the UsbCommand structure included.
-void printUSBSpeed(void) 
-{
+void printUSBSpeed(void) {
 	Dbprintf("USB Speed:");
 	Dbprintf("  Sending USB packets to client...");
 
@@ -397,11 +354,8 @@ void SendStatus(void) {
 	cmd_send(CMD_ACK,1,0,0,0,0);
 }
 
-#if defined(WITH_HF_YOUNG) || defined(WITH_LF_SAMYRUN)
-
-#define OPTS 2
-void StandAloneMode()
-{
+// Show some leds in a pattern to identify StandAlone mod is running
+void StandAloneMode(void) {
 	DbpString("Stand-alone mode! No PC necessary.");
 	// Oooh pretty -- notify user we're in elite samy mode now
 	LED(LED_RED,	200);
@@ -414,393 +368,37 @@ void StandAloneMode()
 	LED(LED_ORANGE, 200);
 	LED(LED_RED,	200);
 }
-#endif
-
-#ifdef WITH_HF_YOUNG
-
-typedef struct {
-	uint8_t uid[10];
-	uint8_t uidlen;
-	uint8_t atqa[2];
-	uint8_t sak;
-} __attribute__((__packed__)) card_clone_t;
-
-void StandAloneMode14a()
-{
-	StandAloneMode();
-	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-
-	int selected = 0, playing = 0, iGotoRecord = 0, iGotoClone = 0;
-	int cardRead[OPTS] = {0};
-
-	card_clone_t uids[OPTS];
-	iso14a_card_select_t card[OPTS];
-	uint8_t params = (MAGIC_SINGLE | MAGIC_DATAIN);
-					
-	LED(selected + 1, 0);
-
-	for (;;)
-	{
-		usb_poll();
-		WDT_HIT();
-		SpinDelay(300);
-
-		if (iGotoRecord == 1 || cardRead[selected] == 0)
-		{
-			iGotoRecord = 0;
-			LEDsoff();
-			LED(selected + 1, 0);
-			LED(LED_RED2, 0);
-
-			// record
-			Dbprintf("Enabling iso14443a reader mode for [Bank: %d]...", selected);
-			/* need this delay to prevent catching some weird data */
-			SpinDelay(500);
-			iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
-
-			for ( ; ; )
-			{
-				WDT_HIT();
-				if (BUTTON_PRESS()) {
-					if (cardRead[selected]) {
-						Dbprintf("Button press detected -- replaying card in bank[%d]", selected);
-						break;
-					}
-					else if (cardRead[(selected+1) % OPTS]) {
-						Dbprintf("Button press detected but no card in bank[%d] so playing from bank[%d]", selected, (selected+1)%OPTS);
-						selected = (selected+1) % OPTS;
-						break; // playing = 1;
-					}
-					else {
-						Dbprintf("Button press detected but no stored tag to play. (Ignoring button)");
-						SpinDelay(300);
-					}
-				}
-				if (!iso14443a_select_card(NULL, &card[selected], NULL, true, 0))
-					continue;
-				else
-				{
-					Dbprintf("Read UID:"); 
-					Dbhexdump(card[selected].uidlen, card[selected].uid, 0);
-					
-					if (memcmp(uids[(selected+1)%OPTS].uid, card[selected].uid, card[selected].uidlen ) == 0 ) {
-						Dbprintf("Card selected has same UID as what is stored in the other bank. Skipping.");
-					}
-					else {
-						
-						uids[selected].sak = card[selected].sak;
-						uids[selected].uidlen = card[selected].uidlen;						
-						memcpy(uids[selected].uid , card[selected].uid, uids[selected].uidlen);						
-						memcpy(uids[selected].atqa, card[selected].atqa, 2);
-												
-						if (uids[selected].uidlen > 4)
-							Dbprintf("Bank[%d] received a 7-byte UID", selected);
-						else
-							Dbprintf("Bank[%d] received a 4-byte UID", selected);
-					break;
-				}
-			}
-			}
-			Dbprintf("ATQA = %02X%02X", uids[selected].atqa[0], uids[selected].atqa[1]);
-			Dbprintf("SAK = %02X", uids[selected].sak);
-			LEDsoff();
-			LED(LED_GREEN,  200);
-			LED(LED_ORANGE, 200);
-			LED(LED_GREEN,  200);
-			LED(LED_ORANGE, 200);
-
-			LEDsoff();
-			LED(selected + 1, 0);
-
-			// Next state is replay:
-			playing = 1;
-
-			cardRead[selected] = 1;
-		}
-		/* MF Classic UID clone */
-		else if (iGotoClone==1)
-		{
-			iGotoClone=0;
-			LEDsoff();
-			LED(selected + 1, 0);
-			LED(LED_ORANGE, 250);
-
-			// magiccards holds 4bytes uid.  *usually*
-			uint32_t tmpuid = bytes_to_num(uids[selected].uid, 4);
-			
-			// record
-			Dbprintf("Preparing to Clone card [Bank: %d]; uid: %08x", selected, tmpuid);
-
-			// wait for button to be released
-			// Delay cloning until card is in place
-			while(BUTTON_PRESS())
-				WDT_HIT();
-
-			Dbprintf("Starting clone. [Bank: %d]", selected);
-			// need this delay to prevent catching some weird data
-			SpinDelay(500);
-			// Begin clone function here:
-			/* Example from client/mifarehost.c for commanding a block write for "magic Chinese" cards:
-					UsbCommand c = {CMD_MIFARE_CSETBLOCK, {params & (0xFE | (uid == NULL ? 0:1)), blockNo, 0}};
-					memcpy(c.d.asBytes, data, 16);
-					SendCommand(&c);
-
-				Block read is similar:
-					UsbCommand c = {CMD_MIFARE_CGETBLOCK, {params, blockNo, 0}};
-				We need to imitate that call with blockNo 0 to set a uid.
-
-				The get and set commands are handled in this file:
-					// Work with "magic Chinese" card
-					case CMD_MIFARE_CSETBLOCK:
-							MifareCSetBlock(c->arg[0], c->arg[1], c->d.asBytes);
-							break;
-					case CMD_MIFARE_CGETBLOCK:
-							MifareCGetBlock(c->arg[0], c->arg[1], c->d.asBytes);
-							break;
-
-				mfCSetUID provides example logic for UID set workflow:
-					-Read block0 from card in field with MifareCGetBlock()
-					-Configure new values without replacing reserved bytes
-							memcpy(block0, uid, 4); // Copy UID bytes from byte array
-							// Mifare UID BCC
-							block0[4] = block0[0]^block0[1]^block0[2]^block0[3]; // BCC on byte 5
-							Bytes 5-7 are reserved SAK and ATQA for mifare classic
-					-Use mfCSetBlock(0, block0, oldUID, wantWipe, MAGIC_SINGLE) to write it
-			*/
-			uint8_t oldBlock0[16] = {0}, newBlock0[16] = {0}, testBlock0[16] = {0};
-			// arg0 = Flags, arg1=blockNo
-			MifareCGetBlock(params, 0, oldBlock0);
-			if (oldBlock0[0] == 0 && oldBlock0[0] == oldBlock0[1]  && oldBlock0[1] == oldBlock0[2] && oldBlock0[2] == oldBlock0[3]) {
-				Dbprintf("No changeable tag detected. Returning to replay mode for bank[%d]", selected);
-				playing = 1;
-			}
-			else {
-				Dbprintf("UID from target tag: %02X%02X%02X%02X", oldBlock0[0], oldBlock0[1], oldBlock0[2], oldBlock0[3]);
-				memcpy(newBlock0, oldBlock0, 16);
-
-				// Copy uid for bank (2nd is for longer UIDs not supported if classic)
-				memcpy(newBlock0, uids[selected].uid, 4);
-				newBlock0[4] = newBlock0[0] ^ newBlock0[1] ^ newBlock0[2] ^ newBlock0[3];
-
-				// arg0 = workFlags, arg1 = blockNo, datain
-				MifareCSetBlock(params, 0, newBlock0);
-				MifareCGetBlock(params, 0, testBlock0);
-				
-				if (memcmp(testBlock0, newBlock0, 16)==0) {
-					DbpString("Cloned successfull!");
-					cardRead[selected] = 0; // Only if the card was cloned successfully should we clear it
-					playing = 0;
-					iGotoRecord = 1;
-					selected = (selected + 1) % OPTS;
-				} else {
-					Dbprintf("Clone failed. Back to replay mode on bank[%d]", selected);
-					playing = 1;
-				}
-			}
-			LEDsoff();
-			LED(selected + 1, 0);
-		}
-		// Change where to record (or begin playing)
-		else if (playing==1) // button_pressed == BUTTON_SINGLE_CLICK && cardRead[selected])
-		{
-			LEDsoff();
-			LED(selected + 1, 0);
-
-			// Begin transmitting
-			LED(LED_GREEN, 0);
-			DbpString("Playing");
-			for ( ; ; ) {
-				WDT_HIT();
-				int button_action = BUTTON_HELD(1000);
-				if (button_action == 0) { // No button action, proceed with sim
-
-					uint8_t flags = FLAG_4B_UID_IN_DATA;
-					uint8_t data[USB_CMD_DATA_SIZE] = {0}; // in case there is a read command received we shouldn't break
-
-					memcpy(data, uids[selected].uid, uids[selected].uidlen);
-					
-					uint64_t tmpuid = bytes_to_num(uids[selected].uid, uids[selected].uidlen);
-								
-					if (  uids[selected].uidlen == 7 ) {
-						flags = FLAG_7B_UID_IN_DATA;
-						Dbprintf("Simulating ISO14443a tag with uid: %014" PRIx64 " [Bank: %d]", tmpuid, selected);
-					} else {
-						Dbprintf("Simulating ISO14443a tag with uid: %08" PRIx64 " [Bank: %d]", tmpuid, selected);
-					}
-					
-					if (uids[selected].sak == 0x08 && uids[selected].atqa[0] == 0x04 && uids[selected].atqa[1] == 0) {
-						DbpString("Mifare Classic 1k");
-						SimulateIso14443aTag(1, flags, data);
-					} else if (uids[selected].sak == 0x18 && uids[selected].atqa[0] == 0x02 && uids[selected].atqa[1] == 0) {
-						DbpString("Mifare Classic 4k (4b uid)");
-						SimulateIso14443aTag(8, flags, data);
-					} else if (uids[selected].sak == 0x08 && uids[selected].atqa[0] == 0x44 && uids[selected].atqa[1] == 0) {
-						DbpString("Mifare Classic 4k (7b uid)");
-						SimulateIso14443aTag(8, flags, data);
-					} else if (uids[selected].sak == 0x00 && uids[selected].atqa[0] == 0x44 && uids[selected].atqa[1] == 0) {
-						DbpString("Mifare Ultralight");
-						SimulateIso14443aTag(2, flags, data);
-					} else if (uids[selected].sak == 0x20 && uids[selected].atqa[0] == 0x04 && uids[selected].atqa[1] == 0x03) {
-						DbpString("Mifare DESFire");
-						SimulateIso14443aTag(3, flags, data);
-					}
-					else {
-						Dbprintf("Unrecognized tag type -- defaulting to Mifare Classic emulation");
-						SimulateIso14443aTag(1, flags, data);
-					}
-				}
-				else if (button_action == BUTTON_SINGLE_CLICK) {
-					selected = (selected + 1) % OPTS;
-					Dbprintf("Done playing. Switching to record mode on bank %d", selected);
-					iGotoRecord = 1;
-					break;
-				}
-				else if (button_action == BUTTON_HOLD) {
-					Dbprintf("Playtime over. Begin cloning...");
-					iGotoClone = 1;
-					break;
-				}
-				WDT_HIT();
-			}
-
-			/* We pressed a button so ignore it here with a delay */
-			SpinDelay(300);
-			LEDsoff();
-			LED(selected + 1, 0);
-
-		}
-	}
-}
-#elif WITH_LF_SAMYRUN
-// samy's sniff and repeat routine for LF
-void SamyRun()
-{
-	StandAloneMode();
-	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-
-	int high[OPTS], low[OPTS];
-	int selected = 0;
-	int playing = 0;
-	int cardRead = 0;
-
-	// Turn on selected LED
-	LED(selected + 1, 0);
-
-	for (;;) {
-		
-		WDT_HIT();
-		
-		// exit from SammyRun,   send a usbcommand.
-		if (usb_poll_validate_length()) {
-			break;
-		}
-
-		// Was our button held down or pressed?
-		int button_pressed = BUTTON_HELD(1000);
-		SpinDelay(300);
-
-		// Button was held for a second, begin recording
-		if (button_pressed > 0 && cardRead == 0)
-		{
-			LEDsoff();
-			LED(selected + 1, 0);
-			LED(LED_RED2, 0);
-
-			// record
-			DbpString("Starting recording");
-
-			// wait for button to be released
-			while(BUTTON_PRESS())
-				WDT_HIT();
-
-			/* need this delay to prevent catching some weird data */
-			SpinDelay(500);
-
-			CmdHIDdemodFSK(1, &high[selected], &low[selected], 0);
-			Dbprintf("Recorded %x %x %08x", selected, high[selected], low[selected]);
-
-			LEDsoff();
-			LED(selected + 1, 0);
-			// Finished recording
-			// If we were previously playing, set playing off
-			// so next button push begins playing what we recorded
-			playing = 0;			
-			cardRead = 1;	
-		}
-		else if (button_pressed > 0 && cardRead == 1) {
-			LEDsoff();
-			LED(selected + 1, 0);
-			LED(LED_ORANGE, 0);
-
-			// record
-			Dbprintf("Cloning %x %x %08x", selected, high[selected], low[selected]);
-
-			// wait for button to be released
-			while(BUTTON_PRESS())
-				WDT_HIT();
-
-			/* need this delay to prevent catching some weird data */
-			SpinDelay(500);
-
-			CopyHIDtoT55x7(0, high[selected], low[selected], 0);
-			Dbprintf("Cloned %x %x %08x", selected, high[selected], low[selected]);
-
-			LEDsoff();
-			LED(selected + 1, 0);
-			// Finished recording
-
-			// If we were previously playing, set playing off
-			// so next button push begins playing what we recorded
-			playing = 0;			
-			cardRead = 0;			
-		}
-
-		// Change where to record (or begin playing)
-		else if (button_pressed) {
-			// Next option if we were previously playing
-			if (playing)
-				selected = (selected + 1) % OPTS;
-			playing = !playing;
-
-			LEDsoff();
-			LED(selected + 1, 0);
-
-			// Begin transmitting
-			if (playing)
-			{
-				LED(LED_GREEN, 0);
-				DbpString("Playing");
-				// wait for button to be released
-				while(BUTTON_PRESS())
-					WDT_HIT();
-				
-				Dbprintf("%x %x %08x", selected, high[selected], low[selected]);
-				CmdHIDsimTAG(high[selected], low[selected], 0);		
-				DbpString("Done playing");
-				
-				if (BUTTON_HELD(1000) > 0) {
-					DbpString("Exiting");
-					LEDsoff();
-					return;
-				}
-
-				/* We pressed a button so ignore it here with a delay */
-				SpinDelay(300);
-
-				// when done, we're done playing, move to next option
-				selected = (selected + 1) % OPTS;
-				playing = !playing;
-				LEDsoff();
-				LED(selected + 1, 0);
-			}
-			else
-				while(BUTTON_PRESS())
-					WDT_HIT();
-		}
-	}
+// detection of which Standalone Modes is installed
+// (iceman)
+void printStandAloneModes(void) {
+	#if defined(WITH_HF_YOUNG) || defined(WITH_LF_SAMYRUN)
+	DbpString("Installed StandAlone Mods");
+	#endif
+	#if defined(WITH_LF_ICERUN)
+	DbpString("   LF sniff/clone/simulation -  aka IceRun (iceman)");
+	#endif
+	#if defined(WITH_HF_YOUNG)
+	DbpString("   HF Mifare sniff/simulation - (Craig Young)");
+	#endif
+	#if defined(WITH_LF_SAMYRUN)
+	DbpString("   LF HID26 standalone - aka SamyRun (Samy Kamkar)");
+	#endif
+	#if defined(WITH_LF_PROXBRUTE)
+	DbpString("   LF HID ProxII bruteforce - aka Proxbrute (Brad Antoniewicz)");
+	#endif 
+	#if defined(WITH_LF_HIDCORP)
+	DbpString("   LF HID corporate 1000 bruteforce - (Federi Codotta)");
+	#endif 
+	#if defined(WITH_HF_MATTYRUN)
+	DbpString("   HF Mifare sniff/clone - aka MattyRun (Matta Real)");
+	#endif 
+	
+	//.. add your own standalone detection based on with compiler directive you are used.
+	// don't "reuse" the already taken ones, this will make things easier when trying to detect the different modes
+	// 2017-08-06  must adapt the makefile and have individual compilation flags for all mods
+	// 
 }
 
-#endif
 /*
 OBJECTIVE
 Listen and detect an external reader. Determine the best location
@@ -950,8 +548,7 @@ void ListenReaderField(int limit) {
 	}
 }
 
-void UsbPacketReceived(uint8_t *packet, int len)
-{
+void UsbPacketReceived(uint8_t *packet, int len) {
 	UsbCommand *c = (UsbCommand *)packet;
 
 	//Dbprintf("received %d bytes, with command: 0x%04x and args: %d %d %d",len,c->cmd,c->arg[0],c->arg[1],c->arg[2]);
@@ -1203,6 +800,9 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_MIFARE_ACQUIRE_ENCRYPTED_NONCES:
 			MifareAcquireEncryptedNonces(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;
+		case CMD_MIFARE_ACQUIRE_NONCES:
+			MifareAcquireNonces(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
+			break;
 		case CMD_MIFARE_NESTED:
 			MifareNested(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;
@@ -1305,7 +905,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 #ifdef WITH_ICLASS
 		// Makes use of ISO14443a FPGA Firmware
 		case CMD_SNOOP_ICLASS:
-			SnoopIClass();
+			SniffIClass();
 			break;
 		case CMD_SIMULATE_TAG_ICLASS:
 			SimulateIClass(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
@@ -1502,8 +1102,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 	}
 }
 
-void  __attribute__((noreturn)) AppMain(void)
-{
+void  __attribute__((noreturn)) AppMain(void) {
 	SpinDelay(100);
 	clear_trace();
 	if(common_area.magic != COMMON_AREA_MAGIC || common_area.version != 1) {
@@ -1554,17 +1153,15 @@ void  __attribute__((noreturn)) AppMain(void)
 		}
 		WDT_HIT();
 
-#ifdef WITH_LF_SAMYRUN
-#ifndef WITH_HF_YOUNG
-		if (BUTTON_HELD(1000) > 0)
-			SamyRun();
+		if (BUTTON_HELD(1000) > 0) {
+#if defined (WITH_LF) && defined (WITH_LF_SAMYRUN)
+			RunMod();
 #endif
+		
+#if defined (WITH_ISO14443a) && defined (WITH_HF_YOUNG)
+			RunMod();
 #endif
-#ifdef WITH_ISO14443a
-#ifdef WITH_HF_YOUNG
-		if (BUTTON_HELD(1000) > 0)
-			StandAloneMode14a();
-#endif
-#endif
+
+		}
 	}
 }

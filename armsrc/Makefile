@@ -21,15 +21,13 @@ APP_CFLAGS = -DWITH_CRC \
 			 -DWITH_ISO14443a \
 			 -DWITH_ICLASS \
 			 -DWITH_HFSNOOP \
-			 -DWITH_HF_YOUNG \
-			 -DWITH_LF_SAMYRUN \
 			 -fno-strict-aliasing -ffunction-sections -fdata-sections
 ### IMPORTANT -  move the commented variable below this line
 #			 -DWITH_LCD \
 #
 # Standalone Mods
 #-------------------------------------------------------
-# -DWITH_ICEMAN
+# -DWITH_LF_ICERUN
 # -DWITH_LF_SAMYRUN
 # -DWITH_LF_PROXBRUTE
 # -DWITH_LF_HIDCORP
@@ -77,6 +75,9 @@ THUMBSRC = start.c \
 	ticks.c \
 	random.c \
 	hfsnoop.c
+
+#	Standalone/hf_young.c \
+#	Standalone/lf_samyrun.c	
 
 # These are to be compiled in ARM mode
 ARMSRC = fpgaloader.c \

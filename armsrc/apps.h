@@ -30,6 +30,7 @@ extern "C" {
 #include "desfire.h"
 #include "iso14443b.h"
 #include "emvcard.h"
+#include "Standalone/standalone.h"
 
 extern const uint8_t OddByteParity[256];
 extern int rsamples;   // = 0;
@@ -43,7 +44,6 @@ extern uint8_t trigger;
 /// appmain.h
 void ReadMem(int addr);
 void __attribute__((noreturn)) AppMain(void);
-void SamyRun(void);
 //void DbpIntegers(int a, int b, int c);
 void DbpString(char *str);
 void Dbprintf(const char *fmt, ...);
@@ -63,6 +63,9 @@ void ToSendReset(void);
 void ListenReaderField(int limit);
 extern int ToSendMax;
 extern uint8_t ToSend[];
+
+extern void StandAloneMode(void);
+extern void printStandAloneModes(void);
 
 /// lfops.h
 extern uint8_t decimation;
@@ -139,6 +142,7 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 void MifareUWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain);
 void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *datain);
+void MifareAcquireNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *datain);
 void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
 void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
 void MifareSetDbgLvl(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
@@ -195,7 +199,7 @@ void DirectTag15693Command(uint32_t datalen,uint32_t speed, uint32_t recv, uint8
 void SetDebugIso15693(uint32_t flag);
 
 // iclass.h
-void RAMFUNC SnoopIClass(void);
+void RAMFUNC SniffIClass(void);
 void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 void ReaderIClass(uint8_t arg0);
 void ReaderIClass_Replay(uint8_t arg0,uint8_t *MAC);

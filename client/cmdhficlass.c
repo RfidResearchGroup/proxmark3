@@ -193,7 +193,7 @@ int usage_hf_iclass_replay(void) {
 	PrintAndLog("        hf iclass replay 00112233");	
 	return 0;
 }
-int usage_hf_iclass_snoop(void) {
+int usage_hf_iclass_sniff(void) {
 	PrintAndLog("HELP:   Snoops the communication between reader and tag");
 	PrintAndLog("Usage:  hf iclass snoop [h]");
 	PrintAndLog("Samples:");
@@ -230,10 +230,9 @@ int CmdHFiClassList(const char *Cmd) {
 	return 0;
 }
 
-int CmdHFiClassSnoop(const char *Cmd) {
+int CmdHFiClassSniff(const char *Cmd) {
 	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H')	return usage_hf_iclass_snoop();
-
+	if (cmdp == 'h' || cmdp == 'H')	return usage_hf_iclass_sniff();
 	UsbCommand c = {CMD_SNOOP_ICLASS};
 	SendCommand(&c);
 	return 0;
@@ -263,7 +262,7 @@ int CmdHFiClassSim(const char *Cmd) {
 
 	uint8_t numberOfCSNs = 0;
 	if (simType == 2) {
-		UsbCommand c = {CMD_SIMULATE_TAG_ICLASS, {simType,NUM_CSNS}};
+		UsbCommand c = {CMD_SIMULATE_TAG_ICLASS, {simType, NUM_CSNS}};
 		UsbCommand resp = {0};
 
 /*
@@ -325,7 +324,7 @@ int CmdHFiClassSim(const char *Cmd) {
 		}
 
 		uint8_t num_mac_responses  = resp.arg[1];
-		PrintAndLog("Mac responses: %d MACs obtained (should be %d)", num_mac_responses,NUM_CSNS);
+		PrintAndLog("Mac responses: %d MACs obtained (should be %d)", num_mac_responses, NUM_CSNS);
 
 		size_t datalen = NUM_CSNS*24;
 		/*
@@ -351,7 +350,7 @@ int CmdHFiClassSim(const char *Cmd) {
 		saveFile("iclass_mac_attack", "bin", dump, datalen);
 		free(dump);
 	} else {
-		UsbCommand c = {CMD_SIMULATE_TAG_ICLASS, {simType,numberOfCSNs}};
+		UsbCommand c = {CMD_SIMULATE_TAG_ICLASS, {simType, numberOfCSNs}};
 		memcpy(c.d.asBytes, CSN, 8);
 		clearCommandBuffer();
 		SendCommand(&c);
@@ -392,7 +391,10 @@ int HFiClassReader(const char *Cmd, bool loop, bool verbose) {
 			}
 			if (readStatus & FLAG_ICLASS_READER_AA) {
 				bool legacy = true;
-				PrintAndLog(" AppIA: %s",sprint_hex(data+8*5,8));
+				PrintAndLog(" AppIA: %s", sprint_hex(data+8*5,8));
+
+				//if ( memcmp(data+8*5, '\xff\xff\xff\xff\xff\xff\xff\xff',8) != 0 )
+					// legacy = false;
 				for (int i = 0; i<8; i++) {
 					if (data[8*5+i] != 0xFF) {
 						legacy = false;
@@ -1731,7 +1733,7 @@ static command_t CommandTable[] = {
 	{"readtagfile", CmdHFiClassReadTagFile,     	1,	"[options..] Display Content from tagfile"},
 	{"replay",      CmdHFiClassReader_Replay,   	0,	"<mac>       Read an iClass tag via Reply Attack"},
 	{"sim",         CmdHFiClassSim,             	0,	"[options..] Simulate iClass tag"},
-	{"snoop",       CmdHFiClassSnoop,           	0,	"            Eavesdrop iClass communication"},
+	{"sniff",       CmdHFiClassSniff,           	0,	"            Eavesdrop iClass communication"},
 	{"writeblk",    CmdHFiClass_WriteBlock,     	0,	"[options..] Authenticate and Write iClass block"},
 	{NULL, NULL, 0, NULL}
 };

@@ -556,9 +556,7 @@ void OnSuccess(){
 	pcb_blocknum = 0;
 	ReaderTransmit(deselect_cmd, 3 , NULL);
 	mifare_ultra_halt();
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	LEDsoff();
-	set_tracing(false);	
+	switch_off(); 
 }
 
 void OnError(uint8_t reason){

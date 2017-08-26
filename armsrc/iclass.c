@@ -60,7 +60,7 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf);
 // The software UART that receives commands from the reader, and its state
 // variables.
 //-----------------------------------------------------------------------------
-static struct {
+typedef struct {
     enum {
         STATE_UNSYNCD,
         STATE_START_OF_COMMUNICATION,
@@ -69,7 +69,7 @@ static struct {
     uint16_t    shiftReg;
     int     bitCnt;
     int     byteCnt;
-    int     byteCntMax;
+//    int     byteCntMax;
     int     posCnt;
     int     nOutOfCnt;
     int     OutOfCnt;
@@ -81,8 +81,69 @@ static struct {
     int     bitBuffer;
     int     dropPosition;
     uint8_t *output;
-} Uart;
+} tUart;
 
+typedef struct {
+    enum {
+        DEMOD_UNSYNCD,
+		DEMOD_START_OF_COMMUNICATION,
+		DEMOD_START_OF_COMMUNICATION2,
+		DEMOD_START_OF_COMMUNICATION3,
+		DEMOD_SOF_COMPLETE,
+		DEMOD_MANCHESTER_D,
+		DEMOD_MANCHESTER_E,
+		DEMOD_END_OF_COMMUNICATION,
+		DEMOD_END_OF_COMMUNICATION2,
+		DEMOD_MANCHESTER_F,
+        DEMOD_ERROR_WAIT
+    }       state;
+    int     bitCount;
+    int     posCount;
+	int     syncBit;
+    uint16_t    shiftReg;
+	int     buffer;
+	int     buffer2;
+	int		buffer3;
+	int     buff;
+	int     samples;
+    int     len;
+	enum {
+		SUB_NONE,
+		SUB_FIRST_HALF,
+		SUB_SECOND_HALF,
+		SUB_BOTH
+	}		sub;
+    uint8_t   *output;
+} tDemod;
+
+static tUart Uart;
+static void UartReset(){
+	Uart.state = STATE_UNSYNCD;
+	Uart.shiftReg = 0;
+    Uart.bitCnt = 0;
+    Uart.byteCnt = 0;
+    Uart.posCnt = 0;
+    Uart.nOutOfCnt = 0;
+    Uart.OutOfCnt = 0;
+    Uart.syncBit = 0;
+    Uart.samples = 0;
+    Uart.highCnt = 0;
+    Uart.swapper = 0;
+    Uart.counter = 0;
+    Uart.bitBuffer = 0;
+    Uart.dropPosition = 0;
+}
+static void UartInit(uint8_t *data){
+	Uart.output = data;
+	UartReset();
+}
+
+
+/*
+* READER TO CARD
+*  1 out of 4 Decoding
+*  1 out of 256 Decoding
+*/
 static RAMFUNC int OutOfNDecoding(int bit) {
 	//int error = 0;
 	int bitright;
@@ -263,10 +324,13 @@ static RAMFUNC int OutOfNDecoding(int bit) {
 				Uart.posCnt = 1;   // apparently we are busy with our first half bit period
 				Uart.syncBit = bit & 8;
 				Uart.samples = 3;
+				
 				if (!Uart.syncBit)	{ Uart.syncBit = bit & 4; Uart.samples = 2; }
 				else if (bit & 4)	{ Uart.syncBit = bit & 4; Uart.samples = 2; bit <<= 2; }
+				
 				if (!Uart.syncBit)	{ Uart.syncBit = bit & 2; Uart.samples = 1; }
 				else if (bit & 2)	{ Uart.syncBit = bit & 2; Uart.samples = 1; bit <<= 1; }
+				
 				if (!Uart.syncBit)	{ Uart.syncBit = bit & 1; Uart.samples = 0;
 					if (Uart.syncBit && (Uart.bitBuffer & 8)) {
 						Uart.syncBit = 8;
@@ -300,40 +364,83 @@ static RAMFUNC int OutOfNDecoding(int bit) {
 //=============================================================================
 // Manchester
 //=============================================================================
+static tDemod Demod;
+static void DemodReset() {
+	Demod.bitCount = 0;
+	Demod.posCount = 0;
+	Demod.syncBit = 0;
+	Demod.shiftReg = 0;
+	Demod.buffer = 0;
+	Demod.buffer2 = 0;
+	Demod.buffer3 = 0;
+	Demod.buff = 0;
+	Demod.samples = 0;
+	Demod.len = 0;
+	Demod.sub = SUB_NONE;
+	Demod.state = DEMOD_UNSYNCD;
+}
+static void DemodInit(uint8_t *data) {
+	Demod.output = data;
+	DemodReset();
+}
 
-static struct {
-    enum {
-        DEMOD_UNSYNCD,
-		DEMOD_START_OF_COMMUNICATION,
-		DEMOD_START_OF_COMMUNICATION2,
-		DEMOD_START_OF_COMMUNICATION3,
-		DEMOD_SOF_COMPLETE,
-		DEMOD_MANCHESTER_D,
-		DEMOD_MANCHESTER_E,
-		DEMOD_END_OF_COMMUNICATION,
-		DEMOD_END_OF_COMMUNICATION2,
-		DEMOD_MANCHESTER_F,
-        DEMOD_ERROR_WAIT
-    }       state;
-    int     bitCount;
-    int     posCount;
-	int     syncBit;
-    uint16_t    shiftReg;
-	int     buffer;
-	int     buffer2;
-	int	buffer3;
-	int     buff;
-	int     samples;
-    int     len;
-	enum {
-		SUB_NONE,
-		SUB_FIRST_HALF,
-		SUB_SECOND_HALF,
-		SUB_BOTH
-	}		sub;
-    uint8_t   *output;
-} Demod;
+// UART debug 
+// it adds the debug values which will be put in the tracelog,
+// visible on client when running  'hf list iclass'
+/*
+pm3 --> hf li iclass
+Recorded Activity (TraceLen = 162 bytes)
+      Start |        End | Src | Data (! denotes parity error)                                   | CRC | Annotation         |
+------------|------------|-----|-----------------------------------------------------------------|-----|--------------------|
+          0 |          0 | Rdr |0a                                                               |     | ACTALL
+       1280 |       1280 | Tag |bb! 33! bb! 01  02  04  08  bb!                                  |  ok |
+       1280 |       1280 | Rdr |0c                                                               |     | IDENTIFY
+       1616 |       1616 | Tag |bb! 33! bb! 00! 02  00! 02  bb!                                  |  ok |
+       1616 |       1616 | Rdr |0a                                                               |     | ACTALL
+       2336 |       2336 | Tag |bb! d4! bb! 02  08  00! 08  bb!                                  |  ok |
+       2336 |       2336 | Rdr |0c                                                               |     | IDENTIFY
+       2448 |       2448 | Tag |bb! 33! bb! 00! 00! 00! 02  bb!                                  |  ok |
+       2448 |       2448 | Rdr |0a                                                               |     | ACTALL
+       2720 |       2720 | Tag |bb! d4! bb! 08  0b  01  04  bb!                                  |  ok |
+       2720 |       2720 | Rdr |0c                                                               |     | IDENTIFY
+       3232 |       3232 | Tag |bb! d4! bb! 02  02  08  04  bb!                                  |  ok |
+*/
+static void uart_debug(int error, int bit) {
+	Demod.output[Demod.len] = 0xBB;
+	Demod.len++;
+	Demod.output[Demod.len] = error & 0xFF;
+	Demod.len++;
+	Demod.output[Demod.len] = 0xBB;
+	Demod.len++;
+	Demod.output[Demod.len] = bit & 0xFF;
+	Demod.len++;
+	Demod.output[Demod.len] = Demod.buffer & 0xFF;
+	Demod.len++;
+	// Look harder ;-)
+	Demod.output[Demod.len] = Demod.buffer2 & 0xFF;
+	Demod.len++;
+	Demod.output[Demod.len] = Demod.syncBit & 0xFF;
+	Demod.len++;
+	Demod.output[Demod.len] = 0xBB;
+	Demod.len++;
+}
 
+/*
+* CARD TO READER
+* in ISO15693-2 mode -  Manchester 
+* in ISO 14443b - BPSK coding
+*
+* Timings:
+*  ISO 15693-2 
+*           Tout = 330 µs, Tprog 1 = 4 to 15 ms, Tslot = 330 µs + (number of slots x 160 µs)
+*  ISO 14443a
+*			Tout = 100 µs, Tprog = 4 to 15 ms, Tslot = 100 µs+ (number of slots x 80 µs)
+*  ISO 14443b
+			 Tout = 76 µs, Tprog = 4 to 15 ms, Tslot = 119 µs+ (number of slots x 150 µs)
+*
+*
+*  So for current implementation in ISO15693, its 330 µs from end of reader, to start of card.
+*/
 static RAMFUNC int ManchesterDecoding(int v) {
 	int bit;
 	int modulation;
@@ -344,6 +451,7 @@ static RAMFUNC int ManchesterDecoding(int v) {
 	Demod.buffer2 = Demod.buffer3;
 	Demod.buffer3 = v;
 
+	// too few bits?
 	if (Demod.buff < 3) {
 		Demod.buff++;
 		return false;
@@ -382,8 +490,9 @@ static RAMFUNC int ManchesterDecoding(int v) {
 			Demod.bitCount = 0;
 			Demod.shiftReg = 0;
 			Demod.samples = 0;
+
 			if (Demod.posCount) {
-				//if(trigger) LED_A_OFF();  // Not useful in this case...
+
 				switch (Demod.syncBit) {
 					case 0x08: Demod.samples = 3; break;
 					case 0x04: Demod.samples = 2; break;
@@ -399,182 +508,146 @@ static RAMFUNC int ManchesterDecoding(int v) {
 				if (!(Demod.buffer2 & Demod.syncBit) || !(Demod.buffer3 & Demod.syncBit)) {
 					Demod.state = DEMOD_UNSYNCD;
 					error = 0x88;
+					uart_debug(error, bit);
 					return false;
 				}				
-				// TODO: use this error value to print?  Ask Holiman.
-				// 2016-01-08 iceman
 			}
 			error = 0;
 		}
-	} else {
-		modulation = bit & Demod.syncBit;
-		modulation |= ((bit << 1) ^ ((Demod.buffer & 0x08) >> 3)) & Demod.syncBit;
+		return false;
+	}
 
-		Demod.samples += 4;
+	// state is DEMOD is in SYNC from here on.
+	
+	modulation = bit & Demod.syncBit;
+	modulation |= ((bit << 1) ^ ((Demod.buffer & 0x08) >> 3)) & Demod.syncBit;
+	Demod.samples += 4;
 
-		if (Demod.posCount == 0) {
-			Demod.posCount = 1;
-			if (modulation)
-				Demod.sub = SUB_FIRST_HALF;
-			else
-				Demod.sub = SUB_NONE;
+	if (Demod.posCount == 0) {
+		Demod.posCount = 1;
+		Demod.sub = (modulation) ? SUB_FIRST_HALF : SUB_NONE;
+		return false;
+	}
+
+	Demod.posCount = 0;
+
+	if (modulation) {
+		
+		if (Demod.sub == SUB_FIRST_HALF)
+			Demod.sub = SUB_BOTH;
+		else
+			Demod.sub = SUB_SECOND_HALF;
+	}
+	
+	if (Demod.sub == SUB_NONE) {
+		if (Demod.state == DEMOD_SOF_COMPLETE) {
+			Demod.output[Demod.len] = 0x0f;
+			Demod.len++;
+			Demod.state = DEMOD_UNSYNCD;
+			return true;
 		} else {
-			Demod.posCount = 0;
-			/*(modulation && (Demod.sub == SUB_FIRST_HALF)) {
-				if(Demod.state!=DEMOD_ERROR_WAIT) {
-					Demod.state = DEMOD_ERROR_WAIT;
-					Demod.output[Demod.len] = 0xaa;
-					error = 0x01;
-				}
-			}*/
-			//else if(modulation) {
-			if (modulation) {
-				if (Demod.sub == SUB_FIRST_HALF)
-					Demod.sub = SUB_BOTH;
-				else
-					Demod.sub = SUB_SECOND_HALF;
-			}
-			else if (Demod.sub == SUB_NONE) {
-				if (Demod.state == DEMOD_SOF_COMPLETE) {
-					Demod.output[Demod.len] = 0x0f;
-					Demod.len++;
-					Demod.state = DEMOD_UNSYNCD;
-//					error = 0x0f;
-					return true;
-				} else {
-					Demod.state = DEMOD_ERROR_WAIT;
-					error = 0x33;
-				}
-				/*if(Demod.state!=DEMOD_ERROR_WAIT) {
-					Demod.state = DEMOD_ERROR_WAIT;
-					Demod.output[Demod.len] = 0xaa;
-					error = 0x01;
-				}*/
-			}
-
-			switch (Demod.state) {
-				case DEMOD_START_OF_COMMUNICATION:
-					if (Demod.sub == SUB_BOTH) {
-						//Demod.state = DEMOD_MANCHESTER_D;
-						Demod.state = DEMOD_START_OF_COMMUNICATION2;
-						Demod.posCount = 1;
-						Demod.sub = SUB_NONE;
-					} else {
-						Demod.output[Demod.len] = 0xab;
-						Demod.state = DEMOD_ERROR_WAIT;
-						error = 0xd2;
-					}
-					break;
-				case DEMOD_START_OF_COMMUNICATION2:
-					if (Demod.sub == SUB_SECOND_HALF) {
-						Demod.state = DEMOD_START_OF_COMMUNICATION3;
-					} else {
-						Demod.output[Demod.len] = 0xab;
-						Demod.state = DEMOD_ERROR_WAIT;
-						error = 0xd3;
-					}
-					break;
-				case DEMOD_START_OF_COMMUNICATION3:
-					if (Demod.sub == SUB_SECOND_HALF) {
-//						Demod.state = DEMOD_MANCHESTER_D;
-						Demod.state = DEMOD_SOF_COMPLETE;
-						//Demod.output[Demod.len] = Demod.syncBit & 0xFF;
-						//Demod.len++;
-					} else {
-						Demod.output[Demod.len] = 0xab;
-						Demod.state = DEMOD_ERROR_WAIT;
-						error = 0xd4;
-					}
-					break;
-				case DEMOD_SOF_COMPLETE:
-				case DEMOD_MANCHESTER_D:
-				case DEMOD_MANCHESTER_E:
-					// OPPOSITE FROM ISO14443 - 11110000 = 0 (1 in 14443)
-					//                          00001111 = 1 (0 in 14443)
-					if (Demod.sub == SUB_SECOND_HALF) { // SUB_FIRST_HALF
-						Demod.bitCount++;
-						Demod.shiftReg = (Demod.shiftReg >> 1) ^ 0x100;
-						Demod.state = DEMOD_MANCHESTER_D;
-					} else if (Demod.sub == SUB_FIRST_HALF) { // SUB_SECOND_HALF
-						Demod.bitCount++;
-						Demod.shiftReg >>= 1;
-						Demod.state = DEMOD_MANCHESTER_E;
-					} else if (Demod.sub == SUB_BOTH) {
-						Demod.state = DEMOD_MANCHESTER_F;
-					} else {
-						Demod.state = DEMOD_ERROR_WAIT;
-						error = 0x55;
-					}
-					break;
-
-				case DEMOD_MANCHESTER_F:
-					// Tag response does not need to be a complete byte!
-					if (Demod.len > 0 || Demod.bitCount > 0) {
-						if (Demod.bitCount > 1) {  // was > 0, do not interpret last closing bit, is part of EOF
-							Demod.shiftReg >>= (9 - Demod.bitCount);	// right align data
-							Demod.output[Demod.len] = Demod.shiftReg & 0xff;
-							Demod.len++;
-						}
-
-						Demod.state = DEMOD_UNSYNCD;
-						return true;
-					} else {
-						Demod.output[Demod.len] = 0xad;
-						Demod.state = DEMOD_ERROR_WAIT;
-						error = 0x03;
-					}
-					break;
-
-				case DEMOD_ERROR_WAIT:
-					Demod.state = DEMOD_UNSYNCD;
-					break;
-
-				default:
-					Demod.output[Demod.len] = 0xdd;
-					Demod.state = DEMOD_UNSYNCD;
-					break;
-			}
-
-			/*if (Demod.bitCount >= 9) {
-				Demod.output[Demod.len] = Demod.shiftReg & 0xff;
-				Demod.len++;
-
-				Demod.parityBits <<= 1;
-				Demod.parityBits ^= ((Demod.shiftReg >> 8) & 0x01);
-
-				Demod.bitCount = 0;
-				Demod.shiftReg = 0;
-			}*/
-			if (Demod.bitCount >= 8) {
-				Demod.shiftReg >>= 1;
-				Demod.output[Demod.len] = (Demod.shiftReg & 0xff);
-				Demod.len++;
-				Demod.bitCount = 0;
-				Demod.shiftReg = 0;
-			}
-
-			if (error) {
-				Demod.output[Demod.len] = 0xBB;
-				Demod.len++;
-				Demod.output[Demod.len] = error & 0xFF;
-				Demod.len++;
-				Demod.output[Demod.len] = 0xBB;
-				Demod.len++;
-				Demod.output[Demod.len] = bit & 0xFF;
-				Demod.len++;
-				Demod.output[Demod.len] = Demod.buffer & 0xFF;
-				Demod.len++;
-				// Look harder ;-)
-				Demod.output[Demod.len] = Demod.buffer2 & 0xFF;
-				Demod.len++;
-				Demod.output[Demod.len] = Demod.syncBit & 0xFF;
-				Demod.len++;
-				Demod.output[Demod.len] = 0xBB;
-				Demod.len++;
-				return true;
-			}
+			Demod.state = DEMOD_ERROR_WAIT;
+			error = 0x33;
 		}
-	} // end (state != UNSYNCED)
+	}
+
+	switch (Demod.state) {
+		
+		case DEMOD_START_OF_COMMUNICATION:
+			if (Demod.sub == SUB_BOTH) {
+
+				Demod.state = DEMOD_START_OF_COMMUNICATION2;
+				Demod.posCount = 1;
+				Demod.sub = SUB_NONE;
+			} else {
+				Demod.output[Demod.len] = 0xab;
+				Demod.state = DEMOD_ERROR_WAIT;
+				error = 0xd2;
+			}
+			break;
+			
+		case DEMOD_START_OF_COMMUNICATION2:
+			if (Demod.sub == SUB_SECOND_HALF) {
+				Demod.state = DEMOD_START_OF_COMMUNICATION3;
+			} else {
+				Demod.output[Demod.len] = 0xab;
+				Demod.state = DEMOD_ERROR_WAIT;
+				error = 0xd3;
+			}
+			break;
+			
+		case DEMOD_START_OF_COMMUNICATION3:
+			if (Demod.sub == SUB_SECOND_HALF) {
+				Demod.state = DEMOD_SOF_COMPLETE;
+			} else {
+				Demod.output[Demod.len] = 0xab;
+				Demod.state = DEMOD_ERROR_WAIT;
+				error = 0xd4;
+			}
+			break;
+			
+		case DEMOD_SOF_COMPLETE:
+		case DEMOD_MANCHESTER_D:
+		case DEMOD_MANCHESTER_E:
+			// OPPOSITE FROM ISO14443 - 11110000 = 0 (1 in 14443)
+			//                          00001111 = 1 (0 in 14443)
+			if (Demod.sub == SUB_SECOND_HALF) { // SUB_FIRST_HALF
+				Demod.bitCount++;
+				Demod.shiftReg = (Demod.shiftReg >> 1) ^ 0x100;
+				Demod.state = DEMOD_MANCHESTER_D;
+			} else if (Demod.sub == SUB_FIRST_HALF) { // SUB_SECOND_HALF
+				Demod.bitCount++;
+				Demod.shiftReg >>= 1;
+				Demod.state = DEMOD_MANCHESTER_E;
+			} else if (Demod.sub == SUB_BOTH) {
+				Demod.state = DEMOD_MANCHESTER_F;
+			} else {
+				Demod.state = DEMOD_ERROR_WAIT;
+				error = 0x55;
+			}
+			break;
+
+		case DEMOD_MANCHESTER_F:
+			// Tag response does not need to be a complete byte!
+			if (Demod.len > 0 || Demod.bitCount > 0) {
+				if (Demod.bitCount > 1) {  // was > 0, do not interpret last closing bit, is part of EOF
+					Demod.shiftReg >>= (9 - Demod.bitCount);	// right align data
+					Demod.output[Demod.len] = Demod.shiftReg & 0xff;
+					Demod.len++;
+				}
+
+				Demod.state = DEMOD_UNSYNCD;
+				return true;
+			} else {
+				Demod.output[Demod.len] = 0xad;
+				Demod.state = DEMOD_ERROR_WAIT;
+				error = 0x03;
+			}
+			break;
+
+		case DEMOD_ERROR_WAIT:
+			Demod.state = DEMOD_UNSYNCD;
+			break;
+
+		default:
+			Demod.output[Demod.len] = 0xdd;
+			Demod.state = DEMOD_UNSYNCD;
+			break;
+	}
+
+	if (Demod.bitCount >= 8) {
+		Demod.shiftReg >>= 1;
+		Demod.output[Demod.len] = (Demod.shiftReg & 0xff);
+		Demod.len++;
+		Demod.bitCount = 0;
+		Demod.shiftReg = 0;
+	}
+
+	if (error) {
+		uart_debug(error, bit);
+		return true;
+	}
+	
     return false;
 }
 
@@ -589,18 +662,28 @@ static RAMFUNC int ManchesterDecoding(int v) {
 // near the reader.
 //-----------------------------------------------------------------------------
 // turn off afterwards
-void RAMFUNC SnoopIClass(void) {
+void RAMFUNC SniffIClass(void) {
 
+	LEDsoff();
+	
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+	// Set up the synchronous serial port
+	FpgaSetupSsc();
+	// connect Demodulated Signal to ADC:
+	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 
-    // Setup for the DMA.
-    FpgaSetupSsc();
+	// Signal field is off with the appropriate LED
+    LED_D_OFF();
+	
+    // put the FPGA in the appropriate mode
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_SNIFFER);
+	SpinDelay(50);
+ 
+	// Start the timer
+	StartCountSspClk();
 
-    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
-
-	 // free all BigBuf memory
-	BigBuf_free();
-
+	// free all BigBuf memory
+	BigBuf_free(); BigBuf_Clear_ext(false);
 	clear_trace();
 	set_tracing(true);
 	
@@ -612,163 +695,169 @@ void RAMFUNC SnoopIClass(void) {
 	// The length of a received command will in most cases be no more than 18 bytes.
 	// So 32 should be enough!
 	#define ICLASS_BUFFER_SIZE 32
-	uint8_t readerToTagCmd[ICLASS_BUFFER_SIZE];
+	uint8_t *readerToTagCmd = BigBuf_malloc(ICLASS_BUFFER_SIZE);
 	
     // The response (tag -> reader) that we're receiving.
-	uint8_t tagToReaderResponse[ICLASS_BUFFER_SIZE];
+	uint8_t *tagToReaderResponse = BigBuf_malloc(ICLASS_BUFFER_SIZE);
 
     // The DMA buffer, used to stream samples from the FPGA
     uint8_t *dmaBuf = BigBuf_malloc(DMA_BUFFER_SIZE);
-    uint8_t *upTo = dmaBuf;
+    uint8_t *data = dmaBuf;
 
-    int lastRxCounter = DMA_BUFFER_SIZE;
-    int smpl, maxBehindBy = 0;
-
-    // Count of samples received so far, so that we can include timing
-    // information in the trace buffer.
-    int samples = 0;
-
-	// global variable (apps.h)
-    rsamples = 0;
+	uint8_t previous_data = 0;
+	int maxDataLen = 0;
+	int datalen = 0;
+	bool TagIsActive = false;
+	bool ReaderIsActive = false;
 
     // Set up the demodulator for tag -> reader responses.
-	Demod.output = tagToReaderResponse;
-    Demod.len = 0;
-    Demod.state = DEMOD_UNSYNCD;
+	DemodInit(tagToReaderResponse);
+
+	// And the reader -> tag commands
+	UartInit(readerToTagCmd);
 
 	// Setup and start DMA.
 	if ( !FpgaSetupSscDma((uint8_t*) dmaBuf, DMA_BUFFER_SIZE) ){
-		if (MF_DBGLEVEL > 1) Dbprintf("FpgaSetupSscDma failed. Exiting"); 
+		if (MF_DBGLEVEL > 1) DbpString("FpgaSetupSscDma failed. Exiting"); 
 		return;
 	}
-
-    // And the reader -> tag commands
-    memset(&Uart, 0, sizeof(Uart));
-	Uart.output = readerToTagCmd;
-    Uart.byteCntMax = 32; // was 100 (greg)////////////////////////////////////////////////////////////////////////
-    Uart.state = STATE_UNSYNCD;
-
-    // And put the FPGA in the appropriate mode
-    // Signal field is off with the appropriate LED
-    LED_D_OFF();
-
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_SNIFFER);
-	SpinDelay(20);
-
+	
 	uint32_t time_0 = GetCountSspClk();
 	uint32_t time_start = 0, time_stop  = 0;
-    int div = 0, decbyte = 0,  decbyter = 0;
+    int div = 0; 
 
-    // And now we loop, receiving samples.
-    for(;;) {
+    uint32_t rsamples = 0;
+
+	DbpString("Starting to sniff");	
+
+    // loop and listen
+	while (!BUTTON_PRESS()) {
         WDT_HIT();
         LED_A_ON();
 
-        int behindBy = (lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR) & (DMA_BUFFER_SIZE-1);
-
-        if ( behindBy > maxBehindBy) {
-            maxBehindBy = behindBy;
-            if ( behindBy > (9 * DMA_BUFFER_SIZE / 10)) {
-                Dbprintf("blew circular buffer! behindBy=0x%x", behindBy);
-                goto done;
-            }
-        }
-        if( behindBy < 1) continue;
-
+		// number of bytes we have processed so far
+		int register readBufDataP = data - dmaBuf;
+		// number of bytes already transferred		
+		int register dmaBufDataP = DMA_BUFFER_SIZE - AT91C_BASE_PDC_SSC->PDC_RCR;
+		
+		if (readBufDataP <= dmaBufDataP)
+			datalen = dmaBufDataP - readBufDataP;
+		else 
+			datalen = DMA_BUFFER_SIZE - readBufDataP + dmaBufDataP;
+		
+		// test for length of buffer
+		if (datalen > maxDataLen) {
+			maxDataLen = datalen;
+			if (datalen > (9 * DMA_BUFFER_SIZE / 10)) {
+				Dbprintf("blew circular buffer! datalen=%d", datalen);
+				break;
+			}
+		}
+		if (datalen < 1) continue;
+			
+		// primary buffer was stopped( <-- we lost data!
+		if (!AT91C_BASE_PDC_SSC->PDC_RCR) {
+			AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dmaBuf;
+			AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
+			Dbprintf("RxEmpty ERROR!!! data length:%d", datalen); // temporary
+		}
+		// secondary buffer sets as primary, secondary buffer was stopped
+		if (!AT91C_BASE_PDC_SSC->PDC_RNCR) {
+			AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dmaBuf;
+			AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
+		}
+		
 		LED_A_OFF();
-        smpl = upTo[0];
-        upTo++;
-        lastRxCounter -= 1;
-        if (upTo - dmaBuf > DMA_BUFFER_SIZE) {
-            upTo -= DMA_BUFFER_SIZE;
-            lastRxCounter += DMA_BUFFER_SIZE;
-            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) upTo;
-            AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
-        }
-
-        //samples += 4;
-		samples += 1;
-
-		if(smpl & 0xF)
-			decbyte ^= (1 << (3 - div));
-	
-		// FOR READER SIDE COMMUMICATION...
-		decbyter <<= 2;
-		decbyter ^= (smpl & 0x30);
 
 		div++;
+		// 
+		Dbprintf("iced:  prev %, curr %u,  div %i", previous_data, *data, div);
 	
-		if (( div + 1) % 2 == 0) {
-			smpl = decbyter;	
-			if ( OutOfNDecoding((smpl & 0xF0) >> 4)) {
-				rsamples = samples - Uart.samples;
-				time_stop = (GetCountSspClk() - time_0) << 4;
-				LED_C_ON();
+		// need two samples to feed OutOfNDecoding
+		if (rsamples & 0x01) {
 
-				//if(!LogTrace(Uart.output,Uart.byteCnt, rsamples, Uart.parityBits,true)) break;
-				//if(!LogTrace(NULL, 0, Uart.endTime*16 - DELAY_READER_AIR2ARM_AS_SNIFFER, 0, true)) break;
-				//uint8_t parity[Uart.byteCnt/8];
-				//GetParity(Uart.output, Uart.byteCnt, parity);
-				//LogTrace(Uart.output, Uart.byteCnt, time_start, time_stop, parity, true);
-				LogTrace(Uart.output, Uart.byteCnt, time_start, time_stop, NULL, true);
+			// no need to try decoding reader data if the tag is sending			
+			// READER TO CARD
+			if (!TagIsActive) {
 
-				/* And ready to receive another command. */
-				Uart.state = STATE_UNSYNCD;
-				/* And also reset the demod code, which might have been */
-				/* false-triggered by the commands from the reader. */
-				Demod.state = DEMOD_UNSYNCD;
-				LED_B_OFF();
-				Uart.byteCnt = 0;
-			} else {
-				time_start = (GetCountSspClk() - time_0) << 4;
+				if (MF_DBGLEVEL > 1) DbpString("reader -> card"); 
+			
+				uint8_t readerdata = (previous_data & 0xF0) | (*data >> 4);
+				
+				// FOR READER SIDE COMMUMICATION...
+				//readerbyte <<= 2;				// make space for two new bits.
+				
+				//                76543210
+				// xor ( sample & 00110000 )   only bit 5,4 wanted.  ( one out of four?
+				//readerbyte ^= (sample & 0x30);	
+				// 00110000 -> 0011
+				if ( OutOfNDecoding((readerdata & 0xF0) >> 4)) {
+
+					LED_C_INV();
+									
+					time_stop = (GetCountSspClk() - time_0) << 4;
+
+					LogTrace(Uart.output, Uart.byteCnt, time_start, time_stop, NULL, true);
+
+					// reset the demod code, which might have been false-triggered by the commands from the reader. 
+					DemodReset();
+					// ready to receive another command.
+					UartInit(readerToTagCmd);
+				} else {
+					time_start = (GetCountSspClk() - time_0) << 4;
+				}
+				//readerbyte = 0;
+				ReaderIsActive = (Uart.state != STATE_UNSYNCD);
 			}
-			decbyter = 0;
 		}
 
 		if (div > 3) {
-			smpl = decbyte;
-			if (ManchesterDecoding(smpl & 0x0F)) {
-				time_stop = (GetCountSspClk() - time_0) << 4;
-
-				rsamples = samples - Demod.samples;
-				LED_B_ON();
-
-				//uint8_t parity[Demod.len/8];
-				//GetParity(Demod.output, Demod.len, parity);
-				//LogTrace(Demod.output, Demod.len, time_start, time_stop, parity, false);
-				LogTrace(Demod.output, Demod.len, time_start, time_stop, NULL, false);
-
-				// And ready to receive another response.
-				memset(&Demod, 0, sizeof(Demod));
-				Demod.output = tagToReaderResponse;
-				Demod.state = DEMOD_UNSYNCD;
-				LED_C_OFF();
-			} else {
-				time_start = (GetCountSspClk() - time_0) << 4;
-			}
 			
-			div = 0;
-			decbyte = 0x00;
+			if (MF_DBGLEVEL > 1) DbpString("div > 3"); 
+			
+			// no need to try decoding tag data if the reader is sending - and we cannot afford the time
+			// CARD TO READER
+			if (!ReaderIsActive) {
+
+				// xor  (
+				// if (sample & 0xF)
+					// tagbyte ^= (1 << (3 - div));		
+				uint8_t tagdata = (previous_data << 4) | (*data & 0x0F);
+				if (ManchesterDecoding(tagdata)) {
+					LED_C_INV();
+					
+					time_stop = (GetCountSspClk() - time_0) << 4;
+
+					LogTrace(Demod.output, Demod.len, time_start, time_stop, NULL, false);
+
+					// ready to receive another response.
+					DemodReset();				
+					// reset the Uart decode including its (now outdated) input buffer
+					UartInit(readerToTagCmd);
+
+					} else {
+					time_start = (GetCountSspClk() - time_0) << 4;
+				}
+				
+				div = 0;
+				//tagbyte = 00;			
+				TagIsActive = (Demod.state != DEMOD_UNSYNCD);
+			}
 		}
 
-        if (BUTTON_PRESS()) {
-            DbpString("cancelled_a");
-            goto done;
-        }
-    }
+		previous_data = *data;
+		rsamples++;		
+		data++;
+		if(data == dmaBuf + DMA_BUFFER_SIZE)
+			data = dmaBuf;
+	
+    } // end main loop
 
-    DbpString("COMMAND FINISHED");
-
-    Dbprintf("%x %x %x", maxBehindBy, Uart.state, Uart.byteCnt);
-	Dbprintf("%x %x %x", Uart.byteCntMax, BigBuf_get_traceLen(), (int)Uart.output[0]);
-
-done:
-    FpgaDisableSscDma();
-    Dbprintf("%x %x %x", maxBehindBy, Uart.state, Uart.byteCnt);
-	Dbprintf("%x %x %x", Uart.byteCntMax, BigBuf_get_traceLen(), (int)Uart.output[0]);
-	LEDsoff();
-	set_tracing(false);	
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	if (MF_DBGLEVEL >= 1) {	
+		Dbprintf("maxDataLen=%x, Uart.state=%x, Uart.bytecn=%x", maxDataLen, Uart.state, Uart.byteCnt);
+		Dbprintf("tracelen=%x, Uart.output[0]=%x", BigBuf_get_traceLen(), (int)Uart.output[0]);
+	}
+	switch_off(); 
 }
 
 void rotateCSN(uint8_t* originalCSN, uint8_t* rotatedCSN) {
@@ -782,26 +871,23 @@ void rotateCSN(uint8_t* originalCSN, uint8_t* rotatedCSN) {
 // Stop when button is pressed
 // Or return TRUE when command is captured
 //-----------------------------------------------------------------------------
-static bool GetIClassCommandFromReader(uint8_t *received, int *len, int maxLen) {
-	
-    // Now run a `software UART' on the stream of incoming samples.
-    Uart.output = received;
-    Uart.byteCntMax = maxLen;
-    Uart.state = STATE_UNSYNCD;
-
+static bool GetIClassCommandFromReader(uint8_t *received, int *len, int maxLen) {	
     // Set FPGA mode to "simulated ISO 14443 tag", no modulation (listen
     // only, since we are receiving, not transmitting).
     // Signal field is off with the appropriate LED
     LED_D_OFF();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_LISTEN);
 
+	// Now run a `software UART' on the stream of incoming samples.
+	UartInit(received);
+	
 	// clear RXRDY:
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
 	while (!BUTTON_PRESS()) {
         WDT_HIT();
 
-        // if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))
+        //if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))
             // AT91C_BASE_SSC->SSC_THR = 0x00;
 
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
@@ -984,11 +1070,9 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 	} else {
 		// We may want a mode here where we hardcode the csns to use (from proxclone).
 		// That will speed things up a little, but not required just yet.
-		Dbprintf("The mode is not implemented, reserved for future use");
+		DbpString("The mode is not implemented, reserved for future use");
 	}
-	Dbprintf("Done...");
-	set_tracing(false);
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);	
+	switch_off(); 
 }
 void AppendCrc(uint8_t* data, int len) {
 	ComputeCrc14443(CRC_ICLASS, data, len, data+len, data+len+1);
@@ -1005,7 +1089,7 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 	BigBuf_free_keep_EM();
 	
 	State cipher_state;
-//	State cipher_state_reserve;
+
 	uint8_t *csn = BigBuf_get_EM_addr();
 	uint8_t *emulator = csn;
 	uint8_t sof_data[] = { 0x0F} ;
@@ -1085,27 +1169,41 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 	// First card answer: SOF
 	CodeIClassTagSOF();
 	memcpy(resp_sof, ToSend, ToSendMax); resp_sof_Len = ToSendMax;
-	DbpString("SOF"); PrintToSendBuffer();
-
+	if ( MF_DBGLEVEL ==  MF_DBG_EXTENDED) {
+		DbpString("SOF"); 
+		PrintToSendBuffer();
+	}
+	
 	// Anticollision CSN
 	CodeIClassTagAnswer(anticoll_data, sizeof(anticoll_data));
 	memcpy(resp_anticoll, ToSend, ToSendMax); resp_anticoll_len = ToSendMax;
-	DbpString("ANTI COLL CSN"); PrintToSendBuffer();
-
+	if ( MF_DBGLEVEL ==  MF_DBG_EXTENDED) {
+		DbpString("ANTI COLL CSN"); 
+		PrintToSendBuffer();
+	}
+	
 	// CSN
 	CodeIClassTagAnswer(csn_data, sizeof(csn_data));
 	memcpy(resp_csn, ToSend, ToSendMax); resp_csn_len = ToSendMax;
-	DbpString("CSN"); PrintToSendBuffer();
+	if ( MF_DBGLEVEL ==  MF_DBG_EXTENDED) {
+		DbpString("CSN");
+		PrintToSendBuffer();
+	}
 
 	// e-Purse
 	CodeIClassTagAnswer(card_challenge_data, sizeof(card_challenge_data));
 	memcpy(resp_cc, ToSend, ToSendMax); resp_cc_len = ToSendMax;
-	DbpString("e-Purse"); PrintToSendBuffer();
-
+	if ( MF_DBGLEVEL ==  MF_DBG_EXTENDED) {
+		DbpString("e-Purse"); 
+		PrintToSendBuffer();
+	}
 	// Application Issuer Area
 	CodeIClassTagAnswer(aia_data, sizeof(aia_data));
 	memcpy(resp_aia, ToSend, ToSendMax); resp_aia_len = ToSendMax;
-	DbpString("Application Issuer Data"); PrintToSendBuffer();
+	if ( MF_DBGLEVEL ==  MF_DBG_EXTENDED) {
+		DbpString("Application Issuer Data"); 
+		PrintToSendBuffer();
+	}
 
 	//This is used for responding to READ-block commands or other data which is dynamically generated
 	//First the 'trace'-data, not encoded for FPGA
@@ -1137,7 +1235,11 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 		WDT_HIT();
 
 		response_delay = 1;
-
+		receivedCmd[0] = 0;	receivedCmd[1] = 0;	receivedCmd[2] = 0;	receivedCmd[3] = 0;
+		receivedCmd[4] = 0;	receivedCmd[5] = 0;	receivedCmd[6] = 0;	receivedCmd[7] = 0;
+		receivedCmd[8] = 0;	receivedCmd[9] = 0;	receivedCmd[10] = 0; receivedCmd[11] = 0;
+		receivedCmd[12] = 0;receivedCmd[13] = 0;receivedCmd[14] = 0; receivedCmd[15] = 0;
+		
 		//Signal tracer, can be used to get a trigger for an oscilloscope..
 		LED_B_OFF(); LED_C_OFF();
 
@@ -1292,17 +1394,11 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 			t2r_time = (GetCountSspClk() - time_0) << 4;
 		}
 
-		//uint8_t parity[MAX_PARITY_SIZE];
-		//GetParity(receivedCmd, len, parity);
-		//LogTrace(receivedCmd, len, (r2t_time - time_0)<< 4, (r2t_time - time_0) << 4, parity, true);
-
 		LogTrace(receivedCmd, len, (r2t_time - time_0)<< 4, (r2t_time - time_0) << 4, NULL, true);
 
 		if (trace_data != NULL) {
-			//GetParity(trace_data, trace_data_size, parity);
-			//LogTrace(trace_data, trace_data_size, t2r_time, t2r_time, parity, false);
 			LogTrace(trace_data, trace_data_size, t2r_time, t2r_time, NULL, false);
-			DbpString("trace written");
+			if ( MF_DBGLEVEL ==  MF_DBG_EXTENDED) DbpString("trace written");
 		}
 	}
 
@@ -1489,16 +1585,13 @@ void ReaderTransmitIClass(uint8_t* frame, int len) {
 //-----------------------------------------------------------------------------
 static int GetIClassAnswer(uint8_t* receivedResponse, int maxLen, int *samples, int *elapsed) {
 	// buffer needs to be 512 bytes
-
 	// maxLen is not used...
 
 	int c = 0;
 	bool skip = false;
 
 	// Setup UART/DEMOD to receive 
-	Demod.output = receivedResponse;
-	Demod.len = 0;
-	Demod.state = DEMOD_UNSYNCD;
+	DemodInit(receivedResponse);
 
 	if (elapsed) *elapsed = 0;
 
@@ -1513,7 +1606,8 @@ static int GetIClassAnswer(uint8_t* receivedResponse, int maxLen, int *samples, 
 		WDT_HIT();
 
 		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-			AT91C_BASE_SSC->SSC_THR = 0x00;  // To make use of exact timing of next command from reader!!
+			AT91C_BASE_SSC->SSC_THR = 0x00;  
+			// To make use of exact timing of next command from reader!!
 			if (elapsed) (*elapsed)++;
 		}
 
@@ -1524,8 +1618,7 @@ static int GetIClassAnswer(uint8_t* receivedResponse, int maxLen, int *samples, 
 			
 			b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 			
-			skip = !skip;
-			
+			skip = !skip;			
 			if (skip) continue;
 		
 			if (ManchesterDecoding(b & 0x0f)) {
@@ -1541,7 +1634,7 @@ static int GetIClassAnswer(uint8_t* receivedResponse, int maxLen, int *samples, 
 int ReaderReceiveIClass(uint8_t* receivedAnswer) {
 	int samples = 0;
 
-	if (!GetIClassAnswer(receivedAnswer, 160, &samples, NULL)) 
+	if (!GetIClassAnswer(receivedAnswer, 0, &samples, NULL)) 
 		return false;
 
 	rsamples += samples;
@@ -1574,6 +1667,10 @@ void setupIclassReader() {
     // Signal field is on with the appropriate LED
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
     SpinDelay(20);
+
+	// Start the timer
+	StartCountSspClk();
+	
     LED_A_ON();
 }
 
@@ -1598,17 +1695,15 @@ bool sendCmdGetResponseWithRetries(uint8_t* command, size_t cmdsize, uint8_t* re
 uint8_t handshakeIclassTag_ext(uint8_t *card_data, bool use_credit_key) {
 
 	// act_all...
-
-	static uint8_t act_all[]     = { ICLASS_CMD_ACTALL };
-	static uint8_t identify[]    = { ICLASS_CMD_READ_OR_IDENTIFY, 0x00, 0x73, 0x33 };
-	static uint8_t select[]      = { ICLASS_CMD_SELECT, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-	static uint8_t readcheck_cc[]= { ICLASS_CMD_READCHECK_KD, 0x02 };
+	static uint8_t act_all[]      = { ICLASS_CMD_ACTALL };
+	static uint8_t identify[]     = { ICLASS_CMD_READ_OR_IDENTIFY, 0x00, 0x73, 0x33 };
+	static uint8_t select[]       = { ICLASS_CMD_SELECT, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	static uint8_t readcheck_cc[] = { ICLASS_CMD_READCHECK_KD, 0x02 };
 
 	if  (use_credit_key) 
 		readcheck_cc[0] = ICLASS_CMD_READCHECK_KC;
 
-	uint8_t resp[ICLASS_BUFFER_SIZE];
-
+	uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
 	uint8_t read_status = 0;
 
 	// Send act_all
@@ -1621,7 +1716,7 @@ uint8_t handshakeIclassTag_ext(uint8_t *card_data, bool use_credit_key) {
 	ReaderTransmitIClass(identify, 1);
 
 	//We expect a 10-byte response here, 8 byte anticollision-CSN and 2 byte CRC
-	uint8_t len  = ReaderReceiveIClass(resp);
+	uint8_t len = ReaderReceiveIClass(resp);
 	if (len != 10) return read_status;//Fail
 
 	//Copy the Anti-collision CSN to our select-packet
@@ -1685,7 +1780,6 @@ void ReaderIClass(uint8_t arg0) {
 	uint8_t flagReadCC = arg0 & FLAG_ICLASS_READER_CC;
 	uint8_t flagReadAA = arg0 & FLAG_ICLASS_READER_AA;
 
-	set_tracing(true);
 	setupIclassReader();
 
 	uint16_t tryCnt = 0;
@@ -1716,7 +1810,7 @@ void ReaderIClass(uint8_t arg0) {
 				result_status |= FLAG_ICLASS_READER_CONF;
 				memcpy(card_data+8, resp, 8);
 			} else {
-				Dbprintf("Failed to dump config block");
+				DbpString("Failed to dump config block");
 			}
 		}
 
@@ -1726,7 +1820,7 @@ void ReaderIClass(uint8_t arg0) {
 				result_status |= FLAG_ICLASS_READER_AA;
 				memcpy(card_data+(8*5), resp, 8);
 			} else {
-				//Dbprintf("Failed to dump AA block");
+				//DbpString("Failed to dump AA block");
 			}
 		}
 
@@ -1762,10 +1856,7 @@ void ReaderIClass(uint8_t arg0) {
 		cmd_send(CMD_ACK, 0, 0, 0, card_data, 0);		
 
 out:    
-    LEDsoff();
-	Dbprintf("Done...");
-	set_tracing(false);
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	switch_off(); 
 }
 
 // turn off afterwards
@@ -1800,7 +1891,6 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 	uint8_t resp[ICLASS_BUFFER_SIZE];
 	
     setupIclassReader();
-	set_tracing(true);
 
 	while (!BUTTON_PRESS()) {
 	
@@ -1813,27 +1903,27 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 		memcpy(check+5, MAC, 4);
 
 		if (!sendCmdGetResponseWithRetries(check, sizeof(check), resp, 4, 5)) {
-			Dbprintf("Error: Authentication Fail!");
+			DbpString("Error: Authentication Fail!");
 			continue;
 		}
 
 		//first get configuration block (block 1)
 		crc = block_crc_LUT[1];
-		read[1]=1;
+		read[1] = 1;
 		read[2] = crc >> 8;
 		read[3] = crc & 0xff;
 
 		if (!sendCmdGetResponseWithRetries(read, sizeof(read), resp, 10, 10)) {
-			Dbprintf("Dump config (block 1) failed");
+			DbpString("Dump config (block 1) failed");
 			continue;
 		}
 
-		 mem = resp[5];
-		 memory.k16 = (mem & 0x80);
-		 memory.book = (mem & 0x20);
-		 memory.k2 = (mem & 0x8);
-		 memory.lockauth = (mem & 0x2);
-		 memory.keyaccess = (mem & 0x1);
+		mem = resp[5];
+		memory.k16 = (mem & 0x80);
+		memory.book = (mem & 0x20);
+		memory.k2 = (mem & 0x8);
+		memory.lockauth = (mem & 0x2);
+		memory.keyaccess = (mem & 0x1);
 
 		cardsize = memory.k16 ? 255 : 32;
 
@@ -1903,10 +1993,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 			 0
 	);
 
-	LEDsoff();
-	Dbprintf("Done...");
-	set_tracing(false);
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	switch_off(); 
 }
 
 // turn off afterwards
@@ -1916,7 +2003,7 @@ void iClass_ReadCheck(uint8_t	blockNo, uint8_t keyType) {
 	size_t isOK = 0;
 	isOK = sendCmdGetResponseWithRetries(readcheck, sizeof(readcheck), resp, sizeof(resp), 6);
 	cmd_send(CMD_ACK,isOK,0,0,0,0);
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	switch_off(); 
 }
 
 // used with function select_and_auth (cmdhficlass.c) 
@@ -1933,9 +2020,9 @@ void iClass_Authentication(uint8_t *MAC) {
 bool iClass_ReadBlock(uint8_t blockNo, uint8_t *readdata) {
 	uint8_t readcmd[] = {ICLASS_CMD_READ_OR_IDENTIFY, blockNo, 0x00, 0x00}; //0x88, 0x00 // can i use 0C?
 	char bl = blockNo;
-	uint16_t rdCrc = iclass_crc16(&bl, 1);
-	readcmd[2] = rdCrc >> 8;
-	readcmd[3] = rdCrc & 0xff;
+	uint16_t crc = iclass_crc16(&bl, 1);
+	readcmd[2] = crc >> 8;
+	readcmd[3] = crc & 0xff;
 	uint8_t resp[] = {0,0,0,0,0,0,0,0,0,0};
 
 	bool isOK = sendCmdGetResponseWithRetries(readcmd, sizeof(readcmd), resp, 10, 10);
@@ -1949,7 +2036,7 @@ void iClass_ReadBlk(uint8_t blockno) {
 	bool isOK = false;
 	isOK = iClass_ReadBlock(blockno, readblockdata);
 	cmd_send(CMD_ACK, isOK, 0, 0, readblockdata, 8);
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	switch_off(); 
 }
 
 // turn off afterwards
@@ -1961,43 +2048,42 @@ void iClass_Dump(uint8_t blockno, uint8_t numblks) {
 	BigBuf_free();
 	uint8_t *dataout = BigBuf_malloc(255*8);
 	if (dataout == NULL){
-		Dbprintf("out of memory");
+		DbpString("out of memory");
 		OnError(1);
 		return;
 	}
-	memset(dataout,0xFF,255*8);
+	// fill mem with 0xFF
+	memset(dataout, 0xFF, 255*8);
 
 	for (;blkCnt < numblks; blkCnt++) {
 		isOK = iClass_ReadBlock(blockno + blkCnt, readblockdata);
+		
+		// 0xBB is the internal debug separator byte..
 		if (!isOK || (readblockdata[0] == 0xBB || readblockdata[7] == 0xBB || readblockdata[2] == 0xBB)) { //try again
 			isOK = iClass_ReadBlock(blockno + blkCnt, readblockdata);
 			if (!isOK) {
 				Dbprintf("Block %02X failed to read", blkCnt + blockno);
-			break;
-		}
+				break;
+			}
 		}
 		memcpy(dataout + (blkCnt * 8), readblockdata, 8);
 	}
 	//return pointer to dump memory in arg3
 	cmd_send(CMD_ACK, isOK, blkCnt, BigBuf_max_traceLen(), 0, 0);
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	LEDsoff();
+	switch_off(); 
 	BigBuf_free();
 }
 
 bool iClass_WriteBlock_ext(uint8_t blockNo, uint8_t *data) {
 	uint8_t write[] = { ICLASS_CMD_UPDATE, blockNo, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-	//uint8_t readblockdata[10];
-	//write[1] = blockNo;
 	memcpy(write+2, data, 12); // data + mac
 	char *wrCmd = (char *)(write+1); 
-	uint16_t wrCrc = iclass_crc16(wrCmd, 13);
-	write[14] = wrCrc >> 8;
-	write[15] = wrCrc & 0xff;
+	uint16_t crc = iclass_crc16(wrCmd, 13);
+	write[14] = crc >> 8;
+	write[15] = crc & 0xff;
 	uint8_t resp[] = {0,0,0,0,0,0,0,0,0,0};
-	bool isOK = false;
 
-	isOK = sendCmdGetResponseWithRetries(write, sizeof(write), resp, sizeof(resp), 10);
+	bool isOK = sendCmdGetResponseWithRetries(write, sizeof(write), resp, sizeof(resp), 10);
 	if (isOK) { //if reader responded correctly
 		//Dbprintf("WriteResp: %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",resp[0],resp[1],resp[2],resp[3],resp[4],resp[5],resp[6],resp[7],resp[8],resp[9]);
 
@@ -2007,8 +2093,7 @@ bool iClass_WriteBlock_ext(uint8_t blockNo, uint8_t *data) {
 			if (blockNo != 3 && blockNo != 4) {
 				//error try again
 				isOK = sendCmdGetResponseWithRetries(write, sizeof(write), resp, sizeof(resp), 10);
-			} 
-			
+			} 			
 		}
 	}
 	return isOK;
@@ -2023,9 +2108,7 @@ void iClass_WriteBlock(uint8_t blockNo, uint8_t *data) {
 		Dbprintf("Write block [%02x] failed", blockNo);		
 	
 	cmd_send(CMD_ACK,isOK,0,0,0,0);
-    LEDsoff();
-	set_tracing(false);
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);	
+	switch_off(); 
 }
 
 // turn off afterwards
@@ -2047,11 +2130,10 @@ void iClass_Clone(uint8_t startblock, uint8_t endblock, uint8_t *data) {
 		}
 	}
 	if (written == total_block)
-		Dbprintf("Clone complete");
+		DbpString("Clone complete");
 	else
-		Dbprintf("Clone incomplete");   
+		DbpString("Clone incomplete");   
 
 	cmd_send(CMD_ACK,1,0,0,0,0);
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	LEDsoff();
+	switch_off(); 
 }

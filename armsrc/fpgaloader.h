@@ -14,7 +14,6 @@
 
 #include "common.h"		// standard definitions
 #include "proxmark3.h"	// common area
-//#include "util.h"
 #include "string.h"
 #include "BigBuf.h"		// bigbuf mem
 #include "zlib.h"		// uncompress
@@ -32,6 +31,8 @@ int FpgaGetCurrent();
 #define FpgaDisableSscDma(void)	AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
 #define FpgaEnableSscDma(void) AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTEN;
 void SetAdcMuxFor(uint32_t whichGpio);
+
+extern void switch_off();
 
 // definitions for multiple FPGA config files support
 #define FPGA_BITSTREAM_MAX 2	// the total number of FPGA bitstreams (configs)

@@ -8,7 +8,6 @@
 //-----------------------------------------------------------------------------
 // High frequency iClass support
 //-----------------------------------------------------------------------------
-
 #ifndef CMDHFICLASS_H__
 #define CMDHFICLASS_H__
 
@@ -55,10 +54,11 @@ extern int CmdHFiClass_ReadBlock(const char *Cmd);
 extern int CmdHFiClass_TestMac(const char *Cmd);
 extern int CmdHFiClassManageKeys(const char *Cmd);
 extern int CmdHFiClass_loclass(const char *Cmd);
-extern int CmdHFiClassSnoop(const char *Cmd);
+extern int CmdHFiClassSniff(const char *Cmd);
 extern int CmdHFiClassSim(const char *Cmd);
 extern int CmdHFiClassWriteKeyFile(const char *Cmd);
 extern int CmdHFiClass_WriteBlock(const char *Cmd);
+
 void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t endblock, size_t filesize);
 void HFiClassCalcDivKey(uint8_t	*CSN, uint8_t	*KEY, uint8_t *div_key, bool elite);
 #endif

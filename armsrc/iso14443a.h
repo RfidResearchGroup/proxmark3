@@ -71,7 +71,7 @@ typedef struct {
 	uint16_t shiftReg;
 	int16_t	 bitCount;
 	uint16_t len;
-	uint16_t byteCntMax;
+	//uint16_t byteCntMax;
 	uint16_t posCnt;
 	uint16_t syncBit;
 	uint8_t  parityBits;
