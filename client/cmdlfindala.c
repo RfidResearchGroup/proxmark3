@@ -55,20 +55,53 @@ int usage_lf_indala_clone(void) {
 }
 
 // redesigned by marshmellow adjusted from existing decode functions
-// indala id decoding - only tested on 26 bit tags, but attempted to make it work for more
-int detectIndala26(uint8_t *dest, size_t *size, uint8_t *invert) {
-	//26 bit 40134 format  (don't know other formats)
-	uint8_t preamble[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1};
-	uint8_t preamble_i[] = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0};
-	size_t startidx = 0; 
-	if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startidx)){
+// indala id decoding
+int indala64decode(uint8_t *dest, size_t *size, uint8_t *invert) {
+	//standard 64 bit indala formats including 26 bit 40134 format
+	uint8_t preamble64[] = {1,0,1,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1};
+	uint8_t preamble64_i[] = {0,1,0,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 0};
+	size_t idx = 0;
+	size_t found_size = *size;
+	if (!preambleSearch(dest, preamble64, sizeof(preamble64), &found_size, &idx) ) {
 		// if didn't find preamble try again inverting
-		if (!preambleSearch(dest, preamble_i, sizeof(preamble_i), size, &startidx)) return -1;
+		if (!preambleSearch(dest, preamble64_i, sizeof(preamble64_i), &found_size, &idx)) return -1;
 		*invert ^= 1;
-	} 
-	if (*size != 64 && *size != 224) return -2;
-	
-	return (int) startidx;
+	}
+	if (found_size != 64) return -2;
+
+	if (*invert==1)
+		for (size_t i = idx; i < found_size + idx; i++) 
+			dest[i] ^= 1;
+
+	// note: don't change *size until we are sure we got it... 
+	*size = found_size;
+	return (int) idx;
+}
+
+int indala224decode(uint8_t *dest, size_t *size, uint8_t *invert) {
+	//large 224 bit indala formats (different preamble too...)
+	uint8_t preamble224[] = {1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,1};
+	uint8_t preamble224_i[] = {0,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,0};
+	size_t idx = 0;
+	size_t found_size = *size;
+	if (!preambleSearch(dest, preamble224, sizeof(preamble224), &found_size, &idx) ) {
+		// if didn't find preamble try again inverting
+		if (!preambleSearch(dest, preamble224_i, sizeof(preamble224_i), &found_size, &idx)) return -1;
+		*invert ^= 1;
+	}
+	if (found_size != 224) return -2;
+	if (*invert==1 && idx > 0)
+		for (size_t i = idx-1; i < found_size + idx + 2; i++) 
+			dest[i] ^= 1;
+
+	// 224 formats are typically PSK2 (afaik 2017 Marshmellow)
+	// note loses 1 bit at beginning of transformation...
+	// don't need to verify array is big enough as to get here there has to be a full preamble after all of our data
+	psk1TOpsk2(dest + (idx-1), found_size+2);
+	idx++;
+
+	*size = found_size;
+	return (int) idx;
 }
 
 // this read is the "normal" read,  which download lf signal and tries to demod here.
@@ -94,11 +127,19 @@ int CmdIndalaDemod(const char *Cmd) {
 
 	uint8_t invert = 0;
 	size_t size = DemodBufferLen;
-	int idx = detectIndala26(DemodBuffer, &size, &invert);
-	if (idx < 0 || size > 224) {
-		if (g_debugMode) PrintAndLog("DEBUG: Error - Indala wrong size, expected [64|224] got: %d", size);
-		return -1;
+	int idx = indala64decode(DemodBuffer, &size, &invert);
+	if (idx < 0 || size != 64) {
+		// try 224 indala
+		invert = 0;
+		size = DemodBufferLen;
+		idx = indala224decode(DemodBuffer, &size, &invert);
+		if (idx < 0 || size != 224) {
+			if (g_debugMode)
+				PrintAndLog("DEBUG: Error - Indala wrong size, expected [64|224] got: %d (startindex %i)", size, idx);
+			return -1;
+		}
 	}
+	
 	setDemodBuf(DemodBuffer, size, (size_t)idx);
 	setClockGrid(g_DemodClock, g_DemodStartIdx + (idx * g_DemodClock));
 	if (invert) {
