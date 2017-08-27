@@ -71,7 +71,7 @@ static void showBanner(void){
 	printf("██╔═══╝ ██║╚██╔╝██║   ══█║    iceman@icesql.net\n");
 	printf("██║     ██║ ╚═╝ ██║ ████╔╝ https://github.com/iceman1001/proxmark3\n");
 	printf("╚═╝     ╚═╝     ╚═╝ ╚═══╝v3.0.0\n");
-	printf("\nKeep icemanfork alive, donate to: https://paypal.me/iceman1001/");
+	printf("\nKeep icemanfork alive, do please donate,  https://paypal.me/iceman1001/");
 	printf("\n\n");
 }
 #endif

@@ -901,7 +901,6 @@ int CmdHF14AMfNested(const char *Cmd) {
 		
 		uint64_t t2 = msclock() - t1;
 		PrintAndLog("Time to check 6 known keys: %.0f seconds\n", (float)t2/1000.0 );
-		
 		PrintAndLog("enter nested...");	
 		
 		// nested sectors

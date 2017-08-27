@@ -1546,12 +1546,10 @@ void RAMFUNC SnoopIso14443b(void) {
 
 	uint32_t time_0 = 0, time_start = 0, time_stop = 0;
 	int ci = 0, cq = 0;
-	int lastRxCounter = ISO14443B_DMA_BUFFER_SIZE;
 
 	// We won't start recording the frames that we acquire until we trigger;
 	// a good trigger condition to get started is probably when we see a
 	// response from the tag.
-	bool triggered = true;			// TODO: set and evaluate trigger condition		
 	bool TagIsActive = false;
 	bool ReaderIsActive = false;
 
@@ -1559,7 +1557,7 @@ void RAMFUNC SnoopIso14443b(void) {
 	
 	// The DMA buffer, used to stream samples from the FPGA
 	int8_t *dmaBuf = (int8_t*) BigBuf_malloc(ISO14443B_DMA_BUFFER_SIZE);
-	int8_t *upTo = dmaBuf;
+	int8_t *data = dmaBuf;
 
 	// Setup and start DMA.
 	if ( !FpgaSetupSscDma((uint8_t*) dmaBuf, ISO14443B_DMA_BUFFER_SIZE) ){
@@ -1567,108 +1565,72 @@ void RAMFUNC SnoopIso14443b(void) {
 		BigBuf_free();
 		return;
 	}
-	
+
+	// time ZERO, the point from which it all is calculated.	
 	time_0 = GetCountSspClk();
 		
-	// And now we loop, receiving samples.
-	for(;;) {
-
+    // loop and listen
+	while (!BUTTON_PRESS()) {
 		WDT_HIT();
 
-		ci = upTo[0];
-		cq = upTo[1];
-		upTo += 2;		
-		lastRxCounter -= 2;
+		ci = data[0];
+		cq = data[1];
+		data += 2;		
 		
-		if (upTo >= dmaBuf + ISO14443B_DMA_BUFFER_SIZE) {
-			upTo = dmaBuf;
-			lastRxCounter = ISO14443B_DMA_BUFFER_SIZE;
+		if (data >= dmaBuf + ISO14443B_DMA_BUFFER_SIZE) {
+			data = dmaBuf;
 			AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dmaBuf;
-			AT91C_BASE_PDC_SSC->PDC_RNCR = ISO14443B_DMA_BUFFER_SIZE;
-		
-			if (!tracing) {
-				if (MF_DBGLEVEL >= 2) DbpString("Trace full");
-				break;
-			}
-				
-			if (BUTTON_PRESS()) {
-				if (MF_DBGLEVEL >= 2) DbpString("cancelled");
-				break;
-			}
+			AT91C_BASE_PDC_SSC->PDC_RNCR = ISO14443B_DMA_BUFFER_SIZE;		
 		}
 		
 		if (!TagIsActive) {		
 		
-			LED_A_ON();
+			LED_A_INV();
 			
 			// no need to try decoding reader data if the tag is sending
 			if (Handle14443bReaderUartBit(ci & 0x01)) {
-
 				time_stop = GetCountSspClk() - time_0;
-				
-				if (triggered)
-					LogTrace(Uart.output, Uart.byteCnt, time_start, time_stop, NULL, true);
-
-				/* And ready to receive another command. */
+				LogTrace(Uart.output, Uart.byteCnt, time_start, time_stop, NULL, true);
 				UartReset();
-				/* And also reset the demod code, which might have been */
-				/* false-triggered by the commands from the reader. */
 				DemodReset();
 			} else {
 				time_start = GetCountSspClk() - time_0;
 			}
 			
-			if (Handle14443bReaderUartBit(cq & 0x01)) {
-				
+			if (Handle14443bReaderUartBit(cq & 0x01)) {				
 				time_stop = GetCountSspClk() - time_0;
-				
-				if (triggered)
-					LogTrace(Uart.output, Uart.byteCnt, time_start, time_stop, NULL, true);
-
-				/* And ready to receive another command. */
+				LogTrace(Uart.output, Uart.byteCnt, time_start, time_stop, NULL, true);
 				UartReset();
-				/* And also reset the demod code, which might have been */
-				/* false-triggered by the commands from the reader. */
 				DemodReset();
 			} else {
 				time_start = GetCountSspClk() - time_0;
 			}
 			ReaderIsActive = (Uart.state > STATE_GOT_FALLING_EDGE_OF_SOF);
-			LED_A_OFF();
 		}
 		
 		if (!ReaderIsActive) {
 			// no need to try decoding tag data if the reader is sending - and we cannot afford the time
 			// is this | 0x01 the error?   & 0xfe  in https://github.com/Proxmark/proxmark3/issues/103
 			// LSB is a fpga signal bit.
-			if (Handle14443bTagSamplesDemod(ci >> 1, cq >> 1)) {
-				
-				time_stop = GetCountSspClk() - time_0;
-				
+			if (Handle14443bTagSamplesDemod(ci >> 1, cq >> 1)) {				
+				time_stop = GetCountSspClk() - time_0;			
 				LogTrace(Demod.output, Demod.len, time_start, time_stop, NULL, false);
-
-				triggered = true;
-
-				// And ready to receive another response.
-				DemodReset();
+				UartReset();				
+				DemodReset();				
 			} else {
 				time_start = GetCountSspClk() - time_0;
 			}
 			TagIsActive = (Demod.state > DEMOD_GOT_FALLING_EDGE_OF_SOF);
 		}
 	}
-
-	switch_off();
 	
 	if (MF_DBGLEVEL >= 2) {
-		DbpString("Snoop statistics:");
+		DbpString("Sniff statistics:");
 		Dbprintf("  Uart State: %x  ByteCount: %i  ByteCountMax: %i", Uart.state,  Uart.byteCnt,  Uart.byteCntMax);
 		Dbprintf("  Trace length: %i", BigBuf_get_traceLen());
 	}
-	// free mem refs.
-	if ( upTo ) upTo = NULL;
 	
-	// Uart.byteCntMax  should be set with ATQB value..
+	switch_off();
 }
 
 void iso14b_set_trigger(bool enable) {
