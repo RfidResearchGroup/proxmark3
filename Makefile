@@ -65,9 +65,15 @@ newtarbin:
 tarbin: newtarbin client/tarbin armsrc/tarbin bootrom/tarbin
 	$(GZIP) proxmark3-$(platform)-bin.tar
 
+# configure system	
+#  - to ignore PM3 device as a modem (blacklist)
+#  - add user to the dialout group
+# you may need to logout, relogin to get this access right correct.
+# Finally,  you might need to run the proxmark3 client under SUDO on some systems
 udev:
 	sudo cp -rf driver/77-mm-usb-device-blacklist.rules /etc/udev/rules.d/77-mm-usb-device-blacklist.rules
 	sudo udevadm control --reload-rules
+	sudo adduser $USER dialout
  
 # Dummy target to test for GNU make availability
 _test:
