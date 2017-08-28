@@ -5,11 +5,19 @@ local lib14a = require('read14a')
 local utils = require('utils')
 
 example =[[
+    -- generate commands
 	1. script run formatMifare
+	
+	-- generate command, replacing key with new key.
 	2. script run formatMifare -k aabbccddeeff -n 112233445566 -a FF0780
+	
+	-- generate commands and excute them against card.
+	3. script run formatMifare -x
 ]]
 author = "Iceman"
-usage = "script run formatMifare -k <key>"
+usage = [[
+   script run formatMifare -k <key> -n <key> -a <access> -x   
+]]
 desc =[[
 This script will generate 'hf mf wrbl' commands for each block to format a Mifare card.
 
@@ -20,11 +28,13 @@ The GDB will become 0x00
 
 The script will skip the manufactoring block 0.
 
+
 Arguments:
 	-h             - this help
 	-k <key>       - the current six byte key with write access
 	-n <key>       - the new key that will be written to the card
 	-a <access>    - the new access bytes that will be written to the card
+	-x             - execute the commands aswell.
 ]]
 local TIMEOUT = 2000 -- Shouldn't take longer than 2 seconds
 local DEBUG = true -- the debug flag
@@ -118,16 +128,16 @@ local function main(args)
 	print( string.rep('--',20) )
 	print()
 	
-	local OldKey 
-	local NewKey
-	local Accessbytes
+	local OldKey, NewKey, Accessbytes
+	local x = false
 	
 	-- Arguments for the script
-	for o, a in getopt.getopt(args, 'hk:n:a:') do
+	for o, a in getopt.getopt(args, 'hk:n:a:x') do
 		if o == "h" then return help() end		
 		if o == "k" then OldKey = a end
 		if o == "n" then NewKey = a	end
 		if o == "a" then Accessbytes = a end
+		if o == "x" then x = true end
 	end
 
 	-- validate input args.
@@ -164,6 +174,9 @@ local function main(args)
 	dbg( string.format('New emptyblock: %s',EMPTY_BL))
 	dbg('')
 	
+	if x then 
+		print('[Warning] you have used the EXECUTE parameter, which means this will run these commands against card.')
+	end 
 	-- Ask
 	local dialogResult = utils.confirm("Do you want to erase this card")
 	if dialogResult == false then 
@@ -185,7 +198,7 @@ local function main(args)
 	
 		if block ~= 0 then
 			print(cmd)
-			--core.console(cmd)
+			if x then core.console(cmd) end
 		end
 		
 		if core.ukbhit() then
