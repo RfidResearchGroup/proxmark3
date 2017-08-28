@@ -1905,7 +1905,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
 			fclose(f);
 			return 3;
 		}
-		printf(".");
+		printf("."); fflush(stdout);
 		blockNum++;
 		
 		if (blockNum >= numBlocks) break;
@@ -1989,7 +1989,7 @@ int CmdHF14AMfESave(const char *Cmd) {
 		for (j = 0; j < 16; j++)
 			fprintf(f, "%02X", buf[j]); 
 		fprintf(f,"\n");
-		printf(".");
+		printf("."); fflush(stdout);
 	}
 	printf("\n");
 	fclose(f);
@@ -2169,7 +2169,7 @@ int CmdHF14AMfCLoad(const char *Cmd) {
 				PrintAndLog("Cant set magic card block: %d", blockNum);
 				return 3;
 			}
-			printf(".");
+			printf("."); fflush(stdout);
 		}
 		printf("\n");
 		return 0;
@@ -2402,7 +2402,7 @@ int CmdHF14AMfCSave(const char *Cmd) {
 				PrintAndLog("Cant set emul block: %d", i);
 				return 3;
 			}
-			printf(".");
+			printf("."); fflush(stdout);
 		}
 		printf("\n");
 		return 0;
@@ -2438,7 +2438,7 @@ int CmdHF14AMfCSave(const char *Cmd) {
 		
 		// bin
 		fwrite(buf, 1, sizeof(buf), fbin);
-		printf(".");
+		printf("."); fflush(stdout);
 	}
 	printf("\n");	
 	fflush(feml); fflush(fbin);
