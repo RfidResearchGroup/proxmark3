@@ -1877,7 +1877,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
 	}
 	
 	blockNum = 0;
-	while(!feof(f)){
+	while (!feof(f)){
 		memset(buf, 0, sizeof(buf));
 		
 		if (fgets(buf, sizeof(buf), f) == NULL) {
@@ -2143,7 +2143,7 @@ int CmdHF14AMfCLoad(const char *Cmd) {
 	FILE * f;
 	char filename[FILE_PATH_SIZE];
 	char * fnameptr = filename;
-	char buf[32] = {0x00};
+	char buf[33] = {0x00};  // 32+1 null terminator
 	uint8_t buf8[16] = {0x00};
 	uint8_t fillFromEmulator = 0;
 	int i, len, blockNum, flags=0;
@@ -2189,7 +2189,7 @@ int CmdHF14AMfCLoad(const char *Cmd) {
 	}
 
 	blockNum = 0;
-	while(!feof(f)){
+	while (!feof(f)){
 	
 		memset(buf, 0, sizeof(buf));
 		
