@@ -65,12 +65,12 @@ byte_t* prx = rx;
 #if defined(__linux__)
 static void showBanner(void){
 	printf("\n\n");
-	printf("██████╗ ███╗   ███╗ ████╗     ...Iceman fork\n");
-	printf("██╔══██╗████╗ ████║   ══█║\n");
-	printf("██████╔╝██╔████╔██║ ████╔╝\n");
-	printf("██╔═══╝ ██║╚██╔╝██║   ══█║    iceman@icesql.net\n");
-	printf("██║     ██║ ╚═╝ ██║ ████╔╝ https://github.com/iceman1001/proxmark3\n");
-	printf("╚═╝     ╚═╝     ╚═╝ ╚═══╝v3.0.0\n");
+	printf("\e[34m██████╗ ███╗   ███╗ ████╗\e[0m     ...iceman fork\n");
+	printf("\e[34m██╔══██╗████╗ ████║   ══█║\e[0m\n");
+	printf("\e[34m██████╔╝██╔████╔██║ ████╔╝\e[0m\n");
+	printf("\e[34m██╔═══╝ ██║╚██╔╝██║   ══█║\e[0m    iceman@icesql.net\n");
+	printf("\e[34m██║     ██║ ╚═╝ ██║ ████╔╝\e[0m  https://github.com/iceman1001/proxmark3\n");
+	printf("\e[34m╚═╝     ╚═╝     ╚═╝ ╚═══╝\e[0m v3.0.0\n");
 	printf("\nKeep icemanfork alive, do please donate,  https://paypal.me/iceman1001/");
 	printf("\n\n");
 }

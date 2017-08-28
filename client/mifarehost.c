@@ -484,8 +484,9 @@ int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params) {
 	UsbCommand resp;
 	if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
 		isOK  = resp.arg[0] & 0xff;
+		if (!isOK) 
+			return 2;		
 		memcpy(data, resp.d.asBytes, 16);
-		if (!isOK) return 2;
 	} else {
 		PrintAndLog("Command execute timeout");
 		return 1;
