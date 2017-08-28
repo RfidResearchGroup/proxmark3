@@ -1989,12 +1989,12 @@ int CmdHF14AMfESave(const char *Cmd) {
 		for (j = 0; j < 16; j++)
 			fprintf(f, "%02X", buf[j]); 
 		fprintf(f,"\n");
+		printf(".");
 	}
+	printf("\n");
 	fclose(f);
-	
 	PrintAndLog("Saved %d blocks to file: %s", numBlocks, filename);
-	
-  return 0;
+	return 0;
 }
 
 int CmdHF14AMfECFill(const char *Cmd) {
@@ -2143,7 +2143,7 @@ int CmdHF14AMfCLoad(const char *Cmd) {
 	FILE * f;
 	char filename[FILE_PATH_SIZE];
 	char * fnameptr = filename;
-	char buf[33] = {0x00};  // 32+1 null terminator
+	char buf[35] = {0x00};  // 32+newline chars+1 null terminator
 	uint8_t buf8[16] = {0x00};
 	uint8_t fillFromEmulator = 0;
 	int i, len, blockNum, flags=0;
@@ -2169,7 +2169,9 @@ int CmdHF14AMfCLoad(const char *Cmd) {
 				PrintAndLog("Cant set magic card block: %d", blockNum);
 				return 3;
 			}
+			printf(".");
 		}
+		printf("\n");
 		return 0;
 	} 
 	
@@ -2218,10 +2220,12 @@ int CmdHF14AMfCLoad(const char *Cmd) {
 			fclose(f);
 			return 3;
 		}
+		printf(".");
 		blockNum++;
 	
 		if (blockNum >= 16 * 4) break;  // magic card type - mifare 1K
 	}
+	printf("\n");
 	fclose(f);
 
 	// 64 or 256blocks.
@@ -2398,8 +2402,9 @@ int CmdHF14AMfCSave(const char *Cmd) {
 				PrintAndLog("Cant set emul block: %d", i);
 				return 3;
 			}
+			printf(".");
 		}
-		// exit
+		printf("\n");
 		return 0;
 	}
 
@@ -2433,8 +2438,9 @@ int CmdHF14AMfCSave(const char *Cmd) {
 		
 		// bin
 		fwrite(buf, 1, sizeof(buf), fbin);
+		printf(".");
 	}
-	
+	printf("\n");	
 	fflush(feml); fflush(fbin);
 	fclose(feml); fclose(fbin);
 
