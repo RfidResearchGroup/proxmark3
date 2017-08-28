@@ -1226,7 +1226,7 @@ int CmdLegicWipe(const char *Cmd){
 	UsbCommand resp;
 	for(size_t i = 7; i < card.cardsize; i += USB_CMD_DATA_SIZE) {
 		
-		printf(".");
+		printf("."); fflush(stdout);
 		len = MIN((card.cardsize - i), USB_CMD_DATA_SIZE);		
 		c.arg[0] = i; // offset
 		c.arg[1] = len; // number of bytes

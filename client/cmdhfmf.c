@@ -1317,8 +1317,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 			if (e_sector[i].foundKey[trgKeyType]) continue;
 						
 			for (uint32_t c = 0; c < keycnt; c += max_keys) {
-				printf(".");
-				fflush(stdout);			
+				printf("."); fflush(stdout);			
 				uint32_t size = keycnt-c > max_keys ? max_keys : keycnt-c;
 				
 				res = mfCheckKeys(b, trgKeyType, true, size, &keyBlock[6*c], &key64);
@@ -1612,8 +1611,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 
 	// wait cycle
 	while (true) {
-		printf(".");
-		fflush(stdout);
+		printf("."); fflush(stdout);
 		if (ukbhit()) {
 			int gc = getchar(); (void)gc;
 			printf("\naborted via keyboard!\n");
@@ -2220,7 +2218,7 @@ int CmdHF14AMfCLoad(const char *Cmd) {
 			fclose(f);
 			return 3;
 		}
-		printf(".");
+		printf("."); fflush(stdout);
 		blockNum++;
 	
 		if (blockNum >= 16 * 4) break;  // magic card type - mifare 1K
