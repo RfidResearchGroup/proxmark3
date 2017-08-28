@@ -2236,7 +2236,7 @@ int CmdHF14AMfCLoad(const char *Cmd) {
 }
 
 int CmdHF14AMfCGetBlk(const char *Cmd) {
-	uint8_t data[16];
+	uint8_t data[16] = {0};
 	uint8_t blockNo = 0;
 	int res;
 	memset(data, 0x00, sizeof(data));
@@ -2259,7 +2259,7 @@ int CmdHF14AMfCGetBlk(const char *Cmd) {
 }
 
 int CmdHF14AMfCGetSc(const char *Cmd) {
-	uint8_t *data = NULL;
+	uint8_t data[16] = {0};
 	uint8_t sector = 0;
 	int i, res, flags;
 
@@ -2272,9 +2272,8 @@ int CmdHF14AMfCGetSc(const char *Cmd) {
 		return 1;
 	}
 
-	PrintAndLog("Sector : %02d/0x%02X ", sector, sector);
-	PrintAndLog("block | data");
-
+	PrintAndLog("\n  # | data    |  Sector | %02d/ 0x%02X ", sector, sector);
+	PrintAndLog("----+------------------------------------------------");
 	uint8_t blocks = 4;
 	uint8_t start = sector * 4;
 	if ( sector > 32 ) {
@@ -2293,7 +2292,7 @@ int CmdHF14AMfCGetSc(const char *Cmd) {
 			PrintAndLog("Can't read block. %d error=%d", start + i, res);
 			return 1;
 		}
-		PrintAndLog(" %3d | %s", start + i, sprint_hex(data, sizeof(data)));
+		PrintAndLog("%3d | %s", start + i, sprint_hex(data, 16));
 	}
 	return 0;
 }
