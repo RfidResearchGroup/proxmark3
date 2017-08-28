@@ -2231,7 +2231,7 @@ int CmdHF14AMfCLoad(const char *Cmd) {
 		PrintAndLog("File content error. There must be 64 blocks");
 		return 4;
 	}
-	PrintAndLog("Loaded from file: %s", filename);
+	PrintAndLog("Loaded %d blocks from file: %s", blockNum, filename);	
 	return 0;
 }
 
@@ -2443,7 +2443,7 @@ int CmdHF14AMfCSave(const char *Cmd) {
 	fclose(feml); fclose(fbin);
 
 	for (uint8_t i=0; i<2; ++i)
-		PrintAndLog("Saved to file: %s", filename[i]);
+		PrintAndLog("Saved %d blocks to file: %s", numblocks, filename[i]);
 
 	return 0;
 }
