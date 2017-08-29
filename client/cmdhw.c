@@ -30,6 +30,8 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used)
 	memset(asBuff, 0, sizeof(asBuff));
 	uint32_t mem_avail = 0;
 	
+	PrintAndLog(" [ Hardware ] ");
+	
 	switch(iChipID) {
 		case 0x270B0A40: sprintf(asBuff,"AT91SAM7S512 Rev A"); break;
 		case 0x270B0A4F: sprintf(asBuff,"AT91SAM7S512 Rev B"); break;
@@ -50,14 +52,14 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used)
 		case 0x27050241: sprintf(asBuff,"AT9SAM7S161 Rev A"); break;
 		case 0x27050240: sprintf(asBuff,"AT91SAM7S16 Rev A"); break;
 	}
-	PrintAndLog("uC: %s",asBuff);
+	PrintAndLog("  --= uC: %s",asBuff);
 	switch( (iChipID & 0xE0) >> 5) {
 		case 1: sprintf(asBuff,"ARM946ES");	break;
 		case 2:	sprintf(asBuff,"ARM7TDMI");	break;
 		case 4:	sprintf(asBuff,"ARM920T"); break;
 		case 5:	sprintf(asBuff,"ARM926EJS"); break;
 	}
-	PrintAndLog("Embedded Processor: %s",asBuff);
+	PrintAndLog("  --= Embedded Processor: %s",asBuff);
 	switch( (iChipID & 0xF00) >> 8) {
 		case 0:  mem_avail = 0; break;
 		case 1:	 mem_avail = 8; break;
@@ -75,7 +77,7 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used)
 	if ( mem_avail > 0 ) 
 		mem_left = (mem_avail * 1024) - mem_used;
 	
-	PrintAndLog("Nonvolatile Program Memory Size: %uK bytes. Used: %u bytes (%2.0f\%). Free: %u bytes (%2.0f\%).", 
+	PrintAndLog("  --= Nonvolatile Program Memory Size: %uK bytes, Used: %u bytes (%2.0f\%) Free: %u bytes (%2.0f\%)", 
 				mem_avail, 
 				mem_used, 
 				mem_avail == 0 ? 0.0f : (float)mem_used/(mem_avail*1024)*100,
@@ -95,7 +97,7 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used)
 		case 12: sprintf(asBuff,"1024K bytes");	break;
 		case 14: sprintf(asBuff,"2048K bytes"); break;
 	}
-	PrintAndLog("Second Nonvolatile Program Memory Size: %s",asBuff);
+	PrintAndLog("  --= Second Nonvolatile Program Memory Size: %s",asBuff);
 	switch( (iChipID & 0xF0000) >> 16) {
 		case 1:  sprintf(asBuff,"1K bytes"); break;
 		case 2:  sprintf(asBuff,"2K bytes"); break;
@@ -113,7 +115,7 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used)
 		case 14: sprintf(asBuff,"96K bytes"); break;
 		case 15: sprintf(asBuff,"512K bytes");break;
 	}
-	PrintAndLog("Internal SRAM Size: %s",asBuff);
+	PrintAndLog("  --= Internal SRAM Size: %s",asBuff);
 	switch( (iChipID & 0xFF00000) >> 20) {
 		case 0x19: sprintf(asBuff,"AT91SAM9xx Series"); break;
 		case 0x29: sprintf(asBuff,"AT91SAM9XExx Series"); break;
@@ -135,7 +137,7 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used)
 		case 0x92: sprintf(asBuff,"AT91x92 Series"); break;
 		case 0xF0: sprintf(asBuff,"AT75Cxx Series"); break;
 	}
-	PrintAndLog("Architecture Identifier: %s",asBuff);
+	PrintAndLog("  --= Architecture Identifier: %s",asBuff);
 	switch( (iChipID & 0x70000000) >> 28 ) {
 		case 0: sprintf(asBuff,"ROM"); break;
 		case 1: sprintf(asBuff,"ROMless or on-chip Flash");	break;
@@ -143,7 +145,7 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used)
 		case 3:	sprintf(asBuff,"ROM and Embedded Flash Memory\nNVPSIZ is ROM size\nNVPSIZ2 is Flash size");	break;
 		case 4:	sprintf(asBuff,"SRAM emulating ROM"); break;		
 	}
-	PrintAndLog("Nonvolatile Program Memory Type: %s",asBuff);
+	PrintAndLog("  --= Nonvolatile Program Memory Type: %s",asBuff);
 }
 
 int CmdDetectReader(const char *Cmd)
@@ -256,17 +258,26 @@ int CmdVersion(const char *Cmd)
 	if (resp.arg[0] == 0 && resp.arg[1] == 0) { // no cached information available
 		SendCommand(&c);
 		if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
-			PrintAndLog("Proxmark3 RFID instrument");
+#ifdef __WIN32
+			PrintAndLog("\nProxmark3 RFID instrument\n");
+#else
+			PrintAndLog("\n\e[34mProxmark3 RFID instrument\e[0m\n");	
+#endif	
 			PrintAndLog((char*)resp.d.asBytes);
-			lookupChipID(resp.arg[0], resp.arg[1]);
+			lookupChipID(resp.arg[0], resp.arg[1]);			
 		}
 	} else {
 		PrintAndLog("[[[ Cached information ]]]\n");
-		PrintAndLog("Proxmark3 RFID instrument");
+#ifdef __WIN32
+			PrintAndLog("\nProxmark3 RFID instrument\n");
+#else
+			PrintAndLog("\n\e[33mProxmark3 RFID instrument\e[0m\n");	
+#endif	
 		PrintAndLog((char*)resp.d.asBytes);
 		lookupChipID(resp.arg[0], resp.arg[1]);
 		PrintAndLog("");
 	}
+	printf("\n");
 	return 0;
 }
 

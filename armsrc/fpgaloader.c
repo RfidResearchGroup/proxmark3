@@ -438,11 +438,11 @@ void FpgaGatherVersion(int bitstream_version, char *dst, int len) {
 			}
 		}
 		if (!memcmp("fpga_lf", tempstr, 7))
-			strncat(dst, "LF ", len-1);
+			strncat(dst, " LF ", len-1);
 		else if (!memcmp("fpga_hf", tempstr, 7))
-			strncat(dst, "HF ", len-1);
+			strncat(dst, " HF ", len-1);
 	}
-	strncat(dst, "FPGA image built", len-1);
+	strncat(dst, "image built", len-1);
 	if (bitparse_find_section(bitstream_version, 'b', &fpga_info_len, &compressed_fpga_stream, output_buffer)) {
 		strncat(dst, " for ", len-1);
 		for (uint16_t i = 0; i < fpga_info_len; i++) {

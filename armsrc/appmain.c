@@ -286,17 +286,21 @@ void SendVersion(void) {
 	 * pointer, then use it.
 	 */
 	char *bootrom_version = *(char**)&_bootphase1_version_pointer;
+
+	strncat(VersionString, " [ ARM ]\n", sizeof(VersionString) - strlen(VersionString) - 1);
 	
 	if( bootrom_version < &_flash_start || bootrom_version >= &_flash_end ) {
 		strcat(VersionString, "bootrom version information appears invalid\n");
 	} else {
-		FormatVersionInformation(temp, sizeof(temp), "bootrom: ", bootrom_version);
+		FormatVersionInformation(temp, sizeof(temp), " bootrom: ", bootrom_version);
 		strncat(VersionString, temp, sizeof(VersionString) - strlen(VersionString) - 1);
 	}
 
-	FormatVersionInformation(temp, sizeof(temp), "os: ", &version_information);
+	FormatVersionInformation(temp, sizeof(temp), "      os: ", &version_information);
 	strncat(VersionString, temp, sizeof(VersionString) - strlen(VersionString) - 1);
 
+	strncat(VersionString, " [ FPGA ]\n", sizeof(VersionString) - strlen(VersionString) - 1);
+	
 	FpgaGatherVersion(FPGA_BITSTREAM_LF, temp, sizeof(temp));
 	strncat(VersionString, temp, sizeof(VersionString) - strlen(VersionString) - 1);
 	
