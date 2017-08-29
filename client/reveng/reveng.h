@@ -1,9 +1,10 @@
 /* reveng.h
- * Greg Cook, 25/Jul/2016
+ * Greg Cook, 19/Jun/2017
  */
 
 /* CRC RevEng: arbitrary-precision CRC calculator and algorithm finder
- * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016  Gregory Cook
+ * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017
+ * Gregory Cook
  *
  * This file is part of CRC RevEng.
  *
@@ -92,7 +93,7 @@
 /* Global definitions */
 
 /* CRC RevEng version string */
-#define VERSION "1.4.4"
+#define VERSION "1.5.2"
 
 /* bmpbit.c */
 typedef BMP_T bmp_t;
@@ -162,12 +163,17 @@ extern int pmpar(const poly_t poly, const poly_t mask);
 extern int pident(const poly_t a, const poly_t b);
 
 /* model.c */
+
+/* A model_t constant representing an uninitialised model or zero-bit CRC algorithm. */
+#define MZERO {PZERO, PZERO, P_BE, PZERO, PZERO, PZERO, NULL}
+
 typedef struct {
 	poly_t spoly;		/* polynomial with highest-order term removed. length determines CRC width */
-	poly_t init;		/* initial register value. length == poly.length */
+	poly_t init;		/* initial register value. length == spoly.length */
 	int flags;		/* P_REFIN and P_REFOUT indicate reflected input/output */
-	poly_t xorout;		/* final register XOR mask. length == poly.length */
+	poly_t xorout;		/* final register XOR mask. length == spoly.length */
 	poly_t check;		/* optional check value, the CRC of the UTF-8 string "123456789" */
+	poly_t magic;		/* optional magic check value, the residue of a valid codeword */
 	const char *name;	/* optional canonical name of the model */
 } model_t;
 
@@ -203,8 +209,9 @@ extern model_t *reveng(const model_t *guess, const poly_t qpoly, int rflags, int
 
 /* cli.c */
 #define C_INFILE  1
-#define C_FORCE   2
-#define C_RESULT  4
+#define C_NOPCK   2
+#define C_NOBFS   4
+#define C_RESULT  8
 
 #define BUFFER 32768
 

@@ -1,9 +1,10 @@
 /* bmpbit.c
- * Greg Cook, 27/Jun/2016
+ * Greg Cook, 7/Feb/2017
  */
 
 /* CRC RevEng: arbitrary-precision CRC calculator and algorithm finder
- * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016  Gregory Cook
+ * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017
+ * Gregory Cook
  *
  * This file is part of CRC RevEng.
  *

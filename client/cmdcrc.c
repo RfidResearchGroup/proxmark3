@@ -71,14 +71,7 @@ int CmdCrc(const char *Cmd)
 //  as well as a width array for the width of each model
 int GetModels(char *Models[], int *count, uint8_t *width){
 	/* default values */
-	static model_t model = {
-		PZERO,		/* no CRC polynomial, user must specify */
-		PZERO,		/* Init = 0 */
-		P_BE,		/* RefIn = false, RefOut = false, plus P_RTJUST setting in reveng.h */
-		PZERO,		/* XorOut = 0 */
-		PZERO,		/* check value unused */
-		NULL		/* no model name */
-	};
+	static model_t model = MZERO;
 
 	int ibperhx = 8;//, obperhx = 8;
 	int rflags = 0, uflags = 0; /* search and UI flags */
@@ -136,7 +129,7 @@ int GetModels(char *Models[], int *count, uint8_t *width){
 		 * searched.
 		 */
 		/* scan against preset models */
-		if (~uflags & C_FORCE) {
+		if (~uflags & C_NOPCK) {
 			pass = 0;
 			Cnt = 0;
 			do {
@@ -252,14 +245,8 @@ int GetModels(char *Models[], int *count, uint8_t *width){
 //result = calculated crc hex string
 int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *result){
 	/* default values */
-	static model_t model = {
-		PZERO,		// no CRC polynomial, user must specify
-		PZERO,		// Init = 0
-		P_BE,		  // RefIn = false, RefOut = false, plus P_RTJUST setting in reveng.h
-		PZERO,		// XorOut = 0
-		PZERO,		// check value unused 
-		NULL		  // no model name 
-	};
+	static model_t model = MZERO;
+	
 	int ibperhx = 8, obperhx = 8;
 	int rflags = 0; // search flags 
 	int c;
@@ -389,10 +376,9 @@ int CmdrevengSearch(const char *Cmd){
 	int dataLen = param_getstr(Cmd, 0, inHexStr);
 	if (dataLen < 4) return 0;
 
-	char *Models[80];
+	char *Models[102];
 	int count = 0;
-	uint8_t width[80];
-	width[0] = 0;
+	uint8_t width[80] = {0};
 	uint8_t crcChars = 0;
 	char result[30];
 	char revResult[30];
@@ -418,10 +404,10 @@ int CmdrevengSearch(const char *Cmd){
 		char *outHex = calloc(dataLen-crcChars+1, sizeof(char));
 		memcpy(outHex, inHexStr, dataLen-crcChars);
 
-		//PrintAndLog("DEBUG: dataLen: %d, crcChars: %d, Model: %s, CRC: %s, width: %d, outHex: %s",dataLen, crcChars, Models[i], inCRC, width[i], outHex);
+		// PrintAndLog("DEBUG: dataLen: %d, crcChars: %d, Model: %s, CRC: %s, width: %d, outHex: %s",dataLen, crcChars, Models[i], inCRC, width[i], outHex);
 		ans = RunModel(Models[i], outHex, false, 0, result);
 		if (ans) {
-			//test for match
+			// test for match
 			if (memcmp(result, inCRC, crcChars)==0){
 				PrintAndLog("\nFound a possible match!\nModel: %s\nValue: %s\n",Models[i], result);
 				//optional - stop searching if found...
@@ -431,7 +417,7 @@ int CmdrevengSearch(const char *Cmd){
 					char *swapEndian = SwapEndianStr(result, crcChars, crcChars);
 					if (memcmp(swapEndian, inCRC, crcChars)==0){
 						PrintAndLog("\nFound a possible match!\nModel: %s\nValue EndianSwapped: %s\n",Models[i], swapEndian);
-						//optional - stop searching if found...
+						// optional - stop searching if found...
 						found = true;
 					}
 					free(swapEndian);
@@ -439,31 +425,32 @@ int CmdrevengSearch(const char *Cmd){
 			}
 		}
 		
-		//if (!found){
+		// if (!found){
 			ans = RunModel(Models[i], outHex, true, 0, revResult);
 			if (ans) {
-				//test for match
+				// test for match
 				if (memcmp(revResult, inCRC, crcChars)==0){
 					PrintAndLog("\nFound a possible match!\nModel Reversed: %s\nValue: %s\n",Models[i], revResult);
-					//optional - stop searching if found...
+					// optional - stop searching if found...
 					found = true;
 				} else {
 					if (crcChars > 2){
 						char *swapEndian = SwapEndianStr(revResult, crcChars, crcChars);
 						if (memcmp(swapEndian, inCRC, crcChars)==0){
 							PrintAndLog("\nFound a possible match!\nModel Reversed: %s\nValue EndianSwapped: %s\n",Models[i], swapEndian);
-							//optional - stop searching if found...
+							// optional - stop searching if found...
 							found = true;
 						}
 						free(swapEndian);
 					}
 				}
 			}
-		//}
+		// }
 		free(inCRC);
 		free(outHex);
 		free(Models[i]);
 	}
+	
 	if (!found) PrintAndLog("\nNo matches found\n");
 	return 1;
 }

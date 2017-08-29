@@ -1,9 +1,10 @@
 /* poly.c
- * Greg Cook, 26/Jul/2016
+ * Greg Cook, 7/Feb/2017
  */
 
 /* CRC RevEng: arbitrary-precision CRC calculator and algorithm finder
- * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016  Gregory Cook
+ * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017
+ * Gregory Cook
  *
  * This file is part of CRC RevEng.
  *
@@ -640,6 +641,7 @@ pshift(poly_t *dest, const poly_t src, unsigned long head, unsigned long start, 
 	/* copies bits start to end-1 of src to dest, plus the number of leading and trailing zeroes given by head and tail.
 	 * end may exceed the length of src in which case more zeroes are appended.
 	 * dest may point to src, in which case the poly is edited in place.
+	 * src must be CLEAN.
 	 * On exit, dest is CLEAN.
 	 */
 

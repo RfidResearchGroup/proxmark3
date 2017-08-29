@@ -1,9 +1,10 @@
 /* reveng.c
- * Greg Cook, 27/Jun/2016
+ * Greg Cook, 7/Feb/2017
  */
 
 /* CRC RevEng: arbitrary-precision CRC calculator and algorithm finder
- * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016  Gregory Cook
+ * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017
+ * Gregory Cook
  *
  * This file is part of CRC RevEng.
  *
@@ -151,6 +152,7 @@ requit:
 	rptr->flags  = 0;
 	rptr->xorout = pzero;
 	rptr->check  = pzero;
+	rptr->magic  = pzero;
 	rptr->name   = NULL;
 
 	return(result);
@@ -446,7 +448,7 @@ static void
 chkres(int *resc, model_t **result, const poly_t divisor, const poly_t init, int flags, const poly_t xorout, int args, const poly_t *argpolys) {
 	/* Checks a model against the argument list, and adds to the
 	 * external results table if consistent.
-	 * Extends the result array and update the external pointer if
+	 * Extends the result array and updates the external pointer if
 	 * necessary.
 	 */
 	model_t *rptr;
@@ -484,6 +486,8 @@ chkres(int *resc, model_t **result, const poly_t divisor, const poly_t init, int
 	rptr->init   = pclone(init);
 	rptr->flags  = flags;
 	rptr->xorout = pclone(xorout);
+	rptr->check  = pzero;
+	rptr->magic  = pzero;
 	rptr->name   = NULL;
 
 	/* compute check value for this model */
