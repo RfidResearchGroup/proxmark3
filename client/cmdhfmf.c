@@ -2332,6 +2332,7 @@ int CmdHF14AMfCSave(const char *Cmd) {
 		case '2':
 		case '4':
 			numblocks = NumOfBlocks(ctmp);
+			PrintAndLog("Saving magic mifare %cK", ctmp);
 			cmdp++;
 			break;
 		case 'u':
