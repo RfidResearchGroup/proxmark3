@@ -280,12 +280,12 @@ int usage_hf14_csave(void){
 	PrintAndLog("       e             save data to emulator memory");
 	PrintAndLog("       u             save data to file, use carduid as filename");	
 	PrintAndLog("       card memory   0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
-	PrintAndLog("       i <filename>  save data to file");
+	PrintAndLog("       o <filename>  save data to file");
 	PrintAndLog("");
 	PrintAndLog("samples:");
 	PrintAndLog("       hf mf csave u 1");
 	PrintAndLog("       hf mf csave e 1");
-	PrintAndLog("       hf mf csave 4 i filename");
+	PrintAndLog("       hf mf csave 4 o filename");
 	return 0;
 }
 
@@ -2350,20 +2350,19 @@ int CmdHF14AMfCSave(const char *Cmd) {
 			hasname = true;
 			cmdp++;			
 			break;
-		case 'i':
-		case 'I':
+		case 'o':
+		case 'O':
 			// input file
 			len = param_getstr(Cmd, cmdp+1, filename[0]);
-
+			len = param_getstr(Cmd, cmdp+1, filename[1]);
+			
 			if (len < 1) {
 				errors = true;
 				break;
 			}
 			
 			if (len > FILE_PATH_SIZE - 5) len = FILE_PATH_SIZE - 5;				
-			
-			memcpy(filename[0], Cmd, len);
-			memcpy(filename[1], Cmd, len);
+
 			femlptr += len;
 			fbinptr += len;
 
