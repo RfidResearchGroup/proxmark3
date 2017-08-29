@@ -10,6 +10,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
   There is a lot of changes,  command breaking changes, which is the cause for the JUMP in version number.
   It is set to v3.0.0 to show that it is on par with PM3 Offical v3 release.
 
+  - Updated 'mkversion.pl' to write a date based on file when repo is downloaded as a zip file from github (iceman)
   - Update 'readme.md' to fit GitHubs markup(joanbono)
   - Added 'script run ul_uid', try to change UID on a magic UL-card. (iceman)
   - Fixed 'hf snoop' bug,  of wrong bool value (ikarus23)
@@ -21,10 +22,11 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
   - Fixed 'hf mfu restore/dump' to use the right struct values in special data in dumpfile. (iceman)
   - Added 'hf mfu restore r' new parameter to use the new pwd for all further auths needed when executing (iceman)
   - Added 'default_keys_dic2lua.awk' script to generate default_keys file in client/lualibs (iceman)
-  - Fixes to lots of lua scripts, 
+  - Fixes to lots of lua scripts, among others
     - 'mifare_autopwn', now uses PRNG detection (iceman)
 	- 'mfkeys', fixed bug which only tested the first key (iceman)
 	- 'dumptoemul', removed last newline (iceman)
+	- ... 
   - Added USB/SERIAL communication enhancements (micolous)
   - Change 'hf 14a cuids', to be interrupted with keyboard press (iceman)
   - Change debugstatements for LF to show which function more unified (iceman)
