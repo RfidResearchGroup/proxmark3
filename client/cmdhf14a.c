@@ -172,7 +172,10 @@ int CmdHF14AReader(const char *Cmd) {
 	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
-	WaitForResponse(CMD_ACK, &resp);
+	if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+		if (Cmd[0] != 's') PrintAndLog("iso14443a card select failed");		
+		return 0;
+	}
 	
 	iso14a_card_select_t card;
 	memcpy(&card, (iso14a_card_select_t *)resp.d.asBytes, sizeof(iso14a_card_select_t));
