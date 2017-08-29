@@ -4,6 +4,80 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 
+## [3.0.0][2017-08-29]
+  Notes on this release
+  this version includes a merge with the PM3 offical v3.0.1 code, a.k.a the "Monster merge"
+  There is a lot of changes,  command breaking changes, which is the cause for the JUMP in version number.
+  It is set to v3.0.0 to show that it is on par with PM3 Offical v3 release.
+
+  - Update 'readme.md' to fit GitHubs markup(joanbono)
+  - Added 'script run ul_uid', try to change UID on a magic UL-card. (iceman)
+  - Fixed 'hf snoop' bug,  of wrong bool value (ikarus23)
+  - Fixed fullimage.s19, wrong offsets (doegox)
+  - Updated '77-mm-usb-device-blacklist.rules' for the pid/vid (iceman)
+  - 'hf 14a sim' now follows Mifare UL-EV1 protocol better (iceman)
+  - Updated 'fpga_hf.bit' file (piwi)
+  - Added more card detections to 'hf mfu info' (iceman)
+  - Fixed 'hf mfu restore/dump' to use the right struct values in special data in dumpfile. (iceman)
+  - Added 'hf mfu restore r' new parameter to use the new pwd for all further auths needed when executing (iceman)
+  - Added 'default_keys_dic2lua.awk' script to generate default_keys file in client/lualibs (iceman)
+  - Fixes to lots of lua scripts, 
+    - 'mifare_autopwn', now uses PRNG detection (iceman)
+	- 'mfkeys', fixed bug which only tested the first key (iceman)
+	- 'dumptoemul', removed last newline (iceman)
+  - Added USB/SERIAL communication enhancements (micolous)
+  - Change 'hf 14a cuids', to be interrupted with keyboard press (iceman)
+  - Change debugstatements for LF to show which function more unified (iceman)
+  - Added 'script run calc_di' , to calculate some Mifare keys (iceman)
+  - Fixed iclass commands never shut down antenna afterwards (iceman)
+  - Change 512kb detection when flashing (iceman)
+  - Fixed compilation GCC4.9 or higher detection (winguru)
+  - Fixed compiler warnings in Ubuntu 17.04 (iceman)
+  - Ripped out 'standalone' code into separete folder to be continued. (iceman)
+  - 'hf mf nested', added key validation to entered key (merlokk)
+  - 'hf mf hardnested', added key validation to enterd key (iceman)
+  - Change a lot of help texts (iceman)
+  - Fixed 'hf mf chk' - keyblock bug, limited keys to 256. (iceman)
+  - Change 'hf mf dump' retries three times now before giving up (marshmellow)
+  - Fixed 'mfu authentication', with pack-len error (iceman)
+  - 'Script list', change sortorder to alphabetic order (iceman)
+  - Change 'hf mfu gen' to read taguid (iceman)
+  - Change 'hf mfu pwdgen' to read taguid (iceman)
+  - Added 'hf mf setmod' sets Mifare Classic EV1 load modulation strength to card (angelsl)
+  - Added 'hf 14a read'  Mifare PRNG detection based on @doegox LIBNFC impl (iceman)
+  - Added 'hf mf nonces', collects Mifare Classic nonces for analysing of PRNG (iceman)		
+  - Added new CSNS in 'hf iclass sim 2' attack (iceman)						
+  - Added more default keys (iceman)						
+  - Added analyse nuid, enable creation of Mifare NUID (iceman) 																					  
+  - Updated the Reveng 1.44 sourcecode to 1.51 from Reveng project homepage (iceman)
+  - script run formatMifare - got an option to execute the generate strings (iceman)
+  - Fix 'hf mf cgetsc' (iceman)
+  - Fix 'hf legic info' (iceman)
+  - Change version output (iceman)
+  - Added PAC/Stanley detection to lf search (marshmellow)
+  - Added lf pac demod and lf pac read - extracts the raw blocks from a PAC/Stanley tag (marshmellow)
+  - Added hf mf csave commands compatibity for 4k (Fl0-0)
+  - Added data fsktonrz, a fsk cleaning/demodulating routine for weak fsk signal. Note: follow this up with a `data rawdemod nr` to finish demoding your signal. (marshmellow)
+  - Added lf em 410xbrute, LF EM410x reader bruteforce attack by simulating UIDs from a file (Fl0-0)
+  - Compiles on OS X
+  - Compiles with gcc 4.9 
+  - Compiles for non-Intel CPUs
+  - Added lf hitag write 24, the command writes a block to hitag2 tags in crypto mode (henjo)
+  - Added the improved 'hf mf hardnested', an attack working for hardened Mifare cards (EV1, Mifare Plus SL1)
+  - Added experimental testmode write option for t55xx (danger) (marshmellow)
+  - Added t55xx p1detect to `lf search` chip detections (marshmellow)
+  - Added lf t55xx p1detect, detect page 1 of a t55xx tag based on E015 mfg code (marshmellow)
+  - Added lf noralsy demod, read, clone, sim commands (iceman)
+  - Added lf jablotron demod, read, clone, sim commands (iceman)
+  - Added lf nexwatch read   - reads a nexwatch tag from the antenna
+  - Added lf paradox read    - reads a paradox tag from the antenna
+  - Added lf fdx sim (iceman)
+  - Added lf fdx clone       - clones an fdx-b animal tag to t55x7 or q5 (iceman)
+  - Added lf fdx read        - reads a fdx-b tag from the antenna (iceman)
+  - Added lf gproxii read    - reads a gproxii tag from the antenna (marshmellow)
+  - Added lf indala read     - reads an indala tag from the antenna (marshmellow)
+  - Added lf visa2000 demod, read, clone, sim commands (iceman)
+
 ## [1.7.0 iceman fork] [2017-03-07]
   - hf mf dump - added retry loops to try each read attempt up to 3 times.  makes getting a complete dump easier with many antennas. (marshmellow)
 
