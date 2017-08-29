@@ -462,7 +462,7 @@ int CmdHF15DumpMem(const char*Cmd) {
 	
 		SendCommand(&c);
 		
-		if (WaitForResponseTimeout(CMD_ACK,&resp,1000)) {
+		if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
 			recv = resp.d.asBytes;
 			if (ISO15_CRC_CHECK==Crc(recv,resp.arg[0])) {
 				if (!(recv[0] & ISO15_RES_ERROR)) {
@@ -484,7 +484,8 @@ int CmdHF15DumpMem(const char*Cmd) {
 					return 1;
 				}
 			} // else PrintAndLog("crc");
-		} // else PrintAndLog("r null");
+		} 
+		// else PrintAndLog("r null");
 	} // retry
   // TODO: need fix
 //	if (resp.arg[0]<3)
@@ -547,7 +548,7 @@ int CmdHF15CmdInquiry(const char *Cmd)
 	SendCommand(&c);
 	
 	if (WaitForResponseTimeout(CMD_ACK,&resp,1000)) {
-		if (resp.arg[0]>=12) {
+		if (resp.arg[0] >= 12) {
 		   recv = resp.d.asBytes;
 		   PrintAndLog("UID=%s", sprintUID(NULL, &recv[2]));
 		   PrintAndLog("Tag Info: %s", getTagInfo_15(&recv[2]));	
@@ -555,7 +556,7 @@ int CmdHF15CmdInquiry(const char *Cmd)
 			PrintAndLog("Response to short, just %i bytes. No tag?\n", resp.arg[0]);
 		}
 	} else {
-		PrintAndLog("timeout.");
+		PrintAndLog("timeout while waiting for reply.");
 	}
 	return 0;
 }
@@ -849,7 +850,7 @@ int CmdHF15CmdSysinfo(const char *Cmd) {
 			PrintAndLog("CRC failed");
 		}
 	} else {
-		PrintAndLog("timeout: no answer");
+		PrintAndLog("timeout while waiting for reply.");
 	}
 	
 	return 0;
@@ -928,7 +929,7 @@ int CmdHF15CmdReadmulti(const char *Cmd) {
 			PrintAndLog("CRC failed");
 		}
 	} else {
-		PrintAndLog("no answer");
+		PrintAndLog("timeout while waiting for reply.");
 	}
 	
 	return 0;
@@ -1002,7 +1003,7 @@ int CmdHF15CmdRead(const char *Cmd) {
 			PrintAndLog("CRC failed");
 		}
 	} else {
-		PrintAndLog("no answer");
+		PrintAndLog("timeout while waiting for reply.");
 	}
 	
 	return 0;

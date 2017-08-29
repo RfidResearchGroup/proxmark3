@@ -1459,6 +1459,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 		
 		if (initialize) {
 			if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
+				//strange second call (iceman)
 				UsbCommand c = {CMD_MIFARE_ACQUIRE_ENCRYPTED_NONCES, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, 4}};
 				clearCommandBuffer();
 				SendCommand(&c);

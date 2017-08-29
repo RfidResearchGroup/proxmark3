@@ -167,13 +167,14 @@ int CmdHF14AList(const char *Cmd) {
 }
 
 int CmdHF14AReader(const char *Cmd) {
+	bool silent = (Cmd[0] == 's' || Cmd[0] ==  'S');
 	UsbCommand cDisconnect = {CMD_READER_ISO_14443a, {0,0,0}};
 	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
-	if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-		if (Cmd[0] != 's') PrintAndLog("iso14443a card select failed");
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+		if (!silent) PrintAndLog("iso14443a card select failed");
 		SendCommand(&cDisconnect);
 		return 0;
 	}
@@ -181,15 +182,21 @@ int CmdHF14AReader(const char *Cmd) {
 	iso14a_card_select_t card;
 	memcpy(&card, (iso14a_card_select_t *)resp.d.asBytes, sizeof(iso14a_card_select_t));
 
-	uint64_t select_status = resp.arg[0];		// 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
+	/* 
+		0: couldn't read
+		1: OK, with ATS
+		2: OK, no ATS
+		3: proprietary Anticollision	
+	*/
+	uint64_t select_status = resp.arg[0];
 	
-	if(select_status == 0) {
-		if (Cmd[0] != 's') PrintAndLog("iso14443a card select failed");
+	if (select_status == 0) {
+		if (!silent) PrintAndLog("iso14443a card select failed");
 		SendCommand(&cDisconnect);
 		return 0;
 	}
 
-	if(select_status == 3) {
+	if (select_status == 3) {
 		PrintAndLog("Card doesn't support standard iso14443-3 anticollision");
 		PrintAndLog("ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
 		SendCommand(&cDisconnect);

@@ -71,7 +71,7 @@ int CmdHF14AMfDESAuth(const char *Cmd){
          if (isOK){
              PrintAndLog("enc(nc)/b0:%s", sprint_hex(data+2,8));
              memcpy(b0,data+2,8);
-	}
+		}
     } else {
         PrintAndLog("Command execute timeout");
     }
@@ -107,10 +107,9 @@ int CmdHF14AMfDESAuth(const char *Cmd){
         uint8_t  isOK  = respb.arg[0] & 0xff;
         uint8_t * data2= respb.d.asBytes;
 
-        if (isOK){
+        if (isOK)
             PrintAndLog("b3:%s", sprint_hex(data2+2, 8));
-	}
-                 
+	
     } else {
         PrintAndLog("Command execute timeout");
     } 
@@ -163,7 +162,7 @@ int CmdHF14AMfAESAuth(const char *Cmd){
     UsbCommand c = {CMD_MIFARE_DES_AUTH1, {blockNo}};
     SendCommand(&c);
     UsbCommand resp;
-    if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK  = resp.arg[0] & 0xff;
 	        cuid  = resp.arg[1];
         uint8_t * data= resp.d.asBytes;
@@ -171,7 +170,7 @@ int CmdHF14AMfAESAuth(const char *Cmd){
          if (isOK){
              PrintAndLog("enc(nc)/b0:%s", sprint_hex(data+2,16));
              memcpy(b0,data+2,16);
-	}
+		}
     } else {
         PrintAndLog("Command execute timeout");
     }
@@ -210,14 +209,13 @@ int CmdHF14AMfAESAuth(const char *Cmd){
     SendCommand(&d);
 
     UsbCommand respb;
-    if (WaitForResponseTimeout(CMD_ACK,&respb,1500)) {
+    if (WaitForResponseTimeout(CMD_ACK, &respb, 1500)) {
         uint8_t  isOK  = respb.arg[0] & 0xff;
         uint8_t * data2= respb.d.asBytes;
 
-        if (isOK){
+        if (isOK)
             PrintAndLog("b3:%s", sprint_hex(data2+2, 16));
-	}
-                 
+		
     } else {
         PrintAndLog("Command execute timeout");
     } 

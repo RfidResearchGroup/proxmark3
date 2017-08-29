@@ -356,7 +356,7 @@ int CmdHF14AMfWrBl(const char *Cmd) {
 	SendCommand(&c);
 
 	UsbCommand resp;
-	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+	if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
 		uint8_t isOK  = resp.arg[0] & 0xff;
 		PrintAndLog("isOk:%02x", isOK);
 	} else {
@@ -448,10 +448,10 @@ int CmdHF14AMfRdSc(const char *Cmd) {
 	memcpy(c.d.asBytes, key, 6);
 	clearCommandBuffer();
 	SendCommand(&c);
-	PrintAndLog(" ");
+	PrintAndLog("");
 
 	UsbCommand resp;
-	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+	if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
 		isOK  = resp.arg[0] & 0xff;
 		data  = resp.d.asBytes;
 
@@ -1619,97 +1619,97 @@ int CmdHF14AMfSniff(const char *Cmd){
 		}
 		
 		UsbCommand resp;
-		if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-			res = resp.arg[0] & 0xff;
-			traceLen = resp.arg[1];
-			len = resp.arg[2];
+		if ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) continue;
+		
+		res = resp.arg[0] & 0xff;
+		traceLen = resp.arg[1];
+		len = resp.arg[2];
 
-			// we are done?
-			if (res == 0) {
-				free(buf);
-				return 0;
-			}
+		// we are done?
+		if (res == 0) {
+			free(buf);
+			return 0;
+		}
 
-			if (res == 1) {								// there is (more) data to be transferred
-				if (pckNum == 0) {						// first packet, (re)allocate necessary buffer
-					if (traceLen > bufsize || buf == NULL) {
-						uint8_t *p;
-						if (buf == NULL)				// not yet allocated
-							p = malloc(traceLen);
-						else						// need more memory
-							p = realloc(buf, traceLen);
-						
-						if (p == NULL) {
-							PrintAndLog("Cannot allocate memory for trace");
-							free(buf);
-							return 2;
-						}
-						buf = p;
+		if (res == 1) {								// there is (more) data to be transferred
+			if (pckNum == 0) {						// first packet, (re)allocate necessary buffer
+				if (traceLen > bufsize || buf == NULL) {
+					uint8_t *p;
+					if (buf == NULL)				// not yet allocated
+						p = malloc(traceLen);
+					else						// need more memory
+						p = realloc(buf, traceLen);
+					
+					if (p == NULL) {
+						PrintAndLog("Cannot allocate memory for trace");
+						free(buf);
+						return 2;
 					}
-					bufPtr = buf;
-					bufsize = traceLen;
-					memset(buf, 0x00, traceLen);
+					buf = p;
 				}
-				if (bufPtr == NULL) {
-					PrintAndLog("Cannot allocate memory for trace");
-					free(buf);
-					return 2;
-				}
-				// what happens if LEN is bigger then TRACELEN --iceman
-				memcpy(bufPtr, resp.d.asBytes, len);
-				bufPtr += len;
-				pckNum++;
-			}
-
-			if (res == 2) {								// received all data, start displaying
-				blockLen = bufPtr - buf;
 				bufPtr = buf;
-				printf(">\n");
-				PrintAndLog("received trace len: %d packages: %d", blockLen, pckNum);
-				while (bufPtr - buf < blockLen) {
-					bufPtr += 6;						// skip (void) timing information
-					len = *((uint16_t *)bufPtr);
-					if(len & 0x8000) {
-						isTag = true;
-						len &= 0x7fff;
-					} else {
-						isTag = false;
-					}
-					bufPtr += 2;
-					if ((len == 17) && (bufPtr[0] == 0xff) && (bufPtr[1] == 0xff) && (bufPtr[15] == 0xff) && (bufPtr[16] == 0xff)) {
-						memcpy(uid, bufPtr + 2, 10);
-						memcpy(atqa, bufPtr + 2 + 10, 2);
-						switch (atqa[0] & 0xC0) {
-							case 0x80: uid_len = 10; break;
-							case 0x40: uid_len = 7; break;
-							default:   uid_len = 4; break;
-						}
-						sak = bufPtr[14];
-						PrintAndLog("tag select uid| %s atqa:0x%02x%02x sak:0x%02x", 
-							sprint_hex(uid, uid_len),
-							atqa[1], 
-							atqa[0], 
-							sak);
-						if (wantLogToFile || wantDecrypt) {
-							FillFileNameByUID(logHexFileName, uid, ".log", uid_len);
-							AddLogCurrentDT(logHexFileName);
-						}						
-						if (wantDecrypt)
-							mfTraceInit(uid, uid_len, atqa, sak, wantSaveToEmlFile);
-					} else {
-						PrintAndLog("%03d| %s |%s", num, isTag ? "TAG" : "RDR", sprint_hex(bufPtr, len));
-						if (wantLogToFile) 
-							AddLogHex(logHexFileName, isTag ? "TAG| ":"RDR| ", bufPtr, len);
-						if (wantDecrypt) 
-							mfTraceDecode(bufPtr, len, wantSaveToEmlFile);
-						num++;	
-					}
-					bufPtr += len;
-					bufPtr += ((len-1)/8+1);	// ignore parity
-				}
-				pckNum = 0;
+				bufsize = traceLen;
+				memset(buf, 0x00, traceLen);
 			}
-		} // resp not NULL
+			if (bufPtr == NULL) {
+				PrintAndLog("Cannot allocate memory for trace");
+				free(buf);
+				return 2;
+			}
+			// what happens if LEN is bigger then TRACELEN --iceman
+			memcpy(bufPtr, resp.d.asBytes, len);
+			bufPtr += len;
+			pckNum++;
+		}
+
+		if (res == 2) {								// received all data, start displaying
+			blockLen = bufPtr - buf;
+			bufPtr = buf;
+			printf(">\n");
+			PrintAndLog("received trace len: %d packages: %d", blockLen, pckNum);
+			while (bufPtr - buf < blockLen) {
+				bufPtr += 6;						// skip (void) timing information
+				len = *((uint16_t *)bufPtr);
+				if(len & 0x8000) {
+					isTag = true;
+					len &= 0x7fff;
+				} else {
+					isTag = false;
+				}
+				bufPtr += 2;
+				if ((len == 17) && (bufPtr[0] == 0xff) && (bufPtr[1] == 0xff) && (bufPtr[15] == 0xff) && (bufPtr[16] == 0xff)) {
+					memcpy(uid, bufPtr + 2, 10);
+					memcpy(atqa, bufPtr + 2 + 10, 2);
+					switch (atqa[0] & 0xC0) {
+						case 0x80: uid_len = 10; break;
+						case 0x40: uid_len = 7; break;
+						default:   uid_len = 4; break;
+					}
+					sak = bufPtr[14];
+					PrintAndLog("tag select uid| %s atqa:0x%02x%02x sak:0x%02x", 
+						sprint_hex(uid, uid_len),
+						atqa[1], 
+						atqa[0], 
+						sak);
+					if (wantLogToFile || wantDecrypt) {
+						FillFileNameByUID(logHexFileName, uid, ".log", uid_len);
+						AddLogCurrentDT(logHexFileName);
+					}						
+					if (wantDecrypt)
+						mfTraceInit(uid, uid_len, atqa, sak, wantSaveToEmlFile);
+				} else {
+					PrintAndLog("%03d| %s |%s", num, isTag ? "TAG" : "RDR", sprint_hex(bufPtr, len));
+					if (wantLogToFile) 
+						AddLogHex(logHexFileName, isTag ? "TAG| ":"RDR| ", bufPtr, len);
+					if (wantDecrypt) 
+						mfTraceDecode(bufPtr, len, wantSaveToEmlFile);
+					num++;	
+				}
+				bufPtr += len;
+				bufPtr += ((len-1)/8+1);	// ignore parity
+			}
+			pckNum = 0;
+		}
 	} // while (true)
 
 	free(buf);

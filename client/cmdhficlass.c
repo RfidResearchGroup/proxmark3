@@ -318,6 +318,7 @@ int CmdHFiClassSim(const char *Cmd) {
 		memcpy(c.d.asBytes, csns, 8*NUM_CSNS);
 		clearCommandBuffer();
 		SendCommand(&c);
+		// -1 make it wait all the time (iceman)
 		if (!WaitForResponseTimeout(CMD_ACK, &resp, -1)) {
 			PrintAndLog("Command timed out");
 			return 0;

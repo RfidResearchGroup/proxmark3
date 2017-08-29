@@ -181,9 +181,8 @@ int CmdHF14ADesInfo(const char *Cmd){
 	c.arg[1] = 0x01;
 	c.d.asBytes[0] = GET_FREE_MEMORY;
     SendCommand(&c);
-	if ( !WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+	if ( !WaitForResponseTimeout(CMD_ACK,&resp,1500)) 
 		return 0;
-	}  
 	
 	uint8_t tmp[3];
 	memcpy(tmp, resp.d.asBytes+3,3); 
@@ -299,9 +298,7 @@ void GetKeySettings( uint8_t *aid){
 		c.d.asBytes[0] = GET_KEY_VERSION; //0x64
 		c.d.asBytes[1] = 0x00;
 		SendCommand(&c);
-		if ( !WaitForResponseTimeout(CMD_ACK,&resp,1000) ) {
-			return;
-		}
+		if ( !WaitForResponseTimeout(CMD_ACK,&resp,1000) ) { return; }
 		isOK  = resp.arg[0] & 0xff;
 		if ( !isOK ){
 			PrintAndLog("   Can't read key-version");

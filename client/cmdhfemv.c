@@ -173,7 +173,7 @@ int CmdHfEmvTrans(const char *Cmd) {
 	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
-	if (WaitForResponseTimeout(CMD_ACK, &resp, 5000)) {
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 5000)) {
 		PrintAndLog("Command execute time-out");
 		return 1;
 	}
@@ -312,7 +312,7 @@ int CmdHfEmvSim(const char *Cmd) {
 	clearCommandBuffer();
 	SendCommand(&c);	
 	UsbCommand resp;
-	if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
 		PrintAndLog("Command execute time-out");
 		return 1;
 	}	
