@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+  - 
+  - trace/securakey-64169.pm3 - trace of a scecurakey (atyppo)
+  - 'hf mf decrypt' - got some longer input and helptext parameter (iceman)  
 
 ## [3.0.0][2017-08-29]
   Notes on this release
