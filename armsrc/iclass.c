@@ -715,7 +715,7 @@ static void iclass_setup_sniff(void){
 void RAMFUNC SniffIClass(void) {
 
 	uint8_t previous_data = 0;
-	int maxDataLen = 0,  datalen = 0; 
+	int maxDataLen = 0; //  datalen = 0; 
 	uint32_t time_0 = 0, time_start = 0, time_stop  = 0;
     uint32_t sniffCounter = 0;
 
@@ -834,7 +834,19 @@ void RAMFUNC SniffIClass(void) {
 		DbpString("Sniff statistics:");	
 		Dbprintf(" maxDataLen=%x, Uart.state=%x, Uart.byteCnt=%x", maxDataLen, Uart.state, Uart.byteCnt);
 		Dbprintf(" Tracelen=%x, Uart.output[0]=%x", BigBuf_get_traceLen(), (int)Uart.output[0]);
-		Dbhexdump(datalen, data, false);
+		Dbhexdump(ICLASS_DMA_BUFFER_SIZE, data, false);
+		uint8_t r[128] = {0}; 
+		uint8_t t[128] = {0};
+		uint16_t i;
+		uint8_t j;
+		for (i=0, j=0; i<ICLASS_DMA_BUFFER_SIZE; i += 2, j++) {
+			r[j] = (data[i] & 0xF0)  | (data[i+1] >> 4);
+			t[j] = (data[i] << 4) | (data[i+1] & 0xF);
+		}
+		DbpString("reader:");
+		Dbhexdump(sizeof(r), r, false);
+		DbpString("tag:");
+		Dbhexdump(sizeof(t), t, false);
 	}
 	
 	switch_off(); 

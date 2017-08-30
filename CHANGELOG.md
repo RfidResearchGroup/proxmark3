@@ -6,7 +6,10 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
   - 
   - trace/securakey-64169.pm3 - trace of a scecurakey (atyppo)
   - 'hf mf decrypt' - got some longer input and helptext parameter (iceman)  
-
+  - Updated the Reveng 1.51 sourcecode to 1.52 from Reveng project homepage (iceman)
+  - 'hf 14a read' - disconnects when failing to read tag (iceman)
+  - 'hf mf csave' - renamed parameter 'i' to 'o' as in output (iceman)
+  
 ## [3.0.0][2017-08-29]
   Notes on this release
   this version includes a merge with the PM3 offical v3.0.1 code, a.k.a the "Monster merge"
