@@ -151,6 +151,20 @@ int usage_hf14_restore(void){
 	PrintAndLog("         hf mf restore 4");	
 	return 0;
 }
+int usage_hf14_decryptbytes(void){
+	PrintAndLog("Decrypt Crypto-1 encrypted bytes given some known state of crypto. See tracelog to gather needed values\n");
+	PrintAndLog("usage:   hf mf decrypt [h] <nt> <ar_enc> <at_enc> <data>");
+	PrintAndLog("options:");
+	PrintAndLog("      h            this help");
+	PrintAndLog("      <nt>         reader nonce");
+	PrintAndLog("      <ar_enc>     encrypted reader response");
+	PrintAndLog("      <at_enc>     encrypted tag response");
+	PrintAndLog("      <data>       encrypted data, taken directly after at_enc and forward");
+	PrintAndLog("samples:");
+	PrintAndLog("         hf mf decrypt b830049b 9248314a 9280e203 41e586f9\n");
+	PrintAndLog("  this sample decrypts 41e586f9 -> 3003999a  Annotated: 30 03 [99 9a]  auth block 3 [crc]");
+	return 0;
+}
 
 int usage_hf14_eget(void){
 	PrintAndLog("Usage:  hf mf eget <block number>");
@@ -2449,21 +2463,30 @@ int CmdHF14AMfCSave(const char *Cmd) {
 
 //needs nt, ar, at, Data to decrypt
 int CmdHf14AMfDecryptBytes(const char *Cmd){
-	uint8_t data[50];
+	
+	char ctmp = param_getchar(Cmd, 0);
+	if (strlen(Cmd) < 1 || ctmp == 'h' || ctmp == 'H') return usage_hf14_decryptbytes();
+	
 	uint32_t nt 	= param_get32ex(Cmd,0,0,16);
 	uint32_t ar_enc = param_get32ex(Cmd,1,0,16);
 	uint32_t at_enc = param_get32ex(Cmd,2,0,16);
 
-	int len = 0;
+	int len = param_getlength(Cmd, 3);
+	if (len & 1 ) {
+		PrintAndLog("Uneven hex string length. LEN=%d", len);
+		return 1;
+	}
+
+	PrintAndLog("nt\t%08X", nt);
+	PrintAndLog("ar enc\t%08X", ar_enc);
+	PrintAndLog("at enc\t%08X", at_enc);
+		
+	uint8_t *data = malloc(len);	
 	param_gethex_ex(Cmd, 3, data, &len);
-	
-	len /= 2;	
-	int limit = sizeof(data) / 2;
-	
-	if ( len >= limit )
-		len = limit;
-	
-	return tryDecryptWord( nt, ar_enc, at_enc, data, len);
+	len >>= 1;
+	tryDecryptWord( nt, ar_enc, at_enc, data, len);
+	free (data);
+	return 0;
 }
 
 int CmdHf14AMfSetMod(const char *Cmd) {
