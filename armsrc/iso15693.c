@@ -90,8 +90,7 @@ int DEBUG = 0;
 // resulting data rate is 26,48 kbit/s (fc/512)
 // cmd ... data
 // n ... length of data
-static void CodeIso15693AsReader(uint8_t *cmd, int n)
-{
+static void CodeIso15693AsReader(uint8_t *cmd, int n) {
 	int i, j;
 
 	ToSendReset();
@@ -170,8 +169,7 @@ static void CodeIso15693AsReader(uint8_t *cmd, int n)
 // encode data using "1 out of 256" sheme
 // data rate is 1,66 kbit/s (fc/8192) 
 // is designed for more robust communication over longer distances
-static void CodeIso15693AsReader256(uint8_t *cmd, int n)
-{
+static void CodeIso15693AsReader256(uint8_t *cmd, int n) {
 	int i, j;
 
 	ToSendReset();
@@ -212,14 +210,12 @@ static void CodeIso15693AsReader256(uint8_t *cmd, int n)
 		ToSendStuffBit(1);
 }
 
-
 // Transmit the command (to the tag) that was placed in ToSend[].
-static void TransmitTo15693Tag(const uint8_t *cmd, int len, int *samples, int *wait)
-{
+static void TransmitTo15693Tag(const uint8_t *cmd, int len, int *samples, int *wait) {
     int c;
 	volatile uint32_t r;
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_TX);
-	
+
 	if (wait) {
 		if (*wait < 10) { *wait = 10; }
 		for (c = 0; c < *wait;) {
@@ -236,15 +232,17 @@ static void TransmitTo15693Tag(const uint8_t *cmd, int len, int *samples, int *w
 
     c = 0;
     for(;;) {
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+        WDT_HIT();
+		
+		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
             AT91C_BASE_SSC->SSC_THR = cmd[c];
             if( ++c >= len) break;
         }
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             r = AT91C_BASE_SSC->SSC_RHR; (void)r;
         }
-        WDT_HIT();
     }
+	
 	if (samples) {
 		if (wait)
 			*samples = (c + *wait) << 3;
@@ -256,11 +254,11 @@ static void TransmitTo15693Tag(const uint8_t *cmd, int len, int *samples, int *w
 //-----------------------------------------------------------------------------
 // Transmit the command (to the reader) that was placed in ToSend[].
 //-----------------------------------------------------------------------------
-static void TransmitTo15693Reader(const uint8_t *cmd, int len, int *samples, int *wait)
-{
+static void TransmitTo15693Reader(const uint8_t *cmd, int len, int *samples, int *wait) {
     int c = 0;
 	volatile uint32_t r;
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR|FPGA_HF_SIMULATOR_MODULATE_424K);
+	
 	if (wait) {
 		if (*wait < 10) { *wait = 10; }
 		for (c = 0; c < *wait;) {
@@ -274,16 +272,17 @@ static void TransmitTo15693Reader(const uint8_t *cmd, int len, int *samples, int
 			WDT_HIT();
 		}
 	}
-	
+
+    c = 0;	
     for(;;) {
-        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+        WDT_HIT();
+		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
             AT91C_BASE_SSC->SSC_THR = cmd[c];
             if( ++c >= len) break;
         }
         if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             r = AT91C_BASE_SSC->SSC_RHR; (void)r;
         }
-        WDT_HIT();
     }
 	if (samples) {
 		if (wait)
@@ -293,7 +292,6 @@ static void TransmitTo15693Reader(const uint8_t *cmd, int len, int *samples, int
 	}
 }
 
-
 // Read from Tag
 // Parameters:
 //		receivedResponse
@@ -302,16 +300,15 @@ static void TransmitTo15693Reader(const uint8_t *cmd, int len, int *samples, int
 //		elapsed
 // returns: 
 //		number of decoded bytes
-static int GetIso15693AnswerFromTag(uint8_t *receivedResponse, int maxLen, int *samples, int *elapsed)
-{
-	uint8_t *dest = BigBuf_get_addr();
-
-	int c = 0, getNext = false;
-	int8_t prev = 0;
+static int GetIso15693AnswerFromTag(uint8_t *receivedResponse, int maxLen, int *samples, int *elapsed) {
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
 	//SpinDelay(60);	// greg - experiment to get rid of some of the 0 byte/failed reads
-
+	
+	int c = 0, getNext = false;
+	int8_t prev = 0;
+	uint8_t *dest = BigBuf_get_addr();
+	
 	for(;;) {
 		WDT_HIT();
 
@@ -431,13 +428,12 @@ static int GetIso15693AnswerFromTag(uint8_t *receivedResponse, int maxLen, int *
 
 // Now the GetISO15693 message from sniffing command
 static int GetIso15693AnswerFromSniff(uint8_t *receivedResponse, int maxLen, int *samples, int *elapsed) {
-	uint8_t *dest = BigBuf_get_addr();
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
+	//SpinDelay(60);	// greg - experiment to get rid of some of the 0 byte/failed reads
 
 	int c = 0, getNext = false;
 	int8_t prev = 0;
-
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
-	//SpinDelay(60);	// greg - experiment to get rid of some of the 0 byte/failed reads
+	uint8_t *dest = BigBuf_get_addr();
 
 	for(;;) {
 		WDT_HIT();
@@ -468,7 +464,7 @@ static int GetIso15693AnswerFromSniff(uint8_t *receivedResponse, int maxLen, int
 	/////////// DEMODULATE ///////////////////
 	//////////////////////////////////////////
 
-	int i, j, max = 0, maxPos=0, skip = 4;
+	int i, j, max = 0, maxPos = 0, skip = 4;
 
 	// First, correlate for SOF
 	for(i = 0; i < 19000; i++) {
@@ -559,48 +555,52 @@ static void BuildIdentifyRequest(void);
 //-----------------------------------------------------------------------------
 void AcquireRawAdcSamplesIso15693(void)
 {
-	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-
 	int c = 0, getNext = false;
 	int8_t prev = 0;
 	volatile uint32_t r;
-
-	uint8_t *dest = BigBuf_get_addr();
-	BuildIdentifyRequest();
+	volatile int8_t b;	
+	
+	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+
+	FpgaSetupSsc();
 
 	// Give the tags time to energize
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
 	SpinDelay(100);
 
 	// Now send the command
-	FpgaSetupSsc();
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_TX);
 
+	uint8_t *dest = BigBuf_get_addr();
+	BuildIdentifyRequest();
+	
 	c = 0;
 	for(;;) {
+		WDT_HIT();
+		
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
 			AT91C_BASE_SSC->SSC_THR = ToSend[c];
 			if( ++c == ToSendMax+3) break;
 		}
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-			r = AT91C_BASE_SSC->SSC_RHR;
-			(void)r;
+			r = AT91C_BASE_SSC->SSC_RHR; (void)r;
 		}
-		WDT_HIT();
 	}
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
 
 	c = 0;
 	for(;;) {
+		WDT_HIT();
+		
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))
 			AT91C_BASE_SSC->SSC_THR = 0x43;
 		
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 
-			int8_t b = (int8_t)AT91C_BASE_SSC->SSC_RHR;
+			b = (int8_t)AT91C_BASE_SSC->SSC_RHR;
 
 			// The samples are correlations against I and Q versions of the
 			// tone that the tag AM-modulates, so every other sample is I,
@@ -620,40 +620,31 @@ void AcquireRawAdcSamplesIso15693(void)
 	}
 }
 
-
-void RecordRawAdcSamplesIso15693(void)
-{
-	uint8_t *dest = BigBuf_get_addr();
+// switch_off,  initreader
+void RecordRawAdcSamplesIso15693(void) {
 
 	int c = 0, getNext = false;
 	int8_t prev = 0;
+	volatile int8_t b;
+	
+	Iso15693InitReader();
 
-	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-	// Setup SSC
-	FpgaSetupSsc();
+	uint8_t *dest = BigBuf_get_addr();
 
-	// Start from off (no field generated)
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	SpinDelay(200);
-
-	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
-	SpinDelay(100);
-
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
-
-	for(;;) {
+	for(;;) { 
+		WDT_HIT();
+		
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
 			AT91C_BASE_SSC->SSC_THR = 0x43;
 		}
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-			int8_t b;
 			b = (int8_t)AT91C_BASE_SSC->SSC_RHR;
 
 			// The samples are correlations against I and Q versions of the
 			// tone that the tag AM-modulates, so every other sample is I,
 			// every other is Q. We just want power, so abs(I) + abs(Q) is
 			// close to what we want.
-			if(getNext) {
+			if (getNext) {
 				dest[c++] = (uint8_t) ABS(b) + ABS(prev);
 
 				if(c >= 7000)
@@ -663,40 +654,34 @@ void RecordRawAdcSamplesIso15693(void)
 			}
 
 			getNext = !getNext;
-			WDT_HIT();
 		}
 	}
-	Dbprintf("fin record");
+	
+	Dbprintf("done");
+	switch_off();
 }
 
 
 // Initialize the proxmark as iso15k reader 
 // (this might produces glitches that confuse some tags
-void Iso15693InitReader() {
-	LED_A_ON();
-	LED_B_ON();
-	LED_C_OFF();
-	LED_D_OFF();
-	
+void Iso15693InitReader(void) {
+	LEDsoff();
+
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-	// Setup SSC
-	// FpgaSetupSsc();
 
 	// Start from off (no field generated)
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	SpinDelay(10);
 
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+	
 	FpgaSetupSsc();
 
 	// Give the tags time to energize
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
-	SpinDelay(250);
+	SpinDelay(60);
 
 	LED_A_ON();
-	LED_B_OFF();
-	LED_C_OFF();
-	LED_D_OFF();
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -794,10 +779,9 @@ int SendDataTag(uint8_t *send, int sendlen, int init, int speed, uint8_t **recv)
 	int samples = 0, tsamples = 0;
 	int wait = 0, elapsed = 0;
 	int answerLen = 0;
-	
+
+	LEDsoff();
 	LED_A_ON(); LED_B_ON();
-	
-	LED_C_OFF(); LED_D_OFF();
 	
 	if (init) Iso15693InitReader();
 
@@ -813,14 +797,12 @@ int SendDataTag(uint8_t *send, int sendlen, int init, int speed, uint8_t **recv)
 		CodeIso15693AsReader(send, sendlen);
 	}
 	
-	LED_A_ON();
-	LED_B_OFF();
+	LED_A_INV();
 	
 	TransmitTo15693Tag(ToSend, ToSendMax, &tsamples, &wait);	
 	// Now wait for a response
-	if (recv!=NULL) {
-		LED_A_OFF();
-		LED_B_ON();
+	if (recv != NULL) {
+		LED_B_INV();
 		answerLen = GetIso15693AnswerFromTag(answer, 100, &samples, &elapsed) ;	
 		*recv = answer;
 	}
@@ -906,13 +888,7 @@ void SetDebugIso15693(uint32_t debug) {
 // Simulate an ISO15693 reader, perform anti-collision and then attempt to read a sector
 // all demodulation performed in arm rather than host. - greg
 //-----------------------------------------------------------------------------
-void ReaderIso15693(uint32_t parameter)
-{
-	LED_A_ON();
-	LED_B_ON();
-	LED_C_OFF();
-	LED_D_OFF();
-
+void ReaderIso15693(uint32_t parameter) {
 	int answerLen1 = 0;
 	int answerLen2 = 0;
 	int answerLen3 = 0;
@@ -921,9 +897,8 @@ void ReaderIso15693(uint32_t parameter)
 	int tsamples = 0;
 	int wait = 0;
 	int elapsed = 0;
+	
 	uint8_t TagUID[8] = {0x00};
-
-	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
 	uint8_t *answer1 = BigBuf_malloc(100);
 	uint8_t *answer2 = BigBuf_malloc(100);
@@ -933,36 +908,21 @@ void ReaderIso15693(uint32_t parameter)
 	memset(answer2, 0x00, 100);
 	memset(answer3, 0x00, 100);
 
-	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
-	// Setup SSC
-	FpgaSetupSsc();
-
-	// Start from off (no field generated)
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	SpinDelay(200);
-
-	// Give the tags time to energize
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
-	SpinDelay(200);
-
-	LED_A_ON();
-	LED_B_OFF();
-	LED_C_OFF();
-	LED_D_OFF();
-
+	// Now send the IDENTIFY command
 	// FIRST WE RUN AN INVENTORY TO GET THE TAG UID
 	// THIS MEANS WE CAN PRE-BUILD REQUESTS TO SAVE CPU TIME
-
-	// Now send the IDENTIFY command
 	BuildIdentifyRequest();
 	
+	// set up device/fpga 
+	Iso15693InitReader();
+
 	TransmitTo15693Tag(ToSend,ToSendMax,&tsamples, &wait);
 	
 	// Now wait for a response
 	answerLen1 = GetIso15693AnswerFromTag(answer1, 100, &samples, &elapsed) ;
 
-	if (answerLen1 >= 12) // we should do a better check than this
-	{
+	// we should do a better check than this
+	if (answerLen1 >= 12) {
 		TagUID[0] = answer1[2];
 		TagUID[1] = answer1[3];
 		TagUID[2] = answer1[4];
@@ -971,7 +931,6 @@ void ReaderIso15693(uint32_t parameter)
 		TagUID[5] = answer1[7];
 		TagUID[6] = answer1[8]; // IC Manufacturer code
 		TagUID[7] = answer1[9]; // always E0
-
 	}
 
 	Dbprintf("%d octets read from IDENTIFY request:", answerLen1);
@@ -979,7 +938,7 @@ void ReaderIso15693(uint32_t parameter)
 	Dbhexdump(answerLen1, answer1, true);
 
 	// UID is reverse
-	if (answerLen1>=12) 
+	if (answerLen1 >= 12) 
 		Dbprintf("UID = %02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX",
 			TagUID[7],TagUID[6],TagUID[5],TagUID[4],
 			TagUID[3],TagUID[2],TagUID[1],TagUID[0]);
@@ -990,7 +949,7 @@ void ReaderIso15693(uint32_t parameter)
 	Dbhexdump(answerLen2, answer2, true);
 
 	Dbprintf("%d octets read from XXX request:", answerLen3);
-	DbdecodeIso15693Answer(answerLen3,answer3);
+	DbdecodeIso15693Answer(answerLen3, answer3);
 	Dbhexdump(answerLen3, answer3, true);
 
 	// read all pages
@@ -1010,13 +969,22 @@ void ReaderIso15693(uint32_t parameter)
 		} 
 	}
 
-	LEDsoff();
+	switch_off();
 }
 
 // Simulate an ISO15693 TAG, perform anti-collision and then print any reader commands
 // all demodulation performed in arm rather than host. - greg
-void SimTagIso15693(uint32_t parameter, uint8_t *uid)
-{
+void SimTagIso15693(uint32_t parameter, uint8_t *uid) {
+	
+	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+		
+	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+	FpgaSetupSsc();
+
+	// Start from off (no field generated)
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	SpinDelay(200);
+	
 	LED_A_ON();
 
 	int ans = 0;
@@ -1026,18 +994,9 @@ void SimTagIso15693(uint32_t parameter, uint8_t *uid)
 	int elapsed = 0;
 
 	Dbprintf("iso15963 Simulating uid: %x %x %x %x %x %x %x %x", uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6], uid[7]);
-	
-	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
 	uint8_t *buf = BigBuf_malloc(100);
 	memset(buf, 0x00, 100);
-
-	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
-	FpgaSetupSsc();
-
-	// Start from off (no field generated)
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	SpinDelay(200);
 
 	LED_C_ON();
 
@@ -1045,14 +1004,14 @@ void SimTagIso15693(uint32_t parameter, uint8_t *uid)
 	// not so obsvious, but in the call to BuildInventoryResponse,  the command is copied to the global ToSend buffer used below.			
 	BuildInventoryResponse(uid);
 	
-	while(!BUTTON_PRESS() && !usb_poll_validate_length() ) {
+	while (!BUTTON_PRESS() && !usb_poll_validate_length() ) {
 		WDT_HIT();
 	
 		// Listen to reader
 		ans = GetIso15693AnswerFromSniff(buf, 100, &samples, &elapsed) ;
 
 		// we should do a better check than this
-		if (ans >=1 ) {
+		if (ans >= 1 ) {
 			TransmitTo15693Reader(ToSend, ToSendMax, &tsamples, &wait);
 			
 			Dbprintf("%d octets read from reader command: %x %x %x %x %x %x %x %x %x", ans,
@@ -1060,8 +1019,7 @@ void SimTagIso15693(uint32_t parameter, uint8_t *uid)
 			buf[4], buf[5],	buf[6], buf[7], buf[8]);
 		}
 	}
-	LEDsoff();
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);	
+	switch_off();
 }
 
 
@@ -1125,13 +1083,13 @@ void DirectTag15693Command(uint32_t datalen,uint32_t speed, uint32_t recv, uint8
 
 	if (recv) { 
 		LED_B_ON();
-		cmd_send(CMD_ACK,recvlen>48?48:recvlen,0,0,recvbuf,48);
+		cmd_send(CMD_ACK, recvlen > 48 ? 48 : recvlen, 0, 0, recvbuf, 48);
 		LED_B_OFF();	
 		
 		if (DEBUG) {
 			Dbprintf("RECV");
-			DbdecodeIso15693Answer(recvlen,recvbuf); 
-			Dbhexdump(recvlen,recvbuf,true);
+			DbdecodeIso15693Answer(recvlen, recvbuf);
+			Dbhexdump(recvlen, recvbuf, true);
 		}
 	}
 }
