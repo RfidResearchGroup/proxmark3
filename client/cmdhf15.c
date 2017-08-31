@@ -217,7 +217,8 @@ int getUID(uint8_t *buf)
 		req[2] = 0; // mask length
 		reqlen = AddCrc(req, 3);
 		c.arg[0] = reqlen;
-	
+
+		clearCommandBuffer();
 		SendCommand(&c);
 		
 		if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
@@ -284,7 +285,6 @@ int CmdHF15Demod(const char *Cmd)
 	
 	int i, j;
 	int max = 0, maxPos = 0;
-
 	int skip = 4;
 
 	if (GraphTraceLen < 1000) return 0;
@@ -360,6 +360,7 @@ int CmdHF15Demod(const char *Cmd)
 int CmdHF15Read(const char *Cmd)
 {
 	UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693};
+	clearCommandBuffer();	
 	SendCommand(&c);
 	return 0;
 }
@@ -368,6 +369,7 @@ int CmdHF15Read(const char *Cmd)
 int CmdHF15Record(const char *Cmd)
 {
 	UsbCommand c = {CMD_RECORD_RAW_ADC_SAMPLES_ISO_15693};
+	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;
 }
@@ -389,6 +391,7 @@ int HF15Reader(const char *Cmd, bool verbose)
 int CmdHF15Reader(const char *Cmd)
 {
 	UsbCommand c = {CMD_READER_ISO_15693, {strtol(Cmd, NULL, 0), 0, 0}};
+	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;
 }
@@ -417,7 +420,7 @@ int CmdHF15Sim(const char *Cmd)
 
 	UsbCommand c = {CMD_SIMTAG_ISO_15693, {0, 0, 0}};
 	memcpy(c.d.asBytes,uid,8);
-	
+	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;
 }
@@ -427,6 +430,7 @@ int CmdHF15Sim(const char *Cmd)
 int CmdHF15Afi(const char *Cmd)
 {
 	UsbCommand c = {CMD_ISO_15693_FIND_AFI, {strtol(Cmd, NULL, 0), 0, 0}};
+	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;
 }
@@ -460,6 +464,7 @@ int CmdHF15DumpMem(const char*Cmd) {
 		reqlen = AddCrc(req, 11);
 		c.arg[0] = reqlen;
 	
+		clearCommandBuffer();
 		SendCommand(&c);
 		
 		if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
@@ -538,13 +543,14 @@ int CmdHF15CmdInquiry(const char *Cmd)
 	uint8_t *req=c.d.asBytes;
 	int reqlen=0;
 	
-	req[0]= ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | 
+	req[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | 
 	        ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1;
-	req[1]=ISO15_CMD_INVENTORY;
-	req[2]=0; // mask length
-	reqlen=AddCrc(req,3);
-	c.arg[0]=reqlen;
+	req[1] = ISO15_CMD_INVENTORY;
+	req[2] = 0; // mask length
+	reqlen = AddCrc(req,3);
+	c.arg[0] = reqlen;
 
+	clearCommandBuffer();
 	SendCommand(&c);
 	
 	if (WaitForResponseTimeout(CMD_ACK,&resp,1000)) {
@@ -564,7 +570,7 @@ int CmdHF15CmdInquiry(const char *Cmd)
 
 // Turns debugging on(1)/off(0)
 int CmdHF15CmdDebug( const char *cmd) {
-	int debug=atoi(cmd);
+	int debug = atoi(cmd);
 	if (strlen(cmd)<1) {
 		PrintAndLog("Usage: hf 15 cmd debug  <0|1>");
 		PrintAndLog("	0 no debugging");
@@ -573,6 +579,7 @@ int CmdHF15CmdDebug( const char *cmd) {
 	}
 
 	UsbCommand c = {CMD_ISO_15693_DEBUG, {debug, 0, 0}};
+	clearCommandBuffer();	
 	SendCommand(&c);
 	return 0;
 }
@@ -629,28 +636,29 @@ int CmdHF15CmdRaw (const char *cmd) {
 		if ((cmd[i]>='0' && cmd[i]<='9') ||
 		    (cmd[i]>='a' && cmd[i]<='f') ||
 		    (cmd[i]>='A' && cmd[i]<='F') ) {
-		    buf[strlen(buf)+1]=0;
-		    buf[strlen(buf)]=cmd[i];
+		    buf[strlen(buf)+1] = 0;
+		    buf[strlen(buf)] = cmd[i];
 		    i++;
 		    
-		    if (strlen(buf)>=2) {
-		    	sscanf(buf,"%x",&temp);
-		    	data[datalen]=(uint8_t)(temp & 0xff);
+		    if (strlen(buf) >= 2) {
+		    	sscanf(buf, "%x", &temp);
+		    	data[datalen] = (uint8_t)(temp & 0xff);
 		    	datalen++;
-		    	*buf=0;
+		    	*buf = 0;
 		    }
 		    continue;
 		}
 		PrintAndLog("Invalid char on input");
 		return 0;
 	}
-	if (crc) datalen=AddCrc(data,datalen);
+	if (crc) datalen = AddCrc(data,datalen);
 	
-	c.arg[0]=datalen;
-	c.arg[1]=fast;
-	c.arg[2]=reply;
+	c.arg[0] = datalen;
+	c.arg[1] = fast;
+	c.arg[2] = reply;
 	memcpy(c.d.asBytes,data,datalen);
-	
+
+	clearCommandBuffer();	
 	SendCommand(&c);
 	
 	if (reply) {
@@ -783,7 +791,7 @@ int CmdHF15CmdSysinfo(const char *Cmd) {
 	char output[2048]="";
 	int i;
 	
-	strncpy(cmd,Cmd,99);
+	strncpy(cmd, Cmd, 99);
 
 	// usage:
 	if (strlen(cmd)<1) {
@@ -803,14 +811,15 @@ int CmdHF15CmdSysinfo(const char *Cmd) {
 	prepareHF15Cmd(&cmd, &c,(uint8_t[]){ISO15_CMD_SYSINFO},1);	
 	reqlen = c.arg[0];
 	
-	reqlen=AddCrc(req,reqlen);
-	c.arg[0]=reqlen;
+	reqlen = AddCrc(req, reqlen);
+	c.arg[0] = reqlen;
 
+	clearCommandBuffer();
 	SendCommand(&c);
 
-	if (WaitForResponseTimeout(CMD_ACK,&resp,1000) && resp.arg[0]>2) {
+	if (WaitForResponseTimeout(CMD_ACK, &resp, 1000) && resp.arg[0]>2) {
 		recv = resp.d.asBytes;
-		if (ISO15_CRC_CHECK==Crc(recv,resp.arg[0])) {
+		if (ISO15_CRC_CHECK == Crc(recv,resp.arg[0])) {
 			if (!(recv[0] & ISO15_RES_ERROR)) {
 				*output=0; // reset outputstring
 				for ( i=1; i<resp.arg[0]-2; i++) {
@@ -864,13 +873,13 @@ int CmdHF15CmdReadmulti(const char *Cmd) {
 	UsbCommand resp;
 	uint8_t *recv;
 	UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
-	uint8_t *req=c.d.asBytes;
-	int reqlen=0, pagenum,pagecount;
+	uint8_t *req = c.d.asBytes;
+	int reqlen = 0, pagenum,pagecount;
 	char cmdbuf[100];
-	char *cmd=cmdbuf;
-	char output[2048]="";
+	char *cmd = cmdbuf;
+	char output[2048] = "";
 	
-	strncpy(cmd,Cmd,99);
+	strncpy(cmd, Cmd, 99);
 
 	// usage:
 	if (strlen(cmd)<3) {
@@ -888,25 +897,26 @@ int CmdHF15CmdReadmulti(const char *Cmd) {
 	}	
 	
 	prepareHF15Cmd(&cmd, &c,(uint8_t[]){ISO15_CMD_READMULTI},1);	
-	reqlen=c.arg[0];
+	reqlen = c.arg[0];
 
-	pagenum=strtol(cmd,NULL,0);
+	pagenum = strtol(cmd, NULL, 0);
 
 	// skip to next space		
 	while (*cmd!=' ' && *cmd!='\t') cmd++;
 	// skip over the space
 	while (*cmd==' ' || *cmd=='\t') cmd++;
 
-	pagecount=strtol(cmd,NULL,0);
-	if (pagecount>0) pagecount--; // 0 means 1 page, 1 means 2 pages, ...	
+	pagecount = strtol(cmd, NULL, 0);
+	if (pagecount > 0) pagecount--; // 0 means 1 page, 1 means 2 pages, ...	
 	
-	req[reqlen++]=(uint8_t)pagenum;
-	req[reqlen++]=(uint8_t)pagecount;
+	req[reqlen++] = (uint8_t)pagenum;
+	req[reqlen++] = (uint8_t)pagecount;
 	
-	reqlen=AddCrc(req,reqlen);
+	reqlen = AddCrc(req, reqlen);
 	
-	c.arg[0]=reqlen;
+	c.arg[0] = reqlen;
 
+	clearCommandBuffer();
 	SendCommand(&c);
 
 	if (WaitForResponseTimeout(CMD_ACK,&resp,1000) && resp.arg[0]>2) {
@@ -943,11 +953,11 @@ int CmdHF15CmdRead(const char *Cmd) {
 	UsbCommand resp;
 	uint8_t *recv;
 	UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
-	uint8_t *req=c.d.asBytes;
-	int reqlen=0, pagenum;
+	uint8_t *req = c.d.asBytes;
+	int reqlen = 0, pagenum;
 	char cmdbuf[100];
-	char *cmd=cmdbuf;
-	char output[100]="";
+	char *cmd = cmdbuf;
+	char output[100] = "";
 	
 	strncpy(cmd,Cmd,99);
 
@@ -966,25 +976,26 @@ int CmdHF15CmdRead(const char *Cmd) {
 	}	
 	
 	prepareHF15Cmd(&cmd, &c,(uint8_t[]){ISO15_CMD_READ},1);	
-	reqlen=c.arg[0];
+	reqlen = c.arg[0];
 
-	pagenum=strtol(cmd,NULL,0);
+	pagenum = strtol(cmd, NULL, 0);
 	/*if (pagenum<0) {
 		PrintAndLog("invalid pagenum");
 		return 0;
 	}	*/
 	
-	req[reqlen++]=(uint8_t)pagenum;
+	req[reqlen++] = (uint8_t)pagenum;
 	
-	reqlen=AddCrc(req,reqlen);
+	reqlen = AddCrc(req,reqlen);
 	
-	c.arg[0]=reqlen;
+	c.arg[0] = reqlen;
 
+	clearCommandBuffer();
 	SendCommand(&c);
 
 	if (WaitForResponseTimeout(CMD_ACK,&resp,1000) && resp.arg[0]>2) {
 		recv = resp.d.asBytes;
-		if (ISO15_CRC_CHECK==Crc(recv,resp.arg[0])) {
+		if (ISO15_CRC_CHECK == Crc(recv,resp.arg[0])) {
 			if (!(recv[0] & ISO15_RES_ERROR)) {
 				*output=0; // reset outputstring
 				//sprintf(output, "Block %2i   ",blocknum);
@@ -1072,7 +1083,7 @@ int CmdHF15CmdWrite(const char *Cmd) {
 	reqlen=AddCrc(req,reqlen);
 	
 	c.arg[0]=reqlen;
-
+	clearCommandBuffer();
 	SendCommand(&c);
 
 	if (WaitForResponseTimeout(CMD_ACK,&resp,2000) && resp.arg[0]>2) {
@@ -1093,32 +1104,25 @@ int CmdHF15CmdWrite(const char *Cmd) {
 	return 0;
 }
 
-
-
-static command_t CommandTable15Cmd[] =
-{
-	{"help",    CmdHF15CmdHelp,    1, "This Help"},
- 	{"inquiry", CmdHF15CmdInquiry, 0, "Search for tags in range"},
- /*	
-	{"select",  CmdHF15CmdSelect, 0, "Select an tag with a specific UID for further commands"},
- */
-	{"read",    CmdHF15CmdRead,    0, "Read a block"},	
-	{"write",   CmdHF15CmdWrite,    0, "Write a block"},	
-	{"readmulti",CmdHF15CmdReadmulti,    0, "Reads multiple Blocks"},
-	{"sysinfo",CmdHF15CmdSysinfo,    0, "Get Card Information"},
-	{"raw",		 CmdHF15CmdRaw,		0,	"Send raw hex data to tag"}, 
-	{"debug",    CmdHF15CmdDebug,    0, "Turn debugging on/off"},
+static command_t CommandTable15Cmd[] = {
+	{"help",		CmdHF15CmdHelp,			1, "This Help"},
+ 	{"inquiry",		CmdHF15CmdInquiry,		0, "Search for tags in range"},
+// {"select",		CmdHF15CmdSelect,		0, "Select an tag with a specific UID for further commands"},
+	{"read",		CmdHF15CmdRead,			0, "Read a block"},	
+	{"write",		CmdHF15CmdWrite,		0, "Write a block"},	
+	{"readmulti",	CmdHF15CmdReadmulti,	0, "Reads multiple Blocks"},
+	{"sysinfo",		CmdHF15CmdSysinfo,		0, "Get Card Information"},
+	{"raw",			CmdHF15CmdRaw,			0, "Send raw hex data to tag"}, 
+	{"debug",		CmdHF15CmdDebug,		0, "Turn debugging on/off"},
 	{NULL, NULL, 0, NULL}
 };
 
-int CmdHF15Cmd(const char *Cmd)
-{
+int CmdHF15Cmd(const char *Cmd) {
 	CmdsParse(CommandTable15Cmd, Cmd);
 	return 0;
 }
 	
-int CmdHF15CmdHelp(const char *Cmd)
-{
+int CmdHF15CmdHelp(const char *Cmd) {
 	CmdsHelp(CommandTable15Cmd);
 	return 0;
 }
