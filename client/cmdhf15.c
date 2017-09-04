@@ -21,21 +21,7 @@
 // The proxmark just samples the antenna and passes this "analog" data via USB to
 // the client. Signal Processing & decoding is done on the pc. This is the slowest
 // variant, but offers the possibility to analyze the waveforms directly. 
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
-
-#include "proxmark3.h"
-#include "data.h"
-#include "graph.h"
-#include "ui.h"
-#include "util.h"
-#include "cmdparser.h"
 #include "cmdhf15.h"
-#include "iso15693tools.h"
-#include "cmdmain.h"
 
 #define FrameSOF				Iso15693FrameSOF
 #define Logic0					Iso15693Logic0
@@ -282,8 +268,9 @@ int usage_15_demod(void){
 	PrintAndLog("Gather samples with 'hf 15 read' / 'hf 15 record'");
 	return 0;
 }
-int usage_15_read(void){
+int usage_15_samples(void){
 	PrintAndLog("Acquire samples as Reader (enables carrier, send inquiry");
+	PrintAndLog("and download it to graphbuffer.  Try 'hf 15 demod'  to try to demodulate/decode signal");
 	return 0;
 }
 int usage_15_info(void){
@@ -316,7 +303,65 @@ int usage_15_sim(void){
 int usage_15_findafi(void){
 	return 0;
 }
-int usage_15_dumpmem(void){
+int usage_15_dump(void){
+	PrintAndLog("'hf 15 dump' needs a helptext..");
+	return 0;
+}
+int usage_15_restore(void){
+	PrintAndLog("'hf 15 restore' - to be implemented...");
+	return 0;
+}
+int usage_15_debug(void){
+	PrintAndLog("Usage: hf 15 debug  <0|1>");
+	PrintAndLog("	0 no debugging");
+	PrintAndLog("	1 turn debugging on");	
+	return 0;
+}
+int usage_15_raw(void){
+	PrintAndLog("Usage: hf 15 raw  [-r] [-2] [-c] <0A 0B 0C ... hex>");
+	PrintAndLog("       -r    do not read response");
+	PrintAndLog("       -2    use slower '1 out of 256' mode");
+	PrintAndLog("       -c	  calculate and append CRC");
+	PrintAndLog(" Tip: turn on debugging for verbose output");		
+	return 0;	
+}
+int usage_15_read(void){
+	PrintAndLog("Usage:  hf 15 read    [options] <uid|s|u|*> <page#>");
+	PrintAndLog("           options:");
+	PrintAndLog("               -2        use slower '1 out of 256' mode");
+	PrintAndLog("           uid (either): ");
+	PrintAndLog("               <8B hex>  full UID eg E011223344556677");
+	PrintAndLog("               s         selected tag");
+	PrintAndLog("               u         unaddressed mode");
+	PrintAndLog("               *         scan for tag");
+	PrintAndLog("           page#:        page number 0-255");  
+	return 0;
+}
+int usage_15_write(void){
+	PrintAndLog("Usage:  hf 15 write    [options] <uid|s|u|*> <page#> <hexdata>");
+	PrintAndLog("           options:");
+	PrintAndLog("               -2        use slower '1 out of 256' mode");
+	PrintAndLog("               -o        set OPTION Flag (needed for TI)");
+	PrintAndLog("           uid (either): ");
+	PrintAndLog("               <8B hex>  full UID eg E011223344556677");
+	PrintAndLog("               s         selected tag");
+	PrintAndLog("               u         unaddressed mode");
+	PrintAndLog("               *         scan for tag");
+	PrintAndLog("           page#:        page number 0-255");  
+	PrintAndLog("           hexdata:      data to be written eg AA BB CC DD");  
+	return 0;
+}
+int usage_15_readmulti(void){
+	PrintAndLog("Usage:  hf 15 readmulti  [options] <uid|s|u|*> <start#> <count#>");
+	PrintAndLog("           options:");
+	PrintAndLog("               -2        use slower '1 out of 256' mode");
+	PrintAndLog("           uid (either): ");
+	PrintAndLog("               <8B hex>  full UID eg E011223344556677");
+	PrintAndLog("               s         selected tag");
+	PrintAndLog("               u         unaddressed mode");
+	PrintAndLog("               *         scan for tag");
+	PrintAndLog("           start#:       page number to start 0-255");  
+	PrintAndLog("           count#:       number of pages");  
 	return 0;
 }
 
@@ -402,13 +447,16 @@ int CmdHF15Demod(const char *Cmd) {
 
 // * Acquire Samples as Reader (enables carrier, sends inquiry)
 //helptext
-int CmdHF15Read(const char *Cmd) {
+int CmdHF15Samples(const char *Cmd) {
 	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H') return usage_15_read();
+	if (cmdp == 'h' || cmdp == 'H') return usage_15_samples();
 
 	UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693};
 	clearCommandBuffer();	
 	SendCommand(&c);
+	
+	//download samples 
+	getSamples(0, false);
 	return 0;
 }
 
@@ -574,11 +622,12 @@ int CmdHF15Afi(const char *Cmd) {
 }
 
 // Reads all memory pages
+// need to write to file
 // helptext
-int CmdHF15DumpMem(const char*Cmd) {
+int CmdHF15Dump(const char*Cmd) {
 
 	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H') return usage_15_dumpmem();
+	if (cmdp == 'h' || cmdp == 'H') return usage_15_dump();
 
 	uint8_t uid[8] = {0,0,0,0,0,0,0,0};	
 
@@ -656,54 +705,24 @@ int CmdHF15DumpMem(const char*Cmd) {
 	return 1;
 }
 
+int CmdHF15Restore(const char*Cmd) {
+	// read from file
+	// write to tag
+	return usage_15_restore();
+}
+
 int CmdHF15List(const char *Cmd) {
 	//PrintAndLog("Deprecated command, use 'hf list 15' instead");
 	CmdHFList("15");
 	return 0;
 }
 
-// "HF 15" interface
-static command_t CommandTable15[] = {
-	{"help",		CmdHF15Help,    1, "This help"},
-	{"list",		CmdHF15List,    0, "[Deprecated] List ISO 15693 history"},
-	{"demod",		CmdHF15Demod,   1, "Demodulate ISO15693 from tag"},
-	{"read",		CmdHF15Read,    0, "Read ISO 15693 tag"},
-	{"info",		CmdHF15Info,	0, "Get Card Information"},	
-	{"record",		CmdHF15Record,  0, "Record Samples (ISO 15693)"},
-	{"reader",		CmdHF15Reader,  0, "Act like an ISO15693 reader"},
-	{"sim",			CmdHF15Sim,     0, "Fake an ISO15693 tag"},
-	{"findafi",		CmdHF15Afi,     0, "Brute force AFI of an ISO15693 tag"},
-	{"dumpmemory",	CmdHF15DumpMem, 0, "Read all memory pages of an ISO15693 tag"},
-	{"cmd",			CmdHF15Cmd,     0, "Send commands to ISO15693 tag"},
-	{"debug",		CmdHF15CmdDebug,0, "Turn debugging on/off"},	
-	{NULL, NULL, 0, NULL}
-};
-
-int CmdHF15(const char *Cmd) {
-	clearCommandBuffer();	
-	CmdsParse(CommandTable15, Cmd);
-	return 0;
-}
-
-int CmdHF15Help(const char *Cmd) {
-	CmdsHelp(CommandTable15);
-	return 0;
-}
-
-
-// "HF 15 Cmd" Interface
-// Allows direct communication with the tag on command level
-
 // Turns debugging on(1)/off(0)
-int CmdHF15CmdDebug( const char *Cmd) {
+int CmdHF15Debug( const char *Cmd) {
 
 	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd)<1 || cmdp == 'h' || cmdp == 'H') {
-		PrintAndLog("Usage: hf 15 cmd debug  <0|1>");
-		PrintAndLog("	0 no debugging");
-		PrintAndLog("	1 turn debugging on");	
-		return 0;
-	}
+	if (strlen(Cmd)<1 || cmdp == 'h' || cmdp == 'H') return usage_15_debug();
+	
 	int debug = atoi(Cmd);
 	UsbCommand c = {CMD_ISO_15693_DEBUG, {debug, 0, 0}};
 	clearCommandBuffer();	
@@ -711,17 +730,10 @@ int CmdHF15CmdDebug( const char *Cmd) {
 	return 0;
 }
 
-int CmdHF15CmdRaw(const char *Cmd) {
+int CmdHF15Raw(const char *Cmd) {
 
 	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd)<3 || cmdp == 'h' || cmdp == 'H') {
-		PrintAndLog("Usage: hf 15 cmd raw  [-r] [-2] [-c] <0A 0B 0C ... hex>");
-		PrintAndLog("       -r    do not read response");
-		PrintAndLog("       -2    use slower '1 out of 256' mode");
-		PrintAndLog("       -c	  calculate and append CRC");
-		PrintAndLog(" Tip: turn on debugging for verbose output");		
-		return 0;	
-	}
+	if (strlen(Cmd)<3 || cmdp == 'h' || cmdp == 'H') return usage_15_raw();
 
 	UsbCommand resp;
 	UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
@@ -883,22 +895,10 @@ int prepareHF15Cmd(char **cmd, UsbCommand *c, uint8_t iso15cmd) {
  * Commandline handling: HF15 CMD READMULTI
  * Read multiple blocks at once (not all tags support this)
  */
-int CmdHF15CmdReadmulti(const char *Cmd) {
+int CmdHF15Readmulti(const char *Cmd) {
 
 	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd)<3 || cmdp == 'h' || cmdp == 'H') {
-		PrintAndLog("Usage:  hf 15 cmd readmulti  [options] <uid|s|u|*> <start#> <count#>");
-		PrintAndLog("           options:");
-		PrintAndLog("               -2        use slower '1 out of 256' mode");
-		PrintAndLog("           uid (either): ");
-		PrintAndLog("               <8B hex>  full UID eg E011223344556677");
-		PrintAndLog("               s         selected tag");
-		PrintAndLog("               u         unaddressed mode");
-		PrintAndLog("               *         scan for tag");
-		PrintAndLog("           start#:       page number to start 0-255");  
-		PrintAndLog("           count#:       number of pages");  
-		return 0;
-	}	
+	if (strlen(Cmd)<3 || cmdp == 'h' || cmdp == 'H') return usage_15_readmulti();
 
 	UsbCommand resp;
 	uint8_t *recv;
@@ -907,8 +907,6 @@ int CmdHF15CmdReadmulti(const char *Cmd) {
 	int reqlen = 0, pagenum,pagecount;
 	char cmdbuf[100];
 	char *cmd = cmdbuf;
-	char output[2048] = "";
-	
 	strncpy(cmd, Cmd, 99);
 
 	prepareHF15Cmd(&cmd, &c, ISO15_CMD_READMULTI);	
@@ -926,36 +924,37 @@ int CmdHF15CmdReadmulti(const char *Cmd) {
 	
 	req[reqlen++] = (uint8_t)pagenum;
 	req[reqlen++] = (uint8_t)pagecount;
-	
 	reqlen = AddCrc(req, reqlen);
-	
 	c.arg[0] = reqlen;
 
 	clearCommandBuffer();
 	SendCommand(&c);
-
-	if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) && resp.arg[0] > 2) {
-		recv = resp.d.asBytes;
-		if (ISO15_CRC_CHECK == Crc(recv,resp.arg[0])) {
-			if (!(recv[0] & ISO15_RES_ERROR)) {
-				*output=0; // reset outputstring
-				for ( int i=1; i<resp.arg[0]-2; i++) {
-					sprintf(output+strlen(output),"%02X ",recv[i]);
-				}					
-				strcat(output,"   ");
-				for ( int i=1; i<resp.arg[0]-2; i++) {
-					sprintf(output+strlen(output),"%c",recv[i]>31 && recv[i]<127?recv[i]:'.');					
-				}					
-				PrintAndLog("%s",output);	
-			} else {
-				PrintAndLog("Tag returned Error %i: %s",recv[0],TagErrorStr(recv[0])); 
-			}		   
-		} else {
-			PrintAndLog("CRC failed");
-		}
-	} else {
-		PrintAndLog("timeout while waiting for reply.");
+	
+	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
+		PrintAndLog("iso15693 card select failed");
+		return 1;
 	}
+	
+	uint32_t status = resp.arg[0];	
+	if ( status < 2 ) {
+		PrintAndLog("iso15693 card select failed");
+		return 1;		
+	}
+
+	recv = resp.d.asBytes;	
+	
+	if (ISO15_CRC_CHECK == Crc(recv, status)) {
+		PrintAndLog("CRC failed");
+		return 2;
+	} 
+	
+	if ( recv[0] & ISO15_RES_ERROR ) {
+		PrintAndLog("iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0])); 
+		return 3;
+	}
+
+	// print response
+	PrintAndLog("%s", sprint_hex_ascii( recv, status-2));
 	
 	return 0;
 }
@@ -964,21 +963,10 @@ int CmdHF15CmdReadmulti(const char *Cmd) {
  * Commandline handling: HF15 CMD READ
  * Reads a single Block
  */
-int CmdHF15CmdRead(const char *Cmd) {
+int CmdHF15Read(const char *Cmd) {
 
 	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd)<3 || cmdp == 'h' || cmdp == 'H') {
-		PrintAndLog("Usage:  hf 15 cmd read    [options] <uid|s|u|*> <page#>");
-		PrintAndLog("           options:");
-		PrintAndLog("               -2        use slower '1 out of 256' mode");
-		PrintAndLog("           uid (either): ");
-		PrintAndLog("               <8B hex>  full UID eg E011223344556677");
-		PrintAndLog("               s         selected tag");
-		PrintAndLog("               u         unaddressed mode");
-		PrintAndLog("               *         scan for tag");
-		PrintAndLog("           page#:        page number 0-255");  
-		return 0;
-	}	
+	if (strlen(Cmd)<3 || cmdp == 'h' || cmdp == 'H')  return usage_15_read();
 	
 	UsbCommand resp;
 	uint8_t *recv;
@@ -992,8 +980,6 @@ int CmdHF15CmdRead(const char *Cmd) {
 	int reqlen = 0, pagenum;
 	char cmdbuf[100];
 	char *cmd = cmdbuf;
-	char output[100] = "";
-	
 	strncpy(cmd, Cmd, 99);
 	
 	prepareHF15Cmd(&cmd, &c,ISO15_CMD_READ);	
@@ -1010,54 +996,42 @@ int CmdHF15CmdRead(const char *Cmd) {
 	clearCommandBuffer();
 	SendCommand(&c);
 
-	if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) && resp.arg[0] > 2) {
-		recv = resp.d.asBytes;
-		if (ISO15_CRC_CHECK == Crc(recv, resp.arg[0])) {
-			if (!(recv[0] & ISO15_RES_ERROR)) {
-				*output=0; // reset outputstring
-				//sprintf(output, "Block %2i   ",blocknum);
-				for ( int i=1; i<resp.arg[0]-2; i++) {
-					sprintf(output+strlen(output),"%02X ",recv[i]);
-				}					
-				strcat(output,"   ");
-				for ( int i=1; i<resp.arg[0]-2; i++) {
-					sprintf(output+strlen(output),"%c",recv[i]>31 && recv[i]<127?recv[i]:'.');					
-				}					
-				PrintAndLog("%s", output);	
-			} else {
-				PrintAndLog("Tag returned Error %i: %s",recv[1],TagErrorStr(recv[1])); 
-			}		   
-		} else {
-			PrintAndLog("CRC failed");
-		}
-	} else {
-		PrintAndLog("timeout while waiting for reply.");
+	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
+		PrintAndLog("iso15693 card select failed");
+		return 1;
 	}
+	
+	uint32_t status = resp.arg[0];	
+	if ( status < 2 ) {
+		PrintAndLog("iso15693 card select failed");
+		return 1;		
+	}
+
+	recv = resp.d.asBytes;	
+	
+	if (ISO15_CRC_CHECK == Crc(recv, status)) {
+		PrintAndLog("CRC failed");
+		return 2;
+	} 
+	
+	if ( recv[0] & ISO15_RES_ERROR ) {
+		PrintAndLog("iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0])); 
+		return 3;
+	}
+	
+	// print response
+	PrintAndLog("%s", sprint_hex_ascii(recv, status-2) );
 	return 0;
 }
-
 
 /**
  * Commandline handling: HF15 CMD WRITE
  * Writes a single Block - might run into timeout, even when successful
  */
-int CmdHF15CmdWrite(const char *Cmd) {
+int CmdHF15Write(const char *Cmd) {
 
 	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd)<3 || cmdp == 'h' || cmdp == 'H') {
-		PrintAndLog("Usage:  hf 15 cmd write    [options] <uid|s|u|*> <page#> <hexdata>");
-		PrintAndLog("           options:");
-		PrintAndLog("               -2        use slower '1 out of 256' mode");
-		PrintAndLog("               -o        set OPTION Flag (needed for TI)");
-		PrintAndLog("           uid (either): ");
-		PrintAndLog("               <8B hex>  full UID eg E011223344556677");
-		PrintAndLog("               s         selected tag");
-		PrintAndLog("               u         unaddressed mode");
-		PrintAndLog("               *         scan for tag");
-		PrintAndLog("           page#:        page number 0-255");  
-		PrintAndLog("           hexdata:      data to be written eg AA BB CC DD");  
-		return 0;
-	}	
+	if (strlen(Cmd)<3 || cmdp == 'h' || cmdp == 'H') return usage_15_read();
 	
 	UsbCommand resp;
 	uint8_t *recv;
@@ -1071,7 +1045,7 @@ int CmdHF15CmdWrite(const char *Cmd) {
 	strncpy(cmd,Cmd,99);
 
 	prepareHF15Cmd(&cmd, &c, ISO15_CMD_WRITE);	
-	reqlen=c.arg[0];
+	reqlen = c.arg[0];
 	
 	// *cmd -> page num ; *cmd2 -> data 
 	cmd2=cmd;
@@ -1092,47 +1066,69 @@ int CmdHF15CmdWrite(const char *Cmd) {
 		req[reqlen++]=temp & 0xff;
 		cmd2+=2;
 	} 
-	
 	reqlen = AddCrc(req,reqlen);
-	
 	c.arg[0] = reqlen;
+	
+	PrintAndLog("iso15693 writing to page %02d (0x&02X) | data ", pagenum, pagenum);
+	
 	clearCommandBuffer();
 	SendCommand(&c);
 
-	if (WaitForResponseTimeout(CMD_ACK,&resp,2000) && resp.arg[0]>2) {
-		recv = resp.d.asBytes;
-		if (ISO15_CRC_CHECK == Crc(recv,resp.arg[0])) {
-			if (!(recv[0] & ISO15_RES_ERROR)) {					
-				PrintAndLog("OK");	
-			} else {
-				PrintAndLog("Tag returned Error %i: %s", recv[1], TagErrorStr(recv[1])); 
-			}		   
-		} else {
-			PrintAndLog("CRC failed");
-		}
-	} else {
-		PrintAndLog("timeout: no answer - data may be written anyway");
+	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
+		PrintAndLog("iso15693 card timeout, data may be written anyway");
+		return 1;
 	}
+	
+	uint32_t status = resp.arg[0];	
+	if ( status < 2 ) {
+		PrintAndLog("iso15693 card select failed");
+		return 1;		
+	}
+
+	recv = resp.d.asBytes;	
+	
+	if (ISO15_CRC_CHECK == Crc(recv, status)) {
+		PrintAndLog("CRC failed");
+		return 2;
+	} 
+	
+	if ( recv[0] & ISO15_RES_ERROR ) {
+		PrintAndLog("iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0])); 
+		return 3;
+	}
+	
+	PrintAndLog("OK");
 	return 0;
 }
 
-static command_t CommandTable15Cmd[] = {
-	{"help",		CmdHF15CmdHelp,			1, "This Help"},
-// {"select",		CmdHF15CmdSelect,		0, "Select an tag with a specific UID for further commands"},
-	{"read",		CmdHF15CmdRead,			0, "Read a block"},	
-	{"write",		CmdHF15CmdWrite,		0, "Write a block"},	
-	{"readmulti",	CmdHF15CmdReadmulti,	0, "Reads multiple Blocks"},
-	{"raw",			CmdHF15CmdRaw,			0, "Send raw hex data to tag"}, 
+static command_t CommandTable15[] = {
+	{"help",		CmdHF15Help,    1, "This help"},
+	{"debug",		CmdHF15Debug,	0, "Turn debugging on/off"},	
+	{"demod",		CmdHF15Demod,   1, "Demodulate ISO15693 from tag"},
+	{"dump",		CmdHF15Dump,	0, "Read all memory pages of an ISO15693 tag, save to file"},
+	{"findafi",		CmdHF15Afi,     0, "Brute force AFI of an ISO15693 tag"},
+	{"info",		CmdHF15Info,	0, "Get Card Information"},	
+	{"list",		CmdHF15List,    0, "[Deprecated] List ISO15693 history"},
+	{"raw",			CmdHF15Raw,		0, "Send raw hex data to tag"}, 
+	{"reader",		CmdHF15Reader,  0, "Act like an ISO15693 reader"},
+	{"record",		CmdHF15Record,  0, "Record Samples (ISO15693)"},
+	{"restore",		CmdHF15Restore,	0, "Restore from file to all memory pages of an ISO15693 tag"},
+	{"sim",			CmdHF15Sim,     0, "Fake an ISO15693 tag"},
+	{"samples",		CmdHF15Samples,	0, "Acquire Samples as Reader (enables carrier, sends inquiry)"},
+	// {"select",		CmdHF15Select,		0, "Select an tag with a specific UID for further commands"},
+	{"read",		CmdHF15Read,		0, "Read a block"},	
+	{"write",		CmdHF15Write,		0, "Write a block"},	
+	{"readmulti",	CmdHF15Readmulti,	0, "Reads multiple Blocks"},
 	{NULL, NULL, 0, NULL}
 };
 
-int CmdHF15Cmd(const char *Cmd) {
-	clearCommandBuffer();
-	CmdsParse(CommandTable15Cmd, Cmd);
+int CmdHF15(const char *Cmd) {
+	clearCommandBuffer();	
+	CmdsParse(CommandTable15, Cmd);
 	return 0;
 }
-	
-int CmdHF15CmdHelp(const char *Cmd) {
-	CmdsHelp(CommandTable15Cmd);
+
+int CmdHF15Help(const char *Cmd) {
+	CmdsHelp(CommandTable15);
 	return 0;
 }
