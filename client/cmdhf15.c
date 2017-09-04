@@ -211,8 +211,10 @@ int getUID(uint8_t *buf) {
 
 	c.arg[0] = AddCrc(c.d.asBytes, 3);
 
+	uint8_t retry;
+	
 	// don't give up the at the first try			
-	for (uint8_t retry = 0; retry < 3; retry++) {
+	for (retry = 0; retry < 3; retry++) {
 
 		clearCommandBuffer();
 		SendCommand(&c);
@@ -226,6 +228,10 @@ int getUID(uint8_t *buf) {
 			} 
 		} 
 	} // retry
+	
+	if ( retry >= 3 )
+		PrintAndLog("timeout while waiting for reply.");
+	
 	return 0;
 }
 
@@ -278,6 +284,19 @@ int usage_15_demod(void){
 }
 int usage_15_read(void){
 	PrintAndLog("Acquire samples as Reader (enables carrier, send inquiry");
+	return 0;
+}
+int usage_15_info(void){
+	PrintAndLog("Usage:  hf 15 info    [options] <uid|s|u|*>");
+	PrintAndLog("           options:");
+	PrintAndLog("               -2        use slower '1 out of 256' mode");
+	PrintAndLog("           uid (either): ");
+	PrintAndLog("               <8B hex>  full UID eg E011223344556677");
+	PrintAndLog("               s         selected tag");
+	PrintAndLog("               u         unaddressed mode");
+	PrintAndLog("               *         scan for tag");
+	PrintAndLog("           start#:       page number to start 0-255");  
+	PrintAndLog("           count#:       number of pages");  
 	return 0;
 }
 int usage_15_record(void){
@@ -393,6 +412,99 @@ int CmdHF15Read(const char *Cmd) {
 	return 0;
 }
 
+/**
+ * Commandline handling: HF15 CMD SYSINFO
+ * get system information from tag/VICC
+ */
+int CmdHF15Info(const char *Cmd) {
+
+	char cmdp = param_getchar(Cmd, 0);
+	if (strlen(Cmd)<1 || cmdp == 'h' || cmdp == 'H') return usage_15_info();
+
+	UsbCommand resp;
+	uint8_t *recv;
+	UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
+	uint8_t *req = c.d.asBytes;
+	int reqlen = 0;
+	char cmdbuf[100];
+	char *cmd = cmdbuf;
+	int i;
+	
+	strncpy(cmd, Cmd, 99);
+	
+	int cmdisok = prepareHF15Cmd(&cmd, &c, ISO15_CMD_SYSINFO);
+	if ( !cmdisok )
+		return 0;
+
+	reqlen = AddCrc(req,  c.arg[0]);
+	c.arg[0] = reqlen;
+
+	PrintAndLog("cmd %s", sprint_hex(c.d.asBytes, reqlen) ); 
+	
+	clearCommandBuffer();
+	SendCommand(&c);
+
+	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
+		PrintAndLog("iso15693 card select failed");
+		return 1;
+	}
+	
+	uint32_t status = resp.arg[0];
+	
+	if ( status < 2 ) {
+		PrintAndLog("iso15693 card select failed");
+		return 1;		
+	}
+	PrintAndLog("len %u, recv %s",status, sprint_hex(resp.d.asBytes, status) ); 
+	
+	recv = resp.d.asBytes;	
+	
+	if (ISO15_CRC_CHECK == Crc(recv, status)) {
+		PrintAndLog("CRC failed");
+		return 2;
+	} 
+	
+	if ( recv[0] & ISO15_RES_ERROR ) {
+		PrintAndLog("iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0])); 
+		return 3;
+	}
+	
+	PrintAndLog("  UID : %s", sprintUID(NULL, recv+2));
+	PrintAndLog("  MANUFACTURER : %s", getTagInfo_15(recv+2));
+	PrintAndLog("  raw : %s", sprint_hex(recv, status-2));
+
+	i = 10;
+
+	// DSFID
+	if (recv[1] & 0x01) 
+		PrintAndLog("     - DSFID supported, set to %02X", recv[i++]);
+	else 
+		PrintAndLog("     - DSFID not supported");
+	
+	// AFI
+	if (recv[1] & 0x02) 
+		PrintAndLog("     - AFI supported, set to %03X", recv[i++]);
+	else 
+		PrintAndLog("     - AFI not supported");
+	
+	// memory 
+	if (recv[1] & 0x04) {
+		PrintAndLog("     - Tag provides info on memory layout (vendor dependent)");
+		PrintAndLog("           %i (or %i) bytes/page x %i pages \n\r", (recv[i+1] & 0x1F) + 1, (recv[i+1] & 0x1F), recv[i]+1);
+		i += 2;
+	} else {
+		PrintAndLog("     - Tag does not provide information on memory layout");
+	}
+	
+	// IC reference
+	if (recv[1] & 0x08) 
+		PrintAndLog("     - IC reference given: %02X", recv[i++]);
+	else 
+		PrintAndLog("     - IC reference not given");
+	   
+	return 0;
+}
+
 // Record Activity without enabeling carrier
 //helptext
 int CmdHF15Record(const char *Cmd) {
@@ -469,53 +581,72 @@ int CmdHF15DumpMem(const char*Cmd) {
 	if (cmdp == 'h' || cmdp == 'H') return usage_15_dumpmem();
 
 	uint8_t uid[8] = {0,0,0,0,0,0,0,0};	
+
+	if (!getUID(uid)) {
+		PrintAndLog("No Tag found.");
+		return 0;
+	}
+	// detect blocksize from card :)
+	
+	PrintAndLog("Reading memory from tag UID %s", sprintUID(NULL, uid));
+	PrintAndLog("Tag Info: %s", getTagInfo_15(uid));
+
+	int reqlen = 0, blocknum = 0;
 	uint8_t *recv = NULL;
+
+	uint8_t data[256*4] = {0};
+	memset(data, sizeof(data), 0);
+
 	UsbCommand resp;
 	UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
 	uint8_t *req = c.d.asBytes;
 	req[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS;
 	req[1] = ISO15_CMD_READ;
-	
-	int reqlen = 0, blocknum = 0;
-		
-	if (!getUID(uid)) {
-		PrintAndLog("No Tag found.");
-		return 0;
-	}
-	
-	PrintAndLog("Reading memory from tag UID=%s", sprintUID(NULL, uid));
-	PrintAndLog("Tag Info: %s", getTagInfo_15(uid));
 
-	for (int retry=0; retry<5; retry++) {
+	// copy uid to read command
+	memcpy(req+2, uid, 8);
 	
-		memcpy(&req[2], uid, 8);
+	for (int retry = 0; retry < 5; retry++) {
+	
 		req[10] = blocknum;
 		reqlen = AddCrc(req, 11);
 		c.arg[0] = reqlen;
 	
 		clearCommandBuffer();
 		SendCommand(&c);
-		
-		if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
+				
+		if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+
 			uint8_t len = resp.arg[0];
 			recv = resp.d.asBytes;
-			
+		
 			if ( ISO15_CRC_CHECK == Crc(recv, len) ) {
 				
 				if (!(recv[0] & ISO15_RES_ERROR)) {
-
+								
+					memcpy(data + (blocknum * 4), resp.d.asBytes + 1, 4);
+					
 					retry = 0;
-					PrintAndLog("%Block %02x | %s", blocknum, sprint_hex_ascii( recv, len - 2 ) );
 					blocknum++;
+					
+					printf("."); fflush(stdout);
 				} else {
 					PrintAndLog("Tag returned Error %i: %s", recv[1], TagErrorStr(recv[1]) ); 
-					return 1;
+					break;
+					// return 1;
 				}
 			}
 		} 
 	}
+	printf("\n");
+
+	PrintAndLog("Blk| data                | ascii");
+	PrintAndLog("---+---------------------+----------");	
+	for (int i=0; i < blocknum; i++) {
+			PrintAndLog("%02x | %s", i, sprint_hex_ascii(data + (i*4) , 4 ) );
+	}
 	
-  // TODO: need fix
+	// TODO: need fix
 //	if (resp.arg[0]<3)
 //		PrintAndLog("Lost Connection");
 //	else if (ISO15_CRC_CHECK!=Crc(resp.d.asBytes,resp.arg[0]))
@@ -524,11 +655,20 @@ int CmdHF15DumpMem(const char*Cmd) {
 //		PrintAndLog("Tag returned Error %i: %s",recv[1],TagErrorStr(recv[1])); 
 	return 1;
 }
+
+int CmdHF15List(const char *Cmd) {
+	//PrintAndLog("Deprecated command, use 'hf list 15' instead");
+	CmdHFList("15");
+	return 0;
+}
+
 // "HF 15" interface
 static command_t CommandTable15[] = {
 	{"help",		CmdHF15Help,    1, "This help"},
+	{"list",		CmdHF15List,    0, "[Deprecated] List ISO 15693 history"},
 	{"demod",		CmdHF15Demod,   1, "Demodulate ISO15693 from tag"},
 	{"read",		CmdHF15Read,    0, "Read ISO 15693 tag"},
+	{"info",		CmdHF15Info,	0, "Get Card Information"},	
 	{"record",		CmdHF15Record,  0, "Record Samples (ISO 15693)"},
 	{"reader",		CmdHF15Reader,  0, "Act like an ISO15693 reader"},
 	{"sim",			CmdHF15Sim,     0, "Fake an ISO15693 tag"},
@@ -553,36 +693,6 @@ int CmdHF15Help(const char *Cmd) {
 
 // "HF 15 Cmd" Interface
 // Allows direct communication with the tag on command level
-int CmdHF15CmdInquiry(const char *Cmd) {
-
-	UsbCommand resp;
-	uint8_t *recv;
-	UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
-	uint8_t *req = c.d.asBytes;
-	int reqlen = 0;
-	
-	req[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1;
-	req[1] = ISO15_CMD_INVENTORY;
-	req[2] = 0; // mask length
-	reqlen = AddCrc(req,3);
-	c.arg[0] = reqlen;
-
-	clearCommandBuffer();
-	SendCommand(&c);
-	
-	if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-		if (resp.arg[0] >= 12) {
-		   recv = resp.d.asBytes;
-		   PrintAndLog("UID = %s", sprintUID(NULL, recv+2) );
-		   PrintAndLog("Tag Info: %s", getTagInfo_15( recv+2) );	
-		} else {
-			PrintAndLog("Response to short, just %i bytes. No tag?\n", resp.arg[0]);
-		}
-	} else {
-		PrintAndLog("timeout while waiting for reply.");
-	}
-	return 0;
-}
 
 // Turns debugging on(1)/off(0)
 int CmdHF15CmdDebug( const char *Cmd) {
@@ -690,7 +800,7 @@ int CmdHF15CmdRaw(const char *Cmd) {
  * Parameters:
  *  **cmd   	command line
  */
-int prepareHF15Cmd(char **cmd, UsbCommand *c, uint8_t iso15cmd[], int iso15cmdlen) {
+int prepareHF15Cmd(char **cmd, UsbCommand *c, uint8_t iso15cmd) {
 	int temp;
 	uint8_t *req = c->d.asBytes;
 	uint8_t uid[8] = {0x00};
@@ -724,43 +834,40 @@ int prepareHF15Cmd(char **cmd, UsbCommand *c, uint8_t iso15cmd[], int iso15cmdle
 		case 'S':
 			// you must have selected the tag earlier
 			req[reqlen++] |= ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_SELECT;
-			memcpy(&req[reqlen], &iso15cmd[0], iso15cmdlen);
-			reqlen += iso15cmdlen;		   
+			req[reqlen++] = iso15cmd;
 			break;
 		case 'u':
 		case 'U':
 			// unaddressed mode may not be supported by all vendors
 			req[reqlen++] |= ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY;
-			memcpy(&req[reqlen], &iso15cmd[0], iso15cmdlen);
-			reqlen += iso15cmdlen; 
+			req[reqlen++] = iso15cmd;
 			break;
 		case '*':
 			// we scan for the UID ourself
 			req[reqlen++] |= ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS;
-			memcpy(&req[reqlen], &iso15cmd[0], iso15cmdlen);
-			reqlen += iso15cmdlen;
+			req[reqlen++] = iso15cmd;
+
 			if (!getUID(uid)) {
 				PrintAndLog("No Tag found");
 				return 0;
 			}
-			memcpy(req+reqlen, uid, 8);
+			memcpy(&req[reqlen], uid, sizeof(uid));
 			PrintAndLog("Detected UID %s", sprintUID(NULL, uid));
-			reqlen += 8;
+			reqlen += sizeof(uid);
 			break;			
 		default:
 			req[reqlen++] |= ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS;
-			memcpy(&req[reqlen], &iso15cmd[0], iso15cmdlen);
-			reqlen += iso15cmdlen;
-		   
+			req[reqlen++] = iso15cmd;
+			
 		    // parse UID
 			for (int i=0; i<8 && (*cmd)[i*2] && (*cmd)[i*2+1]; i++) {
 				sscanf((char[]){(*cmd)[i*2], (*cmd)[i*2+1],0}, "%X", &temp);
-				uid[7-i] = temp&0xff;
+				uid[7-i] = temp & 0xff;
 			}				
 				
 			PrintAndLog("Using UID %s", sprintUID(NULL, uid));
-			memcpy(&req[reqlen], &uid[0], 8);
-			reqlen += 8;
+			memcpy(&req[reqlen], uid, sizeof(uid));
+			reqlen +=  sizeof(uid);
 			break;
 	}
 	// skip to next space		
@@ -770,95 +877,6 @@ int prepareHF15Cmd(char **cmd, UsbCommand *c, uint8_t iso15cmd[], int iso15cmdle
 	
 	c->arg[0] = reqlen;	
 	return 1;
-}
-
-/**
- * Commandline handling: HF15 CMD SYSINFO
- * get system information from tag/VICC
- */
-int CmdHF15CmdSysinfo(const char *Cmd) {
-
-	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd)<1 || cmdp == 'h' || cmdp == 'H') {
-		PrintAndLog("Usage:  hf 15 cmd sysinfo    [options] <uid|s|u|*>");
-		PrintAndLog("           options:");
-		PrintAndLog("               -2        use slower '1 out of 256' mode");
-		PrintAndLog("           uid (either): ");
-		PrintAndLog("               <8B hex>  full UID eg E011223344556677");
-		PrintAndLog("               s         selected tag");
-		PrintAndLog("               u         unaddressed mode");
-		PrintAndLog("               *         scan for tag");
-		PrintAndLog("           start#:       page number to start 0-255");  
-		PrintAndLog("           count#:       number of pages");  
-		return 0;
-	}	
-	
-	UsbCommand resp;
-	uint8_t *recv;
-	UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
-	uint8_t *req = c.d.asBytes;
-	int reqlen = 0;
-	char cmdbuf[100];
-	char *cmd = cmdbuf;
-	char output[2048] = "\0";
-	int i;
-	
-	strncpy(cmd, Cmd, 99);
-	
-	prepareHF15Cmd(&cmd, &c,(uint8_t[]){ISO15_CMD_SYSINFO},1);	
-	reqlen = c.arg[0];
-	
-	reqlen = AddCrc(req, reqlen);
-	c.arg[0] = reqlen;
-
-	clearCommandBuffer();
-	SendCommand(&c);
-
-	if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) && resp.arg[0] > 2) {
-		recv = resp.d.asBytes;
-		if (ISO15_CRC_CHECK == Crc(recv,resp.arg[0])) {
-			if (!(recv[0] & ISO15_RES_ERROR)) {
-				*output=0; // reset outputstring
-				for ( i=1; i<resp.arg[0]-2; i++) {
-					sprintf(output+strlen(output), "%02X ", recv[i]);
-				}					
-				strcat(output, "\n\r");
-				strcat(output, "UID = ");
-				strcat(output, sprintUID(NULL, recv+2));
-				strcat(output, "\n\r");
-				strcat(output, getTagInfo_15(recv+2)); //ABC
-				strcat(output, "\n\r");
-				i = 10;
-				if (recv[1] & 0x01) 
-					sprintf(output+strlen(output),"DSFID supported, set to %02X\n\r",recv[i++]);
-				else 
-					strcat(output,"DSFID not supported\n\r");
-				if (recv[1] & 0x02) 
-					sprintf(output+strlen(output),"AFI supported, set to %03X\n\r",recv[i++]);
-				else 
-					strcat(output,"AFI not supported\n\r");
-				if (recv[1] & 0x04) {
-					strcat(output,"Tag provides info on memory layout (vendor dependent)\n\r");
-					sprintf(output+strlen(output)," %i (or %i) bytes/page x %i pages \n\r",
-							(recv[i+1]&0x1F)+1, (recv[i+1]&0x1F), recv[i]+1);
-					i+=2;
-				} else 
-					strcat(output,"Tag does not provide information on memory layout\n\r");
-				if (recv[1] & 0x08) sprintf(output+strlen(output),"IC reference given: %02X\n\r",recv[i++]);
-					else strcat(output,"IC reference not given\n\r");
-
-
-				PrintAndLog("%s",output);	
-			} else {
-				PrintAndLog("Tag returned Error %i: %s",recv[0],TagErrorStr(recv[0])); 
-			}		   
-		} else {
-			PrintAndLog("CRC failed");
-		}
-	} else {
-		PrintAndLog("timeout while waiting for reply.");
-	}	
-	return 0;
 }
 
 /**
@@ -893,7 +911,7 @@ int CmdHF15CmdReadmulti(const char *Cmd) {
 	
 	strncpy(cmd, Cmd, 99);
 
-	prepareHF15Cmd(&cmd, &c,(uint8_t[]){ISO15_CMD_READMULTI},1);	
+	prepareHF15Cmd(&cmd, &c, ISO15_CMD_READMULTI);	
 	reqlen = c.arg[0];
 
 	pagenum = strtol(cmd, NULL, 0);
@@ -978,7 +996,7 @@ int CmdHF15CmdRead(const char *Cmd) {
 	
 	strncpy(cmd, Cmd, 99);
 	
-	prepareHF15Cmd(&cmd, &c,(uint8_t[]){ISO15_CMD_READ},1);	
+	prepareHF15Cmd(&cmd, &c,ISO15_CMD_READ);	
 	reqlen = c.arg[0];
 
 	pagenum = strtol(cmd, NULL, 0);
@@ -1052,7 +1070,7 @@ int CmdHF15CmdWrite(const char *Cmd) {
 	
 	strncpy(cmd,Cmd,99);
 
-	prepareHF15Cmd(&cmd, &c,(uint8_t[]){ISO15_CMD_WRITE},1);	
+	prepareHF15Cmd(&cmd, &c, ISO15_CMD_WRITE);	
 	reqlen=c.arg[0];
 	
 	// *cmd -> page num ; *cmd2 -> data 
@@ -1100,12 +1118,10 @@ int CmdHF15CmdWrite(const char *Cmd) {
 
 static command_t CommandTable15Cmd[] = {
 	{"help",		CmdHF15CmdHelp,			1, "This Help"},
- 	{"inquiry",		CmdHF15CmdInquiry,		0, "Search for tags in range"},
 // {"select",		CmdHF15CmdSelect,		0, "Select an tag with a specific UID for further commands"},
 	{"read",		CmdHF15CmdRead,			0, "Read a block"},	
 	{"write",		CmdHF15CmdWrite,		0, "Write a block"},	
 	{"readmulti",	CmdHF15CmdReadmulti,	0, "Reads multiple Blocks"},
-	{"sysinfo",		CmdHF15CmdSysinfo,		0, "Get Card Information"},
 	{"raw",			CmdHF15CmdRaw,			0, "Send raw hex data to tag"}, 
 	{NULL, NULL, 0, NULL}
 };

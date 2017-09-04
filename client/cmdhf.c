@@ -136,29 +136,30 @@ void annotateIclass(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize) {
 }
 
 void annotateIso15693(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize) {
-	if(cmd[0] == 0x26) {
-		switch(cmd[1]){
-			case ISO15693_INVENTORY				:snprintf(exp, size, "INVENTORY");break;
-			case ISO15693_STAYQUIET				:snprintf(exp, size, "STAY_QUIET");break;
-			default								:snprintf(exp,size,"?"); break;
-		}
-	} else if(cmd[0] == 0x02) {
-		switch (cmd[1]) {
-			case ISO15693_READBLOCK            :snprintf(exp, size, "READBLOCK");break;
-			case ISO15693_WRITEBLOCK           :snprintf(exp, size, "WRITEBLOCK");break;
-			case ISO15693_LOCKBLOCK            :snprintf(exp, size, "LOCKBLOCK");break;
-			case ISO15693_READ_MULTI_BLOCK     :snprintf(exp, size, "READ_MULTI_BLOCK");break;
-			case ISO15693_SELECT               :snprintf(exp, size, "SELECT");break;
-			case ISO15693_RESET_TO_READY       :snprintf(exp, size, "RESET_TO_READY");break;
-			case ISO15693_WRITE_AFI            :snprintf(exp, size, "WRITE_AFI");break;
-			case ISO15693_LOCK_AFI             :snprintf(exp, size, "LOCK_AFI");break;
-			case ISO15693_WRITE_DSFID          :snprintf(exp, size, "WRITE_DSFID");break;
-			case ISO15693_LOCK_DSFID           :snprintf(exp, size, "LOCK_DSFID");break;
-			case ISO15693_GET_SYSTEM_INFO      :snprintf(exp, size, "GET_SYSTEM_INFO");break;
-			case ISO15693_READ_MULTI_SECSTATUS :snprintf(exp, size, "READ_MULTI_SECSTATUS");break;
-			default:                            snprintf(exp,size,"?"); break;
-		}
+
+	switch(cmd[1]){
+		case ISO15693_INVENTORY				:snprintf(exp, size, "INVENTORY");return;
+		case ISO15693_STAYQUIET				:snprintf(exp, size, "STAY_QUIET");return;
+		case ISO15693_READBLOCK				:snprintf(exp, size, "READBLOCK");return;
+		case ISO15693_WRITEBLOCK			:snprintf(exp, size, "WRITEBLOCK");return;
+		case ISO15693_LOCKBLOCK				:snprintf(exp, size, "LOCKBLOCK");return;
+		case ISO15693_READ_MULTI_BLOCK		:snprintf(exp, size, "READ_MULTI_BLOCK");return;
+		case ISO15693_SELECT				:snprintf(exp, size, "SELECT");return;
+		case ISO15693_RESET_TO_READY		:snprintf(exp, size, "RESET_TO_READY");return;
+		case ISO15693_WRITE_AFI				:snprintf(exp, size, "WRITE_AFI");return;
+		case ISO15693_LOCK_AFI				:snprintf(exp, size, "LOCK_AFI");return;
+		case ISO15693_WRITE_DSFID			:snprintf(exp, size, "WRITE_DSFID");return;
+		case ISO15693_LOCK_DSFID			:snprintf(exp, size, "LOCK_DSFID");return;
+		case ISO15693_GET_SYSTEM_INFO		:snprintf(exp, size, "GET_SYSTEM_INFO");return;
+		case ISO15693_READ_MULTI_SECSTATUS	:snprintf(exp, size, "READ_MULTI_SECSTATUS");return;
+		default: break;
 	}
+
+	if ( cmd[1] >= 0x2D && cmd[1] <= 0x9F ) snprintf(exp, size, "Optional RFU"); 
+	else if ( cmd[1] >= 0xA0 && cmd[1] <= 0xDF ) snprintf(exp, size, "Cust IC MFG dependent"); 
+	else if ( cmd[1] >= 0xE0 && cmd[1] <= 0xFF ) snprintf(exp, size, "Proprietary IC MFG dependent"); 
+	else
+		snprintf(exp, size, "?");
 }
 
 void annotateTopaz(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){

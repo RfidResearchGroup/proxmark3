@@ -2,6 +2,7 @@
 // Jonathan Westhues, split Nov 2006
 // Modified by Greg Jones, Jan 2009
 // Modified by Adrian Dabrowski "atrox", Mar-Sept 2010,Oct 2011
+// Modified by Christian Herrmann "iceman", 2017
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -69,6 +70,9 @@
 // This section basicly contains transmission and receiving of bits
 ///////////////////////////////////////////////////////////////////////
 
+// 32 + 2 crc + 1 
+#define ISO15_MAX_FRAME   35
+
 #define FrameSOF              Iso15693FrameSOF
 #define Logic0                Iso15693Logic0
 #define Logic1                Iso15693Logic1
@@ -79,7 +83,6 @@
 #define sprintUID(target,uid)	Iso15693sprintUID(target, uid)
 
 int DEBUG = 0;
-
 
 static uint8_t BuildIdentifyRequest(uint8_t **cmdout);
 //static uint8_t BuildReadBlockRequest(uint8_t **cmdout, uint8_t *uid, uint8_t blockNumber );
@@ -324,7 +327,7 @@ static int DemodAnswer(uint8_t *received, uint8_t *dest, uint16_t samplecount) {
 	
 	i = maxPos + ARRAYLEN(FrameSOF) / skip;
 
-	uint8_t outBuf[20];
+	uint8_t outBuf[ISO15_MAX_FRAME];
 	memset(outBuf, 0, sizeof(outBuf));
 	uint8_t mask = 0x01;
 	for(;;) {
@@ -367,11 +370,12 @@ static int DemodAnswer(uint8_t *received, uint8_t *dest, uint16_t samplecount) {
 		}
 	}
 	
+	if (DEBUG) Dbprintf("ice: demod bytes %u", k);
+			
 	if (mask != 0x01) { // this happens, when we miss the EOF
 		
 		// TODO: for some reason this happens quite often
 		if (DEBUG) Dbprintf("error, uneven octet! (extra bits!) mask %02x", mask);
-		
 		//if (mask < 0x08) k--; // discard the last uneven octet;
 		// 0x08 is an assumption - but works quite often
 	}
@@ -391,24 +395,44 @@ static int DemodAnswer(uint8_t *received, uint8_t *dest, uint16_t samplecount) {
 // returns: 
 //		number of decoded bytes
 // logging enabled
-static int GetIso15693AnswerFromTag(uint8_t *received, int *samples, int *elapsed) {
+static int GetIso15693AnswerFromTag(uint8_t *received, int *elapsed) {
 
+#define SIGNAL_BUFF_SIZE 15000
+	// get current clock
+	uint32_t time_0 = GetCountSspClk();
+	uint32_t time_stop = 0;
 	bool getNext = false;
 	int counter = 0, ci = 0, cq = 0;
-	uint32_t time_0 = 0, time_stop = 0;
-	uint8_t *buf = BigBuf_malloc(7000);
+	//volatile uint32_t r;
+	uint8_t *buf = BigBuf_malloc(SIGNAL_BUFF_SIZE);
 
-	// get current clock
-	time_0 = GetCountSspClk();
+	if (elapsed) *elapsed = 0;
 	
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
+	
+	// for (counter = 0; counter < wait;) {
+		
+		// WDT_HIT();
+
+		// if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+			// AT91C_BASE_SSC->SSC_THR = 0x00;		// For exact timing!
+			// counter++;
+		// }
+		// if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+			 // r = AT91C_BASE_SSC->SSC_RHR; (void)r;
+		// }
+	// }
+	// counter = 0;
+
 
 	for(;;) {
 		WDT_HIT();
 
-		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))
-			AT91C_BASE_SSC->SSC_THR = 0x43;
-
+		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+			AT91C_BASE_SSC->SSC_THR = 0x00; //0x43;
+			// To make use of exact timing of next command from reader!!
+			if (elapsed) (*elapsed)++;
+		}
 		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 
 			ci = (int8_t)AT91C_BASE_SSC->SSC_RHR;
@@ -426,7 +450,7 @@ static int GetIso15693AnswerFromTag(uint8_t *received, int *samples, int *elapse
 								
 				buf[counter++] = (uint8_t)(MAX(ci,cq) + (MIN(ci, cq) >> 1));
 				
-				if (counter >= 7000-1)
+				if (counter >= SIGNAL_BUFF_SIZE)
 					break;
 			} else {
 				cq = ci;
@@ -434,9 +458,9 @@ static int GetIso15693AnswerFromTag(uint8_t *received, int *samples, int *elapse
 			getNext = !getNext;
 		}
 	}	
-	time_stop = GetCountSspClk() - time_0;	
+	time_stop = GetCountSspClk() - time_0 ;	
 	int len = DemodAnswer(received, buf, counter);	
-	LogTrace(received, len, time_0, time_stop, NULL, false);
+	LogTrace(received, len, time_0 << 4, time_stop << 4, NULL, false);
 	BigBuf_free();	
 	return len;
 }
@@ -487,9 +511,9 @@ static int GetIso15693AnswerFromSniff(uint8_t *received, int *samples, int *elap
 		}
 	}
 	
-	time_stop = GetCountSspClk() - time_0;	
+	time_stop = GetCountSspClk() - time_0;
 	int k = DemodAnswer(received, buf, counter);	
-	LogTrace(received, k, time_0, time_stop, NULL, false);	
+	LogTrace(received, k, time_0 << 4, time_stop << 4, NULL, false);	
 	return k;	
 }
 
@@ -536,7 +560,8 @@ void AcquireRawAdcSamplesIso15693(void) {
 		}
 	}
 
-	LogTrace(cmd, cmdlen, time_start, GetCountSspClk()-time_start, NULL, true);
+	
+	LogTrace(cmd, cmdlen, time_start << 4, (GetCountSspClk() - time_start) << 4, NULL, true);
 	
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
 
@@ -749,9 +774,7 @@ static uint8_t BuildInventoryResponse(uint8_t **out, uint8_t *uid) {
 // logging enabled
 int SendDataTag(uint8_t *send, int sendlen, bool init, int speed, uint8_t *outdata) {
 
-	int samples = 0, t_samples = 0;
-	int wait = 0, elapsed = 0;
-	int answer_len = 0;
+	int t_samples = 0, wait = 0, elapsed = 0, answer_len = 0;
 	
 	LEDsoff();
 	
@@ -769,12 +792,12 @@ int SendDataTag(uint8_t *send, int sendlen, bool init, int speed, uint8_t *outda
 	uint32_t time_start = GetCountSspClk();
 
 	TransmitTo15693Tag(ToSend, ToSendMax, &t_samples, &wait);
-	LogTrace(send, sendlen, time_start, GetCountSspClk()-time_start, NULL, true);
+	LogTrace(send, sendlen, time_start << 4, (GetCountSspClk() - time_start) << 4, NULL, true);
 	
 	// Now wait for a response
 	if (outdata != NULL) {
 		LED_B_INV();		
-		answer_len = GetIso15693AnswerFromTag(outdata, &samples, &elapsed);
+		answer_len = GetIso15693AnswerFromTag(outdata, &elapsed);
 	}
 
 	LEDsoff();
@@ -863,11 +886,7 @@ void ReaderIso15693(uint32_t parameter) {
 	int answerLen1 = 0;
 	//int answerLen2 = 0;
 	//int answerLen3 = 0;
-	//int i = 0;
-	int samples = 0;
-	int tsamples = 0;
-	int wait = 0;
-	int elapsed = 0;
+	int tsamples = 0, wait = 0, elapsed = 0;
 	
 	uint8_t uid[8] = {0,0,0,0,0,0,0,0};
 
@@ -889,10 +908,10 @@ void ReaderIso15693(uint32_t parameter) {
 	uint8_t *cmd = NULL;
 	uint8_t cmdlen = BuildIdentifyRequest( &cmd );
 	TransmitTo15693Tag(ToSend, ToSendMax, &tsamples, &wait);
-	LogTrace(cmd, cmdlen, time_start, GetCountSspClk()-time_start, NULL, true);
+	LogTrace(cmd, cmdlen, time_start << 4, (GetCountSspClk() - time_start) << 4, NULL, true);
 		
 	// Now wait for a response
-	answerLen1 = GetIso15693AnswerFromTag(answer1, &samples, &elapsed) ;
+	answerLen1 = GetIso15693AnswerFromTag(answer1, &elapsed) ;
 
 	// we should do a better check than this
 	if (answerLen1 >= 12) {
@@ -934,9 +953,9 @@ void ReaderIso15693(uint32_t parameter) {
 			cmdlen = BuildReadBlockRequest(cmd, uid, i);
 				
 			TransmitTo15693Tag(ToSend, ToSendMax, &tsamples, &wait); 
-			LogTrace(cmd, cmdlen, time_start, GetCountSspClk()-time_start, NULL, true);	
+			LogTrace(cmd, cmdlen, time_start<<4, (GetCountSspClk()-time_start)<<4, NULL, true);	
 			
-			answerLen2 = GetIso15693AnswerFromTag(answer2, &samples, &elapsed);
+			answerLen2 = GetIso15693AnswerFromTag(answer2, &elapsed);
 			if (answerLen2 > 0) {
 				Dbprintf("READ SINGLE BLOCK %d returned %d octets:", i, answerLen2);
 				DbdecodeIso15693Answer(answerLen2, answer2);
@@ -969,8 +988,8 @@ void SimTagIso15693(uint32_t parameter, uint8_t *uid) {
 
 	Dbprintf("ISO-15963 Simulating uid: %02X%02X%02X%02X%02X%02X%02X%02X", uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6], uid[7]);
 
-	uint8_t buf[20];
-	memset(buf, 0x00, 20);
+	uint8_t buf[ISO15_MAX_FRAME];
+	memset(buf, 0x00, sizeof(buf));
 
 	LED_C_ON();
 
@@ -990,7 +1009,7 @@ void SimTagIso15693(uint32_t parameter, uint8_t *uid) {
 						
 			time_start = GetCountSspClk();
 			TransmitTo15693Reader(ToSend, ToSendMax, &tsamples, &wait);
-			LogTrace(cmd, cmdlen, time_start, GetCountSspClk()-time_start, NULL, true);						
+			LogTrace(cmd, cmdlen, time_start << 4, (GetCountSspClk() - time_start) << 4, NULL, true);						
 					
 			Dbprintf("%d octets read from reader command: %x %x %x %x %x %x %x %x %x", ans,
 			buf[0], buf[1], buf[2],	buf[3],
@@ -1050,8 +1069,8 @@ void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint
 
 	bool init = true;
 	int buflen = 0;
-	uint8_t buf[20];
-	memset(buf, 0x00, 20);
+	uint8_t buf[ISO15_MAX_FRAME];
+	memset(buf, 0x00, sizeof(buf));
 
 	if (DEBUG) {
 		DbpString("SEND");
@@ -1061,7 +1080,7 @@ void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint
 	buflen = SendDataTag(data, datalen, init, speed, (recv ? buf : NULL));
 	
 	if (recv) { 
-		buflen = (buflen > 20) ? 20 : buflen;
+		buflen = (buflen > ISO15_MAX_FRAME) ? ISO15_MAX_FRAME : buflen;
 		
 		LED_B_ON();
 		cmd_send(CMD_ACK, buflen, 0, 0, buf, buflen);

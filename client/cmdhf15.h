@@ -15,6 +15,7 @@ int CmdHF15(const char *Cmd);
 
 extern int CmdHF15Demod(const char *Cmd);
 extern int CmdHF15Read(const char *Cmd);
+extern int CmdHF15Info(const char *Cmd);
 extern int CmdHF15Record(const char *Cmd);
 extern int HF15Reader(const char *Cmd, bool verbose);
 extern int CmdHF15Reader(const char *Cmd);
@@ -25,9 +26,7 @@ extern int CmdHF15DumpMem(const char*Cmd);
 extern int CmdHF15CmdDebug( const char *Cmd);
 
 // cmd sub.
-extern int CmdHF15CmdInquiry(const char *Cmd);
 extern int CmdHF15CmdRaw(const char *cmd);
-extern int CmdHF15CmdSysinfo(const char *Cmd);
 extern int CmdHF15CmdReadmulti(const char *Cmd);
 extern int CmdHF15CmdRead(const char *Cmd);
 extern int CmdHF15CmdWrite(const char *Cmd);
@@ -35,4 +34,5 @@ extern int CmdHF15CmdWrite(const char *Cmd);
 extern int CmdHF15CmdHelp(const char*Cmd);
 extern int CmdHF15Help(const char*Cmd);
 
+extern int prepareHF15Cmd(char **cmd, UsbCommand *c, uint8_t iso15cmd);
 #endif
