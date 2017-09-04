@@ -201,29 +201,27 @@ const productName uidmapping[] = {
 //		*buf	should be large enough to fit the 64bit uid
 // returns 1 if suceeded
 int getUID(uint8_t *buf) {
+
 	UsbCommand resp;
-	uint8_t *recv;
 	UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
-	uint8_t *req = c.d.asBytes;
-	req[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1;
-	req[1] = ISO15_CMD_INVENTORY;
 
-	int reqlen = 0;
-	
+	c.d.asBytes[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1;
+	c.d.asBytes[1] = ISO15_CMD_INVENTORY;
+	c.d.asBytes[2] = 0; // mask length
+
+	c.arg[0] = AddCrc(c.d.asBytes, 3);
+
 	// don't give up the at the first try			
-	for (int retry = 0; retry <3; retry++) {
-
-		req[2] = 0; // mask length
-		reqlen = AddCrc(req, 3);
-		c.arg[0] = reqlen;
+	for (uint8_t retry = 0; retry < 3; retry++) {
 
 		clearCommandBuffer();
 		SendCommand(&c);
 		
-		if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
-			recv = resp.d.asBytes;
-			if (resp.arg[0] >= 12 && ISO15_CRC_CHECK == Crc(recv, 12)) {
-			   memcpy(buf, recv + 2, 8);
+		if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+			
+			uint8_t resplen = resp.arg[0];
+			if (resplen >= 12 && ISO15_CRC_CHECK == Crc(resp.d.asBytes, 12)) {
+			   memcpy(buf, resp.d.asBytes + 2, 8);
 			   return 1;
 			} 
 		} 
@@ -408,8 +406,7 @@ int CmdHF15Record(const char *Cmd) {
 }
 
 // used with 'hf search'
-int HF15Reader(const char *Cmd, bool verbose)
-{
+int HF15Reader(const char *Cmd, bool verbose) {
 	uint8_t uid[8] = {0,0,0,0,0,0,0,0};	
 	if (!getUID(uid)) {
 		if (verbose) PrintAndLog("No Tag found.");
@@ -426,9 +423,7 @@ int CmdHF15Reader(const char *Cmd) {
 	char cmdp = param_getchar(Cmd, 0);
 	if (cmdp == 'h' || cmdp == 'H') return usage_15_reader();
 	
-	UsbCommand c = {CMD_READER_ISO_15693, {strtol(Cmd, NULL, 0), 0, 0}};
-	clearCommandBuffer();
-	SendCommand(&c);
+	HF15Reader(Cmd, true);
 	return 0;
 }
 

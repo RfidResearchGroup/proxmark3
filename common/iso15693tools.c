@@ -43,7 +43,6 @@ int Iso15693AddCrc(uint8_t *req, int n) {
 	return n+2;
 }
 
-
 int sprintf(char *str, const char *format, ...);
 
 // returns a string representation of the UID
@@ -53,9 +52,12 @@ int sprintf(char *str, const char *format, ...);
 //	return: ptr to string
 char* Iso15693sprintUID(char *target, uint8_t *uid) {
 	static char tempbuf[2*8+1] = {0};
-	if (target==NULL) target=tempbuf;
+	if (target == NULL) 
+		target = tempbuf;
 	sprintf(target,"%02X%02X%02X%02X%02X%02X%02X%02X",
-				uid[7],uid[6],uid[5],uid[4],uid[3],uid[2],uid[1],uid[0]);
+				uid[7], uid[6], uid[5], uid[4],
+				uid[3], uid[2], uid[1], uid[0]
+	);
 	return target;
 }
 

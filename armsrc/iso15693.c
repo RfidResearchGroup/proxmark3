@@ -57,7 +57,6 @@
 //	*) remove or refactor code under "depricated"
 // *) document all the functions
 
-
 #include "proxmark3.h"
 #include "util.h"
 #include "apps.h"
@@ -75,12 +74,16 @@
 #define Logic1                Iso15693Logic1
 #define FrameEOF              Iso15693FrameEOF
 
-#define Crc(data,datalen)     Iso15693Crc(data,datalen)
-#define AddCrc(data,datalen)  Iso15693AddCrc(data,datalen)
-#define sprintUID(target,uid)	Iso15693sprintUID(target,uid)
+#define Crc(data,datalen)     Iso15693Crc(data, datalen)
+#define AddCrc(data,datalen)  Iso15693AddCrc(data, datalen)
+#define sprintUID(target,uid)	Iso15693sprintUID(target, uid)
 
 int DEBUG = 0;
 
+
+static uint8_t BuildIdentifyRequest(uint8_t **cmdout);
+//static uint8_t BuildReadBlockRequest(uint8_t **cmdout, uint8_t *uid, uint8_t blockNumber );
+static uint8_t BuildInventoryResponse(uint8_t **cmdout, uint8_t *uid);
 
 // ---------------------------
 // Signal Processing 
@@ -212,6 +215,7 @@ static void CodeIso15693AsReader256(uint8_t *cmd, int n) {
 
 // Transmit the command (to the tag) that was placed in ToSend[].
 static void TransmitTo15693Tag(const uint8_t *cmd, int len, int *samples, int *wait) {
+
     int c;
 	volatile uint32_t r;
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_TX);
@@ -292,67 +296,22 @@ static void TransmitTo15693Reader(const uint8_t *cmd, int len, int *samples, int
 	}
 }
 
-// Read from Tag
-// Parameters:
-//		receivedResponse
-//		maxLen
-//		samples
-//		elapsed
-// returns: 
-//		number of decoded bytes
-static int GetIso15693AnswerFromTag(uint8_t *receivedResponse, int maxLen, int *samples, int *elapsed) {
-
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
-	//SpinDelay(60);	// greg - experiment to get rid of some of the 0 byte/failed reads
+//-----------------------------------------------------------------------------
+// DEMODULATE tag answer
+//-----------------------------------------------------------------------------
+static int DemodAnswer(uint8_t *received, uint8_t *dest, uint16_t samplecount) {
 	
-	int c = 0, getNext = false;
-	int8_t prev = 0;
-	uint8_t *dest = BigBuf_get_addr();
-	
-	for(;;) {
-		WDT_HIT();
-
-		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))
-			AT91C_BASE_SSC->SSC_THR = 0x43;
-
-		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-			int8_t b = (int8_t)AT91C_BASE_SSC->SSC_RHR;
-
-			// The samples are correlations against I and Q versions of the
-			// tone that the tag AM-modulates, so every other sample is I,
-			// every other is Q. We just want power, so abs(I) + abs(Q) is
-			// close to what we want.
-			// iceman 2016, amplitude sqrt(abs(i) + abs(q))
-			if(getNext) {
-				dest[c++] = (uint8_t)ABS(b) + ABS(prev);
-
-				if(c >= 2000)
-					break;
-			} else {
-				prev = b;
-			}
-
-			getNext = !getNext;
-		}
-	}
-
-	//////////////////////////////////////////
-	/////////// DEMODULATE ///////////////////
-	//////////////////////////////////////////
-
 	int i, j;
-	int max = 0, maxPos=0, skip = 4;
+	int max = 0, maxPos = 0, skip = 4;
 	int k = 0; // this will be our return value
-	
-	//	if(GraphTraceLen < 1000) return;	// THIS CHECKS FOR A BUFFER TO SMALL
 
 	// First, correlate for SOF
-	for(i = 0; i < 100; i++) {
+	for (i = 0; i < samplecount; i++) {
 		int corr = 0;
-		for(j = 0; j < ARRAYLEN(FrameSOF); j += skip) {
+		for ( j = 0; j < ARRAYLEN(FrameSOF); j += skip) {
 			corr += FrameSOF[j] * dest[i+(j/skip)];
 		}
-		if(corr > max) {
+		if (corr > max) {
 			max = corr;
 			maxPos = i;
 		}
@@ -360,212 +319,193 @@ static int GetIso15693AnswerFromTag(uint8_t *receivedResponse, int maxLen, int *
 	//	DbpString("SOF at %d, correlation %d", maxPos,max/(ARRAYLEN(FrameSOF)/skip));
 
 	// greg - If correlation is less than 1 then there's little point in continuing
-	if ((max/(ARRAYLEN(FrameSOF)/skip)) >= 1)
-	{
-		i = maxPos + ARRAYLEN(FrameSOF) / skip;
+	if ((max / (ARRAYLEN(FrameSOF)/skip) ) < 1) 
+		return k;
 	
-		uint8_t outBuf[20];
-		memset(outBuf, 0, sizeof(outBuf));
-		uint8_t mask = 0x01;
-		for(;;) {
-			int corr0 = 0, corr1 = 0, corrEOF = 0;
-			for(j = 0; j < ARRAYLEN(Logic0); j += skip) {
-				corr0 += Logic0[j] * dest[i+(j/skip)];
-			}
-			for(j = 0; j < ARRAYLEN(Logic1); j += skip) {
-				corr1 += Logic1[j] * dest[i+(j/skip)];
-			}
-			for(j = 0; j < ARRAYLEN(FrameEOF); j += skip) {
-				corrEOF += FrameEOF[j] * dest[i+(j/skip)];
-			}
-			// Even things out by the length of the target waveform.
-			corr0 *= 4;
-			corr1 *= 4;
-	
-			if(corrEOF > corr1 && corrEOF > corr0) {
-	//			DbpString("EOF at %d", i);
-				break;
-			} else if(corr1 > corr0) {
-				i += ARRAYLEN(Logic1)/skip;
-				outBuf[k] |= mask;
-			} else {
-				i += ARRAYLEN(Logic0)/skip;
-			}
-			mask <<= 1;
-			if(mask == 0) {
-				k++;
-				mask = 0x01;
-			}
-			if( ( i + (int)ARRAYLEN(FrameEOF)) >= 2000) {
-				DbpString("ran off end!");
-				break;
-			}
+	i = maxPos + ARRAYLEN(FrameSOF) / skip;
+
+	uint8_t outBuf[20];
+	memset(outBuf, 0, sizeof(outBuf));
+	uint8_t mask = 0x01;
+	for(;;) {
+		int corr0 = 0, corr1 = 0, corrEOF = 0;
+		for (j = 0; j < ARRAYLEN(Logic0); j += skip) {
+			corr0 += Logic0[j] * dest[i+(j/skip)];
 		}
-		if(mask != 0x01) { // this happens, when we miss the EOF
-			// TODO: for some reason this happens quite often
-			if (DEBUG) Dbprintf("error, uneven octet! (extra bits!) mask=%02x", mask);
-			if (mask < 0x08) k--; // discard the last uneven octet;
-			// 0x08 is an assumption - but works quite often
+		for (j = 0; j < ARRAYLEN(Logic1); j += skip) {
+			corr1 += Logic1[j] * dest[i+(j/skip)];
 		}
-	//	uint8_t str1 [8];
-	//	itoa(k,str1);
-	//	strncat(str1," octets read",8);
-	
-	//	DbpString(  str1);    // DbpString("%d octets", k);
-	
-	//	for(i = 0; i < k; i+=3) {
-	//		//DbpString("# %2d: %02x ", i, outBuf[i]);
-	//		DbpIntegers(outBuf[i],outBuf[i+1],outBuf[i+2]);
-	//	}
-	
-		for(i = 0; i < k; i++) {
-			receivedResponse[i] = outBuf[i];
+		for (j = 0; j < ARRAYLEN(FrameEOF); j += skip) {
+			corrEOF += FrameEOF[j] * dest[i+(j/skip)];
 		}
-	} // "end if correlation > 0" 	(max/(ARRAYLEN(FrameSOF)/skip))
-	return k; // return the number of bytes demodulated
+		// Even things out by the length of the target waveform.
+		corr0 *= 4;
+		corr1 *= 4;
+		// if (DEBUG)
+			// Dbprintf("Corr1 %d, Corr0 %d, CorrEOF %d", corr1, corr0, corrEOF);
+
+		if (corrEOF > corr1 && corrEOF > corr0)
+			break;
+		
+		if (corr1 > corr0) {
+			i += ARRAYLEN(Logic1) / skip;
+			outBuf[k] |= mask;
+		} else {
+			i += ARRAYLEN(Logic0) / skip;
+		}
+		
+		mask <<= 1;
+		
+		if (mask == 0) {
+			k++;
+			mask = 0x01;
+		}
+		
+		if ( ( i + (int)ARRAYLEN(FrameEOF)) >= samplecount-1) {
+			//Dbprintf("ran off end!  %d | %d",( i + (int)ARRAYLEN(FrameEOF)), samplecount-1);
+			break;
+		}
+	}
+	
+	if (mask != 0x01) { // this happens, when we miss the EOF
+		
+		// TODO: for some reason this happens quite often
+		if (DEBUG) Dbprintf("error, uneven octet! (extra bits!) mask %02x", mask);
+		
+		//if (mask < 0x08) k--; // discard the last uneven octet;
+		// 0x08 is an assumption - but works quite often
+	}
+
+	for(i = 0; i < k; i++)
+		received[i] = outBuf[i];
+
+	// return the number of bytes demodulated
+	return k;
 }
 
+// Read from Tag
+// Parameters:
+//		received
+//		samples
+//		elapsed
+// returns: 
+//		number of decoded bytes
+// logging enabled
+static int GetIso15693AnswerFromTag(uint8_t *received, int *samples, int *elapsed) {
 
-// Now the GetISO15693 message from sniffing command
-static int GetIso15693AnswerFromSniff(uint8_t *receivedResponse, int maxLen, int *samples, int *elapsed) {
+	bool getNext = false;
+	int counter = 0, ci = 0, cq = 0;
+	uint32_t time_0 = 0, time_stop = 0;
+	uint8_t *buf = BigBuf_malloc(7000);
+
+	// get current clock
+	time_0 = GetCountSspClk();
+	
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
-	//SpinDelay(60);	// greg - experiment to get rid of some of the 0 byte/failed reads
-
-	int c = 0, getNext = false;
-	int8_t prev = 0;
-	uint8_t *dest = BigBuf_get_addr();
 
 	for(;;) {
 		WDT_HIT();
 
-		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))
+		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))
 			AT91C_BASE_SSC->SSC_THR = 0x43;
 
-		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-			int8_t b = (int8_t)AT91C_BASE_SSC->SSC_RHR;
+		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+
+			ci = (int8_t)AT91C_BASE_SSC->SSC_RHR;
+			
+			// LSB is a FPGA singal bit
+			ci >>= 1;			
+			ci = ABS(ci);
 
 			// The samples are correlations against I and Q versions of the
 			// tone that the tag AM-modulates, so every other sample is I,
 			// every other is Q. We just want power, so abs(I) + abs(Q) is
 			// close to what we want.
-			if(getNext) {
-				dest[c++] = (uint8_t)ABS(b) + ABS(prev);
-
-				if(c >= 20000)
+			// iceman 2016, amplitude sqrt(abs(i) + abs(q))
+			if (getNext) {
+								
+				buf[counter++] = (uint8_t)(MAX(ci,cq) + (MIN(ci, cq) >> 1));
+				
+				if (counter >= 7000-1)
 					break;
 			} else {
-				prev = b;
+				cq = ci;
+			}
+			getNext = !getNext;
+		}
+	}	
+	time_stop = GetCountSspClk() - time_0;	
+	int len = DemodAnswer(received, buf, counter);	
+	LogTrace(received, len, time_0, time_stop, NULL, false);
+	BigBuf_free();	
+	return len;
+}
+
+
+// Now the GetISO15693 message from sniffing command
+// logging enable,
+static int GetIso15693AnswerFromSniff(uint8_t *received, int *samples, int *elapsed) {
+
+	bool getNext = false;
+	int counter = 0, ci = 0, cq = 0;
+	uint32_t time_0 = 0, time_stop = 0;
+	uint8_t *buf = BigBuf_get_addr();
+
+	// get current clock
+	time_0 = GetCountSspClk();
+		
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
+
+	for(;;) {
+		WDT_HIT();
+
+		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))
+			AT91C_BASE_SSC->SSC_THR = 0x43;
+
+		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+
+			ci = (int8_t)AT91C_BASE_SSC->SSC_RHR;
+			
+			// LSB is a FPGA singal bit
+			ci >>= 1;			
+			ci = ABS(ci);
+			
+			// The samples are correlations against I and Q versions of the
+			// tone that the tag AM-modulates, so every other sample is I,
+			// every other is Q. We just want power, so abs(I) + abs(Q) is
+			// close to what we want.
+			if(getNext) {
+
+				buf[counter++] = (uint8_t)(MAX(ci,cq) + (MIN(ci, cq) >> 1));
+
+				if(counter >= 20000)
+					break;
+			} else {
+				 cq = ci;
 			}
 			getNext = !getNext;
 		}
 	}
-
-	//////////////////////////////////////////
-	/////////// DEMODULATE ///////////////////
-	//////////////////////////////////////////
-
-	int i, j, max = 0, maxPos = 0, skip = 4;
-
-	// First, correlate for SOF
-	for(i = 0; i < 19000; i++) {
-		int corr = 0;
-		for(j = 0; j < ARRAYLEN(FrameSOF); j += skip) {
-			corr += FrameSOF[j]*dest[i+(j/skip)];
-		}
-		if(corr > max) {
-			max = corr;
-			maxPos = i;
-		}
-	}
-//	DbpString("SOF at %d, correlation %d", maxPos,max/(ARRAYLEN(FrameSOF)/skip));
-
-	int k = 0; // this will be our return value
-
-	// greg - If correlation is less than 1 then there's little point in continuing
-	if ((max/(ARRAYLEN(FrameSOF)/skip)) >= 1)	// THIS SHOULD BE 1
-	{
 	
-		i = maxPos + ARRAYLEN(FrameSOF)/skip;
-	
-		uint8_t outBuf[20];
-		memset(outBuf, 0, sizeof(outBuf));
-		uint8_t mask = 0x01;
-		for(;;) {
-			int corr0 = 0, corr1 = 0, corrEOF = 0;
-			for(j = 0; j < ARRAYLEN(Logic0); j += skip) {
-				corr0 += Logic0[j]*dest[i+(j/skip)];
-			}
-			for(j = 0; j < ARRAYLEN(Logic1); j += skip) {
-				corr1 += Logic1[j]*dest[i+(j/skip)];
-			}
-			for(j = 0; j < ARRAYLEN(FrameEOF); j += skip) {
-				corrEOF += FrameEOF[j]*dest[i+(j/skip)];
-			}
-			// Even things out by the length of the target waveform.
-			corr0 *= 4;
-			corr1 *= 4;
-	
-			if(corrEOF > corr1 && corrEOF > corr0) {
-	//			DbpString("EOF at %d", i);
-				break;
-			} else if(corr1 > corr0) {
-				i += ARRAYLEN(Logic1)/skip;
-				outBuf[k] |= mask;
-			} else {
-				i += ARRAYLEN(Logic0)/skip;
-			}
-			mask <<= 1;
-			if(mask == 0) {
-				k++;
-				mask = 0x01;
-			}
-			if((i+(int)ARRAYLEN(FrameEOF)) >= 2000) {
-				DbpString("ran off end!");
-				break;
-			}
-		}
-		if(mask != 0x01) {
-			DbpString("sniff: error, uneven octet! (discard extra bits!)");
-	//		DbpString("   mask=%02x", mask);
-		}
-	//	uint8_t str1 [8];
-	//	itoa(k,str1);
-	//	strncat(str1," octets read",8);
-	
-	//	DbpString(  str1);    // DbpString("%d octets", k);
-	
-	//	for(i = 0; i < k; i+=3) {
-	//		//DbpString("# %2d: %02x ", i, outBuf[i]);
-	//		DbpIntegers(outBuf[i],outBuf[i+1],outBuf[i+2]);
-	//	}
-	
-		for(i = 0; i < k; i++) {
-			receivedResponse[i] = outBuf[i];
-		}
-	} // "end if correlation > 0" 	(max/(ARRAYLEN(FrameSOF)/skip))
-	return k; // return the number of bytes demodulated
+	time_stop = GetCountSspClk() - time_0;	
+	int k = DemodAnswer(received, buf, counter);	
+	LogTrace(received, k, time_0, time_stop, NULL, false);	
+	return k;	
 }
 
-
-static void BuildIdentifyRequest(void);
 //-----------------------------------------------------------------------------
 // Start to read an ISO 15693 tag. We send an identify request, then wait
 // for the response. The response is not demodulated, just left in the buffer
 // so that it can be downloaded to a PC and processed there.
 //-----------------------------------------------------------------------------
-void AcquireRawAdcSamplesIso15693(void)
-{
+void AcquireRawAdcSamplesIso15693(void) {
 	int c = 0, getNext = false;
-	int8_t prev = 0;
 	volatile uint32_t r;
-	volatile int8_t b;	
+	int ci = 0, cq = 0;
 	
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
-
 	FpgaSetupSsc();
-
 	// Give the tags time to energize
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
 	SpinDelay(100);
@@ -573,63 +513,77 @@ void AcquireRawAdcSamplesIso15693(void)
 	// Now send the command
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_TX);
 
-	uint8_t *dest = BigBuf_get_addr();
-	BuildIdentifyRequest();
+	uint8_t *buf = BigBuf_get_addr();
 	
+	uint32_t time_start = GetCountSspClk();
+	uint8_t *cmd = NULL;
+	uint8_t cmdlen = BuildIdentifyRequest( &cmd);
+	
+	// sending command
 	c = 0;
 	for(;;) {
 		WDT_HIT();
 		
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
 			AT91C_BASE_SSC->SSC_THR = ToSend[c];
-			if( ++c == ToSendMax+3) break;
+			c++;
+			if(c == ToSendMax + 3) {
+				break;
+			}
 		}
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 			r = AT91C_BASE_SSC->SSC_RHR; (void)r;
 		}
 	}
 
+	LogTrace(cmd, cmdlen, time_start, GetCountSspClk()-time_start, NULL, true);
+	
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
 
 	c = 0;
 	for(;;) {
 		WDT_HIT();
 		
-		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))
+		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))
 			AT91C_BASE_SSC->SSC_THR = 0x43;
 		
-		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 
-			b = (int8_t)AT91C_BASE_SSC->SSC_RHR;
+			ci = (int8_t)AT91C_BASE_SSC->SSC_RHR;
 
+			// LSB is a FPGA singal bit
+			ci >>= 1;
+			
+			ci = ABS(ci);
+			
 			// The samples are correlations against I and Q versions of the
 			// tone that the tag AM-modulates, so every other sample is I,
 			// every other is Q. We just want power, so abs(I) + abs(Q) is
 			// close to what we want.
-			if(getNext) {
+			// iceman 2016, amplitude sqrt(abs(i) + abs(q))
+			if (getNext) {
 				
-				dest[c++] = (uint8_t)(ABS(b) + ABS(prev));
-
-				if(c >= 2000) break;
+				buf[c++] = (uint8_t)(MAX(ci,cq) + (MIN(ci, cq) >> 1));
+				
+				if (c >= 7000) break;
 				
 			} else {
-				prev = b;
+				cq = ci;
 			}
 			getNext = !getNext;
 		}
 	}
 }
 
-// switch_off,  initreader
+// switch_off,  initreader, no logging
 void RecordRawAdcSamplesIso15693(void) {
 
 	int c = 0, getNext = false;
-	int8_t prev = 0;
-	volatile int8_t b;
+	int ci = 0, cq = 0;
 	
 	Iso15693InitReader();
 
-	uint8_t *dest = BigBuf_get_addr();
+	uint8_t *buf = BigBuf_get_addr();
 
 	for(;;) { 
 		WDT_HIT();
@@ -638,19 +592,25 @@ void RecordRawAdcSamplesIso15693(void) {
 			AT91C_BASE_SSC->SSC_THR = 0x43;
 		}
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-			b = (int8_t)AT91C_BASE_SSC->SSC_RHR;
 
+			ci = (int8_t)AT91C_BASE_SSC->SSC_RHR;
+			
+			// LSB is a FPGA singal bit
+			ci >>= 1;
+			
+			ci = ABS(ci);
 			// The samples are correlations against I and Q versions of the
 			// tone that the tag AM-modulates, so every other sample is I,
 			// every other is Q. We just want power, so abs(I) + abs(Q) is
 			// close to what we want.
 			if (getNext) {
-				dest[c++] = (uint8_t) ABS(b) + ABS(prev);
+				
+				buf[c++] = (uint8_t)(MAX(ci,cq) + (MIN(ci, cq) >> 1));
 
 				if(c >= 7000)
 					break;
 			} else {
-				prev = b;
+				cq = ci;
 			}
 
 			getNext = !getNext;
@@ -661,12 +621,13 @@ void RecordRawAdcSamplesIso15693(void) {
 	switch_off();
 }
 
-
 // Initialize the proxmark as iso15k reader 
 // (this might produces glitches that confuse some tags
 void Iso15693InitReader(void) {
 	LEDsoff();
-
+	clear_trace();
+	set_tracing(true);
+	
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
 	// Start from off (no field generated)
@@ -679,7 +640,12 @@ void Iso15693InitReader(void) {
 
 	// Give the tags time to energize
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
-	SpinDelay(60);
+	SpinDelay(100);
+	
+	// Start the timer
+	StartCountSspClk();
+	
+	if (DEBUG) DbpString("Iso15693InitReader Exit");
 
 	LED_A_ON();
 }
@@ -691,30 +657,30 @@ void Iso15693InitReader(void) {
 
 // Encode (into the ToSend buffers) an identify request, which is the first
 // thing that you must send to a tag to get a response.
-static void BuildIdentifyRequest(void)
-{
-	uint8_t cmd[5] = {0,1,0,0,0};
-	uint16_t crc;
-	// one sub-carrier, inventory, 1 slot, fast rate
-	// AFI is at bit 5 (1<<4) when doing an INVENTORY
-	cmd[0] = (1 << 2) | (1 << 5) | (1 << 1);
-	// inventory command code
-	cmd[1] = 0x01;
+static uint8_t BuildIdentifyRequest(uint8_t **out) {
+#define CMD_ID_RESP 5
+
+	uint8_t cmd[CMD_ID_RESP] = {0, ISO15_CMD_INVENTORY, 0, 0, 0};
+	// flags
+	cmd[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1;
 	// no mask
 	cmd[2] = 0x00;
-	//Now the CRC
-	crc = Crc(cmd, 3);
+	// CRC
+	uint16_t crc = Crc(cmd, 3);
 	cmd[3] = crc & 0xff;
 	cmd[4] = crc >> 8;
-
-	CodeIso15693AsReader(cmd, sizeof(cmd));
+	// coding as high speed (1 out of 4)
+	CodeIso15693AsReader(cmd, CMD_ID_RESP);
+	*out = cmd;
+	return CMD_ID_RESP;		
 }
 
 // uid is in transmission order (which is reverse of display order)
-static void BuildReadBlockRequest(uint8_t *uid, uint8_t blockNumber )
-{
-	uint8_t cmd[13] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
-	uint16_t crc;
+/*
+static uint8_t BuildReadBlockRequest(uint8_t **out, uint8_t *uid, uint8_t blockNumber ) {
+#define CMD_READ_RESP 13
+
+	uint8_t cmd[CMD_READ_RESP] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
 	// If we set the Option_Flag in this request, the VICC will respond with the secuirty status of the block
 	// followed by teh block data
 	// one sub-carrier, inventory, 1 slot, fast rate
@@ -733,19 +699,23 @@ static void BuildReadBlockRequest(uint8_t *uid, uint8_t blockNumber )
 	cmd[9] = uid[7]; // 0xe0; // always e0 (not exactly unique)
 	// Block number to read
 	cmd[10] = blockNumber;//0x00;
-	//Now the CRC
-	crc = Crc(cmd, 11); // the crc needs to be calculated over 12 bytes
+	// CRC
+	uint16_t crc = Crc(cmd, 11); // the crc needs to be calculated over 12 bytes
 	cmd[11] = crc & 0xff;
 	cmd[12] = crc >> 8;
 
-	CodeIso15693AsReader(cmd, sizeof(cmd));
+	CodeIso15693AsReader(cmd, CMD_READ_RESP);
+	*out = cmd;
+	return CMD_READ_RESP;	
 }
+*/
 
 // Now the VICC>VCD responses when we are simulating a tag
- static void BuildInventoryResponse( uint8_t *uid)
-{
-	uint8_t cmd[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
-	uint16_t crc;
+static uint8_t BuildInventoryResponse(uint8_t **out, uint8_t *uid) {
+#define CMD_INV_RESP 12
+	
+	uint8_t cmd[CMD_INV_RESP] = {0,0,0,0,0,0,0,0,0,0,0,0};
+
 	// one sub-carrier, inventory, 1 slot, fast rate
 	// AFI is at bit 5 (1<<4) when doing an INVENTORY
     //(1 << 2) | (1 << 5) | (1 << 1);
@@ -760,12 +730,14 @@ static void BuildReadBlockRequest(uint8_t *uid, uint8_t blockNumber )
 	cmd[7] = uid[2]; //0x10;
 	cmd[8] = uid[1]; //0x05;
 	cmd[9] = uid[0]; //0xe0;
-	//Now the CRC
-	crc = Crc(cmd, 10);
+	// CRC
+	uint16_t crc = Crc(cmd, 10);
 	cmd[10] = crc & 0xff;
 	cmd[11] = crc >> 8;
 
-	CodeIso15693AsReader(cmd, sizeof(cmd));
+	CodeIso15693AsReader(cmd, CMD_INV_RESP);
+	*out = cmd;
+	return CMD_INV_RESP;
 }
 
 // Universal Method for sending to and recv bytes from a tag
@@ -774,43 +746,40 @@ static void BuildReadBlockRequest(uint8_t *uid, uint8_t blockNumber )
 // 	**recv will return you a pointer to the received data
 // 	If you do not need the answer use NULL for *recv[] 
 //	return: lenght of received data
-int SendDataTag(uint8_t *send, int sendlen, int init, int speed, uint8_t **recv) {
+// logging enabled
+int SendDataTag(uint8_t *send, int sendlen, bool init, int speed, uint8_t *outdata) {
 
-	int samples = 0, tsamples = 0;
+	int samples = 0, t_samples = 0;
 	int wait = 0, elapsed = 0;
-	int answerLen = 0;
-
+	int answer_len = 0;
+	
 	LEDsoff();
-	LED_A_ON(); LED_B_ON();
 	
 	if (init) Iso15693InitReader();
+		
+	LED_A_ON();
 
-	// answer is 100bytes long?
-	uint8_t *answer = BigBuf_malloc(100);
-	if (recv != NULL) memset(answer, 0, 100);
+	if (!speed)
+		CodeIso15693AsReader256(send, sendlen); // low speed (1 out of 256)
+	else
+		CodeIso15693AsReader(send, sendlen);	// high speed (1 out of 4)
 
-	if (!speed) {
-		// low speed (1 out of 256)
-		CodeIso15693AsReader256(send, sendlen);
-	} else {
-		// high speed (1 out of 4)
-		CodeIso15693AsReader(send, sendlen);
-	}
-	
 	LED_A_INV();
 	
-	TransmitTo15693Tag(ToSend, ToSendMax, &tsamples, &wait);	
+	uint32_t time_start = GetCountSspClk();
+
+	TransmitTo15693Tag(ToSend, ToSendMax, &t_samples, &wait);
+	LogTrace(send, sendlen, time_start, GetCountSspClk()-time_start, NULL, true);
+	
 	// Now wait for a response
-	if (recv != NULL) {
-		LED_B_INV();
-		answerLen = GetIso15693AnswerFromTag(answer, 100, &samples, &elapsed) ;	
-		*recv = answer;
+	if (outdata != NULL) {
+		LED_B_INV();		
+		answer_len = GetIso15693AnswerFromTag(outdata, &samples, &elapsed);
 	}
 
 	LEDsoff();
-	return answerLen;
+	return answer_len;
 }
-
 
 // --------------------------------------------------------------------
 // Debug Functions 
@@ -861,16 +830,16 @@ void DbdecodeIso15693Answer(int len, uint8_t *d) {
 			}
 			strncat(status ," " ,DBD15STATLEN);
 		} else {
-			strncat(status ,"NoErr ", DBD15STATLEN);
+			strncat(status ,"No err ", DBD15STATLEN);
 		}
 			
-		crc = Crc(d,len-2);
+		crc = Crc(d, len-2);
 		if ( (( crc & 0xff ) == d[len-2]) && (( crc >> 8 ) == d[len-1]) ) 
-			strncat(status, "CrcOK", DBD15STATLEN);
+			strncat(status, "Crc OK", DBD15STATLEN);
 		else
-			strncat(status, "CrcFail!", DBD15STATLEN); 
+			strncat(status, "Crc Fail!", DBD15STATLEN); 
 
-		Dbprintf("%s", status);
+		if ( DEBUG ) Dbprintf("%s", status);
 	}
 }
 
@@ -885,81 +854,90 @@ void SetDebugIso15693(uint32_t debug) {
 }
 
 //-----------------------------------------------------------------------------
-// Simulate an ISO15693 reader, perform anti-collision and then attempt to read a sector
+// Act as ISO15693 reader, perform anti-collision and then attempt to read a sector
 // all demodulation performed in arm rather than host. - greg
 //-----------------------------------------------------------------------------
+// ok
+// parameter is unused !?!
 void ReaderIso15693(uint32_t parameter) {
 	int answerLen1 = 0;
-	int answerLen2 = 0;
-	int answerLen3 = 0;
-	int i = 0;
+	//int answerLen2 = 0;
+	//int answerLen3 = 0;
+	//int i = 0;
 	int samples = 0;
 	int tsamples = 0;
 	int wait = 0;
 	int elapsed = 0;
 	
-	uint8_t TagUID[8] = {0x00};
+	uint8_t uid[8] = {0,0,0,0,0,0,0,0};
 
-	uint8_t *answer1 = BigBuf_malloc(100);
-	uint8_t *answer2 = BigBuf_malloc(100);
-	uint8_t *answer3 = BigBuf_malloc(100);
+	// set up device/fpga 
+	Iso15693InitReader();
+	
+	uint8_t *answer1 = BigBuf_malloc(50);
+	uint8_t *answer2 = BigBuf_malloc(50);
+	//uint8_t *answer3 = BigBuf_malloc(50);
 	// Blank arrays
-	memset(answer1, 0x00, 100);
-	memset(answer2, 0x00, 100);
-	memset(answer3, 0x00, 100);
+	memset(answer1, 0x00, 50);
+	memset(answer2, 0x00, 50);
+	//memset(answer3, 0x00, 50);
 
 	// Now send the IDENTIFY command
 	// FIRST WE RUN AN INVENTORY TO GET THE TAG UID
 	// THIS MEANS WE CAN PRE-BUILD REQUESTS TO SAVE CPU TIME
-	BuildIdentifyRequest();
-	
-	// set up device/fpga 
-	Iso15693InitReader();
-
-	TransmitTo15693Tag(ToSend,ToSendMax,&tsamples, &wait);
-	
+	uint32_t time_start = GetCountSspClk();
+	uint8_t *cmd = NULL;
+	uint8_t cmdlen = BuildIdentifyRequest( &cmd );
+	TransmitTo15693Tag(ToSend, ToSendMax, &tsamples, &wait);
+	LogTrace(cmd, cmdlen, time_start, GetCountSspClk()-time_start, NULL, true);
+		
 	// Now wait for a response
-	answerLen1 = GetIso15693AnswerFromTag(answer1, 100, &samples, &elapsed) ;
+	answerLen1 = GetIso15693AnswerFromTag(answer1, &samples, &elapsed) ;
 
 	// we should do a better check than this
 	if (answerLen1 >= 12) {
-		TagUID[0] = answer1[2];
-		TagUID[1] = answer1[3];
-		TagUID[2] = answer1[4];
-		TagUID[3] = answer1[5];
-		TagUID[4] = answer1[6];
-		TagUID[5] = answer1[7];
-		TagUID[6] = answer1[8]; // IC Manufacturer code
-		TagUID[7] = answer1[9]; // always E0
+		uid[0] = answer1[9]; // always E0
+		uid[1] = answer1[8]; // IC Manufacturer code
+		uid[2] = answer1[7];
+		uid[3] = answer1[6];
+		uid[4] = answer1[5];
+		uid[5] = answer1[4];
+		uid[6] = answer1[3]; 
+		uid[7] = answer1[2];
+	
+		if ( DEBUG ) {	
+			Dbprintf("UID = %02X%02X%02X%02X%02X%02X%02X%02X",
+				uid[0], uid[1], uid[2], uid[3],
+				uid[4], uid[5], uid[5], uid[6]
+			);
+		}
+		// send UID back to client.
+		// arg0 = 1 = OK
+		// arg1 = len of response (12 bytes)
+		// arg2 = rtf
+		// asbytes = uid.
+		cmd_send(CMD_ACK, 1, sizeof(uid), 0, uid, sizeof(uid));
 	}
 
-	Dbprintf("%d octets read from IDENTIFY request:", answerLen1);
-	DbdecodeIso15693Answer(answerLen1, answer1);
-	Dbhexdump(answerLen1, answer1, true);
+	if ( DEBUG ) {
+		Dbprintf("%d octets read from IDENTIFY request:", answerLen1);
+		DbdecodeIso15693Answer(answerLen1, answer1);
+		Dbhexdump(answerLen1, answer1, true);
+	}
 
-	// UID is reverse
-	if (answerLen1 >= 12) 
-		Dbprintf("UID = %02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX",
-			TagUID[7],TagUID[6],TagUID[5],TagUID[4],
-			TagUID[3],TagUID[2],TagUID[1],TagUID[0]);
-
-
-	Dbprintf("%d octets read from SELECT request:", answerLen2);
-	DbdecodeIso15693Answer(answerLen2, answer2);
-	Dbhexdump(answerLen2, answer2, true);
-
-	Dbprintf("%d octets read from XXX request:", answerLen3);
-	DbdecodeIso15693Answer(answerLen3, answer3);
-	Dbhexdump(answerLen3, answer3, true);
-
-	// read all pages
+	// DEBUG read all pages
+/*
 	if (answerLen1 >= 12 && DEBUG) {
 		i = 0;			
 		while ( i < 32 ) {  // sanity check, assume max 32 pages
-			BuildReadBlockRequest(TagUID,i);
-			TransmitTo15693Tag(ToSend,ToSendMax,&tsamples, &wait);  
-			answerLen2 = GetIso15693AnswerFromTag(answer2, 100, &samples, &elapsed);
-			if (answerLen2>0) {
+			
+			cmdlen = BuildReadBlockRequest(cmd, uid, i);
+				
+			TransmitTo15693Tag(ToSend, ToSendMax, &tsamples, &wait); 
+			LogTrace(cmd, cmdlen, time_start, GetCountSspClk()-time_start, NULL, true);	
+			
+			answerLen2 = GetIso15693AnswerFromTag(answer2, &samples, &elapsed);
+			if (answerLen2 > 0) {
 				Dbprintf("READ SINGLE BLOCK %d returned %d octets:", i, answerLen2);
 				DbdecodeIso15693Answer(answerLen2, answer2);
 				Dbhexdump(answerLen2, answer2, true);
@@ -968,7 +946,7 @@ void ReaderIso15693(uint32_t parameter) {
 			i++;
 		} 
 	}
-
+*/
 	switch_off();
 }
 
@@ -976,44 +954,44 @@ void ReaderIso15693(uint32_t parameter) {
 // all demodulation performed in arm rather than host. - greg
 void SimTagIso15693(uint32_t parameter, uint8_t *uid) {
 	
-	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-		
+	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);		
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 	FpgaSetupSsc();
-
 	// Start from off (no field generated)
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	SpinDelay(200);
 	
 	LED_A_ON();
 
-	int ans = 0;
-	int samples = 0;
-	int tsamples = 0;
-	int wait = 0;
-	int elapsed = 0;
+	uint32_t time_start = 0;
+	int ans = 0, samples = 0, tsamples = 0;
+	int wait = 0, elapsed = 0;
 
-	Dbprintf("iso15963 Simulating uid: %x %x %x %x %x %x %x %x", uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6], uid[7]);
+	Dbprintf("ISO-15963 Simulating uid: %02X%02X%02X%02X%02X%02X%02X%02X", uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6], uid[7]);
 
-	uint8_t *buf = BigBuf_malloc(100);
-	memset(buf, 0x00, 100);
+	uint8_t buf[20];
+	memset(buf, 0x00, 20);
 
 	LED_C_ON();
 
 	// Build a suitable reponse to the reader INVENTORY cocmmand
 	// not so obsvious, but in the call to BuildInventoryResponse,  the command is copied to the global ToSend buffer used below.			
-	BuildInventoryResponse(uid);
+	uint8_t *cmd = NULL;
+	uint8_t cmdlen = BuildInventoryResponse( &cmd, uid);
 	
 	while (!BUTTON_PRESS() && !usb_poll_validate_length() ) {
 		WDT_HIT();
 	
 		// Listen to reader
-		ans = GetIso15693AnswerFromSniff(buf, 100, &samples, &elapsed) ;
+		ans = GetIso15693AnswerFromSniff(buf, &samples, &elapsed) ;
 
 		// we should do a better check than this
 		if (ans >= 1 ) {
+						
+			time_start = GetCountSspClk();
 			TransmitTo15693Reader(ToSend, ToSendMax, &tsamples, &wait);
-			
+			LogTrace(cmd, cmdlen, time_start, GetCountSspClk()-time_start, NULL, true);						
+					
 			Dbprintf("%d octets read from reader command: %x %x %x %x %x %x %x %x %x", ans,
 			buf[0], buf[1], buf[2],	buf[3],
 			buf[4], buf[5],	buf[6], buf[7], buf[8]);
@@ -1022,74 +1000,79 @@ void SimTagIso15693(uint32_t parameter, uint8_t *uid) {
 	switch_off();
 }
 
-
 // Since there is no standardized way of reading the AFI out of a tag, we will brute force it
 // (some manufactures offer a way to read the AFI, though)
 void BruteforceIso15693Afi(uint32_t speed) {	
-	uint8_t data[20];
-	uint8_t *recv = data;
-	int datalen = 0, recvlen = 0;
 
-	memset(data, 0, sizeof(data));
+	uint8_t data[7] = {0,0,0,0,0,0,0};
+	int datalen = 0, recvlen = 0;
 	
 	Iso15693InitReader();
 	
 	// first without AFI
 	// Tags should respond wihtout AFI and with AFI=0 even when AFI is active
 	
-	data[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | 
-	          ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1;
+	data[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1;
 	data[1] = ISO15_CMD_INVENTORY;
 	data[2] = 0; // mask length
 	datalen = AddCrc(data, 3);
-	recvlen = SendDataTag(data, datalen, 0, speed, &recv);
+	
+	recvlen = SendDataTag(data, datalen, false, speed, data);
+	
 	WDT_HIT();
+	
 	if (recvlen >= 12) {
-		Dbprintf("NoAFI UID=%s", sprintUID(NULL, &recv[2]));
+		Dbprintf("NoAFI UID=%s", sprintUID(NULL, data + 2) );
 	}
 	
 	// now with AFI
-	
-	data[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | 
-	          ISO15_REQ_INVENTORY | ISO15_REQINV_AFI | ISO15_REQINV_SLOT1;
-	data[1] = ISO15_CMD_INVENTORY;
+	data[0] |= ISO15_REQINV_AFI;
+	//data[1] = ISO15_CMD_INVENTORY;
 	data[2] = 0; // AFI
 	data[3] = 0; // mask length
 	
 	for (int i = 0; i < 256; i++) {
-		data[2] = i & 0xFF; // iceman 2016,  is & 0xFF needed?
+		data[2] = i & 0xFF;
 		datalen = AddCrc(data, 4);
-		recvlen = SendDataTag(data, datalen, 0, speed, &recv);
+		recvlen = SendDataTag(data, datalen, false, speed, data);
 		WDT_HIT();
 		if (recvlen >= 12) {
-			Dbprintf("AFI=%i UID=%s", i, sprintUID(NULL, &recv[2]));
+			Dbprintf("AFI=%i UID=%s", i, sprintUID(NULL, data + 2) );
 		}
 	}	
+	
 	Dbprintf("AFI Bruteforcing done.");
 }
 
 // Allows to directly send commands to the tag via the client
-void DirectTag15693Command(uint32_t datalen,uint32_t speed, uint32_t recv, uint8_t data[]) {
+// Has to increase dialog between device and client. 
+void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint8_t *data) {
 
-	int recvlen = 0;
-	uint8_t *recvbuf = BigBuf_get_addr();
-	
+	bool init = true;
+	int buflen = 0;
+	uint8_t buf[20];
+	memset(buf, 0x00, 20);
+
 	if (DEBUG) {
-		Dbprintf("SEND");
-		Dbhexdump(datalen,data,true);
+		DbpString("SEND");
+		Dbhexdump(datalen, data, true);
 	}
 	
-	recvlen = SendDataTag(data, datalen, 1, speed, (recv ? &recvbuf : NULL));
-
+	buflen = SendDataTag(data, datalen, init, speed, (recv ? buf : NULL));
+	
 	if (recv) { 
+		buflen = (buflen > 20) ? 20 : buflen;
+		
 		LED_B_ON();
-		cmd_send(CMD_ACK, recvlen > 48 ? 48 : recvlen, 0, 0, recvbuf, 48);
+		cmd_send(CMD_ACK, buflen, 0, 0, buf, buflen);
 		LED_B_OFF();	
 		
 		if (DEBUG) {
-			Dbprintf("RECV");
-			DbdecodeIso15693Answer(recvlen, recvbuf);
-			Dbhexdump(recvlen, recvbuf, true);
+			DbpString("RECV");
+			DbdecodeIso15693Answer(buflen, buf);
+			Dbhexdump(buflen, buf, true);
 		}
+	} else {
+		cmd_send(CMD_ACK,1,0,0,0,0);
 	}
 }

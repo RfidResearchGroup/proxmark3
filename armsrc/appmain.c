@@ -697,7 +697,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			RecordRawAdcSamplesIso15693();
 			break;
 		case CMD_ISO_15693_COMMAND:
-			DirectTag15693Command(c->arg[0],c->arg[1],c->arg[2],c->d.asBytes);
+			DirectTag15693Command(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;
 		case CMD_ISO_15693_FIND_AFI:
 			BruteforceIso15693Afi(c->arg[0]);

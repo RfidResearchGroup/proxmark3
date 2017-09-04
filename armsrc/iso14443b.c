@@ -1020,12 +1020,12 @@ static void TransmitFor14443b_AsReader(void) {
 		// AT91C_BASE_SSC->SSC_THR = 0XFF;
 	// }
 	
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_TX | FPGA_HF_READER_TX_SHALLOW_MOD);
-	SpinDelay(40);
-
 	int c;	
 	volatile uint32_t b;
-										 
+	
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_TX | FPGA_HF_READER_TX_SHALLOW_MOD);
+	SpinDelay(40);
+									 
 	// What does this loop do? Is it TR1?
 	// 0xFF = 8 bits of 1.    1 bit == 1Etu,..  
 	// loop 10 * 8 = 80 ETU of delay, with a non modulated signal.  why?
@@ -1036,8 +1036,7 @@ static void TransmitFor14443b_AsReader(void) {
 			++c;
 		}
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-			b = AT91C_BASE_SSC->SSC_RHR;
-			(void)b;
+			b = AT91C_BASE_SSC->SSC_RHR; (void)b;
 		}
 	}
 
@@ -1047,8 +1046,7 @@ static void TransmitFor14443b_AsReader(void) {
 			AT91C_BASE_SSC->SSC_THR = ToSend[c++];
 		}
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-			b = AT91C_BASE_SSC->SSC_RHR;
-			(void)b;
+			b = AT91C_BASE_SSC->SSC_RHR; (void)b;
 		}					
 	}
 	//WaitForFpgaDelayQueueIsEmpty(delay);
