@@ -274,16 +274,20 @@ int usage_15_samples(void){
 	return 0;
 }
 int usage_15_info(void){
+	PrintAndLog("Uses the optional command 'get_systeminfo' 0x2B to try and extract information");
+	PrintAndLog("command may fail, depending on tag.");
+	PrintAndLog("defaults to '1 out of 4' mode");
+	PrintAndLog("");
 	PrintAndLog("Usage:  hf 15 info    [options] <uid|s|u|*>");
-	PrintAndLog("           options:");
+	PrintAndLog("options:");
 	PrintAndLog("               -2        use slower '1 out of 256' mode");
 	PrintAndLog("           uid (either): ");
 	PrintAndLog("               <8B hex>  full UID eg E011223344556677");
 	PrintAndLog("               s         selected tag");
 	PrintAndLog("               u         unaddressed mode");
 	PrintAndLog("               *         scan for tag");
-	PrintAndLog("           start#:       page number to start 0-255");  
-	PrintAndLog("           count#:       number of pages");  
+	PrintAndLog("Samples:");
+	PrintAndLog("       hf 15 info u");
 	return 0;
 }
 int usage_15_record(void){
@@ -480,14 +484,13 @@ int CmdHF15Info(const char *Cmd) {
 	
 	strncpy(cmd, Cmd, 99);
 	
-	int cmdisok = prepareHF15Cmd(&cmd, &c, ISO15_CMD_SYSINFO);
-	if ( !cmdisok )
+	if ( !prepareHF15Cmd(&cmd, &c, ISO15_CMD_SYSINFO) )
 		return 0;
 
 	reqlen = AddCrc(req,  c.arg[0]);
 	c.arg[0] = reqlen;
 
-	PrintAndLog("cmd %s", sprint_hex(c.d.asBytes, reqlen) ); 
+	//PrintAndLog("cmd %s", sprint_hex(c.d.asBytes, reqlen) ); 
 	
 	clearCommandBuffer();
 	SendCommand(&c);
@@ -500,17 +503,12 @@ int CmdHF15Info(const char *Cmd) {
 	uint32_t status = resp.arg[0];
 	
 	if ( status < 2 ) {
-		PrintAndLog("iso15693 card select failed");
+		PrintAndLog("iso15693 card doesn't answer to systeminfo command");
 		return 1;		
 	}
-	PrintAndLog("len %u, recv %s",status, sprint_hex(resp.d.asBytes, status) ); 
+//	PrintAndLog("len %u, recv %s",status, sprint_hex(resp.d.asBytes, status) ); 
 	
 	recv = resp.d.asBytes;	
-	
-	if (ISO15_CRC_CHECK == Crc(recv, status)) {
-		PrintAndLog("CRC failed");
-		return 2;
-	} 
 	
 	if ( recv[0] & ISO15_RES_ERROR ) {
 		PrintAndLog("iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0])); 
@@ -519,7 +517,7 @@ int CmdHF15Info(const char *Cmd) {
 	
 	PrintAndLog("  UID : %s", sprintUID(NULL, recv+2));
 	PrintAndLog("  MANUFACTURER : %s", getTagInfo_15(recv+2));
-	PrintAndLog("  raw : %s", sprint_hex(recv, status-2));
+	PrintAndLog("\n  raw : %s", sprint_hex(recv, status-2));
 
 	i = 10;
 
@@ -860,7 +858,7 @@ int prepareHF15Cmd(char **cmd, UsbCommand *c, uint8_t iso15cmd) {
 			req[reqlen++] = iso15cmd;
 
 			if (!getUID(uid)) {
-				PrintAndLog("No Tag found");
+				PrintAndLog("No tag found");
 				return 0;
 			}
 			memcpy(&req[reqlen], uid, sizeof(uid));
@@ -909,7 +907,9 @@ int CmdHF15Readmulti(const char *Cmd) {
 	char *cmd = cmdbuf;
 	strncpy(cmd, Cmd, 99);
 
-	prepareHF15Cmd(&cmd, &c, ISO15_CMD_READMULTI);	
+	if ( !prepareHF15Cmd(&cmd, &c, ISO15_CMD_READMULTI) )
+		return 0;
+
 	reqlen = c.arg[0];
 
 	pagenum = strtol(cmd, NULL, 0);
@@ -982,7 +982,9 @@ int CmdHF15Read(const char *Cmd) {
 	char *cmd = cmdbuf;
 	strncpy(cmd, Cmd, 99);
 	
-	prepareHF15Cmd(&cmd, &c,ISO15_CMD_READ);	
+	if ( !prepareHF15Cmd(&cmd, &c, ISO15_CMD_READ) )
+		return 0;
+
 	reqlen = c.arg[0];
 
 	pagenum = strtol(cmd, NULL, 0);
@@ -1042,9 +1044,11 @@ int CmdHF15Write(const char *Cmd) {
 	char *cmd = cmdbuf;
 	char *cmd2;
 	
-	strncpy(cmd,Cmd,99);
+	strncpy(cmd, Cmd, 99);
 
-	prepareHF15Cmd(&cmd, &c, ISO15_CMD_WRITE);	
+	if ( !prepareHF15Cmd(&cmd, &c, ISO15_CMD_WRITE) )
+		return 0;
+
 	reqlen = c.arg[0];
 	
 	// *cmd -> page num ; *cmd2 -> data 
