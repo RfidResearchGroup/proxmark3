@@ -4,8 +4,6 @@ local lib14a = require('read14a')
 
 example = "script run 14araw -x 6000F57b"
 author = "Martin Holst Swende"
-
-
 desc =
 [[
 This is a script to allow raw 1444a commands to be sent and received. 
@@ -50,26 +48,23 @@ local DEBUG = false -- the debug flag
 
 --- 
 -- A debug printout-function
-function dbg(args)
+local function dbg(args)
 	if DEBUG then
 		print("###", args)
 	end
 end 
 --- 
 -- This is only meant to be used when errors occur
-function oops(err)
+local function oops(err)
 	print("ERROR: ",err)
 end
-
-
 --- 
 -- Usage help
-function help()
+local function help()
 	print(desc)
 	print("Example usage")
 	print(example)
 end
-
 --- 
 -- The main entry point
 function main(args)
