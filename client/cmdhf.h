@@ -18,19 +18,20 @@
 #include "graph.h"
 #include "ui.h"
 #include "cmdparser.h"
-#include "cmdhf14a.h"
-#include "cmdhf14b.h"
-#include "cmdhf15.h"
+#include "cmdhf14a.h"		// 14443 a
+#include "cmdhf14b.h"		// 14443 b
+#include "cmdhf15.h"		// ISO15693
 #include "cmdhfepa.h"
-#include "cmdhflegic.h"	 // LEGIC
-#include "cmdhficlass.h" // ICLASS
-#include "cmdhfmf.h"	 // CLASSIC
-#include "cmdhfmfu.h"	 // ULTRALIGHT/NTAG etc
-#include "cmdhfmfdes.h"	 // DESFIRE
-#include "cmdhftopaz.h"	 // TOPAZ
-#include "cmdhfemv.h"	 // EMV
+#include "cmdhflegic.h"		// LEGIC
+#include "cmdhficlass.h"	// ICLASS
+#include "cmdhfmf.h"		// CLASSIC
+#include "cmdhfmfu.h"		// ULTRALIGHT/NTAG etc
+#include "cmdhfmfdes.h"		// DESFIRE
+#include "cmdhftopaz.h"		// TOPAZ
+#include "cmdhfemv.h"		// EMV
 #include "protocols.h"
-#include "parity.h"  // oddparity
+#include "parity.h"			// oddparity
+#include "iso15693tools.h"	// iso15693 crc
 
 extern int CmdHF(const char *Cmd);
 extern int CmdHFTune(const char *Cmd);

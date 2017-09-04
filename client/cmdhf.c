@@ -422,11 +422,10 @@ uint8_t iso14443A_CRC_check(bool isResponse, uint8_t* data, uint8_t len)
 	if(isResponse & (len < 6)) return 2;
 	
 	ComputeCrc14443(CRC_14443_A, data, len-2, &b1, &b2);
-	if (b1 != data[len-2] || b2 != data[len-1]) {
+	if (b1 != data[len-2] || b2 != data[len-1])
 		return 0;
-	} else {
-		return 1;
-	}
+	
+	return 1;
 }
 
 
@@ -446,9 +445,9 @@ uint8_t iso14443B_CRC_check(bool isResponse, uint8_t* data, uint8_t len)
 	if(len <= 2) return 2;
 
 	ComputeCrc14443(CRC_14443_B, data, len-2, &b1, &b2);
-	if(b1 != data[len-2] || b2 != data[len-1]) {
+	if(b1 != data[len-2] || b2 != data[len-1])
 	  return 0;
-	}
+  
 	return 1;
 }
 
@@ -510,6 +509,19 @@ uint8_t iclass_CRC_check(bool isResponse, uint8_t* data, uint8_t len)
 
 	ComputeCrc14443(CRC_ICLASS, data, len-2, &b1, &b2);
 	return b1 == data[len -2] && b2 == data[len-1];
+}
+// CRC Iso15693Crc(data,datalen)
+uint8_t iso15693_CRC_check(bool isResponse, uint8_t* data, uint8_t len) {
+	if ( len <= 3) return 2;
+	
+	uint16_t crc = Iso15693Crc(data, len-2);
+	uint8_t b1 = crc & 0xFF;
+	uint8_t b2 = ((crc >> 8) & 0xFF);
+	
+	if ( b1 != data[len-2] || b2 != data[len-1] )
+		return 0;
+	
+	return 1;
 }
 
 bool is_last_record(uint16_t tracepos, uint8_t *trace, uint16_t traceLen)
@@ -626,6 +638,9 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 			case MFDES:
 				crcStatus = iso14443A_CRC_check(isResponse, frame, data_len);
 				break;
+			case ISO_15693:
+				crcStatus = iso15693_CRC_check(isResponse, frame, data_len);
+				break;
 			default: 
 				break;
 		}
@@ -684,6 +699,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 			case ISO_14443B:	annotateIso14443b(explanation,sizeof(explanation),frame,data_len); break;
 			case TOPAZ:			annotateTopaz(explanation,sizeof(explanation),frame,data_len); break;
 			case ISO_7816_4:	annotateIso7816(explanation,sizeof(explanation),frame,data_len); break;
+			case ISO_15693:		annotateIso15693(explanation,sizeof(explanation),frame,data_len); break;
 			default:			break;
 		}
 	}
@@ -729,7 +745,8 @@ int usage_hf_list(){
 	PrintAndLog("    raw    - just show raw data without annotations");
 	PrintAndLog("    14a    - interpret data as iso14443a communications");
 	PrintAndLog("    14b    - interpret data as iso14443b communications");
-	PrintAndLog("    des 	- interpret data as DESFire communications");
+	PrintAndLog("    15     - interpret data as iso15693 communications");
+	PrintAndLog("    des    - interpret data as DESFire communications");
 #ifdef WITH_EMV
 	PrintAndLog("    emv    - interpret data as EMV / communications");
 #endif	
@@ -799,6 +816,7 @@ int CmdHFList(const char *Cmd) {
 	else if(strcmp(type, "7816")== 0)		protocol = ISO_7816_4;	
 	else if(strcmp(type, "des")== 0)		protocol = MFDES;
 	else if(strcmp(type, "legic")==0)		protocol = LEGIC;
+	else if(strcmp(type, "15")==0)			protocol = ISO_15693;
 	else if(strcmp(type, "raw")== 0)		protocol = -1;//No crc, no annotations
 	else errors = true;
 
@@ -837,6 +855,9 @@ int CmdHFList(const char *Cmd) {
 		PrintAndLog("iClass    - Timings are not as accurate");
 	if ( protocol == LEGIC )
 		PrintAndLog("LEGIC    - Timings are in ticks (1us == 1.5ticks)");
+	if ( protocol == ISO_15693 )
+		PrintAndLog("ISO15693 - Timings are not as accurate");
+	
 	PrintAndLog("");
     PrintAndLog("      Start |        End | Src | Data (! denotes parity error)                                   | CRC | Annotation         |");
 	PrintAndLog("------------|------------|-----|-----------------------------------------------------------------|-----|--------------------|");
