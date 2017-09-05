@@ -685,7 +685,7 @@ static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool use_credit_key, bool v
 	}
 	
 	if(isOK <= 1){
-		PrintAndLog("Failed to obtain CC! Aborting");
+		PrintAndLog("Failed to obtain CC! Aborting...");
 		return false;
 	}
 	return true;	

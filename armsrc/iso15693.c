@@ -1056,9 +1056,14 @@ void BruteforceIso15693Afi(uint32_t speed) {
 		if (recvlen >= 12) {
 			Dbprintf("AFI = %i  UID = %s", i, sprintUID(NULL, buf + 2) );
 		}
+		
+		if (BUTTON_PRESS) {
+			DbpString("button pressed, aborting..");
+			break;
+		}
 	}	
 	
-	Dbprintf("AFI Bruteforcing done.");
+	DbpString("AFI Bruteforcing done.");
 	switch_off();
 }
 

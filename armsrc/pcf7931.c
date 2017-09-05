@@ -99,7 +99,7 @@ int DemodPCF7931(uint8_t **outBlocks) {
 				warnings++;
 				if (warnings > 10)
 				{
-					Dbprintf("Error: too many detection errors, aborting.");
+					Dbprintf("Error: too many detection errors, aborting...");
 					return 0;
 				}
 			}
