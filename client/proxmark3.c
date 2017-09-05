@@ -71,8 +71,9 @@ static void showBanner(void){
 	printf("\e[34m██╔═══╝ ██║╚██╔╝██║   ══█║\e[0m    iceman@icesql.net\n");
 	printf("\e[34m██║     ██║ ╚═╝ ██║ ████╔╝\e[0m  https://github.com/iceman1001/proxmark3\n");
 	printf("\e[34m╚═╝     ╚═╝     ╚═╝ ╚═══╝\e[0m v3.0.0\n");
-	printf("\nKeep icemanfork alive by a donation https://paypal.me/iceman1001/");
-	printf("\n\n");
+	printf("\nKeep iceman fork alive with a donation!           https://paypal.me/iceman1001/");
+	printf("\nMONERO: 43mNJLpgBVaTvyZmX9ajcohpvVkaRy1kbZPm8tqAb7itZgfuYecgkRF36rXrKFUkwEGeZedPsASRxgv4HPBHvJwyJdyvQuP");
+	printf("\n\n\n");
 }
 #endif
 
