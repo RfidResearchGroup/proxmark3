@@ -641,7 +641,7 @@ int CmdHF15Dump(const char*Cmd) {
 	uint8_t *recv = NULL;
 
 	uint8_t data[256*4] = {0};
-	memset(data, sizeof(data), 0);
+	memset(data, 0, sizeof(data));
 
 	UsbCommand resp;
 	UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
