@@ -254,7 +254,7 @@ static char* TagErrorStr(uint8_t error) {
 		case 0x02: return "The command is not recognised";
 		case 0x03: return "The option is not supported.";
 		case 0x0f: return "Unknown error.";
-		case 0x10: return "The specified block is not available (doesn’t exist).";
+		case 0x10: return "The specified block is not available (doesn't exist).";
 		case 0x11: return "The specified block is already -locked and thus cannot be locked again";
 		case 0x12: return "The specified block is locked and its content cannot be changed.";
 		case 0x13: return "The specified block was not successfully programmed.";
@@ -368,7 +368,10 @@ int usage_15_readmulti(void){
 	PrintAndLog("           count#:       number of pages");  
 	return 0;
 }
-
+int usage_15_select(void){
+	PrintAndLog("'hf 15 select' helptext to be written..");
+	return 0;
+}
 // Mode 3
 //helptext
 int CmdHF15Demod(const char *Cmd) {
@@ -480,7 +483,6 @@ int CmdHF15Info(const char *Cmd) {
 	int reqlen = 0;
 	char cmdbuf[100];
 	char *cmd = cmdbuf;
-	int i;
 	
 	strncpy(cmd, Cmd, 99);
 	
@@ -506,7 +508,6 @@ int CmdHF15Info(const char *Cmd) {
 		PrintAndLog("iso15693 card doesn't answer to systeminfo command");
 		return 1;		
 	}
-//	PrintAndLog("len %u, recv %s",status, sprint_hex(resp.d.asBytes, status) ); 
 	
 	recv = resp.d.asBytes;	
 	
@@ -515,39 +516,38 @@ int CmdHF15Info(const char *Cmd) {
 		return 3;
 	}
 	
-	PrintAndLog("  UID : %s", sprintUID(NULL, recv+2));
-	PrintAndLog("  MANUFACTURER : %s", getTagInfo_15(recv+2));
-	PrintAndLog("\n  raw : %s", sprint_hex(recv, status-2));
-
-	i = 10;
+	PrintAndLog("  UID  : %s", sprintUID(NULL, recv+2));
+	PrintAndLog("  TYPE : %s", getTagInfo_15(recv+2));
+	PrintAndLog("  SYSINFO : %s", sprint_hex(recv, status-2));
 
 	// DSFID
 	if (recv[1] & 0x01) 
-		PrintAndLog("     - DSFID supported, set to %02X", recv[i++]);
+		PrintAndLog("     - DSFID supported        [0x%02X]", recv[10]);
 	else 
 		PrintAndLog("     - DSFID not supported");
 	
 	// AFI
 	if (recv[1] & 0x02) 
-		PrintAndLog("     - AFI supported, set to %03X", recv[i++]);
+		PrintAndLog("     - AFI   supported        [0x%02X]", recv[11]);
 	else 
-		PrintAndLog("     - AFI not supported");
-	
+		PrintAndLog("     - AFI   not supported");
+
+	// IC reference
+	if (recv[1] & 0x08) 
+		PrintAndLog("     - IC reference supported [0x%02X]", recv[14]);
+	else 
+		PrintAndLog("     - IC reference not supported");
+
 	// memory 
 	if (recv[1] & 0x04) {
 		PrintAndLog("     - Tag provides info on memory layout (vendor dependent)");
-		PrintAndLog("           %i (or %i) bytes/page x %i pages \n\r", (recv[i+1] & 0x1F) + 1, (recv[i+1] & 0x1F), recv[i]+1);
-		i += 2;
+		uint8_t blocks = recv[12]+1;
+		uint8_t size = (recv[13] & 0x1F);
+		PrintAndLog("           %u (or %u) bytes/blocks x %u blocks", size+1, size, blocks );
 	} else {
 		PrintAndLog("     - Tag does not provide information on memory layout");
 	}
-	
-	// IC reference
-	if (recv[1] & 0x08) 
-		PrintAndLog("     - IC reference given: %02X", recv[i++]);
-	else 
-		PrintAndLog("     - IC reference not given");
-	   
+	printf("\n");
 	return 0;
 }
 
@@ -571,8 +571,8 @@ int HF15Reader(const char *Cmd, bool verbose) {
 		return 0;
 	}
 
-	PrintAndLog("Tag UID : %s", sprintUID(NULL, uid));
-	PrintAndLog("Tag Info: %s", getTagInfo_15(uid));
+	PrintAndLog(" UID   : %s", sprintUID(NULL, uid));
+	PrintAndLog(" TYPE : %s", getTagInfo_15(uid));
 	return 1;
 }
 
@@ -636,7 +636,6 @@ int CmdHF15Dump(const char*Cmd) {
 	// detect blocksize from card :)
 	
 	PrintAndLog("Reading memory from tag UID %s", sprintUID(NULL, uid));
-	PrintAndLog("Tag Info: %s", getTagInfo_15(uid));
 
 	int reqlen = 0, blocknum = 0;
 	uint8_t *recv = NULL;
@@ -651,7 +650,7 @@ int CmdHF15Dump(const char*Cmd) {
 	req[1] = ISO15_CMD_READ;
 
 	// copy uid to read command
-	memcpy(req+2, uid, 8);
+	memcpy(req+2, uid, sizeof(uid));
 	
 	for (int retry = 0; retry < 5; retry++) {
 	
@@ -665,6 +664,11 @@ int CmdHF15Dump(const char*Cmd) {
 		if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
 
 			uint8_t len = resp.arg[0];
+			if ( len < 2 ) {
+				PrintAndLog("iso15693 card select failed");
+				continue;		
+			}
+			
 			recv = resp.d.asBytes;
 		
 			if ( ISO15_CRC_CHECK == Crc(recv, len) ) {
@@ -678,7 +682,7 @@ int CmdHF15Dump(const char*Cmd) {
 					
 					printf("."); fflush(stdout);
 				} else {
-					PrintAndLog("Tag returned Error %i: %s", recv[1], TagErrorStr(recv[1]) ); 
+					PrintAndLog("\nTag returned Error %i: %s", recv[1], TagErrorStr(recv[1]) ); 
 					break;
 					// return 1;
 				}
@@ -696,7 +700,7 @@ int CmdHF15Dump(const char*Cmd) {
 	// TODO: need fix
 //	if (resp.arg[0]<3)
 //		PrintAndLog("Lost Connection");
-//	else if (ISO15_CRC_CHECK!=Crc(resp.d.asBytes,resp.arg[0]))
+//	else if (ISO15_CRC_CHECK != Crc(resp.d.asBytes, resp.arg[0]-2))
 //		PrintAndLog("CRC Failed");
 //	else 
 //		PrintAndLog("Tag returned Error %i: %s",recv[1],TagErrorStr(recv[1])); 
@@ -943,7 +947,7 @@ int CmdHF15Readmulti(const char *Cmd) {
 
 	recv = resp.d.asBytes;	
 	
-	if (ISO15_CRC_CHECK == Crc(recv, status)) {
+	if (ISO15_CRC_CHECK == Crc(recv, status-2)) {
 		PrintAndLog("CRC failed");
 		return 2;
 	} 
@@ -954,7 +958,7 @@ int CmdHF15Readmulti(const char *Cmd) {
 	}
 
 	// print response
-	PrintAndLog("%s", sprint_hex_ascii( recv, status-2));
+	PrintAndLog("%s", sprint_hex_ascii( recv+1, status-3));
 	
 	return 0;
 }
@@ -1011,7 +1015,7 @@ int CmdHF15Read(const char *Cmd) {
 
 	recv = resp.d.asBytes;	
 	
-	if (ISO15_CRC_CHECK == Crc(recv, status)) {
+	if (ISO15_CRC_CHECK == Crc(recv, status-2)) {
 		PrintAndLog("CRC failed");
 		return 2;
 	} 
@@ -1022,7 +1026,7 @@ int CmdHF15Read(const char *Cmd) {
 	}
 	
 	// print response
-	PrintAndLog("%s", sprint_hex_ascii(recv, status-2) );
+	PrintAndLog("%s", sprint_hex_ascii(recv+1, status-3) );
 	return 0;
 }
 
@@ -1091,7 +1095,7 @@ int CmdHF15Write(const char *Cmd) {
 
 	recv = resp.d.asBytes;	
 	
-	if (ISO15_CRC_CHECK == Crc(recv, status)) {
+	if (ISO15_CRC_CHECK == Crc(recv, status-2)) {
 		PrintAndLog("CRC failed");
 		return 2;
 	} 
@@ -1105,21 +1109,62 @@ int CmdHF15Write(const char *Cmd) {
 	return 0;
 }
 
+int CmdHF15Select(const char *Cmd) {
+	char cmdp = param_getchar(Cmd, 0);
+	if (cmdp == 'h' || cmdp == 'H') return usage_15_select();	
+	
+	uint8_t uid[8] = {0x00};
+	if (!getUID(uid)) {
+		PrintAndLog("No tag found");
+		return 0;
+	}	
+	PrintAndLog("Detected UID %s", sprintUID(NULL, uid));
+	
+	UsbCommand resp;	
+	UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
+	c.d.asBytes[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS;
+	c.d.asBytes[1] = ISO15_CMD_SELECT;
+	memcpy(c.d.asBytes+2, uid, sizeof(uid));
+
+	//Select (usage: 2025+8bytes UID+2bytes ISO15693-CRC - can be used in addressed form only!)			[NO NEED FOR OPTION FLAG]
+	// len
+	c.arg[0] = AddCrc(c.d.asBytes, 10);
+	
+	clearCommandBuffer();
+	SendCommand(&c);
+	
+	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
+		PrintAndLog("iso15693 card select failed");
+		return 1;
+	}
+
+	switch(resp.arg[0]) {
+		case 3:
+			PrintAndLog("Card is selected");
+			break;
+		case 4:
+		default:
+			PrintAndLog("iso15693 card select failed, error %02X", resp.d.asBytes[0]);
+			return 1;		
+	}
+	return 0;
+}
+
 static command_t CommandTable15[] = {
-	{"help",		CmdHF15Help,    1, "This help"},
-	{"debug",		CmdHF15Debug,	0, "Turn debugging on/off"},	
-	{"demod",		CmdHF15Demod,   1, "Demodulate ISO15693 from tag"},
-	{"dump",		CmdHF15Dump,	0, "Read all memory pages of an ISO15693 tag, save to file"},
-	{"findafi",		CmdHF15Afi,     0, "Brute force AFI of an ISO15693 tag"},
-	{"info",		CmdHF15Info,	0, "Get Card Information"},	
-	{"list",		CmdHF15List,    0, "[Deprecated] List ISO15693 history"},
-	{"raw",			CmdHF15Raw,		0, "Send raw hex data to tag"}, 
-	{"reader",		CmdHF15Reader,  0, "Act like an ISO15693 reader"},
-	{"record",		CmdHF15Record,  0, "Record Samples (ISO15693)"},
-	{"restore",		CmdHF15Restore,	0, "Restore from file to all memory pages of an ISO15693 tag"},
-	{"sim",			CmdHF15Sim,     0, "Fake an ISO15693 tag"},
-	{"samples",		CmdHF15Samples,	0, "Acquire Samples as Reader (enables carrier, sends inquiry)"},
-	// {"select",		CmdHF15Select,		0, "Select an tag with a specific UID for further commands"},
+	{"help",		CmdHF15Help,    	1, "This help"},
+	{"debug",		CmdHF15Debug,		0, "Turn debugging on/off"},	
+	{"demod",		CmdHF15Demod,   	1, "Demodulate ISO15693 from tag"},
+	{"dump",		CmdHF15Dump,		0, "Read all memory pages of an ISO15693 tag, save to file"},
+	{"findafi",		CmdHF15Afi,     	0, "Brute force AFI of an ISO15693 tag"},
+	{"info",		CmdHF15Info,		0, "Get Card Information"},	
+	{"list",		CmdHF15List,    	0, "[Deprecated] List ISO15693 history"},
+	{"raw",			CmdHF15Raw,			0, "Send raw hex data to tag"}, 
+	{"reader",		CmdHF15Reader,  	0, "Act like an ISO15693 reader"},
+	{"record",		CmdHF15Record,  	0, "Record Samples (ISO15693)"},
+	{"restore",		CmdHF15Restore,		0, "Restore from file to all memory pages of an ISO15693 tag"},
+	{"sim",			CmdHF15Sim,     	0, "Fake an ISO15693 tag"},
+	{"samples",		CmdHF15Samples,		0, "Acquire Samples as Reader (enables carrier, sends inquiry)"},
+	{"select",		CmdHF15Select,		0, "Select an tag with a specific UID for further commands"},
 	{"read",		CmdHF15Read,		0, "Read a block"},	
 	{"write",		CmdHF15Write,		0, "Write a block"},	
 	{"readmulti",	CmdHF15Readmulti,	0, "Reads multiple Blocks"},
