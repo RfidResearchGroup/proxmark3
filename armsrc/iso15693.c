@@ -72,6 +72,9 @@
 
 // 32 + 2 crc + 1 
 #define ISO15_MAX_FRAME   35
+#define CMD_ID_RESP 5
+#define CMD_READ_RESP 13
+#define CMD_INV_RESP 12
 
 #define FrameSOF              Iso15693FrameSOF
 #define Logic0                Iso15693Logic0
@@ -84,9 +87,9 @@
 
 int DEBUG = 0;
 
-static uint8_t BuildIdentifyRequest(uint8_t **cmdout);
-//static uint8_t BuildReadBlockRequest(uint8_t **cmdout, uint8_t *uid, uint8_t blockNumber );
-static uint8_t BuildInventoryResponse(uint8_t **cmdout, uint8_t *uid);
+static void BuildIdentifyRequest(uint8_t *cmdout);
+//static void BuildReadBlockRequest(uint8_t *cmdout, uint8_t *uid, uint8_t blockNumber );
+static void BuildInventoryResponse(uint8_t *cmdout, uint8_t *uid);
 
 // ---------------------------
 // Signal Processing 
@@ -540,8 +543,8 @@ void AcquireRawAdcSamplesIso15693(void) {
 	uint8_t *buf = BigBuf_get_addr();
 	
 	uint32_t time_start = GetCountSspClk();
-	uint8_t *cmd = NULL;
-	uint8_t cmdlen = BuildIdentifyRequest( &cmd);
+	uint8_t cmd[CMD_ID_RESP] = {0};
+	BuildIdentifyRequest(cmd);
 	
 	// sending command
 	c = 0;
@@ -561,7 +564,7 @@ void AcquireRawAdcSamplesIso15693(void) {
 	}
 
 	
-	LogTrace(cmd, cmdlen, time_start << 4, (GetCountSspClk() - time_start) << 4, NULL, true);
+	LogTrace(cmd, CMD_ID_RESP, time_start << 4, (GetCountSspClk() - time_start) << 4, NULL, true);
 	
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
 
@@ -682,8 +685,7 @@ void Iso15693InitReader(void) {
 
 // Encode (into the ToSend buffers) an identify request, which is the first
 // thing that you must send to a tag to get a response.
-static uint8_t BuildIdentifyRequest(uint8_t **out) {
-#define CMD_ID_RESP 5
+static void BuildIdentifyRequest(uint8_t *out) {
 
 	uint8_t cmd[CMD_ID_RESP] = {0, ISO15_CMD_INVENTORY, 0, 0, 0};
 	// flags
@@ -696,15 +698,12 @@ static uint8_t BuildIdentifyRequest(uint8_t **out) {
 	cmd[4] = crc >> 8;
 	// coding as high speed (1 out of 4)
 	CodeIso15693AsReader(cmd, CMD_ID_RESP);
-	*out = cmd;
-	return CMD_ID_RESP;		
+	memcpy(out, cmd, CMD_ID_RESP);
 }
 
 // uid is in transmission order (which is reverse of display order)
 /*
-static uint8_t BuildReadBlockRequest(uint8_t **out, uint8_t *uid, uint8_t blockNumber ) {
-#define CMD_READ_RESP 13
-
+static void BuildReadBlockRequest(uint8_t **out, uint8_t *uid, uint8_t blockNumber ) {
 	uint8_t cmd[CMD_READ_RESP] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
 	// If we set the Option_Flag in this request, the VICC will respond with the secuirty status of the block
 	// followed by teh block data
@@ -730,15 +729,13 @@ static uint8_t BuildReadBlockRequest(uint8_t **out, uint8_t *uid, uint8_t blockN
 	cmd[12] = crc >> 8;
 
 	CodeIso15693AsReader(cmd, CMD_READ_RESP);
-	*out = cmd;
-	return CMD_READ_RESP;	
+	memcpy(out, cmd, CMD_ID_RESP);
 }
 */
 
 // Now the VICC>VCD responses when we are simulating a tag
-static uint8_t BuildInventoryResponse(uint8_t **out, uint8_t *uid) {
-#define CMD_INV_RESP 12
-	
+static void BuildInventoryResponse(uint8_t *out, uint8_t *uid) {
+
 	uint8_t cmd[CMD_INV_RESP] = {0,0,0,0,0,0,0,0,0,0,0,0};
 
 	// one sub-carrier, inventory, 1 slot, fast rate
@@ -761,8 +758,7 @@ static uint8_t BuildInventoryResponse(uint8_t **out, uint8_t *uid) {
 	cmd[11] = crc >> 8;
 
 	CodeIso15693AsReader(cmd, CMD_INV_RESP);
-	*out = cmd;
-	return CMD_INV_RESP;
+	memcpy(out, cmd, CMD_ID_RESP);
 }
 
 // Universal Method for sending to and recv bytes from a tag
@@ -905,10 +901,10 @@ void ReaderIso15693(uint32_t parameter) {
 	// FIRST WE RUN AN INVENTORY TO GET THE TAG UID
 	// THIS MEANS WE CAN PRE-BUILD REQUESTS TO SAVE CPU TIME
 	uint32_t time_start = GetCountSspClk();
-	uint8_t *cmd = NULL;
-	uint8_t cmdlen = BuildIdentifyRequest( &cmd );
+	uint8_t cmd[CMD_ID_RESP] = {0};
+	BuildIdentifyRequest( cmd );
 	TransmitTo15693Tag(ToSend, ToSendMax, &tsamples, &wait);
-	LogTrace(cmd, cmdlen, time_start << 4, (GetCountSspClk() - time_start) << 4, NULL, true);
+	LogTrace(cmd, CMD_ID_RESP, time_start << 4, (GetCountSspClk() - time_start) << 4, NULL, true);
 		
 	// Now wait for a response
 	answerLen1 = GetIso15693AnswerFromTag(answer1, &elapsed) ;
@@ -995,8 +991,8 @@ void SimTagIso15693(uint32_t parameter, uint8_t *uid) {
 
 	// Build a suitable reponse to the reader INVENTORY cocmmand
 	// not so obsvious, but in the call to BuildInventoryResponse,  the command is copied to the global ToSend buffer used below.			
-	uint8_t *cmd = NULL;
-	uint8_t cmdlen = BuildInventoryResponse( &cmd, uid);
+	uint8_t cmd[CMD_INV_RESP] = {0};
+	BuildInventoryResponse(cmd, uid);
 	
 	while (!BUTTON_PRESS() && !usb_poll_validate_length() ) {
 		WDT_HIT();
@@ -1009,7 +1005,7 @@ void SimTagIso15693(uint32_t parameter, uint8_t *uid) {
 						
 			time_start = GetCountSspClk();
 			TransmitTo15693Reader(ToSend, ToSendMax, &tsamples, &wait);
-			LogTrace(cmd, cmdlen, time_start << 4, (GetCountSspClk() - time_start) << 4, NULL, true);						
+			LogTrace(cmd, CMD_INV_RESP, time_start << 4, (GetCountSspClk() - time_start) << 4, NULL, true);						
 					
 			Dbprintf("%d octets read from reader command: %x %x %x %x %x %x %x %x %x", ans,
 			buf[0], buf[1], buf[2],	buf[3],
@@ -1024,6 +1020,8 @@ void SimTagIso15693(uint32_t parameter, uint8_t *uid) {
 void BruteforceIso15693Afi(uint32_t speed) {	
 
 	uint8_t data[7] = {0,0,0,0,0,0,0};
+	uint8_t buf[ISO15_MAX_FRAME];
+	memset(buf, 0x00, sizeof(buf));
 	int datalen = 0, recvlen = 0;
 	
 	Iso15693InitReader();
@@ -1036,12 +1034,12 @@ void BruteforceIso15693Afi(uint32_t speed) {
 	data[2] = 0; // mask length
 	datalen = AddCrc(data, 3);
 	
-	recvlen = SendDataTag(data, datalen, false, speed, data);
+	recvlen = SendDataTag(data, datalen, false, speed, buf);
 	
 	WDT_HIT();
 	
 	if (recvlen >= 12) {
-		Dbprintf("NoAFI UID=%s", sprintUID(NULL, data + 2) );
+		Dbprintf("NoAFI UID = %s", sprintUID(NULL, buf + 2) );
 	}
 	
 	// now with AFI
@@ -1053,10 +1051,10 @@ void BruteforceIso15693Afi(uint32_t speed) {
 	for (int i = 0; i < 256; i++) {
 		data[2] = i & 0xFF;
 		datalen = AddCrc(data, 4);
-		recvlen = SendDataTag(data, datalen, false, speed, data);
+		recvlen = SendDataTag(data, datalen, false, speed, buf);
 		WDT_HIT();
 		if (recvlen >= 12) {
-			Dbprintf("AFI=%i UID=%s", i, sprintUID(NULL, data + 2) );
+			Dbprintf("AFI = %i  UID = %s", i, sprintUID(NULL, buf + 2) );
 		}
 	}	
 	

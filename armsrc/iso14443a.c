@@ -1829,13 +1829,13 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_card, uint32_
 	if(p_card) {
 		memcpy(p_card->atqa, resp, 2);
 		p_card->uidlen = 0;
-		memset(p_card->uid,0,10);
+		memset(p_card->uid, 0, 10);
 	}
 
 	if (anticollision) {
 		// clear uid
 		if (uid_ptr)
-			memset(uid_ptr,0,10);
+			memset(uid_ptr, 0, 10);
 	}
 
 	// reset the PCB block number
