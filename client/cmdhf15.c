@@ -612,6 +612,8 @@ int CmdHF15Sim(const char *Cmd) {
 int CmdHF15Afi(const char *Cmd) {
 	char cmdp = param_getchar(Cmd, 0);
 	if (cmdp == 'h' || cmdp == 'H') return usage_15_findafi();
+
+	PrintAndLog("press pm3-button to cancel");
 	
 	UsbCommand c = {CMD_ISO_15693_FIND_AFI, {strtol(Cmd, NULL, 0), 0, 0}};
 	clearCommandBuffer();
