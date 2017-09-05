@@ -1059,6 +1059,7 @@ void BruteforceIso15693Afi(uint32_t speed) {
 	}	
 	
 	Dbprintf("AFI Bruteforcing done.");
+	switch_off();
 }
 
 // Allows to directly send commands to the tag via the client
