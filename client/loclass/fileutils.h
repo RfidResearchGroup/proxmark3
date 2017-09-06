@@ -41,8 +41,9 @@
 
 #ifndef ON_DEVICE
 
+#include <inttypes.h>
 /**
- * @brief Utility function to save data to a file. This method takes a preferred name, but if that
+ * @brief Utility function to save data to a binary file. This method takes a preferred name, but if that
  * file already exists, it tries with another name until it finds something suitable.
  * E.g. dumpdata-15.txt
  * @param preferredName
@@ -51,7 +52,20 @@
  * @param datalen the length of the data
  * @return 0 for ok, 1 for failz
  */
-int saveFile(const char *preferredName, const char *suffix, const void* data, size_t datalen);
+extern int saveFile(const char *preferredName, const char *suffix, const void* data, size_t datalen);
+
+/**
+ * @brief Utility function to save data to a textfile. This method takes a preferred name, but if that
+ * file already exists, it tries with another name until it finds something suitable.
+ * E.g. dumpdata-15.txt
+ * @param preferredName
+ * @param suffix the file suffix. Leave out the ".".
+ * @param data The binary data to write to the file
+ * @param datalen the length of the data
+ * @param blocksize the length of one row
+ * @return 0 for ok, 1 for failz
+*/
+extern int saveFileEML(const char *preferredName, const char *suffix, uint8_t* data, size_t datalen, size_t blocksize);
 /**
  * @brief Utility function to save load binary data from a a file. This method takes a filename,
  * Should only be used for fixed-size binary files

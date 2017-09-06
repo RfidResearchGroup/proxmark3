@@ -25,6 +25,7 @@
 #include "iso15693tools.h"	// iso15 crc
 #include "cmdmain.h"
 #include "cmddata.h"		// getsamples
+#include "loclass/fileutils.h" 		// savefileEML
 
 int CmdHF15(const char *Cmd);
 

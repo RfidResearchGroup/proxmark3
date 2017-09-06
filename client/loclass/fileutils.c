@@ -63,32 +63,81 @@ int fileExists(const char *filename) {
 
 int saveFile(const char *preferredName, const char *suffix, const void* data, size_t datalen)
 {
-	int size = sizeof(char) * (strlen(preferredName)+strlen(suffix)+10);
+	int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
 	char * fileName = malloc(size);
 
-	memset(fileName,0,size);
+	memset(fileName, 0, size);
 	int num = 1;
 	sprintf(fileName,"%s.%s", preferredName, suffix);
-	while(fileExists(fileName))
-	{
+	while (fileExists(fileName)) {
 		sprintf(fileName,"%s-%d.%s", preferredName, num, suffix);
 		num++;
 	}
 	/* We should have a valid filename now, e.g. dumpdata-3.bin */
 
 	/*Opening file for writing in binary mode*/
-	FILE *f = fopen(fileName,"wb");
+	FILE *f = fopen(fileName, "wb");
 	if (!f) {
-		prnlog("Failed to write to file '%s'", fileName);
+		prnlog("File not found or locked. '%s'", fileName);
 		free(fileName);
 		return 1;
 	}
 	fwrite(data, 1,	datalen, f);
-	if (f)
-		fclose(f);
-	prnlog("Saved data to '%s'", fileName);
+	fflush(f);
+	fclose(f);
+	prnlog("Saved %u bytes to binary file %s", datalen, fileName);
 	free(fileName);
 	return 0;
+}
+int saveFileEML(const char *preferredName, const char *suffix, uint8_t* data, size_t datalen, size_t blocksize) {
+
+	if ( preferredName == NULL ) return 1;
+	if ( suffix == NULL ) return 1;
+	if ( data == NULL ) return 1;
+
+	int retval = 0;
+	int blocks = datalen/blocksize;
+	int i,j;
+	int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
+	char * fileName = malloc(size);
+
+	memset(fileName, 0, size);
+	int num = 1;
+	sprintf(fileName,"%s.%s", preferredName, suffix);
+	while (fileExists(fileName)) {
+		sprintf(fileName,"%s-%d.%s", preferredName, num, suffix);
+		num++;
+	}
+	
+	/* We should have a valid filename now, e.g. dumpdata-3.bin */
+
+	/*Opening file for writing in text mode*/
+	FILE *f = fopen(fileName, "w+");
+	if (!f) {
+		prnlog("File not found or locked. '%s'", fileName);
+		retval =  1;
+		goto out;
+	}
+
+	for (i = 0; i < datalen; i++) {
+		fprintf(f, "%02X", data[i] );
+		if ( (i+1) % 4 == 0)
+			fprintf(f, "\n");
+	}
+	// left overs
+	if ( datalen % blocksize != 0) {
+		int index = blocks * blocksize;
+		for (j = 0; j < datalen % blocksize; j++) {
+			fprintf(f, "%02X", data[index + j] );
+		}
+	}
+	fflush(f);
+	fclose(f);
+	prnlog("Saved %d blocks to text file %s", blocks, fileName);
+	
+out:	
+	free(fileName);
+	return retval;
 }
 
 /**
@@ -107,7 +156,6 @@ void prnlog(char *fmt, ...)
 	vsprintf (buffer,fmt, args);
 	va_end(args);
 	PrintAndLog(buffer);
-
 }
 #else //if we're on ARM
 void prnlog(char *fmt,...)

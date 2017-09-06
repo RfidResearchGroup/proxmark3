@@ -571,7 +571,7 @@ int HF15Reader(const char *Cmd, bool verbose) {
 		return 0;
 	}
 
-	PrintAndLog(" UID   : %s", sprintUID(NULL, uid));
+	PrintAndLog(" UID  : %s", sprintUID(NULL, uid));
 	PrintAndLog(" TYPE : %s", getTagInfo_15(uid));
 	return 1;
 }
@@ -621,20 +621,56 @@ int CmdHF15Afi(const char *Cmd) {
 	return 0;
 }
 
+typedef struct {
+	uint8_t lock;
+	uint8_t block[4];
+} t15memory;
+
 // Reads all memory pages
 // need to write to file
 // helptext
 int CmdHF15Dump(const char*Cmd) {
 
-	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H') return usage_15_dump();
-
+	uint8_t fileNameLen = 0;
+	char filename[FILE_PATH_SIZE] = {0};
+	char * fptr = filename;
+	bool errors = false;
+	uint8_t cmdp = 0;
+	
 	uint8_t uid[8] = {0,0,0,0,0,0,0,0};	
-
 	if (!getUID(uid)) {
-		PrintAndLog("No Tag found.");
-		return 0;
+		PrintAndLog("No tag found.");
+		return 1;
 	}
+	
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch(param_getchar(Cmd, cmdp)) {
+		case 'h':
+		case 'H':
+			return usage_15_dump();
+		case 'f':
+		case 'F':
+			fileNameLen = param_getstr(Cmd, cmdp+1, filename); 
+			if (fileNameLen < 1) {
+				PrintAndLog("Using UID as filename");
+				
+				fptr += sprintf(fptr, "dump15_"); 
+				
+				for (int j = sizeof(uid)-1; j >=0 ; j--) {
+					fptr += sprintf(fptr, "%02X", uid[j]); 
+				}
+			}
+			cmdp += 2;
+			break;
+		default:
+			PrintAndLog("Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+			errors = true;
+			break;
+		}
+	}
+	//Validations
+	if (errors) return usage_15_dump();
+	
 	// detect blocksize from card :)
 	
 	PrintAndLog("Reading memory from tag UID %s", sprintUID(NULL, uid));
@@ -642,6 +678,9 @@ int CmdHF15Dump(const char*Cmd) {
 	int reqlen = 0, blocknum = 0;
 	uint8_t *recv = NULL;
 
+	// memory.
+	t15memory mem[256];
+	
 	uint8_t data[256*4] = {0};
 	memset(data, 0, sizeof(data));
 
@@ -677,6 +716,9 @@ int CmdHF15Dump(const char*Cmd) {
 				
 				if (!(recv[0] & ISO15_RES_ERROR)) {
 								
+					mem[blocknum].lock = resp.d.asBytes[0];
+					memcpy(mem[blocknum].block, resp.d.asBytes + 1, 4);
+					
 					memcpy(data + (blocknum * 4), resp.d.asBytes + 1, 4);
 					
 					retry = 0;
@@ -686,32 +728,33 @@ int CmdHF15Dump(const char*Cmd) {
 				} else {
 					PrintAndLog("\nTag returned Error %i: %s", recv[1], TagErrorStr(recv[1]) ); 
 					break;
-					// return 1;
 				}
+			} else {
+				PrintAndLog("crc fail");
 			}
 		} 
 	}
 	printf("\n");
 
-	PrintAndLog("Blk| data                | ascii");
-	PrintAndLog("---+---------------------+----------");	
-	for (int i=0; i < blocknum; i++) {
-			PrintAndLog("%02x | %s", i, sprint_hex_ascii(data + (i*4) , 4 ) );
+	PrintAndLog("Block#   | Data         |lck| Ascii");
+	PrintAndLog("---------+--------------+---+----------");	
+	for (int i = 0; i < blocknum; i++) {
+			PrintAndLog("%3d/0x%02X | %s | %d | %s", i, i, sprint_hex(mem[i].block, 4 ), mem[i].lock, sprint_ascii(mem[i].block, 4) );
 	}
-	
-	// TODO: need fix
-//	if (resp.arg[0]<3)
-//		PrintAndLog("Lost Connection");
-//	else if (ISO15_CRC_CHECK != Crc(resp.d.asBytes, resp.arg[0]-2))
-//		PrintAndLog("CRC Failed");
-//	else 
-//		PrintAndLog("Tag returned Error %i: %s",recv[1],TagErrorStr(recv[1])); 
-	return 1;
+
+	printf("\n");
+
+	size_t datalen = blocknum*4;
+	saveFileEML(filename, "eml", data, datalen, 4);	
+	saveFile(filename, "bin", data, datalen);
+	return 0;
 }
 
 int CmdHF15Restore(const char*Cmd) {
 	// read from file
-	// write to tag
+	// loop file
+	// write block to tag
+	// end loop
 	return usage_15_restore();
 }
 
@@ -949,7 +992,7 @@ int CmdHF15Readmulti(const char *Cmd) {
 
 	recv = resp.d.asBytes;	
 	
-	if (ISO15_CRC_CHECK == Crc(recv, status-2)) {
+	if (ISO15_CRC_CHECK == Crc(recv, status)) {
 		PrintAndLog("CRC failed");
 		return 2;
 	} 
@@ -1017,7 +1060,7 @@ int CmdHF15Read(const char *Cmd) {
 
 	recv = resp.d.asBytes;	
 	
-	if (ISO15_CRC_CHECK == Crc(recv, status-2)) {
+	if (ISO15_CRC_CHECK == Crc(recv, status)) {
 		PrintAndLog("CRC failed");
 		return 2;
 	} 
@@ -1097,7 +1140,7 @@ int CmdHF15Write(const char *Cmd) {
 
 	recv = resp.d.asBytes;	
 	
-	if (ISO15_CRC_CHECK == Crc(recv, status-2)) {
+	if (ISO15_CRC_CHECK == Crc(recv, status)) {
 		PrintAndLog("CRC failed");
 		return 2;
 	} 
