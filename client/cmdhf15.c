@@ -1082,7 +1082,7 @@ int CmdHF15Read(const char *Cmd) {
 int CmdHF15Write(const char *Cmd) {
 
 	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd)<3 || cmdp == 'h' || cmdp == 'H') return usage_15_read();
+	if (strlen(Cmd)<3 || cmdp == 'h' || cmdp == 'H') return usage_15_write();
 	
 	UsbCommand resp;
 	uint8_t *recv;
