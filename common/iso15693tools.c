@@ -37,7 +37,7 @@ uint16_t Iso15693Crc(uint8_t *v, int n)
 //		n       length without crc
 // returns the new length of the dataframe.
 int Iso15693AddCrc(uint8_t *req, int n) {
-	uint16_t crc=Iso15693Crc(req,n);
+	uint16_t crc = Iso15693Crc(req, n);
 	req[n] = crc & 0xff;
 	req[n+1] = crc >> 8;
 	return n+2;

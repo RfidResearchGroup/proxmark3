@@ -28,9 +28,9 @@
 #define Logic1					Iso15693Logic1
 #define FrameEOF				Iso15693FrameEOF
 
-#define Crc(data,datalen)		Iso15693Crc(data,datalen)
-#define AddCrc(data,datalen)	Iso15693AddCrc(data,datalen)
-#define sprintUID(target,uid)	Iso15693sprintUID(target,uid)
+#define Crc(data, len)			Iso15693Crc((data), (len))
+#define AddCrc(data, len)		Iso15693AddCrc((data), (len))
+#define sprintUID(target, uid)	Iso15693sprintUID((target), (uid))
 
 // structure and database for uid -> tagtype lookups 
 typedef struct { 
@@ -712,7 +712,7 @@ int CmdHF15Dump(const char*Cmd) {
 			
 			recv = resp.d.asBytes;
 		
-			if ( ISO15_CRC_CHECK == Crc(recv, len) ) {
+			if ( ISO15_CRC_CHECK == Crc(recv, len-2) ) {
 				
 				if (!(recv[0] & ISO15_RES_ERROR)) {
 								
@@ -736,7 +736,7 @@ int CmdHF15Dump(const char*Cmd) {
 	}
 	printf("\n");
 
-	PrintAndLog("Block#   | Data         |lck| Ascii");
+	PrintAndLog("block#   | data         |lck| ascii");
 	PrintAndLog("---------+--------------+---+----------");	
 	for (int i = 0; i < blocknum; i++) {
 			PrintAndLog("%3d/0x%02X | %s | %d | %s", i, i, sprint_hex(mem[i].block, 4 ), mem[i].lock, sprint_ascii(mem[i].block, 4) );
@@ -876,13 +876,13 @@ int prepareHF15Cmd(char **cmd, UsbCommand *c, uint8_t iso15cmd) {
 	// strip
 	while (**cmd==' ' || **cmd=='\t') (*cmd)++;
 	
-	if (strstr(*cmd,"-o") == *cmd) {
+	if (strstr(*cmd, "-o") == *cmd) {
 	 	req[reqlen] = ISO15_REQ_OPTION;
 	 	(*cmd) += 2;
 	}
 	
 	// strip
-	while (**cmd==' ' || **cmd=='\t') (*cmd)++;
+	while (**cmd == ' ' || **cmd == '\t') (*cmd)++;
 	
 	switch (**cmd) {
 		case 0:
@@ -951,7 +951,8 @@ int CmdHF15Readmulti(const char *Cmd) {
 	uint8_t *recv;
 	UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
 	uint8_t *req = c.d.asBytes;
-	int reqlen = 0, pagenum,pagecount;
+	int reqlen = 0;
+	uint8_t pagenum, pagecount;
 	char cmdbuf[100];
 	char *cmd = cmdbuf;
 	strncpy(cmd, Cmd, 99);
@@ -959,20 +960,23 @@ int CmdHF15Readmulti(const char *Cmd) {
 	if ( !prepareHF15Cmd(&cmd, &c, ISO15_CMD_READMULTI) )
 		return 0;
 
+	// add OPTION flag, in order to get lock-info
+	req[0] |= ISO15_REQ_OPTION;
+	
 	reqlen = c.arg[0];
 
-	pagenum = strtol(cmd, NULL, 0);
+	// decimal
+	pagenum = param_get8ex(cmd, 0, 0, 10);
+	pagecount = param_get8ex(cmd, 1, 0, 10);
 
-	// skip to next space		
-	while (*cmd!=' ' && *cmd!='\t') cmd++;
-	// skip over the space
-	while (*cmd==' ' || *cmd=='\t') cmd++;
-
-	pagecount = strtol(cmd, NULL, 0);
-	if (pagecount > 0) pagecount--; // 0 means 1 page, 1 means 2 pages, ...	
+	printf("ice %d %d\n", pagenum, pagecount);
 	
-	req[reqlen++] = (uint8_t)pagenum;
-	req[reqlen++] = (uint8_t)pagecount;
+	// 0 means 1 page,
+	// 1 means 2 pages, ...	
+	if (pagecount > 0) pagecount--; 
+	
+	req[reqlen++] = pagenum;
+	req[reqlen++] = pagecount;
 	reqlen = AddCrc(req, reqlen);
 	c.arg[0] = reqlen;
 
@@ -992,7 +996,7 @@ int CmdHF15Readmulti(const char *Cmd) {
 
 	recv = resp.d.asBytes;	
 	
-	if (ISO15_CRC_CHECK == Crc(recv, status)) {
+	if (ISO15_CRC_CHECK == Crc(recv, status-2)) {
 		PrintAndLog("CRC failed");
 		return 2;
 	} 
@@ -1002,9 +1006,18 @@ int CmdHF15Readmulti(const char *Cmd) {
 		return 3;
 	}
 
+	int start = 1;  // skip status byte
+	int stop = (pagecount+1) * 5;
+	int currblock = pagenum;
 	// print response
-	PrintAndLog("%s", sprint_hex_ascii( recv+1, status-3));
-	
+	PrintAndLog("");
+	PrintAndLog("block#   | data         |lck| ascii");
+	PrintAndLog("---------+--------------+---+----------");	
+	for (int i = start; i < stop; i += 5) {
+		PrintAndLog("%3d/0x%02X | %s | %d | %s", currblock, currblock, sprint_hex(recv+i+1, 4 ), recv[i], sprint_ascii(recv+i+1, 4) );
+		currblock++;
+	}
+
 	return 0;
 }
 
@@ -1026,7 +1039,7 @@ int CmdHF15Read(const char *Cmd) {
 	// arg2 (recv == 1 == expect a response)
 	UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; 
 	uint8_t *req = c.d.asBytes;
-	int reqlen = 0, pagenum;
+	int reqlen = 0, blocknum;
 	char cmdbuf[100];
 	char *cmd = cmdbuf;
 	strncpy(cmd, Cmd, 99);
@@ -1034,11 +1047,14 @@ int CmdHF15Read(const char *Cmd) {
 	if ( !prepareHF15Cmd(&cmd, &c, ISO15_CMD_READ) )
 		return 0;
 
+	// add OPTION flag, in order to get lock-info
+	req[0] |= ISO15_REQ_OPTION;
+	
 	reqlen = c.arg[0];
 
-	pagenum = strtol(cmd, NULL, 0);
+	blocknum = strtol(cmd, NULL, 0);
 	
-	req[reqlen++] = (uint8_t)pagenum;
+	req[reqlen++] = (uint8_t)blocknum;
 	
 	reqlen = AddCrc(req, reqlen);
 	
@@ -1060,7 +1076,7 @@ int CmdHF15Read(const char *Cmd) {
 
 	recv = resp.d.asBytes;	
 	
-	if (ISO15_CRC_CHECK == Crc(recv, status)) {
+	if (ISO15_CRC_CHECK == Crc(recv, status-2)) {
 		PrintAndLog("CRC failed");
 		return 2;
 	} 
@@ -1071,7 +1087,11 @@ int CmdHF15Read(const char *Cmd) {
 	}
 	
 	// print response
-	PrintAndLog("%s", sprint_hex_ascii(recv+1, status-3) );
+	PrintAndLog("");
+	PrintAndLog("block #%3d  |lck| ascii", blocknum );
+	PrintAndLog("------------+---+------" );
+	PrintAndLog("%s| %d | %s", sprint_hex(recv+2, status-4), recv[1], sprint_ascii(recv+2, status-4) );
+	PrintAndLog("");	
 	return 0;
 }
 
@@ -1140,7 +1160,7 @@ int CmdHF15Write(const char *Cmd) {
 
 	recv = resp.d.asBytes;	
 	
-	if (ISO15_CRC_CHECK == Crc(recv, status)) {
+	if (ISO15_CRC_CHECK == Crc(recv, status-2)) {
 		PrintAndLog("CRC failed");
 		return 2;
 	} 
