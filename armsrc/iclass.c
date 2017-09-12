@@ -1026,7 +1026,8 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 
 	//Use the emulator memory for SIM
 	uint8_t *emulator = BigBuf_get_EM_addr();
-
+	uint8_t mac_responses[USB_CMD_DATA_SIZE] = { 0 };
+	
 	if (simType == 0) {
 		// Use the CSN from commandline
 		memcpy(emulator, datain, 8);
@@ -1039,7 +1040,6 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 		doIClassSimulation(MODE_SIM_CSN, NULL);
 	} else if (simType == 2) {
 
-		uint8_t mac_responses[USB_CMD_DATA_SIZE] = { 0 };
 		Dbprintf("Going into attack mode, %d CSNS sent", numberOfCSNS);
 		// In this mode, a number of csns are within datain. We'll simulate each one, one at a time
 		// in order to collect MAC's from the reader. This can later be used in an offlne-attack
@@ -1049,9 +1049,11 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 			// The usb data is 512 bytes, fitting 65 8-byte CSNs in there.
 
 			memcpy(emulator, datain + (i*8), 8);
+			
 			if (doIClassSimulation(MODE_EXIT_AFTER_MAC, mac_responses+i*8)) {
+				// Button pressed
 				cmd_send(CMD_ACK, CMD_SIMULATE_TAG_ICLASS, i, 0, mac_responses, i*8);
-				return; // Button pressed
+				goto out;
 			}
 		}
 		cmd_send(CMD_ACK, CMD_SIMULATE_TAG_ICLASS, i, 0, mac_responses, i*8);
@@ -1059,11 +1061,49 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 	} else if (simType == 3){
 		//This is 'full sim' mode, where we use the emulator storage for data.
 		doIClassSimulation(MODE_FULLSIM, NULL);
+	} else if (simType == 4){
+
+		// This is the KEYROLL version of sim 2.
+		// the collected data (mac_response) is doubled out since we are trying to collect both keys in the keyroll process.
+		// Keyroll iceman  9 csns * 8 * 2 = 144
+		// keyroll CARL55  15csns * 8 * 2 = 15 * 8 * 2 = 240		
+		Dbprintf("Going into attack keyroll mode, %d CSNS sent", numberOfCSNS);
+		// In this mode, a number of csns are within datain. We'll simulate each one, one at a time
+		// in order to collect MAC's from the reader. This can later be used in an offlne-attack
+		// in order to obtain the keys, as in the "dismantling iclass"-paper.
+		
+		// keyroll mode,   reader swaps between old key and new key alternatively when fail a authentication.
+		// attack below is same as SIM 2, but we run the CSN twice to collected the mac for both keys.
+		int i = 0;
+		// The usb data is 512 bytes, fitting 65 8-byte CSNs in there.  iceman fork uses 9 CSNS
+		for (; i < numberOfCSNS && i*8 + 8 < USB_CMD_DATA_SIZE; i++) {
+
+			memcpy(emulator, datain + (i*8), 8);
+			
+			// keyroll 1 			
+			if (doIClassSimulation(MODE_EXIT_AFTER_MAC, mac_responses + i*8 )) {
+				cmd_send(CMD_ACK, CMD_SIMULATE_TAG_ICLASS, i*2, 0, mac_responses, i * 8 * 2);
+				// Button pressed
+				goto out; 
+			}
+
+			// keyroll 2
+			if (doIClassSimulation(MODE_EXIT_AFTER_MAC, mac_responses + (i + numberOfCSNS) * 8 )) {
+				cmd_send(CMD_ACK, CMD_SIMULATE_TAG_ICLASS, i*2, 0, mac_responses, i * 8 * 2);
+				// Button pressed
+				goto out; 
+			}			
+		}
+		// double the amount of collected data.
+		cmd_send(CMD_ACK, CMD_SIMULATE_TAG_ICLASS, i*2, 0, mac_responses, i * 8 * 2 );
+	
 	} else {
 		// We may want a mode here where we hardcode the csns to use (from proxclone).
 		// That will speed things up a little, but not required just yet.
 		DbpString("The mode is not implemented, reserved for future use");
 	}
+
+out:	
 	switch_off(); 
 }
 void AppendCrc(uint8_t* data, int len) {

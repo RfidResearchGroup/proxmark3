@@ -39,17 +39,19 @@ int usage_hf_iclass_sim(void) {
 	PrintAndLog("                1       simulate default CSN");
 	PrintAndLog("                2       Reader-attack, gather reader responses to extract elite key");
 	PrintAndLog("                3       Full simulation using emulator memory (see 'hf iclass eload')");
-	PrintAndLog("        example: hf iclass sim 0 031FEC8AF7FF12E0");
-	PrintAndLog("        example: hf iclass sim 2");
-	PrintAndLog("        example: hf iclass eload 'tagdump.bin'");
-	PrintAndLog("                 hf iclass sim 3");
+	PrintAndLog("                4       Reader-attack, adapted for KeyRoll mode, gather reader responses to extract elite key");
+	PrintAndLog("Samples:");
+	PrintAndLog("        hf iclass sim 0 031FEC8AF7FF12E0");
+	PrintAndLog("        hf iclass sim 2");
+	PrintAndLog("        hf iclass eload 'tagdump.bin'");
+	PrintAndLog("        hf iclass sim 3");
 	return 0;
 }
 int usage_hf_iclass_eload(void) {
 	PrintAndLog("Loads iclass tag-dump into emulator memory on device");
 	PrintAndLog("Usage:  hf iclass eload f <filename>");
 	PrintAndLog("");
-	PrintAndLog("Example: hf iclass eload f iclass_tagdump-aa162d30f8ff12f1.bin");
+	PrintAndLog("Samples: hf iclass eload f iclass_tagdump-aa162d30f8ff12f1.bin");
 	return 0;
 }
 int usage_hf_iclass_decrypt(void) {
@@ -58,7 +60,7 @@ int usage_hf_iclass_decrypt(void) {
 	PrintAndLog("OBS! In order to use this function, the file 'iclass_decryptionkey.bin' must reside");
 	PrintAndLog("in the working directory. The file should be 16 bytes binary data");
 	PrintAndLog("");
-	PrintAndLog("example: hf iclass decrypt f tagdump_12312342343.bin");
+	PrintAndLog("Samples: hf iclass decrypt f tagdump_12312342343.bin");
 	PrintAndLog("");
 	PrintAndLog("OBS! This is pretty stupid implementation, it tries to decrypt every block after block 6. ");
 	PrintAndLog("Correct behaviour would be to decrypt only the application areas where the key is valid,");
@@ -109,6 +111,7 @@ int usage_hf_iclass_clone(void) {
 	return -1;
 }
 int usage_hf_iclass_writeblock(void) {
+	PrintAndLog("Usage:  hf iclass writeblk b <Block> d <Data> k <Key> c e|r\n");
 	PrintAndLog("Options:");
 	PrintAndLog("  b <Block> : The block number as 2 hex symbols");
 	PrintAndLog("  d <data>  : Set the Data to write as 16 hex symbols");
@@ -141,7 +144,7 @@ int usage_hf_iclass_readtagfile() {
 	return 1;
 }
 int usage_hf_iclass_calc_newkey(void) {
-	PrintAndLog("HELP :  Manage iClass Keys in client memory:\n");
+	PrintAndLog("HELP :  Calc new key for updating:\n");
 	PrintAndLog("Usage:  hf iclass calc_newkey o <Old key> n <New key> s [csn] e");
 	PrintAndLog("  Options:");
 	PrintAndLog("  o <oldkey> : *specify a key as 16 hex symbols or a key number as 1 symbol");
@@ -255,16 +258,13 @@ int CmdHFiClassSim(const char *Cmd) {
 		PrintAndLog("--simtype:%02x csn:%s", simType, sprint_hex(CSN, 8));
 	}
 
-	if (simType > 3) {
+	if (simType > 4) {
 		PrintAndLog("Undefined simptype %d", simType);
 		return usage_hf_iclass_sim();
 	}
 
 	uint8_t numberOfCSNs = 0;
-	if (simType == 2) {
-		UsbCommand c = {CMD_SIMULATE_TAG_ICLASS, {simType, NUM_CSNS}};
-		UsbCommand resp = {0};
-
+	
 /*
 		// pre-defined 8 CSN by Holiman
 		uint8_t csns[8*NUM_CSNS] = {		
@@ -295,7 +295,6 @@ int CmdHFiClassSim(const char *Cmd) {
 			0xD2, 0x5A, 0x82, 0xF8, 0xF7, 0xFF, 0x12, 0xE0
 			//0x04, 0x08, 0x9F, 0x78, 0x6E, 0xFF, 0x12, 0xE0
 		};
-
 /*
 		// pre-defined 15 CSN by Carl55
 		// remember to change the define NUM_CSNS to match.
@@ -317,46 +316,111 @@ int CmdHFiClassSim(const char *Cmd) {
 			0x00, 0x05, 0x01, 0x21, 0xF7, 0xFF, 0x12, 0xE0 
 		};		
 */
-		memcpy(c.d.asBytes, csns, 8*NUM_CSNS);
-		clearCommandBuffer();
-		SendCommand(&c);
-		// -1 make it wait all the time (iceman)
-		if (!WaitForResponseTimeout(CMD_ACK, &resp, -1)) {
-			PrintAndLog("Command timed out");
-			return 0;
-		}
+	
+/* DUMPFILE FORMAT:
+ *
+ * <8-byte CSN><8-byte CC><4 byte NR><4 byte MAC>....
+ * So, it should wind up as
+ * 8 * 24 bytes.
+ *
+ * The returndata from the pm3 is on the following format
+ * <4 byte NR><4 byte MAC>
+ * CC are all zeroes, CSN is the same as was sent in
+ **/
+	switch(simType) {
+		
+		case 2: {
+			PrintAndLog("Starting the sim 2 attack");
+			UsbCommand c = {CMD_SIMULATE_TAG_ICLASS, {simType, NUM_CSNS}};
+			UsbCommand resp = {0};
+			memcpy(c.d.asBytes, csns, 8*NUM_CSNS);
+			clearCommandBuffer();
+			SendCommand(&c);
+			// -1 make it wait all the time (iceman)
+			if (!WaitForResponseTimeout(CMD_ACK, &resp, -1)) {
+				PrintAndLog("Command timed out");
+				return 0;
+			}
 
-		uint8_t num_mac_responses  = resp.arg[1];
-		PrintAndLog("Mac responses: %d MACs obtained (should be %d)", num_mac_responses, NUM_CSNS);
+			uint8_t num_mac_responses  = resp.arg[1];
+			PrintAndLog("Mac responses: %d MACs obtained (should be %d)", num_mac_responses, NUM_CSNS);
 
-		size_t datalen = NUM_CSNS*24;
-		/*
-		 * Now, time to dump to file. We'll use this format:
-		 * <8-byte CSN><8-byte CC><4 byte NR><4 byte MAC>....
-		 * So, it should wind up as
-		 * 8 * 24 bytes.
-		 *
-		 * The returndata from the pm3 is on the following format
-		 * <4 byte NR><4 byte MAC>
-		 * CC are all zeroes, CSN is the same as was sent in
-		 **/
-		void* dump = malloc(datalen);
-		memset(dump, 0, datalen);//<-- Need zeroes for the CC-field
-		uint8_t i = 0;
-		for (i = 0 ; i < NUM_CSNS ; i++) {
-			memcpy(dump + i*24, csns + i*8, 8); //CSN
-			//8 zero bytes here...
-			//Then comes NR_MAC (eight bytes from the response)
-			memcpy(dump + i*24 + 16, resp.d.asBytes + i*8, 8);
+			size_t datalen = NUM_CSNS*24;
+
+			void* dump = malloc(datalen);
+			if ( !dump ) {
+				PrintAndLog("Failed to allocate memory");
+				return 2;
+			}
+			
+			memset(dump, 0, datalen);//<-- Need zeroes for the CC-field
+			uint8_t i = 0;
+			for (i = 0 ; i < NUM_CSNS ; i++) {
+				memcpy(dump + i*24, csns + i*8, 8); //CSN
+				//8 zero bytes here...
+				//Then comes NR_MAC (eight bytes from the response)
+				memcpy(dump + i*24 + 16, resp.d.asBytes + i*8, 8);
+			}
+			/** Now, save to dumpfile **/
+			saveFile("iclass_mac_attack", "bin", dump, datalen);
+			free(dump);			
+			break;
 		}
-		/** Now, save to dumpfile **/
-		saveFile("iclass_mac_attack", "bin", dump, datalen);
-		free(dump);
-	} else {
-		UsbCommand c = {CMD_SIMULATE_TAG_ICLASS, {simType, numberOfCSNs}};
-		memcpy(c.d.asBytes, CSN, 8);
-		clearCommandBuffer();
-		SendCommand(&c);
+		case 4:{
+			PrintAndLog("Starting the sim 4 keyroll attack");
+			UsbCommand c = {CMD_SIMULATE_TAG_ICLASS, {simType, NUM_CSNS}};
+			UsbCommand resp = {0};
+			memcpy(c.d.asBytes, csns, 8*NUM_CSNS);
+			clearCommandBuffer();
+			SendCommand(&c);
+			// -1 make it wait all the time (iceman)
+			if (!WaitForResponseTimeout(CMD_ACK, &resp, -1)) {
+				PrintAndLog("Command timed out");
+				return 0;
+			}
+
+			uint8_t num_mac_responses  = resp.arg[1];
+			PrintAndLog("Mac responses: %d MACs obtained (should be %d)", num_mac_responses, NUM_CSNS * 2);
+
+			size_t datalen = NUM_CSNS*24;
+			void* dump = malloc(datalen);
+			if ( !dump ) {
+				PrintAndLog("Failed to allocate memory");
+				return 2;
+			}
+			
+			//KEYROLL 1
+			//Need zeroes for the CC-field
+			memset(dump, 0, datalen);
+			for (uint8_t i = 0; i < NUM_CSNS ; i++) {
+				memcpy(dump + i*24, csns + i*8, 8); //CSN
+				//8 zero bytes here...
+				//Then comes NR_MAC (eight bytes from the response)
+				memcpy(dump + i*24 + 16, resp.d.asBytes + i*8, 8);
+			}
+			saveFile("iclass_mac_attack_keyroll_A", "bin", dump, datalen);
+
+			//KEYROLL 2
+			memset(dump, 0, datalen);
+			for (uint8_t i = NUM_CSNS; i < NUM_CSNS*2 ; i++) {
+				memcpy(dump + i*24, csns + i*8, 8); 
+				memcpy(dump + i*24 + 16, resp.d.asBytes + i*8, 8);
+			}						
+			saveFile("iclass_mac_attack_keyroll_B", "bin", dump, datalen);
+			
+			free(dump);			
+			
+			break;
+		}		
+		case 1:
+		case 3:
+		default: {
+			UsbCommand c = {CMD_SIMULATE_TAG_ICLASS, {simType, numberOfCSNs}};
+			memcpy(c.d.asBytes, CSN, 8);
+			clearCommandBuffer();
+			SendCommand(&c);
+			break;
+		}		
 	}
 	return 0;
 }
