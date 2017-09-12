@@ -73,7 +73,7 @@ static float brute_force_per_second;
 
 static void get_SIMD_instruction_set(char* instruction_set) {
 #if defined (__i386__) || defined (__x86_64__)	
-	#if !defined(__APPLE__) || (defined(__APPLE__) && (__clang_major__ > 8))
+	#if !defined(__APPLE__) || (defined(__APPLE__) && (__clang_major__ > 8 || __clang_major__ == 8 && __clang_minor__ >= 1))	
 		#if (__GNUC__ >= 5) && (__GNUC__ > 5 || __GNUC_MINOR__ > 2)
 	if (__builtin_cpu_supports("avx512f")) strcpy(instruction_set, "AVX512F");
 	else if (__builtin_cpu_supports("avx2")) strcpy(instruction_set, "AVX2");
