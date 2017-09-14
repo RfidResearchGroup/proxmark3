@@ -110,7 +110,13 @@ void MifareDesfireGetInformation(){
 		OnError(1);
 		return;
 	}
-
+	
+	if ( card.uidlen != 7 ) {
+		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Wrong UID size. Expected 7byte got %d", card.uidlen);
+		OnError(2);
+		return;		
+	}
+		
 	memcpy(dataout, card.uid, 7);
 
 	LED_A_ON();
@@ -123,7 +129,7 @@ void MifareDesfireGetInformation(){
 	len =  DesfireAPDU(cmd, cmd_len, resp);
 	if ( !len ) {
 		print_result("ERROR <--: ", resp, len);	
-		OnError(2);
+		OnError(3);
 		return;
 	}
 	
@@ -136,7 +142,7 @@ void MifareDesfireGetInformation(){
 	len =  DesfireAPDU(cmd, cmd_len, resp);
 	if ( !len ) {
 		print_result("ERROR <--: ", resp, len);	
-		OnError(2);
+		OnError(3);
 		return;
 	}	
 	
@@ -148,7 +154,7 @@ void MifareDesfireGetInformation(){
 	len =  DesfireAPDU(cmd, cmd_len, resp);
 	if ( !len ) {
 		print_result("ERROR <--: ", resp, len);	
-		OnError(2);
+		OnError(3);
 		return;
 	}
 	
@@ -431,7 +437,7 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
 			AesCtx ctx;
 			if ( AesCtxIni(&ctx, IV, key->data, KEY128, CBC) < 0 ){
 				if( MF_DBGLEVEL >= 4) {
-					Dbprintf("AES context failed to init");
+					DbpString("AES context failed to init");
 				}
 				OnError(7);
 				return;

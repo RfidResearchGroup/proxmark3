@@ -145,7 +145,15 @@ int CmdHF14ADesInfo(const char *Cmd){
 	}
 	uint8_t isOK  = resp.arg[0] & 0xff;
 	if ( !isOK ){
-		PrintAndLog("Command unsuccessful");
+		switch ( resp.arg[1] ) {
+			case 1: 
+				PrintAndLog("Can't select card"); break;
+			case 2:
+				PrintAndLog("Card is most likely not Desfire. Its UID has wrong size"); break;
+			case 3:				
+			default:
+				PrintAndLog("Command unsuccessful"); break;
+		}
 		return 0;
 	}  
 	PrintAndLog("");
