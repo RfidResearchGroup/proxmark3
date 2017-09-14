@@ -501,7 +501,7 @@ static int GetIso15693AnswerFromSniff(uint8_t *received, int *samples, int *elap
 			// tone that the tag AM-modulates, so every other sample is I,
 			// every other is Q. We just want power, so abs(I) + abs(Q) is
 			// close to what we want.
-			if(getNext) {
+			if (getNext) {
 
 				buf[counter++] = (uint8_t)(MAX(ci,cq) + (MIN(ci, cq) >> 1));
 
@@ -1007,9 +1007,12 @@ void SimTagIso15693(uint32_t parameter, uint8_t *uid) {
 			TransmitTo15693Reader(ToSend, ToSendMax, &tsamples, &wait);
 			LogTrace(cmd, CMD_INV_RESP, time_start << 4, (GetCountSspClk() - time_start) << 4, NULL, true);						
 					
-			Dbprintf("%d octets read from reader command: %x %x %x %x %x %x %x %x %x", ans,
-			buf[0], buf[1], buf[2],	buf[3],
-			buf[4], buf[5],	buf[6], buf[7], buf[8]);
+			if (DEBUG) {
+				Dbprintf("%d octets read from reader command: %x %x %x %x %x %x %x %x", ans,
+					buf[0], buf[1], buf[2],	buf[3],
+					buf[4], buf[5],	buf[6], buf[7]
+				);
+			}
 		}
 	}
 	switch_off();
