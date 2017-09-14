@@ -12,7 +12,7 @@
 $ENV{'LC_ALL'} = "C";
 $ENV{'LANG'} = "C";
 
-my $githistory = `git fetch --all`;
+#my $githistory = `git fetch --all`;
 my $gitversion = `git describe --dirty`;
 my $gitbranch = `git rev-parse --abbrev-ref HEAD`;
 my $clean = $gitversion =~ '-dirty' ? 0 : 1;
