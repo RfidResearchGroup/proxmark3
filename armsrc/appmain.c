@@ -1000,12 +1000,13 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			LED_B_OFF();
 			break;
 		}
-		case CMD_DOWNLOADED_SIM_SAMPLES_125K: {
+		case CMD_UPLOAD_SIM_SAMPLES_125K: {
 			// iceman; since changing fpga_bitstreams clears bigbuff, Its better to call it before.
 			// to be able to use this one for uploading data to device 
 			// arg1 = 0 upload for LF usage 
 			//        1 upload for HF usage
-			if ( c->arg[1] == 0 )
+			#define FPGA_LF 1
+			if ( c->arg[1] == FPGA_LF )
 				FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 			else 
 				FpgaDownloadAndGo(FPGA_BITSTREAM_HF);

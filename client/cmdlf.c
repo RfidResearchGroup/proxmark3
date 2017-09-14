@@ -75,16 +75,27 @@ int usage_lf_config(void) {
 	return 0;
 }
 int usage_lf_simfsk(void) {
-	PrintAndLog("Usage: lf simfsk [c <clock>] [i] [H <fcHigh>] [L <fcLow>] [d <hexdata>]");
+	PrintAndLog("Usage: lf simfsk [h] [c <clock>] [H <fcHigh>] [L <fcLow>] [d <hexdata>]");
+	PrintAndLog("there are about four FSK modulations to know of.");
+	PrintAndLog("FSK1  -  where fc/8 = high  and fc/5 = low");
+	PrintAndLog("FSK1a -  is inverted FSK1,  ie:   fc/5 = high and fc/8 = low");
+	PrintAndLog("FSK2  -  where fc/10 = high  and fc/8 = low");
+	PrintAndLog("FSK2a -  is inverted FSK2,  ie:   fc/10 = high and fc/8 = low");	
+	PrintAndLog("");
 	PrintAndLog("Options:");
 	PrintAndLog("       h              This help");
 	PrintAndLog("       c <clock>      Manually set clock - can autodetect if using DemodBuffer");
-	PrintAndLog("       i              invert data");
 	PrintAndLog("       H <fcHigh>     Manually set the larger Field Clock");
 	PrintAndLog("       L <fcLow>      Manually set the smaller Field Clock");
-	//PrintAndLog("       s              TBD- -to enable a gap between playback repetitions - default: no gap");
+	//PrintAndLog("       s              TBD- -STT to enable a gap between playback repetitions - default: no gap");
 	PrintAndLog("       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
 	PrintAndLog("\n  NOTE: if you set one clock manually set them all manually");
+	PrintAndLog("\nSamples:");
+	PrintAndLog("       lf simfsk c 40 H 8 L 5 d 010203      -  FSK1  rf/40  data 010203");
+	PrintAndLog("       lf simfsk c 40 H 5 L 8 d 010203      -  FSK1a rf/40  data 010203");
+	PrintAndLog("       lf simfsk c 64 H 10 L 8 d 010203     -  FSK2  rf/64  data 010203");
+	PrintAndLog("       lf simfsk c 64 H 8 L 10 d 010203     -  FSK2a rf/64  data 010203");
+	PrintAndLog("");
 	return 0;
 }
 int usage_lf_simask(void) {
@@ -400,9 +411,10 @@ static void ChkBitstream(const char *str) {
 //Attempt to simulate any wave in buffer (one bit per output sample)
 // converts GraphBuffer to bitstream (based on zero crossings) if needed.
 int CmdLFSim(const char *Cmd) {
-	int i,j;
-	static int gap;
+#define FPGA_LF 1
+#define FPGA_HF 2
 
+	int gap = 0;
 	sscanf(Cmd, "%i", &gap);
 
 	// convert to bitstream if necessary 
@@ -410,12 +422,13 @@ int CmdLFSim(const char *Cmd) {
 
 	if (g_debugMode) 
 		printf("DEBUG: Sending [%d bytes]\n", GraphTraceLen);
+			
 	
 	//can send only 512 bits at a time (1 byte sent per bit...)
-	for (i = 0; i < GraphTraceLen; i += USB_CMD_DATA_SIZE) {
-		UsbCommand c = {CMD_DOWNLOADED_SIM_SAMPLES_125K, {i, 0, 0}};
+	for (uint16_t i = 0; i < GraphTraceLen; i += USB_CMD_DATA_SIZE) {
+		UsbCommand c = {CMD_UPLOAD_SIM_SAMPLES_125K, {i, FPGA_LF, 0}};
 
-		for (j = 0; j < USB_CMD_DATA_SIZE; j++)
+		for (uint16_t j = 0; j < USB_CMD_DATA_SIZE; j++)
 			c.d.asBytes[j] = GraphBuffer[i+j];
 
 		clearCommandBuffer();
@@ -438,21 +451,16 @@ int CmdLFfskSim(const char *Cmd) {
 	//might be able to autodetect FCs and clock from Graphbuffer if using demod buffer
 	// otherwise will need FChigh, FClow, Clock, and bitstream
 	uint8_t fcHigh = 0, fcLow = 0, clk = 0;
-	uint8_t invert = 0;
-	bool errors = false;
+	bool errors = false, separator = false;
 	char hexData[32] = {0x00}; // store entered hex data
 	uint8_t data[255] = {0x00}; 
 	int dataLen = 0;
-	uint8_t cmdp = 0;
+	uint8_t cmdp = 0;	
 	
 	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch(param_getchar(Cmd, cmdp)){
 			case 'h':
 				return usage_lf_simfsk();
-			case 'i':
-				invert = 1;
-				cmdp++;
-				break;
 			case 'c':
 				errors |= param_getdec(Cmd, cmdp+1, &clk);
 				cmdp += 2;
@@ -465,10 +473,10 @@ int CmdLFfskSim(const char *Cmd) {
 				errors |= param_getdec(Cmd, cmdp+1, &fcLow);
 				cmdp += 2;
 				break;
-			//case 's':
-			//  separator = 1;
-			//  cmdp++;
-			//  break;
+			case 's':
+				separator = 1;
+				cmdp++;
+				break;
 			case 'd':
 				dataLen = param_getstr(Cmd, cmdp+1, hexData);
 				if (dataLen == 0)
@@ -514,7 +522,7 @@ int CmdLFfskSim(const char *Cmd) {
 
 	uint16_t arg1, arg2;
 	arg1 = fcHigh << 8 | fcLow;
-	arg2 = invert << 8 | clk;
+	arg2 = separator << 8 | clk;
 	size_t size = DemodBufferLen;
 	if (size > USB_CMD_DATA_SIZE) {
 		PrintAndLog("DemodBuffer too long for current implementation - length: %d - max: %d", size, USB_CMD_DATA_SIZE);
@@ -525,6 +533,8 @@ int CmdLFfskSim(const char *Cmd) {
 	memcpy(c.d.asBytes, DemodBuffer, size);
 	clearCommandBuffer();
 	SendCommand(&c);
+	
+	setClockGrid(clk, 0);
 	return 0;
 }
 
