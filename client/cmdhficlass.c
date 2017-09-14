@@ -345,6 +345,11 @@ int CmdHFiClassSim(const char *Cmd) {
 			uint8_t num_mac_responses  = resp.arg[1];
 			PrintAndLog("Mac responses: %d MACs obtained (should be %d)", num_mac_responses, NUM_CSNS);
 
+			if ( num_mac_responses == 0 ) {
+				PrintAndLog("hf iclass sim - attack failed");
+				break;
+			}
+			
 			size_t datalen = NUM_CSNS*24;
 
 			void* dump = malloc(datalen);
@@ -382,6 +387,11 @@ int CmdHFiClassSim(const char *Cmd) {
 			uint8_t num_mac_responses  = resp.arg[1];
 			PrintAndLog("Mac responses: %d MACs obtained (should be %d)", num_mac_responses, NUM_CSNS * 2);
 
+			if ( num_mac_responses == 0 ) {
+				PrintAndLog("hf iclass sim - attack failed");
+				break;
+			}
+			
 			size_t datalen = NUM_CSNS*24;
 			void* dump = malloc(datalen);
 			if ( !dump ) {
