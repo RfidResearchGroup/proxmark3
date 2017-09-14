@@ -91,16 +91,16 @@ int usage_lf_hid_brute(void){
 }
 
 // sending three times.  Didn't seem to break the previous sim?
-static int sendPing(void){
+static bool sendPing(void){
 	UsbCommand ping = {CMD_PING, {1, 2, 3}};
 	SendCommand(&ping);
 	SendCommand(&ping);	
 	SendCommand(&ping);	
 	clearCommandBuffer();
 	UsbCommand resp;
-	if (WaitForResponseTimeout(CMD_ACK, &resp, 1000))
-		return 0;
-	return 1;
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000))
+		return false;
+	return true;
 }
 static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, uint8_t *bits, bool verbose){
 
