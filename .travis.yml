@@ -38,7 +38,7 @@ before_script:
 script: 
 ## for the time being we are satisfied if it can be build and then successfully started
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
-    proxmark3 ;
+##    proxmark3 ;
   elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then 
-    ./client/proxmark3 ;
+##    ./client/proxmark3 ;
   fi
