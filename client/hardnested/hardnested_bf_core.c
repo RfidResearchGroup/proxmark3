@@ -77,7 +77,7 @@ THE SOFTWARE.
 #endif
 
 #define VECTOR_SIZE (MAX_BITSLICES/8)
-typedef unsigned int __attribute__((aligned(VECTOR_SIZE))) __attribute__((vector_size(VECTOR_SIZE))) bitslice_value_t;
+typedef uint32_t __attribute__((aligned(VECTOR_SIZE))) __attribute__((vector_size(VECTOR_SIZE))) bitslice_value_t;
 typedef union {
         bitslice_value_t value;
         uint64_t bytes64[MAX_BITSLICES/64];
