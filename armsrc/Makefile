@@ -24,6 +24,7 @@ APP_CFLAGS = -DWITH_CRC \
 			 -fno-strict-aliasing -ffunction-sections -fdata-sections
 ### IMPORTANT -  move the commented variable below this line
 #			 -DWITH_LCD \
+#			 -DWITH_EMV \
 #
 # Standalone Mods
 #-------------------------------------------------------
@@ -33,6 +34,7 @@ APP_CFLAGS = -DWITH_CRC \
 # -DWITH_LF_HIDCORP
 # -DWITH_HF_YOUNG
 # -DWITH_HF_MATTYRUN
+
 
 SRC_LCD = fonts.c LCD.c
 SRC_LF = lfops.c hitag2.c hitagS.c lfsampling.c pcf7931.c lfdemod.c
@@ -85,12 +87,18 @@ ARMSRC = fpgaloader.c \
 	$(SRC_ISO14443b) \
 	$(SRC_CRAPTO1) \
 	$(SRC_CRC) \
-	$(SRC_ICLASS) \
-	$(SRC_EMV) \
 	parity.c \
 	usb_cdc.c \
 	cmd.c
-
+	
+ifneq ($(WITH_ICLASS),"")
+ARMSRC += $(SRC_ICLASS)
+endif	
+	
+ifneq ($(WITH_EMV),"")
+ARMSRC += $(SRC_EMV)
+endif
+	
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
 include ../common/Makefile.common
 

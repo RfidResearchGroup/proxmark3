@@ -234,20 +234,20 @@ void HfSnoop(int , int);
 
 //EMV functions
 // emvcmd.h
-void EMVTransaction(void);
-void EMVgetUDOL(void);
-void EMVloadvalue(uint32_t tag, uint8_t* datain);
-void EMVdumpcard(void);
-//void EMVSelect(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *data);
-void EMVFuzz_RATS(uint8_t ratslen, uint8_t* RATS);
-void EMVReadRecord(uint8_t arg0, uint8_t arg1,emvcard* inputcard);
-void EMVSelectPPSE();
-void EMVSelectAID(uint8_t *AID, uint8_t AIDlen, emvcard* inputcard);
-void EMVTransaction();
-void EMVClone(uint8_t maxsfi, uint8_t maxrecord);
-void EMVSim();
-void EMVTest();
-void SimulateEMVcard();
+extern void EMVTransaction(void);
+extern void EMVgetUDOL(void);
+extern void EMVloadvalue(uint32_t tag, uint8_t* datain);
+extern void EMVdumpcard(void);
+//extern void EMVSelect(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *data);
+extern void EMVFuzz_RATS(uint8_t ratslen, uint8_t* RATS);
+extern void EMVReadRecord(uint8_t arg0, uint8_t arg1,emvcard* inputcard);
+extern void EMVSelectPPSE();
+extern void EMVSelectAID(uint8_t *AID, uint8_t AIDlen, emvcard* inputcard);
+extern void EMVTransaction();
+extern void EMVClone(uint8_t maxsfi, uint8_t maxrecord);
+extern void EMVSim();
+extern void EMVTest();
+extern void SimulateEMVcard();
 
 #ifdef __cplusplus
 }
