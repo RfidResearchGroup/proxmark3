@@ -243,7 +243,6 @@ extern void EMVFuzz_RATS(uint8_t ratslen, uint8_t* RATS);
 extern void EMVReadRecord(uint8_t arg0, uint8_t arg1,emvcard* inputcard);
 extern void EMVSelectPPSE();
 extern void EMVSelectAID(uint8_t *AID, uint8_t AIDlen, emvcard* inputcard);
-extern void EMVTransaction();
 extern void EMVClone(uint8_t maxsfi, uint8_t maxrecord);
 extern void EMVSim();
 extern void EMVTest();

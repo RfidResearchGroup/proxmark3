@@ -13,6 +13,9 @@ RM = rm -f
 MV = mv
 
 #COMMON_FLAGS = -m32
+# uncomment to enable EMV
+#COMMON_FLAGS += -DWITH_EMV
+
 VPATH = ../common ../zlib ../uart
 OBJDIR = obj
 

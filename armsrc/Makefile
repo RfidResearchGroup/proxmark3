@@ -86,18 +86,12 @@ ARMSRC = fpgaloader.c \
 	$(SRC_ISO14443a) \
 	$(SRC_ISO14443b) \
 	$(SRC_CRAPTO1) \
+	$(SRC_ICLASS) \
+	$(SRC_EMV) \
 	$(SRC_CRC) \
 	parity.c \
 	usb_cdc.c \
 	cmd.c
-	
-ifneq ($(WITH_ICLASS),"")
-ARMSRC += $(SRC_ICLASS)
-endif	
-	
-ifneq ($(WITH_EMV),"")
-ARMSRC += $(SRC_EMV)
-endif
 	
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
 include ../common/Makefile.common
