@@ -403,7 +403,9 @@ int bruteforceItem(dumpdata item, uint16_t keytable[])
 		
 		brute++;
 		if ((brute & 0xFFFF) == 0) {
-			printf("%d,",(brute >> 16) & 0xFF);
+			printf("%3d,",(brute >> 16) & 0xFF);
+			if ( ((brute >> 16) % 0x10) == 0)
+				printf("\n");
 			fflush(stdout);
 		}
 	}
@@ -418,6 +420,7 @@ int bruteforceItem(dumpdata item, uint16_t keytable[])
 			keytable[bytes_to_recover[i]]  |= CRACK_FAILED;
 		}
 	} else {
+		prnlog("DES calcs: %u\n", brute);
 		for (i=0; i < numbytes_to_recover; i++){
 			keytable[bytes_to_recover[i]]  &= 0xFF;
 			keytable[bytes_to_recover[i]]  |= CRACKED;

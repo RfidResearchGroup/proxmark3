@@ -343,14 +343,17 @@ int CmdHFiClassSim(const char *Cmd) {
 			}
 
 			uint8_t num_mac_responses  = resp.arg[1];
-			PrintAndLog("Mac responses: %d MACs obtained (should be %d)", num_mac_responses, NUM_CSNS);
+			bool success = ( NUM_CSNS == num_mac_responses );
+			PrintAndLog("Mac responses: %d MACs obtained (should be %d) %s"
+				, num_mac_responses
+				, NUM_CSNS
+				, (success) ? "OK":"FAIL"
+			);
 
-			if ( num_mac_responses == 0 ) {
-				PrintAndLog("hf iclass sim - attack failed");
+			if ( num_mac_responses == 0 )
 				break;
-			}
 			
-			size_t datalen = NUM_CSNS*24;
+			size_t datalen = NUM_CSNS * 24;
 
 			void* dump = malloc(datalen);
 			if ( !dump ) {
@@ -361,9 +364,9 @@ int CmdHFiClassSim(const char *Cmd) {
 			memset(dump, 0, datalen);//<-- Need zeroes for the CC-field
 			uint8_t i = 0;
 			for (i = 0 ; i < NUM_CSNS ; i++) {
-				memcpy(dump + i*24, csns + i*8, 8); //CSN
-				//8 zero bytes here...
-				//Then comes NR_MAC (eight bytes from the response)
+				//copy CSN 
+				memcpy(dump + i*24, csns + i*8, 8);
+				//8 zero bytes here then comes NR_MAC (eight bytes from the response)  ( 8b csn + 8 empty== 16)
 				memcpy(dump + i*24 + 16, resp.d.asBytes + i*8, 8);
 			}
 			/** Now, save to dumpfile **/
@@ -385,36 +388,46 @@ int CmdHFiClassSim(const char *Cmd) {
 			}
 
 			uint8_t num_mac_responses  = resp.arg[1];
-			PrintAndLog("Mac responses: %d MACs obtained (should be %d)", num_mac_responses, NUM_CSNS * 2);
+			bool success = ( (NUM_CSNS * 2) == num_mac_responses );
+			PrintAndLog("Mac responses: %d MACs obtained (should be %d) %s"
+				, num_mac_responses
+				, NUM_CSNS * 2
+				, (success) ? "OK":"FAIL"
+			);
 
-			if ( num_mac_responses == 0 ) {
-				PrintAndLog("hf iclass sim - attack failed");
+			if ( num_mac_responses == 0 )
 				break;
-			}
 			
-			size_t datalen = NUM_CSNS*24;
+			size_t datalen = NUM_CSNS * 24;
 			void* dump = malloc(datalen);
 			if ( !dump ) {
 				PrintAndLog("Failed to allocate memory");
 				return 2;
 			}
 			
+			#define MAC_ITEM_SIZE 24
+			
 			//KEYROLL 1
 			//Need zeroes for the CC-field
 			memset(dump, 0, datalen);
 			for (uint8_t i = 0; i < NUM_CSNS ; i++) {
-				memcpy(dump + i*24, csns + i*8, 8); //CSN
-				//8 zero bytes here...
-				//Then comes NR_MAC (eight bytes from the response)
-				memcpy(dump + i*24 + 16, resp.d.asBytes + i*8, 8);
+				// Copy CSN
+				memcpy(dump + i*MAC_ITEM_SIZE, csns + i*8, 8); //CSN
+				//8 zero bytes here then comes NR_MAC (eight bytes from the response)  ( 8b csn + 8 empty== 16)
+				memcpy(dump + i*MAC_ITEM_SIZE + 16, resp.d.asBytes + i*8, 8);
 			}
 			saveFile("iclass_mac_attack_keyroll_A", "bin", dump, datalen);
 
 			//KEYROLL 2
 			memset(dump, 0, datalen);
-			for (uint8_t i = NUM_CSNS; i < NUM_CSNS*2 ; i++) {
-				memcpy(dump + i*24, csns + i*8, 8); 
-				memcpy(dump + i*24 + 16, resp.d.asBytes + i*8, 8);
+			uint8_t resp_index = 0;
+			for (uint8_t i = 0; i < NUM_CSNS; i++) {
+				resp_index =  (i + NUM_CSNS) * 8;
+				// Copy CSN
+				memcpy(dump + i*MAC_ITEM_SIZE, csns + i*8, 8); 
+				//8 zero bytes here then comes NR_MAC (eight bytes from the response)  ( 8b csn + 8 empty== 16)
+				memcpy(dump + i*MAC_ITEM_SIZE + 16, resp.d.asBytes + resp_index, 8);
+				resp_index++;
 			}						
 			saveFile("iclass_mac_attack_keyroll_B", "bin", dump, datalen);
 			
