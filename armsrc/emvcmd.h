@@ -18,7 +18,6 @@
 #include "string.h"
 #include "iso14443crc.h"
 #include "iso14443a.h"
-#include "emvcmd.h"
 #include "emvutil.h"
 #include "emvdataels.h"
 #include "emvcard.h"

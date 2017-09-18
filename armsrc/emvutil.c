@@ -1360,6 +1360,24 @@ int emv_select(uint8_t* AID, uint8_t AID_len, void* data)
     return iso14_apdu(selectCmd, selectCmd_len, data);
 }
 
+
+int emv_selectPPSE()
+{
+    int isOK = 0; 
+    //PPSE directory = "2PAY.SYS.DDF01"
+    //uint8_t AID[14] = {0x32,0x50,0x41,0x59,0x2E,0x53,0x59,0x53,0x2E,0x44,0x44,0x46,0x30,0x31}; 
+    while(true) { 
+        if(!emv_select((uint8_t*)DF_PSE, 14, NULL)){
+            if(MF_DBGLEVEL >= 1) Dbprintf("SELECT PPSE FAILED");
+                break; 
+        } 
+        isOK=1;
+        break;
+    }
+    if(MF_DBGLEVEL >= 2) DbpString("SELECT_PPSE Finished");
+    return isOK;
+}
+
 //perform READ RECORD
 int emv_readrecord(uint8_t recordnumber, uint8_t sfi, void* data)
 {

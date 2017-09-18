@@ -2,7 +2,6 @@
 // Peter Fillmore 2014
 // code derived off merloks mifare code
 // 
-//
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
@@ -23,7 +22,6 @@
 #include "BigBuf.h"
 #include "iso14443crc.h"
 #include "iso14443a.h"
-#include "emvutil.h"
 #include "emvdataels.h" //EMV data elements 
 #include "emvtags.h" //EMV card structure
 
