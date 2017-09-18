@@ -269,7 +269,9 @@ lua_build:
 	cd ../liblua && make $(LUAPLATFORM)
 
 .PHONY: all clean
-print-%: ; @echo $* = $($*)
+
+# easy printing of MAKE VARIABLES
+print-%: ; @echo $* = $($*) 
 
 $(OBJDIR)/%_NOSIMD.o : %.c $(OBJDIR)/%.d
 	$(CC) $(DEPFLAGS) $(CFLAGS) $(HARD_SWITCH_NOSIMD) -c -o $@ $<

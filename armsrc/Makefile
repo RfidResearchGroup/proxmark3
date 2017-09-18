@@ -160,4 +160,3 @@ help:
 	@echo Possible targets:
 	@echo +	all    - Build the full image $(OBJDIR)/fullimage.s19
 	@echo +	clean             - Clean $(OBJDIR)
-

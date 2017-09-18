@@ -75,5 +75,8 @@ udev:
 	sudo udevadm control --reload-rules
 	sudo adduser $USER dialout
  
+# easy printing of MAKE VARIABLES
+print-%: ; @echo $* = $($*) 
+
 # Dummy target to test for GNU make availability
 _test:

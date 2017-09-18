@@ -109,6 +109,9 @@ $(OBJDIR)/%.s19: $(OBJDIR)/%.elf
 version.c: default_version.c
 	perl ../tools/mkversion.pl .. > $@ || $(COPY) $^ $@ 
 
+# easy printing of MAKE VARIABLES
+print-%: ; @echo $* = $($*) 
+	
 # Automatic dependency generation
 DEPENDENCY_FILES = $(patsubst %.c,$(OBJDIR)/%.d,$(notdir $(THUMBSRC))) \
 	$(patsubst %.c,$(OBJDIR)/%.d,$(notdir $(ARMSRC))) \
