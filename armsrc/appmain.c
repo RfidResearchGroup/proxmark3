@@ -887,8 +887,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             break;
         case CMD_EMV_DUMP_CARD:
             EMVdumpcard();
-			break;
-/*			
+			break;		
        case CMD_EMV_READ_RECORD:
             EMVReadRecord(c->arg[0], c->arg[1], NULL);
             break; 
@@ -904,7 +903,6 @@ void UsbPacketReceived(uint8_t *packet, int len) {
         case CMD_EMV_FUZZ_RATS:
             EMVFuzz_RATS(c->arg[0],c->d.asBytes);
             break;
-			*/
 #endif
 #ifdef WITH_ICLASS
 		// Makes use of ISO14443a FPGA Firmware

@@ -12,7 +12,7 @@
 
 static emvcard currentcard; //use to hold emv tags for the reader/card during communications
 
-void EMVTest()
+void EMVTest(void)
 {
     uint8_t rats[0x0b] = {0x0b,0x78,0x80,0x81,0x02,0x4b,0x4f,0x4e,0x41, 0x14, 0x11};
     EMVFuzz_RATS(0xb, rats);
@@ -132,7 +132,7 @@ void EMVSelectAID(uint8_t *AID, uint8_t AIDlen, emvcard* inputcard)
 	LEDsoff();
 }
 							   
-void EMVSelectPPSE()
+void EMVSelectPPSE(void)
 {
     while(true) { 
         if(!emv_selectPPSE()) {
@@ -224,7 +224,7 @@ int EMVGenerateAC(uint8_t refcontrol, emvcard* inputcard)
 
 //function to perform paywave transaction
 //takes in TTQ, amount authorised, unpredicable number and transaction currency code
-int EMV_PaywaveTransaction()
+int EMV_PaywaveTransaction(void)
 {
     uint8_t *resp  = BigBuf_malloc(256);
     tlvtag temptag; 
@@ -332,7 +332,7 @@ int EMV_PaywaveTransaction()
     return 0;
 } 
 
-int EMV_PaypassTransaction()
+int EMV_PaypassTransaction(void)
 {
     uint8_t *resp  = BigBuf_malloc(256); 
     tlvtag temptag; //buffer for decoded tags 
@@ -449,7 +449,7 @@ int EMV_PaypassTransaction()
     return 0;
 }
 
-void EMVTransaction()
+void EMVTransaction(void)
 {
     //params
     uint8_t uid[10] = {0x00};
@@ -651,7 +651,7 @@ void EMVClone(uint8_t maxsfi, uint8_t maxrecord)
 // Main loop of simulated tag: receive commands from reader, decide what
 // response to send, and send it.
 //-----------------------------------------------------------------------------
-void SimulateEMVcard()
+void EMVSim(void)
 {
 	/*
 	

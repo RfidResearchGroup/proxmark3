@@ -246,7 +246,6 @@ extern void EMVSelectAID(uint8_t *AID, uint8_t AIDlen, emvcard* inputcard);
 extern void EMVClone(uint8_t maxsfi, uint8_t maxrecord);
 extern void EMVSim();
 extern void EMVTest();
-extern void SimulateEMVcard();
 
 #ifdef __cplusplus
 }
