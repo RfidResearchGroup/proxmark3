@@ -15,15 +15,14 @@ void DbpString(char *str) {
 	while (str[len] != 0x00)
 		len++;
 	
-	cmd_send(CMD_DEBUG_PRINT_STRING,len,0,0,(byte_t*)str,len);
+	cmd_send(CMD_DEBUG_PRINT_STRING, len, 0, 0, (byte_t*)str, len);
 }
 
 struct common_area common_area __attribute__((section(".commonarea")));
 unsigned int start_addr, end_addr, bootrom_unlocked;
 extern char _bootrom_start, _bootrom_end, _flash_start, _flash_end;
 
-static void ConfigClocks(void)
-{
+static void ConfigClocks(void) {
     // we are using a 16 MHz crystal as the basis for everything
     // slow clock runs at 32Khz typical regardless of crystal
 
@@ -122,7 +121,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 				uint32_t flash_address = arg0 + (0x100*j);
         
 				/* Check that the address that we are supposed to write to is within our allowed region */
-				if( ((flash_address+AT91C_IFLASH_PAGE_SIZE-1) >= end_addr) || (flash_address < start_addr) ) {
+				if( ((flash_address + AT91C_IFLASH_PAGE_SIZE - 1) >= end_addr) || (flash_address < start_addr) ) {
 					/* Disallow write */
 					dont_ack = 1;
 					cmd_send(CMD_NACK,0,0,0,0,0);
@@ -150,7 +149,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 		} break;
       
 		case CMD_START_FLASH: {
-			if(c->arg[2] == START_FLASH_MAGIC) 
+			if (c->arg[2] == START_FLASH_MAGIC) 
 				bootrom_unlocked = 1;
 			else 
 				bootrom_unlocked = 0;
@@ -182,12 +181,11 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 		} break;
 	}
   
-	if(!dont_ack)
+	if (!dont_ack)
 		cmd_send(CMD_ACK,arg0,0,0,0,0);
 }
 
-static void flash_mode(int externally_entered)
-{
+static void flash_mode(int externally_entered) {
 	start_addr = 0;
 	end_addr = 0;
 	bootrom_unlocked = 0;
@@ -201,20 +199,19 @@ static void flash_mode(int externally_entered)
 		WDT_HIT();
 
 		if (usb_poll()) {
-			rx_len = usb_read(rx,sizeof(UsbCommand));
+			rx_len = usb_read(rx, sizeof(UsbCommand));
 			if (rx_len)
-				UsbPacketReceived(rx,rx_len);
+				UsbPacketReceived(rx, rx_len);
 		}
 
-		if(!externally_entered && !BUTTON_PRESS()) {
+		if (!externally_entered && !BUTTON_PRESS()) {
 			/* Perform a reset to leave flash mode */
 			usb_disable();
 			LED_B_ON();
 			AT91C_BASE_RSTC->RSTC_RCR = RST_CONTROL_KEY | AT91C_RSTC_PROCRST;
-			for(;;)
-				;
+			for(;;) {};
 		}
-		if(externally_entered && BUTTON_PRESS()) {
+		if (externally_entered && BUTTON_PRESS()) {
 			/* Let the user's button press override the automatic leave */
 			externally_entered = 0;
 		}
@@ -222,8 +219,7 @@ static void flash_mode(int externally_entered)
 }
 
 extern uint32_t _osimage_entry;
-void BootROM(void)
-{
+void BootROM(void) {
     //------------
     // First set up all the I/O pins; GPIOs configured directly, other ones
     // just need to be assigned to the appropriate peripheral.
