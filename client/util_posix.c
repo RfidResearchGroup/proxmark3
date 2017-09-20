@@ -35,7 +35,7 @@ void msleep(uint32_t n) {
 }
 #endif // _WIN32
 
-#ifdef __MACH__
+#ifdef __APPLE__
 
 	#define CLOCK_MONOTONIC (1)
 	#define CLOCK_REALTIME (2)
@@ -63,20 +63,19 @@ void msleep(uint32_t n) {
 
 		} else if (clk_id == CLOCK_MONOTONIC) {
 			static uint64_t clock_start_time = 0;
-			static mach_timebase_info_data_t timebase_ifo = {0, 0};
+			static mach_timebase_info_data_t timebase_info = {0, 0};
 
 			uint64_t now = mach_absolute_time();
 
 			if (clock_start_time == 0) {
-				//kern_return_t mach_status = mach_timebase_info(&timebase_ifo);
-				// appease "unused variable" warning for release builds
-				//(void)mach_status;
+				
+				mach_timebase_info(&timebase_info);
 				clock_start_time = now;
 			}
 
 			now = (uint64_t)((double)(now - clock_start_time)
-			                 * (double)timebase_ifo.numer
-			                 / (double)timebase_ifo.denom);
+			                 * (double)timebase_info.numer
+			                 / (double)timebase_info.denom);
 
 			t->tv_sec = now / 1000000000;
 			t->tv_nsec = now % 1000000000;
