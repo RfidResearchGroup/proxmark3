@@ -60,7 +60,7 @@ DETECTED_OS=Windows
 endif
 
 # uncomment these two; to enable EMV
-APP_CFLAGS += -DWITH_EMV
+#APP_CFLAGS += -DWITH_EMV
 
 # uncomment these two; to fix 256 vs 512kb PM3 devices
 # flashing bootrom -b is needed
