@@ -55,7 +55,7 @@ static void ConfigClocks(void) {
     // PLL output is MAINCK * multiplier / divisor = 16Mhz * 12 / 2 = 96Mhz
     AT91C_BASE_PMC->PMC_PLLR =
     	PMC_PLL_DIVISOR(2) |
-		PMC_PLL_COUNT_BEFORE_LOCK(0x50) |
+		PMC_PLL_COUNT_BEFORE_LOCK(0x10) |
 		PMC_PLL_FREQUENCY_RANGE(0) |
 		PMC_PLL_MULTIPLIER(12) |
 		PMC_PLL_USB_DIVISOR(1);
