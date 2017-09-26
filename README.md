@@ -148,6 +148,9 @@ Read instructions on @Gator96100 repo page. (https://github.com/Gator96100/ProxS
 Links
 - https://github.com/Gator96100/ProxSpace/archive/master.zip
 
+## OR
+
+Use the following list of packages required to setup the compile environment yourself.
 
 
 ### 1. QT Open Source
