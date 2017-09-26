@@ -833,7 +833,11 @@ int CmdHFList(const char *Cmd) {
 	// Query for the size of the trace
 	UsbCommand response;
 	GetFromBigBuf(trace, USB_CMD_DATA_SIZE, 0);
-	WaitForResponse(CMD_ACK, &response);
+	if ( !WaitForResponseTimeout(CMD_ACK, &response, 4000) ) {
+		PrintAndLog("timeout while waiting for reply.");
+		return 1;
+	}
+	
 	uint16_t traceLen = response.arg[2];
 	if (traceLen > USB_CMD_DATA_SIZE) {
 		uint8_t *p = realloc(trace, traceLen);
