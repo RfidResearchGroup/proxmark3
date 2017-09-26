@@ -112,7 +112,7 @@ serial_port uart_open(const char* pcPortName)
   sp->tiNew.c_cc[VTIME] = 0;
   
   // Try to set the new terminal info struct
-  if(tcsetattr(sp->fd,TCSANOW,&sp->tiNew) == -1) {
+  if(tcsetattr(sp->fd, TCSANOW, &sp->tiNew) == -1) {
     uart_close(sp);
     return INVALID_SERIAL_PORT;
   }
@@ -128,9 +128,13 @@ serial_port uart_open(const char* pcPortName)
 }
 
 void uart_close(const serial_port sp) {
+  if (!sp) return; 
+  if (sp == INVALID_SERIAL_PORT) return;
+  if (sp == CLAIMED_SERIAL_PORT) return;
+
   serial_port_unix* spu = (serial_port_unix*)sp;
-  tcflush(spu->fd,TCIOFLUSH);
-  tcsetattr(spu->fd,TCSANOW,&(spu->tiOld));
+  tcflush(spu->fd, TCIOFLUSH);
+  tcsetattr(spu->fd, TCSANOW, &(spu->tiOld));
   struct flock fl;
   fl.l_type   = F_UNLCK;
   fl.l_whence = SEEK_SET;

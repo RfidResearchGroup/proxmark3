@@ -69,7 +69,7 @@ serial_port uart_open(const char* pcPortName) {
   sp->hPort = CreateFileA(acPortName, GENERIC_READ|GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
   if (sp->hPort == INVALID_HANDLE_VALUE) {
     uart_close(sp);
-    return INVALID_SERIAL_PORT;
+	return INVALID_SERIAL_PORT;
   }
   
   // Prepare the device control
@@ -107,7 +107,9 @@ serial_port uart_open(const char* pcPortName) {
 }
 
 void uart_close(const serial_port sp) {
-	if (!sp) return;
+  if (!sp) return; 
+  if (sp == INVALID_SERIAL_PORT) return;
+  if (sp == CLAIMED_SERIAL_PORT) return;
 	if (((serial_port_windows*)sp)->hPort != NULL )
 		CloseHandle(((serial_port_windows*)sp)->hPort);
 	free(sp);

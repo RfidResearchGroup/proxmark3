@@ -372,11 +372,7 @@ int main(int argc, char* argv[]) {
 #else
 	main_loop(script_cmds_file, usb_present);
 #endif	
-
-	// Clean up the port
-	if (usb_present)
-		uart_close(sp);
-  
+ 
 	// clean up mutex
 	pthread_mutex_destroy(&print_lock);
 	
