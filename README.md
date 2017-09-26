@@ -136,6 +136,20 @@ Recommendations:  Use only latest container.
 
 
 ## Building on Windows
+
+### Gator96100 distro
+Rather than download and install every one of these packages, a new ProxSpace 
+environment archive file will be made available for download on the project
+page at @Gator96100's repo
+
+Afterwards just clone the iceman repo or download someone elses.
+Read instructions on @Gator96100 repo page. (https://github.com/Gator96100/ProxSpace/)
+
+Links
+- https://github.com/Gator96100/ProxSpace/archive/master.zip
+
+
+
 ### 1. QT Open Source
 Download QT 5.6.1: http://download.qt.io/archive/qt/5.6/5.6.1-1/qt-opensource-windows-x86-mingw492-5.6.1-1.exe		
 Install to `C:\Qt` and choose the following components to be installed:		
