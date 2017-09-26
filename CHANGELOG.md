@@ -3,7 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-  - 
+
+## [ice.3.1.0][2017-09-26]
+  - proxmark3 client can reconnect to device without restart (iceman)
+  - lots of bug fixes (many many)
   - trace/securakey-64169.pm3 - trace of a scecurakey (atyppo)
   - 'hf mf decrypt' - got some longer input and helptext parameter (iceman)  
   - Updated the Reveng 1.51 sourcecode to 1.52 from Reveng project homepage (iceman)

@@ -17,7 +17,22 @@ To compile, just run "make".
 ===========
 = Windows =
 ===========
-The following is a complete list of packages required to setup the compile environment yourself. Alternatively you can download an archive of the full environment (see below).
+
+Rather than download and install every one of these packages, a new ProxSpace 
+environment archive file will be made available for download on the project
+page at @Gator96100's repo
+
+Afterwards just clone the iceman repo or download someone elses.  Read instructions on @Gator96100 repo page. (https://github.com/Gator96100/ProxSpace/)
+
+Download the ProxSpace environment archive and extract it to C:\
+
+Links
+  https://github.com/Gator96100/ProxSpace/archive/master.zip
+
+
+-- OR --
+
+Use the following list of packages required to setup the compile environment yourself.
 
 1 - Install QT SDK for Windows [1]
 
@@ -72,11 +87,6 @@ Download links:
 [5] http://sourceforge.net/projects/devkitpro/files/Automated%20Installer/devkitProUpdater-1.5.0.exe/download
 [6] http://strawberry-perl.googlecode.com/files/strawberry-perl-5.10.1.1.msi
 
-Rather than download and install every one of these packages, a new ProxSpace
-environment archive file will be made available for download on the project
-page at http://code.google.com/p/proxmark3/downloads/list
-
-Download the ProxSpace environment archive and extract it to C:\
 
 ============
 = Mac OS X =
