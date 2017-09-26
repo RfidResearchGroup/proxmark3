@@ -794,7 +794,7 @@ int EM4x50Read(const char *Cmd, bool verbose) {
 	char tmp2[20];
 	int phaseoff;
 	high = low = 0;
-	memset(tmpbuff, 0, MAX_GRAPH_TRACE_LEN / 64);
+	memset(tmpbuff, 0, sizeof(tmpbuff) );
 
 	// get user entry if any
 	sscanf(Cmd, "%i %i", &clk, &invert);

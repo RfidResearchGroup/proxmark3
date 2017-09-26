@@ -342,7 +342,7 @@ const uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, 
 			// }
 #endif
             // add the even state bits
-			const bitslice_t const *restrict bitsliced_even_state = bitsliced_even_states[block_idx];
+			const bitslice_t *restrict bitsliced_even_state = bitsliced_even_states[block_idx];
 			for(uint32_t state_idx = 1; state_idx < STATE_SIZE; state_idx += 2) {
 				state_p[state_idx] = bitsliced_even_state[state_idx/2];
 			}

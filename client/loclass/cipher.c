@@ -114,9 +114,9 @@ uint8_t _select(bool x, bool y, uint8_t r)
 	bool r6 = r >> 1 & 0x1;
 	bool r7 = r & 0x1;
 
-	bool z0 = (r0 & r2) ^ (r1 & ~r3) ^ (r2 | r4);
+	bool z0 = (r0 & r2) ^ (r1 & !r3) ^ (r2 | r4);
 	bool z1 = (r0 | r2) ^ ( r5 | r7) ^ r1 ^ r6 ^ x ^ y;
-	bool z2 = (r3 & ~r5) ^ (r4 & r6 ) ^ r7 ^ x;
+	bool z2 = (r3 & !r5) ^ (r4 & r6 ) ^ r7 ^ x;
 
 	// The three bitz z0.. z1 are packed into a uint8_t:
 	// 00000ZZZ
