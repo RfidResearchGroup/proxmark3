@@ -27,15 +27,15 @@ static char* serial_port_name;
 
 void cmd_debug(UsbCommand* UC) {
 	//  Debug
-	printf("UsbCommand length[len=%zd]\n",sizeof(UsbCommand));
-	printf("  cmd[len=%zd]: %016" PRIx64"\n",sizeof(UC->cmd),UC->cmd);
-	printf(" arg0[len=%zd]: %016" PRIx64"\n",sizeof(UC->arg[0]),UC->arg[0]);
-	printf(" arg1[len=%zd]: %016" PRIx64"\n",sizeof(UC->arg[1]),UC->arg[1]);
-	printf(" arg2[len=%zd]: %016" PRIx64"\n",sizeof(UC->arg[2]),UC->arg[2]);
-	printf(" data[len=%zd]: ",sizeof(UC->d.asBytes));
+	printf("UsbCommand length[len=%zd]\n", sizeof(UsbCommand));
+	printf("  cmd[len=%zd]: %016" PRIx64"\n", sizeof(UC->cmd), UC->cmd);
+	printf(" arg0[len=%zd]: %016" PRIx64"\n", sizeof(UC->arg[0]), UC->arg[0]);
+	printf(" arg1[len=%zd]: %016" PRIx64"\n", sizeof(UC->arg[1]), UC->arg[1]);
+	printf(" arg2[len=%zd]: %016" PRIx64"\n", sizeof(UC->arg[2]), UC->arg[2]);
+	printf(" data[len=%zd]: ", sizeof(UC->d.asBytes));
 
 	for (size_t i=0; i<16; i++)
-		printf("%02x",UC->d.asBytes[i]);
+		printf("%02x", UC->d.asBytes[i]);
 
 	printf("...\n");
 }
@@ -43,7 +43,7 @@ void cmd_debug(UsbCommand* UC) {
 void SendCommand(UsbCommand* txcmd) {
 	//  printf("send: ");
 	//  cmd_debug(txcmd);
-	if (!uart_send(sp,(byte_t*)txcmd,sizeof(UsbCommand))) {
+	if (!uart_send(sp,(byte_t*)txcmd, sizeof(UsbCommand))) {
 		printf("Sending bytes to proxmark failed\n");
 		exit(1);
 	}
@@ -80,8 +80,7 @@ int OpenProxmark(size_t i) {
 	return 1;
 }
 
-static void usage(char *argv0)
-{
+static void usage(char *argv0) {
 	fprintf(stderr, "Usage:   %s <port> [-b] image.elf [image.elf...]\n\n", argv0);
 	fprintf(stderr, "\t-b\tEnable flashing of bootloader area (DANGEROUS)\n\n");
 	fprintf(stderr, "\nExample (Linux):\n\n\t %s  /dev/ttyACM0 armsrc/obj/fullimage.elf\n", argv0);

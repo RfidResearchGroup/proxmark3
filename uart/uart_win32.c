@@ -62,11 +62,11 @@ serial_port uart_open(const char* pcPortName) {
   serial_port_windows* sp = malloc(sizeof(serial_port_windows));
   
   // Copy the input "com?" to "\\.\COM?" format
-  sprintf(acPortName,"\\\\.\\%s",pcPortName);
+  sprintf(acPortName,"\\\\.\\%s", pcPortName);
   upcase(acPortName);
   
   // Try to open the serial port
-  sp->hPort = CreateFileA(acPortName,GENERIC_READ|GENERIC_WRITE,0,NULL,OPEN_EXISTING,0,NULL);
+  sp->hPort = CreateFileA(acPortName, GENERIC_READ|GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
   if (sp->hPort == INVALID_HANDLE_VALUE) {
     uart_close(sp);
     return INVALID_SERIAL_PORT;
@@ -75,13 +75,13 @@ serial_port uart_open(const char* pcPortName) {
   // Prepare the device control
   memset(&sp->dcb, 0, sizeof(DCB));
   sp->dcb.DCBlength = sizeof(DCB);
-  if(!BuildCommDCBA("baud=115200 parity=N data=8 stop=1",&sp->dcb)) {
+  if (!BuildCommDCBA("baud=115200 parity=N data=8 stop=1",&sp->dcb)) {
     uart_close(sp);
     return INVALID_SERIAL_PORT;
   }
   
   // Update the active serial port
-  if(!SetCommState(sp->hPort,&sp->dcb)) {
+  if (!SetCommState(sp->hPort, &sp->dcb)) {
     uart_close(sp);
     return INVALID_SERIAL_PORT;
   }
@@ -92,7 +92,7 @@ serial_port uart_open(const char* pcPortName) {
   sp->ct.WriteTotalTimeoutMultiplier = 0;//1;
   sp->ct.WriteTotalTimeoutConstant   = 30;
   
-  if(!SetCommTimeouts(sp->hPort,&sp->ct)) {
+  if (!SetCommTimeouts(sp->hPort, &sp->ct)) {
     uart_close(sp);
     return INVALID_SERIAL_PORT;
   }
@@ -107,18 +107,20 @@ serial_port uart_open(const char* pcPortName) {
 }
 
 void uart_close(const serial_port sp) {
-  CloseHandle(((serial_port_windows*)sp)->hPort);
-  free(sp);
+	if (!sp) return;
+	if (((serial_port_windows*)sp)->hPort != NULL )
+		CloseHandle(((serial_port_windows*)sp)->hPort);
+	free(sp);
 }
 
 bool uart_receive(const serial_port sp, byte_t* pbtRx, size_t pszMaxRxLen, size_t* pszRxLen) {
-  ReadFile(((serial_port_windows*)sp)->hPort,pbtRx,pszMaxRxLen,(LPDWORD)pszRxLen,NULL);
+  ReadFile(((serial_port_windows*)sp)->hPort, pbtRx, pszMaxRxLen, (LPDWORD)pszRxLen, NULL);
   return (*pszRxLen != 0);
 }
 
 bool uart_send(const serial_port sp, const byte_t* pbtTx, const size_t szTxLen) {
   DWORD dwTxLen = 0;
-  return WriteFile(((serial_port_windows*)sp)->hPort,pbtTx,szTxLen,&dwTxLen,NULL);
+  return WriteFile(((serial_port_windows*)sp)->hPort, pbtTx, szTxLen, &dwTxLen, NULL);
   return (dwTxLen != 0);
 }
 

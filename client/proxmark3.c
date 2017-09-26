@@ -28,9 +28,10 @@
 
 // a global mutex to prevent interlaced printing from different threads
 extern pthread_mutex_t print_lock;
-
 static serial_port sp;
 static UsbCommand txcmd;
+static char comport[255];
+
 volatile static bool txcmd_pending = false;
 
 void SendCommand(UsbCommand *c) {
@@ -77,10 +78,31 @@ static void showBanner(void){
 }
 #endif
 
+static bool hookUpPM3() {	
+	bool ret = false;
+	sp = uart_open( comport );
+	if (sp == INVALID_SERIAL_PORT) {
+		printf("ERROR: invalid serial port\n");
+		ret = false;
+		offline = 1;
+	} else if (sp == CLAIMED_SERIAL_PORT) {
+		printf("ERROR: serial port is claimed by another process\n");
+		ret = false;
+		offline = 1;
+	} else {
+		//printf("OK: connected to serial port %s\n", comport);
+		ret = true;
+		offline = 0;
+	}
+	return ret;
+}
+
+// (iceman) if uart_receiver fails a command three times,  we conside the device to be offline.
 static void *uart_receiver(void *targ) {
 	struct receiver_arg *arg = (struct receiver_arg*)targ;
 	size_t rxlen;
-
+	int counter_to_offline = 0;
+	
 	while (arg->run) {
 		rxlen = 0;
 		if (uart_receive(sp, prx, sizeof(UsbCommand) - (prx-rx), &rxlen)) {
@@ -98,24 +120,36 @@ static void *uart_receiver(void *targ) {
 		if ( tmpsignal ) {
 			bool res = uart_send(sp, (byte_t*) &txcmd, sizeof(UsbCommand));
 			if (!res) {
+				counter_to_offline++;
 				PrintAndLog("Sending bytes to proxmark failed");
 			}
 			 __atomic_clear(&txcmd_pending, __ATOMIC_SEQ_CST);
 			//txcmd_pending = false;
+			
+			// set offline flag
+			if ( counter_to_offline == 3 ) {
+				__atomic_test_and_set(&offline, __ATOMIC_SEQ_CST);
+				break;
+			}			
 		}
 	}
+
+	// when this reader thread dies, we close the serial port.
+	uart_close(sp);
+	
 	pthread_exit(NULL);
 	return NULL;
 }
 
-
 void main_loop(char *script_cmds_file, bool usb_present) {
+
 	struct receiver_arg rarg;
-	char *cmd = NULL;
 	pthread_t reader_thread;
-  
+	char *cmd = NULL;
+	
 	if (usb_present) {
 		rarg.run = 1;
+		//
 		pthread_create(&reader_thread, NULL, &uart_receiver, &rarg);
 		// cache Version information now:
 		CmdVersion(NULL);
@@ -133,7 +167,23 @@ void main_loop(char *script_cmds_file, bool usb_present) {
 
 	read_history(".history");
 	
-	while(1)  {
+	// loops everytime enter is pressed...
+	while(1) {
+		
+		// this should hook up the PM3 again.
+		if (offline) {
+			
+			// sets the global variable, SP and offline)
+			usb_present = hookUpPM3();
+		
+			// usb and the reader_thread is NULL,  create a new reader thread.
+			if (usb_present && !offline) {
+				rarg.run = 1;
+				pthread_create(&reader_thread, NULL, &uart_receiver, &rarg);
+				// cache Version information now:
+				CmdVersion(NULL);
+			}
+		}
 
 		// If there is a script file
 		if (script_file) {
@@ -245,7 +295,8 @@ int main(int argc, char* argv[]) {
   
 	if (argc < 2) {
 		printf("syntax: %s <port>\n\n",argv[0]);
-		printf("\tLinux example:'%s /dev/ttyACM0'\n\n", argv[0]);
+		printf("\tLinux example:'%s /dev/ttyACM0'\n", argv[0]);
+		printf("\tWindows example:'%s com3'\n\n", argv[0]);
 		printf("help:   %s -h\n\n", argv[0]);
 		printf("\tDump all interactive help at once\n");
 		printf("markdown:   %s -m\n\n", argv[0]);
@@ -254,7 +305,8 @@ int main(int argc, char* argv[]) {
 	}
 	if (strcmp(argv[1], "-h") == 0) {
 		printf("syntax: %s <port>\n\n",argv[0]);
-		printf("\tLinux example:'%s /dev/ttyACM0'\n\n", argv[0]);
+		printf("\tLinux example:'%s /dev/ttyACM0'\n", argv[0]);
+		printf("\tWindows example:'%s com3'\n\n", argv[0]);
 		dumpAllHelp(0);
 		return 0;
 	}
@@ -270,25 +322,20 @@ int main(int argc, char* argv[]) {
 	
 	set_my_executable_path();
 	
-	bool usb_present = false;
 	char *script_cmds_file = NULL;
 
-  	sp = uart_open(argv[1]);
-	if (sp == INVALID_SERIAL_PORT) {
-		printf("ERROR: invalid serial port\n");
-		usb_present = false;
-		offline = 1;
-	} else if (sp == CLAIMED_SERIAL_PORT) {
-		printf("ERROR: serial port is claimed by another process\n");
-		usb_present = false;
-		offline = 1;
-	} else {
-		usb_present = true;
-		offline = 0;
-	}
+	// lets copy the comport string.
+	memset(comport, 0, sizeof(comport));
+	memcpy(comport, argv[1], strlen(argv[1]));
+	
+	// sets the global variable, SP and offline)
+	bool usb_present = hookUpPM3();
 
 	// If the user passed the filename of the 'script' to execute, get it
 	if (argc > 2 && argv[2]) {
+		
+		printf("Num of args: %d   -- %s\n", argc, argv[2]);
+		
 		if (argv[2][0] == 'f' &&  //buzzy, if a word 'flush' passed, flush the output after every log entry.
 			argv[2][1] == 'l' &&
 			argv[2][2] == 'u' &&
