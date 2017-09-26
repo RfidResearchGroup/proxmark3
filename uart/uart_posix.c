@@ -222,13 +222,14 @@ bool uart_send(const serial_port sp, const byte_t* pbtTx, const size_t szTxLen) 
   size_t szPos = 0;
   fd_set rfds;
   struct timeval tv;
-  
+  const serial_port_unix* spu = (serial_port_unix*)sp;
+
   while (szPos < szTxLen) {
     // Reset file descriptor
     FD_ZERO(&rfds);
-    FD_SET(((serial_port_unix*)sp)->fd, &rfds);
+    FD_SET((spu->fd, &rfds);
     tv = timeout;
-    res = select(((serial_port_unix*)sp)->fd+1, NULL, &rfds, NULL, &tv);
+    res = select((spu->fd+1, NULL, &rfds, NULL, &tv);
     
     // Write error
     if (res < 0) {
@@ -243,7 +244,7 @@ bool uart_send(const serial_port sp, const byte_t* pbtTx, const size_t szTxLen) 
     }
     
     // Send away the bytes
-    res = write(((serial_port_unix*)sp)->fd, pbtTx + szPos, szTxLen-szPos);
+    res = write(spu->fd, pbtTx + szPos, szTxLen-szPos);
     
     // Stop if the OS has some troubles sending the data
     if (res <= 0) {
