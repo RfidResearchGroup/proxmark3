@@ -1180,6 +1180,12 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 	uint8_t *resp_csn = BigBuf_malloc(30);
 	int resp_csn_len;
 
+	// configuration  picopass 2ks
+	uint8_t *resp_conf = BigBuf_malloc(20);
+	int resp_conf_len;
+	uint8_t conf_data[10] = {0x12,0xFF,0xFF,0xFF,0x7F,0x1F,0xFF,0x3C,0x00,0x00};
+	ComputeCrc14443(CRC_ICLASS, conf_data, 8, &conf_data[8], &conf_data[9]);
+	
 	// e-Purse
 	// 18: Takes 2 bytes for SOF/EOF and 8 * 2 = 16 bytes (2 bytes/bit)
 	uint8_t *resp_cc = BigBuf_malloc(20);
@@ -1222,6 +1228,14 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 		PrintToSendBuffer();
 	}
 
+	// Configuration
+	CodeIClassTagAnswer(conf_data, sizeof(conf_data));
+	memcpy(resp_conf, ToSend, ToSendMax); resp_conf_len = ToSendMax;
+	if ( MF_DBGLEVEL ==  MF_DBG_EXTENDED) {
+		DbpString("Configuration"); 
+		PrintToSendBuffer();
+	}
+	
 	// e-Purse
 	CodeIClassTagAnswer(card_challenge_data, sizeof(card_challenge_data));
 	memcpy(resp_cc, ToSend, ToSendMax); resp_cc_len = ToSendMax;
@@ -1229,6 +1243,7 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 		DbpString("e-Purse"); 
 		PrintToSendBuffer();
 	}
+
 	// Application Issuer Area
 	CodeIClassTagAnswer(aia_data, sizeof(aia_data));
 	memcpy(resp_aia, ToSend, ToSendMax); resp_aia_len = ToSendMax;
@@ -1250,7 +1265,6 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 	//SpinDelay(200);
 	
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_LISTEN);
-	//SpinDelay(20);
 
 	StartCountSspClk();
 
@@ -1267,25 +1281,24 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 		WDT_HIT();
 
 		response_delay = 1;
-		receivedCmd[0] = 0;	receivedCmd[1] = 0;	receivedCmd[2] = 0;	receivedCmd[3] = 0;
-		receivedCmd[4] = 0;	receivedCmd[5] = 0;	receivedCmd[6] = 0;	receivedCmd[7] = 0;
-		receivedCmd[8] = 0;	receivedCmd[9] = 0;	receivedCmd[10] = 0; receivedCmd[11] = 0;
-		receivedCmd[12] = 0;receivedCmd[13] = 0;receivedCmd[14] = 0; receivedCmd[15] = 0;
+		// receivedCmd[0] = 0;	receivedCmd[1] = 0;	receivedCmd[2] = 0;	receivedCmd[3] = 0;
+		// receivedCmd[4] = 0;	receivedCmd[5] = 0;	receivedCmd[6] = 0;	receivedCmd[7] = 0;
+		// receivedCmd[8] = 0;	receivedCmd[9] = 0;	receivedCmd[10] = 0; receivedCmd[11] = 0;
+		// receivedCmd[12] = 0;receivedCmd[13] = 0;receivedCmd[14] = 0; receivedCmd[15] = 0;
 		
 		//Signal tracer, can be used to get a trigger for an oscilloscope..
 		LED_B_OFF(); LED_C_OFF();
 
-		if (!GetIClassCommandFromReader(receivedCmd, &len, 100)) {
+		if (!GetIClassCommandFromReader(receivedCmd, &len, 0)) {
 			buttonPressed = true;
 			exitLoop = true;
 			continue;
 		}
 
 		r2t_time = GetCountSspClk();
-		//Signal tracer
-		LED_C_ON();
 
-		// Okay, look at the command now.
+		LED_C_ON();	//Signal tracer
+
 		if (receivedCmd[0] == ICLASS_CMD_ACTALL ) {  // 0x0A
 			// Reader in anticollission phase
 			modulated_response = resp_sof; modulated_response_size = resp_sof_Len; //order = 1;
@@ -1296,14 +1309,12 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 			modulated_response = resp_anticoll; modulated_response_size = resp_anticoll_len; //order = 2;
 			trace_data = anticoll_data;
 			trace_data_size = sizeof(anticoll_data);
-			//DbpString("Reader requests anticollission CSN:");
 		} else if (receivedCmd[0] == ICLASS_CMD_SELECT) { // 0x81
 			// Reader selects anticollission CSN.
 			// Tag sends the corresponding real CSN
 			modulated_response = resp_csn; modulated_response_size = resp_csn_len; //order = 3;
 			trace_data = csn_data;
 			trace_data_size = sizeof(csn_data);
-			//DbpString("Reader selects anticollission CSN:");
 		} else if (receivedCmd[0] == ICLASS_CMD_READCHECK_KD) { // 0x88
 			// Read e-purse (88 02)
 			modulated_response = resp_cc; modulated_response_size = resp_cc_len; //order = 4;
@@ -1312,7 +1323,7 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 			LED_B_ON();
 		} else if (receivedCmd[0] == ICLASS_CMD_CHECK) { // 0x05
 			// Reader random and reader MAC!!!
-			if(simulationMode == MODE_FULLSIM) {
+			if (simulationMode == MODE_FULLSIM) {
 				//NR, from reader, is in receivedCmd +1
 				opt_doTagMAC_2(cipher_state,receivedCmd+1,data_generic_trace,diversified_key);
 
@@ -1333,8 +1344,7 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 				
 				if (simulationMode == MODE_EXIT_AFTER_MAC) {
 					// dbprintf:ing ...
-					Dbprintf("CSN: %02x %02x %02x %02x %02x %02x %02x %02x"
-							   ,csn[0],csn[1],csn[2],csn[3],csn[4],csn[5],csn[6],csn[7]);
+					Dbprintf("CSN: %02x %02x %02x %02x %02x %02x %02x %02x", csn[0], csn[1], csn[2], csn[3], csn[4], csn[5], csn[6], csn[7]);
 					Dbprintf("RDR:  (len=%02d): %02x %02x %02x %02x %02x %02x %02x %02x %02x", len,
 							receivedCmd[0], receivedCmd[1], receivedCmd[2],
 							receivedCmd[3], receivedCmd[4], receivedCmd[5],
@@ -1352,19 +1362,34 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 			modulated_response = resp_sof; modulated_response_size = 0; //order = 0;
 			trace_data = NULL;
 			trace_data_size = 0;
-
-		// (iceman) Special case for testing in SIM 2 attack mode.
-		// hence the ridiculous if statement..  (MY TESTING PURPOSES)
-		} else if ( simulationMode == MODE_EXIT_AFTER_MAC && 
-					receivedCmd[0] == ICLASS_CMD_READ_OR_IDENTIFY &&
-					receivedCmd[1] == 0x05 && 
-					len == 4) {
-			// some readers likes the Application Issuer Area
-			// Read Application Issuer Area (0c 05)
-			modulated_response = resp_aia; modulated_response_size = resp_aia_len;
-			trace_data = aia_data;
-			trace_data_size = sizeof(aia_data);
-
+		// sim 2 / 4,   
+		} else if (simulationMode == MODE_EXIT_AFTER_MAC && receivedCmd[0] == ICLASS_CMD_READ_OR_IDENTIFY && len == 4){
+			// block0,1,2,5 is always readable.
+			uint16_t blk = receivedCmd[1];
+			switch (blk){
+				case 0:	// csn (0c 00)
+					modulated_response = resp_csn; modulated_response_size = resp_csn_len;
+					trace_data = csn_data;
+					trace_data_size = sizeof(csn_data);
+					break;
+				case 1:	// configuration (0c 01)
+					modulated_response = resp_conf; modulated_response_size = resp_conf_len;
+					trace_data = conf_data;
+					trace_data_size = sizeof(conf_data);
+					break;
+				case 2: // e-purse (0c 02)	
+					modulated_response = resp_cc; modulated_response_size = resp_cc_len;
+					trace_data = card_challenge_data;
+					trace_data_size = sizeof(card_challenge_data);
+					break;
+				case 5:// Application Issuer Area (0c 05)
+					modulated_response = resp_aia; modulated_response_size = resp_aia_len;
+					trace_data = aia_data;
+					trace_data_size = sizeof(aia_data);
+					break;
+				default: break;
+			}						
+			
 		} else if (simulationMode == MODE_FULLSIM && receivedCmd[0] == ICLASS_CMD_READ_OR_IDENTIFY && len == 4){
 			//Read block
 			uint16_t blk = receivedCmd[1];
@@ -1378,7 +1403,8 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 			memcpy(data_response, ToSend, ToSendMax);
 			modulated_response = data_response;
 			modulated_response_size = ToSendMax;
-		} else if (receivedCmd[0] == ICLASS_CMD_UPDATE && simulationMode == MODE_FULLSIM) {
+		} else if (simulationMode == MODE_FULLSIM && receivedCmd[0] == ICLASS_CMD_UPDATE) {
+			
 			//Probably the reader wants to update the nonce. Let's just ignore that for now.
 			// OBS! If this is implemented, don't forget to regenerate the cipher_state
 			//We're expected to respond with the data+crc, exactly what's already in the receivedcmd
@@ -1394,7 +1420,7 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 			memcpy(data_response, ToSend, ToSendMax);
 			modulated_response = data_response;
 			modulated_response_size = ToSendMax;
-		} else if(receivedCmd[0] == ICLASS_CMD_PAGESEL)	{  // 0x84
+//		} else if(receivedCmd[0] == ICLASS_CMD_PAGESEL)	{  // 0x84
 			//Pagesel
 			//Pagesel enables to select a page in the selected chip memory and return its configuration block
 			//Chips with a single page will not answer to this command
@@ -1404,11 +1430,14 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 		} else {
 			//#db# Unknown command received from reader (len=5): 26 1 0 f6 a 44 44 44 44
 			// Never seen this command before
-			Dbprintf("Unhandled command received from reader (len %d) | %02x %02x %02x %02x %02x %02x %02x %02x %02x",
-			len,
-			receivedCmd[0], receivedCmd[1], receivedCmd[2],
-			receivedCmd[3], receivedCmd[4], receivedCmd[5],
-			receivedCmd[6], receivedCmd[7], receivedCmd[8]);
+			if ( MF_DBGLEVEL ==  MF_DBG_EXTENDED) {
+				Dbprintf("Unhandled command received from reader (len %d) | %02x %02x %02x %02x %02x %02x %02x %02x %02x",
+					len,
+					receivedCmd[0], receivedCmd[1], receivedCmd[2], receivedCmd[3], 
+					receivedCmd[4], receivedCmd[5], receivedCmd[6], receivedCmd[7], receivedCmd[8]
+				);
+			}
+			
 			// Do not respond
 			modulated_response = resp_sof;
 			modulated_response_size = 0; //order = 0;
