@@ -227,9 +227,9 @@ bool uart_send(const serial_port sp, const byte_t* pbtTx, const size_t szTxLen) 
   while (szPos < szTxLen) {
     // Reset file descriptor
     FD_ZERO(&rfds);
-    FD_SET((spu->fd, &rfds);
+    FD_SET(spu->fd, &rfds);
     tv = timeout;
-    res = select((spu->fd+1, NULL, &rfds, NULL, &tv);
+    res = select(spu->fd + 1, NULL, &rfds, NULL, &tv);
     
     // Write error
     if (res < 0) {
