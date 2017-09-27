@@ -412,7 +412,7 @@ static int GetIso15693AnswerFromTag(uint8_t *received, int *elapsed) {
 	if (elapsed) *elapsed = 0;
 	
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
-	
+		
 	// for (counter = 0; counter < wait;) {
 		
 		// WDT_HIT();
@@ -482,7 +482,7 @@ static int GetIso15693AnswerFromSniff(uint8_t *received, int *samples, int *elap
 	time_0 = GetCountSspClk();
 		
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
-
+	
 	for(;;) {
 		WDT_HIT();
 
@@ -534,11 +534,11 @@ void AcquireRawAdcSamplesIso15693(void) {
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 	FpgaSetupSsc();
 	// Give the tags time to energize
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
-	SpinDelay(100);
-
+	//FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
+	
 	// Now send the command
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_TX);
+	SpinDelay(200);
 
 	uint8_t *buf = BigBuf_get_addr();
 	
@@ -668,7 +668,7 @@ void Iso15693InitReader(void) {
 
 	// Give the tags time to energize
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
-	SpinDelay(100);
+	SpinDelay(200);
 	
 	// Start the timer
 	StartCountSspClk();
