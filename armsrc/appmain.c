@@ -26,6 +26,9 @@
  #include "LCD.h"
 #endif
 
+// Global var to determine if device is in standalone mode or not.
+static int InStandAloneMode = 0;
+
 //=============================================================================
 // A buffer where we can queue things up to be sent through the FPGA, for
 // any purpose (fake tag, as reader, whatever). We go MSB first, since that
@@ -360,6 +363,8 @@ void SendStatus(void) {
 
 // Show some leds in a pattern to identify StandAlone mod is running
 void StandAloneMode(void) {
+	
+	InStandAloneMode = 1;
 	DbpString("Stand-alone mode! No PC necessary.");
 	// Oooh pretty -- notify user we're in elite samy mode now
 	LED(LED_RED,	200);
@@ -375,9 +380,9 @@ void StandAloneMode(void) {
 // detection of which Standalone Modes is installed
 // (iceman)
 void printStandAloneModes(void) {
-	#if defined(WITH_HF_YOUNG) || defined(WITH_LF_SAMYRUN)
+
 	DbpString("Installed StandAlone Mods");
-	#endif
+	
 	#if defined(WITH_LF_ICERUN)
 	DbpString("   LF sniff/clone/simulation -  aka IceRun (iceman)");
 	#endif
@@ -396,6 +401,9 @@ void printStandAloneModes(void) {
 	#if defined(WITH_HF_MATTYRUN)
 	DbpString("   HF Mifare sniff/clone - aka MattyRun (Matta Real)");
 	#endif 
+	
+	DbpString("Running ");	
+	Dbprintf("  Are we running standalone | %s", (InStandAloneMode)? "Yes" : "No");
 	
 	//.. add your own standalone detection based on with compiler directive you are used.
 	// don't "reuse" the already taken ones, this will make things easier when trying to detect the different modes
@@ -1106,8 +1114,10 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 }
 
 void  __attribute__((noreturn)) AppMain(void) {
+
 	SpinDelay(100);
 	clear_trace();
+		
 	if(common_area.magic != COMMON_AREA_MAGIC || common_area.version != 1) {
 		/* Initialize common area */
 		memset(&common_area, 0, sizeof(common_area));
@@ -1118,6 +1128,8 @@ void  __attribute__((noreturn)) AppMain(void) {
 
 	LEDsoff();
 
+	// list with standalone refs.
+	
 	// Init USB device
 	usb_enable();
 
@@ -1156,7 +1168,14 @@ void  __attribute__((noreturn)) AppMain(void) {
 		}
 		WDT_HIT();
 
+		// Press button for one second to enter a possible standalone mode
 		if (BUTTON_HELD(1000) > 0) {
+			
+/*
+* So this is the trigger to execute a standalone mod.  Generic entrypoint by following the standalone/standalone.h headerfile
+* All standalone mod "main loop" should be the RunMod() function.
+* Since the standalone is either LF or HF, the somewhat bisarr defines below exists. 
+*/			
 #if defined (WITH_LF) && defined (WITH_LF_SAMYRUN)
 			RunMod();
 #endif
@@ -1164,7 +1183,8 @@ void  __attribute__((noreturn)) AppMain(void) {
 #if defined (WITH_ISO14443a) && defined (WITH_HF_YOUNG)
 			RunMod();
 #endif
-
+			// when here,  we are no longer in standalone mode.
+			InStandAloneMode = 0;
 		}
 	}
 }

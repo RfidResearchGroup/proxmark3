@@ -21,6 +21,7 @@ APP_CFLAGS = -DWITH_CRC \
 			 -DWITH_ISO14443a \
 			 -DWITH_ICLASS \
 			 -DWITH_HFSNOOP \
+			 -DWITH_LF_SAMYRUN \
 			 -fno-strict-aliasing -ffunction-sections -fdata-sections
 ### IMPORTANT -  move the commented variable below this line
 #			 -DWITH_LCD \
@@ -46,6 +47,8 @@ SRC_CRC = iso14443crc.c crc.c crc16.c crc32.c
 SRC_EMV = tlv.c emvdataels.c emvutil.c emvcmd.c 									 
 SRC_ICLASS = iclass.c optimized_cipher.c
 SRC_LEGIC = legicrf.c legic_prng.c
+SRC_FLASH = flash.c
+SRC_BEE = bee.c
 
 #the FPGA bitstream files. Note: order matters!
 FPGA_BITSTREAMS = fpga_lf.bit fpga_hf.bit
@@ -78,8 +81,6 @@ THUMBSRC = start.c \
 	random.c \
 	hfsnoop.c
 
-#	Standalone/hf_young.c \
-#	Standalone/lf_samyrun.c	
 
 # These are to be compiled in ARM mode
 ARMSRC = fpgaloader.c \
@@ -91,7 +92,10 @@ ARMSRC = fpgaloader.c \
 	$(SRC_CRC) \
 	parity.c \
 	usb_cdc.c \
-	cmd.c
+	cmd.c \
+	lf_samyrun.c \
+#	hf_young.c
+	
 	
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
 include ../common/Makefile.common
