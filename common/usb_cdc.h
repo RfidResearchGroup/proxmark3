@@ -40,13 +40,18 @@
 #include "config_gpio.h"
 #include "common.h"
 
-void usb_disable();
-void usb_enable();
-bool usb_check();
-bool usb_poll();
-bool usb_poll_validate_length();
-uint32_t usb_read(byte_t* data, size_t len);
-uint32_t usb_write(const byte_t* data, const size_t len);
+extern void usb_disable();
+extern void usb_enable();
+extern bool usb_check();
+extern bool usb_poll();
+extern bool usb_poll_validate_length();
+extern uint32_t usb_read(byte_t* data, size_t len);
+extern uint32_t usb_write(const byte_t* data, const size_t len);
+
+void AT91F_USB_SendData(AT91PS_UDP pUdp, const char *pData, uint32_t length);
+void AT91F_USB_SendZlp(AT91PS_UDP pUdp);
+void AT91F_USB_SendStall(AT91PS_UDP pUdp);
+void AT91F_CDC_Enumerate();
 
 typedef const struct __attribute__((__packed__)) {
 	const uint32_t dwLength;
@@ -73,7 +78,7 @@ typedef const struct __attribute__((__packed__)) {
 	const uint16_t wPropertyNameLength3;
 	const wchar_t bPropertyName3[6];
 	const uint32_t dwPropertyDataLength3;
-	const wchar_t bPropertyData3[39];
+	const wchar_t bPropertyData3[38];
 } g_sOSProperties;
 
 extern const g_sOSProperties g_pOSProperties;
