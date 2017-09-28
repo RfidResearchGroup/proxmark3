@@ -162,9 +162,7 @@ int CmdHFEPAPACEReplay(const char *Cmd)
 	return 1;
 }
 
-// UI-related stuff
-
-static const command_t CommandTable[] = {
+static command_t CommandTable[] = {
 	{"help",    CmdHelp,                   1, "This help"},
 	{"cnonces", CmdHFEPACollectPACENonces, 0, "<m> <n> <d> Acquire n>0 encrypted PACE nonces of size m>0 with d sec pauses"},
 	{"preplay", CmdHFEPAPACEReplay,        0, "<mse> <get> <map> <pka> <ma> Perform PACE protocol by replaying given APDUs"},
