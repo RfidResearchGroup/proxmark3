@@ -31,7 +31,7 @@ void RunMod() {
 
 		// Was our button held down or pressed?
 		int button_pressed = BUTTON_HELD(1000);
-		SpinDelay(300);
+		//SpinDelay(300);
 
 		// Button was held for a second, begin recording
 		if (button_pressed > 0 && cardRead == 0) {

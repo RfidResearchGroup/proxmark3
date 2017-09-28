@@ -12,9 +12,10 @@
 #ifndef __LF_SAMYRUN_H
 #define __LF_SAMYRUN_H
 
-#include <stdbool.h> // for bool
+//#include <stdbool.h> // for bool
 #include "standalone.h" // standalone definitions
 #include "apps.h" // debugstatements, lfops?
+
 
 #define OPTS 2
 
