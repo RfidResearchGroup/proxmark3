@@ -1,7 +1,7 @@
 CC = gcc
 LD = gcc
-CFLAGS =  -std=c99 -march=native -Wall -Winline -O3
-LDFLAGS =
+CFLAGS +=  -std=c99 -march=native -Wall -Winline -O3
+LDFLAGS +=
 
 OBJS = crapto1.o crypto1.o
 HEADERS = crapto1.h

@@ -12,17 +12,19 @@ TARFLAGS = -C .. --ignore-failed-read -rvf
 RM = rm -f
 MV = mv
 
-#COMMON_FLAGS = -m32
 # uncomment to enable EMV
-#COMMON_FLAGS += -DWITH_EMV
+#CFLAGS += -DWITH_EMV
+
+ENV_LDFLAGS := $(LDFLAGS)
+ENV_CFLAGS := $(CFLAGS)
 
 VPATH = ../common ../zlib ../uart
 OBJDIR = obj
 
 LDLIBS = -L/opt/local/lib -L/usr/local/lib -lreadline -lpthread -lm
 LUALIB = ../liblua/liblua.a
-LDFLAGS = $(COMMON_FLAGS)
-CFLAGS = -std=c99 -D_ISOC99_SOURCE -I. -I../include -I../common -I../zlib -I../uart -I/opt/local/include -I../liblua -Wall $(COMMON_FLAGS) -g -O3
+LDFLAGS = $(ENV_LDFLAGS)
+CFLAGS = $(ENV_CFLAGS) -std=c99 -D_ISOC99_SOURCE -I. -I../include -I../common -I../zlib -I../uart -I/opt/local/include -I../liblua -Wall -g -O3
 CXXFLAGS = -I../include -Wall -O3
 
 LUAPLATFORM = generic
