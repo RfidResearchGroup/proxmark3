@@ -1806,7 +1806,7 @@ int ReaderReceive(uint8_t *receivedAnswer, uint8_t *parity) {
 // fills the card info record unless NULL
 // if anticollision is false, then the UID must be provided in uid_ptr[] 
 // and num_cascades must be set (1: 4 Byte UID, 2: 7 Byte UID, 3: 10 Byte UID)
-int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades) {
+int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats) {
 	uint8_t wupa[]       = { ISO14443A_CMD_WUPA };  // 0x26 - ISO14443A_CMD_REQA  0x52 - ISO14443A_CMD_WUPA
 	uint8_t sel_all[]    = { ISO14443A_CMD_ANTICOLL_OR_SELECT,0x20 };
 	uint8_t sel_uid[]    = { ISO14443A_CMD_ANTICOLL_OR_SELECT,0x70,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
@@ -1837,9 +1837,6 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_card, uint32_
 		if (uid_ptr)
 			memset(uid_ptr, 0, 10);
 	}
-
-	// reset the PCB block number
-	iso14_pcb_blocknum = 0;
 	
 	// check for proprietary anticollision:
 	if ((resp[0] & 0x1F) == 0) return 3;
@@ -1941,19 +1938,26 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_card, uint32_
 	// non iso14443a compliant tag
 	if( (sak & 0x20) == 0) return 2; 
 
-	// Request for answer to select
-	AppendCrc14443a(rats, 2);
-	ReaderTransmit(rats, sizeof(rats), NULL);
+	// RATS, Request for answer to select
+	if ( !no_rats ) {
+		AppendCrc14443a(rats, 2);
+		ReaderTransmit(rats, sizeof(rats), NULL);
+		len = ReaderReceive(resp, resp_par);
+		
+		if (!len) return 0;
 
-	if (!(len = ReaderReceive(resp, resp_par))) return 0;
-	
-	if(p_card) {
-		memcpy(p_card->ats, resp, sizeof(p_card->ats));
-		p_card->ats_len = len;
+		if(p_card) {
+			memcpy(p_card->ats, resp, sizeof(p_card->ats));
+			p_card->ats_len = len;
+		}
+
+		// reset the PCB block number
+		iso14_pcb_blocknum = 0;
+
+		//set default timeout based on ATS
+		iso14a_set_ATS_timeout(resp);
 	}
-
-	// set default timeout based on ATS
-	iso14a_set_ATS_timeout(resp);
+	
 	return 1;	
 }
 
@@ -2046,7 +2050,7 @@ void ReaderIso14443a(UsbCommand *c) {
 		// if failed selecting, turn off antenna and quite.
 		if( !(param & ISO14A_NO_SELECT) ) {
 			iso14a_card_select_t *card = (iso14a_card_select_t*)buf;
-			arg0 = iso14443a_select_card(NULL, card, NULL, true, 0);
+			arg0 = iso14443a_select_card(NULL, card, NULL, true, 0, param & ISO14A_NO_RATS );
 			cmd_send(CMD_ACK, arg0, card->uidlen, 0, buf, sizeof(iso14a_card_select_t));
 			if ( arg0 == 0 )
 				goto OUT;
@@ -2237,7 +2241,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 		// this part is from Piwi's faster nonce collecting part in Hardnested.
 		if (!have_uid) { // need a full select cycle to get the uid first
 			iso14a_card_select_t card_info;		
-			if(!iso14443a_select_card(uid, &card_info, &cuid, true, 0)) {
+			if(!iso14443a_select_card(uid, &card_info, &cuid, true, 0, true)) {
 				if (MF_DBGLEVEL >= 4)	Dbprintf("Mifare: Can't select card (ALL)");
 				break;
 			}
@@ -2249,7 +2253,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 			}
 			have_uid = true;	
 		} else { // no need for anticollision. We can directly select the card
-			if(!iso14443a_select_card(uid, NULL, &cuid, false, cascade_levels)) {
+			if(!iso14443a_select_card(uid, NULL, &cuid, false, cascade_levels, true)) {
 				if (MF_DBGLEVEL >= 4)	Dbprintf("Mifare: Can't select card (UID)");
 				continue;
 			}

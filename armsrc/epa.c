@@ -526,7 +526,7 @@ int EPA_Setup()
 	// power up the field
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
 	// select the card
-	return_code = iso14443a_select_card(uid, &card_a_info, NULL, true, 0);
+	return_code = iso14443a_select_card(uid, &card_a_info, NULL, true, 0, false);
 	if (return_code == 1) {
 		// send the PPS request
 		ReaderTransmit((uint8_t *)pps, sizeof(pps), NULL);

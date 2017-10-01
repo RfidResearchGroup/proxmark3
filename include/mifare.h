@@ -34,7 +34,8 @@ typedef enum ISO14A_COMMAND {
 	ISO14A_APPEND_CRC =			(1 << 5),
 	ISO14A_SET_TIMEOUT =		(1 << 6),
 	ISO14A_NO_SELECT =			(1 << 7),
-	ISO14A_TOPAZMODE =			(1 << 8)
+	ISO14A_TOPAZMODE =			(1 << 8),
+	ISO14A_NO_RATS =            (1 << 9)
 } iso14a_command_t;
 
 typedef struct {

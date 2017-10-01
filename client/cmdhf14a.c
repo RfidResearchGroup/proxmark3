@@ -157,6 +157,7 @@ int usage_hf_14a_raw(void){
 	PrintAndLog("       -b    number of bits to send. Useful for send partial byte");
 	PrintAndLog("       -t    timeout in ms");
 	PrintAndLog("       -T    use Topaz protocol to send command");
+	PrintAndLog("       -3    ISO14443-3 select only (skip RATS)");
 	return 0;
 }
 
@@ -435,7 +436,7 @@ int CmdHF14ACUIDs(const char *Cmd) {
 		}
 		
 		// execute anticollision procedure
-		UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT, 0, 0}};
+		UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0}};
 		SendCommand(&c);
     
 		UsbCommand resp;
@@ -567,22 +568,23 @@ int CmdHF14ASniff(const char *Cmd) {
 
 int CmdHF14ACmdRaw(const char *cmd) {
     UsbCommand c = {CMD_READER_ISO_14443a, {0, 0, 0}};
-    bool reply=1;
+    bool reply = 1;
     bool crc = false;
     bool power = false;
     bool active = false;
     bool active_select = false;
-    uint16_t numbits=0;
+    uint16_t numbits = 0;
 	bool bTimeout = false;
-	uint32_t timeout=0;
+	uint32_t timeout = 0;
 	bool topazmode = false;
+	bool no_rats = false;
     char buf[5]="";
-    int i=0;
+    int i = 0;
     uint8_t data[USB_CMD_DATA_SIZE];
-	uint16_t datalen=0;
+	uint16_t datalen = 0;
 	uint32_t temp;
 
-    if (strlen(cmd)<2) return usage_hf_14a_raw();
+    if (strlen(cmd) < 2) return usage_hf_14a_raw();
 
     // strip
     while (*cmd==' ' || *cmd=='\t') cmd++;
@@ -610,7 +612,7 @@ int CmdHF14ACmdRaw(const char *cmd) {
                     active_select = true;
                     break;
                 case 'b': 
-                    sscanf(cmd+i+2,"%d",&temp);
+                    sscanf(cmd+i+2, "%d", &temp);
                     numbits = temp & 0xFFFF;
                     i+=3;
                     while(cmd[i]!=' ' && cmd[i]!='\0') { i++; }
@@ -618,7 +620,7 @@ int CmdHF14ACmdRaw(const char *cmd) {
                     break;
 				case 't':
 					bTimeout = true;
-					sscanf(cmd+i+2,"%d",&temp);
+					sscanf(cmd+i+2, "%d", &temp);
 					timeout = temp;
 					i+=3;
 					while(cmd[i]!=' ' && cmd[i]!='\0') { i++; }
@@ -627,10 +629,13 @@ int CmdHF14ACmdRaw(const char *cmd) {
                 case 'T':
 					topazmode = true;
 					break;
+				case '3':
+					no_rats = true;
+					break;
                 default:
                     return usage_hf_14a_raw();
             }
-            i+=2;
+            i += 2;
             continue;
         }
         if ((cmd[i]>='0' && cmd[i]<='9') ||
@@ -656,8 +661,7 @@ int CmdHF14ACmdRaw(const char *cmd) {
         return 0;
     }
 
-    if(crc && datalen>0 && datalen<sizeof(data)-2)
-    {
+    if (crc && datalen>0 && datalen<sizeof(data)-2) {
         uint8_t first, second;
 		if (topazmode) {
 			ComputeCrc14443(CRC_14443_B, data, datalen, &first, &second);
@@ -668,14 +672,13 @@ int CmdHF14ACmdRaw(const char *cmd) {
         data[datalen++] = second;
     }
 
-    if(active || active_select)
-    {
+    if (active || active_select) {
         c.arg[0] |= ISO14A_CONNECT;
         if(active)
             c.arg[0] |= ISO14A_NO_SELECT;
     }
 
-	if(bTimeout){
+	if (bTimeout){
 	    #define MAX_TIMEOUT 40542464 	// = (2^32-1) * (8*16) / 13560000Hz * 1000ms/s
         c.arg[0] |= ISO14A_SET_TIMEOUT;
         if(timeout > MAX_TIMEOUT) {
@@ -685,16 +688,19 @@ int CmdHF14ACmdRaw(const char *cmd) {
 		c.arg[2] = 13560000 / 1000 / (8*16) * timeout; // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
 	}
 
-    if(power) {
+    if (power) {
         c.arg[0] |= ISO14A_NO_DISCONNECT;
 	}
 	
-    if(datalen>0) {
+    if (datalen>0) {
         c.arg[0] |= ISO14A_RAW;
 	}
 	
-	if(topazmode) {
+	if (topazmode) {
 		c.arg[0] |= ISO14A_TOPAZMODE;
+	}
+	if (no_rats) {
+		c.arg[0] |= ISO14A_NO_RATS;
 	}
 			
 	// Max buffer is USB_CMD_DATA_SIZE
@@ -707,11 +713,11 @@ int CmdHF14ACmdRaw(const char *cmd) {
     SendCommand(&c);
 
     if (reply) {
-        if(active_select)
+        if (active_select)
             waitCmd(1);
-        if(datalen>0)
+        if (datalen > 0)
             waitCmd(0);
-    } // if reply
+    }
     return 0;
 }
 

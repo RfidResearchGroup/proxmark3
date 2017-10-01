@@ -56,7 +56,7 @@ void RunMod() {
 
 	Dbprintf("...Waiting For Tag...");
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-	while (!iso14443a_select_card(cjuid, NULL, &cjcuid)) {
+	while (!iso14443a_select_card(cjuid, NULL, &cjcuid, true, 0, true)) {
 		WDT_HIT();
 	}
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -328,7 +328,7 @@ int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, ui
 
    for (i = 0; i < keyCount; ++i) {
 			/* no need for anticollision. just verify tag is still here */
-			if (!iso14443a_select_card(uid, NULL, &cuid)) {
+			if (!iso14443a_select_card(uid, NULL, &cuid, true, 0 , true)) {
 				  cjat91_printf("FATAL : E_MF_LOSTTAG");
 				  return -1;
 			}

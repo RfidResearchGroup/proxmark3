@@ -1,20 +1,13 @@
 //-----------------------------------------------------------------------------
 // Ultralight Code (c) 2013,2014 Midnitesnake & Andy Davies of Pentura
-//
+// 2015,2016,2017 Iceman, Marshmellow
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
 // High frequency MIFARE ULTRALIGHT (C) commands
 //-----------------------------------------------------------------------------
-#include "loclass/des.h"
 #include "cmdhfmfu.h"
-#include "cmdhfmf.h"
-#include "cmdhf14a.h"
-#include "mifare.h"
-#include "util.h"
-#include "protocols.h"
-#include "data.h"
 
 #define MAX_UL_BLOCKS     0x0f
 #define MAX_ULC_BLOCKS    0x2b
@@ -29,6 +22,15 @@
 #define MAX_MY_D_NFC       0xff
 #define MAX_MY_D_MOVE      0x25
 #define MAX_MY_D_MOVE_LEAN 0x0f
+
+#define PUBLIC_ECDA_KEYLEN 33
+uint8_t public_ecda_key[PUBLIC_ECDA_KEYLEN] = {
+		0x04, 0x49, 0x4e, 0x1a, 0x38, 0x6d, 0x3d, 0x3c,
+		0xfe, 0x3d, 0xc1, 0x0e, 0x5d, 0xe6, 0x8a, 0x49,
+		0x9b, 0x1c, 0x20, 0x2d, 0xb5, 0xb1, 0x32, 0x39,
+		0x3e, 0x89, 0xed, 0x19, 0xfe, 0x5b, 0xe8, 0xbc,
+		0x61
+};
 
 #define KEYS_3DES_COUNT 7
 uint8_t default_3des_keys[KEYS_3DES_COUNT][16] = {
@@ -186,7 +188,7 @@ char *getUlev1CardSizeStr( uint8_t fsize ){
 }
 
 static void ul_switch_on_field(void) {
-	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}};
+	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
 }
@@ -198,7 +200,7 @@ void ul_switch_off_field(void) {
 }
 
 static int ul_send_cmd_raw( uint8_t *cmd, uint8_t cmdlen, uint8_t *response, uint16_t responseLength ) {
-	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_APPEND_CRC, cmdlen, 0}};
+	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_APPEND_CRC | ISO14A_NO_RATS, cmdlen, 0}};
 	memcpy(c.d.asBytes, cmd, cmdlen);
 	clearCommandBuffer();
 	SendCommand(&c);
@@ -352,7 +354,7 @@ static int ul_fudan_check( void ){
 	if ( !ul_select(&card) ) 
 		return UL_ERROR;
 
-	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_NO_DISCONNECT, 4, 0}};
+	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 4, 0}};
 
 	uint8_t cmd[4] = {0x30,0x00,0x02,0xa7}; //wrong crc on purpose  should be 0xa8
 	memcpy(c.d.asBytes, cmd, 4);
@@ -577,11 +579,12 @@ static int ulev1_print_counters(){
 
 static int ulev1_print_signature( uint8_t *data, uint8_t len){
 	PrintAndLog("\n--- Tag Signature");	
-	//PrintAndLog("IC signature public key name  : NXP NTAG21x 2013"); // don't know if there is other NXP public keys.. :(
-	PrintAndLog("IC signature public key value : 04494e1a386d3d3cfe3dc10e5de68a499b1c202db5b132393e89ed19fe5be8bc61");
+	PrintAndLog("IC signature public key name  : NXP NTAG21x (2013)"); 
+	PrintAndLog("IC signature public key value : %s", sprint_hex(public_ecda_key, PUBLIC_ECDA_KEYLEN) );
 	PrintAndLog("    Elliptic curve parameters : secp128r1");
 	PrintAndLog("            Tag ECC Signature : %s", sprint_hex(data, len));
 	//to do:  verify if signature is valid
+	// only UID is signed.
 	//PrintAndLog("IC signature status: %s valid", (iseccvalid() )?"":"not");
 	return 0;
 }
@@ -1926,6 +1929,7 @@ int CmdHF14AMfURestore(const char *Cmd){
 		SendCommand(&c);
 		wait4response(b);
 		printf(".");
+		fflush(stdout);
 	}
 	printf("\n");
 	
@@ -2213,7 +2217,7 @@ int CmdHF14AMfuGenDiverseKeys(const char *Cmd){
 
 	if ( cmdp == 'r' || cmdp == 'R') {
 			// read uid from tag
-		UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT, 0, 0}};
+		UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0}};
 		clearCommandBuffer();
 		SendCommand(&c);
 		UsbCommand resp;
@@ -2323,7 +2327,7 @@ int CmdHF14AMfuPwdGen(const char *Cmd){
 	
 	if ( cmdp == 'r' || cmdp == 'R') {
 			// read uid from tag
-		UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT, 0, 0}};
+		UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0}};
 		clearCommandBuffer();
 		SendCommand(&c);
 		UsbCommand resp;

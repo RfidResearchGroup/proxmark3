@@ -23,7 +23,7 @@ bool InitDesfireCard(){
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 	set_tracing(true);
 
-	if (!iso14443a_select_card(NULL, &card, NULL, true, 0)) {
+	if (!iso14443a_select_card(NULL, &card, NULL, true, 0, false)) {
 		if (MF_DBGLEVEL >= MF_DBG_ERROR) DbpString("Can't select card");
 		OnError(1);
 		return false;
@@ -105,7 +105,7 @@ void MifareDesfireGetInformation(){
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 	// card select - information
-	if ( !iso14443a_select_card(NULL, &card, NULL, true, 0) ) {
+	if ( !iso14443a_select_card(NULL, &card, NULL, true, 0, false) ) {
 		if (MF_DBGLEVEL >= MF_DBG_ERROR) DbpString("Can't select card");
 		OnError(1);
 		return;

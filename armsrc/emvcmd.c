@@ -491,7 +491,7 @@ void EMVTransaction(void)
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 	
     while(true) { 
-        if(!iso14443a_select_card(uid, NULL, &cuid, true, 0)) {
+        if(!iso14443a_select_card(uid, NULL, &cuid, true, 0, false)) {
             if(MF_DBGLEVEL >= 1) Dbprintf("Can't select card");
             break;
         }
@@ -572,7 +572,7 @@ void EMVClone(uint8_t maxsfi, uint8_t maxrecord)
     LED_C_OFF();
     
     while(true) { 
-        if(!iso14443a_select_card(uid, &hi14a_card, &cuid, true, 0)) {
+        if(!iso14443a_select_card(uid, &hi14a_card, &cuid, true, 0, false)) {
             if(MF_DBGLEVEL >= 1) Dbprintf("Can't select card");
             break;
         }

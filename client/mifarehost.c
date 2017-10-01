@@ -830,7 +830,7 @@ bool detect_classic_prng(){
 
 	UsbCommand resp, respA;	
 	uint8_t cmd[] = {MIFARE_AUTH_KEYA, 0x00};
-	uint32_t flags = ISO14A_CONNECT | ISO14A_RAW | ISO14A_APPEND_CRC;
+	uint32_t flags = ISO14A_CONNECT | ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_RATS;
 	
 	UsbCommand c = {CMD_READER_ISO_14443a, {flags, sizeof(cmd), 0}};
 	memcpy(c.d.asBytes, cmd, sizeof(cmd));

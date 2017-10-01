@@ -1,9 +1,15 @@
-#include "cmdhfmf.h"
-#include "cmdhf14a.h"
-
 #ifndef CMDHFMFU_H__
 #define CMDHFMFU_H__
 
+#include <stdint.h>
+#include <stdio.h>
+#include "loclass/des.h"
+#include "cmdhfmf.h"
+#include "cmdhf14a.h"
+#include "mifare.h"
+#include "util.h"
+#include "protocols.h"
+#include "data.h"
 typedef struct {
 	uint8_t version[8];
 	uint8_t tbo[2];

@@ -68,7 +68,7 @@ void RunMod() {
 					}
 				}
 				
-				if (!iso14443a_select_card(NULL, &card[selected], NULL, true, 0)) {
+				if (!iso14443a_select_card(NULL, &card[selected], NULL, true, 0, true)) {
 					continue;
 				} else {
 					Dbprintf("Read UID:"); 
@@ -123,7 +123,7 @@ void RunMod() {
 
 			// wait for button to be released
 			// Delay cloning until card is in place
-			while(BUTTON_PRESS())
+			while (BUTTON_PRESS())
 				WDT_HIT();
 
 			Dbprintf("Starting clone. [Bank: %d]", selected);
