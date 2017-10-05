@@ -453,7 +453,7 @@ function main(args)
 	local segments = {}
 	
 	-- parse arguments for the script
-	for o, a in getopt.getopt(args, 'hwsdc:i::o:') do
+	for o, a in getopt.getopt(args, 'hwsdc:i:o:') do
 		-- output file
 		if o == "o" then 
 			outfile = a
