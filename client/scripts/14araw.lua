@@ -84,7 +84,7 @@ function main(args)
 	local no_rats = false
 	
 	-- Read the parameters
-	for o, a in getopt.getopt(args, 'corcpx:t3') do
+	for o, a in getopt.getopt(args, 'orcpx:dt3') do
 		if o == "o" then doconnect = false end		
 		if o == "r" then ignore_response = true end
 		if o == "c" then appendcrc = true end
