@@ -1738,7 +1738,7 @@ typedef struct _AT91S_UDP {
 #define AT91C_UDP_EPEDS       (0x1 << 15) // (UDP) Endpoint Enable Disable
 #define AT91C_UDP_RXBYTECNT   (0x7FF << 16) // (UDP) Number Of Bytes Available in the FIFO
 // -------- UDP_TXVC : (UDP Offset: 0x74) Transceiver Control Register --------
-#define AT91C_UDP_TXVDIS      (0x1 <<  8) // (UDP)
+#define AT91C_UDP_TXVDIS      (0x1 <<  8) // (UDP)  Transceiver Disable
 
 // *****************************************************************************
 //               REGISTER ADDRESS DEFINITION FOR AT91SAM7S512
