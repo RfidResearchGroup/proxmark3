@@ -122,7 +122,7 @@ local function main(args)
 
 	
 	-- find tag
-	result, err = lib14a.read1443a(false)
+	result, err = lib14a.read1443a(false, true)
 	if not result then return oops(err)	end
 
 	-- load keys

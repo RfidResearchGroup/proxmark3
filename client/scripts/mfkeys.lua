@@ -259,7 +259,7 @@ local function main( args)
 	end
 	
 	-- identify tag
-	tag, err = lib14a.read1443a(false)
+	tag, err = lib14a.read1443a(false, true)
 	if not tag then return oops(err) end
 
 	-- detect sectors and print taginfo

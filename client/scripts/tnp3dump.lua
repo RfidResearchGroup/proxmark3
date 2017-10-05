@@ -126,7 +126,7 @@ local function main(args)
 	local cmdSetDbgOff = "hf mf dbg 0"
 	core.console( cmdSetDbgOff) 
 	
-	result, err = lib14a.read1443a(false)
+	result, err = lib14a.read1443a(false, true)
 	if not result then
 		return oops(err)
 	end

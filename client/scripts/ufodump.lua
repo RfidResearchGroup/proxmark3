@@ -24,20 +24,20 @@ local TIMEOUT = 2000 -- Shouldn't take longer than 2 seconds
 local DEBUG = false -- the debug flag
 --- 
 -- A debug printout-function
-function dbg(args)
+local function dbg(args)
 	if DEBUG then
 		print("###", args)
 	end
 end 
 --- 
 -- This is only meant to be used when errors occur
-function oops(err)
+local function oops(err)
 	print("ERROR: ",err)
 	core.clearCommandBuffer()	
 end
 --- 
 -- Usage help
-function help()
+local function help()
 	print(desc)
 	print("Example usage")
 	print(example)
@@ -92,7 +92,7 @@ end
 -- Send a "raw" iso14443a package, ie "hf 14a raw" command
 function sendRaw(rawdata, options)
 	--print(">> ", rawdata)	
-	local flags = lib14a.ISO14A_COMMAND.ISO14A_NO_DISCONNECT + lib14a.ISO14A_COMMAND.ISO14A_RAW + lib14a.ISO14A_COMMAND.ISO14A_APPEND_CRC
+	local flags = lib14a.ISO14A_COMMAND.ISO14A_NO_DISCONNECT + lib14a.ISO14A_COMMAND.ISO14A_RAW + lib14a.ISO14A_COMMAND.ISO14A_APPEND_CRC + lib14a.ISO14A_COMMAND.ISO14A_NO_RATS
 	local command = Command:new{cmd = cmds.CMD_READER_ISO_14443a, 
 									arg1 = flags, -- Send raw 
 									-- arg2 contains the length, which is half the length 
@@ -125,7 +125,7 @@ function main(args)
 	endblock = endblock or 20
 	
 	-- First of all, connect
-	info, err = lib14a.read1443a(true)
+	info, err = lib14a.read1443a(true, true)
 	if err then disconnect() return oops(err) end	
 	core.clearCommandBuffer()
 	
@@ -156,10 +156,7 @@ function main(args)
 
 	print(string.format("\nDumped data into %s", filename))
 end
-
-					
-
-
+	
 -------------------------
 -- 	Testing
 -------------------------
