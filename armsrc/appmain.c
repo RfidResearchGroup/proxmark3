@@ -26,9 +26,6 @@
  #include "LCD.h"
 #endif
 
-// Global var to determine if device is in standalone mode or not.
-static int InStandAloneMode = 0;
-
 //=============================================================================
 // A buffer where we can queue things up to be sent through the FPGA, for
 // any purpose (fake tag, as reader, whatever). We go MSB first, since that
@@ -364,7 +361,6 @@ void SendStatus(void) {
 // Show some leds in a pattern to identify StandAlone mod is running
 void StandAloneMode(void) {
 	
-	InStandAloneMode = 1;
 	DbpString("Stand-alone mode! No PC necessary.");
 	// Oooh pretty -- notify user we're in elite samy mode now
 	LED(LED_RED,	200);
@@ -403,7 +399,9 @@ void printStandAloneModes(void) {
 	#endif 
 	
 	DbpString("Running ");	
-	Dbprintf("  Are we running standalone | %s", (InStandAloneMode)? "Yes" : "No");
+	//Dbprintf("  Is Device attached to USB| %s", USB_ATTACHED() ? "Yes" : "No"); 
+	//Dbprintf("  Is USB_reconnect value   | %d", GetUSBreconnect() );
+	//Dbprintf("  Is USB_configured value  | %d", GetUSBconfigured() );
 	
 	//.. add your own standalone detection based on with compiler directive you are used.
 	// don't "reuse" the already taken ones, this will make things easier when trying to detect the different modes
@@ -818,9 +816,14 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 		case CMD_MIFARE_NESTED:
 			MifareNested(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;
-		case CMD_MIFARE_CHKKEYS:
+		case CMD_MIFARE_CHKKEYS: {
 			MifareChkKeys(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;
+		}
+		case CMD_MIFARE_CHKKEYS_FAST: {
+			MifareChkKeys_fast(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
+			break;
+		}
 		case CMD_SIMULATE_MIFARE_CARD:
 			Mifare1ksim(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;
@@ -1127,8 +1130,6 @@ void  __attribute__((noreturn)) AppMain(void) {
 	common_area.flags.osimage_present = 1;
 
 	LEDsoff();
-
-	// list with standalone refs.
 	
 	// Init USB device
 	usb_enable();
@@ -1158,7 +1159,7 @@ void  __attribute__((noreturn)) AppMain(void) {
 
 	byte_t rx[sizeof(UsbCommand)];
 	size_t rx_len;
-  
+   
 	for(;;) {
 		if ( usb_poll_validate_length() ) {
 			rx_len = usb_read(rx, sizeof(UsbCommand));
@@ -1184,7 +1185,9 @@ void  __attribute__((noreturn)) AppMain(void) {
 			RunMod();
 #endif
 			// when here,  we are no longer in standalone mode.
-			InStandAloneMode = 0;
+			// reseting the variables which keeps track of usb re-attached/configured
+			//SetUSBreconnect(0);
+			//SetUSBconfigured(0);
 		}
 	}
 }

@@ -1957,7 +1957,61 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_card, uint32_
 		//set default timeout based on ATS
 		iso14a_set_ATS_timeout(resp);
 	}
+	return 1;	
+}
+
+int iso14443a_fast_select_card(uint8_t *uid_ptr, uint8_t num_cascades) {
+	uint8_t wupa[]       = { ISO14443A_CMD_WUPA };  // 0x26 - ISO14443A_CMD_REQA  0x52 - ISO14443A_CMD_WUPA
+	uint8_t sel_all[]    = { ISO14443A_CMD_ANTICOLL_OR_SELECT,0x20 };
+	uint8_t sel_uid[]    = { ISO14443A_CMD_ANTICOLL_OR_SELECT,0x70,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+	uint8_t resp[5] = {0}; // theoretically. A usual RATS will be much smaller
+	uint8_t resp_par[1] = {0};
+	uint8_t uid_resp[4] = {0};
+
+	uint8_t sak = 0x04; // cascade uid
+	int cascade_level = 0;
+
+	// Broadcast for a card, WUPA (0x52) will force response from all cards in the field
+    ReaderTransmitBitsPar(wupa, 7, NULL, NULL);
 	
+	// Receive the ATQA
+	if(!ReaderReceive(resp, resp_par)) return 0;
+
+	// OK we will select at least at cascade 1, lets see if first byte of UID was 0x88 in
+	// which case we need to make a cascade 2 request and select - this is a long UID
+	// While the UID is not complete, the 3nd bit (from the right) is set in the SAK.
+	for(; sak & 0x04; cascade_level++) {
+		// SELECT_* (L1: 0x93, L2: 0x95, L3: 0x97)
+		sel_uid[0] = sel_all[0] = 0x93 + cascade_level * 2;
+			
+		if (cascade_level < num_cascades - 1) {
+			uid_resp[0] = 0x88;
+			memcpy(uid_resp+1, uid_ptr+cascade_level*3, 3);
+		} else {
+			memcpy(uid_resp, uid_ptr+cascade_level*3, 4);
+		}
+
+		// Construct SELECT UID command
+		//sel_uid[1] = 0x70;													// transmitting a full UID (1 Byte cmd, 1 Byte NVB, 4 Byte UID, 1 Byte BCC, 2 Bytes CRC)
+		memcpy(sel_uid+2, uid_resp, 4);										// the UID received during anticollision, or the provided UID
+		sel_uid[6] = sel_uid[2] ^ sel_uid[3] ^ sel_uid[4] ^ sel_uid[5];  	// calculate and add BCC
+		AppendCrc14443a(sel_uid, 7);										// calculate and add CRC
+		ReaderTransmit(sel_uid, sizeof(sel_uid), NULL);
+
+		// Receive the SAK
+		if (!ReaderReceive(resp, resp_par)) return 0;
+		
+		sak = resp[0];
+
+		// Test if more parts of the uid are coming
+		if ((sak & 0x04) /* && uid_resp[0] == 0x88 */) {
+			// Remove first byte, 0x88 is not an UID byte, it CT, see page 3 of:
+			// http://www.nxp.com/documents/application_note/AN10927.pdf
+			uid_resp[0] = uid_resp[1];
+			uid_resp[1] = uid_resp[2];
+			uid_resp[2] = uid_resp[3]; 
+		}
+	}
 	return 1;	
 }
 
