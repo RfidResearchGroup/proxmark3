@@ -671,7 +671,15 @@ static void iclass_setup_sniff(void){
 
 	LEDsoff();
 
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+
+	// connect Demodulated Signal to ADC:
+	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+
+	// Set up the synchronous serial port
+	FpgaSetupSsc();
 
 	BigBuf_free(); BigBuf_Clear_ext(false); 
 	clear_trace();
@@ -690,19 +698,15 @@ static void iclass_setup_sniff(void){
 		Dbprintf("  DMA: %i bytes", ICLASS_DMA_BUFFER_SIZE);
 	}
 
-	// connect Demodulated Signal to ADC:
-	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
-
-	// Set up the synchronous serial port
-	FpgaSetupSsc();
-
 	// Set FPGA in the appropriate mode
     // put the FPGA in the appropriate mode
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_SNIFFER);
-	SpinDelay(50);
+	SpinDelay(200);
  
 	// Start the SSP timer
 	StartCountSspClk();
+	
+	LED_A_ON();
 	if (MF_DBGLEVEL > 3) Dbprintf("iclass_setup_sniff Exit");
 }
 
@@ -1010,6 +1014,13 @@ static void CodeIClassTagSOF() {
 // turn off afterwards
 void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
 
+	if (MF_DBGLEVEL > 3) Dbprintf("iclass_simulate Enter");
+
+	LEDsoff();
+
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+
+	
 	// this will clear out bigbuf memory ...
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
@@ -1260,10 +1271,6 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 	//Each bit is doubled when modulated for FPGA, and we also have SOF and EOF (2 bytes)
 	uint8_t *data_response = BigBuf_malloc( (8+2) * 2 + 2);
 
-	// Start from off (no field generated)
-	//FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	//SpinDelay(200);
-	
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_LISTEN);
 
 	StartCountSspClk();
@@ -1280,7 +1287,7 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 
 		WDT_HIT();
 
-		response_delay = 1;
+		response_delay = 200;
 		// receivedCmd[0] = 0;	receivedCmd[1] = 0;	receivedCmd[2] = 0;	receivedCmd[3] = 0;
 		// receivedCmd[4] = 0;	receivedCmd[5] = 0;	receivedCmd[6] = 0;	receivedCmd[7] = 0;
 		// receivedCmd[8] = 0;	receivedCmd[9] = 0;	receivedCmd[10] = 0; receivedCmd[11] = 0;
@@ -1523,7 +1530,7 @@ static void TransmitIClassCommand(const uint8_t *cmd, int len, int *samples, int
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
 	AT91C_BASE_SSC->SSC_THR = 0x00;
-	SpinDelay(100);
+	//SpinDelay(200);
 
 	if (wait) {
 		if (*wait < 10) *wait = 10;
@@ -1708,6 +1715,13 @@ int ReaderReceiveIClass(uint8_t* receivedAnswer) {
 }
 
 void setupIclassReader() {
+
+	LEDsoff();
+
+    // Start from off (no field generated)
+    // Signal field is off with the appropriate LED
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	
     FpgaSetupSsc();
@@ -1718,16 +1732,10 @@ void setupIclassReader() {
 	clear_trace();
 	set_tracing(true);
 
-    // Start from off (no field generated)
-    // Signal field is off with the appropriate LED
-    LED_D_OFF();
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    SpinDelay(200);
-
     // Now give it time to spin up.
     // Signal field is on with the appropriate LED
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
-    SpinDelay(20);
+    SpinDelay(200);
 
 	// Start the timer
 	StartCountSspClk();
