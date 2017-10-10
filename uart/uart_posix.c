@@ -128,7 +128,6 @@ serial_port uart_open(const char* pcPortName)
 }
 
 void uart_close(const serial_port sp) {
-  if (!sp) return; 
   if (sp == INVALID_SERIAL_PORT) return;
   if (sp == CLAIMED_SERIAL_PORT) return;
 
@@ -162,7 +161,7 @@ bool uart_receive(const serial_port sp, byte_t* pbtRx, size_t pszMaxRxLen, size_
   int byteCount;
   fd_set rfds;
   struct timeval tv;
-  uint64_t timeout_at = msclock() + RECV_TOTAL_TIMEOUT_MS;
+  //uint64_t timeout_at = msclock() + RECV_TOTAL_TIMEOUT_MS;
   
   // Reset the output count
   *pszRxLen = 0;
@@ -212,8 +211,8 @@ bool uart_receive(const serial_port sp, byte_t* pbtRx, size_t pszMaxRxLen, size_
       return true;
     }
     
-//  } while (byteCount);
-  } while (msclock() < timeout_at);
+  } while (byteCount);
+//  } while (msclock() < timeout_at);
   return true;
 }
 
