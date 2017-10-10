@@ -129,6 +129,7 @@ CMDSRCS =	crapto1/crapto1.c \
 			cmdhfmfdes.c \
 			cmdhftopaz.c \
 			cmdhfemv.c \
+			cmdhffelica.c \
 			cmdhw.c \
 			cmdlf.c \
 			cmdlfawid.c \

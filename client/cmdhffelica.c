@@ -96,10 +96,7 @@ int CmdHFFelicaSim(const char *Cmd) {
 	uint8_t cmdp = 0;
 	uint8_t uid[10] = {0,0,0,0,0,0,0,0,0,0};
 	int uidlen = 0;
-	bool useUIDfromEML = true;
-	bool setEmulatorMem = false;
-	bool verbose = false;
-	nonces_t data[1];
+	bool verbose =  false;
 	
 	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch(param_getchar(Cmd, cmdp)) {
@@ -120,7 +117,6 @@ int CmdHFFelicaSim(const char *Cmd) {
 				param_gethex_ex(Cmd, cmdp+1, uid, &uidlen);
 				if (!errors) {
 					PrintAndLog("Emulating ISO18092/FeliCa tag with %d byte UID (%s)", uidlen>>1, sprint_hex(uid, uidlen>>1));
-					useUIDfromEML = false;
 				}
 				cmdp += 2;
 				break;
@@ -131,7 +127,6 @@ int CmdHFFelicaSim(const char *Cmd) {
 				break;
 			case 'e':
 			case 'E':
-				setEmulatorMem = true;
 				cmdp++;
 				break;				
 			default:
@@ -150,7 +145,8 @@ int CmdHFFelicaSim(const char *Cmd) {
 	SendCommand(&c);	
 	UsbCommand resp;
 	
-	PrintAndLog("Press pm3-button to abort simulation");
+	if ( verbose )
+		PrintAndLog("Press pm3-button to abort simulation");
 	
 	while( !ukbhit() ){
 		if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500) ) continue;
@@ -304,14 +300,14 @@ int CmdHFFelicaCmdRaw(const char *cmd) {
 
     if (reply) {
         if (active_select)
-            waitCmd(1);
+            waitCmdFelica(1);
         if (datalen > 0)
-            waitCmd(0);
+            waitCmdFelica(0);
     }
     return 0;
 }
 
-void waitCmd(uint8_t iSelect) {
+void waitCmdFelica(uint8_t iSelect) {
     UsbCommand resp;
     uint16_t len = 0;
 

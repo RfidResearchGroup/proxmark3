@@ -37,5 +37,5 @@ extern int usage_hf_felica_sim(void);
 extern int usage_hf_felica_sniff(void);
 extern int usage_hf_fFelica_raw(void);
 
-void waitCmd(uint8_t iSelect);
+void waitCmdFelica(uint8_t iSelect);
 #endif

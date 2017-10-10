@@ -404,6 +404,12 @@ void annotateLegic(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 	}
 }
 
+void annotateFelica(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){	
+	switch(cmd[0]){
+		default                     : snprintf(exp,size ,"?");break;
+	}
+}
+
 /**
  * @brief iso14443A_CRC_check Checks CRC in command or response
  * @param isResponse
@@ -633,6 +639,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 				break;
 			case ISO_14443B:
 			case TOPAZ:
+			case FELICA:
 				crcStatus = iso14443B_CRC_check(isResponse, frame, data_len);
 				break;
 			case ISO_14443A:
@@ -701,6 +708,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 			case TOPAZ:			annotateTopaz(explanation,sizeof(explanation),frame,data_len); break;
 			case ISO_7816_4:	annotateIso7816(explanation,sizeof(explanation),frame,data_len); break;
 			case ISO_15693:		annotateIso15693(explanation,sizeof(explanation),frame,data_len); break;
+			case FELICA:		annotateFelica(explanation,sizeof(explanation),frame,data_len); break;
 			default:			break;
 		}
 	}
@@ -756,6 +764,7 @@ int usage_hf_list(){
 	PrintAndLog("    topaz  - interpret data as topaz communications");
 	PrintAndLog("    7816   - interpret data as iso7816-4 communications");
 	PrintAndLog("    legic  - interpret data as LEGIC communications");
+	PrintAndLog("    felica - interpret data as ISO18092 / FeliCa communications");
 	PrintAndLog("");
 	PrintAndLog("example:	hf list 14a f");
 	PrintAndLog("			hf list iclass");
@@ -818,6 +827,7 @@ int CmdHFList(const char *Cmd) {
 	else if(strcmp(type, "des")== 0)		protocol = MFDES;
 	else if(strcmp(type, "legic")==0)		protocol = LEGIC;
 	else if(strcmp(type, "15")==0)			protocol = ISO_15693;
+	else if(strcmp(type, "felica")==0)		protocol = FELICA;
 	else if(strcmp(type, "raw")== 0)		protocol = -1;//No crc, no annotations
 	else errors = true;
 
@@ -862,6 +872,8 @@ int CmdHFList(const char *Cmd) {
 		PrintAndLog("LEGIC    - Timings are in ticks (1us == 1.5ticks)");
 	if ( protocol == ISO_15693 )
 		PrintAndLog("ISO15693 - Timings are not as accurate");
+	if ( protocol == FELICA )
+		PrintAndLog("ISO18092 / FeliCa - Timings are not as accurate");	
 	
 	PrintAndLog("");
     PrintAndLog("      Start |        End | Src | Data (! denotes parity error)                                   | CRC | Annotation         |");
@@ -912,6 +924,14 @@ int CmdHFSearch(const char *Cmd){
 		PrintAndLog("\nValid iClass Tag (or PicoPass Tag) Found - Quiting Search\n");
 		return ans;
 	}
+
+	/*
+	ans = CmdHFFelicaReader("s");
+	if (ans) {
+		PrintAndLog("\nValid ISO18092 / FeliCa Found - Quiting Search\n");
+		return ans;
+	}
+	*/
 	
 	PrintAndLog("\nno known/supported 13.56 MHz tags found\n");
 	return 0;
@@ -939,6 +959,7 @@ static command_t CommandTable[] = {
 #ifdef WITH_EMV
 	{"emv",         CmdHFEmv,         1, "{ EMV RFIDs...                  }"},
 #endif	
+	{"felica",      CmdHFFelica,      1, "{ ISO18092 / Felica RFIDs...    }"},
 	{"legic",       CmdHFLegic,       1, "{ LEGIC RFIDs...                }"},
 	{"iclass",      CmdHFiClass,      1, "{ ICLASS RFIDs...               }"},
 	{"mf",      	CmdHFMF,		  1, "{ MIFARE RFIDs...               }"},
