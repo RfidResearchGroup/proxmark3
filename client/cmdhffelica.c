@@ -13,10 +13,11 @@ static int CmdHelp(const char *Cmd);
 
 int usage_hf_felica_sim(void) {
 	PrintAndLog("\n Emulating ISO/18092 FeliCa tag \n");
-	PrintAndLog("usage: hf 14a sim [h] t <type> u <uid> [v]");
+	PrintAndLog("usage: hf felica sim [h] t <type> u <uid> [v]");
 	PrintAndLog("options: ");
 	PrintAndLog("    h     : This help");
-	PrintAndLog("    t     : 1 = MIFARE Classic 1k");
+	PrintAndLog("    t     : 1 = FeliCa");
+	PrintAndLog("          : 2 = FeliCaS");
 	PrintAndLog("    v     : (Optional) Verbose");
 	PrintAndLog("samples:");
 	PrintAndLog("          hf felica sim t 1 u 11223344556677");
@@ -24,7 +25,7 @@ int usage_hf_felica_sim(void) {
 }
 int usage_hf_felica_sniff(void){
 	PrintAndLog("It get data from the field and saves it into command buffer.");
-	PrintAndLog("Buffer accessible from command 'hf list 14a'");
+	PrintAndLog("Buffer accessible from command 'hf list felica'");
 	PrintAndLog("Usage:  hf felica sniff [c][r]");
 	PrintAndLog("c - triggered by first data from card");
 	PrintAndLog("r - triggered by first 7-bit request from reader (REQ,WUP,...)");
@@ -143,7 +144,7 @@ int CmdHFFelicaSim(const char *Cmd) {
 	//Validations
 	if (errors || cmdp == 0) return usage_hf_felica_sim();
 	
-	UsbCommand c = {CMD_SIMULATE_TAG_ISO_14443a,{ tagtype, flags, 0 }};	
+	UsbCommand c = {CMD_FELICA_SIMULATE_TAG,{ tagtype, flags, 0 }};	
 	memcpy(c.d.asBytes, uid, uidlen>>1);
 	clearCommandBuffer();
 	SendCommand(&c);	
@@ -168,14 +169,14 @@ int CmdHFFelicaSniff(const char *Cmd) {
 		if (ctmp == 'r' || ctmp == 'R') param |= 0x02;
 	}
 
-	UsbCommand c = {CMD_SNOOP_ISO_14443a, {param, 0, 0}};
+	UsbCommand c = {CMD_FELICA_SNOOP, {param, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;
 }
 
 int CmdHFFelicaCmdRaw(const char *cmd) {
-    UsbCommand c = {CMD_READER_ISO_14443a, {0, 0, 0}};
+    UsbCommand c = {CMD_FELICA_COMMAND, {0, 0, 0}};
     bool reply = 1;
     bool crc = false;
     bool power = false;
@@ -190,7 +191,7 @@ int CmdHFFelicaCmdRaw(const char *cmd) {
 	uint16_t datalen = 0;
 	uint32_t temp;
 
-    if (strlen(cmd) < 2) return usage_hf_14a_raw();
+    if (strlen(cmd) < 2) return usage_hf_felica_raw();
 
     // strip
     while (*cmd==' ' || *cmd=='\t') cmd++;
