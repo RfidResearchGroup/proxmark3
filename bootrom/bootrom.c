@@ -88,7 +88,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 	UsbCommand* c = (UsbCommand *)packet;
 	volatile uint32_t *p;
 
-	if(len != sizeof(UsbCommand)) Fatal();
+	if ( len != sizeof(UsbCommand)) Fatal();
   
 	uint32_t arg0 = (uint32_t)c->arg[0];
   
@@ -199,7 +199,7 @@ static void flash_mode(int externally_entered) {
 	for(;;) {
 		WDT_HIT();
 
-		if (usb_poll()) {
+		if ( usb_poll_validate_length())  {
 			rx_len = usb_read(rx, sizeof(UsbCommand));
 			if (rx_len)
 				UsbPacketReceived(rx, rx_len);
