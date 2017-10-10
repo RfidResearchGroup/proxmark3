@@ -103,8 +103,8 @@ serial_port uart_open(const char* pcPortName) {
   
   PurgeComm(sp->hPort, PURGE_RXABORT | PURGE_RXCLEAR);
   
-  bool err = uart_set_speed(sp, 460800);
-  if (!err)
+  bool success = uart_set_speed(sp, 460800);
+  if (!success)
 	  uart_set_speed(sp, 115200);
   
   return sp;
