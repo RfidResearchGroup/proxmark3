@@ -37,7 +37,8 @@
 
 #include <wchar.h>
 #include "at91sam7s512.h"
-#include "config_gpio.h"
+#include "config_gpio.h" 
+#include "proxmark3.h" // USB_CONNECT()
 #include "common.h"
 
 extern void usb_disable();
@@ -48,10 +49,15 @@ extern bool usb_poll_validate_length();
 extern uint32_t usb_read(byte_t* data, size_t len);
 extern uint32_t usb_write(const byte_t* data, const size_t len);
 
-void AT91F_USB_SendData(AT91PS_UDP pUdp, const char *pData, uint32_t length);
-void AT91F_USB_SendZlp(AT91PS_UDP pUdp);
-void AT91F_USB_SendStall(AT91PS_UDP pUdp);
-void AT91F_CDC_Enumerate();
+extern void SetUSBreconnect(int value);
+extern int GetUSBreconnect(void);
+extern void SetUSBconfigured(int value);
+extern int GetUSBconfigured(void);
+
+extern void AT91F_USB_SendData(AT91PS_UDP pUdp, const char *pData, uint32_t length);
+extern void AT91F_USB_SendZlp(AT91PS_UDP pUdp);
+extern void AT91F_USB_SendStall(AT91PS_UDP pUdp);
+extern void AT91F_CDC_Enumerate();
 
 typedef const struct __attribute__((__packed__)) {
 	const uint32_t dwLength;
