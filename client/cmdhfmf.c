@@ -129,7 +129,8 @@ int usage_hf14_chk(void){
 	return 0;
 }
 int usage_hf14_chk_fast(void){
-	PrintAndLog("Usage:  hf mf fastchk <card memory> [t|d] [<key (12 hex symbols)>] [<dic (*.dic)>]");
+	PrintAndLog("Usage:  hf mf fchk <card memory> [t|d] [<key (12 hex symbols)>] [<dic (*.dic)>]");
+	PrintAndLog("(iceman) This is a improved checkkeys method speedwise ");
 	PrintAndLog("options:");
 	PrintAndLog("      h    this help");	
 	PrintAndLog("      <cardmem> all sectors based on card memory, other values then below defaults to 1k");
@@ -141,9 +142,9 @@ int usage_hf14_chk_fast(void){
 	PrintAndLog("      t    write keys to emulator memory\n");
 	PrintAndLog(" ");
 	PrintAndLog("samples:");
-	PrintAndLog("      hf mf chk 1 1234567890ab keys.dic    -- target 1K using key 1234567890ab, using dictionary file");
-	PrintAndLog("      hf mf chk 1 t                        -- target 1K, write to emulator mem");
-	PrintAndLog("      hf mf chk 1 d                        -- target 1K, write to file");
+	PrintAndLog("      hf mf fchk 1 1234567890ab keys.dic    -- target 1K using key 1234567890ab, using dictionary file");
+	PrintAndLog("      hf mf fchk 1 t                        -- target 1K, write to emulator mem");
+	PrintAndLog("      hf mf fchk 1 d                        -- target 1K, write to file");
 	return 0;
 }
 int usage_hf14_keybrute(void){
@@ -1188,7 +1189,7 @@ void shuffle( uint8_t *array, uint16_t len) {
 
 int CmdHF14AMfChk_fast(const char *Cmd) {
 
-	if (strlen(Cmd)<2) return usage_hf14_chk_fast();
+	if (strlen(Cmd)<1) return usage_hf14_chk_fast();
 
 	FILE * f;
 	char filename[FILE_PATH_SIZE]={0};
@@ -1375,7 +1376,7 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 		timeout = 0;
 		
 		t2 = msclock() - t2;
-		PrintAndLog("\n[-] Chunk: %.1fs | found %d/%d keys", t2, (float)(t2/1000.0), curr_keys, (SectorsCnt<<1));
+		PrintAndLog("\n[-] Chunk: %.1fs | found %u/%u keys", t2, (float)(t2/1000.0), curr_keys, (SectorsCnt<<1));
 		
 		// all keys?		
 		if ( curr_keys == SectorsCnt*2 || lastChunk ) {
