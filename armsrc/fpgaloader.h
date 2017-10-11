@@ -35,10 +35,11 @@ void SetAdcMuxFor(uint32_t whichGpio);
 extern void switch_off();
 
 // definitions for multiple FPGA config files support
-#define FPGA_BITSTREAM_MAX 2	// the total number of FPGA bitstreams (configs)
+#define FPGA_BITSTREAM_MAX 3	// the total number of FPGA bitstreams (configs)
 #define FPGA_BITSTREAM_ERR 0
 #define FPGA_BITSTREAM_LF 1
 #define FPGA_BITSTREAM_HF 2
+#define FPGA_BITSTREAM_NFC 3
 
 // Definitions for the FPGA commands.
 #define FPGA_CMD_SET_CONFREG						(1<<12)
@@ -55,6 +56,7 @@ extern void switch_off();
 #define FPGA_MAJOR_MODE_HF_SIMULATOR				(2<<5)
 #define FPGA_MAJOR_MODE_HF_ISO14443A				(3<<5)
 #define FPGA_MAJOR_MODE_HF_SNOOP				    (4<<5)
+#define FPGA_MAJOR_MODE_HF_FELICA      				(5<<5)
 // BOTH
 #define FPGA_MAJOR_MODE_OFF							(7<<5)
 // Options for LF_ADC

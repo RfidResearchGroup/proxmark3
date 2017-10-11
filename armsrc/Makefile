@@ -12,6 +12,7 @@ APP_INCLUDES = apps.h
 #in the next section to remove that particular feature from compilation.
 # NO space,TABs after the "\" sign.  
 APP_CFLAGS = -DWITH_CRC \
+			 -DWITH_ISO18092 \
 			 -DON_DEVICE \
 			 -DWITH_LF \
 			 -DWITH_HITAG \
@@ -21,20 +22,21 @@ APP_CFLAGS = -DWITH_CRC \
 			 -DWITH_ISO14443a \
 			 -DWITH_ICLASS \
 			 -DWITH_HFSNOOP \
-			 -DWITH_LF_SAMYRUN \
+			 -DWITH_HF_YOUNG \
 			 -fno-strict-aliasing -ffunction-sections -fdata-sections
+
 ### IMPORTANT -  move the commented variable below this line
 #			 -DWITH_LCD \
 #			 -DWITH_EMV \
 #
 # Standalone Mods
 #-------------------------------------------------------
-# -DWITH_LF_ICERUN
-# -DWITH_LF_SAMYRUN
-# -DWITH_LF_PROXBRUTE
-# -DWITH_LF_HIDCORP
-# -DWITH_HF_YOUNG
-# -DWITH_HF_MATTYRUN
+#			 -DWITH_LF_ICERUN
+#			 -DWITH_LF_SAMYRUN
+#			 -DWITH_LF_PROXBRUTE
+#			 -DWITH_LF_HIDCORP
+#			 -DWITH_HF_YOUNG
+#			 -DWITH_HF_MATTYRUN
 
 
 SRC_LCD = fonts.c LCD.c
@@ -51,7 +53,7 @@ SRC_FLASH = flash.c
 SRC_BEE = bee.c
 
 #the FPGA bitstream files. Note: order matters!
-FPGA_BITSTREAMS = fpga_lf.bit fpga_hf.bit
+FPGA_BITSTREAMS = fpga_lf.bit fpga_hf.bit fpga_nfc.bit
 
 #the zlib source files required for decompressing the fpga config at run time
 SRC_ZLIB = inflate.c inffast.c inftrees.c adler32.c zutil.c
@@ -93,9 +95,8 @@ ARMSRC = fpgaloader.c \
 	parity.c \
 	usb_cdc.c \
 	cmd.c \
-	lf_samyrun.c \
-#	hf_young.c
-	
+	hf_young.c
+	#	lf_samyrun.c \
 	
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
 include ../common/Makefile.common
