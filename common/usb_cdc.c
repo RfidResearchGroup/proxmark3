@@ -169,7 +169,7 @@ static const char cfgDescriptor[] = {
 	_EP03_IN,   // EndpointAddress, Endpoint 03-IN
 	_INTERRUPT, // Attributes
 	0x40, 0x00, // MaxPacket Size  (ice 0x200, pm3 0x08)
-	0x02,		// Interval polling (rfidler 0x02,  pm3 0xff)
+	0xFF,		// Interval polling (rfidler 0x02,  pm3 0xff)
 
 	/* Data Class Interface Descriptor Requirement */
 	0x09, // Length
@@ -188,7 +188,7 @@ static const char cfgDescriptor[] = {
 	_EP01_OUT, 	// Endpoint Address, Endpoint 01-OUT
 	_BULK,   	// Attributes      BULK
 	0x40, 0x00, // MaxPacket Size	
-	0x00,   	// Interval
+	0x00,   	// Interval	   (ignored for bulk)
 
 	/* Endpoint descriptor */
 	0x07,   	// Length
@@ -196,7 +196,7 @@ static const char cfgDescriptor[] = {
 	_EP02_IN,   // Endpoint Address, Endpoint 02-IN
 	_BULK,   	// Attributes      BULK
 	0x40, 0x00, // MaxPacket Size	
-	0x00    	// Interval
+	0x00    	// Interval	   (ignored for bulk)
 };
 
 // Microsoft OS Extended Configuration Compatible ID Descriptor
@@ -744,22 +744,17 @@ void AT91F_CDC_Enumerate() {
 
 	if ( bRequest == MS_VENDOR_CODE) {
 		if ( bmRequestType == MS_WCID_GET_DESCRIPTOR ) { // C0
-		
 			if ( wIndex == MS_EXTENDED_COMPAT_ID ) {  // 4
 				AT91F_USB_SendData(pUdp, CompatIDFeatureDescriptor, MIN(sizeof(CompatIDFeatureDescriptor), wLength));
-			} else {
-				AT91F_USB_SendStall(pUdp);
-			}
-			return;
+				return;
+			} 
 		}
 		if ( bmRequestType == MS_WCID_GET_FEATURE_DESCRIPTOR ) {  //C1
 			if ( wIndex == MS_EXTENDED_PROPERTIES ) { // 5
 				AT91F_USB_SendData(pUdp, (char *)&OSPropertyDescriptor, MIN(sizeof(OSPropertyDescriptor), wLength));
-				AT91F_USB_SendData(pUdp, OSprop, MIN(sizeof(OSprop), wLength));
-			} else {
-				AT91F_USB_SendStall(pUdp);
-			}
-			return;
+				//AT91F_USB_SendData(pUdp, OSprop, MIN(sizeof(OSprop), wLength));
+				return;
+			} 
 		}
 	}
 	// Handle supported standard device request Cf Table 9-3 in USB specification Rev 1.1
