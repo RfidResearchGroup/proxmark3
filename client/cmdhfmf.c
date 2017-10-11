@@ -1376,7 +1376,7 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 		timeout = 0;
 		
 		t2 = msclock() - t2;
-		PrintAndLog("\n[-] Chunk: %.1fs | found %u/%u keys", t2, (float)(t2/1000.0), curr_keys, (SectorsCnt<<1));
+		PrintAndLog("\n[-] Chunk: %.1fs | found %u/%u keys", (float)(t2/1000.0), curr_keys, (SectorsCnt<<1));
 		
 		// all keys?		
 		if ( curr_keys == SectorsCnt*2 || lastChunk ) {
