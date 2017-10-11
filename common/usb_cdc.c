@@ -668,7 +668,7 @@ void AT91F_USB_SendData(AT91PS_UDP pUdp, const char *pData, uint32_t length) {
 	uint32_t cpt = 0;
 
 	do {
-		cpt = MIN(length, 8);
+		cpt = MIN(length, AT91C_EP_CONTROL_SIZE);
 		length -= cpt;
 
 		while (cpt--)
