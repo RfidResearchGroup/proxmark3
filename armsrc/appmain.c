@@ -307,6 +307,9 @@ void SendVersion(void) {
 	FpgaGatherVersion(FPGA_BITSTREAM_HF, temp, sizeof(temp));
 	strncat(VersionString, temp, sizeof(VersionString) - strlen(VersionString) - 1);
 
+	FpgaGatherVersion(FPGA_BITSTREAM_NFC, temp, sizeof(temp));
+	strncat(VersionString, temp, sizeof(VersionString) - strlen(VersionString) - 1);
+
 	// Send Chip ID and used flash memory
 	uint32_t text_and_rodata_section_size = (uint32_t)&__data_src_start__ - (uint32_t)&_flash_start;
 	uint32_t compressed_data_section_size = common_area.arg1;
@@ -1090,9 +1093,8 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			usb_disable();
 			SpinDelay(2000);
 			AT91C_BASE_RSTC->RSTC_RCR = RST_CONTROL_KEY | AT91C_RSTC_PROCRST;
-			for(;;) {
-				// We're going to reset, and the bootrom will take control.
-			}
+			// We're going to reset, and the bootrom will take control.
+			for(;;) {}
 			break;
 
 		case CMD_START_FLASH:
@@ -1101,7 +1103,8 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			}
 			usb_disable();
 			AT91C_BASE_RSTC->RSTC_RCR = RST_CONTROL_KEY | AT91C_RSTC_PROCRST;
-			for(;;);
+			// We're going to flash, and the bootrom will take control.
+			for(;;) {}			
 			break;
 
 		case CMD_DEVICE_INFO: {
@@ -1158,15 +1161,21 @@ void  __attribute__((noreturn)) AppMain(void) {
 #endif
 
 	byte_t rx[sizeof(UsbCommand)];
-	size_t rx_len;
+	size_t rx_len = 0;
    
 	for(;;) {
+	
+		// Check if there is a usb packet available
 		if ( usb_poll_validate_length() ) {
+  
+			// Try to retrieve the available command frame
 			rx_len = usb_read(rx, sizeof(UsbCommand));
-			
-			if (rx_len)
-				UsbPacketReceived(rx, rx_len);
+
+			// Check if the transfer was complete
+			if (rx_len == sizeof(UsbCommand))
+				UsbPacketReceived(rx, rx_len);					
 		}
+		
 		WDT_HIT();
 
 		// Press button for one second to enter a possible standalone mode
