@@ -15,6 +15,17 @@
 
 #include "mifarecmd.h"
 #include <inttypes.h>
+
+#ifndef AUTHENTICATION_TIMEOUT
+# define AUTHENTICATION_TIMEOUT  848 //848			// card times out 1ms after wrong authentication (according to NXP documentation)
+#endif
+#ifndef PRE_AUTHENTICATION_LEADTIME
+# define PRE_AUTHENTICATION_LEADTIME 400		// some (non standard) cards need a pause after select before they are ready for first authentication 
+#endif 	
+#ifndef CHK_TIMEOUT
+# define CHK_TIMEOUT()  SpinDelayUs(AUTHENTICATION_TIMEOUT);
+#endif
+
 //-----------------------------------------------------------------------------
 // Select, Authenticate, Read a MIFARE tag. 
 // read block
@@ -598,9 +609,6 @@ int valid_nonce(uint32_t Nt, uint32_t NtEnc, uint32_t Ks1, uint8_t *parity) {
 	(oddparity8((Nt >> 8) & 0xFF) == ((parity[2]) ^ oddparity8((NtEnc >> 8) & 0xFF) ^ BIT(Ks1,0)))) ? 1 : 0;
 }
 
-#define AUTHENTICATION_TIMEOUT  848 //848			// card times out 1ms after wrong authentication (according to NXP documentation)
-#define PRE_AUTHENTICATION_LEADTIME 400		// some (non standard) cards need a pause after select before they are ready for first authentication 
-
 void MifareAcquireNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *datain) {
 
 	uint32_t cuid = 0;
@@ -610,11 +618,13 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *
 	uint8_t par[1] = {0x00};
 	int16_t isOK = 0;
 	uint8_t buf[USB_CMD_DATA_SIZE] = {0x00};
-	uint32_t timeout = 0;
 	uint8_t blockNo = arg0 & 0xff;
 	uint8_t keyType = (arg0 >> 8) & 0xff;
 	bool initialize = flags & 0x0001;
 	bool field_off = flags & 0x0004;
+
+	uint16_t num_nonces = 0;
+	bool have_uid = false;
 	
 	LED_A_ON();
 	LED_C_OFF();
@@ -629,9 +639,6 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *
 	
 	LED_C_ON();
 	
-	uint8_t dummy_answer = 0;	
-	uint16_t num_nonces = 0;
-	bool have_uid = false;
 	for (uint16_t i = 0; i <= USB_CMD_DATA_SIZE-4; i += 4 ) {
 
 		// Test if the action was cancelled
@@ -668,9 +675,11 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *
 		int len = ReaderReceive(answer, par);		
 
 		// send a dummy byte as reader response in order to trigger the cards authentication timeout
-		ReaderTransmit(&dummy_answer, 1, NULL);
-		timeout = GetCountSspClk() + AUTHENTICATION_TIMEOUT;
+		//ReaderTransmit(&dummy_answer, 1, NULL);
 
+		// wait for the card to become ready again
+		CHK_TIMEOUT();
+		
 		if (len != 4) {
 			if (MF_DBGLEVEL >= 1)	Dbprintf("AcquireNonces: Auth1 error");
 			continue;
@@ -683,9 +692,6 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *
 		buf[i+1] = answer[1];
 		buf[i+2] = answer[2];
 		buf[i+3] = answer[3];
-
-		// wait for the card to become ready again
-		while (GetCountSspClk() < timeout) {};	
 	}
 
 	LED_C_OFF();
@@ -708,7 +714,6 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *
 // Mifare Classic Cards" in Proceedings of the 22nd ACM SIGSAC Conference on 
 // Computer and Communications Security, 2015
 //-----------------------------------------------------------------------------
-
 void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *datain)
 {
 	uint64_t ui64Key = 0;
@@ -723,8 +728,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 	uint8_t par_enc[1] = {0x00};
 	uint8_t nt_par_enc = 0;
 	uint8_t buf[USB_CMD_DATA_SIZE] = {0x00};
-	uint32_t timeout = 0;
-	
+
 	uint8_t blockNo = arg0 & 0xff;
 	uint8_t keyType = (arg0 >> 8) & 0xff;
 	uint8_t targetBlockNo = arg1 & 0xff;
@@ -734,6 +738,10 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 	bool slow = flags & 0x0002;
 	bool field_off = flags & 0x0004;
 	
+//	uint8_t dummy_answer = 0;	
+	uint16_t num_nonces = 0;
+	bool have_uid = false;
+
 	LED_A_ON();
 	LED_C_OFF();
 
@@ -747,9 +755,6 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 	
 	LED_C_ON();
 	
-	uint8_t dummy_answer = 0;	
-	uint16_t num_nonces = 0;
-	bool have_uid = false;
 	for (uint16_t i = 0; i <= USB_CMD_DATA_SIZE - 9; ) {
 
 		// Test if the action was cancelled
@@ -780,10 +785,8 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 			}
 		}
 		
-		if (slow) {
-			timeout = GetCountSspClk() + PRE_AUTHENTICATION_LEADTIME;
-			while(GetCountSspClk() < timeout);
-		}
+		if (slow)
+			SpinDelayUs(PRE_AUTHENTICATION_LEADTIME);
 
 		uint32_t nt1;
 		if (mifare_classic_authex(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST, &nt1, NULL)) {
@@ -795,8 +798,9 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 		uint16_t len = mifare_sendcmd_short(pcs, AUTH_NESTED, 0x60 + (targetKeyType & 0x01), targetBlockNo, receivedAnswer, par_enc, NULL);
 
 		// send a dummy byte as reader response in order to trigger the cards authentication timeout
-		ReaderTransmit(&dummy_answer, 1, NULL);
-		timeout = GetCountSspClk() + AUTHENTICATION_TIMEOUT;
+		//ReaderTransmit(&dummy_answer, 1, NULL);
+		// wait for the card to become ready again
+		CHK_TIMEOUT();
 
 		if (len != 4) {
 			if (MF_DBGLEVEL >= 1)	Dbprintf("AcquireNonces: Auth2 error len=%d", len);
@@ -813,8 +817,6 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 			memcpy(buf+i+8, &nt_par_enc, 1);
 			i += 9;
 		}
-		// wait for the card to become ready again
-		while(GetCountSspClk() < timeout);	
 	}
 
 	LED_C_OFF();
@@ -1081,17 +1083,9 @@ typedef struct chk_t {
 }
 */
 
-#ifndef CHK_TIMEOUT
-# define CHK_TIMEOUT() {\
-	uint8_t dummy_answer = 0; \
-	ReaderTransmit(&dummy_answer, 1, NULL); \
-	uint32_t timeout = GetCountSspClk() + AUTHENTICATION_TIMEOUT; \
-	while(GetCountSspClk() < timeout); \
-}
-#endif
 
 // checks one key.
-// fast select,  tries 10times to select
+// fast select,  tries 5 times to select
 // 
 // return:
 //  2 = failed to select.
@@ -1100,7 +1094,7 @@ typedef struct chk_t {
 uint8_t chkKey( struct chk_t *c ) {
 	
 	uint8_t i = 0, res = 2;	
-	while( i<10 ) {
+	while( i < 5 ) {
 		// this part is from Piwi's faster nonce collecting part in Hardnested.
 		// assume: fast select
 		if(!iso14443a_fast_select_card(c->uid, c->cl)) {
@@ -1109,7 +1103,12 @@ uint8_t chkKey( struct chk_t *c ) {
 		}
 
 		res = mifare_classic_authex(c->pcs, c->cuid, c->block, c->keyType, c->key, AUTH_FIRST, NULL, NULL);
-		CHK_TIMEOUT();
+		//CHK_TIMEOUT();
+		
+		// if successfull auth, send HALT
+		if ( !res ) 
+			mifare_classic_halt_ex(c->pcs);
+		
 		break;
 	}
 	return res;
@@ -1126,7 +1125,7 @@ uint8_t chkKey_readb(struct chk_t *c, uint8_t *keyb) {
 	uint8_t data[16] = {0x00};	
 	uint8_t res = mifare_classic_readblock(c->pcs, c->cuid, c->block, data);
 	
-	CHK_TIMEOUT();
+	//CHK_TIMEOUT();
 	
 	// successful read
 	if ( !res ) {
@@ -1137,6 +1136,7 @@ uint8_t chkKey_readb(struct chk_t *c, uint8_t *keyb) {
 		} else {
 			res = 3;
 		}
+		mifare_classic_halt_ex(c->pcs);
 	}
 	return res;
 }
@@ -1147,14 +1147,17 @@ void chkKey_scanA(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, ui
 	for (uint8_t s = 0; s < *sectorcnt; ++s) { 
 
 		// skip already found A keys 
-		if( !found[(s*2)] ) {
-
+		if ( !found[(s*2)] ) {
+			
 			c->block = FirstBlockOfSector( s );
+						
 			uint8_t status = chkKey( c ); 
 			if ( status == 0 ) { 
 				num_to_bytes(c->key, 6, k_sector[s].keyA);
 				found[(s*2)] = 1; 
 				++*foundkeys; 
+				
+				Dbprintf("ChkKeys_fast: Scan A (%d)", c->block);
 			}
 		}
 	} 
@@ -1166,7 +1169,7 @@ void chkKey_scanA(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, ui
 	for (uint8_t s = 0; s < *sectorcnt; ++s) { 
 
 		// skip already found B keys 
-		if( !found[(s*2)+1] ) {
+		if ( !found[(s*2)+1] ) {
 
 			c->block = FirstBlockOfSector( s );
 			uint8_t status = chkKey( c ); 
@@ -1174,6 +1177,8 @@ void chkKey_scanA(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, ui
 				num_to_bytes(c->key, 6, k_sector[s].keyB);	
 				found[(s*2)+1] = 1; 
 				++*foundkeys; 
+				
+				Dbprintf("ChkKeys_fast: Scan B (%d)", c->block);
 			}
 		}
 	} 
@@ -1182,6 +1187,8 @@ void chkKey_scanA(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, ui
 // loop all A keys,
 // when A is found but not B,  try to read B.
 void chkKey_loopBonly(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, uint8_t *sectorcnt, uint8_t *foundkeys) {
+
+	Dbprintf("ChkKeys_fast: Loop B only (%d)", c->block);
 
 	// read Block B, if A is found.
 	for (uint8_t s = 0; s < *sectorcnt; ++s) {
@@ -1307,6 +1314,9 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 					++foundkeys;
 					
 					chkKey_scanA(&chk_data, k_sector, found, &sectorcnt, &foundkeys);
+					
+					// read Block B, if A is found.
+					chkKey_loopBonly( &chk_data, k_sector, found, &sectorcnt, &foundkeys);
 				}
 			}
 			
@@ -1322,11 +1332,8 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 					chkKey_scanB(&chk_data, k_sector, found, &sectorcnt, &foundkeys);
 				}
 			}
-		} // end loop sectors
-		
-		// read Block B, if A is found.
-		chkKey_loopBonly( &chk_data, k_sector, found, &sectorcnt, &foundkeys);
-		
+		} // end loop sectors		
+	
 		// is all keys found?
 		if ( foundkeys == allkeys )
 			break;
@@ -1372,7 +1379,6 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 	uint64_t key = 0;
 	bool have_uid = false;
 	uint8_t cascade_levels = 0;
-	uint32_t timeout = 0;
 	
 	int i;
 	byte_t isOK = 0;
@@ -1426,14 +1432,11 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 		key = bytes_to_num(datain + i * 6, 6);
 		if (mifare_classic_auth(pcs, cuid, blockNo, keyType, key, AUTH_FIRST)) {
 
-			uint8_t dummy_answer = 0;
-			ReaderTransmit(&dummy_answer, 1, NULL);
-			timeout = GetCountSspClk() + AUTHENTICATION_TIMEOUT;
-			
-			// wait for the card to become ready again
-			while(GetCountSspClk() < timeout) {};
+			//CHK_TIMEOUT();
 			
 			continue;
+		} else {
+			mifare_classic_halt_ex(pcs);
 		}
 		isOK = 1;
 		break;

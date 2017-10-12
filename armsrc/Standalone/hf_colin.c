@@ -338,10 +338,8 @@ int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, ui
 
 					uint8_t dummy_answer = 0;
 					ReaderTransmit(&dummy_answer, 1, NULL);
-					timeout = GetCountSspClk() + AUTHENTICATION_TIMEOUT;
-
 				   // wait for the card to become ready again
-					while(GetCountSspClk() < timeout) {};
+					SpinDelayUs(AUTHENTICATION_TIMEOUT);
 					
 					continue;
 			}
