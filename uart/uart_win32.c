@@ -111,25 +111,24 @@ serial_port uart_open(const char* pcPortName) {
 }
 
 void uart_close(const serial_port sp) {
-//	if (!sp) return; 
-//	if (sp == INVALID_SERIAL_PORT) return;
-//	if (sp == CLAIMED_SERIAL_PORT) return;
 	if (((serial_port_windows*)sp)->hPort != INVALID_HANDLE_VALUE )
 		CloseHandle(((serial_port_windows*)sp)->hPort);
 	free(sp);
 }
 
-bool uart_receive(const serial_port sp, byte_t* pbtRx, size_t pszMaxRxLen, size_t* pszRxLen) {
-	ReadFile(((serial_port_windows*)sp)->hPort, pbtRx, pszMaxRxLen, (LPDWORD)pszRxLen, NULL);
-	return (*pszRxLen != 0);
+bool uart_receive(const serial_port sp, byte_t* p_rx, size_t pszMaxRxLen, size_t* p_rxlen) {
+	ReadFile(((serial_port_windows*)sp)->hPort, p_rx, pszMaxRxLen, (LPDWORD)p_rxlen, NULL);
+	return (*p_rxlen != 0);
 }
 
-bool uart_send(const serial_port sp, const byte_t* pbtTx, const size_t szTxLen) {
-	DWORD dwTxLen = 0;
-	if ( !WriteFile(((serial_port_windows*)sp)->hPort, pbtTx, szTxLen, &dwTxLen, NULL) ) {
+bool uart_send(const serial_port sp, const byte_t* p_tx, const size_t len) {
+	DWORD txlen = 0;
+	bool res = WriteFile(((serial_port_windows*)sp)->hPort, p_tx, len, &txlen, NULL);
+	if ( !res )
 		return false;
-	}
-	return (dwTxLen != 0);
+		
+	printf("TX %u\n", txlen);
+	return (txlen != 0);
 }
 
 bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed) {

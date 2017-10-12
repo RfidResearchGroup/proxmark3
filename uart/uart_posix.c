@@ -125,9 +125,6 @@ serial_port uart_open(const char* pcPortName)
 }
 
 void uart_close(const serial_port sp) {
-//  if (sp == INVALID_SERIAL_PORT) return;
-//  if (sp == CLAIMED_SERIAL_PORT) return;
-
   serial_port_unix* spu = (serial_port_unix*)sp;
   tcflush(spu->fd, TCIOFLUSH);
   tcsetattr(spu->fd, TCSANOW, &(spu->tiOld));
@@ -221,13 +218,13 @@ bool uart_send(const serial_port sp, const byte_t* pbtTx, const size_t szTxLen) 
     
     // Write error
     if (res < 0) {
-		printf("UART:: write error\n");
+		printf("UART:: write error (%d)\n", res);
 		return false;
     }
     
     // Write time-out
     if (res == 0) {
-		printf("UART:: write time-out\n");
+		printf("UART:: write time-out (%d)\n", res);
 		return false;
     }
     
@@ -236,7 +233,7 @@ bool uart_send(const serial_port sp, const byte_t* pbtTx, const size_t szTxLen) 
     
     // Stop if the OS has some troubles sending the data
     if (res <= 0) {
-		printf("UART:: os troubles\n");
+		printf("UART:: os troubles (%d)\n", res);
 		return false;
 	}
     
