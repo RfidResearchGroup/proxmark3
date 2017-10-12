@@ -1824,9 +1824,9 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_card, uint32_
     ReaderTransmitBitsPar(wupa, 7, NULL, NULL);
 	
 	// Receive the ATQA
-	if(!ReaderReceive(resp, resp_par)) return 0;
+	if (!ReaderReceive(resp, resp_par)) return 0;
 
-	if(p_card) {
+	if (p_card) {
 		memcpy(p_card->atqa, resp, 2);
 		p_card->uidlen = 0;
 		memset(p_card->uid, 0, 10);
@@ -1930,7 +1930,7 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_card, uint32_
 		}
 	}
 
-	if(p_card) {
+	if (p_card) {
 		p_card->sak = sak;
 		p_card->ats_len = 0;
 	}
@@ -1940,13 +1940,14 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_card, uint32_
 
 	// RATS, Request for answer to select
 	if ( !no_rats ) {
+		DbpString("iso14a - RATS");
 		AppendCrc14443a(rats, 2);
 		ReaderTransmit(rats, sizeof(rats), NULL);
 		len = ReaderReceive(resp, resp_par);
 		
 		if (!len) return 0;
 
-		if(p_card) {
+		if (p_card) {
 			memcpy(p_card->ats, resp, sizeof(p_card->ats));
 			p_card->ats_len = len;
 		}
@@ -2030,7 +2031,7 @@ void iso14443a_setup(uint8_t fpga_minor_mode) {
 		LED_D_ON();
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | fpga_minor_mode);
-	SpinDelay(50);
+	SpinDelay(100);
  
 	// Start the timer
 	StartCountSspClk();
