@@ -100,7 +100,7 @@ static const char devDescriptor[] = {
 	/* Device descriptor */
 	0x12,      // Length
 	0x01,      // Descriptor Type (DEVICE)
-	0x00,0x02, // Complies with USB Spec. Release (0200h = release 2.00)  0210 == release 2.10
+	0x10,0x02, // Complies with USB Spec. Release (0200h = release 2.00)  0210 == release 2.10
 	0x02,      // Device Class:    CDC class code
 	0x02,      // Device Subclass: CDC class sub code ACM [ice 0x02 = win10 virtual comport :) ]
 	0x00,      // Device Protocol: CDC Device protocol
@@ -123,7 +123,7 @@ static const char cfgDescriptor[] = {
 	0x02,   // Number of Interfaces
 	0x01,   // Index value of this Configuration
 	0x00,   // Configuration string index
-	_DEFAULT,   // Attributes 0xA0
+	0xC0,   // Attributes 0xA0
 	0xFA,   // Max Power consumption
 
 	/* Communication Class Interface Descriptor Requirement */
@@ -160,7 +160,7 @@ static const char cfgDescriptor[] = {
 	0x05, // Function Length
 	0x24, // Descriptor Type: CS_INTERFACE
 	0x01, // Descriptor Subtype: Call Management Func Desc 
-	0x00, // Capabilities: D1 + D0   (ice 0x03, pm3 0x00, rfidler 0x00)
+	0x00, // Capabilities: D1 + D0
 	0x01, // Data Interface: Data Class Interface 1
 
 	/* Endpoint descriptor */
@@ -168,8 +168,8 @@ static const char cfgDescriptor[] = {
 	USB_DESCRIPTOR_ENDPOINT, // Descriptor Type
 	_EP03_IN,   // EndpointAddress, Endpoint 03-IN
 	_INTERRUPT, // Attributes
-	0x40, 0x00, // MaxPacket Size  (ice 0x200, pm3 0x08)
-	0xFF,		// Interval polling (rfidler 0x02,  pm3 0xff)
+	0x08, 0x00, // MaxPacket Size  (pm3 0x08)
+	0x02,		// Interval polling (rfidler 0x02,  pm3 0xff)
 
 	/* Data Class Interface Descriptor Requirement */
 	0x09, // Length

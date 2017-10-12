@@ -32,6 +32,7 @@
 
 #include "cmd.h"
 
+// (iceman 2017) this method is not used anymore. uart_win32 /uart_posix is used instead
 bool cmd_receive(UsbCommand* cmd) {
  
   // Check if there is a usb packet available
