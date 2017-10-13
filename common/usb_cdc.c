@@ -215,50 +215,6 @@ static const char CompatIDFeatureDescriptor[] = {
 };
 
 // Microsoft Extended Properties Feature Descriptor
-const g_sOSProperties OSPropertyDescriptor = {
-		.dwLength =					sizeof(g_pOSProperties),
-		.bcdVersion =				0x0100,
-		.wIndex =					MS_EXTENDED_PROPERTIES,	// (see MS_EXTENDED_PROPERTIES)
-		.wCount =					3,  					// three sections below
-	
-		//-----property section 1------
-		// (iceman) With modem manager GUID, it gets install but doesn't get a COMport assigned.
-		// "{4D36E978-E325-11CE-BFC1-08002BE10318}" 
-		// *HACK* instead of generating unique GUID we use standard GUID for COM & LPT ports to get installed as a COM port
-		// "{4d36e978-e325-11ce-bfc1-08002be10318}"
-		//.dwSize =					sizeof(L"DeviceInterfaceGUID") + sizeof(L"{4D36E978-E325-11CE-BFC1-08002BE10318}") + 14,
-		.dwSize =					40 + 78 + 14,
-		.dwPropertyDataType = 		1,	//(Unicode string
-		//.wPropertyNameLength = 		sizeof(L"DeviceInterfaceGUID"),
-		.wPropertyNameLength = 		40,
-		.bPropertyName = 			L"DeviceInterfaceGUID",
-		//.dwPropertyDataLength =		sizeof(L"{4D36E978-E325-11CE-BFC1-08002BE10318}"),
-		.dwPropertyDataLength =		78,
-		.bPropertyData = 			L"{4D36E978-E325-11CE-BFC1-08002BE10318}",
-
-		//-----property section 2------
-		//.dwSize2 =					sizeof(L"Label") + sizeof(L"Awesome PM3 Device") + 14,
-		.dwSize2 =					12 + 38 + 14,
-		.dwPropertyDataType2 = 		1,	//(Unicode string
-		//.wPropertyNameLength2 = 	sizeof(L"Label"),
-		.wPropertyNameLength2 = 	12,
-		.bPropertyName2 =			L"Label",
-		//.dwPropertyDataLength2 =	sizeof(L"Awesome PM3 Device"),
-		.dwPropertyDataLength2 =	38,
-		.bPropertyData2 =			L"Awesome PM3 Device",
-
-		//-----property section 3------
-		//.dwSize3 =					sizeof(L"Icons") + sizeof(L"%SystemRoot%\\system32\\Shell32.dll,-13") + 14,
-		.dwSize3 =					12 + 76 + 14,
-		.dwPropertyDataType3 = 		2,	//Unicode string with environment variables
-		//.wPropertyNameLength3 = 	sizeof(L"Icons"),
-		.wPropertyNameLength3 = 	12,
-		.bPropertyName3 = 			L"Icons",
-		//.dwPropertyDataLength3 =	sizeof(L"%SystemRoot%\\system32\\Shell32.dll,-13"),
-		.dwPropertyDataLength3 =	76,
-		.bPropertyData3 = 			L"%SystemRoot%\\system32\\Shell32.dll,-13"
-};
-
 static const char OSprop[] = {
 		// u32 Descriptor Length (10+132+64+102 == 308
 		0x34, 0x01, 0, 0,
@@ -266,7 +222,7 @@ static const char OSprop[] = {
 		0, 1,
 		// u16 wIndex
 		MS_EXTENDED_PROPERTIES, 0,
-		// u16 wCount  -- three sections
+		// u16 wCount  -- three section
 		3, 0,
 		
 		//-----property section 1------
@@ -283,8 +239,8 @@ static const char OSprop[] = {
 		// data {4D36E978-E325-11CE-BFC1-08002BE10318}
 		'{',0,'4',0,'D',0,'3',0,'6',0,'E',0,'9',0,'7',0,'8',0,'-',0,'E',0,'3',0,'2',0,'5',0,
 		'-',0,'1',0,'1',0,'C',0,'E',0,'-',0,'B',0,'F',0,'C',0,'1',0,'-',0,'0',0,'8',0,'0',0,
-		'0',0,'2',0,'B',0,'E',0,'1',0,'0',0,'3',0,'1',0,'8',0,'}',0,0,0,
-		
+		'0',0,'2',0,'B',0,'E',0,'1',0,'0',0,'3',0,'1',0,'8',0,'}',0,0,0,		
+
 		//-----property section 2------
 		// u32 size  ( 14+12+38 == 64)
 		64, 0, 0, 0,
@@ -298,7 +254,7 @@ static const char OSprop[] = {
 		38, 0, 0, 0,
 		// data 'Awesome PM3 Device'
 		'A',0,'w',0,'e',0,'s',0,'o',0,'m',0,'e',0,' ',0,'P',0,'M',0,'3',0,' ',0,'D',0,'e',0,'v',0,'i',0,'c',0,'e',0,0,0,
-		
+
 		//-----property section 3------
 		// u32 size ( 14+12+76 == 102)
 		102, 0, 0, 0,
@@ -750,11 +706,10 @@ void AT91F_CDC_Enumerate() {
 			} 
 		}
 		if ( bmRequestType == MS_WCID_GET_FEATURE_DESCRIPTOR ) {  //C1
-			if ( wIndex == MS_EXTENDED_PROPERTIES ) { // 5
-				AT91F_USB_SendData(pUdp, (char *)&OSPropertyDescriptor, MIN(sizeof(OSPropertyDescriptor), wLength));
-				//AT91F_USB_SendData(pUdp, OSprop, MIN(sizeof(OSprop), wLength));
+			//if ( wIndex == MS_EXTENDED_PROPERTIES ) { // 5  - winusb bug with wIndex == interface index,  so I just send it always)
+				AT91F_USB_SendData(pUdp, OSprop, MIN(sizeof(OSprop), wLength));
 				return;
-			} 
+			//} 
 		}
 	}
 	// Handle supported standard device request Cf Table 9-3 in USB specification Rev 1.1

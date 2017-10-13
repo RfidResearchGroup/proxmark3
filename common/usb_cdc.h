@@ -59,35 +59,5 @@ extern void AT91F_USB_SendZlp(AT91PS_UDP pUdp);
 extern void AT91F_USB_SendStall(AT91PS_UDP pUdp);
 extern void AT91F_CDC_Enumerate();
 
-typedef const struct __attribute__((__packed__)) {
-	const uint32_t dwLength;
-	const uint16_t bcdVersion;
-	const uint16_t wIndex;
-	const uint16_t wCount;
-
-	const uint32_t dwSize;
-	const uint32_t dwPropertyDataType;
-	const uint16_t wPropertyNameLength;
-	const wchar_t bPropertyName[20];
-	const uint32_t dwPropertyDataLength;
-	const wchar_t bPropertyData[39];
-
-	const uint32_t dwSize2;
-	const uint32_t dwPropertyDataType2;
-	const uint16_t wPropertyNameLength2;
-	const wchar_t bPropertyName2[6];
-	const uint32_t dwPropertyDataLength2;
-	const wchar_t bPropertyData2[19];
-
-	const uint32_t dwSize3;
-	const uint32_t dwPropertyDataType3;
-	const uint16_t wPropertyNameLength3;
-	const wchar_t bPropertyName3[6];
-	const uint32_t dwPropertyDataLength3;
-	const wchar_t bPropertyData3[38];
-} g_sOSProperties;
-
-extern const g_sOSProperties g_pOSProperties;
-
 #endif // _USB_CDC_H_
 
