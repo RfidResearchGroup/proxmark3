@@ -1134,9 +1134,6 @@ void  __attribute__((noreturn)) AppMain(void) {
 
 	LEDsoff();
 	
-	// Init USB device
-	usb_enable();
-
 	// The FPGA gets its clock from us from PCK0 output, so set that up.
 	AT91C_BASE_PIOA->PIO_BSR = GPIO_PCK0;
 	AT91C_BASE_PIOA->PIO_PDR = GPIO_PCK0;
@@ -1155,6 +1152,9 @@ void  __attribute__((noreturn)) AppMain(void) {
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
 	StartTickCount();
+
+	// Init USB device
+	usb_enable();
   	
 #ifdef WITH_LCD
 	LCDInit();

@@ -191,7 +191,6 @@ static void flash_mode(int externally_entered) {
 	end_addr = 0;
 	bootrom_unlocked = 0;
 	byte_t rx[sizeof(UsbCommand)];
-	//size_t rx_len;
 
 	usb_enable();
 	//for (volatile size_t i=0; i<0x100000; i++) {};
@@ -203,12 +202,6 @@ static void flash_mode(int externally_entered) {
 		if ( cmd_receive( (UsbCommand*)rx ) )
 			UsbPacketReceived(rx, sizeof(UsbCommand) );
 		
-		// if ( usb_poll_validate_length())  {
-			// rx_len = usb_read(rx, sizeof(UsbCommand));
-			// if (rx_len)
-				// UsbPacketReceived(rx, rx_len);
-		//}
-			
 		if (!externally_entered && !BUTTON_PRESS()) {
 			/* Perform a reset to leave flash mode */
 			usb_disable();
