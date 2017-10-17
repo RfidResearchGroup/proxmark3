@@ -125,7 +125,6 @@ static void *uart_receiver(void *targ) {
 				PrintAndLog("Sending bytes to proxmark failed");
 			}
 			 __atomic_clear(&txcmd_pending, __ATOMIC_SEQ_CST);
-			//txcmd_pending = false;
 			
 			// set offline flag
 			if ( counter_to_offline == 3 ) {
@@ -356,7 +355,7 @@ int main(int argc, char* argv[]) {
 
 #ifdef HAVE_GUI
 
-#  if _WIN32
+#  ifdef _WIN32
 	InitGraphics(argc, argv, script_cmds_file, usb_present);
 	MainGraphics();
 #  else

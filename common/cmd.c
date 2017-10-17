@@ -41,11 +41,14 @@ bool cmd_receive(UsbCommand* cmd) {
   // Try to retrieve the available command frame
   size_t rxlen = usb_read((byte_t*)cmd, sizeof(UsbCommand));
 
-  // Check if the transfer was complete
-  if (rxlen != sizeof(UsbCommand)) return false;
+  // (iceman) this check is wrong.  Since USB can send packages which is not sizeof(usbcommand) 544 bytes.
+  //  hence, I comment it out
   
+  // Check if the transfer was complete
+  //if (rxlen != sizeof(UsbCommand)) return false;
   // Received command successfully
-  return true;
+  //return true;
+  return (rxlen);
 }
 
 bool cmd_send(uint32_t cmd, uint32_t arg0, uint32_t arg1, uint32_t arg2, void* data, size_t len) {

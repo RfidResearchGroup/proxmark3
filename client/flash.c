@@ -13,7 +13,7 @@
 void SendCommand(UsbCommand* txcmd);
 void ReceiveCommand(UsbCommand* rxcmd);
 void CloseProxmark();
-int OpenProxmark(size_t i);
+int OpenProxmark();
 
 // FIXME: what the fuckity fuck
 unsigned int current_command = CMD_UNKNOWN;
@@ -41,8 +41,7 @@ static const uint8_t elf_ident[] = {
 
 // Turn PHDRs into flasher segments, checking for PHDR sanity and merging adjacent
 // unaligned segments if needed
-static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs, int num_phdrs)
-{
+static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs, int num_phdrs) {
 	Elf32_Phdr *phdr = phdrs;
 	flash_seg_t *seg;
 	uint32_t last_end = 0;
@@ -187,8 +186,7 @@ static int check_segs(flash_file_t *ctx, int can_write_bl) {
 }
 
 // Load an ELF file and prepare it for flashing
-int flash_load(flash_file_t *ctx, const char *name, int can_write_bl)
-{
+int flash_load(flash_file_t *ctx, const char *name, int can_write_bl) {
 	FILE *fd = NULL;
 	Elf32_Ehdr ehdr;
 	Elf32_Phdr *phdrs = NULL;
@@ -269,10 +267,8 @@ fail:
 }
 
 // Get the state of the proxmark, backwards compatible
-static int get_proxmark_state(uint32_t *state)
-{
-	UsbCommand c;
-	c.cmd = CMD_DEVICE_INFO;
+static int get_proxmark_state(uint32_t *state) {
+	UsbCommand c = {CMD_DEVICE_INFO};
 	SendCommand(&c);
 	UsbCommand resp;
 	ReceiveCommand(&resp);
@@ -297,13 +293,11 @@ static int get_proxmark_state(uint32_t *state)
 			return -1;
 			break;
 	}
-
 	return 0;
 }
 
 // Enter the bootloader to be able to start flashing
-static int enter_bootloader(char *serial_port_name)
-{
+static int enter_bootloader(char *serial_port_name) {
 	uint32_t state;
 
 	if (get_proxmark_state(&state) < 0)
@@ -314,7 +308,7 @@ static int enter_bootloader(char *serial_port_name)
 		return 0;
 
 	if (state & DEVICE_INFO_FLAG_CURRENT_MODE_OS) {
-		fprintf(stderr,"Entering bootloader...\n");
+		fprintf(stderr, "Entering bootloader...\n");
 		UsbCommand c;
 		memset(&c, 0, sizeof (c));
 
@@ -324,22 +318,22 @@ static int enter_bootloader(char *serial_port_name)
 			// and enter the bootrom on the next boot.
 			c.cmd = CMD_START_FLASH;
 			SendCommand(&c);
-			fprintf(stderr,"(Press and release the button only to abort)\n");
+			fprintf(stderr, "(Press and release the button only to abort)\n");
 		} else {
 			// Old style handover: Ask the user to press the button, then reset the board
 			c.cmd = CMD_HARDWARE_RESET;
 			SendCommand(&c);
-			fprintf(stderr,"Press and hold down button NOW if your bootloader requires it.\n");
+			fprintf(stderr, "Press and hold down button NOW if your bootloader requires it.\n");
 		}
 		msleep(100);
 		CloseProxmark();
 
-		fprintf(stderr,"Waiting for Proxmark to reappear on %s",serial_port_name);
+		fprintf(stderr, "Waiting for Proxmark to reappear on %s", serial_port_name);
 		do {
 			msleep(1000);
 			fprintf(stderr, ".");
-		} while (!OpenProxmark(0));
-		fprintf(stderr," Found.\n");
+		} while ( !OpenProxmark());
+		fprintf(stderr, " Found.\n");
 		return 0;
 	}
 
@@ -347,19 +341,17 @@ static int enter_bootloader(char *serial_port_name)
 	return -1;
 }
 
-static int wait_for_ack(UsbCommand *ack) 
-{
+static int wait_for_ack(UsbCommand *ack) {
 	ReceiveCommand(ack);
 	if (ack->cmd != CMD_ACK) {
-		printf("Error: Unexpected reply 0x%04" PRIx64 " %s (expected ACK)\n", ack->cmd, (ack->cmd==CMD_NACK)?"NACK":"");
+		printf("Error: Unexpected reply 0x%04" PRIx64 " %s (expected ACK)\n", ack->cmd, (ack->cmd == CMD_NACK) ? "NACK" : "");
 		return -1;
 	}
 	return 0;
 }
 
 // Go into flashing mode
-int flash_start_flashing(int enable_bl_writes,char *serial_port_name)
-{
+int flash_start_flashing(int enable_bl_writes, char *serial_port_name) {
 	uint32_t state;
 
 	if (enter_bootloader(serial_port_name) < 0)
@@ -392,8 +384,7 @@ int flash_start_flashing(int enable_bl_writes,char *serial_port_name)
 	return 0;
 }
 
-static int write_block(uint32_t address, uint8_t *data, uint32_t length)
-{
+static int write_block(uint32_t address, uint8_t *data, uint32_t length) {
 	uint8_t block_buf[BLOCK_SIZE];
 	memset(block_buf, 0xFF, BLOCK_SIZE);
 	memcpy(block_buf, data, length);
@@ -415,8 +406,7 @@ static int write_block(uint32_t address, uint8_t *data, uint32_t length)
 }
 
 // Write a file's segments to Flash
-int flash_write(flash_file_t *ctx)
-{
+int flash_write(flash_file_t *ctx) {
 	fprintf(stderr, "Writing segments for file: %s\n", ctx->filename);
 	for (int i = 0; i < ctx->num_segs; i++) {
 		flash_seg_t *seg = &ctx->segments[i];
@@ -425,8 +415,7 @@ int flash_write(flash_file_t *ctx)
 		uint32_t blocks = (length + BLOCK_SIZE - 1) / BLOCK_SIZE;
 		uint32_t end = seg->start + length;
 
-		fprintf(stderr, " 0x%08x..0x%08x [0x%x / %d blocks]",
-		        seg->start, end - 1, length, blocks);
+		fprintf(stderr, " 0x%08x..0x%08x [0x%x / %d blocks]", seg->start, end - 1, length, blocks);
 
 		int block = 0;
 		uint8_t *data = seg->data;
@@ -455,8 +444,7 @@ int flash_write(flash_file_t *ctx)
 }
 
 // free a file context
-void flash_free(flash_file_t *ctx)
-{
+void flash_free(flash_file_t *ctx) {
 	if (!ctx)
 		return;
 	if (ctx->segments) {

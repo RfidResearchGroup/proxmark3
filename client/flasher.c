@@ -16,6 +16,8 @@
 #include "uart.h"
 #include "usb_cmd.h"
 
+#define MAX_FILES 4
+
 #ifdef _WIN32
 # define unlink(x)
 #else
@@ -25,17 +27,17 @@
 static serial_port sp;
 static char* serial_port_name;
 
-void cmd_debug(UsbCommand* UC) {
+void cmd_debug(UsbCommand* c) {
 	//  Debug
 	printf("UsbCommand length[len=%zd]\n", sizeof(UsbCommand));
-	printf("  cmd[len=%zd]: %016" PRIx64"\n", sizeof(UC->cmd), UC->cmd);
-	printf(" arg0[len=%zd]: %016" PRIx64"\n", sizeof(UC->arg[0]), UC->arg[0]);
-	printf(" arg1[len=%zd]: %016" PRIx64"\n", sizeof(UC->arg[1]), UC->arg[1]);
-	printf(" arg2[len=%zd]: %016" PRIx64"\n", sizeof(UC->arg[2]), UC->arg[2]);
-	printf(" data[len=%zd]: ", sizeof(UC->d.asBytes));
+	printf("  cmd[len=%zd]: %016" PRIx64"\n", sizeof(c->cmd), c->cmd);
+	printf(" arg0[len=%zd]: %016" PRIx64"\n", sizeof(c->arg[0]), c->arg[0]);
+	printf(" arg1[len=%zd]: %016" PRIx64"\n", sizeof(c->arg[1]), c->arg[1]);
+	printf(" arg2[len=%zd]: %016" PRIx64"\n", sizeof(c->arg[2]), c->arg[2]);
+	printf(" data[len=%zd]: ", sizeof(c->d.asBytes));
 
 	for (size_t i=0; i<16; i++)
-		printf("%02x", UC->d.asBytes[i]);
+		printf("%02x", c->d.asBytes[i]);
 
 	printf("...\n");
 }
@@ -43,7 +45,7 @@ void cmd_debug(UsbCommand* UC) {
 void SendCommand(UsbCommand* txcmd) {
 	//  printf("send: ");
 	//  cmd_debug(txcmd);
-	if (!uart_send(sp,(byte_t*)txcmd, sizeof(UsbCommand))) {
+	if (!uart_send(sp, (byte_t*)txcmd, sizeof(UsbCommand))) {
 		printf("Sending bytes to proxmark failed\n");
 		exit(1);
 	}
@@ -70,13 +72,17 @@ void CloseProxmark() {
 	unlink(serial_port_name);
 }
 
-int OpenProxmark(size_t i) {
+int OpenProxmark() {
 	sp = uart_open(serial_port_name);
 
 	//poll once a second
-	if (sp == INVALID_SERIAL_PORT || sp == CLAIMED_SERIAL_PORT)
+	if (sp == INVALID_SERIAL_PORT) {
+		printf("ERROR: invalid serial port\n");
 		return 0;
-
+	} else if (sp == CLAIMED_SERIAL_PORT) {
+		printf("ERROR: serial port is claimed by another process\n");
+		return 0;
+	} 	
 	return 1;
 }
 
@@ -95,10 +101,7 @@ static void usage(char *argv0) {
 	fprintf(stderr, "              https://github.com/Proxmark/proxmark3/wiki/OSX\n\n");	
 }
 
-#define MAX_FILES 4
-
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
 	int can_write_bl = 0;
 	int num_files = 0;
 	int res;
@@ -138,7 +141,7 @@ int main(int argc, char **argv)
 		fprintf(stderr, ".");
 	} while (!OpenProxmark(0));
 
-	fprintf(stderr," Found.\n");
+	fprintf(stderr, " Found.\n");
 
 	res = flash_start_flashing(can_write_bl, serial_port_name);
 	if (res < 0)

@@ -224,7 +224,7 @@ bool uart_send(const serial_port sp, const byte_t* pbtTx, const size_t szTxLen) 
     
     // Write time-out
     if (res == 0) {
-		printf("UART:: write time-out (%d)\n", res);
+		printf("UART:: write time-out\n");
 		return false;
     }
     

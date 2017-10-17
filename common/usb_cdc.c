@@ -44,25 +44,29 @@ AT91SAM7S256  USB Device Port
 – Ping-pong Mode (two memory banks) for bulk endpoints
 */
 
-#define AT91C_EP_CONTROL      0
-#define AT91C_EP_CONTROL_SIZE 0x08
+// 
+#define AT91C_EP_CONTROL        0
+#define AT91C_EP_OUT            1  // cfg bulk out
+#define AT91C_EP_IN             2  // cfg bulk in
+#define AT91C_EP_NOTIFY         3  // cfg cdc notification interrup
 
-#define AT91C_EP_IN          2
-#define AT91C_EP_IN_SIZE  0x40
+#define AT91C_EP_CONTROL_SIZE   8
+#define AT91C_EP_OUT_SIZE       64
+#define AT91C_EP_IN_SIZE        64
 
-#define AT91C_EP_OUT         1
-#define AT91C_EP_OUT_SIZE 0x40
 
 // Section: USB Descriptors
-#define USB_DESCRIPTOR_DEVICE           0x01    // bDescriptorType for a Device Descriptor.
-#define USB_DESCRIPTOR_CONFIGURATION    0x02    // bDescriptorType for a Configuration Descriptor.
-#define USB_DESCRIPTOR_STRING           0x03    // bDescriptorType for a String Descriptor.
-#define USB_DESCRIPTOR_INTERFACE        0x04    // bDescriptorType for an Interface Descriptor.
-#define USB_DESCRIPTOR_ENDPOINT         0x05    // bDescriptorType for an Endpoint Descriptor.
-#define USB_DESCRIPTOR_DEVICE_QUALIFIER 0x06    // bDescriptorType for a Device Qualifier.
-#define USB_DESCRIPTOR_OTHER_SPEED      0x07    // bDescriptorType for a Other Speed Configuration.
-#define USB_DESCRIPTOR_INTERFACE_POWER  0x08    // bDescriptorType for Interface Power.
-#define USB_DESCRIPTOR_OTG              0x09    // bDescriptorType for an OTG Descriptor.
+#define USB_DESCRIPTOR_DEVICE           0x01    // DescriptorType for a Device Descriptor.
+#define USB_DESCRIPTOR_CONFIGURATION    0x02    // DescriptorType for a Configuration Descriptor.
+#define USB_DESCRIPTOR_STRING           0x03    // DescriptorType for a String Descriptor.
+#define USB_DESCRIPTOR_INTERFACE        0x04    // DescriptorType for an Interface Descriptor.
+#define USB_DESCRIPTOR_ENDPOINT         0x05    // DescriptorType for an Endpoint Descriptor.
+#define USB_DESCRIPTOR_DEVICE_QUALIFIER 0x06    // DescriptorType for a Device Qualifier.
+#define USB_DESCRIPTOR_OTHER_SPEED      0x07    // DescriptorType for a Other Speed Configuration.
+#define USB_DESCRIPTOR_INTERFACE_POWER  0x08    // DescriptorType for Interface Power.
+#define USB_DESCRIPTOR_OTG              0x09    // DescriptorType for an OTG Descriptor.
+#define USB_DESCRIPTOR_IAD				0x0B	// DescriptorType for a Interface Association Descriptor
+#define USB_DESCRIPTOR_TYPE_BO          0x0F    // DescriptorType for a BOS Descriptor.
 
 /* Configuration Attributes */
 #define _DEFAULT    (0x01<<7)       //Default Value (Bit 7 is set)
@@ -99,104 +103,148 @@ AT91SAM7S256  USB Device Port
 static const char devDescriptor[] = {
 	/* Device descriptor */
 	0x12,      // Length
-	0x01,      // Descriptor Type (DEVICE)
-	0x10,0x02, // Complies with USB Spec. Release (0200h = release 2.00)  0210 == release 2.10
-	0x02,      // Device Class:    CDC class code
-	0x02,      // Device Subclass: CDC class sub code ACM [ice 0x02 = win10 virtual comport :) ]
-	0x00,      // Device Protocol: CDC Device protocol
+	USB_DESCRIPTOR_DEVICE,      // Descriptor Type (DEVICE)
+	0x00,0x02, // Complies with USB Spec. Release (0200h = release 2.00)  0210 == release 2.10
+	2,      // Device Class:    Communication Device Class
+	2,      // Device Subclass: CDC class sub code ACM [ice 0x02 = win10 virtual comport ]
+	0,      // Device Protocol: CDC Device protocol (unused)
 	AT91C_EP_CONTROL_SIZE,      // MaxPacketSize0
     0xc4,0x9a, // Vendor ID  [0x9ac4 = J. Westhues]
     0x8f,0x4b, // Product ID [0x4b8f = Proxmark-3 RFID Instrument]
-	0x01,0x00, // Device release number (0001)
-	0x01,      // index Manufacturer  
-	0x02,      // index Product
-	0x03,      // index SerialNumber
-	0x01       // Number of Configs
+	0x00,0x01, // BCD Device release number (1.00)
+	1,      // index Manufacturer  
+	2,      // index Product
+	3,      // index SerialNumber
+	1       // Number of Configs 
 };
 
 static const char cfgDescriptor[] = {
-	/* ============== CONFIGURATION 1 =========== */
-	/* Configuration 1 descriptor */
-	0x09,   // Length
-	USB_DESCRIPTOR_CONFIGURATION,   // Descriptor Type
-	0x43,0x00,   // Total Length 2 EP + Control	
-	0x02,   // Number of Interfaces
-	0x01,   // Index value of this Configuration
-	0x00,   // Configuration string index
-	0xC0,   // Attributes 0xA0
-	0xFA,   // Max Power consumption
 
-	/* Communication Class Interface Descriptor Requirement */
-	0x09, // Length
+	/* Configuration 1 descriptor */
+	// -----------------------------
+	9,         // Length
+	USB_DESCRIPTOR_CONFIGURATION, // Descriptor Type	        
+	(9+9+5+5+4+5+7+9+7+7), 0,	  // Total Length 2 EP + Control	
+	2,         // Number of Interfaces
+	1,         // Index value of this Configuration (used in SetConfiguration from Host)
+	0,         // Configuration string index
+	_DEFAULT,  // Attributes 0xA0
+	0xFA,      // Max Power consumption
+
+	// IAD to associate the one CDC interface
+    // --------------------------------------
+/*
+	8,		// Length
+    USB_DESCRIPTOR_IAD,	// IAD_DESCRIPTOR (0x0B)
+    0,		// CDC_INT_INTERFACE NUMBER  (
+	2,		// IAD INTERFACE COUNT (two interfaces)
+    2,		// Function Class: CDC_CLASS
+    2,		// Function SubClass: ACM
+    1,      // Function Protocol: v.25term
+	0,      // iInterface
+*/
+	
+	/* Interface 0 Descriptor */
+	/* CDC Communication Class Interface Descriptor Requirement for Notification*/
+	// -----------------------------------------------------------
+	9, 		// Length
 	USB_DESCRIPTOR_INTERFACE, // Descriptor Type
-	0x00, // Interface Number
-	0x00, // Alternate Setting
-	0x01, // Number of Endpoints in this interface
-	0x02, // Interface Class code (CDC)
-	0x02, // Interface Subclass code (ACM)
-	0x01, // InterfaceProtocol  (rfidler 0x00,  pm3 0x01 == VT25)
-	0x00, // iInterface
+	0, 		// Interface Number
+	0, 		// Alternate Setting
+	1, 		// Number of Endpoints in this interface
+	2, 		// Interface Class code    (Communication Interface Class)
+	2, 		// Interface Subclass code (Abstract Control Model)
+	1, 		// InterfaceProtocol       (Common AT Commands, V.25term)
+	0, 		// iInterface
 
 	/* Header Functional Descriptor */
-	0x05, // Function Length
-	0x24, // Descriptor type: CS_INTERFACE
-	0x00, // Descriptor subtype: Header Func Desc
+	5,		// Function Length
+	0x24,	// Descriptor type:    CS_INTERFACE
+	0,		// Descriptor subtype: Header Functional Descriptor
 	0x10,0x01, // bcd CDC:1.1	
 
 	/* ACM Functional Descriptor */
-	0x04, // Function Length
-	0x24, // Descriptor Type: CS_INTERFACE
-	0x02, // Descriptor Subtype: ACM Func Desc
-	0x02, // Capabilities  (rfidler 0x04,  pm3 0x02,  zero should also work  )
+	4,		// Function Length
+	0x24,	// Descriptor Type:    CS_INTERFACE
+	2,		// Descriptor Subtype: Abstract Control Management Functional Descriptor
+	2,		// Capabilities        D1, Device supports the request combination of Set_Line_Coding, Set_Control_Line_State, Get_Line_Coding, and the notification Serial_State
 
 	/* Union Functional Descriptor */
-	0x05, // Function Length
-	0x24, // Descriptor Type: CS_INTERFACE
-	0x06, // Descriptor Subtype: Union Func Desc
-	0x00, // MasterInterface: Communication Class Interface
-	0x01, // SlaveInterface0: Data Class Interface
-
+	5,		// Function Length
+	0x24,	// Descriptor Type:    CS_INTERFACE
+	6,		// Descriptor Subtype: Union Functional Descriptor
+	0,		// MasterInterface:    Communication Class Interface
+	1,		// SlaveInterface0:    Data Class Interface
+	
 	/* Call Management Functional Descriptor */
-	0x05, // Function Length
-	0x24, // Descriptor Type: CS_INTERFACE
-	0x01, // Descriptor Subtype: Call Management Func Desc 
-	0x00, // Capabilities: D1 + D0
-	0x01, // Data Interface: Data Class Interface 1
+	5,		// Function Length
+	0x24,	// Descriptor Type:    CS_INTERFACE
+	1,		// Descriptor Subtype: Call Management Functional Descriptor 
+	0,		// Capabilities:       Device sends/receives call management information only over the Communication Class interface. Device does not handle call management itself
+	1,		// Data Interface:     Data Class Interface
+																			
+	/* Protocol Functional Descriptor */
+	/*
+	6,
+	0x24,	// Descriptor Type: CS_INTERFACE
+	0x0B,	// Descriptor Subtype: Protocol Unit functional Descriptor
+	0xDD, 	// constant uniq ID of unit
+	0xFE, 	// protocol  
+	*/
+	
+	/* CDC Notification Endpoint descriptor */
+	// ---------------------------------------
+	7,	 	                     // Length
+	USB_DESCRIPTOR_ENDPOINT,     // Descriptor Type
+	_EP03_IN,                    // EndpointAddress:   Endpoint 03 - IN
+	_INTERRUPT,                  // Attributes
+	AT91C_EP_CONTROL_SIZE, 0x00, // MaxPacket Size:    EP0 - 8
+	0xFF,		                 // Interval polling
 
-	/* Endpoint descriptor */
-	0x07,		// Length
-	USB_DESCRIPTOR_ENDPOINT, // Descriptor Type
-	_EP03_IN,   // EndpointAddress, Endpoint 03-IN
-	_INTERRUPT, // Attributes
-	0x08, 0x00, // MaxPacket Size  (pm3 0x08)
-	0x02,		// Interval polling (rfidler 0x02,  pm3 0xff)
-
-	/* Data Class Interface Descriptor Requirement */
-	0x09, // Length
+	
+	/* Interface 1 Descriptor */
+	/* CDC Data Class Interface 1 Descriptor Requirement */
+	9, 		                  // Length
 	USB_DESCRIPTOR_INTERFACE, // Descriptor Type
-	0x01, // Interface Number
-	0x00, // Alternate Setting
-	0x02, // Number of Endpoints
-	0x0A, // Interface Class   ( Data interface class )
-	0x00, // Interface Subclass
-	0x00, // Interface Protocol
-	0x00, // Interface - no string descriptor
+	1, 		                  // Interface Number
+	0, 		                  // Alternate Setting
+	2, 		                  // Number of Endpoints
+	0x0A, 	                  // Interface Class:     CDC Data interface class
+	0, 		                  // Interface Subclass:  not used
+	0,                        // Interface Protocol:  No class specific protocol required (usb spec)
+	0,                        // Interface
 
 	/* Endpoint descriptor */
-	0x07,   	// Length
-	USB_DESCRIPTOR_ENDPOINT, // Descriptor Type
-	_EP01_OUT, 	// Endpoint Address, Endpoint 01-OUT
-	_BULK,   	// Attributes      BULK
-	0x40, 0x00, // MaxPacket Size	
-	0x00,   	// Interval	   (ignored for bulk)
+	7,   		              // Length
+	USB_DESCRIPTOR_ENDPOINT,  // Descriptor Type
+	_EP01_OUT, 	              // Endpoint Address:    Endpoint 01 - OUT
+	_BULK,   	              // Attributes:          BULK
+	AT91C_EP_OUT_SIZE, 0x00,  // MaxPacket Size:      64 bytes
+	0,   		              // Interval:            ignored for bulk
 
 	/* Endpoint descriptor */
-	0x07,   	// Length
-	USB_DESCRIPTOR_ENDPOINT, // DescriptorType
-	_EP02_IN,   // Endpoint Address, Endpoint 02-IN
-	_BULK,   	// Attributes      BULK
-	0x40, 0x00, // MaxPacket Size	
-	0x00    	// Interval	   (ignored for bulk)
+	7,   		              // Length
+	USB_DESCRIPTOR_ENDPOINT,  // Descriptor Type
+	_EP02_IN,                 // Endpoint Address:    Endpoint 02 - IN
+	_BULK,   	              // Attribute:           BULK
+	AT91C_EP_IN_SIZE, 0x00,   // MaxPacket Size:      64 bytes
+	0 			              // Interval:            ignored for bulk
+};
+
+// BOS descriptor
+static const char bosDescriptor[] = {
+		0x5,
+		USB_DESCRIPTOR_TYPE_BO,
+		0xC,
+		0x0,
+		0x1,	// 1 device capability
+		0x7,
+		0x10, 	//USB_DEVICE_CAPABITY_TYPE,
+		0x2,
+		0x2,	// LPM capability bit set
+		0x0,
+		0x0,
+		0x0
 };
 
 // Microsoft OS Extended Configuration Compatible ID Descriptor
@@ -208,7 +256,7 @@ static const char CompatIDFeatureDescriptor[] = {
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,		// Reserved (7bytes)
 		//-----function section 1------		
 		0x00,											// Interface Number #0
-		0x01,											// reserved 
+		0x01,											// reserved (0x1)
 		0x57, 0x49, 0x4E, 0x55, 0x53, 0x42, 0x00, 0x00,	// Compatible ID  ('WINUSB\0\0')  (8bytes)
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,	// Sub-Compatible ID (8byte)
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00				// Reserved (6bytes)
@@ -237,9 +285,9 @@ static const char OSprop[] = {
 		// u32 datalen  (39*2 = 78)
 		78, 0, 0, 0,
 		// data {4D36E978-E325-11CE-BFC1-08002BE10318}
-		'{',0,'4',0,'D',0,'3',0,'6',0,'E',0,'9',0,'7',0,'8',0,'-',0,'E',0,'3',0,'2',0,'5',0,
-		'-',0,'1',0,'1',0,'C',0,'E',0,'-',0,'B',0,'F',0,'C',0,'1',0,'-',0,'0',0,'8',0,'0',0,
-		'0',0,'2',0,'B',0,'E',0,'1',0,'0',0,'3',0,'1',0,'8',0,'}',0,0,0,		
+		'{',0,'4',0,'d',0,'3',0,'6',0,'e',0,'9',0,'7',0,'8',0,'-',0,'e',0,'3',0,'2',0,'5',0,
+		'-',0,'1',0,'1',0,'c',0,'e',0,'-',0,'b',0,'f',0,'c',0,'1',0,'-',0,'0',0,'8',0,'0',0,
+		'0',0,'2',0,'b',0,'e',0,'1',0,'0',0,'3',0,'1',0,'8',0,'}',0,0,0,		
 
 		//-----property section 2------
 		// u32 size  ( 14+12+38 == 64)
@@ -297,6 +345,12 @@ static const char StrSerialNumber[] = {
 	'8',0,'8',0,'8',0,'8',0,'8',0,'8',0,'8',0,'8',0
 };
 
+static const char StrConfig1[] = {
+	22, //length
+	3, //string
+	'P',0,'M',0,'3',0,' ',0,'C',0,'o',0,'n',0,'f',0,'i',0,'g',0
+};
+
 // size inkluderar sitt egna fält.
 static const char StrMS_OSDescriptor[] = {
     18,			// length 0x12
@@ -310,6 +364,7 @@ const char* getStringDescriptor(uint8_t idx) {
 		case 1: return StrManufacturer;
 		case 2: return StrProduct;
 		case 3: return StrSerialNumber;
+		case 4: return StrConfig1;
 		case MS_OS_DESCRIPTOR_INDEX: return StrMS_OSDescriptor;
 		default: 
 			return(NULL);
@@ -370,10 +425,10 @@ const char* getStringDescriptor(uint8_t idx) {
 #define SET_CONTROL_LINE_STATE        0x2221
 
 typedef struct {
-	unsigned int dwDTERRate;
-	char bCharFormat;
-	char bParityType;
-	char bDataBits;
+	uint32_t BitRate;
+	uint8_t Format;
+	uint8_t ParityType;
+	uint8_t DataBits;
 } AT91S_CDC_LINE_CODING, *AT91PS_CDC_LINE_CODING;
 
 AT91S_CDC_LINE_CODING line = {
@@ -383,9 +438,9 @@ AT91S_CDC_LINE_CODING line = {
 	8};     // 8 Data bits
 
 AT91PS_UDP pUdp = AT91C_BASE_UDP;
-uint16_t btConfiguration = 0;
-uint16_t btConnection    = 0;
-byte_t btReceiveBank   = AT91C_UDP_RX_DATA_BK0;
+uint8_t btConfiguration = 0;
+uint8_t btConnection    = 0;
+uint8_t btReceiveBank   = AT91C_UDP_RX_DATA_BK0;
 
 //*----------------------------------------------------------------------------
 //* \fn    usb_disable
@@ -458,12 +513,6 @@ bool usb_check() {
 	// reconnected ONCE and 
 	if ( !USB_ATTACHED() ){
 		usb_reconnect = 1;
-		LED_C_INV();
-		LED_C_INV();
-		LED_C_INV();
-		LED_C_INV();
-		LED_C_INV();
-		LED_C_INV();
 		return false;
 	}
 	
@@ -471,18 +520,6 @@ bool usb_check() {
 	if ( USB_ATTACHED() && usb_reconnect == 1 ) {
 			
 		if ( usb_configured == 0) {			
-			// blink
-			LED_D_INV();
-			LED_D_INV();
-			LED_D_INV();
-			LED_D_INV();
-			LED_D_INV();
-			LED_D_INV();
-			LED_D_INV();
-			LED_D_INV();
-			LED_D_INV();
-			LED_D_INV();
-		
 			usb_disable();
 			usb_enable();		
 
@@ -494,8 +531,6 @@ bool usb_check() {
 	}
 	*/
 
-	WDT_HIT();
-	
 	// interrupt status register
 	AT91_REG isr = pUdp->UDP_ISR;
 
@@ -508,15 +543,19 @@ bool usb_check() {
 		// Enable the function
 		pUdp->UDP_FADDR = AT91C_UDP_FEN;
 		// Configure endpoint 0  (enable control endpoint)
-		UDP_SET_EP_FLAGS(AT91C_EP_CONTROL, (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_CTRL));
+		pUdp->UDP_CSR[AT91C_EP_CONTROL] = (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_CTRL);
 		// clear it
 		pUdp->UDP_ICR |= AT91C_UDP_ENDBUSRES;
 	}
 	else if (isr & AT91C_UDP_EPINT0) {
 		pUdp->UDP_ICR = AT91C_UDP_EPINT0;
 		AT91F_CDC_Enumerate();
-		// clear it?
 		pUdp->UDP_ICR |= AT91C_UDP_EPINT0;
+	}
+	else if (isr & AT91C_UDP_EPINT3 ) {
+		pUdp->UDP_ICR = AT91C_UDP_EPINT3;
+		AT91F_CDC_Enumerate();
+		pUdp->UDP_ICR |= AT91C_UDP_EPINT3;
 	}
 	return (btConfiguration) ? true : false;
 }
@@ -542,10 +581,11 @@ bool usb_poll_validate_length() {
 
 //*----------------------------------------------------------------------------
 //* \fn    usb_read
-//* \brief Read available data from Endpoint OUT
+//* \brief Read available data from Endpoint 1 OUT (host to device)
 //*----------------------------------------------------------------------------
 uint32_t usb_read(byte_t* data, size_t len) {
-	byte_t bank = btReceiveBank;
+	
+	uint8_t bank = btReceiveBank;
 	uint32_t packetSize, nbBytesRcv = 0;
 	uint32_t time_out = 0;
   
@@ -558,7 +598,7 @@ uint32_t usb_read(byte_t* data, size_t len) {
 			while (packetSize--)
 				data[nbBytesRcv++] = pUdp->UDP_FDR[AT91C_EP_OUT];
 
-			UDP_CLEAR_EP_FLAGS(AT91C_EP_OUT, bank)			
+			UDP_CLEAR_EP_FLAGS(AT91C_EP_OUT, bank)
 
 			if (bank == AT91C_UDP_RX_DATA_BK0)
 				bank = AT91C_UDP_RX_DATA_BK1;
@@ -574,7 +614,7 @@ uint32_t usb_read(byte_t* data, size_t len) {
 
 //*----------------------------------------------------------------------------
 //* \fn    usb_write
-//* \brief Send through endpoint 2
+//* \brief Send through endpoint 2 (device to host)
 //*----------------------------------------------------------------------------
 uint32_t usb_write(const byte_t* data, const size_t len) {
 
@@ -584,25 +624,29 @@ uint32_t usb_write(const byte_t* data, const size_t len) {
 	size_t length = len;
 	uint32_t cpt = 0;
  
-	// Send the first packet
-	cpt = MIN(length, AT91C_EP_IN_SIZE-1);
+	// send first chunk
+	cpt = MIN(length, AT91C_EP_IN_SIZE);
 	length -= cpt;
-	while (cpt--) pUdp->UDP_FDR[AT91C_EP_IN] = *data++;
+	while (cpt--) {
+		pUdp->UDP_FDR[AT91C_EP_IN] = *data++;
+	}
 
 	UDP_SET_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXPKTRDY)
 
 	while (length) {
-		// Fill the second bank
-		cpt = MIN(length, AT91C_EP_IN_SIZE-1);
+		// Send next chunk
+		cpt = MIN(length, AT91C_EP_IN_SIZE);
 		length -= cpt;
-		while (cpt--) pUdp->UDP_FDR[AT91C_EP_IN] = *data++;
+		while (cpt--) {
+			pUdp->UDP_FDR[AT91C_EP_IN] = *data++;
+		}
+		
 		// Wait for the first bank to be sent
 		while (!(pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP)) {
 			if (!usb_check()) return length;
 		}
 		
-		UDP_CLEAR_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXCOMP)
-	
+		UDP_CLEAR_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXCOMP)	
 		UDP_SET_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXPKTRDY)
 	}
   
@@ -622,13 +666,14 @@ uint32_t usb_write(const byte_t* data, const size_t len) {
 //*----------------------------------------------------------------------------
 void AT91F_USB_SendData(AT91PS_UDP pUdp, const char *pData, uint32_t length) {
 	uint32_t cpt = 0;
-
+	AT91_REG csr;
+	
 	do {
 		cpt = MIN(length, AT91C_EP_CONTROL_SIZE);
 		length -= cpt;
 
 		while (cpt--)
-			pUdp->UDP_FDR[0] = *pData++;
+			pUdp->UDP_FDR[AT91C_EP_CONTROL] = *pData++;
 
 		if (pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP) {
 			
@@ -638,13 +683,14 @@ void AT91F_USB_SendData(AT91PS_UDP pUdp, const char *pData, uint32_t length) {
 		UDP_SET_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_TXPKTRDY)
 
 		do {
+			csr = pUdp->UDP_CSR[AT91C_EP_CONTROL];
 			// Data IN stage has been stopped by a status OUT
-			if ( pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_RX_DATA_BK0) {
+			if ( csr & AT91C_UDP_RX_DATA_BK0) {
 				
 				UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_RX_DATA_BK0)
 				return;
 			}
-		} while ( !( pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP) );
+		} while ( !(csr & AT91C_UDP_TXCOMP) );
 
 	} while (length);
 
@@ -676,6 +722,9 @@ void AT91F_USB_SendStall(AT91PS_UDP pUdp) {
 //*----------------------------------------------------------------------------
 //* \fn    AT91F_CDC_Enumerate
 //* \brief This function is a callback invoked when a SETUP packet is received
+//* problem:  
+//* 1. this is for USB endpoint0.  the control endpoint.
+//* 2. mixed with CDC ACM endpoint3 , interrupt, control endpoint
 //*----------------------------------------------------------------------------
 void AT91F_CDC_Enumerate() {
 	byte_t bmRequestType, bRequest;
@@ -684,16 +733,16 @@ void AT91F_CDC_Enumerate() {
 	if ( !(pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_RXSETUP) )
 		return;
 
-	bmRequestType = pUdp->UDP_FDR[0];
-	bRequest      = pUdp->UDP_FDR[0];
-	wValue        = (pUdp->UDP_FDR[0] & 0xFF);
-	wValue       |= (pUdp->UDP_FDR[0] << 8);
-	wIndex        = (pUdp->UDP_FDR[0] & 0xFF);
-	wIndex       |= (pUdp->UDP_FDR[0] << 8);
-	wLength       = (pUdp->UDP_FDR[0] & 0xFF);
-	wLength      |= (pUdp->UDP_FDR[0] << 8);
+	bmRequestType = pUdp->UDP_FDR[AT91C_EP_CONTROL];
+	bRequest      = pUdp->UDP_FDR[AT91C_EP_CONTROL];
+	wValue        = (pUdp->UDP_FDR[AT91C_EP_CONTROL] & 0xFF);
+	wValue       |= (pUdp->UDP_FDR[AT91C_EP_CONTROL] << 8);
+	wIndex        = (pUdp->UDP_FDR[AT91C_EP_CONTROL] & 0xFF);
+	wIndex       |= (pUdp->UDP_FDR[AT91C_EP_CONTROL] << 8);
+	wLength       = (pUdp->UDP_FDR[AT91C_EP_CONTROL] & 0xFF);
+	wLength      |= (pUdp->UDP_FDR[AT91C_EP_CONTROL] << 8);
 
-	if (bmRequestType & 0x80) {
+	if (bmRequestType & 0x80) {        // Data Phase Transfer Direction Device to Host
 		UDP_SET_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_DIR)
 	}
 	UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_RXSETUP)
@@ -701,15 +750,15 @@ void AT91F_CDC_Enumerate() {
 	if ( bRequest == MS_VENDOR_CODE) {
 		if ( bmRequestType == MS_WCID_GET_DESCRIPTOR ) { // C0
 			if ( wIndex == MS_EXTENDED_COMPAT_ID ) {  // 4
-				AT91F_USB_SendData(pUdp, CompatIDFeatureDescriptor, MIN(sizeof(CompatIDFeatureDescriptor), wLength));
-				return;
+				//AT91F_USB_SendData(pUdp, CompatIDFeatureDescriptor, MIN(sizeof(CompatIDFeatureDescriptor), wLength));
+				//return;
 			} 
 		}
 		if ( bmRequestType == MS_WCID_GET_FEATURE_DESCRIPTOR ) {  //C1
-			//if ( wIndex == MS_EXTENDED_PROPERTIES ) { // 5  - winusb bug with wIndex == interface index,  so I just send it always)
-				AT91F_USB_SendData(pUdp, OSprop, MIN(sizeof(OSprop), wLength));
-				return;
-			//} 
+			// if ( wIndex == MS_EXTENDED_PROPERTIES ) { // 5  - winusb bug with wIndex == interface index,  so I just send it always)
+				//AT91F_USB_SendData(pUdp, OSprop, MIN(sizeof(OSprop), wLength));
+				//return;
+			// } 
 		}
 	}
 	// Handle supported standard device request Cf Table 9-3 in USB specification Rev 1.1
@@ -719,6 +768,8 @@ void AT91F_CDC_Enumerate() {
 			AT91F_USB_SendData(pUdp, devDescriptor, MIN(sizeof(devDescriptor), wLength));
 		else if (wValue == 0x200)  // Return Configuration Descriptor
 			AT91F_USB_SendData(pUdp, cfgDescriptor, MIN(sizeof(cfgDescriptor), wLength));
+		else if ((wValue & 0xF00) == 0xF00) // Return BOS Descriptor
+			AT91F_USB_SendData(pUdp, bosDescriptor, MIN(sizeof(bosDescriptor), wLength));
 		else if ((wValue & 0x300) == 0x300) { // Return String Descriptor
 			
 			const char *strDescriptor = getStringDescriptor(wValue & 0xff);
@@ -739,34 +790,33 @@ void AT91F_CDC_Enumerate() {
 	case STD_SET_CONFIGURATION:
 		btConfiguration = wValue;
 		AT91F_USB_SendZlp(pUdp);
-		pUdp->UDP_GLBSTATE  = (wValue) ? AT91C_UDP_CONFG : AT91C_UDP_FADDEN;
-		
-		UDP_SET_EP_FLAGS(1, (wValue) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_OUT) : 0 );
-		UDP_SET_EP_FLAGS(2, (wValue) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_IN)  : 0 ); 
-		UDP_SET_EP_FLAGS(3, (wValue) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_INT_IN)   : 0 );
-//		pUdp->UDP_CSR[1] = (wValue) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_OUT) : 0;
-//		pUdp->UDP_CSR[2] = (wValue) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_IN)  : 0;
-//		pUdp->UDP_CSR[3] = (wValue) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_INT_IN)   : 0;
+		pUdp->UDP_GLBSTATE  = (wValue) ? AT91C_UDP_CONFG : AT91C_UDP_FADDEN;		
+		UDP_SET_EP_FLAGS(AT91C_EP_OUT,    (wValue) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_OUT) : 0 );
+		UDP_SET_EP_FLAGS(AT91C_EP_IN,     (wValue) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_IN)  : 0 ); 
+		UDP_SET_EP_FLAGS(AT91C_EP_NOTIFY, (wValue) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_INT_IN)   : 0 );
+//		pUdp->UDP_CSR[AT91C_EP_OUT] = (wValue) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_OUT) : 0;
+//		pUdp->UDP_CSR[AT91C_EP_IN] = (wValue) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_IN)  : 0;
+//		pUdp->UDP_CSR[AT91C_EP_NOTIFY] = (wValue) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_INT_IN)   : 0;
 		break;
 	case STD_GET_CONFIGURATION:
 		AT91F_USB_SendData(pUdp, (char *) &(btConfiguration), sizeof(btConfiguration));
 		break;
 	case STD_GET_STATUS_ZERO:
-		wStatus = 0;
+		wStatus = 0;   // Device is Bus powered, remote wakeup disabled
 		AT91F_USB_SendData(pUdp, (char *) &wStatus, sizeof(wStatus));
 		break;
 	case STD_GET_STATUS_INTERFACE:
-		wStatus = 0;
+		wStatus = 0;   // reserved for future use
 		AT91F_USB_SendData(pUdp, (char *) &wStatus, sizeof(wStatus));
 		break;
 	case STD_GET_STATUS_ENDPOINT:
 		wStatus = 0;
 		wIndex &= 0x0F;
-		if ((pUdp->UDP_GLBSTATE & AT91C_UDP_CONFG) && (wIndex <= 3)) {
+		if ((pUdp->UDP_GLBSTATE & AT91C_UDP_CONFG) && (wIndex <= AT91C_EP_NOTIFY)) {
 			wStatus = (pUdp->UDP_CSR[wIndex] & AT91C_UDP_EPEDS) ? 0 : 1;
 			AT91F_USB_SendData(pUdp, (char *) &wStatus, sizeof(wStatus));
 		}
-		else if ((pUdp->UDP_GLBSTATE & AT91C_UDP_FADDEN) && (wIndex == 0)) {
+		else if ((pUdp->UDP_GLBSTATE & AT91C_UDP_FADDEN) && (wIndex == AT91C_EP_CONTROL)) {
 			wStatus = (pUdp->UDP_CSR[wIndex] & AT91C_UDP_EPEDS) ? 0 : 1;
 			AT91F_USB_SendData(pUdp, (char *) &wStatus, sizeof(wStatus));
 		} else {
@@ -781,7 +831,7 @@ void AT91F_CDC_Enumerate() {
 		break;
 	case STD_SET_FEATURE_ENDPOINT:
 		wIndex &= 0x0F;
-		if ((wValue == 0) && wIndex && (wIndex <= 3)) {
+		if ((wValue == 0) && (wIndex >= AT91C_EP_OUT) && (wIndex <= AT91C_EP_NOTIFY)) {
 			pUdp->UDP_CSR[wIndex] = 0;
 			AT91F_USB_SendZlp(pUdp);
 		} else {
@@ -796,18 +846,18 @@ void AT91F_CDC_Enumerate() {
 		break;
 	case STD_CLEAR_FEATURE_ENDPOINT:
 		wIndex &= 0x0F;
-		if ((wValue == 0) && wIndex && (wIndex <= 3)) {
+		if ((wValue == 0) && (wIndex >= AT91C_EP_OUT) && (wIndex <= AT91C_EP_NOTIFY)) {
 			if (wIndex == 1) {
-				//pUdp->UDP_CSR[1] = (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_OUT);
-				UDP_SET_EP_FLAGS(1, (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_OUT) );
+				//pUdp->UDP_CSR[AT91C_EP_OUT] = (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_OUT);
+				UDP_SET_EP_FLAGS(AT91C_EP_OUT, (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_OUT) );
 			}
 			else if (wIndex == 2) {
-				//pUdp->UDP_CSR[2] = (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_IN);
-				UDP_SET_EP_FLAGS(2, (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_IN) );
+				//pUdp->UDP_CSR[AT91C_EP_IN] = (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_IN);
+				UDP_SET_EP_FLAGS(AT91C_EP_IN, (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_IN) );
 			}
 			else if (wIndex == 3) {
-				//pUdp->UDP_CSR[3] = (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_ISO_IN);
-				UDP_SET_EP_FLAGS(3, (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_ISO_IN) );
+				//pUdp->UDP_CSR[AT91C_EP_NOTIFY] = (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_INT_IN);
+				UDP_SET_EP_FLAGS(AT91C_EP_NOTIFY, (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_INT_IN) );
 			}
 			AT91F_USB_SendZlp(pUdp);
 		} else {

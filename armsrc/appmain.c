@@ -1161,20 +1161,12 @@ void  __attribute__((noreturn)) AppMain(void) {
 #endif
 
 	byte_t rx[sizeof(UsbCommand)];
-	size_t rx_len = 0;
    
 	for(;;) {
 	
 		// Check if there is a usb packet available
-		if ( usb_poll_validate_length() ) {
-  
-			// Try to retrieve the available command frame
-			rx_len = usb_read(rx, sizeof(UsbCommand));
-
-			// Check if the transfer was complete
-			if (rx_len == sizeof(UsbCommand))
-				UsbPacketReceived(rx, rx_len);					
-		}
+		if ( cmd_receive( (UsbCommand*)rx ) )
+			UsbPacketReceived(rx, sizeof(UsbCommand) );
 		
 		WDT_HIT();
 

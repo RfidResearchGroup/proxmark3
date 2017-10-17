@@ -75,7 +75,8 @@ serial_port uart_open(const char* pcPortName) {
 		return INVALID_SERIAL_PORT;
 	}
   
-	// Prepare the device control
+	// Prepare the device control 
+	// doesn't matter since PM3 device ignors this CDC command:  set_line_coding in usb_cdc.c
 	memset(&sp->dcb, 0, sizeof(DCB));
 	sp->dcb.DCBlength = sizeof(DCB);
 	if (!BuildCommDCBA("baud=115200 parity=N data=8 stop=1",&sp->dcb)) {
@@ -124,14 +125,6 @@ bool uart_receive(const serial_port sp, byte_t* p_rx, size_t pszMaxRxLen, size_t
 bool uart_send(const serial_port sp, const byte_t* p_tx, const size_t len) {
 	DWORD txlen = 0;
 	return WriteFile(((serial_port_windows*)sp)->hPort, p_tx, len, &txlen, NULL);
-	/*
-	bool res = WriteFile(((serial_port_windows*)sp)->hPort, p_tx, len, &txlen, NULL);
-	if ( !res )
-		return false;
-		
-	printf("TX %u\n", txlen);
-	return (txlen != 0);
-	*/
 }
 
 bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed) {
