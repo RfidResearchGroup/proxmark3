@@ -11,6 +11,7 @@ ARMSRC =
 THUMBSRC = cmd.c \
 	usb_cdc.c \
 	bootrom.c
+
 ASMSRC = ram-reset.s flash-reset.s
 
 ## There is a strange bug with the linker: Sometimes it will not emit the glue to call

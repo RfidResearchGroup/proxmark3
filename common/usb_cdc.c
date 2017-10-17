@@ -33,7 +33,6 @@
  */
 
 #include "usb_cdc.h"
-
 /*
 AT91SAM7S256  USB Device Port
 • Embedded 328-byte dual-port RAM for endpoints
@@ -442,6 +441,29 @@ uint8_t btConfiguration = 0;
 uint8_t btConnection    = 0;
 uint8_t btReceiveBank   = AT91C_UDP_RX_DATA_BK0;
 
+static void SpinDelay(int ms) {
+	int us = ms * 1000;
+	int ticks = (48 * us) >> 10;
+
+	// Borrow a PWM unit for my real-time clock
+	AT91C_BASE_PWMC->PWMC_ENA = PWM_CHANNEL(0);
+	
+	// 48 MHz / 1024 gives 46.875 kHz
+	AT91C_BASE_PWMC_CH0->PWMC_CMR = PWM_CH_MODE_PRESCALER(10);
+	AT91C_BASE_PWMC_CH0->PWMC_CDTYR = 0;
+	AT91C_BASE_PWMC_CH0->PWMC_CPRDR = 0xffff;
+
+	uint16_t start = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
+
+	for(;;) {
+		uint16_t now = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
+		if (now == (uint16_t)(start + ticks))
+			return;
+
+		WDT_HIT();
+	}
+}
+
 //*----------------------------------------------------------------------------
 //* \fn    usb_disable
 //* \brief This function deactivates the USB device
@@ -480,8 +502,9 @@ void usb_enable() {
 	// Disconnect and reconnect USB controller for 100ms
 	usb_disable();
 
+	SpinDelay(100);
 	// Wait for a short while
-	for (volatile size_t i=0; i<0x100000; i++) {};
+	//for (volatile size_t i=0; i<0x100000; i++) {};
 	
 	// Reconnect USB reconnect
 	AT91C_BASE_PIOA->PIO_SODR = GPIO_USB_PU;
@@ -550,7 +573,7 @@ bool usb_check() {
 	else if (isr & AT91C_UDP_EPINT0) {
 		pUdp->UDP_ICR = AT91C_UDP_EPINT0;
 		AT91F_CDC_Enumerate();
-		pUdp->UDP_ICR |= AT91C_UDP_EPINT0;
+		//pUdp->UDP_ICR |= AT91C_UDP_EPINT0;
 	}
 	else if (isr & AT91C_UDP_EPINT3 ) {
 		pUdp->UDP_ICR = AT91C_UDP_EPINT3;

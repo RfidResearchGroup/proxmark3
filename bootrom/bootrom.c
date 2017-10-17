@@ -193,7 +193,8 @@ static void flash_mode(int externally_entered) {
 	byte_t rx[sizeof(UsbCommand)];
 
 	usb_enable();
-	//for (volatile size_t i=0; i<0x100000; i++) {};
+	
+	for (volatile size_t i=0; i<0x100000; i++) {};
 
 	for(;;) {
 		WDT_HIT();
