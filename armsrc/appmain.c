@@ -1163,13 +1163,12 @@ void  __attribute__((noreturn)) AppMain(void) {
 	byte_t rx[sizeof(UsbCommand)];
    
 	for(;;) {
-	
+		WDT_HIT();
+		
 		// Check if there is a usb packet available
 		if ( cmd_receive( (UsbCommand*)rx ) )
 			UsbPacketReceived(rx, sizeof(UsbCommand) );
 		
-		WDT_HIT();
-
 		// Press button for one second to enter a possible standalone mode
 		if (BUTTON_HELD(1000) > 0) {
 			
