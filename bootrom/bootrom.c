@@ -84,11 +84,11 @@ static void Fatal(void) {
 }
 
 void UsbPacketReceived(uint8_t *packet, int len) {
-	int i, dont_ack=0;
+	int i, dont_ack = 0;
 	UsbCommand* c = (UsbCommand *)packet;
 	volatile uint32_t *p;
 
-	if ( len != sizeof(UsbCommand)) Fatal();
+	//if ( len != sizeof(UsbCommand)) Fatal();
   
 	uint32_t arg0 = (uint32_t)c->arg[0];
   
