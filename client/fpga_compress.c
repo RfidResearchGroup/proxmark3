@@ -43,12 +43,12 @@
 
 static void usage(void)
 {
-	fprintf(stderr, "Usage: fpga_compress <infile1> <infile2> ... <infile_n> <outfile>\n");
-	fprintf(stderr, "          Combine n FPGA bitstream files and compress them into one.\n\n");
-	fprintf(stderr, "       fpga_compress -d <infile> <outfile>");
-	fprintf(stderr, "          Decompress <infile>. Write result to <outfile>");
-	fprintf(stderr, "       fpga_compress -t <infile> <outfile>");
-	fprintf(stderr, "          Compress hardnested table <infile>. Write result to <outfile>");
+	fprintf(stdout, "Usage: fpga_compress <infile1> <infile2> ... <infile_n> <outfile>\n");
+	fprintf(stdout, "          Combine n FPGA bitstream files and compress them into one.\n\n");
+	fprintf(stdout, "       fpga_compress -d <infile> <outfile>");
+	fprintf(stdout, "          Decompress <infile>. Write result to <outfile>");
+	fprintf(stdout, "       fpga_compress -t <infile> <outfile>");
+	fprintf(stdout, "          Compress hardnested table <infile>. Write result to <outfile>");
 }
 
 
@@ -150,7 +150,7 @@ int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, bool hardn
 		ret = deflate(&compressed_fpga_stream, Z_FINISH);
 	}
 	
-	fprintf(stderr, "compressed %u input bytes to %lu output bytes\n", i, compressed_fpga_stream.total_out);
+	fprintf(stdout, "compressed %u input bytes to %lu output bytes\n", i, compressed_fpga_stream.total_out);
 
 	if (ret != Z_STREAM_END) {
 		fprintf(stderr, "Error in deflate(): %d %s\n", ret, compressed_fpga_stream.msg);
