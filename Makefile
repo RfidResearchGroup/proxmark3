@@ -73,7 +73,7 @@ tarbin: newtarbin client/tarbin armsrc/tarbin bootrom/tarbin
 udev:
 	sudo cp -rf driver/77-mm-usb-device-blacklist.rules /etc/udev/rules.d/77-mm-usb-device-blacklist.rules
 	sudo udevadm control --reload-rules
-	sudo adduser $USER dialout
+	sudo adduser $(USER) dialout
  
 # easy printing of MAKE VARIABLES
 print-%: ; @echo $* = $($*) 
