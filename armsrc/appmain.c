@@ -144,7 +144,8 @@ void Dbhexdump(int len, uint8_t *d, bool bAsci) {
 		
 		// filter safe ascii
 		for (i=0; i<l; i++)
-			if (ascii[i]<32 || ascii[i]>126) ascii[i]='.';
+            if (ascii[i] < 32 || ascii[i] > 126)
+                ascii[i] = '.';
         
 		if (bAsci)
 			Dbprintf("%-8s %*D",ascii,l,d," ");
@@ -165,8 +166,7 @@ static int ReadAdc(int ch) {
 	uint32_t d;
 
 	AT91C_BASE_ADC->ADC_CR = AT91C_ADC_SWRST;
-	AT91C_BASE_ADC->ADC_MR =
-		ADC_MODE_PRESCALE(63  /* was 32 */) |							// ADC_CLK = MCK / ((63+1) * 2) = 48MHz / 128 = 375kHz
+    AT91C_BASE_ADC->ADC_MR = ADC_MODE_PRESCALE(63 /* was 32 */) |       // ADC_CLK = MCK / ((63+1) * 2) = 48MHz / 128 = 375kHz
 		ADC_MODE_STARTUP_TIME(1  /* was 16 */) |						// Startup Time = (1+1) * 8 / ADC_CLK = 16 / 375kHz = 42,7us     Note: must be > 20us
 		ADC_MODE_SAMPLE_HOLD_TIME(15  /* was 8 */); 					// Sample & Hold Time SHTIM = 15 / ADC_CLK = 15 / 375kHz = 40us
 
@@ -227,8 +227,10 @@ void MeasureAntennaTuning(void) {
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, i);
 		SpinDelay(20);
 		adcval = ((MAX_ADC_LF_VOLTAGE * AvgAdc(ADC_CHAN_LF)) >> 10);
-		if (i==95) 	vLf125 = adcval; // voltage at 125Khz
-		if (i==89) 	vLf134 = adcval; // voltage at 134Khz
+        if (i == 95)
+            vLf125 = adcval; // voltage at 125Khz
+        if (i == 89)
+            vLf134 = adcval; // voltage at 134Khz
 
 		LF_Results[i] = adcval >> 8; // scale int to fit in byte for graphing purposes
 		if(LF_Results[i] > peak) {
@@ -269,8 +271,7 @@ void MeasureAntennaTuningHf(void) {
 void ReadMem(int addr) {
 	const uint8_t *data = ((uint8_t *)addr);
 
-	Dbprintf("%x: %02x %02x %02x %02x %02x %02x %02x %02x",
-		addr, data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
+    Dbprintf("%x: %02x %02x %02x %02x %02x %02x %02x %02x", addr, data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
 }
 
 /* osimage version information is linked in */
@@ -339,9 +340,7 @@ void printUSBSpeed(void) {
 
 	Dbprintf("  Time elapsed............%dms", end_time - start_time);
 	Dbprintf("  Bytes transferred.......%d", bytes_transferred);
-	Dbprintf("  USB Transfer Speed PM3 -> Client = %d Bytes/s", 
-		1000 * bytes_transferred / (end_time - start_time));
-
+    Dbprintf("  USB Transfer Speed PM3 -> Client = %d Bytes/s", 1000 * bytes_transferred / (end_time - start_time));
 }
 	
 /**
@@ -400,6 +399,9 @@ void printStandAloneModes(void) {
 	#if defined(WITH_HF_MATTYRUN)
 	DbpString("   HF Mifare sniff/clone - aka MattyRun (Matta Real)");
 	#endif 
+#if defined(WITH_HF_COLIN)
+    DbpString("   HF Mifare ultra fast sniff/sim/clone - aka VIGIKPWN (Colin Brigato)");
+#endif
 	
 	DbpString("Running ");	
 	//Dbprintf("  Is Device attached to USB| %s", USB_ATTACHED() ? "Yes" : "No"); 
@@ -650,7 +652,8 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			ReadPCF7931();
 			break;
 		case CMD_PCF7931_WRITE:
-			WritePCF7931(c->d.asBytes[0],c->d.asBytes[1],c->d.asBytes[2],c->d.asBytes[3],c->d.asBytes[4],c->d.asBytes[5],c->d.asBytes[6], c->d.asBytes[9], c->d.asBytes[7]-128,c->d.asBytes[8]-128, c->arg[0], c->arg[1], c->arg[2]);
+        WritePCF7931(c->d.asBytes[0], c->d.asBytes[1], c->d.asBytes[2], c->d.asBytes[3], c->d.asBytes[4], c->d.asBytes[5], c->d.asBytes[6], c->d.asBytes[9],
+                     c->d.asBytes[7] - 128, c->d.asBytes[8] - 128, c->arg[0], c->arg[1], c->arg[2]);
 			break;
 		case CMD_EM4X_READ_WORD:
 			EM4xReadWord(c->arg[0], c->arg[1], c->arg[2]);
@@ -690,9 +693,8 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			break;
 		case CMD_WR_HITAG_S: //writer for Hitag tags args=data to write,page and key or challenge
 			if ((hitag_function)c->arg[0] < 10) {
-			WritePageHitagS((hitag_function)c->arg[0],(hitag_data*)c->d.asBytes,c->arg[2]);
-			}
-			else if ((hitag_function)c->arg[0] >= 10) {
+				WritePageHitagS((hitag_function)c->arg[0],(hitag_data*)c->d.asBytes,c->arg[2]);
+			} else if ((hitag_function)c->arg[0] >= 10) {
 			  WriterHitag((hitag_function)c->arg[0],(hitag_data*)c->d.asBytes, c->arg[2]);
 			}
 			break;
@@ -869,8 +871,10 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			break;
 
 		//mifare desfire
-		case CMD_MIFARE_DESFIRE_READBL:	break;
-		case CMD_MIFARE_DESFIRE_WRITEBL: break;
+    case CMD_MIFARE_DESFIRE_READBL:
+        break;
+    case CMD_MIFARE_DESFIRE_WRITEBL:
+        break;
 		case CMD_MIFARE_DESFIRE_AUTH1:
 			MifareDES_Auth1(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;
@@ -1111,7 +1115,8 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 
 		case CMD_DEVICE_INFO: {
 			uint32_t dev_info = DEVICE_INFO_FLAG_OSIMAGE_PRESENT | DEVICE_INFO_FLAG_CURRENT_MODE_OS;
-			if(common_area.flags.bootrom_present) dev_info |= DEVICE_INFO_FLAG_BOOTROM_PRESENT;
+        if (common_area.flags.bootrom_present)
+            dev_info |= DEVICE_INFO_FLAG_BOOTROM_PRESENT;
 			cmd_send(CMD_DEVICE_INFO,dev_info,0,0,0,0);	
 			break;
 		}
@@ -1136,6 +1141,8 @@ void  __attribute__((noreturn)) AppMain(void) {
 
 	LEDsoff();
 	
+    usb_enable();
+
 	// The FPGA gets its clock from us from PCK0 output, so set that up.
 	AT91C_BASE_PIOA->PIO_BSR = GPIO_PCK0;
 	AT91C_BASE_PIOA->PIO_PDR = GPIO_PCK0;
@@ -1155,8 +1162,6 @@ void  __attribute__((noreturn)) AppMain(void) {
 
 	StartTickCount();
 
-	// Init USB device
-	usb_enable();
   	
 #ifdef WITH_LCD
 	LCDInit();

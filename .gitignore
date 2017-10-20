@@ -16,7 +16,6 @@
 *.moc.cpp
 *.z
 !client/hardnested/tables/*.z
-usb_cmd.lua
 version.c
 client/ui/ui_overlays.h
 *.Td
@@ -47,3 +46,7 @@ fpga/*
 #client/*
 # my own traces folder
 client/traces/*
+
+
+client/lualibs/mf_default_keys.lua
+client/lualibs/usb_cmd.lua

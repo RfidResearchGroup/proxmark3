@@ -4,6 +4,11 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 
+ - Added new standalone mode "HF Mifare ultra fast sniff/sim/clone - aka VIGIKPWN"  (@cjbrigato)
+
+### Fixed
+- Changed start sequence in Qt mode (fix: short commands hangs main Qt thread) (Merlok)
+
 ## [ice.3.1.0][2017-09-26]
   - proxmark3 client can reconnect to device without restart (iceman)
   - lots of bug fixes (many many)
