@@ -107,7 +107,8 @@ static int l_unpack(lua_State *L) 		/** unpack(f,s, [init]) */
  size_t len;
  const char *s=luaL_checklstring(L,2,&len); /* switched s and f */
  const char *f=luaL_checkstring(L,1);
- int i_read = (int)luaL_optint(L,(3),(1))-1;
+ int i_read = luaL_optinteger(L,3,1)-1;
+ //int i_read = (int)luaL_optint(L,(3),(1))-1;
  unsigned int i;
  if (i_read >= 0) {
    i = i_read;
