@@ -10,6 +10,12 @@
 #include "usb_cdc.h"
 #include "cmd.h"
 
+
+struct common_area common_area __attribute__((section(".commonarea")));
+unsigned int start_addr, end_addr, bootrom_unlocked;
+extern char _bootrom_start, _bootrom_end, _flash_start, _flash_end;
+extern uint32_t _osimage_entry;
+
 void DbpString(char *str) {
 	byte_t len = 0;
 	while (str[len] != 0x00)
@@ -17,10 +23,6 @@ void DbpString(char *str) {
 	
 	cmd_send(CMD_DEBUG_PRINT_STRING, len, 0, 0, (byte_t*)str, len);
 }
-
-struct common_area common_area __attribute__((section(".commonarea")));
-unsigned int start_addr, end_addr, bootrom_unlocked;
-extern char _bootrom_start, _bootrom_end, _flash_start, _flash_end;
 
 static void ConfigClocks(void) {
     // we are using a 16 MHz crystal as the basis for everything
@@ -194,6 +196,7 @@ static void flash_mode(int externally_entered) {
 
 	usb_enable();
 	
+	// wait for reset to be complete?
 	for (volatile size_t i=0; i<0x100000; i++) {};
 
 	for(;;) {
@@ -217,7 +220,6 @@ static void flash_mode(int externally_entered) {
 	}
 }
 
-extern uint32_t _osimage_entry;
 void BootROM(void) {
     //------------
     // First set up all the I/O pins; GPIOs configured directly, other ones
