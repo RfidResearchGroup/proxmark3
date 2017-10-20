@@ -77,7 +77,6 @@ int OpenProxmark() {
 
 	//poll once a second
 	if (sp == INVALID_SERIAL_PORT) {
-		//fprintf(stderr, "ERROR: invalid serial port\n");
 		return 0;
 	} else if (sp == CLAIMED_SERIAL_PORT) {
 		fprintf(stderr, "ERROR: serial port is claimed by another process\n");
@@ -90,7 +89,7 @@ static void usage(char *argv0) {
 	fprintf(stdout, "Usage:   %s <port> [-b] image.elf [image.elf...]\n\n", argv0);
 	fprintf(stdout, "\t-b\tEnable flashing of bootloader area (DANGEROUS)\n\n");
 	fprintf(stdout, "\nExample (Linux):\n\n\t %s  /dev/ttyACM0 armsrc/obj/fullimage.elf\n", argv0);
-	fprintf(stdout, "\nExample (OS)   :\n\n\t %s  /dev/cu.usbmodem1451 armsrc/obj/fullimage.elf\n", argv0);
+	fprintf(stdout, "\nExample (OSX   :\n\n\t %s  /dev/cu.usbmodem88888888 armsrc/obj/fullimage.elf\n", argv0);
 	fprintf(stdout, "\nExample (WIN)  :\n\n\t %s  com3 armsrc/obj/fullimage.elf\n", argv0);
 	fprintf(stdout, "\nNote (Linux): if the flasher gets stuck in 'Waiting for Proxmark to reappear on <DEVICE>',\n");
 	fprintf(stdout, "              you need to blacklist proxmark for modem-manager - see wiki for more details:\n");
