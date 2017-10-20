@@ -77,7 +77,19 @@ void ProxGuiQT::_Exit(void) {
 	delete this;
 }
 
-void ProxGuiQT::MainLoop() {
+void ProxGuiQT::_StartProxmarkThread(void) {
+	if (!proxmarkThread)
+		return;
+
+	// if thread finished delete self and delete application
+	QObject::connect(proxmarkThread, SIGNAL(finished()), proxmarkThread, SLOT(deleteLater()));
+	QObject::connect(proxmarkThread, SIGNAL(finished()), this, SLOT(_Exit()));
+	// start proxmark thread
+	proxmarkThread->start();
+}
+
+void ProxGuiQT::MainLoop()
+{
 	plotapp = new QApplication(argc, argv);
 
 	connect(this, SIGNAL(ShowGraphWindowSignal()), this, SLOT(_ShowGraphWindow()));
@@ -85,10 +97,16 @@ void ProxGuiQT::MainLoop() {
 	connect(this, SIGNAL(HideGraphWindowSignal()), this, SLOT(_HideGraphWindow()));
 	connect(this, SIGNAL(ExitSignal()), this, SLOT(_Exit()));
 
+	//start proxmark thread after starting event loop
+	QTimer::singleShot(200, this, SLOT(_StartProxmarkThread()));
+
 	plotapp->exec();
 }
 
-ProxGuiQT::ProxGuiQT(int argc, char **argv) : plotapp(NULL), plotwidget(NULL), argc(argc), argv(argv) {}
+ProxGuiQT::ProxGuiQT(int argc, char **argv, WorkerThread *wthread) : plotapp(NULL), plotwidget(NULL),
+	argc(argc), argv(argv), proxmarkThread(wthread)
+{
+}
 
 ProxGuiQT::~ProxGuiQT(void) {
 	if (plotapp) {

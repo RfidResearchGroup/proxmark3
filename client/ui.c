@@ -19,7 +19,7 @@ int GridOffset = 0;
 bool GridLocked = false;
 bool showDemod = true;
 
-pthread_mutex_t print_lock = PTHREAD_MUTEX_INITIALIZER;
+extern pthread_mutex_t print_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static char *logfilename = "proxmark3.log";
 

@@ -3,7 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-
+ - Changed proxmark command line parameter `flush` to `-f` or `-flush` (Merlok)
+ - Added to proxmark command line parameters `w` - wait 20s for serial port (Merlok)
+ - Added to proxmark command line parameters `c` and `l` - execute command and lua script from command line (Merlok)
+ - Added to proxmark ability to execute commands from stdin (pipe) (Merlok)
  - Added new standalone mode "HF Mifare ultra fast sniff/sim/clone - aka VIGIKPWN"  (@cjbrigato)
 
 ### Fixed

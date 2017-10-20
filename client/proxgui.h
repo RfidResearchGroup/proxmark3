@@ -19,7 +19,7 @@ void ShowGraphWindow(void);
 void HideGraphWindow(void);
 void RepaintGraphWindow(void);
 void MainGraphics(void);
-void InitGraphics(int argc, char **argv, char *script_cmds_file, bool usb_present);
+void InitGraphics(int argc, char **argv, char *script_cmds_file, char *script_cmd, bool usb_present);
 void ExitGraphics(void);
 
 #define MAX_GRAPH_TRACE_LEN (40000 * 8)

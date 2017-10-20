@@ -1628,8 +1628,8 @@ static inline bool remaining_bits_match(uint_fast8_t num_common_bits, uint_fast8
 }
 
 
-static pthread_mutex_t statelist_cache_mutex;
-static pthread_mutex_t book_of_work_mutex;
+static pthread_mutex_t statelist_cache_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t book_of_work_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
 typedef enum {

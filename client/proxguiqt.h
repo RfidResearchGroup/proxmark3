@@ -88,6 +88,18 @@ class ProxWidget : public QWidget
 		void vchange_dthr_down(int v);
 };
 
+class WorkerThread : public QThread {
+		Q_OBJECT;
+	public:
+		WorkerThread(char*, char*, bool);
+		~WorkerThread();
+		void run();
+	private:
+		char *script_cmds_file = NULL;
+		char *script_cmd = NULL;
+		bool usb_present;
+};
+
 class ProxGuiQT : public QObject
 {
 	Q_OBJECT;
@@ -98,9 +110,10 @@ class ProxGuiQT : public QObject
 		int argc;
 		char **argv;
 		void (*main_func)(void);
+		WorkerThread *proxmarkThread;
 		
 	public:
-		ProxGuiQT(int argc, char **argv);
+		ProxGuiQT(int argc, char **argv, WorkerThread *wthread);
 		~ProxGuiQT(void);
 		void ShowGraphWindow(void);
 		void RepaintGraphWindow(void);
@@ -113,25 +126,13 @@ class ProxGuiQT : public QObject
 		void _RepaintGraphWindow(void);
 		void _HideGraphWindow(void);
 		void _Exit(void);
-		
+		void _StartProxmarkThread(void);
+
 	signals:
 		void ShowGraphWindowSignal(void);
 		void RepaintGraphWindowSignal(void);
 		void HideGraphWindowSignal(void);
 		void ExitSignal(void);
-};
-
-class WorkerThread : public QThread {
-	Q_OBJECT;
-
-	public:
-		WorkerThread(char*, bool);
-		~WorkerThread();
-		void run();
-		
-	private:
-		char *script_cmds_file = NULL;
-		bool usb_present;
 };
 
 #endif // PROXGUI_QT
