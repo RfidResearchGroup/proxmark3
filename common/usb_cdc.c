@@ -279,6 +279,7 @@ static const char bosDescriptor[] = {
 };
 
 // Microsoft OS Extended Configuration Compatible ID Descriptor
+/*
 static const char CompatIDFeatureDescriptor[] = {
 		0x28, 0x00, 0x00, 0x00,							// Descriptor Length 40bytes (0x28)
 		0x00, 0x01,										// Version ('1.0')
@@ -292,8 +293,10 @@ static const char CompatIDFeatureDescriptor[] = {
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,	// Sub-Compatible ID (8byte)
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00				// Reserved (6bytes)
 };
+*/
 
 // Microsoft Extended Properties Feature Descriptor
+/*
 static const char OSprop[] = {
 		// u32 Descriptor Length (10+132+64+102 == 308
 		0x34, 0x01, 0, 0,
@@ -351,6 +354,8 @@ static const char OSprop[] = {
 		'S',0,'h',0,'e',0,'l',0,'l',0,'3',0,'2',0,'.',0,'d',0,'l',0,'l',0,',',0,
 		'-',0,'1',0,'3',0,0,0
 };
+
+*/
 
 static const char StrLanguageCodes[] = {
   4,			// Length
@@ -737,6 +742,7 @@ void AT91F_USB_SendData(AT91PS_UDP pUdp, const char *pData, uint32_t length) {
 void AT91F_USB_SendZlp(AT91PS_UDP pUdp) {
 	UDP_SET_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_TXPKTRDY);	
 	while ( !(pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXPKTRDY) );
+	
 	UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_TXCOMP);
 	while (pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP);
 }
@@ -798,44 +804,55 @@ void AT91F_CDC_Enumerate() {
 	}
 	// Handle supported standard device request Cf Table 9-3 in USB specification Rev 1.1
 	switch ((bRequest << 8) | bmRequestType) {
-	case STD_GET_DESCRIPTOR:
-		if (wValue == 0x100)       // Return Device Descriptor
-			AT91F_USB_SendData(pUdp, devDescriptor, MIN(sizeof(devDescriptor), wLength));
-		else if (wValue == 0x200)  // Return Configuration Descriptor
-			AT91F_USB_SendData(pUdp, cfgDescriptor, MIN(sizeof(cfgDescriptor), wLength));
-		else if ((wValue & 0xF00) == 0xF00) // Return BOS Descriptor
-			AT91F_USB_SendData(pUdp, bosDescriptor, MIN(sizeof(bosDescriptor), wLength));
-		else if ((wValue & 0x300) == 0x300) { // Return String Descriptor
-			
-			const char *strDescriptor = getStringDescriptor(wValue & 0xff);
-			if (strDescriptor != NULL) {
-				AT91F_USB_SendData(pUdp, strDescriptor, MIN(strDescriptor[0], wLength));
+	case STD_GET_DESCRIPTOR: {
+		
+			if ( wValue == 0x100 )       // Return Device Descriptor
+				AT91F_USB_SendData(pUdp, devDescriptor, MIN(sizeof(devDescriptor), wLength));
+			else if ( wValue == 0x200 )  // Return Configuration Descriptor
+				AT91F_USB_SendData(pUdp, cfgDescriptor, MIN(sizeof(cfgDescriptor), wLength));
+			else if ( (wValue & 0xF00) == 0xF00) // Return BOS Descriptor
+				AT91F_USB_SendData(pUdp, bosDescriptor, MIN(sizeof(bosDescriptor), wLength));
+			else if ( (wValue & 0x300) == 0x300) { // Return String Descriptor
+
+				const char *strDescriptor = getStringDescriptor(wValue & 0xff);
+				if (strDescriptor != NULL) {
+					AT91F_USB_SendData(pUdp, strDescriptor, MIN(strDescriptor[0], wLength));
+				} else {
+					AT91F_USB_SendStall(pUdp);
+				}
 			} else {
 				AT91F_USB_SendStall(pUdp);
 			}
 		}
-		else
-			AT91F_USB_SendStall(pUdp);
 		break;
 	case STD_SET_ADDRESS:
 		AT91F_USB_SendZlp(pUdp);
-		pUdp->UDP_FADDR = (AT91C_UDP_FEN | wValue);
+		pUdp->UDP_FADDR = (AT91C_UDP_FEN | (wValue & 0x7F) );
 		pUdp->UDP_GLBSTATE  = (wValue) ? AT91C_UDP_FADDEN : 0;
 		break;
 	case STD_SET_CONFIGURATION:
-		btConfiguration = wValue;
+	
+		/* 
+		*   Set or clear the device "configured" state. 
+		*   The LSB of wValue is the "Configuration Number". If this value is non-zero, 
+		*   it should be the same number as defined in the Configuration Descriptor; 
+		*   otherwise an error must have occurred. 
+		*   This device has only one configuration and its Config Number is CONF_NB (= 1). 
+		*/  			
 		AT91F_USB_SendZlp(pUdp);
+		btConfiguration = wValue;
 		pUdp->UDP_GLBSTATE  = (wValue) ? AT91C_UDP_CONFG : AT91C_UDP_FADDEN;
 		
 		// make sure we are not stalled
+		/*
 		UDP_CLEAR_EP_FLAGS(AT91C_EP_OUT   , AT91C_UDP_FORCESTALL);
         UDP_CLEAR_EP_FLAGS(AT91C_EP_IN    , AT91C_UDP_FORCESTALL);
 		UDP_CLEAR_EP_FLAGS(AT91C_EP_NOTIFY, AT91C_UDP_FORCESTALL);
+		*/
 		
 		// enable endpoints
-
-		pUdp->UDP_CSR[AT91C_EP_OUT] = (wValue) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_OUT) : 0;
-		pUdp->UDP_CSR[AT91C_EP_IN] = (wValue) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_IN)  : 0;
+		pUdp->UDP_CSR[AT91C_EP_OUT]    = (wValue) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_OUT) : 0;
+		pUdp->UDP_CSR[AT91C_EP_IN]     = (wValue) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_IN)  : 0;
 		pUdp->UDP_CSR[AT91C_EP_NOTIFY] = (wValue) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_INT_IN)   : 0;
 		break;
 	case STD_GET_CONFIGURATION:
@@ -887,18 +904,11 @@ void AT91F_CDC_Enumerate() {
 	case STD_CLEAR_FEATURE_ENDPOINT:
 		wIndex &= 0x0F;
 		if ((wValue == 0) && (wIndex >= AT91C_EP_OUT) && (wIndex <= AT91C_EP_NOTIFY)) {
-			if (wIndex == AT91C_EP_OUT) {
-				//pUdp->UDP_CSR[AT91C_EP_OUT] = (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_OUT);
-				UDP_SET_EP_FLAGS(AT91C_EP_OUT, (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_OUT) );
-			}
-			else if (wIndex == AT91C_EP_IN) {
-				//pUdp->UDP_CSR[AT91C_EP_IN] = (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_IN);
-				UDP_SET_EP_FLAGS(AT91C_EP_IN, (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_IN) );
-			}
-			else if (wIndex == AT91C_EP_NOTIFY) {
-				//pUdp->UDP_CSR[AT91C_EP_NOTIFY] = (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_INT_IN);
-				UDP_SET_EP_FLAGS(AT91C_EP_NOTIFY, (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_INT_IN) );
-			}
+
+			if (wIndex == AT91C_EP_OUT)			pUdp->UDP_CSR[AT91C_EP_OUT] = (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_OUT);
+			else if (wIndex == AT91C_EP_IN)		pUdp->UDP_CSR[AT91C_EP_IN] = (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_IN);
+			else if (wIndex == AT91C_EP_NOTIFY) pUdp->UDP_CSR[AT91C_EP_NOTIFY] = (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_INT_IN);
+
 			AT91F_USB_SendZlp(pUdp);
 		} else {
 			AT91F_USB_SendStall(pUdp);
@@ -906,12 +916,18 @@ void AT91F_CDC_Enumerate() {
 		break;
 
 	// handle CDC class requests
-	case SET_LINE_CODING:
+	case SET_LINE_CODING: {
+	/*
+	    uint8_t i;  
+		for ( i = 0 ; i < 7 ; i++ )  {  
+			((uint8_t*)&line)[i] =  pUdp->UDP_FDR[AT91C_EP_CONTROL];
+		}  */
 		// ignor SET_LINE_CODING...
 		while ( !(pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_RX_DATA_BK0) );
 		UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_RX_DATA_BK0);
 		AT91F_USB_SendZlp(pUdp);
 		break;
+	}
 	case GET_LINE_CODING:
 		AT91F_USB_SendData(pUdp, (char *) &line, MIN(sizeof(line), wLength));
 		break;
