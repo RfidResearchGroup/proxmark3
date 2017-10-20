@@ -308,9 +308,6 @@ void SendVersion(void) {
 	FpgaGatherVersion(FPGA_BITSTREAM_HF, temp, sizeof(temp));
 	strncat(VersionString, temp, sizeof(VersionString) - strlen(VersionString) - 1);
 
-	FpgaGatherVersion(FPGA_BITSTREAM_NFC, temp, sizeof(temp));
-	strncat(VersionString, temp, sizeof(VersionString) - strlen(VersionString) - 1);
-
 	// Send Chip ID and used flash memory
 	uint32_t text_and_rodata_section_size = (uint32_t)&__data_src_start__ - (uint32_t)&_flash_start;
 	uint32_t compressed_data_section_size = common_area.arg1;

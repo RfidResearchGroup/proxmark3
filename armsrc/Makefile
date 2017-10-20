@@ -56,7 +56,7 @@ SRC_FLASH = flash.c
 SRC_BEE = bee.c
 
 #the FPGA bitstream files. Note: order matters!
-FPGA_BITSTREAMS = fpga_lf.bit fpga_hf.bit fpga_nfc.bit
+FPGA_BITSTREAMS = fpga_lf.bit fpga_hf.bit
 
 #the zlib source files required for decompressing the fpga config at run time
 SRC_ZLIB = inflate.c inffast.c inftrees.c adler32.c zutil.c
