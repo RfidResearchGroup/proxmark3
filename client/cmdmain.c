@@ -160,9 +160,8 @@ bool WaitForResponseTimeoutW(uint32_t cmd, UsbCommand* response, size_t ms_timeo
 				return true;			
 		}
 
-		if (msclock() - start_time > ms_timeout) {
+		if (msclock() - start_time > ms_timeout)
 			break;
-		}
 		
 		if (msclock() - start_time > 2000 && show_warning) {
 			PrintAndLog("Waiting for a response from the proxmark...");
@@ -178,7 +177,7 @@ bool WaitForResponseTimeout(uint32_t cmd, UsbCommand* response, size_t ms_timeou
 }
 
 bool WaitForResponse(uint32_t cmd, UsbCommand* response) {
-	return WaitForResponseTimeoutW(cmd, response, -1);
+	return WaitForResponseTimeoutW(cmd, response, -1, true);
 }
 
 //-----------------------------------------------------------------------------
