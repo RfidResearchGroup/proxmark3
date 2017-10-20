@@ -11,6 +11,8 @@
 #ifndef CMDSCRIPT_H__
 #define CMDSCRIPT_H__
 
-int CmdScript(const char *Cmd);
+extern int CmdScript(const char *Cmd);
 
+extern int CmdScriptList(const char *Cmd);
+extern int CmdScriptRun(const char *Cmd);
 #endif

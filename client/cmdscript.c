@@ -38,16 +38,6 @@
 #endif
 
 static int CmdHelp(const char *Cmd);
-static int CmdList(const char *Cmd);
-static int CmdRun(const char *Cmd);
-
-command_t CommandTable[] =
-{
-  {"help",  CmdHelp, 1, "This help"},
-  {"list",  CmdList, 1, "List available scripts"},
-  {"run",   CmdRun,  1, "<name> -- Execute a script"},
-  {NULL, NULL, 0, NULL}
-};
 
 int str_ends_with(const char * str, const char * suffix) {
 
@@ -62,16 +52,14 @@ int str_ends_with(const char * str, const char * suffix) {
 
   return 0 == strncmp( str + str_len - suffix_len, suffix, suffix_len );
 }
+
 /**
- * Shows some basic help
- * @brief CmdHelp
- * @param Cmd
- * @return
+ * Utility to check the ending of a string (used to check file suffix)
  */
-int CmdHelp(const char * Cmd)
-{
-    PrintAndLog("This is a feature to run Lua-scripts. You can place lua-scripts within the scripts/-folder. ");
-    return 0;
+bool endsWith (char* base, char* str) {
+    int blen = strlen(base);
+    int slen = strlen(str);
+    return (blen >= slen) && (0 == strcmp(base + blen - slen, str));
 }
 
 /**
@@ -79,7 +67,7 @@ int CmdHelp(const char * Cmd)
 * generate a file listing of the script-directory for files
 * ending with .lua
 */
-int CmdList(const char *Cmd) {
+int CmdScriptList(const char *Cmd) {
 
 	char script_directory_path[strlen(get_my_executable_directory()) + strlen(LUA_SCRIPTS_DIRECTORY) + 1];
 	strcpy(script_directory_path, get_my_executable_directory());
@@ -103,35 +91,13 @@ int CmdList(const char *Cmd) {
 	return 0;
 }
 
-
 /**
- * Finds a matching script-file
- * @brief CmdScript
- * @param Cmd
- * @return
- */
-int CmdScript(const char *Cmd) {
-	clearCommandBuffer();
-	CmdsParse(CommandTable, Cmd);
-	return 0;
-}
-/**
- * Utility to check the ending of a string (used to check file suffix)
- */
-bool endsWith (char* base, char* str) {
-    int blen = strlen(base);
-    int slen = strlen(str);
-    return (blen >= slen) && (0 == strcmp(base + blen - slen, str));
-}
-
-/**
- * @brief CmdRun - executes a script file.
+ * @brief CmdScriptRun - executes a script file.
  * @param argc
  * @param argv
  * @return
  */
-int CmdRun(const char *Cmd)
-{
+int CmdScriptRun(const char *Cmd) {
     // create new Lua state
     lua_State *lua_state;
     lua_state = luaL_newstate();
@@ -197,3 +163,33 @@ int CmdRun(const char *Cmd)
     return 0;
 }
 
+
+static command_t CommandTable[] = {
+	{"help",  CmdHelp, 1, "This help"},
+	{"list",  CmdScriptList, 1, "List available scripts"},
+	{"run",   CmdScriptRun,  1, "<name> -- Execute a script"},
+	{NULL, NULL, 0, NULL}
+};
+
+/**
+ * Finds a matching script-file
+ * @brief CmdScript
+ * @param Cmd
+ * @return
+ */
+int CmdScript(const char *Cmd) {
+	clearCommandBuffer();
+	CmdsParse(CommandTable, Cmd);
+	return 0;
+}
+
+/**
+ * Shows some basic help
+ * @brief CmdHelp
+ * @param Cmd
+ * @return
+ */
+int CmdHelp(const char * Cmd) {
+    PrintAndLog("This is a feature to run Lua-scripts. You can place lua-scripts within the scripts/-folder. ");
+    return 0;
+}
