@@ -1091,7 +1091,9 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 		case CMD_FINISH_WRITE:
 		case CMD_HARDWARE_RESET:
 			usb_disable();
-			SpinDelay(2000);
+
+			// (iceman) why this wait?
+			SpinDelay(1000);  
 			AT91C_BASE_RSTC->RSTC_RCR = RST_CONTROL_KEY | AT91C_RSTC_PROCRST;
 			// We're going to reset, and the bootrom will take control.
 			for(;;) {}
