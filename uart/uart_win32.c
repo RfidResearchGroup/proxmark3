@@ -118,8 +118,7 @@ void uart_close(const serial_port sp) {
 }
 
 bool uart_receive(const serial_port sp, byte_t* p_rx, size_t pszMaxRxLen, size_t* p_rxlen) {
-	ReadFile(((serial_port_windows*)sp)->hPort, p_rx, pszMaxRxLen, (LPDWORD)p_rxlen, NULL);
-	return (*p_rxlen != 0);
+	return ReadFile(((serial_port_windows*)sp)->hPort, p_rx, pszMaxRxLen, (LPDWORD)p_rxlen, NULL);
 }
 
 bool uart_send(const serial_port sp, const byte_t* p_tx, const size_t len) {
