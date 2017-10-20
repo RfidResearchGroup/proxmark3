@@ -143,7 +143,7 @@ int getCommand(UsbCommand* response) {
  * @param ms_timeout
  * @return true if command was returned, otherwise false
  */
-bool WaitForResponseTimeout(uint32_t cmd, UsbCommand* response, size_t ms_timeout, bool show_warning)) {
+bool WaitForResponseTimeoutW(uint32_t cmd, UsbCommand* response, size_t ms_timeout, bool show_warning) {
   
 	UsbCommand resp;
 
