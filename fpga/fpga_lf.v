@@ -103,7 +103,7 @@ lo_edge_detect le(
 // Major modes:
 //   000 --  LF reader (generic)
 //   001 --  LF edge detect (generic)
-//   010 --  LF passthru
+//   010 --  LF passthrough
 
 mux8 mux_ssp_clk		(major_mode, ssp_clk,   lr_ssp_clk,   le_ssp_clk,         1'b0,   1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
 mux8 mux_ssp_din		(major_mode, ssp_din,   lr_ssp_din,         1'b0,   lp_ssp_din,   1'b0, 1'b0, 1'b0, 1'b0, 1'b0);

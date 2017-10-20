@@ -436,6 +436,67 @@ uint32_t GetT55xxClockBit(uint32_t clock);
 #define EM4x05_DISABLE_ALLOWED        1<<23
 #define EM4x05_READER_TALK_FIRST      1<<24
 
+
+
+#define FLITE_SERVICE_RO 0x000B
+#define FLITE_SERVICE_RW 0x0009
+
+#define FELICA_POLL_REQ 0x00
+#define FELICA_POLL_ACK 0x01
+
+#define FELICA_REQSRV_REQ 0x02
+#define FELICA_REQSRV_ACK 0x03
+
+#define FELICA_RDBLK_REQ 0x06
+#define FELICA_RDBLK_ACK 0x07
+
+#define FELICA_WRTBLK_REQ 0x08
+#define FELICA_WRTBLK_ACK 0x09
+
+#define FELICA_SRCHSYSCODE_REQ 0x0a
+#define FELICA_SRCHSYSCODE_ACK 0x0b
+
+#define FELICA_REQSYSCODE_REQ 0x0c
+#define FELICA_REQSYSCODE_ACK 0x0d
+
+#define FELICA_AUTH1_REQ 0x10
+#define FELICA_AUTH1_ACK 0x11
+
+#define FELICA_AUTH2_REQ 0x12
+#define FELICA_AUTH2_ACK 0x13
+
+#define FELICA_RDSEC_REQ 0x14
+#define FELICA_RDSEC_ACK 0x15
+
+#define FELICA_WRTSEC_REQ 0x16
+#define FELICA_WRTSEC_ACK 0x17
+
+#define FELICA_REQSRV2_REQ 0x32
+#define FELICA_REQSRV2_ACK 0x33
+
+#define FELICA_GETSTATUS_REQ 0x38
+#define FELICA_GETSTATUS_ACK 0x39
+
+#define FELICA_OSVER_REQ 0x3c
+#define FELICA_OSVER_ACK 0x3d
+
+#define FELICA_RESET_MODE_REQ 0x3e
+#define FELICA_RESET_MODE_ACK 0x3f
+
+#define FELICA_AUTH1V2_REQ 0x40
+#define FELICA_AUTH1V2_ACK 0x41
+
+#define FELICA_AUTH2V2_REQ 0x42
+#define FELICA_AUTH2V2_ACK 0x43
+
+#define FELICA_RDSECV2_REQ 0x44
+#define FELICA_RDSECV2_ACK 0x45
+#define FELICA_WRTSECV2_REQ 0x46
+#define FELICA_WRTSECV2_ACK 0x47
+
+#define FELICA_UPDATE_RNDID_REQ 0x4C
+#define FELICA_UPDATE_RNDID_ACK 0x4D
+
 // iclass / picopass chip config structures and shared routines
 typedef struct {
 	uint8_t app_limit;      //[8]

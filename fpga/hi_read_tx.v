@@ -12,7 +12,7 @@ module hi_read_tx(
     ssp_frame, ssp_din, ssp_dout, ssp_clk,
     cross_hi, cross_lo,
     dbg,
-    shallow_modulation
+    shallow_modulation, speed, power
 );
     input pck0, ck_1356meg, ck_1356megb;
     output pwr_lo, pwr_hi, pwr_oe1, pwr_oe2, pwr_oe3, pwr_oe4;
@@ -23,6 +23,8 @@ module hi_read_tx(
     input cross_hi, cross_lo;
     output dbg;
     input shallow_modulation;
+    input [1:0] speed;
+    input power;
 
 // The high-frequency stuff. For now, for testing, just bring out the carrier,
 // and allow the ARM to modulate it over the SSP.
@@ -32,6 +34,8 @@ reg pwr_oe2;
 reg pwr_oe3;
 reg pwr_oe4;
 always @(ck_1356megb or ssp_dout or shallow_modulation)
+begin
+if (power)
 begin
     if(shallow_modulation)
     begin
@@ -50,6 +54,15 @@ begin
         pwr_oe4 <= 1'b0;
     end
 end
+else
+begin
+       pwr_hi <= 1'b0;
+        pwr_oe1 <= 1'b0;
+        pwr_oe2 <= 1'b0;
+        pwr_oe3 <= 1'b0;
+        pwr_oe4 <= ~ssp_dout;
+end    
+end
 
 // Then just divide the 13.56 MHz clock down to produce appropriate clocks
 // for the synchronous serial port.
@@ -59,7 +72,7 @@ reg [6:0] hi_div_by_128;
 always @(posedge ck_1356meg)
     hi_div_by_128 <= hi_div_by_128 + 1;
 
-assign ssp_clk = hi_div_by_128[6];
+assign ssp_clk = speed[1]? (speed[0]? hi_div_by_128[3]: hi_div_by_128[4]) : (speed[0]? hi_div_by_128[5]: hi_div_by_128[6]);
 
 reg [2:0] hi_byte_div;
 
@@ -76,7 +89,7 @@ assign adc_clk = ck_1356meg;
 reg after_hysteresis;
 always @(negedge adc_clk)
 begin
-    if(& adc_d[7:0]) after_hysteresis <= 1'b1;
+    if(& adc_d[7:4]) after_hysteresis <= 1'b1;
     else if(~(| adc_d[7:0])) after_hysteresis <= 1'b0;
 end
 

@@ -233,6 +233,11 @@ bool cmd_send(uint32_t cmd, uint32_t arg0, uint32_t arg1, uint32_t arg2, void* d
 // util.h
 void HfSnoop(int , int);
 
+//felica.c
+extern void HfSnoopISO18(uint32_t samples, uint32_t triggers);
+extern void HfSimLite(uint64_t uid);
+extern void HfDumpFelicaLiteS();
+
 //EMV functions
 // emvcmd.h
 extern void EMVTransaction(void);

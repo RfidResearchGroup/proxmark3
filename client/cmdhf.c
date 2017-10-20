@@ -745,6 +745,114 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 	return tracepos;
 }
 
+void printFelica(uint16_t traceLen, uint8_t *trace)
+{
+	PrintAndLog("    Gap | Src | Data                            | CRC      | Annotation        |");
+	PrintAndLog("--------|-----|---------------------------------|----------|-------------------|");
+    uint16_t tracepos=0;
+    //I am stripping SYNC
+    while(tracepos<traceLen)
+    {
+    if(tracepos+3>=traceLen) break;
+    uint16_t gap= (uint16_t)trace[tracepos+1]+((uint16_t)trace[tracepos]>>8);
+    uint16_t crc_ok=trace[tracepos+2];
+    tracepos+=3;
+    if(tracepos+3>=traceLen) break;
+    uint16_t len=trace[tracepos+2];
+    //printf("!!! %02x %02x %02x %02x %02x %02x %d",trace[tracepos+0],trace[tracepos+1],trace[tracepos+2],trace[tracepos+3],trace[tracepos+4],trace[tracepos+5],len);
+    tracepos+=3; //skip SYNC
+    if(tracepos+len+1>=traceLen) break;
+    uint8_t cmd=trace[tracepos];
+    uint8_t isResponse=cmd&1;
+    char line[32][110];
+    for (int j = 0; j < len+1 && j/8 < 32; j++) 
+        {
+        snprintf(line[j/8]+(( j % 8) * 4), 110, " %02x ", trace[tracepos+j]);
+        }
+    char expbuf[50];
+    switch(cmd)
+    {
+   case FELICA_POLL_REQ:snprintf(expbuf,49,"Poll Req");break;
+   case FELICA_POLL_ACK :snprintf(expbuf,49,"Poll Resp");break;
+
+ case FELICA_REQSRV_REQ :snprintf(expbuf,49,"Request Srvc Req");break;
+case FELICA_REQSRV_ACK :snprintf(expbuf,49,"Request Srv Resp");break;
+
+case FELICA_RDBLK_REQ :snprintf(expbuf,49,"Read block(s) Req");break;
+case FELICA_RDBLK_ACK :snprintf(expbuf,49,"Read block(s) Resp");break;
+
+case FELICA_WRTBLK_REQ :snprintf(expbuf,49,"Write block(s) Req");break;
+case FELICA_WRTBLK_ACK :snprintf(expbuf,49,"Write block(s) Resp");break;
+case FELICA_SRCHSYSCODE_REQ :snprintf(expbuf,49,"Search syscode Req");break;
+case FELICA_SRCHSYSCODE_ACK :snprintf(expbuf,49,"Search syscode Resp");break;
+
+case FELICA_REQSYSCODE_REQ :snprintf(expbuf,49,"Request syscode Req");break;
+case FELICA_REQSYSCODE_ACK :snprintf(expbuf,49,"Request syscode Resp");break;
+
+case FELICA_AUTH1_REQ :snprintf(expbuf,49,"Auth1 Req");break;
+case FELICA_AUTH1_ACK :snprintf(expbuf,49,"Auth1 Resp");break;
+
+case FELICA_AUTH2_REQ :snprintf(expbuf,49,"Auth2 Req");break;
+case FELICA_AUTH2_ACK :snprintf(expbuf,49,"Auth2 Resp");break;
+
+case FELICA_RDSEC_REQ :snprintf(expbuf,49,"Secure read Req");break;
+case FELICA_RDSEC_ACK :snprintf(expbuf,49,"Secure read Resp");break;
+
+case FELICA_WRTSEC_REQ :snprintf(expbuf,49,"Secure write Req");break;
+case FELICA_WRTSEC_ACK :snprintf(expbuf,49,"Secure write Resp");break;
+
+case FELICA_REQSRV2_REQ :snprintf(expbuf,49,"Request Srvc v2 Req");break;
+case FELICA_REQSRV2_ACK :snprintf(expbuf,49,"Request Srvc v2 Resp");break;
+
+case FELICA_GETSTATUS_REQ :snprintf(expbuf,49,"Get status Req");break;
+case FELICA_GETSTATUS_ACK :snprintf(expbuf,49,"Get status Resp");break;
+
+case FELICA_OSVER_REQ :snprintf(expbuf,49,"Get OS Version Req");break;
+case FELICA_OSVER_ACK :snprintf(expbuf,49,"Get OS Version Resp");break;
+
+case FELICA_RESET_MODE_REQ :snprintf(expbuf,49,"Reset mode Req");break;
+case FELICA_RESET_MODE_ACK :snprintf(expbuf,49,"Reset mode Resp");break;
+
+case FELICA_AUTH1V2_REQ :snprintf(expbuf,49,"Auth1 v2 Req");break;
+case FELICA_AUTH1V2_ACK :snprintf(expbuf,49,"Auth1 v2 Resp");break;
+
+case FELICA_AUTH2V2_REQ :snprintf(expbuf,49,"Auth2 v2 Req");break;
+case FELICA_AUTH2V2_ACK :snprintf(expbuf,49,"Auth2 v2 Resp");break;
+
+case FELICA_RDSECV2_REQ :snprintf(expbuf,49,"Secure read v2 Req");break;
+case FELICA_RDSECV2_ACK :snprintf(expbuf,49,"Secure read v2 Resp");break;
+case FELICA_WRTSECV2_REQ :snprintf(expbuf,49,"Secure write v2 Req");break;
+case FELICA_WRTSECV2_ACK :snprintf(expbuf,49,"Secure write v2 Resp");break;
+
+case FELICA_UPDATE_RNDID_REQ :snprintf(expbuf,49,"Update IDr Req");break;
+case FELICA_UPDATE_RNDID_ACK :snprintf(expbuf,49,"Update IDr Resp");break;
+    default: snprintf(expbuf,49,"Unknown");break;
+    }
+    
+	int num_lines = MIN((len )/16 + 1, 16);
+	for (int j = 0; j < num_lines ; j++) 
+    {
+		if (j == 0) {
+			PrintAndLog("%7d | %s |%-32s |%02x %02x %s| %s",
+				gap,
+				(isResponse ? "Tag" : "Rdr"),
+				line[j],
+                trace[tracepos+len],
+                trace[tracepos+len+1],
+				(crc_ok) ? "OK" : "NG",
+				expbuf);
+		} else {
+			PrintAndLog("        |     |%-32s |        |    ",
+				line[j]);
+		}
+	}
+    tracepos+=len+1;
+	}
+    PrintAndLog("");
+	
+}
+
+
 int usage_hf_list(){
 	PrintAndLog("List protocol data in trace buffer.");
 	PrintAndLog("Usage:  hf list <protocol> [f][c]");
@@ -863,6 +971,12 @@ int CmdHFList(const char *Cmd) {
 	
 	PrintAndLog("Recorded Activity (TraceLen = %d bytes)", traceLen);
 	PrintAndLog("");
+ if(protocol==FELICA)
+{
+printFelica(traceLen,trace);
+}
+else
+{ 
 	PrintAndLog("Start = Start of Start Bit, End = End of last modulation. Src = Source of Transfer");
 	if ( protocol == ISO_14443A )
 		PrintAndLog("iso14443a - All times are in carrier periods (1/13.56Mhz)");
@@ -882,7 +996,7 @@ int CmdHFList(const char *Cmd) {
 	while(tracepos < traceLen) {
 		tracepos = printTraceLine(tracepos, traceLen, trace, protocol, showWaitCycles, markCRCBytes);
 	}
-
+}
 	free(trace);
 	return 0;
 }

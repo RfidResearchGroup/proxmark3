@@ -10,7 +10,7 @@ module hi_read_rx_xcorr(
     ssp_frame, ssp_din, ssp_dout, ssp_clk,
     cross_hi, cross_lo,
     dbg,
-    xcorr_is_848, snoop
+    xcorr_is_848, snoop, xcorr_quarter_freq
 );
     input pck0, ck_1356meg, ck_1356megb;
     output pwr_lo, pwr_hi, pwr_oe1, pwr_oe2, pwr_oe3, pwr_oe4;
@@ -20,7 +20,7 @@ module hi_read_rx_xcorr(
     output ssp_frame, ssp_din, ssp_clk;
     input cross_hi, cross_lo;
     output dbg;
-    input xcorr_is_848, snoop;
+    input xcorr_is_848, snoop, xcorr_quarter_freq;
 
 // Carrier is steady on through this, unless we're snooping.
 assign pwr_hi = ck_1356megb & (~snoop);
@@ -28,18 +28,20 @@ assign pwr_oe1 = 1'b0;
 assign pwr_oe3 = 1'b0;
 assign pwr_oe4 = 1'b0;
 
-// Clock divider
-reg [0:0] fc_divider;
+reg [2:0] fc_div;
 always @(negedge ck_1356megb)
-    fc_divider <= fc_divider + 1;
-wire fc_div2 = fc_divider[0];
+    fc_div <= fc_div + 1;
 
-reg adc_clk;
-always @(ck_1356megb)
-	if (xcorr_is_848)
+(* clock_signal = "yes" *) reg adc_clk;				// sample frequency, always 16 * fc
+always @(ck_1356megb, xcorr_is_848, xcorr_quarter_freq, fc_div)
+	if (xcorr_is_848 & ~xcorr_quarter_freq)			// fc = 847.5 kHz
 		adc_clk <= ck_1356megb;
-	else
-		adc_clk <= fc_div2;
+	else if (~xcorr_is_848 & ~xcorr_quarter_freq)	// fc = 424.25 kHz 
+		adc_clk <= fc_div[0];
+	else if (xcorr_is_848 & xcorr_quarter_freq)		// fc = 212.125 kHz
+		adc_clk <= fc_div[1];
+	else 											// fc = 106.0625 kHz
+		adc_clk <= fc_div[2];
 
 // When we're a reader, we just need to do the BPSK demod; but when we're an
 // eavesdropper, we also need to pick out the commands sent by the reader,
@@ -71,8 +73,7 @@ end
 // so we need a 6-bit counter.
 reg [5:0] corr_i_cnt;
 // And a couple of registers in which to accumulate the correlations.
-// we would add at most 32 times adc_d, the result can be held in 13 bits. 
-// Need one additional bit because it can be negative as well
+// we would add/sub at most 32 times adc_d, the signed result can be held in 14 bits. 
 reg signed [13:0] corr_i_accum;
 reg signed [13:0] corr_q_accum;
 reg signed [7:0] corr_i_out;

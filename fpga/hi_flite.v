@@ -1,15 +1,11 @@
-// Satsuoni, October 2017,  Added FeliCa support
-//
+
 //this code demodulates and modulates signal as described in ISO/IEC 18092.  That includes packets used for Felica, NFC Tag 3, etc. (which do overlap)
 //simple envelope following algorithm is used (modification of fail0verflow LF one) is used to combat some nasty aliasing effect with testing phone (envelope looked like sine wave) 
-// only 212 kbps (fc/64) for now 414 is relatively straightforward... 
+// only 212 kbps (fc/64) for now 414 is relatively straightforward... though for reader, the selection has to come from ARM
 // modulation waits for 
-
 //market sprocket -doesn't really mean anything ;) 
-`define SNIFFER	3'b000
-`define TAGSIM_LISTEN	3'b001 //same as SNIFFER, really. demod does not distinguish tag from reader
-`define TAGSIM_MODULATE	3'b010
-`define TAGSIM_MOD_NODELAY	3'b011 //not implemented yet. for use with commands other than polling, which might require different timing, as per Felica standard
+//redefining mod_type: bits 210: bit 2 - reader drive/power on/off,  bit 1 -  speed bit, 0:212, 1 -424   bit 0: listen or modulate
+
 
 module hi_flite(
     pck0, ck_1356meg, ck_1356megb,
@@ -18,7 +14,8 @@ module hi_flite(
     ssp_frame, ssp_din, ssp_dout, ssp_clk,
     cross_hi, cross_lo,
     dbg,
-    mod_type // maybe used
+    mod_type //  used
+    
 );
     input pck0, ck_1356meg, ck_1356megb;
     output pwr_lo, pwr_hi, pwr_oe1, pwr_oe2, pwr_oe3, pwr_oe4;
@@ -28,15 +25,18 @@ module hi_flite(
     output ssp_frame, ssp_din, ssp_clk;
     input cross_hi, cross_lo;
     output dbg;
-    input [2:0] mod_type; // maybe used.
+    input [2:0] mod_type; //  used.
 assign dbg=0;
 
-// Most off, oe4 for modulation; No reader emulation (would presumably just require switching power on, but I am not sure) 
-assign pwr_hi  = 1'b0;
+wire  power= mod_type[2];
+wire  speed= mod_type[1];
+wire  disabl= mod_type[0];
+
+// Most off, oe4 for modulation;
+// Trying reader emulation (would presumably just require switching power on, but I am not sure) 
+ //;// 1'b0;
 assign pwr_lo  = 1'b0;
-assign pwr_oe1 = 1'b0;
-assign pwr_oe2 = 1'b0;
-assign pwr_oe3 = 1'b0;
+
 
 
 //512x64/fc  -wait before ts0, 32768 ticks
@@ -51,7 +51,7 @@ assign adc_clk = ck_1356meg;
 `define ithrmin 91//-13'd8
 `define ithrmax 160// 13'd8
 
-
+`define min_bitdelay_212 8
 //minimum values and corresponding thresholds
 reg  [8:0] curmin=`imin;
 
@@ -76,9 +76,13 @@ reg did_sync=0;
 
 
 `define bithalf_212 32 //half-bit length for 212 kbit
-`define bitlen_212 64 //full-bit length for 212 kbit
 `define bitmlen_212 63 //bit transition edge
-`define bitmhalf_212 31 //mod flip
+
+`define bithalf_424 16 //half-bit length for 212 kbit
+`define bitmlen_424 31 //bit transition edge
+
+wire [7:0]bithalf= speed ? `bithalf_424 : `bithalf_212;
+wire [7:0]bitmlen= speed ? `bitmlen_424 : `bitmlen_212;
 
 
 //ssp clock and current values
@@ -98,57 +102,36 @@ reg [8:0] ssp_cnt=9'd0;
 always @(posedge adc_clk)
      ssp_cnt <= (ssp_cnt + 1);
 
-
-reg getting_arm_data=1'b0; 
-
-
-reg  [47:0] delayline=48'd0; //48-bit preamble delay line. Just push the data into it starting from first  SYNC (1) bit coming from ARM Made this long to keep all ARM data received during preamble
-reg  [5:0] delay_read_ptr=6'd0; // this is supposed to count ARM delay in the buffer. 
-reg preamble=0; // whether we are sending preamble
-
-    
+//maybe change it so that ARM sends preamble as well.
+//then: ready bits sent to ARM, 8 bits sent from ARM (all ones), then preamble (all zeros, presumably) - which starts modulation    
   
 always @(negedge adc_clk)
 begin
      //count fc/64 - transfer bits to ARM at the rate they are received
-     if(ssp_cnt[5:0] == 6'b000000)
+     if( ((~speed) && (ssp_cnt[5:0] == 6'b000000)) || (speed &&(ssp_cnt[4:0] == 5'b00000)))
         begin
 			ssp_clk <= 1'b1;
+           // if(mod_type[2])
+          //  begin
+         //    ssp_din<=outp[0];//after_hysteresis;
+           
+               //outp<={1'b0,outp[7:1]};             
+           //  end
+           // else
             ssp_din <= curbit;  
             
-            //sample ssp_dout?
-            if(mod_type==`TAGSIM_MODULATE||mod_type==`TAGSIM_MOD_NODELAY)
-            begin
-             delayline<={delayline[46:0],ssp_dout};
-             if ((~getting_arm_data) && ssp_dout)
-             begin
-             getting_arm_data <=1'b1;
-             delay_read_ptr<=delay_read_ptr+1;
-             end
-             else
-             begin
-               if (getting_arm_data & preamble)
-                begin
-                delay_read_ptr<=delay_read_ptr+1;
-                end
-             end
-            end
-            else
-            begin
-              getting_arm_data <=1'b0;
-              delay_read_ptr<=6'd0;
-            end
+            //sample ssp_dout
                            
         end
-		if(ssp_cnt[5:0] == 6'b100000)
+		if( ( (~speed) && (ssp_cnt[5:0] == 6'b100000)) ||(speed && ssp_cnt[4:0] == 5'b10000))
 			ssp_clk <= 1'b0;
     //create frame pulses. TBH, I still don't know what they do exactly, but they are crucial for ARM->FPGA transfer. If the frame is in the beginning of the byte, transfer slows to a crawl for some reason
     // took me a day to figure THAT out.         
-       if(ssp_cnt[8:0] == 9'd31)
+       if(( (~speed) && (ssp_cnt[8:0] == 9'd31))||(speed && ssp_cnt[7:0] == 8'd15))
         begin
 			ssp_frame <= 1'b1;    
         end
-         if(ssp_cnt[8:0] == 9'b1011111)
+         if(( (~speed) &&  (ssp_cnt[8:0] == 9'b1011111))||(speed &&ssp_cnt[7:0] == 8'b101111) )
         begin
 			ssp_frame <= 1'b0;    
         end
@@ -158,7 +141,7 @@ end
 
 
 //send current bit (detected in SNIFF mode or the one being modulated in MOD mode, 0 otherwise)
-reg ssp_din;    
+reg ssp_din;//= outp[0];    
   
   
 
@@ -168,28 +151,74 @@ reg prv =1'b1;
 
 reg[7:0] mid=8'd128; //for simple error correction in mod/demod detection, use maximum of modded/demodded in given interval. Maybe 1 bit is extra? but better safe than sorry. 
 
-//modulated coil. set to 1 to modulate low, 0 to keep signal high
-reg mod_sig_coil=1'b0;
 
 // set TAGSIM__MODULATE on ARM if we want to write... (frame would get lost if done mid-frame...)
 // start sending over 1s on ssp->arm when we start sending preamble
 
 reg counting_desync=1'b0; // are we counting bits since last frame? 
 reg sending=1'b0;  // are we actively modulating? 
-reg [11:0] bit_counts=12'd0;///for timeslots... only support ts=0 for now, at 212 speed  -512 fullbits from end of frame. One hopes.                   
+reg [11:0] bit_counts=12'd0;///for timeslots... only support ts=0 for now, at 212 speed  -512 fullbits from end of frame. One hopes.   might remove those?                 
 
 
+//reg [2:0]old_mod;
+
+//always @(mod_type) //when moving from modulate_mode
+//begin
+//if (mod_type[2]==1&&old_mod[2]==0)
+// bit_counts=0;
+//old_mod=mod_type; 
+//end
+//we need some way to flush bit_counts triggers on mod_type changes don't compile
+reg dlay;
 always @(negedge adc_clk) //every data ping? 
 begin
   //envelope follow code...          
   ////////////   
-  if ((mod_type==`SNIFFER )||(mod_type==`TAGSIM_LISTEN))
+
+           //move the counter to the outside...
+       // if (adc_d>=curminthres||try_sync) 
+        if(fccount==bitmlen)
   begin     
+        if((~try_sync)&&(adc_d<curminthres)&&disabl )
+        begin
+         fccount<=1;
+          end
+         else
+         begin
+          fccount<=0;
+         end 
+        // if (counting_desync)
+        //  begin
+           dlay<=ssp_dout;
+           if(bit_counts>768) // should be over ts0 now, without ARM interference... stop counting...
+              begin 
+               bit_counts<=0;
+              // counting_desync<=0;
+               end
+           else
+             if((power))
+             bit_counts<=0;
+             else
+               bit_counts<=bit_counts+1; 
+         // end 
+        end
+        else
+        begin 
+        if((~try_sync)&&(adc_d<curminthres) &&disabl)
+        begin
+         fccount<=1;
+          end
+         else
+         begin
+          fccount<=fccount+1;
+         end 
+        end
+  
       if (adc_d>curmaxthres) //rising edge
        begin
         case (state)
          0: begin
-            curmax <= adc_d>155? adc_d :155;
+            curmax <= adc_d>`imax? adc_d :`imax;
             state <= 2;
             end
          1: begin
@@ -214,7 +243,7 @@ begin
         begin 
           case (state)
             0: begin
-               curmin <=adc_d<96? adc_d :96; 
+               curmin <=adc_d<`imin? adc_d :`imin; 
                state <=1;
                end
             1: begin
@@ -224,7 +253,7 @@ begin
             2: begin
                 curminthres <= ( (curmin>>1)+(curmin>>2)+(curmin>>4)+(curmax>>3)+(curmax>>4));
                 curmaxthres <= ( (curmax>>1)+(curmax>>2)+(curmax>>4)+(curmin>>3)+(curmin>>4));
-                curmin <=adc_d<96? adc_d :96;
+                curmin <=adc_d<`imin? adc_d :`imin;
                 state <=1;       
                end 
             default:
@@ -235,7 +264,7 @@ begin
           if (~try_sync ) //begin modulation, lower edge... 
              begin
              try_sync <=1;
-             counting_desync<=1'b0;
+             //counting_desync<=1'b0;
              fccount <= 1;
              did_sync<=0;
              curbit<=0;
@@ -259,7 +288,7 @@ begin
                if (tsinceedge>=(128))
                   begin
                   //we might need to start counting... assuming ARM wants to reply to the frame. 
-                  counting_desync<=1'b1;
+                 // counting_desync<=1'b1;
                   bit_counts<=1;// i think? 128 is about 2 bits passed... but 1 also works
                   try_sync<=0;
                   did_sync<=0;//desync
@@ -278,32 +307,13 @@ begin
               end
          end 
         
-        //move the counter to the outside...
-        if (adc_d>=curminthres||try_sync) 
-        if(fccount==`bitmlen_212)
-        begin
-         fccount<=0;
-         if (counting_desync)
-          begin
-           
-           if(bit_counts>768) // should be over ts0 now, without ARM interference... stop counting...
-               begin 
-               bit_counts<=0;
-               counting_desync<=0;
-               end
-            else
-               bit_counts<=bit_counts+1; 
-          end 
-        end
-        else
-        begin 
-          fccount<=fccount+1;
-        end
+    
+   
         
         if (try_sync && tsinceedge<128)
             begin
             //detect bits in their middle ssp sampling is in sync, so it would sample all bits in order
-            if (fccount==`bithalf_212)
+            if (fccount==bithalf)
               begin
                 if ((~did_sync) && ((prv==1&&(mid>128))||(prv==0&&(mid<=128))))
                   begin 
@@ -336,7 +346,7 @@ begin
                end
              else  
               begin  
-                if (fccount==`bitmlen_212)
+                if (fccount==bitmlen)
                   begin
                   // fccount <=0;
                    prv <=(mid>128)?1:0; 
@@ -367,61 +377,40 @@ begin
            begin
             end       
        sending <=0;     
-       
-    end //listen mode end
-    else
-    begin //sim mode start
-    //not sure how precise do the time slots have to be... is anything within Ts ok? 
-    //keep counting until  576, just in case
-     if(fccount==`bitmlen_212)
-        begin
-      if (bit_counts==512) //
-           curbit<=1;
-           else
-           begin
-           if(bit_counts>512)
-            curbit<=mod_sig_coil;//delayline[delay_read_ptr];//bit_counts[0];
-           else 
-            curbit<=0;
-           end
-   
-         fccount<=0;
-         if (bit_counts<=576) //we don't need to count after that... 
-          begin          
-            bit_counts<=bit_counts+1;
-            if (bit_counts== 512) //should start sending from next tick... i think?
-            begin
-            sending <=1;
-            mod_sig_coil <=1;//modulate... down? 
-            preamble<=1;
-            end
-            else
-            if  (bit_counts== 559)
-            begin
-               preamble<=0;
-            end
-          end 
-         if (sending)
-         begin //need next bit
-             if(preamble)
-              mod_sig_coil<=1;
-             else
-              mod_sig_coil<=~delayline[delay_read_ptr]; 
-         end
-        end
-        else
-        begin 
-          fccount<=fccount+1;
-          
-          if ((fccount==`bitmhalf_212)&&(sending)) //flip modulation mid-bit
-          begin
-           mod_sig_coil<=~mod_sig_coil;//flip
-          end
-        end
-    end   //sim mode end     
-     
 end
+//put modulation here to maintain the correct clock. Seems that some readers are sensitive to that
+reg pwr_hi;
+reg pwr_oe1;
+reg pwr_oe2;
+reg pwr_oe3;
+reg pwr_oe4;
 
-assign pwr_oe4 =  mod_sig_coil  & (mod_type == `TAGSIM_MODULATE)&sending;
+wire mod=((fccount>=bithalf)^dlay)&(~disabl);
+
+always @(ck_1356megb or ssp_dout or power or disabl or mod)
+        begin
+if (power)
+           begin
+        pwr_hi <= ck_1356megb;
+        pwr_oe1 <= mod;
+        pwr_oe2 <= mod;
+        pwr_oe3 <= mod;
+        pwr_oe4 <= 1'b0;
+           end
+else
+          begin          
+       pwr_hi <= 1'b0;
+        pwr_oe1 <= 1'b0;
+        pwr_oe2 <= 1'b0;
+        pwr_oe3 <= 1'b0;
+        pwr_oe4 <= mod;
+            end
+            end
+//assign pwr_oe4 = 1'b0;// mod_sig_coil  & (modulate_mode)&sending & (~mod_type[2]);
+//try shallow mod for reader?
+//assign pwr_hi= (mod_type[2]) & ck_1356megb;
+//assign pwr_oe1= 1'b0; //mod_sig_coil  & (modulate_mode)&sending & (mod_type[2]);
+//assign pwr_oe2 = 1'b0;// mod_sig_coil  & (modulate_mode)&sending & (mod_type[2]);
+//assign pwr_oe3 = 1'b0; //mod_sig_coil  & (modulate_mode)&sending & (mod_type[2]);
 
 endmodule

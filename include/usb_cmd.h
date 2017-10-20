@@ -171,6 +171,9 @@ typedef struct{
 #define CMD_FELICA_SIMULATE_TAG                                           0x03A0
 #define CMD_FELICA_SNOOP                                                  0x03A1
 #define CMD_FELICA_COMMAND                                                0x03A2
+//temp
+#define CMD_FELICA_LITE_DUMP                                              0x03AA
+#define CMD_FELICA_LITE_SIM                                               0x03AB
 
 // For measurements of the antenna tuning
 #define CMD_MEASURE_ANTENNA_TUNING                                        0x0400

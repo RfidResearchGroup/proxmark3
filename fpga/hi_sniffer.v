@@ -17,8 +17,11 @@ module hi_sniffer(
     output dbg;
     input xcorr_is_848, snoop, xcorr_quarter_freq; // not used.
 
+    
+// let's try hi-pass
+
 // We are only snooping, all off.
-assign pwr_hi  = 1'b0;
+assign pwr_hi  = ck_1356megb & xcorr_quarter_freq;//1'b0;
 assign pwr_lo  = 1'b0;
 assign pwr_oe1 = 1'b0;
 assign pwr_oe2 = 1'b0;
@@ -29,8 +32,12 @@ reg ssp_frame;
 reg [7:0] adc_d_out = 8'd0;
 reg [2:0] ssp_cnt = 3'd0;
 
-assign adc_clk = ck_1356meg;
-assign ssp_clk = ~ck_1356meg;
+
+reg [12:0] avg=13'd0;
+
+assign adc_clk = ck_1356megb;
+assign ssp_clk = ~ck_1356megb;
+
 
 always @(posedge ssp_clk)
 begin
@@ -41,7 +48,9 @@ begin
 
     if(ssp_cnt[2:0] == 3'b000) // set frame length
         begin
-            adc_d_out[7:0] <= adc_d;
+           // adc_d_out[7:0] <= (alias_buf>>>3) +8'd126;//( $signed(adc_d-adc_d_old)>1 | $signed(adc_d_old-adc_d)>1)?  alias_buf+adc_d-adc_d_old:alias_buf; //alias_buf[11:3]+8'd126;//adc_d;
+           // adc_d_out[7:0]<=adc_d;
+            adc_d_out[7:0] <=adc_d;//-(avg>>3) +8'd126;
             ssp_frame <= 1'b1;
         end
     else

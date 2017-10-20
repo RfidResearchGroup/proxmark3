@@ -53,11 +53,6 @@ end
 
 // Divide 13.56 MHz by 32 to produce the SSP_CLK
 // The register is bigger to allow higher division factors of up to /128
-// FPGA_HF_SIMULATOR_NO_MODULATION		(0<<0) // 0000
-// FPGA_HF_SIMULATOR_MODULATE_BPSK		(1<<0) // 0001
-// FPGA_HF_SIMULATOR_MODULATE_212K		(2<<0) // 0010
-// FPGA_HF_SIMULATOR_MODULATE_424K		(4<<0) // 0100
-// FPGA_HF_SIMULATOR_MODULATE_424K_8BIT	0x5    // 0101
 reg [10:0] ssp_clk_divider;
 
 always @(posedge adc_clk)
@@ -91,8 +86,8 @@ end
 // Divide SSP_CLK by 8 to produce the byte framing signal; the phase of
 // this is arbitrary, because it's just a bitstream.
 // One nasty issue, though: I can't make it work with both rx and tx at
-// once. The phase wrt ssp_clk must be changed. 
-// TODO to find out why that is and make a better fix.
+// once. The phase wrt ssp_clk must be changed. TODO to find out why
+// that is and make a better fix.
 reg [2:0] ssp_frame_divider_to_arm;
 always @(posedge ssp_clk)
     ssp_frame_divider_to_arm <= (ssp_frame_divider_to_arm + 1);

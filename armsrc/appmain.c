@@ -766,6 +766,18 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			break;
 #endif
 
+#ifdef WITH_FELICA
+        case CMD_FELICA_LITE_SIM:
+            HfSimLite(c->arg[0]);
+            break;
+        case CMD_FELICA_SNOOP:
+            HfSnoopISO18(c->arg[0], c->arg[1]);
+            break;
+        case CMD_FELICA_LITE_DUMP:
+			HfDumpFelicaLiteS();
+            break;
+#endif
+
 #ifdef WITH_ISO14443a
 		case CMD_SNOOP_ISO_14443a:
 			SniffIso14443a(c->arg[0]);

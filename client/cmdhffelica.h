@@ -38,4 +38,9 @@ extern int usage_hf_felica_sniff(void);
 extern int usage_hf_fFelica_raw(void);
 
 void waitCmdFelica(uint8_t iSelect);
+
+//temp
+extern int CmdHFFelicaSimLite(const char *Cmd);
+extern int CmdHFFelicaDumpLite(const char *Cmd);
+
 #endif
