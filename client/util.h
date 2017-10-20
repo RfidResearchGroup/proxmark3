@@ -144,4 +144,7 @@ extern uint64_t HornerScheme(uint64_t num, uint64_t divider, uint64_t factor);
 extern int num_CPUs(void);			// number of logical CPUs
 
 extern void str_lower(char* s);	 // converts string to lower case
+extern void strcleanrn(char *buf, size_t len);
+extern void strcreplace(char *buf, size_t len, char from, char to);
+extern char *strmcopy(char *buf);
 #endif

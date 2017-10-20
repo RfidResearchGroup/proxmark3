@@ -118,7 +118,7 @@ void FillFileNameByUID(char *fileName, uint8_t *uid, char *ext, int byteCount) {
 // printing and converting functions
 void print_hex(const uint8_t * data, const size_t len) {
 	size_t i;
-	for (i=0; i < len; ++i)
+	for (i=0; i < len; i++)
 		printf("%02x ", data[i]);
 	printf("\n");
 }
@@ -681,4 +681,35 @@ extern int num_CPUs(void) {
 extern void str_lower(char *s ){
 	for(int i=0; i < strlen(s); i++)
 		s[i] = tolower( s[i] );
+}
+
+// Replace unprintable characters with a dot in char buffer
+extern void clean_ascii(unsigned char *buf, size_t len) {
+  for (size_t i = 0; i < len; i++) {
+    if (!isprint(buf[i]))
+      buf[i] = '.';
+  }
+}
+
+// replace \r \n to \0
+extern void strcleanrn(char *buf, size_t len) {
+	strcreplace(buf, len, '\n', '\0');
+	strcreplace(buf, len, '\r', '\0');
+}
+
+// replace char in buffer
+extern void strcreplace(char *buf, size_t len, char from, char to) {
+  for (size_t i = 0; i < len; i++) {
+    if (buf[i] == from)
+      buf[i] = to;
+  }
+}
+
+extern char *strmcopy(char *buf) {
+	char * str = NULL;
+	if ((str = (char*) malloc(strlen(buf) + 1)) != NULL) {
+		memset(str, 0, strlen(buf) + 1);
+		strcpy(str, buf);
+	}	
+	return str;
 }
