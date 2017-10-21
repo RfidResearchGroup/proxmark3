@@ -35,9 +35,6 @@
 #define SERIAL_PORT_H	"/dev/ttyACM0"
 #endif
 
-
-// a global mutex to prevent interlaced printing from different threads
-//pthread_mutex_t print_lock = PTHREAD_MUTEX_INITIALIZER;
 static serial_port sp;
 static UsbCommand txcmd;
 static char comport[255];
@@ -237,33 +234,34 @@ void main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 					// read command from command prompt
 					cmd = readline(PROXPROMPT);
 				}
-		
-				// execute command
-				if (cmd) {
-					if (strlen(cmd) > 0) {
-						while(cmd[strlen(cmd) - 1] == ' ')
-							cmd[strlen(cmd) - 1] = 0x00;
-					}
-
-					if (cmd[0] != 0x00) {
-						int ret = CommandReceived(cmd);
-						add_history(cmd);
-						
-						// exit or quit
-						if (ret == 99) 
-							break;
-					}
-					free(cmd);
-					cmd = NULL;
-				} else {
-					pthread_mutex_lock(&print_lock);
-					printf("\n");
-					pthread_mutex_unlock(&print_lock);
-					break;
-				}
 			}
 		}
+		
+		// execute command
+		if (cmd) {
+			if (strlen(cmd) > 0) {
+				while(cmd[strlen(cmd) - 1] == ' ')
+					cmd[strlen(cmd) - 1] = 0x00;
+			}
+
+			if (cmd[0] != 0x00) {
+				int ret = CommandReceived(cmd);
+				add_history(cmd);
+				
+				// exit or quit
+				if (ret == 99) 
+					break;
+			}
+			free(cmd);
+			cmd = NULL;
+		} else {
+			pthread_mutex_lock(&print_lock);
+			printf("\n");
+			pthread_mutex_unlock(&print_lock);
+			break;
+		}
 	}
+
 	
 	if (sf)
 		fclose(sf);
