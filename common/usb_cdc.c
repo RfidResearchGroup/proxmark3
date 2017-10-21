@@ -376,9 +376,11 @@ static const char StrProduct[] = {
 };
 
 static const char StrSerialNumber[] = {
-	18,			// Length
+	8,			// Length
 	0x03,		// Type is string
-	'8',0,'8',0,'8',0,'8',0,'8',0,'8',0,'8',0,'8',0
+	'8',0,
+	'8',0,
+	'8',0
 };
 
 // size inkluderar sitt egna fält.

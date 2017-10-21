@@ -30,7 +30,7 @@
 #if defined (_WIN32)
 #define SERIAL_PORT_H	"com3"
 #elif defined(__APPLE__)
-#define SERIAL_PORT_H   "/dev/cu.usbmodem888888"
+#define SERIAL_PORT_H   "/dev/cu.usbmodem888"
 #else
 #define SERIAL_PORT_H	"/dev/ttyACM0"
 #endif
@@ -109,6 +109,7 @@ static bool hookUpPM3() {
 static void *uart_receiver(void *targ) {
 	struct receiver_arg *arg = (struct receiver_arg*)targ;
 	size_t rxlen;
+	bool tmpsignal;
 	int counter_to_offline = 0;
 	
 	while (arg->run) {
@@ -124,7 +125,6 @@ static void *uart_receiver(void *targ) {
 		}
 		prx = rx;
 
-		bool tmpsignal;
 		__atomic_load(&txcmd_pending, &tmpsignal, __ATOMIC_SEQ_CST);
 		if ( tmpsignal ) {
 			bool res = uart_send(sp, (byte_t*) &txcmd, sizeof(UsbCommand));
