@@ -249,13 +249,17 @@ int CmdTune(const char *Cmd)
     return CmdTuneSamples(Cmd);
 }
 
-int CmdVersion(const char *Cmd)
-{
-	clearCommandBuffer();
+int CmdVersion(const char *Cmd) {
+	
+	bool silent = (Cmd[0] == 's' || Cmd[0] ==  'S');
+	if ( silent ) 
+		return 0;
+
 	UsbCommand c = {CMD_VERSION};
 	static UsbCommand resp = {0, {0, 0, 0}};
 
 	if (resp.arg[0] == 0 && resp.arg[1] == 0) { // no cached information available
+		clearCommandBuffer();
 		SendCommand(&c);
 		if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
 #ifdef __WIN32

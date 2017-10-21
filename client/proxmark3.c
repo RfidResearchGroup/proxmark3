@@ -160,7 +160,10 @@ void main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 		rarg.run = 1;
 		pthread_create(&reader_thread, NULL, &uart_receiver, &rarg);
 		// cache Version information now:
-		CmdVersion( (script_cmds_file) ? "s" : NULL );
+		if ( execCommand || script_cmds_file || stdinOnPipe)
+			CmdVersion("s");
+		else 
+			CmdVersion("");
 	}
 
 	if (script_cmds_file) {
@@ -186,7 +189,10 @@ void main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 				rarg.run = 1;
 				pthread_create(&reader_thread, NULL, &uart_receiver, &rarg);
 				// cache Version information now:
-				CmdVersion( (script_cmds_file) ? "s" : NULL );
+				if ( execCommand || script_cmds_file || stdinOnPipe)
+					CmdVersion("s");
+				else 
+					CmdVersion("");
 			}
 		}
 
