@@ -354,11 +354,6 @@ int main(int argc, char* argv[]) {
 		show_help(true, argv[0]);
 		return 1;
 	}
-
-#if defined(__linux__) || (__APPLE__)
-// ascii art doesn't work well on mingw :( 
-	showBanner();  
-#endif
 	
 	// lets copy the comport string.
 	memset(comport, 0, sizeof(comport));
@@ -367,7 +362,7 @@ int main(int argc, char* argv[]) {
 	for (int i = 1; i < argc; i++) {
 	
 		// helptext
-		if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i],"-help") == 0) {
+		if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "-help") == 0) {
 			show_help(false, argv[0]);
 			dumpAllHelp(0);
 			return 0;
@@ -380,23 +375,23 @@ int main(int argc, char* argv[]) {
 		}	   
 
 		// flush output
-		if(strcmp(argv[i],"-f") == 0 || strcmp(argv[i],"-flush") == 0){
+		if(strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "-flush") == 0){
 			printf("Output will be flushed after every print.\n");
 			flushAfterWrite = 1;
 		}
 		
 		// wait for comport
-		if(strcmp(argv[i],"-w") == 0 || strcmp(argv[i],"-wait") == 0){
+		if(strcmp(argv[i], "-w") == 0 || strcmp(argv[i], "-wait") == 0){
 			waitCOMPort = true;
 		}
 
 		// execute pm3 command
-		if(strcmp(argv[i],"-c") == 0 || strcmp(argv[i],"-command") == 0){
+		if(strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "-command") == 0){
 			executeCommand = true;
 		}
 
 		// execute lua script
-		if(strcmp(argv[i],"-l") == 0 || strcmp(argv[i],"-lua") == 0){
+		if(strcmp(argv[i], "-l") == 0 || strcmp(argv[i], "-lua") == 0){
 			executeCommand = true;
 			addLuaExec = true;
 		}
@@ -437,6 +432,14 @@ int main(int argc, char* argv[]) {
 		printf("ERROR: execute command: command not found.\n");
 		return 2;
 	}
+
+#if defined(__linux__) || (__APPLE__)
+// ascii art doesn't work well on mingw :( 
+
+	bool stdinOnPipe = !isatty(STDIN_FILENO);
+	if ( executeCommand || script_cmds_file || stdinOnPipe )
+		showBanner();  
+#endif
 	
 	// set global variables
 	set_my_executable_path();
