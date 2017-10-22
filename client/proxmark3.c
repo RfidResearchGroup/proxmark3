@@ -437,7 +437,7 @@ int main(int argc, char* argv[]) {
 // ascii art doesn't work well on mingw :( 
 
 	bool stdinOnPipe = !isatty(STDIN_FILENO);
-	if ( !executeCommand || !script_cmds_file || !stdinOnPipe )
+	if ( !executeCommand && !script_cmds_file && !stdinOnPipe )
 		showBanner();  
 #endif
 	
