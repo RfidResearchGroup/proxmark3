@@ -83,6 +83,8 @@ See https://github.com/Proxmark/proxmark3/wiki/Ubuntu%20Linux
 
 A nice and cool install script made by @daveio is found here: 
 https://github.com/daveio/attacksurface/blob/master/proxmark3/pm3-setup.sh
+I have also added this script to the fork.  
+https://github.com/iceman1001/proxmark3/blob/master/install.sh
 
 - Run		
 `sudo apt-get install p7zip git build-essential libreadline5 libreadline-dev libusb-0.1-4 libusb-dev libqt4-dev perl pkg-config wget libncurses5-dev gcc-arm-none-eabi`
@@ -93,11 +95,8 @@ https://github.com/daveio/attacksurface/blob/master/proxmark3/pm3-setup.sh
 - Get the latest commits	
 `git pull`
 
-- Install the blacklist rules	
+- Install the blacklist rules and  add user to dialout group (if you on a Linux/ubuntu/debian). If you do this one, you need to logout and login in again to make sure your rights got changed.	
 `make udev`
-
-- add user to dialout group (if you on a Linux/ubuntu/debian). If you do this one, you need to logout and login in again to make sure your rights got changed.	
-`sudo adduser $USER dialout`
 
 - Clean and complete compilation	
 `make clean && make all`
