@@ -280,9 +280,6 @@ a7abbc77cc9e,
 f792c4c76a5c,
 bfb6796a11db,
 #
-# Data from
-8829da9daf76,
-#
 # Data from Salto A/B
 6A1987C40A21,
 7F33625BC129,
@@ -333,9 +330,12 @@ a56c2df9a26d,
 # * Own dumps
 021209197591,
 2ef720f2af76,
+414c41524f4e,
 424c41524f4e,
 4a6352684677,
 bf1f4424af76,
+#
+021209197591, // BTCINO UNDETERMINED SPREAKD 0x01->0x13 key
 # 
 # Intratone Cogelec 
 # Data from http://bouzdeck.com/rfid/32-cloning-a-mifare-classic-1k-tag.html
@@ -345,6 +345,7 @@ a22ae129c013,
 38fcf33072e0, 
 8ad5517b4b18,
 509359f131b1, 
+6c78928e1317,
 aa0720018738, 
 a6cac2886412, 
 62d0c424ed8e, 
