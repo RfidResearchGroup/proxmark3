@@ -395,8 +395,9 @@ static void sendNFCToFPGA(uint8_t * frame, int len, uint32_t waitTill, uint8_t p
 			AT91C_BASE_SSC->SSC_THR = 0x00;
 			c++;
 		}
-		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY))
+		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 			b = (uint16_t)(AT91C_BASE_SSC->SSC_RHR); (void)b;
+		}
 	}
 
 	for(c = 0; c < len;) {
@@ -404,8 +405,9 @@ static void sendNFCToFPGA(uint8_t * frame, int len, uint32_t waitTill, uint8_t p
 			AT91C_BASE_SSC->SSC_THR = frame[c];
 			c++;
 		}
-		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY))
+		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 			b = (uint16_t)(AT91C_BASE_SSC->SSC_RHR); (void)b;
+		}
 	}
 
 	while(!(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))) {};
@@ -589,8 +591,9 @@ void HfDumpFelicaLiteS() {
     if(!crc_tabccitt_init)
         init_crcccitt_tab();
 
-    if(!manch_tbl_fill)
+    if(!manch_tbl_fill) {
         fillManch();
+    }
 	
 	ResetNFCFrame();
 
