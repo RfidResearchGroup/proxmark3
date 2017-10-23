@@ -135,22 +135,24 @@ void Dbhexdump(int len, uint8_t *d, bool bAsci) {
 	int l=0, i;
 	char ascii[9];
     
-	while (len>0) {
+	while (len > 0) {
 
 		l = (len>8) ? 8 : len;
 		
-		memcpy(ascii,d,l);
+		memcpy(ascii, d, l);
 		ascii[l]=0;
 		
 		// filter safe ascii
-		for (i=0; i<l; i++)
-            if (ascii[i] < 32 || ascii[i] > 126)
+		for (i=0; i<l; i++) {
+            if (ascii[i] < 32 || ascii[i] > 126) {
                 ascii[i] = '.';
-        
+			}
+        }
+		
 		if (bAsci)
-			Dbprintf("%-8s %*D",ascii,l,d," ");
+			Dbprintf("%-8s %*D", ascii, l, d, " ");
 		else
-			Dbprintf("%*D",l,d," ");
+			Dbprintf("%*D", l, d, " ");
         
 		len -= 8;
 		d += 8;		
