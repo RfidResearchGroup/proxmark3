@@ -154,7 +154,6 @@ AAFB06045877, --EPI Envisionte# 3dprinter
 454841585443, -- key A
 #
 # Data from: http://pastebin.com/gQ6nk38G
-A0A1A2A3A4A5,
 D39BB83F5297,
 A27D3804C259,
 85675B200017,
@@ -328,15 +327,13 @@ a56c2df9a26d,
 # * https://github.com/DumpDos/Vigik
 # * http://newffr.com/viewtopic.php?&forum=235&topic=11559
 # * Own dumps
-021209197591,
+021209197591,  // BTCINO UNDETERMINED SPREAKD 0x01->0x13 key
 2ef720f2af76,
 414c41524f4e,
 424c41524f4e,
 4a6352684677,
 bf1f4424af76,
 536653644c65,
-#
-021209197591, // BTCINO UNDETERMINED SPREAKD 0x01->0x13 key
 # 
 # Intratone Cogelec 
 # Data from http://bouzdeck.com/rfid/32-cloning-a-mifare-classic-1k-tag.html
