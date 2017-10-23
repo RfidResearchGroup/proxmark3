@@ -19,7 +19,7 @@
 `include "hi_iso14443a.v"
 `include "hi_sniffer.v"
 `include "hi_flite.v"
-//`include "hf_fmod.v"
+
 `include "util.v"
 
 module fpga_hf(
@@ -98,16 +98,6 @@ hi_read_tx ht(
 	hi_read_tx_shallow_modulation,hi_read_tx_speed, 1'b1
 );
  
-/*hi_fmod hmf(
-	pck0, ck_1356meg, ck_1356megb,
-	hmf_pwr_lo, hmf_pwr_hi, hmf_pwr_oe1, hmf_pwr_oe2, hmf_pwr_oe3, hmf_pwr_oe4,
-	adc_d, ht_adc_clk,
-	hmf_ssp_frame, hmf_ssp_din, ssp_dout, hmf_ssp_clk,
-	cross_hi, cross_lo,
-	hmf_dbg,
-	hi_simulate_mod_type
-);*/
-
 
 hi_read_rx_xcorr hrxc(
 	pck0, ck_1356meg, ck_1356megb,
