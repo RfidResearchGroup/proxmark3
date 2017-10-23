@@ -392,10 +392,10 @@ always @(ck_1356megb or ssp_dout or power or disabl or mod)
 if (power)
            begin
         pwr_hi <= ck_1356megb;
-        pwr_oe1 <= mod;
-        pwr_oe2 <= mod;
-        pwr_oe3 <= mod;
-        pwr_oe4 <= 1'b0;
+        pwr_oe1 <= 1'b0;//mod;
+        pwr_oe2 <= 1'b0;//mod;
+        pwr_oe3 <= 1'b0;//mod;
+        pwr_oe4 <= mod;//1'b0;
            end
 else
           begin          

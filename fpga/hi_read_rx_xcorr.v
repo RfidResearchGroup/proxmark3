@@ -34,13 +34,13 @@ always @(negedge ck_1356megb)
 
 (* clock_signal = "yes" *) reg adc_clk;				// sample frequency, always 16 * fc
 always @(ck_1356megb, xcorr_is_848, xcorr_quarter_freq, fc_div)
-	if (xcorr_is_848 & ~xcorr_quarter_freq)			// fc = 847.5 kHz
+	if (xcorr_is_848 & ~xcorr_quarter_freq)			// fc = 847.5 kHz, standard ISO14443B
 		adc_clk <= ck_1356megb;
-	else if (~xcorr_is_848 & ~xcorr_quarter_freq)	// fc = 424.25 kHz 
+	else if (~xcorr_is_848 & ~xcorr_quarter_freq)	// fc = 423.75 kHz 
 		adc_clk <= fc_div[0];
-	else if (xcorr_is_848 & xcorr_quarter_freq)		// fc = 212.125 kHz
+	else if (xcorr_is_848 & xcorr_quarter_freq)		// fc = 211.875 kHz
 		adc_clk <= fc_div[1];
-	else 											// fc = 106.0625 kHz
+	else 											// fc = 105.9375 kHz
 		adc_clk <= fc_div[2];
 
 // When we're a reader, we just need to do the BPSK demod; but when we're an
@@ -69,13 +69,16 @@ begin
     end
 end
 
-// Let us report a correlation every 4 subcarrier cycles, or 4*16 samples,
+// Let us report a correlation every 4 subcarrier cycles, or 4*16=64 samples,
 // so we need a 6-bit counter.
 reg [5:0] corr_i_cnt;
 // And a couple of registers in which to accumulate the correlations.
-// we would add/sub at most 32 times adc_d, the signed result can be held in 14 bits. 
-reg signed [13:0] corr_i_accum;
-reg signed [13:0] corr_q_accum;
+// We would add at most 32 times the difference between unmodulated and modulated signal. It should
+// be safe to assume that a tag will not be able to modulate the carrier signal by more than 25%.
+// 32 * 255 * 0,25 = 2040, which can be held in 11 bits. Add 1 bit for sign.
+reg signed [11:0] corr_i_accum;
+reg signed [11:0] corr_q_accum;
+// we will report maximum 8 significant bits
 reg signed [7:0] corr_i_out;
 reg signed [7:0] corr_q_out;
 // clock and frame signal for communication to ARM
@@ -99,16 +102,16 @@ begin
     begin
         if(snoop)
 			begin
-				// Send only 7 most significant bits of tag signal (signed), LSB is reader signal:
-				corr_i_out <= {corr_i_accum[13:7], after_hysteresis_prev_prev};
-				corr_q_out <= {corr_q_accum[13:7], after_hysteresis_prev};
+			// Send 7 most significant bits of tag signal (signed), plus 1 bit reader signal
+            corr_i_out <= {corr_i_accum[11:5], after_hysteresis_prev_prev};
+            corr_q_out <= {corr_q_accum[11:5], after_hysteresis_prev};
 				after_hysteresis_prev_prev <= after_hysteresis;
 			end
         else
 			begin
-				// 8 most significant bits of tag signal
-				corr_i_out <= corr_i_accum[13:6];
-				corr_q_out <= corr_q_accum[13:6];
+            // 8 bits of tag signal
+            corr_i_out <= corr_i_accum[11:4];
+            corr_q_out <= corr_q_accum[11:4];
 			end
 
         corr_i_accum <= adc_d;
