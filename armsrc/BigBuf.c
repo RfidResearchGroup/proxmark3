@@ -124,12 +124,15 @@ uint16_t BigBuf_max_traceLen(void)
 void clear_trace() {
 	traceLen = 0;
 }
-void set_tracelen(uint16_t tl)
-{
-    traceLen=tl;
+void set_tracelen(uint16_t value) {
+    traceLen = value;
 }
 void set_tracing(bool enable) {
 	tracing = enable;
+}
+
+bool get_tracing(void) {
+	return tracing;
 }
 
 /**
