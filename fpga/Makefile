@@ -1,6 +1,6 @@
 include ../common/Makefile.common
 
-all: fpga_lf.bit fpga_hf.bit fpga_nfc.bit
+all: fpga_lf.bit fpga_hf.bit
 clean:
 	$(DELETE) *.bgn *.drc *.ncd *.ngd *_par.xrpt *-placed.* *-placed_pad.* *_usage.xml xst_hf.srp xst_lf.srp
 	$(DELETE) *.map *.ngc *.xrpt *.pcf *.rbt *_auto_* *.bld *.mrp *.ngm *.unroutes *_summary.xml netlist.lst xst
@@ -8,10 +8,6 @@ clean:
 fpga_hf.ngc: fpga_hf.v fpga.ucf xst_hf.scr util.v hi_simulate.v hi_read_tx.v hi_read_rx_xcorr.v hi_iso14443a.v hi_sniffer.v hi_flite.v
 	$(DELETE) $@
 	$(XILINX_TOOLS_PREFIX)xst -ifn xst_hf.scr
-
-fpga_nfc.ngc: fpga_nfc.v fpga.ucf xst_nfc.scr util.v  hi_flite.v
-	$(DELETE) $@
-	$(XILINX_TOOLS_PREFIX)xst -ifn xst_nfc.scr
 
 
 fpga_lf.ngc: fpga_lf.v fpga.ucf xst_lf.scr util.v clk_divider.v lo_edge_detect.v lo_read.v lo_passthru.v lp20khz_1MSa_iir_filter.v min_max_tracker.v lf_edge_detect.v
