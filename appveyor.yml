@@ -189,7 +189,6 @@ test_script:
       #execute scriptblock
       Write-host "Test [$using:Name] job: $using:Cmd"
       $Cond=&$sb
-      Write-host "Result[$using:Name]: $Cond"
 
       if ($Cond -eq $null){
       } Else {
@@ -206,8 +205,10 @@ test_script:
       }
 
       If ($res) {
+        Write-host "Result[$using:Name]: $Cond" -ForegroundColor Green
         Add-AppveyorTest -Name "$using:Name" -Framework NUnit -Filename "$using:File" -Outcome Passed -Duration "$([System.Environment]::TickCount-$TestTime)"
       }Else {
+        Write-host "Result[$using:Name]: $Cond" -ForegroundColor Red
         Add-AppveyorTest -Name "$using:Name" -Framework NUnit -Filename "$using:File" -Outcome Failed -Duration "$([System.Environment]::TickCount-$TestTime)" -ErrorMessage "command:$using:Cmd`nresult:$Cond"
       }
         return $res
