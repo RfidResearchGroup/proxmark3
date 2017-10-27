@@ -175,7 +175,7 @@ test_script:
     $global:TestsPassed=$true
 
 
-    Function ExecTest($Name, $File, $Cmd) {
+    Function ExecTest($Name, $File, $Cmd, $CheckResult) {
 
     #--- begin Job
 
@@ -191,6 +191,21 @@ test_script:
       $Cond=&$sb
 
       if ($Cond -eq $null){
+      } ElseIf($using:CheckResult -ne $null) {
+        [String]$searchstr=""
+        if ($Cond -is [Object]){
+          ForEach($line in $Cond){
+            Write-host $line -ForegroundColor Gray
+            $searchstr += $line
+          }
+        }else{
+          Write-host "$Cond" -ForegroundColor Gray
+          $searchstr = $Cond
+        }
+        If($searchstr -like "*$using:CheckResult*") {
+          $res=$true
+        }
+        $Cond="*$using:CheckResult*"
       } Else {
         If (!($Cond -is [bool] -or $Cond -is [byte] -or $Cond -is [int16] -or $Cond -is [int32] -or $Cond -is [int64] -or $Cond -is [float])){
             if ($Cond -is "String" -and $Cond -like "*passed*"){
@@ -258,9 +273,9 @@ test_script:
     ExecTest "proxmark help hardnested" "proxmark3 -h" {bash -lc 'cd ~/client;proxmark3 -h | grep -q hardnested && echo Passed || echo Failed'}
 
 
-    ExecTest "hf mf offline text" "hf mf" {bash -lc "cd ~/client;proxmark3 comx -c 'hf mf' | grep -q at_enc && echo Passed || echo Failed"}
+    ExecTest "hf mf offline text" "hf mf" {bash -lc "cd ~/client;proxmark3 comx -c 'hf mf'"} "at_enc"
 
-    ExecTest "hf mf hardnested" "hf mf hardnested" {bash -lc "cd ~/client;proxmark3 comx -c 'hf mf hardnested t 1 000000000000' | grep -q 'found:' && echo Passed || echo Failed"}
+    ExecTest "hf mf hardnested" "hf mf hardnested" {bash -lc "cd ~/client;proxmark3 comx -c 'hf mf hardnested t 1 000000000000'"} "found:"
 
 
     if ($global:TestsPassed) {
