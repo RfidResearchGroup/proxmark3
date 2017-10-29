@@ -111,10 +111,13 @@ static void *uart_receiver(void *targ) {
 	
 	while (arg->run) {
 		rxlen = 0;
-		if (uart_receive(sp, prx, sizeof(UsbCommand) - (prx-rx), &rxlen) && rxlen) {
+		
+		if (uart_receive(sp, prx, sizeof(UsbCommand) - (prx-rx), &rxlen)) {
+			
+			if ( rxlen == 0 ) continue;
 			
 			prx += rxlen;
-			if (prx-rx < sizeof(UsbCommand)) {
+			if ( (prx-rx) < sizeof(UsbCommand)) {
 				continue;
 			}
 			

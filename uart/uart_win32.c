@@ -118,12 +118,19 @@ void uart_close(const serial_port sp) {
 }
 
 bool uart_receive(const serial_port sp, byte_t* p_rx, size_t pszMaxRxLen, size_t* p_rxlen) {
-	return ReadFile(((serial_port_windows*)sp)->hPort, p_rx, pszMaxRxLen, (LPDWORD)p_rxlen, NULL);
+	int res = ReadFile(((serial_port_windows*)sp)->hPort, p_rx, pszMaxRxLen, (LPDWORD)p_rxlen, NULL);
+	if ( res == 0 ) 
+		return false;
+	return ( pszMaxRxLen == *p_rxlen );
+	
 }
 
 bool uart_send(const serial_port sp, const byte_t* p_tx, const size_t len) {
 	DWORD txlen = 0;
-	return WriteFile(((serial_port_windows*)sp)->hPort, p_tx, len, &txlen, NULL);
+	int res = WriteFile(((serial_port_windows*)sp)->hPort, p_tx, len, &txlen, NULL);
+	if ( res == 0)
+		return false;
+	return ( len == txlen );
 }
 
 bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed) {
