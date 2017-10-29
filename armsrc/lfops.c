@@ -395,8 +395,7 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc)
 	StopTicks();
 }
 
-void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
-{
+void SimulateTagLowFrequencyEx(int period, int gap, int ledcontrol, int numcycles) {
 	// note this may destroy the bigbuf so be sure this is called before now...
 	//FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	
@@ -404,7 +403,6 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
 	SpinDelay(20);
 
-	#define BREAK_OUT_LIMIT 	
 	int i = 0;
 	uint8_t *buf = BigBuf_get_addr();
 	
@@ -424,6 +422,15 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 
 	for(;;) {
 
+		if ( numcycles > -1 ) {
+			if ( x != numcycles ) {
+				++x;
+			} else { 
+				// exit without turning of field
+				return; 
+			}
+		}
+	
 		if (ledcontrol) LED_D_ON();
 				
 		// wait until SSC_CLK goes HIGH
@@ -461,8 +468,12 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 OUT: 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LED_D_OFF();
-	return;	
 }
+
+void SimulateTagLowFrequency(int period, int gap, int ledcontrol) {
+	SimulateTagLowFrequencyEx(period, gap, ledcontrol, -1);
+}
+
 
 #define DEBUG_FRAME_CONTENTS 1
 void SimulateTagLowFrequencyBidir(int divisor, int t0)
@@ -563,7 +574,7 @@ static void fcAll(uint8_t fc, int *n, uint8_t clock, uint16_t *modCnt)
 
 // prepare a waveform pattern in the buffer based on the ID given then
 // simulate a HID tag until the button is pressed
-void CmdHIDsimTAG(int hi, int lo, int ledcontrol) {
+void CmdHIDsimTAGEx( uint32_t hi, uint32_t lo, int ledcontrol, int numcycles) {
 
 	if (hi > 0xFFF) {
 		DbpString("Tags can only have 44 bits. - USE lf simfsk for larger tags");
@@ -618,8 +629,12 @@ void CmdHIDsimTAG(int hi, int lo, int ledcontrol) {
 	}
 
 	if (ledcontrol)	LED_A_ON();
-	SimulateTagLowFrequency(n, 0, ledcontrol);
+	SimulateTagLowFrequencyEx(n, 0, ledcontrol, numcycles);
 	if (ledcontrol)	LED_A_OFF();
+}
+
+void CmdHIDsimTAG( uint32_t hi, uint32_t lo, int ledcontrol) {
+	void CmdHIDsimTAG( hi, lo, ledcontrol, -1)
 }
 
 // prepare a waveform pattern in the buffer based on the ID given then
@@ -800,12 +815,11 @@ void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 }
 
 // loop to get raw HID waveform then FSK demodulate the TAG ID from it
-void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
-{
+void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol) {
 	uint8_t *dest = BigBuf_get_addr();
 	size_t size = 0; 
-	uint32_t hi2=0, hi=0, lo=0;
-	int idx=0;
+	uint32_t hi2 = 0, hi = 0, lo = 0;
+	int idx = 0;
 	int dummyIdx = 0;
 	// Configure to go in 125Khz listen mode
 	LFSetupFPGAForADC(95, true);
@@ -813,7 +827,7 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 	//clear read buffer
 	BigBuf_Clear_keep_EM();
 
-	while(!BUTTON_PRESS() && !usb_poll_validate_length()) {
+	while( !BUTTON_PRESS() && !usb_poll_validate_length()) {
 
 		WDT_HIT();
 		if (ledcontrol) LED_A_ON();
@@ -899,8 +913,7 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 }
 
 // loop to get raw HID waveform then FSK demodulate the TAG ID from it
-void CmdAWIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
-{
+void CmdAWIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
 	uint8_t *dest = BigBuf_get_addr();
 	size_t size; 
 	int idx=0, dummyIdx=0;
@@ -978,6 +991,8 @@ void CmdAWIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		}
 		if (findone){
 			if (ledcontrol)	LED_A_OFF();
+			*high = hi;
+			*low = lo;
 			break;
 		}
 		// reset
@@ -989,8 +1004,7 @@ void CmdAWIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 	if (ledcontrol) LED_A_OFF();
 }
 
-void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
-{
+void CmdEM410xdemod(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
 	uint8_t *dest = BigBuf_get_addr();
 
 	size_t size=0, idx=0;
@@ -1037,8 +1051,8 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
 
 			if (findone){
 				if (ledcontrol) LED_A_OFF();
-				*high=lo>>32;
-				*low=lo & 0xFFFFFFFF;
+				*high = hi;
+				*low = lo;
 				break;
 			}
 		}
@@ -1051,25 +1065,24 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
 	if (ledcontrol) LED_A_OFF();
 }
 
-void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
-{
+void CmdIOdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
 	uint8_t *dest = BigBuf_get_addr();
 	int dummyIdx = 0;
 	int idx = 0;
-	uint32_t code=0, code2=0;
-	uint8_t version=0;
-	uint8_t facilitycode=0;
-	uint16_t number=0;
+	uint32_t code = 0, code2 = 0;
+	uint8_t version = 0;
+	uint8_t facilitycode = 0;
+	uint16_t number = 0;
 	uint8_t crc = 0;
 	uint16_t calccrc = 0;
 	size_t size = BigBuf_max_traceLen();
-	//clear read buffer
+	
 	BigBuf_Clear_keep_EM();
 	
 	// Configure to go in 125Khz listen mode
 	LFSetupFPGAForADC(95, true);
 
-	while(!BUTTON_PRESS() && !usb_poll_validate_length()) {
+	while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
 		WDT_HIT();
 		if (ledcontrol) LED_A_ON();
 		DoAcquisition_default(-1,true);
@@ -1124,14 +1137,14 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 			// if we're only looking for one tag
 			if (findone){
 				if (ledcontrol)	LED_A_OFF();
-				*high=code;
-				*low=code2;
+				*high = hi;
+				*low = lo;
 				break;
 			}
-			code=code2=0;
-			version=facilitycode=0;
-			number=0;
-			idx=0;
+			code = code2 = 0;
+			version = facilitycode = 0;
+			number = 0;
+			idx = 0;
 
 		WDT_HIT();
 	}

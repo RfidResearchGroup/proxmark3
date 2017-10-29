@@ -392,8 +392,8 @@ void printStandAloneModes(void) {
 	#if defined(WITH_LF_PROXBRUTE)
 	DbpString("   LF HID ProxII bruteforce - aka Proxbrute (Brad Antoniewicz)");
 	#endif 
-	#if defined(WITH_LF_HIDCORP)
-	DbpString("   LF HID corporate 1000 bruteforce - (Federi Codotta)");
+	#if defined(WITH_LF_HIDBRUTE)
+	DbpString("   LF HID corporate 1000 bruteforce - (Federico dotta & Maurizio Agazzini)");
 	#endif 
 	#if defined(WITH_HF_MATTYRUN)
 	DbpString("   HF Mifare sniff/clone - aka MattyRun (Matta Real)");
@@ -585,9 +585,11 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			cmd_send(CMD_ACK, bits, 0, 0, 0, 0);
 			break;
 		}
-		case CMD_HID_DEMOD_FSK:
-			CmdHIDdemodFSK(c->arg[0], 0, 0, 1);
+		case CMD_HID_DEMOD_FSK: {
+			uint32_t high, low;
+			CmdHIDdemodFSK(c->arg[0], &high, &low, 1);
 			break;
+		}
 		case CMD_HID_SIM_TAG:
 			CmdHIDsimTAG(c->arg[0], c->arg[1], 1);
 			break;
@@ -603,15 +605,19 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 		case CMD_HID_CLONE_TAG:
 			CopyHIDtoT55x7(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes[0]);
 			break;
-		case CMD_IO_DEMOD_FSK:
-			CmdIOdemodFSK(c->arg[0], 0, 0, 1);
+		case CMD_IO_DEMOD_FSK: {
+			uint32_t high, low;
+			CmdIOdemodFSK(c->arg[0], &high, &low, 1);
 			break;
+		}
 		case CMD_IO_CLONE_TAG:
 			CopyIOtoT55x7(c->arg[0], c->arg[1]);
 			break;
-		case CMD_EM410X_DEMOD:
-			CmdEM410xdemod(c->arg[0], 0, 0, 1);
+		case CMD_EM410X_DEMOD: {
+			uint32_t high, low;
+			CmdEM410xdemod(c->arg[0], &high, &low, 1);
 			break;
+		}
 		case CMD_EM410X_WRITE_TAG:
 			WriteEM410x(c->arg[0], c->arg[1], c->arg[2]);
 			break;
@@ -660,9 +666,12 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 		case CMD_EM4X_WRITE_WORD:
 			EM4xWriteWord(c->arg[0], c->arg[1], c->arg[2]);
 			break;
-		case CMD_AWID_DEMOD_FSK: // Set realtime AWID demodulation
-			CmdAWIDdemodFSK(c->arg[0], 0, 0, 1);
+		case CMD_AWID_DEMOD_FSK:  {
+			uint32_t high, low;
+			// Set realtime AWID demodulation
+			CmdAWIDdemodFSK(c->arg[0], &high, &low, 1);
 			break;
+		}
         case CMD_VIKING_CLONE_TAG:
 			CopyVikingtoT55xx(c->arg[0], c->arg[1], c->arg[2]);
             break;
@@ -1195,13 +1204,14 @@ void  __attribute__((noreturn)) AppMain(void) {
 * All standalone mod "main loop" should be the RunMod() function.
 * Since the standalone is either LF or HF, the somewhat bisarr defines below exists. 
 */			
-#if defined (WITH_LF) && defined (WITH_LF_SAMYRUN)
+#if defined (WITH_LF) && ( defined (WITH_LF_SAMYRUN) || defined (WITH_LF_HIDBRUTE) )
 			RunMod();
 #endif
 		
-#if defined (WITH_ISO14443a) && defined (WITH_HF_YOUNG)
+#if defined (WITH_ISO14443a) && defined (WITH_HF_YOUNG) 
 			RunMod();
 #endif
+
 			// when here,  we are no longer in standalone mode.
 			// reseting the variables which keeps track of usb re-attached/configured
 			//SetUSBreconnect(0);

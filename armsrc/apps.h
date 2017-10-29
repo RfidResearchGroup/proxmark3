@@ -79,16 +79,18 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc);
 
 void AcquireTiType(void);
 void AcquireRawBitsTI(void);
+void SimulateTagLowFrequencyEx(int period, int gap, int ledcontrol, int numcycles);
 void SimulateTagLowFrequency(int period, int gap, int ledcontrol);
 void SimulateTagLowFrequencyBidir(int divisor, int max_bitlen);
-void CmdHIDsimTAG(int hi, int lo, int ledcontrol);
+void CmdHIDsimTAGEx(uint32_t hi, uint32_t lo, int ledcontrol, int numcycles);
+void CmdHIDsimTAG(uint32_t hi, uint32_t lo, int ledcontrol);
 void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream);
 void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream);
 void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream);
-void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol);
-void CmdAWIDdemodFSK(int findone, int *high, int *low, int ledcontrol); // Realtime demodulation mode for AWID26
-void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol);
-void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol);
+void CmdHIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol);
+void CmdAWIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol); // Realtime demodulation mode for AWID26
+void CmdEM410xdemod(int findone, uint32_t *high, uint32_t *low, int ledcontrol);
+void CmdIOdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol);
 void CopyIOtoT55x7(uint32_t hi, uint32_t lo); // Clone an ioProx card to T5557/T5567
 void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT); // Clone an HID card to T5557/T5567
 void CopyVikingtoT55xx(uint32_t block1, uint32_t block2, uint8_t Q5);
