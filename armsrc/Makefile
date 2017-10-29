@@ -102,6 +102,8 @@ ARMSRC = fpgaloader.c \
 	hf_young.c
 	#	lf_samyrun.c \
 	#	lf_hidbrute.c \
+	#	lf_proxbrute.c \
+	
 	
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
 include ../common/Makefile.common
