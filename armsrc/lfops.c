@@ -634,7 +634,7 @@ void CmdHIDsimTAGEx( uint32_t hi, uint32_t lo, int ledcontrol, int numcycles) {
 }
 
 void CmdHIDsimTAG( uint32_t hi, uint32_t lo, int ledcontrol) {
-	void CmdHIDsimTAGEx( hi, lo, ledcontrol, -1);
+	CmdHIDsimTAGEx( hi, lo, ledcontrol, -1);
 }
 
 // prepare a waveform pattern in the buffer based on the ID given then
