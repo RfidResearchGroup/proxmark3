@@ -159,7 +159,7 @@ static const char cfgDescriptor[] = {
 	2,         // Number of Interfaces
 	1,         // Index value of this Configuration (used in SetConfiguration from Host)
 	0,         // Configuration string index
-	0xC0,      // Attributes 0xA0
+	_DEFAULT,      // Attributes 0xA0
 	0xFA,      // Max Power consumption
 
 	// IAD to associate the one CDC interface
@@ -363,6 +363,9 @@ static const char StrLanguageCodes[] = {
   0x09, 0x04	// supported language Code 0 = 0x0409 (English)
 };
 
+// Note: ModemManager (Linux) ignores Proxmark3 devices by matching the
+// manufacturer string "proxmark.org". Don't change this.
+// or use the blacklisting file.
 static const char StrManufacturer[] = {
   26,			// Length
   0x03,			// Type is string
