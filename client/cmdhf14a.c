@@ -404,7 +404,7 @@ int CmdHF14AReader(const char *Cmd) {
 	}		
 
 	// disconnect
-	SendCommand(&cDisconnect);
+	//SendCommand(&cDisconnect);
 	
 	if (isMifareClassic) {		
 		if ( detect_classic_prng() )
@@ -726,10 +726,21 @@ static void waitCmd(uint8_t iSelect) {
     uint16_t len = 0;
 
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {        
-        len = iSelect ? (resp.arg[1] & 0xffff) : (resp.arg[0]  & 0xffff);
-        PrintAndLog("received %i octets", len);
+		uint8_t iLen = resp.arg[0];
+		if (iSelect){
+			iLen = resp.arg[1];
+			if (iLen){
+				PrintAndLog("Card selected. UID[%i]:", iLen);
+			} else {
+				PrintAndLog("Can't select card.");
+			}
+		} else {
+			PrintAndLog("received %i bytes:", iLen);
+		}
+		
         if(!len)
             return;
+		
 		PrintAndLog("%s", sprint_hex(resp.d.asBytes, len) );
     } else {
         PrintAndLog("timeout while waiting for reply.");
