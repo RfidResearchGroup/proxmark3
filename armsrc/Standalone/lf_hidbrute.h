@@ -1,5 +1,7 @@
 //-----------------------------------------------------------------------------
 // Samy Kamkar 2012
+// Federico Dotta, 2015
+// Maurizio Agazzini, 2015
 // Christian Herrmann, 2017
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
@@ -9,10 +11,9 @@
 // StandAlone Mod
 //-----------------------------------------------------------------------------
 
-#ifndef __LF_SAMYRUN_H
-#define __LF_SAMYRUN_H
+#ifndef __LF_HIDBRUTE_H
+#define __LF_HIDBRUTE_H
 
-//#include <stdbool.h> // for bool
 #include "standalone.h" // standalone definitions
 #include "apps.h" // debugstatements, lfops?
 
@@ -20,4 +21,4 @@
 
 void hid_corporate_1000_calculate_checksum_and_set( uint32_t *high, uint32_t *low, uint32_t cardnum, uint32_t fc);
 
-#endif /* __LF_SAMYRUN_H */
+#endif /* __LF_HIDBRUTE_H */
