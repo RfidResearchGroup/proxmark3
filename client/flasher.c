@@ -89,12 +89,10 @@ static void usage(char *argv0) {
 	fprintf(stdout, "Usage:   %s <port> [-b] image.elf [image.elf...]\n\n", argv0);
 	fprintf(stdout, "\t-b\tEnable flashing of bootloader area (DANGEROUS)\n\n");
 	fprintf(stdout, "\nExample (Linux):\n\n\t %s  /dev/ttyACM0 armsrc/obj/fullimage.elf\n", argv0);
-	fprintf(stdout, "\nExample (OSX   :\n\n\t %s  /dev/cu.usbmodem88888888 armsrc/obj/fullimage.elf\n", argv0);
-	fprintf(stdout, "\nExample (WIN)  :\n\n\t %s  com3 armsrc/obj/fullimage.elf\n", argv0);
+	fprintf(stdout, "\nExample (OSX   :\n\n\t %s  /dev/cu.usbmodem888 armsrc/obj/fullimage.elf\n", argv0);
+	fprintf(stdout, "\nExample (WIN)  :\n\n\t %s  com3 armsrc/obj/fullimage.elf\n\n", argv0);
 	fprintf(stdout, "\nNote (Linux): if the flasher gets stuck in 'Waiting for Proxmark to reappear on <DEVICE>',\n");
-	fprintf(stdout, "              you need to blacklist proxmark for modem-manager - see wiki for more details:\n");
-	fprintf(stdout, "        old ref --> http://code.google.com/p/proxmark3/wiki/Linux\n\n");
-	fprintf(stdout, "       new refs --> ");
+	fprintf(stdout, "              you need to blacklist proxmark for modem-manager - see wiki for more details:\n\n");
 	fprintf(stdout, "              https://github.com/Proxmark/proxmark3/wiki/Gentoo Linux\n\n");
 	fprintf(stdout, "              https://github.com/Proxmark/proxmark3/wiki/Ubuntu Linux\n\n");
 	fprintf(stdout, "              https://github.com/Proxmark/proxmark3/wiki/OSX\n\n");	

@@ -343,6 +343,7 @@ static int enter_bootloader(char *serial_port_name) {
 
 static int wait_for_ack(UsbCommand *ack) {
 	ReceiveCommand(ack);
+
 	if (ack->cmd != CMD_ACK) {
 		printf("Error: Unexpected reply 0x%04" PRIx64 " %s (expected ACK)\n", ack->cmd, (ack->cmd == CMD_NACK) ? "NACK" : "");
 		return -1;
