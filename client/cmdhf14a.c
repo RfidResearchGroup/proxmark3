@@ -726,19 +726,19 @@ static void waitCmd(uint8_t iSelect) {
     uint16_t len = 0;
 
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {        
-		uint8_t iLen = resp.arg[0];
+		len = (resp.arg[0] & 0xFFFF);
 		if (iSelect){
-			iLen = resp.arg[1];
-			if (iLen){
-				PrintAndLog("Card selected. UID[%i]:", iLen);
+			len = (resp.arg[1] & 0xFFFF);
+			if (len){
+				PrintAndLog("Card selected. UID[%i]:", len);
 			} else {
 				PrintAndLog("Can't select card.");
 			}
 		} else {
-			PrintAndLog("received %i bytes:", iLen);
+			PrintAndLog("received %i bytes:", len);
 		}
 		
-        if(!len)
+        if (!len)
             return;
 		
 		PrintAndLog("%s", sprint_hex(resp.d.asBytes, len) );
