@@ -403,7 +403,7 @@ void SimulateTagLowFrequencyEx(int period, int gap, int ledcontrol, int numcycle
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
 	SpinDelay(20);
 
-	int i = 0;
+	int i = 0, x = 0;
 	uint8_t *buf = BigBuf_get_addr();
 	
 	// set frequency,  get values from 'lf config' command
@@ -634,7 +634,7 @@ void CmdHIDsimTAGEx( uint32_t hi, uint32_t lo, int ledcontrol, int numcycles) {
 }
 
 void CmdHIDsimTAG( uint32_t hi, uint32_t lo, int ledcontrol) {
-	void CmdHIDsimTAG( hi, lo, ledcontrol, -1)
+	void CmdHIDsimTAG( hi, lo, ledcontrol, -1);
 }
 
 // prepare a waveform pattern in the buffer based on the ID given then
