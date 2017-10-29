@@ -614,7 +614,8 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			CopyIOtoT55x7(c->arg[0], c->arg[1]);
 			break;
 		case CMD_EM410X_DEMOD: {
-			uint32_t high, low;
+			uint32_t high;
+			uint64_t low;
 			CmdEM410xdemod(c->arg[0], &high, &low, 1);
 			break;
 		}
