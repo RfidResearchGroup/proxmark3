@@ -207,6 +207,54 @@ int CmdHF14AReader(const char *Cmd) {
 	PrintAndLog("ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
 	PrintAndLog(" SAK : %02x [%d]", card.sak, resp.arg[0]);
 
+	if(card.ats_len >= 3) {			// a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
+		PrintAndLog(" ATS : %s", sprint_hex(card.ats, card.ats_len));
+	}
+	PrintAndLog("For more info execute command `hf 14a info`");
+
+	return 0;
+}
+
+int CmdHF14AInfo(const char *Cmd) {
+	bool silent = (Cmd[0] == 's' || Cmd[0] ==  'S');
+	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}};
+	clearCommandBuffer();
+	SendCommand(&c);
+	UsbCommand resp;
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+		if (!silent) PrintAndLog("iso14443a card select failed");
+		ul_switch_off_field();
+		return 0;
+	}
+	
+	iso14a_card_select_t card;
+	memcpy(&card, (iso14a_card_select_t *)resp.d.asBytes, sizeof(iso14a_card_select_t));
+
+	/* 
+		0: couldn't read
+		1: OK, with ATS
+		2: OK, no ATS
+		3: proprietary Anticollision	
+	*/
+	uint64_t select_status = resp.arg[0];
+	
+	if (select_status == 0) {
+		if (!silent) PrintAndLog("iso14443a card select failed");
+		ul_switch_off_field();
+		return 0;
+	}
+
+	if (select_status == 3) {
+		PrintAndLog("Card doesn't support standard iso14443-3 anticollision");
+		PrintAndLog("ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
+		ul_switch_off_field();
+		return 0;
+	}
+
+	PrintAndLog(" UID : %s", sprint_hex(card.uid, card.uidlen));
+	PrintAndLog("ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
+	PrintAndLog(" SAK : %02x [%d]", card.sak, resp.arg[0]);
+
 	bool isMifareClassic = true;
 	switch (card.sak) {
 		case 0x00: 
@@ -393,11 +441,6 @@ int CmdHF14AReader(const char *Cmd) {
 	}
 	
 	return select_status;
-}
-
-int CmdHF14AInfo(const char *Cmd) {
-	
-	return 0;
 }
 
 // Collect ISO14443 Type A UIDs
