@@ -34,6 +34,7 @@
 extern int CmdHF14A(const char *Cmd);
 extern int CmdHF14AList(const char *Cmd);
 extern int CmdHF14AReader(const char *Cmd);
+extern int CmdHF14AInfo(const char *Cmd);
 extern int CmdHF14ASim(const char *Cmd);
 extern int CmdHF14ASniff(const char *Cmd);
 extern int CmdHF14ACmdRaw(const char *Cmd);

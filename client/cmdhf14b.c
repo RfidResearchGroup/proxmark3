@@ -845,7 +845,7 @@ bool waitCmd14b(bool verbose) {
 
 static command_t CommandTable[] = {
 	{"help",        CmdHelp,        1, "This help"},
-	{"info",        CmdHF14Binfo,   0, "Find and print details about a 14443B tag"},
+	{"info",        CmdHF14Binfo,   0, "Tag information"},
 	{"list",        CmdHF14BList,   0, "[Deprecated] List ISO 14443B history"},
 	{"raw",         CmdHF14BCmdRaw, 0, "Send raw hex data to tag"},
 	{"reader",      CmdHF14BReader, 0, "Act as a 14443B reader to identify a tag"},

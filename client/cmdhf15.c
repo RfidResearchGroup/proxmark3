@@ -1221,7 +1221,7 @@ static command_t CommandTable15[] = {
 	{"demod",		CmdHF15Demod,   	1, "Demodulate ISO15693 from tag"},
 	{"dump",		CmdHF15Dump,		0, "Read all memory pages of an ISO15693 tag, save to file"},
 	{"findafi",		CmdHF15Afi,     	0, "Brute force AFI of an ISO15693 tag"},
-	{"info",		CmdHF15Info,		0, "Get Card Information"},	
+	{"info",		CmdHF15Info,		0, "Tag information"},	
 	{"list",		CmdHF15List,    	0, "[Deprecated] List ISO15693 history"},
 	{"raw",			CmdHF15Raw,			0, "Send raw hex data to tag"}, 
 	{"reader",		CmdHF15Reader,  	0, "Act like an ISO15693 reader"},

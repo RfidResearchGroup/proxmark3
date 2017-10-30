@@ -395,6 +395,11 @@ int CmdHF14AReader(const char *Cmd) {
 	return select_status;
 }
 
+int CmdHF14AInfo(const char *Cmd) {
+	
+	return 0;
+}
+
 // Collect ISO14443 Type A UIDs
 int CmdHF14ACUIDs(const char *Cmd) {
 	// requested number of UIDs
@@ -728,11 +733,12 @@ static void waitCmd(uint8_t iSelect) {
 
 static command_t CommandTable[] = {
   {"help",   CmdHelp,              1, "This help"},
-  {"list",   CmdHF14AList,         0, "[Deprecated] List ISO 14443a history"},
-  {"reader", CmdHF14AReader,       0, "Act like an ISO14443 Type A reader"},
-  {"cuids",  CmdHF14ACUIDs,        0, "<n> Collect n>0 ISO14443 Type A UIDs in one go"},
-  {"sim",    CmdHF14ASim,          0, "<UID> -- Simulate ISO 14443a tag"},
-  {"sniff",  CmdHF14ASniff,        0, "sniff ISO 14443 Type A traffic"},
+  {"list",   CmdHF14AList,         0, "[Deprecated] List ISO 14443-a history"},
+  {"info",   CmdHF14AInfo,         0, "Tag information"},
+  {"reader", CmdHF14AReader,       0, "Act like an ISO14443-a reader"},
+  {"cuids",  CmdHF14ACUIDs,        0, "<n> Collect n>0 ISO14443-a UIDs in one go"},
+  {"sim",    CmdHF14ASim,          0, "<UID> -- Simulate ISO 14443-a tag"},
+  {"sniff",  CmdHF14ASniff,        0, "sniff ISO 14443-a traffic"},
   {"raw",    CmdHF14ACmdRaw,       0, "Send raw hex data to tag"},
   {NULL, NULL, 0, NULL}
 };
