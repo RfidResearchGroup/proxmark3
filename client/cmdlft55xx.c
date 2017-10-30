@@ -1292,7 +1292,7 @@ int CmdT55xxDump(const char *Cmd){
 	return 1;
 }
 
-int AquireData( uint8_t page, uint8_t block, bool pwdmode, uint32_t password ){
+bool AquireData( uint8_t page, uint8_t block, bool pwdmode, uint32_t password ){
 	// arg0 bitmodes:
 	// 	bit0 = pwdmode
 	// 	bit1 = page to read from
@@ -1304,7 +1304,7 @@ int AquireData( uint8_t page, uint8_t block, bool pwdmode, uint32_t password ){
 	SendCommand(&c);
 	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500) ) {
 		PrintAndLog("command execution time out");
-		return 0;
+		return false;
 	}
 
 	//uint8_t got[12288];
@@ -1312,14 +1312,14 @@ int AquireData( uint8_t page, uint8_t block, bool pwdmode, uint32_t password ){
 	GetFromBigBuf(got, sizeof(got), 0);
 	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 8000) ) {
 		PrintAndLog("command execution time out");
-		return 0;
+		return false;
 	}
 	setGraphBuf(got, sizeof(got));
 
 	if (is_justnoise(GraphBuffer, sizeof(got))) 
-		return 0;
+		return false;
 
-	return 1;
+	return true;
 }
 
 char * GetBitRateStr(uint32_t id, bool xmode) {

@@ -22,15 +22,20 @@
 #include "hitagS.h"
 #include "util_posix.h"
 #include "cmdmain.h"
+#include "cmddata.h"
 
 static int CmdHelp(const char *Cmd);
 
 size_t nbytes(size_t nbits) {
-	return (nbits/8)+((nbits%8)>0);
+	return (nbits/8) + ((nbits%8) > 0);
 }
 
 int CmdLFHitagList(const char *Cmd) {
  	uint8_t *got = malloc(USB_CMD_DATA_SIZE);
+	if ( !got ) {
+		PrintAndLog("Cannot allocate memory for trace");
+		return 2;
+	}
 
 	// Query for the actual size of the trace
 	UsbCommand response;
@@ -197,22 +202,22 @@ int CmdLFHitagReader(const char *Cmd) {
 	switch (htf) {
 		case 01: { //RHTSF_CHALLENGE
 			c = (UsbCommand){ CMD_READ_HITAG_S };
-			num_to_bytes(param_get32ex(Cmd,1,0,16),4,htd->auth.NrAr);
-			num_to_bytes(param_get32ex(Cmd,2,0,16),4,htd->auth.NrAr+4);
+			num_to_bytes(param_get32ex(Cmd, 1, 0, 16), 4, htd->auth.NrAr);
+			num_to_bytes(param_get32ex(Cmd, 2, 0, 16), 4, htd->auth.NrAr+4);
 		} break;
 		case 02: { //RHTSF_KEY
 			c = (UsbCommand){ CMD_READ_HITAG_S };
-			num_to_bytes(param_get64ex(Cmd,1,0,16),6,htd->crypto.key);
+			num_to_bytes(param_get64ex(Cmd, 1, 0, 16), 6, htd->crypto.key);
 		} break;
 		case RHT2F_PASSWORD: {
-			num_to_bytes(param_get32ex(Cmd,1,0,16),4,htd->pwd.password);
+			num_to_bytes(param_get32ex(Cmd, 1, 0, 16), 4, htd->pwd.password);
 		} break;
 		case RHT2F_AUTHENTICATE: {
-			num_to_bytes(param_get32ex(Cmd,1,0,16),4,htd->auth.NrAr);
-			num_to_bytes(param_get32ex(Cmd,2,0,16),4,htd->auth.NrAr+4);
+			num_to_bytes(param_get32ex(Cmd, 1, 0, 16), 4, htd->auth.NrAr);
+			num_to_bytes(param_get32ex(Cmd, 2, 0, 16), 4, htd->auth.NrAr+4);
 		} break;
 		case RHT2F_CRYPTO: {
-			num_to_bytes(param_get64ex(Cmd,1,0,16),6,htd->crypto.key);
+			num_to_bytes(param_get64ex(Cmd, 1, 0, 16), 6, htd->crypto.key);
 		} break;
 		case RHT2F_TEST_AUTH_ATTEMPTS: {
 			// No additional parameters needed
@@ -221,7 +226,7 @@ int CmdLFHitagReader(const char *Cmd) {
 			// No additional parameters needed
 		} break;
 		default: {
-			PrintAndLog("\nError: unkown reader function %d",htf);
+			PrintAndLog("\nError: unkown reader function %d", htf);
 			PrintAndLog("");
 			PrintAndLog("Usage: hitag reader <Reader Function #>");
 			PrintAndLog("Reader Functions:");
@@ -243,30 +248,36 @@ int CmdLFHitagReader(const char *Cmd) {
 	c.arg[0] = htf;
 	clearCommandBuffer();
 	SendCommand(&c);
-	UsbCommand resp;
-	WaitForResponse(CMD_ACK, &resp);
+	UsbCommand resp;	
+	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 4000) ) {
+		PrintAndLog("timeout while waiting for reply.");
+		return 1;
+	}
 
 	// Check the return status, stored in the first argument
-	if (resp.arg[0] == false) return 1;
+	if (resp.arg[0] == false) {
+		if (g_debugMode) PrintAndLog("DEBUG: Error - hitag failed");
+		return 1;
+	}
 
-	uint32_t id = bytes_to_num(resp.d.asBytes,4);
+	uint32_t id = bytes_to_num(resp.d.asBytes, 4);
 
 	if (htf == RHT2F_UID_ONLY){
-		PrintAndLog("Valid Hitag2 tag found - UID: %08x",id);
+		PrintAndLog("Valid Hitag2 tag found - UID: %08x", id);
 	} else {
 		char filename[FILE_PATH_SIZE];
 		FILE* f = NULL;
-		sprintf(filename,"%08x_%04x.ht2",id,(rand() & 0xffff));
-		f = fopen(filename,"wb");
+		sprintf(filename, "%08x_%04x.ht2", id, (rand() & 0xffff));
+		f = fopen(filename, "wb");
 		if (!f) {
-			PrintAndLog("Error: Could not open file [%s]",filename);
+			PrintAndLog("Error: Could not open file [%s]", filename);
 			return 1;
 		}
 
 		// Write the 48 tag memory bytes to file and finalize
 		fwrite(resp.d.asBytes, 1, 48, f);
 		fclose(f);
-		PrintAndLog("Succesfully saved tag memory to [%s]",filename);
+		PrintAndLog("Succesfully saved tag memory to [%s]", filename);
 	}
 	return 0;
 }
@@ -312,12 +323,13 @@ int CmdLFHitagCheckChallenges(const char *Cmd) {
 	FILE* f;
 	bool file_given;
 	int len = strlen(Cmd);
-	if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
+	if (len > FILE_PATH_SIZE)
+		len = FILE_PATH_SIZE;
 	memcpy(filename, Cmd, len);
 	
 	if (strlen(filename) > 0) {
 		f = fopen(filename,"rb+");
-		if( !f ) {
+		if ( !f ) {
 			PrintAndLog("Error: Could not open file [%s]", filename);
 			return 1;
 		}
@@ -343,23 +355,23 @@ int CmdLFHitagCheckChallenges(const char *Cmd) {
 int CmdLFHitagWP(const char *Cmd) {
 	UsbCommand c = { CMD_WR_HITAG_S };
 	hitag_data* htd = (hitag_data*)c.d.asBytes;
-	hitag_function htf = param_get32ex(Cmd,0,0,10);
+	hitag_function htf = param_get32ex(Cmd, 0, 0, 10);
 	switch (htf) {
 		case 03: { //WHTSF_CHALLENGE
-			num_to_bytes(param_get64ex(Cmd,1,0,16),8,htd->auth.NrAr);
+			num_to_bytes(param_get64ex(Cmd, 1, 0, 16), 8, htd->auth.NrAr);
 			c.arg[2]= param_get32ex(Cmd, 2, 0, 10);
-			num_to_bytes(param_get32ex(Cmd,3,0,16),4,htd->auth.data);
+			num_to_bytes(param_get32ex(Cmd, 3, 0, 16), 4, htd->auth.data);
 		} break;
 		case 04:
 		case 24:
 		 { //WHTSF_KEY
-			num_to_bytes(param_get64ex(Cmd,1,0,16),6,htd->crypto.key);
+			num_to_bytes(param_get64ex(Cmd, 1, 0, 16), 6, htd->crypto.key);
 			c.arg[2]= param_get32ex(Cmd, 2, 0, 10);
-			num_to_bytes(param_get32ex(Cmd,3,0,16),4,htd->crypto.data);
+			num_to_bytes(param_get32ex(Cmd, 3, 0, 16), 4, htd->crypto.data);
 
 		} break;
 		default: {
-			PrintAndLog("Error: unkown writer function %d",htf);
+			PrintAndLog("Error: unkown writer function %d", htf);
 			PrintAndLog("Hitag writer functions");
 			PrintAndLog(" HitagS (0*)");
 			PrintAndLog("  03 <nr,ar> (Challenge) <page> <byte0...byte3> write page on a Hitag S tag");
@@ -375,7 +387,7 @@ int CmdLFHitagWP(const char *Cmd) {
 	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
-	WaitForResponse(CMD_ACK,&resp);
+	WaitForResponse(CMD_ACK, &resp);
 
 	// Check the return status, stored in the first argument
 	if (resp.arg[0] == false) return 1;

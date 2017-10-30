@@ -155,7 +155,7 @@ bool testKnownConfigBlock(uint32_t block0);
 extern bool tryDetectP1(bool getData);
 bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5);
 int special(const char *Cmd);
-int AquireData( uint8_t page, uint8_t block, bool pwdmode, uint32_t password );
+bool AquireData( uint8_t page, uint8_t block, bool pwdmode, uint32_t password );
 
 bool detectPassword(int password);
 

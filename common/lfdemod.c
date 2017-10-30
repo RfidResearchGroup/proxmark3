@@ -143,22 +143,22 @@ bool parityTest(uint32_t bits, uint8_t bitLen, uint8_t pType) {
 //by marshmellow
 // takes a array of binary values, start position, length of bits per parity (includes parity bit - MAX 32),
 //   Parity Type (1 for odd; 0 for even; 2 for Always 1's; 3 for Always 0's), and binary Length (length to run) 
-size_t removeParity(uint8_t *BitStream, size_t startIdx, uint8_t pLen, uint8_t pType, size_t bLen) {
+size_t removeParity(uint8_t *bits, size_t startIdx, uint8_t pLen, uint8_t pType, size_t bLen) {
 	uint32_t parityWd = 0;
 	size_t bitCnt = 0;
 	for (int word = 0; word < (bLen); word += pLen){
 		for (int bit=0; bit < pLen; bit++){
 			if (word+bit >= bLen) break;
-			parityWd = (parityWd << 1) | BitStream[startIdx+word+bit];
-			BitStream[bitCnt++] = (BitStream[startIdx+word+bit]);
+			parityWd = (parityWd << 1) | bits[startIdx+word+bit];
+			bits[bitCnt++] = (bits[startIdx+word+bit]);
 		}
 		if (word+pLen > bLen) break;
 
 		bitCnt--; // overwrite parity with next data
 		// if parity fails then return 0
 		switch (pType) {
-			case 3: if (BitStream[bitCnt]==1) {return 0;} break; //should be 0 spacer bit
-			case 2: if (BitStream[bitCnt]==0) {return 0;} break; //should be 1 spacer bit
+			case 3: if (bits[bitCnt]==1) {return 0;} break; //should be 0 spacer bit
+			case 2: if (bits[bitCnt]==0) {return 0;} break; //should be 1 spacer bit
 			default: if (parityTest(parityWd, pLen, pType) == 0) { return 0; } break; //test parity
 		}
 		parityWd = 0;
@@ -196,8 +196,7 @@ size_t addParity(uint8_t *BitSource, uint8_t *dest, uint8_t sourceLen, uint8_t p
 	return bitCnt;
 }
 
-uint32_t bytebits_to_byte(uint8_t *src, size_t numbits)
-{
+uint32_t bytebits_to_byte(uint8_t *src, size_t numbits) {
 	uint32_t num = 0;
 	for(int i = 0 ; i < numbits ; i++) {
 		num = (num << 1) | (*src);
@@ -207,8 +206,7 @@ uint32_t bytebits_to_byte(uint8_t *src, size_t numbits)
 }
 
 //least significant bit first
-uint32_t bytebits_to_byteLSBF(uint8_t *src, size_t numbits)
-{
+uint32_t bytebits_to_byteLSBF(uint8_t *src, size_t numbits) {
 	uint32_t num = 0;
 	for(int i = 0 ; i < numbits ; i++) {
 		num = (num << 1) | *(src + (numbits-(i+1)));
@@ -225,14 +223,14 @@ bool preambleSearch(uint8_t *BitStream, uint8_t *preamble, size_t pLen, size_t *
 // search for given preamble in given BitStream and return success=1 or fail=0 and startIndex (where it was found) and length if not fineone 
 // fineone does not look for a repeating preamble for em4x05/4x69 sends preamble once, so look for it once in the first pLen bits
 //(iceman) FINDONE,  only finds start index. NOT SIZE!.  I see Em410xDecode (lfdemod.c) uses SIZE to determine success
-bool preambleSearchEx(uint8_t *BitStream, uint8_t *preamble, size_t pLen, size_t *size, size_t *startIdx, bool findone)
+bool preambleSearchEx(uint8_t *bits, uint8_t *preamble, size_t pLen, size_t *size, size_t *startIdx, bool findone)
 {
-	// Sanity check.  If preamble length is bigger than bitstream length.
+	// Sanity check.  If preamble length is bigger than bits length.
 	if ( *size <= pLen ) return false;
 	
 	uint8_t foundCnt = 0;
 	for (size_t idx = 0; idx < *size - pLen; idx++) {
-		if (memcmp(BitStream+idx, preamble, pLen) == 0){
+		if (memcmp(bits+idx, preamble, pLen) == 0){
 			//first index found
 			foundCnt++;
 			if (foundCnt == 1){
@@ -590,7 +588,7 @@ int DetectStrongNRZClk(uint8_t *dest, size_t size, int peak, int low, bool *stro
 		++i;
 	lastWasHigh = (dest[i] >= peak);
 
-	if (i==size) return 0;
+	if (i == size) return 0;
 	transition1 = i;
 
 	for (;i < size; i++) {
@@ -1257,19 +1255,19 @@ int BiphaseRawDecode(uint8_t *bits, size_t *size, int *offset, int invert) {
 //by marshmellow
 //take 10 and 01 and manchester decode
 //run through 2 times and take least errCnt
-int manrawdecode(uint8_t *BitStream, size_t *size, uint8_t invert, uint8_t *alignPos){
+int manrawdecode(uint8_t *bits, size_t *size, uint8_t invert, uint8_t *alignPos){
 
 	// sanity check
 	if (*size < 16) return -1;
 	
 	int errCnt = 0, bestErr = 1000;
-	uint16_t bitnum = 0, MaxBits = 512, bestRun = 0;
+	uint16_t bitnum = 0, maxBits = 512, bestRun = 0;
 	size_t i, k;
 
 	//find correct start position [alignment]
 	for (k = 0; k < 2; ++k){
 		for (i = k; i < *size-3; i += 2) {
-			if (BitStream[i] == BitStream[i+1])
+			if (bits[i] == bits[i+1])
 				errCnt++;
 		}
 		if (bestErr > errCnt){
@@ -1281,14 +1279,14 @@ int manrawdecode(uint8_t *BitStream, size_t *size, uint8_t invert, uint8_t *alig
 	*alignPos = bestRun;
 	//decode
 	for (i = bestRun; i < *size-3; i += 2){
-		if (BitStream[i] == 1 && (BitStream[i+1] == 0)){
-			BitStream[bitnum++] = invert;
-		} else if ((BitStream[i] == 0) && BitStream[i+1] == 1){
-			BitStream[bitnum++] = invert^1;
+		if (bits[i] == 1 && (bits[i+1] == 0)){
+			bits[bitnum++] = invert;
+		} else if ((bits[i] == 0) && bits[i+1] == 1){
+			bits[bitnum++] = invert^1;
 		} else {
-			BitStream[bitnum++] = 7;
+			bits[bitnum++] = 7;
 		}
-		if (bitnum > MaxBits) break;
+		if (bitnum > maxBits) break;
 	}
 	*size = bitnum;
 	return bestErr;
@@ -1440,11 +1438,15 @@ int askdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr
 // peaks invert bit (high=1 low=0) each clock cycle = 1 bit determined by last peak
 int nrzRawDemod(uint8_t *dest, size_t *size, int *clk, int *invert, int *startIdx) {
 	if (justNoise(dest, *size)) return -1;
+	
 	size_t clkStartIdx = 0;
 	*clk = DetectNRZClock(dest, *size, *clk, &clkStartIdx);
-	if (*clk==0) return -2;
+	if (*clk == 0) return -2;
+	
 	size_t i, gLen = 4096;
-	if (gLen>*size) gLen = *size-20;
+	if (gLen > *size) 
+		gLen = *size-20;
+	
 	int high, low;
 	if (getHiLo(dest, gLen, &high, &low, 75, 75) < 1) return -3; //25% fuzz on high 25% fuzz on low
 

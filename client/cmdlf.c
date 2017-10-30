@@ -849,7 +849,7 @@ int CheckChipType(bool getDeviceData) {
 //by marshmellow
 int CmdLFfind(const char *Cmd) {
 	int ans = 0;
-	size_t minLength = 1000;
+	size_t minLength = 2000;
 	char cmdp = param_getchar(Cmd, 0);
 	char testRaw = param_getchar(Cmd, 1);
 	
@@ -873,18 +873,17 @@ int CmdLFfind(const char *Cmd) {
 	
 	// only run these tests if device is online
 	if (isOnline) {
-
-		// only run if graphbuffer is just noise as it should be for hitag/cotag
+		// only run if graphbuffer is just noise as it should be for hitag
+		// The improved noise detection will find Cotag.
 		if (is_justnoise(GraphBuffer, minLength)) {
-			
-			if (CheckChipType(isOnline) ) return 1;			
-			if (CmdLFHitagReader("26")) { PrintAndLog("\nValid Hitag Found!"); return 1;}
-			if (CmdCOTAGRead("")) 		{ PrintAndLog("\nValid COTAG ID Found!"); return 1;}
 
-			PrintAndLog("Signal looks just like noise. Quitting.");
+			PrintAndLog("Signal looks just like noise. Looking for Hitag signal now.");					
+			if (CmdLFHitagReader("26") == 0) { PrintAndLog("\nValid Hitag Found!"); return 1;}
+			if (CmdCOTAGRead("") > 0) 	{ PrintAndLog("\nValid COTAG ID Found!"); return 1;}
 		    return 0;
 		}
 	}
+	
 	if (EM4x50Read("", false))	{ PrintAndLog("\nValid EM4x50 ID Found!"); return 1;}
 	if (CmdAWIDDemod(""))		{ PrintAndLog("\nValid AWID ID Found!"); goto out;}
 	if (CmdEM410xDemod(""))		{ PrintAndLog("\nValid EM410x ID Found!"); goto out;}
@@ -906,6 +905,7 @@ int CmdLFfind(const char *Cmd) {
 	if (CmdVikingDemod(""))		{ PrintAndLog("\nValid Viking ID Found!"); goto out;}	
 	if (CmdVisa2kDemod(""))		{ PrintAndLog("\nValid Visa2000 ID Found!"); goto out;}
 
+	//if (CmdFermaxDemod(""))		{ PrintAndLog("\nValid Fermax ID Found!"); goto out;}
 	// TIdemod?  flexdemod?
 	
 	PrintAndLog("\nNo Known Tags Found!\n");
