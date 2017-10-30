@@ -23,8 +23,12 @@
 # define PRE_AUTHENTICATION_LEADTIME 400		// some (non standard) cards need a pause after select before they are ready for first authentication 
 #endif 	
 #ifndef CHK_TIMEOUT
-# define CHK_TIMEOUT()  SpinDelayUs(AUTHENTICATION_TIMEOUT);
+# define CHK_TIMEOUT() { \
+ ReaderTransmit(&dummy_answer, 1, NULL); \
+ SpinDelayUs(AUTHENTICATION_TIMEOUT); \
+}
 #endif
+static uint8_t dummy_anser = 0;
 
 //-----------------------------------------------------------------------------
 // Select, Authenticate, Read a MIFARE tag. 
