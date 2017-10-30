@@ -272,16 +272,16 @@ bool is_justnoise(int *bits, uint32_t size) {
 	//might not be high enough for noisy environments
 	#define NOICE_AMPLITUDE_THRESHOLD 10;
 
-	uint32_t sum = 0, mean = 0, high = 0, low = 255;
+	int32_t sum = 0, mean = 0, high = -127, low = 127;
 	for ( size_t i = 0; i < size; i++) {
 		if ( bits[i] < low ) low = bits[i];
 		if ( bits[i] > high ) high = bits[i];
 		sum += bits[i];		
 	}
 
-	mean = sum / size;
+	mean = sum / (int)size;
 	// measure amplitude of signal
-	bool isnoise = (high - mean) < NOICE_AMPLITUDE_THRESHOLD;
+	bool isnoise = ABS(high - mean) < NOICE_AMPLITUDE_THRESHOLD;
 	
 	if (g_debugMode == 2) 
 		PrintAndLog("DEBUG: (is_justnoise) mean %u | hi %u | low %u | IS NOISE %c", mean, high, low, isnoise?'Y':'N');
