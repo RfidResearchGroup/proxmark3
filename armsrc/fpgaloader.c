@@ -231,7 +231,7 @@ static bool reset_fpga_stream(int bitstream_version, z_streamp compressed_fpga_s
 		header[i] = get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer);
 
 	// Check for a valid .bit file (starts with _bitparse_fixed_header)
-	if(memcmp(_bitparse_fixed_header, header, FPGA_BITSTREAM_FIXED_HEADER_SIZE) == 0)
+	if (memcmp(_bitparse_fixed_header, header, FPGA_BITSTREAM_FIXED_HEADER_SIZE) == 0)
 		return true;
 
 	return false;

@@ -65,8 +65,9 @@ void dummy(char *fmt, ...){}
 uint32_t compute_mean_uint(uint8_t *in, size_t N) {
 	uint32_t mean = 0;
 	for (size_t i = 0; i < N; i++)
-		mean += in[i];
-	return (uint32_t)mean/N;
+		mean += in[i];		
+
+	return mean / N;
 }
 // Function to compute mean for a series
 // rounded to integer..
@@ -74,22 +75,33 @@ int32_t compute_mean_int(int *in, size_t N) {
 	int32_t mean = 0;
 	for (size_t i = 0; i < N; i++)
 		mean += in[i];
-	return (int32_t)mean/N;
+	
+	return mean / (int)N;
 }
 
 //test samples are not just noise
+// By measuring mean and look at amplitude of signal from HIGH / LOW, 
+// we can detect noise
 bool justNoise(uint8_t *bits, size_t size) {
 
-	// if we take the mean on the sample set and see if its 
-	// below the threshold,  it will be a better indicator
-	uint32_t mean = compute_mean_uint(bits, size);
-	uint8_t counter = 0;
-	for ( size_t i = 0; i < size && counter < 10; i++) {
-		if ( bits[i] > mean ) counter++;
-	}
-	if (g_debugMode == 2) prnt("DEBUG: (justNoise) mean %u | %i | counter %u", mean, FSK_PSK_THRESHOLD, counter);
-	return  counter < 10;
+	//might not be high enough for noisy environments
+	#define NOICE_AMPLITUDE_THRESHOLD 10;
 
+	uint32_t sum = 0, mean = 0, high = 0, low = 255;
+	for ( size_t i = 0; i < size; i++) {
+		if ( bits[i] < low ) low = bits[i];
+		if ( bits[i] > high ) high = bits[i];
+		sum += bits[i];		
+	}
+
+	mean = sum / size;
+	// measure amplitude of signal
+	bool isnoise = (high - mean) < NOICE_AMPLITUDE_THRESHOLD;
+	
+	if (g_debugMode == 2) 
+		prnt("DEBUG: (justNoise) mean %u | hi %u | low %u | IS NOISE %c", mean, high, low, isnoise?'Y':'N');
+
+	return isnoise;
 	/*
 	// loop until a sample is larger than threshold.
 	// one sample above threshold is not a good indicator.
