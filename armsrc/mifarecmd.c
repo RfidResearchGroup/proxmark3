@@ -28,7 +28,7 @@
  SpinDelayUs(AUTHENTICATION_TIMEOUT); \
 }
 #endif
-static uint8_t dummy_anser = 0;
+static uint8_t dummy_answer = 0;
 
 //-----------------------------------------------------------------------------
 // Select, Authenticate, Read a MIFARE tag. 
