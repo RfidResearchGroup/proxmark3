@@ -1369,7 +1369,8 @@ void printEM4x05ProtectionBits(uint32_t word) {
 
 //quick test for EM4x05/EM4x69 tag
 bool EM4x05IsBlock0(uint32_t *word) {
-	return EM4x05ReadWord_ext(0, 0, false, word);
+	int res = EM4x05ReadWord_ext(0, 0, false, word);
+	return (res > 0) ? true : false;
 }
 
 int CmdEM4x05Info(const char *Cmd) {
