@@ -283,8 +283,8 @@ bool is_justnoise(int *bits, uint32_t size) {
 	// measure amplitude of signal
 	bool isnoise = ABS(high - mean) < NOICE_AMPLITUDE_THRESHOLD;
 	
-	if (g_debugMode == 2) 
-		PrintAndLog("DEBUG: (is_justnoise) mean %u | hi %u | low %u | IS NOISE %c", mean, high, low, isnoise?'Y':'N');
+	if (g_debugMode == 1) 
+		PrintAndLog("DEBUG: (is_justnoise) mean %i | hi %i | low %i | IS NOISE %c", mean, high, low, isnoise?'Y':'N');
 
 	return isnoise;
 		
