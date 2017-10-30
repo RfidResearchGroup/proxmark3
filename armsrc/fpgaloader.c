@@ -251,7 +251,7 @@ static void DownloadFPGA_byte(unsigned char w) {
 
 // Download the fpga image starting at current stream position with length FpgaImageLen bytes
 static void DownloadFPGA(int bitstream_version, int FpgaImageLen, z_streamp compressed_fpga_stream, uint8_t *output_buffer) {
-	int i=0;
+	int i = 0;
 
 	AT91C_BASE_PIOA->PIO_OER = GPIO_FPGA_ON;
 	AT91C_BASE_PIOA->PIO_PER = GPIO_FPGA_ON;
@@ -289,7 +289,7 @@ static void DownloadFPGA(int bitstream_version, int FpgaImageLen, z_streamp comp
 	SpinDelay(50);
 	HIGH(GPIO_FPGA_NPROGRAM);
 
-	i=100000;
+	i = 100000;
 	// wait for FPGA ready to accept data signal
 	while ((i) && ( !(AT91C_BASE_PIOA->PIO_PDSR & GPIO_FPGA_NINIT ) ) ) {
 		i--;
@@ -302,7 +302,7 @@ static void DownloadFPGA(int bitstream_version, int FpgaImageLen, z_streamp comp
 		return;
 	}
 
-	for(i = 0; i < FpgaImageLen; i++) {
+	for (i = 0; i < FpgaImageLen; i++) {
 		int b = get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer);
 		if (b < 0) {
 			Dbprintf("Error %d during FpgaDownload", b);
@@ -312,7 +312,7 @@ static void DownloadFPGA(int bitstream_version, int FpgaImageLen, z_streamp comp
 	}
 
 	// continue to clock FPGA until ready signal goes high
-	i=100000;
+	i = 100000;
 	while ( (i--) && ( !(AT91C_BASE_PIOA->PIO_PDSR & GPIO_FPGA_DONE ) ) ) {
 		HIGH(GPIO_FPGA_CCLK);
 		LOW(GPIO_FPGA_CCLK);
@@ -525,7 +525,7 @@ void SetAdcMuxFor(uint32_t whichGpio) {
 }
 
 void Fpga_print_status(void) {
-	DbpString("Fgpa");
+	DbpString("Fpga");
 	switch(downloaded_bitstream) {
 		case FPGA_BITSTREAM_HF: DbpString("  mode....................HF"); break;
 		case FPGA_BITSTREAM_LF: DbpString("  mode....................LF"); break;
@@ -541,6 +541,7 @@ int FpgaGetCurrent() {
 // log message
 // if HF,  Disable SSC DMA
 // turn off trace and leds off.
+/*
 void switch_off() {	
 	if (MF_DBGLEVEL > 3) Dbprintf("switch_off");
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -550,3 +551,4 @@ void switch_off() {
 	set_tracing(false);
 	LEDsoff();	
 }
+*/
