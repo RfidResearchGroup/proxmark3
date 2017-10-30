@@ -122,10 +122,10 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
     bufsize = (bufsize > 0 && bufsize < BigBuf_max_traceLen()) ? bufsize : BigBuf_max_traceLen();
 
 
-	if(bits_per_sample < 1) bits_per_sample = 1;
-	if(bits_per_sample > 8) bits_per_sample = 8;
+	if (bits_per_sample < 1) bits_per_sample = 1;
+	if (bits_per_sample > 8) bits_per_sample = 8;
 
-	if(decimation < 1) decimation = 1;
+	if (decimation < 1) decimation = 1;
 
 	// Use a bit stream to handle the output
 	BitstreamOut data = { dest , 0, 0};
@@ -133,8 +133,8 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
 	uint8_t sample = 0;
 	//If we want to do averaging
 	uint32_t sample_sum =0 ;
-	uint32_t sample_total_numbers =0 ;
-	uint32_t sample_total_saved =0 ;
+	uint32_t sample_total_numbers = 0;
+	uint32_t sample_total_saved = 0;
 
 	while(!BUTTON_PRESS() && !usb_poll_validate_length() ) {
 		WDT_HIT();
@@ -152,46 +152,45 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
 			trigger_threshold = 0;
 			sample_total_numbers++;
 
-			if(averaging)
-			{
+			if (averaging)
 				sample_sum += sample;
-			}
+
 			//Check decimation
-			if(decimation > 1)
-			{
+			if (decimation > 1)	{
 				sample_counter++;
-				if(sample_counter < decimation) continue;
+				if (sample_counter < decimation) continue;
 				sample_counter = 0;
 			}
+			
 			//Averaging
-			if(averaging && decimation > 1) {
+			if (averaging && decimation > 1) {
 				sample = sample_sum / decimation;
 				sample_sum =0;
 			}
+			
 			//Store the sample
 			sample_total_saved ++;
-			if(bits_per_sample == 8){
+			if (bits_per_sample == 8){
 				dest[sample_total_saved-1] = sample;
 				data.numbits = sample_total_saved << 3;//Get the return value correct
-				if(sample_total_saved >= bufsize) break;
+				if (sample_total_saved >= bufsize) break;
 				
 			} else {
 				pushBit(&data, sample & 0x80);
-				if(bits_per_sample > 1)	pushBit(&data, sample & 0x40);
-				if(bits_per_sample > 2)	pushBit(&data, sample & 0x20);
-				if(bits_per_sample > 3)	pushBit(&data, sample & 0x10);
-				if(bits_per_sample > 4)	pushBit(&data, sample & 0x08);
-				if(bits_per_sample > 5)	pushBit(&data, sample & 0x04);
-				if(bits_per_sample > 6)	pushBit(&data, sample & 0x02);
+				if (bits_per_sample > 1)	pushBit(&data, sample & 0x40);
+				if (bits_per_sample > 2)	pushBit(&data, sample & 0x20);
+				if (bits_per_sample > 3)	pushBit(&data, sample & 0x10);
+				if (bits_per_sample > 4)	pushBit(&data, sample & 0x08);
+				if (bits_per_sample > 5)	pushBit(&data, sample & 0x04);
+				if (bits_per_sample > 6)	pushBit(&data, sample & 0x02);
 				//Not needed, 8bps is covered above
-				//if(bits_per_sample > 7)	pushBit(&data, sample & 0x01);
-				if((data.numbits >> 3) +1  >= bufsize) break;
+				//if (bits_per_sample > 7)	pushBit(&data, sample & 0x01);
+				if ((data.numbits >> 3) +1  >= bufsize) break;
 			}
 		}
 	}
 
-	if(!silent)
-	{
+	if (!silent) {
 		Dbprintf("Done, saved %d out of %d seen samples at %d bits/sample",sample_total_saved, sample_total_numbers,bits_per_sample);
 		Dbprintf("buffer samples: %02x %02x %02x %02x %02x %02x %02x %02x ...",
 					dest[0], dest[1], dest[2], dest[3], dest[4], dest[5], dest[6], dest[7]);
