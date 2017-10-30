@@ -1788,7 +1788,9 @@ void MifareCIdent(){
 	uint8_t isGen = 0;
 	uint8_t rec[1] = {0x00};
 	uint8_t recpar[1] = {0x00};
-	
+
+	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+			
 	// Generation 1 test
 	ReaderTransmitBitsPar(wupC1, 7, NULL, NULL);
 	if(!ReaderReceive(rec, recpar) || (rec[0] != 0x0a)) {
@@ -1825,7 +1827,9 @@ TEST2:;
 OUT:;
 	// removed the if,  since some magic tags misbehavies and send an answer to it.
 	mifare_classic_halt_ex(NULL);
-	cmd_send(CMD_ACK,isGen, 0, 0, 0, 0);
+	cmd_send(CMD_ACK, isGen, 0, 0, 0, 0);
+	// turns off
+	OnSuccessMagic();
 }
 
 void OnSuccessMagic(){
