@@ -331,7 +331,7 @@ static int enter_bootloader(char *serial_port_name) {
 		fprintf(stdout, "Waiting for Proxmark to reappear on %s", serial_port_name);
 		do {
 			msleep(1000);
-			fprintf(stdout, ".");
+			fprintf(stdout, "."); fflush(stdout);
 		} while ( !OpenProxmark());
 		fprintf(stdout, " Found.\n");
 		return 0;
@@ -417,7 +417,7 @@ int flash_write(flash_file_t *ctx) {
 		uint32_t end = seg->start + length;
 
 		fprintf(stdout, " 0x%08x..0x%08x [0x%x / %d blocks]", seg->start, end - 1, length, blocks);
-		fflush();
+		fflush(stdout);
 		int block = 0;
 		uint8_t *data = seg->data;
 		uint32_t baddr = seg->start;
@@ -438,10 +438,10 @@ int flash_write(flash_file_t *ctx) {
 			length -= block_size;
 			block++;
 			fprintf(stdout, ".");
-			fflush();
+			fflush(stdout);
 		}
 		fprintf(stdout, " OK\n");
-		fflush();
+		fflush(stdout);
 	}
 	return 0;
 }
