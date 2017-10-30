@@ -10,7 +10,13 @@
 
 #ifndef GRAPH_H__
 #define GRAPH_H__
+#include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
+#include <string.h>
+#include "ui.h"
+#include "lfdemod.h"
+#include "cmddata.h" //for g_debugmode
 
 void AppendGraph(int redraw, int clock, int bit);
 int ClearGraph(int redraw);
@@ -21,7 +27,7 @@ uint8_t GetPskCarrier(const char str[], bool printAns, bool verbose);
 uint8_t GetNrzClock(const char str[], bool printAns, bool verbose);
 uint8_t GetFskClock(const char str[], bool printAns, bool verbose);
 uint8_t fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, bool verbose, int *firstClockEdge);
-bool is_justnoise(int *bits, int size);
+bool is_justnoise(int *bits, uint32_t size);
 void setGraphBuf(uint8_t *buff, size_t size);
 void save_restoreGB(uint8_t saveOpt);
 

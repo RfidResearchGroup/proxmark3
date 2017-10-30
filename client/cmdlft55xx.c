@@ -1315,6 +1315,10 @@ int AquireData( uint8_t page, uint8_t block, bool pwdmode, uint32_t password ){
 		return 0;
 	}
 	setGraphBuf(got, sizeof(got));
+
+	if (is_justnoise(GraphBuffer, sizeof(got))) 
+		return 0;
+
 	return 1;
 }
 
@@ -1755,12 +1759,12 @@ bool tryDetectP1(bool getData) {
 	ans = fskClocks(&fc1, &fc2, (uint8_t *)&clk, false, &firstClockEdge);
 	if (ans && ((fc1==10 && fc2==8) || (fc1==8 && fc2==5))) {
 		if ( FSKrawDemod("0 0", false) && 
-			  preambleSearchEx(DemodBuffer,preamble,sizeof(preamble),&DemodBufferLen,&startIdx,false) && 
+			  preambleSearchEx(DemodBuffer, preamble,sizeof(preamble), &DemodBufferLen, &startIdx, false) && 
 			  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
 			return true;
 		}
 		if ( FSKrawDemod("0 1", false) && 
-			  preambleSearchEx(DemodBuffer,preamble,sizeof(preamble),&DemodBufferLen,&startIdx,false) && 
+			  preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) && 
 			  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
 			return true;
 		}
@@ -1769,19 +1773,19 @@ bool tryDetectP1(bool getData) {
 
 	// try psk clock detect. if successful it cannot be any other type of modulation... (in theory...)
 	clk = GetPskClock("", false, false);
-	if (clk>0) {
+	if (clk > 0) {
 		// allow undo
 		// save_restoreGB(1);
 		// skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
 		//CmdLtrim("160");
 		if ( PSKDemod("0 0 6", false) &&
-			  preambleSearchEx(DemodBuffer,preamble,sizeof(preamble),&DemodBufferLen,&startIdx,false) && 
+			  preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) && 
 			  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
 			//save_restoreGB(0);
 			return true;
 		}
 		if ( PSKDemod("0 1 6", false) &&
-			  preambleSearchEx(DemodBuffer,preamble,sizeof(preamble),&DemodBufferLen,&startIdx,false) && 
+			  preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) && 
 			  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
 			//save_restoreGB(0);
 			return true;
@@ -1789,7 +1793,7 @@ bool tryDetectP1(bool getData) {
 		// PSK2 - needs a call to psk1TOpsk2.
 		if ( PSKDemod("0 0 6", false)) {
 			psk1TOpsk2(DemodBuffer, DemodBufferLen);
-			if (preambleSearchEx(DemodBuffer,preamble,sizeof(preamble),&DemodBufferLen,&startIdx,false) && 
+			if (preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) && 
 				  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
 				//save_restoreGB(0);
 				return true;
@@ -1805,39 +1809,39 @@ bool tryDetectP1(bool getData) {
 	clk = GetAskClock("", false, false);
 	if (clk>0) {
 		if ( ASKDemod_ext("0 0 1", false, false, 1, &st) &&
-			  preambleSearchEx(DemodBuffer,preamble,sizeof(preamble),&DemodBufferLen,&startIdx,false) && 
+			  preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) && 
 			  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
 			return true;
 		}
 		st = true;
 		if ( ASKDemod_ext("0 1 1", false, false, 1, &st)  &&
-			  preambleSearchEx(DemodBuffer,preamble,sizeof(preamble),&DemodBufferLen,&startIdx,false) && 
-			  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
+				preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) && 
+				(DemodBufferLen == 32 || DemodBufferLen == 64) ) {
 			return true;
 		}
 		if ( ASKbiphaseDemod("0 0 0 2", false) &&
-			  preambleSearchEx(DemodBuffer,preamble,sizeof(preamble),&DemodBufferLen,&startIdx,false) && 
-			  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
+				preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) && 
+				(DemodBufferLen == 32 || DemodBufferLen == 64) ) {
 			return true;
 		}
 		if ( ASKbiphaseDemod("0 0 1 2", false) &&
-			  preambleSearchEx(DemodBuffer,preamble,sizeof(preamble),&DemodBufferLen,&startIdx,false) && 
-			  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
+				preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) && 
+				(DemodBufferLen == 32 || DemodBufferLen == 64) ) {
 			return true;
 		}
 	}
 
 	// try NRZ clock detect.  it could be another type even if successful.
 	clk = GetNrzClock("", false, false); //has the most false positives :(
-	if (clk>0) {
+	if (clk > 0) {
 		if ( NRZrawDemod("0 0 1", false)  &&
-			  preambleSearchEx(DemodBuffer,preamble,sizeof(preamble),&DemodBufferLen,&startIdx,false) && 
-			  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
+				preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) && 
+				(DemodBufferLen == 32 || DemodBufferLen == 64) ) {
 			return true;
 		}
 		if ( NRZrawDemod("0 1 1", false)  &&
-			  preambleSearchEx(DemodBuffer,preamble,sizeof(preamble),&DemodBufferLen,&startIdx,false) && 
-			  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
+				preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) && 
+				(DemodBufferLen == 32 || DemodBufferLen == 64) ) {
 			return true;
 		}
 	}

@@ -7,14 +7,7 @@
 //-----------------------------------------------------------------------------
 // Graph utilities
 //-----------------------------------------------------------------------------
-
-#include <stdio.h>
-#include <stdbool.h>
-#include <string.h>
-#include "ui.h"
 #include "graph.h"
-#include "lfdemod.h"
-#include "cmddata.h" //for g_debugmode
 
 int GraphBuffer[MAX_GRAPH_TRACE_LEN];
 int GraphTraceLen;
@@ -81,13 +74,12 @@ void setGraphBuf(uint8_t *buf, size_t size) {
 	return;
 }
 size_t getFromGraphBuf(uint8_t *buf) {
-
 	if (buf == NULL ) return 0;
 	uint32_t i;
 	for (i=0; i < GraphTraceLen; ++i){
 		if (GraphBuffer[i] > 127) GraphBuffer[i] = 127; //trim
 		if (GraphBuffer[i] < -127) GraphBuffer[i] = -127; //trim
-		buf[i] = (uint8_t)(GraphBuffer[i]+128);
+		buf[i] = (uint8_t)(GraphBuffer[i] + 128);
 	}
 	return i;
 }
@@ -110,17 +102,19 @@ void DetectHighLowInGraph(int *high, int *low, bool addFuzz) {
 	if ( loopMax > GraphTraceLen)
 		loopMax = GraphTraceLen;
   
+  	*high = -255; *low = 255;
+	
 	for (uint8_t i = 0; i < loopMax; ++i) {
-		if (GraphBuffer[i] > *high)
-			*high = GraphBuffer[i];
-		else if (GraphBuffer[i] < *low)
-			*low = GraphBuffer[i];
+		if (GraphBuffer[i] > *high) *high = GraphBuffer[i];
+		if (GraphBuffer[i] < *low)	*low = GraphBuffer[i];
 	}
 	
 	//12% fuzz in case highs and lows aren't clipped
 	if (addFuzz) {
-		*high = (int)(*high * .88);
-		*low  = (int)(*low  * .88);
+		*high *= .88;
+		*low  *= .88;
+		//*high = (int)(*high * .88);		
+		//*low  = (int)(*low  * .88);
 	}
 }
 
@@ -272,12 +266,19 @@ uint8_t fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, bool verbose, int *f
 }
 
 // test samples are not just noise
-bool is_justnoise(int *bits, int size) {
+bool is_justnoise(int *bits, uint32_t size) {
 	//might not be high enough for noisy environments
-	#define THRESHOLD 15; 
+	#define NOICE_THRESHOLD 15;
+
+	// if we take the mean on the sample set and see if its 
+	// below the threshold,  it will be a better indicator
+	int32_t mean = compute_mean_int(bits, size);
+	return  mean < NOICE_THRESHOLD;
+	
+	/*
 	bool isNoise = true;
-	for(int i=0; i < size && isNoise; i++){
+	for(int i=0; i < size && isNoise; i++)
 		isNoise = bits[i] < THRESHOLD;
-	}
 	return isNoise;
+	*/
 }
