@@ -826,7 +826,7 @@ int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data,
 *	TRUE if tag uses WEAK prng (ie Now the NACK bug also needs to be present for Darkside attack)
 *   FALSE is tag uses HARDEND prng (ie hardnested attack possible, with known key)
 */
-bool detect_classic_prng(){
+bool detect_classic_prng(void){
 
 	UsbCommand resp, respA;	
 	uint8_t cmd[] = {MIFARE_AUTH_KEYA, 0x00};
@@ -849,10 +849,8 @@ bool detect_classic_prng(){
 	uint32_t nonce = bytes_to_num(respA.d.asBytes, respA.arg[0]);
 	return validate_prng_nonce(nonce);
 }
-/* Detect Mifare Classic NACK bug 
-*  
-*/
-bool detect_classic_nackbug(){
+/* Detect Mifare Classic NACK bug */
+bool detect_classic_nackbug(void){
 	
 	// get nonce?
 	
@@ -860,4 +858,22 @@ bool detect_classic_nackbug(){
 	// fixed nonce, different parity every call
 	
 	return false;
+}
+/* try to see if card responses to "chinese magic backdoor" commands. */
+void detect_classic_magic(void) {
+	
+	uint8_t isGeneration = 0;
+	UsbCommand resp;
+	UsbCommand c = {CMD_MIFARE_CIDENT, {0, 0, 0}};
+	clearCommandBuffer();
+	SendCommand(&c);
+	if (WaitForResponseTimeout(CMD_ACK, &resp, 1500))
+		isGeneration = resp.arg[0] & 0xff;
+	
+	switch( isGeneration ){
+		case 1: PrintAndLog("Answers to magic commands (GEN 1a): YES"); break;
+		case 2: PrintAndLog("Answers to magic commands (GEN 1b): YES"); break;
+		//case 4: PrintAndLog("Answers to magic commands (GEN 2): YES"); break;
+		default: PrintAndLog("Answers to magic commands: NO"); break;
+	}		
 }

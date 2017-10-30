@@ -169,14 +169,13 @@ int CmdHF14AList(const char *Cmd) {
 
 int CmdHF14AReader(const char *Cmd) {
 	bool silent = (Cmd[0] == 's' || Cmd[0] ==  'S');
-	UsbCommand cDisconnect = {CMD_READER_ISO_14443a, {0,0,0}};
 	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
 		if (!silent) PrintAndLog("iso14443a card select failed");
-		SendCommand(&cDisconnect);
+		ul_switch_off_field();
 		return 0;
 	}
 	
@@ -193,14 +192,14 @@ int CmdHF14AReader(const char *Cmd) {
 	
 	if (select_status == 0) {
 		if (!silent) PrintAndLog("iso14443a card select failed");
-		SendCommand(&cDisconnect);
+		ul_switch_off_field();
 		return 0;
 	}
 
 	if (select_status == 3) {
 		PrintAndLog("Card doesn't support standard iso14443-3 anticollision");
 		PrintAndLog("ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
-		SendCommand(&cDisconnect);
+		ul_switch_off_field();
 		return 0;
 	}
 
@@ -383,28 +382,8 @@ int CmdHF14AReader(const char *Cmd) {
 	} else {
 		PrintAndLog("proprietary non iso14443-4 card found, RATS not supported");
 	}
-
 	
-	// try to see if card responses to "chinese magic backdoor" commands.
-	uint8_t isGeneration = 0;
-	clearCommandBuffer();
-	c.cmd = CMD_MIFARE_CIDENT;
-	c.arg[0] = 0;
-	c.arg[1] = 0;
-	c.arg[2] = 0;	
-	SendCommand(&c);
-	if (WaitForResponseTimeout(CMD_ACK, &resp, 1500))
-		isGeneration = resp.arg[0] & 0xff;
-	
-	switch( isGeneration ){
-		case 1: PrintAndLog("Answers to magic commands (GEN 1a): YES"); break;
-		case 2: PrintAndLog("Answers to magic commands (GEN 1b): YES"); break;
-		//case 4: PrintAndLog("Answers to magic commands (GEN 2): YES"); break;
-		default: PrintAndLog("Answers to magic commands: NO"); break;
-	}		
-
-	// disconnect
-	//SendCommand(&cDisconnect);
+	detect_classic_magic();
 	
 	if (isMifareClassic) {		
 		if ( detect_classic_prng() )
@@ -706,7 +685,7 @@ int CmdHF14ACmdRaw(const char *cmd) {
 	// Max buffer is USB_CMD_DATA_SIZE
 	datalen = (datalen > USB_CMD_DATA_SIZE) ? USB_CMD_DATA_SIZE : datalen;
 		
-    c.arg[1] = (datalen & 0xFFFF) | (uint32_t)(numbits << 16);
+    c.arg[1] = (datalen & 0xFFFF) | ((uint32_t)(numbits << 16));
     memcpy(c.d.asBytes, data, datalen);
 
 	clearCommandBuffer();
