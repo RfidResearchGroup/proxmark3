@@ -417,7 +417,7 @@ int flash_write(flash_file_t *ctx) {
 		uint32_t end = seg->start + length;
 
 		fprintf(stdout, " 0x%08x..0x%08x [0x%x / %d blocks]", seg->start, end - 1, length, blocks);
-
+		fflush();
 		int block = 0;
 		uint8_t *data = seg->data;
 		uint32_t baddr = seg->start;
@@ -438,8 +438,10 @@ int flash_write(flash_file_t *ctx) {
 			length -= block_size;
 			block++;
 			fprintf(stdout, ".");
+			fflush();
 		}
 		fprintf(stdout, " OK\n");
+		fflush();
 	}
 	return 0;
 }
