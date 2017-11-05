@@ -66,27 +66,27 @@ int usage_hf_14b_sim(void){
 	return 0;    
 }
 int usage_hf_14b_read_srx(void){
-	PrintAndLog("Usage:  hf 14b read [h] <1|2>");
+	PrintAndLog("Usage:  hf 14b sriread [h] <1|2>");
 	PrintAndLog("Options:");
 	PrintAndLog("       h        this help");
 	PrintAndLog("       <1|2>    1 = SRIX4K , 2 = SRI512");
 	PrintAndLog("sample:");
-	PrintAndLog("       hf 14b read 1");
-	PrintAndLog("       hf 14b read 2");
+	PrintAndLog("       hf 14b sriread 1");
+	PrintAndLog("       hf 14b sriread 2");
 	return 0;
 }
 int usage_hf_14b_write_srx(void){
-	PrintAndLog("Usage:  hf 14b [h] write <1|2> <BLOCK> <DATA>");
+	PrintAndLog("Usage:  hf 14b [h] sriwrite <1|2> <BLOCK> <DATA>");
 	PrintAndLog("Options:");
 	PrintAndLog("       h        this help");
 	PrintAndLog("       <1|2>    1 = SRIX4K , 2 = SRI512");
 	PrintAndLog("       <block>  BLOCK number depends on tag, special block == FF");
 	PrintAndLog("       <data>   hex bytes of data to be written");
 	PrintAndLog("sample:");
-	PrintAndLog("       hf 14b write 1 7F 11223344");
-	PrintAndLog("       hf 14b write 1 FF 11223344");
-	PrintAndLog("       hf 14b write 2 15 11223344");
-	PrintAndLog("       hf 14b write 2 FF 11223344");
+	PrintAndLog("       hf 14b sriwrite 1 7F 11223344");
+	PrintAndLog("       hf 14b sriwrite 1 FF 11223344");
+	PrintAndLog("       hf 14b sriwrite 2 15 11223344");
+	PrintAndLog("       hf 14b sriwrite 2 FF 11223344");
 	return 0;
 }
 
