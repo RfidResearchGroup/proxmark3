@@ -219,20 +219,21 @@ uint8_t GetFskClock(const char str[], bool printAns, bool verbose) {
 	}
 	return 0;
 }
-uint8_t fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, bool verbose, int *firstClockEdge)
-{
-	uint8_t BitStream[MAX_GRAPH_TRACE_LEN] = {0};
-	size_t size = getFromGraphBuf(BitStream);
+uint8_t fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, bool verbose, int *firstClockEdge) {
+	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
+	size_t size = getFromGraphBuf(bits);
 	if (size == 0) return 0;
-	uint16_t ans = countFC(BitStream, size, 1); 
+	
+	uint16_t ans = countFC(bits, size, 1); 
 	if (ans == 0) {
 		if (verbose || g_debugMode) PrintAndLog("DEBUG: No data found");
 		return 0;
 	}
+	
 	*fc1 = (ans >> 8) & 0xFF;
 	*fc2 = ans & 0xFF;
 	//int firstClockEdge = 0;
-	*rf1 = detectFSKClk(BitStream, size, *fc1, *fc2, firstClockEdge);
+	*rf1 = detectFSKClk(bits, size, *fc1, *fc2, firstClockEdge);
 	if (*rf1 == 0) {
 		if (verbose || g_debugMode) PrintAndLog("DEBUG: Clock detect error");
 		return 0;
