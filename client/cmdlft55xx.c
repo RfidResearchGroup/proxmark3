@@ -1316,10 +1316,7 @@ bool AquireData( uint8_t page, uint8_t block, bool pwdmode, uint32_t password ){
 	}
 	setGraphBuf(got, sizeof(got));
 
-	if (is_justnoise(GraphBuffer, sizeof(got))) 
-		return false;
-
-	return true;
+	return justNoise(got, sizeof(got));
 }
 
 char * GetBitRateStr(uint32_t id, bool xmode) {

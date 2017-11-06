@@ -9,7 +9,6 @@
 //-----------------------------------------------------------------------------
 #include "cmddata.h"
 
-
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 uint8_t g_debugMode = 0;
 size_t DemodBufferLen = 0;
@@ -252,21 +251,19 @@ void setDemodBuf(uint8_t *buf, size_t size, size_t startIdx) {
 	DemodBufferLen = size;
 }
 
-
-bool getDemodBuf(uint8_t *buff, size_t *size) {
-	if (buff == NULL) return false;
+bool getDemodBuf(uint8_t *buf, size_t *size) {
+	if (buf == NULL) return false;
 	if (size == NULL) return false;
 	if (*size == 0) return false;
 
 	*size = (*size > DemodBufferLen) ? DemodBufferLen : *size;
 
-	memcpy(buff, DemodBuffer, *size);
+	memcpy(buf, DemodBuffer, *size);
 	return true;
 }
 
 // option '1' to save DemodBuffer any other to restore
-void save_restoreDB(uint8_t saveOpt)
-{
+void save_restoreDB(uint8_t saveOpt) {
 	static uint8_t SavedDB[MAX_DEMOD_BUF_LEN];
 	static size_t SavedDBlen;
 	static bool DB_Saved = false;
@@ -286,7 +283,6 @@ void save_restoreDB(uint8_t saveOpt)
 		g_DemodClock = savedDemodClock;
 		g_DemodStartIdx = savedDemodStartIdx;
 	}
-	return;
 }								  
 
 int CmdSetDebugMode(const char *Cmd) {
@@ -1001,7 +997,6 @@ int PSKDemod(const char *Cmd, bool verbose)
 	//prime demod buffer for output
 	setDemodBuf(BitStream, BitLen, 0);
 	setClockGrid(clk, startIdx);
-		
 	return 1;
 }
 
@@ -1312,8 +1307,7 @@ uint8_t getByte(uint8_t bits_per_sample, BitstreamOut* b)
 	return val;
 }
 
-int getSamples(int n, bool silent)
-{
+int getSamples(int n, bool silent) {
 	//If we get all but the last byte in bigbuf,
 	// we don't have to worry about remaining trash
 	// in the last byte in case the bits-per-sample
@@ -1333,6 +1327,9 @@ int getSamples(int n, bool silent)
         PrintAndLog("timeout while waiting for reply.");
 		return 1;
     }
+	
+	// set signal properties low/high/mean/amplitude and isnoice detection
+	justNoise(got, n);
 	
 	uint8_t bits_per_sample = 8;
 
@@ -1466,6 +1463,9 @@ int CmdLoad(const char *Cmd)
 	setClockGrid(0,0);
 	DemodBufferLen = 0;
 	RepaintGraphWindow();
+	
+	// set signal properties low/high/mean/amplitude and isnoice detection
+	justNoise_int(GraphBuffer, GraphTraceLen);
 	return 0;
 }
 
@@ -1913,7 +1913,7 @@ static command_t CommandTable[] =
 	{"biphaserawdecode",CmdBiphaseDecodeRaw,1, "[offset] [invert<0|1>] [maxErr] -- Biphase decode bin stream in DemodBuffer (offset = 0|1 bits to shift the decode start)"},
 	{"bin2hex",         Cmdbin2hex,         1, "<digits> -- Converts binary to hexadecimal"},
 	{"bitsamples",      CmdBitsamples,      0, "Get raw samples as bitstring"},
-	{"buffclear",       CmdBuffClear,       1, "Clears bigbuff on deviceside. d graph window"},
+	{"buffclear",       CmdBuffClear,       1, "Clears bigbuff on deviceside and graph window"},
 	{"dec",             CmdDec,             1, "Decimate samples"},
 	{"detectclock",     CmdDetectClockRate, 1, "[<a|f|n|p>] Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer"},
 	{"fsktonrz",        CmdFSKToNRZ,        1, "Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk)"},

@@ -21,10 +21,21 @@
 #include "parity.h"  // for parity test
 
 //generic
+typedef struct {
+	int low;
+	int high;
+	int mean;
+	int amplitude;
+	bool isnoise;
+} signal_t;
+extern signal_t* getSignalProperties(void);
+
 extern uint32_t	compute_mean_uint(uint8_t *in, size_t N);
 extern int32_t	compute_mean_int(int *in, size_t N);
 
-extern bool		justNoise(uint8_t *bits, size_t size);
+extern bool		justNoise_int(int *bits, uint32_t size);
+extern bool		justNoise(uint8_t *bits, uint32_t size);
+
 extern size_t   addParity(uint8_t *BitSource, uint8_t *dest, uint8_t sourceLen, uint8_t pLen, uint8_t pType);
 extern int      askdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr, uint8_t amp, uint8_t askType);
 extern int      askdemod_ext(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr, uint8_t amp, uint8_t askType, int *startIdx);

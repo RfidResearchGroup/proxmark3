@@ -265,37 +265,3 @@ uint8_t fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, bool verbose, int *f
 	return 1;
 }
 
-//test samples are not just noise
-// By measuring mean and look at amplitude of signal from HIGH / LOW, 
-// we can detect noise
-bool is_justnoise(int *bits, uint32_t size) {
-	
-	if ( bits == NULL ) return true;
-	if ( size < 100 ) return true;
-	
-	//might not be high enough for noisy environments
-	#define NOICE_AMPLITUDE_THRESHOLD 10;
-
-	int32_t sum = 0, mean = 0, high = -127, low = 127;
-	for ( size_t i = 0; i < size; i++) {
-		if ( bits[i] < low ) low = bits[i];
-		if ( bits[i] > high ) high = bits[i];
-		sum += bits[i];		
-	}
-
-	mean = sum / (int)size;
-	// measure amplitude of signal
-	bool isnoise = ABS(high - mean) < NOICE_AMPLITUDE_THRESHOLD;
-	
-	if (g_debugMode == 1) 
-		PrintAndLog("DEBUG: (is_justnoise) mean %i | hi %i | low %i | IS NOISE %c", mean, high, low, isnoise?'Y':'N');
-
-	return isnoise;
-		
-	/*
-	bool isNoise = true;
-	for(int i=0; i < size && isNoise; i++)
-		isNoise = bits[i] < THRESHOLD;
-	return isNoise;
-	*/
-}
