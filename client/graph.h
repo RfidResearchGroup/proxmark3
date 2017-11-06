@@ -31,7 +31,6 @@ void setGraphBuf(uint8_t *buff, size_t size);
 void save_restoreGB(uint8_t saveOpt);
 
 bool HasGraphData();
-void DetectHighLowInGraph(int *high, int *low, bool addFuzz); 
 
 // Max graph trace len: 40000 (bigbuf) * 8 (at 1 bit per sample)
 #define MAX_GRAPH_TRACE_LEN (40000 * 8 )

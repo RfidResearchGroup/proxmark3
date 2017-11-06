@@ -93,31 +93,6 @@ bool HasGraphData(){
 	return true;	
 }
 
-// Detect high and lows in Grapbuffer.
-// Only loops the first 256 values. 
-// Optional: 12% fuzz in case highs and lows aren't clipped
-void DetectHighLowInGraph(int *high, int *low, bool addFuzz) {
-
-	uint8_t loopMax = 255;
-	if ( loopMax > GraphTraceLen)
-		loopMax = GraphTraceLen;
-  
-  	*high = -255; *low = 255;
-	
-	for (uint8_t i = 0; i < loopMax; ++i) {
-		if (GraphBuffer[i] > *high) *high = GraphBuffer[i];
-		if (GraphBuffer[i] < *low)	*low = GraphBuffer[i];
-	}
-	
-	//12% fuzz in case highs and lows aren't clipped
-	if (addFuzz) {
-		*high *= .88;
-		*low  *= .88;
-		//*high = (int)(*high * .88);		
-		//*low  = (int)(*low  * .88);
-	}
-}
-
 // Get or auto-detect ask clock rate
 int GetAskClock(const char str[], bool printAns, bool verbose) {
 	int clock;
