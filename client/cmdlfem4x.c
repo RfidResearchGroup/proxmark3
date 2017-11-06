@@ -1147,7 +1147,8 @@ int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word) 
 		return -1;
 	}
 	int testLen = (GraphTraceLen < 1000) ? GraphTraceLen : 1000;
-	if (is_justnoise(GraphBuffer, testLen)) {
+	
+	if (justNoise_int(GraphBuffer, testLen)) {
 		PrintAndLog("no tag found");
 		return -1;
 	}
