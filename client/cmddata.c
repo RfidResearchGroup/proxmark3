@@ -1318,7 +1318,7 @@ int getSamples(int n, bool silent) {
 		n = sizeof(got);
 
 	if (!silent) PrintAndLog("Reading %d bytes from device memory\n", n);
-	GetFromBigBuf(got,n,0);
+	GetFromBigBuf(got, n, 0);
 
 	if (!silent) PrintAndLog("Data fetched");
 
@@ -1327,9 +1327,6 @@ int getSamples(int n, bool silent) {
         PrintAndLog("timeout while waiting for reply.");
 		return 1;
     }
-	
-	// set signal properties low/high/mean/amplitude and isnoice detection
-	justNoise(got, n);
 	
 	uint8_t bits_per_sample = 8;
 
@@ -1357,6 +1354,9 @@ int getSamples(int n, bool silent) {
 		GraphTraceLen = n;
 	}
 
+	// set signal properties low/high/mean/amplitude and isnoice detection
+	justNoise_int(GraphBuffer, GraphTraceLen);
+	
 	setClockGrid(0, 0);
 	DemodBufferLen = 0;
 	RepaintGraphWindow();
