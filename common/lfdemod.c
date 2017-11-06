@@ -157,20 +157,12 @@ bool justNoise(uint8_t *bits, uint32_t size) {
 //get high and low values of a wave with passed in fuzz factor. also return noise test = 1 for passed or 0 for only noise
 int getHiLo(uint8_t *bits, size_t size, int *high, int *low, uint8_t fuzzHi, uint8_t fuzzLo) {
 
-	*high = 0; *low = 255;
-	
-	// get high and low thresholds 
-	for (size_t i=0; i < size; i++){
-		if (bits[i] > *high) *high = bits[i];
-		if (bits[i] < *low) *low = bits[i];
-	}
-	
 	// just noise - no super good detection. good enough
-	if (*high < FSK_PSK_THRESHOLD) return -1; 
+	if (signalprop.isnoise) return -1; 
 	
 	// add fuzz.
-	*high = ((*high-128)*fuzzHi + 12800)/100;
-	*low = ((*low-128)*fuzzLo + 12800)/100;
+	*high = ((signalprop.high - 128) * fuzzHi + 12800)/100;
+	*low = ((signalprop.low - 128) * fuzzLo + 12800)/100;
 	return 1;
 }
 
@@ -327,12 +319,12 @@ int getClosestClock(int testclk) {
 
 void getNextLow(uint8_t samples[], size_t size, int low, size_t *i) {
 	while ((samples[*i] > low) && (*i < size))
-		*i+=1;
+		*i += 1;
 }
 
 void getNextHigh(uint8_t samples[], size_t size, int high, size_t *i) {
 	while ((samples[*i] < high) && (*i < size))
-		*i+=1;
+		*i += 1;
 }
 
 // load wave counters
