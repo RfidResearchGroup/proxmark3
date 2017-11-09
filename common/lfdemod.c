@@ -208,13 +208,13 @@ size_t removeParity(uint8_t *bits, size_t startIdx, uint8_t pLen, uint8_t pType,
 // takes a array of binary values, length of bits per parity (includes parity bit),
 //   Parity Type (1 for odd; 0 for even; 2 Always 1's; 3 Always 0's), and binary Length (length to run)
 //   Make sure *dest is long enough to store original sourceLen + #_of_parities_to_be_added
-size_t addParity(uint8_t *BitSource, uint8_t *dest, uint8_t sourceLen, uint8_t pLen, uint8_t pType) {
+size_t addParity(uint8_t *src, uint8_t *dest, uint8_t sourceLen, uint8_t pLen, uint8_t pType) {
 	uint32_t parityWd = 0;
 	size_t j = 0, bitCnt = 0;
-	for (int word = 0; word < sourceLen; word+=pLen-1) {
+	for (int word = 0; word < sourceLen; word += pLen-1) {
 		for (int bit=0; bit < pLen-1; bit++){
-			parityWd = (parityWd << 1) | BitSource[word+bit];
-			dest[j++] = (BitSource[word+bit]);
+			parityWd = (parityWd << 1) | src[word+bit];
+			dest[j++] = (src[word+bit]);
 		}
 		// if parity fails then return 0
 		switch (pType) {
@@ -252,8 +252,8 @@ uint32_t bytebits_to_byteLSBF(uint8_t *src, size_t numbits) {
 
 //by marshmellow
 //search for given preamble in given BitStream and return success = TRUE or fail = FALSE and startIndex and length
-bool preambleSearch(uint8_t *BitStream, uint8_t *preamble, size_t pLen, size_t *size, size_t *startIdx){
-	return preambleSearchEx(BitStream, preamble, pLen, size, startIdx, false);
+bool preambleSearch(uint8_t *bits, uint8_t *preamble, size_t pLen, size_t *size, size_t *startIdx){
+	return preambleSearchEx(bits, preamble, pLen, size, startIdx, false);
 }
 //by marshmellow
 // search for given preamble in given BitStream and return success=1 or fail=0 and startIndex (where it was found) and length if not fineone 
@@ -320,18 +320,18 @@ int getClosestClock(int testclk) {
 	return 0;
 }
 
-void getNextLow(uint8_t samples[], size_t size, int low, size_t *i) {
+void getNextLow(uint8_t *samples, size_t size, int low, size_t *i) {
 	while ((samples[*i] > low) && (*i < size))
 		*i += 1;
 }
 
-void getNextHigh(uint8_t samples[], size_t size, int high, size_t *i) {
+void getNextHigh(uint8_t *samples, size_t size, int high, size_t *i) {
 	while ((samples[*i] < high) && (*i < size))
 		*i += 1;
 }
 
 // load wave counters
-bool loadWaveCounters(uint8_t samples[], size_t size, int lowToLowWaveLen[], int highToLowWaveLen[], int *waveCnt, int *skip, int *minClk, int *high, int *low) {
+bool loadWaveCounters(uint8_t *samples, size_t size, int lowToLowWaveLen[], int highToLowWaveLen[], int *waveCnt, int *skip, int *minClk, int *high, int *low) {
 	size_t i=0, firstLow, firstHigh;
 	size_t testsize = (size < 512) ? size : 512;
 
@@ -368,7 +368,7 @@ bool loadWaveCounters(uint8_t samples[], size_t size, int lowToLowWaveLen[], int
 	return true;
 }
 
-size_t pskFindFirstPhaseShift(uint8_t samples[], size_t size, uint8_t *curPhase, size_t waveStart, uint16_t fc, uint16_t *fullWaveLen) {
+size_t pskFindFirstPhaseShift(uint8_t *samples, size_t size, uint8_t *curPhase, size_t waveStart, uint16_t fc, uint16_t *fullWaveLen) {
 	uint16_t loopCnt = (size+3 < 4096) ? size : 4096;  //don't need to loop through entire array...
 
 	uint16_t avgWaveVal=0, lastAvgWaveVal=0;
@@ -440,7 +440,7 @@ int ManchesterEncode(uint8_t *bits, size_t size) {
 
 // by marshmellow
 // to detect a wave that has heavily clipped (clean) samples
-uint8_t DetectCleanAskWave(uint8_t dest[], size_t size, uint8_t high, uint8_t low) {
+uint8_t DetectCleanAskWave(uint8_t *dest, size_t size, uint8_t high, uint8_t low) {
 	bool allArePeaks = true;
 	uint16_t cntPeaks = 0;
 	size_t loopEnd = 512 + 160;
@@ -470,7 +470,7 @@ uint8_t DetectCleanAskWave(uint8_t dest[], size_t size, uint8_t high, uint8_t lo
 // by marshmellow
 // to help detect clocks on heavily clipped samples
 // based on count of low to low
-int DetectStrongAskClock(uint8_t dest[], size_t size, int high, int low, int *clock) {
+int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clock) {
 	size_t startwave;
 	size_t i = 100;
 	size_t minClk = 512;
@@ -508,7 +508,7 @@ int DetectStrongAskClock(uint8_t dest[], size_t size, int high, int low, int *cl
 // not perfect especially with lower clocks or VERY good antennas (heavy wave clipping)
 // maybe somehow adjust peak trimming value based on samples to fix?
 // return start index of best starting position for that clock and return clock (by reference)
-int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr) {
+int DetectASKClock(uint8_t *dest, size_t size, int *clock, int maxErr) {
 	size_t i = 1;
 	uint16_t clk[] = {255,8,16,32,40,50,64,100,128,255};
 	uint16_t clkEnd = 9;
@@ -780,7 +780,7 @@ int DetectNRZClock(uint8_t *dest, size_t size, int clock, size_t *clockStartIdx)
 //countFC is to detect the field clock lengths.
 //counts and returns the 2 most common wave lengths
 //mainly used for FSK field clock detection
-uint16_t countFC(uint8_t *BitStream, size_t size, uint8_t fskAdj) {
+uint16_t countFC(uint8_t *bits, size_t size, uint8_t fskAdj) {
 	uint8_t fcLens[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 	uint16_t fcCnts[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 	uint8_t fcLensFnd = 0;
@@ -791,11 +791,11 @@ uint16_t countFC(uint8_t *BitStream, size_t size, uint8_t fskAdj) {
 
 	// prime i to first up transition
 	for (i = 160; i < size-20; i++)
-		if (BitStream[i] > BitStream[i-1] && BitStream[i] >= BitStream[i+1])
+		if (bits[i] > bits[i-1] && bits[i] >= bits[i+1])
 			break;
 
 	for (; i < size-20; i++){
-		if (BitStream[i] > BitStream[i-1] && BitStream[i] >= BitStream[i+1]){
+		if (bits[i] > bits[i-1] && bits[i] >= bits[i+1]){
 			// new up transition
 			fcCounter++;
 			if (fskAdj){
@@ -1101,7 +1101,7 @@ bool findST(int *stStopLoc, int *stStartIdx, int lowToLowWaveLen[], int highToLo
 }
 //by marshmellow
 //attempt to identify a Sequence Terminator in ASK modulated raw wave
-bool DetectST(uint8_t buffer[], size_t *size, int *foundclock, size_t *ststart, size_t *stend) {
+bool DetectST(uint8_t *buffer, size_t *size, int *foundclock, size_t *ststart, size_t *stend) {
 	size_t bufsize = *size;
 	//need to loop through all samples and identify our clock, look for the ST pattern
 	int clk = 0; 
@@ -1530,7 +1530,7 @@ int nrzRawDemod(uint8_t *dest, size_t *size, int *clk, int *invert, int *startId
 }
 
 //translate wave to 11111100000 (1 for each short wave [higher freq] 0 for each long wave [lower freq])
-size_t fsk_wave_demod(uint8_t * dest, size_t size, uint8_t fchigh, uint8_t fclow, int *startIdx) {
+size_t fsk_wave_demod(uint8_t *dest, size_t size, uint8_t fchigh, uint8_t fclow, int *startIdx) {
 	
 	if ( size < 1024 ) return 0; // not enough samples
 	
