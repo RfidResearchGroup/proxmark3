@@ -77,8 +77,9 @@ size_t getFromGraphBuf(uint8_t *buf) {
 	if (buf == NULL ) return 0;
 	uint32_t i;
 	for (i=0; i < GraphTraceLen; ++i){
-		if (GraphBuffer[i] > 127) GraphBuffer[i] = 127; //trim
-		if (GraphBuffer[i] < -127) GraphBuffer[i] = -127; //trim
+		//trim
+		if (GraphBuffer[i] > 127) GraphBuffer[i] = 127;
+		if (GraphBuffer[i] < -127) GraphBuffer[i] = -127;
 		buf[i] = (uint8_t)(GraphBuffer[i] + 128);
 	}
 	return i;
@@ -94,19 +95,17 @@ bool HasGraphData(){
 }
 
 // Get or auto-detect ask clock rate
-int GetAskClock(const char str[], bool printAns, bool verbose) {
-	int clock;
-	sscanf(str, "%i", &clock);
-	if (!strcmp(str, ""))
-		clock = 0;
+int GetAskClock(const char *str, bool printAns) {
 
-	if (clock != 0) return clock;
+	int clock = param_get32ex(str, 0, 0, 10);
+	if (clock > 0) 
+		return clock;
 	
 	// Auto-detect clock
 	uint8_t grph[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t size = getFromGraphBuf(grph);
 	if (size == 0) {
-		if (verbose)
+		if (g_debugMode)
 			PrintAndLog("Failed to copy from graphbuffer");
 		return -1;
 	}
@@ -119,18 +118,18 @@ int GetAskClock(const char str[], bool printAns, bool verbose) {
 	}
 	setClockGrid(clock, start);
 	// Only print this message if we're not looping something
-	if (printAns || g_debugMode) {
+	if (printAns || g_debugMode)
 		PrintAndLog("Auto-detected clock rate: %d, Best Starting Position: %d", clock, start);
-	}
+
 	return clock;
 }
 
-uint8_t GetPskCarrier(const char str[], bool printAns, bool verbose) {
+uint8_t GetPskCarrier(const char *str, bool printAns) {
 	uint8_t carrier = 0;
 	uint8_t grph[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t size = getFromGraphBuf(grph);
 	if ( size == 0 ) {
-		if (verbose) 
+		if (g_debugMode) 
 			PrintAndLog("Failed to copy from graphbuffer");
 		return 0;
 	}
@@ -144,18 +143,16 @@ uint8_t GetPskCarrier(const char str[], bool printAns, bool verbose) {
 	return carrier;
 }
 
-int GetPskClock(const char str[], bool printAns, bool verbose) {
-	int clock;
-	sscanf(str, "%i", &clock);
-	if (!strcmp(str, "")) 
-		clock = 0;
-
-	if (clock != 0) return clock;
+int GetPskClock(const char* str, bool printAns) {
+	int clock = param_get32ex(str, 0, 0, 10);
+	if (clock != 0) 
+		return clock;
+	
 	// Auto-detect clock
 	uint8_t grph[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t size = getFromGraphBuf(grph);
 	if ( size == 0 ) {
-		if (verbose) PrintAndLog("Failed to copy from graphbuffer");
+		if (g_debugMode) PrintAndLog("Failed to copy from graphbuffer");
 		return -1;
 	}
 	size_t firstPhaseShiftLoc = 0;
@@ -163,25 +160,22 @@ int GetPskClock(const char str[], bool printAns, bool verbose) {
 	clock = DetectPSKClock(grph, size, 0, &firstPhaseShiftLoc, &curPhase, &fc);
 	setClockGrid(clock, firstPhaseShiftLoc);
 	// Only print this message if we're not looping something
-	if (printAns){
+	if (printAns)
 		PrintAndLog("Auto-detected clock rate: %d", clock);
-	}
 	return clock;
 }
 
-uint8_t GetNrzClock(const char str[], bool printAns, bool verbose) {
-	int clock;
-	sscanf(str, "%i", &clock);
-	if (!strcmp(str, ""))
-		clock = 0;
+int GetNrzClock(const char* str, bool printAns) {
 
+	int clock = param_get32ex(str, 0, 0, 10);
 	if (clock != 0) 
 		return clock;
+	
 	// Auto-detect clock
 	uint8_t grph[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t size = getFromGraphBuf(grph);
 	if ( size == 0 ) {
-		if (verbose) 
+		if (g_debugMode) 
 			PrintAndLog("Failed to copy from graphbuffer");
 		return -1;
 	}
@@ -189,44 +183,44 @@ uint8_t GetNrzClock(const char str[], bool printAns, bool verbose) {
 	clock = DetectNRZClock(grph, size, 0, &clkStartIdx);
 	setClockGrid(clock, clkStartIdx);
 	// Only print this message if we're not looping something
-	if (printAns){
+	if (printAns)
 		PrintAndLog("Auto-detected clock rate: %d", clock);
-	}
 	return clock;
 }
 //by marshmellow
 //attempt to detect the field clock and bit clock for FSK
-uint8_t GetFskClock(const char str[], bool printAns, bool verbose) {
-	int clock;
-	sscanf(str, "%i", &clock);
-	if (!strcmp(str, ""))
-		clock = 0;
-	if (clock != 0) return (uint8_t)clock;
+int GetFskClock(const char* str, bool printAns) {
 
+	int clock = param_get32ex(str, 0, 0, 10);
+	if (clock != 0) 
+		return clock;
 
-	uint8_t fc1=0, fc2=0, rf1=0;
+	uint8_t fc1 = 0, fc2 = 0, rf1 = 0;
 	int firstClockEdge = 0;
-	uint8_t ans = fskClocks(&fc1, &fc2, &rf1, verbose, &firstClockEdge);
-	if (ans == 0) return 0;
+	int ans = fskClocks(&fc1, &fc2, &rf1, &firstClockEdge);
+	if (ans == 0) 
+		return 0;
+	
 	if ((fc1==10 && fc2==8) || (fc1==8 && fc2==5)){
 		if (printAns) PrintAndLog("Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d", fc1, fc2, rf1);
 		setClockGrid(rf1, firstClockEdge);
 		return rf1;
 	}
-	if (verbose){
+	if (g_debugMode) {
 		PrintAndLog("DEBUG: unknown fsk field clock detected");
 		PrintAndLog("Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d", fc1, fc2, rf1);
 	}
 	return 0;
 }
-uint8_t fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, bool verbose, int *firstClockEdge) {
+int fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, int *firstClockEdge) {
 	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t size = getFromGraphBuf(bits);
-	if (size == 0) return 0;
+	if (size == 0) 
+		return 0;
 	
 	uint16_t ans = countFC(bits, size, 1); 
 	if (ans == 0) {
-		if (verbose || g_debugMode) PrintAndLog("DEBUG: No data found");
+		if (g_debugMode) PrintAndLog("DEBUG: No data found");
 		return 0;
 	}
 	
@@ -235,7 +229,7 @@ uint8_t fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, bool verbose, int *f
 	//int firstClockEdge = 0;
 	*rf1 = detectFSKClk(bits, size, *fc1, *fc2, firstClockEdge);
 	if (*rf1 == 0) {
-		if (verbose || g_debugMode) PrintAndLog("DEBUG: Clock detect error");
+		if (g_debugMode) PrintAndLog("DEBUG: Clock detect error");
 		return 0;
 	}
 	return 1;

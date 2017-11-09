@@ -504,7 +504,7 @@ int CmdLFfskSim(const char *Cmd) {
 	int firstClockEdge = 0;
 	if (dataLen == 0){ //using DemodBuffer 
 		if (clk == 0 || fcHigh == 0 || fcLow == 0){ //manual settings must set them all
-			uint8_t ans = fskClocks(&fcHigh, &fcLow, &clk, 0, &firstClockEdge);
+			uint8_t ans = fskClocks(&fcHigh, &fcLow, &clk, &firstClockEdge);
 			if (ans==0){
 				if (!fcHigh) fcHigh = 10;
 				if (!fcLow) fcLow = 8;
@@ -604,7 +604,7 @@ int CmdLFaskSim(const char *Cmd) {
 	
 	if (dataLen == 0){ //using DemodBuffer
 		if (clk == 0) 
-			clk = GetAskClock("0", false, false);
+			clk = GetAskClock("0", false);
 	} else {
 		setDemodBuf(data, dataLen, 0);
 	}
@@ -700,10 +700,10 @@ int CmdLFpskSim(const char *Cmd) {
 	if (dataLen == 0){ //using DemodBuffer
 		PrintAndLog("Getting Clocks");
 		
-		if (clk==0) clk = GetPskClock("", false, false);
+		if (clk==0) clk = GetPskClock("", false);
 		PrintAndLog("clk: %d",clk);
 		
-		if (!carrier) carrier = GetPskCarrier("", false, false); 
+		if (!carrier) carrier = GetPskCarrier("", false); 
 		PrintAndLog("carrier: %d", carrier);
 		
 	} else {
@@ -943,8 +943,8 @@ int CmdLFfind(const char *Cmd) {
 		}
 
 		 //fsk
-		if ( GetFskClock("",false,false) ) {
-			if ( FSKrawDemod("",true) ) { 
+		if ( GetFskClock("", false) ) {
+			if ( FSKrawDemod("", true) ) { 
 				PrintAndLog("\nUnknown FSK Modulated Tag Found!"); goto out;
 			}
 		}

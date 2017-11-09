@@ -1027,7 +1027,7 @@ bool doPreambleSearch(size_t *startIdx){
 
 bool detectFSK(){
 	// detect fsk clock
-	if (!GetFskClock("", false, false)) {
+	if (!GetFskClock("", false)) {
 		if (g_debugMode) PrintAndLog("DEBUG: Error - EM: FSK clock failed");
 		return false;
 	}
@@ -1041,7 +1041,7 @@ bool detectFSK(){
 }
 // PSK clocks should be easy to detect ( but difficult to demod a non-repeating pattern... )
 bool detectPSK(){	
-	int	ans = GetPskClock("", false, false);
+	int	ans = GetPskClock("", false);
 	if (ans <= 0) {
 		if (g_debugMode) PrintAndLog("DEBUG: Error - EM: PSK clock failed");
 		return false;

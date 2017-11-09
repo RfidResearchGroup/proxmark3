@@ -511,7 +511,7 @@ bool tryDetectModulation(){
 	int bitRate=0;
 	uint8_t fc1 = 0, fc2 = 0, ans = 0;
 	int clk = 0, firstClockEdge = 0;
-	ans = fskClocks(&fc1, &fc2, (uint8_t *)&clk, false, &firstClockEdge);
+	ans = fskClocks(&fc1, &fc2, (uint8_t *)&clk, &firstClockEdge);
 	if (ans && ((fc1==10 && fc2==8) || (fc1==8 && fc2==5))) {
 		if ( FSKrawDemod("0 0", false) && test(DEMOD_FSK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)){
 			tests[hits].modulation = DEMOD_FSK;
@@ -538,7 +538,7 @@ bool tryDetectModulation(){
 			++hits;
 		}
 	} else {
-		clk = GetAskClock("", false, false);
+		clk = GetAskClock("", false);
 		if (clk>0) {
 			tests[hits].ST = true;
 			// "0 0 1 " == clock auto, invert false, maxError 1.
@@ -583,7 +583,7 @@ bool tryDetectModulation(){
 				++hits;
 			}
 		}
-		clk = GetNrzClock("", false, false);
+		clk = GetNrzClock("", false);
 		if (clk>8) { //clock of rf/8 is likely a false positive, so don't use it.
 			if ( NRZrawDemod("0 0 1", false)  && test(DEMOD_NRZ, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
 				tests[hits].modulation = DEMOD_NRZ;
@@ -604,7 +604,7 @@ bool tryDetectModulation(){
 			}
 		}
 		
-		clk = GetPskClock("", false, false);
+		clk = GetPskClock("", false);
 		if (clk>0) {
 			// allow undo
 			save_restoreGB(GRAPH_SAVE);
@@ -1753,7 +1753,7 @@ bool tryDetectP1(bool getData) {
 	}
 
 	// try fsk clock detect. if successful it cannot be any other type of modulation...  (in theory...)
-	ans = fskClocks(&fc1, &fc2, (uint8_t *)&clk, false, &firstClockEdge);
+	ans = fskClocks(&fc1, &fc2, (uint8_t *)&clk, &firstClockEdge);
 	if (ans && ((fc1==10 && fc2==8) || (fc1==8 && fc2==5))) {
 		if ( FSKrawDemod("0 0", false) && 
 			  preambleSearchEx(DemodBuffer, preamble,sizeof(preamble), &DemodBufferLen, &startIdx, false) && 
@@ -1769,7 +1769,7 @@ bool tryDetectP1(bool getData) {
 	}
 
 	// try psk clock detect. if successful it cannot be any other type of modulation... (in theory...)
-	clk = GetPskClock("", false, false);
+	clk = GetPskClock("", false);
 	if (clk > 0) {
 		// allow undo
 		// save_restoreGB(1);
@@ -1803,7 +1803,7 @@ bool tryDetectP1(bool getData) {
 	}
 
 	// try ask clock detect.  it could be another type even if successful.
-	clk = GetAskClock("", false, false);
+	clk = GetAskClock("", false);
 	if (clk>0) {
 		if ( ASKDemod_ext("0 0 1", false, false, 1, &st) &&
 			  preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) && 
@@ -1829,7 +1829,7 @@ bool tryDetectP1(bool getData) {
 	}
 
 	// try NRZ clock detect.  it could be another type even if successful.
-	clk = GetNrzClock("", false, false); //has the most false positives :(
+	clk = GetNrzClock("", false); //has the most false positives :(
 	if (clk > 0) {
 		if ( NRZrawDemod("0 0 1", false)  &&
 				preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) && 

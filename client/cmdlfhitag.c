@@ -201,12 +201,12 @@ int CmdLFHitagReader(const char *Cmd) {
 	
 	switch (htf) {
 		case 01: { //RHTSF_CHALLENGE
-			c = (UsbCommand){ CMD_READ_HITAG_S };
+			c.cmd = CMD_READ_HITAG_S;
 			num_to_bytes(param_get32ex(Cmd, 1, 0, 16), 4, htd->auth.NrAr);
 			num_to_bytes(param_get32ex(Cmd, 2, 0, 16), 4, htd->auth.NrAr+4);
 		} break;
 		case 02: { //RHTSF_KEY
-			c = (UsbCommand){ CMD_READ_HITAG_S };
+			c.cmd = CMD_READ_HITAG_S;
 			num_to_bytes(param_get64ex(Cmd, 1, 0, 16), 6, htd->crypto.key);
 		} break;
 		case RHT2F_PASSWORD: {

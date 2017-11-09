@@ -12,8 +12,8 @@
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 uint8_t g_debugMode = 0;
 size_t DemodBufferLen = 0;
-int g_DemodStartIdx=0;
-int g_DemodClock=0;
+int g_DemodStartIdx = 0;
+int g_DemodClock = 0;
 
 static int CmdHelp(const char *Cmd);
 
@@ -26,7 +26,6 @@ int usage_data_printdemodbuf(void){
 	PrintAndLog("       l <length> enter length to print in # of bits or hex characters respectively");
 	return 0;	
 }
-
 int usage_data_manrawdecode(void){
 	PrintAndLog("Usage:  data manrawdecode [invert] [maxErr]");
 	PrintAndLog("     Takes 10 and 01 and converts to 0 and 1 respectively");
@@ -225,7 +224,6 @@ int usage_data_buffclear(void){
 	PrintAndLog("       h              This help");
 	return 0;
 }
-
 int usage_data_fsktonrz() {
 		PrintAndLog("Usage: data fsktonrz c <clock> l <fc_low> f <fc_high>");
 		PrintAndLog("Options:        ");
@@ -235,7 +233,6 @@ int usage_data_fsktonrz() {
 		PrintAndLog("       f <fc_high>  enter a field clock (omit to autodetect)");
 		return 0;	
 }
-
 
 //set the demod buffer with given array of binary (one bit per byte)
 //by marshmellow
@@ -260,6 +257,36 @@ bool getDemodBuf(uint8_t *buf, size_t *size) {
 
 	memcpy(buf, DemodBuffer, *size);
 	return true;
+}
+
+// include <math.h>
+// Root mean square
+double rms(double *v, int n) {
+	double sum = 0.0;
+	for(int i = 0; i < n; i++)
+		sum += v[i] * v[i];
+	return sqrt(sum / n);
+}
+int cmp_int( const void *a, const void *b) {
+    if (*(const int *)a < *(const int *)b)
+		return -1;
+    else 
+		return *(const int *)a > *(const int *)b;
+}
+int cmp_uint8( const void *a, const void *b) {
+    if (*(const uint8_t *)a < *(const uint8_t *)b)
+		return -1;
+    else 
+		return *(const uint8_t *)a > *(const uint8_t *)b;
+}
+// Median of a array of values
+double median_int( int *src, size_t size ) {
+    qsort( src, size, sizeof(int), cmp_int);
+    return 0.5 * ( src[size/2] + src[(size-1)/2]);
+}
+double median_uint8( uint8_t *src, size_t size ) {
+    qsort( src, size, sizeof(uint8_t), cmp_uint8);
+    return 0.5 * ( src[size/2] + src[(size-1)/2]);
 }
 
 // option '1' to save DemodBuffer any other to restore
@@ -843,19 +870,19 @@ int CmdDetectClockRate(const char *Cmd)
 	switch ( cmdp ) {
 		case 'a' :
 		case 'A' :
-			clock = GetAskClock(Cmd+1, true, false);
+			clock = GetAskClock(Cmd+1, true);
 			break;
 		case 'f' :
 		case 'F' :
-			clock = GetFskClock("", true, false);
+			clock = GetFskClock("", true);
 			break;
 		case 'n' :
 		case 'N' :
-			clock = GetNrzClock("", true, false);
+			clock = GetNrzClock("", true);
 			break;
 		case 'p' :
 		case 'P' :
-			clock = GetPskClock("", true, false);
+			clock = GetPskClock("", true);
 			break;
 		default :
 			PrintAndLog ("Please specify a valid modulation to detect the clock of - see option h for help");
@@ -1791,7 +1818,7 @@ int FSKToNRZ(int *data, int *dataLen, int clk, int LowToneFC, int HighToneFC) {
 	uint8_t ans=0;
 	if (clk == 0 || LowToneFC == 0 || HighToneFC == 0) {
 		int firstClockEdge=0;
-		ans = fskClocks((uint8_t *) &LowToneFC, (uint8_t *) &HighToneFC, (uint8_t *) &clk, false, &firstClockEdge);
+		ans = fskClocks((uint8_t *) &LowToneFC, (uint8_t *) &HighToneFC, (uint8_t *) &clk, &firstClockEdge);
 		if (g_debugMode	> 1) {
 			PrintAndLog	("DEBUG FSKtoNRZ: detected clocks: fc_low %i, fc_high %i, clk %i, firstClockEdge %i, ans %u", LowToneFC, HighToneFC, clk, firstClockEdge, ans);
 		}

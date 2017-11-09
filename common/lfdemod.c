@@ -163,6 +163,9 @@ int getHiLo(uint8_t *bits, size_t size, int *high, int *low, uint8_t fuzzHi, uin
 	// add fuzz.
 	*high = ((signalprop.high - 128) * fuzzHi + 12800)/100;
 	*low = ((signalprop.low - 128) * fuzzLo + 12800)/100;
+	
+	if (g_debugMode == 1) 
+		prnt("getHiLo fuzzed: High %d | Low %d", *high, *low);
 	return 1;
 }
 
@@ -533,7 +536,8 @@ int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr) {
 		}
 	}
 	// test clock if given as cmd parameter
-	clk[0] = *clock;
+	if ( *clock > 0 )
+		clk[0] = *clock;
 	
 	uint16_t ii;
 	uint8_t clkCnt, tol = 0;
@@ -965,7 +969,8 @@ int DetectPSKClock(uint8_t *dest, size_t size, int clock, size_t *firstPhaseShif
 //detects the bit clock for FSK given the high and low Field Clocks
 uint8_t detectFSKClk(uint8_t *bits, size_t size, uint8_t fcHigh, uint8_t fcLow, int *firstClockEdge) {
 
-	if (size == 0) return 0;
+	if (size == 0) 
+		return 0;
 	
 	uint8_t clk[] = {8,16,32,40,50,64,100,128,0};
 	uint16_t rfLens[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
@@ -1038,13 +1043,15 @@ uint8_t detectFSKClk(uint8_t *bits, size_t size, uint8_t fcHigh, uint8_t fcLow, 
 		} else if(rfCnts[i] > rfCnts[rfHighest3]){
 			rfHighest3 = i;
 		}
-		if (g_debugMode==2) prnt("DEBUG FSK: RF %d, cnts %d", rfLens[i], rfCnts[i]);
+		if (g_debugMode==2) 
+			prnt("DEBUG FSK: RF %d, cnts %d", rfLens[i], rfCnts[i]);
 	}  
 	// set allowed clock remainder tolerance to be 1 large field clock length+1 
 	//   we could have mistakenly made a 9 a 10 instead of an 8 or visa versa so rfLens could be 1 FC off  
 	uint8_t tol1 = fcHigh+1; 
 	
-	if (g_debugMode==2) prnt("DEBUG FSK: most counted rf values: 1 %d, 2 %d, 3 %d", rfLens[rfHighest], rfLens[rfHighest2], rfLens[rfHighest3]);
+	if (g_debugMode==2) 
+		prnt("DEBUG FSK: most counted rf values: 1 %d, 2 %d, 3 %d", rfLens[rfHighest], rfLens[rfHighest2], rfLens[rfHighest3]);
 
 	// loop to find the highest clock that has a remainder less than the tolerance
 	//   compare samples counted divided by
@@ -1054,7 +1061,8 @@ uint8_t detectFSKClk(uint8_t *bits, size_t size, uint8_t fcHigh, uint8_t fcLow, 
 		if (rfLens[rfHighest] % clk[ii] < tol1 || rfLens[rfHighest] % clk[ii] > clk[ii]-tol1){
 			if (rfLens[rfHighest2] % clk[ii] < tol1 || rfLens[rfHighest2] % clk[ii] > clk[ii]-tol1){
 				if (rfLens[rfHighest3] % clk[ii] < tol1 || rfLens[rfHighest3] % clk[ii] > clk[ii]-tol1){
-					if (g_debugMode==2) prnt("DEBUG FSK: clk %d divides into the 3 most rf values within tolerance",clk[ii]);
+					if (g_debugMode==2) 
+						prnt("DEBUG FSK: clk %d divides into the 3 most rf values within tolerance",clk[ii]);
 					break;
 				}
 			}
@@ -1403,7 +1411,7 @@ int askdemod_ext(uint8_t *bits, size_t *size, int *clk, int *invert, int maxErr,
 	//start pos from detect ask clock is 1/2 clock offset
 	// NOTE: can be negative (demod assumes rest of wave was there)
 	*startIdx = start - (*clk/2); 
-	uint16_t initLoopMax = 1500;
+	uint16_t initLoopMax = 1024;
 	if (initLoopMax > *size) initLoopMax = *size;
 	// Detect high and lows
 	//25% clip in case highs and lows aren't clipped [marshmellow]
