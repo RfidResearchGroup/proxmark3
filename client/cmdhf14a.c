@@ -130,7 +130,7 @@ int usage_hf_14a_sim(void) {
 //	PrintAndLog("          hf 14a sim t 1 u 11223445566778899AA\n");
 	return 0;
 }
-int usage_hf_14a_sniff(void){
+int usage_hf_14a_sniff(void) {
 	PrintAndLog("It get data from the field and saves it into command buffer.");
 	PrintAndLog("Buffer accessible from command 'hf list 14a'");
 	PrintAndLog("Usage:  hf 14a sniff [c][r]");
@@ -139,7 +139,7 @@ int usage_hf_14a_sniff(void){
 	PrintAndLog("sample: hf 14a sniff c r");
 	return 0;
 }
-int usage_hf_14a_raw(void){
+int usage_hf_14a_raw(void) {
 	PrintAndLog("Usage: hf 14a raw [-h] [-r] [-c] [-p] [-a] [-T] [-t] <milliseconds> [-b] <number of bits>  <0A 0B 0C ... hex>");
 	PrintAndLog("       -h    this help");
 	PrintAndLog("       -r    do not read response");
@@ -153,6 +153,20 @@ int usage_hf_14a_raw(void){
 	PrintAndLog("       -3    ISO14443-3 select only (skip RATS)");
 	return 0;
 }
+int usage_hf_14a_reader(void) {
+	PrintAndLog("Usage: hf 14a reader [k|s|x] [3]");
+	PrintAndLog("       k    keep the field active after command executed");
+	PrintAndLog("       s    silent (no messages)");
+	PrintAndLog("       x    just drop the signal field");
+	PrintAndLog("       3    ISO14443-3 select only (skip RATS)");
+	return 0;
+}
+int usage_hf_14a_info(void){
+	PrintAndLog("This command makes more extensive tests against a ISO14443a tag in order to collect information");
+	PrintAndLog("Usage: hf 14a info [h|s]");
+	PrintAndLog("       s    silent (no messages)");
+	return 0;
+}
 
 int CmdHF14AList(const char *Cmd) {
 	//PrintAndLog("Deprecated command, use 'hf list 14a' instead");
@@ -161,15 +175,54 @@ int CmdHF14AList(const char *Cmd) {
 }
 
 int CmdHF14AReader(const char *Cmd) {
-	bool silent = (Cmd[0] == 's' || Cmd[0] ==  'S');
-	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}};
+	bool silent = false;
+
+	uint32_t cm = ISO14A_CONNECT;
+	bool disconnectAfter = true;
+	
+	int cmdp = 0;
+	while(param_getchar(Cmd, cmdp) != 0x00) {
+		switch(param_getchar(Cmd, cmdp)) {
+		case 'h':
+		case 'H':
+			return usage_hf_14a_reader();
+		case '3':
+			cm |= ISO14A_NO_RATS; 
+			break;
+		case 'k':
+		case 'K':
+			disconnectAfter = false;
+			break;
+		case 's':
+		case 'S':	
+		      silent = true;
+			  break;
+		case 'x':
+		case 'X':
+			cm = cm - ISO14A_CONNECT;
+			break;
+		default:
+			PrintAndLog("Unknown command.");
+			return 1;
+		}	
+		
+		cmdp++;
+	}
+
+	if (!disconnectAfter)
+		cm |= ISO14A_NO_DISCONNECT; 
+	
+	UsbCommand c = {CMD_READER_ISO_14443a, {cm, 0, 0}};
+	
 	clearCommandBuffer();
 	SendCommand(&c);
+
+	if (ISO14A_CONNECT & cm) {
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
 		if (!silent) PrintAndLog("iso14443a card select failed");
-		ul_switch_off_field();
-		return 0;
+		DropField();
+		return 1;
 	}
 	
 	iso14a_card_select_t card;
@@ -185,15 +238,15 @@ int CmdHF14AReader(const char *Cmd) {
 	
 	if (select_status == 0) {
 		if (!silent) PrintAndLog("iso14443a card select failed");
-		ul_switch_off_field();
-		return 0;
+		DropField();
+		return 1;
 	}
 
 	if (select_status == 3) {
 		PrintAndLog("Card doesn't support standard iso14443-3 anticollision");
 		PrintAndLog("ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
-		ul_switch_off_field();
-		return 0;
+		DropField();
+		return 1;
 	}
 
 	PrintAndLog(" UID : %s", sprint_hex(card.uid, card.uidlen));
@@ -203,12 +256,22 @@ int CmdHF14AReader(const char *Cmd) {
 	if(card.ats_len >= 3) {			// a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
 		PrintAndLog(" ATS : %s", sprint_hex(card.ats, card.ats_len));
 	}
-	PrintAndLog("For more info execute command `hf 14a info`");
+		if (!disconnectAfter) {
+			if (!silent) PrintAndLog("Card is selected. You can now start sending commands");
+		}
+	}
+
+	if (disconnectAfter) {
+		if (!silent)  PrintAndLog("Field dropped.");
+	}
 
 	return 0;
 }
 
 int CmdHF14AInfo(const char *Cmd) {
+	
+	if (Cmd[0] == 'h' || Cmd[0] ==  'H') return usage_hf_14a_info();
+	
 	bool silent = (Cmd[0] == 's' || Cmd[0] ==  'S');
 	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}};
 	clearCommandBuffer();
@@ -216,7 +279,7 @@ int CmdHF14AInfo(const char *Cmd) {
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
 		if (!silent) PrintAndLog("iso14443a card select failed");
-		ul_switch_off_field();
+		DropField();
 		return 0;
 	}
 	
@@ -233,14 +296,14 @@ int CmdHF14AInfo(const char *Cmd) {
 	
 	if (select_status == 0) {
 		if (!silent) PrintAndLog("iso14443a card select failed");
-		ul_switch_off_field();
+		DropField();
 		return 0;
 	}
 
 	if (select_status == 3) {
 		PrintAndLog("Card doesn't support standard iso14443-3 anticollision");
 		PrintAndLog("ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
-		ul_switch_off_field();
+		DropField();
 		return 0;
 	}
 
@@ -254,7 +317,7 @@ int CmdHF14AInfo(const char *Cmd) {
 			isMifareClassic = false;
 			
 			// ******** is card of the MFU type (UL/ULC/NTAG/ etc etc)
-			ul_switch_off_field();
+			DropField();
 			
 			uint32_t tagT = GetHF14AMfU_Type();
 			if (tagT != UL_ERROR)
@@ -276,7 +339,7 @@ int CmdHF14AInfo(const char *Cmd) {
 			select_status = resp.arg[0];		// 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS
 			
 			if(select_status == 0) {
-				ul_switch_off_field();
+				DropField();
 				return 0;
 			}
 			break;
