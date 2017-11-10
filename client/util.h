@@ -114,6 +114,7 @@ extern void SwapEndian64ex(const uint8_t *src, const size_t len, const uint8_t b
 
 extern int param_getlength(const char *line, int paramnum);
 extern char param_getchar(const char *line, int paramnum);
+extern char param_getchar_indx(const char *line, int indx, int paramnum);
 extern int param_getptr(const char *line, int *bg, int *en, int paramnum);
 extern uint8_t param_get8(const char *line, int paramnum);
 extern uint8_t param_get8ex(const char *line, int paramnum, int deflt, int base);
@@ -123,6 +124,7 @@ extern uint8_t param_getdec(const char *line, int paramnum, uint8_t *destination
 extern uint8_t param_isdec(const char *line, int paramnum);
 extern int param_gethex(const char *line, int paramnum, uint8_t * data, int hexcnt);
 extern int param_gethex_ex(const char *line, int paramnum, uint8_t * data, int *hexcnt);
+extern int param_gethex_to_eol(const char *line, int paramnum, uint8_t * data, int maxdatalen, int *datalen);
 extern int param_getstr(const char *line, int paramnum, char * str);
 
 extern int hextobinarray( char *target,  char *source);

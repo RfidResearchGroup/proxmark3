@@ -30,6 +30,14 @@
 #include "cmdhfmfu.h"
 #include "cmdhf.h"		// list cmd
 #include "mifarehost.h"
+#include "emv/apduinfo.h"
+#include "emv/emvcore.h"						  
+
+// structure and database for uid -> tagtype lookups 
+typedef struct { 
+	uint8_t uid;
+	char* desc;
+} manufactureName; 
 
 extern int CmdHF14A(const char *Cmd);
 extern int CmdHF14AList(const char *Cmd);
@@ -41,6 +49,9 @@ extern int CmdHF14ACmdRaw(const char *Cmd);
 extern int CmdHF14ACUIDs(const char *Cmd);
 
 extern char* getTagInfo(uint8_t uid);
+extern void DropField();
+extern int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int *dataoutlen);
+											
 
 extern int usage_hf_14a_sim(void);
 extern int usage_hf_14a_sniff(void);

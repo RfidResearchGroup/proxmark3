@@ -8,6 +8,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added to proxmark command line parameters `c` and `l` - execute command and lua script from command line (Merlok)
  - Added to proxmark ability to execute commands from stdin (pipe) (Merlok)
  - Added new standalone mode "HF Mifare ultra fast sniff/sim/clone - aka VIGIKPWN"  (@cjbrigato)
+- Added to `hf 14a apdu` - exchange apdu via iso1443-4 (Merlok)
+- Added to `hf 14a apdu` - apdu and tlv results parser (Merlok)
 
 ### Fixed
 - Changed start sequence in Qt mode (fix: short commands hangs main Qt thread) (Merlok)

@@ -12,13 +12,7 @@
 #include "cmdhf14a.h"
 
 static int CmdHelp(const char *Cmd);
-static void waitCmd(uint8_t iLen);
-
-// structure and database for uid -> tagtype lookups 
-typedef struct { 
-	uint8_t uid;
-	char* desc;
-} manufactureName; 
+static int waitCmd(uint8_t iLen);
 
 const manufactureName manufactureMapping[] = {
 	// ID,  "Vendor Country"
@@ -93,7 +87,6 @@ const manufactureName manufactureMapping[] = {
 	{ 0x56, "Sensible Object. UK" },
 	{ 0x00, "no tag-info available" } // must be the last entry
 };
-
 
 // get a product description based on the UID
 //		uid[8] 	tag uid
@@ -593,6 +586,160 @@ int CmdHF14ASniff(const char *Cmd) {
 	return 0;
 }
 
+void DropField() {
+	UsbCommand c = {CMD_READER_ISO_14443a, {0, 0, 0}}; 
+	clearCommandBuffer();
+	SendCommand(&c);
+}
+
+int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int *dataoutlen) {
+	uint16_t cmdc = 0;
+	
+	if (activateField) {
+		cmdc |= ISO14A_CONNECT;
+	}
+	if (leaveSignalON)
+		cmdc |= ISO14A_NO_DISCONNECT;
+
+	// "Command APDU" length should be 5+255+1, but javacard's APDU buffer might be smaller - 133 bytes
+	// https://stackoverflow.com/questions/32994936/safe-max-java-card-apdu-data-command-and-respond-size
+	// here length USB_CMD_DATA_SIZE=512
+	// timeout timeout14a * 1.06 / 100, true, size, &keyBlock[6 * c], e_sector); // timeout is (ms * 106)/10 or us*0.0106
+	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_APDU | ISO14A_SET_TIMEOUT | cmdc, (datainlen & 0xFFFF), 1000 * 1000 * 1.06 / 100}}; 
+	memcpy(c.d.asBytes, datain, datainlen);
+	SendCommand(&c);
+	
+    uint8_t *recv;
+    UsbCommand resp;
+
+	if (activateField) {
+		if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+			PrintAndLog("APDU ERROR: Proxmark connection timeout.");
+			return 1;
+		}
+		if (resp.arg[0] != 1) {
+			PrintAndLog("APDU ERROR: Proxmark error %d.", resp.arg[0]);
+			return 1;
+		}
+	}
+
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+        recv = resp.d.asBytes;
+        int iLen = resp.arg[0];
+		
+		*dataoutlen = iLen - 2;
+		if (*dataoutlen < 0)
+			*dataoutlen = 0;
+		memcpy(dataout, recv, *dataoutlen);
+		
+        if(!iLen) {
+			PrintAndLog("APDU ERROR: No APDU response.");
+            return 1;
+		}
+
+		// check block TODO
+		if (iLen == -2) {
+			PrintAndLog("APDU ERROR: Block type mismatch.");
+			return 2;
+		}
+		
+		// CRC Check
+		if (iLen == -1) {
+			PrintAndLog("APDU ERROR: ISO 14443A CRC error.");
+			return 3;
+		}
+
+		// check apdu length
+		if (iLen < 4) {
+			PrintAndLog("APDU ERROR: Small APDU response. Len=%d", iLen);
+			return 2;
+		}
+		
+    } else {
+        PrintAndLog("APDU ERROR: Reply timeout.");
+		return 4;
+    }
+	
+	return 0;
+}
+
+int CmdHF14AAPDU(const char *cmd) {
+	uint8_t data[USB_CMD_DATA_SIZE];
+	int datalen = 0;
+	bool activateField = false;
+	bool leaveSignalON = false;
+	bool decodeTLV = false;
+	
+	if (strlen(cmd) < 2) {
+		PrintAndLog("Usage: hf 14a apdu [-s] [-k] [-t] <APDU (hex)>");
+		PrintAndLog("       -s    activate field and select card");
+		PrintAndLog("       -k    leave the signal field ON after receive response");
+		PrintAndLog("       -t    executes TLV decoder if it possible. TODO!!!!");
+		return 0;
+	}
+
+	int cmdp = 0;
+	while(param_getchar(cmd, cmdp) != 0x00) {
+		char c = param_getchar(cmd, cmdp);
+		if ((c == '-') && (param_getlength(cmd, cmdp) == 2))
+			switch (param_getchar_indx(cmd, 1, cmdp)) {
+				case 's':
+				case 'S':
+					activateField = true;
+					break;
+				case 'k':
+				case 'K':
+					leaveSignalON = true;
+					break;
+				case 't':
+				case 'T':
+					decodeTLV = true;
+					break;
+				default:
+					PrintAndLog("Unknown parameter '%c'", param_getchar_indx(cmd, 1, cmdp));
+					return 1;
+			}
+			
+		if (isxdigit(c)) {
+			// len = data + PCB(1b) + CRC(2b)
+			switch(param_gethex_to_eol(cmd, cmdp, data, sizeof(data) - 1 - 2, &datalen)) {
+			case 1:
+				PrintAndLog("Invalid HEX value.");
+				return 1;
+			case 2:
+				PrintAndLog("APDU too large.");
+				return 1;
+			case 3:
+				PrintAndLog("Hex must have even number of digits.");
+				return 1;
+			}
+			
+			// we get all the hex to end of line with spaces
+			break;
+		}
+		
+		cmdp++;
+	}
+
+	PrintAndLog(">>>>[%s%s%s] %s", activateField ? "sel ": "", leaveSignalON ? "keep ": "", decodeTLV ? "TLV": "", sprint_hex(data, datalen));
+	
+	int res = ExchangeAPDU14a(data, datalen, activateField, leaveSignalON, data, &datalen);
+
+	if (res)
+		return res;
+
+	PrintAndLog("<<<< %s", sprint_hex(data, datalen));
+	
+	PrintAndLog("APDU response: %02x %02x - %s", data[datalen - 2], data[datalen - 1], GetAPDUCodeDescription(data[datalen - 2], data[datalen - 1])); 
+
+	// TLV decoder
+	if (decodeTLV && datalen > 4) {
+		TLVPrintFromBuffer(data, datalen - 2);
+	}
+	
+	return 0;
+}
+
 int CmdHF14ACmdRaw(const char *cmd) {
     UsbCommand c = {CMD_READER_ISO_14443a, {0, 0, 0}};
     bool reply = 1;
@@ -600,11 +747,11 @@ int CmdHF14ACmdRaw(const char *cmd) {
     bool power = false;
     bool active = false;
     bool active_select = false;
+	bool no_rats = false;
     uint16_t numbits = 0;
 	bool bTimeout = false;
 	uint32_t timeout = 0;
 	bool topazmode = false;
-	bool no_rats = false;
     char buf[5]="";
     int i = 0;
     uint8_t data[USB_CMD_DATA_SIZE];
@@ -740,15 +887,16 @@ int CmdHF14ACmdRaw(const char *cmd) {
     SendCommand(&c);
 
     if (reply) {
+		int res = 0;
         if (active_select)
-            waitCmd(1);
-        if (datalen > 0)
+			res = waitCmd(1);
+		if (!res && datalen > 0)
             waitCmd(0);
     }
     return 0;
 }
 
-static void waitCmd(uint8_t iSelect) {
+static int waitCmd(uint8_t iSelect) {
     UsbCommand resp;
     uint16_t len = 0;
 
@@ -766,12 +914,14 @@ static void waitCmd(uint8_t iSelect) {
 		}
 		
         if (!len)
-            return;
+            return 1;
 		
 		PrintAndLog("%s", sprint_hex(resp.d.asBytes, len) );
     } else {
         PrintAndLog("timeout while waiting for reply.");
+		return 3;
     }
+	return 0;
 }
 
 static command_t CommandTable[] = {
@@ -782,6 +932,7 @@ static command_t CommandTable[] = {
   {"cuids",  CmdHF14ACUIDs,        0, "<n> Collect n>0 ISO14443-a UIDs in one go"},
   {"sim",    CmdHF14ASim,          0, "<UID> -- Simulate ISO 14443-a tag"},
   {"sniff",  CmdHF14ASniff,        0, "sniff ISO 14443-a traffic"},
+  {"apdu",   CmdHF14AAPDU,         0, "Send ISO 14443-4 APDU to tag"},
   {"raw",    CmdHF14ACmdRaw,       0, "Send raw hex data to tag"},
   {NULL, NULL, 0, NULL}
 };

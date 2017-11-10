@@ -114,6 +114,11 @@ CMDSRCS =	crapto1/crapto1.c \
 			graph.c \
 			cmddata.c \
 			lfdemod.c \
+			emv/apduinfo.c\
+			emv/dump.c\
+			emv/tlv.c\
+			emv/emv_tags.c\
+			emv/emvcore.c\
 			cmdanalyse.c \
 			cmdhf.c \
 			cmdhf14a.c \
@@ -328,3 +333,4 @@ $(DEPENDENCY_FILES): ;
 .PRECIOUS: $(DEPENDENCY_FILES)
 
 -include $(DEPENDENCY_FILES)
+

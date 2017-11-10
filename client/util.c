@@ -379,11 +379,19 @@ int param_getlength(const char *line, int paramnum)
 	return en - bg + 1;
 }
 
-char param_getchar(const char *line, int paramnum)
-{
+char param_getchar(const char *line, int paramnum) {
+	return param_getchar_indx(line, 0, paramnum);
+}
+
+char param_getchar_indx(const char *line, int indx, int paramnum) {
 	int bg, en;
-	if (param_getptr(line, &bg, &en, paramnum)) return 0;
-	return line[bg];
+	
+	if (param_getptr(line, &bg, &en, paramnum)) return 0x00;
+
+	if (bg + indx > en)
+		return '\0';
+	
+	return line[bg + indx];
 }
 
 uint8_t param_get8(const char *line, int paramnum)
@@ -487,6 +495,51 @@ int param_gethex_ex(const char *line, int paramnum, uint8_t * data, int *hexcnt)
 
 	return 0;
 }
+
+int param_gethex_to_eol(const char *line, int paramnum, uint8_t * data, int maxdatalen, int *datalen) {
+	int bg, en;
+	uint32_t temp;
+	char buf[5] = {0};
+
+	if (param_getptr(line, &bg, &en, paramnum)) return 1;
+
+	*datalen = 0;
+	
+	int indx = bg;
+	while (line[indx]) {
+		if (line[indx] == '\t' || line[indx] == ' ') 
+			continue;
+		
+		if (isxdigit(line[indx])) {
+			buf[strlen(buf) + 1] = 0x00;
+			buf[strlen(buf)] = line[indx];
+		} else {
+			// if we have symbols other than spaces and hex
+			return 1;
+		}				
+
+		if (*datalen >= maxdatalen) {
+			// if we dont have space in buffer and have symbols to translate
+			return 2;
+		}
+
+		if (strlen(buf) >= 2) {
+			sscanf(buf, "%x", &temp);
+			data[*datalen] = (uint8_t)(temp & 0xff);
+			*buf = 0;
+			(*datalen)++;
+		}
+		
+		indx++;
+	}
+
+	if (strlen(buf) > 0) 
+		//error when not completed hex bytes
+		return 3;
+		
+	return 0;
+}
+
 int param_getstr(const char *line, int paramnum, char * str)
 {
 	int bg, en;
