@@ -10,6 +10,9 @@
 #include "util.h"
 #include "protocols.h"
 #include "data.h"
+
+#define ul_switch_off_field DropField
+
 typedef struct {
 	uint8_t version[8];
 	uint8_t tbo[2];

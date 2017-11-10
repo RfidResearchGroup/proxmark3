@@ -193,12 +193,6 @@ static void ul_switch_on_field(void) {
 	SendCommand(&c);
 }
 
-void ul_switch_off_field(void) {
-	UsbCommand c = {CMD_READER_ISO_14443a, {0, 0, 0}};
-	clearCommandBuffer();
-	SendCommand(&c);
-}
-
 static int ul_send_cmd_raw( uint8_t *cmd, uint8_t cmdlen, uint8_t *response, uint16_t responseLength ) {
 	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_APPEND_CRC | ISO14A_NO_RATS, cmdlen, 0}};
 	memcpy(c.d.asBytes, cmd, cmdlen);
@@ -630,10 +624,10 @@ static int ulc_magic_test(){
 }
 */
 static int ul_magic_test(){
-
 	// Magic Ultralight tests
 	// 1) take present UID, and try to write it back. OBSOLETE 
 	// 2) make a wrong length write to page0, and see if tag answers with ACK/NACK:
+
 	iso14a_card_select_t card;
 	if ( !ul_select(&card) ) 
 		return UL_ERROR;
@@ -700,6 +694,7 @@ uint32_t GetHF14AMfU_Type(void){
 			case -1  : tagtype = (UL | UL_C | NTAG_203); break;  // could be UL | UL_C magic tags
 			default  : tagtype = UNKNOWN; break;
 		}
+	
 		// UL vs UL-C vs ntag203 test
 		if (tagtype & (UL | UL_C | NTAG_203)) {
 			if ( !ul_select(&card) ) return UL_ERROR;
@@ -2358,7 +2353,8 @@ int CmdHF14AMfuPwdGen(const char *Cmd){
 	PrintAndLog(" Ami  | %08X | %04X", ul_ev1_pwdgenB(uid), ul_ev1_packgenB(uid));
 	PrintAndLog(" LD   | %08X | %04X", ul_ev1_pwdgenC(uid), ul_ev1_packgenC(uid));
 	PrintAndLog("------+----------+-----");
-
+	PrintAndLog(" Vingcard algo");
+	PrintAndLog("--------------------");
 	return 0;
 }
 //------------------------------------
