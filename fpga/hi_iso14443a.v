@@ -311,9 +311,13 @@ reg [3:0] sub_carrier_cnt;
 
 // The ARM must not send too early, otherwise the mod_sig_buf will overflow, therefore signal that we are ready
 // with fdt_indicator. The mod_sig_buf can buffer 29 excess data bits, i.e. a maximum delay of 29 * 16 = 464 adc_clk ticks.
-// fdt_indicator could appear at ssp_din after 1 tick, the transfer needs 16 ticks, the ARM can send 128 ticks later.
-// 1128 - 464 - 1 - 128 - 8 = 535
-`define FDT_INDICATOR_COUNT 11'd535
+// fdt_indicator is assigned to sendbit after at least 1 tick, the transfer to ARM needs minimum 8 ticks. Response from
+// ARM could appear at ssp_dout 8 ticks later.
+// 1128 - 464 - 1 - 8 - 8 = 647
+`define FDT_INDICATOR_COUNT 11'd647
+// Note: worst case, assignment to sendbit takes 15 ticks more, and transfer to ARM needs 7*16 = 112 ticks more.
+//       When the ARM's response then appears, the fdt_count is already 647 + 15 + 112 = 774, which still allows the ARM a possible
+//       response window of 1128 - 774 = 354 ticks. 
 
 // reset on a pause in listen mode. I.e. the counter starts when the pause is over:
 assign fdt_reset = ~after_hysteresis && mod_type == `TAGSIM_LISTEN;
