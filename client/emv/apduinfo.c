@@ -132,7 +132,7 @@ const APDUCode APDUCodeTable[] = {
 	{"6EXX", 	APDUCODE_TYPE_ERROR,		"Instruction class not supported (procedure byte), (ISO 7816-3)"},
 	{"6F--", 	APDUCODE_TYPE_ERROR,		"Internal exception"},
 	{"6F00", 	APDUCODE_TYPE_ERROR,		"Command aborted - more exact diagnosis not possible (e.g., operating system error)."},
-	{"6FFF", 	APDUCODE_TYPE_ERROR,		"Card dead (overuse, …)"},
+	{"6FFF", 	APDUCODE_TYPE_ERROR,		"Card dead (overuse)"},
 	{"6FXX", 	APDUCODE_TYPE_ERROR,		"No precise diagnosis (procedure byte), (ISO 7816-3)"},
 	{"9---", 	APDUCODE_TYPE_NONE, 		""},
 	{"9000", 	APDUCODE_TYPE_INFO,			"Command successfully executed (OK)."},
@@ -278,7 +278,7 @@ int CodeCmp(const char *code1, const char *code2) {
 }
 
 const APDUCode* const GetAPDUCode(uint8_t sw1, uint8_t sw2) {
-	char buf[4] = {0};
+	char buf[6] = {0};
 	int res;
 	int mineq = 100;
 	int mineqindx = 0;
