@@ -308,7 +308,7 @@ void tlvdb_add(struct tlvdb *tlvdb, struct tlvdb *other)
 	tlvdb->next = other;
 }
 
-void tlvdb_visit(const struct tlvdb *tlvdb, tlv_cb cb, void *data)
+void tlvdb_visit(const struct tlvdb *tlvdb, tlv_cb cb, void *data, int level)
 {
 	struct tlvdb *next = NULL;
 
@@ -317,8 +317,9 @@ void tlvdb_visit(const struct tlvdb *tlvdb, tlv_cb cb, void *data)
 
 	for (; tlvdb; tlvdb = next) {
 		next = tlvdb->next;
-		cb(data, &tlvdb->tag);
-		tlvdb_visit(tlvdb->children, cb, data);
+		bool is_leaf = (tlvdb->children == NULL);
+		cb(data, &tlvdb->tag, level, is_leaf);
+		tlvdb_visit(tlvdb->children, cb, data, level+1);
 	}
 }
 

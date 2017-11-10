@@ -19,6 +19,6 @@
 #include "tlv.h"
 #include <stdio.h>
 
-bool emv_tag_dump(const struct tlv *tlv, FILE *f);
+bool emv_tag_dump(const struct tlv *tlv, FILE *f, int level);
 
 #endif

@@ -21,6 +21,8 @@
 
 #include <stdio.h>
 
+#define PRINT_INDENT(level) 	{for (int i = 0; i < (level); i++) fprintf(f, "\t");}
+
 void dump_buffer_simple(const unsigned char *ptr, size_t len, FILE *f)
 {
 	int i;
@@ -32,7 +34,7 @@ void dump_buffer_simple(const unsigned char *ptr, size_t len, FILE *f)
 		fprintf(f, "%s%02hhX", i ? " " : "", ptr[i]);
 }
 
-void dump_buffer(const unsigned char *ptr, size_t len, FILE *f)
+void dump_buffer(const unsigned char *ptr, size_t len, FILE *f, int level)
 {
 	int i, j;
 
@@ -40,6 +42,7 @@ void dump_buffer(const unsigned char *ptr, size_t len, FILE *f)
 		f = stdout;
 
 	for (i = 0; i < len; i += 16) {
+		PRINT_INDENT(level);
 		fprintf(f, "\t%02x:", i);
 		for (j = 0; j < 16; j++) {
 			if (i + j < len)
