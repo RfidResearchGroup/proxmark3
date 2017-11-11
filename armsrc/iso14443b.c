@@ -546,19 +546,16 @@ static void TransmitFor14443b_AsTag( uint8_t *response, uint16_t len) {
 //-----------------------------------------------------------------------------
 void SimulateIso14443bTag(uint32_t pupi) {
 
-	///////////// setup device.
+	// setup device.
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-
-	// connect Demodulated Signal to ADC:
-	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
-
 	// Set up the synchronous serial port
 	FpgaSetupSsc();
-	/////////////
+	// connect Demodulated Signal to ADC:
+	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 	
 	// allocate command receive buffer
-	BigBuf_free();
-	BigBuf_Clear_ext(false);
+	BigBuf_free(); BigBuf_Clear_ext(false);
+
 	clear_trace(); //sim
 	set_tracing(true);
 
