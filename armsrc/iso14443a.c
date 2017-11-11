@@ -66,13 +66,13 @@ uint16_t FpgaSendQueueDelay;
 #define DELAY_FPGA_QUEUE (FpgaSendQueueDelay<<1)
 
 // When the PM acts as tag and is sending, it takes
-// 4*16 ticks until we can write data to the sending hold register
+// 4*16 + 8 ticks until we can write data to the sending hold register
 // 8*16 ticks until the SHR is transferred to the Sending Shift Register
-// 8 ticks until the first transfer starts
-// 8 ticks later the FPGA samples the data
-// + a varying number of ticks in the FPGA Delay Queue (mod_sig_buf)
+// 8 ticks later the FPGA samples the first data
+// + 16 ticks until assigned to mod_sig
 // + 1 tick to assign mod_sig_coil
-#define DELAY_ARM2AIR_AS_TAG (4*16 + 8*16 + 8 + 8 + DELAY_FPGA_QUEUE + 1)
+// + a varying number of ticks in the FPGA Delay Queue (mod_sig_buf)
+#define DELAY_ARM2AIR_AS_TAG (4*16 + 8 + 8*16 + 8 + 16 + 1 + DELAY_FPGA_QUEUE)
 
 // When the PM acts as sniffer and is receiving tag data, it takes
 // 3 ticks A/D conversion
@@ -136,7 +136,6 @@ void iso14a_set_ATS_timeout(uint8_t *ats) {
 
 			fwi = (tb1 & 0xf0) >> 4;			// frame waiting indicator (FWI)
 			fwt = 256 * 16 * (1 << fwi);		// frame waiting time (FWT) in 1/fc
-			//fwt = 4096 * (1 << fwi);
 			
 			iso14a_set_timeout(fwt/(8*16));
 			//iso14a_set_timeout(fwt/128);
@@ -240,10 +239,8 @@ static RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time) {
 		// Sequence X followed by Sequence Y followed by Sequence Z     (111100x1 11111111 00x11111)
 		// we therefore look for a ...xx1111 11111111 00x11111xxxxxx... pattern 
 		// (12 '1's followed by 2 '0's, eventually followed by another '0', followed by 5 '1's)
-		//
-#define ISO14443A_STARTBIT_MASK		0x07FFEF80		// mask is    00001111 11111111 1110 1111 10000000
-#define ISO14443A_STARTBIT_PATTERN	0x07FF8F80		// pattern is 00001111 11111111 1000 1111 10000000
-
+		#define ISO14443A_STARTBIT_MASK		0x07FFEF80							// mask is    00000111 11111111 11101111 10000000
+		#define ISO14443A_STARTBIT_PATTERN	0x07FF8F80							// pattern is 00000111 11111111 10001111 10000000
 		if		((Uart.fourBits & (ISO14443A_STARTBIT_MASK >> 0)) == ISO14443A_STARTBIT_PATTERN >> 0) Uart.syncBit = 7;
 		else if ((Uart.fourBits & (ISO14443A_STARTBIT_MASK >> 1)) == ISO14443A_STARTBIT_PATTERN >> 1) Uart.syncBit = 6;
 		else if ((Uart.fourBits & (ISO14443A_STARTBIT_MASK >> 2)) == ISO14443A_STARTBIT_PATTERN >> 2) Uart.syncBit = 5;
@@ -1651,7 +1648,7 @@ int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen) {
 	}
 
 	// Ensure that the FPGA Delay Queue is empty before we switch to TAGSIM_LISTEN again:
-	uint8_t fpga_queued_bits = FpgaSendQueueDelay >> 3;  // twich /8 ??   >>3, 
+	uint8_t fpga_queued_bits = FpgaSendQueueDelay >> 3; 
 	for (i = 0; i <= fpga_queued_bits/8 + 1; ) {
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
 			AT91C_BASE_SSC->SSC_THR = SEC_F;
@@ -1806,6 +1803,7 @@ int ReaderReceive(uint8_t *receivedAnswer, uint8_t *parity) {
 // fills the card info record unless NULL
 // if anticollision is false, then the UID must be provided in uid_ptr[] 
 // and num_cascades must be set (1: 4 Byte UID, 2: 7 Byte UID, 3: 10 Byte UID)
+// requests ATS unless no_rats is true
 int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats) {
 	uint8_t wupa[]       = { ISO14443A_CMD_WUPA };  // 0x26 - ISO14443A_CMD_REQA  0x52 - ISO14443A_CMD_WUPA
 	uint8_t sel_all[]    = { ISO14443A_CMD_ANTICOLL_OR_SELECT,0x20 };
@@ -1820,6 +1818,11 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_card, uint32_
 	int cascade_level = 0;
 	int len;
 
+	if (p_card) {
+		p_card->uidlen = 0;
+		memset(p_card->uid, 0, 10);
+		p_card->ats_len = 0;
+	}
 	// Broadcast for a card, WUPA (0x52) will force response from all cards in the field
     ReaderTransmitBitsPar(wupa, 7, NULL, NULL);
 	
@@ -1827,9 +1830,8 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_card, uint32_
 	if (!ReaderReceive(resp, resp_par)) return 0;
 
 	if (p_card) {
-		memcpy(p_card->atqa, resp, 2);
-		p_card->uidlen = 0;
-		memset(p_card->uid, 0, 10);
+		p_card->atqa[0] = resp[0];
+		p_card->atqa[1] = resp[1];		
 	}
 
 	if (anticollision) {
@@ -1932,7 +1934,6 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_card, uint32_
 
 	if (p_card) {
 		p_card->sak = sak;
-		p_card->ats_len = 0;
 	}
 
 	// non iso14443a compliant tag
@@ -1940,7 +1941,7 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_card, uint32_
 
 	// RATS, Request for answer to select
 	if ( !no_rats ) {
-		DbpString("iso14a - RATS");
+
 		AppendCrc14443a(rats, 2);
 		ReaderTransmit(rats, sizeof(rats), NULL);
 		len = ReaderReceive(resp, resp_par);
@@ -2043,32 +2044,86 @@ void iso14443a_setup(uint8_t fpga_minor_mode) {
 	iso14a_set_timeout(1060); // 106 * 10ms default	
 }
 
+/* Peter Fillmore 2015
+Added card id field to the function
+ info from ISO14443A standard
+b1 = Block Number
+b2 = RFU (always 1)
+b3 = depends on block
+b4 = Card ID following if set to 1
+b5 = depends on block type
+b6 = depends on block type
+b7,b8 = block type.
+Coding of I-BLOCK:
+b8 b7 b6 b5 b4 b3 b2 b1
+0  0  0  x  x  x  1  x
+b5 = chaining bit
+Coding of R-block:
+b8 b7 b6 b5 b4 b3 b2 b1
+1  0  1  x  x  0  1  x
+b5 = ACK/NACK
+Coding of S-block:
+b8 b7 b6 b5 b4 b3 b2 b1
+1  1  x  x  x  0  1  0 
+b5,b6 = 00 - DESELECT
+        11 - WTX 
+*/    
 int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, void *data) {
 	uint8_t parity[MAX_PARITY_SIZE] = {0x00};
 	uint8_t real_cmd[cmd_len+4];
-	real_cmd[0] = 0x0a; //I-Block
+	
+	// ISO 14443 APDU frame: PCB [CID] [NAD] APDU CRC PCB=0x02
+	real_cmd[0] = 0x02; // bnr,nad,cid,chn=0; i-block(0x00)	
 	// put block number into the PCB
 	real_cmd[0] |= iso14_pcb_blocknum;
-	real_cmd[1] = 0x00; //CID: 0 //FIXME: allow multiple selected cards
-	memcpy(real_cmd+2, cmd, cmd_len);
-	AppendCrc14443a(real_cmd,cmd_len+2);
+	memcpy(real_cmd + 1, cmd, cmd_len);
+	AppendCrc14443a(real_cmd, cmd_len + 1);
  
-	ReaderTransmit(real_cmd, cmd_len+4, NULL);
+	ReaderTransmit(real_cmd, cmd_len + 3, NULL);
+
 	size_t len = ReaderReceive(data, parity);
-	 //DATA LINK ERROR
-	if (!len) return 0;
-	
 	uint8_t *data_bytes = (uint8_t *) data;
+
+	if (!len) {
+		return 0; //DATA LINK ERROR
+	} else{
+		// S-Block WTX 
+		while((data_bytes[0] & 0xF2) == 0xF2) {
+			// Transmit WTX back 
+			// byte1 - WTXM [1..59]. command FWT=FWT*WTXM
+			data_bytes[1] = data_bytes[1] & 0x3f; // 2 high bits mandatory set to 0b
+			// now need to fix CRC.
+			AppendCrc14443a(data_bytes, len - 2);
+			// transmit S-Block
+			ReaderTransmit(data_bytes, len, NULL);
+			// retrieve the result again 
+			len = ReaderReceive(data, parity);
+			data_bytes = data;
+		}
 
 	// if we received an I- or R(ACK)-Block with a block number equal to the
 	// current block number, toggle the current block number
-	if (len >= 4 // PCB+CID+CRC = 4 bytes
+		if (len >= 3 // PCB+CRC = 3 bytes
 	         && ((data_bytes[0] & 0xC0) == 0 // I-Block
 	             || (data_bytes[0] & 0xD0) == 0x80) // R-Block with ACK bit set to 0
 	         && (data_bytes[0] & 0x01) == iso14_pcb_blocknum) // equal block numbers
 	{
 		iso14_pcb_blocknum ^= 1;
 	}
+
+		// crc check
+		if (len >=3 && !CheckCrc14443(CRC_14443_A, data_bytes, len)) {
+			return -1;
+		}
+		
+	}
+	
+	// cut frame byte
+	len -= 1;
+	// memmove(data_bytes, data_bytes + 1, len);
+	for (int i = 0; i < len; i++)
+		data_bytes[i] = data_bytes[i + 1];
+	
 	return len;
 }
 
@@ -2172,7 +2227,6 @@ void ReaderIso14443a(UsbCommand *c) {
 
 OUT:	
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	SpinDelay(200);
 	set_tracing(false);
 	LEDsoff();
 }
@@ -2187,28 +2241,15 @@ int32_t dist_nt(uint32_t nt1, uint32_t nt2) {
 	uint32_t nttmp1 = nt1;
 	uint32_t nttmp2 = nt2;
 
-	// 0xFFFF -- Half up and half down to find distance between nonces
-	for (uint16_t i = 1; i < 32768/8; i += 8) {
-		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i;
-		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i+1;
-		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i+2;
-		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i+3;
-		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i+4;
-		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i+5;
-		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i+6;
-		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i+7;
+	for (uint16_t i = 1; i < 32768; i++) {
+		nttmp1 = prng_successor(nttmp1, 1);
+		if (nttmp1 == nt2) return i;
 		
-		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -i;
-		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+1);
-		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+2);
-		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+3);
-		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+4);
-		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+5);
-		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+6);
-		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+7);		
+		nttmp2 = prng_successor(nttmp2, 1);
+		if (nttmp2 == nt1) return -i;
 	}
-	// either nt1 or nt2 are invalid nonces	
-	return(-99999); 
+	
+	return(-99999); // either nt1 or nt2 are invalid nonces
 }
 
 //-----------------------------------------------------------------------------
