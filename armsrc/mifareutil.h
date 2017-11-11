@@ -30,6 +30,16 @@
 #define AUTH_FIRST    0	
 #define AUTH_NESTED   2
 
+#define AUTHENTICATION_TIMEOUT 848			// card times out 1ms after wrong authentication (according to NXP documentation)
+#define PRE_AUTHENTICATION_LEADTIME 400		// some (non standard) cards need a pause after select before they are ready for first authentication
+
+// mifare 4bit card answers
+#define CARD_ACK      0x0A  // 1010 - ACK
+#define CARD_NACK_NA  0x04  // 0100 - NACK, not allowed (command not allowed)
+#define CARD_NACK_TR  0x05  // 0101 - NACK, transmission error
+
+
+
 //mifare emulator states
 #define MFEMUL_NOFIELD      0
 #define MFEMUL_IDLE         1
@@ -75,6 +85,7 @@ int mifare_desfire_des_auth2(uint32_t uid, uint8_t *key, uint8_t *blockData);
 
 // crypto functions
 void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *receivedCmd, int len);
+void mf_crypto1_decryptEx(struct Crypto1State *pcs, uint8_t *data_in, int len, uint8_t *data_out);
 void mf_crypto1_encrypt(struct Crypto1State *pcs, uint8_t *data, uint16_t len, uint8_t *par);
 uint8_t mf_crypto1_encrypt4bit(struct Crypto1State *pcs, uint8_t data);
 
