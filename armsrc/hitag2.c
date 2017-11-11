@@ -684,14 +684,14 @@ static bool hitag2_authenticate(byte_t* rx, const size_t rxlen, byte_t* tx, size
 				return false;
 			}
 			*txlen = 5;
-			memcpy(tx,"\xc0",nbytes(*txlen));
+			memcpy(tx,"\xc0", nbytes(*txlen));
 		} break;
 			
 		// Received UID, crypto tag answer
 		case 32: {
 			if (!bCrypto) {
 				*txlen = 64;
-				memcpy(tx,NrAr,8);
+				memcpy(tx, NrAr, 8);
 				bCrypto = true;
 			} else {
 				DbpString("Authentication succesful!");
@@ -701,7 +701,7 @@ static bool hitag2_authenticate(byte_t* rx, const size_t rxlen, byte_t* tx, size
 			
 		// Unexpected response
 		default: {
-			Dbprintf("Uknown frame length: %d",rxlen);
+			Dbprintf("Uknown frame length: %d", rxlen);
 			return false;
 		} break;
 	}
@@ -863,7 +863,7 @@ void SnoopHitag(uint32_t type) {
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 	
 	// Reset the received frame, frame count and timing info
-	memset(rx,0x00,sizeof(rx));
+	memset(rx, 0x00, sizeof(rx));
 	frame_count = 0;
 	response = 0;
 	overflow = 0;
@@ -1452,9 +1452,6 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 				
 				// Capture tag frame (manchester decoding using only falling edges)
 				if (ra >= HITAG_T_EOF) {
-					if (rxlen != 0) {
-						//DbpString("wierd1?");
-					}
 					// Capture the T0 periods that have passed since last communication or field drop (reset)
 					// We always recieve a 'one' first, which has the falling edge after a half period |-_|
 					response = ra-HITAG_T_TAG_HALF_PERIOD;

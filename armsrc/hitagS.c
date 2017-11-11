@@ -962,7 +962,6 @@ void SimulateHitagSTag(bool tag_mem_supplied, byte_t* data) {
 
 	tag.pstate = HT_READY;
 	tag.tstate = HT_NO_OP;
-	tag.tstate = HT_NO_OP;
 	for (i = 0; i < 16; i++)
 		for (j = 0; j < 4; j++)
 			tag.pages[i][j] = 0x0;
