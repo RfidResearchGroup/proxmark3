@@ -289,14 +289,14 @@ uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace,uint16_t tracelen) {
 			PrintAndLog( "Memory Configuration (MC):");
 			PrintAndLog( "MAC needed to write state: %s", trace[3+12]? "on" : "off");
 			//order might be off here...
-			PrintAndLog("Write with MAC for S_PAD  : %s ", sprint_bin(trace+3+10, 2) );
-			PrintAndLog("Write with AUTH for S_PAD : %s ", sprint_bin(trace+3+8, 2) );
-			PrintAndLog("Read after AUTH for S_PAD : %s ", sprint_bin(trace+3+6, 2) );
+			PrintAndLog( "Write with MAC for S_PAD  : %s ", sprint_bin(trace+3+10, 2) );
+			PrintAndLog( "Write with AUTH for S_PAD : %s ", sprint_bin(trace+3+8, 2) );
+			PrintAndLog( "Read after AUTH for S_PAD : %s ", sprint_bin(trace+3+6, 2) );
 			PrintAndLog( "MAC needed to write CK and CKV: %s", trace[3+5] ? "on" : "off");
 			PrintAndLog( "RF parameter: %02x", (trace[3+4] & 0x7) );
 			PrintAndLog( "Compatible with NDEF: %s", trace[3+3] ? "yes" : "no");
 			PrintAndLog( "Memory config writable : %s", (trace[3+2] == 0xff) ? "yes" : "no");
-			PrintAndLog("RW access for S_PAD : %s ", sprint_bin(trace+3, 2) );
+			PrintAndLog( "RW access for S_PAD : %s ", sprint_bin(trace+3, 2) );
 			}
 		break;         
 		case 0x90: {
@@ -307,16 +307,14 @@ uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace,uint16_t tracelen) {
             PrintAndLog( "MAC_A, RW (auth):   %s ", line);
            }
 		break; 
-		case 0x92: {
+		case 0x92:
             PrintAndLog( "State:");
             PrintAndLog( "Polling disabled: %s", trace[3+8] ? "yes" : "no");
             PrintAndLog( "Authenticated: %s", trace[3] ? "yes" : "no");
-           }
-		break;
-		case 0xa0: {
+			break;
+		case 0xa0:
             PrintAndLog( "CRC of all bloacks match : %s", (trace[3+2]==0xff) ? "no" : "yes");
-           }
-		break;
+			break;
 		default: 
 			PrintAndLog( "INVALID %d: %s", blocknum, line);
 		break;

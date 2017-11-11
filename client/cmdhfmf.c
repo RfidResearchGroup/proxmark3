@@ -1256,7 +1256,7 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 			keycnt++;
 		} else {
 			// May be a dic file
-			if ( param_getstr(Cmd, 1 + i,filename) >= FILE_PATH_SIZE ) {
+			if ( param_getstr(Cmd, 1 + i, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE ) {
 				PrintAndLog("File name too long");
 				free(keyBlock);
 				return 2;
@@ -1525,7 +1525,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 			keycnt++;
 		} else {
 			// May be a dic file
-			if ( param_getstr(Cmd, 2 + i,filename) >= FILE_PATH_SIZE ) {
+			if ( param_getstr(Cmd, 2 + i, filename, sizeof(filename)) >= FILE_PATH_SIZE ) {
 				PrintAndLog("File name too long");
 				free(keyBlock);
 				return 2;
@@ -2184,7 +2184,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
 	uint32_t numblk2 = param_get32ex(Cmd,2,0,10);
 	if (numblk2 > 0) numBlocks = numblk2;	
 
-	len = param_getstr(Cmd, nameParamNo, filename);
+	len = param_getstr(Cmd, nameParamNo, filename, sizeof(filename));
 	
 	if (len > FILE_PATH_SIZE - 5) len = FILE_PATH_SIZE - 5;
 
@@ -2272,7 +2272,7 @@ int CmdHF14AMfESave(const char *Cmd) {
 		}
 	}
 
-	len = param_getstr(Cmd, nameParamNo, filename);
+	len = param_getstr(Cmd, nameParamNo, filename, sizeof(filename));
 	
 	if (len > FILE_PATH_SIZE - 5) len = FILE_PATH_SIZE - 5;
 	
@@ -2679,8 +2679,8 @@ int CmdHF14AMfCSave(const char *Cmd) {
 		case 'o':
 		case 'O':
 			// input file
-			len = param_getstr(Cmd, cmdp+1, filename[0]);
-			len = param_getstr(Cmd, cmdp+1, filename[1]);
+			len = param_getstr(Cmd, cmdp+1, filename[0], FILE_PATH_SIZE);
+			len = param_getstr(Cmd, cmdp+1, filename[1], FILE_PATH_SIZE);
 			
 			if (len < 1) {
 				errors = true;

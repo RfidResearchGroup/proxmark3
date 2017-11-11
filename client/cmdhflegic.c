@@ -869,7 +869,7 @@ int CmdLegicDump(const char *Cmd){
 				return usage_legic_dump();
 			case 'o':
 			case 'O':
-				fileNlen = param_getstr(Cmd, cmdp+1, filename);
+				fileNlen = param_getstr(Cmd, cmdp+1, filename, FILE_PATH_SIZE);
 				if (!fileNlen) 
 					errors = true; 
 				if (fileNlen > FILE_PATH_SIZE-5) 
@@ -970,7 +970,7 @@ int CmdLegicRestore(const char *Cmd){
 				break;
 			case 'i':
 			case 'I':
-				fileNlen = param_getstr(Cmd, cmdp+1, filename);
+				fileNlen = param_getstr(Cmd, cmdp+1, filename, FILE_PATH_SIZE);
 				if (!fileNlen) 
 					errors = true;
 				
@@ -1099,7 +1099,7 @@ int CmdLegicELoad(const char *Cmd) {
 	memset(data, 0, numofbytes);
 	
 	// set up file
-	len = param_getstr(Cmd, nameParamNo, filename);
+	len = param_getstr(Cmd, nameParamNo, filename, FILE_PATH_SIZE);
 	if (len > FILE_PATH_SIZE - 5) 
 		len = FILE_PATH_SIZE - 5;
 	fnameptr += len;
@@ -1154,7 +1154,7 @@ int CmdLegicESave(const char *Cmd) {
 		default  : numofbytes = 256; nameParamNo = 0; break;
 	}
 
-	fileNlen = param_getstr(Cmd, nameParamNo, filename);
+	fileNlen = param_getstr(Cmd, nameParamNo, filename, FILE_PATH_SIZE);
 	
 	if (fileNlen > FILE_PATH_SIZE - 5) 
 		fileNlen = FILE_PATH_SIZE - 5;

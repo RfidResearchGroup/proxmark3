@@ -358,6 +358,30 @@ int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *res
 	pfree(&apoly);
 	return 1;
 }
+
+//test call to RunModel
+int CmdrevengTestC(const char *Cmd){
+	int cmdp = 0;
+	char inModel[30] = {0x00};
+	char inHexStr[30] = {0x00};
+	char result[30];
+	int dataLen;
+	char endian = 0;
+	dataLen = param_getstr(Cmd, cmdp++, inModel, sizeof(inModel));
+	if (dataLen < 4) return 0;
+	dataLen = param_getstr(Cmd, cmdp++, inHexStr, sizeof(inHexStr));
+	if (dataLen < 4) return 0;
+	bool reverse = (param_get8(Cmd, cmdp++)) ? true : false;
+	endian = param_getchar(Cmd, cmdp++); 
+
+	//PrintAndLog("mod: %s, hex: %s, rev %d", inModel, inHexStr, reverse);
+	int ans = RunModel(inModel, inHexStr, reverse, endian, result);
+	if (!ans) return 0;
+	
+	PrintAndLog("Result: %s",result);
+	return 1;
+}
+
 //returns a calloced string (needs to be freed)
 char *SwapEndianStr(const char *inStr, const size_t len, const uint8_t blockSize){
 	char *tmp = calloc(len+1, sizeof(char));
@@ -373,7 +397,7 @@ char *SwapEndianStr(const char *inStr, const size_t len, const uint8_t blockSize
 // takes hex string in and searches for a matching result (hex string must include checksum)
 int CmdrevengSearch(const char *Cmd){
 	char inHexStr[50] = {0x00};
-	int dataLen = param_getstr(Cmd, 0, inHexStr);
+	int dataLen = param_getstr(Cmd, 0, inHexStr, sizeof(inHexStr));
 	if (dataLen < 4) return 0;
 
 	char *Models[102];

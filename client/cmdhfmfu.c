@@ -214,9 +214,10 @@ static int ul_select( iso14a_card_select_t *card ){
 	UsbCommand resp;
 	bool ans = false;
 	ans = WaitForResponseTimeout(CMD_ACK, &resp, 1500);
+	
 	if (!ans || resp.arg[0] < 1) {
 		PrintAndLog("iso14443a card select failed");
-		ul_switch_off_field();
+		DropField();
 		return 0;
 	}
 
@@ -293,7 +294,7 @@ static int ul_auth_select( iso14a_card_select_t *card, TagTypeUL_t tagtype, bool
 
 		if (hasAuthKey) {
 			if ( ulev1_requestAuthentication(authkey, pack, packSize) == -1 ) {
-				ul_switch_off_field();
+				DropField();
 				PrintAndLog("Error: Authentication Failed UL-EV1/NTAG");
 				return 0;
 			}
@@ -303,7 +304,6 @@ static int ul_auth_select( iso14a_card_select_t *card, TagTypeUL_t tagtype, bool
 }
 
 static int ulev1_getVersion( uint8_t *response, uint16_t responseLength ){
-
 	uint8_t cmd[] = {MIFARE_ULEV1_VERSION};	
 	int len = ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
 	return len;
@@ -619,7 +619,7 @@ static int ulc_magic_test(){
 	} else {
 		returnValue = UL;
 	}	
-	ul_switch_off_field();
+	DropField();
 	return returnValue;
 }
 */
@@ -632,7 +632,7 @@ static int ul_magic_test(){
 	if ( !ul_select(&card) ) 
 		return UL_ERROR;
 	int status = ul_comp_write(0, NULL, 0);
-	ul_switch_off_field();
+	DropField();
 	if ( status == 0 ) 
 		return MAGIC;
 	return 0;
@@ -651,14 +651,14 @@ uint32_t GetHF14AMfU_Type(void){
 	// Ultralight - ATQA / SAK 
 	if ( card.atqa[1] != 0x00 || card.atqa[0] != 0x44 || card.sak != 0x00 ) {
 		//PrintAndLog("Tag is not Ultralight | NTAG | MY-D  [ATQA: %02X %02X SAK: %02X]\n", card.atqa[1], card.atqa[0], card.sak);
-		ul_switch_off_field();
+		DropField();
 		return UL_ERROR;
 	}
 
 	if ( card.uid[0] != 0x05) {
 
 		len  = ulev1_getVersion(version, sizeof(version));
-		ul_switch_off_field();
+		DropField();
 
 		switch (len) {
 			case 0x0A: {
@@ -702,7 +702,7 @@ uint32_t GetHF14AMfU_Type(void){
 			// do UL_C check first...
 			uint8_t nonce[11] = {0x00};
 			status = ulc_requestAuthentication(nonce, sizeof(nonce));
-			ul_switch_off_field();
+			DropField();
 			if (status > 1) {
 				tagtype = UL_C;
 			} else { 
@@ -723,15 +723,15 @@ uint32_t GetHF14AMfU_Type(void){
 						tagtype = UNKNOWN;
 					}
 				}
-				ul_switch_off_field();
+				DropField();
 			}
 		}
 		if (tagtype & UL) {
 			tagtype = ul_fudan_check(); 
-			ul_switch_off_field();
+			DropField();
 		}
 	} else {
-		ul_switch_off_field();
+		DropField();
 		// Infinition MY-D tests   Exam high nibble 
 		uint8_t nib = (card.uid[1] & 0xf0) >> 4;
 		switch ( nib ){
@@ -775,7 +775,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			return usage_hf_mfu_info();
 		case 'k':
 		case 'K':
-			dataLen = param_getstr(Cmd, cmdp+1, tempStr);
+			dataLen = param_getstr(Cmd, cmdp+1, tempStr, sizeof(tempStr));
 			if (dataLen == 32 || dataLen == 8) { //ul-c or ev1/ntag key length
 				errors = param_gethex(tempStr, 0, authenticationkey, dataLen);
 				dataLen /= 2; // handled as bytes from now on
@@ -815,7 +815,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	// read pages 0,1,2,3 (should read 4pages)
 	status = ul_read(0, data, sizeof(data));
 	if ( status == -1 ) {
-		ul_switch_off_field();
+		DropField();
 		PrintAndLog("Error: tag didn't answer to READ");
 		return status;
 	} else if (status == 16) {
@@ -833,7 +833,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		status = ul_read(0x28, ulc_conf, sizeof(ulc_conf));
 		if ( status == -1 ){
 			PrintAndLog("Error: tag didn't answer to READ UL-C");
-			ul_switch_off_field();
+			DropField();
 			return status;
 		} 
 		if (status == 16) ulc_print_configuration(ulc_conf);
@@ -844,14 +844,14 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			uint8_t ulc_deskey[16] = {0x00};
 			status = ul_read(0x2C, ulc_deskey, sizeof(ulc_deskey));
 			if ( status == -1 ) {
-				ul_switch_off_field();
+				DropField();
 				PrintAndLog("Error: tag didn't answer to READ magic");
 				return status;
 			}
 			if (status == 16) ulc_print_3deskey(ulc_deskey);
 
 		} else {
-			ul_switch_off_field();
+			DropField();
 			// if we called info with key, just return 
 			if ( hasAuthKey ) return 1;
 
@@ -887,7 +887,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		status = ulev1_readSignature( ulev1_signature, sizeof(ulev1_signature));
 		if ( status == -1 ) {
 			PrintAndLog("Error: tag didn't answer to READ SIGNATURE");
-			ul_switch_off_field();
+			DropField();
 			return status;
 		}
 		if (status == 32) ulev1_print_signature( ulev1_signature, sizeof(ulev1_signature));
@@ -903,7 +903,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		status  = ulev1_getVersion(version, sizeof(version));
 		if ( status == -1 ) {
 			PrintAndLog("Error: tag didn't answer to GETVERSION");
-			ul_switch_off_field();
+			DropField();
 			return status;
 		} else if (status == 10) {
 			ulev1_print_version(version);
@@ -923,7 +923,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			status = ul_read(startconfigblock, ulev1_conf, sizeof(ulev1_conf));
 			if ( status == -1 ) {
 				PrintAndLog("Error: tag didn't answer to READ EV1");
-				ul_switch_off_field();
+				DropField();
 				return status;
 			} else if (status == 16) {
 				// save AUTHENTICATION LIMITS for later:
@@ -978,7 +978,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		}
 	}
 
-	ul_switch_off_field();
+	DropField();
 	if (locked) PrintAndLog("\nTag appears to be locked, try using the key to get more info");
 	PrintAndLog("");
 	return 1;
@@ -1529,7 +1529,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 			return usage_hf_mfu_dump();
 		case 'k':
 		case 'K':
-			dataLen = param_getstr(Cmd, cmdp+1, tempStr);
+			dataLen = param_getstr(Cmd, cmdp+1, tempStr, sizeof(tempStr));
 			if (dataLen == 32 || dataLen == 8) { //ul-c or ev1/ntag key length
 				errors = param_gethex(tempStr, 0, authenticationkey, dataLen);
 				dataLen /= 2;
@@ -1547,7 +1547,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 			break;
 		case 'n':
 		case 'N':
-			fileNlen = param_getstr(Cmd, cmdp+1, filename);
+			fileNlen = param_getstr(Cmd, cmdp+1, filename, sizeof(filename));
 			if (!fileNlen) errors = true; 
 			if (fileNlen > FILE_PATH_SIZE-5) fileNlen = FILE_PATH_SIZE-5;
 			cmdp += 2;
@@ -1639,7 +1639,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 			get_pack[0]=0;
 			get_pack[1]=0;
 		}
-		ul_switch_off_field();
+		DropField();
 		// add pack to block read
 		memcpy(data + (Pages*4) - 4, get_pack, sizeof(get_pack));
 		
@@ -1654,14 +1654,14 @@ int CmdHF14AMfUDump(const char *Cmd){
 			ulev1_readCounter(i, get_counter, sizeof(get_counter) );
 		}
 		
-		ul_switch_off_field();
+		DropField();
 		if ( hasAuthKey )
 			ul_auth_select( &card, tagtype, hasAuthKey, authKeyPtr, dummy_pack, sizeof(dummy_pack));
 		else
 			ul_select(&card);
 		
 		ulev1_readSignature( get_signature, sizeof(get_signature));
-		ul_switch_off_field();
+		DropField();
 	}
 
 	// format and add keys to block dump output
@@ -1749,7 +1749,7 @@ int CmdHF14AMfURestore(const char *Cmd){
 			return usage_hf_mfu_restore();
 		case 'k':
 		case 'K':
-			keylen = param_getstr(Cmd, cmdp+1, tempStr);
+			keylen = param_getstr(Cmd, cmdp+1, tempStr, sizeof(tempStr));
 			if (keylen == 32 || keylen == 8) { //ul-c or ev1/ntag key length
 				errors = param_gethex(tempStr, 0, authkey, keylen);
 				keylen /= 2;
@@ -1767,7 +1767,7 @@ int CmdHF14AMfURestore(const char *Cmd){
 			break;
 		case 'f':
 		case 'F':
-			filelen = param_getstr(Cmd, cmdp+1, filename);
+			filelen = param_getstr(Cmd, cmdp+1, filename, FILE_PATH_SIZE);
 
 			if (filelen > FILE_PATH_SIZE-5)
 				filelen = FILE_PATH_SIZE-5;
@@ -1948,7 +1948,7 @@ int CmdHF14AMfURestore(const char *Cmd){
 		}
 	}
 	
-	ul_switch_off_field();
+	DropField();
 	free(dump);
 	return 0;	
 }

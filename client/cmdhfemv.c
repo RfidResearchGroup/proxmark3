@@ -207,7 +207,7 @@ int CmdHfEmvELoad(const char *Cmd) {
 				return usage_hf_emv_eload();
 			case 'o':
 			case 'O':
-				len = param_getstr(Cmd, cmdp+1, filename);
+				len = param_getstr(Cmd, cmdp+1, filename, FILE_PATH_SIZE);
 				if (!len) 
 					errors = true; 
 				if (len > FILE_PATH_SIZE-5) 

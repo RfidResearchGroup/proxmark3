@@ -225,7 +225,7 @@ int CmdT55xxSetConfig(const char *Cmd) {
 			cmdp+=2;
 			break;
 		case 'd':
-			param_getstr(Cmd, cmdp+1, modulation);
+			param_getstr(Cmd, cmdp+1, modulation, sizeof(modulation));
 			cmdp += 2;
 
 			if ( strcmp(modulation, "FSK" ) == 0) {

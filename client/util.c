@@ -540,10 +540,19 @@ int param_gethex_to_eol(const char *line, int paramnum, uint8_t * data, int maxd
 	return 0;
 }
 
-int param_getstr(const char *line, int paramnum, char * str)
+int param_getstr(const char *line, int paramnum, char * str, size_t buffersize)
 {
 	int bg, en;
-	if (param_getptr(line, &bg, &en, paramnum)) return 0;
+
+	if (param_getptr(line, &bg, &en, paramnum)) {	
+		return 0;
+	}
+
+	// Prevent out of bounds errors
+	if (en - bg + 1 >= buffersize) {
+		printf("out of bounds error: want %d bytes have %u bytes\n", en - bg + 1 + 1, buffersize);
+		return 0;
+	}
 	
 	memcpy(str, line + bg, en - bg + 1);
 	str[en - bg + 1] = 0;
@@ -560,6 +569,7 @@ https://github.com/ApertureLabsLtd/RFIDler/blob/master/firmware/Pic32/RFIDler.X/
 int hextobinarray(char *target, char *source)
 {
     int length, i, count= 0;
+    char* start = source;
     char x;
 
     length = strlen(source);
@@ -575,8 +585,10 @@ int hextobinarray(char *target, char *source)
             x -= '0';
         else if (x >= 'A' && x <= 'F')
             x -= 'A' - 10;
-        else
+        else {
+        	printf("Discovered unknown character %c %d at idx %d of %s\n", x, x, source - start, start);
             return 0;
+        }
         // output
         for(i= 0 ; i < 4 ; ++i, ++count)
             *(target++)= (x >> (3 - i)) & 1;

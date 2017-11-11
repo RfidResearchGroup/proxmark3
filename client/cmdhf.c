@@ -924,7 +924,7 @@ int CmdHFList(const char *Cmd) {
 		return usage_hf_list();
 	}
 
-	param_getstr(Cmd,0,type);
+	param_getstr(Cmd, 0, type, sizeof(type) );
 	
 	// validate type of output
 	if (strcmp(type,     "iclass") == 0)	protocol = ICLASS;

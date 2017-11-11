@@ -161,7 +161,7 @@ int CmdLFCommandRead(const char *Cmd) {
 			cmdp++;
 			break;
 		case 'c':
-			param_getstr(Cmd, cmdp+1, (char *)&c.d.asBytes);
+			param_getstr(Cmd, cmdp+1, (char *)&c.d.asBytes, sizeof(c.d.asBytes));
 			cmdp+=2;
 			break;
 		case 'd':
@@ -452,7 +452,7 @@ int CmdLFfskSim(const char *Cmd) {
 	// otherwise will need FChigh, FClow, Clock, and bitstream
 	uint8_t fcHigh = 0, fcLow = 0, clk = 0;
 	bool errors = false, separator = false;
-	char hexData[32] = {0x00}; // store entered hex data
+	char hexData[64] = {0x00}; // store entered hex data
 	uint8_t data[255] = {0x00}; 
 	int dataLen = 0;
 	uint8_t cmdp = 0;	
@@ -478,7 +478,7 @@ int CmdLFfskSim(const char *Cmd) {
 				cmdp++;
 				break;
 			case 'd':
-				dataLen = param_getstr(Cmd, cmdp+1, hexData);
+				dataLen = param_getstr(Cmd, cmdp+1, hexData, sizeof(hexData));
 				if (dataLen == 0)
 					errors = true; 
 				else
@@ -545,7 +545,7 @@ int CmdLFaskSim(const char *Cmd) {
 	// needs clock, invert, manchester/raw as m or r, separator as s, and bitstream
 	uint8_t encoding = 1, separator = 0, clk = 0, invert = 0;
 	bool errors = false;
-	char hexData[32] = {0x00}; 
+	char hexData[64] = {0x00}; 
 	uint8_t data[255]= {0x00}; // store entered hex data
 	int dataLen = 0;
 	uint8_t cmdp = 0;
@@ -579,7 +579,7 @@ int CmdLFaskSim(const char *Cmd) {
 				cmdp++;
 				break;
 			case 'd':
-				dataLen = param_getstr(Cmd, cmdp+1, hexData);
+				dataLen = param_getstr(Cmd, cmdp+1, hexData, sizeof(hexData));
 				if (dataLen == 0)
 					errors = true; 
 				else
@@ -639,7 +639,7 @@ int CmdLFpskSim(const char *Cmd) {
 	uint8_t carrier=0, clk=0;
 	uint8_t invert=0;
 	bool errors = false;
-	char hexData[32] = {0x00}; // store entered hex data
+	char hexData[64] = {0x00}; // store entered hex data
 	uint8_t data[255] = {0x00}; 
 	int dataLen = 0;
 	uint8_t cmdp = 0;
@@ -674,7 +674,7 @@ int CmdLFpskSim(const char *Cmd) {
 				cmdp++;
 				break;
 			case 'd':
-				dataLen = param_getstr(Cmd, cmdp+1, hexData);
+				dataLen = param_getstr(Cmd, cmdp+1, hexData, sizeof(hexData));
 				if (dataLen == 0)
 					errors = true; 
 				else

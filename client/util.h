@@ -125,7 +125,7 @@ extern uint8_t param_isdec(const char *line, int paramnum);
 extern int param_gethex(const char *line, int paramnum, uint8_t * data, int hexcnt);
 extern int param_gethex_ex(const char *line, int paramnum, uint8_t * data, int *hexcnt);
 extern int param_gethex_to_eol(const char *line, int paramnum, uint8_t * data, int maxdatalen, int *datalen);
-extern int param_getstr(const char *line, int paramnum, char * str);
+extern int param_getstr(const char *line, int paramnum, char * str, size_t buffersize);
 
 extern int hextobinarray( char *target,  char *source);
 extern int hextobinstring( char *target,  char *source);

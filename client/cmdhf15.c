@@ -650,7 +650,7 @@ int CmdHF15Dump(const char*Cmd) {
 			return usage_15_dump();
 		case 'f':
 		case 'F':
-			fileNameLen = param_getstr(Cmd, cmdp+1, filename); 
+			fileNameLen = param_getstr(Cmd, cmdp+1, filename, FILE_PATH_SIZE); 
 			if (fileNameLen < 1) {
 				PrintAndLog("Using UID as filename");
 				
