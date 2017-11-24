@@ -576,7 +576,7 @@ void HfDumpFelicaLiteS() {
     if (!manch_tbl_fill)
         fillManch();
 	
-	ResetNFCFrame();
+    ResetNFCFrame();
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_ISO18092 | FPGA_HF_ISO18092_FLAG_READER |FPGA_HF_ISO18092_FLAG_NOMOD);
 
