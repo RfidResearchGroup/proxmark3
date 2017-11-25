@@ -11,8 +11,6 @@
 #include "protocols.h"
 #include "data.h"
 
-#define ul_switch_off_field DropField
-
 typedef struct {
 	uint8_t version[8];
 	uint8_t tbo[2];
@@ -43,7 +41,6 @@ extern int CmdHF14AMfUSim(const char *Cmd);
 
 extern uint32_t GetHF14AMfU_Type(void);
 extern int ul_print_type(uint32_t tagtype, uint8_t spacer);
-extern void ul_switch_off_field(void);
 
 void printMFUdump(mfu_dump_t* card);
 void printMFUdumpEx(mfu_dump_t* card, uint16_t pages, uint8_t startpage);
@@ -65,10 +62,12 @@ int CmdHFMFUltra(const char *Cmd);
 uint32_t ul_ev1_pwdgenA(uint8_t* uid);
 uint32_t ul_ev1_pwdgenA(uint8_t* uid);
 uint32_t ul_ev1_pwdgenC(uint8_t* uid);
+uint32_t ul_ev1_pwdgenD(uint8_t* uid);
 
 uint16_t ul_ev1_packgenA(uint8_t* uid);
-uint16_t ul_ev1_packgenA(uint8_t* uid);
-uint16_t ul_ev1_packgenA(uint8_t* uid);
+uint16_t ul_ev1_packgenB(uint8_t* uid);
+uint16_t ul_ev1_packgenC(uint8_t* uid);
+uint16_t ul_ev1_packgenD(uint8_t* uid);
 
 uint32_t ul_ev1_otpgenA(uint8_t* uid);
 
