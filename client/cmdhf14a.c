@@ -1,7 +1,8 @@
 //-----------------------------------------------------------------------------
-// 2011, Merlok
-// 2014, Peter Fillmore
 // Copyright (C) 2010 iZsh <izsh at fail0verflow.com>, Hagen Fritsch
+// 2011, 2017 Merlok
+// 2014, Peter Fillmore
+// 2015, 2016, 2017 Iceman
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -655,7 +656,7 @@ void DropField() {
 	SendCommand(&c);
 }
 
-int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int *dataoutlen) {
+int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
 	uint16_t cmdc = 0;
 	
 	if (activateField) {
@@ -667,8 +668,8 @@ int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool lea
 	// "Command APDU" length should be 5+255+1, but javacard's APDU buffer might be smaller - 133 bytes
 	// https://stackoverflow.com/questions/32994936/safe-max-java-card-apdu-data-command-and-respond-size
 	// here length USB_CMD_DATA_SIZE=512
-	// timeout timeout14a * 1.06 / 100, true, size, &keyBlock[6 * c], e_sector); // timeout is (ms * 106)/10 or us*0.0106
-	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_APDU | ISO14A_SET_TIMEOUT | cmdc, (datainlen & 0xFFFF), 1000 * 1000 * 1.06 / 100}}; 
+	// timeout must be authomatically set by "get ATS"
+	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_APDU | cmdc, (datainlen & 0xFFFF), 0}}; 
 	memcpy(c.d.asBytes, datain, datainlen);
 	SendCommand(&c);
 	
@@ -693,6 +694,12 @@ int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool lea
 		*dataoutlen = iLen - 2;
 		if (*dataoutlen < 0)
 			*dataoutlen = 0;
+		
+		if (maxdataoutlen && *dataoutlen > maxdataoutlen) {
+			PrintAndLog("APDU ERROR: Buffer too small(%d). Needs %d bytes", *dataoutlen, maxdataoutlen);
+			return 2;
+		}
+		
 		memcpy(dataout, recv, *dataoutlen);
 		
         if(!iLen) {
@@ -786,7 +793,7 @@ int CmdHF14AAPDU(const char *cmd) {
 
 	PrintAndLog(">>>>[%s%s%s] %s", activateField ? "sel ": "", leaveSignalON ? "keep ": "", decodeTLV ? "TLV": "", sprint_hex(data, datalen));
 	
-	int res = ExchangeAPDU14a(data, datalen, activateField, leaveSignalON, data, &datalen);
+	int res = ExchangeAPDU14a(data, datalen, activateField, leaveSignalON, data, USB_CMD_DATA_SIZE, &datalen);
 
 	if (res)
 		return res;

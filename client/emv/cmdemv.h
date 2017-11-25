@@ -27,5 +27,6 @@
 
 int CmdHFEMV(const char *Cmd);
 
+#define TLV_ADD(tag, value)( tlvdb_add(tlvRoot, tlvdb_fixed(tag, sizeof(value) - 1, (const unsigned char *)value)) )
 
 #endif

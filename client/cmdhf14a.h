@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
-// 2011, Merlok
 // Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
+// 2011, Merlok
 // 2015,216,2017 iceman, marshmellow, piwi
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -50,7 +50,8 @@ extern int CmdHF14ACUIDs(const char *Cmd);
 
 extern char* getTagInfo(uint8_t uid);
 extern void DropField();
-extern int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int *dataoutlen);
+extern int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);
+
 											
 
 extern int usage_hf_14a_sim(void);

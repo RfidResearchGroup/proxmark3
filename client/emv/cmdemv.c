@@ -10,6 +10,8 @@
 
 #include "cmdemv.h"
 
+static int CmdHelp(const char *Cmd);
+
 int UsageCmdHFEMVSelect(void) {
 	PrintAndLog("HELP :  Executes select applet command:\n");
 	PrintAndLog("Usage:  hf emv select [-s][-k][-a][-t] <HEX applet AID>\n");
@@ -289,8 +291,6 @@ int UsageCmdHFEMVExec(void) {
 	return 0;
 }
 
-#define TLV_ADD(tag, value)( tlvdb_add(tlvRoot, tlvdb_fixed(tag, sizeof(value) - 1, (const unsigned char *)value)) )
-
 int CmdHFEMVExec(const char *cmd) {
 	bool activateField = false;
 	bool showAPDU = false;
@@ -531,7 +531,6 @@ return 0;
 	return 0;
 }
 
-int CmdHelp(const char *Cmd);
 static command_t CommandTable[] =  {
 	{"help",	CmdHelp,		1,	"This help"},
 	{"exec",	CmdHFEMVExec,	0,	"Executes EMV contactless transaction."},
@@ -542,6 +541,7 @@ static command_t CommandTable[] =  {
 };
 
 int CmdHFEMV(const char *Cmd) {
+	clearCommandBuffer();
 	CmdsParse(CommandTable, Cmd);
 	return 0;
 }
