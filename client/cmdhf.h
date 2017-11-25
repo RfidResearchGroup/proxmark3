@@ -28,11 +28,12 @@
 #include "cmdhfmfu.h"		// ULTRALIGHT/NTAG etc
 #include "cmdhfmfdes.h"		// DESFIRE
 #include "cmdhftopaz.h"		// TOPAZ
-#include "cmdhfemv.h"		// EMV
 #include "cmdhffelica.h"	// ISO18092 / FeliCa
-#include "protocols.h"
+#include "emv/cmdemv.h"		// EMV
+#include "protocols.h"				
 #include "parity.h"			// oddparity
 #include "iso15693tools.h"	// ISO15693 crc
+											  
 
 extern int CmdHF(const char *Cmd);
 extern int CmdHFTune(const char *Cmd);
