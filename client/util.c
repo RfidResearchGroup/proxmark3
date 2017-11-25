@@ -153,6 +153,30 @@ char *sprint_hex(const uint8_t *data, const size_t len) {
 	return buf;
 }
 
+char *sprint_hex_inrow_ex(const uint8_t *data, const size_t len, const size_t min_str_len) {
+	
+
+	static char buf[1024] = {0};
+	char *tmp = buf;
+	memset(buf, 0x00, 1024);
+	int max_len = ( len > 1024/2) ? 1024/2 : len;
+	size_t i;
+
+	for (i = 0; i < max_len; ++i, tmp += 2)
+		sprintf(tmp, "%02X", data[i]);
+	
+	i *= 2;
+	int m = min_str_len > i ? min_str_len : 0;
+	for(; i < m; i++, tmp += 1) 
+		sprintf(tmp, " ");
+
+	return buf;
+}
+
+char *sprint_hex_inrow(const uint8_t *data, const size_t len) {
+	return sprint_hex_inrow_ex(data, len, 0);
+}
+
 char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t breaks) {
 	
 	// make sure we don't go beyond our char array memory
@@ -248,7 +272,7 @@ char *sprint_hex_ascii(const uint8_t *data, const size_t len) {
 	return buf;
 }
 
-char *sprint_ascii(const uint8_t *data, const size_t len) {
+char *sprint_ascii_ex(const uint8_t *data, const size_t len, const size_t min_str_len) {
 	static char buf[1024];
 	char *tmp = buf;
 	memset(buf, 0x00, 1024);
@@ -259,7 +283,15 @@ char *sprint_ascii(const uint8_t *data, const size_t len) {
 		tmp[i] = ((c < 32) || (c == 127)) ? '.' : c;
 		++i;
 	}
+	
+	int m = min_str_len > i ? min_str_len : 0;
+	for(; i < m; ++i) 
+		tmp[i] = ' ';
+	
 	return buf;
+}
+char *sprint_ascii(const uint8_t *data, const size_t len) {
+	return sprint_ascii_ex(data, len, 0);
 }
 
 void print_blocks(uint32_t *data, size_t len) {
@@ -507,8 +539,10 @@ int param_gethex_to_eol(const char *line, int paramnum, uint8_t * data, int maxd
 	
 	int indx = bg;
 	while (line[indx]) {
-		if (line[indx] == '\t' || line[indx] == ' ') 
+		if (line[indx] == '\t' || line[indx] == ' ') {
+			indx++;
 			continue;
+		}
 		
 		if (isxdigit(line[indx])) {
 			buf[strlen(buf) + 1] = 0x00;

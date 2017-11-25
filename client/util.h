@@ -98,10 +98,13 @@ extern void FillFileNameByUID(char *fileName, uint8_t * uid, char *ext, int byte
 extern void print_hex(const uint8_t * data, const size_t len);
 extern void print_hex_break(const uint8_t *data, const size_t len, const uint8_t breaks);
 extern char *sprint_hex(const uint8_t * data, const size_t len);
+extern char *sprint_hex_inrow(const uint8_t *data, const size_t len);
+extern char *sprint_hex_inrow_ex(const uint8_t *data, const size_t len, const size_t min_str_len);
 extern char *sprint_bin(const uint8_t * data, const size_t len);
 extern char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t breaks);
 extern char *sprint_hex_ascii(const uint8_t *data, const size_t len);
 extern char *sprint_ascii(const uint8_t *data, const size_t len);
+extern char *sprint_ascii_ex(const uint8_t *data, const size_t len, const size_t min_str_len);
 
 extern void print_blocks(uint32_t *data, size_t len);
 
