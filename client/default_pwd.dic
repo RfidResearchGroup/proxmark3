@@ -10,8 +10,10 @@
 314159E0,
 # ref. http://www.proxmark.org/forum/viewtopic.php?pid=28115#p28115
 AA55BBBB,
+# ref.  http://www.proxmark.org/forum/viewtopic.php?pid=30379#p30379
+1C0B5848,
 # paxton bullit?
-575F4F4B, 
+575F4F4B,
 # Default pwd, simple:
 00000000,
 11111111,
