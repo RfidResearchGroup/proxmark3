@@ -29,7 +29,6 @@ extern "C" {
 #include "pcf7931.h"
 #include "desfire.h"
 #include "iso14443b.h"
-#include "emvcard.h"
 #include "Standalone/standalone.h"
 
 extern const uint8_t OddByteParity[256];
@@ -239,21 +238,6 @@ void HfSnoop(int , int);
 extern void HfSnoopISO18(uint32_t samples, uint32_t triggers);
 extern void HfSimLite(uint64_t uid);
 extern void HfDumpFelicaLiteS();
-
-//EMV functions
-// emvcmd.h
-extern void EMVTransaction(void);
-extern void EMVgetUDOL(void);
-extern void EMVloadvalue(uint32_t tag, uint8_t* datain);
-extern void EMVdumpcard(void);
-//extern void EMVSelect(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *data);
-extern void EMVFuzz_RATS(uint8_t ratslen, uint8_t* RATS);
-extern void EMVReadRecord(uint8_t arg0, uint8_t arg1,emvcard* inputcard);
-extern void EMVSelectPPSE();
-extern void EMVSelectAID(uint8_t *AID, uint8_t AIDlen, emvcard* inputcard);
-extern void EMVClone(uint8_t maxsfi, uint8_t maxrecord);
-extern void EMVSim();
-extern void EMVTest();
 
 #ifdef __cplusplus
 }

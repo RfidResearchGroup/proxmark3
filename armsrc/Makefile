@@ -49,7 +49,6 @@ SRC_ISO14443b = iso14443b.c
 SRC_FELICA = felica.c
 SRC_CRAPTO1 = crypto1.c des.c aes.c desfire_key.c desfire_crypto.c mifaredesfire.c
 SRC_CRC = iso14443crc.c crc.c crc16.c crc32.c 
-#SRC_EMV = tlv.c emvdataels.c emvutil.c emvcmd.c 									 
 SRC_ICLASS = iclass.c optimized_cipher.c
 SRC_LEGIC = legicrf.c legic_prng.c
 SRC_FLASH = flash.c

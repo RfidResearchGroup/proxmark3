@@ -914,35 +914,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 		case CMD_MIFARE_COLLECT_NONCES:
 			break;
 #endif
-#ifdef WITH_EMV
-		case CMD_EMV_TRANSACTION:
-			EMVTransaction();
-			break;
-        case CMD_EMV_GET_RANDOM_NUM:
-            //EMVgetUDOL();
-            break;
-        case CMD_EMV_LOAD_VALUE:
-            EMVloadvalue(c->arg[0], c->d.asBytes);  
-            break;
-        case CMD_EMV_DUMP_CARD:
-            EMVdumpcard();
-			break;		
-       case CMD_EMV_READ_RECORD:
-            EMVReadRecord(c->arg[0], c->arg[1], NULL);
-            break; 
-        case CMD_EMV_CLONE:
-            EMVClone(c->arg[0], c->arg[1]);
-            break;
-       case CMD_EMV_SIM:
-            EMVSim();
-            break;
-        case CMD_EMV_TEST:
-            EMVTest();
-            break;
-        case CMD_EMV_FUZZ_RATS:
-            EMVFuzz_RATS(c->arg[0],c->d.asBytes);
-            break;
-#endif
+
 #ifdef WITH_ICLASS
 		// Makes use of ISO14443a FPGA Firmware
 		case CMD_SNOOP_ICLASS:
