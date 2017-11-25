@@ -19,7 +19,7 @@ uint8_t trigger = 0;
 // the block number for the ISO14443-4 PCB
 static uint8_t iso14_pcb_blocknum = 0;
 
-//static uint8_t* free_buffer_pointer;
+static uint8_t* free_buffer_pointer;
 
 //
 // ISO14443 timing:
