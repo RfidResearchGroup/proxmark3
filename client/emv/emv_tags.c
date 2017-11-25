@@ -29,6 +29,7 @@ enum emv_tag_t {
 	EMV_TAG_BITMASK,
 	EMV_TAG_DOL,
 	EMV_TAG_CVM_LIST,
+	EMV_TAG_AFL,
 	EMV_TAG_STRING,
 	EMV_TAG_NUMERIC,
 	EMV_TAG_YYMMDD,
@@ -57,7 +58,7 @@ static const struct emv_tag_bit EMV_AIP[] = {
 	{ EMV_BIT(1, 3), "Issuer authentication is supported" },
 	{ EMV_BIT(1, 2), "Reserved for use by the EMV Contactless Specifications" },
 	{ EMV_BIT(1, 1), "CDA supported" },
-	{ EMV_BIT(2, 8), "Reserved for use by the EMV Contactless Specifications" },
+	{ EMV_BIT(2, 8), "MSD is supported (Magnetic Stripe Data)" },
 	{ EMV_BIT(2, 7), "Reserved for use by the EMV Contactless Specifications" },
 	{ EMV_BIT(2, 6), "Reserved for use by the EMV Contactless Specifications" },
 	{ EMV_BIT(2, 1), "Reserved for use by the EMV Contactless Specifications" },
@@ -113,8 +114,44 @@ static const struct emv_tag_bit EMV_TVR[] = {
 	EMV_BIT_FINISH,
 };
 
+static const struct emv_tag_bit EMV_CTQ[] = {
+	{ EMV_BIT(1, 8), "Online PIN Required" },
+	{ EMV_BIT(1, 7), "Signature Required" },
+	{ EMV_BIT(1, 6), "Go Online if Offline Data Authentication Fails and Reader is online capable" },
+	{ EMV_BIT(1, 5), "Switch Interface if Offline Data Authentication fails and Reader supports VIS" },
+	{ EMV_BIT(1, 4), "Go Online if Application Expired" },
+	{ EMV_BIT(1, 3), "Switch Interface for Cash Transactions" },
+	{ EMV_BIT(1, 2), "Switch Interface for Cashback Transactions" },
+	{ EMV_BIT(2, 8), "Consumer Device CVM Performed" },
+	{ EMV_BIT(2, 7), "Card supports Issuer Update Processing at the POS" },
+	EMV_BIT_FINISH,
+};
+
+static const struct emv_tag_bit EMV_TTQ[] = {
+	{ EMV_BIT(1, 8), "MSD supported" },
+	{ EMV_BIT(1, 7), "VSDC supported" },
+	{ EMV_BIT(1, 6), "qVSDC supported" },
+	{ EMV_BIT(1, 5), "EMV contact chip supported" },
+	{ EMV_BIT(1, 4), "Offline-only reader" },
+	{ EMV_BIT(1, 3), "Online PIN supported" },
+	{ EMV_BIT(1, 2), "Signature supported" },
+	{ EMV_BIT(1, 1), "Offline Data Authentication (ODA) for Online Authorizations supported\nWarning!!!! Readers compliant to this specification set TTQ byte 1 bit 1 (this field) to 0b" },
+	{ EMV_BIT(2, 8), "Online cryptogram required" },
+	{ EMV_BIT(2, 7), "CVM required" },
+	{ EMV_BIT(2, 6), "(Contact Chip) Offline PIN supported" },
+	{ EMV_BIT(3, 8), "Issuer Update Processing supported" },
+	{ EMV_BIT(3, 7), "Mobile functionality supported (Consumer Device CVM)" },
+	EMV_BIT_FINISH,
+};
+
+// All Data Elements by Tags used in TLV structure (according to the EMV 4.2 Standard )
+// https://www.eftlab.co.uk/index.php/site-map/knowledge-base/145-emv-nfc-tags
+// http://dexterous-programmer.blogspot.in/2012/05/emv-tags.html
 static const struct emv_tag emv_tags[] = {
 	{ 0x00  , "Unknown ???" },
+	{ 0x01  , "", EMV_TAG_STRING }, // string for headers
+	{ 0x41  , "Country code and national data" },
+	{ 0x42  , "Issuer Identification Number (IIN)" },
 	{ 0x4f  , "Application Dedicated File (ADF) Name" },
 	{ 0x50  , "Application Label", EMV_TAG_STRING },
 	{ 0x56  , "Track 1 Data" },
@@ -147,12 +184,13 @@ static const struct emv_tag emv_tags[] = {
 	{ 0x91  , "Issuer Authentication Data" },
 	{ 0x92  , "Issuer Public Key Remainder" },
 	{ 0x93  , "Signed Static Application Data" },
-	{ 0x94  , "Application File Locator (AFL)" },
+	{ 0x94  , "Application File Locator (AFL)", EMV_TAG_AFL },
 	{ 0x95  , "Terminal Verification Results" },
 	{ 0x9a  , "Transaction Date", EMV_TAG_YYMMDD },
 	{ 0x9c  , "Transaction Type" },
 	{ 0x9f02, "Amount, Authorised (Numeric)", EMV_TAG_NUMERIC },
 	{ 0x9f03, "Amount, Other (Numeric)", EMV_TAG_NUMERIC, },
+	{ 0x9f06, "Application Identifier (AID), Terminal. ISO 7816-5" },
 	{ 0x9f07, "Application Usage Control", EMV_TAG_BITMASK, &EMV_AUC },
 	{ 0x9f08, "Application Version Number" },
 	{ 0x9f0d, "Issuer Action Code - Default", EMV_TAG_BITMASK, &EMV_TVR },
@@ -168,6 +206,7 @@ static const struct emv_tag emv_tags[] = {
 	{ 0x9f21, "Transaction Time" },
 	{ 0x9f26, "Application Cryptogram" },
 	{ 0x9f27, "Cryptogram Information Data" },
+	{ 0x9f2a, "Kernel Identifier" },
 	{ 0x9f2d, "ICC PIN Encipherment Public Key Certificate" },
 	{ 0x9f2e, "ICC PIN Encipherment Public Key Exponent" },
 	{ 0x9f2f, "ICC PIN Encipherment Public Key Remainder" },
@@ -193,9 +232,12 @@ static const struct emv_tag emv_tags[] = {
 	{ 0x9f63, "PUNATC(Track1)" },
 	{ 0x9f64, "NATC(Track1)" },
 	{ 0x9f65, "PCVC3(Track2)" },
-	{ 0x9f66, "PUNATC(Track2)" },
-	{ 0x9f67, "NATC(Track2)" },
+	{ 0x9f66, "PUNATC(Track2) / Terminal Transaction Qualifiers (TTQ)", EMV_TAG_BITMASK, &EMV_TTQ },
+	{ 0x9f67, "NATC(Track2) / MSD Offset" },
+	{ 0x9f69, "Card Authentication Related Data" },
+	{ 0x9f6a, "Unpredictable Number", EMV_TAG_NUMERIC },
 	{ 0x9f6b, "Track 2 Data" },
+	{ 0x9f6c, "Card Transaction Qualifiers (CTQ)", EMV_TAG_BITMASK, &EMV_CTQ },
 	{ 0xa5  , "File Control Information (FCI) Proprietary Template" },
 	{ 0xbf0c, "File Control Information (FCI) Issuer Discretionary Data" },
 };
@@ -242,10 +284,11 @@ static void emv_tag_dump_bitmask(const struct tlv *tlv, const struct emv_tag *ta
 		PRINT_INDENT(level);
 		fprintf(f, "\tByte %u (%02x)\n", byte, val);
 		for (bit = 8; bit > 0; bit--, val <<= 1) {
-			if (val & 0x80)
+			if (val & 0x80){
 				PRINT_INDENT(level);
 				fprintf(f, "\t\t%s - '%s'\n", bitstrings[bit - 1],
 						bits->bit == EMV_BIT(byte, bit) ? bits->name : "Unknown");
+			}
 			if (bits->bit == EMV_BIT(byte, bit))
 				bits ++;
 		}
@@ -276,10 +319,8 @@ static void emv_tag_dump_dol(const struct tlv *tlv, const struct emv_tag *tag, F
 
 static void emv_tag_dump_string(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level)
 {
-	PRINT_INDENT(level);
 	fprintf(f, "\tString value '");
 	fwrite(tlv->value, 1, tlv->len, f);
-	PRINT_INDENT(level);
 	fprintf(f, "'\n");
 }
 
@@ -433,6 +474,19 @@ static void emv_tag_dump_cvm_list(const struct tlv *tlv, const struct emv_tag *t
 	}
 }
 
+static void emv_tag_dump_afl(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level){
+	if (tlv->len < 4 || tlv->len % 4) {
+		PRINT_INDENT(level);
+		fprintf(f, "\tINVALID!\n");
+		return;
+	}
+	
+	for (int i = 0; i < tlv->len / 4; i++) {
+		PRINT_INDENT(level);
+		fprintf(f, "SFI[%02x] start:%02x end:%02x offline:%02x\n", tlv->value[i * 4 + 0] >> 3, tlv->value[i * 4 + 1], tlv->value[i * 4 + 2], tlv->value[i * 4 + 3]);
+	}
+}
+
 bool emv_tag_dump(const struct tlv *tlv, FILE *f, int level)
 {
 	if (!tlv) {
@@ -443,19 +497,27 @@ bool emv_tag_dump(const struct tlv *tlv, FILE *f, int level)
 	const struct emv_tag *tag = emv_get_tag(tlv);
 
 	PRINT_INDENT(level);
-	fprintf(f, "--%2hx[%02zx] '%s':\n", tlv->tag, tlv->len, tag->name);
+	fprintf(f, "--%2hx[%02zx] '%s':", tlv->tag, tlv->len, tag->name);
 
 	switch (tag->type) {
 	case EMV_TAG_GENERIC:
+		fprintf(f, "\n");
 		break;
 	case EMV_TAG_BITMASK:
+		fprintf(f, "\n");
 		emv_tag_dump_bitmask(tlv, tag, f, level);
 		break;
 	case EMV_TAG_DOL:
+		fprintf(f, "\n");
 		emv_tag_dump_dol(tlv, tag, f, level);
 		break;
 	case EMV_TAG_CVM_LIST:
+		fprintf(f, "\n");
 		emv_tag_dump_cvm_list(tlv, tag, f, level);
+		break;
+	case EMV_TAG_AFL:
+		fprintf(f, "\n");
+		emv_tag_dump_afl(tlv, tag, f, level);
 		break;
 	case EMV_TAG_STRING:
 		emv_tag_dump_string(tlv, tag, f, level);

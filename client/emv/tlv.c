@@ -299,6 +299,40 @@ void tlvdb_free(struct tlvdb *tlvdb)
 	}
 }
 
+struct tlvdb *tlvdb_find_next(struct tlvdb *tlvdb, tlv_tag_t tag) {
+	if (!tlvdb)
+		return NULL;
+	
+	return tlvdb_find(tlvdb->next, tag);
+}
+
+struct tlvdb *tlvdb_find(struct tlvdb *tlvdb, tlv_tag_t tag) {
+	if (!tlvdb)
+		return NULL;
+	
+	for (; tlvdb; tlvdb = tlvdb->next) {
+		if (tlvdb->tag.tag == tag)
+			return tlvdb;
+	}
+
+	return NULL;
+}
+
+struct tlvdb *tlvdb_find_path(struct tlvdb *tlvdb, tlv_tag_t tag[]) {
+	int i = 0;
+	struct tlvdb *tnext = tlvdb;
+	
+	while (tnext && tag[i]) {
+		tnext = tlvdb_find(tnext, tag[i]);
+		i++;
+		if (tag[i] && tnext) {
+			tnext = tnext->children;
+		}
+	}
+	
+	return tnext;
+}
+
 void tlvdb_add(struct tlvdb *tlvdb, struct tlvdb *other)
 {
 	while (tlvdb->next) {
@@ -317,9 +351,8 @@ void tlvdb_visit(const struct tlvdb *tlvdb, tlv_cb cb, void *data, int level)
 
 	for (; tlvdb; tlvdb = next) {
 		next = tlvdb->next;
-		bool is_leaf = (tlvdb->children == NULL);
-		cb(data, &tlvdb->tag, level, is_leaf);
-		tlvdb_visit(tlvdb->children, cb, data, level+1);
+		cb(data, &tlvdb->tag, level, (tlvdb->children == NULL));
+		tlvdb_visit(tlvdb->children, cb, data, level + 1);
 	}
 }
 
@@ -354,6 +387,11 @@ const struct tlv *tlvdb_get(const struct tlvdb *tlvdb, tlv_tag_t tag, const stru
 	}
 
 	return NULL;
+}
+
+const struct tlv *tlvdb_get_inchild(const struct tlvdb *tlvdb, tlv_tag_t tag, const struct tlv *prev) {
+	tlvdb = tlvdb->children;
+	return tlvdb_get(tlvdb, tag, prev);
 }
 
 unsigned char *tlv_encode(const struct tlv *tlv, size_t *len)

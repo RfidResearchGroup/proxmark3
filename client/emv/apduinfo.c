@@ -283,8 +283,8 @@ const APDUCode* const GetAPDUCode(uint8_t sw1, uint8_t sw2) {
 	int mineq = 100;
 	int mineqindx = 0;
 	
-	sprintf(&buf[0], "%02X ", sw1);
-	sprintf(&buf[2], "%02X ", sw2);
+	sprintf(&buf[0], "%02X", sw1);
+	sprintf(&buf[2], "%02X", sw2);
 	
 	for (int i = 0; i < APDUCodeTableLen; i++) {
 		res = CodeCmp(APDUCodeTable[i].ID, buf);

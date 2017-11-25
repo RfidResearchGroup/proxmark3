@@ -19,7 +19,6 @@
 
 #include "dump.h"
 
-#include <stdio.h>
 
 #define PRINT_INDENT(level) 	{for (int i = 0; i < (level); i++) fprintf(f, "\t");}
 
