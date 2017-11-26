@@ -242,7 +242,7 @@ static int l_iso15693_crc(lua_State *L) {
     const char *v = luaL_checklstring(L, 1, &size);
 	// iceman, should be size / 2 ?!?
     uint16_t retval = Iso15693Crc((uint8_t *) v, size);
-    lua_pushinteger(L, (int) retval);
+    lua_pushunsigned(L, retval);
     return 1;
 }
 
@@ -388,7 +388,7 @@ static int l_crc8legic(lua_State *L)
 	const char *p_str = luaL_checklstring(L, 1, &size);
 
 	uint16_t retval = CRC8Legic( (uint8_t*) p_str, size);
-    lua_pushinteger(L, (int) retval);
+    lua_pushunsigned(L, retval);
     return 1;
 }
 
@@ -398,7 +398,7 @@ static int l_crc16(lua_State *L)
 	const char *p_str = luaL_checklstring(L, 1, &size);
 
 	uint16_t retval = crc16_ccitt( (uint8_t*) p_str, size);
-    lua_pushinteger(L, (int) retval);
+    lua_pushunsigned(L, retval);
     return 1;
 }
 
@@ -620,8 +620,8 @@ static int l_keygen_algoD(lua_State *L) {
 	uint32_t pwd = ul_ev1_pwdgenD(uid);
 	uint16_t pack = ul_ev1_packgenD(uid);
 	
-	lua_pushinteger(L, pwd);
-	lua_pushinteger(L, pack);
+	lua_pushunsigned(L, pwd);
+	lua_pushunsigned(L, pack);
 	return 2;	
 }
 
