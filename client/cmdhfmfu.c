@@ -828,6 +828,9 @@ uint32_t GetHF14AMfU_Type(void){
 	return tagtype;
 }
 
+//
+//  extended tag information
+//
 int CmdHF14AMfUInfo(const char *Cmd){
 
 	uint8_t authlim = 0xff;
@@ -1038,6 +1041,12 @@ int CmdHF14AMfUInfo(const char *Cmd){
 
 			// test pwd gen C
 			num_to_bytes( ul_ev1_pwdgenC(card.uid), 4, key);
+			len = ulev1_requestAuthentication(key, pack, sizeof(pack));
+			if (len > -1)
+				PrintAndLog("Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
+
+			// test pwd gen D
+			num_to_bytes( ul_ev1_pwdgenD(card.uid), 4, key);
 			len = ulev1_requestAuthentication(key, pack, sizeof(pack));
 			if (len > -1)
 				PrintAndLog("Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
@@ -1805,6 +1814,10 @@ static void wait4response(uint8_t b){
 		PrintAndLog("Command execute timeout");
 	}
 }
+
+//
+//  Restore dump file onto tag
+//
 int CmdHF14AMfURestore(const char *Cmd){
 
 	char tempStr[50] = {0};
@@ -2034,13 +2047,17 @@ int CmdHF14AMfURestore(const char *Cmd){
 	free(dump);
 	return 0;	
 }
-
+//
+//  Load emulator with dump file
+//
 int CmdHF14AMfUeLoad(const char *Cmd){
 	char c = param_getchar(Cmd, 0);
 	if ( c == 'h' || c == 'H' || c == 0x00) return usage_hf_mfu_eload();
 	return CmdHF14AMfELoad(Cmd);
 }
-
+//
+//  Simulate tag
+//
 int CmdHF14AMfUSim(const char *Cmd){
 	char c = param_getchar(Cmd, 0);
 	if ( c == 'h' || c == 'H' || c == 0x00) return usage_hf_mfu_sim();
