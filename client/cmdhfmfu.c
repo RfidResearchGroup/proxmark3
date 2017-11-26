@@ -742,19 +742,22 @@ uint32_t GetHF14AMfU_Type(void){
 
 		switch (len) {
 			case 0x0A: {
-				if ( version[2] == 0x03 && version[6] == 0x0B )
+				#define PTYPE 2
+				#define PSUBTYPE 3
+				#define PSIZE 6
+				if ( version[PTYPE] == 0x03 && version[PSIZE] == 0x0B )
 					tagtype = UL_EV1_48;
-				else if ( version[2] == 0x03 && version[6] != 0x0B )
+				else if ( version[PTYPE] == 0x03 && version[PSIZE] != 0x0B )
 					tagtype = UL_EV1_128;
-				else if ( version[2] == 0x04 && version[3] == 0x01 && version[6] == 0x0B )
+				else if ( version[PTYPE] == 0x04 && version[PSUBTYPE] == 0x01 && version[PSIZE] == 0x0B )
 					tagtype = NTAG_210;
-				else if ( version[2] == 0x04 && version[3] == 0x01 && version[6] == 0x0E )
+				else if ( version[PTYPE] == 0x04 && version[PSUBTYPE] == 0x01 && version[PSIZE] == 0x0E )
 					tagtype = NTAG_212;
-				else if ( version[2] == 0x04 && version[3] == 0x02 && version[6] == 0x0F )
+				else if ( version[PTYPE] == 0x04 && (version[PSUBTYPE] == 0x02 || version[PSUBTYPE] == 0x04) && version[PSIZE] == 0x0F )
 					tagtype = NTAG_213;
-				else if ( version[2] == 0x04 && version[3] == 0x02 && version[6] == 0x11 )
+				else if ( version[PTYPE] == 0x04 && version[PSUBTYPE] == 0x02 && version[PSIZE] == 0x11 )
 					tagtype = NTAG_215;
-				else if ( version[2] == 0x04 && version[3] == 0x02 && version[6] == 0x13 )
+				else if ( version[PTYPE] == 0x04 && version[PSUBTYPE] == 0x02 && version[PSIZE] == 0x13 )
 					tagtype = NTAG_216;
 				else if ( memcmp(version+2, "\x04\x05\x02\x01\x13", 5) == 0)
 					tagtype = NTAG_I2C_1K;
@@ -764,7 +767,7 @@ uint32_t GetHF14AMfU_Type(void){
 					tagtype = NTAG_I2C_1K_PLUS;
 				else if ( memcmp(version+2, "\x04\x05\x02\x02\x15", 5) == 0)
 					tagtype = NTAG_I2C_2K_PLUS;
-				else if ( version[2] == 0x04 )
+				else if ( version[PTYPE] == 0x04 )
 					tagtype = NTAG;
 
 				break;
