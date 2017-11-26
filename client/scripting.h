@@ -28,7 +28,7 @@
 #include "aes.h"
 #include "cmdcrc.h"
 #include "cmdhfmfhard.h"
-
+#include "cmdhfmfu.h"
 
 #define LUA_LIBRARIES_DIRECTORY 	"lualibs/"
 #define LUA_SCRIPTS_DIRECTORY 		"scripts/"

@@ -602,6 +602,28 @@ static int l_detect_prng(lua_State *L) {
 	lua_pushinteger(L, valid);
 	return 1;
 }
+/*
+ * @brief l_keygen_algoD is a function to calculate pwd/pack using UID, by algo D
+ * @param L
+ * @return
+ */
+static int l_keygen_algoD(lua_State *L) {
+	size_t size;
+    const char *p_uid = luaL_checklstring(L, 1, &size);
+	if(size != 14)  return returnToLuaWithError(L,"Wrong size of UID, got %d bytes, expected 14", (int) size);
+
+	uint8_t uid[7] = {0,0,0,0,0,0,0};
+
+	for (int i = 0; i < 14; i += 2)
+		sscanf(&p_uid[i], "%02x", (unsigned int *)&uid[i / 2]);
+
+	uint32_t pwd = ul_ev1_pwdgenD(uid);
+	uint16_t pack = ul_ev1_packgenD(uid);
+	
+	lua_pushinteger(L, pwd);
+	lua_pushinteger(L, pack);
+	return 2;	
+}
 
 /**
  * @brief Sets the lua path to include "./lualibs/?.lua", in order for a script to be
@@ -651,6 +673,10 @@ int set_pm3_libraries(lua_State *L) {
 		{"reveng_runmodel",				l_reveng_RunModel},
 		{"hardnested",					l_hardnested},
 		{"detect_prng",					l_detect_prng},
+//		{"keygen.algoA",				l_keygen_algoA},
+//		{"keygen.algoB",				l_keygen_algoB},
+//		{"keygen.algoC",				l_keygen_algoC},
+		{"keygen_algo_d",				l_keygen_algoD},
         {NULL, NULL}
     };
 
