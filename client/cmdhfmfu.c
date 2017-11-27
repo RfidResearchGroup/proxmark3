@@ -796,7 +796,7 @@ uint32_t GetHF14AMfU_Type(void){
 				else if ( memcmp(version, "\x00\x04\x04\x05\x02\x02\x13", 7) == 0) { tagtype = NTAG_I2C_1K_PLUS; break; }
 				else if ( memcmp(version, "\x00\x04\x04\x05\x02\x02\x15", 7) == 0) { tagtype = NTAG_I2C_2K_PLUS; break; }
 				else if ( version[2] == 0x04 ) { tagtype = NTAG; break; }
-				else if ( version[2] = 0x03 ) { tagtype = UL_EV1; }
+				else if ( version[2] == 0x03 ) { tagtype = UL_EV1; }
 				break;
 			}
 			case 0x01: tagtype = UL_C; break;
