@@ -9,19 +9,19 @@
 //-----------------------------------------------------------------------------
 #include "cmdhfmfu.h"
 
-#define MAX_UL_BLOCKS     0x0f
-#define MAX_ULC_BLOCKS    0x2b
-#define MAX_ULEV1a_BLOCKS 0x13
-#define MAX_ULEV1b_BLOCKS 0x28
-#define MAX_NTAG_203      0x29
-#define MAX_NTAG_210      0x13
-#define MAX_NTAG_212      0x28
-#define MAX_NTAG_213      0x2c
-#define MAX_NTAG_215      0x86
-#define MAX_NTAG_216      0xe6
-#define MAX_MY_D_NFC       0xff
+#define MAX_UL_BLOCKS      0x0F
+#define MAX_ULC_BLOCKS     0x2B
+#define MAX_ULEV1a_BLOCKS  0x13
+#define MAX_ULEV1b_BLOCKS  0x28
+#define MAX_NTAG_203       0x29
+#define MAX_NTAG_210       0x13
+#define MAX_NTAG_212       0x28
+#define MAX_NTAG_213       0x2C
+#define MAX_NTAG_215       0x86
+#define MAX_NTAG_216       0xE6
+#define MAX_MY_D_NFC       0xFF
 #define MAX_MY_D_MOVE      0x25
-#define MAX_MY_D_MOVE_LEAN 0x0f
+#define MAX_MY_D_MOVE_LEAN 0x0F
 
 #define PUBLIC_ECDA_KEYLEN 33
 uint8_t public_ecda_key[PUBLIC_ECDA_KEYLEN] = {
@@ -56,7 +56,8 @@ uint32_t UL_TYPES_ARRAY[MAX_UL_TYPES] = {
 		NTAG_213, NTAG_215, NTAG_216,
 		MY_D, MY_D_NFC, MY_D_MOVE,
 		MY_D_MOVE_NFC, MY_D_MOVE_LEAN, FUDAN_UL,
-		UL_EV1, NTAG_213_F, NTAG_216_F };
+		UL_EV1, NTAG_213_F, NTAG_216_F
+	};
 
 uint8_t UL_MEMORY_ARRAY[MAX_UL_TYPES] = {
 		MAX_UL_BLOCKS, MAX_UL_BLOCKS, MAX_ULC_BLOCKS,
@@ -65,7 +66,8 @@ uint8_t UL_MEMORY_ARRAY[MAX_UL_TYPES] = {
 		MAX_NTAG_213, MAX_NTAG_215, MAX_NTAG_216, 
 		MAX_UL_BLOCKS, MAX_MY_D_NFC, MAX_MY_D_MOVE,
 		MAX_MY_D_MOVE, MAX_MY_D_MOVE_LEAN, MAX_UL_BLOCKS,
-		MAX_ULEV1a_BLOCKS, MAX_NTAG_213, MAX_NTAG_216};
+		MAX_ULEV1a_BLOCKS, MAX_NTAG_213, MAX_NTAG_216
+	};
 
 //------------------------------------
 // Pwd & Pack generation Stuff
@@ -994,6 +996,8 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		}
 	}
 
+	// NTAG counters?
+	
 	// Read signature
 	if ((tagtype & (UL_EV1_48 | UL_EV1_128 | UL_EV1 | NTAG_213 | NTAG_213_F | NTAG_215 | NTAG_216 | NTAG_216_F | NTAG_I2C_1K | NTAG_I2C_2K | NTAG_I2C_1K_PLUS | NTAG_I2C_2K_PLUS))) {
 		uint8_t ulev1_signature[32] = {0x00};
@@ -1028,10 +1032,11 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		uint8_t startconfigblock = 0;
 		uint8_t ulev1_conf[16] = {0x00};
 		// config blocks always are last 4 pages
-		for (uint8_t idx = 0; idx < MAX_UL_TYPES; idx++)
-			if (tagtype & UL_TYPES_ARRAY[idx])
-				startconfigblock = UL_MEMORY_ARRAY[idx]-3;
-
+		for (uint8_t i = 0; i < MAX_UL_TYPES; i++) {
+			if (tagtype & UL_TYPES_ARRAY[i])
+				startconfigblock = UL_MEMORY_ARRAY[i]-3;
+		}
+		
 		if (startconfigblock){ // if we know where the config block is...
 			status = ul_read(startconfigblock, ulev1_conf, sizeof(ulev1_conf));
 			if ( status == -1 ) {
@@ -1056,30 +1061,40 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			// test pwd gen A
 			num_to_bytes( ul_ev1_pwdgenA(card.uid), 4, key);
 			len = ulev1_requestAuthentication(key, pack, sizeof(pack));
-			if (len > -1)
+			if (len > -1) {
 				PrintAndLog("Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
+				goto out;
+			}
 
 			if (!ul_auth_select( &card, tagtype, hasAuthKey, authkeyptr, pack, sizeof(pack))) return -1;
 			
 			// test pwd gen B
 			num_to_bytes( ul_ev1_pwdgenB(card.uid), 4, key);
 			len = ulev1_requestAuthentication(key, pack, sizeof(pack));
-			if (len > -1)
+			if (len > -1) {
 				PrintAndLog("Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
+				goto out;
+			}
 
 			if (!ul_auth_select( &card, tagtype, hasAuthKey, authkeyptr, pack, sizeof(pack))) return -1;
 
 			// test pwd gen C
 			num_to_bytes( ul_ev1_pwdgenC(card.uid), 4, key);
 			len = ulev1_requestAuthentication(key, pack, sizeof(pack));
-			if (len > -1)
+			if (len > -1) {
 				PrintAndLog("Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
-
+				goto out;
+			}
+			
+			if (!ul_auth_select( &card, tagtype, hasAuthKey, authkeyptr, pack, sizeof(pack))) return -1;
+						
 			// test pwd gen D
 			num_to_bytes( ul_ev1_pwdgenD(card.uid), 4, key);
 			len = ulev1_requestAuthentication(key, pack, sizeof(pack));
-			if (len > -1)
+			if (len > -1) {
 				PrintAndLog("Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
+				goto out;
+			}
 			
 			if (!ul_auth_select( &card, tagtype, hasAuthKey, authkeyptr, pack, sizeof(pack))) return -1;			
 			
@@ -1096,7 +1111,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			if (len < 1) PrintAndLog("password not known");
 		}
 	}
-
+out:
 	DropField();
 	if (locked) PrintAndLog("\nTag appears to be locked, try using the key to get more info");
 	PrintAndLog("");
