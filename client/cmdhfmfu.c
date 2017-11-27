@@ -48,14 +48,15 @@ uint8_t default_pwd_pack[KEYS_PWD_COUNT][4] = {
 	{0xFF,0xFF,0xFF,0xFF}, // PACK 0x00,0x00 -- factory default
 };
 
-#define MAX_UL_TYPES 18
+#define MAX_UL_TYPES 21
 uint32_t UL_TYPES_ARRAY[MAX_UL_TYPES] = {
 		UNKNOWN, UL, UL_C, 
 		UL_EV1_48, UL_EV1_128, NTAG,
 		NTAG_203, NTAG_210, NTAG_212,
 		NTAG_213, NTAG_215, NTAG_216,
 		MY_D, MY_D_NFC, MY_D_MOVE,
-		MY_D_MOVE_NFC, MY_D_MOVE_LEAN, FUDAN_UL};
+		MY_D_MOVE_NFC, MY_D_MOVE_LEAN, FUDAN_UL,
+		UL_EV1, NTAG_213_F, NTAG_216_F };
 
 uint8_t UL_MEMORY_ARRAY[MAX_UL_TYPES] = {
 		MAX_UL_BLOCKS, MAX_UL_BLOCKS, MAX_ULC_BLOCKS,
@@ -63,7 +64,8 @@ uint8_t UL_MEMORY_ARRAY[MAX_UL_TYPES] = {
 		MAX_NTAG_203, MAX_NTAG_210, MAX_NTAG_212,
 		MAX_NTAG_213, MAX_NTAG_215, MAX_NTAG_216, 
 		MAX_UL_BLOCKS, MAX_MY_D_NFC, MAX_MY_D_MOVE,
-		MAX_MY_D_MOVE, MAX_MY_D_MOVE_LEAN, MAX_UL_BLOCKS};
+		MAX_MY_D_MOVE, MAX_MY_D_MOVE_LEAN, MAX_UL_BLOCKS,
+		MAX_ULEV1a_BLOCKS, MAX_NTAG_213, MAX_NTAG_216};
 
 //------------------------------------
 // Pwd & Pack generation Stuff
@@ -492,21 +494,21 @@ static int ul_print_default( uint8_t *data){
 
 static int ndef_print_CC(uint8_t *data) {
 	// no NDEF message
-	if(data[0] != 0xe1)
+	if (data[0] != 0xE1)
 		return -1;
 
 	PrintAndLog("--- NDEF Message");
 	PrintAndLog("Capability Container: %s", sprint_hex(data,4) );
 	PrintAndLog("  %02X : NDEF Magic Number", data[0]); 
-	PrintAndLog("  %02X : version %d.%d supported by tag", data[1], (data[1] & 0xF0) >> 4, data[1] & 0x0f);
+	PrintAndLog("  %02X : version %d.%d supported by tag", data[1], (data[1] & 0xF0) >> 4, data[1] & 0x0F);
 	PrintAndLog("  %02X : Physical Memory Size: %d bytes", data[2], (data[2] + 1) * 8);
 	if ( data[2] == 0x96 )
 		PrintAndLog("  %02X : NDEF Memory Size: %d bytes", data[2], 48);
 	else if ( data[2] == 0x12 )
 		PrintAndLog("  %02X : NDEF Memory Size: %d bytes", data[2], 144);
-	else if ( data[2] == 0x3e )
+	else if ( data[2] == 0x3E )
 		PrintAndLog("  %02X : NDEF Memory Size: %d bytes", data[2], 496);
-	else if ( data[2] == 0x6d )
+	else if ( data[2] == 0x6D )
 		PrintAndLog("  %02X : NDEF Memory Size: %d bytes", data[2], 872);
 
 	PrintAndLog("  %02X : %s / %s", data[3], 
@@ -528,6 +530,8 @@ int ul_print_type(uint32_t tagtype, uint8_t spaces){
 		PrintAndLog("%sTYPE : MIFARE Ultralight EV1 48bytes (MF0UL1101)", spacer); 
 	else if ( tagtype & UL_EV1_128)	
 		PrintAndLog("%sTYPE : MIFARE Ultralight EV1 128bytes (MF0UL2101)", spacer);
+	else if ( tagtype & UL_EV1 )
+		PrintAndLog("%sTYPE : MIFARE Ultralight EV1 UNKNOWN", spacer);
 	else if ( tagtype & NTAG )
 		PrintAndLog("%sTYPE : NTAG UNKNOWN", spacer);
 	else if ( tagtype & NTAG_203 )
@@ -538,10 +542,14 @@ int ul_print_type(uint32_t tagtype, uint8_t spaces){
 		PrintAndLog("%sTYPE : NTAG 212 128bytes (NT2L1211G0DU)", spacer);
 	else if ( tagtype & NTAG_213 )
 		PrintAndLog("%sTYPE : NTAG 213 144bytes (NT2H1311G0DU)", spacer);
+	else if ( tagtype & NTAG_213_F )
+		PrintAndLog("%sTYPE : NTAG 213F 144bytes (NT2H1311F0DTL)", spacer);
 	else if ( tagtype & NTAG_215 )
 		PrintAndLog("%sTYPE : NTAG 215 504bytes (NT2H1511G0DU)", spacer);
 	else if ( tagtype & NTAG_216 )
 		PrintAndLog("%sTYPE : NTAG 216 888bytes (NT2H1611G0DU)", spacer);
+	else if ( tagtype & NTAG_216_F )
+		PrintAndLog("%sTYPE : NTAG 216F 888bytes (NT2H1611F0DTL)", spacer);	
 	else if ( tagtype & NTAG_I2C_1K )
 		PrintAndLog("%sTYPE : NTAG I%sC 888bytes (NT3H1101FHK)", spacer, "\xFD");
 	else if ( tagtype & NTAG_I2C_2K )	
@@ -612,6 +620,36 @@ static int ulev1_print_configuration( uint8_t *data, uint8_t startPage){
 	uint8_t vctid = data[5];
 
 	PrintAndLog("  cfg0 [%u/0x%02X] : %s", startPage, startPage, sprint_hex(data, 4));
+	
+	/* if ( NTAG_213_F || NTAG_216_F) {
+		uint8_t mirror_conf = (data[0] & 0xC0);
+		uint8_t mirror_byte = (data[0] & 0x30);
+		bool sleep_en = (data[0] & 0x08);
+		bool strg_mod_en = (data[0] & 0x04);
+		uint8_t fdp_conf = (data[0] & 0x03);
+		
+		PrintAndLog("FDP and MIRROR configuration");
+		switch( mirror_conf) {
+			case 0: PrintAndLog("                    - no ASCII mirror); break;
+			case 1: PrintAndLog("                    - UID ASCII mirror); break;
+			case 2: PrintAndLog("                    - NFC counter ASCII mirror); break;
+			case 3: PrintAndLog("                    - UID and NFC counter ASCII mirror); break;			
+			default: break;
+		}
+		PrintAndLog("                    - strong modulation mode %s", (strg_mod_en) ? "enabled":"disabled");
+		PrintAndLog("                    - SLEEP mode %s", (sleep_en) ? "enabled":"disabled");	
+		switch( fdp_conf) {
+			case 0: PrintAndLog("                    - no field detect); break;
+			case 1: PrintAndLog("                    - enabled by first State-of-Frame (start of communication)); break;
+			case 2: PrintAndLog("                    - enabled by selection of the tag); break;
+			case 3: PrintAndLog("                    - enabled by field presence); break;			
+			default: break;
+		}
+		// valid mirror start page 
+		
+	}
+	*/
+	
 	if ( data[3] < 0xff )
 		PrintAndLog("                    - page %d and above need authentication",data[3]);
 	else 
@@ -742,34 +780,23 @@ uint32_t GetHF14AMfU_Type(void){
 
 		switch (len) {
 			case 0x0A: {
-				#define PTYPE 2
-				#define PSUBTYPE 3
-				#define PSIZE 6
-				if ( version[PTYPE] == 0x03 && version[PSIZE] == 0x0B )
-					tagtype = UL_EV1_48;
-				else if ( version[PTYPE] == 0x03 && version[PSIZE] != 0x0B )
-					tagtype = UL_EV1_128;
-				else if ( version[PTYPE] == 0x04 && version[PSUBTYPE] == 0x01 && version[PSIZE] == 0x0B )
-					tagtype = NTAG_210;
-				else if ( version[PTYPE] == 0x04 && version[PSUBTYPE] == 0x01 && version[PSIZE] == 0x0E )
-					tagtype = NTAG_212;
-				else if ( version[PTYPE] == 0x04 && (version[PSUBTYPE] == 0x02 || version[PSUBTYPE] == 0x04) && version[PSIZE] == 0x0F )
-					tagtype = NTAG_213;
-				else if ( version[PTYPE] == 0x04 && version[PSUBTYPE] == 0x02 && version[PSIZE] == 0x11 )
-					tagtype = NTAG_215;
-				else if ( version[PTYPE] == 0x04 && version[PSUBTYPE] == 0x02 && version[PSIZE] == 0x13 )
-					tagtype = NTAG_216;
-				else if ( memcmp(version+2, "\x04\x05\x02\x01\x13", 5) == 0)
-					tagtype = NTAG_I2C_1K;
-				else if ( memcmp(version+2, "\x04\x05\x02\x01\x15", 5) == 0)
-					tagtype = NTAG_I2C_2K;
-				else if ( memcmp(version+2, "\x04\x05\x02\x02\x13", 5) == 0)
-					tagtype = NTAG_I2C_1K_PLUS;
-				else if ( memcmp(version+2, "\x04\x05\x02\x02\x15", 5) == 0)
-					tagtype = NTAG_I2C_2K_PLUS;
-				else if ( version[PTYPE] == 0x04 )
-					tagtype = NTAG;
-
+				if ( memcmp(version, "\x00\x04\x03\x01\x01\x00\x0B", 7) == 0)      { tagtype = UL_EV1_48; break; }
+				else if ( memcmp(version, "\x00\x04\x03\x02\x01\x00\x0B", 7) == 0) { tagtype = UL_EV1_48; break; }
+				else if ( memcmp(version, "\x00\x04\x03\x01\x01\x00\x0E", 7) == 0) { tagtype = UL_EV1_128; break; }
+				else if ( memcmp(version, "\x00\x04\x03\x02\x01\x00\x0E", 7) == 0) { tagtype = UL_EV1_128; break; }
+				else if ( memcmp(version, "\x00\x04\x04\x01\x01\x00\x0B", 7) == 0) { tagtype = NTAG_210; break; }
+				else if ( memcmp(version, "\x00\x04\x04\x01\x01\x00\x0E", 7) == 0) { tagtype = NTAG_212; break; }
+				else if ( memcmp(version, "\x00\x04\x04\x02\x01\x00\x0F", 7) == 0) { tagtype = NTAG_213; break; }
+				else if ( memcmp(version, "\x00\x04\x04\x02\x01\x00\x11", 7) == 0) { tagtype = NTAG_215; break; }
+				else if ( memcmp(version, "\x00\x04\x04\x02\x01\x00\x13", 7) == 0) { tagtype = NTAG_216; break; }
+				else if ( memcmp(version, "\x00\x04\x04\x04\x01\x00\x0F", 7) == 0) { tagtype = NTAG_213_F; break; }
+				else if ( memcmp(version, "\x00\x04\x04\x04\x01\x00\x13", 7) == 0) { tagtype = NTAG_216_F; break; }
+				else if ( memcmp(version, "\x00\x04\x04\x05\x02\x01\x13", 7) == 0) { tagtype = NTAG_I2C_1K; break; }
+				else if ( memcmp(version, "\x00\x04\x04\x05\x02\x01\x15", 7) == 0) { tagtype = NTAG_I2C_2K; break; }
+				else if ( memcmp(version, "\x00\x04\x04\x05\x02\x02\x13", 7) == 0) { tagtype = NTAG_I2C_1K_PLUS; break; }
+				else if ( memcmp(version, "\x00\x04\x04\x05\x02\x02\x15", 7) == 0) { tagtype = NTAG_I2C_2K_PLUS; break; }
+				else if ( version[2] == 0x04 ) { tagtype = NTAG; break; }
+				else if ( version[2] = 0x03 ) { tagtype = UL_EV1; }
 				break;
 			}
 			case 0x01: tagtype = UL_C; break;
@@ -777,7 +804,7 @@ uint32_t GetHF14AMfU_Type(void){
 			case -1  : tagtype = (UL | UL_C | NTAG_203); break;  // could be UL | UL_C magic tags
 			default  : tagtype = UNKNOWN; break;
 		}
-	
+
 		// UL vs UL-C vs ntag203 test
 		if (tagtype & (UL | UL_C | NTAG_203)) {
 			if ( !ul_select(&card) ) return UL_ERROR;
@@ -819,10 +846,10 @@ uint32_t GetHF14AMfU_Type(void){
 		uint8_t nib = (card.uid[1] & 0xf0) >> 4;
 		switch ( nib ){
 			// case 0: tagtype =  SLE66R35E7; break; //or SLE 66R35E7 - mifare compat... should have different sak/atqa for mf 1k
-			case 1:	tagtype =  MY_D; break; //or SLE 66RxxS ... up to 512 pages of 8 user bytes...
-			case 2:	tagtype = (MY_D_NFC); break; //or SLE 66RxxP ... up to 512 pages of 8 user bytes... (or in nfc mode FF pages of 4 bytes)
-			case 3:	tagtype = (MY_D_MOVE | MY_D_MOVE_NFC); break; //or SLE 66R01P // 38 pages of 4 bytes //notice: we can not currently distinguish between these two
-			case 7: tagtype =  MY_D_MOVE_LEAN; break; //or SLE 66R01L  // 16 pages of 4 bytes
+			case 1:	tagtype =  MY_D; break; // or SLE 66RxxS ... up to 512 pages of 8 user bytes...
+			case 2:	tagtype = (MY_D_NFC); break; // or SLE 66RxxP ... up to 512 pages of 8 user bytes... (or in nfc mode FF pages of 4 bytes)
+			case 3:	tagtype = (MY_D_MOVE | MY_D_MOVE_NFC); break; // or SLE 66R01P // 38 pages of 4 bytes //notice: we can not currently distinguish between these two
+			case 7: tagtype =  MY_D_MOVE_LEAN; break; // or SLE 66R01L  // 16 pages of 4 bytes
 		}
 	}
 
@@ -960,7 +987,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	// do counters and signature first (don't neet auth) 
 
 	// ul counters are different than ntag counters
-	if ((tagtype & (UL_EV1_48 | UL_EV1_128))) {
+	if ((tagtype & (UL_EV1_48 | UL_EV1_128 | UL_EV1))) {
 		if (ulev1_print_counters() != 3) {
 			// failed - re-select
 			if (!ul_auth_select( &card, tagtype, hasAuthKey, authkeyptr, pack, sizeof(pack))) return -1;
@@ -968,7 +995,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	}
 
 	// Read signature
-	if ((tagtype & (UL_EV1_48 | UL_EV1_128 | NTAG_213 | NTAG_215 | NTAG_216 | NTAG_I2C_1K | NTAG_I2C_2K	| NTAG_I2C_1K_PLUS | NTAG_I2C_2K_PLUS))) {
+	if ((tagtype & (UL_EV1_48 | UL_EV1_128 | UL_EV1 | NTAG_213 | NTAG_213_F | NTAG_215 | NTAG_216 | NTAG_216_F | NTAG_I2C_1K | NTAG_I2C_2K | NTAG_I2C_1K_PLUS | NTAG_I2C_2K_PLUS))) {
 		uint8_t ulev1_signature[32] = {0x00};
 		status = ulev1_readSignature( ulev1_signature, sizeof(ulev1_signature));
 		if ( status == -1 ) {
@@ -984,7 +1011,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	}
 
 	// Get Version
-	if ((tagtype & (UL_EV1_48 | UL_EV1_128 | NTAG_210 | NTAG_212 | NTAG_213 | NTAG_215 | NTAG_216 | NTAG_I2C_1K | NTAG_I2C_2K | NTAG_I2C_1K_PLUS | NTAG_I2C_2K_PLUS))) {
+	if ((tagtype & (UL_EV1_48 | UL_EV1_128 | UL_EV1 | NTAG_213 | NTAG_213_F | NTAG_215 | NTAG_216 | NTAG_216_F | NTAG_I2C_1K | NTAG_I2C_2K | NTAG_I2C_1K_PLUS | NTAG_I2C_2K_PLUS))) {
 		uint8_t version[10] = {0x00};
 		status  = ulev1_getVersion(version, sizeof(version));
 		if ( status == -1 ) {
