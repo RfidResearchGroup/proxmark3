@@ -649,20 +649,19 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
 			case 3: PrintAndLog("                    - enabled by field presence"); break;			
 			default: break;
 		}
-		// valid mirror start page 
-		PrintAndLog("    valid mirror start block and byte position within.");
+		// valid mirror start page and byte position within start page.
 		if ( tagtype & NTAG_213_F ) {
 			switch ( mirror_conf ) {
-				case 1: { PrintAndLog("              start block %02X | byte pos %02X - %s", data[2], mirror_byte, ( data[2]>= 0x4 && data[2] <= 0x24) ? "OK":"Invalid value"); break;}
-				case 2: { PrintAndLog("              start block %02X | byte pos %02X - %s", data[2], mirror_byte, ( data[2]>= 0x4 && data[2] <= 0x26) ? "OK":"Invalid value"); break;}
-				case 3: { PrintAndLog("              start block %02X | byte pos %02X - %s", data[2], mirror_byte, ( data[2]>= 0x4 && data[2] <= 0x22) ? "OK":"Invalid value"); break;}
+				case 1: { PrintAndLog("         mirror start block %02X | byte pos %02X - %s", data[2], mirror_byte, ( data[2]>= 0x4 && data[2] <= 0x24) ? "OK":"Invalid value"); break;}
+				case 2: { PrintAndLog("         mirror start block %02X | byte pos %02X - %s", data[2], mirror_byte, ( data[2]>= 0x4 && data[2] <= 0x26) ? "OK":"Invalid value"); break;}
+				case 3: { PrintAndLog("         mirror start block %02X | byte pos %02X - %s", data[2], mirror_byte, ( data[2]>= 0x4 && data[2] <= 0x22) ? "OK":"Invalid value"); break;}
 				default: break;
 			}
 		} else if ( tagtype & NTAG_216_F ) {
 			switch ( mirror_conf ) {
-				case 1: { PrintAndLog("              start block %02X | byte pos %02X - %s", data[2], mirror_byte, ( data[2]>= 0x4 && data[2] <= 0xDE) ? "OK":"Invalid value"); break;}
-				case 2: { PrintAndLog("              start block %02X | byte pos %02X - %s", data[2], mirror_byte, ( data[2]>= 0x4 && data[2] <= 0xE0) ? "OK":"Invalid value"); break;}
-				case 3: { PrintAndLog("              start block %02X | byte pos %02X - %s", data[2], mirror_byte, ( data[2]>= 0x4 && data[2] <= 0xDC) ? "OK":"Invalid value"); break;}
+				case 1: { PrintAndLog("         mirror start block %02X | byte pos %02X - %s", data[2], mirror_byte, ( data[2]>= 0x4 && data[2] <= 0xDE) ? "OK":"Invalid value"); break;}
+				case 2: { PrintAndLog("         mirror start block %02X | byte pos %02X - %s", data[2], mirror_byte, ( data[2]>= 0x4 && data[2] <= 0xE0) ? "OK":"Invalid value"); break;}
+				case 3: { PrintAndLog("         mirror start block %02X | byte pos %02X - %s", data[2], mirror_byte, ( data[2]>= 0x4 && data[2] <= 0xDC) ? "OK":"Invalid value"); break;}
 				default: break;
 			}			
 		}
@@ -672,7 +671,7 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
 		PrintAndLog("                    - page %d and above need authentication",data[3]);
 	else 
 		PrintAndLog("                    - pages don't need authentication");
-	PrintAndLog("                    - strong modulation mode %s", (strg_mod_en) ? "enabled":"disabled");
+
 	PrintAndLog("  cfg1 [%u/0x%02X] : %s", startPage + 1, startPage + 1,  sprint_hex(data+4, 4) );
 	if ( authlim == 0)
 		PrintAndLog("                    - Unlimited password attempts");
@@ -687,7 +686,7 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
 	PrintAndLog("                    - %02X, Virtual Card Type Identifier is %s default", vctid, (vctid==0x05)? "":"not");
 	PrintAndLog("  PWD  [%u/0x%02X] : %s- (cannot be read)", startPage + 2, startPage + 2,  sprint_hex(data+8, 4));
 	PrintAndLog("  PACK [%u/0x%02X] : %s      - (cannot be read)", startPage + 3, startPage + 3,  sprint_hex(data+12, 2));
-	PrintAndLog("  RFU  [%u/0x%02X] :       %s- (cannot be read)", startPage + 3, startPage + 3,  sprint_hex(data+12, 2));
+	PrintAndLog("  RFU  [%u/0x%02X] :       %s- (cannot be read)", startPage + 3, startPage + 3,  sprint_hex(data+14, 2));
 	return 0;
 }
 
@@ -1067,7 +1066,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 				authlim = (ulev1_conf[4] & 0x07);
 				// add pwd / pack if used from cli
 				if ( hasAuthKey ) {
-					memcpy(ulev1_conf+8, pwd, sizeof(pwd));
+					memcpy(ulev1_conf+8, authkeyptr, 4);
 					memcpy(ulev1_conf+12, pack, sizeof(pack));
 				}
 				ulev1_print_configuration(tagtype, ulev1_conf, startconfigblock);
