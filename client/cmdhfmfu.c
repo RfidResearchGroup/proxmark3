@@ -609,7 +609,7 @@ static int ulc_print_configuration( uint8_t *data){
 	return 0;
 }
 
-static int ulev1_print_configuration( uint8_t *data, uint8_t startPage){
+static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t startPage){
 
 	PrintAndLog("\n--- Tag Configuration");
 
@@ -623,34 +623,50 @@ static int ulev1_print_configuration( uint8_t *data, uint8_t startPage){
 
 	PrintAndLog("  cfg0 [%u/0x%02X] : %s", startPage, startPage, sprint_hex(data, 4));
 	
-	/* if ( NTAG_213_F || NTAG_216_F) {
+	 if (tagtype & (NTAG_213_F || NTAG_216_F) ) {
 		uint8_t mirror_conf = (data[0] & 0xC0);
 		uint8_t mirror_byte = (data[0] & 0x30);
 		bool sleep_en = (data[0] & 0x08);
 		bool strg_mod_en = (data[0] & 0x04);
 		uint8_t fdp_conf = (data[0] & 0x03);
 		
-		PrintAndLog("FDP and MIRROR configuration");
-		switch( mirror_conf) {
-			case 0: PrintAndLog("                    - no ASCII mirror); break;
-			case 1: PrintAndLog("                    - UID ASCII mirror); break;
-			case 2: PrintAndLog("                    - NFC counter ASCII mirror); break;
-			case 3: PrintAndLog("                    - UID and NFC counter ASCII mirror); break;			
+		PrintAndLog("             FDP and MIRROR configuration");
+		switch (mirror_conf) {
+			case 0: PrintAndLog("                    - no ASCII mirror"); break;
+			case 1: PrintAndLog("                    - UID ASCII mirror"); break;
+			case 2: PrintAndLog("                    - NFC counter ASCII mirror"); break;
+			case 3: PrintAndLog("                    - UID and NFC counter ASCII mirror"); break;			
 			default: break;
 		}
+		
 		PrintAndLog("                    - strong modulation mode %s", (strg_mod_en) ? "enabled":"disabled");
 		PrintAndLog("                    - SLEEP mode %s", (sleep_en) ? "enabled":"disabled");	
-		switch( fdp_conf) {
-			case 0: PrintAndLog("                    - no field detect); break;
-			case 1: PrintAndLog("                    - enabled by first State-of-Frame (start of communication)); break;
-			case 2: PrintAndLog("                    - enabled by selection of the tag); break;
-			case 3: PrintAndLog("                    - enabled by field presence); break;			
+		
+		switch (fdp_conf) {
+			case 0: PrintAndLog("                    - no field detect"); break;
+			case 1: PrintAndLog("                    - enabled by first State-of-Frame (start of communication)"); break;
+			case 2: PrintAndLog("                    - enabled by selection of the tag"); break;
+			case 3: PrintAndLog("                    - enabled by field presence"); break;			
 			default: break;
 		}
 		// valid mirror start page 
-		
+		PrintAndLog("    valid mirror start block and byte position within.");
+		if ( tagtype & NTAG_213_F ) {
+			switch ( mirror_conf ) {
+				case 1: { PrintAndLog("              start block %02X | byte pos %02X - %s", data[2], mirror_byte, ( data[2]>= 0x4 && data[2] <= 0x24) ? "OK":"Invalid value"); break;}
+				case 2: { PrintAndLog("              start block %02X | byte pos %02X - %s", data[2], mirror_byte, ( data[2]>= 0x4 && data[2] <= 0x26) ? "OK":"Invalid value"); break;}
+				case 3: { PrintAndLog("              start block %02X | byte pos %02X - %s", data[2], mirror_byte, ( data[2]>= 0x4 && data[2] <= 0x22) ? "OK":"Invalid value"); break;}
+				default: break;
+			}
+		} else if ( tagtype & NTAG_216_F ) {
+			switch ( mirror_conf ) {
+				case 1: { PrintAndLog("              start block %02X | byte pos %02X - %s", data[2], mirror_byte, ( data[2]>= 0x4 && data[2] <= 0xDE) ? "OK":"Invalid value"); break;}
+				case 2: { PrintAndLog("              start block %02X | byte pos %02X - %s", data[2], mirror_byte, ( data[2]>= 0x4 && data[2] <= 0xE0) ? "OK":"Invalid value"); break;}
+				case 3: { PrintAndLog("              start block %02X | byte pos %02X - %s", data[2], mirror_byte, ( data[2]>= 0x4 && data[2] <= 0xDC) ? "OK":"Invalid value"); break;}
+				default: break;
+			}			
+		}
 	}
-	*/
 	
 	if ( data[3] < 0xff )
 		PrintAndLog("                    - page %d and above need authentication",data[3]);
@@ -1031,6 +1047,12 @@ int CmdHF14AMfUInfo(const char *Cmd){
 
 		uint8_t startconfigblock = 0;
 		uint8_t ulev1_conf[16] = {0x00};
+		// add pwd / pack if used from cli
+		if ( hasAuthKey ) {
+			memcpy(ulev1_conf+8, pwd, sizeof(pwd));
+			memcpy(ulev1_conf+12, pack, sizeof(pack));
+		}
+		
 		// config blocks always are last 4 pages
 		for (uint8_t i = 0; i < MAX_UL_TYPES; i++) {
 			if (tagtype & UL_TYPES_ARRAY[i]) {
@@ -1048,7 +1070,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			} else if (status == 16) {
 				// save AUTHENTICATION LIMITS for later:
 				authlim = (ulev1_conf[4] & 0x07);
-				ulev1_print_configuration(ulev1_conf, startconfigblock);
+				ulev1_print_configuration(tagtype, ulev1_conf, startconfigblock);
 			}
 		}
 
