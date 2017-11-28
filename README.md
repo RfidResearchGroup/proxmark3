@@ -6,8 +6,9 @@ The iceman fork
 ## This fork is HIGHLY experimental and bleeding edge
 
 ## Donate
-https://paypal.me/iceman1001/
-Feel free to donate. All support is welcome.
+<a href='https://pledgie.com/campaigns/35206'><img alt='Click here to lend your support to: Iceman&#x27;s donation fund and make a donation at pledgie.com !' src='https://pledgie.com/campaigns/35206.png?skin_name=chrome' border='0' ></a>
+
+https://paypal.me/iceman1001/  Feel free to donate. All support is welcome.
 
 monereo:  43mNJLpgBVaTvyZmX9ajcohpvVkaRy1kbZPm8tqAb7itZgfuYecgkRF36rXrKFUkwEGeZedPsASRxgv4HPBHvJwyJdyvQuP
 
