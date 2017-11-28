@@ -1033,8 +1033,10 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		uint8_t ulev1_conf[16] = {0x00};
 		// config blocks always are last 4 pages
 		for (uint8_t i = 0; i < MAX_UL_TYPES; i++) {
-			if (tagtype & UL_TYPES_ARRAY[i])
+			if (tagtype & UL_TYPES_ARRAY[i]) {
 				startconfigblock = UL_MEMORY_ARRAY[i]-3;
+				break;
+			}
 		}
 		
 		if (startconfigblock){ // if we know where the config block is...
@@ -1201,8 +1203,10 @@ int CmdHF14AMfUWrBl(const char *Cmd){
 
 	uint8_t maxblockno = 0;
 	for (uint8_t idx = 0; idx < MAX_UL_TYPES; idx++){
-		if (tagtype & UL_TYPES_ARRAY[idx])
+		if (tagtype & UL_TYPES_ARRAY[idx]) {
 			maxblockno = UL_MEMORY_ARRAY[idx];
+			break;
+		}
 	}
 	if (blockNo > maxblockno){
 		PrintAndLog("block number too large. Max block is %u/0x%02X \n", maxblockno,maxblockno);
@@ -1220,21 +1224,21 @@ int CmdHF14AMfUWrBl(const char *Cmd){
 	
 	//Send write Block
 	UsbCommand c = {CMD_MIFAREU_WRITEBL, {blockNo}};
-	memcpy(c.d.asBytes,blockdata,4);
+	memcpy(c.d.asBytes, blockdata, 4);
 
 	if ( hasAuthKey ){
 		c.arg[1] = 1;
-		memcpy(c.d.asBytes+4,authKeyPtr,16);
+		memcpy(c.d.asBytes+4, authKeyPtr, 16);
 	}
 	else if ( hasPwdKey ) {
 		c.arg[1] = 2;
-		memcpy(c.d.asBytes+4,authKeyPtr,4);
+		memcpy(c.d.asBytes+4, authKeyPtr, 4);
 	}
 	
 	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
-	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+	if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
 		uint8_t isOK  = resp.arg[0] & 0xff;
 		PrintAndLog("isOk:%02x", isOK);
 	} else {
@@ -1315,8 +1319,10 @@ int CmdHF14AMfURdBl(const char *Cmd){
 
 	uint8_t maxblockno = 0;
 	for (uint8_t idx = 0; idx < MAX_UL_TYPES; idx++){
-		if (tagtype & UL_TYPES_ARRAY[idx])
+		if (tagtype & UL_TYPES_ARRAY[idx]) {
 			maxblockno = UL_MEMORY_ARRAY[idx];
+			break;
+		}
 	}
 	if (blockNo > maxblockno){
 		PrintAndLog("block number to large. Max block is %u/0x%02X \n", maxblockno,maxblockno);
@@ -1643,9 +1649,11 @@ int CmdHF14AMfUDump(const char *Cmd){
 	char *fnameptr = filename;
 
 	uint8_t data[1024] = {0x00};
+	memset(data, 0x00, sizeof(data));
+	
 	bool hasAuthKey = false;
 	int i = 0;
-	int Pages = 16;
+	int pages = 16;
 	uint8_t dataLen = 0;
 	uint8_t cmdp = 0;
 	uint8_t authenticationkey[16] = {0x00};
@@ -1657,6 +1665,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 	bool manualPages = false;
 	uint8_t startPage = 0;
 	char tempStr[50];
+
 
 	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch(param_getchar(Cmd, cmdp)) {
@@ -1696,7 +1705,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 			break;
 		case 'q':
 		case 'Q':
-			Pages = param_get8(Cmd, cmdp+1);
+			pages = param_get8(Cmd, cmdp+1);
 			cmdp += 2;
 			manualPages = true;
 			break;
@@ -1717,14 +1726,19 @@ int CmdHF14AMfUDump(const char *Cmd){
 	TagTypeUL_t tagtype = GetHF14AMfU_Type();
 	if (tagtype == UL_ERROR) return -1;
 
-	if (!manualPages) //get number of pages to read
-		for (uint8_t idx = 0; idx < MAX_UL_TYPES; idx++)
-			if (tagtype & UL_TYPES_ARRAY[idx])
-				Pages = UL_MEMORY_ARRAY[idx]+1; //add one as maxblks starts at 0
-
+	 //get number of pages to read
+	if (!manualPages) {
+		for (uint8_t idx = 0; idx < MAX_UL_TYPES; idx++) {
+			if (tagtype & UL_TYPES_ARRAY[idx]) {
+				//add one as maxblks starts at 0
+				pages = UL_MEMORY_ARRAY[idx]+1; 
+				break;
+			}
+		}
+	]
 	ul_print_type(tagtype, 0);
 	PrintAndLog("Reading tag memory...");
-	UsbCommand c = {CMD_MIFAREU_READCARD, {startPage,Pages}};
+	UsbCommand c = {CMD_MIFAREU_READCARD, {startPage, pages}};
 	if ( hasAuthKey ) {
 		if (tagtype & UL_C)
 			c.arg[2] = 1; //UL_C auth
@@ -1755,7 +1769,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 	GetFromBigBuf(data, bufferSize, startindex);
 	WaitForResponse(CMD_ACK,NULL);
 
-	Pages = bufferSize/4;
+	pages = bufferSize/4;
 	
 	uint8_t	get_pack[] = {0,0};
 	iso14a_card_select_t card;
@@ -1776,8 +1790,8 @@ int CmdHF14AMfUDump(const char *Cmd){
 			get_pack[1]=0;
 		}
 		DropField();
-		// add pack to block read
-		memcpy(data + (Pages*4) - 4, get_pack, sizeof(get_pack));
+		// add pack to block read		
+		memcpy(data + (pages*4) - 4, get_pack, sizeof(get_pack));
 		
 		if ( hasAuthKey )
 			ul_auth_select( &card, tagtype, hasAuthKey, authKeyPtr, dummy_pack, sizeof(dummy_pack));
@@ -1812,10 +1826,10 @@ int CmdHF14AMfUDump(const char *Cmd){
 		}
 
 		if (tagtype & UL_C){ //add 4 pages
-			memcpy(data + Pages*4, authKeyPtr, dataLen);
-			Pages += dataLen/4;  
+			memcpy(data + pages*4, authKeyPtr, dataLen);
+			pages += dataLen/4;  
 		} else { // 2nd page from end
-			memcpy(data + (Pages*4) - 8, authenticationkey, dataLen);
+			memcpy(data + (pages*4) - 8, authenticationkey, dataLen);
 		}
 	}
 
@@ -1825,9 +1839,9 @@ int CmdHF14AMfUDump(const char *Cmd){
 	memcpy(dump_file_data.tearing, get_tearing, sizeof(dump_file_data.tearing));
 	memcpy(dump_file_data.pack, get_pack, sizeof(dump_file_data.pack));
 	memcpy(dump_file_data.signature, get_signature, sizeof(dump_file_data.signature));
-	memcpy(dump_file_data.data, data, Pages*4);
+	memcpy(dump_file_data.data, data, pages*4);
 
-	printMFUdumpEx(&dump_file_data, Pages, startPage);
+	printMFUdumpEx(&dump_file_data, pages, startPage);
 	
 	// user supplied filename?
 	if (fileNlen < 1) {
@@ -1842,10 +1856,10 @@ int CmdHF14AMfUDump(const char *Cmd){
 		PrintAndLog("Could not create file name %s", filename);
 		return 1;
 	}
-	fwrite( &dump_file_data, 1, Pages*4 + DUMP_PREFIX_LENGTH, fout );
+	fwrite( &dump_file_data, 1, pages*4 + DUMP_PREFIX_LENGTH, fout );
 	if (fout)
 		fclose(fout);
-	PrintAndLog("Dumped %d pages, wrote %d bytes to %s", Pages+(DUMP_PREFIX_LENGTH/4), Pages*4 + DUMP_PREFIX_LENGTH, filename);
+	PrintAndLog("Dumped %d pages, wrote %d bytes to %s", pages + (DUMP_PREFIX_LENGTH/4), pages*4 + DUMP_PREFIX_LENGTH, filename);
 	return 0;
 }
 
