@@ -623,7 +623,7 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
 
 	PrintAndLog("  cfg0 [%u/0x%02X] : %s", startPage, startPage, sprint_hex(data, 4));
 	
-	 if (tagtype & (NTAG_213_F || NTAG_216_F) ) {
+	 if ( (tagtype & (NTAG_213_F | NTAG_216_F)) ) {
 		uint8_t mirror_conf = (data[0] & 0xC0);
 		uint8_t mirror_byte = (data[0] & 0x30);
 		bool sleep_en = (data[0] & 0x08);
@@ -1047,11 +1047,6 @@ int CmdHF14AMfUInfo(const char *Cmd){
 
 		uint8_t startconfigblock = 0;
 		uint8_t ulev1_conf[16] = {0x00};
-		// add pwd / pack if used from cli
-		if ( hasAuthKey ) {
-			memcpy(ulev1_conf+8, pwd, sizeof(pwd));
-			memcpy(ulev1_conf+12, pack, sizeof(pack));
-		}
 		
 		// config blocks always are last 4 pages
 		for (uint8_t i = 0; i < MAX_UL_TYPES; i++) {
@@ -1070,6 +1065,11 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			} else if (status == 16) {
 				// save AUTHENTICATION LIMITS for later:
 				authlim = (ulev1_conf[4] & 0x07);
+				// add pwd / pack if used from cli
+				if ( hasAuthKey ) {
+					memcpy(ulev1_conf+8, pwd, sizeof(pwd));
+					memcpy(ulev1_conf+12, pack, sizeof(pack));
+				}
 				ulev1_print_configuration(tagtype, ulev1_conf, startconfigblock);
 			}
 		}
