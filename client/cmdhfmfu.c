@@ -1067,7 +1067,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 				// add pwd / pack if used from cli
 				if ( hasAuthKey ) {
 					memcpy(ulev1_conf+8, authkeyptr, 4);
-					memcpy(ulev1_conf+12, pack, sizeof(pack));
+					memcpy(ulev1_conf+12, pack, 2);
 				}
 				ulev1_print_configuration(tagtype, ulev1_conf, startconfigblock);
 			}
