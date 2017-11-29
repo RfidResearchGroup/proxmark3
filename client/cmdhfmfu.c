@@ -630,7 +630,6 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
 		bool strg_mod_en = (data[0] & 0x04);
 		uint8_t fdp_conf = (data[0] & 0x03);
 		
-		PrintAndLog("             FDP and MIRROR configuration");
 		switch (mirror_conf) {
 			case 0: PrintAndLog("                    - no ASCII mirror"); break;
 			case 1: PrintAndLog("                    - UID ASCII mirror"); break;
