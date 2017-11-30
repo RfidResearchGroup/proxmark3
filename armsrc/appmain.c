@@ -1152,11 +1152,8 @@ void  __attribute__((noreturn)) AppMain(void) {
 	// Load the FPGA image, which we have stored in our flash.
 	// (the HF version by default)
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-	// turn off antenna
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	
 	StartTickCount();
-
   	
 #ifdef WITH_LCD
 	LCDInit();

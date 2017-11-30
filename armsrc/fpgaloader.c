@@ -406,6 +406,9 @@ void FpgaDownloadAndGo(int bitstream_version) {
 
 	inflateEnd(&compressed_fpga_stream);
 
+	// turn off antenna
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	
 	// free eventually allocated BigBuf memory
 	BigBuf_free(); BigBuf_Clear_ext(false);
 }
