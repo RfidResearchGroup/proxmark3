@@ -11,6 +11,10 @@ matrix:
       osx_image: xcode7.3	# OS X 10.11
     - os: osx
       osx_image: xcode8.3   # OS X 10.12
+    - os: osx
+      osx_image: xcode9     # OS X 10.13
+    - os: osx
+      osx_image: xcode9.1   # OS X 10.13.1
     - os: linux
       dist: trusty
       sudo: required
@@ -29,6 +33,8 @@ before_install:
 
 install:
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
+    brew info proxmark3;
+    brew options proxmark3;	
     brew install --HEAD proxmark3;
   elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then 
     make all;
