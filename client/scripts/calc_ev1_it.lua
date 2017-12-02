@@ -30,6 +30,8 @@ local bxor = bit32.bxor
 --- 
 -- A debug printout-function
 local function dbg(args)
+	if not DEBUG then return end
+	
     if type(args) == "table" then
 		local i = 1
 		while args[i] do

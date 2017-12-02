@@ -455,7 +455,7 @@ local function find( main, sub)
     main = main:lower()
 	sub = sub:lower()
     for k, v in pairs(_names) do
-		if ( v[2]:lower()  == main  and v[3]:lower() == sub) then
+		if ( v[2]:lower() == main and v[3]:lower() == sub) then
 			return v
 		end
 	end
