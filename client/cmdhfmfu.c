@@ -627,7 +627,7 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
 		uint8_t mirror_conf = (data[0] & 0xC0);
 		uint8_t mirror_byte = (data[0] & 0x30);
 		bool sleep_en = (data[0] & 0x08);
-		bool strg_mod_en = (data[0] & 0x04);
+		strg_mod_en = (data[0] & 0x04);
 		uint8_t fdp_conf = (data[0] & 0x03);
 		
 		switch (mirror_conf) {
@@ -638,7 +638,6 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
 			default: break;
 		}
 		
-		PrintAndLog("                    - strong modulation mode %s", (strg_mod_en) ? "enabled":"disabled");
 		PrintAndLog("                    - SLEEP mode %s", (sleep_en) ? "enabled":"disabled");	
 		
 		switch (fdp_conf) {
@@ -665,6 +664,7 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
 			}			
 		}
 	}
+	PrintAndLog("                    - strong modulation mode %s", (strg_mod_en) ? "enabled":"disabled");
 	
 	if ( data[3] < 0xff )
 		PrintAndLog("                    - page %d and above need authentication",data[3]);
