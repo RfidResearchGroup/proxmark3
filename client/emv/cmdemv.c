@@ -402,12 +402,12 @@ int CmdHFEMVExec(const char *cmd) {
 		TLVPrintFromBuffer(buf, len);
 	PrintAndLog("* Selected.");
 	
-PrintAndLog("-----BREAK.");
-return 0;
 	PrintAndLog("\n* Init transaction parameters.");
 
     //9F66:(Terminal Transaction Qualifiers (TTQ)) len:4
-	TLV_ADD(0x9F66, "\x26\x00\x00\x00"); // E6
+	TLV_ADD(0x9F66, "\x86\x00\x00\x00"); // MSD
+//	TLV_ADD(0x9F66, "\x26\x00\x00\x00"); // qVSDC
+//	TLV_ADD(0x9F66, "\x8e\x00\x00\x00"); // CDA
     //9F02:(Amount, Authorised (Numeric)) len:6
 	TLV_ADD(0x9F02, "\x00\x00\x00\x00\x01\x00");
     //9F1A:(Terminal Country Code) len:2
@@ -421,8 +421,10 @@ return 0;
 	TLV_ADD(0x9C,   "\x00");
 	// 9F37 Unpredictable Number len:4
 	TLV_ADD(0x9F37, "\x01\x02\x03\x04");
+	// 9F6A Unpredictable Number (MSD for UDOL) len:4
+	TLV_ADD(0x9F6A, "\x01\x02\x03\x04");
 
-	TLVPrintFromTLV(tlvRoot);
+	TLVPrintFromTLV(tlvRoot); // TODO delete!!!
 	
 	PrintAndLog("\n* Calc PDOL.");
 	struct tlv *pdol_data_tlv = dol_process(tlvdb_get(tlvRoot, 0x9f38, NULL), tlvRoot, 0x83);
@@ -439,8 +441,6 @@ return 0;
 	}
 	PrintAndLog("PDOL data[%d]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
 
-//PrintAndLog("-----BREAK.");
-//return 0;
 	PrintAndLog("\n* GPO.");
 	res = EMVGPO(true, pdol_data_tlv_data, pdol_data_tlv_data_len, buf, sizeof(buf), &len, &sw, tlvRoot);
 	
@@ -453,19 +453,47 @@ return 0;
 
 	// process response template format 1 [id:80  2b AIP + x4b AFL] and format 2 [id:77 TLV]
 	if (buf[0] == 0x80) {
-		
-		
-		
 		if (decodeTLV){
 			PrintAndLog("GPO response format1:");
 			TLVPrintFromBuffer(buf, len);
 		}
+		
+		if (len < 4 || (len - 4) % 4) {
+			PrintAndLog("ERROR: GPO response format1 parsing error. length=%d", len);
 	} else {
-		
-		
-		
+			// AIP
+			struct tlvdb * f1AIP = tlvdb_fixed(0x82, 2, buf + 2);
+			tlvdb_add(tlvRoot, f1AIP);
+			if (decodeTLV){
+				PrintAndLog("\n* * Decode response format 1 (0x80) AIP and AFL:");
+				TLVPrintFromTLV(f1AIP);
+			}
+
+			// AFL
+			struct tlvdb * f1AFL = tlvdb_fixed(0x94, len - 4, buf + 2 + 2);
+			tlvdb_add(tlvRoot, f1AFL);
+			if (decodeTLV)
+				TLVPrintFromTLV(f1AFL);
+		}		
+	} else {
 		if (decodeTLV)
 			TLVPrintFromBuffer(buf, len);
+	}
+	
+	// extract PAN from track2
+	{
+		const struct tlv *track2 = tlvdb_get(tlvRoot, 0x57, NULL);
+		if (!tlvdb_get(tlvRoot, 0x5a, NULL) && track2 && track2->len >= 8) {
+			struct tlvdb *pan = GetPANFromTrack2(track2);
+			if (pan) {
+				tlvdb_add(tlvRoot, pan); 
+				
+				const struct tlv *pantlv = tlvdb_get(tlvRoot, 0x5a, NULL);	
+				PrintAndLog("\n* * Extracted PAN from track2: %s", sprint_hex(pantlv->value, pantlv->len));
+			} else {
+				PrintAndLog("\n* * WARNING: Can't extract PAN from track2.");
+			}
+		}
 	}
 	
 	PrintAndLog("\n* Read records from AFL.");
@@ -516,7 +544,114 @@ return 0;
 		break;
 	}	
 	
-	// additional contacless EMV commands (fDDA, CDA, external authenticate)
+	// transaction check
+	const struct tlv *AIPtlv = tlvdb_get(tlvRoot, 0x82, NULL);	
+	uint16_t AIP = AIPtlv->value[0] + AIPtlv->value[1] * 0x100;
+	PrintAndLog("* * AIP=%x", AIP);
+
+	// qVSDC
+	{
+		// 9F26: Application Cryptogram
+		const struct tlv *AC = tlvdb_get(tlvRoot, 0x9F26, NULL);
+		if (AC) {
+			PrintAndLog("\n--> qVSDC transaction.");
+			PrintAndLog("* AC path");
+			
+			// 9F36: Application Transaction Counter (ATC)
+			const struct tlv *ATC = tlvdb_get(tlvRoot, 0x9F36, NULL);
+			if (ATC) {
+			
+				// 9F10: Issuer Application Data - optional
+				const struct tlv *IAD = tlvdb_get(tlvRoot, 0x9F10, NULL);
+
+				// print AC data
+				PrintAndLog("ATC: %s", sprint_hex(ATC->value, ATC->len));
+				PrintAndLog("AC: %s", sprint_hex(AC->value, AC->len));
+				if (IAD){
+					PrintAndLog("IAD: %s", sprint_hex(IAD->value, IAD->len));
+					
+					if (IAD->len >= IAD->value[0] + 1) {
+						PrintAndLog("\tKey index:  0x%02x", IAD->value[1]);
+						PrintAndLog("\tCrypto ver: 0x%02x(%03d)", IAD->value[2], IAD->value[2]);
+						PrintAndLog("\tCVR:", sprint_hex(&IAD->value[3], IAD->value[0] - 2));
+						struct tlvdb * cvr = tlvdb_fixed(0x20, IAD->value[0] - 2, &IAD->value[3]);
+						TLVPrintFromTLVLev(cvr, 1);
+					}
+				} else {
+					PrintAndLog("WARNING: IAD not found.");
+				}
+				
+			} else {
+				PrintAndLog("ERROR AC: Application Transaction Counter (ATC) not found.");
+			}
+		}
+	}
+	
+	// TODO: Mastercard M/CHIP
+	{
+		const struct tlv *CDOL1 = tlvdb_get(tlvRoot, 0x8c, NULL);
+		if (CDOL1 && GetCardPSVendor(AID, AIDlen) == CV_MASTERCARD) { // and m/chip transaction flag
+		
+		}
+	}
+		
+	// MSD
+	if (AIP & 0x8000) {
+		PrintAndLog("\n--> MSD transaction.");
+		
+		
+		PrintAndLog("* MSD dCVV path. Check dCVV");
+
+		const struct tlv *track2 = tlvdb_get(tlvRoot, 0x57, NULL);
+		if (track2) {
+			PrintAndLog("Track2: %s", sprint_hex(track2->value, track2->len));
+
+			struct tlvdb *dCVV = GetdCVVRawFromTrack2(track2);
+			PrintAndLog("dCVV raw data:");
+			TLVPrintFromTLV(dCVV);
+			
+			if (GetCardPSVendor(AID, AIDlen) == CV_MASTERCARD) {
+				PrintAndLog("\n* Mastercard calculate UDOL");
+
+				// UDOL (9F69)
+				const struct tlv *UDOL = tlvdb_get(tlvRoot, 0x9F69, NULL);
+				// UDOL(9F69) default: 9F6A (Unpredictable number) 4 bytes
+				const struct tlv defUDOL = {
+					.tag = 0x01,
+					.len = 3,
+					.value = (uint8_t *)"\x9f\x6a\x04",
+				};
+				if (!UDOL)
+					PrintAndLog("Use default UDOL.");
+
+				struct tlv *udol_data_tlv = dol_process(UDOL ? UDOL : &defUDOL, tlvRoot, 0x01); // 0x01 - fake tag!
+				if (!udol_data_tlv){
+					PrintAndLog("ERROR: can't create UDOL TLV.");
+					return 4;
+				}
+
+				PrintAndLog("UDOL data[%d]: %s", udol_data_tlv->len, sprint_hex(udol_data_tlv->value, udol_data_tlv->len));
+				
+				PrintAndLog("\n* Mastercard compute cryptographic checksum(UDOL)");
+				
+				res = MSCComputeCryptoChecksum(true, (uint8_t *)udol_data_tlv->value, udol_data_tlv->len, buf, sizeof(buf), &len, &sw, tlvRoot);
+				if (res) {
+					PrintAndLog("ERROR Compute Crypto Checksum. APDU error %4x", sw);
+					return 5;
+				}
+				
+				if (decodeTLV) {
+					TLVPrintFromBuffer(buf, len);
+					PrintAndLog("");
+				}
+
+			}
+		} else {
+			PrintAndLog("ERROR MSD: Track2 data not found.");
+		}
+	}
+	
+	// additional contacless EMV commands (fDDA, external authenticate)
 	
 	
 	// DropField

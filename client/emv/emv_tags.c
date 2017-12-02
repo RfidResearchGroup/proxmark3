@@ -21,6 +21,7 @@
 #include "emv_tags.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 #define PRINT_INDENT(level) 	{for (int i = 0; i < (level); i++) fprintf(f, "\t");}
 
@@ -33,6 +34,7 @@ enum emv_tag_t {
 	EMV_TAG_STRING,
 	EMV_TAG_NUMERIC,
 	EMV_TAG_YYMMDD,
+	EMV_TAG_CVR,
 };
 
 struct emv_tag {
@@ -144,12 +146,38 @@ static const struct emv_tag_bit EMV_TTQ[] = {
 	EMV_BIT_FINISH,
 };
 
+static const struct emv_tag_bit EMV_CVR[] = {
+	// mask 0F 0F F0 0F
+	{ EMV_BIT(1, 4), "CDA Performed" },
+	{ EMV_BIT(1, 3), "Offline DDA Performed" },
+	{ EMV_BIT(1, 2), "Issuer Authentication Not Performed" },
+	{ EMV_BIT(1, 1), "Issuer Authentication performed and Failed" },
+	{ EMV_BIT(2, 4), "Offline PIN Verification Performed" },
+	{ EMV_BIT(2, 3), "Offline PIN Verification Performed and PIN Not Successfully Verified" },
+	{ EMV_BIT(2, 2), "PIN Try Limit Exceeded" },
+	{ EMV_BIT(2, 1), "Last Online Transaction Not Completed" },
+	{ EMV_BIT(3, 8), "Lower Offline Transaction Count Limit Exceeded" },
+	{ EMV_BIT(3, 7), "Upper Offline Transaction Count Limit Exceeded" },
+	{ EMV_BIT(3, 6), "Lower Cumulative Offline Amount Limit Exceeded" },
+	{ EMV_BIT(3, 5), "Upper Cumulative Offline Amount Limit Exceeded" },
+	{ EMV_BIT(4, 4), "Issuer script processing failed on last transaction" },
+	{ EMV_BIT(4, 3), "Offline data authentication failed on previous transaction and transaction declined offline" },
+	{ EMV_BIT(4, 2), "Go Online on Next Transaction Was Set" },
+	{ EMV_BIT(4, 1), "Unable to go Online" },
+	EMV_BIT_FINISH,
+};
+
 // All Data Elements by Tags used in TLV structure (according to the EMV 4.2 Standard )
 // https://www.eftlab.co.uk/index.php/site-map/knowledge-base/145-emv-nfc-tags
 // http://dexterous-programmer.blogspot.in/2012/05/emv-tags.html
 static const struct emv_tag emv_tags[] = {
+	// internal
 	{ 0x00  , "Unknown ???" },
 	{ 0x01  , "", EMV_TAG_STRING }, // string for headers
+	{ 0x02  , "Raw data", }, // data
+	{ 0x20  , "Cardholder Verification Results (CVR)", EMV_TAG_CVR }, // not standard!
+
+	// EMV
 	{ 0x41  , "Country code and national data" },
 	{ 0x42  , "Issuer Identification Number (IIN)" },
 	{ 0x4f  , "Application Dedicated File (ADF) Name" },
@@ -228,6 +256,8 @@ static const struct emv_tag emv_tags[] = {
 	{ 0x9f4c, "ICC Dynamic Number" },
 	{ 0x9f4d, "Log Entry" },
 	{ 0x9f4f, "Log Format", EMV_TAG_DOL },
+	{ 0x9f60, "CVC3 (Track1)" },
+	{ 0x9f61, "CVC3 (Track2)" },
 	{ 0x9f62, "PCVC3(Track1)" },
 	{ 0x9f63, "PUNATC(Track1)" },
 	{ 0x9f64, "NATC(Track1)" },
@@ -373,6 +403,72 @@ static void emv_tag_dump_yymmdd(const struct tlv *tlv, const struct emv_tag *tag
 static uint32_t emv_get_binary(const unsigned char *S)
 {
 	return (S[0] << 24) | (S[1] << 16) | (S[2] << 8) | (S[3] << 0);
+}
+
+// https://github.com/binaryfoo/emv-bertlv/blob/master/src/main/resources/fields/visa-cvr.txt
+static void emv_tag_dump_cvr(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
+	if (!tlv || tlv->len < 1) {
+		PRINT_INDENT(level);
+		fprintf(f, "\tINVALID!\n");
+		return;
+	}
+	
+	if (tlv->len != tlv->value[0] + 1) {
+		PRINT_INDENT(level);
+		fprintf(f, "\tINVALID length!\n");
+		return;
+	}
+	
+	if (tlv->len >= 2) {
+		// AC1
+		PRINT_INDENT(level);
+		if ((tlv->value[1] & 0xC0) == 0x00)	fprintf(f, "\tAC1: AAC (Transaction declined)\n");
+		if ((tlv->value[1] & 0xC0) == 0x40)	fprintf(f, "\tAC1: TC (Transaction approved)\n");
+		if ((tlv->value[1] & 0xC0) == 0x80)	fprintf(f, "\tAC1: ARQC (Online authorisation requested)\n");
+		if ((tlv->value[1] & 0xC0) == 0xC0)	fprintf(f, "\tAC1: RFU\n");
+		// AC2
+		PRINT_INDENT(level);
+		if ((tlv->value[1] & 0x30) == 0x00)	fprintf(f, "\tAC2: AAC (Transaction declined)\n");
+		if ((tlv->value[1] & 0x30) == 0x10)	fprintf(f, "\tAC2: TC (Transaction approved)\n");
+		if ((tlv->value[1] & 0x30) == 0x20)	fprintf(f, "\tAC2: not requested (ARQC)\n");
+		if ((tlv->value[1] & 0x30) == 0x30)	fprintf(f, "\tAC2: RFU\n");
+	}
+	if (tlv->len >= 3 && (tlv->value[2] >> 4)) {
+		PRINT_INDENT(level);
+		fprintf(f, "\tPIN try: %x\n", tlv->value[2] >> 4);
+	}
+	if (tlv->len >= 4 && (tlv->value[3] & 0x0F)) {
+		PRINT_INDENT(level);
+		fprintf(f, "\tIssuer discretionary bits: %x\n", tlv->value[3] & 0x0F);
+	}
+	if (tlv->len >= 5 && (tlv->value[4] >> 4)) {
+		PRINT_INDENT(level);
+		fprintf(f, "\tSuccessfully processed issuer script commands: %x\n", tlv->value[4] >> 4);
+	}
+	
+	// mask 0F 0F F0 0F
+	uint8_t data[20] = {0};
+	memcpy(data, &tlv->value[1], tlv->len - 1);
+	data[0] &= 0x0F;
+	data[1] &= 0x0F;
+	data[2] &= 0xF0;
+	data[3] &= 0x0F;
+	const struct tlv bit_tlv = {
+		.tag = tlv->tag,
+		.len = tlv->len - 1,
+		.value = data,
+	};
+	const struct emv_tag bit_tag = {
+		.tag = tag->tag,
+		.name = tag->name,
+		.type = EMV_TAG_BITMASK,
+		.data = EMV_CVR,
+	};
+	
+	if (data[0] || data[1] || data[2] || data[3])
+		emv_tag_dump_bitmask(&bit_tlv, &bit_tag, f, level);
+	
+	return;
 }
 
 static void emv_tag_dump_cvm_list(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level)
@@ -527,6 +623,10 @@ bool emv_tag_dump(const struct tlv *tlv, FILE *f, int level)
 		break;
 	case EMV_TAG_YYMMDD:
 		emv_tag_dump_yymmdd(tlv, tag, f, level);
+		break;
+	case EMV_TAG_CVR:
+		fprintf(f, "\n");
+		emv_tag_dump_cvr(tlv, tag, f, level);
 		break;
 	};
 

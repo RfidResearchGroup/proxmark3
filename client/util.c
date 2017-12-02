@@ -115,6 +115,31 @@ void FillFileNameByUID(char *fileName, uint8_t *uid, char *ext, int byteCount) {
 	sprintf(fnameptr, "%s", ext); 
 }
 
+void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex_len, const size_t hex_max_len, 
+	const size_t min_str_len, const size_t spaces_between, bool uppercase) {
+		
+	char *tmp = (char *)buf;
+	size_t i;
+
+	int maxLen = ( hex_len > hex_max_len) ? hex_max_len : hex_len;
+
+	for (i = 0; i < maxLen; ++i, tmp += 2 + spaces_between) {
+		sprintf(tmp, (uppercase) ? "%02X" : "%02x", (unsigned int) hex_data[i]); 
+		
+		for (int j = 0; j < spaces_between; j++)
+			sprintf(tmp + 2 + j, " ");
+	}
+	
+	i *= (2 + spaces_between);
+	int minStrLen = min_str_len > i ? min_str_len : 0;
+	if (minStrLen > hex_max_len)
+		minStrLen = hex_max_len;
+	for(; i < minStrLen; i++, tmp += 1) 
+		sprintf(tmp, " ");
+
+	return;
+}
+
 // printing and converting functions
 void print_hex(const uint8_t * data, const size_t len) {
 	size_t i;
@@ -141,34 +166,17 @@ void print_hex_break(const uint8_t *data, const size_t len, uint8_t breaks) {
 }
 
 char *sprint_hex(const uint8_t *data, const size_t len) {
+	static char buf[1025] = {0};
+	
+	hex_to_buffer((uint8_t *)buf, data, len, sizeof(buf) - 1, 0, 1, true);
 
-	static char buf[1024];
-	char * tmp = buf;
-	memset(buf, 0x00, 1024);
-	size_t max_len = ( len > 1024/3) ? 1024/3 : len;
-	size_t i;
-
-	for (i=0; i < max_len; ++i, tmp += 3)
-		sprintf(tmp, "%02X ", data[i]);
 	return buf;
 }
 
 char *sprint_hex_inrow_ex(const uint8_t *data, const size_t len, const size_t min_str_len) {
-	
+	static char buf[1025] = {0};
 
-	static char buf[1024] = {0};
-	char *tmp = buf;
-	memset(buf, 0x00, 1024);
-	int max_len = ( len > 1024/2) ? 1024/2 : len;
-	size_t i;
-
-	for (i = 0; i < max_len; ++i, tmp += 2)
-		sprintf(tmp, "%02X", data[i]);
-	
-	i *= 2;
-	int m = min_str_len > i ? min_str_len : 0;
-	for(; i < m; i++, tmp += 1) 
-		sprintf(tmp, " ");
+	hex_to_buffer((uint8_t *)buf, data, len, sizeof(buf) - 1, min_str_len, 0, true);
 
 	return buf;
 }

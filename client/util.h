@@ -98,6 +98,9 @@ extern void AddLogUint64(char *fileName, char *extData, const uint64_t data);
 extern void AddLogCurrentDT(char *fileName);
 extern void FillFileNameByUID(char *fileName, uint8_t * uid, char *ext, int byteCount);
 
+extern void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex_len, 
+	const size_t hex_max_len, const size_t min_str_len, const size_t spaces_between, bool uppercase);
+
 extern void print_hex(const uint8_t * data, const size_t len);
 extern void print_hex_break(const uint8_t *data, const size_t len, const uint8_t breaks);
 extern char *sprint_hex(const uint8_t * data, const size_t len);
