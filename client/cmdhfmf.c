@@ -1167,7 +1167,7 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 }
 
 int randInRange(int min, int max) {
-	return min + (int) (rand() / (double) (RAND_MAX + 1) * (max - min + 1));
+	return min + (int) (rand() / (double) (RAND_MAX) * (max - min + 1));
 }
 
 //Fisher–Yates shuffle
@@ -1177,7 +1177,6 @@ void shuffle( uint8_t *array, uint16_t len) {
 	time_t t;
 	srand((unsigned) time(&t));
 	while (len) {		
-		//x = randInRange(0, len) * (len-- *6) | 0; // 0 = i < n
 		x = randInRange(0, (len -= 6) ) | 0; // 0 = i < n
 		x %= 6;
 		memcpy(tmp, array + x, 6);
