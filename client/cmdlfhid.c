@@ -233,7 +233,7 @@ int CmdHIDRead_device(const char *Cmd) {
 
 int CmdHIDSim(const char *Cmd) {
 	uint32_t hi = 0, lo = 0;
-	int n = 0, i = 0;
+	uint32_t n = 0, i = 0;
 
 	uint8_t ctmp = param_getchar(Cmd, 0);
 	if ( strlen(Cmd) == 0 || ctmp == 'H' || ctmp == 'h' ) return usage_lf_hid_sim();
@@ -255,7 +255,7 @@ int CmdHIDSim(const char *Cmd) {
 int CmdHIDClone(const char *Cmd) {
 	
 	uint32_t hi2 = 0, hi = 0, lo = 0;
-	int n = 0, i = 0;
+	uint32_t n = 0, i = 0;
 	UsbCommand c;
 
 	uint8_t ctmp = param_getchar(Cmd, 0);

@@ -202,7 +202,8 @@ int usage_lf_em4x05_info(void) {
 // Construct the graph for emulating an EM410X tag
 void ConstructEM410xEmulGraph(const char *uid,const  uint8_t clock) {
 
-	int i, n, j, binary[4], parity[4];
+	int i, j, binary[4], parity[4];
+	uint32_t n;
 	/* clear our graph */
 	ClearGraph(0);
 

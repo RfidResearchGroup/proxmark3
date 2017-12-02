@@ -540,6 +540,7 @@ int loadTraceCard(uint8_t *tuid, uint8_t uidlen) {
 	char buf[64] = {0x00};
 	uint8_t buf8[64] = {0x00};
 	int i, blockNum;
+	uint32_t tmp;
 	
 	if (!isTraceCardEmpty()) 
 		saveTraceCard();
@@ -573,8 +574,10 @@ int loadTraceCard(uint8_t *tuid, uint8_t uidlen) {
 			}
 			return 2;
 		}
-		for (i = 0; i < 32; i += 2)
-			sscanf(&buf[i], "%02X", (unsigned int *)&buf8[i / 2]);
+		for (i = 0; i < 32; i += 2) {
+			sscanf(&buf[i], "%02X", &tmp);
+			buf8[i / 2] = tmp & 0xFF;
+		}
 
 		memcpy(traceCard + blockNum * 16, buf8, 16);
 

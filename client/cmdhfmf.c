@@ -2162,6 +2162,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
 	int i, len, blockNum, numBlocks;
 	int nameParamNo = 1;
 	uint8_t blockWidth = 32;
+	uint32_t tmp;
 	char c = param_getchar(Cmd, 0);
 		
 	if ( c == 'h' || c == 'H' || c == 0x00)
@@ -2220,7 +2221,8 @@ int CmdHF14AMfELoad(const char *Cmd) {
 		}
 		
 		for (i = 0; i < blockWidth; i += 2) {
-			sscanf(&buf[i], "%02x", (unsigned int *)&buf8[i / 2]);
+			sscanf(&buf[i], "%02x", &tmp);
+			buf8[i / 2] = tmp & 0xFF;
 		}
 		if (mfEmlSetMem_xt(buf8, blockNum, 1, blockWidth/2)) {
 			PrintAndLog("Cant set emul block: %3d", blockNum);
@@ -2468,6 +2470,7 @@ int CmdHF14AMfCLoad(const char *Cmd) {
 	char buf[35] = {0x00};  // 32+newline chars+1 null terminator
 	uint8_t buf8[16] = {0x00};
 	uint8_t fillFromEmulator = 0;
+	uint32_t tmp;
 	int i, len, blockNum, flags=0;
 
 	memset(filename, 0, sizeof(filename));
@@ -2530,9 +2533,11 @@ int CmdHF14AMfCLoad(const char *Cmd) {
 			fclose(f);
 			return 2;
 		}
-		for (i = 0; i < 32; i += 2)
-			sscanf(&buf[i], "%02x", (unsigned int *)&buf8[i / 2]);
-
+		for (i = 0; i < 32; i += 2) {
+			sscanf(&buf[i], "%02x", &tmp);
+			buf8[i / 2] = tmp & 0xFF;
+		}
+		
 		if (blockNum == 0) flags = MAGIC_INIT + MAGIC_WUPC;				// switch on field and send magic sequence
 		if (blockNum == 1) flags = 0;									// just write
 		if (blockNum == 16 * 4 - 1) flags = MAGIC_HALT + MAGIC_OFF;		// Done. Switch off field.

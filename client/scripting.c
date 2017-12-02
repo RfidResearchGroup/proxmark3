@@ -252,12 +252,15 @@ static int l_iso14443b_crc(lua_State *L) {
                      unsigned char *TransmitFirst,
                      unsigned char *TransmitSecond)
 	*/
+	uint32_t tmp;
 	unsigned char buf[USB_CMD_DATA_SIZE] = {0x00};
     size_t size = 0;	
     const char *data = luaL_checklstring(L, 1, &size);
 	
-	for (int i = 0; i < size; i += 2)
-		sscanf(&data[i], "%02x", (unsigned int *)&buf[i / 2]);	
+	for (int i = 0; i < size; i += 2) {
+		sscanf(&data[i], "%02x", &tmp);
+		buf[i / 2] = tmp & 0xFF;
+	}
 	
 	size /= 2;	
 	ComputeCrc14443(CRC_14443_B, buf, size, &buf[size], &buf[size+1]);	
@@ -272,6 +275,7 @@ static int l_iso14443b_crc(lua_State *L) {
 static int l_aes128decrypt_cbc(lua_State *L) {
 	//Check number of arguments
 	int i;
+	uint32_t tmp;
     size_t size;
     const char *p_key = luaL_checklstring(L, 1, &size);
     if(size != 32)  return returnToLuaWithError(L,"Wrong size of key, got %d bytes, expected 32", (int) size);
@@ -285,8 +289,10 @@ static int l_aes128decrypt_cbc(lua_State *L) {
 
 	// convert key to bytearray and convert input to bytearray
 	for (i = 0; i < 32; i += 2) {
-		sscanf(&p_encTxt[i], "%02x", (unsigned int *)&indata[i / 2]);
-		sscanf(&p_key[i], "%02x", (unsigned int *)&aes_key[i / 2]);
+		sscanf(&p_encTxt[i], "%02x", &tmp);
+		indata[i / 2] = tmp & 0xFF;
+		sscanf(&p_key[i], "%02x", &tmp);
+		aes_key[i / 2] = tmp & 0xFF;
 	}
 
     aes_context ctx;
@@ -301,6 +307,7 @@ static int l_aes128decrypt_ecb(lua_State *L)
 {
 	//Check number of arguments
 	int i;
+	uint32_t tmp;
     size_t size;
     const char *p_key = luaL_checklstring(L, 1, &size);
     if(size != 32)  return returnToLuaWithError(L,"Wrong size of key, got %d bytes, expected 32", (int) size);
@@ -313,8 +320,10 @@ static int l_aes128decrypt_ecb(lua_State *L)
 
 	// convert key to bytearray and convert input to bytearray
 	for (i = 0; i < 32; i += 2) {
-		sscanf(&p_encTxt[i], "%02x", (unsigned int *)&indata[i / 2]);
-		sscanf(&p_key[i], "%02x", (unsigned int *)&aes_key[i / 2]);
+		sscanf(&p_encTxt[i], "%02x", &tmp);
+		indata[i / 2] = tmp & 0xFF;
+		sscanf(&p_key[i], "%02x", &tmp);
+		aes_key[i / 2] = tmp & 0xFF;
 	}
     aes_context ctx;
     aes_init(&ctx);
@@ -330,6 +339,7 @@ static int l_aes128encrypt_cbc(lua_State *L)
 {
 	//Check number of arguments
 	int i;
+	uint32_t tmp;
     size_t size;
     const char *p_key = luaL_checklstring(L, 1, &size);
     if(size != 32)  return returnToLuaWithError(L,"Wrong size of key, got %d bytes, expected 32", (int) size);
@@ -342,8 +352,10 @@ static int l_aes128encrypt_cbc(lua_State *L)
 	unsigned char iv[16] = {0x00};
 	
 	for (i = 0; i < 32; i += 2) {
-		sscanf(&p_txt[i], "%02x", (unsigned int *)&indata[i / 2]);
-		sscanf(&p_key[i], "%02x", (unsigned int *)&aes_key[i / 2]);
+		sscanf(&p_txt[i], "%02x", &tmp);
+		indata[i / 2] = tmp & 0xFF;
+		sscanf(&p_key[i], "%02x", &tmp);
+		aes_key[i / 2] = tmp & 0xFF;
 	}
 
     aes_context ctx;
@@ -359,6 +371,7 @@ static int l_aes128encrypt_ecb(lua_State *L)
 {
 	//Check number of arguments
 	int i;
+	uint32_t tmp;
     size_t size;
     const char *p_key = luaL_checklstring(L, 1, &size);
     if(size != 32)  return returnToLuaWithError(L,"Wrong size of key, got %d bytes, expected 32", (int) size);
@@ -370,8 +383,10 @@ static int l_aes128encrypt_ecb(lua_State *L)
     unsigned char aes_key[16] = {0x00};
 	
 	for (i = 0; i < 32; i += 2) {
-		sscanf(&p_txt[i], "%02x", (unsigned int *)&indata[i / 2]);
-		sscanf(&p_key[i], "%02x", (unsigned int *)&aes_key[i / 2]);
+		sscanf(&p_txt[i], "%02x", &tmp);
+		indata[i / 2] = tmp & 0xFF;
+		sscanf(&p_key[i], "%02x", &tmp);
+		aes_key[i / 2] = tmp & 0xFF;
 	}	
     aes_context ctx;
     aes_init(&ctx);
@@ -522,6 +537,7 @@ static int l_hardnested(lua_State *L){
 
 	bool haveTarget = true;
     size_t size;
+	uint32_t tmp;
     const char *p_blockno = luaL_checklstring(L, 1, &size);
     if(size != 2)  return returnToLuaWithError(L,"Wrong size of blockNo, got %d bytes, expected 2", (int) size);
 
@@ -571,9 +587,12 @@ static int l_hardnested(lua_State *L){
 	uint8_t key[6] = {0,0,0,0,0,0};
     uint8_t trgkey[6] = {0,0,0,0,0,0};
 	for (int i = 0; i < 32; i += 2) {
-		sscanf(&p_key[i], "%02x", (unsigned int *)&key[i / 2]);
-		if (haveTarget)
-			sscanf(&p_trgkey[i], "%02x", (unsigned int *)&trgkey[i / 2]);
+		sscanf(&p_key[i], "%02x", &tmp);
+		key[i / 2] = tmp & 0xFF;
+		if (haveTarget) {
+			sscanf(&p_trgkey[i], "%02x", &tmp);
+			trgkey[i / 2] = tmp & 0xFF;
+		}
 	}
 	
     uint64_t foundkey = 0;
@@ -609,13 +628,16 @@ static int l_detect_prng(lua_State *L) {
  */
 static int l_keygen_algoD(lua_State *L) {
 	size_t size;
+	uint32_t tmp;
     const char *p_uid = luaL_checklstring(L, 1, &size);
-	if(size != 14)  return returnToLuaWithError(L,"Wrong size of UID, got %d bytes, expected 14", (int) size);
+	if (size != 14) return returnToLuaWithError(L,"Wrong size of UID, got %d bytes, expected 14", (int) size);
 
 	uint8_t uid[7] = {0,0,0,0,0,0,0};
 
-	for (int i = 0; i < 14; i += 2)
-		sscanf(&p_uid[i], "%02x", (unsigned int *)&uid[i / 2]);
+	for (int i = 0; i < 14; i += 2) {
+		sscanf(&p_uid[i], "%02x", &tmp);
+		uid[i / 2] = tmp & 0xFF;
+	}
 
 	uint32_t pwd = ul_ev1_pwdgenD(uid);
 	uint16_t pack = ul_ev1_packgenD(uid);

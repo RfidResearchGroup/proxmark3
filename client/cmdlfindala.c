@@ -422,7 +422,7 @@ int CmdIndalaClone(const char *Cmd) {
 	UsbCommand c;
 	uint32_t uid1, uid2, uid3, uid4, uid5, uid6, uid7;
 	uid1 =  uid2 = uid3 = uid4 = uid5 = uid6 = uid7 = 0;
-	int n = 0, i = 0;
+	uint32_t n = 0, i = 0;
 
 	if (strchr(Cmd,'l') != 0) {
 		while (sscanf(&Cmd[i++], "%1x", &n ) == 1) {
