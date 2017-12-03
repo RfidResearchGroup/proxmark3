@@ -2236,10 +2236,18 @@ int CmdHF14AMfELoad(const char *Cmd) {
 	}
 	fclose(f);
 	printf("\n");
-	
-	if ((blockNum != numBlocks)) {
-		PrintAndLog("File content error. Got %d must be %d blocks.",blockNum, numBlocks);
-		return 4;
+
+	// Ultralight /Ntag
+	if ( blockWidth == 8 ) {
+		if ((blockNum != numBlocks)) {		
+			PrintAndLog("Warning, Ultralight/Ntag file content, Loaded %d blocks into emulator memory", blockNum);
+			return 0;
+		}
+	} else {
+		if ((blockNum != numBlocks)) {
+			PrintAndLog("Error, file content, Only loaded %d blocks, must be %d blocks into emulator memory", blockNum, numBlocks);
+			return 4;
+		}
 	}
 	PrintAndLog("Loaded %d blocks from file: %s", blockNum, filename);
 	return 0;
