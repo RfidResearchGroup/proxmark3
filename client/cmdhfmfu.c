@@ -2042,7 +2042,7 @@ int CmdHF14AMfURestore(const char *Cmd){
 				memcpy(c.d.asBytes,  p_authkey, 4 );
 			}
 
-			printf("special PWD     block written 0x%X - %s\n", MFU_NTAG_SPECIAL_PWD, sprint_hex(c.d.asBytes, 8));
+			printf("special PWD     block written 0x%X - %s\n", MFU_NTAG_SPECIAL_PWD, sprint_hex(c.d.asBytes, 4));
 			clearCommandBuffer();
 			SendCommand(&c);
 			wait4response(MFU_NTAG_SPECIAL_PWD);
@@ -2059,7 +2059,7 @@ int CmdHF14AMfURestore(const char *Cmd){
 		c.d.asBytes[1] = mem->pack[1];
 		c.d.asBytes[2] = 0;
 		c.d.asBytes[3] = 0;
-		printf("special PACK    block written 0x%X - %s\n", MFU_NTAG_SPECIAL_PACK, sprint_hex(c.d.asBytes, 8));
+		printf("special PACK    block written 0x%X - %s\n", MFU_NTAG_SPECIAL_PACK, sprint_hex(c.d.asBytes, 4));
 		clearCommandBuffer();
 		SendCommand(&c);
 		wait4response(MFU_NTAG_SPECIAL_PACK);
@@ -2068,7 +2068,7 @@ int CmdHF14AMfURestore(const char *Cmd){
 		for (uint8_t s = MFU_NTAG_SPECIAL_SIGNATURE, i=0; s < MFU_NTAG_SPECIAL_SIGNATURE+8; s++, i += 4){
 			c.arg[0] = s;
 			memcpy(c.d.asBytes, mem->signature+i, 4);
-			printf("special SIG     block written 0x%X - %s\n", s, sprint_hex(c.d.asBytes, 8) );
+			printf("special SIG     block written 0x%X - %s\n", s, sprint_hex(c.d.asBytes, 4) );
 			clearCommandBuffer();
 			SendCommand(&c);
 			wait4response(s);		
@@ -2078,7 +2078,7 @@ int CmdHF14AMfURestore(const char *Cmd){
 		for (uint8_t s = MFU_NTAG_SPECIAL_VERSION, i=0; s < MFU_NTAG_SPECIAL_VERSION+2; s++, i += 4){		
 			c.arg[0] = s;
 			memcpy(c.d.asBytes, mem->version+i, 4 );			
-			printf("special VERSION block written 0x%X - %s\n", s, sprint_hex(c.d.asBytes, 8) );
+			printf("special VERSION block written 0x%X - %s\n", s, sprint_hex(c.d.asBytes, 4) );
 			clearCommandBuffer();
 			SendCommand(&c);
 			wait4response(s);
@@ -2118,7 +2118,7 @@ int CmdHF14AMfURestore(const char *Cmd){
 			clearCommandBuffer();
 			SendCommand(&c);
 			wait4response(b);
-			printf("special block written %u - %s\n", b, sprint_hex(c.d.asBytes, 8) );
+			printf("special block written %u - %s\n", b, sprint_hex(c.d.asBytes, 4) );
 		}
 	}
 	
