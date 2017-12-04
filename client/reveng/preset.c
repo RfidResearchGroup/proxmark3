@@ -725,6 +725,7 @@ static const struct malias aliases[] = {
 static const struct mpreset models[] = {
 	{ 0UL, 0,       0,       P_BE,   0,       0,       0,       NULL       },	/* terminating entry */
 };
+#  define NPRESETS 0
 
 static const struct malias aliases[] = {
 	{NULL,			NULL     },	/* terminating entry */
