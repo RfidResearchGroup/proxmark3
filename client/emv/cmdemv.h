@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include <string.h>
+#include <ctype.h>
 #include "proxmark3.h"
 #include "ui.h"
 #include "cmdparser.h"

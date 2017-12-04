@@ -14,6 +14,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include <time.h>
+#include <ctype.h>
 #include "proxmark3.h"
 #include "ui.h"
 #include "graph.h"

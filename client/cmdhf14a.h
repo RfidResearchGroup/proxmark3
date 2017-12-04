@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <ctype.h>
 #include "proxmark3.h"
 #include "common.h"
 #include "ui.h"
