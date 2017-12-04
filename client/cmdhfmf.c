@@ -2848,6 +2848,36 @@ int CmdHf14AMfSetMod(const char *Cmd) {
 	return 0;
 }
 
+// Mifare NACK bug detection
+int CmdHf14AMfNack(const char *Cmd) {
+
+	UsbCommand c = {CMD_MIFARE_NACK_DETECT, {0, 0, 0}};
+	clearCommandBuffer();
+	SendCommand(&c);
+	UsbCommand resp;
+	
+	while (true) {
+		
+		printf(".");
+		fflush(stdout);
+		if (ukbhit()) {
+			int gc = getchar(); (void)gc;
+			return -1;
+			break;
+		}
+	
+		if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+			uint8_t ok = resp.arg[0] & 0xff;
+			PrintAndLog("isOk:%02x", ok);
+			if (!ok) {
+				PrintAndLog("Failed.");
+			}
+			break;
+		}
+	}
+	return 0;
+}
+
 int CmdHF14AMfice(const char *Cmd) {
 
 	uint8_t blockNo = 0;
@@ -2957,6 +2987,7 @@ static command_t CommandTable[] = {
 	{"decrypt",		CmdHf14AMfDecryptBytes,  1, "[nt] [ar_enc] [at_enc] [data] - to decrypt snoop or trace"},
 	{"setmod",		CmdHf14AMfSetMod, 		0, "Set MIFARE Classic EV1 load modulation strength"},
 	{"ice",			CmdHF14AMfice,			0, "collect Mifare Classic nonces to file"},
+	{"nack",		CmdHf14AMfNack,			0, "Test for Mifare NACK bug"},
 	{NULL, NULL, 0, NULL}
 };
 

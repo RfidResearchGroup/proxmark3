@@ -231,6 +231,7 @@ typedef struct{
 #define CMD_MIFARE_DESFIRE                                                0x072e
 
 #define CMD_MIFARE_COLLECT_NONCES										  0x072f
+#define CMD_MIFARE_NACK_DETECT											  0x0730
 
 #define CMD_HF_SNIFFER                                                    0x0800
 

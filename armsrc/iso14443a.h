@@ -16,7 +16,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+													   
+#include "usb_cmd.h"
 #include "cmd.h"
 #include "apps.h"
 #include "util.h"
@@ -27,6 +28,7 @@ extern "C" {
 #include "mifareutil.h"
 #include "parity.h"
 #include "random.h"
+#include "mifare.h"  // structs
 
 typedef struct {
 	enum {
@@ -82,10 +84,13 @@ typedef struct {
 	uint8_t *parity;
 } tUart;
 
-
 extern void GetParity(const uint8_t *pbtCmd, uint16_t len, uint8_t *par);
 extern void AppendCrc14443a(uint8_t *data, int len);
 
+// iso14443a.h
+extern void RAMFUNC SniffIso14443a(uint8_t param);
+extern void SimulateIso14443aTag(int tagType, int flags, uint8_t *data);
+extern void ReaderIso14443a(UsbCommand *c);
 extern void ReaderTransmit(uint8_t *frame, uint16_t len, uint32_t *timing);
 extern void ReaderTransmitBitsPar(uint8_t *frame, uint16_t bits, uint8_t *par, uint32_t *timing);
 extern void ReaderTransmitPar(uint8_t *frame, uint16_t len, uint8_t *par, uint32_t *timing);
@@ -97,14 +102,20 @@ extern int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *resp_da
 extern int iso14443a_fast_select_card(uint8_t *uid_ptr, uint8_t num_cascades);
 extern void iso14a_set_trigger(bool enable);
 
-int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen);
-int EmSend4bit(uint8_t resp);
+extern int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen);
+extern int EmSend4bit(uint8_t resp);
 extern int EmSendCmd(uint8_t *resp, uint16_t respLen);
 extern int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *parity);
-int EmSendCmdPar(uint8_t *resp, uint16_t respLen, uint8_t *par);
+extern int EmSendCmdPar(uint8_t *resp, uint16_t respLen, uint8_t *par);
+extern int EmSendPrecompiledCmd(tag_response_info_t *response_info);
+
 bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_StartTime, uint32_t reader_EndTime, uint8_t *reader_Parity,
 				uint8_t *tag_data, uint16_t tag_len, uint32_t tag_StartTime, uint32_t tag_EndTime, uint8_t *tag_Parity);
 
+//extern bool prepare_allocated_tag_modulation(tag_response_info_t *response_info, uint8_t **buffer, size_t *buffer_size);
+
+void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype );
+void DetectNACKbug();
 
 #ifdef __cplusplus
 }

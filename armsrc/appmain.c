@@ -881,21 +881,18 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 		case CMD_MIFARE_CIDENT:
 			MifareCIdent();
 			break;
-			
 		// mifare sniffer
 		case CMD_MIFARE_SNIFFER:
 			SniffMifare(c->arg[0]);
 			break;
-
 		case CMD_MIFARE_SETMOD:
 			MifareSetMod(c->arg[0], c->d.asBytes);
 			break;
-
 		//mifare desfire
-    case CMD_MIFARE_DESFIRE_READBL:
-        break;
-    case CMD_MIFARE_DESFIRE_WRITEBL:
-        break;
+		case CMD_MIFARE_DESFIRE_READBL:
+			break;
+		case CMD_MIFARE_DESFIRE_WRITEBL:
+			break;
 		case CMD_MIFARE_DESFIRE_AUTH1:
 			MifareDES_Auth1(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;
@@ -912,6 +909,9 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			MifareSendCommand(c->arg[0], c->arg[1], c->d.asBytes);
 			break;
 		case CMD_MIFARE_COLLECT_NONCES:
+			break;
+		case CMD_MIFARE_NACK_DETECT:
+			DetectNACKbug();
 			break;
 #endif
 
