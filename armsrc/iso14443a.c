@@ -2569,12 +2569,15 @@ void DetectNACKbug() {
 	uint16_t consecutive_resyncs = 0;
 	uint16_t unexpected_random = 0;
 	uint16_t sync_tries = 0;
+	uint32_t nt_attacked = 0;
+	uint32_t sync_time = 0;
+	uint32_t sync_cycles = 0;
+	uint8_t par_low = 0;
+	uint8_t cascade_levels = 0;
 
-	// static variables here, is re-used in the next call
-	static uint32_t nt_attacked = 0;
-	static uint32_t sync_time = 0;
-	static uint32_t sync_cycles = 0;
-	static uint8_t par_low = 0;
+	bool have_uid = false;
+	
+	uint8_t num_nacks = 0;
 	
 	#define PRNG_SEQUENCE_LENGTH	(1 << 16)
 	#define MAX_UNEXPECTED_RANDOM	4		// maximum number of unexpected (i.e. real) random numbers when trying to sync. Then give up.
@@ -2589,18 +2592,12 @@ void DetectNACKbug() {
 
 	sync_time = GetCountSspClk() & 0xfffffff8;
 	sync_cycles = PRNG_SEQUENCE_LENGTH; // Mifare Classic's random generator repeats every 2^16 cycles (and so do the nonces).		
-	nt_attacked = 0;
 	
    if (MF_DBGLEVEL >= 4)	Dbprintf("Mifare::Sync %u", sync_time);
 				
-	par_low = 0;
-
-	bool have_uid = false;
-	uint8_t cascade_levels = 0;
-
 	LED_C_ON(); 
 	uint16_t i;
-	for (i = 0; true; ++i) {
+	for (i = 0; num_nacks < 3; ++i) {
 
 		WDT_HIT();
 
@@ -2732,28 +2729,29 @@ void DetectNACKbug() {
  
 		// Receive answer. This will be a 4 Bit NACK when the 8 parity bits are OK after decoding
 		if (ReaderReceive(receivedAnswer, receivedAnswerPar)) {
-			catch_up_cycles = 8; 	// the PRNG is delayed by 8 cycles due to the NAC (4Bits = 0x05 encrypted) transfer
-	
-			if (nt_diff == 0)
-				par_low = par[0] & 0xE0; // there is no need to check all parities for other nt_diff. Parity Bits for mf_nr_ar[0..2] won't change
-
-			// Test if the information is complete
-
-			nt_diff = (nt_diff + 1) & 0x07;
-			mf_nr_ar[3] = (mf_nr_ar[3] & 0x1F) | (nt_diff << 5);
-			par[0] = par_low;
+			catch_up_cycles = 8; 	// the PRNG is delayed by 8 cycles due to the NAC (4Bits = 0x05 encrypted) transfer	
+			num_nacks++;
+			
+			par[0] = 0;
+			//new nonce
+			mf_nr_ar[0]++;
+			mf_nr_ar[1]++;
+			mf_nr_ar[2]++;
+			mf_nr_ar[3]++;
 			
 		} else {
 			// No NACK.	
-			if (nt_diff == 0) {
-				par[0]++;
-				if (par[0] == 0x00) {	// tried all 256 possible parities without success. Card doesn't send NACK.
-					isOK = -2;
-					break;
-				}
-			} else {
-				// Why this?
-				par[0] = ((par[0] & 0x1F) + 1) | par_low;
+			par[0]++;
+			// tried all 256 possible parities without success.
+			if (par[0] == 0x00) {	
+				// 
+				if ( num_nacks < 3 ) {
+					//new nonce
+					mf_nr_ar[0]++;
+					mf_nr_ar[1]++;
+					mf_nr_ar[2]++;
+					mf_nr_ar[3]++;
+				}				
 			}
 		}
 		
@@ -2761,9 +2759,10 @@ void DetectNACKbug() {
 		consecutive_resyncs = 0;
 	} // end for loop
 
-	if (MF_DBGLEVEL >= 4) Dbprintf("Number of sent auth requestes: %u", i);
-	
-	cmd_send(CMD_ACK, isOK, 0, 0, 0, 0 );
+	Dbprintf("Num of sent auth requestes : %u", i);
+	Dbprintf("Num of received NACK       : %u", num_nacks);
+		
+	cmd_send(CMD_ACK, num_nacks, 0, 0, 0, 0 );
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
