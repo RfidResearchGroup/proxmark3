@@ -897,9 +897,9 @@ int detect_classic_nackbug(bool verbose){
 							PrintAndLog("with 16 effective bits only, but shows unexpected behavior, try again."); 
 							return 0;
 						}
-				case  2 : PrintAndLog("Card always leak NACK."); return 3;
-				case  1 : PrintAndLog("Card has NACK bug."); return 1;
-				case  0 : PrintAndLog("Card has not NACK bug."); return 2;
+				case  2 : PrintAndLog("Always leak NACK detected"); return 3;
+				case  1 : PrintAndLog("NACK bug detected"); return 1;
+				case  0 : PrintAndLog("No NACK bug detected"); return 2;
 				default : PrintAndLog("  errorcode from device [%i]", ok); return 0;
 			}
 			break;
