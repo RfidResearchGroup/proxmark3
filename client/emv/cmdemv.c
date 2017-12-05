@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 2017 Merlok
-//
+// modified 2017 iceman
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
@@ -12,8 +12,8 @@
 
 static int CmdHelp(const char *Cmd);
 
-int UsageCmdHFEMVSelect(void) {
-	PrintAndLog("HELP :  Executes select applet command:\n");
+int usage_emv_select(void) {
+	PrintAndLog("Executes select applet command:\n");
 	PrintAndLog("Usage:  hf emv select [-s][-k][-a][-t] <HEX applet AID>\n");
 	PrintAndLog("  Options:");
 	PrintAndLog("  -s       : select card");
@@ -21,8 +21,8 @@ int UsageCmdHFEMVSelect(void) {
 	PrintAndLog("  -a       : show APDU reqests and responses\n");
 	PrintAndLog("  -t       : TLV decode results\n");
 	PrintAndLog("Samples:");
-	PrintAndLog(" hf emv select -s a00000000101 -> select card, select applet");
-	PrintAndLog(" hf emv select -s -t a00000000101 -> select card, select applet, show result in TLV");
+	PrintAndLog(" hf emv select -s a00000000101        -> select card, select applet");
+	PrintAndLog(" hf emv select -s -t a00000000101     -> select card, select applet, show result in TLV");
 	return 0;
 }
 
@@ -33,10 +33,8 @@ int CmdHFEMVSelect(const char *cmd) {
 	bool leaveSignalON = false;
 	bool decodeTLV = false;
 
-	if (strlen(cmd) < 1) {
-		UsageCmdHFEMVSelect();
-		return 0;
-	}
+	if (strlen(cmd) < 1)
+		return usage_emv_select();
 	
 	SetAPDULogging(false);
 	
@@ -47,8 +45,7 @@ int CmdHFEMVSelect(const char *cmd) {
 			switch (param_getchar_indx(cmd, 1, cmdp)) {
 				case 'h':
 				case 'H':
-					UsageCmdHFEMVSelect();
-					return 0;
+					return usage_emv_select();
 				case 's':
 				case 'S':
 					activateField = true;
@@ -86,8 +83,6 @@ int CmdHFEMVSelect(const char *cmd) {
 			// we get all the hex to end of line with spaces
 			break;
 		}
-
-
 		cmdp++;
 	}
 	
@@ -109,8 +104,8 @@ int CmdHFEMVSelect(const char *cmd) {
 	return 0;
 }
 
-int UsageCmdHFEMVSearch(void) {
-	PrintAndLog("HELP :  Tries to select all applets from applet list:\n");
+int usage_emv_search(void) {
+	PrintAndLog("Tries to select all applets from applet list:\n");
 	PrintAndLog("Usage:  hf emv search [-s][-k][-a][-t]\n");
 	PrintAndLog("  Options:");
 	PrintAndLog("  -s       : select card");
@@ -118,8 +113,8 @@ int UsageCmdHFEMVSearch(void) {
 	PrintAndLog("  -a       : show APDU reqests and responses\n");
 	PrintAndLog("  -t       : TLV decode results of selected applets\n");
 	PrintAndLog("Samples:");
-	PrintAndLog(" hf emv search -s -> select card and search");
-	PrintAndLog(" hf emv search -s -t -> select card, search and show result in TLV");
+	PrintAndLog(" hf emv search -s         -> select card and search");
+	PrintAndLog(" hf emv search -s -t      -> select card, search and show result in TLV");
 	return 0;
 }
 
@@ -129,10 +124,8 @@ int CmdHFEMVSearch(const char *cmd) {
 	bool leaveSignalON = false;
 	bool decodeTLV = false;
 
-	if (strlen(cmd) < 1) {
-		UsageCmdHFEMVSearch();
-		return 0;
-	}
+	if (strlen(cmd) < 1)
+		return usage_emv_search();
 	
 	SetAPDULogging(false);
 	
@@ -143,8 +136,7 @@ int CmdHFEMVSearch(const char *cmd) {
 			switch (param_getchar_indx(cmd, 1, cmdp)) {
 				case 'h':
 				case 'H':
-					UsageCmdHFEMVSearch();
-					return 0;
+					return usage_emv_search();
 				case 's':
 				case 'S':
 					activateField = true;
@@ -189,8 +181,8 @@ int CmdHFEMVSearch(const char *cmd) {
 	return 0;
 }
 
-int UsageCmdHFEMVPPSE(void) {
-	PrintAndLog("HELP :  Executes PSE/PPSE select command. It returns list of applet on the card:\n");
+int usage_emv_ppse(void) {
+	PrintAndLog("Executes PSE/PPSE select command. It returns list of applet on the card:\n");
 	PrintAndLog("Usage:  hf emv pse [-s][-k][-1][-2][-a][-t]\n");
 	PrintAndLog("  Options:");
 	PrintAndLog("  -s       : select card");
@@ -200,9 +192,9 @@ int UsageCmdHFEMVPPSE(void) {
 	PrintAndLog("  -a       : show APDU reqests and responses\n");
 	PrintAndLog("  -t       : TLV decode results\n");
 	PrintAndLog("Samples:");
-	PrintAndLog(" hf emv pse -s -1 -> select, get pse");
-	PrintAndLog(" hf emv pse -s -k -2 -> select, get ppse, keep field");
-	PrintAndLog(" hf emv pse -s -t -2 -> select, get ppse, show result in TLV");
+	PrintAndLog(" hf emv pse -s -1         -> select, get pse");
+	PrintAndLog(" hf emv pse -s -k -2      -> select, get ppse, keep field");
+	PrintAndLog(" hf emv pse -s -t -2      -> select, get ppse, show result in TLV");
 	return 0;
 }
 
@@ -213,10 +205,8 @@ int CmdHFEMVPPSE(const char *cmd) {
 	bool leaveSignalON = false;
 	bool decodeTLV = false;
 
-	if (strlen(cmd) < 1) {
-		UsageCmdHFEMVPPSE();
-		return 0;
-	}
+	if (strlen(cmd) < 1)
+		return usage_emv_ppse();
 
 	SetAPDULogging(false);
 	
@@ -227,8 +217,7 @@ int CmdHFEMVPPSE(const char *cmd) {
 			switch (param_getchar_indx(cmd, 1, cmdp)) {
 				case 'h':
 				case 'H':
-					UsageCmdHFEMVPPSE();
-					return 0;
+					return usage_emv_ppse();
 				case 's':
 				case 'S':
 					activateField = true;
@@ -268,8 +257,7 @@ int CmdHFEMVPPSE(const char *cmd) {
 		PrintAndLog("APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff)); 
 
 	if (res)
-		return res;
-	
+		return res;	
 	
 	if (decodeTLV)
 		TLVPrintFromBuffer(buf, len);
@@ -277,8 +265,8 @@ int CmdHFEMVPPSE(const char *cmd) {
 	return 0;
 }
 
-int UsageCmdHFEMVExec(void) {
-	PrintAndLog("HELP :  Executes EMV contactless transaction:\n");
+int usage_emv_exec(void) {
+	PrintAndLog("Executes EMV contactless transaction:\n");
 	PrintAndLog("Usage:  hf emv exec [-s][-a][-t]\n");
 	PrintAndLog("  Options:");
 	PrintAndLog("  -s       : select card");
@@ -290,8 +278,8 @@ int UsageCmdHFEMVExec(void) {
 	PrintAndLog("  -x       : transaction type - VSDC. For test only. Not a standart behavior.\n");
 	PrintAndLog("By default : transaction type - MSD.\n");
 	PrintAndLog("Samples:");
-	PrintAndLog(" hf emv pse -s -> select card");
-	PrintAndLog(" hf emv pse -s -t -a -> select card, show responses in TLV, show APDU");
+	PrintAndLog(" hf emv pse -s            -> select card");
+	PrintAndLog(" hf emv pse -s -t -a      -> select card, show responses in TLV, show APDU");
 	return 0;
 }
 
@@ -310,10 +298,8 @@ int CmdHFEMVExec(const char *cmd) {
 	
 	int res;
 	
-	if (strlen(cmd) < 1) {
-		UsageCmdHFEMVExec();
-		return 0;
-	}
+	if (strlen(cmd) < 1)
+		return usage_emv_exec();
 	
 	int cmdp = 0;
 	while(param_getchar(cmd, cmdp) != 0x00) {
@@ -322,8 +308,7 @@ int CmdHFEMVExec(const char *cmd) {
 			switch (param_getchar_indx(cmd, 1, cmdp)) {
 				case 'h':
 				case 'H':
-					UsageCmdHFEMVExec();
-					return 0;
+					return usage_emv_exec();
 				case 's':
 				case 'S':
 					activateField = true;
@@ -358,7 +343,6 @@ int CmdHFEMVExec(const char *cmd) {
 		}
 		cmdp++;
 	}
-
 	
 	// init applets list tree
 	struct tlvdb *tlvSelect = NULL;
@@ -417,14 +401,14 @@ int CmdHFEMVExec(const char *cmd) {
 	
 	if (decodeTLV)
 		TLVPrintFromBuffer(buf, len);
-	PrintAndLog("* Selected.");
 	
+	PrintAndLog("* Selected.");	
 	PrintAndLog("\n* Init transaction parameters.");
 
     //9F66:(Terminal Transaction Qualifiers (TTQ)) len:4
 	switch(TrType) {
 		case TT_MSD:
-	TLV_ADD(0x9F66, "\x86\x00\x00\x00"); // MSD
+			TLV_ADD(0x9F66, "\x86\x00\x00\x00"); // MSD
 			break;
 		// not standart for contactless. just for test.
 		case TT_VSDC:  
@@ -493,7 +477,7 @@ int CmdHFEMVExec(const char *cmd) {
 		
 		if (len < 4 || (len - 4) % 4) {
 			PrintAndLog("ERROR: GPO response format1 parsing error. length=%d", len);
-	} else {
+		} else {
 			// AIP
 			struct tlvdb * f1AIP = tlvdb_fixed(0x82, 2, buf + 2);
 			tlvdb_add(tlvRoot, f1AIP);
@@ -531,11 +515,11 @@ int CmdHFEMVExec(const char *cmd) {
 	
 	PrintAndLog("\n* Read records from AFL.");
 	const struct tlv *AFL = tlvdb_get(tlvRoot, 0x94, NULL);
-	if (!AFL || !AFL->len) {
+
+	if (!AFL || !AFL->len)
 		PrintAndLog("WARNING: AFL not found.");
-	}
 	
-	while(AFL && AFL->len) {
+	while (AFL && AFL->len) {
 		if (AFL->len % 4) {
 			PrintAndLog("ERROR: Wrong AFL length: %d", AFL->len);
 			break;
@@ -553,7 +537,7 @@ int CmdHFEMVExec(const char *cmd) {
 				continue;
 			}
 			
-			for(int n = SFIstart; n <= SFIend; n++) {
+			for (int n = SFIstart; n <= SFIend; n++) {
 				PrintAndLog("* * * SFI[%02x] %d", SFI, n);
 				
 				res = EMVReadRecord(true, SFI, n, buf, sizeof(buf), &len, &sw, tlvRoot);
@@ -572,8 +556,7 @@ int CmdHFEMVExec(const char *cmd) {
 					// dont foget: if (sfi < 11)
 				}
 			}
-		}
-		
+		}		
 		break;
 	}	
 	
@@ -590,10 +573,8 @@ int CmdHFEMVExec(const char *cmd) {
 
 	// DDA
 	if (AIP & 0x0020) {
-		PrintAndLog("\n* DDA");
-		
+		PrintAndLog("\n* DDA");		
 	}	
-	
 	// transaction check
 
 	// qVSDC
@@ -760,14 +741,12 @@ int CmdHFEMVExec(const char *cmd) {
 					TLVPrintFromBuffer(buf, len);
 					PrintAndLog("");
 				}
-
 			}
 		} else {
 			PrintAndLog("ERROR MSD: Track2 data not found.");
 		}
 	}
-	
-	// DropField
+
 	DropField();
 	
 	// Destroy TLV's
@@ -775,8 +754,30 @@ int CmdHFEMVExec(const char *cmd) {
 	tlvdb_free(tlvRoot);
 
 	PrintAndLog("\n* Transaction completed.");
-	
 	return 0;
+}
+
+int usage_emv_getrnd(void){
+	PrintAndLog("retrieve the UN number from a terminal");
+	PrintAndLog("Usage:  hf emv getrnd [h]");
+	PrintAndLog("Options:");
+	PrintAndLog("      h             : this help");
+	PrintAndLog("");
+	PrintAndLog("Samples:");
+	PrintAndLog("      hf emv getrnd");
+	return 0;
+}
+
+//retrieve the UN number from a terminal
+int CmdHfEMVGetrng(const char *Cmd) {
+	char cmdp = param_getchar(Cmd, 0);
+	if ( cmdp == 'h' || cmdp == 'H') return usage_emv_getrnd();
+
+	return 0;
+}
+
+int CmdHfEMVList(const char *Cmd) {
+	return CmdHFList("7816");
 }
 
 static command_t CommandTable[] =  {
@@ -785,6 +786,15 @@ static command_t CommandTable[] =  {
 	{"pse",		CmdHFEMVPPSE,	0,	"Execute PPSE. It selects 2PAY.SYS.DDF01 or 1PAY.SYS.DDF01 directory."},
 	{"search",	CmdHFEMVSearch,	0,	"Try to select all applets from applets list and print installed applets."},
 	{"select",	CmdHFEMVSelect,	0,	"Select applet."},
+
+	/*
+	{"getrng",		CmdHfEMVGetrng,	  0, "get random number from terminal"}, 
+	{"eload",		CmdHfEmvELoad, 	  0, "load EMV tag into device"},
+	{"dump",		CmdHfEmvDump,	  0, "dump EMV tag values"},
+	{"sim",			CmdHfEmvSim,	  0, "simulate EMV tag"},
+	{"clone",		CmdHfEmvClone,	  0, "clone an EMV tag"}, 
+	*/
+	{"list",	CmdHfEMVList,	  0, "[Deprecated] List ISO7816 history"}, 
 	{NULL, NULL, 0, NULL}
 };
 
