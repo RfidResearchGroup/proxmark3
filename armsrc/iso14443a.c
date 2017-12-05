@@ -2372,7 +2372,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 		// this part is from Piwi's faster nonce collecting part in Hardnested.
 		if (!have_uid) { // need a full select cycle to get the uid first
 			iso14a_card_select_t card_info;		
-			if(!iso14443a_select_card(uid, &card_info, &cuid, true, 0, true)) {
+			if (!iso14443a_select_card(uid, &card_info, &cuid, true, 0, true)) {
 				if (MF_DBGLEVEL >= 4)	Dbprintf("Mifare: Can't select card (ALL)");
 				break;
 			}
@@ -2384,12 +2384,13 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 			}
 			have_uid = true;	
 		} else { // no need for anticollision. We can directly select the card
-			if(!iso14443a_select_card(uid, NULL, &cuid, false, cascade_levels, true)) {
+			if (!iso14443a_fast_select_card(uid, cascade_levels)) {
 				if (MF_DBGLEVEL >= 4)	Dbprintf("Mifare: Can't select card (UID)");
 				continue;
 			}
 		}
-		
+
+		elapsed_prng_sequences = 1;
 		// Sending timeslot of ISO14443a frame		
 		sync_time = (sync_time & 0xfffffff8 ) + sync_cycles + catch_up_cycles;
 		catch_up_cycles = 0;
@@ -2586,7 +2587,7 @@ void DetectNACKbug() {
 	
 	BigBuf_free(); BigBuf_Clear_ext(false);	
 	clear_trace();
-	set_tracing(false);	
+	set_tracing(true);	
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
 
 	sync_time = GetCountSspClk() & 0xfffffff8;
@@ -2626,6 +2627,8 @@ void DetectNACKbug() {
 				continue;
 			}
 		}
+
+		elapsed_prng_sequences = 1;
 		
 		// Sending timeslot of ISO14443a frame		
 		sync_time = (sync_time & 0xfffffff8 ) + sync_cycles + catch_up_cycles;
