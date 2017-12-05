@@ -2549,55 +2549,47 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 *  Mifare Classic NACK-bug detection
 */
 void DetectNACKbug() {
+
+	#define PRNG_SEQUENCE_LENGTH	(1 << 16)
+	#define MAX_UNEXPECTED_RANDOM	4		// maximum number of unexpected (i.e. real) random numbers when trying to sync, then give up.
+	#define MAX_SYNC_TRIES			32
 	
-	uint8_t mf_auth[] 	= {0x60, 0, 0, 0};
-	uint8_t mf_nr_ar[]	= {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+	uint8_t mf_auth[] 	= {0x60, 0x00, 0xF5, 0x7B};
+	uint8_t mf_nr_ar[]	= {0,0,0,0,0,0,0,0};
 	uint8_t uid[10]		= {0,0,0,0,0,0,0,0,0,0};
 	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
 	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
 	uint8_t par[1] = {0};	// maximum 8 Bytes to be sent here, 1 byte parity is therefore enough
-	uint32_t nt = 0;
-	uint32_t previous_nt = 0;	
-	uint32_t cuid = 0;
-	int32_t isOK = 0;
-	
-	int32_t catch_up_cycles = 0;
-	int32_t last_catch_up = 0;
-	int32_t nt_distance = 0;
-	
+
+	uint32_t nt = 0, previous_nt = 0, nt_attacked = 0, cuid = 0;
+	int32_t isOK = 0, catch_up_cycles = 0, last_catch_up = 0;
+	uint8_t cascade_levels = 0, num_nacks = 0;
 	uint16_t elapsed_prng_sequences = 1;
 	uint16_t consecutive_resyncs = 0;
 	uint16_t unexpected_random = 0;
 	uint16_t sync_tries = 0;
-	uint32_t nt_attacked = 0;
 	uint32_t sync_time = 0;
-	uint32_t sync_cycles = 0;
-	uint8_t cascade_levels = 0;
-
 	bool have_uid = false;
 	
-	uint8_t num_nacks = 0;
+	// Mifare Classic's random generator repeats every 2^16 cycles (and so do the nonces).			
+	uint32_t sync_cycles = PRNG_SEQUENCE_LENGTH;
 	
-	#define PRNG_SEQUENCE_LENGTH	(1 << 16)
-	#define MAX_UNEXPECTED_RANDOM	4		// maximum number of unexpected (i.e. real) random numbers when trying to sync, then give up.
-	#define MAX_SYNC_TRIES			32
-	#define MAX_PRNG_TRIES			20 		// when we gone through 10 prng sequences without managing to sync,  then give up.
-	
-	AppendCrc14443a(mf_auth, 2);
+	// create our reader nonce randomly 
+	uint32_t nonce = prng_successor( GetCountSspClk() & 0xfffffff8 , 32);
+	num_to_bytes(nonce, 4, mf_nr_ar);
 	
 	BigBuf_free(); BigBuf_Clear_ext(false);	
 	clear_trace();
 	set_tracing(true);	
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
 
-	sync_time = GetCountSspClk() & 0xfffffff8;
-	sync_cycles = PRNG_SEQUENCE_LENGTH; // Mifare Classic's random generator repeats every 2^16 cycles (and so do the nonces).		
+	sync_time = GetCountSspClk() & 0xfffffff8;	
 	
-   if (MF_DBGLEVEL >= 4)	Dbprintf("Mifare::Sync %u", sync_time);
+	if (MF_DBGLEVEL >= 4) Dbprintf("Mifare::Sync %u", sync_time);
 				
 	LED_C_ON(); 
 	uint16_t i;
-	for (i = 0; num_nacks < 3; ++i) {
+	for (i = 0; true; ++i) {
 
 		WDT_HIT();
 
@@ -2653,16 +2645,11 @@ void DetectNACKbug() {
 		// Transmit reader nonce with fake par
 		ReaderTransmitPar(mf_nr_ar, sizeof(mf_nr_ar), par, NULL);
 	
-		if ( elapsed_prng_sequences > MAX_PRNG_TRIES) {
-			isOK = -4; 			// Card's PRNG runs at an unexpected frequency or resets unexpectedly
-			break;
-		}
-	
 		// we didn't calibrate our clock yet,
 		// iceman: has to be calibrated every time.
 		if (previous_nt && !nt_attacked) { 
 
-			nt_distance = dist_nt(previous_nt, nt);
+			int nt_distance = dist_nt(previous_nt, nt);
 			
 			// if no distance between,  then we are in sync.
 			if (nt_distance == 0) {
@@ -2675,7 +2662,9 @@ void DetectNACKbug() {
 						isOK = -3;
 						break;
 					} else {						
-						if (sync_cycles <= 0) sync_cycles += PRNG_SEQUENCE_LENGTH;
+						if (sync_cycles <= 0) {
+							sync_cycles += PRNG_SEQUENCE_LENGTH;
+						}
 						LED_B_OFF();
 						continue;		// continue trying...
 					}
@@ -2707,7 +2696,7 @@ void DetectNACKbug() {
 
 		if ( (nt != nt_attacked) && nt_attacked) { 	
 			// we somehow lost sync. Try to catch up again...			
-			catch_up_cycles = ABS(dist_nt(nt_attacked, nt));
+			catch_up_cycles = -dist_nt(nt_attacked, nt);
 			
 			if (catch_up_cycles == 99999) {
 				// invalid nonce received. Don't resync on that one.
@@ -2725,14 +2714,16 @@ void DetectNACKbug() {
 			}		
 			
 			if (consecutive_resyncs < 3) {
-				if (MF_DBGLEVEL >= 4)
+				if (MF_DBGLEVEL >= 4) {
 					Dbprintf("Lost sync in cycle %d. nt_distance=%d. Consecutive Resyncs = %d. Trying one time catch up...\n", i, catch_up_cycles, consecutive_resyncs);
+				}
 			} else {	
 				sync_cycles += catch_up_cycles;
 				
-				if (MF_DBGLEVEL >= 4) 
+				if (MF_DBGLEVEL >= 4) {
 					Dbprintf("Lost sync in cycle %d for the fourth time consecutively (nt_distance = %d). Adjusting sync_cycles to %d.\n", i, catch_up_cycles, sync_cycles);
-
+					Dbprintf("nt [%08x] attacted [%08x]", nt, nt_attacked );
+				}
 				last_catch_up = 0;
 				catch_up_cycles = 0;
 				consecutive_resyncs = 0;
@@ -2744,37 +2735,24 @@ void DetectNACKbug() {
 		if (ReaderReceive(receivedAnswer, receivedAnswerPar)) {
 			catch_up_cycles = 8; 	// the PRNG is delayed by 8 cycles due to the NAC (4Bits = 0x05 encrypted) transfer	
 			num_nacks++;
-			
-			par[0] = 0;
-			//new nonce
-			mf_nr_ar[0]++;
-			mf_nr_ar[1]++;
-			mf_nr_ar[2]++;
-			mf_nr_ar[3]++;
-			
-		} else {
-			// No NACK.	
-			par[0]++;
-			// tried all 256 possible parities without success.
-			if (par[0] == 0x00) {	
-				// 
-				if ( num_nacks < 3 ) {
-					//new nonce
-					mf_nr_ar[0]++;
-					mf_nr_ar[1]++;
-					mf_nr_ar[2]++;
-					mf_nr_ar[3]++;
-				}				
-			}
+		} 
+
+		// we are testing all 256 possibilities. 
+		par[0]++;
+ 
+		// tried all 256 possible parities without success.
+		if (par[0] == 0) {
+			if ( num_nacks > 1 )
+				isOK = -2;
+			break;
 		}
-		
+
 		// reset the resyncs since we got a complete transaction on right time.
 		consecutive_resyncs = 0;
 	} // end for loop
 
-	if (num_nacks == 3) 
-		isOK = 1;
-	
+	// num_nacks = number of nacks recieved. should be only 1. if not its a clone card which always sends NACK (parity == 0) ?
+	// i  =  number of authentications sent.  Not always 256, since we are trying to sync but close to it.
 	cmd_send(CMD_ACK, isOK, num_nacks, i, 0, 0 );
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);

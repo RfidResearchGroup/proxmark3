@@ -2871,22 +2871,16 @@ int CmdHf14AMfNack(const char *Cmd) {
 			uint32_t nacks = resp.arg[1];
 			uint32_t auths = resp.arg[2];
 			
-			PrintAndLog("Three different nonces used, expecting three nacks");
 			PrintAndLog("Num of sent auth requestes : %u", auths);
 			PrintAndLog("Num of received NACK       : %u", nacks);
 			switch( ok ) {
 				case -1 : PrintAndLog("Button pressed. Aborted."); return 1;
+				case -2 : PrintAndLog("Card answers NACK, (most likely a clone)"); return 1;
 				case -3 : PrintAndLog("Card random number generator is not predictable)."); return 1;
 				case -4 : PrintAndLog("Card random number generator seems to be based on the wellknown");
 						  PrintAndLog("generating polynomial with 16 effective bits only, but shows unexpected behaviour."); return 1;
 				case  1 : PrintAndLog("Card has NACK bug."); return 1;
-				case  0 : {
-						if ( nacks > 0 ) 
-							PrintAndLog("Card may have NACK bug. inconclusive result"); 
-						else
-							PrintAndLog("Card has not NACK bug."); 
-						return 1;
-					}
+				case  0 : PrintAndLog("Card has not NACK bug."); return 1;
 				default : PrintAndLog("  errorcode from device [%i]", ok); return 1;
 			}
 			break;
