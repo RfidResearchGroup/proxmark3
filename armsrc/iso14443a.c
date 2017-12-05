@@ -2606,7 +2606,7 @@ void DetectNACKbug() {
 
 		// Test if the action was cancelled
 		if(BUTTON_PRESS()) {
-			isOK = -1;
+			isOK = 99;
 			break;
 		}
 		
@@ -2675,7 +2675,7 @@ void DetectNACKbug() {
 					unexpected_random++;
 					if (unexpected_random > MAX_UNEXPECTED_RANDOM) {
 						// Card has an unpredictable PRNG. Give up	
-						isOK = -3;
+						isOK = 98;
 						break;
 					} else {						
 						if (sync_cycles <= 0) {
@@ -2687,7 +2687,7 @@ void DetectNACKbug() {
 				}
 				
 				if (++sync_tries > MAX_SYNC_TRIES) {
-					isOK = -4; 			// Card's PRNG runs at an unexpected frequency or resets unexpectedly
+					isOK = 97; 			// Card's PRNG runs at an unexpected frequency or resets unexpectedly
 					break;
 				}
 				
@@ -2697,7 +2697,7 @@ void DetectNACKbug() {
 					sync_cycles += PRNG_SEQUENCE_LENGTH;
 				
 				if (sync_cycles > PRNG_SEQUENCE_LENGTH * 2 ) {
-					isOK = -4; 			// Card's PRNG runs at an unexpected frequency or resets unexpectedly
+					isOK = 96; 			// Card's PRNG runs at an unexpected frequency or resets unexpectedly
 					break;
 				}
 				

@@ -166,6 +166,7 @@ int usage_hf_14a_info(void){
 	PrintAndLog("This command makes more extensive tests against a ISO14443a tag in order to collect information");
 	PrintAndLog("Usage: hf 14a info [h|s]");
 	PrintAndLog("       s    silent (no messages)");
+	PrintAndLog("       n    test for nack bug");
 	return 0;
 }
 
@@ -274,6 +275,8 @@ int CmdHF14AInfo(const char *Cmd) {
 	if (Cmd[0] == 'h' || Cmd[0] ==  'H') return usage_hf_14a_info();
 	
 	bool silent = (Cmd[0] == 's' || Cmd[0] ==  'S');
+	bool do_nack_test = (Cmd[0] == 'n' || Cmd[0] ==  'N');
+	
 	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
@@ -494,7 +497,10 @@ int CmdHF14AInfo(const char *Cmd) {
 		if ( detect_classic_prng() )
 			PrintAndLog("Prng detection: WEAK");
 		else
-			PrintAndLog("Prng detection: HARDEND (hardnested)");		
+			PrintAndLog("Prng detection: HARDEND (hardnested)");
+		
+		if ( do_nack_test )
+			detect_classic_nackbug(silent);
 	}
 	
 	return select_status;
