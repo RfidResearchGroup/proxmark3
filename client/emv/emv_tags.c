@@ -35,6 +35,7 @@ enum emv_tag_t {
 	EMV_TAG_NUMERIC,
 	EMV_TAG_YYMMDD,
 	EMV_TAG_CVR,
+	EMV_TAG_CID,
 };
 
 struct emv_tag {
@@ -59,7 +60,7 @@ static const struct emv_tag_bit EMV_AIP[] = {
 	{ EMV_BIT(1, 4), "Terminal risk management is to be performed" },
 	{ EMV_BIT(1, 3), "Issuer authentication is supported" },
 	{ EMV_BIT(1, 2), "Reserved for use by the EMV Contactless Specifications" },
-	{ EMV_BIT(1, 1), "CDA supported" },
+	{ EMV_BIT(1, 1), "CDA supported (Combined Dynamic Data Authentication / Application Cryptogram Generation)" },
 	{ EMV_BIT(2, 8), "MSD is supported (Magnetic Stripe Data)" },
 	{ EMV_BIT(2, 7), "Reserved for use by the EMV Contactless Specifications" },
 	{ EMV_BIT(2, 6), "Reserved for use by the EMV Contactless Specifications" },
@@ -221,6 +222,7 @@ static const struct emv_tag emv_tags[] = {
 	{ 0x9f06, "Application Identifier (AID), Terminal. ISO 7816-5" },
 	{ 0x9f07, "Application Usage Control", EMV_TAG_BITMASK, &EMV_AUC },
 	{ 0x9f08, "Application Version Number" },
+	{ 0x9f0a, "Application Selection Registered Proprietary Data" }, // https://blog.ul-ts.com/posts/electronic-card-identifier-one-more-step-for-mif-compliance/
 	{ 0x9f0d, "Issuer Action Code - Default", EMV_TAG_BITMASK, &EMV_TVR },
 	{ 0x9f0e, "Issuer Action Code - Denial", EMV_TAG_BITMASK, &EMV_TVR },
 	{ 0x9f0f, "Issuer Action Code - Online", EMV_TAG_BITMASK, &EMV_TVR },
@@ -233,7 +235,7 @@ static const struct emv_tag emv_tags[] = {
 	{ 0x9f1f, "Track 1 Discretionary Data", EMV_TAG_STRING },
 	{ 0x9f21, "Transaction Time" },
 	{ 0x9f26, "Application Cryptogram" },
-	{ 0x9f27, "Cryptogram Information Data" },
+	{ 0x9f27, "Cryptogram Information Data", EMV_TAG_CID },
 	{ 0x9f2a, "Kernel Identifier" },
 	{ 0x9f2d, "ICC PIN Encipherment Public Key Certificate" },
 	{ 0x9f2e, "ICC PIN Encipherment Public Key Exponent" },
@@ -270,6 +272,7 @@ static const struct emv_tag emv_tags[] = {
 	{ 0x9f6c, "Card Transaction Qualifiers (CTQ)", EMV_TAG_BITMASK, &EMV_CTQ },
 	{ 0xa5  , "File Control Information (FCI) Proprietary Template" },
 	{ 0xbf0c, "File Control Information (FCI) Issuer Discretionary Data" },
+	{ 0xdf20, "Issuer Proprietary Bitmap (IPB)" },
 };
 
 static int emv_sort_tag(tlv_tag_t tag)
@@ -471,6 +474,50 @@ static void emv_tag_dump_cvr(const struct tlv *tlv, const struct emv_tag *tag, F
 	return;
 }
 
+// EMV Book 3
+static void emv_tag_dump_cid(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
+	if (!tlv || tlv->len < 1) {
+		PRINT_INDENT(level);
+		fprintf(f, "\tINVALID!\n");
+		return;
+	}
+	
+	PRINT_INDENT(level);
+	if ((tlv->value[0] & EMVAC_AC_MASK) == EMVAC_AAC)		fprintf(f, "\tAC1: AAC (Transaction declined)\n");
+	if ((tlv->value[0] & EMVAC_AC_MASK) == EMVAC_TC)		fprintf(f, "\tAC1: TC (Transaction approved)\n");
+	if ((tlv->value[0] & EMVAC_AC_MASK) == EMVAC_ARQC)		fprintf(f, "\tAC1: ARQC (Online authorisation requested)\n");
+	if ((tlv->value[0] & EMVAC_AC_MASK) == EMVAC_AC_MASK)	fprintf(f, "\tAC1: RFU\n");
+
+	if (tlv->value[0] & EMVCID_ADVICE) {
+		PRINT_INDENT(level);
+		fprintf(f, "\tAdvice required!\n");
+	}
+
+	if (tlv->value[0] & EMVCID_REASON_MASK) {
+		PRINT_INDENT(level);
+		fprintf(f, "\tReason/advice/referral code: ");
+		switch((tlv->value[0] & EMVCID_REASON_MASK)) {
+			case 0:
+				fprintf(f, "No information given\n");
+				break;
+			case 1:
+				fprintf(f, "Service not allowed\n");
+				break;
+			case 2:
+				fprintf(f, "PIN Try Limit exceeded\n");
+				break;
+			case 3:
+				fprintf(f, "Issuer authentication failed\n");
+				break;
+			default:
+				fprintf(f, "\tRFU: %2x\n", (tlv->value[0] & EMVCID_REASON_MASK));
+				break;
+		}
+	}
+
+	return;
+}
+
 static void emv_tag_dump_cvm_list(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level)
 {
 	uint32_t X, Y;
@@ -627,6 +674,10 @@ bool emv_tag_dump(const struct tlv *tlv, FILE *f, int level)
 	case EMV_TAG_CVR:
 		fprintf(f, "\n");
 		emv_tag_dump_cvr(tlv, tag, f, level);
+		break;
+	case EMV_TAG_CID:
+		fprintf(f, "\n");
+		emv_tag_dump_cid(tlv, tag, f, level);
 		break;
 	};
 

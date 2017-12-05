@@ -19,6 +19,17 @@
 #include "tlv.h"
 #include <stdio.h>
 
+// AC
+# define EMVAC_AC_MASK   0xC0
+# define EMVAC_AAC       0x00
+# define EMVAC_TC        0x40
+# define EMVAC_ARQC      0x80
+# define EMVAC_CDAREQ    0x10
+
+// CID
+# define EMVCID_ADVICE       0x08
+# define EMVCID_REASON_MASK  0x07
+
 bool emv_tag_dump(const struct tlv *tlv, FILE *f, int level);
 
 #endif

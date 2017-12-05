@@ -242,13 +242,13 @@ int EMVExchangeEx(bool ActivateField, bool LeaveFieldON, sAPDU apdu, uint8_t *Re
 	// 6 byes + data = INS + CLA + P1 + P2 + Lc + <data = Nc> + Le
 	int res = ExchangeAPDU14a(data, 6 + apdu.Lc, ActivateField, LeaveFieldON, Result, (int)MaxResultLen, (int *)ResultLen);
 	
-	if (APDULogging)
-		PrintAndLog("<<<< %s", sprint_hex(Result, *ResultLen));
-	
 	if (res) {
 		return res;
 	}
 	
+	if (APDULogging)
+		PrintAndLog("<<<< %s", sprint_hex(Result, *ResultLen));
+
 	*ResultLen -= 2;
 	isw = Result[*ResultLen] * 0x0100 + Result[*ResultLen + 1];
 	if (sw)
@@ -467,3 +467,29 @@ int EMVGenerateChallenge(bool LeaveFieldON, uint8_t *Result, size_t MaxResultLen
 int MSCComputeCryptoChecksum(bool LeaveFieldON, uint8_t *UDOL, uint8_t UDOLlen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
 	return EMVExchange(LeaveFieldON, (sAPDU){0x80, 0x2a, 0x8e, 0x80, UDOLlen, UDOL}, Result, MaxResultLen, ResultLen, sw, tlv);
 }
+
+// Authentication 
+int trSDA(uint8_t *AID, size_t AIDlen, struct tlvdb *tlv) {
+	if (AIDlen < 5) 
+		return 1;
+	
+	// Get public key index (0x8F)
+	//int PubKeyIndx = 0; 
+	
+	// Get public key from key storage
+	// GetPublicKey(AID(0..5), PubKeyIndx)
+	
+	// Processing of Issuer Public Key Certificate (0x90)
+	//Certificate = 
+	
+	// check issuer public key certificate
+	
+	// Verification of Signed Static Application Data (SSAD) (0x93)
+	
+	// get 9F4A Static Data Authentication Tag List
+	
+	// set Data Auth Code (9F45) from SSAD 
+	
+	return 0;
+}
+
