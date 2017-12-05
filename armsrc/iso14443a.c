@@ -2558,6 +2558,7 @@ void DetectNACKbug() {
 	uint32_t nt = 0;
 	uint32_t previous_nt = 0;	
 	uint32_t cuid = 0;
+	int32_t isOK = 0;
 	
 	int32_t catch_up_cycles = 0;
 	int32_t last_catch_up = 0;
@@ -2600,6 +2601,7 @@ void DetectNACKbug() {
 
 		// Test if the action was cancelled
 		if(BUTTON_PRESS()) {
+			isOK = -1;
 			break;
 		}
 		
@@ -2660,7 +2662,8 @@ void DetectNACKbug() {
 				if (nt_distance == -99999) { // invalid nonce received
 					unexpected_random++;
 					if (unexpected_random > MAX_UNEXPECTED_RANDOM) {
-						isOK = -3;		// Card has an unpredictable PRNG. Give up	
+						// Card has an unpredictable PRNG. Give up	
+						isOK = -3;
 						break;
 					} else {						
 						if (sync_cycles <= 0) sync_cycles += PRNG_SEQUENCE_LENGTH;
@@ -2757,8 +2760,11 @@ void DetectNACKbug() {
 
 	Dbprintf("Num of sent auth requestes : %u", i);
 	Dbprintf("Num of received NACK       : %u", num_nacks);
-		
-	cmd_send(CMD_ACK, num_nacks, 0, 0, 0, 0 );
+
+	if ( num_nacks == 3) 
+		isOK = 1;
+	
+	cmd_send(CMD_ACK, isOK, num_nacks, 0, 0, 0 );
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
