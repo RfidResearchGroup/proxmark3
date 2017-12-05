@@ -2288,6 +2288,11 @@ int32_t dist_nt(uint32_t nt1, uint32_t nt2) {
 	return(-99999); // either nt1 or nt2 are invalid nonces
 }
 
+	
+#define PRNG_SEQUENCE_LENGTH	(1 << 16)
+#define MAX_UNEXPECTED_RANDOM	4		// maximum number of unexpected (i.e. real) random numbers when trying to sync. Then give up.
+#define MAX_SYNC_TRIES		32
+
 //-----------------------------------------------------------------------------
 // Recover several bits of the cypher stream. This implements (first stages of)
 // the algorithm described in "The Dark Side of Security by Obscurity and
@@ -2297,7 +2302,7 @@ int32_t dist_nt(uint32_t nt1, uint32_t nt2) {
 void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 	
 	uint8_t mf_auth[] 	= { keytype, block, 0x00, 0x00 };
-	uint8_t mf_nr_ar[]	= { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 };
+	uint8_t mf_nr_ar[]	= {0,0,0,0,0,0,0,0};
 	uint8_t uid[10]		= {0,0,0,0,0,0,0,0,0,0};
 	uint8_t par_list[8]	= {0,0,0,0,0,0,0,0};
 	uint8_t ks_list[8]	= {0,0,0,0,0,0,0,0};
@@ -2312,13 +2317,15 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 	int32_t catch_up_cycles = 0;
 	int32_t last_catch_up = 0;
 	int32_t isOK = 0;
-	int32_t nt_distance = 0;
 	
 	uint16_t elapsed_prng_sequences = 1;
 	uint16_t consecutive_resyncs = 0;
 	uint16_t unexpected_random = 0;
 	uint16_t sync_tries = 0;
 
+	bool have_uid = false;
+	uint8_t cascade_levels = 0;
+	
 	// static variables here, is re-used in the next call
 	static uint32_t nt_attacked = 0;
 	static uint32_t sync_time = 0;
@@ -2326,24 +2333,12 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 	static uint8_t par_low = 0;
 	static uint8_t mf_nr_ar3 = 0;
 	
-	#define PRNG_SEQUENCE_LENGTH	(1 << 16)
-	#define MAX_UNEXPECTED_RANDOM	4		// maximum number of unexpected (i.e. real) random numbers when trying to sync. Then give up.
-	#define MAX_SYNC_TRIES		32
-	
 	AppendCrc14443a(mf_auth, 2);
 	
-	BigBuf_free(); BigBuf_Clear_ext(false);	
-	clear_trace();
-	set_tracing(false);	
-	iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
-
-	sync_time = GetCountSspClk() & 0xfffffff8;
-	sync_cycles = PRNG_SEQUENCE_LENGTH; // Mifare Classic's random generator repeats every 2^16 cycles (and so do the nonces).		
-	nt_attacked = 0;
-	
-   if (MF_DBGLEVEL >= 4)	Dbprintf("Mifare::Sync %u", sync_time);
-				
 	if (first_try) {
+		// create our reader nonce randomly 
+		uint32_t nonce = prng_successor( GetCountSspClk() & 0xfffffff8 , 32);
+		num_to_bytes(nonce, 4, mf_nr_ar);
 		mf_nr_ar3 = 0;
 		par_low = 0;
 	} else {
@@ -2354,8 +2349,16 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 		par[0] = par_low;
 	}
 
-	bool have_uid = false;
-	uint8_t cascade_levels = 0;
+	sync_cycles = PRNG_SEQUENCE_LENGTH; // Mifare Classic's random generator repeats every 2^16 cycles (and so do the nonces).		
+	nt_attacked = 0;
+			
+	BigBuf_free(); BigBuf_Clear_ext(false);	
+	clear_trace();
+	set_tracing(false);	
+	iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
+
+	sync_time = GetCountSspClk() & 0xfffffff8;	
+	if (MF_DBGLEVEL >= 4) Dbprintf("Mifare::Sync %u", sync_time);
 
 	LED_C_ON(); 
 	uint16_t i;
@@ -2391,12 +2394,13 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 		}
 
 		elapsed_prng_sequences = 1;
+		
 		// Sending timeslot of ISO14443a frame		
 		sync_time = (sync_time & 0xfffffff8 ) + sync_cycles + catch_up_cycles;
 		catch_up_cycles = 0;
 								
 		// if we missed the sync time already, advance to the next nonce repeat
-		while( GetCountSspClk() > sync_time) {
+		while ( GetCountSspClk() > sync_time) {
 			++elapsed_prng_sequences;
 			sync_time = (sync_time & 0xfffffff8 ) + sync_cycles;
 		}		
@@ -2418,7 +2422,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 		// iceman: has to be calibrated every time.
 		if (previous_nt && !nt_attacked) { 
 
-			nt_distance = dist_nt(previous_nt, nt);
+			int nt_distance = dist_nt(previous_nt, nt);
 			
 			// if no distance between,  then we are in sync.
 			if (nt_distance == 0) {
@@ -2430,7 +2434,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 						isOK = -3;		// Card has an unpredictable PRNG. Give up	
 						break;
 					} else {						
-						if (sync_cycles <= 0) sync_cycles += PRNG_SEQUENCE_LENGTH;
+//						if (sync_cycles <= 0) sync_cycles += PRNG_SEQUENCE_LENGTH;
 						LED_B_OFF();
 						continue;		// continue trying...
 					}
@@ -2457,7 +2461,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 
 		if ( (nt != nt_attacked) && nt_attacked) { 	// we somehow lost sync. Try to catch up again...
 			
-			catch_up_cycles = ABS(dist_nt(nt_attacked, nt));
+			catch_up_cycles = -dist_nt(nt_attacked, nt);
 			if (catch_up_cycles == 99999) {			// invalid nonce received. Don't resync on that one.
 				catch_up_cycles = 0;
 				continue;
@@ -2473,8 +2477,9 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 			}		
 			
 			if (consecutive_resyncs < 3) {
-				if (MF_DBGLEVEL >= 4)
+				if (MF_DBGLEVEL >= 4) {
 					Dbprintf("Lost sync in cycle %d. nt_distance=%d. Consecutive Resyncs = %d. Trying one time catch up...\n", i, catch_up_cycles, consecutive_resyncs);
+				}
 			} else {	
 				sync_cycles += catch_up_cycles;
 				
@@ -2550,10 +2555,6 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 */
 void DetectNACKbug() {
 
-	#define PRNG_SEQUENCE_LENGTH	(1 << 16)
-	#define MAX_UNEXPECTED_RANDOM	4		// maximum number of unexpected (i.e. real) random numbers when trying to sync, then give up.
-	#define MAX_SYNC_TRIES			32
-	
 	uint8_t mf_auth[] 	= {0x60, 0x00, 0xF5, 0x7B};
 	uint8_t mf_nr_ar[]	= {0,0,0,0,0,0,0,0};
 	uint8_t uid[10]		= {0,0,0,0,0,0,0,0,0,0};
