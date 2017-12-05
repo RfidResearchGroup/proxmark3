@@ -2867,10 +2867,20 @@ int CmdHf14AMfNack(const char *Cmd) {
 		}
 	
 		if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-			uint8_t ok = resp.arg[0] & 0xff;
-			PrintAndLog("isOk:%02x", ok);
-			if (!ok) {
-				PrintAndLog("Failed.");
+			int32_t ok = resp.arg[0] & 0xff;
+			uint32_t nacks = resp.arg[1];
+			uint32_t auths = resp.arg[2];
+			
+			PrintAndLog("Three different nonces used, expecting three nacks");
+			PrintAndLog("Num of sent auth requestes : %u", auths);
+			PrintAndLog("Num of received NACK       : %u", num_nacks);
+			switch( ok ) {
+				case -1 : PrintAndLog("Button pressed. Aborted."); return 1;
+				case -3 : PrintAndLog("Card random number generator is not predictable)."); return 1;
+				case -4 : PrintAndLog("Card random number generator seems to be based on the wellknown");
+						  PrintAndLog("generating polynomial with 16 effective bits only, but shows unexpected behaviour."); return 1;
+				case  1 : PrintAndLog("Card has NACK bug."); return 1;
+				case  0 : PrintAndLog("Card may have NACK bug. inconclusive result"); return 1;
 			}
 			break;
 		}

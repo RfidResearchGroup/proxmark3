@@ -2758,13 +2758,10 @@ void DetectNACKbug() {
 		consecutive_resyncs = 0;
 	} // end for loop
 
-	Dbprintf("Num of sent auth requestes : %u", i);
-	Dbprintf("Num of received NACK       : %u", num_nacks);
-
-	if ( num_nacks == 3) 
+	if (num_nacks == 3) 
 		isOK = 1;
 	
-	cmd_send(CMD_ACK, isOK, num_nacks, 0, 0, 0 );
+	cmd_send(CMD_ACK, isOK, num_nacks, i, 0, 0 );
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
