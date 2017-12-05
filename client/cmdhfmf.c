@@ -2867,7 +2867,7 @@ int CmdHf14AMfNack(const char *Cmd) {
 		}
 	
 		if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-			int32_t ok = resp.arg[0] & 0xff;
+			int32_t ok = resp.arg[0];
 			uint32_t nacks = resp.arg[1];
 			uint32_t auths = resp.arg[2];
 			
@@ -2880,7 +2880,14 @@ int CmdHf14AMfNack(const char *Cmd) {
 				case -4 : PrintAndLog("Card random number generator seems to be based on the wellknown");
 						  PrintAndLog("generating polynomial with 16 effective bits only, but shows unexpected behaviour."); return 1;
 				case  1 : PrintAndLog("Card has NACK bug."); return 1;
-				case  0 : PrintAndLog("Card may have NACK bug. inconclusive result"); return 1;
+				case  0 : {
+						if ( nacks > 0 ) 
+							PrintAndLog("Card may have NACK bug. inconclusive result"); 
+						else
+							PrintAndLog("Card has not NACK bug."); 
+						return 1;
+					}
+				default : PrintAndLog("  errorcode from device [%i]", ok); return 1;
 			}
 			break;
 		}

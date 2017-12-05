@@ -2578,8 +2578,9 @@ void DetectNACKbug() {
 	uint8_t num_nacks = 0;
 	
 	#define PRNG_SEQUENCE_LENGTH	(1 << 16)
-	#define MAX_UNEXPECTED_RANDOM	4		// maximum number of unexpected (i.e. real) random numbers when trying to sync. Then give up.
-	#define MAX_SYNC_TRIES		32
+	#define MAX_UNEXPECTED_RANDOM	4		// maximum number of unexpected (i.e. real) random numbers when trying to sync, then give up.
+	#define MAX_SYNC_TRIES			32
+	#define MAX_PRNG_TRIES			20 		// when we gone through 10 prng sequences without managing to sync,  then give up.
 	
 	AppendCrc14443a(mf_auth, 2);
 	
@@ -2649,6 +2650,11 @@ void DetectNACKbug() {
 		// Transmit reader nonce with fake par
 		ReaderTransmitPar(mf_nr_ar, sizeof(mf_nr_ar), par, NULL);
 	
+		if ( elapsed_prng_sequences > MAX_PRNG_TRIES) {
+			isOK = -4; 			// Card's PRNG runs at an unexpected frequency or resets unexpectedly
+			break;
+		}
+	
 		// we didn't calibrate our clock yet,
 		// iceman: has to be calibrated every time.
 		if (previous_nt && !nt_attacked) { 
@@ -2681,6 +2687,11 @@ void DetectNACKbug() {
 				
 				if (sync_cycles <= 0)
 					sync_cycles += PRNG_SEQUENCE_LENGTH;
+				
+				if (sync_cycles > PRNG_SEQUENCE_LENGTH * 2 ) {
+					isOK = -4; 			// Card's PRNG runs at an unexpected frequency or resets unexpectedly
+					break;
+				}
 				
 				if (MF_DBGLEVEL >= 4)
 					Dbprintf("calibrating in cycle %d. nt_distance=%d, elapsed_prng_sequences=%d, new sync_cycles: %d\n", i, nt_distance, elapsed_prng_sequences, sync_cycles);
