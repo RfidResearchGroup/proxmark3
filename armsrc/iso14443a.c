@@ -2600,7 +2600,6 @@ void DetectNACKbug() {
 
 		// Test if the action was cancelled
 		if(BUTTON_PRESS()) {
-			isOK = -1;
 			break;
 		}
 		
