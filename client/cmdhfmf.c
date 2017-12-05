@@ -2873,7 +2873,7 @@ int CmdHf14AMfNack(const char *Cmd) {
 			
 			PrintAndLog("Three different nonces used, expecting three nacks");
 			PrintAndLog("Num of sent auth requestes : %u", auths);
-			PrintAndLog("Num of received NACK       : %u", num_nacks);
+			PrintAndLog("Num of received NACK       : %u", nacks);
 			switch( ok ) {
 				case -1 : PrintAndLog("Button pressed. Aborted."); return 1;
 				case -3 : PrintAndLog("Card random number generator is not predictable)."); return 1;
