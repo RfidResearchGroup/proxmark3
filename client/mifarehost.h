@@ -67,8 +67,6 @@ typedef struct {
 	//uint8_t foundKey[2];
 } icesector_t;
 
- 
-
 extern char logHexFileName[FILE_PATH_SIZE];
 
 extern int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key);
@@ -95,6 +93,6 @@ extern int saveTraceCard(void);
 extern int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data, int len);
 
 extern bool detect_classic_prng(void);
-extern bool detect_classic_nackbug(void);
+extern int detect_classic_nackbug(bool verbose);
 extern void detect_classic_magic(void);
 #endif

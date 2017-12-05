@@ -321,6 +321,17 @@ int usage_hf14_csave(void){
 	PrintAndLog("       hf mf csave 4 o filename");
 	return 0;
 }
+int usage_hf14_nack(void) {
+	PrintAndLog("Test a mifare classic based card for the NACK bug.");
+	PrintAndLog("");	
+	PrintAndLog("Usage:  hf mf nack [h] [v]");
+	PrintAndLog("Options:");
+	PrintAndLog("       h             this help");
+	PrintAndLog("       v             verbose");
+	PrintAndLog("samples:");
+	PrintAndLog("       hf mf nack");
+	return 0;
+}
 
 int CmdHF14AMifare(const char *Cmd) {
 	uint8_t blockno = 0, key_type = MIFARE_AUTH_KEYA;
@@ -2851,43 +2862,15 @@ int CmdHf14AMfSetMod(const char *Cmd) {
 // Mifare NACK bug detection
 int CmdHf14AMfNack(const char *Cmd) {
 
-	UsbCommand c = {CMD_MIFARE_NACK_DETECT, {0, 0, 0}};
-	clearCommandBuffer();
-	SendCommand(&c);
-	UsbCommand resp;
+	bool verbose = false;
+	char ctmp = param_getchar(Cmd, 0);	
+	if ( ctmp == 'h' || ctmp == 'H' ) return usage_hf14_nack();
+	if ( ctmp == 'v' || ctmp == 'V' ) verbose = true;
+
+	if ( verbose )
+		PrintAndLog("Started testing card for NACK bug. Press key to abort");
 	
-	PrintAndLog("Started testing card for NACK bug");
-	
-	while (true) {
-		
-		printf(".");
-		fflush(stdout);
-		if (ukbhit()) {
-			int gc = getchar(); (void)gc;
-			return -1;
-			break;
-		}
-	
-		if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-			int32_t ok = resp.arg[0];
-			uint32_t nacks = resp.arg[1];
-			uint32_t auths = resp.arg[2];
-			
-			PrintAndLog("\nNum of sent auth requestes : %u", auths);
-			PrintAndLog("Num of received NACK       : %u", nacks);
-			switch( ok ) {
-				case -1 : PrintAndLog("Button pressed. Aborted."); return 1;
-				case -2 : PrintAndLog("Card answers NACK, (most likely a clone)"); return 1;
-				case -3 : PrintAndLog("Card random number generator is not predictable)."); return 1;
-				case -4 : PrintAndLog("Card random number generator seems to be based on the wellknown");
-						  PrintAndLog("generating polynomial with 16 effective bits only, but shows unexpected behaviour."); return 1;
-				case  1 : PrintAndLog("Card has NACK bug."); return 1;
-				case  0 : PrintAndLog("Card has not NACK bug."); return 1;
-				default : PrintAndLog("  errorcode from device [%i]", ok); return 1;
-			}
-			break;
-		}
-	}
+	detect_classic_nackbug(verbose);
 	return 0;
 }
 

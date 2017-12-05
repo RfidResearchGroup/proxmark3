@@ -2552,6 +2552,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 
 /*
 *  Mifare Classic NACK-bug detection
+*  Thanks to @doegox for the feedback and new approaches.
 */
 void DetectNACKbug() {
 
@@ -2571,6 +2572,7 @@ void DetectNACKbug() {
 	uint16_t sync_tries = 0;
 	uint32_t sync_time = 0;
 	bool have_uid = false;
+	bool received_nack;
 	
 	// Mifare Classic's random generator repeats every 2^16 cycles (and so do the nonces).			
 	uint32_t sync_cycles = PRNG_SEQUENCE_LENGTH;
@@ -2592,6 +2594,18 @@ void DetectNACKbug() {
 	uint16_t i;
 	for (i = 0; true; ++i) {
 
+		received_nack = false;
+		if ((i==10) && (num_nacks == i)) {
+			// Cards always leaks a NACK, no matter the parity
+			isOK = 2;
+			break;
+		}
+		if ( (i > 1) && (num_nacks == 1) ) {
+			// NACK bug
+			isOK = 1;
+			break;
+		}
+	
 		WDT_HIT();
 
 		// Test if the action was cancelled
@@ -2639,7 +2653,7 @@ void DetectNACKbug() {
 		// Receive the (4 Byte) "random" nonce from TAG
 		if (!ReaderReceive(receivedAnswer, receivedAnswerPar))
 			continue;
-
+	
 		previous_nt = nt;
 		nt = bytes_to_num(receivedAnswer, 4);
 		
@@ -2735,7 +2749,7 @@ void DetectNACKbug() {
 		// Receive answer. This will be a 4 Bit NACK when the 8 parity bits are OK after decoding
 		if (ReaderReceive(receivedAnswer, receivedAnswerPar)) {
 			catch_up_cycles = 8; 	// the PRNG is delayed by 8 cycles due to the NAC (4Bits = 0x05 encrypted) transfer	
-			isOK = 1;
+			received_nack = true;
 			num_nacks++;
 		} 
 

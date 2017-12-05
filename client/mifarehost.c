@@ -81,8 +81,7 @@ static uint32_t nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_i
 	return i;
 }
 
-int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key)
-{
+int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 	uint32_t uid = 0;
 	uint32_t nt = 0, nr = 0;
 	uint64_t par_list = 0, ks_list = 0;
@@ -852,15 +851,59 @@ bool detect_classic_prng(void){
 	uint32_t nonce = bytes_to_num(respA.d.asBytes, respA.arg[0]);
 	return validate_prng_nonce(nonce);
 }
-/* Detect Mifare Classic NACK bug */
-bool detect_classic_nackbug(void){
+/* Detect Mifare Classic NACK bug 
+
+returns:
+0 = error during test / aborted
+1 = has nack bug
+2 = has not nack bug
+3 = always leak nacks  (clones)
+*/
+int detect_classic_nackbug(bool verbose){
 	
-	// get nonce?
+	UsbCommand c = {CMD_MIFARE_NACK_DETECT, {0, 0, 0}};
+	clearCommandBuffer();
+	SendCommand(&c);
+	UsbCommand resp;
 	
-	// loop max 256 times, 
-	// fixed nonce, different parity every call
+	if ( verbose )
+		printf("Press pm3-button on the proxmark3 device to abort both proxmark3 and client.\n");
+		
+	while (true) {
+		
+		printf(".");
+		fflush(stdout);
+		if (ukbhit()) {
+			int gc = getchar(); (void)gc;
+			return -1;
+			break;
+		}
 	
-	return false;
+		if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+			int32_t ok = resp.arg[0];
+			uint32_t nacks = resp.arg[1];
+			uint32_t auths = resp.arg[2];
+			if ( verbose ) {
+				PrintAndLog("\nNum of sent auth requests : %u", auths);
+				PrintAndLog("Num of received NACK      : %u", nacks);
+			}
+			switch( ok ) {
+				case -1 : if (verbose) PrintAndLog("Button pressed. Aborted."); return 0;
+				case -3 : if (verbose) PrintAndLog("Card random number generator is not predictable)."); return 0;
+				case -4 : if (verbose) {
+							PrintAndLog("Card random number generator seems to be based on the well-known generating polynomial");
+							PrintAndLog("with 16 effective bits only, but shows unexpected behavior, try again."); 
+							return 0;
+						}
+				case  2 : PrintAndLog("Card always leak NACK."); return 3;
+				case  1 : PrintAndLog("Card has NACK bug."); return 1;
+				case  0 : PrintAndLog("Card has not NACK bug."); return 2;
+				default : PrintAndLog("  errorcode from device [%i]", ok); return 0;
+			}
+			break;
+		}
+	}	
+	return 0;
 }
 /* try to see if card responses to "chinese magic backdoor" commands. */
 void detect_classic_magic(void) {
