@@ -2755,8 +2755,11 @@ void DetectNACKbug() {
 		par[0]++;
  
 		// tried all 256 possible parities without success.
-		if (par[0] == 0)
+		if (par[0] == 0) {
+			if ( num_nacks == 1 )
+				isOK = 1;
 			break;
+		}
 
 		// reset the resyncs since we got a complete transaction on right time.
 		consecutive_resyncs = 0;

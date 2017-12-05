@@ -886,8 +886,8 @@ int detect_classic_nackbug(bool verbose){
 			PrintAndLog("");
 			
 			if ( verbose ) {
-				PrintAndLog("Num of sent auth requests : %u", auths);
-				PrintAndLog("Num of received NACK      : %u", nacks);
+				PrintAndLog("Num of auth requests  : %u", auths);
+				PrintAndLog("Num of received NACK  : %u", nacks);
 			}
 			switch( ok ) {
 				case -1 : if (verbose) PrintAndLog("Button pressed. Aborted."); return 0;
