@@ -2856,6 +2856,8 @@ int CmdHf14AMfNack(const char *Cmd) {
 	SendCommand(&c);
 	UsbCommand resp;
 	
+	PrintAndLog("Started testing card for NACK bug");
+	
 	while (true) {
 		
 		printf(".");
@@ -2871,7 +2873,7 @@ int CmdHf14AMfNack(const char *Cmd) {
 			uint32_t nacks = resp.arg[1];
 			uint32_t auths = resp.arg[2];
 			
-			PrintAndLog("Num of sent auth requestes : %u", auths);
+			PrintAndLog("\nNum of sent auth requestes : %u", auths);
 			PrintAndLog("Num of received NACK       : %u", nacks);
 			switch( ok ) {
 				case -1 : PrintAndLog("Button pressed. Aborted."); return 1;

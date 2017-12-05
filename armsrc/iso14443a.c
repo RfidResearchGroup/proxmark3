@@ -2734,6 +2734,7 @@ void DetectNACKbug() {
 		// Receive answer. This will be a 4 Bit NACK when the 8 parity bits are OK after decoding
 		if (ReaderReceive(receivedAnswer, receivedAnswerPar)) {
 			catch_up_cycles = 8; 	// the PRNG is delayed by 8 cycles due to the NAC (4Bits = 0x05 encrypted) transfer	
+			isOK = 1;
 			num_nacks++;
 		} 
 
