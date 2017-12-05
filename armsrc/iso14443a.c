@@ -2555,14 +2555,12 @@ void DetectNACKbug() {
 	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
 	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
 	uint8_t par[1] = {0};	// maximum 8 Bytes to be sent here, 1 byte parity is therefore enough
-	uint8_t nt_diff = 0;
 	uint32_t nt = 0;
 	uint32_t previous_nt = 0;	
 	uint32_t cuid = 0;
 	
 	int32_t catch_up_cycles = 0;
 	int32_t last_catch_up = 0;
-	int32_t isOK = 0;
 	int32_t nt_distance = 0;
 	
 	uint16_t elapsed_prng_sequences = 1;
@@ -2572,7 +2570,6 @@ void DetectNACKbug() {
 	uint32_t nt_attacked = 0;
 	uint32_t sync_time = 0;
 	uint32_t sync_cycles = 0;
-	uint8_t par_low = 0;
 	uint8_t cascade_levels = 0;
 
 	bool have_uid = false;
