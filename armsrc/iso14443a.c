@@ -1782,7 +1782,6 @@ int ReaderReceive(uint8_t *receivedAnswer, uint8_t *parity) {
 	return Demod.len;
 }
 
-
 static void iso14a_set_ATS_times(uint8_t *ats) {
 
 	uint8_t tb1;
@@ -1809,7 +1808,6 @@ static void iso14a_set_ATS_times(uint8_t *ats) {
 		}
 	}
 }
-
 
 static int GetATQA(uint8_t *resp, uint8_t *resp_par) {
 
@@ -2012,7 +2010,6 @@ int iso14443a_fast_select_card(uint8_t *uid_ptr, uint8_t num_cascades) {
 		return 0;
 	}
 	
-
 	// OK we will select at least at cascade 1, lets see if first byte of UID was 0x88 in
 	// which case we need to make a cascade 2 request and select - this is a long UID
 	// While the UID is not complete, the 3nd bit (from the right) is set in the SAK.
@@ -2603,7 +2600,7 @@ void DetectNACKbug() {
 
 	LED_C_ON(); 
 	uint16_t i;
-	for(i = 0; true; ++i) {
+	for (i = 0; true; ++i) {
 
 		WDT_HIT();
 
@@ -2616,7 +2613,7 @@ void DetectNACKbug() {
 		// this part is from Piwi's faster nonce collecting part in Hardnested.
 		if (!have_uid) { // need a full select cycle to get the uid first
 			iso14a_card_select_t card_info;		
-			if(!iso14443a_select_card(uid, &card_info, &cuid, true, 0, true)) {
+			if (!iso14443a_select_card(uid, &card_info, &cuid, true, 0, true)) {
 				if (MF_DBGLEVEL >= 4)	Dbprintf("Mifare: Can't select card (ALL)");
 				break;
 			}
@@ -2628,7 +2625,7 @@ void DetectNACKbug() {
 			}
 			have_uid = true;	
 		} else { // no need for anticollision. We can directly select the card
-			if(!iso14443a_select_card(uid, NULL, &cuid, false, cascade_levels, true)) {
+			if (!iso14443a_fast_select_card(uid, cascade_levels)) {
 				if (MF_DBGLEVEL >= 4)	Dbprintf("Mifare: Can't select card (UID)");
 				continue;
 			}
