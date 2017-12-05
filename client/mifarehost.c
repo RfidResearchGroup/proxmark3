@@ -883,8 +883,10 @@ int detect_classic_nackbug(bool verbose){
 			int32_t ok = resp.arg[0];
 			uint32_t nacks = resp.arg[1];
 			uint32_t auths = resp.arg[2];
+			PrintAndLog("");
+			
 			if ( verbose ) {
-				PrintAndLog("\nNum of sent auth requests : %u", auths);
+				PrintAndLog("Num of sent auth requests : %u", auths);
 				PrintAndLog("Num of received NACK      : %u", nacks);
 			}
 			switch( ok ) {

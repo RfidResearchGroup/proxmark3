@@ -2595,8 +2595,9 @@ void DetectNACKbug() {
 	for (i = 0; true; ++i) {
 
 		received_nack = false;
+		
+		// Cards always leaks a NACK, no matter the parity
 		if ((i==10) && (num_nacks == i)) {
-			// Cards always leaks a NACK, no matter the parity
 			isOK = 2;
 			break;
 		}
