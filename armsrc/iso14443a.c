@@ -2600,11 +2600,6 @@ void DetectNACKbug() {
 			isOK = 2;
 			break;
 		}
-		if ( (i > 1) && (num_nacks == 1) ) {
-			// NACK bug
-			isOK = 1;
-			break;
-		}
 	
 		WDT_HIT();
 
@@ -2660,6 +2655,11 @@ void DetectNACKbug() {
 		// Transmit reader nonce with fake par
 		ReaderTransmitPar(mf_nr_ar, sizeof(mf_nr_ar), par, NULL);
 	
+		if (ReaderReceive(receivedAnswer, receivedAnswerPar)) {
+			received_nack = true;
+			num_nacks++;
+		} 
+
 		// we didn't calibrate our clock yet,
 		// iceman: has to be calibrated every time.
 		if (previous_nt && !nt_attacked) { 
@@ -2747,21 +2747,15 @@ void DetectNACKbug() {
 		}
  
 		// Receive answer. This will be a 4 Bit NACK when the 8 parity bits are OK after decoding
-		if (ReaderReceive(receivedAnswer, receivedAnswerPar)) {
+		if (received_nack)
 			catch_up_cycles = 8; 	// the PRNG is delayed by 8 cycles due to the NAC (4Bits = 0x05 encrypted) transfer	
-			received_nack = true;
-			num_nacks++;
-		} 
 
 		// we are testing all 256 possibilities. 
 		par[0]++;
  
 		// tried all 256 possible parities without success.
-		if (par[0] == 0) {
-			if ( num_nacks > 1 )
-				isOK = -2;
+		if (par[0] == 0)
 			break;
-		}
 
 		// reset the resyncs since we got a complete transaction on right time.
 		consecutive_resyncs = 0;
