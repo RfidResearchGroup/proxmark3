@@ -12,9 +12,6 @@ TARFLAGS = -C .. --ignore-failed-read -rvf
 RM = rm -f
 MV = mv
 
-# uncomment to enable EMV
-#CFLAGS += -DWITH_EMV
-
 ENV_LDFLAGS := $(LDFLAGS)
 ENV_CFLAGS := $(CFLAGS)
 
@@ -89,7 +86,6 @@ CORESRCS =  uart_posix.c \
 			util.c \
 			util_posix.c \
 			scandir.c
-
 
 CMDSRCS =	crapto1/crapto1.c \
 			crapto1/crypto1.c \
@@ -210,15 +206,7 @@ MULTIARCHOBJS = $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_NOSIMD.o) \
 			$(MULTIARCHSRCS:%.c=$(OBJDIR)/%_AVX.o) \
 			$(MULTIARCHSRCS:%.c=$(OBJDIR)/%_AVX2.o)
 
-#GCC_GTEQ_490 := $(shell expr `gcc --version | awk '/gcc/{print $$NF;}' | sed -e 's/\.\([0-9][0-9]\)/\1/g' -e 's/\.\([0-9]\)/0\1/g' -e 's/^[0-9]\{3,4\}$$/&00/'` \>= 40900)
-GCC_VERSION := $(shell gcc --version | awk '/gcc/{print $$NF;}' | sed -e 's/\-.*//g' -e 's/\.\([0-9][0-9]\)/\1/g' -e 's/\.\([0-9]\)/0\1/g' -e 's/^[0-9]\{3,4\}$$/&00/')
-CLANG_VERSION := $(shell gcc --version | awk '/Apple LLVM version/{print $$4;}' | sed -e 's/\-.*//g' -e 's/\.\([0-9][0-9]\)/\1/g' -e 's/\.\([0-9]\)/0\1/g' -e 's/^[0-9]\{3,4\}$$/&00/')
-ifneq ($(CLANG_VERSION), )
-	SUPPORTS_AVX512 :=  $(shell [ $(CLANG_VERSION) -ge 80000 ] && echo "True" )
-endif
-ifneq ($(GCC_VERSION), )
-	SUPPORTS_AVX512 :=  $(shell [ $(GCC_VERSION) -ge 40900 ] && echo "True" )
-endif
+SUPPORTS_AVX512 :=  $(shell echo | gcc -E -mavx512f - > /dev/null 2>&1 && echo "True" )
 
 HARD_SWITCH_NOSIMD = -mno-mmx -mno-sse2 -mno-avx -mno-avx2
 HARD_SWITCH_MMX = -mmmx -mno-sse2 -mno-avx -mno-avx2

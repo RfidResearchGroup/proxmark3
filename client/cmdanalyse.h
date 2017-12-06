@@ -23,6 +23,7 @@
 #include "tea.h"
 #include "legic_prng.h"
 #include "loclass/elite_crack.h"
+#include "mfkey.h"  //nonce2key 
 
 int usage_analyse_lcr(void);
 int usage_analyse_checksum(void);

@@ -9,78 +9,6 @@
 //-----------------------------------------------------------------------------
 #include "mifarehost.h"
 
-// MIFARE
-static int compare_uint64(const void *a, const void *b) {
-	if (*(uint64_t*)b == *(uint64_t*)a) return 0;
-	if (*(uint64_t*)b < *(uint64_t*)a) return 1;
-	return -1;
-}
-
-// create the intersection (common members) of two sorted lists. Lists are terminated by -1. Result will be in list1. Number of elements is returned.
-static uint32_t intersection(uint64_t *list1, uint64_t *list2) {
-	if (list1 == NULL || list2 == NULL)
-		return 0;
-		
-	uint64_t *p1, *p2, *p3;
-	p1 = p3 = list1;
-	p2 = list2;
-
-	while ( *p1 != -1 && *p2 != -1 ) {
-		if (compare_uint64(p1, p2) == 0) {
-			*p3++ = *p1++;
-			p2++;
-		}
-		else {
-			while (compare_uint64(p1, p2) == -1) ++p1;
-			while (compare_uint64(p1, p2) == 1) ++p2;
-		}
-	}
-	*p3 = -1;
-	return p3 - list1;
-}
-
-// Darkside attack (hf mf mifare)
-// if successful it will return a list of keys, not just one.
-static uint32_t nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_t ks_info, uint64_t **keys) {
-	struct Crypto1State *states;
-	uint32_t i, pos, rr;
-	uint8_t bt, ks3x[8], par[8][8];
-	uint64_t key_recovered;
-	static uint64_t *keylist;
-	rr = 0;
-
-	// Reset the last three significant bits of the reader nonce
-	nr &= 0xffffff1f;
-
-	for ( pos = 0; pos < 8; pos++ ) {
-		ks3x[7-pos] = (ks_info >> (pos*8)) & 0x0f;
-		bt = (par_info >> (pos*8)) & 0xff;
-		for ( i = 0; i < 8; i++)	{
-				par[7-pos][i] = (bt >> i) & 0x01;
-		}
-	}
-
-	states = lfsr_common_prefix(nr, rr, ks3x, par, (par_info == 0));
-
-	if (!states) {
-		PrintAndLog("Failed getting states");
-		*keys = NULL;
-		return 0;
-	}
-
-	keylist = (uint64_t*)states;
-
-	for (i = 0; keylist[i]; i++) {
-		lfsr_rollback_word(states+i, uid^nt, 0);
-		crypto1_get_lfsr(states+i, &key_recovered);
-		keylist[i] = key_recovered;
-	}
-	keylist[i] = -1;
-
-	*keys = keylist;
-	return i;
-}
-
 int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 	uint32_t uid = 0;
 	uint32_t nt = 0, nr = 0;
@@ -96,7 +24,6 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 	printf("Executing command. Expected execution time: 25sec on average\n");
 	printf("Press pm3-button on the proxmark3 device to abort both proxmark3 and client.\n");
 	printf("-------------------------------------------------------------------------\n");
-
 
 	while (true) {
 		clearCommandBuffer();
@@ -118,7 +45,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 			}
 
 			UsbCommand resp;
-			if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+			if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
 				isOK  = resp.arg[0];
 				if (isOK < 0) 
 					return isOK;
@@ -868,7 +795,10 @@ int detect_classic_nackbug(bool verbose){
 	
 	if ( verbose )
 		printf("Press pm3-button on the proxmark3 device to abort both proxmark3 and client.\n");
-		
+	
+	// for nice animation
+	//bool stdinOnPipe = !isatty(STDIN_FILENO)
+	
 	while (true) {
 		
 		printf(".");

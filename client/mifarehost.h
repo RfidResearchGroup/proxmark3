@@ -26,6 +26,7 @@
 #include "iso14443crc.h"
 #include "protocols.h"
 #include "mifare.h"
+#include "mfkey.h"
 
 #define NESTED_SECTOR_RETRY     10
 

@@ -152,15 +152,17 @@ static uint16_t calcSumNibbleXor( uint8_t* bytes, uint8_t len, uint32_t mask) {
 }
 static uint16_t calcSumByteXor( uint8_t* bytes, uint8_t len, uint32_t mask) {
     uint16_t sum = 0;
-    for (uint8_t i = 0; i < len; i++)
-        sum ^= bytes[i];
+    for (uint8_t i = 0; i < len; i++) {
+		sum ^= bytes[i];
+	}
 	sum &= mask;	
     return sum;
 }
 static uint16_t calcSumByteAdd( uint8_t* bytes, uint8_t len, uint32_t mask) {
     uint16_t sum = 0;
-    for (uint8_t i = 0; i < len; i++)
-        sum += bytes[i];
+    for (uint8_t i = 0; i < len; i++) {
+		sum += bytes[i];
+	}
 	sum &= mask;	
     return sum;
 }
@@ -171,8 +173,9 @@ static uint16_t calcSumByteAddOnes( uint8_t* bytes, uint8_t len, uint32_t mask) 
 
 static uint16_t calcSumByteSub( uint8_t* bytes, uint8_t len, uint32_t mask) {
     uint8_t sum = 0;
-    for (uint8_t i = 0; i < len; i++)
-        sum -= bytes[i];
+    for (uint8_t i = 0; i < len; i++) {
+		sum -= bytes[i];
+	}
 	sum &= mask;	
     return sum;
 }
@@ -414,35 +417,179 @@ int CmdAnalyseTEASelfTest(const char *Cmd){
 }
 
 int CmdAnalyseA(const char *Cmd){
-/*	
-piwi
+	
+//piwi
 // uid(2e086b1a) nt(230736f6) ks(0b0008000804000e) nr(000000000)
 // uid(2e086b1a) nt(230736f6) ks(0e0b0e0b090c0d02) nr(000000001)
 // uid(2e086b1a) nt(230736f6) ks(0e05060e01080b08) nr(000000002)
-uint64_t d1[] = {0x2e086b1a, 0x230736f6, 0x0000001, 0x0e0b0e0b090c0d02};
-uint64_t d2[] = {0x2e086b1a, 0x230736f6, 0x0000002, 0x0e05060e01080b08};
+//uint64_t d1[] = {0x2e086b1a, 0x230736f6, 0x0000001, 0x0e0b0e0b090c0d02};
+//uint64_t d2[] = {0x2e086b1a, 0x230736f6, 0x0000002, 0x0e05060e01080b08};
 	
 // uid(17758822) nt(c0c69e59) ks(080105020705040e) nr(00000001)
 // uid(17758822) nt(c0c69e59) ks(01070a05050c0705) nr(00000002)
-uint64_t d1[] = {0x17758822, 0xc0c69e59, 0x0000001, 0x080105020705040e};
-uint64_t d2[] = {0x17758822, 0xc0c69e59, 0x0000002, 0x01070a05050c0705};
+//uint64_t d1[] = {0x17758822, 0xc0c69e59, 0x0000001, 0x080105020705040e};
+//uint64_t d2[] = {0x17758822, 0xc0c69e59, 0x0000002, 0x01070a05050c0705};
 	
 // uid(6e442129) nt(8f699195) ks(090d0b0305020f02) nr(00000001)
 // uid(6e442129) nt(8f699195) ks(03030508030b0c0e) nr(00000002)
 // uid(6e442129) nt(8f699195) ks(02010f030c0d050d) nr(00000003)
 // uid(6e442129) nt(8f699195) ks(00040f0f0305030e) nr(00000004)
-uint64_t d1[] = {0x6e442129, 0x8f699195, 0x0000001, 0x090d0b0305020f02};
-uint64_t d2[] = {0x6e442129, 0x8f699195, 0x0000004, 0x00040f0f0305030e};
-	
+//uint64_t d1[] = {0x6e442129, 0x8f699195, 0x0000001, 0x090d0b0305020f02};
+//uint64_t d2[] = {0x6e442129, 0x8f699195, 0x0000004, 0x00040f0f0305030e};
+
+/*	
 uid(3e172b29) nt(039b7bd2) ks(0c0e0f0505080800) nr(00000001)
 uid(3e172b29) nt(039b7bd2) ks(0e06090d03000b0f) nr(00000002)
 */
-	// uint64_t key = 0;
-	// uint64_t d1[] = {0x3e172b29, 0x039b7bd2, 0x0000001, 0x0c0e0f0505080800};
-	// uint64_t d2[] = {0x3e172b29, 0x039b7bd2, 0x0000002, 0x0e06090d03000b0f};
+	uint64_t *keylistA = NULL, *keylistB = NULL;
+	uint32_t keycountA = 0, keycountB = 0;
+//	uint64_t d1[] = {0x3e172b29, 0x039b7bd2, 0x0000001, 0, 0x0c0e0f0505080800};
+//	uint64_t d2[] = {0x3e172b29, 0x039b7bd2, 0x0000002, 0, 0x0e06090d03000b0f};
+uint64_t d1[] = {0x6e442129, 0x8f699195, 0x0000001, 0, 0x090d0b0305020f02};
+uint64_t d2[] = {0x6e442129, 0x8f699195, 0x0000004, 0, 0x00040f0f0305030e};
 	
-	// nonce2key_ex(0, 0 , d1[0], d1[1], d1[2], d1[3], &key);
-	// nonce2key_ex(0, 0 , d2[0], d2[1], d2[2], d2[3], &key);
+	keycountA = nonce2key(d1[0], d1[1], d1[2], d1[3], d1[4] ,&keylistA);
+	keycountB = nonce2key(d2[0], d2[1], d2[2], d2[3], d2[4], &keylistB);
+
+	switch (keycountA) {
+		case 0: printf("Key test A failed\n"); break;
+		case 1: printf("KEY A | %012" PRIX64 " ", keylistA[0]); break;
+	}
+	switch (keycountB) {
+		case 0: printf("Key test B failed\n"); break;
+		case 1: printf("KEY B | %012" PRIX64 " ", keylistB[0]); break;
+	}	
+	
+	free(keylistA);
+	free(keylistB);
+	
+//	qsort(keylist, keycount, sizeof(*keylist), compare_uint64);
+//	keycount = intersection(last_keylist, keylist);
+
+	/*
+	uint64_t keys[] = {
+		0x7b5b8144a32f, 0x76b46ccc461e, 0x03c3c36ea7a2, 0x171414d31961,
+		0xe2bfc7153eea, 0x48023d1d1985, 0xff7e1a410953, 0x49a3110249d3,
+		0xe3515546d015, 0x667c2ac86f85, 0x5774a8d5d6a9, 0xe401c2ca602c,
+		0x3be7e5020a7e, 0x66dbec3cf90b, 0x4e13f1534605, 0x5c172e1e78c9,
+		0xeafe51411fbf, 0xc579f0fcdd8f, 0x2146a0d745c3, 0xab31ca60171a,
+		0x3169130a5035, 0xde5e11ea4923, 0x96fe2aeb9924, 0x828b61e6fcba,
+		0x8211b0607367, 0xe2936b320f76, 0xaff501e84378, 0x82b31cedb21b,
+		0xb725d31d4cd3, 0x3b984145b2f1, 0x3b4adb3e82ba, 0x8779075210fe
+	};
+	
+	uint64_t keya[] = {
+		0x7b5b8144a32f, 0x76b46ccc461e, 0x03c3c36ea7a2, 0x171414d31961,
+		0xe2bfc7153eea, 0x48023d1d1985, 0xff7e1a410953, 0x49a3110249d3,
+		0xe3515546d015, 0x667c2ac86f85, 0x5774a8d5d6a9, 0xe401c2ca602c,
+		0x3be7e5020a7e, 0x66dbec3cf90b, 0x4e13f1534605, 0x5c172e1e78c9
+	};
+	uint64_t keyb[] = {
+		0xeafe51411fbf, 0xc579f0fcdd8f, 0x2146a0d745c3, 0xab31ca60171a,
+		0x3169130a5035, 0xde5e11ea4923, 0x96fe2aeb9924, 0x828b61e6fcba,
+		0x8211b0607367, 0xe2936b320f76, 0xaff501e84378, 0x82b31cedb21b,
+		0xb725d31d4cd3, 0x3b984145b2f1, 0x3b4adb3e82ba, 0x8779075210fe
+	};
+	
+	*/
+	
+	/*
+	uint64_t xor[] = {
+		0x0DEFED88E531,	0x7577AFA2E1BC,	0x14D7D7BDBEC3,	0xF5ABD3C6278B,
+		0xAABDFA08276F,	0xB77C275C10D6,	0xB6DD0B434080,	0xAAF2444499C6,
+		0x852D7F8EBF90,	0x3108821DB92C,	0xB3756A1FB685,	0xDFE627C86A52,
+		0x5D3C093EF375,	0x28C81D6FBF0E,	0x1204DF4D3ECC, 0xB6E97F5F6776,
+		0x2F87A1BDC230, 0xE43F502B984C,	0x8A776AB752D9,	0x9A58D96A472F,
+		0xEF3702E01916, 0x48A03B01D007, 0x14754B0D659E, 0x009AD1868FDD,
+		0x6082DB527C11, 0x4D666ADA4C0E, 0x2D461D05F163, 0x3596CFF0FEC8,
+		0x8CBD9258FE22, 0x00D29A7B304B, 0xBC33DC6C9244
+	};
+	
+
+	uint64_t xorA[] = {
+		0x0DEFED88E531,	0x7577AFA2E1BC,	0x14D7D7BDBEC3,	0xF5ABD3C6278B,
+		0xAABDFA08276F,	0xB77C275C10D6,	0xB6DD0B434080,	0xAAF2444499C6,
+		0x852D7F8EBF90,	0x3108821DB92C,	0xB3756A1FB685,	0xDFE627C86A52,
+		0x5D3C093EF375,	0x28C81D6FBF0E,	0x1204DF4D3ECC
+	};
+	uint64_t xorB[] = {
+		0x2F87A1BDC230, 0xE43F502B984C,	0x8A776AB752D9,	0x9A58D96A472F,
+		0xEF3702E01916, 0x48A03B01D007, 0x14754B0D659E, 0x009AD1868FDD,
+		0x6082DB527C11, 0x4D666ADA4C0E, 0x2D461D05F163, 0x3596CFF0FEC8,
+		0x8CBD9258FE22, 0x00D29A7B304B, 0xBC33DC6C9244
+	};
+	*/
+	/*	
+	// xor key A      | xor key B
+	1  | 0DEFED88E531 | 2F87A1BDC230
+	2  | 7577AFA2E1BC | E43F502B984C
+	3  | 14D7D7BDBEC3 | 8A776AB752D9
+	4  | F5ABD3C6278B | 9A58D96A472F
+	5  | AABDFA08276F | EF3702E01916
+	6  | B77C275C10D6 | 48A03B01D007
+	7  | B6DD0B434080 | 14754B0D659E
+	8  | AAF2444499C6 | 009AD1868FDD
+	9  | 852D7F8EBF90 | 6082DB527C11
+	10 | 3108821DB92C | 4D666ADA4C0E
+	11 | B3756A1FB685 | 2D461D05F163
+	12 | DFE627C86A52 | 3596CFF0FEC8
+	13 | 5D3C093EF375 | 8CBD9258FE22
+	14 | 28C81D6FBF0E | 00D29A7B304B
+	15 | 1204DF4D3ECC | BC33DC6C9244
+	*/
+
+	// generate xor table :)
+	/*
+	for (uint8_t i=0; i<31; i++){
+		uint64_t a = keys[i] ^ keys[i+1];
+		printf("%u | %012" PRIX64 " | \n", i, a);
+	}
+	*/
+	
+	/*
+	uint32_t id = param_get32ex(Cmd, 0, 0x93290142, 16);	
+	uint8_t uid[6] = {0};
+	num_to_bytes(id,4,uid);
+	
+	uint8_t key_s0a[] = {
+		uid[1] ^ uid[2] ^ uid[3] ^ 0x11,
+		uid[1] ^ 0x72,
+		uid[2] ^ 0x80,
+		(uid[0] + uid[1] + uid[2] + uid[3] ) ^ uid[3] ^ 0x19,
+		0xA3,
+		0x2F
+	};
+
+	printf("UID   | %s\n", sprint_hex(uid,4 ));
+	printf("KEY A | %s\n", sprint_hex(key_s0a, 6));
+	
+	// arrays w all keys
+	uint64_t foo[32] = {0};
+	
+	//A
+	foo[0] = bytes_to_num(key_s0a, 6);
+	//B
+	//foo[16] = 0xcafe71411fbf;
+	foo[16] = 0xeafe51411fbf;
+	
+	for (uint8_t i=0; i<15; i++){	
+		foo[i+1] = foo[i] ^ xorA[i];
+		foo[i+16+1] = foo[i+16] ^ xorB[i];
+		
+	}
+	for (uint8_t i=0; i<15; i++){
+		uint64_t a = foo[i];
+		uint64_t b = foo[i+16];
+
+		printf("%02u | %012" PRIX64 " %s | %012" PRIX64 " %s\n",
+			i,
+			a,
+			( a == keya[i])?"ok":"err",
+			b,
+			( b == keyb[i])?"ok":"err" 
+		);
+	}
+	*/
 	return 0;
 }
 

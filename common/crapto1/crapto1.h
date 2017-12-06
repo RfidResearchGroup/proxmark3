@@ -21,6 +21,8 @@
 #define CRAPTO1_INCLUDED
 #include <stdint.h>
 #include <stdbool.h>
+#include "bucketsort.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
