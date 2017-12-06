@@ -2323,7 +2323,8 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 	uint16_t unexpected_random = 0;
 	uint16_t sync_tries = 0;
 
-	bool have_uid = false;
+	bool received_nack;
+	bool have_uid = false;	
 	uint8_t cascade_levels = 0;
 	
 	// static variables here, is re-used in the next call
@@ -2364,6 +2365,8 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 	uint16_t i;
 	for(i = 0; true; ++i) {
 
+		received_nack = false;
+		
 		WDT_HIT();
 
 		// Test if the action was cancelled
@@ -2417,7 +2420,11 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 		
 		// Transmit reader nonce with fake par
 		ReaderTransmitPar(mf_nr_ar, sizeof(mf_nr_ar), par, NULL);
-	
+
+		// Receive answer. This will be a 4 Bit NACK when the 8 parity bits are OK after decoding
+		if (ReaderReceive(receivedAnswer, receivedAnswerPar)) {
+			received_nack = true;
+		}
 		// we didn't calibrate our clock yet,
 		// iceman: has to be calibrated every time.
 		if (previous_nt && !nt_attacked) { 
@@ -2434,8 +2441,6 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 						isOK = -3;		// Card has an unpredictable PRNG. Give up	
 						break;
 					} else {						
-//						if (sync_cycles <= 0) sync_cycles += PRNG_SEQUENCE_LENGTH;
-						LED_B_OFF();
 						continue;		// continue trying...
 					}
 				}
@@ -2453,11 +2458,9 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 				if (MF_DBGLEVEL >= 4)
 					Dbprintf("calibrating in cycle %d. nt_distance=%d, elapsed_prng_sequences=%d, new sync_cycles: %d\n", i, nt_distance, elapsed_prng_sequences, sync_cycles);
 
-				LED_B_OFF();
 				continue;
 			}
 		}
-		LED_B_OFF();
 
 		if ( (nt != nt_attacked) && nt_attacked) { 	// we somehow lost sync. Try to catch up again...
 			
@@ -2494,7 +2497,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 		}
  
 		// Receive answer. This will be a 4 Bit NACK when the 8 parity bits are OK after decoding
-		if (ReaderReceive(receivedAnswer, receivedAnswerPar)) {
+		if (received_nack) {
 			catch_up_cycles = 8; 	// the PRNG is delayed by 8 cycles due to the NAC (4Bits = 0x05 encrypted) transfer
 	
 			if (nt_diff == 0)
@@ -2517,7 +2520,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 			// No NACK.	
 			if (nt_diff == 0 && first_try) {
 				par[0]++;
-				if (par[0] == 0x00) {	// tried all 256 possible parities without success. Card doesn't send NACK.
+				if (par[0] == 0) {	// tried all 256 possible parities without success. Card doesn't send NACK.
 					isOK = -2;
 					break;
 				}
@@ -2681,7 +2684,6 @@ void DetectNACKbug() {
 						if (sync_cycles <= 0) {
 							sync_cycles += PRNG_SEQUENCE_LENGTH;
 						}
-						LED_B_OFF();
 						continue;		// continue trying...
 					}
 				}
@@ -2704,11 +2706,9 @@ void DetectNACKbug() {
 				if (MF_DBGLEVEL >= 4)
 					Dbprintf("calibrating in cycle %d. nt_distance=%d, elapsed_prng_sequences=%d, new sync_cycles: %d\n", i, nt_distance, elapsed_prng_sequences, sync_cycles);
 
-				LED_B_OFF();
 				continue;
 			}
 		}
-		LED_B_OFF();
 
 		if ( (nt != nt_attacked) && nt_attacked) { 	
 			// we somehow lost sync. Try to catch up again...			
