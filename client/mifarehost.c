@@ -20,10 +20,10 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 	UsbCommand c = {CMD_READER_MIFARE, {true, blockno, key_type}};
 
 	// message
-	printf("-------------------------------------------------------------------------\n");
+	printf("----------------------------------------------------------------------------\n");
 	printf("Executing command. Expected execution time: 25sec on average\n");
 	printf("Press pm3-button on the proxmark3 device to abort both proxmark3 and client.\n");
-	printf("-------------------------------------------------------------------------\n");
+	printf("----------------------------------------------------------------------------\n");
 
 	while (true) {
 		clearCommandBuffer();
@@ -58,7 +58,8 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 				break;
 			}
 		}
-
+		printf("\n");
+		
 		if (par_list == 0 && c.arg[0] == true) {
 			PrintAndLog("Parity is all zero. Most likely this card sends NACK on every failed authentication.");
 			PrintAndLog("Attack will take a few seconds longer because we need two consecutive successful runs.");
