@@ -117,7 +117,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 	return 0;
 }
 int mfCheckKeys (uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keycnt, uint8_t * keyBlock, uint64_t * key){
-	*key = 0;	
+	*key = -1;	
 	UsbCommand c = {CMD_MIFARE_CHKKEYS, { (blockNo | (keyType << 8)), clear_trace, keycnt}};
 	memcpy(c.d.asBytes, keyBlock, 6 * keycnt);
 	clearCommandBuffer();
@@ -441,10 +441,10 @@ uint32_t ks2 = 0;
 uint32_t ks3 = 0;
 
 uint32_t cuid = 0;    // serial number
-uint32_t nt =0;      // tag challenge
-uint32_t nr_enc =0;  // encrypted reader challenge
-uint32_t ar_enc =0;  // encrypted reader response
-uint32_t at_enc =0;  // encrypted tag response
+uint32_t nt = 0;      // tag challenge
+uint32_t nr_enc = 0;  // encrypted reader challenge
+uint32_t ar_enc = 0;  // encrypted reader response
+uint32_t at_enc = 0;  // encrypted tag response
 
 int isTraceCardEmpty(void) {
 	return ((traceCard[0] == 0) && (traceCard[1] == 0) && (traceCard[2] == 0) && (traceCard[3] == 0));
@@ -765,15 +765,28 @@ bool detect_classic_prng(void){
 	memcpy(c.d.asBytes, cmd, sizeof(cmd));
 
 	clearCommandBuffer();
-	SendCommand(&c);
-	WaitForResponse(CMD_ACK, &resp);
-	WaitForResponse(CMD_ACK, &respA);
+	SendCommand(&c);					
+	
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+        PrintAndLog("PRNG UID: Reply timeout.");
+		return -1;
+	}
 		
 	// if select tag failed.
 	if ( resp.arg[0] == 0 ) {
 		printf("Error:  selecting tag failed,  can't detect prng\n");
 		return false;
 	}
+	if (!WaitForResponseTimeout(CMD_ACK, &respA, 2500)) {
+        PrintAndLog("PRNG data: Reply timeout.");
+		return -1;
+	}
+
+	// check respA
+	if (respA.arg[0] != 4) {
+		PrintAndLog("PRNG data error: Wrong length: %d", respA.arg[0]);
+		return -1;
+	}			
 
 	uint32_t nonce = bytes_to_num(respA.d.asBytes, respA.arg[0]);
 	return validate_prng_nonce(nonce);
