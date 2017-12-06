@@ -942,7 +942,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 		}						   
 		
 		uint64_t t2 = msclock() - t1;
-		PrintAndLog("Time to check 6 known keys: %.0f seconds\n", (float)t2/1000.0 );
+		PrintAndLog("Time to check %d known keys: %.0f seconds\n", MIFARE_DEFAULTKEYS_SIZE, (float)t2/1000.0 );
 		PrintAndLog("enter nested...");	
 		
 		// nested sectors
@@ -2036,6 +2036,8 @@ int CmdHF14AMfKeyBrute(const char *Cmd) {
 
 void printKeyTable_fast( uint8_t sectorscnt, icesector_t *e_sector, uint64_t bar, uint64_t foo ){
 	
+	char strA[12+1] = {0};
+	char strB[12+1] = {0};	
 	uint8_t arr[80];
 	for (uint8_t i = 0; i < 64;  ++i) {
 		arr[i] = (foo >> i) & 0x1;
@@ -2048,25 +2050,47 @@ void printKeyTable_fast( uint8_t sectorscnt, icesector_t *e_sector, uint64_t bar
 	PrintAndLog("|sec|key A           |res|key B           |res|");
 	PrintAndLog("|---|----------------|---|----------------|---|");
 	for (uint8_t i = 0; i < sectorscnt; ++i) {
-		PrintAndLog("|%03d|  %012" PRIx64 "  | %d |  %012" PRIx64 "  | %d |"
+
+		snprintf(strA, sizeof(strA), "------------");
+		snprintf(strB, sizeof(strB), "------------");
+		
+		if ( arr[i*2] )
+			snprintf(strA, sizeof(strA), "%012" PRIx64, bytes_to_num(e_sector[i].keyA, 6));
+		
+		if ( arr[(i*2)+1] )
+			snprintf(strB, sizeof(strB), "%012" PRIx64, bytes_to_num(e_sector[i].keyB, 6));
+		
+		PrintAndLog("|%03d|  %s  | %d |  %s  | %d |"
 			, i
-			, bytes_to_num(e_sector[i].keyA, 6)
-			, arr[i*2]
-			, bytes_to_num(e_sector[i].keyB, 6)
-			, arr[(i*2)+1]
+			, strA, arr[i*2]
+			, strB, arr[(i*2)+1]
 		);
 	}
 	PrintAndLog("|---|----------------|---|----------------|---|");
 }
 
 void printKeyTable( uint8_t sectorscnt, sector_t *e_sector ){
+	char strA[12+1] = {0};
+	char strB[12+1] = {0};	
 	PrintAndLog("|---|----------------|---|----------------|---|");
 	PrintAndLog("|sec|key A           |res|key B           |res|");
 	PrintAndLog("|---|----------------|---|----------------|---|");
 	for (uint8_t i = 0; i < sectorscnt; ++i) {
-		PrintAndLog("|%03d|  %012" PRIx64 "  | %d |  %012" PRIx64 "  | %d |", i,
-			e_sector[i].Key[0], e_sector[i].foundKey[0], 
-			e_sector[i].Key[1], e_sector[i].foundKey[1]
+		
+		snprintf(strA, sizeof(strA), "------------");
+		snprintf(strB, sizeof(strB), "------------");
+		
+		if ( e_sector[i].foundKey[0] )
+			snprintf(strA, sizeof(strA), "%012" PRIx64, e_sector[i].Key[0]);
+		
+		if ( e_sector[i].foundKey[1] )
+			snprintf(strB, sizeof(strB), "%012" PRIx64, e_sector[i].Key[1]);
+
+		
+		PrintAndLog("|%03d|  %s  | %d |  %s  | %d |"
+			, i
+			, strA, e_sector[i].foundKey[0]
+			, strB, e_sector[i].foundKey[1]
 		);
 	}
 	PrintAndLog("|---|----------------|---|----------------|---|");
