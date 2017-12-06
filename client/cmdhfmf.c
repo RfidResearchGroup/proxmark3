@@ -826,7 +826,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 	uint8_t trgKeyType = 0;
 	uint8_t SectorsCnt = 0;
 	uint8_t key[6] = {0, 0, 0, 0, 0, 0};
-	uint8_t keyBlock[6*6];
+	uint8_t keyBlock[MIFARE_DEFAULTKEYS_SIZE*6];
 	uint64_t key64 = 0;
 	bool transferToEml = false;
 	bool createDumpFile = false;
@@ -922,12 +922,10 @@ int CmdHF14AMfNested(const char *Cmd) {
 		if (e_sector == NULL) return 1;
 		
 		//test current key and additional standard keys first
-		memcpy(keyBlock, key, 6);
-		num_to_bytes(0xffffffffffff, 6, (uint8_t*)(keyBlock + 1 * 6));
-		num_to_bytes(0x000000000000, 6, (uint8_t*)(keyBlock + 2 * 6));
-		num_to_bytes(0xa0a1a2a3a4a5, 6, (uint8_t*)(keyBlock + 3 * 6));
-		num_to_bytes(0xb0b1b2b3b4b5, 6, (uint8_t*)(keyBlock + 4 * 6));
-		num_to_bytes(0xaabbccddeeff, 6, (uint8_t*)(keyBlock + 5 * 6));
+		//test current key and additional standard keys first
+		for (int cnt = 0; cnt < MIFARE_DEFAULTKEYS_SIZE; cnt++){
+			num_to_bytes(g_mifare_default_keys[cnt], 6, (uint8_t*)(keyBlock + cnt * 6));
+		}
 
 		PrintAndLog("Testing known keys. Sector count=%d", SectorsCnt);
 		for (i = 0; i < SectorsCnt; i++) {
@@ -1204,7 +1202,6 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 	char filename[FILE_PATH_SIZE]={0};
 	char buf[13];
 	uint8_t *keyBlock = NULL, *p;
-	uint16_t stKeyBlock = 20;
 	int i, keycnt = 0;
 	int transferToEml = 0, createDumpFile = 0;
 	char ctmp = 0x00;
@@ -1213,29 +1210,14 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 	uint64_t foo = 0, bar = 0;
 	icesector_t *e_sector = NULL;
 
-	keyBlock = calloc(stKeyBlock, 6);
+	uint32_t keyitems = MIFARE_DEFAULTKEYS_SIZE;
+	
+	keyBlock = calloc(MIFARE_DEFAULTKEYS_SIZE, 6);
 	if (keyBlock == NULL) return 1;
 
-	uint64_t defaultKeys[] = {
-		0xffffffffffff, // Default key (first key used by program if no user defined key)
-		0x000000000000, // Blank key
-		0xa0a1a2a3a4a5, // NFCForum MAD key
-		0xb0b1b2b3b4b5,
-		0xaabbccddeeff,
-		0x4d3a99c351dd,
-		0x1a982c7e459a,
-		0xd3f7d3f7d3f7,
-		0x714c5c886e97,
-		0x587ee5f9350f,
-		0xa0478cc39091,
-		0x533cb6c723f6,
-		0x8fd0a4f256e9
-	};
-	int defaultKeysSize = sizeof(defaultKeys) / sizeof(uint64_t);
-
-	for (int defaultKeyCounter = 0; defaultKeyCounter < defaultKeysSize; defaultKeyCounter++)
-		num_to_bytes(defaultKeys[defaultKeyCounter], 6, (uint8_t*)(keyBlock + defaultKeyCounter * 6));
-
+	for (int cnt = 0; cnt < MIFARE_DEFAULTKEYS_SIZE; cnt++)
+		num_to_bytes(g_mifare_default_keys[cnt], 6, (uint8_t*)(keyBlock + cnt * 6));
+	
 	// sectors
 	switch(param_getchar(Cmd, 0)) {
 		case '0': SectorsCnt =  5; break;
@@ -1251,8 +1233,9 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 	
 	for (i = transferToEml || createDumpFile; param_getchar(Cmd, 1 + i); i++) {
 		if (!param_gethex(Cmd, 1 + i, keyBlock + 6 * keycnt, 12)) {
-			if ( stKeyBlock - keycnt < 2) {
-				p = realloc(keyBlock, 6*(stKeyBlock+=10));
+
+			if ( keyitems - keycnt < 2) {
+				p = realloc(keyBlock, 6 * (keyitems += 64));
 				if (!p) {
 					PrintAndLog("Cannot allocate memory for Keys");
 					free(keyBlock);
@@ -1287,8 +1270,8 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 					}
 					
 					buf[12] = 0;
-					if ( stKeyBlock - keycnt < 2) {
-						p = realloc(keyBlock, 6*(stKeyBlock += 64));
+					if ( keyitems - keycnt < 2) {
+						p = realloc(keyBlock, 6 * (keyitems += 64));
 						if (!p) {
 							PrintAndLog("Cannot allocate memory for defKeys");
 							free(keyBlock);
@@ -1300,7 +1283,6 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 					int pos = 6 * keycnt;
 					memset(keyBlock + pos, 0, 6);
 					num_to_bytes(strtoll(buf, NULL, 16), 6, keyBlock + pos);
-					//PrintAndLog("check key[%2d] %012" PRIx64, keycnt, bytes_to_num(keyBlock + pos, 6) );
 					keycnt++;
 					memset(buf, 0, sizeof(buf));
 				}
@@ -1309,15 +1291,14 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 			} else {
 				PrintAndLog("File: %s: not found or locked.", filename);
 				free(keyBlock);
-				return 1;
-			
+				return 1;		
 			}
 		}
 	}
 		
 	if (keycnt == 0) {
 		PrintAndLog("No key specified, trying default keys");
-		for (;keycnt < defaultKeysSize; keycnt++)
+		for (;keycnt < MIFARE_DEFAULTKEYS_SIZE; keycnt++)
 			PrintAndLog("key[%2d] %02x%02x%02x%02x%02x%02x", keycnt,
 				(keyBlock + 6*keycnt)[0],(keyBlock + 6*keycnt)[1], (keyBlock + 6*keycnt)[2],
 				(keyBlock + 6*keycnt)[3], (keyBlock + 6*keycnt)[4],	(keyBlock + 6*keycnt)[5], 6);
@@ -1449,8 +1430,6 @@ int CmdHF14AMfChk(const char *Cmd) {
 	char filename[FILE_PATH_SIZE]={0};
 	char buf[13];
 	uint8_t *keyBlock = NULL, *p;
-	uint16_t stKeyBlock = 20;
-	
 	sector_t *e_sector = NULL;
 	
 	int i, res;
@@ -1466,28 +1445,13 @@ int CmdHF14AMfChk(const char *Cmd) {
 	int transferToEml = 0;
 	int createDumpFile = 0;
 
-	keyBlock = calloc(stKeyBlock, 6);
+	uint32_t keyitems = MIFARE_DEFAULTKEYS_SIZE;
+		
+	keyBlock = calloc(MIFARE_DEFAULTKEYS_SIZE, 6);
 	if (keyBlock == NULL) return 1;
 
-	uint64_t defaultKeys[] = {
-		0xffffffffffff, // Default key (first key used by program if no user defined key)
-		0x000000000000, // Blank key
-		0xa0a1a2a3a4a5, // NFCForum MAD key
-		0xb0b1b2b3b4b5,
-		0xaabbccddeeff,
-		0x4d3a99c351dd,
-		0x1a982c7e459a,
-		0xd3f7d3f7d3f7,
-		0x714c5c886e97,
-		0x587ee5f9350f,
-		0xa0478cc39091,
-		0x533cb6c723f6,
-		0x8fd0a4f256e9
-	};
-	int defaultKeysSize = sizeof(defaultKeys) / sizeof(uint64_t);
-
-	for (int defaultKeyCounter = 0; defaultKeyCounter < defaultKeysSize; defaultKeyCounter++)
-		num_to_bytes(defaultKeys[defaultKeyCounter], 6, (uint8_t*)(keyBlock + defaultKeyCounter * 6));
+	for (int cnt = 0; cnt < MIFARE_DEFAULTKEYS_SIZE; cnt++)
+		num_to_bytes(g_mifare_default_keys[cnt], 6, (uint8_t*)(keyBlock + cnt * 6));
 
 	
 	if (param_getchar(Cmd, 0)=='*') {
@@ -1520,8 +1484,8 @@ int CmdHF14AMfChk(const char *Cmd) {
 	
 	for (i = transferToEml || createDumpFile; param_getchar(Cmd, 2 + i); i++) {
 		if (!param_gethex(Cmd, 2 + i, keyBlock + 6 * keycnt, 12)) {
-			if ( stKeyBlock - keycnt < 2) {
-				p = realloc(keyBlock, 6*(stKeyBlock+=10));
+			if ( keyitems - keycnt < 2) {
+				p = realloc(keyBlock, 6 * (keyitems += 64));
 				if (!p) {
 					PrintAndLog("Cannot allocate memory for Keys");
 					free(keyBlock);
@@ -1557,8 +1521,8 @@ int CmdHF14AMfChk(const char *Cmd) {
 					
 					buf[12] = 0;
 
-					if ( stKeyBlock - keycnt < 2) {
-						p = realloc(keyBlock, 6*(stKeyBlock+=10));
+					if ( keyitems - keycnt < 2) {
+						p = realloc(keyBlock, 6 * (keyitems += 64));
 						if (!p) {
 							PrintAndLog("Cannot allocate memory for defKeys");
 							free(keyBlock);
@@ -1586,7 +1550,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 	
 	if (keycnt == 0) {
 		PrintAndLog("No key specified, trying default keys");
-		for (;keycnt < defaultKeysSize; keycnt++)
+		for (;keycnt < MIFARE_DEFAULTKEYS_SIZE; keycnt++)
 			PrintAndLog("key[%2d] %02x%02x%02x%02x%02x%02x", keycnt,
 				(keyBlock + 6*keycnt)[0],(keyBlock + 6*keycnt)[1], (keyBlock + 6*keycnt)[2],
 				(keyBlock + 6*keycnt)[3], (keyBlock + 6*keycnt)[4],	(keyBlock + 6*keycnt)[5], 6);

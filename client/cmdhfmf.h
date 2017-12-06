@@ -28,6 +28,7 @@
 #include "cmdhfmfhard.h"
 #include "mifarehost.h"
 #include "util_posix.h" // msclock
+#include "mifaredefault.h"  // mifare default key array
 
 
 extern int CmdHFMF(const char *Cmd);
