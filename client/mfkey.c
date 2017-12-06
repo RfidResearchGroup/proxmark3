@@ -33,8 +33,8 @@ uint32_t intersection(uint64_t *listA, uint64_t *listB) {
 			p2++;
 		}
 		else {
-			while (compare_uint64(p1, p2) == -1) ++p1;
-			while (compare_uint64(p1, p2) == 1) ++p2;
+			while (compare_uint64(p1, p2) < 0) ++p1;
+			while (compare_uint64(p1, p2) > 0) ++p2;
 		}
 	}
 	*p3 = -1;
@@ -70,7 +70,6 @@ uint32_t nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, ui
 	states = lfsr_common_prefix(nr, rr, ks3x, par, (par_info == 0));
 
 	if (!states) {
-		printf("Failed getting states\n");
 		*keys = NULL;
 		return 0;
 	}
@@ -78,7 +77,7 @@ uint32_t nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, ui
 	keylist = (uint64_t*)states;
 
 	for (i = 0; keylist[i]; i++) {
-		lfsr_rollback_word(states+i, uid^nt, 0);
+		lfsr_rollback_word(states+i, uid ^ nt, 0);
 		crypto1_get_lfsr(states+i, &key_recovered);
 		keylist[i] = key_recovered;
 	}

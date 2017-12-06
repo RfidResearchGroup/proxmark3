@@ -51,10 +51,10 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 					return isOK;
 				
 				uid = (uint32_t)bytes_to_num(resp.d.asBytes +  0, 4);
-				nt =  (uint32_t)bytes_to_num(resp.d.asBytes +  4, 4);
+				nt = (uint32_t)bytes_to_num(resp.d.asBytes +  4, 4);
 				par_list = bytes_to_num(resp.d.asBytes +  8, 8);
 				ks_list = bytes_to_num(resp.d.asBytes +  16, 8);
-				nr = bytes_to_num(resp.d.asBytes + 24, 4);
+				nr = (uint32_t)bytes_to_num(resp.d.asBytes + 24, 4);
 				break;
 			}
 		}
@@ -73,12 +73,15 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 			continue;
 		}
 
-		qsort(keylist, keycount, sizeof(*keylist), compare_uint64);
-		keycount = intersection(last_keylist, keylist);
-		if (keycount == 0) {
-			free(last_keylist);
-			last_keylist = keylist;
-			continue;
+		// only parity zero attack
+		if (par_list == 0 ) {
+			qsort(keylist, keycount, sizeof(*keylist), compare_uint64);
+			keycount = intersection(last_keylist, keylist);
+			if (keycount == 0) {
+				free(last_keylist);
+				last_keylist = keylist;
+				continue;
+			}
 		}
 
 		if (keycount > 1) {
@@ -112,6 +115,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 			PrintAndLog("Test authentication failed. Restarting darkside attack");
 			free(last_keylist);
 			last_keylist = keylist;
+			c.arg[0] = true;
 		}
 	}
 	return 0;
@@ -183,8 +187,7 @@ int Compare16Bits(const void * a, const void * b) {
 }
 
 // wrapper function for multi-threaded lfsr_recovery32
-void* nested_worker_thread(void *arg)
-{
+void* nested_worker_thread(void *arg) {
 	struct Crypto1State *p1;
 	StateList_t *statelist = arg;
 	statelist->head.slhead = lfsr_recovery32(statelist->ks1, statelist->nt ^ statelist->uid);	
@@ -198,8 +201,7 @@ void* nested_worker_thread(void *arg)
 	return statelist->head.slhead;
 }
 
-int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t * resultKey, bool calibrate) 
-{
+int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t * resultKey, bool calibrate) {
 	uint16_t i;
 	uint32_t uid;
 	UsbCommand resp;
