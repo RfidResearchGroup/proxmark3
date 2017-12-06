@@ -890,15 +890,21 @@ int detect_classic_nackbug(bool verbose){
 				PrintAndLog("Num of received NACK  : %u", nacks);
 			}
 			switch( ok ) {
-				case 99 : if (verbose) PrintAndLog("Button pressed. Aborted."); return 0;
+				case 99 : PrintAndLog("Button pressed. Aborted."); return 0;
 				case 96 : 
-				case 98 : if (verbose) PrintAndLog("Card random number generator is not predictable)."); return 0;
-				case 97 : if (verbose) {
-							PrintAndLog("Card random number generator seems to be based on the well-known generating polynomial");
-							PrintAndLog("with 16 effective bits only, but shows unexpected behavior, try again."); 
-							return 0;
+				case 98 : { 
+							if (verbose)
+								PrintAndLog("Card random number generator is not predictable.");
+							PrintAndLog("Detection failed");
+							return 2;
 						}
-				
+				case 97 : {
+							if (verbose) {
+								PrintAndLog("Card random number generator seems to be based on the well-known generating polynomial");
+								PrintAndLog("with 16 effective bits only, but shows unexpected behavior, try again."); 
+								return 0;
+							}
+						}				
 				case  2 : PrintAndLog("Always leak NACK detected"); return 3;
 				case  1 : PrintAndLog("NACK bug detected"); return 1;
 				case  0 : PrintAndLog("No NACK bug detected"); return 2;
