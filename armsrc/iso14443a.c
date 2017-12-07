@@ -824,9 +824,7 @@ bool prepare_allocated_tag_modulation(tag_response_info_t* response_info) {
 void SimulateIso14443aTag(int tagType, int flags, uint8_t* data) {
 
 	#define ATTACK_KEY_COUNT 8 // keep same as define in cmdhfmf.c -> readerAttack()
-	// init pseudorand
-	fast_prand();
-	
+
 	uint8_t sak = 0;
 	uint32_t cuid = 0;			
 	uint32_t nonce = 0;
@@ -1149,8 +1147,8 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t* data) {
 				cardAUTHKEY = receivedCmd[0] - 0x60;
 				cardAUTHSC = receivedCmd[1] / 4; // received block num
 				
-				// incease nonce at AUTH requests. this is time consuming.
-				nonce = prand();
+				// incease nonce at AUTH requests. this is time consuming.				
+				nonce = prng_successor( GetTickCount(), 32 );
 				//num_to_bytes(nonce, 4, response5);
 				num_to_bytes(nonce, 4, dynamic_response_info.response);				
 				dynamic_response_info.response_n = 4;
@@ -2779,9 +2777,6 @@ void DetectNACKbug() {
 * (unless reader attack mode enabled then it runs util it gets enough nonces to recover all keys attmpted)
   */
 void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *datain) {
-
-	// init pseudorand
-	fast_prand( GetTickCount() );
 	
 	int cardSTATE = MFEMUL_NOFIELD;
 	int _UID_LEN = 0;  // 4, 7, 10
@@ -2818,7 +2813,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 
 	// TAG Nonce - Authenticate response
 	uint8_t rAUTH_NT[4];
-	uint32_t nonce = prand();
+	uint32_t nonce = prng_successor( GetTickCount(), 32 );
 	num_to_bytes(nonce, 4, rAUTH_NT);
 	
 	// uint8_t rAUTH_NT[] = {0x55, 0x41, 0x49, 0x92};// nonce from nested? why this?
@@ -2964,7 +2959,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 			crypto1_destroy(pcs);
 			cardAUTHKEY = 0xff;
 			LEDsoff();
-			nonce = prand(); 
+			nonce = prng_successor(selTimer, 32); 
 			continue;
 		}
 		
