@@ -160,15 +160,15 @@ struct Crypto1State* lfsr_recovery32(uint32_t ks2, uint32_t in)
 	int i;
 
 	// split the keystream into an odd and even part
-	for(i = 31; i >= 0; i -= 2)
+	for (i = 31; i >= 0; i -= 2)
 		oks = oks << 1 | BEBIT(ks2, i);
-	for(i = 30; i >= 0; i -= 2)
+	for (i = 30; i >= 0; i -= 2)
  		eks = eks << 1 | BEBIT(ks2, i);
 
 	odd_head = odd_tail = malloc(sizeof(uint32_t) << 21);
 	even_head = even_tail = malloc(sizeof(uint32_t) << 21);
 	statelist =  malloc(sizeof(struct Crypto1State) << 18);
-	if(!odd_tail-- || !even_tail-- || !statelist) {
+	if (!odd_tail-- || !even_tail-- || !statelist) {
 		free(statelist);
 		statelist = 0;
 		goto out;
@@ -181,7 +181,7 @@ struct Crypto1State* lfsr_recovery32(uint32_t ks2, uint32_t in)
 	
 	for (uint32_t i = 0; i < 2; i++) {
 		for (uint32_t j = 0; j <= 0xff; j++) {
-			bucket[i][j].head = malloc(sizeof(uint32_t)<<14);
+			bucket[i][j].head = malloc(sizeof(uint32_t) << 14);
 			if (!bucket[i][j].head) {
 				goto out;
 			}
@@ -436,7 +436,6 @@ static uint32_t fastfwd[2][8] = {
 	{ 0, 0x4BC53, 0xECB1, 0x450E2, 0x25E29, 0x6E27A, 0x2B298, 0x60ECB},
 	{ 0, 0x1D962, 0x4BC53, 0x56531, 0xECB1, 0x135D3, 0x450E2, 0x58980}};
 
-
 /** lfsr_prefix_ks
  *
  * Is an exported helper function from the common prefix attack
@@ -523,15 +522,15 @@ struct Crypto1State* lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8]
 	even = lfsr_prefix_ks(ks, 0);
 
 	s = statelist = malloc((sizeof *statelist) << 24); // was << 20. Need more for no_par special attack. Enough???
-	if(!s || !odd || !even) {
+	if (!s || !odd || !even) {
 		free(statelist);
 		statelist = 0;
-                goto out;
+		goto out;
 	}
 
-	for(o = odd; *o + 1; ++o)
-		for(e = even; *e + 1; ++e)
-			for(top = 0; top < 64; ++top) {
+	for (o = odd; *o + 1; ++o)
+		for (e = even; *e + 1; ++e)
+			for (top = 0; top < 64; ++top) {
 				*o += 1 << 21;
 				*e += (!(top & 7) + 1) << 21;
 				s = check_pfx_parity(pfx, rr, par, *o, *e, s, no_par);

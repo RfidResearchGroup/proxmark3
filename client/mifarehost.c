@@ -33,7 +33,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 		while (ukbhit()) {
 			int gc = getchar(); (void)gc;
 		}
-
+		
 		// wait cycle
 		while (true) {
 			printf(".");
@@ -61,7 +61,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 		printf("\n");
 		
 		if (par_list == 0 && c.arg[0] == true) {
-			PrintAndLog("Parity is all zero. Most likely this card sends NACK on every failed authentication.");
+			PrintAndLog("Parity is all zero. Most likely this card sends NACK on every authentication.");
 			PrintAndLog("Attack will take a few seconds longer because we need two consecutive successful runs.");
 		}
 		c.arg[0] = false;

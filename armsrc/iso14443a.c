@@ -2300,6 +2300,14 @@ int32_t dist_nt(uint32_t nt1, uint32_t nt2) {
 //-----------------------------------------------------------------------------
 void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 	
+	if ( first_try ) {
+		iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
+	}
+
+	BigBuf_free(); BigBuf_Clear_ext(false);	
+	clear_trace();
+	set_tracing(true);
+	
 	uint8_t mf_auth[] 	= { keytype, block, 0x00, 0x00 };
 	uint8_t mf_nr_ar[]	= {0,0,0,0,0,0,0,0};
 	uint8_t uid[10]		= {0,0,0,0,0,0,0,0,0,0};
@@ -2309,9 +2317,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
 	uint8_t par[1] = {0};	// maximum 8 Bytes to be sent here, 1 byte parity is therefore enough
 	uint8_t nt_diff = 0;
-	uint32_t nt = 0;
-	uint32_t previous_nt = 0;	
-	uint32_t cuid = 0;
+	uint32_t nt = 0, previous_nt = 0, cuid = 0;
 	
 	int32_t catch_up_cycles = 0;
 	int32_t last_catch_up = 0;
@@ -2322,8 +2328,8 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 	uint16_t unexpected_random = 0;
 	uint16_t sync_tries = 0;
 
-	bool received_nack;
 	bool have_uid = false;	
+	bool received_nack;
 	uint8_t cascade_levels = 0;
 	
 	// static variables here, is re-used in the next call
@@ -2336,9 +2342,9 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 	AppendCrc14443a(mf_auth, 2);
 	
 	if (first_try) {
-		// create our reader nonce randomly 
-		uint32_t nonce = prng_successor( GetCountSspClk() & 0xfffffff8 , 32);
-		num_to_bytes(nonce, 4, mf_nr_ar);
+		sync_time = GetCountSspClk() & 0xfffffff8;
+		sync_cycles = PRNG_SEQUENCE_LENGTH; // Mifare Classic's random generator repeats every 2^16 cycles (and so do the nonces).
+		nt_attacked = 0;
 		mf_nr_ar3 = 0;
 		par_low = 0;
 	} else {
@@ -2349,27 +2355,16 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 		par[0] = par_low;
 	}
 
-	sync_cycles = PRNG_SEQUENCE_LENGTH; // Mifare Classic's random generator repeats every 2^16 cycles (and so do the nonces).		
-	nt_attacked = 0;
-			
-	BigBuf_free(); BigBuf_Clear_ext(false);	
-	clear_trace();
-	set_tracing(false);	
-	iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
-
-	sync_time = GetCountSspClk() & 0xfffffff8;	
-	if (MF_DBGLEVEL >= 4) Dbprintf("Mifare::Sync %u", sync_time);
-
 	LED_C_ON(); 
 	uint16_t i;
-	for(i = 0; true; ++i) {
+	for (i = 0; true; ++i) {
 
 		received_nack = false;
 		
 		WDT_HIT();
 
 		// Test if the action was cancelled
-		if(BUTTON_PRESS()) {
+		if (BUTTON_PRESS()) {
 			isOK = -1;
 			break;
 		}
@@ -2403,14 +2398,14 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 								
 		// if we missed the sync time already, advance to the next nonce repeat
 		while ( GetCountSspClk() > sync_time) {
-			++elapsed_prng_sequences;
+			elapsed_prng_sequences++;
 			sync_time = (sync_time & 0xfffffff8 ) + sync_cycles;
 		}		
 
 		// Transmit MIFARE_CLASSIC_AUTH at synctime. Should result in returning the same tag nonce (== nt_attacked)
 		ReaderTransmit(mf_auth, sizeof(mf_auth), &sync_time);
 
-		// Receive the (4 Byte) "random" nonce from TAG
+		// Receive the (4 Byte) "random" TAG nonce 
 		if (!ReaderReceive(receivedAnswer, receivedAnswerPar))
 			continue;
 
@@ -2421,9 +2416,9 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 		ReaderTransmitPar(mf_nr_ar, sizeof(mf_nr_ar), par, NULL);
 
 		// Receive answer. This will be a 4 Bit NACK when the 8 parity bits are OK after decoding
-		if (ReaderReceive(receivedAnswer, receivedAnswerPar)) {
+		if (ReaderReceive(receivedAnswer, receivedAnswerPar))
 			received_nack = true;
-		}
+
 		// we didn't calibrate our clock yet,
 		// iceman: has to be calibrated every time.
 		if (first_try && previous_nt && !nt_attacked) { 
@@ -2557,7 +2552,6 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 *  Thanks to @doegox for the feedback and new approaches.
 */
 void DetectNACKbug() {
-
 	uint8_t mf_auth[] 	= {0x60, 0x00, 0xF5, 0x7B};
 	uint8_t mf_nr_ar[]	= {0,0,0,0,0,0,0,0};
 	uint8_t uid[10]		= {0,0,0,0,0,0,0,0,0,0};
@@ -2578,28 +2572,22 @@ void DetectNACKbug() {
 	
 	// Mifare Classic's random generator repeats every 2^16 cycles (and so do the nonces).			
 	uint32_t sync_cycles = PRNG_SEQUENCE_LENGTH;
-	
-	// create our reader nonce randomly 
-	uint32_t nonce = prng_successor( GetCountSspClk() & 0xfffffff8 , 32);
-	num_to_bytes(nonce, 4, mf_nr_ar);
-	
+
 	BigBuf_free(); BigBuf_Clear_ext(false);	
 	clear_trace();
 	set_tracing(true);	
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
 
 	sync_time = GetCountSspClk() & 0xfffffff8;	
-	
-	if (MF_DBGLEVEL >= 4) Dbprintf("Mifare::Sync %u", sync_time);
 				
 	LED_C_ON(); 
 	uint16_t i;
-	for (i = 0; true; ++i) {
+	for (i = 1; true; ++i) {
 
 		received_nack = false;
 		
 		// Cards always leaks a NACK, no matter the parity
-		if ((i==10) && (num_nacks == i)) {
+		if ((i==10) && (num_nacks == i-1)) {
 			isOK = 2;
 			break;
 		}
@@ -2607,7 +2595,7 @@ void DetectNACKbug() {
 		WDT_HIT();
 
 		// Test if the action was cancelled
-		if(BUTTON_PRESS()) {
+		if (BUTTON_PRESS()) {
 			isOK = 99;
 			break;
 		}
@@ -2640,7 +2628,7 @@ void DetectNACKbug() {
 		catch_up_cycles = 0;
 								
 		// if we missed the sync time already, advance to the next nonce repeat
-		while( GetCountSspClk() > sync_time) {
+		while ( GetCountSspClk() > sync_time) {
 			++elapsed_prng_sequences;
 			sync_time = (sync_time & 0xfffffff8 ) + sync_cycles;
 		}		
@@ -2648,7 +2636,7 @@ void DetectNACKbug() {
 		// Transmit MIFARE_CLASSIC_AUTH at synctime. Should result in returning the same tag nonce (== nt_attacked)
 		ReaderTransmit(mf_auth, sizeof(mf_auth), &sync_time);
 
-		// Receive the (4 Byte) "random" nonce from TAG
+		// Receive the (4 Byte) "random" TAG nonce
 		if (!ReaderReceive(receivedAnswer, receivedAnswerPar))
 			continue;
 	
@@ -2661,6 +2649,10 @@ void DetectNACKbug() {
 		if (ReaderReceive(receivedAnswer, receivedAnswerPar)) {
 			received_nack = true;
 			num_nacks++;
+			// ALWAYS leak Detection.
+			if ( i == num_nacks ) {
+				continue;
+			}
 		} 
 
 		// we didn't calibrate our clock yet,
@@ -2675,7 +2667,7 @@ void DetectNACKbug() {
 			} else {
 				if (nt_distance == -99999) { // invalid nonce received
 					unexpected_random++;
-					if (unexpected_random > MAX_UNEXPECTED_RANDOM) {
+					if (unexpected_random > MAX_UNEXPECTED_RANDOM ) {
 						// Card has an unpredictable PRNG. Give up	
 						isOK = 98;
 						break;
@@ -2683,7 +2675,7 @@ void DetectNACKbug() {
 						if (sync_cycles <= 0) {
 							sync_cycles += PRNG_SEQUENCE_LENGTH;
 						}
-						continue;		// continue trying...
+						continue;
 					}
 				}
 				
