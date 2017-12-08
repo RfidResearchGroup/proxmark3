@@ -1007,7 +1007,7 @@ int CmdHFSearch(const char *Cmd){
 	if (cmdp == 'h' || cmdp == 'H') return usage_hf_search();
 	
 	PrintAndLog("");
-	int ans = CmdHF14AReader("s");
+	int ans = CmdHF14AInfo("s");
 	if (ans > 0) {
 		PrintAndLog("\nValid ISO14443-A Tag Found - Quiting Search\n");
 		return ans;

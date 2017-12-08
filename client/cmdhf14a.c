@@ -308,7 +308,7 @@ int CmdHF14AInfo(const char *Cmd) {
 		PrintAndLog("Card doesn't support standard iso14443-3 anticollision");
 		PrintAndLog("ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
 		DropField();
-		return 0;
+		return select_status;
 	}
 
 	PrintAndLog(" UID : %s", sprint_hex(card.uid, card.uidlen));
