@@ -1161,7 +1161,7 @@ void chkKey_scanA(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, ui
 				found[(s*2)] = 1; 
 				++*foundkeys; 
 				
-				Dbprintf("ChkKeys_fast: Scan A (%d)", c->block);
+				if (MF_DBGLEVEL >= 3) Dbprintf("ChkKeys_fast: Scan A (%d)", c->block);
 			}
 		}
 	} 
@@ -1182,7 +1182,7 @@ void chkKey_scanA(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, ui
 				found[(s*2)+1] = 1; 
 				++*foundkeys; 
 				
-				Dbprintf("ChkKeys_fast: Scan B (%d)", c->block);
+				if (MF_DBGLEVEL >= 3) Dbprintf("ChkKeys_fast: Scan B (%d)", c->block);
 			}
 		}
 	} 
@@ -1192,7 +1192,7 @@ void chkKey_scanA(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, ui
 // when A is found but not B,  try to read B.
 void chkKey_loopBonly(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, uint8_t *sectorcnt, uint8_t *foundkeys) {
 
-	Dbprintf("ChkKeys_fast: Loop B only (%d)", c->block);
+	if (MF_DBGLEVEL >= 3) Dbprintf("ChkKeys_fast: Loop B only (%d)", c->block);
 
 	// read Block B, if A is found.
 	for (uint8_t s = 0; s < *sectorcnt; ++s) {
@@ -1222,8 +1222,8 @@ void chkKey_loopBonly(struct chk_t *c, struct sector_t *k_sector, uint8_t *found
 void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
 
 	// save old debuglevel, and tempory turn off dbg printing. speedissues.
-	int OLD_MF_DBGLEVEL = MF_DBGLEVEL;	
-	MF_DBGLEVEL = MF_DBG_NONE;
+	// int OLD_MF_DBGLEVEL = MF_DBGLEVEL;	
+	// MF_DBGLEVEL = MF_DBG_NONE;
 
 	// first call or 
 	uint8_t sectorcnt = arg0 & 0xFF; // 16;
@@ -1250,7 +1250,7 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 	if (uid == NULL || firstchunk) {
 		uid = BigBuf_malloc(10);
 		if (uid == NULL ) {
-			Dbprintf("ChkKeys: uid malloc failed");
+			if (MF_DBGLEVEL >= 3) Dbprintf("ChkKeys: uid malloc failed");
 			goto OUT;
 		}
 	}
@@ -1271,7 +1271,7 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 	
 		iso14a_card_select_t card_info;		
 		if(!iso14443a_select_card(uid, &card_info, &cuid, true, 0, true)) {
-			Dbprintf("ChkKeys: Can't select card (ALL)");
+			if (MF_DBGLEVEL >= 1) Dbprintf("ChkKeys: Can't select card (ALL)");
 			goto OUT;
 		}
 		switch (card_info.uidlen) {
@@ -1345,7 +1345,7 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 		
 OUT:	
 	// restore debug level
-	MF_DBGLEVEL = OLD_MF_DBGLEVEL;	
+	// MF_DBGLEVEL = OLD_MF_DBGLEVEL;	
 	LEDsoff();
 
 	// All keys found, send to client, or last keychunk from client
@@ -1414,7 +1414,7 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 		if (!have_uid) { // need a full select cycle to get the uid first
 			iso14a_card_select_t card_info;		
 			if(!iso14443a_select_card(uid, &card_info, &cuid, true, 0, true)) {
-				//if (MF_DBGLEVEL >= 1)	Dbprintf("ChkKeys: Can't select card (ALL)");
+				if (MF_DBGLEVEL >= 1)	Dbprintf("ChkKeys: Can't select card (ALL)");
 				--i; // try same key once again
 				continue;
 			}
@@ -1427,7 +1427,7 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 			have_uid = true;	
 		} else { // no need for anticollision. We can directly select the card
 			if(!iso14443a_select_card(uid, NULL, NULL, false, cascade_levels, true)) {
-				//if (MF_DBGLEVEL >= 1)	Dbprintf("ChkKeys: Can't select card (UID)");
+				if (MF_DBGLEVEL >= 1)	Dbprintf("ChkKeys: Can't select card (UID)");
 				--i; // try same key once again
 				continue;
 			}
