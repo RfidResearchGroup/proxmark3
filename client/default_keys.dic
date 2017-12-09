@@ -1,10 +1,14 @@
 #
-# Default Keys as already in Proxmark.exe:
+# Mifare Default Keys
+#   -- iceman fork version --
+#   -- contribute to this list, sharing is caring --
+#  
 ffffffffffff,//Defaultkey(firstkeyusedbyprogramifnouserdefinedkey)
 000000000000,//Blankkey
 a0a1a2a3a4a5,//NFCForumMADkey
 b0b1b2b3b4b5,
 c0c1c2c3c4c5,
+d0d1d2d3d4d5,
 aabbccddeeff,
 4d3a99c351dd,
 1a982c7e459a,
@@ -487,3 +491,7 @@ f7a39753d018,
 8697389ACA26,
 1AB23CD45EF6,
 013889343891,
+#
+#
+0000000018de,
+16ddcb6b3f24,
