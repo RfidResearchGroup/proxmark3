@@ -187,14 +187,14 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 	// Receive 4 byte tag answer
 	len = ReaderReceive(receivedAnswer, receivedAnswerPar);
 	if (!len) {
-		if (MF_DBGLEVEL >= 1)	Dbprintf("Authentication failed. Card timeout.");
+		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Authentication failed. Card timeout.");
 		return 2;
 	}
 
 	ntpp = prng_successor(nt, 32) ^ crypto1_word(pcs, 0,0);
 
 	if (ntpp != bytes_to_num(receivedAnswer, 4)) {
-		if (MF_DBGLEVEL >= 1)	Dbprintf("Authentication failed. Error card response.");
+		if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("Authentication failed. Error card response.");
 		return 3;
 	}
 	return 0;
@@ -209,18 +209,18 @@ int mifare_classic_readblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blo
 	
 	len = mifare_sendcmd_short(pcs, 1, ISO14443A_CMD_READBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL);
 	if (len == 1) {
-		if (MF_DBGLEVEL >= 1)	Dbprintf("Cmd Error: %02x", receivedAnswer[0]);  
+		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Cmd Error: %02x", receivedAnswer[0]);  
 		return 1;
 	}
 	if (len != 18) {
-		if (MF_DBGLEVEL >= 1)	Dbprintf("Cmd Error: card timeout. len: %x", len);  
+		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Cmd Error: card timeout. len: %x", len);  
 		return 2;
 	}
 
 	memcpy(bt, receivedAnswer + 16, 2);
 	AppendCrc14443a(receivedAnswer, 16);
 	if (bt[0] != receivedAnswer[16] || bt[1] != receivedAnswer[17]) {
-		if (MF_DBGLEVEL >= 1)	Dbprintf("Cmd CRC response error.");  
+		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Cmd CRC response error.");  
 		return 3;
 	}
 	
@@ -381,7 +381,7 @@ int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
 	len = mifare_sendcmd_short(pcs, 1, ISO14443A_CMD_WRITEBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL);
 
 	if ((len != 1) || (receivedAnswer[0] != 0x0A)) {   //  0x0a - ACK
-		if (MF_DBGLEVEL >= 1)	Dbprintf("Cmd Error: %02x", receivedAnswer[0]);  
+		if (MF_DBGLEVEL >= MF_DBG_ERROR1) Dbprintf("Cmd Error: %02x", receivedAnswer[0]);  
 		return 1;
 	}
 	
@@ -406,7 +406,7 @@ int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
 	res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], 3)) << 3;
 
 	if ((len != 1) || (res != 0x0A)) {
-		if (MF_DBGLEVEL >= 1)	Dbprintf("Cmd send data2 Error: %02x", res);  
+		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Cmd send data2 Error: %02x", res);  
 		return 2;
 	}
 	return 0;
@@ -589,23 +589,20 @@ void emlClearMem(void) {
 
 
 // Mifare desfire commands
-int mifare_sendcmd_special(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t* data, uint8_t* answer, uint8_t *answer_parity, uint32_t *timing)
-{
+int mifare_sendcmd_special(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t* data, uint8_t* answer, uint8_t *answer_parity, uint32_t *timing) {
     uint8_t dcmd[5] = {cmd, data[0], data[1], 0x00, 0x00};
 	AppendCrc14443a(dcmd, 3);
 	
 	ReaderTransmit(dcmd, sizeof(dcmd), NULL);
 	int len = ReaderReceive(answer, answer_parity);
 	if(!len) {
-		if (MF_DBGLEVEL >= MF_DBG_ERROR) 
-			Dbprintf("Authentication failed. Card timeout.");
+		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Authentication failed. Card timeout.");
 		return 1;
     }
 	return len;
 }
 
-int mifare_sendcmd_special2(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t* data, uint8_t* answer,uint8_t *answer_parity, uint32_t *timing)
-{
+int mifare_sendcmd_special2(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t* data, uint8_t* answer,uint8_t *answer_parity, uint32_t *timing) {
     uint8_t dcmd[20] = {0x00};
     dcmd[0] = cmd;
     memcpy(dcmd+1,data,17);
@@ -614,8 +611,7 @@ int mifare_sendcmd_special2(struct Crypto1State *pcs, uint8_t crypted, uint8_t c
 	ReaderTransmit(dcmd, sizeof(dcmd), NULL);
 	int len = ReaderReceive(answer, answer_parity);
 	if(!len){
-        if (MF_DBGLEVEL >= MF_DBG_ERROR)
-			Dbprintf("Authentication failed. Card timeout.");
+        if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Authentication failed. Card timeout.");
 		return 1;
     }
 	return len;
