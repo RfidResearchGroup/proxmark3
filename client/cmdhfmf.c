@@ -111,7 +111,7 @@ int usage_hf14_hardnested(void){
 	return 0;
 }
 int usage_hf14_chk(void){
-	PrintAndLog("Usage:  hf mf chk <block number>|<*card memory> <key type (A/B/?)> [t|d] [<key (12 hex symbols)>] [<dic (*.dic)>]");
+	PrintAndLog("Usage:  hf mf chk [h] <block number>|<*card memory> <key type (A/B/?)> [t|d] [<key (12 hex symbols)>] [<dic (*.dic)>]");
 	PrintAndLog("options:");
 	PrintAndLog("      h    this help");	
 	PrintAndLog("      *    all sectors based on card memory, other values then below defaults to 1k");
@@ -129,7 +129,7 @@ int usage_hf14_chk(void){
 	return 0;
 }
 int usage_hf14_chk_fast(void){
-	PrintAndLog("Usage:  hf mf fchk <card memory> [t|d] [<key (12 hex symbols)>] [<dic (*.dic)>]");
+	PrintAndLog("Usage:  hf mf fchk [h] <card memory> [t|d] [<key (12 hex symbols)>] [<dic (*.dic)>]");
 	PrintAndLog("(iceman) This is a improved checkkeys method speedwise ");
 	PrintAndLog("options:");
 	PrintAndLog("      h    this help");	
@@ -1196,21 +1196,20 @@ void shuffle( uint8_t *array, uint16_t len) {
 
 int CmdHF14AMfChk_fast(const char *Cmd) {
 
-	if (strlen(Cmd)<1) return usage_hf14_chk_fast();
+	char ctmp = 0x00;
+	ctmp = param_getchar(Cmd, 0);
+	if (strlen(Cmd) < 1 || ctmp == 'h' || ctmp == 'H') return usage_hf14_chk_fast();
 
 	FILE * f;
 	char filename[FILE_PATH_SIZE]={0};
 	char buf[13];
 	uint8_t *keyBlock = NULL, *p;
+	uint8_t SectorsCnt = 1;
 	int i, keycnt = 0;
 	int transferToEml = 0, createDumpFile = 0;
-	char ctmp = 0x00;
-	uint8_t SectorsCnt = 1;
-	
+	uint32_t keyitems = MIFARE_DEFAULTKEYS_SIZE;
 	uint64_t foo = 0, bar = 0;
 	icesector_t *e_sector = NULL;
-
-	uint32_t keyitems = MIFARE_DEFAULTKEYS_SIZE;
 	
 	keyBlock = calloc(MIFARE_DEFAULTKEYS_SIZE, 6);
 	if (keyBlock == NULL) return 1;
@@ -1219,7 +1218,7 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 		num_to_bytes(g_mifare_default_keys[cnt], 6, (uint8_t*)(keyBlock + cnt * 6));
 	
 	// sectors
-	switch(param_getchar(Cmd, 0)) {
+	switch(ctmp) {
 		case '0': SectorsCnt =  5; break;
 		case '1': SectorsCnt = 16; break;
 		case '2': SectorsCnt = 32; break;
@@ -1424,35 +1423,31 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 
 int CmdHF14AMfChk(const char *Cmd) {
 
-	if (strlen(Cmd)<3) return usage_hf14_chk();
+	char ctmp = 0x00;
+	ctmp = param_getchar(Cmd, 0);
+	if (strlen(Cmd) < 3 || ctmp == 'h' || ctmp == 'H') return usage_hf14_chk();
 
 	FILE * f;
 	char filename[FILE_PATH_SIZE]={0};
 	char buf[13];
 	uint8_t *keyBlock = NULL, *p;
 	sector_t *e_sector = NULL;
-	
-	int i, res;
-	int	keycnt = 0;
-	char ctmp	= 0x00;
+
 	uint8_t blockNo = 0;
 	uint8_t SectorsCnt = 1;
 	uint8_t keyType = 0;
-	uint64_t key64 = 0;
-	
-	uint8_t tempkey[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-		
-	int transferToEml = 0;
-	int createDumpFile = 0;
-
 	uint32_t keyitems = MIFARE_DEFAULTKEYS_SIZE;
-		
+	uint64_t key64 = 0;	
+	uint8_t tempkey[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};		
+	int transferToEml = 0;
+	int createDumpFile = 0;	
+	int i, res, keycnt = 0;
+
 	keyBlock = calloc(MIFARE_DEFAULTKEYS_SIZE, 6);
 	if (keyBlock == NULL) return 1;
 
 	for (int cnt = 0; cnt < MIFARE_DEFAULTKEYS_SIZE; cnt++)
 		num_to_bytes(g_mifare_default_keys[cnt], 6, (uint8_t*)(keyBlock + cnt * 6));
-
 	
 	if (param_getchar(Cmd, 0)=='*') {
 		blockNo = 3;
