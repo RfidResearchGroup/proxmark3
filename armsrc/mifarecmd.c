@@ -25,9 +25,9 @@
 #ifndef CHK_TIMEOUT
 # define CHK_TIMEOUT() { \
  ReaderTransmit(&dummy_answer, 1, NULL); \
- //SpinDelayUs(AUTHENTICATION_TIMEOUT); \
 }
 #endif
+//SpinDelayUs(AUTHENTICATION_TIMEOUT);
 static uint8_t dummy_answer = 0;
 
 //-----------------------------------------------------------------------------
