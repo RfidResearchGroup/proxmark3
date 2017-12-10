@@ -1723,6 +1723,7 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint8_t *receive
 	// clear RXRDY:
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
+	uint32_t timeout = iso14a_get_timeout();
 	for(;;) {
 		WDT_HIT();
 
@@ -1731,7 +1732,7 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint8_t *receive
 			if (ManchesterDecoding(b, offset, 0)) {
 				NextTransferTime = MAX(NextTransferTime, Demod.endTime - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER)/16 + FRAME_DELAY_TIME_PICC_TO_PCD);
 				return true;
-			} else if (c++ > iso14a_timeout && Demod.state == DEMOD_UNSYNCD) {
+			} else if (c++ >  timeout && Demod.state == DEMOD_UNSYNCD) {
 				return false; 
 			}
 		}
