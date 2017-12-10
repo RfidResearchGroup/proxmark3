@@ -158,7 +158,7 @@ local function main(args)
 					print("Using key: "..key);
 				else 
 					-- Crack it
-					local key, cnt
+					local cnt
 					err, res = core.mfDarkside()
 					if     err == -1 then return oops("Button pressed. Aborted.") 
 					elseif err == -2 then return oops("Card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests).")
