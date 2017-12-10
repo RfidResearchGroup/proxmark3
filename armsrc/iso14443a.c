@@ -119,12 +119,12 @@ void iso14a_set_trigger(bool enable) {
 }
 
 void iso14a_set_timeout(uint32_t timeout) {
-	iso14a_timeout = timeout - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER)/(16*8);
+	iso14a_timeout = timeout - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER)/(16*8) + 2;
 	//if (MF_DBGLEVEL >= 3) Dbprintf("ISO14443A Timeout set to %ld (%dms)", iso14a_timeout, iso14a_timeout / 106);
 }
 
 uint32_t iso14a_get_timeout(void) {
-	return iso14a_timeout + (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER)/(16*8);
+	return iso14a_timeout + (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER)/(16*8) + 2;
 }
 
 //-----------------------------------------------------------------------------
@@ -1732,7 +1732,7 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint8_t *receive
 			if (ManchesterDecoding(b, offset, 0)) {
 				NextTransferTime = MAX(NextTransferTime, Demod.endTime - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER)/16 + FRAME_DELAY_TIME_PICC_TO_PCD);
 				return true;
-			} else if (c++ >  timeout && Demod.state == DEMOD_UNSYNCD) {
+			} else if (c++ > timeout && Demod.state == DEMOD_UNSYNCD) {
 				return false; 
 			}
 		}
@@ -2118,9 +2118,9 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, void *data) {
 	} else{
 		// S-Block WTX 
 		while((data_bytes[0] & 0xF2) == 0xF2) {
-			uint32_t save_iso14a_timeout = iso14a_timeout;
+			uint32_t save_iso14a_timeout = iso14a_get_timeout();
 			// temporarily increase timeout
-			iso14a_timeout = MAX((data_bytes[1] & 0x3f) * iso14a_timeout, MAX_ISO14A_TIMEOUT);
+			iso14a_set_timeout( MAX((data_bytes[1] & 0x3f) * save_iso14a_timeout, MAX_ISO14A_TIMEOUT) );
 			// Transmit WTX back 
 			// byte1 - WTXM [1..59]. command FWT=FWT*WTXM
 			data_bytes[1] = data_bytes[1] & 0x3f; // 2 high bits mandatory set to 0b
@@ -2132,7 +2132,7 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, void *data) {
 			len = ReaderReceive(data, parity);
 			data_bytes = data;
 			// restore timeout
-			iso14a_timeout = save_iso14a_timeout;
+			iso14a_set_timeout(save_iso14a_timeout);
 		}
 
 	// if we received an I- or R(ACK)-Block with a block number equal to the

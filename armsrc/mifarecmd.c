@@ -25,7 +25,7 @@
 #ifndef CHK_TIMEOUT
 # define CHK_TIMEOUT() { \
  ReaderTransmit(&dummy_answer, 1, NULL); \
- SpinDelayUs(AUTHENTICATION_TIMEOUT); \
+ //SpinDelayUs(AUTHENTICATION_TIMEOUT); \
 }
 #endif
 static uint8_t dummy_answer = 0;
@@ -626,7 +626,6 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *
 	uint8_t keyType = (arg0 >> 8) & 0xff;
 	bool initialize = flags & 0x0001;
 	bool field_off = flags & 0x0004;
-
 	uint16_t num_nonces = 0;
 	bool have_uid = false;
 	
@@ -637,16 +636,16 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *
 	clear_trace();
 	set_tracing(true);
 	
-	if (initialize) {
+	if (initialize)
 		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-	}
+
 	
 	LED_C_ON();
 	
 	for (uint16_t i = 0; i <= USB_CMD_DATA_SIZE-4; i += 4 ) {
 
 		// Test if the action was cancelled
-		if(BUTTON_PRESS()) {
+		if (BUTTON_PRESS()) {
 			isOK = 2;
 			field_off = true;
 			break;
@@ -654,7 +653,7 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *
 
 		if (!have_uid) { // need a full select cycle to get the uid first
 			iso14a_card_select_t card_info;		
-			if(!iso14443a_select_card(uid, &card_info, &cuid, true, 0, true)) {
+			if (!iso14443a_select_card(uid, &card_info, &cuid, true, 0, true)) {
 				if (MF_DBGLEVEL >= 1)	Dbprintf("AcquireNonces: Can't select card (ALL)");
 				continue;
 			}
@@ -666,7 +665,7 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *
 			}
 			have_uid = true;	
 		} else { // no need for anticollision. We can directly select the card
-			if(!iso14443a_select_card(uid, NULL, NULL, false, cascade_levels, true)) {
+			if (!iso14443a_fast_select_card(uid, cascade_levels)) {
 				if (MF_DBGLEVEL >= 1)	Dbprintf("AcquireNonces: Can't select card (UID)");
 				continue;
 			}
@@ -678,14 +677,11 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *
 		ReaderTransmit(dcmd, sizeof(dcmd), NULL);
 		int len = ReaderReceive(answer, par);		
 
-		// send a dummy byte as reader response in order to trigger the cards authentication timeout
-		//ReaderTransmit(&dummy_answer, 1, NULL);
-
 		// wait for the card to become ready again
 		CHK_TIMEOUT();
 		
 		if (len != 4) {
-			if (MF_DBGLEVEL >= 1)	Dbprintf("AcquireNonces: Auth1 error");
+			if (MF_DBGLEVEL >= 2)	Dbprintf("AcquireNonces: Auth1 error");
 			continue;
 		}
 		
@@ -741,8 +737,6 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 	bool initialize = flags & 0x0001;
 	bool slow = flags & 0x0002;
 	bool field_off = flags & 0x0004;
-	
-//	uint8_t dummy_answer = 0;	
 	uint16_t num_nonces = 0;
 	bool have_uid = false;
 
@@ -783,7 +777,6 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 			have_uid = true;	
 		} else { // no need for anticollision. We can directly select the card
 			if (!iso14443a_fast_select_card(uid, cascade_levels)) {
-			//if(!iso14443a_select_card(uid, NULL, NULL, false, cascade_levels, true)) {
 				if (MF_DBGLEVEL >= 1)	Dbprintf("AcquireNonces: Can't select card (UID)");
 				continue;
 			}
@@ -801,8 +794,6 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 		// nested authentication
 		uint16_t len = mifare_sendcmd_short(pcs, AUTH_NESTED, 0x60 + (targetKeyType & 0x01), targetBlockNo, receivedAnswer, par_enc, NULL);
 
-		// send a dummy byte as reader response in order to trigger the cards authentication timeout
-		//ReaderTransmit(&dummy_answer, 1, NULL);
 		// wait for the card to become ready again
 		CHK_TIMEOUT();
 
@@ -905,27 +896,27 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 
 			// prepare next select. No need to power down the card.
 			if(mifare_classic_halt(pcs, cuid)) {
-				if (MF_DBGLEVEL >= 1)	Dbprintf("Nested: Halt error");
+				if (MF_DBGLEVEL >= 2)	Dbprintf("Nested: Halt error");
 				rtr--;
 				continue;
 			}
 
 			if(!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
-				if (MF_DBGLEVEL >= 1)	Dbprintf("Nested: Can't select card");
+				if (MF_DBGLEVEL >= 2)	Dbprintf("Nested: Can't select card");
 				rtr--;
 				continue;
 			};
 
 			auth1_time = 0;
 			if(mifare_classic_authex(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST, &nt1, &auth1_time)) {
-				if (MF_DBGLEVEL >= 1)	Dbprintf("Nested: Auth1 error");
+				if (MF_DBGLEVEL >= 2)	Dbprintf("Nested: Auth1 error");
 				rtr--;
 				continue;
 			};
 			auth2_time = (delta_time) ? auth1_time + delta_time : 0;
 
 			if(mifare_classic_authex(pcs, cuid, blockNo, keyType, ui64Key, AUTH_NESTED, &nt2, &auth2_time)) {
-				if (MF_DBGLEVEL >= 1)	Dbprintf("Nested: Auth2 error");
+				if (MF_DBGLEVEL >= 2)	Dbprintf("Nested: Auth2 error");
 				rtr--;
 				continue;
 			};
@@ -975,18 +966,18 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 		
 			// prepare next select. No need to power down the card.
 			if(mifare_classic_halt(pcs, cuid)) {
-				if (MF_DBGLEVEL >= 1)	Dbprintf("Nested: Halt error");
+				if (MF_DBGLEVEL >= 2)	Dbprintf("Nested: Halt error");
 				continue;
 			}
 
 			if(!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
-				if (MF_DBGLEVEL >= 1)	Dbprintf("Nested: Can't select card");
+				if (MF_DBGLEVEL >= 2)	Dbprintf("Nested: Can't select card");
 				continue;
 			};
 		
 			auth1_time = 0;
 			if(mifare_classic_authex(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST, &nt1, &auth1_time)) {
-				if (MF_DBGLEVEL >= 1)	Dbprintf("Nested: Auth1 error");
+				if (MF_DBGLEVEL >= 2)	Dbprintf("Nested: Auth1 error");
 				continue;
 			};
 
@@ -995,7 +986,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 
 			len = mifare_sendcmd_short(pcs, AUTH_NESTED, 0x60 + (targetKeyType & 0x01), targetBlockNo, receivedAnswer, par, &auth2_time);
 			if (len != 4) {
-				if (MF_DBGLEVEL >= 1)	Dbprintf("Nested: Auth2 error len=%d", len);
+				if (MF_DBGLEVEL >= 2)	Dbprintf("Nested: Auth2 error len=%d", len);
 				continue;
 			};
 		
@@ -1107,11 +1098,12 @@ uint8_t chkKey( struct chk_t *c ) {
 		}
 
 		res = mifare_classic_authex(c->pcs, c->cuid, c->block, c->keyType, c->key, AUTH_FIRST, NULL, NULL);
+
 		CHK_TIMEOUT();
 		
 		// if successfull auth, send HALT
-		if ( !res ) 
-			mifare_classic_halt_ex(c->pcs);
+		// if ( !res ) 
+			// mifare_classic_halt_ex(c->pcs);
 		
 		break;
 	}
@@ -1378,7 +1370,7 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 	bool have_uid = false;
 	uint8_t cascade_levels = 0;
 	
-	int i;
+	int i, res;
 	byte_t isOK = 0;
 	uint8_t uid[10] = {0x00};
 	uint32_t cuid = 0;
@@ -1397,8 +1389,6 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 	set_tracing(true);
 	
 	for (i = 0; i < keyCount; i++) {
-
-		//mifare_classic_halt(pcs, cuid);
 
 		// Iceman: use piwi's faster nonce collecting part in hardnested.
 		if (!have_uid) { // need a full select cycle to get the uid first
@@ -1424,14 +1414,12 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 		}
 	
 		key = bytes_to_num(datain + i * 6, 6);
-		if (mifare_classic_auth(pcs, cuid, blockNo, keyType, key, AUTH_FIRST)) {
+		res = mifare_classic_auth(pcs, cuid, blockNo, keyType, key, AUTH_FIRST);
+		CHK_TIMEOUT();
 
-			CHK_TIMEOUT();
-			
+		if (res)
 			continue;
-		} else {
-			mifare_classic_halt_ex(pcs);
-		}
+
 		isOK = 1;
 		break;
 	}
