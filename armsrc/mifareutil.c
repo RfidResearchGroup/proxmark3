@@ -119,20 +119,15 @@ int mifare_classic_auth(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo,
 
 int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint8_t isNested, uint32_t *ntptr, uint32_t *timing) {
 	int len;	
-	uint32_t pos;
+	uint32_t pos, nt, ntpp; // Supplied tag nonce
 	uint8_t par[1] = {0x00};
-
-	// "random" reader nonce:
-	//byte_t nr[4] = {0x55, 0x41, 0x49, 0x92};
-	fast_prand();
-	byte_t nr[4];
-	num_to_bytes(prand(), 4, nr);
-	
-	uint32_t nt, ntpp; // Supplied tag nonce
-	
+	uint8_t nr[4];
 	uint8_t mf_nr_ar[] = { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 };
 	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
 	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
+
+	// "random" reader nonce:
+	num_to_bytes( prng_successor( GetTickCount(), 32), 4, nr);
 	
 	// Transmit MIFARE_CLASSIC_AUTH
 	len = mifare_sendcmd_short(pcs, isNested, 0x60 + (keyType & 0x01), blockNo, receivedAnswer, receivedAnswerPar, timing);

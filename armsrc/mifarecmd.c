@@ -638,7 +638,6 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *
 	
 	if (initialize)
 		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-
 	
 	LED_C_ON();
 	
@@ -714,8 +713,7 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *
 // Mifare Classic Cards" in Proceedings of the 22nd ACM SIGSAC Conference on 
 // Computer and Communications Security, 2015
 //-----------------------------------------------------------------------------
-void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *datain)
-{
+void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *datain) {
 	uint64_t ui64Key = 0;
 	uint8_t uid[10] = {0x00};
 	uint32_t cuid = 0;
@@ -747,9 +745,8 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 	clear_trace();
 	set_tracing(false);
 	
-	if (initialize) {
+	if (initialize)
 		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-	}
 	
 	LED_C_ON();
 	
@@ -1050,8 +1047,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 //-----------------------------------------------------------------------------
 // MIFARE check keys. key count up to 85. 
 // 
-//-----------------------------------------------------------------------------
-	
+//-----------------------------------------------------------------------------	
 typedef struct sector_t {
 	uint8_t keyA[6];
 	uint8_t keyB[6];
@@ -1067,18 +1063,6 @@ typedef struct chk_t {
 	struct Crypto1State *pcs;
 } chk_t;
 
-	
-// wait for the card to become ready again
-// assume: fast reset of card
-/*void chk_timeout(void){
-	uint8_t dummy_answer = 0;
-	ReaderTransmit(&dummy_answer, 1, NULL);
-	uint32_t timeout = GetCountSspClk() + AUTHENTICATION_TIMEOUT;
-	while(GetCountSspClk() < timeout);
-}
-*/
-
-
 // checks one key.
 // fast select,  tries 5 times to select
 // 
@@ -1087,12 +1071,11 @@ typedef struct chk_t {
 //  1 = wrong key
 //  0 = correct key
 uint8_t chkKey( struct chk_t *c ) {
-	
 	uint8_t i = 0, res = 2;	
 	while( i < 5 ) {
 		// this part is from Piwi's faster nonce collecting part in Hardnested.
 		// assume: fast select
-		if(!iso14443a_fast_select_card(c->uid, c->cl)) {
+		if (!iso14443a_fast_select_card(c->uid, c->cl)) {
 			++i;
 			continue;
 		}
@@ -1104,7 +1087,6 @@ uint8_t chkKey( struct chk_t *c ) {
 		// if successfull auth, send HALT
 		// if ( !res ) 
 			// mifare_classic_halt_ex(c->pcs);
-		
 		break;
 	}
 	return res;
@@ -1112,7 +1094,7 @@ uint8_t chkKey( struct chk_t *c ) {
 
 uint8_t chkKey_readb(struct chk_t *c, uint8_t *keyb) {	
 	
-	if(!iso14443a_fast_select_card(c->uid, c->cl))
+	if (!iso14443a_fast_select_card(c->uid, c->cl))
 		return 2;
 	
 	if ( mifare_classic_authex(c->pcs, c->cuid, c->block, 0, c->key, AUTH_FIRST, NULL, NULL) )
@@ -1120,8 +1102,6 @@ uint8_t chkKey_readb(struct chk_t *c, uint8_t *keyb) {
 
 	uint8_t data[16] = {0x00};	
 	uint8_t res = mifare_classic_readblock(c->pcs, c->cuid, c->block, data);
-	
-	//CHK_TIMEOUT();
 	
 	// successful read
 	if ( !res ) {
@@ -1223,7 +1203,6 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
 	pcs = &mpcs;
-
 	struct chk_t chk_data;
 	
 	uint8_t allkeys = sectorcnt << 1;
@@ -1368,10 +1347,9 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 	uint8_t keyCount = arg2;
 	uint64_t key = 0;
 	bool have_uid = false;
-	uint8_t cascade_levels = 0;
-	
+	uint8_t cascade_levels = 0;	
 	int i, res;
-	byte_t isOK = 0;
+	uint8_t isOK = 0;
 	uint8_t uid[10] = {0x00};
 	uint32_t cuid = 0;
 	struct Crypto1State mpcs = {0, 0};
@@ -1393,7 +1371,7 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 		// Iceman: use piwi's faster nonce collecting part in hardnested.
 		if (!have_uid) { // need a full select cycle to get the uid first
 			iso14a_card_select_t card_info;		
-			if(!iso14443a_select_card(uid, &card_info, &cuid, true, 0, true)) {
+			if (!iso14443a_select_card(uid, &card_info, &cuid, true, 0, true)) {
 				if (MF_DBGLEVEL >= 1)	Dbprintf("ChkKeys: Can't select card (ALL)");
 				--i; // try same key once again
 				continue;
@@ -1406,7 +1384,7 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 			}
 			have_uid = true;	
 		} else { // no need for anticollision. We can directly select the card
-			if(!iso14443a_select_card(uid, NULL, NULL, false, cascade_levels, true)) {
+			if (!iso14443a_select_card(uid, NULL, NULL, false, cascade_levels, true)) {
 				if (MF_DBGLEVEL >= 1)	Dbprintf("ChkKeys: Can't select card (UID)");
 				--i; // try same key once again
 				continue;
@@ -1415,6 +1393,7 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 	
 		key = bytes_to_num(datain + i * 6, 6);
 		res = mifare_classic_auth(pcs, cuid, blockNo, keyType, key, AUTH_FIRST);
+
 		CHK_TIMEOUT();
 
 		if (res)
