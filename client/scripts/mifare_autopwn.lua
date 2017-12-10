@@ -1,6 +1,7 @@
 local getopt = require('getopt')
 local reader = require('read14a')
 local cmds = require('commands')
+local utils = require('utils')
 
 example = "script run mifare_autopwn"
 author = "Martin Holst Swende"
