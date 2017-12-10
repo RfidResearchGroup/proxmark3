@@ -1221,10 +1221,6 @@ void chkKey_loopBonly(struct chk_t *c, struct sector_t *k_sector, uint8_t *found
 // datain = keys as array
 void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
 
-	// save old debuglevel, and tempory turn off dbg printing. speedissues.
-	// int OLD_MF_DBGLEVEL = MF_DBGLEVEL;	
-	// MF_DBGLEVEL = MF_DBG_NONE;
-
 	// first call or 
 	uint8_t sectorcnt = arg0 & 0xFF; // 16;
 	uint8_t firstchunk = (arg0 >> 8) & 0xF;	
@@ -1270,7 +1266,7 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 		foundkeys = 0;		
 	
 		iso14a_card_select_t card_info;		
-		if(!iso14443a_select_card(uid, &card_info, &cuid, true, 0, true)) {
+		if ( !iso14443a_select_card(uid, &card_info, &cuid, true, 0, true)) {
 			if (MF_DBGLEVEL >= 1) Dbprintf("ChkKeys: Can't select card (ALL)");
 			goto OUT;
 		}
@@ -1344,8 +1340,6 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 	} // end loop keys
 		
 OUT:	
-	// restore debug level
-	// MF_DBGLEVEL = OLD_MF_DBGLEVEL;	
 	LEDsoff();
 
 	// All keys found, send to client, or last keychunk from client
@@ -1391,10 +1385,6 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
 	pcs = &mpcs;
-	
-	// save old debuglevel, and tempory turn off dbg printing. speedissues.
-	int OLD_MF_DBGLEVEL = MF_DBGLEVEL;	
-	MF_DBGLEVEL = MF_DBG_NONE;
 	
 	LEDsoff();
 	LED_A_ON();
@@ -1451,9 +1441,6 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
-	
-	// restore debug level
-	MF_DBGLEVEL = OLD_MF_DBGLEVEL;	
 	
 	set_tracing(false);
 	crypto1_destroy(pcs);
