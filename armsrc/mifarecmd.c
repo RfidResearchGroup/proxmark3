@@ -1107,7 +1107,7 @@ uint8_t chkKey( struct chk_t *c ) {
 		}
 
 		res = mifare_classic_authex(c->pcs, c->cuid, c->block, c->keyType, c->key, AUTH_FIRST, NULL, NULL);
-		//CHK_TIMEOUT();
+		CHK_TIMEOUT();
 		
 		// if successfull auth, send HALT
 		if ( !res ) 
@@ -1426,7 +1426,7 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 		key = bytes_to_num(datain + i * 6, 6);
 		if (mifare_classic_auth(pcs, cuid, blockNo, keyType, key, AUTH_FIRST)) {
 
-			//CHK_TIMEOUT();
+			CHK_TIMEOUT();
 			
 			continue;
 		} else {
