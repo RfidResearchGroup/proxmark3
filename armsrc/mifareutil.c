@@ -152,7 +152,7 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 	}
 
 	// some statistic
-	if (!ntptr && (MF_DBGLEVEL >= 3))
+	if (!ntptr && (MF_DBGLEVEL >= MF_DBG_EXTENDED))
 		Dbprintf("auth uid: %08x | nr: %08x | nt: %08x", uid, nr, nt);
 	
 	// save Nt
@@ -182,14 +182,14 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 	// Receive 4 byte tag answer
 	len = ReaderReceive(receivedAnswer, receivedAnswerPar);
 	if (!len) {
-		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Authentication failed. Card timeout.");
+		if (MF_DBGLEVEL >= MF_DBG_ALL) Dbprintf("Authentication failed. Card timeout.");
 		return 2;
 	}
 
 	ntpp = prng_successor(nt, 32) ^ crypto1_word(pcs, 0,0);
 
 	if (ntpp != bytes_to_num(receivedAnswer, 4)) {
-		if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("Authentication failed. Error card response.");
+		if (MF_DBGLEVEL >= MF_DBG_ALL)	Dbprintf("Authentication failed. Error card response.");
 		return 3;
 	}
 	return 0;
@@ -208,14 +208,14 @@ int mifare_classic_readblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blo
 		return 1;
 	}
 	if (len != 18) {
-		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Cmd Error: card timeout. len: %x", len);  
+		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Cmd Error: wrong response len: %x  (expected 18)", len);  
 		return 2;
 	}
 
 	memcpy(bt, receivedAnswer + 16, 2);
 	AppendCrc14443a(receivedAnswer, 16);
 	if (bt[0] != receivedAnswer[16] || bt[1] != receivedAnswer[17]) {
-		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Cmd CRC response error.");  
+		if (MF_DBGLEVEL >= MF_DBG_ALL) Dbprintf("Cmd CRC response error.");  
 		return 3;
 	}
 	
