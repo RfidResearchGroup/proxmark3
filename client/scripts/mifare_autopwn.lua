@@ -29,9 +29,17 @@ local DEBUG = false
 --- 
 -- A debug printout-function
 local function dbg(args)
-	if DEBUG then
-		print(":: ", args)
-	end
+	if not DEBUG then return end
+	
+	if type(args) == 'table' then
+		local i = 1
+		while result[i] do
+			dbg(result[i])
+			i = i+1
+		end
+	else
+		print('###', args)
+	end	
 end 
 --- 
 -- This is only meant to be used when errors occur
@@ -39,7 +47,6 @@ local function oops(err)
 	print("ERROR: ",err)
 	return nil,err
 end
-
 --- 
 -- Usage help
 local function help()
@@ -47,7 +54,6 @@ local function help()
 	print("Example usage")
 	print(example)
 end
-
 ---
 -- Waits for a mifare card to be placed within the vicinity of the reader. 
 -- @return if successfull: an table containing card info
@@ -76,24 +82,29 @@ local function nested(key,sak)
 	else
 		print("I don't know how many sectors there are on this type of card, defaulting to 16")
 	end
-	local cmd = string.format("hf mf nested %d 0 A %s d",typ,key)
+	local cmd = string.format("hf mf nested %d 0 A %s d", typ, key)
 	core.console(cmd)
 end
 
 local function dump(uid)
-	core.console("hf mf dump")
-	-- Save the global args, those are *our* arguments
-	local myargs = args
-	-- Set the arguments for htmldump script
-	args =("-o %s.html"):format(uid)
-	-- call it 
-	require('../scripts/htmldump')
+	dbg('dumping tag memory')
 
-	args =""
-	-- dump to emulator
-	require('../scripts/dumptoemul')
-	-- Set back args. Not that it's used, just for the karma... 
-	args = myargs
+	if utils.confirm('Do you wish to create a memory dump of tag?') then 
+
+		core.console("hf mf dump")
+		-- Save the global args, those are *our* arguments
+		local myargs = args
+		-- Set the arguments for htmldump script
+		args =("-o %s.html"):format(uid)
+		-- call it 
+		require('../scripts/htmldump')
+
+		args =""
+		-- dump to emulator
+		require('../scripts/dumptoemul')
+		-- Set back args. Not that it's used, just for the karma... 
+		args = myargs
+	end
 end
 --
 -- performs a test if tag nonce uses weak or hardend prng
@@ -114,11 +125,13 @@ local function main(args)
 
 	local verbose, exit, res, uid, err, _, sak
 	local seen_uids = {}
+	local key = ''
 	local print_message = true
 	-- Read the parameters
-	for o, a in getopt.getopt(args, 'hd') do
+	for o, a in getopt.getopt(args, 'hdk:') do
 		if o == "h" then help() return end
 		if o == "d" then DEBUG = true end
+		if o == 'k' then key = a end
 	end
 
 	while not exit do
@@ -131,9 +144,7 @@ local function main(args)
 		-- Seen already?
 		uid = res.uid
 		sak = res.sak
-		
-
-		
+			
 		if not seen_uids[uid] then
 			-- Store it
 			seen_uids[uid] = uid
@@ -141,25 +152,29 @@ local function main(args)
 			-- check if PRNG is WEAK
 			if perform_prng_test() then  
 				print("Card found, commencing crack on UID", uid)
-				-- Crack it
-				local key, cnt
-				err, res = core.mfDarkside()
-				if     err == -1 then return oops("Button pressed. Aborted.") 
-				elseif err == -2 then return oops("Card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests).")
-				elseif err == -3 then return oops("Card is not vulnerable to Darkside attack (its random number generator is not predictable).")
-				elseif err == -4 then return oops([[
-	Card is not vulnerable to Darkside attack (its random number generator seems to be based on the wellknown
-	generating polynomial with 16 effective bits only, but shows unexpected behaviour.]])
-				elseif err == -5 then return oops("Aborted via keyboard.")
-				end
-				-- The key is actually 8 bytes, so a 
-				-- 6-byte key is sent as 00XXXXXX
-				-- This means we unpack it as first
-				-- two bytes, then six bytes actual key data
-				-- We can discard first and second return values
-				_,_,key = bin.unpack("H2H6",res)
-				print("Found valid key: "..key);
 
+				if #key == 12 then
+					print("Using key: "..key);
+				else 
+					-- Crack it
+					local key, cnt
+					err, res = core.mfDarkside()
+					if     err == -1 then return oops("Button pressed. Aborted.") 
+					elseif err == -2 then return oops("Card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests).")
+					elseif err == -3 then return oops("Card is not vulnerable to Darkside attack (its random number generator is not predictable).")
+					elseif err == -4 then return oops([[
+		Card is not vulnerable to Darkside attack (its random number generator seems to be based on the wellknown
+		generating polynomial with 16 effective bits only, but shows unexpected behaviour.]])
+					elseif err == -5 then return oops("Aborted via keyboard.")
+					end
+					-- The key is actually 8 bytes, so a 
+					-- 6-byte key is sent as 00XXXXXX
+					-- This means we unpack it as first
+					-- two bytes, then six bytes actual key data
+					-- We can discard first and second return values
+					_,_,key = bin.unpack("H2H6",res)
+					print("Found valid key: "..key);
+				end
 				-- Use nested attack
 				nested(key,sak)
 				-- Dump info
