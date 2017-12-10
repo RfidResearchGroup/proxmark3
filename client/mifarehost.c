@@ -812,12 +812,18 @@ int detect_classic_nackbug(bool verbose){
 	if ( verbose )
 		printf("Press pm3-button on the proxmark3 device to abort both proxmark3 and client.\n");
 	
-	// for nice animation
-	//bool stdinOnPipe = !isatty(STDIN_FILENO)
-	
+	// for nice animation	
+	bool term = !isatty(STDIN_FILENO);
+	char star[] = {'-', '\\', '|', '/'};
+	uint8_t staridx = 0;	
+
 	while (true) {
-		
-		printf(".");
+
+		if (term) {		
+			printf(".");
+		} else {
+			printf("\e[s%c\e[u", star[ (staridx++ % 4) ]);
+		}
 		fflush(stdout);
 		if (ukbhit()) {
 			int gc = getchar(); (void)gc;
@@ -825,7 +831,7 @@ int detect_classic_nackbug(bool verbose){
 			break;
 		}
 	
-		if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+		if (WaitForResponseTimeout(CMD_ACK, &resp, 500)) {
 			int32_t ok = resp.arg[0];
 			uint32_t nacks = resp.arg[1];
 			uint32_t auths = resp.arg[2];
