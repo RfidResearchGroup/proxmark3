@@ -1256,7 +1256,50 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 	chk_data.cuid = cuid;
 	chk_data.cl = cascade_levels;
 	chk_data.pcs = pcs;
+
+	chk_data.block = 0;
 	
+	// keychunk loop - depth first for sector0.
+	for (uint8_t i = 0; i < keyCount; ++i) {
+		// Allow button press / usb cmd to interrupt device
+		if (BUTTON_PRESS() && !usb_poll_validate_length()) break;
+
+		WDT_HIT();
+	
+		// new key
+		chk_data.key = bytes_to_num(datain + i * 6, 6);
+		// assume: block0,1,2 has more read rights in accessbits than the sectortrailer. authenticating against block0 in each sector
+
+		// skip already found A keys 
+		if( !found[0] ) {
+			chk_data.keyType = 0;
+			status = chkKey( &chk_data);
+			if ( status == 0 ) {
+				memcpy(k_sector[0].keyA, datain + i * 6, 6);
+				found[0] = 1;
+				++foundkeys;
+				
+				chkKey_scanA(&chk_data, k_sector, found, &sectorcnt, &foundkeys);
+				
+				// read Block B, if A is found.
+				chkKey_loopBonly( &chk_data, k_sector, found, &sectorcnt, &foundkeys);
+			}
+		}
+		
+		// skip already found B keys 
+		if( !found[1] ) {
+			chk_data.keyType = 1;
+			status = chkKey( &chk_data);
+			if ( status == 0 ) {
+				memcpy(k_sector[0].keyB, datain + i * 6, 6);
+				found[1] = 1;
+				++foundkeys;
+				
+				chkKey_scanB(&chk_data, k_sector, found, &sectorcnt, &foundkeys);
+			}
+		}
+	} // end look - depth first
+
 	// Keychunk loop
 	for (uint8_t i = 0; i < keyCount; ++i) {
 
