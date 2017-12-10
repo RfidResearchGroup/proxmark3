@@ -151,7 +151,7 @@ static int returnToLuaWithError(lua_State *L, const char* fmt, ...) {
 static int l_mfDarkside(lua_State *L){
 
 	uint32_t blockno = 0;
-	uint32_t keytype = 0;
+	uint32_t keytype = 60;
 	uint64_t key = 0;
 	size_t size;
 
