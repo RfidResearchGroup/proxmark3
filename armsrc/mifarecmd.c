@@ -1268,9 +1268,6 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 			if ( found[(s*2)] && found[(s*2)+1] )  
 				continue;
 
-			// assume: block0,1,2 has more read rights in accessbits than the sectortrailer. authenticating against block0 in each sector
-			chk_data.block = FirstBlockOfSector( s );
-
 			for (uint8_t i = 0; i < keyCount; ++i) {
 
 				// Allow button press / usb cmd to interrupt device
@@ -1284,6 +1281,9 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 
 				WDT_HIT();
 			
+				// assume: block0,1,2 has more read rights in accessbits than the sectortrailer. authenticating against block0 in each sector
+				chk_data.block = FirstBlockOfSector( s );
+
 				// new key
 				chk_data.key = bytes_to_num(datain + i * 6, 6);
 
