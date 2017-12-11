@@ -1350,10 +1350,10 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 				timeout++;
 				printf(".");
 				fflush(stdout);
-				// max timeout for one chunk of 85keys, 60*2sec = 120seconds
+				// max timeout for one chunk of 85keys, 60*3sec = 180seconds
 				// s70 with 40*2 keys to check, 80*85 = 6800 auth.
 				// takes about 97s, still some margin before abort
-				if (timeout > 60) {
+				if (timeout > 180) {
 					PrintAndLog("\nNo response from Proxmark. Aborting...");
 					return 1;
 				}
@@ -1374,8 +1374,8 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 				memcpy(e_sector, resp.d.asBytes, SectorsCnt * sizeof(icesector_t) );
 				goto out;
 			}
-		}
-	}
+		} // end chunks of keys
+	} // end strategy
 out: 
 	t1 = msclock() - t1;
 	PrintAndLog("[+] Time in checkkeys (fast):  %.1fs\n", (float)(t1/1000.0));

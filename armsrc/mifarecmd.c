@@ -1254,11 +1254,13 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 	chk_data.cuid = cuid;
 	chk_data.cl = cascade_levels;
 	chk_data.pcs = pcs;
-	chk_data.block = 0;
-	
+	chk_data.block = 0;	
 	
 	// keychunk loop - depth first one sector.
 	if ( strategy == 1 ) {
+
+		uint8_t newfound = foundkeys;
+
 		// Sector main loop
 		// keep track of how many sectors on card.
 		for (uint8_t s = 0; s < sectorcnt; ++s) {
@@ -1270,10 +1272,15 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 			chk_data.block = FirstBlockOfSector( s );
 
 			for (uint8_t i = 0; i < keyCount; ++i) {
+
 				// Allow button press / usb cmd to interrupt device
 				if (BUTTON_PRESS() && !usb_poll_validate_length()) {
 					goto OUT;
 				}
+
+				// found all keys?
+				if ( foundkeys == allkeys )
+					goto OUT;
 
 				WDT_HIT();
 			
@@ -1313,6 +1320,11 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 					}
 				}
 			} // end loop - depth first
+
+			// assume1. if we already some keys,  time to quit this keyblock?
+			if ( newfound-foundkeys  > 0 )
+				goto OUT;
+
 		} // end loop - sector
 	} // end strategy 1
 
@@ -1331,6 +1343,10 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 			// Sector main loop
 			// keep track of how many sectors on card.
 			for (uint8_t s = 0; s < sectorcnt; ++s) {
+
+				// found all keys?
+				if ( foundkeys == allkeys )
+					goto OUT;
 
 				// assume: block0,1,2 has more read rights in accessbits than the sectortrailer. authenticating against block0 in each sector
 				chk_data.block = FirstBlockOfSector( s );
@@ -1365,18 +1381,18 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 						chkKey_scanB(&chk_data, k_sector, found, &sectorcnt, &foundkeys);
 					}
 				}
+
+
 			} // end loop sectors		
-		
-			// is all keys found?
-			if ( foundkeys == allkeys )
-				break;
 		} // end loop keys	
 	} // end loop strategy 2
 OUT:	
 	LEDsoff();
 
+	crypto1_destroy(pcs);
+
 	// All keys found, send to client, or last keychunk from client
-	if (foundkeys==allkeys || lastchunk ) {
+	if (foundkeys == allkeys || lastchunk ) {
 		
 		uint64_t foo = 0;
 		uint16_t bar = 0;
@@ -1394,7 +1410,6 @@ OUT:
 
 		set_tracing(false);		
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-		crypto1_destroy(pcs);
 	} else {
 		// partial/none keys found
 		cmd_send(CMD_ACK, foundkeys, 0, 0, 0, 0);
