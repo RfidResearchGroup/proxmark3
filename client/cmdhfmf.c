@@ -1323,54 +1323,57 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 	// time
 	uint64_t t1 = msclock();
 	
-	// main keychunk loop			
-	for (uint32_t i = 0; i < keycnt; i += chunksize) {
-		
-		uint32_t size = ((keycnt - i)  > chunksize) ? chunksize : keycnt - i;
-		
-		// last chunk?
-		if ( size == keycnt - i)
-			lastChunk = true;
-		
-		// send keychunk		
-		UsbCommand c = {CMD_MIFARE_CHKKEYS_FAST, { (SectorsCnt | (firstChunk << 8) | (lastChunk << 12) ), 0, size}};	
-		
-		memcpy(c.d.asBytes, keyBlock + i * 6, 6 * size);
+	// strategys. 1= deep first on sector 0 AB,  2= width first on all sectors
+	for (uint8_t strategy = 1; strategy < 3; strategy++) {
+		// main keychunk loop			
+		for (uint32_t i = 0; i < keycnt; i += chunksize) {
+			
+			uint32_t size = ((keycnt - i)  > chunksize) ? chunksize : keycnt - i;
+			
+			// last chunk?
+			if ( size == keycnt - i)
+				lastChunk = true;
+			
+			// send keychunk		
+			UsbCommand c = {CMD_MIFARE_CHKKEYS_FAST, { (SectorsCnt | (firstChunk << 8) | (lastChunk << 12) ), strategy, size}};	
+			
+			memcpy(c.d.asBytes, keyBlock + i * 6, 6 * size);
 
-		clearCommandBuffer();
-		SendCommand(&c);
-		UsbCommand resp;
+			clearCommandBuffer();
+			SendCommand(&c);
+			UsbCommand resp;
+			
+			if ( firstChunk ) firstChunk = false;
 		
-		if ( firstChunk ) firstChunk = false;
-	
-		uint64_t t2 = msclock();	
-		while ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
-			timeout++;
-			printf(".");
-			fflush(stdout);
-			// max timeout for one chunk of 85keys, 60*2sec = 120seconds
-			// s70 with 40*2 keys to check, 80*85 = 6800 auth.
-			// takes about 97s, still some margin before abort
-			if (timeout > 60) {
-				PrintAndLog("\nNo response from Proxmark. Aborting...");
-				return 1;
+			uint64_t t2 = msclock();	
+			while ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
+				timeout++;
+				printf(".");
+				fflush(stdout);
+				// max timeout for one chunk of 85keys, 60*2sec = 120seconds
+				// s70 with 40*2 keys to check, 80*85 = 6800 auth.
+				// takes about 97s, still some margin before abort
+				if (timeout > 60) {
+					PrintAndLog("\nNo response from Proxmark. Aborting...");
+					return 1;
+				}
 			}
-		}
-		
-		uint8_t curr_keys = resp.arg[0];
-		foo = bytes_to_num(resp.d.asBytes+480, 8);
-		bar = bytes_to_num(resp.d.asBytes+488, 2);
+			
+			uint8_t curr_keys = resp.arg[0];
+			foo = bytes_to_num(resp.d.asBytes+480, 8);
+			bar = bytes_to_num(resp.d.asBytes+488, 2);
 
-		// reset
-		timeout = 0;
-		
-		t2 = msclock() - t2;
-		PrintAndLog("\n[-] Chunk: %.1fs | found %u/%u keys (%u)", (float)(t2/1000.0), curr_keys, (SectorsCnt<<1), size);
-		
-		// all keys?		
-		if ( curr_keys == SectorsCnt*2 || lastChunk ) {
-			memcpy(e_sector, resp.d.asBytes, SectorsCnt * sizeof(icesector_t) );
-			break;
+			// reset
+			timeout = 0;
+			
+			t2 = msclock() - t2;
+			PrintAndLog("\n[-] Chunk: %.1fs | found %u/%u keys (%u)", (float)(t2/1000.0), curr_keys, (SectorsCnt<<1), size);
+			
+			// all keys?		
+			if ( curr_keys == SectorsCnt*2 || lastChunk ) {
+				memcpy(e_sector, resp.d.asBytes, SectorsCnt * sizeof(icesector_t) );
+				break;
+			}
 		}
 	}
 
