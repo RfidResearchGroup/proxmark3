@@ -13,6 +13,7 @@
 
 #include <stdlib.h>  //size_t
 #include <string.h>
+#include <unistd.h>
 #include "cmdmain.h"
 #include "proxmark3.h"
 #include "ui.h"		// PrintAndLog

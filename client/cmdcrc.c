@@ -89,10 +89,10 @@ int GetModels(char *Models[], int *count, uint8_t *width){
 	int Cnt = 0;
 	if (width[0] == 0) { //reveng -D
 		*count = mcount();
-		if(!*count)
+		if (!*count)
 			return uerr("no preset models available");
 
-		for(int mode = 0; mode < *count; ++mode) {
+		for (int mode = 0; mode < *count; ++mode) {
 			mbynum(&model, mode);
 			mcanon(&model);
 			size_t size = (model.name && *model.name) ? strlen(model.name) : 6;
@@ -107,20 +107,20 @@ int GetModels(char *Models[], int *count, uint8_t *width){
 		mfree(&model);
 	} else { //reveng -s
 
-		if(~model.flags & P_MULXN)
+		if (~model.flags & P_MULXN)
 			return uerr("cannot search for non-Williams compliant models");
 
 		praloc(&model.spoly, (unsigned long)width[0]);
 		praloc(&model.init, (unsigned long)width[0]);
 		praloc(&model.xorout, (unsigned long)width[0]);
 
-		if(!plen(model.spoly))
+		if (!plen(model.spoly))
 			palloc(&model.spoly, (unsigned long)width[0]);
 		else
 			width[0] = (uint8_t)plen(model.spoly);
 
 		/* special case if qpoly is zero, search to end of range */
-		if(!ptst(qpoly))
+		if (!ptst(qpoly))
 			rflags &= ~R_HAVEQ;
 
 		/* if endianness not specified, try
@@ -135,7 +135,7 @@ int GetModels(char *Models[], int *count, uint8_t *width){
 			do {
 				psets = mcount();
 
-				while(psets) {
+				while (psets) {
 					mbynum(&pset, --psets);
 					
 					/* skip if different width, or refin or refout don't match */

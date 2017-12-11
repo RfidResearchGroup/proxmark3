@@ -1131,12 +1131,12 @@ void chkKey_scanA(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, ui
 			found[(s*2)] = 1; 
 			++*foundkeys; 
 			
-			if (MF_DBGLEVEL >= 3) Dbprintf("ChkKeys_fast: Scan A (%d)", c->block);
+			if (MF_DBGLEVEL >= 3) Dbprintf("ChkKeys_fast: Scan A found (%d)", c->block);
 		}
 	} 
 }
 
- void chkKey_scanB(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, uint8_t *sectorcnt, uint8_t *foundkeys) { 
+void chkKey_scanB(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, uint8_t *sectorcnt, uint8_t *foundkeys) { 
 	uint8_t status;	
 	for (uint8_t s = 0; s < *sectorcnt; s++) { 
 
@@ -1151,7 +1151,7 @@ void chkKey_scanA(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, ui
 			found[(s*2)+1] = 1; 
 			++*foundkeys; 
 			
-			if (MF_DBGLEVEL >= 3) Dbprintf("ChkKeys_fast: Scan B (%d)", c->block);
+			if (MF_DBGLEVEL >= 3) Dbprintf("ChkKeys_fast: Scan B found (%d)", c->block);
 		}
 	} 
 }
@@ -1171,7 +1171,7 @@ void chkKey_loopBonly(struct chk_t *c, struct sector_t *k_sector, uint8_t *found
 				found[(s*2)+1] = 1;
 				++*foundkeys;
 
-				if (MF_DBGLEVEL >= 3) Dbprintf("ChkKeys_fast: Loop B only (%d)", c->block);		
+				if (MF_DBGLEVEL >= 3) Dbprintf("ChkKeys_fast: Reading B found (%d)", c->block);		
 
 				// try quick find all B?
 				// assume: keys comes in groups. Find one B, test against all B.
@@ -1256,54 +1256,65 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 	chk_data.pcs = pcs;
 	chk_data.block = 0;
 	
-	// keychunk loop - depth first for sector0.
+	
+	// keychunk loop - depth first one sector.
 	if ( strategy == 1 ) {
-		for (uint8_t i = 0; i < keyCount; ++i) {
-			// Allow button press / usb cmd to interrupt device
-			if (BUTTON_PRESS() && !usb_poll_validate_length()) {
-				goto OUT;
-			}
+		// Sector main loop
+		// keep track of how many sectors on card.
+		for (uint8_t s = 0; s < sectorcnt; ++s) {
 
-			WDT_HIT();
-		
-			// new key
-			chk_data.key = bytes_to_num(datain + i * 6, 6);
-			// those scans messes with block.
-			chk_data.block = 0;
+			if ( found[(s*2)] && found[(s*2)+1] )  
+				continue;
+
 			// assume: block0,1,2 has more read rights in accessbits than the sectortrailer. authenticating against block0 in each sector
+			chk_data.block = FirstBlockOfSector( s );
 
-			// skip already found A keys 
-			if( !found[0] ) {
-				chk_data.keyType = 0;
-				status = chkKey( &chk_data);
-				if ( status == 0 ) {
-					memcpy(k_sector[0].keyA, datain + i * 6, 6);
-					found[0] = 1;
-					++foundkeys;
-					
-					chkKey_scanA(&chk_data, k_sector, found, &sectorcnt, &foundkeys);
-					
-					// read Block B, if A is found.
-					chkKey_loopBonly( &chk_data, k_sector, found, &sectorcnt, &foundkeys);
-					
-					chk_data.block = 0;
+			for (uint8_t i = 0; i < keyCount; ++i) {
+				// Allow button press / usb cmd to interrupt device
+				if (BUTTON_PRESS() && !usb_poll_validate_length()) {
+					goto OUT;
 				}
-			}
+
+				WDT_HIT();
 			
-			// skip already found B keys 
-			if( !found[1] ) {
-				chk_data.keyType = 1;
-				status = chkKey( &chk_data);
-				if ( status == 0 ) {
-					memcpy(k_sector[0].keyB, datain + i * 6, 6);
-					found[1] = 1;
-					++foundkeys;
-					
-					chkKey_scanB(&chk_data, k_sector, found, &sectorcnt, &foundkeys);
+				// new key
+				chk_data.key = bytes_to_num(datain + i * 6, 6);
+
+				// assume: block0,1,2 has more read rights in accessbits than the sectortrailer. authenticating against block0 in each sector
+
+				// skip already found A keys 
+				if( !found[(s*2)] ) {
+					chk_data.keyType = 0;
+					status = chkKey( &chk_data);
+					if ( status == 0 ) {
+						memcpy(k_sector[s].keyA, datain + i * 6, 6);
+						found[(s*2)] = 1;
+						++foundkeys;
+						
+						chkKey_scanA(&chk_data, k_sector, found, &sectorcnt, &foundkeys);
+						
+						// read Block B, if A is found.
+						chkKey_loopBonly( &chk_data, k_sector, found, &sectorcnt, &foundkeys);
+						
+						chk_data.block = FirstBlockOfSector( s );
+					}
 				}
-			}
-		} // end look - depth first
-	} // strategy 1
+				
+				// skip already found B keys 
+				if( !found[(s*2)+1] ) {
+					chk_data.keyType = 1;
+					status = chkKey( &chk_data);
+					if ( status == 0 ) {
+						memcpy(k_sector[s].keyB, datain + i * 6, 6);
+						found[(s*2)+1] = 1;
+						++foundkeys;
+						
+						chkKey_scanB(&chk_data, k_sector, found, &sectorcnt, &foundkeys);
+					}
+				}
+			} // end loop - depth first
+		} // end loop - sector
+	} // end strategy 1
 
 	if ( strategy == 2 ) {
 		// Keychunk loop

@@ -418,6 +418,24 @@ int CmdAnalyseTEASelfTest(const char *Cmd){
 
 int CmdAnalyseA(const char *Cmd){
 	
+	bool term = !isatty(STDIN_FILENO);
+	if (!term) {
+		char star[4];
+		star[0] = '-';
+		star[1] = '\\';
+		star[2] = '|';
+		star[4] = '/';
+		
+		for (uint8_t k=0; k<5; k = (k+1) % 4 ) {
+			printf("\e[s%c\e[u", star[k]);
+			fflush(stdout);
+			if (ukbhit()) {
+				int gc = getchar(); (void)gc;
+				break;
+			}
+		}
+	}
+	
 //piwi
 // uid(2e086b1a) nt(230736f6) ks(0b0008000804000e) nr(000000000)
 // uid(2e086b1a) nt(230736f6) ks(0e0b0e0b090c0d02) nr(000000001)

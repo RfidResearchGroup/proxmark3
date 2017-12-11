@@ -1272,7 +1272,7 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 					if ( keyitems - keycnt < 2) {
 						p = realloc(keyBlock, 6 * (keyitems += 64));
 						if (!p) {
-							PrintAndLog("Cannot allocate memory for defKeys");
+							PrintAndLog("Cannot allocate memory for default keys");
 							free(keyBlock);
 							fclose(f);
 							return 2;
@@ -1372,11 +1372,11 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 			// all keys?		
 			if ( curr_keys == SectorsCnt*2 || lastChunk ) {
 				memcpy(e_sector, resp.d.asBytes, SectorsCnt * sizeof(icesector_t) );
-				break;
+				goto out;
 			}
 		}
 	}
-
+out: 
 	t1 = msclock() - t1;
 	PrintAndLog("[+] Time in checkkeys (fast):  %.1fs\n", (float)(t1/1000.0));
 
