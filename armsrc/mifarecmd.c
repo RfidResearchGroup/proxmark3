@@ -1319,10 +1319,11 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 						chkKey_scanB(&chk_data, k_sector, found, &sectorcnt, &foundkeys);
 					}
 				}
-			} // end loop - depth first
 
-			// assume1. if we already some keys,  time to quit this keyblock?
-			if ( newfound-foundkeys  > 0 )
+			} // end keys test loop - depth first 
+
+			// assume1. if no keys found in first sector, get next keychunk from client
+			if ( newfound-foundkeys  == 0 )
 				goto OUT;
 
 		} // end loop - sector
