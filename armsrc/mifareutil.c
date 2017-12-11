@@ -182,14 +182,14 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 	// Receive 4 byte tag answer
 	len = ReaderReceive(receivedAnswer, receivedAnswerPar);
 	if (!len) {
-		if (MF_DBGLEVEL >= MF_DBG_ALL) Dbprintf("Authentication failed. Card timeout.");
+		if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("Authentication failed. Card timeout.");
 		return 2;
 	}
 
 	ntpp = prng_successor(nt, 32) ^ crypto1_word(pcs, 0,0);
 
 	if (ntpp != bytes_to_num(receivedAnswer, 4)) {
-		if (MF_DBGLEVEL >= MF_DBG_ALL)	Dbprintf("Authentication failed. Error card response.");
+		if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("Authentication failed. Error card response.");
 		return 3;
 	}
 	return 0;
