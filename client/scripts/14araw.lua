@@ -71,9 +71,7 @@ end
 -- The main entry point
 function main(args)
 
-	if args == nil or #args == 0 then
-		return help()
-	end
+	if args == nil or #args == 0 then return help() end
 
 	local ignore_response = false
 	local append_crc = false
