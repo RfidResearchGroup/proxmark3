@@ -818,7 +818,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 }
 
 int CmdHF14AMfNested(const char *Cmd) {
-	int i, j, res, iterations;
+	int i, res, iterations;
 	sector_t *e_sector = NULL;
 	uint8_t blockNo = 0;
 	uint8_t keyType = 0;
@@ -826,7 +826,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 	uint8_t trgKeyType = 0;
 	uint8_t SectorsCnt = 0;
 	uint8_t key[6] = {0, 0, 0, 0, 0, 0};
-	uint8_t keyBlock[MIFARE_DEFAULTKEYS_SIZE*6];
+	uint8_t keyBlock[(MIFARE_DEFAULTKEYS_SIZE + 1) *6];
 	uint64_t key64 = 0;
 	bool transferToEml = false;
 	bool createDumpFile = false;
@@ -922,25 +922,16 @@ int CmdHF14AMfNested(const char *Cmd) {
 		if (e_sector == NULL) return 1;
 		
 		//test current key and additional standard keys first
-		//test current key and additional standard keys first
+		// add parameter key
+		memcpy( keyBlock + (MIFARE_DEFAULTKEYS_SIZE * 6), key, 6 );
+
 		for (int cnt = 0; cnt < MIFARE_DEFAULTKEYS_SIZE; cnt++){
 			num_to_bytes(g_mifare_default_keys[cnt], 6, (uint8_t*)(keyBlock + cnt * 6));
 		}
 
 		PrintAndLog("Testing known keys. Sector count=%d", SectorsCnt);
-		for (i = 0; i < SectorsCnt; i++) {
-			for (j = 0; j < 2; j++) {
-				if (e_sector[i].foundKey[j]) continue;
+		res = mfCheckKeys_fast( SectorsCnt, true, true, 1, MIFARE_DEFAULTKEYS_SIZE + 1, keyBlock, e_sector);
 				
-				res = mfCheckKeys(FirstBlockOfSector(i), j, true, 6, keyBlock, &key64);
-				
-				if (!res) {
-					e_sector[i].Key[j] = key64;
-					e_sector[i].foundKey[j] = true;
-				}
-			}
-		}						   
-		
 		uint64_t t2 = msclock() - t1;
 		PrintAndLog("Time to check %d known keys: %.0f seconds\n", MIFARE_DEFAULTKEYS_SIZE, (float)t2/1000.0 );
 		PrintAndLog("enter nested...");	
@@ -969,6 +960,8 @@ int CmdHF14AMfNested(const char *Cmd) {
 							iterations++;
 							e_sector[sectorNo].foundKey[trgKeyType] = 1;
 							e_sector[sectorNo].Key[trgKeyType] = bytes_to_num(keyBlock, 6);
+
+							res = mfCheckKeys_fast( SectorsCnt, true, true, 2, 1, keyBlock, e_sector);
 							continue;
 							
 						default : PrintAndLog("Unknown Error.\n");
@@ -1203,13 +1196,14 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 	FILE * f;
 	char filename[FILE_PATH_SIZE]={0};
 	char buf[13];
+	uint8_t tempkey[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 	uint8_t *keyBlock = NULL, *p;
-	uint8_t SectorsCnt = 1;
+	uint8_t sectorsCnt = 1;
 	int i, keycnt = 0;
 	int transferToEml = 0, createDumpFile = 0;
 	uint32_t keyitems = MIFARE_DEFAULTKEYS_SIZE;
-	uint64_t foo = 0, bar = 0;
-	icesector_t *e_sector = NULL;
+
+	sector_t *e_sector = NULL;
 	
 	keyBlock = calloc(MIFARE_DEFAULTKEYS_SIZE, 6);
 	if (keyBlock == NULL) return 1;
@@ -1219,11 +1213,11 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 	
 	// sectors
 	switch(ctmp) {
-		case '0': SectorsCnt =  5; break;
-		case '1': SectorsCnt = 16; break;
-		case '2': SectorsCnt = 32; break;
-		case '4': SectorsCnt = 40; break;
-		default:  SectorsCnt = 16;
+		case '0': sectorsCnt =  5; break;
+		case '1': sectorsCnt = 16; break;
+		case '2': sectorsCnt = 32; break;
+		case '4': sectorsCnt = 40; break;
+		default:  sectorsCnt = 16;
 	}
 	
 	ctmp = param_getchar(Cmd, 1);
@@ -1303,22 +1297,15 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 				(keyBlock + 6*keycnt)[3], (keyBlock + 6*keycnt)[4],	(keyBlock + 6*keycnt)[5], 6);
 	}
 	
-	// initialize storage for found keys
-	e_sector = calloc(SectorsCnt, sizeof(icesector_t));
+	// // initialize storage for found keys
+	e_sector = calloc(sectorsCnt, sizeof(sector_t));
 	if (e_sector == NULL) {
 		free(keyBlock);
 		return 1;
 	}
-
-	// empty e_sector
-	for(int i = 0; i < SectorsCnt; ++i){
-		memset(e_sector[i].keyA, 0xFF, 6);
-		memset(e_sector[i].keyB, 0xFF, 6);
-	}
 			
 	uint32_t chunksize = keycnt > (USB_CMD_DATA_SIZE/6) ? (USB_CMD_DATA_SIZE/6) : keycnt;
 	bool firstChunk = true, lastChunk = false;
-	uint32_t timeout = 0;
 	
 	// time
 	uint64_t t1 = msclock();
@@ -1334,58 +1321,25 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 			if ( size == keycnt - i)
 				lastChunk = true;
 			
-			// send keychunk		
-			UsbCommand c = {CMD_MIFARE_CHKKEYS_FAST, { (SectorsCnt | (firstChunk << 8) | (lastChunk << 12) ), strategy, size}};	
-			
-			memcpy(c.d.asBytes, keyBlock + i * 6, 6 * size);
+			int res = mfCheckKeys_fast( sectorsCnt, firstChunk, lastChunk, strategy, size, keyBlock + (i * 6), e_sector);
 
-			clearCommandBuffer();
-			SendCommand(&c);
-			UsbCommand resp;
-			
-			if ( firstChunk ) firstChunk = false;
-		
-			uint64_t t2 = msclock();	
-			while ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
-				timeout++;
-				printf(".");
-				fflush(stdout);
-				// max timeout for one chunk of 85keys, 60*3sec = 180seconds
-				// s70 with 40*2 keys to check, 80*85 = 6800 auth.
-				// takes about 97s, still some margin before abort
-				if (timeout > 180) {
-					PrintAndLog("\nNo response from Proxmark. Aborting...");
-					return 1;
-				}
-			}
-			
-			uint8_t curr_keys = resp.arg[0];
-			foo = bytes_to_num(resp.d.asBytes+480, 8);
-			bar = bytes_to_num(resp.d.asBytes+488, 2);
-
-			// reset
-			timeout = 0;
-			
-			t2 = msclock() - t2;
-			PrintAndLog("\n[-] Chunk: %.1fs | found %u/%u keys (%u)", (float)(t2/1000.0), curr_keys, (SectorsCnt<<1), size);
-			
-			// all keys?		
-			if ( curr_keys == SectorsCnt*2 || lastChunk ) {
-				memcpy(e_sector, resp.d.asBytes, SectorsCnt * sizeof(icesector_t) );
+			if ( firstChunk )
+				firstChunk = false;
+						
+			// all keys,  aborted,  last keychunk		
+			if ( res == 0 || res == 2 || lastChunk )
 				goto out;
-			}
 		} // end chunks of keys
 	} // end strategy
 out: 
 	t1 = msclock() - t1;
 	PrintAndLog("[+] Time in checkkeys (fast):  %.1fs\n", (float)(t1/1000.0));
 
-	//print keys
-	printKeyTable_fast( SectorsCnt, e_sector, bar, foo );
+	printKeyTable( sectorsCnt, e_sector );
 
 	if (transferToEml) {
 		uint8_t block[16] = {0x00};
-		for (uint8_t i = 0; i < SectorsCnt; ++i ) {
+		for (uint8_t i = 0; i < sectorsCnt; ++i ) {
 			mfEmlGetMem(block, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1);
 			/*
 			if (e_sector[i].foundKey[0])
@@ -1408,11 +1362,15 @@ out:
 		}
 		PrintAndLog("Printing keys to binary file dumpkeys.bin...");
 	
-		for( i=0; i<SectorsCnt; i++)
-			fwrite (e_sector[i].keyA, 1, 6, fkeys);
+		for (i=0; i<sectorsCnt; i++) {
+			num_to_bytes(e_sector[i].Key[0], 6, tempkey);
+			fwrite (tempkey, 1, 6, fkeys);
+		}
 
-		for(i=0; i<SectorsCnt; i++)
-			fwrite (e_sector[i].keyB, 1, 6, fkeys );
+		for (i=0; i<sectorsCnt; i++) {
+			num_to_bytes(e_sector[i].Key[1], 6, tempkey);
+			fwrite (tempkey, 1, 6, fkeys );
+		}
 
 		fclose(fkeys);
 		PrintAndLog("Found keys have been dumped to file dumpkeys.bin. 0xffffffffffff has been inserted for unknown keys.");			
@@ -1636,7 +1594,6 @@ int CmdHF14AMfChk(const char *Cmd) {
 			}
 		}
 	}
-
 
 	//print keys
 	printKeyTable( SectorsCnt, e_sector );
@@ -2030,41 +1987,6 @@ int CmdHF14AMfKeyBrute(const char *Cmd) {
 	t1 = msclock() - t1;
 	PrintAndLog("\nTime in keybrute: %.0f seconds\n", (float)t1/1000.0);
 	return 0;	
-}
-
-void printKeyTable_fast( uint8_t sectorscnt, icesector_t *e_sector, uint64_t bar, uint64_t foo ){
-	
-	char strA[12+1] = {0};
-	char strB[12+1] = {0};	
-	uint8_t arr[80];
-	for (uint8_t i = 0; i < 64;  ++i) {
-		arr[i] = (foo >> i) & 0x1;
-	}
-	for (uint8_t i = 0; i < 16;  ++i) {
-		arr[i+64] = (bar >> i) & 0x1;
-	}
-	
-	PrintAndLog("|---|----------------|---|----------------|---|");
-	PrintAndLog("|sec|key A           |res|key B           |res|");
-	PrintAndLog("|---|----------------|---|----------------|---|");
-	for (uint8_t i = 0; i < sectorscnt; ++i) {
-
-		snprintf(strA, sizeof(strA), "------------");
-		snprintf(strB, sizeof(strB), "------------");
-		
-		if ( arr[i*2] )
-			snprintf(strA, sizeof(strA), "%012" PRIx64, bytes_to_num(e_sector[i].keyA, 6));
-		
-		if ( arr[(i*2)+1] )
-			snprintf(strB, sizeof(strB), "%012" PRIx64, bytes_to_num(e_sector[i].keyB, 6));
-		
-		PrintAndLog("|%03d|  %s  | %d |  %s  | %d |"
-			, i
-			, strA, arr[i*2]
-			, strB, arr[(i*2)+1]
-		);
-	}
-	PrintAndLog("|---|----------------|---|----------------|---|");
 }
 
 void printKeyTable( uint8_t sectorscnt, sector_t *e_sector ){

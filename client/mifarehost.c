@@ -133,6 +133,82 @@ int mfCheckKeys (uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t key
 	*key = bytes_to_num(resp.d.asBytes, 6);
 	return 0;
 }
+
+// Sends chunks of keys to device. 
+// 0 == ok all keys found
+// 1 == 
+// 2 == Time-out, aborting
+int mfCheckKeys_fast( uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, uint8_t strategy,
+						uint32_t size, uint8_t *keyBlock, sector_t *e_sector) {
+
+	uint64_t t2 = msclock();
+	uint32_t timeout = 0;
+
+	// send keychunk		
+	UsbCommand c = {CMD_MIFARE_CHKKEYS_FAST, { (sectorsCnt | (firstChunk << 8) | (lastChunk << 12) ), strategy, size}};	
+	memcpy(c.d.asBytes, keyBlock, 6 * size);
+	clearCommandBuffer();
+	SendCommand(&c);
+	UsbCommand resp;
+
+	while ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
+		timeout++;
+		printf(".");
+		fflush(stdout);
+		// max timeout for one chunk of 85keys, 60*3sec = 180seconds
+		// s70 with 40*2 keys to check, 80*85 = 6800 auth.
+		// takes about 97s, still some margin before abort
+		if (timeout > 180) {
+			PrintAndLog("\nNo response from Proxmark. Aborting...");
+			return 2;
+		}
+	}
+	t2 = msclock() - t2;
+
+	// time to convert the returned data.
+	uint8_t curr_keys = resp.arg[0];
+
+	PrintAndLog("\n[-] Chunk: %.1fs | found %u/%u keys (%u)", (float)(t2/1000.0), curr_keys, (sectorsCnt<<1), size);
+		
+	// all keys?		
+	if ( curr_keys == sectorsCnt*2 || lastChunk ) {
+		
+		// success array. each byte is status of key 
+		uint8_t arr[80];
+		uint64_t foo = bytes_to_num(resp.d.asBytes+480, 8);
+		for (uint8_t i = 0; i < 64;  ++i) {
+			arr[i] = (foo >> i) & 0x1;
+		}
+		foo = bytes_to_num(resp.d.asBytes+488, 2);
+		for (uint8_t i = 0; i < 16;  ++i) {
+			arr[i+64] = (foo >> i) & 0x1;
+		}
+
+		// initialize storage for found keys
+		icesector_t *tmp = NULL;
+		tmp = calloc(sectorsCnt, sizeof(icesector_t));
+		if (tmp == NULL)
+			return 1;
+		memcpy(tmp, resp.d.asBytes, sectorsCnt * sizeof(icesector_t) );
+
+		for ( int i = 0; i < sectorsCnt; i++) {
+			// key A
+			if ( !e_sector[i].foundKey[0] ) {
+				e_sector[i].Key[0] =  bytes_to_num( tmp[i].keyA, 6);
+				e_sector[i].foundKey[0] = arr[ (i*2) ];
+			}
+			// key B
+			if ( !e_sector[i].foundKey[1] ) {
+				e_sector[i].Key[1] =  bytes_to_num( tmp[i].keyB, 6);
+				e_sector[i].foundKey[1] = arr[ (i*2) + 1 ];
+			}
+		}
+		free(tmp);
+		return 0;
+	}
+	return 1;
+}
+
 // PM3 imp of J-Run mf_key_brute (part 2)
 // ref: https://github.com/J-Run/mf_key_brute
 int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultkey){
