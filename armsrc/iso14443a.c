@@ -119,12 +119,12 @@ void iso14a_set_trigger(bool enable) {
 }
 
 void iso14a_set_timeout(uint32_t timeout) {
-	iso14a_timeout = timeout - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER)/(16*8) + 2;
+	iso14a_timeout = timeout + (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER)/(16*8) + 2;
 	//if (MF_DBGLEVEL >= 3) Dbprintf("ISO14443A Timeout set to %ld (%dms)", iso14a_timeout, iso14a_timeout / 106);
 }
 
 uint32_t iso14a_get_timeout(void) {
-	return iso14a_timeout + (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER)/(16*8) + 2;
+	return iso14a_timeout - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER)/(16*8) - 2;
 }
 
 //-----------------------------------------------------------------------------
