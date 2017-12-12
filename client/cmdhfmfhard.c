@@ -1697,16 +1697,12 @@ static inline bool bitflips_match(uint8_t byte, uint32_t state, odd_even_t odd_e
 }
 	
 	
-static uint_fast8_t reverse(uint_fast8_t byte)
+static uint_fast8_t reverse(uint_fast8_t b)
 {
-	uint_fast8_t rev_byte = 0;
-	
-	for (uint8_t i = 0; i < 8; i++) {
-		rev_byte <<= 1;
-		rev_byte |= (byte >> i) & 0x01;
-	}
-	
-	return rev_byte;
+	b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
+	b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
+	b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
+	return b;
 }
 
 
