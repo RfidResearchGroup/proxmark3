@@ -69,7 +69,12 @@ bool endsWith (char* base, char* str) {
 */
 int CmdScriptList(const char *Cmd) {
 
-	char script_directory_path[strlen(get_my_executable_directory()) + strlen(LUA_SCRIPTS_DIRECTORY) + 1];
+	char const * exedir = get_my_executable_directory();
+	strcpy(script_directory_path, get_my_executable_directory());
+	if (exedir == NULL)
+	    return 0;
+	char script_directory_path[strlen(exedir) + strlen(LUA_SCRIPTS_DIRECTORY) + 1];
+	strcpy(script_directory_path, exedir);
 	strcpy(script_directory_path, get_my_executable_directory());
 	strcat(script_directory_path, LUA_SCRIPTS_DIRECTORY);
 
