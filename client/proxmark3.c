@@ -88,14 +88,15 @@ static bool hookUpPM3() {
 	bool ret = false;
 	sp = uart_open( comport );
 	if (sp == INVALID_SERIAL_PORT) {
-		printf("ERROR: invalid serial port\n");
+		printf("Reconnect failed, retrying...  (reason: invalid serial port)\n");
 		ret = false;
 		offline = 1;
 	} else if (sp == CLAIMED_SERIAL_PORT) {
-		printf("ERROR: serial port is claimed by another process\n");
+		printf("Reconnect failed, retrying... (reason: serial port is claimed by another process)\n");
 		ret = false;
 		offline = 1;
 	} else {
+		printf("Proxmark reconnected\n");
 		ret = true;
 		offline = 0;
 	}
@@ -178,7 +179,7 @@ void main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 
 	read_history(".history");
 	
-	// loops everytime enter is pressed...
+	// loops every time enter is pressed...
 	while(1) {
 		
 		// this should hook up the PM3 again.
@@ -270,7 +271,6 @@ void main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 			break;
 		}
 	}
-
 	
 	if (sf)
 		fclose(sf);
