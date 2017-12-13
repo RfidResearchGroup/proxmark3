@@ -788,8 +788,8 @@ static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool use_credit_key, bool v
 }
 
 static bool select_and_auth(uint8_t *KEY, uint8_t *MAC, uint8_t *div_key, bool use_credit_key, bool elite, bool rawkey, bool verbose) {
-	uint8_t CSN[8]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
-	uint8_t CCNR[12]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+	uint8_t CSN[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+	uint8_t CCNR[12] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
 
 	if (!select_only(CSN, CCNR, use_credit_key, verbose))
 		return false;
@@ -800,7 +800,7 @@ static bool select_and_auth(uint8_t *KEY, uint8_t *MAC, uint8_t *div_key, bool u
 	else
 		HFiClassCalcDivKey(CSN, KEY, div_key, elite);
 	
-	PrintAndLog("Authing with %s: %02x%02x%02x%02x%02x%02x%02x%02x", rawkey ? "raw key" : "diversified key", div_key[0],div_key[1],div_key[2],div_key[3],div_key[4],div_key[5],div_key[6],div_key[7]);
+	if (verbose) PrintAndLog("Authing with %s: %s", rawkey ? "raw key" : "diversified key", sprint_hex(div_key, 8) );
 
 	doMAC(CCNR, div_key, MAC);
 	UsbCommand resp;
@@ -809,12 +809,12 @@ static bool select_and_auth(uint8_t *KEY, uint8_t *MAC, uint8_t *div_key, bool u
 	clearCommandBuffer();
 	SendCommand(&d);
 	if (!WaitForResponseTimeout(CMD_ACK,&resp,4500)) {
-		PrintAndLog("Auth Command execute timeout");
+		if (verbose) PrintAndLog("Auth Command execute timeout");
 		return false;
 	}
 	uint8_t isOK = resp.arg[0] & 0xff;
 	if (!isOK) {
-		PrintAndLog("Authentication error");
+		if (verbose) PrintAndLog("Authentication error");
 		return false;
 	}
 	return true;
@@ -1894,6 +1894,8 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 				printf("\naborted via keyboard!\n");
 				break;
 			}
+			
+			memcpy(key, keyBlock + 8 * c , 8); 
 
 			// debit key. try twice
 			if ( !found_debit ) {
