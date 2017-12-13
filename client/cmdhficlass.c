@@ -218,6 +218,13 @@ int usage_hf_iclass_loclass(void) {
 	PrintAndLog("                  ... totalling N*24 bytes");
 	return 0;
 }
+int usage_hf_iclass_chk(void) {
+	PrintAndLog("Usage: hf iclass chk [h]  <f  (*.dic)>");
+	PrintAndLog("Options:");
+	PrintAndLog("h             Show this help");
+	PrintAndLog("f <filename>  Dictionary file with default iclass keys");
+	return 0;
+}
 
 int xorbits_8(uint8_t val) {
 	uint8_t res = val ^ (val >> 1); //1st pass
@@ -788,7 +795,7 @@ static bool select_and_auth(uint8_t *KEY, uint8_t *MAC, uint8_t *div_key, bool u
 		return false;
 
 	//get div_key
-	if(rawkey)
+	if (rawkey)
 		memcpy(div_key, KEY, 8);
 	else
 		HFiClassCalcDivKey(CSN, KEY, div_key, elite);
@@ -1806,9 +1813,137 @@ int CmdHFiClassManageKeys(const char *Cmd) {
 	return 0;
 }
 
+int CmdHFiClassCheckKeys(const char *Cmd) {
+
+	char ctmp = 0x00;
+	ctmp = param_getchar(Cmd, 0);
+	if (ctmp == 'h' || ctmp == 'H') return usage_hf_iclass_chk();
+
+	uint8_t mac[4] = {0x00,0x00,0x00,0x00};
+	uint8_t key[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+	uint8_t div_key[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+
+	// elite key,  raw key, standard key
+	bool elite = false;
+	bool rawkey = false;	
+	bool found_debit = false;
+	bool found_credit = false;	
+
+	FILE * f;
+	char filename[FILE_PATH_SIZE] = {0};
+	char buf[17];
+	uint8_t *keyBlock = NULL, *p;
+	int keyitems = 0, keycnt = 0;
+
+	
+	// May be a dictionary file
+	if ( param_getstr(Cmd, 1, filename, sizeof(filename)) >= FILE_PATH_SIZE ) {
+		PrintAndLog("File name too long");
+		free(keyBlock);
+		return 2;
+	}
+			
+	if ( !(f = fopen( filename , "r")) ) {
+		PrintAndLog("File: %s: not found or locked.", filename);
+		free(keyBlock);
+		return 1;
+	}
+
+	while( fgets(buf, sizeof(buf), f) ){
+		if (strlen(buf) < 16 || buf[15] == '\n')
+			continue;
+	
+		while (fgetc(f) != '\n' && !feof(f)) ;  //goto next line
+		
+		if( buf[0]=='#' ) continue;	//The line start with # is comment, skip
+
+		if (!isxdigit(buf[0])){
+			PrintAndLog("File content error. '%s' must include 16 HEX symbols",buf);
+			continue;
+		}
+		
+		buf[16] = 0;
+
+		p = realloc(keyBlock, 8 * (keyitems += 64));
+		if (!p) {
+			PrintAndLog("Cannot allocate memory for default keys");
+			free(keyBlock);
+			fclose(f);
+			return 2;
+		}
+		keyBlock = p;
+
+		memset(keyBlock + 8 * keycnt, 0, 8);
+		num_to_bytes(strtoll(buf, NULL, 16), 8, keyBlock + 8 * keycnt);
+
+		PrintAndLog("check key[%2d] %016" PRIx64, keycnt, bytes_to_num(keyBlock + 8*keycnt, 8));
+		keycnt++;
+		memset(buf, 0, sizeof(buf));
+	}
+	fclose(f);
+	PrintAndLog("Loaded %2d keys from %s", keycnt, filename);
+
+	
+	// time
+	uint64_t t1 = msclock();
+				
+	for (uint32_t c = 0; c < keycnt; c += 1) {
+			printf("."); fflush(stdout);			
+			if (ukbhit()) {
+				int gc = getchar(); (void)gc;
+				printf("\naborted via keyboard!\n");
+				break;
+			}
+
+			// debit key. try twice
+			if ( !found_debit ) {
+				for (int foo = 0; foo < 2; foo++) {
+					if (!select_and_auth(key, mac, div_key, false, elite, rawkey, false))
+						continue;
+
+					// key found.
+					PrintAndLog("Found debit key %s || div_key %s",
+						sprint_hex(key, 8),
+						sprint_hex(div_key, 8)
+					);
+					found_debit = true;
+				}
+			}
+			
+			// credit key. try twice
+			if ( !found_credit ) {
+				for (int foo = 0; foo < 2; foo++) {
+					if (!select_and_auth(key, mac, div_key, true, elite, rawkey, false))
+						continue;
+					
+					// key found
+					PrintAndLog("Found credit key %s || div_key %s",
+						sprint_hex(key, 8),
+						sprint_hex(div_key, 8)
+					);
+					found_credit = true;
+				}
+			}
+			
+			// both keys found.
+			if ( found_debit && found_credit )
+				break;
+	}
+
+	t1 = msclock() - t1;
+
+	PrintAndLog("\nTime in iclass checkkeys: %.0f seconds\n", (float)t1/1000.0);
+	
+	DropField();
+	free(keyBlock);
+	PrintAndLog("");
+	return 0;
+}
+
 static command_t CommandTable[] = {
 	{"help",		CmdHelp,						1,	"This help"},
 	{"calcnewkey",  CmdHFiClassCalcNewKey,      	1,	"[options..] Calc Diversified keys (blocks 3 & 4) to write new keys"},
+	{"chk",         CmdHFiClassCheckKeys,        	0,	"            Check keys"},
 	{"clone",       CmdHFiClassCloneTag,        	0,	"[options..] Authenticate and Clone from iClass bin file"},
 	{"decrypt",     CmdHFiClassDecrypt,         	1,	"[f <fname>] Decrypt tagdump" },
 	{"dump",        CmdHFiClassReader_Dump,     	0,	"[options..] Authenticate and Dump iClass tag's AA1"},
