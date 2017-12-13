@@ -1315,6 +1315,12 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 		// main keychunk loop			
 		for (uint32_t i = 0; i < keycnt; i += chunksize) {
 			
+			if (ukbhit()) {
+				int gc = getchar(); (void)gc;
+				printf("\naborted via keyboard!\n");
+				goto out;
+			}
+			
 			uint32_t size = ((keycnt - i)  > chunksize) ? chunksize : keycnt - i;
 			
 			// last chunk?
@@ -1545,7 +1551,14 @@ int CmdHF14AMfChk(const char *Cmd) {
 			if (e_sector[i].foundKey[trgKeyType]) continue;
 						
 			for (uint32_t c = 0; c < keycnt; c += max_keys) {
-				printf("."); fflush(stdout);			
+								
+				printf("."); fflush(stdout);
+				if (ukbhit()) {
+					int gc = getchar();	(void)gc;
+					printf("\naborted via keyboard!\n");
+					goto out;
+				}
+								
 				uint32_t size = keycnt-c > max_keys ? max_keys : keycnt-c;
 				
 				res = mfCheckKeys(b, trgKeyType, true, size, &keyBlock[6*c], &key64);
@@ -1554,6 +1567,8 @@ int CmdHF14AMfChk(const char *Cmd) {
 					e_sector[i].foundKey[trgKeyType] = true;
 					break;
 				}
+				
+
 			}
 			b < 127 ? ( b +=4 ) : ( b += 16 );	
 		}
@@ -1595,6 +1610,8 @@ int CmdHF14AMfChk(const char *Cmd) {
 		}
 	}
 
+out:
+	
 	//print keys
 	printKeyTable( SectorsCnt, e_sector );
 	
@@ -1632,7 +1649,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 		fclose(fkeys);
 		PrintAndLog("Found keys have been dumped to file dumpkeys.bin. 0xffffffffffff has been inserted for unknown keys.");			
 	}
-	
+
 	free(keyBlock);
 	free(e_sector);
 	PrintAndLog("");
