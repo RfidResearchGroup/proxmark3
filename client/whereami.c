@@ -557,6 +557,7 @@ int WAI_PREFIX(getModulePath)(char* out, int capacity, int* dirname_length)
       defined(__FreeBSD_kernel__) || defined(__NetBSD__)
 
 #include <limits.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
@@ -574,8 +575,12 @@ int WAI_PREFIX(getExecutablePath)(char* out, int capacity, int* dirname_length)
 
   for (;;)
   {
+#ifdef KERN_PROC_ARGV
+    int mib[4] = { CTL_KERN, KERN_PROC_ARGS, getpid(), KERN_PROC_ARGV };
+#else
     int mib[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
-    size_t size = sizeof(buffer1);
+#endif
+	size_t size = sizeof(buffer1);
 
     if (sysctl(mib, (u_int)(sizeof(mib) / sizeof(mib[0])), path, &size, NULL, 0) != 0)
         break;
