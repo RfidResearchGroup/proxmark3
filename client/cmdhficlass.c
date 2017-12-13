@@ -1874,7 +1874,7 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 		keyBlock = p;
 
 		memset(keyBlock + 8 * keycnt, 0, 8);
-		num_to_bytes(strtoll(buf, NULL, 16), 8, keyBlock + 8 * keycnt);
+		num_to_bytes(strtoull(buf, NULL, 16), 8, keyBlock + 8 * keycnt);
 
 		PrintAndLog("check key[%2d] %016" PRIx64, keycnt, bytes_to_num(keyBlock + 8*keycnt, 8));
 		keycnt++;
@@ -1882,7 +1882,6 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 	}
 	fclose(f);
 	PrintAndLog("Loaded %2d keys from %s", keycnt, filename);
-
 	
 	// time
 	uint64_t t1 = msclock();
