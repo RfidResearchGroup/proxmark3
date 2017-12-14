@@ -324,7 +324,7 @@ a56c2df9a26d,
 2031d1e57a3b,
 68d3f7307c89,
 9189449ea24e,
-568c9083f71c,
+568c9083f71c,--Smart Rider. Western Australian Public Transport Cards
 53c11f90822a,
 # Vigik Keys
 # Various sources :
@@ -495,3 +495,37 @@ f7a39753d018,
 #
 0000000018de,
 16ddcb6b3f24,
+#
+# Data from https://pastebin.com/vwDRZW7d
+EC0A9B1A9E06,--Vingcard Mifare 4k Staff card
+6C94E1CED026,--Vingcard Mifare 4k Staff card
+0F230695923F,--Vingcard Mifare 4k Staff card
+0000014B5C31,--Vingcard Mifare 4k Staff card
+#
+BEDB604CC9D1,
+B8A1F613CF3D,
+B578F38A5C61,
+AD4FB33388BF,
+69FB7B7CD8EE,
+2A6D9205E7CA,
+2a2c13cc242a,
+27FBC86A00D0,
+01FA3FC68349,
+#
+6D44B5AAF464,--Smart Rider. Western Australian Public Transport Cards
+1717E34A7A8A,--Smart Rider. Western Australian Public Transport Cards
+#
+6B6579737472,--RFIDeas
+#
+484944204953,--HID MIFARE Classic 1k Key
+204752454154,--HID MIFARE Classic 1k Key
+3B7E4FD575AD,--HID MIFARE SO
+11496F97752A,--HID MIFARE SO
+#
+415A54454B4D,--Luxeo/Aztek cashless vending
+#
+321958042333,--BQT
+#
+160A91D29A9C,--Aperio KEY_A Sector 1, 12, 13, 14, 15 Data Start 0 Length 48
+#
+b7bf0c13066e,--Gallagher
