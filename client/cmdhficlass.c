@@ -755,15 +755,15 @@ void Calc_wb_mac(uint8_t blockno, uint8_t *data, uint8_t *div_key, uint8_t MAC[4
 
 static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool use_credit_key, bool verbose) {
 	UsbCommand resp;
-
 	UsbCommand c = {CMD_READER_ICLASS, {0}};
 	c.arg[0] = FLAG_ICLASS_READER_ONLY_ONCE | FLAG_ICLASS_READER_CC | FLAG_ICLASS_READER_ONE_TRY;
+	
 	if (use_credit_key)
 		c.arg[0] |= FLAG_ICLASS_READER_CEDITKEY;
 
 	clearCommandBuffer();
 	SendCommand(&c);
-	if (!WaitForResponseTimeout(CMD_ACK,&resp,4500)) {
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
 		PrintAndLog("Command execute timeout");
 		return false;
 	}
@@ -771,16 +771,16 @@ static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool use_credit_key, bool v
 	uint8_t isOK = resp.arg[0] & 0xff;
 	uint8_t *data = resp.d.asBytes;
 
-	memcpy(CSN,data,8);
+	memcpy(CSN, data, 8);
 	
-	if (CCNR!=NULL) 
-		memcpy(CCNR,data+16,8);
+	if (CCNR != NULL) 
+		memcpy(CCNR, data+16, 8);
 	
-	if(isOK > 0) {
+	if (isOK > 0) {
 		if (verbose) PrintAndLog("CSN: %s",sprint_hex(CSN,8));
 	}
 	
-	if(isOK <= 1){
+	if (isOK <= 1){
 		PrintAndLog("Failed to obtain CC! Aborting...");
 		return false;
 	}
@@ -808,7 +808,7 @@ static bool select_and_auth(uint8_t *KEY, uint8_t *MAC, uint8_t *div_key, bool u
 	memcpy(d.d.asBytes, MAC, 4);
 	clearCommandBuffer();
 	SendCommand(&d);
-	if (!WaitForResponseTimeout(CMD_ACK,&resp,4500)) {
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
 		if (verbose) PrintAndLog("Auth Command execute timeout");
 		return false;
 	}
@@ -1355,7 +1355,7 @@ static int ReadBlock(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite,
 int CmdHFiClass_ReadBlock(const char *Cmd) {
 	uint8_t blockno=0;
 	uint8_t keyType = 0x88; //debit key
-	uint8_t KEY[8]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+	uint8_t KEY[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
 	uint8_t keyNbr = 0;
 	uint8_t dataLen = 0;
 	char tempStr[50] = {0};
@@ -1897,33 +1897,25 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 			memcpy(key, keyBlock + 8 * c , 8); 
 
 			// debit key. try twice
-			if ( !found_debit ) {
-				for (int foo = 0; foo < 2; foo++) {
-					if (!select_and_auth(key, mac, div_key, false, elite, rawkey, false))
-						continue;
+			for (int foo = 0; foo < 2 && !found_debit; foo++) {
+				if (!select_and_auth(key, mac, div_key, false, elite, rawkey, false))
+					continue;
 
-					// key found.
-					PrintAndLog("Found debit key %s || div_key %s",
-						sprint_hex(key, 8),
-						sprint_hex(div_key, 8)
-					);
-					found_debit = true;
-				}
+				// key found.
+				PrintAndLog("\n--------------------------------------------------------");
+				PrintAndLog("   Found AA1 debit key\t\t[%s]", sprint_hex(key, 8));
+				found_debit = true;
 			}
 			
 			// credit key. try twice
-			if ( !found_credit ) {
-				for (int foo = 0; foo < 2; foo++) {
-					if (!select_and_auth(key, mac, div_key, true, elite, rawkey, false))
-						continue;
-					
-					// key found
-					PrintAndLog("Found credit key %s || div_key %s",
-						sprint_hex(key, 8),
-						sprint_hex(div_key, 8)
-					);
-					found_credit = true;
-				}
+			for (int foo = 0; foo < 2 && !found_credit; foo++) {
+				if (!select_and_auth(key, mac, div_key, true, elite, rawkey, false))
+					continue;
+				
+				// key found
+				PrintAndLog("\n--------------------------------------------------------");
+				PrintAndLog("   Found AA2 credit key\t\t[%s]", sprint_hex(key, 8));
+				found_credit = true;
 			}
 			
 			// both keys found.
