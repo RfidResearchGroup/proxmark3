@@ -232,15 +232,15 @@ test_script:
     #--- end Job
 
       [bool]$res=$false
-      # Wait 40 sec timeout for Job
-      if(Wait-Job $Job -Timeout 40){
+      # Wait 60 sec timeout for Job
+      if(Wait-Job $Job -Timeout 60){
         $Results = $Job | Receive-Job
         if($Results -like "true"){
           $res=$true
         }
       } else {
         Write-host "Test [$Name] timeout" -ForegroundColor Red
-        Add-AppveyorTest -Name "$Name" -Framework NUnit -Filename "$File" -Outcome Failed -Duration 40000 -ErrorMessage "timeout"
+        Add-AppveyorTest -Name "$Name" -Framework NUnit -Filename "$File" -Outcome Failed -Duration 60000 -ErrorMessage "timeout"
       }
       Remove-Job -Force $Job
 
@@ -272,11 +272,9 @@ test_script:
 
     ExecTest "proxmark help hardnested" "proxmark3 -h" {bash -lc 'cd ~/client;proxmark3 -h | grep -q hardnested && echo Passed || echo Failed'}
 
-
     ExecTest "hf mf offline text" "hf mf" {bash -lc "cd ~/client;proxmark3 comx -c 'hf mf'"} "at_enc"
 
     ExecTest "hf mf hardnested" "hf mf hardnested" {bash -lc "cd ~/client;proxmark3 comx -c 'hf mf hardnested t 1 000000000000'"} "found:"
-
 
     if ($global:TestsPassed) {
       Write-Host "Tests [ OK ]" -ForegroundColor Green
