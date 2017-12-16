@@ -219,10 +219,16 @@ int usage_hf_iclass_loclass(void) {
 	return 0;
 }
 int usage_hf_iclass_chk(void) {
-	PrintAndLog("Usage: hf iclass chk [h]  <f  (*.dic)>");
+	PrintAndLog("Checkkeys loads a dictionary text file with 8byte hex keys to test authenticating against a iClass tag");	
+	PrintAndLog("Usage: hf iclass chk [h|e|r] <f  (*.dic)>");
 	PrintAndLog("Options:");
-	PrintAndLog("h             Show this help");
-	PrintAndLog("f <filename>  Dictionary file with default iclass keys");
+	PrintAndLog("      h             Show this help");
+	PrintAndLog("      f <filename>  Dictionary file with default iclass keys");
+	PrintAndLog("      e             target Elite / High security key scheme");
+	PrintAndLog("      r             interpret dictionary file as raw (diversified keys)");
+	PrintAndLog("Samples:");
+	PrintAndLog("		 hf iclass chk f default_iclass_keys.dic");	
+	PrintAndLog("		 hf iclass chk f default_iclass_keys.dic e");
 	return 0;
 }
 
@@ -1815,37 +1821,59 @@ int CmdHFiClassManageKeys(const char *Cmd) {
 
 int CmdHFiClassCheckKeys(const char *Cmd) {
 
-	char ctmp = 0x00;
-	ctmp = param_getchar(Cmd, 0);
-	if (ctmp == 'h' || ctmp == 'H') return usage_hf_iclass_chk();
 
 	uint8_t mac[4] = {0x00,0x00,0x00,0x00};
 	uint8_t key[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
 	uint8_t div_key[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
 
 	// elite key,  raw key, standard key
-	bool elite = false;
-	bool rawkey = false;	
+	bool use_elite = false;
+	bool use_raw = false;	
 	bool found_debit = false;
-	bool found_credit = false;	
-
+	bool found_credit = false;
+	bool errors = false;
+	uint8_t cmdp = 0x00;
 	FILE * f;
 	char filename[FILE_PATH_SIZE] = {0};
+	uint8_t fileNameLen = 0;
 	char buf[17];
 	uint8_t *keyBlock = NULL, *p;
 	int keyitems = 0, keycnt = 0;
 
-	
-	// May be a dictionary file
-	if ( param_getstr(Cmd, 1, filename, sizeof(filename)) >= FILE_PATH_SIZE ) {
-		PrintAndLog("File name too long");
-		free(keyBlock);
-		return 2;
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch (param_getchar(Cmd, cmdp)) {
+		case 'h':
+		case 'H':
+			return usage_hf_iclass_chk();
+		case 'f':
+		case 'F':
+			fileNameLen = param_getstr(Cmd, cmdp+1, filename, sizeof(filename)); 
+			if (fileNameLen < 1) {
+				PrintAndLog("No filename found after f");
+				errors = true;
+			}
+			cmdp += 2;
+			break;
+		case 'e':
+		case 'E':
+			use_elite = true;
+			cmdp++;
+			break;
+		case 'r':
+		case 'R':
+			use_raw = true;
+			cmdp++;
+			break;
+		default:
+			PrintAndLog("Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+			errors = true;
+			break;
+		}
 	}
+	if (errors) return usage_hf_iclass_chk();	
 			
 	if ( !(f = fopen( filename , "r")) ) {
 		PrintAndLog("File: %s: not found or locked.", filename);
-		free(keyBlock);
 		return 1;
 	}
 
@@ -1898,7 +1926,7 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 
 			// debit key. try twice
 			for (int foo = 0; foo < 2 && !found_debit; foo++) {
-				if (!select_and_auth(key, mac, div_key, false, elite, rawkey, false))
+				if (!select_and_auth(key, mac, div_key, false, use_elite, use_raw, false))
 					continue;
 
 				// key found.
@@ -1909,7 +1937,7 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 			
 			// credit key. try twice
 			for (int foo = 0; foo < 2 && !found_credit; foo++) {
-				if (!select_and_auth(key, mac, div_key, true, elite, rawkey, false))
+				if (!select_and_auth(key, mac, div_key, true, use_elite, use_raw, false))
 					continue;
 				
 				// key found
