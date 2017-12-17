@@ -1530,7 +1530,7 @@ static void TransmitIClassCommand(const uint8_t *cmd, int len, int *samples, int
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
 	AT91C_BASE_SSC->SSC_THR = 0x00;
-	//SpinDelay(200);
+	//SpinDelay(100);
 
 	if (wait) {
 		if (*wait < 10) *wait = 10;
@@ -1551,7 +1551,7 @@ static void TransmitIClassCommand(const uint8_t *cmd, int len, int *samples, int
 
 	c = 0;
 
-	for(;;) {
+	for (;;) {
 
 		WDT_HIT();
 
@@ -1565,7 +1565,7 @@ static void TransmitIClassCommand(const uint8_t *cmd, int len, int *samples, int
 				c++;
 			}
 
-			if(sendbyte == 0xff)
+			if (sendbyte == 0xff)
 				sendbyte = 0xfe;
 
 			AT91C_BASE_SSC->SSC_THR = sendbyte;
@@ -1925,39 +1925,35 @@ void ReaderIClass(uint8_t arg0) {
 		cmd_send(CMD_ACK, 0, 0, 0, card_data, 0);		
 
 out:    
-	switch_off(); 
+	if ( abort_after_read )
+		switch_off(); 
 }
 
 // turn off afterwards
 void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 
+    uint16_t crc = 0;
+	uint8_t cardsize = 0;
+	uint8_t mem = 0;
+	uint8_t check[] = { 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	uint8_t read[]  = { 0x0c, 0x00, 0x00, 0x00 };
 	uint8_t card_data[USB_CMD_DATA_SIZE] = {0};
 	uint16_t block_crc_LUT[255] = {0};
+	uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
 
 	//Generate a lookup table for block crc
 	for (int block = 0; block < 255; block++){
 		char bl = block;
 		block_crc_LUT[block] = iclass_crc16(&bl ,1);
 	}
-	
-	//Dbprintf("Lookup table: %02x %02x %02x" ,block_crc_LUT[0],block_crc_LUT[1],block_crc_LUT[2]);
 
-	uint8_t check[] = { 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-	uint8_t read[]  = { 0x0c, 0x00, 0x00, 0x00 };
-	
-    uint16_t crc = 0;
-	uint8_t cardsize = 0;
-	uint8_t mem = 0;
-	
 	static struct memory_t{
 	  int k16;
 	  int book;
 	  int k2;
 	  int lockauth;
 	  int keyaccess;
-	} memory;
-	
-	uint8_t resp[ICLASS_BUFFER_SIZE];
+	} memory;	
 	
     setupIclassReader();
 
@@ -2081,8 +2077,9 @@ void iClass_Authentication(uint8_t *MAC) {
 	uint8_t check[] = { ICLASS_CMD_CHECK, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 	uint8_t resp[ICLASS_BUFFER_SIZE];
 	memcpy(check+5, MAC, 4);
-	bool isOK;
-	isOK = sendCmdGetResponseWithRetries(check, sizeof(check), resp, 4, 6);
+	
+	// 6 retries 
+	bool isOK = sendCmdGetResponseWithRetries(check, sizeof(check), resp, 4, 6);
 	cmd_send(CMD_ACK,isOK,0,0,0,0);
 }
 
