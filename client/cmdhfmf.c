@@ -1337,6 +1337,8 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 			if ( res == 0 || res == 2 )
 				goto out;
 		} // end chunks of keys
+		firstChunk = true;
+		lastChunk = false;
 	} // end strategy
 out: 
 	t1 = msclock() - t1;
