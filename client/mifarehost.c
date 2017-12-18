@@ -204,7 +204,11 @@ int mfCheckKeys_fast( uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk,
 			}
 		}
 		free(tmp);
-		return 0;
+		
+		if ( curr_keys == sectorsCnt*2 )
+			return 0;
+		if ( lastChunk )
+			return 1;
 	}
 	return 1;
 }

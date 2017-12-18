@@ -1312,6 +1312,7 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 	
 	// strategys. 1= deep first on sector 0 AB,  2= width first on all sectors
 	for (uint8_t strategy = 1; strategy < 3; strategy++) {
+		PrintAndLog("[+] Running strategy %u", strategy);
 		// main keychunk loop			
 		for (uint32_t i = 0; i < keycnt; i += chunksize) {
 			
@@ -1332,8 +1333,8 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 			if ( firstChunk )
 				firstChunk = false;
 						
-			// all keys,  aborted,  last keychunk		
-			if ( res == 0 || res == 2 || lastChunk )
+			// all keys,  aborted
+			if ( res == 0 || res == 2 )
 				goto out;
 		} // end chunks of keys
 	} // end strategy
