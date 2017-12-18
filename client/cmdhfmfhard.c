@@ -2389,6 +2389,7 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
 				free_bitarray(all_bitflips_bitarray[EVEN_STATE]);
 				free_sum_bitarrays();
 				free_part_sum_bitarrays();
+				
 				return is_OK;
 			}
 		}

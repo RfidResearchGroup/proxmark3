@@ -29,7 +29,7 @@
 #include "mifarehost.h"
 #include "util_posix.h" // msclock
 #include "mifaredefault.h"  // mifare default key array
-
+#include "cmdhf14a.h" // dropfield
 
 extern int CmdHFMF(const char *Cmd);
 

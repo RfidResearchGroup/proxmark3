@@ -597,7 +597,8 @@ static int l_hardnested(lua_State *L){
 	
     uint64_t foundkey = 0;
 	int retval = mfnestedhard(blockNo, keyType, key, trgBlockNo, trgKeyType, haveTarget ? trgkey : NULL, nonce_file_read,  nonce_file_write,  slow,  tests, &foundkey);
-
+	DropField();
+	
     //Push the retval on the stack
     lua_pushinteger(L,retval);
 
