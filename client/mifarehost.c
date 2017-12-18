@@ -852,7 +852,7 @@ bool detect_classic_prng(void){
 	
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
         PrintAndLog("PRNG UID: Reply timeout.");
-		return -1;
+		return false;
 	}
 		
 	// if select tag failed.
@@ -862,13 +862,13 @@ bool detect_classic_prng(void){
 	}
 	if (!WaitForResponseTimeout(CMD_ACK, &respA, 2500)) {
         PrintAndLog("PRNG data: Reply timeout.");
-		return -1;
+		return false;
 	}
 
 	// check respA
 	if (respA.arg[0] != 4) {
 		PrintAndLog("PRNG data error: Wrong length: %d", respA.arg[0]);
-		return -1;
+		return false;
 	}			
 
 	uint32_t nonce = bytes_to_num(respA.d.asBytes, respA.arg[0]);
