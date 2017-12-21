@@ -976,7 +976,7 @@ int CmdHF15Readmulti(const char *Cmd) {
 	pagenum = param_get8ex(cmd, 0, 0, 10);
 	pagecount = param_get8ex(cmd, 1, 0, 10);
 
-	printf("ice %d %d\n", pagenum, pagecount);
+	//printf("ice %d %d\n", pagenum, pagecount);
 	
 	// 0 means 1 page,
 	// 1 means 2 pages, ...	
@@ -1003,7 +1003,7 @@ int CmdHF15Readmulti(const char *Cmd) {
 
 	recv = resp.d.asBytes;	
 	
-	if (ISO15_CRC_CHECK == Crc(recv, status)) {
+	if (ISO15_CRC_CHECK != Crc(recv, status)) {
 		PrintAndLog("CRC failed");
 		return 2;
 	} 
@@ -1041,7 +1041,7 @@ int CmdHF15Read(const char *Cmd) {
 	uint8_t *recv;
 
 	// UsbCommand arg: len, speed, recv?
-	// arg0 (datalen,  cmd len?  )
+	// arg0 (datalen,  cmd len?  .arg0 == crc?)
 	// arg1	(speed == 0 == 1 of 256,  == 1 == 1 of 4 )
 	// arg2 (recv == 1 == expect a response)
 	UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; 
@@ -1083,7 +1083,7 @@ int CmdHF15Read(const char *Cmd) {
 
 	recv = resp.d.asBytes;	
 	
-	if (ISO15_CRC_CHECK == Crc(recv, status)) {
+	if (ISO15_CRC_CHECK != Crc(recv, status)) {
 		PrintAndLog("CRC failed");
 		return 2;
 	} 
@@ -1167,7 +1167,7 @@ int CmdHF15Write(const char *Cmd) {
 
 	recv = resp.d.asBytes;	
 	
-	if (ISO15_CRC_CHECK == Crc(recv, status)) {
+	if (ISO15_CRC_CHECK != Crc(recv, status)) {
 		PrintAndLog("CRC failed");
 		return 2;
 	} 
