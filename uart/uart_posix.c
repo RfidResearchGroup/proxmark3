@@ -203,16 +203,16 @@ bool uart_receive(const serial_port sp, byte_t* pbtRx, size_t pszMaxRxLen, size_
   return true;
 }
 
-bool uart_send(const serial_port sp, const byte_t* pbtTx, const size_t szTxLen) {
+bool uart_send(const serial_port sp, const byte_t* pbtTx, const size_t len) {
   int32_t res;
-  size_t szPos = 0;
+  size_t pos = 0;
   fd_set rfds;
   struct timeval tv;
 
-  while (szPos < szTxLen) {
+  while (pos < len) {
     // Reset file descriptor
     FD_ZERO(&rfds);
-    FD_SET(((serial_port_unix*)sp)->fd,&rfds);
+    FD_SET(((serial_port_unix*)sp)->fd, &rfds);
     tv = timeout;
     res = select(((serial_port_unix*)sp)->fd+1, NULL, &rfds, NULL, &tv);
     
@@ -229,7 +229,7 @@ bool uart_send(const serial_port sp, const byte_t* pbtTx, const size_t szTxLen) 
     }
     
     // Send away the bytes
-    res = write(((serial_port_unix*)sp)->fd,pbtTx+szPos,szTxLen-szPos);
+    res = write(((serial_port_unix*)sp)->fd, pbtTx+pos, len-pos);
     
     // Stop if the OS has some troubles sending the data
     if (res <= 0) {
@@ -237,7 +237,7 @@ bool uart_send(const serial_port sp, const byte_t* pbtTx, const size_t szTxLen) 
 		return false;
 	}
     
-    szPos += res;
+    pos += res;
   }
   return true;
 }

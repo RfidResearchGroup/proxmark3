@@ -69,6 +69,7 @@ serial_port uart_open(const char* pcPortName) {
 	upcase(acPortName);
 
 	// Try to open the serial port
+	// r/w,  none-share comport, no security, existing, no overlapping, no templates
 	sp->hPort = CreateFileA(acPortName, GENERIC_READ|GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
 	if (sp->hPort == INVALID_HANDLE_VALUE) {
 		uart_close(sp);
@@ -79,7 +80,7 @@ serial_port uart_open(const char* pcPortName) {
 	// doesn't matter since PM3 device ignors this CDC command:  set_line_coding in usb_cdc.c
 	memset(&sp->dcb, 0, sizeof(DCB));
 	sp->dcb.DCBlength = sizeof(DCB);
-	if (!BuildCommDCBA("baud=115200 parity=N data=8 stop=1",&sp->dcb)) {
+	if (!BuildCommDCBA("baud=115200 parity=N data=8 stop=1", &sp->dcb)) {
 		uart_close(sp);
 		return INVALID_SERIAL_PORT;
 	}
@@ -119,18 +120,30 @@ void uart_close(const serial_port sp) {
 
 bool uart_receive(const serial_port sp, byte_t* p_rx, size_t pszMaxRxLen, size_t* p_rxlen) {
 	int res = ReadFile(((serial_port_windows*)sp)->hPort, p_rx, pszMaxRxLen, (LPDWORD)p_rxlen, NULL);
-	if ( res == 0 ) 
+	if ( res == 0 ) {
+		printf("UART:: reading from port error\n");
 		return false;
-	return ( pszMaxRxLen == *p_rxlen );
+	}
 	
+	bool read_test = ( pszMaxRxLen ==  *p_rxlen );
+	if ( !read_test && *p_rxlen > 0 ) {
+		printf("UART:: not all data read from port  len %u | read %u\n", pszMaxRxLen, *p_rxlen);
+	}
+	return read_test;
 }
 
 bool uart_send(const serial_port sp, const byte_t* p_tx, const size_t len) {
-	DWORD txlen = 0;
+	DWORD txlen = 0;		
 	int res = WriteFile(((serial_port_windows*)sp)->hPort, p_tx, len, &txlen, NULL);
-	if ( res == 0)
+	if ( res == 0) {
+		printf("UART:: writing to port error\n");
 		return false;
-	return ( len == txlen );
+	}
+	bool write_test = ( len == txlen );
+	if ( !write_test ) {
+		printf("UART:: not all data written to port  len %u | sent %lu\n", len, txlen);
+	}	
+	return write_test;
 }
 
 bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed) {

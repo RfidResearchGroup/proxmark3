@@ -82,9 +82,9 @@ bool uart_receive(const serial_port sp, byte_t* pbtRx, size_t pszMaxRxLen, size_
 
 /* Sends a buffer to a given serial port.
  *   pbtTx: A pointer to a buffer containing the data to send.
- *   szTxLen: The amount of data to be sent.
+ *   len: The amount of data to be sent.
  */
-bool uart_send(const serial_port sp, const byte_t* pbtTx, const size_t szTxLen);
+bool uart_send(const serial_port sp, const byte_t* pbtTx, const size_t len);
 
 /* Sets the current speed of the serial port, in baud.
  */
