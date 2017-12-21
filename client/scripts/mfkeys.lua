@@ -33,17 +33,17 @@ Arguments:
 
 local TIMEOUT = 10000 -- 10 seconds
 --- 
+-- This is only meant to be used when errors occur
+local function oops(err)
+	print('ERROR: ',err)
+	return nil,err
+end
+--- 
 -- Usage help
-function help()
+local function help()
 	print(desc)
 	print("Example usage")
 	print(example)
-end
---- 
--- This is only meant to be used when errors occur
-function oops(err)
-	print('ERROR: ',err)
-	return nil,err
 end
 --
 -- waits for answer from pm3 device
