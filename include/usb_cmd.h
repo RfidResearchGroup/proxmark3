@@ -166,6 +166,7 @@ typedef struct{
 #define CMD_ICLASS_WRITEBLOCK                                             0x0397
 #define CMD_ICLASS_EML_MEMSET                                             0x0398
 #define CMD_ICLASS_AUTHENTICATION                                         0x0399
+#define CMD_ICLASS_CHECK_KEYS                                             0x039A
 
 // For ISO1092 / FeliCa 
 #define CMD_FELICA_SIMULATE_TAG                                           0x03A0

@@ -29,7 +29,6 @@
  * @file cmd.c
  * @brief
  */
-
 #include "cmd.h"
 
 // (iceman 2017) this method is not used anymore. uart_win32 /uart_posix is used instead
@@ -79,5 +78,3 @@ bool cmd_send(uint32_t cmd, uint32_t arg0, uint32_t arg1, uint32_t arg2, void* d
 
 	return true;
 }
-
-

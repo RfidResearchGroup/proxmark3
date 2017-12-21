@@ -946,6 +946,9 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 		case CMD_ICLASS_AUTHENTICATION: //check
 			iClass_Authentication(c->d.asBytes);
 			break;
+		case CMD_ICLASS_CHECK_KEYS:
+			iClass_Authentication_fast(c->arg[0], c->arg[1], c->d.asBytes);
+			break;
 		case CMD_ICLASS_DUMP:
 			iClass_Dump(c->arg[0], c->arg[1]);
 			break;
