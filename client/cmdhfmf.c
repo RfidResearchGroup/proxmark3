@@ -1236,7 +1236,7 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 				}
 				keyBlock = p;
 			}
-			PrintAndLog("key[%2d] %02x%02x%02x%02x%02x%02x", keycnt,
+			PrintAndLog("[%2d] key %02x%02x%02x%02x%02x%02x", keycnt,
 			(keyBlock + 6*keycnt)[0],(keyBlock + 6*keycnt)[1], (keyBlock + 6*keycnt)[2],
 			(keyBlock + 6*keycnt)[3], (keyBlock + 6*keycnt)[4],	(keyBlock + 6*keycnt)[5], 6);
 			keycnt++;
@@ -1280,7 +1280,7 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 					memset(buf, 0, sizeof(buf));
 				}
 				fclose(f);
-				PrintAndLog("Loaded %2d keys from %s", keycnt, filename);
+				PrintAndLog("[+] Loaded %2d keys from %s", keycnt, filename);
 			} else {
 				PrintAndLog("File: %s: not found or locked.", filename);
 				free(keyBlock);
@@ -1290,7 +1290,7 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 	}
 		
 	if (keycnt == 0) {
-		PrintAndLog("No key specified, trying default keys");
+		PrintAndLog("[+] No key specified, trying default keys");
 		for (;keycnt < MIFARE_DEFAULTKEYS_SIZE; keycnt++)
 			PrintAndLog("key[%2d] %02x%02x%02x%02x%02x%02x", keycnt,
 				(keyBlock + 6*keycnt)[0],(keyBlock + 6*keycnt)[1], (keyBlock + 6*keycnt)[2],
