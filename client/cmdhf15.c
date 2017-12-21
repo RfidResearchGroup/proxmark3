@@ -298,7 +298,7 @@ int usage_15_reader(void){
 	return 0;
 }
 int usage_15_sim(void){
-	PrintAndLog("Usage:  hf 15 sim <UID>");
+	PrintAndLog("usage:  hf 15 sim <UID>");
 	PrintAndLog("");
 	PrintAndLog("sample:");
 	PrintAndLog("         hf 15 sim E016240000000000");
@@ -308,7 +308,16 @@ int usage_15_findafi(void){
 	return 0;
 }
 int usage_15_dump(void){
-	PrintAndLog("'hf 15 dump' needs a helptext..");
+	PrintAndLog("This command dumps the contents of a ISO-15693 tag and save it to file");
+	PrintAndLog("");
+	PrintAndLog("usage: hf 15 dump [h] <f filname> ");
+	PrintAndLog("options:");
+	PrintAndLog("           h             this help");
+	PrintAndLog("           f <name>      filename,  if no <name> UID will be used as filename");
+	PrintAndLog("");
+	PrintAndLog("sample:");
+	PrintAndLog("         hf 15 dump f");
+	PrintAndLog("         hf 15 dump f mydump");
 	return 0;
 }
 int usage_15_restore(void){
@@ -630,18 +639,13 @@ typedef struct {
 // need to write to file
 // helptext
 int CmdHF15Dump(const char*Cmd) {
-
+	
 	uint8_t fileNameLen = 0;
 	char filename[FILE_PATH_SIZE] = {0};
 	char * fptr = filename;
 	bool errors = false;
 	uint8_t cmdp = 0;
-	
 	uint8_t uid[8] = {0,0,0,0,0,0,0,0};	
-	if (!getUID(uid)) {
-		PrintAndLog("No tag found.");
-		return 1;
-	}
 	
 	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch(param_getchar(Cmd, cmdp)) {
@@ -651,15 +655,6 @@ int CmdHF15Dump(const char*Cmd) {
 		case 'f':
 		case 'F':
 			fileNameLen = param_getstr(Cmd, cmdp+1, filename, FILE_PATH_SIZE); 
-			if (fileNameLen < 1) {
-				PrintAndLog("Using UID as filename");
-				
-				fptr += sprintf(fptr, "dump15_"); 
-				
-				for (int j = sizeof(uid)-1; j >=0 ; j--) {
-					fptr += sprintf(fptr, "%02X", uid[j]); 
-				}
-			}
 			cmdp += 2;
 			break;
 		default:
@@ -668,9 +663,24 @@ int CmdHF15Dump(const char*Cmd) {
 			break;
 		}
 	}
+
 	//Validations
 	if (errors) return usage_15_dump();
 	
+	if (fileNameLen < 1) {
+
+		PrintAndLog("Using UID as filename");
+
+		if (!getUID(uid)) {
+			PrintAndLog("No tag found.");
+			return 1;
+		}
+		
+		fptr += sprintf(fptr, "dump15_"); 
+		
+		for (int j = sizeof(uid)-1; j >=0 ; j--)
+			fptr += sprintf(fptr, "%02X", uid[j]); 
+	}	
 	// detect blocksize from card :)
 	
 	PrintAndLog("Reading memory from tag UID %s", sprintUID(NULL, uid));
@@ -711,27 +721,25 @@ int CmdHF15Dump(const char*Cmd) {
 			}
 			
 			recv = resp.d.asBytes;
-		
-			if ( ISO15_CRC_CHECK == Crc(recv, len-2) ) {
-				
-				if (!(recv[0] & ISO15_RES_ERROR)) {
-								
-					mem[blocknum].lock = resp.d.asBytes[0];
-					memcpy(mem[blocknum].block, resp.d.asBytes + 1, 4);
-					
-					memcpy(data + (blocknum * 4), resp.d.asBytes + 1, 4);
-					
-					retry = 0;
-					blocknum++;
-					
-					printf("."); fflush(stdout);
-				} else {
-					PrintAndLog("\nTag returned Error %i: %s", recv[1], TagErrorStr(recv[1]) ); 
-					break;
-				}
-			} else {
+			
+			if ( ISO15_CRC_CHECK != Crc(recv, len) ) {
 				PrintAndLog("crc fail");
+				continue;
 			}
+
+			if (recv[0] & ISO15_RES_ERROR) {
+				PrintAndLog("\nTag returned Error %i: %s", recv[1], TagErrorStr(recv[1]) ); 
+				break;
+			}
+								
+			mem[blocknum].lock = resp.d.asBytes[0];
+			memcpy(mem[blocknum].block, resp.d.asBytes + 1, 4);					
+			memcpy(data + (blocknum * 4), resp.d.asBytes + 1, 4);
+			
+			retry = 0;
+			blocknum++;
+			
+			printf("."); fflush(stdout);
 		} 
 	}
 	printf("\n");
@@ -739,12 +747,11 @@ int CmdHF15Dump(const char*Cmd) {
 	PrintAndLog("block#   | data         |lck| ascii");
 	PrintAndLog("---------+--------------+---+----------");	
 	for (int i = 0; i < blocknum; i++) {
-			PrintAndLog("%3d/0x%02X | %s | %d | %s", i, i, sprint_hex(mem[i].block, 4 ), mem[i].lock, sprint_ascii(mem[i].block, 4) );
+		PrintAndLog("%3d/0x%02X | %s | %d | %s", i, i, sprint_hex(mem[i].block, 4 ), mem[i].lock, sprint_ascii(mem[i].block, 4) );
 	}
-
 	printf("\n");
 
-	size_t datalen = blocknum*4;
+	size_t datalen = blocknum * 4;
 	saveFileEML(filename, "eml", data, datalen, 4);	
 	saveFile(filename, "bin", data, datalen);
 	return 0;
@@ -996,7 +1003,7 @@ int CmdHF15Readmulti(const char *Cmd) {
 
 	recv = resp.d.asBytes;	
 	
-	if (ISO15_CRC_CHECK == Crc(recv, status-2)) {
+	if (ISO15_CRC_CHECK == Crc(recv, status)) {
 		PrintAndLog("CRC failed");
 		return 2;
 	} 
@@ -1076,7 +1083,7 @@ int CmdHF15Read(const char *Cmd) {
 
 	recv = resp.d.asBytes;	
 	
-	if (ISO15_CRC_CHECK == Crc(recv, status-2)) {
+	if (ISO15_CRC_CHECK == Crc(recv, status)) {
 		PrintAndLog("CRC failed");
 		return 2;
 	} 
@@ -1160,7 +1167,7 @@ int CmdHF15Write(const char *Cmd) {
 
 	recv = resp.d.asBytes;	
 	
-	if (ISO15_CRC_CHECK == Crc(recv, status-2)) {
+	if (ISO15_CRC_CHECK == Crc(recv, status)) {
 		PrintAndLog("CRC failed");
 		return 2;
 	} 
