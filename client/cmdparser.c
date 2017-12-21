@@ -37,10 +37,10 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
 		dumpCommandsRecursive(Commands, 1);
 		return 0;
 	}
-	char cmd_name[64];
+	char cmd_name[128];
 	int len = 0;
 	memset(cmd_name, 0, sizeof(cmd_name));
-	sscanf(Cmd, "%63s%n", cmd_name, &len);
+	sscanf(Cmd, "%127s%n", cmd_name, &len);
 	str_lower(cmd_name);
 	int i = 0;
 	while (Commands[i].Name && strcmp(Commands[i].Name, cmd_name))

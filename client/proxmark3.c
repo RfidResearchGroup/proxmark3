@@ -59,7 +59,7 @@ void SendCommand(UsbCommand *c) {
 	or disconnected. The main console thread is alive, but comm thread just spins here.
 	Not good.../holiman
 	**/
-	while(txcmd_pending);
+	while (txcmd_pending);
 
 	txcmd = *c;
 	 __atomic_test_and_set(&txcmd_pending, __ATOMIC_SEQ_CST);
@@ -84,7 +84,7 @@ static void showBanner(void){
 }
 #endif
 
-static bool hookUpPM3() {	
+bool hookUpPM3() {	
 	bool ret = false;
 	sp = uart_open( comport );
 	if (sp == INVALID_SERIAL_PORT) {
@@ -104,7 +104,7 @@ static bool hookUpPM3() {
 }
 
 // (iceman) if uart_receiver fails a command three times,  we conside the device to be offline.
-static void *uart_receiver(void *targ) {
+void *uart_receiver(void *targ) {
 	struct receiver_arg *arg = (struct receiver_arg*)targ;
 	size_t rxlen;
 	bool tmpsignal;
@@ -249,10 +249,11 @@ void main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 		
 		// execute command
 		if (cmd) {
-			if (strlen(cmd) > 0) {
-				while(cmd[strlen(cmd) - 1] == ' ')
-					cmd[strlen(cmd) - 1] = 0x00;
-			}
+			
+			// rtrim
+			size_t l = strlen(cmd);
+			if ( l > 0 && isspace(cmd[l - 1]))
+				cmd[l-1] = 0x00;
 
 			if (cmd[0] != 0x00) {
 				int ret = CommandReceived(cmd);

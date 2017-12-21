@@ -20,7 +20,6 @@
 static int l_SendCommand(lua_State *L){
 
     /*
-     *
      The SendCommand (native) expects the following structure:
 
      typedef struct {
@@ -34,11 +33,9 @@ static int l_SendCommand(lua_State *L){
 
     ==> A 544 byte buffer will do.
     **/
-    //Pop cmd
     size_t size;
     const char *data = luaL_checklstring(L, 1, &size);
-    if(size != sizeof(UsbCommand))
-    {
+    if (size != sizeof(UsbCommand)) {
 		printf("Got data size %d, expected %d" , (int) size,(int) sizeof(UsbCommand));
         lua_pushstring(L,"Wrong data size");
         return 1;
