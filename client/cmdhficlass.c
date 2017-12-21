@@ -1914,6 +1914,8 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 	for (uint8_t i=0; i<10 && !got_csn; i++) {
 		if (select_only(CSN, CCNR, false, false)) {
 			got_csn = true;
+		} else {
+			printf("One more try\n");
 		}
 	}
 	DropField();
@@ -1963,7 +1965,7 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 		
 		uint64_t t2 = msclock();
 		uint32_t timeout = 0;
-	
+		
 		if (ukbhit()) {
 			int gc = getchar(); (void)gc;
 			printf("\naborted via keyboard!\n");
@@ -2000,7 +2002,9 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 			case 1: {
 				found_debit = true;
 				
-				PrintAndLog("\n[-] Chunk: %.1fs [debit]  found key  %s (index %u)"
+				PrintAndLog("\n[-] Chunk [%d/%d]: %.1fs [debit]  found key  %s (index %u)"
+						, i
+						, keycnt						
 						, (float)(t2/1000.0)
 						, sprint_hex(keyBlock + (i+found)*8, 8)
 						, found
@@ -2008,7 +2012,7 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 				break;
 			}
 			case 0: {
-				PrintAndLog("\n[-] Chunk: %.1fs [debit]", (float)(t2/1000.0));
+				PrintAndLog("\n[-] Chunk [%d/%d] : %.1fs [debit]", i, keycnt, (float)(t2/1000.0));
 				break;
 			}
 			case 99: {
