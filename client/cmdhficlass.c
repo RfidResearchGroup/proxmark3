@@ -468,7 +468,7 @@ int CmdHFiClassSim(const char *Cmd) {
 
 int HFiClassReader(const char *Cmd, bool loop, bool verbose) {
 	bool tagFound = false;
-	UsbCommand c = {CMD_READER_ICLASS, {FLAG_ICLASS_READER_CSN | FLAG_ICLASS_READER_CONF | FLAG_ICLASS_READER_AA}};
+	UsbCommand c = {CMD_READER_ICLASS, {FLAG_ICLASS_READER_CSN | FLAG_ICLASS_READER_CONF | FLAG_ICLASS_READER_AIA}};
 	// loop in client not device - else on windows have a communication error
 	c.arg[0] |= FLAG_ICLASS_READER_ONLY_ONCE | FLAG_ICLASS_READER_ONE_TRY;
 	UsbCommand resp;
@@ -497,18 +497,10 @@ int HFiClassReader(const char *Cmd, bool loop, bool verbose) {
 			if( readStatus & FLAG_ICLASS_READER_CONF) {
 				printIclassDumpInfo(data);
 			}
-			if (readStatus & FLAG_ICLASS_READER_AA) {
-				bool legacy = true;
-				PrintAndLog(" AppIA: %s", sprint_hex(data+8*5,8));
-
-				//if ( memcmp(data+8*5, '\xff\xff\xff\xff\xff\xff\xff\xff',8) != 0 )
-					// legacy = false;
-				for (int i = 0; i<8; i++) {
-					if (data[8*5+i] != 0xFF) {
-						legacy = false;
-					} 
-				}
-				PrintAndLog("      : Possible iClass %s",(legacy) ? "(legacy tag)" : "(NOT legacy tag)");
+			if (readStatus & FLAG_ICLASS_READER_AIA) {
+				bool legacy = ( memcmp( (uint8_t *)(data + 8*5), "\xff\xff\xff\xff\xff\xff\xff\xff", 8) == 0 );
+				PrintAndLog(" App IA: %s", sprint_hex(data+8*5, 8));
+				PrintAndLog("      : Possible iClass %s", (legacy) ? "(legacy tag)" : "(NOT legacy tag)");
 			}
 
 			if (tagFound && !loop) return 1;
@@ -792,7 +784,7 @@ static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool use_credit_key, bool v
 	// }
 	
 	if (isOK <= 1){
-		PrintAndLog("Failed to obtain CC! Aborting...");
+		PrintAndLog("(%d) Failed to obtain CC! Aborting...", isOK);
 		return false;
 	}
 	return true;	
@@ -1329,8 +1321,8 @@ int CmdHFiClassCloneTag(const char *Cmd) {
 }
 
 static int ReadBlock(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite, bool rawkey, bool verbose, bool auth) {
-	uint8_t MAC[4]={0x00,0x00,0x00,0x00};
-	uint8_t div_key[8]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+	uint8_t MAC[4] = {0x00,0x00,0x00,0x00};
+	uint8_t div_key[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
 
 	// block 0,1 should always be able to read,  and block 5 on some cards.
 	if (auth || blockno >= 2) {

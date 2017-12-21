@@ -1818,19 +1818,15 @@ void ReaderIClass(uint8_t arg0) {
 
     int read_status= 0;
 	uint8_t result_status = 0;
-	// flag to read until one tag is found successfully
-    bool abort_after_read = arg0 & FLAG_ICLASS_READER_ONLY_ONCE;
 	
-	// flag to only try 5 times to find one tag then return
-	bool try_once = arg0 & FLAG_ICLASS_READER_ONE_TRY;
 	
-	// if neither abort_after_read nor try_once then continue reading until button pressed.
+    bool abort_after_read = arg0 & FLAG_ICLASS_READER_ONLY_ONCE;		// flag to read until one tag is found successfully
+	bool try_once = arg0 & FLAG_ICLASS_READER_ONE_TRY;					// flag to only try 5 times to find one tag then return
+	bool use_credit_key = arg0 & FLAG_ICLASS_READER_CEDITKEY;			// flag to try credit key
+	uint8_t flagReadConfig = arg0 & FLAG_ICLASS_READER_CONF;			// test flags for what blocks to be sure to read
 
-	bool use_credit_key = arg0 & FLAG_ICLASS_READER_CEDITKEY;
-	// test flags for what blocks to be sure to read
-	uint8_t flagReadConfig = arg0 & FLAG_ICLASS_READER_CONF;
 	//uint8_t flagReadCC = arg0 & FLAG_ICLASS_READER_CC;
-	uint8_t flagReadAA = arg0 & FLAG_ICLASS_READER_AA;
+	uint8_t flagReadAA = arg0 & FLAG_ICLASS_READER_AIA;
 
 	setupIclassReader();
 
@@ -1859,7 +1855,7 @@ void ReaderIClass(uint8_t arg0) {
 
 		//Read block 1, config
 		if (flagReadConfig) {
-			if (sendCmdGetResponseWithRetries(readConf, sizeof(readConf), resp, 10, 10)) {
+			if (sendCmdGetResponseWithRetries(readConf, sizeof(readConf), resp, 10, 5)) {
 				result_status |= FLAG_ICLASS_READER_CONF;
 				memcpy(card_data+8, resp, 8);
 			} else {
@@ -1867,10 +1863,10 @@ void ReaderIClass(uint8_t arg0) {
 			}
 		}
 
-		//Read block 5, AA
+		//Read block 5, AIA
 		if (flagReadAA) {
-			if (sendCmdGetResponseWithRetries(readAA, sizeof(readAA), resp, 10, 10)) {
-				result_status |= FLAG_ICLASS_READER_AA;
+			if (sendCmdGetResponseWithRetries(readAA, sizeof(readAA), resp, 10, 5)) {
+				result_status |= FLAG_ICLASS_READER_AIA;
 				memcpy(card_data+(8*5), resp, 8);
 			} else {
 				if (MF_DBGLEVEL > 1) DbpString("Failed to dump AA block");
@@ -1880,8 +1876,9 @@ void ReaderIClass(uint8_t arg0) {
 		// 0 : CSN
 		// 1 : Configuration
 		// 2 : e-purse
-		// (3,4 write-only, kc and kd)
-		// 5 Application issuer area
+		// 3 : kd / debit / aa2 (write-only) 
+		// 4 : kc / credit / aa1 (write-only)
+		// 5 : AIA, Application issuer area
 		//
 		//Then we can 'ship' back the 6 * 8 bytes of data,
 		// with 0xFF:s in block 3 and 4.
@@ -1891,7 +1888,7 @@ void ReaderIClass(uint8_t arg0) {
 		//  only useful if looping in arm (not try_once && not abort_after_read)			
 		if (memcmp(last_csn, card_data, 8) != 0) {
 			// If caller requires that we get Conf, CC, AA, continue until we got it
-			if ( (result_status ^ FLAG_ICLASS_READER_CSN ^ FLAG_ICLASS_READER_CONF ^ FLAG_ICLASS_READER_CC ^ FLAG_ICLASS_READER_AA) == 0) {
+			if ( (result_status ^ FLAG_ICLASS_READER_CSN ^ FLAG_ICLASS_READER_CONF ^ FLAG_ICLASS_READER_CC ^ FLAG_ICLASS_READER_AIA) == 0) {
 				cmd_send(CMD_ACK, result_status, 0, 0, card_data, sizeof(card_data) );
 				if (abort_after_read) {
 					LED_B_OFF();
@@ -1962,7 +1959,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 		read[2] = crc >> 8;
 		read[3] = crc & 0xff;
 
-		if (!sendCmdGetResponseWithRetries(read, sizeof(read), resp, 10, 10)) {
+		if (!sendCmdGetResponseWithRetries(read, sizeof(read), resp, 10, 5)) {
 			DbpString("Dump config (block 1) failed");
 			continue;
 		}
@@ -1990,7 +1987,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 			read[2] = crc >> 8;
 			read[3] = crc & 0xff;
 
-			if (sendCmdGetResponseWithRetries(read, sizeof(read), resp, 10, 10)) {
+			if (sendCmdGetResponseWithRetries(read, sizeof(read), resp, 10, 5)) {
 				Dbprintf("     %02x: %02x %02x %02x %02x %02x %02x %02x %02x",
 					block, resp[0], resp[1], resp[2],
 					resp[3], resp[4], resp[5],
@@ -2169,7 +2166,7 @@ bool iClass_ReadBlock(uint8_t blockNo, uint8_t *readdata) {
 	readcmd[3] = crc & 0xff;
 	uint8_t resp[] = {0,0,0,0,0,0,0,0,0,0};
 
-	bool isOK = sendCmdGetResponseWithRetries(readcmd, sizeof(readcmd), resp, 10, 10);
+	bool isOK = sendCmdGetResponseWithRetries(readcmd, sizeof(readcmd), resp, 10, 5);
 	memcpy(readdata, resp, sizeof(resp));
 	return isOK;
 }
@@ -2227,7 +2224,7 @@ bool iClass_WriteBlock_ext(uint8_t blockNo, uint8_t *data) {
 	write[15] = crc & 0xff;
 	uint8_t resp[] = {0,0,0,0,0,0,0,0,0,0};
 
-	bool isOK = sendCmdGetResponseWithRetries(write, sizeof(write), resp, sizeof(resp), 10);
+	bool isOK = sendCmdGetResponseWithRetries(write, sizeof(write), resp, sizeof(resp), 5);
 	if (isOK) { //if reader responded correctly
 
 		//if response is not equal to write values
@@ -2235,7 +2232,7 @@ bool iClass_WriteBlock_ext(uint8_t blockNo, uint8_t *data) {
 
 		//if not programming key areas (note key blocks don't get programmed with actual key data it is xor data)
 			if (blockNo != 3 && blockNo != 4) {
-				isOK = sendCmdGetResponseWithRetries(write, sizeof(write), resp, sizeof(resp), 10);
+				isOK = sendCmdGetResponseWithRetries(write, sizeof(write), resp, sizeof(resp), 5);
 			} 			
 		}
 	}
