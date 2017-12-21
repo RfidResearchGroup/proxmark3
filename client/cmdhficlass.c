@@ -488,11 +488,11 @@ int HFiClassReader(const char *Cmd, bool loop, bool verbose) {
 				return 0;
 			}
 			if( readStatus & FLAG_ICLASS_READER_CSN){
-				PrintAndLog("CSN: %s",sprint_hex(data,8));
+				PrintAndLog("CSN: %s", sprint_hex(data, 8));
 				tagFound = true;
 			}
 			if( readStatus & FLAG_ICLASS_READER_CC) { 
-				PrintAndLog("    CC: %s",sprint_hex(data+16,8));
+				PrintAndLog("    CC: %s", sprint_hex(data+16, 8));
 			}
 			if( readStatus & FLAG_ICLASS_READER_CONF) {
 				printIclassDumpInfo(data);

@@ -1805,9 +1805,10 @@ uint8_t handshakeIclassTag(uint8_t *card_data){
 void ReaderIClass(uint8_t arg0) {
 
 	uint8_t card_data[6 * 8] = {0};
-	memset(card_data, 0xFF, sizeof(card_data));
 	uint8_t last_csn[8] = {0,0,0,0,0,0,0,0};
 	uint8_t resp[ICLASS_BUFFER_SIZE];
+
+	memset(card_data, 0xFF, sizeof(card_data));
 	memset(resp, 0xFF, sizeof(resp));
 	
 	//Read conf block CRC(0x01) => 0xfa 0x22
@@ -1816,28 +1817,29 @@ void ReaderIClass(uint8_t arg0) {
 	//Read App Issuer Area block CRC(0x05) => 0xde  0x64
 	uint8_t readAA[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x05, 0xde, 0x64};
 
-    int read_status= 0;
+    int read_status = 0;
+	uint16_t tryCnt = 0;
 	uint8_t result_status = 0;
 	
-	
     bool abort_after_read = arg0 & FLAG_ICLASS_READER_ONLY_ONCE;		// flag to read until one tag is found successfully
-	bool try_once = arg0 & FLAG_ICLASS_READER_ONE_TRY;					// flag to only try 5 times to find one tag then return
-	bool use_credit_key = arg0 & FLAG_ICLASS_READER_CEDITKEY;			// flag to try credit key
-	uint8_t flagReadConfig = arg0 & FLAG_ICLASS_READER_CONF;			// test flags for what blocks to be sure to read
-
-	//uint8_t flagReadCC = arg0 & FLAG_ICLASS_READER_CC;
-	uint8_t flagReadAA = arg0 & FLAG_ICLASS_READER_AIA;
+	bool try_once = arg0 & FLAG_ICLASS_READER_ONE_TRY;					// flag to not to loop continuously, looking for tag
+	bool use_credit_key = arg0 & FLAG_ICLASS_READER_CEDITKEY;			// flag to use credit key
+	bool flagReadConfig = arg0 & FLAG_ICLASS_READER_CONF;				// flag to read block1, configuration
+	bool flagReadCC = arg0 & FLAG_ICLASS_READER_CC;						// flag to read block2, e-purse
+	bool flagReadAIA = arg0 & FLAG_ICLASS_READER_AIA;					// flag to read block5, application issuer area
 
 	setupIclassReader();
 
-	uint16_t tryCnt = 0;
 	bool userCancelled = BUTTON_PRESS() || usb_poll_validate_length();
 	while (!userCancelled) {
 
 		WDT_HIT();
 
 		// if only looking for one card try 2 times if we missed it the first time
-		if (try_once && tryCnt > 2) break; 
+		if (try_once && tryCnt > 2) {
+			if (MF_DBGLEVEL > 1) DbpString("Failed to find a tag");
+			break; 
+		}
 		
 		tryCnt++;
 		result_status = 0;
@@ -1864,7 +1866,7 @@ void ReaderIClass(uint8_t arg0) {
 		}
 
 		//Read block 5, AIA
-		if (flagReadAA) {
+		if (flagReadAIA) {
 			if (sendCmdGetResponseWithRetries(readAA, sizeof(readAA), resp, 10, 5)) {
 				result_status |= FLAG_ICLASS_READER_AIA;
 				memcpy(card_data+(8*5), resp, 8);
@@ -1888,7 +1890,35 @@ void ReaderIClass(uint8_t arg0) {
 		//  only useful if looping in arm (not try_once && not abort_after_read)			
 		if (memcmp(last_csn, card_data, 8) != 0) {
 			// If caller requires that we get Conf, CC, AA, continue until we got it
-			if ( (result_status ^ FLAG_ICLASS_READER_CSN ^ FLAG_ICLASS_READER_CONF ^ FLAG_ICLASS_READER_CC ^ FLAG_ICLASS_READER_AIA) == 0) {
+			if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
+				Dbprintf("STATUS %02X | CSN %c | CONF %c | CC %c | AIA %c | ONCE %c | 1TRY %c",
+					result_status,
+					(result_status & FLAG_ICLASS_READER_CSN) ? 'Y':'N',
+					(result_status & FLAG_ICLASS_READER_CONF)? 'Y':'N',
+					(result_status & FLAG_ICLASS_READER_CC)  ? 'Y':'N',
+					(result_status & FLAG_ICLASS_READER_AIA) ? 'Y':'N'					
+				);
+				Dbprintf(" aar %c | to %c, | uc %c | frc %c | fra %c | cc %c",
+					abort_after_read  ? 'Y':'N',
+					try_once ? 'Y':'N',
+					use_credit_key ? 'Y':'N',
+					flagReadConfig ? 'Y':'N',
+					flagReadAIA ? 'Y':'N',
+					flagReadCC ? 'Y':'N'
+					);
+			}
+			
+			bool send = (result_status & FLAG_ICLASS_READER_CSN );
+			if (flagReadCC)
+				send |= (result_status & FLAG_ICLASS_READER_CC );
+			if (flagReadAIA)
+				send |= (result_status & FLAG_ICLASS_READER_AIA );
+			if (flagReadConfig)
+				send |= (result_status & FLAG_ICLASS_READER_CONF );
+			
+			if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("SEND %c",  send?'y':'n');
+				
+			if ( send ) {
 				cmd_send(CMD_ACK, result_status, 0, 0, card_data, sizeof(card_data) );
 				if (abort_after_read) {
 					LED_B_OFF();
