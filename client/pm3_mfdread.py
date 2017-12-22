@@ -10,7 +10,7 @@
 #or
 #   pip install bitstring
 #Usage:
-#   mfdread.py ./dump.mfd
+#   pm3_mfdread.py ./dump.mfd
 #
 
 import codecs
@@ -220,7 +220,7 @@ def print_info(data):
             if q == 0 and z == 0:
                 permissions = "-"
 
-            elif z == n_blocks:
+            elif z == n_blocks - 1:
                 permissions = accbits_to_permission_sector(blockrights[q][z])
             else:
                 permissions = accbits_to_permission_data(blockrights[q][z])
