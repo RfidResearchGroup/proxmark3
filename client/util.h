@@ -13,8 +13,13 @@
 #include <stdint.h>		//included in data.h
 #include <stddef.h>
 #include <inttypes.h>
+#include <string.h>
+#include <ctype.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <time.h>
+#include "data.h"
 #include "ui.h"			// PrintAndLog
-#include "lfdemod.h"	// bytebites_to
 
 #ifdef ANDROID
   #include <endian.h>
@@ -169,8 +174,6 @@ extern void num_to_bytebits(uint64_t n, size_t len, uint8_t *dest);
 extern void num_to_bytebitsLSBF(uint64_t n, size_t len, uint8_t *dest);
 extern uint8_t *SwapEndian64(const uint8_t *src, const size_t len, const uint8_t blockSize);
 extern void SwapEndian64ex(const uint8_t *src, const size_t len, const uint8_t blockSize, uint8_t *dest);
-
-extern uint8_t bits_to_array(const uint8_t *bits, size_t size, uint8_t *dest);
 
 extern int param_getlength(const char *line, int paramnum);
 extern char param_getchar(const char *line, int paramnum);

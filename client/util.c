@@ -7,16 +7,7 @@
 //-----------------------------------------------------------------------------
 // utilities
 //-----------------------------------------------------------------------------
-
 #include "util.h"
-
-#include <stdint.h>
-#include <string.h>
-#include <ctype.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <time.h>
-#include "data.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -370,17 +361,6 @@ void SwapEndian64ex(const uint8_t *src, const size_t len, const uint8_t blockSiz
 			dest[i+(blockSize*block)] = src[(blockSize-1-i)+(blockSize*block)];
 		}
 	}
-}
-
-
-// array must be size dividable with 8
-uint8_t bits_to_array(const uint8_t *bits, size_t size, uint8_t *dest) {
-	if ( (size == 0) || (size % 8) != 0) return 0;
-	
-	for(uint32_t i = 0; i < (size / 8); i++)
-		dest[i] = bytebits_to_byte((uint8_t *) bits + (i * 8), 8);
-
-	return 0;
 }
 
 //  -------------------------------------------------------------------------
