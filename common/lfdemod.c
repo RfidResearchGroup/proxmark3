@@ -232,6 +232,16 @@ size_t addParity(uint8_t *src, uint8_t *dest, uint8_t sourceLen, uint8_t pLen, u
 	return bitCnt;
 }
 
+// array must be size dividable with 8
+uint8_t bits_to_array(const uint8_t *bits, size_t size, uint8_t *dest) {
+	if ( (size == 0) || (size % 8) != 0) return 0;
+	
+	for(uint32_t i = 0; i < (size / 8); i++)
+		dest[i] = bytebits_to_byte((uint8_t *) bits + (i * 8), 8);
+
+	return 0;
+}
+
 uint32_t bytebits_to_byte(uint8_t *src, size_t numbits) {
 	uint32_t num = 0;
 	for(int i = 0 ; i < numbits ; i++) {
@@ -1553,10 +1563,37 @@ size_t fsk_wave_demod(uint8_t *dest, size_t size, uint8_t fchigh, uint8_t fclow,
 	last_transition = idx;
 	idx++;
 	size_t numBits = 0;
-	// count cycles between consecutive lo-hi transitions, there should be either 8 (fc/8)
-	// or 10 (fc/10) cycles but in practice due to noise etc we may end up with anywhere
-	// between 7 to 11 cycles so fuzz it by treat anything <9 as 8 and anything else as 10
-	//  (could also be fc/5 && fc/7 for fsk1 = 4-9)
+	
+	// Definition:  cycles between consecutive lo-hi transitions
+	// Lets define some expected lengths. FSK1 is easier since it has bigger differences between.
+	// FSK1 8/5 
+	// 50/8 = 6		| 40/8 = 5  | 64/8 = 8
+	// 50/5 = 10	| 40/5 = 8	| 64/5 = 12
+
+	// FSK2 10/8
+	// 50/10 = 5	| 40/10 = 4 | 64/10 = 6
+	// 50/8  = 6	| 40/8  = 5 | 64/8  = 8
+	
+	// count cycles between consecutive lo-hi transitions,
+	// in practice due to noise etc we may end up with anywhere
+	// To allow fuzz would mean  +-1 on expected cycle width.
+	// FSK1 8/5
+	// 50/8 = 6 (5-7)	| 40/8 = 5 (4-6)	| 64/8 = 8 (7-9)
+	// 50/5 = 10 (9-11)	| 40/5 = 8 (7-9)	| 64/5 = 12 (11-13)
+
+	// FSK2 10/8
+	// 50/10 = 5 (4-6)	| 40/10 = 4 (3-5)	| 64/10 = 6 (5-7)
+	// 50/8  = 6 (5-7)	| 40/8  = 5 (4-6)	| 64/8  = 8	(7-9)
+	//
+	// It easy to see to the overgaping, but luckily we the group value also,  like 1111000001111
+	// to separate between which bit to demodulate to.
+
+	// process: 
+	// count width from 0-1 transition to  1-0.  
+	// determine the width is withing FUZZ_min and FUZZ_max tolerances
+	// width should be divided with exp_one.  i:e 6+7+6+2=21,  21/5 = 4, 
+	// the 1-0 to 0-1  width should be divided with exp_zero.   Ie: 3+5+6+7 = 21/6 = 3	
+	
 	for(; idx < size-20; idx++) {
 		// threshold current value
 		if (dest[idx] < FSK_PSK_THRESHOLD) dest[idx] = 0;
