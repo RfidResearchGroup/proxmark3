@@ -372,6 +372,17 @@ void SwapEndian64ex(const uint8_t *src, const size_t len, const uint8_t blockSiz
 	}
 }
 
+
+// array must be size dividable with 8
+uint8_t bits_to_array(const uint8_t *bits, size_t size, uint8_t *dest) {
+	if ( (size == 0) || (size % 8) != 0) return 0;
+	
+	for(uint32_t i = 0; i < (size / 8); i++)
+		dest[i] = bytebits_to_byte((uint8_t *) bits + (i * 8), 8);
+
+	return 0;
+}
+
 //  -------------------------------------------------------------------------
 //  string parameters lib
 //  -------------------------------------------------------------------------
@@ -813,7 +824,7 @@ extern void strcreplace(char *buf, size_t len, char from, char to) {
 }
 
 extern char *strmcopy(char *buf) {
-	char * str = NULL;
+	char* str = NULL;
 	if ((str = (char*) malloc(strlen(buf) + 1)) != NULL) {
 		memset(str, 0, strlen(buf) + 1);
 		strcpy(str, buf);

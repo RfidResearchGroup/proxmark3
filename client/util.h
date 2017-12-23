@@ -14,6 +14,7 @@
 #include <stddef.h>
 #include <inttypes.h>
 #include "ui.h"			// PrintAndLog
+#include "lfdemod.h"	// bytebites_to
 
 #ifdef ANDROID
   #include <endian.h>
@@ -37,24 +38,65 @@
 # define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #endif
 
-// Byte swapping
-#ifndef BSWAP_64
-#define	BSWAP_64(x)     (((uint64_t)(x) << 56) | \
-                        (((uint64_t)(x) << 40) & 0xff000000000000ULL) | \
-                        (((uint64_t)(x) << 24) & 0xff0000000000ULL) | \
-                        (((uint64_t)(x) << 8)  & 0xff00000000ULL) | \
-                        (((uint64_t)(x) >> 8)  & 0xff000000ULL) | \
-                        (((uint64_t)(x) >> 24) & 0xff0000ULL) | \
-                        (((uint64_t)(x) >> 40) & 0xff00ULL) | \
-                        ((uint64_t)(x)  >> 56))
+// endian change for 64bit
+#ifdef __GNUC__
+	#ifndef BSWAP_64
+		#define BSWAP_64(x) __builtin_bswap64(x)
+	#endif
+#else
+	#ifdef _MSC_VER
+		#ifndef BSWAP_64
+			#define BSWAP_64(x) _byteswap_uint64(x)
+		#endif
+	#else
+	#ifndef BSWAP_64
+		#define	BSWAP_64(x) \
+			(((uint64_t)(x) << 56) | \
+			(((uint64_t)(x) << 40) & 0xff000000000000ULL) | \
+			(((uint64_t)(x) << 24) & 0xff0000000000ULL) | \
+			(((uint64_t)(x) << 8)  & 0xff00000000ULL) | \
+			(((uint64_t)(x) >> 8)  & 0xff000000ULL) | \
+			(((uint64_t)(x) >> 24) & 0xff0000ULL) | \
+			(((uint64_t)(x) >> 40) & 0xff00ULL) | \
+			((uint64_t)(x)  >> 56))
+		#endif
+	#endif
 #endif
-#ifndef BSWAP_32
-# define BSWAP_32(x) \
-     ((((x) & 0xff000000) >> 24) | (((x) & 0x00ff0000) >>  8) | \
-      (((x) & 0x0000ff00) <<  8) | (((x) & 0x000000ff) << 24))
+
+// endian change for 32bit
+#ifdef __GNUC__
+	#ifndef BSWAP_32
+		#define BSWAP_32(x) __builtin_bswap32(x)
+	#endif
+#else
+	#ifdef _MSC_VER
+		#ifndef BSWAP_32
+			#define BSWAP_32(x) _byteswap_ulong(x)
+		#endif
+	#else
+		#ifndef BSWAP_32
+			# define BSWAP_32(x) \
+			 ((((x) & 0xff000000) >> 24) | (((x) & 0x00ff0000) >>  8) | \
+			  (((x) & 0x0000ff00) <<  8) | (((x) & 0x000000ff) << 24))
+		#endif
+	#endif
 #endif
-#ifndef BSWAP_16
-# define BSWAP_16(x) ((( ((x) & 0xFF00 ) >> 8))| ( (((x) & 0x00FF) << 8)))
+
+// endian change for 16bit
+#ifdef __GNUC__
+	#ifndef BSWAP_16
+		#define BSWAP_16(x) __builtin_bswap16(x)
+	#endif
+#else
+	#ifdef _MSC_VER
+		#ifndef BSWAP_16
+			#define BSWAP_16(x) _byteswap_ushort(x)
+		#endif
+	#else
+		#ifndef BSWAP_16
+			# define BSWAP_16(x) ((( ((x) & 0xFF00 ) >> 8))| ( (((x) & 0x00FF) << 8)))
+		#endif
+	#endif
 #endif
 
 #define EVEN                        0
@@ -91,6 +133,12 @@
 # define ARRAYLEN(x) (sizeof(x)/sizeof((x)[0]))
 #endif
 
+#if defined(__linux__)	|| (__APPLE__)
+# define BLUE_MSG(s) \e[34m(s)\e[0m
+#else
+# define BLUE_MSG(s) (s)
+#endif
+
 extern int ukbhit(void);
 extern void AddLogLine(char *fileName, char *extData, char *c);
 extern void AddLogHex(char *fileName, char *extData, const uint8_t * data, const size_t len);
@@ -99,7 +147,8 @@ extern void AddLogCurrentDT(char *fileName);
 extern void FillFileNameByUID(char *fileName, uint8_t * uid, char *ext, int byteCount);
 
 extern void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex_len, 
-	const size_t hex_max_len, const size_t min_str_len, const size_t spaces_between, bool uppercase);
+						  const size_t hex_max_len, const size_t min_str_len, const size_t spaces_between,
+						  bool uppercase);
 
 extern void print_hex(const uint8_t * data, const size_t len);
 extern void print_hex_break(const uint8_t *data, const size_t len, const uint8_t breaks);
@@ -120,6 +169,8 @@ extern void num_to_bytebits(uint64_t n, size_t len, uint8_t *dest);
 extern void num_to_bytebitsLSBF(uint64_t n, size_t len, uint8_t *dest);
 extern uint8_t *SwapEndian64(const uint8_t *src, const size_t len, const uint8_t blockSize);
 extern void SwapEndian64ex(const uint8_t *src, const size_t len, const uint8_t blockSize, uint8_t *dest);
+
+extern uint8_t bits_to_array(const uint8_t *bits, size_t size, uint8_t *dest);
 
 extern int param_getlength(const char *line, int paramnum);
 extern char param_getchar(const char *line, int paramnum);
@@ -158,4 +209,4 @@ extern void str_lower(char* s);	 // converts string to lower case
 extern void strcleanrn(char *buf, size_t len);
 extern void strcreplace(char *buf, size_t len, char from, char to);
 extern char *strmcopy(char *buf);
-#endif
+#endif 
