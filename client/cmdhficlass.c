@@ -28,15 +28,6 @@ static uint8_t iClass_Key_Table[ICLASS_KEYS_MAX][8] = {
 		{ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 }
 };
 
-typedef struct iclass_block {
-    uint8_t d[8];
-} iclass_block_t;
-
-typedef struct iclass_precalc {
-//	uint8_t key[8];
-	uint8_t mac[4];
-} iclass_precalc_t;
-
 int usage_hf_iclass_sim(void) {
 	PrintAndLog("Usage:  hf iclass sim <option> [CSN]");
 	PrintAndLog("        options");
@@ -392,7 +383,7 @@ int CmdHFiClassSim(const char *Cmd) {
 			free(dump);			
 			break;
 		}
-		case 4:{
+		case 4: {
 			PrintAndLog("Starting the sim 4 keyroll attack");
 			UsbCommand c = {CMD_SIMULATE_TAG_ICLASS, {simType, NUM_CSNS}};
 			UsbCommand resp = {0};
@@ -1816,9 +1807,6 @@ int CmdHFiClassManageKeys(const char *Cmd) {
 
 int CmdHFiClassCheckKeys(const char *Cmd) {
 
-	//uint8_t mac[4] = {0x00,0x00,0x00,0x00};
-	uint8_t key[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
-	uint8_t div_key[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
 	uint8_t CSN[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
 	uint8_t CCNR[12] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
 		
@@ -1826,17 +1814,17 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 	bool use_elite = false;
 	bool use_raw = false;	
 	bool found_debit = false;
-	bool found_credit = false;
+	//bool found_credit = false;
 	bool got_csn = false;
 	bool errors = false;
 	uint8_t cmdp = 0x00;
-	FILE * f;
+
 	char filename[FILE_PATH_SIZE] = {0};
 	uint8_t fileNameLen = 0;
-	char buf[17];
-	uint8_t *keyBlock = NULL, *p;
+
+	uint8_t *keyBlock = NULL;	
 	iclass_precalc_t *pre = NULL;
-	int keyitems = 0, keycnt = 0;
+	int keycnt = 0;
 
 	// time
 	uint64_t t1 = msclock();
@@ -1872,45 +1860,10 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 		}
 	}
 	if (errors) return usage_hf_iclass_chk();	
-			
-	if ( !(f = fopen( filename , "r")) ) {
-		PrintAndLog("File: %s: not found or locked.", filename);
-		return 1;
-	}
 
-	while( fgets(buf, sizeof(buf), f) ){
-		if (strlen(buf) < 16 || buf[15] == '\n')
-			continue;
 	
-		while (fgetc(f) != '\n' && !feof(f)) ;  //goto next line
-		
-		if( buf[0]=='#' ) continue;	//The line start with # is comment, skip
-
-		if (!isxdigit(buf[0])){
-			PrintAndLog("File content error. '%s' must include 16 HEX symbols",buf);
-			continue;
-		}
-		
-		buf[16] = 0;
-
-		p = realloc(keyBlock, 8 * (keyitems += 64));
-		if (!p) {
-			PrintAndLog("Cannot allocate memory for default keys");
-			free(keyBlock);
-			fclose(f);
-			return 2;
-		}
-		keyBlock = p;
-
-		memset(keyBlock + 8 * keycnt, 0, 8);
-		num_to_bytes(strtoull(buf, NULL, 16), 8, keyBlock + 8 * keycnt);
-		keycnt++;
-		memset(buf, 0, sizeof(buf));
-	}
-	fclose(f);
-	PrintAndLog("[+] Loaded %2d keys from %s", keycnt, filename);
-	
-	// // Get CSN / UID and CCNR
+	// Get CSN / UID and CCNR
+	PrintAndLog("[+] Reading tag CSN");
 	for (uint8_t i=0; i<10 && !got_csn; i++) {
 		if (select_only(CSN, CCNR, false, false)) {
 			got_csn = true;
@@ -1922,39 +1875,31 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 	
 	if ( !got_csn ) {
 		PrintAndLog("Can't select card, aborting...");
-		free(keyBlock);
 		return 1;
 	}
 
+	// load keys into keyblock
+	int res = ReadDictionaryKeyFile( filename, &keyBlock, &keycnt);
+	if ( res > 0) {
+		free(keyBlock);
+		return 1;
+	}
+		
 	pre = calloc(keycnt, sizeof(iclass_precalc_t));
 	if ( !pre ) {
 		free(keyBlock);
 		return 1;
 	}
-
-	// precalc diversified keys
-	PrintAndLog("#key | key              | mac");
-	PrintAndLog("-----+------------------+---------");
-	for ( int m=0; m < keycnt; m++) {
-
-		memcpy(key, keyBlock + 8 * m , 8); 
-		
-		if (use_raw)
-			memcpy(div_key, key, 8);
-		else
-			HFiClassCalcDivKey(CSN, key, div_key, use_elite);
-
-		doMAC(CCNR, div_key, pre[m].mac);
-
-		if (m < 10 ) {			
-			PrintAndLog("[%2d] | %016" PRIx64 " | %08" PRIx32,
-				m,
-				bytes_to_num(key, 8),
-				bytes_to_num( pre[m].mac, 4) );
-		} else if ( m == 10 ) {
-			PrintAndLog("... skip printing the rest");
-		}
+	
+	PrintAndLog("[+] Generating diversified keys and MAC");
+	res = GenerateMacFromKeyFile( CSN, CCNR, use_raw, use_elite, keyBlock, keycnt, pre );
+	if ( res > 0) {
+		free(keyBlock);
+		free(pre);
+		return 1;
 	}
+	
+	PrintPreCalcMac(keyBlock, keycnt, pre);
 
 	// max 42 keys inside USB_COMMAND.  512/4 = 103 mac
 	uint32_t chunksize = keycnt > (USB_CMD_DATA_SIZE/4) ? (USB_CMD_DATA_SIZE/4) : keycnt;
@@ -2021,7 +1966,7 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 		}
 
 		// both keys found.
-		if ( found_debit && found_credit ) {
+		if ( found_debit ) {
 			PrintAndLog("[+] All keys found, exiting");
 			break;
 		}
@@ -2038,6 +1983,230 @@ out:
 	free(keyBlock);
 	PrintAndLog("");
 	return 0;
+}
+static int cmp_uint32( const void *a, const void *b) {
+    if (*(const uint32_t *)a < *(const uint32_t *)b)
+		return -1;
+    else 
+		return *(const uint32_t *)a > *(const uint32_t *)b;
+}
+static inline uint32_t binsearch(uint32_t key, uint32_t v[], size_t n){
+   int low, high, mid;
+   low = 0;
+   high = n - 1;
+   while (low <= high) {
+       mid = (low+high)/2;
+       if (key < v[mid])
+           high = mid + 1;
+       else if (key  > v[mid])
+           low = mid + 1;
+       else    /* found match */
+           return mid;
+   }
+   return -1;   /* no match */
+}
+
+int ReaderEliteLookUp(const char *Cmd) {
+	
+	// SIM  / sniff,
+	// reader tries to authenticate AA1 ->
+	//  legacy key 
+	//   
+	// or 
+	//  elite key
+	// ladda nycklar.
+	// sortera nycklar, mac på mac  qsort
+	// leta upp mac binsearch,
+	// om funnen, printa
+		// load keys into keyblock
+	uint8_t CSN[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+	uint8_t CCNR[12] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+/*
+	uint8_t key[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+	uint8_t div_key[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+	uint8_t mac_legacy[4] = {0x00,0x00,0x00,0x00};
+	uint8_t mac_elite[4] = {0x00,0x00,0x00,0x00};
+	
+	*/
+	// elite key,  raw key, standard key
+	bool use_elite = false;
+	bool use_raw = false;
+	bool errors = false;
+	uint8_t cmdp = 0x00;
+
+	char filename[FILE_PATH_SIZE] = {0};
+	uint8_t fileNameLen = 0;
+
+	uint8_t *keyBlock = NULL;	
+	iclass_precalc_t *pre = NULL;
+	int keycnt = 0;
+
+	// time
+	uint64_t t1 = msclock();
+	
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch (param_getchar(Cmd, cmdp)) {
+		case 'h':
+		case 'H':
+			return usage_hf_iclass_chk();
+		case 'f':
+		case 'F':
+			fileNameLen = param_getstr(Cmd, cmdp+1, filename, sizeof(filename)); 
+			if (fileNameLen < 1) {
+				PrintAndLog("No filename found after f");
+				errors = true;
+			}
+			cmdp += 2;
+			break;
+		case 'e':
+		case 'E':
+			use_elite = true;
+			cmdp++;
+			break;
+		case 'r':
+		case 'R':
+			use_raw = true;
+			cmdp++;
+			break;
+		default:
+			PrintAndLog("Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+			errors = true;
+			break;
+		}
+	}
+	if (errors) return usage_hf_iclass_chk();	
+				
+	int res = ReadDictionaryKeyFile( filename, &keyBlock, &keycnt);
+	if ( res > 0) {
+		free(keyBlock);
+		return 1;
+	}
+		
+	pre = calloc(keycnt, sizeof(iclass_precalc_t));
+	if ( !pre ) {
+		free(keyBlock);
+		return 1;
+	}
+	
+	PrintAndLog("[+] Generating diversified keys and MAC");
+	res = GenerateMacFromKeyFile( CSN, CCNR, use_raw, use_elite, keyBlock, keycnt, pre );
+	if ( res > 0) {
+		free(keyBlock);
+		free(pre);
+		return 1;
+	}	
+	
+	// qsort
+	// qsort( pre, sizeof(iclass_precalc_t), cmp_uint32);
+	// binsearch(mac_elite, pre, keycnt)
+	
+	// memcpy(div_key, key, 8);
+	// doMAC(CCNR, div_key, mac_legacy);
+
+	
+	
+	// if (use_raw)
+		// memcpy(div_key, key, 8);
+	// else
+		// HFiClassCalcDivKey(CSN, key, div_key, use_elite);
+
+		// doMAC(CCNR, div_key, pre_list[i].mac);
+	t1 = msclock() - t1;
+
+	PrintAndLog("\nTime in iclass : %.0f seconds\n", (float)t1/1000.0);
+	
+	DropField();
+	free(pre);
+	free(keyBlock);
+	PrintAndLog("");		
+	return 0;
+}	
+
+int ReadDictionaryKeyFile( char* filename, uint8_t **keys, int *keycnt) {
+
+	char buf[17];
+	FILE * f;
+	uint8_t *p;
+	int keyitems = 0;
+	
+	if ( !(f = fopen( filename , "r")) ) {
+		PrintAndLog("File: %s: not found or locked.", filename);
+		return 0;
+	}
+
+	while( fgets(buf, sizeof(buf), f) ){
+		if (strlen(buf) < 16 || buf[15] == '\n')
+			continue;
+	
+		//goto next line
+		while (fgetc(f) != '\n' && !feof(f)) {}; 
+		
+		//The line start with # is comment, skip		
+		if( buf[0]=='#' ) continue;
+
+		// doesn't this only test first char only?
+		if (!isxdigit(buf[0])){
+			PrintAndLog("File content error. '%s' must include 16 HEX symbols", buf);
+			continue;
+		}
+		
+		// null terminator (skip the rest of the line)
+		buf[16] = 0;
+
+		p = realloc(*keys, 8 * (keyitems += 64));
+		if (!p) {
+			PrintAndLog("Cannot allocate memory for default keys");
+			fclose(f);
+			return 2;
+		}
+		*keys = p;
+
+		memset(*keys + 8 * (*keycnt), 0, 8);
+		num_to_bytes(strtoull(buf, NULL, 16), 8, *keys + 8 * (*keycnt));
+		(*keycnt)++;
+		memset(buf, 0, sizeof(buf));
+	}
+	fclose(f);
+	PrintAndLog("%s Loaded %2d keys from %s", BLUE_MSG("[+]"), *keycnt, filename);	
+	return 0;
+}
+
+// precalc diversified keys and their MAC
+int GenerateMacFromKeyFile( uint8_t* CSN, uint8_t* CCNR, bool use_raw, bool use_elite, uint8_t* keys, int keycnt, iclass_precalc_t* pre_list ) {
+	uint8_t key[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+	uint8_t div_key[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+
+	for ( int i=0; i < keycnt; i++) {
+
+		memcpy(key, keys + 8 * i , 8); 
+		
+		if (use_raw)
+			memcpy(div_key, key, 8);
+		else
+			HFiClassCalcDivKey(CSN, key, div_key, use_elite);
+
+		doMAC(CCNR, div_key, pre_list[i].mac);
+	}	
+	return 0;
+}
+
+// print diversified keys
+void PrintPreCalcMac(uint8_t* keys, int keycnt, iclass_precalc_t* pre_list) {
+
+	uint8_t key[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+	PrintAndLog("-----+------------------+---------");
+	PrintAndLog("#key | key              | mac");
+	PrintAndLog("-----+------------------+---------");
+	for ( int i=0; i < keycnt; i++) {
+
+		memcpy(key, keys + 8 * i , 8); 
+
+		if (i < 10 ) {			
+			PrintAndLog("[%2d] | %016" PRIx64 " | %08" PRIx32, i, bytes_to_num(key, 8), bytes_to_num( pre_list[i].mac, 4) );
+		} else if ( i == 10 ) {
+			PrintAndLog("... skip printing the rest");
+		}
+	}
 }
 
 static command_t CommandTable[] = {
