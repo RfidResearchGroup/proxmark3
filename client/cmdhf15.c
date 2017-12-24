@@ -295,6 +295,14 @@ int usage_15_record(void){
 	return 0;
 }
 int usage_15_reader(void){
+	PrintAndLog("This command identifies a ISO 15693 tag");
+	PrintAndLog("");
+	PrintAndLog("usage: hf 15 reader [h]");
+	PrintAndLog("options:");
+	PrintAndLog("           h             this help");
+	PrintAndLog("");
+	PrintAndLog("sample:");
+	PrintAndLog("         hf 15 reader");
 	return 0;
 }
 int usage_15_sim(void){
@@ -305,6 +313,7 @@ int usage_15_sim(void){
 	return 0;
 }
 int usage_15_findafi(void){
+	PrintAndLog("'hf 15 finafi' This command needs a helptext. Feel free to add one!");
 	return 0;
 }
 int usage_15_dump(void){
@@ -339,8 +348,8 @@ int usage_15_raw(void){
 	return 0;	
 }
 int usage_15_read(void){
-	PrintAndLog("Usage:  hf 15 read    [options] <uid|s|u|*> <page#>");
-	PrintAndLog("           options:");
+	PrintAndLog("usage:  hf 15 read    [options] <uid|s|u|*> <page#>");
+	PrintAndLog("options:");
 	PrintAndLog("               -2        use slower '1 out of 256' mode");
 	PrintAndLog("           uid (either): ");
 	PrintAndLog("               <8B hex>  full UID eg E011223344556677");
@@ -351,8 +360,8 @@ int usage_15_read(void){
 	return 0;
 }
 int usage_15_write(void){
-	PrintAndLog("Usage:  hf 15 write    [options] <uid|s|u|*> <page#> <hexdata>");
-	PrintAndLog("           options:");
+	PrintAndLog("usage:  hf 15 write    [options] <uid|s|u|*> <page#> <hexdata>");
+	PrintAndLog("options:");
 	PrintAndLog("               -2        use slower '1 out of 256' mode");
 	PrintAndLog("               -o        set OPTION Flag (needed for TI)");
 	PrintAndLog("           uid (either): ");
@@ -378,7 +387,7 @@ int usage_15_readmulti(void){
 	return 0;
 }
 int usage_15_select(void){
-	PrintAndLog("'hf 15 select' helptext to be written..");
+	PrintAndLog("'hf 15 select' This command needs a helptext. Feel free to add one!");
 	return 0;
 }
 // Mode 3
@@ -585,7 +594,6 @@ int HF15Reader(const char *Cmd, bool verbose) {
 	return 1;
 }
 
-//helptext
 int CmdHF15Reader(const char *Cmd) {
 	char cmdp = param_getchar(Cmd, 0);
 	if (cmdp == 'h' || cmdp == 'H') return usage_15_reader();
@@ -637,7 +645,6 @@ typedef struct {
 
 // Reads all memory pages
 // need to write to file
-// helptext
 int CmdHF15Dump(const char*Cmd) {
 	
 	uint8_t fileNameLen = 0;
