@@ -21,8 +21,8 @@ OBJDIR = obj
 LDLIBS = -L/opt/local/lib -L/usr/local/lib -lreadline -lpthread -lm
 LUALIB = ../liblua/liblua.a
 LDFLAGS = $(ENV_LDFLAGS)
-INCLUDES = -I. -I../include -I../common -I../common/polarssl -I../zlib -I../uart -I/opt/local/include -I../liblua
-CFLAGS = $(ENV_CFLAGS) -std=c99 -D_ISOC99_SOURCE $(INCLUDES) -Wall -g -O3
+INCLUDES_CLIENT = -I. -I../include -I../common -I../common/polarssl -I../zlib -I../uart -I/opt/local/include -I../liblua
+CFLAGS = $(ENV_CFLAGS) -std=c99 -D_ISOC99_SOURCE $(INCLUDES_CLIENT) -Wall -g -O3
 CXXFLAGS = -I../include -Wall -O3
 
 LUAPLATFORM = generic
@@ -94,8 +94,8 @@ CMDSRCS =	crapto1/crapto1.c \
 			tea.c \
 			polarssl/des.c \
 			polarssl/aes.c \
-			polarssl/bignum.c\
-			polarssl/rsa.c\
+			polarssl/bignum.c \
+			polarssl/rsa.c \
 			polarssl/sha1.c \
 			polarssl/sha256.c \
 			loclass/cipher.c \
@@ -113,7 +113,7 @@ CMDSRCS =	crapto1/crapto1.c \
 			iso14443crc.c \
 			legic_prng.c \
 			iso15693tools.c \
-			prng.c \			
+			prng.c \
 			data.c \
 			graph.c \
 			cmddata.c \
