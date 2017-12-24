@@ -210,7 +210,6 @@ typedef struct {
 
 #define CMD_UNKNOWN                                                       0xFFFF
 
-
 //Mifare simulation flags
 #define FLAG_INTERACTIVE		0x01
 #define FLAG_4B_UID_IN_DATA 	0x02
@@ -219,15 +218,13 @@ typedef struct {
 #define FLAG_UID_IN_EMUL		0x10
 #define FLAG_NR_AR_ATTACK 		0x20
 
-
 //Iclass reader flags
-#define FLAG_ICLASS_READER_ONLY_ONCE 0x01
-#define FLAG_ICLASS_READER_CC       0x02
-#define FLAG_ICLASS_READER_CSN		0x04
-#define FLAG_ICLASS_READER_CONF		0x08
-#define FLAG_ICLASS_READER_AA		0x10
-#define FLAG_ICLASS_READER_ONE_TRY      0x20
-
+#define FLAG_ICLASS_READER_ONLY_ONCE	0x01
+#define FLAG_ICLASS_READER_CC			0x02
+#define FLAG_ICLASS_READER_CSN			0x04
+#define FLAG_ICLASS_READER_CONF			0x08
+#define FLAG_ICLASS_READER_AIA			0x10
+#define FLAG_ICLASS_READER_ONE_TRY		0x20
 
 
 // CMD_DEVICE_INFO response packet has flags in arg[0], flag definitions:
