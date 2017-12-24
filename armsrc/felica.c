@@ -3,7 +3,7 @@
 #include "BigBuf.h"
 #include "util.h"
 #include "usb_cdc.h"	// for usb_poll_validate_length
-#include "../common/protocols.h"
+#include "protocols.h"
 
 //random service RW: 0x0009
 //random service RO: 0x000B
