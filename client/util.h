@@ -139,9 +139,9 @@
 #endif
 
 #if defined(__linux__)	|| (__APPLE__)
-# define BLUE_MSG(s) \e[34m(s)\e[0m
+# define BLUE_MSG(s) "\e[34m(s)\e[0m"
 #else
-# define BLUE_MSG(s) (s)
+# define BLUE_MSG(s) "(s)"
 #endif
 
 extern int ukbhit(void);
