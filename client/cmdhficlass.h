@@ -23,7 +23,7 @@
 #include "common.h"
 #include "util.h"
 #include "cmdmain.h"
-#include "loclass/des.h"
+#include "des.h"
 #include "loclass/cipherutils.h"
 #include "loclass/cipher.h"
 #include "loclass/ikeys.h"
