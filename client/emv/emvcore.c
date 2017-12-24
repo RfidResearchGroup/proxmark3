@@ -16,7 +16,7 @@ static const char *PSElist [] = {
 	"325041592E5359532E4444463031", // 2PAY.SYS.DDF01 - Visa Proximity Payment System Environment - PPSE
 	"315041592E5359532E4444463031"  // 1PAY.SYS.DDF01 - Visa Payment System Environment - PSE
 };
-static const size_t PSElistLen = sizeof(PSElist)/sizeof(char*);
+//static const size_t PSElistLen = sizeof(PSElist)/sizeof(char*);
 
 typedef struct {
 	enum CardPSVendor vendor;
@@ -464,32 +464,378 @@ int EMVGenerateChallenge(bool LeaveFieldON, uint8_t *Result, size_t MaxResultLen
 	return EMVExchange(LeaveFieldON, (sAPDU){0x00, 0x84, 0x00, 0x00, 0x00, NULL}, Result, MaxResultLen, ResultLen, sw, tlv);
 }
 
+int EMVInternalAuthenticate(bool LeaveFieldON, uint8_t *DDOL, size_t DDOLLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
+	return EMVExchange(LeaveFieldON, (sAPDU){0x00, 0x88, 0x00, 0x00, DDOLLen, DDOL}, Result, MaxResultLen, ResultLen, sw, tlv);
+}
+
 int MSCComputeCryptoChecksum(bool LeaveFieldON, uint8_t *UDOL, uint8_t UDOLlen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
 	return EMVExchange(LeaveFieldON, (sAPDU){0x80, 0x2a, 0x8e, 0x80, UDOLlen, UDOL}, Result, MaxResultLen, ResultLen, sw, tlv);
 }
 
 // Authentication 
-int trSDA(uint8_t *AID, size_t AIDlen, struct tlvdb *tlv) {
-	if (AIDlen < 5) 
-		return 1;
+static struct emv_pk *get_ca_pk(struct tlvdb *db) {
+	const struct tlv *df_tlv = tlvdb_get(db, 0x84, NULL);
+	const struct tlv *caidx_tlv = tlvdb_get(db, 0x8f, NULL);
+
+	if (!df_tlv || !caidx_tlv || df_tlv->len < 6 || caidx_tlv->len != 1)
+		return NULL;
+
+	PrintAndLog("CA public key index 0x%0x", caidx_tlv->value[0]);
+	return emv_pk_get_ca_pk(df_tlv->value, caidx_tlv->value[0]);
+}
+
+int trSDA(struct tlvdb *tlv) {
+
+	struct emv_pk *pk = get_ca_pk(tlv);
+	if (!pk) {
+		PrintAndLog("ERROR: Key not found. Exit.");
+		return 2;
+	}
 	
-	// Get public key index (0x8F)
-	//int PubKeyIndx = 0; 
+	struct emv_pk *issuer_pk = emv_pki_recover_issuer_cert(pk, tlv);
+	if (!issuer_pk) {
+		emv_pk_free(pk);
+		PrintAndLog("ERROR: Issuer certificate not found. Exit.");
+		return 2;
+	}
+
+	PrintAndLog("Issuer PK recovered. RID %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx CSN %02hhx:%02hhx:%02hhx",
+		issuer_pk->rid[0],
+		issuer_pk->rid[1],
+		issuer_pk->rid[2],
+		issuer_pk->rid[3],
+		issuer_pk->rid[4],
+		issuer_pk->index,
+		issuer_pk->serial[0],
+		issuer_pk->serial[1],
+		issuer_pk->serial[2]
+		);
+
+	const struct tlv *sda_tlv = tlvdb_get(tlv, 0x21, NULL);
+	if (!sda_tlv || sda_tlv->len < 1) {
+		emv_pk_free(issuer_pk);
+		emv_pk_free(pk);
+		PrintAndLog("ERROR: Can't find input list for Offline Data Authentication. Exit.");
+		return 3;
+	}
 	
-	// Get public key from key storage
-	// GetPublicKey(AID(0..5), PubKeyIndx)
+	struct tlvdb *dac_db = emv_pki_recover_dac(issuer_pk, tlv, sda_tlv);
+	if (dac_db) {
+		const struct tlv *dac_tlv = tlvdb_get(dac_db, 0x9f45, NULL);
+		PrintAndLog("SDA verified OK. (%02hhx:%02hhx)\n", dac_tlv->value[0], dac_tlv->value[1]);
+		tlvdb_add(tlv, dac_db);
+	} else {
+		emv_pk_free(issuer_pk);
+		emv_pk_free(pk);
+		PrintAndLog("ERROR: SSAD verify error");
+		return 4;
+	}
 	
-	// Processing of Issuer Public Key Certificate (0x90)
-	//Certificate = 
-	
-	// check issuer public key certificate
-	
-	// Verification of Signed Static Application Data (SSAD) (0x93)
-	
-	// get 9F4A Static Data Authentication Tag List
-	
-	// set Data Auth Code (9F45) from SSAD 
-	
+	emv_pk_free(issuer_pk);
+	emv_pk_free(pk);
 	return 0;
 }
 
+static const unsigned char default_ddol_value[] = {0x9f, 0x37, 0x04};
+static struct tlv default_ddol_tlv = {.tag = 0x9f49, .len = 3, .value = default_ddol_value };
+
+int trDDA(bool decodeTLV, struct tlvdb *tlv) {
+	uint8_t buf[APDU_RES_LEN] = {0};
+	size_t len = 0;
+	uint16_t sw = 0;
+
+	struct emv_pk *pk = get_ca_pk(tlv);
+	if (!pk) {
+		PrintAndLog("ERROR: Key not found. Exit.");
+		return 2;
+	}
+
+	const struct tlv *sda_tlv = tlvdb_get(tlv, 0x21, NULL);
+	if (!sda_tlv || sda_tlv->len < 1) {
+		emv_pk_free(pk);
+		PrintAndLog("ERROR: Can't find input list for Offline Data Authentication. Exit.");
+		return 3;
+	}
+
+	struct emv_pk *issuer_pk = emv_pki_recover_issuer_cert(pk, tlv);
+	if (!issuer_pk) {
+		emv_pk_free(pk);
+		PrintAndLog("ERROR: Issuer certificate not found. Exit.");
+		return 2;
+	}
+	printf("Issuer PK recovered. RID %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx CSN %02hhx:%02hhx:%02hhx\n",
+			issuer_pk->rid[0],
+			issuer_pk->rid[1],
+			issuer_pk->rid[2],
+			issuer_pk->rid[3],
+			issuer_pk->rid[4],
+			issuer_pk->index,
+			issuer_pk->serial[0],
+			issuer_pk->serial[1],
+			issuer_pk->serial[2]
+			);
+				
+	struct emv_pk *icc_pk = emv_pki_recover_icc_cert(issuer_pk, tlv, sda_tlv);
+	if (!icc_pk) {
+		emv_pk_free(pk);
+		emv_pk_free(issuer_pk);
+		PrintAndLog("ERROR: ICC setrificate not found. Exit.");
+		return 2;
+	}
+	printf("ICC PK recovered. RID %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx CSN %02hhx:%02hhx:%02hhx\n",
+			icc_pk->rid[0],
+			icc_pk->rid[1],
+			icc_pk->rid[2],
+			icc_pk->rid[3],
+			icc_pk->rid[4],
+			icc_pk->index,
+			icc_pk->serial[0],
+			icc_pk->serial[1],
+			icc_pk->serial[2]
+			);
+
+	struct emv_pk *icc_pe_pk = emv_pki_recover_icc_pe_cert(issuer_pk, tlv);
+	if (!icc_pe_pk) {
+		PrintAndLog("WARNING: ICC PE PK recover error. ");
+	} else {
+		printf("ICC PE PK recovered. RID %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx CSN %02hhx:%02hhx:%02hhx\n",
+				icc_pe_pk->rid[0],
+				icc_pe_pk->rid[1],
+				icc_pe_pk->rid[2],
+				icc_pe_pk->rid[3],
+				icc_pe_pk->rid[4],
+				icc_pe_pk->index,
+				icc_pe_pk->serial[0],
+				icc_pe_pk->serial[1],
+				icc_pe_pk->serial[2]
+				);
+	}
+
+	// 9F4B: Signed Dynamic Application Data
+	const struct tlv *sdad_tlv = tlvdb_get(tlv, 0x9f4b, NULL);
+	// DDA with internal authenticate OR fDDA with filled 0x9F4B tag (GPO result)
+	// EMV kernel3 v2.4, contactless book C-3, C.1., page 147
+	if (sdad_tlv) {
+		PrintAndLog("\n* * Got Signed Dynamic Application Data (9F4B) form GPO. Maybe fDDA...");
+
+		const struct tlvdb *atc_db = emv_pki_recover_atc_ex(icc_pk, tlv, true);
+		if (!atc_db) {
+			PrintAndLog("ERROR: Can't recover IDN (ICC Dynamic Number)");
+			emv_pk_free(pk);
+			emv_pk_free(issuer_pk);
+			emv_pk_free(icc_pk);
+			return 8;
+		}
+
+		// 9f36 Application Transaction Counter (ATC)
+		const struct tlv *atc_tlv = tlvdb_get(atc_db, 0x9f36, NULL);
+		if(atc_tlv) {
+			PrintAndLog("\nATC (Application Transaction Counter) [%zu] %s", atc_tlv->len, sprint_hex_inrow(atc_tlv->value, atc_tlv->len));
+			
+			const struct tlv *core_atc_tlv = tlvdb_get(tlv, 0x9f36, NULL);
+			if(tlv_equal(core_atc_tlv, atc_tlv)) {
+				PrintAndLog("ATC check OK.");
+				PrintAndLog("fDDA (fast DDA) verified OK.");
+			} else {
+				PrintAndLog("ERROR: fDDA verified, but ATC in the certificate and ATC in the record not the same.");
+			}
+		} else {
+			PrintAndLog("\nERROR: fDDA (fast DDA) verify error");
+			emv_pk_free(pk);
+			emv_pk_free(issuer_pk);
+			emv_pk_free(icc_pk);
+			return 9;
+		}
+	} else {
+		struct tlvdb *dac_db = emv_pki_recover_dac(issuer_pk, tlv, sda_tlv);
+		if (dac_db) {
+			const struct tlv *dac_tlv = tlvdb_get(dac_db, 0x9f45, NULL);
+			printf("SDA verified OK. (%02hhx:%02hhx)\n", dac_tlv->value[0], dac_tlv->value[1]);
+			tlvdb_add(tlv, dac_db);
+		} else {
+			PrintAndLog("ERROR: SSAD verify error");
+			emv_pk_free(pk);
+			emv_pk_free(issuer_pk);
+			emv_pk_free(icc_pk);
+			return 4;
+		}
+		
+		PrintAndLog("\n* Calc DDOL");
+		const struct tlv *ddol_tlv = tlvdb_get(tlv, 0x9f49, NULL);
+		if (!ddol_tlv) {
+			ddol_tlv = &default_ddol_tlv;
+			PrintAndLog("DDOL [9f49] not found. Using default DDOL");
+		}
+
+		struct tlv *ddol_data_tlv = dol_process(ddol_tlv, tlv, 0);
+		if (!ddol_data_tlv) {
+			PrintAndLog("ERROR: Can't create DDOL TLV");
+			emv_pk_free(pk);
+			emv_pk_free(issuer_pk);
+			emv_pk_free(icc_pk);
+			return 5;
+		}
+
+		PrintAndLog("DDOL data[%d]: %s", ddol_data_tlv->len, sprint_hex(ddol_data_tlv->value, ddol_data_tlv->len));
+
+		PrintAndLog("\n* Internal Authenticate");
+		int res = EMVInternalAuthenticate(true, (uint8_t *)ddol_data_tlv->value, ddol_data_tlv->len, buf, sizeof(buf), &len, &sw, NULL);
+		if (res) {	
+			PrintAndLog("Internal Authenticate error(%d): %4x. Exit...", res, sw);
+			free(ddol_data_tlv);
+			emv_pk_free(pk);
+			emv_pk_free(issuer_pk);
+			emv_pk_free(icc_pk);
+			return 6;
+		}
+
+		struct tlvdb *dda_db = NULL;
+		if (buf[0] == 0x80) {
+			if (len < 3 ) {
+				PrintAndLog("ERROR: Internal Authenticate format1 parsing error. length=%d", len);
+			} else {
+				// 9f4b Signed Dynamic Application Data
+				dda_db = tlvdb_fixed(0x9f4b, len - 2, buf + 2);
+				tlvdb_add(tlv, dda_db);
+				if (decodeTLV){
+					PrintAndLog("* * Decode response format 1:");
+					TLVPrintFromTLV(dda_db);
+				}
+			}
+		} else {
+			dda_db = tlvdb_parse_multi(buf, len);
+			if(!dda_db) {
+				PrintAndLog("ERROR: Can't parse Internal Authenticate result as TLV");
+				free(ddol_data_tlv);
+				emv_pk_free(pk);
+				emv_pk_free(issuer_pk);
+				emv_pk_free(icc_pk);
+				return 7;
+			}
+			tlvdb_add(tlv, dda_db);
+			
+			if (decodeTLV)
+				TLVPrintFromTLV(dda_db);
+		}
+
+		struct tlvdb *idn_db = emv_pki_recover_idn_ex(icc_pk, dda_db, ddol_data_tlv, true);
+		free(ddol_data_tlv);
+		if (!idn_db) {
+			PrintAndLog("ERROR: Can't recover IDN (ICC Dynamic Number)");
+			tlvdb_free(dda_db);
+			emv_pk_free(pk);
+			emv_pk_free(issuer_pk);
+			emv_pk_free(icc_pk);
+			return 8;
+		}
+		tlvdb_free(dda_db);
+
+		// 9f4c ICC Dynamic Number
+		const struct tlv *idn_tlv = tlvdb_get(idn_db, 0x9f4c, NULL);
+		if(idn_tlv) {
+			PrintAndLog("\nIDN (ICC Dynamic Number) [%zu] %s", idn_tlv->len, sprint_hex_inrow(idn_tlv->value, idn_tlv->len));
+			PrintAndLog("DDA verified OK.");
+			tlvdb_add(tlv, idn_db);
+			tlvdb_free(idn_db);
+		} else {
+			PrintAndLog("\nERROR: DDA verify error");
+			tlvdb_free(idn_db);
+
+			emv_pk_free(pk);
+			emv_pk_free(issuer_pk);
+			emv_pk_free(icc_pk);
+			return 9;
+		}
+	}
+	
+	emv_pk_free(pk);
+	emv_pk_free(issuer_pk);
+	emv_pk_free(icc_pk);
+	return 0;
+}
+
+int trCDA(struct tlvdb *tlv, struct tlvdb *ac_tlv, struct tlv *pdol_data_tlv, struct tlv *ac_data_tlv) {
+
+	struct emv_pk *pk = get_ca_pk(tlv);
+	if (!pk) {
+		PrintAndLog("ERROR: Key not found. Exit.");
+		return 2;
+	}
+
+	const struct tlv *sda_tlv = tlvdb_get(tlv, 0x21, NULL);
+	if (!sda_tlv || sda_tlv->len < 1) {
+		PrintAndLog("ERROR: Can't find input list for Offline Data Authentication. Exit.");
+		emv_pk_free(pk);
+		return 3;
+	}
+
+	struct emv_pk *issuer_pk = emv_pki_recover_issuer_cert(pk, tlv);
+	if (!issuer_pk) {
+		PrintAndLog("ERROR: Issuer certificate not found. Exit.");
+		emv_pk_free(pk);
+		return 2;
+	}
+	printf("Issuer PK recovered. RID %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx CSN %02hhx:%02hhx:%02hhx\n",
+			issuer_pk->rid[0],
+			issuer_pk->rid[1],
+			issuer_pk->rid[2],
+			issuer_pk->rid[3],
+			issuer_pk->rid[4],
+			issuer_pk->index,
+			issuer_pk->serial[0],
+			issuer_pk->serial[1],
+			issuer_pk->serial[2]
+			);
+				
+	struct emv_pk *icc_pk = emv_pki_recover_icc_cert(issuer_pk, tlv, sda_tlv);
+	if (!icc_pk) {
+		PrintAndLog("ERROR: ICC setrificate not found. Exit.");
+		emv_pk_free(pk);
+		emv_pk_free(issuer_pk);
+		return 2;
+	}
+	printf("ICC PK recovered. RID %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx CSN %02hhx:%02hhx:%02hhx\n",
+			icc_pk->rid[0],
+			icc_pk->rid[1],
+			icc_pk->rid[2],
+			icc_pk->rid[3],
+			icc_pk->rid[4],
+			icc_pk->index,
+			icc_pk->serial[0],
+			icc_pk->serial[1],
+			icc_pk->serial[2]
+			);
+
+	struct tlvdb *dac_db = emv_pki_recover_dac(issuer_pk, tlv, sda_tlv);
+	if (dac_db) {
+		const struct tlv *dac_tlv = tlvdb_get(dac_db, 0x9f45, NULL);
+		PrintAndLog("SSAD verified OK. (%02hhx:%02hhx)", dac_tlv->value[0], dac_tlv->value[1]);
+		tlvdb_add(tlv, dac_db);
+	} else {
+		PrintAndLog("ERROR: SSAD verify error");
+		emv_pk_free(pk);
+		emv_pk_free(issuer_pk);
+		emv_pk_free(icc_pk);
+		return 4;
+	}
+	
+	PrintAndLog("\n* * Check Signed Dynamic Application Data (SDAD)");
+	struct tlvdb *idn_db = emv_pki_perform_cda_ex(icc_pk, tlv, ac_tlv,
+			pdol_data_tlv, // pdol
+			ac_data_tlv,   // cdol1
+			NULL,          // cdol2 
+			true);
+	if (idn_db) {
+		const struct tlv *idn_tlv = tlvdb_get(idn_db, 0x9f4c, NULL);
+		PrintAndLog("\nIDN (ICC Dynamic Number) [%zu] %s", idn_tlv->len, sprint_hex_inrow(idn_tlv->value, idn_tlv->len));
+		PrintAndLog("CDA verified OK.");
+		tlvdb_add(tlv, idn_db);
+	} else {
+		PrintAndLog("\nERROR: CDA verify error");
+	}
+
+	emv_pk_free(pk);
+	emv_pk_free(issuer_pk);
+	emv_pk_free(icc_pk);
+	return 0;
+}

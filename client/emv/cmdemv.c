@@ -9,6 +9,7 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdemv.h"
+#include "test/cryptotest.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -267,7 +268,7 @@ int CmdHFEMVPPSE(const char *cmd) {
 
 int usage_emv_exec(void) {
 	PrintAndLog("Executes EMV contactless transaction:\n");
-	PrintAndLog("Usage:  hf emv exec [-s][-a][-t]\n");
+	PrintAndLog("Usage:  hf emv exec [-s][-a][-t][-f][-v][-c][-x][-g]\n");
 	PrintAndLog("  Options:");
 	PrintAndLog("  -s       : select card");
 	PrintAndLog("  -a       : show APDU reqests and responses\n");
@@ -276,12 +277,16 @@ int usage_emv_exec(void) {
 	PrintAndLog("  -v       : transaction type - qVSDC or M/Chip.\n");
 	PrintAndLog("  -c       : transaction type - qVSDC or M/Chip plus CDA (SDAD generation).\n");
 	PrintAndLog("  -x       : transaction type - VSDC. For test only. Not a standart behavior.\n");
+	PrintAndLog("  -g       : VISA. generate AC from GPO\n");
 	PrintAndLog("By default : transaction type - MSD.\n");
 	PrintAndLog("Samples:");
-	PrintAndLog(" hf emv pse -s            -> select card");
-	PrintAndLog(" hf emv pse -s -t -a      -> select card, show responses in TLV, show APDU");
+	PrintAndLog(" hf emv exec -s -a -t         -> execute MSD transaction");
+	PrintAndLog(" hf emv exec -s -a -t -c      -> execute CDA transaction");
 	return 0;
 }
+
+#define TLV_ADD(tag, value)( tlvdb_add(tlvRoot, tlvdb_fixed(tag, sizeof(value) - 1, (const unsigned char *)value)) )
+#define dreturn(n) {free(pdol_data_tlv);tlvdb_free(tlvSelect);tlvdb_free(tlvRoot);DropField();return n;}
 
 int CmdHFEMVExec(const char *cmd) {
 	bool activateField = false;
@@ -289,15 +294,21 @@ int CmdHFEMVExec(const char *cmd) {
 	bool decodeTLV = false;
 	bool forceSearch = false;
 	enum TransactionType TrType = TT_MSD;
+	bool GenACGPO = false;
 
 	uint8_t buf[APDU_RES_LEN] = {0};
 	size_t len = 0;
 	uint16_t sw = 0;
 	uint8_t AID[APDU_AID_LEN] = {0};
 	size_t AIDlen = 0;
+	uint8_t ODAiList[4096];
+	size_t ODAiListLen = 0;
 	
 	int res;
 	
+	struct tlvdb *tlvSelect = NULL;
+	struct tlvdb *tlvRoot = NULL;
+	struct tlv *pdol_data_tlv = NULL;
 	if (strlen(cmd) < 1)
 		return usage_emv_exec();
 	
@@ -337,6 +348,10 @@ int CmdHFEMVExec(const char *cmd) {
 				case 'C':
 					TrType = TT_CDA;
 					break;
+				case 'g':
+				case 'G':
+					GenACGPO = true;
+					break;
 				default:
 					PrintAndLog("Unknown parameter '%c'", param_getchar_indx(cmd, 1, cmdp));
 					return 1;
@@ -345,7 +360,6 @@ int CmdHFEMVExec(const char *cmd) {
 	}
 	
 	// init applets list tree
-	struct tlvdb *tlvSelect = NULL;
 	const char *al = "Applets list";
 	tlvSelect = tlvdb_fixed(1, strlen(al), (const unsigned char *)al);
 
@@ -369,8 +383,7 @@ int CmdHFEMVExec(const char *cmd) {
 		PrintAndLog("\n* Search AID in list.");
 		SetAPDULogging(false);
 		if (EMVSearch(activateField, true, decodeTLV, tlvSelect)) {
-			tlvdb_free(tlvSelect);
-			return 2;
+			dreturn(2);
 		}
 
 		// check search and select application id
@@ -379,14 +392,13 @@ int CmdHFEMVExec(const char *cmd) {
 	}
 	
 	// Init TLV tree
-	struct tlvdb *tlvRoot = NULL;
 	const char *alr = "Root terminal TLV tree";
 	tlvRoot = tlvdb_fixed(1, strlen(alr), (const unsigned char *)alr);
 	
 	// check if we found EMV application on card
 	if (!AIDlen) {
 		PrintAndLog("Can't select AID. EMV AID not found");
-		return 2;
+		dreturn(2);
 	}
 	
 	// Select
@@ -396,7 +408,7 @@ int CmdHFEMVExec(const char *cmd) {
 	
 	if (res) {	
 		PrintAndLog("Can't select AID (%d). Exit...", res);
-		return 3;
+		dreturn(3);
 	}
 	
 	if (decodeTLV)
@@ -406,25 +418,30 @@ int CmdHFEMVExec(const char *cmd) {
 	PrintAndLog("\n* Init transaction parameters.");
 
     //9F66:(Terminal Transaction Qualifiers (TTQ)) len:4
+	char *qVSDC = "\x26\x00\x00\x00";
+	if (GenACGPO) {
+		qVSDC = "\x26\x80\x00\x00";
+	}
 	switch(TrType) {
 		case TT_MSD:
 			TLV_ADD(0x9F66, "\x86\x00\x00\x00"); // MSD
 			break;
-		// not standart for contactless. just for test.
+		// not standard for contactless. just for test.
 		case TT_VSDC:  
 			TLV_ADD(0x9F66, "\x46\x00\x00\x00"); // VSDC
 			break;
 		case TT_QVSDCMCHIP:
-			TLV_ADD(0x9F66, "\x26\x00\x00\x00"); // qVSDC
+			TLV_ADD(0x9F66, qVSDC); // qVSDC
 			break;
 		case TT_CDA:
-			TLV_ADD(0x9F66, "\x86\x80\x00\x00"); // CDA
+			TLV_ADD(0x9F66, qVSDC); // qVSDC (VISA CDA not enabled)
 			break;
 		default:
 			TLV_ADD(0x9F66, "\x26\x00\x00\x00"); // qVSDC
 			break;
 	}
-    //9F02:(Amount, Authorised (Numeric)) len:6
+	
+    //9F02:(Amount, authorized (Numeric)) len:6
 	TLV_ADD(0x9F02, "\x00\x00\x00\x00\x01\x00");
     //9F1A:(Terminal Country Code) len:2
 	TLV_ADD(0x9F1A, "ru");
@@ -443,17 +460,17 @@ int CmdHFEMVExec(const char *cmd) {
 	TLVPrintFromTLV(tlvRoot); // TODO delete!!!
 	
 	PrintAndLog("\n* Calc PDOL.");
-	struct tlv *pdol_data_tlv = dol_process(tlvdb_get(tlvRoot, 0x9f38, NULL), tlvRoot, 0x83);
+	pdol_data_tlv = dol_process(tlvdb_get(tlvRoot, 0x9f38, NULL), tlvRoot, 0x83);
 	if (!pdol_data_tlv){
 		PrintAndLog("ERROR: can't create PDOL TLV.");
-		return 4;
+		dreturn(4);
 	}
 	
 	size_t pdol_data_tlv_data_len;
 	unsigned char *pdol_data_tlv_data = tlv_encode(pdol_data_tlv, &pdol_data_tlv_data_len);
 	if (!pdol_data_tlv_data) {
 		PrintAndLog("ERROR: can't create PDOL data.");
-		return 4;
+		dreturn(4);
 	}
 	PrintAndLog("PDOL data[%d]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
 
@@ -461,11 +478,11 @@ int CmdHFEMVExec(const char *cmd) {
 	res = EMVGPO(true, pdol_data_tlv_data, pdol_data_tlv_data_len, buf, sizeof(buf), &len, &sw, tlvRoot);
 	
 	free(pdol_data_tlv_data);
-	free(pdol_data_tlv);
+	//free(pdol_data_tlv); --- free on exit.
 	
 	if (res) {	
 		PrintAndLog("GPO error(%d): %4x. Exit...", res, sw);
-		return 5;
+		dreturn(5);
 	}
 
 	// process response template format 1 [id:80  2b AIP + x4b AFL] and format 2 [id:77 TLV]
@@ -551,13 +568,35 @@ int CmdHFEMVExec(const char *cmd) {
 					PrintAndLog("");
 				}
 				
+				// Build Input list for Offline Data Authentication
+				// EMV 4.3 book3 10.3, page 96
 				if (SFIoffline) {
-					// here will be offline records storing...
-					// dont foget: if (sfi < 11)
+					if (SFI < 11) {
+						const unsigned char *abuf = buf;
+						size_t elmlen = len;
+						struct tlv e;
+						if (tlv_parse_tl(&abuf, &elmlen, &e)) {
+							memcpy(&ODAiList[ODAiListLen], &buf[len - elmlen], elmlen);
+							ODAiListLen += elmlen;
+						} else {
+							PrintAndLog("ERROR SFI[%02x]. Creating input list for Offline Data Authentication error.", SFI);
+						}
+					} else {
+						memcpy(&ODAiList[ODAiListLen], buf, len);
+						ODAiListLen += len;
+					}
 				}
 			}
-		}		
+		}
+		
 		break;
+	}	
+	
+	// copy Input list for Offline Data Authentication
+	if (ODAiListLen) {
+		struct tlvdb *oda = tlvdb_fixed(0x21, ODAiListLen, ODAiList); // not a standard tag
+		tlvdb_add(tlvRoot, oda); 
+		PrintAndLog("* Input list for Offline Data Authentication added to TLV. len=%d \n", ODAiListLen);
 	}	
 	
 	// get AIP
@@ -568,13 +607,15 @@ int CmdHFEMVExec(const char *cmd) {
 	// SDA
 	if (AIP & 0x0040) {
 		PrintAndLog("\n* SDA");
-		trSDA(AID, AIDlen, tlvRoot);
+		trSDA(tlvRoot);
 	}
 
 	// DDA
 	if (AIP & 0x0020) {
 		PrintAndLog("\n* DDA");		
+		trDDA(decodeTLV, tlvRoot);
 	}	
+	
 	// transaction check
 
 	// qVSDC
@@ -625,11 +666,11 @@ int CmdHFEMVExec(const char *cmd) {
 			res = EMVGenerateChallenge(true, buf, sizeof(buf), &len, &sw, tlvRoot);
 			if (res) {
 				PrintAndLog("ERROR GetChallenge. APDU error %4x", sw);
-				return 5;
+				dreturn(6);
 			}
 			if (len < 4) {
 				PrintAndLog("ERROR GetChallenge. Wrong challenge length %d", len);
-				return 5;
+				dreturn(6);
 			}
 			
 			// ICC Dynamic Number
@@ -644,7 +685,7 @@ int CmdHFEMVExec(const char *cmd) {
 			struct tlv *cdol_data_tlv = dol_process(tlvdb_get(tlvRoot, 0x8c, NULL), tlvRoot, 0x01); // 0x01 - dummy tag
 			if (!cdol_data_tlv){
 				PrintAndLog("ERROR: can't create CDOL1 TLV.");
-				return 4;
+				dreturn(6);
 			}
 			PrintAndLog("CDOL1 data[%d]: %s", cdol_data_tlv->len, sprint_hex(cdol_data_tlv->value, cdol_data_tlv->len));
 			
@@ -652,17 +693,25 @@ int CmdHFEMVExec(const char *cmd) {
 			// EMVAC_TC + EMVAC_CDAREQ --- to get SDAD
 			res = EMVAC(true, (TrType == TT_CDA) ? EMVAC_TC + EMVAC_CDAREQ : EMVAC_TC, (uint8_t *)cdol_data_tlv->value, cdol_data_tlv->len, buf, sizeof(buf), &len, &sw, tlvRoot);
 			
-			free(cdol_data_tlv);
-			
 			if (res) {	
 				PrintAndLog("AC1 error(%d): %4x. Exit...", res, sw);
-				return 5;
+				dreturn(7);
 			}
 			
 			if (decodeTLV)
 				TLVPrintFromBuffer(buf, len);
 			
-			PrintAndLog("* M/Chip transaction result:");
+			// CDA
+			PrintAndLog("\n* CDA:");
+			struct tlvdb *ac_tlv = tlvdb_parse_multi(buf, len);
+			res = trCDA(tlvRoot, ac_tlv, pdol_data_tlv, cdol_data_tlv);
+			if (res) {	
+				PrintAndLog("CDA error (%d)", res);
+			}
+			free(ac_tlv);
+			free(cdol_data_tlv);
+			
+			PrintAndLog("\n* M/Chip transaction result:");
 			// 9F27: Cryptogram Information Data (CID)
 			const struct tlv *CID = tlvdb_get(tlvRoot, 0x9F27, NULL);
 			if (CID) {
@@ -724,7 +773,7 @@ int CmdHFEMVExec(const char *cmd) {
 				struct tlv *udol_data_tlv = dol_process(UDOL ? UDOL : &defUDOL, tlvRoot, 0x01); // 0x01 - dummy tag
 				if (!udol_data_tlv){
 					PrintAndLog("ERROR: can't create UDOL TLV.");
-					return 4;
+					dreturn(8);
 				}
 
 				PrintAndLog("UDOL data[%d]: %s", udol_data_tlv->len, sprint_hex(udol_data_tlv->value, udol_data_tlv->len));
@@ -734,13 +783,16 @@ int CmdHFEMVExec(const char *cmd) {
 				res = MSCComputeCryptoChecksum(true, (uint8_t *)udol_data_tlv->value, udol_data_tlv->len, buf, sizeof(buf), &len, &sw, tlvRoot);
 				if (res) {
 					PrintAndLog("ERROR Compute Crypto Checksum. APDU error %4x", sw);
-					return 5;
+					free(udol_data_tlv);
+					dreturn(9);
 				}
 				
 				if (decodeTLV) {
 					TLVPrintFromBuffer(buf, len);
 					PrintAndLog("");
 				}
+				free(udol_data_tlv);
+
 			}
 		} else {
 			PrintAndLog("ERROR MSD: Track2 data not found.");
@@ -750,6 +802,7 @@ int CmdHFEMVExec(const char *cmd) {
 	DropField();
 	
 	// Destroy TLV's
+	free(pdol_data_tlv);
 	tlvdb_free(tlvSelect);
 	tlvdb_free(tlvRoot);
 
@@ -780,13 +833,16 @@ int CmdHfEMVList(const char *Cmd) {
 	return CmdHFList("7816");
 }
 
+int CmdHFEMVTest(const char *cmd) {
+	return ExecuteCryptoTests(true);
+}
 static command_t CommandTable[] =  {
 	{"help",	CmdHelp,		1,	"This help"},
 	{"exec",	CmdHFEMVExec,	0,	"Executes EMV contactless transaction."},
 	{"pse",		CmdHFEMVPPSE,	0,	"Execute PPSE. It selects 2PAY.SYS.DDF01 or 1PAY.SYS.DDF01 directory."},
 	{"search",	CmdHFEMVSearch,	0,	"Try to select all applets from applets list and print installed applets."},
 	{"select",	CmdHFEMVSelect,	0,	"Select applet."},
-
+	{"test",	CmdHFEMVTest,	0,	"Crypto logic test."},
 	/*
 	{"getrng",		CmdHfEMVGetrng,	  0, "get random number from terminal"}, 
 	{"eload",		CmdHfEmvELoad, 	  0, "load EMV tag into device"},

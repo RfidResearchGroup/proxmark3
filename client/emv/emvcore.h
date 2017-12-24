@@ -20,11 +20,13 @@
 #include "common.h"
 #include "ui.h"
 #include "cmdhf14a.h"
-#include "emv/apduinfo.h"
-#include "emv/tlv.h"
-#include "emv/dol.h"
-#include "emv/dump.h"
-#include "emv/emv_tags.h"
+#include "apduinfo.h"
+#include "tlv.h"
+#include "dol.h"
+#include "dump.h"
+#include "emv_tags.h"
+#include "emv_pk.h"
+#include "emv_pki.h"
 
 #define APDU_RES_LEN 260
 #define APDU_AID_LEN 50
@@ -79,10 +81,14 @@ extern int EMVReadRecord(bool LeaveFieldON, uint8_t SFI, uint8_t SFIrec, uint8_t
 // AC
 extern int EMVGenerateChallenge(bool LeaveFieldON, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv);
 extern int EMVAC(bool LeaveFieldON, uint8_t RefControl, uint8_t *CDOL, size_t CDOLLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv);
+// DDA
+extern int EMVInternalAuthenticate(bool LeaveFieldON, uint8_t *DDOL, size_t DDOLLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv);
 // Mastercard
 int MSCComputeCryptoChecksum(bool LeaveFieldON, uint8_t *UDOL, uint8_t UDOLlen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv);
 // Auth
-extern int trSDA(uint8_t *AID, size_t AIDlen, struct tlvdb *tlv);
+extern int trSDA(struct tlvdb *tlv);
+extern int trDDA(bool decodeTLV, struct tlvdb *tlv);
+extern int trCDA(struct tlvdb *tlv, struct tlvdb *ac_tlv, struct tlv *pdol_data_tlv, struct tlv *ac_data_tlv);
 
 #endif
 

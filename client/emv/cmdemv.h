@@ -26,8 +26,6 @@
 #include "emvcore.h"
 #include "apduinfo.h"
 
-#define TLV_ADD(tag, value)( tlvdb_add(tlvRoot, tlvdb_fixed(tag, sizeof(value) - 1, (const unsigned char *)value)) )
-
 int CmdHFEMV(const char *Cmd);
 
 extern int CmdHFEMVSelect(const char *cmd);

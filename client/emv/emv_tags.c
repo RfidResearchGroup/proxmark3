@@ -177,6 +177,7 @@ static const struct emv_tag emv_tags[] = {
 	{ 0x01  , "", EMV_TAG_STRING }, // string for headers
 	{ 0x02  , "Raw data", }, // data
 	{ 0x20  , "Cardholder Verification Results (CVR)", EMV_TAG_CVR }, // not standard!
+	{ 0x21  , "Input list for Offline Data Authentication" }, // not standard! data for "Offline Data Authentication" come from "read records" command. (EMV book3 10.3)
 
 	// EMV
 	{ 0x41  , "Country code and national data" },
@@ -266,6 +267,7 @@ static const struct emv_tag emv_tags[] = {
 	{ 0x9f65, "PCVC3(Track2)" },
 	{ 0x9f66, "PUNATC(Track2) / Terminal Transaction Qualifiers (TTQ)", EMV_TAG_BITMASK, &EMV_TTQ },
 	{ 0x9f67, "NATC(Track2) / MSD Offset" },
+	{ 0x9f68, "Cardholder verification method list (PayPass)" },
 	{ 0x9f69, "Card Authentication Related Data" },
 	{ 0x9f6a, "Unpredictable Number", EMV_TAG_NUMERIC },
 	{ 0x9f6b, "Track 2 Data" },
