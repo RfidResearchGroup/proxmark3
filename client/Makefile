@@ -21,7 +21,8 @@ OBJDIR = obj
 LDLIBS = -L/opt/local/lib -L/usr/local/lib -lreadline -lpthread -lm
 LUALIB = ../liblua/liblua.a
 LDFLAGS = $(ENV_LDFLAGS)
-CFLAGS = $(ENV_CFLAGS) -std=c99 -D_ISOC99_SOURCE -I. -I../include -I../common -I../zlib -I../uart -I/opt/local/include -I../liblua -Wall -g -O3
+INCLUDES = -I. -I../include -I../common -I../common/polarssl -I../zlib -I../uart -I/opt/local/include -I../liblua
+CFLAGS = $(ENV_CFLAGS) -std=c99 -D_ISOC99_SOURCE $(INCLUDES) -Wall -g -O3
 CXXFLAGS = -I../include -Wall -O3
 
 LUAPLATFORM = generic
@@ -90,9 +91,15 @@ CORESRCS =  uart_posix.c \
 CMDSRCS =	crapto1/crapto1.c \
 			crapto1/crypto1.c \
 			mfkey.c \
+			tea.c \
+			polarssl/des.c \
+			polarssl/aes.c \
+			polarssl/bignum.c\
+			polarssl/rsa.c\
+			polarssl/sha1.c \
+			polarssl/sha256.c \
 			loclass/cipher.c \
 			loclass/cipherutils.c \
-			loclass/des.c \
 			loclass/ikeys.c \
 			loclass/hash1_brute.c \
 			loclass/elite_crack.c \
@@ -106,16 +113,27 @@ CMDSRCS =	crapto1/crapto1.c \
 			iso14443crc.c \
 			legic_prng.c \
 			iso15693tools.c \
+			prng.c \			
 			data.c \
 			graph.c \
 			cmddata.c \
 			lfdemod.c \
+			emv/crypto_polarssl.c\
+			emv/crypto.c\
+			emv/emv_pk.c\
+			emv/emv_pki.c\
+			emv/emv_pki_priv.c\
+			emv/test/cryptotest.c\
 			emv/apduinfo.c \
 			emv/dump.c \
 			emv/tlv.c \
 			emv/emv_tags.c \
 			emv/dol.c \
 			emv/emvcore.c \
+			emv/test/crypto_test.c\
+			emv/test/sda_test.c\
+			emv/test/dda_test.c\
+			emv/test/cda_test.c\
 			emv/cmdemv.c \
 			cmdanalyse.c \
 			cmdhf.c \
@@ -163,10 +181,7 @@ CMDSRCS =	crapto1/crapto1.c \
 			scripting.c \
 			cmdscript.c \
 			pm3_bitlib.c \
-			aes.c \
 			protocols.c \
-			sha1.c \
-			sha256.c \
 			cmdcrc.c \
 			reveng/preset.c \
 			reveng/reveng.c \
@@ -175,8 +190,6 @@ CMDSRCS =	crapto1/crapto1.c \
 			reveng/model.c \
 			reveng/poly.c \
 			reveng/getopt.c \
-			tea.c \
-			prng.c \
 			bucketsort.c
 #			radixsort.c \
 
