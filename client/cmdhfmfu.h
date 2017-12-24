@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
-#include "loclass/des.h"
+#include "des.h"
 #include "cmdhfmf.h"
 #include "cmdhf14a.h"
 #include "mifare.h"
