@@ -25,7 +25,7 @@
 #define POLARSSL_SHA1_H
 
 #if !defined(POLARSSL_CONFIG_FILE)
-//#include "config.h"
+#include "polarssl_config.h"
 /**
  * \def POLARSSL_SHA1_C
  *
