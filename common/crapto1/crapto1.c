@@ -33,10 +33,6 @@ static void __attribute__((constructor)) fill_lut()
 #define filter(x) (filterlut[(x) & 0xfffff])
 #endif
 
-
-
-
-
 /** binsearch
  * Binary search for the first occurence of *stop's MSB in sorted [start,stop]
  */
