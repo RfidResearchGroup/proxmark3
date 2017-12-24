@@ -12,12 +12,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include "loclass/des.h"
+#include "des.h"
 #include "cmdmain.h"
 #include "proxmark3.h"
 #include "../include/common.h"
 #include "../include/mifare.h"
-#include "../common/iso14443crc.h"
+#include "iso14443crc.h"
 #include "data.h"
 #include "ui.h"
 #include "cmdparser.h"
