@@ -22,7 +22,7 @@
  *
  * This is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as published
- * by the Free Software Foundation.
+ * by the Free Software Foundation, or, at your option, any later version. 
  *
  * This file is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -232,15 +232,15 @@ void hash2(uint8_t *key64, uint8_t *outp_keytable)
     // Once again, key is on iclass-format
     desencrypt_iclass(key64, key64_negated, z[0]);
 
-    prnlog("\nHigh security custom key (Kcus):");
-    printvar("z0  ",  z[0],8);
+//    prnlog("\nHigh security custom key (Kcus):");
+//    printvar("z0  ",  z[0],8);
 
     uint8_t y[8][8]={{0},{0}};
 
     // y[0]=DES_dec(z[0],~key)
     // Once again, key is on iclass-format
     desdecrypt_iclass(z[0], key64_negated, y[0]);
-    printvar("y0  ",  y[0],8);
+//    printvar("y0  ",  y[0],8);
 
     for (i=1; i<8; i++) {
         // z [i] = DES dec (rk(K cus , i), z [i−1] )
