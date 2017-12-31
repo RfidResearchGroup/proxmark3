@@ -1200,6 +1200,7 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 	uint8_t *keyBlock = NULL, *p;
 	uint8_t sectorsCnt = 1;
 	int i, keycnt = 0;
+	int clen = 0;
 	int transferToEml = 0, createDumpFile = 0;
 	uint32_t keyitems = MIFARE_DEFAULTKEYS_SIZE;
 
@@ -1219,73 +1220,79 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 		case '4': sectorsCnt = 40; break;
 		default:  sectorsCnt = 16;
 	}
-	
-	ctmp = param_getchar(Cmd, 1);
-	if		(ctmp == 't' || ctmp == 'T') transferToEml = 1;
-	else if (ctmp == 'd' || ctmp == 'D') createDumpFile = 1;
-	
-	for (i = transferToEml || createDumpFile; param_getchar(Cmd, 1 + i); i++) {
-		if (!param_gethex(Cmd, 1 + i, keyBlock + 6 * keycnt, 12)) {
+
+	for (i = 1; param_getchar(Cmd, i); i++) {
+		
+		ctmp = param_getchar(Cmd, i);
+		clen = param_getlength(Cmd, i);
+		
+		if (clen == 12) {
+			
+			if ( param_gethex(Cmd, i, keyBlock + 6 * keycnt, 12) ){
+				PrintAndLog("[-] not hex, skipping");
+				continue;
+			}
 
 			if ( keyitems - keycnt < 2) {
 				p = realloc(keyBlock, 6 * (keyitems += 64));
 				if (!p) {
-					PrintAndLog("Cannot allocate memory for Keys");
+					PrintAndLog("[-] Cannot allocate memory for Keys");
 					free(keyBlock);
 					return 2;
 				}
 				keyBlock = p;
 			}
-			PrintAndLog("[%2d] key %02x%02x%02x%02x%02x%02x", keycnt,
-			(keyBlock + 6*keycnt)[0],(keyBlock + 6*keycnt)[1], (keyBlock + 6*keycnt)[2],
-			(keyBlock + 6*keycnt)[3], (keyBlock + 6*keycnt)[4],	(keyBlock + 6*keycnt)[5], 6);
+			PrintAndLog("[%2d] key %s", keycnt, sprint_hex( (keyBlock + 6*keycnt), 6 ) );
 			keycnt++;
+		} else if ( clen == 1) {
+			if (ctmp == 't' || ctmp == 'T') { transferToEml = 1; continue; }
+			if (ctmp == 'd' || ctmp == 'D') { createDumpFile = 1; continue; }
 		} else {
 			// May be a dic file
-			if ( param_getstr(Cmd, 1 + i, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE ) {
-				PrintAndLog("File name too long");
-				free(keyBlock);
-				return 2;
+			if ( param_getstr(Cmd, i, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE ) {
+				PrintAndLog("[-] Filename too long");
+				continue;
 			}
 			
-			if ( (f = fopen( filename , "r")) ) {
-				while( fgets(buf, sizeof(buf), f) ){
-					if (strlen(buf) < 12 || buf[11] == '\n')
-						continue;
-				
-					while (fgetc(f) != '\n' && !feof(f)) ;  //goto next line
-					
-					if( buf[0]=='#' ) continue;	//The line start with # is comment, skip
-
-					if (!isxdigit(buf[0])){
-						PrintAndLog("File content error. '%s' must include 12 HEX symbols",buf);
-						continue;
-					}
-					
-					buf[12] = 0;
-					if ( keyitems - keycnt < 2) {
-						p = realloc(keyBlock, 6 * (keyitems += 64));
-						if (!p) {
-							PrintAndLog("Cannot allocate memory for default keys");
-							free(keyBlock);
-							fclose(f);
-							return 2;
-						}
-						keyBlock = p;
-					}
-					int pos = 6 * keycnt;
-					memset(keyBlock + pos, 0, 6);
-					num_to_bytes(strtoll(buf, NULL, 16), 6, keyBlock + pos);
-					keycnt++;
-					memset(buf, 0, sizeof(buf));
-				}
-				fclose(f);
-				PrintAndLog("[+] Loaded %2d keys from %s", keycnt, filename);
-			} else {
-				PrintAndLog("File: %s: not found or locked.", filename);
-				free(keyBlock);
-				return 1;		
+			f = fopen( filename, "r");
+			if ( !f ){
+				PrintAndLog("[-] File: %s: not found or locked.", filename);
+				continue;
 			}
+			
+			// read file
+			while( fgets(buf, sizeof(buf), f) ){
+				if (strlen(buf) < 12 || buf[11] == '\n')
+					continue;
+			
+				while (fgetc(f) != '\n' && !feof(f)) ;  //goto next line
+				
+				if( buf[0]=='#' ) continue;	//The line start with # is comment, skip
+
+				if (!isxdigit(buf[0])){
+					PrintAndLog("[-] File content error. '%s' must include 12 HEX symbols",buf);
+					continue;
+				}
+				
+				buf[12] = 0;
+				if ( keyitems - keycnt < 2) {
+					p = realloc(keyBlock, 6 * (keyitems += 64));
+					if (!p) {
+						PrintAndLog("[-] Cannot allocate memory for default keys");
+						free(keyBlock);
+						fclose(f);
+						return 2;
+					}
+					keyBlock = p;
+				}
+				int pos = 6 * keycnt;
+				memset(keyBlock + pos, 0, 6);
+				num_to_bytes(strtoll(buf, NULL, 16), 6, keyBlock + pos);
+				keycnt++;
+				memset(buf, 0, sizeof(buf));
+			}
+			fclose(f);
+			PrintAndLog("[+] Loaded %2d keys from %s", keycnt, filename);
 		}
 	}
 		
@@ -1393,8 +1400,7 @@ out:
 
 int CmdHF14AMfChk(const char *Cmd) {
 
-	char ctmp = 0x00;
-	ctmp = param_getchar(Cmd, 0);
+	char ctmp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) < 3 || ctmp == 'h' || ctmp == 'H') return usage_hf14_chk();
 
 	FILE * f;
@@ -1408,7 +1414,8 @@ int CmdHF14AMfChk(const char *Cmd) {
 	uint8_t keyType = 0;
 	uint32_t keyitems = MIFARE_DEFAULTKEYS_SIZE;
 	uint64_t key64 = 0;	
-	uint8_t tempkey[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};		
+	uint8_t tempkey[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+	int clen = 0;
 	int transferToEml = 0;
 	int createDumpFile = 0;	
 	int i, res, keycnt = 0;
@@ -1427,89 +1434,99 @@ int CmdHF14AMfChk(const char *Cmd) {
 	}
 	
 	ctmp = param_getchar(Cmd, 1);
-	switch (ctmp) {	
-	case 'a': case 'A':
-		keyType = !0;
-		break;
-	case 'b': case 'B':
-		keyType = !1;
-		break;
-	case '?':
-		keyType = 2;
-		break;
-	default:
-		PrintAndLog("Key type must be A , B or ?");
-		free(keyBlock);
-		return 1;
-	};
-	
-	ctmp = param_getchar(Cmd, 2);
-	if		(ctmp == 't' || ctmp == 'T') transferToEml = 1;
-	else if (ctmp == 'd' || ctmp == 'D') createDumpFile = 1;
-	
-	for (i = transferToEml || createDumpFile; param_getchar(Cmd, 2 + i); i++) {
-		if (!param_gethex(Cmd, 2 + i, keyBlock + 6 * keycnt, 12)) {
+	clen = param_getlength(Cmd, 1);
+	if (clen == 1) {
+		switch (ctmp) {	
+		case 'a': case 'A':
+			keyType = 0;
+			break;
+		case 'b': case 'B':
+			keyType = 1;
+			break;
+		case '?':
+			keyType = 2;
+			break;
+		default:
+			PrintAndLog("Key type must be A , B or ?");
+			free(keyBlock);
+			return 1;
+		};
+	}
+
+	for (i = 2; param_getchar(Cmd, i); i++) {
+
+		ctmp = param_getchar(Cmd, i);	
+		clen = param_getlength(Cmd, i);
+		
+		if (clen == 12) {
+			
+			if ( param_gethex(Cmd, i, keyBlock + 6 * keycnt, 12) ){
+				PrintAndLog("[-] not hex, skipping");
+				continue;
+			}
+
 			if ( keyitems - keycnt < 2) {
 				p = realloc(keyBlock, 6 * (keyitems += 64));
 				if (!p) {
-					PrintAndLog("Cannot allocate memory for Keys");
+					PrintAndLog("[-] cannot allocate memory for Keys");
 					free(keyBlock);
 					return 2;
 				}
 				keyBlock = p;
 			}
-			PrintAndLog("key[%2d] %02x%02x%02x%02x%02x%02x", keycnt,
-			(keyBlock + 6*keycnt)[0],(keyBlock + 6*keycnt)[1], (keyBlock + 6*keycnt)[2],
-			(keyBlock + 6*keycnt)[3], (keyBlock + 6*keycnt)[4],	(keyBlock + 6*keycnt)[5], 6);
+			PrintAndLog("[%2d] key %s", keycnt, sprint_hex( (keyBlock + 6*keycnt), 6 ) );;
 			keycnt++;
+		} else if ( clen == 1 ) {
+			if (ctmp == 't' || ctmp == 'T') { transferToEml = 1; continue; }
+			if (ctmp == 'd' || ctmp == 'D') { createDumpFile = 1; continue; }
 		} else {
 			// May be a dic file
-			if ( param_getstr(Cmd, 2 + i, filename, sizeof(filename)) >= FILE_PATH_SIZE ) {
-				PrintAndLog("File name too long");
-				free(keyBlock);
-				return 2;
+			if ( param_getstr(Cmd, i, filename, sizeof(filename)) >= FILE_PATH_SIZE ) {
+				PrintAndLog("[-] File name too long");
+				continue;
 			}
 			
-			if ( (f = fopen( filename , "r")) ) {
-				while( fgets(buf, sizeof(buf), f) ){
-					if (strlen(buf) < 12 || buf[11] == '\n')
-						continue;
+			f = fopen( filename , "r");
+			if ( !f ) {
+				PrintAndLog("[-] File: %s: not found or locked.", filename);
+				continue;
+			}
+			
+			// load keys from dictionary file
+			while( fgets(buf, sizeof(buf), f) ){
+				if (strlen(buf) < 12 || buf[11] == '\n')
+					continue;
+			
+				while (fgetc(f) != '\n' && !feof(f)) ;  //goto next line
 				
-					while (fgetc(f) != '\n' && !feof(f)) ;  //goto next line
-					
-					if( buf[0]=='#' ) continue;	//The line start with # is comment, skip
+				if( buf[0]=='#' ) continue;	//The line start with # is comment, skip
 
-					if (!isxdigit(buf[0])){
-						PrintAndLog("File content error. '%s' must include 12 HEX symbols",buf);
-						continue;
-					}
-					
-					buf[12] = 0;
-
-					if ( keyitems - keycnt < 2) {
-						p = realloc(keyBlock, 6 * (keyitems += 64));
-						if (!p) {
-							PrintAndLog("Cannot allocate memory for defKeys");
-							free(keyBlock);
-							fclose(f);
-							return 2;
-						}
-						keyBlock = p;
-					}
-					memset(keyBlock + 6 * keycnt, 0, 6);
-					num_to_bytes(strtoll(buf, NULL, 16), 6, keyBlock + 6*keycnt);
-					//PrintAndLog("check key[%2d] %012" PRIx64, keycnt, bytes_to_num(keyBlock + 6*keycnt, 6));
-					keycnt++;
-					memset(buf, 0, sizeof(buf));
+				// codesmell, only checks first char?
+				if (!isxdigit(buf[0])){
+					PrintAndLog("[-] File content error. '%s' must include 12 HEX symbols",buf);
+					continue;
 				}
-				fclose(f);
-				PrintAndLog("Loaded %2d keys from %s", keycnt, filename);
-			} else {
-				PrintAndLog("File: %s: not found or locked.", filename);
-				free(keyBlock);
-				return 1;
-			
+				
+				buf[12] = 0;
+
+				if ( keyitems - keycnt < 2) {
+					p = realloc(keyBlock, 6 * (keyitems += 64));
+					if (!p) {
+						PrintAndLog("[-] Cannot allocate memory for defKeys");
+						free(keyBlock);
+						fclose(f);
+						return 2;
+					}
+					keyBlock = p;
+				}
+				memset(keyBlock + 6 * keycnt, 0, 6);
+				num_to_bytes(strtoll(buf, NULL, 16), 6, keyBlock + 6*keycnt);
+				//PrintAndLog("check key[%2d] %012" PRIx64, keycnt, bytes_to_num(keyBlock + 6*keycnt, 6));
+				keycnt++;
+				memset(buf, 0, sizeof(buf));
 			}
+			fclose(f);
+			PrintAndLog("[+] Loaded %2d keys from %s", keycnt, filename);
 		}
 	}
 	
