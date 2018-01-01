@@ -56,7 +56,7 @@ int str_ends_with(const char * str, const char * suffix) {
 /**
  * Utility to check the ending of a string (used to check file suffix)
  */
-bool endsWith (char* base, char* str) {
+bool endsWith(char* base, char* str) {
     int blen = strlen(base);
     int slen = strlen(str);
     return (blen >= slen) && (0 == strcmp(base + blen - slen, str));
@@ -82,12 +82,12 @@ int CmdScriptList(const char *Cmd) {
 
 	n = scandir(script_directory_path, &namelist, NULL, alphasort);
 	if (n == -1) {
-		PrintAndLog ("Couldn't open the scripts-directory");
+		PrintAndLog ("[-] Couldn't open the scripts-directory");
 		return 1;
 	}
 
 	for (uint16_t i = 0; i < n; i++) {
-		if(str_ends_with(namelist[i]->d_name, ".lua"))
+		if (str_ends_with(namelist[i]->d_name, ".lua"))
 			PrintAndLog("%-21s", namelist[i]->d_name);
 		free(namelist[i]);
 	}
@@ -126,10 +126,8 @@ int CmdScriptRun(const char *Cmd) {
     sscanf(Cmd, "%127s%n %255[^\n\r]%n", script_name,&name_len, arguments, &arg_len);
 
     char *suffix = "";
-    if(!endsWith(script_name,".lua"))
-    {
+    if (!endsWith(script_name,".lua"))
         suffix = ".lua";
-    }
 
 	char script_path[strlen(get_my_executable_directory()) + strlen(LUA_SCRIPTS_DIRECTORY) + strlen(script_name) + strlen(suffix) + 1];
 	strcpy(script_path, get_my_executable_directory());
@@ -137,7 +135,7 @@ int CmdScriptRun(const char *Cmd) {
 	strcat(script_path, script_name);
 	strcat(script_path, suffix);
 
-    printf("--- Executing: %s%s, args '%s'\n", script_name, suffix, arguments);
+    printf("[+] Executing: %s%s, args '%s'\n", script_name, suffix, arguments);
 
     // run the Lua script
     int error = luaL_loadfile(lua_state, script_path);
@@ -152,7 +150,7 @@ int CmdScriptRun(const char *Cmd) {
     {
         // the top of the stack should be the error string
         if (!lua_isstring(lua_state, lua_gettop(lua_state)))
-            printf( "Error - but no error (?!)");
+            printf("[-] Error - but no error (?!)");
 
         // get the top of the stack as the error and pop it off
         const char * str = lua_tostring(lua_state, lua_gettop(lua_state));
@@ -163,15 +161,14 @@ int CmdScriptRun(const char *Cmd) {
     //luaL_dofile(lua_state, buf);
     // close the Lua state
     lua_close(lua_state);
-    printf("\n-----Finished\n");
+    printf("\n[+] Finished\n");
     return 0;
 }
 
-
 static command_t CommandTable[] = {
-	{"help",  CmdHelp, 1, "This help"},
-	{"list",  CmdScriptList, 1, "List available scripts"},
-	{"run",   CmdScriptRun,  1, "<name> -- Execute a script"},
+	{"help",  CmdHelp,			1, "This help"},
+	{"list",  CmdScriptList,	1, "List available scripts"},
+	{"run",   CmdScriptRun,		1, "<name> -- Execute a script"},
 	{NULL, NULL, 0, NULL}
 };
 
