@@ -675,23 +675,22 @@ int doTestsWithKnownInputs() {
 	return errors;
 }
 
-int readKeyFile(uint8_t key[8]) {
-	int retval = 1;
+static bool readKeyFile(uint8_t key[8]) {
+	bool retval = false;
 	FILE *f = fopen("iclass_key.bin", "rb");
 	if (!f)
-		return 0;
+		return retval;
 	
-	size_t bytes_read = fread(key, sizeof(uint8_t), 8, f);
-	if ( bytes_read == 1)
-		retval = 0;	
+	size_t bytes_read = fread(key, sizeof(uint8_t), sizeof(key), f);
+	if ( bytes_read == sizeof(key))
+		retval = true;	
 
 	if (f)
 		fclose(f);
 	return retval;
 }
 
-int doKeyTests(uint8_t debuglevel)
-{
+int doKeyTests(uint8_t debuglevel) {
 	debug_print = debuglevel;
 
 	prnlog("[+] Checking if the master key is present (iclass_key.bin)...");
