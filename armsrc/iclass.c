@@ -2095,10 +2095,9 @@ void iClass_Authentication(uint8_t *mac) {
 	cmd_send(CMD_ACK,isOK,0,0,0,0);
 }
 
-typedef struct iclass_precalc {
-	//uint8_t key[8];
+typedef struct iclass_premac {
 	uint8_t mac[4];
-} iclass_precalc_t;
+} iclass_premac_t;
 
 /* this function works on the following assumptions.
 * - one select first, to get CSN / CC (e-purse) 
@@ -2122,7 +2121,7 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
 	// select card / e-purse
 	uint8_t card_data[6 * 8] = {0};
 	
-	iclass_precalc_t *keys = (iclass_precalc_t *)datain;
+	iclass_premac_t *keys = (iclass_premac_t *)datain;
 		
 	LED_A_ON();
 	

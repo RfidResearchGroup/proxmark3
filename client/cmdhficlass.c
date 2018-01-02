@@ -216,12 +216,13 @@ int usage_hf_iclass_loclass(void) {
 }
 int usage_hf_iclass_chk(void) {
 	PrintAndLog("Checkkeys loads a dictionary text file with 8byte hex keys to test authenticating against a iClass tag");	
-	PrintAndLog("Usage: hf iclass chk [h|e|r] <f  (*.dic)>");
+	PrintAndLog("Usage: hf iclass chk [h|e|r] [f  (*.dic)] [c <csn>] [p <epurse>] [m <macs>]");
 	PrintAndLog("Options:");
 	PrintAndLog("      h             Show this help");
 	PrintAndLog("      f <filename>  Dictionary file with default iclass keys");
-	PrintAndLog("      e             target Elite / High security key scheme");
-	PrintAndLog("      r             interpret dictionary file as raw (diversified keys)");
+	PrintAndLog("      c             CSN");
+	PrintAndLog("      p             EPURSE");
+	PrintAndLog("      m             macs");
 	PrintAndLog("Samples:");
 	PrintAndLog("		 hf iclass chk f default_iclass_keys.dic");	
 	PrintAndLog("		 hf iclass chk f default_iclass_keys.dic e");
@@ -1823,7 +1824,7 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 	uint8_t fileNameLen = 0;
 
 	uint8_t *keyBlock = NULL;	
-	iclass_precalc_t *pre = NULL;
+	iclass_premac_t *pre = NULL;
 	int keycnt = 0;
 
 	// time
@@ -1879,13 +1880,13 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 	}
 
 	// load keys into keyblock
-	int res = ReadDictionaryKeyFile( filename, &keyBlock, &keycnt);
+	int res = LoadDictionaryKeyFile( filename, &keyBlock, &keycnt);
 	if ( res > 0) {
 		free(keyBlock);
 		return 1;
 	}
 		
-	pre = calloc(keycnt, sizeof(iclass_precalc_t));
+	pre = calloc(keycnt, sizeof(iclass_premac_t));
 	if ( !pre ) {
 		free(keyBlock);
 		return 1;
@@ -1984,50 +1985,49 @@ out:
 	PrintAndLog("");
 	return 0;
 }
+
 static int cmp_uint32( const void *a, const void *b) {
-    if (*(const uint32_t *)a < *(const uint32_t *)b)
+	
+	const iclass_prekey_t* x = (const iclass_prekey_t *)a;
+	const iclass_prekey_t* y = (const iclass_prekey_t *)b;
+	
+	uint32_t mx = bytes_to_num( (uint8_t*)x->mac, 4);
+	uint32_t my = bytes_to_num( (uint8_t*)y->mac, 4);
+	
+    if (mx < my)
 		return -1;
     else 
-		return *(const uint32_t *)a > *(const uint32_t *)b;
-}
-static inline uint32_t binsearch(uint32_t key, uint32_t v[], size_t n){
-   int low, high, mid;
-   low = 0;
-   high = n - 1;
-   while (low <= high) {
-       mid = (low+high)/2;
-       if (key < v[mid])
-           high = mid + 1;
-       else if (key  > v[mid])
-           low = mid + 1;
-       else    /* found match */
-           return mid;
-   }
-   return -1;   /* no match */
+		return mx > my;
 }
 
-int ReaderEliteLookUp(const char *Cmd) {
+// binary search in struct iclass_prekey_t for mac 
+// static inline int32_t binsearch(uint32_t key, iclass_prekey_t* v, size_t n){
+   // int mid, low = 0, high = n - 1;
+   // uint32_t m;
+   // while (low <= high) {
+	   
+       // mid = (low+high)/2;	   
+	   // m = bytes_to_num( v[mid].mac, 4);
+	   
+       // if (key < m)
+           // high = mid - 1;
+       // else if (key > m)
+           // low = mid + 1;
+       // else    /* found match */
+           // return mid;
+   // }
+   // return -1;   /* no match */
+// }
+
+// this method tries to identify in which configuration mode a iClass / iClass SE reader is in.
+// Standard or Elite / HighSecurity mode.  It uses a default key dictionary list in order to work.
+int CmdHFiClassLookUp(const char *Cmd) {
 	
-	// SIM  / sniff,
-	// reader tries to authenticate AA1 ->
-	//  legacy key 
-	//   
-	// or 
-	//  elite key
-	// ladda nycklar.
-	// sortera nycklar, mac på mac  qsort
-	// leta upp mac binsearch,
-	// om funnen, printa
-		// load keys into keyblock
-	uint8_t CSN[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
-	uint8_t CCNR[12] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
-/*
-	uint8_t key[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
-	uint8_t div_key[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
-	uint8_t mac_legacy[4] = {0x00,0x00,0x00,0x00};
-	uint8_t mac_elite[4] = {0x00,0x00,0x00,0x00};
+	uint8_t CSN[8];
+	uint8_t EPURSE[8];
+	uint8_t MACS[8];
+	uint8_t MAC_TAG[4] = {0x00,0x00,0x00,0x00};
 	
-	*/
 	// elite key,  raw key, standard key
 	bool use_elite = false;
 	bool use_raw = false;
@@ -2038,8 +2038,8 @@ int ReaderEliteLookUp(const char *Cmd) {
 	uint8_t fileNameLen = 0;
 
 	uint8_t *keyBlock = NULL;	
-	iclass_precalc_t *pre = NULL;
-	int keycnt = 0;
+	iclass_prekey_t *prekey = NULL;
+	int keycnt = 0, len = 0;
 
 	// time
 	uint64_t t1 = msclock();
@@ -2058,6 +2058,36 @@ int ReaderEliteLookUp(const char *Cmd) {
 			}
 			cmdp += 2;
 			break;
+		case 'u':
+		case 'U':
+			param_gethex_ex(Cmd, cmdp+1, CSN, &len);
+			if ( len>>1 != sizeof(CSN) ) {
+				PrintAndLog("Wrong CSN length, expected %d got [%d]", sizeof(CSN), len>>1);
+				errors = true;
+			}
+			cmdp += 2;			
+			break;
+		case 'm':
+		case 'M':
+			param_gethex_ex(Cmd, cmdp+1, MACS, &len);
+			if ( len>>1 != sizeof(MACS) ) {
+				PrintAndLog("Wrong MACS length, expected %d got [%d]  ", sizeof(MACS), len>>1);
+				errors = true;
+			} else {
+				memcpy(MAC_TAG, MACS+4, 4);
+			}
+			cmdp += 2;			
+			break;
+		case 'p':
+		case 'P':
+			param_gethex_ex(Cmd, cmdp+1, EPURSE, &len);
+			if ( len>>1 != sizeof(EPURSE) ) {
+				PrintAndLog("Wrong EPURSE length, expected %d got [%d]  ", sizeof(EPURSE), len>>1);
+				errors = true;
+			}
+			cmdp += 2;			
+			break;
+		break;
 		case 'e':
 		case 'E':
 			use_elite = true;
@@ -2075,54 +2105,60 @@ int ReaderEliteLookUp(const char *Cmd) {
 		}
 	}
 	if (errors) return usage_hf_iclass_chk();	
-				
-	int res = ReadDictionaryKeyFile( filename, &keyBlock, &keycnt);
-	if ( res > 0) {
-		free(keyBlock);
-		return 1;
-	}
-		
-	pre = calloc(keycnt, sizeof(iclass_precalc_t));
-	if ( !pre ) {
-		free(keyBlock);
-		return 1;
-	}
+
+	PrintAndLog("CSN %s", sprint_hex( CSN, sizeof(CSN) ));
+	PrintAndLog("Epurse %s", sprint_hex( EPURSE, sizeof(EPURSE) ));
+	PrintAndLog("MACS %s", sprint_hex( MACS, sizeof(MACS) ));
+	PrintAndLog("MAC_TAG %s", sprint_hex( MAC_TAG, sizeof(MAC_TAG) ));
 	
-	PrintAndLog("[+] Generating diversified keys and MAC");
-	res = GenerateMacFromKeyFile( CSN, CCNR, use_raw, use_elite, keyBlock, keycnt, pre );
+	int res = LoadDictionaryKeyFile( filename, &keyBlock, &keycnt);
 	if ( res > 0) {
 		free(keyBlock);
-		free(pre);
+		return 1;
+	}
+	//iclass_prekey_t	
+	prekey = calloc(keycnt, sizeof(iclass_prekey_t));
+	if ( !prekey ) {
+		free(keyBlock);
+		return 1;
+	}
+
+	PrintAndLog("[-] Generating diversified keys and MAC");
+	res = GenerateFromKeyFile( CSN, EPURSE, use_raw, use_elite, keyBlock, keycnt, prekey );
+	if ( res > 0) {
+		free(keyBlock);
+		free(prekey);
 		return 1;
 	}	
-	
-	// qsort
-	// qsort( pre, sizeof(iclass_precalc_t), cmp_uint32);
-	// binsearch(mac_elite, pre, keycnt)
-	
-	// memcpy(div_key, key, 8);
-	// doMAC(CCNR, div_key, mac_legacy);
 
-	
-	
-	// if (use_raw)
-		// memcpy(div_key, key, 8);
-	// else
-		// HFiClassCalcDivKey(CSN, key, div_key, use_elite);
+	PrintAndLog("[-] Sorting");
+			
+	// sort mac list.
+	qsort( prekey, keycnt, sizeof(iclass_prekey_t), cmp_uint32);
 
-		// doMAC(CCNR, div_key, pre_list[i].mac);
+	//PrintPreCalc(prekey, keycnt);
+	
+	PrintAndLog("[-] Searching");	
+	iclass_prekey_t *item;
+	iclass_prekey_t lookup;
+	memcpy(lookup.mac, MAC_TAG, 4);
+	
+	// using find
+	item = (iclass_prekey_t*) bsearch(&lookup, prekey, keycnt, sizeof(iclass_prekey_t), cmp_uint32);	
+	if( item != NULL ) {
+		PrintAndLog("\n[+] [debit] found key %s", sprint_hex(item->key, 8));
+	}
+
 	t1 = msclock() - t1;
-
 	PrintAndLog("\nTime in iclass : %.0f seconds\n", (float)t1/1000.0);
-	
 	DropField();
-	free(pre);
+	free(prekey);
 	free(keyBlock);
 	PrintAndLog("");		
 	return 0;
 }	
 
-int ReadDictionaryKeyFile( char* filename, uint8_t **keys, int *keycnt) {
+int LoadDictionaryKeyFile( char* filename, uint8_t **keys, int *keycnt) {
 
 	char buf[17];
 	FILE * f;
@@ -2172,7 +2208,7 @@ int ReadDictionaryKeyFile( char* filename, uint8_t **keys, int *keycnt) {
 }
 
 // precalc diversified keys and their MAC
-int GenerateMacFromKeyFile( uint8_t* CSN, uint8_t* CCNR, bool use_raw, bool use_elite, uint8_t* keys, int keycnt, iclass_precalc_t* pre_list ) {
+int GenerateMacFromKeyFile( uint8_t* CSN, uint8_t* CCNR, bool use_raw, bool use_elite, uint8_t* keys, int keycnt, iclass_premac_t* list ) {
 	uint8_t key[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
 	uint8_t div_key[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
 
@@ -2185,24 +2221,54 @@ int GenerateMacFromKeyFile( uint8_t* CSN, uint8_t* CCNR, bool use_raw, bool use_
 		else
 			HFiClassCalcDivKey(CSN, key, div_key, use_elite);
 
-		doMAC(CCNR, div_key, pre_list[i].mac);
+		doMAC(CCNR, div_key, list[i].mac);
+	}	
+	return 0;
+}
+
+int GenerateFromKeyFile( uint8_t* CSN, uint8_t* CCNR, bool use_raw, bool use_elite, uint8_t* keys, int keycnt, iclass_prekey_t* list ) {
+
+	uint8_t div_key[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+
+	for ( int i=0; i < keycnt; i++) {
+				
+		memcpy(list[i].key, keys + 8 * i , 8); 
+		
+		// generate diversifed key
+		if (use_raw)
+			memcpy(div_key, list[i].key, 8);
+		else
+			HFiClassCalcDivKey(CSN, list[i].key, div_key, use_elite);
+
+		// generate MAC
+		doMAC(CCNR, div_key, list[i].mac);
 	}	
 	return 0;
 }
 
 // print diversified keys
-void PrintPreCalcMac(uint8_t* keys, int keycnt, iclass_precalc_t* pre_list) {
+void PrintPreCalcMac(uint8_t* keys, int keycnt, iclass_premac_t* pre_list) {
 
-	uint8_t key[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+	iclass_prekey_t* b =  calloc(keycnt, sizeof(iclass_prekey_t));
+	if ( !b )
+		return;
+		
+	for ( int i=0; i < keycnt; i++) {		
+		memcpy(b[i].key, keys + 8 * i , 8); 
+		memcpy(b[i].mac, pre_list[i].mac, 4);
+	}
+	PrintPreCalc(b, keycnt);
+	free(b);
+}
+
+void PrintPreCalc(iclass_prekey_t* list, int itemcnt) {
 	PrintAndLog("-----+------------------+---------");
 	PrintAndLog("#key | key              | mac");
 	PrintAndLog("-----+------------------+---------");
-	for ( int i=0; i < keycnt; i++) {
-
-		memcpy(key, keys + 8 * i , 8); 
+	for ( int i=0; i < itemcnt; i++) {
 
 		if (i < 10 ) {			
-			PrintAndLog("[%2d] | %016" PRIx64 " | %08" PRIx32, i, bytes_to_num(key, 8), bytes_to_num( pre_list[i].mac, 4) );
+			PrintAndLog("[%2d] | %016" PRIx64 " | %08" PRIx32, i, bytes_to_num(list[i].key, 8), bytes_to_num( list[i].mac, 4) );
 		} else if ( i == 10 ) {
 			PrintAndLog("... skip printing the rest");
 		}
@@ -2228,6 +2294,8 @@ static command_t CommandTable[] = {
 	{"sim",         CmdHFiClassSim,             	0,	"[options..] Simulate iClass tag"},
 	{"sniff",       CmdHFiClassSniff,           	0,	"            Eavesdrop iClass communication"},
 	{"writeblk",    CmdHFiClass_WriteBlock,     	0,	"[options..] Authenticate and Write iClass block"},
+	{"a",    CmdHFiClassLookUp,     	0,	"[options..] A"},
+	
 	{NULL, NULL, 0, NULL}
 };
 
