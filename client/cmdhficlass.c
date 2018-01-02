@@ -539,35 +539,44 @@ int iclassEmlSetMem(uint8_t *data, int blockNum, int blocksCount) {
 
 int CmdHFiClassELoad(const char *Cmd) {
 
-	char opt = param_getchar(Cmd, 0);
-	if (strlen(Cmd)<1 || opt == 'h' || opt == 'H') return usage_hf_iclass_eload();
-
+	char ctmp = param_getchar(Cmd, 0);
+	if (strlen(Cmd)< 1 || ctmp == 'h' || ctmp == 'H') return usage_hf_iclass_eload();
+	
+	if ( ctmp != 'f' && ctmp != 'F') return usage_hf_iclass_eload();
+	
 	//File handling and reading
 	FILE *f;
 	char filename[FILE_PATH_SIZE];
-	if (opt == 'f' && param_getstr(Cmd, 1, filename, sizeof(filename)) > 0) {
-		f = fopen(filename, "rb");
-	} else {
-		return usage_hf_iclass_eload();
-	}
-
-	if (!f) {
-		PrintAndLog("Failed to read from file '%s'", filename);
+	
+	if ( param_getstr(Cmd, 1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE ) {
+		PrintAndLog("[-] Filename too long");
 		return 1;
 	}
-
+	
+	f = fopen(filename, "rb");
+	if ( !f ){
+		PrintAndLog("[-] File: %s: not found or locked.", filename);
+		return 1;
+	}
+	
+	// get filesize in order to malloc memory
 	fseek(f, 0, SEEK_END);
 	long fsize = ftell(f);
 	fseek(f, 0, SEEK_SET);
 
 	if (fsize < 0) 	{
-		prnlog("Error, when getting filesize");
+		prnlog("[-] error, when getting filesize");
 		fclose(f);
 		return 1;
 	}
 
 	uint8_t *dump = malloc(fsize);
-
+	if (!dump) {
+		prnlog("[-] error, cannot allocate memory ");
+		fclose(f);
+		return 1;
+	}
+	
 	size_t bytes_read = fread(dump, 1, fsize, f);
 	fclose(f);
 
@@ -575,7 +584,7 @@ int CmdHFiClassELoad(const char *Cmd) {
 	//Validate
 
 	if (bytes_read < fsize)	{
-		prnlog("Error, could only read %d bytes (should be %d)",bytes_read, fsize );
+		prnlog("[-] error, could only read %d bytes (should be %d)", bytes_read, fsize );
 		free(dump);
 		return 1;
 	}
@@ -583,9 +592,9 @@ int CmdHFiClassELoad(const char *Cmd) {
 	uint32_t bytes_sent = 0;
 	uint32_t bytes_remaining  = bytes_read;
 
-	while(bytes_remaining > 0){
+	while (bytes_remaining > 0){
 		uint32_t bytes_in_packet = MIN(USB_CMD_DATA_SIZE, bytes_remaining);
-		UsbCommand c = {CMD_ICLASS_EML_MEMSET, {bytes_sent,bytes_in_packet,0}};
+		UsbCommand c = {CMD_ICLASS_EML_MEMSET, {bytes_sent, bytes_in_packet, 0}};
 		memcpy(c.d.asBytes, dump, bytes_in_packet);
 		clearCommandBuffer();
 		SendCommand(&c);
@@ -593,7 +602,7 @@ int CmdHFiClassELoad(const char *Cmd) {
 		bytes_sent += bytes_in_packet;
 	}
 	free(dump);
-	PrintAndLog("Sent %d bytes of data to device emulator memory", bytes_sent);
+	PrintAndLog("[+] sent %d bytes of data to device emulator memory", bytes_sent);
 	return 0;
 }
 
@@ -1999,25 +2008,6 @@ static int cmp_uint32( const void *a, const void *b) {
     else 
 		return mx > my;
 }
-
-// binary search in struct iclass_prekey_t for mac 
-// static inline int32_t binsearch(uint32_t key, iclass_prekey_t* v, size_t n){
-   // int mid, low = 0, high = n - 1;
-   // uint32_t m;
-   // while (low <= high) {
-	   
-       // mid = (low+high)/2;	   
-	   // m = bytes_to_num( v[mid].mac, 4);
-	   
-       // if (key < m)
-           // high = mid - 1;
-       // else if (key > m)
-           // low = mid + 1;
-       // else    /* found match */
-           // return mid;
-   // }
-   // return -1;   /* no match */
-// }
 
 // this method tries to identify in which configuration mode a iClass / iClass SE reader is in.
 // Standard or Elite / HighSecurity mode.  It uses a default key dictionary list in order to work.
