@@ -26,14 +26,14 @@ void FpgaSetupSscExt(uint8_t clearPCER);
 void FpgaSetupSsc(void);
 void SetupSpi(int mode);
 bool FpgaSetupSscDma(uint8_t *buf, int len);
-void Fpga_print_status();
-int FpgaGetCurrent();
+void Fpga_print_status(void);
+int FpgaGetCurrent(void);
 #define FpgaDisableSscDma(void)	AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
 #define FpgaEnableSscDma(void) AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTEN;
 void SetAdcMuxFor(uint32_t whichGpio);
 
 // extern and generel turn off the antenna method
-extern void switch_off();
+extern void switch_off(void);
 
 // definitions for multiple FPGA config files support
 #define FPGA_BITSTREAM_MAX 2	// the total number of FPGA bitstreams (configs)

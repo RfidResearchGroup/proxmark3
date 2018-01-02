@@ -536,7 +536,7 @@ void Fpga_print_status(void) {
 	}
 }
 
-int FpgaGetCurrent() {
+int FpgaGetCurrent(void) {
 	return downloaded_bitstream;
 }
 
@@ -545,10 +545,9 @@ int FpgaGetCurrent() {
 // if HF,  Disable SSC DMA
 // turn off trace and leds off.
 
-void switch_off() {	
+void switch_off(void) {	
 	if (MF_DBGLEVEL > 3) Dbprintf("switch_off");
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	//SpinDelay(100);
 	if (downloaded_bitstream == FPGA_BITSTREAM_HF )
 		FpgaDisableSscDma();
 	set_tracing(false);

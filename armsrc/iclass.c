@@ -719,7 +719,7 @@ static void iclass_setup_sniff(void){
 void RAMFUNC SniffIClass(void) {
 
 	uint8_t previous_data = 0;
-	int maxDataLen = 0; //  datalen = 0; 
+	int maxDataLen = 0, datalen = 0; 
 	uint32_t time_0 = 0, time_start = 0, time_stop  = 0;
     uint32_t sniffCounter = 0;
 
@@ -734,7 +734,7 @@ void RAMFUNC SniffIClass(void) {
 
 	// Setup and start DMA.
 	if ( !FpgaSetupSscDma(dmaBuf, ICLASS_DMA_BUFFER_SIZE) ){
-		if (MF_DBGLEVEL > 1) DbpString("FpgaSetupSscDma failed. Exiting"); 
+		if (MF_DBGLEVEL > 1) DbpString("[-] FpgaSetupSscDma failed. Exiting"); 
 		return;
 	}
 
@@ -755,45 +755,46 @@ void RAMFUNC SniffIClass(void) {
 			AT91C_BASE_PDC_SSC->PDC_RNCR = ICLASS_DMA_BUFFER_SIZE;
 		}
 		// number of bytes we have processed so far
-		//int register readBufDataP = data - dmaBuf;
+		int register readBufData = data - dmaBuf;
 		// number of bytes already transferred		
-		//int register dmaBufDataP = ICLASS_DMA_BUFFER_SIZE - AT91C_BASE_PDC_SSC->PDC_RCR;
-		/*
-		if (readBufDataP <= dmaBufDataP)
-			datalen = dmaBufDataP - readBufDataP;
+		int register dmaBufData = ICLASS_DMA_BUFFER_SIZE - AT91C_BASE_PDC_SSC->PDC_RCR;
+		
+		if (readBufData <= dmaBufData)
+			datalen = dmaBufData - readBufData;
 		else 
-			datalen = ICLASS_DMA_BUFFER_SIZE - readBufDataP + dmaBufDataP;
-		*/
-		// test for length of buffer
+			datalen = ICLASS_DMA_BUFFER_SIZE - readBufData + dmaBufData;
+		
 		/*
+		// test for length of buffer		
 		if (datalen > maxDataLen) {
 			maxDataLen = datalen;
 			if (datalen > (9 * ICLASS_DMA_BUFFER_SIZE / 10)) {
-				Dbprintf("blew circular buffer! datalen=%d", datalen);
+				Dbprintf("[-] blew circular buffer! datalen=%d", datalen);
 				break;
 			}
 		}
 		*/
+		
 		// this part basically does wait until our DMA buffer got a value.
 		// well it loops, but the purpose is to wait.
-		//if (datalen < 1) continue;
+		if (datalen < 1) continue;
 			
 		// these two, is more of a "reset" the DMA buffers,  re-init.
 		// primary buffer was stopped( <-- we lost data!
-		/*
+		
 		if (!AT91C_BASE_PDC_SSC->PDC_RCR) {
 			AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dmaBuf;
 			AT91C_BASE_PDC_SSC->PDC_RCR = ICLASS_DMA_BUFFER_SIZE;
 //			Dbprintf("Primary buffer ERROR!!! data length: %d", datalen); // temporary
 		}
-		*/
-		/*
+		
+		
 		// secondary buffer sets as primary, secondary buffer was stopped
 		if (!AT91C_BASE_PDC_SSC->PDC_RNCR) {
 			AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dmaBuf;
 			AT91C_BASE_PDC_SSC->PDC_RNCR = ICLASS_DMA_BUFFER_SIZE;
 //			Dbprintf("Seconday buffer ERROR!!! data length: %d", datalen); // temporary	
-		}*/
+		}
 
 		if (sniffCounter & 0x01) {
 			// no need to try decoding reader data if the tag is sending
@@ -835,9 +836,9 @@ void RAMFUNC SniffIClass(void) {
 	} // end main loop
 
 	if (MF_DBGLEVEL >= 1) {	
-		DbpString("Sniff statistics:");	
-		Dbprintf(" maxDataLen=%x, Uart.state=%x, Uart.byteCnt=%x", maxDataLen, Uart.state, Uart.byteCnt);
-		Dbprintf(" Tracelen=%x, Uart.output[0]=%x", BigBuf_get_traceLen(), (int)Uart.output[0]);
+		DbpString("[+] Sniff statistics:");	
+		Dbprintf("[+]  maxDataLen=%x, Uart.state=%x, Uart.byteCnt=%x", maxDataLen, Uart.state, Uart.byteCnt);
+		Dbprintf("[+]  Tracelen=%x, Uart.output[0]=%x", BigBuf_get_traceLen(), (int)Uart.output[0]);
 		Dbhexdump(ICLASS_DMA_BUFFER_SIZE, data, false);
 		uint8_t r[128] = {0}; 
 		uint8_t t[128] = {0};
@@ -1015,18 +1016,14 @@ static void CodeIClassTagSOF() {
 // turn off afterwards
 void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
 
-	if (MF_DBGLEVEL > 3) Dbprintf("iclass_simulate Enter");
+	if (MF_DBGLEVEL > 3) Dbprintf("[+] iClass_simulate Enter");
 
 	LEDsoff();
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-
-	
-	// this will clear out bigbuf memory ...
+	// this will clear out bigbuf memory,  the eload command must select this before!
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-
 	FpgaSetupSsc();
-
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 
 	// Enable and clear the trace
@@ -1052,7 +1049,7 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 		doIClassSimulation(MODE_SIM_CSN, NULL);
 	} else if (simType == 2) {
 
-		Dbprintf("Going into attack mode, %d CSNS sent", numberOfCSNS);
+		Dbprintf("[+] going into attack mode, %d CSNS sent", numberOfCSNS);
 		// In this mode, a number of csns are within datain. We'll simulate each one, one at a time
 		// in order to collect MAC's from the reader. This can later be used in an offlne-attack
 		// in order to obtain the keys, as in the "dismantling iclass"-paper.
@@ -1072,6 +1069,7 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 
 	} else if (simType == 3){
 		//This is 'full sim' mode, where we use the emulator storage for data.
+		//ie:  BigBuf_get_EM_addr should be previously filled with data from the "eload" command
 		doIClassSimulation(MODE_FULLSIM, NULL);
 	} else if (simType == 4){
 
@@ -1079,7 +1077,7 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 		// the collected data (mac_response) is doubled out since we are trying to collect both keys in the keyroll process.
 		// Keyroll iceman  9 csns * 8 * 2 = 144
 		// keyroll CARL55  15csns * 8 * 2 = 15 * 8 * 2 = 240		
-		Dbprintf("Going into attack keyroll mode, %d CSNS sent", numberOfCSNS);
+		Dbprintf("[+] going into attack keyroll mode, %d CSNS sent", numberOfCSNS);
 		// In this mode, a number of csns are within datain. We'll simulate each one, one at a time
 		// in order to collect MAC's from the reader. This can later be used in an offlne-attack
 		// in order to obtain the keys, as in the "dismantling iclass"-paper.
@@ -1112,7 +1110,7 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 	} else {
 		// We may want a mode here where we hardcode the csns to use (from proxclone).
 		// That will speed things up a little, but not required just yet.
-		DbpString("The mode is not implemented, reserved for future use");
+		DbpString("[-] the mode is not implemented, reserved for future use");
 	}
 
 out:	
@@ -1142,7 +1140,7 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 	uint8_t anticoll_data[10] = { 0 };
 	uint8_t csn_data[10] = { 0 };
 	memcpy(csn_data, csn, sizeof(csn_data));
-	Dbprintf("Simulating CSN %02x%02x%02x%02x%02x%02x%02x%02x", csn[0], csn[1], csn[2], csn[3], csn[4], csn[5], csn[6], csn[7]);
+	Dbprintf("[+] Simulating CSN %02x%02x%02x%02x%02x%02x%02x%02x", csn[0], csn[1], csn[2], csn[3], csn[4], csn[5], csn[6], csn[7]);
 
 	// Construct anticollision-CSN
 	rotateCSN(csn_data, anticoll_data);
@@ -1298,7 +1296,8 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 		}
 		r2t_etime = ((GetCountSspClk() - time_0) << 4 ) - r2t_stime;
 		
-		response_delay = 330;
+		// 330us normal wait,  adjusted for our execution
+		response_delay = 230;
 
 		LED_C_ON();	//Signal tracer
 
@@ -1307,7 +1306,8 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 			modulated_response = resp_sof; modulated_response_size = resp_sof_Len; //order = 1;
 			trace_data = sof_data;
 			trace_data_size = sizeof(sof_data);
-			response_delay = 330+160;
+			// adjusted for 330 + (160*num of slot) 
+			response_delay = 330 + 160;
 		} else if (receivedCmd[0] == ICLASS_CMD_READ_OR_IDENTIFY && len == 1) { // 0x0C
 			// Reader asks for anticollission CSN
 			modulated_response = resp_anticoll; modulated_response_size = resp_anticoll_len; //order = 2;
@@ -1321,6 +1321,12 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 			trace_data_size = sizeof(csn_data);
 		} else if (receivedCmd[0] == ICLASS_CMD_READCHECK_KD) { // 0x88
 			// Read e-purse (88 02)
+			modulated_response = resp_cc; modulated_response_size = resp_cc_len; //order = 4;
+			trace_data = card_challenge_data;
+			trace_data_size = sizeof(card_challenge_data);
+			LED_B_ON();
+		} else if (receivedCmd[0] == ICLASS_CMD_READCHECK_KC) { // 0x18
+			// Read e-purse (18 02)
 			modulated_response = resp_cc; modulated_response_size = resp_cc_len; //order = 4;
 			trace_data = card_challenge_data;
 			trace_data_size = sizeof(card_challenge_data);
@@ -1367,7 +1373,7 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 			trace_data = NULL;
 			trace_data_size = 0;
 		// sim 2 / 4,   
-		} else if (simulationMode == MODE_EXIT_AFTER_MAC && receivedCmd[0] == ICLASS_CMD_READ_OR_IDENTIFY && len == 4){
+		} else if (simulationMode == MODE_EXIT_AFTER_MAC && receivedCmd[0] == ICLASS_CMD_READ_OR_IDENTIFY && len == 4){  // 0x0C
 			// block0,1,2,5 is always readable.
 			uint16_t blk = receivedCmd[1];
 			switch (blk){
@@ -1394,7 +1400,7 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 				default: break;
 			}						
 			
-		} else if (simulationMode == MODE_FULLSIM && receivedCmd[0] == ICLASS_CMD_READ_OR_IDENTIFY && len == 4){
+		} else if (simulationMode == MODE_FULLSIM && receivedCmd[0] == ICLASS_CMD_READ_OR_IDENTIFY && len == 4){ // 0x0C
 			//Read block
 			uint16_t blk = receivedCmd[1];
 			//Take the data...
@@ -1437,13 +1443,8 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 		} else {
 			//#db# Unknown command received from reader (len=5): 26 1 0 f6 a 44 44 44 44
 			// Never seen this command before
-			if ( MF_DBGLEVEL ==  MF_DBG_EXTENDED) {
-				Dbprintf("Unhandled command received from reader (len %d) | %02x %02x %02x %02x %02x %02x %02x %02x %02x",
-					len,
-					receivedCmd[0], receivedCmd[1], receivedCmd[2], receivedCmd[3], 
-					receivedCmd[4], receivedCmd[5], receivedCmd[6], receivedCmd[7], receivedCmd[8]
-				);
-			}
+			if ( MF_DBGLEVEL ==  MF_DBG_EXTENDED)
+				print_result("[-] Unhandled command received ", receivedCmd, len);
 			
 			// Do not respond
 			modulated_response = resp_sof;
@@ -1470,7 +1471,7 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 	LEDsoff();
 	
 	if (buttonPressed)
-		DbpString("Button pressed");
+		DbpString("[+] button pressed");
 	
 	return buttonPressed;
 }

@@ -932,7 +932,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 		case CMD_ICLASS_EML_MEMSET:
 			//iceman, should call FPGADOWNLOAD before, since it corrupts BigBuf
 			FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-			emlSet(c->d.asBytes,c->arg[0], c->arg[1]);
+			emlSet(c->d.asBytes, c->arg[0], c->arg[1]);
 			break;
 		case CMD_ICLASS_WRITEBLOCK:
 			iClass_WriteBlock(c->arg[0], c->d.asBytes);

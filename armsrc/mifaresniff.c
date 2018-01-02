@@ -169,6 +169,7 @@ bool intMfSniffSend() {
 	uint8_t *data = BigBuf_get_addr();
 	
 	FpgaDisableSscDma();
+	
 	while (pckLen > 0) {
 		pckSize = MIN(USB_CMD_DATA_SIZE, pckLen);
 		LED_B_ON();
