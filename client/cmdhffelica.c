@@ -331,7 +331,7 @@ int CmdHFFelicaDumpLite(const char *Cmd) {
 	if ( ctmp == 'h' || ctmp == 'H') return usage_hf_felica_dumplite();
 
 	PrintAndLog("[+] FeliCa lite - dump started");
-	
+	PrintAndLog("[+] press pm3-button to cancel");
 	UsbCommand c = {CMD_FELICA_LITE_DUMP, {0,0,0}};
 	clearCommandBuffer();
 	SendCommand(&c);
@@ -344,12 +344,18 @@ int CmdHFFelicaDumpLite(const char *Cmd) {
 		if (ukbhit()) {
 			int gc = getchar(); (void)gc;
 			printf("\n[!] aborted via keyboard!\n");
+			DropField();
 			return 1;
 		}
 		if (timeout > 100) {
 			PrintAndLog("[!] timeout while waiting for reply.");
+			DropField();
 			return 1;
 		}
+	}
+	if (resp.arg[0] == 0) {
+		PrintAndLog("\n[!] Button pressed. Aborted.");
+		return 1;
 	}
 	
 	uint64_t tracelen = resp.arg[1];	

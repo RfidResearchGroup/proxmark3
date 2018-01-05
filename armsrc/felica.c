@@ -587,8 +587,8 @@ void HfDumpFelicaLiteS() {
 	StartCountSspClk();
 
 	int c;
-	int cnt = 0;
-	int cntfails = 0;
+	bool isOK = false;
+	uint16_t cnt = 0, cntfails = 0;
 	uint8_t *dest = (uint8_t *)BigBuf_get_addr();
 
 	while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
@@ -628,6 +628,7 @@ void HfDumpFelicaLiteS() {
 					}
 				}
 			}
+			isOK = true;
 			break; 
 		}  
 	}
@@ -639,5 +640,5 @@ void HfDumpFelicaLiteS() {
     
 	//setting tracelen - important!  it was set by buffer overflow before
     set_tracelen(cnt);
-	cmd_send(CMD_ACK, 1, cnt, 0, 0, 0);
+	cmd_send(CMD_ACK, isOK, cnt, 0, 0, 0);
 }
