@@ -3410,8 +3410,8 @@ void RAMFUNC SniffMifare(uint8_t param) {
 
 	// Setup and start DMA.
 	// set transfer address and number of bytes. Start transfer.
-	if ( !FpgaSetupSscDma((uint8_t*) dmaBuf, DMA_BUFFER_SIZE) ){
-		if (MF_DBGLEVEL > 1) Dbprintf("FpgaSetupSscDma failed. Exiting"); 
+	if ( !FpgaSetupSscDma(dmaBuf, DMA_BUFFER_SIZE) ){
+		if (MF_DBGLEVEL > 1) Dbprintf("[-] FpgaSetupSscDma failed. Exiting"); 
 		return;
 	}
 
@@ -3427,6 +3427,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
 		LED_A_ON();
 
  		if ((sniffCounter & 0x0000FFFF) == 0) {	// from time to time
+	
 			// check if a transaction is completed (timeout after 2000ms).
 			// if yes, stop the DMA transfer and send what we have so far to the client
 			if (MfSniffSend(2000)) {			
@@ -3438,7 +3439,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
 				TagIsActive = false;
 				// Setup and start DMA. set transfer address and number of bytes. Start transfer.
 				if ( !FpgaSetupSscDma(dmaBuf, DMA_BUFFER_SIZE) ){
-					if (MF_DBGLEVEL > 1) Dbprintf("FpgaSetupSscDma failed. Exiting"); 
+					if (MF_DBGLEVEL > 1) DbpString("[-] FpgaSetupSscDma failed. Exiting"); 
 					return;
 				}				
 			}
@@ -3455,24 +3456,24 @@ void RAMFUNC SniffMifare(uint8_t param) {
 			dataLen = DMA_BUFFER_SIZE - readBufDataP + dmaBufDataP; // number of bytes still to be processed
 
 		// test for length of buffer
-		if(dataLen > maxDataLen) {					// we are more behind than ever...
+		if (dataLen > maxDataLen) {					// we are more behind than ever...
 			maxDataLen = dataLen;					
-			if(dataLen > (9 * DMA_BUFFER_SIZE / 10)) {
-				Dbprintf("blew circular buffer! dataLen=0x%x", dataLen);
+			if (dataLen > (9 * DMA_BUFFER_SIZE / 10)) {
+				Dbprintf("[-] blew circular buffer! dataLen=0x%x", dataLen);
 				break;
 			}
 		}
-		if(dataLen < 1) continue;
+		if (dataLen < 1) continue;
 
 		// primary buffer was stopped ( <-- we lost data!
 		if (!AT91C_BASE_PDC_SSC->PDC_RCR) {
-			AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dmaBuf;
+			AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t)dmaBuf;
 			AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
-			Dbprintf("RxEmpty ERROR, data length:%d", dataLen); // temporary
+			Dbprintf("[-] RxEmpty ERROR, data length:%d", dataLen); // temporary
 		}
 		// secondary buffer sets as primary, secondary buffer was stopped
 		if (!AT91C_BASE_PDC_SSC->PDC_RNCR) {
-			AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dmaBuf;
+			AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t)dmaBuf;
 			AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
 		}
 
@@ -3483,7 +3484,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
 			// no need to try decoding tag data if the reader is sending
 			if (!TagIsActive) {		
 				uint8_t readerdata = (previous_data & 0xF0) | (*data >> 4);
-				if(MillerDecoding(readerdata, (sniffCounter-1)*4)) {
+				if (MillerDecoding(readerdata, (sniffCounter-1)*4)) {
 					LED_C_INV();
 
 					if (MfSniffLogic(receivedCmd, Uart.len, Uart.parity, Uart.bitCount, true)) break;
@@ -3497,7 +3498,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
 			// no need to try decoding tag data if the reader is sending
 			if (!ReaderIsActive) {		
 				uint8_t tagdata = (previous_data << 4) | (*data & 0x0F);
-				if(ManchesterDecoding(tagdata, 0, (sniffCounter-1)*4)) {
+				if (ManchesterDecoding(tagdata, 0, (sniffCounter-1)*4)) {
 					LED_C_INV();
 
 					if (MfSniffLogic(receivedResponse, Demod.len, Demod.parity, Demod.bitCount, false)) break;
@@ -3513,7 +3514,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
 		sniffCounter++;
 		data++;
 
-		if(data == dmaBuf + DMA_BUFFER_SIZE)
+		if (data == dmaBuf + DMA_BUFFER_SIZE)
 			data = dmaBuf;
 
 	} // main cycle
