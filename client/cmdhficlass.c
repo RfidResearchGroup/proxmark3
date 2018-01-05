@@ -194,9 +194,9 @@ int usage_hf_iclass_replay(void) {
 }
 int usage_hf_iclass_sniff(void) {
 	PrintAndLog("HELP:   Snoops the communication between reader and tag");
-	PrintAndLog("Usage:  hf iclass snoop [h]");
+	PrintAndLog("Usage:  hf iclass sniff [h]");
 	PrintAndLog("Samples:");
-	PrintAndLog("		 hf iclass snoop");	
+	PrintAndLog("		 hf iclass sniff");	
 	return 0;
 }
 int usage_hf_iclass_loclass(void) {
@@ -1919,7 +1919,7 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 	for (uint32_t i = 0; i < keycnt; i += chunksize) {
 		
 		uint64_t t2 = msclock();
-		uint32_t timeout = 0;
+		uint8_t timeout = 0;
 		
 		if (ukbhit()) {
 			int gc = getchar(); (void)gc;

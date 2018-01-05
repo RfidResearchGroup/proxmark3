@@ -1399,7 +1399,7 @@ int CmdSamples(const char *Cmd)
 int CmdTuneSamples(const char *Cmd)
 {
 	int timeout = 0;
-	printf("\nMeasuring antenna characteristics, please wait...");
+	printf("\n[+] measuring antenna characteristics, please wait...");
 
 	UsbCommand c = {CMD_MEASURE_ANTENNA_TUNING, {0,0,0}};
 	clearCommandBuffer();
@@ -1407,10 +1407,9 @@ int CmdTuneSamples(const char *Cmd)
 	UsbCommand resp;
 	while(!WaitForResponseTimeout(CMD_MEASURED_ANTENNA_TUNING, &resp, 2000)) {
 		timeout++;
-		printf(".");
-		fflush(stdout);
+		printf("."); fflush(stdout);
 		if (timeout > 7) {
-			PrintAndLog("\nNo response from Proxmark. Aborting...");
+			PrintAndLog("\n[!] no response from Proxmark. Aborting...");
 			return 1;
 		}
 	}
@@ -1430,31 +1429,30 @@ int CmdTuneSamples(const char *Cmd)
 	peakv = resp.arg[2] >> 16;
 	PrintAndLog("");
 	if ( vLf125 > NON_VOLTAGE )
-		PrintAndLog("# LF antenna: %5.2f V @   125.00 kHz", vLf125/1000.0);
+		PrintAndLog("[+] LF antenna: %5.2f V @   125.00 kHz", vLf125/1000.0);
 	if ( vLf134 > NON_VOLTAGE )
-		PrintAndLog("# LF antenna: %5.2f V @   134.00 kHz", vLf134/1000.0);
+		PrintAndLog("[+] LF antenna: %5.2f V @   134.00 kHz", vLf134/1000.0);
 	if ( peakv > NON_VOLTAGE && peakf > 0 )
-		PrintAndLog("# LF optimal: %5.2f V @%9.2f kHz", peakv/1000.0, 12000.0/(peakf+1));
+		PrintAndLog("[+] LF optimal: %5.2f V @%9.2f kHz", peakv/1000.0, 12000.0/(peakf+1));
 	if ( vHf > NON_VOLTAGE )
-		PrintAndLog("# HF antenna: %5.2f V @    13.56 MHz", vHf/1000.0);
+		PrintAndLog("[+] HF antenna: %5.2f V @    13.56 MHz", vHf/1000.0);
 
 
 
 	if (peakv < LF_UNUSABLE_V)
-		PrintAndLog("# Your LF antenna is unusable.");
+		PrintAndLog("[!] Your LF antenna is unusable.");
 	else if (peakv < LF_MARGINAL_V)
-		PrintAndLog("# Your LF antenna is marginal.");
+		PrintAndLog("[!] Your LF antenna is marginal.");
 	if (vHf < HF_UNUSABLE_V)
-		PrintAndLog("# Your HF antenna is unusable.");
+		PrintAndLog("[!] Your HF antenna is unusable.");
 	else if (vHf < HF_MARGINAL_V)
-		PrintAndLog("# Your HF antenna is marginal.");
+		PrintAndLog("[!] Your HF antenna is marginal.");
 
 	if (peakv >= LF_UNUSABLE_V)	{
 		for (int i = 0; i < 256; i++) {
 			GraphBuffer[i] = resp.d.asBytes[i] - 128;
 		}
-		PrintAndLog("Displaying LF tuning graph. Divisor 89 is 134khz, 95 is 125khz.\n");
-		PrintAndLog("\n");
+		PrintAndLog("[+] Displaying LF tuning graph. Divisor 89 is 134khz, 95 is 125khz.\n\n");
 		GraphTraceLen = 256;
 		ShowGraphWindow();
 		RepaintGraphWindow();
@@ -1473,7 +1471,7 @@ int CmdLoad(const char *Cmd)
 	
 	FILE *f = fopen(filename, "r");
 	if (!f) {
-		PrintAndLog("couldn't open '%s'", filename);
+		PrintAndLog("[!] couldn't open '%s'", filename);
 		return 0;
 	}
 
@@ -1486,7 +1484,7 @@ int CmdLoad(const char *Cmd)
 	if (f)
 		fclose(f);
 
-	PrintAndLog("loaded %d samples", GraphTraceLen);
+	PrintAndLog("[+] loaded %d samples", GraphTraceLen);
 	setClockGrid(0,0);
 	DemodBufferLen = 0;
 	RepaintGraphWindow();
