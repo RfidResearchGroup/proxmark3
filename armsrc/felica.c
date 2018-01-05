@@ -203,7 +203,7 @@ void HfSnoopISO18(uint32_t samplesToSkip, uint32_t triggersToSkip) {
     // connect Demodulated Signal to ADC:
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 
-	BigBuf_free(); BigBuf_Clear();
+	BigBuf_free(); BigBuf_Clear_ext(false);
 	clear_trace();
     
     FpgaWriteConfWord(FPGA_MAJOR_MODE_ISO18092|FPGA_HF_ISO18092_FLAG_NOMOD);
@@ -262,14 +262,14 @@ void HfSnoopISO18(uint32_t samplesToSkip, uint32_t triggersToSkip) {
         }
     }
 
+	switch_off();
+	
     //reset framing
     AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
     set_tracelen(numbts);
 
-    LED_D_OFF();	
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     Dbprintf("Felica sniffing done, tracelen: %i, use hf list felica for annotations", BigBuf_get_traceLen());
-	cmd_send(CMD_ACK,1,0,0,0,0);
+	cmd_send(CMD_ACK,1, numbts,0,0,0);
 }
 
 // poll-0: 0xb2,0x4d,0x06,0x00,0xff,0xff,0x00,0x00,0x09,0x21,
@@ -515,7 +515,7 @@ void HfSimLite( uint64_t nfcid) {
 		if( BUTTON_PRESS()) break;
     }
     
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    switch_off();
     DbpString("Felica Lite-S sim end");
 }
 
@@ -562,7 +562,7 @@ void HfDumpFelicaLiteS() {
 	FpgaSetupSsc();
 	
 	// allocate command receive buffer
-	BigBuf_free(); BigBuf_Clear();
+	BigBuf_free(); BigBuf_Clear_ext(false);
 
 	LED_D_ON();
 	
@@ -595,7 +595,7 @@ void HfDumpFelicaLiteS() {
 		
 		WDT_HIT();
 		
-		TransmitFor18092_AsReader(poll, 10, GetCountSspClk()+8,1,0);
+		TransmitFor18092_AsReader(poll, 10, GetCountSspClk()+8, 1, 0);
 		
 		if (WaitForFelicaReply(512) && NFCFrame.framebytes[3] == FELICA_POLL_ACK) {
 			
@@ -629,15 +629,15 @@ void HfDumpFelicaLiteS() {
 				}
 			}
 			break; 
-		}
-		//SpinDelay(500);      
+		}  
 	}
-	
+
+	switch_off();
+
 	//Resetting Frame mode (First set in fpgaloader.c)	
     AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
-    //setting tracelen - important!  it was set by buffer overflow before
+    
+	//setting tracelen - important!  it was set by buffer overflow before
     set_tracelen(cnt);
-
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	cmd_send(CMD_ACK,1,0,0,0,0);
+	cmd_send(CMD_ACK, 1, cnt, 0, 0, 0);
 }

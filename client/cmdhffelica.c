@@ -46,6 +46,7 @@ int usage_hf_felica_simlite(void) {
 }
 int usage_hf_felica_dumplite(void) {
 	PrintAndLog("\n Dump ISO/18092 FeliCa Lite tag \n");
+	PrintAndLog("press button to abort run, otherwise it will loop for 200sec.");
 	PrintAndLog("usage: hf felica litedump [h]");
 	PrintAndLog("options: ");
 	PrintAndLog("    h     : This help");
@@ -159,8 +160,7 @@ int CmdHFFelicaSim(const char *Cmd) {
 		PrintAndLog("Press pm3-button to abort simulation");
 	
 	while( !ukbhit() ){
-		if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500) ) continue;
-		
+		if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500) ) continue;		
 	}
 	return 0;
 }
@@ -216,10 +216,13 @@ int CmdHFFelicaSimLite(const char *Cmd) {
 	return 0;
 }
  
+static void printSep() {
+	PrintAndLog("------------------------------------------------------------------------------------");
+}
 uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace,uint16_t tracelen) {
 	if (tracepos+19 >= tracelen) 
 		return tracelen;
-
+	
 	trace += tracepos;
 	uint8_t blocknum = trace[0];
 	uint8_t status1 = trace[1];
@@ -230,7 +233,7 @@ uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace,uint16_t tracelen) {
 		snprintf(line+( j  * 4),110, "%02x  ", trace[j+3]);
 	}
 
-	PrintAndLog( "Block number %02x, status: %02x %02x",blocknum,status1, status2);
+	PrintAndLog("block number %02x, status: %02x %02x",blocknum,status1, status2);
 	switch (blocknum) {
 		case 0x00: PrintAndLog( "S_PAD0: %s",line);break;
 		case 0x01: PrintAndLog( "S_PAD1: %s",line);break;
@@ -324,46 +327,50 @@ uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace,uint16_t tracelen) {
 
 int CmdHFFelicaDumpLite(const char *Cmd) {
 
-	//usage_hf_felica_dumplite();
+	char ctmp = param_getchar(Cmd, 0);
+	if ( ctmp == 'h' || ctmp == 'H') return usage_hf_felica_dumplite();
 
+	PrintAndLog("[+] FeliCa lite - dump started");
+	
 	UsbCommand c = {CMD_FELICA_LITE_DUMP, {0,0,0}};
 	clearCommandBuffer();
 	SendCommand(&c);
-    
-    uint16_t tracepos = 0;
-	uint8_t *trace;
+	UsbCommand resp;
 	
-	trace = malloc(USB_CMD_DATA_SIZE);
-	if ( trace == NULL ) {
-		PrintAndLog("Cannot allocate memory for trace");		
-		return 1;
-	}
-	
-	// Query for the size of the trace
-	UsbCommand response;
-	GetFromBigBuf(trace, USB_CMD_DATA_SIZE, 0);
-	if ( !WaitForResponseTimeout(CMD_ACK, &response, 4000) ) {
-		PrintAndLog("timeout while waiting for reply.");
-		return 1;
-	}
-	
-	uint16_t traceLen = response.arg[2];
-	if (traceLen > USB_CMD_DATA_SIZE) {
-		uint8_t *p = realloc(trace, traceLen);
-		if (p == NULL) {
-			PrintAndLog("Cannot allocate memory for trace");
-			free(trace);
-			return 2;
+	uint8_t timeout = 0;
+	while ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
+		timeout++;
+		printf("."); fflush(stdout);
+		if (ukbhit()) {
+			int gc = getchar(); (void)gc;
+			printf("\n[!] aborted via keyboard!\n");
+			return 1;
 		}
-		trace = p;
-		GetFromBigBuf(trace, traceLen, 0);
-		WaitForResponse(CMD_ACK, NULL);
+		if (timeout > 100) {
+			PrintAndLog("[!] timeout while waiting for reply.");
+			return 1;
+		}
 	}
 	
-	PrintAndLog("Recorded Activity (TraceLen = %d bytes)", traceLen);
-    while (tracepos < traceLen) {
-		tracepos = PrintFliteBlock(tracepos, trace, traceLen);
-    }
+	uint64_t tracelen = resp.arg[1];	
+	uint8_t *trace = malloc(tracelen);
+	if ( trace == NULL ) {
+		PrintAndLog("[!] Cannot allocate memory for trace");		
+		return 1;
+	}
+
+	// only download data if there is any.
+	if ( tracelen > 0 ) {		
+		GetFromBigBuf(trace, tracelen, 0);
+		PrintAndLog("[+] Recorded Activity (trace len = %d bytes)", tracelen);
+		printSep();
+		uint16_t tracepos = 0;
+		while (tracepos < tracelen)
+			tracepos = PrintFliteBlock(tracepos, trace, tracelen);
+		
+		printSep();
+	}
+
     free(trace);
 	return 0;
 }
