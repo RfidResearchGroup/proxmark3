@@ -568,7 +568,7 @@ int loadTraceCard(uint8_t *tuid, uint8_t uidlen) {
 	
 		memset(buf, 0, sizeof(buf));
 		if (fgets(buf, sizeof(buf), f) == NULL) {
-			PrintAndLog("No trace file found or reading error.");
+			PrintAndLog("[-] No trace file found or reading error.");
 			if (f) {
 				fclose(f);
 			}
@@ -577,7 +577,7 @@ int loadTraceCard(uint8_t *tuid, uint8_t uidlen) {
 
 		if (strlen(buf) < 32){
 			if (feof(f)) break;
-			PrintAndLog("File content error. Block data must include 32 HEX symbols");
+			PrintAndLog("[-] File content error. Block data must include 32 HEX symbols");
 			if (f) {
 				fclose(f);
 			}
