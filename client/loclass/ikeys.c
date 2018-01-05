@@ -681,8 +681,8 @@ static bool readKeyFile(uint8_t key[8]) {
 	if (!f)
 		return retval;
 	
-	size_t bytes_read = fread(key, sizeof(uint8_t), sizeof(key), f);
-	if ( bytes_read == sizeof(key))
+	size_t bytes_read = fread(key, sizeof(uint8_t), 8, f);
+	if ( bytes_read == 8)
 		retval = true;	
 
 	if (f)
