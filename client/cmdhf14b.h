@@ -33,26 +33,26 @@
 int usage_hf_14b_info(void);
 int usage_hf_14b_reader(void);
 int usage_hf_14b_raw(void);
-int usage_hf_14b_snoop(void);
+int usage_hf_14b_sniff(void);
 int usage_hf_14b_sim(void);
 int usage_hf_14b_read_srx(void);
 int usage_hf_14b_write_srx(void);
 
-int CmdHF14B(const char *Cmd);
-int CmdHF14BList(const char *Cmd);
-int CmdHF14BInfo(const char *Cmd);
-int CmdHF14BSim(const char *Cmd);
-int CmdHF14BSnoop(const char *Cmd);
-int CmdHF14BWrite( const char *cmd);
-int CmdHF14BReader(const char *Cmd);
+extern int CmdHF14B(const char *Cmd);
+extern int CmdHF14BList(const char *Cmd);
+extern int CmdHF14BInfo(const char *Cmd);
+extern int CmdHF14BSim(const char *Cmd);
+extern int CmdHF14BSniff(const char *Cmd);
+extern int CmdHF14BWrite( const char *cmd);
+extern int CmdHF14BReader(const char *Cmd);
 
-bool HF14BInfo(bool verbose);
-bool HF14BReader(bool verbose);
-int CmdHF14BCmdRaw (const char *Cmd);
+extern bool HF14BInfo(bool verbose);
+extern bool HF14BReader(bool verbose);
+extern int CmdHF14BCmdRaw (const char *Cmd);
 
 // SRi  ST Microelectronics read/write 
-int CmdHF14BReadSri(const char *Cmd);
-int CmdHF14BWriteSri(const char *Cmd);
+extern int CmdHF14BReadSri(const char *Cmd);
+extern int CmdHF14BWriteSri(const char *Cmd);
 
 bool waitCmd14b(bool verbose);
 #endif

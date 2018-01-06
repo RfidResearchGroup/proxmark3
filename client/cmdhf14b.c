@@ -44,14 +44,14 @@ int usage_hf_14b_raw(void){
 	PrintAndLog("       hf 14b raw -s -c -p 0200a40400");
 	return 0;    
 }
-int usage_hf_14b_snoop(void){
+int usage_hf_14b_sniff(void){
 	PrintAndLog("It get data from the field and saves it into command buffer.");
 	PrintAndLog("Buffer accessible from command 'hf list 14b'");
-	PrintAndLog("Usage: hf 14b snoop [h]");
+	PrintAndLog("Usage: hf 14b sniff [h]");
 	PrintAndLog("Options:");
 	PrintAndLog("       h    this help");
 	PrintAndLog("sample:");
-	PrintAndLog("       hf 14b snoop");
+	PrintAndLog("       hf 14b sniff");
 	return 0;    
 }
 int usage_hf_14b_sim(void){
@@ -123,10 +123,10 @@ int CmdHF14BSim(const char *Cmd) {
 	return 0;
 }
 
-int CmdHF14BSnoop(const char *Cmd) {
+int CmdHF14BSniff(const char *Cmd) {
 	
 	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H') return usage_hf_14b_snoop();
+	if (cmdp == 'h' || cmdp == 'H') return usage_hf_14b_sniff();
 	
 	UsbCommand c = {CMD_SNOOP_ISO_14443B, {0, 0, 0}};
 	clearCommandBuffer();
@@ -850,7 +850,7 @@ static command_t CommandTable[] = {
 	{"raw",         CmdHF14BCmdRaw, 0, "Send raw hex data to tag"},
 	{"reader",      CmdHF14BReader, 0, "Act as a 14443B reader to identify a tag"},
 	{"sim",         CmdHF14BSim,    0, "Fake ISO 14443B tag"},
-	{"snoop",       CmdHF14BSnoop,  0, "Eavesdrop ISO 14443B"},
+	{"sniff",       CmdHF14BSniff,  0, "Eavesdrop ISO 14443B"},
 	{"sriread",		CmdHF14BReadSri,  0, "Read contents of a SRI512 | SRIX4K tag"},
 	{"sriwrite",    CmdHF14BWriteSri, 0, "Write data to a SRI512 | SRIX4K tag"},
 	//{"valid",   	srix4kValid,	1, "srix4k checksum test"},

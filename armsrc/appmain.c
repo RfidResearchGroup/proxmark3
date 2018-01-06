@@ -764,7 +764,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			ReadSTMemoryIso14443b(c->arg[0]);
 			break;
 		case CMD_SNOOP_ISO_14443B:
-			SnoopIso14443b();
+			SniffIso14443b();
 			break;
 		case CMD_SIMULATE_TAG_ISO_14443B:
 			SimulateIso14443bTag(c->arg[0]);

@@ -110,7 +110,7 @@ void Cotag(uint32_t arg0);
 void SimulateIso14443bTag(uint32_t pupi);
 void AcquireRawAdcSamplesIso14443b(uint32_t parameter);
 void ReadSTMemoryIso14443b(uint8_t numofblocks);
-void RAMFUNC SnoopIso14443b(void);
+void RAMFUNC SniffIso14443b(void);
 void SendRawCommand14443B(uint32_t, uint32_t, uint8_t, uint8_t[]);
 void SendRawCommand14443B_Ex(UsbCommand *c);
 void AppendCrc14443b(uint8_t* data, int len);
