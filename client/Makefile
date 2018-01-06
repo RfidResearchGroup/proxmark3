@@ -223,7 +223,7 @@ SUPPORTS_AVX512 :=  $(shell echo | gcc -E -mavx512f - > /dev/null 2>&1 && echo "
 
 HARD_SWITCH_NOSIMD = -mno-mmx -mno-sse2 -mno-avx -mno-avx2
 HARD_SWITCH_MMX = -mmmx -mno-sse2 -mno-avx -mno-avx2
-HARD_SWITCH_SSE2 = -mmmx -msse2 -mno-avx -mno-avx2 -mstackrealign
+HARD_SWITCH_SSE2 = -mmmx -msse2 -mno-avx -mno-avx2
 HARD_SWITCH_AVX = -mmmx -msse2 -mavx -mno-avx2
 HARD_SWITCH_AVX2 = -mmmx -msse2 -mavx -mavx2
 HARD_SWITCH_AVX512 = -mmmx -msse2 -mavx -mavx2 -mavx512f
