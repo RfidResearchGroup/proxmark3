@@ -129,13 +129,13 @@ int usage_hf14_chk(void){
 	return 0;
 }
 int usage_hf14_chk_fast(void){
+	PrintAndLog("This is a improved checkkeys method speedwise. It checks Mifare Classic tags sector keys against a dictionary file with keys");
 	PrintAndLog("Usage:  hf mf fchk [h] <card memory> [t|d] [<key (12 hex symbols)>] [<dic (*.dic)>]");
-	PrintAndLog("(iceman) This is a improved checkkeys method speedwise ");
 	PrintAndLog("options:");
 	PrintAndLog("      h    this help");	
-	PrintAndLog("      <cardmem> all sectors based on card memory, other values then below defaults to 1k");
+	PrintAndLog("      <cardmem> all sectors based on card memory, other values than below defaults to 1k");
 	PrintAndLog("      			 0 - MINI(320 bytes)");
-	PrintAndLog("      			 1 - 1K");
+	PrintAndLog("      			 1 - 1K   <default>");
 	PrintAndLog("      			 2 - 2K");
 	PrintAndLog("      			 4 - 4K");
 	PrintAndLog("      d    write keys to binary file");
@@ -143,7 +143,7 @@ int usage_hf14_chk_fast(void){
 	PrintAndLog(" ");
 	PrintAndLog("samples:");
 	PrintAndLog("      hf mf fchk 1 1234567890ab keys.dic    -- target 1K using key 1234567890ab, using dictionary file");
-	PrintAndLog("      hf mf fchk 1 t                        -- target 1K, write to emulator mem");
+	PrintAndLog("      hf mf fchk 1 t                        -- target 1K, write to emulator memory");
 	PrintAndLog("      hf mf fchk 1 d                        -- target 1K, write to file");
 	return 0;
 }
@@ -348,13 +348,13 @@ int CmdHF14AMifare(const char *Cmd) {
 
 	int isOK = mfDarkside(blockno, key_type, &key);
 	switch (isOK) {
-		case -1 : PrintAndLog("Button pressed. Aborted."); return 1;
-		case -2 : PrintAndLog("Card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests)."); return 1;
-		case -3 : PrintAndLog("Card is not vulnerable to Darkside attack (its random number generator is not predictable)."); return 1;
-		case -4 : PrintAndLog("Card is not vulnerable to Darkside attack (its random number generator seems to be based on the wellknown");
+		case -1 : PrintAndLog("[!] Button pressed. Aborted."); return 1;
+		case -2 : PrintAndLog("[-] Card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests)."); return 1;
+		case -3 : PrintAndLog("[-] Card is not vulnerable to Darkside attack (its random number generator is not predictable)."); return 1;
+		case -4 : PrintAndLog("[-] Card is not vulnerable to Darkside attack (its random number generator seems to be based on the wellknown");
 				  PrintAndLog("generating polynomial with 16 effective bits only, but shows unexpected behaviour."); return 1;
-		case -5 : PrintAndLog("Aborted via keyboard.");  return 1;
-		default : PrintAndLog("Found valid key: %012" PRIx64 "\n", key); break;
+		case -5 : PrintAndLog("[!] aborted via keyboard.");  return 1;
+		default : PrintAndLog("[+] Found valid key: %012" PRIx64 "\n", key); break;
 	}
 
 	PrintAndLog("");
@@ -1835,16 +1835,12 @@ int CmdHF14AMfSniff(const char *Cmd){
 	bool wantSaveToEmlFile = false;
 
 	//var 
-	int tmpchar;
-	int res = 0;
-	int len = 0;
-	int blockLen = 0;
-	int pckNum = 0;
-	int num = 0;
+	int res = 0, len = 0, blockLen = 0;
+	int pckNum = 0, num = 0;
+	uint8_t sak = 0;
 	uint8_t uid[10];
 	uint8_t uid_len = 0;
 	uint8_t atqa[2] = {0x00, 0x00};
-	uint8_t sak = 0;
 	bool isTag = false;
 	uint8_t *buf = NULL;
 	uint16_t bufsize = 0;
@@ -1874,25 +1870,28 @@ int CmdHF14AMfSniff(const char *Cmd){
 	clearCommandBuffer();
 	SendCommand(&c);
 
+	UsbCommand resp;
+	
 	// wait cycle
 	while (true) {
 		printf("."); fflush(stdout);
 		if (ukbhit()) {
-			tmpchar = getchar();
-			(void)tmpchar;
-			printf("\naborted via keyboard!\n");
+			int gc = getchar(); (void)gc;
+			printf("\n[+] aborted via keyboard!\n");
 			break;
 		}
 		
-		UsbCommand resp;
-		if ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) continue;
+		if ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
+			continue;
+		}
 		
 		res = resp.arg[0] & 0xff;
 		traceLen = resp.arg[1];
 		len = resp.arg[2];
-
-		// we are done?
+		//PrintAndLog("ice | %x | %x | %x", res, traceLen, len);
+		// we are done?		
 		if (res == 0) {
+			PrintAndLog("[+] hf mifare sniff finished");
 			free(buf);
 			return 0;
 		}
@@ -1903,11 +1902,11 @@ int CmdHF14AMfSniff(const char *Cmd){
 					uint8_t *p;
 					if (buf == NULL)				// not yet allocated
 						p = malloc(traceLen);
-					else						// need more memory
+					else							// need more memory
 						p = realloc(buf, traceLen);
 					
 					if (p == NULL) {
-						PrintAndLog("Cannot allocate memory for trace");
+						PrintAndLog("[-] Cannot allocate memory for trace");
 						free(buf);
 						return 2;
 					}
@@ -1918,7 +1917,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 				memset(buf, 0x00, traceLen);
 			}
 			if (bufPtr == NULL) {
-				PrintAndLog("Cannot allocate memory for trace");
+				PrintAndLog("[-] Cannot allocate memory for trace");
 				free(buf);
 				return 2;
 			}
@@ -1932,7 +1931,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 			blockLen = bufPtr - buf;
 			bufPtr = buf;
 			printf(">\n");
-			PrintAndLog("received trace len: %d packages: %d", blockLen, pckNum);
+			PrintAndLog("[+] received trace len: %d packages: %d", blockLen, pckNum);
 			while (bufPtr - buf < blockLen) {
 				bufPtr += 6;						// skip (void) timing information
 				len = *((uint16_t *)bufPtr);
@@ -1952,7 +1951,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 						default:   uid_len = 4; break;
 					}
 					sak = bufPtr[14];
-					PrintAndLog("tag select uid| %s atqa:0x%02x%02x sak:0x%02x", 
+					PrintAndLog("[+] tag select uid| %s atqa:0x%02x%02x sak:0x%02x", 
 						sprint_hex(uid, uid_len),
 						atqa[1], 
 						atqa[0], 
