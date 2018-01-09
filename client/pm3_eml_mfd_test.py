@@ -11,7 +11,7 @@ import pm3_eml2mfd, pm3_mfd2eml
 class TestEmlMfd(unittest.TestCase):
     def setUp(self):
         self.tmpdir = mkdtemp()
-    
+
     def tearDown(self):
         rmtree(self.tmpdir)
 
@@ -46,7 +46,7 @@ def hex_c14n(inp):
     """
     Canonicalizes the input string by removing non-hexadecimal
     characters and making everything uppercase
-    """ 
+    """
     return ''.join(c.upper() for c in inp if c in hexdigits)
 
 if __name__ == '__main__':

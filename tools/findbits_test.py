@@ -56,10 +56,10 @@ class TestFindBits(unittest.TestCase):
 class OutputBuffer(object):
 	def __init__(self):
 		self.clear_buffer()
-	
+
 	def clear_buffer(self):
 		self.content = ''
-	
+
 	def write(self, data):
 		self.content += data
 

@@ -1,10 +1,10 @@
 #!/usr/bin/python
 
 #  xorcheck.py - find xor values for 8-bit LRC
-# 
+#
 #  Adam Laurie <adam@algroup.co.uk>
 #  http://rfidiot.org/
-# 
+#
 #  This code is copyright (c) Adam Laurie, 2009, All rights reserved.
 #  For non-commercial use only, the following terms apply - for all other
 #  uses, please contact the author:
