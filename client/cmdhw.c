@@ -24,12 +24,10 @@
 
 static int CmdHelp(const char *Cmd);
 
-static void lookupChipID(uint32_t iChipID, uint32_t mem_used)
-{
+static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
 	char asBuff[120];
 	memset(asBuff, 0, sizeof(asBuff));
-	uint32_t mem_avail = 0;
-	
+	uint32_t mem_avail = 0;	
 	PrintAndLog(" [ Hardware ] ");
 	
 	switch(iChipID) {
@@ -148,8 +146,7 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used)
 	PrintAndLog("  --= Nonvolatile Program Memory Type: %s",asBuff);
 }
 
-int CmdDetectReader(const char *Cmd)
-{
+int CmdDetectReader(const char *Cmd) {
 	UsbCommand c = {CMD_LISTEN_READER_FIELD};
 	// 'l' means LF - 125/134 kHz
 	if(*Cmd == 'l') {
@@ -166,16 +163,14 @@ int CmdDetectReader(const char *Cmd)
 }
 
 // ## FPGA Control
-int CmdFPGAOff(const char *Cmd)
-{
+int CmdFPGAOff(const char *Cmd) {
 	UsbCommand c = {CMD_FPGA_MAJOR_MODE_OFF};
 	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;
 }
 
-int CmdLCD(const char *Cmd)
-{
+int CmdLCD(const char *Cmd) {
 	int i, j;
 
 	UsbCommand c = {CMD_LCD};
@@ -188,24 +183,21 @@ int CmdLCD(const char *Cmd)
 	return 0;
 }
 
-int CmdLCDReset(const char *Cmd)
-{
+int CmdLCDReset(const char *Cmd) {
 	UsbCommand c = {CMD_LCD_RESET, {strtol(Cmd, NULL, 0), 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;
 }
 
-int CmdReadmem(const char *Cmd)
-{
+int CmdReadmem(const char *Cmd) {
 	UsbCommand c = {CMD_READ_MEM, {strtol(Cmd, NULL, 0), 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;
 }
 
-int CmdReset(const char *Cmd)
-{
+int CmdReset(const char *Cmd) {
 	UsbCommand c = {CMD_HARDWARE_RESET};
 	clearCommandBuffer();
 	SendCommand(&c);
@@ -216,8 +208,7 @@ int CmdReset(const char *Cmd)
  * Sets the divisor for LF frequency clock: lets the user choose any LF frequency below
  * 600kHz.
  */
-int CmdSetDivisor(const char *Cmd)
-{
+int CmdSetDivisor(const char *Cmd) {
 	UsbCommand c = {CMD_SET_LF_DIVISOR, {strtol(Cmd, NULL, 0), 0, 0}};
 	
 	if (c.arg[0] < 19 || c.arg[0] > 255) {
@@ -225,15 +216,13 @@ int CmdSetDivisor(const char *Cmd)
 		return 1;
 	} 
 	// 12 000 000 (12Mhz)
-	// 
 	clearCommandBuffer();
 	SendCommand(&c);
 	PrintAndLog("Divisor set, expected %.1f KHz", ((double)12000 / (c.arg[0]+1)) );
 	return 0;
 }
 
-int CmdSetMux(const char *Cmd)
-{
+int CmdSetMux(const char *Cmd) {
 	UsbCommand c = {CMD_SET_ADC_MUX};
 	if (strcmp(Cmd, "lopkd") == 0) 		c.arg[0] = 0;
 	else if (strcmp(Cmd, "loraw") == 0)	c.arg[0] = 1;
@@ -244,8 +233,7 @@ int CmdSetMux(const char *Cmd)
 	return 0;
 }
 
-int CmdTune(const char *Cmd)
-{
+int CmdTune(const char *Cmd) {
     return CmdTuneSamples(Cmd);
 }
 
@@ -285,8 +273,7 @@ int CmdVersion(const char *Cmd) {
 	return 0;
 }
 
-int CmdStatus(const char *Cmd)
-{
+int CmdStatus(const char *Cmd) {
 	uint8_t speed_test_buffer[USB_CMD_DATA_SIZE];
 	sample_buf = speed_test_buffer;
 	clearCommandBuffer();
@@ -297,8 +284,7 @@ int CmdStatus(const char *Cmd)
 	return 0;
 }
 
-int CmdPing(const char *Cmd)
-{
+int CmdPing(const char *Cmd) {
 	clearCommandBuffer();
 	UsbCommand resp;
 	UsbCommand c = {CMD_PING};
@@ -310,8 +296,7 @@ int CmdPing(const char *Cmd)
 	return 0;
 }
 
-static command_t CommandTable[] = 
-{
+static command_t CommandTable[] = {
 	{"help",          CmdHelp,        1, "This help"},
 	{"detectreader",  CmdDetectReader,0, "['l'|'h'] -- Detect external reader field (option 'l' or 'h' to limit to LF or HF)"},
 	{"fpgaoff",       CmdFPGAOff,     0, "Set FPGA off"},
@@ -334,8 +319,7 @@ int CmdHW(const char *Cmd) {
 	return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
 	CmdsHelp(CommandTable);
 	return 0;
 }
