@@ -608,8 +608,8 @@ int CmdHFiClassELoad(const char *Cmd) {
 
 static int readKeyfile(const char *filename, size_t len, uint8_t* buffer) {
 	FILE *f = fopen(filename, "rb");
-	if(!f) {
-		PrintAndLog("Failed to read from file '%s'", filename);
+	if (!f) {
+		PrintAndLog("[!] Failed to read from file '%s'", filename);
 		return 1;
 	}
 	fseek(f, 0, SEEK_END);
@@ -618,13 +618,13 @@ static int readKeyfile(const char *filename, size_t len, uint8_t* buffer) {
 	size_t bytes_read = fread(buffer, 1, len, f);
 	fclose(f);
 	
-	if(fsize != len) {
-		PrintAndLog("Warning, file size is %d, expected %d", fsize, len);
+	if (fsize != len) {
+		PrintAndLog("[!] Warning, file size is %d, expected %d", fsize, len);
 		return 1;
 	}
 	
-	if(bytes_read != len) {
-		PrintAndLog("Warning, could only read %d bytes, expected %d" ,bytes_read, len);
+	if (bytes_read != len) {
+		PrintAndLog("[!] Warning, could only read %d bytes, expected %d" ,bytes_read, len);
 		return 1;
 	}
 	return 0;
