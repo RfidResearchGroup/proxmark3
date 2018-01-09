@@ -165,12 +165,6 @@ void Dbhexdump(int len, uint8_t *d, bool bAsci) {
 // return that.
 //-----------------------------------------------------------------------------
 static int ReadAdc(int ch) {
-	uint32_t d;
-
-	AT91C_BASE_ADC->ADC_CR = AT91C_ADC_SWRST;
-    AT91C_BASE_ADC->ADC_MR = ADC_MODE_PRESCALE(63 /* was 32 */) |       // ADC_CLK = MCK / ((63+1) * 2) = 48MHz / 128 = 375kHz
-		ADC_MODE_STARTUP_TIME(1  /* was 16 */) |						// Startup Time = (1+1) * 8 / ADC_CLK = 16 / 375kHz = 42,7us     Note: must be > 20us
-		ADC_MODE_SAMPLE_HOLD_TIME(15  /* was 8 */); 					// Sample & Hold Time SHTIM = 15 / ADC_CLK = 15 / 375kHz = 40us
 
 	// Note: ADC_MODE_PRESCALE and ADC_MODE_SAMPLE_HOLD_TIME are set to the maximum allowed value. 
 	// Both AMPL_LO and AMPL_HI are very high impedance (10MOhm) outputs, the input capacitance of the ADC is 12pF (typical). This results in a time constant
@@ -182,20 +176,25 @@ static int ReadAdc(int ch) {
 	//       v_cap = v_in * (1 - exp(-RC/SHTIM))  =   v_in * (1 - exp(-3))  =  v_in * 0,95                   (i.e. an error of 5%)
 	// 
 	// Note: with the "historic" values in the comments above, the error was 34%  !!!
-	
-	AT91C_BASE_ADC->ADC_CHER = ADC_CHANNEL(ch);
 
+	AT91C_BASE_ADC->ADC_CR = AT91C_ADC_SWRST;
+    AT91C_BASE_ADC->ADC_MR = 
+				  ADC_MODE_PRESCALE(63)				// [was 32] ADC_CLK = MCK / ((63+1) * 2) = 48MHz / 128 = 375kHz
+				| ADC_MODE_STARTUP_TIME(1)			// [was 16] Startup Time = (1+1) * 8 / ADC_CLK = 16 / 375kHz = 42,7us   Note: must be > 20us
+				| ADC_MODE_SAMPLE_HOLD_TIME(15);	// [was 8] Sample & Hold Time SHTIM = 15 / ADC_CLK = 15 / 375kHz = 40us
+
+	AT91C_BASE_ADC->ADC_CHER = ADC_CHANNEL(ch);
 	AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
 
 	while (!(AT91C_BASE_ADC->ADC_SR & ADC_END_OF_CONVERSION(ch))) {};
-	
-	d = AT91C_BASE_ADC->ADC_CDR[ch];
-	return d;
+
+	return AT91C_BASE_ADC->ADC_CDR[ch];
 }
 
 // was static - merlok 
 int AvgAdc(int ch) {
-	int i, a = 0;
+	uint8_t i;
+	int a = 0;
 	for(i = 0; i < 32; i++)
 		a += ReadAdc(ch);
 
@@ -205,8 +204,8 @@ int AvgAdc(int ch) {
 void MeasureAntennaTuning(void) {
 
 	uint8_t LF_Results[256];
-	int i, adcval = 0, peak = 0, peakv = 0, peakf = 0;
-	int vLf125 = 0, vLf134 = 0, vHf = 0;	// in mV
+	uint32_t i, adcval = 0, peak = 0, peakv = 0, peakf = 0;
+	uint32_t vLf125 = 0, vLf134 = 0, vHf = 0;	// in mV
 
 	memset(LF_Results, 0, sizeof(LF_Results));
 	LED_B_ON();
@@ -234,7 +233,7 @@ void MeasureAntennaTuning(void) {
         if (i == 89)
             vLf134 = adcval; // voltage at 134Khz
 
-		LF_Results[i] = adcval >> 8; // scale int to fit in byte for graphing purposes
+		LF_Results[i] = adcval >> 9; // scale int to fit in byte for graphing purposes
 		if(LF_Results[i] > peak) {
 			peakv = adcval;
 			peak = LF_Results[i];
@@ -255,16 +254,15 @@ void MeasureAntennaTuning(void) {
 }
 
 void MeasureAntennaTuningHf(void) {
-	int vHf = 0;	// in mV
+	uint16_t vHf = 0;	// in mV
 	// Let the FPGA drive the high-frequency antenna around 13.56 MHz.
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
 
-	while ( !BUTTON_PRESS() ){
+	while( !BUTTON_PRESS() ){
 		SpinDelay(20);
 		vHf = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
-		//Dbprintf("%d mV",vHf);
-		DbprintfEx(CMD_MEASURE_ANTENNA_TUNING_HF, "%d mV",vHf);
+		DbprintfEx(CMD_MEASURE_ANTENNA_TUNING_HF, "%u mV",vHf);
 	}
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	DbpString("cancelled");

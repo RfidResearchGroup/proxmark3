@@ -1396,8 +1396,13 @@ int CmdSamples(const char *Cmd)
 	return getSamples(n, false);
 }
 
-int CmdTuneSamples(const char *Cmd)
-{
+int CmdTuneSamples(const char *Cmd) {
+#define NON_VOLTAGE		999
+#define LF_UNUSABLE_V	2948		// was 2000. Changed due to bugfix in voltage measurements. LF results are now 47% higher.
+#define LF_MARGINAL_V	14739		// was 10000. Changed due to bugfix bug in voltage measurements. LF results are now 47% higher.
+#define HF_UNUSABLE_V	3167		// was 2000. Changed due to bugfix in voltage measurements. HF results are now 58% higher.
+#define HF_MARGINAL_V	7917		// was 5000. Changed due to bugfix in voltage measurements. HF results are now 58% higher.
+
 	int timeout = 0;
 	printf("\n[+] measuring antenna characteristics, please wait...");
 
@@ -1414,45 +1419,41 @@ int CmdTuneSamples(const char *Cmd)
 		}
 	}
 
-#define NON_VOLTAGE		999
-#define LF_UNUSABLE_V	2948		// was 2000. Changed due to bugfix in voltage measurements. LF results are now 47% higher.
-#define LF_MARGINAL_V	14739		// was 10000. Changed due to bugfix bug in voltage measurements. LF results are now 47% higher.
-#define HF_UNUSABLE_V	3167		// was 2000. Changed due to bugfix in voltage measurements. HF results are now 58% higher.
-#define HF_MARGINAL_V	7917		// was 5000. Changed due to bugfix in voltage measurements. HF results are now 58% higher.
- 
-	int peakv, peakf;
-	int vLf125, vLf134, vHf;
-	vLf125 = resp.arg[0] & 0xffff;
-	vLf134 = resp.arg[0] >> 16;
-	vHf = resp.arg[1] & 0xffff;;
-	peakf = resp.arg[2] & 0xffff;
-	peakv = resp.arg[2] >> 16;
-	PrintAndLog("");
+	uint32_t vLf125 = resp.arg[0] & 0xffff;
+	uint32_t vLf134 = resp.arg[0] >> 16;
+	
+	uint32_t vHf = resp.arg[1] & 0xffff;;
+	uint32_t peakf = resp.arg[2] & 0xffff;
+	uint32_t peakv = resp.arg[2] >> 16;
+	
+	PrintAndLog("\n");
+	
 	if ( vLf125 > NON_VOLTAGE )
-		PrintAndLog("[+] LF antenna: %5.2f V @   125.00 kHz", vLf125/1000.0);
+		PrintAndLog("[+] LF antenna: %5.2f V - 125.00 kHz", vLf125/1000.0);
 	if ( vLf134 > NON_VOLTAGE )
-		PrintAndLog("[+] LF antenna: %5.2f V @   134.00 kHz", vLf134/1000.0);
+		PrintAndLog("[+] LF antenna: %5.2f V - 134.00 kHz", vLf134/1000.0);
 	if ( peakv > NON_VOLTAGE && peakf > 0 )
-		PrintAndLog("[+] LF optimal: %5.2f V @%9.2f kHz", peakv/1000.0, 12000.0/(peakf+1));
+		PrintAndLog("[+] LF optimal: %5.2f V - %6.2f kHz", peakv/1000.0, 12000.0/(peakf+1));
+
+	// LF judgement
+	if (peakv < LF_UNUSABLE_V) 			PrintAndLog("[!] LF antenna is unusable");
+	else if (peakv < LF_MARGINAL_V)		PrintAndLog("[!] LF antenna is marginal");
+	else						 		PrintAndLog("[+] LF antenna is ok");
+	
+	PrintAndLog("");
 	if ( vHf > NON_VOLTAGE )
-		PrintAndLog("[+] HF antenna: %5.2f V @    13.56 MHz", vHf/1000.0);
+		PrintAndLog("[+] HF antenna: %5.2f V - 13.56 MHz", vHf/1000.0);
 
-
-
-	if (peakv < LF_UNUSABLE_V)
-		PrintAndLog("[!] Your LF antenna is unusable.");
-	else if (peakv < LF_MARGINAL_V)
-		PrintAndLog("[!] Your LF antenna is marginal.");
-	if (vHf < HF_UNUSABLE_V)
-		PrintAndLog("[!] Your HF antenna is unusable.");
-	else if (vHf < HF_MARGINAL_V)
-		PrintAndLog("[!] Your HF antenna is marginal.");
+	// HF judgement
+	if (vHf < HF_UNUSABLE_V)			PrintAndLog("[!] HF antenna is unusable");
+	else if (vHf < HF_MARGINAL_V)		PrintAndLog("[!] HF antenna is marginal");
+	else						 		PrintAndLog("[+] HF antenna is ok");	
 
 	if (peakv >= LF_UNUSABLE_V)	{
 		for (int i = 0; i < 256; i++) {
 			GraphBuffer[i] = resp.d.asBytes[i] - 128;
 		}
-		PrintAndLog("[+] Displaying LF tuning graph. Divisor 89 is 134khz, 95 is 125khz.\n\n");
+		PrintAndLog("\n[+] Displaying LF tuning graph. Divisor 89 is 134khz, 95 is 125khz.\n\n");
 		GraphTraceLen = 256;
 		ShowGraphWindow();
 		RepaintGraphWindow();
