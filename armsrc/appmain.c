@@ -110,7 +110,6 @@ void DbprintfEx(uint32_t cmd, const char *fmt, ...) {
 	// should probably limit size here; oh well, let's just use a big buffer
 	char output_string[128] = {0x00};
 	va_list ap;
-
 	va_start(ap, fmt);
 	kvsprintf(fmt, output_string, 10, ap);
 	va_end(ap);
@@ -167,21 +166,19 @@ void Dbhexdump(int len, uint8_t *d, bool bAsci) {
 static int ReadAdc(int ch) {
 
 	// Note: ADC_MODE_PRESCALE and ADC_MODE_SAMPLE_HOLD_TIME are set to the maximum allowed value. 
-	// Both AMPL_LO and AMPL_HI are very high impedance (10MOhm) outputs, the input capacitance of the ADC is 12pF (typical). This results in a time constant
-	// of RC = 10MOhm * 12pF = 120us. Even after the maximum configurable sample&hold time of 40us the input capacitor will not be fully charged. 
+	// AMPL_HI is are high impedance (10MOhm || 1MOhm) output, the input capacitance of the ADC is 12pF (typical). This results in a time constant
+	// of RC = (0.91MOhm) * 12pF = 10.9us. Even after the maximum configurable sample&hold time of 40us the input capacitor will not be fully charged. 
 	// 
 	// The maths are:
 	// If there is a voltage v_in at the input, the voltage v_cap at the capacitor (this is what we are measuring) will be
 	//
-	//       v_cap = v_in * (1 - exp(-RC/SHTIM))  =   v_in * (1 - exp(-3))  =  v_in * 0,95                   (i.e. an error of 5%)
-	// 
-	// Note: with the "historic" values in the comments above, the error was 34%  !!!
+	//       v_cap = v_in * (1 - exp(-SHTIM/RC))  =   v_in * (1 - exp(-40us/10.9us))  =  v_in * 0,97                   (i.e. an error of 3%)
 
 	AT91C_BASE_ADC->ADC_CR = AT91C_ADC_SWRST;
     AT91C_BASE_ADC->ADC_MR = 
-				  ADC_MODE_PRESCALE(63)				// [was 32] ADC_CLK = MCK / ((63+1) * 2) = 48MHz / 128 = 375kHz
-				| ADC_MODE_STARTUP_TIME(1)			// [was 16] Startup Time = (1+1) * 8 / ADC_CLK = 16 / 375kHz = 42,7us   Note: must be > 20us
-				| ADC_MODE_SAMPLE_HOLD_TIME(15);	// [was 8] Sample & Hold Time SHTIM = 15 / ADC_CLK = 15 / 375kHz = 40us
+				  ADC_MODE_PRESCALE(63)				// ADC_CLK = MCK / ((63+1) * 2) = 48MHz / 128 = 375kHz
+				| ADC_MODE_STARTUP_TIME(1)			// Startup Time = (1+1) * 8 / ADC_CLK = 16 / 375kHz = 42,7us   Note: must be > 20us
+				| ADC_MODE_SAMPLE_HOLD_TIME(15);	// Sample & Hold Time SHTIM = 15 / ADC_CLK = 15 / 375kHz = 40us
 
 	AT91C_BASE_ADC->ADC_CHER = ADC_CHANNEL(ch);
 	AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
@@ -205,7 +202,7 @@ void MeasureAntennaTuning(void) {
 
 	uint8_t LF_Results[256];
 	uint32_t i, adcval = 0, peak = 0, peakv = 0, peakf = 0;
-	uint32_t vLf125 = 0, vLf134 = 0, vHf = 0;	// in mV
+	uint32_t v_lf125 = 0, v_lf134 = 0, v_hf = 0;	// in mV
 
 	memset(LF_Results, 0, sizeof(LF_Results));
 	LED_B_ON();
@@ -229,26 +226,34 @@ void MeasureAntennaTuning(void) {
 		SpinDelay(20);
 		adcval = ((MAX_ADC_LF_VOLTAGE * AvgAdc(ADC_CHAN_LF)) >> 10);
         if (i == 95)
-            vLf125 = adcval; // voltage at 125Khz
+            v_lf125 = adcval; // voltage at 125Khz
         if (i == 89)
-            vLf134 = adcval; // voltage at 134Khz
+            v_lf134 = adcval; // voltage at 134Khz
 
 		LF_Results[i] = adcval >> 9; // scale int to fit in byte for graphing purposes
 		if(LF_Results[i] > peak) {
 			peakv = adcval;
-			peak = LF_Results[i];
 			peakf = i;
+			peak = LF_Results[i];			
 		}
-	}
-
+	}	
+	
 	LED_A_ON();
 	// Let the FPGA drive the high-frequency antenna around 13.56 MHz.
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
 	SpinDelay(20);
-	vHf = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
+	v_hf = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
 
-	cmd_send(CMD_MEASURED_ANTENNA_TUNING, vLf125 | (vLf134 << 16), vHf, peakf | (peakv << 16), LF_Results, 256);
+	uint64_t arg0 = v_lf134;
+	arg0 <<= 32;
+	arg0 |= v_lf125;
+	
+	uint64_t arg2 = peakv;
+	arg2 <<= 32;
+	arg2 |= peakf;
+	
+	cmd_send(CMD_MEASURED_ANTENNA_TUNING, arg0, v_hf, arg2, LF_Results, 256);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 }
@@ -262,7 +267,7 @@ void MeasureAntennaTuningHf(void) {
 	while( !BUTTON_PRESS() ){
 		SpinDelay(20);
 		vHf = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
-		DbprintfEx(CMD_MEASURE_ANTENNA_TUNING_HF, "%u mV",vHf);
+		DbprintfEx(CMD_MEASURE_ANTENNA_TUNING_HF, "%u mV / %5.2f V", vHf, vHf/1000.0);
 	}
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	DbpString("cancelled");

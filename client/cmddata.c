@@ -1397,11 +1397,11 @@ int CmdSamples(const char *Cmd)
 }
 
 int CmdTuneSamples(const char *Cmd) {
-#define NON_VOLTAGE		999
-#define LF_UNUSABLE_V	2948		// was 2000. Changed due to bugfix in voltage measurements. LF results are now 47% higher.
-#define LF_MARGINAL_V	14739		// was 10000. Changed due to bugfix bug in voltage measurements. LF results are now 47% higher.
-#define HF_UNUSABLE_V	3167		// was 2000. Changed due to bugfix in voltage measurements. HF results are now 58% higher.
-#define HF_MARGINAL_V	7917		// was 5000. Changed due to bugfix in voltage measurements. HF results are now 58% higher.
+#define NON_VOLTAGE		1000
+#define LF_UNUSABLE_V	2000
+#define LF_MARGINAL_V	10000
+#define HF_UNUSABLE_V	3000
+#define HF_MARGINAL_V	5000
 
 	int timeout = 0;
 	printf("\n[+] measuring antenna characteristics, please wait...");
@@ -1410,7 +1410,7 @@ int CmdTuneSamples(const char *Cmd) {
 	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
-	while(!WaitForResponseTimeout(CMD_MEASURED_ANTENNA_TUNING, &resp, 2000)) {
+	while (!WaitForResponseTimeout(CMD_MEASURED_ANTENNA_TUNING, &resp, 2000)) {
 		timeout++;
 		printf("."); fflush(stdout);
 		if (timeout > 7) {
@@ -1418,46 +1418,62 @@ int CmdTuneSamples(const char *Cmd) {
 			return 1;
 		}
 	}
-
-	uint32_t vLf125 = resp.arg[0] & 0xffff;
-	uint32_t vLf134 = resp.arg[0] >> 16;
+	printf("\n");
 	
-	uint32_t vHf = resp.arg[1] & 0xffff;;
-	uint32_t peakf = resp.arg[2] & 0xffff;
-	uint32_t peakv = resp.arg[2] >> 16;
+	uint32_t v_lf125 = resp.arg[0];
+	uint32_t v_lf134 = resp.arg[0] >> 32;
 	
-	PrintAndLog("\n");
+	uint32_t v_hf = resp.arg[1];
+	uint32_t peakf = resp.arg[2];
+	uint32_t peakv = resp.arg[2] >> 32;
 	
-	if ( vLf125 > NON_VOLTAGE )
-		PrintAndLog("[+] LF antenna: %5.2f V - 125.00 kHz", vLf125/1000.0);
-	if ( vLf134 > NON_VOLTAGE )
-		PrintAndLog("[+] LF antenna: %5.2f V - 134.00 kHz", vLf134/1000.0);
+	if ( v_lf125 > NON_VOLTAGE )
+		PrintAndLog("[+] LF antenna: %5.2f V - 125.00 kHz", v_lf125/1000.0);
+	if ( v_lf134 > NON_VOLTAGE )
+		PrintAndLog("[+] LF antenna: %5.2f V - 134.00 kHz", v_lf134/1000.0);
 	if ( peakv > NON_VOLTAGE && peakf > 0 )
 		PrintAndLog("[+] LF optimal: %5.2f V - %6.2f kHz", peakv/1000.0, 12000.0/(peakf+1));
 
-	// LF judgement
-	if (peakv < LF_UNUSABLE_V) 			PrintAndLog("[!] LF antenna is unusable");
-	else if (peakv < LF_MARGINAL_V)		PrintAndLog("[!] LF antenna is marginal");
-	else						 		PrintAndLog("[+] LF antenna is ok");
+	char judgement[10];
+	memset(judgement, 0, sizeof(judgement));		
+	// LF evaluation
+	if (peakv < LF_UNUSABLE_V)
+		sprintf(judgement, "UNUSABLE");
+	else if (peakv < LF_MARGINAL_V)
+		sprintf(judgement, "MARGINAL");
+	else
+		sprintf(judgement, "OK");
 	
-	PrintAndLog("");
-	if ( vHf > NON_VOLTAGE )
-		PrintAndLog("[+] HF antenna: %5.2f V - 13.56 MHz", vHf/1000.0);
+	PrintAndLog("[%c] LF antenna is %s \n"
+			, (peakv < LF_UNUSABLE_V) ? '!' : '+'
+			, judgement
+			);
+	
+	// HF evaluation
+	if ( v_hf > NON_VOLTAGE )
+		PrintAndLog("[+] HF antenna: %5.2f V - 13.56 MHz %s", v_hf/1000.0, judgement);
 
-	// HF judgement
-	if (vHf < HF_UNUSABLE_V)			PrintAndLog("[!] HF antenna is unusable");
-	else if (vHf < HF_MARGINAL_V)		PrintAndLog("[!] HF antenna is marginal");
-	else						 		PrintAndLog("[+] HF antenna is ok");	
+	memset(judgement, 0, sizeof(judgement));
+	
+	if (v_hf < HF_UNUSABLE_V)  
+		sprintf(judgement, "UNUSABLE");
+	else if (v_hf < HF_MARGINAL_V)
+		sprintf(judgement, "MARGINAL");
+	else
+		sprintf(judgement, "OK");	
+	PrintAndLog("[%c] HF antenna is %s"
+			, (v_hf < HF_UNUSABLE_V) ? '!' : '+'
+			, judgement
+			);
 
-	if (peakv >= LF_UNUSABLE_V)	{
-		for (int i = 0; i < 256; i++) {
-			GraphBuffer[i] = resp.d.asBytes[i] - 128;
-		}
-		PrintAndLog("\n[+] Displaying LF tuning graph. Divisor 89 is 134khz, 95 is 125khz.\n\n");
-		GraphTraceLen = 256;
-		ShowGraphWindow();
-		RepaintGraphWindow();
+	// graph LF measurements
+	for (int i = 0; i < 256; i++) {
+		GraphBuffer[i] = resp.d.asBytes[i] - 128;
 	}
+	PrintAndLog("\n[+] Displaying LF tuning graph. Divisor 89 is 134khz, 95 is 125khz.\n\n");
+	GraphTraceLen = 256;
+	ShowGraphWindow();
+	RepaintGraphWindow();
 	return 0;
 }
 

@@ -50,7 +50,7 @@ bool cmd_receive(UsbCommand* cmd) {
   return (rxlen);
 }
 
-bool cmd_send(uint32_t cmd, uint32_t arg0, uint32_t arg1, uint32_t arg2, void* data, size_t len) {
+bool cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void* data, size_t len) {
 
 	UsbCommand txcmd;
 
