@@ -659,12 +659,12 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 
 	if (traceState == TRACE_ERROR) return 1;
 
-	if (len > 64) {
+	if (len > 255) {
 		traceState = TRACE_ERROR;
 		return 1;
 	}
 	
-	uint8_t data[64];
+	uint8_t data[255];
 	memset(data, 0x00, sizeof(data));
 	
 	memcpy(data, data_src, len);
