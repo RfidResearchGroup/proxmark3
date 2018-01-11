@@ -1848,7 +1848,7 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 		case 'F':
 			fileNameLen = param_getstr(Cmd, cmdp+1, filename, sizeof(filename)); 
 			if (fileNameLen < 1) {
-				PrintAndLog("No filename found after f");
+				PrintAndLog("[!] no filename found after f");
 				errors = true;
 			}
 			cmdp += 2;
@@ -1864,7 +1864,7 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 			cmdp++;
 			break;
 		default:
-			PrintAndLog("Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+			PrintAndLog("[!] Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
 			errors = true;
 			break;
 		}
@@ -1878,13 +1878,13 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 		if (select_only(CSN, CCNR, false, false)) {
 			got_csn = true;
 		} else {
-			printf("One more try\n");
+			printf("[-] one more try\n");
 		}
 	}
 	DropField();
 	
 	if ( !got_csn ) {
-		PrintAndLog("Can't select card, aborting...");
+		PrintAndLog("[!] can't select card, aborting...");
 		return 1;
 	}
 
@@ -1923,7 +1923,7 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 		
 		if (ukbhit()) {
 			int gc = getchar(); (void)gc;
-			printf("\naborted via keyboard!\n");
+			printf("\n[!] aborted via keyboard!\n");
 			goto out;
 		}
 		
@@ -1944,7 +1944,7 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 			printf(".");
 			fflush(stdout);
 			if (timeout > 120) {
-				PrintAndLog("\nNo response from Proxmark. Aborting...");
+				PrintAndLog("\n[!] no response from Proxmark. Aborting...");
 				goto out;
 			}
 		}
@@ -1986,12 +1986,11 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 out:	
 	t1 = msclock() - t1;
 
-	PrintAndLog("\nTime in iclass checkkeys: %.0f seconds\n", (float)t1/1000.0);
+	PrintAndLog("\n[+] Time in iclass checkkeys: %.0f seconds\n", (float)t1/1000.0);
 	
 	DropField();
 	free(pre);
 	free(keyBlock);
-	PrintAndLog("");
 	return 0;
 }
 
