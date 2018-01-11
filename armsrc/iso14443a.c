@@ -3150,7 +3150,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 				EmSendCmd(rAUTH_AT, sizeof(rAUTH_AT));
 				LED_C_ON();
 				
-				if (MF_DBGLEVEL >= 1) {
+				if (MF_DBGLEVEL >= 3) {
 					Dbprintf("AUTH COMPLETED for sector %d with key %c. time=%d", 
 						cardAUTHSC, 
 						cardAUTHKEY == 0 ? 'A' : 'B',
