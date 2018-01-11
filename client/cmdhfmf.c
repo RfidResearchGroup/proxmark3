@@ -1798,7 +1798,7 @@ int CmdHF14AMf1kSim(const char *Cmd) {
 		}
 	}
 	//Validations
-	if (errors || cmdp == 0) return usage_hf14_mf1ksim();
+	if (errors) return usage_hf14_mf1ksim();
 	
 	PrintAndLog(" uid:%s, numreads:%d, flags:%d (0x%02x) "
 				, (uidlen == 0 ) ? "N/A" : sprint_hex(uid, uidlen>>1)
