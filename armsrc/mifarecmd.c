@@ -16,18 +16,22 @@
 #include "mifarecmd.h"
 #include <inttypes.h>
 
-#ifndef AUTHENTICATION_TIMEOUT
-# define AUTHENTICATION_TIMEOUT  848 //848			// card times out 1ms after wrong authentication (according to NXP documentation)
+#ifndef HARDNESTED_AUTHENTICATION_TIMEOUT
+# define HARDNESTED_AUTHENTICATION_TIMEOUT  848 //848			// card times out 1ms after wrong authentication (according to NXP documentation)
 #endif
-#ifndef PRE_AUTHENTICATION_LEADTIME
-# define PRE_AUTHENTICATION_LEADTIME 400		// some (non standard) cards need a pause after select before they are ready for first authentication 
+#ifndef HARDNESTED_PRE_AUTHENTICATION_LEADTIME
+# define HARDNESTED_PRE_AUTHENTICATION_LEADTIME 400		// some (non standard) cards need a pause after select before they are ready for first authentication 
 #endif 	
+
+// send an incomplete dummy response in order to trigger the card's authentication failure timeout
 #ifndef CHK_TIMEOUT
 # define CHK_TIMEOUT() { \
- ReaderTransmit(&dummy_answer, 1, NULL); \
-}
+	ReaderTransmit(&dummy_answer, 1, NULL); \
+	uint32_t timeout = GetCountSspClk() + HARDNESTED_AUTHENTICATION_TIMEOUT; \
+	while (GetCountSspClk() < timeout) {}; \
+ } 
 #endif
-//SpinDelayUs(AUTHENTICATION_TIMEOUT);
+
 static uint8_t dummy_answer = 0;
 
 //-----------------------------------------------------------------------------
@@ -615,18 +619,18 @@ int valid_nonce(uint32_t Nt, uint32_t NtEnc, uint32_t Ks1, uint8_t *parity) {
 
 void MifareAcquireNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *datain) {
 
-	uint32_t cuid = 0;
 	uint8_t uid[10] = {0x00};
-	uint8_t cascade_levels = 0;	
 	uint8_t answer[MAX_MIFARE_FRAME_SIZE] = {0x00};
 	uint8_t par[1] = {0x00};
-	int16_t isOK = 0;
 	uint8_t buf[USB_CMD_DATA_SIZE] = {0x00};
+	uint32_t cuid = 0;
+	int16_t isOK = 0;
+	uint16_t num_nonces = 0;
+	uint8_t cascade_levels = 0;	
 	uint8_t blockNo = arg0 & 0xff;
 	uint8_t keyType = (arg0 >> 8) & 0xff;
 	bool initialize = flags & 0x0001;
 	bool field_off = flags & 0x0004;
-	uint16_t num_nonces = 0;
 	bool have_uid = false;
 	
 	LED_A_ON();
@@ -714,28 +718,29 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *
 // Computer and Communications Security, 2015
 //-----------------------------------------------------------------------------
 void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *datain) {
-	uint64_t ui64Key = 0;
-	uint8_t uid[10] = {0x00};
-	uint32_t cuid = 0;
-	uint8_t cascade_levels = 0;
+
 	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
 	pcs = &mpcs;
+
+	uint8_t uid[10] = {0x00};
 	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
-	int16_t isOK = 0;
 	uint8_t par_enc[1] = {0x00};
-	uint8_t nt_par_enc = 0;
 	uint8_t buf[USB_CMD_DATA_SIZE] = {0x00};
 
+	uint64_t ui64Key = bytes_to_num(datain, 6);
+	uint32_t cuid = 0;
+	int16_t isOK = 0;
+	uint16_t num_nonces = 0;
+	uint8_t nt_par_enc = 0;
+	uint8_t cascade_levels = 0;
 	uint8_t blockNo = arg0 & 0xff;
 	uint8_t keyType = (arg0 >> 8) & 0xff;
 	uint8_t targetBlockNo = arg1 & 0xff;
-	uint8_t targetKeyType = (arg1 >> 8) & 0xff;
-	ui64Key = bytes_to_num(datain, 6);
+	uint8_t targetKeyType = (arg1 >> 8) & 0xff;	
 	bool initialize = flags & 0x0001;
 	bool slow = flags & 0x0002;
 	bool field_off = flags & 0x0004;
-	uint16_t num_nonces = 0;
 	bool have_uid = false;
 
 	LED_A_ON();
@@ -780,7 +785,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 		}
 		
 		if (slow)
-			SpinDelayUs(PRE_AUTHENTICATION_LEADTIME);
+			SpinDelayUs(HARDNESTED_PRE_AUTHENTICATION_LEADTIME);
 
 		uint32_t nt1;
 		if (mifare_classic_authex(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST, &nt1, NULL)) {
@@ -1419,20 +1424,22 @@ OUT:
 
 void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 
-	uint8_t blockNo = arg0 & 0xFF;
-	uint8_t keyType = (arg0 >> 8) & 0xFF;
-	bool clearTrace = arg1 & 0xFF;
-	uint8_t keyCount = arg2;
-	uint64_t key = 0;
-	bool have_uid = false;
-	uint8_t cascade_levels = 0;	
-	int i, res;
-	uint8_t isOK = 0;
-	uint8_t uid[10] = {0x00};
-	uint32_t cuid = 0;
 	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
 	pcs = &mpcs;
+
+	uint8_t uid[10] = {0x00};
+
+	uint64_t key = 0;
+	uint32_t cuid = 0;
+	int i, res;
+	uint8_t blockNo = arg0 & 0xFF;
+	uint8_t keyType = (arg0 >> 8) & 0xFF;
+	uint8_t keyCount = arg2;
+	uint8_t cascade_levels = 0;	
+	uint8_t isOK = 0;
+	bool have_uid = false;
+	bool clearTrace = arg1 & 0xFF;
 	
 	LEDsoff();
 	LED_A_ON();
