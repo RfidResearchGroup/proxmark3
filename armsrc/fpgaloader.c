@@ -154,13 +154,13 @@ void FpgaSetupSsc(void) {
 bool FpgaSetupSscDma(uint8_t *buf, int len) {
 	if (buf == NULL) return false;
 
-	AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;	// Disable DMA Transfer
+	FpgaDisableSscDma();
 	AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) buf;		// transfer to this memory address
 	AT91C_BASE_PDC_SSC->PDC_RCR = len;					// transfer this many bytes
 	AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) buf;		// next transfer to same memory address
 	AT91C_BASE_PDC_SSC->PDC_RNCR = len;					// ... with same number of bytes
-	AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTEN;		// go!
-    return true;
+	FpgaEnableSscDma();
+	return true;
 }
 
 //----------------------------------------------------------------------------
