@@ -51,14 +51,17 @@ int ukbhit(void) {
 #endif
 
 // log files functions
-void AddLogLine(char *file, char *extData, char *c) {
+
+// open, appped and close logfile
+void AddLogLine(char *fn, char *data, char *c) {
 	FILE *f = NULL;
     char filename[FILE_PATH_SIZE] = {0x00};
     int len = 0;
 
-    len = strlen(file);
-    if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
-    memcpy(filename, file, len);
+    len = strlen(fn);
+    if (len > FILE_PATH_SIZE) 
+		len = FILE_PATH_SIZE;
+    memcpy(filename, fn, len);
    
 	f = fopen(filename, "a");
 	if (!f) {
@@ -66,42 +69,47 @@ void AddLogLine(char *file, char *extData, char *c) {
 		return;
 	}
 
-	fprintf(f, "%s", extData);
+	fprintf(f, "%s", data);
 	fprintf(f, "%s\n", c);
 	fflush(f);
 	fclose(f);
 }
 
-void AddLogHex(char *fileName, char *extData, const uint8_t * data, const size_t len){
-	AddLogLine(fileName, extData, sprint_hex(data, len));
+void AddLogHex(char *fn, char *extData, const uint8_t * data, const size_t len){
+	AddLogLine(fn, extData, sprint_hex(data, len));
 }
 
-void AddLogUint64(char *fileName, char *extData, const uint64_t data) {
+void AddLogUint64(char *fn, char *data, const uint64_t value) {
 	char buf[20] = {0};
 	memset(buf, 0x00, sizeof(buf));
-	sprintf(buf, "%016" PRIx64 "", data);
-	AddLogLine(fileName, extData, buf);
+	sprintf(buf, "%016" PRIx64 "", value);
+	AddLogLine(fn, data, buf);
 }
 
-void AddLogCurrentDT(char *fileName) {
+void AddLogCurrentDT(char *fn) {
 	char buf[20];
 	memset(buf, 0x00, sizeof(buf));
 	struct tm *curTime;
 	time_t now = time(0);
 	curTime = gmtime(&now);
 	strftime (buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", curTime);
-	AddLogLine(fileName, "\nanticollision: ", buf);
+	AddLogLine(fn, "\nanticollision: ", buf);
 }
 
-void FillFileNameByUID(char *fileName, uint8_t *uid, char *ext, int byteCount) {
-	if ( fileName == NULL || uid == NULL || ext == NULL ){
-		printf("error: parameter is NULL\n");
+// create filename on hex uid.
+// param *fn   -  pointer to filename char array
+// param *uid  -  pointer to uid byte array
+// param *ext  -  ".log"
+// param uidlen - length of uid array.
+void FillFileNameByUID(char *fn, uint8_t *uid, char *ext, int uidlen) {
+	if ( fn == NULL || uid == NULL || ext == NULL ){
+		printf("[!] error parameter is NULL\n");
 		return;
 	}
-	char * fnameptr = fileName;
-	memset(fileName, 0x00, FILE_PATH_SIZE);
+	char *fnameptr = fn;
+	memset(fn, 0x00, FILE_PATH_SIZE);
 	
-	for (int j = 0; j < byteCount; j++, fnameptr += 2)
+	for (int j = 0; j < uidlen; j++, fnameptr += 2)
 		sprintf(fnameptr, "%02X", uid[j]); 
 	sprintf(fnameptr, "%s", ext); 
 }
@@ -132,7 +140,7 @@ void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex
 }
 
 // printing and converting functions
-void print_hex(const uint8_t * data, const size_t len) {
+void print_hex(const uint8_t *data, const size_t len) {
 	size_t i;
 	for (i=0; i < len; i++)
 		printf("%02x ", data[i]);
@@ -140,7 +148,6 @@ void print_hex(const uint8_t * data, const size_t len) {
 }
 
 void print_hex_break(const uint8_t *data, const size_t len, uint8_t breaks) {
-
 	int rownum = 0;
 	printf("[%02d] | ", rownum);
 	for (int i = 0; i < len; ++i) {
@@ -158,17 +165,13 @@ void print_hex_break(const uint8_t *data, const size_t len, uint8_t breaks) {
 
 char *sprint_hex(const uint8_t *data, const size_t len) {
 	static char buf[1025] = {0};
-	
 	hex_to_buffer((uint8_t *)buf, data, len, sizeof(buf) - 1, 0, 1, true);
-
 	return buf;
 }
 
 char *sprint_hex_inrow_ex(const uint8_t *data, const size_t len, const size_t min_str_len) {
 	static char buf[1025] = {0};
-
 	hex_to_buffer((uint8_t *)buf, data, len, sizeof(buf) - 1, min_str_len, 0, true);
-
 	return buf;
 }
 
