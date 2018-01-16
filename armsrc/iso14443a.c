@@ -196,7 +196,7 @@ void UartReset() {
 	Uart.parityBits = 0;				// holds 8 parity bits
 	Uart.startTime = 0;
 	Uart.endTime = 0;
-
+	Uart.fourBits = 0x00000000;			// clear the buffer for 4 Bits
 	Uart.posCnt = 0;
 	Uart.syncBit = 9999;
 }
@@ -204,7 +204,6 @@ void UartReset() {
 void UartInit(uint8_t *data, uint8_t *parity) {
 	Uart.output = data;
 	Uart.parity = parity;
-	Uart.fourBits = 0x00000000;			// clear the buffer for 4 Bits
 	UartReset();
 }
 
@@ -252,14 +251,14 @@ static RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time) {
 					Uart.bitCount++;
 					Uart.shiftReg = (Uart.shiftReg >> 1);						// add a 0 to the shiftreg
 					Uart.state = STATE_MILLER_Z;
-					Uart.endTime = Uart.startTime + 8*(9*Uart.len + Uart.bitCount + 1) - 6;
-					if(Uart.bitCount >= 9) {									// if we decoded a full byte (including parity)
+					Uart.endTime = Uart.startTime + 8 * (9 * Uart.len + Uart.bitCount + 1) - 6;
+					if (Uart.bitCount >= 9) {									// if we decoded a full byte (including parity)
 						Uart.output[Uart.len++] = (Uart.shiftReg & 0xff);
 						Uart.parityBits <<= 1;									// make room for the parity bit
 						Uart.parityBits |= ((Uart.shiftReg >> 8) & 0x01);		// store parity bit
 						Uart.bitCount = 0;
 						Uart.shiftReg = 0;
-						if((Uart.len&0x0007) == 0) {							// every 8 data bytes
+						if ((Uart.len & 0x0007) == 0) {							// every 8 data bytes
 							Uart.parity[Uart.parityLen++] = Uart.parityBits;	// store 8 parity bits
 							Uart.parityBits = 0;
 						}
@@ -271,14 +270,14 @@ static RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time) {
 				Uart.bitCount++;
 				Uart.shiftReg = (Uart.shiftReg >> 1) | 0x100;					// add a 1 to the shiftreg
 				Uart.state = STATE_MILLER_X;
-				Uart.endTime = Uart.startTime + 8*(9*Uart.len + Uart.bitCount + 1) - 2;
-				if(Uart.bitCount >= 9) {										// if we decoded a full byte (including parity)
+				Uart.endTime = Uart.startTime + 8 * (9 * Uart.len + Uart.bitCount + 1) - 2;
+				if (Uart.bitCount >= 9) {										// if we decoded a full byte (including parity)
 					Uart.output[Uart.len++] = (Uart.shiftReg & 0xff);
 					Uart.parityBits <<= 1;										// make room for the new parity bit
 					Uart.parityBits |= ((Uart.shiftReg >> 8) & 0x01); 			// store parity bit
 					Uart.bitCount = 0;
 					Uart.shiftReg = 0;
-					if ((Uart.len&0x0007) == 0) {								// every 8 data bytes
+					if ((Uart.len & 0x0007) == 0) {								// every 8 data bytes
 						Uart.parity[Uart.parityLen++] = Uart.parityBits;		// store 8 parity bits
 						Uart.parityBits = 0;
 					}
@@ -288,7 +287,7 @@ static RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time) {
 					Uart.state = STATE_UNSYNCD;
 					Uart.bitCount--;											// last "0" was part of EOC sequence
 					Uart.shiftReg <<= 1;										// drop it
-					if(Uart.bitCount > 0) {										// if we decoded some bits
+					if (Uart.bitCount > 0) {										// if we decoded some bits
 						Uart.shiftReg >>= (9 - Uart.bitCount);					// right align them
 						Uart.output[Uart.len++] = (Uart.shiftReg & 0xff);		// add last byte to the output
 						Uart.parityBits <<= 1;									// add a (void) parity bit
@@ -311,13 +310,13 @@ static RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time) {
 					Uart.bitCount++;
 					Uart.shiftReg = (Uart.shiftReg >> 1);						// add a 0 to the shiftreg
 					Uart.state = STATE_MILLER_Y;
-					if(Uart.bitCount >= 9) {									// if we decoded a full byte (including parity)
+					if (Uart.bitCount >= 9) {									// if we decoded a full byte (including parity)
 						Uart.output[Uart.len++] = (Uart.shiftReg & 0xff);
 						Uart.parityBits <<= 1;									// make room for the parity bit
 						Uart.parityBits |= ((Uart.shiftReg >> 8) & 0x01); 		// store parity bit
 						Uart.bitCount = 0;
 						Uart.shiftReg = 0;
-						if ((Uart.len&0x0007) == 0) {							// every 8 data bytes
+						if ((Uart.len & 0x0007) == 0) {							// every 8 data bytes
 							Uart.parity[Uart.parityLen++] = Uart.parityBits;	// store 8 parity bits
 							Uart.parityBits = 0;
 						}
@@ -363,7 +362,7 @@ void DemodReset() {
 	Demod.shiftReg = 0;					// shiftreg to hold decoded data bits
 	Demod.parityBits = 0;				// 
 	Demod.collisionPos = 0;				// Position of collision bit
-	Demod.twoBits = 0xffff;				// buffer for 2 Bits
+	Demod.twoBits = 0xFFFF;				// buffer for 2 Bits
 	Demod.highCnt = 0;
 	Demod.startTime = 0;
 	Demod.endTime = 0;	
@@ -417,34 +416,34 @@ static RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non
 			}															// modulation in first half only - Sequence D = 1
 			Demod.bitCount++;
 			Demod.shiftReg = (Demod.shiftReg >> 1) | 0x100;				// in both cases, add a 1 to the shiftreg
-			if(Demod.bitCount == 9) {									// if we decoded a full byte (including parity)
+			if (Demod.bitCount == 9) {									// if we decoded a full byte (including parity)
 				Demod.output[Demod.len++] = (Demod.shiftReg & 0xff);
 				Demod.parityBits <<= 1;									// make room for the parity bit
 				Demod.parityBits |= ((Demod.shiftReg >> 8) & 0x01); 	// store parity bit
 				Demod.bitCount = 0;
 				Demod.shiftReg = 0;
-				if((Demod.len&0x0007) == 0) {							// every 8 data bytes
+				if ((Demod.len & 0x0007) == 0) {							// every 8 data bytes
 					Demod.parity[Demod.parityLen++] = Demod.parityBits;	// store 8 parity bits
 					Demod.parityBits = 0;
 				}
 			}
-			Demod.endTime = Demod.startTime + 8*(9*Demod.len + Demod.bitCount + 1) - 4;
+			Demod.endTime = Demod.startTime + 8 * (9 * Demod.len + Demod.bitCount + 1) - 4;
 		} else {														// no modulation in first half
 			if (IsManchesterModulationNibble2(Demod.twoBits >> Demod.syncBit)) {	// and modulation in second half = Sequence E = 0
 				Demod.bitCount++;
 				Demod.shiftReg = (Demod.shiftReg >> 1);					// add a 0 to the shiftreg
-				if(Demod.bitCount >= 9) {								// if we decoded a full byte (including parity)
+				if (Demod.bitCount >= 9) {								// if we decoded a full byte (including parity)
 					Demod.output[Demod.len++] = (Demod.shiftReg & 0xff);
 					Demod.parityBits <<= 1;								// make room for the new parity bit
 					Demod.parityBits |= ((Demod.shiftReg >> 8) & 0x01); // store parity bit
 					Demod.bitCount = 0;
 					Demod.shiftReg = 0;
-					if ((Demod.len&0x0007) == 0) {						// every 8 data bytes
+					if ((Demod.len & 0x0007) == 0) {						// every 8 data bytes
 						Demod.parity[Demod.parityLen++] = Demod.parityBits;	// store 8 parity bits1
 						Demod.parityBits = 0;
 					}
 				}
-				Demod.endTime = Demod.startTime + 8*(9*Demod.len + Demod.bitCount + 1);
+				Demod.endTime = Demod.startTime + 8 * (9 * Demod.len + Demod.bitCount + 1);
 			} else {													// no modulation in both halves - End of communication
 				if(Demod.bitCount > 0) {								// there are some remaining data bits
 					Demod.shiftReg >>= (9 - Demod.bitCount);			// right align the decoded bits
@@ -464,8 +463,7 @@ static RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non
 				}
 			}
 		}
-	} 
-
+	}
     return false;	// not finished yet, need more data
 }
 
@@ -569,7 +567,8 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 
 		LED_A_OFF();
 		
-		if (rsamples & 0x01) {		// Need two samples to feed Miller and Manchester-Decoder
+		// Need two samples to feed Miller and Manchester-Decoder
+		if (rsamples & 0x01) {
 
 			if (!TagIsActive) {		// no need to try decoding reader data if the tag is sending
 				uint8_t readerdata = (previous_data & 0xF0) | (*data >> 4);
@@ -615,7 +614,8 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 					// ready to receive another response.
 					DemodReset();
 					// reset the Miller decoder including its (now outdated) input buffer
-					UartInit(receivedCmd, receivedCmdPar);
+					UartReset();
+					//UartInit(receivedCmd, receivedCmdPar);
 					LED_C_OFF();
 				} 
 				TagIsActive = (Demod.state != DEMOD_UNSYNCD);
@@ -3374,10 +3374,16 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 //-----------------------------------------------------------------------------
 // "hf mf sniff"
 void RAMFUNC SniffMifare(uint8_t param) {
+	// param:
+	// bit 0 - trigger from first card answer
+	// bit 1 - trigger from first reader 7-bit request
 
+	// C(red) A(yellow) B(green)
 	LEDsoff();
-
-	// free eventually allocated BigBuf memory
+	iso14443a_setup(FPGA_HF_ISO14443A_SNIFFER);
+	
+	// Allocate memory from BigBuf for some buffers
+	// free all previous allocations first
 	BigBuf_free(); BigBuf_Clear_ext(false);
 	clear_trace();
 	set_tracing(true);
@@ -3390,10 +3396,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
 	uint8_t receivedResponse[MAX_MIFARE_FRAME_SIZE] = {0x00};
 	uint8_t receivedResponsePar[MAX_MIFARE_PARITY_SIZE] = {0x00};
 
-	iso14443a_setup(FPGA_HF_ISO14443A_SNIFFER);
-
 	// allocate the DMA buffer, used to stream samples from the FPGA
-	// [iceman] is this sniffed data unsigned?
 	uint8_t *dmaBuf = BigBuf_malloc(DMA_BUFFER_SIZE);
 	uint8_t *data = dmaBuf;
 	uint8_t previous_data = 0;
@@ -3411,7 +3414,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
 	// Setup and start DMA.
 	// set transfer address and number of bytes. Start transfer.
 	if ( !FpgaSetupSscDma(dmaBuf, DMA_BUFFER_SIZE) ){
-		if (MF_DBGLEVEL > 1) Dbprintf("[-] FpgaSetupSscDma failed. Exiting"); 
+		if (MF_DBGLEVEL > 1) Dbprintf("[!] FpgaSetupSscDma failed. Exiting"); 
 		return;
 	}
 
@@ -3426,22 +3429,23 @@ void RAMFUNC SniffMifare(uint8_t param) {
 		WDT_HIT();
 		LED_A_ON();
 
- 		if ((sniffCounter & 0x0000FFFF) == 0) {	// from time to time
-	
+ 		if ((sniffCounter & 0xFFFF) == 0) {	// from time to time
 			// check if a transaction is completed (timeout after 2000ms).
 			// if yes, stop the DMA transfer and send what we have so far to the client
 			if (MfSniffSend(2000)) {			
 				// Reset everything - we missed some sniffed data anyway while the DMA was stopped
 				sniffCounter = 0;
+				dmaBuf = BigBuf_malloc(DMA_BUFFER_SIZE);
 				data = dmaBuf;
 				maxDataLen = 0;
 				ReaderIsActive = false;
 				TagIsActive = false;
-				// Setup and start DMA. set transfer address and number of bytes. Start transfer.
+				
+				// Setup and start DMA. set transfer address and number of bytes. Start transfer.				
 				if ( !FpgaSetupSscDma(dmaBuf, DMA_BUFFER_SIZE) ){
-					if (MF_DBGLEVEL > 1) DbpString("[-] FpgaSetupSscDma failed. Exiting"); 
+					if (MF_DBGLEVEL > 1) DbpString("[!] FpgaSetupSscDma failed. Exiting"); 
 					return;
-				}				
+				}
 			}
 		}
 
@@ -3459,7 +3463,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
 		if (dataLen > maxDataLen) {					// we are more behind than ever...
 			maxDataLen = dataLen;					
 			if (dataLen > (9 * DMA_BUFFER_SIZE / 10)) {
-				Dbprintf("[-] blew circular buffer! dataLen=0x%x", dataLen);
+				Dbprintf("[!] blew circular buffer! | datalen %u", dataLen);
 				break;
 			}
 		}
@@ -3469,7 +3473,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
 		if (!AT91C_BASE_PDC_SSC->PDC_RCR) {
 			AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t)dmaBuf;
 			AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
-			Dbprintf("[-] RxEmpty ERROR, data length:%d", dataLen); // temporary
+			Dbprintf("[-] RxEmpty ERROR | data length %u", dataLen); // temporary
 		}
 		// secondary buffer sets as primary, secondary buffer was stopped
 		if (!AT91C_BASE_PDC_SSC->PDC_RNCR) {
@@ -3478,38 +3482,38 @@ void RAMFUNC SniffMifare(uint8_t param) {
 		}
 
 		LED_A_OFF();
-		
+
+		// Need two samples to feed Miller and Manchester-Decoder
 		if (sniffCounter & 0x01) {
 
 			// no need to try decoding tag data if the reader is sending
 			if (!TagIsActive) {		
-				uint8_t readerdata = (previous_data & 0xF0) | (*data >> 4);
-				if (MillerDecoding(readerdata, (sniffCounter-1)*4)) {
-					LED_C_INV();
-
-					if (MfSniffLogic(receivedCmd, Uart.len, Uart.parity, Uart.bitCount, true)) break;
-
+				uint8_t readerbyte = (previous_data & 0xF0) | (*data >> 4);
+				if (MillerDecoding(readerbyte, (sniffCounter-1)*4)) {
+					LED_B_ON();
+					LED_C_OFF();
+					MfSniffLogic(receivedCmd, Uart.len, Uart.parity, Uart.bitCount, true);
 					DemodReset();
-					UartInit(receivedCmd, receivedCmdPar);
+					UartReset();
 				}
 				ReaderIsActive = (Uart.state != STATE_UNSYNCD);
+				TagIsActive = !ReaderIsActive;
 			}
 			
 			// no need to try decoding tag data if the reader is sending
 			if (!ReaderIsActive) {		
-				uint8_t tagdata = (previous_data << 4) | (*data & 0x0F);
-				if (ManchesterDecoding(tagdata, 0, (sniffCounter-1)*4)) {
-					LED_C_INV();
-
-					if (MfSniffLogic(receivedResponse, Demod.len, Demod.parity, Demod.bitCount, false)) break;
-
+				uint8_t tagbyte = (previous_data << 4) | (*data & 0x0F);
+				if (ManchesterDecoding(tagbyte, 0, (sniffCounter-1)*4)) {
+					LED_B_OFF();
+					LED_C_ON();
+					MfSniffLogic(receivedResponse, Demod.len, Demod.parity, Demod.bitCount, false);
 					DemodReset();
-					UartInit(receivedCmd, receivedCmdPar);
+					UartReset();
 				}
 				TagIsActive = (Demod.state != DEMOD_UNSYNCD);
+				ReaderIsActive = !TagIsActive;
 			}
 		}
-
 		previous_data = *data;
 		sniffCounter++;
 		data++;
