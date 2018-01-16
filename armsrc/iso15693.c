@@ -83,6 +83,7 @@
 
 #define Crc(data,datalen)     Iso15693Crc(data, datalen)
 #define AddCrc(data,datalen)  Iso15693AddCrc(data, datalen)
+#define CheckCrc(data,datalen)  Iso15693CheckCrc(data,datalen)
 #define sprintUID(target,uid)	Iso15693sprintUID(target, uid)
 
 int DEBUG = 0;
@@ -693,9 +694,7 @@ static void BuildIdentifyRequest(uint8_t *out) {
 	// no mask
 	cmd[2] = 0x00;
 	// CRC
-	uint16_t crc = Crc(cmd, 3);
-	cmd[3] = crc & 0xff;
-	cmd[4] = crc >> 8;
+	AddCrc(cmd, 3);
 	// coding as high speed (1 out of 4)
 	CodeIso15693AsReader(cmd, CMD_ID_RESP);
 	memcpy(out, cmd, CMD_ID_RESP);
@@ -724,10 +723,7 @@ static void BuildReadBlockRequest(uint8_t **out, uint8_t *uid, uint8_t blockNumb
 	// Block number to read
 	cmd[10] = blockNumber;//0x00;
 	// CRC
-	uint16_t crc = Crc(cmd, 11); // the crc needs to be calculated over 12 bytes
-	cmd[11] = crc & 0xff;
-	cmd[12] = crc >> 8;
-
+	AddCrc(cmd, 11);
 	CodeIso15693AsReader(cmd, CMD_READ_RESP);
 	memcpy(out, cmd, CMD_ID_RESP);
 }
@@ -753,10 +749,7 @@ static void BuildInventoryResponse(uint8_t *out, uint8_t *uid) {
 	cmd[8] = uid[1]; //0x05;
 	cmd[9] = uid[0]; //0xe0;
 	// CRC
-	uint16_t crc = Crc(cmd, 10);
-	cmd[10] = crc & 0xff;
-	cmd[11] = crc >> 8;
-
+	AddCrc(cmd, 10);
 	CodeIso15693AsReader(cmd, CMD_INV_RESP);
 	memcpy(out, cmd, CMD_ID_RESP);
 }
@@ -808,7 +801,6 @@ int SendDataTag(uint8_t *send, int sendlen, bool init, int speed, uint8_t *outda
 #define DBD15STATLEN 48
 void DbdecodeIso15693Answer(int len, uint8_t *d) {
 	char status[DBD15STATLEN+1] = {0};
-	uint16_t crc;
 
 	if (len > 3) {
 		if (d[0] & ( 1 << 3 )) 
@@ -818,45 +810,44 @@ void DbdecodeIso15693Answer(int len, uint8_t *d) {
 			strncat(status, "Error ", DBD15STATLEN);
 			switch (d[1]) {
 				case 0x01: 
-					strncat(status, "01:notSupp", DBD15STATLEN);
+					strncat(status, "01: not supported", DBD15STATLEN);
 					break;
 				case 0x02: 
-					strncat(status, "02:notRecog", DBD15STATLEN);
+					strncat(status, "02: not recognized", DBD15STATLEN);
 					break;
 				case 0x03: 
-					strncat(status, "03:optNotSupp", DBD15STATLEN);
+					strncat(status, "03: opt not supported", DBD15STATLEN);
 					break;
 				case 0x0f: 
-					strncat(status, "0f:noInfo", DBD15STATLEN);
+					strncat(status, "0F: no info", DBD15STATLEN);
 					break;
 				case 0x10: 
-					strncat(status, "10:dontExist", DBD15STATLEN);
+					strncat(status, "10: dont exist", DBD15STATLEN);
 					break;
 				case 0x11: 
-					strncat(status, "11:lockAgain", DBD15STATLEN);
+					strncat(status, "11: lock again", DBD15STATLEN);
 					break;
 				case 0x12: 
-					strncat(status, "12:locked", DBD15STATLEN);
+					strncat(status, "12: locked", DBD15STATLEN);
 					break;
 				case 0x13: 
-					strncat(status, "13:progErr", DBD15STATLEN);
+					strncat(status, "13: program error", DBD15STATLEN);
 					break;
 				case 0x14: 
-					strncat(status, "14:lockErr", DBD15STATLEN);
+					strncat(status, "14: lock error", DBD15STATLEN);
 					break;
 				default:
-					strncat(status, "unknownErr", DBD15STATLEN);
+					strncat(status, "unknown error", DBD15STATLEN);
 			}
 			strncat(status ," " ,DBD15STATLEN);
 		} else {
-			strncat(status ,"No err ", DBD15STATLEN);
+			strncat(status ,"No error ", DBD15STATLEN);
 		}
 			
-		crc = Crc(d, len-2);
-		if ( (( crc & 0xff ) == d[len-2]) && (( crc >> 8 ) == d[len-1]) ) 
-			strncat(status, "Crc OK", DBD15STATLEN);
+		if (CheckCrc(d,len))
+			strncat(status, "[+] crc OK", DBD15STATLEN);
 		else
-			strncat(status, "Crc Fail!", DBD15STATLEN); 
+			strncat(status, "[!] crc fail", DBD15STATLEN);
 
 		if ( DEBUG ) Dbprintf("%s", status);
 	}
@@ -868,7 +859,7 @@ void DbdecodeIso15693Answer(int len, uint8_t *d) {
 
 void SetDebugIso15693(uint32_t debug) {
 	DEBUG = debug;
-	Dbprintf("Iso15693 Debug is now %s", DEBUG ? "on" : "off");
+	Dbprintf("[!] Iso15693 debug is %s", DEBUG ? "on" : "off");
 	return;
 }
 

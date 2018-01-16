@@ -43,6 +43,17 @@ int Iso15693AddCrc(uint8_t *req, int n) {
 	return n+2;
 }
 
+// check the CRC as described in ISO 15693-Part 3-Annex C
+// 	v	buffer with data
+//	n	length (including crc)
+//	returns true if the crc is valid, else return false
+bool Iso15693CheckCrc(uint8_t *v, int n) {
+	uint16_t crc = Iso15693Crc(v, n-2);
+	if ( (( crc & 0xff ) == v[n-2]) && (( crc >> 8 ) == v[n-1]) )
+		return true;
+	return false;
+}
+
 int sprintf(char *str, const char *format, ...);
 
 // returns a string representation of the UID
@@ -62,31 +73,26 @@ char* Iso15693sprintUID(char *target, uint8_t *uid) {
 	return target;
 }
 
-uint16_t iclass_crc16(char *data_p, unsigned short length)
-{
-      unsigned char i;
-      unsigned int data;
-	  uint16_t crc = 0xffff;
+uint16_t iclass_crc16(char *data_p, unsigned short length) {
+	unsigned char i;
+	unsigned int data;
+	uint16_t crc = 0xffff;
 
-      if (length == 0)
-            return (~crc);
+	if (length == 0)
+		return (~crc);
 
-      do
-      {
-            for (i=0, data=(unsigned int)0xff & *data_p++;
-                 i < 8; 
-                 i++, data >>= 1)
-            {
-                  if ((crc & 0x0001) ^ (data & 0x0001))
-                        crc = (crc >> 1) ^ POLY;
-                  else  crc >>= 1;
-            }
-      } while (--length);
+	do {
+		for (i=0, data = (unsigned int)0xff & *data_p++; i < 8;  i++, data >>= 1) {
+			if ((crc & 0x0001) ^ (data & 0x0001))
+				crc = (crc >> 1) ^ POLY;
+			else  
+				crc >>= 1;
+		}
+	} while (--length);
 
-      crc = ~crc;
-      data = crc;
-      crc = (crc << 8) | (data >> 8 & 0xff);
-      crc = crc ^ 0xBC3;
-      return (crc);
+	crc = ~crc;
+	data = crc;
+	crc = (crc << 8) | (data >> 8 & 0xff);
+	crc = crc ^ 0xBC3;
+	return crc;
 }
-
