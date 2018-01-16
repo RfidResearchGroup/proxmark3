@@ -1877,7 +1877,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 		printf("."); fflush(stdout);
 		if (ukbhit()) {
 			int gc = getchar(); (void)gc;
-			printf("\n[+] aborted via keyboard!\n");
+			printf("\n[!] aborted via keyboard!\n");
 			break;
 		}
 		
@@ -1888,8 +1888,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 		res = resp.arg[0] & 0xff;
 		traceLen = resp.arg[1];
 		len = resp.arg[2];
-		//PrintAndLog("ice | %x | %x | %x", res, traceLen, len);
-		// we are done?		
+
 		if (res == 0) {
 			PrintAndLog("[+] hf mifare sniff finished");
 			free(buf);
@@ -1942,6 +1941,10 @@ int CmdHF14AMfSniff(const char *Cmd){
 					isTag = false;
 				}
 				bufPtr += 2;
+				
+				// the uid identification package 
+				// 0xFF 0xFF xx xx xx xx xx xx xx xx xx xx aa aa cc 0xFF 0xFF
+				// x = uid,  a = atqa, c = sak
 				if ((len == 17) && (bufPtr[0] == 0xff) && (bufPtr[1] == 0xff) && (bufPtr[15] == 0xff) && (bufPtr[16] == 0xff)) {
 					memcpy(uid, bufPtr + 2, 10);
 					memcpy(atqa, bufPtr + 2 + 10, 2);
@@ -1951,7 +1954,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 						default:   uid_len = 4; break;
 					}
 					sak = bufPtr[14];
-					PrintAndLog("[+] tag select uid| %s atqa:0x%02x%02x sak:0x%02x", 
+					PrintAndLog("[+] UID %s | ATQA %02x %02x | SAK 0x%02x", 
 						sprint_hex(uid, uid_len),
 						atqa[1], 
 						atqa[0], 
@@ -1959,6 +1962,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 					if (wantLogToFile || wantDecrypt) {
 						FillFileNameByUID(logHexFileName, uid, ".log", uid_len);
 						AddLogCurrentDT(logHexFileName);
+						PrintAndLog("[+] Trace saved to %s", logHexFileName);
 					}						
 					if (wantDecrypt)
 						mfTraceInit(uid, uid_len, atqa, sak, wantSaveToEmlFile);
