@@ -2913,7 +2913,7 @@ static command_t CommandTable[] = {
 	{"nested",		CmdHF14AMfNested,		0, "Nested attack. Test nested authentication"},
 	{"hardnested", 	CmdHF14AMfNestedHard, 	0, "Nested attack for hardened Mifare cards"},
 	{"keybrute",	CmdHF14AMfKeyBrute,		0, "J_Run's 2nd phase of multiple sector nested authentication key recovery"},
-	{"sniff",		CmdHF14AMfSniff,		0, "Sniff card-reader communication"},
+//	{"sniff",		CmdHF14AMfSniff,		0, "Sniff card-reader communication"},
 	{"sim",			CmdHF14AMf1kSim,		0, "Simulate MIFARE card"},
 	{"eclr",		CmdHF14AMfEClear,		0, "Clear simulator memory block"},
 	{"eget",		CmdHF14AMfEGet,			0, "Get simulator memory block"},

@@ -87,7 +87,15 @@ typedef struct {
 extern void GetParity(const uint8_t *pbtCmd, uint16_t len, uint8_t *par);
 extern void AppendCrc14443a(uint8_t *data, int len);
 
-// iso14443a.h
+extern tDemod* GetDemod(void);
+extern void DemodReset(void);
+extern void DemodInit(uint8_t *data, uint8_t *parity);
+extern tUart* GetUart(void);
+extern void UartReset(void);
+extern void UartInit(uint8_t *data, uint8_t *parity);
+extern RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time);
+extern RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_time);
+
 extern void RAMFUNC SniffIso14443a(uint8_t param);
 extern void SimulateIso14443aTag(int tagType, int flags, uint8_t *data);
 extern void ReaderIso14443a(UsbCommand *c);

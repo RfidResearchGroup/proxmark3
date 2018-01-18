@@ -46,7 +46,7 @@ extern int CmdHF14AMfChk(const char* cmd);
 extern int CmdHF14AMifare(const char* cmd);
 extern int CmdHF14AMfNested(const char* cmd);
 extern int CmdHF14AMfNestedHard(const char *Cmd);
-extern int CmdHF14AMfSniff(const char* cmd);
+//extern int CmdHF14AMfSniff(const char* cmd);
 extern int CmdHF14AMf1kSim(const char* cmd);
 extern int CmdHF14AMfKeyBrute(const char *Cmd);
 extern int CmdHF14AMfEClear(const char* cmd);

@@ -697,26 +697,25 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 		}
 
 		// READ
-		if ((len ==4) && ((data[0] == ISO14443A_CMD_READBLOCK))) {
+		if ((len == 4) && ((data[0] == ISO14443A_CMD_READBLOCK))) {
 			traceState = TRACE_READ_DATA;
 			traceCurBlock = data[1];
 			return 0;
 		}
 
 		// WRITE
-		if ((len ==4) && ((data[0] == ISO14443A_CMD_WRITEBLOCK))) {
+		if ((len == 4) && ((data[0] == ISO14443A_CMD_WRITEBLOCK))) {
 			traceState = TRACE_WRITE_OK;
 			traceCurBlock = data[1];
 			return 0;
 		}
 
 		// HALT
-		if ((len ==4) && ((data[0] == ISO14443A_CMD_HALT) && (data[1] == 0x00))) {
+		if ((len == 4) && ((data[0] == ISO14443A_CMD_HALT) && (data[1] == 0x00))) {
 			traceState = TRACE_ERROR;  // do not decrypt the next commands
 			return 0;
 		}
 		return 0;
-	break;
 
 	case TRACE_READ_DATA: 
 		if (len == 18) {
@@ -812,10 +811,12 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 			
 			// set cryptosystem state
 			traceCrypto1 = lfsr_recovery64(ks2, ks3);			
-			return 0;
+
 		} else {
+			printf("[!] nested key recovery not implemented!\n");
+			at_enc = bytes_to_num(data, 4);
+			crypto1_destroy(traceCrypto1);			
 			traceState = TRACE_ERROR;
-			return 1;
 		}
 		break;
 	default: 

@@ -11,14 +11,14 @@
 //-----------------------------------------------------------------------------
 #include "iso14443a.h"
 
-static uint32_t iso14a_timeout;
 #define MAX_ISO14A_TIMEOUT 524288
+static uint32_t iso14a_timeout;
 
 int rsamples = 0;
+
 uint8_t trigger = 0;
 // the block number for the ISO14443-4 PCB
 static uint8_t iso14_pcb_blocknum = 0;
-
 static uint8_t* free_buffer_pointer;
 
 //
@@ -187,7 +187,11 @@ const bool Mod_Miller_LUT[] = {
 #define IsMillerModulationNibble1(b) (Mod_Miller_LUT[(b & 0x000000F0) >> 4])
 #define IsMillerModulationNibble2(b) (Mod_Miller_LUT[(b & 0x0000000F)])
 
-void UartReset() {
+tUart* GetUart() {
+	return &Uart;
+}
+
+void UartReset(void) {
 	Uart.state = STATE_UNSYNCD;
 	Uart.bitCount = 0;
 	Uart.len = 0;						// number of decoded data bytes
@@ -208,7 +212,7 @@ void UartInit(uint8_t *data, uint8_t *parity) {
 }
 
 // use parameter non_real_time to provide a timestamp. Set to 0 if the decoder should measure real time
-static RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time) {
+RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time) {
 	Uart.fourBits = (Uart.fourBits << 8) | bit;
 	
 	if (Uart.state == STATE_UNSYNCD) {											// not yet synced
@@ -343,7 +347,7 @@ static RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time) {
 // 8 ticks modulated:									A collision. Save the collision position and treat as Sequence D
 // Note 1: the bitstream may start at any time. We therefore need to sync.
 // Note 2: parameter offset is used to determine the position of the parity bits (required for the anticollision command only)
-static tDemod Demod;
+tDemod Demod;
 
 // Lookup-Table to decide if 4 raw bits are a modulation.
 // We accept three or four "1" in any position
@@ -355,7 +359,10 @@ const bool Mod_Manchester_LUT[] = {
 #define IsManchesterModulationNibble1(b) (Mod_Manchester_LUT[(b & 0x00F0) >> 4])
 #define IsManchesterModulationNibble2(b) (Mod_Manchester_LUT[(b & 0x000F)])
 
-void DemodReset() {
+tDemod* GetDemod() {
+	return &Demod;
+}
+void DemodReset(void) {
 	Demod.state = DEMOD_UNSYNCD;
 	Demod.len = 0;						// number of decoded data bytes
 	Demod.parityLen = 0;
@@ -378,7 +385,7 @@ void DemodInit(uint8_t *data, uint8_t *parity) {
 }
 
 // use parameter non_real_time to provide a timestamp. Set to 0 if the decoder should measure real time
-static RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_time) {
+RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_time) {
 	Demod.twoBits = (Demod.twoBits << 8) | bit;
 	
 	if (Demod.state == DEMOD_UNSYNCD) {
@@ -496,8 +503,8 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 	uint8_t *receivedCmdPar = BigBuf_malloc(MAX_PARITY_SIZE);
 	
 	// The response (tag -> reader) that we're receiving.
-	uint8_t *receivedResponse = BigBuf_malloc(MAX_FRAME_SIZE);
-	uint8_t *receivedResponsePar = BigBuf_malloc(MAX_PARITY_SIZE);
+	uint8_t *receivedResp = BigBuf_malloc(MAX_FRAME_SIZE);
+	uint8_t *receivedRespPar = BigBuf_malloc(MAX_PARITY_SIZE);
 	
 	// The DMA buffer, used to stream samples from the FPGA
 	uint8_t *dmaBuf = BigBuf_malloc(DMA_BUFFER_SIZE);
@@ -510,7 +517,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 	bool ReaderIsActive = false;
 	
 	// Set up the demodulator for tag -> reader responses.
-	DemodInit(receivedResponse, receivedResponsePar);
+	DemodInit(receivedResp, receivedRespPar);
 	
 	// Set up the demodulator for the reader -> tag commands
 	UartInit(receivedCmd, receivedCmdPar);
@@ -547,7 +554,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 		if (dataLen > maxDataLen) {
 			maxDataLen = dataLen;
 			if (dataLen > (9 * DMA_BUFFER_SIZE / 10)) {
-				Dbprintf("blew circular buffer! dataLen=%d", dataLen);
+				Dbprintf("[!] blew circular buffer! | datalen %u", dataLen);
 				break;
 			}
 		}
@@ -557,7 +564,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 		if (!AT91C_BASE_PDC_SSC->PDC_RCR) {
 			AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dmaBuf;
 			AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
-			Dbprintf("RxEmpty ERROR!!! data length:%d", dataLen); // temporary
+			Dbprintf("[-] RxEmpty ERROR | data length %d", dataLen); // temporary
 		}
 		// secondary buffer sets as primary, secondary buffer was stopped
 		if (!AT91C_BASE_PDC_SSC->PDC_RNCR) {
@@ -602,7 +609,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 				if (ManchesterDecoding(tagdata, 0, (rsamples-1)*4)) {
 					LED_B_ON();
 
-					if (!LogTrace(receivedResponse, 
+					if (!LogTrace(receivedResp, 
 									Demod.len, 
 									Demod.startTime*16 - DELAY_TAG_AIR2ARM_AS_SNIFFER, 
 									Demod.endTime*16 - DELAY_TAG_AIR2ARM_AS_SNIFFER,
@@ -3365,167 +3372,4 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 	cmd_send(CMD_ACK,1,0,0,0,0);	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 	set_tracing(false);
-}
-
-//-----------------------------------------------------------------------------
-// MIFARE sniffer. 
-// 
-// if no activity for 2sec, it sends the collected data to the client.
-//-----------------------------------------------------------------------------
-// "hf mf sniff"
-void RAMFUNC SniffMifare(uint8_t param) {
-	// param:
-	// bit 0 - trigger from first card answer
-	// bit 1 - trigger from first reader 7-bit request
-
-	// C(red) A(yellow) B(green)
-	LEDsoff();
-	iso14443a_setup(FPGA_HF_ISO14443A_SNIFFER);
-	
-	// Allocate memory from BigBuf for some buffers
-	// free all previous allocations first
-	BigBuf_free(); BigBuf_Clear_ext(false);
-	clear_trace();
-	set_tracing(true);
-
-	// The command (reader -> tag) that we're receiving.
-	uint8_t receivedCmd[MAX_MIFARE_FRAME_SIZE] = {0x00};	
-	uint8_t receivedCmdPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
-
-	// The response (tag -> reader) that we're receiving.
-	uint8_t receivedResponse[MAX_MIFARE_FRAME_SIZE] = {0x00};
-	uint8_t receivedResponsePar[MAX_MIFARE_PARITY_SIZE] = {0x00};
-
-	// allocate the DMA buffer, used to stream samples from the FPGA
-	uint8_t *dmaBuf = BigBuf_malloc(DMA_BUFFER_SIZE);
-	uint8_t *data = dmaBuf;
-	uint8_t previous_data = 0;
-	int maxDataLen = 0;
-	int dataLen = 0;
-	bool ReaderIsActive = false;
-	bool TagIsActive = false;
-
-	// Set up the demodulator for tag -> reader responses.
-	DemodInit(receivedResponse, receivedResponsePar);
-
-	// Set up the demodulator for the reader -> tag commands
-	UartInit(receivedCmd, receivedCmdPar);
-
-	// Setup and start DMA.
-	// set transfer address and number of bytes. Start transfer.
-	if ( !FpgaSetupSscDma(dmaBuf, DMA_BUFFER_SIZE) ){
-		if (MF_DBGLEVEL > 1) Dbprintf("[!] FpgaSetupSscDma failed. Exiting"); 
-		return;
-	}
-
-	// Signal field is off with the appropriate LED
-	LED_D_OFF();
-
-	MfSniffInit();
-	
-	uint32_t sniffCounter = 0;
-    // loop and listen
-	while (!BUTTON_PRESS()) {		
-		WDT_HIT();
-		LED_A_ON();
-
- 		if ((sniffCounter & 0xFFFF) == 0) {	// from time to time
-			// check if a transaction is completed (timeout after 2000ms).
-			// if yes, stop the DMA transfer and send what we have so far to the client
-			if (MfSniffSend(2000)) {			
-				// Reset everything - we missed some sniffed data anyway while the DMA was stopped
-				sniffCounter = 0;
-				dmaBuf = BigBuf_malloc(DMA_BUFFER_SIZE);
-				data = dmaBuf;
-				maxDataLen = 0;
-				ReaderIsActive = false;
-				TagIsActive = false;
-				
-				// Setup and start DMA. set transfer address and number of bytes. Start transfer.				
-				if ( !FpgaSetupSscDma(dmaBuf, DMA_BUFFER_SIZE) ){
-					if (MF_DBGLEVEL > 1) DbpString("[!] FpgaSetupSscDma failed. Exiting"); 
-					return;
-				}
-			}
-		}
-
-		// number of bytes we have processed so far		
-		int register readBufDataP = data - dmaBuf;	
-		// number of bytes already transferred		
-		int register dmaBufDataP = DMA_BUFFER_SIZE - AT91C_BASE_PDC_SSC->PDC_RCR;
-
-		if (readBufDataP <= dmaBufDataP)			// we are processing the same block of data which is currently being transferred
-			dataLen = dmaBufDataP - readBufDataP;	// number of bytes still to be processed
-		else
-			dataLen = DMA_BUFFER_SIZE - readBufDataP + dmaBufDataP; // number of bytes still to be processed
-
-		// test for length of buffer
-		if (dataLen > maxDataLen) {					// we are more behind than ever...
-			maxDataLen = dataLen;					
-			if (dataLen > (9 * DMA_BUFFER_SIZE / 10)) {
-				Dbprintf("[!] blew circular buffer! | datalen %u", dataLen);
-				break;
-			}
-		}
-		if (dataLen < 1) continue;
-
-		// primary buffer was stopped ( <-- we lost data!
-		if (!AT91C_BASE_PDC_SSC->PDC_RCR) {
-			AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t)dmaBuf;
-			AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
-			Dbprintf("[-] RxEmpty ERROR | data length %u", dataLen); // temporary
-		}
-		// secondary buffer sets as primary, secondary buffer was stopped
-		if (!AT91C_BASE_PDC_SSC->PDC_RNCR) {
-			AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t)dmaBuf;
-			AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
-		}
-
-		LED_A_OFF();
-
-		// Need two samples to feed Miller and Manchester-Decoder
-		if (sniffCounter & 0x01) {
-
-			// no need to try decoding tag data if the reader is sending
-			if (!TagIsActive) {		
-				uint8_t readerbyte = (previous_data & 0xF0) | (*data >> 4);
-				if (MillerDecoding(readerbyte, (sniffCounter-1)*4)) {
-					LED_B_ON();
-					LED_C_OFF();
-					MfSniffLogic(receivedCmd, Uart.len, Uart.parity, Uart.bitCount, true);
-					DemodReset();
-					UartReset();
-				}
-				ReaderIsActive = (Uart.state != STATE_UNSYNCD);
-				TagIsActive = !ReaderIsActive;
-			}
-			
-			// no need to try decoding tag data if the reader is sending
-			if (!ReaderIsActive) {		
-				uint8_t tagbyte = (previous_data << 4) | (*data & 0x0F);
-				if (ManchesterDecoding(tagbyte, 0, (sniffCounter-1)*4)) {
-					LED_B_OFF();
-					LED_C_ON();
-					MfSniffLogic(receivedResponse, Demod.len, Demod.parity, Demod.bitCount, false);
-					DemodReset();
-					UartReset();
-				}
-				TagIsActive = (Demod.state != DEMOD_UNSYNCD);
-				ReaderIsActive = !TagIsActive;
-			}
-		}
-		previous_data = *data;
-		sniffCounter++;
-		data++;
-
-		if (data == dmaBuf + DMA_BUFFER_SIZE)
-			data = dmaBuf;
-
-	} // main cycle
-	
-	if (MF_DBGLEVEL >= 1) 
-		Dbprintf("maxDataLen=%x, Uart.state=%x, Uart.len=%x", maxDataLen, Uart.state, Uart.len);
-	
-	MfSniffEnd();
-	switch_off(); 
 }
