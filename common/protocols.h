@@ -437,7 +437,7 @@ uint32_t GetT55xxClockBit(uint32_t clock);
 #define EM4x05_READER_TALK_FIRST      1<<24
 
 
-
+// FeliCa protocol
 #define FLITE_SERVICE_RO 0x000B
 #define FLITE_SERVICE_RW 0x0009
 
@@ -496,6 +496,56 @@ uint32_t GetT55xxClockBit(uint32_t clock);
 
 #define FELICA_UPDATE_RNDID_REQ 0x4C
 #define FELICA_UPDATE_RNDID_ACK 0x4D
+
+// Calypso protocol
+
+#define CALYPSO_MIN_SESSION_MODIFS 3
+#define CALYPSO_MIN_RECORD_SIZE    29
+
+
+#define CALYPSO_SFI_ENVIRONMENT    0x07
+#define CALYPSO_SFI_TRANSPORT_LOG  0x08
+#define CALYPSO_SFI_CONTRACTS      0x09
+#define CALYPSO_SFI_COUNTERS       0x19
+#define CALYPSO_SFI_CONTRACT_LIST  0x1E
+
+#define CALYPSO_KEY_ISSUER         0x01
+#define CALYPSO_KIF_ISSUER         0x21
+#define CALYPSO_KNO_ISSUER         0x0C
+
+#define CALYPSO_KEY_LOAD           0x02
+#define CALYPSO_KIF_LOAD           0x27
+#define CALYPSO_KNO_LOAD           0x02
+
+#define CALYPSO_KEY_DEBIT          0x03
+#define CALYPSO_KIF_DEBIT          0x30
+#define CALYPSO_KNO_DEBIT          0x0D
+
+#define CALYPSO_INS_GET_RESPONSE   0xC0
+#define CALYPSO_INS_SELECT         0xA4
+#define CALYPSO_INS_INVALIDATE     0x04
+#define CALYPSO_INS_REHABILITATE   0x44
+#define CALYPSO_INS_APPEND_RECORD  0xE2
+#define CALYPSO_INS_DECREASE       0x30
+#define CALYPSO_INS_INCREASE       0x32
+#define CALYPSO_INS_READ_BINARY    0xB0
+#define CALYPSO_INS_READ_RECORD    0xB2
+#define CALYPSO_INS_UPDATE_BINARY  0xD6
+#define CALYPSO_INS_UPDATE_RECORD  0xDC
+#define CALYPSO_INS_WRITE_RECORD   0xD2
+#define CALYPSO_INS_OPEN_SESSION   0x8A
+#define CALYPSO_INS_CLOSE_SESSION  0x8E
+#define CALYPSO_INS_GET_CHALLENGE  0x84
+#define CALYPSO_INS_CHANGE_PIN     0xD8
+#define CALYPSO_INS_VERIFY_PIN     0x20
+
+#define CALYPSO_INS_SV_GET         0x7C
+#define CALYPSO_INS_SV_DEBIT       0xBA
+#define CALYPSO_INS_SV_RELOAD      0xB8
+#define CALYPSO_INS_SV_UN_DEBIT    0xBC
+
+#define CALYPSO_INS_SAM_SV_DEBIT   0x54
+#define CALYPSO_INS_SAM_SV_RELOAD  0x56
 
 // iclass / picopass chip config structures and shared routines
 typedef struct {
