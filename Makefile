@@ -73,7 +73,11 @@ tarbin: newtarbin client/tarbin armsrc/tarbin bootrom/tarbin
 udev:
 	sudo cp -rf driver/77-mm-usb-device-blacklist.rules /etc/udev/rules.d/77-mm-usb-device-blacklist.rules
 	sudo udevadm control --reload-rules
+ifneq ($(wildcard /etc/arch-release),) #If user is running ArchLinux
+	sudo usermod -aG uucp $(USER) #Use specific command and group
+else
 	sudo adduser $(USER) dialout
+endif
  
 # easy printing of MAKE VARIABLES
 print-%: ; @echo $* = $($*) 
