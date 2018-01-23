@@ -37,8 +37,12 @@ void msleep(uint32_t n) {
 
 #ifdef __APPLE__
 
+#ifndef CLOCK_MONOTONIC
 	#define CLOCK_MONOTONIC (1)
+#endif
+#ifndef CLOCK_REALTIME	
 	#define CLOCK_REALTIME (2)
+#endif
 
 	#include <sys/time.h>
 	#include <mach/clock.h>

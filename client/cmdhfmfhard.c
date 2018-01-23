@@ -144,13 +144,6 @@ static inline void set_bit24(uint32_t *bitarray, uint32_t index)
 	bitarray[index>>5] |= 0x80000000>>(index&0x0000001f);
 }
 
-
-static inline void clear_bit24(uint32_t *bitarray, uint32_t index)
-{
-	bitarray[index>>5] &= ~(0x80000000>>(index&0x0000001f));
-}
-
-
 static inline uint32_t test_bit24(uint32_t *bitarray, uint32_t index)
 {
 	return 	bitarray[index>>5] & (0x80000000>>(index&0x0000001f));
@@ -189,42 +182,6 @@ static inline uint32_t next_state(uint32_t *bitarray, uint32_t state)
 	return 1<<24;
 #endif
 }
-
-
-static inline uint32_t next_not_state(uint32_t *bitarray, uint32_t state)
-{
-	if (++state == 1<<24) return 1<<24;
-	uint32_t index = state >> 5;
-	uint_fast8_t bit = state & 0x1f;
-	uint32_t line = bitarray[index] << bit;
-	while (bit <= 0x1f) {
-		if ((line & 0x80000000) == 0) return state;
-		state++;
-		bit++;
-		line <<= 1;
-	}
-	index++;
-	while (bitarray[index] == 0xffffffff && state < 1<<24) {
-		index++;
-		state += 0x20;
-	}
-	if (state >= 1<<24) return 1<<24;
-#if defined __GNUC__
-	return state + __builtin_clz(~bitarray[index]);
-#else
-	bit = 0x00;
-	line = bitarray[index];
-	while (bit <= 0x1f) {
-		if ((line & 0x80000000) == 0) return state;
-		state++;
-		bit++;
-		line <<= 1;
-	}
-	return 1<<24;
-#endif
-}
-
-
 
 
 #define BITFLIP_2ND_BYTE				0x0200
