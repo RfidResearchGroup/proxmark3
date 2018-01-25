@@ -485,9 +485,8 @@ int CmdEM410xBrute(const char *Cmd) {
 		delay = param_get32ex(Cmd, 4, 1000, 10);
 	}
 
-	param_getstr(Cmd, 0, filename, FILE_PATH_SIZE);
-	
-	if (strlen(filename) == 0) {
+	int filelen = param_getstr(Cmd, 0, filename, FILE_PATH_SIZE);	
+	if (filelen == 0) {
 		PrintAndLog("Error: Please specify a filename");
 		return 1;		
 	}
