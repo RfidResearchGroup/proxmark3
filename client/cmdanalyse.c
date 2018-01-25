@@ -424,9 +424,9 @@ int CmdAnalyseA(const char *Cmd){
 		star[0] = '-';
 		star[1] = '\\';
 		star[2] = '|';
-		star[4] = '/';
+		star[3] = '/';
 		
-		for (uint8_t k=0; k<5; k = (k+1) % 4 ) {
+		for (uint8_t k=0; k<4; k = (k+1) % 4 ) {
 			printf("\e[s%c\e[u", star[k]);
 			fflush(stdout);
 			if (ukbhit()) {
