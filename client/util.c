@@ -622,7 +622,7 @@ int hextobinarray(char *target, char *source)
         else if (x >= 'A' && x <= 'F')
             x -= 'A' - 10;
         else {
-        	printf("Discovered unknown character %c %d at idx % " PRIu32 " of %s\n", x, x, source - start, start);
+        	printf("Discovered unknown character %c %d at idx %d of %s\n", x, x, (int16_t)(source - start), start);
             return 0;
         }
         // output
