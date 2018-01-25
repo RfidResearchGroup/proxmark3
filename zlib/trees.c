@@ -1012,8 +1012,7 @@ void ZLIB_INTERNAL _tr_flush_block(s, buf, stored_len, last)
         s->compressed_len += 7;  /* align on byte boundary */
 #endif
     }
-    Tracev((stderr,"\ncomprlen %lu(%lu) ", s->compressed_len>>3,
-           s->compressed_len-7*last));
+    Tracev((stderr,"\ncomprlen %lu(%lu) ", s->compressed_len >> 3, s->compressed_len - 7 * last));
 }
 
 /* ===========================================================================
