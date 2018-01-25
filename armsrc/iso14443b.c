@@ -38,7 +38,7 @@
 // 4sample
 #define SEND4STUFFBIT(x) ToSendStuffBit(x);ToSendStuffBit(x);ToSendStuffBit(x);ToSendStuffBit(x);
 //#define SEND4STUFFBIT(x) ToSendStuffBit(x);
- // iceman, this threshold value,  what makes 8 a good amplituted for this IQ values? 
+ // iceman, this threshold value,  what makes 8 a good amplitude for this IQ values? 
 #ifndef SUBCARRIER_DETECT_THRESHOLD
 # define SUBCARRIER_DETECT_THRESHOLD	8
 #endif
@@ -1028,6 +1028,7 @@ static void TransmitFor14443b_AsReader(void) {
 	// 0xFF = 8 bits of 1.    1 bit == 1Etu,..  
 	// loop 10 * 8 = 80 ETU of delay, with a non modulated signal.  why?
 	// 80*9 = 720us.
+/*
    	for(c = 0; c < 50;) {
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
 			AT91C_BASE_SSC->SSC_THR = 0xFF;
@@ -1037,7 +1038,8 @@ static void TransmitFor14443b_AsReader(void) {
 			b = AT91C_BASE_SSC->SSC_RHR; (void)b;
 		}
 	}
-
+*/
+	
 	// Send frame loop
 	for(c = 0; c < ToSendMax;) {
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
