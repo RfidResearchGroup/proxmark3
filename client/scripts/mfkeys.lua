@@ -1,11 +1,11 @@
 --[[
 	This is an example of Lua-scripting within proxmark3. This is a lua-side
-	implementation of hf mf chk  
+	implementation of hf mf chk
 
 	This code is licensed to you under the terms of the GNU GPL, version 2 or,
 	at your option, any later version. See the LICENSE.txt file for the text of
 	the license.
-	
+
 	Copyright (C) 2013 m h swende <martin at swende.se>
 --]]
 -- Loads the commands-library
@@ -15,6 +15,7 @@ local keylist = require('mf_default_keys')
 -- Ability to read what card is there
 local lib14a = require('read14a')
 local getopt = require('getopt')
+-- Asks the user for input
 local utils = require('utils')
 
 example =[[
@@ -22,7 +23,8 @@ example =[[
 ]]
 author = "Holiman"
 usage = "script run mfkeys"
-desc = ("This script implements Mifare check keys. It utilises a large list of default keys (currently %d keys).\
+desc = ("This script implements Mifare check keys.\
+It utilises a large list of default keys (currently %d keys).\
 If you want to add more, just put them inside /lualibs/mf_default_keys.lua\n"):format(#keylist) ..
 [[
 
@@ -84,10 +86,10 @@ local function checkBlock(blockno, testkeys, keytype)
 		local d1 = table.concat(testkeys, "", start, n)
 			
 		print(("Testing block %d, keytype %d, with %d keys"):format(blockno, keytype, chunksize))
-		local command = Command:new{cmd = cmds.CMD_MIFARE_CHKKEYS, 
+		local command = Command:new{cmd = cmds.CMD_MIFARE_CHKKEYS,
 								arg1 =  arg1,
-								arg2 = 0, 
-								arg3 = chunksize, 
+								arg2 = 0,
+								arg3 = chunksize,
 								data = d1}
 		local status = checkCommand(command)
 		if status then return status, blockno end
@@ -116,8 +118,8 @@ local function display_results(keys)
 end
 -- A little helper to place an item first in the list
 local function placeFirst(akey, list)
-	akey  = akey:lower()
-	if list[1] == akey then 
+	akey = akey:lower()
+	if list[1] == akey then
 		-- Already at pole position
 		return list
 	end
@@ -155,17 +157,17 @@ end
 --
 -- dumps all keys to file
 local function dumptofile(keys)
-	if utils.confirm('Do you wish to save the keys to dumpfile?') then 
+	if utils.confirm('Do you wish to save the keys to dumpfile?') then
 		local destination = utils.input('Select a filename to store to', 'dumpkeys.bin')
 		local file = io.open(destination, 'wb')
-		if file == nil then 
+		if file == nil then
 			print('Could not write to file ', destination)
 			return
 		end
 
 		local key_a = ''
 		local key_b = ''
-		
+
 		--for sector,_ in pairs(keys) do
 		for sector = 0, #keys do
 			local succA, succB, keyA, keyB = unpack(keys[sector])
@@ -205,18 +207,18 @@ local function perform_check(numsectors)
 		local succA, succB, keyA, keyB = unpack(keys[sector])
 		
 		local keyA = checkBlock(targetblock, keylist, 0)
-		if keyA then succA = 1; keylist  = placeFirst(keyA, keylist) end
+		if keyA then succA = 1; keylist = placeFirst(keyA, keylist) end
 		keyA = keyA or '------------'
-	
+
 		local keyB = checkBlock(targetblock, keylist, 1)
-		if keyB then succB = 1;  keylist  = placeFirst(keyB, keylist) end
+		if keyB then succB = 1; keylist = placeFirst(keyB, keylist) end
 		keyB = keyB or '------------'
 
-		keys[sector] = {succA, succB, keyA, keyB }
+		keys[sector] = {succA, succB, keyA, keyB}
 	end
 	
 	display_results(keys)
-	
+
 	-- save to dumpkeys.bin
 	dumptofile(keys)
 end
@@ -224,13 +226,13 @@ end
 -- shows tag information
 local function taginfo(tag)
 
-	local sectors = 16	
+	local sectors = 16
 	-- Show tag info
 	print((' Found tag %s'):format(tag.name))
-	
+
 	if 0x18 == tag.sak then --NXP MIFARE Classic 4k | Plus 4k
-		-- MIFARE Classic 4K offers 4096 bytes split into forty sectors, 
-		-- of which 32 are same size as in the 1K with eight more that are quadruple size sectors. 
+		-- MIFARE Classic 4K offers 4096 bytes split into forty sectors,
+		-- of which 32 are same size as in the 1K with eight more that are quadruple size sectors.
 		sectors = 40
 	elseif 0x08 == tag.sak then -- NXP MIFARE CLASSIC 1k | Plus 2k
 		-- 1K offers 1024 bytes of data storage, split into 16 sector
@@ -245,31 +247,29 @@ local function taginfo(tag)
 	end
 	return sectors
 end
---- 
+---
 -- The main entry point
-local function main( args)
+local function main(args)
 
 	local start_time = os.time()
-	local numSectors = 16 
-		
+	local numSectors = 16
+
 	-- Arguments for the script
 	for o, a in getopt.getopt(args, 'hp') do
-		if o == "h" then return help() end			
+		if o == "h" then return help() end
 		if o == "p" then return printkeys() end
 	end
-	
 	-- identify tag
-	tag, err = lib14a.read1443a(false, true)
+	tag, err = lib14a.read(false, true)
 	if not tag then return oops(err) end
 
 	-- detect sectors and print taginfo
 	numsectors = taginfo(tag)
-	
+
 	perform_check(numsectors)
-	
+
 	local end_time = os.time()
-	print('mfkeys - Total execution time: '..os.difftime(end_time, start_time)..' sec')	
+	print('mfkeys - Total execution time: '..os.difftime(end_time, start_time)..' sec')
 end
 
 main( args)
-

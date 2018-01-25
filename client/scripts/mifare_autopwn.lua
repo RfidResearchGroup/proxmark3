@@ -1,5 +1,5 @@
 local getopt = require('getopt')
-local reader = require('read14a')
+local lib14a = require('read14a')
 local cmds = require('commands')
 local utils = require('utils')
 
@@ -61,7 +61,7 @@ end
 -- @return if unsuccessfull : nil, error
 local function wait_for_mifare()
 	while not core.ukbhit() do
-		res, err = reader.read1443a()
+		res, err = lib14a.read()
 		if res then return res end
 		-- err means that there was no response from card
 	end

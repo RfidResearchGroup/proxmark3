@@ -81,7 +81,7 @@ end
 --
 -- Read information from a card
 function GetCardInfo()
-	result, err = lib14a.read1443a(false, true)
+	result, err = lib14a.read(false, true)
 	if not result then
 		print(err)
 		return

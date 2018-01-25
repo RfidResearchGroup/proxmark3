@@ -561,7 +561,7 @@ function main(args)
 	setdevicedebug(false)
 
 	-- GET TAG UID
-	tag, err = lib14a.read1443a(false, true)
+	tag, err = lib14a.read(false, true)
 	if not tag then return oops(err) end
 	core.clearCommandBuffer()
 	

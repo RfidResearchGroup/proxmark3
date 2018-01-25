@@ -125,7 +125,7 @@ function main(args)
 	endblock = endblock or 20
 	
 	-- First of all, connect
-	info, err = lib14a.read1443a(true, true)
+	info, err = lib14a.read(true, true)
 	if err then disconnect() return oops(err) end	
 	core.clearCommandBuffer()
 	

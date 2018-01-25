@@ -359,7 +359,7 @@ local function main(args)
 		if #uid ~= 14 then return oops('uid wrong length. Should be 7 hex bytes') end
 	else
 		-- GET TAG UID	
-		local tag, err = lib14a.read1443a(false, true)
+		local tag, err = lib14a.read(false, true)
 		if not tag then return oops(err) end
 		core.clearCommandBuffer()
 		uid = tag.uid	
