@@ -53,7 +53,7 @@ static unsigned char *emv_pki_decode_message(const struct emv_pk *enc_pk,
 	}
 
 	if (cert_tlv->len != enc_pk->mlen) {
-		printf("ERROR: Certificate length (%d) not equal key length (%d)\n", cert_tlv->len, enc_pk->mlen);
+		printf("ERROR: Certificate length (%d) not equal key length (%zu)\n", cert_tlv->len, enc_pk->mlen);
 		return NULL;
 	}
 	kcp = crypto_pk_open(enc_pk->pk_algo,
@@ -451,7 +451,7 @@ struct tlvdb *emv_pki_perform_cda_ex(const struct emv_pk *enc_pk, const struct t
 			un_tlv,
 			NULL);
 	if (!data || data_len < 3) {
-		printf("ERROR: can't decode message. len %d\n", data_len);
+		printf("ERROR: can't decode message. len %zu\n", data_len);
 		return NULL;
 	}
 

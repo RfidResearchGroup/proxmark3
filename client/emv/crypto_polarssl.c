@@ -215,7 +215,7 @@ static unsigned char *crypto_pk_polarssl_encrypt(const struct crypto_pk *_cp, co
 
 	res = rsa_public(&cp->ctx, buf, result);
 	if(res) {
-		printf("RSA encrypt failed. Error: %x data len: %d key len: %d\n", res * -1, len, keylen);
+		printf("RSA encrypt failed. Error: %x data len: %zu key len: %zu\n", res * -1, len, keylen);
 		return NULL;
 	}
 	
@@ -241,7 +241,7 @@ static unsigned char *crypto_pk_polarssl_decrypt(const struct crypto_pk *_cp, co
 
 	res = rsa_private(&cp->ctx, buf, result); // CHECK???
 	if(res) {
-		printf("RSA decrypt failed. Error: %x data len: %d key len: %d\n", res * -1, len, keylen);
+		printf("RSA decrypt failed. Error: %x data len: %zu key len: %zu\n", res * -1, len, keylen);
 		return NULL;
 	}
 	

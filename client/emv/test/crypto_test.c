@@ -219,7 +219,7 @@ static int test_pk(bool verbose)
 
 	tmp = crypto_pk_get_parameter(pubk, 0, &tmp_len);
 	if (tmp_len != sizeof(pk_N) || memcmp(tmp, pk_N, tmp_len)) {
-		fprintf(stderr, "ERROR: crypto_pk_get_parameter(0) Modulus. param len %d len %zu\n", tmp_len, sizeof(pk_N));
+		fprintf(stderr, "ERROR: crypto_pk_get_parameter(0) Modulus. param len %zu len %zu\n", tmp_len, sizeof(pk_N));
 		free(tmp);
 		goto close_pub;
 	}
@@ -256,7 +256,7 @@ static int test_pk(bool verbose)
 
 	tmp = crypto_pk_get_parameter(privk, 0, &tmp_len);
 	if (tmp_len != sizeof(pk_N) || memcmp(tmp, pk_N, tmp_len)) {
-		fprintf(stderr, "ERROR: crypto_pk_get_parameter(0) Modulus. param len %d len %zu\n", tmp_len, sizeof(pk_N));
+		fprintf(stderr, "ERROR: crypto_pk_get_parameter(0) Modulus. param len %zu len %zu\n", tmp_len, sizeof(pk_N));
 		free(tmp);
 		goto close;
 	}

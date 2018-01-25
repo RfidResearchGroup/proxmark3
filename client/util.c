@@ -586,7 +586,7 @@ int param_getstr(const char *line, int paramnum, char * str, size_t buffersize)
 
 	// Prevent out of bounds errors
 	if (en - bg + 1 >= buffersize) {
-		printf("out of bounds error: want %d bytes have %u bytes\n", en - bg + 1 + 1, buffersize);
+		printf("out of bounds error: want %d bytes have %zu bytes\n", en - bg + 1 + 1, buffersize);
 		return 0;
 	}
 	
@@ -622,7 +622,7 @@ int hextobinarray(char *target, char *source)
         else if (x >= 'A' && x <= 'F')
             x -= 'A' - 10;
         else {
-        	printf("Discovered unknown character %c %d at idx %d of %s\n", x, x, source - start, start);
+        	printf("Discovered unknown character %c %d at idx % " PRId32 " of %s\n", x, x, source - start, start);
             return 0;
         }
         // output
