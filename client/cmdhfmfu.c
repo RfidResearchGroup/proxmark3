@@ -1946,7 +1946,7 @@ int CmdHF14AMfURestore(const char *Cmd){
 			if (filelen > FILE_PATH_SIZE-5)
 				filelen = FILE_PATH_SIZE-5;
 			
-			if (filelen < 0)
+			if (filelen < 1)
 				sprintf(filename, "dumpdata.bin");
 
 			cmdp += 2;
