@@ -176,6 +176,8 @@ Read instructions on @Gator96100 repo page. (https://github.com/Gator96100/ProxS
 
 Links
 - https://github.com/Gator96100/ProxSpace/archive/master.zip
+- https://github.com/Gator96100/ProxSpace/releases/tag/v2.1     (release v2.1   with gcc v5.3.0)
+- https://github.com/Gator96100/ProxSpace/releases/tag/v2.0.2   (release v2.0.2 with gcc v4.9.2)
 
 ## OR
 
