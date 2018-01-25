@@ -136,7 +136,7 @@ int main(int argc, char **argv) {
 	do {
 		msleep(500);
 		fprintf(stderr, ".");
-	} while (!OpenProxmark(0));
+	} while (!OpenProxmark());
 
 	fprintf(stdout, " Found.\n");
 
