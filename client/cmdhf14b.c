@@ -276,7 +276,7 @@ static void print_atqb_resp(uint8_t *data, uint8_t cid){
 	PrintAndLog(" Frame Options: CID is %ssupported",(data[6]&1) ? "" : "not ");
 	PrintAndLog("Tag :");
 	PrintAndLog("  Max Buf Length: %u (MBLI) %s", cid>>4, (cid & 0xF0) ? "" : "chained frames not supported");
-	PrintAndLog("  CDI : %u", cid & 0x0f);
+	PrintAndLog("  CID : %u", cid & 0x0f);
 	return;
 }
 
@@ -433,7 +433,6 @@ bool HF14BInfo(bool verbose){
 
 	// try unknown 14b read commands (to be identified later)
 	//   could be read of calypso, CEPAS, moneo, or pico pass.
-
 	if (verbose) PrintAndLog("no 14443B tag found");
 	return false;
 }
@@ -460,6 +459,7 @@ bool HF14B_ST_Reader(bool verbose){
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
 		if (verbose) PrintAndLog("timeout while waiting for reply.");
+		switch_off_field_14b();
 		return false;
     }
 	
@@ -503,6 +503,7 @@ bool HF14B_Std_Reader(bool verbose){
 	
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
 		if (verbose) PrintAndLog("timeout while waiting for reply.");
+		switch_off_field_14b();		
 		return false;
     }
 	
@@ -603,7 +604,7 @@ bool HF14BReader(bool verbose){
 	if (HF14B_ST_Reader(verbose)) return true;
 
 	// try unknown 14b read commands (to be identified later)
-	//   could be read of calypso, CEPAS, moneo, or pico pass.
+	// could be read of calypso, CEPAS, moneo, or pico pass.
 	if (HF14B_Other_Reader()) return true;
 
 	if (verbose) PrintAndLog("no 14443B tag found");
