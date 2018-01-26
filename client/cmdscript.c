@@ -123,12 +123,13 @@ int CmdScriptRun(const char *Cmd) {
 
     int name_len = 0;
     int arg_len = 0;
-    sscanf(Cmd, "%127s%n %255[^\n\r]%n", script_name,&name_len, arguments, &arg_len);
+    sscanf(Cmd, "%127s%n %255[^\n\r]%n", script_name, &name_len, arguments, &arg_len);
 
     char *suffix = "";
-    if (!endsWith(script_name,".lua"))
+    if (!endsWith(script_name, ".lua")) {
         suffix = ".lua";
-
+	}
+	
 	char script_path[strlen(get_my_executable_directory()) + strlen(LUA_SCRIPTS_DIRECTORY) + strlen(script_name) + strlen(suffix) + 1];
 	strcpy(script_path, get_my_executable_directory());
 	strcat(script_path, LUA_SCRIPTS_DIRECTORY);

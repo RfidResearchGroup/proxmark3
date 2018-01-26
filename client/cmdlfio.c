@@ -148,7 +148,7 @@ int CmdIOProxDemod(const char *Cmd) {
 	uint8_t facilitycode = bytebits_to_byte(bits+idx+18,8) ;
 	uint16_t number = (bytebits_to_byte(bits+idx+36,8)<<8)|(bytebits_to_byte(bits+idx+45,8)); //36,9
 	uint8_t crc = bytebits_to_byte(bits+idx+54,8);
-	uint16_t calccrc = 0;
+	uint8_t calccrc = 0;
 
 	for (uint8_t i = 1; i < 6; ++i){
 		calccrc += bytebits_to_byte(bits + idx + 9 * i ,8);
