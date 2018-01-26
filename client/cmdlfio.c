@@ -156,7 +156,7 @@ int CmdIOProxDemod(const char *Cmd) {
 	calccrc &= 0xff;
 	calccrc = 0xff - calccrc;
 
-	char crcStr[20];
+	char crcStr[30];
 	memset(crcStr, 0x00, sizeof(crcStr) );
 	
 	if (crc == calccrc) {
@@ -165,7 +165,7 @@ int CmdIOProxDemod(const char *Cmd) {
 	} else {
 		if (g_debugMode) PrintAndLog("DEBUG: Error - IO prox crc failed");
 			
-		snprintf(crcStr, 20, "failed 0x%02X != 0x%02X", crc, calccrc);
+		snprintf(crcStr, sizeof(crcStr), "failed 0x%02X != 0x%02X", crc, calccrc);
 		retval = 0;
 	}
 
