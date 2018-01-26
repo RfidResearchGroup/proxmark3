@@ -897,9 +897,9 @@ int CmdHF14AMfNested(const char *Cmd) {
 				if (transferToEml) {
 					uint8_t sectortrailer;
 					if (trgBlockNo < 32*4) { 	// 4 block sector
-						sectortrailer = (trgBlockNo & 0x03) + 3;
+						sectortrailer = (trgBlockNo & ~0x03) + 3;
 					} else {					// 16 block sector
-						sectortrailer = (trgBlockNo & 0x0f) + 15;
+						sectortrailer = (trgBlockNo & ~0x0f) + 15;
 					}
 					mfEmlGetMem(keyBlock, sectortrailer, 1);
 			
@@ -2105,11 +2105,7 @@ int CmdHF14AMfESet(const char *Cmd) {
 	}
 	
 	//  1 - blocks count
-	UsbCommand cmd = {CMD_MIFARE_EML_MEMSET, {blockNo, 1, 0}};
-	memcpy(cmd.d.asBytes, memBlock, 16);
-	clearCommandBuffer();
-	SendCommand(&cmd);
-	return 0;
+	return mfEmlSetMem(memBlock, blockNo, 1);
 }
 
 int CmdHF14AMfELoad(const char *Cmd) {
