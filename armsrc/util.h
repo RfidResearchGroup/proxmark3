@@ -42,6 +42,10 @@
 size_t nbytes(size_t nbits);
 uint32_t SwapBits(uint32_t value, int nrbits);
 uint32_t reflect(uint32_t v, int b);
+
+// dedicated 8bit reversal
+uint8_t reflect8(uint8_t b);
+
 void num_to_bytes(uint64_t n, size_t len, uint8_t* dest);
 uint64_t bytes_to_num(uint8_t* src, size_t len);
 void rol(uint8_t *data, const size_t len);

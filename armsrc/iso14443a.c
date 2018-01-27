@@ -2503,7 +2503,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 			if (nt_diff == 0  && first_try)
 				par_low = par[0] & 0xE0; // there is no need to check all parities for other nt_diff. Parity Bits for mf_nr_ar[0..2] won't change
 
-			par_list[nt_diff] = SwapBits(par[0], 8);
+			par_list[nt_diff] = reflect8(par[0]);
 			ks_list[nt_diff] = receivedAnswer[0] ^ 0x05;  // xor with NACK value to get keystream
 
 			// Test if the information is complete

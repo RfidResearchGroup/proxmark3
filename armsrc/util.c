@@ -13,14 +13,19 @@ size_t nbytes(size_t nbits) {
 	return (nbits >> 3)+((nbits % 8) > 0);
 }
 
-uint32_t SwapBits(uint32_t value, int nrbits) {
+// Swap bit order on a uint32_t value.  Can be limited by 'b' just use say 8 bits reversal
+// note: function clears the rest of the bits.
+uint32_t SwapBits(uint32_t v, int b) {
 	uint32_t newvalue = 0;
-	for(int i = 0; i < nrbits; i++) {
-		newvalue ^= ((value >> i) & 1) << (nrbits - 1 - i);
+	for(int i = 0; i < b; i++) {
+		newvalue ^= ((v >> i) & 1) << (b - 1 - i);
 	}
 	return newvalue;
 }
 
+uint8_t reflect8(uint8_t b) {
+	return ((b * 0x80200802ULL) & 0x0884422110ULL) * 0x0101010101ULL >> 32;
+}
 /*
  ref  http://www.csm.ornl.gov/~dunigan/crc.html
  Returns the value v with the bottom b [0,32] bits reflected. 
