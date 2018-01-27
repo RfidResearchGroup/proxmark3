@@ -105,7 +105,7 @@ uint32_t CRC8Mad(uint8_t *buff, size_t size) {
 	crc_init_ref(&crc, 8, 0x1d, 0xe3, 0, true, true);
 	for ( int i = 0; i < size; ++i)
 		crc_update2(&crc, buff[i], 8);
-	return reflect(crc_finish(&crc), 8);
+	return reflect8(crc_finish(&crc));
 }
 // width=4  poly=0xC, reversed poly=0x7  init=0x5   refin=true  refout=true  xorout=0x0000  check=  name="CRC-4/LEGIC"
 uint32_t CRC4Legic(uint8_t *cmd, size_t size) {
@@ -123,7 +123,7 @@ uint32_t CRC8Legic(uint8_t *buff, size_t size) {
 	crc_init_ref(&crc, 8, 0x63, 0x55, 0, true, true);
 	for ( int i = 0; i < size; ++i)
 		crc_update2(&crc, buff[i], 8);
-	return reflect(crc_finish(&crc), 8);
+	return reflect8(crc_finish(&crc));
 }
 
 // This CRC-16 is used in Legic Advant systems. 
@@ -138,7 +138,7 @@ uint32_t CRC16Legic(uint8_t *buff, size_t size, uint8_t uidcrc) {
 	crc_init_ref(&crc, 16, CRC16_POLY_LEGIC, initial, 0, true, true);
 	for ( int i=0; i < size; ++i)
 		crc_update(&crc, buff[i], 8);
-	return reflect(crc_finish(&crc), 16);
+	return reflect16(crc_finish(&crc));
 }
 
 //w=16  poly=0x3d65  init=0x0000  refin=true  refout=true  xorout=0xffff  check=0xea82  name="CRC-16/DNP"
@@ -165,7 +165,7 @@ uint32_t CRC16_Iso15693(uint8_t *buff, size_t size) {
 	crc_init_ref(&crc, 16, 0x8408, 0xFFFF, 0xFFFF, true, false);	
 	for ( int i=0; i < size; ++i)
 		crc_update(&crc, buff[i], 8);
-	return reflect(crc_finish(&crc), 16);
+	return reflect16(crc_finish(&crc));
 }
 //width=16  poly=0x8408  init=0xffff  refin=true  refout=true  xorout=0x0BC3  check=0xF0B8  name="CRC-16/ICLASS"
 uint32_t CRC16_ICLASS(uint8_t *buff, size_t size) {

@@ -28,7 +28,6 @@ uint16_t Iso15693Crc(uint8_t *v, int n)
 			}
 		}
 	}
-
 	return ~(uint16_t)(reg & 0xffff);
 }
 
