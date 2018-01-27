@@ -319,6 +319,9 @@ void AcquireTiType(void)
 			}
 		}
 	}
+	
+	// reset SSC
+	FpgaSetupSsc();
 }
 
 // arguments: 64bit data split into 32bit idhi:idlo and optional 16bit crc
