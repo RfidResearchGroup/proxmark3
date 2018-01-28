@@ -18,11 +18,9 @@
 #define	CRC_14443_B	0xFFFF  /* ISO/IEC 13239 (formerly ISO/IEC 3309) */
 #define CRC_ICLASS	0xE012  /* ICLASS PREFIX */
 
-unsigned short UpdateCrc14443(unsigned char ch, unsigned short *lpwCrc);
-void ComputeCrc14443(int CrcType,
-                     const unsigned char *Data, int Length,
-                     unsigned char *TransmitFirst,
-                     unsigned char *TransmitSecond);
-int CheckCrc14443(int CrcType, const unsigned char *Data, int Length);
+uint16_t UpdateCrc14443(uint8_t b, uint16_t *crc);
+void ComputeCrc14443(uint16_t CrcType, const uint8_t *data, int length,
+                     uint8_t *TransmitFirst, uint8_t *TransmitSecond);
+bool CheckCrc14443(uint16_t CrcType, const uint8_t *data, int length);
 
 #endif
