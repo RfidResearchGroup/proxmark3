@@ -8,6 +8,8 @@
 // Analyse bytes commands
 //-----------------------------------------------------------------------------
 #include "cmdanalyse.h"
+#include "iso15693tools.h"
+#include "util_posix.h" // msclock
 
 static int CmdHelp(const char *Cmd);
 
@@ -275,16 +277,17 @@ int CmdAnalyseCRC(const char *Cmd) {
 	}
 	len >>= 1;	
 
-	//PrintAndLog("\nTests with '%s' hex bytes", sprint_hex(data, len));
+	PrintAndLog("\nTests with | %s", sprint_hex(data, len));
 	
-	PrintAndLog("\nTests of reflection. Two current methods in source code");	
+	PrintAndLog("\nTests of reflection. Current methods in source code");	
 	PrintAndLog("   reflect(0x3e23L,3) is %04X == 0x3e26", reflect(0x3e23L,3) );
-	PrintAndLog("  SwapBits(0x3e23L,3) is %04X == 0x3e26", SwapBits(0x3e23L,3) );
-	PrintAndLog("  0xB400 == %04X", reflect( (1 << 16 | 0xb400),16) );
-
+	PrintAndLog("       reflect8(0x80) is %02X == 0x01", reflect8(0x80));
+	PrintAndLog("    reflect16(0x8000) is %04X == 0x0001", reflect16(0x8000));
 	//
 	// Test of CRC16,  '123456789' string.
 	//
+	uint8_t b1, b2;
+	
 	PrintAndLog("\nTests with '123456789' string");
 	uint8_t dataStr[] = { 0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39 };
 	uint8_t legic8 = CRC8Legic(dataStr, sizeof(dataStr));
@@ -293,20 +296,35 @@ int CmdAnalyseCRC(const char *Cmd) {
 
 	//these below has been tested OK.
 	PrintAndLog("Confirmed CRC Implementations");
+	printf("\n");
 	PrintAndLog("LEGIC: CRC8 : %X (0xC6 expected)", legic8);
 	PrintAndLog("MAXIM: CRC8 : %X (0xA1 expected)", CRC8Maxim(dataStr, sizeof(dataStr)));
 	PrintAndLog("DNP  : CRC16: %X (0x82EA expected)", CRC16_DNP(dataStr, sizeof(dataStr)));	
 	PrintAndLog("CCITT: CRC16: %X (0xE5CC expected)", CRC16_CCITT(dataStr, sizeof(dataStr)));
+	PrintAndLog("ICLASS org: CRC16: %X (0x expected)", iclass_crc16( dataStr, sizeof(dataStr)));
+	
+	// ISO14443 crc A
+	uint16_t crcA = crc16_a(dataStr, sizeof(dataStr));
+	ComputeCrc14443(CRC_14443_A, dataStr, sizeof(dataStr), &b1, &b2);
+	uint16_t crcAA = b1 << 8 | b2;
+	printf("ISO14443 crc A   | %04x == %04x\n", crcA, crcAA);
+	
+	// ISO14443 crc B
+	uint16_t crcB = crc16_a(dataStr, sizeof(dataStr));
+	ComputeCrc14443(CRC_14443_B, dataStr, sizeof(dataStr)-2, &b1, &b2);	
+	uint16_t crcBB = b1 << 8 | b2;
+	printf("ISO14443 crc B   | %04x == %04x\n", crcB, crcBB);
 
-	PrintAndLog("ICLASS org: CRC16: %X (0x expected)",iclass_crc16( (char*)dataStr, sizeof(dataStr)));
-	PrintAndLog("ICLASS ice: CRC16: %X (0x expected)",CRC16_ICLASS(dataStr, sizeof(dataStr)));
+	// ISO15693 crc  (x.25)
+	uint16_t x25 = crc16_x25(dataStr, sizeof(dataStr));
+	uint16_t iso = Iso15693Crc(dataStr, sizeof(dataStr));
+	printf("ISO15693 crc X25 | %04x == %04x\n", iso, x25 );
 
-
-
-	uint8_t dataStr1234[] = { 0x1,0x2,0x3,0x4};
-	PrintAndLog("ISO15693 org:  : CRC16: %X (0xF0B8 expected)", Iso15693Crc(dataStr1234, sizeof(dataStr1234)));
-	PrintAndLog("ISO15693 ice:  : CRC16: %X (0xF0B8 expected)", CRC16_Iso15693(dataStr1234, sizeof(dataStr1234)));
-
+	// ICLASS (
+	uint16_t iclass = crc16_iclass(dataStr, sizeof(dataStr));
+	uint16_t iclass_org = iclass_crc16(dataStr, sizeof(dataStr));
+	printf("ICLASS crc       | %04x == %04x\n", iclass, iclass_org);
+	
 	free(data);
 	return 0;
 }
@@ -417,7 +435,150 @@ int CmdAnalyseTEASelfTest(const char *Cmd){
 }
 
 int CmdAnalyseA(const char *Cmd){
+
+	uint8_t b1, b2;
+
+	// 14 a
+	uint8_t halt[] = {0x50 , 0x00, 0x57, 0xcd }; //halt w crc
+	uint8_t atqs[] = {0x09, 0x78, 0x00, 0x92, 0x02, 0x54, 0x13, 0x02, 0x04, 0x2d, 0xe8 }; // atqs w crc	
+	ComputeCrc14443(CRC_14443_A, halt, sizeof(halt), &b1, &b2);
+	printf("14a crc halt == 0  [%s]\n", (b1==0 && b2==0) ? "YES": "NO" );
+	ComputeCrc14443(CRC_14443_A, atqs, sizeof(atqs), &b1, &b2);
+	printf("14a crc ATQS == 0  [%s]\n", (b1==0 && b2==0) ? "YES": "NO" );
 	
+	// 14b
+	uint8_t u14b[] = {0x05,0x00,0x08,0x39,0x73};
+	ComputeCrc14443(CRC_14443_B, u14b, sizeof(u14b), &b1, &b2);
+	printf("14b crc u14b == 0  [%s] %02x %02x\n", (b1==0 && b2==0) ? "YES": "NO" , b1,b2);	
+	ComputeCrc14443(CRC_14443_B, u14b, sizeof(u14b)-2, &b1, &b2);
+	printf("14b crc u14b == 0  [%s] %02x %02x\n", (b1==0 && b2==0) ? "YES": "NO" , b1,b2);	
+	
+	uint8_t data[] = {0x30,0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39};
+	uint16_t kermit = crc16_kermit(data, sizeof(data));
+	uint16_t xmodem = crc16_xmodem(data, sizeof(data));
+
+
+	printf(">>>  KERMIT 5F6E | XMODEM 9C58 <<<\n");
+	printf("            %04X | XMODEM %04X \n", kermit, xmodem);
+
+	printf("\n\n");	
+	return 0;
+	
+	time_t t;
+	srand((unsigned) time(&t));
+	uint64_t t1 = msclock();
+	// test CRC-A etc
+	for (int foo=0; foo < 10000000; foo++) {
+		crc16_a(data, sizeof(data));
+		data[1] = rand();
+		data[2] = rand();
+		data[3] = rand();
+		data[4] = rand();
+	}
+	t1 = msclock() - t1; printf("ticks crc_a  %" PRIu64 "\n", t1);
+	
+	t1 = msclock();
+	for (int foo=0; foo < 10000000; foo++) {
+		ComputeCrc14443(CRC_14443_A, data, sizeof(data), &b1, &b2);
+		data[1] = rand();
+		data[2] = rand();
+		data[3] = rand();
+		data[4] = rand();	}
+	t1 = msclock() - t1; printf("ticks curr CRC-a  %" PRIu64 "\n", t1);
+	
+	// test ISO15693 crc
+	t1 = msclock();
+	for (int foo=0; foo < 10000000; foo++) {
+		crc16_x25(data, sizeof(data));
+		data[1] = rand();
+		data[2] = rand();
+		data[3] = rand();
+		data[4] = rand();
+	}
+	t1 = msclock() - t1; printf("ticks x25  %" PRIu64 "\n", t1);
+	
+	t1 = msclock();
+	for (int foo=0; foo < 10000000; foo++) {
+		Iso15693Crc(data, sizeof(data));
+		data[1] = rand();
+		data[2] = rand();
+		data[3] = rand();
+		data[4] = rand();	}
+	t1 = msclock() - t1; printf("ticks curr iso15 (x25)  %" PRIu64 "\n", t1);	
+
+	return 0;
+	
+	uint16_t v = 1;
+	for(uint8_t i = 0; i < 16; i++) {
+		
+		uint16_t r = reflect16(v);		
+		
+		printf(" 0x%04x <-> 0x%04x  | ", v, r);
+		for(uint8_t i = 0; i < 16; i++) {
+			printf("%c", (v & (1 << i) ) ? '1':'0');
+		}
+		printf("  |  ");
+		for(uint8_t i = 0; i < 16; i++) {
+			printf("%c", (r & (1 << i) ) ? '1':'0');
+		}
+		printf("\n");
+		v <<= 1;
+	}
+	uint8_t b = 1;
+	for(uint8_t i = 0; i < 8; i++) {
+		uint8_t r = reflect8(b);
+		printf(" 0x%02x <-> 0x%02x  | ", b, r);
+		for(uint8_t i = 0; i < 8; i++) {
+			printf("%c", (b & (1 << i) ) ? '1':'0');
+		}
+		printf("  |  ");
+		for(uint8_t i = 0; i < 8; i++) {
+			printf("%c", (r & (1 << i) ) ? '1':'0');
+		}
+		printf("\n");
+		b <<= 1;		
+	}
+
+	// 16bit test
+
+	uint8_t md;
+	uint32_t mb, mc;
+
+	// reflect
+	t1 = msclock();
+	for (int foo=0; foo < 10000000; foo++) {
+		mb = rand();
+		reflect(mb, 16);
+	}
+	t1 = msclock() - t1; printf("ticks reflect  %" PRIu64 "\n", t1);
+	
+	// reflect16
+	t1 = msclock();
+	for (int foo=0; foo < 10000000; foo++) {
+		mc = rand();
+		reflect16(mc);	
+	}
+	t1 = msclock() - t1; printf("ticks reflect16  %" PRIu64 "\n", t1);
+	//---------------------------------------------------------
+	
+	// reflect
+	t1 = msclock();
+	for (int foo=0; foo < 10000000; foo++) {
+		md = rand();
+		reflect(md, 8);
+	}
+	t1 = msclock() - t1; printf("ticks reflect _8_ %" PRIu64 "\n", t1);
+	
+	// reflect8
+	t1 = msclock();
+	for (int foo=0; foo < 10000000; foo++) {
+		md = rand();
+		reflect8(md);	
+	}
+	t1 = msclock() - t1; printf("ticks reflect8  %" PRIu64 "\n", t1);
+
+	return 0;
+	/*
 	bool term = !isatty(STDIN_FILENO);
 	if (!term) {
 		char star[4];
@@ -435,6 +596,7 @@ int CmdAnalyseA(const char *Cmd){
 			}
 		}
 	}
+	*/
 	
 //piwi
 // uid(2e086b1a) nt(230736f6) ks(0b0008000804000e) nr(000000000)

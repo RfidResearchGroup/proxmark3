@@ -30,7 +30,7 @@ uint16_t update_crc16( uint16_t crc, uint8_t c ) {
 // two ways.
 // msb or lsb loop.
 //
-uint16_t crc16(uint8_t const *d, int length, uint16_t remainder, uint16_t polynomial, bool refin, bool refout) {
+uint16_t crc16(uint8_t const *d, size_t length, uint16_t remainder, uint16_t polynomial, bool refin, bool refout) {
     
 	if (length == 0)
         return (~remainder);
@@ -63,35 +63,44 @@ uint16_t crc16(uint8_t const *d, int length, uint16_t remainder, uint16_t polyno
 	
     return remainder;
 }
-uint16_t crc16_ccitt(uint8_t const *d, int n) {
+uint16_t crc16_ccitt(uint8_t const *d, size_t n) {
     return crc16(d, n, 0xffff, CRC16_POLY_CCITT, false, false);
 }
 //poly=0x1021  init=0x0000  refin=true  refout=true  xorout=0x0000 name="KERMIT"
-uint16_t crc16_ccitt_kermit(uint8_t const *message, int length){
-	return crc16_kermit(message, length);
+uint16_t crc16_ccitt_kermit(uint8_t const *d, size_t n){
+	return crc16_kermit(d, n);
 }
-uint16_t crc16_kermit(uint8_t const *d, int n) {
+uint16_t crc16_kermit(uint8_t const *d, size_t n) {
 	return crc16(d, n, 0x0000, CRC16_POLY_CCITT, true, true);
 }
 //FeliCa uses XMODEM
 //poly=0x1021  init=0x0000  refin=false  refout=false  xorout=0x0000 name="XMODEM"
-uint16_t crc16_xmodem(uint8_t const *d, int n) {
+uint16_t crc16_xmodem(uint8_t const *d, size_t n) {
 	return crc16(d, n, 0x0000, CRC16_POLY_CCITT, false, false); 
 }
 //ISO 15693 uses X-25, CRC_B  (or 14443-3 )
 //poly=0x1021  init=0xffff  refin=true  refout=true  xorout=0xffff name="X-25"
-uint16_t crc16_x25(uint8_t const *d, int n) {	
+uint16_t crc16_x25(uint8_t const *d, size_t n) {	
 	uint16_t crc = crc16(d, n, 0xffff, CRC16_POLY_CCITT, true, true);
 	crc ^= 0xFFFF;
 	return crc;
 }
 //CRC-A  (14443-3)
 //poly=0x1021 init=0xc6c6 refin=true refout=true xorout=0x0000 name="CRC-A"
-uint16_t crc16_a(uint8_t const *d, int n) {	
+uint16_t crc16_a(uint8_t const *d, size_t n) {	
 	return crc16(d, n, 0xc6c6, 0x1021, true, true);
 }
 
-bool check_crc16_ccitt(uint8_t const *d, int n) {
+//width=16  poly=0x8408  init=0xffff  refin=true  refout=true  xorout=0x0BC3  check=0xF0B8  name="CRC-16/ICLASS"
+uint16_t crc16_iclass(uint8_t const *d, size_t n) {
+	uint16_t crc = crc16(d, n, 0xffff, CRC16_POLY_CCITT, true, true);
+	crc ^= 0x0BC3;
+	return crc;
+}
+
+
+// CHECK functions.
+bool check_crc16_ccitt(uint8_t const *d, size_t n) {
 	if (n < 3) return false;
 
 	uint16_t crc = crc16_ccitt(d, n - 2);	

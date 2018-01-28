@@ -21,6 +21,7 @@
 #include "crc.h"
 #include "iso15693tools.h"	//
 #include "iso14443crc.h"	// crc 14a
+#include "crc16.h"			// crc16 ccitt
 #include "tea.h"
 #include "legic_prng.h"
 #include "loclass/elite_crack.h"

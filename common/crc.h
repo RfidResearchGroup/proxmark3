@@ -70,8 +70,6 @@ uint32_t CRC16Legic(uint8_t *buff, size_t size, uint8_t uidcrc);
 // test crc 16.
 uint32_t CRC16_DNP(uint8_t *buff, size_t size);
 uint32_t CRC16_CCITT(uint8_t *buff, size_t size);
-uint32_t CRC16_Iso15693(uint8_t *buff, size_t size);
-uint32_t CRC16_ICLASS(uint8_t *buff, size_t size);
 
 /* Static initialization of a crc structure */
 #define CRC_INITIALIZER(_order, _polynom, _initial_value, _final_xor) { \

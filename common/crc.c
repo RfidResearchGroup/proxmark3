@@ -70,7 +70,8 @@ void crc_update(crc_t *crc, uint32_t data, int data_width)
 
 uint32_t crc_finish(crc_t *crc) {
 	uint32_t val = crc->state;
-	if (crc->refout) val = reflect(val, crc->order);
+	if (crc->refout) 
+		val = reflect(val, crc->order);
 	return ( val ^ crc->final_xor ) & crc->mask;
 }
 
@@ -155,23 +156,6 @@ uint32_t CRC16_DNP(uint8_t *buff, size_t size) {
 uint32_t CRC16_CCITT(uint8_t *buff, size_t size) {
 	crc_t crc;
 	crc_init(&crc, 16, 0x1021, 0x1d0f, 0);	
-	for ( int i=0; i < size; ++i)
-		crc_update(&crc, buff[i], 8);
-	return  crc_finish(&crc);
-}
-//width=16  poly=0x8408  init=0xffff  refin=false  refout=true  xorout=0xffff  check=0xF0B8  name="CRC-16/ISO/IEC 13239"
-uint32_t CRC16_Iso15693(uint8_t *buff, size_t size) {
-	crc_t crc;
-	crc_init_ref(&crc, 16, 0x8408, 0xFFFF, 0xFFFF, true, false);	
-	for ( int i=0; i < size; ++i)
-		crc_update(&crc, buff[i], 8);
-	return reflect16(crc_finish(&crc));
-}
-//width=16  poly=0x8408  init=0xffff  refin=true  refout=true  xorout=0x0BC3  check=0xF0B8  name="CRC-16/ICLASS"
-uint32_t CRC16_ICLASS(uint8_t *buff, size_t size) {
-
-	crc_t crc;
-	crc_init_ref(&crc, 16, 0x8408, 0xFFFF, 0x0BC3, false, false);	
 	for ( int i=0; i < size; ++i)
 		crc_update(&crc, buff[i], 8);
 	return  crc_finish(&crc);

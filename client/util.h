@@ -202,7 +202,6 @@ extern int32_t le24toh (uint8_t data[3]);
 
 extern uint32_t PackBits(uint8_t start, uint8_t len, uint8_t* bits);
 extern void rol(uint8_t *data, const size_t len);
-extern uint32_t SwapBits(uint32_t value, int nrbits);
 extern uint32_t reflect(uint32_t v, int b);
 extern uint8_t reflect8(uint8_t b);		// dedicated 8bit reversal
 extern uint16_t reflect16(uint16_t b);	// dedicated 16bit reversal
