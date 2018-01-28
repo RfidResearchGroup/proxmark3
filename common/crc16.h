@@ -20,7 +20,6 @@ uint16_t update_crc16(uint16_t crc, uint8_t c);
 uint16_t crc16(uint8_t const *message, size_t length, uint16_t remainder, uint16_t polynomial, bool refin, bool refout);
 
 uint16_t crc16_ccitt(uint8_t const *d, size_t n);
-uint16_t crc16_ccitt_kermit(uint8_t const *d, size_t n);
 uint16_t crc16_kermit(uint8_t const *d, size_t n);
 uint16_t crc16_xmodem(uint8_t const *d, size_t n);
 uint16_t crc16_x25(uint8_t const *d, size_t n);

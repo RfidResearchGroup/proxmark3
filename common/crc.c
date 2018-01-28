@@ -128,7 +128,7 @@ uint32_t CRC8Legic(uint8_t *buff, size_t size) {
 }
 
 // This CRC-16 is used in Legic Advant systems. 
-// width=8  poly=0xB400, reversed poly=0x  init=depends  refin=true  refout=true  xorout=0x0000  check=  name="CRC-16/LEGIC"
+// poly=0xB400, reversed poly=0x  init=depends  refin=true  refout=true  xorout=0x0000  check=  name="CRC-16/LEGIC"
 uint32_t CRC16Legic(uint8_t *buff, size_t size, uint8_t uidcrc) {
 
 	#define CRC16_POLY_LEGIC 0xB400
@@ -142,7 +142,7 @@ uint32_t CRC16Legic(uint8_t *buff, size_t size, uint8_t uidcrc) {
 	return reflect16(crc_finish(&crc));
 }
 
-//w=16  poly=0x3d65  init=0x0000  refin=true  refout=true  xorout=0xffff  check=0xea82  name="CRC-16/DNP"
+// poly=0x3d65  init=0x0000  refin=true  refout=true  xorout=0xffff  check=0xea82  name="CRC-16/DNP"
 uint32_t CRC16_DNP(uint8_t *buff, size_t size) {
 	crc_t crc;
 	crc_init_ref(&crc, 16, 0x3d65, 0, 0xffff, true, true);
@@ -152,7 +152,7 @@ uint32_t CRC16_DNP(uint8_t *buff, size_t size) {
 	return BSWAP_16(crc_finish(&crc));
 }
 
-//width=16  poly=0x1021  init=0x1d0f  refin=false  refout=false  xorout=0x0000  check=0xe5cc  name="CRC-16/AUG-CCITT"
+// poly=0x1021  init=0x1d0f  refin=false  refout=false  xorout=0x0000  check=0xe5cc  name="CRC-16/AUG-CCITT"
 uint32_t CRC16_CCITT(uint8_t *buff, size_t size) {
 	crc_t crc;
 	crc_init(&crc, 16, 0x1021, 0x1d0f, 0);	

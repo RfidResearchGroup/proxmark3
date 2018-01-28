@@ -67,9 +67,6 @@ uint16_t crc16_ccitt(uint8_t const *d, size_t n) {
     return crc16(d, n, 0xffff, CRC16_POLY_CCITT, false, false);
 }
 //poly=0x1021  init=0x0000  refin=true  refout=true  xorout=0x0000 name="KERMIT"
-uint16_t crc16_ccitt_kermit(uint8_t const *d, size_t n){
-	return crc16_kermit(d, n);
-}
 uint16_t crc16_kermit(uint8_t const *d, size_t n) {
 	return crc16(d, n, 0x0000, CRC16_POLY_CCITT, true, true);
 }

@@ -127,7 +127,7 @@ int getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t
 	for (uint8_t i=0; i<8; ++i)
 		raw[i] = bytebits_to_byte(bits + 11 + i * 9, 8);
 		
-	uint16_t crc = crc16_ccitt_kermit(raw, 8);
+	uint16_t crc = crc16_kermit(raw, 8);
 	num_to_bytebitsLSBF(crc >> 0, 8, bits+83);
 	num_to_bytebitsLSBF(crc >> 8, 8, bits+92);
 	
@@ -211,7 +211,7 @@ int CmdFDXBdemodBI(const char *Cmd){
 
 	if (g_debugMode) PrintAndLog("Raw ID Hex: %s", sprint_hex(raw,8));
 
-	uint16_t calcCrc = crc16_ccitt_kermit(raw, 8);
+	uint16_t calcCrc = crc16_kermit(raw, 8);
 	PrintAndLog("Animal ID:     %04u-%012" PRIu64, countryCode, NationalCode);
 	PrintAndLog("National Code: %012" PRIu64, NationalCode);
 	PrintAndLog("CountryCode:   %04u", countryCode);
@@ -279,7 +279,7 @@ int CmdFdxDemod(const char *Cmd) {
 	num_to_bytes(rawid, 8, raw);
 
 
-	uint16_t calcCrc = crc16_ccitt_kermit(raw, 8);
+	uint16_t calcCrc = crc16_kermit(raw, 8);
 	
 	PrintAndLog("\nFDX-B / ISO 11784/5 Animal Tag ID Found:  Raw : %s", sprint_hex(raw, 8));
 	PrintAndLog("Animal ID          %04u-%012" PRIu64, countryCode, NationalCode);
