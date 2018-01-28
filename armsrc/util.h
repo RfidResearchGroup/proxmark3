@@ -41,6 +41,7 @@
 
 size_t nbytes(size_t nbits);
 
+extern uint32_t reflect(uint32_t v, int b); // used in crc.c ...
 extern uint8_t reflect8(uint8_t b);		// dedicated 8bit reversal
 extern uint16_t reflect16(uint16_t b);	// dedicated 16bit reversal
 
