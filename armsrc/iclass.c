@@ -49,6 +49,7 @@
 
 static int timeout = 4096;
 static int SendIClassAnswer(uint8_t *resp, int respLen, uint16_t delay);
+int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf);
 
 #define MODE_SIM_CSN        0
 #define MODE_EXIT_AFTER_MAC 1
@@ -64,12 +65,11 @@ static int SendIClassAnswer(uint8_t *resp, int respLen, uint16_t delay);
 	#define ICLASS_BUFFER_SIZE 32
 #endif
 
-int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf);
-
 //-----------------------------------------------------------------------------
 // The software UART that receives commands from the reader, and its state
 // variables.
 //-----------------------------------------------------------------------------
+/*
 typedef struct {
     enum {
         STATE_UNSYNCD,
@@ -92,7 +92,7 @@ typedef struct {
     int     dropPosition;
     uint8_t *output;
 } tUart;
-
+*/
 typedef struct {
     enum {
         DEMOD_UNSYNCD,
@@ -111,9 +111,9 @@ typedef struct {
     int     posCount;
 	int     syncBit;
     uint16_t    shiftReg;
-	int     buffer;
-	int     buffer2;
-	int		buffer3;
+	uint32_t buffer;
+	uint32_t buffer2;
+	uint32_t buffer3;
 	int     buff;
 	int     samples;
     int     len;
@@ -126,7 +126,133 @@ typedef struct {
     uint8_t   *output;
 } tDemod;
 
+/*
+* Abrasive's uart implementation
+* https://github.com/abrasive/proxmark3/commit/2b8bff7daea8ae1193bf7ee29b1fa46e95218902
+*/
+// Static vars for UART
+typedef struct {
+	bool synced;
+	bool frame;
+	bool frame_done;
+	uint8_t *buf;
+	int len;
+} tUart;
 static tUart Uart;
+
+static void uart_reset(void){
+	Uart.frame_done = false;
+	Uart.synced = false;
+	Uart.frame = false;
+}
+static void uart_init(uint8_t *data){
+	Uart.buf = data;
+	uart_reset();
+}
+static void uart_bit(uint8_t bit) {
+    static uint8_t buf = 0xff;
+    static uint8_t n_buf;
+    static uint8_t msg_byte;
+    static int nmsg_byte;
+    buf <<= 1;
+    buf |= bit ? 1 : 0;
+
+    if (!Uart.frame) {
+        if (buf == 0x7b) {	// 0b0111 1011
+            Uart.frame = true;
+            n_buf = 0;
+            Uart.len = 0;
+            nmsg_byte = 0;
+        }
+    } else {
+        n_buf++;
+        if (n_buf == 8) {
+            msg_byte >>= 2;
+            switch (buf) {
+                case 0xbf:    // 0 - 1011 1111
+                    break;
+                case 0xef:    // 1 - 1110 1111 
+                    msg_byte |= (1<<6);
+                    break;
+                case 0xfb:    // 2 - 1111 1011
+                    msg_byte |= (2<<6);
+                    break;
+                case 0xfe:    // 3 - 1111 1110
+                    msg_byte |= (3<<6);
+                    break;
+                case 0xdf:    // eof - 1101 1111
+                    Uart.frame = false;
+                    Uart.synced = false;
+                    Uart.frame_done = true;
+                    break;
+                default:
+                    Uart.frame = false;
+					Uart.synced = false;
+                    Dbprintf("[-] bad %02X at %d:%d", buf, Uart.len, nmsg_byte);
+            }
+
+            if (Uart.frame) {   // data bits
+                nmsg_byte += 2;
+                if (nmsg_byte >= 8) {
+                    Uart.buf[Uart.len++] = msg_byte;
+                    nmsg_byte = 0;
+                }
+            }
+            n_buf = 0;
+            buf = 0xff;
+        }
+    }
+}
+
+static void uart_samples(uint8_t byte) {
+    static uint32_t buf;
+    static int window;
+    static int drop_next = 0;
+
+    uint32_t falling;
+    int lz;
+
+    if (!Uart.synced) {
+        if (byte == 0xFF)
+            return;
+        buf = 0xFFFFFFFF;
+        window = 0;
+        drop_next = 0;
+        Uart.synced = true;
+    }
+
+    buf <<= 8;
+    buf |= byte;
+
+    if (drop_next) {
+        drop_next = 0;
+        return;
+    }
+
+again:
+    falling = ~buf & ((buf >> 1) ^ buf) & (0xFF << window);
+
+    uart_bit(!falling);
+
+    if (!falling)
+        return;
+
+    lz = __builtin_clz(falling) - 24 + window;
+
+    // aim to get falling edge on fourth-leftmost bit of window
+    window += 3 - lz;
+
+    if (window < 0) {
+        window += 8;
+        drop_next = 1;
+    } else if (window >= 8) {
+        window -= 8;
+        goto again;
+    }
+}
+
+
+/*
 static void UartReset(){
 	Uart.state = STATE_UNSYNCD;
 	Uart.shiftReg = 0;
@@ -143,17 +269,14 @@ static void UartReset(){
     Uart.bitBuffer = 0;
     Uart.dropPosition = 0;
 }
-static void UartInit(uint8_t *data){
-	Uart.output = data;
-	UartReset();
-}
-
+*/
 
 /*
 * READER TO CARD
 *  1 out of 4 Decoding
 *  1 out of 256 Decoding
 */
+/*
 static RAMFUNC int OutOfNDecoding(int bit) {
 	//int error = 0;
 	int bitright;
@@ -166,15 +289,15 @@ static RAMFUNC int OutOfNDecoding(int bit) {
 		Uart.bitBuffer ^= bit;
 	}
 	
-	/*if (Uart.swapper) {
-		Uart.output[Uart.byteCnt] = Uart.bitBuffer & 0xFF;
-		Uart.byteCnt++;
-		Uart.swapper = 0;
-		if (Uart.byteCnt > 15) return true;
-	}
-	else {
-		Uart.swapper = 1;
-	}*/
+	// if (Uart.swapper) {
+	//	Uart.output[Uart.byteCnt] = Uart.bitBuffer & 0xFF;
+	//	Uart.byteCnt++;
+	//	Uart.swapper = 0;
+	//	if (Uart.byteCnt > 15) return true;
+	//}
+	//else {
+	//	Uart.swapper = 1;
+	//}
 
 	if (Uart.state != STATE_UNSYNCD) {
 		Uart.posCnt++;
@@ -301,7 +424,7 @@ static RAMFUNC int OutOfNDecoding(int bit) {
 					Uart.dropPosition = 0;
 				}
 			}
-
+*/
 			/*if (error) {
 				Uart.output[Uart.byteCnt] = 0xAA;
 				Uart.byteCnt++;
@@ -319,6 +442,7 @@ static RAMFUNC int OutOfNDecoding(int bit) {
 				Uart.byteCnt++;
 				return true;
 			}*/
+/*
 		}
 	} else {
 		bit = Uart.bitBuffer & 0xf0;
@@ -370,7 +494,7 @@ static RAMFUNC int OutOfNDecoding(int bit) {
 	}
     return false;
 }
-
+*/
 //=============================================================================
 // Manchester
 //=============================================================================
@@ -451,7 +575,7 @@ static void uart_debug(int error, int bit) {
 *
 *  So for current implementation in ISO15693, its 330 µs from end of reader, to start of card.
 */
-static RAMFUNC int ManchesterDecoding(int v) {
+static RAMFUNC int ManchesterDecoding_iclass( uint32_t v) {
 	int bit;
 	int modulation;
 	int error = 0;
@@ -665,7 +789,6 @@ static RAMFUNC int ManchesterDecoding(int v) {
 // Finally, a `sniffer' for iClass communication
 // Both sides of communication!
 //=============================================================================
-
 static void iclass_setup_sniff(void){
 	if (MF_DBGLEVEL > 3) Dbprintf("iclass_setup_sniff Enter");
 
@@ -687,11 +810,13 @@ static void iclass_setup_sniff(void){
 
 	// Initialize Demod and Uart structs
 	DemodInit(BigBuf_malloc(ICLASS_BUFFER_SIZE));
-	UartInit(BigBuf_malloc(ICLASS_BUFFER_SIZE));
+
+	uart_init(BigBuf_malloc(ICLASS_BUFFER_SIZE));
+	//UartInit(BigBuf_malloc(ICLASS_BUFFER_SIZE));
 
 	if (MF_DBGLEVEL > 1) {
 		// Print debug information about the buffer sizes
-		Dbprintf("Snooping buffers initialized:");
+		Dbprintf("[+] Sniffing buffers initialized:");
 		Dbprintf("  Trace: %i bytes", BigBuf_max_traceLen());
 		Dbprintf("  Reader -> tag: %i bytes", ICLASS_BUFFER_SIZE);
 		Dbprintf("  tag -> Reader: %i bytes", ICLASS_BUFFER_SIZE);
@@ -707,7 +832,7 @@ static void iclass_setup_sniff(void){
 	StartCountSspClk();
 	
 	LED_A_ON();
-	if (MF_DBGLEVEL > 3) Dbprintf("iclass_setup_sniff Exit");
+	if (MF_DBGLEVEL > 3) Dbprintf("[+] iclass_setup_sniff Exit");
 }
 
 //-----------------------------------------------------------------------------
@@ -718,18 +843,19 @@ static void iclass_setup_sniff(void){
 // turn off afterwards
 void RAMFUNC SniffIClass(void) {
 
-	uint8_t previous_data = 0;
-	int maxDataLen = 0, datalen = 0; 
+	//int datalen = 0; 
+	uint32_t previous_data = 0;	
 	uint32_t time_0 = 0, time_start = 0, time_stop  = 0;
     uint32_t sniffCounter = 0;
-
 	bool TagIsActive = false;
 	bool ReaderIsActive = false;
 	
 	iclass_setup_sniff();
 	
     // The DMA buffer, used to stream samples from the FPGA
+	// *dmaBuf is the start reference.
     uint8_t *dmaBuf = BigBuf_malloc(ICLASS_DMA_BUFFER_SIZE);
+	// pointer to samples from fpga
     uint8_t *data = dmaBuf;
 
 	// Setup and start DMA.
@@ -741,11 +867,20 @@ void RAMFUNC SniffIClass(void) {
 	// time ZERO, the point from which it all is calculated.
 	time_0 = GetCountSspClk();
 
+	int div = 0;
+	uint8_t tag_byte = 0, foo = 0;
     // loop and listen
+	// every sample (1byte in data),
+	//     contains HIGH nibble = reader data
+	//     contains LOW nibble = tag data
+	// so two bytes are needed in order to get 1byte of either reader or tag data.  (ie 2 sample bytes)
+	// since reader data is manchester encoded,  we need 2bytes of data in order to get one demoded byte.  (ie:  4 sample bytes)
 	while (!BUTTON_PRESS()) {
         WDT_HIT();
 
-		previous_data = *data;
+		previous_data <<= 8;
+		previous_data |= *data;
+		
 		sniffCounter++;	
 		data++;
 
@@ -754,105 +889,76 @@ void RAMFUNC SniffIClass(void) {
 			AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dmaBuf;
 			AT91C_BASE_PDC_SSC->PDC_RNCR = ICLASS_DMA_BUFFER_SIZE;
 		}
-		// number of bytes we have processed so far
-		int register readBufData = data - dmaBuf;
-		// number of bytes already transferred		
-		int register dmaBufData = ICLASS_DMA_BUFFER_SIZE - AT91C_BASE_PDC_SSC->PDC_RCR;
 		
-		if (readBufData <= dmaBufData)
-			datalen = dmaBufData - readBufData;
-		else 
-			datalen = ICLASS_DMA_BUFFER_SIZE - readBufData + dmaBufData;
-		
-		/*
-		// test for length of buffer		
-		if (datalen > maxDataLen) {
-			maxDataLen = datalen;
-			if (datalen > (9 * ICLASS_DMA_BUFFER_SIZE / 10)) {
-				Dbprintf("[-] blew circular buffer! datalen=%d", datalen);
-				break;
-			}
+		if ( *data & 0xF) { 
+			//tag_byte <<= 1;
+			tag_byte ^= (1 << 4);
+			foo ^= (1 << (3 - div));
+			Dbprintf(" %d|%x == %d|%x", tag_byte, tag_byte, foo, foo);
 		}
-		*/
+		div++;
 		
-		// this part basically does wait until our DMA buffer got a value.
-		// well it loops, but the purpose is to wait.
-		if (datalen < 1) continue;
-			
-		// these two, is more of a "reset" the DMA buffers,  re-init.
-		// primary buffer was stopped( <-- we lost data!
-		
-		if (!AT91C_BASE_PDC_SSC->PDC_RCR) {
-			AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dmaBuf;
-			AT91C_BASE_PDC_SSC->PDC_RCR = ICLASS_DMA_BUFFER_SIZE;
-//			Dbprintf("Primary buffer ERROR!!! data length: %d", datalen); // temporary
-		}
-		
-		
-		// secondary buffer sets as primary, secondary buffer was stopped
-		if (!AT91C_BASE_PDC_SSC->PDC_RNCR) {
-			AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dmaBuf;
-			AT91C_BASE_PDC_SSC->PDC_RNCR = ICLASS_DMA_BUFFER_SIZE;
-//			Dbprintf("Seconday buffer ERROR!!! data length: %d", datalen); // temporary	
-		}
-
+		// every odd sample
 		if (sniffCounter & 0x01) {
 			// no need to try decoding reader data if the tag is sending
 			// READER TO CARD
 			if (!TagIsActive) {
 				LED_C_INV();
 				// HIGH nibble is always reader data.
-				uint8_t readerdata = (previous_data & 0xF0) | (*data >> 4);
-				if ( OutOfNDecoding(readerdata) ) {
+				uint8_t reader_byte = (previous_data & 0xF0) | (*data >> 4);
+				uart_samples(reader_byte);
+				if (Uart.frame_done) {
 					time_stop = GetCountSspClk() - time_0;
-					LogTrace(Uart.output, Uart.byteCnt, time_start, time_stop, NULL, true);
+					LogTrace( Uart.buf, Uart.len, time_start, time_stop, NULL, true);
 					DemodReset();
-					UartReset();
+					uart_reset();
 				} else {
 					time_start = GetCountSspClk() - time_0;
 				}
-				ReaderIsActive = (Uart.state != STATE_UNSYNCD);		
+				ReaderIsActive = Uart.frame_done;
 			}
 		}
-		if ( sniffCounter % 3) {
+		// every four sample
+		if ( (sniffCounter % 4) == 0) {
 			// need two samples to feed Manchester
 			// no need to try decoding tag data if the reader is sending - and we cannot afford the time
 			// CARD TO READER
 			if (!ReaderIsActive) {
 				LED_C_INV();
 				// LOW nibble is always tag data.
-				uint8_t tagdata = (previous_data << 4) | (*data & 0x0F);
-				if (ManchesterDecoding(tagdata)) {
+				/*
+				
+				
+				uint32_t tag_byte = 
+						((previous_data & 0x0F000000) >> 8 )  |
+						((previous_data & 0x000F0000) >> 4 )  |
+						((previous_data & 0x00000F00)      )  |
+						((previous_data & 0x0000000F) << 4 )  |
+						(*data & 0xF);
+						*/
+				
+						
+				//uint8_t tag_byte = ((previous_data & 0xF) << 4 ) | (*data & 0xF);
+				if (ManchesterDecoding_iclass(foo)) {
 					time_stop = GetCountSspClk() - time_0;
 					LogTrace(Demod.output, Demod.len, time_start, time_stop, NULL, false);
 					DemodReset();
-					UartReset();
+					uart_reset();					
 				} else {
 					time_start = GetCountSspClk() - time_0;
 				}
 				TagIsActive = (Demod.state != DEMOD_UNSYNCD);
 			}
+			tag_byte = 0;
+			foo = 0;
+			div = 0;
 		}
 	} // end main loop
 
 	if (MF_DBGLEVEL >= 1) {	
 		DbpString("[+] Sniff statistics:");	
-		Dbprintf("[+]  maxDataLen=%x, Uart.state=%x, Uart.byteCnt=%x", maxDataLen, Uart.state, Uart.byteCnt);
-		Dbprintf("[+]  Tracelen=%x, Uart.output[0]=%x", BigBuf_get_traceLen(), (int)Uart.output[0]);
 		Dbhexdump(ICLASS_DMA_BUFFER_SIZE, data, false);
-		uint8_t r[128] = {0}; 
-		uint8_t t[128] = {0};
-		uint16_t i;
-		uint8_t j;
-		for (i=0, j=0; i<ICLASS_DMA_BUFFER_SIZE; i += 2, j++) {
-			r[j] = (data[i] & 0xF0)  | (data[i+1] >> 4);
-			t[j] = (data[i] << 4) | (data[i+1] & 0xF);
 		}
-		DbpString("reader:");
-		Dbhexdump(sizeof(r), r, false);
-		DbpString("tag:");
-		Dbhexdump(sizeof(t), t, false);
-	}
 	
 	switch_off(); 
 }
@@ -875,24 +981,22 @@ static bool GetIClassCommandFromReader(uint8_t *received, int *len, int maxLen) 
     // Signal field is off with the appropriate LED
     LED_D_OFF();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_LISTEN);
-
-	// Now run a `software UART' on the stream of incoming samples.
-	UartInit(received);
-	
+	uart_init(received);
 	// clear RXRDY:
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
 	while (!BUTTON_PRESS()) {
         WDT_HIT();
 
-        //if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))
-            // AT91C_BASE_SSC->SSC_THR = 0x00;
+        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))
+            AT91C_BASE_SSC->SSC_THR = 0x00;
 
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
-			if (OutOfNDecoding(b & 0x0f)) {
-				*len = Uart.byteCnt;
+            uart_samples(b);
+            if (Uart.frame_done) {
+                *len = Uart.len;
 				return true;
 			}
         }
@@ -1115,6 +1219,7 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 
 out:	
 	switch_off(); 
+	BigBuf_free_keep_EM();
 }
 void AppendCrc(uint8_t* data, int len) {
 	ComputeCrc14443(CRC_ICLASS, data, len, data+len, data+len+1);
@@ -1307,7 +1412,7 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 			trace_data = sof_data;
 			trace_data_size = sizeof(sof_data);
 			// adjusted for 330 + (160*num of slot) 
-			response_delay = 330 + 160;
+			response_delay = 330 + 160 * 1;
 		} else if (receivedCmd[0] == ICLASS_CMD_READ_OR_IDENTIFY && len == 1) { // 0x0C
 			// Reader asks for anticollission CSN
 			modulated_response = resp_anticoll; modulated_response_size = resp_anticoll_len; //order = 2;
@@ -1334,7 +1439,7 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 		} else if (receivedCmd[0] == ICLASS_CMD_CHECK) { // 0x05
 			// Reader random and reader MAC!!!
 			if (simulationMode == MODE_FULLSIM) {
-				//NR, from reader, is in receivedCmd +1
+				// NR, from reader, is in receivedCmd +1
 				opt_doTagMAC_2(cipher_state, receivedCmd+1, data_generic_trace, diversified_key);
 
 				trace_data = data_generic_trace;
@@ -1346,14 +1451,14 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 				response_delay = 0;//We need to hurry here...
 				//exitLoop = true;
 			} else {
-				//Not fullsim, we don't respond
+				// Not fullsim, we don't respond
 				// We do not know what to answer, so lets keep quiet
 				modulated_response = resp_sof; modulated_response_size = 0;
 				trace_data = NULL;
 				trace_data_size = 0;
 				
 				if (simulationMode == MODE_EXIT_AFTER_MAC) {
-					// dbprintf:ing ...
+
 					Dbprintf("CSN: %02x %02x %02x %02x %02x %02x %02x %02x", csn[0], csn[1], csn[2], csn[3], csn[4], csn[5], csn[6], csn[7]);
 					Dbprintf("RDR:  (len=%02d): %02x %02x %02x %02x %02x %02x %02x %02x %02x", len,
 							receivedCmd[0], receivedCmd[1], receivedCmd[2],
@@ -1431,7 +1536,7 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 			memcpy(data_response, ToSend, ToSendMax);
 			modulated_response = data_response;
 			modulated_response_size = ToSendMax;			
-			response_delay = 4000;  // tPROG 4-15ms
+			response_delay = 4600 * 1.5;  // tPROG 4-15ms
 			
 //		} else if(receivedCmd[0] == ICLASS_CMD_PAGESEL)	{  // 0x84
 			//Pagesel
@@ -1489,7 +1594,7 @@ static int SendIClassAnswer(uint8_t *resp, int respLen, uint16_t delay) {
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_424K_8BIT);	
 	AT91C_BASE_SSC->SSC_THR = 0x00;
 
-	SpinDelayUs(delay);  // So, first make sure we timeout previous comms.	
+//	SpinDelayUs(delay);  // So, first make sure we timeout previous comms.	
 
 	while (!BUTTON_PRESS()) {
 		if ( (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY)){
@@ -1670,7 +1775,7 @@ static int GetIClassAnswer(uint8_t* receivedResponse, int maxLen, int *samples, 
 			skip = !skip;			
 			if (skip) continue;
 		
-			if (ManchesterDecoding(b & 0x0f)) {
+			if (ManchesterDecoding_iclass(b & 0x0f)) {
 				if (samples) 
 					*samples = c << 3;
 				return true;
@@ -1954,9 +2059,8 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 	uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
 
 	//Generate a lookup table for block crc
-	for (int block = 0; block < 255; block++){
-		char bl = block;
-		block_crc_LUT[block] = iclass_crc16(&bl ,1);
+	for (uint8_t b = 0; b < 255; b++){
+		block_crc_LUT[b] = iclass_crc16(&b, 1);
 	}
 
 	static struct memory_t{
@@ -2190,8 +2294,7 @@ out:
 
 bool iClass_ReadBlock(uint8_t blockNo, uint8_t *readdata) {
 	uint8_t readcmd[] = {ICLASS_CMD_READ_OR_IDENTIFY, blockNo, 0x00, 0x00}; //0x88, 0x00 // can i use 0C?
-	char bl = blockNo;
-	uint16_t crc = iclass_crc16(&bl, 1);
+	uint16_t crc = iclass_crc16(readcmd+1, 1);
 	readcmd[2] = crc >> 8;
 	readcmd[3] = crc & 0xff;
 	uint8_t resp[] = {0,0,0,0,0,0,0,0,0,0};
@@ -2248,8 +2351,7 @@ void iClass_Dump(uint8_t blockno, uint8_t numblks) {
 bool iClass_WriteBlock_ext(uint8_t blockNo, uint8_t *data) {
 	uint8_t write[] = { ICLASS_CMD_UPDATE, blockNo, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 	memcpy(write+2, data, 12); // data + mac
-	char *wrCmd = (char *)(write+1); 
-	uint16_t crc = iclass_crc16(wrCmd, 13);
+	uint16_t crc = iclass_crc16(write+1, 13);
 	write[14] = crc >> 8;
 	write[15] = crc & 0xff;
 	uint8_t resp[] = {0,0,0,0,0,0,0,0,0,0};
