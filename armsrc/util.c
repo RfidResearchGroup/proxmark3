@@ -13,34 +13,29 @@ size_t nbytes(size_t nbits) {
 	return (nbits >> 3)+((nbits % 8) > 0);
 }
 
-// Swap bit order on a uint32_t value.  Can be limited by 'b' just use say 8 bits reversal
-// note: function clears the rest of the bits.
-uint32_t SwapBits(uint32_t v, int b) {
-	uint32_t newvalue = 0;
-	for(int i = 0; i < b; i++) {
-		newvalue ^= ((v >> i) & 1) << (b - 1 - i);
-	}
-	return newvalue;
-}
-
 uint8_t reflect8(uint8_t b) {
 	return ((b * 0x80200802ULL) & 0x0884422110ULL) * 0x0101010101ULL >> 32;
 }
-/*
- ref  http://www.csm.ornl.gov/~dunigan/crc.html
- Returns the value v with the bottom b [0,32] bits reflected. 
- Example: reflect(0x3e23L,3) == 0x3e26
-*/
-uint32_t reflect(uint32_t v, int b) {
-	uint32_t t = v;
-	for ( int i = 0; i < b; ++i) {
-		if (t & 1)
-			v |=  BITMASK((b-1)-i);
-		else
-			v &= ~BITMASK((b-1)-i);
-		t >>= 1;
-	}
-	return v;
+uint16_t reflect16(uint16_t b) {
+    uint16_t v = 0;
+    v |= (b & 0x8000) >> 15; 
+    v |= (b & 0x4000) >> 13;
+    v |= (b & 0x2000) >> 11;
+    v |= (b & 0x1000) >> 9;
+    v |= (b & 0x0800) >> 7;
+    v |= (b & 0x0400) >> 5;
+    v |= (b & 0x0200) >> 3;
+    v |= (b & 0x0100) >> 1;
+
+    v |= (b & 0x0080) << 1;
+    v |= (b & 0x0040) << 3;
+    v |= (b & 0x0020) << 5;
+    v |= (b & 0x0010) << 7;
+    v |= (b & 0x0008) << 9;
+    v |= (b & 0x0004) << 11;
+    v |= (b & 0x0002) << 13;
+    v |= (b & 0x0001) << 15;
+    return v;
 }
 
 void num_to_bytes(uint64_t n, size_t len, uint8_t* dest) {
