@@ -278,11 +278,19 @@ int CmdAnalyseCRC(const char *Cmd) {
 	len >>= 1;	
 
 	PrintAndLog("\nTests with | %s", sprint_hex(data, len));
+
+	
+	init_table(CRC_LEGIC);
+	// 51  f5  7a  d6 
+	uint8_t uid[] = {0x51, 0xf5, 0x7a, 0xd6}; //12 34 56
+	uint8_t legic8 = CRC8Legic(uid, sizeof(uid));
+	PrintAndLog("LEGIC | %X (EF6F expected) %02x", crc16_legic(data, sizeof(len), legic8), legic8);
+	
 	
 	PrintAndLog("\nTests of reflection. Current methods in source code");	
 	PrintAndLog("   reflect(0x3e23L,3) is %04X == 0x3e26", reflect(0x3e23L,3) );
 	PrintAndLog("       reflect8(0x80) is %02X == 0x01", reflect8(0x80));
-	PrintAndLog("    reflect16(0x8000) is %04X == 0x0001", reflect16(0x8000));
+	PrintAndLog("    reflect16(0x8000) is %04X == 0x0001", reflect16(0xc6c6));
 	//
 	// Test of CRC16,  '123456789' string.
 	//
@@ -290,41 +298,65 @@ int CmdAnalyseCRC(const char *Cmd) {
 	
 	PrintAndLog("\nTests with '123456789' string");
 	uint8_t dataStr[] = { 0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39 };
-	uint8_t legic8 = CRC8Legic(dataStr, sizeof(dataStr));
-	
-	PrintAndLog("LEGIC: CRC16: %X", CRC16Legic(dataStr, sizeof(dataStr), legic8));
+	legic8 = CRC8Legic(dataStr, sizeof(dataStr));
 
 	//these below has been tested OK.
 	PrintAndLog("Confirmed CRC Implementations");
-	printf("\n");
-	PrintAndLog("LEGIC: CRC8 : %X (0xC6 expected)", legic8);
-	PrintAndLog("MAXIM: CRC8 : %X (0xA1 expected)", CRC8Maxim(dataStr, sizeof(dataStr)));
-	PrintAndLog("DNP  : CRC16: %X (0x82EA expected)", CRC16_DNP(dataStr, sizeof(dataStr)));	
-	PrintAndLog("CCITT: CRC16: %X (0xE5CC expected)", CRC16_CCITT(dataStr, sizeof(dataStr)));
-	PrintAndLog("ICLASS org: CRC16: %X (0x expected)", iclass_crc16( dataStr, sizeof(dataStr)));
+	printf("-------------------------------------\n");
+	printf("CRC 8 based\n\n");
+	PrintAndLog("LEGIC: CRC8 : %X (C6 expected)", legic8);
+	PrintAndLog("MAXIM: CRC8 : %X (A1 expected)", CRC8Maxim(dataStr, sizeof(dataStr)));
+	printf("-------------------------------------\n");
+	printf("CRC16 based\n\n");
+
+	init_table(CRC_DNP);
+	PrintAndLog("DNP    | %X (EA82 expected)", crc16_dnp(dataStr, sizeof(dataStr)));
+
+	init_table(CRC_CCITT);
+	PrintAndLog("CCITT  | %X (29B1 expected)", crc16_ccitt(dataStr, sizeof(dataStr)));
+		
+	init_table(CRC_FELICA);
+	PrintAndLog("FeliCa | %X (31C3 expected)", crc16_xmodem( dataStr, sizeof(dataStr)));
+	//uint8_t poll[10] = { 0xb2,0x4d,0x06,0x00,0xff,0xff,0x00,0x00,0x09,0x21};
+	uint8_t poll[] = {0xb2,0x4d,0x12,0x01,0x01,0x2e,0x3d,0x17,0x26,0x47,0x80,
+					  0x95,0x00,0xf1,0x00,0x00,0x00,0x01,0x43,0x00,0xb3,0x7f};
+	PrintAndLog("FeliCa | %X (B37F expected)", crc16_xmodem( poll+2, sizeof(poll)-4));
+	PrintAndLog("FeliCa | %X (0000 expected)", crc16_xmodem( poll+2, sizeof(poll)-2));
+	printf("-------------------------------------\n");
+	printf("\n\n");	
+	
 	
 	// ISO14443 crc A
+	
+	// table test.
+	init_table(CRC_14A);
 	uint16_t crcA = crc16_a(dataStr, sizeof(dataStr));
 	ComputeCrc14443(CRC_14443_A, dataStr, sizeof(dataStr), &b1, &b2);
 	uint16_t crcAA = b1 << 8 | b2;
-	printf("ISO14443 crc A   | %04x == %04x\n", crcA, crcAA);
+	printf("ISO14443 crc A   | %04x == %04x   (BF05 expected)\n", crcA, crcAA);
 	
 	// ISO14443 crc B
-	uint16_t crcB = crc16_a(dataStr, sizeof(dataStr));
-	ComputeCrc14443(CRC_14443_B, dataStr, sizeof(dataStr)-2, &b1, &b2);	
+	init_table(CRC_14B);
+	uint16_t crcB = crc16_x25(dataStr, sizeof(dataStr));
+	ComputeCrc14443(CRC_14443_B, dataStr, sizeof(dataStr), &b1, &b2);	
 	uint16_t crcBB = b1 << 8 | b2;
-	printf("ISO14443 crc B   | %04x == %04x\n", crcB, crcBB);
+	printf("ISO14443 crc B   | %04x == %04x   (906E expected)\n", crcB, crcBB);
 
 	// ISO15693 crc  (x.25)
+	init_table(CRC_15);
 	uint16_t x25 = crc16_x25(dataStr, sizeof(dataStr));
 	uint16_t iso = Iso15693Crc(dataStr, sizeof(dataStr));
-	printf("ISO15693 crc X25 | %04x == %04x\n", iso, x25 );
+	printf("ISO15693 crc X25 | %04x == %04x   (906E expected)\n", iso, x25 );
 
-	// ICLASS (
-	uint16_t iclass = crc16_iclass(dataStr, sizeof(dataStr));
-	uint16_t iclass_org = iclass_crc16(dataStr, sizeof(dataStr));
-	printf("ICLASS crc       | %04x == %04x\n", iclass, iclass_org);
-	
+	// ICLASS	
+	init_table(CRC_15_ICLASS);
+	uint16_t iclass_new = crc16_iclass(dataStr, sizeof(dataStr));
+	ComputeCrc14443(CRC_ICLASS, dataStr, sizeof(dataStr), &b1, &b2);
+	uint16_t crcCC = b1 << 8 | b2;
+	printf("ICLASS crc  | %04x == %04x \n", crcCC, iclass_new);
+
+
+		
 	free(data);
 	return 0;
 }
@@ -452,14 +484,9 @@ int CmdAnalyseA(const char *Cmd){
 	printf("14b crc u14b == 0  [%s] %02x %02x\n", (b1==0 && b2==0) ? "YES": "NO" , b1,b2);	
 	ComputeCrc14443(CRC_14443_B, u14b, sizeof(u14b)-2, &b1, &b2);
 	printf("14b crc u14b == 0  [%s] %02x %02x\n", (b1==0 && b2==0) ? "YES": "NO" , b1,b2);	
-	
-	uint8_t data[] = {0x30,0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39};
-	uint16_t kermit = crc16_kermit(data, sizeof(data));
-	uint16_t xmodem = crc16_xmodem(data, sizeof(data));
 
-
-	printf(">>>  KERMIT 5F6E | XMODEM 9C58 <<<\n");
-	printf("            %04X | XMODEM %04X \n", kermit, xmodem);
+	printf("x25 or 14b command  %04X == (3973)\n", crc16_x25(u14b, sizeof(u14b)-2));
+	printf("x25 or 14b command  %04X == (0)\n", crc16_x25(u14b, sizeof(u14b)));
 
 	printf("\n\n");	
 	return 0;
@@ -469,78 +496,47 @@ int CmdAnalyseA(const char *Cmd){
 	uint64_t t1 = msclock();
 	// test CRC-A etc
 	for (int foo=0; foo < 10000000; foo++) {
-		crc16_a(data, sizeof(data));
-		data[1] = rand();
-		data[2] = rand();
-		data[3] = rand();
-		data[4] = rand();
+		crc16_a(atqs, sizeof(atqs));
+		atqs[1] = rand();
+		atqs[2] = rand();
+		atqs[3] = rand();
+		atqs[4] = rand();
 	}
 	t1 = msclock() - t1; printf("ticks crc_a  %" PRIu64 "\n", t1);
 	
 	t1 = msclock();
 	for (int foo=0; foo < 10000000; foo++) {
-		ComputeCrc14443(CRC_14443_A, data, sizeof(data), &b1, &b2);
-		data[1] = rand();
-		data[2] = rand();
-		data[3] = rand();
-		data[4] = rand();	}
+		ComputeCrc14443(CRC_14443_A, atqs, sizeof(atqs), &b1, &b2);
+		atqs[1] = rand();
+		atqs[2] = rand();
+		atqs[3] = rand();
+		atqs[4] = rand();	}
 	t1 = msclock() - t1; printf("ticks curr CRC-a  %" PRIu64 "\n", t1);
+	
 	
 	// test ISO15693 crc
 	t1 = msclock();
 	for (int foo=0; foo < 10000000; foo++) {
-		crc16_x25(data, sizeof(data));
-		data[1] = rand();
-		data[2] = rand();
-		data[3] = rand();
-		data[4] = rand();
+		crc16_x25(atqs, sizeof(atqs));
+		atqs[1] = rand();
+		atqs[2] = rand();
+		atqs[3] = rand();
+		atqs[4] = rand();
 	}
 	t1 = msclock() - t1; printf("ticks x25  %" PRIu64 "\n", t1);
 	
 	t1 = msclock();
 	for (int foo=0; foo < 10000000; foo++) {
-		Iso15693Crc(data, sizeof(data));
-		data[1] = rand();
-		data[2] = rand();
-		data[3] = rand();
-		data[4] = rand();	}
+		Iso15693Crc(atqs, sizeof(atqs));
+		atqs[1] = rand();
+		atqs[2] = rand();
+		atqs[3] = rand();
+		atqs[4] = rand();	}
 	t1 = msclock() - t1; printf("ticks curr iso15 (x25)  %" PRIu64 "\n", t1);	
 
-	return 0;
+	//return 0;
 	
-	uint16_t v = 1;
-	for(uint8_t i = 0; i < 16; i++) {
-		
-		uint16_t r = reflect16(v);		
-		
-		printf(" 0x%04x <-> 0x%04x  | ", v, r);
-		for(uint8_t i = 0; i < 16; i++) {
-			printf("%c", (v & (1 << i) ) ? '1':'0');
-		}
-		printf("  |  ");
-		for(uint8_t i = 0; i < 16; i++) {
-			printf("%c", (r & (1 << i) ) ? '1':'0');
-		}
-		printf("\n");
-		v <<= 1;
-	}
-	uint8_t b = 1;
-	for(uint8_t i = 0; i < 8; i++) {
-		uint8_t r = reflect8(b);
-		printf(" 0x%02x <-> 0x%02x  | ", b, r);
-		for(uint8_t i = 0; i < 8; i++) {
-			printf("%c", (b & (1 << i) ) ? '1':'0');
-		}
-		printf("  |  ");
-		for(uint8_t i = 0; i < 8; i++) {
-			printf("%c", (r & (1 << i) ) ? '1':'0');
-		}
-		printf("\n");
-		b <<= 1;		
-	}
-
 	// 16bit test
-
 	uint8_t md;
 	uint32_t mb, mc;
 

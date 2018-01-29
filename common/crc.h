@@ -62,15 +62,6 @@ uint32_t CRC4Legic(uint8_t *buff, size_t size);
 // Calculate CRC-8/Legic checksum
 uint32_t CRC8Legic(uint8_t *buff, size_t size);
 
-// Calculate CRC-16/Legic checksum
-// the initial_value is based on the previous legic_Crc8 of the UID.
-// ie:  uidcrc = 0x78  then initial_value == 0x7878
-uint32_t CRC16Legic(uint8_t *buff, size_t size, uint8_t uidcrc);
-
-// test crc 16.
-uint32_t CRC16_DNP(uint8_t *buff, size_t size);
-uint32_t CRC16_CCITT(uint8_t *buff, size_t size);
-
 /* Static initialization of a crc structure */
 #define CRC_INITIALIZER(_order, _polynom, _initial_value, _final_xor) { \
 	.state = ((_initial_value) & ((1L<<(_order))-1)), \

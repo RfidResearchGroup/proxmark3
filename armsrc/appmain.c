@@ -779,14 +779,17 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 #endif
 
 #ifdef WITH_FELICA
+		case CMD_FELICA_COMMAND:
+			felica_sendraw(c);
+			break;
         case CMD_FELICA_LITE_SIM:
-            HfSimLite(c->arg[0]);
+            felica_sim_lite(c->arg[0]);
             break;
         case CMD_FELICA_SNOOP:
-            HfSnoopISO18(c->arg[0], c->arg[1]);
+            felica_sniff(c->arg[0], c->arg[1]);
             break;
         case CMD_FELICA_LITE_DUMP:
-			HfDumpFelicaLiteS();
+			felica_dump_lite_s();
             break;
 #endif
 

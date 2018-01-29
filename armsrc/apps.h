@@ -236,9 +236,10 @@ bool cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void* d
 void HfSnoop(int , int);
 
 //felica.c
-extern void HfSnoopISO18(uint32_t samples, uint32_t triggers);
-extern void HfSimLite(uint64_t uid);
-extern void HfDumpFelicaLiteS();
+extern void felica_sendraw(UsbCommand *c);
+extern void felica_sniff(uint32_t samples, uint32_t triggers);
+extern void felica_sim_lite(uint64_t uid);
+extern void felica_dump_lite_s();
 
 #ifdef __cplusplus
 }

@@ -52,13 +52,14 @@ typedef struct {
 	uint8_t  *output;
 	uint8_t  *parity;
 } tDemod;
-
+/*
 typedef enum {
 	MOD_NOMOD = 0,
 	MOD_SECOND_HALF,
 	MOD_FIRST_HALF,
 	MOD_BOTH_HALVES
 	} Modulation_t;
+*/
 
 typedef struct {
 	enum {

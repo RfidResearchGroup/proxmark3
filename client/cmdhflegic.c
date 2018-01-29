@@ -723,7 +723,8 @@ int CmdLegicCalcCrc(const char *Cmd){
 	
 	switch (type){
 		case 16:
-			PrintAndLog("Legic crc16: %X", CRC16Legic(data, len, uidcrc));
+			init_table(CRC_LEGIC);
+			PrintAndLog("Legic crc16: %X", crc16_legic(data, len, uidcrc));
 			break;
 		default:
 			PrintAndLog("Legic crc8: %X",  CRC8Legic(data, len) );

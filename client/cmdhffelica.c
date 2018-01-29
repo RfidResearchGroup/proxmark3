@@ -75,28 +75,44 @@ int CmdHFFelicaList(const char *Cmd) {
 
 int CmdHFFelicaReader(const char *Cmd) {
 	bool silent = (Cmd[0] == 's' || Cmd[0] ==  'S');
-	UsbCommand cDisconnect = {CMD_READER_ISO_14443a, {0,0,0}};
-	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}};
+	//UsbCommand cDisconnect = {CMD_FELICA_COMMAND, {0,0,0}};
+	UsbCommand c = {CMD_FELICA_COMMAND, {FELICA_CONNECT, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
-		if (!silent) PrintAndLog("iso14443a card select failed");
-		SendCommand(&cDisconnect);
+		if (!silent) PrintAndLog("FeliCa card select failed");
+		//SendCommand(&cDisconnect);
 		return 0;
 	}
 	
-	iso14a_card_select_t card;
-	memcpy(&card, (iso14a_card_select_t *)resp.d.asBytes, sizeof(iso14a_card_select_t));
-	uint64_t select_status = resp.arg[0];
+	felica_card_select_t card;
+	memcpy(&card, (felica_card_select_t *)resp.d.asBytes, sizeof(felica_card_select_t));
+	uint64_t status = resp.arg[0];
 	
-	if (select_status == 0) {
-		if (!silent) PrintAndLog("iso14443a card select failed");
-		SendCommand(&cDisconnect);
-		return 0;
+	switch(status) {
+		case 1: {
+			if (!silent) 
+				PrintAndLog("Card timeout"); 
+			break;
+		}
+		case 2: {
+			if (!silent)
+				PrintAndLog("Card answered wrong"); 
+			break;
+		}
+		case 3: {
+			if (!silent)
+				PrintAndLog("CRC check failed");
+			break;
+		}
+		case 0: {
+			PrintAndLog("FeliCa Card found");
+			PrintAndLog("UID:  %s", sprint_hex(card.uid, sizeof(card.uid)));
+			break;
+		}
 	}
-
-	return select_status;
+	return status;
 }
 
 // simulate iso18092 / FeliCa tag
@@ -369,6 +385,9 @@ int CmdHFFelicaDumpLite(const char *Cmd) {
 	if ( tracelen > 0 ) {		
 		GetFromBigBuf(trace, tracelen, 0);
 		PrintAndLog("[+] Recorded Activity (trace len = %d bytes)", tracelen);
+		
+		print_hex_break(trace, tracelen, 32);
+		
 		printSep();
 		uint16_t tracepos = 0;
 		while (tracepos < tracelen)
@@ -521,7 +540,7 @@ void waitCmdFelica(uint8_t iSelect) {
     UsbCommand resp;
     uint16_t len = 0;
 
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {        
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {        
         len = iSelect ? (resp.arg[1] & 0xffff) : (resp.arg[0]  & 0xffff);
         PrintAndLog("received %i octets", len);
         if(!len)

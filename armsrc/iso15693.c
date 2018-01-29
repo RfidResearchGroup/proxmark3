@@ -1039,7 +1039,7 @@ void BruteforceIso15693Afi(uint32_t speed) {
 	data[2] = 0; // AFI
 	data[3] = 0; // mask length
 	
-	for (int i = 0; i < 256; i++) {
+	for (uint16_t i = 0; i < 256; i++) {
 		data[2] = i & 0xFF;
 		datalen = AddCrc(data, 4);
 		recvlen = SendDataTag(data, datalen, false, speed, buf);
