@@ -73,6 +73,7 @@ void reset_table(void) {
 	crc_type = CRC_NONE;
 }
 
+// table lookup LUT solution
 uint16_t crc16_fast(uint8_t const *d, size_t n, uint16_t initval, bool refin, bool refout) {
 
 	// fast lookup table algorithm without augmented zero bytes, e.g. used in pkzip.
@@ -96,6 +97,7 @@ uint16_t crc16_fast(uint8_t const *d, size_t n, uint16_t initval, bool refin, bo
 	return crc;
 }
 
+// bit looped solution
 uint16_t update_crc16_ex( uint16_t crc, uint8_t c, uint16_t polynomial ) {
 	uint16_t i, v, tmp = 0;
 

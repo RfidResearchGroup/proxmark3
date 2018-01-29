@@ -12,6 +12,7 @@
 // 	v	buffer with data
 //		n	length
 //	returns crc as 16bit value
+/*
 uint16_t Iso15693Crc(uint8_t *v, int n)
 {
 	uint32_t reg;
@@ -30,27 +31,33 @@ uint16_t Iso15693Crc(uint8_t *v, int n)
 	}
 	return ~(uint16_t)(reg & 0xffff);
 }
+*/
+uint16_t Iso15693Crc(uint8_t *d, size_t n){
+	init_table(CRC_15);
+	return crc16_x25(d, n);
+}
 
 // adds a CRC to a dataframe
-// 	req[]   iso15963 frame without crc
-//		n       length without crc
+// 	d[]   iso15963 frame without crc
+//	n     length without crc
 // returns the new length of the dataframe.
-int Iso15693AddCrc(uint8_t *req, int n) {
-	uint16_t crc = Iso15693Crc(req, n);
-	req[n] = crc & 0xff;
-	req[n+1] = crc >> 8;
-	return n+2;
+int Iso15693AddCrc(uint8_t *d, size_t n) {
+	uint16_t crc = Iso15693Crc(d, n);
+	d[n] = crc & 0xff;
+	d[n+1] = crc >> 8;
+	return n + 2;
 }
 
 // check the CRC as described in ISO 15693-Part 3-Annex C
 // 	v	buffer with data
 //	n	length (including crc)
-//	returns true if the crc is valid, else return false
-bool Iso15693CheckCrc(uint8_t *v, int n) {
-	uint16_t crc = Iso15693Crc(v, n-2);
-	if ( (( crc & 0xff ) == v[n-2]) && (( crc >> 8 ) == v[n-1]) )
-		return true;
-	return false;
+// If calculated with crc bytes,  the residue should be 0xF0B8
+bool Iso15693CheckCrc(uint8_t *d, size_t n) {
+	return (Iso15693Crc(d, n) == ISO15_CRC_CHECK );
+	//uint16_t crc = Iso15693Crc(v, n-2);
+	// if ( (( crc & 0xff ) == v[n-2]) && (( crc >> 8 ) == v[n-1]) )
+		// return true;
+	// return false;
 }
 
 int sprintf(char *str, const char *format, ...);
@@ -77,13 +84,14 @@ uint16_t iclass_crc16(uint8_t *d, uint16_t n) {
 	unsigned int data;
 	uint16_t crc = 0xffff;
 
+	
 	if (n == 0)
 		return (~crc);
 
 	do {
 		for (uint8_t i=0, data = *d++; i < 8;  i++, data >>= 1) {
 			if ((crc & 0x0001) ^ (data & 0x0001))
-				crc = (crc >> 1) ^ POLY;
+				crc = (crc >> 1) ^ ISO15_CRC_POLY;
 			else  
 				crc >>= 1;
 		}

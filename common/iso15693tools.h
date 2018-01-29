@@ -7,9 +7,7 @@
 #include "proxmark3.h"
 #include <stdint.h>
 #include <stdlib.h>
-
-#define POLY 0x8408
-
+#include "crc16.h"
 
 // ISO15693 CRC
 #define ISO15_CRC_PRESET	(uint16_t)0xFFFF
@@ -74,10 +72,10 @@
 #define ISO15_CMD_SECSTATUS			0x2C
 
 
-uint16_t Iso15693Crc(uint8_t *v, int n);
-int Iso15693AddCrc(uint8_t *req, int n);
-bool Iso15693CheckCrc(uint8_t *d, int n);
-char* Iso15693sprintUID(char *target,uint8_t *uid);
+uint16_t Iso15693Crc(uint8_t *d, size_t n);
+int Iso15693AddCrc(uint8_t *d, size_t n);
+bool Iso15693CheckCrc(uint8_t *d, size_t n);
+char* Iso15693sprintUID(char *target, uint8_t *uid);
 
 uint16_t iclass_crc16(uint8_t *d, uint16_t n);
 
