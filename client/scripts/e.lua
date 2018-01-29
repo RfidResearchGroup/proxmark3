@@ -55,7 +55,7 @@ function main(args)
 	print('Bit width of CRC | '..width)
 	print('Bytes            | '..data)
 	print('')
-	print( ('%-20s| %-16s| %s'):format('Model','CRC', 'CRC reverse'))
+	print( ('%-20s| %-16s| %s'):format('Model','CRC', 'CRC reverse','bigEnd', 'bigEnd','little','little'))
 	print( string.rep('-',60) )
 	local lists = core.reveng_models(width)
 	for _,i in pairs(lists) do
