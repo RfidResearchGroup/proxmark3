@@ -51,28 +51,3 @@ char* Iso15693sprintUID(char *target, uint8_t *uid) {
 	);
 	return target;
 }
-
-uint16_t iclass_crc16(uint8_t *d, uint16_t n) {
-
-	unsigned int data;
-	uint16_t crc = 0xffff;
-
-	
-	if (n == 0)
-		return (~crc);
-
-	do {
-		for (uint8_t i=0, data = *d++; i < 8;  i++, data >>= 1) {
-			if ((crc & 0x0001) ^ (data & 0x0001))
-				crc = (crc >> 1) ^ ISO15_CRC_POLY;
-			else  
-				crc >>= 1;
-		}
-	} while (--n);
-
-	crc = ~crc;
-	data = crc;
-	crc = (crc << 8) | (data >> 8 & 0xff);
-	crc = crc ^ 0xBC3;
-	return crc;
-}

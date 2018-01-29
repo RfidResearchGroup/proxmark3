@@ -77,7 +77,6 @@ int Iso15693AddCrc(uint8_t *d, size_t n);
 bool Iso15693CheckCrc(uint8_t *d, size_t n);
 char* Iso15693sprintUID(char *target, uint8_t *uid);
 
-uint16_t iclass_crc16(uint8_t *d, uint16_t n);
 
 //-----------------------------------------------------------------------------
 // Map a sequence of octets (~layer 2 command) into the set of bits to feed

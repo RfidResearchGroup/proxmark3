@@ -1825,6 +1825,8 @@ void setupIclassReader() {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
     SpinDelay(300);
 
+	init_table(CRC_15_ICLASS);
+	
 	// Start the timer
 	StartCountSspClk();
 	
@@ -2291,7 +2293,7 @@ out:
 
 bool iClass_ReadBlock(uint8_t blockNo, uint8_t *readdata) {
 	uint8_t readcmd[] = {ICLASS_CMD_READ_OR_IDENTIFY, blockNo, 0x00, 0x00}; //0x88, 0x00 // can i use 0C?
-	uint16_t crc = iclass_crc16(readcmd+1, 1);
+	uint16_t crc = crc16_iclass(readcmd+1, 1);
 	readcmd[2] = crc >> 8;
 	readcmd[3] = crc & 0xff;
 	uint8_t resp[] = {0,0,0,0,0,0,0,0,0,0};
@@ -2348,7 +2350,7 @@ void iClass_Dump(uint8_t blockno, uint8_t numblks) {
 bool iClass_WriteBlock_ext(uint8_t blockNo, uint8_t *data) {
 	uint8_t write[] = { ICLASS_CMD_UPDATE, blockNo, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 	memcpy(write+2, data, 12); // data + mac
-	uint16_t crc = iclass_crc16(write+1, 13);
+	uint16_t crc = crc16_iclass(write+1, 13);
 	write[14] = crc >> 8;
 	write[15] = crc & 0xff;
 	uint8_t resp[] = {0,0,0,0,0,0,0,0,0,0};
