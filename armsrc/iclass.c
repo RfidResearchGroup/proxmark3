@@ -43,6 +43,7 @@
 // different initial value (CRC_ICLASS)
 #include "iso14443crc.h"
 #include "iso15693tools.h"
+#include "crc16.h"
 #include "protocols.h"
 #include "optimized_cipher.h"
 #include "usb_cdc.h" // for usb_poll_validate_length
@@ -2055,13 +2056,8 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 	uint8_t check[] = { 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 	uint8_t read[]  = { 0x0c, 0x00, 0x00, 0x00 };
 	uint8_t card_data[USB_CMD_DATA_SIZE] = {0};
-	uint16_t block_crc_LUT[255] = {0};
 	uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
-
-	//Generate a lookup table for block crc
-	for (uint8_t b = 0; b < 255; b++){
-		block_crc_LUT[b] = iclass_crc16(&b, 1);
-	}
+	uint8_t tmp[] = {1};
 
 	static struct memory_t{
 	  int k16;
@@ -2089,7 +2085,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 		}
 
 		//first get configuration block (block 1)
-		crc = block_crc_LUT[1];
+		crc = crc16_iclass( tmp , 1);
 		read[1] = 1;
 		read[2] = crc >> 8;
 		read[3] = crc & 0xff;
@@ -2115,10 +2111,12 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 		uint32_t stored_data_length = 0;
 
 		//then loop around remaining blocks
-		for (int block=0; block < cardsize; block++) {
+		for ( uint16_t block=0; block < cardsize; block++) {
 
 			read[1] = block;
-			crc = block_crc_LUT[block];
+			//crc = block_crc_LUT[block];
+			tmp[0] = block & 0xFF;
+			crc = crc16_iclass( tmp , 1);
 			read[2] = crc >> 8;
 			read[3] = crc & 0xff;
 
@@ -2173,7 +2171,6 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 			 card_data,
 			 0
 	);
-
 	switch_off(); 
 }
 
