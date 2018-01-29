@@ -181,7 +181,7 @@ uint16_t crc16_a(uint8_t const *d, size_t n) {
 // poly       0x1021 reflected 0x8408
 // poly=0x1021  init=0x4807  refin=true  refout=true  xorout=0x0BC3  check=0xF0B8  name="CRC-16/ICLASS"
 uint16_t crc16_iclass(uint8_t const *d, size_t n) {
-	return crc16_fast(d, n, 0x4807, true, true);
+	return BSWAP_16(crc16_fast(d, n, 0x4807, true, true));
 }
 
 // This CRC-16 is used in Legic Advant systems. 
@@ -199,7 +199,6 @@ uint16_t crc16_dnp(uint8_t const *d, size_t n) {
 	crc = ~crc;
 	return crc;
 }
-
 
 // -----------------CHECK functions.
 bool check_crc16_ccitt(uint8_t const *d, size_t n) {

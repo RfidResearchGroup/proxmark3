@@ -67,8 +67,4 @@ uint16_t crc16_fast(uint8_t const *d, size_t n, uint16_t initval, bool refin, bo
 //checks
 bool check_crc16_ccitt(uint8_t const *d, size_t n);
 
-//felica imp
-void felica_test();
-void init_crcccitt_tab( void );
-uint16_t update_crc_ccitt( uint16_t crc,uint8_t c );
 #endif
