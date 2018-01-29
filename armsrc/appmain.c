@@ -725,9 +725,6 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 		case CMD_ISO_15693_FIND_AFI:
 			BruteforceIso15693Afi(c->arg[0]);
 			break;	
-		case CMD_ISO_15693_DEBUG:
-			SetDebugIso15693(c->arg[0]);
-			break;
 		case CMD_READER_ISO_15693:
 			ReaderIso15693(c->arg[0]);
 			break;
@@ -862,7 +859,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 		
 		// emulator
 		case CMD_MIFARE_SET_DBGMODE:
-			MifareSetDbgLvl(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
+			MifareSetDbgLvl(c->arg[0]);
 			break;
 		case CMD_MIFARE_EML_MEMCLR:
 			MifareEMemClr(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);

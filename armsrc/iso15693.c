@@ -71,22 +71,20 @@
 ///////////////////////////////////////////////////////////////////////
 
 // 32 + 2 crc + 1 
-#define ISO15_MAX_FRAME   35
-#define CMD_ID_RESP 5
-#define CMD_READ_RESP 13
-#define CMD_INV_RESP 12
+#define ISO15_MAX_FRAME		35
+#define CMD_ID_RESP			5
+#define CMD_READ_RESP		13
+#define CMD_INV_RESP		12
 
 #define FrameSOF              Iso15693FrameSOF
 #define Logic0                Iso15693Logic0
 #define Logic1                Iso15693Logic1
 #define FrameEOF              Iso15693FrameEOF
 
-#define Crc(data,datalen)     Iso15693Crc(data, datalen)
-#define AddCrc(data,datalen)  Iso15693AddCrc(data, datalen)
-#define CheckCrc(data,datalen)  Iso15693CheckCrc(data,datalen)
-#define sprintUID(target,uid)	Iso15693sprintUID(target, uid)
-
-int DEBUG = 0;
+#define Crc(data,datalen)		Iso15693Crc((data), (datalen))
+#define AddCrc(data,datalen)	Iso15693AddCrc((data), (datalen))
+#define CheckCrc(data,datalen)  Iso15693CheckCrc((data), (datalen))
+#define sprintUID(target,uid)	Iso15693sprintUID((target), (uid))
 
 static void BuildIdentifyRequest(uint8_t *cmdout);
 //static void BuildReadBlockRequest(uint8_t *cmdout, uint8_t *uid, uint8_t blockNumber );
@@ -345,7 +343,7 @@ static int DemodAnswer(uint8_t *received, uint8_t *dest, uint16_t samplecount) {
 		// Even things out by the length of the target waveform.
 		corr0 *= 4;
 		corr1 *= 4;
-		// if (DEBUG)
+		// if (MF_DBGLEVEL >= MF_DBG_EXTENDED)
 			// Dbprintf("Corr1 %d, Corr0 %d, CorrEOF %d", corr1, corr0, corrEOF);
 
 		if (corrEOF > corr1 && corrEOF > corr0)
@@ -366,17 +364,17 @@ static int DemodAnswer(uint8_t *received, uint8_t *dest, uint16_t samplecount) {
 		}
 		
 		if ( ( i + (int)ARRAYLEN(FrameEOF)) >= samplecount-1) {
-			//Dbprintf("ran off end!  %d | %d",( i + (int)ARRAYLEN(FrameEOF)), samplecount-1);
+			//Dbprintf("[!] ran off end!  %d | %d",( i + (int)ARRAYLEN(FrameEOF)), samplecount-1);
 			break;
 		}
 	}
 	
-	if (DEBUG) Dbprintf("ice: demod bytes %u", k);
+	if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("ice: demod bytes %u", k);
 			
 	if (mask != 0x01) { // this happens, when we miss the EOF
 		
 		// TODO: for some reason this happens quite often
-		if (DEBUG) Dbprintf("error, uneven octet! (extra bits!) mask %02x", mask);
+		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("[!] error, uneven octet! (extra bits!) mask %02x", mask);
 		//if (mask < 0x08) k--; // discard the last uneven octet;
 		// 0x08 is an assumption - but works quite often
 	}
@@ -671,7 +669,7 @@ void Iso15693InitReader(void) {
 	// Start the timer
 	StartCountSspClk();
 	
-	if (DEBUG) DbpString("Iso15693InitReader Exit");
+	if (MF_DBGLEVEL >= MF_DBG_EXTENDED ) DbpString("[+] Iso15693InitReader Exit");
 
 	LED_A_ON();
 }
@@ -846,19 +844,13 @@ void DbdecodeIso15693Answer(int len, uint8_t *d) {
 		else
 			strncat(status, "[!] crc fail", DBD15STATLEN);
 
-		if ( DEBUG ) Dbprintf("%s", status);
+		if ( MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("%s", status);
 	}
 }
 
 ///////////////////////////////////////////////////////////////////////
 // Functions called via USB/Client
 ///////////////////////////////////////////////////////////////////////
-
-void SetDebugIso15693(uint32_t debug) {
-	DEBUG = debug;
-	Dbprintf("[!] Iso15693 debug is %s", DEBUG ? "on" : "off");
-	return;
-}
 
 //-----------------------------------------------------------------------------
 // Act as ISO15693 reader, perform anti-collision and then attempt to read a sector
@@ -908,8 +900,8 @@ void ReaderIso15693(uint32_t parameter) {
 		uid[6] = answer1[3]; 
 		uid[7] = answer1[2];
 	
-		if ( DEBUG ) {	
-			Dbprintf("UID = %02X%02X%02X%02X%02X%02X%02X%02X",
+		if ( MF_DBGLEVEL >= MF_DBG_EXTENDED) {	
+			Dbprintf("[+] UID = %02X%02X%02X%02X%02X%02X%02X%02X",
 				uid[0], uid[1], uid[2], uid[3],
 				uid[4], uid[5], uid[5], uid[6]
 			);
@@ -922,15 +914,15 @@ void ReaderIso15693(uint32_t parameter) {
 		cmd_send(CMD_ACK, 1, sizeof(uid), 0, uid, sizeof(uid));
 	}
 
-	if ( DEBUG ) {
-		Dbprintf("%d octets read from IDENTIFY request:", answerLen1);
+	if ( MF_DBGLEVEL >= MF_DBG_EXTENDED) {
+		Dbprintf("[+] %d octets read from IDENTIFY request:", answerLen1);
 		DbdecodeIso15693Answer(answerLen1, answer1);
 		Dbhexdump(answerLen1, answer1, true);
 	}
 
 	// DEBUG read all pages
 /*
-	if (answerLen1 >= 12 && DEBUG) {
+	if (answerLen1 >= 12 && MF_DBGLEVEL >= MF_DBG_EXTENDED) {
 		i = 0;			
 		while ( i < 32 ) {  // sanity check, assume max 32 pages
 			
@@ -995,8 +987,8 @@ void SimTagIso15693(uint32_t parameter, uint8_t *uid) {
 			TransmitTo15693Reader(ToSend, ToSendMax, &tsamples, &wait);
 			LogTrace(cmd, CMD_INV_RESP, time_start << 4, (GetCountSspClk() - time_start) << 4, NULL, true);						
 					
-			if (DEBUG) {
-				Dbprintf("%d octets read from reader command: %x %x %x %x %x %x %x %x", ans,
+			if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
+				Dbprintf("[+] %d octets read from reader command: %x %x %x %x %x %x %x %x", ans,
 					buf[0], buf[1], buf[2],	buf[3],
 					buf[4], buf[5],	buf[6], buf[7]
 				);
@@ -1067,8 +1059,8 @@ void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint
 	uint8_t buf[ISO15_MAX_FRAME];
 	memset(buf, 0x00, sizeof(buf));
 
-	if (DEBUG) {
-		DbpString("SEND");
+	if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
+		DbpString("[+] SEND");
 		Dbhexdump(datalen, data, true);
 	}
 	
@@ -1081,8 +1073,8 @@ void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint
 		cmd_send(CMD_ACK, buflen, 0, 0, buf, buflen);
 		LED_B_OFF();	
 		
-		if (DEBUG) {
-			DbpString("RECV");
+		if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
+			DbpString("[+] RECV");
 			DbdecodeIso15693Answer(buflen, buf);
 			Dbhexdump(buflen, buf, true);
 		}

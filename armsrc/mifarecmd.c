@@ -1502,7 +1502,7 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 // MIFARE commands set debug level
 // 
 //-----------------------------------------------------------------------------
-void MifareSetDbgLvl(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain){
+void MifareSetDbgLvl(uint16_t arg0){
 	MF_DBGLEVEL = arg0;
 	Dbprintf("Debug level: %d", MF_DBGLEVEL);
 }

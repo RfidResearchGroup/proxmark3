@@ -333,12 +333,6 @@ int usage_15_restore(void){
 	PrintAndLog("'hf 15 restore' - to be implemented...");
 	return 0;
 }
-int usage_15_debug(void){
-	PrintAndLog("Usage: hf 15 debug  <0|1>");
-	PrintAndLog("	0 no debugging");
-	PrintAndLog("	1 turn debugging on");	
-	return 0;
-}
 int usage_15_raw(void){
 	PrintAndLog("Usage: hf 15 raw  [-r] [-2] [-c] <0A 0B 0C ... hex>");
 	PrintAndLog("       -r    do not read response");
@@ -775,19 +769,6 @@ int CmdHF15Restore(const char*Cmd) {
 int CmdHF15List(const char *Cmd) {
 	//PrintAndLog("Deprecated command, use 'hf list 15' instead");
 	CmdHFList("15");
-	return 0;
-}
-
-// Turns debugging on(1)/off(0)
-int CmdHF15Debug( const char *Cmd) {
-
-	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd)<1 || cmdp == 'h' || cmdp == 'H') return usage_15_debug();
-	
-	int debug = atoi(Cmd);
-	UsbCommand c = {CMD_ISO_15693_DEBUG, {debug, 0, 0}};
-	clearCommandBuffer();	
-	SendCommand(&c);
 	return 0;
 }
 
@@ -1231,7 +1212,6 @@ int CmdHF15Select(const char *Cmd) {
 
 static command_t CommandTable15[] = {
 	{"help",		CmdHF15Help,    	1, "This help"},
-	{"debug",		CmdHF15Debug,		0, "Turn debugging on/off"},	
 	{"demod",		CmdHF15Demod,   	1, "Demodulate ISO15693 from tag"},
 	{"dump",		CmdHF15Dump,		0, "Read all memory pages of an ISO15693 tag, save to file"},
 	{"findafi",		CmdHF15Afi,     	0, "Brute force AFI of an ISO15693 tag"},

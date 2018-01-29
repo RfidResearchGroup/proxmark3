@@ -39,7 +39,6 @@ extern int CmdHF15Reader(const char *Cmd);
 extern int CmdHF15Sim(const char *Cmd);
 extern int CmdHF15Afi(const char *Cmd);
 extern int CmdHF15Dump(const char*Cmd);
-extern int CmdHF15Debug( const char *Cmd);
 extern int CmdHF15Raw(const char *cmd);
 extern int CmdHF15Readmulti(const char *Cmd);
 extern int CmdHF15Read(const char *Cmd);
@@ -57,7 +56,6 @@ extern int usage_15_sim(void);
 extern int usage_15_findafi(void);
 extern int usage_15_dump(void);
 extern int usage_15_restore(void);
-extern int usage_15_debug(void);
 extern int usage_15_raw(void);
 
 extern int usage_15_read(void);

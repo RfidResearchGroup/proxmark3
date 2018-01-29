@@ -355,8 +355,7 @@ int CmdAnalyseCRC(const char *Cmd) {
 	uint16_t crcCC = b1 << 8 | b2;
 	printf("ICLASS crc  | %04x == %04x \n", crcCC, iclass_new);
 
-
-		
+	
 	free(data);
 	return 0;
 }
@@ -467,6 +466,9 @@ int CmdAnalyseTEASelfTest(const char *Cmd){
 }
 
 int CmdAnalyseA(const char *Cmd){
+
+
+	PrintAndLog("ISO 15693 - x25 -  Residue %04x ( %0xF0B8 expected) ", ISO15_CRC_CHECK);
 
 	uint8_t b1, b2;
 
