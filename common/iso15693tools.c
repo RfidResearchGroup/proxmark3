@@ -9,29 +9,6 @@
 #include "iso15693tools.h"
 
 // The CRC as described in ISO 15693-Part 3-Annex C
-// 	v	buffer with data
-//		n	length
-//	returns crc as 16bit value
-/*
-uint16_t Iso15693Crc(uint8_t *v, int n)
-{
-	uint32_t reg;
-	int i, j;
-
-	reg = 0xffff;
-	for(i = 0; i < n; i++) {
-		reg = reg ^ ((uint32_t)v[i]);
-		for (j = 0; j < 8; j++) {
-			if (reg & 0x0001) {
-				reg = (reg >> 1) ^ 0x8408;
-			} else {
-				reg = (reg >> 1);
-			}
-		}
-	}
-	return ~(uint16_t)(reg & 0xffff);
-}
-*/
 uint16_t Iso15693Crc(uint8_t *d, size_t n){
 	init_table(CRC_15);
 	return crc16_x25(d, n);
@@ -54,10 +31,6 @@ int Iso15693AddCrc(uint8_t *d, size_t n) {
 // If calculated with crc bytes,  the residue should be 0xF0B8
 bool Iso15693CheckCrc(uint8_t *d, size_t n) {
 	return (Iso15693Crc(d, n) == ISO15_CRC_CHECK );
-	//uint16_t crc = Iso15693Crc(v, n-2);
-	// if ( (( crc & 0xff ) == v[n-2]) && (( crc >> 8 ) == v[n-1]) )
-		// return true;
-	// return false;
 }
 
 int sprintf(char *str, const char *format, ...);
