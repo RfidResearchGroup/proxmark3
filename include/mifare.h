@@ -89,4 +89,19 @@ typedef struct {
 	} state;
 } nonces_t;
 
+//-----------------------------------------------------------------------------
+// FeliCa
+//-----------------------------------------------------------------------------
+typedef struct {
+	uint8_t uid[8];
+} __attribute__((__packed__)) felica_card_select_t;
+
+typedef enum FELICA_COMMAND {
+	FELICA_CONNECT = 			(1 << 0),
+	FELICA_NO_DISCONNECT =		(1 << 1),
+	FELICA_RAW =				(1 << 3),
+	FELICA_APPEND_CRC =			(1 << 5),
+	FELICA_NO_SELECT =			(1 << 6),
+} felica_command_t;
+
 #endif // _MIFARE_H_

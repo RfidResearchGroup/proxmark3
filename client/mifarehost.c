@@ -608,8 +608,8 @@ int saveTraceCard(void) {
 
 	// given 4096 tracecard size,  these loop will only match a 1024, 1kb card memory
 	// 4086/16 == 256blocks. 
-	for (int i = 0; i < 256; i++) {  // blocks
-		for (int j = 0; j < 16; j++)  // bytes
+	for (uint16_t i = 0; i < 256; i++) {  // blocks
+		for (uint8_t j = 0; j < 16; j++)  // bytes
 			fprintf(f, "%02X", *(traceCard + i * 16 + j)); 
 			
 		// no extra line in the end
