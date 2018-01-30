@@ -146,6 +146,23 @@ uint16_t crc16(uint8_t const *d, size_t length, uint16_t remainder, uint16_t pol
     return remainder;
 }
 
+void compute_crc(CrcType_t ct, const uint8_t *d, size_t n, uint8_t *first, uint8_t *second) {
+	uint16_t crc = 0;
+	switch (ct) {
+		case CRC_14A: crc = crc16_a(d, n); break;
+		case CRC_14B:
+		case CRC_15: crc = crc16_x25(d, n); break;
+		case CRC_15_ICLASS: crc = crc16_iclass(d, n); break;
+		case CRC_FELICA:crc = crc16_xmodem(d, n); break;
+		//case CRC_LEGIC:
+		case CRC_DNP: crc = crc16_dnp(d, n); break;
+		case CRC_CCITT: crc = crc16_ccitt(d, n); break;
+		default: break;
+	}
+	*first = (crc & 0xFF);
+    *second = ((crc >> 8) & 0xFF);
+}
+
 //poly=0x1021  init=0xffff  refin=false  refout=false  xorout=0x0000  check=0x29b1  residue=0x0000  name="CRC-16/CCITT-FALSE"
 uint16_t crc16_ccitt(uint8_t const *d, size_t n) {
 	return crc16_fast(d, n, 0xffff, false, false);

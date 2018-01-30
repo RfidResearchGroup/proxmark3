@@ -438,9 +438,6 @@ uint32_t GetT55xxClockBit(uint32_t clock);
 
 
 // FeliCa protocol
-#define FLITE_SERVICE_RO 0x000B
-#define FLITE_SERVICE_RW 0x0009
-
 #define FELICA_POLL_REQ 0x00
 #define FELICA_POLL_ACK 0x01
 
@@ -496,6 +493,21 @@ uint32_t GetT55xxClockBit(uint32_t clock);
 
 #define FELICA_UPDATE_RNDID_REQ 0x4C
 #define FELICA_UPDATE_RNDID_ACK 0x4D
+
+// FeliCa SYSTEM list
+#define SYSTEMCODE_ANY  		0xffff // ANY
+#define SYSTEMCODE_FELICA_LITE 	0x88b4 // FeliCa Lite
+#define SYSTEMCODE_COMMON 		0xfe00 // Common
+#define SYSTEMCODE_EDY			0xfe00 // Edy
+#define SYSTEMCODE_CYBERNE		0x0003 // Cyberne
+#define SYSTEMCODE_SUICA		0x0003 // Suica
+#define SYSTEMCODE_PASMO		0x0003 // Pasmo
+    
+//FeliCa Service list Suica/pasmo (little endian)
+#define SERVICE_SUICA_INOUT				0x108f // SUICA/PASMO
+#define SERVICE_SUICA_HISTORY			0x090f // SUICA/PASMO
+#define SERVICE_FELICA_LITE_READONLY	0x0b00 // FeliCa Lite RO
+#define SERVICE_FELICA_LITE_READWRITE	0x0900 // FeliCa Lite RW
 
 // Calypso protocol
 #define CALYPSO_GET_RESPONSE   0xC0

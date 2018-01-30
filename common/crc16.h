@@ -32,6 +32,9 @@ uint16_t update_crc16_ex( uint16_t crc, uint8_t c, uint16_t polynomial );
 uint16_t update_crc16(uint16_t crc, uint8_t c);
 uint16_t crc16(uint8_t const *message, size_t length, uint16_t remainder, uint16_t polynomial, bool refin, bool refout);
 
+// 
+void compute_crc(CrcType_t ct, const uint8_t *d, size_t n, uint8_t *first, uint8_t *second);
+
 // Calculate CRC-16/CCITT-FALSE checksum
 uint16_t crc16_ccitt(uint8_t const *d, size_t n);
 

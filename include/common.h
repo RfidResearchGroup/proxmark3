@@ -50,5 +50,4 @@ extern int MF_DBGLEVEL;
 #ifdef __cplusplus
 }
 #endif				
-
 #endif

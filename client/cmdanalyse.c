@@ -277,16 +277,17 @@ int CmdAnalyseCRC(const char *Cmd) {
 	}
 	len >>= 1;	
 
-	PrintAndLog("\nTests with | %s", sprint_hex(data, len));
-
+	PrintAndLog("\nTests with (%d) | %s",len, sprint_hex(data, len));
 	
-	init_table(CRC_LEGIC);
 	// 51  f5  7a  d6 
 	uint8_t uid[] = {0x51, 0xf5, 0x7a, 0xd6}; //12 34 56
+	init_table(CRC_LEGIC);
 	uint8_t legic8 = CRC8Legic(uid, sizeof(uid));
-	PrintAndLog("LEGIC | %X (EF6F expected) %02x", crc16_legic(data, sizeof(len), legic8), legic8);
+	PrintAndLog("Legic 16 | %X (EF6F expected) [legic8 = %02x]", crc16_legic(data, len, legic8), legic8);
+	init_table(CRC_FELICA);
+	PrintAndLog("FeliCa | %X ", crc16_xmodem(data, len));
 	
-	
+	return 0;
 	PrintAndLog("\nTests of reflection. Current methods in source code");	
 	PrintAndLog("   reflect(0x3e23L,3) is %04X == 0x3e26", reflect(0x3e23L,3) );
 	PrintAndLog("       reflect8(0x80) is %02X == 0x01", reflect8(0x80));
