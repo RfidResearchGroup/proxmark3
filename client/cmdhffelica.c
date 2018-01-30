@@ -108,7 +108,16 @@ int CmdHFFelicaReader(const char *Cmd) {
 		}
 		case 0: {
 			PrintAndLog("FeliCa Card found");
-			PrintAndLog("UID:  %s", sprint_hex(card.uid, sizeof(card.uid)));
+			
+			PrintAndLog("IDm  %s", sprint_hex(card.IDm, sizeof(card.IDm)));
+			PrintAndLog("  - CODE    %s", sprint_hex(card.code, sizeof(card.code)));
+			PrintAndLog("  - NFCUID1 %s", sprint_hex(card.uid, sizeof(card.uid)));
+			
+			PrintAndLog("PMm  %s", sprint_hex(card.PMm, sizeof(card.PMm)));
+			PrintAndLog("  - IC CODE %s", sprint_hex(card.iccode, sizeof(card.iccode)));
+			PrintAndLog("  - MRT     %s", sprint_hex(card.mrt, sizeof(card.mrt)));
+			
+			PrintAndLog("SERVICE CODE %s", sprint_hex(card.servicecode, sizeof(card.servicecode)));
 			break;
 		}
 	}

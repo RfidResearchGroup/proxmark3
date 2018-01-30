@@ -738,8 +738,8 @@ static void Code4bitAnswerAsTag(uint8_t cmd) {
 
 //-----------------------------------------------------------------------------
 // Wait for commands from reader
-// Stop when button is pressed
-// Or return TRUE when command is captured
+// stop when button is pressed
+// or return TRUE when command is captured
 //-----------------------------------------------------------------------------
 int GetIso14443aCommandFromReader(uint8_t *received, uint8_t *parity, int *len) {
     // Set FPGA mode to "simulated ISO 14443 tag", no modulation (listen
@@ -1410,10 +1410,9 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
 	} else {
 		
 		uint32_t ThisTransferTime = 0;
-		
 		ThisTransferTime = ((MAX(NextTransferTime, GetCountSspClk()) & 0xfffffff8) + 8);
 
-		while (GetCountSspClk() < ThisTransferTime);
+		while (GetCountSspClk() < ThisTransferTime) {};
 
 		LastTimeProxToAirStart = ThisTransferTime;
 	}
@@ -1716,7 +1715,7 @@ bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_Start
 //  If it takes too long return FALSE
 //-----------------------------------------------------------------------------
 static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint8_t *receivedResponsePar, uint16_t offset) {
-	uint32_t c = 0x00;
+	uint32_t c = 0;
 	
 	// Set FPGA mode to "reader listen mode", no modulation (listen
 	// only, since we are receiving, not transmitting).
