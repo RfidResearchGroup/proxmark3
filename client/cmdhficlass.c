@@ -216,16 +216,28 @@ int usage_hf_iclass_loclass(void) {
 }
 int usage_hf_iclass_chk(void) {
 	PrintAndLog("Checkkeys loads a dictionary text file with 8byte hex keys to test authenticating against a iClass tag");	
-	PrintAndLog("Usage: hf iclass chk [h|e|r] [f  (*.dic)] [c <csn>] [p <epurse>] [m <macs>]");
+	PrintAndLog("Usage: hf iclass chk [h|e|r] [f  (*.dic)]");
 	PrintAndLog("Options:");
 	PrintAndLog("      h             Show this help");
 	PrintAndLog("      f <filename>  Dictionary file with default iclass keys");
-	PrintAndLog("      c             CSN");
-	PrintAndLog("      p             EPURSE");
-	PrintAndLog("      m             macs");
+	PrintAndLog("      r             raw");
+	PrintAndLog("      e             elite");
 	PrintAndLog("Samples:");
 	PrintAndLog("		 hf iclass chk f default_iclass_keys.dic");	
 	PrintAndLog("		 hf iclass chk f default_iclass_keys.dic e");
+	return 0;
+}
+int usage_hf_iclass_lookup(void) {
+	PrintAndLog("Lookup keys takes some sniffed trace data and tries to verify what key was used against a dictionary file");	
+	PrintAndLog("Usage: hf iclass lookup [h|e|r] [f  (*.dic)] [c <csn>] [p <epurse>] [m <macs>]");
+	PrintAndLog("Options:");
+	PrintAndLog("      h             Show this help");
+	PrintAndLog("      f <filename>  Dictionary file with default iclass keys");
+	PrintAndLog("      u             CSN");
+	PrintAndLog("      p             EPURSE");
+	PrintAndLog("      m             macs");
+	PrintAndLog("Samples:");
+	PrintAndLog("        hf iclass lookup u 9655a400f8ff12e0 p f0ffffffffffffff m 0000000089cb984b f default_iclass_keys.dic");
 	return 0;
 }
 
@@ -1836,6 +1848,10 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 	iclass_premac_t *pre = NULL;
 	int keycnt = 0;
 
+	// if empty string
+	if (strlen(Cmd) == 0) errors = true;
+
+	
 	// time
 	uint64_t t1 = msclock();
 	
@@ -2030,6 +2046,8 @@ int CmdHFiClassLookUp(const char *Cmd) {
 	iclass_prekey_t *prekey = NULL;
 	int keycnt = 0, len = 0;
 
+	// if empty string
+	if (strlen(Cmd) == 0) errors = true;
 	// time
 	uint64_t t1 = msclock();
 	
@@ -2037,7 +2055,7 @@ int CmdHFiClassLookUp(const char *Cmd) {
 		switch (param_getchar(Cmd, cmdp)) {
 		case 'h':
 		case 'H':
-			return usage_hf_iclass_chk();
+			return usage_hf_iclass_lookup();
 		case 'f':
 		case 'F':
 			fileNameLen = param_getstr(Cmd, cmdp+1, filename, sizeof(filename)); 
@@ -2093,7 +2111,8 @@ int CmdHFiClassLookUp(const char *Cmd) {
 			break;
 		}
 	}
-	if (errors) return usage_hf_iclass_chk();	
+
+	if (errors) return usage_hf_iclass_lookup();	
 
 	PrintAndLog("CSN %s", sprint_hex( CSN, sizeof(CSN) ));
 	PrintAndLog("Epurse %s", sprint_hex( EPURSE, sizeof(EPURSE) ));
@@ -2265,26 +2284,25 @@ void PrintPreCalc(iclass_prekey_t* list, int itemcnt) {
 }
 
 static command_t CommandTable[] = {
-	{"help",		CmdHelp,						1,	"This help"},
-	{"calcnewkey",  CmdHFiClassCalcNewKey,      	1,	"[options..] Calc Diversified keys (blocks 3 & 4) to write new keys"},
-	{"chk",         CmdHFiClassCheckKeys,        	0,	"            Check keys"},
-	{"clone",       CmdHFiClassCloneTag,        	0,	"[options..] Authenticate and Clone from iClass bin file"},
-	{"decrypt",     CmdHFiClassDecrypt,         	1,	"[f <fname>] Decrypt tagdump" },
-	{"dump",        CmdHFiClassReader_Dump,     	0,	"[options..] Authenticate and Dump iClass tag's AA1"},
-	{"eload",       CmdHFiClassELoad,           	0,	"[f <fname>] (experimental) Load data into iClass emulator memory"},
-	{"encryptblk",  CmdHFiClassEncryptBlk,      	1,	"<BlockData> Encrypt given block data"},
-	{"list",        CmdHFiClassList,            	0,	"            (Deprecated) List iClass history"},
-	{"loclass",     CmdHFiClass_loclass,        	1,	"[options..] Use loclass to perform bruteforce of reader attack dump"},
-	{"managekeys",  CmdHFiClassManageKeys,      	1,	"[options..] Manage the keys to use with iClass"},
-	{"readblk",     CmdHFiClass_ReadBlock,      	0,	"[options..] Authenticate and Read iClass block"},
-	{"reader",		CmdHFiClassReader,				0,	"            Act like an iClass reader"},
-	{"readtagfile", CmdHFiClassReadTagFile,     	1,	"[options..] Display Content from tagfile"},
-	{"replay",      CmdHFiClassReader_Replay,   	0,	"<mac>       Read an iClass tag via Reply Attack"},
-	{"sim",         CmdHFiClassSim,             	0,	"[options..] Simulate iClass tag"},
-	{"sniff",       CmdHFiClassSniff,           	0,	"            Eavesdrop iClass communication"},
-	{"writeblk",    CmdHFiClass_WriteBlock,     	0,	"[options..] Authenticate and Write iClass block"},
-	{"a",    CmdHFiClassLookUp,     	0,	"[options..] A"},
-	
+	{"help",		CmdHelp,					1,	"This help"},
+	{"calcnewkey",  CmdHFiClassCalcNewKey,     	1,	"[options..] Calc Diversified keys (blocks 3 & 4) to write new keys"},
+	{"chk",         CmdHFiClassCheckKeys,      	1,	"            Check keys"},
+	{"clone",       CmdHFiClassCloneTag,       	0,	"[options..] Authenticate and Clone from iClass bin file"},
+	{"decrypt",     CmdHFiClassDecrypt,        	1,	"[f <fname>] Decrypt tagdump" },
+	{"dump",        CmdHFiClassReader_Dump,    	0,	"[options..] Authenticate and Dump iClass tag's AA1"},
+	{"eload",       CmdHFiClassELoad,          	0,	"[f <fname>] (experimental) Load data into iClass emulator memory"},
+	{"encryptblk",  CmdHFiClassEncryptBlk,     	1,	"<BlockData> Encrypt given block data"},
+	{"list",        CmdHFiClassList,           	0,	"            (Deprecated) List iClass history"},
+	{"loclass",     CmdHFiClass_loclass,       	1,	"[options..] Use loclass to perform bruteforce of reader attack dump"},
+	{"lookup",		CmdHFiClassLookUp,     		0,	"[options..] Uses authentication trace to check for key in dictionary file"},
+	{"managekeys",  CmdHFiClassManageKeys,     	1,	"[options..] Manage the keys to use with iClass"},
+	{"readblk",     CmdHFiClass_ReadBlock,      0,	"[options..] Authenticate and Read iClass block"},
+	{"reader",		CmdHFiClassReader,			0,	"            Act like an iClass reader"},
+	{"readtagfile", CmdHFiClassReadTagFile,     1,	"[options..] Display Content from tagfile"},
+	{"replay",      CmdHFiClassReader_Replay,   0,	"<mac>       Read an iClass tag via Reply Attack"},
+	{"sim",         CmdHFiClassSim,             0,	"[options..] Simulate iClass tag"},
+	{"sniff",       CmdHFiClassSniff,           0,	"            Eavesdrop iClass communication"},
+	{"writeblk",    CmdHFiClass_WriteBlock,     0,	"[options..] Authenticate and Write iClass block"},
 	{NULL, NULL, 0, NULL}
 };
 
