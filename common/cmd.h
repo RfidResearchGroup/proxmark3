@@ -37,7 +37,6 @@
 #include "usb_cmd.h"
 #include "usb_cdc.h"
 #include "proxmark3.h"
-#include "string.h"
 
 bool cmd_receive(UsbCommand* cmd);
 bool cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void* data, size_t len);

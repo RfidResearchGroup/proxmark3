@@ -24,8 +24,8 @@
 
 ----------------------------------------------------------------------*/
 
-#include "string.h"
-#include "stdio.h"
+#include <string.h>
+#include <stdio.h>
 #include "getopt.h"
 
 char *optarg;
