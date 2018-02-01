@@ -227,21 +227,14 @@ static int l_CmdConsole(lua_State *L) {
 }
 
 static int l_iso15693_crc(lua_State *L) {
-    //    uint16_t Iso15693Crc(uint8_t *v, int n);
     size_t size;
     const char *v = luaL_checklstring(L, 1, &size);
 	// iceman, should be size / 2 ?!?
-    uint16_t retval = Iso15693Crc((uint8_t *) v, size);
-    lua_pushunsigned(L, retval);
+    lua_pushunsigned(L, crc( CRC_15693, (uint8_t *) v, size));
     return 1;
 }
 
 static int l_iso14443b_crc(lua_State *L) {
-	/* void ComputeCrc14443(int CrcType,
-                     const unsigned char *Data, int Length,
-                     unsigned char *TransmitFirst,
-                     unsigned char *TransmitSecond)
-	*/
 	uint32_t tmp;
 	unsigned char buf[USB_CMD_DATA_SIZE] = {0x00};
     size_t size = 0;	
@@ -253,7 +246,7 @@ static int l_iso14443b_crc(lua_State *L) {
 	}
 	
 	size /= 2;	
-	ComputeCrc14443(CRC_14443_B, buf, size, &buf[size], &buf[size+1]);	
+	compute_crc(CRC_14443_B, buf, size, &buf[size], &buf[size+1]);	
     lua_pushlstring(L, (const char *)&buf, size+2);
     return 1;
 }
@@ -397,6 +390,7 @@ static int l_crc16(lua_State *L) {
 	size_t size;
 	const char *p_str = luaL_checklstring(L, 1, &size);
 
+	//iceman tochange
 	uint16_t retval = crc16_ccitt( (uint8_t*) p_str, size);
     lua_pushunsigned(L, retval);
     return 1;

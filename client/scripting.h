@@ -19,8 +19,6 @@
 #include "cmdmain.h"
 #include "util.h"
 #include "mifarehost.h"
-#include "iso15693tools.h"
-#include "iso14443crc.h"
 #include "crc.h"
 #include "crc16.h"
 #include "crc64.h"

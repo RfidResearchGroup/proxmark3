@@ -81,9 +81,10 @@
 #define Logic1                Iso15693Logic1
 #define FrameEOF              Iso15693FrameEOF
 
-#define Crc(data,datalen)		Iso15693Crc((data), (datalen))
-#define AddCrc(data,datalen)	Iso15693AddCrc((data), (datalen))
-#define CheckCrc(data,datalen)  Iso15693CheckCrc((data), (datalen))
+#define Crc(data, len)			crc(CRC_15693, (data), (len))
+#define CheckCrc(data, len)		check_crc(CRC_15693, (data), (len))
+#define AddCrc(data, len)		compute_crc(CRC_15693, (data), (len), (data)+(len), (data)+(len)+1)
+
 #define sprintUID(target,uid)	Iso15693sprintUID((target), (uid))
 
 static void BuildIdentifyRequest(uint8_t *cmdout);
@@ -839,7 +840,7 @@ void DbdecodeIso15693Answer(int len, uint8_t *d) {
 			strncat(status ,"No error ", DBD15STATLEN);
 		}
 			
-		if (CheckCrc(d,len))
+		if (CheckCrc(d, len))
 			strncat(status, "[+] crc OK", DBD15STATLEN);
 		else
 			strncat(status, "[!] crc fail", DBD15STATLEN);
@@ -1015,7 +1016,8 @@ void BruteforceIso15693Afi(uint32_t speed) {
 	data[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1;
 	data[1] = ISO15_CMD_INVENTORY;
 	data[2] = 0; // mask length
-	datalen = AddCrc(data, 3);
+	AddCrc(data, 3);
+	datalen += 2;
 	
 	recvlen = SendDataTag(data, datalen, false, speed, buf);
 	
@@ -1033,7 +1035,8 @@ void BruteforceIso15693Afi(uint32_t speed) {
 	
 	for (uint16_t i = 0; i < 256; i++) {
 		data[2] = i & 0xFF;
-		datalen = AddCrc(data, 4);
+		AddCrc(data, 4);
+		datalen += 2;
 		recvlen = SendDataTag(data, datalen, false, speed, buf);
 		WDT_HIT();
 		if (recvlen >= 12) {

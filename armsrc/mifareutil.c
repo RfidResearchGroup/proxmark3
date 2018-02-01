@@ -62,7 +62,7 @@ int mifare_sendcmd(uint8_t cmd, uint8_t* data, uint8_t data_size, uint8_t* answe
 	uint8_t dcmd[data_size+3];
     dcmd[0] = cmd;
 	memcpy(dcmd+1, data, data_size);
-	AppendCrc14443a(dcmd, data_size+1);
+	AddCrc14A(dcmd, data_size+1);
 	ReaderTransmit(dcmd, sizeof(dcmd), timing);
 	int len = ReaderReceive(answer, answer_parity);
 	if(!len) {
@@ -78,7 +78,7 @@ int mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd,
 	uint8_t dcmd[4] = {cmd, data, 0x00, 0x00};
 	uint8_t	ecmd[4] = {0x00, 0x00, 0x00, 0x00};
 	uint8_t par[1] = {0x00};			// 1 Byte parity is enough here
-	AppendCrc14443a(dcmd, 2);
+	AddCrc14A(dcmd, 2);
 	memcpy(ecmd, dcmd, sizeof(dcmd));
 	
 	if (crypted) {
@@ -213,7 +213,7 @@ int mifare_classic_readblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blo
 	}
 
 	memcpy(bt, receivedAnswer + 16, 2);
-	AppendCrc14443a(receivedAnswer, 16);
+	AddCrc14A(receivedAnswer, 16);
 	if (bt[0] != receivedAnswer[16] || bt[1] != receivedAnswer[17]) {
 		if (MF_DBGLEVEL >= MF_DBG_ALL) Dbprintf("Cmd CRC response error.");  
 		return 3;
@@ -351,7 +351,7 @@ int mifare_ultra_readblock(uint8_t blockNo, uint8_t *blockData) {
 	}
     
 	memcpy(bt, receivedAnswer + 16, 2);
-	AppendCrc14443a(receivedAnswer, 16);
+	AddCrc14A(receivedAnswer, 16);
 	if (bt[0] != receivedAnswer[16] || bt[1] != receivedAnswer[17]) {
 		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Cmd CRC response error.");
 		return 3;
@@ -381,7 +381,7 @@ int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
 	}
 	
 	memcpy(d_block, blockData, 16);
-	AppendCrc14443a(d_block, 16);
+	AddCrc14A(d_block, 16);
 	
 	// crypto
 	for (pos = 0; pos < 18; pos++) {
@@ -424,7 +424,7 @@ int mifare_ultra_writeblock_compat(uint8_t blockNo, uint8_t *blockData) {
     }
 
 	memcpy(d_block, blockData, 16);
-    AppendCrc14443a(d_block, 16);
+    AddCrc14A(d_block, 16);
 
 	ReaderTransmitPar(d_block, sizeof(d_block), par, NULL);
 
@@ -586,7 +586,7 @@ void emlClearMem(void) {
 // Mifare desfire commands
 int mifare_sendcmd_special(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t* data, uint8_t* answer, uint8_t *answer_parity, uint32_t *timing) {
     uint8_t dcmd[5] = {cmd, data[0], data[1], 0x00, 0x00};
-	AppendCrc14443a(dcmd, 3);
+	AddCrc14A(dcmd, 3);
 	
 	ReaderTransmit(dcmd, sizeof(dcmd), NULL);
 	int len = ReaderReceive(answer, answer_parity);
@@ -601,7 +601,7 @@ int mifare_sendcmd_special2(struct Crypto1State *pcs, uint8_t crypted, uint8_t c
     uint8_t dcmd[20] = {0x00};
     dcmd[0] = cmd;
     memcpy(dcmd+1,data,17);
-	AppendCrc14443a(dcmd, 18);
+	AddCrc14A(dcmd, 18);
 
 	ReaderTransmit(dcmd, sizeof(dcmd), NULL);
 	int len = ReaderReceive(answer, answer_parity);

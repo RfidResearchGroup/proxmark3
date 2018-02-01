@@ -729,6 +729,14 @@ void rol(uint8_t *data, const size_t len){
     data[len-1] = first;
 }
 
+/*
+uint8_t pw_rev_A(uint8_t b) {
+	b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
+	b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
+	b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
+	return b;
+}
+*/
 uint8_t reflect8(uint8_t b) {
 	return ((b * 0x80200802ULL) & 0x0884422110ULL) * 0x0101010101ULL >> 32;
 }

@@ -8,8 +8,6 @@
 // Analyse bytes commands
 //-----------------------------------------------------------------------------
 #include "cmdanalyse.h"
-#include "iso15693tools.h"
-#include "util_posix.h" // msclock
 
 static int CmdHelp(const char *Cmd);
 
@@ -287,7 +285,6 @@ int CmdAnalyseCRC(const char *Cmd) {
 	init_table(CRC_FELICA);
 	PrintAndLog("FeliCa | %X ", crc16_xmodem(data, len));
 	
-	return 0;
 	PrintAndLog("\nTests of reflection. Current methods in source code");	
 	PrintAndLog("   reflect(0x3e23L,3) is %04X == 0x3e26", reflect(0x3e23L,3) );
 	PrintAndLog("       reflect8(0x80) is %02X == 0x01", reflect8(0x80));
@@ -297,7 +294,7 @@ int CmdAnalyseCRC(const char *Cmd) {
 	//
 	uint8_t b1, b2;
 	
-	PrintAndLog("\nTests with '123456789' string");
+	printf("\n\nStandard test with 31 32 33 34 35 36 37 38 39  '123456789'\n\n");	
 	uint8_t dataStr[] = { 0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39 };
 	legic8 = CRC8Legic(dataStr, sizeof(dataStr));
 
@@ -310,52 +307,41 @@ int CmdAnalyseCRC(const char *Cmd) {
 	printf("-------------------------------------\n");
 	printf("CRC16 based\n\n");
 
-	init_table(CRC_DNP);
-	PrintAndLog("DNP    | %X (EA82 expected)", crc16_dnp(dataStr, sizeof(dataStr)));
-
-	init_table(CRC_CCITT);
-	PrintAndLog("CCITT  | %X (29B1 expected)", crc16_ccitt(dataStr, sizeof(dataStr)));
-		
-	init_table(CRC_FELICA);
-	PrintAndLog("FeliCa | %X (31C3 expected)", crc16_xmodem( dataStr, sizeof(dataStr)));
-	//uint8_t poll[10] = { 0xb2,0x4d,0x06,0x00,0xff,0xff,0x00,0x00,0x09,0x21};
-	uint8_t poll[] = {0xb2,0x4d,0x12,0x01,0x01,0x2e,0x3d,0x17,0x26,0x47,0x80,
-					  0x95,0x00,0xf1,0x00,0x00,0x00,0x01,0x43,0x00,0xb3,0x7f};
-	PrintAndLog("FeliCa | %X (B37F expected)", crc16_xmodem( poll+2, sizeof(poll)-4));
-	PrintAndLog("FeliCa | %X (0000 expected)", crc16_xmodem( poll+2, sizeof(poll)-2));
-	printf("-------------------------------------\n");
-	printf("\n\n");	
+	// input from commandline
+	PrintAndLog("CCITT  | %X (29B1 expected)", crc(CRC_CCITT, dataStr, sizeof(dataStr)));		
 	
+	uint8_t poll[] = {0xb2,0x4d,0x12,0x01,0x01,0x2e,0x3d,0x17,0x26,0x47,0x80, 0x95,0x00,0xf1,0x00,0x00,0x00,0x01,0x43,0x00,0xb3,0x7f};
+	PrintAndLog("FeliCa | %X (B37F expected)", crc(CRC_FELICA, poll+2, sizeof(poll)-4));
+	PrintAndLog("FeliCa | %X (0000 expected)", crc(CRC_FELICA, poll+2, sizeof(poll)-2));
+	
+	uint8_t sel_corr[] = { 0x40, 0xe1, 0xe1, 0xff, 0xfe, 0x5f, 0x02, 0x3c, 0x43, 0x01};
+	PrintAndLog("iCLASS | %04x (0143 expected)", crc(CRC_ICLASS, sel_corr, sizeof(sel_corr)-2));
+	printf("---------------------------------------------------------------\n\n\n");
 	
 	// ISO14443 crc A
-	
-	// table test.
-	init_table(CRC_14A);
-	uint16_t crcA = crc16_a(dataStr, sizeof(dataStr));
-	ComputeCrc14443(CRC_14443_A, dataStr, sizeof(dataStr), &b1, &b2);
+	compute_crc(CRC_14443_A, dataStr, sizeof(dataStr), &b1, &b2);
 	uint16_t crcAA = b1 << 8 | b2;
-	printf("ISO14443 crc A   | %04x == %04x   (BF05 expected)\n", crcA, crcAA);
+	printf("ISO14443 crc A  | %04x or %04x (BF05 expected)\n", crcAA, crc(CRC_14443_A, dataStr, sizeof(dataStr)) );
 	
 	// ISO14443 crc B
-	init_table(CRC_14B);
-	uint16_t crcB = crc16_x25(dataStr, sizeof(dataStr));
-	ComputeCrc14443(CRC_14443_B, dataStr, sizeof(dataStr), &b1, &b2);	
+	compute_crc(CRC_14443_B, dataStr, sizeof(dataStr), &b1, &b2);
 	uint16_t crcBB = b1 << 8 | b2;
-	printf("ISO14443 crc B   | %04x == %04x   (906E expected)\n", crcB, crcBB);
+	printf("ISO14443 crc B  | %04x or %04x (906E expected)\n", crcBB, crc(CRC_14443_B, dataStr, sizeof(dataStr)) );
 
 	// ISO15693 crc  (x.25)
-	init_table(CRC_15);
-	uint16_t x25 = crc16_x25(dataStr, sizeof(dataStr));
-	uint16_t iso = Iso15693Crc(dataStr, sizeof(dataStr));
-	printf("ISO15693 crc X25 | %04x == %04x   (906E expected)\n", iso, x25 );
+	compute_crc(CRC_15693, dataStr, sizeof(dataStr), &b1, &b2);
+	uint16_t crcCC = b1 << 8 | b2;
+	printf("ISO15693 crc X25| %04x or %04x (906E expected)\n", crcCC, crc(CRC_15693, dataStr, sizeof(dataStr)) );
 
 	// ICLASS	
-	init_table(CRC_15_ICLASS);
-	uint16_t iclass_new = crc16_iclass(dataStr, sizeof(dataStr));
-	ComputeCrc14443(CRC_ICLASS, dataStr, sizeof(dataStr), &b1, &b2);
-	uint16_t crcCC = b1 << 8 | b2;
-	printf("ICLASS crc  | %04x == %04x \n", crcCC, iclass_new);
+	compute_crc(CRC_ICLASS, dataStr, sizeof(dataStr), &b1, &b2);
+	uint16_t crcDD = b1 << 8 | b2;
+	printf("ICLASS crc      | %04x or %04x\n", crcDD, crc(CRC_ICLASS, dataStr, sizeof(dataStr)) );
 
+	// FeliCa
+	compute_crc(CRC_FELICA, dataStr, sizeof(dataStr), &b1, &b2);
+	uint16_t crcEE = b1 << 8 | b2;
+	printf("FeliCa          | %04x or %04x (31C3 expected)\n", crcEE, crc(CRC_FELICA, dataStr, sizeof(dataStr)));
 	
 	free(data);
 	return 0;
@@ -468,113 +454,72 @@ int CmdAnalyseTEASelfTest(const char *Cmd){
 
 int CmdAnalyseA(const char *Cmd){
 
+	uint8_t syncBit = 99;
+	// The start bit is one ore more Sequence Y followed by a Sequence Z (... 11111111 00x11111). We need to distinguish from
+	// Sequence X followed by Sequence Y followed by Sequence Z     (111100x1 11111111 00x11111)
+	// we therefore look for a ...xx1111 11111111 00x11111xxxxxx... pattern 
+	// (12 '1's followed by 2 '0's, eventually followed by another '0', followed by 5 '1's)
+	# define SYNC_16BIT 0x4DB2
+	#define FELICA_STARTBIT_MASK	0x07FFEF80					// mask is    00000111 11111111 11101111 10000000
 
-	PrintAndLog("ISO 15693 - x25 -  Residue %04x ( %0xF0B8 expected) ", ISO15_CRC_CHECK);
-
-	uint8_t b1, b2;
-
-	// 14 a
-	uint8_t halt[] = {0x50 , 0x00, 0x57, 0xcd }; //halt w crc
-	uint8_t atqs[] = {0x09, 0x78, 0x00, 0x92, 0x02, 0x54, 0x13, 0x02, 0x04, 0x2d, 0xe8 }; // atqs w crc	
-	ComputeCrc14443(CRC_14443_A, halt, sizeof(halt), &b1, &b2);
-	printf("14a crc halt == 0  [%s]\n", (b1==0 && b2==0) ? "YES": "NO" );
-	ComputeCrc14443(CRC_14443_A, atqs, sizeof(atqs), &b1, &b2);
-	printf("14a crc ATQS == 0  [%s]\n", (b1==0 && b2==0) ? "YES": "NO" );
+	uint32_t shiftReg =  SYNC_16BIT;
+	printf("reg %04x \n",(shiftReg & (SYNC_16BIT >> 0)));
+	printf("reg %04x \n",(shiftReg & (SYNC_16BIT >> 1)));
+	printf("reg %04x \n",(shiftReg & (SYNC_16BIT >> 2)));
+	printf("reg %04x \n",(shiftReg & (SYNC_16BIT >> 3)));
+	printf("reg %04x \n",(shiftReg & (SYNC_16BIT >> 4)));
+	printf("reg %04x \n",(shiftReg & (SYNC_16BIT >> 5)));
+	printf("reg %04x \n",(shiftReg & (SYNC_16BIT >> 6)));
+	printf("reg %04x \n",(shiftReg & (SYNC_16BIT >> 7)));
 	
-	// 14b
-	uint8_t u14b[] = {0x05,0x00,0x08,0x39,0x73};
-	ComputeCrc14443(CRC_14443_B, u14b, sizeof(u14b), &b1, &b2);
-	printf("14b crc u14b == 0  [%s] %02x %02x\n", (b1==0 && b2==0) ? "YES": "NO" , b1,b2);	
-	ComputeCrc14443(CRC_14443_B, u14b, sizeof(u14b)-2, &b1, &b2);
-	printf("14b crc u14b == 0  [%s] %02x %02x\n", (b1==0 && b2==0) ? "YES": "NO" , b1,b2);	
+	for ( uint8_t i=0; i<32; i++){		
+		if		((shiftReg & (SYNC_16BIT >> 0)) == SYNC_16BIT >> 0) syncBit = 7;
+		else if ((shiftReg & (SYNC_16BIT >> 1)) == SYNC_16BIT >> 1) syncBit = 6;
+		else if ((shiftReg & (SYNC_16BIT >> 2)) == SYNC_16BIT >> 2) syncBit = 5;
+		else if ((shiftReg & (SYNC_16BIT >> 3)) == SYNC_16BIT >> 3) syncBit = 4;
+		else if ((shiftReg & (SYNC_16BIT >> 4)) == SYNC_16BIT >> 4) syncBit = 3;
+		else if ((shiftReg & (SYNC_16BIT >> 5)) == SYNC_16BIT >> 5) syncBit = 2;
+		else if ((shiftReg & (SYNC_16BIT >> 6)) == SYNC_16BIT >> 6) syncBit = 1;
+		else if ((shiftReg & (SYNC_16BIT >> 7)) == SYNC_16BIT >> 7) syncBit = 0;
 
-	printf("x25 or 14b command  %04X == (3973)\n", crc16_x25(u14b, sizeof(u14b)-2));
-	printf("x25 or 14b command  %04X == (0)\n", crc16_x25(u14b, sizeof(u14b)));
-
-	printf("\n\n");	
+		printf("ShiftReg is [%04x] | SyncBit is [%u]\n", shiftReg, syncBit);
+		shiftReg = shiftReg << 1 | ( shiftReg & 0x8000 ) >> 15;
+	}
+/*	
+pm3 --> da hex2bin 4db2     0100110110110010
+pm3 --> da hex2bin 926d9  10010010011011011001
+*/
 	return 0;
-	
-	time_t t;
-	srand((unsigned) time(&t));
-	uint64_t t1 = msclock();
-	// test CRC-A etc
-	for (int foo=0; foo < 10000000; foo++) {
-		crc16_a(atqs, sizeof(atqs));
-		atqs[1] = rand();
-		atqs[2] = rand();
-		atqs[3] = rand();
-		atqs[4] = rand();
-	}
-	t1 = msclock() - t1; printf("ticks crc_a  %" PRIu64 "\n", t1);
-	
-	t1 = msclock();
-	for (int foo=0; foo < 10000000; foo++) {
-		ComputeCrc14443(CRC_14443_A, atqs, sizeof(atqs), &b1, &b2);
-		atqs[1] = rand();
-		atqs[2] = rand();
-		atqs[3] = rand();
-		atqs[4] = rand();	}
-	t1 = msclock() - t1; printf("ticks curr CRC-a  %" PRIu64 "\n", t1);
-	
-	
-	// test ISO15693 crc
-	t1 = msclock();
-	for (int foo=0; foo < 10000000; foo++) {
-		crc16_x25(atqs, sizeof(atqs));
-		atqs[1] = rand();
-		atqs[2] = rand();
-		atqs[3] = rand();
-		atqs[4] = rand();
-	}
-	t1 = msclock() - t1; printf("ticks x25  %" PRIu64 "\n", t1);
-	
-	t1 = msclock();
-	for (int foo=0; foo < 10000000; foo++) {
-		Iso15693Crc(atqs, sizeof(atqs));
-		atqs[1] = rand();
-		atqs[2] = rand();
-		atqs[3] = rand();
-		atqs[4] = rand();	}
-	t1 = msclock() - t1; printf("ticks curr iso15 (x25)  %" PRIu64 "\n", t1);	
 
-	//return 0;
+	// 14443-A	
+	uint8_t u14_c[] = {0x09, 0x78, 0x00, 0x92, 0x02, 0x54, 0x13, 0x02, 0x04, 0x2d, 0xe8 }; // atqs w crc	
+	uint8_t u14_w[] = {0x09, 0x78, 0x00, 0x92, 0x02, 0x54, 0x13, 0x02, 0x04, 0x2d, 0xe7 }; // atqs w crc
+	printf("14a check wrong crc      | %s\n", (check_crc(CRC_14443_A, u14_w, sizeof(u14_w))) ? "YES": "NO" );	
+	printf("14a check correct crc    | %s\n", (check_crc(CRC_14443_A, u14_c, sizeof(u14_c))) ? "YES": "NO" );
 	
-	// 16bit test
-	uint8_t md;
-	uint32_t mb, mc;
+	// 14443-B
+	uint8_t u14b[] = {0x05,0x00,0x08,0x39,0x73};
+	printf("14b check crc            | %s\n", (check_crc(CRC_14443_B, u14b, sizeof(u14b))) ? "YES": "NO");	
 
-	// reflect
-	t1 = msclock();
-	for (int foo=0; foo < 10000000; foo++) {
-		mb = rand();
-		reflect(mb, 16);
-	}
-	t1 = msclock() - t1; printf("ticks reflect  %" PRIu64 "\n", t1);
+	// 15693 test
+	uint8_t u15_c[] = {0x05,0x00,0x08,0x39,0x73}; // correct
+	uint8_t u15_w[] = {0x05,0x00,0x08,0x39,0x72};	// wrong
+	printf("15 check wrong crc       | %s\n", (check_crc(CRC_15693, u15_w, sizeof(u15_w))) ? "YES": "NO");	
+	printf("15 check correct crc     | %s\n", (check_crc(CRC_15693, u15_c, sizeof(u15_c))) ? "YES": "NO");	
+
+	// iCLASS test - wrong crc , swapped bytes.
+	uint8_t iclass_w[] = { 0x40, 0xe1, 0xe1, 0xff, 0xfe, 0x5f, 0x02, 0x3c, 0x01, 0x43};
+	uint8_t iclass_c[] = { 0x40, 0xe1, 0xe1, 0xff, 0xfe, 0x5f, 0x02, 0x3c, 0x43, 0x01};
+	printf("iCLASS check wrong crc   | %s\n", (check_crc(CRC_ICLASS, iclass_w, sizeof(iclass_w))) ? "YES": "NO");	
+	printf("iCLASS check correct crc | %s\n", (check_crc(CRC_ICLASS, iclass_c, sizeof(iclass_c))) ? "YES": "NO");	
 	
-	// reflect16
-	t1 = msclock();
-	for (int foo=0; foo < 10000000; foo++) {
-		mc = rand();
-		reflect16(mc);	
-	}
-	t1 = msclock() - t1; printf("ticks reflect16  %" PRIu64 "\n", t1);
-	//---------------------------------------------------------
+	// FeliCa test
+	uint8_t felica_w[] = {0x12,0x01,0x01,0x2e,0x3d,0x17,0x26,0x47,0x80, 0x95,0x00,0xf1,0x00,0x00,0x00,0x01,0x43,0x00,0xb3,0x7e};
+	uint8_t felica_c[] = {0x12,0x01,0x01,0x2e,0x3d,0x17,0x26,0x47,0x80, 0x95,0x00,0xf1,0x00,0x00,0x00,0x01,0x43,0x00,0xb3,0x7f};
+	printf("FeliCa check wrong crc   | %s\n", (check_crc(CRC_FELICA, felica_w, sizeof(felica_w))) ? "YES": "NO");	
+	printf("FeliCa check correct crc | %s\n", (check_crc(CRC_FELICA, felica_c, sizeof(felica_c))) ? "YES": "NO");	
 	
-	// reflect
-	t1 = msclock();
-	for (int foo=0; foo < 10000000; foo++) {
-		md = rand();
-		reflect(md, 8);
-	}
-	t1 = msclock() - t1; printf("ticks reflect _8_ %" PRIu64 "\n", t1);
-	
-	// reflect8
-	t1 = msclock();
-	for (int foo=0; foo < 10000000; foo++) {
-		md = rand();
-		reflect8(md);	
-	}
-	t1 = msclock() - t1; printf("ticks reflect8  %" PRIu64 "\n", t1);
+	printf("\n\n");	
 
 	return 0;
 	/*
@@ -876,19 +821,19 @@ int CmdAnalyseHid(const char *Cmd){
 
 void generate4bNUID(uint8_t *uid, uint8_t *nuid){
 	uint16_t crc;
-	uint8_t first, second;
+	uint8_t b1, b2;
 		
-	ComputeCrc14443(CRC_14443_A, uid, 3, &first, &second);
-	nuid[0] |= (second & 0xE0) | 0xF;
-	nuid[1] = first;
+	compute_crc(CRC_14443_A, uid, 3, &b1, &b2);
+	nuid[0] |= (b2 & 0xE0) | 0xF;
+	nuid[1] = b1;
 	
-	crc = first;
-	crc |= second << 8;
+	crc = b1;
+	crc |= b2 << 8;
 	
-	UpdateCrc14443(uid[3], &crc);
-	UpdateCrc14443(uid[4], &crc);
-	UpdateCrc14443(uid[5], &crc);
-	UpdateCrc14443(uid[6], &crc);
+	crc = update_crc16(uid[3], crc);
+	crc = update_crc16(uid[4], crc);
+	crc = update_crc16(uid[5], crc);
+	crc = update_crc16(uid[6], crc);
 		
 	nuid[2] = (crc >> 8) & 0xFF ;
 	nuid[3] = crc & 0xFF;

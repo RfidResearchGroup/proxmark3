@@ -420,42 +420,27 @@ void annotateFelica(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
  *          2 : Not crc-command
  */
 
-uint8_t iso14443A_CRC_check(bool isResponse, uint8_t* data, uint8_t len)
-{
-	uint8_t b1,b2;
-
-	if(len <= 2) return 2;
-
-	if(isResponse & (len < 6)) return 2;
-	
-	ComputeCrc14443(CRC_14443_A, data, len-2, &b1, &b2);
-	if (b1 != data[len-2] || b2 != data[len-1])
-		return 0;
-	
-	return 1;
+uint8_t iso14443A_CRC_check(bool isResponse, uint8_t* d, uint8_t n) {
+	if (n < 3) return 2;
+	if (isResponse & (n < 6)) return 2;
+	return check_crc(CRC_14443_A, d, n);
 }
 
 
 /**
- * @brief iso14443B_CRC_check Checks CRC in command or response
- * @param isResponse
+ * @brief iso14443B_CRC_check Checks CRC
  * @param data
  * @param len
  * @return  0 : CRC-command, CRC not ok
  *          1 : CRC-command, CRC ok
  *          2 : Not crc-command
  */
-uint8_t iso14443B_CRC_check(bool isResponse, uint8_t* data, uint8_t len)
-{
-	uint8_t b1,b2;
+uint8_t iso14443B_CRC_check(uint8_t* d, uint8_t n) {
+	return check_crc(CRC_14443_B, d, n);
+}
 
-	if(len <= 2) return 2;
-
-	ComputeCrc14443(CRC_14443_B, data, len-2, &b1, &b2);
-	if(b1 != data[len-2] || b2 != data[len-1])
-	  return 0;
-  
-	return 1;
+uint8_t iso15693_CRC_check(uint8_t* d, uint8_t n) {
+	return check_crc(CRC_15693, d, n);
 }
 
 /**
@@ -467,13 +452,13 @@ uint8_t iso14443B_CRC_check(bool isResponse, uint8_t* data, uint8_t len)
  *	        1 : CRC-command, CRC ok
  *          2 : Not crc-command
  */
-uint8_t iclass_CRC_check(bool isResponse, uint8_t* data, uint8_t len)
+uint8_t iclass_CRC_check(bool isResponse, uint8_t* d, uint8_t n)
 {
-	if(len < 4) return 2;//CRC commands (and responses) are all at least 4 bytes
-
-	uint8_t b1, b2;
+	//CRC commands (and responses) are all at least 4 bytes
+	if (n < 4) return 2;
 
 	//Commands to tag
+	//Don't include the command byte
 	if (!isResponse) {
 		/**
 		  These commands should have CRC. Total length leftmost
@@ -484,10 +469,8 @@ uint8_t iclass_CRC_check(bool isResponse, uint8_t* data, uint8_t len)
 		  4 PAGESEL
 		  **/
 		//Covers three of them
-		if(len == 4 || len == 12) {
-			//Don't include the command byte
-			ComputeCrc14443(CRC_ICLASS, (data+1), len-3, &b1, &b2);
-			return b1 == data[len -2] && b2 == data[len-1];
+		if (n == 4 || n == 12) {
+			return check_crc( CRC_ICLASS, d+1, n-1);
 		}
 		return 2;
 	} 
@@ -512,23 +495,9 @@ uint8_t iclass_CRC_check(bool isResponse, uint8_t* data, uint8_t len)
 	In conclusion, without looking at the command; any response
 	of length 10 or 34 should have CRC
 	  **/
-	if(len != 10 && len != 34) return true;
+	if (n != 10 && n != 34) return true;
 
-	ComputeCrc14443(CRC_ICLASS, data, len-2, &b1, &b2);
-	return b1 == data[len -2] && b2 == data[len-1];
-}
-// CRC Iso15693Crc(data,datalen)
-uint8_t iso15693_CRC_check(bool isResponse, uint8_t* data, uint8_t len) {
-	if ( len <= 3) return 2;
-	
-	uint16_t crc = Iso15693Crc(data, len-2);
-	uint8_t b1 = crc & 0xFF;
-	uint8_t b2 = ((crc >> 8) & 0xFF);
-	
-	if ( b1 != data[len-2] || b2 != data[len-1] )
-		return 0;
-	
-	return 1;
+	return check_crc( CRC_ICLASS, d, n);
 }
 
 bool is_last_record(uint16_t tracepos, uint8_t *trace, uint16_t traceLen)
@@ -640,14 +609,14 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 			case ISO_14443B:
 			case TOPAZ:
 			case FELICA:
-				crcStatus = iso14443B_CRC_check(isResponse, frame, data_len);
+				crcStatus = iso14443B_CRC_check(frame, data_len);
 				break;
 			case ISO_14443A:
 			case MFDES:
 				crcStatus = iso14443A_CRC_check(isResponse, frame, data_len);
 				break;
 			case ISO_15693:
-				crcStatus = iso15693_CRC_check(isResponse, frame, data_len);
+				crcStatus = iso15693_CRC_check(frame, data_len);
 				break;
 			default: 
 				break;

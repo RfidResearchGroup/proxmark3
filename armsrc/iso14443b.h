@@ -22,11 +22,18 @@ extern "C" {
 #include "apps.h"
 #include "util.h"
 #include "string.h"
-#include "iso14443crc.h"
+#include "crc16.h"
 #include "mifare.h"
 #include "protocols.h"
 
-extern void AppendCrc14443b(uint8_t *data, int len);
+#ifndef AddCrc14A
+# define	AddCrc14A(data, len)	compute_crc(CRC_14443_A, (data), (len), (data)+(len), (data)+(len)+1)
+#endif
+
+#ifndef AddCrc14B
+# define	AddCrc14B(data, len)	compute_crc(CRC_14443_B, (data), (len), (data)+(len), (data)+(len)+1)
+#endif
+
 extern void SendRawCommand14443B_Ex(UsbCommand *c);
 extern void iso14443b_setup();
 extern uint8_t iso14443b_apdu(uint8_t const *message, size_t message_length, uint8_t *response);

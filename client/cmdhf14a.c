@@ -914,9 +914,9 @@ int CmdHF14ACmdRaw(const char *cmd) {
     if (crc && datalen>0 && datalen<sizeof(data)-2) {
         uint8_t first, second;
 		if (topazmode) {
-			ComputeCrc14443(CRC_14443_B, data, datalen, &first, &second);
+			compute_crc(CRC_14443_B, data, datalen, &first, &second);
 		} else {
-			ComputeCrc14443(CRC_14443_A, data, datalen, &first, &second);
+			compute_crc(CRC_14443_A, data, datalen, &first, &second);
 		}
         data[datalen++] = first;
         data[datalen++] = second;

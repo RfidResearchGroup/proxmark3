@@ -22,7 +22,7 @@ extern "C" {
 #include "apps.h"
 #include "util.h"
 #include "string.h"
-#include "iso14443crc.h"
+#include "crc16.h"
 #include "mifaresniff.h"
 #include "crapto1/crapto1.h"
 #include "mifareutil.h"
@@ -85,8 +85,15 @@ typedef struct {
 	uint8_t *parity;
 } tUart;
 
+#ifndef AddCrc14A
+# define	AddCrc14A(data, len)	compute_crc(CRC_14443_A, (data), (len), (data)+(len), (data)+(len)+1)
+#endif
+
+#ifndef AddCrc14B
+# define	AddCrc14B(data, len)	compute_crc(CRC_14443_B, (data), (len), (data)+(len), (data)+(len)+1)
+#endif
+
 extern void GetParity(const uint8_t *pbtCmd, uint16_t len, uint8_t *par);
-extern void AppendCrc14443a(uint8_t *data, int len);
 
 extern tDemod* GetDemod(void);
 extern void DemodReset(void);

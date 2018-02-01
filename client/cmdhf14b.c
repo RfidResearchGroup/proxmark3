@@ -806,7 +806,6 @@ int srix4kValid(const char *Cmd){
 bool waitCmd14b(bool verbose) {
 
 	bool crc = false;
-	uint8_t b1 = 0, b2 = 0;
 	uint8_t data[USB_CMD_DATA_SIZE] = {0x00};
 	uint8_t status = 0;
 	uint16_t len = 0;	
@@ -823,8 +822,7 @@ bool waitCmd14b(bool verbose) {
 		
 		if (verbose) {
 			if ( len >= 3 ) {
-				ComputeCrc14443(CRC_14443_B, data, len-2, &b1, &b2);
-				crc = ( data[len-2] == b1 && data[len-1] == b2);
+				crc = check_crc(CRC_14443_B, data, len);
 		
 				PrintAndLog("[LEN %u] %s[%02X %02X] %s",
 					len,

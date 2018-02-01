@@ -258,7 +258,7 @@ void* mifare_cryto_preprocess_data (desfiretag_t tag, void *data, size_t *nbytes
                 // ... CRC ...
                 switch (DESFIRE (tag)->authentication_scheme) {
                 case AS_LEGACY:
-                    AppendCrc14443a(res + offset, *nbytes - offset);
+                    AddCrc14A(res + offset, *nbytes - offset);
                     *nbytes += 2;
                     break;
                 case AS_NEW:
@@ -445,9 +445,8 @@ void* mifare_cryto_postprocess_data (desfiretag_t tag, void *data, size_t *nbyte
             uint32_t crc;
             switch (DESFIRE (tag)->authentication_scheme) {
             case AS_LEGACY:
-                end_crc_pos = crc_pos + 2;
-                AppendCrc14443a (res, end_crc_pos);
-				
+                AddCrc14A(res, end_crc_pos);
+                end_crc_pos = crc_pos + 2;				
 				// 
 				
 				

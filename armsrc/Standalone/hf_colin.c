@@ -737,7 +737,7 @@ int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *data
         };
 
         memcpy(d_block, datain, 16);
-        AppendCrc14443a(d_block, 16);
+        AddCrc14A(d_block, 16);
         ReaderTransmit(d_block, sizeof(d_block), NULL);
         if ((ReaderReceive(receivedAnswer, receivedAnswerPar) != 1) || (receivedAnswer[0] != 0x0a)) {
             // if (MF_DBGLEVEL >= 1)

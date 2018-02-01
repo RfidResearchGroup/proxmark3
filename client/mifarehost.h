@@ -23,7 +23,7 @@
 #include "data.h"
 #include "util.h"
 #include "crapto1/crapto1.h"
-#include "iso14443crc.h"
+#include "crc16.h"
 #include "protocols.h"
 #include "mifare.h"
 #include "mfkey.h"

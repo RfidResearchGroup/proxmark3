@@ -676,7 +676,7 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *
 		
 		// Transmit MIFARE_CLASSIC_AUTH	
 		uint8_t dcmd[4] = {0x60 + (keyType & 0x01), blockNo, 0x00, 0x00};
-		AppendCrc14443a(dcmd, 2);
+		AddCrc14A(dcmd, 2);
 		ReaderTransmit(dcmd, sizeof(dcmd), NULL);
 		int len = ReaderReceive(answer, par);		
 
@@ -1721,7 +1721,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain){
 		}
 	
 		memcpy(data, datain, 16);
-		AppendCrc14443a(data, 16);
+		AddCrc14A(data, 16);
 	
 		ReaderTransmit(data, sizeof(data), NULL);
 		if ((ReaderReceive(receivedAnswer, receivedAnswerPar) != 1) || (receivedAnswer[0] != 0x0a)) {

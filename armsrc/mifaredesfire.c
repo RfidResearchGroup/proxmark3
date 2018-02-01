@@ -334,7 +334,7 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
                 memcpy(buff1,newKey, 8);
                 memcpy(buff2,newKey + 8, 8);
                 
-                ComputeCrc14443(CRC_14443_A, newKey, 16, &first, &second);
+                compute_crc(CRC_14443_A, newKey, 16, &first, &second);
                 memcpy(buff3, &first, 1);
                 memcpy(buff3 + 1, &second, 1);
                 
@@ -376,7 +376,7 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
                         memcpy(buff1,newKey, 8);
                         memcpy(buff2,newKey + 8, 8);
                         
-                        ComputeCrc14443(CRC_14443_A, newKey, 16, &first, &second);
+                        compute_crc(CRC_14443_A, newKey, 16, &first, &second);
                         memcpy(buff3, &first, 1);
                         memcpy(buff3 + 1, &second, 1);
                         
@@ -546,7 +546,7 @@ size_t CreateAPDU( uint8_t *datain, size_t len, uint8_t *dataout){
 	cmd[1] = 0x00;  //  CID: 0x00 //TODO: allow multiple selected cards
 	
 	memcpy(cmd+2, datain, len);
-	AppendCrc14443a(cmd, len+2);
+	AddCrc14A(cmd, len+2);
 	
 	memcpy(dataout, cmd, cmdlen);
 	

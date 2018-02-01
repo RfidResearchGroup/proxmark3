@@ -8,6 +8,7 @@
 
 #include "iso14443crc.h"
 
+
 uint16_t UpdateCrc14443(uint8_t b, uint16_t *crc) {
     b = (b ^ (uint8_t)((*crc) & 0x00FF));
     b = (b ^ (b << 4));

@@ -23,7 +23,6 @@ int usage_hf_felica_sim(void) {
 	PrintAndLog("          hf felica sim t 1 ");
 	return 0;
 }
-
 int usage_hf_felica_sniff(void){
 	PrintAndLog("It get data from the field and saves it into command buffer.");
 	PrintAndLog("Buffer accessible from command 'hf list felica'");
@@ -55,15 +54,13 @@ int usage_hf_felica_dumplite(void) {
 	return 0;
 }
 int usage_hf_felica_raw(void){
-	PrintAndLog("Usage: hf felica raw [-h] [-r] [-c] [-p] [-a] [-t] <milliseconds> [-b] <number of bits>  <0A 0B 0C ... hex>");
+	PrintAndLog("Usage: hf felica raw [-h] [-r] [-c] [-p] [-a] <0A 0B 0C ... hex>");
 	PrintAndLog("       -h    this help");
 	PrintAndLog("       -r    do not read response");
 	PrintAndLog("       -c    calculate and append CRC");
 	PrintAndLog("       -p    leave the signal field ON after receive");
 	PrintAndLog("       -a    active signal field ON without select");
 	PrintAndLog("       -s    active signal field ON with select");
-	PrintAndLog("       -b    number of bits to send. Useful for send partial byte");
-	PrintAndLog("       -t    timeout in ms");
 	return 0;
 }
 
@@ -107,13 +104,13 @@ int CmdHFFelicaReader(const char *Cmd) {
 			break;
 		}
 		case 0: {
-			PrintAndLog("FeliCa Card found");
+			PrintAndLog("FeliCa Card");
 			
 			PrintAndLog("IDm  %s", sprint_hex(card.IDm, sizeof(card.IDm)));
 			PrintAndLog("  - CODE    %s", sprint_hex(card.code, sizeof(card.code)));
-			PrintAndLog("  - NFCUID1 %s", sprint_hex(card.uid, sizeof(card.uid)));
+			PrintAndLog("  - NFCID2  %s", sprint_hex(card.uid, sizeof(card.uid)));
 			
-			PrintAndLog("PMm  %s", sprint_hex(card.PMm, sizeof(card.PMm)));
+			PrintAndLog("Parameter (PAD) | %s", sprint_hex(card.PMm, sizeof(card.PMm)));
 			PrintAndLog("  - IC CODE %s", sprint_hex(card.iccode, sizeof(card.iccode)));
 			PrintAndLog("  - MRT     %s", sprint_hex(card.mrt, sizeof(card.mrt)));
 			
@@ -244,6 +241,7 @@ int CmdHFFelicaSimLite(const char *Cmd) {
 static void printSep() {
 	PrintAndLog("------------------------------------------------------------------------------------");
 }
+
 uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace,uint16_t tracelen) {
 	if (tracepos+19 >= tracelen) 
 		return tracelen;
@@ -417,8 +415,6 @@ int CmdHFFelicaCmdRaw(const char *cmd) {
     bool active = false;
     bool active_select = false;
     uint16_t numbits = 0;
-	bool bTimeout = false;
-	uint32_t timeout = 0;
     char buf[5]="";
     int i = 0;
     uint8_t data[USB_CMD_DATA_SIZE];
@@ -459,14 +455,6 @@ int CmdHFFelicaCmdRaw(const char *cmd) {
                     while(cmd[i]!=' ' && cmd[i]!='\0') { i++; }
                     i-=2;
                     break;
-				case 't':
-					bTimeout = true;
-					sscanf(cmd+i+2, "%d", &temp);
-					timeout = temp;
-					i+=3;
-					while(cmd[i]!=' ' && cmd[i]!='\0') { i++; }
-					i-=2;
-					break;
                 default:
                     return usage_hf_felica_raw();
             }
@@ -496,35 +484,25 @@ int CmdHFFelicaCmdRaw(const char *cmd) {
         return 0;
     }
 
-    if (crc && datalen>0 && datalen<sizeof(data)-2) {
-        uint8_t first, second;
-		ComputeCrc14443(CRC_14443_B, data, datalen, &first, &second);
-        data[datalen++] = first;
-        data[datalen++] = second;
+    if (crc && datalen>0 && datalen < sizeof(data)-2) {
+        uint8_t b1, b2;
+		compute_crc(CRC_FELICA, data, datalen, &b1, &b2);
+        data[datalen++] = b1;
+        data[datalen++] = b2;
     }
 
     if (active || active_select) {
-        c.arg[0] |= ISO14A_CONNECT;
+        c.arg[0] |= FELICA_CONNECT;
         if(active)
-            c.arg[0] |= ISO14A_NO_SELECT;
+            c.arg[0] |= FELICA_NO_SELECT;
     }
 
-	if (bTimeout){
-	    #define MAX_TIMEOUT 40542464 	// = (2^32-1) * (8*16) / 13560000Hz * 1000ms/s
-        c.arg[0] |= ISO14A_SET_TIMEOUT;
-        if(timeout > MAX_TIMEOUT) {
-            timeout = MAX_TIMEOUT;
-            PrintAndLog("Set timeout to 40542 seconds (11.26 hours). The max we can wait for response");
-        }
-		c.arg[2] = 13560000 / 1000 / (8*16) * timeout; // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
-	}
-
     if (power) {
-        c.arg[0] |= ISO14A_NO_DISCONNECT;
+        c.arg[0] |= FELICA_NO_DISCONNECT;
 	}
 	
-    if (datalen>0) {
-        c.arg[0] |= ISO14A_RAW;
+    if (datalen > 0) {
+        c.arg[0] |= FELICA_RAW;
 	}
 			
 	// Max buffer is USB_CMD_DATA_SIZE

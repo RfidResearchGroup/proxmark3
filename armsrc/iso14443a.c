@@ -152,9 +152,6 @@ void GetParity(const uint8_t *pbtCmd, uint16_t iLen, uint8_t *par) {
 	par[paritybyte_cnt] = parityBits;	
 }
 
-void AppendCrc14443a(uint8_t* data, int len) {
-	ComputeCrc14443(CRC_14443_A,data,len,data+len,data+len+1);
-}
 
 //=============================================================================
 // ISO 14443 Type A - Miller decoder
@@ -887,7 +884,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t* data) {
 			// PACK
 			response8[0] = 0x80;
 			response8[1] = 0x80;
-			ComputeCrc14443(CRC_14443_A, response8, 2, &response8[2], &response8[3]);
+			compute_crc(CRC_14443_A, response8, 2, &response8[2], &response8[3]);
 			// uid not supplied then get from emulator memory
 			if (data[0]==0) {
 				uint16_t start = 4 * (0+12);  
@@ -944,12 +941,12 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t* data) {
 
 	// Prepare the mandatory SAK (for 4 and 7 byte UID)
 	uint8_t response3[3]  = {sak, 0x00, 0x00};
-	ComputeCrc14443(CRC_14443_A, response3, 1, &response3[1], &response3[2]);
+	compute_crc(CRC_14443_A, response3, 1, &response3[1], &response3[2]);
 
 	// Prepare the optional second SAK (for 7 byte UID), drop the cascade bit
 	uint8_t response3a[3]  = {0x00};
 	response3a[0] = sak & 0xFB;
-	ComputeCrc14443(CRC_14443_A, response3a, 1, &response3a[1], &response3a[2]);
+	compute_crc(CRC_14443_A, response3a, 1, &response3a[1], &response3a[2]);
 
 	// Tag NONCE.
 	uint8_t response5[4]; 
@@ -959,7 +956,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t* data) {
 	// TA(1) = 0x80: different divisors not supported, DR = 1, DS = 1
 	// TB(1) = not present. Defaults: FWI = 4 (FWT = 256 * 16 * 2^4 * 1/fc = 4833us), SFGI = 0 (SFG = 256 * 16 * 2^0 * 1/fc = 302us)
 	// TC(1) = 0x02: CID supported, NAD not supported
-	ComputeCrc14443(CRC_14443_A, response6, 4, &response6[4], &response6[5]);
+	compute_crc(CRC_14443_A, response6, 4, &response6[4], &response6[5]);
 	
 	// Prepare GET_VERSION (different for UL EV-1 / NTAG)
 	// uint8_t response7_EV1[] = {0x00, 0x04, 0x03, 0x01, 0x01, 0x00, 0x0b, 0x03, 0xfd, 0xf7};  //EV1 48bytes VERSION.
@@ -1058,14 +1055,14 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t* data) {
 				uint16_t start = 4 * (block+12);  
 				uint8_t emdata[MAX_MIFARE_FRAME_SIZE];
 				emlGetMemBt( emdata, start, 16);
-				AppendCrc14443a(emdata, 16);
+				AddCrc14A(emdata, 16);
 				EmSendCmd(emdata, sizeof(emdata));
 				// We already responded, do not send anything with the EmSendCmd14443aRaw() that is called below
 				p_response = NULL;
 			} else { // all other tags (16 byte block tags)
 				uint8_t emdata[MAX_MIFARE_FRAME_SIZE];
 				emlGetMemBt( emdata, block, 16);
-				AppendCrc14443a(emdata, 16);
+				AddCrc14A(emdata, 16);
 				EmSendCmd(emdata, sizeof(emdata));
 				// EmSendCmd(data+(4*receivedCmd[1]),16);
 				// Dbprintf("Read request from reader: %x %x",receivedCmd[0],receivedCmd[1]);
@@ -1078,7 +1075,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t* data) {
 			int start =  (receivedCmd[1]+12) * 4; 
 			int len   = (receivedCmd[2] - receivedCmd[1] + 1) * 4;
 			emlGetMemBt( emdata, start, len);
-			AppendCrc14443a(emdata, len);
+			AddCrc14A(emdata, len);
 			EmSendCmd(emdata, len+2);				
 			p_response = NULL;		
 		} else if (receivedCmd[0] == MIFARE_ULEV1_READSIG && tagType == 7) {	// Received a READ SIGNATURE -- 
@@ -1086,7 +1083,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t* data) {
 			uint16_t start = 4 * 4;
 			uint8_t emdata[34];
 			emlGetMemBt( emdata, start, 32);
-			AppendCrc14443a(emdata, 32);
+			AddCrc14A(emdata, 32);
 			EmSendCmd(emdata, sizeof(emdata));
 			p_response = NULL;					
 		} else if (receivedCmd[0] == MIFARE_ULEV1_READ_CNT && tagType == 7) {	// Received a READ COUNTER -- 
@@ -1098,7 +1095,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t* data) {
 			} else {
 			uint8_t cmd[] =  {0x00,0x00,0x00,0x14,0xa5};
 				num_to_bytes(counters[index], 3, cmd);
-				AppendCrc14443a(cmd, sizeof(cmd)-2);
+				AddCrc14A(cmd, sizeof(cmd)-2);
 			EmSendCmd(cmd,sizeof(cmd));				
 			}
 			p_response = NULL;
@@ -1135,7 +1132,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t* data) {
 				EmSendCmd(nack,sizeof(nack));
 			} else {			
 				emlGetMemBt( emdata, 10+index, 1);
-			AppendCrc14443a(emdata, sizeof(emdata)-2);
+			AddCrc14A(emdata, sizeof(emdata)-2);
 			EmSendCmd(emdata, sizeof(emdata));	
 			}
 			p_response = NULL;		
@@ -1146,7 +1143,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t* data) {
 			if ( tagType == 7 ) {   // IF NTAG /EV1  0x60 == GET_VERSION, not a authentication request.
 				uint8_t emdata[10];
 				emlGetMemBt( emdata, 0, 8 );
-				AppendCrc14443a(emdata, sizeof(emdata)-2);
+				AddCrc14A(emdata, sizeof(emdata)-2);
 				EmSendCmd(emdata, sizeof(emdata));
 				p_response = NULL;
 			} else {
@@ -1242,7 +1239,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t* data) {
 				uint16_t start = 13; // first 4 blocks of emu are [getversion answer - check tearing - pack - 0x00]
 				uint8_t emdata[4];
 				emlGetMemBt( emdata, start, 2);
-				AppendCrc14443a(emdata, 2);
+				AddCrc14A(emdata, 2);
 				EmSendCmd(emdata, sizeof(emdata));
 				p_response = NULL;
 				uint32_t pwd = bytes_to_num(receivedCmd+1,4);
@@ -1308,7 +1305,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t* data) {
 				dynamic_response_info.response[1] = receivedCmd[1];
 
 				// Add CRC bytes, always used in ISO 14443A-4 compliant cards
-				AppendCrc14443a(dynamic_response_info.response, dynamic_response_info.response_n);
+				AddCrc14A(dynamic_response_info.response, dynamic_response_info.response_n);
 				dynamic_response_info.response_n += 2;
         
 				if (prepare_tag_modulation(&dynamic_response_info,DYNAMIC_MODULATION_BUFFER_SIZE) == false) {
@@ -1420,12 +1417,16 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
 	// clear TXRDY
 	AT91C_BASE_SSC->SSC_THR = SEC_Y;
 
+	volatile uint8_t b;
 	uint16_t c = 0; 
 	while (c < len) {
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-			AT91C_BASE_SSC->SSC_THR = cmd[c];
-			c++;
+			AT91C_BASE_SSC->SSC_THR = cmd[c++];
 		}
+		//iceman test
+		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+			b = (uint16_t)(AT91C_BASE_SSC->SSC_RHR); (void)b;
+		}		
 	}
 	
 	NextTransferTime = MAX(NextTransferTime, LastTimeProxToAirStart + REQUEST_GUARD_TIME);
@@ -1586,7 +1587,7 @@ int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *parity) {
 }
 
 int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen) {
-	uint8_t b;
+	volatile uint8_t b;
 	uint16_t i = 0;
 	uint32_t ThisTransferTime;
 	bool correctionNeeded;
@@ -1631,7 +1632,10 @@ int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen) {
 			AT91C_BASE_SSC->SSC_THR = resp[i++];
 			FpgaSendQueueDelay = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 		}
-	
+		
+		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+			b = (uint16_t)(AT91C_BASE_SSC->SSC_RHR); (void)b;
+		}	
 		if(BUTTON_PRESS()) break;
 	}
 
@@ -1943,7 +1947,7 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_card, uint32_
 		sel_uid[1] = 0x70;													// transmitting a full UID (1 Byte cmd, 1 Byte NVB, 4 Byte UID, 1 Byte BCC, 2 Bytes CRC)
 		memcpy(sel_uid+2, uid_resp, 4);										// the UID received during anticollision, or the provided UID
 		sel_uid[6] = sel_uid[2] ^ sel_uid[3] ^ sel_uid[4] ^ sel_uid[5];  	// calculate and add BCC
-		AppendCrc14443a(sel_uid, 7);										// calculate and add CRC
+		AddCrc14A(sel_uid, 7);										// calculate and add CRC
 		ReaderTransmit(sel_uid, sizeof(sel_uid), NULL);
 
 		// Receive the SAK
@@ -1980,7 +1984,7 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_card, uint32_
 	// RATS, Request for answer to select
 	if ( !no_rats ) {
 
-		AppendCrc14443a(rats, 2);
+		AddCrc14A(rats, 2);
 		ReaderTransmit(rats, sizeof(rats), NULL);
 		len = ReaderReceive(resp, resp_par);
 		
@@ -2032,7 +2036,7 @@ int iso14443a_fast_select_card(uint8_t *uid_ptr, uint8_t num_cascades) {
 		//sel_uid[1] = 0x70;													// transmitting a full UID (1 Byte cmd, 1 Byte NVB, 4 Byte UID, 1 Byte BCC, 2 Bytes CRC)
 		memcpy(sel_uid+2, uid_resp, 4);										// the UID received during anticollision, or the provided UID
 		sel_uid[6] = sel_uid[2] ^ sel_uid[3] ^ sel_uid[4] ^ sel_uid[5];  	// calculate and add BCC
-		AppendCrc14443a(sel_uid, 7);										// calculate and add CRC
+		AddCrc14A(sel_uid, 7);										// calculate and add CRC
 		ReaderTransmit(sel_uid, sizeof(sel_uid), NULL);
 
 		// Receive the SAK
@@ -2112,7 +2116,7 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, void *data) {
 	// put block number into the PCB
 	real_cmd[0] |= iso14_pcb_blocknum;
 	memcpy(real_cmd + 1, cmd, cmd_len);
-	AppendCrc14443a(real_cmd, cmd_len + 1);
+	AddCrc14A(real_cmd, cmd_len + 1);
  
 	ReaderTransmit(real_cmd, cmd_len + 3, NULL);
 
@@ -2131,7 +2135,7 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, void *data) {
 			// byte1 - WTXM [1..59]. command FWT=FWT*WTXM
 			data_bytes[1] = data_bytes[1] & 0x3f; // 2 high bits mandatory set to 0b
 			// now need to fix CRC.
-			AppendCrc14443a(data_bytes, len - 2);
+			AddCrc14A(data_bytes, len - 2);
 			// transmit S-Block
 			ReaderTransmit(data_bytes, len, NULL);
 			// retrieve the result again (with increased timeout) 
@@ -2152,7 +2156,7 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, void *data) {
 	}
 
 		// crc check
-		if (len >=3 && !CheckCrc14443(CRC_14443_A, data_bytes, len)) {
+		if (len >=3 && !check_crc(CRC_14443_A, data_bytes, len)) {
 			return -1;
 		}
 		
@@ -2221,9 +2225,9 @@ void ReaderIso14443a(UsbCommand *c) {
 			// Don't append crc on empty bytearray...
 			if ( len > 0 ) {
 				if ((param & ISO14A_TOPAZMODE))
-					AppendCrc14443b(cmd, len);
+					AddCrc14B(cmd, len);
 				else
-					AppendCrc14443a(cmd, len);
+					AddCrc14A(cmd, len);
 
 				len += 2;
 				if (lenbits) lenbits += 16;
@@ -2344,7 +2348,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 	static uint8_t par_low = 0;
 	static uint8_t mf_nr_ar3 = 0;
 	
-	AppendCrc14443a(mf_auth, 2);
+	AddCrc14A(mf_auth, 2);
 	
 	if (first_try) {
 		sync_time = GetCountSspClk() & 0xfffffff8;
@@ -2921,9 +2925,9 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 			break;
 	}
 	// calc some crcs
-	ComputeCrc14443(CRC_14443_A, sak_4, 1, &sak_4[1], &sak_4[2]);
-	ComputeCrc14443(CRC_14443_A, sak_7, 1, &sak_7[1], &sak_7[2]);
-	ComputeCrc14443(CRC_14443_A, sak_10, 1, &sak_10[1], &sak_10[2]);
+	compute_crc(CRC_14443_A, sak_4, 1, &sak_4[1], &sak_4[2]);
+	compute_crc(CRC_14443_A, sak_7, 1, &sak_7[1], &sak_7[2]);
+	compute_crc(CRC_14443_A, sak_10, 1, &sak_10[1], &sak_10[2]);
 	
 	// We need to listen to the high-frequency, peak-detected path.
 	iso14443a_setup(FPGA_HF_ISO14443A_TAGSIM_LISTEN);
@@ -3247,7 +3251,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 					if (MF_DBGLEVEL >= 4) Dbprintf("Reader reading block %d (0x%02x)", receivedCmd[1], receivedCmd[1]);
 
 					emlGetMem(response, receivedCmd[1], 1);
-					AppendCrc14443a(response, 16);
+					AddCrc14A(response, 16);
 					mf_crypto1_encrypt(pcs, response, 18, response_par);
 					EmSendCmdPar(response, 18, response_par);
 					numReads++;

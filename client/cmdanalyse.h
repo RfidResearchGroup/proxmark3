@@ -19,13 +19,13 @@
 #include "ui.h"		// PrintAndLog
 #include "util.h"
 #include "crc.h"
-#include "iso15693tools.h"	//
-#include "iso14443crc.h"	// crc 14a
 #include "crc16.h"			// crc16 ccitt
 #include "tea.h"
 #include "legic_prng.h"
 #include "loclass/elite_crack.h"
 #include "mfkey.h"  //nonce2key 
+#include "util_posix.h" // msclock
+
 
 int usage_analyse_lcr(void);
 int usage_analyse_checksum(void);

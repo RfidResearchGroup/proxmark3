@@ -110,7 +110,6 @@ CMDSRCS =	crapto1/crapto1.c \
 			crc.c \
 			crc16.c \
 			crc64.c \
-			iso14443crc.c \
 			legic_prng.c \
 			iso15693tools.c \
 			prng.c \
@@ -191,7 +190,6 @@ CMDSRCS =	crapto1/crapto1.c \
 			reveng/poly.c \
 			reveng/getopt.c \
 			bucketsort.c
-#			radixsort.c \
 
 cpu_arch = $(shell uname -m)
 ifneq ($(findstring 86, $(cpu_arch)), )

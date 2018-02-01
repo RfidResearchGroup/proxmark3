@@ -3,34 +3,9 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// ISO15693 CRC & other commons
+// ISO15693 other commons
 //-----------------------------------------------------------------------------
 #include "iso15693tools.h"
-
-// The CRC as described in ISO 15693-Part 3-Annex C
-uint16_t Iso15693Crc(uint8_t *d, size_t n){
-	init_table(CRC_15);
-	return crc16_x25(d, n);
-}
-
-// adds a CRC to a dataframe
-// 	d[]   iso15963 frame without crc
-//	n     length without crc
-// returns the new length of the dataframe.
-int Iso15693AddCrc(uint8_t *d, size_t n) {
-	uint16_t crc = Iso15693Crc(d, n);
-	d[n] = crc & 0xff;
-	d[n+1] = crc >> 8;
-	return n + 2;
-}
-
-// check the CRC as described in ISO 15693-Part 3-Annex C
-// 	v	buffer with data
-//	n	length (including crc)
-// If calculated with crc bytes,  the residue should be 0xF0B8
-bool Iso15693CheckCrc(uint8_t *d, size_t n) {
-	return (Iso15693Crc(d, n) == ISO15_CRC_CHECK );
-}
 
 int sprintf(char *str, const char *format, ...);
 

@@ -113,7 +113,6 @@ void ReadSTMemoryIso14443b(uint8_t numofblocks);
 void RAMFUNC SniffIso14443b(void);
 void SendRawCommand14443B(uint32_t, uint32_t, uint8_t, uint8_t[]);
 void SendRawCommand14443B_Ex(UsbCommand *c);
-void AppendCrc14443b(uint8_t* data, int len);
 void ClearFpgaShiftingRegisters(void);
 
 // iso14443a.h
@@ -205,12 +204,11 @@ void RAMFUNC SniffIClass(void);
 void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 void ReaderIClass(uint8_t arg0);
 void ReaderIClass_Replay(uint8_t arg0,uint8_t *MAC);
-void IClass_iso14443A_GetPublic(uint8_t arg0);
 void iClass_Authentication(uint8_t *MAC);
 void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain);
 void iClass_WriteBlock(uint8_t blockNo, uint8_t *data);
 void iClass_ReadBlk(uint8_t blockNo);
-bool iClass_ReadBlock(uint8_t blockNo, uint8_t *readdata);
+bool iClass_ReadBlock(uint8_t blockNo, uint8_t *data, uint8_t datalen);
 void iClass_Dump(uint8_t blockno, uint8_t numblks);
 void iClass_Clone(uint8_t startblock, uint8_t endblock, uint8_t *data);
 void iClass_ReadCheck(uint8_t blockNo, uint8_t keyType);

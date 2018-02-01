@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include "iso14443crc.h"
+#include "crc16.h"
 #include "proxmark3.h"
 #include "data.h"
 #include "graph.h"

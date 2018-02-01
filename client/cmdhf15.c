@@ -2,6 +2,7 @@
 // Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
 // Modified 2010-2012 by <adrian -at- atrox.at>
 // Modified 2012 by <vsza at vsza.hu>
+// Modfified 2018 by <iceman>
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -28,8 +29,10 @@
 #define Logic1					Iso15693Logic1
 #define FrameEOF				Iso15693FrameEOF
 
-#define Crc(data, len)			Iso15693Crc((data), (len))
-#define AddCrc(data, len)		Iso15693AddCrc((data), (len))
+#define Crc(data, len)			crc(CRC_15693, (data), (len))
+#define CheckCrc(data, len)		check_crc(CRC_15693, (data), (len))
+#define AddCrc(data, len)		compute_crc(CRC_15693, (data), (len), (data)+(len), (data)+(len)+1)
+
 #define sprintUID(target, uid)	Iso15693sprintUID((target), (uid))
 
 // structure and database for uid -> tagtype lookups 
@@ -195,7 +198,8 @@ int getUID(uint8_t *buf) {
 	c.d.asBytes[1] = ISO15_CMD_INVENTORY;
 	c.d.asBytes[2] = 0; // mask length
 
-	c.arg[0] = AddCrc(c.d.asBytes, 3);
+	AddCrc(c.d.asBytes, 3);
+	c.arg[0] = 5; // len
 
 	uint8_t retry;
 	
@@ -208,7 +212,7 @@ int getUID(uint8_t *buf) {
 		if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
 			
 			uint8_t resplen = resp.arg[0];
-			if (resplen >= 12 && ISO15_CRC_CHECK == Crc(resp.d.asBytes, 12)) {
+			if (resplen >= 12 && CheckCrc(resp.d.asBytes, 12)) {
 			   memcpy(buf, resp.d.asBytes + 2, 8);
 			   return 1;
 			} 
@@ -460,7 +464,7 @@ int CmdHF15Demod(const char *Cmd) {
 	for (i = 0; i < k; i++)
 		PrintAndLog("# %2d: %02x ", i, outBuf[i]);
 
-	PrintAndLog("CRC %04x", Iso15693Crc(outBuf, k - 2));
+	PrintAndLog("CRC %04x", Crc(outBuf, k - 2));
 	return 0;
 }
 
@@ -492,7 +496,6 @@ int CmdHF15Info(const char *Cmd) {
 	uint8_t *recv;
 	UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
 	uint8_t *req = c.d.asBytes;
-	int reqlen = 0;
 	char cmdbuf[100];
 	char *cmd = cmdbuf;
 	
@@ -501,8 +504,8 @@ int CmdHF15Info(const char *Cmd) {
 	if ( !prepareHF15Cmd(&cmd, &c, ISO15_CMD_SYSINFO) )
 		return 0;
 
-	reqlen = AddCrc(req,  c.arg[0]);
-	c.arg[0] = reqlen;
+	AddCrc(req,  c.arg[0]);
+	c.arg[0] += 2;
 
 	//PrintAndLog("cmd %s", sprint_hex(c.d.asBytes, reqlen) ); 
 	
@@ -686,7 +689,7 @@ int CmdHF15Dump(const char*Cmd) {
 	
 	PrintAndLog("Reading memory from tag UID %s", sprintUID(NULL, uid));
 
-	int reqlen = 0, blocknum = 0;
+	int blocknum = 0;
 	uint8_t *recv = NULL;
 
 	// memory.
@@ -707,8 +710,8 @@ int CmdHF15Dump(const char*Cmd) {
 	for (int retry = 0; retry < 5; retry++) {
 	
 		req[10] = blocknum;
-		reqlen = AddCrc(req, 11);
-		c.arg[0] = reqlen;
+		AddCrc(req, 11);
+		c.arg[0] = 13;
 	
 		clearCommandBuffer();
 		SendCommand(&c);
@@ -723,7 +726,7 @@ int CmdHF15Dump(const char*Cmd) {
 			
 			recv = resp.d.asBytes;
 			
-			if ( ISO15_CRC_CHECK != Crc(recv, len) ) {
+			if ( !CheckCrc(recv, len) ) {
 				PrintAndLog("crc fail");
 				continue;
 			}
@@ -827,9 +830,13 @@ int CmdHF15Raw(const char *Cmd) {
 		PrintAndLog("Invalid char on input");
 		return 0;
 	}
-	if (crc) datalen = AddCrc(data, datalen);
 	
-	c.arg[0] = datalen;
+	if (crc) {
+		AddCrc(data, datalen);
+		c.arg[0] = datalen+2;
+	} else {
+		c.arg[0] = datalen;
+	}
 	c.arg[1] = fast;
 	c.arg[2] = reply;
 	memcpy(c.d.asBytes, data, datalen);
@@ -972,8 +979,8 @@ int CmdHF15Readmulti(const char *Cmd) {
 	
 	req[reqlen++] = pagenum;
 	req[reqlen++] = pagecount;
-	reqlen = AddCrc(req, reqlen);
-	c.arg[0] = reqlen;
+	AddCrc(req, reqlen);
+	c.arg[0] = reqlen+2;
 
 	clearCommandBuffer();
 	SendCommand(&c);
@@ -991,7 +998,7 @@ int CmdHF15Readmulti(const char *Cmd) {
 
 	recv = resp.d.asBytes;	
 	
-	if (ISO15_CRC_CHECK != Crc(recv, status)) {
+	if (!CheckCrc(recv, status)) {
 		PrintAndLog("CRC failed");
 		return 2;
 	} 
@@ -1051,9 +1058,9 @@ int CmdHF15Read(const char *Cmd) {
 	
 	req[reqlen++] = (uint8_t)blocknum;
 	
-	reqlen = AddCrc(req, reqlen);
+	AddCrc(req, reqlen);
 	
-	c.arg[0] = reqlen;
+	c.arg[0] = reqlen+2;
 
 	clearCommandBuffer();
 	SendCommand(&c);
@@ -1071,7 +1078,7 @@ int CmdHF15Read(const char *Cmd) {
 
 	recv = resp.d.asBytes;	
 	
-	if (ISO15_CRC_CHECK != Crc(recv, status)) {
+	if ( !CheckCrc(recv, status) ) {
 		PrintAndLog("CRC failed");
 		return 2;
 	} 
@@ -1134,8 +1141,8 @@ int CmdHF15Write(const char *Cmd) {
 		req[reqlen++]=temp & 0xff;
 		cmd2+=2;
 	} 
-	reqlen = AddCrc(req,reqlen);
-	c.arg[0] = reqlen;
+	AddCrc(req, reqlen);
+	c.arg[0] = reqlen+2;
 	
 	PrintAndLog("iso15693 writing to page %02d (0x&02X) | data ", pagenum, pagenum);
 	
@@ -1155,7 +1162,7 @@ int CmdHF15Write(const char *Cmd) {
 
 	recv = resp.d.asBytes;	
 	
-	if (ISO15_CRC_CHECK != Crc(recv, status)) {
+	if ( !CheckCrc(recv, status) ) {
 		PrintAndLog("CRC failed");
 		return 2;
 	} 
@@ -1188,7 +1195,8 @@ int CmdHF15Select(const char *Cmd) {
 
 	//Select (usage: 2025+8bytes UID+2bytes ISO15693-CRC - can be used in addressed form only!)			[NO NEED FOR OPTION FLAG]
 	// len
-	c.arg[0] = AddCrc(c.d.asBytes, 10);
+	AddCrc(c.d.asBytes, 10);
+	c.arg[0] = 12;
 	
 	clearCommandBuffer();
 	SendCommand(&c);
