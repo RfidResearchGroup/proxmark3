@@ -365,28 +365,24 @@ int CmdHFiClassSim(const char *Cmd) {
 			
 			while ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
 				tries++;
-
 				if (ukbhit()) {
 					int gc = getchar(); (void)gc;
 					PrintAndLog("\n[!] aborted via keyboard.");
 					return 0;
 				}
-
 				if ( tries > 20) {
 					PrintAndLog("\n[!] timeout while waiting for reply.");
 					return 0;
 				}
 			}
-			
 			uint8_t num_mac  = resp.arg[1];
 			bool success = ( NUM_CSNS == num_mac );
-			PrintAndLog("[+] %d out of %d MAC obtained [%s]", num_mac, NUM_CSNS, (success) ? "OK" : "FAIL");
+			PrintAndLog("[%c] %d out of %d MAC obtained [%s]", (success) ? '+':'!', num_mac, NUM_CSNS, (success) ? "OK" : "FAIL");
 
 			if ( num_mac == 0 )
 				break;
 			
 			size_t datalen = NUM_CSNS * 24;
-
 			void* dump = malloc(datalen);
 			if ( !dump ) {
 				PrintAndLog("[!] Failed to allocate memory");
@@ -417,23 +413,19 @@ int CmdHFiClassSim(const char *Cmd) {
 
 			while ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
 				tries++;
-
 				if (ukbhit()) {
 					int gc = getchar(); (void)gc;
 					PrintAndLog("\n[!] aborted via keyboard.");
 					return 0;
 				}
-
 				if ( tries > 20) {
 					PrintAndLog("\n[!] timeout while waiting for reply.");
 					return 0;
 				}
 			}
-
-			
 			uint8_t num_mac  = resp.arg[1];
 			bool success = ( (NUM_CSNS * 2) == num_mac );
-			PrintAndLog("[+] %d out of %d MAC obtained [%s]", num_mac, NUM_CSNS * 2, (success) ? "OK" : "FAIL");
+			PrintAndLog("[%c] %d out of %d MAC obtained [%s]", (success) ? '+':'!', num_mac, NUM_CSNS, (success) ? "OK" : "FAIL");
 
 			if ( num_mac == 0 )
 				break;
@@ -469,10 +461,8 @@ int CmdHFiClassSim(const char *Cmd) {
 				memcpy(dump + i*MAC_ITEM_SIZE + 16, resp.d.asBytes + resp_index, 8);
 				resp_index++;
 			}						
-			saveFile("iclass_mac_attack_keyroll_B", "bin", dump, datalen);
-			
+			saveFile("iclass_mac_attack_keyroll_B", "bin", dump, datalen);			
 			free(dump);			
-			
 			break;
 		}		
 		case 1:
