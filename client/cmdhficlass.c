@@ -365,28 +365,24 @@ int CmdHFiClassSim(const char *Cmd) {
 			
 			while ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
 				tries++;
-				printf(".");
-				fflush(stdout);
+
 				if (ukbhit()) {
 					int gc = getchar(); (void)gc;
-					PrintAndLog("[!] aborted via keyboard.");
+					PrintAndLog("\n[!] aborted via keyboard.");
 					return 0;
 				}
 
 				if ( tries > 20) {
-					PrintAndLog("[!] timeout while waiting for reply.");
+					PrintAndLog("\n[!] timeout while waiting for reply.");
 					return 0;
 				}
 			}
-			uint8_t num_mac_responses  = resp.arg[1];
-			bool success = ( NUM_CSNS == num_mac_responses );
-			PrintAndLog("[+] Mac responses: %d MACs obtained (should be %d) %s"
-				, num_mac_responses
-				, NUM_CSNS
-				, (success) ? "OK":"FAIL"
-			);
+			
+			uint8_t num_mac  = resp.arg[1];
+			bool success = ( NUM_CSNS == num_mac );
+			PrintAndLog("[+] %d out of %d MAC obtained [%s]", num_mac, NUM_CSNS, (success) ? "OK" : "FAIL");
 
-			if ( num_mac_responses == 0 )
+			if ( num_mac == 0 )
 				break;
 			
 			size_t datalen = NUM_CSNS * 24;
@@ -421,29 +417,25 @@ int CmdHFiClassSim(const char *Cmd) {
 
 			while ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
 				tries++;
-				printf(".");
-				fflush(stdout);
+
 				if (ukbhit()) {
 					int gc = getchar(); (void)gc;
-					PrintAndLog("[!] aborted via keyboard.");
+					PrintAndLog("\n[!] aborted via keyboard.");
 					return 0;
 				}
 
 				if ( tries > 20) {
-					PrintAndLog("[!] timeout while waiting for reply.");
+					PrintAndLog("\n[!] timeout while waiting for reply.");
 					return 0;
 				}
 			}
 
-			uint8_t num_mac_responses  = resp.arg[1];
-			bool success = ( (NUM_CSNS * 2) == num_mac_responses );
-			PrintAndLog("[+] Mac responses: %d MACs obtained (should be %d) %s"
-				, num_mac_responses
-				, NUM_CSNS * 2
-				, (success) ? "OK":"FAIL"
-			);
+			
+			uint8_t num_mac  = resp.arg[1];
+			bool success = ( (NUM_CSNS * 2) == num_mac );
+			PrintAndLog("[+] %d out of %d MAC obtained [%s]", num_mac, NUM_CSNS * 2, (success) ? "OK" : "FAIL");
 
-			if ( num_mac_responses == 0 )
+			if ( num_mac == 0 )
 				break;
 			
 			size_t datalen = NUM_CSNS * 24;
