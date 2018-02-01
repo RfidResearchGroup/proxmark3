@@ -147,6 +147,12 @@ uint16_t crc16(uint8_t const *d, size_t length, uint16_t remainder, uint16_t pol
 }
 
 void compute_crc(CrcType_t ct, const uint8_t *d, size_t n, uint8_t *first, uint8_t *second) {
+
+	// can't calc a crc on less than 3 byte. (1byte + 2 crc bytes)
+	if ( n < 3 ) return;
+	
+	init_table(ct);
+	
 	uint16_t crc = 0;
 	switch (ct) {
 		case CRC_14A: crc = crc16_a(d, n); break;
@@ -167,10 +173,13 @@ void compute_crc(CrcType_t ct, const uint8_t *d, size_t n, uint8_t *first, uint8
 uint16_t crc16_ccitt(uint8_t const *d, size_t n) {
 	return crc16_fast(d, n, 0xffff, false, false);
 }
+
+// FDX-B ISO11784/85) uses KERMIT 
 //poly=0x1021  init=0x0000  refin=true  refout=true  xorout=0x0000 name="KERMIT"
 uint16_t crc16_kermit(uint8_t const *d, size_t n) {
 	return crc16_fast(d, n, 0x0000, true, true);
 }
+
 // FeliCa uses XMODEM
 //poly=0x1021  init=0x0000  refin=false  refout=false  xorout=0x0000 name="XMODEM"
 uint16_t crc16_xmodem(uint8_t const *d, size_t n) {
@@ -198,14 +207,12 @@ uint16_t crc16_a(uint8_t const *d, size_t n) {
 // poly       0x1021 reflected 0x8408
 // poly=0x1021  init=0x4807  refin=true  refout=true  xorout=0x0BC3  check=0xF0B8  name="CRC-16/ICLASS"
 uint16_t crc16_iclass(uint8_t const *d, size_t n) {
-	return BSWAP_16(crc16_fast(d, n, 0x4807, true, true));
+	return crc16_fast(d, n, 0x4807, true, true);
 }
 
 // This CRC-16 is used in Legic Advant systems. 
 // poly=0xB400,  init=depends  refin=true  refout=true  xorout=0x0000  check=  name="CRC-16/LEGIC"
 uint16_t crc16_legic(uint8_t const *d, size_t n, uint8_t uidcrc) {
-	//uint16_t initial = reflect8(uidcrc);
-	//initial |= initial << 8;
 	uint16_t initial = uidcrc << 8 | uidcrc;
 	return crc16_fast(d, n, initial, true, true);
 }
