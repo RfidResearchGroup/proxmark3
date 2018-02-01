@@ -423,9 +423,9 @@ int CmdHFiClassSim(const char *Cmd) {
 					return 0;
 				}
 			}
-			uint8_t num_mac  = resp.arg[1];
+			uint8_t num_mac = resp.arg[1];
 			bool success = ( (NUM_CSNS * 2) == num_mac );
-			PrintAndLog("[%c] %d out of %d MAC obtained [%s]", (success) ? '+':'!', num_mac, NUM_CSNS, (success) ? "OK" : "FAIL");
+			PrintAndLog("[%c] %d out of %d MAC obtained [%s]", (success) ? '+':'!', num_mac, NUM_CSNS*2, (success) ? "OK" : "FAIL");
 
 			if ( num_mac == 0 )
 				break;
