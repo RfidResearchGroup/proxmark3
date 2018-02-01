@@ -276,14 +276,14 @@ int CmdHFiClassSim(const char *Cmd) {
 
 	if (simType == 0) {
 		if (param_gethex(Cmd, 1, CSN, 16)) {
-			PrintAndLog("A CSN should consist of 16 HEX symbols");
+			PrintAndLog("[!] A CSN should consist of 16 HEX symbols");
 			return usage_hf_iclass_sim();
 		}
 		PrintAndLog("--simtype:%02x csn:%s", simType, sprint_hex(CSN, 8));
 	}
 
 	if (simType > 4) {
-		PrintAndLog("Undefined simptype %d", simType);
+		PrintAndLog("[!] Undefined simptype %d", simType);
 		return usage_hf_iclass_sim();
 	}
 
@@ -356,7 +356,7 @@ int CmdHFiClassSim(const char *Cmd) {
 	switch(simType) {
 		
 		case 2: {
-			PrintAndLog("[+] Starting the sim 2 attack");
+			PrintAndLog("[+] Starting iCLASS sim 2 attack (elite mode)");
 			PrintAndLog("[+] press keyboard to cancel");
 			UsbCommand c = {CMD_SIMULATE_TAG_ICLASS, {simType, NUM_CSNS}};
 			UsbCommand resp = {0};
@@ -404,7 +404,8 @@ int CmdHFiClassSim(const char *Cmd) {
 			break;
 		}
 		case 4: {
-			PrintAndLog("[+] Starting the sim 4 key roll attack");
+			// reader in key roll mode,  when it has two keys it alternates when trying to verify.
+			PrintAndLog("[+] Starting iCLASS sim 4 attack (elite mode, reader in key roll mode)");
 			PrintAndLog("[+] press keyboard to cancel");
 			UsbCommand c = {CMD_SIMULATE_TAG_ICLASS, {simType, NUM_CSNS}};
 			UsbCommand resp = {0};
