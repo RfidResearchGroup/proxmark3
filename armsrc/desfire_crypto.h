@@ -6,7 +6,6 @@ extern "C" {
 #endif
 
 #include <string.h>
-//#include "apps.h"
 #include "crc32.h"
 #include "printf.h"
 #include "desfire.h"
