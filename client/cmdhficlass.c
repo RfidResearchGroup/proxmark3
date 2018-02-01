@@ -353,21 +353,29 @@ int CmdHFiClassSim(const char *Cmd) {
 	switch(simType) {
 		
 		case 2: {
-			PrintAndLog("Starting the sim 2 attack");
+			PrintAndLog("[+] Starting the sim 2 attack");
+			PrintAndLog("[+] press keyboard to cancel");
 			UsbCommand c = {CMD_SIMULATE_TAG_ICLASS, {simType, NUM_CSNS}};
 			UsbCommand resp = {0};
 			memcpy(c.d.asBytes, csns, 8*NUM_CSNS);
 			clearCommandBuffer();
 			SendCommand(&c);
-			// -1 make it wait all the time (iceman)
-			if (!WaitForResponseTimeout(CMD_ACK, &resp, -1)) {
-				PrintAndLog("Command timed out");
-				return 0;
-			}
+			
+			while (true) {
+				if (ukbhit()) {
+					int gc = getchar(); (void)gc;
+					PrintAndLog("[!] aborted via keyboard.");
+					return 0;
+				}
 
+				if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+					PrintAndLog("[!] timeout while waiting for reply.");
+					return 0;
+				}
+			}
 			uint8_t num_mac_responses  = resp.arg[1];
 			bool success = ( NUM_CSNS == num_mac_responses );
-			PrintAndLog("Mac responses: %d MACs obtained (should be %d) %s"
+			PrintAndLog("[+] Mac responses: %d MACs obtained (should be %d) %s"
 				, num_mac_responses
 				, NUM_CSNS
 				, (success) ? "OK":"FAIL"
@@ -380,7 +388,7 @@ int CmdHFiClassSim(const char *Cmd) {
 
 			void* dump = malloc(datalen);
 			if ( !dump ) {
-				PrintAndLog("Failed to allocate memory");
+				PrintAndLog("[!] Failed to allocate memory");
 				return 2;
 			}
 			
@@ -398,21 +406,30 @@ int CmdHFiClassSim(const char *Cmd) {
 			break;
 		}
 		case 4: {
-			PrintAndLog("Starting the sim 4 keyroll attack");
+			PrintAndLog("[+] Starting the sim 4 keyroll attack");
+			PrintAndLog("[+] press keyboard to cancel");
 			UsbCommand c = {CMD_SIMULATE_TAG_ICLASS, {simType, NUM_CSNS}};
 			UsbCommand resp = {0};
 			memcpy(c.d.asBytes, csns, 8*NUM_CSNS);
 			clearCommandBuffer();
 			SendCommand(&c);
-			// -1 make it wait all the time (iceman)
-			if (!WaitForResponseTimeout(CMD_ACK, &resp, -1)) {
-				PrintAndLog("Command timed out");
-				return 0;
+
+			while (true) {
+				if (ukbhit()) {
+					int gc = getchar(); (void)gc;
+					PrintAndLog("[!] aborted via keyboard.");
+					return 0;
+				}
+
+				if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+					PrintAndLog("[!] timeout while waiting for reply.");
+					return 0;
+				}
 			}
 
 			uint8_t num_mac_responses  = resp.arg[1];
 			bool success = ( (NUM_CSNS * 2) == num_mac_responses );
-			PrintAndLog("Mac responses: %d MACs obtained (should be %d) %s"
+			PrintAndLog("[+] Mac responses: %d MACs obtained (should be %d) %s"
 				, num_mac_responses
 				, NUM_CSNS * 2
 				, (success) ? "OK":"FAIL"
@@ -424,7 +441,7 @@ int CmdHFiClassSim(const char *Cmd) {
 			size_t datalen = NUM_CSNS * 24;
 			void* dump = malloc(datalen);
 			if ( !dump ) {
-				PrintAndLog("Failed to allocate memory");
+				PrintAndLog("[!] Failed to allocate memory");
 				return 2;
 			}
 			
