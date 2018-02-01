@@ -21,6 +21,10 @@
 #ifndef DELAY_ARM2AIR_AS_READER
 #define DELAY_ARM2AIR_AS_READER (4*16 + 8*16 + 8 + 8 + 1)
 #endif
+
+// CRC skips two first sync bits in data buffer
+#define AddCrc(data, len)		compute_crc(CRC_FELICA, (data)+2, (len),(data)+(len)+2, (data)+(len)+3)
+
 static uint32_t felica_timeout;
 static uint32_t felica_nexttransfertime;
 static uint32_t felica_lasttime_prox2air_start;
@@ -72,7 +76,7 @@ static struct {
 //b2 4d is SYNC, 45645 in 16-bit notation, 10110010 01001101 binary. Frame will not start filling until this is shifted in
 //bit order in byte -reverse, I guess?  [((bt>>0)&1),((bt>>1)&1),((bt>>2)&1),((bt>>3)&1),((bt>>4)&1),((bt>>5)&1),((bt>>6)&1),((bt>>7)&1)] -at least in the mode that I read those in
 #ifndef SYNC_16BIT
-# define SYNC_16BIT 45645
+# define SYNC_16BIT 0x4DB2
 #endif
 
 static void NFCFrameReset() {
@@ -182,10 +186,10 @@ static void ProcessNFCByte(uint8_t bt) {
 
 			if ( NFCFrame.rem_len <= 0 ) {
 				// skip sync 2bytes. IF ok, residue should be 0x0000
-				uint16_t crc = crc16_xmodem(NFCFrame.framebytes+2, NFCFrame.len-2);
-				NFCFrame.crc_ok = (crc == 0);
+				NFCFrame.crc_ok = check_crc(CRC_FELICA, NFCFrame.framebytes+2, NFCFrame.len-2);
 				NFCFrame.state = STATE_FULL;
 				NFCFrame.rem_len = 0;
+				if (MF_DBGLEVEL > 3) Dbprintf("[+] got 2 crc bytes [%s]", (NFCFrame.crc_ok) ? "OK" : "No" );			
 			}
 			break;
 		}
@@ -242,7 +246,7 @@ static uint8_t felica_select_card(felica_card_select_t *card) {
 		return 2;
 	
 	// VALIDATE CRC   residue is 0, hence if crc is a value it failed.
-	if (crc16_xmodem(NFCFrame.framebytes+2, NFCFrame.len-2))
+	if (!check_crc(CRC_FELICA, NFCFrame.framebytes+2, NFCFrame.len-2))
 		return 3;
 	
 	// copy UID
@@ -250,7 +254,7 @@ static uint8_t felica_select_card(felica_card_select_t *card) {
 	if (card) {
 		memcpy(card->IDm, NFCFrame.framebytes + 4, 8);
 		memcpy(card->PMm, NFCFrame.framebytes + 4 + 8, 8);
-		memcpy(card->servicecode, NFCFrame.framebytes + 4 + 8 + 8, 2);
+		//memcpy(card->servicecode, NFCFrame.framebytes + 4 + 8 + 8, 2);
 		memcpy(card->code, card->IDm, 2);
 		memcpy(card->uid, card->IDm + 2, 6);
 		memcpy(card->iccode, card->PMm, 2);
@@ -361,19 +365,20 @@ static void TransmitFor18092_AsReader(uint8_t * frame, int len, uint32_t *timing
 	c = 0;
 	while (c < len) {
 		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-			AT91C_BASE_SSC->SSC_THR = frame[c];
-			c++;
+			AT91C_BASE_SSC->SSC_THR = frame[c++];
 		}
 		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 			b = (uint16_t)(AT91C_BASE_SSC->SSC_RHR); (void)b;
 		}
 	}
 
+/**/	
 	while (!(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))) {};
 	AT91C_BASE_SSC->SSC_THR = 0x00; //minimum delay
 	
 	while (!(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))) {};
 	AT91C_BASE_SSC->SSC_THR = 0x00; //spin
+/**/
 
 	// log
 	LogTrace(
@@ -429,6 +434,10 @@ bool WaitForFelicaReply(uint16_t maxbytes) {
 				return true;
 			} else if (c++ > timeout && NFCFrame.state == STATE_UNSYNCD) {
 				return false; 
+			} else if (NFCFrame.state == STATE_GET_CRC) {
+				Dbprintf(" Frame: ");
+				Dbhexdump(16, NFCFrame.framebytes, 0);
+				//return false;
 			}
 		} 
 	}
