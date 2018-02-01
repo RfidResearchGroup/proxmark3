@@ -1494,6 +1494,8 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 							receivedCmd[0], receivedCmd[1], receivedCmd[2],
 							receivedCmd[3], receivedCmd[4], receivedCmd[5],
 							receivedCmd[6], receivedCmd[7], receivedCmd[8]);
+					} else {
+						Dbprintf("[+] CSN: %02x .... %02x OK", csn[0], csn[7]);
 					}
 					if (reader_mac_buf != NULL)	{
 						memcpy(reader_mac_buf, receivedCmd+1, 8);
