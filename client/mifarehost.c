@@ -41,7 +41,6 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 			if (ukbhit()) {
 				int gc = getchar(); (void)gc;
 				return -5;
-				break;
 			}
 
 			UsbCommand resp;

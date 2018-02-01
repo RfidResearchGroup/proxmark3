@@ -1244,7 +1244,6 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 	uint8_t anticoll_data[10] = { 0 };
 	uint8_t csn_data[10] = { 0 };
 	memcpy(csn_data, csn, sizeof(csn_data));
-	Dbprintf("[+] Simulating CSN %02x%02x%02x%02x%02x%02x%02x%02x", csn[0], csn[1], csn[2], csn[3], csn[4], csn[5], csn[6], csn[7]);
 
 	// Construct anticollision-CSN
 	rotateCSN(csn_data, anticoll_data);
@@ -1321,50 +1320,50 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 	// First card answer: SOF
 	CodeIClassTagSOF();
 	memcpy(resp_sof, ToSend, ToSendMax); resp_sof_Len = ToSendMax;
-	if ( MF_DBGLEVEL ==  MF_DBG_EXTENDED) {
-		DbpString("SOF"); 
-		PrintToSendBuffer();
-	}
+	// if ( MF_DBGLEVEL ==  MF_DBG_EXTENDED) {
+		// DbpString("SOF"); 
+		// PrintToSendBuffer();
+	// }
 	
 	// Anticollision CSN
 	CodeIClassTagAnswer(anticoll_data, sizeof(anticoll_data));
 	memcpy(resp_anticoll, ToSend, ToSendMax); resp_anticoll_len = ToSendMax;
-	if ( MF_DBGLEVEL ==  MF_DBG_EXTENDED) {
-		DbpString("ANTI COLL CSN"); 
-		PrintToSendBuffer();
-	}
+	// if ( MF_DBGLEVEL ==  MF_DBG_EXTENDED) {
+		// DbpString("ANTI COLL CSN"); 
+		// PrintToSendBuffer();
+	// }
 	
 	// CSN
 	CodeIClassTagAnswer(csn_data, sizeof(csn_data));
 	memcpy(resp_csn, ToSend, ToSendMax); resp_csn_len = ToSendMax;
-	if ( MF_DBGLEVEL ==  MF_DBG_EXTENDED) {
-		DbpString("CSN");
-		PrintToSendBuffer();
-	}
+	// if ( MF_DBGLEVEL ==  MF_DBG_EXTENDED) {
+		// DbpString("CSN");
+		// PrintToSendBuffer();
+	// }
 
 	// Configuration
 	CodeIClassTagAnswer(conf_data, sizeof(conf_data));
 	memcpy(resp_conf, ToSend, ToSendMax); resp_conf_len = ToSendMax;
-	if ( MF_DBGLEVEL ==  MF_DBG_EXTENDED) {
-		DbpString("Configuration"); 
-		PrintToSendBuffer();
-	}
+	// if ( MF_DBGLEVEL ==  MF_DBG_EXTENDED) {
+		// DbpString("Configuration"); 
+		// PrintToSendBuffer();
+	// }
 	
 	// e-Purse
 	CodeIClassTagAnswer(card_challenge_data, sizeof(card_challenge_data));
 	memcpy(resp_cc, ToSend, ToSendMax); resp_cc_len = ToSendMax;
-	if ( MF_DBGLEVEL ==  MF_DBG_EXTENDED) {
-		DbpString("e-Purse"); 
-		PrintToSendBuffer();
-	}
+	// if ( MF_DBGLEVEL ==  MF_DBG_EXTENDED) {
+		// DbpString("e-Purse"); 
+		// PrintToSendBuffer();
+	// }
 
 	// Application Issuer Area
 	CodeIClassTagAnswer(aia_data, sizeof(aia_data));
 	memcpy(resp_aia, ToSend, ToSendMax); resp_aia_len = ToSendMax;
-	if ( MF_DBGLEVEL ==  MF_DBG_EXTENDED) {
-		DbpString("Application Issuer Data"); 
-		PrintToSendBuffer();
-	}
+	// if ( MF_DBGLEVEL ==  MF_DBG_EXTENDED) {
+		// DbpString("Application Issuer Data"); 
+		// PrintToSendBuffer();
+	// }
 
 	//This is used for responding to READ-block commands or other data which is dynamically generated
 	//First the 'trace'-data, not encoded for FPGA
@@ -1488,13 +1487,14 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 				trace_data_size = 0;
 				
 				if (simulationMode == MODE_EXIT_AFTER_MAC) {
-
-					Dbprintf("CSN: %02x %02x %02x %02x %02x %02x %02x %02x", csn[0], csn[1], csn[2], csn[3], csn[4], csn[5], csn[6], csn[7]);
-					Dbprintf("RDR:  (len=%02d): %02x %02x %02x %02x %02x %02x %02x %02x %02x", len,
+					
+					if ( MF_DBGLEVEL ==  MF_DBG_EXTENDED) {
+						Dbprintf("[+] CSN: %02x %02x %02x %02x %02x %02x %02x %02x", csn[0], csn[1], csn[2], csn[3], csn[4], csn[5], csn[6], csn[7]);
+						Dbprintf("[+] RDR:  (len=%02d): %02x %02x %02x %02x %02x %02x %02x %02x %02x", len,
 							receivedCmd[0], receivedCmd[1], receivedCmd[2],
 							receivedCmd[3], receivedCmd[4], receivedCmd[5],
 							receivedCmd[6], receivedCmd[7], receivedCmd[8]);
-
+					}
 					if (reader_mac_buf != NULL)	{
 						memcpy(reader_mac_buf, receivedCmd+1, 8);
 					}

@@ -350,6 +350,8 @@ int CmdHFiClassSim(const char *Cmd) {
  * <4 byte NR><4 byte MAC>
  * CC are all zeroes, CSN is the same as was sent in
  **/
+	uint8_t tries = 0;
+			
 	switch(simType) {
 		
 		case 2: {
@@ -361,14 +363,17 @@ int CmdHFiClassSim(const char *Cmd) {
 			clearCommandBuffer();
 			SendCommand(&c);
 			
-			while (true) {
+			while ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
+				tries++;
+				printf(".");
+				fflush(stdout);
 				if (ukbhit()) {
 					int gc = getchar(); (void)gc;
 					PrintAndLog("[!] aborted via keyboard.");
 					return 0;
 				}
 
-				if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+				if ( tries > 20) {
 					PrintAndLog("[!] timeout while waiting for reply.");
 					return 0;
 				}
@@ -406,7 +411,7 @@ int CmdHFiClassSim(const char *Cmd) {
 			break;
 		}
 		case 4: {
-			PrintAndLog("[+] Starting the sim 4 keyroll attack");
+			PrintAndLog("[+] Starting the sim 4 key roll attack");
 			PrintAndLog("[+] press keyboard to cancel");
 			UsbCommand c = {CMD_SIMULATE_TAG_ICLASS, {simType, NUM_CSNS}};
 			UsbCommand resp = {0};
@@ -414,14 +419,17 @@ int CmdHFiClassSim(const char *Cmd) {
 			clearCommandBuffer();
 			SendCommand(&c);
 
-			while (true) {
+			while ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
+				tries++;
+				printf(".");
+				fflush(stdout);
 				if (ukbhit()) {
 					int gc = getchar(); (void)gc;
 					PrintAndLog("[!] aborted via keyboard.");
 					return 0;
 				}
 
-				if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+				if ( tries > 20) {
 					PrintAndLog("[!] timeout while waiting for reply.");
 					return 0;
 				}
