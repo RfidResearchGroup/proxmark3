@@ -7,8 +7,6 @@
 //-----------------------------------------------------------------------------
 #include "iso15693tools.h"
 
-int sprintf(char *str, const char *format, ...);
-
 // returns a string representation of the UID
 // UID is transmitted and stored LSB first, displayed MSB first
 //		target    char* buffer, where to put the UID, if NULL a static buffer is returned
