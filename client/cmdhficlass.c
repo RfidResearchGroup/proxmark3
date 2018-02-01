@@ -41,6 +41,7 @@ int usage_hf_iclass_sim(void) {
 	PrintAndLog("        hf iclass sim 2");
 	PrintAndLog("        hf iclass eload 'tagdump.bin'");
 	PrintAndLog("        hf iclass sim 3");
+	PrintAndLog("        hf iclass sim 4");
 	return 0;
 }
 int usage_hf_iclass_eload(void) {
@@ -118,7 +119,7 @@ int usage_hf_iclass_writeblock(void) {
 	PrintAndLog("Samples:");
 	PrintAndLog("  hf iclass writeblk b 0A d AAAAAAAAAAAAAAAA k 001122334455667B");
 	PrintAndLog("  hf iclass writeblk b 1B d AAAAAAAAAAAAAAAA k 001122334455667B c");
-	PrintAndLog("  hf iclass writeblk b 0A d AAAAAAAAAAAAAAAA n 0");
+	// PrintAndLog("  hf iclass writeblk b 0A d AAAAAAAAAAAAAAAA n 0"); # No reference to option `n` in implementation
 	return 0;
 }
 int usage_hf_iclass_readblock(void) {
@@ -229,7 +230,7 @@ int usage_hf_iclass_chk(void) {
 }
 int usage_hf_iclass_lookup(void) {
 	PrintAndLog("Lookup keys takes some sniffed trace data and tries to verify what key was used against a dictionary file");	
-	PrintAndLog("Usage: hf iclass lookup [h|e|r] [f  (*.dic)] [c <csn>] [p <epurse>] [m <macs>]");
+	PrintAndLog("Usage: hf iclass lookup [h|e|r] [f  (*.dic)] [u <csn>] [p <epurse>] [m <macs>]");
 	PrintAndLog("Options:");
 	PrintAndLog("      h             Show this help");
 	PrintAndLog("      f <filename>  Dictionary file with default iclass keys");
