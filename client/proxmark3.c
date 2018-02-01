@@ -104,7 +104,13 @@ bool hookUpPM3() {
 }
 
 // (iceman) if uart_receiver fails a command three times,  we conside the device to be offline.
-void *uart_receiver(void *targ) {
+void
+#ifdef __has_attribute
+#if __has_attribute(force_align_arg_pointer)
+__attribute__((force_align_arg_pointer)) 
+#endif
+#endif
+*uart_receiver(void *targ) {
 	struct receiver_arg *arg = (struct receiver_arg*)targ;
 	size_t rxlen;
 	bool tmpsignal;
@@ -150,7 +156,13 @@ void *uart_receiver(void *targ) {
 	return NULL;
 }
 
-void main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
+void
+#ifdef __has_attribute
+#if __has_attribute(force_align_arg_pointer)
+__attribute__((force_align_arg_pointer)) 
+#endif
+#endif
+main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 
 	struct receiver_arg rarg;
 	char *cmd = NULL;

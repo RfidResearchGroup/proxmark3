@@ -268,7 +268,13 @@ int Compare16Bits(const void * a, const void * b) {
 }
 
 // wrapper function for multi-threaded lfsr_recovery32
-void* nested_worker_thread(void *arg) {
+void
+#ifdef __has_attribute
+#if __has_attribute(force_align_arg_pointer)
+__attribute__((force_align_arg_pointer)) 
+#endif
+#endif
+*nested_worker_thread(void *arg) {
 	struct Crypto1State *p1;
 	StateList_t *statelist = arg;
 	statelist->head.slhead = lfsr_recovery32(statelist->ks1, statelist->nt ^ statelist->uid);	
@@ -681,7 +687,7 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 	switch (traceState) {
 	case TRACE_IDLE: 
 		// check packet crc16!
-		if ((len >= 4) && (!CheckCrc14443(CRC_14443_A, data, len))) {
+		if ((len >= 4) && (!check_crc(CRC_14443_A, data, len))) {
 			PrintAndLog("DEC| CRC ERROR!!!");
 			AddLogLine(logHexFileName, "DEC| ", "CRC ERROR!!!"); 
 			traceState = TRACE_ERROR;  // do not decrypt the next commands
