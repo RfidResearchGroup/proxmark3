@@ -1293,22 +1293,22 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 
 	// CSN
 	// 22: Takes 2 bytes for SOF/EOF and 10 * 2 = 20 bytes (2 bytes/byte)
-	uint8_t *resp_csn = BigBuf_malloc(30);
+	uint8_t *resp_csn = BigBuf_malloc(28);
 	int resp_csn_len;
 
 	// configuration  picopass 2ks
-	uint8_t *resp_conf = BigBuf_malloc(20);
+	uint8_t *resp_conf = BigBuf_malloc(28);
 	int resp_conf_len;
 	uint8_t conf_data[10] = {0x12,0xFF,0xFF,0xFF,0x7F,0x1F,0xFF,0x3C,0x00,0x00};
 	ComputeCrc14443(CRC_ICLASS, conf_data, 8, &conf_data[8], &conf_data[9]);
 	
 	// e-Purse
 	// 18: Takes 2 bytes for SOF/EOF and 8 * 2 = 16 bytes (2 bytes/bit)
-	uint8_t *resp_cc = BigBuf_malloc(20);
+	uint8_t *resp_cc = BigBuf_malloc(28);
 	int resp_cc_len;
 
 	// Application Issuer Area 
-	uint8_t *resp_aia = BigBuf_malloc(20);
+	uint8_t *resp_aia = BigBuf_malloc(28);
 	int resp_aia_len;
 	uint8_t aia_data[10] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0x00,0x00};
 	ComputeCrc14443(CRC_ICLASS, aia_data, 8, &aia_data[8], &aia_data[9]);
@@ -1377,7 +1377,7 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 	uint8_t *data_response = BigBuf_malloc( (8+2) * 2 + 2);
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_LISTEN);
-
+	SpinDelay(100);
 	StartCountSspClk();
 
 	// To control where we are in the protocol
@@ -1414,29 +1414,34 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 			trace_data_size = sizeof(sof_data);
 			// adjusted for 330 + (160*num of slot) 
 			response_delay = 330 + 160 * 1;
+			goto send;
 		} else if (receivedCmd[0] == ICLASS_CMD_READ_OR_IDENTIFY && len == 1) { // 0x0C
 			// Reader asks for anticollission CSN
 			modulated_response = resp_anticoll; modulated_response_size = resp_anticoll_len; //order = 2;
 			trace_data = anticoll_data;
 			trace_data_size = sizeof(anticoll_data);
+			goto send;
 		} else if (receivedCmd[0] == ICLASS_CMD_SELECT) { // 0x81
 			// Reader selects anticollission CSN.
 			// Tag sends the corresponding real CSN
 			modulated_response = resp_csn; modulated_response_size = resp_csn_len; //order = 3;
 			trace_data = csn_data;
 			trace_data_size = sizeof(csn_data);
+			goto send;
 		} else if (receivedCmd[0] == ICLASS_CMD_READCHECK_KD) { // 0x88
 			// Read e-purse (88 02)
 			modulated_response = resp_cc; modulated_response_size = resp_cc_len; //order = 4;
 			trace_data = card_challenge_data;
 			trace_data_size = sizeof(card_challenge_data);
 			LED_B_ON();
+			goto send;
 		} else if (receivedCmd[0] == ICLASS_CMD_READCHECK_KC) { // 0x18
 			// Read e-purse (18 02)
 			modulated_response = resp_cc; modulated_response_size = resp_cc_len; //order = 4;
 			trace_data = card_challenge_data;
 			trace_data_size = sizeof(card_challenge_data);
 			LED_B_ON();
+			goto send;			
 		} else if (receivedCmd[0] == ICLASS_CMD_CHECK) { // 0x05
 			// Reader random and reader MAC!!!
 			if (simulationMode == MODE_FULLSIM) {
@@ -1472,12 +1477,13 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 					exitLoop = true;
 				}
 			}
-
+			goto send;
 		} else if (receivedCmd[0] == ICLASS_CMD_HALT && len == 1) {
 			// Reader ends the session
 			modulated_response = resp_sof; modulated_response_size = 0; //order = 0;
 			trace_data = NULL;
 			trace_data_size = 0;
+			goto send;
 		// sim 2 / 4,   
 		} else if (simulationMode == MODE_EXIT_AFTER_MAC && receivedCmd[0] == ICLASS_CMD_READ_OR_IDENTIFY && len == 4){  // 0x0C
 			// block0,1,2,5 is always readable.
@@ -1505,7 +1511,7 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 					break;
 				default: break;
 			}						
-			
+			goto send;
 		} else if (simulationMode == MODE_FULLSIM && receivedCmd[0] == ICLASS_CMD_READ_OR_IDENTIFY && len == 4){ // 0x0C
 			//Read block
 			uint16_t blk = receivedCmd[1];
@@ -1519,6 +1525,7 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 			memcpy(data_response, ToSend, ToSendMax);
 			modulated_response = data_response;
 			modulated_response_size = ToSendMax;
+			goto send;
 		} else if (simulationMode == MODE_FULLSIM && receivedCmd[0] == ICLASS_CMD_UPDATE) {
 			
 			//Probably the reader wants to update the nonce. Let's just ignore that for now.
@@ -1538,7 +1545,7 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 			modulated_response = data_response;
 			modulated_response_size = ToSendMax;			
 			response_delay = 4600 * 1.5;  // tPROG 4-15ms
-			
+			goto send;
 //		} else if(receivedCmd[0] == ICLASS_CMD_PAGESEL)	{  // 0x84
 			//Pagesel
 			//Pagesel enables to select a page in the selected chip memory and return its configuration block
@@ -1559,6 +1566,7 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 			trace_data_size = 0;
 		}
 		
+send:		
 		/**
 		A legit tag has about 330us delay between reader EOT and tag SOF.
 		**/
@@ -1594,9 +1602,6 @@ static int SendIClassAnswer(uint8_t *resp, int respLen, uint16_t delay) {
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_424K_8BIT);	
 	AT91C_BASE_SSC->SSC_THR = 0x00;
-
-//	SpinDelayUs(delay);  // So, first make sure we timeout previous comms.	
-
 	while (!BUTTON_PRESS()) {
 		if ( (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY)){
 			b = AT91C_BASE_SSC->SSC_RHR; (void) b;
