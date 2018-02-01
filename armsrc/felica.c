@@ -105,17 +105,6 @@ static void shiftInByte(uint8_t bt) {
     }
 }
 
-//expect framebuf to be preset with len...
-void AddCrc(uint8_t* buf, int len) {
-
-	// buf[2] == length
-	//uint8_t len = buf[2];
-	// uint16_t crc = crc16_xmodem( buf+2, len);
-    // buf[2 + len] = (crc >> 8);
-    // buf[3 + len] = (crc & 0xff);
-	compute_crc( CRC_FELICA, buf+2, len, buf+len+2, buf+len+3);
-}
-
 static void ProcessNFCByte(uint8_t bt) {
     switch (NFCFrame.state) {
 		case STATE_UNSYNCD: {
