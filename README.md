@@ -153,6 +153,29 @@ Further questions about Mac & Homebrew,  contact @Chrisfu  (https://github.com/c
 
 3. Install Proxmark3: `brew install proxmark3` for stable release or `brew install --HEAD proxmark3` for latest non-stable from GitHub.
 
+Upgrading HomeBrew tap formula
+-----------------------------
+*This method is useful for those looking to run bleeding-edge versions of iceman's client. Keep this in mind when attempting to update your HomeBrew tap formula as this procedure could easily cause a build to break if an update is unstable on macOS.* 
+
+Tested on macOS Sierra 10.12.6
+
+*Note: This assumes you have already installed iceman's fork from HomeBrew as mentioned above*
+
+1. Force HomeBrew to pull the latest source from github
+`brew upgrade --fetch-HEAD iceman1001/proxmark3/proxmark3`
+ 
+2. Flash the bootloader
+  * With your Proxmark3 unplugged from your machine, press and hold the button on your Proxmark 3 as you plug it into a USB port. After about 5 seconds let go of the button and run this command
+   `$ sudo proxmark3-flasher /dev/tty.usbmodem881 /usr/local/Cellar/proxmark3/HEAD-ccfdd60/share/firmware/fullimage.elf`
+  * After the bootloader finishes flashing, unplug your Proxmark3 from your machine
+  
+3. Flash fullimage.elf
+  * Press and hold the button on your Proxmark 3 and keep it held as you plug the Proxmark 3 back into the USB port; continue to hold the button until after this step is complete and the `proxmark3-flasher` command outputs "Have a nice day!"*
+
+`$ sudo proxmark3-flasher /dev/tty.usbmodem881 /usr/local/Cellar/proxmark3/HEAD-ccfdd60/share/firmware/fullimage.elf`
+
+4. Enjoy the update
+
 ## Docker container
 I recently added a docker container on Docker HUB.  You find it here: https://hub.docker.com/r/iceman1001/proxmark3/
 Follow those instructions to get it up and running.  No need for the old proxspace-environment anymore.
