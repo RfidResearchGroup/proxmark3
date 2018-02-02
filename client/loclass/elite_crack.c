@@ -546,8 +546,9 @@ int bruteforceFile(const char *filename, uint16_t keytable[]) {
 
 	if (f) fclose(f);
 	
-    if (bytes_read < fsize)
+    if (bytes_read < fsize) {
         prnlog("[!] Error, could only read %d bytes (should be %d)", bytes_read, fsize );
+	}
 
 	uint8_t res = bruteforceDump(dump, fsize, keytable);
 	free(dump);
