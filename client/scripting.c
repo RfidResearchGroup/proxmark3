@@ -459,15 +459,14 @@ static int l_reveng_models(lua_State *L){
 
 	// This array needs to be adjusted if RevEng adds more crc-models.
 	uint8_t width[102];
+	memset(width, 0, sizeof(width));
 	// This array needs to be adjusted if RevEng adds more crc-models.
 	char *models[102];
 
 	width[0] = in_width;
 	
-	int ans = GetModels(models, &count, width);
-	if (!ans) {
-		return returnToLuaWithError(L, "Didn't find any models");
-	}
+	if (!GetModels(models, &count, width))
+		return returnToLuaWithError(L, "didn't find any models");
 	
 	lua_newtable(L);	
 	for (int i = 0; i < count; i++){

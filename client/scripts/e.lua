@@ -49,7 +49,7 @@ function main(args)
 		if o == "w" then width = a end
 	end
 
-	data = data or '01020304'
+	data = data or '01020304'	
 	width = width or 0
 	
 	print( string.rep('-',60) )
@@ -58,8 +58,8 @@ function main(args)
 	print('')
 	print( ('%-20s| %-16s| %s'):format('Model','CRC', 'CRC reverse','bigEnd', 'bigEnd','little','little'))
 	print( string.rep('-',60) )
-	local lists = core.reveng_models(width)	
-	if lists == nil then return oops("Couldn't find any CRC algos with that width") end
+	local lists, err = core.reveng_models(width)	
+	if lists == nil then return oops(err) end
 	
 	for _,i in pairs(lists) do
 		if string.len(i) > 1 then
