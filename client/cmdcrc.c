@@ -90,7 +90,7 @@ int GetModels(char *Models[], int *count, uint8_t *width){
 	if (width[0] == 0) { //reveng -D
 		*count = mcount();
 		if (!*count)
-			return uerr("no preset models available");
+			return uerr("[-] no preset models available");
 
 		for (int mode = 0; mode < *count; ++mode) {
 			mbynum(&model, mode);
@@ -98,7 +98,7 @@ int GetModels(char *Models[], int *count, uint8_t *width){
 			size_t size = (model.name && *model.name) ? strlen(model.name) : 6;
 			char *tmp = calloc(size+1, sizeof(char));
 			if (tmp==NULL)
-				return uerr("out of memory?");
+				return uerr("[!] out of memory?");
 
 			memcpy(tmp, model.name, size);
 			Models[mode] = tmp;
@@ -108,7 +108,7 @@ int GetModels(char *Models[], int *count, uint8_t *width){
 	} else { //reveng -s
 
 		if (~model.flags & P_MULXN)
-			return uerr("cannot search for non-Williams compliant models");
+			return uerr("[!] cannot search for non-Williams compliant models");
 
 		praloc(&model.spoly, (unsigned long)width[0]);
 		praloc(&model.init, (unsigned long)width[0]);
@@ -175,7 +175,7 @@ int GetModels(char *Models[], int *count, uint8_t *width){
 						//PrintAndLog("Size: %d, %s, count: %d",size,pset.name, Cnt);
 						char *tmp = calloc(size+1, sizeof(char));
 						if (tmp == NULL){
-							PrintAndLog("out of memory?");
+							PrintAndLog("[!] out of memory?");
 							return 0;
 						}
 						width[Cnt] = width[0];
@@ -204,7 +204,7 @@ int GetModels(char *Models[], int *count, uint8_t *width){
 			}
 		}
 		if (!(model.flags & P_REFIN) != !(model.flags & P_REFOUT))
-			return uerr("cannot search for crossed-endian models");
+			return uerr("[!] cannot search for crossed-endian models");
 
 		pass = 0;
 		do {
@@ -228,10 +228,10 @@ int GetModels(char *Models[], int *count, uint8_t *width){
 			pfree(qptr);
 		}
 		free(apolys);
-		if (~uflags & C_RESULT)
-			return uerr("no models found");
-		
 		mfree(&model);
+		
+		if (~uflags & C_RESULT)
+			return uerr("[!] no models found");
 	}
 	return 1;
 }

@@ -50,6 +50,7 @@ function main(args)
 	end
 
 	data = data or '01020304'
+	width = width or 0
 	
 	print( string.rep('-',60) )
 	print('Bit width of CRC | '..width)
