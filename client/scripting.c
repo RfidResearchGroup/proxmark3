@@ -466,9 +466,6 @@ static int l_reveng_models(lua_State *L){
 	
 	int ans = GetModels(models, &count, width);
 	if (!ans) {
-		for (int i =0; i<102; i++) {
-			free(models[i]);
-		}
 		return returnToLuaWithError(L, "Didn't find any models");
 	}
 	

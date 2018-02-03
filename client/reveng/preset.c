@@ -723,12 +723,12 @@ static const struct malias aliases[] = {
 #else /* PRESETS */
 
 static const struct mpreset models[] = {
-	{ 0UL, 0,       0,       P_BE,   0,       0,       0,       NULL       },	/* terminating entry */
+	{ 0UL, 0, 0, P_BE, 0, 0, 0, NULL },	/* terminating entry */
 };
 #  define NPRESETS 0
 
 static const struct malias aliases[] = {
-	{NULL,			NULL     },	/* terminating entry */
+	{NULL, NULL },	/* terminating entry */
 };
 #  define NALIASES 0
 
@@ -760,26 +760,26 @@ int mbynam(model_t *dest, const char *key) {
 	int cmp = 1;
 	char *ukey, *uptr;
 
-	if(!aliases->name)
+	if (!aliases->name)
 		return(-1);
-	if(!(ukey = malloc((size_t) 1 + strlen(key)))) {
-		uerror("cannot allocate memory for comparison string");
+	if (!(ukey = malloc((size_t) 1 + strlen(key) + 1))) {
+		uerror("[!] cannot allocate memory for comparison string");
 		return(0);
 	}
 	uptr = ukey;
 	do
 		*uptr++ = toupper(*key);
-	while(*key++);
+	while (*key++);
 
-	while(left < right && cmp) {
+	while (left < right && cmp) {
 		middle = (left >> 1) + (right >> 1);
 		cmp = strcmp(ukey, aliases[middle].name);
-		if(cmp < 0) right = middle;
-		else if(cmp > 0) left = middle + 1;
+		if (cmp < 0) right = middle;
+		else if (cmp > 0) left = middle + 1;
 	}
 	free(ukey);
 
-	if(cmp)
+	if (cmp)
 		return(0);
 	munpack(dest, aliases[middle].model);
 	return(1);
@@ -787,7 +787,7 @@ int mbynam(model_t *dest, const char *key) {
 
 void mbynum(model_t *dest, int num) {
 	/* Sets parameters in dest according to the model indexed by num. */
-	if(num > NPRESETS)
+	if (num > NPRESETS)
 		num = NPRESETS;
 	munpack(dest, num+models);
 }
@@ -806,17 +806,17 @@ char * mnames(void) {
 	char *string, *sptr;
 	const struct malias *aptr = aliases;
 
-	while(aptr->name) {
-		if(aptr == aptr->model->alias)
+	while (aptr->name) {
+		if (aptr == aptr->model->alias)
 			size += strlen(aptr->name) + 1;
 		++aptr;
 	}
-	if(!size) return(NULL);
-	if((string = malloc(size))) {
+	if (!size) return(NULL);
+	if ((string = malloc(size))) {
 		aptr = aliases;
 		sptr = string;
-		while(aptr->name) {
-			if(aptr == aptr->model->alias) {
+		while (aptr->name) {
+			if (aptr == aptr->model->alias) {
 				strcpy(sptr, aptr->name);
 				sptr += strlen(aptr->name);
 				*sptr++ = '\n';
@@ -836,49 +836,48 @@ void mmatch(model_t *model, int flags) {
 	size_t left = 0, right = NPRESETS, middle = 0;
 	poly_t poly = PZERO;
 	int cmp = 1;
-	if(!model) return;
+	if (!model) return;
 
-	while(left < right && cmp) {
+	while (left < right && cmp) {
 		middle = (left >> 1) + (right >> 1);
 		PUNPACK(&poly, models+middle, bspoly);
 		cmp = psncmp(&model->spoly, &poly);
-		if(!cmp) {
+		if (!cmp) {
 			PUNPACK(&poly, models+middle, binit);
 			cmp = psncmp(&model->init, &poly);
 		}
-		if(!cmp) {
-			if((model->flags & P_REFIN) && (~models[middle].flags & P_REFIN))
+		if (!cmp) {
+			if ((model->flags & P_REFIN) && (~models[middle].flags & P_REFIN))
 				cmp = 1;
-			else if((~model->flags & P_REFIN) && (models[middle].flags & P_REFIN))
+			else if ((~model->flags & P_REFIN) && (models[middle].flags & P_REFIN))
 				cmp = -1;
-			else if((model->flags & P_REFOUT) && (~models[middle].flags & P_REFOUT))
+			else if ((model->flags & P_REFOUT) && (~models[middle].flags & P_REFOUT))
 				cmp = 1;
-			else if((~model->flags & P_REFOUT) && (models[middle].flags & P_REFOUT))
+			else if ((~model->flags & P_REFOUT) && (models[middle].flags & P_REFOUT))
 				cmp = -1;
 			else {
 				PUNPACK(&poly, models+middle, bxorout);
 				cmp = psncmp(&model->xorout, &poly);
 			}
 		}
-		if(cmp < 0) right = middle;
-		else if(cmp > 0) left = middle + 1;
+		if (cmp < 0) right = middle;
+		else if (cmp > 0) left = middle + 1;
 	}
 	pfree(&poly);
 
-	if(!cmp) {
+	if (!cmp) {
 		model->name = models[middle].alias->name;
-		if(flags & M_OVERWR)
+		if (flags & M_OVERWR)
 			munpack(model, models+middle);
 	}
 }
 
 /* Private functions */
-
 static void munpack(model_t *dest, const struct mpreset *src) {
 	/* Copies the parameters of src to dest.
 	 * dest must be an initialised model.
 	 */
-	if(!dest || !src) return;
+	if (!dest || !src) return;
 	MUNPACK(spoly);
 	MUNPACK(init);
 	MUNPACK(xorout);

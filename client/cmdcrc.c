@@ -95,7 +95,7 @@ int GetModels(char *Models[], int *count, uint8_t *width){
 		for (int mode = 0; mode < *count; ++mode) {
 			mbynum(&model, mode);
 			mcanon(&model);
-			size_t size = (model.name && *model.name) ? strlen(model.name) : 6;
+			size_t size = (model.name && *model.name) ? strlen(model.name) : 7;
 			char *tmp = calloc(size+1, sizeof(char));
 			if (tmp==NULL)
 				return uerr("[!] out of memory?");
@@ -171,7 +171,7 @@ int GetModels(char *Models[], int *count, uint8_t *width){
 						/* the selected model solved all arguments */
 						mcanon(&pset);
 						
-						size_t size = (pset.name && *pset.name) ? strlen(pset.name) : 6;
+						size_t size = (pset.name && *pset.name) ? strlen(pset.name) : 7;
 						//PrintAndLog("Size: %d, %s, count: %d",size,pset.name, Cnt);
 						char *tmp = calloc(size+1, sizeof(char));
 						if (tmp == NULL){
