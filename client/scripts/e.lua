@@ -25,7 +25,7 @@ end
 --- 
 -- This is only meant to be used when errors occur
 function oops(err)
-	print("ERROR: ",err)
+	print("[!] ERROR: ",err)
 	return nil,err
 end
 --- 
@@ -57,7 +57,9 @@ function main(args)
 	print('')
 	print( ('%-20s| %-16s| %s'):format('Model','CRC', 'CRC reverse','bigEnd', 'bigEnd','little','little'))
 	print( string.rep('-',60) )
-	local lists = core.reveng_models(width)
+	local lists = core.reveng_models(width)	
+	if lists == nil then return oops("Couldn't find any CRC algos with that width") end
+	
 	for _,i in pairs(lists) do
 		local a1 = core.reveng_runmodel(i, data, false, '0')
 		local a2 = core.reveng_runmodel(i, data, true, '0')
