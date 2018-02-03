@@ -400,9 +400,11 @@ int CmdrevengSearch(const char *Cmd){
 	int dataLen = param_getstr(Cmd, 0, inHexStr, sizeof(inHexStr));
 	if (dataLen < 4) return 0;
 
+	// these two arrays, must match preset size.
 	char *Models[102];
+	uint8_t width[102] = {0};
 	int count = 0;
-	uint8_t width[80] = {0};
+
 	uint8_t crcChars = 0;
 	char result[30];
 	char revResult[30];
