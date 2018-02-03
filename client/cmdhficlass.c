@@ -238,8 +238,11 @@ int usage_hf_iclass_lookup(void) {
 	PrintAndLog("      u             CSN");
 	PrintAndLog("      p             EPURSE");
 	PrintAndLog("      m             macs");
+	PrintAndLog("      r             raw");
+	PrintAndLog("      e             elite");
 	PrintAndLog("Samples:");
 	PrintAndLog("        hf iclass lookup u 9655a400f8ff12e0 p f0ffffffffffffff m 0000000089cb984b f default_iclass_keys.dic");
+	PrintAndLog("        hf iclass lookup u 9655a400f8ff12e0 p f0ffffffffffffff m 0000000089cb984b f default_iclass_keys.dic e");
 	return 0;
 }
 
@@ -360,7 +363,7 @@ int CmdHFiClassSim(const char *Cmd) {
 			PrintAndLog("[+] press keyboard to cancel");
 			UsbCommand c = {CMD_SIMULATE_TAG_ICLASS, {simType, NUM_CSNS}};
 			UsbCommand resp = {0};
-			memcpy(c.d.asBytes, csns, 8*NUM_CSNS);
+			memcpy(c.d.asBytes, csns, 8 * NUM_CSNS);
 			clearCommandBuffer();
 			SendCommand(&c);
 			
@@ -390,13 +393,16 @@ int CmdHFiClassSim(const char *Cmd) {
 				return 2;
 			}
 			
-			memset(dump, 0, datalen);//<-- Need zeroes for the CC-field
+			memset(dump, 0, datalen);//<-- Need zeroes for the EPURSE - field (offical)
+			
 			uint8_t i = 0;
 			for (i = 0 ; i < NUM_CSNS ; i++) {
 				//copy CSN 
 				memcpy(dump + i*24, csns + i*8, 8);
-				//8 zero bytes here then comes NR_MAC (eight bytes from the response)  ( 8b csn + 8 empty== 16)
-				memcpy(dump + i*24 + 16, resp.d.asBytes + i*8, 8);
+				//copy epurse
+				memcpy(dump + i*24 + 8, resp.d.asBytes + i*16, 8);
+				// NR_MAC (eight bytes from the response)  ( 8b csn + 8b epurse == 16)
+				memcpy(dump + i*24 + 16, resp.d.asBytes + i*16 + 8, 8);
 			}
 			/** Now, save to dumpfile **/
 			saveFile("iclass_mac_attack", "bin", dump, datalen);
@@ -445,10 +451,12 @@ int CmdHFiClassSim(const char *Cmd) {
 			//Need zeroes for the CC-field
 			memset(dump, 0, datalen);
 			for (uint8_t i = 0; i < NUM_CSNS ; i++) {
-				// Copy CSN
+				// copy CSN
 				memcpy(dump + i*MAC_ITEM_SIZE, csns + i*8, 8); //CSN
-				//8 zero bytes here then comes NR_MAC (eight bytes from the response)  ( 8b csn + 8 empty== 16)
-				memcpy(dump + i*MAC_ITEM_SIZE + 16, resp.d.asBytes + i*8, 8);
+				// copy EPURSE
+				memcpy(dump + i*MAC_ITEM_SIZE + 8, resp.d.asBytes + i * 16, 8);
+				// copy NR_MAC (eight bytes from the response)  ( 8b csn + 8b epurse == 16)
+				memcpy(dump + i*MAC_ITEM_SIZE + 16, resp.d.asBytes + i * 16 + 8, 8);
 			}
 			saveFile("iclass_mac_attack_keyroll_A", "bin", dump, datalen);
 
@@ -456,11 +464,13 @@ int CmdHFiClassSim(const char *Cmd) {
 			memset(dump, 0, datalen);
 			uint8_t resp_index = 0;
 			for (uint8_t i = 0; i < NUM_CSNS; i++) {
-				resp_index =  (i + NUM_CSNS) * 8;
+				resp_index =  (i + NUM_CSNS) * 16;
 				// Copy CSN
 				memcpy(dump + i*MAC_ITEM_SIZE, csns + i*8, 8); 
-				//8 zero bytes here then comes NR_MAC (eight bytes from the response)  ( 8b csn + 8 empty== 16)
-				memcpy(dump + i*MAC_ITEM_SIZE + 16, resp.d.asBytes + resp_index, 8);
+				// copy EPURSE
+				memcpy(dump + i*MAC_ITEM_SIZE + 8, resp.d.asBytes + resp_index, 8);
+				// copy NR_MAC (eight bytes from the response)  ( 8b csn + 8 epurse == 16)
+				memcpy(dump + i*MAC_ITEM_SIZE + 16, resp.d.asBytes + resp_index + 8, 8);
 				resp_index++;
 			}						
 			saveFile("iclass_mac_attack_keyroll_B", "bin", dump, datalen);			
@@ -800,9 +810,9 @@ static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool use_credit_key, bool v
 	if (CCNR != NULL) 
 		memcpy(CCNR, data+16, 8);
 	
-	// if (isOK > 0) {
-		// if (verbose) PrintAndLog("CSN: %s",sprint_hex(CSN,8));
-	// }
+	if (isOK > 0) {
+		PrintAndLog("CCNR: %s   MISSING NCN",sprint_hex(CCNR, 8));
+	}
 	
 	if (isOK <= 1){
 		PrintAndLog("(%d) Failed to obtain CC! Aborting...", isOK);
@@ -1926,6 +1936,8 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 	}
 	
 	PrintAndLog("[+] Generating diversified keys and MAC");
+	PrintAndLog("[+] CSN     | %s", sprint_hex( CSN, sizeof(CSN) ));
+	PrintAndLog("[+] CCNR    | %s", sprint_hex( CCNR, sizeof(CCNR) ));
 	res = GenerateMacFromKeyFile( CSN, CCNR, use_raw, use_elite, keyBlock, keycnt, pre );
 	if ( res > 0) {
 		free(keyBlock);
@@ -2039,6 +2051,7 @@ int CmdHFiClassLookUp(const char *Cmd) {
 	uint8_t CSN[8];
 	uint8_t EPURSE[8];
 	uint8_t MACS[8];
+	uint8_t CCNR[12];
 	uint8_t MAC_TAG[4] = {0x00,0x00,0x00,0x00};
 	
 	// elite key,  raw key, standard key
@@ -2122,10 +2135,15 @@ int CmdHFiClassLookUp(const char *Cmd) {
 
 	if (errors) return usage_hf_iclass_lookup();	
 
-	PrintAndLog("[+] CSN %s", sprint_hex( CSN, sizeof(CSN) ));
-	PrintAndLog("[+] Epurse %s", sprint_hex( EPURSE, sizeof(EPURSE) ));
-	PrintAndLog("[+] MACS %s", sprint_hex( MACS, sizeof(MACS) ));
-	PrintAndLog("[+] MAC_TAG %s", sprint_hex( MAC_TAG, sizeof(MAC_TAG) ));
+	// stupid copy.. CCNR is a combo of epurse and reader nonce
+	memcpy(CCNR, EPURSE, 8);
+	memcpy(CCNR+8, MACS, 4);
+	
+	PrintAndLog("[+] CSN     | %s", sprint_hex( CSN, sizeof(CSN) ));
+	PrintAndLog("[+] Epurse  | %s", sprint_hex( EPURSE, sizeof(EPURSE) ));
+	PrintAndLog("[+] MACS    | %s", sprint_hex( MACS, sizeof(MACS) ));
+	PrintAndLog("[+] CCNR    | %s", sprint_hex( CCNR, sizeof(CCNR) ));
+	PrintAndLog("[+] MAC_TAG | %s", sprint_hex( MAC_TAG, sizeof(MAC_TAG) ));
 	
 	int res = LoadDictionaryKeyFile( filename, &keyBlock, &keycnt);
 	if ( res > 0) {
@@ -2140,7 +2158,7 @@ int CmdHFiClassLookUp(const char *Cmd) {
 	}
 
 	PrintAndLog("[-] Generating diversified keys and MAC");
-	res = GenerateFromKeyFile( CSN, EPURSE, use_raw, use_elite, keyBlock, keycnt, prekey );
+	res = GenerateFromKeyFile( CSN, CCNR, use_raw, use_elite, keyBlock, keycnt, prekey );
 	if ( res > 0) {
 		free(keyBlock);
 		free(prekey);

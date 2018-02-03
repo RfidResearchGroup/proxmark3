@@ -1159,19 +1159,20 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 		// In this mode, a number of csns are within datain. We'll simulate each one, one at a time
 		// in order to collect MAC's from the reader. This can later be used in an offlne-attack
 		// in order to obtain the keys, as in the "dismantling iclass"-paper.
+		#define EPURSE_MAC_SIZE 16
 		int i = 0;
-		for (; i < numberOfCSNS && i*8 + 8 < USB_CMD_DATA_SIZE; i++) {
+		for (; i < numberOfCSNS && i * EPURSE_MAC_SIZE + 8 < USB_CMD_DATA_SIZE; i++) {
 			// The usb data is 512 bytes, fitting 65 8-byte CSNs in there.
 
 			memcpy(emulator, datain + (i*8), 8);
 			
-			if (doIClassSimulation(MODE_EXIT_AFTER_MAC, mac_responses+i*8)) {
+			if (doIClassSimulation(MODE_EXIT_AFTER_MAC, mac_responses+i * EPURSE_MAC_SIZE)) {
 				// Button pressed
-				cmd_send(CMD_ACK, CMD_SIMULATE_TAG_ICLASS, i, 0, mac_responses, i*8);
+				cmd_send(CMD_ACK, CMD_SIMULATE_TAG_ICLASS, i, 0, mac_responses, i * EPURSE_MAC_SIZE);
 				goto out;
 			}
 		}
-		cmd_send(CMD_ACK, CMD_SIMULATE_TAG_ICLASS, i, 0, mac_responses, i*8);
+		cmd_send(CMD_ACK, CMD_SIMULATE_TAG_ICLASS, i, 0, mac_responses, i * EPURSE_MAC_SIZE);
 
 	} else if (simType == 3){
 		//This is 'full sim' mode, where we use the emulator storage for data.
@@ -1192,26 +1193,26 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 		// attack below is same as SIM 2, but we run the CSN twice to collected the mac for both keys.
 		int i = 0;
 		// The usb data is 512 bytes, fitting 65 8-byte CSNs in there.  iceman fork uses 9 CSNS
-		for (; i < numberOfCSNS && i*8 + 8 < USB_CMD_DATA_SIZE; i++) {
+		for (; i < numberOfCSNS && i * EPURSE_MAC_SIZE + 8 < USB_CMD_DATA_SIZE; i++) {
 
 			memcpy(emulator, datain + (i*8), 8);
 			
 			// keyroll 1 			
-			if (doIClassSimulation(MODE_EXIT_AFTER_MAC, mac_responses + i*8 )) {
-				cmd_send(CMD_ACK, CMD_SIMULATE_TAG_ICLASS, i*2, 0, mac_responses, i * 8 * 2);
+			if (doIClassSimulation(MODE_EXIT_AFTER_MAC, mac_responses + i * EPURSE_MAC_SIZE )) {
+				cmd_send(CMD_ACK, CMD_SIMULATE_TAG_ICLASS, i*2, 0, mac_responses, i * EPURSE_MAC_SIZE * 2);
 				// Button pressed
 				goto out; 
 			}
 
 			// keyroll 2
-			if (doIClassSimulation(MODE_EXIT_AFTER_MAC, mac_responses + (i + numberOfCSNS) * 8 )) {
-				cmd_send(CMD_ACK, CMD_SIMULATE_TAG_ICLASS, i*2, 0, mac_responses, i * 8 * 2);
+			if (doIClassSimulation(MODE_EXIT_AFTER_MAC, mac_responses + (i + numberOfCSNS) * EPURSE_MAC_SIZE )) {
+				cmd_send(CMD_ACK, CMD_SIMULATE_TAG_ICLASS, i*2, 0, mac_responses, i * EPURSE_MAC_SIZE* 2);
 				// Button pressed
 				goto out; 
 			}			
 		}
 		// double the amount of collected data.
-		cmd_send(CMD_ACK, CMD_SIMULATE_TAG_ICLASS, i*2, 0, mac_responses, i * 8 * 2 );
+		cmd_send(CMD_ACK, CMD_SIMULATE_TAG_ICLASS, i*2, 0, mac_responses, i * EPURSE_MAC_SIZE * 2 );
 	
 	} else {
 		// We may want a mode here where we hardcode the csns to use (from proxclone).
@@ -1255,6 +1256,7 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 	uint8_t diversified_key[8] = { 0 };
 	// e-Purse
 	uint8_t card_challenge_data[8] = { 0xfe,0xff,0xff,0xff,0xff,0xff,0xff,0xff };
+	//uint8_t card_challenge_data[8] = { 0 };
 	if (simulationMode == MODE_FULLSIM) {
 		//The diversified key should be stored on block 3
 		//Get the diversified key from emulator memory
@@ -1265,7 +1267,11 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 		//Precalculate the cipher state, feeding it the CC
 		cipher_state = opt_doTagMAC_1(card_challenge_data, diversified_key);
 	}
-
+	// set epurse of sim2,4 attack
+	if (reader_mac_buf != NULL)	{
+		memcpy(reader_mac_buf, card_challenge_data, 8);
+	}	
+	
 	int exitLoop = 0;
 	// Reader 0a
 	// Tag    0f
@@ -1320,50 +1326,26 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 	// First card answer: SOF
 	CodeIClassTagSOF();
 	memcpy(resp_sof, ToSend, ToSendMax); resp_sof_Len = ToSendMax;
-	// if ( MF_DBGLEVEL ==  MF_DBG_EXTENDED) {
-		// DbpString("SOF"); 
-		// PrintToSendBuffer();
-	// }
 	
 	// Anticollision CSN
 	CodeIClassTagAnswer(anticoll_data, sizeof(anticoll_data));
 	memcpy(resp_anticoll, ToSend, ToSendMax); resp_anticoll_len = ToSendMax;
-	// if ( MF_DBGLEVEL ==  MF_DBG_EXTENDED) {
-		// DbpString("ANTI COLL CSN"); 
-		// PrintToSendBuffer();
-	// }
 	
 	// CSN
 	CodeIClassTagAnswer(csn_data, sizeof(csn_data));
 	memcpy(resp_csn, ToSend, ToSendMax); resp_csn_len = ToSendMax;
-	// if ( MF_DBGLEVEL ==  MF_DBG_EXTENDED) {
-		// DbpString("CSN");
-		// PrintToSendBuffer();
-	// }
 
 	// Configuration
 	CodeIClassTagAnswer(conf_data, sizeof(conf_data));
 	memcpy(resp_conf, ToSend, ToSendMax); resp_conf_len = ToSendMax;
-	// if ( MF_DBGLEVEL ==  MF_DBG_EXTENDED) {
-		// DbpString("Configuration"); 
-		// PrintToSendBuffer();
-	// }
 	
 	// e-Purse
 	CodeIClassTagAnswer(card_challenge_data, sizeof(card_challenge_data));
 	memcpy(resp_cc, ToSend, ToSendMax); resp_cc_len = ToSendMax;
-	// if ( MF_DBGLEVEL ==  MF_DBG_EXTENDED) {
-		// DbpString("e-Purse"); 
-		// PrintToSendBuffer();
-	// }
 
 	// Application Issuer Area
 	CodeIClassTagAnswer(aia_data, sizeof(aia_data));
 	memcpy(resp_aia, ToSend, ToSendMax); resp_aia_len = ToSendMax;
-	// if ( MF_DBGLEVEL ==  MF_DBG_EXTENDED) {
-		// DbpString("Application Issuer Data"); 
-		// PrintToSendBuffer();
-	// }
 
 	//This is used for responding to READ-block commands or other data which is dynamically generated
 	//First the 'trace'-data, not encoded for FPGA
@@ -1435,6 +1417,10 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 						modulated_response = resp_cc; modulated_response_size = resp_cc_len;
 						trace_data = card_challenge_data;
 						trace_data_size = sizeof(card_challenge_data);
+						// set epurse of sim2,4 attack
+						if (reader_mac_buf != NULL)	{
+							memcpy(reader_mac_buf, card_challenge_data, 8);
+						}
 						break;
 					case 5:// Application Issuer Area (0c 05)
 						modulated_response = resp_aia; modulated_response_size = resp_aia_len;
@@ -1498,7 +1484,7 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf) {
 						Dbprintf("[+] CSN: %02x .... %02x OK", csn[0], csn[7]);
 					}
 					if (reader_mac_buf != NULL)	{
-						memcpy(reader_mac_buf, receivedCmd+1, 8);
+						memcpy(reader_mac_buf + 8, receivedCmd+1, 8);
 					}
 					exitLoop = true;
 				}

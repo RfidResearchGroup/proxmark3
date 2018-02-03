@@ -271,9 +271,9 @@ int _readFromDump(uint8_t dump[], dumpdata* item, uint8_t i) {
 	memcpy(item, dump+i*itemsize, itemsize);
 
 	if (true) {
-		printvar("csn", item->csn,8);
-		printvar("cc_nr", item->cc_nr,12);
-		printvar("mac", item->mac,4);
+		printvar("csn", item->csn, sizeof(item->csn));
+		printvar("cc_nr", item->cc_nr, sizeof(item->cc_nr));
+		printvar("mac", item->mac, sizeof(item->mac));
 	}
 	return 0;
 }
@@ -355,6 +355,7 @@ int bruteforceItem(dumpdata item, uint16_t keytable[]) {
 		prnlog("[+] Bruteforcing byte %d", bytes_to_recover[i]);
 
 	while (!found && !(brute & endmask)) {
+		
 		//Update the keytable with the brute-values
 		for (i=0; i < numbytes_to_recover; i++) {
 			keytable[bytes_to_recover[i]] &= 0xFF00;
@@ -380,7 +381,7 @@ int bruteforceItem(dumpdata item, uint16_t keytable[]) {
 
 		// success
 		if (memcmp(calculated_MAC, item.mac, 4) == 0) {
-			//printf("\r\n");
+			printf("\r\n");
 			for (i =0 ; i < numbytes_to_recover; i++) {
 				prnlog("[=] %d: 0x%02x", bytes_to_recover[i], 0xFF & keytable[bytes_to_recover[i]]);	
 			}

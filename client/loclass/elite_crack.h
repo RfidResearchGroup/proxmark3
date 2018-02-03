@@ -84,8 +84,7 @@ typedef struct {
 	uint8_t csn[8];
 	uint8_t cc_nr[12];
 	uint8_t mac[4];
-
-}dumpdata;
+} dumpdata;
 
 /**
  * @brief Performs brute force attack against a dump-data item, containing csn, cc_nr and mac.
