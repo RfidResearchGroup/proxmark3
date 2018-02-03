@@ -4,6 +4,11 @@
 # the license.
 #-----------------------------------------------------------------------------
 
+# reveng will compile without macros, but these may be useful:
+# Add -DBMPMACRO to use bitmap size constant macros (edit config.h)
+# Add -DNOFORCE  to disable the -F switch
+# Add -DPRESETS  to compile with preset models (edit config.h)
+
 CC = gcc
 CXX = g++
 LD = g++
@@ -22,7 +27,7 @@ LDLIBS = -L/opt/local/lib -L/usr/local/lib -lreadline -lpthread -lm
 LUALIB = ../liblua/liblua.a
 LDFLAGS = $(ENV_LDFLAGS)
 INCLUDES_CLIENT = -I. -I../include -I../common -I../common/polarssl -I../zlib -I../uart -I/opt/local/include -I../liblua
-CFLAGS = $(ENV_CFLAGS) -std=c99 -D_ISOC99_SOURCE $(INCLUDES_CLIENT) -Wall -g -O3
+CFLAGS = $(ENV_CFLAGS) -std=c99 -D_ISOC99_SOURCE -DPRESETS $(INCLUDES_CLIENT) -Wall -g -O3
 CXXFLAGS = -I../include -Wall -O3
 
 LUAPLATFORM = generic
