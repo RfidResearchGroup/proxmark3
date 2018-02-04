@@ -1,10 +1,10 @@
 get_craptev1:
 #	wget http://crapto1.netgarage.org/craptev1-v1.0.tar.xz
-	wget http://crapto1.netgarage.org/craptev1-v1.1.tar.xz
+	wget -N http://crapto1.netgarage.org/craptev1-v1.1.tar.xz
 	tar Jxvf craptev1-v1.1.tar.xz
 
 get_crapto1:
-	wget http://crapto1.netgarage.org/crapto1-v3.3.tar.xz
+	wget -N http://crapto1.netgarage.org/crapto1-v3.3.tar.xz
 	mkdir crapto1-v3.3
 	tar Jxvf crapto1-v3.3.tar.xz -C crapto1-v3.3
 
