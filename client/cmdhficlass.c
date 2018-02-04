@@ -811,7 +811,7 @@ static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool use_credit_key, bool v
 		memcpy(CCNR, data+16, 8);
 	
 	if (isOK > 0) {
-		PrintAndLog("CCNR: %s   MISSING NCN",sprint_hex(CCNR, 8));
+		if (verbose) PrintAndLog("CCNR: %s   MISSING NCN", sprint_hex(CCNR, 8));
 	}
 	
 	if (isOK <= 1){
@@ -1915,7 +1915,6 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 			printf("[-] one more try\n");
 		}
 	}
-	DropField();
 	
 	if ( !got_csn ) {
 		PrintAndLog("[!] can't select card, aborting...");

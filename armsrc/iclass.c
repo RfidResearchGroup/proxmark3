@@ -1739,7 +1739,7 @@ static int GetIClassAnswer(uint8_t* receivedResponse, int maxLen, int *samples, 
 	// Set FPGA mode to "reader listen mode", no modulation (listen
 	// only, since we are receiving, not transmitting).
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_LISTEN);
-	SpinDelayUs(330);  //310 Tout= 330us (iso15603-2)   (330/21.3) take consideration for clock increments.
+	SpinDelayUs(320);  //310 Tout= 330us (iso15603-2)   (330/21.3) take consideration for clock increments.
 
 	// clear RXRDY:
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
@@ -2171,7 +2171,13 @@ void iClass_ReadCheck(uint8_t blockNo, uint8_t keyType) {
 void iClass_Authentication(uint8_t *mac) {
 	uint8_t check[] = { ICLASS_CMD_CHECK, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 	uint8_t resp[ICLASS_BUFFER_SIZE];
-	memcpy(check+5, mac, 4);
+
+	// copy MAC to check command (readersignature)
+	check[5] = mac[0];
+	check[6] = mac[1];
+	check[7] = mac[2];
+	check[8] = mac[3];
+	//memcpy(check+5, mac, 4);
 	
 	// 6 retries 
 	bool isOK = sendCmdGetResponseWithRetries(check, sizeof(check), resp, 4, 6);
@@ -2208,6 +2214,9 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
 		
 	LED_A_ON();
 	
+	switch_off();
+	SpinDelay(20);
+	
 	setupIclassReader();
 
 	int read_status = 0;
@@ -2218,43 +2227,42 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
 
 		read_status = handshakeIclassTag_ext(card_data, use_credit_key);
 		if ( startup_limit-- == 0 ) {
-			Dbprintf("Handshake status | %d (fail 10)", read_status);
+			Dbprintf("[-] Handshake status | %d (fail 10)", read_status);
 			isOK = 99;			
 			goto out;
 		}
 	};
+	// since handshakeIclassTag_ext call sends s readcheck,  we start with sending first response.
 		
 	// Keychunk loop
 	for (i = 0; i < keyCount; i++) {
-		
-		LED_C_INV();
 		
 		// Allow button press / usb cmd to interrupt device
 		if (BUTTON_PRESS() && !usb_poll_validate_length()) break;
 
 		WDT_HIT();
-
 		LED_B_ON();		
-		
-		// Auth Sequence MUST begin with reading e-purse. (block2)	
-		// Card selected, now read e-purse (cc) (block2) (only 8 bytes no CRC)		
-		ReaderTransmitIClass(readcheck_cc, sizeof(readcheck_cc));		
-		if (ReaderReceiveIClass(resp) == 8) {
-		}
-		
-		LED_B_OFF();
+	
 		// copy MAC to check command (readersignature)
 		check[5] = keys[i].mac[0];
 		check[6] = keys[i].mac[1];
 		check[7] = keys[i].mac[2];
 		check[8] = keys[i].mac[3];
 		
-		// expect 4bytes, 3 retries times..
-		isOK = sendCmdGetResponseWithRetries(check, sizeof(check), resp, 4, 2);
+		// expect 4bytes, 2 retries times..
+		isOK = sendCmdGetResponseWithRetries(check, sizeof(check), resp, 4, 3);
 		if ( isOK )
 			goto out;
 			
-		SpinDelayUs(350);  //iClass (iso15693-2) should timeout after 330us.
+		SpinDelayUs(400);  //iClass (iso15693-2) should timeout after 330us.
+
+		// Auth Sequence MUST begin with reading e-purse. (block2)	
+		// Card selected, now read e-purse (cc) (block2) (only 8 bytes no CRC)		
+		ReaderTransmitIClass(readcheck_cc, sizeof(readcheck_cc));		
+		// if (ReaderReceiveIClass(resp) == 8) {
+		// }
+		
+		LED_B_OFF();		
 	}
 	
 out:	
