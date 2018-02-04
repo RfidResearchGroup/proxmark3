@@ -1819,13 +1819,22 @@ void setupIclassReader() {
 }
 
 bool sendCmdGetResponseWithRetries(uint8_t* command, size_t cmdsize, uint8_t* resp, uint8_t expected_size, uint8_t retries) {
+	uint8_t got_n = 0;
 	while (retries-- > 0) {
 		
 		ReaderTransmitIClass(command, cmdsize);
 		
 		//iceman - if received size is bigger than expected, we smash the stack here
 		//		since its called with fixed sized arrays
-		if (expected_size == ReaderReceiveIClass(resp))
+		got_n = ReaderReceiveIClass(resp);
+		
+		// 0xBB is the internal debug separator byte..
+		if ( expected_size != got_n|| (resp[0] == 0xBB || resp[7] == 0xBB || resp[2] == 0xBB)) {
+			//try again
+			continue;
+		}
+	
+		if (got_n == expected_size)
 			return true;
 	}
 	return false;
@@ -1854,8 +1863,7 @@ uint8_t handshakeIclassTag_ext(uint8_t *card_data, bool use_credit_key) {
 
 	// Send act_all
 	ReaderTransmitIClass_ext(act_all, 1, 330+160);
-
-	// Card present?
+	// Card present?	
 	if (!ReaderReceiveIClass(resp)) return read_status;//Fail
 
 	//Send Identify
@@ -1872,7 +1880,7 @@ uint8_t handshakeIclassTag_ext(uint8_t *card_data, bool use_credit_key) {
 	ReaderTransmitIClass(select, sizeof(select));
 	
 	//We expect a 10-byte response here, 8 byte CSN and 2 byte CRC
-	len  = ReaderReceiveIClass(resp);
+	len = ReaderReceiveIClass(resp);
 	if (len != 10) return read_status;//Fail
 
 	//Success - level 1, we got CSN
@@ -1883,13 +1891,18 @@ uint8_t handshakeIclassTag_ext(uint8_t *card_data, bool use_credit_key) {
 	read_status = 1;
 
 	// Card selected, now read e-purse (cc) (block2) (only 8 bytes no CRC)
-	ReaderTransmitIClass(readcheck_cc, sizeof(readcheck_cc));
-	if (ReaderReceiveIClass(resp) == 8) {
-		//Save CC (e-purse) in response data
-		memcpy(card_data+8, resp, 8);
-		read_status++;
-	}
-
+//	ReaderTransmitIClass(readcheck_cc, sizeof(readcheck_cc));
+// if (ReaderReceiveIClass(resp) == 8) {
+		// //Save CC (e-purse) in response data
+		// memcpy(card_data+8, resp, 8);
+		// read_status++;
+	// }
+	bool isOK = sendCmdGetResponseWithRetries(readcheck_cc, sizeof(readcheck_cc), resp, 8, 3);
+	if (!isOK) return read_status;
+	
+	//Save CC (e-purse) in response data
+	memcpy(card_data+8, resp, 8);
+	read_status++;
 	return read_status;
 }
 uint8_t handshakeIclassTag(uint8_t *card_data){
@@ -2279,22 +2292,23 @@ out:
 }
 
 // Tries to read block.
-// retries 5times.
+// retries 10times.
 bool iClass_ReadBlock(uint8_t blockNo, uint8_t *data, uint8_t len) {
-	//uint8_t resp[] = BigBuf_malloc(len);
-	uint8_t resp[20];
-	uint8_t cmd[] = {ICLASS_CMD_READ_OR_IDENTIFY, blockNo, 0x00, 0x00}; //0x88, 0x00 // can i use 0C?
+	uint8_t resp[10];
+	uint8_t cmd[] = {ICLASS_CMD_READ_OR_IDENTIFY, blockNo, 0x00, 0x00};
 	AddCrc( cmd+1, 1 );
-	bool isOK = sendCmdGetResponseWithRetries(cmd, sizeof(cmd), resp, len, 5);
+	// expect size 10,  retry 5times
+	bool isOK = sendCmdGetResponseWithRetries(cmd, sizeof(cmd), resp, 10, 5);
 	memcpy(data, resp, len);
 	return isOK;
 }
 
 // turn off afterwards
+// readblock 8 + 2.  only want 8.
 void iClass_ReadBlk(uint8_t blockno) {
 	uint8_t data[] = {0,0,0,0,0,0,0,0,0,0};
 	bool isOK = iClass_ReadBlock(blockno, data, sizeof(data));
-	cmd_send(CMD_ACK, isOK, 0, 0, data, 8);
+	cmd_send(CMD_ACK, isOK, 0, 0, data, sizeof(data));
 	switch_off(); 
 }
 
@@ -2307,7 +2321,7 @@ void iClass_Dump(uint8_t blockno, uint8_t numblks) {
 	BigBuf_free();
 	uint8_t *dataout = BigBuf_malloc(255*8);
 	if (dataout == NULL){
-		DbpString("out of memory");
+		DbpString("[!] out of memory");
 		OnError(1);
 		return;
 	}
@@ -2321,7 +2335,7 @@ void iClass_Dump(uint8_t blockno, uint8_t numblks) {
 		if (!isOK || (blockdata[0] == 0xBB || blockdata[7] == 0xBB || blockdata[2] == 0xBB)) { //try again
 			isOK = iClass_ReadBlock(blockno + blkCnt, blockdata, sizeof(blockdata));
 			if (!isOK) {
-				Dbprintf("Block %02X failed to read", blkCnt + blockno);
+				Dbprintf("[!] block %02X failed to read", blkCnt + blockno);
 				break;
 			}
 		}
@@ -2346,7 +2360,7 @@ bool iClass_WriteBlock_ext(uint8_t blockNo, uint8_t *data) {
 		//if response is not equal to write values
 		if (memcmp(write + 2, resp, 8)) {
 
-		//if not programming key areas (note key blocks don't get programmed with actual key data it is xor data)
+			//if not programming key areas (note key blocks don't get programmed with actual key data it is xor data)
 			if (blockNo != 3 && blockNo != 4) {
 				isOK = sendCmdGetResponseWithRetries(write, sizeof(write), resp, sizeof(resp), 5);
 			} 			
@@ -2358,11 +2372,6 @@ bool iClass_WriteBlock_ext(uint8_t blockNo, uint8_t *data) {
 // turn off afterwards
 void iClass_WriteBlock(uint8_t blockNo, uint8_t *data) {
 	bool isOK = iClass_WriteBlock_ext(blockNo, data);
-	if (isOK)
-		Dbprintf("Write block [%02x] successful", blockNo);
-    else
-		Dbprintf("Write block [%02x] failed", blockNo);		
-	
 	cmd_send(CMD_ACK,isOK,0,0,0,0);
 	switch_off(); 
 }
