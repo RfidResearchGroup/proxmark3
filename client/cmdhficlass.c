@@ -245,6 +245,20 @@ int usage_hf_iclass_lookup(void) {
 	PrintAndLog("        hf iclass lookup u 9655a400f8ff12e0 p f0ffffffffffffff m 0000000089cb984b f default_iclass_keys.dic e");
 	return 0;
 }
+int usage_hf_iclass_permutekey(void){
+	PrintAndLog("Permute function from 'heart of darkness' paper.");
+	PrintAndLog("");
+	PrintAndLog("Usage:  hf iclass permute [h] <r|f> <bytes>");
+	PrintAndLog("Options:");
+	PrintAndLog("           h          This help");
+	PrintAndLog("           r          reverse permuted key");
+	PrintAndLog("           f          permute key");
+	PrintAndLog("           <bytes>    input bytes");
+	PrintAndLog("");
+	PrintAndLog("Samples:");
+	PrintAndLog("      hf iclass permute r 0123456789abcdef");
+	return 0;
+}
 
 int xorbits_8(uint8_t val) {
 	uint8_t res = val ^ (val >> 1); //1st pass
@@ -2334,6 +2348,108 @@ void PrintPreCalc(iclass_prekey_t* list, int itemcnt) {
 	}
 }
 
+static void permute(uint8_t *data, uint8_t len, uint8_t *output){	
+#define KEY_SIZE 8
+
+	if ( len > KEY_SIZE ) {
+		for(uint8_t m = 0; m < len; m += KEY_SIZE){
+			permute(data+m, KEY_SIZE, output+m);
+		}
+		return;
+	}
+	if ( len != KEY_SIZE ) {
+		printf("[!] wrong key size\n");
+		return;
+	}
+	uint8_t i,j,p, mask;
+	for( i=0; i < KEY_SIZE; ++i){
+		p = 0;
+		mask = 0x80 >> i;
+		for( j=0; j < KEY_SIZE; ++j){
+			p >>= 1;
+			if (data[j] & mask) 
+				p |= 0x80;
+		}
+		output[i] = p;
+	}
+}
+static void permute_rev(uint8_t *data, uint8_t len, uint8_t *output){
+	permute(data, len, output);
+	permute(output, len, data);
+	permute(data, len, output);
+}
+static void simple_crc(uint8_t *data, uint8_t len, uint8_t *output){
+	uint8_t crc = 0;
+	for( uint8_t i=0; i < len; ++i){
+		// seventh byte contains the crc.
+		if ( (i & 0x7) == 0x7 ) {
+			output[i] = crc ^ 0xFF;
+			crc = 0;
+		} else {
+			output[i] = data[i];
+			crc ^= data[i];
+		}
+	}
+}
+// DES doesn't use the MSB.
+static void shave(uint8_t *data, uint8_t len){
+	for (uint8_t i=0; i<len; ++i)
+		data[i] &= 0xFE;
+}
+static void generate_rev(uint8_t *data, uint8_t len) {
+	uint8_t *key = calloc(len,1);	
+	printf("[+] input permuted key | %s \n", sprint_hex(data, len));
+	permute_rev(data, len, key);
+	printf("[+]     unpermuted key | %s \n", sprint_hex(key, len));
+	shave(key, len);
+	printf("[+]                key | %s \n", sprint_hex(key, len));
+	free(key);	
+}
+static void generate(uint8_t *data, uint8_t len) {
+	uint8_t *key = calloc(len,1);
+	uint8_t *pkey = calloc(len,1);	
+	printf("[+]    input key | %s \n", sprint_hex(data, len));
+	permute(data, len, pkey);
+	printf("[+] permuted key | %s \n", sprint_hex(pkey, len));
+	simple_crc(pkey, len, key );
+	printf("[+]   CRC'ed key | %s \n", sprint_hex(key, len));
+	free(key);
+	free(pkey);
+}
+
+int CmdHFiClassPermuteKey(const char *Cmd) { 
+
+	uint8_t key[8] = {0};	
+	uint8_t key_std_format[8] = {0};
+	uint8_t key_iclass_format[8] = {0};
+	uint8_t data[16] = {0};
+	bool isReverse = false;
+	int len = 0;
+	char cmdp = param_getchar(Cmd, 0);
+	if (strlen(Cmd) == 0|| cmdp == 'h' || cmdp == 'H') return usage_hf_iclass_permutekey();
+		
+	isReverse = ( cmdp == 'r' || cmdp == 'R' );
+	
+	param_gethex_ex(Cmd, 1, data, &len);
+	if ( len%2 ) return usage_hf_iclass_permutekey();
+
+	len >>= 1;	
+
+	memcpy(key, data, 8);
+
+	if ( isReverse ) {
+		generate_rev(data, len);
+		permutekey_rev(key, key_std_format);
+		printf("[+] holiman iclass key | %s \n", sprint_hex(key_std_format, 8));
+	}
+	else {
+		generate(data, len);
+		permutekey(key, key_iclass_format);		
+		printf("[+] holiman std key | %s \n", sprint_hex(key_iclass_format, 8));
+	}
+	return 0;
+}
+
 static command_t CommandTable[] = {
 	{"help",		CmdHelp,					1,	"This help"},
 	{"calcnewkey",  CmdHFiClassCalcNewKey,     	1,	"[options..] Calc Diversified keys (blocks 3 & 4) to write new keys"},
@@ -2347,6 +2463,7 @@ static command_t CommandTable[] = {
 	{"loclass",     CmdHFiClass_loclass,       	1,	"[options..] Use loclass to perform bruteforce of reader attack dump"},
 	{"lookup",		CmdHFiClassLookUp,     		0,	"[options..] Uses authentication trace to check for key in dictionary file"},
 	{"managekeys",  CmdHFiClassManageKeys,     	1,	"[options..] Manage the keys to use with iClass"},
+	{"permutekey",  CmdHFiClassPermuteKey,		0,	"            Permute function from 'heart of darkness' paper"},
 	{"readblk",     CmdHFiClass_ReadBlock,      0,	"[options..] Authenticate and Read iClass block"},
 	{"reader",		CmdHFiClassReader,			0,	"            Act like an iClass reader"},
 	{"readtagfile", CmdHFiClassReadTagFile,     1,	"[options..] Display Content from tagfile"},
