@@ -198,7 +198,7 @@ int CmdHF14BCmdRaw (const char *Cmd) {
             }
             continue;
         }
-        PrintAndLog("Invalid char on input");
+        PrintAndLog("[!] unknown parameter '%c'\n", param_getchar(Cmd, i));
 		return 0;
     }
 	
@@ -387,7 +387,7 @@ bool HF14B_ST_Info(bool verbose){
 	UsbCommand resp;
 
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
-		if (verbose) PrintAndLog("timeout while waiting for reply.");
+		if (verbose) PrintAndLog("[!] command execution timeout");
 		return false;
     }
 
@@ -433,7 +433,7 @@ bool HF14BInfo(bool verbose){
 
 	// try unknown 14b read commands (to be identified later)
 	//   could be read of calypso, CEPAS, moneo, or pico pass.
-	if (verbose) PrintAndLog("no 14443B tag found");
+	if (verbose) PrintAndLog("[-] no 14443-B tag found");
 	return false;
 }
 
@@ -458,7 +458,7 @@ bool HF14B_ST_Reader(bool verbose){
 	SendCommand(&c);
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
-		if (verbose) PrintAndLog("timeout while waiting for reply.");
+		if (verbose) PrintAndLog("[!] command execution timeout");
 		switch_off_field_14b();
 		return false;
     }
@@ -474,16 +474,16 @@ bool HF14B_ST_Reader(bool verbose){
 			isSuccess = true;
 			break;
 		case 1:
-			if (verbose) PrintAndLog("iso14443-3 random chip id fail");
+			if (verbose) PrintAndLog("[-] ISO 14443-3 random chip id fail");
 			break;
 		case 2:
-			if (verbose) PrintAndLog("iso14443-3 ATTRIB fail");
+			if (verbose) PrintAndLog("[-] ISO 14443-3 ATTRIB fail");
 			break;
 		case 3: 
-			if (verbose) PrintAndLog("iso14443-3 CRC fail");
+			if (verbose) PrintAndLog("[-] ISO 14443-3 CRC fail");
 			break;
 		default:
-			if (verbose) PrintAndLog("iso14443b card select SRx failed");
+			if (verbose) PrintAndLog("[-] ISO 14443-b card select SRx failed");
 			break;
 	}
 	
@@ -502,7 +502,7 @@ bool HF14B_Std_Reader(bool verbose){
 	UsbCommand resp;
 	
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
-		if (verbose) PrintAndLog("timeout while waiting for reply.");
+		if (verbose) PrintAndLog("[!] command execution timeout");
 		switch_off_field_14b();		
 		return false;
     }
@@ -521,13 +521,13 @@ bool HF14B_Std_Reader(bool verbose){
 			isSuccess = true;
 			break;
 		case 2:
-			if (verbose) PrintAndLog("iso14443-3 ATTRIB fail");
+			if (verbose) PrintAndLog("[-] ISO 14443-3 ATTRIB fail");
 			break;
 		case 3: 
-			if (verbose) PrintAndLog("iso14443-3 CRC fail");
+			if (verbose) PrintAndLog("[-] ISO 14443-3 CRC fail");
 			break;
 		default:
-			if (verbose) PrintAndLog("iso14443b card select failed");
+			if (verbose) PrintAndLog("[-] ISO 14443-b card select failed");
 			break;
 	}
 	
@@ -607,7 +607,7 @@ bool HF14BReader(bool verbose){
 	// could be read of calypso, CEPAS, moneo, or pico pass.
 	if (HF14B_Other_Reader()) return true;
 
-	if (verbose) PrintAndLog("no 14443B tag found");
+if (verbose) PrintAndLog("[-] no 14443-B tag found");
 	return false;
 }
 
@@ -663,35 +663,35 @@ int CmdHF14BWriteSri(const char *Cmd){
 	//blockno = param_get8(Cmd, 1);
 	
 	if ( param_gethex(Cmd, 1, &blockno, 2) ) {
-		PrintAndLog("Block number must include 2 HEX symbols");
+		PrintAndLog("[!] block number must include 2 HEX symbols");
 		return 0;
 	}
 	
 	if ( isSrix4k ){
 		if ( blockno > 0x7f && blockno != 0xff ){
-			PrintAndLog("Block number out of range");
+			PrintAndLog("[-] block number out of range");
 			return 0;
 		}		
 	} else {
 		if ( blockno > 0x0f && blockno != 0xff ){
-			PrintAndLog("Block number out of range");
+			PrintAndLog("[-] block number out of range");
 			return 0;
 		}		
 	}
 	
 	if (param_gethex(Cmd, 2, data, 8)) {
-		PrintAndLog("Data must include 8 HEX symbols");
+		PrintAndLog("[!] data must include 8 HEX symbols");
 		return 0;
 	}
  
 	if ( blockno == 0xff) {
-		PrintAndLog("[%s] Write special block %02X [ %s ]",
+		PrintAndLog("[+] [%s] Write special block %02X [ %s ]",
 			(isSrix4k) ? "SRIX4K":"SRI512",
 			blockno,
 			sprint_hex(data,4)
 		);
 	} else {
-		PrintAndLog("[%s] Write block %02X [ %s ]",
+		PrintAndLog("[+] [%s] Write block %02X [ %s ]",
 			(isSrix4k) ? "SRIX4K":"SRI512",
 			blockno, 
 			sprint_hex(data,4)
@@ -782,7 +782,7 @@ uint32_t srix4kGetMagicbytes( uint64_t uid, uint32_t block6, uint32_t block18, u
 	uint32_t doubleBlock = (decodedBlock18 << 16 | decodedBlock19) + 1;
 
 	uint32_t result = (uid32 * doubleBlock * counter) & MASK;
-	PrintAndLog("Magic bytes | %08X", result);
+	PrintAndLog("[+] Magic bytes | %08X", result);
 	return result;
 }
 int srix4kValid(const char *Cmd){
@@ -796,10 +796,10 @@ int srix4kValid(const char *Cmd){
 	uint32_t test_b18 = 0x00313918;
 	uint32_t test_b18_enc = srix4kEncode(test_b18);
 	//uint32_t test_b18_dec = srix4kDecode(test_b18_enc);
-	PrintAndLog("ENCODE & CHECKSUM |  %08X -> %08X (%s)", test_b18, test_b18_enc , "");
+	PrintAndLog("[+] ENCODE & CHECKSUM |  %08X -> %08X (%s)", test_b18, test_b18_enc , "");
 	
 	uint32_t magic = srix4kGetMagicbytes(uid, block6, block18, block19);
-	PrintAndLog("BLOCK 21 |  %08X -> %08X (no XOR)", block21, magic ^ block21);
+	PrintAndLog("[+] BLOCK 21 |  %08X -> %08X (no XOR)", block21, magic ^ block21);
 	return 0;
 }
 
@@ -837,7 +837,7 @@ bool waitCmd14b(bool verbose) {
 		}	
 		return true;
     } else {
-        PrintAndLog("timeout while waiting for reply.");
+        PrintAndLog("[!] command execution timeout");
 		return false;
     }
 }
