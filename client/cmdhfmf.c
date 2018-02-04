@@ -82,7 +82,7 @@ int usage_hf14_nested(void){
 	PrintAndLog("      h    this help");
 	PrintAndLog("      card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K");
 	PrintAndLog("      t    transfer keys into emulator memory");
-	PrintAndLog("      d    write keys to binary file `dumpkeys.bin`");
+	PrintAndLog("      d    write keys to binary file `hf-mf-<UID>-key.bin`");
 	PrintAndLog(" ");
 	PrintAndLog("samples:");
 	PrintAndLog("      hf mf nested 1 0 A FFFFFFFFFFFF ");
@@ -340,6 +340,43 @@ int usage_hf14_nack(void) {
 	return 0;
 }
 
+int GetHFMF14AUID(uint8_t *uid) {
+	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}};
+	clearCommandBuffer();
+	SendCommand(&c);
+	UsbCommand resp;
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+		//if (!silent) 
+		PrintAndLog("iso14443a card select failed");
+		DropField();
+		return 0;
+	}
+	
+	iso14a_card_select_t card;
+	memcpy(&card, (iso14a_card_select_t *)resp.d.asBytes, sizeof(iso14a_card_select_t));
+	memcpy(uid, card.uid, card.uidlen * sizeof(uint8_t));
+	return 1;
+}
+
+char * GenerateFilename(const char *prefix, const char *suffix){
+	uint8_t uid[4] = {0,0,0,0};	
+	int len=0;
+	char * fptr = malloc (sizeof (char) * (strlen(prefix) + strlen(suffix)) + sizeof(uid)*2 + 1);
+	
+	if (!GetHFMF14AUID(uid)) {
+		PrintAndLog("No tag found.");
+		return NULL;
+	}
+	
+	strcpy(fptr, prefix);
+	len=strlen(fptr);
+	for (int i=0;i<sizeof(uid)/sizeof(uint8_t);i++)
+	len += sprintf(fptr+len, "%02x", uid[i]);	
+	strcat(fptr, suffix);
+
+	return fptr;
+}
+
 int CmdHF14ADarkside(const char *Cmd) {
 	uint8_t blockno = 0, key_type = MIFARE_AUTH_KEYA;
 	uint64_t key = 0;
@@ -563,6 +600,9 @@ int CmdHF14AMfDump(const char *Cmd) {
 	uint8_t rights[40][4];
 	uint8_t carddata[256][16];
 	uint8_t numSectors = 16;
+	char filename[FILE_PATH_SIZE] = {0};
+	char * fptr = filename;
+	
 	FILE *fin, *fout;	
 	UsbCommand resp;
 
@@ -578,8 +618,9 @@ int CmdHF14AMfDump(const char *Cmd) {
 		return 0;
 	}
 	
-	if ((fin = fopen("dumpkeys.bin","rb")) == NULL) {
-		PrintAndLog("Could not find file dumpkeys.bin");
+	fptr = GenerateFilename("hf-mf-","-key.bin");
+	if ((fin = fopen(fptr,"rb")) == NULL) {
+		PrintAndLog("Could not find file %s", fptr);
 		return 1;
 	}
 	
@@ -715,14 +756,15 @@ int CmdHF14AMfDump(const char *Cmd) {
 	}
 
 	if (isOK) {
-		if ((fout = fopen("dumpdata.bin","wb")) == NULL) { 
-			PrintAndLog("[!] could not create file name dumpdata.bin");
+		fptr=GenerateFilename("hf-mf-","-data.bin");
+		if ((fout = fopen(fptr,"wb")) == NULL) { 
+			PrintAndLog("[!] could not create file name %s",fptr);
 			return 1;
 		}
 		uint16_t numblocks = FirstBlockOfSector(numSectors - 1) + NumBlocksPerSector(numSectors - 1);
 		fwrite(carddata, 1, 16*numblocks, fout);
 		fclose(fout);
-		PrintAndLog("[+] dumped %d blocks (%d bytes) to file dumpdata.bin", numblocks, 16*numblocks);
+		PrintAndLog("[+] dumped %d blocks (%d bytes) to file %s", numblocks, 16*numblocks, fptr);
 	}
 	return 0;
 }
@@ -735,6 +777,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 	uint8_t keyA[40][6];
 	uint8_t keyB[40][6];
 	uint8_t numSectors;	
+	char *filename;
 	FILE *fdump, *fkeys;
 
 	char cmdp = param_getchar(Cmd, 0);
@@ -742,9 +785,10 @@ int CmdHF14AMfRestore(const char *Cmd) {
 
 	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H')
 		return usage_hf14_restore();
-
-	if ((fkeys = fopen("dumpkeys.bin","rb")) == NULL) {
-		PrintAndLog("Could not find file dumpkeys.bin");
+	
+	filename=GenerateFilename("hf-mf-","-key.bin");
+	if ((fkeys = fopen(filename,"rb")) == NULL) {
+		PrintAndLog("Could not find file %s",fkeys);
 		return 1;
 	}
 	
@@ -752,7 +796,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		bytes_read = fread( keyA[sectorNo], 1, 6, fkeys );
 		if ( bytes_read != 6) {
-			PrintAndLog("File reading error (dumpkeys.bin).");
+			PrintAndLog("File reading error (%s).", filename);
 			fclose(fkeys);
 			return 2;
 		}
@@ -761,7 +805,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		bytes_read = fread( keyB[sectorNo], 1, 6, fkeys );
 		if ( bytes_read != 6) {
-			PrintAndLog("File reading error (dumpkeys.bin).");
+			PrintAndLog("File reading error (%s).", filename);
 			fclose(fkeys);
 			return 2;
 		}
@@ -769,11 +813,12 @@ int CmdHF14AMfRestore(const char *Cmd) {
 
 	fclose(fkeys);
 
-	if ((fdump = fopen("dumpdata.bin","rb")) == NULL) {
-		PrintAndLog("Could not find file dumpdata.bin");
+	filename=GenerateFilename("hf-mf-","-data.bin");
+	if ((fdump = fopen(filename,"rb")) == NULL) {
+		PrintAndLog("Could not find file %s", filename);
 		return 1;
 	}	
-	PrintAndLog("Restoring dumpdata.bin to card");
+	PrintAndLog("Restoring %s to card", filename);
 
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		for(blockNo = 0; blockNo < NumBlocksPerSector(sectorNo); blockNo++) {
@@ -781,7 +826,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 			memcpy(c.d.asBytes, key, 6);			
 			bytes_read = fread(bldata, 1, 16, fdump);
 			if ( bytes_read != 16) {
-				PrintAndLog("File reading error (dumpdata.bin).");
+				PrintAndLog("File reading error (%s).", filename);
 				fclose(fdump);
 				fdump = NULL;				
 				return 2;
@@ -838,7 +883,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 	FILE *fkeys;
 	uint8_t standart[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 	uint8_t tempkey[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-
+	char *fptr;
 	if (strlen(Cmd)<3) return usage_hf14_nested();
 	
 	char cmdp, ctmp;
@@ -1031,14 +1076,14 @@ int CmdHF14AMfNested(const char *Cmd) {
 		
 		// Create dump file
 		if (createDumpFile) {
-			
-			if ((fkeys = fopen("dumpkeys.bin","wb")) == NULL) { 
-				PrintAndLog("[!] could not create file dumpkeys.bin");
+			fptr = GenerateFilename("hf-mf-","-key.bin");
+			if ((fkeys = fopen(fptr, "wb")) == NULL) { 
+				PrintAndLog("[!] could not create file %s", fptr);
 				free(e_sector);
 				return 1;
 			}
 			
-			PrintAndLog("[+] saving keys to binary file dumpkeys.bin...");
+			PrintAndLog("[+] saving keys to binary file %s...", fptr);
 			for (i=0; i<SectorsCnt; i++) {
 				if (e_sector[i].foundKey[0]){
 					num_to_bytes(e_sector[i].Key[0], 6, tempkey);
@@ -1177,7 +1222,7 @@ int randInRange(int min, int max) {
 	return min + (int) (rand() / (double) (RAND_MAX) * (max - min + 1));
 }
 
-//Fisher–Yates shuffle
+//Fisherâ€“Yates shuffle
 void shuffle( uint8_t *array, uint16_t len) {
 	uint8_t tmp[6];
 	uint16_t x;
@@ -1201,6 +1246,7 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 	FILE * f;
 	char filename[FILE_PATH_SIZE]={0};
 	char buf[13];
+	char *fptr;
 	uint8_t tempkey[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 	uint8_t *keyBlock = NULL, *p;
 	uint8_t sectorsCnt = 1;
@@ -1374,14 +1420,15 @@ out:
 	}
 	
 	if (createDumpFile) {
-		FILE *fkeys = fopen("dumpkeys.bin","wb");
+		fptr = GenerateFilename("hf-mf-","-key.bin");
+		FILE *fkeys = fopen(fptr,"wb");
 		if (fkeys == NULL) { 
-			PrintAndLog("Could not create file dumpkeys.bin");
+			PrintAndLog("Could not create file %s", filename);
 			free(keyBlock);
 			free(e_sector);
 			return 1;
 		}
-		PrintAndLog("Printing keys to binary file dumpkeys.bin...");
+		PrintAndLog("Printing keys to binary file %s...", filename);
 	
 		for (i=0; i<sectorsCnt; i++) {
 			num_to_bytes(e_sector[i].Key[0], 6, tempkey);
@@ -1394,7 +1441,7 @@ out:
 		}
 
 		fclose(fkeys);
-		PrintAndLog("Found keys have been dumped to file dumpkeys.bin. 0xffffffffffff has been inserted for unknown keys.");			
+		PrintAndLog("Found keys have been dumped to file %s. 0xffffffffffff has been inserted for unknown keys.", filename);			
 	}
 	
 	free(keyBlock);
@@ -1420,6 +1467,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 	uint32_t keyitems = MIFARE_DEFAULTKEYS_SIZE;
 	uint64_t key64 = 0;	
 	uint8_t tempkey[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+	char *fptr;
 	int clen = 0;
 	int transferToEml = 0;
 	int createDumpFile = 0;	
@@ -1654,14 +1702,15 @@ out:
 	}
 	
 	if (createDumpFile) {
-		FILE *fkeys = fopen("dumpkeys.bin","wb");
+		fptr = GenerateFilename("hf-mf-","-key.bin");
+		FILE *fkeys = fopen(fptr,"wb");
 		if (fkeys == NULL) { 
-			PrintAndLog("Could not create file dumpkeys.bin");
+			PrintAndLog("Could not create file %s", fptr);
 			free(keyBlock);
 			free(e_sector);
 			return 1;
 		}
-		PrintAndLog("Printing keys to binary file dumpkeys.bin...");
+		PrintAndLog("Printing keys to binary file %s...", fptr);
 	
 		for( i=0; i<SectorsCnt; i++) {
 			num_to_bytes(e_sector[i].Key[0], 6, tempkey);
@@ -1672,7 +1721,7 @@ out:
 			fwrite ( tempkey, 1, 6, fkeys );
 		}
 		fclose(fkeys);
-		PrintAndLog("Found keys have been dumped to file dumpkeys.bin. 0xffffffffffff has been inserted for unknown keys.");			
+		PrintAndLog("Found keys have been dumped to file %s. 0xffffffffffff has been inserted for unknown keys.", fptr);
 	}
 
 	free(keyBlock);
