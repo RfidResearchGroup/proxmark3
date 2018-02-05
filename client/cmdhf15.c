@@ -680,10 +680,9 @@ int CmdHF15Dump(const char*Cmd) {
 			return 1;
 		}
 		
-		fptr += sprintf(fptr, "dump15_"); 
-		
-		for (int j = sizeof(uid)-1; j >=0 ; j--)
-			fptr += sprintf(fptr, "%02X", uid[j]); 
+		fptr += sprintf(fptr, "hf-15-"); 
+		FillFileNameByUID(fptr,uid,"-dump",sizeof(uid));
+
 	}	
 	// detect blocksize from card :)
 	
