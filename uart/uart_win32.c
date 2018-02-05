@@ -154,7 +154,7 @@ uint32_t uart_get_speed(const serial_port sp) {
 bool uart_receive(const serial_port sp, byte_t* p_rx, size_t pszMaxRxLen, size_t* p_rxlen) {
 	int res = ReadFile(((serial_port_windows*)sp)->hPort, p_rx, pszMaxRxLen, (LPDWORD)p_rxlen, NULL);
 	if ( res == 0 ) {
-		printf("[!] UART error reading from port\n");
+		//printf("[!] UART error reading from port\n");
 		return false;
 	}
 	
