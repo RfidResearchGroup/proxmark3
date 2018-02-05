@@ -105,10 +105,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 				break;
 			}
 		}
-
 		if (*key != -1) {
-			free(last_keylist);
-			free(keylist);
 			break;
 		} else {
 			PrintAndLog("[-] all candidate keys failed authentication. Restarting darkside attack");
@@ -117,6 +114,8 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 			c.arg[0] = true;
 		}
 	}
+	free(last_keylist);
+	free(keylist);
 	return 0;
 }
 int mfCheckKeys(uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keycnt, uint8_t * keyBlock, uint64_t * key){
