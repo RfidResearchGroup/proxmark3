@@ -20,10 +20,10 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 	UsbCommand c = {CMD_READER_MIFARE, {true, blockno, key_type}};
 
 	// message
-	printf("----------------------------------------------------------------------------\n");
-	printf("Executing command. Expected execution time: 25sec on average\n");
-	printf("Press pm3-button on the proxmark3 device to abort both proxmark3 and client.\n");
-	printf("----------------------------------------------------------------------------\n");
+	printf("--------------------------------------------------------------------------------\n");
+	printf("[+] executing command. Expected execution time: 25sec on average\n");
+	printf("[+] press pm3-button on the proxmark3 device to abort both proxmark3 and client.\n");
+	printf("--------------------------------------------------------------------------------\n");
 
 	while (true) {
 		clearCommandBuffer();
@@ -36,8 +36,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 		
 		// wait cycle
 		while (true) {
-			printf(".");
-			fflush(stdout);
+			printf("."); fflush(stdout);
 			if (ukbhit()) {
 				int gc = getchar(); (void)gc;
 				return -5;
@@ -60,16 +59,16 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 		printf("\n");
 		
 		if (par_list == 0 && c.arg[0] == true) {
-			PrintAndLog("Parity is all zero. Most likely this card sends NACK on every authentication.");
-			PrintAndLog("Attack will take a few seconds longer because we need two consecutive successful runs.");
+			PrintAndLog("[+] Parity is all zero. Most likely this card sends NACK on every authentication.");
+			PrintAndLog("[+] Attack will take a few seconds longer because we need two consecutive successful runs.");
 		}
 		c.arg[0] = false;
 
 		keycount = nonce2key(uid, nt, nr, par_list, ks_list, &keylist);
 
 		if (keycount == 0) {
-			PrintAndLog("Key not found (lfsr_common_prefix list is null). Nt=%08x", nt);
-			PrintAndLog("This is expected to happen in 25%% of all cases. Trying again with a different reader nonce...");
+			PrintAndLog("[-] key not found (lfsr_common_prefix list is null). Nt=%08x", nt);
+			PrintAndLog("[-] this is expected to happen in 25%% of all cases. Trying again with a different reader nonce...");
 			continue;
 		}
 
@@ -85,9 +84,9 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 		}
 
 		if (keycount > 1) {
-			PrintAndLog("Found %u candidate keys. Trying to verify with authentication...\n", keycount);
+			PrintAndLog("[+] found %u candidate keys. Trying to verify with authentication...\n", keycount);
 		} else {
-			PrintAndLog("Found a candidate key. Trying to verify it with authentication...\n");
+			PrintAndLog("[+] found a candidate key. Trying to verify it with authentication...\n");
 		}
 
 		*key = -1;
@@ -96,10 +95,10 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 		for (int i = 0; i < keycount; i += max_keys) {
 			int size = keycount - i > max_keys ? max_keys : keycount - i;
 			for (int j = 0; j < size; j++) {
-				if (last_keylist == NULL) {
-					num_to_bytes(keylist[i*max_keys + j], 6, keyBlock);
+				if (par_list == 0) {
+					num_to_bytes(last_keylist[i*max_keys + j], 6, keyBlock);					
 				} else {
-					num_to_bytes(last_keylist[i*max_keys + j], 6, keyBlock);
+					num_to_bytes(keylist[i*max_keys + j], 6, keyBlock);
 				}
 			}
 			if (!mfCheckKeys(blockno, key_type - 0x60, false, size, keyBlock, key)) {
@@ -112,7 +111,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 			free(keylist);
 			break;
 		} else {
-			PrintAndLog("Test authentication failed. Restarting darkside attack");
+			PrintAndLog("[-] test authentication failed. Restarting darkside attack");
 			free(last_keylist);
 			last_keylist = keylist;
 			c.arg[0] = true;
@@ -158,7 +157,7 @@ int mfCheckKeys_fast( uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk,
 		// s70 with 40*2 keys to check, 80*85 = 6800 auth.
 		// takes about 97s, still some margin before abort
 		if (timeout > 180) {
-			PrintAndLog("\nNo response from Proxmark. Aborting...");
+			PrintAndLog("\n[!] no response from Proxmark. Aborting...");
 			return 2;
 		}
 	}
@@ -254,7 +253,7 @@ int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultk
 		
 		// progress 
 		if ( counter % 20 == 0 )
-			PrintAndLog("tried : %s.. \t %u keys", sprint_hex(candidates + i, 6),  counter * KEYS_IN_BLOCK  );
+			PrintAndLog("[+] tried : %s.. \t %u keys", sprint_hex(candidates + i, 6),  counter * KEYS_IN_BLOCK  );
 	}
 	return found;
 }
@@ -444,9 +443,9 @@ int mfCSetUID(uint8_t *uid, uint8_t *atqa, uint8_t *sak, uint8_t *oldUID, uint8_
 
 	int old = mfCGetBlock(0, block0, params);
 	if (old == 0)
-		PrintAndLog("old block 0:  %s", sprint_hex(block0, sizeof(block0)));
+		PrintAndLog("[+] old block 0:  %s", sprint_hex(block0, sizeof(block0)));
 	else 
-		PrintAndLog("Couldn't get old data. Will write over the last bytes of Block 0.");	
+		PrintAndLog("[-] couldn't get old data. Will write over the last bytes of Block 0.");	
 
 	// fill in the new values
 	// UID
@@ -461,7 +460,7 @@ int mfCSetUID(uint8_t *uid, uint8_t *atqa, uint8_t *sak, uint8_t *oldUID, uint8_
 		block0[6] = atqa[1];
 		block0[7] = atqa[0];
 	}
-	PrintAndLog("new block 0:  %s", sprint_hex(block0,16));
+	PrintAndLog("[+] new block 0:  %s", sprint_hex(block0,16));
 	
 	if ( wipecard )		 params |= MAGIC_WIPE;	
 	if ( oldUID == NULL) params |= MAGIC_UID;
@@ -484,7 +483,7 @@ int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t params) {
 		if (!isOK) 
 			return 2;
 	} else {
-		PrintAndLog("Command execute timeout");
+		PrintAndLog("[!] command execute timeout");
 		return 1;
 	}
 	return 0;
@@ -502,7 +501,7 @@ int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params) {
 			return 2;		
 		memcpy(data, resp.d.asBytes, 16);
 	} else {
-		PrintAndLog("Command execute timeout");
+		PrintAndLog("[!] command execute timeout");
 		return 1;
 	}
 	return 0;
@@ -793,7 +792,7 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 			lfsr_rollback_word(revstate, nr_enc, 1);
 			lfsr_rollback_word(revstate, cuid ^ nt, 0);
 			crypto1_get_lfsr(revstate, &key);
-			PrintAndLog("Found Key: [%012" PRIx64 "]", key);
+			PrintAndLog("[+] found Key: [%012" PRIx64 "]", key);
 			
 			//if ( tryMfk64(cuid, nt, nr_enc, ar_enc, at_enc, &key) )
 			AddLogUint64(logHexFileName, "Found Key: ", key); 
@@ -832,13 +831,13 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 }
 
 int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data, int len){
-	PrintAndLog("\nEncrypted data: [%s]", sprint_hex(data, len) );
+	PrintAndLog("\n[+] encrypted data: [%s]", sprint_hex(data, len) );
 	struct Crypto1State *s;
 	ks2 = ar_enc ^ prng_successor(nt, 64);
 	ks3 = at_enc ^ prng_successor(nt, 96);
 	s = lfsr_recovery64(ks2, ks3);
 	mf_crypto1_decrypt(s, data, len, false);
-	PrintAndLog("Decrypted data: [%s]", sprint_hex(data, len) );
+	PrintAndLog("[+] decrypted data: [%s]", sprint_hex(data, len) );
 	crypto1_destroy(s);
 	return 0;
 }
@@ -863,23 +862,23 @@ bool detect_classic_prng(void){
 	SendCommand(&c);					
 	
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-        PrintAndLog("PRNG UID: Reply timeout.");
+        PrintAndLog("[!] PRNG UID: Reply timeout.");
 		return false;
 	}
 		
 	// if select tag failed.
 	if ( resp.arg[0] == 0 ) {
-		printf("Error:  selecting tag failed,  can't detect prng\n");
+		printf("[!] error:  selecting tag failed,  can't detect prng\n");
 		return false;
 	}
 	if (!WaitForResponseTimeout(CMD_ACK, &respA, 2500)) {
-        PrintAndLog("PRNG data: Reply timeout.");
+        PrintAndLog("[!] PRNG data: Reply timeout.");
 		return false;
 	}
 
 	// check respA
 	if (respA.arg[0] != 4) {
-		PrintAndLog("PRNG data error: Wrong length: %d", respA.arg[0]);
+		PrintAndLog("[!] PRNG data error: Wrong length: %d", respA.arg[0]);
 		return false;
 	}			
 
@@ -902,7 +901,7 @@ int detect_classic_nackbug(bool verbose){
 	UsbCommand resp;
 	
 	if ( verbose )
-		printf("Press pm3-button on the proxmark3 device to abort both proxmark3 and client.\n");
+		printf("[+] press pm3-button on the proxmark3 device to abort both proxmark3 and client.\n");
 	
 	// for nice animation	
 	bool term = !isatty(STDIN_FILENO);
@@ -914,7 +913,13 @@ int detect_classic_nackbug(bool verbose){
 		if (term) {		
 			printf(".");
 		} else {
-			printf("\e[s%c\e[u", star[ (staridx++ % 4) ]);
+			printf(
+			#if defined(__linux__)
+			"\e[32m\e[s%c\e[u\e[0m", star[ (staridx++ % 4) ]
+			#else
+			"."
+			#endif
+			);
 		}
 		fflush(stdout);
 		if (ukbhit()) {
@@ -930,29 +935,29 @@ int detect_classic_nackbug(bool verbose){
 			PrintAndLog("");
 			
 			if ( verbose ) {
-				PrintAndLog("Num of auth requests  : %u", auths);
-				PrintAndLog("Num of received NACK  : %u", nacks);
+				PrintAndLog("[+] num of auth requests  : %u", auths);
+				PrintAndLog("[+] num of received NACK  : %u", nacks);
 			}
 			switch( ok ) {
-				case 99 : PrintAndLog("Button pressed. Aborted."); return 0;
+				case 99 : PrintAndLog("[!] button pressed. Aborted."); return 0;
 				case 96 : 
 				case 98 : { 
 							if (verbose)
-								PrintAndLog("Card random number generator is not predictable.");
-							PrintAndLog("Detection failed");
+								PrintAndLog("[-] card random number generator is not predictable.");
+							PrintAndLog("[!] detection failed");
 							return 2;
 						}
 				case 97 : {
 							if (verbose) {
-								PrintAndLog("Card random number generator seems to be based on the well-known generating polynomial");
-								PrintAndLog("with 16 effective bits only, but shows unexpected behavior, try again."); 
+								PrintAndLog("[-] card random number generator seems to be based on the well-known generating polynomial");
+								PrintAndLog("[- ]with 16 effective bits only, but shows unexpected behavior, try again."); 
 								return 0;
 							}
 						}				
-				case  2 : PrintAndLog("Always leak NACK detected"); return 3;
-				case  1 : PrintAndLog("NACK bug detected"); return 1;
-				case  0 : PrintAndLog("No NACK bug detected"); return 2;
-				default : PrintAndLog("  errorcode from device [%i]", ok); return 0;
+				case  2 : PrintAndLog("[+] always leak NACK detected"); return 3;
+				case  1 : PrintAndLog("[+] NACK bug detected"); return 1;
+				case  0 : PrintAndLog("[+] No NACK bug detected"); return 2;
+				default : PrintAndLog("[!] errorcode from device [%i]", ok); return 0;
 			}
 			break;
 		}
