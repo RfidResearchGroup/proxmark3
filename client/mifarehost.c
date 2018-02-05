@@ -30,8 +30,9 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 		SendCommand(&c);
 
 		//flush queue
-		while (ukbhit()) {
-			int gc = getchar(); (void)gc;
+		while (ukbhit()) { 
+			int gc = getchar(); (void)gc; 
+			return -5;
 		}
 		
 		// wait cycle
@@ -79,6 +80,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 			if (keycount == 0) {
 				free(last_keylist);
 				last_keylist = keylist;
+				PrintAndLog("[-] no candidates found, trying again...");
 				continue;
 			}
 		}
