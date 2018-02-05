@@ -169,6 +169,13 @@ int usage_hf_14a_info(void){
 	PrintAndLog("       n    test for nack bug");
 	return 0;
 }
+int usage_hf_14a_apdu(void) {
+	PrintAndLog("Usage: hf 14a apdu [-s] [-k] [-t] <APDU (hex)>");
+	PrintAndLog("       -s    activate field and select card");
+	PrintAndLog("       -k    leave the signal field ON after receive response");
+	PrintAndLog("       -t    executes TLV decoder if it possible. TODO!!!!");
+	return 0;
+}
 
 int CmdHF14AList(const char *Cmd) {
 	//PrintAndLog("Deprecated command, use 'hf list 14a' instead");
@@ -204,7 +211,7 @@ int CmdHF14AReader(const char *Cmd) {
 			cm &= ~ISO14A_CONNECT;
 			break;
 		default:
-			PrintAndLog("Unknown command.");
+			PrintAndLog("[!] Unknown command.");
 			return 1;
 		}	
 		
@@ -222,7 +229,7 @@ int CmdHF14AReader(const char *Cmd) {
 	if (ISO14A_CONNECT & cm) {
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
-		if (!silent) PrintAndLog("iso14443a card select failed");
+		if (!silent) PrintAndLog("[!] iso14443a card select failed");
 		DropField();
 		return 1;
 	}
@@ -239,7 +246,7 @@ int CmdHF14AReader(const char *Cmd) {
 	uint64_t select_status = resp.arg[0];
 	
 	if (select_status == 0) {
-		if (!silent) PrintAndLog("iso14443a card select failed");
+		if (!silent) PrintAndLog("[!] iso14443a card select failed");
 		DropField();
 		return 1;
 	}
@@ -259,12 +266,12 @@ int CmdHF14AReader(const char *Cmd) {
 		PrintAndLog(" ATS : %s", sprint_hex(card.ats, card.ats_len));
 	}
 		if (!disconnectAfter) {
-			if (!silent) PrintAndLog("Card is selected. You can now start sending commands");
+			if (!silent) PrintAndLog("[+] Card is selected. You can now start sending commands");
 		}
 	}
 
 	if (disconnectAfter) {
-		if (!silent)  PrintAndLog("Field dropped.");
+		if (!silent)  PrintAndLog("[+] field dropped.");
 	}
 
 	return 0;
@@ -282,7 +289,7 @@ int CmdHF14AInfo(const char *Cmd) {
 	SendCommand(&c);
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
-		if (!silent) PrintAndLog("iso14443a card select failed");
+		if (!silent) PrintAndLog("[!] iso14443a card select failed");
 		DropField();
 		return 0;
 	}
@@ -299,7 +306,7 @@ int CmdHF14AInfo(const char *Cmd) {
 	uint64_t select_status = resp.arg[0];
 	
 	if (select_status == 0) {
-		if (!silent) PrintAndLog("iso14443a card select failed");
+		if (!silent) PrintAndLog("[!] iso14443a card select failed");
 		DropField();
 		return 0;
 	}
@@ -514,14 +521,14 @@ int CmdHF14ACUIDs(const char *Cmd) {
 	n = n > 0 ? n : 1;
 
 	uint64_t t1 =  msclock();
-	PrintAndLog("Collecting %d UIDs", n);
+	PrintAndLog("[+] collecting %d UIDs", n);
 
 	// repeat n times
 	for (int i = 0; i < n; i++) {
 
 		if (ukbhit()) {
 			int gc = getchar(); (void)gc;
-			printf("\naborted via keyboard!\n");
+			printf("\n[!] aborted via keyboard!\n");
 			break;
 		}
 		
@@ -536,7 +543,7 @@ int CmdHF14ACUIDs(const char *Cmd) {
 
 		// check if command failed
 		if (resp.arg[0] == 0) {
-			PrintAndLog("Card select failed.");
+			PrintAndLog("[!] card select failed.");
 		} else {
 			char uid_string[20];
 			for (uint16_t i = 0; i < card->uidlen; i++) {
@@ -545,7 +552,7 @@ int CmdHF14ACUIDs(const char *Cmd) {
 			PrintAndLog("%s", uid_string);
 		}
 	}
-	PrintAndLog("End: %" PRIu64 " seconds", (msclock()-t1)/1000);
+	PrintAndLog("[+] end: %" PRIu64 " seconds", (msclock()-t1)/1000);
 	return 1;
 }
 
@@ -587,7 +594,7 @@ int CmdHF14ASim(const char *Cmd) {
 					default: errors = true;	break;
 				}				
 				if (!errors) {
-					PrintAndLog("Emulating ISO/IEC 14443 type A tag with %d byte UID (%s)", uidlen>>1, sprint_hex(uid, uidlen>>1));
+					PrintAndLog("[+] Emulating ISO/IEC 14443 type A tag with %d byte UID (%s)", uidlen>>1, sprint_hex(uid, uidlen>>1));
 					useUIDfromEML = false;
 				}
 				cmdp += 2;
@@ -608,7 +615,7 @@ int CmdHF14ASim(const char *Cmd) {
 				cmdp++;
 				break;				
 			default:
-				PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+				PrintAndLog("[!]Unknown parameter '%c'", param_getchar(Cmd, cmdp));
 				errors = true;
 				break;
 			}
@@ -626,7 +633,7 @@ int CmdHF14ASim(const char *Cmd) {
 	SendCommand(&c);	
 	UsbCommand resp;
 	
-	PrintAndLog("Press pm3-button to abort simulation");
+	PrintAndLog("[+] press pm3-button to abort simulation");
 	
 	while( !ukbhit() ){
 		if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500) ) continue;
@@ -649,7 +656,6 @@ int CmdHF14ASniff(const char *Cmd) {
 		if (ctmp == 'c' || ctmp == 'C') param |= 0x01;
 		if (ctmp == 'r' || ctmp == 'R') param |= 0x02;
 	}
-
 	UsbCommand c = {CMD_SNOOP_ISO_14443a, {param, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
@@ -746,19 +752,16 @@ int CmdHF14AAPDU(const char *cmd) {
 	bool leaveSignalON = false;
 	bool decodeTLV = false;
 	
-	if (strlen(cmd) < 2) {
-		PrintAndLog("Usage: hf 14a apdu [-s] [-k] [-t] <APDU (hex)>");
-		PrintAndLog("       -s    activate field and select card");
-		PrintAndLog("       -k    leave the signal field ON after receive response");
-		PrintAndLog("       -t    executes TLV decoder if it possible. TODO!!!!");
-		return 0;
-	}
+	if (strlen(cmd) < 2) return usage_hf_14a_apdu();
 
 	int cmdp = 0;
 	while(param_getchar(cmd, cmdp) != 0x00) {
 		char c = param_getchar(cmd, cmdp);
 		if ((c == '-') && (param_getlength(cmd, cmdp) == 2))
 			switch (param_getchar_indx(cmd, 1, cmdp)) {
+				case 'h':
+				case 'H':
+					return usage_hf_14a_apdu();
 				case 's':
 				case 'S':
 					activateField = true;
@@ -772,7 +775,7 @@ int CmdHF14AAPDU(const char *cmd) {
 					decodeTLV = true;
 					break;
 				default:
-					PrintAndLog("Unknown parameter '%c'", param_getchar_indx(cmd, 1, cmdp));
+					PrintAndLog("[!] Unknown parameter '%c'", param_getchar_indx(cmd, 1, cmdp));
 					return 1;
 			}
 			
@@ -780,13 +783,13 @@ int CmdHF14AAPDU(const char *cmd) {
 			// len = data + PCB(1b) + CRC(2b)
 			switch(param_gethex_to_eol(cmd, cmdp, data, sizeof(data) - 1 - 2, &datalen)) {
 			case 1:
-				PrintAndLog("Invalid HEX value.");
+				PrintAndLog("[!] invalid HEX value.");
 				return 1;
 			case 2:
-				PrintAndLog("APDU too large.");
+				PrintAndLog("[!] APDU too large.");
 				return 1;
 			case 3:
-				PrintAndLog("Hex must have even number of digits.");
+				PrintAndLog("[!] hex must have even number of digits.");
 				return 1;
 			}
 			
@@ -806,7 +809,7 @@ int CmdHF14AAPDU(const char *cmd) {
 
 	PrintAndLog("<<<< %s", sprint_hex(data, datalen));
 	
-	PrintAndLog("APDU response: %02x %02x - %s", data[datalen - 2], data[datalen - 1], GetAPDUCodeDescription(data[datalen - 2], data[datalen - 1])); 
+	PrintAndLog("[+] APDU response: %02x %02x - %s", data[datalen - 2], data[datalen - 1], GetAPDUCodeDescription(data[datalen - 2], data[datalen - 1])); 
 
 	// TLV decoder
 	if (decodeTLV && datalen > 4) {
