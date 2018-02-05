@@ -340,7 +340,7 @@ int usage_hf14_nack(void) {
 	return 0;
 }
 
-int GetHFMF14AUID(uint8_t *uid) {
+int GetHFMF14AUID(uint8_t *uid, int *uidlen) {
 	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
@@ -355,25 +355,23 @@ int GetHFMF14AUID(uint8_t *uid) {
 	iso14a_card_select_t card;
 	memcpy(&card, (iso14a_card_select_t *)resp.d.asBytes, sizeof(iso14a_card_select_t));
 	memcpy(uid, card.uid, card.uidlen * sizeof(uint8_t));
+	*uidlen=card.uidlen;
 	return 1;
 }
 
 char * GenerateFilename(const char *prefix, const char *suffix){
-	uint8_t uid[4] = {0,0,0,0};	
-	int len=0;
+	uint8_t uid[8] = {0,0,0,0,0,0,0,0};
+	int uidlen=0;
 	char * fptr = malloc (sizeof (char) * (strlen(prefix) + strlen(suffix)) + sizeof(uid)*2 + 1);
 	
-	if (!GetHFMF14AUID(uid)) {
+	if (!GetHFMF14AUID(uid, &uidlen)) {
 		PrintAndLog("No tag found.");
 		return NULL;
 	}
 	
-	strcpy(fptr, prefix);
-	len=strlen(fptr);
-	for (int i=0;i<sizeof(uid)/sizeof(uint8_t);i++)
-	len += sprintf(fptr+len, "%02x", uid[i]);	
-	strcat(fptr, suffix);
-
+	strcpy(fptr, prefix);	
+	FillFileNameByUID(fptr,uid,suffix,uidlen);
+	
 	return fptr;
 }
 
