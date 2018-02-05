@@ -360,7 +360,7 @@ int GetHFMF14AUID(uint8_t *uid, int *uidlen) {
 }
 
 char * GenerateFilename(const char *prefix, const char *suffix){
-	uint8_t uid[8] = {0,0,0,0,0,0,0,0};
+	uint8_t uid[10] = {0,0,0,0,0,0,0,0,0,0};
 	int uidlen=0;
 	char * fptr = malloc (sizeof (char) * (strlen(prefix) + strlen(suffix)) + sizeof(uid)*2 + 1);
 	
