@@ -157,7 +157,7 @@ Upgrading HomeBrew tap formula
 -----------------------------
 *This method is useful for those looking to run bleeding-edge versions of iceman's client. Keep this in mind when attempting to update your HomeBrew tap formula as this procedure could easily cause a build to break if an update is unstable on macOS.* 
 
-Tested on macOS Hig Sierra 10.13.2
+Tested on macOS High Sierra 10.13.2
 
 *Note: This assumes you have already installed iceman's fork from HomeBrew as mentioned above*
 
