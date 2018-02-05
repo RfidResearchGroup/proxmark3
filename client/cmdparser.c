@@ -57,7 +57,7 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
 				matches++;
 			}
 		}
-		if(matches == 1) i = last_match;
+		if (matches == 1) i = last_match;
 	}
 
 	if (Commands[i].Name) {
@@ -76,8 +76,7 @@ char pparent[512] = {0};
 char *parent = pparent;
 
 void dumpCommandsRecursive(const command_t cmds[], int markdown) {
-	if (cmds[0].Name == NULL)
-		return;
+	if (cmds[0].Name == NULL) return;
 
 	int i = 0;
 	int w_cmd = 25;

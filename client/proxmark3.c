@@ -69,7 +69,7 @@ struct receiver_arg {
 	int run;
 };
 
-#if defined(__linux__)	|| (__APPLE__)
+#if defined(__linux__)
 static void showBanner(void){
 	printf("\n\n");
 	printf("\e[34m██████╗ ███╗   ███╗ ████╗\e[0m     ...iceman fork\n");
