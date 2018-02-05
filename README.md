@@ -157,7 +157,7 @@ Upgrading HomeBrew tap formula
 -----------------------------
 *This method is useful for those looking to run bleeding-edge versions of iceman's client. Keep this in mind when attempting to update your HomeBrew tap formula as this procedure could easily cause a build to break if an update is unstable on macOS.* 
 
-Tested on macOS Sierra 10.12.6
+Tested on macOS Hig Sierra 10.13.2
 
 *Note: This assumes you have already installed iceman's fork from HomeBrew as mentioned above*
 
@@ -166,13 +166,13 @@ Tested on macOS Sierra 10.12.6
  
 2. Flash the bootloader
   * With your Proxmark3 unplugged from your machine, press and hold the button on your Proxmark 3 as you plug it into a USB port. After about 5 seconds let go of the button and run this command
-   `$ sudo proxmark3-flasher /dev/tty.usbmodem881 /usr/local/Cellar/proxmark3/HEAD-ccfdd60/share/firmware/fullimage.elf`
+   `$ sudo proxmark3-flasher /dev/tty.usbmodem881 -b /usr/local/Cellar/proxmark3/HEAD-6a710ef/share/firmware/bootrom.elf`
   * After the bootloader finishes flashing, unplug your Proxmark3 from your machine
   
 3. Flash fullimage.elf
   * Press and hold the button on your Proxmark 3 and keep it held as you plug the Proxmark 3 back into the USB port; continue to hold the button until after this step is complete and the `proxmark3-flasher` command outputs "Have a nice day!"*
 
-`$ sudo proxmark3-flasher /dev/tty.usbmodem881 /usr/local/Cellar/proxmark3/HEAD-ccfdd60/share/firmware/fullimage.elf`
+`$ sudo proxmark3-flasher /dev/tty.usbmodem881 /usr/local/Cellar/proxmark3/HEAD-6a710ef/share/firmware/fullimage.elf`
 
 4. Enjoy the update
 
