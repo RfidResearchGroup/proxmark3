@@ -2344,7 +2344,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 	// static variables here, is re-used in the next call
 	static uint32_t nt_attacked = 0;
 	static uint32_t sync_time = 0;
-	static uint32_t sync_cycles = 0;
+	static int32_t sync_cycles = 0;
 	static uint8_t par_low = 0;
 	static uint8_t mf_nr_ar3 = 0;
 	
@@ -2455,15 +2455,23 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 				
 				sync_cycles = (sync_cycles - nt_distance)/elapsed_prng_sequences;
 				
-				if (sync_cycles <= 0)
-					sync_cycles += PRNG_SEQUENCE_LENGTH;
+				// no negative sync_cycles
+				if (sync_cycles <= 0) sync_cycles += PRNG_SEQUENCE_LENGTH;
+
+				// reset sync_cycles
+				if (sync_cycles > PRNG_SEQUENCE_LENGTH * 2 ) {
+					sync_cycles = PRNG_SEQUENCE_LENGTH;
+					sync_time = GetCountSspClk() & 0xfffffff8;
+				}
 				
 				if (MF_DBGLEVEL >= 4)
 					Dbprintf("calibrating in cycle %d. nt_distance=%d, elapsed_prng_sequences=%d, new sync_cycles: %d\n", i, nt_distance, elapsed_prng_sequences, sync_cycles);
 
+				LED_B_OFF();
 				continue;
 			}
 		}
+		LED_B_OFF();
 
 		if ( (nt != nt_attacked) && nt_attacked) { 	// we somehow lost sync. Try to catch up again...
 			
@@ -2503,7 +2511,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 		if (received_nack) {
 			catch_up_cycles = 8; 	// the PRNG is delayed by 8 cycles due to the NAC (4Bits = 0x05 encrypted) transfer
 	
-			if (nt_diff == 0  && first_try)
+			if (nt_diff == 0)
 				par_low = par[0] & 0xE0; // there is no need to check all parities for other nt_diff. Parity Bits for mf_nr_ar[0..2] won't change
 
 			par_list[nt_diff] = reflect8(par[0]);

@@ -27,10 +27,8 @@ all clean: %: client/% bootrom/% armsrc/% recovery/% mfkey/% nonce2key/%
 
 mfkey/%: FORCE
 	$(MAKE) -C tools/mfkey $(patsubst mfkey/%,%,$@)
-
 nonce2key/%: FORCE
 	$(MAKE) -C tools/nonce2key $(patsubst nonce2key/%,%,$@)
-
 bootrom/%: FORCE
 	$(MAKE) -C bootrom $(patsubst bootrom/%,%,$@)
 armsrc/%: FORCE
