@@ -12,15 +12,15 @@
 
 static int CmdHelp(const char *Cmd);
 int usage_hf14_mifare(void){
-	PrintAndLog("Usage:  hf mf mifare [h] <block number> <A|B>");
+	PrintAndLog("Usage:  hf mf darkside [h] <block number> <A|B>");
 	PrintAndLog("options:");
 	PrintAndLog("      h               this help");
 	PrintAndLog("      <block number>  (Optional) target other block");
 	PrintAndLog("      <A|B>           (optional) target key type");
 	PrintAndLog("samples:");
-	PrintAndLog("           hf mf mifare");
-	PrintAndLog("           hf mf mifare 16");
-	PrintAndLog("           hf mf mifare 16 B");
+	PrintAndLog("           hf mf darkside");
+	PrintAndLog("           hf mf darkside 16");
+	PrintAndLog("           hf mf darkside 16 B");
 	return 0;
 }
 int usage_hf14_mf1ksim(void){
@@ -150,7 +150,9 @@ int usage_hf14_chk_fast(void){
 int usage_hf14_keybrute(void){
 	PrintAndLog("J_Run's 2nd phase of multiple sector nested authentication key recovery");
 	PrintAndLog("You have a known 4 last bytes of a key recovered with mf_nonce_brute tool.");
-	PrintAndLog("First 2 bytes of key will be bruteforced");
+	PrintAndLog("First 2 bytes of key will be bruteforced");	
+	PrintAndLog("");
+	PrintAndLog(" ---[ This attack is obsolete,  try hardnested instead ]---");
 	PrintAndLog("");
 	PrintAndLog("Usage:  hf mf keybrute [h] <block number> <A|B> <key>");
 	PrintAndLog("options:");
@@ -333,7 +335,7 @@ int usage_hf14_nack(void) {
 	return 0;
 }
 
-int CmdHF14AMifare(const char *Cmd) {
+int CmdHF14ADarkside(const char *Cmd) {
 	uint8_t blockno = 0, key_type = MIFARE_AUTH_KEYA;
 	uint64_t key = 0;
 	
@@ -347,16 +349,16 @@ int CmdHF14AMifare(const char *Cmd) {
 		key_type = MIFARE_AUTH_KEYB;
 
 	int isOK = mfDarkside(blockno, key_type, &key);
+	PrintAndLog("");
 	switch (isOK) {
-		case -1 : PrintAndLog("[!] Button pressed. Aborted."); return 1;
-		case -2 : PrintAndLog("[-] Card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests)."); return 1;
-		case -3 : PrintAndLog("[-] Card is not vulnerable to Darkside attack (its random number generator is not predictable)."); return 1;
-		case -4 : PrintAndLog("[-] Card is not vulnerable to Darkside attack (its random number generator seems to be based on the wellknown");
-				  PrintAndLog("generating polynomial with 16 effective bits only, but shows unexpected behaviour."); return 1;
+		case -1 : PrintAndLog("[!] button pressed. Aborted."); return 1;
+		case -2 : PrintAndLog("[-] card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests)."); return 1;
+		case -3 : PrintAndLog("[-] card is not vulnerable to Darkside attack (its random number generator is not predictable)."); return 1;
+		case -4 : PrintAndLog("[-] card is not vulnerable to Darkside attack (its random number generator seems to be based on the wellknown");
+				  PrintAndLog("[-] generating polynomial with 16 effective bits only, but shows unexpected behaviour."); return 1;
 		case -5 : PrintAndLog("[!] aborted via keyboard.");  return 1;
-		default : PrintAndLog("[+] Found valid key: %012" PRIx64 "\n", key); break;
+		default : PrintAndLog("[+] found valid key: %012" PRIx64 "\n", key); break;
 	}
-
 	PrintAndLog("");
 	return 0;
 }
@@ -2020,12 +2022,12 @@ int CmdHF14AMfKeyBrute(const char *Cmd) {
 	uint64_t t1 = msclock();
 	
 	if (mfKeyBrute( blockNo, keytype, key, &foundkey))
-		PrintAndLog("Found valid key: %012" PRIx64 " \n", foundkey);
+		PrintAndLog("[+] found valid key: %012" PRIx64 " \n", foundkey);
 	else
-		PrintAndLog("Key not found");
+		PrintAndLog("[-] key not found");
 	
 	t1 = msclock() - t1;
-	PrintAndLog("\nTime in keybrute: %.0f seconds\n", (float)t1/1000.0);
+	PrintAndLog("\n[+] time in keybrute: %.0f seconds\n", (float)t1/1000.0);
 	return 0;	
 }
 
@@ -2893,19 +2895,24 @@ out:
 
 static command_t CommandTable[] = {
 	{"help",		CmdHelp,				1, "This help"},
+	{"darkside",	CmdHF14ADarkside,		0, "Darkside attack. read parity error messages."},
+	{"nested",		CmdHF14AMfNested,		0, "Nested attack. Test nested authentication"},
+	{"hardnested", 	CmdHF14AMfNestedHard, 	0, "Nested attack for hardened Mifare cards"},
+	{"keybrute",	CmdHF14AMfKeyBrute,		0, "J_Run's 2nd phase of multiple sector nested authentication key recovery"},	
+	{"nack",		CmdHf14AMfNack,			0, "Test for Mifare NACK bug"},
+	{"chk",			CmdHF14AMfChk,			0, "Check keys"},
+	{"fchk",		CmdHF14AMfChk_fast,		0, "Check keys fast, targets all keys on card"},
+	{"decrypt",		CmdHf14AMfDecryptBytes, 1, "[nt] [ar_enc] [at_enc] [data] - to decrypt snoop or trace"},
+	{"-----------",	CmdHelp,				1, ""},
 	{"dbg",			CmdHF14AMfDbg,			0, "Set default debug mode"},
 	{"rdbl",		CmdHF14AMfRdBl,			0, "Read MIFARE classic block"},
 	{"rdsc",		CmdHF14AMfRdSc,			0, "Read MIFARE classic sector"},
 	{"dump",		CmdHF14AMfDump,			0, "Dump MIFARE classic tag to binary file"},
 	{"restore",		CmdHF14AMfRestore,		0, "Restore MIFARE classic binary file to BLANK tag"},
 	{"wrbl",		CmdHF14AMfWrBl,			0, "Write MIFARE classic block"},
-	{"chk",			CmdHF14AMfChk,			0, "Check keys"},
-	{"fchk",		CmdHF14AMfChk_fast,		0, "Check keys fast, targets all keys on card"},
-	{"mifare",		CmdHF14AMifare,			0, "Darkside attack. read parity error messages."},
-	{"nested",		CmdHF14AMfNested,		0, "Nested attack. Test nested authentication"},
-	{"hardnested", 	CmdHF14AMfNestedHard, 	0, "Nested attack for hardened Mifare cards"},
-	{"keybrute",	CmdHF14AMfKeyBrute,		0, "J_Run's 2nd phase of multiple sector nested authentication key recovery"},
+	{"setmod",		CmdHf14AMfSetMod, 		0, "Set MIFARE Classic EV1 load modulation strength"},	
 //	{"sniff",		CmdHF14AMfSniff,		0, "Sniff card-reader communication"},
+	{"-----------",	CmdHelp,				1, ""},
 	{"sim",			CmdHF14AMf1kSim,		0, "Simulate MIFARE card"},
 	{"eclr",		CmdHF14AMfEClear,		0, "Clear simulator memory block"},
 	{"eget",		CmdHF14AMfEGet,			0, "Get simulator memory block"},
@@ -2914,16 +2921,15 @@ static command_t CommandTable[] = {
 	{"esave",		CmdHF14AMfESave,		0, "Save to file emul dump"},
 	{"ecfill",		CmdHF14AMfECFill,		0, "Fill simulator memory with help of keys from simulator"},
 	{"ekeyprn",		CmdHF14AMfEKeyPrn,		0, "Print keys from simulator memory"},
+	{"-----------",	CmdHelp,				1, ""},
 	{"csetuid",		CmdHF14AMfCSetUID,		0, "Set UID for magic Chinese card"},
 	{"csetblk",		CmdHF14AMfCSetBlk,		0, "Write block - Magic Chinese card"},
 	{"cgetblk",		CmdHF14AMfCGetBlk,		0, "Read block - Magic Chinese card"},
 	{"cgetsc",		CmdHF14AMfCGetSc,		0, "Read sector - Magic Chinese card"},
 	{"cload",		CmdHF14AMfCLoad,		0, "Load dump into magic Chinese card"},
 	{"csave",		CmdHF14AMfCSave,		0, "Save dump from magic Chinese card into file or emulator"},
-	{"decrypt",		CmdHf14AMfDecryptBytes,  1, "[nt] [ar_enc] [at_enc] [data] - to decrypt snoop or trace"},
-	{"setmod",		CmdHf14AMfSetMod, 		0, "Set MIFARE Classic EV1 load modulation strength"},
+
 	{"ice",			CmdHF14AMfice,			0, "collect Mifare Classic nonces to file"},
-	{"nack",		CmdHf14AMfNack,			0, "Test for Mifare NACK bug"},
 	{NULL, NULL, 0, NULL}
 };
 
