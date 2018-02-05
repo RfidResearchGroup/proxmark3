@@ -1217,6 +1217,8 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 	static uint8_t found[80];
 	static uint8_t *uid;
 
+	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+		
 	if (uid == NULL || firstchunk) {
 		uid = BigBuf_malloc(10);
 		if (uid == NULL ) {
@@ -1228,8 +1230,6 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 	LEDsoff();
 	LED_A_ON();
 		
-	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-	
 	if ( firstchunk ) {
 		
 		clear_trace();
@@ -1416,6 +1416,7 @@ OUT:
 
 		set_tracing(false);		
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+		BigBuf_free(); BigBuf_Clear_ext(false);			
 	} else {
 		// partial/none keys found
 		cmd_send(CMD_ACK, foundkeys, 0, 0, 0, 0);
