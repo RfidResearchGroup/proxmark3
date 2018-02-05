@@ -21,7 +21,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 
 	// message
 	printf("--------------------------------------------------------------------------------\n");
-	printf("[+] executing command. Expected execution time: 25sec on average\n");
+	printf("[+] executing Darkside attack. Expected execution time: 25sec on average\n");
 	printf("[+] press pm3-button on the proxmark3 device to abort both proxmark3 and client.\n");
 	printf("--------------------------------------------------------------------------------\n");
 
