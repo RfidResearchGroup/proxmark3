@@ -2407,7 +2407,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 								
 		// if we missed the sync time already, advance to the next nonce repeat
 		while ( GetCountSspClk() > sync_time) {
-			elapsed_prng_sequences++;
+			++elapsed_prng_sequences;
 			sync_time = (sync_time & 0xfffffff8 ) + sync_cycles;
 		}		
 
@@ -2430,7 +2430,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 
 		// we didn't calibrate our clock yet,
 		// iceman: has to be calibrated every time.
-		if (first_try && previous_nt && !nt_attacked) { 
+		if (previous_nt && !nt_attacked) { 
 
 			int nt_distance = dist_nt(previous_nt, nt);
 			

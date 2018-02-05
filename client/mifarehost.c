@@ -83,11 +83,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 			}
 		}
 
-		if (keycount > 1) {
-			PrintAndLog("[+] found %u candidate keys. Trying to verify with authentication...\n", keycount);
-		} else {
-			PrintAndLog("[+] found a candidate key. Trying to verify it with authentication...\n");
-		}
+		PrintAndLog("[+] found %u candidate key%s Trying to verify with authentication...\n", keycount, (keycount > 1) ? "s." : ".");
 
 		*key = -1;
 		uint8_t keyBlock[USB_CMD_DATA_SIZE];
@@ -96,7 +92,9 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 			int size = keycount - i > max_keys ? max_keys : keycount - i;
 			for (int j = 0; j < size; j++) {
 				if (par_list == 0) {
-					num_to_bytes(last_keylist[i*max_keys + j], 6, keyBlock);					
+					if ( last_keylist != NULL ){
+						num_to_bytes(last_keylist[i*max_keys + j], 6, keyBlock);					
+					}
 				} else {
 					num_to_bytes(keylist[i*max_keys + j], 6, keyBlock);
 				}
@@ -111,7 +109,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 			free(keylist);
 			break;
 		} else {
-			PrintAndLog("[-] test authentication failed. Restarting darkside attack");
+			PrintAndLog("[-] all candidate keys failed authentication. Restarting darkside attack");
 			free(last_keylist);
 			last_keylist = keylist;
 			c.arg[0] = true;
@@ -905,8 +903,10 @@ int detect_classic_nackbug(bool verbose){
 	
 	// for nice animation	
 	bool term = !isatty(STDIN_FILENO);
+#if defined(__linux__)
 	char star[] = {'-', '\\', '|', '/'};
 	uint8_t staridx = 0;	
+#endif 
 
 	while (true) {
 
