@@ -243,7 +243,7 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
             
             if ( resp[2] == 0xaf ){
             } else {
-                DbpString("Authetication failed. Invalid key number.");
+                DbpString("Authentication failed. Invalid key number.");
                 OnError(3);
                 return;
             }
@@ -310,7 +310,7 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
                 rol(decRndA,8);
                 for (int x = 0; x < 8; x++) {
                     if (decRndA[x] != encRndA[x]) {
-                        DbpString("Authetication failed. Cannot varify PICC.");
+                        DbpString("Authentication failed. Cannot varify PICC.");
                         OnError(4);
                         return;
                     }
@@ -411,7 +411,7 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
                 else if (algo == 1)
                 cmd_send(CMD_ACK,1,0,0,skey->data,8);
             } else {
-                DbpString("Authetication failed.");
+                DbpString("Authentication failed.");
                 OnError(6);
                 return;
             }
@@ -482,7 +482,7 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
 				Desfire_session_key_new( nonce, decRndB , key, skey );
 				print_result("SESSION : ", skey->data, 16);
 			} else {
-				DbpString("Authetication failed.");
+				DbpString("Authentication failed.");
 				OnError(7);
 				return;
 			}
