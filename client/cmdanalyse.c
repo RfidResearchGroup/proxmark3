@@ -466,83 +466,47 @@ int CmdAnalyseA(const char *Cmd){
 	// Sequence X followed by Sequence Y followed by Sequence Z     (111100x1 11111111 00x11111)
 	// we therefore look for a ...xx1111 11111111 00x11111xxxxxx... pattern 
 	// (12 '1's followed by 2 '0's, eventually followed by another '0', followed by 5 '1's)
-	# define SYNC_16BIT 0x4DB2
-	#define FELICA_STARTBIT_MASK	0x07FFEF80					// mask is    00000111 11111111 11101111 10000000
+	# define SYNC_16BIT 0xB24D
+	uint32_t shiftReg = param_get32ex(Cmd, 0, 0xb24d, 16);
+	uint8_t bt = param_get8ex(Cmd, 1, 0xBB, 16);
+	uint8_t byte_offset = 99;
+	// reverse byte
+	uint8_t rev =  reflect8(bt);
+	printf("input  %02x | %02x \n", bt, rev);
+	printf("shiftreg before  %08x \n", shiftReg);
+	// add byte to shift register
+	shiftReg = shiftReg << 8 | rev;
 
-	// uint32_t shiftReg =  SYNC_16BIT;
-	// printf("reg %04x \n",(shiftReg & (SYNC_16BIT >> 0)));
-	// printf("reg %04x \n",(shiftReg & (SYNC_16BIT >> 1)));
-	// printf("reg %04x \n",(shiftReg & (SYNC_16BIT >> 2)));
-	// printf("reg %04x \n",(shiftReg & (SYNC_16BIT >> 3)));
-	// printf("reg %04x \n",(shiftReg & (SYNC_16BIT >> 4)));
-	// printf("reg %04x \n",(shiftReg & (SYNC_16BIT >> 5)));
-	// printf("reg %04x \n",(shiftReg & (SYNC_16BIT >> 6)));
-	// printf("reg %04x \n",(shiftReg & (SYNC_16BIT >> 7)));
+	printf("shiftreg after %08x \n", shiftReg);
 	
-	// for ( uint8_t i=0; i<32; i++){	
-		// if		((shiftReg & (SYNC_16BIT >> 0)) == SYNC_16BIT >> 0) syncBit = 7;
-		// else if ((shiftReg & (SYNC_16BIT >> 1)) == SYNC_16BIT >> 1) syncBit = 6;
-		// else if ((shiftReg & (SYNC_16BIT >> 2)) == SYNC_16BIT >> 2) syncBit = 5;
-		// else if ((shiftReg & (SYNC_16BIT >> 3)) == SYNC_16BIT >> 3) syncBit = 4;
-		// else if ((shiftReg & (SYNC_16BIT >> 4)) == SYNC_16BIT >> 4) syncBit = 3;
-		// else if ((shiftReg & (SYNC_16BIT >> 5)) == SYNC_16BIT >> 5) syncBit = 2;
-		// else if ((shiftReg & (SYNC_16BIT >> 6)) == SYNC_16BIT >> 6) syncBit = 1;
-		// else if ((shiftReg & (SYNC_16BIT >> 7)) == SYNC_16BIT >> 7) syncBit = 0;
+	printf("reg %04x \n", ( shiftReg >> 7 & 0xFFFF ));
+	printf("reg %04x \n", ( shiftReg >> 6 & 0xFFFF ));
+	printf("reg %04x \n", ( shiftReg >> 5 & 0xFFFF ));
+	printf("reg %04x \n", ( shiftReg >> 4 & 0xFFFF ));
+	printf("reg %04x \n", ( shiftReg >> 3 & 0xFFFF ));
+	printf("reg %04x \n", ( shiftReg >> 2 & 0xFFFF ));
+	printf("reg %04x \n", ( shiftReg >> 1 & 0xFFFF ));
+	printf("reg %04x \n", ( shiftReg >> 0 & 0xFFFF ));
+	
+	
+	// kolla om SYNC_PATTERN finns.
+	if (( shiftReg >> 7 & 0xFFFF ) == SYNC_16BIT) byte_offset = 7;
+	else if (( shiftReg >> 6 & 0xFFFF ) == SYNC_16BIT) byte_offset = 6;
+	else if (( shiftReg >> 5 & 0xFFFF ) == SYNC_16BIT) byte_offset = 5;
+	else if (( shiftReg >> 4 & 0xFFFF ) == SYNC_16BIT) byte_offset = 4;				
+	else if (( shiftReg >> 3 & 0xFFFF ) == SYNC_16BIT) byte_offset = 3;
+	else if (( shiftReg >> 2 & 0xFFFF ) == SYNC_16BIT) byte_offset = 2;
+	else if (( shiftReg >> 1 & 0xFFFF ) == SYNC_16BIT) byte_offset = 1;
+	else if (( shiftReg >> 0 & 0xFFFF ) == SYNC_16BIT) byte_offset = 0;
 
-		// printf("ShiftReg is [%04x] | SyncBit is [%u]\n", shiftReg, syncBit);
-		// shiftReg = shiftReg << 1 | ( shiftReg & 0x8000 ) >> 15;
-	// }
-	uint8_t a = 0x4D, b = 0;
-	printf("%X \n", (0xFF >> 2));
-	
-	//shift in remaining byte, slowly...
-	// this reverses the input...
-	for (uint8_t i=0; i<8; i++) {
-		printf("%u | %02X  %s| %02X %s |\n", i, a, pb(a), b, pb(b));
-		b = (b << 1) | (a & 1);
-		a >>= 1;
-	}
-	
-	uint16_t sync = 0x4DB2;
-	uint32_t shift = 0x1FFF4D;  // typical start pattern.
-	
-	uint8_t bt = 0x4D; //incoming byte  ( b10110010) reflected = b 01001101 == 4D..  So,  4DB2 is opposite.. hm.
-	
-	// shift in byte.
-	shift = shift << 8 | reflect8(bt);
-	
-	// sync position
-	uint8_t sync_pos = 0;
-	
-	// finding sync_pos
-	for ( uint8_t i=0; i<32; i++) {
-		if		((shift & (sync >> 0)) == sync >> 0) sync_pos = 7;
-		else if ((shift & (sync >> 1)) == sync >> 1) sync_pos = 6;
-		else if ((shift & (sync >> 2)) == sync >> 2) sync_pos = 5;
-		else if ((shift & (sync >> 3)) == sync >> 3) sync_pos = 4;
-		else if ((shift & (sync >> 4)) == sync >> 4) sync_pos = 3;
-		else if ((shift & (sync >> 5)) == sync >> 5) sync_pos = 2;
-		else if ((shift & (sync >> 6)) == sync >> 6) sync_pos = 1;
-		else if ((shift & (sync >> 7)) == sync >> 7) sync_pos = 0;
-
-		printf("shift [%04x] | sync_pos [%u]\n", shift, sync_pos);
-		shift <<= 1;
-	}
-	
-	// shift = 0x1FF4DB; 
-	// shift = 0x3FE9B6;
-	// printf("%s | %s %c\n", pb((shift & (sync >> 0))), pb(sync >> 0), ((shift & (sync >> 0)) == sync >> 0) ?'Y':'N' );
-	// printf("%s | %s %c\n", pb((shift & (sync >> 1))), pb(sync >> 1), ((shift & (sync >> 1)) == sync >> 1)  ?'Y':'N' );
-	// printf("%s | %s %c\n", pb((shift & (sync >> 2))), pb(sync >> 2), ((shift & (sync >> 2)) == sync >> 2) ?'Y':'N' );
-	// printf("%s | %s %c\n", pb((shift & (sync >> 3))), pb(sync >> 3), ((shift & (sync >> 3)) == sync >> 3) ?'Y':'N' );
-	// printf("%s | %s %c\n", pb((shift & (sync >> 4))), pb(sync >> 4), ((shift & (sync >> 4)) == sync >> 4) ?'Y':'N' );
-	// printf("%s | %s %c\n", pb((shift & (sync >> 5))), pb(sync >> 5),  ((shift & (sync >> 5)) == sync >> 5)?'Y':'N' );
-	// printf("%s | %s %c\n", pb((shift & (sync >> 6))), pb(sync >> 6), ((shift & (sync >> 6)) == sync >> 6) ?'Y':'N' );
-	// printf("%s | %s %c\n", pb((shift & (sync >> 7))), pb(sync >> 7), ((shift & (sync >> 7)) == sync >> 7)  ?'Y':'N');
-	
+	if (byte_offset == 99 ) return 0;
+	//uint8_t p0 = 
+	uint8_t p1 = (rev & (uint8_t)(~(0xFF << byte_offset)));
+	printf("Offset  %u  | leftovers  %02x  %s \n", byte_offset, p1, pb(p1) );
+return 0;
+/*	
 	// split byte into two parts.
 	uint8_t offset = 3, n0 = 0, n1 = 0;
-	uint8_t rev =  reflect8(bt);
 	rev = 0xB2;
 	for (uint8_t m=0; m<8; m++) {
 		offset = m;
@@ -564,7 +528,7 @@ return 0;
 		a >>=1;
 	}
 	
-	
+	*/
 /*	
 pm3 --> da hex2bin 4db2     0100110110110010
 pm3 --> da hex2bin 926d9  10010010011011011001
