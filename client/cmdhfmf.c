@@ -10,6 +10,11 @@
 
 #include "cmdhfmf.h"
 
+#define MIFARE_4K_MAXBLOCK 255
+#define MIFARE_2K_MAXBLOCK 128 
+#define MIFARE_1K_MAXBLOCK 64
+#define MIFARE_MINI_MAXBLOCK 20
+
 static int CmdHelp(const char *Cmd);
 int usage_hf14_mifare(void){
 	PrintAndLog("Usage:  hf mf darkside [h] <block number> <A|B>");
@@ -515,10 +520,6 @@ int CmdHF14AMfRdSc(const char *Cmd) {
   return 0;
 }
 
-#define MIFARE_4K_MAXBLOCK 255
-#define MIFARE_2K_MAXBLOCK 128 
-#define MIFARE_1K_MAXBLOCK 64
-#define MIFARE_MINI_MAXBLOCK 20
 uint8_t NumOfBlocks(char card){
 	switch(card){
 		case '0' : return MIFARE_MINI_MAXBLOCK;
@@ -555,6 +556,7 @@ uint8_t NumBlocksPerSector(uint8_t sectorNo) {
 }
 
 int CmdHF14AMfDump(const char *Cmd) {
+
 	uint8_t sectorNo, blockNo;
 	uint8_t keyA[40][6];
 	uint8_t keyB[40][6];
@@ -609,32 +611,33 @@ int CmdHF14AMfDump(const char *Cmd) {
 	PrintAndLog("|-----------------------------------------|");
 	uint8_t tries = 0;
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
-		for (tries = 0; tries < 3; tries++) {		
-		UsbCommand c = {CMD_MIFARE_READBL, {FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 0, 0}};
-		memcpy(c.d.asBytes, keyA[sectorNo], 6);
-		clearCommandBuffer();
-		SendCommand(&c);
+		for (tries = 0; tries < MIFARE_SECTOR_RETRY; tries++) {
+		
+			UsbCommand c = {CMD_MIFARE_READBL, {FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 0, 0}};
+			memcpy(c.d.asBytes, keyA[sectorNo], 6);
+			clearCommandBuffer();
+			SendCommand(&c);
 
-		if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-			uint8_t isOK  = resp.arg[0] & 0xff;
-			uint8_t *data  = resp.d.asBytes;
-			if (isOK){
-				rights[sectorNo][0] = ((data[7] & 0x10)>>2) | ((data[8] & 0x1)<<1) | ((data[8] & 0x10)>>4); // C1C2C3 for data area 0
-				rights[sectorNo][1] = ((data[7] & 0x20)>>3) | ((data[8] & 0x2)<<0) | ((data[8] & 0x20)>>5); // C1C2C3 for data area 1
-				rights[sectorNo][2] = ((data[7] & 0x40)>>4) | ((data[8] & 0x4)>>1) | ((data[8] & 0x40)>>6); // C1C2C3 for data area 2
-				rights[sectorNo][3] = ((data[7] & 0x80)>>5) | ((data[8] & 0x8)>>2) | ((data[8] & 0x80)>>7); // C1C2C3 for sector trailer
+			if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+				uint8_t isOK = resp.arg[0] & 0xff;
+				uint8_t *data = resp.d.asBytes;
+				if (isOK){
+					rights[sectorNo][0] = ((data[7] & 0x10) >> 2) | ((data[8] & 0x1) << 1) | ((data[8] & 0x10) >> 4); // C1C2C3 for data area 0
+					rights[sectorNo][1] = ((data[7] & 0x20) >> 3) | ((data[8] & 0x2) << 0) | ((data[8] & 0x20) >> 5); // C1C2C3 for data area 1
+					rights[sectorNo][2] = ((data[7] & 0x40) >> 4) | ((data[8] & 0x4) >> 1) | ((data[8] & 0x40) >> 6); // C1C2C3 for data area 2
+					rights[sectorNo][3] = ((data[7] & 0x80) >> 5) | ((data[8] & 0x8) >> 2) | ((data[8] & 0x80) >> 7); // C1C2C3 for sector trailer
 					break;
 				} else if (tries == 2) { // on last try set defaults
-				PrintAndLog("Could not get access rights for sector %2d. Trying with defaults...", sectorNo);
+					PrintAndLog("[-] could not get access rights for sector %2d. Trying with defaults...", sectorNo);
+					rights[sectorNo][0] = rights[sectorNo][1] = rights[sectorNo][2] = 0x00;
+					rights[sectorNo][3] = 0x01;
+				}
+			} else {
+				PrintAndLog("[-] command execute timeout when trying to read access rights for sector %2d. Trying with defaults...", sectorNo);
 				rights[sectorNo][0] = rights[sectorNo][1] = rights[sectorNo][2] = 0x00;
 				rights[sectorNo][3] = 0x01;
 			}
-		} else {
-			PrintAndLog("Command execute timeout when trying to read access rights for sector %2d. Trying with defaults...", sectorNo);
-			rights[sectorNo][0] = rights[sectorNo][1] = rights[sectorNo][2] = 0x00;
-			rights[sectorNo][3] = 0x01;
 		}
-	}
 	}
 	
 	PrintAndLog("|-----------------------------------------|");
@@ -645,30 +648,31 @@ int CmdHF14AMfDump(const char *Cmd) {
 	for (sectorNo = 0; isOK && sectorNo < numSectors; sectorNo++) {
 		for (blockNo = 0; isOK && blockNo < NumBlocksPerSector(sectorNo); blockNo++) {
 			bool received = false;
-			for (tries = 0; tries < 3; tries++) {			
-			if (blockNo == NumBlocksPerSector(sectorNo) - 1) {		// sector trailer. At least the Access Conditions can always be read with key A. 
-				UsbCommand c = {CMD_MIFARE_READBL, {FirstBlockOfSector(sectorNo) + blockNo, 0, 0}};
-				memcpy(c.d.asBytes, keyA[sectorNo], 6);
-				clearCommandBuffer();
-				SendCommand(&c);
-				received = WaitForResponseTimeout(CMD_ACK,&resp,1500);
-			} else {												// data block. Check if it can be read with key A or key B
-				uint8_t data_area = sectorNo<32?blockNo:blockNo/5;
-				if ((rights[sectorNo][data_area] == 0x03) || (rights[sectorNo][data_area] == 0x05)) {	// only key B would work
-					UsbCommand c = {CMD_MIFARE_READBL, {FirstBlockOfSector(sectorNo) + blockNo, 1, 0}};
-					memcpy(c.d.asBytes, keyB[sectorNo], 6);
-					SendCommand(&c);
-					received = WaitForResponseTimeout(CMD_ACK,&resp,1500);
-				} else if (rights[sectorNo][data_area] == 0x07) {										// no key would work
-					isOK = false;
-					PrintAndLog("Access rights do not allow reading of sector %2d block %3d", sectorNo, blockNo);
-						tries = 2;
-				} else {																				// key A would work
+			
+			for (tries = 0; tries < MIFARE_SECTOR_RETRY; tries++) {			
+				if (blockNo == NumBlocksPerSector(sectorNo) - 1) {		// sector trailer. At least the Access Conditions can always be read with key A. 
 					UsbCommand c = {CMD_MIFARE_READBL, {FirstBlockOfSector(sectorNo) + blockNo, 0, 0}};
 					memcpy(c.d.asBytes, keyA[sectorNo], 6);
 					clearCommandBuffer();
 					SendCommand(&c);
-					received = WaitForResponseTimeout(CMD_ACK,&resp,1500);
+					received = WaitForResponseTimeout(CMD_ACK, &resp, 1500);
+				} else {												// data block. Check if it can be read with key A or key B
+					uint8_t data_area = (sectorNo < 32) ? blockNo : blockNo/5;
+					if ((rights[sectorNo][data_area] == 0x03) || (rights[sectorNo][data_area] == 0x05)) {	// only key B would work
+						UsbCommand c = {CMD_MIFARE_READBL, {FirstBlockOfSector(sectorNo) + blockNo, 1, 0}};
+						memcpy(c.d.asBytes, keyB[sectorNo], 6);
+						SendCommand(&c);
+						received = WaitForResponseTimeout(CMD_ACK, &resp, 1500);
+					} else if (rights[sectorNo][data_area] == 0x07) {										// no key would work
+						isOK = false;
+						PrintAndLog("[!] access rights do not allow reading of sector %2d block %3d", sectorNo, blockNo);
+						tries = MIFARE_SECTOR_RETRY;
+					} else {																				// key A would work
+						UsbCommand c = {CMD_MIFARE_READBL, {FirstBlockOfSector(sectorNo) + blockNo, 0, 0}};
+						memcpy(c.d.asBytes, keyA[sectorNo], 6);
+						clearCommandBuffer();
+						SendCommand(&c);
+						received = WaitForResponseTimeout(CMD_ACK, &resp, 1500);
 					}
 				}
 				if (received) {
@@ -696,15 +700,15 @@ int CmdHF14AMfDump(const char *Cmd) {
 				}
 				if (isOK) {
 					memcpy(carddata[FirstBlockOfSector(sectorNo) + blockNo], data, 16);
-                    PrintAndLog("Successfully read block %2d of sector %2d.", blockNo, sectorNo);
+                    PrintAndLog("[+] successfully read block %2d of sector %2d.", blockNo, sectorNo);
 				} else {
-					PrintAndLog("Could not read block %2d of sector %2d", blockNo, sectorNo);
+					PrintAndLog("[-] could not read block %2d of sector %2d", blockNo, sectorNo);
 					break;
 				}
 			}
 			else {
 				isOK = false;
-				PrintAndLog("Command execute timeout when trying to read block %2d of sector %2d.", blockNo, sectorNo);
+				PrintAndLog("[!] command execute timeout when trying to read block %2d of sector %2d.", blockNo, sectorNo);
 				break;
 			}
 		}
@@ -712,15 +716,14 @@ int CmdHF14AMfDump(const char *Cmd) {
 
 	if (isOK) {
 		if ((fout = fopen("dumpdata.bin","wb")) == NULL) { 
-			PrintAndLog("Could not create file name dumpdata.bin");
+			PrintAndLog("[!] could not create file name dumpdata.bin");
 			return 1;
 		}
 		uint16_t numblocks = FirstBlockOfSector(numSectors - 1) + NumBlocksPerSector(numSectors - 1);
 		fwrite(carddata, 1, 16*numblocks, fout);
 		fclose(fout);
-		PrintAndLog("Dumped %d blocks (%d bytes) to file dumpdata.bin", numblocks, 16*numblocks);
+		PrintAndLog("[+] dumped %d blocks (%d bytes) to file dumpdata.bin", numblocks, 16*numblocks);
 	}
-		
 	return 0;
 }
 
@@ -844,7 +847,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 	ctmp = param_getchar(Cmd, 2);
 
 	if (ctmp != 'a' && ctmp != 'A' && ctmp != 'b' && ctmp != 'B') {
-		PrintAndLog("Key type must be A or B");
+		PrintAndLog("[!] key type must be A or B");
 		return 1;
 	}
 	
@@ -852,7 +855,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 		keyType = 1;
 		
 	if (param_gethex(Cmd, 3, key, 12)) {
-		PrintAndLog("Key must include 12 HEX symbols");
+		PrintAndLog("[!] key must include 12 HEX symbols");
 		return 1;
 	}
 	
@@ -861,7 +864,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 		trgBlockNo = param_get8(Cmd, 4);
 		ctmp = param_getchar(Cmd, 5);
 		if (ctmp != 'a' && ctmp != 'A' && ctmp != 'b' && ctmp != 'B') {
-			PrintAndLog("Target key type must be A or B");
+			PrintAndLog("[!] target key type must be A or B");
 			return 1;
 		}
 		if (ctmp != 'A' && ctmp != 'a') 
@@ -881,17 +884,17 @@ int CmdHF14AMfNested(const char *Cmd) {
 	// check if we can authenticate to sector
 	res = mfCheckKeys(blockNo, keyType, true, 1, key, &key64);
 	if (res) {
-		PrintAndLog("Key is wrong. Can't authenticate to block:%3d key type:%c", blockNo, keyType ? 'B' : 'A');
+		PrintAndLog("[!] key is wrong. Can't authenticate to block:%3d key type:%c", blockNo, keyType ? 'B' : 'A');
 		return 3;
 	}	
 	
 	if (cmdp == 'o') {
 		int16_t isOK = mfnested(blockNo, keyType, key, trgBlockNo, trgKeyType, keyBlock, true);
 		switch (isOK) {
-			case -1 : PrintAndLog("Error: No response from Proxmark.\n"); break;
-			case -2 : PrintAndLog("Button pressed. Aborted.\n"); break;
-			case -3 : PrintAndLog("Tag isn't vulnerable to Nested Attack (PRNG is not predictable).\n"); break;
-			case -4 : PrintAndLog("No valid key found"); break;
+			case -1 : PrintAndLog("[!] Error: No response from Proxmark.\n"); break;
+			case -2 : PrintAndLog("[!] Button pressed. Aborted.\n"); break;
+			case -3 : PrintAndLog("[-] Tag isn't vulnerable to Nested Attack (PRNG is not predictable).\n"); break;
+			case -4 : PrintAndLog("[-] No valid key found"); break;
 			case -5 : 
 				key64 = bytes_to_num(keyBlock, 6);
 
@@ -910,10 +913,10 @@ int CmdHF14AMfNested(const char *Cmd) {
 					else
 						num_to_bytes(key64, 6, &keyBlock[10]);
 					mfEmlSetMem(keyBlock, sectortrailer, 1);	
-					PrintAndLog("Key transferred to emulator memory.");
+					PrintAndLog("[+] Key transferred to emulator memory.");
 				}
 				return 0;
-			default : PrintAndLog("Unknown Error.\n");
+			default : PrintAndLog("[!] Unknown Error.\n");
 		}
 		return 2;
 	}
@@ -931,18 +934,18 @@ int CmdHF14AMfNested(const char *Cmd) {
 			num_to_bytes(g_mifare_default_keys[cnt], 6, (uint8_t*)(keyBlock + cnt * 6));
 		}
 
-		PrintAndLog("Testing known keys. Sector count=%d", SectorsCnt);
+		PrintAndLog("[+] Testing known keys. Sector count=%d", SectorsCnt);
 		res = mfCheckKeys_fast( SectorsCnt, true, true, 1, MIFARE_DEFAULTKEYS_SIZE + 1, keyBlock, e_sector);
 				
 		uint64_t t2 = msclock() - t1;
-		PrintAndLog("Time to check %d known keys: %.0f seconds\n", MIFARE_DEFAULTKEYS_SIZE, (float)t2/1000.0 );
-		PrintAndLog("enter nested...");	
+		PrintAndLog("[+] Time to check %d known keys: %.0f seconds\n", MIFARE_DEFAULTKEYS_SIZE, (float)t2/1000.0 );
+		PrintAndLog("[+] enter nested attack");
 		
 		// nested sectors
 		iterations = 0;
 		bool calibrate = true;
 
-		for (i = 0; i < NESTED_SECTOR_RETRY; i++) {
+		for (i = 0; i < MIFARE_SECTOR_RETRY; i++) {
 			for (uint8_t sectorNo = 0; sectorNo < SectorsCnt; ++sectorNo) {
 				for (trgKeyType = 0; trgKeyType < 2; ++trgKeyType) { 
 
@@ -950,9 +953,9 @@ int CmdHF14AMfNested(const char *Cmd) {
 					
 					int16_t isOK = mfnested(blockNo, keyType, key, FirstBlockOfSector(sectorNo), trgKeyType, keyBlock, calibrate);
 					switch (isOK) {
-						case -1 : PrintAndLog("Error: No response from Proxmark.\n"); break;
-						case -2 : PrintAndLog("Button pressed. Aborted.\n"); break;
-						case -3 : PrintAndLog("Tag isn't vulnerable to Nested Attack (PRNG is not predictable).\n"); break;
+						case -1 : PrintAndLog("[!] error: No response from Proxmark.\n"); break;
+						case -2 : PrintAndLog("[!] button pressed. Aborted.\n"); break;
+						case -3 : PrintAndLog("[-] Tag isn't vulnerable to Nested Attack (PRNG is not predictable).\n"); break;
 						case -4 : //key not found
 							calibrate = false;
 							iterations++;
@@ -966,7 +969,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 							res = mfCheckKeys_fast( SectorsCnt, true, true, 2, 1, keyBlock, e_sector);
 							continue;
 							
-						default : PrintAndLog("Unknown Error.\n");
+						default : PrintAndLog("[!] unknown Error.\n");
 					}
 					free(e_sector);
 					return 2;
@@ -975,18 +978,18 @@ int CmdHF14AMfNested(const char *Cmd) {
 		}
 		
 		t1 = msclock() - t1;
-		PrintAndLog("Time in nested: %.0f seconds\n", (float)t1/1000.0);
+		PrintAndLog("[+] time in nested: %.0f seconds\n", (float)t1/1000.0);
 
 
 		// 20160116 If Sector A is found, but not Sector B,  try just reading it of the tag?
-		PrintAndLog("trying to read key B...");
+		PrintAndLog("[+] trying to read key B...");
 		for (i = 0; i < SectorsCnt; i++) {
 			// KEY A  but not KEY B
 			if ( e_sector[i].foundKey[0] && !e_sector[i].foundKey[1] ) {
 				
 				uint8_t sectrail = (FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1);
 				
-				PrintAndLog("Reading block %d", sectrail);
+				PrintAndLog("[+] reading block %d", sectrail);
 							
 				UsbCommand c = {CMD_MIFARE_READBL, {sectrail, 0, 0}};
 				num_to_bytes(e_sector[i].Key[0], 6, c.d.asBytes); // KEY A
@@ -1002,7 +1005,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 				uint8_t *data = resp.d.asBytes;
 				key64 = bytes_to_num(data+10, 6);
 				if (key64) {
-					PrintAndLog("Data:%s", sprint_hex(data+10, 6));
+					PrintAndLog("[+] data: %s", sprint_hex(data+10, 6));
 					e_sector[i].foundKey[1] = true;
 					e_sector[i].Key[1] = key64;
 				}
@@ -1022,7 +1025,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 				if (e_sector[i].foundKey[1])
 					num_to_bytes(e_sector[i].Key[1], 6, &keyBlock[10]);
 				mfEmlSetMem(keyBlock, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1);
-				PrintAndLog("Key transferred to emulator memory.");
+				PrintAndLog("[+] key transferred to emulator memory.");
 			}		
 		}
 		
@@ -1030,12 +1033,12 @@ int CmdHF14AMfNested(const char *Cmd) {
 		if (createDumpFile) {
 			
 			if ((fkeys = fopen("dumpkeys.bin","wb")) == NULL) { 
-				PrintAndLog("Could not create file dumpkeys.bin");
+				PrintAndLog("[!] could not create file dumpkeys.bin");
 				free(e_sector);
 				return 1;
 			}
 			
-			PrintAndLog("Printing keys to binary file dumpkeys.bin...");
+			PrintAndLog("[+] saving keys to binary file dumpkeys.bin...");
 			for (i=0; i<SectorsCnt; i++) {
 				if (e_sector[i].foundKey[0]){
 					num_to_bytes(e_sector[i].Key[0], 6, tempkey);

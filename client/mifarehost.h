@@ -29,7 +29,7 @@
 #include "mfkey.h"
 #include "util_posix.h"  // msclock
 
-#define NESTED_SECTOR_RETRY     10
+#define MIFARE_SECTOR_RETRY     10
 
 // mifare tracer flags
 #define TRACE_IDLE		 		0x00
