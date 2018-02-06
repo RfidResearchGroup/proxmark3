@@ -449,7 +449,7 @@ int main(int argc, char* argv[]) {
 		return 2;
 	}
 
-#if defined(__linux__) || (__APPLE__)
+#if defined(__linux__)
 // ascii art doesn't work well on mingw :( 
 
 	bool stdinOnPipe = !isatty(STDIN_FILENO);
