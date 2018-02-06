@@ -662,12 +662,6 @@ int CmdHF14ASniff(const char *Cmd) {
 	return 0;
 }
 
-void DropField() {
-	UsbCommand c = {CMD_READER_ISO_14443a, {0, 0, 0}}; 
-	clearCommandBuffer();
-	SendCommand(&c);
-}
-
 int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
 	uint16_t cmdc = 0;
 	
