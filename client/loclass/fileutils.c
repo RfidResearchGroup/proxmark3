@@ -120,7 +120,7 @@ int saveFileEML(const char *preferredName, const char *suffix, uint8_t* data, si
 
 	for (i = 0; i < datalen; i++) {
 		fprintf(f, "%02X", data[i] );
-		if ( (i+1) % 4 == 0)
+		if ( (i+1) % blocksize == 0)
 			fprintf(f, "\n");
 	}
 	// left overs
