@@ -904,7 +904,7 @@ int detect_classic_nackbug(bool verbose){
 	
 	// for nice animation	
 	bool term = !isatty(STDIN_FILENO);
-#if defined(__linux__)
+#if defined(__linux__) || (__APPLE__)
 	char star[] = {'-', '\\', '|', '/'};
 	uint8_t staridx = 0;	
 #endif 
@@ -915,7 +915,7 @@ int detect_classic_nackbug(bool verbose){
 			printf(".");
 		} else {
 			printf(
-			#if defined(__linux__)
+			#if defined(__linux__) || (__APPLE__)
 			"\e[32m\e[s%c\e[u\e[0m", star[ (staridx++ % 4) ]
 			#else
 			"."

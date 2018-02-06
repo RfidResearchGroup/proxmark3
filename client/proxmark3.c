@@ -69,7 +69,7 @@ struct receiver_arg {
 	int run;
 };
 
-#if defined(__linux__)
+#if defined(__linux__) || (__APPLE__)
 static void showBanner(void){
 	printf("\n\n");
 	printf("\e[34m██████╗ ███╗   ███╗ ████╗\e[0m     ...iceman fork\n");
@@ -186,7 +186,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 		sf = fopen(script_cmds_file, "r");
 		
 		if (sf)
-			printf("executing commands from file: %s\n", script_cmds_file);
+			printf("[+] executing commands from file: %s\n", script_cmds_file);
 	}
 
 	read_history(".history");
@@ -243,7 +243,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 				if (stdinOnPipe) {
 					memset(script_cmd_buf, 0, sizeof(script_cmd_buf));
 					if (!fgets(script_cmd_buf, sizeof(script_cmd_buf), stdin)) {
-						printf("\nstdin end, exit...\n");
+						printf("\n[!] stdin end, exit...\n");
 						break;
 					}
 					strcleanrn(script_cmd_buf, sizeof(script_cmd_buf));
@@ -436,7 +436,7 @@ int main(int argc, char* argv[]) {
 					}
 				}
 				
-				printf("Execute command from commandline: %s\n", script_cmd);
+				printf("[+] execute command from commandline: %s\n", script_cmd);
 			}
 		} else {
 			script_cmds_file = argv[argc - 1];
@@ -445,11 +445,11 @@ int main(int argc, char* argv[]) {
 
 	// check command
 	if (executeCommand && (!script_cmd || strlen(script_cmd) == 0)){
-		printf("ERROR: execute command: command not found.\n");
+		printf("[!] ERROR: execute command: command not found.\n");
 		return 2;
 	}
 
-#if defined(__linux__)
+#if defined(__linux__) || (__APPLE__)
 // ascii art doesn't work well on mingw :( 
 
 	bool stdinOnPipe = !isatty(STDIN_FILENO);
@@ -464,7 +464,7 @@ int main(int argc, char* argv[]) {
 	if (!waitCOMPort) {
 		sp = uart_open(argv[1]);
 	} else {
-		printf("Waiting for Proxmark to appear on %s ", argv[1]);
+		printf("[+] waiting for Proxmark to appear on %s ", argv[1]);
 		fflush(stdout);
 		int openCount = 0;
 		do {
@@ -472,17 +472,17 @@ int main(int argc, char* argv[]) {
 			msleep(1000);
 			printf(".");
 			fflush(stdout);
-		} while(++openCount < 20 && (sp == INVALID_SERIAL_PORT || sp == CLAIMED_SERIAL_PORT));
+		} while (++openCount < 20 && (sp == INVALID_SERIAL_PORT || sp == CLAIMED_SERIAL_PORT));
 		printf("\n");
 	}
 
 	// check result of uart opening
 	if (sp == INVALID_SERIAL_PORT) {
-		printf("ERROR: invalid serial port\n");
+		printf("[!] ERROR: invalid serial port\n");
 		usb_present = false;
 		offline = 1;
 	} else if (sp == CLAIMED_SERIAL_PORT) {
-		printf("ERROR: serial port is claimed by another process\n");
+		printf("[!] ERROR: serial port is claimed by another process\n");
 		usb_present = false;
 		offline = 1;
 	} else {
