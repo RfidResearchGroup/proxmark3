@@ -364,7 +364,8 @@ char * GenerateFilename(const char *prefix, const char *suffix){
 	int uidlen=0;
 	char * fptr = malloc (sizeof (char) * (strlen(prefix) + strlen(suffix)) + sizeof(uid)*2 + 1);
 	
-	if (!GetHFMF14AUID(uid, &uidlen)) {
+	GetHFMF14AUID(uid, &uidlen);
+	if (!uidlen) {
 		PrintAndLog("No tag found.");
 		return NULL;
 	}
