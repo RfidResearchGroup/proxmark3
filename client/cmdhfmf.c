@@ -16,6 +16,18 @@
 #define MIFARE_MINI_MAXBLOCK 20
 
 static int CmdHelp(const char *Cmd);
+
+int usage_hf14_dump(void){
+		PrintAndLog("Usage:   hf mf dump [card memory] k <name> f <name>");
+		PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
+		PrintAndLog("  k <name>     : key filename, if no <name> given, UID will be used as filename");
+		PrintAndLog("  f <name>     : data filename, if no <name> given, UID will be used as filename");
+		PrintAndLog("");
+		PrintAndLog("Samples: hf mf dump");
+		PrintAndLog("         hf mf dump 4");
+		return 0;
+}
+
 int usage_hf14_mifare(void){
 	PrintAndLog("Usage:  hf mf darkside [h] <block number> <A|B>");
 	PrintAndLog("options:");
@@ -599,27 +611,55 @@ int CmdHF14AMfDump(const char *Cmd) {
 	uint8_t rights[40][4];
 	uint8_t carddata[256][16];
 	uint8_t numSectors = 16;
-	char filename[FILE_PATH_SIZE] = {0};
-	char * fptr = filename;
+	uint8_t cmdp = 0;
+	
+	char keyFilename[FILE_PATH_SIZE] = {0};
+	char dataFilename[FILE_PATH_SIZE] = {0};
+	char * fptr;
 	
 	FILE *fin, *fout;	
 	UsbCommand resp;
-
-	char cmdp = param_getchar(Cmd, 0);
-	numSectors = NumOfSectors(cmdp);
 	
-	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') {
-		PrintAndLog("Usage:   hf mf dump [card memory]");
-		PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
-		PrintAndLog("");
-		PrintAndLog("Samples: hf mf dump");
-		PrintAndLog("         hf mf dump 4");
-		return 0;
+	while(param_getchar(Cmd, cmdp) != 0x00) {
+		switch(param_getchar(Cmd, cmdp)) {
+		case 'h':
+		case 'H':
+			return usage_hf14_dump();
+		case 'k':
+		case 'K':
+			param_getstr(Cmd, cmdp+1, keyFilename, FILE_PATH_SIZE); 
+			cmdp += 2;
+			break;
+		case 'f':
+		case 'F':
+			param_getstr(Cmd, cmdp+1, dataFilename, FILE_PATH_SIZE); 
+			cmdp += 2;
+			break;
+		default:
+			if (cmdp==0)
+			{
+				numSectors = NumOfSectors(param_getchar(Cmd, cmdp));
+				cmdp++;
+			}
+			else
+			{
+			
+				PrintAndLog("Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+				return usage_hf14_dump();
+			}
+		}
 	}
-	
-	fptr = GenerateFilename("hf-mf-","-key.bin");
-	if ((fin = fopen(fptr,"rb")) == NULL) {
-		PrintAndLog("Could not find file %s", fptr);
+
+	if (keyFilename[0] == 0x00)
+	{
+		fptr = GenerateFilename("hf-mf-","-key.bin");
+		if (fptr == NULL) 
+			return 1;
+		strcpy(keyFilename, fptr);
+	}
+
+	if ((fin = fopen(keyFilename,"rb")) == NULL) {
+		PrintAndLog("Could not find file %s", keyFilename);
 		return 1;
 	}
 	
@@ -755,15 +795,21 @@ int CmdHF14AMfDump(const char *Cmd) {
 	}
 
 	if (isOK) {
-		fptr=GenerateFilename("hf-mf-","-data.bin");
-		if ((fout = fopen(fptr,"wb")) == NULL) { 
-			PrintAndLog("[!] could not create file name %s",fptr);
+		if (dataFilename[0] == 0x00) {
+			fptr=GenerateFilename("hf-mf-","-data.bin");
+			if (fptr == NULL) 
+				return 1;
+			strcpy(dataFilename, fptr);
+		}
+		
+		if ((fout = fopen(dataFilename,"wb")) == NULL) { 
+			PrintAndLog("[!] could not create file name %s", dataFilename);
 			return 1;
 		}
 		uint16_t numblocks = FirstBlockOfSector(numSectors - 1) + NumBlocksPerSector(numSectors - 1);
 		fwrite(carddata, 1, 16*numblocks, fout);
 		fclose(fout);
-		PrintAndLog("[+] dumped %d blocks (%d bytes) to file %s", numblocks, 16*numblocks, fptr);
+		PrintAndLog("[+} dumped %d blocks (%d bytes) to file %s", numblocks, 16*numblocks, dataFilename);
 	}
 	return 0;
 }
