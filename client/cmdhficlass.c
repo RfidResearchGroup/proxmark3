@@ -2239,7 +2239,7 @@ int LoadDictionaryKeyFile( char* filename, uint8_t **keys, int *keycnt) {
 	int keyitems = 0;
 	
 	if ( !(f = fopen( filename , "r")) ) {
-		PrintAndLog("[!] File: %s: not found or locked.", filename);
+		PrintAndLog(_RED_([!]) " file: %s: not found or locked.", filename);
 		return 0;
 	}
 
@@ -2255,7 +2255,7 @@ int LoadDictionaryKeyFile( char* filename, uint8_t **keys, int *keycnt) {
 
 		// doesn't this only test first char only?
 		if (!isxdigit(buf[0])){
-			PrintAndLog("[!] File content error. '%s' must include 16 HEX symbols", buf);
+			PrintAndLog(_RED_([!]) " file content error. '%s' must include 16 HEX symbols", buf);
 			continue;
 		}
 		
@@ -2264,7 +2264,7 @@ int LoadDictionaryKeyFile( char* filename, uint8_t **keys, int *keycnt) {
 
 		p = realloc(*keys, 8 * (keyitems += 64));
 		if (!p) {
-			PrintAndLog("[!] Cannot allocate memory for default keys");
+			PrintAndLog(_RED_([!])" cannot allocate memory for default keys");
 			fclose(f);
 			return 2;
 		}
@@ -2276,7 +2276,7 @@ int LoadDictionaryKeyFile( char* filename, uint8_t **keys, int *keycnt) {
 		memset(buf, 0, sizeof(buf));
 	}
 	fclose(f);
-	PrintAndLog("[+] %s Loaded %2d keys from %s", BLUE_MSG("[+]"), *keycnt, filename);	
+	PrintAndLog(_BLUE_([+]) " loaded " _GREEN_(%2d) " keys from %s", *keycnt, filename);	
 	return 0;
 }
 
