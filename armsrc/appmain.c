@@ -270,7 +270,7 @@ void MeasureAntennaTuningHf(void) {
 		DbprintfEx(CMD_MEASURE_ANTENNA_TUNING_HF, "%u mV / %5.2f V", vHf, vHf/1000.0);
 	}
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	DbpString("cancelled");
+	DbpString("[+] cancelled");
 }
 
 void ReadMem(int addr) {
@@ -885,9 +885,9 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			MifareCIdent();
 			break;
 		// mifare sniffer
-		case CMD_MIFARE_SNIFFER:
+//		case CMD_MIFARE_SNIFFER:
 			//SniffMifare(c->arg[0]);
-			break;
+//			break;
 		case CMD_MIFARE_SETMOD:
 			MifareSetMod(c->arg[0], c->d.asBytes);
 			break;
@@ -1155,6 +1155,12 @@ void  __attribute__((noreturn)) AppMain(void) {
 	// Reset SSC
 	AT91C_BASE_SSC->SSC_CR = AT91C_SSC_SWRST;
 
+	// set pins LOW
+	LOW(GPIO_MUXSEL_HIPKD);
+	LOW(GPIO_MUXSEL_LOPKD);
+	LOW(GPIO_MUXSEL_HIRAW);
+	LOW(GPIO_MUXSEL_LORAW);
+	
 	// Load the FPGA image, which we have stored in our flash.
 	// (the HF version by default)
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
