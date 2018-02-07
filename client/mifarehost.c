@@ -80,17 +80,18 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 			if (keycount == 0) {
 				free(last_keylist);
 				last_keylist = keylist;
-				PrintAndLog("[-] no candidates found, trying again...");
+				PrintAndLog("[-] no candidates found, trying again");
 				continue;
 			}
 		}
 
-		PrintAndLog("[+] found %u candidate key%s Trying to verify with authentication...\n", keycount, (keycount > 1) ? "s." : ".");
+		PrintAndLog("[+] found %u candidate key%s\n", keycount, (keycount > 1) ? "s." : ".");
 
 		*key = -1;
 		uint8_t keyBlock[USB_CMD_DATA_SIZE];
-		int max_keys = USB_CMD_DATA_SIZE/6;
+		int max_keys = USB_CMD_DATA_SIZE / 6;
 		for (int i = 0; i < keycount; i += max_keys) {
+			
 			int size = keycount - i > max_keys ? max_keys : keycount - i;
 			for (int j = 0; j < size; j++) {
 				if (par_list == 0) {
@@ -99,14 +100,16 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 					num_to_bytes(keylist[i*max_keys + j], 6, keyBlock+(j*6));
 				}
 			}
+			
 			if (!mfCheckKeys(blockno, key_type - 0x60, false, size, keyBlock, key)) {
 				break;
 			}
 		}
+		
 		if (*key != -1) {
 			break;
 		} else {
-			PrintAndLog("[-] all candidate keys failed authentication. Restarting darkside attack");
+			PrintAndLog("[-] all candidate keys failed. Restarting darkside attack");
 			free(last_keylist);
 			last_keylist = keylist;
 			c.arg[0] = true;
@@ -366,39 +369,41 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 	statelists[0].len = intersection(statelists[0].head.keyhead, statelists[1].head.keyhead);
 
 	//statelists[0].tail.keytail = --p7;
-	uint32_t numOfCandidates = statelists[0].len;
-	if ( numOfCandidates == 0 ) goto out;
-	
+	uint32_t keycnt = statelists[0].len;
+	if ( keycnt == 0 ) goto out;
+
 	memset(resultKey, 0, 6);
-	uint64_t key64 = 0;
+	uint64_t key64 = -1;
 
 	// The list may still contain several key candidates. Test each of them with mfCheckKeys
-	// uint32_t max_keys = keycnt > (USB_CMD_DATA_SIZE/6) ? (USB_CMD_DATA_SIZE/6) : keycnt;
+	uint32_t max_keys = keycnt > (USB_CMD_DATA_SIZE/6) ? (USB_CMD_DATA_SIZE/6) : keycnt;
 	uint8_t keyBlock[USB_CMD_DATA_SIZE] = {0x00};
 
-	// ugly assumption that we have less than 85 candidate keys.
-	for (i = 0; i < numOfCandidates; ++i){
-		crypto1_get_lfsr(statelists[0].head.slhead + i, &key64);
-		num_to_bytes(key64, 6, keyBlock + i * 6);
-	}
+	for (int i = 0; i < keycnt; i += max_keys) {
+		
+		int size = keycnt - i > max_keys ? max_keys : keycnt - i;
+	
+		for (int j = 0; j < size; j++) {
+			crypto1_get_lfsr(statelists[0].head.slhead + i, &key64);
+			num_to_bytes(key64, 6, keyBlock + i * 6);
+		}
+		
+		if (!mfCheckKeys(statelists[0].blockNo, statelists[0].keyType, false, size, keyBlock, &key64)) {		
+			free(statelists[0].head.slhead);
+			free(statelists[1].head.slhead);
+			num_to_bytes(key64, 6, resultKey);
 
-	if (!mfCheckKeys(statelists[0].blockNo, statelists[0].keyType, false, numOfCandidates, keyBlock, &key64)) {		
-		free(statelists[0].head.slhead);
-		free(statelists[1].head.slhead);
-		num_to_bytes(key64, 6, resultKey);
-
-		PrintAndLog("UID: %08x target block:%3u key type: %c  -- Found key [%012" PRIx64 "]",
-			uid,
-			(uint16_t)resp.arg[2] & 0xff,
-			(resp.arg[2] >> 8) ? 'B' : 'A',
-			key64
-		);
-		return -5;
+			PrintAndLog("[+] target block:%3u key type: %c  -- found valid key [%012" PRIx64 "]",
+				(uint16_t)resp.arg[2] & 0xff,
+				(resp.arg[2] >> 8) ? 'B' : 'A',
+				key64
+			);
+			return -5;
+		}		
 	}
 	
 out:
-	PrintAndLog("UID: %08x target block:%3u key type: %c",
-			uid,
+	PrintAndLog("[+] target block:%3u key type: %c",
 			(uint16_t)resp.arg[2] & 0xff,
 			(resp.arg[2] >> 8) ? 'B' : 'A'
 	);	
