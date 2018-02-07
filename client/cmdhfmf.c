@@ -182,11 +182,17 @@ int usage_hf14_keybrute(void){
 	return 0;
 }
 int usage_hf14_restore(void){
-	PrintAndLog("Usage:   hf mf restore [card memory]");
+	PrintAndLog("Usage:   hf mf restore [card memory] u <UID> k <name> f <name>");
+	PrintAndLog("options:");
 	PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
+	PrintAndLog("  u <UID>      : uid, try to restore from hf-mf-<UID>-key.bin and hf-mf-<UID>-data.bin");
+	PrintAndLog("  k <name>     : key filename, specific the full filename of key file");
+	PrintAndLog("  f <name>     : data filename, specific the full filename of data file");
 	PrintAndLog("");
-	PrintAndLog("Samples: hf mf restore");
-	PrintAndLog("         hf mf restore 4");	
+	PrintAndLog("Samples: hf mf restore                            -- read the UID from tag first, then restore from hf-mf-<UID>-key.bin and and hf-mf-<UID>-data.bin");
+	PrintAndLog("         hf mf restore 1 u 12345678               -- restore from hf-mf-12345678-key.bin and hf-mf-12345678-data.bin");
+	PrintAndLog("         hf mf restore 1 u 12345678 k dumpkey.bin -- restore from dumpkey.bin and hf-mf-12345678-data.bin");
+	PrintAndLog("         hf mf restore 4                          -- read the UID from tag with 4K memory first, then restore from hf-mf-<UID>-key.bin and and hf-mf-<UID>-data.bin");
 	return 0;
 }
 int usage_hf14_decryptbytes(void){
@@ -821,22 +827,62 @@ int CmdHF14AMfRestore(const char *Cmd) {
 	uint8_t bldata[16] = {0x00};
 	uint8_t keyA[40][6];
 	uint8_t keyB[40][6];
-	uint8_t numSectors;	
-	char *filename;
+	uint8_t numSectors = 16;
+	uint8_t cmdp = 0;
+	char keyFilename[FILE_PATH_SIZE]="";	
+	char dataFilename[FILE_PATH_SIZE]="";
+	char szTemp[FILE_PATH_SIZE]="";	
+	char *fptr;
 	FILE *fdump, *fkeys;
 
-	char cmdp = param_getchar(Cmd, 0);
-	numSectors = NumOfSectors(cmdp);
+	while(param_getchar(Cmd, cmdp) != 0x00) {
+		switch(param_getchar(Cmd, cmdp)) {
+		case 'h':
+		case 'H':
+			return usage_hf14_restore();
+		case 'u':
+		case 'U':
+			param_getstr(Cmd, cmdp+1, szTemp, FILE_PATH_SIZE); 
+			if(keyFilename[0]==0x00)
+				snprintf(keyFilename, FILE_PATH_SIZE, "hf-mf-%s-key.bin", szTemp);
+			if(dataFilename[0]==0x00)
+				snprintf(dataFilename, FILE_PATH_SIZE, "hf-mf-%s-data.bin", szTemp);
+			cmdp+=2;
+			break;
+		case 'k':
+		case 'K':
+			param_getstr(Cmd, cmdp+1, keyFilename, FILE_PATH_SIZE); 
+			cmdp += 2;
+			break;
+		case 'f':
+		case 'F':
+			param_getstr(Cmd, cmdp+1, dataFilename, FILE_PATH_SIZE); 
+			cmdp += 2;
+			break;
+		default:
+			if (cmdp==0)
+			{
+				numSectors = NumOfSectors(param_getchar(Cmd, cmdp));
+				cmdp++;
+			}
+			else
+			{
+				PrintAndLog("Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+				return usage_hf14_restore();
+			}
+		}
+	}
 
-	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H')
-		return usage_hf14_restore();
-	
-	filename=GenerateFilename("hf-mf-","-key.bin");
-	if (filename == NULL) 
-		return 1;
-			
-	if ((fkeys = fopen(filename,"rb")) == NULL) {
-		PrintAndLog("Could not find file %s", filename);
+	if(keyFilename[0]==0x00)
+	{
+		fptr=GenerateFilename("hf-mf-","-key.bin");
+		if (fptr == NULL) 
+			return 1;
+		strcpy(keyFilename,fptr);
+	}
+
+	if ((fkeys = fopen(keyFilename,"rb")) == NULL) {
+		PrintAndLog("Could not find file %s", keyFilename);
 		return 1;
 	}
 	
@@ -844,7 +890,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		bytes_read = fread( keyA[sectorNo], 1, 6, fkeys );
 		if ( bytes_read != 6) {
-			PrintAndLog("File reading error (%s).", filename);
+			PrintAndLog("File reading error (%s).", keyFilename);
 			fclose(fkeys);
 			return 2;
 		}
@@ -853,7 +899,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		bytes_read = fread( keyB[sectorNo], 1, 6, fkeys );
 		if ( bytes_read != 6) {
-			PrintAndLog("File reading error (%s).", filename);
+			PrintAndLog("File reading error (%s).", keyFilename);
 			fclose(fkeys);
 			return 2;
 		}
@@ -861,15 +907,19 @@ int CmdHF14AMfRestore(const char *Cmd) {
 
 	fclose(fkeys);
 
-	filename=GenerateFilename("hf-mf-","-data.bin");
-	if (filename == NULL) 
-		return 1;
-			
-	if ((fdump = fopen(filename,"rb")) == NULL) {
-		PrintAndLog("Could not find file %s", filename);
+	if( dataFilename[0]==0x00)
+	{
+		fptr=GenerateFilename("hf-mf-","-data.bin");
+		if (fptr == NULL) 
+			return 1;
+		strcpy(dataFilename,fptr);
+	}
+
+	if ((fdump = fopen(dataFilename,"rb")) == NULL) {
+		PrintAndLog("Could not find file %s", dataFilename);
 		return 1;
 	}	
-	PrintAndLog("Restoring %s to card", filename);
+	PrintAndLog("Restoring %s to card", dataFilename);
 
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		for(blockNo = 0; blockNo < NumBlocksPerSector(sectorNo); blockNo++) {
@@ -877,7 +927,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 			memcpy(c.d.asBytes, key, 6);			
 			bytes_read = fread(bldata, 1, 16, fdump);
 			if ( bytes_read != 16) {
-				PrintAndLog("File reading error (%s).", filename);
+				PrintAndLog("File reading error (%s).", dataFilename);
 				fclose(fdump);
 				fdump = NULL;				
 				return 2;
