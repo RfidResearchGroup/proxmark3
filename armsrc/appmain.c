@@ -276,7 +276,7 @@ void MeasureAntennaTuningHf(void) {
 	
 	while( !BUTTON_PRESS() ){
 		SpinDelay(20);
-		if ( use_high ) {
+		if ( !use_high ) {
 			volt = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
 		} else {
 			volt = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
