@@ -23,6 +23,7 @@
 
 #define ADC_CHAN_LF								4
 #define ADC_CHAN_HF								5
+#define ADC_CHAN_HF_RDV40						7
 #define ADC_MODE_PRESCALE(x)					((x) << 8)
 #define ADC_MODE_STARTUP_TIME(x)				((x) << 16)
 #define ADC_MODE_SAMPLE_HOLD_TIME(x)			((x) << 24)

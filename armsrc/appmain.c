@@ -245,6 +245,11 @@ void MeasureAntennaTuning(void) {
 	SpinDelay(20);
 	v_hf = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
 
+	// hitting the roof, try other ADC channel
+	if ( v_hf > MAX_ADC_HF_VOLTAGE-300 ) {
+		v_hf = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
+	}
+	
 	uint64_t arg0 = v_lf134;
 	arg0 <<= 32;
 	arg0 |= v_lf125;
@@ -259,15 +264,24 @@ void MeasureAntennaTuning(void) {
 }
 
 void MeasureAntennaTuningHf(void) {
-	uint16_t vHf = 0;	// in mV
+	uint16_t volt = 0;	// in mV
 	// Let the FPGA drive the high-frequency antenna around 13.56 MHz.
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
 
+	SpinDelay(20);
+	volt = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
+	bool use_high = ( volt > MAX_ADC_HF_VOLTAGE-300 );
+		
+	
 	while( !BUTTON_PRESS() ){
 		SpinDelay(20);
-		vHf = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
-		DbprintfEx(CMD_MEASURE_ANTENNA_TUNING_HF, "%u mV / %5.2f V", vHf, vHf/1000.0);
+		if ( use_high ) {
+			volt = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
+		} else {
+			volt = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
+		}
+		DbprintfEx(CMD_MEASURE_ANTENNA_TUNING_HF, "%u mV / %5.2f V", volt, volt/1000.0);
 	}
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	DbpString("[+] cancelled");
