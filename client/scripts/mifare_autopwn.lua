@@ -110,15 +110,13 @@ end
 --
 -- performs a test if tag nonce uses weak or hardend prng
 local function perform_prng_test()
-
 	local isweak = core.detect_prng()
-	if isweak == 1 then
+	if isweak then
 		dbg('PRNG detection : WEAK nonce detected')
-		return true
+	else
+		dbg('PRNG detection : HARDEND nonce detected')
 	end
-
-	dbg('PRNG detection : HARDEND nonce detected')
-	return false
+	return isweak
 end
 --- 
 -- The main entry point
