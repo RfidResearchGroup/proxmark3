@@ -786,8 +786,11 @@ int CmdHF14AMfRestore(const char *Cmd) {
 		return usage_hf14_restore();
 	
 	filename=GenerateFilename("hf-mf-","-key.bin");
+	if (filename == NULL) 
+		return 1;
+			
 	if ((fkeys = fopen(filename,"rb")) == NULL) {
-		PrintAndLog("Could not find file %s",fkeys);
+		PrintAndLog("Could not find file %s", filename);
 		return 1;
 	}
 	
@@ -813,6 +816,9 @@ int CmdHF14AMfRestore(const char *Cmd) {
 	fclose(fkeys);
 
 	filename=GenerateFilename("hf-mf-","-data.bin");
+	if (filename == NULL) 
+		return 1;
+			
 	if ((fdump = fopen(filename,"rb")) == NULL) {
 		PrintAndLog("Could not find file %s", filename);
 		return 1;
@@ -1076,6 +1082,9 @@ int CmdHF14AMfNested(const char *Cmd) {
 		// Create dump file
 		if (createDumpFile) {
 			fptr = GenerateFilename("hf-mf-","-key.bin");
+			if (fptr == NULL) 
+				return 1;
+			
 			if ((fkeys = fopen(fptr, "wb")) == NULL) { 
 				PrintAndLog("[!] could not create file %s", fptr);
 				free(e_sector);
@@ -1420,6 +1429,9 @@ out:
 	
 	if (createDumpFile) {
 		fptr = GenerateFilename("hf-mf-","-key.bin");
+		if (fptr == NULL) 
+			return 1;
+
 		FILE *fkeys = fopen(fptr,"wb");
 		if (fkeys == NULL) { 
 			PrintAndLog("Could not create file %s", filename);
@@ -1702,6 +1714,9 @@ out:
 	
 	if (createDumpFile) {
 		fptr = GenerateFilename("hf-mf-","-key.bin");
+		if (fptr == NULL) 
+			return 1;
+
 		FILE *fkeys = fopen(fptr,"wb");
 		if (fkeys == NULL) { 
 			PrintAndLog("Could not create file %s", fptr);
