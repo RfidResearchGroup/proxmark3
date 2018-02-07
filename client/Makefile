@@ -238,7 +238,7 @@ ifeq "$(SUPPORTS_AVX512)" "True"
 	HARD_SWITCH_AVX2 += -mno-avx512f
 	MULTIARCHOBJS +=  $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_AVX512.o)
 endif
-			
+
 BINS = proxmark3 flasher fpga_compress
 WINBINS = $(patsubst %, %.exe, $(BINS))
 CLEAN = $(BINS) $(WINBINS) $(COREOBJS) $(CMDOBJS) $(ZLIBOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(OBJDIR)/*.o *.moc.cpp ui/ui_overlays.h lualibs/usb_cmd.lua lualibs/mf_default_keys.lua
@@ -316,7 +316,6 @@ $(OBJDIR)/%.o : %.c $(OBJDIR)/%.d
 $(OBJDIR)/%.o : %.cpp $(OBJDIR)/%.d
 	$(CXX) $(DEPFLAGS) $(CXXFLAGS) $(QTINCLUDES) -c -o $@ $<
 	$(POSTCOMPILE)
-
 
 #$(CMDOBJS) $(COREOBJS): $(notdir $(%.c)) %.d
 #	$(CC) $(DEPFLAGS) $(CFLAGS) -c -o $@ $<
