@@ -216,6 +216,7 @@ void MeasureAntennaTuning(void) {
  * ( hopefully around 95 if it is tuned to 125kHz!)
  */
   
+  	DbpString("[+] collecting LF data");
   	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 	SpinDelay(50);
@@ -238,11 +239,12 @@ void MeasureAntennaTuning(void) {
 		}
 	}	
 	
+	DbpString("[+] collecting HF data");
 	LED_A_ON();
 	// Let the FPGA drive the high-frequency antenna around 13.56 MHz.
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
-	SpinDelay(20);
+	SpinDelay(50);
 	v_hf = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
 
 	// hitting the roof, try other ADC channel
@@ -268,8 +270,7 @@ void MeasureAntennaTuningHf(void) {
 	// Let the FPGA drive the high-frequency antenna around 13.56 MHz.
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
-
-	SpinDelay(20);
+	SpinDelay(50);
 	volt = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
 	bool use_high = ( volt > MAX_ADC_HF_VOLTAGE-300 );
 		
@@ -1169,6 +1170,19 @@ void  __attribute__((noreturn)) AppMain(void) {
 	// Reset SSC
 	AT91C_BASE_SSC->SSC_CR = AT91C_SSC_SWRST;
 
+	// Configure MUX
+	AT91C_BASE_PIOA->PIO_OER =
+		GPIO_MUXSEL_HIPKD |
+		GPIO_MUXSEL_LOPKD |
+		GPIO_MUXSEL_LORAW |
+		GPIO_MUXSEL_HIRAW;
+
+	AT91C_BASE_PIOA->PIO_PER =
+		GPIO_MUXSEL_HIPKD |
+		GPIO_MUXSEL_LOPKD |
+		GPIO_MUXSEL_LORAW |
+		GPIO_MUXSEL_HIRAW;
+	
 	// set pins LOW
 	LOW(GPIO_MUXSEL_HIPKD);
 	LOW(GPIO_MUXSEL_LOPKD);
