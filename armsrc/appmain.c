@@ -216,7 +216,6 @@ void MeasureAntennaTuning(void) {
  * ( hopefully around 95 if it is tuned to 125kHz!)
  */
   
-  	DbpString("[+] collecting LF data");
   	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 	SpinDelay(50);
@@ -239,7 +238,6 @@ void MeasureAntennaTuning(void) {
 		}
 	}	
 	
-	DbpString("[+] collecting HF data");
 	LED_A_ON();
 	// Let the FPGA drive the high-frequency antenna around 13.56 MHz.
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);

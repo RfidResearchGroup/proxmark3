@@ -1402,7 +1402,7 @@ int CmdTuneSamples(const char *Cmd) {
 #define LF_MARGINAL_V	10000
 #define HF_UNUSABLE_V	3000
 #define HF_MARGINAL_V	5000
-
+#define ANTENNA_ERROR	1.03	// current algo has 3% error margin.
 	int timeout = 0;
 	printf("\n[+] measuring antenna characteristics, please wait...");
 
@@ -1428,11 +1428,11 @@ int CmdTuneSamples(const char *Cmd) {
 	uint32_t peakv = resp.arg[2] >> 32;
 	
 	if ( v_lf125 > NON_VOLTAGE )
-		PrintAndLog("[+] LF antenna: %5.2f V - 125.00 kHz", v_lf125/1000.0);
+		PrintAndLog("[+] LF antenna: %5.2f V - 125.00 kHz", (v_lf125 * ANTENNA_ERROR)/1000.0);
 	if ( v_lf134 > NON_VOLTAGE )
-		PrintAndLog("[+] LF antenna: %5.2f V - 134.00 kHz", v_lf134/1000.0);
+		PrintAndLog("[+] LF antenna: %5.2f V - 134.00 kHz", (v_lf134 * ANTENNA_ERROR)/1000.0);
 	if ( peakv > NON_VOLTAGE && peakf > 0 )
-		PrintAndLog("[+] LF optimal: %5.2f V - %6.2f kHz", peakv/1000.0, 12000.0/(peakf+1));
+		PrintAndLog("[+] LF optimal: %5.2f V - %6.2f kHz", (peakv * ANTENNA_ERROR)/1000.0, 12000.0/(peakf+1));
 
 	char judgement[10];
 	memset(judgement, 0, sizeof(judgement));		
@@ -1451,7 +1451,7 @@ int CmdTuneSamples(const char *Cmd) {
 	
 	// HF evaluation
 	if ( v_hf > NON_VOLTAGE )
-		PrintAndLog("[+] HF antenna: %5.2f V - 13.56 MHz %s", v_hf/1000.0, judgement);
+		PrintAndLog("[+] HF antenna: %5.2f V - 13.56 MHz %s", (v_hf * ANTENNA_ERROR)/1000.0, judgement);
 
 	memset(judgement, 0, sizeof(judgement));
 	
@@ -1467,6 +1467,7 @@ int CmdTuneSamples(const char *Cmd) {
 			);
 
 	// graph LF measurements
+	// even here, these values has 3% error.
 	for (int i = 0; i < 256; i++) {
 		GraphBuffer[i] = resp.d.asBytes[i] - 128;
 	}
