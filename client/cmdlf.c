@@ -162,19 +162,19 @@ int CmdLFCommandRead(const char *Cmd) {
 			break;
 		case 'c':
 			param_getstr(Cmd, cmdp+1, (char *)&c.d.asBytes, sizeof(c.d.asBytes));
-			cmdp+=2;
+			cmdp += 2;
 			break;
 		case 'd':
 			c.arg[0] = param_get32ex(Cmd, cmdp+1, 0, 10);
-			cmdp+=2;
+			cmdp += 2;
 			break;
 		case 'z':
 			zero = param_get32ex(Cmd, cmdp+1, 0, 10) & 0xFFFF;
-			cmdp+=2;
+			cmdp += 2;
 			break;
 		case 'o':
 			one = param_get32ex(Cmd, cmdp+1, 0, 10) & 0xFFFF;
-			cmdp+=2;
+			cmdp += 2;
 			break;
 		default:
 			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
