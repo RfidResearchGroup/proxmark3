@@ -507,9 +507,13 @@ int CmdHFiClassSim(const char *Cmd) {
 
 int HFiClassReader(const char *Cmd, bool loop, bool verbose) {
 	bool tagFound = false;
-	UsbCommand c = {CMD_READER_ICLASS, {FLAG_ICLASS_READER_CSN | FLAG_ICLASS_READER_CONF | FLAG_ICLASS_READER_AIA}};
+
+	uint32_t flags = FLAG_ICLASS_READER_CSN | FLAG_ICLASS_READER_CC |  FLAG_ICLASS_READER_AIA |
+					FLAG_ICLASS_READER_CONF | FLAG_ICLASS_READER_ONLY_ONCE |
+					FLAG_ICLASS_READER_ONE_TRY;
+					
+	UsbCommand c = {CMD_READER_ICLASS, {flags, 0, 0}};
 	// loop in client not device - else on windows have a communication error
-	c.arg[0] |= FLAG_ICLASS_READER_ONLY_ONCE | FLAG_ICLASS_READER_ONE_TRY;
 	UsbCommand resp;
 	while (!ukbhit()){
 	
