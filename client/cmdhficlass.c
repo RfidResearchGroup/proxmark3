@@ -830,7 +830,7 @@ static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool use_credit_key, bool v
 	}
 	
 	if (isOK <= 1){
-		PrintAndLog("[-] (%d) Failed to obtain CC! Aborting...", isOK);
+		PrintAndLog("[-] failed to obtain CC! Tag-select is aborting...  (%d)", isOK);
 		return false;
 	}
 	return true;	
@@ -989,12 +989,13 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 		DropField();
 		return 0;
 	}
+	DropField();
+	
 	uint8_t readStatus = resp.arg[0] & 0xff;
-	uint8_t * data  = resp.d.asBytes;
+	uint8_t *data  = resp.d.asBytes;
 
 	if (readStatus == 0){
 		PrintAndLog("[-] no tag found");
-		DropField();
 		return 0;
 	}
 	
@@ -1006,7 +1007,7 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 		// large memory - not able to dump pages currently
 		if (numblks > maxBlk) numblks = maxBlk;
 	}
-	DropField();
+	
 	// authenticate debit key and get div_key - later store in dump block 3
 	if (!select_and_auth(KEY, MAC, div_key, use_credit_key, elite, rawkey, verbose)){
 		//try twice - for some reason it sometimes fails the first time...
@@ -1024,15 +1025,14 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 	SendCommand(&w);
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 4500)) {
 		PrintAndLog("[!] command execute timeout 1");
-		DropField();
 		return 1;
 	}
+	// dump cmd switch off at device when finised.
 	
 	uint32_t blocksRead = resp.arg[1];
 	uint8_t isOK = resp.arg[0] & 0xff;
 	if (!isOK && !blocksRead) {
 		PrintAndLog("[!] read block failed");
-		DropField();
 		return 0;
 	}
 	
@@ -1070,14 +1070,12 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 			SendCommand(&w);
 			if (!WaitForResponseTimeout(CMD_ACK, &resp, 4500)) {
 				PrintAndLog("[!] command execute timeout 2");
-				DropField();
 				return 0;
 			}
 			uint8_t isOK = resp.arg[0] & 0xff;
 			blocksRead = resp.arg[1];
 			if (!isOK && !blocksRead) {
 				PrintAndLog("[!] read block failed 2");
-				DropField();
 				return 0;
 			}		
 
@@ -1094,7 +1092,6 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 		}
 	}
 
-	//field is still on - turn it off...
 	DropField();
 	
 	// add diversified keys to dump
