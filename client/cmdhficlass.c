@@ -527,7 +527,8 @@ int HFiClassReader(const char *Cmd, bool loop, bool verbose) {
 			// no tag found or button pressed
 			if ( (readStatus == 0 && !loop) || readStatus == 0xFF) {
 				// abort
-				if (verbose) PrintAndLog("[-] Quitting..."); {
+				if (verbose) {
+					PrintAndLog("[-] Quitting..."); 
 					DropField();
 					return 0;
 				}
@@ -553,7 +554,8 @@ int HFiClassReader(const char *Cmd, bool loop, bool verbose) {
 				return 1;
 			}
 		} else {
-			if (verbose) PrintAndLog("[!] command execute timeout");
+			if (verbose) 
+				PrintAndLog("[!] command execute timeout");
 		}
 		if (!loop) break;
 	}
