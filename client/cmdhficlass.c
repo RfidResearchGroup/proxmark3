@@ -1974,7 +1974,7 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 		return 1;
 	}
 	
-	PrintAndLog("[+] Generating diversified keys and MAC");
+	PrintAndLog("[+] Generating diversified keys, MAC");
 	PrintAndLog("[+] CSN     | %s", sprint_hex( CSN, sizeof(CSN) ));
 	PrintAndLog("[+] CCNR    | %s", sprint_hex( CCNR, sizeof(CCNR) ));
 	res = GenerateMacFromKeyFile( CSN, CCNR, use_raw, use_elite, keyBlock, keycnt, pre );
@@ -2009,7 +2009,7 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 			lastChunk = true;
 		
 		UsbCommand c = {CMD_ICLASS_CHECK_KEYS, { (lastChunk << 8), keys, 0}};
-		memcpy(c.d.asBytes, pre, 4 * keys);
+		memcpy(c.d.asBytes, pre + i, 4 * keys);
 		clearCommandBuffer();
 		SendCommand(&c);
 		UsbCommand resp;
