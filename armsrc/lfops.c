@@ -26,6 +26,32 @@
 # define OPEN_COIL()	HIGH(GPIO_SSC_DOUT)
 #endif
 
+
+#define START_GAP 31*8 // was 250 // SPEC:  1*8 to 50*8 - typ 15*8 (15fc)
+#define WRITE_GAP 20*8 // was 160 // SPEC:  1*8 to 20*8 - typ 10*8 (10fc)
+#define WRITE_0   18*8 // was 144 // SPEC: 16*8 to 32*8 - typ 24*8 (24fc)
+#define WRITE_1   50*8 // was 400 // SPEC: 48*8 to 64*8 - typ 56*8 (56fc)  432 for T55x7; 448 for E5550
+#define READ_GAP  15*8 
+
+//  VALUES TAKEN FROM EM4x function: SendForward
+//  START_GAP = 440;       (55*8) cycles at 125Khz (8us = 1cycle)
+//  WRITE_GAP = 128;       (16*8)
+//  WRITE_1   = 256 32*8;  (32*8) 
+
+//  These timings work for 4469/4269/4305 (with the 55*8 above)
+//  WRITE_0 = 23*8 , 9*8 
+
+// Sam7s has several timers, we will use the source TIMER_CLOCK1 (aka AT91C_TC_CLKS_TIMER_DIV1_CLOCK)
+// TIMER_CLOCK1 = MCK/2, MCK is running at 48 MHz, Timer is running at 48/2 = 24 MHz
+// Hitag units (T0) have duration of 8 microseconds (us), which is 1/125000 per second (carrier)
+// T0 = TIMER_CLOCK1 / 125000 = 192
+// 1 Cycle = 8 microseconds(us)  == 1 field clock
+
+// new timer:
+//     = 1us = 1.5ticks
+// 1fc = 8us = 12ticks
+
+
 /**
  * Function to do a modulation and then get samples.
  * @param delay_off
@@ -33,13 +59,7 @@
  * @param useHighFreg
  * @param command
  */
-void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t periods, uint32_t useHighFreq, uint8_t *command)
-{
-	/* Make sure the tag is reset */
-	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	SpinDelay(200);
-
+void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t periods, uint32_t useHighFreq, uint8_t *command) {
 	uint16_t period_0 =  periods >> 16;
 	uint16_t period_1 =  periods & 0xFFFF;
 	
@@ -52,34 +72,31 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t periods, uint3
 	BigBuf_Clear_keep_EM();
 
 	LFSetupFPGAForADC(sc.divisor, 1);
-
-	// And a little more time for the tag to fully power up
-	SpinDelay(50);
-
-	// now modulate the reader field
-	while(*command != '\0' && *command != ' ') {
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-		LED_D_OFF();
-		WaitUS(delay_off);
-		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, sc.divisor);
-
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
-		LED_D_ON();
-		if(*(command++) == '0')
-			WaitUS(period_0);
-		else
-			WaitUS(period_1);
-	}
+	
+	// Trigger T55x7 in mode.
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	LED_D_OFF();
-	WaitUS(delay_off);
-	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, sc.divisor);
+	WaitUS(START_GAP);
+	
+	// now modulate the reader field
+	while (*command != '\0' && *command != ' ') {
+		LED_D_ON();
+		if (*(command++) == '0')
+			TurnReadLFOn(period_0);
+		else
+			TurnReadLFOn(period_1);
+
+		LED_D_OFF();
+		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+		WaitUS(delay_off);		
+	}
+	
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 
 	// now do the read
 	DoAcquisition_config(false, 0);
 	
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	cmd_send(CMD_ACK,0,0,0,0,0);    
 }
 
 /* blank r/w tag data stream
@@ -1171,29 +1188,6 @@ void CmdIOdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
  * Q5 tags seems to have issues when these values changes. 
  */
 
-#define START_GAP 31*8 // was 250 // SPEC:  1*8 to 50*8 - typ 15*8 (15fc)
-#define WRITE_GAP 20*8 // was 160 // SPEC:  1*8 to 20*8 - typ 10*8 (10fc)
-#define WRITE_0   18*8 // was 144 // SPEC: 16*8 to 32*8 - typ 24*8 (24fc)
-#define WRITE_1   50*8 // was 400 // SPEC: 48*8 to 64*8 - typ 56*8 (56fc)  432 for T55x7; 448 for E5550
-#define READ_GAP  15*8 
-
-//  VALUES TAKEN FROM EM4x function: SendForward
-//  START_GAP = 440;       (55*8) cycles at 125Khz (8us = 1cycle)
-//  WRITE_GAP = 128;       (16*8)
-//  WRITE_1   = 256 32*8;  (32*8) 
-
-//  These timings work for 4469/4269/4305 (with the 55*8 above)
-//  WRITE_0 = 23*8 , 9*8 
-
-// Sam7s has several timers, we will use the source TIMER_CLOCK1 (aka AT91C_TC_CLKS_TIMER_DIV1_CLOCK)
-// TIMER_CLOCK1 = MCK/2, MCK is running at 48 MHz, Timer is running at 48/2 = 24 MHz
-// Hitag units (T0) have duration of 8 microseconds (us), which is 1/125000 per second (carrier)
-// T0 = TIMER_CLOCK1 / 125000 = 192
-// 1 Cycle = 8 microseconds(us)  == 1 field clock
-
-// new timer:
-//     = 1us = 1.5ticks
-// 1fc = 8us = 12ticks
 void TurnReadLFOn(uint32_t delay) {
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 
