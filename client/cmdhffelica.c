@@ -66,7 +66,7 @@ int usage_hf_felica_raw(void){
 
 int CmdHFFelicaList(const char *Cmd) {
 	//PrintAndLog("Deprecated command, use 'hf list felica' instead");
-	CmdHFList("felica");
+	CmdHFList("raw");
 	return 0;
 }
 
@@ -78,7 +78,7 @@ int CmdHFFelicaReader(const char *Cmd) {
 	SendCommand(&c);
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
-		if (!silent) PrintAndLog("FeliCa card select failed");
+		if (!silent) PrintAndLog("[!] FeliCa card select failed");
 		//SendCommand(&cDisconnect);
 		return 0;
 	}
@@ -90,21 +90,21 @@ int CmdHFFelicaReader(const char *Cmd) {
 	switch(status) {
 		case 1: {
 			if (!silent) 
-				PrintAndLog("Card timeout"); 
+				PrintAndLog("[!] card timeout"); 
 			break;
 		}
 		case 2: {
 			if (!silent)
-				PrintAndLog("Card answered wrong"); 
+				PrintAndLog("[!] card answered wrong"); 
 			break;
 		}
 		case 3: {
 			if (!silent)
-				PrintAndLog("CRC check failed");
+				PrintAndLog("[!] CRC check failed");
 			break;
 		}
 		case 0: {
-			PrintAndLog("FeliCa Card");
+			PrintAndLog("[+] FeliCa tag info");
 			
 			PrintAndLog("IDm  %s", sprint_hex(card.IDm, sizeof(card.IDm)));
 			PrintAndLog("  - CODE    %s", sprint_hex(card.code, sizeof(card.code)));
