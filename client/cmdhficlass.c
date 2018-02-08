@@ -896,8 +896,8 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 	bool verbose = false;
 	uint8_t cmdp = 0;
 
-	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch(param_getchar(Cmd, cmdp)) {
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch (param_getchar(Cmd, cmdp)) {
 		case 'h':
 		case 'H':
 			return usage_hf_iclass_dump();
@@ -992,7 +992,7 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 	uint8_t readStatus = resp.arg[0] & 0xff;
 	uint8_t * data  = resp.d.asBytes;
 
-	if(readStatus == 0){
+	if (readStatus == 0){
 		PrintAndLog("[-] no tag found");
 		DropField();
 		return 0;
@@ -1012,6 +1012,7 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 		//try twice - for some reason it sometimes fails the first time...
 		PrintAndLog("[+] retry to select card");
 		if (!select_and_auth(KEY, MAC, div_key, use_credit_key, elite, rawkey, verbose)){
+			PrintAndLog("[!] failed authenticating with debit key");
 			DropField();
 			return 0;
 		}
@@ -1026,6 +1027,7 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 		DropField();
 		return 1;
 	}
+	
 	uint32_t blocksRead = resp.arg[1];
 	uint8_t isOK = resp.arg[0] & 0xff;
 	if (!isOK && !blocksRead) {
@@ -1033,11 +1035,13 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 		DropField();
 		return 0;
 	}
+	
 	uint32_t startindex = resp.arg[2];
-	if (blocksRead*8 > sizeof(tag_data)-(blockno*8)) {
-		PrintAndLog("[-] data exceeded Buffer size!");
+	if (blocksRead*8 > sizeof(tag_data) - (blockno*8)) {
+		PrintAndLog("[-] data exceeded buffer size!");
 		blocksRead = (sizeof(tag_data)/8) - blockno;
 	}
+	
 	// response ok - now get bigbuf content of the dump
 	GetFromBigBuf(tag_data+(blockno*8), blocksRead*8, startindex);
 	WaitForResponse(CMD_ACK, NULL);
@@ -1052,6 +1056,7 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 		if (!select_and_auth(CreditKEY, MAC, c_div_key, true, elite, rawkey, verbose)){
 			//try twice - for some reason it sometimes fails the first time...
 			if (!select_and_auth(CreditKEY, MAC, c_div_key, true, elite, rawkey, verbose)){
+				PrintAndLog("[!] failed authenticating with credit key");
 				DropField();
 				return 0;
 			}
@@ -1086,14 +1091,16 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 			WaitForResponse(CMD_ACK, NULL);
 
 			gotBytes += blocksRead * 8;			
-		} else { //field is still on - turn it off...
-			DropField();
 		}
 	}
 
+	//field is still on - turn it off...
+	DropField();
+	
 	// add diversified keys to dump
 	if (have_debit_key) memcpy(tag_data+(3*8),div_key,8);
 	if (have_credit_key) memcpy(tag_data+(4*8),c_div_key,8);
+
 	// print the dump
 	printf("------+--+-------------------------+\n");
 	printf("CSN   |00| %s|\n", sprint_hex(tag_data, 8));	
