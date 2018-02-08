@@ -2240,7 +2240,7 @@ int LoadDictionaryKeyFile( char* filename, uint8_t **keys, int *keycnt) {
 	
 	if ( !(f = fopen( filename , "r")) ) {
 		PrintAndLog(_RED_([!]) " file: %s: not found or locked.", filename);
-		return 0;
+		return 1;
 	}
 
 	while( fgets(buf, sizeof(buf), f) ){
