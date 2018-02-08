@@ -908,7 +908,7 @@ int CmdHF14ACmdRaw(const char *cmd) {
         return 0;
     }
 
-    if (crc && datalen>0 && datalen<sizeof(data)-2) {
+    if (crc && datalen>0 && datalen < sizeof(data)-2) {
         uint8_t first, second;
 		if (topazmode) {
 			compute_crc(CRC_14443_B, data, datalen, &first, &second);
@@ -921,7 +921,7 @@ int CmdHF14ACmdRaw(const char *cmd) {
 
     if (active || active_select) {
         c.arg[0] |= ISO14A_CONNECT;
-        if(active)
+        if (active)
             c.arg[0] |= ISO14A_NO_SELECT;
     }
 
@@ -939,7 +939,7 @@ int CmdHF14ACmdRaw(const char *cmd) {
         c.arg[0] |= ISO14A_NO_DISCONNECT;
 	}
 	
-    if (datalen>0) {
+    if (datalen > 0) {
         c.arg[0] |= ISO14A_RAW;
 	}
 	
