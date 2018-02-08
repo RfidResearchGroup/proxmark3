@@ -521,7 +521,7 @@ int HFiClassReader(const char *Cmd, bool loop, bool verbose) {
 
 			if (verbose) PrintAndLog("Readstatus:%02x", readStatus);
 			// no tag found or button pressed
-			if( (readStatus == 0 && !loop) || readStatus == 0xFF) {
+			if ( (readStatus == 0 && !loop) || readStatus == 0xFF) {
 				// abort
 				if (verbose) PrintAndLog("[-] Quitting...");
 				return 0;
@@ -530,10 +530,10 @@ int HFiClassReader(const char *Cmd, bool loop, bool verbose) {
 				PrintAndLog("CSN: %s", sprint_hex(data, 8));
 				tagFound = true;
 			}
-			if( readStatus & FLAG_ICLASS_READER_CC) { 
+			if (readStatus & FLAG_ICLASS_READER_CC) { 
 				PrintAndLog("    CC: %s", sprint_hex(data+16, 8));
 			}
-			if( readStatus & FLAG_ICLASS_READER_CONF) {
+			if (readStatus & FLAG_ICLASS_READER_CONF) {
 				printIclassDumpInfo(data);
 			}
 			if (readStatus & FLAG_ICLASS_READER_AIA) {
@@ -976,9 +976,12 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 	// if no debit key given try credit key on AA1 (not for iclass but for some picopass this will work)
 	if (!have_debit_key && have_credit_key) use_credit_key = true;
 
+	uint32_t flags = FLAG_ICLASS_READER_CSN | FLAG_ICLASS_READER_CC |
+					FLAG_ICLASS_READER_CONF | FLAG_ICLASS_READER_ONLY_ONCE |
+					FLAG_ICLASS_READER_ONE_TRY;
+	
 	//get config and first 3 blocks
-	UsbCommand c = {CMD_READER_ICLASS, {FLAG_ICLASS_READER_CSN |
-					FLAG_ICLASS_READER_CONF | FLAG_ICLASS_READER_ONLY_ONCE | FLAG_ICLASS_READER_ONE_TRY}};
+	UsbCommand c = {CMD_READER_ICLASS, {flags, 0, 0}};					
 	UsbCommand resp;
 	uint8_t tag_data[255*8];
 
@@ -1023,9 +1026,17 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 	UsbCommand w = {CMD_ICLASS_DUMP, {blockno, numblks-blockno+1}};
 	clearCommandBuffer();
 	SendCommand(&w);
-	if (!WaitForResponseTimeout(CMD_ACK, &resp, 4500)) {
-		PrintAndLog("[!] command execute timeout 1");
-		return 1;
+	while (true) {
+		printf("."); fflush(stdout);
+		if (ukbhit()) {
+			int gc = getchar(); (void)gc;
+			printf("\n[!] aborted via keyboard!\n");
+			DropField();
+			return 0;
+		}
+		
+		if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) )
+			break;
 	}
 	// dump cmd switch off at device when finised.
 	
