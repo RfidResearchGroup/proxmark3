@@ -121,16 +121,18 @@ int usage_hf14_hardnested(void){
 	PrintAndLog("  or  hf mf hardnested r [known target key]");
 	PrintAndLog(" ");
 	PrintAndLog("options:");
-	PrintAndLog("      h    this help");	
-	PrintAndLog("      w    acquire nonces and write them to binary file nonces.bin");
-	PrintAndLog("      s    slower acquisition (required by some non standard cards)");
-	PrintAndLog("      r    read nonces.bin and start attack");
-	PrintAndLog("      t    tests?");
+	PrintAndLog("      h         this help");	
+	PrintAndLog("      w         acquire nonces and UID, and write them to binary file with default name hf-mf-<UID>-nonces.bin");
+	PrintAndLog("      s         slower acquisition (required by some non standard cards)");
+	PrintAndLog("      r         read nonces.bin and start attack");
+	PrintAndLog("      u <UID>   read/write hf-mf-<UID>-nonces.bin instead of default name");
+	PrintAndLog("      f <name>  read/write <name> instead of default name");
+	PrintAndLog("      t         tests?");
 	PrintAndLog(" ");
 	PrintAndLog("samples:");
 	PrintAndLog("      hf mf hardnested 0 A FFFFFFFFFFFF 4 A");
 	PrintAndLog("      hf mf hardnested 0 A FFFFFFFFFFFF 4 A w");
-	PrintAndLog("      hf mf hardnested 0 A FFFFFFFFFFFF 4 A w s");
+	PrintAndLog("      hf mf hardnested 0 A FFFFFFFFFFFF 4 A f nonces.bin w s");
 	PrintAndLog("      hf mf hardnested r");
 	PrintAndLog("      hf mf hardnested r a0a1a2a3a4a5");
 	PrintAndLog(" ");
@@ -1230,11 +1232,10 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 	uint8_t trgKeyType = 0;
 	uint8_t key[6] = {0, 0, 0, 0, 0, 0};
 	uint8_t trgkey[6] = {0, 0, 0, 0, 0, 0};
-	
+	uint8_t cmdp=0;
+	char filename[FILE_PATH_SIZE], *fptr;
+	char szTemp[FILE_PATH_SIZE];
 	char ctmp;
-	ctmp = param_getchar(Cmd, 0);
-	if (ctmp == 'H' || ctmp == 'h' ) return usage_hf14_hardnested();
-	if (ctmp != 'R' && ctmp != 'r' && ctmp != 'T' && ctmp != 't' && strlen(Cmd) < 20) return usage_hf14_hardnested();
 	
 	bool know_target_key = false;
 	bool nonce_file_read = false;
@@ -1242,61 +1243,84 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 	bool slow = false;
 	int tests = 0;
 	
-
-	if (ctmp == 'R' || ctmp == 'r') {
-		nonce_file_read = true;
-		if (!param_gethex(Cmd, 1, trgkey, 12)) {
-			know_target_key = true;
-		}
-	} else if (ctmp == 'T' || ctmp == 't') {
-		tests = param_get32ex(Cmd, 1, 100, 10);
-		if (!param_gethex(Cmd, 2, trgkey, 12)) {
-			know_target_key = true;
-		}
-	} else {
-		blockNo = param_get8(Cmd, 0);
-		ctmp = param_getchar(Cmd, 1);
-		if (ctmp != 'a' && ctmp != 'A' && ctmp != 'b' && ctmp != 'B') {
-			PrintAndLog("Key type must be A or B");
-			return 1;
-		}
-		if (ctmp != 'A' && ctmp != 'a') { 
-			keyType = 1;
-		}
-		
-		if (param_gethex(Cmd, 2, key, 12)) {
-			PrintAndLog("Key must include 12 HEX symbols");
-			return 1;
-		}
-		
-		trgBlockNo = param_get8(Cmd, 3);
-		ctmp = param_getchar(Cmd, 4);
-		if (ctmp != 'a' && ctmp != 'A' && ctmp != 'b' && ctmp != 'B') {
-			PrintAndLog("Target key type must be A or B");
-			return 1;
-		}
-		if (ctmp != 'A' && ctmp != 'a') {
-			trgKeyType = 1;
-		}
-
-		uint16_t i = 5;
-
-		if (!param_gethex(Cmd, 5, trgkey, 12)) {
-			know_target_key = true;
-			i++;
-		}
-
-		while ((ctmp = param_getchar(Cmd, i))) {
-			if (ctmp == 's' || ctmp == 'S') {
-				slow = true;
-			} else if (ctmp == 'w' || ctmp == 'W') {
-				nonce_file_write = true;
-			} else {
-				PrintAndLog("Possible options are w and/or s");
+	switch(tolower(param_getchar(Cmd, cmdp))) {
+		case 'h': return usage_hf14_hardnested();
+		case 'r': 
+			strcpy(filename,"nonces.bin");
+			nonce_file_read = true;
+			if (!param_gethex(Cmd, cmdp+1, trgkey, 12)) {
+				know_target_key = true;
+			}
+			cmdp++;
+			break;
+		case 't':
+			tests = param_get32ex(Cmd, cmdp+1, 100, 10);
+			if (!param_gethex(Cmd, cmdp+2, trgkey, 12)) {
+				know_target_key = true;
+			}
+			cmdp+=2;
+			break;
+		default:
+			blockNo = param_get8(Cmd, cmdp);
+			ctmp = param_getchar(Cmd, cmdp+1);
+			if (ctmp != 'a' && ctmp != 'A' && ctmp != 'b' && ctmp != 'B') {
+				PrintAndLog("Key type must be A or B");
 				return 1;
 			}
-			i++;
+			if (ctmp != 'A' && ctmp != 'a') { 
+				keyType = 1;
+			}
+			
+			if (param_gethex(Cmd, cmdp+2, key, 12)) {
+				PrintAndLog("Key must include 12 HEX symbols");
+				return 1;
+			}
+			
+			trgBlockNo = param_get8(Cmd, cmdp+3);
+			ctmp = param_getchar(Cmd, cmdp+4);
+			if (ctmp != 'a' && ctmp != 'A' && ctmp != 'b' && ctmp != 'B') {
+				PrintAndLog("Target key type must be A or B");
+				return 1;
+			}
+			if (ctmp != 'A' && ctmp != 'a') {
+				trgKeyType = 1;
+			}
+			cmdp+=5;
+	}
+	if (!param_gethex(Cmd, cmdp, trgkey, 12)) {
+		know_target_key = true;
+		cmdp++;
+	}
+
+	while ((ctmp = param_getchar(Cmd, cmdp))) {
+		switch(tolower(ctmp))
+		{
+		case 's':
+			slow = true;
+			break;
+		case 'w':
+			nonce_file_write = true;
+			fptr=GenerateFilename("hf-mf-","-nonces.bin");
+			if (fptr == NULL) 
+				return 1;
+			strncpy(filename, fptr, FILE_PATH_SIZE);
+			break;
+		case 'u':
+			param_getstr(Cmd, cmdp+1, szTemp, FILE_PATH_SIZE);
+			snprintf(filename, FILE_PATH_SIZE, "hf-mf-%s-nonces.bin", szTemp);
+			cmdp++;
+			break;
+		case 'f':
+			param_getstr(Cmd, cmdp+1, szTemp, FILE_PATH_SIZE);
+			strncpy(filename, szTemp, FILE_PATH_SIZE);
+			cmdp++;
+			break;
+		default:
+			PrintAndLog("Unknown parameter '%c'\n", ctmp);
+			usage_hf14_hardnested();
+			return 1;
 		}
+		cmdp++;
 	}
 	
 	if ( !know_target_key ) {
@@ -1319,7 +1343,7 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 			tests);
 
 	uint64_t foundkey = 0;
-	int16_t isOK = mfnestedhard(blockNo, keyType, key, trgBlockNo, trgKeyType, know_target_key ? trgkey : NULL, nonce_file_read, nonce_file_write, slow, tests, &foundkey);
+	int16_t isOK = mfnestedhard(blockNo, keyType, key, trgBlockNo, trgKeyType, know_target_key ? trgkey : NULL, nonce_file_read, nonce_file_write, slow, tests, &foundkey, filename);
 
 	DropField();
 	if (isOK) {

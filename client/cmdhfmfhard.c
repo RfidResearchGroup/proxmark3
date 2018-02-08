@@ -1054,9 +1054,10 @@ static void estimate_sum_a8(void)
 }	
 
 
-static int read_nonce_file(void)
+static int read_nonce_file(char *filename)
 {
 	FILE *fnonces = NULL;
+	char progress_text[80]="";
 	size_t bytes_read;
 	uint8_t trgBlockNo;
 	uint8_t trgKeyType;
@@ -1065,12 +1066,12 @@ static int read_nonce_file(void)
 	uint8_t par_enc;
 	
 	num_acquired_nonces = 0;
-	if ((fnonces = fopen("nonces.bin","rb")) == NULL) { 
-		PrintAndLog("Could not open file nonces.bin");
+	if ((fnonces = fopen(filename,"rb")) == NULL) { 
+		PrintAndLog("Could not open file %s",filename);
 		return 1;
 	}
-
-	hardnested_print_progress(0, "Reading nonces from file nonces.bin...", (float)(1LL<<47), 0);
+	snprintf(progress_text, 80, "Reading nonces from file %s...",filename);
+	hardnested_print_progress(0, progress_text, (float)(1LL<<47), 0);
 	bytes_read = fread(read_buf, 1, 6, fnonces);
 	if (bytes_read != 6) {
 		PrintAndLog("File reading error.");
@@ -1387,7 +1388,7 @@ static void simulate_acquire_nonces()
 }
 
 
-static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, bool nonce_file_write, bool slow)
+static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, bool nonce_file_write, bool slow, char *filename)
 {
 	last_sample_clock = msclock();
 	sample_period = 2000;	// initial rough estimate. Will be refined.
@@ -1400,6 +1401,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 	uint32_t total_num_nonces = 0;
 	float brute_force;
 	bool reported_suma8 = false;
+	char progress_text[80];
 	FILE *fnonces = NULL;
 	UsbCommand resp;
 
@@ -1432,11 +1434,12 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 
 			cuid = resp.arg[1];
 			if (nonce_file_write && fnonces == NULL) {
-				if ((fnonces = fopen("nonces.bin","wb")) == NULL) { 
-					PrintAndLog("Could not create file nonces.bin");
+				if ((fnonces = fopen(filename,"wb")) == NULL) { 
+					PrintAndLog("Could not create file %s", filename);
 					return 3;
 				}
-				hardnested_print_progress(0, "Writing acquired nonces to binary file nonces.bin", (float)(1LL<<47), 0);
+				snprintf(progress_text, 80, "Writing acquired nonces to binary file %s", filename);
+				hardnested_print_progress(0, progress_text, (float)(1LL<<47), 0);
 				num_to_bytes(cuid, 4, write_buf);
 				fwrite(write_buf, 1, 4, fnonces);
 				fwrite(&trgBlockNo, 1, 1, fnonces);
@@ -2203,7 +2206,7 @@ static void set_test_state(uint8_t byte)
 }
 
 
-int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *trgkey, bool nonce_file_read, bool nonce_file_write, bool slow, int tests, uint64_t *foundkey) 
+int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *trgkey, bool nonce_file_read, bool nonce_file_write, bool slow, int tests, uint64_t *foundkey, char *filename) 
 {
 	char progress_text[80];
 
@@ -2334,7 +2337,7 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
 		update_reduction_rate(0.0, true);
 
 		if (nonce_file_read) {  	// use pre-acquired data from file nonces.bin
-			if (read_nonce_file() != 0) {
+			if (read_nonce_file(filename) != 0) {
 				free_bitflip_bitarrays();
 				free_nonces_memory();
 				free_bitarray(all_bitflips_bitarray[ODD_STATE]);
@@ -2348,7 +2351,7 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
 			float brute_force;
 			shrink_key_space(&brute_force);
 		} else {					// acquire nonces.
-			uint16_t is_OK = acquire_nonces(blockNo, keyType, key, trgBlockNo, trgKeyType, nonce_file_write, slow);
+			uint16_t is_OK = acquire_nonces(blockNo, keyType, key, trgBlockNo, trgKeyType, nonce_file_write, slow, filename);
 			if (is_OK != 0) {
 				free_bitflip_bitarrays();
 				free_nonces_memory();

@@ -545,11 +545,15 @@ static int l_hardnested(lua_State *L){
 	const char *p_tests = luaL_checklstring(L, 10, &size);
     if(size != 1)  return returnToLuaWithError(L,"Wrong size of tests, got %d bytes, expected 1", (int) size);
 	
+	char filename[FILE_PATH_SIZE]="nonces.bin";
+	const char *p_filename = luaL_checklstring(L, 11, &size);
+	if(size != 0)
+		strcpy(filename, p_filename);
+
 	uint32_t blockNo = 0, keyType = 0;
 	uint32_t trgBlockNo = 0, trgKeyType = 0;
 	uint32_t slow = 0, tests = 0;
 	uint32_t nonce_file_read = 0, nonce_file_write = 0;
-	
     sscanf(p_blockno, "%02x", &blockNo);
 	sscanf(p_keytype, "%x", &keyType);
     sscanf(p_trg_blockno, "%02x", &trgBlockNo);
@@ -572,7 +576,7 @@ static int l_hardnested(lua_State *L){
 	}
 	
     uint64_t foundkey = 0;
-	int retval = mfnestedhard(blockNo, keyType, key, trgBlockNo, trgKeyType, haveTarget ? trgkey : NULL, nonce_file_read,  nonce_file_write,  slow,  tests, &foundkey);
+	int retval = mfnestedhard(blockNo, keyType, key, trgBlockNo, trgKeyType, haveTarget ? trgkey : NULL, nonce_file_read,  nonce_file_write,  slow,  tests, &foundkey, filename);
 	DropField();
 
     //Push the key onto the stack
