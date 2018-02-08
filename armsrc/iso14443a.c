@@ -2308,9 +2308,7 @@ int32_t dist_nt(uint32_t nt1, uint32_t nt2) {
 //-----------------------------------------------------------------------------
 void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 	
-	if ( first_try ) {
-		iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
-	}
+	iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
 
 	BigBuf_free(); BigBuf_Clear_ext(false);	
 	clear_trace();
@@ -2325,7 +2323,9 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
 	uint8_t par[1] = {0};	// maximum 8 Bytes to be sent here, 1 byte parity is therefore enough
 	uint8_t nt_diff = 0;
+
 	uint32_t nt = 0, previous_nt = 0, cuid = 0;
+	uint32_t sync_time = GetCountSspClk() & 0xfffffff8;
 	
 	int32_t catch_up_cycles = 0;
 	int32_t last_catch_up = 0;
@@ -2341,8 +2341,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 	uint8_t cascade_levels = 0;
 	
 	// static variables here, is re-used in the next call
-	static uint32_t nt_attacked = 0;
-	static uint32_t sync_time = 0;
+	static uint32_t nt_attacked = 0;	
 	static int32_t sync_cycles = 0;
 	static uint8_t par_low = 0;
 	static uint8_t mf_nr_ar3 = 0;
@@ -2350,7 +2349,6 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 	AddCrc14A(mf_auth, 2);
 	
 	if (first_try) {
-		sync_time = GetCountSspClk() & 0xfffffff8;
 		sync_cycles = PRNG_SEQUENCE_LENGTH; // Mifare Classic's random generator repeats every 2^16 cycles (and so do the nonces).
 		nt_attacked = 0;
 		mf_nr_ar3 = 0;
@@ -2403,9 +2401,11 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 		// Sending timeslot of ISO14443a frame		
 		sync_time = (sync_time & 0xfffffff8 ) + sync_cycles + catch_up_cycles;
 		catch_up_cycles = 0;
-								
-		// if we missed the sync time already, advance to the next nonce repeat
-		while ( GetCountSspClk() > sync_time) {
+
+		#define SYNC_TIME_BUFFER		16		// if there is only SYNC_TIME_BUFFER left before next planned sync, wait for next PRNG cycle
+		
+		// if we missed the sync time already or are about to miss it, advance to the next nonce repeat
+		while ( sync_time < GetCountSspClk() + SYNC_TIME_BUFFER) {
 			++elapsed_prng_sequences;
 			sync_time = (sync_time & 0xfffffff8 ) + sync_cycles;
 		}		
@@ -2548,13 +2548,13 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 
 	if (MF_DBGLEVEL >= 4) Dbprintf("Number of sent auth requestes: %u", i);
 	
-	uint8_t buf[28] = {0x00};
+	uint8_t buf[32] = {0x00};
 	memset(buf, 0x00, sizeof(buf));
 	num_to_bytes(cuid, 4, buf);
 	num_to_bytes(nt, 4, buf + 4);
 	memcpy(buf + 8,  par_list, 8);
 	memcpy(buf + 16, ks_list, 8);
-	memcpy(buf + 24, mf_nr_ar, 4);
+	memcpy(buf + 24, mf_nr_ar, 8);
 		
 	cmd_send(CMD_ACK, isOK, 0, 0, buf, sizeof(buf) );
 

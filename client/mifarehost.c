@@ -11,7 +11,7 @@
 
 int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 	uint32_t uid = 0;
-	uint32_t nt = 0, nr = 0;
+	uint32_t nt = 0, nr = 0, ar = 0;
 	uint64_t par_list = 0, ks_list = 0;
 	uint64_t *keylist = NULL, *last_keylist = NULL;
 	uint32_t keycount = 0;
@@ -54,6 +54,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 				par_list = bytes_to_num(resp.d.asBytes +  8, 8);
 				ks_list = bytes_to_num(resp.d.asBytes +  16, 8);
 				nr = (uint32_t)bytes_to_num(resp.d.asBytes + 24, 4);
+				ar = (uint32_t)bytes_to_num(resp.d.asBytes + 28, 4);
 				break;
 			}
 		}
@@ -61,11 +62,10 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 		
 		if (par_list == 0 && c.arg[0] == true) {
 			PrintAndLog("[+] Parity is all zero. Most likely this card sends NACK on every authentication.");
-			PrintAndLog("[+] Attack will take a few seconds longer because we need two consecutive successful runs.");
 		}
 		c.arg[0] = false;
 
-		keycount = nonce2key(uid, nt, nr, par_list, ks_list, &keylist);
+		keycount = nonce2key(uid, nt, nr, ar, par_list, ks_list, &keylist);
 
 		if (keycount == 0) {
 			PrintAndLog("[-] key not found (lfsr_common_prefix list is null). Nt=%08x", nt);

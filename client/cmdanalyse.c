@@ -461,6 +461,11 @@ char* pb(uint32_t b) {
 
 int CmdAnalyseA(const char *Cmd){
 
+	printf("-- " _BLUE_(its my message) "\n");
+	printf("-- " _RED_(its my message) "\n");
+	printf("-- " _YELLOW_(its my message) "\n");
+	printf("-- " _GREEN_(its my message) "\n");
+	
 	//uint8_t syncBit = 99;
 	// The start bit is one ore more Sequence Y followed by a Sequence Z (... 11111111 00x11111). We need to distinguish from
 	// Sequence X followed by Sequence Y followed by Sequence Z     (111100x1 11111111 00x11111)
@@ -473,37 +478,46 @@ int CmdAnalyseA(const char *Cmd){
 	// reverse byte
 	uint8_t rev =  reflect8(bt);
 	printf("input  %02x | %02x \n", bt, rev);
-	printf("shiftreg before  %08x \n", shiftReg);
 	// add byte to shift register
 	shiftReg = shiftReg << 8 | rev;
 
-	printf("shiftreg after %08x \n", shiftReg);
+	printf("shiftreg after %08x | pattern %08x \n", shiftReg, SYNC_16BIT);
 	
-	printf("reg %04x \n", ( shiftReg >> 7 & 0xFFFF ));
-	printf("reg %04x \n", ( shiftReg >> 6 & 0xFFFF ));
-	printf("reg %04x \n", ( shiftReg >> 5 & 0xFFFF ));
-	printf("reg %04x \n", ( shiftReg >> 4 & 0xFFFF ));
-	printf("reg %04x \n", ( shiftReg >> 3 & 0xFFFF ));
-	printf("reg %04x \n", ( shiftReg >> 2 & 0xFFFF ));
-	printf("reg %04x \n", ( shiftReg >> 1 & 0xFFFF ));
-	printf("reg %04x \n", ( shiftReg >> 0 & 0xFFFF ));
-	
-	
-	// kolla om SYNC_PATTERN finns.
-	if (( shiftReg >> 7 & 0xFFFF ) == SYNC_16BIT) byte_offset = 7;
-	else if (( shiftReg >> 6 & 0xFFFF ) == SYNC_16BIT) byte_offset = 6;
-	else if (( shiftReg >> 5 & 0xFFFF ) == SYNC_16BIT) byte_offset = 5;
-	else if (( shiftReg >> 4 & 0xFFFF ) == SYNC_16BIT) byte_offset = 4;				
-	else if (( shiftReg >> 3 & 0xFFFF ) == SYNC_16BIT) byte_offset = 3;
-	else if (( shiftReg >> 2 & 0xFFFF ) == SYNC_16BIT) byte_offset = 2;
-	else if (( shiftReg >> 1 & 0xFFFF ) == SYNC_16BIT) byte_offset = 1;
-	else if (( shiftReg >> 0 & 0xFFFF ) == SYNC_16BIT) byte_offset = 0;
+/*
+hex(0xb24d shr 0) 0xB24D 0b1011001001001101
+hex(0xb24d shr 1) 0x5926
+hex(0xb24d shr 2) 0x2C93
+*/
 
-	if (byte_offset == 99 ) return 0;
-	//uint8_t p0 = 
+for ( int i =0; i< 16; i++) {
+	printf(" (shiftReg >> %d) & 0xFFFF ==  %08x ---", i, (( shiftReg >> i) & 0xFFFF ));
+
+	// kolla om SYNC_PATTERN finns.
+	if ((( shiftReg >> 7) & 0xFFFF ) == SYNC_16BIT) byte_offset = 7;
+	else if ((( shiftReg >> 6) & 0xFFFF ) == SYNC_16BIT) byte_offset = 6;
+	else if ((( shiftReg >> 5) & 0xFFFF ) == SYNC_16BIT) byte_offset = 5;
+	else if ((( shiftReg >> 4) & 0xFFFF ) == SYNC_16BIT) byte_offset = 4;				
+	else if ((( shiftReg >> 3) & 0xFFFF ) == SYNC_16BIT) byte_offset = 3;
+	else if ((( shiftReg >> 2) & 0xFFFF ) == SYNC_16BIT) byte_offset = 2;
+	else if ((( shiftReg >> 1) & 0xFFFF ) == SYNC_16BIT) byte_offset = 1;
+	else if ((( shiftReg >> 0) & 0xFFFF ) == SYNC_16BIT) byte_offset = 0;
+
+	printf("Offset  %u \n", byte_offset);
+	if ( byte_offset != 99 ) 
+		break;
+	
+	shiftReg >>=1;	
+}
+
 	uint8_t p1 = (rev & (uint8_t)(~(0xFF << byte_offset)));
 	printf("Offset  %u  | leftovers  %02x  %s \n", byte_offset, p1, pb(p1) );
-return 0;
+
+
+	
+	/*	
+pm3 --> da hex2bin 4db2     0100110110110010
+*/
+	return 0;
 /*	
 	// split byte into two parts.
 	uint8_t offset = 3, n0 = 0, n1 = 0;
@@ -529,10 +543,6 @@ return 0;
 	}
 	
 	*/
-/*	
-pm3 --> da hex2bin 4db2     0100110110110010
-pm3 --> da hex2bin 926d9  10010010011011011001
-*/
 	return 0;
 
 	// 14443-A	
@@ -616,8 +626,8 @@ uid(3e172b29) nt(039b7bd2) ks(0e06090d03000b0f) nr(00000002)
 uint64_t d1[] = {0x6e442129, 0x8f699195, 0x0000001, 0, 0x090d0b0305020f02};
 uint64_t d2[] = {0x6e442129, 0x8f699195, 0x0000004, 0, 0x00040f0f0305030e};
 	
-	keycountA = nonce2key(d1[0], d1[1], d1[2], d1[3], d1[4] ,&keylistA);
-	keycountB = nonce2key(d2[0], d2[1], d2[2], d2[3], d2[4], &keylistB);
+	keycountA = nonce2key(d1[0], d1[1], d1[2], 0, d1[3], d1[4] ,&keylistA);
+	keycountB = nonce2key(d2[0], d2[1], d2[2], 0, d2[3], d2[4], &keylistB);
 
 	switch (keycountA) {
 		case 0: printf("Key test A failed\n"); break;
