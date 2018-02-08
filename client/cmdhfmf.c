@@ -17,6 +17,17 @@
 
 static int CmdHelp(const char *Cmd);
 
+int usage_hf14_ice(void){
+		PrintAndLog("Usage:   hf mf ice [l] <limit> [f] <name>");
+		PrintAndLog("  h            this help");
+		PrintAndLog("  l <limit>    nonces to be collected");
+		PrintAndLog("  f <name>     save nonces to <name> instead of hf-mf-<UID>-nonces.bin");
+		PrintAndLog("");
+		PrintAndLog("Samples: hf mf ice");
+		PrintAndLog("         hf mf ice f nonces.bin");
+		return 0;
+}
+
 int usage_hf14_dump(void){
 		PrintAndLog("Usage:   hf mf dump [card memory] k <name> f <name>");
 		PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
@@ -2987,18 +2998,50 @@ int CmdHF14AMfice(const char *Cmd) {
 	bool slow = false;
 	bool initialize = true;
 	bool acquisition_completed = false;
+	uint8_t cmdp=0;
 	uint32_t flags = 0;
 	uint32_t total_num_nonces = 0;
+	char ctmp;
+	char filename[FILE_PATH_SIZE], *fptr;
 	FILE *fnonces = NULL;
 	UsbCommand resp;
 
 	uint32_t part_limit = 3000;
-	uint32_t limit = param_get32ex(Cmd, 0, 50000, 10);
-	
+	uint32_t limit = 50000;
+
+	while ((ctmp = param_getchar(Cmd, cmdp))) {
+		switch(tolower(ctmp))
+		{
+		case 'h':
+			return usage_hf14_ice();
+		case 'f':
+			param_getstr(Cmd, cmdp+1, filename, FILE_PATH_SIZE);
+			cmdp++;
+			break;
+		case 'l':
+			limit = param_get32ex(Cmd, cmdp+1, 50000, 10);
+			cmdp++;
+			break;
+		default:
+			PrintAndLog("Unknown parameter '%c'\n", ctmp);
+			usage_hf14_ice();
+			return 1;
+		}
+		cmdp++;
+	}
+
+	if(filename[0]=='\0')
+	{
+		fptr = GenerateFilename("hf-mf-","-nonces.bin");
+		if (fptr == NULL) 
+			return 1;
+		strcpy(filename, fptr);
+	}
+
 	printf("Collecting %u nonces \n", limit);
 	
-	if ((fnonces = fopen("nonces.bin","wb")) == NULL) { 
-		PrintAndLog("Could not create file nonces.bin");
+	if ((fnonces = fopen(filename,"wb")) == NULL) { 
+		PrintAndLog("Could not create file %s",filename);
 		return 3;
 	}
 
