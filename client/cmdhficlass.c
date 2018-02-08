@@ -527,8 +527,10 @@ int HFiClassReader(const char *Cmd, bool loop, bool verbose) {
 			// no tag found or button pressed
 			if ( (readStatus == 0 && !loop) || readStatus == 0xFF) {
 				// abort
-				if (verbose) PrintAndLog("[-] Quitting...");
-				return 0;
+				if (verbose) PrintAndLog("[-] Quitting..."); {
+					DropField();
+					return 0;
+				}
 			}
 			if( readStatus & FLAG_ICLASS_READER_CSN){
 				PrintAndLog("CSN: %s", sprint_hex(data, 8));
@@ -546,12 +548,16 @@ int HFiClassReader(const char *Cmd, bool loop, bool verbose) {
 				PrintAndLog("      : Possible iClass %s", (legacy) ? "(legacy tag)" : "(NOT legacy tag)");
 			}
 
-			if (tagFound && !loop) return 1;
+			if (tagFound && !loop) {
+				DropField();
+				return 1;
+			}
 		} else {
 			if (verbose) PrintAndLog("[!] command execute timeout");
 		}
 		if (!loop) break;
 	}
+	DropField();
 	return 0;
 }
 
