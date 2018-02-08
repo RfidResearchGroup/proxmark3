@@ -16,7 +16,7 @@ void RunMod() {
 	StandAloneMode();
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
-	int high[OPTS], low[OPTS];
+	uint32_t high[OPTS], low[OPTS];
 	int selected = 0;
 	int playing = 0;
 	int cardRead = 0;
