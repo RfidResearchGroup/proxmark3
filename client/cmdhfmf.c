@@ -1261,6 +1261,12 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 			cmdp+=2;
 			break;
 		default:
+			if(param_getchar(Cmd, cmdp) == 0x00)
+			{
+				PrintAndLog("Block number is missing");
+				return 1;
+			
+			}
 			blockNo = param_get8(Cmd, cmdp);
 			ctmp = param_getchar(Cmd, cmdp+1);
 			if (ctmp != 'a' && ctmp != 'A' && ctmp != 'b' && ctmp != 'B') {
@@ -1276,7 +1282,14 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 				return 1;
 			}
 			
+			if(param_getchar(Cmd, cmdp+3) == 0x00)
+			{
+				PrintAndLog("Target block number is missing");
+				return 1;
+			
+			}
 			trgBlockNo = param_get8(Cmd, cmdp+3);
+
 			ctmp = param_getchar(Cmd, cmdp+4);
 			if (ctmp != 'a' && ctmp != 'A' && ctmp != 'b' && ctmp != 'B') {
 				PrintAndLog("Target key type must be A or B");
