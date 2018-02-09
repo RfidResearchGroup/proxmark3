@@ -381,7 +381,7 @@ int usage_hf14_nack(void) {
 }
 
 int GetHFMF14AUID(uint8_t *uid, int *uidlen) {
-	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}};
+	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
