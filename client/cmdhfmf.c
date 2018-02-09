@@ -124,7 +124,7 @@ int usage_hf14_hardnested(void){
 	PrintAndLog("      h         this help");	
 	PrintAndLog("      w         acquire nonces and UID, and write them to binary file with default name hf-mf-<UID>-nonces.bin");
 	PrintAndLog("      s         slower acquisition (required by some non standard cards)");
-	PrintAndLog("      r         read nonces.bin and start attack");
+	PrintAndLog("      r         read hf-mf-<UID>-nonces.bin if tag present, otherwise read nonces.bin, then start attack");
 	PrintAndLog("      u <UID>   read/write hf-mf-<UID>-nonces.bin instead of default name");
 	PrintAndLog("      f <name>  read/write <name> instead of default name");
 	PrintAndLog("      t         tests?");
@@ -1245,8 +1245,13 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 	
 	switch(tolower(param_getchar(Cmd, cmdp))) {
 		case 'h': return usage_hf14_hardnested();
-		case 'r': 
-			strcpy(filename,"nonces.bin");
+		case 'r':
+			fptr=GenerateFilename("hf-mf-","-nonces.bin");
+			if(fptr==NULL) 
+				strncpy(filename,"nonces.bin", FILE_PATH_SIZE);
+			else
+				strncpy(filename,fptr, FILE_PATH_SIZE);
+				
 			nonce_file_read = true;
 			if (!param_gethex(Cmd, cmdp+1, trgkey, 12)) {
 				know_target_key = true;
