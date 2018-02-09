@@ -1215,7 +1215,7 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 	if (keyBlock == NULL) return 1;
 
 	for (int cnt = 0; cnt < MIFARE_DEFAULTKEYS_SIZE; cnt++)
-		num_to_bytes(g_mifare_default_keys[cnt], 6, (uint8_t*)(keyBlock + cnt * 6));
+		num_to_bytes(g_mifare_default_keys[cnt], 6, keyBlock + cnt * 6);
 	
 	// sectors
 	switch(ctmp) {
@@ -1306,7 +1306,7 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 		for (;keycnt < MIFARE_DEFAULTKEYS_SIZE; keycnt++)
 			PrintAndLog("[%2d] %02x%02x%02x%02x%02x%02x", keycnt,
 				(keyBlock + 6*keycnt)[0],(keyBlock + 6*keycnt)[1], (keyBlock + 6*keycnt)[2],
-				(keyBlock + 6*keycnt)[3], (keyBlock + 6*keycnt)[4],	(keyBlock + 6*keycnt)[5], 6);
+				(keyBlock + 6*keycnt)[3], (keyBlock + 6*keycnt)[4],	(keyBlock + 6*keycnt)[5]);
 	}
 	
 	// // initialize storage for found keys
