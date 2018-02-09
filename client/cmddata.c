@@ -1451,7 +1451,7 @@ int CmdTuneSamples(const char *Cmd) {
 	
 	// HF evaluation
 	if ( v_hf > NON_VOLTAGE )
-		PrintAndLog("[+] HF antenna: %5.2f V - 13.56 MHz %s", (v_hf * ANTENNA_ERROR)/1000.0, judgement);
+		PrintAndLog("[+] HF antenna: %5.2f V - 13.56 MHz", (v_hf * ANTENNA_ERROR)/1000.0);
 
 	memset(judgement, 0, sizeof(judgement));
 	
@@ -1468,13 +1468,19 @@ int CmdTuneSamples(const char *Cmd) {
 
 	// graph LF measurements
 	// even here, these values has 3% error.
+	uint16_t test = 0;
 	for (int i = 0; i < 256; i++) {
 		GraphBuffer[i] = resp.d.asBytes[i] - 128;
+		test += resp.d.asBytes[i];
 	}
-	PrintAndLog("\n[+] Displaying LF tuning graph. Divisor 89 is 134khz, 95 is 125khz.\n\n");
-	GraphTraceLen = 256;
-	ShowGraphWindow();
-	RepaintGraphWindow();
+	if ( test > 0 ) {
+		PrintAndLog("\n[+] Displaying LF tuning graph. Divisor 89 is 134khz, 95 is 125khz.\n\n");
+		GraphTraceLen = 256;
+		ShowGraphWindow();
+		RepaintGraphWindow();
+	} else {
+		PrintAndLog("\n[-] Not showing LF tuning graph since all values is zero.\n\n");
+	}
 	return 0;
 }
 
