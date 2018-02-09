@@ -17,12 +17,13 @@ int usage_lf_guard_clone(void){
 	PrintAndLog("Currently work only on 26bit");
 	PrintAndLog("");
 	PrintAndLog("Usage: lf gprox clone [h] <format> <Facility-Code> <Card-Number>");
-	PrintAndLog("Options :");
+	PrintAndLog("Options:");
 	PrintAndLog("         <format> :  format length 26|32|36|40");	
 	PrintAndLog("  <Facility-Code> :  8-bit value facility code");
 	PrintAndLog("  <Card Number>   : 16-bit value card number");
 	PrintAndLog("");
-	PrintAndLog("Sample  : lf gprox clone 26 123 11223");
+	PrintAndLog("Examples:");
+	PrintAndLog("       lf gprox clone 26 123 11223");
 	return 0;
 }
 
@@ -33,12 +34,13 @@ int usage_lf_guard_sim(void) {
 	PrintAndLog("Currently work only on 26bit");
 	PrintAndLog("");
 	PrintAndLog("Usage:  lf gprox sim [h] <format> <Facility-Code> <Card-Number>");
-	PrintAndLog("Options :");
+	PrintAndLog("Options:");
 	PrintAndLog("         <format> :  format length 26|32|36|40");	
 	PrintAndLog("  <Facility-Code> :  8-bit value facility code");
 	PrintAndLog("  <Card Number>   : 16-bit value card number");
 	PrintAndLog("");
-	PrintAndLog("Sample  : lf gprox sim 26 123 11223");
+	PrintAndLog("Examples:");
+	PrintAndLog("       lf gprox sim 26 123 11223");
 	return 0;
 }
 

@@ -27,12 +27,13 @@ int usage_lf_paradox_sim(void) {
 	PrintAndLog("The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.");
 	PrintAndLog("");
 	PrintAndLog("Usage:  lf paradox sim [h] <Facility-Code> <Card-Number>");
-	PrintAndLog("Options :");
+	PrintAndLog("Options:");
 	PrintAndLog("  h               : this help");
 	PrintAndLog("  <Facility-Code> :  8-bit value facility code");
 	PrintAndLog("  <Card Number>   : 16-bit value card number");
 	PrintAndLog("");
-	PrintAndLog("Sample  : lf paradox sim 123 11223");
+	PrintAndLog("Examples:");
+	PrintAndLog("       lf paradox sim 123 11223");
 	return 0;
 }
 

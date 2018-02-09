@@ -18,11 +18,11 @@ int usage_lf_io_read(void) {
 	PrintAndLog("If the [1] option is provided, reader mode is exited after reading a single card.");
 	PrintAndLog("");
 	PrintAndLog("Usage:  lf io read [h] [1]");
-	PrintAndLog("Options :");
+	PrintAndLog("Options:");
 	PrintAndLog("      h :  This help");
 	PrintAndLog("      1 : (optional) stop after reading a single card");
 	PrintAndLog("");
-	PrintAndLog("Samples");
+	PrintAndLog("Examples:");
 	PrintAndLog("        lf io read");
 	PrintAndLog("        lf io read 1");
 	return 0;
@@ -33,13 +33,13 @@ int usage_lf_io_sim(void) {
 	PrintAndLog("Simulation runs until the button is pressed or another USB command is issued.");
 	PrintAndLog("");
 	PrintAndLog("Usage:  lf io sim [h] <version> <facility-code> <card-number>");
-	PrintAndLog("Options :");
+	PrintAndLog("Options:");
 	PrintAndLog("                h :  This help");	
 	PrintAndLog("        <version> :  8bit version");
 	PrintAndLog("  <facility-code> :  8bit value facility code");
 	PrintAndLog("    <card number> :  16bit value card number");
 	PrintAndLog("");
-	PrintAndLog("Samples");
+	PrintAndLog("Examples:");
 	PrintAndLog("       lf io sim 26 101 1337");
 	return 0;
 }
@@ -49,14 +49,14 @@ int usage_lf_io_clone(void) {
 	PrintAndLog("The T55x7 must be on the antenna when issuing this command.  T55x7 blocks are calculated and printed in the process.");
 	PrintAndLog("");
 	PrintAndLog("Usage:  lf io clone [h] <version> <facility-code> <card-number> [Q5]");
-	PrintAndLog("Options :");
+	PrintAndLog("Options:");
 	PrintAndLog("                h :  This help");	
 	PrintAndLog("        <version> :  8bit version");
 	PrintAndLog("  <facility-code> :  8bit value facility code");
 	PrintAndLog("    <card number> :  16bit value card number");
 	PrintAndLog("               Q5 :  optional - clone to Q5 (T5555) instead of T55x7 chip");
 	PrintAndLog("");
-	PrintAndLog("Samples");
+	PrintAndLog("Examples:");
 	PrintAndLog("       lf io clone 26 101 1337");
 	return 0;
 }

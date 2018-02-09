@@ -36,7 +36,7 @@ int usage_hf_iclass_sim(void) {
 	PrintAndLog("                2       Reader-attack, gather reader responses to extract elite key");
 	PrintAndLog("                3       Full simulation using emulator memory (see 'hf iclass eload')");
 	PrintAndLog("                4       Reader-attack, adapted for KeyRoll mode, gather reader responses to extract elite key");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("        hf iclass sim 0 031FEC8AF7FF12E0");
 	PrintAndLog("        hf iclass sim 2");
 	PrintAndLog("        hf iclass eload 'tagdump.bin'");
@@ -47,7 +47,7 @@ int usage_hf_iclass_sim(void) {
 int usage_hf_iclass_eload(void) {
 	PrintAndLog("Loads iclass tag-dump into emulator memory on device");
 	PrintAndLog("Usage:  hf iclass eload f <filename>");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("        hf iclass eload f iclass_tagdump-aa162d30f8ff12f1.bin");
 	return 0;
 }
@@ -60,7 +60,7 @@ int usage_hf_iclass_decrypt(void) {
 	PrintAndLog("");	
 	PrintAndLog("Usage: hf iclass decrypt f <tagdump>");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("S       hf iclass decrypt f tagdump_12312342343.bin");
 	return 0;
 }
@@ -70,7 +70,7 @@ int usage_hf_iclass_encrypt(void) {
 	PrintAndLog("");
 	PrintAndLog("Usage: hf iclass encrypt <BlockData>");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("        hf iclass encrypt 0102030405060708");
 	PrintAndLog("");
 	return 0;
@@ -85,7 +85,7 @@ int usage_hf_iclass_dump(void) {
 	PrintAndLog("  r            : raw, the key is interpreted as raw block 3/4");
 	PrintAndLog("  v            : verbose output");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("        hf iclass dump k 001122334455667B");
 	PrintAndLog("        hf iclass dump k AAAAAAAAAAAAAAAA c 001122334455667B");
 	PrintAndLog("        hf iclass dump k AAAAAAAAAAAAAAAA e");
@@ -101,7 +101,7 @@ int usage_hf_iclass_clone(void) {
 	PrintAndLog("  c           : If 'c' is specified, the key set is assumed to be the credit key\n");
 	PrintAndLog("  e           : If 'e' is specified, elite computations applied to key");
 	PrintAndLog("  r           : If 'r' is specified, no computations applied to key");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("       hf iclass clone f iclass_tagdump-121345.bin b 06 l 1A k 1122334455667788 e");
 	PrintAndLog("       hf iclass clone f iclass_tagdump-121345.bin b 05 l 19 k 0");
 	PrintAndLog("       hf iclass clone f iclass_tagdump-121345.bin b 06 l 19 k 0 e");
@@ -117,7 +117,7 @@ int usage_hf_iclass_writeblock(void) {
 	PrintAndLog("  e         : elite computations applied to key");
 	PrintAndLog("  r         : raw, no computations applied to key");
 	PrintAndLog("  v         : verbose output");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("        hf iclass writeblk b 0A d AAAAAAAAAAAAAAAA k 001122334455667B");
 	PrintAndLog("        hf iclass writeblk b 1B d AAAAAAAAAAAAAAAA k 001122334455667B c");
 	return 0;
@@ -131,7 +131,7 @@ int usage_hf_iclass_readblock(void) {
 	PrintAndLog("  e         : elite computations applied to key");
 	PrintAndLog("  r         : raw, no computations applied to key");
 	PrintAndLog("  v         : verbose output");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("        hf iclass readblk b 06 k 0011223344556677");
 	PrintAndLog("        hf iclass readblk b 1B k 0011223344556677 c");
 	PrintAndLog("        hf iclass readblk b 0A k 0");
@@ -144,13 +144,13 @@ int usage_hf_iclass_readtagfile() {
 int usage_hf_iclass_calc_newkey(void) {
 	PrintAndLog("Calculate new key for updating\n");
 	PrintAndLog("Usage:  hf iclass calc_newkey o <Old key> n <New key> s [csn] e");
-	PrintAndLog("  Options:");
+	PrintAndLog("Options:");
 	PrintAndLog("  o <oldkey> : *specify a key as 16 hex symbols or a key number as 1 symbol");
 	PrintAndLog("  n <newkey> : *specify a key as 16 hex symbols or a key number as 1 symbol");
 	PrintAndLog("  s <csn>    : specify a card Serial number to diversify the key (if omitted will attempt to read a csn)");
 	PrintAndLog("  e          : specify new key as elite calc");
 	PrintAndLog("  ee         : specify old and new key as elite calc");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog(" e key to e key given csn  : hf iclass calcnewkey o 1122334455667788 n 2233445566778899 s deadbeafdeadbeaf ee");
 	PrintAndLog(" std key to e key read csn : hf iclass calcnewkey o 1122334455667788 n 2233445566778899 e");
 	PrintAndLog(" std to std read csn       : hf iclass calcnewkey o 1122334455667788 n 2233445566778899");
@@ -160,14 +160,14 @@ int usage_hf_iclass_calc_newkey(void) {
 int usage_hf_iclass_managekeys(void) {
 	PrintAndLog("HELP :  Manage iClass Keys in client memory:\n");
 	PrintAndLog("Usage:  hf iclass managekeys n [keynbr] k [key] f [filename] s l p\n");
-	PrintAndLog("  Options:");
+	PrintAndLog("Options:");
 	PrintAndLog("  n <keynbr>  : specify the keyNbr to set in memory");
 	PrintAndLog("  k <key>     : set a key in memory");
 	PrintAndLog("  f <filename>: specify a filename to use with load or save operations");
 	PrintAndLog("  s           : save keys in memory to file specified by filename");
 	PrintAndLog("  l           : load keys to memory from file specified by filename");
 	PrintAndLog("  p           : print keys loaded into memory\n");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog(" set key      : hf iclass managekeys n 0 k 1122334455667788");
 	PrintAndLog(" save key file: hf iclass managekeys f mykeys.bin s");
 	PrintAndLog(" load key file: hf iclass managekeys f mykeys.bin l");
@@ -180,7 +180,7 @@ int usage_hf_iclass_reader(void) {
 	PrintAndLog("Options:");
 	PrintAndLog("    h   This help text");
 	PrintAndLog("    1   read only 1 tag");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("        hf iclass reader 1");
 	return 0;
 }
@@ -190,14 +190,14 @@ int usage_hf_iclass_replay(void) {
 	PrintAndLog("Options:");
 	PrintAndLog("    h       This help text");
 	PrintAndLog("    <mac>   Mac bytes to replay (8 hexsymbols)");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("        hf iclass replay 00112233");	
 	return 0;
 }
 int usage_hf_iclass_sniff(void) {
 	PrintAndLog("Sniff the communication between reader and tag");
 	PrintAndLog("Usage:  hf iclass sniff [h]");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("		 hf iclass sniff");	
 	return 0;
 }
@@ -224,7 +224,7 @@ int usage_hf_iclass_chk(void) {
 	PrintAndLog("      f <filename>  Dictionary file with default iclass keys");
 	PrintAndLog("      r             raw");
 	PrintAndLog("      e             elite");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("		 hf iclass chk f default_iclass_keys.dic");	
 	PrintAndLog("		 hf iclass chk f default_iclass_keys.dic e");
 	return 0;
@@ -240,7 +240,7 @@ int usage_hf_iclass_lookup(void) {
 	PrintAndLog("      m             macs");
 	PrintAndLog("      r             raw");
 	PrintAndLog("      e             elite");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("        hf iclass lookup u 9655a400f8ff12e0 p f0ffffffffffffff m 0000000089cb984b f default_iclass_keys.dic");
 	PrintAndLog("        hf iclass lookup u 9655a400f8ff12e0 p f0ffffffffffffff m 0000000089cb984b f default_iclass_keys.dic e");
 	return 0;
@@ -255,7 +255,7 @@ int usage_hf_iclass_permutekey(void){
 	PrintAndLog("           f          permute key");
 	PrintAndLog("           <bytes>    input bytes");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      hf iclass permute r 0123456789abcdef");
 	return 0;
 }

@@ -24,7 +24,7 @@ int usage_lf_awid_read(void) {
 	PrintAndLog("      h :  This help");	
 	PrintAndLog("      1 : (optional) stop after reading a single card");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("       lf awid read");
 	PrintAndLog("       lf awid read 1");
 	return 0;
@@ -41,7 +41,7 @@ int usage_lf_awid_sim(void) {
 	PrintAndLog("  <facility-code> :  8|16bit value facility code");
 	PrintAndLog("    <card number> :  16|32-bit value card number");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("       lf awid sim 26 224 1337");
 	PrintAndLog("       lf awid sim 50 2001 deadc0de");
 	return 0;
@@ -59,7 +59,7 @@ int usage_lf_awid_clone(void) {
 	PrintAndLog("    <card number> :  16|32-bit value card number");
 	PrintAndLog("               Q5 :  optional - clone to Q5 (T5555) instead of T55x7 chip");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("       lf awid clone 26 224 1337");
 	PrintAndLog("       lf awid clone 50 2001 13371337");
 	return 0;
@@ -79,7 +79,7 @@ int usage_lf_awid_brute(void){
 	PrintAndLog("       d <delay>         :  delay betweens attempts in ms. Default 1000ms");
 	PrintAndLog("       v                 :  verbose logging, show all tries");	
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("       lf awid brute a 26 f 224");
 	PrintAndLog("       lf awid brute a 50 f 2001 d 2000");
 	PrintAndLog("       lf awid brute v a 50 f 2001 c 200 d 2000");

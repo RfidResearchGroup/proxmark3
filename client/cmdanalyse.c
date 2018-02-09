@@ -20,7 +20,7 @@ int usage_analyse_lcr(void) {
 	PrintAndLog("           h          This help");
 	PrintAndLog("           <bytes>    bytes to calc missing XOR in a LCR");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      analyse lcr 04008064BA");
 	PrintAndLog("expected output: Target (BA) requires final LRC XOR byte value: 5A");
 	return 0;
@@ -36,7 +36,7 @@ int usage_analyse_checksum(void) {
 	PrintAndLog("           b <bytes>  bytes to calc missing XOR in a LCR");
 	PrintAndLog("           m <mask>   bit mask to limit the outpuyt");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      analyse chksum b 137AF00A0A0D m FF");
 	PrintAndLog("expected output: 0x61");
 	return 0;
@@ -49,7 +49,7 @@ int usage_analyse_crc(void){
 	PrintAndLog("           h          This help");
 	PrintAndLog("           <bytes>    bytes to calc crc");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      analyse crc 137AF00A0A0D");
 	return 0;
 }
@@ -62,7 +62,7 @@ int usage_analyse_nuid(void){
 	PrintAndLog("           h          This help");
 	PrintAndLog("           <bytes>  input bytes (14 hexsymbols)");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      analyse nuid 11223344556677");
 	return 0;
 }

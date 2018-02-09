@@ -19,7 +19,8 @@ int usage_lf_nedap_clone(void){
 	PrintAndLog("      <Card Number> : 24-bit value card number");
 //	PrintAndLog("      Q5            : optional - clone to Q5 (T5555) instead of T55x7 chip");
 	PrintAndLog("");
-	PrintAndLog("Sample: lf nedap clone 112233");
+	PrintAndLog("Examples:");
+	PrintAndLog("       lf nedap clone 112233");
 	return 0;
 }
 
@@ -32,7 +33,8 @@ int usage_lf_nedap_sim(void) {
 	PrintAndLog("      h               : This help");
 	PrintAndLog("      <Card Number>   : 24-bit value card number");
 	PrintAndLog("");
-	PrintAndLog("Sample: lf nedap sim 112233");
+	PrintAndLog("Examples:");
+	PrintAndLog("       lf nedap sim 112233");
 	return 0;
 }
 

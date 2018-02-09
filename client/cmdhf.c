@@ -844,8 +844,9 @@ int usage_hf_list(){
 	PrintAndLog("    legic  - interpret data as LEGIC communications");
 	PrintAndLog("    felica - interpret data as ISO18092 / FeliCa communications");
 	PrintAndLog("");
-	PrintAndLog("example:	hf list 14a f");
-	PrintAndLog("			hf list iclass");
+	PrintAndLog("Examples:");
+	PrintAndLog("        hf list 14a f");
+	PrintAndLog("        hf list iclass");
 	return 0;
 }
 int usage_hf_search(){
@@ -866,7 +867,8 @@ int usage_hf_snoop(){
 	PrintAndLog("       <skip pairs>	- skip sample pairs");
 	PrintAndLog("       <skip triggers>	- skip number of triggers");
 	PrintAndLog("");
-	PrintAndLog("example:   hf snoop");
+	PrintAndLog("Examples:");
+	PrintAndLog("           hf snoop");
 	PrintAndLog("           hf snoop 1000 0");
 	return 0;
 }

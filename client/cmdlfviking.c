@@ -14,11 +14,12 @@ static int CmdHelp(const char *Cmd);
 int usage_lf_viking_clone(void) {
 	PrintAndLog("clone a Viking AM tag to a T55x7 tag.");
 	PrintAndLog("Usage: lf viking clone <Card ID - 8 hex digits> <Q5>");
-	PrintAndLog("Options :");
+	PrintAndLog("Options:");
 	PrintAndLog("  <Card Number>  : 8 digit hex viking card number");
 	PrintAndLog("  <Q5>           : specify write to Q5 (t5555 instead of t55x7)");
 	PrintAndLog("");
-	PrintAndLog("Sample  : lf viking clone 1A337 Q5");
+	PrintAndLog("Examples:");
+	PrintAndLog("       lf viking clone 1A337 Q5");
 	return 0;
 }
 
@@ -28,10 +29,11 @@ int usage_lf_viking_sim(void) {
 	PrintAndLog("Per viking format, the card number is 8 digit hex number.  Larger values are truncated.");
 	PrintAndLog("");
 	PrintAndLog("Usage:  lf viking sim <Card-Number>");
-	PrintAndLog("Options :");
+	PrintAndLog("Options:");
 	PrintAndLog("  <Card Number>   : 8 digit hex viking card number");
 	PrintAndLog("");
-	PrintAndLog("Sample  : lf viking sim 1A337");
+	PrintAndLog("Examples:");
+	PrintAndLog("       lf viking sim 1A337");
 	return 0;
 }
 

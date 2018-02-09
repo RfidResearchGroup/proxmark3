@@ -17,10 +17,10 @@ int usage_lf_indala_demod(void) {
 	PrintAndLog("By default, values are printed and logged until the button is pressed or another USB command is issued.");
 	PrintAndLog("");
 	PrintAndLog("Usage:  lf indala demod [h]");
-	PrintAndLog("Options :");
+	PrintAndLog("Options:");
 	PrintAndLog("      h :  This help");
 	PrintAndLog("");
-	PrintAndLog("Samples");
+	PrintAndLog("Examples:");
 	PrintAndLog("        lf indala demod");
 	return 0;
 }
@@ -30,11 +30,11 @@ int usage_lf_indala_sim(void) {
 	PrintAndLog("Simulation runs until the button is pressed or another USB command is issued.");
 	PrintAndLog("");
 	PrintAndLog("Usage:  lf indala sim [h] <uid>");
-	PrintAndLog("Options :");
+	PrintAndLog("Options:");
 	PrintAndLog("            h :  This help");	
 	PrintAndLog("        <uid> :  64/224 UID");
 	PrintAndLog("");
-	PrintAndLog("Samples");
+	PrintAndLog("Examples:");
 	PrintAndLog("       lf indala sim deadc0de");
 	return 0;
 }
@@ -44,12 +44,12 @@ int usage_lf_indala_clone(void) {
 	PrintAndLog("The T55x7 must be on the antenna when issuing this command.  T55x7 blocks are calculated and printed in the process.");
 	PrintAndLog("");
 	PrintAndLog("Usage:  lf indala clone [h] <uid> [Q5]");
-	PrintAndLog("Options :");
+	PrintAndLog("Options:");
 	PrintAndLog("            h :  This help");	
 	PrintAndLog("        <uid> :  64/224 UID");
 	PrintAndLog("           Q5 :  optional - clone to Q5 (T5555) instead of T55x7 chip");
 	PrintAndLog("");
-	PrintAndLog("Samples");
+	PrintAndLog("Examples:");
 	PrintAndLog("       lf indala clone 112233");
 	return 0;
 }

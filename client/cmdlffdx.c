@@ -44,7 +44,8 @@ int usage_lf_fdx_clone(void){
 	// extended data
 	PrintAndLog("      <Q5>        : Specify write to Q5 (t5555 instead of t55x7)");
 	PrintAndLog("");
-	PrintAndLog("Sample: lf fdx clone 999 112233");
+	PrintAndLog("Examples:");
+	PrintAndLog("       lf fdx clone 999 112233");
 	return 0;
 }
 
@@ -58,7 +59,8 @@ int usage_lf_fdx_sim(void) {
 	PrintAndLog("      <country id> : Country ID");
 	PrintAndLog("      <animal id>  : Animal ID");
 	PrintAndLog("");
-	PrintAndLog("Sample: lf fdx sim 999 112233");
+	PrintAndLog("Examples:");
+	PrintAndLog("       lf fdx sim 999 112233");
 	return 0;
 }
 

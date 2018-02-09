@@ -568,8 +568,9 @@ int CmdHF14ADesAuth(const char *Cmd){
 		PrintAndLog("		    Crypto");
 		PrintAndLog("                 1 = DES 2 = 3DES 3 = 3K3DES 4 = AES");
 		PrintAndLog("");
-        PrintAndLog("        sample: hf mfdes auth 1 1 0 11223344");
-		PrintAndLog("        sample: hf mfdes auth 3 4 0 404142434445464748494a4b4c4d4e4f");
+        PrintAndLog("Examples:");
+		PrintAndLog("         hf mfdes auth 1 1 0 11223344");
+		PrintAndLog("         hf mfdes auth 3 4 0 404142434445464748494a4b4c4d4e4f");
         return 0;
     } 
 	uint8_t cmdAuthMode	= param_get8(Cmd,0);

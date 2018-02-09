@@ -18,7 +18,7 @@ int usage_hf_14b_info(void){
 	PrintAndLog("Options:");
 	PrintAndLog("       h    this help");
 	PrintAndLog("       s    silently");
-	PrintAndLog("sample:");
+	PrintAndLog("Example:");
 	PrintAndLog("       hf 14b info");
 	return 0;
 }
@@ -27,7 +27,7 @@ int usage_hf_14b_reader(void){
 	PrintAndLog("Options:");
 	PrintAndLog("       h    this help");
 	PrintAndLog("       s    silently");
-	PrintAndLog("sample:");
+	PrintAndLog("Example:");
 	PrintAndLog("       hf 14b reader");
 	return 0;
 }
@@ -40,7 +40,7 @@ int usage_hf_14b_raw(void){
 	PrintAndLog("       -p    leave the field on after receive");
 	PrintAndLog("       -s    active signal field ON with select");
 	PrintAndLog("       -ss   active signal field ON with select for SRx ST Microelectronics tags");
-	PrintAndLog("sample:");
+	PrintAndLog("Example:");
 	PrintAndLog("       hf 14b raw -s -c -p 0200a40400");
 	return 0;    
 }
@@ -50,7 +50,7 @@ int usage_hf_14b_sniff(void){
 	PrintAndLog("Usage: hf 14b sniff [h]");
 	PrintAndLog("Options:");
 	PrintAndLog("       h    this help");
-	PrintAndLog("sample:");
+	PrintAndLog("Example:");
 	PrintAndLog("       hf 14b sniff");
 	return 0;    
 }
@@ -60,7 +60,7 @@ int usage_hf_14b_sim(void){
 	PrintAndLog("Options:");
 	PrintAndLog("       h    this help");
 	PrintAndLog("       u    4byte UID/PUPI");
-	PrintAndLog("sample:");
+	PrintAndLog("Example:");
 	PrintAndLog("       hf 14b sim");
 	PrintAndLog("       hf 14b sim u 11223344");
 	return 0;    
@@ -70,7 +70,7 @@ int usage_hf_14b_read_srx(void){
 	PrintAndLog("Options:");
 	PrintAndLog("       h        this help");
 	PrintAndLog("       <1|2>    1 = SRIX4K , 2 = SRI512");
-	PrintAndLog("sample:");
+	PrintAndLog("Example:");
 	PrintAndLog("       hf 14b sriread 1");
 	PrintAndLog("       hf 14b sriread 2");
 	return 0;
@@ -82,7 +82,7 @@ int usage_hf_14b_write_srx(void){
 	PrintAndLog("       <1|2>    1 = SRIX4K , 2 = SRI512");
 	PrintAndLog("       <block>  BLOCK number depends on tag, special block == FF");
 	PrintAndLog("       <data>   hex bytes of data to be written");
-	PrintAndLog("sample:");
+	PrintAndLog("Example:");
 	PrintAndLog("       hf 14b sriwrite 1 7F 11223344");
 	PrintAndLog("       hf 14b sriwrite 1 FF 11223344");
 	PrintAndLog("       hf 14b sriwrite 2 15 11223344");

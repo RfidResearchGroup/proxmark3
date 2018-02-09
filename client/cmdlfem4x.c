@@ -23,11 +23,12 @@ int usage_lf_em410x_demod(void){
 	PrintAndLog("     <0|1>               - 0 normal output, 1 for invert output");
 	PrintAndLog("     maxerror            - set maximum allowed errors, default = 100.");
 	PrintAndLog("");
-	PrintAndLog("    sample: lf em 410x_demod        = demod an EM410x Tag ID from GraphBuffer");
-	PrintAndLog("          : lf em 410x_demod 32     = demod an EM410x Tag ID from GraphBuffer using a clock of RF/32");
-	PrintAndLog("          : lf em 410x_demod 32 1   = demod an EM410x Tag ID from GraphBuffer using a clock of RF/32 and inverting data");
-	PrintAndLog("          : lf em 410x_demod 1      = demod an EM410x Tag ID from GraphBuffer while inverting data");
-	PrintAndLog("          : lf em 410x_demod 64 1 0 = demod an EM410x Tag ID from GraphBuffer using a clock of RF/64 and inverting data and allowing 0 demod errors");
+	PrintAndLog("Examples:");
+	PrintAndLog("           lf em 410x_demod        = demod an EM410x Tag ID from GraphBuffer");
+	PrintAndLog("           lf em 410x_demod 32     = demod an EM410x Tag ID from GraphBuffer using a clock of RF/32");
+	PrintAndLog("           lf em 410x_demod 32 1   = demod an EM410x Tag ID from GraphBuffer using a clock of RF/32 and inverting data");
+	PrintAndLog("           lf em 410x_demod 1      = demod an EM410x Tag ID from GraphBuffer while inverting data");
+	PrintAndLog("           lf em 410x_demod 64 1 0 = demod an EM410x Tag ID from GraphBuffer using a clock of RF/64 and inverting data and allowing 0 demod errors");
 	return 0;
 }
 int usage_lf_em410x_write(void) {
@@ -39,7 +40,7 @@ int usage_lf_em410x_write(void) {
 	PrintAndLog("       <id>      - ID number");
 	PrintAndLog("       <card>    - 0|1 T5555 (Q5) / T55x7");
 	PrintAndLog("       <clock>   - 16|32|40|64, optional, set R/F clock rate, defaults to 64");
-	PrintAndLog("samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      lf em 410x_write 0F0368568B");
 	return 0;
 }
@@ -49,7 +50,7 @@ int usage_lf_em410x_ws(void) {
 	PrintAndLog("Usage:  lf em 410x_spoof [h]");
 	PrintAndLog("Options:");
 	PrintAndLog("       h         - this help");
-	PrintAndLog("samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      lf em 410x_spoof");
 	return 0;
 }
@@ -61,7 +62,7 @@ int usage_lf_em410x_clone(void) {
 	PrintAndLog("       h         - this help");
 	PrintAndLog("       uid       - uid (10 HEX symbols)");
 	PrintAndLog("       clock     - clock (32|64) (optional)");
-	PrintAndLog("samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      lf em 410x_clone 0F0368568B");
 	PrintAndLog("      lf em 410x_clone 0F0368568B 32");
 	return 0;
@@ -74,7 +75,7 @@ int usage_lf_em410x_sim(void) {
 	PrintAndLog("       h         - this help");
 	PrintAndLog("       uid       - uid (10 HEX symbols)");
 	PrintAndLog("       clock     - clock (32|64) (optional)");
-	PrintAndLog("samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      lf em 410x_sim 0F0368568B");
 	PrintAndLog("      lf em 410x_sim 0F0368568B 32");
 	return 0;
@@ -88,7 +89,7 @@ int usage_lf_em410x_brute(void) {
 	PrintAndLog("       ids.txt       - file with UIDs in HEX format, one per line");
 	PrintAndLog("       d (2000)      - pause delay in milliseconds between UIDs simulation, default 1000 ms (optional)");
 	PrintAndLog("       c (32)        - clock (32|64), default 64 (optional)");
-	PrintAndLog("samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      lf em 410x_brute ids.txt");
 	PrintAndLog("      lf em 410x_brute ids.txt c 32");
 	PrintAndLog("      lf em 410x_brute ids.txt d 3000");
@@ -104,7 +105,7 @@ int usage_lf_em4x50_dump(void) {
 	PrintAndLog("Options:");
 	PrintAndLog("       h         - this help");
 	PrintAndLog("       pwd       - password (hex) (optional)");
-	PrintAndLog("samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      lf em 4x50_dump");
 	PrintAndLog("      lf em 4x50_dump 11223344");
 	return 0;
@@ -117,7 +118,7 @@ int usage_lf_em4x50_read(void) {
 	PrintAndLog("       h         - this help");
 	PrintAndLog("       address   - memory address to read. (0-15)");
 	PrintAndLog("       pwd       - password (hex) (optional)");
-	PrintAndLog("samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      lf em 4x50_read 1");
 	PrintAndLog("      lf em 4x50_read 1 11223344");
 	return 0;
@@ -131,7 +132,7 @@ int usage_lf_em4x50_write(void) {
 	PrintAndLog("       address   - memory address to write to. (0-15)");
 	PrintAndLog("       data      - data to write (hex)");	
 	PrintAndLog("       pwd       - password (hex) (optional)");
-	PrintAndLog("samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      lf em 4x50_write 1 deadc0de");
 	PrintAndLog("      lf em 4x50_write 1 deadc0de 11223344");
 	return 0;
@@ -145,7 +146,7 @@ int usage_lf_em4x05_dump(void) {
 	PrintAndLog("Options:");
 	PrintAndLog("       h         - this help");
 	PrintAndLog("       pwd       - password (hex) (optional)");
-	PrintAndLog("samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      lf em 4x05_dump");
 	PrintAndLog("      lf em 4x05_dump 11223344");
 	return 0;
@@ -158,7 +159,7 @@ int usage_lf_em4x05_read(void) {
 	PrintAndLog("       h         - this help");
 	PrintAndLog("       address   - memory address to read. (0-15)");
 	PrintAndLog("       pwd       - password (hex) (optional)");
-	PrintAndLog("samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      lf em 4x05_read 1");
 	PrintAndLog("      lf em 4x05_read 1 11223344");
 	return 0;
@@ -172,7 +173,7 @@ int usage_lf_em4x05_write(void) {
 	PrintAndLog("       address   - memory address to write to. (0-15)");
 	PrintAndLog("       data      - data to write (hex)");	
 	PrintAndLog("       pwd       - password (hex) (optional)");
-	PrintAndLog("samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      lf em 4x05_write 1 deadc0de");
 	PrintAndLog("      lf em 4x05_write 1 deadc0de 11223344");
 	return 0;
@@ -184,7 +185,7 @@ int usage_lf_em4x05_info(void) {
 	PrintAndLog("Options:");
 	PrintAndLog("       h         - this help");
 	PrintAndLog("       pwd       - password (hex) (optional)");
-	PrintAndLog("samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      lf em 4x05_info");
 	PrintAndLog("      lf em 4x05_info deadc0de");
 	return 0;

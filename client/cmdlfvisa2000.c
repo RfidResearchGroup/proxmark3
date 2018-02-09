@@ -23,7 +23,8 @@ int usage_lf_visa2k_clone(void){
 	PrintAndLog("      <card ID>  : Visa2k card ID");
 	PrintAndLog("      <Q5>       : specify write to Q5 (t5555 instead of t55x7)");
 	PrintAndLog("");
-	PrintAndLog("Sample: lf visa2000 clone 112233");
+	PrintAndLog("Examples:");
+	PrintAndLog("      lf visa2000 clone 112233");
 	return 0;
 }
 
@@ -36,7 +37,8 @@ int usage_lf_visa2k_sim(void) {
 	PrintAndLog("      h          : This help");
 	PrintAndLog("      <card ID>  : Visa2k card ID");
 	PrintAndLog("");
-	PrintAndLog("Sample: lf visa2000 sim 112233");
+	PrintAndLog("Examples:");
+	PrintAndLog("        lf visa2000 sim 112233");
 	return 0;
 }
 

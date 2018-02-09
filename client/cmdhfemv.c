@@ -18,7 +18,7 @@ int usage_hf_emv_test(void){
 	PrintAndLog("Options:");
 	PrintAndLog("      h             : this help");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      hf emv test");	
 	return 0;
 }
@@ -30,7 +30,7 @@ int usage_hf_emv_readrecord(void){
 	PrintAndLog("      <records>     : number of records");
 	PrintAndLog("      <sfi>         : number of SFI records");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      hf emv readrecord 1 1");	
 	return 0;
 }
@@ -41,7 +41,7 @@ int usage_hf_emv_clone(void){
 	PrintAndLog("      <records>     : number of records");
 	PrintAndLog("      <sfi>         : number of SFI records");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      hf emv clone 10 10");	
 	return 0;
 }
@@ -51,7 +51,7 @@ int usage_hf_emv_transaction(void){
 	PrintAndLog("Options:");
 	PrintAndLog("      h             : this help");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      hf emv trans");
 	return 0;
 }
@@ -61,7 +61,7 @@ int usage_hf_emv_getrnd(void){
 	PrintAndLog("Options:");
 	PrintAndLog("      h             : this help");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      hf emv getrnd");
 	return 0;
 }
@@ -72,7 +72,7 @@ int usage_hf_emv_eload(void){
 	PrintAndLog("      h             : this help");
 	PrintAndLog("      o <filename>  : filename w/o '.bin'");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      hf emv eload o myfile");
 	return 0;
 }
@@ -84,7 +84,7 @@ int usage_hf_emv_dump(void){
 	PrintAndLog("      h             : this help");
 	PrintAndLog("      o <filename>  : filename w/o '.bin' to dump bytes");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      hf emv dump");
 	PrintAndLog("      hf emv dump o myfile");
 	return 0;
@@ -95,7 +95,7 @@ int usage_hf_emv_sim(void){
 	PrintAndLog("Options:");
 	PrintAndLog("      h             : this help");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      hf emv sim");
 	return 0;
 }

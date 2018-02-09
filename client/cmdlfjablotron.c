@@ -20,7 +20,8 @@ int usage_lf_jablotron_clone(void){
 	PrintAndLog("      <card ID>  : jablotron card ID");
 	PrintAndLog("      <Q5>       : specify write to Q5 (t5555 instead of t55x7)");
 	PrintAndLog("");
-	PrintAndLog("Sample: lf jablotron clone 112233");
+	PrintAndLog("Examples:");
+	PrintAndLog("       lf jablotron clone 112233");
 	return 0;
 }
 
@@ -33,7 +34,8 @@ int usage_lf_jablotron_sim(void) {
 	PrintAndLog("      h          : This help");
 	PrintAndLog("      <card ID>  : jablotron card ID");
 	PrintAndLog("");
-	PrintAndLog("Sample: lf jablotron sim 112233");
+	PrintAndLog("Examples:");
+	PrintAndLog("       lf jablotron sim 112233");
 	return 0;
 }
 

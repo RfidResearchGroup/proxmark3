@@ -48,7 +48,8 @@ int CmdHF14AMfDESAuth(const char *Cmd){
 
     if (strlen(Cmd)<1) {
         PrintAndLog("Usage:  hf desfire des-auth k <key number>");
-        PrintAndLog("        sample: hf desfire des-auth k 0");
+        PrintAndLog("Examples:");
+        PrintAndLog("        hf desfire des-auth k 0");
         return 0;
     } 
     
@@ -144,7 +145,8 @@ int CmdHF14AMfAESAuth(const char *Cmd){
 
     if (strlen(Cmd)<1) {
         PrintAndLog("Usage:  hf desfire aes-auth k <key number>");
-        PrintAndLog("        sample: hf desfire aes-auth k 0");
+        PrintAndLog("Examples:");
+        PrintAndLog("        hf desfire aes-auth k 0");
         return 0;
     } 
     
