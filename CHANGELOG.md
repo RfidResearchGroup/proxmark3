@@ -3,6 +3,12 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - dump / restore now uses custom filenames (@brianpow)
+ - Added 'hf iclass lookup' (@iceman)
+ - Added 'hf iclass chk' (@iceman)
+ - Fixed ADC mux all closed push-pull state (@iceman)
+ - Fix 'hf mf darkside' - speed fixes (@pwpiwi)
+ - Fix 'hw tune'  -  now compensates for 3% error in output,  also measure full 140v using ADC channel 5 and 7.  (@iceman)
  - Updated loclass gpl license (@holiman)
  - Fix Antenna on after changed FPGA Mode. (@iceman)
  - Added 'hf mf nack' - Mifare NACK bug detection (@iceman) (@doegox)
