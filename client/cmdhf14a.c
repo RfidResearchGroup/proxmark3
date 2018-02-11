@@ -108,8 +108,8 @@ char* getTagInfo(uint8_t uid) {
 int usage_hf_14a_sim(void) {
 //	PrintAndLog("\n Emulating ISO/IEC 14443 type A tag with 4,7 or 10 byte UID\n");
 	PrintAndLog("\n Emulating ISO/IEC 14443 type A tag with 4,7 byte UID\n");
-	PrintAndLog("usage: hf 14a sim [h] t <type> u <uid> [x] [e] [v]");
-	PrintAndLog("options: ");
+	PrintAndLog("Usage: hf 14a sim [h] t <type> u <uid> [x] [e] [v]");
+	PrintAndLog("Options:");
 	PrintAndLog("    h     : This help");
 	PrintAndLog("    t     : 1 = MIFARE Classic 1k");
 	PrintAndLog("            2 = MIFARE Ultralight");
@@ -124,7 +124,7 @@ int usage_hf_14a_sim(void) {
 	PrintAndLog("    x     : (Optional) Performs the 'reader attack', nr/ar attack against a reader");
 	PrintAndLog("    e     : (Optional) Fill simulator keys from found keys");	
 	PrintAndLog("    v     : (Optional) Verbose");
-	PrintAndLog("samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("          hf 14a sim t 1 u 11223344 x");
 	PrintAndLog("          hf 14a sim t 1 u 11223344");
 	PrintAndLog("          hf 14a sim t 1 u 11223344556677");
@@ -137,7 +137,8 @@ int usage_hf_14a_sniff(void) {
 	PrintAndLog("Usage:  hf 14a sniff [c][r]");
 	PrintAndLog("c - triggered by first data from card");
 	PrintAndLog("r - triggered by first 7-bit request from reader (REQ,WUP,...)");
-	PrintAndLog("sample: hf 14a sniff c r");
+	PrintAndLog("Examples:");
+	PrintAndLog("        hf 14a sniff c r");
 	return 0;
 }
 int usage_hf_14a_raw(void) {

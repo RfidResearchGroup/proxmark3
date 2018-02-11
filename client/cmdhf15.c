@@ -283,14 +283,14 @@ int usage_15_info(void){
 	PrintAndLog("defaults to '1 out of 4' mode");
 	PrintAndLog("");
 	PrintAndLog("Usage:  hf 15 info    [options] <uid|s|u|*>");
-	PrintAndLog("options:");
+	PrintAndLog("Options:");
 	PrintAndLog("               -2        use slower '1 out of 256' mode");
 	PrintAndLog("           uid (either): ");
 	PrintAndLog("               <8B hex>  full UID eg E011223344556677");
 	PrintAndLog("               s         selected tag");
 	PrintAndLog("               u         unaddressed mode");
 	PrintAndLog("               *         scan for tag");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("       hf 15 info u");
 	return 0;
 }
@@ -301,18 +301,18 @@ int usage_15_record(void){
 int usage_15_reader(void){
 	PrintAndLog("This command identifies a ISO 15693 tag");
 	PrintAndLog("");
-	PrintAndLog("usage: hf 15 reader [h]");
-	PrintAndLog("options:");
+	PrintAndLog("Usage: hf 15 reader [h]");
+	PrintAndLog("Options:");
 	PrintAndLog("           h             this help");
 	PrintAndLog("");
-	PrintAndLog("sample:");
+	PrintAndLog("Example:");
 	PrintAndLog("         hf 15 reader");
 	return 0;
 }
 int usage_15_sim(void){
-	PrintAndLog("usage:  hf 15 sim <UID>");
+	PrintAndLog("Usage:  hf 15 sim <UID>");
 	PrintAndLog("");
-	PrintAndLog("sample:");
+	PrintAndLog("Example:");
 	PrintAndLog("         hf 15 sim E016240000000000");
 	return 0;
 }
@@ -323,12 +323,12 @@ int usage_15_findafi(void){
 int usage_15_dump(void){
 	PrintAndLog("This command dumps the contents of a ISO-15693 tag and save it to file");
 	PrintAndLog("");
-	PrintAndLog("usage: hf 15 dump [h] <f filname> ");
-	PrintAndLog("options:");
+	PrintAndLog("Usage: hf 15 dump [h] <f filname> ");
+	PrintAndLog("Options:");
 	PrintAndLog("           h             this help");
 	PrintAndLog("           f <name>      filename,  if no <name> UID will be used as filename");
 	PrintAndLog("");
-	PrintAndLog("sample:");
+	PrintAndLog("Example:");
 	PrintAndLog("         hf 15 dump f");
 	PrintAndLog("         hf 15 dump f mydump");
 	return 0;
@@ -346,8 +346,8 @@ int usage_15_raw(void){
 	return 0;	
 }
 int usage_15_read(void){
-	PrintAndLog("usage:  hf 15 read    [options] <uid|s|u|*> <page#>");
-	PrintAndLog("options:");
+	PrintAndLog("Usage:  hf 15 read    [options] <uid|s|u|*> <page#>");
+	PrintAndLog("Options:");
 	PrintAndLog("               -2        use slower '1 out of 256' mode");
 	PrintAndLog("           uid (either): ");
 	PrintAndLog("               <8B hex>  full UID eg E011223344556677");
@@ -358,8 +358,8 @@ int usage_15_read(void){
 	return 0;
 }
 int usage_15_write(void){
-	PrintAndLog("usage:  hf 15 write    [options] <uid|s|u|*> <page#> <hexdata>");
-	PrintAndLog("options:");
+	PrintAndLog("Usage:  hf 15 write    [options] <uid|s|u|*> <page#> <hexdata>");
+	PrintAndLog("Options:");
 	PrintAndLog("               -2        use slower '1 out of 256' mode");
 	PrintAndLog("               -o        set OPTION Flag (needed for TI)");
 	PrintAndLog("           uid (either): ");
@@ -373,7 +373,7 @@ int usage_15_write(void){
 }
 int usage_15_readmulti(void){
 	PrintAndLog("Usage:  hf 15 readmulti  [options] <uid|s|u|*> <start#> <count#>");
-	PrintAndLog("           options:");
+	PrintAndLog("Options:");
 	PrintAndLog("               -2        use slower '1 out of 256' mode");
 	PrintAndLog("           uid (either): ");
 	PrintAndLog("               <8B hex>  full UID eg E011223344556677");
@@ -680,10 +680,9 @@ int CmdHF15Dump(const char*Cmd) {
 			return 1;
 		}
 		
-		fptr += sprintf(fptr, "dump15_"); 
-		
-		for (int j = sizeof(uid)-1; j >=0 ; j--)
-			fptr += sprintf(fptr, "%02X", uid[j]); 
+		fptr += sprintf(fptr, "hf-15-"); 
+		FillFileNameByUID(fptr,uid,"-dump",sizeof(uid));
+
 	}	
 	// detect blocksize from card :)
 	

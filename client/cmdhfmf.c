@@ -16,13 +16,38 @@
 #define MIFARE_MINI_MAXBLOCK 20
 
 static int CmdHelp(const char *Cmd);
+
+int usage_hf14_ice(void){
+		PrintAndLog("Usage:   hf mf ice [l] <limit> [f] <name>");
+		PrintAndLog("  h            this help");
+		PrintAndLog("  l <limit>    nonces to be collected");
+		PrintAndLog("  f <name>     save nonces to <name> instead of hf-mf-<UID>-nonces.bin");
+		PrintAndLog("");
+		PrintAndLog("Examples:");
+		PrintAndLog("         hf mf ice");
+		PrintAndLog("         hf mf ice f nonces.bin");
+		return 0;
+}
+
+int usage_hf14_dump(void){
+		PrintAndLog("Usage:   hf mf dump [card memory] k <name> f <name>");
+		PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
+		PrintAndLog("  k <name>     : key filename, if no <name> given, UID will be used as filename");
+		PrintAndLog("  f <name>     : data filename, if no <name> given, UID will be used as filename");
+		PrintAndLog("");
+		PrintAndLog("Examples:");
+		PrintAndLog("         hf mf dump");
+		PrintAndLog("         hf mf dump 4");
+		return 0;
+}
+
 int usage_hf14_mifare(void){
 	PrintAndLog("Usage:  hf mf darkside [h] <block number> <A|B>");
-	PrintAndLog("options:");
+	PrintAndLog("Options:");
 	PrintAndLog("      h               this help");
 	PrintAndLog("      <block number>  (Optional) target other block");
 	PrintAndLog("      <A|B>           (optional) target key type");
-	PrintAndLog("samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("           hf mf darkside");
 	PrintAndLog("           hf mf darkside 16");
 	PrintAndLog("           hf mf darkside 16 B");
@@ -30,7 +55,7 @@ int usage_hf14_mifare(void){
 }
 int usage_hf14_mf1ksim(void){
 	PrintAndLog("Usage:  hf mf sim [h] u <uid> n <numreads> [i] [x] [e] [v]");
-	PrintAndLog("options:");
+	PrintAndLog("Options:");
 	PrintAndLog("      h    this help");
 	PrintAndLog("      u    (Optional) UID 4,7 or 10bytes. If not specified, the UID 4b from emulator memory will be used");
 	PrintAndLog("      n    (Optional) Automatically exit simulation after <numreads> blocks have been read by reader. 0 = infinite");
@@ -38,7 +63,7 @@ int usage_hf14_mf1ksim(void){
 	PrintAndLog("      x    (Optional) Crack, performs the 'reader attack', nr/ar attack against a reader");
 	PrintAndLog("      e    (Optional) Fill simulator keys from found keys");
 	PrintAndLog("      v    (Optional) Verbose");
-	PrintAndLog("samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("           hf mf sim u 0a0a0a0a");
 	PrintAndLog("           hf mf sim u 11223344556677");
 	PrintAndLog("           hf mf sim u 112233445566778899AA");	
@@ -47,7 +72,7 @@ int usage_hf14_mf1ksim(void){
 }
 int usage_hf14_dbg(void){
 	PrintAndLog("Usage:  hf mf dbg [h] <debug level>");
-	PrintAndLog("options:");
+	PrintAndLog("Options:");
 	PrintAndLog("           h    this help");	
 	PrintAndLog("       <debug level>  (Optional) see list for valid levels");
 	PrintAndLog("           0 - no debug messages");
@@ -56,20 +81,20 @@ int usage_hf14_dbg(void){
 	PrintAndLog("           3 - plus debug messages");
 	PrintAndLog("           4 - print even debug messages in timing critical functions");
 	PrintAndLog("               Note: this option therefore may cause malfunction itself");
-	PrintAndLog("samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("           hf mf dbg 3");
 	return 0;
 }
 int usage_hf14_sniff(void){
 	PrintAndLog("It continuously gets data from the field and saves it to: log, emulator, emulator file.");
 	PrintAndLog("Usage:  hf mf sniff [h] [l] [d] [f]");
-	PrintAndLog("options:");
+	PrintAndLog("Options:");
 	PrintAndLog("      h    this help");
 	PrintAndLog("      l    save encrypted sequence to logfile `uid.log`");
 	PrintAndLog("      d    decrypt sequence and put it to log file `uid.log`");
 //	PrintAndLog(" n/a  e     decrypt sequence, collect read and write commands and save the result of the sequence to emulator memory");
 	PrintAndLog("      f    decrypt sequence, collect read and write commands and save the result of the sequence to emulator dump file `uid.eml`");
-	PrintAndLog("sample:");
+	PrintAndLog("Example:");
 	PrintAndLog("           hf mf sniff l d f");
 	return 0;
 }
@@ -78,13 +103,13 @@ int usage_hf14_nested(void){
 	PrintAndLog(" all sectors:  hf mf nested  <card memory> <block number> <key A/B> <key (12 hex symbols)> [t,d]");
 	PrintAndLog(" one sector:   hf mf nested  o <block number> <key A/B> <key (12 hex symbols)>");
 	PrintAndLog("               <target block number> <target key A/B> [t]");
-	PrintAndLog("options:");
+	PrintAndLog("Options:");
 	PrintAndLog("      h    this help");
 	PrintAndLog("      card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K");
 	PrintAndLog("      t    transfer keys into emulator memory");
-	PrintAndLog("      d    write keys to binary file `dumpkeys.bin`");
-	PrintAndLog(" ");
-	PrintAndLog("samples:");
+	PrintAndLog("      d    write keys to binary file `hf-mf-<UID>-key.bin`");
+	PrintAndLog("");
+	PrintAndLog("Examples:");
 	PrintAndLog("      hf mf nested 1 0 A FFFFFFFFFFFF ");
 	PrintAndLog("      hf mf nested 1 0 A FFFFFFFFFFFF t ");
 	PrintAndLog("      hf mf nested 1 0 A FFFFFFFFFFFF d ");
@@ -96,28 +121,30 @@ int usage_hf14_hardnested(void){
 	PrintAndLog("      hf mf hardnested <block number> <key A|B> <key (12 hex symbols)>");
 	PrintAndLog("                       <target block number> <target key A|B> [known target key (12 hex symbols)] [w] [s]");
 	PrintAndLog("  or  hf mf hardnested r [known target key]");
-	PrintAndLog(" ");
-	PrintAndLog("options:");
-	PrintAndLog("      h    this help");	
-	PrintAndLog("      w    acquire nonces and write them to binary file nonces.bin");
-	PrintAndLog("      s    slower acquisition (required by some non standard cards)");
-	PrintAndLog("      r    read nonces.bin and start attack");
-	PrintAndLog("      t    tests?");
-	PrintAndLog(" ");
-	PrintAndLog("samples:");
+	PrintAndLog("");
+	PrintAndLog("Options:");
+	PrintAndLog("      h         this help");	
+	PrintAndLog("      w         acquire nonces and UID, and write them to binary file with default name hf-mf-<UID>-nonces.bin");
+	PrintAndLog("      s         slower acquisition (required by some non standard cards)");
+	PrintAndLog("      r         read hf-mf-<UID>-nonces.bin if tag present, otherwise read nonces.bin, then start attack");
+	PrintAndLog("      u <UID>   read/write hf-mf-<UID>-nonces.bin instead of default name");
+	PrintAndLog("      f <name>  read/write <name> instead of default name");
+	PrintAndLog("      t         tests?");
+	PrintAndLog("");
+	PrintAndLog("Examples:");
 	PrintAndLog("      hf mf hardnested 0 A FFFFFFFFFFFF 4 A");
 	PrintAndLog("      hf mf hardnested 0 A FFFFFFFFFFFF 4 A w");
-	PrintAndLog("      hf mf hardnested 0 A FFFFFFFFFFFF 4 A w s");
+	PrintAndLog("      hf mf hardnested 0 A FFFFFFFFFFFF 4 A f nonces.bin w s");
 	PrintAndLog("      hf mf hardnested r");
 	PrintAndLog("      hf mf hardnested r a0a1a2a3a4a5");
-	PrintAndLog(" ");
+	PrintAndLog("");
 	PrintAndLog("Add the known target key to check if it is present in the remaining key space:");
-	PrintAndLog("      sample5: hf mf hardnested 0 A A0A1A2A3A4A5 4 A FFFFFFFFFFFF");
+	PrintAndLog("      hf mf hardnested 0 A A0A1A2A3A4A5 4 A FFFFFFFFFFFF");
 	return 0;
 }
 int usage_hf14_chk(void){
 	PrintAndLog("Usage:  hf mf chk [h] <block number>|<*card memory> <key type (A/B/?)> [t|d] [<key (12 hex symbols)>] [<dic (*.dic)>]");
-	PrintAndLog("options:");
+	PrintAndLog("Options:");
 	PrintAndLog("      h    this help");	
 	PrintAndLog("      *    all sectors based on card memory, other values then below defaults to 1k");
 	PrintAndLog("      			0 - MINI(320 bytes)");
@@ -126,8 +153,8 @@ int usage_hf14_chk(void){
 	PrintAndLog("      			4 - 4K");
 	PrintAndLog("      d    write keys to binary file");
 	PrintAndLog("      t    write keys to emulator memory\n");
-	PrintAndLog(" ");
-	PrintAndLog("samples:");
+	PrintAndLog("");
+	PrintAndLog("Examples:");
 	PrintAndLog("      hf mf chk 0 A 1234567890ab keys.dic     -- target block 0, Key A");
 	PrintAndLog("      hf mf chk *1 ? t                        -- target all blocks, all keys, 1K, write to emul");
 	PrintAndLog("      hf mf chk *1 ? d                        -- target all blocks, all keys, 1K, write to file");
@@ -136,7 +163,7 @@ int usage_hf14_chk(void){
 int usage_hf14_chk_fast(void){
 	PrintAndLog("This is a improved checkkeys method speedwise. It checks Mifare Classic tags sector keys against a dictionary file with keys");
 	PrintAndLog("Usage:  hf mf fchk [h] <card memory> [t|d] [<key (12 hex symbols)>] [<dic (*.dic)>]");
-	PrintAndLog("options:");
+	PrintAndLog("Options:");
 	PrintAndLog("      h    this help");	
 	PrintAndLog("      <cardmem> all sectors based on card memory, other values than below defaults to 1k");
 	PrintAndLog("      			 0 - MINI(320 bytes)");
@@ -145,8 +172,8 @@ int usage_hf14_chk_fast(void){
 	PrintAndLog("      			 4 - 4K");
 	PrintAndLog("      d    write keys to binary file");
 	PrintAndLog("      t    write keys to emulator memory\n");
-	PrintAndLog(" ");
-	PrintAndLog("samples:");
+	PrintAndLog("");
+	PrintAndLog("Examples:");
 	PrintAndLog("      hf mf fchk 1 1234567890ab keys.dic    -- target 1K using key 1234567890ab, using dictionary file");
 	PrintAndLog("      hf mf fchk 1 t                        -- target 1K, write to emulator memory");
 	PrintAndLog("      hf mf fchk 1 d                        -- target 1K, write to file");
@@ -160,33 +187,40 @@ int usage_hf14_keybrute(void){
 	PrintAndLog(" ---[ This attack is obsolete,  try hardnested instead ]---");
 	PrintAndLog("");
 	PrintAndLog("Usage:  hf mf keybrute [h] <block number> <A|B> <key>");
-	PrintAndLog("options:");
+	PrintAndLog("Options:");
 	PrintAndLog("      h               this help");
 	PrintAndLog("      <block number>  target block number");
 	PrintAndLog("      <A|B>           target key type");
 	PrintAndLog("      <key>           candidate key from mf_nonce_brute tool");
-	PrintAndLog("samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("           hf mf keybrute 1 A 000011223344");
 	return 0;
 }
 int usage_hf14_restore(void){
-	PrintAndLog("Usage:   hf mf restore [card memory]");
+	PrintAndLog("Usage:   hf mf restore [card memory] u <UID> k <name> f <name>");
+	PrintAndLog("Options:");
 	PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
+	PrintAndLog("  u <UID>      : uid, try to restore from hf-mf-<UID>-key.bin and hf-mf-<UID>-data.bin");
+	PrintAndLog("  k <name>     : key filename, specific the full filename of key file");
+	PrintAndLog("  f <name>     : data filename, specific the full filename of data file");
 	PrintAndLog("");
-	PrintAndLog("Samples: hf mf restore");
-	PrintAndLog("         hf mf restore 4");	
+	PrintAndLog("Examples:");
+	PrintAndLog("         hf mf restore                            -- read the UID from tag first, then restore from hf-mf-<UID>-key.bin and and hf-mf-<UID>-data.bin");
+	PrintAndLog("         hf mf restore 1 u 12345678               -- restore from hf-mf-12345678-key.bin and hf-mf-12345678-data.bin");
+	PrintAndLog("         hf mf restore 1 u 12345678 k dumpkey.bin -- restore from dumpkey.bin and hf-mf-12345678-data.bin");
+	PrintAndLog("         hf mf restore 4                          -- read the UID from tag with 4K memory first, then restore from hf-mf-<UID>-key.bin and and hf-mf-<UID>-data.bin");
 	return 0;
 }
 int usage_hf14_decryptbytes(void){
 	PrintAndLog("Decrypt Crypto-1 encrypted bytes given some known state of crypto. See tracelog to gather needed values\n");
-	PrintAndLog("usage:   hf mf decrypt [h] <nt> <ar_enc> <at_enc> <data>");
-	PrintAndLog("options:");
+	PrintAndLog("Usage:   hf mf decrypt [h] <nt> <ar_enc> <at_enc> <data>");
+	PrintAndLog("Options:");
 	PrintAndLog("      h            this help");
 	PrintAndLog("      <nt>         reader nonce");
 	PrintAndLog("      <ar_enc>     encrypted reader response");
 	PrintAndLog("      <at_enc>     encrypted tag response");
 	PrintAndLog("      <data>       encrypted data, taken directly after at_enc and forward");
-	PrintAndLog("samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("         hf mf decrypt b830049b 9248314a 9280e203 41e586f9\n");
 	PrintAndLog("  this sample decrypts 41e586f9 -> 3003999a  Annotated: 30 03 [99 9a]  auth block 3 [crc]");
 	return 0;
@@ -194,7 +228,8 @@ int usage_hf14_decryptbytes(void){
 
 int usage_hf14_eget(void){
 	PrintAndLog("Usage:  hf mf eget <block number>");
-	PrintAndLog(" sample: hf mf eget 0 ");
+	PrintAndLog("Examples:");
+	PrintAndLog("        hf mf eget 0 ");
 	return 0;
 }
 int usage_hf14_eclr(void){
@@ -204,7 +239,8 @@ int usage_hf14_eclr(void){
 }
 int usage_hf14_eset(void){
 	PrintAndLog("Usage:  hf mf eset <block number> <block data (32 hex symbols)>");
-	PrintAndLog("sample: hf mf eset 1 000102030405060708090a0b0c0d0e0f ");	
+	PrintAndLog("Examples:");
+	PrintAndLog("        hf mf eset 1 000102030405060708090a0b0c0d0e0f ");	
 	return 0;
 }
 int usage_hf14_eload(void){
@@ -212,8 +248,9 @@ int usage_hf14_eload(void){
 	PrintAndLog("Usage:  hf mf eload [card memory] <file name w/o `.eml`> [numblocks]");
 	PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K, u = UL");
 	PrintAndLog("");
-	PrintAndLog(" sample: hf mf eload filename");
-	PrintAndLog("         hf mf eload 4 filename");	
+	PrintAndLog("Examples:");
+	PrintAndLog("        hf mf eload filename");
+	PrintAndLog("        hf mf eload 4 filename");	
 	return 0;
 }
 int usage_hf14_esave(void){
@@ -221,9 +258,10 @@ int usage_hf14_esave(void){
 	PrintAndLog(" Usage:  hf mf esave [card memory] [file name w/o `.eml`]");
 	PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
 	PrintAndLog("");
-	PrintAndLog(" sample: hf mf esave ");
-	PrintAndLog("         hf mf esave 4");
-	PrintAndLog("         hf mf esave 4 filename");	
+	PrintAndLog("Examples:");
+	PrintAndLog("        hf mf esave ");
+	PrintAndLog("        hf mf esave 4");
+	PrintAndLog("        hf mf esave 4 filename");	
 	return 0;
 }
 int usage_hf14_ecfill(void){
@@ -232,8 +270,9 @@ int usage_hf14_ecfill(void){
 	PrintAndLog("Usage:  hf mf ecfill <key A/B> [card memory]");
 	PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
 	PrintAndLog("");
-	PrintAndLog("samples:  hf mf ecfill A");
-	PrintAndLog("          hf mf ecfill A 4");
+	PrintAndLog("Examples:");
+	PrintAndLog("        hf mf ecfill A");
+	PrintAndLog("        hf mf ecfill A 4");
 	return 0;
 }
 int usage_hf14_ekeyprn(void){
@@ -241,7 +280,8 @@ int usage_hf14_ekeyprn(void){
 	PrintAndLog("Usage:  hf mf ekeyprn [card memory]");
 	PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
 	PrintAndLog("");
-	PrintAndLog(" sample: hf mf ekeyprn 1");	
+	PrintAndLog("Examples:");
+	PrintAndLog("        hf mf ekeyprn 1");	
 	return 0;
 }
 
@@ -255,7 +295,7 @@ int usage_hf14_csetuid(void){
 	PrintAndLog("       <uid>    UID 8 hex symbols");
 	PrintAndLog("       <atqa>   ATQA 4 hex symbols");
 	PrintAndLog("       <sak>    SAK 2 hex symbols");
-	PrintAndLog("samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      hf mf csetuid 01020304");
 	PrintAndLog("      hf mf csetuid 01020304 0004 08 w");
 	return 0;
@@ -269,7 +309,7 @@ int usage_hf14_csetblk(void){
 	PrintAndLog("       w         wipe card before writing");
 	PrintAndLog("       <block>   block number");
 	PrintAndLog("       <data>    block data to write (32 hex symbols)");
-	PrintAndLog("samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("       hf mf csetblk 1 01020304050607080910111213141516");
 	PrintAndLog("       hf mf csetblk 1 01020304050607080910111213141516 w");
 	return 0;
@@ -283,7 +323,7 @@ int usage_hf14_cload(void){
 	PrintAndLog("       h            this help");
 	PrintAndLog("       e            load card with data from emulator memory");
 	PrintAndLog("       <filename>   load card with data from file");
-	PrintAndLog(" samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("       hf mf cload mydump");
 	PrintAndLog("       hf mf cload e");	
 	return 0;
@@ -295,7 +335,7 @@ int usage_hf14_cgetblk(void){
 	PrintAndLog("Options:");
 	PrintAndLog("      h         this help");
 	PrintAndLog("      <block>   block number");		
-	PrintAndLog("samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      hf mf cgetblk 1");	
 	return 0;
 }
@@ -306,7 +346,7 @@ int usage_hf14_cgetsc(void){
 	PrintAndLog("Options:");
 	PrintAndLog("      h          this help");
 	PrintAndLog("      <sector>   sector number");
-	PrintAndLog("samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      hf mf cgetsc 0");
 	return 0;
 }
@@ -322,7 +362,7 @@ int usage_hf14_csave(void){
 	PrintAndLog("       card memory   0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
 	PrintAndLog("       o <filename>  save data to file");
 	PrintAndLog("");
-	PrintAndLog("samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("       hf mf csave u 1");
 	PrintAndLog("       hf mf csave e 1");
 	PrintAndLog("       hf mf csave 4 o filename");
@@ -335,9 +375,45 @@ int usage_hf14_nack(void) {
 	PrintAndLog("Options:");
 	PrintAndLog("       h             this help");
 	PrintAndLog("       v             verbose");
-	PrintAndLog("samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("       hf mf nack");
 	return 0;
+}
+
+int GetHFMF14AUID(uint8_t *uid, int *uidlen) {
+	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT, 0, 0}};
+	clearCommandBuffer();
+	SendCommand(&c);
+	UsbCommand resp;
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+		//if (!silent) 
+		PrintAndLog("iso14443a card select failed");
+		DropField();
+		return 0;
+	}
+	
+	iso14a_card_select_t card;
+	memcpy(&card, (iso14a_card_select_t *)resp.d.asBytes, sizeof(iso14a_card_select_t));
+	memcpy(uid, card.uid, card.uidlen * sizeof(uint8_t));
+	*uidlen=card.uidlen;
+	return 1;
+}
+
+char * GenerateFilename(const char *prefix, const char *suffix){
+	uint8_t uid[10] = {0,0,0,0,0,0,0,0,0,0};
+	int uidlen=0;
+	char * fptr = malloc (sizeof (char) * (strlen(prefix) + strlen(suffix)) + sizeof(uid)*2 + 1);
+	
+	GetHFMF14AUID(uid, &uidlen);
+	if (!uidlen) {
+		PrintAndLog("No tag found.");
+		return NULL;
+	}
+	
+	strcpy(fptr, prefix);	
+	FillFileNameByUID(fptr,uid,suffix,uidlen);
+	
+	return fptr;
 }
 
 int CmdHF14ADarkside(const char *Cmd) {
@@ -378,7 +454,8 @@ int CmdHF14AMfWrBl(const char *Cmd) {
 
 	if (strlen(Cmd)<3) {
 		PrintAndLog("Usage:  hf mf wrbl    <block number> <key A/B> <key (12 hex symbols)> <block data (32 hex symbols)>");
-		PrintAndLog("        sample: hf mf wrbl 0 A FFFFFFFFFFFF 000102030405060708090A0B0C0D0E0F");
+		PrintAndLog("Examples:");
+		PrintAndLog("        hf mf wrbl 0 A FFFFFFFFFFFF 000102030405060708090A0B0C0D0E0F");
 		return 0;
 	}	
 
@@ -425,7 +502,8 @@ int CmdHF14AMfRdBl(const char *Cmd) {
 
 	if (strlen(Cmd)<3) {
 		PrintAndLog("Usage:  hf mf rdbl    <block number> <key A/B> <key (12 hex symbols)>");
-		PrintAndLog("        sample: hf mf rdbl 0 A FFFFFFFFFFFF ");
+		PrintAndLog("Examples:");
+		PrintAndLog("        hf mf rdbl 0 A FFFFFFFFFFFF ");
 		return 0;
 	}	
 	
@@ -474,7 +552,8 @@ int CmdHF14AMfRdSc(const char *Cmd) {
 
 	if (strlen(Cmd)<3) {
 		PrintAndLog("Usage:  hf mf rdsc    <sector number> <key A/B> <key (12 hex symbols)>");
-		PrintAndLog("        sample: hf mf rdsc 0 A FFFFFFFFFFFF ");
+		PrintAndLog("Examples:");
+		PrintAndLog("        hf mf rdsc 0 A FFFFFFFFFFFF ");
 		return 0;
 	}	
 	
@@ -563,23 +642,55 @@ int CmdHF14AMfDump(const char *Cmd) {
 	uint8_t rights[40][4];
 	uint8_t carddata[256][16];
 	uint8_t numSectors = 16;
+	uint8_t cmdp = 0;
+	
+	char keyFilename[FILE_PATH_SIZE] = {0};
+	char dataFilename[FILE_PATH_SIZE] = {0};
+	char * fptr;
+	
 	FILE *fin, *fout;	
 	UsbCommand resp;
-
-	char cmdp = param_getchar(Cmd, 0);
-	numSectors = NumOfSectors(cmdp);
 	
-	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') {
-		PrintAndLog("Usage:   hf mf dump [card memory]");
-		PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
-		PrintAndLog("");
-		PrintAndLog("Samples: hf mf dump");
-		PrintAndLog("         hf mf dump 4");
-		return 0;
+	while(param_getchar(Cmd, cmdp) != 0x00) {
+		switch(param_getchar(Cmd, cmdp)) {
+		case 'h':
+		case 'H':
+			return usage_hf14_dump();
+		case 'k':
+		case 'K':
+			param_getstr(Cmd, cmdp+1, keyFilename, FILE_PATH_SIZE); 
+			cmdp += 2;
+			break;
+		case 'f':
+		case 'F':
+			param_getstr(Cmd, cmdp+1, dataFilename, FILE_PATH_SIZE); 
+			cmdp += 2;
+			break;
+		default:
+			if (cmdp==0)
+			{
+				numSectors = NumOfSectors(param_getchar(Cmd, cmdp));
+				cmdp++;
+			}
+			else
+			{
+			
+				PrintAndLog("Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+				return usage_hf14_dump();
+			}
+		}
 	}
-	
-	if ((fin = fopen("dumpkeys.bin","rb")) == NULL) {
-		PrintAndLog("Could not find file dumpkeys.bin");
+
+	if (keyFilename[0] == 0x00)
+	{
+		fptr = GenerateFilename("hf-mf-","-key.bin");
+		if (fptr == NULL) 
+			return 1;
+		strcpy(keyFilename, fptr);
+	}
+
+	if ((fin = fopen(keyFilename,"rb")) == NULL) {
+		PrintAndLog("Could not find file %s", keyFilename);
 		return 1;
 	}
 	
@@ -715,14 +826,21 @@ int CmdHF14AMfDump(const char *Cmd) {
 	}
 
 	if (isOK) {
-		if ((fout = fopen("dumpdata.bin","wb")) == NULL) { 
-			PrintAndLog("[!] could not create file name dumpdata.bin");
+		if (dataFilename[0] == 0x00) {
+			fptr=GenerateFilename("hf-mf-","-data.bin");
+			if (fptr == NULL) 
+				return 1;
+			strcpy(dataFilename, fptr);
+		}
+		
+		if ((fout = fopen(dataFilename,"wb")) == NULL) { 
+			PrintAndLog("[!] could not create file name %s", dataFilename);
 			return 1;
 		}
 		uint16_t numblocks = FirstBlockOfSector(numSectors - 1) + NumBlocksPerSector(numSectors - 1);
 		fwrite(carddata, 1, 16*numblocks, fout);
 		fclose(fout);
-		PrintAndLog("[+] dumped %d blocks (%d bytes) to file dumpdata.bin", numblocks, 16*numblocks);
+		PrintAndLog("[+} dumped %d blocks (%d bytes) to file %s", numblocks, 16*numblocks, dataFilename);
 	}
 	return 0;
 }
@@ -734,17 +852,62 @@ int CmdHF14AMfRestore(const char *Cmd) {
 	uint8_t bldata[16] = {0x00};
 	uint8_t keyA[40][6];
 	uint8_t keyB[40][6];
-	uint8_t numSectors;	
+	uint8_t numSectors = 16;
+	uint8_t cmdp = 0;
+	char keyFilename[FILE_PATH_SIZE]="";	
+	char dataFilename[FILE_PATH_SIZE]="";
+	char szTemp[FILE_PATH_SIZE]="";	
+	char *fptr;
 	FILE *fdump, *fkeys;
 
-	char cmdp = param_getchar(Cmd, 0);
-	numSectors = NumOfSectors(cmdp);
+	while(param_getchar(Cmd, cmdp) != 0x00) {
+		switch(param_getchar(Cmd, cmdp)) {
+		case 'h':
+		case 'H':
+			return usage_hf14_restore();
+		case 'u':
+		case 'U':
+			param_getstr(Cmd, cmdp+1, szTemp, FILE_PATH_SIZE); 
+			if(keyFilename[0]==0x00)
+				snprintf(keyFilename, FILE_PATH_SIZE, "hf-mf-%s-key.bin", szTemp);
+			if(dataFilename[0]==0x00)
+				snprintf(dataFilename, FILE_PATH_SIZE, "hf-mf-%s-data.bin", szTemp);
+			cmdp+=2;
+			break;
+		case 'k':
+		case 'K':
+			param_getstr(Cmd, cmdp+1, keyFilename, FILE_PATH_SIZE); 
+			cmdp += 2;
+			break;
+		case 'f':
+		case 'F':
+			param_getstr(Cmd, cmdp+1, dataFilename, FILE_PATH_SIZE); 
+			cmdp += 2;
+			break;
+		default:
+			if (cmdp==0)
+			{
+				numSectors = NumOfSectors(param_getchar(Cmd, cmdp));
+				cmdp++;
+			}
+			else
+			{
+				PrintAndLog("Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+				return usage_hf14_restore();
+			}
+		}
+	}
 
-	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H')
-		return usage_hf14_restore();
+	if(keyFilename[0]==0x00)
+	{
+		fptr=GenerateFilename("hf-mf-","-key.bin");
+		if (fptr == NULL) 
+			return 1;
+		strcpy(keyFilename,fptr);
+	}
 
-	if ((fkeys = fopen("dumpkeys.bin","rb")) == NULL) {
-		PrintAndLog("Could not find file dumpkeys.bin");
+	if ((fkeys = fopen(keyFilename,"rb")) == NULL) {
+		PrintAndLog("Could not find file %s", keyFilename);
 		return 1;
 	}
 	
@@ -752,7 +915,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		bytes_read = fread( keyA[sectorNo], 1, 6, fkeys );
 		if ( bytes_read != 6) {
-			PrintAndLog("File reading error (dumpkeys.bin).");
+			PrintAndLog("File reading error (%s).", keyFilename);
 			fclose(fkeys);
 			return 2;
 		}
@@ -761,7 +924,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		bytes_read = fread( keyB[sectorNo], 1, 6, fkeys );
 		if ( bytes_read != 6) {
-			PrintAndLog("File reading error (dumpkeys.bin).");
+			PrintAndLog("File reading error (%s).", keyFilename);
 			fclose(fkeys);
 			return 2;
 		}
@@ -769,11 +932,19 @@ int CmdHF14AMfRestore(const char *Cmd) {
 
 	fclose(fkeys);
 
-	if ((fdump = fopen("dumpdata.bin","rb")) == NULL) {
-		PrintAndLog("Could not find file dumpdata.bin");
+	if( dataFilename[0]==0x00)
+	{
+		fptr=GenerateFilename("hf-mf-","-data.bin");
+		if (fptr == NULL) 
+			return 1;
+		strcpy(dataFilename,fptr);
+	}
+
+	if ((fdump = fopen(dataFilename,"rb")) == NULL) {
+		PrintAndLog("Could not find file %s", dataFilename);
 		return 1;
 	}	
-	PrintAndLog("Restoring dumpdata.bin to card");
+	PrintAndLog("Restoring %s to card", dataFilename);
 
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		for(blockNo = 0; blockNo < NumBlocksPerSector(sectorNo); blockNo++) {
@@ -781,7 +952,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 			memcpy(c.d.asBytes, key, 6);			
 			bytes_read = fread(bldata, 1, 16, fdump);
 			if ( bytes_read != 16) {
-				PrintAndLog("File reading error (dumpdata.bin).");
+				PrintAndLog("File reading error (%s).", dataFilename);
 				fclose(fdump);
 				fdump = NULL;				
 				return 2;
@@ -838,7 +1009,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 	FILE *fkeys;
 	uint8_t standart[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 	uint8_t tempkey[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-
+	char *fptr;
 	if (strlen(Cmd)<3) return usage_hf14_nested();
 	
 	char cmdp, ctmp;
@@ -1031,14 +1202,17 @@ int CmdHF14AMfNested(const char *Cmd) {
 		
 		// Create dump file
 		if (createDumpFile) {
+			fptr = GenerateFilename("hf-mf-","-key.bin");
+			if (fptr == NULL) 
+				return 1;
 			
-			if ((fkeys = fopen("dumpkeys.bin","wb")) == NULL) { 
-				PrintAndLog("[!] could not create file dumpkeys.bin");
+			if ((fkeys = fopen(fptr, "wb")) == NULL) { 
+				PrintAndLog("[!] could not create file %s", fptr);
 				free(e_sector);
 				return 1;
 			}
 			
-			PrintAndLog("[+] saving keys to binary file dumpkeys.bin...");
+			PrintAndLog("[+] saving keys to binary file %s...", fptr);
 			for (i=0; i<SectorsCnt; i++) {
 				if (e_sector[i].foundKey[0]){
 					num_to_bytes(e_sector[i].Key[0], 6, tempkey);
@@ -1070,11 +1244,10 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 	uint8_t trgKeyType = 0;
 	uint8_t key[6] = {0, 0, 0, 0, 0, 0};
 	uint8_t trgkey[6] = {0, 0, 0, 0, 0, 0};
-	
+	uint8_t cmdp=0;
+	char filename[FILE_PATH_SIZE], *fptr;
+	char szTemp[FILE_PATH_SIZE];
 	char ctmp;
-	ctmp = param_getchar(Cmd, 0);
-	if (ctmp == 'H' || ctmp == 'h' ) return usage_hf14_hardnested();
-	if (ctmp != 'R' && ctmp != 'r' && ctmp != 'T' && ctmp != 't' && strlen(Cmd) < 20) return usage_hf14_hardnested();
 	
 	bool know_target_key = false;
 	bool nonce_file_read = false;
@@ -1082,61 +1255,102 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 	bool slow = false;
 	int tests = 0;
 	
-
-	if (ctmp == 'R' || ctmp == 'r') {
-		nonce_file_read = true;
-		if (!param_gethex(Cmd, 1, trgkey, 12)) {
-			know_target_key = true;
-		}
-	} else if (ctmp == 'T' || ctmp == 't') {
-		tests = param_get32ex(Cmd, 1, 100, 10);
-		if (!param_gethex(Cmd, 2, trgkey, 12)) {
-			know_target_key = true;
-		}
-	} else {
-		blockNo = param_get8(Cmd, 0);
-		ctmp = param_getchar(Cmd, 1);
-		if (ctmp != 'a' && ctmp != 'A' && ctmp != 'b' && ctmp != 'B') {
-			PrintAndLog("Key type must be A or B");
-			return 1;
-		}
-		if (ctmp != 'A' && ctmp != 'a') { 
-			keyType = 1;
-		}
-		
-		if (param_gethex(Cmd, 2, key, 12)) {
-			PrintAndLog("Key must include 12 HEX symbols");
-			return 1;
-		}
-		
-		trgBlockNo = param_get8(Cmd, 3);
-		ctmp = param_getchar(Cmd, 4);
-		if (ctmp != 'a' && ctmp != 'A' && ctmp != 'b' && ctmp != 'B') {
-			PrintAndLog("Target key type must be A or B");
-			return 1;
-		}
-		if (ctmp != 'A' && ctmp != 'a') {
-			trgKeyType = 1;
-		}
-
-		uint16_t i = 5;
-
-		if (!param_gethex(Cmd, 5, trgkey, 12)) {
-			know_target_key = true;
-			i++;
-		}
-
-		while ((ctmp = param_getchar(Cmd, i))) {
-			if (ctmp == 's' || ctmp == 'S') {
-				slow = true;
-			} else if (ctmp == 'w' || ctmp == 'W') {
-				nonce_file_write = true;
-			} else {
-				PrintAndLog("Possible options are w and/or s");
+	switch(tolower(param_getchar(Cmd, cmdp))) {
+		case 'h': return usage_hf14_hardnested();
+		case 'r':
+			fptr=GenerateFilename("hf-mf-","-nonces.bin");
+			if(fptr==NULL) 
+				strncpy(filename,"nonces.bin", FILE_PATH_SIZE);
+			else
+				strncpy(filename,fptr, FILE_PATH_SIZE);
+				
+			nonce_file_read = true;
+			if (!param_gethex(Cmd, cmdp+1, trgkey, 12)) {
+				know_target_key = true;
+			}
+			cmdp++;
+			break;
+		case 't':
+			tests = param_get32ex(Cmd, cmdp+1, 100, 10);
+			if (!param_gethex(Cmd, cmdp+2, trgkey, 12)) {
+				know_target_key = true;
+			}
+			cmdp+=2;
+			break;
+		default:
+			if(param_getchar(Cmd, cmdp) == 0x00)
+			{
+				PrintAndLog("Block number is missing");
+				return 1;
+			
+			}
+			blockNo = param_get8(Cmd, cmdp);
+			ctmp = param_getchar(Cmd, cmdp+1);
+			if (ctmp != 'a' && ctmp != 'A' && ctmp != 'b' && ctmp != 'B') {
+				PrintAndLog("Key type must be A or B");
 				return 1;
 			}
-			i++;
+			if (ctmp != 'A' && ctmp != 'a') { 
+				keyType = 1;
+			}
+			
+			if (param_gethex(Cmd, cmdp+2, key, 12)) {
+				PrintAndLog("Key must include 12 HEX symbols");
+				return 1;
+			}
+			
+			if(param_getchar(Cmd, cmdp+3) == 0x00)
+			{
+				PrintAndLog("Target block number is missing");
+				return 1;
+			
+			}
+			trgBlockNo = param_get8(Cmd, cmdp+3);
+
+			ctmp = param_getchar(Cmd, cmdp+4);
+			if (ctmp != 'a' && ctmp != 'A' && ctmp != 'b' && ctmp != 'B') {
+				PrintAndLog("Target key type must be A or B");
+				return 1;
+			}
+			if (ctmp != 'A' && ctmp != 'a') {
+				trgKeyType = 1;
+			}
+			cmdp+=5;
+	}
+	if (!param_gethex(Cmd, cmdp, trgkey, 12)) {
+		know_target_key = true;
+		cmdp++;
+	}
+
+	while ((ctmp = param_getchar(Cmd, cmdp))) {
+		switch(tolower(ctmp))
+		{
+		case 's':
+			slow = true;
+			break;
+		case 'w':
+			nonce_file_write = true;
+			fptr=GenerateFilename("hf-mf-","-nonces.bin");
+			if (fptr == NULL) 
+				return 1;
+			strncpy(filename, fptr, FILE_PATH_SIZE);
+			break;
+		case 'u':
+			param_getstr(Cmd, cmdp+1, szTemp, FILE_PATH_SIZE);
+			snprintf(filename, FILE_PATH_SIZE, "hf-mf-%s-nonces.bin", szTemp);
+			cmdp++;
+			break;
+		case 'f':
+			param_getstr(Cmd, cmdp+1, szTemp, FILE_PATH_SIZE);
+			strncpy(filename, szTemp, FILE_PATH_SIZE);
+			cmdp++;
+			break;
+		default:
+			PrintAndLog("Unknown parameter '%c'\n", ctmp);
+			usage_hf14_hardnested();
+			return 1;
 		}
+		cmdp++;
 	}
 	
 	if ( !know_target_key ) {
@@ -1159,7 +1373,7 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 			tests);
 
 	uint64_t foundkey = 0;
-	int16_t isOK = mfnestedhard(blockNo, keyType, key, trgBlockNo, trgKeyType, know_target_key ? trgkey : NULL, nonce_file_read, nonce_file_write, slow, tests, &foundkey);
+	int16_t isOK = mfnestedhard(blockNo, keyType, key, trgBlockNo, trgKeyType, know_target_key ? trgkey : NULL, nonce_file_read, nonce_file_write, slow, tests, &foundkey, filename);
 
 	DropField();
 	if (isOK) {
@@ -1177,7 +1391,7 @@ int randInRange(int min, int max) {
 	return min + (int) (rand() / (double) (RAND_MAX) * (max - min + 1));
 }
 
-//Fisher–Yates shuffle
+//Fisherâ€“Yates shuffle
 void shuffle( uint8_t *array, uint16_t len) {
 	uint8_t tmp[6];
 	uint16_t x;
@@ -1201,6 +1415,7 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 	FILE * f;
 	char filename[FILE_PATH_SIZE]={0};
 	char buf[13];
+	char *fptr;
 	uint8_t tempkey[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 	uint8_t *keyBlock = NULL, *p;
 	uint8_t sectorsCnt = 1;
@@ -1374,14 +1589,18 @@ out:
 	}
 	
 	if (createDumpFile) {
-		FILE *fkeys = fopen("dumpkeys.bin","wb");
+		fptr = GenerateFilename("hf-mf-","-key.bin");
+		if (fptr == NULL) 
+			return 1;
+
+		FILE *fkeys = fopen(fptr,"wb");
 		if (fkeys == NULL) { 
-			PrintAndLog("Could not create file dumpkeys.bin");
+			PrintAndLog("Could not create file %s", filename);
 			free(keyBlock);
 			free(e_sector);
 			return 1;
 		}
-		PrintAndLog("Printing keys to binary file dumpkeys.bin...");
+		PrintAndLog("Printing keys to binary file %s...", filename);
 	
 		for (i=0; i<sectorsCnt; i++) {
 			num_to_bytes(e_sector[i].Key[0], 6, tempkey);
@@ -1394,7 +1613,7 @@ out:
 		}
 
 		fclose(fkeys);
-		PrintAndLog("Found keys have been dumped to file dumpkeys.bin. 0xffffffffffff has been inserted for unknown keys.");			
+		PrintAndLog("Found keys have been dumped to file %s. 0xffffffffffff has been inserted for unknown keys.", filename);			
 	}
 	
 	free(keyBlock);
@@ -1420,6 +1639,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 	uint32_t keyitems = MIFARE_DEFAULTKEYS_SIZE;
 	uint64_t key64 = 0;	
 	uint8_t tempkey[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+	char *fptr;
 	int clen = 0;
 	int transferToEml = 0;
 	int createDumpFile = 0;	
@@ -1654,14 +1874,18 @@ out:
 	}
 	
 	if (createDumpFile) {
-		FILE *fkeys = fopen("dumpkeys.bin","wb");
+		fptr = GenerateFilename("hf-mf-","-key.bin");
+		if (fptr == NULL) 
+			return 1;
+
+		FILE *fkeys = fopen(fptr,"wb");
 		if (fkeys == NULL) { 
-			PrintAndLog("Could not create file dumpkeys.bin");
+			PrintAndLog("Could not create file %s", fptr);
 			free(keyBlock);
 			free(e_sector);
 			return 1;
 		}
-		PrintAndLog("Printing keys to binary file dumpkeys.bin...");
+		PrintAndLog("Printing keys to binary file %s...", fptr);
 	
 		for( i=0; i<SectorsCnt; i++) {
 			num_to_bytes(e_sector[i].Key[0], 6, tempkey);
@@ -1672,7 +1896,7 @@ out:
 			fwrite ( tempkey, 1, 6, fkeys );
 		}
 		fclose(fkeys);
-		PrintAndLog("Found keys have been dumped to file dumpkeys.bin. 0xffffffffffff has been inserted for unknown keys.");			
+		PrintAndLog("Found keys have been dumped to file %s. 0xffffffffffff has been inserted for unknown keys.", fptr);
 	}
 
 	free(keyBlock);
@@ -2828,18 +3052,50 @@ int CmdHF14AMfice(const char *Cmd) {
 	bool slow = false;
 	bool initialize = true;
 	bool acquisition_completed = false;
+	uint8_t cmdp=0;
 	uint32_t flags = 0;
 	uint32_t total_num_nonces = 0;
+	char ctmp;
+	char filename[FILE_PATH_SIZE], *fptr;
 	FILE *fnonces = NULL;
 	UsbCommand resp;
 
 	uint32_t part_limit = 3000;
-	uint32_t limit = param_get32ex(Cmd, 0, 50000, 10);
-	
+	uint32_t limit = 50000;
+
+	while ((ctmp = param_getchar(Cmd, cmdp))) {
+		switch(tolower(ctmp))
+		{
+		case 'h':
+			return usage_hf14_ice();
+		case 'f':
+			param_getstr(Cmd, cmdp+1, filename, FILE_PATH_SIZE);
+			cmdp++;
+			break;
+		case 'l':
+			limit = param_get32ex(Cmd, cmdp+1, 50000, 10);
+			cmdp++;
+			break;
+		default:
+			PrintAndLog("Unknown parameter '%c'\n", ctmp);
+			usage_hf14_ice();
+			return 1;
+		}
+		cmdp++;
+	}
+
+	if(filename[0]=='\0')
+	{
+		fptr = GenerateFilename("hf-mf-","-nonces.bin");
+		if (fptr == NULL) 
+			return 1;
+		strcpy(filename, fptr);
+	}
+
 	printf("Collecting %u nonces \n", limit);
 	
-	if ((fnonces = fopen("nonces.bin","wb")) == NULL) { 
-		PrintAndLog("Could not create file nonces.bin");
+	if ((fnonces = fopen(filename,"wb")) == NULL) { 
+		PrintAndLog("Could not create file %s",filename);
 		return 3;
 	}
 

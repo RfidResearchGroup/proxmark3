@@ -101,17 +101,19 @@ void AddLogCurrentDT(char *fn) {
 // param *uid  -  pointer to uid byte array
 // param *ext  -  ".log"
 // param uidlen - length of uid array.
-void FillFileNameByUID(char *fn, uint8_t *uid, char *ext, int uidlen) {
-	if ( fn == NULL || uid == NULL || ext == NULL ){
+void FillFileNameByUID(char *filenamePrefix, uint8_t *uid, const char *ext, int uidlen) {
+	if ( filenamePrefix == NULL || uid == NULL || ext == NULL ){
 		printf("[!] error parameter is NULL\n");
 		return;
 	}
-	char *fnameptr = fn;
-	memset(fn, 0x00, FILE_PATH_SIZE);
 	
-	for (int j = 0; j < uidlen; j++, fnameptr += 2)
-		sprintf(fnameptr, "%02X", uid[j]); 
-	sprintf(fnameptr, "%s", ext); 
+	int len=0;
+	len=strlen(filenamePrefix);
+	//memset(fn, 0x00, FILE_PATH_SIZE);
+	
+	for (int j = 0; j < uidlen; j++)
+		sprintf(filenamePrefix + len + j * 2, "%02X", uid[j]); 
+	strcat(filenamePrefix, ext); 
 }
 
 void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex_len, const size_t hex_max_len, 

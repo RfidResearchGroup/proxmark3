@@ -37,7 +37,7 @@ int usage_lf_read(void){
 	PrintAndLog("       d #samples   # samples to collect (optional)");	
 	PrintAndLog("Use 'lf config' to set parameters.");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("         lf read s d 12000     - collects 12000samples silent");
 	PrintAndLog("         lf read s");
 	return 0;
@@ -90,7 +90,8 @@ int usage_lf_simfsk(void) {
 	//PrintAndLog("       s              TBD- -STT to enable a gap between playback repetitions - default: no gap");
 	PrintAndLog("       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
 	PrintAndLog("\n  NOTE: if you set one clock manually set them all manually");
-	PrintAndLog("\nSamples:");
+	PrintAndLog("");
+	PrintAndLog("Examples:");
 	PrintAndLog("       lf simfsk c 40 H 8 L 5 d 010203      -  FSK1  rf/40  data 010203");
 	PrintAndLog("       lf simfsk c 40 H 5 L 8 d 010203      -  FSK1a rf/40  data 010203");
 	PrintAndLog("       lf simfsk c 64 H 10 L 8 d 010203     -  FSK2  rf/64  data 010203");

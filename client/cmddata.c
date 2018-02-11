@@ -33,7 +33,7 @@ int usage_data_manrawdecode(void){
 	PrintAndLog("  [invert]  invert output");		
 	PrintAndLog("  [maxErr]  set number of errors allowed (default = 20)");		
 	PrintAndLog("");
-	PrintAndLog("    sample: data manrawdecode   = decode manchester bitstream from the demodbuffer");
+	PrintAndLog("   Example: data manrawdecode   = decode manchester bitstream from the demodbuffer");
 	return 0;
 }
 int usage_data_biphaserawdecode(void){
@@ -46,8 +46,8 @@ int usage_data_biphaserawdecode(void){
 	PrintAndLog("     [invert <0|1>], set to 1 to invert output");
 	PrintAndLog("     [maxErr int],   set max errors tolerated - default=20");
 	PrintAndLog("");
-	PrintAndLog("    sample: data biphaserawdecode     = decode biphase bitstream from the demodbuffer");
-	PrintAndLog("    sample: data biphaserawdecode 1 1 = decode biphase bitstream from the demodbuffer, set offset, and invert output");
+	PrintAndLog("   Example: data biphaserawdecode     = decode biphase bitstream from the demodbuffer");
+	PrintAndLog("   Example: data biphaserawdecode 1 1 = decode biphase bitstream from the demodbuffer, set offset, and invert output");
 	return 0;
 }
 int usage_data_rawdemod(void){
@@ -57,7 +57,7 @@ int usage_data_rawdemod(void){
 	PrintAndLog("   <help> as 'h', prints the help for the specific modulation");	
 	PrintAndLog("   <options> see specific modulation help for optional parameters");				
 	PrintAndLog("");
-	PrintAndLog("    sample: data rawdemod fs h         = print help specific to fsk demod");
+	PrintAndLog("   Example: data rawdemod fs h         = print help specific to fsk demod");
 	PrintAndLog("          : data rawdemod fs           = demod GraphBuffer using: fsk - autodetect");
 	PrintAndLog("          : data rawdemod ab           = demod GraphBuffer using: ask/biphase - autodetect");
 	PrintAndLog("          : data rawdemod am           = demod GraphBuffer using: ask/manchester - autodetect");
@@ -76,7 +76,7 @@ int usage_data_rawdemod_am(void){
 	PrintAndLog("     [set maximum Samples to read], default = 32768 (512 bits at rf/64)");
 	PrintAndLog("     <amplify>, 'a' to attempt demod with ask amplification, default = no amp");
 	PrintAndLog("");
-	PrintAndLog("    sample: data rawdemod am        = demod an ask/manchester tag from GraphBuffer");
+	PrintAndLog("   Example: data rawdemod am        = demod an ask/manchester tag from GraphBuffer");
 	PrintAndLog("          : data rawdemod am 32     = demod an ask/manchester tag from GraphBuffer using a clock of RF/32");
 	PrintAndLog("          : data rawdemod am 32 1   = demod an ask/manchester tag from GraphBuffer using a clock of RF/32 and inverting data");
 	PrintAndLog("          : data rawdemod am 1      = demod an ask/manchester tag from GraphBuffer while inverting data");
@@ -97,7 +97,7 @@ int usage_data_rawdemod_ab(void){
 	PrintAndLog("");
 	PrintAndLog("     NOTE: --invert for Conditional Dephase Encoding (CDP) AKA Differential Manchester");
 	PrintAndLog("");
-	PrintAndLog("    sample: data rawdemod ab              = demod an ask/biph tag from GraphBuffer");
+	PrintAndLog("   Example: data rawdemod ab              = demod an ask/biph tag from GraphBuffer");
 	PrintAndLog("          : data rawdemod ab 0 a          = demod an ask/biph tag from GraphBuffer, amplified");
 	PrintAndLog("          : data rawdemod ab 1 32         = demod an ask/biph tag from GraphBuffer using an offset of 1 and a clock of RF/32");
 	PrintAndLog("          : data rawdemod ab 0 32 1       = demod an ask/biph tag from GraphBuffer using a clock of RF/32 and inverting data");
@@ -114,7 +114,7 @@ int usage_data_rawdemod_ar(void){
 	PrintAndLog("     [set maximum Samples to read], default = 32768 (1024 bits at rf/64)");
 	PrintAndLog("     <amplify>, 'a' to attempt demod with ask amplification, default = no amp");
 	PrintAndLog("");
-	PrintAndLog("    sample: data rawdemod ar            = demod an ask tag from GraphBuffer");
+	PrintAndLog("   Example: data rawdemod ar            = demod an ask tag from GraphBuffer");
 	PrintAndLog("          : data rawdemod ar a          = demod an ask tag from GraphBuffer, amplified");
 	PrintAndLog("          : data rawdemod ar 32         = demod an ask tag from GraphBuffer using a clock of RF/32");
 	PrintAndLog("          : data rawdemod ar 32 1       = demod an ask tag from GraphBuffer using a clock of RF/32 and inverting data");
@@ -130,7 +130,7 @@ int usage_data_rawdemod_fs(void){
 	PrintAndLog("     [fchigh], larger field clock length, omit for autodetect");
 	PrintAndLog("     [fclow], small field clock length, omit for autodetect");
 	PrintAndLog("");
-	PrintAndLog("    sample: data rawdemod fs           = demod an fsk tag from GraphBuffer using autodetect");
+	PrintAndLog("   Example: data rawdemod fs           = demod an fsk tag from GraphBuffer using autodetect");
 	PrintAndLog("          : data rawdemod fs 32        = demod an fsk tag from GraphBuffer using a clock of RF/32, autodetect fc");
 	PrintAndLog("          : data rawdemod fs 1         = demod an fsk tag from GraphBuffer using autodetect, invert output");   
 	PrintAndLog("          : data rawdemod fs 32 1      = demod an fsk tag from GraphBuffer using a clock of RF/32, invert output, autodetect fc");
@@ -145,7 +145,7 @@ int usage_data_rawdemod_nr(void){
 	PrintAndLog("     <invert>, 1 for invert output");
 	PrintAndLog("     [set maximum allowed errors], default = 100.");
 	PrintAndLog("");
-	PrintAndLog("    sample: data rawdemod nr        = demod a nrz/direct tag from GraphBuffer");
+	PrintAndLog("   Example: data rawdemod nr        = demod a nrz/direct tag from GraphBuffer");
 	PrintAndLog("          : data rawdemod nr 32     = demod a nrz/direct tag from GraphBuffer using a clock of RF/32");
 	PrintAndLog("          : data rawdemod nr 32 1   = demod a nrz/direct tag from GraphBuffer using a clock of RF/32 and inverting data");
 	PrintAndLog("          : data rawdemod nr 1      = demod a nrz/direct tag from GraphBuffer while inverting data");
@@ -158,7 +158,7 @@ int usage_data_rawdemod_p1(void){
 	PrintAndLog("     <invert>, 1 for invert output");
 	PrintAndLog("     [set maximum allowed errors], default = 100.");
 	PrintAndLog("");
-	PrintAndLog("    sample: data rawdemod p1        = demod a psk1 tag from GraphBuffer");
+	PrintAndLog("   Example: data rawdemod p1        = demod a psk1 tag from GraphBuffer");
 	PrintAndLog("          : data rawdemod p1 32     = demod a psk1 tag from GraphBuffer using a clock of RF/32");
 	PrintAndLog("          : data rawdemod p1 32 1   = demod a psk1 tag from GraphBuffer using a clock of RF/32 and inverting data");
 	PrintAndLog("          : data rawdemod p1 1      = demod a psk1 tag from GraphBuffer while inverting data");
@@ -171,7 +171,7 @@ int usage_data_rawdemod_p2(void){
 	PrintAndLog("     <invert>, 1 for invert output");
 	PrintAndLog("     [set maximum allowed errors], default = 100.");
 	PrintAndLog("");
-	PrintAndLog("    sample: data rawdemod p2         = demod a psk2 tag from GraphBuffer, autodetect clock");
+	PrintAndLog("   Example: data rawdemod p2         = demod a psk2 tag from GraphBuffer, autodetect clock");
 	PrintAndLog("          : data rawdemod p2 32      = demod a psk2 tag from GraphBuffer using a clock of RF/32");
 	PrintAndLog("          : data rawdemod p2 32 1    = demod a psk2 tag from GraphBuffer using a clock of RF/32 and inverting output");
 	PrintAndLog("          : data rawdemod p2 1       = demod a psk2 tag from GraphBuffer, autodetect clock and invert output");
@@ -189,7 +189,7 @@ int usage_data_autocorr(void) {
 int usage_data_undecimate(void){
 	PrintAndLog("Usage: data undec [factor]");
 	PrintAndLog("This function performs un-decimation, by repeating each sample N times");
-	PrintAndLog("Options:        ");
+	PrintAndLog("Options:");
 	PrintAndLog("       h            This help");
 	PrintAndLog("       factor       The number of times to repeat each sample.[default:2]");
 	PrintAndLog("Example: 'data undec 3'");
@@ -201,7 +201,7 @@ int usage_data_detectclock(void){
 	PrintAndLog("     <clock>             , specify the clock (optional - to get best start position only)");
 	PrintAndLog("       'a' = ask, 'f' = fsk, 'n' = nrz/direct, 'p' = psk");
 	PrintAndLog("");
-	PrintAndLog("    sample: data detectclock a    = detect the clock of an ask modulated wave in the GraphBuffer");
+	PrintAndLog("   Example: data detectclock a    = detect the clock of an ask modulated wave in the GraphBuffer");
 	PrintAndLog("            data detectclock f    = detect the clock of an fsk modulated wave in the GraphBuffer");
 	PrintAndLog("            data detectclock p    = detect the clock of an psk modulated wave in the GraphBuffer");
 	PrintAndLog("            data detectclock n    = detect the clock of an nrz/direct modulated wave in the GraphBuffer");
@@ -226,7 +226,7 @@ int usage_data_buffclear(void){
 }
 int usage_data_fsktonrz() {
 		PrintAndLog("Usage: data fsktonrz c <clock> l <fc_low> f <fc_high>");
-		PrintAndLog("Options:        ");
+		PrintAndLog("Options:");
 		PrintAndLog("       h            This help");
 		PrintAndLog("       c <clock>    enter the a clock (omit to autodetect)");
 		PrintAndLog("       l <fc_low>   enter a field clock (omit to autodetect)");

@@ -13,13 +13,14 @@ static int CmdHelp(const char *Cmd);
 int usage_lf_presco_clone(void){
 	PrintAndLog("clone a Presco tag to a T55x7 tag.");
 	PrintAndLog("Usage: lf presco clone [h] d <Card-ID> H <hex-ID> <Q5>");
-	PrintAndLog("Options :");
+	PrintAndLog("Options:");
 	PrintAndLog("  h             : this help");	
 	PrintAndLog("  d <Card-ID>   : 9 digit presco card ID");
 	PrintAndLog("  H <hex-ID>    : 8 digit hex card number");
 	PrintAndLog("  <Q5>          : specify write to Q5 (t5555 instead of t55x7)");
 	PrintAndLog("");
-	PrintAndLog("Sample  : lf presco clone d 123456789");
+	PrintAndLog("Examples:");
+	PrintAndLog("       lf presco clone d 123456789");
 	return 0;
 }
 
@@ -29,12 +30,13 @@ int usage_lf_presco_sim(void) {
 	PrintAndLog("Per presco format, the card number is 9 digit number and can contain *# chars. Larger values are truncated.");
 	PrintAndLog("");
 	PrintAndLog("Usage:  lf presco sim [h] d <Card-ID> or H <hex-ID>");
-	PrintAndLog("Options :");
+	PrintAndLog("Options:");
 	PrintAndLog("  h             : this help");	
 	PrintAndLog("  d <Card-ID>   : 9 digit presco card number");
 	PrintAndLog("  H <hex-ID>    : 8 digit hex card number");
 	PrintAndLog("");
-	PrintAndLog("Sample  : lf presco sim d 123456789");
+	PrintAndLog("Examples:");
+	PrintAndLog("       lf presco sim d 123456789");
 	return 0;
 }
 

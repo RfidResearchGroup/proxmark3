@@ -20,7 +20,8 @@ int usage_lf_noralsy_clone(void){
 	PrintAndLog("      <year>     : Tag allocation year");
 	PrintAndLog("      <Q5>       : specify write to Q5 (t5555 instead of t55x7)");
 	PrintAndLog("");
-	PrintAndLog("Sample: lf noralsy clone 112233");
+	PrintAndLog("Examples:");
+	PrintAndLog("       lf noralsy clone 112233");
 	return 0;
 }
 
@@ -34,7 +35,8 @@ int usage_lf_noralsy_sim(void) {
 	PrintAndLog("      <card id>  : Noralsy card ID");
 	PrintAndLog("      <year>     : Tag allocation year");
 	PrintAndLog("");
-	PrintAndLog("Sample: lf noralsy sim 112233");
+	PrintAndLog("Examples:");
+	PrintAndLog("       lf noralsy sim 112233");
 	return 0;
 }
 

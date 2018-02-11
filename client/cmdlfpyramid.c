@@ -17,13 +17,14 @@ int usage_lf_pyramid_clone(void){
 	PrintAndLog("Currently only works on 26bit");
 	PrintAndLog("");
 	PrintAndLog("Usage: lf pyramid clone [h] <Facility-Code> <Card-Number> [Q5]");
-	PrintAndLog("Options :");
+	PrintAndLog("Options:");
 	PrintAndLog("  h               : this help");
 	PrintAndLog("  <Facility-Code> :  8-bit value facility code");
 	PrintAndLog("  <Card Number>   : 16-bit value card number");
 	PrintAndLog("  Q5              : optional - clone to Q5 (T5555) instead of T55x7 chip");
 	PrintAndLog("");
-	PrintAndLog("Sample  : lf pyramid clone 123 11223");
+	PrintAndLog("Examples:");
+	PrintAndLog("       lf pyramid clone 123 11223");
 	return 0;
 }
 
@@ -34,12 +35,13 @@ int usage_lf_pyramid_sim(void) {
 	PrintAndLog("Currently work only on 26bit");
 	PrintAndLog("");
 	PrintAndLog("Usage:  lf pyramid sim [h] <Facility-Code> <Card-Number>");
-	PrintAndLog("Options :");
+	PrintAndLog("Options:");
 	PrintAndLog("  h               : this help");
 	PrintAndLog("  <Facility-Code> :  8-bit value facility code");
 	PrintAndLog("  <Card Number>   : 16-bit value card number");
 	PrintAndLog("");
-	PrintAndLog("Sample  : lf pyramid sim 123 11223");
+	PrintAndLog("Examples:");
+	PrintAndLog("       lf pyramid sim 123 11223");
 	return 0;
 }
 

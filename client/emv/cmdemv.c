@@ -16,12 +16,12 @@ static int CmdHelp(const char *Cmd);
 int usage_emv_select(void) {
 	PrintAndLog("Executes select applet command:\n");
 	PrintAndLog("Usage:  hf emv select [-s][-k][-a][-t] <HEX applet AID>\n");
-	PrintAndLog("  Options:");
+	PrintAndLog("Options:");
 	PrintAndLog("  -s       : select card");
 	PrintAndLog("  -k       : keep field for next command");
 	PrintAndLog("  -a       : show APDU reqests and responses\n");
 	PrintAndLog("  -t       : TLV decode results\n");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog(" hf emv select -s a00000000101        -> select card, select applet");
 	PrintAndLog(" hf emv select -s -t a00000000101     -> select card, select applet, show result in TLV");
 	return 0;
@@ -108,12 +108,12 @@ int CmdHFEMVSelect(const char *cmd) {
 int usage_emv_search(void) {
 	PrintAndLog("Tries to select all applets from applet list:\n");
 	PrintAndLog("Usage:  hf emv search [-s][-k][-a][-t]\n");
-	PrintAndLog("  Options:");
+	PrintAndLog("Options:");
 	PrintAndLog("  -s       : select card");
 	PrintAndLog("  -k       : keep field for next command");
 	PrintAndLog("  -a       : show APDU reqests and responses\n");
 	PrintAndLog("  -t       : TLV decode results of selected applets\n");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog(" hf emv search -s         -> select card and search");
 	PrintAndLog(" hf emv search -s -t      -> select card, search and show result in TLV");
 	return 0;
@@ -185,14 +185,14 @@ int CmdHFEMVSearch(const char *cmd) {
 int usage_emv_ppse(void) {
 	PrintAndLog("Executes PSE/PPSE select command. It returns list of applet on the card:\n");
 	PrintAndLog("Usage:  hf emv pse [-s][-k][-1][-2][-a][-t]\n");
-	PrintAndLog("  Options:");
+	PrintAndLog("Options:");
 	PrintAndLog("  -s       : select card");
 	PrintAndLog("  -k       : keep field for next command");
 	PrintAndLog("  -1       : ppse (1PAY.SYS.DDF01)");
 	PrintAndLog("  -2       : pse (2PAY.SYS.DDF01)");
 	PrintAndLog("  -a       : show APDU reqests and responses\n");
 	PrintAndLog("  -t       : TLV decode results\n");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog(" hf emv pse -s -1         -> select, get pse");
 	PrintAndLog(" hf emv pse -s -k -2      -> select, get ppse, keep field");
 	PrintAndLog(" hf emv pse -s -t -2      -> select, get ppse, show result in TLV");
@@ -269,7 +269,7 @@ int CmdHFEMVPPSE(const char *cmd) {
 int usage_emv_exec(void) {
 	PrintAndLog("Executes EMV contactless transaction:\n");
 	PrintAndLog("Usage:  hf emv exec [-s][-a][-t][-f][-v][-c][-x][-g]\n");
-	PrintAndLog("  Options:");
+	PrintAndLog("Options:");
 	PrintAndLog("  -s       : select card");
 	PrintAndLog("  -a       : show APDU reqests and responses\n");
 	PrintAndLog("  -t       : TLV decode results\n");
@@ -279,7 +279,7 @@ int usage_emv_exec(void) {
 	PrintAndLog("  -x       : transaction type - VSDC. For test only. Not a standart behavior.\n");
 	PrintAndLog("  -g       : VISA. generate AC from GPO\n");
 	PrintAndLog("By default : transaction type - MSD.\n");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog(" hf emv exec -s -a -t         -> execute MSD transaction");
 	PrintAndLog(" hf emv exec -s -a -t -c      -> execute CDA transaction");
 	return 0;
@@ -816,7 +816,7 @@ int usage_emv_getrnd(void){
 	PrintAndLog("Options:");
 	PrintAndLog("      h             : this help");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      hf emv getrnd");
 	return 0;
 }

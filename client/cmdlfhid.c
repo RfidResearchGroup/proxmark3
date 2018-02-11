@@ -26,7 +26,7 @@ int usage_lf_hid_read(void){
 	PrintAndLog("      h :  This help");	
 	PrintAndLog("      1 : (optional) stop after reading a single card");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("       lf hid read");
 	PrintAndLog("       lf hid read 1");	
 	return 0;
@@ -40,7 +40,7 @@ int usage_lf_hid_wiegand(void){
 	PrintAndLog("       OEM           - OEM number / site code");
 	PrintAndLog("       FC            - facility code");
 	PrintAndLog("       CN            - card number");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      lf hid wiegand 0 101 2001");
 	return 0;
 }
@@ -52,7 +52,7 @@ int usage_lf_hid_sim(void){
 	PrintAndLog("Options:");
 	PrintAndLog("       h	- This help");
 	PrintAndLog("       ID  - HID id");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      lf hid sim 2006ec0c86");
 	return 0;
 }
@@ -64,7 +64,7 @@ int usage_lf_hid_clone(void){
 	PrintAndLog("       h	- This help");
 	PrintAndLog("       ID  - HID id");
 	PrintAndLog("       L   - 84bit ID");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      lf hid clone 2006ec0c86");
 	PrintAndLog("      lf hid clone 2006ec0c86 L");
 	return 0;
@@ -75,7 +75,7 @@ int usage_lf_hid_brute(void){
 	PrintAndLog("if cardnumber is not given, it starts with 1 and goes up to 65535");
 	PrintAndLog("");
 	PrintAndLog("Usage:  lf hid brute [h] [v] a <format> f <facility-code> c <cardnumber> d <delay>");
-	PrintAndLog("Options :");
+	PrintAndLog("Options:");
 	PrintAndLog("       h                 :  This help");	
 	PrintAndLog("       a <format>        :  26|33|34|35|37|40|44|84");
 	PrintAndLog("       f <facility-code> :  8-bit value HID facility code");
@@ -83,7 +83,7 @@ int usage_lf_hid_brute(void){
 	PrintAndLog("       d <delay>         :  delay betweens attempts in ms. Default 1000ms");
 	PrintAndLog("       v                 :  verbose logging, show all tries");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("       lf hid brute a 26 f 224");
 	PrintAndLog("       lf hid brute a 26 f 21 d 2000");
 	PrintAndLog("       lf hid brute v a 26 f 21 c 200 d 2000");

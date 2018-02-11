@@ -1396,9 +1396,10 @@ int usage_hf_mfu_info(void) {
 	PrintAndLog("  k <key> : (optional) key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
 	PrintAndLog("  l       : (optional) swap entered key's endianness");
 	PrintAndLog("");
-	PrintAndLog("   sample : hf mfu info");
-	PrintAndLog("          : hf mfu info k 00112233445566778899AABBCCDDEEFF");
-	PrintAndLog("          : hf mfu info k AABBCCDDD");
+	PrintAndLog("Examples:");
+	PrintAndLog("       hf mfu info");
+	PrintAndLog("       hf mfu info k 00112233445566778899AABBCCDDEEFF");
+	PrintAndLog("       hf mfu info k AABBCCDDD");
 	return 0;
 }
 
@@ -1415,10 +1416,11 @@ int usage_hf_mfu_dump(void) {
 	PrintAndLog("  p <Pg > : starting Page number to manually set a page to start the dump at");	
 	PrintAndLog("  q <qty> : number of Pages to manually set how many pages to dump");	
 	PrintAndLog("");
-	PrintAndLog("   sample : hf mfu dump");
-	PrintAndLog("          : hf mfu dump n myfile");
-	PrintAndLog("          : hf mfu dump k 00112233445566778899AABBCCDDEEFF");
-	PrintAndLog("          : hf mfu dump k AABBCCDDD\n");
+	PrintAndLog("Examples:");
+	PrintAndLog("       hf mfu dump");
+	PrintAndLog("       hf mfu dump n myfile");
+	PrintAndLog("       hf mfu dump k 00112233445566778899AABBCCDDEEFF");
+	PrintAndLog("       hf mfu dump k AABBCCDDD\n");
 	return 0;
 }
 
@@ -1433,38 +1435,40 @@ int usage_hf_mfu_restore(void){
 	PrintAndLog("  r       : (optional) use the password found in dumpfile to configure tag. requires 'e' parameter to work");
 	PrintAndLog("  f <FN>  : filename w/o .bin to restore");	
 	PrintAndLog("");
-	PrintAndLog("   samples:");
-	PrintAndLog("          : hf mfu restore s f myfile");
-	PrintAndLog("          : hf mfu restore k AABBCCDDD s f myfile\n");
-	PrintAndLog("          : hf mfu restore k AABBCCDDD s e r f myfile\n");
+	PrintAndLog("Examples:");
+	PrintAndLog("       hf mfu restore s f myfile");
+	PrintAndLog("       hf mfu restore k AABBCCDDD s f myfile\n");
+	PrintAndLog("       hf mfu restore k AABBCCDDD s e r f myfile\n");
 	return 0;
 }
 
 int usage_hf_mfu_rdbl(void) {
 	PrintAndLog("Read a block and print. It autodetects card type.\n");	
 	PrintAndLog("Usage:  hf mfu rdbl b <block number> k <key> l\n");
-	PrintAndLog("  Options:");
+	PrintAndLog("Options:");
 	PrintAndLog("  b <no>  : block to read");
 	PrintAndLog("  k <key> : (optional) key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
 	PrintAndLog("  l       : (optional) swap entered key's endianness");	
 	PrintAndLog("");
-	PrintAndLog("   sample : hf mfu rdbl b 0");
-	PrintAndLog("          : hf mfu rdbl b 0 k 00112233445566778899AABBCCDDEEFF");
-	PrintAndLog("          : hf mfu rdbl b 0 k AABBCCDDD\n");
+	PrintAndLog("Examples:");
+	PrintAndLog("       hf mfu rdbl b 0");
+	PrintAndLog("       hf mfu rdbl b 0 k 00112233445566778899AABBCCDDEEFF");
+	PrintAndLog("       hf mfu rdbl b 0 k AABBCCDDD\n");
 	return 0;
 }
 
 int usage_hf_mfu_wrbl(void) {
 	PrintAndLog("Write a block. It autodetects card type.\n");		
 	PrintAndLog("Usage:  hf mfu wrbl b <block number> d <data> k <key> l\n");
-	PrintAndLog("  Options:");	
+	PrintAndLog("Options:");	
 	PrintAndLog("  b <no>   : block to write");
 	PrintAndLog("  d <data> : block data - (8 hex symbols)");
 	PrintAndLog("  k <key>  : (optional) key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
 	PrintAndLog("  l        : (optional) swap entered key's endianness");	
 	PrintAndLog("");
-	PrintAndLog("    sample : hf mfu wrbl b 0 d 01234567");
-	PrintAndLog("           : hf mfu wrbl b 0 d 01234567 k AABBCCDDD\n");
+	PrintAndLog("Examples:");
+	PrintAndLog("        hf mfu wrbl b 0 d 01234567");
+	PrintAndLog("        hf mfu wrbl b 0 d 01234567 k AABBCCDDD\n");
 	return 0;
 }
 
@@ -1487,12 +1491,14 @@ int usage_hf_mfu_sim(void) {
 	PrintAndLog("\nEmulating Ultralight tag from emulator memory\n");
 	PrintAndLog("\nBe sure to load the emulator memory first!\n");
 	PrintAndLog("Usage: hf mfu sim t 7 u <uid>");
-	PrintAndLog("  Options:");
+	PrintAndLog("Options:");
 	PrintAndLog("    h       : this help");
 	PrintAndLog("    t 7     : 7 = NTAG or Ultralight sim (required)");
 	PrintAndLog("    u <uid> : 4 or 7 byte UID (optional)");
-	PrintAndLog("\n   sample : hf mfu sim t 7");
-	PrintAndLog("          : hf mfu sim t 7 u 1122344556677\n");
+	PrintAndLog("");
+	PrintAndLog("Examples:");
+	PrintAndLog("        hf mfu sim t 7");
+	PrintAndLog("        hf mfu sim t 7 u 1122344556677\n");
 	
 	return 0;
 }
@@ -1506,8 +1512,9 @@ int usage_hf_mfu_ucauth(void) {
 	PrintAndLog("      4 : all 0x01 key");
 	PrintAndLog("      5 : all 0xff key");
 	PrintAndLog("      6 : 0x00-0xFF key");		
-	PrintAndLog("\n      sample : hf mfu cauth k");
-	PrintAndLog("               : hf mfu cauth k 3");
+	PrintAndLog("Examples:");
+	PrintAndLog("       hf mfu cauth k");
+	PrintAndLog("       hf mfu cauth k 3");
 	return 0;
 }
 
@@ -1515,7 +1522,8 @@ int usage_hf_mfu_ucsetpwd(void) {
 	PrintAndLog("Usage:  hf mfu setpwd <password (32 hex symbols)>");
 	PrintAndLog("       [password] - (32 hex symbols)");
 	PrintAndLog("");
-	PrintAndLog("sample: hf mfu setpwd 000102030405060708090a0b0c0d0e0f");
+	PrintAndLog("Examples:");
+	PrintAndLog("         hf mfu setpwd 000102030405060708090a0b0c0d0e0f");
 	PrintAndLog("");
 	return 0;
 }
@@ -1525,18 +1533,19 @@ int usage_hf_mfu_ucsetuid(void) {
 	PrintAndLog("       [uid] - (14 hex symbols)");
 	PrintAndLog("\nThis only works for Magic Ultralight tags.");
 	PrintAndLog("");
-	PrintAndLog("sample: hf mfu setuid 11223344556677");
+	PrintAndLog("Examples:");
+	PrintAndLog("         hf mfu setuid 11223344556677");
 	PrintAndLog("");
 	return 0;
 }
 
 int usage_hf_mfu_gendiverse(void){
 	PrintAndLog("Usage:  hf mfu gen [h] [r] <uid (8 hex symbols)>");
-	PrintAndLog("options:");
+	PrintAndLog("Options:");
 	PrintAndLog("    h       : this help");
 	PrintAndLog("    r       : read uid from tag");
 	PrintAndLog("    <uid>   : 4 byte UID (optional)");
-	PrintAndLog("samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("        hf mfu gen r");
 	PrintAndLog("        hf mfu gen 11223344");
 	PrintAndLog("");
@@ -1545,12 +1554,12 @@ int usage_hf_mfu_gendiverse(void){
 
 int usage_hf_mfu_pwdgen(void){
 	PrintAndLog("Usage:  hf mfu pwdgen [h|t] [r] <uid (14 hex symbols)>");
-	PrintAndLog("options:");
+	PrintAndLog("Options:");
 	PrintAndLog("    h       : this help");
 	PrintAndLog("    t       : selftest");
 	PrintAndLog("    r       : read uid from tag");
 	PrintAndLog("    <uid>   : 7 byte UID (optional)");
-	PrintAndLog("samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("        hf mfu pwdgen r");
 	PrintAndLog("        hf mfu pwdgen 11223344556677");
 	PrintAndLog("        hf mfu pwdgen t");

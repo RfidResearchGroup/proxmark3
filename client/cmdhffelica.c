@@ -13,13 +13,13 @@ static int CmdHelp(const char *Cmd);
 
 int usage_hf_felica_sim(void) {
 	PrintAndLog("\n Emulating ISO/18092 FeliCa tag \n");
-	PrintAndLog("usage: hf felica sim [h] t <type> [v]");
-	PrintAndLog("options: ");
+	PrintAndLog("Usage: hf felica sim [h] t <type> [v]");
+	PrintAndLog("Options:");
 	PrintAndLog("    h     : This help");
 	PrintAndLog("    t     : 1 = FeliCa");
 	PrintAndLog("          : 2 = FeliCaLiteS");
 	PrintAndLog("    v     : (Optional) Verbose");
-	PrintAndLog("samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("          hf felica sim t 1 ");
 	return 0;
 }
@@ -29,27 +29,27 @@ int usage_hf_felica_sniff(void){
 	PrintAndLog("Usage:  hf felica sniff <s > <t>");
 	PrintAndLog("      s       samples to skip (decimal)");
 	PrintAndLog("      t       triggers to skip (decimal)");
- 	PrintAndLog("samples:");
+ 	PrintAndLog("Examples:");
 	PrintAndLog("          hf felica sniff s 1000");
 	return 0;
 }
 int usage_hf_felica_simlite(void) {
 	PrintAndLog("\n Emulating ISO/18092 FeliCa Lite tag \n");
-	PrintAndLog("usage: hf felica litesim [h] u <uid>");
-	PrintAndLog("options: ");
+	PrintAndLog("Usage: hf felica litesim [h] u <uid>");
+	PrintAndLog("Options:");
 	PrintAndLog("    h     : This help");
 	PrintAndLog("    uid   : UID in hexsymbol");
-	PrintAndLog("samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("          hf felica litesim 11223344556677");
 	return 0;
 }
 int usage_hf_felica_dumplite(void) {
 	PrintAndLog("\n Dump ISO/18092 FeliCa Lite tag \n");
 	PrintAndLog("press button to abort run, otherwise it will loop for 200sec.");
-	PrintAndLog("usage: hf felica litedump [h]");
-	PrintAndLog("options: ");
+	PrintAndLog("Usage: hf felica litedump [h]");
+	PrintAndLog("Options:");
 	PrintAndLog("    h     : This help");
-	PrintAndLog("samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("          hf felica litedump");
 	return 0;
 }

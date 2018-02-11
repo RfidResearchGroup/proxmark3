@@ -19,7 +19,7 @@ int usage_lf_cotag_read(void){
 	PrintAndLog("                 : 1 - translation of HI/LO into bytes with manchester 0,1");
 	PrintAndLog("                 : 2 - raw signal; maxlength bigbuff");
 	PrintAndLog("");
-	PrintAndLog("Sample:");
+	PrintAndLog("Example:");
 	PrintAndLog("        lf cotag read 0");
 	PrintAndLog("        lf cotag read 1");
 	return 0;

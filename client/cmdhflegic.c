@@ -23,7 +23,7 @@ int usage_legic_calccrc(void){
 	PrintAndLog("      u <uidcrc>    : MCC hexbyte");
 	PrintAndLog("      c <8|16>      : Crc type");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      hf legic crc d deadbeef1122");
 	PrintAndLog("      hf legic crc d deadbeef1122 u 9A c 16");
 	return 0;
@@ -37,7 +37,7 @@ int usage_legic_rdmem(void){
 	PrintAndLog("      <length>      : (hex) number of bytes to read");
 	PrintAndLog("      <IV>          : (hex) (optional) Initialization vector to use. Must be odd and 7bits max");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      hf legic rdmem 0 16        - reads from byte[0] 0x16 bytes(system header)");
 	PrintAndLog("      hf legic rdmem 0 4 55      - reads from byte[0] 0x4 bytes with IV 0x55");
 	PrintAndLog("      hf legic rdmem 0 100 55    - reads 0x100 bytes with IV 0x55");
@@ -56,7 +56,7 @@ int usage_legic_sim(void){
 	PrintAndLog("      <frame>       : frame drift");
 	PrintAndLog("      <reqresp>     : reqresp drift");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      hf legic sim");
 	PrintAndLog("      hf legic sim ");
 	return 0;
@@ -70,7 +70,7 @@ int usage_legic_write(void){
 	//PrintAndLog("  <IV>          : (optional) Initialization vector to use (ODD and 7bits)");
 	PrintAndLog("      d <data>      : (hex symbols) bytes to write ");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      hf legic write o 10 d 11223344    - Write 0x11223344 starting from offset 0x10");
 	return 0;
 }
@@ -80,7 +80,7 @@ int usage_legic_reader(void){
 	PrintAndLog("Options:");
 	PrintAndLog("      h             : this help");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      hf legic reader");
 	return 0;
 }
@@ -91,7 +91,7 @@ int usage_legic_info(void){
 	PrintAndLog("Options:");
 	PrintAndLog("      h             : this help");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      hf legic info");
 	return 0;
 }
@@ -104,7 +104,7 @@ int usage_legic_dump(void){
 	PrintAndLog("      h             : this help");
 	PrintAndLog("      o <filename>  : filename w/o '.bin' to dump bytes");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      hf legic dump");
 	PrintAndLog("      hf legic dump o myfile");
 	return 0;
@@ -117,7 +117,7 @@ int usage_legic_restore(void){
 	PrintAndLog("      h             : this help");
 	PrintAndLog("      i <filename>  : filename w/o '.bin' to restore bytes on to card from");
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      hf legic restore i myfile");
 	return 0;
 }
@@ -131,7 +131,7 @@ int usage_legic_eload(void){
 	PrintAndLog("                    : 2 = MIM1024");
 	PrintAndLog("      <filename>    : filename w/o .bin to load");	
 	PrintAndLog("");
-	PrintAndLog("Samples:");
+	PrintAndLog("Examples:");
 	PrintAndLog("      hf legic eload 2 myfile");
 	return 0;
 }
@@ -145,7 +145,7 @@ int usage_legic_esave(void){
 	PrintAndLog("                    : 2 = MIM1024");
 	PrintAndLog("      <filename>    : filename w/o .bin to load");	
 	PrintAndLog("");
-	PrintAndLog("Samples:");	
+	PrintAndLog("Examples:");	
 	PrintAndLog("      hf legic esave 2 myfile");
 	return 0;
 }
@@ -155,7 +155,7 @@ int usage_legic_wipe(void){
 	PrintAndLog("Options:");
 	PrintAndLog("      h             : this help");
 	PrintAndLog("");
-	PrintAndLog("Samples:");	
+	PrintAndLog("Examples:");	
 	PrintAndLog("      hf legic wipe");
 	return 0;
 }
