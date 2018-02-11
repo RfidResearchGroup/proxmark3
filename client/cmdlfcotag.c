@@ -86,7 +86,8 @@ int CmdCOTAGRead(const char *Cmd) {
 		case 2: {
 			CmdPlot("");
 			CmdGrid("384");
-			getSamples(0, true); break;
+			getSamples(0, true); 
+			break;
 		}
 		case 1: {
 			GetFromBigBuf(DemodBuffer, COTAG_BITS, 0);
