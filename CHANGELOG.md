@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
  - dump / restore now uses custom filenames (@brianpow)
+ - Removed 'hf mf sniff' ,  (@iceman),  use HF 14A SNIFF instead
  - Added 'hf iclass lookup' (@iceman)
  - Added 'hf iclass chk' (@iceman)
  - Fixed ADC mux all closed push-pull state (@iceman)
