@@ -221,7 +221,7 @@ void hash2(uint8_t *key64, uint8_t *outp_keytable) {
     // Once again, key is on iclass-format
     desencrypt_iclass(key64, key64_negated, z[0]);
 
-//    prnlog("\nHigh security custom key (Kcus):");
+//    PrintfAndLog("\nHigh security custom key (Kcus):");
 //    printvar("z0  ",  z[0],8);
 
     uint8_t y[8][8]={{0},{0}};
@@ -324,10 +324,10 @@ int bruteforceItem(dumpdata item, uint16_t keytable[]) {
 		keytable[key_index[i]] |= BEING_CRACKED;
 
 		if (numbytes_to_recover > 3) {
-			prnlog("[-] The CSN requires > 3 byte bruteforce, not supported");
+			PrintfAndLog("[-] The CSN requires > 3 byte bruteforce, not supported");
 			printvar("[-] CSN", item.csn, 8);
 			printvar("[-] HASH1", key_index, 8);
-			prnlog("");
+			PrintfAndLog("");
 			//Before we exit, reset the 'BEING_CRACKED' to zero
 			keytable[bytes_to_recover[0]]  &= ~BEING_CRACKED;
 			keytable[bytes_to_recover[1]]  &= ~BEING_CRACKED;
@@ -350,9 +350,9 @@ int bruteforceItem(dumpdata item, uint16_t keytable[]) {
 	*/
 
 	uint32_t endmask =  1 << 8*numbytes_to_recover;
-	prnlog("----------------------------");
+	PrintfAndLog("----------------------------");
 	for (i =0 ; i < numbytes_to_recover && numbytes_to_recover > 1; i++)
-		prnlog("[+] Bruteforcing byte %d", bytes_to_recover[i]);
+		PrintfAndLog("[+] Bruteforcing byte %d", bytes_to_recover[i]);
 
 	while (!found && !(brute & endmask)) {
 		
@@ -383,7 +383,7 @@ int bruteforceItem(dumpdata item, uint16_t keytable[]) {
 		if (memcmp(calculated_MAC, item.mac, 4) == 0) {
 			printf("\r\n");
 			for (i =0 ; i < numbytes_to_recover; i++) {
-				prnlog("[=] %d: 0x%02x", bytes_to_recover[i], 0xFF & keytable[bytes_to_recover[i]]);	
+				PrintfAndLog("[=] %d: 0x%02x", bytes_to_recover[i], 0xFF & keytable[bytes_to_recover[i]]);	
 			}
 			found = true;
 			break;
@@ -399,7 +399,7 @@ int bruteforceItem(dumpdata item, uint16_t keytable[]) {
 	}
 	
 	if (!found) {
-		prnlog("\n[!] Failed to recover %d bytes using the following CSN", numbytes_to_recover);
+		PrintfAndLog("\n[!] Failed to recover %d bytes using the following CSN", numbytes_to_recover);
 		printvar("[!] CSN", item.csn, 8);
 		errors++;
 
@@ -409,7 +409,7 @@ int bruteforceItem(dumpdata item, uint16_t keytable[]) {
 			keytable[bytes_to_recover[i]]  |= CRACK_FAILED;
 		}
 	} else {
-		//prnlog("[+] DES calcs: %u", brute);
+		//PrintfAndLog("[+] DES calcs: %u", brute);
 		for (i=0; i < numbytes_to_recover; i++){
 			keytable[bytes_to_recover[i]]  &= 0xFF;
 			keytable[bytes_to_recover[i]]  |= CRACKED;
@@ -464,7 +464,7 @@ int calculateMasterKey(uint8_t first16bytes[], uint64_t master_key[] ){
 
 	des_setkey_enc( &ctx_e, key64_stdformat );
 	des_crypt_ecb(&ctx_e, key64_negated, result);
-	prnlog("\n[+] -- High security custom key (Kcus) --");
+	PrintfAndLog("\n[+] -- High security custom key (Kcus) --");
 	printvar("[+] Standard format   ", key64_stdformat, 8);
 	printvar("[+] iClass format     ", key64, 8);
 
@@ -472,10 +472,10 @@ int calculateMasterKey(uint8_t first16bytes[], uint64_t master_key[] ){
 		memcpy(master_key, key64, 8);
 
 	if (memcmp(z_0,result,4) != 0) {
-		prnlog("[!] Failed to verify calculated master key (k_cus)! Something is wrong.");
+		PrintfAndLog("[!] Failed to verify calculated master key (k_cus)! Something is wrong.");
 		return 1;
 	} else {
-		prnlog("\n[+] Key verified ok!\n");
+		PrintfAndLog("\n[+] Key verified ok!\n");
 	}
 	return 0;
 }
@@ -501,7 +501,7 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[]) {
 	}
 	free(attack);
 
-	prnlog("[+] time: %" PRIu64 " seconds", (msclock()-t1)/1000);	
+	PrintfAndLog("[+] time: %" PRIu64 " seconds", (msclock()-t1)/1000);	
 
 	// Pick out the first 16 bytes of the keytable.
 	// The keytable is now in 16-bit ints, where the upper 8 bits
@@ -513,7 +513,7 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[]) {
 		first16bytes[i] = keytable[i] & 0xFF;
 		
 		if (!(keytable[i] & CRACKED))
-			prnlog("[!] error, we are missing byte %d, custom key calculation will fail...", i);
+			PrintfAndLog("[!] error, we are missing byte %d, custom key calculation will fail...", i);
 	}
 	errors += calculateMasterKey(first16bytes, NULL);
 	return errors;
@@ -528,7 +528,7 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[]) {
 int bruteforceFile(const char *filename, uint16_t keytable[]) {
 	FILE *f = fopen(filename, "rb");
 	if (!f) {
-		prnlog("[!] Failed to read from file '%s'", filename);
+		PrintfAndLog("[!] Failed to read from file '%s'", filename);
 		return 1;
 	}
 
@@ -537,7 +537,7 @@ int bruteforceFile(const char *filename, uint16_t keytable[]) {
 	fseek(f, 0, SEEK_SET);
 
 	if (fsize < 0) {
-		prnlog("[!] Error, when getting filesize");
+		PrintfAndLog("[!] Error, when getting filesize");
 		if (f) fclose(f);
 		return 1;
 	}
@@ -548,7 +548,7 @@ int bruteforceFile(const char *filename, uint16_t keytable[]) {
 	if (f) fclose(f);
 	
     if (bytes_read < fsize) {
-        prnlog("[!] Error, could only read %d bytes (should be %d)", bytes_read, fsize );
+        PrintfAndLog("[!] Error, could only read %d bytes (should be %d)", bytes_read, fsize );
 	}
 
 	uint8_t res = bruteforceDump(dump, fsize, keytable);
@@ -576,7 +576,7 @@ int _testBruteforce() {
 	int errors = 0;
 	if (true) {
 		// First test
-		prnlog("[+] Testing crack from dumpfile...");
+		PrintfAndLog("[+] Testing crack from dumpfile...");
 
 		/**
 		  Expected values for the dumpfile:
@@ -603,7 +603,7 @@ int _testBruteforce() {
 		} else if (fileExists("client/loclass/iclass_dump.bin")){
 			errors |= bruteforceFile("client/loclass/iclass_dump.bin", keytable);
 		} else {
-			prnlog("[!] Error: The file iclass_dump.bin was not found!");
+			PrintfAndLog("[!] Error: The file iclass_dump.bin was not found!");
 		}
 	}
 	return errors;
@@ -618,20 +618,20 @@ int _test_iclass_key_permutation() {
 	permutekey_rev(testcase_output, testcase_output_rev);
 
 	if (memcmp(testcase_output, testcase_output_correct,8) != 0) {
-		prnlog("[!] Error with iclass key permute!");
+		PrintfAndLog("[!] Error with iclass key permute!");
 		printarr("testcase_output", testcase_output, 8);
 		printarr("testcase_output_correct", testcase_output_correct, 8);
 		return 1;
 
 	}
 	if (memcmp(testcase, testcase_output_rev, 8) != 0) {
-		prnlog("[!] Error with reverse iclass key permute");
+		PrintfAndLog("[!] Error with reverse iclass key permute");
 		printarr("testcase", testcase, 8);
 		printarr("testcase_output_rev", testcase_output_rev, 8);
 		return 1;
 	}
 
-	prnlog("[+] Iclass key permutation OK!");
+	PrintfAndLog("[+] Iclass key permutation OK!");
 	return 0;
 }
 
@@ -642,7 +642,7 @@ int _testHash1() {
     hash1(csn, k);
 
     if (memcmp(k,expected,8) != 0) {
-        prnlog("[!] Error with hash1!");
+        PrintfAndLog("[!] Error with hash1!");
         printarr("calculated", k, 8);
         printarr("expected", expected, 8);
         return 1;
@@ -651,8 +651,8 @@ int _testHash1() {
 }
 
 int testElite() {
-	prnlog("[+] Testing iClass Elite functinality...");
-    prnlog("[+] Testing hash2");
+	PrintfAndLog("[+] Testing iClass Elite functinality...");
+    PrintfAndLog("[+] Testing hash2");
     uint8_t k_cus[8] = {0x5B,0x7C,0x62,0xC4,0x91,0xC1,0x1B,0x39};
 
     /**
@@ -676,13 +676,13 @@ int testElite() {
     hash2(k_cus, keytable);
     printarr_human_readable("Hash2", keytable, 128);
     if (keytable[3] == 0xA1 && keytable[0x30] == 0xA3 && keytable[0x6F] == 0x95) {
-        prnlog("[+] Hash2 looks fine...");
+        PrintfAndLog("[+] Hash2 looks fine...");
     }
 
 	int errors = 0 ;
-    prnlog("[+] Testing hash1...");
+    PrintfAndLog("[+] Testing hash1...");
     errors += _testHash1();
-    prnlog("[+] Testing key diversification ...");
+    PrintfAndLog("[+] Testing key diversification ...");
     errors +=_test_iclass_key_permutation();
 	errors += _testBruteforce();
 	return errors;

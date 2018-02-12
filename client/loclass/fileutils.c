@@ -77,14 +77,14 @@ int saveFile(const char *preferredName, const char *suffix, const void* data, si
 	/*Opening file for writing in binary mode*/
 	FILE *f = fopen(fileName, "wb");
 	if (!f) {
-		prnlog("[!] file not found or locked. '%s'", fileName);
+		PrintfAndLog("[!] file not found or locked. '%s'", fileName);
 		free(fileName);
 		return 1;
 	}
 	fwrite(data, 1,	datalen, f);
 	fflush(f);
 	fclose(f);
-	prnlog("[+] saved %u bytes to binary file %s", datalen, fileName);
+	PrintfAndLog("[+] saved %u bytes to binary file %s", datalen, fileName);
 	free(fileName);
 	return 0;
 }
@@ -113,7 +113,7 @@ int saveFileEML(const char *preferredName, const char *suffix, uint8_t* data, si
 	/*Opening file for writing in text mode*/
 	FILE *f = fopen(fileName, "w+");
 	if (!f) {
-		prnlog("[!] file not found or locked. '%s'", fileName);
+		PrintfAndLog("[!] file not found or locked. '%s'", fileName);
 		retval =  1;
 		goto out;
 	}
@@ -132,7 +132,7 @@ int saveFileEML(const char *preferredName, const char *suffix, uint8_t* data, si
 	}
 	fflush(f);
 	fclose(f);
-	prnlog("[+] saved %d blocks to text file %s", blocks, fileName);
+	PrintfAndLog("[+] saved %d blocks to text file %s", blocks, fileName);
 	
 out:	
 	free(fileName);
@@ -147,7 +147,7 @@ out:
  * write also to a logfile. When doing so, just delete this function.
  * @param fmt
  */
-void prnlog(char *fmt, ...)
+void PrintfAndLog(char *fmt, ...)
 {
 	char buffer[2048] = {0};
 	va_list args;
@@ -157,7 +157,7 @@ void prnlog(char *fmt, ...)
 	PrintAndLog(buffer);
 }
 #else //if we're on ARM
-void prnlog(char *fmt,...)
+void PrintfAndLog(char *fmt,...)
 {
 	return;
 }
