@@ -52,7 +52,7 @@ SRC_CRAPTO1 = crypto1.c des.c aes.c desfire_key.c desfire_crypto.c mifaredesfire
 SRC_CRC = crc.c crc16.c crc32.c 
 SRC_ICLASS = iclass.c optimized_cipher.c
 SRC_LEGIC = legicrf.c legic_prng.c
-SRC_FLASH = flash.c
+SRC_FLASH = flashmem.c
 SRC_BEE = bee.c
 
 #the FPGA bitstream files. Note: order matters!
@@ -77,6 +77,7 @@ THUMBSRC = start.c \
 	$(SRC_LF) \
 	$(SRC_ZLIB) \
 	$(SRC_LEGIC) \
+	$(SRC_FLASH) \
 	appmain.c \
 	printf.c \
 	util.c \

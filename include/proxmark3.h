@@ -82,6 +82,22 @@
 #define LED_D_ON()		HIGH(GPIO_LED_D)
 #define LED_D_OFF()		LOW(GPIO_LED_D)
 #define LED_D_INV()		INVBIT(GPIO_LED_D)
+#define SCK_LOW         LOW(GPIO_SPCK) 
+#define SCK_HIGH        HIGH(GPIO_SPCK) 
+#define MOSI_HIGH       HIGH(GPIO_MOSI)
+#define MOSI_LOW        LOW(GPIO_MOSI)
+// fpga
+#define NCS_0_LOW         LOW(GPIO_NCS0)
+#define NCS_0_HIGH        HIGH(GPIO_NCS0)
+// lcd
+#define NCS_2_LOW         LOW(GPIO_NCS2)
+#define NCS_2_HIGH        HIGH(GPIO_NCS2)
+// flash mem
+#define NCS_3_LOW         LOW(GPIO_NCS3)
+#define NCS_3_HIGH        HIGH(GPIO_NCS3)
+
+
+#define MISO_VALUE     (AT91C_BASE_PIOA->PIO_PDSR & GPIO_MISO)
 #define RELAY_ON()		HIGH(GPIO_RELAY)
 #define RELAY_OFF()		LOW(GPIO_RELAY)
 #define BUTTON_PRESS()	!((AT91C_BASE_PIOA->PIO_PDSR & GPIO_BUTTON) == GPIO_BUTTON)
