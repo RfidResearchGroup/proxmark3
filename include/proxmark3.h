@@ -59,8 +59,10 @@
 #define SETBIT(x, y) (y) ? (HIGH(x)):(LOW(x))
 #define INVBIT(x) SETBIT((x), !(GETBIT(x)))
 
+// Setup for SPI current modes
 #define SPI_FPGA_MODE	0
 #define SPI_LCD_MODE	1
+#define SPI_MEM_MODE	2
 
 #ifndef COTAG_BITS
 #define COTAG_BITS 264

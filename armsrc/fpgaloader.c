@@ -34,6 +34,7 @@ static const uint8_t _bitparse_fixed_header[] = {0x00, 0x09, 0x0f, 0xf0, 0x0f, 0
 // May also be used to write to other SPI attached devices like an LCD
 //-----------------------------------------------------------------------------
 void SetupSpi(int mode) {
+	// PA1	-> SPI_NCS3 chip select (MEM)
 	// PA10 -> SPI_NCS2 chip select (LCD)
 	// PA11 -> SPI_NCS0 chip select (FPGA)
 	// PA12 -> SPI_MISO Master-In Slave-Out
@@ -44,6 +45,7 @@ void SetupSpi(int mode) {
 	AT91C_BASE_PIOA->PIO_PDR =
 		GPIO_NCS0	|
 		GPIO_NCS2 	|
+		GPIO_NCS3	|
 		GPIO_MISO	|
 		GPIO_MOSI	|
 		GPIO_SPCK;
@@ -54,7 +56,9 @@ void SetupSpi(int mode) {
 		GPIO_MOSI	|
 		GPIO_SPCK;
 
-	AT91C_BASE_PIOA->PIO_BSR = GPIO_NCS2;
+	AT91C_BASE_PIOA->PIO_BSR = 
+		GPIO_NCS2	|
+		GPIO_NCS3;
 
 	//enable the SPI Peripheral clock
 	AT91C_BASE_PMC->PMC_PCER = (1<<AT91C_ID_SPI);
@@ -97,6 +101,25 @@ void SetupSpi(int mode) {
 				( 0 << 3)	|	// Chip Select inactive after transfer
 				( 1 << 1)	|	// Clock Phase data captured on leading edge, changes on following edge
 				( 0 << 0);		// Clock Polarity inactive state is logic 0
+			break;
+		case SPI_MEM_MODE:
+			AT91C_BASE_SPI->SPI_MR =
+				( 0 << 24)	|	// Delay between chip selects (take default: 6 MCK periods)
+				( 1 << 16)	|	// Peripheral Chip Select (selects MEM SPI_NCS3 or PA1)   			---> IS THIS CORRECT Chipset pin PA1?
+				( 0 << 7)	|	// Local Loopback Disabled
+				( 1 << 4)	|	// Mode Fault Detection disabled
+				( 0 << 2)	|	// Chip selects connected directly to peripheral
+				( 0 << 1) 	|	// Fixed Peripheral Select
+				( 1 << 0);		// Master Mode
+			AT91C_BASE_SPI->SPI_CSR[2] =
+				( 1 << 24)	|	// Delay between Consecutive Transfers (32 MCK periods)
+				( 1 << 16)	|	// Delay Before SPCK (1 MCK period)
+				( 6 << 8)	|	// Serial Clock Baud Rate (baudrate = MCK/6 = 24Mhz/6 = 4M baud
+				( 8 << 4)	|	// Bits per Transfer (16 bits)										--->  TRANSFER RATE CORRECT?
+				( 0 << 3)	|	// Chip Select inactive after transfer
+				( 1 << 1)	|	// Clock Phase data captured on leading edge, changes on following edge
+				( 0 << 0);		// Clock Polarity inactive state is logic 0
+				
 			break;
 		default:				// Disable SPI
 			AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SPIDIS;
