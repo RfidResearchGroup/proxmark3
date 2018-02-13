@@ -461,6 +461,17 @@ char* pb(uint32_t b) {
 
 int CmdAnalyseA(const char *Cmd){
 
+	UsbCommand c = {CMD_READ_FLASH_MEM, {0,0,0}};
+	clearCommandBuffer();
+	SendCommand(&c);
+	UsbCommand resp;
+	
+	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
+        PrintAndLog("timeout while waiting for reply.");
+		return 1;
+    }
+	return 0;
+	
 	printf("-- " _BLUE_(its my message) "\n");
 	printf("-- " _RED_(its my message) "\n");
 	printf("-- " _YELLOW_(its my message) "\n");
@@ -482,6 +493,13 @@ int CmdAnalyseA(const char *Cmd){
 	shiftReg = shiftReg << 8 | rev;
 
 	printf("shiftreg after %08x | pattern %08x \n", shiftReg, SYNC_16BIT);
+
+	uint8_t n0 = 0, n1 = 0;
+
+	n0 = (rev & (uint8_t)(~(0xFF >> (8-4)))) >> 4;
+	n1 = (n1 << 4) | (rev & (uint8_t)(~(0xFF << 4)));
+
+	printf("rev %02X | %02X %s | %02X %s |\n", rev, n0, pb(n0), n1, pb(n1) );
 	
 /*
 hex(0xb24d shr 0) 0xB24D 0b1011001001001101

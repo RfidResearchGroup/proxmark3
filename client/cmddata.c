@@ -762,6 +762,7 @@ int CmdBuffClear(const char *Cmd)
 	if (cmdp == 'h' || cmdp == 'H') return usage_data_buffclear();
 	
 	UsbCommand c = {CMD_BUFF_CLEAR, {0,0,0}};
+	clearCommandBuffer();
 	SendCommand(&c);
 	ClearGraph(true);
 	return 0;

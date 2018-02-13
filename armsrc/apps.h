@@ -30,6 +30,7 @@ extern "C" {
 #include "desfire.h"
 #include "iso14443b.h"
 #include "Standalone/standalone.h"
+#include "flashmem.h"
 
 extern const uint8_t OddByteParity[256];
 extern int rsamples;   // = 0;
@@ -239,6 +240,7 @@ extern void felica_sendraw(UsbCommand *c);
 extern void felica_sniff(uint32_t samples, uint32_t triggers);
 extern void felica_sim_lite(uint64_t uid);
 extern void felica_dump_lite_s();
+
 
 #ifdef __cplusplus
 }

@@ -190,4 +190,5 @@ void EXFLASH_TEST(void) {
     Dbprintf("%s \r\n","TEST done!");
 
 	EXFLASH_Erase();
+	cmd_send(CMD_ACK, 1, 0, 0, 0,0);
 }
