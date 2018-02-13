@@ -67,6 +67,12 @@ typedef struct{
 #define CMD_DOWNLOAD_EML_BIGBUF											  0x0110
 #define CMD_DOWNLOADED_EML_BIGBUF										  0x0111
 
+// For Flash memory operations
+#define CMD_READ_FLASH_MEM												  0x0120
+#define CMD_WRITE_FLASH_MEM												  0x0121
+#define CMD_UPLOAD_FLASH_MEM											  0x0122
+#define CMD_DOWNLOAND_FLASH_MEM											  0x0123
+
 // For low-frequency tags
 #define CMD_READ_TI_TYPE                                                  0x0202
 #define CMD_WRITE_TI_TYPE                                                 0x0203

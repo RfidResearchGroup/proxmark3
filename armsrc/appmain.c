@@ -1069,7 +1069,12 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 		case CMD_READ_MEM:
 			ReadMem(c->arg[0]);
 			break;
-
+		case CMD_READ_FLASH_MEM:
+		case CMD_WRITE_FLASH_MEM:
+		case CMD_UPLOAD_FLASH_MEM:
+		case CMD_DOWNLOAND_FLASH_MEM:
+			EXFLASH_TEST();
+			break;
 		case CMD_SET_LF_DIVISOR:
 		  	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 			FpgaSendCommand(FPGA_CMD_SET_DIVISOR, c->arg[0]);
@@ -1125,11 +1130,11 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 
 		case CMD_DEVICE_INFO: {
 			uint32_t dev_info = DEVICE_INFO_FLAG_OSIMAGE_PRESENT | DEVICE_INFO_FLAG_CURRENT_MODE_OS;
-        if (common_area.flags.bootrom_present)
-            dev_info |= DEVICE_INFO_FLAG_BOOTROM_PRESENT;
-			cmd_send(CMD_DEVICE_INFO,dev_info,0,0,0,0);	
-			break;
-		}
+			if (common_area.flags.bootrom_present)
+				dev_info |= DEVICE_INFO_FLAG_BOOTROM_PRESENT;
+				cmd_send(CMD_DEVICE_INFO,dev_info,0,0,0,0);	
+				break;
+			}
 		default:
 			Dbprintf("%s: 0x%04x","unknown command:",c->cmd);
 			break;
