@@ -163,7 +163,7 @@ void Dbhexdump(int len, uint8_t *d, bool bAsci) {
 // in ADC units (0 to 1023). Also a routine to average 32 samples and
 // return that.
 //-----------------------------------------------------------------------------
-static int ReadAdc(int ch) {
+static uint16_t ReadAdc(int ch) {
 
 	// Note: ADC_MODE_PRESCALE and ADC_MODE_SAMPLE_HOLD_TIME are set to the maximum allowed value. 
 	// AMPL_HI is are high impedance (10MOhm || 1MOhm) output, the input capacitance of the ADC is 12pF (typical). This results in a time constant
@@ -185,14 +185,13 @@ static int ReadAdc(int ch) {
 
 	while (!(AT91C_BASE_ADC->ADC_SR & ADC_END_OF_CONVERSION(ch))) {};
 
-	return AT91C_BASE_ADC->ADC_CDR[ch];
+	return (AT91C_BASE_ADC->ADC_CDR[ch] & 0x3FF);
 }
 
 // was static - merlok 
-int AvgAdc(int ch) {
-	uint8_t i;
-	int a = 0;
-	for(i = 0; i < 32; i++)
+uint16_t AvgAdc(int ch) {
+	uint16_t a = 0;
+	for(uint8_t i = 0; i < 32; i++)
 		a += ReadAdc(ch);
 
 	return (a + 15) >> 5;
@@ -271,8 +270,7 @@ void MeasureAntennaTuningHf(void) {
 	SpinDelay(50);
 	volt = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
 	bool use_high = ( volt > MAX_ADC_HF_VOLTAGE-300 );
-		
-	
+			
 	while( !BUTTON_PRESS() ){
 		SpinDelay(20);
 		if ( !use_high ) {
@@ -283,7 +281,7 @@ void MeasureAntennaTuningHf(void) {
 		DbprintfEx(CMD_MEASURE_ANTENNA_TUNING_HF, "%u mV / %5.2f V", volt, volt/1000.0);
 	}
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	DbpString("[+] cancelled");
+	DbpString("\n[+] cancelled");
 }
 
 void ReadMem(int addr) {
@@ -1169,23 +1167,7 @@ void  __attribute__((noreturn)) AppMain(void) {
 	AT91C_BASE_SSC->SSC_CR = AT91C_SSC_SWRST;
 
 	// Configure MUX
-	AT91C_BASE_PIOA->PIO_OER =
-		GPIO_MUXSEL_HIPKD |
-		GPIO_MUXSEL_LOPKD |
-		GPIO_MUXSEL_LORAW |
-		GPIO_MUXSEL_HIRAW;
-
-	AT91C_BASE_PIOA->PIO_PER =
-		GPIO_MUXSEL_HIPKD |
-		GPIO_MUXSEL_LOPKD |
-		GPIO_MUXSEL_LORAW |
-		GPIO_MUXSEL_HIRAW;
-	
-	// set pins LOW
-	LOW(GPIO_MUXSEL_HIPKD);
-	LOW(GPIO_MUXSEL_LOPKD);
-	LOW(GPIO_MUXSEL_HIRAW);
-	LOW(GPIO_MUXSEL_LORAW);
+	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 	
 	// Load the FPGA image, which we have stored in our flash.
 	// (the HF version by default)

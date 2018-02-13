@@ -55,7 +55,7 @@ void Dbhexdump(int len, uint8_t *d, bool bAsci);
 #define MAX_ADC_HF_VOLTAGE_RDV40 140800
 // ADC Vref = 3300mV, and an (10000k+240k):240k voltage divider on the LF input can measure voltages up to 140800 mV
 #define MAX_ADC_LF_VOLTAGE 140800
-int AvgAdc(int ch);
+uint16_t AvgAdc(int ch);
 
 void print_result(char *name, uint8_t *buf, size_t len);
 void PrintToSendBuffer(void);
