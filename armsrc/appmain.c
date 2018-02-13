@@ -1130,10 +1130,11 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 
 		case CMD_DEVICE_INFO: {
 			uint32_t dev_info = DEVICE_INFO_FLAG_OSIMAGE_PRESENT | DEVICE_INFO_FLAG_CURRENT_MODE_OS;
-			if (common_area.flags.bootrom_present)
+			if (common_area.flags.bootrom_present) {
 				dev_info |= DEVICE_INFO_FLAG_BOOTROM_PRESENT;
-				cmd_send(CMD_DEVICE_INFO,dev_info,0,0,0,0);	
-				break;
+			}
+			cmd_send(CMD_DEVICE_INFO,dev_info,0,0,0,0);	
+			break;
 			}
 		default:
 			Dbprintf("%s: 0x%04x","unknown command:",c->cmd);
