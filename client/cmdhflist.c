@@ -156,21 +156,30 @@ int applyIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize) {
 		case ISO14443A_CMD_REQA:		snprintf(exp,size,"REQA"); break;
 		case ISO14443A_CMD_READBLOCK:	snprintf(exp,size,"READBLOCK(%d)",cmd[1]); break;
 		case ISO14443A_CMD_WRITEBLOCK:	snprintf(exp,size,"WRITEBLOCK(%d)",cmd[1]); break;
-		case ISO14443A_CMD_HALT:		snprintf(exp,size,"HALT"); break;
+		case ISO14443A_CMD_HALT:		
+			snprintf(exp,size,"HALT"); 
+			MifareAuthState = masNone;
+			break;
 		case ISO14443A_CMD_RATS:		snprintf(exp,size,"RATS"); break;
 		case MIFARE_CMD_INC:			snprintf(exp,size,"INC(%d)",cmd[1]); break;
 		case MIFARE_CMD_DEC:			snprintf(exp,size,"DEC(%d)",cmd[1]); break;
 		case MIFARE_CMD_RESTORE:		snprintf(exp,size,"RESTORE(%d)",cmd[1]); break;
 		case MIFARE_CMD_TRANSFER:		snprintf(exp,size,"TRANSFER(%d)",cmd[1]); break;
 		case MIFARE_AUTH_KEYA:{
-			if ( cmdsize > 3)
-				snprintf(exp,size,"AUTH-A(%d)",cmd[1]); 
-			else
+			if ( cmdsize > 3) {
+				snprintf(exp,size,"AUTH-A(%d)",cmd[1]);
+				MifareAuthState = masNt;
+			} else {
 				//	case MIFARE_ULEV1_VERSION :  both 0x60.
 				snprintf(exp,size,"EV1 VERSION");
+			}
 			break;
 		}
-		case MIFARE_AUTH_KEYB:			snprintf(exp,size,"AUTH-B(%d)",cmd[1]); break;
+		case MIFARE_AUTH_KEYB: {
+			MifareAuthState = masNt;
+			snprintf(exp,size,"AUTH-B(%d)",cmd[1]); 
+			break;
+		}
 		case MIFARE_MAGICWUPC1:			snprintf(exp,size,"MAGIC WUPC1"); break;
 		case MIFARE_MAGICWUPC2:			snprintf(exp,size,"MAGIC WUPC2"); break;
 		case MIFARE_MAGICWIPEC:			snprintf(exp,size,"MAGIC WIPEC"); break;
@@ -553,7 +562,7 @@ void annotateMifare(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize, uint8
 	switch(MifareAuthState) {
 		case masNt:
 			if (cmdsize == 4 && isResponse) {
-				snprintf(exp,size,"AUTH: nt %s", (AuthData.first_auth) ? "" : "(enc)");
+				snprintf(exp, size, "AUTH: nt %s", (AuthData.first_auth) ? "" : "(enc)");
 				MifareAuthState = masNrAr;
 				if (AuthData.first_auth) {
 					AuthData.nt = bytes_to_num(cmd, 4);
@@ -568,7 +577,7 @@ void annotateMifare(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize, uint8
 			break;
 		case masNrAr:
 			if (cmdsize == 8 && !isResponse) {
-				snprintf(exp,size,"AUTH: nr ar (enc)");
+				snprintf(exp, size, "AUTH: nr ar (enc)");
 				MifareAuthState = masAt;
 				AuthData.nr_enc = bytes_to_num(cmd, 4);
 				AuthData.ar_enc = bytes_to_num(&cmd[4], 4);
@@ -580,7 +589,7 @@ void annotateMifare(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize, uint8
 			break;
 		case masAt:
 			if (cmdsize == 4 && isResponse) {
-				snprintf(exp,size,"AUTH: at (enc)");
+				snprintf(exp, size, "AUTH: at (enc)");
 				MifareAuthState = masAuthComplete;
 				AuthData.at_enc = bytes_to_num(cmd, 4);
 				AuthData.at_enc_par = parity[0];
