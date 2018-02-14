@@ -84,5 +84,5 @@ int fileExists(const char *filename);
  * write also to a logfile. When doing so, just point this function to use PrintAndLog
  * @param fmt
  */
-void prnlog(char *fmt, ...);
+void PrintfAndLog(char *fmt, ...);
 #endif // FILEUTILS_H
