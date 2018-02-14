@@ -67,15 +67,17 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
 	// use lf config settings
 	sample_config *sc = getSamplingConfig();
 
-	//clear read buffer
+	// Make sure the tag is reset
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	WaitMS(2500);
+
+	// clear read buffer
 	BigBuf_Clear_keep_EM();
 
 	LFSetupFPGAForADC(sc->divisor, 1);
 	
-	// Trigger T55x7 in mode.
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	
-	// And a little more time for the tag to fully power up
+	// little more time for the tag to fully power up
 	WaitMS(2000);
 	
 	// if delay_off = 0 then just bitbang 1 = antenna on 0 = off for respective periods.

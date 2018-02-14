@@ -250,7 +250,7 @@ uint32_t SnoopLF() {
 }
 
 /**
-* acquisition of T55x7 LF signal. Similart to other LF, but adjusted with @marshmellows thresholds
+* acquisition of T55x7 LF signal. Similar to other LF, but adjusted with @marshmellows thresholds
 * the data is collected in BigBuf.
 **/
 void doT55x7Acquisition(size_t sample_size) {
