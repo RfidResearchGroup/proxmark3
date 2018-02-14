@@ -781,7 +781,8 @@ int CmdHF15Raw(const char *Cmd) {
 
 	UsbCommand resp;
 	UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
-	int reply = 1, fast = 1, crc = 0, i = 0;
+	int reply = 1, fast = 1, i = 0;
+	bool crc = false;
 	char buf[5] = "";
 	uint8_t data[100];
 	uint32_t datalen = 0, temp;
@@ -795,14 +796,14 @@ int CmdHF15Raw(const char *Cmd) {
 			switch (Cmd[i+1]) {
 				case 'r': 
 				case 'R': 
-					reply=0;
+					reply = 0;
 					break;
 				case '2':
-					fast=0;
+					fast = 0;
 					break;
 				case 'c':
 				case 'C':				
-					crc=1;
+					crc = true;
 					break;
 				default:
 					PrintAndLog("Invalid option");
@@ -832,10 +833,10 @@ int CmdHF15Raw(const char *Cmd) {
 	
 	if (crc) {
 		AddCrc(data, datalen);
-		c.arg[0] = datalen+2;
-	} else {
-		c.arg[0] = datalen;
+		datalen += 2;
 	}
+	
+	c.arg[0] = datalen;
 	c.arg[1] = fast;
 	c.arg[2] = reply;
 	memcpy(c.d.asBytes, data, datalen);
