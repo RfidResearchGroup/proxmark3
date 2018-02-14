@@ -428,14 +428,14 @@ int CmdHFList(const char *Cmd) {
 	if (strcmp(type,     "iclass") == 0)	protocol = ICLASS;
 	else if(strcmp(type, "14a") == 0)		protocol = ISO_14443A;
 	else if(strcmp(type, "14b") == 0)		protocol = ISO_14443B;
-	else if(strcmp(type, "topaz")== 0)		protocol = TOPAZ;
-	else if(strcmp(type, "7816")== 0)		protocol = ISO_7816_4;	
-	else if(strcmp(type, "des")== 0)		protocol = MFDES;
-	else if(strcmp(type, "legic")==0)		protocol = LEGIC;
-	else if(strcmp(type, "15")==0)			protocol = ISO_15693;
-	else if(strcmp(type, "felica")==0)		protocol = FELICA;
-	else if(strcmp(type, "mf")==0)			protocol = PROTO_MIFARE;
-	else if(strcmp(type, "raw")== 0)		protocol = -1;//No crc, no annotations
+	else if(strcmp(type, "topaz") == 0)		protocol = TOPAZ;
+	else if(strcmp(type, "7816") == 0)		protocol = ISO_7816_4;	
+	else if(strcmp(type, "des") == 0)		protocol = MFDES;
+	else if(strcmp(type, "legic") == 0)		protocol = LEGIC;
+	else if(strcmp(type, "15") == 0)		protocol = ISO_15693;
+	else if(strcmp(type, "felica") == 0)	protocol = FELICA;
+	else if(strcmp(type, "mf") == 0)		protocol = PROTO_MIFARE;
+	else if(strcmp(type, "raw") == 0)		protocol = -1;//No crc, no annotations
 	else errors = true;
 
 	if (errors) return usage_hf_list();
@@ -474,7 +474,7 @@ int CmdHFList(const char *Cmd) {
 		printFelica(traceLen, trace);
 	} else { 
 		PrintAndLog("Start = Start of Start Bit, End = End of last modulation. Src = Source of Transfer");
-		if ( protocol == ISO_14443A )
+		if ( protocol == ISO_14443A || protocol == PROTO_MIFARE)
 			PrintAndLog("iso14443a - All times are in carrier periods (1/13.56Mhz)");
 		if ( protocol == ICLASS )
 			PrintAndLog("iClass    - Timings are not as accurate");
