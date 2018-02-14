@@ -544,6 +544,10 @@ void annotateMifare(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize, uint8
 			ClearAuthData();
 			AuthData.uid = bytes_to_num(&cmd[2], 4);
 		}
+		if (cmdsize == 9 && cmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_3 && cmd[1] == 0x70) {
+			ClearAuthData();
+			AuthData.uid = bytes_to_num(&cmd[2], 4);
+		}
 	}
 	
 	switch(MifareAuthState) {

@@ -226,9 +226,9 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 
 	// Always annotate LEGIC read/tag
 	if ( protocol == LEGIC )
-		annotateLegic(explanation,sizeof(explanation),frame,data_len);
+		annotateLegic(explanation, sizeof(explanation), frame, data_len);
 
-	if (protocol == PROTO_MIFARE)
+	if ( protocol == PROTO_MIFARE )
 		annotateMifare(explanation, sizeof(explanation), frame, data_len, parityBytes, parity_len, isResponse);
 		
 	if (!isResponse)	{
