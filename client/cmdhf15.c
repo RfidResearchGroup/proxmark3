@@ -474,7 +474,7 @@ int CmdHF15Samples(const char *Cmd) {
 	char cmdp = param_getchar(Cmd, 0);
 	if (cmdp == 'h' || cmdp == 'H') return usage_15_samples();
 
-	UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693};
+	UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693, {0,0,0}};
 	clearCommandBuffer();	
 	SendCommand(&c);
 	
@@ -498,6 +498,7 @@ int CmdHF15Info(const char *Cmd) {
 	uint8_t *req = c.d.asBytes;
 	char cmdbuf[100];
 	char *cmd = cmdbuf;
+	memset(cmdbuf, 0, sizeof(cmdbuf));
 	
 	strncpy(cmd, Cmd, 99);
 	
@@ -572,7 +573,7 @@ int CmdHF15Record(const char *Cmd) {
 	char cmdp = param_getchar(Cmd, 0);
 	if (cmdp == 'h' || cmdp == 'H') return usage_15_record();
 	
-	UsbCommand c = {CMD_RECORD_RAW_ADC_SAMPLES_ISO_15693};
+	UsbCommand c = {CMD_RECORD_RAW_ADC_SAMPLES_ISO_15693, {0,0,0}};
 	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;
