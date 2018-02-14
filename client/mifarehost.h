@@ -101,4 +101,5 @@ extern int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t
 extern bool detect_classic_prng(void);
 extern int detect_classic_nackbug(bool verbose);
 extern void detect_classic_magic(void);
+extern void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len, bool isEncrypted);
 #endif

@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `hf list mf` - deciphers crypto1 stream and works with first authentication and weak nested authentications (@Merlok)
+ - Adjusted `lf cmdread` to respond to client when complete and the client will then automatically call `data samples` (@marshmellow42)
+ - Added a bitbang mode to `lf cmdread` if delay is 0 the cmd bits turn off and on the antenna with 0 and 1 respectively (@marshmellow42)
  - dump / restore now uses custom filenames (@brianpow)
  - Removed 'hf mf sniff' ,  (@iceman),  use HF 14A SNIFF instead
  - Added 'hf iclass lookup' (@iceman)

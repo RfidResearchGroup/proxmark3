@@ -33,7 +33,7 @@
 #include "protocols.h"				
 #include "parity.h"			// oddparity
 #include "iso15693tools.h"	// ISO15693 crc
-											  
+#include "cmdhflist.h"		// annotations											  
 
 extern int CmdHF(const char *Cmd);
 extern int CmdHFTune(const char *Cmd);

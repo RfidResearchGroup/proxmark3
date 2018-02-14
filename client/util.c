@@ -121,6 +121,7 @@ void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex
 		
 	char *tmp = (char *)buf;
 	size_t i;
+	memset(tmp, 0x00, hex_max_len);
 
 	int maxLen = ( hex_len > hex_max_len) ? hex_max_len : hex_len;
 
