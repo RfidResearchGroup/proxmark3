@@ -287,7 +287,6 @@ int usage_15_info(void){
 	PrintAndLog("               -2        use slower '1 out of 256' mode");
 	PrintAndLog("           uid (either): ");
 	PrintAndLog("               <8B hex>  full UID eg E011223344556677");
-	PrintAndLog("               s         selected tag");
 	PrintAndLog("               u         unaddressed mode");
 	PrintAndLog("               *         scan for tag");
 	PrintAndLog("Examples:");
@@ -351,7 +350,6 @@ int usage_15_read(void){
 	PrintAndLog("               -2        use slower '1 out of 256' mode");
 	PrintAndLog("           uid (either): ");
 	PrintAndLog("               <8B hex>  full UID eg E011223344556677");
-	PrintAndLog("               s         selected tag");
 	PrintAndLog("               u         unaddressed mode");
 	PrintAndLog("               *         scan for tag");
 	PrintAndLog("           page#:        page number 0-255");  
@@ -364,7 +362,6 @@ int usage_15_write(void){
 	PrintAndLog("               -o        set OPTION Flag (needed for TI)");
 	PrintAndLog("           uid (either): ");
 	PrintAndLog("               <8B hex>  full UID eg E011223344556677");
-	PrintAndLog("               s         selected tag");
 	PrintAndLog("               u         unaddressed mode");
 	PrintAndLog("               *         scan for tag");
 	PrintAndLog("           page#:        page number 0-255");  
@@ -377,15 +374,10 @@ int usage_15_readmulti(void){
 	PrintAndLog("               -2        use slower '1 out of 256' mode");
 	PrintAndLog("           uid (either): ");
 	PrintAndLog("               <8B hex>  full UID eg E011223344556677");
-	PrintAndLog("               s         selected tag");
 	PrintAndLog("               u         unaddressed mode");
 	PrintAndLog("               *         scan for tag");
 	PrintAndLog("           start#:       page number to start 0-255");  
 	PrintAndLog("           count#:       number of pages");  
-	return 0;
-}
-int usage_15_select(void){
-	PrintAndLog("'hf 15 select' This command needs a helptext. Feel free to add one!");
 	return 0;
 }
 // Mode 3
@@ -892,12 +884,6 @@ int prepareHF15Cmd(char **cmd, UsbCommand *c, uint8_t iso15cmd) {
 			PrintAndLog("missing addr");
 			return 0;
 			break;
-		case 's':
-		case 'S':
-			// you must have selected the tag earlier
-			req[reqlen++] |= ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_SELECT;
-			req[reqlen++] = iso15cmd;
-			break;
 		case 'u':
 		case 'U':
 			// unaddressed mode may not be supported by all vendors
@@ -1177,48 +1163,6 @@ int CmdHF15Write(const char *Cmd) {
 	return 0;
 }
 
-int CmdHF15Select(const char *Cmd) {
-	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H') return usage_15_select();	
-	
-	uint8_t uid[8] = {0x00};
-	if (!getUID(uid)) {
-		PrintAndLog("No tag found");
-		return 0;
-	}	
-	PrintAndLog("Detected UID %s", sprintUID(NULL, uid));
-	
-	UsbCommand resp;	
-	UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
-	c.d.asBytes[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS;
-	c.d.asBytes[1] = ISO15_CMD_SELECT;
-	memcpy(c.d.asBytes+2, uid, sizeof(uid));
-
-	//Select (usage: 2025+8bytes UID+2bytes ISO15693-CRC - can be used in addressed form only!)			[NO NEED FOR OPTION FLAG]
-	// len
-	AddCrc(c.d.asBytes, 10);
-	c.arg[0] = 12;
-	
-	clearCommandBuffer();
-	SendCommand(&c);
-	
-	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
-		PrintAndLog("iso15693 card select failed");
-		return 1;
-	}
-
-	switch(resp.arg[0]) {
-		case 3:
-			PrintAndLog("Card is selected");
-			break;
-		case 4:
-		default:
-			PrintAndLog("iso15693 card select failed, error %02X", resp.d.asBytes[0]);
-			return 1;		
-	}
-	return 0;
-}
-
 static command_t CommandTable15[] = {
 	{"help",		CmdHF15Help,    	1, "This help"},
 	{"demod",		CmdHF15Demod,   	1, "Demodulate ISO15693 from tag"},
@@ -1232,7 +1176,6 @@ static command_t CommandTable15[] = {
 	{"restore",		CmdHF15Restore,		0, "Restore from file to all memory pages of an ISO15693 tag"},
 	{"sim",			CmdHF15Sim,     	0, "Fake an ISO15693 tag"},
 	{"samples",		CmdHF15Samples,		0, "Acquire Samples as Reader (enables carrier, sends inquiry)"},
-	{"select",		CmdHF15Select,		0, "Select an tag with a specific UID for further commands"},
 	{"read",		CmdHF15Read,		0, "Read a block"},	
 	{"write",		CmdHF15Write,		0, "Write a block"},	
 	{"readmulti",	CmdHF15Readmulti,	0, "Reads multiple Blocks"},
