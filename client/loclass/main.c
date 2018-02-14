@@ -56,42 +56,42 @@ int unitTests()
 	errors += testElite();
     if(errors)
     {
-        prnlog("OBS! There were errors!!!");
+        PrintfAndLog("OBS! There were errors!!!");
     }
 	return errors;
 }
 int showHelp()
 {
-    prnlog("Usage: loclass [options]");
-	prnlog("Options:");
-	prnlog("-t                 Perform self-test");
-	prnlog("-h                 Show this help");
-	prnlog("-f <filename>      Bruteforce iclass dumpfile");
-	prnlog("                   An iclass dumpfile is assumed to consist of an arbitrary number of malicious CSNs, and their protocol responses");
-	prnlog("                   The binary format of the file is expected to be as follows: ");
-	prnlog("                   <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
-	prnlog("                   <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
-	prnlog("                   <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
-	prnlog("                  ... totalling N*24 bytes");
-	prnlog("                  Check iclass_dump.bin for an example");
+    PrintfAndLog("Usage: loclass [options]");
+	PrintfAndLog("Options:");
+	PrintfAndLog("-t                 Perform self-test");
+	PrintfAndLog("-h                 Show this help");
+	PrintfAndLog("-f <filename>      Bruteforce iclass dumpfile");
+	PrintfAndLog("                   An iclass dumpfile is assumed to consist of an arbitrary number of malicious CSNs, and their protocol responses");
+	PrintfAndLog("                   The binary format of the file is expected to be as follows: ");
+	PrintfAndLog("                   <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
+	PrintfAndLog("                   <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
+	PrintfAndLog("                   <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
+	PrintfAndLog("                  ... totalling N*24 bytes");
+	PrintfAndLog("                  Check iclass_dump.bin for an example");
 
 	return 0;
 }
 
 int main (int argc, char **argv)
 {
-	prnlog("IClass Cipher version 1.2, Copyright (C) 2014 Martin Holst Swende\n");
-	prnlog("Comes with ABSOLUTELY NO WARRANTY");
-	prnlog("Released as GPLv2\n");
-	prnlog("WARNING");
-	prnlog("");
-	prnlog("THIS TOOL IS CREATED FOR EXPERIMENTATION AND EDUCATIONAL USE ONLY. ");
-	prnlog("");
-	prnlog("USAGE OF THIS TOOL IN OTHER WAYS MAY INFRINGE UPON THE INTELLECTUAL ");
-	prnlog("PROPERTY OF OTHER PARTIES, SUCH AS INSIDE SECURE AND HID GLOBAL, ");
-	prnlog("AND MAY EXPOSE YOU TO AN INFRINGEMENT ACTION FROM THOSE PARTIES. ");
-	prnlog("");
-	prnlog("THIS TOOL SHOULD NEVER BE USED TO INFRINGE PATENTS OR INTELLECTUAL PROPERTY RIGHTS. ");
+	PrintfAndLog("IClass Cipher version 1.2, Copyright (C) 2014 Martin Holst Swende\n");
+	PrintfAndLog("Comes with ABSOLUTELY NO WARRANTY");
+	PrintfAndLog("Released as GPLv2\n");
+	PrintfAndLog("WARNING");
+	PrintfAndLog("");
+	PrintfAndLog("THIS TOOL IS CREATED FOR EXPERIMENTATION AND EDUCATIONAL USE ONLY. ");
+	PrintfAndLog("");
+	PrintfAndLog("USAGE OF THIS TOOL IN OTHER WAYS MAY INFRINGE UPON THE INTELLECTUAL ");
+	PrintfAndLog("PROPERTY OF OTHER PARTIES, SUCH AS INSIDE SECURE AND HID GLOBAL, ");
+	PrintfAndLog("AND MAY EXPOSE YOU TO AN INFRINGEMENT ACTION FROM THOSE PARTIES. ");
+	PrintfAndLog("");
+	PrintfAndLog("THIS TOOL SHOULD NEVER BE USED TO INFRINGE PATENTS OR INTELLECTUAL PROPERTY RIGHTS. ");
 
 
 	char *fileName = NULL;
