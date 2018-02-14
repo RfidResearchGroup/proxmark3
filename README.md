@@ -62,8 +62,7 @@ Among the stuff is
 	
 ---	
 ## Why don't you merged with offical PM3 Master?
-I don't actually know how to make small pull-request to github :( and that is the number one reason for me not pushing a lot of things back to the PM3 master.
-Me fiddling with the code so much, there is a nightmare in merging a PR.  Luckily I have @marshmellow42 who takes some stuff and push PR's back.
+Me fiddling with the code so much, there is a nightmare in merging a PR. I will never find time to do PR because of it. Much of what you find here is not in the interest for offical PM3. However and luckily I have @marshmellow42 who takes some stuff and push PR's back.  The separation from offical pm3 repo gives me very much freedom to create a firmware/client in the way I want to use the PM3.
 
 ## Why don't you add this or that functionality?
 Give me a hint, and I'll see if I can't merge in the stuff you have. 
@@ -199,8 +198,8 @@ Read instructions on @Gator96100 repo page. (https://github.com/Gator96100/ProxS
 
 Links
 - https://github.com/Gator96100/ProxSpace/archive/master.zip
+- https://github.com/Gator96100/ProxSpace/releases/tag/v2.2     (release v2.2   with gcc v5.3.0 arm-none-eabi-gcc v7.1.0)
 - https://github.com/Gator96100/ProxSpace/releases/tag/v2.1     (release v2.1   with gcc v5.3.0)
-- https://github.com/Gator96100/ProxSpace/releases/tag/v2.0.2   (release v2.0.2 with gcc v4.9.2)
 
 ## OR
 
@@ -281,40 +280,5 @@ Assuming you have Proxmark3 Windows drivers installed you can run the Proxmark s
 - Run the client	
 `proxmark3.exe comX`
 
-## Buying a proxmark3
-The Proxmark 3 device is available for purchase (assembled and tested) from the following locations:
-
-   * http://proxmark3.tictail.com/ (For buyers in EU, most likely in Sweden)
- 
-   * http://www.elechouse.com/  (new and revised hardware package 2015, located in China)
-
-Enjoy!
-
 iceman at host iuse.se
 January 2015, Sweden
-
-
-
-## Note from Jonathan Westhues
-
-LICENSING:
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-
-Jonathan Westhues
-user jwesthues, at host cq.cx
-
-May 2007, Cambridge MA
