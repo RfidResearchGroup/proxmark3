@@ -375,7 +375,7 @@ static int DemodAnswer(uint8_t *received, uint8_t *dest, uint16_t samplecount) {
 	if (mask != 0x01) { // this happens, when we miss the EOF
 		
 		// TODO: for some reason this happens quite often
-		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("[!] error, uneven octet! (extra bits!) mask %02x", mask);
+		if (MF_DBGLEVEL >= MF_DBG_ERROR && k != 0) Dbprintf("[!] error, uneven octet! (extra bits!) mask %02x", mask);
 		//if (mask < 0x08) k--; // discard the last uneven octet;
 		// 0x08 is an assumption - but works quite often
 	}
