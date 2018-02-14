@@ -14,19 +14,18 @@ bool g_lf_threshold_set = false;
 static int CmdHelp(const char *Cmd);
 
 int usage_lf_cmdread(void) {
-	PrintAndLog("Usage: lf cmdread d <delay period> z <zero period> o <one period> c <cmdbytes> [H]");
+	PrintAndLog("Usage: lf cmdread d <delay period> z <zero period> o <one period> c <cmdbytes>");
 	PrintAndLog("Options:");
 	PrintAndLog("       h             This help");
-	PrintAndLog("       L             Low frequency (125 KHz)");
-	PrintAndLog("       H             High frequency (134 KHz)");
-	PrintAndLog("       d <delay>     delay OFF period, (decimal)");
+	PrintAndLog("       d <delay>     delay OFF period, (0 for bitbang mode) (decimal)");
 	PrintAndLog("       z <zero>      time period ZERO, (decimal)");
 	PrintAndLog("       o <one>       time period ONE, (decimal)");
 	PrintAndLog("       c <cmd>       Command bytes  (in ones and zeros)");
+	PrintAndLog("");
 	PrintAndLog("       ************* All periods in microseconds (ms)");
+	PrintAndLog("       ************* Use lf config to configure options.");	
 	PrintAndLog("Examples:");
 	PrintAndLog("      lf cmdread d 80 z 100 o 200 c 11000");
-	PrintAndLog("      lf cmdread d 80 z 100 o 100 c 11000 H");
 	return 0;
 }
 int usage_lf_read(void){
@@ -144,23 +143,15 @@ int usage_lf_find(void){
 /* send a LF command before reading */
 int CmdLFCommandRead(const char *Cmd) {
 
-	bool errors = false;
-	bool useHighFreq = false;
-	uint16_t one = 0, zero = 0;
-  	uint8_t cmdp = 0;
 	UsbCommand c = {CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K, {0,0,0}};
-	
+	bool errors = false;
+
+  	uint8_t cmdp = 0;
 	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch(param_getchar(Cmd, cmdp)) {
 		case 'h':
-			return usage_lf_cmdread();
 		case 'H':
-			useHighFreq = true;
-			cmdp++;
-			break;
-		case 'L':
-			cmdp++;
-			break;
+			return usage_lf_cmdread();
 		case 'c':
 			param_getstr(Cmd, cmdp+1, (char *)&c.d.asBytes, sizeof(c.d.asBytes));
 			cmdp += 2;
@@ -170,16 +161,16 @@ int CmdLFCommandRead(const char *Cmd) {
 			cmdp += 2;
 			break;
 		case 'z':
-			zero = param_get32ex(Cmd, cmdp+1, 0, 10) & 0xFFFF;
+			c.arg[1] = param_get32ex(Cmd, cmdp+1, 0, 10) & 0xFFFF;
 			cmdp += 2;
 			break;
 		case 'o':
-			one = param_get32ex(Cmd, cmdp+1, 0, 10) & 0xFFFF;
+			c.arg[2] = param_get32ex(Cmd, cmdp+1, 0, 10) & 0xFFFF;
 			cmdp += 2;
 			break;
 		default:
 			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-			errors = 1;
+			errors = true;
 			break;
 		}
 	}
@@ -187,14 +178,11 @@ int CmdLFCommandRead(const char *Cmd) {
 	//Validations
 	if (errors || cmdp == 0)  return usage_lf_cmdread();
 	
-	// zero and one lengths
-	c.arg[1] = (uint32_t)(zero << 16 | one);
-	
-	// add frequency 125 or 134
-	c.arg[2] = useHighFreq;
-
 	clearCommandBuffer();
 	SendCommand(&c);
+	
+	WaitForResponse(CMD_ACK, NULL);
+	getSamples(0, true);
 	return 0;
 }
 

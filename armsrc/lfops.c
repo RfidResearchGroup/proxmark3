@@ -4,7 +4,7 @@
 // the license.
 //-----------------------------------------------------------------------------
 // Miscellaneous routines for low frequency tag operations.
-// Tags supported here so far are Texas Instruments (TI), HID
+// Tags supported here so far are Texas Instruments (TI), HID, EM4x05, EM410x
 // Also routines for raw mode reading/simulating of LF waveform
 //-----------------------------------------------------------------------------
 
@@ -55,47 +55,101 @@
 /**
  * Function to do a modulation and then get samples.
  * @param delay_off
- * @param periods  0xFFFF0000 is period_0,  0x0000FFFF is period_1
- * @param useHighFreg
- * @param command
+ * @param period_0
+ * @param period_1
+ * @param command (in binary char array)
  */
-void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t periods, uint32_t useHighFreq, uint8_t *command) {
-	uint16_t period_0 =  periods >> 16;
-	uint16_t period_1 =  periods & 0xFFFF;
-	
-	// 95 == 125 KHz  88 == 134.8 KHz
-	int divisor_used = (useHighFreq) ? 88 : 95;
-	sample_config sc = { 0,0,1, divisor_used, 0};
-	setSamplingConfig(&sc);
+void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint32_t period_1, uint8_t *command) {
+
+	// start timer
+	StartTicks();
+
+	// use lf config settings
+	sample_config *sc = getSamplingConfig();
 
 	//clear read buffer
 	BigBuf_Clear_keep_EM();
 
-	LFSetupFPGAForADC(sc.divisor, 1);
+	LFSetupFPGAForADC(sc->divisor, 1);
 	
 	// Trigger T55x7 in mode.
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	WaitUS(START_GAP);
 	
+	// And a little more time for the tag to fully power up
+	WaitMS(2000);
+	
+	// if delay_off = 0 then just bitbang 1 = antenna on 0 = off for respective periods.
+	bool bitbang = delay_off == 0;
 	// now modulate the reader field
-	while (*command != '\0' && *command != ' ') {
-		LED_D_ON();
-		if (*(command++) == '0')
-			TurnReadLFOn(period_0);
-		else
-			TurnReadLFOn(period_1);
+	if (bitbang) {
+		// HACK it appears the loop and if statements take up about 7us so adjust waits accordingly...
+		uint8_t hack_cnt = 7;
+		if (period_0 < hack_cnt || period_1 < hack_cnt) {
+			DbpString("[!] Warning periods cannot be less than 7us in bit bang mode");
+			FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+			LED_D_OFF();
+			return;
+		}
 
-		LED_D_OFF();
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-		WaitUS(delay_off);		
+		// hack2 needed---  it appears to take about 8-16us to turn the antenna back on 
+		// leading to ~ 1 to 2 125khz samples extra in every off period 
+		// so we should test for last 0 before next 1 and reduce period_0 by this extra amount...
+		// but is this time different for every antenna or other hw builds???  more testing needed
+
+		// prime cmd_len to save time comparing strings while modulating
+		int cmd_len = 0;
+		while(command[cmd_len] != '\0' && command[cmd_len] != ' ')
+			cmd_len++;
+
+		int counter = 0;
+		bool off = false;
+		for (counter = 0; counter < cmd_len; counter++) {
+			// if cmd = 0 then turn field off
+			if (command[counter] == '0') {
+				// if field already off leave alone (affects timing otherwise)
+				if (off == false) {
+					FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+					LED_D_OFF();
+					off = true;
+				}
+				// note we appear to take about 7us to switch over (or run the if statements/loop...)
+				WaitUS(period_0 - hack_cnt);
+			// else if cmd = 1 then turn field on
+			} else {
+				// if field already on leave alone (affects timing otherwise)
+				if (off) {
+					FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
+					LED_D_ON();
+					off = false;
+				}
+				// note we appear to take about 7us to switch over (or run the if statements/loop...)
+				WaitUS(period_1 - hack_cnt);
+			}
+		}
+	} else { // old mode of cmd read using delay as off period
+		while(*command != '\0' && *command != ' ') {
+			LED_D_ON();
+			if (*(command++) == '0')
+				TurnReadLFOn(period_0);
+			else
+				TurnReadLFOn(period_1);
+
+			LED_D_OFF();
+			FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+			WaitUS(delay_off);
+		}
+
+		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, sc->divisor);
 	}
-	
+
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 
 	// now do the read
 	DoAcquisition_config(false, 0);
-	
+
+	// Turn off antenna	
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	// tell client we are done	
 	cmd_send(CMD_ACK,0,0,0,0,0);    
 }
 
