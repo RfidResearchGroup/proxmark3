@@ -51,8 +51,8 @@
 #define RELEASE      0xAB
 #define POWERDOWN    0xB9
 #define BLOCK64ERASE 0xD8
-#define Enable_Reset 0x66
-#define Reset        0x99
+#define ENABLE_RESET 0x66
+#define RESET        0x99
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 //					Chip specific instructions 						  //
@@ -123,10 +123,10 @@
  uint8_t 	EXFLASH_spi_write_read(uint8_t wData);
  uint8_t 	EXFLASH_readStat1(void) ;
  uint8_t 	EXFLASH_readStat2(void) ;
- bool    	ESFLASH_NOTBUSY(void);
+ bool    	EXFLASH_NOTBUSY(void);
  void    	EXFLASH_Write_Enable(void) ;
- uint8_t    EXFLASH_Read(uint8_t  address[]);
- uint8_t    EXFLASH_Program(uint8_t  address[],uint8_t array[], uint8_t len) ;
+ uint8_t    EXFLASH_Read(uint8_t *address, uint16_t len);
+ uint8_t    EXFLASH_Program(uint8_t address[], uint8_t *array, uint8_t len) ;
 
  uint8_t 	EXFLASH_ReadID(void) ;
  bool    	EXFLASH_Erase(void) ;
