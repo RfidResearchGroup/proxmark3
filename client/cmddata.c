@@ -770,7 +770,7 @@ int AutoCorrelate(const int *in, int *out, size_t len, int window, bool SaveGrph
 
 int CmdAutoCorr(const char *Cmd) {
 
-	uint32_t window;
+	uint32_t window = 4000;
 	uint8_t cmdp = 0;
 	bool updateGrph = false;
 	bool errors = false;
