@@ -185,6 +185,7 @@ extern void print_hex_break(const uint8_t *data, const size_t len, const uint8_t
 extern char *sprint_hex(const uint8_t * data, const size_t len);
 extern char *sprint_hex_inrow(const uint8_t *data, const size_t len);
 extern char *sprint_hex_inrow_ex(const uint8_t *data, const size_t len, const size_t min_str_len);
+extern char *sprint_hex_inrow_spaces(const uint8_t *data, const size_t len, size_t spaces_between);
 extern char *sprint_bin(const uint8_t * data, const size_t len);
 extern char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t breaks);
 extern char *sprint_hex_ascii(const uint8_t *data, const size_t len);

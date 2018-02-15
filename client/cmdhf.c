@@ -187,19 +187,20 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 	//2 Not crc-command
 
 	//--- Draw the data column
-	char line[16][110];
+	char line[18][110];
 
-	for (int j = 0; j < data_len && j/16 < 16; j++) {
+	for (int j = 0; j < data_len && j/18 < 18; j++) {
 
-		uint8_t parityBits = parityBytes[j>>3];
+		uint8_t parityBits = parityBytes[j >> 3];
 		if (protocol != LEGIC &&
 			protocol != ISO_14443B && 
 			protocol != ISO_7816_4 &&
 			(isResponse || protocol == ISO_14443A) &&
 			(oddparity8(frame[j]) != ((parityBits >> (7-(j&0x0007))) & 0x01))) {
-			snprintf(line[j/16]+(( j % 16) * 4),110, "%02x! ", frame[j]);
+				
+			snprintf(line[j/18]+(( j % 18) * 4),110, "%02x! ", frame[j]);
 		} else {
-			snprintf(line[j/16]+(( j % 16) * 4),110, "%02x  ", frame[j]);
+			snprintf(line[j/18]+(( j % 18) * 4),110, "%02x  ", frame[j]);
 		}
 
 	}
@@ -207,9 +208,9 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 	if (markCRCBytes) {
 		//CRC-command
 		if(crcStatus == 0 || crcStatus == 1) {
-			char *pos1 = line[(data_len-2)/16]+(((data_len-2) % 16) * 4);
+			char *pos1 = line[(data_len-2)/18]+(((data_len-2) % 18) * 4);
 			(*pos1) = '[';
-			char *pos2 = line[(data_len)/16]+(((data_len) % 16) * 4);
+			char *pos2 = line[(data_len)/18]+(((data_len) % 18) * 4);
 			sprintf(pos2, "%c", ']');
 		}
 	}
@@ -245,10 +246,10 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 		}
 	}
 
-	int num_lines = MIN((data_len - 1)/16 + 1, 16);
+	int num_lines = MIN((data_len - 1)/18 + 1, 18);
 	for (int j = 0; j < num_lines ; j++) {
 		if (j == 0) {
-			PrintAndLog(" %10u | %10u | %s |%-64s | %s| %s",
+			PrintAndLog(" %10u | %10u | %s |%-72s | %s| %s",
 				(timestamp - first_timestamp),
 				(EndOfTransmissionTimestamp - first_timestamp),
 				(isResponse ? "Tag" : "Rdr"),
@@ -256,7 +257,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 				(j == num_lines-1) ? crc : "    ",
 				(j == num_lines-1) ? explanation : "");
 		} else {
-			PrintAndLog("            |            |     |%-64s | %s| %s",
+			PrintAndLog("            |            |     |%-72s | %s| %s",
 				line[j],
 				(j == num_lines-1) ? crc : "    ",
 				(j == num_lines-1) ? explanation : "");
@@ -266,14 +267,13 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 	if (DecodeMifareData(frame, data_len, parityBytes, isResponse, mfData, &mfDataLen)) {
 		memset(explanation, 0x00, sizeof(explanation));
 		if (!isResponse) {
-			explanation[0] = '>';
-			annotateIso14443a(&explanation[1], sizeof(explanation) - 1, mfData, mfDataLen);
+			annotateIso14443a(explanation, sizeof(explanation), mfData, mfDataLen);
 		}
 		uint8_t crcc = iso14443A_CRC_check(isResponse, mfData, mfDataLen);
-		PrintAndLog("            |          * | dec |%-64s | %-4s| %s",
-			sprint_hex(mfData, mfDataLen),
+		PrintAndLog("            |            |  *  |%-72s | %-4s| %s",
+			sprint_hex_inrow_spaces(mfData, mfDataLen, 2),
 			(crcc == 0 ? "!crc" : (crcc == 1 ? " ok " : "    ")),
-			(true) ? explanation : "");
+			explanation);
 	};
 
 	if (is_last_record(tracepos, trace, traceLen)) return traceLen;
@@ -486,8 +486,8 @@ int CmdHFList(const char *Cmd) {
 			PrintAndLog("ISO18092 / FeliCa - Timings are not as accurate");	
 		
 		PrintAndLog("");
-		PrintAndLog("      Start |        End | Src | Data (! denotes parity error)                                   | CRC | Annotation         |");
-		PrintAndLog("------------|------------|-----|-----------------------------------------------------------------|-----|--------------------|");
+		PrintAndLog("      Start |        End | Src | Data (! denotes parity error)                                           | CRC | Annotation");
+		PrintAndLog("------------+------------+-----+-------------------------------------------------------------------------+-----+--------------------");
 
 		ClearAuthData();
 		while(tracepos < traceLen) {

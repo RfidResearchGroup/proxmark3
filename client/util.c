@@ -181,6 +181,13 @@ char *sprint_hex_inrow_ex(const uint8_t *data, const size_t len, const size_t mi
 char *sprint_hex_inrow(const uint8_t *data, const size_t len) {
 	return sprint_hex_inrow_ex(data, len, 0);
 }
+char *sprint_hex_inrow_spaces(const uint8_t *data, const size_t len, size_t spaces_between) {
+	static char buf[1025] = {0};
+	hex_to_buffer((uint8_t *)buf, data, len, sizeof(buf) - 1, 0, spaces_between, true);
+	return buf;
+}
+
+
 
 char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t breaks) {
 	

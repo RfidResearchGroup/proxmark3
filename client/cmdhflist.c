@@ -48,8 +48,7 @@ uint8_t iso14443A_CRC_check(bool isResponse, uint8_t* d, uint8_t n) {
 	return check_crc(CRC_14443_A, d, n);
 }
 
-uint8_t mifare_CRC_check(bool isResponse, uint8_t* data, uint8_t len)
-{
+uint8_t mifare_CRC_check(bool isResponse, uint8_t* data, uint8_t len) {
 	switch(MifareAuthState) {
 		case masNone:
 		case masError:
@@ -84,8 +83,7 @@ uint8_t iso15693_CRC_check(uint8_t* d, uint8_t n) {
  *	        1 : CRC-command, CRC ok
  *          2 : Not crc-command
  */
-uint8_t iclass_CRC_check(bool isResponse, uint8_t* d, uint8_t n)
-{
+uint8_t iclass_CRC_check(bool isResponse, uint8_t* d, uint8_t n) {
 	//CRC commands (and responses) are all at least 4 bytes
 	if (n < 4) return 2;
 
@@ -632,11 +630,10 @@ bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isRes
 			AuthData.ks3 = AuthData.at_enc ^ prng_successor(AuthData.nt, 96);
 
 			mfLastKey = GetCrypto1ProbableKey(&AuthData);
-			PrintAndLog("            |          * | key | probable key:%012"PRIx64" Prng:%s   ks2:%08x ks3:%08x |     |", 
+			PrintAndLog("            |            |  *  |%49s %012"PRIx64" prng %s |     |", 
+				"key", 
 				mfLastKey,
-				validate_prng_nonce(AuthData.nt) ? "WEAK": "HARD",
-				AuthData.ks2,
-				AuthData.ks3);
+				validate_prng_nonce(AuthData.nt) ? "WEAK": "HARD");
 			
 			AuthData.first_auth = false;
 
@@ -650,12 +647,8 @@ bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isRes
 			// check last used key
 			if (mfLastKey) {
 				if (NestedCheckKey(mfLastKey, &AuthData, cmd, cmdsize, parity)) {
-					PrintAndLog("            |          * | key | last used key:%012"PRIx64"            ks2:%08x ks3:%08x |     |", 
-						mfLastKey,
-						AuthData.ks2,
-						AuthData.ks3);
-
-				traceCrypto1 = lfsr_recovery64(AuthData.ks2, AuthData.ks3);
+					PrintAndLog("            |            |  *  |%60s %012"PRIx64"|     |", "last used key", mfLastKey);
+					traceCrypto1 = lfsr_recovery64(AuthData.ks2, AuthData.ks3);
 				};
 			}
 			
@@ -663,10 +656,7 @@ bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isRes
 			if (!traceCrypto1) {
 				for (int i = 0; i < MIFARE_DEFAULTKEYS_SIZE; i++){
 					if (NestedCheckKey(g_mifare_default_keys[i], &AuthData, cmd, cmdsize, parity)) {
-						PrintAndLog("            |          * | key | default key:%012"PRIx64"              ks2:%08x ks3:%08x |     |", 
-							g_mifare_default_keys[i],
-							AuthData.ks2,
-							AuthData.ks3);
+						PrintAndLog("            |            |  *  |%61s %012"PRIx64"|     |", "key", g_mifare_default_keys[i]);
 
 						mfLastKey = g_mifare_default_keys[i];
 						traceCrypto1 = lfsr_recovery64(AuthData.ks2, AuthData.ks3);
@@ -686,17 +676,15 @@ bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isRes
 						uint32_t ks3 = AuthData.at_enc ^ prng_successor(ntx, 96);
 						struct Crypto1State *pcs = lfsr_recovery64(ks2, ks3);
 						memcpy(mfData, cmd, cmdsize);
-						mf_crypto1_decrypt(pcs, mfData, cmdsize, 0);
-				
+						mf_crypto1_decrypt(pcs, mfData, cmdsize, 0);				
 						crypto1_destroy(pcs);
 						
 						if (CheckCrypto1Parity(cmd, cmdsize, mfData, parity) && check_crc(CRC_14443_A, mfData, cmdsize)) {
 							AuthData.ks2 = ks2;
 							AuthData.ks3 = ks3;
-
 							AuthData.nt = ntx;
 							mfLastKey = GetCrypto1ProbableKey(&AuthData);
-							PrintAndLog("            |          * | key | nested probable key:%012"PRIx64"      ks2:%08x ks3:%08x |     |", 
+							PrintAndLog("            |            |  *  | nested probable key:%012"PRIx64"      ks2:%08x ks3:%08x |     |", 
 								mfLastKey,
 								AuthData.ks2,
 								AuthData.ks3);
@@ -799,7 +787,6 @@ bool NestedCheckKey(uint64_t key, TAuthData *ad, uint8_t *cmd, uint8_t cmdsize, 
 
 	memcpy(buf, cmd, cmdsize);
 	mf_crypto1_decrypt(pcs, buf, cmdsize, 0);
-	
 	crypto1_destroy(pcs);
 	
 	if (!CheckCrypto1Parity(cmd, cmdsize, buf, parity))
@@ -811,7 +798,6 @@ bool NestedCheckKey(uint64_t key, TAuthData *ad, uint8_t *cmd, uint8_t cmdsize, 
 	AuthData.nt = nt1;
 	AuthData.ks2 = AuthData.ar_enc ^ ar;
 	AuthData.ks3 = AuthData.at_enc ^ at;
-
 	return true;
 }
 
@@ -820,10 +806,11 @@ bool CheckCrypto1Parity(uint8_t *cmd_enc, uint8_t cmdsize, uint8_t *cmd, uint8_t
 		if (oddparity8(cmd[i]) ^ (cmd[i + 1] & 0x01) ^ ((parity_enc[i / 8] >> (7 - i % 8)) & 0x01) ^ (cmd_enc[i + 1] & 0x01))
 			return false;
 	}
-	
 	return true;
 }
 
+// Another implementation of mfkey64 attack,  more "valid" than "probable"
+// 
 uint64_t GetCrypto1ProbableKey(TAuthData *ad) {
 	struct Crypto1State *revstate = lfsr_recovery64(ad->ks2, ad->ks3);
 	lfsr_rollback_word(revstate, 0, 0);

@@ -153,9 +153,9 @@ bool mfkey32_moebius(nonces_t data, uint64_t *outputkey) {
 
 // recover key from reader response and tag response of one authentication sequence
 int mfkey64(nonces_t data, uint64_t *outputkey){
-	uint64_t key 	= 0;				// recovered key
-	uint32_t ks2;     					// keystream used to encrypt reader response
-	uint32_t ks3;     					// keystream used to encrypt tag response
+	uint64_t key = 0;				// recovered key
+	uint32_t ks2;    				// keystream used to encrypt reader response
+	uint32_t ks3;    				// keystream used to encrypt tag response
 	struct Crypto1State *revstate;
 	
 	// Extract the keystream from the messages
