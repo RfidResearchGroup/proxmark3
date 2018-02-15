@@ -28,11 +28,15 @@
 #ifndef M_PI
 #define M_PI 3.14159265358979323846264338327
 #endif
+#define MAX_PRINT_BUFFER 2048
+typedef enum logLevel {NORMAL, INFO, WARNING, ERR, DEBUG} logLevel_t; 
+
 void ShowGui(void);
 void HideGraphWindow(void);
 void ShowGraphWindow(void);
 void RepaintGraphWindow(void);
 extern void PrintAndLog(char *fmt, ...);
+void PrintAndLogEx(logLevel_t level, char *filename, int lineno, char *func, char *fmt, ...);
 extern void SetLogFilename(char *fn);
 
 extern double CursorScaleFactor;
