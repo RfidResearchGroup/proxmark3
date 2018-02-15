@@ -61,7 +61,7 @@ void SetupSpi(int mode) {
 		GPIO_NCS3;
 
 	//enable the SPI Peripheral clock
-	AT91C_BASE_PMC->PMC_PCER = (1<<AT91C_ID_SPI);
+	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_SPI);
 	// Enable SPI
 	AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SPIEN;
 
@@ -111,7 +111,7 @@ void SetupSpi(int mode) {
 				( 0 << 2)	|	// Chip selects connected directly to peripheral
 				( 0 << 1) 	|	// Fixed Peripheral Select
 				( 1 << 0);		// Master Mode
-			AT91C_BASE_SPI->SPI_CSR[2] =
+			AT91C_BASE_SPI->SPI_CSR[3] =
 				( 1 << 24)	|	// Delay between Consecutive Transfers (32 MCK periods)
 				( 1 << 16)	|	// Delay Before SPCK (1 MCK period)
 				( 6 << 8)	|	// Serial Clock Baud Rate (baudrate = MCK/6 = 24Mhz/6 = 4M baud
