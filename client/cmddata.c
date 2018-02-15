@@ -179,10 +179,11 @@ int usage_data_rawdemod_p2(void){
 	return 0;
 }
 int usage_data_autocorr(void) {
-	PrintAndLog("Usage: data autocorr [window] [g]");
+	PrintAndLog("Autocorrelate is used to detect repeating sequences. We use it as detection of length in bits a message inside the signal is");
+	PrintAndLog("Usage: data autocorr w <window> [g]");
 	PrintAndLog("Options:");
 	PrintAndLog("       h              This help");
-	PrintAndLog("       [window]       window length for correlation - default = 4000");
+	PrintAndLog("       w <window>     window length for correlation - default = 4000");
 	PrintAndLog("       g              save back to GraphBuffer (overwrite)");
 	return 0;
 }
@@ -767,23 +768,40 @@ int AutoCorrelate(const int *in, int *out, size_t len, int window, bool SaveGrph
 	return correlation;
 }
 
-int CmdAutoCorr(const char *Cmd)
-{
-	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H') return usage_data_autocorr();
+int CmdAutoCorr(const char *Cmd) {
 
-	int window = 4000; //set default
-	char grph = 0;
+	uint32_t window;
+	uint8_t cmdp = 0;
 	bool updateGrph = false;
-	sscanf(Cmd, "%i %c", &window, &grph);
-
-	if (window >= GraphTraceLen) {
-		PrintAndLog("window must be smaller than trace (%d samples)", GraphTraceLen);
-		return 0;
-	}
+	bool errors = false;
 	
-	if (grph == 'g' || grph == 'G')
-		updateGrph = true;
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch (param_getchar(Cmd, cmdp)) {
+			case 'h':
+			case 'H':
+				return usage_data_autocorr();
+			case 'g':
+			case 'G':
+				updateGrph = true;
+				cmdp++;
+				break;
+			case 'w':
+			case 'W':		 
+				window = param_get32ex(Cmd, cmdp+1, 4000, 10);
+				if (window >= GraphTraceLen) {
+					PrintAndLog("window must be smaller than trace (%d samples)", GraphTraceLen);
+					errors = true;
+				}
+				cmdp += 2;
+				break;
+			default:
+				PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+				errors = true;
+				break;
+		}
+	}
+	//Validations
+	if (errors || cmdp == 0 ) return usage_data_autocorr();
 	
 	return AutoCorrelate(GraphBuffer, GraphBuffer, GraphTraceLen, window, updateGrph, true);
 }
@@ -1436,7 +1454,7 @@ int getSamples(int n, bool silent) {
 	}
 
 //ICEMAN todo
-  // set signal properties low/high/mean/amplitude and isnoice detection
+  // set signal properties low/high/mean/amplitude and is_noice detection
 	//justNoise(got, n);
 	// set signal properties low/high/mean/amplitude and isnoice detection
 	justNoise_int(GraphBuffer, GraphTraceLen);
