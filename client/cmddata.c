@@ -261,9 +261,9 @@ bool getDemodBuf(uint8_t *buf, size_t *size) {
 
 // include <math.h>
 // Root mean square
-double rms(double *v, int n) {
+double rms(double *v, size_t n) {
 	double sum = 0.0;
-	for(int i = 0; i < n; i++)
+	for(size_t i = 0; i < n; i++)
 		sum += v[i] * v[i];
 	return sqrt(sum / n);
 }
@@ -288,6 +288,50 @@ double median_uint8( uint8_t *src, size_t size ) {
     qsort( src, size, sizeof(uint8_t), cmp_uint8);
     return 0.5 * ( src[size/2] + src[(size-1)/2]);
 }
+// function to compute mean for a series
+static double compute_mean(const int *data, size_t n) {
+	double mean = 0.0;
+	for (size_t i=0; i < n; i++)
+		mean += data[i];
+	mean /= n;
+	return mean;
+}
+
+//  function to compute variance for a series
+static double compute_variance(const int *data, size_t n) {
+	double variance = 0.0;
+	double mean = compute_mean(data, n);
+
+	for (size_t i=0; i < n; i++)
+		variance += pow(( data[i] - mean), 2.0);
+
+	variance /= n;	
+	return variance;
+}
+
+// Function to compute autocorrelation for a series
+//  Author: Kenneth J. Christensen
+//  - Corrected divide by n to divide (n - lag) from Tobias Mueller
+/*
+static double compute_autoc(const int *data, size_t n, int lag) {
+	double autocv = 0.0;	// Autocovariance value
+	double ac_value;		// Computed autocorrelation value to be returned
+	double variance; 		// Computed variance
+	double mean;
+	
+	mean = compute_mean(data, n);
+	variance = compute_variance(data, n);
+	
+	for (size_t i=0; i < (n - lag); i++)
+		autocv += (data[i] - mean) * (data[i+lag] - mean);
+
+	autocv = (1.0 / (n - lag)) * autocv;
+
+	// Autocorrelation is autocovariance divided by variance
+	ac_value = autocv / variance;
+	return ac_value;
+}
+*/
 
 // option '1' to save DemodBuffer any other to restore
 void save_restoreDB(uint8_t saveOpt) {
@@ -670,58 +714,64 @@ int Cmdaskrawdemod(const char *Cmd)
 	return ASKDemod(Cmd, true, false, 0);
 }
 
-int AutoCorrelate(const int *in, int *out, size_t len, int window, bool SaveGrph, bool verbose)
-{
-	static int CorrelBuffer[MAX_GRAPH_TRACE_LEN];
-	size_t Correlation = 0;
-	int maxSum = 0;
-	int lastMax = 0;
-	
+int AutoCorrelate(const int *in, int *out, size_t len, int window, bool SaveGrph, bool verbose) {
 	// sanity check
 	if ( window > len ) window = len;
 	
-	if (verbose) PrintAndLog("performing %d correlations", GraphTraceLen - window);
-
+	if (verbose) PrintAndLog("[+] performing %d correlations", GraphTraceLen - window);
+	
+	//test
+	double autocv = 0.0;	// Autocovariance value
+	double ac_value;		// Computed autocorrelation value to be returned
+	double variance; 		// Computed variance
+	double mean;
+	size_t correlation = 0;
+	int lastmax = 0;
+	
+	// in, len, 4000
+	mean = compute_mean(in, len);
+	variance = compute_variance(in, len);
+		
+	static int CorrelBuffer[MAX_GRAPH_TRACE_LEN];
+	
 	for (int i = 0; i < len - window; ++i) {
-		int sum = 0;
-		for (int j = 0; j < window; ++j) {
-			sum += (in[j] * in[i + j]) / 256;
-		}
-		CorrelBuffer[i] = sum;
-		if (sum >= maxSum-100 && sum <= maxSum+100){
-			//another max
-			Correlation = i-lastMax;
-			lastMax = i;
-			if (sum > maxSum) maxSum = sum;
-		} else if (sum > maxSum){
-			maxSum = sum;
-			lastMax = i;
-		}
-	}
-	if (Correlation==0){
-		//try again with wider margin
-		for (int i = 0; i < len - window; i++) {
-			if (CorrelBuffer[i] >= maxSum-(maxSum*0.05) && CorrelBuffer[i] <= maxSum+(maxSum*0.05)){
-				//another max
-				Correlation = i-lastMax;
-				lastMax = i;
-			}
-		}
-	}
-	if (verbose && Correlation > 0) PrintAndLog("Possible Correlation: %d samples",Correlation);
 
+		for (size_t j=0; j < (len - i); j++) {
+			autocv += (in[j] - mean) * (in[j+i] - mean);
+		}
+		autocv = (1.0 / (len - i)) * autocv;
+
+		CorrelBuffer[i] = autocv;
+		
+		// Autocorrelation is autocovariance divided by variance
+		ac_value = autocv / variance;
+
+		// keep track of which distance is repeating.
+		if ( ac_value > 1) {
+			correlation = i-lastmax;
+			lastmax = i;
+		}
+	}
+
+	if (verbose && ( correlation > 1 ) ) {
+		PrintAndLog("[+] possible correlation %4d samples", correlation);
+	} else {
+		PrintAndLog("[-] no repeating pattern found");
+	}
+	
 	if (SaveGrph){
 		//GraphTraceLen = GraphTraceLen - window;
 		memcpy(out, CorrelBuffer, len * sizeof(int));
 		RepaintGraphWindow();  
 	}
-	return Correlation;
+	return correlation;
 }
 
 int CmdAutoCorr(const char *Cmd)
 {
 	char cmdp = param_getchar(Cmd, 0);
 	if (cmdp == 'h' || cmdp == 'H') return usage_data_autocorr();
+
 	int window = 4000; //set default
 	char grph = 0;
 	bool updateGrph = false;
@@ -731,7 +781,10 @@ int CmdAutoCorr(const char *Cmd)
 		PrintAndLog("window must be smaller than trace (%d samples)", GraphTraceLen);
 		return 0;
 	}
-	if (grph == 'g') updateGrph = true;
+	
+	if (grph == 'g' || grph == 'G')
+		updateGrph = true;
+	
 	return AutoCorrelate(GraphBuffer, GraphBuffer, GraphTraceLen, window, updateGrph, true);
 }
 
@@ -1382,6 +1435,9 @@ int getSamples(int n, bool silent) {
 		GraphTraceLen = n;
 	}
 
+//ICEMAN todo
+  // set signal properties low/high/mean/amplitude and isnoice detection
+	//justNoise(got, n);
 	// set signal properties low/high/mean/amplitude and isnoice detection
 	justNoise_int(GraphBuffer, GraphTraceLen);
 	
