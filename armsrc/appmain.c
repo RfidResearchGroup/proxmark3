@@ -1169,6 +1169,8 @@ void  __attribute__((noreturn)) AppMain(void) {
 
 	// Reset SPI
 	AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SWRST;
+	AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SWRST; // errata says it needs twice to be correctly set.
+	
 	// Reset SSC
 	AT91C_BASE_SSC->SSC_CR = AT91C_SSC_SWRST;
 
