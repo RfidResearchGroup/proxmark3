@@ -40,8 +40,10 @@ static UsbCommand txcmd;
 static char comport[255];
 byte_t rx[sizeof(UsbCommand)];
 byte_t* prx = rx;
-
 volatile static bool txcmd_pending = false;
+struct receiver_arg {
+	int run;
+};
 
 void SendCommand(UsbCommand *c) {
 	#if 0
@@ -65,9 +67,6 @@ void SendCommand(UsbCommand *c) {
 	 __atomic_test_and_set(&txcmd_pending, __ATOMIC_SEQ_CST);
 }
 
-struct receiver_arg {
-	int run;
-};
 
 #if defined(__linux__) || (__APPLE__)
 static void showBanner(void){
@@ -87,19 +86,23 @@ static void showBanner(void){
 bool hookUpPM3() {	
 	bool ret = false;
 	sp = uart_open( comport );
+	
+	pthread_mutex_lock(&print_lock);
+
 	if (sp == INVALID_SERIAL_PORT) {
-		printf("Reconnect failed, retrying...  (reason: invalid serial port)\n");
+		printf("[!] Reconnect failed, retrying...  (reason: invalid serial port)\n");
 		ret = false;
 		offline = 1;
 	} else if (sp == CLAIMED_SERIAL_PORT) {
-		printf("Reconnect failed, retrying... (reason: serial port is claimed by another process)\n");
+		printf("[!] Reconnect failed, retrying... (reason: serial port is claimed by another process)\n");
 		ret = false;
 		offline = 1;
-	} else {
-		printf("Proxmark reconnected\n");
+	} else {	
+		printf("[+] Proxmark reconnected\n");
 		ret = true;
 		offline = 0;
 	}
+	pthread_mutex_unlock(&print_lock);
 	return ret;
 }
 
@@ -137,7 +140,7 @@ __attribute__((force_align_arg_pointer))
 			bool res = uart_send(sp, (byte_t*) &txcmd, sizeof(UsbCommand));
 			if (!res) {
 				counter_to_offline++;
-				PrintAndLog("Sending bytes to proxmark failed");
+				PrintAndLog("[!] sending bytes to proxmark failed");
 			}
 			 __atomic_clear(&txcmd_pending, __ATOMIC_SEQ_CST);
 			
@@ -185,8 +188,11 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 	if (script_cmds_file) {
 		sf = fopen(script_cmds_file, "r");
 		
-		if (sf)
+		if (sf) {
+			pthread_mutex_lock(&print_lock);			
 			printf("[+] executing commands from file: %s\n", script_cmds_file);
+			pthread_mutex_unlock(&print_lock);
+		}
 	}
 
 	read_history(".history");
@@ -223,14 +229,18 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 				strcleanrn(script_cmd_buf, sizeof(script_cmd_buf));
 
 				if ((cmd = strmcopy(script_cmd_buf)) != NULL) {
+					pthread_mutex_lock(&print_lock);
 					printf(PROXPROMPT"%s\n", cmd);
+					pthread_mutex_unlock(&print_lock);
 				}
 			}
 		} else {
 			// If there is a script command
 			if (execCommand){
 				if ((cmd = strmcopy(script_cmd)) != NULL) {
+					pthread_mutex_lock(&print_lock);
 					printf(PROXPROMPT"%s\n", cmd);
+					pthread_mutex_unlock(&print_lock);
 				}
 
 				execCommand = false;
@@ -243,13 +253,17 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 				if (stdinOnPipe) {
 					memset(script_cmd_buf, 0, sizeof(script_cmd_buf));
 					if (!fgets(script_cmd_buf, sizeof(script_cmd_buf), stdin)) {
+						pthread_mutex_lock(&print_lock);
 						printf("\n[!] stdin end, exit...\n");
+						pthread_mutex_unlock(&print_lock);						
 						break;
 					}
 					strcleanrn(script_cmd_buf, sizeof(script_cmd_buf));
 
 					if ((cmd = strmcopy(script_cmd_buf)) != NULL) {
+						pthread_mutex_lock(&print_lock);
 						printf(PROXPROMPT"%s\n", cmd);
+						pthread_mutex_unlock(&print_lock);
 					}
 					
 				} else {		
