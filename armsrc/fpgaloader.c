@@ -44,21 +44,19 @@ void SetupSpi(int mode) {
 	// Disable PIO control of the following pins, allows use by the SPI peripheral
 	AT91C_BASE_PIOA->PIO_PDR =
 		GPIO_NCS0	|
-		GPIO_NCS2 	|
-		GPIO_NCS3	|
 		GPIO_MISO	|
 		GPIO_MOSI	|
 		GPIO_SPCK;
 
+	// Peripheral A
 	AT91C_BASE_PIOA->PIO_ASR =
 		GPIO_NCS0	|
 		GPIO_MISO	|
 		GPIO_MOSI	|
 		GPIO_SPCK;
 
-	AT91C_BASE_PIOA->PIO_BSR = 
-		GPIO_NCS2	|
-		GPIO_NCS3;
+	// Peripheral B
+	AT91C_BASE_PIOA->PIO_BSR |= GPIO_NCS2;
 
 	//enable the SPI Peripheral clock
 	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_SPI);
@@ -75,6 +73,7 @@ void SetupSpi(int mode) {
 				( 0 << 2)	|	// Chip selects connected directly to peripheral
 				( 0 << 1) 	|	// Fixed Peripheral Select
 				( 1 << 0);		// Master Mode
+				
 			AT91C_BASE_SPI->SPI_CSR[0] =
 				( 1 << 24)	|	// Delay between Consecutive Transfers (32 MCK periods)
 				( 1 << 16)	|	// Delay Before SPCK (1 MCK period)
@@ -94,6 +93,7 @@ void SetupSpi(int mode) {
 				( 0 << 2)	|	// Chip selects connected directly to peripheral
 				( 0 << 1) 	|	// Fixed Peripheral Select
 				( 1 << 0);		// Master Mode
+				
 			AT91C_BASE_SPI->SPI_CSR[2] =
 				( 1 << 24)	|	// Delay between Consecutive Transfers (32 MCK periods)
 				( 1 << 16)	|	// Delay Before SPCK (1 MCK period)
@@ -104,25 +104,6 @@ void SetupSpi(int mode) {
 				( 0 << 0);		// Clock Polarity inactive state is logic 0
 			break;
 */			
-		case SPI_MEM_MODE:
-			AT91C_BASE_SPI->SPI_MR =
-				( 0 << 24)	|	// Delay between chip selects (take default: 6 MCK periods)
-				( 1 << 16)	|	// Peripheral Chip Select (selects MEM SPI_NCS3 or PA1)   			---> IS THIS CORRECT Chipset pin PA1?
-				( 0 << 7)	|	// Local Loopback Disabled
-				( 1 << 4)	|	// Mode Fault Detection disabled
-				( 0 << 2)	|	// Chip selects connected directly to peripheral
-				( 0 << 1) 	|	// Fixed Peripheral Select
-				( 1 << 0);		// Master Mode
-			AT91C_BASE_SPI->SPI_CSR[2] =
-				( 1 << 24)	|	// Delay between Consecutive Transfers (32 MCK periods)
-				( 1 << 16)	|	// Delay Before SPCK (1 MCK period)
-				( 6 << 8)	|	// Serial Clock Baud Rate (baudrate = MCK/6 = 24Mhz/6 = 4M baud
-				AT91C_SPI_BITS_8 |	// Bits per Transfer (8 bits)										---> 8bits?
-				( 0 << 3)	|	// Chip Select inactive after transfer
-				( 1 << 1)	|	// Clock Phase data captured on leading edge, changes on following edge
-				( 0 << 0);		// Clock Polarity inactive state is logic 0
-				
-			break;
 		default:				// Disable SPI
 			AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SPIDIS;
 			break;
@@ -149,7 +130,7 @@ void FpgaSetupSscExt(uint8_t clearPCER) {
 
 	// Now set up the SSC proper, starting from a known state.
 	AT91C_BASE_SSC->SSC_CR = AT91C_SSC_SWRST;
-
+	
 	// RX clock comes from TX clock, RX starts when TX starts, data changes
 	// on RX clock rising edge, sampled on falling edge
 	AT91C_BASE_SSC->SSC_RCMR = SSC_CLOCK_MODE_SELECT(1) | SSC_CLOCK_MODE_START(1);
@@ -516,6 +497,7 @@ void FpgaSendCommand(uint16_t cmd, uint16_t v) {
 	SetupSpi(SPI_FPGA_MODE);
 	while ((AT91C_BASE_SPI->SPI_SR & AT91C_SPI_TXEMPTY) == 0);	// wait for the transfer to complete
 	AT91C_BASE_SPI->SPI_TDR = AT91C_SPI_LASTXFER | cmd | v;		// send the data
+	while (!(AT91C_BASE_SPI->SPI_SR & AT91C_SPI_RDRF)) {};		// wait till transfer is complete
 }
 //-----------------------------------------------------------------------------
 // Write the FPGA setup word (that determines what mode the logic is in, read
@@ -569,7 +551,6 @@ int FpgaGetCurrent(void) {
 // log message
 // if HF,  Disable SSC DMA
 // turn off trace and leds off.
-
 void switch_off(void) {	
 	if (MF_DBGLEVEL > 3) Dbprintf("switch_off");
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);

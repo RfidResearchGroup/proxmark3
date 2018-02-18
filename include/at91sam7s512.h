@@ -2111,7 +2111,6 @@ typedef struct _AT91S_UDP {
 #define AT91C_PIO_PA1        (1 <<  1) // Pin Controlled by PA1
 #define AT91C_PA1_PWM1     (AT91C_PIO_PA1) //  PWM Channel 1
 #define AT91C_PA1_TIOB0    (AT91C_PIO_PA1) //  Timer Counter 0 Multipurpose Timer I/O Pin B
-#define AT91C_PA1_NPCS3    (AT91C_PIO_PA1) //  SPI Peripheral Chip Select 3
 #define AT91C_PIO_PA2        (1 <<  2) // Pin Controlled by PA2
 #define AT91C_PA2_PWM2     (AT91C_PIO_PA2) //  PWM Channel 2
 #define AT91C_PA2_SCK0     (AT91C_PIO_PA2) //  USART 0 Serial Clock

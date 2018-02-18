@@ -22,7 +22,6 @@
  * along with the Arduino SPIFlash Library.  If not, see
  * <http://www.gnu.org/licenses/>.
  */
-
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 //						Common Instructions 						  //
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -32,34 +31,36 @@
 #include "proxmark3.h"
 #include "apps.h"
 
-#define	MANID        0x90
-#define PAGEPROG     0x02
-#define READDATA     0x03
-#define FASTREAD     0x0B
-#define WRITEDISABLE 0x04
-#define READSTAT1    0x05
-#define READSTAT2    0x35
-#define WRITESTAT    0x01
-#define WRITEENABLE  0x06
-#define SECTORERASE  0x20
-#define BLOCK32ERASE 0x52
-#define CHIPERASE    0xC7
-#define SUSPEND      0x75
-#define ID           0x90
-#define RESUME       0x7A
-#define JEDECID      0x9F
-#define RELEASE      0xAB
-#define POWERDOWN    0xB9
-#define BLOCK64ERASE 0xD8
-#define ENABLE_RESET 0x66
-#define RESET        0x99
+#define	MANID			0x90
+#define PAGEPROG		0x02
+#define READDATA		0x03
+#define FASTREAD		0x0B
+#define WRITEDISABLE	0x04
+#define READSTAT1		0x05
+#define READSTAT2		0x35
+#define WRITESTAT		0x01
+#define WRITEENABLE		0x06
+#define SECTORERASE		0x20
+#define BLOCK32ERASE	0x52
+#define CHIPERASE		0xC7
+#define SUSPEND			0x75
+#define ID				0x90
+#define RESUME			0x7A
+#define JEDECID			0x9F
+#define RELEASE			0xAB
+#define POWERDOWN		0xB9
+#define BLOCK64ERASE	0xD8
+#define ENABLE_RESET	0x66
+#define RESET			0x99
 
+#define UNIQUE_ID		0x4B
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 //					Chip specific instructions 						  //
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~ Winbond ~~~~~~~~~~~~~~~~~~~~~~~~~//
-#define WINBOND_MANID	 0xEF
+#define WINBOND_MANID	0xEF
+#define WINBOND_DEVID	0x11
 #define PAGESIZE	 	0x100
 
 //~~~~~~~~~~~~~~~~~~~~~~~~ Microchip ~~~~~~~~~~~~~~~~~~~~~~~~//
