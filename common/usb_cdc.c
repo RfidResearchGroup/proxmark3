@@ -386,7 +386,7 @@ static const char StrSerialNumber[] = {
 	'8',0
 };
 
-// size inkluderar sitt egna fält.
+// size includes their own field.
 static const char StrMS_OSDescriptor[] = {
     18,			// length 0x12
 	0x03,		// Type is string
@@ -792,6 +792,7 @@ void AT91F_CDC_Enumerate() {
 	UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_RXSETUP);
 	while ( (pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_RXSETUP)  );
 
+	/*
 	if ( bRequest == MS_VENDOR_CODE) {
 		if ( bmRequestType == MS_WCID_GET_DESCRIPTOR ) { // C0
 			if ( wIndex == MS_EXTENDED_COMPAT_ID ) {  // 4
@@ -799,6 +800,7 @@ void AT91F_CDC_Enumerate() {
 				//return;
 			} 
 		}
+
 		if ( bmRequestType == MS_WCID_GET_FEATURE_DESCRIPTOR ) {  //C1
 			// if ( wIndex == MS_EXTENDED_PROPERTIES ) { // 5  - winusb bug with wIndex == interface index,  so I just send it always)
 				//AT91F_USB_SendData(pUdp, OSprop, MIN(sizeof(OSprop), wLength));
@@ -806,6 +808,8 @@ void AT91F_CDC_Enumerate() {
 			// } 
 		}
 	}
+	*/
+	
 	// Handle supported standard device request Cf Table 9-3 in USB specification Rev 1.1
 	switch ((bRequest << 8) | bmRequestType) {
 	case STD_GET_DESCRIPTOR: {
@@ -926,7 +930,7 @@ void AT91F_CDC_Enumerate() {
 		for ( i = 0 ; i < 7 ; i++ )  {  
 			((uint8_t*)&line)[i] =  pUdp->UDP_FDR[AT91C_EP_CONTROL];
 		}  */
-		// ignor SET_LINE_CODING...
+		// ignore SET_LINE_CODING...
 		while ( !(pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_RX_DATA_BK0) );
 		UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_RX_DATA_BK0);
 		AT91F_USB_SendZlp(pUdp);
