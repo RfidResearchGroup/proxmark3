@@ -70,7 +70,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
 	// Make sure the tag is reset
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	WaitMS(2500);
+	WaitMS(500);
 
 	// clear read buffer
 	BigBuf_Clear_keep_EM();
@@ -78,7 +78,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
 	LFSetupFPGAForADC(sc->divisor, 1);
 	
 	// little more time for the tag to fully power up
-	WaitMS(2000);
+	WaitMS(200);
 	
 	// if delay_off = 0 then just bitbang 1 = antenna on 0 = off for respective periods.
 	bool bitbang = delay_off == 0;
