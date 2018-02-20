@@ -3,10 +3,10 @@
 #define address_length 3
 
 /* here: use NCPS2 @ PA10: */
-#define NCPS_PDR_BIT     AT91C_PA10_NPCS2
-#define NCPS_ASR_BIT     0
-#define NPCS_BSR_BIT     AT91C_PA10_NPCS2
-#define SPI_CSR_NUM      0          
+#define NCPS_PDR_BIT     AT91C_PA10_NPCS2	// GPIO
+#define NCPS_ASR_BIT     0					// SPI peripheral A
+#define NPCS_BSR_BIT     AT91C_PA10_NPCS2	// SPI peripheral B
+#define SPI_CSR_NUM      0          		// Chip Select register[] 0,1,2,3  (at91samv512 has 4)
 
 /* PCS_0 for NPCS0, PCS_1 for NPCS1 ... */
 #define PCS_0  ((0<<0)|(1<<1)|(1<<2)|(1<<3)) // 0xE - 1110
