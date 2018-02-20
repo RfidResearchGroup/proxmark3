@@ -52,6 +52,7 @@ end
 -- Usage help
 local function help()
 	print(copyright)
+	print(author)	
 	print(version)	
 	print(desc)
 	print("Example usage")

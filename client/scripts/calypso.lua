@@ -211,6 +211,10 @@ local _calypso_cmds = {
 -- The main entry point
 function main(args)
 
+	print( string.rep('--',20) )
+	print( string.rep('--',20) )	
+	print()
+	
 	local data, apdu, flags, uid, cid, result, err, card
 	-- Read the parameters
 	for o, a in getopt.getopt(args, 'h') do

@@ -2,6 +2,9 @@
 -- Have a look there for further details
 getopt = require('getopt')
 bin = require('bin')
+
+copyright = ''
+version = ''
 example = "script run dumptoemul-mfu -i dumpdata-foobar.bin"
 author = "Martin Holst Swende \n @Marshmellow \n @iceman"
 usage = "script run dumptoemul-mfu [-i <file>] [-o <file>]"
