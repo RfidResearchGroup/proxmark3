@@ -84,27 +84,6 @@
 #define maxAddress    capacity
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-//                    Arduino Due DMA definitions                     //
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-// Use SAM3X DMAC if nonzero
-#define USE_SAM3X_DMAC 1
-// Use extra Bus Matrix arbitration fix if nonzero
-#define USE_SAM3X_BUS_MATRIX_FIX 0
-// Time in ms for DMA receive timeout
-#define SAM3X_DMA_TIMEOUT 100
-// chip select register number
-#define SPI_CHIP_SEL 3
-// DMAC receive channel
-#define SPI_DMAC_RX_CH  1
-// DMAC transmit channel
-#define SPI_DMAC_TX_CH  0
-// DMAC Channel HW Interface Number for SPI TX.
-#define SPI_TX_IDX  1
-// DMAC Channel HW Interface Number for SPI RX.
-#define SPI_RX_IDX  2
-// Set DUE SPI clock div (any integer from 2 - 255)
-#define DUE_SPI_CLK 2
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 //     					   List of Error codes						  //
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 #define SUCCESS      0x00
@@ -119,20 +98,16 @@
 #define NOSUSPEND    0x09
 #define UNKNOWNERROR 0xFF
 
- //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+extern void Dbprintf(const char *fmt, ...);
 
- uint8_t 	EXFLASH_spi_write_read(uint8_t wData);
- uint8_t 	EXFLASH_readStat1(void) ;
- uint8_t 	EXFLASH_readStat2(void) ;
- bool    	EXFLASH_NOTBUSY(void);
- void    	EXFLASH_Write_Enable(void) ;
- uint8_t    EXFLASH_Read(uint8_t *address, uint16_t len);
- uint8_t    EXFLASH_Program(uint8_t address[], uint8_t *array, uint8_t len) ;
-
- uint8_t 	EXFLASH_ReadID(void) ;
- bool    	EXFLASH_Erase(void) ;
- bool    	EXFLASH_Reset(void);
- void    	EXFLASH_Init(void);
- void    	EXFLASH_TEST(void);
+void FlashSetup(void);
+void FlashStop(void);
+bool Flash_NOTBUSY(void);
+uint8_t Flash_ReadStat1(void);
+uint8_t Flash_ReadStat2(void);
+uint16_t FlashSend(uint16_t data);
+bool FlashInit();
+void EXFLASH_TEST(void);
 
  #endif

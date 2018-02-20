@@ -93,9 +93,10 @@
 // fpga
 #define NCS_0_LOW         LOW(GPIO_NCS0)
 #define NCS_0_HIGH        HIGH(GPIO_NCS0)
-// lcd - flash mem
-#define NCS_2_LOW         LOW(GPIO_NCS2)
-#define NCS_2_HIGH        HIGH(GPIO_NCS2)
+
+// flash mem PA1
+#define NCS_1_LOW         LOW(GPIO_NCS2)
+#define NCS_1_HIGH        HIGH(GPIO_NCS2)
 
 
 #define RELAY_ON()		HIGH(GPIO_RELAY)

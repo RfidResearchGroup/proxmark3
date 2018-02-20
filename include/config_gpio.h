@@ -20,8 +20,9 @@
 #define GPIO_LED_B			AT91C_PIO_PA8
 #define GPIO_LED_C			AT91C_PIO_PA9
 
-//#define GPIO_NCS2			AT91C_PA10_NPCS2
-#define GPIO_NCS2			AT91C_PIO_PA1
+// flashmem hooked on PA10
+//#define GPIO_NCS2			AT91C_PIO_PA1
+#define GPIO_NCS2			AT91C_PA10_NPCS2
 #define GPIO_NCS0			AT91C_PA11_NPCS0
 
 #define GPIO_MISO			AT91C_PA12_MISO
