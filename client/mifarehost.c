@@ -851,7 +851,7 @@ int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data,
 *	TRUE if tag uses WEAK prng (ie Now the NACK bug also needs to be present for Darkside attack)
 *   FALSE is tag uses HARDEND prng (ie hardnested attack possible, with known key)
 */
-bool detect_classic_prng(void){
+int detect_classic_prng(void){
 
 	UsbCommand resp, respA;	
 	uint8_t cmd[] = {MIFARE_AUTH_KEYA, 0x00};
@@ -865,23 +865,23 @@ bool detect_classic_prng(void){
 	
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
         PrintAndLog("[!] PRNG UID: Reply timeout.");
-		return false;
+		return -1;
 	}
 		
 	// if select tag failed.
 	if ( resp.arg[0] == 0 ) {
 		printf("[!] error:  selecting tag failed,  can't detect prng\n");
-		return false;
+		return -2;
 	}
 	if (!WaitForResponseTimeout(CMD_ACK, &respA, 2500)) {
         PrintAndLog("[!] PRNG data: Reply timeout.");
-		return false;
+		return -3;
 	}
 
 	// check respA
 	if (respA.arg[0] != 4) {
 		PrintAndLog("[!] PRNG data error: Wrong length: %d", respA.arg[0]);
-		return false;
+		return -4;
 	}			
 
 	uint32_t nonce = bytes_to_num(respA.d.asBytes, respA.arg[0]);

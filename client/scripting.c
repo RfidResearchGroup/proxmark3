@@ -591,11 +591,13 @@ static int l_hardnested(lua_State *L){
 
 /**
  * @brief l_validate_prng is a function to test is a nonce is using the weak PRNG
+ * detection =  1 == weak,  0 == hard ,  -1 = failed
  * @param L
  * @return
  */
 static int l_detect_prng(lua_State *L) {
-	lua_pushboolean(L, detect_classic_prng());
+	int res = detect_classic_prng();
+	lua_pushinteger(L, res);
 	return 1;
 }
 /*

@@ -501,11 +501,14 @@ int CmdHF14AInfo(const char *Cmd) {
 	
 	detect_classic_magic();
 	
-	if (isMifareClassic) {		
-		if ( detect_classic_prng() )
-			PrintAndLog("Prng detection: WEAK");
+	if (isMifareClassic) {
+		int res = detect_classic_prng();
+		if ( res == 1 )
+			PrintAndLog("[+] prng detection: WEAK");
+		else if (res == 0 )
+			PrintAndLog("[+] prng detection: HARDEND (hardnested)");
 		else
-			PrintAndLog("Prng detection: HARDEND (hardnested)");
+			PrintAndLog("[-] prng detection: failed");
 		
 		if ( do_nack_test )
 			detect_classic_nackbug(silent);

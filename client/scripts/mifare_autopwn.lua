@@ -111,10 +111,12 @@ end
 -- performs a test if tag nonce uses weak or hardend prng
 local function perform_prng_test()
 	local isweak = core.detect_prng()
-	if isweak then
+	if isweak == 1 then
 		dbg('PRNG detection : WEAK nonce detected')
-	else
+	elseif isweak == 0 then
 		dbg('PRNG detection : HARDEND nonce detected')
+	else
+		dbg('PRNG detection : failed')	
 	end
 	return isweak
 end
@@ -149,7 +151,7 @@ local function main(args)
 			seen_uids[uid] = uid
 			
 			-- check if PRNG is WEAK
-			if perform_prng_test() then  
+			if perform_prng_test() == 1 then  
 				print("Card found, commencing crack on UID", uid)
 
 				if #key == 12 then
