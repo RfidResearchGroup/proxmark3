@@ -84,6 +84,7 @@ end
 -- Usage help
 local function help()
 	print(copyright)
+	print(author)
 	print(version)	
 	print(desc)
 	print("Example usage")
@@ -144,6 +145,8 @@ local function main(args)
 	print( string.rep('--',20) )
 	print( string.rep('--',20) )	
 	print()
+	
+	if #args == 0 then return help() end
 
 	for o, a in getopt.getopt(args, 'r:f:b:c:t:d:h') do			-- Populate command like arguments
 		if o == 'r' then rfidtag = a end
