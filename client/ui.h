@@ -24,7 +24,6 @@
 
 #include "util.h"
 #include "cmdmain.h"
-#include "proxgui.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846264338327
@@ -46,6 +45,8 @@ extern int offline;
 extern int flushAfterWrite;   //buzzy
 extern bool GridLocked;
 extern bool showDemod;
+
+//extern uint8_t g_debugMode;
 
 extern pthread_mutex_t print_lock;
 

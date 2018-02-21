@@ -16,6 +16,7 @@
 #include "cmdscript.h"  // CmdScriptRun  
 
 #define PROXPROMPT "pm3 --> "
+
 #ifdef __cplusplus
 extern "C" {
 #endif

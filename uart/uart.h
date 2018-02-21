@@ -29,8 +29,8 @@
  * @file uart.h
  */
 
-#ifndef _PM3_UART_H_
-#define _PM3_UART_H_
+#ifndef _UART_H_
+#define _UART_H_
 
 #include <stdio.h>
 #include <string.h>
@@ -94,5 +94,5 @@ bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed);
  */
 uint32_t uart_get_speed(const serial_port sp);
 
-#endif // _PM3_UART_H_
+#endif // _UART_H_
 

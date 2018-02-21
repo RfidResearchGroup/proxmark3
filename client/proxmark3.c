@@ -8,6 +8,7 @@
 //-----------------------------------------------------------------------------
 // Main binary
 //-----------------------------------------------------------------------------
+#include "proxmark3.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,8 +17,6 @@
 #include <unistd.h>
 #include <readline/readline.h>
 #include <readline/history.h>
-
-#include "proxmark3.h"
 #include "proxgui.h"
 #include "cmdmain.h"
 #include "uart.h"

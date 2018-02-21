@@ -25,7 +25,6 @@
   #include <endian.h>
 #endif
 
-
 #ifndef BITMASK
 # define BITMASK(X) (1 << (X))
 #endif
@@ -162,12 +161,13 @@
 # define _YELLOW_(s) #s
 #endif
 
-
 #ifndef DropField
 #define DropField() { \
 	UsbCommand c = {CMD_READER_ISO_14443a, {0,0,0}}; clearCommandBuffer(); SendCommand(&c); \
 }
 #endif
+
+extern uint8_t g_debugMode;
 
 extern int ukbhit(void);
 extern void AddLogLine(char *fileName, char *extData, char *c);
