@@ -448,7 +448,7 @@ int CmdHF15Demod(const char *Cmd) {
 	}
 	
 	if (mask != 0x01) {
-		PrintAndLogEx(NORMAL, "error, uneven octet! (discard extra bits!)");
+		PrintAndLogEx(WARNING, "Error, uneven octet! (discard extra bits!)");
 		PrintAndLogEx(NORMAL, "   mask = %02x", mask);
 	}
 	PrintAndLogEx(NORMAL, "%d octets", k);
@@ -655,7 +655,7 @@ int CmdHF15Dump(const char*Cmd) {
 			cmdp += 2;
 			break;
 		default:
-			PrintAndLogEx(NORMAL, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+			PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
 			errors = true;
 			break;
 		}
