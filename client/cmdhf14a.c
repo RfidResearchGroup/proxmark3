@@ -984,7 +984,7 @@ static int waitCmd(uint8_t iSelect) {
 			if (len){
 				PrintAndLogEx(NORMAL, "Card selected. UID[%i]:", len);
 			} else {
-				PrintAndLogEx(NORMAL, "Can't select card.");
+				PrintAndLogEx(WARNING, "Can't select card.");
 			}
 		} else {
 			PrintAndLogEx(NORMAL, "received %i bytes:", len);
