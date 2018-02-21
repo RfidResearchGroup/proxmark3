@@ -54,11 +54,11 @@ int ExecuteCryptoTests(bool verbose) {
 	res = exec_crypto_test(verbose);
 	if (res) TestFail = true;
 
-	PrintAndLog("\n--------------------------");
+	PrintAndLogEx(NORMAL, "\n--------------------------");
 	if (TestFail)
-		PrintAndLog("Test(s) [ERROR].");
+		PrintAndLogEx(ERR, "Test(s) [ERROR].");
 	else
-		PrintAndLog("Tests [OK].");
+		PrintAndLogEx(SUCCESS, "Tests [OK].");
 	
 	return TestFail;
 }

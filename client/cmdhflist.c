@@ -353,8 +353,6 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 	
 	// it's basically a ISO14443a tag, so try annotation from there
 	if (!applyIso14443a(exp, size, cmd, cmdsize)){
-		//PrintAndLog("rest");
-		//PrintAndLog("(%d)",cmd[0]);
 		// S-block 11xxx010
 		if ( (cmd[0] & 0xC0) && (cmdsize == 3) ) {		
 			switch ( (cmd[0] & 0x30)  ) {
@@ -378,7 +376,7 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 				pos = pos + 1;
 			if ( (cmd[0] & 0x04) == 0x04) // nad byte following
 				pos = pos + 1;
-			//PrintAndLog("[%d]",pos);
+
 			switch ( cmd[pos] ){
 				case MFDES_CREATE_APPLICATION			:snprintf(exp, size, "CREATE APPLICATION");break;
 				case MFDES_DELETE_APPLICATION			:snprintf(exp, size, "DELETE APPLICATION");break;

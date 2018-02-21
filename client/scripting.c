@@ -499,8 +499,6 @@ static int l_reveng_RunModel(lua_State *L){
     bool reverse =  lua_toboolean(L, 3);
 	const char endian = luaL_checkstring(L, 4)[0];
 
-	//PrintAndLog("mod: %s, hex: %s, rev %d", inModel, inHexStr, reverse);
-	//    int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *result)
 	int ans = RunModel( (char *)inModel, (char *)inHexStr, reverse, endian, result);
 	if (!ans) 	
 		return returnToLuaWithError(L,"Reveng failed");

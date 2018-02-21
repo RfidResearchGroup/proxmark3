@@ -310,14 +310,14 @@ char *sprint_ascii(const uint8_t *data, const size_t len) {
 }
 
 void print_blocks(uint32_t *data, size_t len) {
-	PrintAndLog("Blk | Data ");
-	PrintAndLog("----+------------");
+	PrintAndLogEx(NORMAL, "Blk | Data ");
+	PrintAndLogEx(NORMAL, "----+------------");
 
 	if ( !data ) {
-		PrintAndLog("..empty data");
+		PrintAndLogEx(ERR, "..empty data");
 	} else {
 		for (uint8_t i=0; i<len; i++)
-			PrintAndLog(" %02d | 0x%08X", i, data[i]);
+			PrintAndLogEx(NORMAL, "%02d | 0x%08X", i, data[i]);
 	}
 }
 
