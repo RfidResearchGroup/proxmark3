@@ -12,7 +12,7 @@
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 uint8_t g_debugMode = 0;
 size_t DemodBufferLen = 0;
-int g_DemodStartIdx = 0;
+size_t g_DemodStartIdx = 0;
 int g_DemodClock = 0;
 
 static int CmdHelp(const char *Cmd);
@@ -339,7 +339,7 @@ void save_restoreDB(uint8_t saveOpt) {
 	static uint8_t SavedDB[MAX_DEMOD_BUF_LEN];
 	static size_t SavedDBlen;
 	static bool DB_Saved = false;
-	static int savedDemodStartIdx = 0;
+	static size_t savedDemodStartIdx = 0;
 	static int savedDemodClock = 0;
 
 	if (saveOpt == GRAPH_SAVE) { //save

@@ -46,7 +46,7 @@ extern void save_restoreGB(uint8_t saveOpt);
 #define MAX_DEMOD_BUF_LEN (1024*128)
 extern uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 extern size_t DemodBufferLen;
-//extern size_t g_DemodStartIdx;
+extern size_t g_DemodStartIdx;
 extern bool showDemod;
 extern uint8_t g_debugMode;
 
