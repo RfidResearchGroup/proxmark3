@@ -34,7 +34,7 @@ int detectNexWatch(uint8_t *dest, size_t *size, bool *invert) {
 int CmdNexWatchDemod(const char *Cmd) {
 
 	if (!PSKDemod("", false)) {
-		if (g_debugMode) PrintAndLog("DEBUG: Error - NexWatch can't demod signal");
+		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch can't demod signal");
 		return 0;
 	}
 	bool invert = false;
@@ -43,17 +43,17 @@ int CmdNexWatchDemod(const char *Cmd) {
 	if (idx <= 0){
 		if (g_debugMode){
 			if (idx == -1)
-				PrintAndLog("DEBUG: Error - NexWatch not enough samples");
+				PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch not enough samples");
 			// else if (idx == -2)
-				// PrintAndLog("DEBUG: Error - NexWatch only noise found");
+				// PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch only noise found");
 			// else if (idx == -3)
-				// PrintAndLog("DEBUG: Error - NexWatch problem during PSK demod");
+				// PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch problem during PSK demod");
 			else if (idx == -4)
-				PrintAndLog("DEBUG: Error - NexWatch preamble not found");
+				PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch preamble not found");
 			// else if (idx == -5)
-				// PrintAndLog("DEBUG: Error - NexWatch size not correct: %d", size);
+				// PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch size not correct: %d", size);
 			else
-				PrintAndLog("DEBUG: Error - NexWatch error %d",idx);
+				PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch error %d",idx);
 		}
 		return 0;
 	}
@@ -75,9 +75,9 @@ int CmdNexWatchDemod(const char *Cmd) {
 	//checksum check (TBD)
 
 	//output
-	PrintAndLog("NexWatch ID: %d", ID);
+	PrintAndLogEx(NORMAL, "NexWatch ID: %d", ID);
 	if (invert){
-		PrintAndLog("Had to Invert - probably NexKey");
+		PrintAndLogEx(NORMAL, "Had to Invert - probably NexKey");
 		for (size_t i = 0; i < size; i++)
 			DemodBuffer[i] ^= 1;
 	} 

@@ -432,7 +432,7 @@ float brute_force_benchmark() {
 	test_candidates[NUM_BRUTE_FORCE_THREADS-1].next = NULL;
 
 	if (!read_bench_data(test_candidates)) {
-		PrintAndLog("Couldn't read benchmark data. Assuming brute force rate of %1.0f states per second", DEFAULT_BRUTE_FORCE_RATE);
+		PrintAndLogEx(NORMAL, "Couldn't read benchmark data. Assuming brute force rate of %1.0f states per second", DEFAULT_BRUTE_FORCE_RATE);
 		return DEFAULT_BRUTE_FORCE_RATE;
 	}
 

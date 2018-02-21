@@ -16,29 +16,29 @@
 static int CmdHelp(const char *Cmd);
 
 int usage_lf_visa2k_clone(void){
-	PrintAndLog("clone a Visa2000 tag to a T55x7 tag.");
-	PrintAndLog("Usage: lf visa2000 clone [h] <card ID> <Q5>");
-	PrintAndLog("Options:");
-	PrintAndLog("      h          : This help");
-	PrintAndLog("      <card ID>  : Visa2k card ID");
-	PrintAndLog("      <Q5>       : specify write to Q5 (t5555 instead of t55x7)");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("      lf visa2000 clone 112233");
+	PrintAndLogEx(NORMAL, "clone a Visa2000 tag to a T55x7 tag.");
+	PrintAndLogEx(NORMAL, "Usage: lf visa2000 clone [h] <card ID> <Q5>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "      h          : This help");
+	PrintAndLogEx(NORMAL, "      <card ID>  : Visa2k card ID");
+	PrintAndLogEx(NORMAL, "      <Q5>       : specify write to Q5 (t5555 instead of t55x7)");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "      lf visa2000 clone 112233");
 	return 0;
 }
 
 int usage_lf_visa2k_sim(void) {
-	PrintAndLog("Enables simulation of visa2k card with specified card number.");
-	PrintAndLog("Simulation runs until the button is pressed or another USB command is issued.");
-	PrintAndLog("");
-	PrintAndLog("Usage:  lf visa2000 sim [h] <card ID>");
-	PrintAndLog("Options:");
-	PrintAndLog("      h          : This help");
-	PrintAndLog("      <card ID>  : Visa2k card ID");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("        lf visa2000 sim 112233");
+	PrintAndLogEx(NORMAL, "Enables simulation of visa2k card with specified card number.");
+	PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Usage:  lf visa2000 sim [h] <card ID>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "      h          : This help");
+	PrintAndLogEx(NORMAL, "      <card ID>  : Visa2k card ID");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "        lf visa2000 sim 112233");
 	return 0;
 }
 
@@ -104,7 +104,7 @@ int CmdVisa2kDemod(const char *Cmd) {
 	//ASK / Manchester
 	bool st = true;
 	if (!ASKDemod_ext("64 0 0", false, false, 1, &st)) {
-		if (g_debugMode) PrintAndLog("DEBUG: Error - Visa2k: ASK/Manchester Demod failed");
+		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: ASK/Manchester Demod failed");
 		save_restoreGB(0);
 		return 0;
 	}
@@ -113,13 +113,13 @@ int CmdVisa2kDemod(const char *Cmd) {
 	if (ans < 0){
 		if (g_debugMode){
 			if (ans == -1)
-				PrintAndLog("DEBUG: Error - Visa2k: too few bits found");
+				PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: too few bits found");
 			else if (ans == -2)
-				PrintAndLog("DEBUG: Error - Visa2k: preamble not found");
+				PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: preamble not found");
 			else if (ans == -3)
-				PrintAndLog("DEBUG: Error - Visa2k: Size not correct: %d", size);
+				PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: Size not correct: %d", size);
 			else
-				PrintAndLog("DEBUG: Error - Visa2k: ans: %d", ans);
+				PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: ans: %d", ans);
 		}
 		save_restoreGB(0);
 		return 0;
@@ -138,7 +138,7 @@ int CmdVisa2kDemod(const char *Cmd) {
 		
 	// test checksums
 	if ( chk != calc ) { 
-		printf("DEBUG: error: Visa2000 checksum failed %x - %x\n", chk, calc);
+		PrintAndLogEx(DEBUG, "DEBUG: error: Visa2000 checksum failed %x - %x\n", chk, calc);
 		save_restoreGB(0);
 		return 0;
 	}
@@ -146,11 +146,11 @@ int CmdVisa2kDemod(const char *Cmd) {
 	uint8_t calc_par = visa_parity(raw2);
 	uint8_t chk_par = (raw3 & 0xFF0) >> 4;
 	if ( calc_par != chk_par) {
-		printf("DEBUG: error: Visa2000 parity failed %x - %x\n", chk_par, calc_par);
+		PrintAndLogEx(DEBUG, "DEBUG: error: Visa2000 parity failed %x - %x\n", chk_par, calc_par);
 		save_restoreGB(0);
 		return 0;		
 	}
-	PrintAndLog("Visa2000 Tag Found: Card ID %u,  Raw: %08X%08X%08X", raw2,  raw1 ,raw2, raw3);
+	PrintAndLogEx(SUCCESS, "Visa2000 Tag Found: Card ID %u,  Raw: %08X%08X%08X", raw2,  raw1 ,raw2, raw3);
 	save_restoreGB(0);
 	return 1;
 }
@@ -178,7 +178,7 @@ int CmdVisa2kClone(const char *Cmd) {
 	blocks[2] = id;
 	blocks[3] =  (visa_parity(id) << 4) | visa_chksum(id);	
 
-	PrintAndLog("Preparing to clone Visa2000 to T55x7 with CardId: %u", id);
+	PrintAndLogEx(INFO, "Preparing to clone Visa2000 to T55x7 with CardId: %u", id);
 	print_blocks(blocks, 4);
 	
 	UsbCommand resp;
@@ -190,7 +190,7 @@ int CmdVisa2kClone(const char *Cmd) {
 		clearCommandBuffer();
 		SendCommand(&c);
 		if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)){
-			PrintAndLog("Error occurred, device did not respond during write operation.");
+			PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
 			return -1;
 		}
 	}
@@ -211,7 +211,7 @@ int CmdVisa2kSim(const char *Cmd) {
 	arg1 = clk << 8 | encoding;
 	arg2 = invert << 8 | separator;
 
-	PrintAndLog("Simulating Visa2000 - CardId: %u", id);
+	PrintAndLogEx(NORMAL, "Simulating Visa2000 - CardId: %u", id);
 
 	UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};
 

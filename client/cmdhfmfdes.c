@@ -46,28 +46,28 @@ int CmdHF14ADesWb(const char *Cmd)
 	char cmdp	= 0x00;
 
 	if (strlen(Cmd)<3) {
-		PrintAndLog("Usage:  hf mf wrbl    <block number> <key A/B> <key (12 hex symbols)> <block data (32 hex symbols)>");
-		PrintAndLog("        sample: hf mf wrbl 0 A FFFFFFFFFFFF 000102030405060708090A0B0C0D0E0F");
+		PrintAndLogEx(NORMAL, "Usage:  hf mf wrbl    <block number> <key A/B> <key (12 hex symbols)> <block data (32 hex symbols)>");
+		PrintAndLogEx(NORMAL, "        sample: hf mf wrbl 0 A FFFFFFFFFFFF 000102030405060708090A0B0C0D0E0F");
 		return 0;
 	}	
 
 	blockNo = param_get8(Cmd, 0);
 	cmdp = param_getchar(Cmd, 1);
 	if (cmdp == 0x00) {
-		PrintAndLog("Key type must be A or B");
+		PrintAndLogEx(NORMAL, "Key type must be A or B");
 		return 1;
 	}
 	if (cmdp != 'A' && cmdp != 'a') keyType = 1;
 	if (param_gethex(Cmd, 2, key, 12)) {
-		PrintAndLog("Key must include 12 HEX symbols");
+		PrintAndLogEx(NORMAL, "Key must include 12 HEX symbols");
 		return 1;
 	}
 	if (param_gethex(Cmd, 3, bldata, 32)) {
-		PrintAndLog("Block data must include 32 HEX symbols");
+		PrintAndLogEx(NORMAL, "Block data must include 32 HEX symbols");
 		return 1;
 	}
-	PrintAndLog("--block no:%02x key type:%02x key:%s", blockNo, keyType, sprint_hex(key, 6));
-	PrintAndLog("--data: %s", sprint_hex(bldata, 16));
+	PrintAndLogEx(NORMAL, "--block no:%02x key type:%02x key:%s", blockNo, keyType, sprint_hex(key, 6));
+	PrintAndLogEx(NORMAL, "--data: %s", sprint_hex(bldata, 16));
 	
   UsbCommand c = {CMD_MIFARE_WRITEBL, {blockNo, keyType, 0}};
 	memcpy(c.d.asBytes, key, 6);
@@ -77,9 +77,9 @@ int CmdHF14ADesWb(const char *Cmd)
 	UsbCommand resp;
 	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
 		uint8_t isOK  = resp.arg[0] & 0xff;
-		PrintAndLog("isOk:%02x", isOK);
+		PrintAndLogEx(NORMAL, "isOk:%02x", isOK);
 	} else {
-		PrintAndLog("Command execute timeout");
+		PrintAndLogEx(NORMAL, "Command execute timeout");
 	}
  */
 	return 0;
@@ -95,23 +95,23 @@ int CmdHF14ADesRb(const char *Cmd)
 
 
 	// if (strlen(Cmd)<3) {
-		// PrintAndLog("Usage:  hf mf rdbl    <block number> <key A/B> <key (12 hex symbols)>");
-		// PrintAndLog("        sample: hf mf rdbl 0 A FFFFFFFFFFFF ");
+		// PrintAndLogEx(NORMAL, "Usage:  hf mf rdbl    <block number> <key A/B> <key (12 hex symbols)>");
+		// PrintAndLogEx(NORMAL, "        sample: hf mf rdbl 0 A FFFFFFFFFFFF ");
 		// return 0;
 	// }	
 	
 	// blockNo = param_get8(Cmd, 0);
 	// cmdp = param_getchar(Cmd, 1);
 	// if (cmdp == 0x00) {
-		// PrintAndLog("Key type must be A or B");
+		// PrintAndLogEx(NORMAL, "Key type must be A or B");
 		// return 1;
 	// }
 	// if (cmdp != 'A' && cmdp != 'a') keyType = 1;
 	// if (param_gethex(Cmd, 2, key, 12)) {
-		// PrintAndLog("Key must include 12 HEX symbols");
+		// PrintAndLogEx(NORMAL, "Key must include 12 HEX symbols");
 		// return 1;
 	// }
-	// PrintAndLog("--block no:%02x key type:%02x key:%s ", blockNo, keyType, sprint_hex(key, 6));
+	// PrintAndLogEx(NORMAL, "--block no:%02x key type:%02x key:%s ", blockNo, keyType, sprint_hex(key, 6));
 	
   // UsbCommand c = {CMD_MIFARE_READBL, {blockNo, keyType, 0}};
 	// memcpy(c.d.asBytes, key, 6);
@@ -123,11 +123,11 @@ int CmdHF14ADesRb(const char *Cmd)
 		// uint8_t              * data  = resp.d.asBytes;
 
 		// if (isOK)
-			// PrintAndLog("isOk:%02x data:%s", isOK, sprint_hex(data, 16));
+			// PrintAndLogEx(NORMAL, "isOk:%02x data:%s", isOK, sprint_hex(data, 16));
 		// else
-			// PrintAndLog("isOk:%02x", isOK);
+			// PrintAndLogEx(NORMAL, "isOk:%02x", isOK);
 	// } else {
-		// PrintAndLog("Command execute timeout");
+		// PrintAndLogEx(NORMAL, "Command execute timeout");
 	// }
 
   return 0;
@@ -140,45 +140,45 @@ int CmdHF14ADesInfo(const char *Cmd){
 	UsbCommand resp;
 	
 	if ( !WaitForResponseTimeout(CMD_ACK,&resp,1500) ) {
-		PrintAndLog("Command execute timeout");
+		PrintAndLogEx(WARNING, "Command execute timeout");
 		return 0;
 	}
 	uint8_t isOK  = resp.arg[0] & 0xff;
 	if ( !isOK ){
 		switch ( resp.arg[1] ) {
 			case 1: 
-				PrintAndLog("Can't select card"); break;
+				PrintAndLogEx(WARNING, "Can't select card"); break;
 			case 2:
-				PrintAndLog("Card is most likely not Desfire. Its UID has wrong size"); break;
+				PrintAndLogEx(WARNING, "Card is most likely not Desfire. Its UID has wrong size"); break;
 			case 3:				
 			default:
-				PrintAndLog("Command unsuccessful"); break;
+				PrintAndLogEx(WARNING, "Command unsuccessful"); break;
 		}
 		return 0;
 	}  
-	PrintAndLog("");
-	PrintAndLog("-- Desfire Information --------------------------------------");
-	PrintAndLog("-------------------------------------------------------------");
-	PrintAndLog("  UID                : %s",sprint_hex(resp.d.asBytes, 7));
-	PrintAndLog("  Batch number       : %s",sprint_hex(resp.d.asBytes+28,5));
-	PrintAndLog("  Production date    : week %02x, 20%02x",resp.d.asBytes[33], resp.d.asBytes[34]);
-	PrintAndLog("  -----------------------------------------------------------");
-	PrintAndLog("  Hardware Information");
-	PrintAndLog("      Vendor Id      : %s", getTagInfo(resp.d.asBytes[7]));
-	PrintAndLog("      Type           : 0x%02X",resp.d.asBytes[8]);
-	PrintAndLog("      Subtype        : 0x%02X",resp.d.asBytes[9]);
-	PrintAndLog("      Version        : %s",GetVersionStr(resp.d.asBytes[10], resp.d.asBytes[11]) );
-	PrintAndLog("      Storage size   : %s",GetCardSizeStr(resp.d.asBytes[12]));
-	PrintAndLog("      Protocol       : %s",GetProtocolStr(resp.d.asBytes[13]));
-	PrintAndLog("  -----------------------------------------------------------");
-	PrintAndLog("  Software Information");
-	PrintAndLog("      Vendor Id      : %s", getTagInfo(resp.d.asBytes[14]));
-	PrintAndLog("      Type           : 0x%02X",resp.d.asBytes[15]);
-	PrintAndLog("      Subtype        : 0x%02X",resp.d.asBytes[16]);
-	PrintAndLog("      Version        : %d.%d",resp.d.asBytes[17], resp.d.asBytes[18]);
-	PrintAndLog("      storage size   : %s", GetCardSizeStr(resp.d.asBytes[19]));
-	PrintAndLog("      Protocol       : %s", GetProtocolStr(resp.d.asBytes[20]));
-	PrintAndLog("-------------------------------------------------------------");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "-- Desfire Information --------------------------------------");
+	PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
+	PrintAndLogEx(NORMAL, "  UID                : %s",sprint_hex(resp.d.asBytes, 7));
+	PrintAndLogEx(NORMAL, "  Batch number       : %s",sprint_hex(resp.d.asBytes+28,5));
+	PrintAndLogEx(NORMAL, "  Production date    : week %02x, 20%02x",resp.d.asBytes[33], resp.d.asBytes[34]);
+	PrintAndLogEx(NORMAL, "  -----------------------------------------------------------");
+	PrintAndLogEx(NORMAL, "  Hardware Information");
+	PrintAndLogEx(NORMAL, "      Vendor Id      : %s", getTagInfo(resp.d.asBytes[7]));
+	PrintAndLogEx(NORMAL, "      Type           : 0x%02X",resp.d.asBytes[8]);
+	PrintAndLogEx(NORMAL, "      Subtype        : 0x%02X",resp.d.asBytes[9]);
+	PrintAndLogEx(NORMAL, "      Version        : %s",GetVersionStr(resp.d.asBytes[10], resp.d.asBytes[11]) );
+	PrintAndLogEx(NORMAL, "      Storage size   : %s",GetCardSizeStr(resp.d.asBytes[12]));
+	PrintAndLogEx(NORMAL, "      Protocol       : %s",GetProtocolStr(resp.d.asBytes[13]));
+	PrintAndLogEx(NORMAL, "  -----------------------------------------------------------");
+	PrintAndLogEx(NORMAL, "  Software Information");
+	PrintAndLogEx(NORMAL, "      Vendor Id      : %s", getTagInfo(resp.d.asBytes[14]));
+	PrintAndLogEx(NORMAL, "      Type           : 0x%02X",resp.d.asBytes[15]);
+	PrintAndLogEx(NORMAL, "      Subtype        : 0x%02X",resp.d.asBytes[16]);
+	PrintAndLogEx(NORMAL, "      Version        : %d.%d",resp.d.asBytes[17], resp.d.asBytes[18]);
+	PrintAndLogEx(NORMAL, "      storage size   : %s", GetCardSizeStr(resp.d.asBytes[19]));
+	PrintAndLogEx(NORMAL, "      Protocol       : %s", GetProtocolStr(resp.d.asBytes[20]));
+	PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
 	
 	// Master Key settings
 	GetKeySettings(NULL);
@@ -195,8 +195,8 @@ int CmdHF14ADesInfo(const char *Cmd){
 	uint8_t tmp[3];
 	memcpy(tmp, resp.d.asBytes+3,3); 
 
-	PrintAndLog("   Available free memory on card       : %d bytes", le24toh( tmp ));
-	PrintAndLog("-------------------------------------------------------------");
+	PrintAndLogEx(NORMAL, "   Available free memory on card       : %d bytes", le24toh( tmp ));
+	PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
 
 	/*
 		Card Master key (CMK)        0x00 AID = 00 00 00 (card level)
@@ -280,8 +280,8 @@ void GetKeySettings( uint8_t *aid){
 	c.cmd = CMD_MIFARE_DESFIRE;
 	
 	if ( aid == NULL ){
-		PrintAndLog(" CMK - PICC, Card Master Key settings ");
-		PrintAndLog("");
+		PrintAndLogEx(NORMAL, " CMK - PICC, Card Master Key settings ");
+		PrintAndLogEx(NORMAL, "");
 		c.arg[CMDPOS] = (INIT | DISCONNECT);
 		c.arg[LENPOS] =  0x01;
 		c.d.asBytes[0] = GET_KEY_SETTINGS;  // 0x45
@@ -289,18 +289,18 @@ void GetKeySettings( uint8_t *aid){
 		if ( !WaitForResponseTimeout(CMD_ACK,&resp,1000) ) {return;}  
 		isOK  = resp.arg[0] & 0xff;
 		if ( !isOK ){
-			PrintAndLog("   Can't select master application");	
+			PrintAndLogEx(WARNING, "   Can't select master application");	
 			return;
 		}	
 
 		str = (resp.d.asBytes[3] & (1 << 3 )) ? "YES":"NO";	
-		PrintAndLog("   [0x08] Configuration changeable       : %s", str);
+		PrintAndLogEx(NORMAL, "   [0x08] Configuration changeable       : %s", str);
 		str = (resp.d.asBytes[3] & (1 << 2 )) ? "NO":"YES";
-		PrintAndLog("   [0x04] CMK required for create/delete : %s",str);
+		PrintAndLogEx(NORMAL, "   [0x04] CMK required for create/delete : %s",str);
 		str = (resp.d.asBytes[3] & (1 << 1 )) ? "NO":"YES";
-		PrintAndLog("   [0x02] Directory list access with CMK : %s",str);
+		PrintAndLogEx(NORMAL, "   [0x02] Directory list access with CMK : %s",str);
 		str = (resp.d.asBytes[3] & (1 << 0 )) ? "YES" : "NO";
-		PrintAndLog("   [0x01] CMK is changeable              : %s", str);
+		PrintAndLogEx(NORMAL, "   [0x01] CMK is changeable              : %s", str);
 			
 		c.arg[LENPOS] = 0x02; //LEN
 		c.d.asBytes[0] = GET_KEY_VERSION; //0x64
@@ -309,13 +309,13 @@ void GetKeySettings( uint8_t *aid){
 		if ( !WaitForResponseTimeout(CMD_ACK,&resp,1000) ) { return; }
 		isOK  = resp.arg[0] & 0xff;
 		if ( !isOK ){
-			PrintAndLog("   Can't read key-version");
+			PrintAndLogEx(WARNING, "   Can't read key-version");
 			return;
 		}
-		PrintAndLog("");
-		PrintAndLog("   Max number of keys       : %d", resp.d.asBytes[4]);
-		PrintAndLog("   Master key Version       : %d (0x%02x)", resp.d.asBytes[3], resp.d.asBytes[3]);
-		PrintAndLog("   ----------------------------------------------------------");
+		PrintAndLogEx(NORMAL, "");
+		PrintAndLogEx(NORMAL, "   Max number of keys       : %d", resp.d.asBytes[4]);
+		PrintAndLogEx(NORMAL, "   Master key Version       : %d (0x%02x)", resp.d.asBytes[3], resp.d.asBytes[3]);
+		PrintAndLogEx(NORMAL, "   ----------------------------------------------------------");
 		
 		c.arg[LENPOS] = 0x02; //LEN
 		c.d.asBytes[0] = AUTHENTICATE; //0x0A
@@ -323,24 +323,24 @@ void GetKeySettings( uint8_t *aid){
 		SendCommand(&c);
 		if ( !WaitForResponseTimeout(CMD_ACK,&resp,1000) ) {return;}
 		isOK  = resp.d.asBytes[2] & 0xff;
-		PrintAndLog("   [0x0A] Authenticate      : %s", ( isOK==0xAE ) ? "NO":"YES");
+		PrintAndLogEx(NORMAL, "   [0x0A] Authenticate      : %s", ( isOK==0xAE ) ? "NO":"YES");
 
 		c.d.asBytes[0] = AUTHENTICATE_ISO; //0x1A
 		SendCommand(&c);
 		if ( !WaitForResponseTimeout(CMD_ACK,&resp,1000) ) {return;}
 		isOK  = resp.d.asBytes[2] & 0xff;
-		PrintAndLog("   [0x1A] Authenticate ISO  : %s", ( isOK==0xAE ) ? "NO":"YES");
+		PrintAndLogEx(NORMAL, "   [0x1A] Authenticate ISO  : %s", ( isOK==0xAE ) ? "NO":"YES");
 		
 		c.d.asBytes[0] = AUTHENTICATE_AES; //0xAA
 		SendCommand(&c);
 		if ( !WaitForResponseTimeout(CMD_ACK,&resp,1000) ) {return;}
 		isOK  = resp.d.asBytes[2] & 0xff;
-		PrintAndLog("   [0xAA] Authenticate AES  : %s", ( isOK==0xAE ) ? "NO":"YES");
-		PrintAndLog("");
-		PrintAndLog("   ----------------------------------------------------------");
+		PrintAndLogEx(NORMAL, "   [0xAA] Authenticate AES  : %s", ( isOK==0xAE ) ? "NO":"YES");
+		PrintAndLogEx(NORMAL, "");
+		PrintAndLogEx(NORMAL, "   ----------------------------------------------------------");
 		
 	} else {
-		PrintAndLog(" AMK - Application Master Key settings");
+		PrintAndLogEx(NORMAL, " AMK - Application Master Key settings");
 		
 		// SELECT AID
 		c.arg[0] = (INIT | CLEARTRACE);
@@ -350,12 +350,12 @@ void GetKeySettings( uint8_t *aid){
 		SendCommand(&c);
 		
 		if (!WaitForResponseTimeout(CMD_ACK,&resp,1500) ) {
-			PrintAndLog("   Timed-out");
+			PrintAndLogEx(WARNING, "   Timed-out");
 			return;
 		} 
 		isOK  = resp.arg[0] & 0xff;
 		if ( !isOK ){
-			PrintAndLog("   Can't select AID: %s",sprint_hex(aid,3));	
+			PrintAndLogEx(WARNING, "   Can't select AID: %s",sprint_hex(aid,3));	
 			return;
 		}		
 		
@@ -370,7 +370,7 @@ void GetKeySettings( uint8_t *aid){
 		}
 		isOK  = resp.arg[0] & 0xff;
 		if ( !isOK ){
-			PrintAndLog("   Can't read Application Master key settings");
+			PrintAndLogEx(WARNING, "   Can't read Application Master key settings");
 		} else {
 			// Access rights.
 			uint8_t rights = (resp.d.asBytes[3] >> 4 & 0xff);
@@ -388,18 +388,18 @@ void GetKeySettings( uint8_t *aid){
 					str = "Authentication with the specified key is necessary to change any ley. A change key and a PICC master key (CMK) can only be changed after authentication with the master key. For keys other then the master or change key, an authentication with the same key is needed.";
 					break;
 			}
-			PrintAndLog("Changekey Access rights");
-			PrintAndLog("-- %s",str);
-			PrintAndLog("");	
+			PrintAndLogEx(NORMAL, "Changekey Access rights");
+			PrintAndLogEx(NORMAL, "-- %s",str);
+			PrintAndLogEx(NORMAL, "");	
 			// same as CMK
 			str = (resp.d.asBytes[3] & (1 << 3 )) ? "YES":"NO";	
-			PrintAndLog("   0x08 Configuration changeable       : %s", str);
+			PrintAndLogEx(NORMAL, "   0x08 Configuration changeable       : %s", str);
 			str = (resp.d.asBytes[3] & (1 << 2 )) ? "NO":"YES";
-			PrintAndLog("   0x04 AMK required for create/delete : %s",str);
+			PrintAndLogEx(NORMAL, "   0x04 AMK required for create/delete : %s",str);
 			str = (resp.d.asBytes[3] & (1 << 1 )) ? "NO":"YES";
-			PrintAndLog("   0x02 Directory list access with AMK : %s",str);
+			PrintAndLogEx(NORMAL, "   0x02 Directory list access with AMK : %s",str);
 			str = (resp.d.asBytes[3] & (1 << 0 )) ? "YES" : "NO";
-			PrintAndLog("   0x01 AMK is changeable              : %s", str);
+			PrintAndLogEx(NORMAL, "   0x01 AMK is changeable              : %s", str);
 		}
 		
 		// KEY VERSION  - AMK 
@@ -409,7 +409,7 @@ void GetKeySettings( uint8_t *aid){
 		c.d.asBytes[1] = 0x00;
 		SendCommand(&c);
 		if ( !WaitForResponseTimeout(CMD_ACK,&resp,1500) ) {
-			PrintAndLog("   Timed-out");
+			PrintAndLogEx(WARNING, "   Timed-out");
 			return;
 		}
 		
@@ -417,15 +417,15 @@ void GetKeySettings( uint8_t *aid){
 		
 		isOK  = resp.arg[0] & 0xff;
 		if ( !isOK ){
-			PrintAndLog("   Can't read Application Master key version. Trying all keys");
+			PrintAndLogEx(WARNING, "   Can't read Application Master key version. Trying all keys");
 			numOfKeys = MAX_NUM_KEYS;
 		}
 		else{
 			numOfKeys = resp.d.asBytes[4];
-			PrintAndLog("");
-			PrintAndLog("     Max number of keys  : %d", numOfKeys );
-			PrintAndLog("     Application Master key Version  : %d (0x%02x)", resp.d.asBytes[3], resp.d.asBytes[3]);
-			PrintAndLog("-------------------------------------------------------------");			
+			PrintAndLogEx(NORMAL, "");
+			PrintAndLogEx(NORMAL, "     Max number of keys  : %d", numOfKeys );
+			PrintAndLogEx(NORMAL, "     Application Master key Version  : %d (0x%02x)", resp.d.asBytes[3], resp.d.asBytes[3]);
+			PrintAndLogEx(NORMAL, "-------------------------------------------------------------");			
 		}
 		
 		// LOOP over numOfKeys that we got before. 
@@ -455,12 +455,12 @@ int CmdHF14ADesEnumApplications(const char *Cmd){
 	}  
 	isOK  = resp.arg[0] & 0xff;
 	if ( !isOK ){
-		PrintAndLog("Command unsuccessful");
+		PrintAndLogEx(NORMAL, "Command unsuccessful");
 		return 0;
 	} 
-	PrintAndLog("");	
-	PrintAndLog("-- Desfire Enumerate Applications ---------------------------");
-	PrintAndLog("-------------------------------------------------------------");
+	PrintAndLogEx(NORMAL, "");	
+	PrintAndLogEx(NORMAL, "-- Desfire Enumerate Applications ---------------------------");
+	PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
 
 	UsbCommand respAid;
 	UsbCommand respFiles;
@@ -469,7 +469,7 @@ int CmdHF14ADesEnumApplications(const char *Cmd){
 	int max = resp.arg[1] -3 -2;
 	
 	for(int i=3; i<=max; i+=3){
-		PrintAndLog(" Aid %d : %02X %02X %02X ",num ,resp.d.asBytes[i],resp.d.asBytes[i+1],resp.d.asBytes[i+2]);
+		PrintAndLogEx(NORMAL, " Aid %d : %02X %02X %02X ",num ,resp.d.asBytes[i],resp.d.asBytes[i+1],resp.d.asBytes[i+2]);
 		num++;
 		
 		aid[0] = resp.d.asBytes[i];
@@ -487,12 +487,12 @@ int CmdHF14ADesEnumApplications(const char *Cmd){
 		SendCommand(&c);
 		
 		if (!WaitForResponseTimeout(CMD_ACK,&respAid,1500) ) {
-			PrintAndLog("   Timed-out");
+			PrintAndLogEx(WARNING, "   Timed-out");
 			continue;
 		} 
 		isOK  = respAid.d.asBytes[2] & 0xff;
 		if ( isOK != 0x00 ){
-			PrintAndLog("   Can't select AID: %s",sprint_hex(resp.d.asBytes+i,3));	
+			PrintAndLogEx(WARNING, "   Can't select AID: %s",sprint_hex(resp.d.asBytes+i,3));	
 			continue;
 		}
 	
@@ -503,16 +503,16 @@ int CmdHF14ADesEnumApplications(const char *Cmd){
 		SendCommand(&c);
 		
 		if ( !WaitForResponseTimeout(CMD_ACK,&respFiles,1500) ) {
-			PrintAndLog("   Timed-out");
+			PrintAndLogEx(WARNING, "   Timed-out");
 			continue;
 		} else {
 			isOK  = respFiles.d.asBytes[2] & 0xff;
 			if ( !isOK ){
-				PrintAndLog("   Can't get file ids ");
+				PrintAndLogEx(WARNING, "   Can't get file ids ");
 			} else {			
 				int respfileLen = resp.arg[1]-3-2;			
 				for (int j=0; j< respfileLen; ++j){
-					PrintAndLog("   Fileid %d :", resp.d.asBytes[j+3]);
+					PrintAndLogEx(NORMAL, "   Fileid %d :", resp.d.asBytes[j+3]);
 				}
 			}
 		}
@@ -524,23 +524,23 @@ int CmdHF14ADesEnumApplications(const char *Cmd){
 		SendCommand(&c);
 		
 		if ( !WaitForResponseTimeout(CMD_ACK,&respFiles,1500) ) {
-			PrintAndLog("   Timed-out");
+			PrintAndLogEx(WARNING, "   Timed-out");
 			continue;
 		} else {
 			isOK  = respFiles.d.asBytes[2] & 0xff;
 			if ( !isOK ){
-				PrintAndLog("   Can't get ISO file ids ");
+				PrintAndLogEx(WARNING, "   Can't get ISO file ids ");
 			} else {			
 				int respfileLen = resp.arg[1]-3-2;			
 				for (int j=0; j< respfileLen; ++j){
-					PrintAndLog(" ISO  Fileid %d :", resp.d.asBytes[j+3]);
+					PrintAndLogEx(NORMAL, " ISO  Fileid %d :", resp.d.asBytes[j+3]);
 				}
 			}
 		}
 		
 		
 	}
-	PrintAndLog("-------------------------------------------------------------");
+	PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
 	
 	
 	return 1;
@@ -562,15 +562,15 @@ int CmdHF14ADesAuth(const char *Cmd){
 	unsigned char key[24];	
 	
     if (strlen(Cmd)<3) {
-        PrintAndLog("Usage:  hf mfdes auth <1|2|3> <1|2|3|4> <keyno> <key> ");
-		PrintAndLog("		    Auth modes");
-		PrintAndLog("                 1 = normal, 2 = iso, 3 = aes");
-		PrintAndLog("		    Crypto");
-		PrintAndLog("                 1 = DES 2 = 3DES 3 = 3K3DES 4 = AES");
-		PrintAndLog("");
-        PrintAndLog("Examples:");
-		PrintAndLog("         hf mfdes auth 1 1 0 11223344");
-		PrintAndLog("         hf mfdes auth 3 4 0 404142434445464748494a4b4c4d4e4f");
+        PrintAndLogEx(NORMAL, "Usage:  hf mfdes auth <1|2|3> <1|2|3|4> <keyno> <key> ");
+		PrintAndLogEx(NORMAL, "		    Auth modes");
+		PrintAndLogEx(NORMAL, "                 1 = normal, 2 = iso, 3 = aes");
+		PrintAndLogEx(NORMAL, "		    Crypto");
+		PrintAndLogEx(NORMAL, "                 1 = DES 2 = 3DES 3 = 3K3DES 4 = AES");
+		PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(NORMAL, "Examples:");
+		PrintAndLogEx(NORMAL, "         hf mfdes auth 1 1 0 11223344");
+		PrintAndLogEx(NORMAL, "         hf mfdes auth 3 4 0 404142434445464748494a4b4c4d4e4f");
         return 0;
     } 
 	uint8_t cmdAuthMode	= param_get8(Cmd,0);
@@ -581,24 +581,24 @@ int CmdHF14ADesAuth(const char *Cmd){
 	{
 		case 1: 
 			if ( cmdAuthAlgo != 1 && cmdAuthAlgo != 2) {
-				PrintAndLog("Crypto algo not valid for the auth mode");
+				PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth mode");
 				return 1;
 			}
 			break;
 		case 2:
 			if ( cmdAuthAlgo != 1 && cmdAuthAlgo != 2 && cmdAuthAlgo != 3) {
-				PrintAndLog("Crypto algo not valid for the auth mode");
+				PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth mode");
 				return 1;
 			}
 			break;
 		case 3:
 			if ( cmdAuthAlgo != 4) {
-				PrintAndLog("Crypto algo not valid for the auth mode");
+				PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth mode");
 				return 1;
 			}
 			break;
 		default:
-			PrintAndLog("Wrong Auth mode");
+			PrintAndLogEx(WARNING, "Wrong Auth mode");
 			return 1;
 			break;
 	}
@@ -606,29 +606,29 @@ int CmdHF14ADesAuth(const char *Cmd){
 	switch (cmdAuthAlgo){
 		case 2: 
 			keylength = 16;
-			PrintAndLog("3DES selected");
+			PrintAndLogEx(NORMAL, "3DES selected");
 			break;
 		case 3: 
 			keylength = 24;
-			PrintAndLog("3 key 3DES selected");
+			PrintAndLogEx(NORMAL, "3 key 3DES selected");
 			break;
 		case 4:
 			keylength = 16;
-			PrintAndLog("AES selected");
+			PrintAndLogEx(NORMAL, "AES selected");
 			break;
 		default:
 			cmdAuthAlgo = 1;
 			keylength = 8;
-			PrintAndLog("DES selected");
+			PrintAndLogEx(NORMAL, "DES selected");
 			break;
 	}
 
 	// key
 	if (param_gethex(Cmd, 3, key, keylength*2)) {
-		PrintAndLog("Key must include %d HEX symbols", keylength);
+		PrintAndLogEx(WARNING, "Key must include %d HEX symbols", keylength);
 		return 1;
 	}
-	// algo, nyckellängd, 
+	// algo, nyckellï¿½ngd, 
 	UsbCommand c = {CMD_MIFARE_DESFIRE_AUTH1, { cmdAuthMode, cmdAuthAlgo, cmdKeyNo }};
 	
 	c.d.asBytes[0] = keylength;
@@ -638,7 +638,7 @@ int CmdHF14ADesAuth(const char *Cmd){
 	UsbCommand resp;
 	
 	if (!WaitForResponseTimeout(CMD_ACK,&resp,3000)) {
-		PrintAndLog("Client command execute timeout");
+		PrintAndLogEx(WARNING, "Client command execute timeout");
 		return 0;
 	}  
 
@@ -646,14 +646,14 @@ int CmdHF14ADesAuth(const char *Cmd){
 	if ( isOK) {
 		uint8_t * data= resp.d.asBytes;
 		
-		PrintAndLog("  Key        :%s",sprint_hex(key, keylength));
-		PrintAndLog("  SESSION    :%s",sprint_hex(data, keylength));
-		PrintAndLog("-------------------------------------------------------------");
-		//PrintAndLog("  Expected   :B5 21 9E E8 1A A7 49 9D 21 96 68 7E 13 97 38 56");
+		PrintAndLogEx(NORMAL, "  Key        :%s",sprint_hex(key, keylength));
+		PrintAndLogEx(NORMAL, "  SESSION    :%s",sprint_hex(data, keylength));
+		PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
+		//PrintAndLogEx(NORMAL, "  Expected   :B5 21 9E E8 1A A7 49 9D 21 96 68 7E 13 97 38 56");
 	} else{
-		PrintAndLog("Client command failed.");
+		PrintAndLogEx(NORMAL, "Client command failed.");
 	}
-	PrintAndLog("-------------------------------------------------------------");	
+	PrintAndLogEx(NORMAL, "-------------------------------------------------------------");	
     return 1;
 }
 

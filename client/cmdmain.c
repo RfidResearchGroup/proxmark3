@@ -101,7 +101,7 @@ void storeCommand(UsbCommand *command) {
     {
         //If these two are equal, we're about to overwrite in the
         // circular buffer.
-        PrintAndLog("WARNING: Command buffer about to overwrite command! This needs to be fixed!");
+        PrintAndLogEx(FAILED, "WARNING: Command buffer about to overwrite command! This needs to be fixed!");
     }
     //Store the command at the 'head' location
     UsbCommand* destination = &cmdBuffer[cmd_head];
@@ -164,8 +164,8 @@ bool WaitForResponseTimeoutW(uint32_t cmd, UsbCommand* response, size_t ms_timeo
 			break;
 		
 		if (msclock() - start_time > 3000 && show_warning) {
-			PrintAndLog("Waiting for a response from the proxmark...");
-			PrintAndLog("You can cancel this operation by pressing the pm3 button");
+			PrintAndLogEx(NORMAL, "Waiting for a response from the proxmark...");
+			PrintAndLogEx(NORMAL, "You can cancel this operation by pressing the pm3 button");
 			show_warning = false;
 		}
 	}
@@ -203,17 +203,17 @@ void UsbCommandReceived(UsbCommand *c) {
 			
 			// test
 			if ( c->arg[1] == CMD_MEASURE_ANTENNA_TUNING_HF) {
-				printf("\r#db# %s", s);
+				PrintAndLogEx(NORMAL, "\r#db# %s", s);
 				fflush(stdout);
 			}
 			else {
-				PrintAndLog("#db# %s", s);
+				PrintAndLogEx(NORMAL, "#db# %s", s);
 			}
 			return;
 		} break;
 
 		case CMD_DEBUG_PRINT_INTEGERS: {
-			PrintAndLog("#db# %08x, %08x, %08x", c->arg[0], c->arg[1], c->arg[2]);
+			PrintAndLogEx(NORMAL, "#db# %08x, %08x, %08x", c->arg[0], c->arg[1], c->arg[2]);
 			break;
 		}
 		case CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K:
@@ -226,7 +226,7 @@ void UsbCommandReceived(UsbCommand *c) {
 			uint32_t len = c->arg[1];
 			//uint32_t tracelen = c->arg[2];
 			memcpy( sample_buf + offset, c->d.asBytes, len);
-			//printf("ICE:: Download from device. chunk %" PRIu32 " | size %" PRIu32 " | tracelen:%" PRIu32 " \n", offset, len, c->arg[2]);			
+			//PrintAndLogEx(NORMAL, "ICE:: Download from device. chunk %" PRIu32 " | size %" PRIu32 " | tracelen:%" PRIu32 " \n", offset, len, c->arg[2]);			
 			break;
 		}
 		default: {

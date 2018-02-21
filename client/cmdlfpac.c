@@ -29,7 +29,7 @@ int CmdPacDemod(const char *Cmd) {
 
 	//NRZ
 	if (!NRZrawDemod(Cmd, false)) {
-		if (g_debugMode) PrintAndLog("DEBUG: Error - PAC: NRZ Demod failed");
+		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - PAC: NRZ Demod failed");
 		return 0;
 	}
 	size_t size = DemodBufferLen;
@@ -37,13 +37,13 @@ int CmdPacDemod(const char *Cmd) {
 	if (ans < 0) {
 		if (g_debugMode) {
 			if (ans == -1)
-				PrintAndLog("DEBUG: Error - PAC: too few bits found");
+				PrintAndLogEx(DEBUG, "DEBUG: Error - PAC: too few bits found");
 			else if (ans == -2)
-				PrintAndLog("DEBUG: Error - PAC: preamble not found");
+				PrintAndLogEx(DEBUG, "DEBUG: Error - PAC: preamble not found");
 			else if (ans == -3)
-				PrintAndLog("DEBUG: Error - PAC: Size not correct: %d", size);
+				PrintAndLogEx(DEBUG, "DEBUG: Error - PAC: Size not correct: %d", size);
 			else
-				PrintAndLog("DEBUG: Error - PAC: ans: %d", ans);
+				PrintAndLogEx(DEBUG, "DEBUG: Error - PAC: ans: %d", ans);
 		}
 		return 0;
 	}
@@ -60,8 +60,8 @@ int CmdPacDemod(const char *Cmd) {
 	// 11111111001000000 10 01001100 10 00001101 10 00001101 10 00001101 10 00001101 10 00001101 10 00001101 10 00001101 10 00001101 10 10001100 10 100000001
 	// unknown checksum 9 bits at the end
 	
-	PrintAndLog("PAC/Stanley Tag Found -- Raw: %08X%08X%08X%08X", raw1 ,raw2, raw3, raw4);
-	PrintAndLog("\nHow the Raw ID is translated by the reader is unknown");
+	PrintAndLogEx(NORMAL, "PAC/Stanley Tag Found -- Raw: %08X%08X%08X%08X", raw1 ,raw2, raw3, raw4);
+	PrintAndLogEx(NORMAL, "\nHow the Raw ID is translated by the reader is unknown");
 	return 1;
 }
 

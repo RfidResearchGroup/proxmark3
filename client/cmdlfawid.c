@@ -15,74 +15,74 @@
 static int CmdHelp(const char *Cmd);
 
 int usage_lf_awid_read(void) {
-	PrintAndLog("Enables AWID compatible reader mode printing details of scanned AWID26 or AWID50 tags.");
-	PrintAndLog("By default, values are printed and logged until the button is pressed or another USB command is issued.");
-	PrintAndLog("If the [1] option is provided, reader mode is exited after reading a single AWID card.");
-	PrintAndLog("");
-	PrintAndLog("Usage:  lf awid read [h] [1]");
-	PrintAndLog("Options:");
-	PrintAndLog("      h :  This help");	
-	PrintAndLog("      1 : (optional) stop after reading a single card");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("       lf awid read");
-	PrintAndLog("       lf awid read 1");
+	PrintAndLogEx(NORMAL, "Enables AWID compatible reader mode printing details of scanned AWID26 or AWID50 tags.");
+	PrintAndLogEx(NORMAL, "By default, values are printed and logged until the button is pressed or another USB command is issued.");
+	PrintAndLogEx(NORMAL, "If the [1] option is provided, reader mode is exited after reading a single AWID card.");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Usage:  lf awid read [h] [1]");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "      h :  This help");	
+	PrintAndLogEx(NORMAL, "      1 : (optional) stop after reading a single card");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "       lf awid read");
+	PrintAndLogEx(NORMAL, "       lf awid read 1");
 	return 0;
 }
 
 int usage_lf_awid_sim(void) {
-	PrintAndLog("Enables simulation of AWID card with specified facility-code and card number.");
-	PrintAndLog("Simulation runs until the button is pressed or another USB command is issued.");
-	PrintAndLog("");
-	PrintAndLog("Usage:  lf awid sim [h] <format> <facility-code> <card-number>");
-	PrintAndLog("Options:");
-	PrintAndLog("                h :  This help");	
-	PrintAndLog("         <format> :  format length 26|34|37|50");
-	PrintAndLog("  <facility-code> :  8|16bit value facility code");
-	PrintAndLog("    <card number> :  16|32-bit value card number");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("       lf awid sim 26 224 1337");
-	PrintAndLog("       lf awid sim 50 2001 deadc0de");
+	PrintAndLogEx(NORMAL, "Enables simulation of AWID card with specified facility-code and card number.");
+	PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Usage:  lf awid sim [h] <format> <facility-code> <card-number>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "                h :  This help");	
+	PrintAndLogEx(NORMAL, "         <format> :  format length 26|34|37|50");
+	PrintAndLogEx(NORMAL, "  <facility-code> :  8|16bit value facility code");
+	PrintAndLogEx(NORMAL, "    <card number> :  16|32-bit value card number");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "       lf awid sim 26 224 1337");
+	PrintAndLogEx(NORMAL, "       lf awid sim 50 2001 deadc0de");
 	return 0;
 }
 
 int usage_lf_awid_clone(void) {
-	PrintAndLog("Enables cloning of AWID card with specified facility-code and card number onto T55x7.");
-	PrintAndLog("The T55x7 must be on the antenna when issuing this command.  T55x7 blocks are calculated and printed in the process.");
-	PrintAndLog("");
-	PrintAndLog("Usage:  lf awid clone [h] <format> <facility-code> <card-number> [Q5]");
-	PrintAndLog("Options:");
-	PrintAndLog("                h :  This help");	
-	PrintAndLog("         <format> :  format length 26|34|37|50");
-	PrintAndLog("  <facility-code> :  8|16bit value facility code");
-	PrintAndLog("    <card number> :  16|32-bit value card number");
-	PrintAndLog("               Q5 :  optional - clone to Q5 (T5555) instead of T55x7 chip");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("       lf awid clone 26 224 1337");
-	PrintAndLog("       lf awid clone 50 2001 13371337");
+	PrintAndLogEx(NORMAL, "Enables cloning of AWID card with specified facility-code and card number onto T55x7.");
+	PrintAndLogEx(NORMAL, "The T55x7 must be on the antenna when issuing this command.  T55x7 blocks are calculated and printed in the process.");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Usage:  lf awid clone [h] <format> <facility-code> <card-number> [Q5]");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "                h :  This help");	
+	PrintAndLogEx(NORMAL, "         <format> :  format length 26|34|37|50");
+	PrintAndLogEx(NORMAL, "  <facility-code> :  8|16bit value facility code");
+	PrintAndLogEx(NORMAL, "    <card number> :  16|32-bit value card number");
+	PrintAndLogEx(NORMAL, "               Q5 :  optional - clone to Q5 (T5555) instead of T55x7 chip");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "       lf awid clone 26 224 1337");
+	PrintAndLogEx(NORMAL, "       lf awid clone 50 2001 13371337");
 	return 0;
 }
 
 int usage_lf_awid_brute(void){
-	PrintAndLog("Enables bruteforce of AWID reader with specified facility-code.");
-	PrintAndLog("This is a attack against reader. if cardnumber is given, it starts with it and goes up / down one step");
-	PrintAndLog("if cardnumber is not given, it starts with 1 and goes up to 65535");
-	PrintAndLog("");
-	PrintAndLog("Usage:  lf awid brute [h] [v] a <format> f <facility-code> c <cardnumber> d <delay>");
-	PrintAndLog("Options:");
-	PrintAndLog("       h                 :  This help");
-	PrintAndLog("       a <format>        :  format length 26|50");
-	PrintAndLog("       f <facility-code> :  8|16bit value facility code");
-	PrintAndLog("       c <cardnumber>    :  (optional) cardnumber to start with, max 65535");
-	PrintAndLog("       d <delay>         :  delay betweens attempts in ms. Default 1000ms");
-	PrintAndLog("       v                 :  verbose logging, show all tries");	
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("       lf awid brute a 26 f 224");
-	PrintAndLog("       lf awid brute a 50 f 2001 d 2000");
-	PrintAndLog("       lf awid brute v a 50 f 2001 c 200 d 2000");
+	PrintAndLogEx(NORMAL, "Enables bruteforce of AWID reader with specified facility-code.");
+	PrintAndLogEx(NORMAL, "This is a attack against reader. if cardnumber is given, it starts with it and goes up / down one step");
+	PrintAndLogEx(NORMAL, "if cardnumber is not given, it starts with 1 and goes up to 65535");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Usage:  lf awid brute [h] [v] a <format> f <facility-code> c <cardnumber> d <delay>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "       h                 :  This help");
+	PrintAndLogEx(NORMAL, "       a <format>        :  format length 26|50");
+	PrintAndLogEx(NORMAL, "       f <facility-code> :  8|16bit value facility code");
+	PrintAndLogEx(NORMAL, "       c <cardnumber>    :  (optional) cardnumber to start with, max 65535");
+	PrintAndLogEx(NORMAL, "       d <delay>         :  delay betweens attempts in ms. Default 1000ms");
+	PrintAndLogEx(NORMAL, "       v                 :  verbose logging, show all tries");	
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "       lf awid brute a 26 f 224");
+	PrintAndLogEx(NORMAL, "       lf awid brute a 50 f 2001 d 2000");
+	PrintAndLogEx(NORMAL, "       lf awid brute v a 50 f 2001 c 200 d 2000");
 	return 0;
 }
 
@@ -101,10 +101,10 @@ static int sendPing(void){
 static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, uint8_t *bits, size_t bs_len, bool verbose){
 	
 	if ( verbose )
-		PrintAndLog("Trying FC: %u; CN: %u", fc, cn);		
+		PrintAndLogEx(NORMAL, "Trying FC: %u; CN: %u", fc, cn);		
 	
 	if ( !getAWIDBits(fmtlen, fc, cn, bits)) {
-		PrintAndLog("Error with tag bitstream generation.");
+		PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
 		return false;
 	}
 
@@ -171,7 +171,7 @@ int getAWIDBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *bits) {
 
 	if (bitLen != 88) return 0;
 	
-	printf("awid raw bits:\n %s \n", sprint_bin(bits, bitLen));
+	PrintAndLogEx(NORMAL, "awid raw bits:\n %s \n", sprint_bin(bits, bitLen));
 	
 	return 1;
 }
@@ -181,27 +181,27 @@ static void verify_values(uint8_t *fmtlen, uint32_t *fc, uint32_t *cn){
 		case 50:
 			if ((*fc & 0xFFFF) != *fc) {
 				*fc &= 0xFFFF;
-				PrintAndLog("Facility-Code Truncated to 16-bits (AWID50): %u", *fc);
+				PrintAndLogEx(NORMAL, "Facility-Code Truncated to 16-bits (AWID50): %u", *fc);
 			}
 			break;
 		case 37:
 			if ((*fc & 0x1FFF) != *fc) {
 				*fc &= 0x1FFF;
-				PrintAndLog("Facility-Code Truncated to 13-bits (AWID37): %u", *fc);
+				PrintAndLogEx(NORMAL, "Facility-Code Truncated to 13-bits (AWID37): %u", *fc);
 			}
 			if ((*cn & 0x3FFFF) != *cn) {
 				*cn &= 0x3FFFF;
-				PrintAndLog("Card Number Truncated to 18-bits (AWID37): %u", *cn);
+				PrintAndLogEx(NORMAL, "Card Number Truncated to 18-bits (AWID37): %u", *cn);
 			}			
 			break;
 		case 34:
 			if ((*fc & 0xFF) != *fc) {
 				*fc &= 0xFF;
-				PrintAndLog("Facility-Code Truncated to 8-bits (AWID34): %u", *fc);
+				PrintAndLogEx(NORMAL, "Facility-Code Truncated to 8-bits (AWID34): %u", *fc);
 			}
 			if ((*cn & 0xFFFFFF) != *cn) {
 				*cn &= 0xFFFFFF;
-				PrintAndLog("Card Number Truncated to 24-bits (AWID34): %u", *cn);
+				PrintAndLogEx(NORMAL, "Card Number Truncated to 24-bits (AWID34): %u", *cn);
 			}
 			break;
 		case 26:
@@ -209,11 +209,11 @@ static void verify_values(uint8_t *fmtlen, uint32_t *fc, uint32_t *cn){
 			*fmtlen = 26;
 			if ((*fc & 0xFF) != *fc) {
 				*fc &= 0xFF;
-				PrintAndLog("Facility-Code Truncated to 8-bits (AWID26): %u", *fc);
+				PrintAndLogEx(NORMAL, "Facility-Code Truncated to 8-bits (AWID26): %u", *fc);
 			}
 			if ((*cn & 0xFFFF) != *cn) {
 				*cn &= 0xFFFF;
-				PrintAndLog("Card Number Truncated to 16-bits (AWID26): %u", *cn);
+				PrintAndLogEx(NORMAL, "Card Number Truncated to 16-bits (AWID26): %u", *cn);
 			}
 			break;
 	}
@@ -243,7 +243,7 @@ int CmdAWIDDemod(const char *Cmd) {
 	uint8_t bits[MAX_GRAPH_TRACE_LEN]={0};
 	size_t size = getFromGraphBuf(bits);
 	if (size==0) {
-		PrintAndLog("DEBUG: Error - AWID not enough samples");
+		PrintAndLogEx(DEBUG, "DEBUG: Error - AWID not enough samples");
 		return 0;
 	}
 	//get binary from fsk wave
@@ -252,17 +252,17 @@ int CmdAWIDDemod(const char *Cmd) {
 	if (idx <= 0){
 		if (g_debugMode){
 			if (idx == -1)
-				PrintAndLog("DEBUG: Error - AWID not enough samples");
+				PrintAndLogEx(DEBUG, "DEBUG: Error - AWID not enough samples");
 			else if (idx == -2)
-				PrintAndLog("DEBUG: Error - AWID only noise found");
+				PrintAndLogEx(DEBUG, "DEBUG: Error - AWID only noise found");
 			else if (idx == -3)
-				PrintAndLog("DEBUG: Error - AWID problem during FSK demod");
+				PrintAndLogEx(DEBUG, "DEBUG: Error - AWID problem during FSK demod");
 			else if (idx == -4)
-				PrintAndLog("DEBUG: Error - AWID preamble not found");
+				PrintAndLogEx(DEBUG, "DEBUG: Error - AWID preamble not found");
 			else if (idx == -5)
-				PrintAndLog("DEBUG: Error - AWID size not correct, size %d", size);
+				PrintAndLogEx(DEBUG, "DEBUG: Error - AWID size not correct, size %d", size);
 			else
-				PrintAndLog("DEBUG: Error - AWID error demoding fsk %d",idx);
+				PrintAndLogEx(DEBUG, "DEBUG: Error - AWID error demoding fsk %d",idx);
 		}
 		return 0;
 	}
@@ -291,7 +291,7 @@ int CmdAWIDDemod(const char *Cmd) {
 
 	size = removeParity(bits, idx+8, 4, 1, 88);
 	if (size != 66){
-		if (g_debugMode) PrintAndLog("DEBUG: Error - AWID at parity check-tag size does not match AWID format");
+		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - AWID at parity check-tag size does not match AWID format");
 		return 0;
 	}
 	// ok valid card found!
@@ -323,21 +323,21 @@ int CmdAWIDDemod(const char *Cmd) {
 			fc = bytebits_to_byte(bits + 9, 8);
 			cardnum = bytebits_to_byte(bits + 17, 16);
 			code1 = bytebits_to_byte(bits + 8,fmtLen);
-			PrintAndLog("AWID Found - BitLength: %d, FC: %d, Card: %u - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, rawHi2, rawHi, rawLo);
+			PrintAndLogEx(NORMAL, "AWID Found - BitLength: %d, FC: %d, Card: %u - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, rawHi2, rawHi, rawLo);
 			break;
 		case 34:
 			fc = bytebits_to_byte(bits + 9, 8);
 			cardnum = bytebits_to_byte(bits + 17, 24);
 			code1 = bytebits_to_byte(bits + 8, (fmtLen-32) );
 			code2 = bytebits_to_byte(bits + 8 + (fmtLen-32), 32);			
-			PrintAndLog("AWID Found - BitLength: %d, FC: %d, Card: %u - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);			
+			PrintAndLogEx(NORMAL, "AWID Found - BitLength: %d, FC: %d, Card: %u - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);			
 			break;
 		case 37:
 			fc = bytebits_to_byte(bits + 9, 13);
 			cardnum = bytebits_to_byte(bits + 22, 18);
 			code1 = bytebits_to_byte(bits + 8, (fmtLen-32) );
 			code2 = bytebits_to_byte(bits + 8 + (fmtLen-32), 32);			
-			PrintAndLog("AWID Found - BitLength: %d, FC: %d, Card: %u - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);
+			PrintAndLogEx(NORMAL, "AWID Found - BitLength: %d, FC: %d, Card: %u - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);
 			break;
 		// case 40:
 		// break;		
@@ -346,24 +346,24 @@ int CmdAWIDDemod(const char *Cmd) {
 			cardnum = bytebits_to_byte(bits + 25, 32);
 			code1 = bytebits_to_byte(bits + 8, (fmtLen-32) );
 			code2 = bytebits_to_byte(bits + 8 + (fmtLen-32), 32);
-			PrintAndLog("AWID Found - BitLength: %d, FC: %d, Card: %u - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);
+			PrintAndLogEx(NORMAL, "AWID Found - BitLength: %d, FC: %d, Card: %u - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);
 			break;
 		default:
 			if (fmtLen > 32 ) {
 				cardnum = bytebits_to_byte(bits + 8 + (fmtLen-17), 16);
 				code1 = bytebits_to_byte(bits + 8, fmtLen-32);
 				code2 = bytebits_to_byte(bits + 8 + (fmtLen-32), 32);
-				PrintAndLog("AWID Found - BitLength: %d -unknown BitLength- (%u) - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, cardnum, code1, code2, rawHi2, rawHi, rawLo);
+				PrintAndLogEx(NORMAL, "AWID Found - BitLength: %d -unknown BitLength- (%u) - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, cardnum, code1, code2, rawHi2, rawHi, rawLo);
 			} else {
 				cardnum = bytebits_to_byte(bits + 8 + (fmtLen-17), 16);
 				code1 = bytebits_to_byte(bits + 8, fmtLen);
-				PrintAndLog("AWID Found - BitLength: %d -unknown BitLength- (%u) - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, cardnum, code1, rawHi2, rawHi, rawLo);
+				PrintAndLogEx(NORMAL, "AWID Found - BitLength: %d -unknown BitLength- (%u) - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, cardnum, code1, rawHi2, rawHi, rawLo);
 			}
 			break;		
 	}
 
 	if (g_debugMode){
-		PrintAndLog("DEBUG: AWID idx: %d, Len: %d Printing Demod Buffer:", idx, size);
+		PrintAndLogEx(DEBUG, "DEBUG: AWID idx: %d, Len: %d Printing Demod Buffer:", idx, size);
 		printDemodBuff();
 	}
 	return 1;
@@ -386,11 +386,11 @@ int CmdAWIDSim(const char *Cmd) {
 	
 	verify_values(&fmtlen, &fc, &cn);
 	
-	PrintAndLog("Emulating AWID %u -- FC: %u; CN: %u\n", fmtlen, fc, cn);
-	PrintAndLog("Press pm3-button to abort simulation or run another command");
+	PrintAndLogEx(NORMAL, "Emulating AWID %u -- FC: %u; CN: %u\n", fmtlen, fc, cn);
+	PrintAndLogEx(NORMAL, "Press pm3-button to abort simulation or run another command");
 	
 	if (!getAWIDBits(fmtlen, fc, cn, bits)) {
-		PrintAndLog("Error with tag bitstream generation.");
+		PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
 		return 1;
 	}
 	
@@ -433,7 +433,7 @@ int CmdAWIDClone(const char *Cmd) {
 	verify_values(&fmtlen, &fc, &cn);
 		
 	if ( !getAWIDBits(fmtlen, fc, cn, bs)) {
-		PrintAndLog("Error with tag bitstream generation.");
+		PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
 		return 1;
 	}	
 
@@ -441,7 +441,7 @@ int CmdAWIDClone(const char *Cmd) {
 	blocks[2] = bytebits_to_byte(bs + 32, 32);
 	blocks[3] = bytebits_to_byte(bs + 64, 32);
 
-	PrintAndLog("Preparing to clone AWID %u to T55x7 with FC: %u, CN: %u", fmtlen, fc, cn);
+	PrintAndLogEx(NORMAL, "Preparing to clone AWID %u to T55x7 with FC: %u, CN: %u", fmtlen, fc, cn);
 	print_blocks(blocks, 4);
 	
 	UsbCommand resp;
@@ -453,7 +453,7 @@ int CmdAWIDClone(const char *Cmd) {
 		clearCommandBuffer();
 		SendCommand(&c);
 		if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)){
-			PrintAndLog("Error occurred, device did not respond during write operation.");
+			PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
 			return -1;
 		}
 	}
@@ -506,7 +506,7 @@ int CmdAWIDBrute(const char *Cmd) {
 			cmdp++;
 			break;
 		default:
-			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+			PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
 			errors = true;
 			break;
 		}
@@ -519,19 +519,19 @@ int CmdAWIDBrute(const char *Cmd) {
 		case 50:
 			if ((fc & 0xFFFF) != fc) {
 				fc &= 0xFFFF;
-				PrintAndLog("Facility-code truncated to 16-bits (AWID50): %u", fc);
+				PrintAndLogEx(NORMAL, "Facility-code truncated to 16-bits (AWID50): %u", fc);
 			}
 			break;
 		default:
 			if ((fc & 0xFF) != fc) {
 				fc &= 0xFF;
-				PrintAndLog("Facility-code truncated to 8-bits (AWID26): %u", fc);
+				PrintAndLogEx(NORMAL, "Facility-code truncated to 8-bits (AWID26): %u", fc);
 			}
 			break;
 	}
 	
-	PrintAndLog("Bruteforceing AWID %d Reader", fmtlen);
-	PrintAndLog("Press pm3-button to abort simulation or press key");
+	PrintAndLogEx(NORMAL, "Bruteforceing AWID %d Reader", fmtlen);
+	PrintAndLogEx(NORMAL, "Press pm3-button to abort simulation or press key");
 
 	uint16_t up = cn;
 	uint16_t down = cn;
@@ -540,12 +540,12 @@ int CmdAWIDBrute(const char *Cmd) {
 	for (;;){
 	
 		if ( offline ) {
-			printf("Device offline\n");
+			PrintAndLogEx(WARNING, "Device offline\n");
 			return  2;
 		}
 		if (ukbhit()) {
 			int gc = getchar(); (void)gc;
-			PrintAndLog("aborted via keyboard!");
+			PrintAndLogEx(INFO, "aborted via keyboard!");
 			return sendPing();
 		}
 		

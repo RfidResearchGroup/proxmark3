@@ -30,7 +30,7 @@ int CmdSecurakeyDemod(const char *Cmd) {
 	//ASK / Manchester
 	bool st = false;
 	if (!ASKDemod_ext("40 0 0", false, false, 1, &st)) {
-		if (g_debugMode) PrintAndLog("DEBUG: Error - Securakey: ASK/Manchester Demod failed");
+		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Securakey: ASK/Manchester Demod failed");
 		return 0;
 	}
 	if (st) return 0;
@@ -39,13 +39,13 @@ int CmdSecurakeyDemod(const char *Cmd) {
 	if (ans < 0) {
 		if (g_debugMode) {
 			if (ans == -1)
-				PrintAndLog("DEBUG: Error - Securakey: too few bits found");
+				PrintAndLogEx(DEBUG, "DEBUG: Error - Securakey: too few bits found");
 			else if (ans == -2)
-				PrintAndLog("DEBUG: Error - Securakey: preamble not found");
+				PrintAndLogEx(DEBUG, "DEBUG: Error - Securakey: preamble not found");
 			else if (ans == -3)
-				PrintAndLog("DEBUG: Error - Securakey: Size not correct: %d", size);
+				PrintAndLogEx(DEBUG, "DEBUG: Error - Securakey: Size not correct: %d", size);
 			else
-				PrintAndLog("DEBUG: Error - Securakey: ans: %d", ans);
+				PrintAndLogEx(DEBUG, "DEBUG: Error - Securakey: ans: %d", ans);
 		}
 		return 0;
 	}
@@ -75,14 +75,14 @@ int CmdSecurakeyDemod(const char *Cmd) {
 	// remove marker bits (0's every 9th digit after preamble) (pType = 3 (always 0s))
 	size = removeParity(bits_no_spacer, 0, 9, 3, 85);
 	if ( size != 85-9 ) {
-		if (g_debugMode) PrintAndLog("DEBUG: Error removeParity: %d", size);
+		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error removeParity: %d", size);
 		return 0;
 	}
 
 	uint8_t bitLen = (uint8_t)bytebits_to_byte(bits_no_spacer+2, 6);
 	uint32_t fc=0, lWiegand=0, rWiegand=0;
 	if (bitLen > 40) { //securakey's max bitlen is 40 bits...
-		if (g_debugMode) PrintAndLog("DEBUG: Error bitLen too long: %u", bitLen);
+		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error bitLen too long: %u", bitLen);
 		return 0;
 	}
 	// get left 1/2 wiegand & right 1/2 wiegand (for parity test and wiegand print)
@@ -93,18 +93,18 @@ int CmdSecurakeyDemod(const char *Cmd) {
 
 	// test bitLen
 	if (bitLen != 26 && bitLen != 32)
-		PrintAndLog("***unknown securakey bitLen - share with forum***");
+		PrintAndLogEx(NORMAL, "***unknown securakey bitLen - share with forum***");
 
 	uint32_t cardid = bytebits_to_byte(bits_no_spacer+8+23, 16);
 	// test parities - evenparity32 looks to add an even parity returns 0 if already even...
 	bool parity = !evenparity32(lWiegand) && !oddparity32(rWiegand);
 
-	PrintAndLog("Securakey Tag Found--BitLen: %u, Card ID: %u, FC: 0x%X, Raw: %08X%08X%08X", bitLen, cardid, fc, raw1 ,raw2, raw3);
+	PrintAndLogEx(NORMAL, "Securakey Tag Found--BitLen: %u, Card ID: %u, FC: 0x%X, Raw: %08X%08X%08X", bitLen, cardid, fc, raw1 ,raw2, raw3);
 	if (bitLen <= 32)
-		PrintAndLog("Wiegand: %08X, Parity: %s", (lWiegand<<(bitLen/2)) | rWiegand, parity ? "Passed" : "Failed");
-	PrintAndLog("\nHow the FC translates to printed FC is unknown");
-	PrintAndLog("How the checksum is calculated is unknown");
-	PrintAndLog("Help the community identify this format further\n by sharing your tag on the pm3 forum or with forum members");
+		PrintAndLogEx(NORMAL, "Wiegand: %08X, Parity: %s", (lWiegand<<(bitLen/2)) | rWiegand, parity ? "Passed" : "Failed");
+	PrintAndLogEx(NORMAL, "\nHow the FC translates to printed FC is unknown");
+	PrintAndLogEx(NORMAL, "How the checksum is calculated is unknown");
+	PrintAndLogEx(NORMAL, "Help the community identify this format further\n by sharing your tag on the pm3 forum or with forum members");
 	return 1;
 }
 

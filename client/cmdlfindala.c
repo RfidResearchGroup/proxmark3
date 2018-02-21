@@ -13,44 +13,44 @@
 static int CmdHelp(const char *Cmd);
 
 int usage_lf_indala_demod(void) {
-	PrintAndLog("Enables Indala compatible reader mode printing details of scanned tags.");
-	PrintAndLog("By default, values are printed and logged until the button is pressed or another USB command is issued.");
-	PrintAndLog("");
-	PrintAndLog("Usage:  lf indala demod [h]");
-	PrintAndLog("Options:");
-	PrintAndLog("      h :  This help");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("        lf indala demod");
+	PrintAndLogEx(NORMAL, "Enables Indala compatible reader mode printing details of scanned tags.");
+	PrintAndLogEx(NORMAL, "By default, values are printed and logged until the button is pressed or another USB command is issued.");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Usage:  lf indala demod [h]");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "      h :  This help");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "        lf indala demod");
 	return 0;
 }
 
 int usage_lf_indala_sim(void) {
-	PrintAndLog("Enables simulation of Indala card with specified uid.");
-	PrintAndLog("Simulation runs until the button is pressed or another USB command is issued.");
-	PrintAndLog("");
-	PrintAndLog("Usage:  lf indala sim [h] <uid>");
-	PrintAndLog("Options:");
-	PrintAndLog("            h :  This help");	
-	PrintAndLog("        <uid> :  64/224 UID");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("       lf indala sim deadc0de");
+	PrintAndLogEx(NORMAL, "Enables simulation of Indala card with specified uid.");
+	PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Usage:  lf indala sim [h] <uid>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "            h :  This help");	
+	PrintAndLogEx(NORMAL, "        <uid> :  64/224 UID");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "       lf indala sim deadc0de");
 	return 0;
 }
 
 int usage_lf_indala_clone(void) {
-	PrintAndLog("Enables cloning of Indala card with specified uid onto T55x7.");
-	PrintAndLog("The T55x7 must be on the antenna when issuing this command.  T55x7 blocks are calculated and printed in the process.");
-	PrintAndLog("");
-	PrintAndLog("Usage:  lf indala clone [h] <uid> [Q5]");
-	PrintAndLog("Options:");
-	PrintAndLog("            h :  This help");	
-	PrintAndLog("        <uid> :  64/224 UID");
-	PrintAndLog("           Q5 :  optional - clone to Q5 (T5555) instead of T55x7 chip");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("       lf indala clone 112233");
+	PrintAndLogEx(NORMAL, "Enables cloning of Indala card with specified uid onto T55x7.");
+	PrintAndLogEx(NORMAL, "The T55x7 must be on the antenna when issuing this command.  T55x7 blocks are calculated and printed in the process.");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Usage:  lf indala clone [h] <uid> [Q5]");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "            h :  This help");	
+	PrintAndLogEx(NORMAL, "        <uid> :  64/224 UID");
+	PrintAndLogEx(NORMAL, "           Q5 :  optional - clone to Q5 (T5555) instead of T55x7 chip");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "       lf indala clone 112233");
 	return 0;
 }
 
@@ -121,7 +121,7 @@ int CmdIndalaDemod(const char *Cmd) {
 		ans = PSKDemod("32", 0);
 
 	if (!ans){
-		if (g_debugMode) PrintAndLog("DEBUG: Error - Indala can't demod signal: %d",ans);
+		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Indala can't demod signal: %d",ans);
 		return 0;
 	}
 
@@ -135,7 +135,7 @@ int CmdIndalaDemod(const char *Cmd) {
 		idx = indala224decode(DemodBuffer, &size, &invert);
 		if (idx < 0 || size != 224) {
 			if (g_debugMode)
-				PrintAndLog("DEBUG: Error - Indala wrong size, expected [64|224] got: %d (startindex %i)", size, idx);
+				PrintAndLogEx(DEBUG, "DEBUG: Error - Indala wrong size, expected [64|224] got: %d (startindex %i)", size, idx);
 			return -1;
 		}
 	}
@@ -143,7 +143,7 @@ int CmdIndalaDemod(const char *Cmd) {
 	setDemodBuf(DemodBuffer, size, (size_t)idx);
 	setClockGrid(g_DemodClock, g_DemodStartIdx + (idx * g_DemodClock));
 	if (invert) {
-		if (g_debugMode) PrintAndLog("DEBUG: Error - Indala had to invert bits");		
+		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Indala had to invert bits");		
 		for (size_t i = 0; i < size; i++) 
 			DemodBuffer[i] ^= 1;
 	}	
@@ -153,7 +153,7 @@ int CmdIndalaDemod(const char *Cmd) {
 	uid1 = bytebits_to_byte(DemodBuffer,32);
 	uid2 = bytebits_to_byte(DemodBuffer+32,32);
 	if (DemodBufferLen==64){
-		PrintAndLog("Indala Found - Bitlength %d, UID = (%x%08x)\n%s",
+		PrintAndLogEx(SUCCESS, "Indala Found - Bitlength %d, UID = (%x%08x)\n%s",
 			DemodBufferLen, uid1, uid2, sprint_bin_break(DemodBuffer,DemodBufferLen,32)
 		);
 	} else {
@@ -162,13 +162,13 @@ int CmdIndalaDemod(const char *Cmd) {
 		uid5 = bytebits_to_byte(DemodBuffer+128,32);
 		uid6 = bytebits_to_byte(DemodBuffer+160,32);
 		uid7 = bytebits_to_byte(DemodBuffer+192,32);
-		PrintAndLog("Indala Found - Bitlength %d, UID = (%x%08x%08x%08x%08x%08x%08x)\n%s", 
+		PrintAndLogEx(SUCCESS, "Indala Found - Bitlength %d, UID = (%x%08x%08x%08x%08x%08x%08x)\n%s", 
 			DemodBufferLen,
 		    uid1, uid2, uid3, uid4, uid5, uid6, uid7, sprint_bin_break(DemodBuffer,DemodBufferLen,32)
 		);
 	}
 	if (g_debugMode){
-		PrintAndLog("DEBUG: Indala - printing demodbuffer:");
+		PrintAndLogEx(DEBUG, "DEBUG: Indala - printing demodbuffer:");
 		printDemodBuff();
 	}
 	return 1;
@@ -195,7 +195,7 @@ int CmdIndalaDemodAlt(const char *Cmd) {
 	setClockGrid(0, 0);
 	DemodBufferLen = 0;
 	
-	// PrintAndLog("Expecting a bit less than %d raw bits", GraphTraceLen / 32);
+	// PrintAndLogEx(NORMAL, "Expecting a bit less than %d raw bits", GraphTraceLen / 32);
 	// loop through raw signal - since we know it is psk1 rf/32 fc/2 skip every other value (+=2)
 	for (i = 0; i < GraphTraceLen-1; i += 2) {
 		count += 1;
@@ -229,8 +229,8 @@ int CmdIndalaDemodAlt(const char *Cmd) {
 	}
 	
 	if (rawbit>0){
-		PrintAndLog("Recovered %d raw bits, expected: %d", rawbit, GraphTraceLen/32);
-		PrintAndLog("worst metric (0=best..7=worst): %d at pos %d", worst, worstPos);
+		PrintAndLogEx(NORMAL, "Recovered %d raw bits, expected: %d", rawbit, GraphTraceLen/32);
+		PrintAndLogEx(NORMAL, "worst metric (0=best..7=worst): %d at pos %d", worst, worstPos);
 	} else {
 		return 0;
 	}
@@ -260,7 +260,7 @@ int CmdIndalaDemodAlt(const char *Cmd) {
 	}
 	
 	if (start == rawbit - uidlen + 1) {
-		PrintAndLog("nothing to wait for");
+		PrintAndLogEx(NORMAL, "nothing to wait for");
 		return 0;
 	}
 
@@ -279,14 +279,14 @@ int CmdIndalaDemodAlt(const char *Cmd) {
 	int times = 0;
 	
 	if (uidlen > rawbit) {
-		PrintAndLog("Warning: not enough raw bits to get a full UID");
+		PrintAndLogEx(WARNING, "Warning: not enough raw bits to get a full UID");
 		for (bit = 0; bit < rawbit; bit++) {
 			bits[bit] = rawbits[i++];
 			// As we cannot know the parity, let's use "." and "/"
 			showbits[bit] = '.' + bits[bit];
 		}
 		showbits[bit+1]='\0';
-		PrintAndLog("Partial UID=%s", showbits);
+		PrintAndLogEx(NORMAL, "Partial UID=%s", showbits);
 		return 0;
 	} else {
 		for (bit = 0; bit < uidlen; bit++) {
@@ -311,7 +311,7 @@ int CmdIndalaDemodAlt(const char *Cmd) {
 				uid2=(uid2<<1)|1;
 				} 
 			}
-		PrintAndLog("UID=%s (%x%08x)", showbits, uid1, uid2);
+		PrintAndLogEx(NORMAL, "UID=%s (%x%08x)", showbits, uid1, uid2);
 	}
 	else {
 		uid3 = uid4 = uid5 = uid6 = uid7 = 0;
@@ -329,7 +329,7 @@ int CmdIndalaDemodAlt(const char *Cmd) {
 			else 
 				uid7 = (uid7<<1) | 1;
 			}
-		PrintAndLog("UID=%s (%x%08x%08x%08x%08x%08x%08x)", showbits, uid1, uid2, uid3, uid4, uid5, uid6, uid7);
+		PrintAndLogEx(NORMAL, "UID=%s (%x%08x%08x%08x%08x%08x%08x)", showbits, uid1, uid2, uid3, uid4, uid5, uid6, uid7);
 	}
 
 	// Checking UID against next occurrences
@@ -348,7 +348,7 @@ int CmdIndalaDemodAlt(const char *Cmd) {
 		times += 1;
 	}
 
-	PrintAndLog("Occurrences: %d (expected %d)", times, (rawbit - start) / uidlen);
+	PrintAndLogEx(NORMAL, "Occurrences: %d (expected %d)", times, (rawbit - start) / uidlen);
 
 	// Remodulating for tag cloning
 	// HACK: 2015-01-04 this will have an impact on our new way of seening lf commands (demod) 
@@ -407,8 +407,8 @@ int CmdIndalaSim(const char *Cmd) {
 	// It has to send either 64bits (8bytes) or 224bits (28bytes).  Zero padding needed if not.
 	// lf simpsk 1 c 32 r 2 d 0102030405060708
 	
-//	PrintAndLog("Emulating Indala UID: %u \n", cn);
-//	PrintAndLog("Press pm3-button to abort simulation or run another command");
+//	PrintAndLogEx(NORMAL, "Emulating Indala UID: %u \n", cn);
+//	PrintAndLogEx(NORMAL, "Press pm3-button to abort simulation or run another command");
 	
 	UsbCommand c = {CMD_PSK_SIM_TAG, {arg1, arg2, size}};  
 	memcpy(c.d.asBytes, bits, size);
@@ -434,7 +434,7 @@ int CmdIndalaClone(const char *Cmd) {
 			uid6 = (uid6 << 4) | (uid7 >> 28);
 			uid7 = (uid7 << 4) | (n & 0xf);
 		}
-		PrintAndLog("Cloning 224bit tag with UID %x%08x%08x%08x%08x%08x%08x", uid1, uid2, uid3, uid4, uid5, uid6, uid7);
+		PrintAndLogEx(NORMAL, "Cloning 224bit tag with UID %x%08x%08x%08x%08x%08x%08x", uid1, uid2, uid3, uid4, uid5, uid6, uid7);
 		c.cmd = CMD_INDALA_CLONE_TAG_L;
 		c.d.asDwords[0] = uid1;
 		c.d.asDwords[1] = uid2;
@@ -448,7 +448,7 @@ int CmdIndalaClone(const char *Cmd) {
 			uid1 = (uid1 << 4) | (uid2 >> 28);
 			uid2 = (uid2 << 4) | (n & 0xf);
 		}
-		PrintAndLog("Cloning 64bit tag with UID %x%08x", uid1, uid2);
+		PrintAndLogEx(NORMAL, "Cloning 64bit tag with UID %x%08x", uid1, uid2);
 		c.cmd = CMD_INDALA_CLONE_TAG;
 		c.arg[0] = uid1;
 		c.arg[1] = uid2;

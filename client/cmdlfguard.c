@@ -12,35 +12,35 @@
 static int CmdHelp(const char *Cmd);
 
 int usage_lf_guard_clone(void){
-	PrintAndLog("clone a Guardall tag to a T55x7 tag.");
-	PrintAndLog("The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated. ");
-	PrintAndLog("Currently work only on 26bit");
-	PrintAndLog("");
-	PrintAndLog("Usage: lf gprox clone [h] <format> <Facility-Code> <Card-Number>");
-	PrintAndLog("Options:");
-	PrintAndLog("         <format> :  format length 26|32|36|40");	
-	PrintAndLog("  <Facility-Code> :  8-bit value facility code");
-	PrintAndLog("  <Card Number>   : 16-bit value card number");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("       lf gprox clone 26 123 11223");
+	PrintAndLogEx(NORMAL, "clone a Guardall tag to a T55x7 tag.");
+	PrintAndLogEx(NORMAL, "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated. ");
+	PrintAndLogEx(NORMAL, "Currently work only on 26bit");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Usage: lf gprox clone [h] <format> <Facility-Code> <Card-Number>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "         <format> :  format length 26|32|36|40");	
+	PrintAndLogEx(NORMAL, "  <Facility-Code> :  8-bit value facility code");
+	PrintAndLogEx(NORMAL, "  <Card Number>   : 16-bit value card number");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "       lf gprox clone 26 123 11223");
 	return 0;
 }
 
 int usage_lf_guard_sim(void) {
-	PrintAndLog("Enables simulation of Guardall card with specified card number.");
-	PrintAndLog("Simulation runs until the button is pressed or another USB command is issued.");
-	PrintAndLog("The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.");
-	PrintAndLog("Currently work only on 26bit");
-	PrintAndLog("");
-	PrintAndLog("Usage:  lf gprox sim [h] <format> <Facility-Code> <Card-Number>");
-	PrintAndLog("Options:");
-	PrintAndLog("         <format> :  format length 26|32|36|40");	
-	PrintAndLog("  <Facility-Code> :  8-bit value facility code");
-	PrintAndLog("  <Card Number>   : 16-bit value card number");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("       lf gprox sim 26 123 11223");
+	PrintAndLogEx(NORMAL, "Enables simulation of Guardall card with specified card number.");
+	PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
+	PrintAndLogEx(NORMAL, "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.");
+	PrintAndLogEx(NORMAL, "Currently work only on 26bit");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Usage:  lf gprox sim [h] <format> <Facility-Code> <Card-Number>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "         <format> :  format length 26|32|36|40");	
+	PrintAndLogEx(NORMAL, "  <Facility-Code> :  8-bit value facility code");
+	PrintAndLogEx(NORMAL, "  <Card Number>   : 16-bit value card number");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "       lf gprox sim 26 123 11223");
 	return 0;
 }
 
@@ -107,21 +107,21 @@ int GetGuardBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *guardBits) {
 	for (i = 0; i < 4; ++i)
 		rawbytes[i+4] = bytebits_to_byte( pre + (i*8), 8);
 	
-	if (g_debugMode) printf(" WIE | %s\n", sprint_hex(rawbytes, sizeof(rawbytes)));	
+	if (g_debugMode) PrintAndLogEx(NORMAL, " WIE | %s\n", sprint_hex(rawbytes, sizeof(rawbytes)));	
 	
 	
 	// XOR (only works on wiegand stuff)
 	for (i = 1; i < 12; ++i)
 		rawbytes[i] ^= xorKey ;
 	
-	if (g_debugMode) printf(" XOR | %s \n", sprint_hex(rawbytes, sizeof(rawbytes)));
+	if (g_debugMode) PrintAndLogEx(NORMAL, " XOR | %s \n", sprint_hex(rawbytes, sizeof(rawbytes)));
 
 	// convert rawbytes to bits in pre
 	for (i = 0; i < 12; ++i)
 		num_to_bytebitsLSBF( rawbytes[i], 8, pre + (i*8));
 
-	if (g_debugMode) printf("\n Raw | %s \n", sprint_hex(rawbytes, sizeof(rawbytes)));
-	if (g_debugMode) printf(" Raw | %s\n", sprint_bin(pre, 64) );
+	if (g_debugMode) PrintAndLogEx(NORMAL, "\n Raw | %s \n", sprint_hex(rawbytes, sizeof(rawbytes)));
+	if (g_debugMode) PrintAndLogEx(NORMAL, " Raw | %s\n", sprint_bin(pre, 64) );
 	
 	// add spacer bit 0 every 4 bits, starting with index 0,
 	// 12 bytes, 24 nibbles.  24+1 extra bites. 3bytes.  ie 9bytes | 1byte xorkey, 8bytes rawdata (64bits, should be enough for a 40bit wiegand)
@@ -135,7 +135,7 @@ int GetGuardBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *guardBits) {
 	guardBits[4] = 1;
 	guardBits[5] = 0;
 	
-	if (g_debugMode) printf(" FIN | %s\n", sprint_bin(guardBits, 96) );
+	if (g_debugMode) PrintAndLogEx(NORMAL, " FIN | %s\n", sprint_bin(guardBits, 96) );
 	return 1;
 }
 
@@ -177,7 +177,7 @@ int CmdGuardDemod(const char *Cmd) {
 	//Differential Biphase
 	//get binary from ask wave
 	if (!ASKbiphaseDemod("0 64 0 0", false)) {
-		if (g_debugMode) PrintAndLog("DEBUG: Error - gProxII ASKbiphaseDemod failed");
+		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII ASKbiphaseDemod failed");
 		return 0;
 	}
 	
@@ -187,15 +187,15 @@ int CmdGuardDemod(const char *Cmd) {
 	if (preambleIndex < 0){
 		if (g_debugMode){
 			if (preambleIndex == -1)
-				PrintAndLog("DEBUG: Error - gProxII too few bits found");
+				PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII too few bits found");
 			else if (preambleIndex == -2)
-				PrintAndLog("DEBUG: Error - gProxII preamble not found");
+				PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII preamble not found");
 			else if (preambleIndex == -3)
-				PrintAndLog("DEBUG: Error - gProxII size not correct: %d", size);
+				PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII size not correct: %d", size);
 			else if (preambleIndex == -3)
-				PrintAndLog("DEBUG: Error - gProxII wrong spacerbits");
+				PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII wrong spacerbits");
 			else				
-				PrintAndLog("DEBUG: Error - gProxII ans: %d", preambleIndex);
+				PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII ans: %d", preambleIndex);
 		}
 		return 0;
 	}
@@ -212,14 +212,14 @@ int CmdGuardDemod(const char *Cmd) {
 	size_t len = removeParity(bits_no_spacer, 0, 5, 3, 90); //source, startloc, paritylen, ptype, length_to_run
 	if (len != 72) {
 		if (g_debugMode) 
-			PrintAndLog("DEBUG: Error - gProxII spacer removal did not produce 72 bits: %u, start: %u", len, startIdx);
+			PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII spacer removal did not produce 72 bits: %u, start: %u", len, startIdx);
 		return 0;
 	}
 	// get key and then get all 8 bytes of payload decoded
 	xorKey = (uint8_t)bytebits_to_byteLSBF(bits_no_spacer, 8);
 	for (size_t idx = 0; idx < 8; idx++) {
 		ByteStream[idx] = ((uint8_t)bytebits_to_byteLSBF(bits_no_spacer+8 + (idx*8),8)) ^ xorKey;
-		if (g_debugMode) PrintAndLog("DEBUG: gProxII byte %u after xor: %02x", (unsigned int)idx, ByteStream[idx]);
+		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: gProxII byte %u after xor: %02x", (unsigned int)idx, ByteStream[idx]);
 	}
 
 	setDemodBuf(DemodBuffer, 96, preambleIndex);
@@ -248,9 +248,9 @@ int CmdGuardDemod(const char *Cmd) {
 			break;
 	}
 	if ( !unknown)
-		PrintAndLog("G-Prox-II Found: Format Len: %ubit - FC: %u - Card: %u, Raw: %08x%08x%08x", fmtLen, FC, Card, raw1, raw2, raw3);
+		PrintAndLogEx(NORMAL, "G-Prox-II Found: Format Len: %ubit - FC: %u - Card: %u, Raw: %08x%08x%08x", fmtLen, FC, Card, raw1, raw2, raw3);
 	else
-		PrintAndLog("Unknown G-Prox-II Fmt Found: Format Len: %u, Raw: %08x%08x%08x", fmtLen, raw1, raw2, raw3);
+		PrintAndLogEx(NORMAL, "Unknown G-Prox-II Fmt Found: Format Len: %u, Raw: %08x%08x%08x", fmtLen, raw1, raw2, raw3);
 
 	return 1;
 }
@@ -280,7 +280,7 @@ int CmdGuardClone(const char *Cmd) {
 	cardnumber = (cn & 0x0000FFFF);
 	
 	if ( !GetGuardBits(fmtlen, facilitycode, cardnumber, bs)) {
-		PrintAndLog("Error with tag bitstream generation.");
+		PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
 		return 1;
 	}	
 
@@ -292,7 +292,7 @@ int CmdGuardClone(const char *Cmd) {
 	blocks[2] = bytebits_to_byte(bs + 32, 32);
 	blocks[3] = bytebits_to_byte(bs + 64, 32);
 
-	PrintAndLog("Preparing to clone Guardall to T55x7 with Facility Code: %u, Card Number: %u", facilitycode, cardnumber);
+	PrintAndLogEx(NORMAL, "Preparing to clone Guardall to T55x7 with Facility Code: %u, Card Number: %u", facilitycode, cardnumber);
 	print_blocks(blocks, 4);
 
 	UsbCommand resp;
@@ -304,7 +304,7 @@ int CmdGuardClone(const char *Cmd) {
 		clearCommandBuffer();
 		SendCommand(&c);
 		if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)){
-			PrintAndLog("Error occurred, device did not respond during write operation.");
+			PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
 			return -1;
 		}
 	}
@@ -331,11 +331,11 @@ int CmdGuardSim(const char *Cmd) {
 	cardnumber = (cn & 0x0000FFFF);
 	
 	if ( !GetGuardBits(fmtlen, facilitycode, cardnumber, bs)) {
-		PrintAndLog("Error with tag bitstream generation.");
+		PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
 		return 1;
 	}	
 
-	PrintAndLog("Simulating Guardall - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber );
+	PrintAndLogEx(NORMAL, "Simulating Guardall - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber );
 
 	uint64_t arg1, arg2;
 	arg1 = (clock << 8) | encoding;

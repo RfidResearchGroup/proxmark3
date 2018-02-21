@@ -22,18 +22,18 @@
 static int CmdHelp(const char *Cmd);
 
 int usage_lf_paradox_sim(void) {
-	PrintAndLog("Enables simulation of Paradox card with specified card number.");
-	PrintAndLog("Simulation runs until the button is pressed or another USB command is issued.");
-	PrintAndLog("The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.");
-	PrintAndLog("");
-	PrintAndLog("Usage:  lf paradox sim [h] <Facility-Code> <Card-Number>");
-	PrintAndLog("Options:");
-	PrintAndLog("  h               : this help");
-	PrintAndLog("  <Facility-Code> :  8-bit value facility code");
-	PrintAndLog("  <Card Number>   : 16-bit value card number");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("       lf paradox sim 123 11223");
+	PrintAndLogEx(NORMAL, "Enables simulation of Paradox card with specified card number.");
+	PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
+	PrintAndLogEx(NORMAL, "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Usage:  lf paradox sim [h] <Facility-Code> <Card-Number>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "  h               : this help");
+	PrintAndLogEx(NORMAL, "  <Facility-Code> :  8-bit value facility code");
+	PrintAndLogEx(NORMAL, "  <Card Number>   : 16-bit value card number");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "       lf paradox sim 123 11223");
 	return 0;
 }
 
@@ -83,7 +83,7 @@ int CmdParadoxDemod(const char *Cmd) {
 	uint8_t bits[MAX_GRAPH_TRACE_LEN]={0};
 	size_t size = getFromGraphBuf(bits);
 	if (size==0) {
-		PrintAndLog("DEBUG: Error - Paradox not enough samples");
+		PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox not enough samples");
 		return 0;
 	}
 	
@@ -94,17 +94,17 @@ int CmdParadoxDemod(const char *Cmd) {
 	if (idx < 0){
 		if (g_debugMode){
 			if (idx == -1){
-				PrintAndLog("DEBUG: Error - Paradox not enough samples");
+				PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox not enough samples");
 			} else if (idx == -2) {
-				PrintAndLog("DEBUG: Error - Paradox just noise detected");     
+				PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox just noise detected");     
 			} else if (idx == -3) {
-				PrintAndLog("DEBUG: Error - Paradox problem during FSK demod");
+				PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox problem during FSK demod");
 			} else if (idx == -4) {
-				PrintAndLog("DEBUG: Error - Paradox preamble not found");
+				PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox preamble not found");
 			} else if (idx == -5) {
-				PrintAndLog("DEBUG: Error - Paradox error in Manchester data, size %d", size);
+				PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox error in Manchester data, size %d", size);
 			} else {
-				PrintAndLog("DEBUG: Error - Paradox error demoding fsk %d", idx);
+				PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox error demoding fsk %d", idx);
 			}
 		}
 		return 0;
@@ -114,7 +114,7 @@ int CmdParadoxDemod(const char *Cmd) {
 	setClockGrid(50, waveIdx + (idx*50));	
 	
 	if (hi2==0 && hi==0 && lo==0){
-		if (g_debugMode) PrintAndLog("DEBUG: Error - Paradox no value found");
+		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox no value found");
 		return 0;
 	}
 		
@@ -124,7 +124,7 @@ int CmdParadoxDemod(const char *Cmd) {
 	uint32_t rawHi = bytebits_to_byte(bits + idx + 32, 32);
 	uint32_t rawHi2 = bytebits_to_byte(bits + idx, 32);
 
-	PrintAndLog("Paradox TAG ID: %x%08x - FC: %d - Card: %d - Checksum: %02x - RAW: %08x%08x%08x",
+	PrintAndLogEx(NORMAL, "Paradox TAG ID: %x%08x - FC: %d - Card: %d - Checksum: %02x - RAW: %08x%08x%08x",
 		hi >> 10,
 		(hi & 0x3)<<26 | (lo>>10), 
 		fc, cardnum,
@@ -135,7 +135,7 @@ int CmdParadoxDemod(const char *Cmd) {
 	);
 	
 	if (g_debugMode){ 
-		PrintAndLog("DEBUG: Paradox idx: %d, len: %d, Printing Demod Buffer:", idx, size);
+		PrintAndLogEx(DEBUG, "DEBUG: Paradox idx: %d, len: %d, Printing Demod Buffer:", idx, size);
 		printDemodBuff();
 	}
 	return 1;
@@ -171,18 +171,18 @@ int CmdParadoxSim(const char *Cmd) {
 	cardnumber = (cn & 0x0000FFFF);
 	
 	// if ( !GetParadoxBits(facilitycode, cardnumber, bs)) {
-		// PrintAndLog("Error with tag bitstream generation.");
+		// PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
 		// return 1;
 	// }	
 
-	PrintAndLog("Simulating Paradox - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber );
+	PrintAndLogEx(NORMAL, "Simulating Paradox - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber );
 	
 	UsbCommand c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}};
 	memcpy(c.d.asBytes, bs, size);
 	clearCommandBuffer();
 	SendCommand(&c);
 
-	PrintAndLog("UNFINISHED");
+	PrintAndLogEx(NORMAL, "UNFINISHED");
 	return 0;
 }
 

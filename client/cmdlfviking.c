@@ -12,28 +12,28 @@
 static int CmdHelp(const char *Cmd);
 
 int usage_lf_viking_clone(void) {
-	PrintAndLog("clone a Viking AM tag to a T55x7 tag.");
-	PrintAndLog("Usage: lf viking clone <Card ID - 8 hex digits> <Q5>");
-	PrintAndLog("Options:");
-	PrintAndLog("  <Card Number>  : 8 digit hex viking card number");
-	PrintAndLog("  <Q5>           : specify write to Q5 (t5555 instead of t55x7)");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("       lf viking clone 1A337 Q5");
+	PrintAndLogEx(NORMAL, "clone a Viking AM tag to a T55x7 tag.");
+	PrintAndLogEx(NORMAL, "Usage: lf viking clone <Card ID - 8 hex digits> <Q5>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "  <Card Number>  : 8 digit hex viking card number");
+	PrintAndLogEx(NORMAL, "  <Q5>           : specify write to Q5 (t5555 instead of t55x7)");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "       lf viking clone 1A337 Q5");
 	return 0;
 }
 
 int usage_lf_viking_sim(void) {
-	PrintAndLog("Enables simulation of viking card with specified card number.");
-	PrintAndLog("Simulation runs until the button is pressed or another USB command is issued.");
-	PrintAndLog("Per viking format, the card number is 8 digit hex number.  Larger values are truncated.");
-	PrintAndLog("");
-	PrintAndLog("Usage:  lf viking sim <Card-Number>");
-	PrintAndLog("Options:");
-	PrintAndLog("  <Card Number>   : 8 digit hex viking card number");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("       lf viking sim 1A337");
+	PrintAndLogEx(NORMAL, "Enables simulation of viking card with specified card number.");
+	PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
+	PrintAndLogEx(NORMAL, "Per viking format, the card number is 8 digit hex number.  Larger values are truncated.");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Usage:  lf viking sim <Card-Number>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "  <Card Number>   : 8 digit hex viking card number");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "       lf viking sim 1A337");
 	return 0;
 }
 
@@ -73,14 +73,14 @@ int detectViking(uint8_t *dest, size_t *size) {
 //see ASKDemod for what args are accepted
 int CmdVikingDemod(const char *Cmd) {
 	if (!ASKDemod(Cmd, false, false, 1)) {
-		if (g_debugMode) PrintAndLog("DEBUG: Error - Viking ASKDemod failed");
+		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Viking ASKDemod failed");
 		return 0;
 	}
 	size_t size = DemodBufferLen;
 
 	int ans = detectViking(DemodBuffer, &size);
 	if (ans < 0) {
-		if (g_debugMode) PrintAndLog("DEBUG: Error - Viking Demod %d %s", ans, (ans == -5)?"[chksum error]":"");
+		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Viking Demod %d %s", ans, (ans == -5)?"[chksum error]":"");
 		return 0;
 	}
 	//got a good demod
@@ -88,8 +88,8 @@ int CmdVikingDemod(const char *Cmd) {
 	uint32_t raw2 = bytebits_to_byte(DemodBuffer+ans+32, 32);
 	uint32_t cardid = bytebits_to_byte(DemodBuffer+ans+24, 32);
 	uint8_t  checksum = bytebits_to_byte(DemodBuffer+ans+32+24, 8);
-	PrintAndLog("Viking Tag Found: Card ID %08X, Checksum: %02X", cardid, checksum);
-	PrintAndLog("Raw: %08X%08X", raw1,raw2);
+	PrintAndLogEx(SUCCESS, "Viking Tag Found: Card ID %08X, Checksum: %02X", cardid, checksum);
+	PrintAndLogEx(SUCCESS, "Raw: %08X%08X", raw1,raw2);
 	setDemodBuf(DemodBuffer, 64, ans);
 	setClockGrid(g_DemodClock, g_DemodStartIdx + (ans*g_DemodClock));
 	return 1;
@@ -118,14 +118,14 @@ int CmdVikingClone(const char *Cmd) {
 
 	rawID = getVikingBits(id);
 	
-	PrintAndLog("Cloning - ID: %08X, Raw: %08X%08X",id,(uint32_t)(rawID >> 32),(uint32_t) (rawID & 0xFFFFFFFF));
+	PrintAndLogEx(NORMAL, "Cloning - ID: %08X, Raw: %08X%08X",id,(uint32_t)(rawID >> 32),(uint32_t) (rawID & 0xFFFFFFFF));
 	
 	UsbCommand c = {CMD_VIKING_CLONE_TAG, {rawID >> 32, rawID & 0xFFFFFFFF, Q5}};
 	clearCommandBuffer();
     SendCommand(&c);
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)){
-		PrintAndLog("Error occurred, device did not respond during write operation.");
+		PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
 		return -1;
 	}
     return 0;
@@ -149,7 +149,7 @@ int CmdVikingSim(const char *Cmd) {
 	arg1 = clk << 8 | encoding;
 	arg2 = invert << 8 | separator;
 
-	PrintAndLog("Simulating Viking - ID: %08X, Raw: %08X%08X",id,(uint32_t)(rawID >> 32),(uint32_t) (rawID & 0xFFFFFFFF));
+	PrintAndLogEx(NORMAL, "Simulating Viking - ID: %08X, Raw: %08X%08X",id,(uint32_t)(rawID >> 32),(uint32_t) (rawID & 0xFFFFFFFF));
 	
 	UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};
 	num_to_bytebits(rawID, size, c.d.asBytes);

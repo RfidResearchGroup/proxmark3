@@ -13,52 +13,52 @@
 static int CmdHelp(const char *Cmd);
 
 int usage_hf_list(){
-	PrintAndLog("List protocol data in trace buffer.");
-	PrintAndLog("Usage:  hf list <protocol> [f][c]");
-	PrintAndLog("    f      - show frame delay times as well");
-	PrintAndLog("    c      - mark CRC bytes");
-	PrintAndLog("Supported <protocol> values:");
-	PrintAndLog("    raw    - just show raw data without annotations");
-	PrintAndLog("    14a    - interpret data as iso14443a communications");
-	PrintAndLog("    mf     - interpret data as iso14443a communications and decrypt crypto1 stream");
-	PrintAndLog("    14b    - interpret data as iso14443b communications");
-	PrintAndLog("    15     - interpret data as iso15693 communications");
-	PrintAndLog("    des    - interpret data as DESFire communications");
+	PrintAndLogEx(NORMAL, "List protocol data in trace buffer.");
+	PrintAndLogEx(NORMAL, "Usage:  hf list <protocol> [f][c]");
+	PrintAndLogEx(NORMAL, "    f      - show frame delay times as well");
+	PrintAndLogEx(NORMAL, "    c      - mark CRC bytes");
+	PrintAndLogEx(NORMAL, "Supported <protocol> values:");
+	PrintAndLogEx(NORMAL, "    raw    - just show raw data without annotations");
+	PrintAndLogEx(NORMAL, "    14a    - interpret data as iso14443a communications");
+	PrintAndLogEx(NORMAL, "    mf     - interpret data as iso14443a communications and decrypt crypto1 stream");
+	PrintAndLogEx(NORMAL, "    14b    - interpret data as iso14443b communications");
+	PrintAndLogEx(NORMAL, "    15     - interpret data as iso15693 communications");
+	PrintAndLogEx(NORMAL, "    des    - interpret data as DESFire communications");
 #ifdef WITH_EMV
-	PrintAndLog("    emv    - interpret data as EMV / communications");
+	PrintAndLogEx(NORMAL, "    emv    - interpret data as EMV / communications");
 #endif	
-	PrintAndLog("    iclass - interpret data as iclass communications");
-	PrintAndLog("    topaz  - interpret data as topaz communications");
-	PrintAndLog("    7816   - interpret data as iso7816-4 communications");
-	PrintAndLog("    legic  - interpret data as LEGIC communications");
-	PrintAndLog("    felica - interpret data as ISO18092 / FeliCa communications");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("        hf list 14a f");
-	PrintAndLog("        hf list iclass");
+	PrintAndLogEx(NORMAL, "    iclass - interpret data as iclass communications");
+	PrintAndLogEx(NORMAL, "    topaz  - interpret data as topaz communications");
+	PrintAndLogEx(NORMAL, "    7816   - interpret data as iso7816-4 communications");
+	PrintAndLogEx(NORMAL, "    legic  - interpret data as LEGIC communications");
+	PrintAndLogEx(NORMAL, "    felica - interpret data as ISO18092 / FeliCa communications");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "        hf list 14a f");
+	PrintAndLogEx(NORMAL, "        hf list iclass");
 	return 0;
 }
 int usage_hf_search(){
-	PrintAndLog("Usage: hf search");
-	PrintAndLog("Will try to find a HF read out of the unknown tag. Stops when found.");
-	PrintAndLog("Options:");
-	PrintAndLog("       h	- This help");
-	PrintAndLog("");
+	PrintAndLogEx(NORMAL, "Usage: hf search");
+	PrintAndLogEx(NORMAL, "Will try to find a HF read out of the unknown tag. Stops when found.");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "       h	- This help");
+	PrintAndLogEx(NORMAL, "");
 	return 0;
 }
 int usage_hf_snoop(){
-	PrintAndLog("Usage: hf snoop <skip pairs> <skip triggers>");
-	PrintAndLog("The high frequence snoop will assign all available memory on device for snooped data");
-	PrintAndLog("User the 'data samples' command to download from device,  and 'data plot' to look at it");
-	PrintAndLog("Press button to quit the snooping.");
-	PrintAndLog("Options:");
-	PrintAndLog("       h				- This help");
-	PrintAndLog("       <skip pairs>	- skip sample pairs");
-	PrintAndLog("       <skip triggers>	- skip number of triggers");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("           hf snoop");
-	PrintAndLog("           hf snoop 1000 0");
+	PrintAndLogEx(NORMAL, "Usage: hf snoop <skip pairs> <skip triggers>");
+	PrintAndLogEx(NORMAL, "The high frequence snoop will assign all available memory on device for snooped data");
+	PrintAndLogEx(NORMAL, "User the 'data samples' command to download from device,  and 'data plot' to look at it");
+	PrintAndLogEx(NORMAL, "Press button to quit the snooping.");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "       h				- This help");
+	PrintAndLogEx(NORMAL, "       <skip pairs>	- skip sample pairs");
+	PrintAndLogEx(NORMAL, "       <skip triggers>	- skip number of triggers");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "           hf snoop");
+	PrintAndLogEx(NORMAL, "           hf snoop 1000 0");
 	return 0;
 }
 
@@ -249,7 +249,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 	int num_lines = MIN((data_len - 1)/18 + 1, 18);
 	for (int j = 0; j < num_lines ; j++) {
 		if (j == 0) {
-			PrintAndLog(" %10u | %10u | %s |%-72s | %s| %s",
+			PrintAndLogEx(NORMAL, " %10u | %10u | %s |%-72s | %s| %s",
 				(timestamp - first_timestamp),
 				(EndOfTransmissionTimestamp - first_timestamp),
 				(isResponse ? "Tag" : "Rdr"),
@@ -257,7 +257,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 				(j == num_lines-1) ? crc : "    ",
 				(j == num_lines-1) ? explanation : "");
 		} else {
-			PrintAndLog("            |            |     |%-72s | %s| %s",
+			PrintAndLogEx(NORMAL, "            |            |     |%-72s | %s| %s",
 				line[j],
 				(j == num_lines-1) ? crc : "    ",
 				(j == num_lines-1) ? explanation : "");
@@ -270,7 +270,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 			annotateIso14443a(explanation, sizeof(explanation), mfData, mfDataLen);
 		}
 		uint8_t crcc = iso14443A_CRC_check(isResponse, mfData, mfDataLen);
-		PrintAndLog("            |            |  *  |%-72s | %-4s| %s",
+		PrintAndLogEx(NORMAL, "            |            |  *  |%-72s | %-4s| %s",
 			sprint_hex_inrow_spaces(mfData, mfDataLen, 2),
 			(crcc == 0 ? "!crc" : (crcc == 1 ? " ok " : "    ")),
 			explanation);
@@ -280,7 +280,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 	
 	if (showWaitCycles && !isResponse && next_record_is_response(tracepos, trace)) {
 		uint32_t next_timestamp = *((uint32_t *)(trace + tracepos));
-			PrintAndLog(" %10u | %10u | %s |fdt (Frame Delay Time): %d",
+			PrintAndLogEx(NORMAL, " %10u | %10u | %s |fdt (Frame Delay Time): %d",
 				(EndOfTransmissionTimestamp - first_timestamp),
 				(next_timestamp - first_timestamp),
 				"   ",
@@ -292,8 +292,8 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 
 void printFelica(uint16_t traceLen, uint8_t *trace) {
 
-	PrintAndLog("    Gap | Src | Data                            | CRC      | Annotation        |");
-	PrintAndLog("--------|-----|---------------------------------|----------|-------------------|");
+	PrintAndLogEx(NORMAL, "    Gap | Src | Data                            | CRC      | Annotation        |");
+	PrintAndLogEx(NORMAL, "--------|-----|---------------------------------|----------|-------------------|");
     uint16_t tracepos = 0;
 
     while( tracepos < traceLen) {
@@ -382,7 +382,7 @@ void printFelica(uint16_t traceLen, uint8_t *trace) {
 		int num_lines = MIN((len )/16 + 1, 16);
 		for (int j = 0; j < num_lines ; j++) {
 			if (j == 0) {
-				PrintAndLog("%7d | %s |%-32s |%02x %02x %s| %s",
+				PrintAndLogEx(NORMAL, "%7d | %s |%-32s |%02x %02x %s| %s",
 					gap,
 					(isResponse ? "Tag" : "Rdr"),
 					line[j],
@@ -391,12 +391,12 @@ void printFelica(uint16_t traceLen, uint8_t *trace) {
 					(crc_ok) ? "OK" : "NG",
 					expbuf);
 			} else {
-				PrintAndLog("        |     |%-32s |        |    ", line[j]);
+				PrintAndLogEx(NORMAL, "        |     |%-32s |        |    ", line[j]);
 			}
 		}
 		tracepos += len + 1;
 	}
-    PrintAndLog("");
+    PrintAndLogEx(NORMAL, "");
 }
 
 int CmdHFList(const char *Cmd) {
@@ -451,7 +451,7 @@ int CmdHFList(const char *Cmd) {
 	UsbCommand response;
 	GetFromBigBuf(trace, USB_CMD_DATA_SIZE, 0);
 	if ( !WaitForResponseTimeout(CMD_ACK, &response, 4000) ) {
-		PrintAndLog("timeout while waiting for reply.");
+		PrintAndLogEx(FAILED, "timeout while waiting for reply.");
 		return 1;
 	}
 	
@@ -459,7 +459,7 @@ int CmdHFList(const char *Cmd) {
 	if (traceLen > USB_CMD_DATA_SIZE) {
 		uint8_t *p = realloc(trace, traceLen);
 		if (p == NULL) {
-			PrintAndLog("Cannot allocate memory for trace");
+			PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
 			free(trace);
 			return 2;
 		}
@@ -468,26 +468,26 @@ int CmdHFList(const char *Cmd) {
 		WaitForResponse(CMD_ACK, NULL);
 	}
 	
-	PrintAndLog("Recorded Activity (TraceLen = %d bytes)", traceLen);
-	PrintAndLog("");
+	PrintAndLogEx(NORMAL, "Recorded Activity (TraceLen = %d bytes)", traceLen);
+	PrintAndLogEx(NORMAL, "");
 	if (protocol == FELICA) {
 		printFelica(traceLen, trace);
 	} else { 
-		PrintAndLog("Start = Start of Start Bit, End = End of last modulation. Src = Source of Transfer");
+		PrintAndLogEx(NORMAL, "Start = Start of Start Bit, End = End of last modulation. Src = Source of Transfer");
 		if ( protocol == ISO_14443A || protocol == PROTO_MIFARE)
-			PrintAndLog("iso14443a - All times are in carrier periods (1/13.56Mhz)");
+			PrintAndLogEx(NORMAL, "iso14443a - All times are in carrier periods (1/13.56Mhz)");
 		if ( protocol == ICLASS )
-			PrintAndLog("iClass    - Timings are not as accurate");
+			PrintAndLogEx(NORMAL, "iClass    - Timings are not as accurate");
 		if ( protocol == LEGIC )
-			PrintAndLog("LEGIC    - Timings are in ticks (1us == 1.5ticks)");
+			PrintAndLogEx(NORMAL, "LEGIC    - Timings are in ticks (1us == 1.5ticks)");
 		if ( protocol == ISO_15693 )
-			PrintAndLog("ISO15693 - Timings are not as accurate");
+			PrintAndLogEx(NORMAL, "ISO15693 - Timings are not as accurate");
 		if ( protocol == FELICA )
-			PrintAndLog("ISO18092 / FeliCa - Timings are not as accurate");	
+			PrintAndLogEx(NORMAL, "ISO18092 / FeliCa - Timings are not as accurate");	
 		
-		PrintAndLog("");
-		PrintAndLog("      Start |        End | Src | Data (! denotes parity error)                                           | CRC | Annotation");
-		PrintAndLog("------------+------------+-----+-------------------------------------------------------------------------+-----+--------------------");
+		PrintAndLogEx(NORMAL, "");
+		PrintAndLogEx(NORMAL, "      Start |        End | Src | Data (! denotes parity error)                                           | CRC | Annotation");
+		PrintAndLogEx(NORMAL, "------------+------------+-----+-------------------------------------------------------------------------+-----+--------------------");
 
 		ClearAuthData();
 		while(tracepos < traceLen) {
@@ -503,53 +503,53 @@ int CmdHFSearch(const char *Cmd){
 	char cmdp = param_getchar(Cmd, 0);	
 	if (cmdp == 'h' || cmdp == 'H') return usage_hf_search();
 	
-	PrintAndLog("");
+	PrintAndLogEx(NORMAL, "");
 	int ans = CmdHF14AInfo("s");
 	if (ans > 0) {
-		PrintAndLog("\nValid ISO14443-A Tag Found\n");
+		PrintAndLogEx(NORMAL, "\nValid ISO14443-A Tag Found\n");
 		return ans;
 	} 
 	ans = HF15Reader("", false);
 	if (ans) {
-		PrintAndLog("\nValid ISO15693 Tag Found\n");
+		PrintAndLogEx(NORMAL, "\nValid ISO15693 Tag Found\n");
 		return ans;
 	}
 	ans = HFLegicReader("", false);
 	if ( ans == 0) {
-		PrintAndLog("\nValid LEGIC Tag Found\n");
+		PrintAndLogEx(NORMAL, "\nValid LEGIC Tag Found\n");
 		return 1;
 	}
 	ans = CmdHFTopazReader("s");
 	if (ans == 0) {
-		PrintAndLog("\nValid Topaz Tag Found\n");
+		PrintAndLogEx(NORMAL, "\nValid Topaz Tag Found\n");
 		return 1;
 	}
 	// 14b and iclass is the longest test (put last)
 	ans = HF14BReader(false); //CmdHF14BReader("s");
 	if (ans) {
-		PrintAndLog("\nValid ISO14443-B Tag Found\n");
+		PrintAndLogEx(NORMAL, "\nValid ISO14443-B Tag Found\n");
 		return ans;
 	}
 	ans = HFiClassReader("", false, false);
 	if (ans) {
-		PrintAndLog("\nValid iClass Tag (or PicoPass Tag) Found\n");
+		PrintAndLogEx(NORMAL, "\nValid iClass Tag (or PicoPass Tag) Found\n");
 		return ans;
 	}
 
 	/*
 	ans = CmdHFFelicaReader("s");
 	if (ans) {
-		PrintAndLog("\nValid ISO18092 / FeliCa Found\n");
+		PrintAndLogEx(NORMAL, "\nValid ISO18092 / FeliCa Found\n");
 		return ans;
 	}
 	*/
 	
-	PrintAndLog("\nno known/supported 13.56 MHz tags found\n");
+	PrintAndLogEx(NORMAL, "\nno known/supported 13.56 MHz tags found\n");
 	return 0;
 }
 
 int CmdHFTune(const char *Cmd) {
-	PrintAndLog("[+] Measuring HF antenna, press button to exit");
+	PrintAndLogEx(SUCCESS, "Measuring HF antenna, press button to exit");
 	UsbCommand c = {CMD_MEASURE_ANTENNA_TUNING_HF};
 	clearCommandBuffer();
 	SendCommand(&c);

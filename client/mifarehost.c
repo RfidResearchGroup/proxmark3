@@ -20,10 +20,10 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 	UsbCommand c = {CMD_READER_MIFARE, {true, blockno, key_type}};
 
 	// message
-	printf("--------------------------------------------------------------------------------\n");
-	printf("[+] executing Darkside attack. Expected execution time: 25sec on average\n");
-	printf("[+] press pm3-button on the proxmark3 device to abort both proxmark3 and client.\n");
-	printf("--------------------------------------------------------------------------------\n");
+	PrintAndLogEx(NORMAL, "--------------------------------------------------------------------------------\n");
+	PrintAndLogEx(SUCCESS, "executing Darkside attack. Expected execution time: 25sec on average\n");
+	PrintAndLogEx(SUCCESS, "press pm3-button on the proxmark3 device to abort both proxmark3 and client.\n");
+	PrintAndLogEx(NORMAL, "--------------------------------------------------------------------------------\n");
 
 	while (true) {
 		clearCommandBuffer();
@@ -37,7 +37,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 		
 		// wait cycle
 		while (true) {
-			printf("."); fflush(stdout);
+			PrintAndLogEx(NORMAL, "."); fflush(stdout);
 			if (ukbhit()) {
 				int gc = getchar(); (void)gc;
 				return -5;
@@ -58,18 +58,18 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 				break;
 			}
 		}
-		printf("\n");
+		PrintAndLogEx(NORMAL, "\n");
 		
 		if (par_list == 0 && c.arg[0] == true) {
-			PrintAndLog("[+] Parity is all zero. Most likely this card sends NACK on every authentication.");
+			PrintAndLogEx(SUCCESS, "Parity is all zero. Most likely this card sends NACK on every authentication.");
 		}
 		c.arg[0] = false;
 
 		keycount = nonce2key(uid, nt, nr, ar, par_list, ks_list, &keylist);
 
 		if (keycount == 0) {
-			PrintAndLog("[-] key not found (lfsr_common_prefix list is null). Nt=%08x", nt);
-			PrintAndLog("[-] this is expected to happen in 25%% of all cases. Trying again with a different reader nonce...");
+			PrintAndLogEx(FAILED, "key not found (lfsr_common_prefix list is null). Nt=%08x", nt);
+			PrintAndLogEx(FAILED, "this is expected to happen in 25%% of all cases. Trying again with a different reader nonce...");
 			continue;
 		}
 
@@ -80,12 +80,12 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 			if (keycount == 0) {
 				free(last_keylist);
 				last_keylist = keylist;
-				PrintAndLog("[-] no candidates found, trying again");
+				PrintAndLogEx(FAILED, "no candidates found, trying again");
 				continue;
 			}
 		}
 
-		PrintAndLog("[+] found %u candidate key%s\n", keycount, (keycount > 1) ? "s." : ".");
+		PrintAndLogEx(SUCCESS, "found %u candidate key%s\n", keycount, (keycount > 1) ? "s." : ".");
 
 		*key = -1;
 		uint8_t keyBlock[USB_CMD_DATA_SIZE];
@@ -109,7 +109,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 		if (*key != -1) {
 			break;
 		} else {
-			PrintAndLog("[-] all candidate keys failed. Restarting darkside attack");
+			PrintAndLogEx(FAILED, "all candidate keys failed. Restarting darkside attack");
 			free(last_keylist);
 			last_keylist = keylist;
 			c.arg[0] = true;
@@ -151,13 +151,13 @@ int mfCheckKeys_fast( uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk,
 
 	while ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
 		timeout++;
-		printf(".");
+		PrintAndLogEx(NORMAL, ".");
 		fflush(stdout);
 		// max timeout for one chunk of 85keys, 60*3sec = 180seconds
 		// s70 with 40*2 keys to check, 80*85 = 6800 auth.
 		// takes about 97s, still some margin before abort
 		if (timeout > 180) {
-			PrintAndLog("\n[!] no response from Proxmark. Aborting...");
+			PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(WARNING, "no response from Proxmark. Aborting...");
 			return 2;
 		}
 	}
@@ -166,7 +166,7 @@ int mfCheckKeys_fast( uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk,
 	// time to convert the returned data.
 	uint8_t curr_keys = resp.arg[0];
 
-	PrintAndLog("\n[-] Chunk: %.1fs | found %u/%u keys (%u)", (float)(t2/1000.0), curr_keys, (sectorsCnt<<1), size);
+	PrintAndLogEx(NORMAL, "\n[-] Chunk: %.1fs | found %u/%u keys (%u)", (float)(t2/1000.0), curr_keys, (sectorsCnt<<1), size);
 		
 	// all keys?		
 	if ( curr_keys == sectorsCnt*2 || lastChunk ) {
@@ -253,7 +253,7 @@ int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultk
 		
 		// progress 
 		if ( counter % 20 == 0 )
-			PrintAndLog("[+] tried : %s.. \t %u keys", sprint_hex(candidates + i, 6),  counter * KEYS_IN_BLOCK  );
+			PrintAndLogEx(SUCCESS, "tried : %s.. \t %u keys", sprint_hex(candidates + i, 6),  counter * KEYS_IN_BLOCK  );
 	}
 	return found;
 }
@@ -393,7 +393,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 			free(statelists[1].head.slhead);
 			num_to_bytes(key64, 6, resultKey);
 
-			PrintAndLog("[+] target block:%3u key type: %c  -- found valid key [%012" PRIx64 "]",
+			PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [%012" PRIx64 "]",
 				(uint16_t)resp.arg[2] & 0xff,
 				(resp.arg[2] >> 8) ? 'B' : 'A',
 				key64
@@ -403,7 +403,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 	}
 	
 out:
-	PrintAndLog("[+] target block:%3u key type: %c",
+	PrintAndLogEx(SUCCESS, "target block:%3u key type: %c",
 			(uint16_t)resp.arg[2] & 0xff,
 			(resp.arg[2] >> 8) ? 'B' : 'A'
 	);	
@@ -445,9 +445,9 @@ int mfCSetUID(uint8_t *uid, uint8_t *atqa, uint8_t *sak, uint8_t *oldUID, uint8_
 
 	int old = mfCGetBlock(0, block0, params);
 	if (old == 0)
-		PrintAndLog("[+] old block 0:  %s", sprint_hex(block0, sizeof(block0)));
+		PrintAndLogEx(SUCCESS, "old block 0:  %s", sprint_hex(block0, sizeof(block0)));
 	else 
-		PrintAndLog("[-] couldn't get old data. Will write over the last bytes of Block 0.");	
+		PrintAndLogEx(FAILED, "couldn't get old data. Will write over the last bytes of Block 0.");	
 
 	// fill in the new values
 	// UID
@@ -462,7 +462,7 @@ int mfCSetUID(uint8_t *uid, uint8_t *atqa, uint8_t *sak, uint8_t *oldUID, uint8_
 		block0[6] = atqa[1];
 		block0[7] = atqa[0];
 	}
-	PrintAndLog("[+] new block 0:  %s", sprint_hex(block0,16));
+	PrintAndLogEx(SUCCESS, "new block 0:  %s", sprint_hex(block0,16));
 	
 	if ( wipecard )		 params |= MAGIC_WIPE;	
 	if ( oldUID == NULL) params |= MAGIC_UID;
@@ -485,7 +485,7 @@ int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t params) {
 		if (!isOK) 
 			return 2;
 	} else {
-		PrintAndLog("[!] command execute timeout");
+		PrintAndLogEx(WARNING, "command execute timeout");
 		return 1;
 	}
 	return 0;
@@ -503,7 +503,7 @@ int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params) {
 			return 2;		
 		memcpy(data, resp.d.asBytes, 16);
 	} else {
-		PrintAndLog("[!] command execute timeout");
+		PrintAndLogEx(WARNING, "command execute timeout");
 		return 1;
 	}
 	return 0;
@@ -574,7 +574,7 @@ int loadTraceCard(uint8_t *tuid, uint8_t uidlen) {
 	
 		memset(buf, 0, sizeof(buf));
 		if (fgets(buf, sizeof(buf), f) == NULL) {
-			PrintAndLog("[-] No trace file found or reading error.");
+			PrintAndLogEx(FAILED, "No trace file found or reading error.");
 			if (f) {
 				fclose(f);
 			}
@@ -583,7 +583,7 @@ int loadTraceCard(uint8_t *tuid, uint8_t uidlen) {
 
 		if (strlen(buf) < 32){
 			if (feof(f)) break;
-			PrintAndLog("[-] File content error. Block data must include 32 HEX symbols");
+			PrintAndLogEx(FAILED, "File content error. Block data must include 32 HEX symbols");
 			if (f) {
 				fclose(f);
 			}
@@ -680,7 +680,7 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 	
 	if ((traceCrypto1) && ((traceState == TRACE_IDLE) || (traceState > TRACE_AUTH_OK))) {
 		mf_crypto1_decrypt(traceCrypto1, data, len, 0);
-		PrintAndLog("DEC| %s", sprint_hex(data, len));
+		PrintAndLogEx(NORMAL, "DEC| %s", sprint_hex(data, len));
 		AddLogHex(logHexFileName, "DEC| ", data, len); 
 	}
 	
@@ -688,7 +688,7 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 	case TRACE_IDLE: 
 		// check packet crc16!
 		if ((len >= 4) && (!check_crc(CRC_14443_A, data, len))) {
-			PrintAndLog("DEC| CRC ERROR!!!");
+			PrintAndLogEx(NORMAL, "DEC| CRC ERROR!!!");
 			AddLogLine(logHexFileName, "DEC| ", "CRC ERROR!!!"); 
 			traceState = TRACE_ERROR;  // do not decrypt the next commands
 			return 1;
@@ -794,7 +794,7 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 			lfsr_rollback_word(revstate, nr_enc, 1);
 			lfsr_rollback_word(revstate, cuid ^ nt, 0);
 			crypto1_get_lfsr(revstate, &key);
-			PrintAndLog("[+] found Key: [%012" PRIx64 "]", key);
+			PrintAndLogEx(SUCCESS, "found Key: [%012" PRIx64 "]", key);
 			
 			//if ( tryMfk64(cuid, nt, nr_enc, ar_enc, at_enc, &key) )
 			AddLogUint64(logHexFileName, "Found Key: ", key); 
@@ -819,7 +819,7 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 			traceCrypto1 = lfsr_recovery64(ks2, ks3);			
 
 		} else {
-			printf("[!] nested key recovery not implemented!\n");
+			PrintAndLogEx(NORMAL, "[!] nested key recovery not implemented!\n");
 			at_enc = bytes_to_num(data, 4);
 			crypto1_destroy(traceCrypto1);			
 			traceState = TRACE_ERROR;
@@ -833,13 +833,13 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 }
 
 int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data, int len){
-	PrintAndLog("\n[+] encrypted data: [%s]", sprint_hex(data, len) );
+	PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(SUCCESS, "encrypted data: [%s]", sprint_hex(data, len) );
 	struct Crypto1State *s;
 	ks2 = ar_enc ^ prng_successor(nt, 64);
 	ks3 = at_enc ^ prng_successor(nt, 96);
 	s = lfsr_recovery64(ks2, ks3);
 	mf_crypto1_decrypt(s, data, len, false);
-	PrintAndLog("[+] decrypted data: [%s]", sprint_hex(data, len) );
+	PrintAndLogEx(SUCCESS, "decrypted data: [%s]", sprint_hex(data, len) );
 	crypto1_destroy(s);
 	return 0;
 }
@@ -864,23 +864,23 @@ int detect_classic_prng(void){
 	SendCommand(&c);					
 	
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-        PrintAndLog("[!] PRNG UID: Reply timeout.");
+        PrintAndLogEx(WARNING, "PRNG UID: Reply timeout.");
 		return -1;
 	}
 		
 	// if select tag failed.
 	if ( resp.arg[0] == 0 ) {
-		printf("[!] error:  selecting tag failed,  can't detect prng\n");
+		PrintAndLogEx(WARNING, "error:  selecting tag failed,  can't detect prng\n");
 		return -2;
 	}
 	if (!WaitForResponseTimeout(CMD_ACK, &respA, 2500)) {
-        PrintAndLog("[!] PRNG data: Reply timeout.");
+        PrintAndLogEx(WARNING, "PRNG data: Reply timeout.");
 		return -3;
 	}
 
 	// check respA
 	if (respA.arg[0] != 4) {
-		PrintAndLog("[!] PRNG data error: Wrong length: %d", respA.arg[0]);
+		PrintAndLogEx(WARNING, "PRNG data error: Wrong length: %d", respA.arg[0]);
 		return -4;
 	}			
 
@@ -903,7 +903,7 @@ int detect_classic_nackbug(bool verbose){
 	UsbCommand resp;
 	
 	if ( verbose )
-		printf("[+] press pm3-button on the proxmark3 device to abort both proxmark3 and client.\n");
+		PrintAndLogEx(SUCCESS, "press pm3-button on the proxmark3 device to abort both proxmark3 and client.\n");
 	
 	// for nice animation	
 	bool term = !isatty(STDIN_FILENO);
@@ -915,7 +915,7 @@ int detect_classic_nackbug(bool verbose){
 	while (true) {
 
 		if (term) {		
-			printf(".");
+			PrintAndLogEx(NORMAL, ".");
 		} else {
 			printf(
 			#if defined(__linux__) || (__APPLE__)
@@ -936,32 +936,32 @@ int detect_classic_nackbug(bool verbose){
 			int32_t ok = resp.arg[0];
 			uint32_t nacks = resp.arg[1];
 			uint32_t auths = resp.arg[2];
-			PrintAndLog("");
+			PrintAndLogEx(NORMAL, "");
 			
 			if ( verbose ) {
-				PrintAndLog("[+] num of auth requests  : %u", auths);
-				PrintAndLog("[+] num of received NACK  : %u", nacks);
+				PrintAndLogEx(SUCCESS, "num of auth requests  : %u", auths);
+				PrintAndLogEx(SUCCESS, "num of received NACK  : %u", nacks);
 			}
 			switch( ok ) {
-				case 99 : PrintAndLog("[!] button pressed. Aborted."); return 0;
+				case 99 : PrintAndLogEx(WARNING, "button pressed. Aborted."); return 0;
 				case 96 : 
 				case 98 : { 
 							if (verbose)
-								PrintAndLog("[-] card random number generator is not predictable.");
-							PrintAndLog("[!] detection failed");
+								PrintAndLogEx(FAILED, "card random number generator is not predictable.");
+							PrintAndLogEx(WARNING, "detection failed");
 							return 2;
 						}
 				case 97 : {
 							if (verbose) {
-								PrintAndLog("[-] card random number generator seems to be based on the well-known generating polynomial");
-								PrintAndLog("[- ]with 16 effective bits only, but shows unexpected behavior, try again."); 
+								PrintAndLogEx(FAILED, "card random number generator seems to be based on the well-known generating polynomial");
+								PrintAndLogEx(NORMAL, "[- ]with 16 effective bits only, but shows unexpected behavior, try again."); 
 								return 0;
 							}
 						}				
-				case  2 : PrintAndLog("[+] always leak NACK detected"); return 3;
-				case  1 : PrintAndLog("[+] NACK bug detected"); return 1;
-				case  0 : PrintAndLog("[+] No NACK bug detected"); return 2;
-				default : PrintAndLog("[!] errorcode from device [%i]", ok); return 0;
+				case  2 : PrintAndLogEx(SUCCESS, "always leak NACK detected"); return 3;
+				case  1 : PrintAndLogEx(SUCCESS, "NACK bug detected"); return 1;
+				case  0 : PrintAndLogEx(SUCCESS, "No NACK bug detected"); return 2;
+				default : PrintAndLogEx(WARNING, "errorcode from device [%i]", ok); return 0;
 			}
 			break;
 		}
@@ -980,9 +980,9 @@ void detect_classic_magic(void) {
 		isGeneration = resp.arg[0] & 0xff;
 	
 	switch( isGeneration ){
-		case 1: PrintAndLog("Answers to magic commands (GEN 1a): YES"); break;
-		case 2: PrintAndLog("Answers to magic commands (GEN 1b): YES"); break;
-		//case 4: PrintAndLog("Answers to magic commands (GEN 2): YES"); break;
-		default: PrintAndLog("Answers to magic commands: NO"); break;
+		case 1: PrintAndLogEx(NORMAL, "Answers to magic commands (GEN 1a): YES"); break;
+		case 2: PrintAndLogEx(NORMAL, "Answers to magic commands (GEN 1b): YES"); break;
+		//case 4: PrintAndLogEx(NORMAL, "Answers to magic commands (GEN 2): YES"); break;
+		default: PrintAndLogEx(NORMAL, "Answers to magic commands: NO"); break;
 	}		
 }

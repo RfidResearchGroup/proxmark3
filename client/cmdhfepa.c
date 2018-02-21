@@ -27,8 +27,8 @@ int CmdHFEPACollectPACENonces(const char *Cmd)
 	m = m > 0 ? m : 1;
 	n = n > 0 ? n : 1;
 
-	PrintAndLog("Collecting %u %u byte nonces", n, m);
-	PrintAndLog("Start: %" PRIu64, msclock()/1000);
+	PrintAndLogEx(NORMAL, "Collecting %u %u byte nonces", n, m);
+	PrintAndLogEx(NORMAL, "Start: %" PRIu64, msclock()/1000);
 	// repeat n times
 	for (uint32_t i = 0; i < n; i++) {
 		// execute PACE
@@ -40,7 +40,7 @@ int CmdHFEPACollectPACENonces(const char *Cmd)
 
 		// check if command failed
 		if (resp.arg[0] != 0) {
-			PrintAndLog("Error in step %d, Return code: %d",resp.arg[0],(int)resp.arg[1]);
+			PrintAndLogEx(FAILED, "Error in step %d, Return code: %d",resp.arg[0],(int)resp.arg[1]);
 		} else {
 			size_t nonce_length = resp.arg[1];
 			char *nonce = (char *) malloc(2 * nonce_length + 1);
@@ -48,14 +48,14 @@ int CmdHFEPACollectPACENonces(const char *Cmd)
 				sprintf(nonce + (2 * j), "%02X", resp.d.asBytes[j]);
 			}
 			// print nonce
-			PrintAndLog("Length: %d, Nonce: %s", nonce_length, nonce);
+			PrintAndLogEx(NORMAL, "Length: %d, Nonce: %s", nonce_length, nonce);
 			free(nonce);
 		}
 		if (i < n - 1) {
 			sleep(d);
 		}
 	}
-	PrintAndLog("End: %" PRIu64, msclock()/1000);
+	PrintAndLogEx(NORMAL, "End: %" PRIu64, msclock()/1000);
 	return 1;
 }
 
@@ -86,8 +86,8 @@ int CmdHFEPAPACEReplay(const char *Cmd)
 			                     (unsigned int *) (apdus[i] + apdu_lengths[i]),
 			                     &skip_add);
 			if (scan_return < 1) {
-				PrintAndLog((char *)usage_msg);
-				PrintAndLog("Not enough APDUs! Try again!");
+				PrintAndLogEx(NORMAL, (char *)usage_msg);
+				PrintAndLogEx(WARNING, "Not enough APDUs! Try again!");
 				return 0;
 			}
 			skip += skip_add;
@@ -98,7 +98,7 @@ int CmdHFEPAPACEReplay(const char *Cmd)
 		if (Cmd[skip] == '\0') {
 			if (i < sizeof(apdu_lengths) - 1) {
 
-				PrintAndLog((char *)usage_msg);
+				PrintAndLogEx(NORMAL, (char *)usage_msg);
 				return 0;
 			}
 			break;
@@ -132,7 +132,7 @@ int CmdHFEPAPACEReplay(const char *Cmd)
 			SendCommand(&usb_cmd);
 			WaitForResponse(CMD_ACK, &resp);
 			if (resp.arg[0] != 0) {
-				PrintAndLog("Transfer of APDU #%d Part %d failed!", i, j);
+				PrintAndLogEx(WARNING, "Transfer of APDU #%d Part %d failed!", i, j);
 				return 0;
 			}
 		}
@@ -144,20 +144,20 @@ int CmdHFEPAPACEReplay(const char *Cmd)
 	SendCommand(&usb_cmd);
 	WaitForResponse(CMD_ACK, &resp);
 	if (resp.arg[0] != 0) {
-		PrintAndLog("\nPACE replay failed in step %u!", (uint32_t)resp.arg[0]);
-		PrintAndLog("Measured times:");
-		PrintAndLog("MSE Set AT: %u us", resp.d.asDwords[0]);
-		PrintAndLog("GA Get Nonce: %u us", resp.d.asDwords[1]);
-		PrintAndLog("GA Map Nonce: %u us", resp.d.asDwords[2]);
-		PrintAndLog("GA Perform Key Agreement: %u us", resp.d.asDwords[3]);
-		PrintAndLog("GA Mutual Authenticate: %u us", resp.d.asDwords[4]);
+		PrintAndLogEx(NORMAL, "\nPACE replay failed in step %u!", (uint32_t)resp.arg[0]);
+		PrintAndLogEx(NORMAL, "Measured times:");
+		PrintAndLogEx(NORMAL, "MSE Set AT: %u us", resp.d.asDwords[0]);
+		PrintAndLogEx(NORMAL, "GA Get Nonce: %u us", resp.d.asDwords[1]);
+		PrintAndLogEx(NORMAL, "GA Map Nonce: %u us", resp.d.asDwords[2]);
+		PrintAndLogEx(NORMAL, "GA Perform Key Agreement: %u us", resp.d.asDwords[3]);
+		PrintAndLogEx(NORMAL, "GA Mutual Authenticate: %u us", resp.d.asDwords[4]);
 	} else {
-		PrintAndLog("PACE replay successfull!");
-		PrintAndLog("MSE Set AT: %u us", resp.d.asDwords[0]);
-		PrintAndLog("GA Get Nonce: %u us", resp.d.asDwords[1]);
-		PrintAndLog("GA Map Nonce: %u us", resp.d.asDwords[2]);
-		PrintAndLog("GA Perform Key Agreement: %u us", resp.d.asDwords[3]);
-		PrintAndLog("GA Mutual Authenticate: %u us", resp.d.asDwords[4]);
+		PrintAndLogEx(NORMAL, "PACE replay successfull!");
+		PrintAndLogEx(NORMAL, "MSE Set AT: %u us", resp.d.asDwords[0]);
+		PrintAndLogEx(NORMAL, "GA Get Nonce: %u us", resp.d.asDwords[1]);
+		PrintAndLogEx(NORMAL, "GA Map Nonce: %u us", resp.d.asDwords[2]);
+		PrintAndLogEx(NORMAL, "GA Perform Key Agreement: %u us", resp.d.asDwords[3]);
+		PrintAndLogEx(NORMAL, "GA Mutual Authenticate: %u us", resp.d.asDwords[4]);
 	}
 	return 1;
 }
