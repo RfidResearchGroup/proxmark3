@@ -406,7 +406,7 @@ char * GenerateFilename(const char *prefix, const char *suffix){
 	
 	GetHFMF14AUID(uid, &uidlen);
 	if (!uidlen) {
-		PrintAndLogEx(NORMAL, "No tag found.");
+		PrintAndLogEx(WARNING, "No tag found.");
 		return NULL;
 	}
 	
@@ -690,7 +690,7 @@ int CmdHF14AMfDump(const char *Cmd) {
 	}
 
 	if ((fin = fopen(keyFilename,"rb")) == NULL) {
-		PrintAndLogEx(NORMAL, "Could not find file %s", keyFilename);
+		PrintAndLogEx(WARNING, "Could not find file %s", keyFilename);
 		return 1;
 	}
 	
@@ -907,7 +907,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 	}
 
 	if ((fkeys = fopen(keyFilename,"rb")) == NULL) {
-		PrintAndLogEx(NORMAL, "Could not find file %s", keyFilename);
+		PrintAndLogEx(WARNING, "Could not find file %s", keyFilename);
 		return 1;
 	}
 	
@@ -941,7 +941,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 	}
 
 	if ((fdump = fopen(dataFilename,"rb")) == NULL) {
-		PrintAndLogEx(NORMAL, "Could not find file %s", dataFilename);
+		PrintAndLogEx(WARNING, "Could not find file %s", dataFilename);
 		return 1;
 	}	
 	PrintAndLogEx(NORMAL, "Restoring %s to card", dataFilename);
@@ -1595,7 +1595,7 @@ out:
 
 		FILE *fkeys = fopen(fptr,"wb");
 		if (fkeys == NULL) { 
-			PrintAndLogEx(NORMAL, "Could not create file %s", filename);
+			PrintAndLogEx(WARNING, "Could not create file %s", filename);
 			free(keyBlock);
 			free(e_sector);
 			return 1;
@@ -1880,7 +1880,7 @@ out:
 
 		FILE *fkeys = fopen(fptr,"wb");
 		if (fkeys == NULL) { 
-			PrintAndLogEx(NORMAL, "Could not create file %s", fptr);
+			PrintAndLogEx(WARNING, "Could not create file %s", fptr);
 			free(keyBlock);
 			free(e_sector);
 			return 1;
@@ -3095,7 +3095,7 @@ int CmdHF14AMfice(const char *Cmd) {
 	PrintAndLogEx(NORMAL, "Collecting %u nonces \n", limit);
 	
 	if ((fnonces = fopen(filename,"wb")) == NULL) { 
-		PrintAndLogEx(NORMAL, "Could not create file %s",filename);
+		PrintAndLogEx(WARNING, "Could not create file %s",filename);
 		return 3;
 	}
 
