@@ -32,35 +32,35 @@
 static int CmdHelp(const char *Cmd);
 
 int usage_lf_fdx_clone(void){
-	PrintAndLog("Clone a FDX-B animal tag to a T55x7 tag.");
-	PrintAndLog("Usage: lf fdx clone [h] <country id> <animal id> <Q5>");
-	PrintAndLog("Options:");
-	PrintAndLog("      h            : This help");
-	PrintAndLog("      <country id> : Country id");
-	PrintAndLog("      <animal id>  : Animal id");
+	PrintAndLogEx(NORMAL, "Clone a FDX-B animal tag to a T55x7 tag.");
+	PrintAndLogEx(NORMAL, "Usage: lf fdx clone [h] <country id> <animal id> <Q5>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "      h            : This help");
+	PrintAndLogEx(NORMAL, "      <country id> : Country id");
+	PrintAndLogEx(NORMAL, "      <animal id>  : Animal id");
 	// has extended data?
 	//reserved/rfu
 	//is animal tag
 	// extended data
-	PrintAndLog("      <Q5>        : Specify write to Q5 (t5555 instead of t55x7)");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("       lf fdx clone 999 112233");
+	PrintAndLogEx(NORMAL, "      <Q5>        : Specify write to Q5 (t5555 instead of t55x7)");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "       lf fdx clone 999 112233");
 	return 0;
 }
 
 int usage_lf_fdx_sim(void) {
-	PrintAndLog("Enables simulation of FDX-B animal tag");
-	PrintAndLog("Simulation runs until the button is pressed or another USB command is issued.");
-	PrintAndLog("");
-	PrintAndLog("Usage:  lf fdx sim [h] <country id> <animal id>");
-	PrintAndLog("Options:");
-	PrintAndLog("      h            : This help");
-	PrintAndLog("      <country id> : Country ID");
-	PrintAndLog("      <animal id>  : Animal ID");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("       lf fdx sim 999 112233");
+	PrintAndLogEx(NORMAL, "Enables simulation of FDX-B animal tag");
+	PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Usage:  lf fdx sim [h] <country id> <animal id>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "      h            : This help");
+	PrintAndLogEx(NORMAL, "      <country id> : Country ID");
+	PrintAndLogEx(NORMAL, "      <animal id>  : Animal ID");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "       lf fdx sim 999 112233");
 	return 0;
 }
 
@@ -82,11 +82,11 @@ int detectFDXB(uint8_t *dest, size_t *size) {
 static void verify_values(uint32_t countryid, uint64_t animalid){
 	if ((animalid & 0x3FFFFFFFFF) != animalid) {
 		animalid &= 0x3FFFFFFFFF;
-		PrintAndLog("Animal ID Truncated to 38bits: %"PRIx64, animalid);
+		PrintAndLogEx(NORMAL, "Animal ID Truncated to 38bits: %"PRIx64, animalid);
 	}	
 	if ( (countryid & 0x3ff) != countryid ) {
 		countryid &= 0x3ff;
-		PrintAndLog("Country ID Truncated to 10bits: %03d", countryid);
+		PrintAndLogEx(NORMAL, "Country ID Truncated to 10bits: %03d", countryid);
 	}
 }
 
@@ -168,23 +168,23 @@ int CmdFDXBdemodBI(const char *Cmd){
 	
 	errCnt = askdemod(BitStream, &size, &clk, &invert, maxErr, 0, 0);
 	if ( errCnt < 0 || errCnt > maxErr ) { 
-		if (g_debugMode) PrintAndLog("DEBUG: Error - FDXB no data or error found %d, clock: %d", errCnt, clk);
+		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - FDXB no data or error found %d, clock: %d", errCnt, clk);
 		return 0;
 	}
 
 	errCnt = BiphaseRawDecode(BitStream, &size, &offset, 1);
 	if (errCnt < 0 || errCnt > maxErr ) {
-		if (g_debugMode) PrintAndLog("DEBUG: Error - FDXB BiphaseRawDecode: %d", errCnt);
+		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - FDXB BiphaseRawDecode: %d", errCnt);
 		return 0;
 	} 
 	
 	int preambleIndex = detectFDXB(BitStream, &size);
 	if (preambleIndex < 0){
-		if (g_debugMode) PrintAndLog("DEBUG: Error - FDXB preamble not found :: %d",preambleIndex);
+		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - FDXB preamble not found :: %d",preambleIndex);
 		return 0;
 	}
 	if (size != 128) {
-		if (g_debugMode) PrintAndLog("DEBUG: Error - FDXB incorrect data length found");
+		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - FDXB incorrect data length found");
 		return 0;
 	}
 	
@@ -193,10 +193,10 @@ int CmdFDXBdemodBI(const char *Cmd){
 	// remove marker bits (1's every 9th digit after preamble) (pType = 2)
 	size = removeParity(BitStream, preambleIndex + 11, 9, 2, 117);
 	if ( size != 104 ) {
-		if (g_debugMode) PrintAndLog("DEBUG: Error - FDXB error removeParity:: %d", size);
+		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - FDXB error removeParity:: %d", size);
 		return 0;
 	}
-	PrintAndLog("\nFDX-B / ISO 11784/5 Animal Tag ID Found:");
+	PrintAndLogEx(NORMAL, "\nFDX-B / ISO 11784/5 Animal Tag ID Found:");
 
 	//got a good demod
 	uint64_t NationalCode = ((uint64_t)(bytebits_to_byteLSBF(BitStream+32,6)) << 32) | bytebits_to_byteLSBF(BitStream,32);
@@ -211,22 +211,22 @@ int CmdFDXBdemodBI(const char *Cmd){
 	uint8_t raw[8];
 	num_to_bytes(rawid, 8, raw);
 
-	if (g_debugMode) PrintAndLog("Raw ID Hex: %s", sprint_hex(raw,8));
+	if (g_debugMode) PrintAndLogEx(NORMAL, "Raw ID Hex: %s", sprint_hex(raw,8));
 
 	uint16_t calcCrc = crc16_kermit(raw, 8);
-	PrintAndLog("Animal ID:     %04u-%012" PRIu64, countryCode, NationalCode);
-	PrintAndLog("National Code: %012" PRIu64, NationalCode);
-	PrintAndLog("CountryCode:   %04u", countryCode);
+	PrintAndLogEx(NORMAL, "Animal ID:     %04u-%012" PRIu64, countryCode, NationalCode);
+	PrintAndLogEx(NORMAL, "National Code: %012" PRIu64, NationalCode);
+	PrintAndLogEx(NORMAL, "CountryCode:   %04u", countryCode);
 
-	PrintAndLog("Reserved/RFU:      %u", reservedCode);
-	PrintAndLog("Animal Tag:        %s", animalBit ? "True" : "False");
-	PrintAndLog("Has extended data: %s [0x%X]", dataBlockBit ? "True" : "False", extended);
-	PrintAndLog("CRC:           0x%04X - [%04X] - %s", crc16, calcCrc, (calcCrc == crc16) ? "Passed" : "Failed");
+	PrintAndLogEx(NORMAL, "Reserved/RFU:      %u", reservedCode);
+	PrintAndLogEx(NORMAL, "Animal Tag:        %s", animalBit ? "True" : "False");
+	PrintAndLogEx(NORMAL, "Has extended data: %s [0x%X]", dataBlockBit ? "True" : "False", extended);
+	PrintAndLogEx(NORMAL, "CRC:           0x%04X - [%04X] - %s", crc16, calcCrc, (calcCrc == crc16) ? "Passed" : "Failed");
 
 	if (g_debugMode) {
-		PrintAndLog("Start marker %d;   Size %d", preambleIndex, size);
+		PrintAndLogEx(NORMAL, "Start marker %d;   Size %d", preambleIndex, size);
 		char *bin = sprint_bin_break(BitStream,size,16);
-		PrintAndLog("DEBUG BinStream:\n%s",bin);
+		PrintAndLogEx(DEBUG, "DEBUG BinStream:\n%s",bin);
 	}
 	return 1;
 }
@@ -239,7 +239,7 @@ int CmdFdxDemod(const char *Cmd) {
 	//Differential Biphase / di-phase (inverted biphase)
 	//get binary from ask wave
 	if (!ASKbiphaseDemod("0 32 1 0", false)) {
-		if (g_debugMode) PrintAndLog("DEBUG: Error - FDX-B ASKbiphaseDemod failed");
+		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B ASKbiphaseDemod failed");
 		return 0;
 	}
 	size_t size = DemodBufferLen;
@@ -247,13 +247,13 @@ int CmdFdxDemod(const char *Cmd) {
 	if (preambleIndex < 0){
 		if (g_debugMode){
 			if (preambleIndex == -1)
-				PrintAndLog("DEBUG: Error - FDX-B too few bits found");
+				PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B too few bits found");
 			else if (preambleIndex == -2)
-				PrintAndLog("DEBUG: Error - FDX-B preamble not found");
+				PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B preamble not found");
 			else if (preambleIndex == -3)
-				PrintAndLog("DEBUG: Error - FDX-B Size not correct: %d", size);
+				PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B Size not correct: %d", size);
 			else
-				PrintAndLog("DEBUG: Error - FDX-B ans: %d", preambleIndex);
+				PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B ans: %d", preambleIndex);
 		}
 		return 0;
 	}
@@ -264,7 +264,7 @@ int CmdFdxDemod(const char *Cmd) {
 	// remove marker bits (1's every 9th digit after preamble) (pType = 2)
 	size = removeParity(DemodBuffer, 11, 9, 2, 117);
 	if ( size != 104 ) {
-		if (g_debugMode) PrintAndLog("DEBUG: Error - FDX-B error removeParity: %d", size);
+		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B error removeParity: %d", size);
 		return 0;
 	}
 
@@ -283,19 +283,19 @@ int CmdFdxDemod(const char *Cmd) {
 
 	uint16_t calcCrc = crc16_kermit(raw, 8);
 	
-	PrintAndLog("\nFDX-B / ISO 11784/5 Animal Tag ID Found:  Raw : %s", sprint_hex(raw, 8));
-	PrintAndLog("Animal ID          %04u-%012" PRIu64, countryCode, NationalCode);
-	PrintAndLog("National Code      %012" PRIu64 " (0x%" PRIx64 ")", NationalCode, NationalCode);
-	PrintAndLog("Country Code       %04u", countryCode);
-	PrintAndLog("Reserved/RFU       %u (0x04%X)", reservedCode,  reservedCode);
-	PrintAndLog("Animal Tag         %s", animalBit ? "True" : "False");	
-	PrintAndLog("Has extended data  %s [0x%X]", dataBlockBit ? "True" : "False", extended);	
-	PrintAndLog("CRC-16             0x%04X - 0x%04X [%s]", crc16, calcCrc, (calcCrc == crc16) ? "Ok" : "Failed");
+	PrintAndLogEx(NORMAL, "\nFDX-B / ISO 11784/5 Animal Tag ID Found:  Raw : %s", sprint_hex(raw, 8));
+	PrintAndLogEx(NORMAL, "Animal ID          %04u-%012" PRIu64, countryCode, NationalCode);
+	PrintAndLogEx(NORMAL, "National Code      %012" PRIu64 " (0x%" PRIx64 ")", NationalCode, NationalCode);
+	PrintAndLogEx(NORMAL, "Country Code       %04u", countryCode);
+	PrintAndLogEx(NORMAL, "Reserved/RFU       %u (0x04%X)", reservedCode,  reservedCode);
+	PrintAndLogEx(NORMAL, "Animal Tag         %s", animalBit ? "True" : "False");	
+	PrintAndLogEx(NORMAL, "Has extended data  %s [0x%X]", dataBlockBit ? "True" : "False", extended);	
+	PrintAndLogEx(NORMAL, "CRC-16             0x%04X - 0x%04X [%s]", crc16, calcCrc, (calcCrc == crc16) ? "Ok" : "Failed");
 
 	if (g_debugMode) {
-		PrintAndLog("Start marker %d;   Size %d", preambleIndex, size);	
+		PrintAndLogEx(NORMAL, "Start marker %d;   Size %d", preambleIndex, size);	
 		char *bin = sprint_bin_break(DemodBuffer, size, 16);
-		PrintAndLog("DEBUG bin stream:\n%s", bin);
+		PrintAndLogEx(DEBUG, "DEBUG bin stream:\n%s", bin);
 	}
 
 	// set block 0 for later
@@ -328,7 +328,7 @@ int CmdFdxClone(const char *Cmd) {
 	
 	// getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t isextended, uint32_t extended, uint8_t *bits) 
 	if ( !getFDXBits(animalid, countryid, 1, 0, 0, bs)) {
-		PrintAndLog("Error with tag bitstream generation.");
+		PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
 		return 1;
 	}	
 
@@ -342,7 +342,7 @@ int CmdFdxClone(const char *Cmd) {
 	blocks[3] = bytebits_to_byte(bs + 64, 32);
 	blocks[4] = bytebits_to_byte(bs + 96, 32);
 
-	PrintAndLog("Preparing to clone FDX-B to T55x7 with animal ID: %04u-%"PRIu64, countryid, animalid);
+	PrintAndLogEx(NORMAL, "Preparing to clone FDX-B to T55x7 with animal ID: %04u-%"PRIu64, countryid, animalid);
 	print_blocks(blocks, 5);
 	
 	UsbCommand resp;
@@ -354,7 +354,7 @@ int CmdFdxClone(const char *Cmd) {
 		clearCommandBuffer();
 		SendCommand(&c);
 		if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)){
-			PrintAndLog("Error occurred, device did not respond during write operation.");
+			PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
 			return -1;
 		}
 	}
@@ -380,7 +380,7 @@ int CmdFdxSim(const char *Cmd) {
 	arg1 = clk << 8 | encoding;
 	arg2 = invert << 8 | separator;
 
-	PrintAndLog("Simulating FDX-B animal ID: %04u-%"PRIu64, countryid, animalid);
+	PrintAndLogEx(NORMAL, "Simulating FDX-B animal ID: %04u-%"PRIu64, countryid, animalid);
 
 	UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};
 
