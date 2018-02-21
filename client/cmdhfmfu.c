@@ -1882,7 +1882,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 	}
 
 	if ((fout = fopen(filename,"wb")) == NULL) { 
-		PrintAndLogEx(NORMAL, "Could not create file name %s", filename);
+		PrintAndLogEx(WARNING, "Could not create file name %s", filename);
 		return 1;
 	}
 	fwrite( &dump_file_data, 1, pages*4 + DUMP_PREFIX_LENGTH, fout );
@@ -1986,7 +1986,7 @@ int CmdHF14AMfURestore(const char *Cmd){
 	if (errors || cmdp == 0) return usage_hf_mfu_restore();
 	
 	if ((f = fopen(filename,"rb")) == NULL) {
-		PrintAndLogEx(NORMAL, "Could not find file %s", filename);
+		PrintAndLogEx(WARNING, "Could not find file %s", filename);
 		return 1;
 	}	
 
