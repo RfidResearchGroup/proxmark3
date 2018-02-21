@@ -22,6 +22,21 @@ bool showDemod = true;
 pthread_mutex_t print_lock = PTHREAD_MUTEX_INITIALIZER;
 static char *logfilename = "proxmark3.log";
 
+void PrintAndLogEx(logLevel_t level, char *fmt, ...) {
+	char buffer[MAX_PRINT_BUFFER] = {0};
+	int size;
+	static char *prefix[7] = { "", "[+] ", "[=] ", "[-] ", "[!] ", "[!!] ", "[#] "};
+	
+	size=strlen(prefix[level]);
+	strncpy(buffer, prefix[level], sizeof buffer);
+
+	va_list args;
+	va_start(args,fmt);
+	vsnprintf(buffer + size, sizeof(buffer) - size, fmt, args);
+	va_end(args);
+	PrintAndLog(buffer);
+}
+
 void PrintAndLog(char *fmt, ...) {
 	char *saved_line;
 	int saved_point;
