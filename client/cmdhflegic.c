@@ -938,7 +938,7 @@ int CmdLegicDump(const char *Cmd){
 
 	f = fopen(filename,"wb");
 	if (!f) { 
-		PrintAndLogEx(NORMAL, "Could not create file name %s", filename);
+		PrintAndLogEx(WARNING, "Could not create file name %s", filename);
 		if (data)
 			free(data);
 		return 5;
@@ -1185,7 +1185,7 @@ int CmdLegicESave(const char *Cmd) {
 	// open file
 	f = fopen(filename,"wb");
 	if (!f) { 
-		PrintAndLogEx(NORMAL, "Could not create file name %s", filename);
+		PrintAndLogEx(WARNING, "Could not create file name %s", filename);
 		free(data);
 		return 1;
 	}
