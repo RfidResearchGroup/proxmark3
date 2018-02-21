@@ -6,7 +6,7 @@
 #define NCPS_PDR_BIT     AT91C_PA10_NPCS2	// GPIO
 #define NCPS_ASR_BIT     0					// SPI peripheral A
 #define NPCS_BSR_BIT     AT91C_PA10_NPCS2	// SPI peripheral B
-#define SPI_CSR_NUM      0          		// Chip Select register[] 0,1,2,3  (at91samv512 has 4)
+#define SPI_CSR_NUM      2          		// Chip Select register[] 0,1,2,3  (at91samv512 has 4)
 
 /* PCS_0 for NPCS0, PCS_1 for NPCS1 ... */
 #define PCS_0  ((0<<0)|(1<<1)|(1<<2)|(1<<3)) // 0xE - 1110
@@ -93,7 +93,7 @@ void FlashSetup(void) {
 		AT91C_SPI_NCPHA		|	// NCPHA, Clock Phase data captured on leading edge, changes on following edge
 		(0 << 0);				// CPOL, Clock Polarity inactive state is logic 0
 */
-	AT91C_BASE_SPI->SPI_CSR[SPI_CSR_NUM] = AT91C_SPI_CPOL | AT91C_SPI_BITS_8 | (6 << 8);
+	AT91C_BASE_SPI->SPI_CSR[SPI_CSR_NUM] =  AT91C_SPI_NCPHA | AT91C_SPI_BITS_8 | (6 << 8);
 
 	// Enable SPI
 	AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SPIEN;
@@ -104,13 +104,13 @@ void FlashSetup(void) {
 
 	/* enable automatic chip-select */
 	// reset PIO-registers of CS-pin to default
-	AT91C_BASE_PIOA->PIO_ODR  = NCPS_PDR_BIT; // input
-	AT91C_BASE_PIOA->PIO_CODR = NCPS_PDR_BIT; // clear
+	AT91C_BASE_PIOA->PIO_ODR  |= NCPS_PDR_BIT; // input
+	AT91C_BASE_PIOA->PIO_CODR |= NCPS_PDR_BIT; // clear
 	// disable PIO from controlling the CS pin (=hand over to SPI)
-	AT91C_BASE_PIOA->PIO_PDR = NCPS_PDR_BIT;
+	AT91C_BASE_PIOA->PIO_PDR |= NCPS_PDR_BIT;
 	// set pin-functions in PIO Controller (function NCPS for CS-pin)
-	AT91C_BASE_PIOA->PIO_ASR = NCPS_ASR_BIT;
-	AT91C_BASE_PIOA->PIO_BSR = NPCS_BSR_BIT;
+	AT91C_BASE_PIOA->PIO_ASR |= NCPS_ASR_BIT;
+	AT91C_BASE_PIOA->PIO_BSR |= NPCS_BSR_BIT;
 }
 
 void FlashStop(void) {
@@ -139,11 +139,18 @@ uint16_t FlashSend(uint16_t data) {
 	
 	uint16_t incoming = 0;
 
-	while ( !(AT91C_BASE_SPI->SPI_SR & AT91C_SPI_TXEMPTY)) {};	// wait for the transfer to complete
-	AT91C_BASE_SPI->SPI_TDR = data;		// send the data
-	while ( !(AT91C_BASE_SPI->SPI_SR & AT91C_SPI_RDRF)) {};		// wait till transfer is complete
+	// wait until SPI is ready for transfer
+	while ( !(AT91C_BASE_SPI->SPI_SR & AT91C_SPI_TXEMPTY)) {};
+
+	// send the data
+	AT91C_BASE_SPI->SPI_TDR = data;
+
+	// wait recive transfer is complete
+	while ( !(AT91C_BASE_SPI->SPI_SR & AT91C_SPI_RDRF)) {};
 	
+	// reading incoming data
 	incoming = ((AT91C_BASE_SPI->SPI_RDR) & 0xFFFF);
+
 	return incoming;
 }
 uint8_t Flash_ReadStat1(void) {
