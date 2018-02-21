@@ -1067,7 +1067,7 @@ static int read_nonce_file(char *filename)
 	
 	num_acquired_nonces = 0;
 	if ((fnonces = fopen(filename,"rb")) == NULL) { 
-		PrintAndLogEx(NORMAL, "Could not open file %s",filename);
+		PrintAndLogEx(WARNING, "Could not open file %s",filename);
 		return 1;
 	}
 	snprintf(progress_text, 80, "Reading nonces from file %s...",filename);
@@ -1435,7 +1435,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 			cuid = resp.arg[1];
 			if (nonce_file_write && fnonces == NULL) {
 				if ((fnonces = fopen(filename,"wb")) == NULL) { 
-					PrintAndLogEx(NORMAL, "Could not create file %s", filename);
+					PrintAndLogEx(WARNING, "Could not create file %s", filename);
 					return 3;
 				}
 				snprintf(progress_text, 80, "Writing acquired nonces to binary file %s", filename);
@@ -2219,7 +2219,7 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
 		write_stats = true;
 		setlocale(LC_NUMERIC, "");
 		if ((fstats = fopen("hardnested_stats.txt","a")) == NULL) { 
-			PrintAndLogEx(NORMAL, "Could not create/open file hardnested_stats.txt");
+			PrintAndLogEx(WARNING, "Could not create/open file hardnested_stats.txt");
 			return 3;
 		}
 		for (uint32_t i = 0; i < tests; i++) {
