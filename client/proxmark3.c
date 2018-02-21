@@ -48,12 +48,12 @@ struct receiver_arg {
 void SendCommand(UsbCommand *c) {
 	#if 0
 	pthread_mutex_lock(&print_lock);
-	printf("Sending %d bytes\n", sizeof(UsbCommand));
+	PrintAndLogEx(NORMAL, "Sending %d bytes\n", sizeof(UsbCommand));
 	pthread_mutex_unlock(&print_lock);
 	#endif
 
 	if (offline) {
-		PrintAndLog("Sending bytes to proxmark failed - offline");
+		PrintAndLogEx(NORMAL, "Sending bytes to proxmark failed - offline");
 		return;
 	}
 	/**
@@ -70,16 +70,16 @@ void SendCommand(UsbCommand *c) {
 
 #if defined(__linux__) || (__APPLE__)
 static void showBanner(void){
-	printf("\n\n");
-	printf("\e[34m██████╗ ███╗   ███╗ ████╗\e[0m     ...iceman fork\n");
-	printf("\e[34m██╔══██╗████╗ ████║   ══█║\e[0m\n");
-	printf("\e[34m██████╔╝██╔████╔██║ ████╔╝\e[0m\n");
-	printf("\e[34m██╔═══╝ ██║╚██╔╝██║   ══█║\e[0m    iceman@icesql.net\n");
-	printf("\e[34m██║     ██║ ╚═╝ ██║ ████╔╝\e[0m  https://github.com/iceman1001/proxmark3\n");
-	printf("\e[34m╚═╝     ╚═╝     ╚═╝ ╚═══╝\e[0m v3.1.0\n");
-	printf("\nKeep iceman fork alive with a donation!           https://paypal.me/iceman1001/");
-	printf("\nMONERO: 43mNJLpgBVaTvyZmX9ajcohpvVkaRy1kbZPm8tqAb7itZgfuYecgkRF36rXrKFUkwEGeZedPsASRxgv4HPBHvJwyJdyvQuP");
-	printf("\n\n\n");
+	PrintAndLogEx(NORMAL, "\n\n");
+	PrintAndLogEx(NORMAL, "\e[34m██████╗ ███╗   ███╗ ████╗\e[0m     ...iceman fork\n");
+	PrintAndLogEx(NORMAL, "\e[34m██╔══██╗████╗ ████║   ══█║\e[0m\n");
+	PrintAndLogEx(NORMAL, "\e[34m██████╔╝██╔████╔██║ ████╔╝\e[0m\n");
+	PrintAndLogEx(NORMAL, "\e[34m██╔═══╝ ██║╚██╔╝██║   ══█║\e[0m    iceman@icesql.net\n");
+	PrintAndLogEx(NORMAL, "\e[34m██║     ██║ ╚═╝ ██║ ████╔╝\e[0m  https://github.com/iceman1001/proxmark3\n");
+	PrintAndLogEx(NORMAL, "\e[34m╚═╝     ╚═╝     ╚═╝ ╚═══╝\e[0m v3.1.0\n");
+	PrintAndLogEx(NORMAL, "\nKeep iceman fork alive with a donation!           https://paypal.me/iceman1001/");
+	PrintAndLogEx(NORMAL, "\nMONERO: 43mNJLpgBVaTvyZmX9ajcohpvVkaRy1kbZPm8tqAb7itZgfuYecgkRF36rXrKFUkwEGeZedPsASRxgv4HPBHvJwyJdyvQuP");
+	PrintAndLogEx(NORMAL, "\n\n\n");
 }
 #endif
 
@@ -90,15 +90,15 @@ bool hookUpPM3() {
 	pthread_mutex_lock(&print_lock);
 
 	if (sp == INVALID_SERIAL_PORT) {
-		printf("[!] Reconnect failed, retrying...  (reason: invalid serial port)\n");
+		PrintAndLogEx(WARNING, "Reconnect failed, retrying...  (reason: invalid serial port)\n");
 		ret = false;
 		offline = 1;
 	} else if (sp == CLAIMED_SERIAL_PORT) {
-		printf("[!] Reconnect failed, retrying... (reason: serial port is claimed by another process)\n");
+		PrintAndLogEx(WARNING, "Reconnect failed, retrying... (reason: serial port is claimed by another process)\n");
 		ret = false;
 		offline = 1;
 	} else {	
-		printf("[+] Proxmark reconnected\n");
+		PrintAndLogEx(SUCCESS, "Proxmark reconnected\n");
 		ret = true;
 		offline = 0;
 	}
@@ -140,7 +140,7 @@ __attribute__((force_align_arg_pointer))
 			bool res = uart_send(sp, (byte_t*) &txcmd, sizeof(UsbCommand));
 			if (!res) {
 				counter_to_offline++;
-				PrintAndLog("[!] sending bytes to proxmark failed");
+				PrintAndLogEx(NORMAL, "sending bytes to proxmark failed");
 			}
 			 __atomic_clear(&txcmd_pending, __ATOMIC_SEQ_CST);
 			
@@ -190,7 +190,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 		
 		if (sf) {
 			pthread_mutex_lock(&print_lock);			
-			printf("[+] executing commands from file: %s\n", script_cmds_file);
+			PrintAndLogEx(SUCCESS, "executing commands from file: %s\n", script_cmds_file);
 			pthread_mutex_unlock(&print_lock);
 		}
 	}
@@ -254,7 +254,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 					memset(script_cmd_buf, 0, sizeof(script_cmd_buf));
 					if (!fgets(script_cmd_buf, sizeof(script_cmd_buf), stdin)) {
 						pthread_mutex_lock(&print_lock);
-						printf("\n[!] stdin end, exit...\n");
+						PrintAndLogEx(NORMAL, "\n[!] stdin end, exit...\n");
 						pthread_mutex_unlock(&print_lock);						
 						break;
 					}
@@ -262,7 +262,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 
 					if ((cmd = strmcopy(script_cmd_buf)) != NULL) {
 						pthread_mutex_lock(&print_lock);
-						printf(PROXPROMPT"%s\n", cmd);
+						PrintAndLogEx(NORMAL, PROXPROMPT"%s\n", cmd);
 						pthread_mutex_unlock(&print_lock);
 					}
 					
@@ -293,7 +293,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 			cmd = NULL;
 		} else {
 			pthread_mutex_lock(&print_lock);
-			printf("\n");
+			PrintAndLogEx(NORMAL, "\n");
 			pthread_mutex_unlock(&print_lock);
 			break;
 		}
@@ -314,10 +314,10 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 }
 
 static void dumpAllHelp(int markdown) {
-	printf("\n%sProxmark3 command dump%s\n\n", markdown ? "# " : "", markdown ? "" : "\n======================");
-	printf("Some commands are available only if a Proxmark is actually connected.%s\n", markdown ? "  " : "");
-	printf("Check column \"offline\" for their availability.\n");
-	printf("\n");
+	PrintAndLogEx(NORMAL, "\n%sProxmark3 command dump%s\n\n", markdown ? "# " : "", markdown ? "" : "\n======================");
+	PrintAndLogEx(NORMAL, "Some commands are available only if a Proxmark is actually connected.%s\n", markdown ? "  " : "");
+	PrintAndLogEx(NORMAL, "Check column \"offline\" for their availability.\n");
+	PrintAndLogEx(NORMAL, "\n");
 	command_t *cmds = getTopLevelCommandTable();
 	dumpCommandsRecursive(cmds, markdown);
 }
@@ -348,25 +348,25 @@ static void set_my_executable_path(void) {
 }
 
 static void show_help(bool showFullHelp, char *command_line){
-	printf("syntax: %s <port> [-h|-help|-m|-f|-flush|-w|-wait|-c|-command|-l|-lua] [cmd_script_file_name] [command][lua_script_name]\n", command_line);
-	printf("\tLinux example:'%s /dev/ttyACM0'\n", command_line);
-	printf("\tWindows example:'%s com3'\n\n", command_line);
+	PrintAndLogEx(NORMAL, "syntax: %s <port> [-h|-help|-m|-f|-flush|-w|-wait|-c|-command|-l|-lua] [cmd_script_file_name] [command][lua_script_name]\n", command_line);
+	PrintAndLogEx(NORMAL, "\tLinux example:'%s /dev/ttyACM0'\n", command_line);
+	PrintAndLogEx(NORMAL, "\tWindows example:'%s com3'\n\n", command_line);
 	
 	if (showFullHelp){
-		printf("help: <-h|-help> Dump all interactive command's help at once.\n");
-		printf("\t%s  -h\n\n", command_line);
-		printf("markdown: <-m> Dump all interactive help at once in markdown syntax\n");
-		printf("\t%s -m\n\n", command_line);
-		printf("flush: <-f|-flush> Output will be flushed after every print.\n");
-		printf("\t%s -f\n\n", command_line);
-		printf("wait: <-w|-wait> 20sec waiting the serial port to appear in the OS\n");
-		printf("\t%s "SERIAL_PORT_H" -w\n\n", command_line);
-		printf("script: A script file with one proxmark3 command per line.\n\n");
-		printf("command: <-c|-command> Execute one proxmark3 command.\n");
-		printf("\t%s "SERIAL_PORT_H" -c \"hf mf chk 1* ?\"\n", command_line);
-		printf("\t%s "SERIAL_PORT_H" -command \"hf mf nested 1 *\"\n\n", command_line);
-		printf("lua: <-l|-lua> Execute lua script.\n");
-		printf("\t%s "SERIAL_PORT_H" -l hf_read\n\n", command_line);
+		PrintAndLogEx(NORMAL, "help: <-h|-help> Dump all interactive command's help at once.\n");
+		PrintAndLogEx(NORMAL, "\t%s  -h\n\n", command_line);
+		PrintAndLogEx(NORMAL, "markdown: <-m> Dump all interactive help at once in markdown syntax\n");
+		PrintAndLogEx(NORMAL, "\t%s -m\n\n", command_line);
+		PrintAndLogEx(NORMAL, "flush: <-f|-flush> Output will be flushed after every print.\n");
+		PrintAndLogEx(NORMAL, "\t%s -f\n\n", command_line);
+		PrintAndLogEx(NORMAL, "wait: <-w|-wait> 20sec waiting the serial port to appear in the OS\n");
+		PrintAndLogEx(NORMAL, "\t%s "SERIAL_PORT_H" -w\n\n", command_line);
+		PrintAndLogEx(NORMAL, "script: A script file with one proxmark3 command per line.\n\n");
+		PrintAndLogEx(NORMAL, "command: <-c|-command> Execute one proxmark3 command.\n");
+		PrintAndLogEx(NORMAL, "\t%s "SERIAL_PORT_H" -c \"hf mf chk 1* ?\"\n", command_line);
+		PrintAndLogEx(NORMAL, "\t%s "SERIAL_PORT_H" -command \"hf mf nested 1 *\"\n\n", command_line);
+		PrintAndLogEx(NORMAL, "lua: <-l|-lua> Execute lua script.\n");
+		PrintAndLogEx(NORMAL, "\t%s "SERIAL_PORT_H" -l hf_read\n\n", command_line);
 	}
 }
 
@@ -406,7 +406,7 @@ int main(int argc, char* argv[]) {
 
 		// flush output
 		if(strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "-flush") == 0){
-			printf("Output will be flushed after every print.\n");
+			PrintAndLogEx(NORMAL, "Output will be flushed after every print.\n");
 			flushAfterWrite = 1;
 		}
 		
@@ -450,7 +450,7 @@ int main(int argc, char* argv[]) {
 					}
 				}
 				
-				printf("[+] execute command from commandline: %s\n", script_cmd);
+				PrintAndLogEx(SUCCESS, "execute command from commandline: %s\n", script_cmd);
 			}
 		} else {
 			script_cmds_file = argv[argc - 1];
@@ -459,7 +459,7 @@ int main(int argc, char* argv[]) {
 
 	// check command
 	if (executeCommand && (!script_cmd || strlen(script_cmd) == 0)){
-		printf("[!] ERROR: execute command: command not found.\n");
+		PrintAndLogEx(WARNING, "ERROR: execute command: command not found.\n");
 		return 2;
 	}
 
@@ -478,25 +478,25 @@ int main(int argc, char* argv[]) {
 	if (!waitCOMPort) {
 		sp = uart_open(argv[1]);
 	} else {
-		printf("[+] waiting for Proxmark to appear on %s ", argv[1]);
+		PrintAndLogEx(SUCCESS, "waiting for Proxmark to appear on %s ", argv[1]);
 		fflush(stdout);
 		int openCount = 0;
 		do {
 			sp = uart_open(argv[1]);
 			msleep(1000);
-			printf(".");
+			PrintAndLogEx(NORMAL, ".");
 			fflush(stdout);
 		} while (++openCount < 20 && (sp == INVALID_SERIAL_PORT || sp == CLAIMED_SERIAL_PORT));
-		printf("\n");
+		PrintAndLogEx(NORMAL, "\n");
 	}
 
 	// check result of uart opening
 	if (sp == INVALID_SERIAL_PORT) {
-		printf("[!] ERROR: invalid serial port\n");
+		PrintAndLogEx(WARNING, "ERROR: invalid serial port\n");
 		usb_present = false;
 		offline = 1;
 	} else if (sp == CLAIMED_SERIAL_PORT) {
-		printf("[!] ERROR: serial port is claimed by another process\n");
+		PrintAndLogEx(WARNING, "ERROR: serial port is claimed by another process\n");
 		usb_present = false;
 		offline = 1;
 	} else {
