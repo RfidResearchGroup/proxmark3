@@ -47,9 +47,9 @@ int CmdHF14AMfDESAuth(const char *Cmd){
     DES_cblock key1;
 
     if (strlen(Cmd)<1) {
-        PrintAndLog("Usage:  hf desfire des-auth k <key number>");
-        PrintAndLog("Examples:");
-        PrintAndLog("        hf desfire des-auth k 0");
+        PrintAndLogEx(NORMAL, "Usage:  hf desfire des-auth k <key number>");
+        PrintAndLogEx(NORMAL, "Examples:");
+        PrintAndLogEx(NORMAL, "        hf desfire des-auth k 0");
         return 0;
     } 
     
@@ -70,11 +70,11 @@ int CmdHF14AMfDESAuth(const char *Cmd){
         uint8_t * data= resp.d.asBytes;
 
          if (isOK){
-             PrintAndLog("enc(nc)/b0:%s", sprint_hex(data+2,8));
+             PrintAndLogEx(NORMAL, "enc(nc)/b0:%s", sprint_hex(data+2,8));
              memcpy(b0,data+2,8);
 		}
     } else {
-        PrintAndLog("Command execute timeout");
+        PrintAndLogEx(WARNING, "Command execute timeout");
     }
        
     //Do crypto magic
@@ -83,18 +83,18 @@ int CmdHF14AMfDESAuth(const char *Cmd){
     //r0=dec(b0)
     DES_ecb_encrypt(&nr,&b1,&ks1,0);
     DES_ecb_encrypt(&b0,&r0,&ks1,0);
-    //PrintAndLog("b1:%s",sprint_hex(b1, 8));
-    PrintAndLog("r0:%s",sprint_hex(r0, 8));
+    //PrintAndLogEx(NORMAL, "b1:%s",sprint_hex(b1, 8));
+    PrintAndLogEx(NORMAL, "r0:%s",sprint_hex(r0, 8));
     //r1=rol(r0)
     memcpy(r1,r0,8);
     rol(r1,8);
-    PrintAndLog("r1:%s",sprint_hex(r1, 8));
+    PrintAndLogEx(NORMAL, "r1:%s",sprint_hex(r1, 8));
     for(int i=0;i<8;i++){   
       b2[i]=(r1[i] ^ b1[i]);
     }
     DES_ecb_encrypt(&b2,&b2,&ks1,0);
-    //PrintAndLog("b1:%s",sprint_hex(b1, 8));
-    PrintAndLog("b2:%s",sprint_hex(b2, 8));
+    //PrintAndLogEx(NORMAL, "b1:%s",sprint_hex(b1, 8));
+    PrintAndLogEx(NORMAL, "b2:%s",sprint_hex(b2, 8));
 
     //Auth2
     UsbCommand d = {CMD_MIFARE_DES_AUTH2, {cuid}};
@@ -109,10 +109,10 @@ int CmdHF14AMfDESAuth(const char *Cmd){
         uint8_t * data2= respb.d.asBytes;
 
         if (isOK)
-            PrintAndLog("b3:%s", sprint_hex(data2+2, 8));
+            PrintAndLogEx(NORMAL, "b3:%s", sprint_hex(data2+2, 8));
 	
     } else {
-        PrintAndLog("Command execute timeout");
+        PrintAndLogEx(WARNING, "Command execute timeout");
     } 
     return 1;
 }
@@ -144,9 +144,9 @@ int CmdHF14AMfAESAuth(const char *Cmd){
     AES_KEY key_d;
 
     if (strlen(Cmd)<1) {
-        PrintAndLog("Usage:  hf desfire aes-auth k <key number>");
-        PrintAndLog("Examples:");
-        PrintAndLog("        hf desfire aes-auth k 0");
+        PrintAndLogEx(NORMAL, "Usage:  hf desfire aes-auth k <key number>");
+        PrintAndLogEx(NORMAL, "Examples:");
+        PrintAndLogEx(NORMAL, "        hf desfire aes-auth k 0");
         return 0;
     } 
     
@@ -170,11 +170,11 @@ int CmdHF14AMfAESAuth(const char *Cmd){
         uint8_t * data= resp.d.asBytes;
 
          if (isOK){
-             PrintAndLog("enc(nc)/b0:%s", sprint_hex(data+2,16));
+             PrintAndLogEx(NORMAL, "enc(nc)/b0:%s", sprint_hex(data+2,16));
              memcpy(b0,data+2,16);
 		}
     } else {
-        PrintAndLog("Command execute timeout");
+        PrintAndLogEx(WARNING, "Command execute timeout");
     }
     //
     // void AES_cbc_encrypt(const unsigned char *in, unsigned char *out,
@@ -187,21 +187,21 @@ int CmdHF14AMfAESAuth(const char *Cmd){
     //r0=dec(b0)
     //AES_cbc_encrypt(&nr,&b1,16,&key,0);
     AES_cbc_encrypt(&b0,&r0,16,&key_d,iv,0);
-    //PrintAndLog("b1:%s",sprint_hex(b1, 8));
-    PrintAndLog("r0:%s",sprint_hex(r0, 16));
+    //PrintAndLogEx(NORMAL, "b1:%s",sprint_hex(b1, 8));
+    PrintAndLogEx(NORMAL, "r0:%s",sprint_hex(r0, 16));
     //r1=rol(r0)
     memcpy(r1,r0,16);
     rol(r1,8);
-    PrintAndLog("r1:%s",sprint_hex(r1, 16));
+    PrintAndLogEx(NORMAL, "r1:%s",sprint_hex(r1, 16));
     for(int i=0;i<16;i++){
       b1[i]=(nr[i] ^ b0[i]);
       b2[i]=(r1[i] ^ b1[i]);
     }
-    PrintAndLog("nr:%s",sprint_hex(nr, 16));
+    PrintAndLogEx(NORMAL, "nr:%s",sprint_hex(nr, 16));
     AES_cbc_encrypt(&b1,&b1,16,&key_e,iv,1);
     AES_cbc_encrypt(&b2,&b2,16,&key_e,iv,1);
-    PrintAndLog("b1:%s",sprint_hex(b1, 16));
-    PrintAndLog("b2:%s",sprint_hex(b2, 16));
+    PrintAndLogEx(NORMAL, "b1:%s",sprint_hex(b1, 16));
+    PrintAndLogEx(NORMAL, "b2:%s",sprint_hex(b2, 16));
 
     //Auth2
     UsbCommand d = {CMD_MIFARE_DES_AUTH2, {cuid}};
@@ -216,10 +216,10 @@ int CmdHF14AMfAESAuth(const char *Cmd){
         uint8_t * data2= respb.d.asBytes;
 
         if (isOK)
-            PrintAndLog("b3:%s", sprint_hex(data2+2, 16));
+            PrintAndLogEx(NORMAL, "b3:%s", sprint_hex(data2+2, 16));
 		
     } else {
-        PrintAndLog("Command execute timeout");
+        PrintAndLogEx(WARNING, "Command execute timeout");
     } 
     return 1;
 }
