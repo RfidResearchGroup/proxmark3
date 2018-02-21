@@ -1378,7 +1378,7 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 	DropField();
 	if (isOK) {
 		switch (isOK) {
-			case 1 : PrintAndLogEx(NORMAL, "Error: No response from Proxmark.\n"); break;
+			case 1 : PrintAndLogEx(WARNING, "Error: No response from Proxmark.\n"); break;
 			case 2 : PrintAndLogEx(NORMAL, "Button pressed. Aborted.\n"); break;
 			default : break;
 		}
