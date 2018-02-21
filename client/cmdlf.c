@@ -409,9 +409,7 @@ int CmdLFSim(const char *Cmd) {
 	// convert to bitstream if necessary 
 	ChkBitstream(Cmd);
 
-	if (g_debugMode) 
-		PrintAndLogEx(DEBUG, "DEBUG: Sending [%d bytes]\n", GraphTraceLen);
-			
+	PrintAndLogEx(DEBUG, "DEBUG: Sending [%d bytes]\n", GraphTraceLen);
 	
 	//can send only 512 bits at a time (1 byte sent per bit...)
 	for (uint16_t i = 0; i < GraphTraceLen; i += USB_CMD_DATA_SIZE) {

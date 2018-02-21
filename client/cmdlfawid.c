@@ -86,16 +86,16 @@ int usage_lf_awid_brute(void){
 	return 0;
 }
 
-static int sendPing(void){
+static bool sendPing(void){
 	UsbCommand ping = {CMD_PING, {1, 2, 3}};
 	SendCommand(&ping);
 	SendCommand(&ping);	
 	SendCommand(&ping);	
 	clearCommandBuffer();
 	UsbCommand resp;
-	if (WaitForResponseTimeout(CMD_ACK, &resp, 1000))
-		return 0;
-	return 1;
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000))
+		return false;
+	return true;
 }
 
 static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, uint8_t *bits, size_t bs_len, bool verbose){
@@ -291,7 +291,7 @@ int CmdAWIDDemod(const char *Cmd) {
 
 	size = removeParity(bits, idx+8, 4, 1, 88);
 	if (size != 66){
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - AWID at parity check-tag size does not match AWID format");
+		PrintAndLogEx(DEBUG, "DEBUG: Error - AWID at parity check-tag size does not match AWID format");
 		return 0;
 	}
 	// ok valid card found!
