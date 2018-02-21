@@ -29,22 +29,21 @@ int CmdPacDemod(const char *Cmd) {
 
 	//NRZ
 	if (!NRZrawDemod(Cmd, false)) {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - PAC: NRZ Demod failed");
+		PrintAndLogEx(DEBUG, "DEBUG: Error - PAC: NRZ Demod failed");
 		return 0;
 	}
 	size_t size = DemodBufferLen;
 	int ans = detectPac(DemodBuffer, &size);
 	if (ans < 0) {
-		if (g_debugMode) {
-			if (ans == -1)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - PAC: too few bits found");
-			else if (ans == -2)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - PAC: preamble not found");
-			else if (ans == -3)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - PAC: Size not correct: %d", size);
-			else
-				PrintAndLogEx(DEBUG, "DEBUG: Error - PAC: ans: %d", ans);
-		}
+		if (ans == -1)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - PAC: too few bits found");
+		else if (ans == -2)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - PAC: preamble not found");
+		else if (ans == -3)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - PAC: Size not correct: %d", size);
+		else
+			PrintAndLogEx(DEBUG, "DEBUG: Error - PAC: ans: %d", ans);
+
 		return 0;
 	}
 	setDemodBuf(DemodBuffer, 128, ans);

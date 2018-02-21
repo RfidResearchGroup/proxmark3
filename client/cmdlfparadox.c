@@ -82,7 +82,7 @@ int CmdParadoxDemod(const char *Cmd) {
 	//raw fsk demod no manchester decoding no start bit finding just get binary from wave
 	uint8_t bits[MAX_GRAPH_TRACE_LEN]={0};
 	size_t size = getFromGraphBuf(bits);
-	if (size==0) {
+	if (size == 0) {
 		PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox not enough samples");
 		return 0;
 	}
@@ -92,21 +92,20 @@ int CmdParadoxDemod(const char *Cmd) {
 	//get binary from fsk wave
 	int idx = detectParadox(bits, &size, &hi2, &hi, &lo, &waveIdx);
 	if (idx < 0){
-		if (g_debugMode){
-			if (idx == -1){
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox not enough samples");
-			} else if (idx == -2) {
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox just noise detected");     
-			} else if (idx == -3) {
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox problem during FSK demod");
-			} else if (idx == -4) {
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox preamble not found");
-			} else if (idx == -5) {
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox error in Manchester data, size %d", size);
-			} else {
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox error demoding fsk %d", idx);
-			}
-		}
+
+		if (idx == -1)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox not enough samples");
+		else if (idx == -2)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox just noise detected");     
+		else if (idx == -3)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox problem during FSK demod");
+		else if (idx == -4)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox preamble not found");
+		else if (idx == -5)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox error in Manchester data, size %d", size);
+		else
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox error demoding fsk %d", idx);
+		
 		return 0;
 	}
 
@@ -134,10 +133,10 @@ int CmdParadoxDemod(const char *Cmd) {
 		rawLo
 	);
 	
-	if (g_debugMode){ 
-		PrintAndLogEx(DEBUG, "DEBUG: Paradox idx: %d, len: %d, Printing Demod Buffer:", idx, size);
+	PrintAndLogEx(DEBUG, "DEBUG: Paradox idx: %d, len: %d, Printing Demod Buffer:", idx, size);
+	if (g_debugMode)
 		printDemodBuff();
-	}
+
 	return 1;
 }
 //by marshmellow

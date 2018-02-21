@@ -130,22 +130,21 @@ int GetPrescoBits(uint32_t fullcode, uint8_t *prescoBits) {
 int CmdPrescoDemod(const char *Cmd) {
 	bool st = true;
 	if (!ASKDemod_ext("32 0 0 0 0 a", false, false, 1, &st)) {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error Presco ASKDemod failed");
+		PrintAndLogEx(DEBUG, "DEBUG: Error Presco ASKDemod failed");
 		return 0;
 	}
 	size_t size = DemodBufferLen;
 	int ans = detectPresco(DemodBuffer, &size);
 	if (ans < 0) {
-		if (g_debugMode){
-			if (ans == -1)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Presco: too few bits found");
-			else if (ans == -2)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Presco: preamble not found");
-			else if (ans == -3)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Presco: Size not correct: %d", size);
-			else
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Presco: ans: %d", ans);
-		}
+
+		if (ans == -1)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Presco: too few bits found");
+		else if (ans == -2)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Presco: preamble not found");
+		else if (ans == -3)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Presco: Size not correct: %d", size);
+		else
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Presco: ans: %d", ans);
 		return 0;
 	}
 	setDemodBuf(DemodBuffer, 128, ans);
