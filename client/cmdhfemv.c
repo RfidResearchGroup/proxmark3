@@ -13,90 +13,90 @@
 static int CmdHelp(const char *Cmd);
 
 int usage_hf_emv_test(void){
-	PrintAndLog("EMV test ");
-	PrintAndLog("Usage:  hf emv test [h]");
-	PrintAndLog("Options:");
-	PrintAndLog("      h             : this help");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("      hf emv test");	
+	PrintAndLogEx(NORMAL, "EMV test ");
+	PrintAndLogEx(NORMAL, "Usage:  hf emv test [h]");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "      h             : this help");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "      hf emv test");	
 	return 0;
 }
 int usage_hf_emv_readrecord(void){
-	PrintAndLog("Read a EMV record ");
-	PrintAndLog("Usage:  hf emv readrecord [h] <records> <sfi>");
-	PrintAndLog("Options:");
-	PrintAndLog("      h             : this help");
-	PrintAndLog("      <records>     : number of records");
-	PrintAndLog("      <sfi>         : number of SFI records");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("      hf emv readrecord 1 1");	
+	PrintAndLogEx(NORMAL, "Read a EMV record ");
+	PrintAndLogEx(NORMAL, "Usage:  hf emv readrecord [h] <records> <sfi>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "      h             : this help");
+	PrintAndLogEx(NORMAL, "      <records>     : number of records");
+	PrintAndLogEx(NORMAL, "      <sfi>         : number of SFI records");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "      hf emv readrecord 1 1");	
 	return 0;
 }
 int usage_hf_emv_clone(void){
-	PrintAndLog("Usage:  hf emv clone [h] <records> <SFI> ");
-	PrintAndLog("Options:");
-	PrintAndLog("      h             : this help");
-	PrintAndLog("      <records>     : number of records");
-	PrintAndLog("      <sfi>         : number of SFI records");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("      hf emv clone 10 10");	
+	PrintAndLogEx(NORMAL, "Usage:  hf emv clone [h] <records> <SFI> ");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "      h             : this help");
+	PrintAndLogEx(NORMAL, "      <records>     : number of records");
+	PrintAndLogEx(NORMAL, "      <sfi>         : number of SFI records");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "      hf emv clone 10 10");	
 	return 0;
 }
 int usage_hf_emv_transaction(void){
-	PrintAndLog("Performs EMV reader transaction");
-	PrintAndLog("Usage:  hf emv trans [h]");
-	PrintAndLog("Options:");
-	PrintAndLog("      h             : this help");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("      hf emv trans");
+	PrintAndLogEx(NORMAL, "Performs EMV reader transaction");
+	PrintAndLogEx(NORMAL, "Usage:  hf emv trans [h]");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "      h             : this help");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "      hf emv trans");
 	return 0;
 }
 int usage_hf_emv_getrnd(void){
-	PrintAndLog("retrieve the UN number from a terminal");
-	PrintAndLog("Usage:  hf emv getrnd [h]");
-	PrintAndLog("Options:");
-	PrintAndLog("      h             : this help");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("      hf emv getrnd");
+	PrintAndLogEx(NORMAL, "retrieve the UN number from a terminal");
+	PrintAndLogEx(NORMAL, "Usage:  hf emv getrnd [h]");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "      h             : this help");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "      hf emv getrnd");
 	return 0;
 }
 int usage_hf_emv_eload(void){
-	PrintAndLog("set EMV tags in the device to use in a transaction");
-	PrintAndLog("Usage:  hf emv eload [h] o <filename w/o .bin>");
-	PrintAndLog("Options:");
-	PrintAndLog("      h             : this help");
-	PrintAndLog("      o <filename>  : filename w/o '.bin'");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("      hf emv eload o myfile");
+	PrintAndLogEx(NORMAL, "set EMV tags in the device to use in a transaction");
+	PrintAndLogEx(NORMAL, "Usage:  hf emv eload [h] o <filename w/o .bin>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "      h             : this help");
+	PrintAndLogEx(NORMAL, "      o <filename>  : filename w/o '.bin'");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "      hf emv eload o myfile");
 	return 0;
 }
 int usage_hf_emv_dump(void){
-	PrintAndLog("Gets EMV contactless tag values.");
-	PrintAndLog("and saves binary dump into the file `filename.bin` or `cardUID.bin`");
-	PrintAndLog("Usage:  hf emv dump [h] o <filename w/o .bin>");
-	PrintAndLog("Options:");
-	PrintAndLog("      h             : this help");
-	PrintAndLog("      o <filename>  : filename w/o '.bin' to dump bytes");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("      hf emv dump");
-	PrintAndLog("      hf emv dump o myfile");
+	PrintAndLogEx(NORMAL, "Gets EMV contactless tag values.");
+	PrintAndLogEx(NORMAL, "and saves binary dump into the file `filename.bin` or `cardUID.bin`");
+	PrintAndLogEx(NORMAL, "Usage:  hf emv dump [h] o <filename w/o .bin>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "      h             : this help");
+	PrintAndLogEx(NORMAL, "      o <filename>  : filename w/o '.bin' to dump bytes");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "      hf emv dump");
+	PrintAndLogEx(NORMAL, "      hf emv dump o myfile");
 	return 0;
 }
 int usage_hf_emv_sim(void){
-	PrintAndLog("Simulates a EMV contactless card");
-	PrintAndLog("Usage:  hf emv sim [h]");
-	PrintAndLog("Options:");
-	PrintAndLog("      h             : this help");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("      hf emv sim");
+	PrintAndLogEx(NORMAL, "Simulates a EMV contactless card");
+	PrintAndLogEx(NORMAL, "Usage:  hf emv sim [h]");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "      h             : this help");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "      hf emv sim");
 	return 0;
 }
 
@@ -109,11 +109,11 @@ int CmdHfEmvTest(const char *Cmd) {
 	SendCommand(&c);
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-		PrintAndLog("Command execute time-out");
+		PrintAndLogEx(WARNING, "Command execute time-out");
 		return 1;
 	}
 	uint8_t isOK  = resp.arg[0] & 0xff;
-	PrintAndLog("isOk: %02x", isOK);	
+	PrintAndLogEx(NORMAL, "isOk: %02x", isOK);	
 	return 0;
 }
 											 
@@ -124,21 +124,21 @@ int CmdHfEmvReadRecord(const char *Cmd) {
 	uint8_t record = param_get8(Cmd, 0);
 	uint8_t sfi = param_getchar(Cmd, 1);
     if(record > 32){
-        PrintAndLog("Record must be less than 32"); 
+        PrintAndLogEx(WARNING, "Record must be less than 32"); 
 		return 1;
     }
-	PrintAndLog("--record no:%02x SFI:%02x ", record, sfi);
+	PrintAndLogEx(NORMAL, "--record no:%02x SFI:%02x ", record, sfi);
 
 	UsbCommand c = {CMD_EMV_READ_RECORD, {record, sfi, 0}};
 	clearCommandBuffer();  
 	SendCommand(&c);
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-		PrintAndLog("Command execute timeout");
+		PrintAndLogEx(WARNING, "Command execute timeout");
 		return 1;
 	}
 	uint8_t isOK  = resp.arg[0] & 0xff;
-	PrintAndLog("isOk:%02x", isOK);	
+	PrintAndLogEx(NORMAL, "isOk:%02x", isOK);	
 	return 0;
 }												   
 
@@ -149,7 +149,7 @@ int CmdHfEmvClone(const char *Cmd) {
 	uint8_t record = param_get8(Cmd, 0);
 	uint8_t sfi = param_get8(Cmd, 1);
     if(record > 32){
-        PrintAndLog("Record must be less than 32"); 
+        PrintAndLogEx(WARNING, "Record must be less than 32"); 
 		return 1;
     }	
 	UsbCommand c = {CMD_EMV_CLONE, {sfi, record, 0}};
@@ -157,11 +157,11 @@ int CmdHfEmvClone(const char *Cmd) {
 	SendCommand(&c);
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-		PrintAndLog("Command execute timeout");
+		PrintAndLogEx(WARNING, "Command execute timeout");
 		return 1;
 	}
 	uint8_t isOK  = resp.arg[0] & 0xff;
-	PrintAndLog("isOk:%02x", isOK);
+	PrintAndLogEx(NORMAL, "isOk:%02x", isOK);
 	return 0;
 }
 
@@ -174,11 +174,11 @@ int CmdHfEmvTrans(const char *Cmd) {
 	SendCommand(&c);
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 5000)) {
-		PrintAndLog("Command execute time-out");
+		PrintAndLogEx(WARNING, "Command execute time-out");
 		return 1;
 	}
 	uint8_t isOK  = resp.arg[0] & 0xff;
-	PrintAndLog("isOk: %02x", isOK);
+	PrintAndLogEx(NORMAL, "isOk: %02x", isOK);
 	print_hex_break(resp.d.asBytes, 512, 32);
 	return 0;
 }
@@ -216,7 +216,7 @@ int CmdHfEmvELoad(const char *Cmd) {
 				cmdp += 2;
 				break;				
 			default:
-				PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+				PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
 				errors = true;
 				break;
 		}
@@ -227,7 +227,7 @@ int CmdHfEmvELoad(const char *Cmd) {
 	// open file
 	f = fopen(filename,"r");
 	if (!f) { 
-		PrintAndLog("File %s not found or locked", filename);
+		PrintAndLogEx(WARNING, "File %s not found or locked", filename);
 		return 1;
 	}
 	
@@ -239,7 +239,7 @@ int CmdHfEmvELoad(const char *Cmd) {
 	
 	// transfer to device
     while (fgets(line, sizeof (line), f)) {
-        printf("LINE = %s\n", line);
+        PrintAndLogEx(NORMAL, "LINE = %s\n", line);
 		
         token = strtok(line, ":"); 
         tag = (uint16_t)strtol(token, NULL, 0);  
@@ -251,13 +251,13 @@ int CmdHfEmvELoad(const char *Cmd) {
 		clearCommandBuffer();
         SendCommand(&c);
 
-        printf("Loaded TAG   = %04x\n", tag);
-        printf("Loaded VALUE = %s\n", token); 
+        PrintAndLogEx(NORMAL, "Loaded TAG   = %04x\n", tag);
+        PrintAndLogEx(NORMAL, "Loaded VALUE = %s\n", token); 
     }
 	
 	fclose(f);
-	PrintAndLog("loaded %s", filename);
-	//PrintAndLog("\nLoaded %d bytes from file: %s  to emulator memory", numofbytes, filename);
+	PrintAndLogEx(NORMAL, "loaded %s", filename);
+	//PrintAndLogEx(NORMAL, "\nLoaded %d bytes from file: %s  to emulator memory", numofbytes, filename);
 	return 0;
 }
 
@@ -271,7 +271,7 @@ int CmdHfEmvDump(const char *Cmd){
 			case 'H':
 				return usage_hf_emv_dump();
 			default:
-				PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+				PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
 				errors = true;
 				break;
 		}
@@ -284,7 +284,7 @@ int CmdHfEmvDump(const char *Cmd){
     SendCommand(&c);
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
-		PrintAndLog("Command execute time-out");
+		PrintAndLogEx(WARNING, "Command execute time-out");
 		return 1;
 	}
 	return 0;
@@ -300,7 +300,7 @@ int CmdHfEmvSim(const char *Cmd) {
 			case 'H':
 				return usage_hf_emv_sim();
 			default:
-				PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+				PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
 				errors = true;
 				break;
 		}
@@ -313,11 +313,11 @@ int CmdHfEmvSim(const char *Cmd) {
 	SendCommand(&c);	
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-		PrintAndLog("Command execute time-out");
+		PrintAndLogEx(WARNING, "Command execute time-out");
 		return 1;
 	}	
 	uint8_t isOK  = resp.arg[0] & 0xff;
-	PrintAndLog("isOk:%02x", isOK);
+	PrintAndLogEx(NORMAL, "isOk:%02x", isOK);
 	return 0;
 }
 
