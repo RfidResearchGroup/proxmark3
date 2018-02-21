@@ -12,36 +12,36 @@
 static int CmdHelp(const char *Cmd);
 
 int usage_lf_pyramid_clone(void){
-	PrintAndLog("clone a Farpointe/Pyramid tag to a T55x7 tag.");
-	PrintAndLog("The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated. ");
-	PrintAndLog("Currently only works on 26bit");
-	PrintAndLog("");
-	PrintAndLog("Usage: lf pyramid clone [h] <Facility-Code> <Card-Number> [Q5]");
-	PrintAndLog("Options:");
-	PrintAndLog("  h               : this help");
-	PrintAndLog("  <Facility-Code> :  8-bit value facility code");
-	PrintAndLog("  <Card Number>   : 16-bit value card number");
-	PrintAndLog("  Q5              : optional - clone to Q5 (T5555) instead of T55x7 chip");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("       lf pyramid clone 123 11223");
+	PrintAndLogEx(NORMAL, "clone a Farpointe/Pyramid tag to a T55x7 tag.");
+	PrintAndLogEx(NORMAL, "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated. ");
+	PrintAndLogEx(NORMAL, "Currently only works on 26bit");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Usage: lf pyramid clone [h] <Facility-Code> <Card-Number> [Q5]");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "  h               : this help");
+	PrintAndLogEx(NORMAL, "  <Facility-Code> :  8-bit value facility code");
+	PrintAndLogEx(NORMAL, "  <Card Number>   : 16-bit value card number");
+	PrintAndLogEx(NORMAL, "  Q5              : optional - clone to Q5 (T5555) instead of T55x7 chip");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "       lf pyramid clone 123 11223");
 	return 0;
 }
 
 int usage_lf_pyramid_sim(void) {
-	PrintAndLog("Enables simulation of Farpointe/Pyramid card with specified card number.");
-	PrintAndLog("Simulation runs until the button is pressed or another USB command is issued.");
-	PrintAndLog("The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.");
-	PrintAndLog("Currently work only on 26bit");
-	PrintAndLog("");
-	PrintAndLog("Usage:  lf pyramid sim [h] <Facility-Code> <Card-Number>");
-	PrintAndLog("Options:");
-	PrintAndLog("  h               : this help");
-	PrintAndLog("  <Facility-Code> :  8-bit value facility code");
-	PrintAndLog("  <Card Number>   : 16-bit value card number");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("       lf pyramid sim 123 11223");
+	PrintAndLogEx(NORMAL, "Enables simulation of Farpointe/Pyramid card with specified card number.");
+	PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
+	PrintAndLogEx(NORMAL, "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.");
+	PrintAndLogEx(NORMAL, "Currently work only on 26bit");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Usage:  lf pyramid sim [h] <Facility-Code> <Card-Number>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "  h               : this help");
+	PrintAndLogEx(NORMAL, "  <Facility-Code> :  8-bit value facility code");
+	PrintAndLogEx(NORMAL, "  <Card Number>   : 16-bit value card number");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "       lf pyramid sim 123 11223");
 	return 0;
 }
 
@@ -111,7 +111,7 @@ int CmdPyramidDemod(const char *Cmd) {
 	uint8_t bits[MAX_GRAPH_TRACE_LEN]={0};
 	size_t size = getFromGraphBuf(bits);
 	if (size==0) {
-		PrintAndLog("DEBUG: Error - Pyramid not enough samples");
+		PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid not enough samples");
 		return 0;
 	}
 	//get binary from fsk wave
@@ -120,17 +120,17 @@ int CmdPyramidDemod(const char *Cmd) {
 	if (idx < 0){
 		if (g_debugMode){
 			if (idx == -1)
-				PrintAndLog("DEBUG: Error - Pyramid: not enough samples");
+				PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: not enough samples");
 			else if (idx == -2)
-				PrintAndLog("DEBUG: Error - Pyramid: only noise found");
+				PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: only noise found");
 			else if (idx == -3)
-				PrintAndLog("DEBUG: Error - Pyramid: problem during FSK demod");
+				PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: problem during FSK demod");
 			else if (idx == -4)
-				PrintAndLog("DEBUG: Error - Pyramid: preamble not found");				
+				PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: preamble not found");				
 			else if (idx == -5)
-				PrintAndLog("DEBUG: Error - Pyramid: size not correct: %d", size);
+				PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: size not correct: %d", size);
 			else
-				PrintAndLog("DEBUG: Error - Pyramid: error demoding fsk idx: %d",idx);
+				PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: error demoding fsk idx: %d",idx);
 		}
 		return 0;
 	}
@@ -178,9 +178,9 @@ int CmdPyramidDemod(const char *Cmd) {
 	if (size != 105){
 		if (g_debugMode) {
 			if ( size == 0)
-				PrintAndLog("DEBUG: Error - Pyramid: parity check failed - IDX: %d, hi3: %08X", idx, rawHi3);
+				PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: parity check failed - IDX: %d, hi3: %08X", idx, rawHi3);
 			else
-				PrintAndLog("DEBUG: Error - Pyramid: at parity check - tag size does not match Pyramid format, SIZE: %d, IDX: %d, hi3: %08X", size, idx, rawHi3);
+				PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: at parity check - tag size does not match Pyramid format, SIZE: %d, IDX: %d, hi3: %08X", size, idx, rawHi3);
 		}
 		return 0;
 	}
@@ -223,30 +223,30 @@ int CmdPyramidDemod(const char *Cmd) {
 		fc = bytebits_to_byte(bits+73, 8);
 		cardnum = bytebits_to_byte(bits+81, 16);
 		code1 = bytebits_to_byte(bits+72,fmtLen);
-		PrintAndLog("Pyramid ID Found - BitLength: %d, FC: %d, Card: %d - Wiegand: %x, Raw: %08x%08x%08x%08x", fmtLen, fc, cardnum, code1, rawHi3, rawHi2, rawHi, rawLo);
+		PrintAndLogEx(SUCCESS, "Pyramid ID Found - BitLength: %d, FC: %d, Card: %d - Wiegand: %x, Raw: %08x%08x%08x%08x", fmtLen, fc, cardnum, code1, rawHi3, rawHi2, rawHi, rawLo);
 	} else if (fmtLen == 45) {
 		fmtLen = 42; //end = 10 bits not 7 like 26 bit fmt
 		fc = bytebits_to_byte(bits+53, 10);
 		cardnum = bytebits_to_byte(bits+63, 32);
-		PrintAndLog("Pyramid ID Found - BitLength: %d, FC: %d, Card: %d - Raw: %08x%08x%08x%08x", fmtLen, fc, cardnum, rawHi3, rawHi2, rawHi, rawLo);
+		PrintAndLogEx(SUCCESS, "Pyramid ID Found - BitLength: %d, FC: %d, Card: %d - Raw: %08x%08x%08x%08x", fmtLen, fc, cardnum, rawHi3, rawHi2, rawHi, rawLo);
 	} else {
 		cardnum = bytebits_to_byte(bits+81, 16);
 		if (fmtLen>32){
 			//code1 = bytebits_to_byte(bits+(size-fmtLen),fmtLen-32);
 			//code2 = bytebits_to_byte(bits+(size-32),32);
-		PrintAndLog("Pyramid ID Found - BitLength: %d -unknown BitLength- (%d), Raw: %08x%08x%08x%08x", fmtLen, cardnum, rawHi3, rawHi2, rawHi, rawLo);
+		PrintAndLogEx(SUCCESS, "Pyramid ID Found - BitLength: %d -unknown BitLength- (%d), Raw: %08x%08x%08x%08x", fmtLen, cardnum, rawHi3, rawHi2, rawHi, rawLo);
 		} else{
 			//code1 = bytebits_to_byte(bits+(size-fmtLen),fmtLen);
-			PrintAndLog("Pyramid ID Found - BitLength: %d -unknown BitLength- (%d), Raw: %08x%08x%08x%08x", fmtLen, cardnum, rawHi3, rawHi2, rawHi, rawLo);
+			PrintAndLogEx(SUCCESS, "Pyramid ID Found - BitLength: %d -unknown BitLength- (%d), Raw: %08x%08x%08x%08x", fmtLen, cardnum, rawHi3, rawHi2, rawHi, rawLo);
 		}
 	}
 	if (checksum == checkCS)
-		PrintAndLog("Checksum %02x passed", checksum);
+		PrintAndLogEx(SUCCESS, "Checksum %02x passed", checksum);
 	else
-		PrintAndLog("Checksum %02x failed - should have been %02x", checksum, checkCS);
+		PrintAndLogEx(FAILED, "Checksum %02x failed - should have been %02x", checksum, checkCS);
 
 	if (g_debugMode){
-		PrintAndLog("DEBUG: Pyramid: idx: %d, Len: %d, Printing Demod Buffer:", idx, 128);
+		PrintAndLogEx(DEBUG, "DEBUG: Pyramid: idx: %d, Len: %d, Printing Demod Buffer:", idx, 128);
 		printDemodBuff();
 	}
 	return 1;
@@ -273,7 +273,7 @@ int CmdPyramidClone(const char *Cmd) {
 	cardnumber = (cn & 0x0000FFFF);
 	
 	if ( !GetPyramidBits(facilitycode, cardnumber, bs)) {
-		PrintAndLog("Error with tag bitstream generation.");
+		PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
 		return 1;
 	}	
 
@@ -289,7 +289,7 @@ int CmdPyramidClone(const char *Cmd) {
 	blocks[3] = bytebits_to_byte(bs + 64, 32);
 	blocks[4] = bytebits_to_byte(bs + 96, 32);
 
-	PrintAndLog("Preparing to clone Farpointe/Pyramid to T55x7 with Facility Code: %u, Card Number: %u", facilitycode, cardnumber);
+	PrintAndLogEx(NORMAL, "Preparing to clone Farpointe/Pyramid to T55x7 with Facility Code: %u, Card Number: %u", facilitycode, cardnumber);
 	print_blocks(blocks, 5);
 
 	UsbCommand resp;
@@ -301,7 +301,7 @@ int CmdPyramidClone(const char *Cmd) {
 		clearCommandBuffer();
 		SendCommand(&c);
 		if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)){
-			PrintAndLog("Error occurred, device did not respond during write operation.");
+			PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
 			return -1;
 		}
 	}
@@ -331,11 +331,11 @@ int CmdPyramidSim(const char *Cmd) {
 	cardnumber = (cn & 0x0000FFFF);
 	
 	if ( !GetPyramidBits(facilitycode, cardnumber, bs)) {
-		PrintAndLog("Error with tag bitstream generation.");
+		PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
 		return 1;
 	}	
 
-	PrintAndLog("Simulating Farpointe/Pyramid - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber );
+	PrintAndLogEx(NORMAL, "Simulating Farpointe/Pyramid - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber );
 	
 	UsbCommand c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}};
 	memcpy(c.d.asBytes, bs, size);
