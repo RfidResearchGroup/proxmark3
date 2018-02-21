@@ -12,60 +12,60 @@
 static int CmdHelp(const char *Cmd);
 
 int usage_hf_felica_sim(void) {
-	PrintAndLog("\n Emulating ISO/18092 FeliCa tag \n");
-	PrintAndLog("Usage: hf felica sim [h] t <type> [v]");
-	PrintAndLog("Options:");
-	PrintAndLog("    h     : This help");
-	PrintAndLog("    t     : 1 = FeliCa");
-	PrintAndLog("          : 2 = FeliCaLiteS");
-	PrintAndLog("    v     : (Optional) Verbose");
-	PrintAndLog("Examples:");
-	PrintAndLog("          hf felica sim t 1 ");
+	PrintAndLogEx(NORMAL, "\n Emulating ISO/18092 FeliCa tag \n");
+	PrintAndLogEx(NORMAL, "Usage: hf felica sim [h] t <type> [v]");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "    h     : This help");
+	PrintAndLogEx(NORMAL, "    t     : 1 = FeliCa");
+	PrintAndLogEx(NORMAL, "          : 2 = FeliCaLiteS");
+	PrintAndLogEx(NORMAL, "    v     : (Optional) Verbose");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "          hf felica sim t 1 ");
 	return 0;
 }
 int usage_hf_felica_sniff(void){
-	PrintAndLog("It get data from the field and saves it into command buffer.");
-	PrintAndLog("Buffer accessible from command 'hf list felica'");
-	PrintAndLog("Usage:  hf felica sniff <s > <t>");
-	PrintAndLog("      s       samples to skip (decimal)");
-	PrintAndLog("      t       triggers to skip (decimal)");
- 	PrintAndLog("Examples:");
-	PrintAndLog("          hf felica sniff s 1000");
+	PrintAndLogEx(NORMAL, "It get data from the field and saves it into command buffer.");
+	PrintAndLogEx(NORMAL, "Buffer accessible from command 'hf list felica'");
+	PrintAndLogEx(NORMAL, "Usage:  hf felica sniff <s > <t>");
+	PrintAndLogEx(NORMAL, "      s       samples to skip (decimal)");
+	PrintAndLogEx(NORMAL, "      t       triggers to skip (decimal)");
+ 	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "          hf felica sniff s 1000");
 	return 0;
 }
 int usage_hf_felica_simlite(void) {
-	PrintAndLog("\n Emulating ISO/18092 FeliCa Lite tag \n");
-	PrintAndLog("Usage: hf felica litesim [h] u <uid>");
-	PrintAndLog("Options:");
-	PrintAndLog("    h     : This help");
-	PrintAndLog("    uid   : UID in hexsymbol");
-	PrintAndLog("Examples:");
-	PrintAndLog("          hf felica litesim 11223344556677");
+	PrintAndLogEx(NORMAL, "\n Emulating ISO/18092 FeliCa Lite tag \n");
+	PrintAndLogEx(NORMAL, "Usage: hf felica litesim [h] u <uid>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "    h     : This help");
+	PrintAndLogEx(NORMAL, "    uid   : UID in hexsymbol");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "          hf felica litesim 11223344556677");
 	return 0;
 }
 int usage_hf_felica_dumplite(void) {
-	PrintAndLog("\n Dump ISO/18092 FeliCa Lite tag \n");
-	PrintAndLog("press button to abort run, otherwise it will loop for 200sec.");
-	PrintAndLog("Usage: hf felica litedump [h]");
-	PrintAndLog("Options:");
-	PrintAndLog("    h     : This help");
-	PrintAndLog("Examples:");
-	PrintAndLog("          hf felica litedump");
+	PrintAndLogEx(NORMAL, "\n Dump ISO/18092 FeliCa Lite tag \n");
+	PrintAndLogEx(NORMAL, "press button to abort run, otherwise it will loop for 200sec.");
+	PrintAndLogEx(NORMAL, "Usage: hf felica litedump [h]");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "    h     : This help");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "          hf felica litedump");
 	return 0;
 }
 int usage_hf_felica_raw(void){
-	PrintAndLog("Usage: hf felica raw [-h] [-r] [-c] [-p] [-a] <0A 0B 0C ... hex>");
-	PrintAndLog("       -h    this help");
-	PrintAndLog("       -r    do not read response");
-	PrintAndLog("       -c    calculate and append CRC");
-	PrintAndLog("       -p    leave the signal field ON after receive");
-	PrintAndLog("       -a    active signal field ON without select");
-	PrintAndLog("       -s    active signal field ON with select");
+	PrintAndLogEx(NORMAL, "Usage: hf felica raw [-h] [-r] [-c] [-p] [-a] <0A 0B 0C ... hex>");
+	PrintAndLogEx(NORMAL, "       -h    this help");
+	PrintAndLogEx(NORMAL, "       -r    do not read response");
+	PrintAndLogEx(NORMAL, "       -c    calculate and append CRC");
+	PrintAndLogEx(NORMAL, "       -p    leave the signal field ON after receive");
+	PrintAndLogEx(NORMAL, "       -a    active signal field ON without select");
+	PrintAndLogEx(NORMAL, "       -s    active signal field ON with select");
 	return 0;
 }
 
 int CmdHFFelicaList(const char *Cmd) {
-	//PrintAndLog("Deprecated command, use 'hf list felica' instead");
+	//PrintAndLogEx(NORMAL, "Deprecated command, use 'hf list felica' instead");
 	CmdHFList("raw");
 	return 0;
 }
@@ -78,7 +78,7 @@ int CmdHFFelicaReader(const char *Cmd) {
 	SendCommand(&c);
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
-		if (!silent) PrintAndLog("[!] FeliCa card select failed");
+		if (!silent) PrintAndLogEx(WARNING, "FeliCa card select failed");
 		//SendCommand(&cDisconnect);
 		return 0;
 	}
@@ -90,31 +90,31 @@ int CmdHFFelicaReader(const char *Cmd) {
 	switch(status) {
 		case 1: {
 			if (!silent) 
-				PrintAndLog("[!] card timeout"); 
+				PrintAndLogEx(WARNING, "card timeout"); 
 			break;
 		}
 		case 2: {
 			if (!silent)
-				PrintAndLog("[!] card answered wrong"); 
+				PrintAndLogEx(WARNING, "card answered wrong"); 
 			break;
 		}
 		case 3: {
 			if (!silent)
-				PrintAndLog("[!] CRC check failed");
+				PrintAndLogEx(WARNING, "CRC check failed");
 			break;
 		}
 		case 0: {
-			PrintAndLog("[+] FeliCa tag info");
+			PrintAndLogEx(SUCCESS, "FeliCa tag info");
 			
-			PrintAndLog("IDm  %s", sprint_hex(card.IDm, sizeof(card.IDm)));
-			PrintAndLog("  - CODE    %s", sprint_hex(card.code, sizeof(card.code)));
-			PrintAndLog("  - NFCID2  %s", sprint_hex(card.uid, sizeof(card.uid)));
+			PrintAndLogEx(NORMAL, "IDm  %s", sprint_hex(card.IDm, sizeof(card.IDm)));
+			PrintAndLogEx(NORMAL, "  - CODE    %s", sprint_hex(card.code, sizeof(card.code)));
+			PrintAndLogEx(NORMAL, "  - NFCID2  %s", sprint_hex(card.uid, sizeof(card.uid)));
 			
-			PrintAndLog("Parameter (PAD) | %s", sprint_hex(card.PMm, sizeof(card.PMm)));
-			PrintAndLog("  - IC CODE %s", sprint_hex(card.iccode, sizeof(card.iccode)));
-			PrintAndLog("  - MRT     %s", sprint_hex(card.mrt, sizeof(card.mrt)));
+			PrintAndLogEx(NORMAL, "Parameter (PAD) | %s", sprint_hex(card.PMm, sizeof(card.PMm)));
+			PrintAndLogEx(NORMAL, "  - IC CODE %s", sprint_hex(card.iccode, sizeof(card.iccode)));
+			PrintAndLogEx(NORMAL, "  - MRT     %s", sprint_hex(card.mrt, sizeof(card.mrt)));
 			
-			PrintAndLog("SERVICE CODE %s", sprint_hex(card.servicecode, sizeof(card.servicecode)));
+			PrintAndLogEx(NORMAL, "SERVICE CODE %s", sprint_hex(card.servicecode, sizeof(card.servicecode)));
 			break;
 		}
 	}
@@ -149,7 +149,7 @@ int CmdHFFelicaSim(const char *Cmd) {
 				// Retrieve the full 4,7,10 byte long uid 
 				param_gethex_ex(Cmd, cmdp+1, uid, &uidlen);
 				if (!errors) {
-					PrintAndLog("Emulating ISO18092/FeliCa tag with %d byte UID (%s)", uidlen>>1, sprint_hex(uid, uidlen>>1));
+					PrintAndLogEx(NORMAL, "Emulating ISO18092/FeliCa tag with %d byte UID (%s)", uidlen>>1, sprint_hex(uid, uidlen>>1));
 				}
 				cmdp += 2;
 				break;
@@ -163,7 +163,7 @@ int CmdHFFelicaSim(const char *Cmd) {
 				cmdp++;
 				break;				
 			default:
-				PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+				PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
 				errors = true;
 				break;
 			}
@@ -179,7 +179,7 @@ int CmdHFFelicaSim(const char *Cmd) {
 	UsbCommand resp;
 	
 	if ( verbose )
-		PrintAndLog("Press pm3-button to abort simulation");
+		PrintAndLogEx(NORMAL, "Press pm3-button to abort simulation");
 	
 	while( !ukbhit() ){
 		if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500) ) continue;		
@@ -210,7 +210,7 @@ int CmdHFFelicaSniff(const char *Cmd) {
 			cmdp += 2;
 			break;
 		default:
-			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+			PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
 			errors = true;
 			break;
 		}
@@ -239,7 +239,7 @@ int CmdHFFelicaSimLite(const char *Cmd) {
 }
  
 static void printSep() {
-	PrintAndLog("------------------------------------------------------------------------------------");
+	PrintAndLogEx(NORMAL, "------------------------------------------------------------------------------------");
 }
 
 uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace,uint16_t tracelen) {
@@ -256,33 +256,33 @@ uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace,uint16_t tracelen) {
 		snprintf(line+( j  * 4),110, "%02x  ", trace[j+3]);
 	}
 
-	PrintAndLog("block number %02x, status: %02x %02x",blocknum,status1, status2);
+	PrintAndLogEx(NORMAL, "block number %02x, status: %02x %02x",blocknum,status1, status2);
 	switch (blocknum) {
-		case 0x00: PrintAndLog( "S_PAD0: %s",line);break;
-		case 0x01: PrintAndLog( "S_PAD1: %s",line);break;
-		case 0x02: PrintAndLog( "S_PAD2: %s",line);break;
-		case 0x03: PrintAndLog( "S_PAD3: %s",line);break;
-		case 0x04: PrintAndLog( "S_PAD4: %s",line);break;
-		case 0x05: PrintAndLog( "S_PAD5: %s",line);break;
-		case 0x06: PrintAndLog( "S_PAD6: %s",line);break;
-		case 0x07: PrintAndLog( "S_PAD7: %s",line);break;
-		case 0x08: PrintAndLog( "S_PAD8: %s",line);break;
-		case 0x09: PrintAndLog( "S_PAD9: %s",line);break;
-		case 0x0a: PrintAndLog( "S_PAD10: %s",line);break;
-		case 0x0b: PrintAndLog( "S_PAD11: %s",line);break;
-		case 0x0c: PrintAndLog( "S_PAD12: %s",line);break;
-		case 0x0d: PrintAndLog( "S_PAD13: %s",line);break;
+		case 0x00: PrintAndLogEx(NORMAL,  "S_PAD0: %s",line);break;
+		case 0x01: PrintAndLogEx(NORMAL,  "S_PAD1: %s",line);break;
+		case 0x02: PrintAndLogEx(NORMAL,  "S_PAD2: %s",line);break;
+		case 0x03: PrintAndLogEx(NORMAL,  "S_PAD3: %s",line);break;
+		case 0x04: PrintAndLogEx(NORMAL,  "S_PAD4: %s",line);break;
+		case 0x05: PrintAndLogEx(NORMAL,  "S_PAD5: %s",line);break;
+		case 0x06: PrintAndLogEx(NORMAL,  "S_PAD6: %s",line);break;
+		case 0x07: PrintAndLogEx(NORMAL,  "S_PAD7: %s",line);break;
+		case 0x08: PrintAndLogEx(NORMAL,  "S_PAD8: %s",line);break;
+		case 0x09: PrintAndLogEx(NORMAL,  "S_PAD9: %s",line);break;
+		case 0x0a: PrintAndLogEx(NORMAL,  "S_PAD10: %s",line);break;
+		case 0x0b: PrintAndLogEx(NORMAL,  "S_PAD11: %s",line);break;
+		case 0x0c: PrintAndLogEx(NORMAL,  "S_PAD12: %s",line);break;
+		case 0x0d: PrintAndLogEx(NORMAL,  "S_PAD13: %s",line);break;
 		case 0x0E: {
 			uint32_t regA = trace[3] + (trace[4]>>8) + (trace[5]>>16) + (trace[6]>>24);
 			uint32_t regB = trace[7] + (trace[8]>>8) + (trace[9]>>16) + (trace[10]>>24);
 			line[0] = 0;
 			for (int j = 0; j < 8; j++) 
 				snprintf(line+( j  * 2),110, "%02x", trace[j+11]);
-			PrintAndLog( "REG: regA: %d regB: %d regC: %s ", regA, regB, line);
+			PrintAndLogEx(NORMAL,  "REG: regA: %d regB: %d regC: %s ", regA, regB, line);
 			}
 		break;
-		case 0x80: PrintAndLog( "Random Challenge, WO:  %s ", line); break;  
-		case 0x81: PrintAndLog( "MAC, only set on dual read:  %s ", line); break;            
+		case 0x80: PrintAndLogEx(NORMAL,  "Random Challenge, WO:  %s ", line); break;  
+		case 0x81: PrintAndLogEx(NORMAL,  "MAC, only set on dual read:  %s ", line); break;            
 		case 0x82: {
 			char idd[20];
 			char idm[20];
@@ -292,7 +292,7 @@ uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace,uint16_t tracelen) {
 			for (int j = 0; j < 6; j++) 
 				snprintf(idm+( j  * 2),20, "%02x", trace[j+13]);
 				
-			PrintAndLog( "ID Block, IDd: 0x%s DFC: 0x%02x%02x Arb: %s ", idd, trace[11], trace [12], idm);
+			PrintAndLogEx(NORMAL,  "ID Block, IDd: 0x%s DFC: 0x%02x%02x Arb: %s ", idd, trace[11], trace [12], idm);
 			}
 		break;
 		case 0x83: {
@@ -304,45 +304,45 @@ uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace,uint16_t tracelen) {
 			for (int j = 0; j < 8; j++)
 				snprintf(pmm+( j  * 2),20, "%02x", trace[j+11]);
 			
-			PrintAndLog( "DeviceId:  IDm: 0x%s PMm: 0x%s ", idm, pmm);
+			PrintAndLogEx(NORMAL,  "DeviceId:  IDm: 0x%s PMm: 0x%s ", idm, pmm);
 			}
 		break;    
-		case 0x84: PrintAndLog( "SER_C: 0x%02x%02x ", trace[3], trace[4]); break;
-		case 0x85: PrintAndLog( "SYS_Cl 0x%02x%02x ", trace[3], trace[4]); break;   
-		case 0x86: PrintAndLog( "CKV (key version): 0x%02x%02x ", trace[3], trace[4]); break;  
-		case 0x87: PrintAndLog( "CK (card key), WO:   %s ", line); break;
+		case 0x84: PrintAndLogEx(NORMAL,  "SER_C: 0x%02x%02x ", trace[3], trace[4]); break;
+		case 0x85: PrintAndLogEx(NORMAL,  "SYS_Cl 0x%02x%02x ", trace[3], trace[4]); break;   
+		case 0x86: PrintAndLogEx(NORMAL,  "CKV (key version): 0x%02x%02x ", trace[3], trace[4]); break;  
+		case 0x87: PrintAndLogEx(NORMAL,  "CK (card key), WO:   %s ", line); break;
 		case 0x88: {
-			PrintAndLog( "Memory Configuration (MC):");
-			PrintAndLog( "MAC needed to write state: %s", trace[3+12]? "on" : "off");
+			PrintAndLogEx(NORMAL,  "Memory Configuration (MC):");
+			PrintAndLogEx(NORMAL,  "MAC needed to write state: %s", trace[3+12]? "on" : "off");
 			//order might be off here...
-			PrintAndLog( "Write with MAC for S_PAD  : %s ", sprint_bin(trace+3+10, 2) );
-			PrintAndLog( "Write with AUTH for S_PAD : %s ", sprint_bin(trace+3+8, 2) );
-			PrintAndLog( "Read after AUTH for S_PAD : %s ", sprint_bin(trace+3+6, 2) );
-			PrintAndLog( "MAC needed to write CK and CKV: %s", trace[3+5] ? "on" : "off");
-			PrintAndLog( "RF parameter: %02x", (trace[3+4] & 0x7) );
-			PrintAndLog( "Compatible with NDEF: %s", trace[3+3] ? "yes" : "no");
-			PrintAndLog( "Memory config writable : %s", (trace[3+2] == 0xff) ? "yes" : "no");
-			PrintAndLog( "RW access for S_PAD : %s ", sprint_bin(trace+3, 2) );
+			PrintAndLogEx(NORMAL,  "Write with MAC for S_PAD  : %s ", sprint_bin(trace+3+10, 2) );
+			PrintAndLogEx(NORMAL,  "Write with AUTH for S_PAD : %s ", sprint_bin(trace+3+8, 2) );
+			PrintAndLogEx(NORMAL,  "Read after AUTH for S_PAD : %s ", sprint_bin(trace+3+6, 2) );
+			PrintAndLogEx(NORMAL,  "MAC needed to write CK and CKV: %s", trace[3+5] ? "on" : "off");
+			PrintAndLogEx(NORMAL,  "RF parameter: %02x", (trace[3+4] & 0x7) );
+			PrintAndLogEx(NORMAL,  "Compatible with NDEF: %s", trace[3+3] ? "yes" : "no");
+			PrintAndLogEx(NORMAL,  "Memory config writable : %s", (trace[3+2] == 0xff) ? "yes" : "no");
+			PrintAndLogEx(NORMAL,  "RW access for S_PAD : %s ", sprint_bin(trace+3, 2) );
 			}
 		break;         
 		case 0x90: {
-            PrintAndLog( "Write count, RO:   %02x %02x %02x ", trace[3], trace[4], trace[5]);
+            PrintAndLogEx(NORMAL,  "Write count, RO:   %02x %02x %02x ", trace[3], trace[4], trace[5]);
 			}
 		break; 
 		case 0x91: {
-            PrintAndLog( "MAC_A, RW (auth):   %s ", line);
+            PrintAndLogEx(NORMAL,  "MAC_A, RW (auth):   %s ", line);
            }
 		break; 
 		case 0x92:
-            PrintAndLog( "State:");
-            PrintAndLog( "Polling disabled: %s", trace[3+8] ? "yes" : "no");
-            PrintAndLog( "Authenticated: %s", trace[3] ? "yes" : "no");
+            PrintAndLogEx(NORMAL,  "State:");
+            PrintAndLogEx(NORMAL,  "Polling disabled: %s", trace[3+8] ? "yes" : "no");
+            PrintAndLogEx(NORMAL,  "Authenticated: %s", trace[3] ? "yes" : "no");
 			break;
 		case 0xa0:
-            PrintAndLog( "CRC of all bloacks match : %s", (trace[3+2]==0xff) ? "no" : "yes");
+            PrintAndLogEx(NORMAL,  "CRC of all bloacks match : %s", (trace[3+2]==0xff) ? "no" : "yes");
 			break;
 		default: 
-			PrintAndLog( "INVALID %d: %s", blocknum, line);
+			PrintAndLogEx(WARNING,  "INVALID %d: %s", blocknum, line);
 		break;
 	}
 	return tracepos+19;
@@ -353,8 +353,8 @@ int CmdHFFelicaDumpLite(const char *Cmd) {
 	char ctmp = param_getchar(Cmd, 0);
 	if ( ctmp == 'h' || ctmp == 'H') return usage_hf_felica_dumplite();
 
-	PrintAndLog("[+] FeliCa lite - dump started");
-	PrintAndLog("[+] press pm3-button to cancel");
+	PrintAndLogEx(SUCCESS, "FeliCa lite - dump started");
+	PrintAndLogEx(SUCCESS, "press pm3-button to cancel");
 	UsbCommand c = {CMD_FELICA_LITE_DUMP, {0,0,0}};
 	clearCommandBuffer();
 	SendCommand(&c);
@@ -363,35 +363,35 @@ int CmdHFFelicaDumpLite(const char *Cmd) {
 	uint8_t timeout = 0;
 	while ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
 		timeout++;
-		printf("."); fflush(stdout);
+		PrintAndLogEx(NORMAL, "."); fflush(stdout);
 		if (ukbhit()) {
 			int gc = getchar(); (void)gc;
-			printf("\n[!] aborted via keyboard!\n");
+			PrintAndLogEx(NORMAL, "\n[!] aborted via keyboard!\n");
 			DropField();
 			return 1;
 		}
 		if (timeout > 100) {
-			PrintAndLog("[!] timeout while waiting for reply.");
+			PrintAndLogEx(WARNING, "timeout while waiting for reply.");
 			DropField();
 			return 1;
 		}
 	}
 	if (resp.arg[0] == 0) {
-		PrintAndLog("\n[!] Button pressed. Aborted.");
+		PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(WARNING, "Button pressed. Aborted.");
 		return 1;
 	}
 	
 	uint64_t tracelen = resp.arg[1];	
 	uint8_t *trace = malloc(tracelen);
 	if ( trace == NULL ) {
-		PrintAndLog("[!] Cannot allocate memory for trace");		
+		PrintAndLogEx(WARNING, "Cannot allocate memory for trace");		
 		return 1;
 	}
 
 	// only download data if there is any.
 	if ( tracelen > 0 ) {		
 		GetFromBigBuf(trace, tracelen, 0);
-		PrintAndLog("[+] Recorded Activity (trace len = %d bytes)", tracelen);
+		PrintAndLogEx(SUCCESS, "Recorded Activity (trace len = %d bytes)", tracelen);
 		
 		print_hex_break(trace, tracelen, 32);
 		
@@ -474,13 +474,13 @@ int CmdHFFelicaCmdRaw(const char *cmd) {
                 *buf=0;
 				if (++datalen >= sizeof(data)){
 					if (crc)
-						PrintAndLog("Buffer is full, we can't add CRC to your data");
+						PrintAndLogEx(NORMAL, "Buffer is full, we can't add CRC to your data");
 					break;
 				}
             }
             continue;
         }
-        PrintAndLog("Invalid char on input");
+        PrintAndLogEx(WARNING, "Invalid char on input");
         return 0;
     }
 
@@ -529,12 +529,12 @@ void waitCmdFelica(uint8_t iSelect) {
 
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {        
         len = iSelect ? (resp.arg[1] & 0xffff) : (resp.arg[0]  & 0xffff);
-        PrintAndLog("received %i octets", len);
+        PrintAndLogEx(NORMAL, "received %i octets", len);
         if(!len)
             return;
-		PrintAndLog("%s", sprint_hex(resp.d.asBytes, len) );
+		PrintAndLogEx(NORMAL, "%s", sprint_hex(resp.d.asBytes, len) );
     } else {
-        PrintAndLog("timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
     }
 }
 
