@@ -27,9 +27,14 @@ void PrintAndLogEx(logLevel_t level, char *fmt, ...) {
 	int size;
 	static char *prefix[7] = { "", "[+] ", "[=] ", "[-] ", "[!] ", "[!!] ", "[#] "};
 	
-	size=strlen(prefix[level]);
-	strncpy(buffer, prefix[level], sizeof buffer);
-
+	if (g_debugMode	== 0 && level == logLevel.DEBUG) {
+		// skip debug messages if client debugging is turned off i.e. 'DATA SETDEBUG 0' 
+	}
+	else {
+		size = strlen(prefix[level]);
+		strncpy(buffer, prefix[level], sizeof buffer);
+	}
+	
 	va_list args;
 	va_start(args,fmt);
 	vsnprintf(buffer + size, sizeof(buffer) - size, fmt, args);
