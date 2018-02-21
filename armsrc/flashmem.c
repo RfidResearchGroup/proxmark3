@@ -5,7 +5,7 @@
 /* here: use NCPS2 @ PA10: */
 #define NCPS_PDR_BIT     AT91C_PA10_NPCS2	// GPIO
 #define NCPS_ASR_BIT     0					// SPI peripheral A
-#define NPCS_BSR_BIT     AT91C_PA10_NPCS2	// SPI peripheral B
+#define NCPS_BSR_BIT     AT91C_PA10_NPCS2	// SPI peripheral B
 #define SPI_CSR_NUM      2          		// Chip Select register[] 0,1,2,3  (at91samv512 has 4)
 
 /* PCS_0 for NPCS0, PCS_1 for NPCS1 ... */
@@ -52,12 +52,12 @@ void FlashSetup(void) {
 	//AT91C_BASE_PIOA->PIO_PER = GPIO_NCS1 | GPIO_MOSI | GPIO_SPCK | GPIO_MISO;
 
 	// Disable PIO control of the following pins, hand over to SPI control
-	AT91C_BASE_PIOA->PIO_PDR =	GPIO_MISO | GPIO_MOSI | GPIO_SPCK;
+	AT91C_BASE_PIOA->PIO_PDR = GPIO_MISO | GPIO_MOSI | GPIO_SPCK | NCPS_PDR_BIT;
 		
 	// Peripheral A
-	AT91C_BASE_PIOA->PIO_ASR = GPIO_MISO | GPIO_MOSI | GPIO_SPCK;
+	AT91C_BASE_PIOA->PIO_ASR = GPIO_MISO | GPIO_MOSI | GPIO_SPCK | NCPS_ASR_BIT;
 	// Peripheral B
-	AT91C_BASE_PIOA->PIO_BSR = GPIO_MISO | GPIO_MOSI | GPIO_SPCK;
+	AT91C_BASE_PIOA->PIO_BSR = GPIO_MISO | GPIO_MOSI | GPIO_SPCK | NCPS_BSR_BIT ;
 
 	// set chip-select as output high (unselect card)
 	AT91C_BASE_PIOA->PIO_PER  = NCPS_PDR_BIT; // enable GPIO of CS-pin
@@ -110,7 +110,7 @@ void FlashSetup(void) {
 	AT91C_BASE_PIOA->PIO_PDR |= NCPS_PDR_BIT;
 	// set pin-functions in PIO Controller (function NCPS for CS-pin)
 	AT91C_BASE_PIOA->PIO_ASR |= NCPS_ASR_BIT;
-	AT91C_BASE_PIOA->PIO_BSR |= NPCS_BSR_BIT;
+	AT91C_BASE_PIOA->PIO_BSR |= NCPS_BSR_BIT;
 }
 
 void FlashStop(void) {
