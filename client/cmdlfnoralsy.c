@@ -12,31 +12,31 @@
 static int CmdHelp(const char *Cmd);
 
 int usage_lf_noralsy_clone(void){
-	PrintAndLog("clone a Noralsy tag to a T55x7 tag.");
-	PrintAndLog("Usage: lf noralsy clone [h] <card id> <year> <Q5>");
-	PrintAndLog("Options:");
-	PrintAndLog("      h          : This help");
-	PrintAndLog("      <card id>  : Noralsy card ID");
-	PrintAndLog("      <year>     : Tag allocation year");
-	PrintAndLog("      <Q5>       : specify write to Q5 (t5555 instead of t55x7)");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("       lf noralsy clone 112233");
+	PrintAndLogEx(NORMAL, "clone a Noralsy tag to a T55x7 tag.");
+	PrintAndLogEx(NORMAL, "Usage: lf noralsy clone [h] <card id> <year> <Q5>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "      h          : This help");
+	PrintAndLogEx(NORMAL, "      <card id>  : Noralsy card ID");
+	PrintAndLogEx(NORMAL, "      <year>     : Tag allocation year");
+	PrintAndLogEx(NORMAL, "      <Q5>       : specify write to Q5 (t5555 instead of t55x7)");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "       lf noralsy clone 112233");
 	return 0;
 }
 
 int usage_lf_noralsy_sim(void) {
-	PrintAndLog("Enables simulation of Noralsy card with specified card number.");
-	PrintAndLog("Simulation runs until the button is pressed or another USB command is issued.");
-	PrintAndLog("");
-	PrintAndLog("Usage:  lf noralsy sim [h] <card id> <year>");
-	PrintAndLog("Options:");
-	PrintAndLog("      h          : This help");
-	PrintAndLog("      <card id>  : Noralsy card ID");
-	PrintAndLog("      <year>     : Tag allocation year");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("       lf noralsy sim 112233");
+	PrintAndLogEx(NORMAL, "Enables simulation of Noralsy card with specified card number.");
+	PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Usage:  lf noralsy sim [h] <card id> <year>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "      h          : This help");
+	PrintAndLogEx(NORMAL, "      <card id>  : Noralsy card ID");
+	PrintAndLogEx(NORMAL, "      <year>     : Tag allocation year");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "       lf noralsy sim 112233");
 	return 0;
 }
 
@@ -105,11 +105,11 @@ int CmdNoralsyDemod(const char *Cmd) {
 	//ASK / Manchester
 	bool st = true;
 	if (!ASKDemod_ext("32 0 0", false, false, 1, &st)) {
-		if (g_debugMode) PrintAndLog("DEBUG: Error - Noralsy: ASK/Manchester Demod failed");
+		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Noralsy: ASK/Manchester Demod failed");
 		return 0;
 	}
 	if (!st) {
-		if (g_debugMode) PrintAndLog("DEBUG: Error - Noralsy: sequence terminator not found");
+		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Noralsy: sequence terminator not found");
 		return 0;
 	}
 
@@ -118,13 +118,13 @@ int CmdNoralsyDemod(const char *Cmd) {
 	if (ans < 0){
 		if (g_debugMode){
 			if (ans == -1)
-				PrintAndLog("DEBUG: Error - Noralsy: too few bits found");
+				PrintAndLogEx(DEBUG, "DEBUG: Error - Noralsy: too few bits found");
 			else if (ans == -2)
-				PrintAndLog("DEBUG: Error - Noralsy: preamble not found");
+				PrintAndLogEx(DEBUG, "DEBUG: Error - Noralsy: preamble not found");
 			else if (ans == -3)
-				PrintAndLog("DEBUG: Error - Noralsy: Size not correct: %d", size);
+				PrintAndLogEx(DEBUG, "DEBUG: Error - Noralsy: Size not correct: %d", size);
 			else
-				PrintAndLog("DEBUG: Error - Noralsy: ans: %d", ans);
+				PrintAndLogEx(DEBUG, "DEBUG: Error - Noralsy: ans: %d", ans);
 		}
 		return 0;
 	}
@@ -153,18 +153,18 @@ int CmdNoralsyDemod(const char *Cmd) {
 	chk2 = bytebits_to_byte(DemodBuffer+76, 4);
 	// test checksums
 	if ( chk1 != calc1 ) { 
-		if (g_debugMode) PrintAndLog("DEBUG: Error - Noralsy: checksum 1 failed %x - %x\n", chk1, calc1);
+		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Noralsy: checksum 1 failed %x - %x\n", chk1, calc1);
 		return 0;
 	}
 	if ( chk2 != calc2 ) {
-		if (g_debugMode) PrintAndLog("DEBUG: Error - Noralsy: checksum 2 failed %x - %x\n", chk2, calc2);
+		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Noralsy: checksum 2 failed %x - %x\n", chk2, calc2);
 		return 0;
 	}
 	
-	PrintAndLog("Noralsy Tag Found: Card ID %u, Year: %u Raw: %08X%08X%08X", cardid, year, raw1 ,raw2, raw3);
+	PrintAndLogEx(NORMAL, "Noralsy Tag Found: Card ID %u, Year: %u Raw: %08X%08X%08X", cardid, year, raw1 ,raw2, raw3);
 	if (raw1 != 0xBB0214FF) {
-		PrintAndLog("Unknown bits set in first block! Expected 0xBB0214FF, Found: 0x%08X", raw1);
-		PrintAndLog("Please post this output in forum to further research on this format");
+		PrintAndLogEx(NORMAL, "Unknown bits set in first block! Expected 0xBB0214FF, Found: 0x%08X", raw1);
+		PrintAndLogEx(NORMAL, "Please post this output in forum to further research on this format");
 	}
 	return 1;
 }
@@ -193,7 +193,7 @@ int CmdNoralsyClone(const char *Cmd) {
 		blocks[0] = T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(32) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
 	
 	 if ( !getnoralsyBits(id, year, bits)) {
-		PrintAndLog("Error with tag bitstream generation.");
+		PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
 		return 1;
 	}	
 	
@@ -202,7 +202,7 @@ int CmdNoralsyClone(const char *Cmd) {
 	blocks[2] = bytebits_to_byte(bits + 32, 32);
 	blocks[3] = bytebits_to_byte(bits + 64, 32);
 
-	PrintAndLog("Preparing to clone Noralsy to T55x7 with CardId: %u", id);
+	PrintAndLogEx(NORMAL, "Preparing to clone Noralsy to T55x7 with CardId: %u", id);
 	print_blocks(blocks, 4);
 	
 	UsbCommand resp;
@@ -214,7 +214,7 @@ int CmdNoralsyClone(const char *Cmd) {
 		clearCommandBuffer();
 		SendCommand(&c);
 		if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)){
-			PrintAndLog("Error occurred, device did not respond during write operation.");
+			PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
 			return -1;
 		}
 	}
@@ -243,11 +243,11 @@ int CmdNoralsySim(const char *Cmd) {
 	arg2 = invert << 8 | separator;
 	
 	 if ( !getnoralsyBits(id, year, bs)) {
-		PrintAndLog("Error with tag bitstream generation.");
+		PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
 		return 1;
 	}	
 	
-	PrintAndLog("Simulating Noralsy - CardId: %u", id);
+	PrintAndLogEx(NORMAL, "Simulating Noralsy - CardId: %u", id);
 
 	UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};
 	memcpy(c.d.asBytes, bs, size);
