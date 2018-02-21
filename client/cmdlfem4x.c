@@ -363,18 +363,18 @@ int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo ) {
 	
 	int ans = Em410xDecode(bits, &size, &idx, hi, lo);
 	if ( ans < 0){
-		if (g_debugMode){
-			if (ans == -1)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x not only 0|1 in decoded bitstream");
-			else if (ans == -2)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x not enough samples after demod");
-			else if (ans == -4)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x preamble not found");
-			else if (ans == -5)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x Size not correct: %d", size);
-			else if (ans == -6)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x parity failed");
-		}
+
+		if (ans == -1)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x not only 0|1 in decoded bitstream");
+		else if (ans == -2)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x not enough samples after demod");
+		else if (ans == -4)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x preamble not found");
+		else if (ans == -5)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x Size not correct: %d", size);
+		else if (ans == -6)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x parity failed");
+
 		return 0;
 	}
 	if (!lo && !hi) {
@@ -385,10 +385,10 @@ int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo ) {
 	//set GraphBuffer for clone or sim command
 	setDemodBuf(DemodBuffer, (size==40) ? 64 : 128, idx+1);
 	setClockGrid(g_DemodClock, g_DemodStartIdx + ((idx+1)*g_DemodClock));
-	if (g_debugMode){
-		PrintAndLogEx(DEBUG, "DEBUG: Em410x idx: %d, Len: %d, Printing Demod Buffer:", idx, size);
+	
+	PrintAndLogEx(DEBUG, "DEBUG: Em410x idx: %d, Len: %d, Printing Demod Buffer:", idx, size);
+	if (g_debugMode)		
 		printDemodBuff();
-	}
 
 	if (verbose)
 		printEM410x(*hi, *lo);
@@ -1009,7 +1009,7 @@ bool doPreambleSearch(size_t *startIdx){
 	
 	// sanity check
 	if ( DemodBufferLen < EM_PREAMBLE_LEN) {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - EM4305 demodbuffer too small");
+		PrintAndLogEx(DEBUG, "DEBUG: Error - EM4305 demodbuffer too small");
 		return false;
 	}
 
@@ -1020,7 +1020,7 @@ bool doPreambleSearch(size_t *startIdx){
 	uint8_t preamble[EM_PREAMBLE_LEN] = {0,0,1,0,1,0};
 	
 	if ( !preambleSearchEx(DemodBuffer, preamble, EM_PREAMBLE_LEN, &size, startIdx, true)) {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - EM4305 preamble not found :: %d", *startIdx);
+		PrintAndLogEx(DEBUG, "DEBUG: Error - EM4305 preamble not found :: %d", *startIdx);
 		return false;
 	} 
 	return true;
@@ -1029,13 +1029,13 @@ bool doPreambleSearch(size_t *startIdx){
 bool detectFSK(){
 	// detect fsk clock
 	if (!GetFskClock("", false)) {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - EM: FSK clock failed");
+		PrintAndLogEx(DEBUG, "DEBUG: Error - EM: FSK clock failed");
 		return false;
 	}
 	// demod
 	int ans = FSKrawDemod("0 0", false);
 	if (!ans) {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - EM: FSK Demod failed");
+		PrintAndLogEx(DEBUG, "DEBUG: Error - EM: FSK Demod failed");
 		return false;
 	}
 	return true;
@@ -1044,19 +1044,19 @@ bool detectFSK(){
 bool detectPSK(){	
 	int	ans = GetPskClock("", false);
 	if (ans <= 0) {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - EM: PSK clock failed");
+		PrintAndLogEx(DEBUG, "DEBUG: Error - EM: PSK clock failed");
 		return false;
 	}
 	//demod
 	//try psk1 -- 0 0 6 (six errors?!?)
 	ans = PSKDemod("0 0 6", false);
 	if (!ans) {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - EM: PSK1 Demod failed");
+		PrintAndLogEx(DEBUG, "DEBUG: Error - EM: PSK1 Demod failed");
 
 		//try psk1 inverted
 		ans = PSKDemod("0 1 6", false);
 		if (!ans) {
-			if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - EM: PSK1 inverted Demod failed");
+			PrintAndLogEx(DEBUG, "DEBUG: Error - EM: PSK1 inverted Demod failed");
 			return false;
 		}
 	}
@@ -1068,7 +1068,7 @@ bool detectPSK(){
 bool detectASK_MAN(){
 	bool stcheck = false;
 	if ( !ASKDemod_ext("0 0 0", false, false, 1, &stcheck) ) {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - EM: ASK/Manchester Demod failed");
+		PrintAndLogEx(DEBUG, "DEBUG: Error - EM: ASK/Manchester Demod failed");
 		return false;
 	} 
 	return true;
@@ -1094,13 +1094,13 @@ bool setDemodBufferEM(uint32_t *word, size_t idx){
 	uint8_t parity[45] = {0};
 	memcpy( parity, DemodBuffer, 45);
 	if (!EMwordparitytest(parity) ){
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - EM Parity tests failed");
+		PrintAndLogEx(DEBUG, "DEBUG: Error - EM Parity tests failed");
 		return false;
 	}
 		   
     // test for even parity bits and remove them. (leave out the end row of parities so 36 bits)	
 	if (!removeParity(DemodBuffer, idx + EM_PREAMBLE_LEN, 9, 0, 36)) {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - EM, failed removing parity");
+		PrintAndLogEx(DEBUG, "DEBUG: Error - EM, failed removing parity");
 		return false;
 	}
 	setDemodBuf(DemodBuffer, 32, 0);

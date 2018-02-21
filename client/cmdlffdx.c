@@ -168,23 +168,23 @@ int CmdFDXBdemodBI(const char *Cmd){
 	
 	errCnt = askdemod(BitStream, &size, &clk, &invert, maxErr, 0, 0);
 	if ( errCnt < 0 || errCnt > maxErr ) { 
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - FDXB no data or error found %d, clock: %d", errCnt, clk);
+		PrintAndLogEx(DEBUG, "DEBUG: Error - FDXB no data or error found %d, clock: %d", errCnt, clk);
 		return 0;
 	}
 
 	errCnt = BiphaseRawDecode(BitStream, &size, &offset, 1);
 	if (errCnt < 0 || errCnt > maxErr ) {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - FDXB BiphaseRawDecode: %d", errCnt);
+		PrintAndLogEx(DEBUG, "DEBUG: Error - FDXB BiphaseRawDecode: %d", errCnt);
 		return 0;
 	} 
 	
 	int preambleIndex = detectFDXB(BitStream, &size);
 	if (preambleIndex < 0){
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - FDXB preamble not found :: %d",preambleIndex);
+		PrintAndLogEx(DEBUG, "DEBUG: Error - FDXB preamble not found :: %d",preambleIndex);
 		return 0;
 	}
 	if (size != 128) {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - FDXB incorrect data length found");
+		PrintAndLogEx(DEBUG, "DEBUG: Error - FDXB incorrect data length found");
 		return 0;
 	}
 	
@@ -193,7 +193,7 @@ int CmdFDXBdemodBI(const char *Cmd){
 	// remove marker bits (1's every 9th digit after preamble) (pType = 2)
 	size = removeParity(BitStream, preambleIndex + 11, 9, 2, 117);
 	if ( size != 104 ) {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - FDXB error removeParity:: %d", size);
+		PrintAndLogEx(DEBUG, "DEBUG: Error - FDXB error removeParity:: %d", size);
 		return 0;
 	}
 	PrintAndLogEx(NORMAL, "\nFDX-B / ISO 11784/5 Animal Tag ID Found:");
@@ -211,7 +211,7 @@ int CmdFDXBdemodBI(const char *Cmd){
 	uint8_t raw[8];
 	num_to_bytes(rawid, 8, raw);
 
-	if (g_debugMode) PrintAndLogEx(NORMAL, "Raw ID Hex: %s", sprint_hex(raw,8));
+	PrintAndLogEx(NORMAL, "Raw ID Hex: %s", sprint_hex(raw,8));
 
 	uint16_t calcCrc = crc16_kermit(raw, 8);
 	PrintAndLogEx(NORMAL, "Animal ID:     %04u-%012" PRIu64, countryCode, NationalCode);
@@ -224,7 +224,7 @@ int CmdFDXBdemodBI(const char *Cmd){
 	PrintAndLogEx(NORMAL, "CRC:           0x%04X - [%04X] - %s", crc16, calcCrc, (calcCrc == crc16) ? "Passed" : "Failed");
 
 	if (g_debugMode) {
-		PrintAndLogEx(NORMAL, "Start marker %d;   Size %d", preambleIndex, size);
+		PrintAndLogEx(DEBUG, "Start marker %d;   Size %d", preambleIndex, size);
 		char *bin = sprint_bin_break(BitStream,size,16);
 		PrintAndLogEx(DEBUG, "DEBUG BinStream:\n%s",bin);
 	}
@@ -239,22 +239,21 @@ int CmdFdxDemod(const char *Cmd) {
 	//Differential Biphase / di-phase (inverted biphase)
 	//get binary from ask wave
 	if (!ASKbiphaseDemod("0 32 1 0", false)) {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B ASKbiphaseDemod failed");
+		PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B ASKbiphaseDemod failed");
 		return 0;
 	}
 	size_t size = DemodBufferLen;
 	int preambleIndex = detectFDXB(DemodBuffer, &size);
 	if (preambleIndex < 0){
-		if (g_debugMode){
-			if (preambleIndex == -1)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B too few bits found");
-			else if (preambleIndex == -2)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B preamble not found");
-			else if (preambleIndex == -3)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B Size not correct: %d", size);
-			else
-				PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B ans: %d", preambleIndex);
-		}
+
+		if (preambleIndex == -1)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B too few bits found");
+		else if (preambleIndex == -2)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B preamble not found");
+		else if (preambleIndex == -3)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B Size not correct: %d", size);
+		else
+			PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B ans: %d", preambleIndex);
 		return 0;
 	}
 
@@ -264,7 +263,7 @@ int CmdFdxDemod(const char *Cmd) {
 	// remove marker bits (1's every 9th digit after preamble) (pType = 2)
 	size = removeParity(DemodBuffer, 11, 9, 2, 117);
 	if ( size != 104 ) {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B error removeParity: %d", size);
+		PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B error removeParity: %d", size);
 		return 0;
 	}
 
@@ -293,7 +292,7 @@ int CmdFdxDemod(const char *Cmd) {
 	PrintAndLogEx(NORMAL, "CRC-16             0x%04X - 0x%04X [%s]", crc16, calcCrc, (calcCrc == crc16) ? "Ok" : "Failed");
 
 	if (g_debugMode) {
-		PrintAndLogEx(NORMAL, "Start marker %d;   Size %d", preambleIndex, size);	
+		PrintAndLogEx(DEBUG, "Start marker %d;   Size %d", preambleIndex, size);	
 		char *bin = sprint_bin_break(DemodBuffer, size, 16);
 		PrintAndLogEx(DEBUG, "DEBUG bin stream:\n%s", bin);
 	}

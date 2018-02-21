@@ -177,7 +177,7 @@ int CmdGuardDemod(const char *Cmd) {
 	//Differential Biphase
 	//get binary from ask wave
 	if (!ASKbiphaseDemod("0 64 0 0", false)) {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII ASKbiphaseDemod failed");
+		PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII ASKbiphaseDemod failed");
 		return 0;
 	}
 	
@@ -185,18 +185,17 @@ int CmdGuardDemod(const char *Cmd) {
 
 	int preambleIndex = detectGProxII(DemodBuffer, &size);
 	if (preambleIndex < 0){
-		if (g_debugMode){
-			if (preambleIndex == -1)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII too few bits found");
-			else if (preambleIndex == -2)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII preamble not found");
-			else if (preambleIndex == -3)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII size not correct: %d", size);
-			else if (preambleIndex == -3)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII wrong spacerbits");
-			else				
-				PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII ans: %d", preambleIndex);
-		}
+
+		if (preambleIndex == -1)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII too few bits found");
+		else if (preambleIndex == -2)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII preamble not found");
+		else if (preambleIndex == -3)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII size not correct: %d", size);
+		else if (preambleIndex == -3)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII wrong spacerbits");
+		else				
+			PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII ans: %d", preambleIndex);
 		return 0;
 	}
 	
@@ -211,15 +210,14 @@ int CmdGuardDemod(const char *Cmd) {
 	// remove the 18 (90/5=18) parity bits (down to 72 bits (96-6-18=72))
 	size_t len = removeParity(bits_no_spacer, 0, 5, 3, 90); //source, startloc, paritylen, ptype, length_to_run
 	if (len != 72) {
-		if (g_debugMode) 
-			PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII spacer removal did not produce 72 bits: %u, start: %u", len, startIdx);
+		PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII spacer removal did not produce 72 bits: %u, start: %u", len, startIdx);
 		return 0;
 	}
 	// get key and then get all 8 bytes of payload decoded
 	xorKey = (uint8_t)bytebits_to_byteLSBF(bits_no_spacer, 8);
 	for (size_t idx = 0; idx < 8; idx++) {
 		ByteStream[idx] = ((uint8_t)bytebits_to_byteLSBF(bits_no_spacer+8 + (idx*8),8)) ^ xorKey;
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: gProxII byte %u after xor: %02x", (unsigned int)idx, ByteStream[idx]);
+		PrintAndLogEx(DEBUG, "DEBUG: gProxII byte %u after xor: %02x", (unsigned int)idx, ByteStream[idx]);
 	}
 
 	setDemodBuf(DemodBuffer, 96, preambleIndex);

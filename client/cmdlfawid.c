@@ -250,20 +250,20 @@ int CmdAWIDDemod(const char *Cmd) {
 	int waveIdx = 0;
 	int idx = detectAWID(bits, &size, &waveIdx);
 	if (idx <= 0){
-		if (g_debugMode){
-			if (idx == -1)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - AWID not enough samples");
-			else if (idx == -2)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - AWID only noise found");
-			else if (idx == -3)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - AWID problem during FSK demod");
-			else if (idx == -4)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - AWID preamble not found");
-			else if (idx == -5)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - AWID size not correct, size %d", size);
-			else
-				PrintAndLogEx(DEBUG, "DEBUG: Error - AWID error demoding fsk %d",idx);
-		}
+
+		if (idx == -1)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - AWID not enough samples");
+		else if (idx == -2)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - AWID only noise found");
+		else if (idx == -3)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - AWID problem during FSK demod");
+		else if (idx == -4)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - AWID preamble not found");
+		else if (idx == -5)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - AWID size not correct, size %d", size);
+		else
+			PrintAndLogEx(DEBUG, "DEBUG: Error - AWID error demoding fsk %d",idx);
+
 		return 0;
 	}
 
