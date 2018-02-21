@@ -23,16 +23,33 @@ pthread_mutex_t print_lock = PTHREAD_MUTEX_INITIALIZER;
 static char *logfilename = "proxmark3.log";
 
 void PrintAndLogEx(logLevel_t level, char *fmt, ...) {
+
+	// skip debug messages if client debugging is turned off i.e. 'DATA SETDEBUG 0' 
+	if (g_debugMode	== 0 && level == DEBUG)
+		return;
+	
 	char buffer[MAX_PRINT_BUFFER] = {0};
 	int size = 0;
+						//   {NORMAL, SUCCESS, INFO, FAILED, WARNING, ERR, DEBUG}
 	static char *prefix[7] = { "", "[+] ", "[=] ", "[-] ", "[!] ", "[!!] ", "[#] "};
 	
-	if (g_debugMode	== 0 && level == DEBUG) {
-		// skip debug messages if client debugging is turned off i.e. 'DATA SETDEBUG 0' 
-	}
-	else {
-		size = strlen(prefix[level]);
-		strncpy(buffer, prefix[level], sizeof buffer);
+	switch( level ) {
+		case FAILED:
+			size = strlen( _RED_([-] ) );
+			strncpy(buffer,_RED_([-] ), size);
+			break;
+		case DEBUG:
+			size = strlen( _BLUE_([#] ) );
+			strncpy(buffer,_BLUE_([#] ), size);			
+			break;
+		case SUCCESS: 
+			size = strlen( _GREEN_([+] ) );
+			strncpy(buffer,_GREEN_([+] ), size);
+			break;
+		default:
+			size = strlen(prefix[level]);
+			strncpy(buffer, prefix[level], sizeof buffer);
+			break;
 	}
 	
 	va_list args;
