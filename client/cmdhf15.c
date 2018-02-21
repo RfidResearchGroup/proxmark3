@@ -575,7 +575,7 @@ int CmdHF15Record(const char *Cmd) {
 int HF15Reader(const char *Cmd, bool verbose) {
 	uint8_t uid[8] = {0,0,0,0,0,0,0,0};	
 	if (!getUID(uid)) {
-		if (verbose) PrintAndLogEx(NORMAL, "No Tag found.");
+		if (verbose) PrintAndLogEx(WARNING, "No tag found.");
 		return 0;
 	}
 
@@ -669,7 +669,7 @@ int CmdHF15Dump(const char*Cmd) {
 		PrintAndLogEx(INFO, "Using UID as filename");
 
 		if (!getUID(uid)) {
-			PrintAndLogEx(NORMAL, "No tag found.");
+			PrintAndLogEx(WARNING, "No tag found.");
 			return 1;
 		}
 		
