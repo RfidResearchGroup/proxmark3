@@ -69,16 +69,16 @@ void SendCommand(UsbCommand *c) {
 
 #if defined(__linux__) || (__APPLE__)
 static void showBanner(void){
-	PrintAndLogEx(NORMAL, "\n\n");
-	PrintAndLogEx(NORMAL, "\e[34m██████╗ ███╗   ███╗ ████╗\e[0m     ...iceman fork\n");
-	PrintAndLogEx(NORMAL, "\e[34m██╔══██╗████╗ ████║   ══█║\e[0m\n");
-	PrintAndLogEx(NORMAL, "\e[34m██████╔╝██╔████╔██║ ████╔╝\e[0m\n");
-	PrintAndLogEx(NORMAL, "\e[34m██╔═══╝ ██║╚██╔╝██║   ══█║\e[0m    iceman@icesql.net\n");
-	PrintAndLogEx(NORMAL, "\e[34m██║     ██║ ╚═╝ ██║ ████╔╝\e[0m  https://github.com/iceman1001/proxmark3\n");
-	PrintAndLogEx(NORMAL, "\e[34m╚═╝     ╚═╝     ╚═╝ ╚═══╝\e[0m v3.1.0\n");
-	PrintAndLogEx(NORMAL, "\nKeep iceman fork alive with a donation!           https://paypal.me/iceman1001/");
-	PrintAndLogEx(NORMAL, "\nMONERO: 43mNJLpgBVaTvyZmX9ajcohpvVkaRy1kbZPm8tqAb7itZgfuYecgkRF36rXrKFUkwEGeZedPsASRxgv4HPBHvJwyJdyvQuP");
-	PrintAndLogEx(NORMAL, "\n\n\n");
+	printf("\n\n");
+	printf("\e[34m██████╗ ███╗   ███╗ ████╗\e[0m     ...iceman fork\n");
+	printf("\e[34m██╔══██╗████╗ ████║   ══█║\e[0m\n");
+	printf("\e[34m██████╔╝██╔████╔██║ ████╔╝\e[0m\n");
+	printf("\e[34m██╔═══╝ ██║╚██╔╝██║   ══█║\e[0m    iceman@icesql.net\n");
+	printf("\e[34m██║     ██║ ╚═╝ ██║ ████╔╝\e[0m  https://github.com/iceman1001/proxmark3\n");
+	printf("\e[34m╚═╝     ╚═╝     ╚═╝ ╚═══╝\e[0m v3.1.0\n");
+	printf("\nKeep iceman fork alive with a donation!           https://paypal.me/iceman1001/");
+	printf("\nMONERO: 43mNJLpgBVaTvyZmX9ajcohpvVkaRy1kbZPm8tqAb7itZgfuYecgkRF36rXrKFUkwEGeZedPsASRxgv4HPBHvJwyJdyvQuP");
+	printf("\n\n\n");
 }
 #endif
 
