@@ -17,76 +17,76 @@
 static int CmdHelp(const char *Cmd);
 
 int usage_lf_hid_read(void){
-	PrintAndLog("Enables HID compatible reader mode printing details.");
-	PrintAndLog("By default, values are printed and logged until the button is pressed or another USB command is issued.");
-	PrintAndLog("If the [1] option is provided, reader mode is exited after reading a single HID card.");
-	PrintAndLog("");
-	PrintAndLog("Usage:  lf hid read [h] [1]");
-	PrintAndLog("Options:");
-	PrintAndLog("      h :  This help");	
-	PrintAndLog("      1 : (optional) stop after reading a single card");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("       lf hid read");
-	PrintAndLog("       lf hid read 1");	
+	PrintAndLogEx(NORMAL, "Enables HID compatible reader mode printing details.");
+	PrintAndLogEx(NORMAL, "By default, values are printed and logged until the button is pressed or another USB command is issued.");
+	PrintAndLogEx(NORMAL, "If the [1] option is provided, reader mode is exited after reading a single HID card.");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Usage:  lf hid read [h] [1]");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "      h :  This help");	
+	PrintAndLogEx(NORMAL, "      1 : (optional) stop after reading a single card");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "       lf hid read");
+	PrintAndLogEx(NORMAL, "       lf hid read 1");	
 	return 0;
 }
 int usage_lf_hid_wiegand(void){
-	PrintAndLog("This command converts facility code/card number to Wiegand code");
-	PrintAndLog("");
-  	PrintAndLog("Usage: lf hid wiegand [h] [OEM] [FC] [CN]");
-	PrintAndLog("Options:");
-	PrintAndLog("       h             - This help");
-	PrintAndLog("       OEM           - OEM number / site code");
-	PrintAndLog("       FC            - facility code");
-	PrintAndLog("       CN            - card number");
-	PrintAndLog("Examples:");
-	PrintAndLog("      lf hid wiegand 0 101 2001");
+	PrintAndLogEx(NORMAL, "This command converts facility code/card number to Wiegand code");
+	PrintAndLogEx(NORMAL, "");
+  	PrintAndLogEx(NORMAL, "Usage: lf hid wiegand [h] [OEM] [FC] [CN]");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "       h             - This help");
+	PrintAndLogEx(NORMAL, "       OEM           - OEM number / site code");
+	PrintAndLogEx(NORMAL, "       FC            - facility code");
+	PrintAndLogEx(NORMAL, "       CN            - card number");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "      lf hid wiegand 0 101 2001");
 	return 0;
 }
 int usage_lf_hid_sim(void){
-	PrintAndLog("Enables simulation of HID card with card number.");
-	PrintAndLog("Simulation runs until the button is pressed or another USB command is issued.");
-	PrintAndLog("");
-	PrintAndLog("Usage:  lf hid sim [h] [ID]");
-	PrintAndLog("Options:");
-	PrintAndLog("       h	- This help");
-	PrintAndLog("       ID  - HID id");
-	PrintAndLog("Examples:");
-	PrintAndLog("      lf hid sim 2006ec0c86");
+	PrintAndLogEx(NORMAL, "Enables simulation of HID card with card number.");
+	PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Usage:  lf hid sim [h] [ID]");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "       h	- This help");
+	PrintAndLogEx(NORMAL, "       ID  - HID id");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "      lf hid sim 2006ec0c86");
 	return 0;
 }
 int usage_lf_hid_clone(void){
-	PrintAndLog("Clone HID to T55x7.  Tag must be on antenna. ");
-	PrintAndLog("");
-	PrintAndLog("Usage:  lf hid clone [h] [ID] <L>");
-	PrintAndLog("Options:");
-	PrintAndLog("       h	- This help");
-	PrintAndLog("       ID  - HID id");
-	PrintAndLog("       L   - 84bit ID");
-	PrintAndLog("Examples:");
-	PrintAndLog("      lf hid clone 2006ec0c86");
-	PrintAndLog("      lf hid clone 2006ec0c86 L");
+	PrintAndLogEx(NORMAL, "Clone HID to T55x7.  Tag must be on antenna. ");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Usage:  lf hid clone [h] [ID] <L>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "       h	- This help");
+	PrintAndLogEx(NORMAL, "       ID  - HID id");
+	PrintAndLogEx(NORMAL, "       L   - 84bit ID");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "      lf hid clone 2006ec0c86");
+	PrintAndLogEx(NORMAL, "      lf hid clone 2006ec0c86 L");
 	return 0;
 }
 int usage_lf_hid_brute(void){
-	PrintAndLog("Enables bruteforce of HID readers with specified facility code.");
-	PrintAndLog("This is a attack against reader. if cardnumber is given, it starts with it and goes up / down one step");
-	PrintAndLog("if cardnumber is not given, it starts with 1 and goes up to 65535");
-	PrintAndLog("");
-	PrintAndLog("Usage:  lf hid brute [h] [v] a <format> f <facility-code> c <cardnumber> d <delay>");
-	PrintAndLog("Options:");
-	PrintAndLog("       h                 :  This help");	
-	PrintAndLog("       a <format>        :  26|33|34|35|37|40|44|84");
-	PrintAndLog("       f <facility-code> :  8-bit value HID facility code");
-	PrintAndLog("       c <cardnumber>    :  (optional) cardnumber to start with, max 65535");
-	PrintAndLog("       d <delay>         :  delay betweens attempts in ms. Default 1000ms");
-	PrintAndLog("       v                 :  verbose logging, show all tries");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("       lf hid brute a 26 f 224");
-	PrintAndLog("       lf hid brute a 26 f 21 d 2000");
-	PrintAndLog("       lf hid brute v a 26 f 21 c 200 d 2000");
+	PrintAndLogEx(NORMAL, "Enables bruteforce of HID readers with specified facility code.");
+	PrintAndLogEx(NORMAL, "This is a attack against reader. if cardnumber is given, it starts with it and goes up / down one step");
+	PrintAndLogEx(NORMAL, "if cardnumber is not given, it starts with 1 and goes up to 65535");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Usage:  lf hid brute [h] [v] a <format> f <facility-code> c <cardnumber> d <delay>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "       h                 :  This help");	
+	PrintAndLogEx(NORMAL, "       a <format>        :  26|33|34|35|37|40|44|84");
+	PrintAndLogEx(NORMAL, "       f <facility-code> :  8-bit value HID facility code");
+	PrintAndLogEx(NORMAL, "       c <cardnumber>    :  (optional) cardnumber to start with, max 65535");
+	PrintAndLogEx(NORMAL, "       d <delay>         :  delay betweens attempts in ms. Default 1000ms");
+	PrintAndLogEx(NORMAL, "       v                 :  verbose logging, show all tries");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "       lf hid brute a 26 f 224");
+	PrintAndLogEx(NORMAL, "       lf hid brute a 26 f 21 d 2000");
+	PrintAndLogEx(NORMAL, "       lf hid brute v a 26 f 21 c 200 d 2000");
 	return 0;
 }
 
@@ -106,7 +106,7 @@ static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, ui
 
 	// this should be optional.
 	if ( verbose )
-		PrintAndLog("Trying FC: %u; CN: %u", fc, cn);
+		PrintAndLogEx(NORMAL, "Trying FC: %u; CN: %u", fc, cn);
 	
 	calcWiegand( fmtlen, fc, cn, bits);
 
@@ -131,7 +131,7 @@ int CmdHIDDemod(const char *Cmd) {
 	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t size = getFromGraphBuf(bits);
 	if (size==0) {
-		PrintAndLog("DEBUG: Error - HID not enough samples");
+		PrintAndLogEx(DEBUG, "DEBUG: Error - HID not enough samples");
 		return 0;
 	}
 	//get binary from fsk wave
@@ -140,17 +140,17 @@ int CmdHIDDemod(const char *Cmd) {
 	if (idx < 0) {
 		if (g_debugMode){
 			if (idx==-1){
-				PrintAndLog("DEBUG: Error - HID not enough samples");
+				PrintAndLogEx(DEBUG, "DEBUG: Error - HID not enough samples");
 			} else if (idx == -2) {
-				PrintAndLog("DEBUG: Error - HID just noise detected");
+				PrintAndLogEx(DEBUG, "DEBUG: Error - HID just noise detected");
 			} else if (idx == -3) {
-				PrintAndLog("DEBUG: Error - HID problem during FSK demod");
+				PrintAndLogEx(DEBUG, "DEBUG: Error - HID problem during FSK demod");
 			} else if (idx == -4) {
-				PrintAndLog("DEBUG: Error - HID preamble not found");
+				PrintAndLogEx(DEBUG, "DEBUG: Error - HID preamble not found");
 			} else if (idx == -5) {				
-				PrintAndLog("DEBUG: Error - HID error in Manchester data, size %d", size);
+				PrintAndLogEx(DEBUG, "DEBUG: Error - HID error in Manchester data, size %d", size);
 			} else {
-				PrintAndLog("DEBUG: Error - HID error demoding fsk %d", idx);
+				PrintAndLogEx(DEBUG, "DEBUG: Error - HID error demoding fsk %d", idx);
 			}   
 		}
 		return 0;
@@ -160,12 +160,12 @@ int CmdHIDDemod(const char *Cmd) {
 	setClockGrid(50, waveIdx + (idx*50));
 	
 	if (hi2==0 && hi==0 && lo==0) {
-		if (g_debugMode) PrintAndLog("DEBUG: Error - HID no values found");
+		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - HID no values found");
 		return 0;
 	}
 	
 	if (hi2 != 0){ //extra large HID tags
-		PrintAndLog("HID Prox TAG ID: %x%08x%08x (%u)", hi2, hi, lo, (lo>>1) & 0xFFFF);
+		PrintAndLogEx(NORMAL, "HID Prox TAG ID: %x%08x%08x (%u)", hi2, hi, lo, (lo>>1) & 0xFFFF);
 	} else {  //standard HID tags <38 bits
 		uint8_t fmtLen = 0;
 		uint32_t fc = 0;
@@ -203,11 +203,11 @@ int CmdHIDDemod(const char *Cmd) {
 				fc = ((hi & 0xF) << 12) | (lo >> 20);
 			}
 		}
-		PrintAndLog("HID Prox TAG ID: %x%08x (%u) - Format Len: %ubit - FC: %u - Card: %u", hi, lo, (lo>>1) & 0xFFFF, fmtLen, fc, cardnum);
+		PrintAndLogEx(NORMAL, "HID Prox TAG ID: %x%08x (%u) - Format Len: %ubit - FC: %u - Card: %u", hi, lo, (lo>>1) & 0xFFFF, fmtLen, fc, cardnum);
 	}
 
 	if (g_debugMode){ 
-		PrintAndLog("DEBUG: HID idx: %d, Len: %d, Printing Demod Buffer:", idx, size);
+		PrintAndLogEx(DEBUG, "DEBUG: HID idx: %d, Len: %d, Printing Demod Buffer:", idx, size);
 		printDemodBuff();
 	}
 	return 1;
@@ -243,8 +243,8 @@ int CmdHIDSim(const char *Cmd) {
 		lo = (lo << 4) | (n & 0xf);
 	}
 
-	PrintAndLog("Emulating tag with ID %x%08x", hi, lo);
-	PrintAndLog("Press pm3-button to abort simulation");
+	PrintAndLogEx(NORMAL, "Emulating tag with ID %x%08x", hi, lo);
+	PrintAndLogEx(NORMAL, "Press pm3-button to abort simulation");
 
 	UsbCommand c = {CMD_HID_SIM_TAG, {hi, lo, 0}};
 	clearCommandBuffer();
@@ -268,7 +268,7 @@ int CmdHIDClone(const char *Cmd) {
 			lo = (lo << 4) | (n & 0xf);
 		}
 
-		PrintAndLog("Cloning tag with long ID %x%08x%08x", hi2, hi, lo);
+		PrintAndLogEx(NORMAL, "Cloning tag with long ID %x%08x%08x", hi2, hi, lo);
 
 		c.d.asBytes[0] = 1;
 	} else {
@@ -276,7 +276,7 @@ int CmdHIDClone(const char *Cmd) {
 			hi = (hi << 4) | (lo >> 28);
 			lo = (lo << 4) | (n & 0xf);
 		}
-		PrintAndLog("Cloning tag with ID %x%08x", hi, lo);
+		PrintAndLogEx(NORMAL, "Cloning tag with ID %x%08x", hi, lo);
 		hi2 = 0;
 		c.d.asBytes[0] = 0;
 	}
@@ -406,7 +406,7 @@ static void calc37H(uint64_t cardno, uint8_t *out){
 	num_to_bytebits( (uint32_t)(cardno >> 0), 32, wiegand + 2);
   	wiegand_add_parity(out,  wiegand, sizeof(wiegand) );
 	
-	printf("%x %x\n", (uint32_t)(cardno >> 32), (uint32_t)cardno );
+	PrintAndLogEx(NORMAL, "%x %x\n", (uint32_t)(cardno >> 32), (uint32_t)cardno );
 }
 // static void calc40(uint64_t cardno,  uint8_t *out){
 	// cardno = (cardno & 0xFFFFFFFFFF);
@@ -448,21 +448,21 @@ int CmdHIDWiegand(const char *Cmd) {
 
 	uint8_t fmtlen[] = {26,33,34,35,37,38,40};
 	
-	PrintAndLog("HID | OEM | FC   | CN      |  Wiegand  |  HID Formatted");
-	PrintAndLog("----+-----+------+---------+-----------+--------------------");
+	PrintAndLogEx(NORMAL, "HID | OEM | FC   | CN      |  Wiegand  |  HID Formatted");
+	PrintAndLogEx(NORMAL, "----+-----+------+---------+-----------+--------------------");
 	for (uint8_t i = 0; i < sizeof(fmtlen); i++){
 		memset(bits, 0x00, sizeof(bits));
 		calcWiegand( fmtlen[i], fc, cardnum, bs);
-		printf("ice:: %s \n", sprint_bin(bs, fmtlen[i]));
+		PrintAndLogEx(NORMAL, "ice:: %s \n", sprint_bin(bs, fmtlen[i]));
 		wiegand = (uint64_t)bytebits_to_byte(bs, 32) << 32 | bytebits_to_byte(bs+32, 32);
 		
 		addHIDMarker(fmtlen[i], bs);	
-		printf("ice:: %s\n", sprint_bin(bs, BITS));
+		PrintAndLogEx(NORMAL, "ice:: %s\n", sprint_bin(bs, BITS));
 		blocks = (uint64_t)bytebits_to_byte(bs+32, 32) << 32 | bytebits_to_byte(bs+64, 32);
 		uint8_t shifts = 64-fmtlen[i];		
 		wiegand >>= shifts;
 		
-		PrintAndLog(" %u | %03u | %03u  | %" PRIu64 "  | %" PRIX64 "  |  %" PRIX64 ,
+		PrintAndLogEx(NORMAL, " %u | %03u | %03u  | %" PRIu64 "  | %" PRIX64 "  |  %" PRIX64 ,
 			fmtlen[i],
 			oem,
 			fc,
@@ -471,7 +471,7 @@ int CmdHIDWiegand(const char *Cmd) {
 			blocks
 			);
 	}
-	PrintAndLog("----+-----+-----+-------+-----------+--------------------");
+	PrintAndLogEx(NORMAL, "----+-----+-----+-------+-----------+--------------------");
 	return 0;
 }
 
@@ -529,7 +529,7 @@ int CmdHIDBrute(const char *Cmd){
 			cmdp++;
 			break;
 		default:
-			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+			PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
 			errors = true;
 			break;
 		}
@@ -537,8 +537,8 @@ int CmdHIDBrute(const char *Cmd){
 	if ( fc == 0 ) errors = true;
 	if ( errors ) return usage_lf_hid_brute();
 	
-	PrintAndLog("Brute-forcing HID reader");
-	PrintAndLog("Press pm3-button to abort simulation or run another command");
+	PrintAndLogEx(NORMAL, "Brute-forcing HID reader");
+	PrintAndLogEx(NORMAL, "Press pm3-button to abort simulation or run another command");
 	
 	uint16_t up = cn;
 	uint16_t down = cn;
@@ -547,13 +547,13 @@ int CmdHIDBrute(const char *Cmd){
 	for (;;){
 		
 		if ( offline ) {
-			printf("Device offline\n");
+			PrintAndLogEx(WARNING, "Device offline\n");
 			return  2;
 		}
 		
 		if (ukbhit()) {
 			int gc = getchar(); (void)gc;
-			PrintAndLog("aborted via keyboard!");
+			PrintAndLogEx(INFO, "aborted via keyboard!");
 			return sendPing();
 		}
 		
