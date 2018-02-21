@@ -33,7 +33,9 @@ void save_restoreGB(uint8_t saveOpt);
 bool HasGraphData();
 
 // Max graph trace len: 40000 (bigbuf) * 8 (at 1 bit per sample)
+#ifndef MAX_GRAPH_TRACE_LEN
 #define MAX_GRAPH_TRACE_LEN (40000 * 8 )
+#endif
 #define GRAPH_SAVE 1
 #define GRAPH_RESTORE 0
 

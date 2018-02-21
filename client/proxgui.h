@@ -21,8 +21,9 @@ void RepaintGraphWindow(void);
 void MainGraphics(void);
 void InitGraphics(int argc, char **argv, char *script_cmds_file, char *script_cmd, bool usb_present);
 void ExitGraphics(void);
-
+#ifndef MAX_GRAPH_TRACE_LEN
 #define MAX_GRAPH_TRACE_LEN (40000 * 8)
+#endif
 extern int GraphBuffer[MAX_GRAPH_TRACE_LEN];
 extern int GraphTraceLen;
 extern int s_Buff[MAX_GRAPH_TRACE_LEN];
@@ -45,7 +46,7 @@ extern void save_restoreGB(uint8_t saveOpt);
 #define MAX_DEMOD_BUF_LEN (1024*128)
 extern uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 extern size_t DemodBufferLen;
-extern size_t g_DemodStartIdx;
+//extern size_t g_DemodStartIdx;
 extern bool showDemod;
 extern uint8_t g_debugMode;
 

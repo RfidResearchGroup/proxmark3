@@ -24,10 +24,10 @@ static char *logfilename = "proxmark3.log";
 
 void PrintAndLogEx(logLevel_t level, char *fmt, ...) {
 	char buffer[MAX_PRINT_BUFFER] = {0};
-	int size;
+	int size = 0;
 	static char *prefix[7] = { "", "[+] ", "[=] ", "[-] ", "[!] ", "[!!] ", "[#] "};
 	
-	if (g_debugMode	== 0 && level == logLevel.DEBUG) {
+	if (g_debugMode	== 0 && level == DEBUG) {
 		// skip debug messages if client debugging is turned off i.e. 'DATA SETDEBUG 0' 
 	}
 	else {
@@ -183,8 +183,7 @@ void iceSimple_Filter(int *data, const size_t len, uint8_t k){
 	}
 }
 
-float complex cexpf (float complex Z)
-{
+float complex cexpf (float complex Z) {
   float complex  Res;
   double rho = exp (__real__ Z);
   __real__ Res = rho * cosf(__imag__ Z);
