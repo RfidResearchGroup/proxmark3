@@ -121,7 +121,7 @@ int CmdIndalaDemod(const char *Cmd) {
 		ans = PSKDemod("32", 0);
 
 	if (!ans){
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Indala can't demod signal: %d",ans);
+		PrintAndLogEx(DEBUG, "DEBUG: Error - Indala can't demod signal: %d",ans);
 		return 0;
 	}
 
@@ -134,8 +134,7 @@ int CmdIndalaDemod(const char *Cmd) {
 		size = DemodBufferLen;
 		idx = indala224decode(DemodBuffer, &size, &invert);
 		if (idx < 0 || size != 224) {
-			if (g_debugMode)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Indala wrong size, expected [64|224] got: %d (startindex %i)", size, idx);
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Indala wrong size, expected [64|224] got: %d (startindex %i)", size, idx);
 			return -1;
 		}
 	}
@@ -143,7 +142,7 @@ int CmdIndalaDemod(const char *Cmd) {
 	setDemodBuf(DemodBuffer, size, (size_t)idx);
 	setClockGrid(g_DemodClock, g_DemodStartIdx + (idx * g_DemodClock));
 	if (invert) {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Indala had to invert bits");		
+		PrintAndLogEx(DEBUG, "DEBUG: Error - Indala had to invert bits");		
 		for (size_t i = 0; i < size; i++) 
 			DemodBuffer[i] ^= 1;
 	}	
@@ -152,7 +151,7 @@ int CmdIndalaDemod(const char *Cmd) {
 	uint32_t uid1, uid2, uid3, uid4, uid5, uid6, uid7;
 	uid1 = bytebits_to_byte(DemodBuffer,32);
 	uid2 = bytebits_to_byte(DemodBuffer+32,32);
-	if (DemodBufferLen==64){
+	if (DemodBufferLen == 64){
 		PrintAndLogEx(SUCCESS, "Indala Found - Bitlength %d, UID = (%x%08x)\n%s",
 			DemodBufferLen, uid1, uid2, sprint_bin_break(DemodBuffer,DemodBufferLen,32)
 		);

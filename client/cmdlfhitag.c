@@ -256,7 +256,7 @@ int CmdLFHitagReader(const char *Cmd) {
 
 	// Check the return status, stored in the first argument
 	if (resp.arg[0] == false) {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - hitag failed");
+		PrintAndLogEx(DEBUG, "DEBUG: Error - hitag failed");
 		return 1;
 	}
 

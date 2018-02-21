@@ -939,7 +939,7 @@ int EM4x50Read(const char *Cmd, bool verbose) {
 		AllPTest &= pTest;
 		//get output
 		Code[block] = OutputEM4x50_Block(DemodBuffer,DemodBufferLen,verbose, pTest);
-		if (g_debugMode) PrintAndLogEx(NORMAL, "\nskipping %d samples, bits:%d", skip, skip/clk);
+		PrintAndLogEx(DEBUG, "\nskipping %d samples, bits:%d", skip, skip/clk);
 		//skip to start of next block
 		snprintf(tmp,sizeof(tmp),"%i",skip);
 		CmdLtrim(tmp);
@@ -1076,11 +1076,11 @@ bool detectASK_MAN(){
 bool detectASK_BI(){
 	int ans = ASKbiphaseDemod("0 0 1", false);
 	if (!ans) { 
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - EM: ASK/biphase normal demod failed");
+		PrintAndLogEx(DEBUG, "DEBUG: Error - EM: ASK/biphase normal demod failed");
 		
 		ans = ASKbiphaseDemod("0 1 1", false);
 		if (!ans) {
-			if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - EM: ASK/biphase inverted demod failed");
+			PrintAndLogEx(DEBUG, "DEBUG: Error - EM: ASK/biphase inverted demod failed");
 			return false;
 		}
 	}

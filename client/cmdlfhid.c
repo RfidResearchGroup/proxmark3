@@ -138,21 +138,20 @@ int CmdHIDDemod(const char *Cmd) {
 	int waveIdx = 0;
 	int idx = HIDdemodFSK(bits, &size, &hi2, &hi, &lo, &waveIdx);
 	if (idx < 0) {
-		if (g_debugMode){
-			if (idx==-1){
-				PrintAndLogEx(DEBUG, "DEBUG: Error - HID not enough samples");
-			} else if (idx == -2) {
-				PrintAndLogEx(DEBUG, "DEBUG: Error - HID just noise detected");
-			} else if (idx == -3) {
-				PrintAndLogEx(DEBUG, "DEBUG: Error - HID problem during FSK demod");
-			} else if (idx == -4) {
-				PrintAndLogEx(DEBUG, "DEBUG: Error - HID preamble not found");
-			} else if (idx == -5) {				
-				PrintAndLogEx(DEBUG, "DEBUG: Error - HID error in Manchester data, size %d", size);
-			} else {
-				PrintAndLogEx(DEBUG, "DEBUG: Error - HID error demoding fsk %d", idx);
-			}   
-		}
+
+		if (idx == -1)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - HID not enough samples");
+		else if (idx == -2)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - HID just noise detected");
+		else if (idx == -3)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - HID problem during FSK demod");
+		else if (idx == -4)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - HID preamble not found");
+		else if (idx == -5)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - HID error in Manchester data, size %d", size);
+		else
+			PrintAndLogEx(DEBUG, "DEBUG: Error - HID error demoding fsk %d", idx);
+
 		return 0;
 	}
 
@@ -160,7 +159,7 @@ int CmdHIDDemod(const char *Cmd) {
 	setClockGrid(50, waveIdx + (idx*50));
 	
 	if (hi2==0 && hi==0 && lo==0) {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - HID no values found");
+		PrintAndLogEx(DEBUG, "DEBUG: Error - HID no values found");
 		return 0;
 	}
 	
@@ -206,10 +205,10 @@ int CmdHIDDemod(const char *Cmd) {
 		PrintAndLogEx(NORMAL, "HID Prox TAG ID: %x%08x (%u) - Format Len: %ubit - FC: %u - Card: %u", hi, lo, (lo>>1) & 0xFFFF, fmtLen, fc, cardnum);
 	}
 
-	if (g_debugMode){ 
-		PrintAndLogEx(DEBUG, "DEBUG: HID idx: %d, Len: %d, Printing Demod Buffer:", idx, size);
+	PrintAndLogEx(DEBUG, "DEBUG: HID idx: %d, Len: %d, Printing Demod Buffer:", idx, size);
+	if (g_debugMode)		
 		printDemodBuff();
-	}
+	
 	return 1;
 }
 
