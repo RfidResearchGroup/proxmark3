@@ -11,30 +11,30 @@
 static int CmdHelp(const char *Cmd);
 
 int usage_lf_nedap_clone(void){
-	PrintAndLog("clone a NEDAP tag to a T55x7 tag.");
-	PrintAndLog("");
-	PrintAndLog("Usage: lf nedap clone [h] <Card-Number>");
-	PrintAndLog("Options:");
-	PrintAndLog("      h             : This help");
-	PrintAndLog("      <Card Number> : 24-bit value card number");
-//	PrintAndLog("      Q5            : optional - clone to Q5 (T5555) instead of T55x7 chip");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("       lf nedap clone 112233");
+	PrintAndLogEx(NORMAL, "clone a NEDAP tag to a T55x7 tag.");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Usage: lf nedap clone [h] <Card-Number>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "      h             : This help");
+	PrintAndLogEx(NORMAL, "      <Card Number> : 24-bit value card number");
+//	PrintAndLogEx(NORMAL, "      Q5            : optional - clone to Q5 (T5555) instead of T55x7 chip");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "       lf nedap clone 112233");
 	return 0;
 }
 
 int usage_lf_nedap_sim(void) {
-	PrintAndLog("Enables simulation of NEDAP card with specified card number.");
-	PrintAndLog("Simulation runs until the button is pressed or another USB command is issued.");
-	PrintAndLog("");
-	PrintAndLog("Usage:  lf nedap sim [h] <Card-Number>");
-	PrintAndLog("Options:");
-	PrintAndLog("      h               : This help");
-	PrintAndLog("      <Card Number>   : 24-bit value card number");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("       lf nedap sim 112233");
+	PrintAndLogEx(NORMAL, "Enables simulation of NEDAP card with specified card number.");
+	PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Usage:  lf nedap sim [h] <Card-Number>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "      h               : This help");
+	PrintAndLogEx(NORMAL, "      <Card Number>   : 24-bit value card number");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "       lf nedap sim 112233");
 	return 0;
 }
 
@@ -115,7 +115,7 @@ int GetNedapBits(uint32_t cn, uint8_t *nedapBits) {
 int CmdLFNedapDemod(const char *Cmd) {
 	//raw ask demod no start bit finding just get binary from wave
 	if (!ASKbiphaseDemod("0 64 1 0", false)) {
-		if (g_debugMode) PrintAndLog("DEBUG: Error - Nedap ASKbiphaseDemod failed");
+		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Nedap ASKbiphaseDemod failed");
 		return 0;
 	}
 	size_t size = DemodBufferLen;
@@ -123,17 +123,17 @@ int CmdLFNedapDemod(const char *Cmd) {
 	if (idx < 0){
 		if (g_debugMode){
 			// if (idx == -5)
-				// PrintAndLog("DEBUG: Error - not enough samples");
+				// PrintAndLogEx(DEBUG, "DEBUG: Error - not enough samples");
 			// else if (idx == -1)
-				// PrintAndLog("DEBUG: Error - only noise found");
+				// PrintAndLogEx(DEBUG, "DEBUG: Error - only noise found");
 			// else if (idx == -2)
-				// PrintAndLog("DEBUG: Error - problem during ASK/Biphase demod");
+				// PrintAndLogEx(DEBUG, "DEBUG: Error - problem during ASK/Biphase demod");
 			if (idx == -3)
-				PrintAndLog("DEBUG: Error - Nedap Size not correct: %d", size);
+				PrintAndLogEx(DEBUG, "DEBUG: Error - Nedap Size not correct: %d", size);
 			else if (idx == -4)
-				PrintAndLog("DEBUG: Error - Nedap preamble not found");
+				PrintAndLogEx(DEBUG, "DEBUG: Error - Nedap preamble not found");
 			else
-				PrintAndLog("DEBUG: Error - Nedap idx: %d",idx);
+				PrintAndLogEx(DEBUG, "DEBUG: Error - Nedap idx: %d",idx);
 		}
 		return 0;
 	}
@@ -170,13 +170,13 @@ int CmdLFNedapDemod(const char *Cmd) {
 	
 	uint8_t firstParity = GetParity( DemodBuffer, EVEN, 63);
 	if ( firstParity != DemodBuffer[63]  ) {
-		PrintAndLog("DEBUG: Error - Nedap 1st 64bit parity check failed:  %d|%d ", DemodBuffer[63], firstParity);
+		PrintAndLogEx(DEBUG, "DEBUG: Error - Nedap 1st 64bit parity check failed:  %d|%d ", DemodBuffer[63], firstParity);
 		return 0;
 	}
 
 	uint8_t secondParity = GetParity( DemodBuffer+64, EVEN, 63);
 	if ( secondParity != DemodBuffer[127]  ) {
-		PrintAndLog("DEBUG: Error - Nedap 2st 64bit parity check failed:  %d|%d ", DemodBuffer[127], secondParity);
+		PrintAndLogEx(DEBUG, "DEBUG: Error - Nedap 2st 64bit parity check failed:  %d|%d ", DemodBuffer[127], secondParity);
 		return 0;
 	}
 
@@ -194,15 +194,15 @@ int CmdLFNedapDemod(const char *Cmd) {
 	chksum2 =  bytebits_to_byte(DemodBuffer+110, 8);
 	chksum2 |= bytebits_to_byte(DemodBuffer+119, 8) << 8;
 
-	PrintAndLog("NEDAP ID Found - Raw: %08x%08x%08x%08x", raw[3], raw[2], raw[1], raw[0]);
-	PrintAndLog(" - UID: %06X", uid);
-	PrintAndLog(" - i: %04X", two);
-	PrintAndLog(" - Checksum2 %04X", chksum2);
+	PrintAndLogEx(NORMAL, "NEDAP ID Found - Raw: %08x%08x%08x%08x", raw[3], raw[2], raw[1], raw[0]);
+	PrintAndLogEx(NORMAL, " - UID: %06X", uid);
+	PrintAndLogEx(NORMAL, " - i: %04X", two);
+	PrintAndLogEx(NORMAL, " - Checksum2 %04X", chksum2);
 
 	if (g_debugMode){
-		PrintAndLog("DEBUG: idx: %d, Len: %d, Printing Demod Buffer:", idx, 128);
+		PrintAndLogEx(DEBUG, "DEBUG: idx: %d, Len: %d, Printing Demod Buffer:", idx, 128);
 		printDemodBuff();
-		PrintAndLog("BIN:\n%s", sprint_bin_break( DemodBuffer, 128, 64) );
+		PrintAndLogEx(NORMAL, "BIN:\n%s", sprint_bin_break( DemodBuffer, 128, 64) );
 	}
 
 	return 1;
@@ -251,7 +251,7 @@ int CmdLFNedapClone(const char *Cmd) {
 	cardnumber = (cn & 0x00FFFFFF);
 	
 	if ( !GetNedapBits(cardnumber, bits)) {
-		PrintAndLog("Error with tag bitstream generation.");
+		PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
 		return 1;
 	}	
 
@@ -268,7 +268,7 @@ int CmdLFNedapClone(const char *Cmd) {
 	blocks[3] = bytebits_to_byte(bits + 64, 32);
 	blocks[4] = bytebits_to_byte(bits + 96, 32);
 
-	PrintAndLog("Preparing to clone NEDAP to T55x7 with card number: %u", cardnumber);
+	PrintAndLogEx(NORMAL, "Preparing to clone NEDAP to T55x7 with card number: %u", cardnumber);
 	print_blocks(blocks, 5);
 
 	UsbCommand resp;
@@ -280,7 +280,7 @@ int CmdLFNedapClone(const char *Cmd) {
 		clearCommandBuffer();
 		SendCommand(&c);
 		if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)){
-			PrintAndLog("Error occurred, device did not respond during write operation.");
+			PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
 			return -1;
 		}
 	}
@@ -310,12 +310,12 @@ int CmdLFNedapSim(const char *Cmd) {
 	arg2 = invert << 8 | separator;
 	
 	if ( !GetNedapBits(cardnumber, bs)) {
-		PrintAndLog("Error with tag bitstream generation.");
+		PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
 		return 1;
 	}	
 
-	PrintAndLog("bin  %s", sprint_bin_break(bs, 128, 32));
-	PrintAndLog("Simulating Nedap - CardNumber: %u", cardnumber );
+	PrintAndLogEx(NORMAL, "bin  %s", sprint_bin_break(bs, 128, 32));
+	PrintAndLogEx(NORMAL, "Simulating Nedap - CardNumber: %u", cardnumber );
 	
 	UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};
 	memcpy(c.d.asBytes, bs, size);
@@ -332,10 +332,10 @@ int CmdLFNedapChk(const char *Cmd){
 	
 	len = ( len == 0 ) ? 5 : len>>1;
 	
-	PrintAndLog("Input: [%d] %s", len, sprint_hex(data, len));
+	PrintAndLogEx(NORMAL, "Input: [%d] %s", len, sprint_hex(data, len));
 	
 	//uint8_t last = GetParity(data, EVEN, 62);
-	//PrintAndLog("TEST PARITY::  %d | %d ", DemodBuffer[62], last);
+	//PrintAndLogEx(NORMAL, "TEST PARITY::  %d | %d ", DemodBuffer[62], last);
 
     uint8_t cl = 0x1D, ch = 0x1D, carry = 0;
     uint8_t al, bl, temp;
@@ -345,7 +345,7 @@ int CmdLFNedapChk(const char *Cmd){
         for (int j = 8; j > 0; --j) {
 			
             bl = al ^ ch;
-			//printf("BL %02x | CH %02x \n", al, ch);
+			//PrintAndLogEx(NORMAL, "BL %02x | CH %02x \n", al, ch);
 			
             carry = (cl & 0x80) ? 1 : 0;
             cl <<= 1;
@@ -367,7 +367,7 @@ int CmdLFNedapChk(const char *Cmd){
         }
     }
 	
-	PrintAndLog("Nedap checksum: 0x%X", ((ch << 8) | cl) );
+	PrintAndLogEx(NORMAL, "Nedap checksum: 0x%X", ((ch << 8) | cl) );
 	return 0;
 }
 
