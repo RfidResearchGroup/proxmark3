@@ -499,7 +499,7 @@ int CmdT55xxDetect(const char *Cmd){
 	}
 	
 	if ( !tryDetectModulation() )
-		PrintAndLogEx(NORMAL, "Could not detect modulation automatically. Try setting it manually with \'lf t55xx config\'");
+		PrintAndLogEx(WARNING, "Could not detect modulation automatically. Try setting it manually with \'lf t55xx config\'");
 
 	return 0;
 }
