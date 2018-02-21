@@ -10,7 +10,7 @@
 #include "cmddata.h"
 
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
-uint8_t g_debugMode = 0;
+//uint8_t g_debugMode = 0;
 size_t DemodBufferLen = 0;
 size_t g_DemodStartIdx = 0;
 int g_DemodClock = 0;
@@ -476,7 +476,7 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
 
 	size_t BitLen = getFromGraphBuf(BitStream);
 
-	if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) Bitlen from grphbuff: %d", BitLen);
+	PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) Bitlen from grphbuff: %d", BitLen);
 
 	if (BitLen < 255) return 0;
 
@@ -505,14 +505,12 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
 	int errCnt = askdemod_ext(BitStream, &BitLen, &clk, &invert, maxErr, askamp, askType, &startIdx);
 
 	if (errCnt < 0 || BitLen < 16){  //if fatal error (or -1)
-		if (g_debugMode) 
-			PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) No data found errors:%d, invert:%d, bitlen:%d, clock:%d", errCnt, invert, BitLen, clk);
+		PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) No data found errors:%d, invert:%d, bitlen:%d, clock:%d", errCnt, invert, BitLen, clk);
 		return 0;
 	}
 
 	if (errCnt > maxErr){
-		if (g_debugMode) 
-			PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) Too many errors found, errors:%d, bits:%d, clock:%d", errCnt, BitLen, clk);
+		PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) Too many errors found, errors:%d, bits:%d, clock:%d", errCnt, BitLen, clk);
 		return 0;
 	}
 	
@@ -667,15 +665,15 @@ int ASKbiphaseDemod(const char *Cmd, bool verbose)
 	uint8_t BitStream[MAX_DEMOD_BUF_LEN];
 	size_t size = getFromGraphBuf(BitStream);	
 	if (size == 0 ) {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: no data in graphbuf");  
-			return 0;  
+		PrintAndLogEx(DEBUG, "DEBUG: no data in graphbuf");  
+		return 0;  
 	}
 	int startIdx = 0;	
 	//invert here inverts the ask raw demoded bits which has no effect on the demod, but we need the pointer
 	int errCnt = askdemod_ext(BitStream, &size, &clk, &invert, maxErr, 0, 0, &startIdx);  
 	if ( errCnt < 0 || errCnt > maxErr ) {   
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: no data or error found %d, clock: %d", errCnt, clk);  
-			return 0;  
+		PrintAndLogEx(DEBUG, "DEBUG: no data or error found %d, clock: %d", errCnt, clk);  
+		return 0;  
 	} 
 
 	//attempt to Biphase decode BitStream
@@ -1065,8 +1063,8 @@ int PSKDemod(const char *Cmd, bool verbose)
 {
 	int invert = 0, clk = 0, maxErr = 100;
 	sscanf(Cmd, "%i %i %i", &clk, &invert, &maxErr);
-	if (clk==1){
-		invert=1;
+	if (clk == 1){
+		invert = 1;
 		clk=0;
 	}
 	if (invert != 0 && invert != 1) {
@@ -1075,8 +1073,8 @@ int PSKDemod(const char *Cmd, bool verbose)
 	}
 	uint8_t BitStream[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t BitLen = getFromGraphBuf(BitStream);
-	if (BitLen==0) return 0;
-	int errCnt=0;
+	if (BitLen == 0) return 0;
+	int errCnt = 0;
 	int startIdx = 0;
 	errCnt = pskRawDemod_ext(BitStream, &BitLen, &clk, &invert, &startIdx);
 	if (errCnt > maxErr){
@@ -1089,7 +1087,7 @@ int PSKDemod(const char *Cmd, bool verbose)
 	}
 	if (verbose || g_debugMode){
 		PrintAndLogEx(DEBUG, "DEBUG: (PSKdemod) Using Clock:%d, invert:%d, Bits Found:%d",clk,invert,BitLen);
-		if (errCnt>0){
+		if (errCnt > 0){
 			PrintAndLogEx(DEBUG, "DEBUG: (PSKdemod) errors during Demoding (shown as 7 in bit stream): %d",errCnt);
 		}
 	}
@@ -1102,7 +1100,7 @@ int PSKDemod(const char *Cmd, bool verbose)
 int CmdPSKIdteck(const char *Cmd) {
 
 	if (!PSKDemod("", false)) {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck PSKDemod failed");
+		PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck PSKDemod failed");
 		return 0;
 	}
 	size_t size = DemodBufferLen;
@@ -1110,7 +1108,24 @@ int CmdPSKIdteck(const char *Cmd) {
 	//get binary from PSK1 wave
 	int idx = detectIdteck(DemodBuffer, &size);
 	if (idx < 0){
-		if (g_debugMode){
+
+		if (idx == -1)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: not enough samples");
+		else if (idx == -2)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: preamble not found");
+		else if (idx == -3)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: size not correct: %d", size);
+		else
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: idx: %d",idx);
+	
+		// if didn't find preamble try again inverting
+		if (!PSKDemod("1", false)) {
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck PSKDemod failed");
+			return 0;
+		}
+		idx = detectIdteck(DemodBuffer, &size);
+		if (idx < 0){
+			
 			if (idx == -1)
 				PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: not enough samples");
 			else if (idx == -2)
@@ -1119,25 +1134,7 @@ int CmdPSKIdteck(const char *Cmd) {
 				PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: size not correct: %d", size);
 			else
 				PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: idx: %d",idx);
-		}
-	
-		// if didn't find preamble try again inverting
-		if (!PSKDemod("1", false)) {
-			if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck PSKDemod failed");
-			return 0;
-		}
-		idx = detectIdteck(DemodBuffer, &size);
-		if (idx < 0){
-			if (g_debugMode){
-				if (idx == -1)
-					PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: not enough samples");
-				else if (idx == -2)
-					PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: preamble not found");
-				else if (idx == -3)
-					PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: size not correct: %d", size);
-				else
-					PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: idx: %d",idx);
-			}
+
 			return 0;
 		}		
 	}
@@ -1181,11 +1178,11 @@ int NRZrawDemod(const char *Cmd, bool verbose)
 	int clkStartIdx = 0;
 	errCnt = nrzRawDemod(BitStream, &BitLen, &clk, &invert, &clkStartIdx);
 	if (errCnt > maxErr){
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: (NRZrawDemod) Too many errors found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
+		PrintAndLogEx(DEBUG, "DEBUG: (NRZrawDemod) Too many errors found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
 		return 0;
 	} 
 	if (errCnt<0 || BitLen<16){  //throw away static - allow 1 and -1 (in case of threshold command first)
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: (NRZrawDemod) no data found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
+		PrintAndLogEx(DEBUG, "DEBUG: (NRZrawDemod) no data found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
 		return 0;
 	}
 	if (verbose || g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: (NRZrawDemod) Tried NRZ Demod using Clock: %d - invert: %d - Bits Found: %d",clk,invert,BitLen);
@@ -1286,7 +1283,7 @@ int CmdRawDemod(const char *Cmd)
 void setClockGrid(int clk, int offset) {
 	g_DemodStartIdx = offset;
 	g_DemodClock = clk;
-	if (g_debugMode) PrintAndLogEx(NORMAL, "DBEUG: (setClockGrid) demodoffset %d, clk %d",offset,clk);
+	PrintAndLogEx(DEBUG, "DBEUG: (setClockGrid) demodoffset %d, clk %d",offset,clk);
 
 	if (offset > clk) offset %= clk;
 	if (offset < 0) offset += clk;
