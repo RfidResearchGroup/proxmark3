@@ -30,23 +30,21 @@ int CmdSecurakeyDemod(const char *Cmd) {
 	//ASK / Manchester
 	bool st = false;
 	if (!ASKDemod_ext("40 0 0", false, false, 1, &st)) {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Securakey: ASK/Manchester Demod failed");
+		PrintAndLogEx(DEBUG, "DEBUG: Error - Securakey: ASK/Manchester Demod failed");
 		return 0;
 	}
 	if (st) return 0;
 	size_t size = DemodBufferLen;
 	int ans = detectSecurakey(DemodBuffer, &size);
 	if (ans < 0) {
-		if (g_debugMode) {
-			if (ans == -1)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Securakey: too few bits found");
-			else if (ans == -2)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Securakey: preamble not found");
-			else if (ans == -3)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Securakey: Size not correct: %d", size);
-			else
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Securakey: ans: %d", ans);
-		}
+		if (ans == -1)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Securakey: too few bits found");
+		else if (ans == -2)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Securakey: preamble not found");
+		else if (ans == -3)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Securakey: Size not correct: %d", size);
+		else
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Securakey: ans: %d", ans);
 		return 0;
 	}
 	setDemodBuf(DemodBuffer, 96, ans);
@@ -75,14 +73,14 @@ int CmdSecurakeyDemod(const char *Cmd) {
 	// remove marker bits (0's every 9th digit after preamble) (pType = 3 (always 0s))
 	size = removeParity(bits_no_spacer, 0, 9, 3, 85);
 	if ( size != 85-9 ) {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error removeParity: %d", size);
+		PrintAndLogEx(DEBUG, "DEBUG: Error removeParity: %d", size);
 		return 0;
 	}
 
 	uint8_t bitLen = (uint8_t)bytebits_to_byte(bits_no_spacer+2, 6);
 	uint32_t fc=0, lWiegand=0, rWiegand=0;
 	if (bitLen > 40) { //securakey's max bitlen is 40 bits...
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error bitLen too long: %u", bitLen);
+		PrintAndLogEx(DEBUG, "DEBUG: Error bitLen too long: %u", bitLen);
 		return 0;
 	}
 	// get left 1/2 wiegand & right 1/2 wiegand (for parity test and wiegand print)

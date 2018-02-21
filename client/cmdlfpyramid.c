@@ -110,7 +110,7 @@ int CmdPyramidDemod(const char *Cmd) {
 	//raw fsk demod no manchester decoding no start bit finding just get binary from wave
 	uint8_t bits[MAX_GRAPH_TRACE_LEN]={0};
 	size_t size = getFromGraphBuf(bits);
-	if (size==0) {
+	if (size == 0) {
 		PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid not enough samples");
 		return 0;
 	}
@@ -118,20 +118,18 @@ int CmdPyramidDemod(const char *Cmd) {
 	int waveIdx=0;
 	int idx = detectPyramid(bits, &size, &waveIdx);
 	if (idx < 0){
-		if (g_debugMode){
 			if (idx == -1)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: not enough samples");
-			else if (idx == -2)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: only noise found");
-			else if (idx == -3)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: problem during FSK demod");
-			else if (idx == -4)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: preamble not found");				
-			else if (idx == -5)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: size not correct: %d", size);
-			else
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: error demoding fsk idx: %d",idx);
-		}
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: not enough samples");
+		else if (idx == -2)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: only noise found");
+		else if (idx == -3)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: problem during FSK demod");
+		else if (idx == -4)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: preamble not found");				
+		else if (idx == -5)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: size not correct: %d", size);
+		else
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: error demoding fsk idx: %d",idx);
 		return 0;
 	}
 	setDemodBuf(bits, size, idx);
@@ -176,12 +174,10 @@ int CmdPyramidDemod(const char *Cmd) {
 
 	size = removeParity(bits, idx+8, 8, 1, 120);
 	if (size != 105){
-		if (g_debugMode) {
-			if ( size == 0)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: parity check failed - IDX: %d, hi3: %08X", idx, rawHi3);
-			else
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: at parity check - tag size does not match Pyramid format, SIZE: %d, IDX: %d, hi3: %08X", size, idx, rawHi3);
-		}
+		if ( size == 0)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: parity check failed - IDX: %d, hi3: %08X", idx, rawHi3);
+		else
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: at parity check - tag size does not match Pyramid format, SIZE: %d, IDX: %d, hi3: %08X", size, idx, rawHi3);
 		return 0;
 	}
 
@@ -245,10 +241,10 @@ int CmdPyramidDemod(const char *Cmd) {
 	else
 		PrintAndLogEx(FAILED, "Checksum %02x failed - should have been %02x", checksum, checkCS);
 
-	if (g_debugMode){
-		PrintAndLogEx(DEBUG, "DEBUG: Pyramid: idx: %d, Len: %d, Printing Demod Buffer:", idx, 128);
+	PrintAndLogEx(DEBUG, "DEBUG: Pyramid: idx: %d, Len: %d, Printing Demod Buffer:", idx, 128);
+	if (g_debugMode)
 		printDemodBuff();
-	}
+
 	return 1;
 }
 

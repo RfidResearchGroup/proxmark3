@@ -105,8 +105,7 @@ int GetAskClock(const char *str, bool printAns) {
 	uint8_t grph[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t size = getFromGraphBuf(grph);
 	if (size == 0) {
-		if (g_debugMode)
-			PrintAndLogEx(WARNING, "Failed to copy from graphbuffer");
+		PrintAndLogEx(WARNING, "Failed to copy from graphbuffer");
 		return -1;
 	}
 	//, size_t *ststart, size_t *stend
@@ -129,8 +128,7 @@ uint8_t GetPskCarrier(const char *str, bool printAns) {
 	uint8_t grph[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t size = getFromGraphBuf(grph);
 	if ( size == 0 ) {
-		if (g_debugMode) 
-			PrintAndLogEx(WARNING, "Failed to copy from graphbuffer");
+		PrintAndLogEx(WARNING, "Failed to copy from graphbuffer");
 		return 0;
 	}
 	uint16_t fc = countFC(grph, size, 0);
@@ -152,7 +150,7 @@ int GetPskClock(const char* str, bool printAns) {
 	uint8_t grph[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t size = getFromGraphBuf(grph);
 	if ( size == 0 ) {
-		if (g_debugMode) PrintAndLogEx(WARNING, "Failed to copy from graphbuffer");
+		PrintAndLogEx(WARNING, "Failed to copy from graphbuffer");
 		return -1;
 	}
 	size_t firstPhaseShiftLoc = 0;
@@ -175,8 +173,7 @@ int GetNrzClock(const char* str, bool printAns) {
 	uint8_t grph[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t size = getFromGraphBuf(grph);
 	if ( size == 0 ) {
-		if (g_debugMode) 
-			PrintAndLogEx(WARNING, "Failed to copy from graphbuffer");
+		PrintAndLogEx(WARNING, "Failed to copy from graphbuffer");
 		return -1;
 	}
 	size_t clkStartIdx = 0;
@@ -206,10 +203,9 @@ int GetFskClock(const char* str, bool printAns) {
 		setClockGrid(rf1, firstClockEdge);
 		return rf1;
 	}
-	if (g_debugMode) {
-		PrintAndLogEx(DEBUG, "DEBUG: unknown fsk field clock detected");
-		PrintAndLogEx(NORMAL, "Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d", fc1, fc2, rf1);
-	}
+
+	PrintAndLogEx(DEBUG, "DEBUG: unknown fsk field clock detected");
+	PrintAndLogEx(DEBUG, "Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d", fc1, fc2, rf1);
 	return 0;
 }
 int fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, int *firstClockEdge) {
@@ -220,7 +216,7 @@ int fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, int *firstClockEdge) {
 	
 	uint16_t ans = countFC(bits, size, 1); 
 	if (ans == 0) {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: No data found");
+		PrintAndLogEx(DEBUG, "DEBUG: No data found");
 		return 0;
 	}
 	
@@ -229,7 +225,7 @@ int fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, int *firstClockEdge) {
 	//int firstClockEdge = 0;
 	*rf1 = detectFSKClk(bits, size, *fc1, *fc2, firstClockEdge);
 	if (*rf1 == 0) {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Clock detect error");
+		PrintAndLogEx(DEBUG, "DEBUG: Clock detect error");
 		return 0;
 	}
 	return 1;

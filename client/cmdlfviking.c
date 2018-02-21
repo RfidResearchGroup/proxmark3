@@ -73,14 +73,14 @@ int detectViking(uint8_t *dest, size_t *size) {
 //see ASKDemod for what args are accepted
 int CmdVikingDemod(const char *Cmd) {
 	if (!ASKDemod(Cmd, false, false, 1)) {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Viking ASKDemod failed");
+		PrintAndLogEx(DEBUG, "DEBUG: Error - Viking ASKDemod failed");
 		return 0;
 	}
 	size_t size = DemodBufferLen;
 
 	int ans = detectViking(DemodBuffer, &size);
 	if (ans < 0) {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Viking Demod %d %s", ans, (ans == -5)?"[chksum error]":"");
+		PrintAndLogEx(DEBUG, "DEBUG: Error - Viking Demod %d %s", ans, (ans == -5)?"[chksum error]":"");
 		return 0;
 	}
 	//got a good demod

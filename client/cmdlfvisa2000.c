@@ -104,23 +104,22 @@ int CmdVisa2kDemod(const char *Cmd) {
 	//ASK / Manchester
 	bool st = true;
 	if (!ASKDemod_ext("64 0 0", false, false, 1, &st)) {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: ASK/Manchester Demod failed");
+		PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: ASK/Manchester Demod failed");
 		save_restoreGB(0);
 		return 0;
 	}
 	size_t size = DemodBufferLen;
 	int ans = detectVisa2k(DemodBuffer, &size);
 	if (ans < 0){
-		if (g_debugMode){
-			if (ans == -1)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: too few bits found");
-			else if (ans == -2)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: preamble not found");
-			else if (ans == -3)
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: Size not correct: %d", size);
-			else
-				PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: ans: %d", ans);
-		}
+		if (ans == -1)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: too few bits found");
+		else if (ans == -2)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: preamble not found");
+		else if (ans == -3)
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: Size not correct: %d", size);
+		else
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: ans: %d", ans);
+
 		save_restoreGB(0);
 		return 0;
 	}
