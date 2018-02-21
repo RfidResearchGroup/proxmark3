@@ -214,19 +214,19 @@ int ul_ev1_pwdgen_selftest(){
 	
 	uint8_t uid1[] = {0x04, 0x11, 0x12, 0x11, 0x12, 0x11, 0x10};
 	uint32_t pwd1 = ul_ev1_pwdgenA(uid1);
-	PrintAndLog("UID | %s | %08X | %s", sprint_hex(uid1,7), pwd1, (pwd1 == 0x8432EB17)?"OK":"->8432EB17<-");
+	PrintAndLogEx(NORMAL, "UID | %s | %08X | %s", sprint_hex(uid1,7), pwd1, (pwd1 == 0x8432EB17)?"OK":"->8432EB17<-");
 
 	uint8_t uid2[] = {0x04, 0x1f, 0x98, 0xea, 0x1e, 0x3e, 0x81};		
 	uint32_t pwd2 = ul_ev1_pwdgenB(uid2);
-	PrintAndLog("UID | %s | %08X | %s", sprint_hex(uid2,7), pwd2, (pwd2 == 0x5fd37eca)?"OK":"->5fd37eca<--");
+	PrintAndLogEx(NORMAL, "UID | %s | %08X | %s", sprint_hex(uid2,7), pwd2, (pwd2 == 0x5fd37eca)?"OK":"->5fd37eca<--");
 
 	uint8_t uid3[] = {0x04, 0x62, 0xB6, 0x8A, 0xB4, 0x42, 0x80};
 	uint32_t pwd3 = ul_ev1_pwdgenC(uid3);
-	PrintAndLog("UID | %s | %08X | %s", sprint_hex(uid3,7), pwd3, (pwd3 == 0x5a349515)?"OK":"->5a349515<--");
+	PrintAndLogEx(NORMAL, "UID | %s | %08X | %s", sprint_hex(uid3,7), pwd3, (pwd3 == 0x5a349515)?"OK":"->5a349515<--");
 
 	uint8_t uid4[] = {0x04, 0xC5, 0xDF, 0x4A, 0x6D, 0x51, 0x80};
 	uint32_t pwd4 = ul_ev1_pwdgenD(uid4);
-	PrintAndLog("UID | %s | %08X | %s", sprint_hex(uid4,7), pwd4, (pwd4 == 0x72B1EC61)?"OK":"->72B1EC61<--");
+	PrintAndLogEx(NORMAL, "UID | %s | %08X | %s", sprint_hex(uid4,7), pwd4, (pwd4 == 0x72B1EC61)?"OK":"->72B1EC61<--");
 	return 0;
 }
 
@@ -300,7 +300,7 @@ static int ul_select( iso14a_card_select_t *card ){
 	ans = WaitForResponseTimeout(CMD_ACK, &resp, 1500);
 	
 	if (!ans || resp.arg[0] < 1) {
-		PrintAndLog("iso14443a card select failed");
+		PrintAndLogEx(NORMAL, "iso14443a card select failed");
 		DropField();
 		return 0;
 	}

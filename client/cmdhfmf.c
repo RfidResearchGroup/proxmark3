@@ -18,365 +18,365 @@
 static int CmdHelp(const char *Cmd);
 
 int usage_hf14_ice(void){
-		PrintAndLog("Usage:   hf mf ice [l] <limit> [f] <name>");
-		PrintAndLog("  h            this help");
-		PrintAndLog("  l <limit>    nonces to be collected");
-		PrintAndLog("  f <name>     save nonces to <name> instead of hf-mf-<UID>-nonces.bin");
-		PrintAndLog("");
-		PrintAndLog("Examples:");
-		PrintAndLog("         hf mf ice");
-		PrintAndLog("         hf mf ice f nonces.bin");
+		PrintAndLogEx(NORMAL, "Usage:   hf mf ice [l] <limit> [f] <name>");
+		PrintAndLogEx(NORMAL, "  h            this help");
+		PrintAndLogEx(NORMAL, "  l <limit>    nonces to be collected");
+		PrintAndLogEx(NORMAL, "  f <name>     save nonces to <name> instead of hf-mf-<UID>-nonces.bin");
+		PrintAndLogEx(NORMAL, "");
+		PrintAndLogEx(NORMAL, "Examples:");
+		PrintAndLogEx(NORMAL, "         hf mf ice");
+		PrintAndLogEx(NORMAL, "         hf mf ice f nonces.bin");
 		return 0;
 }
 
 int usage_hf14_dump(void){
-		PrintAndLog("Usage:   hf mf dump [card memory] k <name> f <name>");
-		PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
-		PrintAndLog("  k <name>     : key filename, if no <name> given, UID will be used as filename");
-		PrintAndLog("  f <name>     : data filename, if no <name> given, UID will be used as filename");
-		PrintAndLog("");
-		PrintAndLog("Examples:");
-		PrintAndLog("         hf mf dump");
-		PrintAndLog("         hf mf dump 4");
+		PrintAndLogEx(NORMAL, "Usage:   hf mf dump [card memory] k <name> f <name>");
+		PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
+		PrintAndLogEx(NORMAL, "  k <name>     : key filename, if no <name> given, UID will be used as filename");
+		PrintAndLogEx(NORMAL, "  f <name>     : data filename, if no <name> given, UID will be used as filename");
+		PrintAndLogEx(NORMAL, "");
+		PrintAndLogEx(NORMAL, "Examples:");
+		PrintAndLogEx(NORMAL, "         hf mf dump");
+		PrintAndLogEx(NORMAL, "         hf mf dump 4");
 		return 0;
 }
 
 int usage_hf14_mifare(void){
-	PrintAndLog("Usage:  hf mf darkside [h] <block number> <A|B>");
-	PrintAndLog("Options:");
-	PrintAndLog("      h               this help");
-	PrintAndLog("      <block number>  (Optional) target other block");
-	PrintAndLog("      <A|B>           (optional) target key type");
-	PrintAndLog("Examples:");
-	PrintAndLog("           hf mf darkside");
-	PrintAndLog("           hf mf darkside 16");
-	PrintAndLog("           hf mf darkside 16 B");
+	PrintAndLogEx(NORMAL, "Usage:  hf mf darkside [h] <block number> <A|B>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "      h               this help");
+	PrintAndLogEx(NORMAL, "      <block number>  (Optional) target other block");
+	PrintAndLogEx(NORMAL, "      <A|B>           (optional) target key type");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "           hf mf darkside");
+	PrintAndLogEx(NORMAL, "           hf mf darkside 16");
+	PrintAndLogEx(NORMAL, "           hf mf darkside 16 B");
 	return 0;
 }
 int usage_hf14_mf1ksim(void){
-	PrintAndLog("Usage:  hf mf sim [h] u <uid> n <numreads> [i] [x] [e] [v]");
-	PrintAndLog("Options:");
-	PrintAndLog("      h    this help");
-	PrintAndLog("      u    (Optional) UID 4,7 or 10bytes. If not specified, the UID 4b from emulator memory will be used");
-	PrintAndLog("      n    (Optional) Automatically exit simulation after <numreads> blocks have been read by reader. 0 = infinite");
-	PrintAndLog("      i    (Optional) Interactive, means that console will not be returned until simulation finishes or is aborted");
-	PrintAndLog("      x    (Optional) Crack, performs the 'reader attack', nr/ar attack against a reader");
-	PrintAndLog("      e    (Optional) Fill simulator keys from found keys");
-	PrintAndLog("      v    (Optional) Verbose");
-	PrintAndLog("Examples:");
-	PrintAndLog("           hf mf sim u 0a0a0a0a");
-	PrintAndLog("           hf mf sim u 11223344556677");
-	PrintAndLog("           hf mf sim u 112233445566778899AA");	
-	PrintAndLog("           hf mf sim u 11223344 i x");	
+	PrintAndLogEx(NORMAL, "Usage:  hf mf sim [h] u <uid> n <numreads> [i] [x] [e] [v]");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "      h    this help");
+	PrintAndLogEx(NORMAL, "      u    (Optional) UID 4,7 or 10bytes. If not specified, the UID 4b from emulator memory will be used");
+	PrintAndLogEx(NORMAL, "      n    (Optional) Automatically exit simulation after <numreads> blocks have been read by reader. 0 = infinite");
+	PrintAndLogEx(NORMAL, "      i    (Optional) Interactive, means that console will not be returned until simulation finishes or is aborted");
+	PrintAndLogEx(NORMAL, "      x    (Optional) Crack, performs the 'reader attack', nr/ar attack against a reader");
+	PrintAndLogEx(NORMAL, "      e    (Optional) Fill simulator keys from found keys");
+	PrintAndLogEx(NORMAL, "      v    (Optional) Verbose");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "           hf mf sim u 0a0a0a0a");
+	PrintAndLogEx(NORMAL, "           hf mf sim u 11223344556677");
+	PrintAndLogEx(NORMAL, "           hf mf sim u 112233445566778899AA");	
+	PrintAndLogEx(NORMAL, "           hf mf sim u 11223344 i x");	
 	return 0;
 }
 int usage_hf14_dbg(void){
-	PrintAndLog("Usage:  hf mf dbg [h] <debug level>");
-	PrintAndLog("Options:");
-	PrintAndLog("           h    this help");	
-	PrintAndLog("       <debug level>  (Optional) see list for valid levels");
-	PrintAndLog("           0 - no debug messages");
-	PrintAndLog("           1 - error messages");
-	PrintAndLog("           2 - plus information messages");
-	PrintAndLog("           3 - plus debug messages");
-	PrintAndLog("           4 - print even debug messages in timing critical functions");
-	PrintAndLog("               Note: this option therefore may cause malfunction itself");
-	PrintAndLog("Examples:");
-	PrintAndLog("           hf mf dbg 3");
+	PrintAndLogEx(NORMAL, "Usage:  hf mf dbg [h] <debug level>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "           h    this help");	
+	PrintAndLogEx(NORMAL, "       <debug level>  (Optional) see list for valid levels");
+	PrintAndLogEx(NORMAL, "           0 - no debug messages");
+	PrintAndLogEx(NORMAL, "           1 - error messages");
+	PrintAndLogEx(NORMAL, "           2 - plus information messages");
+	PrintAndLogEx(NORMAL, "           3 - plus debug messages");
+	PrintAndLogEx(NORMAL, "           4 - print even debug messages in timing critical functions");
+	PrintAndLogEx(NORMAL, "               Note: this option therefore may cause malfunction itself");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "           hf mf dbg 3");
 	return 0;
 }
 int usage_hf14_sniff(void){
-	PrintAndLog("It continuously gets data from the field and saves it to: log, emulator, emulator file.");
-	PrintAndLog("Usage:  hf mf sniff [h] [l] [d] [f]");
-	PrintAndLog("Options:");
-	PrintAndLog("      h    this help");
-	PrintAndLog("      l    save encrypted sequence to logfile `uid.log`");
-	PrintAndLog("      d    decrypt sequence and put it to log file `uid.log`");
-//	PrintAndLog(" n/a  e     decrypt sequence, collect read and write commands and save the result of the sequence to emulator memory");
-	PrintAndLog("      f    decrypt sequence, collect read and write commands and save the result of the sequence to emulator dump file `uid.eml`");
-	PrintAndLog("Example:");
-	PrintAndLog("           hf mf sniff l d f");
+	PrintAndLogEx(NORMAL, "It continuously gets data from the field and saves it to: log, emulator, emulator file.");
+	PrintAndLogEx(NORMAL, "Usage:  hf mf sniff [h] [l] [d] [f]");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "      h    this help");
+	PrintAndLogEx(NORMAL, "      l    save encrypted sequence to logfile `uid.log`");
+	PrintAndLogEx(NORMAL, "      d    decrypt sequence and put it to log file `uid.log`");
+//	PrintAndLogEx(NORMAL, " n/a  e     decrypt sequence, collect read and write commands and save the result of the sequence to emulator memory");
+	PrintAndLogEx(NORMAL, "      f    decrypt sequence, collect read and write commands and save the result of the sequence to emulator dump file `uid.eml`");
+	PrintAndLogEx(NORMAL, "Example:");
+	PrintAndLogEx(NORMAL, "           hf mf sniff l d f");
 	return 0;
 }
 int usage_hf14_nested(void){
-	PrintAndLog("Usage:");
-	PrintAndLog(" all sectors:  hf mf nested  <card memory> <block number> <key A/B> <key (12 hex symbols)> [t,d]");
-	PrintAndLog(" one sector:   hf mf nested  o <block number> <key A/B> <key (12 hex symbols)>");
-	PrintAndLog("               <target block number> <target key A/B> [t]");
-	PrintAndLog("Options:");
-	PrintAndLog("      h    this help");
-	PrintAndLog("      card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K");
-	PrintAndLog("      t    transfer keys into emulator memory");
-	PrintAndLog("      d    write keys to binary file `hf-mf-<UID>-key.bin`");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("      hf mf nested 1 0 A FFFFFFFFFFFF ");
-	PrintAndLog("      hf mf nested 1 0 A FFFFFFFFFFFF t ");
-	PrintAndLog("      hf mf nested 1 0 A FFFFFFFFFFFF d ");
-	PrintAndLog("      hf mf nested o 0 A FFFFFFFFFFFF 4 A");
+	PrintAndLogEx(NORMAL, "Usage:");
+	PrintAndLogEx(NORMAL, " all sectors:  hf mf nested  <card memory> <block number> <key A/B> <key (12 hex symbols)> [t,d]");
+	PrintAndLogEx(NORMAL, " one sector:   hf mf nested  o <block number> <key A/B> <key (12 hex symbols)>");
+	PrintAndLogEx(NORMAL, "               <target block number> <target key A/B> [t]");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "      h    this help");
+	PrintAndLogEx(NORMAL, "      card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K");
+	PrintAndLogEx(NORMAL, "      t    transfer keys into emulator memory");
+	PrintAndLogEx(NORMAL, "      d    write keys to binary file `hf-mf-<UID>-key.bin`");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "      hf mf nested 1 0 A FFFFFFFFFFFF ");
+	PrintAndLogEx(NORMAL, "      hf mf nested 1 0 A FFFFFFFFFFFF t ");
+	PrintAndLogEx(NORMAL, "      hf mf nested 1 0 A FFFFFFFFFFFF d ");
+	PrintAndLogEx(NORMAL, "      hf mf nested o 0 A FFFFFFFFFFFF 4 A");
 	return 0;
 }
 int usage_hf14_hardnested(void){
-	PrintAndLog("Usage:");
-	PrintAndLog("      hf mf hardnested <block number> <key A|B> <key (12 hex symbols)>");
-	PrintAndLog("                       <target block number> <target key A|B> [known target key (12 hex symbols)] [w] [s]");
-	PrintAndLog("  or  hf mf hardnested r [known target key]");
-	PrintAndLog("");
-	PrintAndLog("Options:");
-	PrintAndLog("      h         this help");	
-	PrintAndLog("      w         acquire nonces and UID, and write them to binary file with default name hf-mf-<UID>-nonces.bin");
-	PrintAndLog("      s         slower acquisition (required by some non standard cards)");
-	PrintAndLog("      r         read hf-mf-<UID>-nonces.bin if tag present, otherwise read nonces.bin, then start attack");
-	PrintAndLog("      u <UID>   read/write hf-mf-<UID>-nonces.bin instead of default name");
-	PrintAndLog("      f <name>  read/write <name> instead of default name");
-	PrintAndLog("      t         tests?");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("      hf mf hardnested 0 A FFFFFFFFFFFF 4 A");
-	PrintAndLog("      hf mf hardnested 0 A FFFFFFFFFFFF 4 A w");
-	PrintAndLog("      hf mf hardnested 0 A FFFFFFFFFFFF 4 A f nonces.bin w s");
-	PrintAndLog("      hf mf hardnested r");
-	PrintAndLog("      hf mf hardnested r a0a1a2a3a4a5");
-	PrintAndLog("");
-	PrintAndLog("Add the known target key to check if it is present in the remaining key space:");
-	PrintAndLog("      hf mf hardnested 0 A A0A1A2A3A4A5 4 A FFFFFFFFFFFF");
+	PrintAndLogEx(NORMAL, "Usage:");
+	PrintAndLogEx(NORMAL, "      hf mf hardnested <block number> <key A|B> <key (12 hex symbols)>");
+	PrintAndLogEx(NORMAL, "                       <target block number> <target key A|B> [known target key (12 hex symbols)] [w] [s]");
+	PrintAndLogEx(NORMAL, "  or  hf mf hardnested r [known target key]");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "      h         this help");	
+	PrintAndLogEx(NORMAL, "      w         acquire nonces and UID, and write them to binary file with default name hf-mf-<UID>-nonces.bin");
+	PrintAndLogEx(NORMAL, "      s         slower acquisition (required by some non standard cards)");
+	PrintAndLogEx(NORMAL, "      r         read hf-mf-<UID>-nonces.bin if tag present, otherwise read nonces.bin, then start attack");
+	PrintAndLogEx(NORMAL, "      u <UID>   read/write hf-mf-<UID>-nonces.bin instead of default name");
+	PrintAndLogEx(NORMAL, "      f <name>  read/write <name> instead of default name");
+	PrintAndLogEx(NORMAL, "      t         tests?");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "      hf mf hardnested 0 A FFFFFFFFFFFF 4 A");
+	PrintAndLogEx(NORMAL, "      hf mf hardnested 0 A FFFFFFFFFFFF 4 A w");
+	PrintAndLogEx(NORMAL, "      hf mf hardnested 0 A FFFFFFFFFFFF 4 A f nonces.bin w s");
+	PrintAndLogEx(NORMAL, "      hf mf hardnested r");
+	PrintAndLogEx(NORMAL, "      hf mf hardnested r a0a1a2a3a4a5");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Add the known target key to check if it is present in the remaining key space:");
+	PrintAndLogEx(NORMAL, "      hf mf hardnested 0 A A0A1A2A3A4A5 4 A FFFFFFFFFFFF");
 	return 0;
 }
 int usage_hf14_chk(void){
-	PrintAndLog("Usage:  hf mf chk [h] <block number>|<*card memory> <key type (A/B/?)> [t|d] [<key (12 hex symbols)>] [<dic (*.dic)>]");
-	PrintAndLog("Options:");
-	PrintAndLog("      h    this help");	
-	PrintAndLog("      *    all sectors based on card memory, other values then below defaults to 1k");
-	PrintAndLog("      			0 - MINI(320 bytes)");
-	PrintAndLog("      			1 - 1K");
-	PrintAndLog("      			2 - 2K");
-	PrintAndLog("      			4 - 4K");
-	PrintAndLog("      d    write keys to binary file");
-	PrintAndLog("      t    write keys to emulator memory\n");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("      hf mf chk 0 A 1234567890ab keys.dic     -- target block 0, Key A");
-	PrintAndLog("      hf mf chk *1 ? t                        -- target all blocks, all keys, 1K, write to emul");
-	PrintAndLog("      hf mf chk *1 ? d                        -- target all blocks, all keys, 1K, write to file");
+	PrintAndLogEx(NORMAL, "Usage:  hf mf chk [h] <block number>|<*card memory> <key type (A/B/?)> [t|d] [<key (12 hex symbols)>] [<dic (*.dic)>]");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "      h    this help");	
+	PrintAndLogEx(NORMAL, "      *    all sectors based on card memory, other values then below defaults to 1k");
+	PrintAndLogEx(NORMAL, "      			0 - MINI(320 bytes)");
+	PrintAndLogEx(NORMAL, "      			1 - 1K");
+	PrintAndLogEx(NORMAL, "      			2 - 2K");
+	PrintAndLogEx(NORMAL, "      			4 - 4K");
+	PrintAndLogEx(NORMAL, "      d    write keys to binary file");
+	PrintAndLogEx(NORMAL, "      t    write keys to emulator memory\n");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "      hf mf chk 0 A 1234567890ab keys.dic     -- target block 0, Key A");
+	PrintAndLogEx(NORMAL, "      hf mf chk *1 ? t                        -- target all blocks, all keys, 1K, write to emul");
+	PrintAndLogEx(NORMAL, "      hf mf chk *1 ? d                        -- target all blocks, all keys, 1K, write to file");
 	return 0;
 }
 int usage_hf14_chk_fast(void){
-	PrintAndLog("This is a improved checkkeys method speedwise. It checks Mifare Classic tags sector keys against a dictionary file with keys");
-	PrintAndLog("Usage:  hf mf fchk [h] <card memory> [t|d] [<key (12 hex symbols)>] [<dic (*.dic)>]");
-	PrintAndLog("Options:");
-	PrintAndLog("      h    this help");	
-	PrintAndLog("      <cardmem> all sectors based on card memory, other values than below defaults to 1k");
-	PrintAndLog("      			 0 - MINI(320 bytes)");
-	PrintAndLog("      			 1 - 1K   <default>");
-	PrintAndLog("      			 2 - 2K");
-	PrintAndLog("      			 4 - 4K");
-	PrintAndLog("      d    write keys to binary file");
-	PrintAndLog("      t    write keys to emulator memory\n");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("      hf mf fchk 1 1234567890ab keys.dic    -- target 1K using key 1234567890ab, using dictionary file");
-	PrintAndLog("      hf mf fchk 1 t                        -- target 1K, write to emulator memory");
-	PrintAndLog("      hf mf fchk 1 d                        -- target 1K, write to file");
+	PrintAndLogEx(NORMAL, "This is a improved checkkeys method speedwise. It checks Mifare Classic tags sector keys against a dictionary file with keys");
+	PrintAndLogEx(NORMAL, "Usage:  hf mf fchk [h] <card memory> [t|d] [<key (12 hex symbols)>] [<dic (*.dic)>]");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "      h    this help");	
+	PrintAndLogEx(NORMAL, "      <cardmem> all sectors based on card memory, other values than below defaults to 1k");
+	PrintAndLogEx(NORMAL, "      			 0 - MINI(320 bytes)");
+	PrintAndLogEx(NORMAL, "      			 1 - 1K   <default>");
+	PrintAndLogEx(NORMAL, "      			 2 - 2K");
+	PrintAndLogEx(NORMAL, "      			 4 - 4K");
+	PrintAndLogEx(NORMAL, "      d    write keys to binary file");
+	PrintAndLogEx(NORMAL, "      t    write keys to emulator memory\n");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "      hf mf fchk 1 1234567890ab keys.dic    -- target 1K using key 1234567890ab, using dictionary file");
+	PrintAndLogEx(NORMAL, "      hf mf fchk 1 t                        -- target 1K, write to emulator memory");
+	PrintAndLogEx(NORMAL, "      hf mf fchk 1 d                        -- target 1K, write to file");
 	return 0;
 }
 int usage_hf14_keybrute(void){
-	PrintAndLog("J_Run's 2nd phase of multiple sector nested authentication key recovery");
-	PrintAndLog("You have a known 4 last bytes of a key recovered with mf_nonce_brute tool.");
-	PrintAndLog("First 2 bytes of key will be bruteforced");	
-	PrintAndLog("");
-	PrintAndLog(" ---[ This attack is obsolete,  try hardnested instead ]---");
-	PrintAndLog("");
-	PrintAndLog("Usage:  hf mf keybrute [h] <block number> <A|B> <key>");
-	PrintAndLog("Options:");
-	PrintAndLog("      h               this help");
-	PrintAndLog("      <block number>  target block number");
-	PrintAndLog("      <A|B>           target key type");
-	PrintAndLog("      <key>           candidate key from mf_nonce_brute tool");
-	PrintAndLog("Examples:");
-	PrintAndLog("           hf mf keybrute 1 A 000011223344");
+	PrintAndLogEx(NORMAL, "J_Run's 2nd phase of multiple sector nested authentication key recovery");
+	PrintAndLogEx(NORMAL, "You have a known 4 last bytes of a key recovered with mf_nonce_brute tool.");
+	PrintAndLogEx(NORMAL, "First 2 bytes of key will be bruteforced");	
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, " ---[ This attack is obsolete,  try hardnested instead ]---");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Usage:  hf mf keybrute [h] <block number> <A|B> <key>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "      h               this help");
+	PrintAndLogEx(NORMAL, "      <block number>  target block number");
+	PrintAndLogEx(NORMAL, "      <A|B>           target key type");
+	PrintAndLogEx(NORMAL, "      <key>           candidate key from mf_nonce_brute tool");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "           hf mf keybrute 1 A 000011223344");
 	return 0;
 }
 int usage_hf14_restore(void){
-	PrintAndLog("Usage:   hf mf restore [card memory] u <UID> k <name> f <name>");
-	PrintAndLog("Options:");
-	PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
-	PrintAndLog("  u <UID>      : uid, try to restore from hf-mf-<UID>-key.bin and hf-mf-<UID>-data.bin");
-	PrintAndLog("  k <name>     : key filename, specific the full filename of key file");
-	PrintAndLog("  f <name>     : data filename, specific the full filename of data file");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("         hf mf restore                            -- read the UID from tag first, then restore from hf-mf-<UID>-key.bin and and hf-mf-<UID>-data.bin");
-	PrintAndLog("         hf mf restore 1 u 12345678               -- restore from hf-mf-12345678-key.bin and hf-mf-12345678-data.bin");
-	PrintAndLog("         hf mf restore 1 u 12345678 k dumpkey.bin -- restore from dumpkey.bin and hf-mf-12345678-data.bin");
-	PrintAndLog("         hf mf restore 4                          -- read the UID from tag with 4K memory first, then restore from hf-mf-<UID>-key.bin and and hf-mf-<UID>-data.bin");
+	PrintAndLogEx(NORMAL, "Usage:   hf mf restore [card memory] u <UID> k <name> f <name>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
+	PrintAndLogEx(NORMAL, "  u <UID>      : uid, try to restore from hf-mf-<UID>-key.bin and hf-mf-<UID>-data.bin");
+	PrintAndLogEx(NORMAL, "  k <name>     : key filename, specific the full filename of key file");
+	PrintAndLogEx(NORMAL, "  f <name>     : data filename, specific the full filename of data file");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "         hf mf restore                            -- read the UID from tag first, then restore from hf-mf-<UID>-key.bin and and hf-mf-<UID>-data.bin");
+	PrintAndLogEx(NORMAL, "         hf mf restore 1 u 12345678               -- restore from hf-mf-12345678-key.bin and hf-mf-12345678-data.bin");
+	PrintAndLogEx(NORMAL, "         hf mf restore 1 u 12345678 k dumpkey.bin -- restore from dumpkey.bin and hf-mf-12345678-data.bin");
+	PrintAndLogEx(NORMAL, "         hf mf restore 4                          -- read the UID from tag with 4K memory first, then restore from hf-mf-<UID>-key.bin and and hf-mf-<UID>-data.bin");
 	return 0;
 }
 int usage_hf14_decryptbytes(void){
-	PrintAndLog("Decrypt Crypto-1 encrypted bytes given some known state of crypto. See tracelog to gather needed values\n");
-	PrintAndLog("Usage:   hf mf decrypt [h] <nt> <ar_enc> <at_enc> <data>");
-	PrintAndLog("Options:");
-	PrintAndLog("      h            this help");
-	PrintAndLog("      <nt>         reader nonce");
-	PrintAndLog("      <ar_enc>     encrypted reader response");
-	PrintAndLog("      <at_enc>     encrypted tag response");
-	PrintAndLog("      <data>       encrypted data, taken directly after at_enc and forward");
-	PrintAndLog("Examples:");
-	PrintAndLog("         hf mf decrypt b830049b 9248314a 9280e203 41e586f9\n");
-	PrintAndLog("  this sample decrypts 41e586f9 -> 3003999a  Annotated: 30 03 [99 9a]  auth block 3 [crc]");
+	PrintAndLogEx(NORMAL, "Decrypt Crypto-1 encrypted bytes given some known state of crypto. See tracelog to gather needed values\n");
+	PrintAndLogEx(NORMAL, "Usage:   hf mf decrypt [h] <nt> <ar_enc> <at_enc> <data>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "      h            this help");
+	PrintAndLogEx(NORMAL, "      <nt>         reader nonce");
+	PrintAndLogEx(NORMAL, "      <ar_enc>     encrypted reader response");
+	PrintAndLogEx(NORMAL, "      <at_enc>     encrypted tag response");
+	PrintAndLogEx(NORMAL, "      <data>       encrypted data, taken directly after at_enc and forward");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "         hf mf decrypt b830049b 9248314a 9280e203 41e586f9\n");
+	PrintAndLogEx(NORMAL, "  this sample decrypts 41e586f9 -> 3003999a  Annotated: 30 03 [99 9a]  auth block 3 [crc]");
 	return 0;
 }
 
 int usage_hf14_eget(void){
-	PrintAndLog("Usage:  hf mf eget <block number>");
-	PrintAndLog("Examples:");
-	PrintAndLog("        hf mf eget 0 ");
+	PrintAndLogEx(NORMAL, "Usage:  hf mf eget <block number>");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "        hf mf eget 0 ");
 	return 0;
 }
 int usage_hf14_eclr(void){
-	PrintAndLog("It set card emulator memory to empty data blocks and key A/B FFFFFFFFFFFF \n");
-	PrintAndLog("Usage:  hf mf eclr");
+	PrintAndLogEx(NORMAL, "It set card emulator memory to empty data blocks and key A/B FFFFFFFFFFFF \n");
+	PrintAndLogEx(NORMAL, "Usage:  hf mf eclr");
 	return 0;
 }
 int usage_hf14_eset(void){
-	PrintAndLog("Usage:  hf mf eset <block number> <block data (32 hex symbols)>");
-	PrintAndLog("Examples:");
-	PrintAndLog("        hf mf eset 1 000102030405060708090a0b0c0d0e0f ");	
+	PrintAndLogEx(NORMAL, "Usage:  hf mf eset <block number> <block data (32 hex symbols)>");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "        hf mf eset 1 000102030405060708090a0b0c0d0e0f ");	
 	return 0;
 }
 int usage_hf14_eload(void){
-	PrintAndLog("It loads emul dump from the file `filename.eml`");
-	PrintAndLog("Usage:  hf mf eload [card memory] <file name w/o `.eml`> [numblocks]");
-	PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K, u = UL");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("        hf mf eload filename");
-	PrintAndLog("        hf mf eload 4 filename");	
+	PrintAndLogEx(NORMAL, "It loads emul dump from the file `filename.eml`");
+	PrintAndLogEx(NORMAL, "Usage:  hf mf eload [card memory] <file name w/o `.eml`> [numblocks]");
+	PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K, u = UL");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "        hf mf eload filename");
+	PrintAndLogEx(NORMAL, "        hf mf eload 4 filename");	
 	return 0;
 }
 int usage_hf14_esave(void){
-	PrintAndLog("It saves emul dump into the file `filename.eml` or `cardID.eml`");
-	PrintAndLog(" Usage:  hf mf esave [card memory] [file name w/o `.eml`]");
-	PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("        hf mf esave ");
-	PrintAndLog("        hf mf esave 4");
-	PrintAndLog("        hf mf esave 4 filename");	
+	PrintAndLogEx(NORMAL, "It saves emul dump into the file `filename.eml` or `cardID.eml`");
+	PrintAndLogEx(NORMAL, " Usage:  hf mf esave [card memory] [file name w/o `.eml`]");
+	PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "        hf mf esave ");
+	PrintAndLogEx(NORMAL, "        hf mf esave 4");
+	PrintAndLogEx(NORMAL, "        hf mf esave 4 filename");	
 	return 0;
 }
 int usage_hf14_ecfill(void){
-	PrintAndLog("Read card and transfer its data to emulator memory.");
-	PrintAndLog("Keys must be laid in the emulator memory. \n");
-	PrintAndLog("Usage:  hf mf ecfill <key A/B> [card memory]");
-	PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("        hf mf ecfill A");
-	PrintAndLog("        hf mf ecfill A 4");
+	PrintAndLogEx(NORMAL, "Read card and transfer its data to emulator memory.");
+	PrintAndLogEx(NORMAL, "Keys must be laid in the emulator memory. \n");
+	PrintAndLogEx(NORMAL, "Usage:  hf mf ecfill <key A/B> [card memory]");
+	PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "        hf mf ecfill A");
+	PrintAndLogEx(NORMAL, "        hf mf ecfill A 4");
 	return 0;
 }
 int usage_hf14_ekeyprn(void){
-	PrintAndLog("It prints the keys loaded in the emulator memory");
-	PrintAndLog("Usage:  hf mf ekeyprn [card memory]");
-	PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("        hf mf ekeyprn 1");	
+	PrintAndLogEx(NORMAL, "It prints the keys loaded in the emulator memory");
+	PrintAndLogEx(NORMAL, "Usage:  hf mf ekeyprn [card memory]");
+	PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "        hf mf ekeyprn 1");	
 	return 0;
 }
 
 int usage_hf14_csetuid(void){
-	PrintAndLog("Set UID, ATQA, and SAK for magic Chinese card. Only works with magic cards");
-	PrintAndLog("");
-	PrintAndLog("Usage:  hf mf csetuid [h] <UID 8 hex symbols> [ATQA 4 hex symbols] [SAK 2 hex symbols] [w]");
-	PrintAndLog("Options:");
-	PrintAndLog("       h        this help");
-	PrintAndLog("       w        wipe card before writing");
-	PrintAndLog("       <uid>    UID 8 hex symbols");
-	PrintAndLog("       <atqa>   ATQA 4 hex symbols");
-	PrintAndLog("       <sak>    SAK 2 hex symbols");
-	PrintAndLog("Examples:");
-	PrintAndLog("      hf mf csetuid 01020304");
-	PrintAndLog("      hf mf csetuid 01020304 0004 08 w");
+	PrintAndLogEx(NORMAL, "Set UID, ATQA, and SAK for magic Chinese card. Only works with magic cards");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Usage:  hf mf csetuid [h] <UID 8 hex symbols> [ATQA 4 hex symbols] [SAK 2 hex symbols] [w]");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "       h        this help");
+	PrintAndLogEx(NORMAL, "       w        wipe card before writing");
+	PrintAndLogEx(NORMAL, "       <uid>    UID 8 hex symbols");
+	PrintAndLogEx(NORMAL, "       <atqa>   ATQA 4 hex symbols");
+	PrintAndLogEx(NORMAL, "       <sak>    SAK 2 hex symbols");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "      hf mf csetuid 01020304");
+	PrintAndLogEx(NORMAL, "      hf mf csetuid 01020304 0004 08 w");
 	return 0;
 }
 int usage_hf14_csetblk(void){
-	PrintAndLog("Set block data for magic Chinese card. Only works with magic cards");
-	PrintAndLog("");		
-	PrintAndLog("Usage:  hf mf csetblk [h] <block number> <block data (32 hex symbols)> [w]");
-	PrintAndLog("Options:");
-	PrintAndLog("       h         this help");
-	PrintAndLog("       w         wipe card before writing");
-	PrintAndLog("       <block>   block number");
-	PrintAndLog("       <data>    block data to write (32 hex symbols)");
-	PrintAndLog("Examples:");
-	PrintAndLog("       hf mf csetblk 1 01020304050607080910111213141516");
-	PrintAndLog("       hf mf csetblk 1 01020304050607080910111213141516 w");
+	PrintAndLogEx(NORMAL, "Set block data for magic Chinese card. Only works with magic cards");
+	PrintAndLogEx(NORMAL, "");		
+	PrintAndLogEx(NORMAL, "Usage:  hf mf csetblk [h] <block number> <block data (32 hex symbols)> [w]");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "       h         this help");
+	PrintAndLogEx(NORMAL, "       w         wipe card before writing");
+	PrintAndLogEx(NORMAL, "       <block>   block number");
+	PrintAndLogEx(NORMAL, "       <data>    block data to write (32 hex symbols)");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "       hf mf csetblk 1 01020304050607080910111213141516");
+	PrintAndLogEx(NORMAL, "       hf mf csetblk 1 01020304050607080910111213141516 w");
 	return 0;
 }
 int usage_hf14_cload(void){
-	PrintAndLog("It loads magic Chinese card from the file `filename.eml`");
-	PrintAndLog("or from emulator memory");
-	PrintAndLog("");
-	PrintAndLog("Usage:  hf mf cload [h] [e] <file name w/o `.eml`>");
-	PrintAndLog("Options:");
-	PrintAndLog("       h            this help");
-	PrintAndLog("       e            load card with data from emulator memory");
-	PrintAndLog("       <filename>   load card with data from file");
-	PrintAndLog("Examples:");
-	PrintAndLog("       hf mf cload mydump");
-	PrintAndLog("       hf mf cload e");	
+	PrintAndLogEx(NORMAL, "It loads magic Chinese card from the file `filename.eml`");
+	PrintAndLogEx(NORMAL, "or from emulator memory");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Usage:  hf mf cload [h] [e] <file name w/o `.eml`>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "       h            this help");
+	PrintAndLogEx(NORMAL, "       e            load card with data from emulator memory");
+	PrintAndLogEx(NORMAL, "       <filename>   load card with data from file");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "       hf mf cload mydump");
+	PrintAndLogEx(NORMAL, "       hf mf cload e");	
 	return 0;
 }
 int usage_hf14_cgetblk(void){
-	PrintAndLog("Get block data from magic Chinese card. Only works with magic cards\n");
-	PrintAndLog("");
-	PrintAndLog("Usage:  hf mf cgetblk [h] <block number>");
-	PrintAndLog("Options:");
-	PrintAndLog("      h         this help");
-	PrintAndLog("      <block>   block number");		
-	PrintAndLog("Examples:");
-	PrintAndLog("      hf mf cgetblk 1");	
+	PrintAndLogEx(NORMAL, "Get block data from magic Chinese card. Only works with magic cards\n");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Usage:  hf mf cgetblk [h] <block number>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "      h         this help");
+	PrintAndLogEx(NORMAL, "      <block>   block number");		
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "      hf mf cgetblk 1");	
 	return 0;
 }
 int usage_hf14_cgetsc(void){
-	PrintAndLog("Get sector data from magic Chinese card. Only works with magic cards\n");
-	PrintAndLog("");
-	PrintAndLog("Usage:  hf mf cgetsc [h] <sector number>");
-	PrintAndLog("Options:");
-	PrintAndLog("      h          this help");
-	PrintAndLog("      <sector>   sector number");
-	PrintAndLog("Examples:");
-	PrintAndLog("      hf mf cgetsc 0");
+	PrintAndLogEx(NORMAL, "Get sector data from magic Chinese card. Only works with magic cards\n");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Usage:  hf mf cgetsc [h] <sector number>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "      h          this help");
+	PrintAndLogEx(NORMAL, "      <sector>   sector number");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "      hf mf cgetsc 0");
 	return 0;
 }
 int usage_hf14_csave(void){
-	PrintAndLog("It saves `magic Chinese` card dump into the file `filename.eml` or `cardID.eml`");
-	PrintAndLog("or into emulator memory");
-	PrintAndLog("");
-	PrintAndLog("Usage:  hf mf csave [h] [e] [u] [card memory] i <file name w/o `.eml`>");
-	PrintAndLog("Options:");
-	PrintAndLog("       h             this help");
-	PrintAndLog("       e             save data to emulator memory");
-	PrintAndLog("       u             save data to file, use carduid as filename");	
-	PrintAndLog("       card memory   0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
-	PrintAndLog("       o <filename>  save data to file");
-	PrintAndLog("");
-	PrintAndLog("Examples:");
-	PrintAndLog("       hf mf csave u 1");
-	PrintAndLog("       hf mf csave e 1");
-	PrintAndLog("       hf mf csave 4 o filename");
+	PrintAndLogEx(NORMAL, "It saves `magic Chinese` card dump into the file `filename.eml` or `cardID.eml`");
+	PrintAndLogEx(NORMAL, "or into emulator memory");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Usage:  hf mf csave [h] [e] [u] [card memory] i <file name w/o `.eml`>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "       h             this help");
+	PrintAndLogEx(NORMAL, "       e             save data to emulator memory");
+	PrintAndLogEx(NORMAL, "       u             save data to file, use carduid as filename");	
+	PrintAndLogEx(NORMAL, "       card memory   0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
+	PrintAndLogEx(NORMAL, "       o <filename>  save data to file");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "       hf mf csave u 1");
+	PrintAndLogEx(NORMAL, "       hf mf csave e 1");
+	PrintAndLogEx(NORMAL, "       hf mf csave 4 o filename");
 	return 0;
 }
 int usage_hf14_nack(void) {
-	PrintAndLog("Test a mifare classic based card for the NACK bug.");
-	PrintAndLog("");	
-	PrintAndLog("Usage:  hf mf nack [h] [v]");
-	PrintAndLog("Options:");
-	PrintAndLog("       h             this help");
-	PrintAndLog("       v             verbose");
-	PrintAndLog("Examples:");
-	PrintAndLog("       hf mf nack");
+	PrintAndLogEx(NORMAL, "Test a mifare classic based card for the NACK bug.");
+	PrintAndLogEx(NORMAL, "");	
+	PrintAndLogEx(NORMAL, "Usage:  hf mf nack [h] [v]");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "       h             this help");
+	PrintAndLogEx(NORMAL, "       v             verbose");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "       hf mf nack");
 	return 0;
 }
 
@@ -387,7 +387,7 @@ int GetHFMF14AUID(uint8_t *uid, int *uidlen) {
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
 		//if (!silent) 
-		PrintAndLog("iso14443a card select failed");
+		PrintAndLogEx(WARNING, "iso14443a card select failed");
 		DropField();
 		return 0;
 	}
@@ -406,7 +406,7 @@ char * GenerateFilename(const char *prefix, const char *suffix){
 	
 	GetHFMF14AUID(uid, &uidlen);
 	if (!uidlen) {
-		PrintAndLog("No tag found.");
+		PrintAndLogEx(NORMAL, "No tag found.");
 		return NULL;
 	}
 	
@@ -430,17 +430,17 @@ int CmdHF14ADarkside(const char *Cmd) {
 		key_type = MIFARE_AUTH_KEYB;
 
 	int isOK = mfDarkside(blockno, key_type, &key);
-	PrintAndLog("");
+	PrintAndLogEx(NORMAL, "");
 	switch (isOK) {
-		case -1 : PrintAndLog("[!] button pressed. Aborted."); return 1;
-		case -2 : PrintAndLog("[-] card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests)."); return 1;
-		case -3 : PrintAndLog("[-] card is not vulnerable to Darkside attack (its random number generator is not predictable)."); return 1;
-		case -4 : PrintAndLog("[-] card is not vulnerable to Darkside attack (its random number generator seems to be based on the wellknown");
-				  PrintAndLog("[-] generating polynomial with 16 effective bits only, but shows unexpected behaviour."); return 1;
-		case -5 : PrintAndLog("[!] aborted via keyboard.");  return 1;
-		default : PrintAndLog("[+] found valid key: %012" PRIx64 "\n", key); break;
+		case -1 : PrintAndLogEx(WARNING, "button pressed. Aborted."); return 1;
+		case -2 : PrintAndLogEx(FAILED, "card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests)."); return 1;
+		case -3 : PrintAndLogEx(FAILED, "card is not vulnerable to Darkside attack (its random number generator is not predictable)."); return 1;
+		case -4 : PrintAndLogEx(FAILED, "card is not vulnerable to Darkside attack (its random number generator seems to be based on the wellknown");
+				  PrintAndLogEx(FAILED, "generating polynomial with 16 effective bits only, but shows unexpected behaviour."); return 1;
+		case -5 : PrintAndLogEx(WARNING, "aborted via keyboard.");  return 1;
+		default : PrintAndLogEx(SUCCESS, "found valid key: %012" PRIx64 "\n", key); break;
 	}
-	PrintAndLog("");
+	PrintAndLogEx(NORMAL, "");
 	return 0;
 }
 
@@ -453,29 +453,29 @@ int CmdHF14AMfWrBl(const char *Cmd) {
 	char cmdp	= 0x00;
 
 	if (strlen(Cmd)<3) {
-		PrintAndLog("Usage:  hf mf wrbl    <block number> <key A/B> <key (12 hex symbols)> <block data (32 hex symbols)>");
-		PrintAndLog("Examples:");
-		PrintAndLog("        hf mf wrbl 0 A FFFFFFFFFFFF 000102030405060708090A0B0C0D0E0F");
+		PrintAndLogEx(NORMAL, "Usage:  hf mf wrbl    <block number> <key A/B> <key (12 hex symbols)> <block data (32 hex symbols)>");
+		PrintAndLogEx(NORMAL, "Examples:");
+		PrintAndLogEx(NORMAL, "        hf mf wrbl 0 A FFFFFFFFFFFF 000102030405060708090A0B0C0D0E0F");
 		return 0;
 	}	
 
 	blockNo = param_get8(Cmd, 0);
 	cmdp = param_getchar(Cmd, 1);
 	if (cmdp == 0x00) {
-		PrintAndLog("Key type must be A or B");
+		PrintAndLogEx(NORMAL, "Key type must be A or B");
 		return 1;
 	}
 	if (cmdp != 'A' && cmdp != 'a') keyType = 1;
 	if (param_gethex(Cmd, 2, key, 12)) {
-		PrintAndLog("Key must include 12 HEX symbols");
+		PrintAndLogEx(NORMAL, "Key must include 12 HEX symbols");
 		return 1;
 	}
 	if (param_gethex(Cmd, 3, bldata, 32)) {
-		PrintAndLog("Block data must include 32 HEX symbols");
+		PrintAndLogEx(NORMAL, "Block data must include 32 HEX symbols");
 		return 1;
 	}
-	PrintAndLog("--block no:%d, key type:%c, key:%s", blockNo, keyType?'B':'A', sprint_hex(key, 6));
-	PrintAndLog("--data: %s", sprint_hex(bldata, 16));
+	PrintAndLogEx(NORMAL, "--block no:%d, key type:%c, key:%s", blockNo, keyType?'B':'A', sprint_hex(key, 6));
+	PrintAndLogEx(NORMAL, "--data: %s", sprint_hex(bldata, 16));
 	
 	UsbCommand c = {CMD_MIFARE_WRITEBL, {blockNo, keyType, 0}};
 	memcpy(c.d.asBytes, key, 6);
@@ -486,9 +486,9 @@ int CmdHF14AMfWrBl(const char *Cmd) {
 	UsbCommand resp;
 	if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
 		uint8_t isOK  = resp.arg[0] & 0xff;
-		PrintAndLog("isOk:%02x", isOK);
+		PrintAndLogEx(NORMAL, "isOk:%02x", isOK);
 	} else {
-		PrintAndLog("Command execute timeout");
+		PrintAndLogEx(NORMAL, "Command execute timeout");
 	}
 
 	return 0;
@@ -501,24 +501,24 @@ int CmdHF14AMfRdBl(const char *Cmd) {
 	char cmdp = 0x00;
 
 	if (strlen(Cmd)<3) {
-		PrintAndLog("Usage:  hf mf rdbl    <block number> <key A/B> <key (12 hex symbols)>");
-		PrintAndLog("Examples:");
-		PrintAndLog("        hf mf rdbl 0 A FFFFFFFFFFFF ");
+		PrintAndLogEx(NORMAL, "Usage:  hf mf rdbl    <block number> <key A/B> <key (12 hex symbols)>");
+		PrintAndLogEx(NORMAL, "Examples:");
+		PrintAndLogEx(NORMAL, "        hf mf rdbl 0 A FFFFFFFFFFFF ");
 		return 0;
 	}	
 	
 	blockNo = param_get8(Cmd, 0);
 	cmdp = param_getchar(Cmd, 1);
 	if (cmdp == 0x00) {
-		PrintAndLog("Key type must be A or B");
+		PrintAndLogEx(NORMAL, "Key type must be A or B");
 		return 1;
 	}
 	if (cmdp != 'A' && cmdp != 'a') keyType = 1;
 	if (param_gethex(Cmd, 2, key, 12)) {
-		PrintAndLog("Key must include 12 HEX symbols");
+		PrintAndLogEx(NORMAL, "Key must include 12 HEX symbols");
 		return 1;
 	}
-	PrintAndLog("--block no:%d, key type:%c, key:%s ", blockNo, keyType?'B':'A', sprint_hex(key, 6));
+	PrintAndLogEx(NORMAL, "--block no:%d, key type:%c, key:%s ", blockNo, keyType?'B':'A', sprint_hex(key, 6));
 	
 	UsbCommand c = {CMD_MIFARE_READBL, {blockNo, keyType, 0}};
 	memcpy(c.d.asBytes, key, 6);
@@ -531,11 +531,11 @@ int CmdHF14AMfRdBl(const char *Cmd) {
 		uint8_t *data = resp.d.asBytes;
 
 		if (isOK)
-			PrintAndLog("isOk:%02x data:%s", isOK, sprint_hex(data, 16));
+			PrintAndLogEx(NORMAL, "isOk:%02x data:%s", isOK, sprint_hex(data, 16));
 		else
-			PrintAndLog("isOk:%02x", isOK);
+			PrintAndLogEx(NORMAL, "isOk:%02x", isOK);
 	} else {
-		PrintAndLog("Command execute timeout");
+		PrintAndLogEx(WARNING, "Command execute timeout");
 	}
 
   return 0;
@@ -551,49 +551,49 @@ int CmdHF14AMfRdSc(const char *Cmd) {
 	char cmdp	= 0x00;
 
 	if (strlen(Cmd)<3) {
-		PrintAndLog("Usage:  hf mf rdsc    <sector number> <key A/B> <key (12 hex symbols)>");
-		PrintAndLog("Examples:");
-		PrintAndLog("        hf mf rdsc 0 A FFFFFFFFFFFF ");
+		PrintAndLogEx(NORMAL, "Usage:  hf mf rdsc    <sector number> <key A/B> <key (12 hex symbols)>");
+		PrintAndLogEx(NORMAL, "Examples:");
+		PrintAndLogEx(NORMAL, "        hf mf rdsc 0 A FFFFFFFFFFFF ");
 		return 0;
 	}	
 	
 	sectorNo = param_get8(Cmd, 0);
 	if (sectorNo > 39) {
-		PrintAndLog("Sector number must be less than 40");
+		PrintAndLogEx(NORMAL, "Sector number must be less than 40");
 		return 1;
 	}
 	cmdp = param_getchar(Cmd, 1);
 	if (cmdp != 'a' && cmdp != 'A' && cmdp != 'b' && cmdp != 'B') {
-		PrintAndLog("Key type must be A or B");
+		PrintAndLogEx(NORMAL, "Key type must be A or B");
 		return 1;
 	}
 	if (cmdp != 'A' && cmdp != 'a') keyType = 1;
 	if (param_gethex(Cmd, 2, key, 12)) {
-		PrintAndLog("Key must include 12 HEX symbols");
+		PrintAndLogEx(NORMAL, "Key must include 12 HEX symbols");
 		return 1;
 	}
-	PrintAndLog("--sector no:%d key type:%c key:%s ", sectorNo, keyType?'B':'A', sprint_hex(key, 6));
+	PrintAndLogEx(NORMAL, "--sector no:%d key type:%c key:%s ", sectorNo, keyType?'B':'A', sprint_hex(key, 6));
 	
 	UsbCommand c = {CMD_MIFARE_READSC, {sectorNo, keyType, 0}};
 	memcpy(c.d.asBytes, key, 6);
 	clearCommandBuffer();
 	SendCommand(&c);
-	PrintAndLog("");
+	PrintAndLogEx(NORMAL, "");
 
 	UsbCommand resp;
 	if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
 		isOK  = resp.arg[0] & 0xff;
 		data  = resp.d.asBytes;
 
-		PrintAndLog("isOk:%02x", isOK);
+		PrintAndLogEx(NORMAL, "isOk:%02x", isOK);
 		if (isOK) {
 			for (i = 0; i < (sectorNo<32?3:15); i++) {
-				PrintAndLog("data   : %s", sprint_hex(data + i * 16, 16));
+				PrintAndLogEx(NORMAL, "data   : %s", sprint_hex(data + i * 16, 16));
 			}
-			PrintAndLog("trailer: %s", sprint_hex(data + (sectorNo<32?3:15) * 16, 16));
+			PrintAndLogEx(NORMAL, "trailer: %s", sprint_hex(data + (sectorNo<32?3:15) * 16, 16));
 		}
 	} else {
-		PrintAndLog("Command execute timeout");
+		PrintAndLogEx(WARNING, "Command execute timeout");
 	}
 
   return 0;
@@ -675,7 +675,7 @@ int CmdHF14AMfDump(const char *Cmd) {
 			else
 			{
 			
-				PrintAndLog("Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+				PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
 				return usage_hf14_dump();
 			}
 		}
@@ -690,7 +690,7 @@ int CmdHF14AMfDump(const char *Cmd) {
 	}
 
 	if ((fin = fopen(keyFilename,"rb")) == NULL) {
-		PrintAndLog("Could not find file %s", keyFilename);
+		PrintAndLogEx(NORMAL, "Could not find file %s", keyFilename);
 		return 1;
 	}
 	
@@ -699,7 +699,7 @@ int CmdHF14AMfDump(const char *Cmd) {
 	for (sectorNo=0; sectorNo<numSectors; sectorNo++) {
 		bytes_read = fread( keyA[sectorNo], 1, 6, fin );
 		if ( bytes_read != 6) {
-			PrintAndLog("File reading error.");
+			PrintAndLogEx(NORMAL, "File reading error.");
 			fclose(fin);
 			return 2;
 		}
@@ -709,7 +709,7 @@ int CmdHF14AMfDump(const char *Cmd) {
 	for (sectorNo=0; sectorNo<numSectors; sectorNo++) {
 		bytes_read = fread( keyB[sectorNo], 1, 6, fin );
 		if ( bytes_read != 6) {
-			PrintAndLog("File reading error.");
+			PrintAndLogEx(NORMAL, "File reading error.");
 			fclose(fin);
 			return 2;
 		}
@@ -717,9 +717,9 @@ int CmdHF14AMfDump(const char *Cmd) {
 	
 	fclose(fin);
 			
-	PrintAndLog("|-----------------------------------------|");
-	PrintAndLog("|------ Reading sector access bits...-----|");
-	PrintAndLog("|-----------------------------------------|");
+	PrintAndLogEx(NORMAL, "|-----------------------------------------|");
+	PrintAndLogEx(NORMAL, "|------ Reading sector access bits...-----|");
+	PrintAndLogEx(NORMAL, "|-----------------------------------------|");
 	uint8_t tries = 0;
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		for (tries = 0; tries < MIFARE_SECTOR_RETRY; tries++) {
@@ -739,21 +739,21 @@ int CmdHF14AMfDump(const char *Cmd) {
 					rights[sectorNo][3] = ((data[7] & 0x80) >> 5) | ((data[8] & 0x8) >> 2) | ((data[8] & 0x80) >> 7); // C1C2C3 for sector trailer
 					break;
 				} else if (tries == 2) { // on last try set defaults
-					PrintAndLog("[-] could not get access rights for sector %2d. Trying with defaults...", sectorNo);
+					PrintAndLogEx(FAILED, "could not get access rights for sector %2d. Trying with defaults...", sectorNo);
 					rights[sectorNo][0] = rights[sectorNo][1] = rights[sectorNo][2] = 0x00;
 					rights[sectorNo][3] = 0x01;
 				}
 			} else {
-				PrintAndLog("[-] command execute timeout when trying to read access rights for sector %2d. Trying with defaults...", sectorNo);
+				PrintAndLogEx(FAILED, "command execute timeout when trying to read access rights for sector %2d. Trying with defaults...", sectorNo);
 				rights[sectorNo][0] = rights[sectorNo][1] = rights[sectorNo][2] = 0x00;
 				rights[sectorNo][3] = 0x01;
 			}
 		}
 	}
 	
-	PrintAndLog("|-----------------------------------------|");
-	PrintAndLog("|----- Dumping all blocks to file... -----|");
-	PrintAndLog("|-----------------------------------------|");
+	PrintAndLogEx(NORMAL, "|-----------------------------------------|");
+	PrintAndLogEx(NORMAL, "|----- Dumping all blocks to file... -----|");
+	PrintAndLogEx(NORMAL, "|-----------------------------------------|");
 	
 	bool isOK = true;
 	for (sectorNo = 0; isOK && sectorNo < numSectors; sectorNo++) {
@@ -776,7 +776,7 @@ int CmdHF14AMfDump(const char *Cmd) {
 						received = WaitForResponseTimeout(CMD_ACK, &resp, 1500);
 					} else if (rights[sectorNo][data_area] == 0x07) {										// no key would work
 						isOK = false;
-						PrintAndLog("[!] access rights do not allow reading of sector %2d block %3d", sectorNo, blockNo);
+						PrintAndLogEx(WARNING, "access rights do not allow reading of sector %2d block %3d", sectorNo, blockNo);
 						tries = MIFARE_SECTOR_RETRY;
 					} else {																				// key A would work
 						UsbCommand c = {CMD_MIFARE_READBL, {FirstBlockOfSector(sectorNo) + blockNo, 0, 0}};
@@ -811,15 +811,15 @@ int CmdHF14AMfDump(const char *Cmd) {
 				}
 				if (isOK) {
 					memcpy(carddata[FirstBlockOfSector(sectorNo) + blockNo], data, 16);
-                    PrintAndLog("[+] successfully read block %2d of sector %2d.", blockNo, sectorNo);
+                    PrintAndLogEx(SUCCESS, "successfully read block %2d of sector %2d.", blockNo, sectorNo);
 				} else {
-					PrintAndLog("[-] could not read block %2d of sector %2d", blockNo, sectorNo);
+					PrintAndLogEx(FAILED, "could not read block %2d of sector %2d", blockNo, sectorNo);
 					break;
 				}
 			}
 			else {
 				isOK = false;
-				PrintAndLog("[!] command execute timeout when trying to read block %2d of sector %2d.", blockNo, sectorNo);
+				PrintAndLogEx(WARNING, "command execute timeout when trying to read block %2d of sector %2d.", blockNo, sectorNo);
 				break;
 			}
 		}
@@ -834,13 +834,13 @@ int CmdHF14AMfDump(const char *Cmd) {
 		}
 		
 		if ((fout = fopen(dataFilename,"wb")) == NULL) { 
-			PrintAndLog("[!] could not create file name %s", dataFilename);
+			PrintAndLogEx(WARNING, "could not create file name %s", dataFilename);
 			return 1;
 		}
 		uint16_t numblocks = FirstBlockOfSector(numSectors - 1) + NumBlocksPerSector(numSectors - 1);
 		fwrite(carddata, 1, 16*numblocks, fout);
 		fclose(fout);
-		PrintAndLog("[+} dumped %d blocks (%d bytes) to file %s", numblocks, 16*numblocks, dataFilename);
+		PrintAndLogEx(NORMAL, "[+} dumped %d blocks (%d bytes) to file %s", numblocks, 16*numblocks, dataFilename);
 	}
 	return 0;
 }
@@ -892,7 +892,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 			}
 			else
 			{
-				PrintAndLog("Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+				PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
 				return usage_hf14_restore();
 			}
 		}
@@ -907,7 +907,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 	}
 
 	if ((fkeys = fopen(keyFilename,"rb")) == NULL) {
-		PrintAndLog("Could not find file %s", keyFilename);
+		PrintAndLogEx(NORMAL, "Could not find file %s", keyFilename);
 		return 1;
 	}
 	
@@ -915,7 +915,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		bytes_read = fread( keyA[sectorNo], 1, 6, fkeys );
 		if ( bytes_read != 6) {
-			PrintAndLog("File reading error (%s).", keyFilename);
+			PrintAndLogEx(NORMAL, "File reading error (%s).", keyFilename);
 			fclose(fkeys);
 			return 2;
 		}
@@ -924,7 +924,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		bytes_read = fread( keyB[sectorNo], 1, 6, fkeys );
 		if ( bytes_read != 6) {
-			PrintAndLog("File reading error (%s).", keyFilename);
+			PrintAndLogEx(NORMAL, "File reading error (%s).", keyFilename);
 			fclose(fkeys);
 			return 2;
 		}
@@ -941,10 +941,10 @@ int CmdHF14AMfRestore(const char *Cmd) {
 	}
 
 	if ((fdump = fopen(dataFilename,"rb")) == NULL) {
-		PrintAndLog("Could not find file %s", dataFilename);
+		PrintAndLogEx(NORMAL, "Could not find file %s", dataFilename);
 		return 1;
 	}	
-	PrintAndLog("Restoring %s to card", dataFilename);
+	PrintAndLogEx(NORMAL, "Restoring %s to card", dataFilename);
 
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		for(blockNo = 0; blockNo < NumBlocksPerSector(sectorNo); blockNo++) {
@@ -952,7 +952,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 			memcpy(c.d.asBytes, key, 6);			
 			bytes_read = fread(bldata, 1, 16, fdump);
 			if ( bytes_read != 16) {
-				PrintAndLog("File reading error (%s).", dataFilename);
+				PrintAndLogEx(NORMAL, "File reading error (%s).", dataFilename);
 				fclose(fdump);
 				fdump = NULL;				
 				return 2;
@@ -973,7 +973,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 				bldata[15] = (keyB[sectorNo][5]);
 			}		
 			
-			PrintAndLog("Writing to block %3d: %s", FirstBlockOfSector(sectorNo) + blockNo, sprint_hex(bldata, 16));
+			PrintAndLogEx(NORMAL, "Writing to block %3d: %s", FirstBlockOfSector(sectorNo) + blockNo, sprint_hex(bldata, 16));
 			
 			memcpy(c.d.asBytes + 10, bldata, 16);
 			clearCommandBuffer();
@@ -982,9 +982,9 @@ int CmdHF14AMfRestore(const char *Cmd) {
 			UsbCommand resp;
 			if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
 				uint8_t isOK  = resp.arg[0] & 0xff;
-				PrintAndLog("isOk:%02x", isOK);
+				PrintAndLogEx(NORMAL, "isOk:%02x", isOK);
 			} else {
-				PrintAndLog("Command execute timeout");
+				PrintAndLogEx(NORMAL, "Command execute timeout");
 			}
 		}
 	}
@@ -1018,7 +1018,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 	ctmp = param_getchar(Cmd, 2);
 
 	if (ctmp != 'a' && ctmp != 'A' && ctmp != 'b' && ctmp != 'B') {
-		PrintAndLog("[!] key type must be A or B");
+		PrintAndLogEx(WARNING, "key type must be A or B");
 		return 1;
 	}
 	
@@ -1026,7 +1026,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 		keyType = 1;
 		
 	if (param_gethex(Cmd, 3, key, 12)) {
-		PrintAndLog("[!] key must include 12 HEX symbols");
+		PrintAndLogEx(WARNING, "key must include 12 HEX symbols");
 		return 1;
 	}
 	
@@ -1035,7 +1035,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 		trgBlockNo = param_get8(Cmd, 4);
 		ctmp = param_getchar(Cmd, 5);
 		if (ctmp != 'a' && ctmp != 'A' && ctmp != 'b' && ctmp != 'B') {
-			PrintAndLog("[!] target key type must be A or B");
+			PrintAndLogEx(WARNING, "target key type must be A or B");
 			return 1;
 		}
 		if (ctmp != 'A' && ctmp != 'a') 
@@ -1055,17 +1055,17 @@ int CmdHF14AMfNested(const char *Cmd) {
 	// check if we can authenticate to sector
 	res = mfCheckKeys(blockNo, keyType, true, 1, key, &key64);
 	if (res) {
-		PrintAndLog("[!] key is wrong. Can't authenticate to block:%3d key type:%c", blockNo, keyType ? 'B' : 'A');
+		PrintAndLogEx(WARNING, "key is wrong. Can't authenticate to block:%3d key type:%c", blockNo, keyType ? 'B' : 'A');
 		return 3;
 	}	
 	
 	if (cmdp == 'o') {
 		int16_t isOK = mfnested(blockNo, keyType, key, trgBlockNo, trgKeyType, keyBlock, true);
 		switch (isOK) {
-			case -1 : PrintAndLog("[!] Error: No response from Proxmark.\n"); break;
-			case -2 : PrintAndLog("[!] Button pressed. Aborted.\n"); break;
-			case -3 : PrintAndLog("[-] Tag isn't vulnerable to Nested Attack (PRNG is not predictable).\n"); break;
-			case -4 : PrintAndLog("[-] No valid key found"); break;
+			case -1 : PrintAndLogEx(WARNING, "Error: No response from Proxmark.\n"); break;
+			case -2 : PrintAndLogEx(WARNING, "Button pressed. Aborted.\n"); break;
+			case -3 : PrintAndLogEx(FAILED, "Tag isn't vulnerable to Nested Attack (PRNG is not predictable).\n"); break;
+			case -4 : PrintAndLogEx(FAILED, "No valid key found"); break;
 			case -5 : 
 				key64 = bytes_to_num(keyBlock, 6);
 
@@ -1084,10 +1084,10 @@ int CmdHF14AMfNested(const char *Cmd) {
 					else
 						num_to_bytes(key64, 6, &keyBlock[10]);
 					mfEmlSetMem(keyBlock, sectortrailer, 1);	
-					PrintAndLog("[+] Key transferred to emulator memory.");
+					PrintAndLogEx(SUCCESS, "Key transferred to emulator memory.");
 				}
 				return 0;
-			default : PrintAndLog("[!] Unknown Error.\n");
+			default : PrintAndLogEx(WARNING, "Unknown Error.\n");
 		}
 		return 2;
 	}
@@ -1105,12 +1105,12 @@ int CmdHF14AMfNested(const char *Cmd) {
 			num_to_bytes(g_mifare_default_keys[cnt], 6, (uint8_t*)(keyBlock + cnt * 6));
 		}
 
-		PrintAndLog("[+] Testing known keys. Sector count=%d", SectorsCnt);
+		PrintAndLogEx(SUCCESS, "Testing known keys. Sector count=%d", SectorsCnt);
 		res = mfCheckKeys_fast( SectorsCnt, true, true, 1, MIFARE_DEFAULTKEYS_SIZE + 1, keyBlock, e_sector);
 				
 		uint64_t t2 = msclock() - t1;
-		PrintAndLog("[+] Time to check %d known keys: %.0f seconds\n", MIFARE_DEFAULTKEYS_SIZE, (float)t2/1000.0 );
-		PrintAndLog("[+] enter nested attack");
+		PrintAndLogEx(SUCCESS, "Time to check %d known keys: %.0f seconds\n", MIFARE_DEFAULTKEYS_SIZE, (float)t2/1000.0 );
+		PrintAndLogEx(SUCCESS, "enter nested attack");
 		
 		// nested sectors
 		iterations = 0;
@@ -1124,9 +1124,9 @@ int CmdHF14AMfNested(const char *Cmd) {
 					
 					int16_t isOK = mfnested(blockNo, keyType, key, FirstBlockOfSector(sectorNo), trgKeyType, keyBlock, calibrate);
 					switch (isOK) {
-						case -1 : PrintAndLog("[!] error: No response from Proxmark.\n"); break;
-						case -2 : PrintAndLog("[!] button pressed. Aborted.\n"); break;
-						case -3 : PrintAndLog("[-] Tag isn't vulnerable to Nested Attack (PRNG is not predictable).\n"); break;
+						case -1 : PrintAndLogEx(WARNING, "error: No response from Proxmark.\n"); break;
+						case -2 : PrintAndLogEx(WARNING, "button pressed. Aborted.\n"); break;
+						case -3 : PrintAndLogEx(FAILED, "Tag isn't vulnerable to Nested Attack (PRNG is not predictable).\n"); break;
 						case -4 : //key not found
 							calibrate = false;
 							iterations++;
@@ -1140,7 +1140,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 							res = mfCheckKeys_fast( SectorsCnt, true, true, 2, 1, keyBlock, e_sector);
 							continue;
 							
-						default : PrintAndLog("[!] unknown Error.\n");
+						default : PrintAndLogEx(WARNING, "unknown Error.\n");
 					}
 					free(e_sector);
 					return 2;
@@ -1149,18 +1149,18 @@ int CmdHF14AMfNested(const char *Cmd) {
 		}
 		
 		t1 = msclock() - t1;
-		PrintAndLog("[+] time in nested: %.0f seconds\n", (float)t1/1000.0);
+		PrintAndLogEx(SUCCESS, "time in nested: %.0f seconds\n", (float)t1/1000.0);
 
 
 		// 20160116 If Sector A is found, but not Sector B,  try just reading it of the tag?
-		PrintAndLog("[+] trying to read key B...");
+		PrintAndLogEx(SUCCESS, "trying to read key B...");
 		for (i = 0; i < SectorsCnt; i++) {
 			// KEY A  but not KEY B
 			if ( e_sector[i].foundKey[0] && !e_sector[i].foundKey[1] ) {
 				
 				uint8_t sectrail = (FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1);
 				
-				PrintAndLog("[+] reading block %d", sectrail);
+				PrintAndLogEx(SUCCESS, "reading block %d", sectrail);
 							
 				UsbCommand c = {CMD_MIFARE_READBL, {sectrail, 0, 0}};
 				num_to_bytes(e_sector[i].Key[0], 6, c.d.asBytes); // KEY A
@@ -1176,7 +1176,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 				uint8_t *data = resp.d.asBytes;
 				key64 = bytes_to_num(data+10, 6);
 				if (key64) {
-					PrintAndLog("[+] data: %s", sprint_hex(data+10, 6));
+					PrintAndLogEx(SUCCESS, "data: %s", sprint_hex(data+10, 6));
 					e_sector[i].foundKey[1] = true;
 					e_sector[i].Key[1] = key64;
 				}
@@ -1196,7 +1196,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 				if (e_sector[i].foundKey[1])
 					num_to_bytes(e_sector[i].Key[1], 6, &keyBlock[10]);
 				mfEmlSetMem(keyBlock, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1);
-				PrintAndLog("[+] key transferred to emulator memory.");
+				PrintAndLogEx(SUCCESS, "key transferred to emulator memory.");
 			}		
 		}
 		
@@ -1207,12 +1207,12 @@ int CmdHF14AMfNested(const char *Cmd) {
 				return 1;
 			
 			if ((fkeys = fopen(fptr, "wb")) == NULL) { 
-				PrintAndLog("[!] could not create file %s", fptr);
+				PrintAndLogEx(WARNING, "could not create file %s", fptr);
 				free(e_sector);
 				return 1;
 			}
 			
-			PrintAndLog("[+] saving keys to binary file %s...", fptr);
+			PrintAndLogEx(SUCCESS, "saving keys to binary file %s...", fptr);
 			for (i=0; i<SectorsCnt; i++) {
 				if (e_sector[i].foundKey[0]){
 					num_to_bytes(e_sector[i].Key[0], 6, tempkey);
@@ -1280,14 +1280,14 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 		default:
 			if(param_getchar(Cmd, cmdp) == 0x00)
 			{
-				PrintAndLog("Block number is missing");
+				PrintAndLogEx(NORMAL, "Block number is missing");
 				return 1;
 			
 			}
 			blockNo = param_get8(Cmd, cmdp);
 			ctmp = param_getchar(Cmd, cmdp+1);
 			if (ctmp != 'a' && ctmp != 'A' && ctmp != 'b' && ctmp != 'B') {
-				PrintAndLog("Key type must be A or B");
+				PrintAndLogEx(NORMAL, "Key type must be A or B");
 				return 1;
 			}
 			if (ctmp != 'A' && ctmp != 'a') { 
@@ -1295,13 +1295,13 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 			}
 			
 			if (param_gethex(Cmd, cmdp+2, key, 12)) {
-				PrintAndLog("Key must include 12 HEX symbols");
+				PrintAndLogEx(NORMAL, "Key must include 12 HEX symbols");
 				return 1;
 			}
 			
 			if(param_getchar(Cmd, cmdp+3) == 0x00)
 			{
-				PrintAndLog("Target block number is missing");
+				PrintAndLogEx(NORMAL, "Target block number is missing");
 				return 1;
 			
 			}
@@ -1309,7 +1309,7 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 
 			ctmp = param_getchar(Cmd, cmdp+4);
 			if (ctmp != 'a' && ctmp != 'A' && ctmp != 'b' && ctmp != 'B') {
-				PrintAndLog("Target key type must be A or B");
+				PrintAndLogEx(NORMAL, "Target key type must be A or B");
 				return 1;
 			}
 			if (ctmp != 'A' && ctmp != 'a') {
@@ -1346,7 +1346,7 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 			cmdp++;
 			break;
 		default:
-			PrintAndLog("Unknown parameter '%c'\n", ctmp);
+			PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", ctmp);
 			usage_hf14_hardnested();
 			return 1;
 		}
@@ -1358,12 +1358,12 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 		// check if we can authenticate to sector
 		int res = mfCheckKeys(blockNo, keyType, true, 1, key, &key64);
 		if (res) {
-			PrintAndLog("Key is wrong. Can't authenticate to block:%3d key type:%c", blockNo, keyType ? 'B' : 'A');
+			PrintAndLogEx(NORMAL, "Key is wrong. Can't authenticate to block:%3d key type:%c", blockNo, keyType ? 'B' : 'A');
 			return 3;
 		}	
 	}
 	
-	PrintAndLog("--target block no:%3d, target key type:%c, known target key: 0x%02x%02x%02x%02x%02x%02x%s, file action: %s, Slow: %s, Tests: %d ", 
+	PrintAndLogEx(NORMAL, "--target block no:%3d, target key type:%c, known target key: 0x%02x%02x%02x%02x%02x%02x%s, file action: %s, Slow: %s, Tests: %d ", 
 			trgBlockNo, 
 			trgKeyType?'B':'A', 
 			trgkey[0], trgkey[1], trgkey[2], trgkey[3], trgkey[4], trgkey[5],
@@ -1378,8 +1378,8 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 	DropField();
 	if (isOK) {
 		switch (isOK) {
-			case 1 : PrintAndLog("Error: No response from Proxmark.\n"); break;
-			case 2 : PrintAndLog("Button pressed. Aborted.\n"); break;
+			case 1 : PrintAndLogEx(NORMAL, "Error: No response from Proxmark.\n"); break;
+			case 2 : PrintAndLogEx(NORMAL, "Button pressed. Aborted.\n"); break;
 			default : break;
 		}
 		return 2;
@@ -1449,20 +1449,20 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 		if (clen == 12) {
 			
 			if ( param_gethex(Cmd, i, keyBlock + 6 * keycnt, 12) ){
-				PrintAndLog("[-] not hex, skipping");
+				PrintAndLogEx(FAILED, "not hex, skipping");
 				continue;
 			}
 
 			if ( keyitems - keycnt < 2) {
 				p = realloc(keyBlock, 6 * (keyitems += 64));
 				if (!p) {
-					PrintAndLog("[-] Cannot allocate memory for Keys");
+					PrintAndLogEx(FAILED, "Cannot allocate memory for Keys");
 					free(keyBlock);
 					return 2;
 				}
 				keyBlock = p;
 			}
-			PrintAndLog("[%2d] key %s", keycnt, sprint_hex( (keyBlock + 6*keycnt), 6 ) );
+			PrintAndLogEx(NORMAL, "[%2d] key %s", keycnt, sprint_hex( (keyBlock + 6*keycnt), 6 ) );
 			keycnt++;
 		} else if ( clen == 1) {
 			if (ctmp == 't' || ctmp == 'T') { transferToEml = 1; continue; }
@@ -1470,13 +1470,13 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 		} else {
 			// May be a dic file
 			if ( param_getstr(Cmd, i, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE ) {
-				PrintAndLog("[-] Filename too long");
+				PrintAndLogEx(FAILED, "Filename too long");
 				continue;
 			}
 			
 			f = fopen( filename, "r");
 			if ( !f ){
-				PrintAndLog("[-] File: %s: not found or locked.", filename);
+				PrintAndLogEx(FAILED, "File: %s: not found or locked.", filename);
 				continue;
 			}
 			
@@ -1490,7 +1490,7 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 				if( buf[0]=='#' ) continue;	//The line start with # is comment, skip
 
 				if (!isxdigit(buf[0])){
-					PrintAndLog("[-] File content error. '%s' must include 12 HEX symbols",buf);
+					PrintAndLogEx(FAILED, "File content error. '%s' must include 12 HEX symbols",buf);
 					continue;
 				}
 				
@@ -1498,7 +1498,7 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 				if ( keyitems - keycnt < 2) {
 					p = realloc(keyBlock, 6 * (keyitems += 64));
 					if (!p) {
-						PrintAndLog("[-] Cannot allocate memory for default keys");
+						PrintAndLogEx(FAILED, "Cannot allocate memory for default keys");
 						free(keyBlock);
 						fclose(f);
 						return 2;
@@ -1512,14 +1512,14 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 				memset(buf, 0, sizeof(buf));
 			}
 			fclose(f);
-			PrintAndLog("[+] Loaded %2d keys from %s", keycnt, filename);
+			PrintAndLogEx(SUCCESS, "Loaded %2d keys from %s", keycnt, filename);
 		}
 	}
 		
 	if (keycnt == 0) {
-		PrintAndLog("[+] No key specified, trying default keys");
+		PrintAndLogEx(SUCCESS, "No key specified, trying default keys");
 		for (;keycnt < MIFARE_DEFAULTKEYS_SIZE; keycnt++)
-			PrintAndLog("[%2d] %02x%02x%02x%02x%02x%02x", keycnt,
+			PrintAndLogEx(NORMAL, "[%2d] %02x%02x%02x%02x%02x%02x", keycnt,
 				(keyBlock + 6*keycnt)[0],(keyBlock + 6*keycnt)[1], (keyBlock + 6*keycnt)[2],
 				(keyBlock + 6*keycnt)[3], (keyBlock + 6*keycnt)[4],	(keyBlock + 6*keycnt)[5]);
 	}
@@ -1539,13 +1539,13 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 	
 	// strategys. 1= deep first on sector 0 AB,  2= width first on all sectors
 	for (uint8_t strategy = 1; strategy < 3; strategy++) {
-		PrintAndLog("[+] Running strategy %u", strategy);
+		PrintAndLogEx(SUCCESS, "Running strategy %u", strategy);
 		// main keychunk loop			
 		for (uint32_t i = 0; i < keycnt; i += chunksize) {
 			
 			if (ukbhit()) {
 				int gc = getchar(); (void)gc;
-				printf("\naborted via keyboard!\n");
+				PrintAndLogEx(NORMAL, "\naborted via keyboard!\n");
 				goto out;
 			}
 			
@@ -1569,7 +1569,7 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 	} // end strategy
 out: 
 	t1 = msclock() - t1;
-	PrintAndLog("[+] Time in checkkeys (fast):  %.1fs\n", (float)(t1/1000.0));
+	PrintAndLogEx(SUCCESS, "Time in checkkeys (fast):  %.1fs\n", (float)(t1/1000.0));
 
 	printKeyTable( sectorsCnt, e_sector );
 
@@ -1585,7 +1585,7 @@ out:
 			mfEmlSetMem(block, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1);
 			*/
 		}
-		PrintAndLog("Found keys have been transferred to the emulator memory");
+		PrintAndLogEx(NORMAL, "Found keys have been transferred to the emulator memory");
 	}
 	
 	if (createDumpFile) {
@@ -1595,12 +1595,12 @@ out:
 
 		FILE *fkeys = fopen(fptr,"wb");
 		if (fkeys == NULL) { 
-			PrintAndLog("Could not create file %s", filename);
+			PrintAndLogEx(NORMAL, "Could not create file %s", filename);
 			free(keyBlock);
 			free(e_sector);
 			return 1;
 		}
-		PrintAndLog("Printing keys to binary file %s...", filename);
+		PrintAndLogEx(NORMAL, "Printing keys to binary file %s...", filename);
 	
 		for (i=0; i<sectorsCnt; i++) {
 			num_to_bytes(e_sector[i].Key[0], 6, tempkey);
@@ -1613,12 +1613,12 @@ out:
 		}
 
 		fclose(fkeys);
-		PrintAndLog("Found keys have been dumped to file %s. 0xffffffffffff has been inserted for unknown keys.", filename);			
+		PrintAndLogEx(NORMAL, "Found keys have been dumped to file %s. 0xffffffffffff has been inserted for unknown keys.", filename);			
 	}
 	
 	free(keyBlock);
 	free(e_sector);
-	PrintAndLog("");
+	PrintAndLogEx(NORMAL, "");
 	return 0;
 }
 
@@ -1672,7 +1672,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 			keyType = 2;
 			break;
 		default:
-			PrintAndLog("Key type must be A , B or ?");
+			PrintAndLogEx(NORMAL, "Key type must be A , B or ?");
 			free(keyBlock);
 			return 1;
 		};
@@ -1686,20 +1686,20 @@ int CmdHF14AMfChk(const char *Cmd) {
 		if (clen == 12) {
 			
 			if ( param_gethex(Cmd, i, keyBlock + 6 * keycnt, 12) ){
-				PrintAndLog("[-] not hex, skipping");
+				PrintAndLogEx(FAILED, "not hex, skipping");
 				continue;
 			}
 
 			if ( keyitems - keycnt < 2) {
 				p = realloc(keyBlock, 6 * (keyitems += 64));
 				if (!p) {
-					PrintAndLog("[-] cannot allocate memory for Keys");
+					PrintAndLogEx(FAILED, "cannot allocate memory for Keys");
 					free(keyBlock);
 					return 2;
 				}
 				keyBlock = p;
 			}
-			PrintAndLog("[%2d] key %s", keycnt, sprint_hex( (keyBlock + 6*keycnt), 6 ) );;
+			PrintAndLogEx(NORMAL, "[%2d] key %s", keycnt, sprint_hex( (keyBlock + 6*keycnt), 6 ) );;
 			keycnt++;
 		} else if ( clen == 1 ) {
 			if (ctmp == 't' || ctmp == 'T') { transferToEml = 1; continue; }
@@ -1707,13 +1707,13 @@ int CmdHF14AMfChk(const char *Cmd) {
 		} else {
 			// May be a dic file
 			if ( param_getstr(Cmd, i, filename, sizeof(filename)) >= FILE_PATH_SIZE ) {
-				PrintAndLog("[-] File name too long");
+				PrintAndLogEx(FAILED, "File name too long");
 				continue;
 			}
 			
 			f = fopen( filename , "r");
 			if ( !f ) {
-				PrintAndLog("[-] File: %s: not found or locked.", filename);
+				PrintAndLogEx(FAILED, "File: %s: not found or locked.", filename);
 				continue;
 			}
 			
@@ -1728,7 +1728,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 
 				// codesmell, only checks first char?
 				if (!isxdigit(buf[0])){
-					PrintAndLog("[-] File content error. '%s' must include 12 HEX symbols",buf);
+					PrintAndLogEx(FAILED, "File content error. '%s' must include 12 HEX symbols",buf);
 					continue;
 				}
 				
@@ -1737,7 +1737,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 				if ( keyitems - keycnt < 2) {
 					p = realloc(keyBlock, 6 * (keyitems += 64));
 					if (!p) {
-						PrintAndLog("[-] Cannot allocate memory for defKeys");
+						PrintAndLogEx(FAILED, "Cannot allocate memory for defKeys");
 						free(keyBlock);
 						fclose(f);
 						return 2;
@@ -1746,19 +1746,19 @@ int CmdHF14AMfChk(const char *Cmd) {
 				}
 				memset(keyBlock + 6 * keycnt, 0, 6);
 				num_to_bytes(strtoll(buf, NULL, 16), 6, keyBlock + 6*keycnt);
-				//PrintAndLog("check key[%2d] %012" PRIx64, keycnt, bytes_to_num(keyBlock + 6*keycnt, 6));
+				//PrintAndLogEx(NORMAL, "check key[%2d] %012" PRIx64, keycnt, bytes_to_num(keyBlock + 6*keycnt, 6));
 				keycnt++;
 				memset(buf, 0, sizeof(buf));
 			}
 			fclose(f);
-			PrintAndLog("[+] Loaded %2d keys from %s", keycnt, filename);
+			PrintAndLogEx(SUCCESS, "Loaded %2d keys from %s", keycnt, filename);
 		}
 	}
 	
 	if (keycnt == 0) {
-		PrintAndLog("No key specified, trying default keys");
+		PrintAndLogEx(NORMAL, "No key specified, trying default keys");
 		for (;keycnt < MIFARE_DEFAULTKEYS_SIZE; keycnt++)
-			PrintAndLog("[%2d] %02x%02x%02x%02x%02x%02x", keycnt,
+			PrintAndLogEx(NORMAL, "[%2d] %02x%02x%02x%02x%02x%02x", keycnt,
 				(keyBlock + 6*keycnt)[0],(keyBlock + 6*keycnt)[1], (keyBlock + 6*keycnt)[2],
 				(keyBlock + 6*keycnt)[3], (keyBlock + 6*keycnt)[4],	(keyBlock + 6*keycnt)[5], 6);
 	}
@@ -1797,10 +1797,10 @@ int CmdHF14AMfChk(const char *Cmd) {
 						
 			for (uint32_t c = 0; c < keycnt; c += max_keys) {
 								
-				printf("."); fflush(stdout);
+				PrintAndLogEx(NORMAL, "."); fflush(stdout);
 				if (ukbhit()) {
 					int gc = getchar();	(void)gc;
-					printf("\naborted via keyboard!\n");
+					PrintAndLogEx(NORMAL, "\naborted via keyboard!\n");
 					goto out;
 				}
 								
@@ -1819,19 +1819,19 @@ int CmdHF14AMfChk(const char *Cmd) {
 		}
 	}
 	t1 = msclock() - t1;
-	PrintAndLog("\nTime in checkkeys: %.0f seconds\n", (float)t1/1000.0);
+	PrintAndLogEx(NORMAL, "\nTime in checkkeys: %.0f seconds\n", (float)t1/1000.0);
 
 		
 	// 20160116 If Sector A is found, but not Sector B,  try just reading it of the tag?
 	if ( keyType != 1 ) {
-		PrintAndLog("testing to read key B...");
+		PrintAndLogEx(NORMAL, "testing to read key B...");
 		for (i = 0; i < SectorsCnt; i++) {
 			// KEY A  but not KEY B
 			if ( e_sector[i].foundKey[0] && !e_sector[i].foundKey[1] ) {
 							
 				uint8_t sectrail = (FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1);
 				
-				PrintAndLog("Reading block %d", sectrail);
+				PrintAndLogEx(NORMAL, "Reading block %d", sectrail);
 				
 				UsbCommand c = {CMD_MIFARE_READBL, {sectrail, 0, 0}};
 				num_to_bytes(e_sector[i].Key[0], 6, c.d.asBytes); // KEY A
@@ -1847,7 +1847,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 				uint8_t *data = resp.d.asBytes;
 				key64 = bytes_to_num(data+10, 6);
 				if (key64) {
-					PrintAndLog("Data:%s", sprint_hex(data+10, 6));
+					PrintAndLogEx(NORMAL, "Data:%s", sprint_hex(data+10, 6));
 					e_sector[i].foundKey[1] = 1;
 					e_sector[i].Key[1] = key64;
 				}
@@ -1870,7 +1870,7 @@ out:
 				num_to_bytes(e_sector[i].Key[1], 6, block+10);
 			mfEmlSetMem(block, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1);
 		}
-		PrintAndLog("Found keys have been transferred to the emulator memory");
+		PrintAndLogEx(NORMAL, "Found keys have been transferred to the emulator memory");
 	}
 	
 	if (createDumpFile) {
@@ -1880,12 +1880,12 @@ out:
 
 		FILE *fkeys = fopen(fptr,"wb");
 		if (fkeys == NULL) { 
-			PrintAndLog("Could not create file %s", fptr);
+			PrintAndLogEx(NORMAL, "Could not create file %s", fptr);
 			free(keyBlock);
 			free(e_sector);
 			return 1;
 		}
-		PrintAndLog("Printing keys to binary file %s...", fptr);
+		PrintAndLogEx(NORMAL, "Printing keys to binary file %s...", fptr);
 	
 		for( i=0; i<SectorsCnt; i++) {
 			num_to_bytes(e_sector[i].Key[0], 6, tempkey);
@@ -1896,12 +1896,12 @@ out:
 			fwrite ( tempkey, 1, 6, fkeys );
 		}
 		fclose(fkeys);
-		PrintAndLog("Found keys have been dumped to file %s. 0xffffffffffff has been inserted for unknown keys.", fptr);
+		PrintAndLogEx(NORMAL, "Found keys have been dumped to file %s. 0xffffffffffff has been inserted for unknown keys.", fptr);
 	}
 
 	free(keyBlock);
 	free(e_sector);
-	PrintAndLog("");
+	PrintAndLogEx(NORMAL, "");
 	return 0;
 }
 
@@ -1943,7 +1943,7 @@ void readerAttack(nonces_t data, bool setEmulatorMem, bool verbose) {
 		uint8_t sector = data.sector;
 		uint8_t keytype = data.keytype;
 
-		PrintAndLog("Reader is trying authenticate with: Key %s, sector %02d: [%012" PRIx64 "]"
+		PrintAndLogEx(NORMAL, "Reader is trying authenticate with: Key %s, sector %02d: [%012" PRIx64 "]"
 			, keytype ? "B" : "A"
 			, sector
 			, key
@@ -1958,7 +1958,7 @@ void readerAttack(nonces_t data, bool setEmulatorMem, bool verbose) {
 			num_to_bytes( k_sector[sector].Key[0], 6, memBlock);
 			num_to_bytes( k_sector[sector].Key[1], 6, memBlock+10);
 			//iceman,  guessing this will not work so well for 4K tags.
-			PrintAndLog("Setting Emulator Memory Block %02d: [%s]"
+			PrintAndLogEx(NORMAL, "Setting Emulator Memory Block %02d: [%s]"
 				, (sector*4) + 3
 				, sprint_hex( memBlock, sizeof(memBlock))
 				);
@@ -2021,7 +2021,7 @@ int CmdHF14AMf1kSim(const char *Cmd) {
 			cmdp++;
 			break;
 		default:
-			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+			PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
 			errors = true;
 			break;
 		}
@@ -2029,7 +2029,7 @@ int CmdHF14AMf1kSim(const char *Cmd) {
 	//Validations
 	if (errors) return usage_hf14_mf1ksim();
 	
-	PrintAndLog(" uid:%s, numreads:%d, flags:%d (0x%02x) "
+	PrintAndLogEx(NORMAL, " uid:%s, numreads:%d, flags:%d (0x%02x) "
 				, (uidlen == 0 ) ? "N/A" : sprint_hex(uid, uidlen>>1)
 				, exitAfterNReads
 				, flags
@@ -2042,7 +2042,7 @@ int CmdHF14AMf1kSim(const char *Cmd) {
 	UsbCommand resp;		
 
 	if(flags & FLAG_INTERACTIVE) {
-		PrintAndLog("Press pm3-button or send another cmd to abort simulation");
+		PrintAndLogEx(NORMAL, "Press pm3-button or send another cmd to abort simulation");
 
 		while( !ukbhit() ){	
 			if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500) ) continue;
@@ -2089,11 +2089,11 @@ int CmdHF14AMfSniff(const char *Cmd){
 		if (ctmp == 'f' || ctmp == 'F') wantSaveToEmlFile = true;
 	}
 	
-	printf("-------------------------------------------------------------------------\n");
-	printf("Executing mifare sniffing command. \n");
-	printf("Press the key on the proxmark3 device to abort both proxmark3 and client.\n");
-	printf("Press the key on pc keyboard to abort the client.\n");
-	printf("-------------------------------------------------------------------------\n");
+	PrintAndLogEx(NORMAL, "-------------------------------------------------------------------------\n");
+	PrintAndLogEx(NORMAL, "Executing mifare sniffing command. \n");
+	PrintAndLogEx(NORMAL, "Press the key on the proxmark3 device to abort both proxmark3 and client.\n");
+	PrintAndLogEx(NORMAL, "Press the key on pc keyboard to abort the client.\n");
+	PrintAndLogEx(NORMAL, "-------------------------------------------------------------------------\n");
 
 	UsbCommand c = {CMD_MIFARE_SNIFFER, {0, 0, 0}};
 	clearCommandBuffer();
@@ -2103,10 +2103,10 @@ int CmdHF14AMfSniff(const char *Cmd){
 	
 	// wait cycle
 	while (true) {
-		printf("."); fflush(stdout);
+		PrintAndLogEx(NORMAL, "."); fflush(stdout);
 		if (ukbhit()) {
 			int gc = getchar(); (void)gc;
-			printf("\n[!] aborted via keyboard!\n");
+			PrintAndLogEx(NORMAL, "\n[!] aborted via keyboard!\n");
 			break;
 		}
 		
@@ -2119,7 +2119,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 		len = resp.arg[2];
 
 		if (res == 0) {
-			PrintAndLog("[+] hf mifare sniff finished");
+			PrintAndLogEx(SUCCESS, "hf mifare sniff finished");
 			free(buf);
 			return 0;
 		}
@@ -2134,7 +2134,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 						p = realloc(buf, traceLen);
 					
 					if (p == NULL) {
-						PrintAndLog("[-] Cannot allocate memory for trace");
+						PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
 						free(buf);
 						return 2;
 					}
@@ -2145,7 +2145,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 				memset(buf, 0x00, traceLen);
 			}
 			if (bufPtr == NULL) {
-				PrintAndLog("[-] Cannot allocate memory for trace");
+				PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
 				free(buf);
 				return 2;
 			}
@@ -2158,8 +2158,8 @@ int CmdHF14AMfSniff(const char *Cmd){
 		if (res == 2) {								// received all data, start displaying
 			blockLen = bufPtr - buf;
 			bufPtr = buf;
-			printf(">\n");
-			PrintAndLog("[+] received trace len: %d packages: %d", blockLen, pckNum);
+			PrintAndLogEx(NORMAL, ">\n");
+			PrintAndLogEx(SUCCESS, "received trace len: %d packages: %d", blockLen, pckNum);
 			while (bufPtr - buf < blockLen) {
 				bufPtr += 6;						// skip (void) timing information
 				len = *((uint16_t *)bufPtr);
@@ -2183,7 +2183,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 						default:   uid_len = 4; break;
 					}
 					sak = bufPtr[14];
-					PrintAndLog("[+] UID %s | ATQA %02x %02x | SAK 0x%02x", 
+					PrintAndLogEx(SUCCESS, "UID %s | ATQA %02x %02x | SAK 0x%02x", 
 						sprint_hex(uid, uid_len),
 						atqa[1], 
 						atqa[0], 
@@ -2191,12 +2191,12 @@ int CmdHF14AMfSniff(const char *Cmd){
 					if (wantLogToFile || wantDecrypt) {
 						FillFileNameByUID(logHexFileName, uid, ".log", uid_len);
 						AddLogCurrentDT(logHexFileName);
-						PrintAndLog("[+] Trace saved to %s", logHexFileName);
+						PrintAndLogEx(SUCCESS, "Trace saved to %s", logHexFileName);
 					}						
 					if (wantDecrypt)
 						mfTraceInit(uid, uid_len, atqa, sak, wantSaveToEmlFile);
 				} else {
-					PrintAndLog("%03d| %s |%s", num, isTag ? "TAG" : "RDR", sprint_hex(bufPtr, len));
+					PrintAndLogEx(NORMAL, "%03d| %s |%s", num, isTag ? "TAG" : "RDR", sprint_hex(bufPtr, len));
 					if (wantLogToFile) 
 						AddLogHex(logHexFileName, isTag ? "TAG| ":"RDR| ", bufPtr, len);
 					if (wantDecrypt) 
@@ -2249,21 +2249,21 @@ int CmdHF14AMfKeyBrute(const char *Cmd) {
 	uint64_t t1 = msclock();
 	
 	if (mfKeyBrute( blockNo, keytype, key, &foundkey))
-		PrintAndLog("[+] found valid key: %012" PRIx64 " \n", foundkey);
+		PrintAndLogEx(SUCCESS, "found valid key: %012" PRIx64 " \n", foundkey);
 	else
-		PrintAndLog("[-] key not found");
+		PrintAndLogEx(FAILED, "key not found");
 	
 	t1 = msclock() - t1;
-	PrintAndLog("\n[+] time in keybrute: %.0f seconds\n", (float)t1/1000.0);
+	PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(SUCCESS, "time in keybrute: %.0f seconds\n", (float)t1/1000.0);
 	return 0;	
 }
 
 void printKeyTable( uint8_t sectorscnt, sector_t *e_sector ){
 	char strA[12+1] = {0};
 	char strB[12+1] = {0};	
-	PrintAndLog("|---|----------------|---|----------------|---|");
-	PrintAndLog("|sec|key A           |res|key B           |res|");
-	PrintAndLog("|---|----------------|---|----------------|---|");
+	PrintAndLogEx(NORMAL, "|---|----------------|---|----------------|---|");
+	PrintAndLogEx(NORMAL, "|sec|key A           |res|key B           |res|");
+	PrintAndLogEx(NORMAL, "|---|----------------|---|----------------|---|");
 	for (uint8_t i = 0; i < sectorscnt; ++i) {
 		
 		snprintf(strA, sizeof(strA), "------------");
@@ -2276,13 +2276,13 @@ void printKeyTable( uint8_t sectorscnt, sector_t *e_sector ){
 			snprintf(strB, sizeof(strB), "%012" PRIx64, e_sector[i].Key[1]);
 
 		
-		PrintAndLog("|%03d|  %s  | %d |  %s  | %d |"
+		PrintAndLogEx(NORMAL, "|%03d|  %s  | %d |  %s  | %d |"
 			, i
 			, strA, e_sector[i].foundKey[0]
 			, strB, e_sector[i].foundKey[1]
 		);
 	}
-	PrintAndLog("|---|----------------|---|----------------|---|");
+	PrintAndLogEx(NORMAL, "|---|----------------|---|----------------|---|");
 }
 
 // EMULATOR COMMANDS
@@ -2295,11 +2295,11 @@ int CmdHF14AMfEGet(const char *Cmd) {
 	
 	blockNo = param_get8(Cmd, 0);
 
-	PrintAndLog("");
+	PrintAndLogEx(NORMAL, "");
 	if (!mfEmlGetMem(data, blockNo, 1)) {
-		PrintAndLog("data[%3d]:%s", blockNo, sprint_hex(data, 16));
+		PrintAndLogEx(NORMAL, "data[%3d]:%s", blockNo, sprint_hex(data, 16));
 	} else {
-		PrintAndLog("[!] Command execute timeout");
+		PrintAndLogEx(WARNING, "Command execute timeout");
 	}
   return 0;
 }
@@ -2326,7 +2326,7 @@ int CmdHF14AMfESet(const char *Cmd) {
 	blockNo = param_get8(Cmd, 0);
 	
 	if (param_gethex(Cmd, 1, memBlock, 32)) {
-		PrintAndLog("[!] block data must include 32 HEX symbols");
+		PrintAndLogEx(WARNING, "block data must include 32 HEX symbols");
 		return 1;
 	}
 	
@@ -2376,7 +2376,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
 	// open file
 	f = fopen(filename, "r");
 	if (f == NULL) {
-		PrintAndLog("[!] File %s not found or locked", filename);
+		PrintAndLogEx(WARNING, "File %s not found or locked", filename);
 		return 1;
 	}
 	
@@ -2388,7 +2388,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
 			
 			if (blockNum >= numBlocks) break;
 			
-			PrintAndLog("[!] File reading error.");
+			PrintAndLogEx(WARNING, "File reading error.");
 			fclose(f);
 			return 2;
 		}
@@ -2396,7 +2396,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
 		if (strlen(buf) < blockWidth){
 			if(strlen(buf) && feof(f))
 				break;
-			PrintAndLog("[!] File content error. Block data must include %d HEX symbols", blockWidth);
+			PrintAndLogEx(WARNING, "File content error. Block data must include %d HEX symbols", blockWidth);
 			fclose(f);
 			return 2;
 		}
@@ -2406,31 +2406,31 @@ int CmdHF14AMfELoad(const char *Cmd) {
 			buf8[i / 2] = tmp & 0xFF;
 		}
 		if (mfEmlSetMem_xt(buf8, blockNum, 1, blockWidth/2)) {
-			PrintAndLog("[!] Cant set emul block: %3d", blockNum);
+			PrintAndLogEx(WARNING, "Cant set emul block: %3d", blockNum);
 			fclose(f);
 			return 3;
 		}
-		printf("."); fflush(stdout);
+		PrintAndLogEx(NORMAL, "."); fflush(stdout);
 		blockNum++;
 		
 		if (blockNum >= numBlocks) break;
 	}
 	fclose(f);
-	printf("\n");
+	PrintAndLogEx(NORMAL, "\n");
 
 	// Ultralight /Ntag
 	if ( blockWidth == 8 ) {
 		if ((blockNum != numBlocks)) {		
-			PrintAndLog("[-] Warning, Ultralight/Ntag file content, Loaded %d blocks into emulator memory", blockNum);
+			PrintAndLogEx(FAILED, "Warning, Ultralight/Ntag file content, Loaded %d blocks into emulator memory", blockNum);
 			return 0;
 		}
 	} else {
 		if ((blockNum != numBlocks)) {
-			PrintAndLog("[-] Error, file content, Only loaded %d blocks, must be %d blocks into emulator memory", blockNum, numBlocks);
+			PrintAndLogEx(FAILED, "Error, file content, Only loaded %d blocks, must be %d blocks into emulator memory", blockNum, numBlocks);
 			return 4;
 		}
 	}
-	PrintAndLog("[+] Loaded %d blocks from file: %s", blockNum, filename);
+	PrintAndLogEx(SUCCESS, "Loaded %d blocks from file: %s", blockNum, filename);
 	return 0;
 }
 
@@ -2469,7 +2469,7 @@ int CmdHF14AMfESave(const char *Cmd) {
 	if (len < 1) {
 		// get filename (UID from memory)
 		if (mfEmlGetMem(buf, 0, 1)) {
-			PrintAndLog("[!] Can\'t get UID from block: %d", 0);
+			PrintAndLogEx(WARNING, "Can\'t get UID from block: %d", 0);
 			len = sprintf(fnameptr, "dump");
 			fnameptr += len;
 		}
@@ -2488,24 +2488,24 @@ int CmdHF14AMfESave(const char *Cmd) {
 	f = fopen(filename, "w+");
 
 	if ( !f ) {
-		PrintAndLog("[!] Can't open file %s ", filename);
+		PrintAndLogEx(WARNING, "Can't open file %s ", filename);
 		return 1;
 	}
 	
 	// put hex
 	for (i = 0; i < numBlocks; i++) {
 		if (mfEmlGetMem(buf, i, 1)) {
-			PrintAndLog("[!] Cant get block: %d", i);
+			PrintAndLogEx(WARNING, "Cant get block: %d", i);
 			break;
 		}
 		for (j = 0; j < 16; j++)
 			fprintf(f, "%02X", buf[j]); 
 		fprintf(f,"\n");
-		printf("."); fflush(stdout);
+		PrintAndLogEx(NORMAL, "."); fflush(stdout);
 	}
-	printf("\n");
+	PrintAndLogEx(NORMAL, "\n");
 	fclose(f);
-	PrintAndLog("[+] Saved %d blocks to file: %s", numBlocks, filename);
+	PrintAndLogEx(SUCCESS, "Saved %d blocks to file: %s", numBlocks, filename);
 	return 0;
 }
 
@@ -2518,7 +2518,7 @@ int CmdHF14AMfECFill(const char *Cmd) {
 		return usage_hf14_ecfill();
 
 	if (c != 'a' && c != 'A' && c != 'b' && c != 'B') {
-		PrintAndLog("[!] Key type must be A or B");
+		PrintAndLogEx(WARNING, "Key type must be A or B");
 		return 1;
 	}
 	if (c != 'A' && c != 'a') keyType = 1;
@@ -2526,7 +2526,7 @@ int CmdHF14AMfECFill(const char *Cmd) {
 	c = param_getchar(Cmd, 1);
 	numSectors = NumOfSectors(c);
 
-	printf("--params: numSectors: %d, keyType: %c\n", numSectors, (keyType==0) ? 'A' : 'B');
+	PrintAndLogEx(NORMAL, "--params: numSectors: %d, keyType: %c\n", numSectors, (keyType==0) ? 'A' : 'B');
 	UsbCommand cmd = {CMD_MIFARE_EML_CARDLOAD, {numSectors, keyType, 0}};
 	clearCommandBuffer();
 	SendCommand(&cmd);
@@ -2546,19 +2546,19 @@ int CmdHF14AMfEKeyPrn(const char *Cmd) {
 
 	numSectors = NumOfSectors(c);
 	
-	PrintAndLog("|---|----------------|----------------|");
-	PrintAndLog("|sec|key A           |key B           |");
-	PrintAndLog("|---|----------------|----------------|");
+	PrintAndLogEx(NORMAL, "|---|----------------|----------------|");
+	PrintAndLogEx(NORMAL, "|sec|key A           |key B           |");
+	PrintAndLogEx(NORMAL, "|---|----------------|----------------|");
 	for (i = 0; i < numSectors; i++) {
 		if (mfEmlGetMem(data, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1)) {
-			PrintAndLog("[!] error get block %d", FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1);
+			PrintAndLogEx(WARNING, "error get block %d", FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1);
 			break;
 		}
 		keyA = bytes_to_num(data, 6);
 		keyB = bytes_to_num(data + 10, 6);
-		PrintAndLog("|%03d|  %012" PRIx64 "  |  %012" PRIx64 "  |", i, keyA, keyB);
+		PrintAndLogEx(NORMAL, "|%03d|  %012" PRIx64 "  |  %012" PRIx64 "  |", i, keyA, keyB);
 	}
-	PrintAndLog("|---|----------------|----------------|");
+	PrintAndLogEx(NORMAL, "|---|----------------|----------------|");
 	return 0;
 }
 
@@ -2591,12 +2591,12 @@ int CmdHF14AMfCSetUID(const char *Cmd) {
 	if (atqaPresent) {
 		if (param_getchar(Cmd, argi)) {
 			if (param_gethex(Cmd, argi, atqa, 4)) {
-				PrintAndLog("[!] ATQA must include 4 HEX symbols");
+				PrintAndLogEx(WARNING, "ATQA must include 4 HEX symbols");
 				return 1;
 			}
 			argi++;
 			if (!param_getchar(Cmd, argi) || param_gethex(Cmd, argi, sak, 2)) {
-				PrintAndLog("[!] SAK must include 2 HEX symbols");
+				PrintAndLogEx(WARNING, "SAK must include 2 HEX symbols");
 				return 1;
 			}
 			argi++;
@@ -2611,16 +2611,16 @@ int CmdHF14AMfCSetUID(const char *Cmd) {
 		}
 	}
 
-	PrintAndLog("--wipe card:%s  uid:%s", (wipeCard)?"YES":"NO", sprint_hex(uid, 4));
+	PrintAndLogEx(NORMAL, "--wipe card:%s  uid:%s", (wipeCard)?"YES":"NO", sprint_hex(uid, 4));
 
 	res = mfCSetUID(uid, (atqaPresent) ? atqa : NULL, (atqaPresent) ? sak : NULL, oldUid, wipeCard);
 	if (res) {
-		PrintAndLog("[!] Can't set UID. error=%d", res);
+		PrintAndLogEx(WARNING, "Can't set UID. error=%d", res);
 		return 1;
 	}
 	
-	PrintAndLog("[+] old UID:%s", sprint_hex(oldUid, 4));
-	PrintAndLog("[+] new UID:%s", sprint_hex(uid, 4));
+	PrintAndLogEx(SUCCESS, "old UID:%s", sprint_hex(oldUid, 4));
+	PrintAndLogEx(SUCCESS, "new UID:%s", sprint_hex(uid, 4));
 	return 0;
 }
 
@@ -2641,11 +2641,11 @@ int CmdHF14AMfCSetBlk(const char *Cmd) {
 	if (ctmp == 'w' || ctmp == 'W')
 		params |= MAGIC_WIPE;
 	
-	PrintAndLog("--block number:%2d data:%s", blockNo, sprint_hex(block, 16));
+	PrintAndLogEx(NORMAL, "--block number:%2d data:%s", blockNo, sprint_hex(block, 16));
 
 	res = mfCSetBlock(blockNo, block, NULL, params);
 	if (res) {
-		PrintAndLog("[!] Can't write block. error=%d", res);
+		PrintAndLogEx(WARNING, "Can't write block. error=%d", res);
 		return 1;
 	}
 	return 0;
@@ -2671,7 +2671,7 @@ int CmdHF14AMfCLoad(const char *Cmd) {
 	if (fillFromEmulator) {
 		for (blockNum = 0; blockNum < 16 * 4; blockNum += 1) {
 			if (mfEmlGetMem(buf8, blockNum, 1)) {
-				PrintAndLog("[!] Cant get block: %d", blockNum);
+				PrintAndLogEx(WARNING, "Cant get block: %d", blockNum);
 				return 2;
 			}
 			if (blockNum == 0) flags = MAGIC_INIT + MAGIC_WUPC;				// switch on field and send magic sequence
@@ -2679,12 +2679,12 @@ int CmdHF14AMfCLoad(const char *Cmd) {
 			if (blockNum == 16 * 4 - 1) flags = MAGIC_HALT + MAGIC_OFF;		// Done. Magic Halt and switch off field.
 
 			if (mfCSetBlock(blockNum, buf8, NULL, flags)) {
-				PrintAndLog("[!] Cant set magic card block: %d", blockNum);
+				PrintAndLogEx(WARNING, "Cant set magic card block: %d", blockNum);
 				return 3;
 			}
-			printf("."); fflush(stdout);
+			PrintAndLogEx(NORMAL, "."); fflush(stdout);
 		}
-		printf("\n");
+		PrintAndLogEx(NORMAL, "\n");
 		return 0;
 	} 
 	
@@ -2699,7 +2699,7 @@ int CmdHF14AMfCLoad(const char *Cmd) {
 	// open file
 	f = fopen(filename, "r");
 	if (f == NULL) {
-		PrintAndLog("[!] File not found or locked.");
+		PrintAndLogEx(WARNING, "File not found or locked.");
 		return 1;
 	}
 
@@ -2710,14 +2710,14 @@ int CmdHF14AMfCLoad(const char *Cmd) {
 		
 		if (fgets(buf, sizeof(buf), f) == NULL) {
 			fclose(f);
-			PrintAndLog("[!] File reading error.");
+			PrintAndLogEx(WARNING, "File reading error.");
 			return 2;
 		}
 
 		if (strlen(buf) < 32) {
 			if(strlen(buf) && feof(f))
 				break;
-			PrintAndLog("[!] File content error. Block data must include 32 HEX symbols");
+			PrintAndLogEx(WARNING, "File content error. Block data must include 32 HEX symbols");
 			fclose(f);
 			return 2;
 		}
@@ -2731,24 +2731,24 @@ int CmdHF14AMfCLoad(const char *Cmd) {
 		if (blockNum == 16 * 4 - 1) flags = MAGIC_HALT + MAGIC_OFF;		// Done. Switch off field.
 
 		if (mfCSetBlock(blockNum, buf8, NULL, flags)) {
-			PrintAndLog("[!] Can't set magic card block: %d", blockNum);
+			PrintAndLogEx(WARNING, "Can't set magic card block: %d", blockNum);
 			fclose(f);
 			return 3;
 		}
-		printf("."); fflush(stdout);
+		PrintAndLogEx(NORMAL, "."); fflush(stdout);
 		blockNum++;
 	
 		if (blockNum >= 16 * 4) break;  // magic card type - mifare 1K
 	}
-	printf("\n");
+	PrintAndLogEx(NORMAL, "\n");
 	fclose(f);
 
 	// 64 or 256blocks.
 	if (blockNum != 16 * 4 && blockNum != 32 * 4 + 8 * 16){
-		PrintAndLog("[!] File content error. There must be 64 blocks");
+		PrintAndLogEx(WARNING, "File content error. There must be 64 blocks");
 		return 4;
 	}
-	PrintAndLog("[+] Loaded %d blocks from file: %s", blockNum, filename);	
+	PrintAndLogEx(SUCCESS, "Loaded %d blocks from file: %s", blockNum, filename);	
 	return 0;
 }
 
@@ -2763,15 +2763,15 @@ int CmdHF14AMfCGetBlk(const char *Cmd) {
 
 	blockNo = param_get8(Cmd, 0);
 
-	PrintAndLog("--block number:%2d ", blockNo);
+	PrintAndLogEx(NORMAL, "--block number:%2d ", blockNo);
 
 	res = mfCGetBlock(blockNo, data, MAGIC_SINGLE);
 	if (res) {
-		PrintAndLog("[!] Can't read block. error=%d", res);
+		PrintAndLogEx(WARNING, "Can't read block. error=%d", res);
 		return 1;
 	}
 	
-	PrintAndLog("data: %s", sprint_hex(data, sizeof(data)));
+	PrintAndLogEx(NORMAL, "data: %s", sprint_hex(data, sizeof(data)));
 	return 0;
 }
 
@@ -2785,12 +2785,12 @@ int CmdHF14AMfCGetSc(const char *Cmd) {
 
 	sector = param_get8(Cmd, 0);
 	if (sector > 39) {
-		PrintAndLog("[!] Sector number must be less then 40");
+		PrintAndLogEx(WARNING, "Sector number must be less then 40");
 		return 1;
 	}
 
-	PrintAndLog("\n  # | data    |  Sector | %02d/ 0x%02X ", sector, sector);
-	PrintAndLog("----+------------------------------------------------");
+	PrintAndLogEx(NORMAL, "\n  # | data    |  Sector | %02d/ 0x%02X ", sector, sector);
+	PrintAndLogEx(NORMAL, "----+------------------------------------------------");
 	uint8_t blocks = 4;
 	uint8_t start = sector * 4;
 	if ( sector > 32 ) {
@@ -2806,10 +2806,10 @@ int CmdHF14AMfCGetSc(const char *Cmd) {
 
 		res = mfCGetBlock( start + i, data, flags);
 		if (res) {
-			PrintAndLog("[!] Can't read block. %d error=%d", start + i, res);
+			PrintAndLogEx(WARNING, "Can't read block. %d error=%d", start + i, res);
 			return 1;
 		}
-		PrintAndLog("%3d | %s", start + i, sprint_hex(data, 16));
+		PrintAndLogEx(NORMAL, "%3d | %s", start + i, sprint_hex(data, 16));
 	}
 	return 0;
 }
@@ -2849,14 +2849,14 @@ int CmdHF14AMfCSave(const char *Cmd) {
 		case '2':
 		case '4':
 			numblocks = NumOfBlocks(ctmp);
-			PrintAndLog("[+] Saving magic mifare %cK", ctmp);
+			PrintAndLogEx(SUCCESS, "Saving magic mifare %cK", ctmp);
 			cmdp++;
 			break;
 		case 'u':
 		case 'U':
 			// get filename based on UID
 			if (mfCGetBlock(0, buf, MAGIC_SINGLE)) {
-				PrintAndLog("[-] Cant get block: %d", 0);
+				PrintAndLogEx(FAILED, "Cant get block: %d", 0);
 				femlptr += sprintf(femlptr, "dump");
 				fbinptr += sprintf(fbinptr, "dump");
 			} else {
@@ -2888,7 +2888,7 @@ int CmdHF14AMfCSave(const char *Cmd) {
 			cmdp += 2;
 			break;			
 		default:
-			PrintAndLog("[!] Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+			PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
 			errors = true;
 			break;
 		}
@@ -2908,17 +2908,17 @@ int CmdHF14AMfCSave(const char *Cmd) {
 			if (i == numblocks - 1) flags = MAGIC_HALT + MAGIC_OFF;
 		
 			if (mfCGetBlock(i, buf, flags)) {
-				PrintAndLog("[!] Cant get block: %d", i);
+				PrintAndLogEx(WARNING, "Cant get block: %d", i);
 				return 3;
 			}
 			
 			if (mfEmlSetMem(buf, i, 1)) {
-				PrintAndLog("[!] Cant set emul block: %d", i);
+				PrintAndLogEx(WARNING, "Cant set emul block: %d", i);
 				return 3;
 			}
-			printf("."); fflush(stdout);
+			PrintAndLogEx(NORMAL, "."); fflush(stdout);
 		}
-		printf("\n");
+		PrintAndLogEx(NORMAL, "\n");
 		return 0;
 	}
 
@@ -2926,12 +2926,12 @@ int CmdHF14AMfCSave(const char *Cmd) {
 	sprintf(fbinptr, ".bin");
 
 	if ((feml = fopen(filename[0], "w+")) == NULL ) {
-		PrintAndLog("[!] File not found or locked");
+		PrintAndLogEx(WARNING, "File not found or locked");
 		return 1;
 	}
 	
 	if ((fbin = fopen(filename[1], "wb")) == NULL) {
-		PrintAndLog("[!] File not found or locked");
+		PrintAndLogEx(WARNING, "File not found or locked");
 		return 1;
 	}
 	
@@ -2942,7 +2942,7 @@ int CmdHF14AMfCSave(const char *Cmd) {
 		if (i == numblocks - 1) flags = MAGIC_HALT + MAGIC_OFF;
 	
 		if (mfCGetBlock(i, buf, flags)) {
-			PrintAndLog("[!] Cant get block: %d", i);
+			PrintAndLogEx(WARNING, "Cant get block: %d", i);
 			break;
 		}
 		// eml
@@ -2952,14 +2952,14 @@ int CmdHF14AMfCSave(const char *Cmd) {
 		
 		// bin
 		fwrite(buf, 1, sizeof(buf), fbin);
-		printf("."); fflush(stdout);
+		PrintAndLogEx(NORMAL, "."); fflush(stdout);
 	}
-	printf("\n");	
+	PrintAndLogEx(NORMAL, "\n");	
 	fflush(feml); fflush(fbin);
 	fclose(feml); fclose(fbin);
 
 	for (uint8_t i=0; i<2; ++i)
-		PrintAndLog("[+] Saved %d blocks to file: %s", numblocks, filename[i]);
+		PrintAndLogEx(SUCCESS, "Saved %d blocks to file: %s", numblocks, filename[i]);
 
 	return 0;
 }
@@ -2976,13 +2976,13 @@ int CmdHf14AMfDecryptBytes(const char *Cmd){
 
 	int len = param_getlength(Cmd, 3);
 	if (len & 1 ) {
-		PrintAndLog("[!] Uneven hex string length. LEN=%d", len);
+		PrintAndLogEx(WARNING, "Uneven hex string length. LEN=%d", len);
 		return 1;
 	}
 
-	PrintAndLog("nt\t%08X", nt);
-	PrintAndLog("ar enc\t%08X", ar_enc);
-	PrintAndLog("at enc\t%08X", at_enc);
+	PrintAndLogEx(NORMAL, "nt\t%08X", nt);
+	PrintAndLogEx(NORMAL, "ar enc\t%08X", ar_enc);
+	PrintAndLogEx(NORMAL, "at enc\t%08X", at_enc);
 		
 	uint8_t *data = malloc(len);	
 	param_gethex_ex(Cmd, 3, data, &len);
@@ -3004,10 +3004,10 @@ int CmdHf14AMfSetMod(const char *Cmd) {
 	}
 	int gethexfail = param_gethex(Cmd, 1, key, 12);
 	if (mod == 2 || gethexfail) {
-		PrintAndLog("Sets the load modulation strength of a MIFARE Classic EV1 card.");
-		PrintAndLog("Usage: hf mf setmod <0|1> <block 0 key A>");
-		PrintAndLog("       0 = normal modulation");
-		PrintAndLog("       1 = strong modulation (default)");
+		PrintAndLogEx(NORMAL, "Sets the load modulation strength of a MIFARE Classic EV1 card.");
+		PrintAndLogEx(NORMAL, "Usage: hf mf setmod <0|1> <block 0 key A>");
+		PrintAndLogEx(NORMAL, "       0 = normal modulation");
+		PrintAndLogEx(NORMAL, "       1 = strong modulation (default)");
 		return 1;
 	}
 
@@ -3019,11 +3019,11 @@ int CmdHf14AMfSetMod(const char *Cmd) {
 	UsbCommand resp;
 	if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
 		uint8_t ok = resp.arg[0] & 0xff;
-		PrintAndLog("isOk:%02x", ok);
+		PrintAndLogEx(NORMAL, "isOk:%02x", ok);
 		if (!ok)
-			PrintAndLog("[-] Failed.");
+			PrintAndLogEx(FAILED, "Failed.");
 	} else {
-		PrintAndLog("[!] Command execute timeout");
+		PrintAndLogEx(WARNING, "Command execute timeout");
 	}
 	return 0;
 }
@@ -3037,7 +3037,7 @@ int CmdHf14AMfNack(const char *Cmd) {
 	if ( ctmp == 'v' || ctmp == 'V' ) verbose = true;
 
 	if ( verbose )
-		PrintAndLog("Started testing card for NACK bug. Press key to abort");
+		PrintAndLogEx(NORMAL, "Started testing card for NACK bug. Press key to abort");
 	
 	detect_classic_nackbug(verbose);
 	return 0;
@@ -3077,7 +3077,7 @@ int CmdHF14AMfice(const char *Cmd) {
 			cmdp++;
 			break;
 		default:
-			PrintAndLog("Unknown parameter '%c'\n", ctmp);
+			PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", ctmp);
 			usage_hf14_ice();
 			return 1;
 		}
@@ -3092,10 +3092,10 @@ int CmdHF14AMfice(const char *Cmd) {
 		strcpy(filename, fptr);
 	}
 
-	printf("Collecting %u nonces \n", limit);
+	PrintAndLogEx(NORMAL, "Collecting %u nonces \n", limit);
 	
 	if ((fnonces = fopen(filename,"wb")) == NULL) { 
-		PrintAndLog("Could not create file %s",filename);
+		PrintAndLogEx(NORMAL, "Could not create file %s",filename);
 		return 3;
 	}
 
@@ -3106,7 +3106,7 @@ int CmdHF14AMfice(const char *Cmd) {
 	do {
 		if (ukbhit()) {
 			int gc = getchar(); (void)gc;
-			printf("\naborted via keyboard!\n");
+			PrintAndLogEx(NORMAL, "\naborted via keyboard!\n");
 			break;
 		}
 		
@@ -3128,7 +3128,7 @@ int CmdHF14AMfice(const char *Cmd) {
 	
 		total_num_nonces += items;
 		if ( total_num_nonces > part_limit ) {
-			printf("Total nonces %u\n", total_num_nonces);
+			PrintAndLogEx(NORMAL, "Total nonces %u\n", total_num_nonces);
 			part_limit += 3000;
 		}
 		
@@ -3139,7 +3139,7 @@ int CmdHF14AMfice(const char *Cmd) {
 	} while (!acquisition_completed);
 
 out:
-	printf("time: %" PRIu64 " seconds\n", (msclock()-t1)/1000);
+	PrintAndLogEx(NORMAL, "time: %" PRIu64 " seconds\n", (msclock()-t1)/1000);
 	
 	if ( fnonces ) {
 		fflush(fnonces);
