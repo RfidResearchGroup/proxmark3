@@ -69,7 +69,7 @@ void RunMod() {
 			Dbprintf("[+] cloning %x %x %08x", selected, high[selected], low[selected]);
 
 			// wait for button to be released
-			while(BUTTON_PRESS())
+			while (BUTTON_PRESS())
 				WDT_HIT();
 
 			/* need this delay to prevent catching some weird data */
@@ -101,17 +101,17 @@ void RunMod() {
 			// Begin transmitting
 			if (playing) {
 				LED(LED_GREEN, 0);
-				DbpString("[+] Playing");
+				DbpString("[+] playing");
 				// wait for button to be released
 				while (BUTTON_PRESS())
 					WDT_HIT();
 				
 				Dbprintf("[+] %x %x %08x", selected, high[selected], low[selected]);
 				CmdHIDsimTAG(high[selected], low[selected], 0);		
-				DbpString("[+] Done playing");
+				DbpString("[+] done playing");
 				
 				if (BUTTON_HELD(1000) > 0) {
-					DbpString("[+] Exiting");
+					DbpString("[+] exiting");
 					LEDsoff();
 					return;
 				}
@@ -126,7 +126,7 @@ void RunMod() {
 				LED(selected + 1, 0);
 			}
 			else {
-				while(BUTTON_PRESS())
+				while (BUTTON_PRESS())
 					WDT_HIT();
 			}
 		}
