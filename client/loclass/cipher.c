@@ -264,7 +264,7 @@ void doMAC_N(uint8_t *address_data_p, uint8_t address_data_size, uint8_t *div_ke
 #ifndef ON_DEVICE
 int testMAC()
 {
-	PrintfAndLog("[+] Testing MAC calculation...");
+	PrintAndLogDevice(SUCCESS, "Testing MAC calculation...");
 
 	//From the "dismantling.IClass" paper:
 	uint8_t cc_nr[] = {0xFE,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0,0,0,0};
@@ -277,11 +277,11 @@ int testMAC()
 
 	if(memcmp(calculated_mac, correct_MAC,4) == 0)
 	{
-		PrintfAndLog("[+] MAC calculation OK!");
+		PrintAndLogDevice(SUCCESS, "MAC calculation OK!");
 
 	}else
 	{
-		PrintfAndLog("[+] FAILED: MAC calculation failed:");
+		PrintAndLogDevice(FAILED, "FAILED: MAC calculation failed:");
 		printarr("    Calculated_MAC", calculated_mac, 4);
 		printarr("    Correct_MAC   ", correct_MAC, 4);
 	return 1;

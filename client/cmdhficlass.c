@@ -626,14 +626,14 @@ int CmdHFiClassELoad(const char *Cmd) {
 	fseek(f, 0, SEEK_SET);
 
 	if (fsize < 0) 	{
-		PrintfAndLog("[-] error, when getting filesize");
+		PrintAndLogDevice(WARNING, "error, when getting filesize");
 		fclose(f);
 		return 1;
 	}
 
 	uint8_t *dump = malloc(fsize);
 	if (!dump) {
-		PrintfAndLog("[-] error, cannot allocate memory ");
+		PrintAndLogDevice(WARNING, "error, cannot allocate memory ");
 		fclose(f);
 		return 1;
 	}
@@ -645,7 +645,7 @@ int CmdHFiClassELoad(const char *Cmd) {
 	//Validate
 
 	if (bytes_read < fsize)	{
-		PrintfAndLog("[-] error, could only read %d bytes (should be %d)", bytes_read, fsize );
+		PrintAndLogDevice(WARNING, "error, could only read %d bytes (should be %d)", bytes_read, fsize );
 		free(dump);
 		return 1;
 	}
@@ -1545,7 +1545,7 @@ int CmdHFiClass_loclass(const char *Cmd) {
 		errors += testMAC();
 		errors += doKeyTests(0);
 		errors += testElite();
-		if (errors) PrintfAndLog("[!] There were errors!!!");
+		if (errors) PrintAndLogDevice(WARNING, "There were errors!!!");
 		return errors;
 	}
 	return 0;
