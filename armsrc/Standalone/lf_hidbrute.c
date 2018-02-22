@@ -56,7 +56,7 @@ void RunMod() {
 			LED(LED_RED2, 0);
 
 			// record
-			DbpString("Starting recording");
+			DbpString("[+] starting recording");
 
 			// wait for button to be released
 			while(BUTTON_PRESS())
@@ -66,7 +66,7 @@ void RunMod() {
 			SpinDelay(500);
 
 			CmdHIDdemodFSK(1, &high[selected], &low[selected], 0);
-			Dbprintf("Recorded %x %x %08x", selected, high[selected], low[selected]);
+			Dbprintf("[+] recorded %x %x %08x", selected, high[selected], low[selected]);
 
 			LEDsoff();
 			LED(selected + 1, 0);
@@ -82,7 +82,7 @@ void RunMod() {
 			LED(LED_ORANGE, 0);
 
 			// record
-			Dbprintf("Cloning %x %x %08x", selected, high[selected], low[selected]);
+			Dbprintf("[+] cloning %x %x %08x", selected, high[selected], low[selected]);
 
 			// wait for button to be released
 			while(BUTTON_PRESS())
@@ -92,7 +92,7 @@ void RunMod() {
 			SpinDelay(500);
 
 			CopyHIDtoT55x7(0, high[selected], low[selected], 0);
-			Dbprintf("Cloned %x %x %08x", selected, high[selected], low[selected]);
+			Dbprintf("[+] cloned %x %x %08x", selected, high[selected], low[selected]);
 
 			LEDsoff();
 			LED(selected + 1, 0);
@@ -118,18 +118,18 @@ void RunMod() {
 			if (playing && selected != 2) {
 
 				LED(LED_GREEN, 0);
-				DbpString("Playing");
+				DbpString("[+] playing");
 				
 				// wait for button to be released
 				while (BUTTON_PRESS())
 					WDT_HIT();
 				
-				Dbprintf("%x %x %08x", selected, high[selected], low[selected]);
+				Dbprintf("[+] %x %x %08x", selected, high[selected], low[selected]);
 				CmdHIDsimTAG(high[selected], low[selected], 0);		
-				DbpString("Done playing");
+				DbpString("[+] done playing");
 				
 				if (BUTTON_HELD(1000) > 0) {
-					DbpString("Exiting");
+					DbpString("[+] exiting");
 					LEDsoff();
 					return;
 				}
@@ -151,12 +151,12 @@ void RunMod() {
 				// Brute force code
 				// Check if the badge is an HID Corporate 1000
 				if( (high[selected] & 0xFFFFFFF8) != 0x28 ) {
-					DbpString("Card is not a HID Corporate 1000. Skipping bruteforce.");
+					DbpString("[-] Card is not a HID Corporate 1000. Skipping bruteforce.");
 					continue;
 				}
 
 				LED(LED_GREEN, 0);
-				DbpString("Entering bruteforce mode");
+				DbpString("[=] entering bruteforce mode");
 				// wait for button to be released
 				while (BUTTON_PRESS())
 					WDT_HIT();
@@ -166,14 +166,14 @@ void RunMod() {
 				uint32_t fc = ((high[selected] & 1 ) << 11 ) | (low[selected] >> 21);
 				uint32_t original_cardnum = cardnum;
 
-				Dbprintf("Proxbrute - starting decrementing card number");
+				Dbprintf("[+] Proxbrute - starting decrementing card number");
 
 				while (cardnum >= 0) {
 				
 					// Needed for exiting from proxbrute when button is pressed
 					if (BUTTON_PRESS()) {
 						if (BUTTON_HELD(1000) > 0) {
-							DbpString("Exiting");
+							DbpString("[+] exiting");
 							LEDsoff();
 							return;
 						} else {
@@ -189,21 +189,21 @@ void RunMod() {
 					hid_corporate_1000_calculate_checksum_and_set(&high[selected], &low[selected], cardnum, fc);
 
 					// Print actual code to brute
-					Dbprintf("TAG ID: %x%08x (%d) - FC: %u - Card: %u", high[selected], low[selected], (low[selected] >> 1) & 0xFFFF, fc, cardnum);
+					Dbprintf("[+] TAG ID: %x%08x (%d) - FC: %u - Card: %u", high[selected], low[selected], (low[selected] >> 1) & 0xFFFF, fc, cardnum);
 			
 					CmdHIDsimTAGEx(high[selected], low[selected], 1, 50000);
 				}
 
 				cardnum = original_cardnum;
 
-				Dbprintf("Proxbrute - starting incrementing card number");
+				Dbprintf("[+] Proxbrute - starting incrementing card number");
 
 				while (cardnum <= 0xFFFFF) {
 					
 					// Needed for exiting from proxbrute when button is pressed
 					if (BUTTON_PRESS()) {
 						if (BUTTON_HELD(1000) > 0) {
-							DbpString("Exiting");
+							DbpString("[+] exiting");
 							LEDsoff();
 							return;
 						} else {							
@@ -219,12 +219,12 @@ void RunMod() {
 					hid_corporate_1000_calculate_checksum_and_set(&high[selected], &low[selected], cardnum, fc);
 
 					// Print actual code to brute
-					Dbprintf("TAG ID: %x%08x (%d) - FC: %u - Card: %u", high[selected], low[selected], (low[selected] >> 1) & 0xFFFF, fc, cardnum);
+					Dbprintf("[+] TAG ID: %x%08x (%d) - FC: %u - Card: %u", high[selected], low[selected], (low[selected] >> 1) & 0xFFFF, fc, cardnum);
 
 					CmdHIDsimTAGEx(high[selected], low[selected], 1, 50000);
 				}
 
-				DbpString("Done brute");
+				DbpString("[+] done bruteforcing");
 				if (BUTTON_HELD(1000) > 0)	{
 					DbpString("Exiting");
 					LEDsoff();

@@ -107,7 +107,7 @@ void RunMod() {
 					WDT_HIT();
 				
 				Dbprintf("[+] %x %x %08x", selected, high[selected], low[selected]);
-				CmdHIDsimTAG(high[selected], low[selected], 0);		
+				CmdHIDsimTAG(high[selected], low[selected], false);		
 				DbpString("[+] done playing");
 				
 				if (BUTTON_HELD(1000) > 0) {
