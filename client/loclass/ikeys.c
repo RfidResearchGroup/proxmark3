@@ -578,7 +578,7 @@ int testKeyDiversificationWithMasterkeyTestcases() {
 	int i;
 	uint8_t empty[8]={0};
 
-	PrintfAndLog("[+} Testing encryption/decryption");
+	PrintfAndLog("[+] Testing encryption/decryption");
 
 	for (i = 0;  memcmp(testcases+i, empty, 8); i++)
 		error += testDES(testcases[i], ctx_enc, ctx_dec);
