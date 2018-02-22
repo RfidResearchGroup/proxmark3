@@ -955,7 +955,7 @@ int CmdDetectClockRate(const char *Cmd)
 			clock = GetPskClock("", true);
 			break;
 		default :
-			PrintAndLog ("Please specify a valid modulation to detect the clock of - see option h for help");
+			PrintAndLogEx(NORMAL, "Please specify a valid modulation to detect the clock of - see option h for help");
 			break;
 	}
 	RepaintGraphWindow();

@@ -376,7 +376,6 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 				pos = pos + 1;
 			if ( (cmd[0] & 0x04) == 0x04) // nad byte following
 				pos = pos + 1;
-
 			switch ( cmd[pos] ){
 				case MFDES_CREATE_APPLICATION			:snprintf(exp, size, "CREATE APPLICATION");break;
 				case MFDES_DELETE_APPLICATION			:snprintf(exp, size, "DELETE APPLICATION");break;
