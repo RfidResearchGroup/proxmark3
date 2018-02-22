@@ -840,7 +840,7 @@ int CmdHF14AMfDump(const char *Cmd) {
 		uint16_t numblocks = FirstBlockOfSector(numSectors - 1) + NumBlocksPerSector(numSectors - 1);
 		fwrite(carddata, 1, 16*numblocks, fout);
 		fclose(fout);
-		PrintAndLogEx(NORMAL, "[+} dumped %d blocks (%d bytes) to file %s", numblocks, 16*numblocks, dataFilename);
+		PrintAndLogEx(SUCCESS, "dumped %d blocks (%d bytes) to file %s", numblocks, 16*numblocks, dataFilename);
 	}
 	return 0;
 }
