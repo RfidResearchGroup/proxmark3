@@ -41,17 +41,17 @@ void RunMod() {
 			LED(LED_RED2, 0);
 
 			// record
-			DbpString("Starting recording");
+			DbpString("[+] starting recording");
 
 			// wait for button to be released
-			while(BUTTON_PRESS())
+			while (BUTTON_PRESS())
 				WDT_HIT();
 
 			/* need this delay to prevent catching some weird data */
 			SpinDelay(500);
 
 			CmdHIDdemodFSK(1, &high[selected], &low[selected], 0);
-			Dbprintf("Recorded %x %x %08x", selected, high[selected], low[selected]);
+			Dbprintf("[+] recorded %x %x %08x", selected, high[selected], low[selected]);
 
 			LEDsoff();
 			LED(selected + 1, 0);
@@ -67,17 +67,17 @@ void RunMod() {
 			LED(LED_ORANGE, 0);
 
 			// record
-			Dbprintf("Cloning %x %x %08x", selected, high[selected], low[selected]);
+			Dbprintf("[+] cloning %x %x %08x", selected, high[selected], low[selected]);
 
 			// wait for button to be released
-			while(BUTTON_PRESS())
+			while (BUTTON_PRESS())
 				WDT_HIT();
 
 			/* need this delay to prevent catching some weird data */
 			SpinDelay(500);
 
 			CopyHIDtoT55x7(0, high[selected], low[selected], 0);
-			Dbprintf("Cloned %x %x %08x", selected, high[selected], low[selected]);
+			Dbprintf("[+] cloned %x %x %08x", selected, high[selected], low[selected]);
 
 			LEDsoff();
 			LED(selected + 1, 0);
@@ -102,9 +102,9 @@ void RunMod() {
 			// Begin transmitting
 			if (playing) {
 				LED(LED_GREEN, 0);
-				DbpString("Playing");
+				DbpString("[+] playing");
 				// wait for button to be released
-				while(BUTTON_PRESS())
+				while (BUTTON_PRESS())
 					WDT_HIT();
 				
 				/* START PROXBRUTE */
@@ -119,34 +119,33 @@ void RunMod() {
 				it takes to get a valid ID then start from scratch every time.
 				*/
 				if ( selected == 1 ) {
-					DbpString("Entering ProxBrute Mode");
-					DbpString("brad a. - foundstone");
-					Dbprintf("Current Tag: Selected = %x Facility = %08x ID = %08x", selected, high[selected], low[selected]);
+					DbpString("[=] entering ProxBrute Mode");
+					Dbprintf("[+] current Tag: Selected = %x Facility = %08x ID = %08x", selected, high[selected], low[selected]);
 					LED(LED_ORANGE, 0);
 					LED(LED_RED, 0);
-					for ( i = low[selected]-1; i > ZERO; i--) {
+					for (uint16_t i = low[selected]-1; i > 0; i--) {
 						if (BUTTON_PRESS()) {
-							DbpString("Told to Stop");
+							DbpString("[-] told to stop");
 							break;
 						}
 
-						Dbprintf("Trying Facility = %08x ID %08x", high[selected], i);
+						Dbprintf("[=] trying Facility = %08x ID %08x", high[selected], i);
 						CmdHIDsimTAGEx(high[selected], i, 0, 20000);
 						SpinDelay(500);
 					}
 
 				} else {
-					DbpString("Red is lit, not entering ProxBrute Mode");
-					Dbprintf("%x %x %x", selected, high[selected], low[selected]);
+					DbpString("[+] RED is lit, not entering ProxBrute Mode");
+					Dbprintf("[+] %x %x %x", selected, high[selected], low[selected]);
 					CmdHIDsimTAGEx(high[selected], low[selected], 0, 20000);
-					DbpString("Done playing");
+					DbpString("[+] done playing");
 				}
 
 				/*   END PROXBRUTE */
 
 				
 				if (BUTTON_HELD(1000) > 0) {
-					DbpString("Exiting");
+					DbpString("[+] exiting");
 					LEDsoff();
 					return;
 				}
@@ -161,7 +160,7 @@ void RunMod() {
 				LED(selected + 1, 0);
 			}
 			else {
-				while(BUTTON_PRESS())
+				while (BUTTON_PRESS())
 					WDT_HIT();
 			}
 		}
