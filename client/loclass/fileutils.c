@@ -77,14 +77,14 @@ int saveFile(const char *preferredName, const char *suffix, const void* data, si
 	/*Opening file for writing in binary mode*/
 	FILE *f = fopen(fileName, "wb");
 	if (!f) {
-		PrintfAndLog("[!] file not found or locked. '%s'", fileName);
+		PrintAndLogDevice(WARNING, "file not found or locked. '%s'", fileName);
 		free(fileName);
 		return 1;
 	}
 	fwrite(data, 1,	datalen, f);
 	fflush(f);
 	fclose(f);
-	PrintfAndLog("[+] saved %u bytes to binary file %s", datalen, fileName);
+	PrintAndLogDevice(SUCCESS, "saved %u bytes to binary file %s", datalen, fileName);
 	free(fileName);
 	return 0;
 }
@@ -113,7 +113,7 @@ int saveFileEML(const char *preferredName, const char *suffix, uint8_t* data, si
 	/*Opening file for writing in text mode*/
 	FILE *f = fopen(fileName, "w+");
 	if (!f) {
-		PrintfAndLog("[!] file not found or locked. '%s'", fileName);
+		PrintAndLogDevice(WARNING, "file not found or locked. '%s'", fileName);
 		retval =  1;
 		goto out;
 	}
@@ -132,7 +132,7 @@ int saveFileEML(const char *preferredName, const char *suffix, uint8_t* data, si
 	}
 	fflush(f);
 	fclose(f);
-	PrintfAndLog("[+] saved %d blocks to text file %s", blocks, fileName);
+	PrintAndLogDevice(SUCCESS, "saved %d blocks to text file %s", blocks, fileName);
 	
 out:	
 	free(fileName);
@@ -147,17 +147,17 @@ out:
  * write also to a logfile. When doing so, just delete this function.
  * @param fmt
  */
-void PrintfAndLog(char *fmt, ...)
+void PrintAndLogDevice(logLevel_t level, char *fmt, ...)
 {
 	char buffer[2048] = {0};
 	va_list args;
-	va_start(args,fmt);
-	vsprintf (buffer,fmt, args);
+	va_start(args, fmt);
+	vsnprintf(buffer, sizeof(buffer), fmt, args);
 	va_end(args);
-	PrintAndLog(buffer);
+	PrintAndLogEx(level, buffer);
 }
 #else //if we're on ARM
-void PrintfAndLog(char *fmt,...)
+void PrintAndLogDevice(logLevel_t level, char *fmt,...)
 {
 	return;
 }

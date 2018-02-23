@@ -41,6 +41,8 @@
 #ifndef ON_DEVICE
 
 #include <inttypes.h>
+#include "../ui.h"
+
 /**
  * @brief Utility function to save data to a binary file. This method takes a preferred name, but if that
  * file already exists, it tries with another name until it finds something suitable.
@@ -84,5 +86,5 @@ int fileExists(const char *filename);
  * write also to a logfile. When doing so, just point this function to use PrintAndLog
  * @param fmt
  */
-void PrintfAndLog(char *fmt, ...);
+void PrintAndLogDevice(logLevel_t level, char *fmt, ...);
 #endif // FILEUTILS_H

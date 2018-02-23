@@ -56,42 +56,42 @@ int unitTests()
 	errors += testElite();
     if(errors)
     {
-        PrintfAndLog("OBS! There were errors!!!");
+        PrintAndLogDevice(NORMAL, "OBS! There were errors!!!");
     }
 	return errors;
 }
 int showHelp()
 {
-    PrintfAndLog("Usage: loclass [options]");
-	PrintfAndLog("Options:");
-	PrintfAndLog("-t                 Perform self-test");
-	PrintfAndLog("-h                 Show this help");
-	PrintfAndLog("-f <filename>      Bruteforce iclass dumpfile");
-	PrintfAndLog("                   An iclass dumpfile is assumed to consist of an arbitrary number of malicious CSNs, and their protocol responses");
-	PrintfAndLog("                   The binary format of the file is expected to be as follows: ");
-	PrintfAndLog("                   <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
-	PrintfAndLog("                   <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
-	PrintfAndLog("                   <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
-	PrintfAndLog("                  ... totalling N*24 bytes");
-	PrintfAndLog("                  Check iclass_dump.bin for an example");
+    PrintAndLogDevice(NORMAL, "Usage: loclass [options]");
+	PrintAndLogDevice(NORMAL, "Options:");
+	PrintAndLogDevice(NORMAL, "-t                 Perform self-test");
+	PrintAndLogDevice(NORMAL, "-h                 Show this help");
+	PrintAndLogDevice(NORMAL, "-f <filename>      Bruteforce iclass dumpfile");
+	PrintAndLogDevice(NORMAL, "                   An iclass dumpfile is assumed to consist of an arbitrary number of malicious CSNs, and their protocol responses");
+	PrintAndLogDevice(NORMAL, "                   The binary format of the file is expected to be as follows: ");
+	PrintAndLogDevice(NORMAL, "                   <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
+	PrintAndLogDevice(NORMAL, "                   <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
+	PrintAndLogDevice(NORMAL, "                   <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
+	PrintAndLogDevice(NORMAL, "                  ... totalling N*24 bytes");
+	PrintAndLogDevice(NORMAL, "                  Check iclass_dump.bin for an example");
 
 	return 0;
 }
 
 int main (int argc, char **argv)
 {
-	PrintfAndLog("IClass Cipher version 1.2, Copyright (C) 2014 Martin Holst Swende\n");
-	PrintfAndLog("Comes with ABSOLUTELY NO WARRANTY");
-	PrintfAndLog("Released as GPLv2\n");
-	PrintfAndLog("WARNING");
-	PrintfAndLog("");
-	PrintfAndLog("THIS TOOL IS CREATED FOR EXPERIMENTATION AND EDUCATIONAL USE ONLY. ");
-	PrintfAndLog("");
-	PrintfAndLog("USAGE OF THIS TOOL IN OTHER WAYS MAY INFRINGE UPON THE INTELLECTUAL ");
-	PrintfAndLog("PROPERTY OF OTHER PARTIES, SUCH AS INSIDE SECURE AND HID GLOBAL, ");
-	PrintfAndLog("AND MAY EXPOSE YOU TO AN INFRINGEMENT ACTION FROM THOSE PARTIES. ");
-	PrintfAndLog("");
-	PrintfAndLog("THIS TOOL SHOULD NEVER BE USED TO INFRINGE PATENTS OR INTELLECTUAL PROPERTY RIGHTS. ");
+	PrintAndLogDevice(NORMAL, "IClass Cipher version 1.2, Copyright (C) 2014 Martin Holst Swende\n");
+	PrintAndLogDevice(NORMAL, "Comes with ABSOLUTELY NO WARRANTY");
+	PrintAndLogDevice(NORMAL, "Released as GPLv2\n");
+	PrintAndLogDevice(NORMAL, "WARNING");
+	PrintAndLogDevice(NORMAL, "");
+	PrintAndLogDevice(NORMAL, "THIS TOOL IS CREATED FOR EXPERIMENTATION AND EDUCATIONAL USE ONLY. ");
+	PrintAndLogDevice(NORMAL, "");
+	PrintAndLogDevice(NORMAL, "USAGE OF THIS TOOL IN OTHER WAYS MAY INFRINGE UPON THE INTELLECTUAL ");
+	PrintAndLogDevice(NORMAL, "PROPERTY OF OTHER PARTIES, SUCH AS INSIDE SECURE AND HID GLOBAL, ");
+	PrintAndLogDevice(NORMAL, "AND MAY EXPOSE YOU TO AN INFRINGEMENT ACTION FROM THOSE PARTIES. ");
+	PrintAndLogDevice(NORMAL, "");
+	PrintAndLogDevice(NORMAL, "THIS TOOL SHOULD NEVER BE USED TO INFRINGE PATENTS OR INTELLECTUAL PROPERTY RIGHTS. ");
 
 
 	char *fileName = NULL;
