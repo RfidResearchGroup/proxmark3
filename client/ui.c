@@ -29,34 +29,49 @@ void PrintAndLogEx(logLevel_t level, char *fmt, ...) {
 		return;
 	
 	char buffer[MAX_PRINT_BUFFER] = {0};
+	char buffer2[MAX_PRINT_BUFFER] = {0};
+	char prefix[20] = {0};
+	char *token = NULL;
 	int size = 0;
 						//   {NORMAL, SUCCESS, INFO, FAILED, WARNING, ERR, DEBUG}
-	static char *prefix[7] = { "", "[+] ", "[=] ", "[-] ", "[!] ", "[!!] ", "[#] "};
+	static char *prefixes[7] = { "", "[+] ", "[=] ", "[-] ", "[!] ", "[!!] ", "[#] "};
 	
 	switch( level ) {
 		case FAILED:
-			size = strlen( _RED_([-] ) );
-			strncpy(buffer,_RED_([-] ), size);
+			strncpy(prefix,_RED_([-] ), sizeof(prefix)-1);
 			break;
 		case DEBUG:
-			size = strlen( _BLUE_([#] ) );
-			strncpy(buffer,_BLUE_([#] ), size);			
+			strncpy(prefix,_BLUE_([#] ), sizeof(prefix)-1);			
 			break;
 		case SUCCESS: 
-			size = strlen( _GREEN_([+] ) );
-			strncpy(buffer,_GREEN_([+] ), size);
+			strncpy(prefix,_GREEN_([+] ), sizeof(prefix)-1);
 			break;
 		default:
-			size = strlen(prefix[level]);
-			strncpy(buffer, prefix[level], sizeof buffer);
+			strncpy(prefix, prefixes[level], sizeof(buffer)-1);
 			break;
 	}
 	
 	va_list args;
-	va_start(args,fmt);
-	vsnprintf(buffer + size, sizeof(buffer) - size, fmt, args);
+	va_start(args, fmt);
+	vsnprintf(buffer, sizeof(buffer), fmt, args);
 	va_end(args);
-	PrintAndLog(buffer);
+
+	if(strchr(buffer, '\n'))
+	{
+		token = strtok(buffer,"\n");
+		while (token != NULL)
+		{
+			size=strlen(buffer2);
+			if(strlen(token))
+				snprintf(buffer2+size, sizeof(buffer2)-size, "%s%s\n", prefix, token);
+			else
+				snprintf(buffer2+size, sizeof(buffer2)-size, "\n");
+			token = strtok(NULL, "\n");
+		}
+		PrintAndLog(buffer2);
+	}
+	else
+		PrintAndLog(buffer);
 }
 
 void PrintAndLog(char *fmt, ...) {
