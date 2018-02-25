@@ -653,7 +653,7 @@ static void fcAll(uint8_t fc, int *n, uint8_t clock, uint16_t *modCnt)
 void CmdHIDsimTAGEx( uint32_t hi, uint32_t lo, int ledcontrol, int numcycles) {
 
 	if (hi > 0xFFF) {
-		DbpString("Tags can only have 44 bits. - USE lf simfsk for larger tags");
+		DbpString("[!] tags can only have 44 bits. - USE lf simfsk for larger tags");
 		return;
 	}
 	
