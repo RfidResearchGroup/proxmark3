@@ -178,7 +178,7 @@ void RunMod() {
                 break;
             } else {
                 /*  BRACE YOURSELF : AS LONG AS WE TRAP A KNOWN KEY, WE STOP CHECKING AND ENFORCE KNOWN SCHEMES */
-                uint8_t tosendkey[12];
+                char tosendkey[12];
                 num_to_bytes(key64, 6, foundKey[type][sec]);
                 Dbprintf("SEC: %d ; KEY : %012" PRIx64 " ; TYP: %i", sec, key64, type);
                 /*cmd_send(CMD_CJB_INFORM_CLIENT_KEY, 12, sec, type, tosendkey, 12);*/
@@ -550,8 +550,8 @@ int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, ui
     MF_DBGLEVEL = MF_DBG_NONE;
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
     set_tracing(false);
-    uint8_t uid[10];
-    uint32_t cuid;
+//    uint8_t uid[10];
+//    uint32_t cuid;
     struct Crypto1State mpcs = {0, 0};
     struct Crypto1State *pcs;
     pcs = &mpcs;
@@ -652,9 +652,9 @@ int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *data
 
     // variables
     byte_t isOK = 0;
-    uint8_t uid[10] = {0x00};
+//    uint8_t uid[10] = {0x00};
     uint8_t d_block[18] = {0x00};
-    uint32_t cuid;
+//    uint32_t cuid;
 
     uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
     uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE];

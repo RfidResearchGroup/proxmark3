@@ -13,7 +13,7 @@
 #define __HF_COLIN_H
 
 #include "iso14443a.h"
-//#include "printf.h"
+#include "printf.h"
 #include "protocols.h"
 #include "standalone.h" // standalone definitions
 #include <stdbool.h>    // for bool
