@@ -333,7 +333,15 @@ int usage_15_dump(void){
 	return 0;
 }
 int usage_15_restore(void){
-	PrintAndLogEx(NORMAL, "'hf 15 restore' - to be implemented...");
+	PrintAndLogEx(NORMAL, "Usage: hf 15 restore [-2] [-o] [h] [r <NUM>] [u <UID>] [f <filename>] [b <block size>]");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "\th              this help");
+	PrintAndLogEx(NORMAL, "\t-2             use slower '1 out of 256' mode");
+	PrintAndLogEx(NORMAL, "\t-o             set OPTION Flag (needed for TI)");
+	PrintAndLogEx(NORMAL, "\tr <NUM>        numbers of retries on error, default is 3");
+	PrintAndLogEx(NORMAL, "\tu <UID>        load hf-15-dump-<UID>.bin");
+	PrintAndLogEx(NORMAL, "\tf <filename>   load <filename>");
+	PrintAndLogEx(NORMAL, "\tb <block size> block size, default is 4");
 	return 0;
 }
 int usage_15_raw(void){
@@ -754,11 +762,111 @@ int CmdHF15Dump(const char*Cmd) {
 }
 
 int CmdHF15Restore(const char*Cmd) {
-	// read from file
-	// loop file
-	// write block to tag
-	// end loop
-	return usage_15_restore();
+	FILE *file;
+	
+	uint8_t uid[8]={0x00};
+	char filename[FILE_PATH_SIZE] = {0x00};
+	char buff[255] = {0x00};
+	size_t blocksize=4;
+	uint8_t cmdp = 0;
+	char newCmdPrefix[255] = {0x00}, tmpCmd[255] = {0x00};
+	char param[FILE_PATH_SIZE]="";
+	char hex[255]="";
+	uint8_t retries = 3, tried = 0;
+	int retval=0;
+	size_t bytes_read;
+	uint8_t i=0;
+		while(param_getchar(Cmd, cmdp) != 0x00) {
+		switch(tolower(param_getchar(Cmd, cmdp))) {
+			case '-':
+				param_getstr(Cmd, cmdp, param, sizeof(param));
+				switch(param[1])
+				{
+					case '2':
+					case 'o': strncpy(newCmdPrefix, " ",sizeof(newCmdPrefix)-1);
+						strncat(newCmdPrefix, param, sizeof(newCmdPrefix)-1);
+								break;
+					default:
+						PrintAndLogEx(WARNING, "Unknown parameter '%s'", param);
+						return usage_15_restore();
+				}
+				break;
+			case 'f':
+				param_getstr(Cmd, cmdp+1, filename, FILE_PATH_SIZE);
+				cmdp++;	
+				break;
+			case 'r':
+				retries=param_get8ex(Cmd, cmdp+1, 3, 10);
+				cmdp++;	
+				break;
+			case 'b':
+				blocksize=param_get8ex(Cmd, cmdp+1, 4, 10);
+				cmdp++;	
+				break;
+			case 'u':
+				param_getstr(Cmd, cmdp+1, buff, FILE_PATH_SIZE);
+				cmdp++;	
+				snprintf(filename,sizeof(filename),"hf-15-dump-%s-bin",buff);				
+				break;
+			case 'h':
+				return usage_15_restore();
+			default:
+				PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+				return usage_15_restore();
+				break;
+		}
+		cmdp++;
+	}
+	PrintAndLogEx(INFO,"Blocksize: %u",blocksize);
+	if(filename[0]=='\0')
+	{
+		PrintAndLogEx(WARNING,"Please provide a filename");
+		return 1;
+	}
+
+	if ((file = fopen(filename,"rb")) == NULL) {
+		PrintAndLogEx(WARNING, "Could not find file %s", filename);
+		return 2;
+	}
+	
+	if (!getUID(uid)) {
+		PrintAndLogEx(WARNING, "No tag found");
+		return 3;
+	}
+	while (1) {
+		tried=0;
+		hex[0]=0x00;
+		tmpCmd[0]=0x00;
+		
+		bytes_read = fread( buff, 1, blocksize, file );
+		if ( bytes_read == 0) {
+			PrintAndLogEx(SUCCESS, "File reading done (%s).", filename);
+			fclose(file);
+			return 0;
+		}
+		else if ( bytes_read != blocksize) {
+			PrintAndLogEx(WARNING, "File reading error (%s), %u bytes read instead of %u bytes.", filename, bytes_read, blocksize);
+			fclose(file);
+			return 2;
+		}
+		for(int j=0;j<blocksize;j++)
+			snprintf(hex+j*2,3,"%02X", (unsigned char)buff[j]);
+		for(int j=0;j<sizeof(uid)/sizeof(uid[0]);j++)
+			snprintf(buff+j*2,3,"%02X", uid[j]);
+		
+		//TODO: Addressed mode currently not work
+		//snprintf(tmpCmd, sizeof(tmpCmd), "%s %s %d %s", newCmdPrefix, buff, i, hex);
+		snprintf(tmpCmd, sizeof(tmpCmd), "%s u %d %s", newCmdPrefix, i, hex);
+		PrintAndLogEx(DEBUG, "Command to be sent: %s", tmpCmd);
+
+		for(tried=0;tried<retries;tried++)
+			if(!(retval=CmdHF15Write(tmpCmd)))
+				break;
+		if(tried >= retries)
+			return retval;
+		i++;
+	}
+	fclose(file);
 }
 
 int CmdHF15List(const char *Cmd) {
