@@ -268,29 +268,29 @@ static char* TagErrorStr(uint8_t error) {
 }
 
 int usage_15_demod(void){
-	PrintAndLogEx(NORMAL, "Tries to demodulate / decode ISO15693, from downloaded samples.");
-	PrintAndLogEx(NORMAL, "Gather samples with 'hf 15 read' / 'hf 15 record'");
+	PrintAndLogEx(NORMAL, "Tries to demodulate / decode ISO15693, from downloaded samples.\n"
+	                      "Gather samples with 'hf 15 read' / 'hf 15 record'");
 	return 0;
 }
 int usage_15_samples(void){
-	PrintAndLogEx(NORMAL, "Acquire samples as Reader (enables carrier, send inquiry");
-	PrintAndLogEx(NORMAL, "and download it to graphbuffer.  Try 'hf 15 demod'  to try to demodulate/decode signal");
+	PrintAndLogEx(NORMAL, "Acquire samples as Reader (enables carrier, send inquiry\n"
+	                      "and download it to graphbuffer.  Try 'hf 15 demod'  to try to demodulate/decode signal");
 	return 0;
 }
 int usage_15_info(void){
-	PrintAndLogEx(NORMAL, "Uses the optional command 'get_systeminfo' 0x2B to try and extract information");
-	PrintAndLogEx(NORMAL, "command may fail, depending on tag.");
-	PrintAndLogEx(NORMAL, "defaults to '1 out of 4' mode");
-	PrintAndLogEx(NORMAL, "");
-	PrintAndLogEx(NORMAL, "Usage:  hf 15 info    [options] <uid|s|u|*>");
-	PrintAndLogEx(NORMAL, "Options:");
-	PrintAndLogEx(NORMAL, "               -2        use slower '1 out of 256' mode");
-	PrintAndLogEx(NORMAL, "           uid (either): ");
-	PrintAndLogEx(NORMAL, "               <8B hex>  full UID eg E011223344556677");
-	PrintAndLogEx(NORMAL, "               u         unaddressed mode");
-	PrintAndLogEx(NORMAL, "               *         scan for tag");
-	PrintAndLogEx(NORMAL, "Examples:");
-	PrintAndLogEx(NORMAL, "       hf 15 info u");
+	PrintAndLogEx(NORMAL, "Uses the optional command 'get_systeminfo' 0x2B to try and extract information\n"
+	                      "command may fail, depending on tag.\n"
+	                      "defaults to '1 out of 4' mode\n"
+	                      "\n"
+	                      "Usage:  hf 15 info    [options] <uid|s|u|*>\n"
+	                      "Options:\n"
+	                      "\t-2        use slower '1 out of 256' mode\n"
+	                      "\tuid (either): \n"
+	                      "\t  <8B hex>  full UID eg E011223344556677\n"
+	                      "\t  u         unaddressed mode\n"
+	                      "\t  *         scan for tag\n"
+	                      "Examples:\n"
+	                      "\thf 15 info u");
 	return 0;
 }
 int usage_15_record(void){
@@ -298,21 +298,21 @@ int usage_15_record(void){
 	return 0;
 }
 int usage_15_reader(void){
-	PrintAndLogEx(NORMAL, "This command identifies a ISO 15693 tag");
-	PrintAndLogEx(NORMAL, "");
-	PrintAndLogEx(NORMAL, "Usage: hf 15 reader [h]");
-	PrintAndLogEx(NORMAL, "Options:");
-	PrintAndLogEx(NORMAL, "           h             this help");
-	PrintAndLogEx(NORMAL, "");
-	PrintAndLogEx(NORMAL, "Example:");
-	PrintAndLogEx(NORMAL, "         hf 15 reader");
+	PrintAndLogEx(NORMAL, "This command identifies a ISO 15693 tag\n"
+	                      "\n"
+	                      "Usage: hf 15 reader [h]\n"
+	                      "Options:\n"
+	                      "\th             this help\n"
+	                      "\n"
+	                      "Example:\n"
+	                      "\thf 15 reader");
 	return 0;
 }
 int usage_15_sim(void){
-	PrintAndLogEx(NORMAL, "Usage:  hf 15 sim <UID>");
-	PrintAndLogEx(NORMAL, "");
-	PrintAndLogEx(NORMAL, "Example:");
-	PrintAndLogEx(NORMAL, "         hf 15 sim E016240000000000");
+	PrintAndLogEx(NORMAL, "Usage:  hf 15 sim <UID>\n"
+	                      "\n"
+	                      "Example:\n"
+	                      "\thf 15 sim E016240000000000");
 	return 0;
 }
 int usage_15_findafi(void){
@@ -320,72 +320,72 @@ int usage_15_findafi(void){
 	return 0;
 }
 int usage_15_dump(void){
-	PrintAndLogEx(NORMAL, "This command dumps the contents of a ISO-15693 tag and save it to file");
-	PrintAndLogEx(NORMAL, "");
-	PrintAndLogEx(NORMAL, "Usage: hf 15 dump [h] <f filname> ");
-	PrintAndLogEx(NORMAL, "Options:");
-	PrintAndLogEx(NORMAL, "           h             this help");
-	PrintAndLogEx(NORMAL, "           f <name>      filename,  if no <name> UID will be used as filename");
-	PrintAndLogEx(NORMAL, "");
-	PrintAndLogEx(NORMAL, "Example:");
-	PrintAndLogEx(NORMAL, "         hf 15 dump f");
-	PrintAndLogEx(NORMAL, "         hf 15 dump f mydump");
+	PrintAndLogEx(NORMAL, "This command dumps the contents of a ISO-15693 tag and save it to file\n"
+	                      "\n"
+	                      "Usage: hf 15 dump [h] <f filname> \n"
+	                      "Options:\n"
+	                      "\th             this help\n"
+	                      "\tf <name>      filename,  if no <name> UID will be used as filename\n"
+	                      "\n"
+	                      "Example:\n"
+	                      "\thf 15 dump f\n"
+	                      "\thf 15 dump f mydump");
 	return 0;
 }
 int usage_15_restore(void){
-	PrintAndLogEx(NORMAL, "Usage: hf 15 restore [-2] [-o] [h] [r <NUM>] [u <UID>] [f <filename>] [b <block size>]");
-	PrintAndLogEx(NORMAL, "Options:");
-	PrintAndLogEx(NORMAL, "\th              this help");
-	PrintAndLogEx(NORMAL, "\t-2             use slower '1 out of 256' mode");
-	PrintAndLogEx(NORMAL, "\t-o             set OPTION Flag (needed for TI)");
-	PrintAndLogEx(NORMAL, "\tr <NUM>        numbers of retries on error, default is 3");
-	PrintAndLogEx(NORMAL, "\tu <UID>        load hf-15-dump-<UID>.bin");
-	PrintAndLogEx(NORMAL, "\tf <filename>   load <filename>");
-	PrintAndLogEx(NORMAL, "\tb <block size> block size, default is 4");
+	PrintAndLogEx(NORMAL, "Usage: hf 15 restore [-2] [-o] [h] [r <NUM>] [u <UID>] [f <filename>] [b <block size>]\n"
+	                       "Options:\n"
+	                       "\th              this help\n"
+	                       "\t-2             use slower '1 out of 256' mode\n"
+	                       "\t-o             set OPTION Flag (needed for TI)\n"
+	                       "\tr <NUM>        numbers of retries on error, default is 3\n"
+	                       "\tu <UID>        load hf-15-dump-<UID>.bin\n"
+	                       "\tf <filename>   load <filename>\n"
+	                       "\tb <block size> block size, default is 4");
 	return 0;
 }
 int usage_15_raw(void){
-	PrintAndLogEx(NORMAL, "Usage: hf 15 raw  [-r] [-2] [-c] <0A 0B 0C ... hex>");
-	PrintAndLogEx(NORMAL, "       -r    do not read response");
-	PrintAndLogEx(NORMAL, "       -2    use slower '1 out of 256' mode");
-	PrintAndLogEx(NORMAL, "       -c	  calculate and append CRC");
-	PrintAndLogEx(NORMAL, " Tip: turn on debugging for verbose output");		
-	return 0;	
+	PrintAndLogEx(NORMAL, "Usage: hf 15 raw  [-r] [-2] [-c] <0A 0B 0C ... hex>\n"
+	                      "\t-r    do not read response\n"
+	                      "\t-2    use slower '1 out of 256' mode\n"
+	                      "\t-c	   calculate and append CRC\n"
+	                      "\tTip: turn on debugging for verbose output");
+	return 0;
 }
 int usage_15_read(void){
-	PrintAndLogEx(NORMAL, "Usage:  hf 15 read    [options] <uid|s|u|*> <page#>");
-	PrintAndLogEx(NORMAL, "Options:");
-	PrintAndLogEx(NORMAL, "               -2        use slower '1 out of 256' mode");
-	PrintAndLogEx(NORMAL, "           uid (either): ");
-	PrintAndLogEx(NORMAL, "               <8B hex>  full UID eg E011223344556677");
-	PrintAndLogEx(NORMAL, "               u         unaddressed mode");
-	PrintAndLogEx(NORMAL, "               *         scan for tag");
-	PrintAndLogEx(NORMAL, "           page#:        page number 0-255");  
+	PrintAndLogEx(NORMAL, "Usage:  hf 15 read    [options] <uid|s|u|*> <page#>\n"
+	                      "Options:\n"
+	                      "\t-2        use slower '1 out of 256' mode\n"
+	                      "\tuid (either): \n"
+	                      "\t   <8B hex>  full UID eg E011223344556677\n"
+	                      "\t   u         unaddressed mode\n"
+	                      "\t   *         scan for tag\n"
+	                      "\tpage#:        page number 0-255");
 	return 0;
 }
 int usage_15_write(void){
-	PrintAndLogEx(NORMAL, "Usage:  hf 15 write    [options] <uid|s|u|*> <page#> <hexdata>");
-	PrintAndLogEx(NORMAL, "Options:");
-	PrintAndLogEx(NORMAL, "               -2        use slower '1 out of 256' mode");
-	PrintAndLogEx(NORMAL, "               -o        set OPTION Flag (needed for TI)");
-	PrintAndLogEx(NORMAL, "           uid (either): ");
-	PrintAndLogEx(NORMAL, "               <8B hex>  full UID eg E011223344556677");
-	PrintAndLogEx(NORMAL, "               u         unaddressed mode");
-	PrintAndLogEx(NORMAL, "               *         scan for tag");
-	PrintAndLogEx(NORMAL, "           page#:        page number 0-255");  
-	PrintAndLogEx(NORMAL, "           hexdata:      data to be written eg AA BB CC DD");  
+	PrintAndLogEx(NORMAL, "Usage:  hf 15 write    [options] <uid|s|u|*> <page#> <hexdata>\n"
+	                      "Options:\n"
+	                      "\t-2        use slower '1 out of 256' mode\n"
+	                      "\t-o        set OPTION Flag (needed for TI)\n"
+	                      "\tuid (either): \n"
+	                      "\t   <8B hex>  full UID eg E011223344556677\n"
+	                      "\t   u         unaddressed mode\n"
+	                      "\t   *         scan for tag\n"
+	                      "\tpage#:        page number 0-255\n"
+	                      "\thexdata:      data to be written eg AA BB CC DD");
 	return 0;
 }
 int usage_15_readmulti(void){
-	PrintAndLogEx(NORMAL, "Usage:  hf 15 readmulti  [options] <uid|s|u|*> <start#> <count#>");
-	PrintAndLogEx(NORMAL, "Options:");
-	PrintAndLogEx(NORMAL, "               -2        use slower '1 out of 256' mode");
-	PrintAndLogEx(NORMAL, "           uid (either): ");
-	PrintAndLogEx(NORMAL, "               <8B hex>  full UID eg E011223344556677");
-	PrintAndLogEx(NORMAL, "               u         unaddressed mode");
-	PrintAndLogEx(NORMAL, "               *         scan for tag");
-	PrintAndLogEx(NORMAL, "           start#:       page number to start 0-255");  
-	PrintAndLogEx(NORMAL, "           count#:       number of pages");  
+	PrintAndLogEx(NORMAL, "Usage:  hf 15 readmulti  [options] <uid|s|u|*> <start#> <count#>\n"
+	                      "Options:\n"
+	                      "\t-2        use slower '1 out of 256' mode\n"
+	                      "\tuid (either): \n"
+	                      "\t   <8B hex>  full UID eg E011223344556677\n"
+	                      "\t   u         unaddressed mode\n"
+	                      "\t   *         scan for tag\n"
+	                      "\tstart#:       page number to start 0-255\n"
+	                      "\tcount#:       number of pages");
 	return 0;
 }
 // Mode 3
