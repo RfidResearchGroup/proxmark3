@@ -66,6 +66,7 @@ int CmdLFHitagList(const char *Cmd) {
 	FILE* f = NULL;
   	
 	if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
+	
 	memcpy(filename, Cmd, len);
    
 	if (strlen(filename) > 0) {

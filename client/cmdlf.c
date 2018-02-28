@@ -865,7 +865,9 @@ int CmdLFfind(const char *Cmd) {
 		signal_t *sp = getSignalProperties();
 		if (sp->isnoise) {
 
-			PrintAndLogEx(NORMAL, "Signal looks just like noise. Looking for Hitag signal now.");					
+			PrintAndLogEx(NORMAL, "Signal looks just like noise. Looking for Hitag signal now.");	
+
+			// 26 === RHT2F_UID_ONLY
 			if (CmdLFHitagReader("26") == 0) { PrintAndLogEx(NORMAL, "\nValid Hitag Found!"); return 1;}
 			if (CmdCOTAGRead("") > 0) 	{ PrintAndLogEx(NORMAL, "\nValid COTAG ID Found!"); return 1;}
 		    return 0;

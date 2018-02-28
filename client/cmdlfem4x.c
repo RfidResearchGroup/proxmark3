@@ -1141,7 +1141,7 @@ int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word) 
 	SendCommand(&c);
 	UsbCommand resp;	
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)){
-		PrintAndLogEx(WARNING, "Command timed out");
+		PrintAndLogEx(DEBUG, "Command timed out");
 		return -1;
 	}
 	if ( !downloadSamplesEM() ) {
@@ -1150,7 +1150,7 @@ int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word) 
 	int testLen = (GraphTraceLen < 1000) ? GraphTraceLen : 1000;
 	
 	if (justNoise_int(GraphBuffer, testLen)) {
-		PrintAndLogEx(WARNING, "No tag found");
+		PrintAndLogEx(DEBUG, "No tag found");
 		return -1;
 	}
 	return demodEM4x05resp(word);
