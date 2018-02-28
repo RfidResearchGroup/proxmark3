@@ -177,6 +177,11 @@ int usage_hf_14a_apdu(void) {
 	PrintAndLogEx(NORMAL, "       -t    executes TLV decoder if it possible. TODO!!!!");
 	return 0;
 }
+int usage_hf_14a_antifuzz(void) {
+	PrintAndLogEx(NORMAL, "Usage: hf 14a antifuzz [4|7|10]");
+	PrintAndLogEx(NORMAL, "       <len>    determine which anticollision phase the command will target.");
+	return 0;
+}
 
 int CmdHF14AList(const char *Cmd) {
 	//PrintAndLogEx(NORMAL, "Deprecated command, use 'hf list 14a' instead");
@@ -1001,16 +1006,30 @@ static int waitCmd(uint8_t iSelect) {
 	return 0;
 }
 
+int CmdHF14AAntiFuzz(const char *cmd) {
+	
+	if (strlen(cmd) < 1) return usage_hf_14a_antifuzz();
+
+	//	read param length
+	uint8_t arg0 = 4;
+	
+	UsbCommand c = {CMD_ANTIFUZZ_ISO_14443a, {arg0, 0, 0}};	
+	clearCommandBuffer();
+    SendCommand(&c);	
+	return 0;
+}
+
 static command_t CommandTable[] = {
-  {"help",   CmdHelp,              1, "This help"},
-  {"list",   CmdHF14AList,         0, "[Deprecated] List ISO 14443-a history"},
-  {"info",   CmdHF14AInfo,         0, "Tag information"},
-  {"reader", CmdHF14AReader,       0, "Act like an ISO14443-a reader"},
-  {"cuids",  CmdHF14ACUIDs,        0, "<n> Collect n>0 ISO14443-a UIDs in one go"},
-  {"sim",    CmdHF14ASim,          0, "<UID> -- Simulate ISO 14443-a tag"},
-  {"sniff",  CmdHF14ASniff,        0, "sniff ISO 14443-a traffic"},
-  {"apdu",   CmdHF14AAPDU,         0, "Send ISO 14443-4 APDU to tag"},
-  {"raw",    CmdHF14ACmdRaw,       0, "Send raw hex data to tag"},
+  {"help",		CmdHelp,              1, "This help"},
+  {"list",		CmdHF14AList,         0, "[Deprecated] List ISO 14443-a history"},
+  {"info",		CmdHF14AInfo,         0, "Tag information"},
+  {"reader",	CmdHF14AReader,       0, "Act like an ISO14443-a reader"},
+  {"cuids",		CmdHF14ACUIDs,        0, "<n> Collect n>0 ISO14443-a UIDs in one go"},
+  {"sim",		CmdHF14ASim,          0, "<UID> -- Simulate ISO 14443-a tag"},
+  {"sniff",		CmdHF14ASniff,        0, "sniff ISO 14443-a traffic"},
+  {"apdu",		CmdHF14AAPDU,         0, "Send ISO 14443-4 APDU to tag"},
+  {"raw",		CmdHF14ACmdRaw,       0, "Send raw hex data to tag"},
+  {"antifuzz",	CmdHF14AAntiFuzz,     0, "Fuzzing the anticollision phase.  Warning! Readers may react strange"},
   {NULL, NULL, 0, NULL}
 };
 

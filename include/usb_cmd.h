@@ -139,7 +139,7 @@ typedef struct{
 #define CMD_WR_HITAG_S													  0x0375
 #define CMD_EMU_HITAG_S													  0x0376
 
-
+#define CMD_ANTIFUZZ_ISO_14443a											  0x0380
 #define CMD_SIMULATE_TAG_ISO_14443B                                       0x0381
 #define CMD_SNOOP_ISO_14443B                                              0x0382
 

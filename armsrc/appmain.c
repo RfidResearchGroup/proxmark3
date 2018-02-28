@@ -811,6 +811,9 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 		case CMD_SIMULATE_TAG_ISO_14443a:
 			SimulateIso14443aTag(c->arg[0], c->arg[1], c->d.asBytes);  // ## Simulate iso14443a tag - pass tag type & UID
 			break;
+		case CMD_ANTIFUZZ_ISO_14443a:
+			iso14443a_antifuzz(c->arg[0]);
+			break;			
 		case CMD_EPA_PACE_COLLECT_NONCE:
 			EPA_PACE_Collect_Nonce(c);
 			break;
