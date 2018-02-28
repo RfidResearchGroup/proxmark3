@@ -344,8 +344,9 @@ void doCotagAcquisition(size_t sample_size) {
 	dest[0] = 0;	
 	uint8_t sample = 0, firsthigh = 0, firstlow = 0; 
 	uint16_t i = 0;
-
-	while (!BUTTON_PRESS() && !usb_poll_validate_length() && (i < bufsize) ) {
+	uint16_t noise_counter = 0;
+	
+	while (!BUTTON_PRESS() && !usb_poll_validate_length() && (i < bufsize) && (noise_counter < (COTAG_T1 << 1)) ) {
 		WDT_HIT();		
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
 			AT91C_BASE_SSC->SSC_THR = 0x43;
@@ -358,13 +359,19 @@ void doCotagAcquisition(size_t sample_size) {
 		
 			// find first peak
 			if ( !firsthigh ) {
-				if (sample < COTAG_ONE_THRESHOLD) 
+				if (sample < COTAG_ONE_THRESHOLD) {
+					noise_counter++;
 					continue;
+				}
+				noise_counter = 0;
 				firsthigh = 1;
 			}
 			if ( !firstlow ){
-				if (sample > COTAG_ZERO_THRESHOLD )
+				if (sample > COTAG_ZERO_THRESHOLD ) {
+					noise_counter++;
 					continue;
+				}
+				noise_counter = 0;
 				firstlow = 1;
 			}
 
