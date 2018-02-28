@@ -36,7 +36,7 @@ uint32_t SampleLF(bool silent, int sample_size);
 uint32_t SnoopLF();
 
 // adds sample size to default options
-uint32_t DoPartialAcquisition(int trigger_threshold, bool silent, int sample_size);
+uint32_t DoPartialAcquisition(int trigger_threshold, bool silent, int sample_size, uint32_t cancel_after);
 
 /**
  * @brief Does sample acquisition, ignoring the config values set in the sample_config.
