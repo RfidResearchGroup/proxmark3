@@ -86,7 +86,7 @@ bool hookUpPM3() {
 	bool ret = false;
 	sp = uart_open( comport );
 	
-	pthread_mutex_lock(&print_lock);
+	//pthread_mutex_lock(&print_lock);
 
 	if (sp == INVALID_SERIAL_PORT) {
 		PrintAndLogEx(WARNING, "Reconnect failed, retrying...  (reason: invalid serial port)\n");
@@ -101,7 +101,7 @@ bool hookUpPM3() {
 		ret = true;
 		offline = 0;
 	}
-	pthread_mutex_unlock(&print_lock);
+	//pthread_mutex_unlock(&print_lock);
 	return ret;
 }
 
@@ -482,20 +482,20 @@ int main(int argc, char* argv[]) {
 		int openCount = 0;
 		do {
 			sp = uart_open(argv[1]);
-			msleep(1000);
+			msleep(500);
 			PrintAndLogEx(NORMAL, ".");
 			fflush(stdout);
-		} while (++openCount < 20 && (sp == INVALID_SERIAL_PORT || sp == CLAIMED_SERIAL_PORT));
+		} while (++openCount < 30 && (sp == INVALID_SERIAL_PORT || sp == CLAIMED_SERIAL_PORT));
 		PrintAndLogEx(NORMAL, "\n");
 	}
 
 	// check result of uart opening
 	if (sp == INVALID_SERIAL_PORT) {
-		PrintAndLogEx(WARNING, "ERROR: invalid serial port\n");
+		PrintAndLogEx(WARNING, "ERROR: invalid serial port");
 		usb_present = false;
 		offline = 1;
 	} else if (sp == CLAIMED_SERIAL_PORT) {
-		PrintAndLogEx(WARNING, "ERROR: serial port is claimed by another process\n");
+		PrintAndLogEx(WARNING, "ERROR: serial port is claimed by another process");
 		usb_present = false;
 		offline = 1;
 	} else {
