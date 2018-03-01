@@ -21,7 +21,32 @@ bool showDemod = true;
 
 pthread_mutex_t print_lock = PTHREAD_MUTEX_INITIALIZER;
 static char *logfilename = "proxmark3.log";
-
+void PrintAndLogOptions(char *str[][2], size_t size, size_t space)
+{
+	char buff[2000] = "Options:\n";
+	char format[2000] = "";
+	size_t counts[2] = {0, 0};
+	for(int i = 0; i < size; i++)
+		for(int j = 0 ; j < 2 ; j++)
+			if(counts[j] < strlen(str[i][j]))
+			{
+				counts[j] = strlen(str[i][j]);
+			}
+	for(int i = 0; i < size; i++)
+    {
+		for(int j = 0; j < 2; j++)
+		{
+			if(j == 0)
+			    snprintf(format, sizeof(format), "%%%us%%%us", space, counts[j]);
+            else
+                snprintf(format, sizeof(format), "%%%us%%-%us", space, counts[j]);
+			snprintf(buff + strlen(buff), sizeof(buff) - strlen(buff), format, " ", str[i][j]);		
+		}
+		if(i<size-1)
+			strncat(buff, "\n", sizeof(buff)-strlen(buff) -1);
+    }
+    PrintAndLogEx(NORMAL, buff);
+}
 void PrintAndLogEx(logLevel_t level, char *fmt, ...) {
 
 	// skip debug messages if client debugging is turned off i.e. 'DATA SETDEBUG 0' 
