@@ -37,7 +37,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 		
 		// wait cycle
 		while (true) {
-			PrintAndLogEx(NORMAL, "."); fflush(stdout);
+			printf("."); fflush(stdout);
 			if (ukbhit()) {
 				int gc = getchar(); (void)gc;
 				return -5;

@@ -236,7 +236,7 @@ void ProxWidget::showEvent(QShowEvent *event) {
 //----------- Plotting
 
 int Plot::xCoordOf(int i, QRect r ) {
-	return r.left() + (int)((i - GraphStart)*GraphPixelsPerPoint);
+	return r.left() + (int)((i - GraphStart) * GraphPixelsPerPoint);
 }
 
 int Plot::yCoordOf(int v, QRect r, int maxVal) {

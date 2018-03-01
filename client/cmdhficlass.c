@@ -1039,7 +1039,7 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 	clearCommandBuffer();
 	SendCommand(&w);
 	while (true) {
-		PrintAndLogEx(NORMAL, "."); fflush(stdout);
+		printf("."); fflush(stdout);
 		if (ukbhit()) {
 			int gc = getchar(); (void)gc;
 			PrintAndLogEx(NORMAL, "\n[!] aborted via keyboard!\n");

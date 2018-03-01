@@ -363,7 +363,7 @@ int CmdHFFelicaDumpLite(const char *Cmd) {
 	uint8_t timeout = 0;
 	while ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
 		timeout++;
-		PrintAndLogEx(NORMAL, "."); fflush(stdout);
+		printf("."); fflush(stdout);
 		if (ukbhit()) {
 			int gc = getchar(); (void)gc;
 			PrintAndLogEx(NORMAL, "\n[!] aborted via keyboard!\n");

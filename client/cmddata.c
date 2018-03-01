@@ -1484,7 +1484,7 @@ int CmdTuneSamples(const char *Cmd) {
 	UsbCommand resp;
 	while (!WaitForResponseTimeout(CMD_MEASURED_ANTENNA_TUNING, &resp, 2000)) {
 		timeout++;
-		PrintAndLogEx(NORMAL, "."); fflush(stdout);
+		printf("."); fflush(stdout);
 		if (timeout > 7) {
 			PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(WARNING, "no response from Proxmark. Aborting...");
 			return 1;
@@ -1532,7 +1532,8 @@ int CmdTuneSamples(const char *Cmd) {
 	else if (v_hf < HF_MARGINAL_V)
 		sprintf(judgement, "MARGINAL");
 	else
-		sprintf(judgement, "OK");	
+		sprintf(judgement, "OK");
+	
 	PrintAndLogEx(NORMAL, "[%c] HF antenna is %s"
 			, (v_hf < HF_UNUSABLE_V) ? '!' : '+'
 			, judgement
@@ -1546,12 +1547,14 @@ int CmdTuneSamples(const char *Cmd) {
 		test += resp.d.asBytes[i];
 	}
 	if ( test > 0 ) {
-		PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(SUCCESS, "Displaying LF tuning graph. Divisor 89 is 134khz, 95 is 125khz.\n\n");
+		PrintAndLogEx(NORMAL, "\n");
+		PrintAndLogEx(SUCCESS, " Displaying LF tuning graph. Divisor 89 is 134khz, 95 is 125khz.\n\n");
 		GraphTraceLen = 256;
 		ShowGraphWindow();
 		RepaintGraphWindow();
 	} else {
-		PrintAndLogEx(NORMAL, "\n[-] Not showing LF tuning graph since all values is zero.\n\n");
+		PrintAndLogEx(NORMAL, "\n");
+		PrintAndLogEx(FAILED, "Not showing LF tuning graph since all values is zero.\n\n");
 	}
 	return 0;
 }
