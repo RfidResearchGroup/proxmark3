@@ -36,6 +36,7 @@ void HideGraphWindow(void);
 void ShowGraphWindow(void);
 void RepaintGraphWindow(void);
 extern void PrintAndLog(char *fmt, ...);
+void PrintAndLogOptions(char *str[][2], size_t size, size_t space);
 void PrintAndLogEx(logLevel_t level, char *fmt, ...);
 extern void SetLogFilename(char *fn);
 
