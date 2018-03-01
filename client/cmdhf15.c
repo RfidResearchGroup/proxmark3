@@ -333,24 +333,29 @@ int usage_15_dump(void){
 	return 0;
 }
 int usage_15_restore(void){
-	PrintAndLogEx(NORMAL, "Usage: hf 15 restore [-2] [-o] [h] [r <NUM>] [u <UID>] [f <filename>] [b <block size>]\n"
-	                       "Options:\n"
-	                       "\th              this help\n"
-	                       "\t-2             use slower '1 out of 256' mode\n"
-	                       "\t-o             set OPTION Flag (needed for TI)\n"
-	                       "\tr <NUM>        numbers of retries on error, default is 3\n"
-	                       "\tu <UID>        load hf-15-dump-<UID>.bin\n"
-	                       "\tf <filename>   load <filename>\n"
-	                       "\tb <block size> block size, default is 4");
-	return 0;
+    char *options[][2]={ 
+        {"h", "this help"},
+        {"-2", "use slower '1 out of 256' mode"},
+        {"-o", "set OPTION Flag (needed for TI)"},
+        {"r <NUM>", "numbers of retries on error, default is 3"},
+        {"u <UID>", "load hf-15-dump-<UID>.bin"},
+        {"f <filename>", "load <filename>"},
+        {"b <block size>", "block size, default is 4"}
+    };
+    PrintAndLogEx(NORMAL, "Usage: hf 15 restore [-2] [-o] [h] [r <NUM>] [u <UID>] [f <filename>] [b <block size>]");
+    PrintAndLogOptions(options, 7, 3);
+    return 0;
 }
 int usage_15_raw(void){
-	PrintAndLogEx(NORMAL, "Usage: hf 15 raw  [-r] [-2] [-c] <0A 0B 0C ... hex>\n"
-	                      "\t-r    do not read response\n"
-	                      "\t-2    use slower '1 out of 256' mode\n"
-	                      "\t-c	   calculate and append CRC\n"
-	                      "\tTip: turn on debugging for verbose output");
-	return 0;
+    char *options[][2]={
+        {"-r", "do not read response" },
+        {"-2", "use slower '1 out of 256' mode" },
+        {"-c", "calculate and append CRC" },
+        {"", "Tip: turn on debugging for verbose output"},
+    };
+    PrintAndLogEx(NORMAL, "Usage: hf 15 raw  [-r] [-2] [-c] <0A 0B 0C ... hex>\n");
+    PrintAndLogOptions(options, 4, 3);
+    return 0;
 }
 int usage_15_read(void){
 	PrintAndLogEx(NORMAL, "Usage:  hf 15 read    [options] <uid|s|u|*> <page#>\n"
