@@ -1797,7 +1797,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 						
 			for (uint32_t c = 0; c < keycnt; c += max_keys) {
 								
-				PrintAndLogEx(NORMAL, "."); fflush(stdout);
+				printf("."); fflush(stdout);
 				if (ukbhit()) {
 					int gc = getchar();	(void)gc;
 					PrintAndLogEx(NORMAL, "\naborted via keyboard!\n");
@@ -2103,7 +2103,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 	
 	// wait cycle
 	while (true) {
-		PrintAndLogEx(NORMAL, "."); fflush(stdout);
+		printf("."); fflush(stdout);
 		if (ukbhit()) {
 			int gc = getchar(); (void)gc;
 			PrintAndLogEx(NORMAL, "\n[!] aborted via keyboard!\n");
@@ -2410,7 +2410,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
 			fclose(f);
 			return 3;
 		}
-		PrintAndLogEx(NORMAL, "."); fflush(stdout);
+		printf("."); fflush(stdout);
 		blockNum++;
 		
 		if (blockNum >= numBlocks) break;
@@ -2682,7 +2682,7 @@ int CmdHF14AMfCLoad(const char *Cmd) {
 				PrintAndLogEx(WARNING, "Cant set magic card block: %d", blockNum);
 				return 3;
 			}
-			PrintAndLogEx(NORMAL, "."); fflush(stdout);
+			printf("."); fflush(stdout);
 		}
 		PrintAndLogEx(NORMAL, "\n");
 		return 0;
@@ -2735,7 +2735,7 @@ int CmdHF14AMfCLoad(const char *Cmd) {
 			fclose(f);
 			return 3;
 		}
-		PrintAndLogEx(NORMAL, "."); fflush(stdout);
+		printf("."); fflush(stdout);
 		blockNum++;
 	
 		if (blockNum >= 16 * 4) break;  // magic card type - mifare 1K
@@ -2952,7 +2952,7 @@ int CmdHF14AMfCSave(const char *Cmd) {
 		
 		// bin
 		fwrite(buf, 1, sizeof(buf), fbin);
-		PrintAndLogEx(NORMAL, "."); fflush(stdout);
+		printf("."); fflush(stdout);
 	}
 	PrintAndLogEx(NORMAL, "\n");	
 	fflush(feml); fflush(fbin);
