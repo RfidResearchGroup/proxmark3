@@ -240,8 +240,9 @@ int Plot::xCoordOf(int i, QRect r ) {
 }
 
 int Plot::yCoordOf(int v, QRect r, int maxVal) {
-	int z = (r.bottom() - r.top())/2;	
-	return -(z * v) / (maxVal + z);
+	int z = (r.bottom() - r.top()) / 2;	
+	if ( maxVal == 0 ) ++maxVal;
+	return -(z * v) / maxVal + z;
 }
 
 int Plot::valueOf_yCoord(int y, QRect r, int maxVal) {
@@ -352,7 +353,7 @@ void Plot::PlotGraph(int *buffer, int len, QRect plotRect, QRect annotationRect,
 	QPainterPath penPath;
 	int vMin = INT_MAX, vMax = INT_MIN, vMean = 0, v = 0, i = 0;
 	int x = xCoordOf(GraphStart, plotRect);
-	int y = yCoordOf(buffer[GraphStart],plotRect,g_absVMax);
+	int y = yCoordOf(buffer[GraphStart], plotRect, g_absVMax);
 	penPath.moveTo(x, y);
 	for(i = GraphStart; i < len && xCoordOf(i, plotRect) < plotRect.right(); i++) {
 
@@ -363,13 +364,13 @@ void Plot::PlotGraph(int *buffer, int len, QRect plotRect, QRect annotationRect,
 
 		penPath.lineTo(x, y);
 
-		if(GraphPixelsPerPoint > 10) {
+		if (GraphPixelsPerPoint > 10) {
 			QRect f(QPoint(x - 3, y - 3),QPoint(x + 3, y + 3));
 			painter->fillRect(f, QColor(100, 255, 100));
 		}
 		// catch stats
-		if(v < vMin) vMin = v;
-		if(v > vMax) vMax = v;
+		if (v < vMin) vMin = v;
+		if (v > vMax) vMax = v;
 		vMean += v;
 	}
 	vMean /= (i - GraphStart);
@@ -377,7 +378,7 @@ void Plot::PlotGraph(int *buffer, int len, QRect plotRect, QRect annotationRect,
 	painter->setPen(getColor(graphNum));
 
 	// Draw y-axis
-	int xo = 5+(graphNum*40);
+	int xo = 5 + (graphNum * 40);
 	painter->drawLine(xo, plotRect.top(),xo, plotRect.bottom());
 
 	int vMarkers = (g_absVMax - (g_absVMax % 10)) / 5;
@@ -388,20 +389,19 @@ void Plot::PlotGraph(int *buffer, int len, QRect plotRect, QRect annotationRect,
 	int n = 0;
 	int lasty0 = 65535;
 
-	for(v = vMarkers; yCoordOf(v,plotRect,g_absVMax) > plotRect.top() && n < 20; v+= vMarkers ,n++)
-	{
-		int y0 = yCoordOf(v,plotRect,g_absVMax);
-		int y1 = yCoordOf(-v,plotRect,g_absVMax);
+	for (v = vMarkers; yCoordOf(v, plotRect, g_absVMax) > plotRect.top() && n < 20; v+= vMarkers ,n++) {
+		int y0 = yCoordOf(v, plotRect, g_absVMax);
+		int y1 = yCoordOf(-v, plotRect, g_absVMax);
 
 		if(lasty0 - y0 < minYDist) continue;
 
 		painter->drawLine(xo-5,y0, xo+5, y0);
 
 		sprintf(yLbl, "%d", v);
-		painter->drawText(xo+8,y0+7,yLbl);
+		painter->drawText(xo+8, y0+7, yLbl);
 
 		painter->drawLine(xo-5, y1, xo+5, y1);
-		sprintf(yLbl, "%d",-v);
+		sprintf(yLbl, "%d", -v);
 		painter->drawText(xo+8, y1+5 , yLbl);
 		lasty0 = y0;
 	}
