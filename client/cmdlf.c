@@ -421,7 +421,7 @@ int CmdLFSim(const char *Cmd) {
 		clearCommandBuffer();
 		SendCommand(&c);
 		WaitForResponse(CMD_ACK, NULL);
-		PrintAndLogEx(NORMAL, ".");
+		printf("."); fflush(stdout);
 	}
 
 	PrintAndLogEx(NORMAL, "Simulating");

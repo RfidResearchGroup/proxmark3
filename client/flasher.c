@@ -135,7 +135,7 @@ int main(int argc, char **argv) {
 	fprintf(stdout, "Waiting for Proxmark to appear on %s", serial_port_name);
 	do {
 		msleep(500);
-		fprintf(stderr, ".");
+		fprintf(stderr, "."); fflush(stdout);
 	} while (!OpenProxmark());
 
 	fprintf(stdout, " Found.\n");

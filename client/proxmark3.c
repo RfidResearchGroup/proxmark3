@@ -483,8 +483,7 @@ int main(int argc, char* argv[]) {
 		do {
 			sp = uart_open(argv[1]);
 			msleep(500);
-			PrintAndLogEx(NORMAL, ".");
-			fflush(stdout);
+			printf("."); fflush(stdout);
 		} while (++openCount < 30 && (sp == INVALID_SERIAL_PORT || sp == CLAIMED_SERIAL_PORT));
 		PrintAndLogEx(NORMAL, "\n");
 	}

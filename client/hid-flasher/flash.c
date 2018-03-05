@@ -336,7 +336,7 @@ static int enter_bootloader(void)
 		msleep(1000);
 		while (!OpenProxmark(0)) {
 			msleep(1000);
-			fprintf(stderr, ".");
+			fprintf(stderr, "."); fflush(stdout);
 		}
 		fprintf(stderr," Found.\n");
 
@@ -449,7 +449,7 @@ int flash_write(flash_file_t *ctx)
 			baddr += block_size;
 			length -= block_size;
 			block++;
-			fprintf(stderr, ".");
+			fprintf(stderr, "."); fflush(stdout);
 		}
 		fprintf(stderr, " OK\n");
 	}

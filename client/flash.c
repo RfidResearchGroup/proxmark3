@@ -437,8 +437,7 @@ int flash_write(flash_file_t *ctx) {
 			baddr += block_size;
 			length -= block_size;
 			block++;
-			fprintf(stdout, ".");
-			fflush(stdout);
+			fprintf(stdout, "."); fflush(stdout);
 		}
 		fprintf(stdout, " OK\n");
 		fflush(stdout);

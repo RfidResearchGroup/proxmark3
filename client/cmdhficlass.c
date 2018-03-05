@@ -2043,8 +2043,7 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 		
 		while ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
 			timeout++;
-			PrintAndLogEx(NORMAL, ".");
-			fflush(stdout);
+			printf("."); fflush(stdout);
 			if (timeout > 120) {
 				PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(WARNING, "no response from Proxmark. Aborting...");
 				goto out;

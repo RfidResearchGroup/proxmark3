@@ -2106,8 +2106,7 @@ int CmdHF14AMfURestore(const char *Cmd){
 		clearCommandBuffer();
 		SendCommand(&c);
 		wait4response(b);
-		PrintAndLogEx(NORMAL, ".");
-		fflush(stdout);
+		printf("."); fflush(stdout);
 	}
 	PrintAndLogEx(NORMAL, "\n");
 	

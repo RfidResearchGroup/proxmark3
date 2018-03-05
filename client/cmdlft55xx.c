@@ -1621,8 +1621,7 @@ int CmdT55xxBruteForce(const char *Cmd) {
 
     while ((!found) && (i <= end_password)){
 
-		PrintAndLogEx(NORMAL, ".");
-		fflush(stdout);
+		printf("."); fflush(stdout);
 		
 		if (IsCancelled()) {
 			free(keyBlock);

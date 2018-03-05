@@ -748,7 +748,7 @@ int CmdHF15Dump(const char*Cmd) {
 			retry = 0;
 			blocknum++;
 			
-			PrintAndLogEx(NORMAL, "."); fflush(stdout);
+			printf("."); fflush(stdout);
 		} 
 	}
 	PrintAndLogEx(NORMAL, "\n");

@@ -68,6 +68,7 @@ uint16_t ul_ev1_packgenA(uint8_t* uid);
 uint16_t ul_ev1_packgenB(uint8_t* uid);
 uint16_t ul_ev1_packgenC(uint8_t* uid);
 uint16_t ul_ev1_packgenD(uint8_t* uid);
+uint16_t ul_ev1_packgen_VCNEW(uint8_t* uid, uint32_t pwd);
 
 uint32_t ul_ev1_otpgenA(uint8_t* uid);
 

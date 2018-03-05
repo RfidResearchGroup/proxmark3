@@ -2501,7 +2501,7 @@ int CmdHF14AMfESave(const char *Cmd) {
 		for (j = 0; j < 16; j++)
 			fprintf(f, "%02X", buf[j]); 
 		fprintf(f,"\n");
-		PrintAndLogEx(NORMAL, "."); fflush(stdout);
+		printf("."); fflush(stdout);
 	}
 	PrintAndLogEx(NORMAL, "\n");
 	fclose(f);
@@ -2916,7 +2916,7 @@ int CmdHF14AMfCSave(const char *Cmd) {
 				PrintAndLogEx(WARNING, "Cant set emul block: %d", i);
 				return 3;
 			}
-			PrintAndLogEx(NORMAL, "."); fflush(stdout);
+			printf("."); fflush(stdout);
 		}
 		PrintAndLogEx(NORMAL, "\n");
 		return 0;
