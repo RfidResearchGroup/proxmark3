@@ -24,7 +24,7 @@ APP_CFLAGS = -DWITH_CRC \
 			 -DWITH_FELICA \
 			 -DWITH_FLASH \
 			 -DWITH_HFSNOOP \
-			 -DWITH_HF_YOUNG \
+			 -DWITH_HF_COLIN \
 			 -fno-strict-aliasing -ffunction-sections -fdata-sections
 
 ### IMPORTANT -  move the commented variable below this line
@@ -103,7 +103,8 @@ ARMSRC = fpgaloader.c \
 	parity.c \
 	usb_cdc.c \
 	cmd.c \
-	hf_young.c
+	hf_colin.c \
+        vtsend.c 
 	#	lf_samyrun.c \
 	#	lf_hidbrute.c \
 	#	lf_proxbrute.c \
