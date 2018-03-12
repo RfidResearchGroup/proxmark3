@@ -394,24 +394,24 @@ void printStandAloneModes(void) {
 
 	DbpString("Installed StandAlone Mods");
 	
-	#if defined(WITH_LF_ICERUN)
+#if defined(WITH_LF_ICERUN)
 	DbpString("   LF sniff/clone/simulation -  aka IceRun (iceman)");
-	#endif
-	#if defined(WITH_HF_YOUNG)
+#endif
+#if defined(WITH_HF_YOUNG)
 	DbpString("   HF Mifare sniff/simulation - (Craig Young)");
-	#endif
-	#if defined(WITH_LF_SAMYRUN)
+#endif
+#if defined(WITH_LF_SAMYRUN)
 	DbpString("   LF HID26 standalone - aka SamyRun (Samy Kamkar)");
-	#endif
-	#if defined(WITH_LF_PROXBRUTE)
+#endif
+#if defined(WITH_LF_PROXBRUTE)
 	DbpString("   LF HID ProxII bruteforce - aka Proxbrute (Brad Antoniewicz)");
-	#endif 
-	#if defined(WITH_LF_HIDBRUTE)
+#endif 
+#if defined(WITH_LF_HIDBRUTE)
 	DbpString("   LF HID corporate 1000 bruteforce - (Federico dotta & Maurizio Agazzini)");
-	#endif 
-	#if defined(WITH_HF_MATTYRUN)
-	DbpString("   HF Mifare sniff/clone - aka MattyRun (Matta Real)");
-	#endif 
+#endif 
+#if defined(WITH_HF_MATTYRUN)
+	DbpString("   HF Mifare sniff/clone - aka MattyRun (Matías A. Ré Medina)");
+#endif 
 #if defined(WITH_HF_COLIN)
     DbpString("   HF Mifare ultra fast sniff/sim/clone - aka VIGIKPWN (Colin Brigato)");
 #endif
@@ -1211,7 +1211,7 @@ void  __attribute__((noreturn)) AppMain(void) {
 			RunMod();
 #endif
 		
-#if defined (WITH_ISO14443a) && ( defined (WITH_HF_YOUNG) || defined(WITH_HF_COLIN) )
+#if defined (WITH_ISO14443a) && ( defined (WITH_HF_YOUNG) || defined(WITH_HF_COLIN) || defined(WITH_HF_MATTYRUN) )
 			RunMod();
 #endif
 
