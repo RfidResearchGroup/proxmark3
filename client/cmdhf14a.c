@@ -414,9 +414,12 @@ int CmdHF14AInfo(const char *Cmd) {
 			tb1 = (card.ats[1] & 0x20) == 0x20;
 			tc1 = (card.ats[1] & 0x40) == 0x40;
 			int16_t fsci = card.ats[1] & 0x0f;
+			
 			PrintAndLogEx(NORMAL, "       -  T0 : TA1 is%s present, TB1 is%s present, "
 					"TC1 is%s present, FSCI is %d (FSC = %ld)",
-				(ta1 ? "" : " NOT"), (tb1 ? "" : " NOT"), (tc1 ? "" : " NOT"),
+				(ta1 ? "" : " NOT"),
+				(tb1 ? "" : " NOT"),
+				(tc1 ? "" : " NOT"),
 				fsci,
 				fsci < 5 ? (fsci - 2) * 8 : 
 					fsci < 8 ? (fsci - 3) * 32 :
@@ -459,7 +462,7 @@ int CmdHF14AInfo(const char *Cmd) {
 					(card.ats[pos] & 0x02) ? "" : " NOT");
 			pos++;
 		}
-		if (card.ats[0] > pos) {
+		if (card.ats[0] > pos && card.ats[0] <  card.ats_len - 2 ) {
 			char *tip = "";
 			if (card.ats[0] - pos >= 7) {
 				if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x01\xBC\xD6", 7) == 0) {
@@ -471,8 +474,7 @@ int CmdHF14AInfo(const char *Cmd) {
 			PrintAndLogEx(NORMAL, "       -  HB : %s%s", sprint_hex(card.ats + pos, card.ats[0] - pos), tip);
 			if (card.ats[pos] == 0xC1) {
 				PrintAndLogEx(NORMAL, "               c1 -> Mifare or (multiple) virtual cards of various type");
-				PrintAndLogEx(NORMAL, "                  %02x -> Length is %d bytes",
-						card.ats[pos + 1], card.ats[pos + 1]);
+				PrintAndLogEx(NORMAL, "                  %02x -> Length is %d bytes", card.ats[pos + 1], card.ats[pos + 1]);
 				switch (card.ats[pos + 2] & 0xf0) {
 					case 0x10: PrintAndLogEx(NORMAL, "                     1x -> MIFARE DESFire"); break;
 					case 0x20: PrintAndLogEx(NORMAL, "                     2x -> MIFARE Plus"); break;
