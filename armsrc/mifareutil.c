@@ -334,7 +334,7 @@ int mifare_ultra_auth(uint8_t *keybytes){
 	return 1;
 }
 
-int mifare_ultra_readblock(uint8_t blockNo, uint8_t *blockData) {
+int mifare_ultra_readblockEx(uint8_t blockNo, uint8_t *blockData) {
 	uint16_t len = 0;
 	uint8_t	bt[2] = {0x00, 0x00};
 	uint8_t receivedAnswer[MAX_FRAME_SIZE] = {0x00};
@@ -359,6 +359,25 @@ int mifare_ultra_readblock(uint8_t blockNo, uint8_t *blockData) {
 	
 	memcpy(blockData, receivedAnswer, 14);
 	return 0;
+}
+int mifare_ultra_readblock(uint8_t blockNo, uint8_t *blockData) {
+	#define MFU_MAX_CRC_RETRIES 5
+	uint8_t retries = 0;
+	uint8_t res;
+	
+	for (retries = 0; retries < MFU_MAX_CRC_RETRIES; ++retries) {
+		res = mifare_ultra_readblockEx(blockNo, blockData);
+		
+		// break if OK,  or NACK.
+		switch ( res ) {
+			case 0:
+			case 1:
+				break;
+			default:
+				continue;
+		}
+	}
+	return res;
 }
 
 int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData) {
