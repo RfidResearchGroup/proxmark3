@@ -245,7 +245,7 @@ void MeasureAntennaTuning(void) {
 	SpinDelay(50);
 	v_hf = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
 
-	// hitting the roof, try other ADC channel
+	// RDV40 will hit the roof, try other ADC channel used in that hardware revision.
 	if ( v_hf > MAX_ADC_HF_VOLTAGE-300 ) {
 		v_hf = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
 	}
@@ -489,7 +489,9 @@ void ListenReaderField(int limit) {
 	}
 
 	hf_av = hf_max = AvgAdc(ADC_CHAN_HF);
-	bool use_high = ( hf_max > MAX_ADC_HF_VOLTAGE-300 );
+
+	// RDV40 will hit the roof, try other ADC channel used in that hardware revision.
+	bool use_high = ( ((MAX_ADC_HF_VOLTAGE * hf_max) >> 10) > MAX_ADC_HF_VOLTAGE-300 );
 	if ( use_high ) {
 		hf_av = hf_max = AvgAdc(ADC_CHAN_HF_RDV40);
 	}
