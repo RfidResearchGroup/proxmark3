@@ -362,10 +362,9 @@ int mifare_ultra_readblockEx(uint8_t blockNo, uint8_t *blockData) {
 }
 int mifare_ultra_readblock(uint8_t blockNo, uint8_t *blockData) {
 	#define MFU_MAX_CRC_RETRIES 5
-	uint8_t retries = 0;
 	uint8_t res;
-	
-	for (retries = 0; retries < MFU_MAX_CRC_RETRIES; ++retries) {
+
+	for (uint8_t retries = 0; retries < MFU_MAX_CRC_RETRIES; ++retries) {
 		res = mifare_ultra_readblockEx(blockNo, blockData);
 		
 		// break if OK,  or NACK.

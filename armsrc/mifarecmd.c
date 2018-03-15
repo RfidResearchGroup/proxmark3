@@ -330,9 +330,9 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
 		if (len) {
 			if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Read block %d error",i);
 			// if no blocks read - error out
-			if (i==0){
+			if (i == 0) {
 				OnError(2);
-			return;
+				return;
 			} else {
 				//stop at last successful read block and return what we got
 				break;
