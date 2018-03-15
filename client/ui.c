@@ -37,10 +37,10 @@ void PrintAndLogOptions(char *str[][2], size_t size, size_t space)
 		for(int j = 0; j < 2; j++)
 		{
 			if(j == 0)
-			    snprintf(format, sizeof(format), "%%%us%%%us", space, counts[j]);
+			    snprintf(format, sizeof(format), "%%%zus%%%zus", space, counts[j]);
             else
-                snprintf(format, sizeof(format), "%%%us%%-%us", space, counts[j]);
-			snprintf(buff + strlen(buff), sizeof(buff) - strlen(buff), format, " ", str[i][j]);		
+                snprintf(format, sizeof(format), "%%%zus%%-%zus", space, counts[j]);
+			snprintf(buff + strlen(buff), sizeof(buff) - strlen(buff), format, " ", str[i][j]);
 		}
 		if(i<size-1)
 			strncat(buff, "\n", sizeof(buff)-strlen(buff) -1);
