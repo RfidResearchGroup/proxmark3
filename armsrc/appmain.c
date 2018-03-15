@@ -194,6 +194,7 @@ uint16_t AvgAdc(int ch) {
 	for(uint8_t i = 0; i < 32; i++)
 		a += ReadAdc(ch);
 
+	//division by 32
 	return (a + 15) >> 5;
 }
 
@@ -469,11 +470,12 @@ void ListenReaderField(int limit) {
 #define HF_ONLY						2
 #define REPORT_CHANGE			 	10    // report new values only if they have changed at least by REPORT_CHANGE
 
-	int lf_av, lf_av_new, lf_baseline= 0, lf_max;
-	int hf_av, hf_av_new,  hf_baseline= 0, hf_max;
-	int mode=1, display_val, display_max, i;
+	uint16_t lf_av, lf_av_new, lf_baseline = 0, lf_max;
+	uint16_t hf_av, hf_av_new,  hf_baseline = 0, hf_max;
+	uint16_t mode = 1, display_val, display_max, i;
 
 	// switch off FPGA - we don't want to measure our own signal
+	// 20180315 - iceman,  why load this before and then turn off?
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
@@ -481,12 +483,16 @@ void ListenReaderField(int limit) {
 
 	lf_av = lf_max = AvgAdc(ADC_CHAN_LF);
 
-	if(limit != HF_ONLY) {
+	if (limit != HF_ONLY) {
 		Dbprintf("LF 125/134kHz Baseline: %dmV", (MAX_ADC_LF_VOLTAGE * lf_av) >> 10);
 		lf_baseline = lf_av;
 	}
 
 	hf_av = hf_max = AvgAdc(ADC_CHAN_HF);
+	bool use_high = ( hf_max > MAX_ADC_HF_VOLTAGE-300 );
+	if ( use_high ) {
+		hf_av = hf_max = AvgAdc(ADC_CHAN_HF_RDV40);
+	}
 
 	if (limit != LF_ONLY) {
 		Dbprintf("HF 13.56MHz Baseline: %dmV", (MAX_ADC_HF_VOLTAGE * hf_av) >> 10);
@@ -494,11 +500,12 @@ void ListenReaderField(int limit) {
 	}
 
 	for(;;) {
+		// Switch modes with button
 		if (BUTTON_PRESS()) {
 			SpinDelay(500);
 			switch (mode) {
 				case 1:
-					mode=2;
+					mode = 2;
 					DbpString("Signal Strength Mode");
 					break;
 				case 2:
@@ -521,7 +528,7 @@ void ListenReaderField(int limit) {
 
 			lf_av_new = AvgAdc(ADC_CHAN_LF);
 			// see if there's a significant change
-			if(ABS(lf_av - lf_av_new) > REPORT_CHANGE) {
+			if (ABS(lf_av - lf_av_new) > REPORT_CHANGE) {
 				Dbprintf("LF 125/134kHz Field Change: %5dmV", (MAX_ADC_LF_VOLTAGE * lf_av_new) >> 10);
 				lf_av = lf_av_new;
 				if (lf_av > lf_max)
@@ -537,7 +544,8 @@ void ListenReaderField(int limit) {
 					LED_B_OFF();
 			}
 
-			hf_av_new = AvgAdc(ADC_CHAN_HF);
+			hf_av_new = (use_high) ? AvgAdc(ADC_CHAN_HF_RDV40) :  AvgAdc(ADC_CHAN_HF);
+
 			// see if there's a significant change
 			if(ABS(hf_av - hf_av_new) > REPORT_CHANGE) {
 				Dbprintf("HF 13.56MHz Field Change: %5dmV", (MAX_ADC_HF_VOLTAGE * hf_av_new) >> 10);
@@ -547,7 +555,7 @@ void ListenReaderField(int limit) {
 			}
 		}
 
-		if(mode == 2) {
+		if (mode == 2) {
 			if (limit == LF_ONLY) {
 				display_val = lf_av;
 				display_max = lf_max;
@@ -571,7 +579,7 @@ void ListenReaderField(int limit) {
 					if (LIGHT_SCHEME[i] & 0x8) LED_D_ON(); else LED_D_OFF();
 					break;
 				}
-			}
+			}		
 		}
 	}
 }
