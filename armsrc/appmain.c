@@ -490,7 +490,8 @@ void ListenReaderField(int limit) {
 
 	hf_av = hf_max = AvgAdc(ADC_CHAN_HF);
 
-	// RDV40 will hit the roof, try other ADC channel used in that hardware revision.
+	// iceman,  useless,  since we are measuring readerfield,  not our field.  My tests shows a max of 20v from a reader.
+	// RDV40 will hit the roof, try other ADC channel used in that hardware revision.	
 	bool use_high = ( ((MAX_ADC_HF_VOLTAGE * hf_max) >> 10) > MAX_ADC_HF_VOLTAGE-300 );
 	if ( use_high ) {
 		hf_av = hf_max = AvgAdc(ADC_CHAN_HF_RDV40);
