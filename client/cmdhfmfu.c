@@ -965,8 +965,10 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			DropField();
 			return status;
 		} 
-		if (status == 16) ulc_print_configuration(ulc_conf);
-		else locked = true;
+		if (status == 16) 
+			ulc_print_configuration(ulc_conf);
+		else 
+			locked = true;
 
 		if ((tagtype & MAGIC)) {
 			//just read key
