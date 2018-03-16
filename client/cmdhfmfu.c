@@ -1695,8 +1695,8 @@ int CmdHF14AMfUDump(const char *Cmd){
 	bool swapEndian = false;
 	bool manualPages = false;
 	uint8_t startPage = 0;
+	uint8_t card_mem_size = 0;
 	char tempStr[50];
-
 
 	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch(param_getchar(Cmd, cmdp)) {
@@ -1756,13 +1756,13 @@ int CmdHF14AMfUDump(const char *Cmd){
 
 	TagTypeUL_t tagtype = GetHF14AMfU_Type();
 	if (tagtype == UL_ERROR) return -1;
-
-	 //get number of pages to read
+	
+	//get number of pages to read
 	if (!manualPages) {
 		for (uint8_t idx = 0; idx < MAX_UL_TYPES; idx++) {
 			if (tagtype & UL_TYPES_ARRAY[idx]) {
 				//add one as maxblks starts at 0
-				pages = UL_MEMORY_ARRAY[idx]+1; 
+				card_mem_size =	pages = UL_MEMORY_ARRAY[idx]+1;
 				break;
 			}
 		}
@@ -1798,8 +1798,10 @@ int CmdHF14AMfUDump(const char *Cmd){
 		bufferSize = sizeof(data);
 	}
 	GetFromBigBuf(data, bufferSize, startindex);
-	WaitForResponse(CMD_ACK,NULL);
+	WaitForResponse(CMD_ACK, NULL);
 
+	bool is_partial = (pages == bufferSize/4);
+	
 	pages = bufferSize/4;
 	
 	uint8_t	get_pack[] = {0,0};
@@ -1822,8 +1824,13 @@ int CmdHF14AMfUDump(const char *Cmd){
 			get_pack[1]=0;
 		}
 		DropField();
-		// add pack to block read		
-		memcpy(data + (pages*4) - 4, get_pack, sizeof(get_pack));
+		
+		// only add pack if not partial read,  and complete pages read.
+		if ( !is_partial && pages == card_mem_size) {
+		
+			// add pack to block read		
+			memcpy(data + (pages*4) - 4, get_pack, sizeof(get_pack));
+		}
 		
 		if ( hasAuthKey )
 			ul_auth_select( &card, tagtype, hasAuthKey, authKeyPtr, dummy_pack, sizeof(dummy_pack));
@@ -1891,7 +1898,12 @@ int CmdHF14AMfUDump(const char *Cmd){
 	fwrite( &dump_file_data, 1, pages*4 + DUMP_PREFIX_LENGTH, fout );
 	if (fout)
 		fclose(fout);
+		
 	PrintAndLogEx(SUCCESS, "Dumped %d pages, wrote %d bytes to %s", pages + (DUMP_PREFIX_LENGTH/4), pages*4 + DUMP_PREFIX_LENGTH, filename);
+	
+	if ( is_partial ) 
+		PrintAndLogEx(WARNING, "Partial dump created. (%d of %d ", pages, card_mem_size);
+	
 	return 0;
 }
 
