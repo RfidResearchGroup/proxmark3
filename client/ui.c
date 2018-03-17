@@ -81,16 +81,17 @@ void PrintAndLogEx(logLevel_t level, char *fmt, ...) {
 	vsnprintf(buffer, sizeof(buffer), fmt, args);
 	va_end(args);
 
-	if(strchr(buffer, '\n'))
-	{
+	if(strchr(buffer, '\n')) {
+		
 		token = strtok(buffer,"\n");
-		while (token != NULL)
-		{
-			size=strlen(buffer2);
-			if(strlen(token))
+		
+		while (token != NULL) {
+			size = strlen(buffer2);
+			if (strlen(token))
 				snprintf(buffer2+size, sizeof(buffer2)-size, "%s%s\n", prefix, token);
 			else
 				snprintf(buffer2+size, sizeof(buffer2)-size, "\n");
+			
 			token = strtok(NULL, "\n");
 		}
 		PrintAndLog(buffer2);
@@ -116,9 +117,13 @@ void PrintAndLog(char *fmt, ...) {
 			logging=0;
 		}
 	}
-	
+
+ 
+// If there is an incoming message from the hardware (eg: lf hid read) in
+// the background (while the prompt is displayed and accepting user input),
+// stash the prompt and bring it back later.	
 #ifdef RL_STATE_READCMD
-	// We are using GNU readline.
+	// We are using GNU readline. libedit (OSX) doesn't support this flag.
 	int need_hack = (rl_readline_state & RL_STATE_READCMD) > 0;
 
 	if (need_hack) {
@@ -128,9 +133,6 @@ void PrintAndLog(char *fmt, ...) {
 		rl_replace_line("", 0);
 		rl_redisplay();
 	}
-#else
-	// We are using libedit (OSX), which doesn't support this flag.
-	int need_hack = 0;
 #endif
 	
 	va_start(argptr, fmt);
@@ -140,6 +142,8 @@ void PrintAndLog(char *fmt, ...) {
 	va_end(argptr);
 	printf("\n");
 
+#ifdef RL_STATE_READCMD
+	// We are using GNU readline. libedit (OSX) doesn't support this flag.
 	if (need_hack) {
 		rl_restore_prompt();
 		rl_replace_line(saved_line, 0);
@@ -147,6 +151,7 @@ void PrintAndLog(char *fmt, ...) {
 		rl_redisplay();
 		free(saved_line);
 	}
+#endif
 	
 	if (logging && logfile) {
 		vfprintf(logfile, fmt, argptr2);
