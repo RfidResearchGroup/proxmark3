@@ -1902,7 +1902,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 	PrintAndLogEx(SUCCESS, "Dumped %d pages, wrote %d bytes to %s", pages + (DUMP_PREFIX_LENGTH/4), pages*4 + DUMP_PREFIX_LENGTH, filename);
 	
 	if ( is_partial ) 
-		PrintAndLogEx(WARNING, "Partial dump created. (%d of %d ", pages, card_mem_size);
+		PrintAndLogEx(WARNING, "Partial dump created. (%d of %d blocks)", pages, card_mem_size);
 	
 	return 0;
 }
