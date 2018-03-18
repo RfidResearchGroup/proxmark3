@@ -588,7 +588,8 @@ int CmdTraceLoad(const char *Cmd) {
 		fclose(f);
 		return 1;
 	}
-	fclose(f);	
+	fclose(f);
+	PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = %d bytes) loaded from file %s", traceLen, filename);	
 	return 0;
 }
 
@@ -619,7 +620,7 @@ int CmdTraceSave(const char *Cmd) {
 	fwrite(buf, 1, 2, f);
 	fwrite(trace, 1, traceLen, f);
 	fclose(f);
-	PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = %d bytes) written to file %s", traceLen, filename);	
+	PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = %d bytes) written to file %s", traceLen, filename);
 	return 0;
 }
 
