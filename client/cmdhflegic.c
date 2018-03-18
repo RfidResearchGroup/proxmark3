@@ -1252,7 +1252,7 @@ int CmdLegicWipe(const char *Cmd){
 }
 
 int CmdLegicList(const char *Cmd) {
-	CmdHFList("legic");
+	CmdTraceList("legic");
 	return 0;
 }
 

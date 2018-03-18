@@ -499,7 +499,7 @@ int CmdHFTopazCmdRaw(const char *Cmd) {
 }
 
 int CmdHFTopazList(const char *Cmd) {
-	CmdHFList("topaz");
+	CmdTraceList("topaz");
 	return 0;
 }
 

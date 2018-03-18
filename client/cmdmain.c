@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include "cmdmain.h"
 #include "util_posix.h"
 #include "cmdparser.h"
 #include "proxmark3.h"
@@ -23,7 +24,7 @@
 #include "cmddata.h"
 #include "cmdhw.h"
 #include "cmdlf.h"
-#include "cmdmain.h"
+#include "cmdtrace.h"
 #include "util.h"
 #include "cmdscript.h"
 #include "cmdcrc.h"
@@ -54,7 +55,8 @@ static command_t CommandTable[] = {
 	{"hw",		CmdHW,		1, "{ Hardware commands... }"},
 	{"lf",		CmdLF,		1, "{ Low Frequency commands... }"},
 	{"reveng",	CmdRev, 	1, "Crc calculations from the software reveng 1.44"},
-	{"script",	CmdScript,	1, "{ Scripting commands }"},	
+	{"script",	CmdScript,	1, "{ Scripting commands }"},
+	{"trace",	CmdTrace,	1, "{ Trace manipulation... }"},
 	{"quit",	CmdQuit,	1, ""},
 	{"exit",	CmdQuit,	1, "Exit program"},
 	{NULL, NULL, 0, NULL}

@@ -876,7 +876,7 @@ int CmdHF15Restore(const char*Cmd) {
 
 int CmdHF15List(const char *Cmd) {
 	//PrintAndLogEx(WARNING, "Deprecated command, use 'hf list 15' instead");
-	CmdHFList("15");
+	CmdTraceList("15");
 	return 0;
 }
 

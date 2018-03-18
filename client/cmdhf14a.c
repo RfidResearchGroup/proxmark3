@@ -185,7 +185,7 @@ int usage_hf_14a_antifuzz(void) {
 
 int CmdHF14AList(const char *Cmd) {
 	//PrintAndLogEx(NORMAL, "Deprecated command, use 'hf list 14a' instead");
-	CmdHFList("14a");
+	CmdTraceList("14a");
 	return 0;
 }
 

@@ -180,6 +180,7 @@ CMDSRCS =	crapto1/crapto1.c \
 			cmdlfti.c \
 			cmdlfviking.c \
 			cmdlfvisa2000.c \
+			cmdtrace.c \
 			cmdparser.c \
 			cmdmain.c \
 			pm3_binlib.c \

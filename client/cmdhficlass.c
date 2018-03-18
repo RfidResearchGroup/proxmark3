@@ -270,7 +270,7 @@ int xorbits_8(uint8_t val) {
 
 int CmdHFiClassList(const char *Cmd) {
 	//PrintAndLogEx(NORMAL, "Deprecated command, use 'hf list iclass' instead");
-	CmdHFList("iclass");
+	CmdTraceList("iclass");
 	return 0;
 }
 

@@ -830,7 +830,7 @@ int CmdHfEMVGetrng(const char *Cmd) {
 }
 
 int CmdHfEMVList(const char *Cmd) {
-	return CmdHFList("7816");
+	return CmdTraceList("7816");
 }
 
 int CmdHFEMVTest(const char *cmd) {

@@ -66,7 +66,7 @@ int usage_hf_felica_raw(void){
 
 int CmdHFFelicaList(const char *Cmd) {
 	//PrintAndLogEx(NORMAL, "Deprecated command, use 'hf list felica' instead");
-	CmdHFList("raw");
+	CmdTraceList("raw");
 	return 0;
 }
 

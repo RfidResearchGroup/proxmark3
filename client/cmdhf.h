@@ -29,19 +29,14 @@
 #include "cmdhfmfdes.h"		// DESFIRE
 #include "cmdhftopaz.h"		// TOPAZ
 #include "cmdhffelica.h"	// ISO18092 / FeliCa
-#include "emv/cmdemv.h"		// EMV
-#include "protocols.h"				
-#include "parity.h"			// oddparity
-#include "iso15693tools.h"	// ISO15693 crc
-#include "cmdhflist.h"		// annotations											  
+#include "emv/cmdemv.h"		// EMV				  
+#include "cmdtrace.h"		// trace list
 
 extern int CmdHF(const char *Cmd);
 extern int CmdHFTune(const char *Cmd);
-extern int CmdHFList(const char *Cmd);
 extern int CmdHFSearch(const char *Cmd);
 extern int CmdHFSnoop(const char *Cmd);
 
-extern int usage_hf_list();					 
 extern int usage_hf_search();
 extern int usage_hf_snoop();
 #endif

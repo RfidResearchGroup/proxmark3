@@ -322,7 +322,7 @@ int CmdHfEmvSim(const char *Cmd) {
 }
 
 int CmdHfEmvList(const char *Cmd) {
-	return CmdHFList("7816");
+	return CmdTraceList("7816");
 }
 
 static command_t CommandTable[] =  {

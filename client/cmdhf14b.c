@@ -104,7 +104,7 @@ static int switch_off_field_14b(void) {
 }
 
 int CmdHF14BList(const char *Cmd) {
-	CmdHFList("14b");
+	CmdTraceList("14b");
 	return 0;
 }
 
