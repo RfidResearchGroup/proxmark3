@@ -11,11 +11,17 @@
 
 static int CmdHelp(const char *Cmd);
 
+// trace pointer
+uint8_t *trace;
+long traceLen = 0;
+bool preRDV40 = true;
+	
 int usage_trace_list(){
 	PrintAndLogEx(NORMAL, "List protocol data in trace buffer.");
-	PrintAndLogEx(NORMAL, "Usage:  trace list <protocol> [f][c]");
+	PrintAndLogEx(NORMAL, "Usage:  trace list <protocol> [f][c| <0|1>");
 	PrintAndLogEx(NORMAL, "    f      - show frame delay times as well");
 	PrintAndLogEx(NORMAL, "    c      - mark CRC bytes");
+	PrintAndLogEx(NORMAL, "    <0|1>  - use data from Tracebuffer, if not set, try reading data from tag.");
 	PrintAndLogEx(NORMAL, "Supported <protocol> values:");
 	PrintAndLogEx(NORMAL, "    raw    - just show raw data without annotations");
 	PrintAndLogEx(NORMAL, "    14a    - interpret data as iso14443a communications");
@@ -39,10 +45,16 @@ int usage_trace_list(){
 }
 int usage_trace_load(){
 	PrintAndLogEx(NORMAL, "Load protocol data from file to trace buffer.");
+	PrintAndLogEx(NORMAL, "Usage:  trace load <filename>");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "        trace lload mytracefile.bin");
 	return 0;
 }
 int usage_trace_save(){
 	PrintAndLogEx(NORMAL, "Save protocol data from trace buffer to file.");
+	PrintAndLogEx(NORMAL, "Usage:  trace save <filename>");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "        trace save mytracefile.bin");
 	return 0;
 }
 
@@ -383,75 +395,110 @@ void printFelica(uint16_t traceLen, uint8_t *trace) {
     PrintAndLogEx(NORMAL, "");
 }
 
+// sanity check. Don't use proxmark if it is offline and you didn't specify useTraceBuffer
+static int SanityOfflineCheck( bool useTraceBuffer ){
+	if ( !useTraceBuffer && offline) {
+		PrintAndLogEx(NORMAL, "Your proxmark3 device is offline. Specify [1] to use TraceBuffer data instead");
+		return 0;
+	}
+	return 1;
+}
+
 int CmdTraceList(const char *Cmd) {
+
 	clearCommandBuffer();
 		
 	bool showWaitCycles = false;
 	bool markCRCBytes = false;
-	char type[10] = {0};
-	//int tlen = param_getstr(Cmd,0,type);
-	char param1 = param_getchar(Cmd, 1);
-	char param2 = param_getchar(Cmd, 2);
+	bool isOnline = true;
 	bool errors = false;
 	uint8_t protocol = 0;
+	char type[10] = {0};
 
-	//Validate params H or empty
-	if (strlen(Cmd) < 1 || param1 == 'h' || param1 == 'H') return usage_trace_list();
-	
-	//Validate params  F,C
-	if(
-		(param1 != 0 && param1 != 'f' && param1 != 'c')	|| 
-		(param2 != 0 && param2 != 'f' && param2 != 'c')
-		) {
-		return usage_trace_list();
+	//int tlen = param_getstr(Cmd,0,type);
+	//char param1 = param_getchar(Cmd, 1);
+	//char param2 = param_getchar(Cmd, 2);
+
+	char cmdp = 0;
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		
+		int slen = param_getstr(Cmd, cmdp, type, sizeof(type) );
+		if ( slen == 1) {
+			
+			switch ( tolower(param_getchar(Cmd, cmdp))) {
+			case 'h':
+				return usage_trace_list();
+			case 'f':
+				showWaitCycles = true;
+				cmdp++;
+				break;
+			case 'c':
+				markCRCBytes = true;
+				cmdp++;
+				break;
+			case '1':
+				isOnline = false;
+				break;
+			default:
+				PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+				errors = true;
+				break;
+			}
+			
+		} else {			
+			
+			str_lower(type);
+			PrintAndLogEx(WARNING, "to lower");
+			
+			// validate type of output
+			if (strcmp(type,     "iclass") == 0)	protocol = ICLASS;
+			else if(strcmp(type, "14a") == 0)		protocol = ISO_14443A;
+			else if(strcmp(type, "14b") == 0)		protocol = ISO_14443B;
+			else if(strcmp(type, "topaz") == 0)		protocol = TOPAZ;
+			else if(strcmp(type, "7816") == 0)		protocol = ISO_7816_4;	
+			else if(strcmp(type, "des") == 0)		protocol = MFDES;
+			else if(strcmp(type, "legic") == 0)		protocol = LEGIC;
+			else if(strcmp(type, "15") == 0)		protocol = ISO_15693;
+			else if(strcmp(type, "felica") == 0)	protocol = FELICA;
+			else if(strcmp(type, "mf") == 0)		protocol = PROTO_MIFARE;
+			else if(strcmp(type, "raw") == 0)		protocol = -1;//No crc, no annotations
+			else errors = true;
+			
+			cmdp++;
+		}		
 	}
-
-	param_getstr(Cmd, 0, type, sizeof(type) );
 	
-	// validate type of output
-	if (strcmp(type,     "iclass") == 0)	protocol = ICLASS;
-	else if(strcmp(type, "14a") == 0)		protocol = ISO_14443A;
-	else if(strcmp(type, "14b") == 0)		protocol = ISO_14443B;
-	else if(strcmp(type, "topaz") == 0)		protocol = TOPAZ;
-	else if(strcmp(type, "7816") == 0)		protocol = ISO_7816_4;	
-	else if(strcmp(type, "des") == 0)		protocol = MFDES;
-	else if(strcmp(type, "legic") == 0)		protocol = LEGIC;
-	else if(strcmp(type, "15") == 0)		protocol = ISO_15693;
-	else if(strcmp(type, "felica") == 0)	protocol = FELICA;
-	else if(strcmp(type, "mf") == 0)		protocol = PROTO_MIFARE;
-	else if(strcmp(type, "raw") == 0)		protocol = -1;//No crc, no annotations
-	else errors = true;
-
+	if (!SanityOfflineCheck(isOnline)) return 1;
+	
+	//Validations
 	if (errors) return usage_trace_list();
-
-	if (param1 == 'f' || param2 == 'f') showWaitCycles = true;
-	if (param1 == 'c' || param2 == 'c') markCRCBytes = true;
-
-	uint8_t *trace;
+	
+	
 	uint16_t tracepos = 0;
-	trace = malloc(USB_CMD_DATA_SIZE);
-
-	// Query for the size of the trace
-	UsbCommand response;
-	GetFromBigBuf(trace, USB_CMD_DATA_SIZE, 0);
-	if ( !WaitForResponseTimeout(CMD_ACK, &response, 4000) ) {
-		PrintAndLogEx(FAILED, "timeout while waiting for reply.");
-		return 1;
-	}
 	
-	uint16_t traceLen = response.arg[2];
-	if (traceLen > USB_CMD_DATA_SIZE) {
-		uint8_t *p = realloc(trace, traceLen);
-		if (p == NULL) {
-			PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
-			free(trace);
-			return 2;
+	if ( !isOnline ) {
+		// Query for the size of the trace
+		UsbCommand response;
+		GetFromBigBuf(trace, USB_CMD_DATA_SIZE, 0);
+		if ( !WaitForResponseTimeout(CMD_ACK, &response, 4000) ) {
+			PrintAndLogEx(FAILED, "timeout while waiting for reply.");
+			return 1;
 		}
-		trace = p;
-		GetFromBigBuf(trace, traceLen, 0);
-		WaitForResponse(CMD_ACK, NULL);
+		
+		traceLen = response.arg[2];
+		if (traceLen > USB_CMD_DATA_SIZE) {
+			uint8_t *p = realloc(trace, traceLen);
+			if (p == NULL) {
+				PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
+				free(trace);
+				return 2;
+			}
+			trace = p;
+			GetFromBigBuf(trace, traceLen, 0);
+			WaitForResponse(CMD_ACK, NULL);
+		}		
 	}
-	
+
 	PrintAndLogEx(NORMAL, "Recorded Activity (TraceLen = %d bytes)", traceLen);
 	PrintAndLogEx(NORMAL, "");
 	if (protocol == FELICA) {
@@ -483,10 +530,86 @@ int CmdTraceList(const char *Cmd) {
 }
 
 int CmdTraceLoad(const char *Cmd) {
+	
+	FILE *f = NULL;
+	size_t bytes_read;
+	uint8_t buf[2];
+	char filename[FILE_PATH_SIZE];
+	char cmdp = param_getchar(Cmd, 0);
+	if (strlen(Cmd) < 1 || cmdp == 'h' || cmdp == 'H') return usage_trace_load();	
+	
+	param_getstr(Cmd, 0, filename, sizeof(filename));	
+	
+	if ((f = fopen(filename,"rb")) == NULL) { 
+		PrintAndLog("Could not open file %s", filename);
+		return 0;
+	}
+	
+	// get filesize in order to malloc memory
+	fseek(f, 0, SEEK_END);
+	long fsize = ftell(f);
+	fseek(f, 0, SEEK_SET);	
+	
+	if (fsize < 0) 	{
+		PrintAndLogDevice(WARNING, "error, when getting filesize");
+		fclose(f);
+		return 3;
+	}
+	
+	// iceman, RDV40 be able to log much bigger than 64kb.
+	// so this two byte limit will have a magic value (above 40kb limit from bigbuff)
+	// or we just skip this limit at all
+	bytes_read = fread(buf, 1, 2, f);
+	if (bytes_read != 2) {
+		PrintAndLog("File reading error.");
+		fclose(f);
+		return 1;
+	}
+	
+	// RDV40 will have bigger traces
+	if (fsize > traceLen + 2 ){
+		traceLen = fsize;
+		trace = malloc(fsize);		
+	} else {
+		traceLen = bytes_to_num(buf, 2); // little endian in file
+		trace = malloc(traceLen+2);
+	}
+	
+	if (trace == NULL) {
+		PrintAndLog("Cannot allocate memory for trace");
+		return 2;
+	}
+	
+	bytes_read = fread(trace, 1, traceLen, f);
+	if (bytes_read != traceLen) {
+		PrintAndLog("File reading error.");
+		fclose(f);
+		return 1;
+	}
 	return 0;
 }
 
 int CmdTraceSave(const char *Cmd) {
+	FILE *f = NULL;
+	uint8_t buf[2] = {0x01, 0xCE};
+	char filename[FILE_PATH_SIZE];	
+	char cmdp = param_getchar(Cmd, 0);
+	if (strlen(Cmd) < 1 || cmdp == 'h' || cmdp == 'H') return usage_trace_save();
+	
+	param_getstr(Cmd, 0, filename, sizeof(filename));	
+	
+	if ((f = fopen(filename, "wb")) == NULL) { 
+		PrintAndLog("Could not create file %s", filename);
+		return 1;
+	}
+
+	// 40kb bigbuffer limit
+	if ( 40000 <= traceLen ){
+		num_to_bytes(traceLen, 2, buf);
+	}
+	fwrite(buf, 1, 2, f);
+	fwrite(trace, 1, traceLen, f);
+	PrintAndLog("Recorded Activity (TraceLen = %d bytes) written to file %s", traceLen, filename);	
 	return 0;
 }
 
