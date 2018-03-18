@@ -448,7 +448,6 @@ int CmdTraceList(const char *Cmd) {
 		} else {			
 			
 			str_lower(type);
-			PrintAndLogEx(WARNING, "to lower");
 			
 			// validate type of output
 			if (strcmp(type,     "iclass") == 0)	protocol = ICLASS;
@@ -473,10 +472,11 @@ int CmdTraceList(const char *Cmd) {
 	//Validations
 	if (errors) return usage_trace_list();
 	
-	
 	uint16_t tracepos = 0;
+	// reserv some space.
+	trace = malloc(USB_CMD_DATA_SIZE);
 	
-	if ( !isOnline ) {
+	if ( isOnline ) {
 		// Query for the size of the trace
 		UsbCommand response;
 		GetFromBigBuf(trace, USB_CMD_DATA_SIZE, 0);
