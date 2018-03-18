@@ -12,7 +12,7 @@
 static int CmdHelp(const char *Cmd);
 
 // trace pointer
-uint8_t *trace;
+static uint8_t *trace;
 long traceLen = 0;
 bool preRDV40 = true;
 	
@@ -474,7 +474,8 @@ int CmdTraceList(const char *Cmd) {
 	
 	uint16_t tracepos = 0;
 	// reserv some space.
-	trace = malloc(USB_CMD_DATA_SIZE);
+	if (!trace)
+		trace = malloc(USB_CMD_DATA_SIZE);
 	
 	if ( isOnline ) {
 		// Query for the size of the trace
@@ -541,7 +542,7 @@ int CmdTraceLoad(const char *Cmd) {
 	param_getstr(Cmd, 0, filename, sizeof(filename));	
 	
 	if ((f = fopen(filename,"rb")) == NULL) { 
-		PrintAndLog("Could not open file %s", filename);
+		PrintAndLogEx(FAILED, "Could not open file %s", filename);
 		return 0;
 	}
 	
@@ -551,7 +552,7 @@ int CmdTraceLoad(const char *Cmd) {
 	fseek(f, 0, SEEK_SET);	
 	
 	if (fsize < 0) 	{
-		PrintAndLogDevice(WARNING, "error, when getting filesize");
+		PrintAndLogEx(WARNING, "error, when getting filesize");
 		fclose(f);
 		return 3;
 	}
@@ -561,7 +562,7 @@ int CmdTraceLoad(const char *Cmd) {
 	// or we just skip this limit at all
 	bytes_read = fread(buf, 1, 2, f);
 	if (bytes_read != 2) {
-		PrintAndLog("File reading error.");
+		PrintAndLogEx(FAILED, "File reading error.");
 		fclose(f);
 		return 1;
 	}
@@ -576,20 +577,28 @@ int CmdTraceLoad(const char *Cmd) {
 	}
 	
 	if (trace == NULL) {
-		PrintAndLog("Cannot allocate memory for trace");
+		PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
+		fclose(f);		
 		return 2;
 	}
 	
 	bytes_read = fread(trace, 1, traceLen, f);
 	if (bytes_read != traceLen) {
-		PrintAndLog("File reading error.");
+		PrintAndLogEx(FAILED, "File reading error.");
 		fclose(f);
 		return 1;
 	}
+	fclose(f);	
 	return 0;
 }
 
 int CmdTraceSave(const char *Cmd) {
+	
+	if (traceLen == 0 ) {
+		PrintAndLogEx(WARNING, "trace is empty, exiting...");
+		return 0;
+	}
+	
 	FILE *f = NULL;
 	uint8_t buf[2] = {0x01, 0xCE};
 	char filename[FILE_PATH_SIZE];	
@@ -599,17 +608,18 @@ int CmdTraceSave(const char *Cmd) {
 	param_getstr(Cmd, 0, filename, sizeof(filename));	
 	
 	if ((f = fopen(filename, "wb")) == NULL) { 
-		PrintAndLog("Could not create file %s", filename);
+		PrintAndLogEx(FAILED, "Could not create file %s", filename);
 		return 1;
 	}
 
 	// 40kb bigbuffer limit
-	if ( 40000 <= traceLen ){
+	if ( traceLen <= 40000 ) {
 		num_to_bytes(traceLen, 2, buf);
 	}
 	fwrite(buf, 1, 2, f);
 	fwrite(trace, 1, traceLen, f);
-	PrintAndLog("Recorded Activity (TraceLen = %d bytes) written to file %s", traceLen, filename);	
+	fclose(f);
+	PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = %d bytes) written to file %s", traceLen, filename);	
 	return 0;
 }
 
