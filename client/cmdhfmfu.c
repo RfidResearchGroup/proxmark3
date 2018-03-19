@@ -23,6 +23,8 @@
 #define MAX_MY_D_MOVE      0x25
 #define MAX_MY_D_MOVE_LEAN 0x0F
 
+static int CmdHelp(const char *Cmd);
+
 #define PUBLIC_ECDA_KEYLEN 33
 uint8_t public_ecda_key[PUBLIC_ECDA_KEYLEN] = {
 		0x04, 0x49, 0x4e, 0x1a, 0x38, 0x6d, 0x3d, 0x3c,
@@ -231,10 +233,6 @@ int ul_ev1_pwdgen_selftest(){
 }
 
 //------------------------------------
-
-
-static int CmdHelp(const char *Cmd);
-
 // get version nxp product type 
 char *getProductTypeStr( uint8_t id){
 
@@ -897,13 +895,11 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	int len = 0;
 	char tempStr[50];
 
-	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch(param_getchar(Cmd, cmdp)) {
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch (to_lower(param_getchar(Cmd, cmdp))) {
 		case 'h':
-		case 'H':
 			return usage_hf_mfu_info();
 		case 'k':
-		case 'K':
 			dataLen = param_getstr(Cmd, cmdp+1, tempStr, sizeof(tempStr));
 			if (dataLen == 32 || dataLen == 8) { //ul-c or ev1/ntag key length
 				errors = param_gethex(tempStr, 0, authenticationkey, dataLen);
@@ -916,7 +912,6 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			hasAuthKey = true;
 			break;
 		case 'l':
-		case 'L':
 			swapEndian = true;
 			cmdp++;
 			break;
@@ -1160,13 +1155,11 @@ int CmdHF14AMfUWrBl(const char *Cmd){
 	uint8_t authenticationkey[16] = {0x00};
 	uint8_t *authKeyPtr = authenticationkey;
 
-	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch(param_getchar(Cmd, cmdp)) {
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch (to_lower(param_getchar(Cmd, cmdp))) {
 			case 'h':
-			case 'H':
 				return usage_hf_mfu_wrbl();
 			case 'k':
-			case 'K':
 				// EV1/NTAG size key
 				keylen = param_gethex(Cmd, cmdp+1, data, 8);
 				if ( !keylen ) {
@@ -1187,7 +1180,6 @@ int CmdHF14AMfUWrBl(const char *Cmd){
 				errors = true; 
 				break;
 			case 'b':
-			case 'B':
 				blockNo = param_get8(Cmd, cmdp+1);
 				if (blockNo < 0) {
 					PrintAndLogEx(WARNING, "Wrong block number");
@@ -1196,12 +1188,10 @@ int CmdHF14AMfUWrBl(const char *Cmd){
 				cmdp += 2;
 				break;
 			case 'l':
-			case 'L':
 				swapEndian = true;
 				cmdp++;	
 				break;
 			case 'd':
-			case 'D':
 				if ( param_gethex(Cmd, cmdp+1, blockdata, 8) ) {
 					PrintAndLogEx(WARNING, "Block data must include 8 HEX symbols");
 					errors = true;
@@ -1285,13 +1275,11 @@ int CmdHF14AMfURdBl(const char *Cmd){
 	uint8_t authenticationkey[16] = {0x00};
 	uint8_t *authKeyPtr = authenticationkey;
 
-	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch(param_getchar(Cmd, cmdp)) {
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch (to_lower(param_getchar(Cmd, cmdp))) {
 			case 'h':
-			case 'H':
 				return usage_hf_mfu_rdbl();
 			case 'k':
-			case 'K':
 				// EV1/NTAG size key
 				keylen = param_gethex(Cmd, cmdp+1, data, 8);
 				if ( !keylen ) {
@@ -1312,7 +1300,6 @@ int CmdHF14AMfURdBl(const char *Cmd){
 				errors = true; 
 				break;
 			case 'b':
-			case 'B':
 				blockNo = param_get8(Cmd, cmdp+1);
 				if (blockNo < 0) {
 					PrintAndLogEx(WARNING, "Wrong block number");
@@ -1321,7 +1308,6 @@ int CmdHF14AMfURdBl(const char *Cmd){
 				cmdp += 2;
 				break;
 			case 'l':
-			case 'L':
 				swapEndian = true;
 				cmdp++;	
 				break;				
@@ -1410,11 +1396,11 @@ int usage_hf_mfu_dump(void) {
 	PrintAndLogEx(NORMAL, "NTAG 203, NTAG 210, NTAG 212, NTAG 213, NTAG 215, NTAG 216");
 	PrintAndLogEx(NORMAL, "and saves binary dump into the file `filename.bin` or `cardUID.bin`");
 	PrintAndLogEx(NORMAL, "It autodetects card type.\n");	
-	PrintAndLogEx(NORMAL, "Usage:  hf mfu dump k <key> l n <filename w/o .bin> p <page#> q <#pages>");
+	PrintAndLogEx(NORMAL, "Usage:  hf mfu dump k <key> l f <filename w/o .bin> p <page#> q <#pages>");
 	PrintAndLogEx(NORMAL, "  Options :");
 	PrintAndLogEx(NORMAL, "  k <key> : (optional) key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
 	PrintAndLogEx(NORMAL, "  l       : (optional) swap entered key's endianness");
-	PrintAndLogEx(NORMAL, "  n <FN > : filename w/o .bin to save the dump as");	
+	PrintAndLogEx(NORMAL, "  f <FN > : filename w/o .bin to save the dump as");	
 	PrintAndLogEx(NORMAL, "  p <Pg > : starting Page number to manually set a page to start the dump at");	
 	PrintAndLogEx(NORMAL, "  q <qty> : number of Pages to manually set how many pages to dump");	
 	PrintAndLogEx(NORMAL, "");
@@ -1698,13 +1684,11 @@ int CmdHF14AMfUDump(const char *Cmd){
 	uint8_t card_mem_size = 0;
 	char tempStr[50];
 
-	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch(param_getchar(Cmd, cmdp)) {
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch (to_lower(param_getchar(Cmd, cmdp))) {
 		case 'h':
-		case 'H':
 			return usage_hf_mfu_dump();
 		case 'k':
-		case 'K':
 			dataLen = param_getstr(Cmd, cmdp+1, tempStr, sizeof(tempStr));
 			if (dataLen == 32 || dataLen == 8) { //ul-c or ev1/ntag key length
 				errors = param_gethex(tempStr, 0, authenticationkey, dataLen);
@@ -1717,25 +1701,21 @@ int CmdHF14AMfUDump(const char *Cmd){
 			hasAuthKey = true;
 			break;
 		case 'l':
-		case 'L':
 			swapEndian = true;
 			cmdp++;
 			break;
-		case 'n':
-		case 'N':
+		case 'f':
 			fileNlen = param_getstr(Cmd, cmdp+1, filename, sizeof(filename));
 			if (!fileNlen) errors = true; 
 			if (fileNlen > FILE_PATH_SIZE-5) fileNlen = FILE_PATH_SIZE-5;
 			cmdp += 2;
 			break;
-		case 'p':
-		case 'P': //set start page
+		case 'p': //set start page
 			startPage = param_get8(Cmd, cmdp+1);
 			manualPages = true;
 			cmdp += 2;
 			break;
 		case 'q':
-		case 'Q':
 			pages = param_get8(Cmd, cmdp+1);
 			cmdp += 2;
 			manualPages = true;
