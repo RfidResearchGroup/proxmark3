@@ -436,8 +436,13 @@ int CmdTraceList(const char *Cmd) {
 				markCRCBytes = true;
 				cmdp++;
 				break;
+			case '0':
+				isOnline = true;
+				cmdp++;
+				break;
 			case '1':
 				isOnline = false;
+				cmdp++;				
 				break;
 			default:
 				PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
@@ -467,15 +472,17 @@ int CmdTraceList(const char *Cmd) {
 		}		
 	}
 	
-	if (!SanityOfflineCheck(isOnline)) return 1;
+	//if (!SanityOfflineCheck(isOnline)) return 1;
 	
 	//Validations
 	if (errors) return usage_trace_list();
 	
 	uint16_t tracepos = 0;
 	// reserv some space.
-	if (!trace)
+	if (!trace) {
+		printf("trace pointer not allocated\n");
 		trace = malloc(USB_CMD_DATA_SIZE);
+	}
 	
 	if ( isOnline ) {
 		// Query for the size of the trace
@@ -522,11 +529,10 @@ int CmdTraceList(const char *Cmd) {
 		PrintAndLogEx(NORMAL, "------------+------------+-----+-------------------------------------------------------------------------+-----+--------------------");
 
 		ClearAuthData();
-		while(tracepos < traceLen) {
+		while (tracepos < traceLen) {
 			tracepos = printTraceLine(tracepos, traceLen, trace, protocol, showWaitCycles, markCRCBytes);
 		}
 	}
-	free(trace);
 	return 0;
 }
 
@@ -552,7 +558,7 @@ int CmdTraceLoad(const char *Cmd) {
 	fseek(f, 0, SEEK_SET);	
 	
 	if (fsize < 0) 	{
-		PrintAndLogEx(WARNING, "error, when getting filesize");
+		PrintAndLogEx(FAILED, "error, when getting filesize");
 		fclose(f);
 		return 3;
 	}
@@ -562,17 +568,22 @@ int CmdTraceLoad(const char *Cmd) {
 	// or we just skip this limit at all
 	bytes_read = fread(buf, 1, 2, f);
 	if (bytes_read != 2) {
-		PrintAndLogEx(FAILED, "File reading error.");
+		PrintAndLogEx(FAILED, "error, when reading dumpsize");
 		fclose(f);
 		return 1;
 	}
 	
+	if ( trace )
+		free(trace);
+
+	// old dumpsize two first bytes of file
+	traceLen = bytes_to_num(buf, 2); // little endian in file
+		
 	// RDV40 will have bigger traces
 	if (fsize > traceLen + 2 ){
 		traceLen = fsize;
 		trace = malloc(fsize);		
 	} else {
-		traceLen = bytes_to_num(buf, 2); // little endian in file
 		trace = malloc(traceLen+2);
 	}
 	
@@ -584,7 +595,7 @@ int CmdTraceLoad(const char *Cmd) {
 	
 	bytes_read = fread(trace, 1, traceLen, f);
 	if (bytes_read != traceLen) {
-		PrintAndLogEx(FAILED, "File reading error.");
+		PrintAndLogEx(FAILED, "File reading error. %d -- %d", bytes_read, traceLen);
 		fclose(f);
 		return 1;
 	}
