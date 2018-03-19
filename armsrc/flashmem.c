@@ -3,9 +3,6 @@
 #define address_length 3
 
 /* here: use NCPS2 @ PA10: */
-#define NCPS_PDR_BIT     AT91C_PA10_NPCS2	// GPIO
-#define NCPS_ASR_BIT     0					// SPI peripheral A
-#define NCPS_BSR_BIT     AT91C_PA10_NPCS2	// SPI peripheral B
 #define SPI_CSR_NUM      2          		// Chip Select register[] 0,1,2,3  (at91samv512 has 4)
 
 /* PCS_0 for NPCS0, PCS_1 for NPCS1 ... */
@@ -28,97 +25,72 @@
 // not realy - when using an external address decoder...
 // but this code takes over the complete SPI-interace anyway
 #endif
-/*
-1.  variable chip select (PS=1)  ChipSelect number is written to TDR in EVERY transfer
-2.  fixed chip select (PS=0), 
 
-FIXED 		= you manage the CS lines
-VARIABLE 	= SPI module manages the CS lines
+
+/*
+	读取指令，可以从一个位置开始持续的读，最多能将整块芯片读取完
+	页写指令，每次写入为1-256字节，但是不能跨越256字节边界
+	擦除指令，擦除指令后必须将CS拉高，否则不会执行
 */
 
-void FlashSetup(void) {
+
+//	初始化Flash
+void FlashSetup()
+{
 	// PA1	-> SPI_NCS3 chip select (MEM)
+	// PA10 -> SPI_NCS2 chip select (LCD)
+	// PA11 -> SPI_NCS0 chip select (FPGA)
 	// PA12 -> SPI_MISO Master-In Slave-Out
 	// PA13 -> SPI_MOSI Master-Out Slave-In
 	// PA14 -> SPI_SPCK Serial Clock
 
-	// Kill all the pullups,
-	//AT91C_BASE_PIOA->PIO_PPUDR = GPIO_NCS1 | GPIO_MOSI | GPIO_SPCK | GPIO_MISO;
+	// Disable PIO control of the following pins, allows use by the SPI peripheral
+	AT91C_BASE_PIOA->PIO_PDR = GPIO_NCS0 | GPIO_MISO | GPIO_MOSI | GPIO_SPCK | GPIO_NCS2;
 
-	// These pins are outputs
-	//AT91C_BASE_PIOA->PIO_OER = GPIO_NCS1 | GPIO_MOSI | GPIO_SPCK;
+	//	Pull-up Enable
+	AT91C_BASE_PIOA->PIO_PPUER = GPIO_NCS0 | GPIO_MISO | GPIO_MOSI | GPIO_SPCK | GPIO_NCS2;
 
-	// PIO controls the following pins
-	//AT91C_BASE_PIOA->PIO_PER = GPIO_NCS1 | GPIO_MOSI | GPIO_SPCK | GPIO_MISO;
-
-	// Disable PIO control of the following pins, hand over to SPI control
-	AT91C_BASE_PIOA->PIO_PDR = GPIO_MISO | GPIO_MOSI | GPIO_SPCK | NCPS_PDR_BIT;
-		
 	// Peripheral A
-	AT91C_BASE_PIOA->PIO_ASR = GPIO_MISO | GPIO_MOSI | GPIO_SPCK | NCPS_ASR_BIT;
-	// Peripheral B
-	AT91C_BASE_PIOA->PIO_BSR = GPIO_MISO | GPIO_MOSI | GPIO_SPCK | NCPS_BSR_BIT ;
+	AT91C_BASE_PIOA->PIO_ASR = GPIO_NCS0 | GPIO_MISO | GPIO_MOSI | GPIO_SPCK;
 
-	// set chip-select as output high (unselect card)
-	AT91C_BASE_PIOA->PIO_PER  = NCPS_PDR_BIT; // enable GPIO of CS-pin
-	AT91C_BASE_PIOA->PIO_SODR = NCPS_PDR_BIT; // set high
-	AT91C_BASE_PIOA->PIO_OER  = NCPS_PDR_BIT; // output enable
-	
+	// Peripheral B
+	AT91C_BASE_PIOA->PIO_BSR |= GPIO_NCS2;
+
 	//enable the SPI Peripheral clock
 	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_SPI);
 
-	// SPI Mode register
-	/*
-	AT91C_BASE_SPI->SPI_MR =
-		(0 << 24)			|	// DLYBCS, Delay between chip selects (take default: 6 MCK periods)
-		(0 << 7)			|	// LLB, Local Loopback Disabled
-		AT91C_SPI_MODFDIS	|	// Mode Fault Detection disabled
-		(0 << 2)			|	// PCSDEC, Chip selects connected directly to peripheral
-		AT91C_SPI_PS_FIXED	|	// PS, Fixed Peripheral Select
-		AT91C_SPI_MSTR;			// MSTR, Master Mode
-		*/
-	AT91C_BASE_SPI->SPI_MR = AT91C_SPI_MSTR  | AT91C_SPI_PS_FIXED | AT91C_SPI_MODFDIS;
-		
-	// PCS, Peripheral Chip Select
-	AT91C_BASE_SPI->SPI_MR |= ( (SPI_MR_PCS << 16) & AT91C_SPI_PCS );
-
-	// SPI Chip select register
-/*
-	AT91C_BASE_SPI->SPI_CSR[SPI_CSR_NUM] =
-		(1 << 24)			|	// Delay between Consecutive Transfers (32 MCK periods)
-		(1 << 16) 			|	// Delay Before SPCK (1 MCK period)
-		(6 << 8) 			|	// Serial Clock Baud Rate (baudrate = MCK/6 = 24Mhz/6 = 4M baud
-		AT91C_SPI_BITS_8	|	// Bits per Transfer (8 bits)
-		(0 << 3) 			|	// CSAAT, Chip Select inactive after transfer
-		AT91C_SPI_NCPHA		|	// NCPHA, Clock Phase data captured on leading edge, changes on following edge
-		(0 << 0);				// CPOL, Clock Polarity inactive state is logic 0
-*/
-	AT91C_BASE_SPI->SPI_CSR[SPI_CSR_NUM] =  AT91C_SPI_NCPHA | AT91C_SPI_BITS_8 | (6 << 8);
-
 	// Enable SPI
 	AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SPIEN;
-	
-		/* Send 20 spi commands with card not selected */
-	for (int i=0; i<21; i++)
-		FlashSend(0xFF);
 
-	/* enable automatic chip-select */
-	// reset PIO-registers of CS-pin to default
-	AT91C_BASE_PIOA->PIO_ODR  |= NCPS_PDR_BIT; // input
-	AT91C_BASE_PIOA->PIO_CODR |= NCPS_PDR_BIT; // clear
-	// disable PIO from controlling the CS pin (=hand over to SPI)
-	AT91C_BASE_PIOA->PIO_PDR |= NCPS_PDR_BIT;
-	// set pin-functions in PIO Controller (function NCPS for CS-pin)
-	AT91C_BASE_PIOA->PIO_ASR |= NCPS_ASR_BIT;
-	AT91C_BASE_PIOA->PIO_BSR |= NCPS_BSR_BIT;
+	//	NPCS2 Mode 0
+	AT91C_BASE_SPI->SPI_MR =
+		( 0 << 24)	|		// Delay between chip selects (take default: 6 MCK periods)
+		(0xB << 16)	|		// Peripheral Chip Select (selects SPI_NCS2 or PA10)
+		( 0 << 7)	|		// Local Loopback Disabled
+		( 1 << 4)	|		// Mode Fault Detection disabled
+		( 0 << 2)	|		// Chip selects connected directly to peripheral
+		( 0 << 1) 	|		// Fixed Peripheral Select
+		( 1 << 0);			// Master Mode
+
+	//	8 bit
+	AT91C_BASE_SPI->SPI_CSR[2] =
+		( 0 << 24)	|		// Delay between Consecutive Transfers (32 MCK periods)
+		( 0 << 16)	|		// Delay Before SPCK (1 MCK period)
+		( 6 << 8)	|		// Serial Clock Baud Rate (baudrate = MCK/6 = 24Mhz/6 = 4M baud
+		( 0 << 4)	|		// Bits per Transfer (8 bits)
+		( 1 << 3)	|		// Chip Select inactive after transfer
+		( 1 << 1)	|		// Clock Phase data captured on leading edge, changes on following edge
+		( 0 << 0);			// Clock Polarity inactive state is logic 0
+
+	//	read first, empty buffer
+	if (AT91C_BASE_SPI->SPI_RDR == 0)
+		;
+
 }
 
-void FlashStop(void) {
-	//NCS_1_HIGH;
-	StopTicks();
-	Dbprintf("FlashStop");
-	LED_A_OFF();
-	
+//	end up SPI
+void FlashStop(void)
+{
 	//* Reset all the Chip Select register
     AT91C_BASE_SPI->SPI_CSR[0] = 0;
     AT91C_BASE_SPI->SPI_CSR[1] = 0;
@@ -133,91 +105,87 @@ void FlashStop(void) {
 	
 	// SPI disable
 	AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SPIDIS;
+
+	Dbprintf("FlashStop");
 }
 
-uint16_t FlashSend(uint16_t data) {	
-	
+//	发送一个字节 send one byte 
+uint16_t FlashSendByte(uint32_t data)
+{	
 	uint16_t incoming = 0;
 
+	WDT_HIT();
+
 	// wait until SPI is ready for transfer
-	while ( !(AT91C_BASE_SPI->SPI_SR & AT91C_SPI_TXEMPTY)) {};
+	while ((AT91C_BASE_SPI->SPI_SR & AT91C_SPI_TXEMPTY) == 0) {};
 
 	// send the data
 	AT91C_BASE_SPI->SPI_TDR = data;
 
 	// wait recive transfer is complete
-	while ( !(AT91C_BASE_SPI->SPI_SR & AT91C_SPI_RDRF)) {};
-	
+	while ((AT91C_BASE_SPI->SPI_SR & AT91C_SPI_RDRF) == 0)
+		WDT_HIT();
+
 	// reading incoming data
 	incoming = ((AT91C_BASE_SPI->SPI_RDR) & 0xFFFF);
 
 	return incoming;
 }
+
+//	send last one byte
+uint16_t FlashSendLastByte(uint32_t data) {
+	return FlashSendByte(data | AT91C_SPI_LASTXFER);
+}
+
+//	Read state register 1
 uint8_t Flash_ReadStat1(void) {
-	uint8_t stat2 = FlashSend(READSTAT1);
-	uint8_t stat1 = FlashSend(0xFF);
-	Dbprintf("stat1 [%02x] %02x ", stat1, stat2);
-//	NCS_1_HIGH;
+	FlashSendByte(READSTAT1);
+	uint8_t stat1 = FlashSendLastByte(0xFF);
+	Dbprintf("stat1 [%02x]", stat1);
 	return stat1;
 }
-/*
-static uint8_t Flash_ReadStat2(void) {
-	FlashSend(READSTAT2);
-	uint8_t stat2 = FlashSend(0xff);
-	NCS_1_HIGH;
+
+// Read state register 2
+uint8_t Flash_ReadStat2(void) {
+	FlashSendByte(READSTAT2);
+	uint8_t stat2 = FlashSendLastByte(0xFF);
+	Dbprintf("stat2 [%02x]", stat2);
 	return stat2;
 }
-*/
 
-bool Flash_NOTBUSY(void) {
-	WDT_HIT();
-	uint8_t state, count = 0;
-	do {
-		state = Flash_ReadStat1();
-		if (count > 100) {
-			return false;
-		}
-		count++;
-	} while (state & BUSY);
-	return true;
-}
-/*
-static uint8_t FlashWriteRead(uint8_t data){
-	FlashSend(READDATA);
-	FlashSend(data);
-	uint8_t ret = MISO_VALUE;
-	return ret;
+// Determine whether FLASHMEM is busy
+bool Flash_CheckBusy(uint16_t times){
+	bool bRet = (Flash_ReadStat1() & BUSY);
+
+	if (!bRet || !times || !(times--))
+		return bRet;
+
+	while (times)
+	{
+		WDT_HIT();
+		SpinDelayUs(1000);		//	wait 1ms
+		bRet = (Flash_ReadStat1() & BUSY);
+		if (!bRet)
+			break;
+		times--;
+	}
+	return bRet;
 }
 
-static void FlashWrite_Enable(){
-	FlashWriteRead(WRITEENABLE);
-	Dbprintf("Flash WriteEnabled");	
-}
-*/
-/*
-static uint8_t FlashRead(uint8_t *address, uint16_t len) {
-	FlashSend(READDATA);
-	for (uint16_t i = 0; i < len; i++) {
-		FlashWriteRead(address[i]);
-	}  
-	uint8_t	tmp = FlashWriteRead(0XFF);
-	return tmp;	
-}
-*/
-
+// read ID out
 uint8_t Flash_ReadID(void) {
 
-//	if (!Flash_NOTBUSY())
-//		return true;
+	if (Flash_CheckBusy(1000))
+		return 0;
 
 	// Manufacture ID / device ID
-	uint8_t t0 = FlashSend(ID);
-	uint8_t t1 = FlashSend(0x00);
-	uint8_t t2 = FlashSend(0x00);
-	uint8_t t3 = FlashSend(0x00);
+	uint8_t t0 = FlashSendByte(ID);
+	uint8_t t1 = FlashSendByte(0x00);
+	uint8_t t2 = FlashSendByte(0x00);
+	uint8_t t3 = FlashSendByte(0x00);
 
-    uint8_t man_id = FlashSend(0xFF);
-	uint8_t dev_id = 0; //	FlashSend(0xff);
+    uint8_t man_id = FlashSendByte(0xFF);
+	uint8_t dev_id = FlashSendLastByte(0xFF);
 	
 	Dbprintf(" [%02x] %02x %02x %02x | %02x  %02x", t0,t1,t2,t3, man_id, dev_id);
 
@@ -225,192 +193,178 @@ uint8_t Flash_ReadID(void) {
 	if ( man_id == WINBOND_MANID ) {
 		Dbprintf("Correct read of Manucaturer ID [%02x] == %02x", man_id, WINBOND_MANID);
 	}
-	// if ( dev_id > 0) {
-		// Dbprintf("Got a device ID [%02x] == %02x  ( 0x11 0x30 0x12", dev_id,  WINBOND_DEVID);
-	// }
 
-//	NCS_1_HIGH;
-	return man_id;
+	if (man_id != WINBOND_MANID)
+		dev_id = 0;
+
+	return dev_id;
 }
-bool FlashInit(void) {
-	
-	StartTicks();
 
-	LED_A_ON();	
+//	读取数据					address				buffer		length
+uint8_t Flash_ReadDate(uint32_t Address, uint8_t *Buffer, uint16_t len)
+{
+	// length should never be zero
+	if (!len || Flash_CheckBusy(1000))
+		return 0;
+
+	FlashSendByte(READDATA);
+	FlashSendByte((Address >> 16) & 0xFF);
+	FlashSendByte((Address >> 8) & 0xFF);
+	FlashSendByte((Address >> 0) & 0xFF);
+
+	uint16_t i = 0;
+	for (; i < (len - 1); i++)
+		Buffer[i] = FlashSendByte(0xFF);
+
+	Buffer[i] = FlashSendLastByte(0xFF);
+	return len;	
+}
+
+//	写入数据			地址	address  	缓冲区	buffer		长度length
+uint8_t Flash_WriteDate(uint32_t Address, uint8_t *Buffer, uint16_t len)
+{
+	// length should never be zero
+	if (!len || Flash_CheckBusy(1000))
+		return 0;
+
+	//	不能跨越 256 字节边界
+	if (((Address & 255) + len) > 256)
+		return 0;
+
+	FlashSendByte(PAGEPROG);
+	FlashSendByte((Address >> 16) & 0xFF);
+	FlashSendByte((Address >> 8) & 0xFF);
+	FlashSendByte((Address >> 0) & 0xFF);
+
+	uint16_t i = 0;
+	for (; i < (len - 1); i++)
+		FlashSendByte(Buffer[i]);
+
+	FlashSendLastByte(Buffer[i]);
+	return len;	
+}
+
+
+//	enable the flash write
+void Flash_WriteEnable()
+{
+	FlashSendLastByte(WRITEENABLE);
+	Dbprintf("Flash WriteEnabled");	
+}
+
+//	erase 4K at one time
+bool Flash_Erase4k(uint32_t Address)
+{
+	if (Address & (4096 - 1))
+	{
+		Dbprintf("Flash_Erase4k : Address is not align at 4096");
+		return false;
+	}
+
+	FlashSendByte(SECTORERASE);
+	FlashSendByte((Address >> 16) & 0xFF);
+	FlashSendByte((Address >> 8) & 0xFF);
+	FlashSendLastByte((Address >> 0) & 0xFF);
+	return true;
+}
+
+//	erase 32K at one time
+bool Flash_Erase32k(uint32_t Address)
+{
+	if (Address & (32*1024 - 1))
+	{
+		Dbprintf("Flash_Erase4k : Address is not align at 4096");
+		return false;
+	}
+	FlashSendByte(BLOCK32ERASE);
+	FlashSendByte((Address >> 16) & 0xFF);
+	FlashSendByte((Address >> 8) & 0xFF);
+	FlashSendLastByte((Address >> 0) & 0xFF);
+	return true;
+}
+
+//	erase 64k at one time
+bool Flash_Erase64k(uint32_t Address)
+{
+	if (Address & (64*1024 - 1))
+	{
+		Dbprintf("Flash_Erase4k : Address is not align at 4096");
+		return false;
+	}
+	FlashSendByte(BLOCK64ERASE);
+	FlashSendByte((Address >> 16) & 0xFF);
+	FlashSendByte((Address >> 8) & 0xFF);
+	FlashSendLastByte((Address >> 0) & 0xFF);
+	return true;
+}
+
+//	erase all
+void Flash_EraseChip(void)
+{
+	FlashSendLastByte(CHIPERASE);
+}
+
+
+//	initialize
+bool FlashInit(void)	
+{
 	FlashSetup();
 
-	if (!Flash_NOTBUSY())
+	if (Flash_CheckBusy(1000))
 		return false;
-	
-//	FlashSend(ENABLE_RESET);
-//	NCS_1_HIGH;
-//	FlashSend(RESET);
-//	NCS_1_HIGH;
-//	WaitUS(10);
 
 	Dbprintf("FlashInit");
 	return true;
 }
 
-void EXFLASH_TEST(void) {
-	//uint8_t a[3] = {0x00,0x00,0x00};
-	//uint8_t b[3] = {0x00,0x01,0x02};
-	//uint8_t d = 0;
+void EXFLASH_TEST(void)
+{
+	uint8_t		Data[256] = { 0x00, 0x01, 0x02 };
+	uint8_t		Data2[256] = { 0x00};
+	uint32_t	FlashSize = 0;
 
 	if (!FlashInit()) return;
-
-	//FlashWrite_Enable();
 	
-	Flash_ReadID();
+	Flash_ReadStat1();
 	
-	//Dbprintf("Flash test write:  012 to 0x00 0x01 0x02");
-	//EXFLASH_Program(a, b, sizeof(b));
+	switch (Flash_ReadID())
+	{
+	case 0x11:		//	W25X20CL
+		FlashSize = 2048*1024;
+		break;
+	case 0x10:		//	W25X10CL
+		FlashSize = 1024*1024;
+		break;
+	case 0x05:		//	W25X05CL
+		FlashSize = 512*1024;
+		break;
+	}
 
-	//d = FlashRead(a, sizeof(a));
-	//Dbprintf("%02x | %02x %02x %02x", d, a[0], a[1], a[2]);
+	Dbprintf("Flash Size = %dk", FlashSize / 1024);
+
+	if (FlashSize != 2048*1024)
+		return;
+	
+	Dbprintf("Flash test write:  012 to 0x00 0x01 0x02");
+	Flash_WriteEnable();
+	Flash_Erase4k(0x00);
+	if (Flash_CheckBusy(1000))
+	{
+		Dbprintf("Flash_Erase4k CheckBusy Error.");
+		return;
+	}
+	Flash_ReadDate(0, Data2, 256);
+	Flash_WriteEnable();
+	Flash_WriteDate(0x12, Data, sizeof(Data));		//	this will never run, cuz out of 256byte boundary
+	Flash_WriteDate(0x12, Data, 3);
+	if (Flash_CheckBusy(1000))
+	{
+		Dbprintf("Flash_WriteDate CheckBusy Error.");
+		return;
+	}
+
+	Flash_ReadDate(0, Data2, 256);
 
 	FlashStop();
-	cmd_send(CMD_ACK, 1, 0, 0, 0,0);
-}
-/*
-//  IO  spi write or read
-uint8_t EXFLASH_spi_write_read(uint8_t wData) {	
-	uint8_t tmp = 0;
-	SCK_LOW;
-	LOW(GPIO_NCS2);
-
-	for (uint8_t i = 0; i < 8; i++) {
-		SCK_LOW;
-		SpinDelayUs(2);
-
-		if (wData & 0x80) {
-			MOSI_HIGH;
-		} else {
-			MOSI_LOW;
-			SpinDelayUs(2);
-		}
-		wData <<= 1;
-		SCK_HIGH;
-		tmp <<= 1;
-		tmp |= MISO_VALUE;
-	}
-	SCK_LOW;
-	return tmp;
 }
 
-
-void EXFLASH_Write_Enable(void) {
-	EXFLASH_spi_write_read(WRITEENABLE);
-	 HIGH(GPIO_NCS2);
-}
-
-uint8_t EXFLASH_Read(uint8_t *address, uint16_t len) {
-
-	if (!EXFLASH_NOTBUSY())
-		return false;
-
-	EXFLASH_spi_write_read(READDATA);
-
-	uint8_t tmp;
-	for (uint16_t i=0; i < len; i++) {
-		EXFLASH_spi_write_read(address[i]);
-	}  
-	tmp = EXFLASH_spi_write_read(0XFF);
-	 HIGH(GPIO_NCS2);
-	return tmp;
-}
-
-uint8_t EXFLASH_Program(uint8_t  address[], uint8_t *array, uint8_t len) {
-	uint8_t state1, count = 0, i;
-	EXFLASH_Write_Enable();
-
-	do {
-		state1 = EXFLASH_readStat1();
-		if (count > 100) {
-			return false;
-		}
-		count++;
-	} while ((state1 & WRTEN) != WRTEN);
-
-	EXFLASH_spi_write_read(PAGEPROG);
-
-	for (i=0; i<address_length; i++) {
-		EXFLASH_spi_write_read(address[i]);
-	}  
-
-	for (i=0; i<len; i++) {
-		EXFLASH_spi_write_read(array[i]);
-	}  
-
-	 HIGH(GPIO_NCS2);
-	return true;
-}
-
-uint8_t EXFLASH_ReadID(void) {
-
-	if (!EXFLASH_NOTBUSY())
-		return true;
-
-    uint8_t ManID;   // DevID	
-	EXFLASH_spi_write_read(MANID);
-    EXFLASH_spi_write_read(0x00);
-    EXFLASH_spi_write_read(0x00); 
-    EXFLASH_spi_write_read(0x00);
-	ManID = EXFLASH_spi_write_read(0xff);
-//	DevID = EXFLASH_spi_write_read(0xff);
-
-	 HIGH(GPIO_NCS2);
-	return ManID;
-}
-
-bool EXFLASH_Erase(void) {
-	uint8_t state1, count = 0;
-
-	EXFLASH_Write_Enable();
-
-	do {
-		state1 = EXFLASH_readStat1();
-		if (count > 100) {
-			return false;
-		}
-		count++;
-	} while ((state1 & WRTEN) != WRTEN);
-
-	EXFLASH_spi_write_read(CHIPERASE);
-	 HIGH(GPIO_NCS2);
-	return true;
-}
-*/
-/*
-void EXFLASH_TEST(void) {
-	 uint8_t a[3] = {0x00,0x00,0x00};
-	 uint8_t b[3] = {0x00,0x01,0x02};
-     uint8_t f[3] = {0x00,0x00,0x01};
-     uint8_t e[3] = {0x00,0x00,0x02};
-	 uint8_t d = 0;
- 
-	 //EXFLASH_Init();
-    // c = EXFLASH_ReadID();
-	
-    //EXFLASH_Write_Enable();
-	//EXFLASH_readStat1();
-    Dbprintf("%s \r\n", "write 012 to 0x00 0x01 0x02");	 
-   	Dbprintf("%s \r\n"," wait... ");
-
-    EXFLASH_Program(a, b, sizeof(b));
-      
-	d = EXFLASH_Read(a, sizeof(a) );
-    Dbprintf(" %d ", d);
-   
-    d = EXFLASH_Read(f, sizeof(f) );
-    Dbprintf(" %d ", d);
-	
-	d = EXFLASH_Read(e, sizeof(e) );
-
-	Dbprintf(" %d ", d);
-    Dbprintf("%s \r\n","TEST done!");
-
-	EXFLASH_Erase();
-	cmd_send(CMD_ACK, 1, 0, 0, 0,0);
-}
-*/

@@ -31,29 +31,37 @@
 #include "proxmark3.h"
 #include "apps.h"
 
+//	Used Command
+#define ID				0x90
 #define	MANID			0x90
-#define PAGEPROG		0x02
-#define READDATA		0x03
-#define FASTREAD		0x0B
-#define WRITEDISABLE	0x04
+#define JEDECID			0x9F
+
 #define READSTAT1		0x05
 #define READSTAT2		0x35
 #define WRITESTAT		0x01
+
+#define WRITEDISABLE	0x04
 #define WRITEENABLE		0x06
+
+#define READDATA		0x03
+#define PAGEPROG		0x02
+
 #define SECTORERASE		0x20
 #define BLOCK32ERASE	0x52
-#define CHIPERASE		0xC7
-#define SUSPEND			0x75
-#define ID				0x90
-#define RESUME			0x7A
-#define JEDECID			0x9F
-#define RELEASE			0xAB
-#define POWERDOWN		0xB9
 #define BLOCK64ERASE	0xD8
-#define ENABLE_RESET	0x66
-#define RESET			0x99
+#define CHIPERASE		0xC7
 
 #define UNIQUE_ID		0x4B
+
+
+//	Not used or not support command
+#define RELEASE			0xAB
+#define POWERDOWN		0xB9
+#define FASTREAD		0x0B
+#define SUSPEND			0x75
+#define RESUME			0x7A
+
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 //					Chip specific instructions 						  //
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -69,10 +77,12 @@
 //							Definitions 							  //
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
+#define SPI_CLK       75000000       //Hex equivalent of 75MHz
+
 #define BUSY          0x01
-#define SPI_CLK       104000000       //Hex equivalent of 104MHz
 #define WRTEN         0x02
 #define SUS           0x40
+
 #define DUMMYBYTE     0xEE
 #define NULLBYTE      0x00
 #define NULLINT       0x0000
@@ -103,10 +113,10 @@ extern void Dbprintf(const char *fmt, ...);
 
 void FlashSetup(void);
 void FlashStop(void);
-bool Flash_NOTBUSY(void);
+bool Flash_WaitIdle(void);
 uint8_t Flash_ReadStat1(void);
 uint8_t Flash_ReadStat2(void);
-uint16_t FlashSend(uint16_t data);
+uint16_t FlashSendByte(uint32_t data);
 bool FlashInit();
 void EXFLASH_TEST(void);
 
