@@ -1387,7 +1387,7 @@ int usage_hf_mfu_info(void) {
 	PrintAndLogEx(NORMAL, "Examples:");
 	PrintAndLogEx(NORMAL, "       hf mfu info");
 	PrintAndLogEx(NORMAL, "       hf mfu info k 00112233445566778899AABBCCDDEEFF");
-	PrintAndLogEx(NORMAL, "       hf mfu info k AABBCCDDD");
+	PrintAndLogEx(NORMAL, "       hf mfu info k AABBCCDD");
 	return 0;
 }
 
@@ -1408,7 +1408,7 @@ int usage_hf_mfu_dump(void) {
 	PrintAndLogEx(NORMAL, "       hf mfu dump");
 	PrintAndLogEx(NORMAL, "       hf mfu dump n myfile");
 	PrintAndLogEx(NORMAL, "       hf mfu dump k 00112233445566778899AABBCCDDEEFF");
-	PrintAndLogEx(NORMAL, "       hf mfu dump k AABBCCDDD\n");
+	PrintAndLogEx(NORMAL, "       hf mfu dump k AABBCCDD\n");
 	return 0;
 }
 
@@ -1425,8 +1425,8 @@ int usage_hf_mfu_restore(void){
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Examples:");
 	PrintAndLogEx(NORMAL, "       hf mfu restore s f myfile");
-	PrintAndLogEx(NORMAL, "       hf mfu restore k AABBCCDDD s f myfile\n");
-	PrintAndLogEx(NORMAL, "       hf mfu restore k AABBCCDDD s e r f myfile\n");
+	PrintAndLogEx(NORMAL, "       hf mfu restore k AABBCCDD s f myfile\n");
+	PrintAndLogEx(NORMAL, "       hf mfu restore k AABBCCDD s e r f myfile\n");
 	return 0;
 }
 
@@ -1441,7 +1441,7 @@ int usage_hf_mfu_rdbl(void) {
 	PrintAndLogEx(NORMAL, "Examples:");
 	PrintAndLogEx(NORMAL, "       hf mfu rdbl b 0");
 	PrintAndLogEx(NORMAL, "       hf mfu rdbl b 0 k 00112233445566778899AABBCCDDEEFF");
-	PrintAndLogEx(NORMAL, "       hf mfu rdbl b 0 k AABBCCDDD\n");
+	PrintAndLogEx(NORMAL, "       hf mfu rdbl b 0 k AABBCCDD\n");
 	return 0;
 }
 
@@ -1456,7 +1456,7 @@ int usage_hf_mfu_wrbl(void) {
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Examples:");
 	PrintAndLogEx(NORMAL, "        hf mfu wrbl b 0 d 01234567");
-	PrintAndLogEx(NORMAL, "        hf mfu wrbl b 0 d 01234567 k AABBCCDDD\n");
+	PrintAndLogEx(NORMAL, "        hf mfu wrbl b 0 d 01234567 k AABBCCDD\n");
 	return 0;
 }
 
