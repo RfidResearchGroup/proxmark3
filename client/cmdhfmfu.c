@@ -896,7 +896,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	char tempStr[50];
 
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch (to_lower(param_getchar(Cmd, cmdp))) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'h':
 			return usage_hf_mfu_info();
 		case 'k':
@@ -1156,7 +1156,7 @@ int CmdHF14AMfUWrBl(const char *Cmd){
 	uint8_t *authKeyPtr = authenticationkey;
 
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch (to_lower(param_getchar(Cmd, cmdp))) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 			case 'h':
 				return usage_hf_mfu_wrbl();
 			case 'k':
@@ -1276,7 +1276,7 @@ int CmdHF14AMfURdBl(const char *Cmd){
 	uint8_t *authKeyPtr = authenticationkey;
 
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch (to_lower(param_getchar(Cmd, cmdp))) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 			case 'h':
 				return usage_hf_mfu_rdbl();
 			case 'k':
@@ -1685,7 +1685,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 	char tempStr[50];
 
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch (to_lower(param_getchar(Cmd, cmdp))) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'h':
 			return usage_hf_mfu_dump();
 		case 'k':
