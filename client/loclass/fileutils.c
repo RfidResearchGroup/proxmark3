@@ -60,8 +60,7 @@ int fileExists(const char *filename) {
 	return result == 0;
 }
 
-int saveFile(const char *preferredName, const char *suffix, const void* data, size_t datalen)
-{
+int saveFile(const char *preferredName, const char *suffix, const void* data, size_t datalen) {
 	int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
 	char * fileName = malloc(size);
 
@@ -147,8 +146,7 @@ out:
  * write also to a logfile. When doing so, just delete this function.
  * @param fmt
  */
-void PrintAndLogDevice(logLevel_t level, char *fmt, ...)
-{
+void PrintAndLogDevice(logLevel_t level, char *fmt, ...) {
 	char buffer[2048] = {0};
 	va_list args;
 	va_start(args, fmt);
@@ -157,8 +155,7 @@ void PrintAndLogDevice(logLevel_t level, char *fmt, ...)
 	PrintAndLogEx(level, buffer);
 }
 #else //if we're on ARM
-void PrintAndLogDevice(logLevel_t level, char *fmt,...)
-{
+void PrintAndLogDevice(logLevel_t level, char *fmt, ...) {
 	return;
 }
 

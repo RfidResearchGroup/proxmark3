@@ -539,8 +539,6 @@ int CmdTraceList(const char *Cmd) {
 int CmdTraceLoad(const char *Cmd) {
 	
 	FILE *f = NULL;
-	size_t bytes_read;
-	uint8_t buf[2];
 	char filename[FILE_PATH_SIZE];
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) < 1 || cmdp == 'h' || cmdp == 'H') return usage_trace_load();	
@@ -562,43 +560,19 @@ int CmdTraceLoad(const char *Cmd) {
 		fclose(f);
 		return 3;
 	}
-	
-	// iceman, RDV40 be able to log much bigger than 64kb.
-	// so this two byte limit will have a magic value (above 40kb limit from bigbuff)
-	// or we just skip this limit at all
-	bytes_read = fread(buf, 1, 2, f);
-	if (bytes_read != 2) {
-		PrintAndLogEx(FAILED, "error, when reading dumpsize");
-		fclose(f);
-		return 1;
-	}
-	
+
 	if ( trace )
 		free(trace);
 
-	// old dumpsize two first bytes of file
-	traceLen = bytes_to_num(buf, 2); // little endian in file
-		
-	// RDV40 will have bigger traces
-	if (fsize > traceLen + 2 ){
-		traceLen = fsize;
-		trace = malloc(fsize);		
-	} else {
-		trace = malloc(traceLen+2);
-	}
-	
+	trace = malloc(fsize);	
 	if (trace == NULL) {
 		PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
 		fclose(f);		
 		return 2;
 	}
 	
-	bytes_read = fread(trace, 1, traceLen, f);
-	if (bytes_read != traceLen) {
-		PrintAndLogEx(FAILED, "File reading error. %d -- %d", bytes_read, traceLen);
-		fclose(f);
-		return 1;
-	}
+	size_t bytes_read = fread(trace, 1, fsize, f);
+	traceLen = bytes_read;
 	fclose(f);
 	PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = %d bytes) loaded from file %s", traceLen, filename);	
 	return 0;
@@ -611,26 +585,14 @@ int CmdTraceSave(const char *Cmd) {
 		return 0;
 	}
 	
-	FILE *f = NULL;
-	uint8_t buf[2] = {0x01, 0xCE};
 	char filename[FILE_PATH_SIZE];	
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) < 1 || cmdp == 'h' || cmdp == 'H') return usage_trace_save();
 	
 	param_getstr(Cmd, 0, filename, sizeof(filename));	
 	
-	if ((f = fopen(filename, "wb")) == NULL) { 
-		PrintAndLogEx(FAILED, "Could not create file %s", filename);
-		return 1;
-	}
+	saveFile(filename, "bin", trace, traceLen);
 
-	// 40kb bigbuffer limit
-	if ( traceLen <= 40000 ) {
-		num_to_bytes(traceLen, 2, buf);
-	}
-	fwrite(buf, 1, 2, f);
-	fwrite(trace, 1, traceLen, f);
-	fclose(f);
 	PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = %d bytes) written to file %s", traceLen, filename);
 	return 0;
 }
