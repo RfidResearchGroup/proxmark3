@@ -560,6 +560,11 @@ int CmdTraceLoad(const char *Cmd) {
 		fclose(f);
 		return 3;
 	}
+	if (fsize < 4 ) 	{
+		PrintAndLogEx(FAILED, "error, file is too small");
+		fclose(f);
+		return 4;
+	}	
 
 	if ( trace )
 		free(trace);
@@ -585,15 +590,12 @@ int CmdTraceSave(const char *Cmd) {
 		return 0;
 	}
 	
-	char filename[FILE_PATH_SIZE];	
+	char filename[FILE_PATH_SIZE];
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) < 1 || cmdp == 'h' || cmdp == 'H') return usage_trace_save();
 	
-	param_getstr(Cmd, 0, filename, sizeof(filename));	
-	
+	param_getstr(Cmd, 0, filename, sizeof(filename));		
 	saveFile(filename, "bin", trace, traceLen);
-
-	PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = %d bytes) written to file %s", traceLen, filename);
 	return 0;
 }
 
