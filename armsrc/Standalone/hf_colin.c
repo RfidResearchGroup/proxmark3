@@ -72,7 +72,7 @@ void cjSetCursLeft() {
 void cjTabulize() { DbprintfEx(FLAG_RAWPRINT, "\t\t\t"); }
 
 void cjPrintKey(uint64_t key, uint8_t *foundKey, uint16_t sectorNo, uint8_t type) {
-    char tosendkey[12];
+    char tosendkey[13];
     sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[0], foundKey[1], foundKey[2], foundKey[3], foundKey[4], foundKey[5]);
     cjSetCursRight();
     DbprintfEx(FLAG_NOLOG, "SEC: %02x | KEY : %s | TYP: %d", sectorNo, tosendkey, type);
@@ -301,7 +301,7 @@ failtag:
             } else {
                 /*  BRACE YOURSELF : AS LONG AS WE TRAP A KNOWN KEY, WE STOP CHECKING AND ENFORCE KNOWN SCHEMES */
                 // uint8_t tosendkey[12];
-                char tosendkey[12];
+                char tosendkey[13];
                 num_to_bytes(key64, 6, foundKey[type][sec]);
                 cjSetCursRight();
                 DbprintfEx(FLAG_NOLOG, "SEC: %02x ; KEY : %012" PRIx64 " ; TYP: %i", sec, key64, type);
