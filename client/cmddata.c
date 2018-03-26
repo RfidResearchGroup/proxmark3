@@ -384,24 +384,20 @@ int CmdPrintDemodBuff(const char *Cmd) {
 	uint32_t offset = 0;
 	uint32_t length = 512;
 	char cmdp = 0;
-	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch(param_getchar(Cmd, cmdp)) {
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'h':
-		case 'H':
 			return usage_data_printdemodbuf();
 		case 'x':
-		case 'X':
 			hexMode = true;
 			cmdp++;
 			break;
 		case 'o':
-		case 'O':
 			offset = param_get32ex(Cmd, cmdp+1, 0, 10);
 			if (!offset) errors = true;
 			cmdp += 2;
 			break;
 		case 'l':
-		case 'L':
 			length = param_get32ex(Cmd, cmdp+1, 512, 10);
 			if (!length) errors = true;
 			cmdp += 2;
@@ -1452,9 +1448,9 @@ int getSamples(int n, bool silent) {
 
 //ICEMAN todo
   // set signal properties low/high/mean/amplitude and is_noice detection
-	//justNoise(got, n);
+	justNoise(got, n);
 	// set signal properties low/high/mean/amplitude and isnoice detection
-	justNoise_int(GraphBuffer, GraphTraceLen);
+	//justNoise_int(GraphBuffer, GraphTraceLen);
 	
 	setClockGrid(0, 0);
 	DemodBufferLen = 0;
