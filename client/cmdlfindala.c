@@ -59,7 +59,7 @@ int usage_lf_indala_clone(void) {
 int indala64decode(uint8_t *dest, size_t *size, uint8_t *invert) {
 	//standard 64 bit indala formats including 26 bit 40134 format
 	// Note: these start with 3 bits from the end of one UID; the rest are from a subsequent one	
-	uint8_t preamble64[] = {1,0,1,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1};
+	uint8_t   preamble64[] = {1,0,1,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1};
 	uint8_t preamble64_i[] = {0,1,0,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 0};
 	size_t idx = 0;
 	size_t found_size = *size;
@@ -84,8 +84,8 @@ int indala64decode(uint8_t *dest, size_t *size, uint8_t *invert) {
 
 int indala224decode(uint8_t *dest, size_t *size, uint8_t *invert) {
 	//large 224 bit indala formats (different preamble too...)
-	uint8_t preamble224[] = {1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,1};
-	uint8_t preamble224_i[] = {0,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,0};
+	uint8_t   preamble224[] = {1,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1};
+	uint8_t preamble224_i[] = {0,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 0};
 	size_t idx = 0;
 	size_t found_size = *size;
 	if (!preambleSearch(dest, preamble224, sizeof(preamble224), &found_size, &idx) ) {
@@ -94,6 +94,7 @@ int indala224decode(uint8_t *dest, size_t *size, uint8_t *invert) {
 		*invert ^= 1;
 	}
 	if (found_size != 224) return -2;
+	
 	if (*invert==1 && idx > 0)
 		for (size_t i = idx-1; i < found_size + idx + 2; i++) 
 			dest[i] ^= 1;
