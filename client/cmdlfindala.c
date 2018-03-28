@@ -58,7 +58,6 @@ int usage_lf_indala_clone(void) {
 // indala id decoding
 int indala64decode(uint8_t *dest, size_t *size, uint8_t *invert) {
 	//standard 64 bit indala formats including 26 bit 40134 format
-	// Note: these start with 3 bits from the end of one UID; the rest are from a subsequent one	
 	uint8_t   preamble64[] = {1,0,1,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1};
 	uint8_t preamble64_i[] = {0,1,0,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 0};
 	size_t idx = 0;
@@ -69,9 +68,6 @@ int indala64decode(uint8_t *dest, size_t *size, uint8_t *invert) {
 		*invert ^= 1;
 	}
 	if (found_size != 64) return -2;
-
-	// Skip the aforementioned 3 bits from the previous UID
-	idx += 3;
 
 	if (*invert == 1)
 		for (size_t i = idx; i < found_size + idx; i++) 
