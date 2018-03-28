@@ -71,7 +71,7 @@ int indala64decode(uint8_t *dest, size_t *size, uint8_t *invert) {
 	if (found_size != 64) return -2;
 
 	// Skip the aforementioned 3 bits from the previous UID
-	startidx += 3;
+	idx += 3;
 
 	if (*invert == 1)
 		for (size_t i = idx; i < found_size + idx; i++) 
@@ -157,7 +157,7 @@ int CmdIndalaDemod(const char *Cmd) {
 	uid1 = bytebits_to_byte(DemodBuffer,32);
 	uid2 = bytebits_to_byte(DemodBuffer+32,32);
 	if (DemodBufferLen == 64){
-		PrintAndLogEx(SUCCESS, "Indala Found - Bitlength %d, UID = (%x%08x)\n%s",
+		PrintAndLogEx(SUCCESS, "Indala Found - bitlength %d, UID = (0x%x%08x)\n%s",
 			DemodBufferLen, uid1, uid2, sprint_bin_break(DemodBuffer,DemodBufferLen,32)
 		);
 	} else {
@@ -166,9 +166,9 @@ int CmdIndalaDemod(const char *Cmd) {
 		uid5 = bytebits_to_byte(DemodBuffer+128,32);
 		uid6 = bytebits_to_byte(DemodBuffer+160,32);
 		uid7 = bytebits_to_byte(DemodBuffer+192,32);
-		PrintAndLogEx(SUCCESS, "Indala Found - Bitlength %d, UID = (%x%08x%08x%08x%08x%08x%08x)\n%s", 
+		PrintAndLogEx(SUCCESS, "Indala Found - bitlength %d, UID = (0x%x%08x%08x%08x%08x%08x%08x)\n%s", 
 			DemodBufferLen,
-		    uid1, uid2, uid3, uid4, uid5, uid6, uid7, sprint_bin_break(DemodBuffer,DemodBufferLen,32)
+		    uid1, uid2, uid3, uid4, uid5, uid6, uid7, sprint_bin_break(DemodBuffer, DemodBufferLen, 32)
 		);
 	}
 	if (g_debugMode){
