@@ -381,6 +381,8 @@ int main(int argc, char* argv[]) {
 
 	// Must be before the first PrintAndLog call, for rl_redisplay
 	//rl_initialize();
+	 /* initialize history */
+	using_history();
   
 	if (argc < 2) {
 		show_help(true, argv[0]);
