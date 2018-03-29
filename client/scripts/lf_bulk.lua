@@ -107,12 +107,12 @@ end
 local function cardHex(i, f)
 	fac = lshift(f, 16)
 	id = bor(i, fac)
-	stream = toBits(id, 26)
+	stream = toBits(id, 24)
 
 	--As the function defaults to even parity and returns a boolean,
 	--perform a 'not' function to get odd parity
-	high = not evenparity(string.sub(stream, 0, 12)) and 1 or 0
-	low = evenparity(string.sub(stream, 13)) and 1 or 0
+	high = evenparity(string.sub(stream,1,12)) and 1 or 0
+	low =  not evenparity(string.sub(stream,13)) and 1 or 0
 	bits = bor( lshift(id, 1), low)
 	bits = bor( bits, lshift(high, 25))
 
