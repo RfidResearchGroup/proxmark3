@@ -62,9 +62,10 @@ serial_port uart_open(const char* pcPortName) {
 	char acPortName[255];
 	serial_port_windows* sp = malloc(sizeof(serial_port_windows));
 
-	if (sp == 0)
+	if (sp == 0) {
+		printf("[!] UART failed to allocate memory\n");
 		return INVALID_SERIAL_PORT;
-
+	}
 	// Copy the input "com?" to "\\.\COM?" format
 	sprintf(acPortName,"\\\\.\\%s", pcPortName);
 	_strupr(acPortName);
@@ -83,12 +84,14 @@ serial_port uart_open(const char* pcPortName) {
 	sp->dcb.DCBlength = sizeof(DCB);
 	if (!BuildCommDCBA("baud=115200 parity=N data=8 stop=1", &sp->dcb)) {
 		uart_close(sp);
+		printf("[!] UART error cdc setup\n");
 		return INVALID_SERIAL_PORT;
 	}
   
 	// Update the active serial port
 	if (!SetCommState(sp->hPort, &sp->dcb)) {
 		uart_close(sp);
+		printf("[!] UART error while setting com state\n");
 		return INVALID_SERIAL_PORT;
 	}
 	// all zero's configure: no timeout for read/write used.
@@ -101,6 +104,7 @@ serial_port uart_open(const char* pcPortName) {
   
 	if (!SetCommTimeouts(sp->hPort, &sp->ct)) {
 		uart_close(sp);
+		printf("[!] UART error while setting comm time outs\n");
 		return INVALID_SERIAL_PORT;
 	}
   
