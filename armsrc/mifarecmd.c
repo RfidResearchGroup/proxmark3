@@ -482,7 +482,7 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain)
 	bool usePwd = (arg1 == 2); //UL_EV1/NTAG
 	byte_t blockdata[4] = {0x00};
 
-	memcpy(blockdata, datain,4);
+	memcpy(blockdata, datain, 4);
 	
 	LEDsoff();
 	LED_A_ON();
@@ -491,7 +491,7 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain)
 	clear_trace();
 	set_tracing(true);
 	
-	if(!iso14443a_select_card(NULL, NULL, NULL, true, 0, true)) {
+	if (!iso14443a_select_card(NULL, NULL, NULL, true, 0, true)) {
 		if (MF_DBGLEVEL >= 1) Dbprintf("Can't select card");
 		OnError(0);
 		return;
@@ -519,13 +519,13 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain)
 		}
 	}
 	
-	if(mifare_ultra_writeblock(blockNo, blockdata)) {
+	if (mifare_ultra_writeblock(blockNo, blockdata)) {
 		if (MF_DBGLEVEL >= 1) Dbprintf("Write block error");
 		OnError(0);
 		return;
 	};
 
-	if(mifare_ultra_halt()) {
+	if (mifare_ultra_halt()) {
 		if (MF_DBGLEVEL >= 1) Dbprintf("Halt error");
 		OnError(0);
 		return;
@@ -552,7 +552,7 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain){
 	clear_trace();
 	set_tracing(true);
 	
-	if(!iso14443a_select_card(NULL, NULL, NULL, true, 0, true)) {
+	if (!iso14443a_select_card(NULL, NULL, NULL, true, 0, true)) {
 		if (MF_DBGLEVEL >= 1) Dbprintf("Can't select card");
 		OnError(0);
 		return;
@@ -562,7 +562,7 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain){
 	blockdata[1] = pwd[6];
 	blockdata[2] = pwd[5];
 	blockdata[3] = pwd[4];
-	if(mifare_ultra_writeblock( 44, blockdata)) {
+	if (mifare_ultra_writeblock( 44, blockdata)) {
 		if (MF_DBGLEVEL >= 1) Dbprintf("Write block error");
 		OnError(44);
 		return;
@@ -572,7 +572,7 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain){
 	blockdata[1] = pwd[2];
 	blockdata[2] = pwd[1];
 	blockdata[3] = pwd[0];
-	if(mifare_ultra_writeblock( 45, blockdata)) {
+	if (mifare_ultra_writeblock( 45, blockdata)) {
 		if (MF_DBGLEVEL >= 1) Dbprintf("Write block error");
 		OnError(45);
 		return;
@@ -582,7 +582,7 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain){
 	blockdata[1] = pwd[14];
 	blockdata[2] = pwd[13];
 	blockdata[3] = pwd[12];
-	if(mifare_ultra_writeblock( 46, blockdata)) {
+	if (mifare_ultra_writeblock( 46, blockdata)) {
 		if (MF_DBGLEVEL >= 1) Dbprintf("Write block error");
 		OnError(46);
 		return;
@@ -592,13 +592,13 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain){
 	blockdata[1] = pwd[10];
 	blockdata[2] = pwd[9];
 	blockdata[3] = pwd[8];
-	if(mifare_ultra_writeblock( 47, blockdata)) {
+	if (mifare_ultra_writeblock( 47, blockdata)) {
 		if (MF_DBGLEVEL >= 1) Dbprintf("Write block error");
 		OnError(47);
 		return;
 	};	
 
-	if(mifare_ultra_halt()) {
+	if (mifare_ultra_halt()) {
 		if (MF_DBGLEVEL >= 1) Dbprintf("Halt error");
 		OnError(0);
 		return;
