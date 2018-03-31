@@ -363,6 +363,7 @@ void printUSBSpeed(void) {
 void SendStatus(void) {
 	BigBuf_print_status();
 	Fpga_print_status();
+	Flashmem_print_status();
 	printConfig(); //LF Sampling config
 	printUSBSpeed();
 	Dbprintf("Various");
@@ -417,7 +418,7 @@ void printStandAloneModes(void) {
     DbpString("   HF Mifare ultra fast sniff/sim/clone - aka VIGIKPWN (Colin Brigato)");
 #endif
 	
-	DbpString("Running ");	
+	//DbpString("Running ");	
 	//Dbprintf("  Is Device attached to USB| %s", USB_ATTACHED() ? "Yes" : "No"); 
 	//Dbprintf("  Is USB_reconnect value   | %d", GetUSBreconnect() );
 	//Dbprintf("  Is USB_configured value  | %d", GetUSBconfigured() );

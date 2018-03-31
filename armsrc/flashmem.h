@@ -30,6 +30,7 @@
 
 #include "proxmark3.h"
 #include "apps.h"
+#include "ticks.h"
 
 //	Used Command
 #define ID				0x90
@@ -52,7 +53,6 @@
 #define CHIPERASE		0xC7
 
 #define UNIQUE_ID		0x4B
-
 
 //	Not used or not support command
 #define RELEASE			0xAB
@@ -120,4 +120,10 @@ uint16_t FlashSendByte(uint32_t data);
 bool FlashInit();
 void EXFLASH_TEST(void);
 
- #endif
+void Flash_UniqueID(uint8_t *uid);
+uint8_t Flash_ReadID(void);
+uint8_t Flash_ReadData(uint32_t address, uint8_t *out, uint16_t len);
+uint8_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len);
+void Flashmem_print_status(void);
+
+#endif

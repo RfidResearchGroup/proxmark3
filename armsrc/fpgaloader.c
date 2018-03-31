@@ -59,18 +59,10 @@ void SetupSpi(int mode) {
 	// PA14 -> SPI_SPCK Serial Clock
 
 	// Disable PIO control of the following pins, allows use by the SPI peripheral
-	AT91C_BASE_PIOA->PIO_PDR =
-		GPIO_NCS0	|
-		GPIO_MISO	|
-		GPIO_MOSI	|
-		GPIO_SPCK;
+	AT91C_BASE_PIOA->PIO_PDR = GPIO_NCS0 | GPIO_MISO | GPIO_MOSI | GPIO_SPCK;
 
 	// Peripheral A
-	AT91C_BASE_PIOA->PIO_ASR =
-		GPIO_NCS0	|
-		GPIO_MISO	|
-		GPIO_MOSI	|
-		GPIO_SPCK;
+	AT91C_BASE_PIOA->PIO_ASR = GPIO_NCS0 | GPIO_MISO | GPIO_MOSI | GPIO_SPCK;
 
 	// Peripheral B
 	//AT91C_BASE_PIOA->PIO_BSR |= GPIO_NCS2;
