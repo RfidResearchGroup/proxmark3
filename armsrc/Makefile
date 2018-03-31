@@ -23,8 +23,9 @@ APP_CFLAGS = -DWITH_CRC \
 			 -DWITH_ICLASS \
 			 -DWITH_FELICA \
 			 -DWITH_FLASH \
+			 -DWITH_ISO7816 \
 			 -DWITH_HFSNOOP \
-			 -DWITH_HF_COLIN \
+			 -DWITH_LF_SAMYRUN \
 			 -fno-strict-aliasing -ffunction-sections -fdata-sections
 
 ### IMPORTANT -  move the commented variable below this line
@@ -54,7 +55,7 @@ SRC_CRC = crc.c crc16.c crc32.c
 SRC_ICLASS = iclass.c optimized_cipher.c
 SRC_LEGIC = legicrf.c legic_prng.c
 SRC_FLASH = flashmem.c
-SRC_SMARTCARD = smartcard.c
+SRC_ISO7816 = iso7816.c
 SRC_BEE = bee.c
 
 #the FPGA bitstream files. Note: order matters!
@@ -80,7 +81,7 @@ THUMBSRC = start.c \
 	$(SRC_ZLIB) \
 	$(SRC_LEGIC) \
 	$(SRC_FLASH) \
-	$(SRC_SMARTCARD) \
+	$(SRC_ISO7816) \
 	appmain.c \
 	printf.c \
 	util.c \
@@ -103,8 +104,8 @@ ARMSRC = fpgaloader.c \
 	parity.c \
 	usb_cdc.c \
 	cmd.c \
-	hf_colin.c \
-        vtsend.c 
+	lf_samyrun.c \
+    vtsend.c 
 	#	lf_samyrun.c \
 	#	lf_hidbrute.c \
 	#	lf_proxbrute.c \
