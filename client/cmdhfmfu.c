@@ -9,19 +9,20 @@
 //-----------------------------------------------------------------------------
 #include "cmdhfmfu.h"
 
-#define MAX_UL_BLOCKS      0x0F
-#define MAX_ULC_BLOCKS     0x2B
-#define MAX_ULEV1a_BLOCKS  0x13
-#define MAX_ULEV1b_BLOCKS  0x28
-#define MAX_NTAG_203       0x29
-#define MAX_NTAG_210       0x13
-#define MAX_NTAG_212       0x28
-#define MAX_NTAG_213       0x2C
-#define MAX_NTAG_215       0x86
-#define MAX_NTAG_216       0xE6
-#define MAX_MY_D_NFC       0xFF
-#define MAX_MY_D_MOVE      0x25
-#define MAX_MY_D_MOVE_LEAN 0x0F
+#define MAX_UL_BLOCKS		0x0F
+#define MAX_ULC_BLOCKS		0x2B
+#define MAX_ULEV1a_BLOCKS	0x13
+#define MAX_ULEV1b_BLOCKS	0x28
+#define MAX_NTAG_203		0x29
+#define MAX_NTAG_210		0x13
+#define MAX_NTAG_212		0x28
+#define MAX_NTAG_213		0x2C
+#define MAX_NTAG_215		0x86
+#define MAX_NTAG_216		0xE6
+#define MAX_MY_D_NFC		0xFF
+#define MAX_MY_D_MOVE		0x25
+#define MAX_MY_D_MOVE_LEAN	0x0F
+#define MAX_UL_NANO_40		0x0A
 
 static int CmdHelp(const char *Cmd);
 
@@ -58,7 +59,7 @@ uint32_t UL_TYPES_ARRAY[MAX_UL_TYPES] = {
 		NTAG_213, NTAG_215, NTAG_216,
 		MY_D, MY_D_NFC, MY_D_MOVE,
 		MY_D_MOVE_NFC, MY_D_MOVE_LEAN, FUDAN_UL,
-		UL_EV1, NTAG_213_F, NTAG_216_F
+		UL_EV1, NTAG_213_F, NTAG_216_F, UL_NANO_40
 	};
 
 uint8_t UL_MEMORY_ARRAY[MAX_UL_TYPES] = {
@@ -68,7 +69,7 @@ uint8_t UL_MEMORY_ARRAY[MAX_UL_TYPES] = {
 		MAX_NTAG_213, MAX_NTAG_215, MAX_NTAG_216, 
 		MAX_UL_BLOCKS, MAX_MY_D_NFC, MAX_MY_D_MOVE,
 		MAX_MY_D_MOVE, MAX_MY_D_MOVE_LEAN, MAX_UL_BLOCKS,
-		MAX_ULEV1a_BLOCKS, MAX_NTAG_213, MAX_NTAG_216
+		MAX_ULEV1a_BLOCKS, MAX_NTAG_213, MAX_NTAG_216, MAX_UL_NANO_40
 	};
 
 //------------------------------------
@@ -526,6 +527,8 @@ int ul_print_type(uint32_t tagtype, uint8_t spaces){
 		PrintAndLogEx(NORMAL, "%sTYPE : MIFARE Ultralight (MF0ICU1) %s", spacer, (tagtype & MAGIC) ? "<magic>" : "" );
 	else if ( tagtype & UL_C)
 		PrintAndLogEx(NORMAL, "%sTYPE : MIFARE Ultralight C (MF0ULC) %s", spacer, (tagtype & MAGIC) ? "<magic>" : "" );
+	else if ( tagtype & UL_NANO_40)
+		PrintAndLogEx(NORMAL, "%sTYPE : MIFARE Ultralight Nano 40bytes (MF0UNH00)", spacer); 		
 	else if ( tagtype & UL_EV1_48)
 		PrintAndLogEx(NORMAL, "%sTYPE : MIFARE Ultralight EV1 48bytes (MF0UL1101)", spacer); 
 	else if ( tagtype & UL_EV1_128)	
@@ -724,7 +727,7 @@ static int ulev1_print_version(uint8_t *data){
 	PrintAndLogEx(NORMAL, "   Major version : %02X", data[4]);
 	PrintAndLogEx(NORMAL, "   Minor version : %02X", data[5]);
 	PrintAndLogEx(NORMAL, "            Size : %s", getUlev1CardSizeStr(data[6]));
-	PrintAndLogEx(NORMAL, "   Protocol type : %02X", data[7]);
+	PrintAndLogEx(NORMAL, "   Protocol type : %02X %s", data[7],  (data[7]==0x3)?"(ISO14443-3 Compliant)":"");
 	return 0;
 }
 
@@ -794,7 +797,9 @@ uint32_t GetHF14AMfU_Type(void){
 
 		switch (len) {
 			case 0x0A: {
+
 				if ( memcmp(version, "\x00\x04\x03\x01\x01\x00\x0B", 7) == 0)      { tagtype = UL_EV1_48; break; }
+				else if ( memcmp(version, "\x00\x04\x03\x01\x02\x00\x0B", 7) == 0) { tagtype = UL_NANO_40; break; }
 				else if ( memcmp(version, "\x00\x04\x03\x02\x01\x00\x0B", 7) == 0) { tagtype = UL_EV1_48; break; }
 				else if ( memcmp(version, "\x00\x04\x03\x01\x01\x00\x0E", 7) == 0) { tagtype = UL_EV1_128; break; }
 				else if ( memcmp(version, "\x00\x04\x03\x02\x01\x00\x0E", 7) == 0) { tagtype = UL_EV1_128; break; }
@@ -871,7 +876,6 @@ uint32_t GetHF14AMfU_Type(void){
 	if (tagtype == (UNKNOWN | MAGIC)) tagtype = (UL_MAGIC);
 	return tagtype;
 }
-
 //
 //  extended tag information
 //
@@ -1010,7 +1014,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	// NTAG counters?
 	
 	// Read signature
-	if ((tagtype & (UL_EV1_48 | UL_EV1_128 | UL_EV1 | NTAG_213 | NTAG_213_F | NTAG_215 | NTAG_216 | NTAG_216_F | NTAG_I2C_1K | NTAG_I2C_2K | NTAG_I2C_1K_PLUS | NTAG_I2C_2K_PLUS))) {
+	if ((tagtype & (UL_EV1_48 | UL_EV1_128 | UL_EV1 | UL_NANO_40 | NTAG_213 | NTAG_213_F | NTAG_215 | NTAG_216 | NTAG_216_F | NTAG_I2C_1K | NTAG_I2C_2K | NTAG_I2C_1K_PLUS | NTAG_I2C_2K_PLUS))) {
 		uint8_t ulev1_signature[32] = {0x00};
 		status = ulev1_readSignature( ulev1_signature, sizeof(ulev1_signature));
 		if ( status == -1 ) {
@@ -1026,7 +1030,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	}
 
 	// Get Version
-	if ((tagtype & (UL_EV1_48 | UL_EV1_128 | UL_EV1 | NTAG_213 | NTAG_213_F | NTAG_215 | NTAG_216 | NTAG_216_F | NTAG_I2C_1K | NTAG_I2C_2K | NTAG_I2C_1K_PLUS | NTAG_I2C_2K_PLUS))) {
+	if ((tagtype & (UL_EV1_48 | UL_EV1_128 | UL_EV1 | UL_NANO_40 | NTAG_213 | NTAG_213_F | NTAG_215 | NTAG_216 | NTAG_216_F | NTAG_I2C_1K | NTAG_I2C_2K | NTAG_I2C_1K_PLUS | NTAG_I2C_2K_PLUS))) {
 		uint8_t version[10] = {0x00};
 		status  = ulev1_getVersion(version, sizeof(version));
 		if ( status == -1 ) {

@@ -178,11 +178,17 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MIFARE_ULEV1_CHECKTEAR	0x3E
 #define MIFARE_ULEV1_VCSL		0x4B
 
+# New Mifare UL Nano commands.  Ref:: (https://www.nxp.com/docs/en/data-sheet/MF0UN_H_00.pdf)
+#define MIFARE_ULNANO_WRITESIG	0xA9
+#define MIFARE_ULNANO_LOCKSIF	0xAC
+
 // mifare 4bit card answers
 #define CARD_ACK      0x0A  // 1010 - ACK
+#define CARD_NACK_IV  0x00	// 0000 - NACK, invalid argument (invalid page address)
+#define CARD_NACK_PA  0x01	// 0001 - NACK, parity / crc error
 #define CARD_NACK_NA  0x04  // 0100 - NACK, not allowed (command not allowed)
 #define CARD_NACK_TR  0x05  // 0101 - NACK, transmission error
-
+#define CARD_NACK_EE  0x07	// 0111 - NACK, EEPROM write error
 
 // Magic Generation 1, parameter "work flags"
 // bit 0 - need get UID
