@@ -782,7 +782,7 @@ bool prepare_tag_modulation(tag_response_info_t* response_info, size_t max_buffe
 	if (ToSendMax > max_buffer_size) {
 		Dbprintf("Out of memory, when modulating bits for tag answer:");
 		Dbhexdump(response_info->response_n,response_info->response,false);
-    return false;
+		return false;
 	}
 
 	// Copy the byte array, used for this modulation to the buffer position
@@ -3045,6 +3045,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 
 		// find reader field
 		if (cardSTATE == MFEMUL_NOFIELD) {
+			
 			vHf = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
 			if (vHf > MF_MINFIELDV) {
 				cardSTATE_TO_IDLE();

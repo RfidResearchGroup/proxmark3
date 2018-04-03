@@ -364,6 +364,7 @@ void SendStatus(void) {
 	BigBuf_print_status();
 	Fpga_print_status();
 	Flashmem_print_status();
+	//Iso7816_print_status();
 	printConfig(); //LF Sampling config
 	printUSBSpeed();
 	Dbprintf("Various");

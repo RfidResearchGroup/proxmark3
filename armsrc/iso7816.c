@@ -121,7 +121,6 @@ bool ISO7816_init(void) {
 
 	StartTicks();
 	
-	
 	//	StopTicks();
 //		return false;
 	
@@ -134,4 +133,16 @@ void ISO7816_test(void) {
 	if (!ISO7816_init()) return;
 	
 	ISO7816_stop();
+}
+
+void Iso7816_print_status(void) {
+	DbpString("Contact module (iso7816)");
+
+	if (!ISO7816_init()) {
+		DbpString("  init....................FAIL");
+		return;
+	}
+	DbpString("  init....................OK");
+		
+	ISO7816_stop();	
 }
