@@ -140,25 +140,25 @@
 #if defined(__linux__)	|| (__APPLE__)
 # define _BLUE_(s) "\x1b[34m" #s "\x1b[0m"
 #else
-# define _BLUE_(s) #s
+# define _BLUE_(s) "#s "
 #endif
 
 #if defined(__linux__)	|| (__APPLE__)
 # define _RED_(s) "\x1b[31m" #s "\x1b[0m"
 #else
-# define _RED_(s) #s
+# define _RED_(s) "#s "
 #endif
 
 #if defined(__linux__)	|| (__APPLE__)
 # define _GREEN_(s) "\x1b[32m" #s "\x1b[0m"
 #else
-# define _GREEN_(s) #s
+# define _GREEN_(s) "#s "
 #endif
 
 #if defined(__linux__)	|| (__APPLE__)
 # define _YELLOW_(s) "\x1b[33m" #s "\x1b[0m"
 #else
-# define _YELLOW_(s) #s
+# define _YELLOW_(s) "#s "
 #endif
 
 #ifndef DropField
