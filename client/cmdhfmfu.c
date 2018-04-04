@@ -51,7 +51,7 @@ uint8_t default_pwd_pack[KEYS_PWD_COUNT][4] = {
 	{0xFF,0xFF,0xFF,0xFF}, // PACK 0x00,0x00 -- factory default
 };
 
-#define MAX_UL_TYPES 21
+#define MAX_UL_TYPES 22
 uint32_t UL_TYPES_ARRAY[MAX_UL_TYPES] = {
 		UNKNOWN, UL, UL_C, 
 		UL_EV1_48, UL_EV1_128, NTAG,
