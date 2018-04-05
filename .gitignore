@@ -11,17 +11,19 @@
 *.s19
 *.map
 *.bin
-!client/hardnested/*.bin
 *.dll
 *.moc.cpp
 *.z
-!client/hardnested/tables/*.z
-version.c
-client/ui/ui_overlays.h
 *.Td
-
+*.DS_Store
 *.exe
 *.dsym
+version.c
+
+!client/hardnested/*.bin
+!client/hardnested/tables/*.z
+client/ui/ui_overlays.h
+
 hardnested_stats.txt
 proxmark3
 flasher
@@ -46,7 +48,14 @@ fpga/*
 #client/*
 # my own traces folder
 client/traces/*
-
+*.ice
+*.new
+armsrc/TEMP EMV/*
+tools/mf_nonce_brute/*
+tools/andrew/*
+ppls patches/*
+*- Copy.*
 
 client/lualibs/mf_default_keys.lua
 client/lualibs/usb_cmd.lua
+
