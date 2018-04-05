@@ -1,0 +1,12 @@
+2017-08-19 iceman,
+
+iclass_dump.bin
+===============
+The file iclass_dump.bin contains CSN's mac results from 128 CSNs.
+Hence when running the test mode, 
+	'hf iclass loclass t'
+it shows a long output from the bruteforce test.
+
+iclass_key.bin
+==============
+The file iclass_key.bin is where you add the AA1 master key in order for the proxmark3 client to use it with the loclass commands
