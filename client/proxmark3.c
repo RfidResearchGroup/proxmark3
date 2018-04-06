@@ -255,7 +255,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 					memset(script_cmd_buf, 0, sizeof(script_cmd_buf));
 					// get 
 					if (!fgets(script_cmd_buf, sizeof(script_cmd_buf), stdin)) {
-						PrintAndLogEx(ERROR, "STDIN unexpected end, exit...");
+						PrintAndLogEx(ERR, "STDIN unexpected end, exit...");
 						break;
 					}
 					// remove linebreaks
