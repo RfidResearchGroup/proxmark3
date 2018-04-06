@@ -22,12 +22,16 @@
 #include <QtGui>
 
 #include "ui/ui_overlays.h"
+
+class ProxWidget;
+
 /**
  * @brief The actual plot, black area were we paint the graph
  */
 class Plot: public QWidget
 {
 	private:
+		QWidget *master;
 		int GraphStart;
 		double GraphPixelsPerPoint;
 		int CursorAPos;

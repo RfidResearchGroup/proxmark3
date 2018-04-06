@@ -80,9 +80,9 @@ void PrintAndLogEx(logLevel_t level, char *fmt, ...) {
 	vsnprintf(buffer, sizeof(buffer), fmt, args);
 	va_end(args);
 
-	if(strchr(buffer, '\n')) {
+	if (strchr(buffer, '\n')) {
 		
-		token = strtok(buffer,"\n");
+		token = strtok(buffer, "\n");
 		
 		while (token != NULL) {
 			size = strlen(buffer2);
@@ -159,9 +159,9 @@ void PrintAndLog(char *fmt, ...) {
 	}
 	va_end(argptr2);
 
-	if (g_flushAfterWrite == 1) {
+	if (g_flushAfterWrite == 1)
 		fflush(NULL);
-	}
+
 	//release lock
 	pthread_mutex_unlock(&print_lock);  
 }

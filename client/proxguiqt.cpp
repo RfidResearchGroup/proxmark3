@@ -557,6 +557,8 @@ Plot::Plot(QWidget *parent) : QWidget(parent), GraphStart(0), GraphPixelsPerPoin
 	CursorBPos = 0;
 
 	setWindowTitle(tr("Sliders"));
+	
+	master = parent;
 }
 
 void Plot::closeEvent(QCloseEvent *event)
@@ -672,8 +674,7 @@ void Plot::keyPressEvent(QKeyEvent *event)
 			break;
 
 		case Qt::Key_Q:
-			//this->hide();
-			this->close();
+			master->hide();
 			break;
 
 		default:
