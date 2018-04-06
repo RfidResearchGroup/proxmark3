@@ -672,7 +672,8 @@ void Plot::keyPressEvent(QKeyEvent *event)
 			break;
 
 		case Qt::Key_Q:
-			this->hide();
+			//this->hide();
+			this->close();
 			break;
 
 		default:
