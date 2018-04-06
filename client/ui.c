@@ -14,7 +14,7 @@
 double CursorScaleFactor = 1;
 int PlotGridX=0, PlotGridY=0, PlotGridXdefault= 64, PlotGridYdefault= 64, CursorCPos= 0, CursorDPos= 0;
 int offline;
-int flushAfterWrite = 0;  //buzzy
+int g_flushAfterWrite = 0;  //buzzy
 int GridOffset = 0;
 bool GridLocked = false;
 bool showDemod = true;
@@ -159,7 +159,7 @@ void PrintAndLog(char *fmt, ...) {
 	}
 	va_end(argptr2);
 
-	if (flushAfterWrite == 1) {
+	if (g_flushAfterWrite == 1) {
 		fflush(NULL);
 	}
 	//release lock

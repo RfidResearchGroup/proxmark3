@@ -46,9 +46,9 @@ struct receiver_arg {
 
 void SendCommand(UsbCommand *c) {
 	#if 0
-	pthread_mutex_lock(&print_lock);
+	//pthread_mutex_lock(&print_lock);
 	PrintAndLogEx(NORMAL, "Sending %d bytes\n", sizeof(UsbCommand));
-	pthread_mutex_unlock(&print_lock);
+	//pthread_mutex_unlock(&print_lock);
 	#endif
 
 	if (offline) {
@@ -79,6 +79,7 @@ static void showBanner(void){
 	printf("\nKeep iceman fork alive with a donation!           https://paypal.me/iceman1001/");
 	printf("\nMONERO: 43mNJLpgBVaTvyZmX9ajcohpvVkaRy1kbZPm8tqAb7itZgfuYecgkRF36rXrKFUkwEGeZedPsASRxgv4HPBHvJwyJdyvQuP");
 	printf("\n\n\n");
+	fflush(NULL);
 }
 #endif
 
@@ -174,6 +175,8 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 	FILE *sf = NULL;
 	char script_cmd_buf[256] = {0x00};  // iceman, needs lua script the same file_path_buffer as the rest
 	
+	PrintAndLogEx(SUCCESS, "ISATTY/STDIN_FILENO == %s\n", (stdinOnPipe)?"true":"false");
+	
 	if (usb_present) {
 		rarg.run = 1;
 		pthread_create(&reader_thread, NULL, &uart_receiver, &rarg);
@@ -185,19 +188,16 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 	}
 
 	if (script_cmds_file) {
-		sf = fopen(script_cmds_file, "r");
 		
-		if (sf) {
-			pthread_mutex_lock(&print_lock);			
+		sf = fopen(script_cmds_file, "r");		
+		if (sf)
 			PrintAndLogEx(SUCCESS, "executing commands from file: %s\n", script_cmds_file);
-			pthread_mutex_unlock(&print_lock);
-		}
 	}
 
 	read_history(".history");
 	
 	// loops every time enter is pressed...
-	while(1) {
+	while (1) {
 		
 		// this should hook up the PM3 again.
 		if (offline) {
@@ -220,27 +220,27 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 		// If there is a script file
 		if (sf) {
 			
+			// clear array
 			memset(script_cmd_buf, 0, sizeof(script_cmd_buf));
+			
+			// read script file
 			if (!fgets(script_cmd_buf, sizeof(script_cmd_buf), sf)) {
 				fclose(sf);
 				sf = NULL;
 			} else {
+				
+				// remove linebreaks
 				strcleanrn(script_cmd_buf, sizeof(script_cmd_buf));
 
-				if ((cmd = strmcopy(script_cmd_buf)) != NULL) {
-					pthread_mutex_lock(&print_lock);
-					printf(PROXPROMPT"%s\n", cmd);
-					pthread_mutex_unlock(&print_lock);
-				}
+				if ((cmd = strmcopy(script_cmd_buf)) != NULL)
+					PrintAndLogEx(NORMAL, PROXPROMPT"%s\n", cmd);
 			}
 		} else {
 			// If there is a script command
 			if (execCommand){
-				if ((cmd = strmcopy(script_cmd)) != NULL) {
-					pthread_mutex_lock(&print_lock);
-					printf(PROXPROMPT"%s\n", cmd);
-					pthread_mutex_unlock(&print_lock);
-				}
+				
+				if ((cmd = strmcopy(script_cmd)) != NULL)
+					PrintAndLogEx(NORMAL, PROXPROMPT"%s", cmd);
 
 				execCommand = false;
 			} else {
@@ -250,24 +250,23 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 
 				// if there is a pipe from stdin
 				if (stdinOnPipe) {
+					
+					// clear array
 					memset(script_cmd_buf, 0, sizeof(script_cmd_buf));
+					// get 
 					if (!fgets(script_cmd_buf, sizeof(script_cmd_buf), stdin)) {
-						pthread_mutex_lock(&print_lock);
-						PrintAndLogEx(NORMAL, "\n[!] stdin end, exit...\n");
-						pthread_mutex_unlock(&print_lock);						
+						PrintAndLogEx(ERROR, "STDIN unexpected end, exit...");
 						break;
 					}
+					// remove linebreaks
 					strcleanrn(script_cmd_buf, sizeof(script_cmd_buf));
 
-					if ((cmd = strmcopy(script_cmd_buf)) != NULL) {
-						pthread_mutex_lock(&print_lock);
-						PrintAndLogEx(NORMAL, PROXPROMPT"%s\n", cmd);
-						pthread_mutex_unlock(&print_lock);
-					}
-					
+					if ((cmd = strmcopy(script_cmd_buf)) != NULL)
+						PrintAndLogEx(NORMAL, PROXPROMPT"%s", cmd);
+				
 				} else {		
-					// read command from command prompt
 					cmd = readline(PROXPROMPT);
+					fflush(NULL);
 				}
 			}
 		}
@@ -291,12 +290,10 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 			free(cmd);
 			cmd = NULL;
 		} else {
-			pthread_mutex_lock(&print_lock);
 			PrintAndLogEx(NORMAL, "\n");
-			pthread_mutex_unlock(&print_lock);
 			break;
 		}
-	}
+	} // end while 
 	
 	if (sf)
 		fclose(sf);
@@ -379,8 +376,6 @@ int main(int argc, char* argv[]) {
 	char *script_cmds_file = NULL;
 	char *script_cmd = NULL;
 
-	// Must be before the first PrintAndLog call, for rl_redisplay
-	//rl_initialize();
 	 /* initialize history */
 	using_history();
   
@@ -410,8 +405,8 @@ int main(int argc, char* argv[]) {
 
 		// flush output
 		if(strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "-flush") == 0){
-			PrintAndLogEx(NORMAL, "Output will be flushed after every print.\n");
-			flushAfterWrite = 1;
+			g_flushAfterWrite = 1;
+			PrintAndLogEx(INFO, "Output will be flushed after every print.\n");
 		}
 		
 		// wait for comport
@@ -436,7 +431,7 @@ int main(int argc, char* argv[]) {
 		if (executeCommand){
 			script_cmd = argv[argc - 1];
 			
-			while(script_cmd[strlen(script_cmd) - 1] == ' ')
+			while (script_cmd[strlen(script_cmd) - 1] == ' ')
 				script_cmd[strlen(script_cmd) - 1] = 0x00;
 			
 			if (strlen(script_cmd) == 0) {
@@ -507,6 +502,7 @@ int main(int argc, char* argv[]) {
 		offline = 0;
 	}
 
+	fflush(NULL);
 	// create a mutex to avoid interlacing print commands from our different threads
 	pthread_mutex_init(&print_lock, NULL);
 
