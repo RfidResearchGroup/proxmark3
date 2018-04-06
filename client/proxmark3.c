@@ -175,7 +175,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 	FILE *sf = NULL;
 	char script_cmd_buf[256] = {0x00};  // iceman, needs lua script the same file_path_buffer as the rest
 	
-	PrintAndLogEx(SUCCESS, "ISATTY/STDIN_FILENO == %s\n", (stdinOnPipe)?"true":"false");
+	PrintAndLogEx(DEBUG, "ISATTY/STDIN_FILENO == %s\n", (stdinOnPipe) ? "true" : "false");
 	
 	if (usb_present) {
 		rarg.run = 1;
