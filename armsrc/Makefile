@@ -23,7 +23,7 @@ APP_CFLAGS = -DWITH_CRC \
 			 -DWITH_ICLASS \
 			 -DWITH_FELICA \
 			 -DWITH_FLASH \
-			 -DWITH_ISO7816 \
+			 -DWITH_SMARTCARD \
 			 -DWITH_HFSNOOP \
 			 -DWITH_LF_SAMYRUN \
 			 -fno-strict-aliasing -ffunction-sections -fdata-sections
@@ -55,7 +55,7 @@ SRC_CRC = crc.c crc16.c crc32.c
 SRC_ICLASS = iclass.c optimized_cipher.c
 SRC_LEGIC = legicrf.c legic_prng.c
 SRC_FLASH = flashmem.c
-SRC_ISO7816 = iso7816.c
+SRC_SMARTCARD = smartcard.c
 SRC_BEE = bee.c
 
 #the FPGA bitstream files. Note: order matters!
@@ -81,7 +81,7 @@ THUMBSRC = start.c \
 	$(SRC_ZLIB) \
 	$(SRC_LEGIC) \
 	$(SRC_FLASH) \
-	$(SRC_ISO7816) \
+	$(SRC_SMARTCARD) \
 	appmain.c \
 	printf.c \
 	util.c \

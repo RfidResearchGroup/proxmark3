@@ -26,6 +26,11 @@
  #include "LCD.h"
 #endif
 
+#ifdef WITH_SMARTCARD
+#include "smartcard.h"
+#endif
+
+
 //=============================================================================
 // A buffer where we can queue things up to be sent through the FPGA, for
 // any purpose (fake tag, as reader, whatever). We go MSB first, since that
@@ -364,7 +369,7 @@ void SendStatus(void) {
 	BigBuf_print_status();
 	Fpga_print_status();
 	Flashmem_print_status();
-	//Iso7816_print_status();
+	SmartCard_print_status();
 	printConfig(); //LF Sampling config
 	printUSBSpeed();
 	Dbprintf("Various");
@@ -1203,6 +1208,10 @@ void  __attribute__((noreturn)) AppMain(void) {
 	LCDInit();
 #endif
 
+#ifdef WITH_SMARTCARD
+	SmartCard_init();
+#endif
+
 	byte_t rx[sizeof(UsbCommand)];
    
 	for(;;) {
@@ -1212,6 +1221,9 @@ void  __attribute__((noreturn)) AppMain(void) {
 		if ( cmd_receive( (UsbCommand*)rx ) )
 			UsbPacketReceived(rx, sizeof(UsbCommand) );
 		
+#ifdef WITH_SMARTCARD
+		SMART_CARD_ServiceSmartCard();
+#endif
 		// Press button for one second to enter a possible standalone mode
 		if (BUTTON_HELD(1000) > 0) {
 			
