@@ -192,11 +192,15 @@ void Flash_UniqueID(uint8_t *uid) {
 
 	// reading unique serial number
 	FlashSendByte(UNIQUE_ID);
-	FlashSendByte(0x00);
-	FlashSendByte(0x00);
-	FlashSendByte(0x00);
-	FlashSendByte(0x00);
+	FlashSendByte(0xFF);
+	FlashSendByte(0xFF);
+	FlashSendByte(0xFF);
+	FlashSendByte(0xFF);
 
+	uid[7] = FlashSendByte(0xFF);
+	uid[6] = FlashSendByte(0xFF);
+	uid[5] = FlashSendByte(0xFF);
+	uid[4] = FlashSendByte(0xFF);
     uid[3] = FlashSendByte(0xFF);
 	uid[2] = FlashSendByte(0xFF);
 	uid[1] = FlashSendByte(0xFF);
@@ -364,9 +368,12 @@ void Flashmem_print_status(void) {
 			break;
 	}
 	
-	uint8_t uid[4] = {0,0,0,0};
+	uint8_t uid[8] = {0,0,0,0,0,0,0,0};
 	Flash_UniqueID(uid);	
-	Dbprintf("  Unique ID...............0x%02x%02x%02x%02x %", uid[3], uid[2], uid[1], uid[0]);	
+	Dbprintf("  Unique ID...............0x%02x%02x%02x%02x%02x%02x%02x%02x",
+			uid[7], uid[6], uid[5], uid[4], 
+			uid[3], uid[2], uid[1], uid[0]
+	);
 	
 	FlashStop();	
 }
