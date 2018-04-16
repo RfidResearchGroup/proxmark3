@@ -704,7 +704,7 @@ bool SmartCard_init(void) {
 
 	//StartTicks();
 	
-	LED_A_ON();
+	//LED_A_ON();
 	SmartCard_setup();
 	
 	if ( MF_DBGLEVEL > 3 ) Dbprintf("Smart Card Init OK");
