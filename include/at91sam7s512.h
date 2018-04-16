@@ -1563,7 +1563,7 @@ typedef struct _AT91S_TCB {
 // *****************************************************************************
 #ifndef __ASSEMBLY__
 typedef struct _AT91S_PWMC_CH {
-	AT91_REG	 PWMC_CMR; 	// Channel Mode Register
+	AT91_REG	 PWMC_CMR; 		// Channel Mode Register
 	AT91_REG	 PWMC_CDTYR; 	// Channel Duty Cycle Register
 	AT91_REG	 PWMC_CPRDR; 	// Channel Period Register
 	AT91_REG	 PWMC_CCNTR; 	// Channel Counter Register

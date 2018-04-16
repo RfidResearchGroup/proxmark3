@@ -18,9 +18,9 @@ void SpinDelayUs(int us) {
 	AT91C_BASE_PWMC->PWMC_ENA = PWM_CHANNEL(0);
 	
 	// 48 MHz / 1024 gives 46.875 kHz
-	AT91C_BASE_PWMC_CH0->PWMC_CMR = PWM_CH_MODE_PRESCALER(10);
-	AT91C_BASE_PWMC_CH0->PWMC_CDTYR = 0;
-	AT91C_BASE_PWMC_CH0->PWMC_CPRDR = 0xffff;
+	AT91C_BASE_PWMC_CH0->PWMC_CMR = PWM_CH_MODE_PRESCALER(10);		// Channel Mode Register
+	AT91C_BASE_PWMC_CH0->PWMC_CDTYR = 0;							// Channel Duty Cycle Register
+	AT91C_BASE_PWMC_CH0->PWMC_CPRDR = 0xffff;						// Channel Period Register
 
 	uint16_t start = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
 

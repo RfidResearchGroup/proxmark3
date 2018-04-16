@@ -32,6 +32,9 @@
 #define SMART_CARD_RECEIVE_BUFFER_SIZE		(10)
 #define SMART_CARD_TRANSMIT_BUFFER_SIZE		(10)
 
+#define SMART_CARD_CLOCK					AT91C_BASE_PWMC_CH1
+
+
 // true = the distance between a and b is greater than c
 #define RANGE(a,b,c)						((MAX(a,b))-(MIN(a,b))>(c))
 
@@ -235,7 +238,8 @@ static bool SMART_CARD_MaintainConnection( void ) {
  */
 static void SMART_CARD_DisableClock( void ) {
 	// Disable TC2
-	AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKDIS;
+	//AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKDIS;
+	AT91C_BASE_PWMC->PWMC_DIS = PWM_CHANNEL(1);
 	generateClk = false;
 }
 
@@ -247,7 +251,8 @@ static void SMART_CARD_DisableClock( void ) {
  */
 static void SMART_CARD_EnableClock( void )  {
 	// Enable and reset TC2
-	AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+	//AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+	AT91C_BASE_PWMC->PWMC_ENA = PWM_CHANNEL(1);
 	generateClk = true;
 }
 
@@ -462,6 +467,7 @@ static bool SMART_CARD_EstablishCommunications( void ) {
  *  @return         void
  */
 static void SMART_CARD_ConfigureClock( void ) {
+	/*
 	AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC2);  			// Enable Clock TC2
 
 	AT91C_BASE_TCB->TCB_BMR &= AT91C_TCB_TC2XC2S;				// Clear the external clock selection
@@ -473,6 +479,22 @@ static void SMART_CARD_ConfigureClock( void ) {
 							| AT91C_TC_CPCTRG; 					// Capture Mode, reset the TC2 counter when RC is reached
 	AT91C_BASE_TC2->TC_RC = 12; 								// RC Compare value = 24MHz / 2MHz = 12
 	AT91C_BASE_TC2->TC_IER = AT91C_TC_CPCS;						// Generate an interrupt when the RC value is reached
+	
+	*/
+
+	// enable PWM Clock
+	AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_PWMC);
+	
+	// Enable channel1 as SMART CARD real-time clock
+	AT91C_BASE_PWMC->PWMC_ENA = PWM_CHANNEL(1);
+	
+	// 48 MHz / 16 gives 3MHz
+	SMART_CARD_CLOCK->PWMC_CMR = PWM_CH_MODE_PRESCALER(3);	// Channel Mode Register
+	SMART_CARD_CLOCK->PWMC_CDTYR = 0;						// Channel Duty Cycle Register
+	SMART_CARD_CLOCK->PWMC_CPRDR = 0xffff;					// Channel Period Register
+	
+	AT91C_BASE_PWMC->PWMC_IER = 1 << 1;
+	// AT91C_BASE_PWMC->PWMC_IDR;  // disable interrupt
 }
 
 
@@ -673,14 +695,14 @@ void SmartCard_setup(void) {
 }
 
 void SmartCard_stop(void) {
-	StopTicks();
+	//StopTicks();
 	if ( MF_DBGLEVEL > 3 )  Dbprintf("Smart Card Stop");
 	LED_A_OFF();
 }
 
 bool SmartCard_init(void) {
 
-	StartTicks();
+	//StartTicks();
 	
 	LED_A_ON();
 	SmartCard_setup();
