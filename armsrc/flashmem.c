@@ -207,7 +207,12 @@ void Flash_UniqueID(uint8_t *uid) {
 	uid[0] = FlashSendLastByte(0xFF);
 }
 
-uint8_t Flash_ReadData(uint32_t address, uint8_t *out, uint16_t len) {
+uint16_t Flash_ReadData(uint32_t address, uint8_t *out, uint16_t len) {
+	
+	if (!FlashInit()) return 0;
+	
+	Flash_ReadStat1();
+	
 	// length should never be zero
 	if (!len || Flash_CheckBusy(1000)) return 0;
 
@@ -221,17 +226,50 @@ uint8_t Flash_ReadData(uint32_t address, uint8_t *out, uint16_t len) {
 		out[i] = FlashSendByte(0xFF);
 
 	out[i] = FlashSendLastByte(0xFF);
+	
+	FlashStop();	
 	return len;	
 }
 
 //	Write data 
-uint8_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len) {
+uint16_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len) {
+
 	// length should never be zero
-	if (!len || Flash_CheckBusy(1000)) return 0;
+	if (!len) {
+		Dbprintf("Flash_WriteData len is zero error");
+		return 0;
+	}
+	
+	if (!FlashInit()) {
+		Dbprintf("Flash_WriteData init fail");
+		return 0;
+	}
+	
+	Flash_ReadStat1();
+	
+	Flash_WriteEnable();
+	
+	if ( len < 0x1000 )
+		Flash_Erase4k(0x00);
+	else if (  len >= 0x1000 && len < 0x7FFF )
+		Flash_Erase32k(0x00);
+	else
+		Flash_Erase64k(0x00);
 
+	// busy after erasing
+	if (Flash_CheckBusy(1000)) {
+		Dbprintf("Flash_WriteData check busy");
+		return 0;
+	}
+	
 	//	不能跨越 256 字节边界
-	if (((address & 255) + len) > 256) return 0;
+	if (((address & 255) + len) > 256) {
+		Dbprintf("Flash_WriteData 256 fail");
+		return 0;
+	}
 
+	Flash_WriteEnable();
+	
 	FlashSendByte(PAGEPROG);
 	FlashSendByte((address >> 16) & 0xFF);
 	FlashSendByte((address >> 8) & 0xFF);
@@ -242,6 +280,8 @@ uint8_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len) {
 		FlashSendByte(in[i]);
 
 	FlashSendLastByte(in[i]);
+
+	FlashStop();
 	return len;	
 }
 
@@ -268,7 +308,7 @@ bool Flash_Erase4k(uint32_t address) {
 //	erase 32K at one time
 bool Flash_Erase32k(uint32_t address) {
 	if (address & (32*1024 - 1)) {
-		if ( MF_DBGLEVEL > 1 ) Dbprintf("Flash_Erase4k : Address is not align at 4096");
+		if ( MF_DBGLEVEL > 1 ) Dbprintf("Flash_Erase32k : Address is not align at 4096");
 		return false;
 	}
 	FlashSendByte(BLOCK32ERASE);
@@ -280,9 +320,8 @@ bool Flash_Erase32k(uint32_t address) {
 
 //	erase 64k at one time
 bool Flash_Erase64k(uint32_t address) {
-
 	if (address & (64*1024 - 1)) {
-		if ( MF_DBGLEVEL > 1 ) Dbprintf("Flash_Erase4k : Address is not align at 4096");
+		if ( MF_DBGLEVEL > 1 ) Dbprintf("Flash_Erase64k : Address is not align at 4096");
 		return false;
 	}
 	FlashSendByte(BLOCK64ERASE);
@@ -311,37 +350,6 @@ bool FlashInit(void) {
 	if ( MF_DBGLEVEL > 3 ) Dbprintf("FlashInit OK");
 	return true;
 }
-
-void EXFLASH_TEST(void) {
-	uint8_t	 data[256] = { 0x00, 0x01, 0x02 };
-	uint8_t	 data2[256] = { 0x00};
-
-	if (!FlashInit()) return;
-	
-	Flash_ReadStat1();
-	
-	Dbprintf("Flash test write:  012 to 0x00 0x01 0x02");
-	Flash_WriteEnable();
-	Flash_Erase4k(0x00);
-	if (Flash_CheckBusy(1000)) {
-		Dbprintf("Flash_Erase4k CheckBusy Error.");
-		return;
-	}
-	
-	Flash_ReadData(0, data2, 256);
-	Flash_WriteEnable();
-	Flash_WriteData(0x12, data, sizeof(data));		//	this will never run, cuz out of 256byte boundary
-	Flash_WriteData(0x12, data, 3);
-
-	if (Flash_CheckBusy(1000)) {
-		Dbprintf("Flash_WriteDate CheckBusy Error.");
-		return;
-	}
-
-	Flash_ReadData(0, data2, 256);
-	FlashStop();
-}
-
 
 void Flashmem_print_status(void) {
 	DbpString("Flash memory");
@@ -375,5 +383,5 @@ void Flashmem_print_status(void) {
 			uid[3], uid[2], uid[1], uid[0]
 	);
 	
-	FlashStop();	
+	FlashStop();
 }

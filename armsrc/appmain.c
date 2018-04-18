@@ -1081,7 +1081,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			// arg2 = RFU
 			//Dbprintf("transfer to client parameters: %" PRIu32 " | %" PRIu32 " | %" PRIu32, startidx, numofbytes, c->arg[2]);
 
-			for(size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
+			for (size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
 				len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
 				isok = cmd_send(CMD_DOWNLOADED_EML_BIGBUF, i, len, 0, mem + startidx + i, len);
 				if (!isok) 
@@ -1096,11 +1096,48 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			ReadMem(c->arg[0]);
 			break;
 #ifdef WITH_FLASH	
-		case CMD_READ_FLASH_MEM:
-		case CMD_WRITE_FLASH_MEM:
+		case CMD_READ_FLASH_MEM: {
+
+			LED_B_ON();
+			uint16_t isok = 0;
+			size_t len = 0;
+			uint32_t startidx = c->arg[0];
+			uint16_t numofbytes = c->arg[1];
+			
+			Dbprintf("FlashMem read | %d - %d", startidx, numofbytes);
+			
+			uint8_t *mem = BigBuf_malloc(USB_CMD_DATA_SIZE);
+	
+			for(size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
+				len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
+				
+				Dbprintf("FlashMem reading  | %d | %d | %d", startidx + i, i, len);
+				
+				isok = Flash_ReadData(startidx + i, mem, len);
+				if ( isok == len ) {
+					print_result("Chunk: ", mem, len);
+				} else {
+					Dbprintf("FlashMem reading failed | %d | %d", len, isok);
+					break;
+				}
+			}
+			// Trigger a finish downloading signal with an ACK frame
+			cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
+			LED_B_OFF();
+			break;
+		}
+		case CMD_WRITE_FLASH_MEM: {
+			LED_B_ON();
+			uint32_t startidx = c->arg[0];
+			uint16_t len = c->arg[1];
+			uint16_t res = Flash_WriteData(startidx, c->d.asBytes, len);			
+			uint8_t isok = (res == len) ? 1 : 0;			
+			cmd_send(CMD_ACK, isok, 0, 0, 0, 0);
+			LED_B_OFF();
+			break;
+		}
 		case CMD_UPLOAD_FLASH_MEM:
 		case CMD_DOWNLOAND_FLASH_MEM:
-			EXFLASH_TEST();
 			break;
 #endif
 		case CMD_SET_LF_DIVISOR:

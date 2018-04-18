@@ -117,13 +117,18 @@ bool Flash_WaitIdle(void);
 uint8_t Flash_ReadStat1(void);
 uint8_t Flash_ReadStat2(void);
 uint16_t FlashSendByte(uint32_t data);
+
+void Flash_WriteEnable();
+bool Flash_Erase4k(uint32_t address);
+bool Flash_Erase32k(uint32_t address);
+bool Flash_Erase64k(uint32_t address);
+
 bool FlashInit();
-void EXFLASH_TEST(void);
 
 void Flash_UniqueID(uint8_t *uid);
 uint8_t Flash_ReadID(void);
-uint8_t Flash_ReadData(uint32_t address, uint8_t *out, uint16_t len);
-uint8_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len);
+uint16_t Flash_ReadData(uint32_t address, uint8_t *out, uint16_t len);
+uint16_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len);
 void Flashmem_print_status(void);
 
 #endif

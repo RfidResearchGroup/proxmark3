@@ -461,15 +461,75 @@ char* pb(uint32_t b) {
 
 int CmdAnalyseA(const char *Cmd){
 
-	UsbCommand c = {CMD_READ_FLASH_MEM, {0,0,0}};
-	clearCommandBuffer();
-	SendCommand(&c);
-	UsbCommand resp;
+	int hexlen = 0;
+	uint8_t cmdp = 0;
+	bool errors = false;
+	uint32_t startindex = 0, len = 0, cmd = 0;
+	uint8_t data[USB_CMD_DATA_SIZE] = {0x00};
 	
-	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
-        PrintAndLogEx(NORMAL, "timeout while waiting for reply.");
-		return 1;
-    }
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
+		case 'l':
+			len = param_get32ex(Cmd, cmdp+1, 0, 10);
+			cmdp += 2;
+			break;
+		case 'i':
+			startindex = param_get32ex(Cmd, cmdp+1, 0, 10);
+			cmdp += 2;
+			break;
+		case 'c':
+			cmd = param_get8ex(Cmd, cmdp+1, 0, 10);
+			cmdp += 2;
+			break;
+		case 'd':
+			param_gethex_ex(Cmd, cmdp+1, data, &hexlen);
+			if ( hexlen != sizeof(data) ) {
+				PrintAndLogEx(WARNING, "Read %d bytes of %u", hexlen, sizeof(data) );
+			}
+			cmdp += 2;			
+			break;
+		case 'h':
+			return usage_analyse_checksum();
+		default:
+			PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+			errors = true;
+			break;
+		}
+	}
+	//Validations
+	if (errors || cmdp == 0 ) return usage_analyse_checksum();
+	
+	UsbCommand c, resp; 
+	
+	switch ( cmd ) {
+		case 0:
+			c = (UsbCommand) {CMD_READ_FLASH_MEM, {startindex, len, 0}};
+			clearCommandBuffer();
+			SendCommand(&c);
+			if ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
+				PrintAndLogEx(NORMAL, "timeout while waiting for reply.");
+				return 1;
+			}
+			break;
+		case 1:
+			c = (UsbCommand) {CMD_WRITE_FLASH_MEM, {startindex, len, 0}};
+			memcpy(c.d.asBytes, data, len);	
+			clearCommandBuffer();
+			SendCommand(&c);
+			
+			if ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
+				PrintAndLogEx(NORMAL, "timeout while waiting for reply.");
+				return 1;
+			}
+			uint8_t isok  = resp.arg[0] & 0xFF;
+			if (isok)
+				PrintAndLogEx(SUCCESS, "Flash write ok");
+			else 
+				PrintAndLogEx(FAILED, "Flash write ok");
+			
+			break;			
+	}
+	
 	return 0;
 	
 	PrintAndLogEx(NORMAL, "-- " _BLUE_(its my message) "\n");
