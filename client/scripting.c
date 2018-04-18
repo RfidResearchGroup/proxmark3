@@ -390,9 +390,8 @@ static int l_crc16(lua_State *L) {
 	size_t size;
 	const char *p_str = luaL_checklstring(L, 1, &size);
 
-	//iceman tochange
-	uint16_t retval = crc16_ccitt( (uint8_t*) p_str, size);
-    lua_pushunsigned(L, retval);
+	uint16_t checksum = crc(CRC_CCITT,  (uint8_t*) p_str, size);
+    lua_pushunsigned(L, checksum);
     return 1;
 }
 
