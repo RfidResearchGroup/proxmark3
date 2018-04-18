@@ -372,7 +372,9 @@ void SendStatus(void) {
 #ifdef WITH_SMARTCARD	
 	SmartCard_print_status();
 #endif	
+#ifdef WITH_LF
 	printConfig(); //LF Sampling config
+#endif	
 	printUSBSpeed();
 	Dbprintf("Various");
 	Dbprintf("  MF_DBGLEVEL.............%d", MF_DBGLEVEL);
@@ -1020,7 +1022,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			SpinDelay(200);
 			LED_D_OFF(); // LED D indicates field ON or OFF
 			break;
-
+#ifdef WITH_LF
 		case CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K: {
 			LED_B_ON();
 			uint8_t *mem = BigBuf_get_addr();
@@ -1049,6 +1051,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			LED_B_OFF();
 			break;
 		}
+#endif		
 		case CMD_UPLOAD_SIM_SAMPLES_125K: {
 			// iceman; since changing fpga_bitstreams clears bigbuff, Its better to call it before.
 			// to be able to use this one for uploading data to device 
@@ -1092,12 +1095,14 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 		case CMD_READ_MEM:
 			ReadMem(c->arg[0]);
 			break;
+#ifdef WITH_FLASH	
 		case CMD_READ_FLASH_MEM:
 		case CMD_WRITE_FLASH_MEM:
 		case CMD_UPLOAD_FLASH_MEM:
 		case CMD_DOWNLOAND_FLASH_MEM:
 			EXFLASH_TEST();
 			break;
+#endif
 		case CMD_SET_LF_DIVISOR:
 		  	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 			FpgaSendCommand(FPGA_CMD_SET_DIVISOR, c->arg[0]);
