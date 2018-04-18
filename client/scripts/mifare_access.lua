@@ -1,16 +1,12 @@
---[[
-	decode mifare classic access bytes
---]]
+local getopt = require('getopt')
 
 copyright = ''
 author = "Neuromancer"
 version = 'v1.0.0'
-
-
 desc = [[
 This script tries to decode Mifare Classic Access bytes
 ]]
-example = 'script run mifare_access'
+example = 'script run mifare_access -a 7F0F0869'
 usage = [[
 script run mifare_access -h -a <access bytes>
 
@@ -89,9 +85,9 @@ local function main(args)
 		if o == "a" then access = a end
 	end	
 		
-	if #access ~= 8 then
-		return oops("incorrect format, provide 4 bytes ACCESS CONDITIONS (e.g. 7F0F0869)")
-	end
+	if access == nil then return oops('empty ACCESS CONDITIONS') end
+	if #access == 0 then return oops('empty ACCESS CONDITIONS') end
+	if #access ~= 8 then return oops("Wrong length. Should be 4 hex bytes ACCESS CONDITIONS (e.g. 7F0F0869)") end
 	
 	local c2_b = tonumber(string.sub(access, 1, 1), 16)
 	local c1_b = tonumber(string.sub(access, 2, 2), 16)
