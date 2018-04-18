@@ -29,7 +29,7 @@ GZIP=gzip
 
 OBJDIR	= obj
 
-INCLUDE = -I../include -I../common
+INCLUDE = -I../include -I../common -I.
 
 TAR=tar
 TARFLAGS = -C .. -rvf

@@ -11,7 +11,6 @@
 #include "crc16.h"
 
 // REQUEST FLAGS
-
 #define ISO15_REQ_SUBCARRIER_SINGLE	0x00	// Tag should respond using one subcarrier (ASK)
 #define ISO15_REQ_SUBCARRIER_TWO	0x01	// Tag should respond using two subcarriers (FSK)
 #define ISO15_REQ_DATARATE_LOW		0x00	// Tag should respond using low data rate
@@ -22,13 +21,11 @@
 #define ISO15_REQ_PROTOCOL_EXT		0x08	// RFU
 
 // REQUEST FLAGS when INVENTORY is not set
-
 #define ISO15_REQ_SELECT			0x10	// only selected cards response
 #define ISO15_REQ_ADDRESS			0x20	// this req contains an address
 #define ISO15_REQ_OPTION			0x40	// Command specific option selector
 
 //REQUEST FLAGS when INVENTORY is set
-
 #define ISO15_REQINV_AFI			0x10	// AFI Field is present
 #define ISO15_REQINV_SLOT1			0x20	// 1 Slot
 #define ISO15_REQINV_SLOT16			0x00	// 16 Slots

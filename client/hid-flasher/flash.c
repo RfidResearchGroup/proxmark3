@@ -17,9 +17,6 @@
 #include "elf.h"
 #include "proxendian.h"
 
-// FIXME: what the fuckity fuck
-unsigned int current_command = CMD_UNKNOWN;
-
 #define FLASH_START            0x100000
 #define FLASH_SIZE             (256*1024)
 #define FLASH_END              (FLASH_START + FLASH_SIZE)

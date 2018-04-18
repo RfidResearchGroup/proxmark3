@@ -15,9 +15,6 @@ void ReceiveCommand(UsbCommand* rxcmd);
 void CloseProxmark();
 int OpenProxmark();
 
-// FIXME: what the fuckity fuck
-unsigned int current_command = CMD_UNKNOWN;
-
 #define FLASH_START            0x100000
 
 #ifdef HAS_512_FLASH

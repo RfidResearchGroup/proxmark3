@@ -30,8 +30,6 @@
 #include "cmdcrc.h"
 #include "cmdanalyse.h"
 
-unsigned int current_command = CMD_UNKNOWN;
-
 static int CmdHelp(const char *Cmd);
 static int CmdQuit(const char *Cmd);
 static int CmdRev(const char *Cmd);
@@ -140,7 +138,7 @@ int getCommand(UsbCommand* response) {
  * Waits for a certain response type. This method waits for a maximum of
  * ms_timeout milliseconds for a specified response command.
  *@brief WaitForResponseTimeout
- * @param cmd command to wait for
+ * @param cmd command to wait for, or CMD_UNKNOWN to take any command.
  * @param response struct to copy received command into.
  * @param ms_timeout
  * @return true if command was returned, otherwise false
@@ -158,7 +156,7 @@ bool WaitForResponseTimeoutW(uint32_t cmd, UsbCommand* response, size_t ms_timeo
 	while (true) {
 
 		while ( getCommand(response) ) {
-			if (response->cmd == cmd)
+			if (cmd == CMD_UNKNOWN || response->cmd == cmd)
 				return true;			
 		}
 
@@ -166,6 +164,7 @@ bool WaitForResponseTimeoutW(uint32_t cmd, UsbCommand* response, size_t ms_timeo
 			break;
 		
 		if (msclock() - start_time > 3000 && show_warning) {
+			// 3 seconds elapsed (but this doesn't mean the timeout was exceeded)
 			PrintAndLogEx(NORMAL, "Waiting for a response from the proxmark...");
 			PrintAndLogEx(NORMAL, "You can cancel this operation by pressing the pm3 button");
 			show_warning = false;

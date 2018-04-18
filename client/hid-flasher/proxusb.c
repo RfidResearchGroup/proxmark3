@@ -19,7 +19,6 @@ usb_dev_handle *devh = NULL;
 static unsigned int claimed_iface = 0;
 unsigned char return_on_error = 0;
 unsigned char error_occured = 0;
-extern unsigned int current_command;
 
 void SendCommand(UsbCommand *c)
 {
@@ -28,7 +27,7 @@ void SendCommand(UsbCommand *c)
 #if 0
   printf("Sending %d bytes\n", sizeof(UsbCommand));
 #endif
-  current_command = c->cmd;
+
   ret = usb_bulk_write(devh, 0x01, (char*)c, sizeof(UsbCommand), 1000);
   if (ret<0) {
     error_occured = 1;
