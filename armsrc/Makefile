@@ -12,7 +12,6 @@ APP_INCLUDES = apps.h
 #in the next section to remove that particular feature from compilation.
 # NO space,TABs after the "\" sign.  
 APP_CFLAGS = -DWITH_CRC \
-			 -DWITH_ISO18092 \
 			 -DON_DEVICE \
 			 -DWITH_LF \
 			 -DWITH_HITAG \

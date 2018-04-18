@@ -369,7 +369,9 @@ void SendStatus(void) {
 	BigBuf_print_status();
 	Fpga_print_status();
 	Flashmem_print_status();
+#ifdef WITH_SMARTCARD	
 	SmartCard_print_status();
+#endif	
 	printConfig(); //LF Sampling config
 	printUSBSpeed();
 	Dbprintf("Various");
