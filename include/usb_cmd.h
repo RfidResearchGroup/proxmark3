@@ -72,6 +72,7 @@ typedef struct{
 #define CMD_WRITE_FLASH_MEM												  0x0121
 #define CMD_UPLOAD_FLASH_MEM											  0x0122
 #define CMD_DOWNLOAND_FLASH_MEM											  0x0123
+#define CMD_DOWNLOADED_FLASHMEM											  0x0124
 
 // For low-frequency tags
 #define CMD_READ_TI_TYPE                                                  0x0202
