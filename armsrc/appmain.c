@@ -1138,7 +1138,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 		case CMD_UPLOAD_FLASH_MEM:
 			LED_B_ON();
 			
-			cmd_send(CMD_ACK, isok, 0, 0, 0, 0);
+			cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
 			LED_B_OFF();
 			break;
 		case CMD_DOWNLOAND_FLASH_MEM: {
