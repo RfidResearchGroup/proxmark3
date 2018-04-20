@@ -345,7 +345,7 @@ static bool SMART_CARD_ClassSelection( uint8_t class, uint8_t * answer, uint8_t 
  *  @return         bool                    true  = Operation was performed successfully
  *                                          false = An error occurred
  */
-static bool SMART_CARD_ProcessResetAnswer( uint8_t * answer, uint8_t length ) {
+static bool SMART_CARD_ProcessResetAnswer( uint8_t* answer, uint8_t length ) {
 	// TODO: This functions implementation is not yet complete
 	bool result = false;
 	uint8_t class;
@@ -438,7 +438,7 @@ static void SMART_CARD_ActivateInterface( void ) {
 static bool SMART_CARD_EstablishCommunications( void ) {
 	// TODO: This functions implementation is not yet complete
 	bool result = false;
-	uint8_t answer;
+	uint8_t* answer = BigBuf_malloc(100);
 
 	// Activate the interface
 	SMART_CARD_ActivateInterface();
@@ -448,7 +448,7 @@ static bool SMART_CARD_EstablishCommunications( void ) {
 
 	// Process the "answer" if it was received
 	if ( result ) {
-		result = SMART_CARD_ProcessResetAnswer( &answer, 100 );
+		result = SMART_CARD_ProcessResetAnswer( answer, 100 );
 
 		// Check if the "answer" was acceptable
 		if ( !result ) {
@@ -456,6 +456,7 @@ static bool SMART_CARD_EstablishCommunications( void ) {
 			WaitMS( 20 );
 		}
 	}
+	
 	return result;
 }
 
