@@ -217,6 +217,7 @@ void UsbCommandReceived(UsbCommand *c) {
 			PrintAndLogEx(NORMAL, "#db# %08x, %08x, %08x", c->arg[0], c->arg[1], c->arg[2]);
 			break;
 		}
+		case CMD_DOWNLOADED_FLASHMEM:
 		case CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K:
 		case CMD_DOWNLOADED_EML_BIGBUF: {
 			// sample_buf is a array pointer, located in data.c

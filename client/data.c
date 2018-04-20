@@ -17,17 +17,19 @@
 
 uint8_t* sample_buf;
 
-void GetFromBigBuf(uint8_t *dest, int bytes, int start_index) {
+// this triggers a download sequence from device,  its received inside  cmdmain.c UsbCommandReceived()
+void GetFromBigBuf(uint8_t *dest, uint32_t len, uint32_t start_index) {	
+	// global
 	sample_buf = dest;
-	UsbCommand c = {CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K, {start_index, bytes, 0}};
+	UsbCommand c = {CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K, {start_index, len, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
 }
 // this will download the EMULATOR memory part from device, 
 // inside the BigBuf EML zon.
-bool GetEMLFromBigBuf(uint8_t *dest, uint32_t bytes, uint32_t start_index) {
+bool GetEMLFromBigBuf(uint8_t *dest, uint32_t len, uint32_t start_index) {
 	sample_buf = dest;
-	UsbCommand c = {CMD_DOWNLOAD_EML_BIGBUF, {start_index, bytes, 0}};
+	UsbCommand c = {CMD_DOWNLOAD_EML_BIGBUF, {start_index, len, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
 	
@@ -40,3 +42,10 @@ bool GetEMLFromBigBuf(uint8_t *dest, uint32_t bytes, uint32_t start_index) {
 	return true;
 }
 
+// Download data from flashmem,  rdv40
+void GetFromFlashMen(uint8_t *dest, uint32_t len, uint32_t start_index) {
+	sample_buf = dest;
+	UsbCommand c = {CMD_DOWNLOAND_FLASH_MEM, {start_index, len, 0}};
+	clearCommandBuffer();
+	SendCommand(&c);
+}
