@@ -89,8 +89,6 @@
 #define NO_CONTINUE   0x00
 #define PASS          0x01
 #define FAIL          0x00
-#define arrayLen(x)   (sizeof(x) / sizeof(*x))
-#define lengthOf(x)   (sizeof(x))/sizeof(byte)
 #define maxAddress    capacity
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -108,6 +106,11 @@
 #define NOSUSPEND    0x09
 #define UNKNOWNERROR 0xFF
 
+// List of blocks
+#define MAX_BLOCKS		4
+#define MAX_SECTORS		16
+
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 extern void Dbprintf(const char *fmt, ...);
 
@@ -119,9 +122,10 @@ uint8_t Flash_ReadStat2(void);
 uint16_t FlashSendByte(uint32_t data);
 
 void Flash_WriteEnable();
-bool Flash_Erase4k(uint32_t address);
-bool Flash_Erase32k(uint32_t address);
-bool Flash_Erase64k(uint32_t address);
+bool Flash_WipeMemory();
+bool Flash_Erase4k(uint8_t block, uint8_t sector);
+//bool Flash_Erase32k(uint32_t address);
+bool Flash_Erase64k(uint8_t block);
 
 bool FlashInit();
 

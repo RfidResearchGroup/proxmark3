@@ -1121,7 +1121,6 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 					break;
 				}
 			}
-			// Trigger a finish downloading signal with an ACK frame
 			cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
 			LED_B_OFF();
 			break;
@@ -1137,8 +1136,40 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			break;
 		}
 		case CMD_UPLOAD_FLASH_MEM:
-		case CMD_DOWNLOAND_FLASH_MEM:
+			LED_B_ON();
+			
+			cmd_send(CMD_ACK, isok, 0, 0, 0, 0);
+			LED_B_OFF();
 			break;
+		case CMD_DOWNLOAND_FLASH_MEM: {
+
+			LED_B_ON();
+			uint8_t *mem = BigBuf_malloc(USB_CMD_DATA_SIZE);
+			bool isok = false;			
+			size_t len = 0;
+			uint32_t startidx = c->arg[0];
+			uint32_t numofbytes = c->arg[1];
+			// arg0 = startindex
+			// arg1 = length bytes to transfer
+			// arg2 = RFU
+			//Dbprintf("transfer to client parameters: %" PRIu32 " | %" PRIu32 " | %" PRIu32, startidx, numofbytes, c->arg[2]);
+
+			for (size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
+				len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
+				
+				isok = Flash_ReadData(startidx + i, mem, len);
+				if (!isok )
+					Dbprintf("reading flash memory failed ::  | bytes between %d - %d", i, len);
+				
+				isok = cmd_send(CMD_DOWNLOADED_FLASHMEM, i, len, 0, mem, len);
+				if (!isok) 
+					Dbprintf("transfer to client failed ::  | bytes between %d - %d", i, len);
+			}
+
+			cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
+			LED_B_OFF();
+			break;
+		}
 #endif
 		case CMD_SET_LF_DIVISOR:
 		  	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
