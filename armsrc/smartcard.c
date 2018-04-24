@@ -438,7 +438,7 @@ static void SMART_CARD_ActivateInterface( void ) {
 static bool SMART_CARD_EstablishCommunications( void ) {
 	// TODO: This functions implementation is not yet complete
 	bool result = false;
-	uint8_t* answer = BigBuf_malloc(100);
+	uint8_t answer[100];
 
 	// Activate the interface
 	SMART_CARD_ActivateInterface();
