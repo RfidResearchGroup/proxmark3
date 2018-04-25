@@ -95,7 +95,7 @@ local function main(args)
 	local c3_b = tonumber(string.sub(access, 4, 4), 16)
 	local c3 = tonumber(string.sub(access, 5, 5), 16)
 	local c2 = tonumber(string.sub(access, 6, 6), 16)
-	local b = string.sub(args, 7, 8)
+	local gpb = string.sub(access, 7, 8)
 
 	if bxor(c1, c1_b) ~= 0xF then print("!!! bitflip in c1") end
 	if bxor(c2, c2_b) ~= 0xF then print("!!! bitflip in c2") end
@@ -125,6 +125,6 @@ local function main(args)
 		end
 	end
 
-	print("B: "..b)
+	print("GPB: "..gpb)
 end
 main(args)
