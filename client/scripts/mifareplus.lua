@@ -18,13 +18,13 @@ READPLAINNOMACUNMACED = "0336"
 
 --- 
 -- This is only meant to be used when errors occur
-function oops(err)
+local function oops(err)
 	print("ERROR: ",err)
 end
 
 ---
 -- Used to send raw data to the firmware to subsequently forward the data to the card.
-function sendRaw(rawdata, crc, power)
+local function sendRaw(rawdata, crc, power)
 	print(("<sent>: 	  %s"):format(rawdata))
 
 	local flags = lib14a.ISO14A_COMMAND.ISO14A_RAW
@@ -44,16 +44,30 @@ function sendRaw(rawdata, crc, power)
 	if result then
 		--unpack the first 4 parts of the result as longs, and the last as an extremely long string to later be cut down based on arg1, the number of bytes returned
 		local count,cmd,arg1,arg2,arg3,data = bin.unpack('LLLLH512',result)
+
 		returned_bytes = string.sub(data, 1, arg1 * 2)
-		print(("<recvd>: %s"):format(returned_bytes)) -- need to multiply by 2 because the hex digits are actually two bytes when they are strings
-		return returned_bytes
+		if #returned_bytes > 0 then
+			print(("<recvd>: %s"):format(returned_bytes)) -- need to multiply by 2 because the hex digits are actually two bytes when they are strings
+			return returned_bytes
+		else
+			return nil
+		end
 	else
-		err = "Error sending the card raw data."
-		oops(err)
+		oops("Error sending the card raw data.")
+		return nil
 	end
 end
 
-function writePerso()
+-- Sends an instruction to do nothing, only disconnect
+local function disconnect()
+	local command = Command:new{cmd = cmds.CMD_READER_ISO_14443a, arg1 = 0,	}
+	-- We can ignore the response here, no ACK is returned for this command
+	-- Check /armsrc/iso14443a.c, ReaderIso14443a() for details
+	return lib14a.sendToDevice(command,true) 
+end	
+
+
+local function writePerso()
 	-- Used to write any data, including the keys (Key A and Key B), for all the sectors.
 	-- writePerso() command parameters:
 	--		1 byte  - 0xA8 - Command Code
@@ -130,7 +144,7 @@ function writePerso()
 	print("WritePerso finished! Card is ready to move into new security level.")
 end
 
-function writeBlock(blocknum, data)
+local function writeBlock(blocknum, data)
 	-- Method writes 16 bytes of the string sent (data) to the specified block number
 	-- The block numbers sent to the card need to be in little endian format (i.e. block 0x0001 is sent as 0x1000)
 	blocknum_little_endian = string.sub(blocknum, 3, 4) .. string.sub(blocknum, 1, 2)
@@ -141,19 +155,19 @@ function writeBlock(blocknum, data)
 	end
 end
 
-function authenticateAES()
+local function authenticateAES()
 	-- Used to try to authenticate with the AES keys we programmed into the card, to ensure the authentication works correctly.
 	commandString = AUTH_FIRST
 	commandString = commandString .. ""
 end
 
-function getVersion()
+local function getVersion()
 	sendRaw(GETVERS_INIT, true, true)
 	sendRaw(GETVERS_CONT, true, true)
 	sendRaw(GETVERS_CONT, true, true)
 end
 
-function commitPerso(SL)
+local function commitPerso(SL)
 	--pass SL as "01" to move to SL1 or "03" to move to SL3.
 	commandString = COMMITPERSO .. SL
 	response = sendRaw(commandString, true, true) --0x90 is returned upon success
@@ -162,7 +176,7 @@ function commitPerso(SL)
 	end
 end
 
-function calculateMAC(MAC_input)
+local function calculateMAC(MAC_input)
 	-- Pad the input if it is not a multiple of 16 bytes (32 nibbles). 
 	if(string.len(MAC_input) % 32 ~= 0) then
 		MAC_input = MAC_input .. "80"
@@ -185,12 +199,14 @@ function calculateMAC(MAC_input)
 	return final_output
 end
 
-function proximityCheck()
+local function proximityCheck()
 	--PreparePC--
 	commandString = PREPAREPC
 	response = sendRaw(commandString, true, true)
+	if not response then return oops("not a Mifare plus card") end
+	
 	OPT = string.sub(response, 5, 6)
-	if(tonumber(OPT) == 1) then
+	if tonumber(OPT) == 1 then
 		pps_present = true
 	else
 		pps_present = false
@@ -199,7 +215,7 @@ function proximityCheck()
 	if(pps_present == true) then
 		pps = string.sub(response, 11, 12)
 	else
-		pps = nil
+		pps = ''
 	end
 	print("OPT = " .. OPT .. " pubRespTime = " .. pubRespTime .. " pps = " .. pps)
 
@@ -223,7 +239,7 @@ function proximityCheck()
 
 	--VerifyPC--
 	MAC_input = "FD" .. OPT .. pubRespTime
-	if(pps_present == true) then
+	if pps_present then
 		MAC_input = MAC_input .. pps
 	end
 	rnum_concat = ""
@@ -240,7 +256,9 @@ function proximityCheck()
 	print("8-byte PCD MAC_tag (placeholder - currently incorrect) = " .. MAC_tag)
 	commandString = VERIFYPC .. MAC_tag
 	response = sendRaw(commandString, true, true)
-	print(response)
+	print(#response, response)
+	if #response < 20 then return oops("Wrong response length (expected 20, got "..#response..") exiting") end
+	
 	PICC_MAC = string.sub(response, 5, 20)
 	print("8-byte MAC returned by PICC = " .. PICC_MAC)
 	MAC_input = "90" .. string.sub(MAC_input, 3)
@@ -253,24 +271,20 @@ end
 ---
 -- The main entry point
 function main(args)
+
 	-- Initialize the card using the already-present read14a library
-	info,err = lib14a.read14443a(true, false)
-	--Perform PPS (Protocol and Parameter Selection) check to finish the ISO 14443-4 protocol.
-	response = sendRaw("e050", true, true)
-	if(response == nil) then
-		err = "No response from RATS"
-	end
-	response = sendRaw("D01100", true, true)
-	if(response == nil) then
-		err = "No response from PPS check"
-	end
-	if err then
-		oops(err)
-	else
-		print(("Connected to card with a UID of %s."):format(info.uid))
-	end
+	-- Perform PPS (Protocol and Parameter Selection) check to finish the ISO 14443-4 protocol.
+	info,err = lib14a.read(true, false)
+	if not info then oops(err); disconnect(); return; end
+	
+    -- 
+	response = sendRaw("D01100", true, true)	
+	if not response then oops("No response from PPS check"); disconnect(); return;  end
 
-
+	print("Connected to")
+	print(" Type : "..info.name)
+	print("  UID : "..info.uid)
+	
 	-- Now, the card is initialized and we can do more interesting things.
 
 	--writePerso()
@@ -292,7 +306,8 @@ function main(args)
 
 	-- Power off the Proxmark
 	sendRaw(POWEROFF, false, false)
-
+	
+	disconnect()
 end
 
 main(args) -- Call the main function
