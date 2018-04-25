@@ -80,8 +80,14 @@ void PrintAndLogEx(logLevel_t level, char *fmt, ...) {
 	vsnprintf(buffer, sizeof(buffer), fmt, args);
 	va_end(args);
 
+	// no prefixes for normal
+	if ( level == NORMAL ) {
+		PrintAndLog(buffer);
+		return;
+	}
+	
 	if (strchr(buffer, '\n')) {
-		
+			
 		token = strtok(buffer, "\n");
 		
 		while (token != NULL) {
@@ -94,9 +100,10 @@ void PrintAndLogEx(logLevel_t level, char *fmt, ...) {
 			token = strtok(NULL, "\n");
 		}
 		PrintAndLog(buffer2);
+	} else {
+		snprintf(buffer2, sizeof(buffer2), "%s%s", prefix, buffer);
+		PrintAndLog(buffer2);
 	}
-	else
-		PrintAndLog(buffer);
 }
 
 void PrintAndLog(char *fmt, ...) {
