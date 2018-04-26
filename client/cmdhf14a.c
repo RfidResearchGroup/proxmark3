@@ -513,7 +513,7 @@ int CmdHF14AInfo(const char *Cmd) {
 		if ( res == 1 )
 			PrintAndLogEx(SUCCESS, "Prng detection: WEAK");
 		else if (res == 0 )
-			PrintAndLogEx(SUCCESS, "Prng detection: WEAK");
+			PrintAndLogEx(SUCCESS, "Prng detection: HARD");
 		else
 			PrintAndLogEx(FAILED, "prng detection: failed");
 		
