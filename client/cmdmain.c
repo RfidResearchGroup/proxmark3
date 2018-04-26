@@ -97,8 +97,7 @@ void clearCommandBuffer() {
 void storeCommand(UsbCommand *command) {
 	
 	pthread_mutex_lock(&cmdBufferMutex);
-    if( ( cmd_head+1) % CMD_BUFFER_SIZE == cmd_tail)
-    {
+    if ( ( cmd_head+1) % CMD_BUFFER_SIZE == cmd_tail) {
         //If these two are equal, we're about to overwrite in the
         // circular buffer.
         PrintAndLogEx(FAILED, "WARNING: Command buffer about to overwrite command! This needs to be fixed!");
@@ -107,7 +106,8 @@ void storeCommand(UsbCommand *command) {
     UsbCommand* destination = &cmdBuffer[cmd_head];
     memcpy(destination, command, sizeof(UsbCommand));
 
-    cmd_head = (cmd_head +1) % CMD_BUFFER_SIZE; //increment head and wrap
+	 //increment head and wrap
+    cmd_head = (cmd_head +1) % CMD_BUFFER_SIZE;	
 	pthread_mutex_unlock(&cmdBufferMutex);
 }
 /**
@@ -193,26 +193,33 @@ int CommandReceived(char *Cmd) {
 // Entry point into our code: called whenever we received a packet over USB
 // that we weren't necessarily expecting, for example a debug print.
 //-----------------------------------------------------------------------------
-void UsbCommandReceived(UsbCommand *c) {
+void UsbCommandReceived(UsbCommand* _ch) {
+
+	//UsbCommand *c = malloc(sizeof(UsbCommand));
+	//memset(cp, 0x00, sizeof(*cp));
+
+	pthread_mutex_lock(&cmdBufferMutex);
+	UsbCommand* c = _ch;
+	pthread_mutex_unlock(&cmdBufferMutex);	
+			
 	switch(c->cmd) {
 		// First check if we are handling a debug message
 		case CMD_DEBUG_PRINT_STRING: {
+
 			char s[USB_CMD_DATA_SIZE+1];
 			memset(s, 0x00, sizeof(s)); 
 			size_t len = MIN(c->arg[0],USB_CMD_DATA_SIZE);
 			memcpy(s, c->d.asBytes, len);
 			
-			// test
+			// print debug line on same row. escape seq \r
 			if ( c->arg[1] == CMD_MEASURE_ANTENNA_TUNING_HF) {
 				PrintAndLogEx(NORMAL, "\r#db# %s", s);
-				fflush(stdout);
-			}
-			else {
+				//fflush(stdout);
+			} else {
 				PrintAndLogEx(NORMAL, "#db# %s", s);
 			}
-			return;
-		} break;
-
+			break;
+		}
 		case CMD_DEBUG_PRINT_INTEGERS: {
 			PrintAndLogEx(NORMAL, "#db# %08x, %08x, %08x", c->arg[0], c->arg[1], c->arg[2]);
 			break;
@@ -220,6 +227,7 @@ void UsbCommandReceived(UsbCommand *c) {
 		case CMD_DOWNLOADED_FLASHMEM:
 		case CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K:
 		case CMD_DOWNLOADED_EML_BIGBUF: {
+
 			// sample_buf is a array pointer, located in data.c
 			// arg0 = offset in transfer. Startindex of this chunk
 			// arg1 = length bytes to transfer
