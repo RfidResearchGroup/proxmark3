@@ -15,7 +15,7 @@ $ENV{'LANG'} = "C";
 
 # if you are making your own fork,  change this line to reflect your fork-name
 my $fullgitinfo = 'iceman';
-my $ctime = '';
+my $ctime;
 # GIT status  0 = dirty,  1 = clean ,  2 = undecided
 my $clean = 2;
 # Do we have acces to git command? 
@@ -40,12 +40,11 @@ if ( defined($commandGIT) )  {
 	}
 } else {
 	$fullgitinfo =  $fullgitinfo.'/master/release (no_git)';
+	my @dl_time = localtime( (stat('../README.md'))[10] );
+	$dl_time[4] += 1;
+	$dl_time[5] += 1900;
+	$ctime = sprintf("%6\$04i-%5\$02i-%4\$02i %3\$02i:%2\$02i:%1\$02i", @dl_time);
 }
-
-my @dl_time = localtime( (stat('../README.md'))[10] );
-$dl_time[4] += 1;
-$dl_time[5] += 1900;
-$ctime = sprintf("%6\$04i-%5\$02i-%4\$02i %3\$02i:%2\$02i:%1\$02i", @dl_time);
 
 $fullgitinfo =~ s/(\s)//g;
 
