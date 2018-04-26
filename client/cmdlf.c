@@ -850,7 +850,7 @@ int CmdLFfind(const char *Cmd) {
 		lf_read(true, 30000);
 	
 	if (GraphTraceLen < minLength) {
-		PrintAndLogEx(NORMAL, "Data in Graphbuffer was too small.");
+		PrintAndLogEx(FAILED, "Data in Graphbuffer was too small.");
 		return 0;
 	}
 
@@ -865,70 +865,51 @@ int CmdLFfind(const char *Cmd) {
 		signal_t *sp = getSignalProperties();
 		if (sp->isnoise) {
 
-			PrintAndLogEx(NORMAL, "Signal looks just like noise. Looking for Hitag signal now.");	
+			PrintAndLogEx(INFO, "Signal looks just like noise. Looking for Hitag signal now.");	
 
 			// 26 === RHT2F_UID_ONLY
-			if (CmdLFHitagReader("26") == 0) { PrintAndLogEx(NORMAL, "\nValid Hitag Found!"); return 1;}
-			if (CmdCOTAGRead("") > 0) 	{ PrintAndLogEx(NORMAL, "\nValid COTAG ID Found!"); return 1;}
+			if (CmdLFHitagReader("26") == 0) { PrintAndLogEx(SUCCESS, "\nValid Hitag Found!"); return 1;}
+			if (CmdCOTAGRead("") > 0) 	{ PrintAndLogEx(SUCCESS, "\nValid COTAG ID Found!"); return 1;}
 		    return 0;
 		}
 	}
 	
-	if (EM4x50Read("", false))	{ PrintAndLogEx(NORMAL, "\nValid EM4x50 ID Found!"); return 1;}
-	if (CmdAWIDDemod(""))		{ PrintAndLogEx(NORMAL, "\nValid AWID ID Found!"); goto out;}
-	if (CmdEM410xDemod(""))		{ PrintAndLogEx(NORMAL, "\nValid EM410x ID Found!"); goto out;}
-	if (CmdFdxDemod(""))		{ PrintAndLogEx(NORMAL, "\nValid FDX-B ID Found!"); goto out;}	
-	if (CmdGuardDemod(""))		{ PrintAndLogEx(NORMAL, "\nValid Guardall G-Prox II ID Found!"); goto out; }
-	if (CmdHIDDemod(""))		{ PrintAndLogEx(NORMAL, "\nValid HID Prox ID Found!"); goto out;}
-	if (CmdPSKIdteck(""))		{ PrintAndLogEx(NORMAL, "\nValid Idteck ID Found!"); goto out;}
-	if (CmdIndalaDemod(""))		{ PrintAndLogEx(NORMAL, "\nValid Indala ID Found!");  goto out;}
-	if (CmdIOProxDemod(""))		{ PrintAndLogEx(NORMAL, "\nValid IO Prox ID Found!"); goto out;}
-	if (CmdJablotronDemod(""))	{ PrintAndLogEx(NORMAL, "\nValid Jablotron ID Found!"); goto out;}
-	if (CmdLFNedapDemod(""))	{ PrintAndLogEx(NORMAL, "\nValid NEDAP ID Found!"); goto out;}
-	if (CmdNexWatchDemod("")) 	{ PrintAndLogEx(NORMAL, "\nValid NexWatch ID Found!"); goto out;}
-	if (CmdNoralsyDemod(""))	{ PrintAndLogEx(NORMAL, "\nValid Noralsy ID Found!"); goto out;}
-	if (CmdPacDemod(""))		{ PrintAndLogEx(NORMAL, "\nValid PAC/Stanley ID Found!"); goto out;}	
-	if (CmdParadoxDemod(""))	{ PrintAndLogEx(NORMAL, "\nValid Paradox ID Found!"); goto out;}
-	if (CmdPrescoDemod(""))		{ PrintAndLogEx(NORMAL, "\nValid Presco ID Found!"); goto out;}				 
-	if (CmdPyramidDemod(""))	{ PrintAndLogEx(NORMAL, "\nValid Pyramid ID Found!"); goto out;}
-	if (CmdSecurakeyDemod(""))	{ PrintAndLogEx(NORMAL, "\nValid Securakey ID Found!"); goto out;}
-	if (CmdVikingDemod(""))		{ PrintAndLogEx(NORMAL, "\nValid Viking ID Found!"); goto out;}	
-	if (CmdVisa2kDemod(""))		{ PrintAndLogEx(NORMAL, "\nValid Visa2000 ID Found!"); goto out;}
+	if (EM4x50Read("", false))	{ PrintAndLogEx(SUCCESS, "\nValid EM4x50 ID Found!"); return 1;}
+	if (CmdAWIDDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid AWID ID Found!"); goto out;}
+	if (CmdEM410xDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid EM410x ID Found!"); goto out;}
+	if (CmdFdxDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid FDX-B ID Found!"); goto out;}	
+	if (CmdGuardDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid Guardall G-Prox II ID Found!"); goto out; }
+	if (CmdHIDDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid HID Prox ID Found!"); goto out;}
+	if (CmdPSKIdteck(""))		{ PrintAndLogEx(SUCCESS, "\nValid Idteck ID Found!"); goto out;}
+	if (CmdIndalaDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid Indala ID Found!");  goto out;}
+	if (CmdIOProxDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid IO Prox ID Found!"); goto out;}
+	if (CmdJablotronDemod(""))	{ PrintAndLogEx(SUCCESS, "\nValid Jablotron ID Found!"); goto out;}
+	if (CmdLFNedapDemod(""))	{ PrintAndLogEx(SUCCESS, "\nValid NEDAP ID Found!"); goto out;}
+	if (CmdNexWatchDemod("")) 	{ PrintAndLogEx(SUCCESS, "\nValid NexWatch ID Found!"); goto out;}
+	if (CmdNoralsyDemod(""))	{ PrintAndLogEx(SUCCESS, "\nValid Noralsy ID Found!"); goto out;}
+	if (CmdPacDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid PAC/Stanley ID Found!"); goto out;}	
+	if (CmdParadoxDemod(""))	{ PrintAndLogEx(SUCCESS, "\nValid Paradox ID Found!"); goto out;}
+	if (CmdPrescoDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid Presco ID Found!"); goto out;}				 
+	if (CmdPyramidDemod(""))	{ PrintAndLogEx(SUCCESS, "\nValid Pyramid ID Found!"); goto out;}
+	if (CmdSecurakeyDemod(""))	{ PrintAndLogEx(SUCCESS, "\nValid Securakey ID Found!"); goto out;}
+	if (CmdVikingDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid Viking ID Found!"); goto out;}	
+	if (CmdVisa2kDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid Visa2000 ID Found!"); goto out;}
 
-	//if (CmdFermaxDemod(""))		{ PrintAndLogEx(NORMAL, "\nValid Fermax ID Found!"); goto out;}
+	//if (CmdFermaxDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid Fermax ID Found!"); goto out;}
 	// TIdemod?  flexdemod?
 	
-	PrintAndLogEx(NORMAL, "\nNo Known Tags Found!\n");
+	PrintAndLogEx(FAILED, "\nNo Known Tags Found!\n");
 	
 	if (testRaw=='u' || testRaw=='U'){
 		//test unknown tag formats (raw mode)
-		PrintAndLogEx(NORMAL, "\nChecking for Unknown tags:\n");
+		PrintAndLogEx(INFO, "\nChecking for Unknown tags:\n");
 		ans = AutoCorrelate(GraphBuffer, GraphBuffer, GraphTraceLen, 4000, false, false);
 		if (ans > 0) {
 
-			PrintAndLogEx(NORMAL, "Possible Auto Correlation of %d repeating samples",ans);
+			PrintAndLogEx(INFO, "Possible Auto Correlation of %d repeating samples",ans);
 
-			if ( ans % 8 == 0)  {
-				int bytes = (ans / 8);
-				PrintAndLogEx(NORMAL, "Possible %d bytes", bytes);
-				int blocks = 0;
-				if ( bytes % 2 == 0) {
-					blocks = (bytes / 2);	
-					PrintAndLogEx(NORMAL, "Possible  2 blocks, width %d", blocks);
-				}
-				if ( bytes % 4 == 0) {
-					blocks = (bytes / 4);	
-					PrintAndLogEx(NORMAL, "Possible  4 blocks, width %d", blocks);
-				}
-				if ( bytes % 8 == 0) {
-					blocks = (bytes / 8);	
-					PrintAndLogEx(NORMAL, "Possible  8 blocks, width %d", blocks);
-				}
-				if ( bytes % 16 == 0) {
-					blocks = (bytes / 16);	
-					PrintAndLogEx(NORMAL, "Possible 16 blocks, width %d", blocks);
-				}
-			}
+			if ( ans % 8 == 0) 
+				PrintAndLogEx(INFO, "Possible %d bytes", (ans / 8));
 		}
 
 		 //fsk
@@ -939,7 +920,7 @@ int CmdLFfind(const char *Cmd) {
 		}
 		
 		bool st = true;
-		if ( ASKDemod_ext("0 0 0",true,false,1,&st) ) {
+		if ( ASKDemod_ext("0 0 0", true, false, 1, &st) ) {
 		  PrintAndLogEx(NORMAL, "\nUnknown ASK Modulated and Manchester encoded Tag Found!");
 		  PrintAndLogEx(NORMAL, "\nif it does not look right it could instead be ASK/Biphase - try 'data rawdemod ab'");
 		  goto out;
@@ -952,7 +933,7 @@ int CmdLFfind(const char *Cmd) {
 			goto out;
 		}
 		
-		PrintAndLogEx(NORMAL, "\nNo Data Found!\n");
+		PrintAndLogEx(FAILED, "\nNo Data Found!\n");
 	}
 out:
 	// identify chipset

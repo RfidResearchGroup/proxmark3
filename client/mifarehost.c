@@ -979,9 +979,9 @@ void detect_classic_magic(void) {
 		isGeneration = resp.arg[0] & 0xff;
 	
 	switch( isGeneration ){
-		case 1: PrintAndLogEx(NORMAL, "Answers to magic commands (GEN 1a): YES"); break;
-		case 2: PrintAndLogEx(NORMAL, "Answers to magic commands (GEN 1b): YES"); break;
-		//case 4: PrintAndLogEx(NORMAL, "Answers to magic commands (GEN 2): YES"); break;
-		default: PrintAndLogEx(NORMAL, "Answers to magic commands: NO"); break;
+		case 1: PrintAndLogEx(SUCCESS, "Answers to magic commands (GEN 1a): YES"); break;
+		case 2: PrintAndLogEx(SUCCESS, "Answers to magic commands (GEN 1b): YES"); break;
+		//case 4: PrintAndLogEx(SUCCESS, "Answers to magic commands (GEN 2): YES"); break;
+		default: PrintAndLogEx(INFO, "Answers to magic commands: NO"); break;
 	}		
 }
