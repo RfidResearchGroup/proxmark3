@@ -2500,7 +2500,9 @@ int CmdHF14AMfESave(const char *Cmd) {
 		}
 		for (j = 0; j < 16; j++)
 			fprintf(f, "%02X", buf[j]); 
-		fprintf(f,"\n");
+		
+		if (i != numBlocks -1)
+			fprintf(f, "\n");
 		printf("."); fflush(stdout);
 	}
 	PrintAndLogEx(NORMAL, "\n");
