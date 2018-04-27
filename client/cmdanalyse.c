@@ -507,10 +507,11 @@ int CmdAnalyseA(const char *Cmd){
 			clearCommandBuffer();
 			SendCommand(&c);
 			if ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
-				PrintAndLogEx(NORMAL, "timeout while waiting for reply.");
+				PrintAndLogEx(WARNING, "timeout while waiting for reply.");
 				return 1;
 			}
 			break;
+		// write flash mem
 		case 1:
 			c = (UsbCommand) {CMD_WRITE_FLASH_MEM, {startindex, len, 0}};
 			memcpy(c.d.asBytes, data, len);	
@@ -518,16 +519,49 @@ int CmdAnalyseA(const char *Cmd){
 			SendCommand(&c);
 			
 			if ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
-				PrintAndLogEx(NORMAL, "timeout while waiting for reply.");
+				PrintAndLogEx(WARNING, "timeout while waiting for reply.");
 				return 1;
 			}
 			uint8_t isok  = resp.arg[0] & 0xFF;
 			if (isok)
 				PrintAndLogEx(SUCCESS, "Flash write ok");
 			else 
-				PrintAndLogEx(FAILED, "Flash write ok");
+				PrintAndLogEx(FAILED, "Flash write fail");
 			
-			break;			
+			break;
+		// downloading mem to client
+		case 2: {
+			uint8_t got[0x3FFFF];
+			memset(got, 0, sizeof(got));
+			PrintAndLogEx(NORMAL, "downloading %u bytes from flashmem", sizeof(got));
+			GetFromFlashMen(got, sizeof(got), 0);
+			WaitForResponse(CMD_ACK, NULL);
+			
+			print_hex(got, 8);
+			
+			for(uint32_t i=0; i< sizeof(got); i++) {
+				if ( got[i] < 0xFF) {
+					printf("I %u (0x%x) | %x \n", i, i, got[i] );
+				}
+			}
+			break;
+		}
+		// wipe
+		case 3: {
+			c = (UsbCommand) {CMD_UPLOAD_FLASH_MEM, {0, 0, 0}};
+			clearCommandBuffer();
+			SendCommand(&c);			
+			if ( !WaitForResponseTimeout(CMD_ACK, &resp, 8000) ) {
+				PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+				return 1;
+			}
+			uint8_t isok  = resp.arg[0] & 0xFF;
+			if (isok)
+				PrintAndLogEx(SUCCESS, "Flash WIPE ok");
+			else 
+				PrintAndLogEx(FAILED, "Flash WIPE failed");
+			break;
+		}
 	}
 	
 	return 0;
