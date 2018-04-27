@@ -81,7 +81,7 @@ int CmdHFSearch(const char *Cmd){
 	}
 	*/
 	
-	PrintAndLogEx(NORMAL, "\nno known/supported 13.56 MHz tags found\n");
+	PrintAndLogEx(FAILED, "\nno known/supported 13.56 MHz tags found\n");
 	return 0;
 }
 

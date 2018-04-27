@@ -383,7 +383,7 @@ int CmdLFSnoop(const char *Cmd) {
 	UsbCommand c = {CMD_LF_SNOOP_RAW_ADC_SAMPLES,{0,0,0}};
 	clearCommandBuffer();	
 	SendCommand(&c);
-	WaitForResponse(CMD_ACK,NULL);
+	WaitForResponse(CMD_ACK, NULL);
 	getSamples(0, false);
 	return 0;
 }
@@ -898,7 +898,7 @@ int CmdLFfind(const char *Cmd) {
 	//if (CmdFermaxDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid Fermax ID Found!"); goto out;}
 	// TIdemod?  flexdemod?
 	
-	PrintAndLogEx(FAILED, "\nNo Known Tags Found!\n");
+	PrintAndLogEx(FAILED, "\nno known 125/134 KHz tags Found!\n");
 	
 	if (testRaw=='u' || testRaw=='U'){
 		//test unknown tag formats (raw mode)
