@@ -1067,7 +1067,11 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 	
 	// response ok - now get bigbuf content of the dump
 	GetFromBigBuf(tag_data+(blockno*8), blocksRead*8, startindex);
-	WaitForResponse(CMD_ACK, NULL);
+	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500) ) {
+		PrintAndLogEx(WARNING, "command execution time out");
+		return 0;
+	}
+	
 	size_t gotBytes = blocksRead*8 + blockno*8;
 
 	// try AA2
@@ -1109,7 +1113,10 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 			}
 			// get dumped data from bigbuf
 			GetFromBigBuf(tag_data + gotBytes, blocksRead * 8, startindex);
-			WaitForResponse(CMD_ACK, NULL);
+			if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500) ) {
+				PrintAndLogEx(WARNING, "command execution time out");
+				return 0;
+			}
 
 			gotBytes += blocksRead * 8;			
 		}
