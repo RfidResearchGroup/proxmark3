@@ -92,8 +92,7 @@ int CmdCOTAGRead(const char *Cmd) {
 		case 1: {
 			GetFromBigBuf(DemodBuffer, COTAG_BITS, 0);
 			DemodBufferLen = COTAG_BITS;
-			UsbCommand response;
-			if ( !WaitForResponseTimeout(CMD_ACK, &response, 1000) ) {
+			if ( !WaitForResponseTimeout(CMD_ACK, NULL, 1000) ) {
 				PrintAndLogEx(WARNING, "timeout while waiting for reply.");
 				return -1;
 			}
