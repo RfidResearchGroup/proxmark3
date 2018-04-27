@@ -236,6 +236,11 @@ void UsbCommandReceived(UsbCommand* _ch) {
 			uint32_t len = MIN(c->arg[1], sample_buf_size);
 			//uint32_t tracelen = c->arg[2];
 			
+			// extended bounds check.
+			if ( offset + len > sample_buf_size ) {
+				PrintAndLogEx(FAILED, "ERROR: Out of bounds when downloading from device,  offset %u | len %u | total len %u > sample_buf_size %u", offset, len,  offset+len,  sample_buf_size);
+				break;
+			}
 			//printf("SAMPLE_BUF_SIZE  %u |   adjusted len %u | offset %u\n", sample_buf_size, len, offset);
 			
 			memcpy( sample_buf + offset, c->d.asBytes, len);
