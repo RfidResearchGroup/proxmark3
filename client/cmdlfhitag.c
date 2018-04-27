@@ -40,7 +40,12 @@ int CmdLFHitagList(const char *Cmd) {
 	// Query for the actual size of the trace
 	UsbCommand response;
 	GetFromBigBuf(got, USB_CMD_DATA_SIZE, 0);
-	WaitForResponse(CMD_ACK, &response);
+	if ( !WaitForResponseTimeout(CMD_ACK, &response, 2500) ) {
+		PrintAndLogEx(WARNING, "command execution time out");
+		free(got);
+		return 2;
+	}
+	
 	uint16_t traceLen = response.arg[2];
 	if (traceLen > USB_CMD_DATA_SIZE) {
 		uint8_t *p = realloc(got, traceLen);
@@ -51,7 +56,11 @@ int CmdLFHitagList(const char *Cmd) {
 		}
 		got = p;
 		GetFromBigBuf(got, traceLen, 0);
-		WaitForResponse(CMD_ACK,NULL);
+		if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500) ) {
+			PrintAndLogEx(WARNING, "command execution time out");
+			free(got);
+			return 2;
+		}
 	}
 	
 	PrintAndLogEx(NORMAL, "recorded activity (TraceLen = %d bytes):");
