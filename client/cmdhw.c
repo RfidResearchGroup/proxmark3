@@ -276,6 +276,7 @@ int CmdVersion(const char *Cmd) {
 int CmdStatus(const char *Cmd) {
 	uint8_t speed_test_buffer[USB_CMD_DATA_SIZE];
 	sample_buf = speed_test_buffer;
+	sample_buf_size = USB_CMD_DATA_SIZE;
 	clearCommandBuffer();
 	UsbCommand c = {CMD_STATUS};
 	SendCommand(&c);

@@ -118,7 +118,7 @@ void storeCommand(UsbCommand *command) {
 int getCommand(UsbCommand* response) {
 	pthread_mutex_lock(&cmdBufferMutex);
     //If head == tail, there's nothing to read, or if we just got initialized
-    if(cmd_head == cmd_tail)  {
+    if (cmd_head == cmd_tail)  {
 		pthread_mutex_unlock(&cmdBufferMutex);
 		return 0;
 	}
@@ -235,6 +235,10 @@ void UsbCommandReceived(UsbCommand* _ch) {
 			uint32_t offset = c->arg[0];
 			uint32_t len = c->arg[1];
 			//uint32_t tracelen = c->arg[2];
+			
+			// extra bounds check.
+			len = MIN(sample_buf_size, len);
+			
 			memcpy( sample_buf + offset, c->d.asBytes, len);
 			//PrintAndLogEx(NORMAL, "ICE:: Download from device. chunk %" PRIu32 " | size %" PRIu32 " | tracelen:%" PRIu32 " \n", offset, len, c->arg[2]);			
 			break;
