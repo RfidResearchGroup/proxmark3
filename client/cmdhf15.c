@@ -220,7 +220,7 @@ int getUID(uint8_t *buf) {
 	} // retry
 	
 	if ( retry >= 3 )
-		PrintAndLogEx(FAILED, "timeout while waiting for reply.");
+		PrintAndLogEx(WARNING, "timeout while waiting for reply.");
 	
 	return 0;
 }
@@ -956,7 +956,7 @@ int CmdHF15Raw(const char *Cmd) {
 			PrintAndLogEx(NORMAL, "received %i octets", len);
 			PrintAndLogEx(NORMAL, "%s", sprint_hex(resp.d.asBytes, len) );
 		} else {
-			PrintAndLogEx(FAILED, "timeout while waiting for reply.");
+			PrintAndLogEx(WARNING, "timeout while waiting for reply.");
 		}		
 	}
 	return 0;

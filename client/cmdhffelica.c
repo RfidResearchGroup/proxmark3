@@ -377,7 +377,7 @@ int CmdHFFelicaDumpLite(const char *Cmd) {
 		}
 	}
 	if (resp.arg[0] == 0) {
-		PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(WARNING, "Button pressed. Aborted.");
+		PrintAndLogEx(WARNING, "\nButton pressed. Aborted.");
 		return 1;
 	}
 	

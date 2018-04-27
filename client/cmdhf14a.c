@@ -1002,7 +1002,7 @@ static int waitCmd(uint8_t iSelect) {
 		
 		PrintAndLogEx(NORMAL, "%s", sprint_hex(resp.d.asBytes, len) );
     } else {
-        PrintAndLogEx(NORMAL, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
 		return 3;
     }
 	return 0;

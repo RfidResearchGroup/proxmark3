@@ -87,17 +87,25 @@ void PrintAndLogEx(logLevel_t level, char *fmt, ...) {
 	}
 	
 	if (strchr(buffer, '\n')) {
+
+		const char delim[2] = "\n";
 			
-		token = strtok(buffer, "\n");
+		// line starts with newline
+		if (buffer[0] == '\n') 
+			PrintAndLog("");
+		
+		token = strtok(buffer, delim);
 		
 		while (token != NULL) {
+			
 			size = strlen(buffer2);
+		
 			if (strlen(token))
 				snprintf(buffer2+size, sizeof(buffer2)-size, "%s%s\n", prefix, token);
 			else
 				snprintf(buffer2+size, sizeof(buffer2)-size, "\n");
 			
-			token = strtok(NULL, "\n");
+			token = strtok(NULL, delim);
 		}
 		PrintAndLog(buffer2);
 	} else {

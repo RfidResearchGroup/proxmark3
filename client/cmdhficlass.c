@@ -386,11 +386,11 @@ int CmdHFiClassSim(const char *Cmd) {
 				tries++;
 				if (ukbhit()) {
 					int gc = getchar(); (void)gc;
-					PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(WARNING, "aborted via keyboard.");
+					PrintAndLogEx(WARNING, "\naborted via keyboard.");
 					return 0;
 				}
 				if ( tries > 20) {
-					PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+					PrintAndLogEx(WARNING, "\ntimeout while waiting for reply.");
 					return 0;
 				}
 			}
@@ -438,11 +438,11 @@ int CmdHFiClassSim(const char *Cmd) {
 				tries++;
 				if (ukbhit()) {
 					int gc = getchar(); (void)gc;
-					PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(WARNING, "aborted via keyboard.");
+					PrintAndLogEx(WARNING, "\naborted via keyboard.");
 					return 0;
 				}
 				if ( tries > 20) {
-					PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+					PrintAndLogEx(WARNING, "\ntimeout while waiting for reply.");
 					return 0;
 				}
 			}
@@ -924,11 +924,11 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 				if (keyNbr < ICLASS_KEYS_MAX) {
 					memcpy(CreditKEY, iClass_Key_Table[keyNbr], 8);
 				} else {
-					PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(WARNING, "ERROR: Credit KeyNbr is invalid\n");
+					PrintAndLogEx(WARNING, "\nERROR: Credit KeyNbr is invalid\n");
 					errors = true;
 				}
 			} else {
-				PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(WARNING, "ERROR: Credit Key is incorrect length\n");
+				PrintAndLogEx(WARNING, "\nERROR: Credit Key is incorrect length\n");
 				errors = true;
 			}
 			cmdp += 2;
@@ -958,11 +958,11 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 				if (keyNbr < ICLASS_KEYS_MAX) {
 					memcpy(KEY, iClass_Key_Table[keyNbr], 8);
 				} else {
-					PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(WARNING, "ERROR: Credit KeyNbr is invalid\n");
+					PrintAndLogEx(WARNING, "\nERROR: Credit KeyNbr is invalid\n");
 					errors = true;
 				}
 			} else {
-				PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(WARNING, "ERROR: Credit Key is incorrect length\n");
+				PrintAndLogEx(WARNING, "\nERROR: Credit Key is incorrect length\n");
 				errors = true;
 			}
 			cmdp += 2;
@@ -1219,11 +1219,11 @@ int CmdHFiClass_WriteBlock(const char *Cmd) {
 				if (keyNbr < ICLASS_KEYS_MAX) {
 					memcpy(KEY, iClass_Key_Table[keyNbr], 8);
 				} else {
-					PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(WARNING, "ERROR: Credit KeyNbr is invalid\n");
+					PrintAndLogEx(WARNING, "\nERROR: Credit KeyNbr is invalid\n");
 					errors = true;
 				}
 			} else {
-				PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(WARNING, "ERROR: Credit Key is incorrect length\n");
+				PrintAndLogEx(WARNING, "\nERROR: Credit Key is incorrect length\n");
 				errors = true;
 			}
 			cmdp += 2;
@@ -1308,11 +1308,11 @@ int CmdHFiClassCloneTag(const char *Cmd) {
 				if (keyNbr < ICLASS_KEYS_MAX) {
 					memcpy(KEY, iClass_Key_Table[keyNbr], 8);
 				} else {
-					PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(WARNING, "ERROR: Credit KeyNbr is invalid\n");
+					PrintAndLogEx(WARNING, "\nERROR: Credit KeyNbr is invalid\n");
 					errors = true;
 				}
 			} else {
-				PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(WARNING, "ERROR: Credit Key is incorrect length\n");
+				PrintAndLogEx(WARNING, "\nERROR: Credit Key is incorrect length\n");
 				errors = true;
 			}
 			cmdp += 2;
@@ -1493,11 +1493,11 @@ int CmdHFiClass_ReadBlock(const char *Cmd) {
 				if (keyNbr < ICLASS_KEYS_MAX) {
 					memcpy(KEY, iClass_Key_Table[keyNbr], 8);
 				} else {
-					PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(WARNING, "ERROR: Credit KeyNbr is invalid\n");
+					PrintAndLogEx(WARNING, "\nERROR: Credit KeyNbr is invalid\n");
 					errors = true;
 				}
 			} else {
-				PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(WARNING, "ERROR: Credit Key is incorrect length\n");
+				PrintAndLogEx(WARNING, "\nERROR: Credit Key is incorrect length\n");
 				errors = true;
 			}
 			cmdp += 2;
@@ -1709,11 +1709,11 @@ int CmdHFiClassCalcNewKey(const char *Cmd) {
 				if (keyNbr < ICLASS_KEYS_MAX) {
 					memcpy(NEWKEY, iClass_Key_Table[keyNbr], 8);
 				} else {
-					PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(WARNING, "ERROR: NewKey Nbr is invalid\n");
+					PrintAndLogEx(WARNING, "\nERROR: NewKey Nbr is invalid\n");
 					errors = true;
 				}
 			} else {
-				PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(WARNING, "ERROR: NewKey is incorrect length\n");
+				PrintAndLogEx(WARNING, "\nERROR: NewKey is incorrect length\n");
 				errors = true;
 			}
 			cmdp += 2;
@@ -1728,11 +1728,11 @@ int CmdHFiClassCalcNewKey(const char *Cmd) {
 				if (keyNbr < ICLASS_KEYS_MAX) {
 					memcpy(OLDKEY, iClass_Key_Table[keyNbr], 8);
 				} else {
-					PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(WARNING, "ERROR: Credit KeyNbr is invalid\n");
+					PrintAndLogEx(WARNING, "\nERROR: Credit KeyNbr is invalid\n");
 					errors = true;
 				}
 			} else {
-				PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(WARNING, "ERROR: Credit Key is incorrect length\n");
+				PrintAndLogEx(WARNING, "\nERROR: Credit Key is incorrect length\n");
 				errors = true;
 			}
 			cmdp += 2;
@@ -1861,7 +1861,7 @@ int CmdHFiClassManageKeys(const char *Cmd) {
 			if (dataLen == 16) { //ul-c or ev1/ntag key length
 				errors = param_gethex(tempStr, 0, KEY, dataLen);
 			} else {
-				PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(WARNING, "ERROR: Key is incorrect length\n");
+				PrintAndLogEx(WARNING, "\nERROR: Key is incorrect length\n");
 				errors = true;
 			}
 			cmdp += 2;
@@ -1979,7 +1979,7 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 		if (select_only(CSN, CCNR, false, false)) {
 			got_csn = true;
 		} else {
-			PrintAndLogEx(NORMAL, "[-] one more try\n");
+			PrintAndLogEx(WARNING, "one more try\n");
 		}
 	}
 	
@@ -2045,7 +2045,7 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 			timeout++;
 			printf("."); fflush(stdout);
 			if (timeout > 120) {
-				PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(WARNING, "no response from Proxmark. Aborting...");
+				PrintAndLogEx(WARNING, "\nno response from Proxmark. Aborting...");
 				goto out;
 			}
 		}
@@ -2087,7 +2087,7 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 out:	
 	t1 = msclock() - t1;
 
-	PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(SUCCESS, "Time in iclass checkkeys: %.0f seconds\n", (float)t1/1000.0);
+	PrintAndLogEx(SUCCESS, "\nTime in iclass checkkeys: %.0f seconds\n", (float)t1/1000.0);
 	
 	DropField();
 	free(pre);
@@ -2245,7 +2245,7 @@ int CmdHFiClassLookUp(const char *Cmd) {
 	// using find
 	item = (iclass_prekey_t*) bsearch(&lookup, prekey, keycnt, sizeof(iclass_prekey_t), cmp_uint32);	
 	if( item != NULL ) {
-		PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(SUCCESS, "[debit] found key %s", sprint_hex(item->key, 8));
+		PrintAndLogEx(SUCCESS, "\n[debit] found key %s", sprint_hex(item->key, 8));
 	}
 
 	t1 = msclock() - t1;

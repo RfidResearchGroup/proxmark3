@@ -208,7 +208,7 @@ void UsbCommandReceived(UsbCommand* _ch) {
 
 			char s[USB_CMD_DATA_SIZE+1];
 			memset(s, 0x00, sizeof(s)); 
-			size_t len = MIN(c->arg[0],USB_CMD_DATA_SIZE);
+			size_t len = MIN(c->arg[0], USB_CMD_DATA_SIZE);
 			memcpy(s, c->d.asBytes, len);
 			
 			// print debug line on same row. escape seq \r
@@ -233,11 +233,10 @@ void UsbCommandReceived(UsbCommand* _ch) {
 			// arg1 = length bytes to transfer
 			// arg2 = bigbuff tracelength (?)
 			uint32_t offset = c->arg[0];
-			uint32_t len = c->arg[1];
+			uint32_t len = MIN(c->arg[1], sample_buf_size);
 			//uint32_t tracelen = c->arg[2];
 			
-			// extra bounds check.
-			len = MIN(sample_buf_size, len);
+			printf("SAMPLE_BUF_SIZE  %u |   adjusted len %u \n", sample_buf_size, len);			
 			
 			memcpy( sample_buf + offset, c->d.asBytes, len);
 			//PrintAndLogEx(NORMAL, "ICE:: Download from device. chunk %" PRIu32 " | size %" PRIu32 " | tracelen:%" PRIu32 " \n", offset, len, c->arg[2]);			

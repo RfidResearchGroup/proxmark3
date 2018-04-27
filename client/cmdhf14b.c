@@ -553,7 +553,7 @@ bool HF14B_Other_Reader(){
 	// WaitForResponse(CMD_ACK,&resp);
 	
 	// if (datalen > 2 ) {
-		// PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(NORMAL, "14443-3b tag found:");
+		// PrintAndLogEx(NORMAL, "\n14443-3b tag found:");
 		// PrintAndLogEx(NORMAL, "unknown tag type answered to a 0x000b3f80 command ans:");
 		// //PrintAndLogEx(NORMAL, "%s", sprint_hex(data, datalen));
 		// rawclose();
@@ -568,7 +568,7 @@ bool HF14B_Other_Reader(){
 	// WaitForResponse(CMD_ACK, &resp);
 	
 	// if (datalen > 0) {
-		// PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(NORMAL, "14443-3b tag found:");
+		// PrintAndLogEx(NORMAL, "\n14443-3b tag found:");
 		// PrintAndLogEx(NORMAL, "Unknown tag type answered to a 0x0A command ans:");
 		// // PrintAndLogEx(NORMAL, "%s", sprint_hex(data, datalen));
 		// rawClose();
@@ -583,7 +583,7 @@ bool HF14B_Other_Reader(){
 	// WaitForResponse(CMD_ACK, &resp);
 
 	// if (datalen > 0) {
-		// PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(NORMAL, "14443-3b tag found:");
+		// PrintAndLogEx(NORMAL, "\n14443-3b tag found:");
 		// PrintAndLogEx(NORMAL, "Unknown tag type answered to a 0x0C command ans:");
 		// PrintAndLogEx(NORMAL, "%s", sprint_hex(data, datalen));
 		// rawClose();

@@ -162,7 +162,7 @@ int CmdScriptRun(const char *Cmd) {
     //luaL_dofile(lua_state, buf);
     // close the Lua state
     lua_close(lua_state);
-    PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(SUCCESS, "Finished\n");
+    PrintAndLogEx(SUCCESS, "\nFinished\n");
     return 0;
 }
 

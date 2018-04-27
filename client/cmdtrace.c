@@ -489,7 +489,7 @@ int CmdTraceList(const char *Cmd) {
 		UsbCommand response;
 		GetFromBigBuf(trace, USB_CMD_DATA_SIZE, 0);
 		if ( !WaitForResponseTimeout(CMD_ACK, &response, 4000) ) {
-			PrintAndLogEx(FAILED, "timeout while waiting for reply.");
+			PrintAndLogEx(WARNING, "timeout while waiting for reply.");
 			return 1;
 		}
 		

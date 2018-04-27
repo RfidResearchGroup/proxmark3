@@ -1416,7 +1416,7 @@ int getSamples(int n, bool silent) {
 
 	UsbCommand response;
 	if ( !WaitForResponseTimeout(CMD_ACK, &response, 10000) ) {
-        PrintAndLogEx(NORMAL, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
 		return 1;
     }
 	
@@ -1472,7 +1472,7 @@ int CmdTuneSamples(const char *Cmd) {
 #define HF_MARGINAL_V	5000
 #define ANTENNA_ERROR	1.03	// current algo has 3% error margin.
 	int timeout = 0;
-	PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(SUCCESS, "measuring antenna characteristics, please wait...");
+	PrintAndLogEx(INFO, "\nmeasuring antenna characteristics, please wait...");
 
 	UsbCommand c = {CMD_MEASURE_ANTENNA_TUNING, {0,0,0}};
 	clearCommandBuffer();
@@ -1482,7 +1482,7 @@ int CmdTuneSamples(const char *Cmd) {
 		timeout++;
 		printf("."); fflush(stdout);
 		if (timeout > 7) {
-			PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(WARNING, "no response from Proxmark. Aborting...");
+			PrintAndLogEx(WARNING, "\nno response from Proxmark. Aborting...");
 			return 1;
 		}
 	}

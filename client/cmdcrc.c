@@ -435,14 +435,14 @@ int CmdrevengSearch(const char *Cmd){
 		if (ans) {
 			// test for match
 			if (memcmp(result, inCRC, crcChars) == 0){
-				PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(SUCCESS, "found possible match\nmodel: %s | value: %s\n", Models[i], result);
+				PrintAndLogEx(SUCCESS, "\nfound possible match\nmodel: %s | value: %s\n", Models[i], result);
 				//optional - stop searching if found...
 				found = true;
 			} else {
 				if (crcChars > 2){
 					char *swapEndian = SwapEndianStr(result, crcChars, crcChars);
 					if (memcmp(swapEndian, inCRC, crcChars) == 0){
-						PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(SUCCESS, "found possible match\nmodel: %s | value endian swapped: %s\n", Models[i], swapEndian);
+						PrintAndLogEx(SUCCESS, "\nfound possible match\nmodel: %s | value endian swapped: %s\n", Models[i], swapEndian);
 						// optional - stop searching if found...
 						found = true;
 					}
@@ -454,14 +454,14 @@ int CmdrevengSearch(const char *Cmd){
 		if (ans) {
 			// test for match
 			if (memcmp(revResult, inCRC, crcChars) == 0){
-				PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(SUCCESS, "found possible match\nmodel reversed: %s | value: %s\n", Models[i], revResult);
+				PrintAndLogEx(SUCCESS, "\nfound possible match\nmodel reversed: %s | value: %s\n", Models[i], revResult);
 				// optional - stop searching if found...
 				found = true;
 			} else {
 				if (crcChars > 2){
 					char *swapEndian = SwapEndianStr(revResult, crcChars, crcChars);
 					if (memcmp(swapEndian, inCRC, crcChars) == 0){
-						PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(SUCCESS, "found possible match\nmodel reversed: %s | value endian swapped: %s\n", Models[i], swapEndian);
+						PrintAndLogEx(SUCCESS, "\nfound possible match\nmodel reversed: %s | value endian swapped: %s\n", Models[i], swapEndian);
 						// optional - stop searching if found...
 						found = true;
 					}

@@ -251,7 +251,7 @@ int CmdLFHitagReader(const char *Cmd) {
 	SendCommand(&c);
 	UsbCommand resp;	
 	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 4000) ) {
-		PrintAndLogEx(NORMAL, "timeout while waiting for reply.");
+		PrintAndLogEx(WARNING, "timeout while waiting for reply.");
 		return 1;
 	}
 
