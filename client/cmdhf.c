@@ -41,36 +41,35 @@ int CmdHFSearch(const char *Cmd){
 	char cmdp = param_getchar(Cmd, 0);	
 	if (cmdp == 'h' || cmdp == 'H') return usage_hf_search();
 	
-	PrintAndLogEx(NORMAL, "");
 	int ans = CmdHF14AInfo("s");
 	if (ans > 0) {
-		PrintAndLogEx(NORMAL, "\nValid ISO14443-A Tag Found\n");
+		PrintAndLogEx(SUCCESS, "\nValid ISO14443-A Tag Found\n");
 		return ans;
 	} 
 	ans = HF15Reader("", false);
 	if (ans) {
-		PrintAndLogEx(NORMAL, "\nValid ISO15693 Tag Found\n");
+		PrintAndLogEx(SUCCESS, "\nValid ISO15693 Tag Found\n");
 		return ans;
 	}
 	ans = HFLegicReader("", false);
 	if ( ans == 0) {
-		PrintAndLogEx(NORMAL, "\nValid LEGIC Tag Found\n");
+		PrintAndLogEx(SUCCESS, "\nValid LEGIC Tag Found\n");
 		return 1;
 	}
 	ans = CmdHFTopazReader("s");
 	if (ans == 0) {
-		PrintAndLogEx(NORMAL, "\nValid Topaz Tag Found\n");
+		PrintAndLogEx(SUCCESS, "\nValid Topaz Tag Found\n");
 		return 1;
 	}
 	// 14b and iclass is the longest test (put last)
 	ans = HF14BReader(false); //CmdHF14BReader("s");
 	if (ans) {
-		PrintAndLogEx(NORMAL, "\nValid ISO14443-B Tag Found\n");
+		PrintAndLogEx(SUCCESS, "\nValid ISO14443-B Tag Found\n");
 		return ans;
 	}
 	ans = HFiClassReader("", false, false);
 	if (ans) {
-		PrintAndLogEx(NORMAL, "\nValid iClass Tag (or PicoPass Tag) Found\n");
+		PrintAndLogEx(SUCCESS, "\nValid iClass Tag (or PicoPass Tag) Found\n");
 		return ans;
 	}
 

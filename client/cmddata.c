@@ -1335,7 +1335,7 @@ int CmdHexsamples(const char *Cmd)
 		return 0;
 	}
 
-	GetFromBigBuf(got,requested,offset);
+	GetFromBigBuf(got, requested, offset);
 	WaitForResponse(CMD_ACK,NULL);
 
 	i = 0;

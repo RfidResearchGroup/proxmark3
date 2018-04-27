@@ -213,8 +213,8 @@ void UsbCommandReceived(UsbCommand* _ch) {
 			
 			// print debug line on same row. escape seq \r
 			if ( c->arg[1] == CMD_MEASURE_ANTENNA_TUNING_HF) {
-				PrintAndLogEx(NORMAL, "\r#db# %s", s);
-				//fflush(stdout);
+				printf("\r#db# %s", s);
+				fflush(stdout);
 			} else {
 				PrintAndLogEx(NORMAL, "#db# %s", s);
 			}
@@ -236,7 +236,7 @@ void UsbCommandReceived(UsbCommand* _ch) {
 			uint32_t len = MIN(c->arg[1], sample_buf_size);
 			//uint32_t tracelen = c->arg[2];
 			
-			printf("SAMPLE_BUF_SIZE  %u |   adjusted len %u \n", sample_buf_size, len);			
+			//printf("SAMPLE_BUF_SIZE  %u |   adjusted len %u | offset %u\n", sample_buf_size, len, offset);
 			
 			memcpy( sample_buf + offset, c->d.asBytes, len);
 			//PrintAndLogEx(NORMAL, "ICE:: Download from device. chunk %" PRIu32 " | size %" PRIu32 " | tracelen:%" PRIu32 " \n", offset, len, c->arg[2]);			

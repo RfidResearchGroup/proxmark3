@@ -2254,7 +2254,7 @@ int CmdHF14AMfKeyBrute(const char *Cmd) {
 		PrintAndLogEx(FAILED, "key not found");
 	
 	t1 = msclock() - t1;
-	PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(SUCCESS, "time in keybrute: %.0f seconds\n", (float)t1/1000.0);
+	PrintAndLogEx(SUCCESS, "\ntime in keybrute: %.0f seconds\n", (float)t1/1000.0);
 	return 0;	
 }
 

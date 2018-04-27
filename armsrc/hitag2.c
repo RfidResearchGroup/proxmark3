@@ -1406,10 +1406,10 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 		// falling edge occured halfway the period. with respect to this falling edge,
 		// we need to wait (T_Wait2 + half_tag_period) when the last was a 'one'.
 		// All timer values are in terms of T0 units
-		while (AT91C_BASE_TC0->TC_CV < T0 * (t_wait+(HITAG_T_TAG_HALF_PERIOD*lastbit)));
+		while (AT91C_BASE_TC0->TC_CV < T0 * (t_wait + (HITAG_T_TAG_HALF_PERIOD * lastbit)));
 		
 		// Transmit the reader frame
-		hitag_reader_send_frame(tx,txlen);
+		hitag_reader_send_frame(tx, txlen);
 
 		// Enable and reset external trigger in timer for capturing future frames
 		AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;

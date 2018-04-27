@@ -128,7 +128,7 @@ void PrintAndLog(char *fmt, ...) {
 		logfile = fopen(logfilename, "a");
 		if (!logfile) {
 			fprintf(stderr, "Can't open logfile, logging disabled!\n");
-			logging=0;
+			logging = 0;
 		}
 	}
 
@@ -169,7 +169,7 @@ void PrintAndLog(char *fmt, ...) {
 	
 	if (logging && logfile) {
 		vfprintf(logfile, fmt, argptr2);
-		fprintf(logfile,"\n");
+		fprintf(logfile, "\n");
 		fflush(logfile);
 	}
 	va_end(argptr2);

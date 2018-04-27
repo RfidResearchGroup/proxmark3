@@ -503,7 +503,7 @@ int CmdHF14AInfo(const char *Cmd) {
 			}
 		}
 	} else {
-		PrintAndLogEx(NORMAL, "proprietary non iso14443-4 card found, RATS not supported");
+		PrintAndLogEx(INFO, "proprietary non iso14443-4 card found, RATS not supported");
 	}
 	
 	detect_classic_magic();

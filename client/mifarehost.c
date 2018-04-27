@@ -156,7 +156,7 @@ int mfCheckKeys_fast( uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk,
 		// s70 with 40*2 keys to check, 80*85 = 6800 auth.
 		// takes about 97s, still some margin before abort
 		if (timeout > 180) {
-			PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(WARNING, "no response from Proxmark. Aborting...");
+			PrintAndLogEx(WARNING, "\nno response from Proxmark. Aborting...");
 			return 2;
 		}
 	}
@@ -832,7 +832,7 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 }
 
 int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data, int len){
-	PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(SUCCESS, "encrypted data: [%s]", sprint_hex(data, len) );
+	PrintAndLogEx(SUCCESS, "\nencrypted data: [%s]", sprint_hex(data, len) );
 	struct Crypto1State *s;
 	ks2 = ar_enc ^ prng_successor(nt, 64);
 	ks3 = at_enc ^ prng_successor(nt, 96);
