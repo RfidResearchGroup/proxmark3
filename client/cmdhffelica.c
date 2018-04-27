@@ -391,6 +391,13 @@ int CmdHFFelicaDumpLite(const char *Cmd) {
 	// only download data if there is any.
 	if ( tracelen > 0 ) {		
 		GetFromBigBuf(trace, tracelen, 0);
+		
+		if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500) ) {
+			PrintAndLogEx(WARNING, "command execution time out");
+			free(trace);
+			return 0;
+		}
+		
 		PrintAndLogEx(SUCCESS, "Recorded Activity (trace len = %d bytes)", tracelen);
 		
 		print_hex_break(trace, tracelen, 32);
