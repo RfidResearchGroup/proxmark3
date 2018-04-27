@@ -1310,7 +1310,7 @@ bool AquireData( uint8_t page, uint8_t block, bool pwdmode, uint32_t password ){
 	//uint8_t got[12288];
 	uint8_t got[7679];
 	GetFromBigBuf(got, sizeof(got), 0);
-	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 8000) ) {
+	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 6000) ) {
 		PrintAndLogEx(WARNING, "command execution time out");
 		return false;
 	}
@@ -1442,8 +1442,11 @@ int CmdResetRead(const char *Cmd) {
 	}
 
 	uint8_t got[BIGBUF_SIZE-1];
-	GetFromBigBuf(got,sizeof(got),0);
-	WaitForResponse(CMD_ACK,NULL);
+	GetFromBigBuf(got, sizeof(got), 0);
+	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500) ) {
+		PrintAndLogEx(WARNING, "command execution time out");
+		return 0;
+	}
 	setGraphBuf(got, sizeof(got));
 	return 1;
 }
