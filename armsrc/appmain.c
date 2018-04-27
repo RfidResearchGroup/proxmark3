@@ -99,7 +99,7 @@ void print_result(char *name, uint8_t *buf, size_t len) {
 
 void DbpStringEx(char *str, uint32_t cmd) {
 	byte_t len = strlen(str);
-	cmd_send(CMD_DEBUG_PRINT_STRING,len, cmd,0,(byte_t*)str,len);
+	cmd_send(CMD_DEBUG_PRINT_STRING, len, cmd, 0, (byte_t*)str, len);
 }
 
 void DbpString(char *str) {
@@ -141,10 +141,10 @@ void Dbhexdump(int len, uint8_t *d, bool bAsci) {
     
 	while (len > 0) {
 
-		l = (len>8) ? 8 : len;
+		l = (len > 8) ? 8 : len;
 		
 		memcpy(ascii, d, l);
-		ascii[l]=0;
+		ascii[l] = 0;
 		
 		// filter safe ascii
 		for (i=0; i<l; i++) {
@@ -284,7 +284,7 @@ void MeasureAntennaTuningHf(void) {
 		} else {
 			volt = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
 		}
-		DbprintfEx(CMD_MEASURE_ANTENNA_TUNING_HF, "%u mV / %5.2f V", volt, volt/1000.0);
+		DbprintfEx(CMD_MEASURE_ANTENNA_TUNING_HF, "%u mV / %5u V", volt, (uint16_t)(volt/1000));
 	}
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	DbpString("\n[+] cancelled");
@@ -382,7 +382,7 @@ void SendStatus(void) {
 	Dbprintf("  ToSendBit...............%d", ToSendBit);
 	Dbprintf("  ToSend BUFFERSIZE.......%d", TOSEND_BUFFER_SIZE);
 	printStandAloneModes();
-	cmd_send(CMD_ACK,1,0,0,0,0);
+	cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
 }
 
 // Show some leds in a pattern to identify StandAlone mod is running
