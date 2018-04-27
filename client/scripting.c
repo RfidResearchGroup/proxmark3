@@ -79,8 +79,15 @@ static int l_GetFromBigBuf(lua_State *L){
         return 2; // two return values
 	}
 		
-	GetFromBigBuf(data, len, startindex);	
-	WaitForResponse(CMD_ACK, NULL);
+	GetFromBigBuf(data, len, startindex);
+	
+	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500) ) {
+		free(data);
+		lua_pushnil(L);
+        lua_pushstring(L,"command execution time out");		
+		return 2;
+	}
+	
 	//Push it as a string
 	lua_pushlstring(L,(const char *)data, len);
 	if (data) 
