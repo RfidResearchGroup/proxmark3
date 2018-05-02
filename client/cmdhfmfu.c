@@ -1781,8 +1781,11 @@ int CmdHF14AMfUDump(const char *Cmd){
 		PrintAndLogEx(FAILED, "Data exceeded Buffer size!");
 		bufferSize = sizeof(data);
 	}
-	GetFromBigBuf(data, bufferSize, startindex);
-	WaitForResponse(CMD_ACK, NULL);
+	
+	if ( !GetFromBigBuf(data, bufferSize, startindex, NULL, 2500, false) ) {
+		PrintAndLogEx(WARNING, "command execution time out");
+		return 1;
+	}
 
 	bool is_partial = (pages == bufferSize/4);
 	
