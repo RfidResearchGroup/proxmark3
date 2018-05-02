@@ -534,7 +534,7 @@ int CmdAnalyseA(const char *Cmd){
 			uint8_t got[0x3FFFF];
 			memset(got, 0, sizeof(got));
 			PrintAndLogEx(NORMAL, "downloading %u bytes from flashmem", sizeof(got));
-			GetFromFlashMen(got, sizeof(got), 0, NULL, -1, true);
+			GetFromDevice(FLASH_MEM, got, sizeof(got), 0, NULL, -1, true);
 			
 			print_hex(got, 8);
 			
@@ -543,6 +543,12 @@ int CmdAnalyseA(const char *Cmd){
 					printf("I %u (0x%x) | %x \n", i, i, got[i] );
 				}
 			}
+			
+			// binary
+			saveFile("flash_mem", "bin", got, sizeof(got));
+			
+			// eml 
+			saveFileEML("flash_mem", "eml", got, sizeof(got), 16);
 			break;
 		}
 		// wipe

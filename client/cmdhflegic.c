@@ -759,7 +759,7 @@ int legic_read_mem(uint32_t offset, uint32_t len, uint32_t iv, uint8_t *out, uin
 		PrintAndLogEx(WARNING, "Fail, only managed to read %u bytes", *outlen);
 	
 	// copy data from device
-	if ( !GetEMLFromBigBuf(out, *outlen, 0, NULL, 2500, false) ) {
+	if ( !GetFromDevice( BIG_BUF_EML, out, *outlen, 0, NULL, 2500, false) ) {
 		PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
 		return 4;
 	}
@@ -924,7 +924,7 @@ int CmdLegicDump(const char *Cmd){
 		PrintAndLogEx(WARNING, "Fail, only managed to read 0x%02X bytes of 0x%02X", readlen, dumplen);
 
 	// copy data from device
-	if (!GetEMLFromBigBuf(data, readlen, 0, NULL, 2500, false) ) {
+	if (!GetFromDevice( BIG_BUF_EML, data, readlen, 0, NULL, 2500, false) ) {
 		PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
 		free(data);
 		return 4;
@@ -1170,7 +1170,7 @@ int CmdLegicESave(const char *Cmd) {
 		
 	// download emulator memory
 	PrintAndLogEx(NORMAL, "Reading emulator memory...");	
-	if (!GetEMLFromBigBuf(data, numofbytes, 0, NULL, 2500, false)) {
+	if (!GetFromDevice( BIG_BUF_EML, data, numofbytes, 0, NULL, 2500, false)) {
 		PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
 		free(data);
 		return 4;

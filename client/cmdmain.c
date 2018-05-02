@@ -7,28 +7,7 @@
 //-----------------------------------------------------------------------------
 // Main command parser entry point
 //-----------------------------------------------------------------------------
-
-#include <pthread.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
 #include "cmdmain.h"
-#include "util_posix.h"
-#include "cmdparser.h"
-#include "proxmark3.h"
-#include "data.h"
-#include "usb_cmd.h"
-#include "ui.h"
-#include "cmdhf.h"
-#include "cmddata.h"
-#include "cmdhw.h"
-#include "cmdlf.h"
-#include "cmdtrace.h"
-#include "util.h"
-#include "cmdscript.h"
-#include "cmdcrc.h"
-#include "cmdanalyse.h"
 
 static int CmdHelp(const char *Cmd);
 static int CmdQuit(const char *Cmd);
@@ -236,6 +215,44 @@ void UsbCommandReceived(UsbCommand* _ch) {
 	}
 }
 
+bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning) {
+	
+	if (dest == NULL) return false;
+	if (bytes == 0) return true;
+
+	UsbCommand resp;
+	if (response == NULL)
+		response = &resp;
+
+	// clear 
+	clearCommandBuffer();
+			
+	switch (memtype) {
+		case BIG_BUF: {
+			UsbCommand c = {CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K, {start_index, bytes, 0}};
+			SendCommand(&c);
+			return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K);
+		}
+		case BIG_BUF_EML: {
+			UsbCommand c = {CMD_DOWNLOAD_EML_BIGBUF, {start_index, bytes, 0}};
+			SendCommand(&c);			
+			return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K);
+		}
+		case FLASH_MEM: {			
+			UsbCommand c = {CMD_DOWNLOAND_FLASH_MEM, {start_index, bytes, 0}};
+			SendCommand(&c);
+			return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_FLASHMEM);
+		}
+		case SIM_MEM: {
+			//UsbCommand c = {CMD_DOWNLOAND_SIM_MEM, {start_index, bytes, 0}};
+			//SendCommand(&c);
+			//return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_SIMMEM);
+			return false;
+		}
+	}
+	return false;
+}
+
 /**
 * Data transfer from Proxmark to client. This method times out after
 * ms_timeout milliseconds.
@@ -256,45 +273,10 @@ bool GetFromBigBuf(uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbComma
 	UsbCommand c = {CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K, {start_index, bytes, 0}};
 	clearCommandBuffer();	
 	SendCommand(&c);
-	
-	UsbCommand resp;
-	if (response == NULL)
-		response = &resp;
 
 	return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K);
 }
 
-bool GetEMLFromBigBuf(uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning) {
-
-	if (dest == NULL) return false;
-	if (bytes == 0) return true;
-
-	UsbCommand c = {CMD_DOWNLOAD_EML_BIGBUF, {start_index, bytes, 0}};
-	clearCommandBuffer();	
-	SendCommand(&c);
-	
-	UsbCommand resp;
-	if (response == NULL)
-		response = &resp;
-
-	return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_EML_BIGBUF);
-}
-
-bool GetFromFlashMen(uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning) {
-
-	if (dest == NULL) return false;
-	if (bytes == 0) return true;
-
-	UsbCommand c = {CMD_DOWNLOAND_FLASH_MEM, {start_index, bytes, 0}};
-	clearCommandBuffer();	
-	SendCommand(&c);
-	
-	UsbCommand resp;
-	if (response == NULL)
-		response = &resp;
-
-	return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_FLASHMEM);
-}
 
 bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd) {
 	
