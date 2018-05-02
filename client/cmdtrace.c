@@ -487,7 +487,7 @@ int CmdTraceList(const char *Cmd) {
 	if ( isOnline ) {
 		// Query for the size of the trace,  downloading USB_CMD_DATA_SIZE
 		UsbCommand response;
-		if ( !GetFromBigBuf(trace, USB_CMD_DATA_SIZE, 0, &response, 4000, true)) {
+		if ( !GetFromDevice(BIG_BUF, trace, USB_CMD_DATA_SIZE, 0, &response, 4000, true)) {
 			PrintAndLogEx(WARNING, "timeout while waiting for reply.");
 			return 1;
 		}
@@ -501,7 +501,7 @@ int CmdTraceList(const char *Cmd) {
 				return 2;
 			}
 			trace = p;
-			if ( !GetFromBigBuf(trace, traceLen, 0, NULL, 2500, false)) {
+			if ( !GetFromDevice(BIG_BUF, trace, traceLen, 0, NULL, 2500, false)) {
 				PrintAndLogEx(WARNING, "command execution time out");
 				free(trace);
 				return 3;

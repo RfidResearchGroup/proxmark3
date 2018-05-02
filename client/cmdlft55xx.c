@@ -1309,7 +1309,7 @@ bool AquireData( uint8_t page, uint8_t block, bool pwdmode, uint32_t password ){
 
 	//uint8_t got[12288];
 	uint8_t got[7679];
-	if ( !GetFromBigBuf(got, sizeof(got), 0, NULL, 6000, true)) {
+	if ( !GetFromDevice(BIG_BUF, got, sizeof(got), 0, NULL, 6000, true)) {
 		PrintAndLogEx(WARNING, "command execution time out");
 		return false;
 	}
@@ -1441,7 +1441,7 @@ int CmdResetRead(const char *Cmd) {
 	}
 
 	uint8_t got[BIGBUF_SIZE-1];
-	if ( !GetFromBigBuf(got, sizeof(got), 0, NULL, 2500, false)) {
+	if ( !GetFromDevice(BIG_BUF, got, sizeof(got), 0, NULL, 2500, false)) {
 		PrintAndLogEx(WARNING, "command execution time out");
 		return 0;
 	}

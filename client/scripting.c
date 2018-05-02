@@ -79,7 +79,7 @@ static int l_GetFromBigBuf(lua_State *L){
         return 2; // two return values
 	}
 		
-	if ( !GetFromBigBuf(data, len, startindex, NULL, 2500, false)) {
+	if ( !GetFromDevice(BIG_BUF, data, len, startindex, NULL, 2500, false)) {
 		free(data);
 		lua_pushnil(L);
         lua_pushstring(L,"command execution time out");		
