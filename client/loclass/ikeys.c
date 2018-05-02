@@ -489,17 +489,18 @@ bool des_getParityBitFromKey(uint8_t key)
 void des_checkParity(uint8_t* key) {
 	int i;
 	int fails = 0;
-	for(i = 0; i < 8; i++) {
+	for (i = 0; i < 8; i++) {
 		bool parity = des_getParityBitFromKey(key[i]);
 		if (parity != (key[i] & 0x1)) {
 			fails++;
 			PrintAndLogDevice(FAILED, "parity1 fail, byte %d [%02x] was %d, should be %d", i, key[i], (key[i] & 0x1), parity);
 		}
 	}
-	if(fails)
+	if (fails) {
 		PrintAndLogDevice(FAILED, "parity fails: %d", fails);
-	else
+	} else {
 		PrintAndLogDevice(SUCCESS, "Key syntax is with parity bits inside each byte");
+	}
 }
 
 Testcase testcases[] ={
