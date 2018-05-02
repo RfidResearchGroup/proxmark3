@@ -118,7 +118,6 @@ CMDSRCS =	crapto1/crapto1.c \
 			legic_prng.c \
 			iso15693tools.c \
 			prng.c \
-			data.c \
 			graph.c \
 			cmddata.c \
 			lfdemod.c \
