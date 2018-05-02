@@ -1782,7 +1782,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 		bufferSize = sizeof(data);
 	}
 	
-	if ( !GetFromBigBuf(data, bufferSize, startindex, NULL, 2500, false) ) {
+	if ( !GetFromDevice(BIG_BUF, data, bufferSize, startindex, NULL, 2500, false) ) {
 		PrintAndLogEx(WARNING, "command execution time out");
 		return 1;
 	}
