@@ -390,9 +390,8 @@ int CmdHFFelicaDumpLite(const char *Cmd) {
 
 	// only download data if there is any.
 	if ( tracelen > 0 ) {		
-		GetFromBigBuf(trace, tracelen, 0);
-		
-		if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500) ) {
+	
+		if ( !GetFromBigBuf(trace, tracelen, 0, NULL, 2500, false) ){
 			PrintAndLogEx(WARNING, "command execution time out");
 			free(trace);
 			return 0;

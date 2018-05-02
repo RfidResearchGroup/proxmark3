@@ -995,8 +995,7 @@ bool downloadSamplesEM(){
 	
 	// 8 bit preamble + 32 bit word response (max clock (128) * 40bits = 5120 samples)
 	uint8_t got[6000];
-	GetFromBigBuf(got, sizeof(got), 0);
-	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500) ) {
+	if ( !GetFromBigBuf(got, sizeof(got), 0, NULL, 2500, false)) {
 		PrintAndLogEx(WARNING, "command execution time out");
 		return false;
 	}

@@ -146,7 +146,6 @@ int CmdParadoxRead(const char *Cmd) {
 	return CmdParadoxDemod(Cmd);
 }
 
-
 int CmdParadoxSim(const char *Cmd) {
 
 	char cmdp = param_getchar(Cmd, 0);

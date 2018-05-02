@@ -14,11 +14,13 @@
 #include <stdbool.h>
 #include "util.h"
 
-#define FILE_PATH_SIZE 1000												
+//#define FILE_PATH_SIZE 1000												
 
+/*
 extern uint32_t sample_buf_size;
 extern uint8_t* sample_buf;
 extern void GetFromBigBuf(uint8_t *dest, uint32_t len, uint32_t start_index);
 extern bool GetEMLFromBigBuf(uint8_t *dest, uint32_t len, uint32_t start_index);
 extern void GetFromFlashMen(uint8_t *dest, uint32_t len, uint32_t start_index);
+*/
 #endif

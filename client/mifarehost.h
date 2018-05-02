@@ -20,7 +20,6 @@
 #include "common.h"
 #include "cmdmain.h"
 #include "ui.h"
-#include "data.h"
 #include "util.h"
 #include "crapto1/crapto1.h"
 #include "crc16.h"

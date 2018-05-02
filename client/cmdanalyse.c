@@ -534,8 +534,7 @@ int CmdAnalyseA(const char *Cmd){
 			uint8_t got[0x3FFFF];
 			memset(got, 0, sizeof(got));
 			PrintAndLogEx(NORMAL, "downloading %u bytes from flashmem", sizeof(got));
-			GetFromFlashMen(got, sizeof(got), 0);
-			WaitForResponse(CMD_ACK, NULL);
+			GetFromFlashMen(got, sizeof(got), 0, NULL, -1, true);
 			
 			print_hex(got, 8);
 			

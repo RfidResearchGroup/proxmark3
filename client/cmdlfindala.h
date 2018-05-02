@@ -19,7 +19,6 @@
 #include "lfdemod.h"    // parityTest, bitbytes_to_byte
 #include "util.h"       // weigandparity
 #include "protocols.h"  // for T55xx config register definitions
-#include "data.h"
 #include "cmdmain.h"
 #include "cmddata.h"
 #include "cmdlf.h"		// lf_read

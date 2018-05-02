@@ -23,6 +23,9 @@ extern bool WaitForResponse(uint32_t cmd, UsbCommand* response);
 extern void clearCommandBuffer();
 extern command_t* getTopLevelCommandTable();
 
+extern bool GetFromBigBuf(uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning);
+extern bool GetEMLFromBigBuf(uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning);
+extern bool GetFromFlashMen(uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning);
 //For storing command that are received from the device
 #define CMD_BUFFER_SIZE 50
 

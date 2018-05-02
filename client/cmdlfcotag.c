@@ -90,12 +90,12 @@ int CmdCOTAGRead(const char *Cmd) {
 			break;
 		}
 		case 1: {
-			GetFromBigBuf(DemodBuffer, COTAG_BITS, 0);
-			DemodBufferLen = COTAG_BITS;
-			if ( !WaitForResponseTimeout(CMD_ACK, NULL, 1000) ) {
+			
+			if ( !GetFromBigBuf(DemodBuffer, COTAG_BITS, 0, NULL, 1000, false)) {
 				PrintAndLogEx(WARNING, "timeout while waiting for reply.");
 				return -1;
 			}
+			DemodBufferLen = COTAG_BITS;
 			return CmdCOTAGDemod("");
 		}
 	}	

@@ -11,7 +11,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "data.h"
 #include "proxmark3.h"
 #include "ui.h"
 #include "cmdparser.h"
@@ -39,8 +38,7 @@ int CmdLFHitagList(const char *Cmd) {
 
 	// Query for the actual size of the trace
 	UsbCommand response;
-	GetFromBigBuf(got, USB_CMD_DATA_SIZE, 0);
-	if ( !WaitForResponseTimeout(CMD_ACK, &response, 2500) ) {
+	if ( !GetFromBigBuf(got, USB_CMD_DATA_SIZE, 0, &response, 2500, false) ) {
 		PrintAndLogEx(WARNING, "command execution time out");
 		free(got);
 		return 2;
@@ -55,8 +53,7 @@ int CmdLFHitagList(const char *Cmd) {
 			return 2;
 		}
 		got = p;
-		GetFromBigBuf(got, traceLen, 0);
-		if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500) ) {
+		if ( !GetFromBigBuf(got, traceLen, 0, NULL, 2500, false) ) {
 			PrintAndLogEx(WARNING, "command execution time out");
 			free(got);
 			return 2;

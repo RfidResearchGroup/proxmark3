@@ -805,8 +805,7 @@ int CmdBitsamples(const char *Cmd)
 	int cnt = 0;
 	uint8_t got[12288];
 
-	GetFromBigBuf(got, sizeof(got), 0);
-	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500) ) {
+	if (!GetFromBigBuf(got, sizeof(got), 0, NULL, 2500 , false)) {
 		PrintAndLogEx(WARNING, "command execution time out");
 		return false;
 	}
@@ -1338,8 +1337,7 @@ int CmdHexsamples(const char *Cmd)
 		return 0;
 	}
 
-	GetFromBigBuf(got, requested, offset);
-	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500) ) {
+	if ( !GetFromBigBuf(got, requested, offset, NULL, 2500, false)) {
 		PrintAndLogEx(WARNING, "command execution time out");
 		return false;
 	}
@@ -1416,10 +1414,9 @@ int getSamples(int n, bool silent) {
 		n = sizeof(got);
 
 	if (!silent) PrintAndLogEx(NORMAL, "Reading %d bytes from device memory\n", n);
-	GetFromBigBuf(got, n, 0);
 
 	UsbCommand response;
-	if ( !WaitForResponseTimeout(CMD_ACK, &response, 10000) ) {
+	if ( !GetFromBigBuf(got, n, 0, &response, 10000, true) ) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
 		return 1;
     }

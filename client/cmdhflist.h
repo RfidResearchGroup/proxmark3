@@ -16,7 +16,6 @@
 #include <stdio.h>
 #include <string.h>
 #include "util.h"
-#include "data.h"
 #include "ui.h"
 #include "cmdhf14a.h"		// ISO14443-A
 #include "cmdhf14b.h"		// ISO14443-B

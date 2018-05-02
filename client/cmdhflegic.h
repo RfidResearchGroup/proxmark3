@@ -14,7 +14,6 @@
 #include <stdio.h>
 #include <string.h>
 #include "proxmark3.h"
-#include "data.h"
 #include "ui.h"
 #include "cmdparser.h"
 #include "cmdmain.h"

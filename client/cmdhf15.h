@@ -17,7 +17,6 @@
 #include <stdint.h>
 
 #include "proxmark3.h"
-#include "data.h"
 #include "graph.h"
 #include "ui.h"
 #include "util.h"

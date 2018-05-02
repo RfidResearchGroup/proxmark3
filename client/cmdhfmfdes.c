@@ -18,7 +18,6 @@
 #include "../include/common.h"
 #include "../include/mifare.h"
 #include "iso14443crc.h"
-#include "data.h"
 #include "ui.h"
 #include "cmdparser.h"
 #include "util.h"

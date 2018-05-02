@@ -18,7 +18,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
-#include "data.h"
 #include "ui.h"			// PrintAndLog
 
 #ifdef ANDROID

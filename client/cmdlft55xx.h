@@ -23,7 +23,6 @@
 #include "cmddata.h"
 #include "cmdlf.h"
 #include "util.h"
-#include "data.h"
 #include "lfdemod.h"
 #include "cmdhf14a.h" //for getTagInfo
 

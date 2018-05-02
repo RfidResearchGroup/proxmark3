@@ -20,7 +20,6 @@
 #include <string.h>   // also included in util.h
 #include <inttypes.h>
 #include <limits.h>   // for CmdNorm INT_MIN && INT_MAX
-#include "data.h"     // also included in util.h
 #include "util.h"
 #include "cmdmain.h"
 #include "proxmark3.h"	// sendcommand
