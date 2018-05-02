@@ -8,6 +8,7 @@
 // mifare commands
 //-----------------------------------------------------------------------------
 #include "mifarehost.h"
+#include "cmdmain.h"
 
 int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 	uint32_t uid = 0;

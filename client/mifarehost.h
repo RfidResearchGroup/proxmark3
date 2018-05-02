@@ -18,9 +18,8 @@
 
 #include "proxmark3.h"	// time_t
 #include "common.h"
-#include "cmdmain.h"
-#include "ui.h"
-#include "util.h"
+#include "util.h"		// FILE_PATH_SIZE
+#include "ui.h"			// PrintAndLog...
 #include "crapto1/crapto1.h"
 #include "crc16.h"
 #include "protocols.h"

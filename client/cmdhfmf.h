@@ -22,13 +22,13 @@
 #include "cmdparser.h"
 #include "common.h"
 #include "util.h"
-#include "mifare.h" // nonces_t struct
-#include "mfkey.h"  // mfkey32_moebious
+#include "mifare.h" 		// nonces_t struct
+#include "mfkey.h"  		// mfkey32_moebious
 #include "cmdhfmfhard.h"
-#include "mifarehost.h"
-#include "util_posix.h" // msclock
+#include "mifarehost.h"		// icesector_t,  sector_t
+#include "util_posix.h"		// msclock
 #include "mifaredefault.h"  // mifare default key array
-#include "cmdhf14a.h" // dropfield
+#include "cmdhf14a.h" 		// dropfield
 
 extern int CmdHFMF(const char *Cmd);
 

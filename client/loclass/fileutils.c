@@ -34,15 +34,10 @@
  * 
  * 
  ****************************************************************************/
-#ifndef ON_DEVICE
-
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <sys/stat.h>
-#include <stdarg.h>
 #include "fileutils.h"
-#include "ui.h"
+
+ #ifndef ON_DEVICE
+
 /**
  * @brief checks if a file exists
  * @param filename
@@ -87,6 +82,7 @@ int saveFile(const char *preferredName, const char *suffix, const void* data, si
 	free(fileName);
 	return 0;
 }
+
 int saveFileEML(const char *preferredName, const char *suffix, uint8_t* data, size_t datalen, size_t blocksize) {
 
 	if ( preferredName == NULL ) return 1;
@@ -146,6 +142,7 @@ out:
  * write also to a logfile. When doing so, just delete this function.
  * @param fmt
  */
+ /*
 void PrintAndLogDevice(logLevel_t level, char *fmt, ...) {
 	char buffer[2048] = {0};
 	va_list args;
@@ -154,9 +151,9 @@ void PrintAndLogDevice(logLevel_t level, char *fmt, ...) {
 	va_end(args);
 	PrintAndLogEx(level, buffer);
 }
+*/
 #else //if we're on ARM
-void PrintAndLogDevice(logLevel_t level, char *fmt, ...) {
-	return;
-}
+
+//void PrintAndLogDevice(logLevel_t level, char *fmt, ...) { return; }
 
 #endif
