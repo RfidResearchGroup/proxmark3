@@ -21,6 +21,7 @@ bool showDemod = true;
 
 pthread_mutex_t print_lock = PTHREAD_MUTEX_INITIALIZER;
 static char *logfilename = "proxmark3.log";
+
 void PrintAndLogOptions(char *str[][2], size_t size, size_t space) {
 	char buff[2000] = "Options:\n";
 	char format[2000] = "";
