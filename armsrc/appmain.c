@@ -1097,7 +1097,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			break;
 #ifdef WITH_FLASH	
 		case CMD_READ_FLASH_MEM: {
-
+			/*
 			LED_B_ON();
 			uint16_t isok = 0;
 			size_t len = 0;
@@ -1123,6 +1123,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			}
 			cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
 			LED_B_OFF();
+			*/
 			break;
 		}
 		case CMD_WRITE_FLASH_MEM: {
@@ -1179,7 +1180,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 				LED_B_OFF();
 				break;
 			}
-			if ( page >= 0 && page < 3)
+			if ( page < 3)
 				isok = Flash_WipeMemoryPage(page);
 			
 			cmd_send(CMD_ACK, isok, 0, 0, 0, 0);
