@@ -160,6 +160,18 @@
 # define _YELLOW_(s) #s " "
 #endif
 
+#if defined(__linux__)	|| (__APPLE__)
+# define _MAGENTA_(s) "\x1b[35m" #s "\x1b[0m "
+#else
+# define _MAGENTA_(s) #s " "
+#endif
+
+#if defined(__linux__)	|| (__APPLE__)
+# define _CYAN_(s) "\x1b[36m" #s "\x1b[0m "
+#else
+# define _CYAN_(s) #s " "
+#endif
+
 #ifndef DropField
 #define DropField() { \
 	UsbCommand c = {CMD_READER_ISO_14443a, {0,0,0}}; clearCommandBuffer(); SendCommand(&c); \
