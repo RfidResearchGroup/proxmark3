@@ -1,4 +1,5 @@
 //-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Copyright (C) 2010 iZsh <izsh at fail0verflow.com>, Hagen Fritsch
 // Copyright (C) 2011 Gerhard de Koning Gans
 // Copyright (C) 2014 Midnitesnake & Andy Davies & Martin Holst Swende
@@ -656,7 +657,7 @@ int CmdHFiClassELoad(const char *Cmd) {
 	while (bytes_remaining > 0){
 		uint32_t bytes_in_packet = MIN(USB_CMD_DATA_SIZE, bytes_remaining);
 		UsbCommand c = {CMD_ICLASS_EML_MEMSET, {bytes_sent, bytes_in_packet, 0}};
-		memcpy(c.d.asBytes, dump, bytes_in_packet);
+		memcpy(c.d.asBytes, dump + bytes_sent, bytes_in_packet);
 		clearCommandBuffer();
 		SendCommand(&c);
 		bytes_remaining -= bytes_in_packet;
