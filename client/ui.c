@@ -72,7 +72,7 @@ void PrintAndLogEx(logLevel_t level, char *fmt, ...) {
 			strncpy(prefix,_GREEN_([+] ), sizeof(prefix)-1);
 			break;
 		case WARNING:
-			strncpy(prefix,_CYAN_([+] ), sizeof(prefix)-1);
+			strncpy(prefix,_CYAN_([!] ), sizeof(prefix)-1);
 			break;		
 		default:
 			strncpy(prefix, prefixes[level], sizeof(prefix)-1);
