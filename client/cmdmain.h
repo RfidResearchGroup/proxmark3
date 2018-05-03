@@ -33,6 +33,7 @@
 #include "cmdscript.h"
 #include "cmdcrc.h"
 #include "cmdanalyse.h"
+#include "cmdflashmem.h"	// rdv40 flashmem commands
 
 //For storing command that are received from the device
 #define CMD_BUFFER_SIZE 50
@@ -52,9 +53,5 @@ extern void clearCommandBuffer();
 extern command_t* getTopLevelCommandTable();
 
 extern bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning);
-
-bool GetFromBigBuf(uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning);
-//bool GetEMLFromBigBuf(uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning);
-//bool GetFromFlashMen(uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning);
 
 #endif

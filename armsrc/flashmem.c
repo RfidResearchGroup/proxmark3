@@ -240,8 +240,8 @@ uint16_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len) {
 		return 0;
 	
 	//	Max 256 bytes write
-	if (((address & 255) + len) > 256) {
-		Dbprintf("Flash_WriteData 256 fail");
+	if (((address & 0xFF) + len) > 256) {
+		Dbprintf("Flash_WriteData 256 fail [ 0x%02x ] [ %u ]", (address & 0xFF)+len, len );
 		return 0;
 	}
 	
@@ -279,6 +279,19 @@ uint16_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len) {
 	return len;	
 }
 
+bool Flash_WipeMemoryPage(uint8_t page) {
+	if (!FlashInit()) {
+		Dbprintf("Flash_WriteData init fail");
+		return false;
+	}
+	Flash_ReadStat1();
+	
+	// Each block is 64Kb. One block erase takes 1s ( 1000ms )
+	Flash_WriteEnable(); Flash_Erase64k(page); Flash_CheckBusy(1000);	
+
+	FlashStop();
+	return true;	
+}
 // Wipes flash memory completely, fills with 0xFF
 bool Flash_WipeMemory() {
 	if (!FlashInit()) {

@@ -122,6 +122,7 @@ uint8_t Flash_ReadStat2(void);
 uint16_t FlashSendByte(uint32_t data);
 
 void Flash_WriteEnable();
+bool Flash_WipeMemoryPage(uint8_t page);
 bool Flash_WipeMemory();
 bool Flash_Erase4k(uint8_t block, uint8_t sector);
 //bool Flash_Erase32k(uint32_t address);

@@ -1127,18 +1127,65 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 		}
 		case CMD_WRITE_FLASH_MEM: {
 			LED_B_ON();
+			uint8_t isok = 0;
+			uint16_t res = 0;
 			uint32_t startidx = c->arg[0];
 			uint16_t len = c->arg[1];
-			uint16_t res = Flash_WriteData(startidx, c->d.asBytes, len);			
-			uint8_t isok = (res == len) ? 1 : 0;			
+			
+			Dbprintf("FlashMem init idx | %u | len %u ", startidx, len );
+			
+			uint32_t tmp = startidx + len;
+			
+			// inside 256b page?
+			if ( (tmp & 0xFF) != 0) {				
+				
+					// is offset+len larger than a page?					
+					tmp =  (startidx & 0xFF ) + len;
+					if (tmp > 0xFF ) {
+					
+						// offset xxxx10,   
+						uint8_t first_len =  (~startidx & 0xFF)+1;
+						
+						// first mem page						
+						res = Flash_WriteData(startidx, c->d.asBytes, first_len);
+						Dbprintf("after 1. offset and larger A | %u | %u | %u == %u", startidx , len,  first_len, res);
+						
+						// second mem page (should be a mod 256)					
+						res = Flash_WriteData(startidx + first_len, c->d.asBytes + first_len, len - first_len);
+						Dbprintf("after 2. offset and larger  B | %u | %u | %u == %u", startidx + first_len, len, len-first_len, res);
+						
+						isok = (res == (len - first_len)) ? 1 : 0;
+						
+					} else {
+						res = Flash_WriteData(startidx, c->d.asBytes, len);
+						Dbprintf("offset and within | %u | %u | %u", startidx, len, res);
+						isok = (res == len) ? 1 : 0;
+					}					
+			} else {				
+				res = Flash_WriteData(startidx, c->d.asBytes, len);
+				Dbprintf("writing idx | %u | len %u ", startidx, len );
+				isok = (res == len) ? 1 : 0;
+			}
+
 			cmd_send(CMD_ACK, isok, 0, 0, 0, 0);
 			LED_B_OFF();
 			break;
 		}
-		case CMD_UPLOAD_FLASH_MEM:
+		case CMD_WIPE_FLASH_MEM:
 			LED_B_ON();
+			uint8_t page = c->arg[0];
+			uint8_t initalwipe = c->arg[1];
+			bool isok = false;
+			if ( initalwipe ) {
+				isok = Flash_WipeMemory();
+				cmd_send(CMD_ACK, isok, 0, 0, 0, 0);
+				LED_B_OFF();
+				break;
+			}
+			if ( page >= 0 && page < 3)
+				isok = Flash_WipeMemoryPage(page);
 			
-			cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
+			cmd_send(CMD_ACK, isok, 0, 0, 0, 0);
 			LED_B_OFF();
 			break;
 		case CMD_DOWNLOAND_FLASH_MEM: {

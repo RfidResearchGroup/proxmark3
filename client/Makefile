@@ -81,6 +81,9 @@ else
     QTGUIOBJS = $(OBJDIR)/guidummy.o
 endif
 
+# RDV40 flag enables flashmemory commands in client.  comment out if you don't have rdv40
+CFLAGS += -DWITH_FLASH 
+
 # Flags to generate temporary dependency files
 DEPFLAGS = -MT $@ -MMD -MP -MF $(OBJDIR)/$*.Td
 # make temporary to final dependeny files after successful compilation
@@ -180,6 +183,7 @@ CMDSRCS =	crapto1/crapto1.c \
 			cmdlfviking.c \
 			cmdlfvisa2000.c \
 			cmdtrace.c \
+			cmdflashmem.c \
 			cmdparser.c \
 			cmdmain.c \
 			pm3_binlib.c \

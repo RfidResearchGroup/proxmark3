@@ -70,7 +70,7 @@ typedef struct{
 // For Flash memory operations
 #define CMD_READ_FLASH_MEM												  0x0120
 #define CMD_WRITE_FLASH_MEM												  0x0121
-#define CMD_UPLOAD_FLASH_MEM											  0x0122
+#define CMD_WIPE_FLASH_MEM												  0x0122
 #define CMD_DOWNLOAND_FLASH_MEM											  0x0123
 #define CMD_DOWNLOADED_FLASHMEM											  0x0124
 

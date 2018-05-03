@@ -464,23 +464,10 @@ int CmdAnalyseA(const char *Cmd){
 	int hexlen = 0;
 	uint8_t cmdp = 0;
 	bool errors = false;
-	uint32_t startindex = 0, len = 0, cmd = 0;
 	uint8_t data[USB_CMD_DATA_SIZE] = {0x00};
 	
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch (tolower(param_getchar(Cmd, cmdp))) {
-		case 'l':
-			len = param_get32ex(Cmd, cmdp+1, 0, 10);
-			cmdp += 2;
-			break;
-		case 'i':
-			startindex = param_get32ex(Cmd, cmdp+1, 0, 10);
-			cmdp += 2;
-			break;
-		case 'c':
-			cmd = param_get8ex(Cmd, cmdp+1, 0, 10);
-			cmdp += 2;
-			break;
 		case 'd':
 			param_gethex_ex(Cmd, cmdp+1, data, &hexlen);
 			if ( hexlen != sizeof(data) ) {
@@ -498,78 +485,6 @@ int CmdAnalyseA(const char *Cmd){
 	}
 	//Validations
 	if (errors || cmdp == 0 ) return usage_analyse_checksum();
-	
-	UsbCommand c, resp; 
-	
-	switch ( cmd ) {
-		case 0:
-			c = (UsbCommand) {CMD_READ_FLASH_MEM, {startindex, len, 0}};
-			clearCommandBuffer();
-			SendCommand(&c);
-			if ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
-				PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-				return 1;
-			}
-			break;
-		// write flash mem
-		case 1:
-			c = (UsbCommand) {CMD_WRITE_FLASH_MEM, {startindex, len, 0}};
-			memcpy(c.d.asBytes, data, len);	
-			clearCommandBuffer();
-			SendCommand(&c);
-			
-			if ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
-				PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-				return 1;
-			}
-			uint8_t isok  = resp.arg[0] & 0xFF;
-			if (isok)
-				PrintAndLogEx(SUCCESS, "Flash write ok");
-			else 
-				PrintAndLogEx(FAILED, "Flash write fail");
-			
-			break;
-		// downloading mem to client
-		case 2: {
-			uint8_t got[0x3FFFF];
-			memset(got, 0, sizeof(got));
-			PrintAndLogEx(NORMAL, "downloading %u bytes from flashmem", sizeof(got));
-			GetFromDevice(FLASH_MEM, got, sizeof(got), 0, NULL, -1, true);
-			
-			print_hex(got, 8);
-			
-			for(uint32_t i=0; i< sizeof(got); i++) {
-				if ( got[i] < 0xFF) {
-					printf("I %u (0x%x) | %x \n", i, i, got[i] );
-				}
-			}
-			
-			// binary
-			saveFile("flash_mem", "bin", got, sizeof(got));
-			
-			// eml 
-			saveFileEML("flash_mem", "eml", got, sizeof(got), 16);
-			break;
-		}
-		// wipe
-		case 3: {
-			c = (UsbCommand) {CMD_UPLOAD_FLASH_MEM, {0, 0, 0}};
-			clearCommandBuffer();
-			SendCommand(&c);			
-			if ( !WaitForResponseTimeout(CMD_ACK, &resp, 8000) ) {
-				PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-				return 1;
-			}
-			uint8_t isok  = resp.arg[0] & 0xFF;
-			if (isok)
-				PrintAndLogEx(SUCCESS, "Flash WIPE ok");
-			else 
-				PrintAndLogEx(FAILED, "Flash WIPE failed");
-			break;
-		}
-	}
-	
-	return 0;
 	
 	PrintAndLogEx(NORMAL, "-- " _BLUE_(its my message) "\n");
 	PrintAndLogEx(NORMAL, "-- " _RED_(its my message) "\n");

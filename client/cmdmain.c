@@ -43,6 +43,9 @@ static command_t CommandTable[] = {
 	{"reveng",	CmdRev, 	1, "Crc calculations from the software reveng 1.44"},
 	{"script",	CmdScript,	1, "{ Scripting commands }"},
 	{"trace",	CmdTrace,	1, "{ Trace manipulation... }"},
+#ifdef WITH_FLASH		
+	{"mem",		CmdFlashMem,1, "{ RDV40, Flash Memory manipulation... }"},
+#endif	
 	{"quit",	CmdQuit,	1, ""},
 	{"exit",	CmdQuit,	1, "Exit program"},
 	{NULL, NULL, 0, NULL}
@@ -215,6 +218,19 @@ void UsbCommandReceived(UsbCommand* _ch) {
 	}
 }
 
+/**
+* Data transfer from Proxmark to client. This method times out after
+* ms_timeout milliseconds.
+* @brief GetFromDevice
+* @param memtype Type of memory to download from proxmark
+* @param dest Destination address for transfer
+* @param bytes number of bytes to be transferred
+* @param start_index offset into Proxmark3 BigBuf[]
+* @param response struct to copy last command (CMD_ACK) into
+* @param ms_timeout timeout in milliseconds
+* @param show_warning display message after 2 seconds
+* @return true if command was returned, otherwise false
+*/
 bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning) {
 	
 	if (dest == NULL) return false;
@@ -252,31 +268,6 @@ bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint3
 	}
 	return false;
 }
-
-/**
-* Data transfer from Proxmark to client. This method times out after
-* ms_timeout milliseconds.
-* @brief GetFromBigBuf
-* @param dest Destination address for transfer
-* @param bytes number of bytes to be transferred
-* @param start_index offset into Proxmark3 BigBuf[]
-* @param response struct to copy last command (CMD_ACK) into
-* @param ms_timeout timeout in milliseconds
-* @param show_warning display message after 2 seconds
-* @return true if command was returned, otherwise false
-*/
-bool GetFromBigBuf(uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning) {
-
-	if (dest == NULL) return false;
-	if (bytes == 0) return true;
-
-	UsbCommand c = {CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K, {start_index, bytes, 0}};
-	clearCommandBuffer();	
-	SendCommand(&c);
-
-	return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K);
-}
-
 
 bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd) {
 	
@@ -328,4 +319,3 @@ bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *resp
 	}
 	return false;
 }
-
