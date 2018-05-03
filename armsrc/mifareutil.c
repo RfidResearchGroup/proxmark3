@@ -371,7 +371,7 @@ int mifare_ultra_readblock(uint8_t blockNo, uint8_t *blockData) {
 		switch ( res ) {
 			case 0:
 			case 1:
-				break;
+				return res;
 			default:
 				continue;
 		}
