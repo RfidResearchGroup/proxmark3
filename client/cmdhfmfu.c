@@ -1781,8 +1781,8 @@ int CmdHF14AMfUDump(const char *Cmd){
 		return 1;
 	}
 
-	bool is_partial = (pages == bufferSize/4);
-	
+	bool is_partial = (pages != bufferSize/4);
+		
 	pages = bufferSize/4;
 	
 	uint8_t	get_pack[] = {0,0};
