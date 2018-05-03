@@ -1131,9 +1131,6 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			uint16_t res = 0;
 			uint32_t startidx = c->arg[0];
 			uint16_t len = c->arg[1];
-			
-			Dbprintf("FlashMem init idx | %u | len %u ", startidx, len );
-			
 			uint8_t* data = c->d.asBytes;
 			
 			uint32_t tmp = startidx + len;
@@ -1141,32 +1138,29 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			// inside 256b page?
 			if ( (tmp & 0xFF) != 0) {				
 				
-					// is offset+len larger than a page?					
+					// is offset+len larger than a page
 					tmp =  (startidx & 0xFF ) + len;
 					if (tmp > 0xFF ) {
 					
+						// data spread over two pages.
+						
 						// offset xxxx10,   
 						uint8_t first_len =  (~startidx & 0xFF)+1;
 												
 						// first mem page						
 						res = Flash_WriteData(startidx, data, first_len);
-						Dbprintf("after 1. offset and larger A | %u | %u | %u == %u", startidx , len,  first_len, res);
 						
-						// second mem page (should be a mod 256)
+						// second mem page
 						res = Flash_WriteData(startidx + first_len, data + first_len, len - first_len);
-						
-						Dbprintf("after 2. offset and larger  B | %u | %u | %u == %u", startidx + first_len, len, len-first_len, res);
 						
 						isok = (res == (len - first_len)) ? 1 : 0;
 						
 					} else {
 						res = Flash_WriteData(startidx, data, len);
-						Dbprintf("offset and within | %u | %u | %u", startidx, len, res);
 						isok = (res == len) ? 1 : 0;
 					}					
 			} else {				
 				res = Flash_WriteData(startidx, data, len);
-				Dbprintf("writing idx | %u | len %u ", startidx, len );
 				isok = (res == len) ? 1 : 0;
 			}
 
