@@ -253,8 +253,8 @@ int CmdAnalyseCRC(const char *Cmd) {
 	if ( len & 1 ) return usage_analyse_crc();
 	
 	// add 1 for null terminator.
-	uint8_t *data = malloc(len+1);
-	if ( data == NULL ) return 1;
+	uint8_t *data = calloc(len+1,  sizeof(uint8_t));
+	if ( !data ) return 1;
 
 	if ( param_gethex(Cmd, 0, data, len)) {
 		free(data);

@@ -134,7 +134,7 @@ int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, bool hardn
 
 	// estimate the size of the compressed output
 	uint32_t outsize_max = deflateBound(&compressed_fpga_stream, compressed_fpga_stream.avail_in);
-	uint8_t *outbuf = malloc(outsize_max);
+	uint8_t *outbuf = calloc(outsize_max, sizeof(uint8_t));
 	compressed_fpga_stream.next_out = outbuf;
 	compressed_fpga_stream.avail_out = outsize_max;
 					

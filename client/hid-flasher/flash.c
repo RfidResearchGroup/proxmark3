@@ -113,7 +113,7 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
 					uint32_t new_length = this_end - prev_seg->start;
 					uint32_t this_offset = paddr - prev_seg->start;
 					uint32_t hole = this_offset - prev_seg->length;
-					uint8_t *new_data = malloc(new_length);
+					uint8_t *new_data = calloc(new_length, sizeof(uint8_t));
 					if (!new_data) {
 						fprintf(stderr, "Out of memory\n");
 						free(data);
