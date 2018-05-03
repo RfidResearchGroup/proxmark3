@@ -2951,7 +2951,7 @@ int CmdHF14AMfCSave(const char *Cmd) {
 		for (j = 0; j < 16; j++)
 			fprintf(feml, "%02x", buf[j]); 
 
-		if (i != numBlocks -1)		
+		if (i != numblocks -1)		
 			fprintf(feml,"\n");
 		
 		// bin
