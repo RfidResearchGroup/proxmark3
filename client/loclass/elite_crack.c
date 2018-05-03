@@ -542,7 +542,11 @@ int bruteforceFile(const char *filename, uint16_t keytable[]) {
 		return 1;
 	}
 
-	uint8_t *dump = malloc(fsize);
+	uint8_t *dump = calloc(fsize, sizeof(uint8_t));
+	if ( !dump ) {
+		PrintAndLogDevice(WARNING, "Failed to allocate memory");
+		return 2;
+	}
 	size_t bytes_read = fread(dump, 1, fsize, f);
 
 	if (f) fclose(f);

@@ -30,7 +30,7 @@ size_t nbytes(size_t nbits) {
 }
 
 int CmdLFHitagList(const char *Cmd) {
- 	uint8_t *got = malloc(USB_CMD_DATA_SIZE);
+ 	uint8_t *got = calloc(USB_CMD_DATA_SIZE, sizeof(uint8_t));
 	if ( !got ) {
 		PrintAndLogEx(WARNING, "Cannot allocate memory for trace");
 		return 2;

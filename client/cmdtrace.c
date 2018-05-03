@@ -481,7 +481,7 @@ int CmdTraceList(const char *Cmd) {
 	// reserv some space.
 	if (!trace) {
 		printf("trace pointer not allocated\n");
-		trace = malloc(USB_CMD_DATA_SIZE);
+		trace = calloc(USB_CMD_DATA_SIZE, sizeof(uint8_t));
 	}
 	
 	if ( isOnline ) {
@@ -571,8 +571,8 @@ int CmdTraceLoad(const char *Cmd) {
 	if ( trace )
 		free(trace);
 
-	trace = malloc(fsize);	
-	if (trace == NULL) {
+	trace = calloc(fsize, sizeof(uint8_t));
+	if (!trace) {
 		PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
 		fclose(f);		
 		return 2;

@@ -71,8 +71,8 @@ static int l_GetFromBigBuf(lua_State *L){
         startindex = luaL_checknumber(L, 2);
     }
 
-	uint8_t *data = malloc(len);
-	if ( data == NULL ) {
+	uint8_t *data = calloc(len, sizeof(uint8_t));
+	if ( !data ) {
         //signal error by returning Nil, errorstring
         lua_pushnil(L);
         lua_pushstring(L,"Allocating memory failed");
@@ -88,8 +88,7 @@ static int l_GetFromBigBuf(lua_State *L){
 	
 	//Push it as a string
 	lua_pushlstring(L,(const char *)data, len);
-	if (data) 
-		free(data);
+	free(data);
 	return 1;// return 1 to signal one return value
 }
 /**
@@ -641,7 +640,7 @@ int setLuaPath( lua_State* L, const char* path ) {
     lua_getfield( L, -1, "path" ); // get field "path" from table at top of stack (-1)
     const char* cur_path = lua_tostring( L, -1 ); // grab path string from top of stack
     int requiredLength = strlen(cur_path)+ strlen(path)+10; //A few bytes too many, whatever we can afford it
-    char * buf = malloc(requiredLength);
+    char * buf = calloc(requiredLength, sizeof(char));
     snprintf(buf, requiredLength, "%s;%s", cur_path, path);
     lua_pop( L, 1 ); // get rid of the string on the stack we just pushed on line 5
     lua_pushstring( L, buf ); // push the new one

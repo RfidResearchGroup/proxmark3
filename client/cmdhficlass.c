@@ -632,7 +632,7 @@ int CmdHFiClassELoad(const char *Cmd) {
 		return 1;
 	}
 
-	uint8_t *dump = malloc(fsize);
+	uint8_t *dump = calloc(fsize, sizeof(uint8_t));
 	if (!dump) {
 		PrintAndLogDevice(WARNING, "error, cannot allocate memory ");
 		fclose(f);
@@ -725,7 +725,12 @@ int CmdHFiClassDecrypt(const char *Cmd) {
 		return 2;
 	}
 	
-	uint8_t *decrypted = malloc(fsize);
+	uint8_t *decrypted = calloc(fsize, sizeof(uint8_t));
+	if ( !decrypted ) {
+		PrintAndLogEx(WARNING, "Failed to allocate memory");
+		fclose(f);
+		return 1;
+	}
 	
 	size_t bytes_read = fread(decrypted, 1, fsize, f);
 	fclose(f);
@@ -1626,7 +1631,12 @@ int CmdHFiClassReadTagFile(const char *Cmd) {
 		return 1;
 	}
 
-	uint8_t *dump = malloc(fsize);
+	uint8_t *dump = calloc(fsize, sizeof(uint8_t));
+	if ( !dump ) {
+		PrintAndLogEx(WARNING, "Failed to allocate memory");
+		fclose(f);
+		return 1;
+	}
 	size_t bytes_read = fread(dump, 1, fsize, f);
 	fclose(f);
 	
@@ -1783,8 +1793,12 @@ static int loadKeys(char *filename) {
 		return 1;
 	}
 
-	uint8_t *dump = malloc(fsize);
-
+	uint8_t *dump = calloc(fsize, sizeof(uint8_t));
+	if ( !dump ) {
+		PrintAndLogEx(WARNING, "Failed to allocate memory");
+		fclose(f);
+		return 1;
+	}
 	size_t bytes_read = fread(dump, 1, fsize, f);
 	fclose(f);
 	if (bytes_read > ICLASS_KEYS_MAX * 8){

@@ -2988,7 +2988,7 @@ int CmdHf14AMfDecryptBytes(const char *Cmd){
 	PrintAndLogEx(NORMAL, "ar enc\t%08X", ar_enc);
 	PrintAndLogEx(NORMAL, "at enc\t%08X", at_enc);
 		
-	uint8_t *data = malloc(len);	
+	uint8_t *data = calloc(len, sizeof(uint8_t));
 	param_gethex_ex(Cmd, 3, data, &len);
 	len >>= 1;
 	tryDecryptWord( nt, ar_enc, at_enc, data, len);

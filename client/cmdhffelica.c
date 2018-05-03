@@ -382,7 +382,7 @@ int CmdHFFelicaDumpLite(const char *Cmd) {
 	}
 	
 	uint64_t tracelen = resp.arg[1];	
-	uint8_t *trace = malloc(tracelen);
+	uint8_t *trace = calloc(tracelen, sizeof(uint8_t));
 	if ( trace == NULL ) {
 		PrintAndLogEx(WARNING, "Cannot allocate memory for trace");		
 		return 1;
