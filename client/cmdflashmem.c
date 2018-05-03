@@ -9,7 +9,8 @@
 //-----------------------------------------------------------------------------
 #include "cmdflashmem.h"
 
-#define FLASH_MEM_BLOCK_SIZE 256
+#define FLASH_MEM_BLOCK_SIZE   256
+#define FLASH_MEM_MAX_SIZE     0x3FFFF
 
 static int CmdHelp(const char *Cmd);
 
@@ -103,6 +104,12 @@ int CmdFlashMemLoad(const char *Cmd){
 		fclose(f);
 		return 1;
 	}
+	
+	if (fsize > FLASH_MEM_MAX_SIZE) {
+		PrintAndLogDevice(WARNING, "error, filesize is larger than available memory");
+		fclose(f);
+		return 1;
+	}
 
 	uint8_t *dump = calloc(fsize, sizeof(uint8_t));
 	if (!dump) {
@@ -153,13 +160,13 @@ int CmdFlashMemSave(const char *Cmd){
 	char filename[FILE_PATH_SIZE] = {0};	
 	uint8_t cmdp = 0;
 	bool errors = false;
-	uint32_t start_index = 0, len = 0x3FFFF;
+	uint32_t start_index = 0, len = FLASH_MEM_MAX_SIZE;
 	
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'h': return usage_flashmem_save();
 		case 'l':
-			len = param_get32ex(Cmd, cmdp+1, 0x3FFFF, 10);
+			len = param_get32ex(Cmd, cmdp+1, FLASH_MEM_MAX_SIZE, 10);
 			cmdp += 2;
 			break;
 		case 'o':
