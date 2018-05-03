@@ -250,11 +250,7 @@ uint16_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len) {
 		Dbprintf("Flash_WriteData,  block out-of-range");
 		return 0;
 	}
-	
-	// if 256b,  empty out lower index.
-	if (len == 256)
-		address &= 0xFFFF00;
-	
+
 	if (!FlashInit()) {
 		Dbprintf("Flash_WriteData init fail");
 		return 0;

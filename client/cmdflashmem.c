@@ -124,14 +124,14 @@ int CmdFlashMemLoad(const char *Cmd){
 	
 	//Send to device
 	uint32_t bytes_sent = 0;
-	uint32_t bytes_remaining  = bytes_read;
+	uint32_t bytes_remaining = bytes_read;
 
 	while (bytes_remaining > 0){
 		uint32_t bytes_in_packet = MIN(FLASH_MEM_BLOCK_SIZE, bytes_remaining);
 		
 		UsbCommand c = {CMD_WRITE_FLASH_MEM, {start_index + bytes_sent, bytes_in_packet, 0}};
 				
-		memcpy(c.d.asBytes, dump + start_index + bytes_sent, bytes_in_packet);
+		memcpy(c.d.asBytes, dump + bytes_sent, bytes_in_packet);
 		clearCommandBuffer();
 		SendCommand(&c);
 
