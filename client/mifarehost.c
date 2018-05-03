@@ -620,7 +620,7 @@ int saveTraceCard(void) {
 			
 		// no extra line in the end
 		if ( i < 255 )
-			fprintf(f,"\n");
+			fprintf(f, "\n");
 	}
 	fflush(f);
 	fclose(f);

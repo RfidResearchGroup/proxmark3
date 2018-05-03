@@ -2950,7 +2950,9 @@ int CmdHF14AMfCSave(const char *Cmd) {
 		// eml
 		for (j = 0; j < 16; j++)
 			fprintf(feml, "%02x", buf[j]); 
-		fprintf(feml,"\n");
+
+		if (i != numBlocks -1)		
+			fprintf(feml,"\n");
 		
 		// bin
 		fwrite(buf, 1, sizeof(buf), fbin);

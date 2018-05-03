@@ -57,9 +57,7 @@ int fileExists(const char *filename) {
 
 int saveFile(const char *preferredName, const char *suffix, const void* data, size_t datalen) {
 	int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
-	char * fileName = malloc(size);
-
-	memset(fileName, 0, size);
+	char * fileName = calloc(size,sizeof(char));
 	int num = 1;
 	sprintf(fileName,"%s.%s", preferredName, suffix);
 	while (fileExists(fileName)) {
@@ -91,11 +89,10 @@ int saveFileEML(const char *preferredName, const char *suffix, uint8_t* data, si
 
 	int retval = 0;
 	int blocks = datalen/blocksize;
+	uint16_t currblock = 1;
 	int i,j;
 	int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
-	char * fileName = malloc(size);
-
-	memset(fileName, 0, size);
+	char * fileName = calloc(size, sizeof(char));
 	int num = 1;
 	sprintf(fileName,"%s.%s", preferredName, suffix);
 	while (fileExists(fileName)) {
@@ -115,8 +112,12 @@ int saveFileEML(const char *preferredName, const char *suffix, uint8_t* data, si
 
 	for (i = 0; i < datalen; i++) {
 		fprintf(f, "%02X", data[i] );
-		if ( (i+1) % blocksize == 0)
+		
+		// no extra line in the end
+		if ( (i+1) % blocksize == 0 && currblock != blocks ) {
 			fprintf(f, "\n");
+			currblock++;
+		}
 	}
 	// left overs
 	if ( datalen % blocksize != 0) {
