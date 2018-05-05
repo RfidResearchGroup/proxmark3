@@ -395,7 +395,7 @@ int GetHFMF14AUID(uint8_t *uid, int *uidlen) {
 	iso14a_card_select_t card;
 	memcpy(&card, (iso14a_card_select_t *)resp.d.asBytes, sizeof(iso14a_card_select_t));
 	memcpy(uid, card.uid, card.uidlen * sizeof(uint8_t));
-	*uidlen=card.uidlen;
+	*uidlen = card.uidlen;
 	return 1;
 }
 
