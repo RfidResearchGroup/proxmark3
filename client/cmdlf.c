@@ -870,6 +870,8 @@ int CmdLFfind(const char *Cmd) {
 			// 26 === RHT2F_UID_ONLY
 			if (CmdLFHitagReader("26") == 0) { PrintAndLogEx(SUCCESS, "\nValid Hitag Found!"); return 1;}
 			if (CmdCOTAGRead("") > 0) 	{ PrintAndLogEx(SUCCESS, "\nValid COTAG ID Found!"); return 1;}
+			
+			PrintAndLogEx(FAILED, "\nNo Data Found! - maybe not an LF tag?");
 		    return 0;
 		}
 	}
@@ -898,7 +900,7 @@ int CmdLFfind(const char *Cmd) {
 	//if (CmdFermaxDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid Fermax ID Found!"); goto out;}
 	// TIdemod?  flexdemod?
 	
-	PrintAndLogEx(FAILED, "\nno known 125/134 KHz tags Found!\n");
+	PrintAndLogEx(FAILED, "\nNo known 125/134 KHz tags Found!\n");
 	
 	if (testRaw=='u' || testRaw=='U'){
 		//test unknown tag formats (raw mode)
