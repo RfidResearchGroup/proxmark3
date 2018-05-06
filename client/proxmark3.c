@@ -345,8 +345,7 @@ static void set_my_executable_path(void) {
 
 static void show_help(bool showFullHelp, char *command_line){
 	PrintAndLogEx(NORMAL, "syntax: %s <port> [-h|-help|-m|-f|-flush|-w|-wait|-c|-command|-l|-lua] [cmd_script_file_name] [command][lua_script_name]\n", command_line);
-	PrintAndLogEx(NORMAL, "\tLinux example:'%s /dev/ttyACM0'\n", command_line);
-	PrintAndLogEx(NORMAL, "\tWindows example:'%s com3'\n\n", command_line);
+	PrintAndLogEx(NORMAL, "\texample:'%s "SERIAL_PORT_H"'\n\n", command_line);
 	
 	if (showFullHelp){
 		PrintAndLogEx(NORMAL, "help: <-h|-help> Dump all interactive command's help at once.\n");
