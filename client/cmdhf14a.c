@@ -119,6 +119,7 @@ int usage_hf_14a_sim(void) {
 	PrintAndLogEx(NORMAL, "            6 = MIFARE Mini");
 	PrintAndLogEx(NORMAL, "            7 = AMIIBO (NTAG 215),  pack 0x8080");
 	PrintAndLogEx(NORMAL, "            8 = MIFARE Classic 4k");
+	PrintAndLogEx(NORMAL, "            9 = FM11RF005SH Shanghai Metro");
 //	PrintAndLogEx(NORMAL, "    u     : 4, 7 or 10 byte UID");
 	PrintAndLogEx(NORMAL, "    u     : 4, 7 byte UID");
 	PrintAndLogEx(NORMAL, "    x     : (Optional) Performs the 'reader attack', nr/ar attack against a reader");
@@ -233,51 +234,52 @@ int CmdHF14AReader(const char *Cmd) {
 	SendCommand(&c);
 
 	if (ISO14A_CONNECT & cm) {
-	UsbCommand resp;
-	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
-		if (!silent) PrintAndLogEx(WARNING, "iso14443a card select failed");
-		DropField();
-		return 1;
-	}
+		UsbCommand resp;
+		if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+			if (!silent) PrintAndLogEx(WARNING, "iso14443a card select failed");
+			DropField();
+			return 1;
+		}
 	
-	iso14a_card_select_t card;
-	memcpy(&card, (iso14a_card_select_t *)resp.d.asBytes, sizeof(iso14a_card_select_t));
+		iso14a_card_select_t card;
+		memcpy(&card, (iso14a_card_select_t *)resp.d.asBytes, sizeof(iso14a_card_select_t));
 
-	/* 
-		0: couldn't read
-		1: OK, with ATS
-		2: OK, no ATS
-		3: proprietary Anticollision	
-	*/
-	uint64_t select_status = resp.arg[0];
-	
-	if (select_status == 0) {
-		if (!silent) PrintAndLogEx(WARNING, "iso14443a card select failed");
-		DropField();
-		return 1;
-	}
+		/* 
+			0: couldn't read
+			1: OK, with ATS
+			2: OK, no ATS
+			3: proprietary Anticollision	
+		*/
+		uint64_t select_status = resp.arg[0];
+		
+		if (select_status == 0) {
+			if (!silent) PrintAndLogEx(WARNING, "iso14443a card select failed");
+			DropField();
+			return 1;
+		}
 
-	if (select_status == 3) {
-		PrintAndLogEx(NORMAL, "Card doesn't support standard iso14443-3 anticollision");
+		if (select_status == 3) {
+			PrintAndLogEx(NORMAL, "Card doesn't support standard iso14443-3 anticollision");
+			PrintAndLogEx(NORMAL, "ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
+			DropField();
+			return 1;
+		}
+
+		PrintAndLogEx(NORMAL, " UID : %s", sprint_hex(card.uid, card.uidlen));
 		PrintAndLogEx(NORMAL, "ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
-		DropField();
-		return 1;
-	}
+		PrintAndLogEx(NORMAL, " SAK : %02x [%" PRIu64 "]", card.sak, resp.arg[0]);
 
-	PrintAndLogEx(NORMAL, " UID : %s", sprint_hex(card.uid, card.uidlen));
-	PrintAndLogEx(NORMAL, "ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
-	PrintAndLogEx(NORMAL, " SAK : %02x [%" PRIu64 "]", card.sak, resp.arg[0]);
-
-	if(card.ats_len >= 3) {			// a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
-		PrintAndLogEx(NORMAL, " ATS : %s", sprint_hex(card.ats, card.ats_len));
-	}
+		if(card.ats_len >= 3) {			// a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
+			PrintAndLogEx(NORMAL, " ATS : %s", sprint_hex(card.ats, card.ats_len));
+		}
+		
 		if (!disconnectAfter) {
 			if (!silent) PrintAndLogEx(SUCCESS, "Card is selected. You can now start sending commands");
 		}
 	}
 
 	if (disconnectAfter) {
-		if (!silent)  PrintAndLogEx(SUCCESS, "field dropped.");
+		if (!silent) PrintAndLogEx(SUCCESS, "field dropped.");
 	}
 
 	return 0;
@@ -364,6 +366,7 @@ int CmdHF14AInfo(const char *Cmd) {
 		case 0x04: PrintAndLogEx(NORMAL, "TYPE : NXP MIFARE (various !DESFire !DESFire EV1)"); isMifareClassic = false; break;
 		case 0x08: PrintAndLogEx(NORMAL, "TYPE : NXP MIFARE CLASSIC 1k | Plus 2k SL1 | 1k Ev1"); break;
 		case 0x09: PrintAndLogEx(NORMAL, "TYPE : NXP MIFARE Mini 0.3k"); break;
+		case 0x0A: PrintAndLogEx(NORMAL, "TYPE : FM11RF005SH (Shanghai Metro)"); break;
 		case 0x10: PrintAndLogEx(NORMAL, "TYPE : NXP MIFARE Plus 2k SL2"); break;
 		case 0x11: PrintAndLogEx(NORMAL, "TYPE : NXP MIFARE Plus 4k SL2"); break;
 		case 0x18: PrintAndLogEx(NORMAL, "TYPE : NXP MIFARE Classic 4k | Plus 4k SL1 | 4k Ev1"); break;
@@ -568,7 +571,6 @@ int CmdHF14ACUIDs(const char *Cmd) {
 }
 
 // ## simulate iso14443a tag
-// ## greg - added ability to specify tag UID
 int CmdHF14ASim(const char *Cmd) {
 	bool errors = false;
 	uint8_t flags = 0;

@@ -898,6 +898,11 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t* data) {
 			response1[0] = 0x02;
 			sak = 0x18;
 		} break;
+		case 9 : { // FM11RF005SH (Shanghai Metro)
+			response1[0] = 0x03;
+			response1[1] = 0x00;
+			sak = 0x0A;
+		}
 		default: {
 			Dbprintf("Error: unkown tagtype (%d)",tagType);
 			return;
@@ -951,6 +956,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t* data) {
 	uint8_t response5[4]; 
 	
 	uint8_t response6[] = { 0x04, 0x58, 0x80, 0x02, 0x00, 0x00 }; 	// dummy ATS (pseudo-ATR), answer to RATS: 
+	
 	// Format byte = 0x58: FSCI=0x08 (FSC=256), TA(1) and TC(1) present, 
 	// TA(1) = 0x80: different divisors not supported, DR = 1, DS = 1
 	// TB(1) = not present. Defaults: FWI = 4 (FWT = 256 * 16 * 2^4 * 1/fc = 4833us), SFGI = 0 (SFG = 256 * 16 * 2^0 * 1/fc = 302us)
@@ -1045,7 +1051,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t* data) {
 		} else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT) {	// Received a SELECT (cascade 1)
 			p_response = &responses[3]; order = 3;
 		} else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2) {	// Received a SELECT (cascade 2)
-			p_response = &responses[4]; order = 30;		
+			p_response = &responses[4]; order = 30;	
 		} else if (receivedCmd[0] == ISO14443A_CMD_READBLOCK) {	// Received a (plain) READ
 			uint8_t block = receivedCmd[1];
 			// if Ultralight or NTAG (4 byte blocks)
@@ -1058,6 +1064,11 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t* data) {
 				EmSendCmd(emdata, sizeof(emdata));
 				// We already responded, do not send anything with the EmSendCmd14443aRaw() that is called below
 				p_response = NULL;
+			} else if ( tagType == 9 && block == 1 ) {
+				// FM11005SH.   16blocks,  4bytes / block.
+				//   block0 = 2byte Customer ID (CID), 2byte Manufacture ID (MID)
+				//   block1 = 4byte UID.
+				p_response = &responses[1];
 			} else { // all other tags (16 byte block tags)
 				uint8_t emdata[MAX_MIFARE_FRAME_SIZE];
 				emlGetMemBt( emdata, block, 16);
