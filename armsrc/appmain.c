@@ -1169,7 +1169,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			LED_B_OFF();
 			break;
 		}
-		case CMD_WIPE_FLASH_MEM:
+		case CMD_WIPE_FLASH_MEM: {
 			LED_B_ON();
 			uint8_t page = c->arg[0];
 			uint8_t initalwipe = c->arg[1];
@@ -1186,6 +1186,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			cmd_send(CMD_ACK, isok, 0, 0, 0, 0);
 			LED_B_OFF();
 			break;
+		}
 		case CMD_DOWNLOAND_FLASH_MEM: {
 
 			LED_B_ON();
@@ -1197,8 +1198,6 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			// arg0 = startindex
 			// arg1 = length bytes to transfer
 			// arg2 = RFU
-			//Dbprintf("transfer to client parameters: %" PRIu32 " | %" PRIu32 " | %" PRIu32, startidx, numofbytes, c->arg[2]);
-
 			for (size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
 				len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
 				
@@ -1213,6 +1212,23 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 
 			cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
 			LED_B_OFF();
+			break;
+		}
+		case CMD_INFO_FLASH_MEM: {
+
+			LED_B_ON();
+			rdv40_validation_t *info = (rdv40_validation_t*)BigBuf_malloc( sizeof(rdv40_validation_t) );
+			
+			bool isok = Flash_ReadData(FLASH_MEM_SIGNATURE_OFFSET, info->signature, FLASH_MEM_SIGNATURE_LEN);
+
+			if (FlashInit()) {
+				Flash_UniqueID( info->flashid);
+				FlashStop();
+			}
+			cmd_send(CMD_ACK, isok, 0, 0, info, sizeof(rdv40_validation_t));
+			BigBuf_free();
+			
+			LED_B_OFF();			
 			break;
 		}
 #endif
