@@ -22,6 +22,8 @@
 #include "BigBuf.h"
 #include "mifareutil.h"
 
+#define DEBUG 1
+
 #ifdef WITH_LCD
  #include "LCD.h"
 #endif
@@ -98,12 +100,16 @@ void print_result(char *name, uint8_t *buf, size_t len) {
 //=============================================================================
 
 void DbpStringEx(char *str, uint32_t cmd) {
+#if DEBUG
 	byte_t len = strlen(str);
 	cmd_send(CMD_DEBUG_PRINT_STRING, len, cmd, 0, (byte_t*)str, len);
+#endif	
 }
 
 void DbpString(char *str) {
+#if DEBUG
 	DbpStringEx(str, 0);
+#endif	
 }
 
 #if 0
@@ -112,6 +118,7 @@ void DbpIntegers(int x1, int x2, int x3) {
 }
 #endif
 void DbprintfEx(uint32_t cmd, const char *fmt, ...) {
+#if DEBUG
 	// should probably limit size here; oh well, let's just use a big buffer
 	char output_string[128] = {0x00};
 	va_list ap;
@@ -120,9 +127,11 @@ void DbprintfEx(uint32_t cmd, const char *fmt, ...) {
 	va_end(ap);
 
 	DbpStringEx(output_string, cmd);
+#endif	
 }
 
 void Dbprintf(const char *fmt, ...) {
+#if DEBUG
 	// should probably limit size here; oh well, let's just use a big buffer
 	char output_string[128] = {0x00};
 	va_list ap;
@@ -132,10 +141,12 @@ void Dbprintf(const char *fmt, ...) {
 	va_end(ap);
 
 	DbpString(output_string);
+#endif	
 }
 
 // prints HEX & ASCII
 void Dbhexdump(int len, uint8_t *d, bool bAsci) {
+#if DEBUG
 	int l=0, i;
 	char ascii[9];
     
@@ -161,6 +172,7 @@ void Dbhexdump(int len, uint8_t *d, bool bAsci) {
 		len -= 8;
 		d += 8;		
 	}
+#endif	
 }
 
 //-----------------------------------------------------------------------------
@@ -1097,19 +1109,20 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			break;
 #ifdef WITH_FLASH	
 		case CMD_READ_FLASH_MEM: {
-			/*
+
 			LED_B_ON();
 			uint16_t isok = 0;
-			size_t len = 0;
 			uint32_t startidx = c->arg[0];
-			uint16_t numofbytes = c->arg[1];
+			uint16_t len = c->arg[1];
 			
-			Dbprintf("FlashMem read | %d - %d", startidx, numofbytes);
+			Dbprintf("FlashMem read | %d - %d", startidx, len);
 			
-			uint8_t *mem = BigBuf_malloc(USB_CMD_DATA_SIZE);
+			size_t size = MIN(USB_CMD_DATA_SIZE, len);
+			
+			uint8_t *mem = BigBuf_malloc(size);
 	
-			for(size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
-				len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
+			for(size_t i = 0; i < len; i += size) {
+				len = MIN((len - i), size);
 				
 				Dbprintf("FlashMem reading  | %d | %d | %d", startidx + i, i, len);
 				
@@ -1121,9 +1134,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 					break;
 				}
 			}
-			cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
 			LED_B_OFF();
-			*/
 			break;
 		}
 		case CMD_WRITE_FLASH_MEM: {
