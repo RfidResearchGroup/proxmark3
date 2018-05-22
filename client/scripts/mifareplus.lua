@@ -66,7 +66,6 @@ local function disconnect()
 	return lib14a.sendToDevice(command,true) 
 end	
 
-
 local function writePerso()
 	-- Used to write any data, including the keys (Key A and Key B), for all the sectors.
 	-- writePerso() command parameters:
@@ -203,7 +202,7 @@ local function proximityCheck()
 	--PreparePC--
 	commandString = PREPAREPC
 	response = sendRaw(commandString, true, true)
-	if not response then return oops("not a Mifare plus card") end
+	if not response then return oops("This card is not support the proximity check command.") end
 	
 	OPT = string.sub(response, 5, 6)
 	if tonumber(OPT) == 1 then
@@ -273,7 +272,7 @@ end
 function main(args)
 
 	-- Initialize the card using the already-present read14a library
-	-- Perform PPS (Protocol and Parameter Selection) check to finish the ISO 14443-4 protocol.
+	-- Perform RATS and PPS (Protocol and Parameter Selection) check to finish the ISO 14443-4 protocol.
 	info,err = lib14a.read(true, false)
 	if not info then oops(err); disconnect(); return; end
 	
