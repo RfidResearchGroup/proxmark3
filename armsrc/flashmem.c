@@ -175,8 +175,8 @@ uint8_t Flash_ReadID(void) {
 	FlashSendByte(0x00);
 
     uint8_t man_id = FlashSendByte(0xFF);
-	uint8_t dev_id = FlashSendLastByte(0xFF);
-	
+	uint8_t dev_id = FlashSendLastByte(0xFF);	
+
 	if ( MF_DBGLEVEL > 3 ) Dbprintf("Flash ReadID  |  Man ID %02x | Device ID %02x", man_id, dev_id);
 	
 	if ( (man_id == WINBOND_MANID ) && (dev_id == WINBOND_DEVID) )
@@ -309,7 +309,7 @@ bool Flash_WipeMemory() {
 
 //	enable the flash write
 void Flash_WriteEnable() {
-	FlashSendLastByte(WRITEENABLE);
+	FlashSendLastByte(WRITEENABLE);	
 	if ( MF_DBGLEVEL > 3 ) Dbprintf("Flash Write enabled");	
 }
 
