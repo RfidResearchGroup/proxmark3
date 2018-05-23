@@ -106,6 +106,7 @@ CMDSRCS =	crapto1/crapto1.c \
 			polarssl/rsa.c \
 			polarssl/sha1.c \
 			polarssl/sha256.c \
+			polarssl/base64.c \
 			loclass/cipher.c \
 			loclass/cipherutils.c \
 			loclass/ikeys.c \
