@@ -26,7 +26,9 @@
 
 extern int CmdFlashMem(const char *Cmd);
 
+extern int CmdFlashMemRead(const char* cmd);
 extern int CmdFlashMemLoad(const char* cmd);
 extern int CmdFlashMemSave(const char* cmd);
 extern int CmdFlashMemWipe(const char *Cmd);
+extern int CmdFlashMemInfo(const char *Cmd);
 #endif
