@@ -1,27 +1,59 @@
 local cmds = require('commands')
 local lib14a = require('read14a')
+local getopt = require('getopt')
 
-SIXTEEN_BYTES_ZEROS = "00000000000000000000000000000000"
+copyright = ''
+author = 'Dominic Celiano'
+version = 'v1.0.0'
+desc =
+[[
+Purpose: Lua script to communicate with the Mifare Plus EV1, including personalization (setting the keys) and proximity check. Manually edit the file to add to the commands you can send the card.
+Please read the NXP manual before running this script to prevent making irreversible changes. Also note:
+	- The Mifare Plus must start in SL0 for personalization. Card can then be moved to SL1 or SL3.
+	- The keys are hardcoded in the script to "00...". Unless you change this, only use this script for testing purposes.
+	- Make sure you choose your card size correctly (2kB or 4kB).
+Small changes can be to made this script to communicate with the Mifare Plus S, X, or SE.
+]]
+usage = [[
+script run mifareplus -h
+Arguments:
+	-h             : this help
+]]
 
-GETVERS_INIT = "0360" -- Begins the GetVersion command
-GETVERS_CONT = "03AF" -- Continues the GetVersion command
-POWEROFF = "OFF"
-WRITEPERSO = "03A8"
-COMMITPERSO = "03AA"
-AUTH_FIRST = "0370"
-AUTH_CONT = "0372"
-AUTH_NONFIRST = "0376"
-PREPAREPC = "03F0"
-PROXIMITYCHECK = "03F2"
-VERIFYPC = "03FD"
-READPLAINNOMACUNMACED = "0336"
+
+-- Default 
+SIXTEEN_BYTES_ZEROS = '00000000000000000000000000000000'
+
+-- ISO7816 commands used
+GETVERS_INIT = '0360' -- Begins the GetVersion command
+GETVERS_CONT = '03AF' -- Continues the GetVersion command
+POWEROFF = 'OFF'
+WRITEPERSO = '03A8'
+COMMITPERSO = '03AA'
+AUTH_FIRST = '0370'
+AUTH_CONT = '0372'
+AUTH_NONFIRST = '0376'
+PREPAREPC = '03F0'
+PROXIMITYCHECK = '03F2'
+VERIFYPC = '03FD'
+READPLAINNOMACUNMACED = '0336'
 
 --- 
 -- This is only meant to be used when errors occur
 local function oops(err)
-	print("ERROR: ",err)
+	print('ERROR: ',err)
+	return nil, err
 end
-
+---
+-- Usage help
+local function help()
+	print(copyright)
+	print(author)	
+	print(version)	
+	print(desc)
+	print('Example usage')
+	print(example)
+end
 ---
 -- Used to send raw data to the firmware to subsequently forward the data to the card.
 local function sendRaw(rawdata, crc, power)
@@ -157,7 +189,7 @@ end
 local function authenticateAES()
 	-- Used to try to authenticate with the AES keys we programmed into the card, to ensure the authentication works correctly.
 	commandString = AUTH_FIRST
-	commandString = commandString .. ""
+	commandString = commandString .. ''
 end
 
 local function getVersion()
@@ -271,6 +303,11 @@ end
 -- The main entry point
 function main(args)
 
+	local o, a
+	for o, a in getopt.getopt(args, 'h') do			-- Populate command line arguments
+		if o == "h" then return help() end
+	end
+
 	-- Initialize the card using the already-present read14a library
 	-- Perform RATS and PPS (Protocol and Parameter Selection) check to finish the ISO 14443-4 protocol.
 	info,err = lib14a.read(true, false)
@@ -309,4 +346,4 @@ function main(args)
 	disconnect()
 end
 
-main(args) -- Call the main function
+main(args)
