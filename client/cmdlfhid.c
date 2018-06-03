@@ -255,7 +255,7 @@ int CmdHIDClone(const char *Cmd) {
 	
 	uint32_t hi2 = 0, hi = 0, lo = 0;
 	uint32_t n = 0, i = 0;
-	UsbCommand c;
+	UsbCommand c = {CMD_HID_CLONE_TAG);
 
 	uint8_t ctmp = param_getchar(Cmd, 0);
 	if ( strlen(Cmd) == 0 || ctmp == 'H' || ctmp == 'h' ) return usage_lf_hid_clone();
@@ -280,7 +280,6 @@ int CmdHIDClone(const char *Cmd) {
 		c.d.asBytes[0] = 0;
 	}
 
-	c.cmd = CMD_HID_CLONE_TAG;
 	c.arg[0] = hi2;
 	c.arg[1] = hi;
 	c.arg[2] = lo;

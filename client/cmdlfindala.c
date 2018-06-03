@@ -419,7 +419,7 @@ int CmdIndalaSim(const char *Cmd) {
 
 // iceman - needs refactoring 
 int CmdIndalaClone(const char *Cmd) {
-	UsbCommand c;
+	UsbCommand c = {0};
 	uint32_t uid1, uid2, uid3, uid4, uid5, uid6, uid7;
 	uid1 =  uid2 = uid3 = uid4 = uid5 = uid6 = uid7 = 0;
 	uint32_t n = 0, i = 0;

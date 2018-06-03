@@ -182,8 +182,8 @@ int CmdLFHitagSim(const char *Cmd) {
 			return 1;
 		}
 		tag_mem_supplied = true;
-		size_t bytes_read = fread(c.d.asBytes, 48, 1, f);
-		if ( bytes_read == 0) {
+		size_t bytes_read = fread(c.d.asBytes, 1, 48, f);
+		if ( bytes_read == 48) {
 			PrintAndLogEx(WARNING, "Error: File reading error");
 			fclose(f);
 			return 1;
@@ -306,8 +306,8 @@ int CmdLFHitagSimS(const char *Cmd) {
 			return 1;
 		}
 		tag_mem_supplied = true;
-		size_t bytes_read = fread(c.d.asBytes, 4*64, 1, f);
-		if ( bytes_read == 0) {
+		size_t bytes_read = fread(c.d.asBytes, 1, 4*64, f);
+		if ( bytes_read == 4*64) {
 			PrintAndLogEx(WARNING, "Error: File reading error");
 			fclose(f);
 			return 1;
@@ -341,8 +341,8 @@ int CmdLFHitagCheckChallenges(const char *Cmd) {
 			return 1;
 		}
 		file_given = true;
-		size_t bytes_read = fread(c.d.asBytes, 8*60, 1, f);
-		if ( bytes_read == 0) {
+		size_t bytes_read = fread(c.d.asBytes, 1, 8*60, f);
+		if ( bytes_read == 8*60) {
 			PrintAndLogEx(WARNING, "Error: File reading error");
 			fclose(f);
 			return 1;

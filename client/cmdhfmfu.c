@@ -2322,7 +2322,7 @@ int CmdHF14AMfucSetPwd(const char *Cmd){
 //
 int CmdHF14AMfucSetUid(const char *Cmd){
 
-	UsbCommand c;
+	UsbCommand c = {CMD_MIFAREU_READBL};
 	UsbCommand resp;
 	uint8_t uid[7] = {0x00};
 	char cmdp = param_getchar(Cmd, 0);
@@ -2335,7 +2335,6 @@ int CmdHF14AMfucSetUid(const char *Cmd){
 	}
 
 	// read block2. 
-	c.cmd = CMD_MIFAREU_READBL;
 	c.arg[0] = 2;
 	clearCommandBuffer();
 	SendCommand(&c);

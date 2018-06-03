@@ -107,7 +107,7 @@ int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, bool hardn
 
 		for(uint16_t j = 0; j < num_infiles; j++) {
 			for(uint16_t k = 0; k < FPGA_INTERLEAVE_SIZE; k++) {
-				c = fgetc(infile[j]);
+				c = (uint8_t)fgetc(infile[j]);
 				if (!feof(infile[j])) {
 					fpga_config[i++] = c;
 				} else if (num_infiles > 1) {

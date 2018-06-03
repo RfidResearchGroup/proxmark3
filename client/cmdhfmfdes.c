@@ -271,12 +271,10 @@ void GetKeySettings( uint8_t *aid){
 	char *str = messStr;
 	uint8_t isOK = 0;
 	uint32_t options = NONE;
-	UsbCommand c;
+	UsbCommand c = {CMD_MIFARE_DESFIRE};
 	UsbCommand resp;
 
 	//memset(messStr, 0x00, 512);
-	
-	c.cmd = CMD_MIFARE_DESFIRE;
 	
 	if ( aid == NULL ){
 		PrintAndLogEx(NORMAL, " CMK - PICC, Card Master Key settings ");

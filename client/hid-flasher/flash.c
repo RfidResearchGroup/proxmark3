@@ -264,10 +264,8 @@ fail:
 // Get the state of the proxmark, backwards compatible
 static int get_proxmark_state(uint32_t *state)
 {
-	UsbCommand c;
-	c.cmd = CMD_DEVICE_INFO;
+	UsbCommand c = {CMD_DEVICE_INFO};
 	SendCommand(&c);
-
 	UsbCommand resp;
 	ReceiveCommand(&resp);
 

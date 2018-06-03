@@ -118,7 +118,7 @@ uint64_t msclock(void) {
 	#include <sys/timeb.h>
 	struct _timeb t;
 	_ftime(&t);
-	return 1000 * t.time + t.millitm;
+	return 1000 * (uint64_t)t.time + t.millitm;
 
 // NORMAL CODE (use _ftime_s)
 	//struct _timeb t;

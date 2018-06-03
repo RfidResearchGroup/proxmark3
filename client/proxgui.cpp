@@ -62,13 +62,9 @@ extern "C" void MainGraphics(void)
 extern "C" void InitGraphics(int argc, char **argv, char *script_cmds_file, char *script_cmd, bool usb_present)
 {
 #ifdef Q_WS_X11
-	bool useGUI = getenv("DISPLAY") != 0;
-#else
-	bool useGUI = true;
-#endif
-	if (!useGUI)
+	if (getenv("DISPLAY") == NULL)
 		return;
-
+#endif
 	main_loop_thread = new WorkerThread(script_cmds_file, script_cmd, usb_present);
 	gui = new ProxGuiQT(argc, argv, main_loop_thread);
 }

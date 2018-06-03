@@ -779,8 +779,10 @@ bool NestedCheckKey(uint64_t key, TAuthData *ad, uint8_t *cmd, uint8_t cmdsize, 
 	uint32_t ar1 = crypto1_word(pcs, 0, 0) ^ ad->ar_enc;
 	uint32_t at1 = crypto1_word(pcs, 0, 0) ^ ad->at_enc;
 
-	if (!(ar == ar1 && at == at1 && NTParityChk(ad, nt1)))
+	if (!(ar == ar1 && at == at1 && NTParityChk(ad, nt1))) {
+		crypto1_destroy(pcs);
 		return false;
+	}
 
 	memcpy(buf, cmd, cmdsize);
 	mf_crypto1_decrypt(pcs, buf, cmdsize, 0);
