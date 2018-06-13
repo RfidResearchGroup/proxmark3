@@ -716,10 +716,20 @@ void SmartCard_print_status(void) {
 	DbpString("Smart card module (ISO 7816)");
 
 	if (!SmartCard_init()) {
-		DbpString("  init....................FAIL");
-		return;
+		// DbpString("  init....................FAIL");
+		// return;
 	}
-	DbpString("  init....................OK");
-		
+//	DbpString("  init....................OK");
+
+	/*
+	HIGH(SMART_CARD_RST_PIN);	// PA1
+	HIGH(SMART_CARD_IO_PIN);	// PA5
+	HIGH(SMART_CARD_CLK_PIN);	// PA7
+	*/
+
+	SMART_CARD_RST_HI;
+	SMART_CARD_IO_HI;
+	SMART_CARD_CLK_HI;
+	
 	SmartCard_stop();	
 }
