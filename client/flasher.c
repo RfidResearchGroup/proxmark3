@@ -24,6 +24,14 @@
 # include <unistd.h>
 #endif
 
+#if defined (_WIN32)
+#define SERIAL_PORT_H	"com3"
+#elif defined(__APPLE__)
+#define SERIAL_PORT_H   "/dev/cu.usbmodem888"
+#else
+#define SERIAL_PORT_H	"/dev/ttyACM0"
+#endif
+
 static serial_port sp;
 static char* serial_port_name;
 
@@ -88,9 +96,7 @@ int OpenProxmark() {
 static void usage(char *argv0) {
 	fprintf(stdout, "Usage:   %s <port> [-b] image.elf [image.elf...]\n\n", argv0);
 	fprintf(stdout, "\t-b\tEnable flashing of bootloader area (DANGEROUS)\n\n");
-	fprintf(stdout, "\nExample (Linux):\n\n\t %s  /dev/ttyACM0 armsrc/obj/fullimage.elf\n", argv0);
-	fprintf(stdout, "\nExample (OSX   :\n\n\t %s  /dev/cu.usbmodem888 armsrc/obj/fullimage.elf\n", argv0);
-	fprintf(stdout, "\nExample (WIN)  :\n\n\t %s  com3 armsrc/obj/fullimage.elf\n\n", argv0);
+	fprintf(stdout, "\nExample:\n\n\t %s "SERIAL_PORT_H" armsrc/obj/fullimage.elf\n", argv0);
 #ifdef __linux__	
 	fprintf(stdout, "\nNote (Linux): if the flasher gets stuck in 'Waiting for Proxmark to reappear on <DEVICE>',\n");
 	fprintf(stdout, "              you need to blacklist proxmark for modem-manager - see wiki for more details:\n\n");
