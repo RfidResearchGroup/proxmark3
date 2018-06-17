@@ -91,10 +91,12 @@ bool hookUpPM3() {
 
 	if (sp == INVALID_SERIAL_PORT) {
 		PrintAndLogEx(WARNING, "Reconnect failed, retrying...  (reason: invalid serial port)\n");
+		sp = NULL;
 		ret = false;
 		offline = 1;
 	} else if (sp == CLAIMED_SERIAL_PORT) {
 		PrintAndLogEx(WARNING, "Reconnect failed, retrying... (reason: serial port is claimed by another process)\n");
+		sp = NULL;
 		ret = false;
 		offline = 1;
 	} else {	
