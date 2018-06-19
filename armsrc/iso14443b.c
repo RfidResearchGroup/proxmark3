@@ -447,19 +447,18 @@ static int GetIso14443bCommandFromReader(uint8_t *received, uint16_t *len) {
 	// clear receiving shift register and holding register
 	// What does this loop do? Is it TR1?
 	// loop is a wait/delay  ? 
-   	/*
+/*
 	for(uint8_t c = 0; c < 10;) {
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
 			AT91C_BASE_SSC->SSC_THR = 0xFF;
 			++c;
 		}
-			
+		
 		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 			b = (uint16_t)(AT91C_BASE_SSC->SSC_RHR); (void)b;
-		}
+		}		
 	}
 	*/
-	
 	// Now run a `software UART' on the stream of incoming samples.
 	UartInit(received);
 
@@ -732,12 +731,12 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 // The soft decision on the bit uses an estimate of just the
 // quadrant of the reference angle, not the exact angle.
 #define MAKE_SOFT_DECISION() { \
-		if(Demod.sumI > 0) { \
+		if (Demod.sumI > 0) { \
 			v = ci; \
 		} else { \
 			v = -ci; \
 		} \
-		if(Demod.sumQ > 0) { \
+		if (Demod.sumQ > 0) { \
 			v += cq; \
 		} else { \
 			v -= cq; \
@@ -747,8 +746,8 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 // Subcarrier amplitude v = sqrt(ci^2 + cq^2), approximated here by abs(ci) + abs(cq)
 // Subcarrier amplitude v = sqrt(ci^2 + cq^2), approximated here by max(abs(ci),abs(cq)) + 1/2*min(abs(ci),abs(cq)))
 #define CHECK_FOR_SUBCARRIER_old() { \
-		if(ci < 0) { \
-			if(cq < 0) { /* ci < 0, cq < 0 */ \
+		if (ci < 0) { \
+			if (cq < 0) { /* ci < 0, cq < 0 */ \
 				if (cq < ci) { \
 					v = -cq - (ci >> 1); \
 				} else { \
@@ -762,7 +761,7 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 				} \
 			} \
 		} else { \
-			if(cq < 0) { /* ci >= 0, cq < 0 */ \
+			if (cq < 0) { /* ci >= 0, cq < 0 */ \
 				if (-cq < ci) { \
 					v = ci - (cq >> 1); \
 				} else { \
@@ -805,7 +804,7 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 					// note: synchronization time > 80 1/fs
 					Demod.sumI += ci;
 					Demod.sumQ += cq;
-					++Demod.posCount;
+					Demod.posCount++;
 				} else {	
 					// subcarrier lost
 					Demod.state = DEMOD_UNSYNCD;
@@ -824,30 +823,29 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 				Demod.posCount = 0;	// start of SOF sequence
 			} else {
 				// maximum length of TR1 = 200 1/fs
-				if(Demod.posCount > 26*2) Demod.state = DEMOD_UNSYNCD;
+				if (Demod.posCount > 200/4) Demod.state = DEMOD_UNSYNCD;
 			}
-			++Demod.posCount;
+			Demod.posCount++;
 			break;
 
 		case DEMOD_GOT_FALLING_EDGE_OF_SOF:
-			++Demod.posCount;
+			Demod.posCount++;
 			
 			MAKE_SOFT_DECISION();
 			
 			if (v > 0) {
 				// low phase of SOF too short (< 9 etu). Note: spec is >= 10, but FPGA tends to "smear" edges
-				if (Demod.posCount < 8*2) { 
+				if (Demod.posCount < 9*2) { 
 					Demod.state = DEMOD_UNSYNCD;
 				} else {
 					LED_C_ON(); // Got SOF
-					//Demod.startTime = GetCountSspClk();
 					Demod.state = DEMOD_AWAITING_START_BIT;
 					Demod.posCount = 0;
 					Demod.len = 0;
 				}
 			} else {
 				// low phase of SOF too long (> 12 etu)
-				if (Demod.posCount > 14*2) { 
+				if (Demod.posCount > 12*2) { 
 					Demod.state = DEMOD_UNSYNCD;
 					LED_C_OFF();
 				}
@@ -855,12 +853,12 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 			break;
 
 		case DEMOD_AWAITING_START_BIT:
-			++Demod.posCount;
+			Demod.posCount++;
 			
 			MAKE_SOFT_DECISION();
 			
 			if (v > 0) {
-				if(Demod.posCount > 2*2) { 		// max 19us between characters = 16 1/fs, max 3 etu after low phase of SOF = 24 1/fs
+				if (Demod.posCount > 3*2) { 		// max 19us between characters = 16 1/fs, max 3 etu after low phase of SOF = 24 1/fs
 					Demod.state = DEMOD_UNSYNCD;
 					LED_C_OFF();
 				}
@@ -887,9 +885,10 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 				Demod.shiftReg >>= 1;
 
 				// OR in a logic '1'
-				if (Demod.thisBit > 0)  Demod.shiftReg |= 0x200;
+				if (Demod.thisBit > 0)  
+					Demod.shiftReg |= 0x200;
 
-				++Demod.bitCount;
+				Demod.bitCount++;
 				
 				// 1 start 8 data 1 stop = 10
 				if (Demod.bitCount == 10) {
@@ -899,13 +898,13 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 					// stop bit == '1', start bit == '0'
 					if ((s & 0x200) && (s & 0x001) == 0 ) { 
 						// left shift to drop the startbit
-						Demod.output[Demod.len] =  (s >> 1) & 0xFF;
+						uint8_t b = (s >> 1);
+						Demod.output[Demod.len] = b;
 						++Demod.len;
 						Demod.state = DEMOD_AWAITING_START_BIT;
 					} else {
 						// this one is a bit hard,  either its a correc byte or its unsynced.
 						Demod.state = DEMOD_UNSYNCD;
-						//Demod.endTime = GetCountSspClk();
 						LED_C_OFF();
 						
 						// This is EOF (start, stop and all data bits == '0'
@@ -963,8 +962,8 @@ static void GetTagSamplesFor14443bDemod() {
 		WDT_HIT();
 
 		// LSB is a fpga signal bit.
-		ci = upTo[0] >> 1;
-		cq = upTo[1] >> 1;
+		ci = upTo[0];
+		cq = upTo[1];
 		upTo += 2;
 		lastRxCounter -= 2;
 
@@ -985,15 +984,17 @@ static void GetTagSamplesFor14443bDemod() {
 	
 	FpgaDisableSscDma();
 	
-	if ( upTo ) upTo = NULL;
+	if ( upTo ) 
+		upTo = NULL;
 	
+	/*
 	if (MF_DBGLEVEL >= 3) {
-		Dbprintf("Demod.state = %d, Demod.len = %u,  PDC_RCR = %u",	
+		Dbprintf("Demod.state = %d, Demod.len = %u",	
 			Demod.state,
-			Demod.len,
-			AT91C_BASE_PDC_SSC->PDC_RCR
+			Demod.len
 		);
 	}
+	*/
 	
 	// print the last batch of IQ values from FPGA
 	if (MF_DBGLEVEL == 4)
@@ -1026,17 +1027,17 @@ static void TransmitFor14443b_AsReader(void) {
 	// 0xFF = 8 bits of 1.    1 bit == 1Etu,..  
 	// loop 10 * 8 = 80 ETU of delay, with a non modulated signal.  why?
 	// 80*9 = 720us.
-/*
+
    	for(c = 0; c < 50;) {
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
 			AT91C_BASE_SSC->SSC_THR = 0xFF;
-			++c;
+			c++;
 		}
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 			b = AT91C_BASE_SSC->SSC_RHR; (void)b;
 		}
 	}
-*/
+
 	
 	// Send frame loop
 	for(c = 0; c < ToSendMax;) {
@@ -1083,7 +1084,7 @@ static void CodeIso14443bAsReader(const uint8_t *cmd, int len) {
 	// 2-3 ETUs of ONE
 	ToSendStuffBit(1);
 	ToSendStuffBit(1);
-	ToSendStuffBit(1);
+//	ToSendStuffBit(1);
 	
 	// Sending cmd, LSB
 	// from here we add BITS
@@ -1127,7 +1128,7 @@ static void CodeIso14443bAsReader(const uint8_t *cmd, int len) {
 	// 8ETUS minum?
 	// Per specification, Subcarrier must be stopped no later than 2 ETUs after EOF.	
 	// I'm guessing this is for the FPGA to be able to send all bits before we switch to listening mode
-	for(i = 0; i < 32 ; ++i) ToSendStuffBit(1);
+	for(i = 0; i < 24 ; ++i) ToSendStuffBit(1);
 	
 	// TR1 - Synchronization time
 	// Convert from last character reference to length
@@ -1173,9 +1174,10 @@ uint8_t iso14443b_apdu(uint8_t const *message, size_t message_length, uint8_t *r
 		return 0;
 	
 	// VALIDATE CRC
-	if (!check_crc(CRC_14443_B, Demod.output, Demod.len))
+	if (!check_crc(CRC_14443_B, Demod.output, Demod.len)){
+		if (MF_DBGLEVEL > 3) Dbprintf("crc fail ICE");
 		return 0;
-	
+	}
 	// copy response contents
 	if(response != NULL)
 		memcpy(response, Demod.output, Demod.len);
@@ -1210,7 +1212,10 @@ uint8_t iso14443b_select_srx_card(iso14b_card_select_t *card ) {
 	if (Demod.len != 3)	return 2;
 	
 	// Check the CRC of the answer:
-	if (!check_crc(CRC_14443_B, Demod.output, Demod.len)) return 3;
+	if (!check_crc(CRC_14443_B, Demod.output, Demod.len)) {
+		if (MF_DBGLEVEL > 1) Dbprintf("crc fail ice2");
+		return 3;
+	}
 	
 	// Check response from the tag: should be the same UID as the command we just sent:
 	if (select_srx[1] != Demod.output[0]) return 1;
@@ -1225,7 +1230,10 @@ uint8_t iso14443b_select_srx_card(iso14b_card_select_t *card ) {
 	if (Demod.len != 10) return 2;
 	
 	// The check the CRC of the answer	
-	if (!check_crc(CRC_14443_B, Demod.output, Demod.len)) return 3;
+	if (!check_crc(CRC_14443_B, Demod.output, Demod.len)) {
+		if (MF_DBGLEVEL > 1) Dbprintf("crc fail ice3");
+		return 3;
+	}
 
 	if (card) {
 		card->uidlen = 8;
@@ -1255,8 +1263,10 @@ uint8_t iso14443b_select_card(iso14b_card_select_t *card ) {
 	if (Demod.len < 14) return 2;
 	
 	// VALIDATE CRC
-	if (!check_crc(CRC_14443_B, Demod.output, Demod.len))
+	if (!check_crc(CRC_14443_B, Demod.output, Demod.len)) {
+		if (MF_DBGLEVEL > 3) Dbprintf("iso1443b_setup crc fail");
 		return 3;
+	}
 	
 	if (card) {
 		card->uidlen = 4;
@@ -1278,8 +1288,10 @@ uint8_t iso14443b_select_card(iso14b_card_select_t *card ) {
     if(Demod.len < 3) return 2;
 
 	// VALIDATE CRC
-	if (!check_crc(CRC_14443_B, Demod.output, Demod.len) )
+	if (!check_crc(CRC_14443_B, Demod.output, Demod.len) ) {
+		if (MF_DBGLEVEL > 3) Dbprintf("iso1443b_setup crc2 fail");
 		return 3;
+	}
 
 	if (card) { 
 	
@@ -1694,8 +1706,9 @@ void SendRawCommand14443B_Ex(UsbCommand *c) {
 	// turn off antenna et al
 	// we don't send a HALT command.
 	if ((param & ISO14B_DISCONNECT) == ISO14B_DISCONNECT) {
-		if (MF_DBGLEVEL > 3) Dbprintf("disconnect");
+		if (MF_DBGLEVEL > 2) Dbprintf("disconnect");
 		switch_off(); // disconnect raw
+		SpinDelay(20);	
 	} else {
 		//FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_TX | FPGA_HF_READER_TX_SHALLOW_MOD);		
 	}
