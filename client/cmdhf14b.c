@@ -607,7 +607,7 @@ bool HF14BReader(bool verbose){
 	// could be read of calypso, CEPAS, moneo, or pico pass.
 	if (HF14B_Other_Reader()) return true;
 
-if (verbose) PrintAndLogEx(FAILED, "no 14443-B tag found");
+	if (verbose) PrintAndLogEx(FAILED, "no 14443-B tag found");
 	return false;
 }
 
