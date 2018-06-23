@@ -68,6 +68,15 @@ typedef enum ISO14B_COMMAND {
 	ISO14B_SELECT_SR =			(1 << 7)
 } iso14b_command_t;
 
+typedef enum ISO15_COMMAND {
+	ISO15_CONNECT = 		(1 << 0),
+	ISO15_NO_DISCONNECT =	(1 << 1),
+	ISO15_RAW =				(1 << 2),
+	ISO15_APPEND_CRC =		(1 << 3),
+	ISO15_HIGH_SPEED =		(1 << 4),
+	ISO15_READ_RESPONSE =	(1 << 5)
+} iso15_command_t;
+
 //-----------------------------------------------------------------------------
 // "hf 14a sim x", "hf mf sim x" attacks
 //-----------------------------------------------------------------------------
