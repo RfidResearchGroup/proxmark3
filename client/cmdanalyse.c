@@ -276,10 +276,17 @@ int CmdAnalyseCRC(const char *Cmd) {
 	PrintAndLogEx(NORMAL, "   reflect(0x3e23L,3) is %04X == 0x3e26", reflect(0x3e23L,3) );
 	PrintAndLogEx(NORMAL, "       reflect8(0x80) is %02X == 0x01", reflect8(0x80));
 	PrintAndLogEx(NORMAL, "    reflect16(0x8000) is %04X == 0x0001", reflect16(0xc6c6));
-	//
+	
+	uint8_t b1, b2;
+	// ISO14443 crc B
+	compute_crc(CRC_14443_B, data, len, &b1, &b2);	
+	uint16_t crcBB_1 = b1 << 8 | b2;
+	uint16_t bbb = crc(CRC_14443_B, data, len);
+	PrintAndLogEx(NORMAL, "ISO14443 crc B  | %04x == %04x \n", crcBB_1, bbb );
+	
+	
 	// Test of CRC16,  '123456789' string.
 	//
-	uint8_t b1, b2;
 	
 	PrintAndLogEx(NORMAL, "\n\nStandard test with 31 32 33 34 35 36 37 38 39  '123456789'\n\n");	
 	uint8_t dataStr[] = { 0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39 };
@@ -298,8 +305,8 @@ int CmdAnalyseCRC(const char *Cmd) {
 	PrintAndLogEx(NORMAL, "CCITT  | %X (29B1 expected)", crc(CRC_CCITT, dataStr, sizeof(dataStr)));		
 	
 	uint8_t poll[] = {0xb2,0x4d,0x12,0x01,0x01,0x2e,0x3d,0x17,0x26,0x47,0x80, 0x95,0x00,0xf1,0x00,0x00,0x00,0x01,0x43,0x00,0xb3,0x7f};
-	PrintAndLogEx(NORMAL, "FeliCa | %X (B37F expected)", crc(CRC_FELICA, poll+2, sizeof(poll)-4));
-	PrintAndLogEx(NORMAL, "FeliCa | %X (0000 expected)", crc(CRC_FELICA, poll+2, sizeof(poll)-2));
+	PrintAndLogEx(NORMAL, "FeliCa | %04X (B37F expected)", crc(CRC_FELICA, poll+2, sizeof(poll)-4));
+	PrintAndLogEx(NORMAL, "FeliCa | %04X (0000 expected)", crc(CRC_FELICA, poll+2, sizeof(poll)-2));
 	
 	uint8_t sel_corr[] = { 0x40, 0xe1, 0xe1, 0xff, 0xfe, 0x5f, 0x02, 0x3c, 0x43, 0x01};
 	PrintAndLogEx(NORMAL, "iCLASS | %04x (0143 expected)", crc(CRC_ICLASS, sel_corr, sizeof(sel_corr)-2));
@@ -485,6 +492,15 @@ int CmdAnalyseA(const char *Cmd){
 	}
 	//Validations
 	if (errors || cmdp == 0 ) return usage_analyse_checksum();
+
+// for testing of smart card.  Sending raw bytes.
+
+	UsbCommand c = {CMD_SMART_SEND, {0, 0, 0}};
+	c.arg[0] = hexlen;
+	memcpy(c.d.asBytes, data, hexlen );
+	clearCommandBuffer();
+	SendCommand(&c);
+	return 0;
 	
 	PrintAndLogEx(NORMAL, "-- " _BLUE_(its my message) "\n");
 	PrintAndLogEx(NORMAL, "-- " _RED_(its my message) "\n");
