@@ -198,9 +198,10 @@ void UsbCommandReceived(UsbCommand* _ch) {
 			// print debug line on same row. escape seq \r
 			if ( c->arg[1] == CMD_MEASURE_ANTENNA_TUNING_HF) {
 				printf("\r#db# %s", s);
-				fflush(stdout);
+				fflush(NULL);
 			} else {
 				PrintAndLogEx(NORMAL, "#db# %s", s);
+				fflush(NULL);
 			}
 			break;
 		}
