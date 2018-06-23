@@ -3049,6 +3049,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 	BigBuf_free_keep_EM();
 	clear_trace();
 	set_tracing(true);
+	LED_D_ON();
 
 	bool finished = false;
 	while (!BUTTON_PRESS() && !finished && !usb_poll_validate_length()) {
@@ -3083,7 +3084,6 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 			cardSTATE = MFEMUL_SELECT1;
 			crypto1_destroy(pcs);
 			cardAUTHKEY = 0xff;
-			LEDsoff();
 			nonce = prng_successor(selTimer, 32); 
 			continue;
 		}
