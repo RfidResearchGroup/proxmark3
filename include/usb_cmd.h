@@ -75,6 +75,9 @@ typedef struct{
 #define CMD_DOWNLOADED_FLASHMEM											  0x0124
 #define CMD_INFO_FLASH_MEM												  0x0125
 
+// RDV40,  Smart card operations
+#define CMD_SMART_SEND													  0x0140
+
 // For low-frequency tags
 #define CMD_READ_TI_TYPE                                                  0x0202
 #define CMD_WRITE_TI_TYPE                                                 0x0203
