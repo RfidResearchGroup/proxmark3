@@ -20,6 +20,7 @@
 #define GPIO_LED_B			AT91C_PIO_PA8
 #define GPIO_LED_C			AT91C_PIO_PA9
 
+// defines for flash mem,  or rdv40 ?
 // flashmem hooked on PA10
 //#define GPIO_NCS2			AT91C_PIO_PA1
 #define GPIO_NCS2			AT91C_PA10_NPCS2
@@ -34,8 +35,17 @@
 #define GPIO_SSC_DIN		AT91C_PA18_RD
 #define GPIO_MUXSEL_HIPKD	AT91C_PIO_PA19
 #define GPIO_MUXSEL_LOPKD	AT91C_PIO_PA20
+
+
 #define GPIO_MUXSEL_HIRAW	AT91C_PIO_PA21
 #define GPIO_MUXSEL_LORAW	AT91C_PIO_PA22
+
+// RDV40 has no HIRAW/LORAW,  its used for FPC
+#ifdef WITH_FPC
+#define GPIO_FPC_RDX		AT91C_PA21_RXD1
+#define GPIO_FPC_TDX		AT91C_PA22_TXD1
+#endif
+
 #define GPIO_BUTTON			AT91C_PIO_PA23
 #define GPIO_USB_PU			AT91C_PIO_PA24
 #define GPIO_RELAY			AT91C_PIO_PA25
