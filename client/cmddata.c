@@ -770,17 +770,14 @@ int CmdAutoCorr(const char *Cmd) {
 	bool errors = false;
 	
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch (param_getchar(Cmd, cmdp)) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 			case 'h':
-			case 'H':
 				return usage_data_autocorr();
 			case 'g':
-			case 'G':
 				updateGrph = true;
 				cmdp++;
 				break;
-			case 'w':
-			case 'W':		 
+			case 'w': 
 				window = param_get32ex(Cmd, cmdp+1, 4000, 10);
 				if (window >= GraphTraceLen) {
 					PrintAndLogEx(WARNING, "window must be smaller than trace (%d samples)", GraphTraceLen);
@@ -935,21 +932,17 @@ int CmdDetectClockRate(const char *Cmd)
 		return usage_data_detectclock();
 
 	int clock = 0;
-	switch ( cmdp ) {
+	switch ( tolower(cmdp) ) {
 		case 'a' :
-		case 'A' :
 			clock = GetAskClock(Cmd+1, true);
 			break;
 		case 'f' :
-		case 'F' :
 			clock = GetFskClock("", true);
 			break;
 		case 'n' :
-		case 'N' :
 			clock = GetNrzClock("", true);
 			break;
 		case 'p' :
-		case 'P' :
 			clock = GetPskClock("", true);
 			break;
 		default :
@@ -1546,14 +1539,13 @@ int CmdTuneSamples(const char *Cmd) {
 		test += resp.d.asBytes[i];
 	}
 	if ( test > 0 ) {
-		PrintAndLogEx(NORMAL, "\n");
-		PrintAndLogEx(SUCCESS, " Displaying LF tuning graph. Divisor 89 is 134khz, 95 is 125khz.\n\n");
+		PrintAndLogEx(SUCCESS, "\nDisplaying LF tuning graph. Divisor 89 is 134khz, 95 is 125khz.\n\n");
 		GraphTraceLen = 256;
 		ShowGraphWindow();
 		RepaintGraphWindow();
 	} else {
-		PrintAndLogEx(NORMAL, "\n");
-		PrintAndLogEx(FAILED, "Not showing LF tuning graph since all values is zero.\n\n");
+
+		PrintAndLogEx(FAILED, "\nNot showing LF tuning graph since all values is zero.\n\n");
 	}
 	return 0;
 }
@@ -1981,22 +1973,18 @@ int CmdFSKToNRZ(const char *Cmd) {
 	int fc_low = 10, fc_high = 8;
 	while(param_getchar(Cmd, cmdp) != 0x00)
 	{
-		switch(param_getchar(Cmd, cmdp))
+		switch (tolower(param_getchar(Cmd, cmdp)))
 		{
 		case 'h':
-		case 'H':
 			return usage_data_fsktonrz();
-		case 'C':
 		case 'c':
 			clk = param_get32ex(Cmd, cmdp+1, 0, 10);
 			cmdp += 2;
 			break;
-		case 'F':
 		case 'f':
 			fc_high = param_get32ex(Cmd, cmdp+1, 0, 10);
 			cmdp += 2;
 			break;
-		case 'L':
 		case 'l':
 			fc_low = param_get32ex(Cmd, cmdp+1, 0, 10);
 			cmdp += 2;
