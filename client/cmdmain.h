@@ -36,7 +36,7 @@
 #include "cmdflashmem.h"	// rdv40 flashmem commands
 
 //For storing command that are received from the device
-#define CMD_BUFFER_SIZE 50
+#define CMD_BUFFER_SIZE 100
 typedef enum {
 	BIG_BUF,
 	BIG_BUF_EML,

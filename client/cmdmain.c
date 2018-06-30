@@ -14,33 +14,25 @@ static int CmdQuit(const char *Cmd);
 static int CmdRev(const char *Cmd);
 
 //For storing command that are received from the device
-#define CMD_BUFFER_SIZE 50
 static UsbCommand cmdBuffer[CMD_BUFFER_SIZE];
+
 //Points to the next empty position to write to
-static int cmd_head;//Starts as 0
+static int cmd_head = 0;
+
 //Points to the position of the last unread command
-static int cmd_tail;//Starts as 0
+static int cmd_tail = 0;
 
 // to lock cmdBuffer operations from different threads
 static pthread_mutex_t cmdBufferMutex = PTHREAD_MUTEX_INITIALIZER;
 
-int CmdQuit(const char *Cmd) {
-	return 99;
-}
-
-int CmdRev(const char *Cmd) {
-	CmdCrc(Cmd);
-	return 0;
-}
-
 static command_t CommandTable[] = {
 	{"help",	CmdHelp,	1, "This help. Use '<command> help' for details of a particular command."},
-	{"analyse", CmdAnalyse, 1, "{ Analyse bytes... }"},
+	{"analyse", CmdAnalyse, 1, "{ Analyse utils... }"},
 	{"data",	CmdData,	1, "{ Plot window / data buffer manipulation... }"},
 	{"hf",		CmdHF,		1, "{ High Frequency commands... }"},
 	{"hw",		CmdHW,		1, "{ Hardware commands... }"},
 	{"lf",		CmdLF,		1, "{ Low Frequency commands... }"},
-	{"reveng",	CmdRev, 	1, "Crc calculations from the software reveng 1.44"},
+	{"reveng",	CmdRev, 	1, "{ Crc calculations from the software reveng 1.51... }"},
 	{"script",	CmdScript,	1, "{ Scripting commands }"},
 	{"trace",	CmdTrace,	1, "{ Trace manipulation... }"},
 #ifdef WITH_FLASH		
@@ -57,6 +49,15 @@ command_t* getTopLevelCommandTable() {
 
 int CmdHelp(const char *Cmd) {
 	CmdsHelp(CommandTable);
+	return 0;
+}
+
+int CmdQuit(const char *Cmd) {
+	return 99;
+}
+
+int CmdRev(const char *Cmd) {
+	CmdCrc(Cmd);
 	return 0;
 }
 
@@ -85,6 +86,7 @@ void storeCommand(UsbCommand *command) {
         //If these two are equal, we're about to overwrite in the
         // circular buffer.
         PrintAndLogEx(FAILED, "WARNING: Command buffer about to overwrite command! This needs to be fixed!");
+		fflush(NULL);
     }
     //Store the command at the 'head' location
     UsbCommand* destination = &cmdBuffer[cmd_head];
@@ -197,12 +199,11 @@ void UsbCommandReceived(UsbCommand* _ch) {
 			
 			// print debug line on same row. escape seq \r
 			if ( c->arg[1] == CMD_MEASURE_ANTENNA_TUNING_HF) {
-				printf("\r#db# %s", s);
-				fflush(NULL);
+				PrintAndLogEx(NORMAL, "\r#db# %s", s);
 			} else {
 				PrintAndLogEx(NORMAL, "#db# %s", s);
-				fflush(NULL);
 			}
+			fflush(NULL);
 			break;
 		}
 		case CMD_DEBUG_PRINT_INTEGERS: {
