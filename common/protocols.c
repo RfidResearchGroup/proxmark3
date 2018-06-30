@@ -136,6 +136,6 @@ void printIclassDumpInfo(uint8_t* iclass_dump) {
 }
 
 #else
-	#define PrintAndLogDevice(level, format, args...) { }
+	#define PrintAndLogDevice(level, format, ...) { }
 #endif
 //ON_DEVICE
