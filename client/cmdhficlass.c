@@ -535,7 +535,7 @@ int HFiClassReader(const char *Cmd, bool loop, bool verbose) {
 				}
 			}
 			if( readStatus & FLAG_ICLASS_READER_CSN){
-				PrintAndLogEx(NORMAL, "CSN: %s", sprint_hex(data, 8));
+				PrintAndLogEx(NORMAL, "   CSN: %s", sprint_hex(data, 8));
 				tagFound = true;
 			}
 			if (readStatus & FLAG_ICLASS_READER_CC) { 
@@ -547,7 +547,10 @@ int HFiClassReader(const char *Cmd, bool loop, bool verbose) {
 			if (readStatus & FLAG_ICLASS_READER_AIA) {
 				bool legacy = ( memcmp( (uint8_t *)(data + 8*5), "\xff\xff\xff\xff\xff\xff\xff\xff", 8) == 0 );
 				PrintAndLogEx(NORMAL, " App IA: %s", sprint_hex(data+8*5, 8));
-				PrintAndLogEx(NORMAL, "      : Possible iClass %s", (legacy) ? "(legacy tag)" : "(NOT legacy tag)");
+				if ( legacy )
+					PrintAndLogEx(SUCCESS, "      : Possible iClass (legacy tag)");
+				else
+					PrintAndLogEx(WARNING, "      : Possible iClass (NOT legacy tag)");
 			}
 
 			if (tagFound && !loop) {
