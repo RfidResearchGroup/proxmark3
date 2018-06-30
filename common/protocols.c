@@ -17,7 +17,7 @@ uint32_t GetT55xxClockBit(uint32_t clock) {
 
 #ifndef ON_DEVICE
 #include "ui.h"
-#define prnt PrintAndLog
+#define PrintAndLogDevice(level, format, args...)  PrintAndLogEx(level, format , ## args)
 
 uint8_t isset(uint8_t val, uint8_t mask) {
 	return (val & mask);
@@ -31,31 +31,31 @@ void fuse_config(const picopass_hdr *hdr) {
 	uint8_t fuses = hdr->conf.fuses;
 
 	if (isset(fuses,FUSE_FPERS)) 
-		prnt("	Mode: Personalization [Programmable]");
+		PrintAndLogDevice(SUCCESS, "\tMode: Personalization [Programmable]");
 	else 
-		prnt("	Mode: Application [Locked]");
+		PrintAndLogDevice(NORMAL, "\tMode: Application [Locked]");
 
 	if (isset(fuses, FUSE_CODING1)) {
-		prnt("	Coding: RFU");
+		PrintAndLogDevice(NORMAL, "\tCoding: RFU");
 	} else {
 		if( isset( fuses , FUSE_CODING0)) 
-			prnt("	Coding: ISO 14443-2 B/ISO 15693");
+			PrintAndLogDevice(NORMAL, "\tCoding: ISO 14443-2 B/ISO 15693");
 		else 
-			prnt("	Coding: ISO 14443B only");
+			PrintAndLogDevice(NORMAL, "\tCoding: ISO 14443B only");
 	}
 	// 1 1
-	if( isset (fuses,FUSE_CRYPT1) && isset(fuses, FUSE_CRYPT0 )) prnt("	Crypt: Secured page, keys not locked");
+	if( isset (fuses,FUSE_CRYPT1) && isset(fuses, FUSE_CRYPT0 )) PrintAndLogDevice(SUCCESS, "\tCrypt: Secured page, keys not locked");
 	// 1 0
-	if( isset (fuses,FUSE_CRYPT1) && notset( fuses, FUSE_CRYPT0 )) prnt("	Crypt: Secured page, keys locked");
+	if( isset (fuses,FUSE_CRYPT1) && notset( fuses, FUSE_CRYPT0 )) PrintAndLogDevice(NORMAL, "\tCrypt: Secured page, keys locked");
 	// 0 1
-	if( notset (fuses,FUSE_CRYPT1) && isset( fuses, FUSE_CRYPT0 )) prnt("	Crypt: Non secured page");
+	if( notset (fuses,FUSE_CRYPT1) && isset( fuses, FUSE_CRYPT0 )) PrintAndLogDevice(SUCCESS, "\tCrypt: Non secured page");
 	// 0 0
-	if( notset (fuses,FUSE_CRYPT1) && notset( fuses, FUSE_CRYPT0 )) prnt("	Crypt: No auth possible. Read only if RA is enabled");
+	if( notset (fuses,FUSE_CRYPT1) && notset( fuses, FUSE_CRYPT0 )) PrintAndLogDevice(NORMAL, "\tCrypt: No auth possible. Read only if RA is enabled");
 
 	if( isset( fuses, FUSE_RA))
-		prnt("	RA: Read access enabled");
+		PrintAndLogDevice(NORMAL, "\tRA: Read access enabled");
 	else 
-		prnt("	RA: Read access not enabled");
+		PrintAndLogDevice(WARNING, "\tRA: Read access not enabled");
 }
 
 void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *max_blk, uint8_t *app_areas, uint8_t *kb) {
@@ -104,28 +104,27 @@ void mem_app_config(const picopass_hdr *hdr) {
 	if (applimit < 6) applimit = 26;
 	if (kb == 2 && (applimit > 0x1f) ) applimit = 26;
 	
-	prnt("  Mem: %u KBits/%u App Areas (%u * 8 bytes) [%02X]", kb, app_areas, max_blk, mem);
-	prnt("	AA1: blocks 06-%02X", applimit);
-	prnt("	AA2: blocks %02X-%02X", applimit+1, max_blk);
-	prnt("	OTP: 0x%02X%02X", hdr->conf.otp[1],  hdr->conf.otp[0]);
-	prnt("");
+	PrintAndLogDevice(NORMAL, " Mem: %u KBits/%u App Areas (%u * 8 bytes) [%02X]", kb, app_areas, max_blk, mem);
+	PrintAndLogDevice(NORMAL, "\tAA1: blocks 06-%02X", applimit);
+	PrintAndLogDevice(NORMAL, "\tAA2: blocks %02X-%02X", applimit+1, max_blk);
+	PrintAndLogDevice(NORMAL, "\tOTP: 0x%02X%02X", hdr->conf.otp[1],  hdr->conf.otp[0]);
+	PrintAndLogDevice(NORMAL, "\nKeyAccess:");
+
 	uint8_t book = isset(mem, 0x20);
 	if (book) {
-		prnt("KeyAccess:");
-		prnt("\tRead A - Kd");
-		prnt("\tRead B - Kc");
-		prnt("\tWrite A - Kd");
-		prnt("\tWrite B - Kc");
-		prnt("\tDebit  - Kd or Kc");
-		prnt("\tCredit - Kc");
+		PrintAndLogDevice(NORMAL, "\tRead A - Kd");
+		PrintAndLogDevice(NORMAL, "\tRead B - Kc");
+		PrintAndLogDevice(NORMAL, "\tWrite A - Kd");
+		PrintAndLogDevice(NORMAL, "\tWrite B - Kc");
+		PrintAndLogDevice(NORMAL, "\tDebit  - Kd or Kc");
+		PrintAndLogDevice(NORMAL,"\tCredit - Kc");
 	} else{
-		prnt("KeyAccess:");
-		prnt("\tRead A - Kd or Kc");
-		prnt("\tRead B - Kd or Kc");
-		prnt("\tWrite A - Kc");
-		prnt("\tWrite B - Kc");
-		prnt("\tDebit  - Kd or Kc");
-		prnt("\tCredit - Kc");
+		PrintAndLogDevice(NORMAL, "\tRead A - Kd or Kc");
+		PrintAndLogDevice(NORMAL, "\tRead B - Kd or Kc");
+		PrintAndLogDevice(NORMAL, "\tWrite A - Kc");
+		PrintAndLogDevice(NORMAL, "\tWrite B - Kc");
+		PrintAndLogDevice(NORMAL, "\tDebit  - Kd or Kc");
+		PrintAndLogDevice(NORMAL, "\tCredit - Kc");
 	}
 }
 void print_picopass_info(const picopass_hdr *hdr) {
@@ -136,17 +135,7 @@ void printIclassDumpInfo(uint8_t* iclass_dump) {
 	print_picopass_info((picopass_hdr *) iclass_dump);
 }
 
-/*
-void test() {
-	picopass_hdr hdr = {0x27,0xaf,0x48,0x01,0xf9,0xff,0x12,0xe0,0x12,0xff,0xff,0xff,0x7f,0x1f,0xff,0x3c};
-	prnt("Picopass configuration:");
-	print_picopass_info(&hdr);
-}
-int main(int argc, char *argv[]) {
-	test();
-	return 0;
-}
-*/
-
+#else
+	#define PrintAndLogDevice(level, format, args...) { }
 #endif
 //ON_DEVICE
