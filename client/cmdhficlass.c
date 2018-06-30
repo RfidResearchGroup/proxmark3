@@ -225,6 +225,7 @@ int usage_hf_iclass_chk(void) {
 	PrintAndLogEx(NORMAL, "      f <filename>  Dictionary file with default iclass keys");
 	PrintAndLogEx(NORMAL, "      r             raw");
 	PrintAndLogEx(NORMAL, "      e             elite");
+	PrintAndLogEx(NORMAL, "      c             credit key  (if not use, default is debit)");
 	PrintAndLogEx(NORMAL, "Examples:");
 	PrintAndLogEx(NORMAL, "		 hf iclass chk f default_iclass_keys.dic");	
 	PrintAndLogEx(NORMAL, "		 hf iclass chk f default_iclass_keys.dic e");
@@ -1937,12 +1938,16 @@ int CmdHFiClassManageKeys(const char *Cmd) {
 
 int CmdHFiClassCheckKeys(const char *Cmd) {
 
+	// empty string
+	if (strlen(Cmd) == 0) return usage_hf_iclass_chk();
+	
 	uint8_t CSN[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
 	uint8_t CCNR[12] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
 		
 	// elite key,  raw key, standard key
 	bool use_elite = false;
-	bool use_raw = false;	
+	bool use_raw = false;
+	bool use_credit_key	= false;
 	bool found_debit = false;
 	//bool found_credit = false;
 	bool got_csn = false;
@@ -1955,21 +1960,15 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 	uint8_t *keyBlock = NULL;	
 	iclass_premac_t *pre = NULL;
 	int keycnt = 0;
-
-	// if empty string
-	if (strlen(Cmd) == 0) errors = true;
-
 	
 	// time
 	uint64_t t1 = msclock();
 	
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch (param_getchar(Cmd, cmdp)) {
+		switch ( tolower(param_getchar(Cmd, cmdp))) {
 		case 'h':
-		case 'H':
 			return usage_hf_iclass_chk();
 		case 'f':
-		case 'F':
 			fileNameLen = param_getstr(Cmd, cmdp+1, filename, sizeof(filename)); 
 			if (fileNameLen < 1) {
 				PrintAndLogEx(WARNING, "no filename found after f");
@@ -1978,12 +1977,14 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 			cmdp += 2;
 			break;
 		case 'e':
-		case 'E':
 			use_elite = true;
 			cmdp++;
 			break;
+		case 'c':
+			use_credit_key = true;
+			cmdp++;			
+			break;
 		case 'r':
-		case 'R':
 			use_raw = true;
 			cmdp++;
 			break;
@@ -2048,7 +2049,7 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 		
 		if (ukbhit()) {
 			int gc = getchar(); (void)gc;
-			PrintAndLogEx(NORMAL, "\n[!] aborted via keyboard!\n");
+			PrintAndLogEx(NORMAL, "\n[!] Aborted via keyboard!\n");
 			goto out;
 		}
 		
@@ -2059,6 +2060,12 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 			lastChunk = true;
 		
 		UsbCommand c = {CMD_ICLASS_CHECK_KEYS, { (lastChunk << 8), keys, 0}};
+		
+		// bit 16
+		//   - 1 indicates credit key
+		//   - 0 indicates debit key (default)
+		c.arg[0] |= (use_credit_key << 16);
+		
 		memcpy(c.d.asBytes, pre + i, 4 * keys);
 		clearCommandBuffer();
 		SendCommand(&c);
@@ -2068,7 +2075,7 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 			timeout++;
 			printf("."); fflush(stdout);
 			if (timeout > 120) {
-				PrintAndLogEx(WARNING, "\nno response from Proxmark. Aborting...");
+				PrintAndLogEx(WARNING, "\nNo response from Proxmark. Aborting...");
 				goto out;
 			}
 		}
@@ -2081,17 +2088,23 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 			case 1: {
 				found_debit = true;
 				
-				PrintAndLogEx(NORMAL, "\n[-] Chunk [%d/%d]: %.1fs [debit]  found key  %s (index %u)"
+				PrintAndLogEx(NORMAL, "\n[-] Chunk [%d/%d]: %.1fs [%s]  found key  %s (index %u)"
 						, i
 						, keycnt						
 						, (float)(t2/1000.0)
+						, (use_credit_key) ? "credit" : "debit"
 						, sprint_hex(keyBlock + (i+found)*8, 8)
 						, found
 					);
 				break;
 			}
 			case 0: {
-				PrintAndLogEx(NORMAL, "\n[-] Chunk [%d/%d] : %.1fs [debit]", i, keycnt, (float)(t2/1000.0));
+				PrintAndLogEx(NORMAL, "\n[-] Chunk [%d/%d] : %.1fs [%s]"
+						, i
+						, keycnt
+						, (float)(t2/1000.0)
+						, (use_credit_key) ? "credit" : "debit"
+					);
 				break;
 			}
 			case 99: {
@@ -2161,12 +2174,10 @@ int CmdHFiClassLookUp(const char *Cmd) {
 	uint64_t t1 = msclock();
 	
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch (param_getchar(Cmd, cmdp)) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'h':
-		case 'H':
 			return usage_hf_iclass_lookup();
 		case 'f':
-		case 'F':
 			fileNameLen = param_getstr(Cmd, cmdp+1, filename, sizeof(filename)); 
 			if (fileNameLen < 1) {
 				PrintAndLogEx(WARNING, "No filename found after f");
@@ -2175,7 +2186,6 @@ int CmdHFiClassLookUp(const char *Cmd) {
 			cmdp += 2;
 			break;
 		case 'u':
-		case 'U':
 			param_gethex_ex(Cmd, cmdp+1, CSN, &len);
 			if ( len>>1 != sizeof(CSN) ) {
 				PrintAndLogEx(WARNING, "Wrong CSN length, expected %d got [%d]", sizeof(CSN), len>>1);
@@ -2184,7 +2194,6 @@ int CmdHFiClassLookUp(const char *Cmd) {
 			cmdp += 2;			
 			break;
 		case 'm':
-		case 'M':
 			param_gethex_ex(Cmd, cmdp+1, MACS, &len);
 			if ( len>>1 != sizeof(MACS) ) {
 				PrintAndLogEx(WARNING, "Wrong MACS length, expected %d got [%d]  ", sizeof(MACS), len>>1);
@@ -2195,7 +2204,6 @@ int CmdHFiClassLookUp(const char *Cmd) {
 			cmdp += 2;			
 			break;
 		case 'p':
-		case 'P':
 			param_gethex_ex(Cmd, cmdp+1, EPURSE, &len);
 			if ( len>>1 != sizeof(EPURSE) ) {
 				PrintAndLogEx(WARNING, "Wrong EPURSE length, expected %d got [%d]  ", sizeof(EPURSE), len>>1);
@@ -2205,12 +2213,10 @@ int CmdHFiClassLookUp(const char *Cmd) {
 			break;
 		break;
 		case 'e':
-		case 'E':
 			use_elite = true;
 			cmdp++;
 			break;
 		case 'r':
-		case 'R':
 			use_raw = true;
 			cmdp++;
 			break;
@@ -2265,11 +2271,10 @@ int CmdHFiClassLookUp(const char *Cmd) {
 	iclass_prekey_t lookup;
 	memcpy(lookup.mac, MAC_TAG, 4);
 	
-	// using find
+	// binsearch
 	item = (iclass_prekey_t*) bsearch(&lookup, prekey, keycnt, sizeof(iclass_prekey_t), cmp_uint32);	
-	if( item != NULL ) {
+	if( item != NULL )
 		PrintAndLogEx(SUCCESS, "\n[debit] found key %s", sprint_hex(item->key, 8));
-	}
 
 	t1 = msclock() - t1;
 	PrintAndLogEx(NORMAL, "\nTime in iclass : %.0f seconds\n", (float)t1/1000.0);
@@ -2325,7 +2330,7 @@ int LoadDictionaryKeyFile( char* filename, uint8_t **keys, int *keycnt) {
 		memset(buf, 0, sizeof(buf));
 	}
 	fclose(f);
-	PrintAndLogEx(NORMAL, _BLUE_([+]) " loaded " _GREEN_(%2d) " keys from %s", *keycnt, filename);	
+	PrintAndLogEx(NORMAL, _BLUE_([+]) "Loaded " _GREEN_(%2d) " keys from %s", *keycnt, filename);	
 	return 0;
 }
 

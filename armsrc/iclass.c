@@ -1853,9 +1853,9 @@ uint8_t handshakeIclassTag_ext(uint8_t *card_data, bool use_credit_key) {
 	static uint8_t act_all[]      = { ICLASS_CMD_ACTALL };
 	static uint8_t identify[]     = { ICLASS_CMD_READ_OR_IDENTIFY, 0x00, 0x73, 0x33 };
 	static uint8_t select[]       = { ICLASS_CMD_SELECT, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-	static uint8_t readcheck_cc[] = { ICLASS_CMD_READCHECK_KD, 0x02 };
+	uint8_t readcheck_cc[] = { ICLASS_CMD_READCHECK_KD, 0x02 };
 
-	if  (use_credit_key) 
+	if (use_credit_key) 
 		readcheck_cc[0] = ICLASS_CMD_READCHECK_KC;
 
 	uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
@@ -1891,12 +1891,13 @@ uint8_t handshakeIclassTag_ext(uint8_t *card_data, bool use_credit_key) {
 	read_status = 1;
 
 	// Card selected, now read e-purse (cc) (block2) (only 8 bytes no CRC)
-//	ReaderTransmitIClass(readcheck_cc, sizeof(readcheck_cc));
-// if (ReaderReceiveIClass(resp) == 8) {
+	//	ReaderTransmitIClass(readcheck_cc, sizeof(readcheck_cc));
+	// if (ReaderReceiveIClass(resp) == 8) {
 		// //Save CC (e-purse) in response data
 		// memcpy(card_data+8, resp, 8);
 		// read_status++;
 	// }
+			
 	bool isOK = sendCmdGetResponseWithRetries(readcheck_cc, sizeof(readcheck_cc), resp, 8, 3);
 	if (!isOK) return read_status;
 	
@@ -2237,7 +2238,7 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
 	while ( read_status != 2) {
 		
 		if (BUTTON_PRESS() && !usb_poll_validate_length()) goto out;
-
+		
 		read_status = handshakeIclassTag_ext(card_data, use_credit_key);
 		if ( startup_limit-- == 0 ) {
 			Dbprintf("[-] Handshake status | %d (fail 10)", read_status);
@@ -2262,7 +2263,7 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
 		check[7] = keys[i].mac[2];
 		check[8] = keys[i].mac[3];
 		
-		// expect 4bytes, 2 retries times..
+		// expect 4bytes, 3 retries times..
 		isOK = sendCmdGetResponseWithRetries(check, sizeof(check), resp, 4, 3);
 		if ( isOK )
 			goto out;
@@ -2272,8 +2273,6 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
 		// Auth Sequence MUST begin with reading e-purse. (block2)	
 		// Card selected, now read e-purse (cc) (block2) (only 8 bytes no CRC)		
 		ReaderTransmitIClass(readcheck_cc, sizeof(readcheck_cc));		
-		// if (ReaderReceiveIClass(resp) == 8) {
-		// }
 		
 		LED_B_OFF();		
 	}
