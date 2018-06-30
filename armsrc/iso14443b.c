@@ -845,7 +845,7 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 				}
 			} else {
 				// low phase of SOF too long (> 12 etu)
-				if (Demod.posCount > 12*2) { 
+				if (Demod.posCount > 14*2) { 
 					Demod.state = DEMOD_UNSYNCD;
 					LED_C_OFF();
 				}
@@ -858,7 +858,7 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 			MAKE_SOFT_DECISION();
 			
 			if (v > 0) {
-				if (Demod.posCount > 3*2) { 		// max 19us between characters = 16 1/fs, max 3 etu after low phase of SOF = 24 1/fs
+				if (Demod.posCount > 6*2) { 		// max 19us between characters = 16 1/fs, max 3 etu after low phase of SOF = 24 1/fs
 					Demod.state = DEMOD_UNSYNCD;
 					LED_C_OFF();
 				}
@@ -986,15 +986,6 @@ static void GetTagSamplesFor14443bDemod() {
 	
 	if ( upTo ) 
 		upTo = NULL;
-	
-	/*
-	if (MF_DBGLEVEL >= 3) {
-		Dbprintf("Demod.state = %d, Demod.len = %u",	
-			Demod.state,
-			Demod.len
-		);
-	}
-	*/
 	
 	// print the last batch of IQ values from FPGA
 	if (MF_DBGLEVEL == 4)
@@ -1341,7 +1332,7 @@ void iso14443b_setup() {
 	
 	// Signal field is on with the appropriate LED
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_TX | FPGA_HF_READER_TX_SHALLOW_MOD);
-	SpinDelay(100);
+	SpinDelay(300);
 
 	// Start the timer
 	StartCountSspClk();
