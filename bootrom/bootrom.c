@@ -29,7 +29,7 @@ static void ConfigClocks(void) {
     // slow clock runs at 32Khz typical regardless of crystal
 
     // enable system clock and USB clock
-    AT91C_BASE_PMC->PMC_SCER = AT91C_PMC_PCK | AT91C_PMC_UDP;
+    AT91C_BASE_PMC->PMC_SCER |= AT91C_PMC_PCK | AT91C_PMC_UDP;
 
 	// enable the clock to the following peripherals
     AT91C_BASE_PMC->PMC_PCER =

@@ -489,7 +489,7 @@ void usb_enable() {
 
 	// Specific Chip USB Initialisation
 	// Enables the 48MHz USB clock UDPCK and System Peripheral USB Clock
-	AT91C_BASE_PMC->PMC_SCER = AT91C_PMC_UDP;
+	AT91C_BASE_PMC->PMC_SCER |= AT91C_PMC_UDP;
 	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_UDP);
 	
 	AT91C_BASE_UDP->UDP_FADDR = 0;
