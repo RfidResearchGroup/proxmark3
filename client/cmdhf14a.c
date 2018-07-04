@@ -197,24 +197,20 @@ int CmdHF14AReader(const char *Cmd) {
 	bool disconnectAfter = true;
 	
 	int cmdp = 0;
-	while(param_getchar(Cmd, cmdp) != 0x00) {
-		switch(param_getchar(Cmd, cmdp)) {
+	while (param_getchar(Cmd, cmdp) != 0x00) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'h':
-		case 'H':
 			return usage_hf_14a_reader();
 		case '3':
 			cm |= ISO14A_NO_RATS; 
 			break;
 		case 'k':
-		case 'K':
 			disconnectAfter = false;
 			break;
 		case 's':
-		case 'S':	
 		      silent = true;
 			  break;
 		case 'x':
-		case 'X':
 			cm &= ~ISO14A_CONNECT;
 			break;
 		default:
