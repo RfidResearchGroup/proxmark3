@@ -29,7 +29,7 @@
 #endif
 
 #ifdef WITH_SMARTCARD
-#include "smartcard.h"
+#include "i2c.h"
 #endif
 
 
@@ -382,7 +382,7 @@ void SendStatus(void) {
 	Fpga_print_status();
 	Flashmem_print_status();
 #ifdef WITH_SMARTCARD	
-	SmartCard_print_status();
+	i2c_print_status();
 #endif	
 #ifdef WITH_LF
 	printConfig(); //LF Sampling config
@@ -688,7 +688,10 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			CopyIndala64toT55x7(c->arg[0], c->arg[1]);					
 			break;
 		case CMD_INDALA_CLONE_TAG_L:
-			CopyIndala224toT55x7(c->d.asDwords[0], c->d.asDwords[1], c->d.asDwords[2], c->d.asDwords[3], c->d.asDwords[4], c->d.asDwords[5], c->d.asDwords[6]);
+			CopyIndala224toT55x7(
+				c->d.asDwords[0], c->d.asDwords[1], c->d.asDwords[2], c->d.asDwords[3],
+				c->d.asDwords[4], c->d.asDwords[5], c->d.asDwords[6]
+				);
 			break;
 		case CMD_T55XX_READ_BLOCK:
 			T55xxReadBlock(c->arg[0], c->arg[1], c->arg[2]);
@@ -706,8 +709,14 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			ReadPCF7931();
 			break;
 		case CMD_PCF7931_WRITE:
-        WritePCF7931(c->d.asBytes[0], c->d.asBytes[1], c->d.asBytes[2], c->d.asBytes[3], c->d.asBytes[4], c->d.asBytes[5], c->d.asBytes[6], c->d.asBytes[9],
-                     c->d.asBytes[7] - 128, c->d.asBytes[8] - 128, c->arg[0], c->arg[1], c->arg[2]);
+			WritePCF7931(
+				c->d.asBytes[0], c->d.asBytes[1], c->d.asBytes[2], c->d.asBytes[3], 
+				c->d.asBytes[4], c->d.asBytes[5], c->d.asBytes[6], c->d.asBytes[9],
+                c->d.asBytes[7] - 128, c->d.asBytes[8] - 128, 
+				c->arg[0], 
+				c->arg[1], 
+				c->arg[2]
+				);
 			break;
 		case CMD_EM4X_READ_WORD:
 			EM4xReadWord(c->arg[0], c->arg[1], c->arg[2]);
@@ -1012,6 +1021,26 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			HfSnoop(c->arg[0], c->arg[1]);
 			break;
 #endif
+#ifdef WITH_SMARTCARD
+        case CMD_SMART_SEND: {
+			
+			// sending to smart card.			
+			I2C_Reset_EnterMainProgram();		
+			
+			// sample:
+			// [C0 02] A0 A4 00 00 02
+			// asBytes = A0 A4 00 00 02
+			// arg0 = len 5
+			I2C_BufferWrite(c->d.asBytes, c->arg[0], I2C_DEVICE_CMD_SEND, I2C_DEVICE_ADDRESS_MAIN);
+			
+			uint8_t resp[255] = {0};
+			uint8_t len = I2C_BufferRead(resp, 255, I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
+			Dbhexdump(len, resp, false);
+			
+			cmd_send(CMD_ACK, len, 0, 0, resp, len);
+            break;
+        }       
+#endif    
 
 		case CMD_BUFF_CLEAR:
 			BigBuf_Clear();
@@ -1251,10 +1280,12 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 		case CMD_SET_ADC_MUX:
 			switch(c->arg[0]) {
 				case 0: SetAdcMuxFor(GPIO_MUXSEL_LOPKD); break;
-				case 1: SetAdcMuxFor(GPIO_MUXSEL_LORAW); break;
 				case 2: SetAdcMuxFor(GPIO_MUXSEL_HIPKD); break;
+#ifndef WITH_FPC			
+				case 1: SetAdcMuxFor(GPIO_MUXSEL_LORAW); break;
 				case 3: SetAdcMuxFor(GPIO_MUXSEL_HIRAW); break;
-			}
+#endif
+				}
 			break;
 
 		case CMD_VERSION:
@@ -1265,6 +1296,11 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			break;
 		case CMD_PING:
 			cmd_send(CMD_ACK,0,0,0,0,0);
+			
+			char header[] = {"*** Iceman Usart ***"};
+			uint32_t res = usart_writebuffer((uint8_t *)header, sizeof(header), 100000);
+			Dbprintf("after sending FPC  [%x]", res);
+
 			break;
 #ifdef WITH_LCD
 		case CMD_LCD_RESET:
@@ -1305,7 +1341,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			break;
 			}
 		default:
-			Dbprintf("%s: 0x%04x","unknown command:",c->cmd);
+			Dbprintf("%s: 0x%04x","unknown command:", c->cmd);
 			break;
 	}
 }
@@ -1330,7 +1366,7 @@ void  __attribute__((noreturn)) AppMain(void) {
 	// The FPGA gets its clock from us from PCK0 output, so set that up.
 	AT91C_BASE_PIOA->PIO_BSR = GPIO_PCK0;
 	AT91C_BASE_PIOA->PIO_PDR = GPIO_PCK0;
-	AT91C_BASE_PMC->PMC_SCER = AT91C_PMC_PCK0;
+	AT91C_BASE_PMC->PMC_SCER |= AT91C_PMC_PCK0;
 	// PCK0 is PLL clock / 4 = 96Mhz / 4 = 24Mhz
 	AT91C_BASE_PMC->PMC_PCKR[0] = AT91C_PMC_CSS_PLL_CLK | AT91C_PMC_PRES_CLK_4; //  4 for 24Mhz pck0, 2 for 48 MHZ pck0
 	AT91C_BASE_PIOA->PIO_OER = GPIO_PCK0;
@@ -1356,21 +1392,30 @@ void  __attribute__((noreturn)) AppMain(void) {
 #endif
 
 #ifdef WITH_SMARTCARD
-	SmartCard_init();
+	I2C_init();
 #endif
-
-	byte_t rx[sizeof(UsbCommand)];
+#ifdef WITH_FPC
+	usart_init();
+#endif	
+	uint8_t rx[sizeof(UsbCommand)];
    
 	for(;;) {
 		WDT_HIT();
 		
-		// Check if there is a usb packet available
-		if ( cmd_receive( (UsbCommand*)rx ) )
-			UsbPacketReceived(rx, sizeof(UsbCommand) );
-		
-#ifdef WITH_SMARTCARD
-		SMART_CARD_ServiceSmartCard();
+#ifdef WITH_FPC
+		// check if there is a FPC USART1 message?
+		/*
+		uint32_t fpc_rxlen = usart_read(rx, sizeof(UsbCommand));
+		if ( fpc_rxlen > 0)
+			Dbprintf("got a package [len %d] %02x", fpc_rxlen, rx[0]);
+		*/
 #endif
+		
+		// Check if there is a usb packet available
+		if ( cmd_receive( (UsbCommand*)rx ) ) {
+			UsbPacketReceived(rx, sizeof(UsbCommand) );
+		}
+		
 		// Press button for one second to enter a possible standalone mode
 		if (BUTTON_HELD(1000) > 0) {
 			
