@@ -32,7 +32,6 @@
 #include "i2c.h"
 #endif
 
-
 //=============================================================================
 // A buffer where we can queue things up to be sent through the FPGA, for
 // any purpose (fake tag, as reader, whatever). We go MSB first, since that
@@ -1296,11 +1295,12 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			break;
 		case CMD_PING:
 			cmd_send(CMD_ACK,0,0,0,0,0);
-			
+
+#ifdef WITH_FPC				
 			char header[] = {"*** Iceman Usart ***"};
 			uint32_t res = usart_writebuffer((uint8_t *)header, sizeof(header), 100000);
 			Dbprintf("after sending FPC  [%x]", res);
-
+#endif
 			break;
 #ifdef WITH_LCD
 		case CMD_LCD_RESET:
