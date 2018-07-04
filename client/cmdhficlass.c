@@ -2030,8 +2030,8 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 		PrintAndLogEx(SUCCESS, "Using elite algo");
 	if (use_raw)
 		PrintAndLogEx(SUCCESS, "Using raw mode");
-		PrintAndLogEx(SUCCESS, "Searching for %s key", (use_credit_key) ? "CREDIT" : "DEBIT");
 
+	PrintAndLogEx(SUCCESS, "Searching for %s key", (use_credit_key) ? "CREDIT" : "DEBIT");
 	PrintAndLogEx(SUCCESS,"Tag info");
 	PrintAndLogEx(SUCCESS, "CSN     | %s", sprint_hex( CSN, sizeof(CSN) ));
 	PrintAndLogEx(SUCCESS, "CCNR    | %s", sprint_hex( CCNR, sizeof(CCNR) ));
