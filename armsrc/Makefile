@@ -30,6 +30,7 @@ APP_CFLAGS = -DWITH_CRC \
 ### IMPORTANT -  move the commented variable below this line
 #			 -DWITH_LCD \
 #			 -DWITH_EMV \
+#			 -DWITH_FPC \
 #
 # Standalone Mods
 #-------------------------------------------------------
@@ -55,7 +56,7 @@ SRC_ICLASS = iclass.c optimized_cipher.c
 SRC_LEGIC = legicrf.c legic_prng.c
 SRC_FLASH = flashmem.c
 SRC_SMARTCARD = i2c.c
-SRC_FPC = usart.c
+#SRC_FPC = usart.c
 SRC_BEE = bee.c
 
 #the FPGA bitstream files. Note: order matters!
