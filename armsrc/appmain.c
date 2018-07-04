@@ -381,7 +381,7 @@ void SendStatus(void) {
 	Fpga_print_status();
 	Flashmem_print_status();
 #ifdef WITH_SMARTCARD	
-	i2c_print_status();
+	I2C_print_status();
 #endif	
 #ifdef WITH_LF
 	printConfig(); //LF Sampling config
@@ -1015,14 +1015,17 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			iClass_Clone(c->arg[0], c->arg[1], c->d.asBytes);
 			break;
 #endif
+
 #ifdef WITH_HFSNOOP
 		case CMD_HF_SNIFFER:
 			HfSnoop(c->arg[0], c->arg[1]);
 			break;
 #endif
+
 #ifdef WITH_SMARTCARD
         case CMD_SMART_SEND: {
 			
+			I2C_init();
 			// sending to smart card.			
 			I2C_Reset_EnterMainProgram();		
 			

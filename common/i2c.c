@@ -22,16 +22,28 @@
 
 #define SCL_read	(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SCL)
 #define SDA_read	(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SDA)
-
-#define I2C_PageSize 8
-
+ 
+volatile unsigned long c;
 
 //	直接使用循环来延时，一个循环 6 条指令，48M， Delay=1 大概为 200kbps
-void I2CSpinDelayClk(uint16_t delay) __attribute__((optimize("O0")));
-void I2CSpinDelayClk(uint16_t delay) {
-	volatile uint32_t c;
+//void I2CSpinDelayClk(uint16_t delay) ;
+void __attribute__((optimize("O0"))) I2CSpinDelayClk(uint16_t delay) {
 	for (c = delay * 2; c; c--) {};
 }
+
+/*
+#define I2C_DELAY_1CLK 		I2CSpinDelayClk(1)
+#define I2C_DELAY_2CLK		I2CSpinDelayClk(2)
+#define I2C_DELAY_XCLK(x)	I2CSpinDelayClk((x))
+*/																  
+//	通讯延迟函数			ommunication delay function	
+#define I2C_DELAY_1CLK 		I2C_DELAY_1()
+#define I2C_DELAY_2CLK		I2C_DELAY_2()
+#define I2C_DELAY_XCLK(x)	I2C_DELAY_X((x))
+void I2C_DELAY_1(void) {	I2CSpinDelayClk(1);}
+void I2C_DELAY_2(void) {	I2CSpinDelayClk(2);}
+void I2C_DELAY_X(uint16_t delay) {	I2CSpinDelayClk(delay);}
+
 
 void I2C_init(void) {
 	// 配置复位引脚，关闭上拉，推挽输出，默认高
@@ -54,9 +66,6 @@ void I2C_init(void) {
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SCL | GPIO_SDA | GPIO_RST;
 }
 
-#define I2C_DELAY_1CLK 		I2CSpinDelayClk(1)
-#define I2C_DELAY_2CLK		I2CSpinDelayClk(2)
-#define I2C_DELAY_XCLK(x)	I2CSpinDelayClk((x))
 
 // 设置复位状态
 // set the reset state
@@ -99,9 +108,10 @@ void I2C_Reset_EnterBootloader(void) {
 
 //	等待时钟变高	
 // Wait for the clock to go High.	
+volatile uint16_t count;
 bool WaitSCL_H(void) {
 
-	volatile uint16_t count = 5000;
+	count = 5000;
 
 	while (count--)	{
 		if (SCL_read) {
@@ -196,7 +206,7 @@ void I2C_SendByte(uint8_t data)	{
 	SCL_L;
 }
 
-uint8_t I2C_ReceiveByte(void) {
+uint8_t I2C_ReadByte(void) {
 	uint8_t i = 8, b = 0;
 
 	SDA_H;
@@ -241,7 +251,7 @@ bool I2C_WriteByte(uint8_t data, uint8_t device_cmd, uint8_t device_address) {
 
 	if (bBreak)	{
 		I2C_Stop();
-		DbpString("I2C_WaitAck Error\n");
+		DbpString("I2C_WaitAck Error");
 		return false;
 	}
 
@@ -286,7 +296,7 @@ bool I2C_BufferWrite(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t dev
 
 	if (bBreak)	{
 		I2C_Stop();
-		DbpString("I2C_WaitAck Error\n");
+		DbpString("I2C_WaitAck Error");
 		return false;
 	}
 
@@ -325,14 +335,14 @@ uint8_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t d
 
 	if (bBreak)	{
 		I2C_Stop();
-		DbpString("I2C_WaitAck Error\n");
+		DbpString("I2C_WaitAck Error");
 		return 0;
 	}
 
 	// reading
 	while (len) {
 		len--;
-		*data = I2C_ReceiveByte();
+		*data = I2C_ReadByte();
 		// 读取的第一个字节为后续长度	
 		// The first byte read is the message length
 		if (!readcount && (len > *data))
@@ -351,14 +361,11 @@ uint8_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t d
 	return readcount;
 }
 
-void i2c_print_status(void) {
-	DbpString("Smart card module (ISO 7816)");
-
+void I2C_print_status(void) {
 	I2C_init();
 	I2C_Reset_EnterMainProgram();
-	// get version
-	uint8_t resp[3] = {0};
-	uint8_t len = I2C_BufferRead(resp, 3, I2C_DEVICE_CMD_GETVERSION, I2C_DEVICE_ADDRESS_MAIN);
-	if ( len == 3)
-		Dbprintf("  FW version................v%x.%02x", resp[1], resp[2]);
+	uint8_t resp[4] = {0};
+	uint8_t len = I2C_BufferRead(resp, 4, I2C_DEVICE_CMD_GETVERSION, I2C_DEVICE_ADDRESS_MAIN);
+	DbpString("Smart card module (ISO 7816)");
+	Dbprintf("  FW version................v%x.%02x  (len %d", resp[1], resp[2], len);
 }
