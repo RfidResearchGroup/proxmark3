@@ -477,6 +477,7 @@ int CmdAnalyseA(const char *Cmd){
 		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'd':
 			param_gethex_ex(Cmd, cmdp+1, data, &hexlen);
+			hexlen >>= 1;
 			if ( hexlen != sizeof(data) ) {
 				PrintAndLogEx(WARNING, "Read %d bytes of %u", hexlen, sizeof(data) );
 			}
@@ -493,13 +494,21 @@ int CmdAnalyseA(const char *Cmd){
 	//Validations
 	if (errors || cmdp == 0 ) return usage_analyse_checksum();
 
-// for testing of smart card.  Sending raw bytes.
+	// for testing of smart card.  Sending raw bytes.
 
 	UsbCommand c = {CMD_SMART_SEND, {0, 0, 0}};
 	c.arg[0] = hexlen;
 	memcpy(c.d.asBytes, data, hexlen );
 	clearCommandBuffer();
 	SendCommand(&c);
+
+	// reading response from smart card
+	UsbCommand resp;
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+		PrintAndLogEx(WARNING, "smart card response failed");
+		return 1;
+	}
+	PrintAndLogEx(SUCCESS,"resp:  %s", sprint_hex(resp.d.asBytes, resp.arg[0]));
 	return 0;
 	
 	PrintAndLogEx(NORMAL, "-- " _BLUE_(its my message) "\n");
