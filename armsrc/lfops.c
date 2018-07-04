@@ -367,10 +367,11 @@ void AcquireTiType(void)
 	LED_D_OFF();
 
 	i = 0;
-	for(;;) {
-		if(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
+	for (;;) {
+		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
 			buf[i] = AT91C_BASE_SSC->SSC_RHR;	// store 32 bit values in buffer
-			i++; if(i >= TIBUFLEN) break;
+			i++; 
+			if (i >= TIBUFLEN) break;
 		}
 		WDT_HIT();
 	}

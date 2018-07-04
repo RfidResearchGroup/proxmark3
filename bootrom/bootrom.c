@@ -10,7 +10,6 @@
 #include "usb_cdc.h"
 #include "cmd.h"
 
-
 struct common_area common_area __attribute__((section(".commonarea")));
 unsigned int start_addr, end_addr, bootrom_unlocked;
 extern char _bootrom_start, _bootrom_end, _flash_start, _flash_end;
