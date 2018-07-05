@@ -494,23 +494,7 @@ int CmdAnalyseA(const char *Cmd){
 	//Validations
 	if (errors || cmdp == 0 ) return usage_analyse_checksum();
 
-	// for testing of smart card.  Sending raw bytes.
 
-	UsbCommand c = {CMD_SMART_SEND, {0, 0, 0}};
-	c.arg[0] = hexlen;
-	memcpy(c.d.asBytes, data, hexlen );
-	clearCommandBuffer();
-	SendCommand(&c);
-
-	// reading response from smart card
-	UsbCommand resp;
-	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
-		PrintAndLogEx(WARNING, "smart card response failed");
-		return 1;
-	}
-	PrintAndLogEx(SUCCESS,"resp:  %s", sprint_hex(resp.d.asBytes, resp.arg[0]));
-	return 0;
-	
 	PrintAndLogEx(NORMAL, "-- " _BLUE_(its my message) "\n");
 	PrintAndLogEx(NORMAL, "-- " _RED_(its my message) "\n");
 	PrintAndLogEx(NORMAL, "-- " _YELLOW_(its my message) "\n");
