@@ -36,8 +36,11 @@ static command_t CommandTable[] = {
 	{"script",	CmdScript,	1, "{ Scripting commands }"},
 	{"trace",	CmdTrace,	1, "{ Trace manipulation... }"},
 #ifdef WITH_FLASH		
-	{"mem",		CmdFlashMem,1, "{ RDV40, Flash Memory manipulation... }"},
-#endif	
+	{"mem",		CmdFlashMem,	1, "{ RDV40, Flash Memory manipulation... }"},
+#endif
+#ifdef WITH_SMARTCARD
+	{"sc",	CmdSmartcard,	1, "{ RDV40, Smart card ISO7816 commands... }"},
+#endif
 	{"quit",	CmdQuit,	1, ""},
 	{"exit",	CmdQuit,	1, "Exit program"},
 	{NULL, NULL, 0, NULL}

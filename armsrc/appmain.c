@@ -1025,9 +1025,8 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 #ifdef WITH_SMARTCARD
         case CMD_SMART_SEND: {
 			
-			I2C_init();
-			// sending to smart card.			
-			I2C_Reset_EnterMainProgram();		
+			I2C_init();	
+			I2C_Reset_EnterMainProgram();
 			
 			// sample:
 			// [C0 02] A0 A4 00 00 02
@@ -1041,7 +1040,30 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			
 			cmd_send(CMD_ACK, len, 0, 0, resp, len);
             break;
-        }       
+        }
+        case CMD_SMART_UPGRADE: {
+			
+			I2C_init();	
+			I2C_Reset_EnterBootloader();	
+
+			uint16_t length = 640;
+			uint16_t pos = 0;
+			uint8_t resp[64] = {0};
+			while (length) {
+				
+				uint8_t msb = (pos >> 8) & 0xFF;
+				uint8_t lsb = pos & 0xFF;
+				Dbprintf("FW %02X %02X", msb, lsb);
+				bool isok = I2C_ReadFW(resp, msb, lsb, I2C_DEVICE_ADDRESS_BOOT);
+				if (isok)
+					Dbhexdump(len, resp, false);
+				
+				length -= 64;
+				pos += 64;
+			}
+			cmd_send(CMD_ACK, len, 0, 0, resp, sizeof(resp));
+            break;			
+		}
 #endif    
 
 		case CMD_BUFF_CLEAR:

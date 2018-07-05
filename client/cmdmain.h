@@ -34,6 +34,7 @@
 #include "cmdcrc.h"
 #include "cmdanalyse.h"
 #include "cmdflashmem.h"	// rdv40 flashmem commands
+#include "cmdsmartcard.h"	// rdv40 smart card ISO7816 commands
 
 //For storing command that are received from the device
 #define CMD_BUFFER_SIZE 100

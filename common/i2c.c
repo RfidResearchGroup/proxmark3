@@ -316,6 +316,7 @@ uint8_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t d
 		if (!I2C_Start())
 			return 0;
 
+		// 0xB0 or 0xC0  i2c write
 		I2C_SendByte(device_address & 0xFE);
 
 		if (!I2C_WaitAck())
@@ -325,6 +326,7 @@ uint8_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t d
 		if (!I2C_WaitAck())
 			break;
 
+		// 0xB1 or 0xC1 read
 		I2C_Start();
 		I2C_SendByte(device_address | 1);
 		if (!I2C_WaitAck())
@@ -340,6 +342,70 @@ uint8_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t d
 	}
 
 	// reading
+	while (len) {
+		len--;
+		*data = I2C_ReadByte();
+		// 读取的第一个字节为后续长度	
+		// The first byte read is the message length
+		if (!readcount && (len > *data))
+			len = *data;
+
+		if (len == 0)
+			I2C_NoAck();
+		else
+			I2C_Ack();
+
+		data++;
+		readcount++;
+	}
+	
+	I2C_Stop();
+	return readcount;
+}
+
+uint8_t I2C_ReadFW(uint8_t *data, uint8_t msb, uint8_t lsb, uint8_t device_address) {
+	//START, 0xB0, 0x00, 0x00, START, 0xB1, xx, yy, zz, ......, STOP
+	
+	bool bBreak = true;
+	uint8_t	readcount = 0;
+
+	// sending
+	do {
+		if (!I2C_Start())
+			return 0;
+
+		// 0xB0 or 0xC0  i2c write
+		I2C_SendByte(device_address & 0xFE);
+		if (!I2C_WaitAck())
+			break;
+
+		// msb
+		I2C_SendByte(msb);
+		if (!I2C_WaitAck())
+			break;
+
+		// lsb
+		I2C_SendByte(lsb);
+		if (!I2C_WaitAck())
+			break;
+		
+		// 0xB1 or 0xC1 read
+		I2C_Start();
+		I2C_SendByte(device_address | 1);
+		if (!I2C_WaitAck())
+			break;
+
+		bBreak = false;
+	} while (false);
+
+	if (bBreak)	{
+		I2C_Stop();
+		DbpString("I2C_WaitAck Error");
+		return 0;
+	}
+
+	// reading
+	uint8_t len = 64;
 	while (len) {
 		len--;
 		*data = I2C_ReadByte();

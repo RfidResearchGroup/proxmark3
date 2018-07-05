@@ -82,7 +82,7 @@ else
 endif
 
 # RDV40 flag enables flashmemory commands in client.  comment out if you don't have rdv40
-CFLAGS += -DWITH_FLASH 
+CFLAGS += -DWITH_FLASH -DWITH_SMARTCARD
 
 # Flags to generate temporary dependency files
 DEPFLAGS = -MT $@ -MMD -MP -MF $(OBJDIR)/$*.Td
@@ -185,6 +185,7 @@ CMDSRCS =	crapto1/crapto1.c \
 			cmdlfvisa2000.c \
 			cmdtrace.c \
 			cmdflashmem.c \
+			cmdsmartcard.c \
 			cmdparser.c \
 			cmdmain.c \
 			pm3_binlib.c \
