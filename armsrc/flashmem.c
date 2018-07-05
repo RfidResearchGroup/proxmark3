@@ -133,7 +133,7 @@ uint16_t FlashSendLastByte(uint32_t data) {
 uint8_t Flash_ReadStat1(void) {
 	FlashSendByte(READSTAT1);
 	uint8_t stat1 = FlashSendLastByte(0xFF);
-	if ( MF_DBGLEVEL > 3 )  Dbprintf("stat1 [%02x]", stat1);
+//	if ( MF_DBGLEVEL > 3 )  Dbprintf("stat1 [%02x]", stat1);
 	return stat1;
 }
 
@@ -141,7 +141,7 @@ uint8_t Flash_ReadStat1(void) {
 uint8_t Flash_ReadStat2(void) {
 	FlashSendByte(READSTAT2);
 	uint8_t stat2 = FlashSendLastByte(0xFF);
-	if ( MF_DBGLEVEL > 3 ) Dbprintf("stat2 [%02x]", stat2);
+//	if ( MF_DBGLEVEL > 3 ) Dbprintf("stat2 [%02x]", stat2);
 	return stat2;
 }
 
@@ -252,7 +252,7 @@ uint16_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len) {
 	}
 
 	if (!FlashInit()) {
-		Dbprintf("Flash_WriteData init fail");
+		if ( MF_DBGLEVEL > 3 ) Dbprintf("Flash_WriteData init fail");
 		return 0;
 	}
 	
@@ -277,7 +277,7 @@ uint16_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len) {
 
 bool Flash_WipeMemoryPage(uint8_t page) {
 	if (!FlashInit()) {
-		Dbprintf("Flash_WriteData init fail");
+		if ( MF_DBGLEVEL > 3 ) Dbprintf("Flash_WriteData init fail");
 		return false;
 	}
 	Flash_ReadStat1();
@@ -291,7 +291,7 @@ bool Flash_WipeMemoryPage(uint8_t page) {
 // Wipes flash memory completely, fills with 0xFF
 bool Flash_WipeMemory() {
 	if (!FlashInit()) {
-		Dbprintf("Flash_WriteData init fail");
+		if ( MF_DBGLEVEL > 3 ) Dbprintf("Flash_WriteData init fail");
 		return false;
 	}
 	Flash_ReadStat1();
