@@ -5,6 +5,7 @@
 #include "proxmark3.h"
 #include "apps.h"
 #include "util.h"
+#include "BigBuf.h"
 
 
 #define I2C_DEVICE_ADDRESS_BOOT		0xB0
@@ -25,6 +26,7 @@ void I2C_SetResetStatus(uint8_t LineRST, uint8_t LineSCK, uint8_t LineSDA);
 void I2C_Reset_EnterMainProgram(void);
 void I2C_Reset_EnterBootloader(void);
 
+bool I2C_WriteCmd(uint8_t device_cmd, uint8_t device_address);
 bool I2C_WriteByte(uint8_t data, uint8_t device_cmd, uint8_t device_address);
 bool I2C_BufferWrite(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t device_address);
 uint8_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t device_address);
@@ -32,6 +34,11 @@ uint8_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t d
 // for firmware
 uint8_t I2C_ReadFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address);
 bool I2C_WriteFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address);
+
+// generice functions
+void SmartCardAtr(void);
+void SmartCardRaw(uint64_t arg0, uint8_t *data);
+void SmartCardUpgrade(uint64_t arg0);
 
 void I2C_print_status(void);
 #endif

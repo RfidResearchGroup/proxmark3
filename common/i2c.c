@@ -46,7 +46,6 @@ void I2C_DELAY_1(void) {	I2CSpinDelayClk(1);}
 void I2C_DELAY_2(void) {	I2CSpinDelayClk(2);}
 void I2C_DELAY_X(uint16_t delay) {	I2CSpinDelayClk(delay);}
 
-
 void I2C_init(void) {
 	// 配置复位引脚，关闭上拉，推挽输出，默认高
 	// Configure reset pin, close up pull up, push-pull output, default high
@@ -227,6 +226,34 @@ uint8_t I2C_ReadByte(void) {
 	return b;
 }
 
+// Only send address, and cmd. For ATR
+bool I2C_WriteCmd(uint8_t device_cmd, uint8_t device_address) {
+	bool bBreak = true;
+	do 	{
+		if (!I2C_Start())
+			return false;
+
+		I2C_SendByte(device_address & 0xFE);
+		if (!I2C_WaitAck())
+			break;
+
+		I2C_SendByte(device_cmd);
+		if (!I2C_WaitAck())
+			break;
+
+		bBreak = false;
+	} while (false);
+
+	if (bBreak)	{
+		I2C_Stop();
+		if ( MF_DBGLEVEL > 3 ) DbpString(I2C_ERROR);
+		return false;
+	}
+
+	I2C_Stop();
+	return true;
+}
+
 // 写入1字节数据 （待写入数据，待写入地址，器件类型）
 // Writes 1 byte data (Data to be written,command to be written , SlaveDevice address  ).
 bool I2C_WriteByte(uint8_t data, uint8_t device_cmd, uint8_t device_address) {
@@ -236,7 +263,6 @@ bool I2C_WriteByte(uint8_t data, uint8_t device_cmd, uint8_t device_address) {
 			return false;
 
 		I2C_SendByte(device_address & 0xFE);
-
 		if (!I2C_WaitAck())
 			break;
 
@@ -317,7 +343,6 @@ uint8_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t d
 
 		// 0xB0 or 0xC0  i2c write
 		I2C_SendByte(device_address & 0xFE);
-
 		if (!I2C_WaitAck())
 			break;
 
@@ -475,4 +500,113 @@ void I2C_print_status(void) {
 		Dbprintf("  FW version................v%x.%02x", resp[1], resp[2]);
 	else
 		DbpString("  FW version................FAILED");
+}
+
+void SmartCardAtr(void) {
+	StartTicks();
+	I2C_Reset_EnterMainProgram();
+	
+	// Send ATR
+	// start [C0 01] stop
+	I2C_WriteCmd(I2C_DEVICE_CMD_GENERATE_ATR, I2C_DEVICE_ADDRESS_MAIN);
+
+	// writing takes time.
+	WaitMS(50);
+
+	uint8_t resp[31] = {0};
+	smart_card_atr_t *card = (smart_card_atr_t *)resp;
+	
+	// start [C0 03 start C1 len aa bb cc stop]
+	uint8_t len = I2C_BufferRead(card->atr, sizeof(card->atr), I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
+
+	card->atr_len = len;
+	
+	// print ATR
+	Dbhexdump(len, resp, false);
+	
+	StopTicks();
+	cmd_send(CMD_ACK, len, 0, 0, resp, sizeof(smart_card_atr_t));
+}
+
+void SmartCardRaw( uint64_t arg0, uint8_t *data ) {
+#define  ISO7618_MAX_FRAME 255
+	StartTicks();
+	I2C_Reset_EnterMainProgram();
+	
+	// Send ATR
+	// start [C0 01] stop
+	I2C_WriteCmd(I2C_DEVICE_CMD_GENERATE_ATR, I2C_DEVICE_ADDRESS_MAIN);
+		
+	// writing takes time.
+	WaitMS(50);
+	
+	// sample:
+	// start [C0 02] A0 A4 00 00 02 stop
+	// asBytes = A0 A4 00 00 02
+	// arg0 = len 5
+	I2C_BufferWrite(data, arg0, I2C_DEVICE_CMD_SEND, I2C_DEVICE_ADDRESS_MAIN);
+	
+	uint8_t *resp =  BigBuf_malloc(ISO7618_MAX_FRAME);
+	
+	// start [C0 03 start C1 len aa bb cc stop]
+	uint8_t len = I2C_BufferRead(resp, ISO7618_MAX_FRAME, I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
+	StopTicks();
+	cmd_send(CMD_ACK, len, 0, 0, resp, len);
+}
+
+void SmartCardUpgrade(uint64_t arg0) {
+#define I2C_BLOCK_SIZE 128
+// write.   Sector0,  with 11,22,33,44
+// erase is 128bytes.
+			
+	StartTicks();
+	I2C_Reset_EnterBootloader();	
+
+	bool isOK = true;
+	uint8_t res = 0;
+	uint16_t length = arg0;
+	uint16_t pos = 0;
+	uint8_t *fwdata = BigBuf_get_addr();
+	uint8_t *verfiydata = BigBuf_malloc(I2C_BLOCK_SIZE);
+	
+	while (length) {
+		
+		uint8_t msb = (pos >> 8) & 0xFF;
+		uint8_t lsb = pos & 0xFF;
+		
+		Dbprintf("FW %02X %02X", msb, lsb);
+
+		size_t size = MIN(I2C_BLOCK_SIZE, length);
+		
+		// write
+		res = I2C_WriteFW(fwdata+pos, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT);
+		if ( !res ) {
+			Dbprintf("Writing failed");
+			isOK = false;
+			break;
+		}
+		
+		// writing takes time.
+		WaitMS(50);
+
+		// read
+		res = I2C_ReadFW(verfiydata, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT);
+		if ( res == 0) {
+			Dbprintf("Reading back failed");
+			isOK = false;					
+			break;
+		}
+		
+		// cmp
+		if ( 0 != memcmp(fwdata+pos, verfiydata, size)) {
+			Dbprintf("not equal data");
+			isOK = false;					
+			break;
+		}
+				
+		length -= size;
+		pos += size;
+	}
+	StopTicks();				
+	cmd_send(CMD_ACK, isOK, pos, 0, 0, 0);
 }

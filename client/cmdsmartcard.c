@@ -65,7 +65,7 @@ int CmdSmartRaw(const char *Cmd) {
 	if (errors || cmdp == 0 ) return usage_sm_raw();			
 	
 
-	UsbCommand c = {CMD_SMART_SEND, {hexlen, 0, 0}};		
+	UsbCommand c = {CMD_SMART_RAW, {hexlen, 0, 0}};		
 	memcpy(c.d.asBytes, data, hexlen );
 	clearCommandBuffer();
 	SendCommand(&c);
@@ -170,12 +170,16 @@ int CmdSmartUpgrade(const char *Cmd) {
 	// trigger the firmware upgrade
 	UsbCommand c = {CMD_SMART_UPGRADE, {bytes_read, 0, 0}};		
 	clearCommandBuffer();
-	SendCommand(&c);	
-	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500) ) {
+	SendCommand(&c);
+	UsbCommand resp;
+	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 2500) ) {
 		PrintAndLogEx(WARNING, "timeout while waiting for reply.");
 		return 1;
 	}
-	PrintAndLogEx(SUCCESS, "Smartcard socket firmware updated successful");
+	if ( (resp.arg[0] && 0xFF ) )
+		PrintAndLogEx(SUCCESS, "Smartcard socket firmware upgraded successful");
+	else
+		PrintAndLogEx(FAILED, "Smartcard socket firmware updating failed");
 	return 0;
 }
 
@@ -227,7 +231,7 @@ int CmdSmartReader(const char *Cmd){
 	//Validations
 	if (errors ) return usage_sm_reader();
 			
-	UsbCommand c = {CMD_SMART_SEND, {0, 0, 0}};
+	UsbCommand c = {CMD_SMART_ATR, {0, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
@@ -242,9 +246,12 @@ int CmdSmartReader(const char *Cmd){
 		return 1;
 	}		
 	
+	smart_card_atr_t *card = (smart_card_atr_t *)resp.d.asBytes;
+	
 	// print header
 	PrintAndLogEx(INFO, "\n--- Smartcard Information ---------");
-	PrintAndLogEx(INFO, "-------------------------------------------------------------");		
+	PrintAndLogEx(INFO, "-------------------------------------------------------------");
+	PrintAndLogEx(INFO, "ATR : %s", sprint_hex(card->atr, sizeof(card->atr_len)));
 	return 0;
 }
 
