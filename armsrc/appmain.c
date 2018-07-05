@@ -1028,7 +1028,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			break;
 		}
         case CMD_SMART_RAW: {
-			SmartCardRaw(c->arg[0], c->d.asBytes);
+			SmartCardRaw(c->arg[0], c->arg[1], c->d.asBytes);
             break;
         }
 		case CMD_SMART_UPLOAD: {

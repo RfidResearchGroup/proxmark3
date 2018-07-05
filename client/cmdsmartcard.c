@@ -15,7 +15,6 @@ int usage_sm_raw(void) {
 	PrintAndLogEx(NORMAL, "Usage: sc raw [h|r|c] d <0A 0B 0C ... hex>");
 	PrintAndLogEx(NORMAL, "       h          :  this help");
 	PrintAndLogEx(NORMAL, "       r          :  do not read response");
-	PrintAndLogEx(NORMAL, "       c          :  calculate and append CRC");
 	PrintAndLogEx(NORMAL, "       d <bytes>  :  bytes to send");
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Examples:");
@@ -42,11 +41,16 @@ int CmdSmartRaw(const char *Cmd) {
 
 	int hexlen = 0;
 	uint8_t cmdp = 0;
-	bool errors = false;
+	bool errors = false, reply = true;
 	uint8_t data[USB_CMD_DATA_SIZE] = {0x00};
 		
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch (tolower(param_getchar(Cmd, cmdp))) {
+		
+		case 'r':
+			reply = false;
+			cmdp++;
+			break;
 		case 'd': {
 			switch (param_gethex_to_eol(Cmd, cmdp+1, data, sizeof(data), &hexlen)) {
 			case 1:
@@ -73,20 +77,21 @@ int CmdSmartRaw(const char *Cmd) {
 	
 	//Validations
 	if (errors || cmdp == 0 ) return usage_sm_raw();			
-	
 
-	UsbCommand c = {CMD_SMART_RAW, {hexlen, 0, 0}};		
+	UsbCommand c = {CMD_SMART_RAW, {0, hexlen, 0}};	
 	memcpy(c.d.asBytes, data, hexlen );
 	clearCommandBuffer();
 	SendCommand(&c);
-	
+
 	// reading response from smart card
-	UsbCommand resp;
-	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
-		PrintAndLogEx(WARNING, "smart card response failed");
-		return 1;
+	if ( reply ) {
+		UsbCommand resp;
+		if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+			PrintAndLogEx(WARNING, "smart card response failed");
+			return 1;
+		}
+		PrintAndLogEx(SUCCESS,"resp:  %s", sprint_hex(resp.d.asBytes, resp.arg[0]));
 	}
-	PrintAndLogEx(SUCCESS,"resp:  %s", sprint_hex(resp.d.asBytes, resp.arg[0]));
 	return 0;;
 }
 int CmdSmartUpgrade(const char *Cmd) {

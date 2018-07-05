@@ -525,7 +525,7 @@ void SmartCardAtr(void) {
 	cmd_send(CMD_ACK, len, 0, 0, resp, sizeof(smart_card_atr_t));
 }
 
-void SmartCardRaw( uint64_t arg0, uint8_t *data ) {
+void SmartCardRaw( uint64_t arg0, uint64_t arg1, uint8_t *data ) {
 #define  ISO7618_MAX_FRAME 255
 	StartTicks();
 	I2C_Reset_EnterMainProgram();
@@ -550,12 +550,12 @@ void SmartCardRaw( uint64_t arg0, uint8_t *data ) {
 	// start [C0 02] A0 A4 00 00 02 stop
 	// asBytes = A0 A4 00 00 02
 	// arg0 = len 5
-	I2C_BufferWrite(data, arg0, I2C_DEVICE_CMD_SEND, I2C_DEVICE_ADDRESS_MAIN);
+	I2C_BufferWrite(data, arg1, I2C_DEVICE_CMD_SEND, I2C_DEVICE_ADDRESS_MAIN);
 	
 	// read response
 	// start [C0 03 start C1 len aa bb cc stop]
 	len = I2C_BufferRead(resp, ISO7618_MAX_FRAME, I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
-
+	
 out:	
 	StopTicks();
 	cmd_send(CMD_ACK, len, 0, 0, resp, len);

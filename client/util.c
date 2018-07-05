@@ -502,8 +502,7 @@ uint64_t param_get64ex(const char *line, int paramnum, int deflt, int base)
 		return deflt;
 }
 
-int param_gethex(const char *line, int paramnum, uint8_t * data, int hexcnt)
-{
+int param_gethex(const char *line, int paramnum, uint8_t * data, int hexcnt) {
 	int bg, en, i;
 	uint32_t temp;
 
@@ -514,7 +513,7 @@ int param_gethex(const char *line, int paramnum, uint8_t * data, int hexcnt)
 	if (en - bg + 1 != hexcnt) return 1;
 
 	for(i = 0; i < hexcnt; i += 2) {
-		if (!(isxdigit(line[bg + i]) && isxdigit(line[bg + i + 1])) )	return 1;
+		if (!(isxdigit(line[bg + i]) && isxdigit(line[bg + i + 1])) ) return 1;
 		
 		sscanf((char[]){line[bg + i], line[bg + i + 1], 0}, "%X", &temp);
 		data[i / 2] = temp & 0xff;
@@ -522,8 +521,7 @@ int param_gethex(const char *line, int paramnum, uint8_t * data, int hexcnt)
 
 	return 0;
 }
-int param_gethex_ex(const char *line, int paramnum, uint8_t * data, int *hexcnt)
-{
+int param_gethex_ex(const char *line, int paramnum, uint8_t * data, int *hexcnt) {
 	int bg, en, i;
 	uint32_t temp;
 

@@ -37,7 +37,7 @@ bool I2C_WriteFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t d
 
 // generice functions
 void SmartCardAtr(void);
-void SmartCardRaw(uint64_t arg0, uint8_t *data);
+void SmartCardRaw(uint64_t arg0, uint64_t arg1, uint8_t *data);
 void SmartCardUpgrade(uint64_t arg0);
 
 void I2C_print_status(void);
