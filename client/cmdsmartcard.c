@@ -81,43 +81,10 @@ int CmdSmartRaw(const char *Cmd) {
 }
 int CmdSmartUpgrade(const char *Cmd) {
 
-	uint8_t cmdp = 0;
-	bool errors = false;	
-	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch (tolower(param_getchar(Cmd, cmdp))) {
-		case 'h':
-			return usage_sm_upgrade();
-		default:
-			PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-			errors = true;
-			break;
-		}
-	}
-	
-	//Validations
-	if (errors) return usage_sm_upgrade();				
-
-	UsbCommand c = {CMD_SMART_UPGRADE, {0, 0, 0}};		
-	clearCommandBuffer();
-	SendCommand(&c);
-	
-	// reading response from smart card
-	UsbCommand resp;
-	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
-		PrintAndLogEx(WARNING, "smart card response failed");
-		return 1;
-	}
-	//PrintAndLogEx(SUCCESS,"resp:  %s", sprint_hex(resp.d.asBytes, resp.arg[0]));
-	return 0;;
-}
-/*
-int CmdSmartUpgrade(const char *Cmd){
-
 	FILE *f;
 	char filename[FILE_PATH_SIZE] = {0};
 	uint8_t cmdp = 0;
 	bool errors = false;
-	uint32_t start_index = 0;
 	
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -159,13 +126,7 @@ int CmdSmartUpgrade(const char *Cmd){
 		fclose(f);
 		return 1;
 	}
-	
-	if (fsize > FLASH_MEM_MAX_SIZE) {
-		PrintAndLogDevice(WARNING, "error, filesize is larger than available memory");
-		fclose(f);
-		return 1;
-	}
-
+		
 	uint8_t *dump = calloc(fsize, sizeof(uint8_t));
 	if (!dump) {
 		PrintAndLogDevice(WARNING, "error, cannot allocate memory ");
@@ -177,40 +138,47 @@ int CmdSmartUpgrade(const char *Cmd){
 	if (f)
 		fclose(f);
 	
+	PrintAndLogEx(SUCCESS, "Smartcard socket firmware uploading to PM3");
 	//Send to device
+	uint32_t index = 0;
 	uint32_t bytes_sent = 0;
 	uint32_t bytes_remaining = bytes_read;
 
 	while (bytes_remaining > 0){
-		uint32_t bytes_in_packet = MIN(FLASH_MEM_BLOCK_SIZE, bytes_remaining);
-		
-		UsbCommand c = {CMD_SMART_UPGRADE, {start_index + bytes_sent, bytes_in_packet, 0}};
-				
+		uint32_t bytes_in_packet = MIN(USB_CMD_DATA_SIZE, bytes_remaining);		
+		UsbCommand c = {CMD_SMART_UPLOAD, {index + bytes_sent, bytes_in_packet, 0}};
+
+		// Fill usb bytes with 0xFF
+		memset(c.d.asBytes, 0xFF, USB_CMD_DATA_SIZE);
 		memcpy(c.d.asBytes, dump + bytes_sent, bytes_in_packet);
 		clearCommandBuffer();
-		SendCommand(&c);
-
-		bytes_remaining -= bytes_in_packet;
-		bytes_sent += bytes_in_packet;
-		
-		UsbCommand resp;
-		if ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
+		SendCommand(&c);	
+		if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2000) ) {
 			PrintAndLogEx(WARNING, "timeout while waiting for reply.");
 			free(dump);
 			return 1;
 		}
 		
-		uint8_t isok  = resp.arg[0] & 0xFF;
-		if (!isok)
-			PrintAndLogEx(FAILED, "Flash write fail [offset %u]", bytes_sent);
-		
+		bytes_remaining -= bytes_in_packet;
+		bytes_sent += bytes_in_packet;
+		printf("."); fflush(stdout);
 	}
 	free(dump);
+	printf("\n");
+	PrintAndLogEx(SUCCESS, "Smartcard socket firmware updating,  don\'t turn off your PM3!");
 	
-	PrintAndLogEx(SUCCESS, "Wrote %u bytes to offset %u", bytes_read, start_index);
+	// trigger the firmware upgrade
+	UsbCommand c = {CMD_SMART_UPGRADE, {bytes_read, 0, 0}};		
+	clearCommandBuffer();
+	SendCommand(&c);	
+	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500) ) {
+		PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+		return 1;
+	}
+	PrintAndLogEx(SUCCESS, "Smartcard socket firmware updated successful");
 	return 0;
 }
-*/
+
 int CmdSmartInfo(const char *Cmd){
 
 //	char filename[FILE_PATH_SIZE] = {0};	

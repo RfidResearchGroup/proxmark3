@@ -22,7 +22,9 @@
 
 #define SCL_read	(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SCL)
 #define SDA_read	(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SDA)
- 
+
+#define I2C_ERROR  "I2C_WaitAck Error" 
+
 volatile unsigned long c;
 
 //	直接使用循环来延时，一个循环 6 条指令，48M， Delay=1 大概为 200kbps
@@ -251,7 +253,7 @@ bool I2C_WriteByte(uint8_t data, uint8_t device_cmd, uint8_t device_address) {
 
 	if (bBreak)	{
 		I2C_Stop();
-		DbpString("I2C_WaitAck Error");
+		if ( MF_DBGLEVEL > 3 ) DbpString(I2C_ERROR);
 		return false;
 	}
 
@@ -276,13 +278,12 @@ bool I2C_BufferWrite(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t dev
 			break;
 
 		I2C_SendByte(device_cmd);
-
 		if (!I2C_WaitAck())
 			break;
 
 		while (len) {
+			
 			I2C_SendByte(*data);
-
 			if (!I2C_WaitAck())
 				break;
 
@@ -294,13 +295,11 @@ bool I2C_BufferWrite(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t dev
 			bBreak = false;
 	} while (false);
 
+	I2C_Stop();
 	if (bBreak)	{
-		I2C_Stop();
-		DbpString("I2C_WaitAck Error");
+		if ( MF_DBGLEVEL > 3 ) DbpString(I2C_ERROR);
 		return false;
 	}
-
-	I2C_Stop();
 	return true;	
 }
 
@@ -337,7 +336,7 @@ uint8_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t d
 
 	if (bBreak)	{
 		I2C_Stop();
-		DbpString("I2C_WaitAck Error");
+		if ( MF_DBGLEVEL > 3 ) DbpString(I2C_ERROR);
 		return 0;
 	}
 
@@ -363,7 +362,7 @@ uint8_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t d
 	return readcount;
 }
 
-uint8_t I2C_ReadFW(uint8_t *data, uint8_t msb, uint8_t lsb, uint8_t device_address) {
+uint8_t I2C_ReadFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address) {
 	//START, 0xB0, 0x00, 0x00, START, 0xB1, xx, yy, zz, ......, STOP
 	
 	bool bBreak = true;
@@ -400,12 +399,11 @@ uint8_t I2C_ReadFW(uint8_t *data, uint8_t msb, uint8_t lsb, uint8_t device_addre
 
 	if (bBreak)	{
 		I2C_Stop();
-		DbpString("I2C_WaitAck Error");
+		if ( MF_DBGLEVEL > 3 ) DbpString(I2C_ERROR);
 		return 0;
 	}
 
 	// reading
-	uint8_t len = 64;
 	while (len) {
 		len--;
 		*data = I2C_ReadByte();
@@ -423,11 +421,58 @@ uint8_t I2C_ReadFW(uint8_t *data, uint8_t msb, uint8_t lsb, uint8_t device_addre
 	return readcount;
 }
 
+bool I2C_WriteFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address) {
+	//START, 0xB0, 0x00, 0x00, xx, yy, zz, ......, STOP	
+	bool bBreak = true;
+
+	do {
+		if (!I2C_Start())
+			return false;
+
+		// 0xB0
+		I2C_SendByte(device_address & 0xFE);
+		if (!I2C_WaitAck())
+			break;
+		
+		// msb
+		I2C_SendByte(msb);
+		if (!I2C_WaitAck())
+			break;
+
+		// lsb
+		I2C_SendByte(lsb);
+		if (!I2C_WaitAck())
+			break;
+
+		while (len) {
+			I2C_SendByte(*data);
+			if (!I2C_WaitAck())
+				break;
+
+			len--;
+			data++;		
+		}
+
+		if (len == 0)
+			bBreak = false;
+	} while (false);
+
+	I2C_Stop();
+	if (bBreak)	{
+		if ( MF_DBGLEVEL > 3 ) DbpString(I2C_ERROR);
+		return false;
+	}
+	return true;	
+}
+
 void I2C_print_status(void) {
 	I2C_init();
 	I2C_Reset_EnterMainProgram();
 	uint8_t resp[4] = {0};
 	uint8_t len = I2C_BufferRead(resp, 4, I2C_DEVICE_CMD_GETVERSION, I2C_DEVICE_ADDRESS_MAIN);
 	DbpString("Smart card module (ISO 7816)");
-	Dbprintf("  FW version................v%x.%02x  (len %d", resp[1], resp[2], len);
+	if ( len )
+		Dbprintf("  FW version................v%x.%02x", resp[1], resp[2]);
+	else
+		DbpString("  FW version................FAILED");
 }

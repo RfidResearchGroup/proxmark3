@@ -1029,7 +1029,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			I2C_Reset_EnterMainProgram();
 			
 			// sample:
-			// [C0 02] A0 A4 00 00 02
+			// [C0 02 C1] A0 A4 00 00 02
 			// asBytes = A0 A4 00 00 02
 			// arg0 = len 5
 			I2C_BufferWrite(c->d.asBytes, c->arg[0], I2C_DEVICE_CMD_SEND, I2C_DEVICE_ADDRESS_MAIN);
@@ -1041,28 +1041,72 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			cmd_send(CMD_ACK, len, 0, 0, resp, len);
             break;
         }
+		case CMD_SMART_UPLOAD: {
+			// upload file from client
+			uint8_t *mem = BigBuf_get_addr();
+			memcpy( mem + c->arg[0], c->d.asBytes, USB_CMD_DATA_SIZE);
+			cmd_send(CMD_ACK,1,0,0,0,0);
+			break;
+		}
         case CMD_SMART_UPGRADE: {
+
+			#define I2C_BLOCK_SIZE 128
+			// write.   Sector0,  with 11,22,33,44
+			// erase is 128bytes.
 			
+			StartTicks();
 			I2C_init();	
 			I2C_Reset_EnterBootloader();	
 
-			uint16_t length = 640;
+			bool isOK = true;
+			uint8_t res = 0;
+			uint16_t length = c->arg[0];
 			uint16_t pos = 0;
-			uint8_t resp[64] = {0};
+			uint8_t *fwdata = BigBuf_get_addr();
+			uint8_t *verfiydata = BigBuf_malloc(I2C_BLOCK_SIZE);
+	
 			while (length) {
 				
 				uint8_t msb = (pos >> 8) & 0xFF;
 				uint8_t lsb = pos & 0xFF;
-				Dbprintf("FW %02X %02X", msb, lsb);
-				bool isok = I2C_ReadFW(resp, msb, lsb, I2C_DEVICE_ADDRESS_BOOT);
-				if (isok)
-					Dbhexdump(sizeof(resp), resp, false);
 				
-				length -= 64;
-				pos += 64;
+				Dbprintf("FW %02X %02X", msb, lsb);
+
+				size_t size = MIN(I2C_BLOCK_SIZE, length);
+				
+				// write
+				res = I2C_WriteFW(fwdata+pos, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT);
+				if ( !res ) {
+					Dbprintf("Writing failed");
+					isOK = false;
+					break;
+				}
+				
+				// writing takes time.
+				WaitMS(50);
+
+				// read
+				res = I2C_ReadFW(verfiydata, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT);
+				if ( res == 0) {
+					Dbprintf("Reading back failed");
+					isOK = false;					
+					break;
+				}
+				
+				// cmp
+				if ( 0 != memcmp(fwdata+pos, verfiydata, size)) {
+					Dbprintf("not equal data");
+					isOK = false;					
+					break;
+				}
+						
+				length -= size;
+				pos += size;
 			}
-			cmd_send(CMD_ACK, len, 0, 0, resp, sizeof(resp));
-            break;			
+						
+			cmd_send(CMD_ACK, isOK, pos, 0, 0, 0);
+			StopTicks();
+            break;	
 		}
 #endif    
 
