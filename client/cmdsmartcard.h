@@ -32,5 +32,6 @@ extern int CmdSmartReader(const char *Cmd);
 
 extern int usage_sm_raw(void);
 extern int usage_sm_reader(void);
+extern int usage_sm_info(void);
 extern int usage_sm_upgrade(void);
 #endif

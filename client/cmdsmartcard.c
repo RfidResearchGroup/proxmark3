@@ -22,15 +22,28 @@ int usage_sm_raw(void) {
 	return 0;
 }
 int usage_sm_reader(void) {
-	PrintAndLogEx(NORMAL, "Usage: s reader [h|s]");
+	PrintAndLogEx(NORMAL, "Usage: sc reader [h|s]");
 	PrintAndLogEx(NORMAL, "       h          :  this help");
 	PrintAndLogEx(NORMAL, "       s          :  silent (no messages)");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "        sc reader");	
+	return 0;
+}
+int usage_sm_info(void) {
+	PrintAndLogEx(NORMAL, "Usage: s info [h|s]");
+	PrintAndLogEx(NORMAL, "       h          :  this help");
+	PrintAndLogEx(NORMAL, "       s          :  silent (no messages)");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "        sc info");		
 	return 0;
 }
 int usage_sm_upgrade(void) {
 	PrintAndLogEx(NORMAL, "Upgrade firmware");
 	PrintAndLogEx(NORMAL, "Usage:  sc upgrade f <file name>");
-	PrintAndLogEx(NORMAL, "  f <filename>  :      file name");
+	PrintAndLogEx(NORMAL, "       h               :  this help");
+	PrintAndLogEx(NORMAL, "       f <filename>    :  firmware file name");
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Examples:");
 	PrintAndLogEx(NORMAL, "        sc upgrade f myfile");
@@ -46,7 +59,7 @@ int CmdSmartRaw(const char *Cmd) {
 		
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch (tolower(param_getchar(Cmd, cmdp))) {
-		
+		case 'h': return usage_sm_raw();		
 		case 'r':
 			reply = false;
 			cmdp++;
@@ -66,8 +79,6 @@ int CmdSmartRaw(const char *Cmd) {
 			cmdp += 2;
 			break;
 		}
-		case 'h':
-			return usage_sm_raw();
 		default:
 			PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
 			errors = true;
@@ -92,8 +103,9 @@ int CmdSmartRaw(const char *Cmd) {
 		}
 		PrintAndLogEx(SUCCESS,"resp:  %s", sprint_hex(resp.d.asBytes, resp.arg[0]));
 	}
-	return 0;;
+	return 0;
 }
+
 int CmdSmartUpgrade(const char *Cmd) {
 
 	FILE *f;
@@ -200,13 +212,12 @@ int CmdSmartUpgrade(const char *Cmd) {
 
 int CmdSmartInfo(const char *Cmd){
 
-//	char filename[FILE_PATH_SIZE] = {0};	
 	uint8_t cmdp = 0;
 	bool errors = false;
 	
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch (tolower(param_getchar(Cmd, cmdp))) {
-		case 'h': return usage_sm_reader();
+		case 'h': return usage_sm_info();
 		default:
 			PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
 			errors = true;
@@ -215,20 +226,11 @@ int CmdSmartInfo(const char *Cmd){
 	}
 	
 	//Validations
-	if (errors || cmdp == 0 ) return usage_sm_reader();
-/*
-	PrintAndLogEx(NORMAL, "downloading %u bytes from flashmem", len);
-	if ( !GetFromDevice(SMARTCARD_FW, dump, len, start_index, NULL, -1, true) ) {
-		PrintAndLogEx(FAILED, "ERROR; downloading firmware");
-		free(dump);
-		return 1;
-	}
+	if (errors || cmdp == 0 ) return usage_sm_info();
 
-	saveFile(filename, "bin", dump, len);
-	free(dump);
-	*/
 	return 0;
 }
+
 int CmdSmartReader(const char *Cmd){
 
 	uint8_t cmdp = 0;
