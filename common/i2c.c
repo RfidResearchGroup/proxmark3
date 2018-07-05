@@ -54,17 +54,17 @@ void I2C_init(void) {
   
 	// 配置 I2C 引脚，开启上拉，开漏输出
 	// Configure I2C pin, open up, open leakage
-	AT91C_BASE_PIOA->PIO_PPUER = GPIO_SCL | GPIO_SDA;	// 打开上拉  Open up the pull up
-	AT91C_BASE_PIOA->PIO_MDER = GPIO_SCL | GPIO_SDA;
+	AT91C_BASE_PIOA->PIO_PPUER |= (GPIO_SCL | GPIO_SDA);	// 打开上拉  Open up the pull up
+	AT91C_BASE_PIOA->PIO_MDER |= (GPIO_SCL | GPIO_SDA);
 
 	// 默认三根线全部拉高
 	// default three lines all pull up
-	AT91C_BASE_PIOA->PIO_SODR = GPIO_SCL | GPIO_SDA | GPIO_RST;
+	AT91C_BASE_PIOA->PIO_SODR |= (GPIO_SCL | GPIO_SDA | GPIO_RST);
 
 	// 允许输出
 	// allow output
-	AT91C_BASE_PIOA->PIO_OER = GPIO_SCL | GPIO_SDA | GPIO_RST;
-	AT91C_BASE_PIOA->PIO_PER = GPIO_SCL | GPIO_SDA | GPIO_RST;
+	AT91C_BASE_PIOA->PIO_OER |= (GPIO_SCL | GPIO_SDA | GPIO_RST);
+	AT91C_BASE_PIOA->PIO_PER |= (GPIO_SCL | GPIO_SDA | GPIO_RST);
 }
 
 
@@ -226,7 +226,7 @@ uint8_t I2C_ReadByte(void) {
 	return b;
 }
 
-// Only send address, and cmd. For ATR
+// Sends one byte  ( command to be written, slavedevice address)
 bool I2C_WriteCmd(uint8_t device_cmd, uint8_t device_address) {
 	bool bBreak = true;
 	do 	{
@@ -244,18 +244,16 @@ bool I2C_WriteCmd(uint8_t device_cmd, uint8_t device_address) {
 		bBreak = false;
 	} while (false);
 
+	I2C_Stop();
 	if (bBreak)	{
-		I2C_Stop();
 		if ( MF_DBGLEVEL > 3 ) DbpString(I2C_ERROR);
 		return false;
 	}
-
-	I2C_Stop();
 	return true;
 }
 
 // 写入1字节数据 （待写入数据，待写入地址，器件类型）
-// Writes 1 byte data (Data to be written,command to be written , SlaveDevice address  ).
+// Sends 1 byte data (Data to be written,command to be written , SlaveDevice address  ).
 bool I2C_WriteByte(uint8_t data, uint8_t device_cmd, uint8_t device_address) {
 	bool bBreak = true;
 	do 	{
@@ -277,19 +275,17 @@ bool I2C_WriteByte(uint8_t data, uint8_t device_cmd, uint8_t device_address) {
 		bBreak = false;
 	} while (false);
 
+	I2C_Stop();
 	if (bBreak)	{
-		I2C_Stop();
 		if ( MF_DBGLEVEL > 3 ) DbpString(I2C_ERROR);
 		return false;
 	}
-
-	I2C_Stop();
 	return true;
 }
 
 
 //	写入1串数据（待写入数组地址，待写入长度，待写入地址，器件类型）	
-// Write 1 strings of data (Array address, length, command to be written , SlaveDevice address  ).
+//Sends a string of data (Array address, length, command to be written , SlaveDevice address  ).
 // len = uint8 (max buffer to write 256bytes)
 bool I2C_BufferWrite(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t device_address) {
 	bool bBreak = true;
@@ -352,6 +348,7 @@ uint8_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t d
 
 		// 0xB1 or 0xC1 read
 		I2C_Start();
+		
 		I2C_SendByte(device_address | 1);
 		if (!I2C_WaitAck())
 			break;
@@ -388,8 +385,7 @@ uint8_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t d
 }
 
 uint8_t I2C_ReadFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address) {
-	//START, 0xB0, 0x00, 0x00, START, 0xB1, xx, yy, zz, ......, STOP
-	
+	//START, 0xB0, 0x00, 0x00, START, 0xB1, xx, yy, zz, ......, STOP	
 	bool bBreak = true;
 	uint8_t	readcount = 0;
 
@@ -506,6 +502,9 @@ void SmartCardAtr(void) {
 	StartTicks();
 	I2C_Reset_EnterMainProgram();
 	
+	uint8_t *resp = BigBuf_malloc( sizeof(smart_card_atr_t) );
+	smart_card_atr_t *card = (smart_card_atr_t *)resp;
+	
 	// Send ATR
 	// start [C0 01] stop
 	I2C_WriteCmd(I2C_DEVICE_CMD_GENERATE_ATR, I2C_DEVICE_ADDRESS_MAIN);
@@ -513,13 +512,11 @@ void SmartCardAtr(void) {
 	// writing takes time.
 	WaitMS(50);
 
-	uint8_t resp[31] = {0};
-	smart_card_atr_t *card = (smart_card_atr_t *)resp;
-	
 	// start [C0 03 start C1 len aa bb cc stop]
 	uint8_t len = I2C_BufferRead(card->atr, sizeof(card->atr), I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
-
-	card->atr_len = len;
+	
+	// remove length byte from the read bytes.
+	card->atr_len = len - 1;
 	
 	// print ATR
 	Dbhexdump(len, resp, false);
@@ -532,6 +529,9 @@ void SmartCardRaw( uint64_t arg0, uint8_t *data ) {
 #define  ISO7618_MAX_FRAME 255
 	StartTicks();
 	I2C_Reset_EnterMainProgram();
+
+	uint8_t buf[30] = {0};	
+	uint8_t *resp =  BigBuf_malloc(ISO7618_MAX_FRAME);
 	
 	// Send ATR
 	// start [C0 01] stop
@@ -539,17 +539,24 @@ void SmartCardRaw( uint64_t arg0, uint8_t *data ) {
 		
 	// writing takes time.
 	WaitMS(50);
+
+	// start [C0 03 start C1 len aa bb cc stop]  (read ATR)
+	uint8_t len = I2C_BufferRead(buf, sizeof(buf), I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
+	if ( !len ) {
+		goto out;
+	}
 	
-	// sample:
+	// Send raw bytes
 	// start [C0 02] A0 A4 00 00 02 stop
 	// asBytes = A0 A4 00 00 02
 	// arg0 = len 5
 	I2C_BufferWrite(data, arg0, I2C_DEVICE_CMD_SEND, I2C_DEVICE_ADDRESS_MAIN);
 	
-	uint8_t *resp =  BigBuf_malloc(ISO7618_MAX_FRAME);
-	
+	// read response
 	// start [C0 03 start C1 len aa bb cc stop]
-	uint8_t len = I2C_BufferRead(resp, ISO7618_MAX_FRAME, I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
+	len = I2C_BufferRead(resp, ISO7618_MAX_FRAME, I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
+
+out:	
 	StopTicks();
 	cmd_send(CMD_ACK, len, 0, 0, resp, len);
 }
@@ -557,7 +564,7 @@ void SmartCardRaw( uint64_t arg0, uint8_t *data ) {
 void SmartCardUpgrade(uint64_t arg0) {
 #define I2C_BLOCK_SIZE 128
 // write.   Sector0,  with 11,22,33,44
-// erase is 128bytes.
+// erase is 128bytes, and takes 50ms to execute
 			
 	StartTicks();
 	I2C_Reset_EnterBootloader();	
