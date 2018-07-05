@@ -47,11 +47,21 @@ int CmdSmartRaw(const char *Cmd) {
 		
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch (tolower(param_getchar(Cmd, cmdp))) {
-		case 'd':
-			param_gethex_ex(Cmd, cmdp+1, data, &hexlen);
-			hexlen >>= 1;
+		case 'd': {
+			switch (param_gethex_to_eol(Cmd, cmdp+1, data, sizeof(data), &hexlen)) {
+			case 1:
+				PrintAndLogEx(WARNING, "Invalid HEX value.");
+				return 1;
+			case 2:
+				PrintAndLogEx(WARNING, "Too many bytes.  Max %d bytes", sizeof(data));
+				return 1;
+			case 3:
+				PrintAndLogEx(WARNING, "Hex must have even number of digits.");
+				return 1;
+			}
 			cmdp += 2;
 			break;
+		}
 		case 'h':
 			return usage_sm_raw();
 		default:
