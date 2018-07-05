@@ -77,6 +77,7 @@ typedef struct{
 
 // RDV40,  Smart card operations
 #define CMD_SMART_SEND													  0x0140
+#define CMD_SMART_UPGRADE												  0x0141
 
 // For low-frequency tags
 #define CMD_READ_TI_TYPE                                                  0x0202

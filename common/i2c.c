@@ -409,10 +409,6 @@ uint8_t I2C_ReadFW(uint8_t *data, uint8_t msb, uint8_t lsb, uint8_t device_addre
 	while (len) {
 		len--;
 		*data = I2C_ReadByte();
-		// 读取的第一个字节为后续长度	
-		// The first byte read is the message length
-		if (!readcount && (len > *data))
-			len = *data;
 
 		if (len == 0)
 			I2C_NoAck();
