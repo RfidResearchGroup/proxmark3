@@ -1056,7 +1056,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 				Dbprintf("FW %02X %02X", msb, lsb);
 				bool isok = I2C_ReadFW(resp, msb, lsb, I2C_DEVICE_ADDRESS_BOOT);
 				if (isok)
-					Dbhexdump(len, resp, false);
+					Dbhexdump(sizeof(resp), resp, false);
 				
 				length -= 64;
 				pos += 64;
