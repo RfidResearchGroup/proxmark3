@@ -617,3 +617,31 @@ void SmartCardUpgrade(uint64_t arg0) {
 	StopTicks();				
 	cmd_send(CMD_ACK, isOK, pos, 0, 0, 0);
 }
+
+void SmartCardSetBaud(uint64_t arg0) {
+	StartTicks();
+	I2C_Reset_EnterMainProgram();	
+	
+	bool isOK = true;
+	//uint16_t baud = arg0;
+	// Send SET BAUD
+	// start [C0 04] stop
+	//I2C_WriteByte(0x00, I2C_DEVICE_CMD_SETBAUD, I2C_DEVICE_ADDRESS_MAIN);
+	
+	StopTicks();				
+	cmd_send(CMD_ACK, isOK, 0, 0, 0, 0);
+}
+
+void SmartCardSetClock(uint64_t arg0) {
+	StartTicks();
+	I2C_Reset_EnterMainProgram();	
+	
+	bool isOK = true;
+	//uint16_t clockrate = arg0;
+	// Send SIM CLC
+	// start [C0 04] stop
+	//I2C_WriteByte(0x00, I2C_DEVICE_CMD_SIM_CLC, I2C_DEVICE_ADDRESS_MAIN);
+	
+	StopTicks();				
+	cmd_send(CMD_ACK, isOK, 0, 0, 0, 0);
+}

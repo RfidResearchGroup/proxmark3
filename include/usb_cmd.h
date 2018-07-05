@@ -80,6 +80,8 @@ typedef struct{
 #define CMD_SMART_UPGRADE												  0x0141
 #define CMD_SMART_UPLOAD												  0x0142
 #define CMD_SMART_ATR													  0x0143
+#define CMD_SMART_SETBAUD												  0x0144
+#define CMD_SMART_SETCLOCK												  0x0145
 
 // For low-frequency tags
 #define CMD_READ_TI_TYPE                                                  0x0202

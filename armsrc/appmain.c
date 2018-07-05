@@ -1027,6 +1027,14 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			SmartCardAtr();
 			break;
 		}
+		case CMD_SMART_SETBAUD:{
+			SmartCardSetBaud(c->arg[0]);
+			break;
+		}
+		case CMD_SMART_SETCLOCK:{
+			SmartCardSetClock(c->arg[0]);
+			break;
+		}
         case CMD_SMART_RAW: {
 			SmartCardRaw(c->arg[0], c->arg[1], c->d.asBytes);
             break;
