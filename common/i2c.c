@@ -128,7 +128,7 @@ bool WaitSCL_L_300ms(void){
 		
 		// exit on SCL LOW
 		if (!SCL_read) {			
-			if ( MF_DBGLEVEL > 3 ) Dbprintf(" 300ms SCL delay counter %d", delay);
+			if ( MF_DBGLEVEL > 3 ) Dbprintf("300ms SCL delay counter %d", delay);
 			return true;			
 		}
 		
@@ -139,11 +139,9 @@ bool WaitSCL_L_300ms(void){
 
 bool I2C_Start(void) {
 	
-	I2C_DELAY_XCLK(8);
-	SDA_H;
-	I2C_DELAY_1CLK;
-	SCL_H;
-	
+	I2C_DELAY_XCLK(4);
+	SDA_H; I2C_DELAY_1CLK;
+	SCL_H;	
 	if (!WaitSCL_H()) return false;
 
 	I2C_DELAY_2CLK;
@@ -242,11 +240,13 @@ uint8_t I2C_ReadByte(void) {
 }
 
 // Sends one byte  ( command to be written, SlaveDevice address)
-bool I2C_WriteCmd(uint8_t device_cmd, uint8_t device_address) {
+uint8_t I2C_SendGETATR(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t device_address) {
 	bool bBreak = true;
+	uint8_t	readcount = 0;
+	
 	do 	{
 		if (!I2C_Start())
-			return false;
+			return 0;
 
 		I2C_SendByte(device_address & 0xFE);
 		if (!I2C_WaitAck())
@@ -262,9 +262,53 @@ bool I2C_WriteCmd(uint8_t device_cmd, uint8_t device_address) {
 	I2C_Stop();
 	if (bBreak)	{
 		if ( MF_DBGLEVEL > 3 ) DbpString(I2C_ERROR);
-		return false;
+		return 0;
 	}
-	return true;
+	
+	// variable delay here.
+	if (!WaitSCL_L_300ms()) {
+		if ( MF_DBGLEVEL > 3 ) DbpString(" 300ms SCL delay - timed out");
+		return 0;
+	} 
+
+	// 8051 speaks with smart card.
+	// 1000*50*3.07 = 153.5ms
+	if (!WaitSCL_H_delay(1000*50) ) {
+		if ( MF_DBGLEVEL > 3 ) DbpString("wait for SCL HIGH - timed out");
+		return 0;
+	}
+	
+	if (!I2C_Start())
+		return 0;
+
+	// 0xB1 / 0xC1 == i2c read
+	I2C_SendByte(device_address | 1);
+	if (!I2C_WaitAck()) {
+		I2C_Stop();
+		if ( MF_DBGLEVEL > 3 ) DbpString(I2C_ERROR);
+		return 0;
+	}
+
+	// reading
+	while (len) {
+		len--;
+		*data = I2C_ReadByte();
+		// 读取的第一个字节为后续长度	
+		// The first byte read is the message length
+		if (!readcount && (len > *data))
+			len = *data;
+
+		if (len == 0)
+			I2C_NoAck();
+		else
+			I2C_Ack();
+
+		data++;
+		readcount++;
+	}
+	I2C_Stop();
+	
+	return readcount;
 }
 
 // 写入1字节数据 （待写入数据，待写入地址，器件类型）
@@ -515,38 +559,25 @@ bool GetATR(smart_card_atr_t *card_ptr) {
 	}
 	
 	// Send ATR
-	// start [C0 01] stop
-	I2C_WriteCmd(I2C_DEVICE_CMD_GENERATE_ATR, I2C_DEVICE_ADDRESS_MAIN);
+	// start [C0 01] stop start C1 len aa bb cc stop]
+	uint8_t len = I2C_SendGETATR(card_ptr->atr, sizeof(card_ptr->atr), I2C_DEVICE_CMD_GENERATE_ATR, I2C_DEVICE_ADDRESS_MAIN);
 
-	// variable delay here.
-	if (!WaitSCL_L_300ms()) {
-		if ( MF_DBGLEVEL > 3 ) DbpString(" 300ms SCL delay - timed out");
-		return false;
-	} 
-
-	// 8051 speaks with smart card.
-	// 1000*50*3.07 = 153.5ms
-	if (!WaitSCL_H_delay(1000*50) ) {
-		if ( MF_DBGLEVEL > 3 ) DbpString("wait for SCL HIGH - timed out");
-		return false;
-	}
-	
-	// extra delay. 166us  / 3.07 = 54
-	I2C_DELAY_XCLK(54);
-
-	// start [C0 03 start C1 len aa bb cc stop]
-	uint8_t len = I2C_BufferRead(card_ptr->atr, sizeof(card_ptr->atr), I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
+	//uint8_t len = I2C_BufferRead(card_ptr->atr, sizeof(card_ptr->atr), I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
 	
 	// remove length byte from the read bytes.
 	if ( card_ptr )
 		card_ptr->atr_len = (len == 0) ? 0 : len - 1;
 	
+	LogTrace(card_ptr->atr, card_ptr->atr_len, 0, 0, NULL, false);
 	return true;
 }
 
 void SmartCardAtr(void) {
-
 	smart_card_atr_t card;
+
+	LED_D_ON();
+	clear_trace();
+	set_tracing(true);
 	
 	I2C_Reset_EnterMainProgram();
 	
@@ -555,9 +586,15 @@ void SmartCardAtr(void) {
 		Dbhexdump(card.atr_len, card.atr, false);
 	
 	cmd_send(CMD_ACK, isOK, sizeof(smart_card_atr_t), 0, &card, sizeof(smart_card_atr_t));
+	LED_D_OFF();
 }
 
 void SmartCardRaw( uint64_t arg0, uint64_t arg1, uint8_t *data ) {
+
+	LED_D_ON();
+	clear_trace();
+	set_tracing(true);
+	
 	#define  ISO7618_MAX_FRAME 255
 	I2C_Reset_EnterMainProgram();
 
@@ -570,24 +607,49 @@ void SmartCardRaw( uint64_t arg0, uint64_t arg1, uint8_t *data ) {
 	if ( !isOK )
 		goto out;
 	
+	// log raw bytes
+	LogTrace(data, arg1, 0, 0, NULL, true);
+	
 	// Send raw bytes
 	// start [C0 02] A0 A4 00 00 02 stop
 	// asBytes = A0 A4 00 00 02
 	// arg0 = len 5
 	I2C_BufferWrite(data, arg1, I2C_DEVICE_CMD_SEND, I2C_DEVICE_ADDRESS_MAIN);
 	
+	
+	// variable delay here.
+	if (!WaitSCL_L_300ms()) {
+		if ( MF_DBGLEVEL > 3 ) DbpString(" 300ms SCL delay - timed out");
+		isOK = 0;
+		goto out;
+	} 
+
+	// 8051 speaks with smart card.
+	// 1000*50*3.07 = 153.5ms
+	if (!WaitSCL_H_delay(1000*50) ) {
+		if ( MF_DBGLEVEL > 3 ) DbpString("wait for SCL HIGH - timed out");
+		isOK = 0;
+		goto out;
+	}
+	
 	// read response
 	// start [C0 03 start C1 len aa bb cc stop]
 	len = I2C_BufferRead(resp, ISO7618_MAX_FRAME, I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
-	
+
+	// log answer
+	LogTrace(resp, len, 0, 0, NULL, false);
 out:	
 	cmd_send(CMD_ACK, isOK, len, 0, resp, len);
+	LED_D_OFF();
 }
 
 void SmartCardUpgrade(uint64_t arg0) {
-#define I2C_BLOCK_SIZE 128
-// write.   Sector0,  with 11,22,33,44
-// erase is 128bytes, and takes 50ms to execute
+
+	LED_C_ON();
+
+	#define I2C_BLOCK_SIZE 128
+	// write.   Sector0,  with 11,22,33,44
+	// erase is 128bytes, and takes 50ms to execute
 			
 	I2C_Reset_EnterBootloader();	
 
@@ -637,9 +699,14 @@ void SmartCardUpgrade(uint64_t arg0) {
 		pos += size;
 	}			
 	cmd_send(CMD_ACK, isOK, pos, 0, 0, 0);
+	LED_C_OFF();
 }
 
 void SmartCardSetBaud(uint64_t arg0) {
+	
+	LED_D_ON();
+	clear_trace();
+	set_tracing(true);
 	I2C_Reset_EnterMainProgram();	
 	
 	bool isOK = true;
@@ -649,10 +716,15 @@ void SmartCardSetBaud(uint64_t arg0) {
 	//I2C_WriteByte(0x00, I2C_DEVICE_CMD_SETBAUD, I2C_DEVICE_ADDRESS_MAIN);
 	
 	cmd_send(CMD_ACK, isOK, 0, 0, 0, 0);
+	LED_D_OFF();
 }
 
 void SmartCardSetClock(uint64_t arg0) {
 
+	LED_D_ON();
+	clear_trace();
+	set_tracing(true);
+	
 	I2C_Reset_EnterMainProgram();	
 	
 	bool isOK = true;
@@ -662,4 +734,5 @@ void SmartCardSetClock(uint64_t arg0) {
 	//I2C_WriteByte(0x00, I2C_DEVICE_CMD_SIM_CLC, I2C_DEVICE_ADDRESS_MAIN);
 				
 	cmd_send(CMD_ACK, isOK, 0, 0, 0, 0);
+	LED_D_OFF();
 }

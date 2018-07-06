@@ -26,7 +26,9 @@ void I2C_SetResetStatus(uint8_t LineRST, uint8_t LineSCK, uint8_t LineSDA);
 void I2C_Reset_EnterMainProgram(void);
 void I2C_Reset_EnterBootloader(void);
 
-bool I2C_WriteCmd(uint8_t device_cmd, uint8_t device_address);
+//bool I2C_WriteCmd(uint8_t device_cmd, uint8_t device_address);
+uint8_t I2C_SendGETATR(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t device_address);
+
 bool I2C_WriteByte(uint8_t data, uint8_t device_cmd, uint8_t device_address);
 bool I2C_BufferWrite(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t device_address);
 uint8_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t device_address);
