@@ -311,13 +311,11 @@ bool I2C_WriteByte(uint8_t data, uint8_t device_cmd, uint8_t device_address) {
 // len = uint8 (max buffer to write 256bytes)
 bool I2C_BufferWrite(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t device_address) {
 	bool bBreak = true;
-
 	do {
 		if (!I2C_Start())
 			return false;
 
 		I2C_SendByte(device_address & 0xFE);
-
 		if (!I2C_WaitAck())
 			break;
 
@@ -529,7 +527,7 @@ bool GetATR(smart_card_atr_t *card_ptr) {
 	
 	// Send ATR
 	// start [C0 01] stop
-	I2C_WriteCmd(I2C_DEVICE_CMD_GENERATE_ATR, I2C_DEVICE_ADDRESS_MAIN);
+	I2C_WriteByte(0x00, I2C_DEVICE_CMD_GENERATE_ATR, I2C_DEVICE_ADDRESS_MAIN);
 
 	// variable delay here.
 	if (!WaitSCL_L_300ms()) {
