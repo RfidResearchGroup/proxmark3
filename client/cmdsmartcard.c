@@ -101,7 +101,7 @@ int CmdSmartRaw(const char *Cmd) {
 			PrintAndLogEx(WARNING, "smart card response failed");
 			return 1;
 		}
-		PrintAndLogEx(SUCCESS,"resp:  %s", sprint_hex(resp.d.asBytes, resp.arg[0]));
+		PrintAndLogEx(SUCCESS,"isOK %d | resp:  %s",resp.arg[0], sprint_hex(resp.d.asBytes, resp.arg[1]));
 	}
 	return 0;
 }
@@ -259,7 +259,7 @@ int CmdSmartReader(const char *Cmd){
 	
 	uint8_t isok = resp.arg[0] & 0xFF;
 	if (!isok) {
-		PrintAndLogEx(FAILED, "failed");
+		PrintAndLogEx(FAILED, "failed to get ATR");
 		return 1;
 	}		
 	

@@ -111,10 +111,9 @@ void I2C_Reset_EnterBootloader(void) {
 
 //	等待时钟变高	
 // Wait for the clock to go High.	
-volatile uint16_t count;
 bool WaitSCL_H(void) {
 
-	count = 5000;
+	volatile uint16_t count = 50000;
 
 	while (count--)	{
 		if (SCL_read) {
@@ -500,50 +499,70 @@ void I2C_print_status(void) {
 		DbpString("  FW version................FAILED");
 }
 
-void SmartCardAtr(void) {
-	I2C_Reset_EnterMainProgram();
+#define WAIT_SCL_MAX_300
+#define WAIT_UNTIL_SCL_GOES_HIGH	while (!SCL_read) { I2C_DELAY_1CLK;	}
+bool WaitSCL_300(void){
+	volatile uint16_t delay = 300;
+	while ( SCL_read || delay ) {
+		SpinDelay(1);
+		delay--;
+	}	
+	return (delay == 0);
+}
+
+bool GetATR(smart_card_atr_t *card_ptr) {
 	
-	uint8_t *resp = BigBuf_malloc( sizeof(smart_card_atr_t) );
-	smart_card_atr_t *card = (smart_card_atr_t *)resp;
+	if ( card_ptr ) {
+		card_ptr->atr_len = 0;
+		memset(card_ptr->atr, 0, sizeof(card_ptr->atr));
+	}
 	
 	// Send ATR
 	// start [C0 01] stop
 	I2C_WriteCmd(I2C_DEVICE_CMD_GENERATE_ATR, I2C_DEVICE_ADDRESS_MAIN);
 
-	// writing takes time.
-	SpinDelay(50);
+	// variable delay here.
+	if (!WaitSCL_300()) 
+		return false;
+
+	// 8051 speaks with smart card.
+	WAIT_UNTIL_SCL_GOES_HIGH;
 
 	// start [C0 03 start C1 len aa bb cc stop]
-	uint8_t len = I2C_BufferRead(card->atr, sizeof(card->atr), I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
+	uint8_t len = I2C_BufferRead(card_ptr->atr, sizeof(card_ptr->atr), I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
 	
 	// remove length byte from the read bytes.
-	card->atr_len = len - 1;
+	if ( card_ptr )
+		card_ptr->atr_len = len - 1;
 	
-	// print ATR
-	Dbhexdump(len, resp, false);
+	return true;
+}
+
+void SmartCardAtr(void) {
+
+	smart_card_atr_t card;
 	
-	cmd_send(CMD_ACK, len, 0, 0, resp, sizeof(smart_card_atr_t));
+	I2C_Reset_EnterMainProgram();
+	
+	bool isOK = GetATR( &card );
+	if ( isOK )
+		Dbhexdump(card.atr_len, card.atr, false);
+
+	cmd_send(CMD_ACK, isOK, sizeof(smart_card_atr_t), 0, &card, sizeof(smart_card_atr_t));
 }
 
 void SmartCardRaw( uint64_t arg0, uint64_t arg1, uint8_t *data ) {
-#define  ISO7618_MAX_FRAME 255
+	#define  ISO7618_MAX_FRAME 255
 	I2C_Reset_EnterMainProgram();
 
-	uint8_t buf[30] = {0};	
+	uint8_t len = 0;
 	uint8_t *resp =  BigBuf_malloc(ISO7618_MAX_FRAME);
 	
-	// Send ATR
-	// start [C0 01] stop
-	I2C_WriteCmd(I2C_DEVICE_CMD_GENERATE_ATR, I2C_DEVICE_ADDRESS_MAIN);
-		
-	// writing takes time.
-	SpinDelay(50);
+	smart_card_atr_t card;
 
-	// start [C0 03 start C1 len aa bb cc stop]  (read ATR)
-	uint8_t len = I2C_BufferRead(buf, sizeof(buf), I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
-	if ( !len ) {
+	bool isOK = GetATR( &card );
+	if ( !isOK )
 		goto out;
-	}
 	
 	// Send raw bytes
 	// start [C0 02] A0 A4 00 00 02 stop
@@ -556,7 +575,7 @@ void SmartCardRaw( uint64_t arg0, uint64_t arg1, uint8_t *data ) {
 	len = I2C_BufferRead(resp, ISO7618_MAX_FRAME, I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
 	
 out:	
-	cmd_send(CMD_ACK, len, 0, 0, resp, len);
+	cmd_send(CMD_ACK, isOK, len, 0, resp, len);
 }
 
 void SmartCardUpgrade(uint64_t arg0) {
