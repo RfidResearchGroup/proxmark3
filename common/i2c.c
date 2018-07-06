@@ -134,6 +134,7 @@ bool WaitSCL_L_300ms(void){
 	volatile uint16_t delay = 300;
 	while ( delay-- ) {
 		
+		// exit on SCL LOW
 		if (!SCL_read) {			
 			if ( MF_DBGLEVEL > 3 ) Dbprintf(" 300ms SCL delay counter %d", delay);
 			return true;			
@@ -531,13 +532,13 @@ bool GetATR(smart_card_atr_t *card_ptr) {
 	I2C_WriteCmd(I2C_DEVICE_CMD_GENERATE_ATR, I2C_DEVICE_ADDRESS_MAIN);
 
 	// variable delay here.
-	if (!WaitSCL_300ms()) {
+	if (!WaitSCL_L_300ms()) {
 		if ( MF_DBGLEVEL > 3 ) DbpString(" 300ms SCL delay - timed out");
 		return false;
 	} 
 
 	// 8051 speaks with smart card.
-	// 1000*50*3.07 = 1530.5ms
+	// 1000*50*3.07 = 153.5ms
 	if (!WaitSCL_H_delay(1000*50) ) {
 		if ( MF_DBGLEVEL > 3 ) DbpString("wait for SCL HIGH - timed out");
 		return false;
