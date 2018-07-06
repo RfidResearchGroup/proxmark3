@@ -31,24 +31,14 @@ volatile unsigned long c;
 // timer.
 // I2CSpinDelayClk(4) = 12.31us
 // I2CSpinDelayClk(1) = 3.07us
-
-//void I2CSpinDelayClk(uint16_t delay) ;
 void __attribute__((optimize("O0"))) I2CSpinDelayClk(uint16_t delay) {
 	for (c = delay * 2; c; c--) {};
 }
-
-/*
-#define I2C_DELAY_1CLK 		I2CSpinDelayClk(1)
-#define I2C_DELAY_2CLK		I2CSpinDelayClk(2)
-#define I2C_DELAY_XCLK(x)	I2CSpinDelayClk((x))
-*/																  
+				  
 //	通讯延迟函数			ommunication delay function	
 #define I2C_DELAY_1CLK 		I2CSpinDelayClk(1)
 #define I2C_DELAY_2CLK		I2CSpinDelayClk(2)
 #define I2C_DELAY_XCLK(x)	I2CSpinDelayClk((x))
-//void I2C_DELAY_1(void) {	I2CSpinDelayClk(1);}
-//void I2C_DELAY_2(void) {	I2CSpinDelayClk(2);}
-//void I2C_DELAY_X(uint16_t delay) {	I2CSpinDelayClk(delay);}
 
 void I2C_init(void) {
 	// 配置复位引脚，关闭上拉，推挽输出，默认高
@@ -124,10 +114,12 @@ bool WaitSCL_H_delay(uint32_t delay) {
 	}
 	return false;
 }
+
 // 5000 * 3.07us = 15350us. 15.35ms
 bool WaitSCL_H(void) {
 	return WaitSCL_H_delay(5000);
 }
+
 // Wait max 300ms or until SCL goes LOW.
 // Which ever comes first
 bool WaitSCL_L_300ms(void){
@@ -147,7 +139,7 @@ bool WaitSCL_L_300ms(void){
 
 bool I2C_Start(void) {
 	
-	I2C_DELAY_XCLK(4);
+	I2C_DELAY_XCLK(8);
 	SDA_H;
 	I2C_DELAY_1CLK;
 	SCL_H;
@@ -174,6 +166,7 @@ void I2C_Stop(void) {
 	I2C_DELAY_2CLK;
 	I2C_DELAY_2CLK;
 }
+
 // Send i2c ACK
 void I2C_Ack(void) {
 	SCL_L; I2C_DELAY_2CLK;
@@ -248,7 +241,7 @@ uint8_t I2C_ReadByte(void) {
 	return b;
 }
 
-// Sends one byte  ( command to be written, slavedevice address)
+// Sends one byte  ( command to be written, SlaveDevice address)
 bool I2C_WriteCmd(uint8_t device_cmd, uint8_t device_address) {
 	bool bBreak = true;
 	do 	{
@@ -275,7 +268,7 @@ bool I2C_WriteCmd(uint8_t device_cmd, uint8_t device_address) {
 }
 
 // 写入1字节数据 （待写入数据，待写入地址，器件类型）
-// Sends 1 byte data (Data to be written,command to be written , SlaveDevice address  ).
+// Sends 1 byte data (Data to be written, command to be written , SlaveDevice address  ).
 bool I2C_WriteByte(uint8_t data, uint8_t device_cmd, uint8_t device_address) {
 	bool bBreak = true;
 	do 	{
@@ -305,9 +298,8 @@ bool I2C_WriteByte(uint8_t data, uint8_t device_cmd, uint8_t device_address) {
 	return true;
 }
 
-
 //	写入1串数据（待写入数组地址，待写入长度，待写入地址，器件类型）	
-//Sends a string of data (Array address, length, command to be written , SlaveDevice address  ).
+//Sends a string of data (Array, length, command to be written , SlaveDevice address  ).
 // len = uint8 (max buffer to write 256bytes)
 bool I2C_BufferWrite(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t device_address) {
 	bool bBreak = true;
@@ -346,13 +338,11 @@ bool I2C_BufferWrite(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t dev
 }
 
 // 读出1串数据（存放读出数据，待读出长度，带读出地址，器件类型）
-// read 1 strings of data (Data storage array, Readout length, command to be written , SlaveDevice address  ).
+// read 1 strings of data (Data array, Readout length, command to be written , SlaveDevice address  ).
 // len = uint8 (max buffer to read 256bytes)
 uint8_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t device_address) {
 	bool bBreak = true;
 	uint8_t	readcount = 0;
-
-	// sending
 	do {
 		if (!I2C_Start())
 			return 0;
@@ -365,10 +355,9 @@ uint8_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t d
 		I2C_SendByte(device_cmd);
 		if (!I2C_WaitAck())
 			break;
-
+		
 		// 0xB1 / 0xC1 == i2c read
 		I2C_Start();
-		
 		I2C_SendByte(device_address | 1);
 		if (!I2C_WaitAck())
 			break;
@@ -527,7 +516,7 @@ bool GetATR(smart_card_atr_t *card_ptr) {
 	
 	// Send ATR
 	// start [C0 01] stop
-	I2C_WriteByte(0x00, I2C_DEVICE_CMD_GENERATE_ATR, I2C_DEVICE_ADDRESS_MAIN);
+	I2C_WriteCmd(I2C_DEVICE_CMD_GENERATE_ATR, I2C_DEVICE_ADDRESS_MAIN);
 
 	// variable delay here.
 	if (!WaitSCL_L_300ms()) {
@@ -541,6 +530,9 @@ bool GetATR(smart_card_atr_t *card_ptr) {
 		if ( MF_DBGLEVEL > 3 ) DbpString("wait for SCL HIGH - timed out");
 		return false;
 	}
+	
+	// extra delay. 166us  / 3.07 = 54
+	I2C_DELAY_XCLK(54);
 
 	// start [C0 03 start C1 len aa bb cc stop]
 	uint8_t len = I2C_BufferRead(card_ptr->atr, sizeof(card_ptr->atr), I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
