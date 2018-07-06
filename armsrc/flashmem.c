@@ -154,7 +154,7 @@ bool Flash_CheckBusy(uint16_t times) {
 
 	while (times) {
 		WDT_HIT();
-		WaitMS(1);
+		SpinDelay(1);
 		ret = (Flash_ReadStat1() & BUSY);
 		if (!ret)
 			break;

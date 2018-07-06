@@ -92,10 +92,11 @@ void I2C_SetResetStatus(uint8_t LineRST, uint8_t LineSCK, uint8_t LineSDA) {
 // Note: the SIM_Adapter will not enter the main program after power up. Please run this function before use SIM_Adapter.
 void I2C_Reset_EnterMainProgram(void) {
 	I2C_SetResetStatus(0, 0, 0);		//	拉低复位线
-	SpinDelay(100);
+	SpinDelay(30);
 	I2C_SetResetStatus(1, 0, 0);		//	解除复位
-	SpinDelay(100);
+	SpinDelay(30);
 	I2C_SetResetStatus(1, 1, 1);		//	拉高数据线
+	SpinDelay(10);
 }
 
 // 复位进入引导模式
@@ -105,6 +106,7 @@ void I2C_Reset_EnterBootloader(void) {
 	I2C_SetResetStatus(0, 1, 1);		//	拉低复位线
 	SpinDelay(100);
 	I2C_SetResetStatus(1, 1, 1);		//	解除复位
+	SpinDelay(10);
 }
 
 //	等待时钟变高	
@@ -499,7 +501,6 @@ void I2C_print_status(void) {
 }
 
 void SmartCardAtr(void) {
-	StartTicks();
 	I2C_Reset_EnterMainProgram();
 	
 	uint8_t *resp = BigBuf_malloc( sizeof(smart_card_atr_t) );
@@ -510,7 +511,7 @@ void SmartCardAtr(void) {
 	I2C_WriteCmd(I2C_DEVICE_CMD_GENERATE_ATR, I2C_DEVICE_ADDRESS_MAIN);
 
 	// writing takes time.
-	WaitMS(50);
+	SpinDelay(50);
 
 	// start [C0 03 start C1 len aa bb cc stop]
 	uint8_t len = I2C_BufferRead(card->atr, sizeof(card->atr), I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
@@ -521,13 +522,11 @@ void SmartCardAtr(void) {
 	// print ATR
 	Dbhexdump(len, resp, false);
 	
-	StopTicks();
 	cmd_send(CMD_ACK, len, 0, 0, resp, sizeof(smart_card_atr_t));
 }
 
 void SmartCardRaw( uint64_t arg0, uint64_t arg1, uint8_t *data ) {
 #define  ISO7618_MAX_FRAME 255
-	StartTicks();
 	I2C_Reset_EnterMainProgram();
 
 	uint8_t buf[30] = {0};	
@@ -538,7 +537,7 @@ void SmartCardRaw( uint64_t arg0, uint64_t arg1, uint8_t *data ) {
 	I2C_WriteCmd(I2C_DEVICE_CMD_GENERATE_ATR, I2C_DEVICE_ADDRESS_MAIN);
 		
 	// writing takes time.
-	WaitMS(50);
+	SpinDelay(50);
 
 	// start [C0 03 start C1 len aa bb cc stop]  (read ATR)
 	uint8_t len = I2C_BufferRead(buf, sizeof(buf), I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
@@ -557,7 +556,6 @@ void SmartCardRaw( uint64_t arg0, uint64_t arg1, uint8_t *data ) {
 	len = I2C_BufferRead(resp, ISO7618_MAX_FRAME, I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
 	
 out:	
-	StopTicks();
 	cmd_send(CMD_ACK, len, 0, 0, resp, len);
 }
 
@@ -566,7 +564,6 @@ void SmartCardUpgrade(uint64_t arg0) {
 // write.   Sector0,  with 11,22,33,44
 // erase is 128bytes, and takes 50ms to execute
 			
-	StartTicks();
 	I2C_Reset_EnterBootloader();	
 
 	bool isOK = true;
@@ -594,7 +591,7 @@ void SmartCardUpgrade(uint64_t arg0) {
 		}
 		
 		// writing takes time.
-		WaitMS(50);
+		SpinDelay(50);
 
 		// read
 		res = I2C_ReadFW(verfiydata, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT);
@@ -613,13 +610,11 @@ void SmartCardUpgrade(uint64_t arg0) {
 				
 		length -= size;
 		pos += size;
-	}
-	StopTicks();				
+	}			
 	cmd_send(CMD_ACK, isOK, pos, 0, 0, 0);
 }
 
 void SmartCardSetBaud(uint64_t arg0) {
-	StartTicks();
 	I2C_Reset_EnterMainProgram();	
 	
 	bool isOK = true;
@@ -628,12 +623,11 @@ void SmartCardSetBaud(uint64_t arg0) {
 	// start [C0 04] stop
 	//I2C_WriteByte(0x00, I2C_DEVICE_CMD_SETBAUD, I2C_DEVICE_ADDRESS_MAIN);
 	
-	StopTicks();				
 	cmd_send(CMD_ACK, isOK, 0, 0, 0, 0);
 }
 
 void SmartCardSetClock(uint64_t arg0) {
-	StartTicks();
+
 	I2C_Reset_EnterMainProgram();	
 	
 	bool isOK = true;
@@ -641,7 +635,6 @@ void SmartCardSetClock(uint64_t arg0) {
 	// Send SIM CLC
 	// start [C0 04] stop
 	//I2C_WriteByte(0x00, I2C_DEVICE_CMD_SIM_CLC, I2C_DEVICE_ADDRESS_MAIN);
-	
-	StopTicks();				
+				
 	cmd_send(CMD_ACK, isOK, 0, 0, 0, 0);
 }
