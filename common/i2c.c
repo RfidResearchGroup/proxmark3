@@ -111,12 +111,8 @@ void I2C_Reset_EnterBootloader(void) {
 
 //	等待时钟变高	
 // Wait for the clock to go High.	
-bool WaitSCL_H(void) {
-
-	volatile uint16_t delay = 5000;
-
+bool WaitSCL_H_delay(uint32_t delay) {
 	while (delay--)	{
-		
 		if (SCL_read) {
 			return true;
 		}
@@ -125,6 +121,9 @@ bool WaitSCL_H(void) {
 	return false;
 }
 
+bool WaitSCL_H(void) {
+	return WaitSCL_H_delay(5000);
+}
 // Wait max 300ms or until SCL goes LOW.
 // Which ever comes first
 bool WaitSCL_300ms(void){
@@ -514,7 +513,6 @@ void I2C_print_status(void) {
 		DbpString("  FW version................FAILED");
 }
 
-#define WAIT_UNTIL_SCL_GOES_HIGH	{ while (!SCL_read) { SpinDelay(1); } }
 bool GetATR(smart_card_atr_t *card_ptr) {
 	
 	if ( card_ptr ) {
@@ -530,12 +528,16 @@ bool GetATR(smart_card_atr_t *card_ptr) {
 
 	// variable delay here.
 	if (!WaitSCL_300ms()) {
-		if ( MF_DBGLEVEL > 3 ) DbpString(" 300ms SCL delay failed");
+		if ( MF_DBGLEVEL > 3 ) DbpString(" 300ms SCL delay - timed out");
 		return false;
 	}
 
 	// 8051 speaks with smart card.
-	WAIT_UNTIL_SCL_GOES_HIGH;
+	// 50ms timeout?
+	if (!WaitSCL_H_delay(1500*50) ) {
+		if ( MF_DBGLEVEL > 3 ) DbpString("wait for SCL HIGH - timed out");
+		return false;
+	}
 
 	if ( MF_DBGLEVEL > 3 ) DbpString("before reading");
 	
