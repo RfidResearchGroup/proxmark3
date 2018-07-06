@@ -28,6 +28,10 @@
 volatile unsigned long c;
 
 //	直接使用循环来延时，一个循环 6 条指令，48M， Delay=1 大概为 200kbps
+// timer.
+// I2CSpinDelayClk(4) = 12.31us
+// I2CSpinDelayClk(1) = 3.07us
+
 //void I2CSpinDelayClk(uint16_t delay) ;
 void __attribute__((optimize("O0"))) I2CSpinDelayClk(uint16_t delay) {
 	for (c = delay * 2; c; c--) {};
@@ -120,18 +124,20 @@ bool WaitSCL_H_delay(uint32_t delay) {
 	}
 	return false;
 }
-
+// 5000 * 3.07us = 15350us. 15.35ms
 bool WaitSCL_H(void) {
 	return WaitSCL_H_delay(5000);
 }
 // Wait max 300ms or until SCL goes LOW.
 // Which ever comes first
-bool WaitSCL_300ms(void){
+bool WaitSCL_L_300ms(void){
 	volatile uint16_t delay = 300;
 	while ( delay-- ) {
 		
-		if (!SCL_read)
-			return true;
+		if (!SCL_read) {			
+			if ( MF_DBGLEVEL > 3 ) Dbprintf(" 300ms SCL delay counter %d", delay);
+			return true;			
+		}
 		
 		SpinDelay(1);
 	}
@@ -352,7 +358,7 @@ uint8_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t d
 		if (!I2C_Start())
 			return 0;
 
-		// 0xB0 or 0xC0  i2c write
+		// 0xB0 / 0xC0  == i2c write
 		I2C_SendByte(device_address & 0xFE);
 		if (!I2C_WaitAck())
 			break;
@@ -361,7 +367,7 @@ uint8_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t d
 		if (!I2C_WaitAck())
 			break;
 
-		// 0xB1 or 0xC1 read
+		// 0xB1 / 0xC1 == i2c read
 		I2C_Start();
 		
 		I2C_SendByte(device_address | 1);
@@ -409,7 +415,7 @@ uint8_t I2C_ReadFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t
 		if (!I2C_Start())
 			return 0;
 
-		// 0xB0 or 0xC0  i2c write
+		// 0xB0 / 0xC0  i2c write
 		I2C_SendByte(device_address & 0xFE);
 		if (!I2C_WaitAck())
 			break;
@@ -424,7 +430,7 @@ uint8_t I2C_ReadFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t
 		if (!I2C_WaitAck())
 			break;
 		
-		// 0xB1 or 0xC1 read
+		// 0xB1 / 0xC1  i2c read
 		I2C_Start();
 		I2C_SendByte(device_address | 1);
 		if (!I2C_WaitAck())
@@ -465,7 +471,7 @@ bool I2C_WriteFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t d
 		if (!I2C_Start())
 			return false;
 
-		// 0xB0
+		// 0xB0  == i2c write
 		I2C_SendByte(device_address & 0xFE);
 		if (!I2C_WaitAck())
 			break;
@@ -519,8 +525,6 @@ bool GetATR(smart_card_atr_t *card_ptr) {
 		card_ptr->atr_len = 0;
 		memset(card_ptr->atr, 0, sizeof(card_ptr->atr));
 	}
-
-	if ( MF_DBGLEVEL > 3 ) DbpString("before sending GET_ATR");
 	
 	// Send ATR
 	// start [C0 01] stop
@@ -530,23 +534,21 @@ bool GetATR(smart_card_atr_t *card_ptr) {
 	if (!WaitSCL_300ms()) {
 		if ( MF_DBGLEVEL > 3 ) DbpString(" 300ms SCL delay - timed out");
 		return false;
-	}
+	} 
 
 	// 8051 speaks with smart card.
-	// 50ms timeout?
-	if (!WaitSCL_H_delay(1500*50) ) {
+	// 1000*50*3.07 = 1530.5ms
+	if (!WaitSCL_H_delay(1000*50) ) {
 		if ( MF_DBGLEVEL > 3 ) DbpString("wait for SCL HIGH - timed out");
 		return false;
 	}
 
-	if ( MF_DBGLEVEL > 3 ) DbpString("before reading");
-	
 	// start [C0 03 start C1 len aa bb cc stop]
 	uint8_t len = I2C_BufferRead(card_ptr->atr, sizeof(card_ptr->atr), I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
 	
 	// remove length byte from the read bytes.
 	if ( card_ptr )
-		card_ptr->atr_len = len - 1;
+		card_ptr->atr_len = (len == 0) ? 0 : len - 1;
 	
 	return true;
 }
@@ -558,9 +560,9 @@ void SmartCardAtr(void) {
 	I2C_Reset_EnterMainProgram();
 	
 	bool isOK = GetATR( &card );
-	if ( isOK )
+	if ( isOK )		
 		Dbhexdump(card.atr_len, card.atr, false);
-
+	
 	cmd_send(CMD_ACK, isOK, sizeof(smart_card_atr_t), 0, &card, sizeof(smart_card_atr_t));
 }
 
@@ -617,7 +619,7 @@ void SmartCardUpgrade(uint64_t arg0) {
 		// write
 		res = I2C_WriteFW(fwdata+pos, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT);
 		if ( !res ) {
-			Dbprintf("Writing failed");
+			DbpString("Writing failed");
 			isOK = false;
 			break;
 		}
@@ -628,14 +630,14 @@ void SmartCardUpgrade(uint64_t arg0) {
 		// read
 		res = I2C_ReadFW(verfiydata, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT);
 		if ( res == 0) {
-			Dbprintf("Reading back failed");
+			DbpString("Reading back failed");
 			isOK = false;					
 			break;
 		}
 		
 		// cmp
 		if ( 0 != memcmp(fwdata+pos, verfiydata, size)) {
-			Dbprintf("not equal data");
+			DbpString("not equal data");
 			isOK = false;					
 			break;
 		}
