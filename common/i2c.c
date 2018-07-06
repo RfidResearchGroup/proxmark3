@@ -39,12 +39,12 @@ void __attribute__((optimize("O0"))) I2CSpinDelayClk(uint16_t delay) {
 #define I2C_DELAY_XCLK(x)	I2CSpinDelayClk((x))
 */																  
 //	通讯延迟函数			ommunication delay function	
-#define I2C_DELAY_1CLK 		I2C_DELAY_1()
-#define I2C_DELAY_2CLK		I2C_DELAY_2()
-#define I2C_DELAY_XCLK(x)	I2C_DELAY_X((x))
-void I2C_DELAY_1(void) {	I2CSpinDelayClk(1);}
-void I2C_DELAY_2(void) {	I2CSpinDelayClk(2);}
-void I2C_DELAY_X(uint16_t delay) {	I2CSpinDelayClk(delay);}
+#define I2C_DELAY_1CLK 		I2CSpinDelayClk(1)
+#define I2C_DELAY_2CLK		I2CSpinDelayClk(2)
+#define I2C_DELAY_XCLK(x)	I2CSpinDelayClk((x))
+//void I2C_DELAY_1(void) {	I2CSpinDelayClk(1);}
+//void I2C_DELAY_2(void) {	I2CSpinDelayClk(2);}
+//void I2C_DELAY_X(uint16_t delay) {	I2CSpinDelayClk(delay);}
 
 void I2C_init(void) {
 	// 配置复位引脚，关闭上拉，推挽输出，默认高
@@ -113,15 +113,30 @@ void I2C_Reset_EnterBootloader(void) {
 // Wait for the clock to go High.	
 bool WaitSCL_H(void) {
 
-	volatile uint16_t count = 50000;
+	volatile uint16_t delay = 5000;
 
-	while (count--)	{
+	while (delay--)	{
+		
 		if (SCL_read) {
 			return true;
 		}
 		I2C_DELAY_1CLK;
 	}
 	return false;
+}
+
+// Wait max 300ms or until SCL goes LOW.
+// Which ever comes first
+bool WaitSCL_300ms(void){
+	volatile uint16_t delay = 300;
+	while ( delay-- ) {
+		
+		if (!SCL_read)
+			return true;
+		
+		SpinDelay(1);
+	}
+	return (delay == 0);
 }
 
 bool I2C_Start(void) {
@@ -499,35 +514,31 @@ void I2C_print_status(void) {
 		DbpString("  FW version................FAILED");
 }
 
-#define WAIT_SCL_MAX_300
-#define WAIT_UNTIL_SCL_GOES_HIGH	while (!SCL_read) { I2C_DELAY_1CLK;	}
-bool WaitSCL_300(void){
-	volatile uint16_t delay = 300;
-	while ( SCL_read || delay ) {
-		SpinDelay(1);
-		delay--;
-	}	
-	return (delay == 0);
-}
-
+#define WAIT_UNTIL_SCL_GOES_HIGH	{ while (!SCL_read) { SpinDelay(1); } }
 bool GetATR(smart_card_atr_t *card_ptr) {
 	
 	if ( card_ptr ) {
 		card_ptr->atr_len = 0;
 		memset(card_ptr->atr, 0, sizeof(card_ptr->atr));
 	}
+
+	if ( MF_DBGLEVEL > 3 ) DbpString("before sending GET_ATR");
 	
 	// Send ATR
 	// start [C0 01] stop
 	I2C_WriteCmd(I2C_DEVICE_CMD_GENERATE_ATR, I2C_DEVICE_ADDRESS_MAIN);
 
 	// variable delay here.
-	if (!WaitSCL_300()) 
+	if (!WaitSCL_300ms()) {
+		if ( MF_DBGLEVEL > 3 ) DbpString(" 300ms SCL delay failed");
 		return false;
+	}
 
 	// 8051 speaks with smart card.
 	WAIT_UNTIL_SCL_GOES_HIGH;
 
+	if ( MF_DBGLEVEL > 3 ) DbpString("before reading");
+	
 	// start [C0 03 start C1 len aa bb cc stop]
 	uint8_t len = I2C_BufferRead(card_ptr->atr, sizeof(card_ptr->atr), I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
 	
