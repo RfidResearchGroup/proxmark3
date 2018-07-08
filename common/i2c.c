@@ -174,12 +174,9 @@ void I2C_Stop(void) {
 	SCL_L; I2C_DELAY_2CLK;
 	SDA_L; I2C_DELAY_2CLK;
 	SCL_H; I2C_DELAY_2CLK;
-	WaitSCL_H();
+	if (!WaitSCL_H()) return;
 	SDA_H;
-	I2C_DELAY_2CLK;
-	I2C_DELAY_2CLK;
-	I2C_DELAY_2CLK;
-	I2C_DELAY_2CLK;
+	I2C_DELAY_XCLK(8);
 }
 // Send i2c ACK
 void I2C_Ack(void) {
@@ -533,10 +530,10 @@ void I2C_print_status(void) {
 	I2C_Reset_EnterMainProgram();
 	uint8_t len = I2C_BufferRead(resp, sizeof(resp), I2C_DEVICE_CMD_GETVERSION, I2C_DEVICE_ADDRESS_MAIN);
 	if ( len > 0 ) {
-		Dbprintf("  FW version..............v%x.%02x", resp[0], resp[1]);
+		Dbprintf("  version.................v%x.%02x", resp[0], resp[1]);
 		LogTrace(resp, len, 0, 0, NULL, false);
 	} else {
-		DbpString("  FW version..............FAILED");
+		DbpString("  version.................FAILED");
 	}
 }
 
@@ -588,6 +585,8 @@ void SmartCardRaw( uint64_t arg0, uint64_t arg1, uint8_t *data ) {
 	clear_trace();
 	set_tracing(true);
 	
+	//uint64_t flags = arg0;
+	
 	#define  ISO7618_MAX_FRAME 255
 	I2C_Reset_EnterMainProgram();
 
@@ -617,7 +616,9 @@ void SmartCardRaw( uint64_t arg0, uint64_t arg1, uint8_t *data ) {
 	// start [C0 03 start C1 len aa bb cc stop]
 	len = I2C_BufferRead(resp, ISO7618_MAX_FRAME, I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
 	
-		
+	if ( len == 0)
+		isOK = false;
+	
 	if ( MF_DBGLEVEL > 3 ) Dbprintf("counter %d", len);
 	
 out:	
