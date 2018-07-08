@@ -170,6 +170,7 @@ bool I2C_WaitForSim() {
 }
 
 // send i2c STOP
+/*
 void I2C_Stop(void) {
 	SCL_L; I2C_DELAY_2CLK;
 	SDA_L; I2C_DELAY_2CLK;
@@ -180,7 +181,18 @@ void I2C_Stop(void) {
 	I2C_DELAY_2CLK;
 	I2C_DELAY_2CLK;
 }
-
+*/
+void I2C_Stop(void) {
+	SCL_L; I2C_DELAY_2CLK;
+	SDA_L; I2C_DELAY_2CLK;
+	SCL_H; I2C_DELAY_2CLK;
+	WaitSCL_H();
+	SDA_H;
+	I2C_DELAY_2CLK;
+	I2C_DELAY_2CLK;
+	I2C_DELAY_2CLK;
+	I2C_DELAY_2CLK;
+}
 // Send i2c ACK
 void I2C_Ack(void) {
 	SCL_L; I2C_DELAY_2CLK;
@@ -256,7 +268,7 @@ uint8_t I2C_ReadByte(void) {
 }
 
 // Sends one byte  ( command to be written, SlaveDevice address)
-bool I2C_SendGETATR(uint8_t device_cmd, uint8_t device_address) {
+bool I2C_WriteCmd(uint8_t device_cmd, uint8_t device_address) {
 	bool bBreak = true;
 	do 	{
 		if (!I2C_Start())
@@ -356,8 +368,9 @@ bool I2C_BufferWrite(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t dev
 // len = uint8 (max buffer to read 256bytes)
 uint8_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t device_address) {
 
-	// extra wait  500us
-	SpinDelayUs(500);
+	// extra wait  500us (514us measured)
+	// 200us  (xx measured)
+	SpinDelayUs(200);
 	
 	bool bBreak = true;
 	uint8_t	readcount = 0;
@@ -534,12 +547,12 @@ bool GetATR(smart_card_atr_t *card_ptr) {
 	
 	// Send ATR
 	// start [C0 01] stop start C1 len aa bb cc stop]
-	I2C_SendGETATR(I2C_DEVICE_CMD_GENERATE_ATR, I2C_DEVICE_ADDRESS_MAIN);
+	I2C_WriteCmd(I2C_DEVICE_CMD_GENERATE_ATR, I2C_DEVICE_ADDRESS_MAIN);
 
 	//wait for sim card to answer.
 	if (!I2C_WaitForSim()) 
 		return false;
-
+		
 	// read answer
 	uint8_t len = I2C_BufferRead(card_ptr->atr, sizeof(card_ptr->atr), I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
 	
@@ -562,7 +575,7 @@ void SmartCardAtr(void) {
 	set_tracing(true);
 	
 	I2C_Reset_EnterMainProgram();
-	
+
 	bool isOK = GetATR( &card );
 	if ( isOK )		
 		Dbhexdump(card.atr_len, card.atr, false);
