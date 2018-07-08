@@ -89,6 +89,8 @@ int CmdSmartRaw(const char *Cmd) {
 	//Validations
 	if (errors || cmdp == 0 ) return usage_sm_raw();			
 
+	// arg0 = RFU flags
+	// arg1 = length
 	UsbCommand c = {CMD_SMART_RAW, {0, hexlen, 0}};	
 	memcpy(c.d.asBytes, data, hexlen );
 	clearCommandBuffer();
