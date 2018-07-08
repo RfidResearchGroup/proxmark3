@@ -191,12 +191,11 @@ int CmdHF14AList(const char *Cmd) {
 }
 
 int CmdHF14AReader(const char *Cmd) {
-	bool silent = false;
 
 	uint32_t cm = ISO14A_CONNECT;
-	bool disconnectAfter = true;
-	
+	bool disconnectAfter = true, silent = false;	
 	int cmdp = 0;
+	
 	while (param_getchar(Cmd, cmdp) != 0x00) {
 		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'h':
@@ -208,16 +207,15 @@ int CmdHF14AReader(const char *Cmd) {
 			disconnectAfter = false;
 			break;
 		case 's':
-		      silent = true;
-			  break;
+			silent = true;
+			break;
 		case 'x':
 			cm &= ~ISO14A_CONNECT;
 			break;
 		default:
 			PrintAndLogEx(WARNING, "Unknown command.");
 			return 1;
-		}	
-		
+		}			
 		cmdp++;
 	}
 
@@ -225,7 +223,6 @@ int CmdHF14AReader(const char *Cmd) {
 		cm |= ISO14A_NO_DISCONNECT; 
 	
 	UsbCommand c = {CMD_READER_ISO_14443a, {cm, 0, 0}};
-	
 	clearCommandBuffer();
 	SendCommand(&c);
 
@@ -1020,17 +1017,17 @@ int CmdHF14AAntiFuzz(const char *cmd) {
 }
 
 static command_t CommandTable[] = {
-  {"help",		CmdHelp,              1, "This help"},
-  {"list",		CmdHF14AList,         0, "[Deprecated] List ISO 14443-a history"},
-  {"info",		CmdHF14AInfo,         0, "Tag information"},
-  {"reader",	CmdHF14AReader,       0, "Act like an ISO14443-a reader"},
-  {"cuids",		CmdHF14ACUIDs,        0, "<n> Collect n>0 ISO14443-a UIDs in one go"},
-  {"sim",		CmdHF14ASim,          0, "<UID> -- Simulate ISO 14443-a tag"},
-  {"sniff",		CmdHF14ASniff,        0, "sniff ISO 14443-a traffic"},
-  {"apdu",		CmdHF14AAPDU,         0, "Send ISO 14443-4 APDU to tag"},
-  {"raw",		CmdHF14ACmdRaw,       0, "Send raw hex data to tag"},
-  {"antifuzz",	CmdHF14AAntiFuzz,     0, "Fuzzing the anticollision phase.  Warning! Readers may react strange"},
-  {NULL, NULL, 0, NULL}
+	{"help",		CmdHelp,              1, "This help"},
+	{"list",		CmdHF14AList,         0, "[Deprecated] List ISO 14443-a history"},
+	{"info",		CmdHF14AInfo,         0, "Tag information"},
+	{"reader",	CmdHF14AReader,       0, "Act like an ISO14443-a reader"},
+	{"cuids",		CmdHF14ACUIDs,        0, "<n> Collect n>0 ISO14443-a UIDs in one go"},
+	{"sim",		CmdHF14ASim,          0, "<UID> -- Simulate ISO 14443-a tag"},
+	{"sniff",		CmdHF14ASniff,        0, "sniff ISO 14443-a traffic"},
+	{"apdu",		CmdHF14AAPDU,         0, "Send ISO 14443-4 APDU to tag"},
+	{"raw",		CmdHF14ACmdRaw,       0, "Send raw hex data to tag"},
+	{"antifuzz",	CmdHF14AAntiFuzz,     0, "Fuzzing the anticollision phase.  Warning! Readers may react strange"},
+	{NULL, NULL, 0, NULL}
 };
 
 int CmdHF14A(const char *Cmd) {

@@ -211,38 +211,68 @@ int CmdSmartUpgrade(const char *Cmd) {
 }
 
 int CmdSmartInfo(const char *Cmd){
-
 	uint8_t cmdp = 0;
-	bool errors = false;
+	bool errors = false, silent = false;
 	
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'h': return usage_sm_info();
+		case 's': 
+			silent = true;
+			break;			
 		default:
 			PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
 			errors = true;
 			break;
 		}
+		cmdp++;
 	}
 	
 	//Validations
 	if (errors || cmdp == 0 ) return usage_sm_info();
-
+	
+	UsbCommand c = {CMD_SMART_ATR, {0, 0, 0}};
+	clearCommandBuffer();
+	SendCommand(&c);
+	UsbCommand resp;
+	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 2500) ) {
+		if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
+		return 1;
+	}
+	
+	uint8_t isok = resp.arg[0] & 0xFF;
+	if (!isok) {
+		if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
+		return 1;
+	}		
+	
+	smart_card_atr_t card;
+	memcpy(&card, (smart_card_atr_t *)resp.d.asBytes, sizeof(smart_card_atr_t));
+	
+	// print header
+	PrintAndLogEx(INFO, "\n--- Smartcard Information ---------");
+	PrintAndLogEx(INFO, "-------------------------------------------------------------");
+	PrintAndLogEx(INFO, "ATR : %s", sprint_hex(card.atr, sizeof(card.atr_len)));
+	PrintAndLogEx(INFO, "\n todo -  look up ATR ");
 	return 0;
 }
 
 int CmdSmartReader(const char *Cmd){
-
 	uint8_t cmdp = 0;
-	bool errors = false;
+	bool errors = false, silent = false;
+	
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch (tolower(param_getchar(Cmd, cmdp))) {
-		case 'h': return usage_sm_reader();	
+		case 'h': return usage_sm_reader();
+		case 's': 
+			silent = true;
+			break;		
 		default:
 			PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
 			errors = true;
 			break;
 		}
+		cmdp++;		
 	}
 		
 	//Validations
@@ -253,27 +283,30 @@ int CmdSmartReader(const char *Cmd){
 	SendCommand(&c);
 	UsbCommand resp;
 	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 2500) ) {
-		PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+		if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
 		return 1;
 	}
 	
 	uint8_t isok = resp.arg[0] & 0xFF;
 	if (!isok) {
-		PrintAndLogEx(FAILED, "failed to get ATR");
+		if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
 		return 1;
 	}		
+	smart_card_atr_t card;
+	memcpy(&card, (smart_card_atr_t *)resp.d.asBytes, sizeof(smart_card_atr_t));
 	
-	smart_card_atr_t *card = (smart_card_atr_t *)resp.d.asBytes;
-	
-	// print header
-	PrintAndLogEx(INFO, "\n--- Smartcard Information ---------");
-	PrintAndLogEx(INFO, "-------------------------------------------------------------");
-	PrintAndLogEx(INFO, "ATR : %s", sprint_hex(card->atr, sizeof(card->atr_len)));
+	PrintAndLogEx(INFO, "ATR : %s", sprint_hex(card.atr, sizeof(card.atr_len)));
+	return 0;
+}
+
+int CmdSmartList(const char *Cmd) {
+	CmdTraceList("7816");
 	return 0;
 }
 
 static command_t CommandTable[] = {
 	{"help",	CmdHelp,            1, "This help"},
+	{"list",	CmdSmartList,       0, "List ISO 7816 history"},	
 	{"info",	CmdSmartInfo,		1, "Tag information [rdv40]"},
 	{"reader",	CmdSmartReader,		1, "Act like an IS07816 reader [rdv40]"},
 	{"raw",		CmdSmartRaw,		1, "Send raw hex data to tag [rdv40]"},
