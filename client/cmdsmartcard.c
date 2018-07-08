@@ -103,11 +103,19 @@ int CmdSmartRaw(const char *Cmd) {
 			PrintAndLogEx(WARNING, "smart card response failed");
 			return 1;
 		}
-		PrintAndLogEx(SUCCESS,"isOK %d | %d | resp:  %s",
-			resp.arg[0],
-			resp.arg[1],
-			sprint_hex(resp.d.asBytes, resp.arg[1])
-		);
+		
+		if ( !resp.arg[0] ) {
+			PrintAndLogEx(WARNING, "smart card response failed");
+			return 1;			
+		}
+		
+		uint32_t len = resp.arg[1];
+		PrintAndLogEx(INFO, "received %i bytes:", len);
+				
+        if (!len)
+            return 1;
+		
+		PrintAndLogEx(SUCCESS, "%s", sprint_hex(resp.d.asBytes, len) );
 	}
 	return 0;
 }
