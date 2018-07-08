@@ -556,7 +556,7 @@ bool GetATR(smart_card_atr_t *card_ptr) {
 	
 	// remove length byte from the read bytes.
 	if ( card_ptr )
-		card_ptr->atr_len = (len == 0) ? 0 : len - 1;
+		card_ptr->atr_len = (len == 0) ? 0 : len--;
 	
 	LogTrace(card_ptr->atr, card_ptr->atr_len, 0, 0, NULL, false);
 	return true;
@@ -564,17 +564,11 @@ bool GetATR(smart_card_atr_t *card_ptr) {
 
 void SmartCardAtr(void) {
 	smart_card_atr_t card;
-
 	LED_D_ON();
 	clear_trace();
 	set_tracing(true);
-	
 	I2C_Reset_EnterMainProgram();
-
 	bool isOK = GetATR( &card );
-	if ( isOK )		
-		Dbhexdump(card.atr_len, card.atr, false);
-	
 	cmd_send(CMD_ACK, isOK, sizeof(smart_card_atr_t), 0, &card, sizeof(smart_card_atr_t));
 	LED_D_OFF();
 }
@@ -589,10 +583,9 @@ void SmartCardRaw( uint64_t arg0, uint64_t arg1, uint8_t *data ) {
 	I2C_Reset_EnterMainProgram();
 
 	uint8_t len = 0;
-	uint8_t *resp =  BigBuf_malloc(ISO7618_MAX_FRAME);
+	uint8_t *resp = BigBuf_malloc(ISO7618_MAX_FRAME);
 	
 	smart_card_atr_t card;
-
 	bool isOK = GetATR( &card );
 	if ( !isOK )
 		goto out;
@@ -603,7 +596,7 @@ void SmartCardRaw( uint64_t arg0, uint64_t arg1, uint8_t *data ) {
 	// Send raw bytes
 	// start [C0 02] A0 A4 00 00 02 stop
 	// asBytes = A0 A4 00 00 02
-	// arg0 = len 5
+	// arg1 = len 5
 	I2C_BufferWrite(data, arg1, I2C_DEVICE_CMD_SEND, I2C_DEVICE_ADDRESS_MAIN);
 
 	//wait for sim card to answer.
@@ -615,6 +608,9 @@ void SmartCardRaw( uint64_t arg0, uint64_t arg1, uint8_t *data ) {
 	// start [C0 03 start C1 len aa bb cc stop]
 	len = I2C_BufferRead(resp, ISO7618_MAX_FRAME, I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
 
+	// remove length byte from the read bytes.
+	if ( len > 0 ) len--;
+	
 	// log answer
 	LogTrace(resp, len, 0, 0, NULL, false);
 out:	

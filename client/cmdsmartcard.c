@@ -101,13 +101,16 @@ int CmdSmartRaw(const char *Cmd) {
 			PrintAndLogEx(WARNING, "smart card response failed");
 			return 1;
 		}
-		PrintAndLogEx(SUCCESS,"isOK %d | resp:  %s",resp.arg[0], sprint_hex(resp.d.asBytes, resp.arg[1]));
+		PrintAndLogEx(SUCCESS,"isOK %d | resp:  %s", resp.arg[0], sprint_hex(resp.d.asBytes, resp.arg[1]));
 	}
 	return 0;
 }
 
 int CmdSmartUpgrade(const char *Cmd) {
 
+	PrintAndLogEx(WARNING, "WARNING - Smartcard socket firmware upgrade.");
+	PrintAndLogEx(WARNING, "A dangerous command, do wrong and you will brick the smart card socket");
+	
 	FILE *f;
 	char filename[FILE_PATH_SIZE] = {0};
 	uint8_t cmdp = 0;
@@ -135,7 +138,7 @@ int CmdSmartUpgrade(const char *Cmd) {
 	
 	//Validations
 	if (errors || cmdp == 0 ) return usage_sm_upgrade();			
-
+	
 	// load file
 	f = fopen(filename, "rb");
 	if ( !f ){
@@ -252,7 +255,7 @@ int CmdSmartInfo(const char *Cmd){
 	// print header
 	PrintAndLogEx(INFO, "\n--- Smartcard Information ---------");
 	PrintAndLogEx(INFO, "-------------------------------------------------------------");
-	PrintAndLogEx(INFO, "ATR : %s", sprint_hex(card.atr, sizeof(card.atr_len)));
+	PrintAndLogEx(INFO, "ATR : %s", sprint_hex(card.atr, card.atr_len));
 	PrintAndLogEx(INFO, "\n todo -  look up ATR ");
 	return 0;
 }
@@ -295,7 +298,8 @@ int CmdSmartReader(const char *Cmd){
 	smart_card_atr_t card;
 	memcpy(&card, (smart_card_atr_t *)resp.d.asBytes, sizeof(smart_card_atr_t));
 	
-	PrintAndLogEx(INFO, "ATR : %s", sprint_hex(card.atr, sizeof(card.atr_len)));
+	PrintAndLogEx(INFO, "ATR : %s", sprint_hex(card.atr, card.atr_len));
+	
 	return 0;
 }
 
