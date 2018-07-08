@@ -528,7 +528,7 @@ void I2C_print_status(void) {
 	uint8_t len = I2C_BufferRead(resp, 4, I2C_DEVICE_CMD_GETVERSION, I2C_DEVICE_ADDRESS_MAIN);
 	DbpString("Smart card module (ISO 7816)");
 	if ( len )
-		Dbprintf("  FW version................v%x.%02x", resp[1], resp[2]);
+		Dbprintf("  FW version................v%x.%02x", resp[0], resp[1]);
 	else
 		DbpString("  FW version................FAILED");
 }
