@@ -170,18 +170,6 @@ bool I2C_WaitForSim() {
 }
 
 // send i2c STOP
-/*
-void I2C_Stop(void) {
-	SCL_L; I2C_DELAY_2CLK;
-	SDA_L; I2C_DELAY_2CLK;
-	SCL_H; I2C_DELAY_2CLK;
-	SDA_H;
-	I2C_DELAY_2CLK;
-	I2C_DELAY_2CLK;
-	I2C_DELAY_2CLK;
-	I2C_DELAY_2CLK;
-}
-*/
 void I2C_Stop(void) {
 	SCL_L; I2C_DELAY_2CLK;
 	SDA_L; I2C_DELAY_2CLK;
@@ -370,10 +358,10 @@ uint8_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t d
 
 	// extra wait  500us (514us measured)
 	// 200us  (xx measured)
-	SpinDelayUs(200);
-	
+	SpinDelayUs(200);	
 	bool bBreak = true;
 	uint8_t	readcount = 0;
+	
 	do {
 		if (!I2C_Start())
 			return 0;
@@ -404,20 +392,26 @@ uint8_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t d
 
 	// reading
 	while (len) {
-		len--;
-		*data = I2C_ReadByte();
-		// 读取的第一个字节为后续长度	
-		// The first byte read is the message length
-		if (!readcount && (len > *data))
-			len = *data;
 
+		*data = I2C_ReadByte();
+
+		len--;
+
+		// 读取的第一个字节为后续长度	
+		// The first byte in response is the message length
+		if (!readcount && (len > *data)) {
+			if ( MF_DBGLEVEL > 3 ) Dbprintf("Old len %d , Repsonse message len %d", len, *data);
+			len = *data;
+		} else {
+			data++;			
+		}
+		readcount++;
+
+		// acknowledgements. After last byte send NACK.
 		if (len == 0)
 			I2C_NoAck();
 		else
 			I2C_Ack();
-
-		data++;
-		readcount++;
 	}
 	
 	I2C_Stop();
@@ -466,16 +460,17 @@ uint8_t I2C_ReadFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t
 
 	// reading
 	while (len) {
-		len--;
 		*data = I2C_ReadByte();
 
+		data++;
+		readcount++;
+		len--;
+
+		// acknowledgements. After last byte send NACK.		
 		if (len == 0)
 			I2C_NoAck();
 		else
 			I2C_Ack();
-
-		data++;
-		readcount++;
 	}
 	
 	I2C_Stop();
