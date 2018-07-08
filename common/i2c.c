@@ -419,7 +419,7 @@ uint8_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t d
 	
 	I2C_Stop();
 	// return bytecount - first byte (which is length byte)
-	return (readcount) ? readcount-- : 0;
+	return (readcount) ? --readcount : 0;
 }
 
 uint8_t I2C_ReadFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address) {
@@ -531,10 +531,13 @@ void I2C_print_status(void) {
 	uint8_t resp[] = {0,0,0};
 	I2C_init();
 	I2C_Reset_EnterMainProgram();
-	if ( I2C_BufferRead(resp, sizeof(resp), I2C_DEVICE_CMD_GETVERSION, I2C_DEVICE_ADDRESS_MAIN) )
-		Dbprintf("  FW version................v%x.%02x", resp[0], resp[1]);
-	else
-		DbpString("  FW version................FAILED");
+	uint8_t len = I2C_BufferRead(resp, sizeof(resp), I2C_DEVICE_CMD_GETVERSION, I2C_DEVICE_ADDRESS_MAIN);
+	if ( len > 0 ) {
+		Dbprintf("  FW version..............v%x.%02x", resp[0], resp[1]);
+		LogTrace(resp, len, 0, 0, NULL, false);
+	} else {
+		DbpString("  FW version..............FAILED");
+	}
 }
 
 bool GetATR(smart_card_atr_t *card_ptr) {
@@ -559,6 +562,8 @@ bool GetATR(smart_card_atr_t *card_ptr) {
 	if ( len == 0 )
 		return false;
 
+		
+	if ( MF_DBGLEVEL > 3 ) Dbprintf("counter %d", len);
 	if ( card_ptr ) {
 		card_ptr->atr_len = len;
 		LogTrace(card_ptr->atr, card_ptr->atr_len, 0, 0, NULL, false);
@@ -612,12 +617,16 @@ void SmartCardRaw( uint64_t arg0, uint64_t arg1, uint8_t *data ) {
 	// start [C0 03 start C1 len aa bb cc stop]
 	len = I2C_BufferRead(resp, ISO7618_MAX_FRAME, I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
 	
+		
+	if ( MF_DBGLEVEL > 3 ) Dbprintf("counter %d", len);
+	
+out:	
+	cmd_send(CMD_ACK, isOK, len, 0, resp, len);
+	
 	// log answer
 	if ( len )	
 		LogTrace(resp, len, 0, 0, NULL, false);
 	
-out:	
-	cmd_send(CMD_ACK, isOK, len, 0, resp, len);
 	LED_D_OFF();
 }
 
