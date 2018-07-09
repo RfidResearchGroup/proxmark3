@@ -51,6 +51,15 @@ int usage_sm_upgrade(void) {
 	PrintAndLogEx(NORMAL, "        sc upgrade f myfile");
 	return 0;
 }
+int usage_sm_setclock(void) {
+	PrintAndLogEx(NORMAL, "Usage: sc setclock [h] c <clockspeed>");
+	PrintAndLogEx(NORMAL, "       h          :  this help");
+	PrintAndLogEx(NORMAL, "       c <>       :  clockspeed (0 = 16mhz, 1=8mhz, 2=4mhz) ");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "        sc setclock c 2");	
+	return 0;
+}
 
 int CmdSmartRaw(const char *Cmd) {
 
@@ -340,6 +349,60 @@ int CmdSmartReader(const char *Cmd){
 	return 0;
 }
 
+int CmdSmartSetClock(const char *Cmd){
+	uint8_t cmdp = 0;
+	bool errors = false;
+	uint8_t clock = 0;
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
+		case 'h': return usage_sm_setclock();
+		case 'c': 
+			clock = param_get8ex(Cmd, cmdp+1, 2, 10);
+			if ( clock > 2)
+				errors = true;
+			
+			cmdp += 2;
+			break;		
+		default:
+			PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+			errors = true;
+			break;
+		}
+	}
+		
+	//Validations
+	if (errors || cmdp == 0) return usage_sm_setclock();
+			
+	UsbCommand c = {CMD_SMART_SETCLOCK, {clock, 0, 0}};
+	clearCommandBuffer();
+	SendCommand(&c);
+	UsbCommand resp;
+	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 2500) ) {
+		PrintAndLogEx(WARNING, "smart card select failed");
+		return 1;
+	}
+	
+	uint8_t isok = resp.arg[0] & 0xFF;
+	if (!isok) {
+		PrintAndLogEx(WARNING, "smart card set clock failed");
+		return 1;
+	}		
+	switch (clock) {
+		case 0:			
+			PrintAndLogEx(SUCCESS, "Clock changed to 16mhz given 10800 baudrate");
+			break;
+		case 1:
+			PrintAndLogEx(SUCCESS, "Clock changed to 8mhz giving 21600 baudrate");
+			break;
+		case 2:
+			PrintAndLogEx(SUCCESS, "Clock changed to 4mhz giving 86400 baudrate");
+			break;
+		default:
+			break;
+	}
+	return 0;
+}
+
 int CmdSmartList(const char *Cmd) {
 	CmdTraceList("7816");
 	return 0;
@@ -352,6 +415,7 @@ static command_t CommandTable[] = {
 	{"reader",	CmdSmartReader,		1, "Act like an IS07816 reader [rdv40]"},
 	{"raw",		CmdSmartRaw,		1, "Send raw hex data to tag [rdv40]"},
 	{"upgrade",	CmdSmartUpgrade,	1, "Upgrade firmware [rdv40]"},
+	{"setclock", CmdSmartSetClock,	1, "Set clock speed"},
 	{NULL, NULL, 0, NULL}
 };
 

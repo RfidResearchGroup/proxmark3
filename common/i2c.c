@@ -576,6 +576,8 @@ void SmartCardRaw( uint64_t arg0, uint64_t arg1, uint8_t *data ) {
 
 	LED_D_ON();
 
+	uint8_t len = 0;
+	uint8_t *resp = BigBuf_malloc(ISO7618_MAX_FRAME);
 	smartcard_command_t flags = arg0;
 	
 	if ((flags & SC_CONNECT))
@@ -583,9 +585,6 @@ void SmartCardRaw( uint64_t arg0, uint64_t arg1, uint8_t *data ) {
 
 	set_tracing(true);
 
-	uint8_t len = 0;
-	uint8_t *resp = BigBuf_malloc(ISO7618_MAX_FRAME);
-	
 	if ((flags & SC_CONNECT)) {	
 	
 		I2C_Reset_EnterMainProgram();
@@ -593,12 +592,12 @@ void SmartCardRaw( uint64_t arg0, uint64_t arg1, uint8_t *data ) {
 		if ( !(flags & SC_NO_SELECT) ) {
 			smart_card_atr_t card;
 			bool gotATR = GetATR( &card );
-			//cmd_send(CMD_ACK, isOK, sizeof(smart_card_atr_t), 0, &card, sizeof(smart_card_atr_t));
+			//cmd_send(CMD_ACK, gotATR, sizeof(smart_card_atr_t), 0, &card, sizeof(smart_card_atr_t));
 			if ( !gotATR )
 				goto OUT;
 		}
 	}
-	
+
 	if ((flags & SC_RAW)) {
 		
 		LogTrace(data, arg1, 0, 0, NULL, true);
@@ -611,14 +610,11 @@ void SmartCardRaw( uint64_t arg0, uint64_t arg1, uint8_t *data ) {
 		//wait for sim card to answer.
 		if ( !I2C_WaitForSim() )
 			goto OUT;
-		
-		// read response
-		// start [C0 03 start C1 len aa bb cc stop]
-		len = I2C_BufferRead(resp, ISO7618_MAX_FRAME, I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
 
+		// read response
+		len = I2C_BufferRead(resp, ISO7618_MAX_FRAME, I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
 		LogTrace(resp, len, 0, 0, NULL, false);
 	}
-	
 OUT:	
 	cmd_send(CMD_ACK, len, 0, 0, resp, len);
 	set_tracing(false);
@@ -702,19 +698,15 @@ void SmartCardSetBaud(uint64_t arg0) {
 }
 
 void SmartCardSetClock(uint64_t arg0) {
-
 	LED_D_ON();
-	clear_trace();
-	set_tracing(true);
-	
+	set_tracing(true);	
 	I2C_Reset_EnterMainProgram();	
-	
-	bool isOK = true;
-	//uint16_t clockrate = arg0;
+
 	// Send SIM CLC
-	// start [C0 04] stop
-	//I2C_WriteByte(0x00, I2C_DEVICE_CMD_SIM_CLC, I2C_DEVICE_ADDRESS_MAIN);
+	// start [C0 05 xx] stop
+	I2C_WriteByte(arg0, I2C_DEVICE_CMD_SIM_CLC, I2C_DEVICE_ADDRESS_MAIN);
 				
-	cmd_send(CMD_ACK, isOK, 0, 0, 0, 0);
-	LED_D_OFF();
+	cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
+	set_tracing(false);
+	LEDsoff();
 }
