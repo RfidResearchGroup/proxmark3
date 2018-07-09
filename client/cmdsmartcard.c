@@ -68,7 +68,7 @@ int CmdSmartRaw(const char *Cmd) {
     bool active = false;
     bool active_select = false;	
 	uint8_t cmdp = 0;
-	bool errors = false, reply = true, decodeTLV = false;
+	bool errors = false, reply = true, decodeTLV = false, breakloop = false;
 	uint8_t data[USB_CMD_DATA_SIZE] = {0x00};
 		
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
@@ -102,7 +102,7 @@ int CmdSmartRaw(const char *Cmd) {
 				PrintAndLogEx(WARNING, "Hex must have even number of digits.");
 				return 1;
 			}
-			cmdp += 2;
+			breakloop = true;
 			break;
 		}
 		default:
@@ -110,6 +110,9 @@ int CmdSmartRaw(const char *Cmd) {
 			errors = true;
 			break;
 		}
+
+		if ( breakloop )
+			break;
 	}
 	
 	//Validations
@@ -155,9 +158,14 @@ int CmdSmartRaw(const char *Cmd) {
 		uint8_t *data = resp.d.asBytes;
 
 		// TLV decoder
-		if (decodeTLV && datalen > 4) {
-			PrintAndLogEx(SUCCESS, "APDU response: %02x %02x - %s", data[datalen - 2], data[datalen - 1], GetAPDUCodeDescription(data[datalen - 2], data[datalen - 1])); 
-			TLVPrintFromBuffer(data, datalen - 2);
+		if (decodeTLV ) {
+			
+			if (datalen >= 2) {
+				PrintAndLogEx(SUCCESS, "%02x %02x | %s", data[datalen - 2], data[datalen - 1], GetAPDUCodeDescription(data[datalen - 2], data[datalen - 1])); 
+			}
+			if (datalen > 4) {
+				TLVPrintFromBuffer(data, datalen - 2);
+			}
 		} else {
 			PrintAndLogEx(SUCCESS, "%s", sprint_hex(data,  datalen)); 
 		}
