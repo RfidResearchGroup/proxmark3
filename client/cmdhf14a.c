@@ -758,20 +758,16 @@ int CmdHF14AAPDU(const char *cmd) {
 	while(param_getchar(cmd, cmdp) != 0x00) {
 		char c = param_getchar(cmd, cmdp);
 		if ((c == '-') && (param_getlength(cmd, cmdp) == 2))
-			switch (param_getchar_indx(cmd, 1, cmdp)) {
+			switch (tolower(param_getchar_indx(cmd, 1, cmdp))) {
 				case 'h':
-				case 'H':
 					return usage_hf_14a_apdu();
 				case 's':
-				case 'S':
 					activateField = true;
 					break;
 				case 'k':
-				case 'K':
 					leaveSignalON = true;
 					break;
 				case 't':
-				case 'T':
 					decodeTLV = true;
 					break;
 				default:

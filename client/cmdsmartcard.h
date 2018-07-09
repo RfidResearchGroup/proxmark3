@@ -22,6 +22,8 @@
 #include "util.h"
 #include "loclass/fileutils.h"	// saveFile
 #include "cmdmain.h"			// getfromdevice
+#include "emv/emvcore.h"		// decodeTVL
+#include "emv/apduinfo.h"		// APDUcode description
 
 extern int CmdSmartcard(const char *Cmd);
 

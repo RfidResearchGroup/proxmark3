@@ -154,13 +154,14 @@ bool I2C_Start(void) {
 }
 
 bool I2C_WaitForSim() {
-		// variable delay here.
+	// variable delay here.
 	if (!WaitSCL_L_300ms())
 		return false;
 
 	// 8051 speaks with smart card.
 	// 1000*50*3.07 = 153.5ms
-	if (!WaitSCL_H_delay(1000*50) )
+	// 1byte transfer == 1ms
+	if (!WaitSCL_H_delay(2000*50) )
 		return false;
 
 	return true;
@@ -526,7 +527,7 @@ void I2C_print_status(void) {
 	I2C_Reset_EnterMainProgram();
 	uint8_t len = I2C_BufferRead(resp, sizeof(resp), I2C_DEVICE_CMD_GETVERSION, I2C_DEVICE_ADDRESS_MAIN);
 	if ( len > 0 )
-	  	Dbprintf("  version. ................v%x.%02x", resp[0], resp[1]);
+	  	Dbprintf("  version.................v%x.%02x", resp[0], resp[1]);
 	else
 		DbpString("  version.................FAILED");	
 }

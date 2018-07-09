@@ -17,6 +17,7 @@ int usage_sm_raw(void) {
 	PrintAndLogEx(NORMAL, "       r          :  do not read response");
 	PrintAndLogEx(NORMAL, "       a          :  active signal field ON without select");
 	PrintAndLogEx(NORMAL, "       s          :  active signal field ON with select");
+	PrintAndLogEx(NORMAL, "       t          :  executes TLV decoder if it possible");
 	PrintAndLogEx(NORMAL, "       d <bytes>  :  bytes to send");
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Examples:");
@@ -67,7 +68,7 @@ int CmdSmartRaw(const char *Cmd) {
     bool active = false;
     bool active_select = false;	
 	uint8_t cmdp = 0;
-	bool errors = false, reply = true;
+	bool errors = false, reply = true, decodeTLV = false;
 	uint8_t data[USB_CMD_DATA_SIZE] = {0x00};
 		
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
@@ -85,6 +86,10 @@ int CmdSmartRaw(const char *Cmd) {
 			active_select = true;
 			cmdp++;
 			break;
+		case 't':
+			decodeTLV = true;
+			cmdp++;
+			break;			
 		case 'd': {
 			switch (param_gethex_to_eol(Cmd, cmdp+1, data, sizeof(data), &hexlen)) {
 			case 1:
@@ -135,19 +140,27 @@ int CmdSmartRaw(const char *Cmd) {
 			PrintAndLogEx(WARNING, "smart card response failed");
 			return 1;
 		}
-		uint32_t len = resp.arg[0];
+		uint32_t datalen = resp.arg[0];
 		
-		if ( !len ) {
+		if ( !datalen ) {
 			PrintAndLogEx(WARNING, "smart card response failed");
 			return 1;			
 		}
 
-		PrintAndLogEx(INFO, "received %i bytes", len);
+		PrintAndLogEx(INFO, "received %i bytes", datalen);
 				
-        if (!len)
+        if (!datalen)
             return 1;
 		
-		PrintAndLogEx(SUCCESS, "%s", sprint_hex(resp.d.asBytes, len) );
+		uint8_t *data = resp.d.asBytes;
+
+		// TLV decoder
+		if (decodeTLV && datalen > 4) {
+			PrintAndLogEx(SUCCESS, "APDU response: %02x %02x - %s", data[datalen - 2], data[datalen - 1], GetAPDUCodeDescription(data[datalen - 2], data[datalen - 1])); 
+			TLVPrintFromBuffer(data, datalen - 2);
+		} else {
+			PrintAndLogEx(SUCCESS, "%s", sprint_hex(data,  datalen)); 
+		}
 	}
 	return 0;
 }
