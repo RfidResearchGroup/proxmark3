@@ -607,11 +607,9 @@ void SmartCardRaw( uint64_t arg0, uint64_t arg1, uint8_t *data ) {
 		// arg1 = len 5
 		I2C_BufferWrite(data, arg1, I2C_DEVICE_CMD_SEND, I2C_DEVICE_ADDRESS_MAIN);
 
-		//wait for sim card to answer.
 		if ( !I2C_WaitForSim() )
 			goto OUT;
 
-		// read response
 		len = I2C_BufferRead(resp, ISO7618_MAX_FRAME, I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
 		LogTrace(resp, len, 0, 0, NULL, false);
 	}
@@ -681,20 +679,6 @@ void SmartCardUpgrade(uint64_t arg0) {
 }
 
 void SmartCardSetBaud(uint64_t arg0) {
-	
-	LED_D_ON();
-	clear_trace();
-	set_tracing(true);
-	I2C_Reset_EnterMainProgram();	
-	
-	bool isOK = true;
-	//uint16_t baud = arg0;
-	// Send SET BAUD
-	// start [C0 04] stop
-	//I2C_WriteByte(0x00, I2C_DEVICE_CMD_SETBAUD, I2C_DEVICE_ADDRESS_MAIN);
-	
-	cmd_send(CMD_ACK, isOK, 0, 0, 0, 0);
-	LED_D_OFF();
 }
 
 void SmartCardSetClock(uint64_t arg0) {

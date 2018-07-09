@@ -386,10 +386,11 @@ int CmdSmartSetClock(const char *Cmd){
 	if (!isok) {
 		PrintAndLogEx(WARNING, "smart card set clock failed");
 		return 1;
-	}		
+	}
+	
 	switch (clock) {
 		case 0:			
-			PrintAndLogEx(SUCCESS, "Clock changed to 16mhz given 10800 baudrate");
+			PrintAndLogEx(SUCCESS, "Clock changed to 16mhz giving 10800 baudrate");
 			break;
 		case 1:
 			PrintAndLogEx(SUCCESS, "Clock changed to 8mhz giving 21600 baudrate");
