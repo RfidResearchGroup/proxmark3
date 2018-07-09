@@ -102,6 +102,7 @@ int CmdSmartRaw(const char *Cmd) {
 				PrintAndLogEx(WARNING, "Hex must have even number of digits.");
 				return 1;
 			}
+			cmdp++;
 			breakloop = true;
 			break;
 		}
