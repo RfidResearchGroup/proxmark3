@@ -15,6 +15,8 @@ int usage_sm_raw(void) {
 	PrintAndLogEx(NORMAL, "Usage: sc raw [h|r|c] d <0A 0B 0C ... hex>");
 	PrintAndLogEx(NORMAL, "       h          :  this help");
 	PrintAndLogEx(NORMAL, "       r          :  do not read response");
+	PrintAndLogEx(NORMAL, "       a          :  active signal field ON without select");
+	PrintAndLogEx(NORMAL, "       s          :  active signal field ON with select");
 	PrintAndLogEx(NORMAL, "       d <bytes>  :  bytes to send");
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Examples:");
@@ -53,6 +55,8 @@ int usage_sm_upgrade(void) {
 int CmdSmartRaw(const char *Cmd) {
 
 	int hexlen = 0;
+    bool active = false;
+    bool active_select = false;	
 	uint8_t cmdp = 0;
 	bool errors = false, reply = true;
 	uint8_t data[USB_CMD_DATA_SIZE] = {0x00};
@@ -62,6 +66,14 @@ int CmdSmartRaw(const char *Cmd) {
 		case 'h': return usage_sm_raw();		
 		case 'r':
 			reply = false;
+			cmdp++;
+			break;
+		case 'a':
+			active = true;
+			cmdp++;
+			break;
+		case 's':
+			active_select = true;
 			cmdp++;
 			break;
 		case 'd': {
@@ -92,6 +104,17 @@ int CmdSmartRaw(const char *Cmd) {
 	// arg0 = RFU flags
 	// arg1 = length
 	UsbCommand c = {CMD_SMART_RAW, {0, hexlen, 0}};	
+	
+	if (active || active_select) {
+        c.arg[0] |= SC_CONNECT;
+        if (active)
+            c.arg[0] |= SC_NO_SELECT;
+    }
+
+	if (hexlen > 0) {
+        c.arg[0] |= SC_RAW;
+	}	
+	
 	memcpy(c.d.asBytes, data, hexlen );
 	clearCommandBuffer();
 	SendCommand(&c);
@@ -103,14 +126,14 @@ int CmdSmartRaw(const char *Cmd) {
 			PrintAndLogEx(WARNING, "smart card response failed");
 			return 1;
 		}
+		uint32_t len = resp.arg[0];
 		
-		if ( !resp.arg[0] ) {
+		if ( !len ) {
 			PrintAndLogEx(WARNING, "smart card response failed");
 			return 1;			
 		}
-		
-		uint32_t len = resp.arg[1];
-		PrintAndLogEx(INFO, "received %i bytes:", len);
+
+		PrintAndLogEx(INFO, "received %i bytes", len);
 				
         if (!len)
             return 1;
@@ -246,7 +269,7 @@ int CmdSmartInfo(const char *Cmd){
 	}
 	
 	//Validations
-	if (errors || cmdp == 0 ) return usage_sm_info();
+	if (errors ) return usage_sm_info();
 	
 	UsbCommand c = {CMD_SMART_ATR, {0, 0, 0}};
 	clearCommandBuffer();
@@ -269,8 +292,9 @@ int CmdSmartInfo(const char *Cmd){
 	// print header
 	PrintAndLogEx(INFO, "\n--- Smartcard Information ---------");
 	PrintAndLogEx(INFO, "-------------------------------------------------------------");
-	PrintAndLogEx(INFO, "ATR : %s", sprint_hex(card.atr, card.atr_len));
-	PrintAndLogEx(INFO, "\n todo -  look up ATR ");
+	PrintAndLogEx(INFO, "ISO76183 ATR : %s", sprint_hex(card.atr, card.atr_len));
+	PrintAndLogEx(INFO, "look up ATR");
+	PrintAndLogEx(INFO, "http://smartcard-atr.appspot.com/parse?ATR=%s", sprint_hex_inrow(card.atr, card.atr_len) );
 	return 0;
 }
 
@@ -312,8 +336,7 @@ int CmdSmartReader(const char *Cmd){
 	smart_card_atr_t card;
 	memcpy(&card, (smart_card_atr_t *)resp.d.asBytes, sizeof(smart_card_atr_t));
 	
-	PrintAndLogEx(INFO, "ATR : %s", sprint_hex(card.atr, card.atr_len));
-	
+	PrintAndLogEx(INFO, "ISO7816-3 ATR : %s", sprint_hex(card.atr, card.atr_len));	
 	return 0;
 }
 

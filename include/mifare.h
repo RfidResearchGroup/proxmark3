@@ -56,7 +56,6 @@ typedef struct {
 	byte_t cid;
 } __attribute__((__packed__)) iso14b_card_select_t;
 
-
 typedef enum ISO14B_COMMAND {
 	ISO14B_CONNECT = 			(1 << 0),
 	ISO14B_DISCONNECT =			(1 << 1),
@@ -105,6 +104,13 @@ typedef struct {
 	uint8_t atr_len;
 	uint8_t atr[30];
 } __attribute__((__packed__)) smart_card_atr_t;
+
+typedef enum SMARTCARD_COMMAND {
+	SC_CONNECT = 			(1 << 0),
+	SC_NO_DISCONNECT =		(1 << 1),
+	SC_RAW =				(1 << 2),
+	SC_NO_SELECT =			(1 << 3)
+} smartcard_command_t;
 
 //-----------------------------------------------------------------------------
 // FeliCa

@@ -40,6 +40,9 @@ void __attribute__((optimize("O0"))) I2CSpinDelayClk(uint16_t delay) {
 #define I2C_DELAY_2CLK		I2CSpinDelayClk(2)
 #define I2C_DELAY_XCLK(x)	I2CSpinDelayClk((x))
 
+
+#define  ISO7618_MAX_FRAME 255
+
 void I2C_init(void) {
 	// 配置复位引脚，关闭上拉，推挽输出，默认高
 	// Configure reset pin, close up pull up, push-pull output, default high
@@ -124,13 +127,10 @@ bool WaitSCL_H(void) {
 // Which ever comes first
 bool WaitSCL_L_300ms(void){
 	volatile uint16_t delay = 300;
-	while ( delay-- ) {
-		
+	while ( delay-- ) {		
 		// exit on SCL LOW
-		if (!SCL_read) {			
-			if ( MF_DBGLEVEL > 3 ) Dbprintf("300ms SCL delay counter %d", delay);
-			return true;			
-		}
+		if (!SCL_read)
+			return true;
 		
 		SpinDelay(1);
 	}
@@ -155,17 +155,14 @@ bool I2C_Start(void) {
 
 bool I2C_WaitForSim() {
 		// variable delay here.
-	if (!WaitSCL_L_300ms()) {
-		if ( MF_DBGLEVEL > 3 ) DbpString(" 300ms SCL delay - timed out");
+	if (!WaitSCL_L_300ms())
 		return false;
-	} 
 
 	// 8051 speaks with smart card.
 	// 1000*50*3.07 = 153.5ms
-	if (!WaitSCL_H_delay(1000*50) ) {
-		if ( MF_DBGLEVEL > 3 ) DbpString("wait for SCL HIGH - timed out");
+	if (!WaitSCL_H_delay(1000*50) )
 		return false;
-	}	
+
 	return true;
 }
 
@@ -178,6 +175,7 @@ void I2C_Stop(void) {
 	SDA_H;
 	I2C_DELAY_XCLK(8);
 }
+
 // Send i2c ACK
 void I2C_Ack(void) {
 	SCL_L; I2C_DELAY_2CLK;
@@ -400,7 +398,6 @@ uint8_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t d
 		// 读取的第一个字节为后续长度	
 		// The first byte in response is the message length
 		if (!readcount && (len > *data)) {
-			if ( MF_DBGLEVEL > 3 ) Dbprintf("Old len %d , Repsonse message len %d", len, *data);
 			len = *data;
 		} else {
 			data++;			
@@ -523,18 +520,15 @@ bool I2C_WriteFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t d
 }
 
 void I2C_print_status(void) {
-
 	DbpString("Smart card module (ISO 7816)");
-	uint8_t resp[] = {0,0,0};
+	uint8_t resp[] = {0,0,0,0};
 	I2C_init();
 	I2C_Reset_EnterMainProgram();
 	uint8_t len = I2C_BufferRead(resp, sizeof(resp), I2C_DEVICE_CMD_GETVERSION, I2C_DEVICE_ADDRESS_MAIN);
-	if ( len > 0 ) {
-		Dbprintf("  version.................v%x.%02x", resp[0], resp[1]);
-		LogTrace(resp, len, 0, 0, NULL, false);
-	} else {
-		DbpString("  version.................FAILED");
-	}
+	if ( len > 0 )
+	  	Dbprintf("  version. ................v%x.%02x", resp[0], resp[1]);
+	else
+		DbpString("  version.................FAILED");	
 }
 
 bool GetATR(smart_card_atr_t *card_ptr) {
@@ -559,8 +553,6 @@ bool GetATR(smart_card_atr_t *card_ptr) {
 	if ( len == 0 )
 		return false;
 
-		
-	if ( MF_DBGLEVEL > 3 ) Dbprintf("counter %d", len);
 	if ( card_ptr ) {
 		card_ptr->atr_len = len;
 		LogTrace(card_ptr->atr, card_ptr->atr_len, 0, 0, NULL, false);
@@ -576,59 +568,61 @@ void SmartCardAtr(void) {
 	I2C_Reset_EnterMainProgram();
 	bool isOK = GetATR( &card );
 	cmd_send(CMD_ACK, isOK, sizeof(smart_card_atr_t), 0, &card, sizeof(smart_card_atr_t));
-	LED_D_OFF();
+	set_tracing(false);
+	LEDsoff();
 }
 
 void SmartCardRaw( uint64_t arg0, uint64_t arg1, uint8_t *data ) {
 
 	LED_D_ON();
-	clear_trace();
+
+	smartcard_command_t flags = arg0;
+	
+	if ((flags & SC_CONNECT))
+		clear_trace();
+
 	set_tracing(true);
-	
-	//uint64_t flags = arg0;
-	
-	#define  ISO7618_MAX_FRAME 255
-	I2C_Reset_EnterMainProgram();
 
 	uint8_t len = 0;
 	uint8_t *resp = BigBuf_malloc(ISO7618_MAX_FRAME);
 	
-	smart_card_atr_t card;
-	bool isOK = GetATR( &card );
-	if ( !isOK )
-		goto out;
+	if ((flags & SC_CONNECT)) {	
 	
-	// log raw bytes
-	LogTrace(data, arg1, 0, 0, NULL, true);
+		I2C_Reset_EnterMainProgram();
+		
+		if ( !(flags & SC_NO_SELECT) ) {
+			smart_card_atr_t card;
+			bool gotATR = GetATR( &card );
+			//cmd_send(CMD_ACK, isOK, sizeof(smart_card_atr_t), 0, &card, sizeof(smart_card_atr_t));
+			if ( !gotATR )
+				goto OUT;
+		}
+	}
 	
-	// Send raw bytes
-	// start [C0 02] A0 A4 00 00 02 stop
-	// asBytes = A0 A4 00 00 02
-	// arg1 = len 5
-	I2C_BufferWrite(data, arg1, I2C_DEVICE_CMD_SEND, I2C_DEVICE_ADDRESS_MAIN);
+	if ((flags & SC_RAW)) {
+		
+		LogTrace(data, arg1, 0, 0, NULL, true);
+		
+		// Send raw bytes
+		// asBytes = A0 A4 00 00 02
+		// arg1 = len 5
+		I2C_BufferWrite(data, arg1, I2C_DEVICE_CMD_SEND, I2C_DEVICE_ADDRESS_MAIN);
 
-	//wait for sim card to answer.
-	isOK = I2C_WaitForSim();
-	if ( !isOK )
-		goto out;
-	
-	// read response
-	// start [C0 03 start C1 len aa bb cc stop]
-	len = I2C_BufferRead(resp, ISO7618_MAX_FRAME, I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
-	
-	if ( len == 0)
-		isOK = false;
-	
-	if ( MF_DBGLEVEL > 3 ) Dbprintf("counter %d", len);
-	
-out:	
-	cmd_send(CMD_ACK, isOK, len, 0, resp, len);
-	
-	// log answer
-	if ( len )	
+		//wait for sim card to answer.
+		if ( !I2C_WaitForSim() )
+			goto OUT;
+		
+		// read response
+		// start [C0 03 start C1 len aa bb cc stop]
+		len = I2C_BufferRead(resp, ISO7618_MAX_FRAME, I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
+
 		LogTrace(resp, len, 0, 0, NULL, false);
+	}
 	
-	LED_D_OFF();
+OUT:	
+	cmd_send(CMD_ACK, len, 0, 0, resp, len);
+	set_tracing(false);
+	LEDsoff();
 }
 
 void SmartCardUpgrade(uint64_t arg0) {
@@ -653,7 +647,7 @@ void SmartCardUpgrade(uint64_t arg0) {
 		uint8_t msb = (pos >> 8) & 0xFF;
 		uint8_t lsb = pos & 0xFF;
 		
-		Dbprintf("FW %02X %02X", msb, lsb);
+		Dbprintf("FW %02X%02X", msb, lsb);
 
 		size_t size = MIN(I2C_BLOCK_SIZE, length);
 		

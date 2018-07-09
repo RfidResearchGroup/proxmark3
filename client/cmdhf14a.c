@@ -894,14 +894,14 @@ int CmdHF14ACmdRaw(const char *cmd) {
         if ((cmd[i]>='0' && cmd[i]<='9') ||
             (cmd[i]>='a' && cmd[i]<='f') ||
             (cmd[i]>='A' && cmd[i]<='F') ) {
-            buf[strlen(buf)+1]=0;
-            buf[strlen(buf)]=cmd[i];
+            buf[strlen(buf)+1] = 0;
+            buf[strlen(buf)] = cmd[i];
             i++;
 
-            if (strlen(buf)>=2) {
-                sscanf(buf,"%x",&temp);
-                data[datalen]=(uint8_t)(temp & 0xff);
-                *buf=0;
+            if (strlen(buf) >= 2) {
+                sscanf(buf, "%x", &temp);
+                data[datalen] = (uint8_t)(temp & 0xff);
+                *buf = 0;
 				if (++datalen >= sizeof(data)){
 					if (crc)
 						PrintAndLogEx(NORMAL, "Buffer is full, we can't add CRC to your data");
@@ -914,7 +914,7 @@ int CmdHF14ACmdRaw(const char *cmd) {
         return 0;
     }
 
-    if (crc && datalen>0 && datalen < sizeof(data)-2) {
+    if (crc && datalen > 0 && datalen < sizeof(data)-2) {
         uint8_t first, second;
 		if (topazmode) {
 			compute_crc(CRC_14443_B, data, datalen, &first, &second);
@@ -989,7 +989,7 @@ static int waitCmd(uint8_t iSelect) {
 				PrintAndLogEx(WARNING, "Can't select card.");
 			}
 		} else {
-			PrintAndLogEx(NORMAL, "received %i bytes:", len);
+			PrintAndLogEx(NORMAL, "received %i bytes", len);
 		}
 		
         if (!len)

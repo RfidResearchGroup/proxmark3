@@ -6,7 +6,7 @@
 #include "apps.h"
 #include "util.h"
 #include "BigBuf.h"
-
+#include "mifare.h"
 
 #define I2C_DEVICE_ADDRESS_BOOT		0xB0
 #define I2C_DEVICE_ADDRESS_MAIN		0xC0
