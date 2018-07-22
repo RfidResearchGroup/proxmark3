@@ -603,9 +603,9 @@ int CmdTraceSave(const char *Cmd) {
 
 static command_t CommandTable[] = {
 	{"help",	CmdHelp,          1, "This help"},
-	{"list",    CmdTraceList,     0, "List protocol data in trace buffer"},	
-	{"load",	CmdTraceLoad,     0, "Load trace from file"},
-	{"save",	CmdTraceSave,     0, "Save trace buffer to file"},
+	{"list",    CmdTraceList,     1, "List protocol data in trace buffer"},	
+	{"load",	CmdTraceLoad,     1, "Load trace from file"},
+	{"save",	CmdTraceSave,     1, "Save trace buffer to file"},
 	{NULL, NULL, 0, NULL}
 };
 
