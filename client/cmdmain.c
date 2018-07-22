@@ -257,7 +257,7 @@ bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint3
 		case BIG_BUF_EML: {
 			UsbCommand c = {CMD_DOWNLOAD_EML_BIGBUF, {start_index, bytes, 0}};
 			SendCommand(&c);			
-			return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K);
+			return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_EML_BIGBUF);
 		}
 		case FLASH_MEM: {			
 			UsbCommand c = {CMD_DOWNLOAND_FLASH_MEM, {start_index, bytes, 0}};
