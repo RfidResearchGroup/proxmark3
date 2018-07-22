@@ -124,9 +124,8 @@ int getCommand(UsbCommand* response) {
 }
 
 /**
- * Waits for a certain response type. This method waits for a maximum of
+ * @brief Waits for a certain response type. This method waits for a maximum of
  * ms_timeout milliseconds for a specified response command.
- *@brief WaitForResponseTimeout
  * @param cmd command to wait for, or CMD_UNKNOWN to take any command.
  * @param response struct to copy received command into.
  * @param ms_timeout display message after 2 seconds
