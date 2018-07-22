@@ -124,9 +124,8 @@ int getCommand(UsbCommand* response) {
 }
 
 /**
- * Waits for a certain response type. This method waits for a maximum of
+ * @brief Waits for a certain response type. This method waits for a maximum of
  * ms_timeout milliseconds for a specified response command.
- *@brief WaitForResponseTimeout
  * @param cmd command to wait for, or CMD_UNKNOWN to take any command.
  * @param response struct to copy received command into.
  * @param ms_timeout display message after 2 seconds
@@ -257,7 +256,7 @@ bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint3
 		case BIG_BUF_EML: {
 			UsbCommand c = {CMD_DOWNLOAD_EML_BIGBUF, {start_index, bytes, 0}};
 			SendCommand(&c);			
-			return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K);
+			return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_EML_BIGBUF);
 		}
 		case FLASH_MEM: {			
 			UsbCommand c = {CMD_DOWNLOAND_FLASH_MEM, {start_index, bytes, 0}};
