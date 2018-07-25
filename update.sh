@@ -10,8 +10,5 @@ function wait4proxmark {
 	echo $PM3
 }
 
-# flash bootroom
-client/flasher $(wait4proxmark) -b bootrom/obj/bootrom.elf
-
-# flash system image
-client/flasher $(wait4proxmark) armsrc/obj/fullimage.elf 
+# flash bootroom & system image
+client/flasher $(wait4proxmark) -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf 
