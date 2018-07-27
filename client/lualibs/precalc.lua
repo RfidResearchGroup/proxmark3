@@ -38,7 +38,7 @@ local function ApplyPermutationAndShifts( pos, value, nibble)
 	local shiftbytes = shifts[pos]
 	local shiftElem = shiftbytes[nibble+1] --one indexed
 	local shiftOne = shiftbytes[1]
-	local rs = bit32.bxor(value, bit32.bxor(shiftOne, shiftElem))
+	local rs = bit32.bxor(value, shiftOne, shiftElem)
 	return rs
 end
 

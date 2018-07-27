@@ -120,8 +120,8 @@ function main(args)
 
 	local uidbytes = utils.ConvertHexToBytes(uid)
 	
-	local bcc1 = bxor(bxor(bxor(uidbytes[1], uidbytes[2]), uidbytes[3]), 0x88)
-	local bcc2 = bxor(bxor(bxor(uidbytes[4], uidbytes[5]), uidbytes[6]), uidbytes[7])
+	local bcc1 = bxor(0x88, uidbytes[1], uidbytes[2], uidbytes[3])
+	local bcc2 = bxor(uidbytes[4], uidbytes[5], uidbytes[6], uidbytes[7])
 	
 	local block0 = string.format('%02X%02X%02X%02X', uidbytes[1], uidbytes[2], uidbytes[3], bcc1)
 	local block1 = string.format('%02X%02X%02X%02X', uidbytes[4], uidbytes[5], uidbytes[6], uidbytes[7])
