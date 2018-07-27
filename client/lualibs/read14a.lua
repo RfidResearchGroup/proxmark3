@@ -64,11 +64,11 @@ local function parse14443a(data)
 
 	--]]
 
-	local count,uid,uidlen, atqa, sak, ats_len, ats= bin.unpack('H10CH2CC',data)
-	uid = uid:sub(1,2*uidlen)
+	local count, uid, uidlen, atqa, sak, ats_len, ats = bin.unpack('H10CH2CC',data)
+	uid = uid:sub(1, 2*uidlen)
 	--print("uid, atqa, sak: ",uid, atqa, sak)
 	--print("TYPE: ", tostring_1443a(sak))
-	return { uid = uid, atqa  = atqa, sak = sak, name = tostring_14443a(sak)}
+	return { uid = uid, atqa  = atqa, sak = sak, name = tostring_14443a(sak), data = data}
 end
 
 --- Sends a USBpacket to the device
