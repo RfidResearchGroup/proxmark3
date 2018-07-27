@@ -10,7 +10,7 @@ local Utils =
 		repeat
 			io.write(message)
 			io.flush()
-			answer=io.read()
+			answer = io.read()
 			if answer == 'Y' or answer == "y" then
 				return true
 			elseif answer == 'N' or answer == 'n' then 
@@ -28,7 +28,7 @@ local Utils =
 		message = message .." \n > "
 		io.write(message)
 		io.flush()
-		answer=io.read()
+		answer = io.read()
 		if answer == '' then answer = default end
 
 		return answer
@@ -47,9 +47,9 @@ local Utils =
 			return nil, string.format("Could not read file %s",filename)
 		end
 		local t = infile:read("*all")
+		io.close(infile)
 		len = string.len(t)
 		local  _,hex = bin.unpack(("H%d"):format(len),t)
-		io.close(infile)
 		return hex
 	end,
 	
@@ -172,10 +172,7 @@ local Utils =
 		if s == nil then return nil end
 		if #s == 0 then return nil end
 		if  type(s) == 'string' then
-			local utils = require('utils')
-			--local asc = utils.ConvertHexToAscii(s)
-			local hash = core.sha1(s)
-			return hash
+			return core.sha1(s)
 		end
 		return nil
 	end,	
@@ -238,11 +235,11 @@ local Utils =
 	--
 	-- Converts DECIMAL to HEX
     ConvertDecToHex = function(IN)
-		local B,K,OUT,I,D=16,"0123456789ABCDEF","",0
-		while IN>0 do
-			I=I+1
-			IN , D = math.floor(IN/B), math.modf(IN,B)+1
-			OUT = string.sub(K,D,D)..OUT
+		local B,K,OUT,I,D = 16, "0123456789ABCDEF", "", 0
+		while IN > 0 do
+			I = I+1
+			IN, D = math.floor(IN/B), math.modf(IN, B) + 1
+			OUT = string.sub(K, D, D)..OUT
 		end
 		return OUT
 	end,
@@ -326,23 +323,28 @@ local Utils =
 		return table.concat(t)
 	end,
 	
+	hexlify = function(s)
+		local u = require('utils')
+		return u.ConvertAsciiToHex(s)
+	end,
+	
 	Chars2num = function(s)
         return (s:byte(1)*16777216)+(s:byte(2)*65536)+(s:byte(3)*256)+(s:byte(4))
 	end,
 	
 	-- use length of string to determine 8,16,32,64 bits
 	bytes_to_int = function(str,endian,signed) 
-		local t={str:byte(1,-1)}
-		if endian=="big" then --reverse bytes
-			local tt={}
-			for k=1,#t do
-				tt[#t-k+1]=t[k]
+		local t = {str:byte(1, -1)}
+		if endian == "big" then --reverse bytes
+			local tt = {}
+			for k = 1, #t do
+				tt[#t-k+1] = t[k]
 			end
-			t=tt
+			t = tt
 		end
-		local n=0
-		for k=1,#t do
-			n=n+t[k]*2^((k-1)*8)
+		local n = 0
+		for k = 1, #t do
+			n = n + t[k] * 2^((k-1) * 8)
 		end
 		if signed then
 			n = (n > 2^(#t*8-1) -1) and (n - 2^(#t*8)) or n -- if last bit set, negative.
