@@ -169,6 +169,7 @@ int CmdFPGAOff(const char *Cmd) {
 	return 0;
 }
 
+#ifdef WITH_LCD
 int CmdLCD(const char *Cmd) {
 	int i, j;
 
@@ -188,6 +189,7 @@ int CmdLCDReset(const char *Cmd) {
 	SendCommand(&c);
 	return 0;
 }
+#endif
 
 int CmdReadmem(const char *Cmd) {
 	UsbCommand c = {CMD_READ_MEM, {strtol(Cmd, NULL, 0), 0, 0}};
@@ -222,7 +224,14 @@ int CmdSetDivisor(const char *Cmd) {
 }
 
 int CmdSetMux(const char *Cmd) {
+	
+	if (strlen(Cmd) < 5) {
+		PrintAndLogEx(NORMAL, "expected:  lopkd | loraw | hipkd | hiraw");
+		return 1;
+	}
+	
 	UsbCommand c = {CMD_SET_ADC_MUX};
+
 	if (strcmp(Cmd, "lopkd") == 0) 		c.arg[0] = 0;
 	else if (strcmp(Cmd, "loraw") == 0)	c.arg[0] = 1;
 	else if (strcmp(Cmd, "hipkd") == 0)	c.arg[0] = 2;
@@ -298,8 +307,10 @@ static command_t CommandTable[] = {
 	{"help",          CmdHelp,        1, "This help"},
 	{"detectreader",  CmdDetectReader,0, "['l'|'h'] -- Detect external reader field (option 'l' or 'h' to limit to LF or HF)"},
 	{"fpgaoff",       CmdFPGAOff,     0, "Set FPGA off"},
+#ifdef WITH_LCD
 	{"lcd",           CmdLCD,         0, "<HEX command> <count> -- Send command/data to LCD"},
 	{"lcdreset",      CmdLCDReset,    0, "Hardware reset LCD"},
+#endif	
 	{"readmem",       CmdReadmem,     0, "[address] -- Read memory at decimal address from flash"},
 	{"reset",         CmdReset,       0, "Reset the Proxmark3"},
 	{"setlfdivisor",  CmdSetDivisor,  0, "<19 - 255> -- Drive LF antenna at 12Mhz/(divisor+1)"},
