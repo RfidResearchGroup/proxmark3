@@ -1,4 +1,4 @@
-local hexlify = require('hexlify')
+local utils = require('utils')
 local cmds = require('commands')
 local Amiibo = require('amiibolib')
 local reader = require('read14a')
@@ -13,10 +13,9 @@ end
 
 local luamiibo = luamiibo_open()
 
-
 local function nfc_read_amiibo ()
-   local command = Command:new{cmd = cmds.CMD_MIFAREU_READCARD,
-                               arg1 = 0, arg2 = 135}
+
+   local command = Command:new{cmd = cmds.CMD_MIFAREU_READCARD, arg1 = 0, arg2 = 135}
 
    local result, err = reader.sendToDevice(command)
    if result then
@@ -28,7 +27,7 @@ local function nfc_read_amiibo ()
       end
 
       -- Do GetFromBigBuf
-      local data = core.getfrombigbuf(offset, data_len)
+      local data = core.GetFromBigBuf(offset, data_len)
 
       return data, err
    else
@@ -86,8 +85,7 @@ local function emulate_amiibo (amiibo_data)
    print(string.format('Simulating with UID: 0x%04x 0x%04x', uid_first, uid_second))
 
    -- Begin simulating NTAG215
-   local simCmd = Command:new{cmd = cmds.CMD_SIMULATE_TAG_ISO_14443a,
-                              arg1 = 6, arg2 = uid_first, arg3 = uid_second}
+   local simCmd = Command:new{cmd = cmds.CMD_SIMULATE_TAG_ISO_14443a, arg1 = 6, arg2 = uid_first, arg3 = uid_second}
    local _, err = reader.sendToDevice(simCmd)
    if err then
    	  print('Failed to start simulator', err)
@@ -106,9 +104,9 @@ local function test_packing()
    local unpacked_pika = luamiibo.unpack(pikachu)
    local packed_data = luamiibo.pack(unpacked_pika)
 
-   print('Original', hexlify(pikachu))
-   print('Unpacked', hexlify(unpacked_pika))
-   print('Packed', hexlify(packed_data))
+   print('Original', utils.hexlify(pikachu))
+   print('Unpacked', utils.hexlify(unpacked_pika))
+   print('Packed', utils.hexlify(packed_data))
 end
 
 
@@ -138,7 +136,7 @@ local function dump_sim(argv)
       local amiiboData = Amiibo:new{tag = dump}
       print('Dumped ' .. dump:len() .. ' bytes')
       print(hexlify(dump))
-      print('Nickname: ' .. hexlify(amiiboData:display_nickname()))
+      print('Nickname: ' .. utils.hexlify(amiiboData:display_nickname()))
 
       -- Write dump to file
       local filename = argv[2]
@@ -202,14 +200,14 @@ local function main(args)
    print('Tag type:', parsed_tag.name)
    print('Tag UID:', parsed_tag.uid)
    print('Tag len:', tag:len())
-   --print('Tag data:', hexlify(tag))
+   --print('Tag data:', utils.hexlify(tag))
 
    local amiiboData = Amiibo:new{tag = tag}
 
-   --print('Unpacked:', hexlify(amiiboData.plain))
-   --print('Repacked:', hexlify(amiiboData:export_tag()))
+   --print('Unpacked:', utils.hexlify(amiiboData.plain))
+   --print('Repacked:', utils.hexlify(amiiboData:export_tag()))
 
-   print('Figure ID:', hexlify(amiiboData.figure_id))
+   print('Figure ID:', utils.hexlify(amiiboData.figure_id))
    print('Settings init:', amiiboData.settings_initialized)
 
    if amiiboData.settings_initialized then
@@ -217,14 +215,12 @@ local function main(args)
       print('Appdata writes:', amiiboData.appdata_counter)
    end
 
-   print('UID:', hexlify(amiiboData.uid))
-   print('Write key:', hexlify(amiiboData:get_pwd()))
+   print('UID:', utils.hexlify(amiiboData.uid))
+   print('Write key:', utils.hexlify(amiiboData:get_pwd()))
 
    --print('Attempting emulation...')
    --emulate_amiibo(amiiboData:export_tag())
-
    return
 end
-
 
 main(args)
