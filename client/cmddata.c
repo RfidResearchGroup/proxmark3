@@ -1508,8 +1508,11 @@ int CmdTuneSamples(const char *Cmd) {
 	else
 		sprintf(judgement, "OK");
 	
-	PrintAndLogEx(NORMAL, "[%c] LF antenna is %s \n"
-			, (peakv < LF_UNUSABLE_V) ? '!' : '+'
+	//_GREEN_([+] )
+	//_CYAN_([!] )
+	
+	PrintAndLogEx(NORMAL, "%s LF antenna is %s \n"
+			, (peakv < LF_UNUSABLE_V) ? _CYAN_([!]) : _GREEN_([+])
 			, judgement
 			);
 	
@@ -1526,8 +1529,8 @@ int CmdTuneSamples(const char *Cmd) {
 	else
 		sprintf(judgement, "OK");
 	
-	PrintAndLogEx(NORMAL, "[%c] HF antenna is %s"
-			, (v_hf < HF_UNUSABLE_V) ? '!' : '+'
+	PrintAndLogEx(NORMAL, "%s HF antenna is %s"
+			, (v_hf < HF_UNUSABLE_V) ? _CYAN_([!]) : _GREEN_([+])
 			, judgement
 			);
 
