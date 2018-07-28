@@ -107,11 +107,8 @@ https://github.com/iceman1001/proxmark3/blob/master/install.sh
 - Clean and complete compilation
 `make clean && make all`
 	
-- Flash the BOOTROM
-`client/flasher /dev/ttyACM0 -b bootrom/obj/bootrom.elf`
-
-- Flash the FULLIMAGE
-`client/flasher /dev/ttyACM0 armsrc/obj/fullimage.elf`
+- Flash the BOOTROM & FULLIMAGE
+`client/flasher /dev/ttyACM0 -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf`
 	
 - Change into the client folder
 `cd client`
@@ -136,11 +133,8 @@ https://github.com/iceman1001/proxmark3/blob/master/install.sh
 - Clean and complete compilation
 `make clean && make all`
 	
-- Flash the BOOTROM
-`client/flasher /dev/ttyACM0 -b bootrom/obj/bootrom.elf`
-
-- Flash the FULLIMAGE
-`client/flasher /dev/ttyACM0 armsrc/obj/fullimage.elf`
+- Flash the BOOTROM & FULLIMAGE
+`client/flasher /dev/ttyACM0 -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf`
 	
 - Change into the client folder
 `cd client`
@@ -169,15 +163,12 @@ Tested on macOS High Sierra 10.13.2
 1. Force HomeBrew to pull the latest source from github
 `brew upgrade --fetch-HEAD iceman1001/proxmark3/proxmark3`
  
-2. Flash the bootloader
-  * With your Proxmark3 unplugged from your machine, press and hold the button on your Proxmark 3 as you plug it into a USB port. After about 5 seconds let go of the button and run this command
-   `$ sudo proxmark3-flasher /dev/tty.usbmodem881 -b /usr/local/Cellar/proxmark3/HEAD-6a710ef/share/firmware/bootrom.elf`
-  * After the bootloader finishes flashing, unplug your Proxmark3 from your machine
-  
-3. Flash fullimage.elf
-  * Press and hold the button on your Proxmark 3 and keep it held as you plug the Proxmark 3 back into the USB port; continue to hold the button until after this step is complete and the `proxmark3-flasher` command outputs "Have a nice day!"*
+2. Flash the bootloader & fullimage.elf
+  * With your Proxmark3 unplugged from your machine, press and hold the button on your Proxmark 3 as you plug it into a USB port. Continue to hold the button until after this step is complete and the `proxmark3-flasher` command outputs "Have a nice day!"*
+   `$ sudo proxmark3-flasher /dev/tty.usbmodem881 -b /usr/local/Cellar/proxmark3/HEAD-6a710ef/share/firmware/bootrom.elf /usr/local/Cellar/proxmark3/HEAD-6a710ef/share/firmware/fullimage.elf`
 
-`$ sudo proxmark3-flasher /dev/tty.usbmodem881 /usr/local/Cellar/proxmark3/HEAD-6a710ef/share/firmware/fullimage.elf`
+
+`$ sudo proxmark3-flasher /dev/tty.usbmodem881 `
 
 4. Enjoy the update
 
@@ -207,61 +198,8 @@ Links
 - https://github.com/Gator96100/ProxSpace/releases/tag/v2.2     (release v2.2   with gcc v5.3.0 arm-none-eabi-gcc v7.1.0)
 - https://github.com/Gator96100/ProxSpace/releases/tag/v2.1     (release v2.1   with gcc v5.3.0)
 
-## OR
-
-Use the following list of packages required to setup the compile environment yourself.
-
-
-### 1. QT Open Source
-Download QT 5.6.1: http://download.qt.io/archive/qt/5.6/5.6.1-1/qt-opensource-windows-x86-mingw492-5.6.1-1.exe
-Install to `C:\Qt` and choose the following components to be installed:
-- QT - MinGW 32 bit
-- Tools - MinGW
-
-In your shell from MSYS (see below), make sure you set QTDIR to your QT installation and add its bin to your path as well:
-`export QTDIR=/c/Qt/5.6/mingw49_32`
-`export PATH=$PATH:$QTDIR/bin`
-
-### 2. MSYS
-MSYS is a collection of GNU utilities such as bash, make, gawk and grep to allow building of applications and programs which depend on traditionally UNIX tools to be present. It is intended to supplement MinGW and the deficiencies of the cmd shell.
-
-Download MSYS: http://downloads.sourceforge.net/mingw/MSYS-1.0.11.exe
-
-Follow the installation procedure, you may want to install MSYS to `C:\Qt\msys` and when asked where is your MinGW installation and for its path answer the following: `c:/Qt/Tools/mingw492_32`
-
-### 3. Readline
-Download and unpack: https://sourceforge.net/projects/gnuwin32/files/readline/5.0-1/readline-5.0-1-bin.zip/download
-
-`bin/*` to `C:\Qt\5.6\Tools\mingw492_32\bin`
-`include/*` to `C:\Qt\5.6\Tools\mingw492_32\include`
-`lib/*` to `C:\Qt\5.6\Tools\mingw492_32\lib`
-
-### 4. LibUSB
-Download and unpack: https://sourceforge.net/projects/libusb-win32/files/latest/download?source=files
-
-`include/lusb0_usb.h` to `C:\Qt\5.6\Tools\mingw492_32\include`
-`lib/gcc/libusb.a` to `C:\Qt\5.6\Tools\mingw492_32\lib`
-
-### 5. DevkitPro
-Download and install: https://sourceforge.net/projects/devkitpro/files/latest/download?source=files
-
-You only need devkitARM, nothing more (no extra lib or anything else) to compile the firmware (ARM) side. Assuming you installed it to `C:\devkitpro`, make sure you set the `DEVKITARM` environment variable to `/c/devkitPro/devkitARM` and add its bin to your PATH:
-`export DEVKITARM=/c/devkitPro/devkitARM`
-`export PATH=$PATH:$DEVKITARM/bin`
-
-### 6. Install Strawberry Perl
-Download and install: https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/strawberry-perl/strawberry-perl-5.10.1.3.msi
 
 ### 7. Build and run
-Download and install Git for Windows: https://git-scm.com/download/win
-
-- Run minimal system: `C:\Qt\msys\msys.bat`
-
-- Set the environment:
-`export DEVKITARM=/c/devkitPro/devkitARM`
-`export PATH=$PATH:$DEVKITARM/bin`
-`export QTDIR=/c/Qt/5.6/mingw49_32`
-`export PATH=$PATH:$QTDIR/bin`
 
 - Clone iceman fork
 `git clone https://github.com/iceman1001/proxmark3.git`
@@ -274,11 +212,8 @@ Download and install Git for Windows: https://git-scm.com/download/win
 
 Assuming you have Proxmark3 Windows drivers installed you can run the Proxmark software where "X" is the com port number assigned to proxmark3 under Windows. 
 	
-- Flash the BOOTROM
-`client/flasher.exe comX -b bootrom/obj/bootrom.elf`
-
-- Flash the FULLIMAGE	
-`client/flasher.exe comX armsrc/obj/fullimage.elf`
+- Flash the BOOTROM & FULLIMAGE
+`client/flasher.exe comX -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf`
 	
 - Change into the client folder
 `cd client`
