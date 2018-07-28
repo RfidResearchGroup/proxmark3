@@ -79,13 +79,11 @@ assign adc_clk = ck_1356meg;
 reg after_hysteresis;
 always @(negedge adc_clk)
 begin
-    if(& adc_d[7:0]) after_hysteresis <= 1'b1;
-    else if(~(| adc_d[7:0])) after_hysteresis <= 1'b0;
+    if(& adc_d[6:4]) after_hysteresis <= 1'b1;
+    else if(~(| adc_d[6:4])) after_hysteresis <= 1'b0;
 end
 
-
 assign ssp_din = after_hysteresis;
-
-assign dbg = ssp_din;
+assign dbg = after_hysteresis;
 
 endmodule
