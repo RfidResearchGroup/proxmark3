@@ -12,16 +12,21 @@
 #ifndef __FPGALOADER_H
 #define __FPGALOADER_H
 
+#include <stdint.h>
+#include <stdbool.h>
+#include "apps.h"
+#include "fpga.h"
 #include "common.h"		// standard definitions
 #include "proxmark3.h"	// common area
 #include "string.h"
 #include "BigBuf.h"		// bigbuf mem
 #include "zlib.h"		// uncompress
 
+
 void FpgaSendCommand(uint16_t cmd, uint16_t v);
 void FpgaWriteConfWord(uint8_t v);
 void FpgaDownloadAndGo(int bitstream_version);
-void FpgaGatherVersion(int bitstream_version, char *dst, int len);
+// void FpgaGatherVersion(int bitstream_version, char *dst, int len);
 void FpgaSetupSscExt(uint8_t clearPCER);
 void FpgaSetupSsc(void);
 void SetupSpi(int mode);
@@ -36,10 +41,9 @@ void SetAdcMuxFor(uint32_t whichGpio);
 extern void switch_off(void);
 
 // definitions for multiple FPGA config files support
-#define FPGA_BITSTREAM_MAX 2	// the total number of FPGA bitstreams (configs)
-#define FPGA_BITSTREAM_ERR 0
 #define FPGA_BITSTREAM_LF 1
 #define FPGA_BITSTREAM_HF 2
+//#define FPGA_BITSTREAM_FELICA 3
 
 // Definitions for the FPGA commands.
 #define FPGA_CMD_SET_CONFREG						(1<<12)

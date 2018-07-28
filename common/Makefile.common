@@ -71,7 +71,7 @@ LIBS = -lgcc
 THUMBOBJ = $(patsubst %.c,$(OBJDIR)/%.o,$(notdir $(THUMBSRC)))
 ARMOBJ   = $(patsubst %.c,$(OBJDIR)/%.o,$(notdir $(ARMSRC)))
 ASMOBJ   = $(patsubst %.s,$(OBJDIR)/%.o,$(notdir $(ASMSRC)))
-VERSIONOBJ = $(OBJDIR)/version.o
+VERSIONOBJ = $(patsubst %.c,$(OBJDIR)/%.o,$(notdir $(VERSIONSRC)))
 
 $(THUMBOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
 	$(CC) $(CFLAGS) -mthumb -mthumb-interwork -o $@ $< 
@@ -94,11 +94,6 @@ OBJCOPY_TRANSLATIONS = --no-change-warnings \
 	--change-section-address .commonarea+0
 $(OBJDIR)/%.s19: $(OBJDIR)/%.elf
 	$(OBJCOPY) -Osrec --srec-forceS3 --strip-debug $(OBJCOPY_TRANSLATIONS) $^ $@
-
-# version.c should be remade on every compilation
-.PHONY: version.c
-version.c: default_version.c
-	perl ../tools/mkversion.pl .. > $@ || $(COPY) $^ $@ 
 
 # easy printing of MAKE VARIABLES
 print-%: ; @echo $* = $($*) 

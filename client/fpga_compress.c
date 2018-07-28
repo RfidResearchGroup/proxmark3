@@ -1,4 +1,6 @@
 //-----------------------------------------------------------------------------
+// piwi, 2017, 2018
+//
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
@@ -11,10 +13,12 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <libgen.h>
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <inttypes.h>
+#include "fpga.h"
 #include "zlib.h"
 
 #define MAX(a,b) ((a)>(b)?(a):(b))
@@ -30,6 +34,7 @@
 	Z_RLE (distances limited to one)
 	Z_FIXED (prevents the use of dynamic Huffman codes)
 */	
+
 #define	COMPRESS_STRATEGY		Z_DEFAULT_STRATEGY
 // zlib tuning parameters:
 #define COMPRESS_GOOD_LENGTH		258
@@ -37,18 +42,18 @@
 #define	COMPRESS_MAX_NICE_LENGTH	258
 #define	COMPRESS_MAX_CHAIN			8192
 
-#define FPGA_INTERLEAVE_SIZE	288 	// (the FPGA's internal config frame size is 288 bits. Interleaving with 288 bytes should give best compression)
-#define FPGA_CONFIG_SIZE            42336L  // our current fpga_[lh]f.bit files are 42175 bytes. Rounded up to next multiple of FPGA_INTERLEAVE_SIZE
 #define HARDNESTED_TABLE_SIZE		(sizeof(uint32_t) * ((1L<<19)+1))
 
 static void usage(void)
 {
 	fprintf(stdout, "Usage: fpga_compress <infile1> <infile2> ... <infile_n> <outfile>\n");
 	fprintf(stdout, "          Combine n FPGA bitstream files and compress them into one.\n\n");
-	fprintf(stdout, "       fpga_compress -d <infile> <outfile>");
-	fprintf(stdout, "          Decompress <infile>. Write result to <outfile>");
-	fprintf(stdout, "       fpga_compress -t <infile> <outfile>");
-	fprintf(stdout, "          Compress hardnested table <infile>. Write result to <outfile>");
+	fprintf(stdout, "       fpga_compress -v <infile1> <infile2> ... <infile_n> <outfile>\n");
+	fprintf(stdout, "          Extract Version Information from FPGA bitstream files and write it to <outfile>\n\n");
+	fprintf(stdout, "       fpga_compress -d <infile> <outfile>\n");
+	fprintf(stdout, "          Decompress <infile>. Write result to <outfile>\n\n");
+	fprintf(stdout, "       fpga_compress -t <infile> <outfile>\n");
+	fprintf(stdout, "          Compress hardnested table <infile>. Write result to <outfile>\n\n");
 }
 
 
@@ -60,7 +65,7 @@ static voidpf fpga_deflate_malloc(voidpf opaque, uInt items, uInt size)
 
 static void fpga_deflate_free(voidpf opaque, voidpf address)
 {
-	return free(address);
+	free(address);
 }
 
 
@@ -252,9 +257,152 @@ int zlib_decompress(FILE *infile, FILE *outfile)
 }
 
 
+/* Simple Xilinx .bit parser. The file starts with the fixed opaque byte sequence
+ * 00 09 0f f0 0f f0 0f f0 0f f0 00 00 01
+ * After that the format is 1 byte section type (ASCII character), 2 byte length
+ * (big endian), <length> bytes content. Except for section 'e' which has 4 bytes
+ * length.
+ */
+static int bitparse_find_section(FILE *infile, char section_name, unsigned int *section_length)
+{
+	int result = 0;
+	#define MAX_FPGA_BIT_STREAM_HEADER_SEARCH 100  // maximum number of bytes to search for the requested section
+	uint16_t numbytes = 0;
+	while (numbytes < MAX_FPGA_BIT_STREAM_HEADER_SEARCH) {
+		char current_name = (char)fgetc(infile);
+		numbytes++;
+		if (current_name < 'a' || current_name > 'e') {
+			/* Strange section name, abort */
+			break;
+		}
+		unsigned int current_length = 0;
+		switch (current_name) {
+		case 'e':
+			/* Four byte length field */
+			current_length += fgetc(infile) << 24;
+			current_length += fgetc(infile) << 16;
+			numbytes += 2;
+		default: /* Fall through, two byte length field */
+			current_length += fgetc(infile) << 8;
+			current_length += fgetc(infile) << 0;
+			numbytes += 2;
+		}
+
+		if (current_name != 'e' && current_length > 255) {
+			/* Maybe a parse error */
+			break;
+		}
+
+		if (current_name == section_name) {
+			/* Found it */
+			*section_length = current_length;
+			result = 1;
+			break;
+		}
+
+		for (uint16_t i = 0; i < current_length && numbytes < MAX_FPGA_BIT_STREAM_HEADER_SEARCH; i++) {
+			(void)fgetc(infile);
+			numbytes++;
+		}
+	}
+	return result;
+}
+
+static int FpgaGatherVersion(FILE *infile, char* infile_name, char *dst, int len)
+{
+	unsigned int fpga_info_len;
+	char tempstr[40] = {0x00};
+	
+	dst[0] = '\0';
+
+	for (uint16_t i = 0; i < FPGA_BITSTREAM_FIXED_HEADER_SIZE; i++) {
+		if (fgetc(infile) != bitparse_fixed_header[i]) {
+			fprintf(stderr, "Invalid FPGA file. Aborting...\n\n");
+			return(EXIT_FAILURE);
+		}
+	}
+
+	if (!memcmp("fpga_lf", basename(infile_name), 7))
+		strncat(dst, "LF", len-1);
+	else if (!memcmp("fpga_hf", basename(infile_name), 7))
+		strncat(dst, "HF", len-1);
+
+	strncat(dst, " image built", len-1);
+	if (bitparse_find_section(infile, 'b', &fpga_info_len)) {
+		strncat(dst, " for ", len-1);
+		for (uint16_t i = 0; i < fpga_info_len; i++) {
+			char c = (char)fgetc(infile);
+			if (i < sizeof(tempstr)) {
+				tempstr[i] = c;
+			}
+		}
+		strncat(dst, tempstr, len-1);
+	}
+	
+	if (bitparse_find_section(infile, 'c', &fpga_info_len)) {
+		strncat(dst, " on ", len-1);
+		for (uint16_t i = 0; i < fpga_info_len; i++) {
+			char c = (char)fgetc(infile);
+			if (i < sizeof(tempstr)) {
+				tempstr[i] = c;
+			}
+		}
+		strncat(dst, tempstr, len-1);
+	}
+	
+	if (bitparse_find_section(infile, 'd', &fpga_info_len)) {
+		strncat(dst, " at ", len-1);
+		for (uint16_t i = 0; i < fpga_info_len; i++) {
+			char c = (char)fgetc(infile);
+			if (i < sizeof(tempstr)) {
+				tempstr[i] = c;
+			}
+		}
+		strncat(dst, tempstr, len-1);
+	}
+	return 0;
+}
+
+static void print_version_info_preamble(FILE *outfile, int num_infiles) {
+	fprintf(outfile, "//-----------------------------------------------------------------------------\n");
+	fprintf(outfile, "// piwi, 2018\n");
+	fprintf(outfile, "//\n");
+	fprintf(outfile, "// This code is licensed to you under the terms of the GNU GPL, version 2 or,\n");
+	fprintf(outfile, "// at your option, any later version. See the LICENSE.txt file for the text of\n");
+	fprintf(outfile, "// the license.\n");
+	fprintf(outfile, "//-----------------------------------------------------------------------------\n");
+	fprintf(outfile, "// Version information on fpga images\n");
+	fprintf(outfile, "//\n");
+	fprintf(outfile, "// This file is generated by fpga_compress. Don't edit!\n");
+	fprintf(outfile, "//-----------------------------------------------------------------------------\n");
+	fprintf(outfile, "\n");
+	fprintf(outfile, "\n");
+	fprintf(outfile, "const int fpga_bitstream_num = %d;\n", num_infiles);
+	fprintf(outfile, "const char* const fpga_version_information[%d] = {\n", num_infiles);
+}
+
+static int generate_fpga_version_info(FILE *infile[], char *infile_names[], int num_infiles, FILE *outfile) {
+	
+	char version_string[80] = "";
+	
+	print_version_info_preamble(outfile, num_infiles);
+	
+	for (int i = 0; i < num_infiles; i++) {
+		FpgaGatherVersion(infile[i], infile_names[i], version_string, sizeof(version_string));
+		fprintf(outfile, "\t\" %s\"", version_string);
+		if (i != num_infiles-1) {
+			fprintf(outfile, ",");
+		}
+		fprintf(outfile,"\n");
+	}	
+	fprintf(outfile, "};\n");
+	return 0;
+}
+
 int main(int argc, char **argv)
 {
 	FILE **infiles;
+	char **infile_names;
 	FILE *outfile;
 	
 	if (argc == 1 || argc == 2) {
@@ -263,6 +411,7 @@ int main(int argc, char **argv)
 	}
 	
 	if (!strcmp(argv[1], "-d")) {			// Decompress
+
 		infiles = calloc(1, sizeof(FILE*));
 		if (argc != 4) {
 			usage();
@@ -270,47 +419,56 @@ int main(int argc, char **argv)
 		} 
 		infiles[0] = fopen(argv[2], "rb");
 		if (infiles[0] == NULL) {
-			fprintf(stderr, "Error. Cannot open input file %s", argv[2]);
+			fprintf(stderr, "Error. Cannot open input file %s\n\n", argv[2]);
 			return(EXIT_FAILURE);
 		}
 		outfile = fopen(argv[3], "wb");
 		if (outfile == NULL) {
-			fprintf(stderr, "Error. Cannot open output file %s", argv[3]);
+			fprintf(stderr, "Error. Cannot open output file %s\n\n", argv[3]);
 			return(EXIT_FAILURE);
 		}
 		return zlib_decompress(infiles[0], outfile);
 
-	} else {								// Compress
+	} else { // Compress or gemerate version info
 
 		bool hardnested_mode = false;
+		bool generate_version_file = false;
 		int num_input_files = 0;
-		if (!strcmp(argv[1], "-t")) { // hardnested table
+		if (!strcmp(argv[1], "-t")) { 			// compress one hardnested table
 			if (argc != 4) {
 				usage();
 				return(EXIT_FAILURE);
 			}
 			hardnested_mode = true;
 			num_input_files = 1;
-		} else {
+		} else if (!strcmp(argv[1], "-v")) { 	// generate version info
+			generate_version_file = true;
+			num_input_files = argc-3;
+		} else { 								// compress 1..n fpga files
 			num_input_files = argc-2;
 		}
-		int adder = (hardnested_mode) ? 2 : 1;
 		
 		infiles = calloc(num_input_files, sizeof(FILE*));
+		infile_names = calloc(num_input_files, sizeof(char*));
 		for (uint16_t i = 0; i < num_input_files; i++) { 
-			infiles[i] = fopen(argv[i + adder ] , "rb");
+			infile_names[i] = argv[i+((hardnested_mode || generate_version_file)?2:1)];
+			infiles[i] = fopen(infile_names[i], "rb");
 			if (infiles[i] == NULL) {
-				fprintf(stderr, "Error. Cannot open input file %s", argv[i + adder] );
+				fprintf(stderr, "Error. Cannot open input file %s\n\n", infile_names[i]);
 				return(EXIT_FAILURE);
-			} else {
-                printf("Opening %s %d \n", argv[i + adder], i+adder );
 			}
 		}
 		outfile = fopen(argv[argc-1], "wb");
 		if (outfile == NULL) {
-			fprintf(stderr, "Error. Cannot open output file %s", argv[argc-1]);
+			fprintf(stderr, "Error. Cannot open output file %s\n\n", argv[argc-1]);
 			return(EXIT_FAILURE);
 		}
+		if (generate_version_file) {
+			if (generate_fpga_version_info(infiles, infile_names, num_input_files, outfile)) {
+				return(EXIT_FAILURE);
+			}
+		} else {
 		return zlib_compress(infiles, num_input_files, outfile, hardnested_mode);
+		}
 	}
 }

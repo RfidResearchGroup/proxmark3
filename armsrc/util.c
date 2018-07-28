@@ -266,23 +266,23 @@ void FormatVersionInformation(char *dst, int len, const char *prefix, void *vers
 	struct version_information *v = (struct version_information*)version_information;
 	dst[0] = 0;
 	strncat(dst, prefix, len-1);
-	if(v->magic != VERSION_INFORMATION_MAGIC) {
+	if (v->magic != VERSION_INFORMATION_MAGIC) {
 		strncat(dst, "Missing/Invalid version information\n", len - strlen(dst) - 1);
 		return;
 	}
-	if(v->versionversion != 1) {
+	if (v->versionversion != 1) {
 		strncat(dst, "Version information not understood\n", len - strlen(dst) - 1);
 		return;
 	}
-	if(!v->present) {
+	if (!v->present) {
 		strncat(dst, "Version information not available\n", len - strlen(dst) - 1);
 		return;
 	}
 
 	strncat(dst, v->gitversion, len - strlen(dst) - 1);
-	if(v->clean == 0) {
+	if (v->clean == 0) {
 		strncat(dst, "-unclean", len - strlen(dst) - 1);
-	} else if(v->clean == 2) {
+	} else if (v->clean == 2) {
 		strncat(dst, "-suspect", len - strlen(dst) - 1);
 	}
 

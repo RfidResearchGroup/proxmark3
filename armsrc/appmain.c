@@ -14,6 +14,7 @@
 #include "usb_cdc.h"
 #include "proxmark3.h"
 #include "apps.h"
+#include "fpga.h"
 #include "util.h"
 #include "printf.h"
 #include "string.h"
@@ -333,14 +334,14 @@ void SendVersion(void) {
 	FormatVersionInformation(temp, sizeof(temp), "      os: ", &version_information);
 	strncat(VersionString, temp, sizeof(VersionString) - strlen(VersionString) - 1);
 
-	strncat(VersionString, " [ FPGA ]\n", sizeof(VersionString) - strlen(VersionString) - 1);
+	strncat(VersionString, "\n [ FPGA ]\n", sizeof(VersionString) - strlen(VersionString) - 1);
 	
-	FpgaGatherVersion(FPGA_BITSTREAM_LF, temp, sizeof(temp));
-	strncat(VersionString, temp, sizeof(VersionString) - strlen(VersionString) - 1);
-	
-	FpgaGatherVersion(FPGA_BITSTREAM_HF, temp, sizeof(temp));
-	strncat(VersionString, temp, sizeof(VersionString) - strlen(VersionString) - 1);
-
+	for (int i = 0; i < fpga_bitstream_num; i++) {
+		strncat(VersionString, fpga_version_information[i], sizeof(VersionString) - strlen(VersionString) - 1);
+		if (i < fpga_bitstream_num - 1) {
+			strncat(VersionString, "\n", sizeof(VersionString) - strlen(VersionString) - 1);
+		}
+	}
 	// Send Chip ID and used flash memory
 	uint32_t text_and_rodata_section_size = (uint32_t)&__data_src_start__ - (uint32_t)&_flash_start;
 	uint32_t compressed_data_section_size = common_area.arg1;
@@ -350,7 +351,7 @@ void SendVersion(void) {
 // measure the USB Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
 // Note: this mimics GetFromBigbuf(), i.e. we have the overhead of the UsbCommand structure included.
 void printUSBSpeed(void) {
-	Dbprintf("USB Speed:");
+	Dbprintf("USB Speed");
 	Dbprintf("  Sending USB packets to client...");
 
 	#define USB_SPEED_TEST_MIN_TIME	1500	// in milliseconds

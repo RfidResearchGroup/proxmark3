@@ -13,6 +13,7 @@ THUMBSRC = cmd.c \
 	bootrom.c
 
 ASMSRC = ram-reset.s flash-reset.s
+VERSIONSRC = version.c
 
 ## There is a strange bug with the linker: Sometimes it will not emit the glue to call
 ## BootROM from ARM mode. The symbol is emitted, but the section will be filled with
@@ -28,6 +29,10 @@ APP_CFLAGS = -I. -fno-strict-aliasing -ffunction-sections -fdata-sections
 include ../common/Makefile.common
 
 OBJS = $(OBJDIR)/bootrom.s19
+
+# version.c should be remade on every compilation
+version.c: default_version.c
+	perl ../tools/mkversion.pl .. > $@ || $(COPY) $^ $@ 
 
 all: $(OBJS)
 

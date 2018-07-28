@@ -27,7 +27,7 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
 	char asBuff[120];
 	memset(asBuff, 0, sizeof(asBuff));
 	uint32_t mem_avail = 0;	
-	PrintAndLogEx(NORMAL, " [ Hardware ] ");
+	PrintAndLogEx(NORMAL, "\n [ Hardware ] ");
 	
 	switch(iChipID) {
 		case 0x270B0A40: sprintf(asBuff,"AT91SAM7S512 Rev A"); break;
@@ -242,32 +242,37 @@ int CmdVersion(const char *Cmd) {
 	if ( silent ) 
 		return 0;
 
-	UsbCommand c = {CMD_VERSION};
-	static UsbCommand resp = {0, {0, 0, 0}};
+	UsbCommand c = {CMD_VERSION, {0, 0, 0}};
+	UsbCommand resp;
+	clearCommandBuffer();
+	SendCommand(&c);
+	if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
+#ifdef __WIN32
+		PrintAndLogEx(NORMAL, "\nProxmark3 RFID instrument\n");
+#else
+		PrintAndLogEx(NORMAL, "\n\e[34mProxmark3 RFID instrument\e[0m\n");	
+#endif	
+		char s[40] = {0};
+		int i = 0;
+#if defined(WITH_FLASH) || defined(WITH_SMARTCARD)
+		strncat(s, "build for RDV40 with ", 22);
+		i = 15;
+#endif
 
-	if (resp.arg[0] == 0 && resp.arg[1] == 0) { // no cached information available
-		clearCommandBuffer();
-		SendCommand(&c);
-		if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
-#ifdef __WIN32
-			PrintAndLogEx(NORMAL, "\nProxmark3 RFID instrument\n");
-#else
-			PrintAndLogEx(NORMAL, "\n\e[34mProxmark3 RFID instrument\e[0m\n");	
+#ifdef WITH_FLASH
+		strncat(s, "flashmem; ", 10);
+		i += 10;
 #endif	
-			PrintAndLogEx(NORMAL, (char*)resp.d.asBytes);
-			lookupChipID(resp.arg[0], resp.arg[1]);			
-		}
-	} else {
-		PrintAndLogEx(NORMAL, "[[[ Cached information ]]]\n");
-#ifdef __WIN32
-			PrintAndLogEx(NORMAL, "\nProxmark3 RFID instrument\n");
-#else
-			PrintAndLogEx(NORMAL, "\n\e[33mProxmark3 RFID instrument\e[0m\n");	
-#endif	
+#ifdef WITH_SMARTCARD
+		strncat(s+i, "smartcard; ", 11);
+		i += 11;
+#endif
+		PrintAndLogEx(NORMAL, "\n [ CLIENT ]");
+		PrintAndLogEx(NORMAL, " client: iceman %s \n", s);
+		
 		PrintAndLogEx(NORMAL, (char*)resp.d.asBytes);
-		lookupChipID(resp.arg[0], resp.arg[1]);
-		PrintAndLogEx(NORMAL, "");
-	}
+		lookupChipID(resp.arg[0], resp.arg[1]);			
+	} 
 	PrintAndLogEx(NORMAL, "\n");
 	return 0;
 }
