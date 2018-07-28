@@ -422,77 +422,7 @@ void FpgaDownloadAndGo(int bitstream_version) {
 	// free eventually allocated BigBuf memory
 	BigBuf_free(); BigBuf_Clear_ext(false);
 }
-/*																							
 
-//-----------------------------------------------------------------------------
-// Gather version information from FPGA image. Needs to decompress the begin
-// of the respective (HF or LF) image.
-// Note: decompression makes use of (i.e. overwrites) BigBuf[]. It is therefore
-// advisable to call this only once and store the results for later use.
-//-----------------------------------------------------------------------------
-void FpgaGatherVersion(int bitstream_version, char *dst, int len) {
-	uint32_t fpga_info_len;
-	char tempstr[40] = {0x00};
-	z_stream compressed_fpga_stream;
-	uint8_t output_buffer[OUTPUT_BUFFER_LEN] = {0x00};
-
-	dst[0] = '\0';
-
-	// ensure that we can allocate enough memory for decompression:
-	BigBuf_free(); BigBuf_Clear_ext(false);
-
-	if (!reset_fpga_stream(bitstream_version, &compressed_fpga_stream, output_buffer))
-		return;
-
-	if (bitparse_find_section(bitstream_version, 'a', &fpga_info_len, &compressed_fpga_stream, output_buffer)) {
-		for (uint16_t i = 0; i < fpga_info_len; i++) {
-			char c = (char)get_from_fpga_stream(bitstream_version, &compressed_fpga_stream, output_buffer);
-			if (i < sizeof(tempstr)) {
-				tempstr[i] = c;
-			}
-		}
-		if (!memcmp("fpga_lf", tempstr, 7))
-			strncat(dst, " LF ", len-1);
-		else if (!memcmp("fpga_hf", tempstr, 7))
-			strncat(dst, " HF ", len-1);
-	}
-	strncat(dst, "image built", len-1);
-	if (bitparse_find_section(bitstream_version, 'b', &fpga_info_len, &compressed_fpga_stream, output_buffer)) {
-		strncat(dst, " for ", len-1);
-		for (uint16_t i = 0; i < fpga_info_len; i++) {
-			char c = (char)get_from_fpga_stream(bitstream_version, &compressed_fpga_stream, output_buffer);
-			if (i < sizeof(tempstr)) {
-				tempstr[i] = c;
-			}
-		}
-		strncat(dst, tempstr, len-1);
-	}
-	if (bitparse_find_section(bitstream_version, 'c', &fpga_info_len, &compressed_fpga_stream, output_buffer)) {
-		strncat(dst, " on ", len-1);
-		for (uint16_t i = 0; i < fpga_info_len; i++) {
-			char c = (char)get_from_fpga_stream(bitstream_version, &compressed_fpga_stream, output_buffer);
-			if (i < sizeof(tempstr)) {
-				tempstr[i] = c;
-			}
-		}
-		strncat(dst, tempstr, len-1);
-	}
-	if (bitparse_find_section(bitstream_version, 'd', &fpga_info_len, &compressed_fpga_stream, output_buffer)) {
-		strncat(dst, " at ", len-1);
-		for (uint16_t i = 0; i < fpga_info_len; i++) {
-			char c = (char)get_from_fpga_stream(bitstream_version, &compressed_fpga_stream, output_buffer);
-			if (i < sizeof(tempstr)) {
-				tempstr[i] = c;
-			}
-		}
-		strncat(dst, tempstr, len-1);
-	}
-
-	strncat(dst, "\n", len-1);
-
-	inflateEnd(&compressed_fpga_stream);
-}
-*/
 //-----------------------------------------------------------------------------
 // Send a 16 bit command/data pair to the FPGA.
 // The bit format is:  C3 C2 C1 C0 D11 D10 D9 D8 D7 D6 D5 D4 D3 D2 D1 D0
