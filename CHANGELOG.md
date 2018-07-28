@@ -3,12 +3,20 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added more default keys  (@j8048188) (@iceman)
+ - Added 'sc list/info/raw/reader/upgrade' - (RDV40) smart card module functionality  (@iceman)
+ - Fix 'download eml buffer' (@drandreas)
+ - Changed 'exclusion of floatingpoint lib' (@pwpiwi)
+ - Changed 'lua scripts bit32 calls' (@iceman)
+ - Changed 'hw version'  (@pwpiwi),   adapted to iceman fork ( @iceman)  
+ - Added 'amiibo functionality'  (@jamchamb),   adapted to iceman fork ( @iceman)  
+ - Fix 'hf legic'  (RDV40) adaptations to FPGA HF enhanched reading distance (@iceman)   Thanks to @drandreas!
  - Added 'script run mifare_acces' - script to decode Mifare classic accessbits (@Neuromancer)
  - Added 'mem load/save/wipe' - commands to upload / download to new RDV40 onboard flashmemory (@iceman)
  - Added 'script run mifareplus" - script to communicate with a mifare plus tag (@dceliano)
  - Added FlashMemory functionality  (RDV40)  (Thanks @willok)
  - Fix 'hf mfu dump' - partial reads lead to corrupt data (Thanks @elafargue for pointing it out)
- - Chg 'hf mfu dump / read'  - now retries five times. (@jamchamb)
+ - Changed 'hf mfu dump / read'  - now retries five times. (@jamchamb)
  - Added `hf list mf` - deciphers crypto1 stream and works with first authentication and weak nested authentications (@Merlok)
  - Adjusted `lf cmdread` to respond to client when complete and the client will then automatically call `data samples` (@marshmellow42)
  - Added a bitbang mode to `lf cmdread` if delay is 0 the cmd bits turn off and on the antenna with 0 and 1 respectively (@marshmellow42)
