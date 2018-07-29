@@ -1,6 +1,7 @@
 //-----------------------------------------------------------------------------
 // (c) 2009 Henryk Plötz <henryk@ploetzli.ch>
 //     2016 Iceman
+//     2018 AntiCat (rwd rewritten)
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -10,517 +11,430 @@
 //-----------------------------------------------------------------------------
 #include "legicrf.h"
 
-static struct legic_frame {
-	uint8_t bits;
-	uint32_t data;
-} current_frame;
+#include "ticks.h"              /* timers */
+#include "crc.h"                /* legic crc-4 */
+#include "legic_prng.h"         /* legic PRNG impl */
+#include "legic.h"              /* legic_card_select_t struct */
 
-static enum {
-  STATE_DISCON,
-  STATE_IV,
-  STATE_CON,
-} legic_state;
+struct legic_frame {
+  uint32_t bits;                /* length of frame */
+  uint8_t  data[24];            /* preprocessed bits */
+};
 
-static crc_t    legic_crc;
-static int      legic_read_count;
-static uint32_t legic_prng_bc;
-static uint32_t legic_prng_iv;
+union frame_encoder {
+  uint32_t uint32;              /* SAM7S512 does not support unaligned access as a */
+  uint8_t  uint8[4];            /* workaround 32bit values are converted to 4x8bit */
+};
 
-static int      legic_phase_drift;
-static int      legic_frame_drift;
-static int      legic_reqresp_drift;
+static uint8_t* legic_mem;      /* card memory, used for read, write and sim */
+static legic_card_select_t card;/* metadata of currently selected card */
+static crc_t legic_crc;
+static int32_t input_threshold; /* values > threshold are 1 else 0 */
 
+// LEGIC RF is using the common timer functions: StartCountUS() and GetCountUS()
+#define RWD_TIME_PAUSE       20 /* 20us */
+#define RWD_TIME_1          100 /* READER_TIME_PAUSE 20us off + 80us on = 100us */
+#define RWD_TIME_0           60 /* READER_TIME_PAUSE 20us off + 40us on = 60us */
+#define TAG_FRAME_WAIT      330 /* 330us from READER frame end to TAG frame start */
+#define TAG_BIT_PERIOD      100 /* 100us */
 
+#define LEGIC_CARD_MEMSIZE 1024 /* The largest Legic Prime card is 1k */
 
+//-----------------------------------------------------------------------------
+// I/O interface abstraction (ARM <-> FPGA)
+//-----------------------------------------------------------------------------
 
-// At TIMER_CLOCK3 (MCK/32)
-// testing calculating in ticks. 1.5ticks = 1us 
-#define	RWD_TIME_1 120		// READER_TIME_PAUSE 20us off, 80us on = 100us  80 * 1.5 == 120ticks
-#define RWD_TIME_0 60		// READER_TIME_PAUSE 20us off, 40us on = 60us   40 * 1.5 == 60ticks 
-#define RWD_TIME_PAUSE 30	// 20us == 20 * 1.5 == 30ticks */
-#define TAG_BIT_PERIOD 142	// 100us == 100 * 1.5 == 150ticks
-#define TAG_FRAME_WAIT 495  // 330us from READER frame end to TAG frame start. 330 * 1.5 == 495
+static inline uint8_t rx_byte_from_fpga() {
+  for(;;) {
+    WDT_HIT();
 
-#define OFFSET_LOG 1024
-
-
-// ToDo: define a meaningful maximum size for auth_table. The bigger this is, the lower will be the available memory for traces. 
-// Historically it used to be FREE_BUFFER_SIZE, which was 2744.
-#define LEGIC_CARD_MEMSIZE 1024
-static uint8_t* cardmem;
-
-static void frame_append_bit(struct legic_frame * const f, uint8_t bit) {
-	// Overflow, won't happen
-   if (f->bits >= 31) return;
-  
-   f->data |= (bit << f->bits);
-   f->bits++;
-}
-
-static void frame_clean(struct legic_frame * const f) {
-	f->data = 0;
-	f->bits = 0;
-}
-
-
-
-}
-
-/* Generate Keystream */
-uint32_t get_key_stream(int skip, int count) {
-
-	int i;
-
-	// Use int to enlarge timer tc to 32bit
-	legic_prng_bc += prng_timer->TC_CV;
-
-	// reset the prng timer.
-
-	/* If skip == -1, forward prng time based */
-	if(skip == -1) {
-		i  = (legic_prng_bc + SIM_SHIFT)/SIM_DIVISOR; /* Calculate Cycles based on timer */
-		i -= legic_prng_count(); /* substract cycles of finished frames */
-		i -= count; /* substract current frame length, rewind to beginning */
-		legic_prng_forward(i);
-	} else {
-		legic_prng_forward(skip);
-	}
-
-	i = (count == 6) ? -1 : legic_read_count;
-
-	/* Generate KeyStream */
-	return legic_prng_get_bits(count);
-}
-
-
-
-}
-
-/* Send a frame in reader mode, the FPGA must have been set up by
- * LegicRfReader
- */
-void frame_sendAsReader(uint32_t data, uint8_t bits){
-
-	uint32_t starttime = GET_TICKS, send = 0, mask = 1;
-	
-	// xor lsfr onto data.
-	send = data ^ legic_prng_get_bits(bits);
-				
-	for (; mask < BITMASK(bits); mask <<= 1) {	
-		if (send & mask)
-			COIL_PULSE(RWD_TIME_1)
-		else
-			COIL_PULSE(RWD_TIME_0)
-	}
-
-	// Final pause to mark the end of the frame
-	COIL_PULSE(0);
-	
-	// log
-	uint8_t cmdbytes[] = {bits, BYTEx(data,0), BYTEx(data,1), BYTEx(data,2), BYTEx(send,0), BYTEx(send,1), BYTEx(send,2)};
-	LogTrace(cmdbytes, sizeof(cmdbytes), starttime, GET_TICKS, NULL, true);
-}
-
-/* Receive a frame from the card in reader emulation mode, the FPGA and
- * timer must have been set up by LegicRfReader and frame_sendAsReader.
- *
- * The LEGIC RF protocol from card to reader does not include explicit
- * frame start/stop information or length information. The reader must
- * know beforehand how many bits it wants to receive. (Notably: a card
- * sending a stream of 0-bits is indistinguishable from no card present.)
- *
- * Receive methodology: There is a fancy correlator in hi_read_rx_xcorr, but
- * I'm not smart enough to use it. Instead I have patched hi_read_tx to output
- * the ADC signal with hysteresis on SSP_DIN. Bit-bang that signal and look
- * for edges. Count the edges in each bit interval. If they are approximately
- * 0 this was a 0-bit, if they are approximately equal to the number of edges
- * expected for a 212kHz subcarrier, this was a 1-bit. For timing we use the
- * timer that's still running from frame_sendAsReader in order to get a synchronization
- * with the frame that we just sent.
- *
- * FIXME: Because we're relying on the hysteresis to just do the right thing
- * the range is severely reduced (and you'll probably also need a good antenna).
- * So this should be fixed some time in the future for a proper receiver.
- */
-static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits) {
-
-	if ( bits > 32 ) return;
-	
-	uint8_t i = bits, edges = 0;	
-	uint32_t the_bit = 1, next_bit_at = 0, data = 0;
-	uint32_t old_level = 0;
-	volatile uint32_t level = 0;
-	
-	frame_clean(f);
-	
-	// calibrate the prng.
-	legic_prng_forward(2);
-	data = legic_prng_get_bits(bits);
-	
-	//FIXED time between sending frame and now listening frame. 330us
-	uint32_t starttime = GET_TICKS;
-	// its about 9+9 ticks delay from end-send to here.
-	WaitTicks( 477 );
-
-	next_bit_at = GET_TICKS + TAG_BIT_PERIOD;
-
-	while ( i-- ){
-		edges = 0;
-		while  ( GET_TICKS < next_bit_at) {
-
-			level = (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_DIN);
-			
-			if (level != old_level)
-				++edges;
-			
-			old_level = level;
-		}		
-
-		next_bit_at += TAG_BIT_PERIOD;
-		
-		// We expect 42 edges (ONE)
-		if ( edges > 20 )
-			data ^= the_bit;
-
-		the_bit <<= 1;	
-	}
-
-	// output
-	f->data = data;
-	f->bits = bits;
-	
-	// log
-	uint8_t cmdbytes[] = {bits,	BYTEx(data, 0),	BYTEx(data, 1)};
-	LogTrace(cmdbytes, sizeof(cmdbytes), starttime, GET_TICKS, NULL, false);
-}
-
-// Setup pm3 as a Legic Reader
-static uint32_t setup_phase_reader(uint8_t iv) {
-	
-	// Switch on carrier and let the tag charge for 5ms
-	HIGH(GPIO_SSC_DOUT);
-	WaitUS(5000);
-	
-	ResetTicks();
-	
-	legic_prng_init(0);
-	
-	// send IV handshake
-	frame_sendAsReader(iv, 7);
-
-	// tag and reader has same IV.
-	legic_prng_init(iv);
-
-	frame_receiveAsReader(&current_frame, 6);
-
-	// 292us (438t) - fixed delay before sending ack.
-	// minus log and stuff 100tick?
-	WaitTicks(338);
-	legic_prng_forward(3); 
-	
-	// Send obsfuscated acknowledgment frame.
-	// 0x19 = 0x18 MIM22, 0x01 LSB READCMD 
-	// 0x39 = 0x38 MIM256, MIM1024 0x01 LSB READCMD 
-	switch ( current_frame.data  ) {
-		case 0x0D: frame_sendAsReader(0x19, 6); break;
-		case 0x1D: 
-		case 0x3D: frame_sendAsReader(0x39, 6); break;
-		default: break;
-	}
-
-	legic_prng_forward(2);
-	return current_frame.data;
-}
-
-void LegicCommonInit(bool clear_mem) {
-
-	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_TX);
-	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
-
-	/* Bitbang the transmitter */
-	SHORT_COIL;
-	AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
-	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
-	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_DIN;
-	
-	// reserve a cardmem,  meaning we can use the tracelog function in bigbuff easier.
-	cardmem = BigBuf_get_EM_addr();
-	if ( clear_mem )
-		memset(cardmem, 0x00, LEGIC_CARD_MEMSIZE);
-
-	clear_trace();
-	set_tracing(true);
-	crc_init(&legic_crc, 4, 0x19 >> 1, 0x5, 0);
-	
-	StartTicks();
-}
-
-// Switch off carrier, make sure tag is reset
-static void switch_off_tag_rwd(void) {
-	SHORT_COIL;
-	WaitUS(20);
-	WDT_HIT();
-}
-
-// calculate crc4 for a legic READ command 
-static uint32_t legic4Crc(uint8_t cmd, uint16_t byte_index, uint8_t value, uint8_t cmd_sz) {
-	crc_clear(&legic_crc);	
-	uint32_t temp =  (value << cmd_sz) | (byte_index << 1) | cmd;
-	crc_update(&legic_crc, temp, cmd_sz + 8 );
-	return crc_finish(&legic_crc);
-}
-
-int legic_read_byte( uint16_t index, uint8_t cmd_sz) {
-
-	uint8_t byte, crc, calcCrc = 0;
-	uint32_t cmd = (index << 1) | LEGIC_READ;
-	
-	// 90ticks = 60us (should be 100us but crc calc takes time.)
-	//WaitTicks(330); // 330ticks prng(4) - works
-	WaitTicks(240); // 240ticks prng(3) - works
-	
-	frame_sendAsReader(cmd, cmd_sz);
-	frame_receiveAsReader(&current_frame, 12);
-
-	// CRC check. 
-	byte = BYTEx(current_frame.data, 0);
-	crc = BYTEx(current_frame.data, 1);
-	calcCrc = legic4Crc(LEGIC_READ, index, byte, cmd_sz);
-
-	if( calcCrc != crc ) {
-		Dbprintf("!!! crc mismatch: %x != %x !!!",  calcCrc, crc);
-		return -1;
-	}
-
-	legic_prng_forward(3);
-	return byte;
-}
-
-/* 
- * - assemble a write_cmd_frame with crc and send it
- * - wait until the tag sends back an ACK ('1' bit unencrypted)
- * - forward the prng based on the timing
- */
-bool legic_write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz) {
-
-	bool isOK = false;
-	int8_t i = 40;
-	uint8_t edges = 0;
-	uint8_t	cmd_sz = addr_sz+1+8+4; //crc+data+cmd;
-	uint32_t steps = 0, next_bit_at, start, crc, old_level = 0;
-
-	crc = legic4Crc(LEGIC_WRITE, index, byte, addr_sz+1);
-
-	// send write command
-	uint32_t cmd = LEGIC_WRITE;
-	cmd |= index << 1;			  // index
-	cmd |= byte  << (addr_sz+1);  // Data	
-	cmd	|= (crc & 0xF ) << (addr_sz+1+8); 	// CRC
-	
-	WaitTicks(240);
-	
-	frame_sendAsReader(cmd, cmd_sz);
-	
-	LINE_IN;
-
-	start = GET_TICKS;
-
-	// ACK,  - one single "1" bit after 3.6ms
-	// 3.6ms = 3600us * 1.5 = 5400ticks.
-	WaitTicks(5400);
-	
-	next_bit_at = GET_TICKS + TAG_BIT_PERIOD;
-	
-    while ( i-- ) {
-		WDT_HIT();
-        edges = 0;
-        while ( GET_TICKS < next_bit_at) {
-			
-            volatile uint32_t level = (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_DIN);
-            
-			if (level != old_level)
-                ++edges;
-
-            old_level = level;
-        }
-		
-		next_bit_at += TAG_BIT_PERIOD;
-		
-		// We expect 42 edges (ONE)
-        if(edges > 20 ) {
-			steps = ( (GET_TICKS - start) / TAG_BIT_PERIOD);			
-			legic_prng_forward(steps);
-        	isOK = true;
-			goto OUT;
-        }
+    // wait for byte be become available in rx holding register
+    if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+      return AT91C_BASE_SSC->SSC_RHR;
     }
-		
-OUT: ;
-	legic_prng_forward(1);
-	
-	uint8_t cmdbytes[] = {1, isOK, BYTEx(steps, 0), BYTEx(steps, 1) };
-	LogTrace(cmdbytes, sizeof(cmdbytes), start, GET_TICKS, NULL, false);
-	return isOK;
+  }
 }
 
-int LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
-	
-	uint16_t i = 0;
-	uint8_t isOK = 1;
-	legic_card_select_t card;
-	
-	LegicCommonInit(true);
-	
-	if ( legic_select_card_iv(&card, iv) ) {
-		isOK = 0;
-		goto OUT;
-	}
+static inline void tx_byte_to_fpga(uint8_t byte) {
+  for(;;) {
+    WDT_HIT();
 
-	if (len + offset > card.cardsize)
-		len = card.cardsize - offset;
+    // put byte into tx holding register as soon as it is ready
+    if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+      AT91C_BASE_SSC->SSC_THR = byte;
+      return;
+    }
+  }
+}
 
-	LED_B_ON();
-	while (i < len) {
-		int r = legic_read_byte(offset + i, card.cmdsize);
-		
-		if (r == -1 || BUTTON_PRESS()) {			
-	        if ( MF_DBGLEVEL >= 2) DbpString("operation aborted");
-			isOK = 0;
-			goto OUT;
-		}
-		cardmem[i++] = r;
-        WDT_HIT();
-	}
+//-----------------------------------------------------------------------------
+// Demodulation
+//-----------------------------------------------------------------------------
 
-OUT:	
-	WDT_HIT();
-	switch_off_tag_rwd();
-	LEDsoff();
-	cmd_send(CMD_ACK, isOK, len, 0, cardmem, len);
-    return 0;
+// Returns am aproximated power measurement
+//
+// The FPGA running on the xcorrelation kernel samples the subcarrier at ~3 MHz.
+// The kernel was initialy designed to receive BSPK/2-PSK. Hance, it reports an
+// I/Q pair every 18.9us (8 bits i and 8 bits q).
+//
+// The subcarrier amplitude can be calculated using Pythagoras sqrt(i^2 + q^2).
+// To reduce CPU time the amplitude is approximated by using linear functions:
+//   am = MAX(ABS(i),ABS(q)) + 1/2*MIN(ABS(i),ABSq))
+//
+// Note: The SSC receiver is never synchronized the calculation my be performed
+// on a i/q pair from two subsequent correlations, but does not matter.
+static inline int32_t sample_power() {
+  int32_t q = (int8_t)rx_byte_from_fpga(); q = ABS(q);
+  int32_t i = (int8_t)rx_byte_from_fpga(); i = ABS(i);
+
+  return MAX(i, q) + (MIN(i, q) >> 1);
+}
+
+// Returns a demedulated bit
+//
+// An aproximated power measurement is available every 18.9us. The bit time
+// is 100us. The code samples 5 times and uses samples 3 and 4.
+//
+// Note: The demodulator is drifting (18.9us * 5 = 94.5us), since the longest
+// respons is 12 bits, the demodulator will stay in sync with a margin of
+// error of 20us left. Sending the next request will resync the card.
+static inline bool rx_bit() {
+  static int32_t p[5];
+  for(size_t i = 0; i<5; ++i) {
+    p[i] = sample_power();
+  }
+
+  if((p[2] > input_threshold) && (p[3] > input_threshold)) {
+    return true;
+  }
+  if((p[2] < input_threshold) && (p[3] < input_threshold)) {
+    return false;
+  }
+
+  Dbprintf("rx_bit failed %i vs %i (threshold %i)", p[2], p[3], input_threshold);
+  return false;
+}
+
+//-----------------------------------------------------------------------------
+// Modulation
+//
+// Modulation is a little bit more tricky as demedulation ssp_clk is running at
+// 105.4 kHz resulting in a ssc bit periode of 9.4us and ssc frame periode of
+// 76us. Legic has a strange pause-puls modulation with a 60us 0-bit and 100us
+// 1-bit periode. The following functions use bit stuffing to aproximate the
+// modulation. The default state of all bits is 1 the. The code adds pauses:
+//  - A 1 is aproximated by b1100000000 = 0x0300
+//  - A 0 is aproximated by     b110000 = 0x0030
+//
+// Note: The modulator expect to be run on a little-endian system and the frame
+// length to not exeed 11 bits. The frame length is not checked.
+//-----------------------------------------------------------------------------
+
+static void clean_frame(struct legic_frame *f) {
+  memset(f->data, 0xff, sizeof(f->data));
+
+  // add end of frame pause
+  f->data[0] ^= 0x03;
+  f->bits = 2;
+}
+
+static void append_to_frame(struct legic_frame *f, uint8_t bit) {
+  uint8_t bit_pos  = f->bits % 8; // calculate bits used in partially used byte
+  uint8_t byte_pos = f->bits / 8; // calculate next free or partially used byte
+
+  static union frame_encoder frame_encoder;
+
+  if(bit) {
+    frame_encoder.uint32 = 0x0300 << bit_pos; // appended bits at bit_pos
+    f->bits +=   10;                          // store amount of bits appended
+  } else {
+    frame_encoder.uint32 = 0x0030 << bit_pos; // appended bits at bit_pos
+    f->bits +=    6;                          // store amount of bits appended
+  }
+
+  // Move data from encoder to frame. This d-tour is necessary bacause the uC
+  // does not support unaligned access. We use bitwise not and xor to flip bits.
+  for(uint8_t i = 0; i < sizeof(frame_encoder); ++i) {
+    f->data[i + byte_pos] ^= frame_encoder.uint8[i];
+  }
+}
+
+static uint8_t finalize_frame(struct legic_frame *f) {
+  // convert bits into full bytes
+  return (f->bits + 7) / 8;
+}
+
+//-----------------------------------------------------------------------------
+// Frame Handling
+//
+// The LEGIC RF protocol from card to reader does not include explicit frame
+// start/stop information or length information. The reader must know beforehand
+// how many bits it wants to receive.
+// Notably: a card sending a stream of 0-bits is indistinguishable from no card
+// present.
+//-----------------------------------------------------------------------------
+
+static void tx_frame(uint32_t frame, uint8_t len) {
+  static struct legic_frame legic_frame;
+  clean_frame(&legic_frame);
+
+  // add bit by bit to frame, MSB (last bit on air) first, this reverses the order
+  // reverse order keeps last pause aligned to byte boundry and in sync with ret
+  // of last tx_byte_to_fpga call. this in turn syncs our rx phase perfectly.
+  while(len > 0) {
+    uint8_t lsb = (frame >> --len) & 0x01;
+    append_to_frame(&legic_frame, lsb ^ legic_prng_get_bit());
+    legic_prng_forward(1);
+  }
+
+  // finalize frame, returns length in bytes
+  len = finalize_frame(&legic_frame);
+
+  // start tx with first frame preloaded
+  tx_byte_to_fpga(legic_frame.data[--len]);
+  FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_TX);
+
+  // transmit frame, MSB first
+  while(len > 0) {
+    tx_byte_to_fpga(legic_frame.data[--len]);
+  }
+
+  // tx queue has 2 cycles, add 2 empty frames to leave function in sync
+  tx_byte_to_fpga(0xff); // blocks until last frame is loaded into shift register
+  tx_byte_to_fpga(0xff); // blocks until last frame is done
+}
+
+static uint32_t rx_frame(uint8_t len) {
+  FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR
+                  | FPGA_HF_READER_RX_XCORR_848_KHZ
+                  | FPGA_HF_READER_RX_XCORR_QUARTER);
+
+  uint32_t frame = 0;
+  for(uint8_t i = 0; i < len; i++) {
+    frame |= (rx_bit() ^ legic_prng_get_bit()) << i;
+    legic_prng_forward(1);
+  }
+
+  return frame;
+}
+
+//-----------------------------------------------------------------------------
+// Legic Reader
+//-----------------------------------------------------------------------------
+
+int init_card(uint8_t cardtype, legic_card_select_t *p_card) {
+  p_card->tagtype = cardtype;
+
+  switch(p_card->tagtype) {
+    case 0x0d:
+      p_card->cmdsize = 6;
+      p_card->addrsize = 5;
+      p_card->cardsize = 22;
+      break;
+    case 0x1d:
+      p_card->cmdsize = 9;
+      p_card->addrsize = 8;
+      p_card->cardsize = 256;
+      break;
+    case 0x3d:
+      p_card->cmdsize = 11;
+      p_card->addrsize = 10;
+      p_card->cardsize = 1024;
+      break;
+    default:
+      p_card->cmdsize = 0;
+      p_card->addrsize = 0;
+      p_card->cardsize = 0;
+      return 2;
+  }
+  return 0;
+}
+
+static void init_reader(bool clear_mem) {
+  // configure FPGA
+  FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+  FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR
+                  | FPGA_HF_READER_RX_XCORR_848_KHZ
+                  | FPGA_HF_READER_RX_XCORR_QUARTER);
+  SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+
+  // configure SSC with defaults (note: defaults are MSB first - Legic has LSB first,
+  // the rx stream is bit stuff in reverse to fix this. However, reversing the order
+  // will align the last pause to a byte boundry and we want that for synchronisation.
+  FpgaSetupSsc();
+
+  // and additonaly set Data Default to 1, to prevent glitches when switching to tx.
+  AT91C_BASE_SSC->SSC_TFMR |= AT91C_SSC_DATDEF;
+
+  // reserve a cardmem, meaning we can use the tracelog function in bigbuff easier.
+  legic_mem = BigBuf_get_EM_addr();
+  if(legic_mem) {
+    memset(legic_mem, 0x00, LEGIC_CARD_MEMSIZE);
+  }
+
+  // start trace
+  clear_trace();
+  set_tracing(true);
+
+  // init crc calculator
+  crc_init(&legic_crc, 4, 0x19 >> 1, 0x05, 0);
+
+  // start us timer
+  StartCountUS();
+}
+
+// Setup reader to card connection
+//
+// The setup consists of a three way handshake:
+//  - Transmit initialisation vector 7 bits
+//  - Receive card type 6 bits
+//  - Acknowledge frame 6 bits
+static uint32_t setup_phase_reader(uint8_t iv) {
+  uint32_t ts = GetCountUS();
+
+  // Switch on carrier and let the card charge for 5ms.
+  // Use the time to calibrate the treshhold.
+  input_threshold = 8; // heuristically determined
+  do {
+    int32_t sample = sample_power();
+    if(sample > input_threshold) {
+      input_threshold = sample;
+    }
+  } while(GetCountUS() < ts + 5000);
+
+  // Set threshold to noise floor * 2
+  input_threshold <<= 1;
+
+  legic_prng_init(0);
+  tx_frame(iv, 7);
+  ts = GetCountUS();
+
+  // configure iv
+  legic_prng_init(iv);
+  legic_prng_forward(2);
+
+  // wait until card is expect to respond
+  while(GetCountUS() < ts + TAG_FRAME_WAIT) { };
+
+  // receive card type
+  int32_t card_type = rx_frame(6);
+
+  // send obsfuscated acknowledgment frame
+  switch (card_type) {
+    case 0x0D:
+      tx_frame(0x19, 6); // MIM22 | READCMD = 0x18 | 0x01
+      break;
+    case 0x1D:
+    case 0x3D:
+      tx_frame(0x39, 6); // MIM256 | READCMD = 0x38 | 0x01
+      break;
+  }
+
+  return card_type;
+}
+
+static uint8_t calc_crc4(uint16_t cmd, uint8_t cmd_sz, uint8_t value) {
+  crc_clear(&legic_crc);
+  crc_update(&legic_crc, (value << cmd_sz) | cmd, 8 + cmd_sz);
+  return crc_finish(&legic_crc);
+}
+
+static int16_t read_byte(uint16_t index, uint8_t cmd_sz) {
+  uint16_t cmd = (index << 1) | LEGIC_READ;
+
+  // read one byte
+  tx_frame(cmd, cmd_sz);
+  uint32_t frame = rx_frame(12);
+
+  // split frame into data and crc
+  uint8_t byte = BYTEx(frame, 0);
+  uint8_t crc = BYTEx(frame, 1);
+
+  // check received against calculated crc
+  uint8_t calc_crc = calc_crc4(cmd, cmd_sz, byte);
+  if(calc_crc != crc) {
+    Dbprintf("!!! crc mismatch: %x != %x !!!",  calc_crc, crc);
+    return -1;
+  }
+
+  return byte;
+}
+
+//-----------------------------------------------------------------------------
+// Command Line Interface
+//
+// Only this functions are public / called from appmain.c
+//-----------------------------------------------------------------------------
+void LegicRfInfo(void) {
+  // configure ARM and FPGA
+  init_reader(false);
+
+  // establish shared secret and detect card type
+  uint8_t card_type = setup_phase_reader(0x01);
+  if(init_card(card_type, &card) != 0) {
+    cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
+    goto OUT;
+  }
+
+  // read UID
+  for(uint8_t i = 0; i < sizeof(card.uid); ++i) {
+    int16_t byte = read_byte(i, card.cmdsize);
+    if(byte == -1) {
+      cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
+      goto OUT;
+    }
+    card.uid[i] = byte & 0xFF;
+  }
+
+  // read MCC and check against UID
+  int16_t mcc = read_byte(4, card.cmdsize);
+  int16_t calc_mcc = CRC8Legic(card.uid, 4);;
+  if(mcc != calc_mcc) {
+    cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
+    goto OUT;
+  }
+
+  // OK
+  cmd_send(CMD_ACK, 1, 0, 0, (uint8_t*)&card, sizeof(legic_card_select_t));
+
+OUT:
+  switch_off();
+}
+
+void LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
+  // configure ARM and FPGA
+  init_reader(false);
+
+  // establish shared secret and detect card type
+  uint8_t card_type = setup_phase_reader(iv);
+  if(init_card(card_type, &card) != 0) {
+    cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
+    goto OUT;
+  }
+
+  // do not read beyond card memory
+  if(len + offset > card.cardsize) {
+    len = card.cardsize - offset;
+  }
+
+  for(uint16_t i = 0; i < len; ++i) {
+    int16_t byte = read_byte(offset + i, card.cmdsize);
+    if(byte == -1) {
+      cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
+      goto OUT;
+    }
+    legic_mem[i] = byte;
+  }
+
+  // OK
+  cmd_send(CMD_ACK, 1, len, 0, legic_mem, len);
+
+OUT:
+  switch_off();
 }
 
 void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
-
-	#define LOWERLIMIT 4
-	uint8_t isOK = 1, msg = 0;
-	legic_card_select_t card;
-	
-	// uid NOT is writeable.
-	if ( offset <= LOWERLIMIT ) {
-		isOK = 0;
-		goto OUT;
-	}
-	
-	LegicCommonInit(false);
-	
-	if ( legic_select_card_iv(&card, iv) ) {
-		isOK = 0;
-		msg = 1;
-		goto OUT;
-	}
-	
-	if ( len + offset > card.cardsize)
-		len = card.cardsize - offset;
-
-    LED_B_ON();	
-	while( len > 0 ) {
-		--len;		
-		if ( !legic_write_byte( len + offset, data[len], card.addrsize) ) {
-			Dbprintf("operation failed | %02X | %02X | %02X", len + offset, len, data[len] );
-			isOK = 0;
-			goto OUT;
-		}
-		WDT_HIT();
-	}
-OUT:
-	cmd_send(CMD_ACK, isOK, msg,0,0,0);
-	switch_off_tag_rwd();
-	LEDsoff();	
-}
-
-int legic_select_card_iv(legic_card_select_t *p_card, uint8_t iv){
-
-	if ( p_card == NULL ) return 1;
-	
-	p_card->tagtype = setup_phase_reader(iv);
-	
-	switch(p_card->tagtype) {
-		case 0x0d:
-            p_card->cmdsize = 6;
-			p_card->addrsize = 5;
-			p_card->cardsize = 22;
-			break;
-		case 0x1d:
-			p_card->cmdsize = 9;
-			p_card->addrsize = 8;
-			p_card->cardsize = 256;
-			break;
-		case 0x3d:
-            p_card->cmdsize = 11;
-			p_card->addrsize = 10;
-			p_card->cardsize = 1024;
-			break;
-		default: 
-		    p_card->cmdsize = 0;
-			p_card->addrsize = 0;
-			p_card->cardsize = 0;
-			return 2;
-	}
-	return 0;
-}
-int legic_select_card(legic_card_select_t *p_card){
-	return legic_select_card_iv(p_card, 0x01);
-}
-
-//-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
-
-void LegicRfInfo(void){
-
-	int r;
-	
-	uint8_t buf[sizeof(legic_card_select_t)] = {0x00};
-	legic_card_select_t *card = (legic_card_select_t*) buf;
-	
-	LegicCommonInit(false);
-
-	if ( legic_select_card(card) ) {
-		cmd_send(CMD_ACK,0,0,0,0,0);
-		goto OUT;
-	}
-
-	// read UID bytes
-	for ( uint8_t i = 0; i < sizeof(card->uid); ++i) {
-		r = legic_read_byte(i, card->cmdsize);
-		if ( r == -1 ) {
-			cmd_send(CMD_ACK,0,0,0,0,0);
-			goto OUT;
-		}
-		card->uid[i] = r & 0xFF;
-	}
-
-	// MCC byte.
-	r = legic_read_byte(4, card->cmdsize);
-	uint32_t calc_mcc =  CRC8Legic(card->uid, 4);;
-	if ( r != calc_mcc) {
-		cmd_send(CMD_ACK,0,0,0,0,0);
-		goto OUT;
-	}
-	
-	// OK
-	cmd_send(CMD_ACK, 1, 0, 0, buf, sizeof(legic_card_select_t));
-
-OUT:
-	switch_off_tag_rwd();
-	LEDsoff();
-}
-
-}
-
-}
-
+  cmd_send(CMD_ACK, 0, 0, 0, 0, 0); //TODO Implement
 }
 
 void LegicRfSimulate(int phase, int frame, int reqresp) {
