@@ -16,16 +16,6 @@
 #include "legic_prng.h"         /* legic PRNG impl */
 #include "legic.h"              /* legic_card_select_t struct */
 
-struct legic_frame {
-  uint32_t bits;                /* length of frame */
-  uint8_t  data[24];            /* preprocessed bits */
-};
-
-union frame_encoder {
-  uint32_t uint32;              /* SAM7S512 does not support unaligned access as a */
-  uint8_t  uint8[4];            /* workaround 32bit values are converted to 4x8bit */
-};
-
 static uint8_t* legic_mem;      /* card memory, used for read, write and sim */
 static legic_card_select_t card;/* metadata of currently selected card */
 static crc_t legic_crc;
@@ -41,7 +31,7 @@ static int32_t input_threshold; /* values > threshold are 1 else 0 */
 #define LEGIC_CARD_MEMSIZE 1024 /* The largest Legic Prime card is 1k */
 
 //-----------------------------------------------------------------------------
-// I/O interface abstraction (ARM <-> FPGA)
+// I/O interface abstraction (FPGA -> ARM)
 //-----------------------------------------------------------------------------
 
 static inline uint8_t rx_byte_from_fpga() {
@@ -51,18 +41,6 @@ static inline uint8_t rx_byte_from_fpga() {
     // wait for byte be become available in rx holding register
     if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
       return AT91C_BASE_SSC->SSC_RHR;
-    }
-  }
-}
-
-static inline void tx_byte_to_fpga(uint8_t byte) {
-  for(;;) {
-    WDT_HIT();
-
-    // put byte into tx holding register as soon as it is ready
-    if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-      AT91C_BASE_SSC->SSC_THR = byte;
-      return;
     }
   }
 }
@@ -118,50 +96,26 @@ static inline bool rx_bit() {
 //-----------------------------------------------------------------------------
 // Modulation
 //
-// Modulation is a little bit more tricky as demedulation ssp_clk is running at
-// 105.4 kHz resulting in a ssc bit periode of 9.4us and ssc frame periode of
-// 76us. Legic has a strange pause-puls modulation with a 60us 0-bit and 100us
-// 1-bit periode. The following functions use bit stuffing to aproximate the
-// modulation. The default state of all bits is 1 the. The code adds pauses:
-//  - A 1 is aproximated by b1100000000 = 0x0300
-//  - A 0 is aproximated by     b110000 = 0x0030
-//
-// Note: The modulator expect to be run on a little-endian system and the frame
-// length to not exeed 11 bits. The frame length is not checked.
+// I've tried to modulate the Legic specific pause-puls using ssc and the default
+// ssc clock of 105.4 kHz (bit periode of 9.4us) - previous commit. However,
+// the timing was not precise enough. By increasing the ssc clock this could
+// be circumvented, but the adventage over bitbang would be little.
 //-----------------------------------------------------------------------------
 
-static void clean_frame(struct legic_frame *f) {
-  memset(f->data, 0xff, sizeof(f->data));
+static inline void tx_bit(bool bit) {
+  uint32_t ts = GetCountUS();
 
-  // add end of frame pause
-  f->data[0] ^= 0x03;
-  f->bits = 2;
-}
+  // insert pause
+  LOW(GPIO_SSC_DOUT);
+  while(GetCountUS() < ts + RWD_TIME_PAUSE) { };
+  HIGH(GPIO_SSC_DOUT);
 
-static void append_to_frame(struct legic_frame *f, uint8_t bit) {
-  uint8_t bit_pos  = f->bits % 8; // calculate bits used in partially used byte
-  uint8_t byte_pos = f->bits / 8; // calculate next free or partially used byte
-
-  static union frame_encoder frame_encoder;
-
+  // return to high, wait for bit periode to end
   if(bit) {
-    frame_encoder.uint32 = 0x0300 << bit_pos; // appended bits at bit_pos
-    f->bits +=   10;                          // store amount of bits appended
+    while(GetCountUS() < ts + RWD_TIME_1) { };
   } else {
-    frame_encoder.uint32 = 0x0030 << bit_pos; // appended bits at bit_pos
-    f->bits +=    6;                          // store amount of bits appended
+    while(GetCountUS() < ts + RWD_TIME_0) { };
   }
-
-  // Move data from encoder to frame. This d-tour is necessary bacause the uC
-  // does not support unaligned access. We use bitwise not and xor to flip bits.
-  for(uint8_t i = 0; i < sizeof(frame_encoder); ++i) {
-    f->data[i + byte_pos] ^= frame_encoder.uint8[i];
-  }
-}
-
-static uint8_t finalize_frame(struct legic_frame *f) {
-  // convert bits into full bytes
-  return (f->bits + 7) / 8;
 }
 
 //-----------------------------------------------------------------------------
@@ -175,33 +129,20 @@ static uint8_t finalize_frame(struct legic_frame *f) {
 //-----------------------------------------------------------------------------
 
 static void tx_frame(uint32_t frame, uint8_t len) {
-  static struct legic_frame legic_frame;
-  clean_frame(&legic_frame);
-
-  // add bit by bit to frame, MSB (last bit on air) first, this reverses the order
-  // reverse order keeps last pause aligned to byte boundry and in sync with ret
-  // of last tx_byte_to_fpga call. this in turn syncs our rx phase perfectly.
-  while(len > 0) {
-    uint8_t lsb = (frame >> --len) & 0x01;
-    append_to_frame(&legic_frame, lsb ^ legic_prng_get_bit());
-    legic_prng_forward(1);
-  }
-
-  // finalize frame, returns length in bytes
-  len = finalize_frame(&legic_frame);
-
-  // start tx with first frame preloaded
-  tx_byte_to_fpga(legic_frame.data[--len]);
   FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_TX);
 
   // transmit frame, MSB first
-  while(len > 0) {
-    tx_byte_to_fpga(legic_frame.data[--len]);
-  }
+  for(uint8_t i = 0; i < len; ++i) {
+    bool bit = (frame >> i) & 0x01;
+    tx_bit(bit ^ legic_prng_get_bit());
+    legic_prng_forward(1);
+  };
 
-  // tx queue has 2 cycles, add 2 empty frames to leave function in sync
-  tx_byte_to_fpga(0xff); // blocks until last frame is loaded into shift register
-  tx_byte_to_fpga(0xff); // blocks until last frame is done
+  // add pause to mark end of the frame
+  uint32_t ts = GetCountUS();
+  LOW(GPIO_SSC_DOUT);
+  while(GetCountUS() < ts + RWD_TIME_PAUSE) { };
+  HIGH(GPIO_SSC_DOUT);
 }
 
 static uint32_t rx_frame(uint8_t len) {
@@ -258,13 +199,13 @@ static void init_reader(bool clear_mem) {
                   | FPGA_HF_READER_RX_XCORR_QUARTER);
   SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 
-  // configure SSC with defaults (note: defaults are MSB first - Legic has LSB first,
-  // the rx stream is bit stuff in reverse to fix this. However, reversing the order
-  // will align the last pause to a byte boundry and we want that for synchronisation.
+  // configure SSC with defaults
   FpgaSetupSsc();
 
-  // and additonaly set Data Default to 1, to prevent glitches when switching to tx.
-  AT91C_BASE_SSC->SSC_TFMR |= AT91C_SSC_DATDEF;
+  // re-claim GPIO_SSC_DOUT as GPIO and enable output
+  AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
+  AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
+  HIGH(GPIO_SSC_DOUT);
 
   // reserve a cardmem, meaning we can use the tracelog function in bigbuff easier.
   legic_mem = BigBuf_get_EM_addr();
