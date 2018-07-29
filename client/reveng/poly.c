@@ -1,9 +1,9 @@
 /* poly.c
- * Greg Cook, 7/Feb/2017
+ * Greg Cook, 26/Jul/2018
  */
 
 /* CRC RevEng: arbitrary-precision CRC calculator and algorithm finder
- * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017
+ * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018
  * Gregory Cook
  *
  * This file is part of CRC RevEng.
@@ -22,7 +22,8 @@
  * along with CRC RevEng.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/* 2016-06-27: pcmp() shortcut returns 0 when pointers identical
+/* 2017-11-28: added braces, redundant statement skipped in prev()
+ * 2016-06-27: pcmp() shortcut returns 0 when pointers identical
  * 2015-07-29: discard leading $, &, 0x from argument to strtop()
  * 2015-04-03: added direct mode to strtop()
  * 2014-01-11: added LOFS(), RNDUP()
@@ -807,9 +808,10 @@ prev(poly_t *poly) {
 			*poly->bitmap = rev(*poly->bitmap >> ofs, (int) poly->length) << ofs;
 			return;
 		}
+
+		/* claim remaining bits of last word (as we use public function pshift()) */
+		poly->length = fulllength;
 	}
-	/* claim remaining bits of last word (as we use public function pshift()) */
-	poly->length = fulllength;
 
 	/* reverse and swap words in the array, leaving it right-justified */
 	while(leftidx < rightidx) {

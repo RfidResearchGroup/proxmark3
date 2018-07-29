@@ -48,7 +48,7 @@ int CmdCrc(const char *Cmd)
 	char *argv[MAX_ARGS];
 	int argc = split(Cmd2, argv);
 
-	if (argc == 3 && memcmp(argv[1],"-g",2)==0) {
+	if (argc == 3 && memcmp(argv[1], "-g", 2) == 0) {
 		CmdrevengSearch(argv[2]);
 	} else {
 		reveng_main(argc, argv);
@@ -56,8 +56,7 @@ int CmdCrc(const char *Cmd)
 	for(int i = 0; i < argc; ++i) {
 		free(argv[i]);
 	}
-
-  return 0; 
+	return 0; 
 }
 
 //returns array of model names and the count of models returning
@@ -396,13 +395,16 @@ char *SwapEndianStr(const char *inStr, const size_t len, const uint8_t blockSize
 
 // takes hex string in and searches for a matching result (hex string must include checksum)
 int CmdrevengSearch(const char *Cmd){
+
+#define NMODELS 103	
+	
 	char inHexStr[100] = {0x00};
 	int dataLen = param_getstr(Cmd, 0, inHexStr, sizeof(inHexStr));
 	if (dataLen < 4) return 0;
 
 	// these two arrays, must match preset size.
-	char *Models[102];
-	uint8_t width[102] = {0};
+	char *Models[NMODELS];
+	uint8_t width[NMODELS] = {0};
 	int count = 0;
 
 	uint8_t crcChars = 0;

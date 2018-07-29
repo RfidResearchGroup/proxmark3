@@ -456,15 +456,16 @@ static int l_sha1(lua_State *L) {
 
 static int l_reveng_models(lua_State *L){
 
+// This array needs to be adjusted if RevEng adds more crc-models.
+#define NMODELS 103
+
 	int count = 0;
 	uint8_t in_width = luaL_checkunsigned(L, 1);
 	if ( in_width > 89 ) return returnToLuaWithError(L,"Width cannot exceed 89, got %d", in_width);
 
-	// This array needs to be adjusted if RevEng adds more crc-models.
-	uint8_t width[102];
+	uint8_t width[NMODELS];
 	memset(width, 0, sizeof(width));
-	// This array needs to be adjusted if RevEng adds more crc-models.
-	char *models[102];
+	char *models[NMODELS];
 
 	width[0] = in_width;
 	

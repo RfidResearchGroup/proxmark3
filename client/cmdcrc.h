@@ -28,8 +28,6 @@
 #include "ui.h"
 #include "util.h"
 
-
-
 extern int CmdCrc(const char *Cmd);
 
 extern int CmdrevengSearch(const char *Cmd);

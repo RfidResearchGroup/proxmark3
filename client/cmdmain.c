@@ -1,6 +1,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
 //
+// Modified 2018 iceman <iceman at iuse.se>
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
@@ -32,14 +33,14 @@ static command_t CommandTable[] = {
 	{"hf",		CmdHF,		1, "{ High Frequency commands... }"},
 	{"hw",		CmdHW,		1, "{ Hardware commands... }"},
 	{"lf",		CmdLF,		1, "{ Low Frequency commands... }"},
-	{"reveng",	CmdRev, 	1, "{ Crc calculations from the software reveng 1.51... }"},
+	{"reveng",	CmdRev, 	1, "{ Crc calculations from the software reveng 1.53... }"},
 	{"script",	CmdScript,	1, "{ Scripting commands }"},
 	{"trace",	CmdTrace,	1, "{ Trace manipulation... }"},
 #ifdef WITH_FLASH		
 	{"mem",		CmdFlashMem,	1, "{ RDV40, Flash Memory manipulation... }"},
 #endif
 #ifdef WITH_SMARTCARD
-	{"sc",	CmdSmartcard,	1, "{ RDV40, Smart card ISO7816 commands... }"},
+	{"sc",		CmdSmartcard,	1, "{ RDV40, Smart card ISO7816 commands... }"},
 #endif
 	{"quit",	CmdQuit,	1, ""},
 	{"exit",	CmdQuit,	1, "Exit program"},

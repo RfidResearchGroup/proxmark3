@@ -1,9 +1,9 @@
 /* reveng.c
- * Greg Cook, 7/Feb/2017
+ * Greg Cook, 26/Jul/2018
  */
 
 /* CRC RevEng: arbitrary-precision CRC calculator and algorithm finder
- * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017
+ * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018
  * Gregory Cook
  *
  * This file is part of CRC RevEng.
