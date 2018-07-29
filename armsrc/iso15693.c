@@ -950,7 +950,7 @@ void ReaderIso15693(uint32_t parameter) {
 // all demodulation performed in arm rather than host. - greg
 void SimTagIso15693(uint32_t parameter, uint8_t *uid) {
 	
-	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);		
+	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);	
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 	FpgaSetupSsc();
 	// Start from off (no field generated)

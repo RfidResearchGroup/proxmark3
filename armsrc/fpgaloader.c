@@ -145,7 +145,7 @@ void FpgaSetupSscExt(uint8_t clearPCER) {
 
 	// clock comes from TK pin, no clock output, outputs change on falling
 	// edge of TK, sample on rising edge of TK, start on positive-going edge of sync
-	AT91C_BASE_SSC->SSC_TCMR = SSC_CLOCK_MODE_SELECT(2) |	SSC_CLOCK_MODE_START(5);
+	AT91C_BASE_SSC->SSC_TCMR = SSC_CLOCK_MODE_SELECT(2) | SSC_CLOCK_MODE_START(5);
 
 	// tx framing is the same as the rx framing
 	AT91C_BASE_SSC->SSC_TFMR = AT91C_BASE_SSC->SSC_RFMR;

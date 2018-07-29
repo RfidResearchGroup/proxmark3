@@ -1127,11 +1127,14 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 	LEDsoff();
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+
 	// this will clear out bigbuf memory,  the eload command must select this before!
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-	FpgaSetupSsc();
+	
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
-
+	
+	FpgaSetupSsc();
+	
 	// Enable and clear the trace
 	clear_trace();
 	set_tracing(true);
@@ -1799,9 +1802,9 @@ void setupIclassReader() {
 	
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	
-    FpgaSetupSsc();
-
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+	
+    FpgaSetupSsc();
 
     // Reset trace buffer
 	clear_trace();
