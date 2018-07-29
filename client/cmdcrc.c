@@ -150,7 +150,6 @@ int GetModels(char *Models[], int *count, uint8_t *width){
 					if (pset.flags & P_REFOUT)
 						prev(&apoly);
 					
-					
 					for (qptr = apolys; qptr < pptr; ++qptr) {
 						crc = pcrc(*qptr, pset.spoly, pset.init, apoly, 0);
 						if (ptst(crc)) {

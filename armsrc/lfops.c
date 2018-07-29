@@ -350,7 +350,9 @@ void AcquireTiType(void)
 
 	AT91C_BASE_SSC->SSC_RCMR = SSC_CLOCK_MODE_SELECT(0);
 	AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(32) | AT91C_SSC_MSBF;
+	// Transmit Clock Mode Register
 	AT91C_BASE_SSC->SSC_TCMR = 0;
+	// Transmit Frame Mode Register
 	AT91C_BASE_SSC->SSC_TFMR = 0;
 	// iceman, FpgaSetupSsc() ?? the code above? can it be replaced?
 	LED_D_ON();
