@@ -36,6 +36,7 @@
 #include "common.h"
 #include "usb_cmd.h"
 #include "usb_cdc.h"
+#include "usart.h"
 #include "proxmark3.h"
 
 bool cmd_receive(UsbCommand* cmd);

@@ -1053,6 +1053,21 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 		}
 #endif    
 
+#ifdef WITH_FPC
+		case CMD_FPC_SEND: {
+//			char header[] = {"*** Iceman Usart ***"};
+//			uint32_t res = usart_writebuffer((uint8_t *)header, sizeof(header), 10000);
+			
+			//temp++;
+			uint8_t got = usart_read(10000);
+			if ( got > 0 ) {
+				Dbprintf("got %02x", got);			
+				usart_write(got, 10000);
+			}
+			cmd_send(CMD_ACK,0,0,0,0,0);
+			break;
+		}
+#endif
 		case CMD_BUFF_CLEAR:
 			BigBuf_Clear();
 			break;
@@ -1292,7 +1307,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			switch(c->arg[0]) {
 				case 0: SetAdcMuxFor(GPIO_MUXSEL_LOPKD); break;
 				case 2: SetAdcMuxFor(GPIO_MUXSEL_HIPKD); break;
-#ifndef WITH_FPC			
+#ifndef WITH_FPC
 				case 1: SetAdcMuxFor(GPIO_MUXSEL_LORAW); break;
 				case 3: SetAdcMuxFor(GPIO_MUXSEL_HIRAW); break;
 #endif
@@ -1307,12 +1322,6 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			break;
 		case CMD_PING:
 			cmd_send(CMD_ACK,0,0,0,0,0);
-
-#ifdef WITH_FPC				
-			char header[] = {"*** Iceman Usart ***"};
-			uint32_t res = usart_writebuffer((uint8_t *)header, sizeof(header), 100000);
-			Dbprintf("after sending FPC  [%x]", res);
-#endif
 			break;
 #ifdef WITH_LCD
 		case CMD_LCD_RESET:
@@ -1406,6 +1415,7 @@ void  __attribute__((noreturn)) AppMain(void) {
 #ifdef WITH_SMARTCARD
 	I2C_init();
 #endif
+
 #ifdef WITH_FPC
 	usart_init();
 #endif	

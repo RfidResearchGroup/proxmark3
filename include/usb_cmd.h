@@ -83,6 +83,10 @@ typedef struct{
 #define CMD_SMART_SETBAUD												  0x0144
 #define CMD_SMART_SETCLOCK												  0x0145
 
+// RDV40,  FPC serial
+#define CMD_FPC_SEND													  0x0160
+#define CMD_FPC_READ													  0x0161
+
 // For low-frequency tags
 #define CMD_READ_TI_TYPE                                                  0x0202
 #define CMD_WRITE_TI_TYPE                                                 0x0203

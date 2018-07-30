@@ -53,7 +53,6 @@ int usage_analyse_crc(void){
 	PrintAndLogEx(NORMAL, "      analyse crc 137AF00A0A0D");
 	return 0;
 }
-
 int usage_analyse_nuid(void){
 	PrintAndLogEx(NORMAL, "Generate 4byte NUID from 7byte UID");
 	PrintAndLogEx(NORMAL, "");
@@ -64,6 +63,18 @@ int usage_analyse_nuid(void){
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Examples:");
 	PrintAndLogEx(NORMAL, "      analyse nuid 11223344556677");
+	return 0;
+}
+int usage_analyse_a(void) {
+	PrintAndLogEx(NORMAL, "my personal garbage test command");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Usage:  analyse a [h] d <bytes>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "           h          This help");
+	PrintAndLogEx(NORMAL, "           d <bytes>  bytes to send to device");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "      analyse a d 137AF00A0A0D");
 	return 0;
 }
 
@@ -484,7 +495,7 @@ int CmdAnalyseA(const char *Cmd){
 			cmdp += 2;			
 			break;
 		case 'h':
-			return usage_analyse_checksum();
+			return usage_analyse_a();
 		default:
 			PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
 			errors = true;
@@ -492,9 +503,20 @@ int CmdAnalyseA(const char *Cmd){
 		}
 	}
 	//Validations
-	if (errors || cmdp == 0 ) return usage_analyse_checksum();
+	if (errors || cmdp == 0 ) return usage_analyse_a();
 
+		
+	UsbCommand c = {CMD_FPC_SEND, {0, 0, 0}};
+	clearCommandBuffer();
+	SendCommand(&c);
 
+	UsbCommand resp;
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+		return 1;
+	}
+	PrintAndLogEx(NORMAL, "got ack");
+	return 0;
+		
 	PrintAndLogEx(NORMAL, "-- " _BLUE_(its my message) "\n");
 	PrintAndLogEx(NORMAL, "-- " _RED_(its my message) "\n");
 	PrintAndLogEx(NORMAL, "-- " _YELLOW_(its my message) "\n");
