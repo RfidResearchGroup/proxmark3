@@ -21,10 +21,28 @@ static legic_card_select_t card;/* metadata of currently selected card */
 static crc_t legic_crc;
 static int32_t input_threshold; /* values > threshold are 1 else 0 */
 
-// LEGIC RF is using the common timer functions: StartCountUS() and GetCountUS()
+//-----------------------------------------------------------------------------
+// Frame timing and pseudorandom number generator
+//
+// The Prng is forwarded every 100us (TAG_BIT_PERIOD), except when the reader is
+// transmitting. In that case the prng has to be forwarded every bit transmitted:
+//  - 60us for a 0 (RWD_TIME_0)
+//  - 100us for a 1 (RWD_TIME_1)
+//
+// The data dependent timing makes writing comprehensible code significantly
+// harder. The current aproach forwards the prng data based if there is data on
+// air and time based, using GetCountUS(), during computational and wait periodes.
+//
+// To not have the necessity to calculate/guess exection time dependend timeouts
+// tx_frame and rx_frame use a shared timestamp to coordinate tx and rx timeslots.
+//-----------------------------------------------------------------------------
+
+static uint32_t last_frame_end; /* ts of last bit of previews rx or tx frame */
+
 #define RWD_TIME_PAUSE       20 /* 20us */
 #define RWD_TIME_1          100 /* READER_TIME_PAUSE 20us off + 80us on = 100us */
 #define RWD_TIME_0           60 /* READER_TIME_PAUSE 20us off + 40us on = 60us */
+#define RWD_FRAME_WAIT      220 /* 220us from TAG frame end to READER frame start */
 #define TAG_FRAME_WAIT      330 /* 330us from READER frame end to TAG frame start */
 #define TAG_BIT_PERIOD      100 /* 100us */
 
@@ -73,9 +91,8 @@ static inline int32_t sample_power() {
 // An aproximated power measurement is available every 18.9us. The bit time
 // is 100us. The code samples 5 times and uses samples 3 and 4.
 //
-// Note: The demodulator is drifting (18.9us * 5 = 94.5us), since the longest
-// respons is 12 bits, the demodulator will stay in sync with a margin of
-// error of 20us left. Sending the next request will resync the card.
+// Note: The demodulator would be drifting (18.9us * 5 != 100us), rx_frame
+// has a delay loop that aligns rx_bit calls to the TAG tx timeslots.
 static inline bool rx_bit() {
   static int32_t p[5];
   for(size_t i = 0; i<5; ++i) {
@@ -103,19 +120,15 @@ static inline bool rx_bit() {
 //-----------------------------------------------------------------------------
 
 static inline void tx_bit(bool bit) {
-  uint32_t ts = GetCountUS();
-
   // insert pause
   LOW(GPIO_SSC_DOUT);
-  while(GetCountUS() < ts + RWD_TIME_PAUSE) { };
+  last_frame_end += RWD_TIME_PAUSE;
+  while(GetCountUS() < last_frame_end) { };
   HIGH(GPIO_SSC_DOUT);
 
   // return to high, wait for bit periode to end
-  if(bit) {
-    while(GetCountUS() < ts + RWD_TIME_1) { };
-  } else {
-    while(GetCountUS() < ts + RWD_TIME_0) { };
-  }
+  last_frame_end += (bit ? RWD_TIME_1 : RWD_TIME_0) - RWD_TIME_PAUSE;
+  while(GetCountUS() < last_frame_end) { };
 }
 
 //-----------------------------------------------------------------------------
@@ -131,6 +144,10 @@ static inline void tx_bit(bool bit) {
 static void tx_frame(uint32_t frame, uint8_t len) {
   FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_TX);
 
+  // wait for next tx timeslot
+  last_frame_end += RWD_FRAME_WAIT;
+  while(GetCountUS() < last_frame_end) { };
+
   // transmit frame, MSB first
   for(uint8_t i = 0; i < len; ++i) {
     bool bit = (frame >> i) & 0x01;
@@ -139,9 +156,9 @@ static void tx_frame(uint32_t frame, uint8_t len) {
   };
 
   // add pause to mark end of the frame
-  uint32_t ts = GetCountUS();
   LOW(GPIO_SSC_DOUT);
-  while(GetCountUS() < ts + RWD_TIME_PAUSE) { };
+  last_frame_end += RWD_TIME_PAUSE;
+  while(GetCountUS() < last_frame_end) { };
   HIGH(GPIO_SSC_DOUT);
 }
 
@@ -150,10 +167,18 @@ static uint32_t rx_frame(uint8_t len) {
                   | FPGA_HF_READER_RX_XCORR_848_KHZ
                   | FPGA_HF_READER_RX_XCORR_QUARTER);
 
+  // hold sampling until card is expected to respond
+  last_frame_end += TAG_FRAME_WAIT;
+  while(GetCountUS() < last_frame_end) { };
+
   uint32_t frame = 0;
   for(uint8_t i = 0; i < len; i++) {
     frame |= (rx_bit() ^ legic_prng_get_bit()) << i;
     legic_prng_forward(1);
+
+    // rx_bit runs only 95us, resync to TAG_BIT_PERIOD
+    last_frame_end += TAG_BIT_PERIOD;
+    while(GetCountUS() < last_frame_end) { };
   }
 
   return frame;
@@ -231,7 +256,8 @@ static void init_reader(bool clear_mem) {
 //  - Receive card type 6 bits
 //  - Acknowledge frame 6 bits
 static uint32_t setup_phase_reader(uint8_t iv) {
-  uint32_t ts = GetCountUS();
+  // init coordination timestamp
+  last_frame_end = GetCountUS();
 
   // Switch on carrier and let the card charge for 5ms.
   // Use the time to calibrate the treshhold.
@@ -241,24 +267,21 @@ static uint32_t setup_phase_reader(uint8_t iv) {
     if(sample > input_threshold) {
       input_threshold = sample;
     }
-  } while(GetCountUS() < ts + 5000);
+  } while(GetCountUS() < last_frame_end + 5000);
 
   // Set threshold to noise floor * 2
   input_threshold <<= 1;
 
   legic_prng_init(0);
   tx_frame(iv, 7);
-  ts = GetCountUS();
 
   // configure iv
   legic_prng_init(iv);
   legic_prng_forward(2);
 
-  // wait until card is expect to respond
-  while(GetCountUS() < ts + TAG_FRAME_WAIT) { };
-
   // receive card type
   int32_t card_type = rx_frame(6);
+  legic_prng_forward(3);
 
   // send obsfuscated acknowledgment frame
   switch (card_type) {
@@ -284,7 +307,9 @@ static int16_t read_byte(uint16_t index, uint8_t cmd_sz) {
   uint16_t cmd = (index << 1) | LEGIC_READ;
 
   // read one byte
+  legic_prng_forward(2);
   tx_frame(cmd, cmd_sz);
+  legic_prng_forward(2);
   uint32_t frame = rx_frame(12);
 
   // split frame into data and crc
@@ -297,6 +322,8 @@ static int16_t read_byte(uint16_t index, uint8_t cmd_sz) {
     Dbprintf("!!! crc mismatch: %x != %x !!!",  calc_crc, crc);
     return -1;
   }
+
+  legic_prng_forward(1);
 
   return byte;
 }
