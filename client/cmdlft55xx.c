@@ -198,7 +198,7 @@ void printT5xxHeader(uint8_t page){
 int CmdT55xxSetConfig(const char *Cmd) {
 
 	uint8_t offset = 0;
-	char modulation[5] = {0x00};
+	char modulation[6] = {0x00};
 	char tmp = 0x00;
 	uint8_t bitRate = 0;
 	uint8_t rates[9] = {8,16,32,40,50,64,100,128,0};
