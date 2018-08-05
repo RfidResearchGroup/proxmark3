@@ -7,9 +7,9 @@
 //-----------------------------------------------------------------------------
 
 #include <stdio.h>
-#include "sleep.h"
+#include "util_posix.h"
 #include "ui.h"
-#include "proxusb.h"
+//#include "proxusb.h"
 #include "cmdmain.h"
 
 #define HANDLE_ERROR if (error_occured) { \
@@ -37,7 +37,7 @@ int main(int argc, char **argv)
   return_on_error = 1;
 
   while (1) {
-    while (!OpenProxmark(0)) { sleep(1); }
+    while (!OpenProxmark()) { sleep(1); }
     while (1) {
       UsbCommand cmdbuf;
       CommandReceived(argv[1]);

@@ -11,9 +11,11 @@
 #ifndef __UTIL_H
 #define __UTIL_H
 
-#include <stddef.h>
-#include <stdint.h>
-#include <common.h>
+#include "common.h"
+#include "proxmark3.h"
+#include "string.h"
+#include "BigBuf.h"
+#include "ticks.h"
 
 #define BYTEx(x, n) (((x) >> (n * 8)) & 0xff )
 
@@ -27,27 +29,33 @@
 #define BUTTON_DOUBLE_CLICK -2
 #define BUTTON_ERROR -99
 
+#ifndef BSWAP_16
+# define BSWAP_16(x) ((( ((x) & 0xFF00 ) >> 8))| ( (((x) & 0x00FF) << 8)))
+#endif
+#ifndef BITMASK
+# define BITMASK(X) (1 << (X))
+#endif
+#ifndef ARRAYLEN
+# define ARRAYLEN(x) (sizeof(x)/sizeof((x)[0]))
+#endif
+
 size_t nbytes(size_t nbits);
-uint32_t SwapBits(uint32_t value, int nrbits);
+
+extern uint32_t reflect(uint32_t v, int b); // used in crc.c ...
+extern uint8_t reflect8(uint8_t b);		// dedicated 8bit reversal
+extern uint16_t reflect16(uint16_t b);	// dedicated 16bit reversal
+
 void num_to_bytes(uint64_t n, size_t len, uint8_t* dest);
 uint64_t bytes_to_num(uint8_t* src, size_t len);
+void rol(uint8_t *data, const size_t len);
+void lsl (uint8_t *data, size_t len);
+int32_t le24toh (uint8_t data[3]);
+uint8_t hex2int(char hexchar);
 
-void SpinDelay(int ms);
-void SpinDelayUs(int us);
 void LED(int led, int ms);
 void LEDsoff();
 int BUTTON_CLICKED(int ms);
 int BUTTON_HELD(int ms);
 void FormatVersionInformation(char *dst, int len, const char *prefix, void *version_information);
-
-void StartTickCount();
-uint32_t RAMFUNC GetTickCount();
-
-void StartCountUS();
-uint32_t RAMFUNC GetCountUS();
-uint32_t RAMFUNC GetDeltaCountUS();
-
-void StartCountSspClk();
-uint32_t RAMFUNC GetCountSspClk();
 
 #endif

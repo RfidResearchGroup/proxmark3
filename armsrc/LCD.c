@@ -5,11 +5,7 @@
 //-----------------------------------------------------------------------------
 // LCD code
 //-----------------------------------------------------------------------------
-
-#include "proxmark3.h"
-#include "apps.h"
 #include "LCD.h"
-#include "fonts.h"
 
 void LCDSend(unsigned int data)
 {

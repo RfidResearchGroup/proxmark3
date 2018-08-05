@@ -428,7 +428,7 @@ typedef struct _AT91S_PIO {
 #define PIO_PDR         (AT91_CAST(AT91_REG *) 	0x00000004) // (PIO_PDR) PIO Disable Register
 #define PIO_PSR         (AT91_CAST(AT91_REG *) 	0x00000008) // (PIO_PSR) PIO Status Register
 #define PIO_OER         (AT91_CAST(AT91_REG *) 	0x00000010) // (PIO_OER) Output Enable Register
-#define PIO_ODR         (AT91_CAST(AT91_REG *) 	0x00000014) // (PIO_ODR) Output Disable Registerr
+#define PIO_ODR         (AT91_CAST(AT91_REG *) 	0x00000014) // (PIO_ODR) Output Disable Register
 #define PIO_OSR         (AT91_CAST(AT91_REG *) 	0x00000018) // (PIO_OSR) Output Status Register
 #define PIO_IFER        (AT91_CAST(AT91_REG *) 	0x00000020) // (PIO_IFER) Input Filter Enable Register
 #define PIO_IFDR        (AT91_CAST(AT91_REG *) 	0x00000024) // (PIO_IFDR) Input Filter Disable Register
@@ -1563,7 +1563,7 @@ typedef struct _AT91S_TCB {
 // *****************************************************************************
 #ifndef __ASSEMBLY__
 typedef struct _AT91S_PWMC_CH {
-	AT91_REG	 PWMC_CMR; 	// Channel Mode Register
+	AT91_REG	 PWMC_CMR; 		// Channel Mode Register
 	AT91_REG	 PWMC_CDTYR; 	// Channel Duty Cycle Register
 	AT91_REG	 PWMC_CPRDR; 	// Channel Period Register
 	AT91_REG	 PWMC_CCNTR; 	// Channel Counter Register
@@ -1738,7 +1738,7 @@ typedef struct _AT91S_UDP {
 #define AT91C_UDP_EPEDS       (0x1 << 15) // (UDP) Endpoint Enable Disable
 #define AT91C_UDP_RXBYTECNT   (0x7FF << 16) // (UDP) Number Of Bytes Available in the FIFO
 // -------- UDP_TXVC : (UDP Offset: 0x74) Transceiver Control Register --------
-#define AT91C_UDP_TXVDIS      (0x1 <<  8) // (UDP)
+#define AT91C_UDP_TXVDIS      (0x1 <<  8) // (UDP)  Transceiver Disable
 
 // *****************************************************************************
 //               REGISTER ADDRESS DEFINITION FOR AT91SAM7S512

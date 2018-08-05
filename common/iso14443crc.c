@@ -8,41 +8,38 @@
 
 #include "iso14443crc.h"
 
-static unsigned short UpdateCrc14443(unsigned char ch, unsigned short *lpwCrc)
-{
-    ch = (ch ^ (unsigned char) ((*lpwCrc) & 0x00FF));
-    ch = (ch ^ (ch << 4));
-    *lpwCrc = (*lpwCrc >> 8) ^ ((unsigned short) ch << 8) ^
-              ((unsigned short) ch << 3) ^ ((unsigned short) ch >> 4);
-    return (*lpwCrc);
+
+uint16_t UpdateCrc14443(uint8_t b, uint16_t *crc) {
+    b = (b ^ (uint8_t)((*crc) & 0x00FF));
+    b = (b ^ (b << 4));
+    *crc = (*crc >> 8) ^ ((uint16_t) b << 8) ^ ((uint16_t) b << 3) ^ ((uint16_t) b >> 4);
+    return (*crc);
 }
 
-void ComputeCrc14443(int CrcType,
-                     const unsigned char *Data, int Length,
-                     unsigned char *TransmitFirst,
-                     unsigned char *TransmitSecond)
+void ComputeCrc14443(uint16_t CrcType, const uint8_t *data, int length,
+                     uint8_t *TransmitFirst, uint8_t *TransmitSecond)
 {
-    unsigned char chBlock;
-    unsigned short wCrc=CrcType;
+    uint8_t b;
+    uint16_t crc = CrcType;
 
-  do {
-        chBlock = *Data++;
-        UpdateCrc14443(chBlock, &wCrc);
-    } while (--Length);
+	do {
+        b = *data++;
+        UpdateCrc14443(b, &crc);
+    } while (--length);
 
     if (CrcType == CRC_14443_B)
-        wCrc = ~wCrc;                /* ISO/IEC 13239 (formerly ISO/IEC 3309) */
+        crc = ~crc;                /* ISO/IEC 13239 (formerly ISO/IEC 3309) */
 
-    *TransmitFirst = (unsigned char) (wCrc & 0xFF);
-    *TransmitSecond = (unsigned char) ((wCrc >> 8) & 0xFF);
+    *TransmitFirst = (uint8_t) (crc & 0xFF);
+    *TransmitSecond = (uint8_t)((crc >> 8) & 0xFF);
     return;
 }
 
-int CheckCrc14443(int CrcType, const unsigned char *Data, int Length) {
-	unsigned char b1;
-	unsigned char b2;
-	if (Length < 3) return 0;
-	ComputeCrc14443(CrcType, Data, Length - 2, &b1, &b2);
-	if ((b1 == Data[Length - 2]) && (b2 == Data[Length - 1])) return 1;
-	return 0;
+bool CheckCrc14443(uint16_t CrcType, const uint8_t *data, int length) {
+	if (length < 3) return false;
+	uint8_t b1, b2;
+	ComputeCrc14443(CrcType, data, length - 2, &b1, &b2);
+	if ((b1 == data[length - 2]) && (b2 == data[length - 1])) 
+		return true;
+	return false;
 }

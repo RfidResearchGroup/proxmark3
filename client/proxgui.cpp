@@ -10,59 +10,70 @@
 
 #include "proxgui.h"
 #include "proxguiqt.h"
+#include "proxmark3.h"
 
 static ProxGuiQT *gui = NULL;
+static WorkerThread *main_loop_thread = NULL;
+
+WorkerThread::WorkerThread(char *script_cmds_file, char *script_cmd, bool usb_present) : script_cmds_file(script_cmds_file), script_cmd(script_cmd), usb_present(usb_present)
+{
+}
+
+WorkerThread::~WorkerThread() 
+{
+}
+
+void WorkerThread::run() {
+	main_loop(script_cmds_file, script_cmd, usb_present);
+}
 
 extern "C" void ShowGraphWindow(void)
 {
-  if (!gui)
-    return;
+	if (!gui)
+		return;
 
-  gui->ShowGraphWindow();
+	gui->ShowGraphWindow();
 }
 
 extern "C" void HideGraphWindow(void)
 {
-  if (!gui)
-    return;
+	if (!gui)
+		return;
 
-  gui->HideGraphWindow();
+	gui->HideGraphWindow();
 }
 
 extern "C" void RepaintGraphWindow(void)
 {
-  if (!gui)
-    return;
+	if (!gui)
+		return;
 
-  gui->RepaintGraphWindow();
+	gui->RepaintGraphWindow();
 }
 
 extern "C" void MainGraphics(void)
 {
-  if (!gui)
-    return;
+	if (!gui)
+		return;
 
-  gui->MainLoop();
+	gui->MainLoop();
 }
 
-extern "C" void InitGraphics(int argc, char **argv)
+extern "C" void InitGraphics(int argc, char **argv, char *script_cmds_file, char *script_cmd, bool usb_present)
 {
 #ifdef Q_WS_X11
-  bool useGUI = getenv("DISPLAY") != 0;
-#else
-  bool useGUI = true;
+	if (getenv("DISPLAY") == NULL)
+		return;
 #endif
-  if (!useGUI)
-    return;
-
-  gui = new ProxGuiQT(argc, argv);
+	main_loop_thread = new WorkerThread(script_cmds_file, script_cmd, usb_present);
+	gui = new ProxGuiQT(argc, argv, main_loop_thread);
 }
 
 extern "C" void ExitGraphics(void)
 {
-  if (!gui)
-    return;
+	if (!gui)
+		return;
 
-  delete gui;
-  gui = NULL;
+	gui->Exit();
+	gui = NULL;
 }

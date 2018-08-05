@@ -9,18 +9,44 @@
 // Routines to load the FPGA image, and then to configure the FPGA's major
 // mode once it is configured.
 //-----------------------------------------------------------------------------
-#include "proxmark3.h"
-#include "apps.h"
-#include "util.h"
-#include "string.h"
+#include "fpgaloader.h"
+
+
+// remember which version of the bitstream we have already downloaded to the FPGA
+static int downloaded_bitstream = 0;
+
+// this is where the bitstreams are located in memory:
+extern uint8_t _binary_obj_fpga_all_bit_z_start, _binary_obj_fpga_all_bit_z_end;
+
+static uint8_t *fpga_image_ptr = NULL;
+static uint32_t uncompressed_bytes_cnt;
+
+#define OUTPUT_BUFFER_LEN 		80
 
 //-----------------------------------------------------------------------------
 // Set up the Serial Peripheral Interface as master
 // Used to write the FPGA config word
 // May also be used to write to other SPI attached devices like an LCD
 //-----------------------------------------------------------------------------
-void SetupSpi(int mode)
-{
+static void DisableSpi(void) {		
+	//* Reset all the Chip Select register
+    AT91C_BASE_SPI->SPI_CSR[0] = 0;
+    AT91C_BASE_SPI->SPI_CSR[1] = 0;
+    AT91C_BASE_SPI->SPI_CSR[2] = 0;
+    AT91C_BASE_SPI->SPI_CSR[3] = 0;
+
+    // Reset the SPI mode
+    AT91C_BASE_SPI->SPI_MR = 0;
+
+    // Disable all interrupts
+    AT91C_BASE_SPI->SPI_IDR = 0xFFFFFFFF;
+	
+	// SPI disable
+	AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SPIDIS;
+}
+
+void SetupSpi(int mode) {
+	// PA1	-> SPI_NCS3 chip select (MEM)
 	// PA10 -> SPI_NCS2 chip select (LCD)
 	// PA11 -> SPI_NCS0 chip select (FPGA)
 	// PA12 -> SPI_MISO Master-In Slave-Out
@@ -28,65 +54,62 @@ void SetupSpi(int mode)
 	// PA14 -> SPI_SPCK Serial Clock
 
 	// Disable PIO control of the following pins, allows use by the SPI peripheral
-	AT91C_BASE_PIOA->PIO_PDR =
-		GPIO_NCS0	|
-		GPIO_NCS2 	|
-		GPIO_MISO	|
-		GPIO_MOSI	|
-		GPIO_SPCK;
+	AT91C_BASE_PIOA->PIO_PDR = GPIO_NCS0 | GPIO_MISO | GPIO_MOSI | GPIO_SPCK;
 
-	AT91C_BASE_PIOA->PIO_ASR =
-		GPIO_NCS0	|
-		GPIO_MISO	|
-		GPIO_MOSI	|
-		GPIO_SPCK;
+	// Peripheral A
+	AT91C_BASE_PIOA->PIO_ASR = GPIO_NCS0 | GPIO_MISO | GPIO_MOSI | GPIO_SPCK;
 
-	AT91C_BASE_PIOA->PIO_BSR = GPIO_NCS2;
+	// Peripheral B
+	//AT91C_BASE_PIOA->PIO_BSR |= GPIO_NCS2;
 
 	//enable the SPI Peripheral clock
-	AT91C_BASE_PMC->PMC_PCER = (1<<AT91C_ID_SPI);
+	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_SPI);
 	// Enable SPI
 	AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SPIEN;
 
 	switch (mode) {
 		case SPI_FPGA_MODE:
 			AT91C_BASE_SPI->SPI_MR =
-				( 0 << 24)	|	// Delay between chip selects (take default: 6 MCK periods)
-				(14 << 16)	|	// Peripheral Chip Select (selects FPGA SPI_NCS0 or PA11)
-				( 0 << 7)	|	// Local Loopback Disabled
-				( 1 << 4)	|	// Mode Fault Detection disabled
-				( 0 << 2)	|	// Chip selects connected directly to peripheral
-				( 0 << 1) 	|	// Fixed Peripheral Select
-				( 1 << 0);		// Master Mode
+				( 0 << 24)			|	// Delay between chip selects (take default: 6 MCK periods)
+				(0xE << 16)			|	// Peripheral Chip Select (selects FPGA SPI_NCS0 or PA11)
+				( 0 << 7)			|	// Local Loopback Disabled
+				AT91C_SPI_MODFDIS 	|	// Mode Fault Detection disabled
+				( 0 << 2)			|	// Chip selects connected directly to peripheral
+				AT91C_SPI_PS_FIXED	|	// Fixed Peripheral Select
+				AT91C_SPI_MSTR;		// Master Mode
+				
 			AT91C_BASE_SPI->SPI_CSR[0] =
 				( 1 << 24)	|	// Delay between Consecutive Transfers (32 MCK periods)
 				( 1 << 16)	|	// Delay Before SPCK (1 MCK period)
 				( 6 << 8)	|	// Serial Clock Baud Rate (baudrate = MCK/6 = 24Mhz/6 = 4M baud
-				( 8 << 4)	|	// Bits per Transfer (16 bits)
+				AT91C_SPI_BITS_16 |	// Bits per Transfer (16 bits)
 				( 0 << 3)	|	// Chip Select inactive after transfer
-				( 1 << 1)	|	// Clock Phase data captured on leading edge, changes on following edge
+				AT91C_SPI_NCPHA	|	// Clock Phase data captured on leading edge, changes on following edge
 				( 0 << 0);		// Clock Polarity inactive state is logic 0
 			break;
-		case SPI_LCD_MODE:
+/*
+			case SPI_LCD_MODE:
 			AT91C_BASE_SPI->SPI_MR =
 				( 0 << 24)	|	// Delay between chip selects (take default: 6 MCK periods)
-				(11 << 16)	|	// Peripheral Chip Select (selects LCD SPI_NCS2 or PA10)
+				(0xB << 16)	|	// Peripheral Chip Select (selects LCD SPI_NCS2 or PA10)
 				( 0 << 7)	|	// Local Loopback Disabled
 				( 1 << 4)	|	// Mode Fault Detection disabled
 				( 0 << 2)	|	// Chip selects connected directly to peripheral
 				( 0 << 1) 	|	// Fixed Peripheral Select
 				( 1 << 0);		// Master Mode
+				
 			AT91C_BASE_SPI->SPI_CSR[2] =
 				( 1 << 24)	|	// Delay between Consecutive Transfers (32 MCK periods)
 				( 1 << 16)	|	// Delay Before SPCK (1 MCK period)
 				( 6 << 8)	|	// Serial Clock Baud Rate (baudrate = MCK/6 = 24Mhz/6 = 4M baud
-				( 1 << 4)	|	// Bits per Transfer (9 bits)
+				AT91C_SPI_BITS_9 |	// Bits per Transfer (9 bits)
 				( 0 << 3)	|	// Chip Select inactive after transfer
 				( 1 << 1)	|	// Clock Phase data captured on leading edge, changes on following edge
 				( 0 << 0);		// Clock Polarity inactive state is logic 0
 			break;
-		default:				// Disable SPI
-			AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SPIDIS;
+*/			
+		default:
+			DisableSpi();		
 			break;
 	}
 }
@@ -95,8 +118,7 @@ void SetupSpi(int mode)
 // Set up the synchronous serial port, with the one set of options that we
 // always use when we are talking to the FPGA. Both RX and TX are enabled.
 //-----------------------------------------------------------------------------
-void FpgaSetupSsc(void)
-{
+void FpgaSetupSscExt(uint8_t clearPCER) {
 	// First configure the GPIOs, and get ourselves a clock.
 	AT91C_BASE_PIOA->PIO_ASR =
 		GPIO_SSC_FRAME	|
@@ -105,11 +127,14 @@ void FpgaSetupSsc(void)
 		GPIO_SSC_CLK;
 	AT91C_BASE_PIOA->PIO_PDR = GPIO_SSC_DOUT;
 
-	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_SSC);
+	if ( clearPCER )
+		AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_SSC);
+	else
+		AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_SSC);
 
 	// Now set up the SSC proper, starting from a known state.
 	AT91C_BASE_SSC->SSC_CR = AT91C_SSC_SWRST;
-
+	
 	// RX clock comes from TX clock, RX starts when TX starts, data changes
 	// on RX clock rising edge, sampled on falling edge
 	AT91C_BASE_SSC->SSC_RCMR = SSC_CLOCK_MODE_SELECT(1) | SSC_CLOCK_MODE_START(1);
@@ -127,31 +152,102 @@ void FpgaSetupSsc(void)
 
 	AT91C_BASE_SSC->SSC_CR = AT91C_SSC_RXEN | AT91C_SSC_TXEN;
 }
-
+void FpgaSetupSsc(void) {
+	FpgaSetupSscExt(true);
+}
 //-----------------------------------------------------------------------------
 // Set up DMA to receive samples from the FPGA. We will use the PDC, with
 // a single buffer as a circular buffer (so that we just chain back to
 // ourselves, not to another buffer). The stuff to manipulate those buffers
 // is in apps.h, because it should be inlined, for speed.
 //-----------------------------------------------------------------------------
-bool FpgaSetupSscDma(uint8_t *buf, int len)
-{
-	if (buf == NULL) {
-        return false;
-    }
+bool FpgaSetupSscDma(uint8_t *buf, int len) {
+	if (buf == NULL) return false;
 
-	AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;	// Disable DMA Transfer
+	FpgaDisableSscDma();
 	AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) buf;		// transfer to this memory address
 	AT91C_BASE_PDC_SSC->PDC_RCR = len;					// transfer this many bytes
 	AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) buf;		// next transfer to same memory address
 	AT91C_BASE_PDC_SSC->PDC_RNCR = len;					// ... with same number of bytes
-	AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTEN;		// go!
-    
-    return true;
+	FpgaEnableSscDma();
+	return true;
 }
 
-static void DownloadFPGA_byte(unsigned char w)
-{
+//----------------------------------------------------------------------------
+// Uncompress (inflate) the FPGA data. Returns one decompressed byte with
+// each call.
+//----------------------------------------------------------------------------
+static int get_from_fpga_combined_stream(z_streamp compressed_fpga_stream, uint8_t *output_buffer) {
+	if (fpga_image_ptr == compressed_fpga_stream->next_out) {	// need more data
+		compressed_fpga_stream->next_out = output_buffer;
+		compressed_fpga_stream->avail_out = OUTPUT_BUFFER_LEN;
+		fpga_image_ptr = output_buffer;
+		int res = inflate(compressed_fpga_stream, Z_SYNC_FLUSH);
+
+		if (res != Z_OK)
+			Dbprintf("inflate returned: %d, %s", res, compressed_fpga_stream->msg);
+
+		if (res < 0)
+			return res;
+	}
+	uncompressed_bytes_cnt++;
+	return *fpga_image_ptr++;
+}
+
+//----------------------------------------------------------------------------
+// Undo the interleaving of several FPGA config files. FPGA config files
+// are combined into one big file:
+// 288 bytes from FPGA file 1, followed by 288 bytes from FGPA file 2, etc.
+//----------------------------------------------------------------------------
+static int get_from_fpga_stream(int bitstream_version, z_streamp compressed_fpga_stream, uint8_t *output_buffer) {
+	while((uncompressed_bytes_cnt / FPGA_INTERLEAVE_SIZE) % fpga_bitstream_num != (bitstream_version - 1)) {
+		// skip undesired data belonging to other bitstream_versions
+		get_from_fpga_combined_stream(compressed_fpga_stream, output_buffer);
+	}
+
+	return get_from_fpga_combined_stream(compressed_fpga_stream, output_buffer);
+}
+
+static voidpf fpga_inflate_malloc(voidpf opaque, uInt items, uInt size) {
+	return BigBuf_malloc(items*size);
+}
+
+// free eventually allocated BigBuf memory
+static void fpga_inflate_free(voidpf opaque, voidpf address) {
+	BigBuf_free(); BigBuf_Clear_ext(false);
+}
+
+//----------------------------------------------------------------------------
+// Initialize decompression of the respective (HF or LF) FPGA stream
+//----------------------------------------------------------------------------
+static bool reset_fpga_stream(int bitstream_version, z_streamp compressed_fpga_stream, uint8_t *output_buffer) {
+	uint8_t header[FPGA_BITSTREAM_FIXED_HEADER_SIZE];
+
+	uncompressed_bytes_cnt = 0;
+
+	// initialize z_stream structure for inflate:
+	compressed_fpga_stream->next_in = &_binary_obj_fpga_all_bit_z_start;
+	compressed_fpga_stream->avail_in = &_binary_obj_fpga_all_bit_z_end - &_binary_obj_fpga_all_bit_z_start;
+	compressed_fpga_stream->next_out = output_buffer;
+	compressed_fpga_stream->avail_out = OUTPUT_BUFFER_LEN;
+	compressed_fpga_stream->zalloc = &fpga_inflate_malloc;
+	compressed_fpga_stream->zfree = &fpga_inflate_free;
+
+	inflateInit2(compressed_fpga_stream, 0);
+
+	fpga_image_ptr = output_buffer;
+
+	for (uint16_t i = 0; i < FPGA_BITSTREAM_FIXED_HEADER_SIZE; i++)
+		header[i] = get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer);
+
+	// Check for a valid .bit file (starts with bitparse_fixed_header)
+	if (memcmp(bitparse_fixed_header, header, FPGA_BITSTREAM_FIXED_HEADER_SIZE) == 0)
+		return true;
+
+	return false;
+}
+
+static void DownloadFPGA_byte(unsigned char w) {
 #define SEND_BIT(x) { if(w & (1<<x) ) HIGH(GPIO_FPGA_DIN); else LOW(GPIO_FPGA_DIN); HIGH(GPIO_FPGA_CCLK); LOW(GPIO_FPGA_CCLK); }
 	SEND_BIT(7);
 	SEND_BIT(6);
@@ -163,11 +259,9 @@ static void DownloadFPGA_byte(unsigned char w)
 	SEND_BIT(0);
 }
 
-// Download the fpga image starting at FpgaImage and with length FpgaImageLen bytes
-// If bytereversal is set: reverse the byte order in each 4-byte word
-static void DownloadFPGA(const char *FpgaImage, int FpgaImageLen, int bytereversal)
-{
-	int i=0;
+// Download the fpga image starting at current stream position with length FpgaImageLen bytes
+static void DownloadFPGA(int bitstream_version, int FpgaImageLen, z_streamp compressed_fpga_stream, uint8_t *output_buffer) {
+	int i = 0;
 
 	AT91C_BASE_PIOA->PIO_OER = GPIO_FPGA_ON;
 	AT91C_BASE_PIOA->PIO_PER = GPIO_FPGA_ON;
@@ -205,7 +299,7 @@ static void DownloadFPGA(const char *FpgaImage, int FpgaImageLen, int byterevers
 	SpinDelay(50);
 	HIGH(GPIO_FPGA_NPROGRAM);
 
-	i=100000;
+	i = 100000;
 	// wait for FPGA ready to accept data signal
 	while ((i) && ( !(AT91C_BASE_PIOA->PIO_PDSR & GPIO_FPGA_NINIT ) ) ) {
 		i--;
@@ -218,25 +312,17 @@ static void DownloadFPGA(const char *FpgaImage, int FpgaImageLen, int byterevers
 		return;
 	}
 
-	if(bytereversal) {
-		/* This is only supported for uint32_t aligned images */
-		if( ((int)FpgaImage % sizeof(uint32_t)) == 0 ) {
-			i=0;
-			while(FpgaImageLen-->0)
-				DownloadFPGA_byte(FpgaImage[(i++)^0x3]);
-			/* Explanation of the magic in the above line:
-			 * i^0x3 inverts the lower two bits of the integer i, counting backwards
-			 * for each 4 byte increment. The generated sequence of (i++)^3 is
-			 * 3 2 1 0 7 6 5 4 11 10 9 8 15 14 13 12 etc. pp.
-			 */
+	for (i = 0; i < FpgaImageLen; i++) {
+		int b = get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer);
+		if (b < 0) {
+			Dbprintf("Error %d during FpgaDownload", b);
+			break;
 		}
-	} else {
-		while(FpgaImageLen-->0)
-			DownloadFPGA_byte(*FpgaImage++);
+		DownloadFPGA_byte(b);
 	}
 
 	// continue to clock FPGA until ready signal goes high
-	i=100000;
+	i = 100000;
 	while ( (i--) && ( !(AT91C_BASE_PIOA->PIO_PDSR & GPIO_FPGA_DONE ) ) ) {
 		HIGH(GPIO_FPGA_CCLK);
 		LOW(GPIO_FPGA_CCLK);
@@ -250,165 +336,91 @@ static void DownloadFPGA(const char *FpgaImage, int FpgaImageLen, int byterevers
 	LED_D_OFF();
 }
 
-static char *bitparse_headers_start;
-static char *bitparse_bitstream_end;
-static int bitparse_initialized = 0;
 /* Simple Xilinx .bit parser. The file starts with the fixed opaque byte sequence
  * 00 09 0f f0 0f f0 0f f0 0f f0 00 00 01
  * After that the format is 1 byte section type (ASCII character), 2 byte length
  * (big endian), <length> bytes content. Except for section 'e' which has 4 bytes
  * length.
  */
-static const char _bitparse_fixed_header[] = {0x00, 0x09, 0x0f, 0xf0, 0x0f, 0xf0, 0x0f, 0xf0, 0x0f, 0xf0, 0x00, 0x00, 0x01};
-static int bitparse_init(void * start_address, void *end_address)
-{
-	bitparse_initialized = 0;
-
-	if(memcmp(_bitparse_fixed_header, start_address, sizeof(_bitparse_fixed_header)) != 0) {
-		return 0; /* Not matched */
-	} else {
-		bitparse_headers_start= ((char*)start_address) + sizeof(_bitparse_fixed_header);
-		bitparse_bitstream_end= (char*)end_address;
-		bitparse_initialized = 1;
-		return 1;
-	}
-}
-
-int bitparse_find_section(char section_name, char **section_start, unsigned int *section_length)
-{
-	char *pos = bitparse_headers_start;
+static int bitparse_find_section(int bitstream_version, char section_name, uint32_t *section_length, z_streamp compressed_fpga_stream, uint8_t *output_buffer) {
 	int result = 0;
-
-	if(!bitparse_initialized) return 0;
-
-	while(pos < bitparse_bitstream_end) {
-		char current_name = *pos++;
-		unsigned int current_length = 0;
-		if(current_name < 'a' || current_name > 'e') {
+	#define MAX_FPGA_BIT_STREAM_HEADER_SEARCH 100  // maximum number of bytes to search for the requested section
+	uint16_t numbytes = 0;
+	while(numbytes < MAX_FPGA_BIT_STREAM_HEADER_SEARCH) {
+		char current_name = get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer);
+		numbytes++;
+		uint32_t current_length = 0;
+		if (current_name < 'a' || current_name > 'e') {
 			/* Strange section name, abort */
 			break;
 		}
 		current_length = 0;
-		switch(current_name) {
+		switch (current_name) {
 		case 'e':
 			/* Four byte length field */
-			current_length += (*pos++) << 24;
-			current_length += (*pos++) << 16;
+			current_length += get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer) << 24;
+			current_length += get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer) << 16;
+			numbytes += 2;
 		default: /* Fall through, two byte length field */
-			current_length += (*pos++) << 8;
-			current_length += (*pos++) << 0;
+			current_length += get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer) << 8;
+			current_length += get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer) << 0;
+			numbytes += 2;
 		}
 
-		if(current_name != 'e' && current_length > 255) {
+		if (current_name != 'e' && current_length > 255) {
 			/* Maybe a parse error */
 			break;
 		}
 
-		if(current_name == section_name) {
+		if (current_name == section_name) {
 			/* Found it */
-			*section_start = pos;
 			*section_length = current_length;
 			result = 1;
 			break;
 		}
 
-		pos += current_length; /* Skip section */
+		for (uint16_t i = 0; i < current_length && numbytes < MAX_FPGA_BIT_STREAM_HEADER_SEARCH; i++) {
+			get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer);
+			numbytes++;
+		}
 	}
-
 	return result;
 }
 
-//-----------------------------------------------------------------------------
-// Find out which FPGA image format is stored in flash, then call DownloadFPGA
-// with the right parameters to download the image
-//-----------------------------------------------------------------------------
-extern char _binary_fpga_lf_bit_start, _binary_fpga_lf_bit_end;
-extern char _binary_fpga_hf_bit_start, _binary_fpga_hf_bit_end;
-void FpgaDownloadAndGo(int bitstream_version)
-{
-	void *bit_start;
-	void *bit_end;
+//----------------------------------------------------------------------------
+// Check which FPGA image is currently loaded (if any). If necessary
+// decompress and load the correct (HF or LF) image to the FPGA
+//----------------------------------------------------------------------------
+void FpgaDownloadAndGo(int bitstream_version) {
 
 	// check whether or not the bitstream is already loaded
-	if (FpgaGatherBitstreamVersion() == bitstream_version)
+	if (downloaded_bitstream == bitstream_version)
+		return;
+	
+	z_stream compressed_fpga_stream;
+	uint8_t output_buffer[OUTPUT_BUFFER_LEN] = {0x00};
+
+	bool verbose = (MF_DBGLEVEL > 3);
+	
+	// make sure that we have enough memory to decompress
+	BigBuf_free(); BigBuf_Clear_ext(verbose);
+
+	if (!reset_fpga_stream(bitstream_version, &compressed_fpga_stream, output_buffer))
 		return;
 
-	if (bitstream_version == FPGA_BITSTREAM_LF) {
-		bit_start = &_binary_fpga_lf_bit_start;
-		bit_end = &_binary_fpga_lf_bit_end;
-	} else if (bitstream_version == FPGA_BITSTREAM_HF) {
-		bit_start = &_binary_fpga_hf_bit_start;
-		bit_end = &_binary_fpga_hf_bit_end;
-	} else
-		return;
-	/* Check for the new flash image format: Should have the .bit file at &_binary_fpga_bit_start
-	 */
-	if(bitparse_init(bit_start, bit_end)) {
-		/* Successfully initialized the .bit parser. Find the 'e' section and
-		 * send its contents to the FPGA.
-		 */
-		char *bitstream_start;
-		unsigned int bitstream_length;
-		if(bitparse_find_section('e', &bitstream_start, &bitstream_length)) {
-			DownloadFPGA(bitstream_start, bitstream_length, 0);
-
-			return; /* All done */
-		}
+	uint32_t bitstream_length;
+	if (bitparse_find_section(bitstream_version, 'e', &bitstream_length, &compressed_fpga_stream, output_buffer)) {
+		DownloadFPGA(bitstream_version, bitstream_length, &compressed_fpga_stream, output_buffer);
+		downloaded_bitstream = bitstream_version;
 	}
 
-	/* Fallback for the old flash image format: Check for the magic marker 0xFFFFFFFF
-	 * 0xAA995566 at address 0x102000. This is raw bitstream with a size of 336,768 bits
-	 * = 10,524 uint32_t, stored as uint32_t e.g. little-endian in memory, but each DWORD
-	 * is still to be transmitted in MSBit first order. Set the invert flag to indicate
-	 * that the DownloadFPGA function should invert every 4 byte sequence when doing
-	 * the bytewise download.
-	 */
-	if( *(uint32_t*)0x102000 == 0xFFFFFFFF && *(uint32_t*)0x102004 == 0xAA995566 )
-		DownloadFPGA((char*)0x102000, 10524*4, 1);
-}
+	inflateEnd(&compressed_fpga_stream);
 
-int FpgaGatherBitstreamVersion()
-{
-	char temp[256];
-	FpgaGatherVersion(temp, sizeof (temp));
-	if (!memcmp("LF", temp, 2))
-		return FPGA_BITSTREAM_LF;
-	else if (!memcmp("HF", temp, 2))
-		return FPGA_BITSTREAM_HF;
-	return FPGA_BITSTREAM_ERR;
-}
-
-void FpgaGatherVersion(char *dst, int len)
-{
-	char *fpga_info;
-	unsigned int fpga_info_len;
-	dst[0] = 0;
-	if(!bitparse_find_section('e', &fpga_info, &fpga_info_len)) {
-		strncat(dst, "FPGA image: legacy image without version information", len-1);
-	} else {
-		/* USB packets only have 48 bytes data payload, so be terse */
-		if(bitparse_find_section('a', &fpga_info, &fpga_info_len) && fpga_info[fpga_info_len-1] == 0 ) {
-			if (!memcmp("fpga_lf", fpga_info, 7))
-				strncat(dst, "LF ", len-1);
-			else if (!memcmp("fpga_hf", fpga_info, 7))
-				strncat(dst, "HF ", len-1);
-		}
-		strncat(dst, "FPGA image built", len-1);
-#if 0
-		if(bitparse_find_section('b', &fpga_info, &fpga_info_len) && fpga_info[fpga_info_len-1] == 0 ) {
-			strncat(dst, " for ", len-1);
-			strncat(dst, fpga_info, len-1);
-		}
-#endif
-		if(bitparse_find_section('c', &fpga_info, &fpga_info_len) && fpga_info[fpga_info_len-1] == 0 ) {
-			strncat(dst, " on ", len-1);
-			strncat(dst, fpga_info, len-1);
-		}
-		if(bitparse_find_section('d', &fpga_info, &fpga_info_len) && fpga_info[fpga_info_len-1] == 0 ) {
-			strncat(dst, " at ", len-1);
-			strncat(dst, fpga_info, len-1);
-		}
-	}
+	// turn off antenna
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	
+	// free eventually allocated BigBuf memory
+	BigBuf_free(); BigBuf_Clear_ext(false);
 }
 
 //-----------------------------------------------------------------------------
@@ -416,19 +428,18 @@ void FpgaGatherVersion(char *dst, int len)
 // The bit format is:  C3 C2 C1 C0 D11 D10 D9 D8 D7 D6 D5 D4 D3 D2 D1 D0
 // where C is the 4 bit command and D is the 12 bit data
 //-----------------------------------------------------------------------------
-void FpgaSendCommand(uint16_t cmd, uint16_t v)
-{
+void FpgaSendCommand(uint16_t cmd, uint16_t v) {
 	SetupSpi(SPI_FPGA_MODE);
-	while ((AT91C_BASE_SPI->SPI_SR & AT91C_SPI_TXEMPTY) == 0);		// wait for the transfer to complete
+	while ((AT91C_BASE_SPI->SPI_SR & AT91C_SPI_TXEMPTY) == 0);	// wait for the transfer to complete
 	AT91C_BASE_SPI->SPI_TDR = AT91C_SPI_LASTXFER | cmd | v;		// send the data
+	while (!(AT91C_BASE_SPI->SPI_SR & AT91C_SPI_RDRF)) {};		// wait till transfer is complete
 }
 //-----------------------------------------------------------------------------
 // Write the FPGA setup word (that determines what mode the logic is in, read
 // vs. clone vs. etc.). This is now a special case of FpgaSendCommand() to
 // avoid changing this function's occurence everywhere in the source code.
 //-----------------------------------------------------------------------------
-void FpgaWriteConfWord(uint8_t v)
-{
+void FpgaWriteConfWord(uint8_t v) {
 	FpgaSendCommand(FPGA_CMD_SET_CONFREG, v);
 }
 
@@ -437,8 +448,7 @@ void FpgaWriteConfWord(uint8_t v)
 // closable, but should only close one at a time. Not an FPGA thing, but
 // the samples from the ADC always flow through the FPGA.
 //-----------------------------------------------------------------------------
-void SetAdcMuxFor(uint32_t whichGpio)
-{
+void SetAdcMuxFor(uint32_t whichGpio) {
 	AT91C_BASE_PIOA->PIO_OER =
 		GPIO_MUXSEL_HIPKD |
 		GPIO_MUXSEL_LOPKD |
@@ -452,9 +462,33 @@ void SetAdcMuxFor(uint32_t whichGpio)
 		GPIO_MUXSEL_HIRAW;
 
 	LOW(GPIO_MUXSEL_HIPKD);
+	LOW(GPIO_MUXSEL_LOPKD);
+#ifndef WITH_FPC
 	LOW(GPIO_MUXSEL_HIRAW);
 	LOW(GPIO_MUXSEL_LORAW);
-	LOW(GPIO_MUXSEL_LOPKD);
+#endif	
 
 	HIGH(whichGpio);
+}
+
+void Fpga_print_status(void) {
+	Dbprintf("Currently loaded FPGA image");
+	Dbprintf("  mode....................%s", fpga_version_information[downloaded_bitstream-1]);
+}
+
+int FpgaGetCurrent(void) {
+	return downloaded_bitstream;
+}
+
+// Turns off the antenna, 
+// log message
+// if HF,  Disable SSC DMA
+// turn off trace and leds off.
+void switch_off(void) {	
+	if (MF_DBGLEVEL > 3) Dbprintf("switch_off");
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	if (downloaded_bitstream == FPGA_BITSTREAM_HF )
+		FpgaDisableSscDma();
+	set_tracing(false);
+	LEDsoff();	
 }

@@ -7,11 +7,9 @@
 //-----------------------------------------------------------------------------
 // Common string.h functions
 //-----------------------------------------------------------------------------
-
 #include "string.h"
-#include <stdint.h>
 
-void *memcpy(void *dest, const void *src, int len)
+RAMFUNC void *memcpy(void *dest, const void *src, int len)
 {
 	uint8_t *d = dest;
 	const uint8_t *s = src;
@@ -33,7 +31,7 @@ void *memset(void *dest, int c, int len)
 	return dest;
 }
 
-int memcmp(const void *av, const void *bv, int len)
+RAMFUNC int memcmp(const void *av, const void *bv, int len)
 {
 	const uint8_t *a = av;
 	const uint8_t *b = bv;
@@ -46,6 +44,11 @@ int memcmp(const void *av, const void *bv, int len)
 		b++;
 	}
 	return 0;
+}
+
+void memxor(uint8_t * dest, uint8_t * src, size_t len) {
+   for( ; len > 0; len--,dest++,src++)
+       *dest ^= *src;
 }
 
 int strlen(const char *str)

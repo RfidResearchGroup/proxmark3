@@ -1,0 +1,35 @@
+# .gitignore
+# don't push these files to the repository
+
+*.log
+*.eml
+*.o
+*.a
+*.d
+*.elf
+*.s19
+*.map
+*.bin
+*.dll
+*.moc.cpp
+*.exe
+proxmark
+proxmark3
+flasher
+version.c
+lua
+luac
+
+fpga/*
+!fpga/tests
+!fpga/fpga_lf.bit
+!fpga/fpga_hf.bit
+!fpga/*.v
+!fpga/Makefile
+!fpga/fpga.ucf
+!fpga/xst_lf.scr
+!fpga/xst_hf.scr
+!fpga/go.bat
+!fpga/sim.tcl
+
+

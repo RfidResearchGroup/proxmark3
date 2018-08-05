@@ -4,13 +4,23 @@ local bin = require('bin')
 local lib14a = require('read14a')
 local utils = require('utils')
 
-example =[[
+example = [[
+    -- generate commands
 	1. script run formatMifare
+	
+	-- generate command, replacing key with new key.
 	2. script run formatMifare -k aabbccddeeff -n 112233445566 -a FF0780
+	
+	-- generate commands and excute them against card.
+	3. script run formatMifare -x
 ]]
-author = "Iceman"
-usage = "script run formatMifare -k <key>"
-desc =[[
+copyright = ''
+version = ''
+author = 'Iceman'
+usage = [[
+   script run formatMifare -k <key> -n <key> -a <access> -x   
+]]
+desc = [[
 This script will generate 'hf mf wrbl' commands for each block to format a Mifare card.
 
 Alla datablocks gets 0x00
@@ -20,11 +30,13 @@ The GDB will become 0x00
 
 The script will skip the manufactoring block 0.
 
+
 Arguments:
 	-h             - this help
 	-k <key>       - the current six byte key with write access
 	-n <key>       - the new key that will be written to the card
 	-a <access>    - the new access bytes that will be written to the card
+	-x             - execute the commands aswell.
 ]]
 local TIMEOUT = 2000 -- Shouldn't take longer than 2 seconds
 local DEBUG = true -- the debug flag
@@ -56,6 +68,9 @@ end
 --- 
 -- Usage help
 function help()
+	print(copyright)
+	print(author)
+	print(version)	
 	print(desc)
 	print("Example usage")
 	print(example)
@@ -71,7 +86,7 @@ end
 --
 -- Read information from a card
 function GetCardInfo()
-	result, err = lib14a.read1443a(false)
+	result, err = lib14a.read(false, true)
 	if not result then
 		print(err)
 		return
@@ -80,18 +95,20 @@ function GetCardInfo()
 
 	core.clearCommandBuffer()
 	
-	if 0x18 == result.sak then --NXP MIFARE Classic 4k | Plus 4k
+	if 0x18 == result.sak then -- NXP MIFARE Classic 4k | Plus 4k
 		-- IFARE Classic 4K offers 4096 bytes split into forty sectors, 
 		-- of which 32 are same size as in the 1K with eight more that are quadruple size sectors. 
 		numSectors = 40
-	elseif 0x08 == result.sak then -- NXP MIFARE CLASSIC 1k | Plus 2k
+	elseif 0x08 == result.sak then  -- NXP MIFARE CLASSIC 1k | Plus 2k
 		-- 1K offers 1024 bytes of data storage, split into 16 sector
 		numSectors = 16
-	elseif 0x09 == result.sak then -- NXP MIFARE Mini 0.3k
+	elseif 0x09 == result.sak then  -- NXP MIFARE Mini 0.3k
 		-- MIFARE Classic mini offers 320 bytes split into five sectors.
 		numSectors = 5
-	elseif  0x10 == result.sak then-- "NXP MIFARE Plus 2k"
+	elseif  0x10 == result.sak then -- NXP MIFARE Plus 2k
 		numSectors = 32
+	elseif  0x01 == result.sak then -- NXP MIFARE TNP3xxx 1K
+		numSectors = 16
 	else
 		print("I don't know how many sectors there are on this type of card, defaulting to 16")
 	end	
@@ -116,16 +133,16 @@ local function main(args)
 	print( string.rep('--',20) )
 	print()
 	
-	local OldKey 
-	local NewKey
-	local Accessbytes
+	local OldKey, NewKey, Accessbytes
+	local x = false
 	
 	-- Arguments for the script
-	for o, a in getopt.getopt(args, 'hk:n:a:') do
+	for o, a in getopt.getopt(args, 'hk:n:a:x') do
 		if o == "h" then return help() end		
 		if o == "k" then OldKey = a end
 		if o == "n" then NewKey = a	end
 		if o == "a" then Accessbytes = a end
+		if o == "x" then x = true end
 	end
 
 	-- validate input args.
@@ -162,6 +179,9 @@ local function main(args)
 	dbg( string.format('New emptyblock: %s',EMPTY_BL))
 	dbg('')
 	
+	if x then 
+		print('[Warning] you have used the EXECUTE parameter, which means this will run these commands against card.')
+	end 
 	-- Ask
 	local dialogResult = utils.confirm("Do you want to erase this card")
 	if dialogResult == false then 
@@ -183,7 +203,7 @@ local function main(args)
 	
 		if block ~= 0 then
 			print(cmd)
-			--core.console(cmd)
+			if x then core.console(cmd) end
 		end
 		
 		if core.ukbhit() then

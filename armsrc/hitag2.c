@@ -21,37 +21,13 @@
 #include "util.h"
 #include "hitag2.h"
 #include "string.h"
+#include "BigBuf.h"
 
 static bool bQuiet;
-
-bool bCrypto;
-bool bAuthenticating;
-bool bPwd;
-bool bSuccessful;
-
-int LogTraceHitag(const uint8_t * btBytes, int iBits, int iSamples, uint32_t dwParity, int bReader)
-{
-  // Return when trace is full
-  if (traceLen >= TRACE_SIZE) return FALSE;
-  
-  // Trace the random, i'm curious
-  rsamples += iSamples;
-  trace[traceLen++] = ((rsamples >> 0) & 0xff);
-  trace[traceLen++] = ((rsamples >> 8) & 0xff);
-  trace[traceLen++] = ((rsamples >> 16) & 0xff);
-  trace[traceLen++] = ((rsamples >> 24) & 0xff);
-  if (!bReader) {
-    trace[traceLen - 1] |= 0x80;
-  }
-  trace[traceLen++] = ((dwParity >> 0) & 0xff);
-  trace[traceLen++] = ((dwParity >> 8) & 0xff);
-  trace[traceLen++] = ((dwParity >> 16) & 0xff);
-  trace[traceLen++] = ((dwParity >> 24) & 0xff);
-  trace[traceLen++] = iBits;
-  memcpy(trace + traceLen, btBytes, nbytes(iBits));
-  traceLen += nbytes(iBits);
-  return TRUE;
-}
+static bool bCrypto;
+static bool bAuthenticating;
+static bool bPwd;
+static bool bSuccessful;
 
 struct hitag2_tag {
 	uint32_t uid;
@@ -85,21 +61,25 @@ static struct hitag2_tag tag = {
     },
 };
 
-//#define TRACE_LENGTH 3000
-//uint8_t *trace = (uint8_t *) BigBuf;
-//int traceLen = 0;
-//int rsamples = 0;
+static enum {
+	WRITE_STATE_START = 0x0,
+	WRITE_STATE_PAGENUM_WRITTEN,
+	WRITE_STATE_PROG
+} writestate;
+	
 
-#define AUTH_TABLE_OFFSET FREE_BUFFER_OFFSET
-#define AUTH_TABLE_LENGTH FREE_BUFFER_SIZE
-byte_t* auth_table = (byte_t *)BigBuf+AUTH_TABLE_OFFSET;
-size_t auth_table_pos = 0;
-size_t auth_table_len = AUTH_TABLE_LENGTH;
+// ToDo: define a meaningful maximum size for auth_table. The bigger this is, the lower will be the available memory for traces. 
+// Historically it used to be FREE_BUFFER_SIZE, which was 2744.
+#define AUTH_TABLE_LENGTH 2744
+static byte_t* auth_table;
+static size_t auth_table_pos = 0;
+static size_t auth_table_len = AUTH_TABLE_LENGTH;
 
-byte_t password[4];
-byte_t NrAr[8];
-byte_t key[8];
-uint64_t cipher_state;
+static byte_t password[4];
+static byte_t NrAr[8];
+static byte_t key[8];
+static byte_t writedata[4];
+static uint64_t cipher_state;
 
 /* Following is a modified version of cryptolib.com/ciphers/hitag2/ */
 // Software optimized 48-bit Philips/NXP Mifare Hitag2 PCF7936/46/47/52 stream cipher algorithm by I.C. Wiener 2006-2007.
@@ -122,7 +102,6 @@ uint64_t cipher_state;
 #define rotl64(x, n)	((((u64)(x))<<((n)&63))+(((u64)(x))>>((0-(n))&63)))
 
 // Single bit Hitag2 functions:
-
 #define i4(x,a,b,c,d)	((u32)((((x)>>(a))&1)+(((x)>>(b))&1)*2+(((x)>>(c))&1)*4+(((x)>>(d))&1)*8))
 
 static const u32 ht2_f4a = 0x2C79;		// 0010 1100 0111 1001
@@ -131,7 +110,7 @@ static const u32 ht2_f5c = 0x7907287B;	// 0111 1001 0000 0111 0010 1000 0111 101
 
 static u32 _f20 (const u64 x)
 {
-	u32					i5;
+	u32	i5;
 
 	i5 = ((ht2_f4a >> i4 (x, 1, 2, 4, 5)) & 1)* 1
 	   + ((ht2_f4b >> i4 (x, 7,11,13,14)) & 1)* 2
@@ -144,8 +123,8 @@ static u32 _f20 (const u64 x)
 
 static u64 _hitag2_init (const u64 key, const u32 serial, const u32 IV)
 {
-	u32					i;
-	u64					x = ((key & 0xFFFF) << 32) + serial;
+	u32	i;
+	u64	x = ((key & 0xFFFF) << 32) + serial;
 
 	for (i = 0; i < 32; i++)
 	{
@@ -157,7 +136,7 @@ static u64 _hitag2_init (const u64 key, const u32 serial, const u32 IV)
 
 static u64 _hitag2_round (u64 *state)
 {
-	u64					x = *state;
+	u64 x = *state;
 
 	x = (x >>  1) +
 	 ((((x >>  0) ^ (x >>  2) ^ (x >>  3) ^ (x >>  6)
@@ -169,24 +148,31 @@ static u64 _hitag2_round (u64 *state)
 	return _f20 (x);
 }
 
+// "MIKRON"             =  O  N  M  I  K  R
+// Key                  = 4F 4E 4D 49 4B 52             - Secret 48-bit key
+// Serial               = 49 43 57 69                   - Serial number of the tag, transmitted in clear
+// Random               = 65 6E 45 72                   - Random IV, transmitted in clear
+//~28~DC~80~31  = D7 23 7F CE                   - Authenticator value = inverted first 4 bytes of the keystream
+
+// The code below must print out "D7 23 7F CE 8C D0 37 A9 57 49 C1 E6 48 00 8A B6".
+// The inverse of the first 4 bytes is sent to the tag to authenticate.
+// The rest is encrypted by XORing it with the subsequent keystream.
+
 static u32 _hitag2_byte (u64 * x)
 {
-	u32					i, c;
+	u32	i, c;
 
 	for (i = 0, c = 0; i < 8; i++) c += (u32) _hitag2_round (x) << (i^7);
 	return c;
 }
 
-int hitag2_reset(void)
-{
+static int hitag2_reset(void) {
 	tag.state = TAG_STATE_RESET;
 	tag.crypto_active = 0;
 	return 0;
 }
 
-int hitag2_init(void)
-{
-//	memcpy(&tag, &resetdata, sizeof(tag));
+static int hitag2_init(void) {
 	hitag2_reset();
 	return 0;
 }
@@ -247,17 +233,18 @@ static int hitag2_cipher_transcrypt(uint64_t* cs, byte_t *data, unsigned int byt
 #define HITAG_T_WAIT_1 200 /* T_wresp should be 199..206 */
 #define HITAG_T_WAIT_2 90 /* T_wresp should be 199..206 */
 #define HITAG_T_WAIT_MAX 300 /* bit more than HITAG_T_WAIT_1 + HITAG_T_WAIT_2 */
+#define HITAG_T_PROG 614
 
-#define HITAG_T_TAG_ONE_HALF_PERIOD			10
-#define HITAG_T_TAG_TWO_HALF_PERIOD			25
-#define HITAG_T_TAG_THREE_HALF_PERIOD		41 
-#define HITAG_T_TAG_FOUR_HALF_PERIOD    57 
+#define HITAG_T_TAG_ONE_HALF_PERIOD		10
+#define HITAG_T_TAG_TWO_HALF_PERIOD		25
+#define HITAG_T_TAG_THREE_HALF_PERIOD	41 
+#define HITAG_T_TAG_FOUR_HALF_PERIOD	57 
 
-#define HITAG_T_TAG_HALF_PERIOD					16
-#define HITAG_T_TAG_FULL_PERIOD					32
+#define HITAG_T_TAG_HALF_PERIOD			16
+#define HITAG_T_TAG_FULL_PERIOD			32
 
-#define HITAG_T_TAG_CAPTURE_ONE_HALF		13
-#define HITAG_T_TAG_CAPTURE_TWO_HALF		25
+#define HITAG_T_TAG_CAPTURE_ONE_HALF	13
+#define HITAG_T_TAG_CAPTURE_TWO_HALF	25
 #define HITAG_T_TAG_CAPTURE_THREE_HALF	41 
 #define HITAG_T_TAG_CAPTURE_FOUR_HALF   57 
 
@@ -300,7 +287,8 @@ static void hitag_send_frame(const byte_t* frame, size_t frame_len)
 	LOW(GPIO_SSC_DOUT);
 }
 
-void hitag2_handle_reader_command(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen)
+
+static void hitag2_handle_reader_command(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen)
 {
 	byte_t rx_air[HITAG_FRAME_LEN];
 	
@@ -364,7 +352,7 @@ void hitag2_handle_reader_command(byte_t* rx, const size_t rxlen, byte_t* tx, si
 				
 				// Unknown command
 				default:
-					Dbprintf("Uknown command: %02x %02x",rx[0],rx[1]);
+					Dbprintf("Unknown command: %02x %02x",rx[0],rx[1]);
 					return;
 				break;
 			}
@@ -435,7 +423,7 @@ static void hitag_reader_send_bit(int bit) {
 	// Binary puls length modulation (BPLM) is used to encode the data stream
 	// This means that a transmission of a one takes longer than that of a zero
 	
-	// Enable modulation, which means, drop the the field
+	// Enable modulation, which means, drop the field
 	HIGH(GPIO_SSC_DOUT);
 	
 	// Wait for 4-10 times the carrier period
@@ -448,14 +436,14 @@ static void hitag_reader_send_bit(int bit) {
 	if(bit == 0) {
 		// Zero bit: |_-|
 		while(AT91C_BASE_TC0->TC_CV < T0*22);
-		//		SpinDelayUs(16*8);
+
 	} else {
 		// One bit: |_--|
 		while(AT91C_BASE_TC0->TC_CV < T0*28);
-		//		SpinDelayUs(22*8);
 	}
 	LED_A_OFF();
 }
+
 
 static void hitag_reader_send_frame(const byte_t* frame, size_t frame_len)
 {
@@ -465,7 +453,7 @@ static void hitag_reader_send_frame(const byte_t* frame, size_t frame_len)
 	}
 	// Send EOF 
 	AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-	// Enable modulation, which means, drop the the field
+	// Enable modulation, which means, drop the field
 	HIGH(GPIO_SSC_DOUT);
 	// Wait for 4-10 times the carrier period
 	while(AT91C_BASE_TC0->TC_CV < T0*6);
@@ -475,7 +463,7 @@ static void hitag_reader_send_frame(const byte_t* frame, size_t frame_len)
 
 size_t blocknr;
 
-bool hitag2_password(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
+static bool hitag2_password(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
 	// Reset the transmission frame length
 	*txlen = 0;
 	
@@ -498,26 +486,26 @@ bool hitag2_password(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) 
 				*txlen = 32;
 				memcpy(tx,password,4);
 				bPwd = true;
-        memcpy(tag.sectors[blocknr],rx,4);
-        blocknr++;
+				memcpy(tag.sectors[blocknr],rx,4);
+				blocknr++;
 			} else {
 				
-			if(blocknr == 1){
-				//store password in block1, the TAG answers with Block3, but we need the password in memory
-				memcpy(tag.sectors[blocknr],tx,4);
-			}else{
-				memcpy(tag.sectors[blocknr],rx,4);
-			}
-			
-			blocknr++;
-			if (blocknr > 7) {
-			  DbpString("Read succesful!");
-        bSuccessful = true;
-			  return false;
-			}
-			*txlen = 10;
-			tx[0] = 0xc0 | (blocknr << 3) | ((blocknr^7) >> 2);
-			tx[1] = ((blocknr^7) << 6);
+				if(blocknr == 1){
+					//store password in block1, the TAG answers with Block3, but we need the password in memory
+					memcpy(tag.sectors[blocknr],tx,4);
+				} else {
+					memcpy(tag.sectors[blocknr],rx,4);
+				}
+				
+				blocknr++;
+				if (blocknr > 7) {
+					DbpString("Read succesful!");
+					bSuccessful = true;
+					return false;
+				}
+				*txlen = 10;
+				tx[0] = 0xc0 | (blocknr << 3) | ((blocknr^7) >> 2);
+				tx[1] = ((blocknr^7) << 6);
 			}
 		} break;
 			
@@ -530,13 +518,64 @@ bool hitag2_password(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) 
 	return true;
 }
 
-bool hitag2_crypto(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
+static bool hitag2_write_page(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen)
+{
+	switch (writestate) {
+	case WRITE_STATE_START:
+		*txlen = 10;
+		tx[0] = 0x82 | (blocknr << 3) | ((blocknr^7) >> 2);
+		tx[1] = ((blocknr^7) << 6);
+		writestate = WRITE_STATE_PAGENUM_WRITTEN;
+		break;
+	case WRITE_STATE_PAGENUM_WRITTEN:
+		// Check if page number was received correctly
+		if ((rxlen == 10) &&
+		    (rx[0] == (0x82 | (blocknr << 3) | ((blocknr^7) >> 2))) &&
+		    (rx[1] == (((blocknr & 0x3) ^ 0x3) << 6))) {
+			*txlen = 32;
+			memset(tx, 0, HITAG_FRAME_LEN);
+			memcpy(tx, writedata, 4);
+			writestate = WRITE_STATE_PROG;
+		} else {
+			Dbprintf("hitag2_write_page: Page number was not received correctly: rxlen=%d rx=%02x%02x%02x%02x",
+				 rxlen, rx[0], rx[1], rx[2], rx[3]);
+			bSuccessful = false;
+			return false;
+		}
+		break;
+	case WRITE_STATE_PROG:
+		if (rxlen == 0) {
+			bSuccessful = true;
+		} else {
+			bSuccessful = false;
+			Dbprintf("hitag2_write_page: unexpected rx data (%d) after page write", rxlen);
+		}
+		return false;
+	default:
+		DbpString("hitag2_write_page: Unknown state %d");
+		bSuccessful = false;
+		return false;
+	}
+
+	return true;
+}
+
+static bool hitag2_crypto(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen, bool write) {
 	// Reset the transmission frame length
 	*txlen = 0;
 	
   if(bCrypto) {
 		hitag2_cipher_transcrypt(&cipher_state,rx,rxlen/8,rxlen%8);
+
 	}
+
+	if (bCrypto && !bAuthenticating && write) {
+		if (!hitag2_write_page(rx, rxlen, tx, txlen)) {
+			return false;
+		}
+	}
+	else
+	{
 
 	// Try to find out which command was send by selecting on length (in bits)
 	switch (rxlen) {
@@ -567,41 +606,49 @@ bool hitag2_crypto(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
           bCrypto = false;
         }
 			} else {
-        *txlen = 5;
-        memcpy(tx,"\xc0",nbytes(*txlen));
-      }
-		} break;
-			
+				*txlen = 5;
+				memcpy(tx,"\xc0",nbytes(*txlen));
+			}
+	break;
+	}
       // Received UID, crypto tag answer
 		case 32: {
 			if (!bCrypto) {
         uint64_t ui64key = key[0] | ((uint64_t)key[1]) << 8 | ((uint64_t)key[2]) << 16 | ((uint64_t)key[3]) << 24 | ((uint64_t)key[4]) << 32 | ((uint64_t)key[5]) << 40;
         uint32_t ui32uid = rx[0] | ((uint32_t)rx[1]) << 8 | ((uint32_t)rx[2]) << 16 | ((uint32_t)rx[3]) << 24;
+			Dbprintf("hitag2_crypto: key=0x%x%x uid=0x%x", (uint32_t) ((rev64(ui64key)) >> 32), (uint32_t) ((rev64(ui64key)) & 0xffffffff), rev32(ui32uid));
         cipher_state = _hitag2_init(rev64(ui64key), rev32(ui32uid), 0);
         memset(tx,0x00,4);
         memset(tx+4,0xff,4);
         hitag2_cipher_transcrypt(&cipher_state,tx+4,4,0);
 				*txlen = 64;
 				bCrypto = true;
-        bAuthenticating = true;
+				bAuthenticating = true;
 			} else {
         // Check if we received answer tag (at)
         if (bAuthenticating) {
-          bAuthenticating = false;
+			bAuthenticating = false;
+				if (write) {
+					if (!hitag2_write_page(rx, rxlen, tx, txlen)) {
+						return false;
+					}
+					break;
+				}
         } else {
-          // Store the received block
-          memcpy(tag.sectors[blocknr],rx,4);
-          blocknr++;
+			// Store the received block
+			memcpy(tag.sectors[blocknr],rx,4);
+			blocknr++;
         }
         if (blocknr > 7) {
-          DbpString("Read succesful!");
-          bSuccessful = true;
-          return false;
-        }
+			DbpString("Read succesful!");
+			bSuccessful = true;
+			return false;
+			} else {
         *txlen = 10;
         tx[0] = 0xc0 | (blocknr << 3) | ((blocknr^7) >> 2);
         tx[1] = ((blocknr^7) << 6);
 			}
+		}
 		} break;
 			
       // Unexpected response
@@ -610,20 +657,20 @@ bool hitag2_crypto(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
 			return false;
 		} break;
 	}
-	
+	}
   
-  if(bCrypto) {
-    // We have to return now to avoid double encryption
-    if (!bAuthenticating) {
-      hitag2_cipher_transcrypt(&cipher_state,tx,*txlen/8,*txlen%8);
-    }
+	if(bCrypto) {
+		// We have to return now to avoid double encryption
+		if (!bAuthenticating) {
+		  hitag2_cipher_transcrypt(&cipher_state, tx, *txlen/8, *txlen%8);
+		}
 	}
 
 	return true;
 }
 
 
-bool hitag2_authenticate(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
+static bool hitag2_authenticate(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
 	// Reset the transmission frame length 
 	*txlen = 0;
 	
@@ -637,25 +684,24 @@ bool hitag2_authenticate(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txl
 				return false;
 			}
 			*txlen = 5;
-			memcpy(tx,"\xc0",nbytes(*txlen));
+			memcpy(tx,"\xc0", nbytes(*txlen));
 		} break;
 			
 		// Received UID, crypto tag answer
 		case 32: {
 			if (!bCrypto) {
 				*txlen = 64;
-				memcpy(tx,NrAr,8);
+				memcpy(tx, NrAr, 8);
 				bCrypto = true;
 			} else {
 				DbpString("Authentication succesful!");
-				// We are done... for now
-				return false;
+				return true;
 			}
 		} break;
 			
 		// Unexpected response
 		default: {
-			Dbprintf("Uknown frame length: %d",rxlen);
+			Dbprintf("Uknown frame length: %d", rxlen);
 			return false;
 		} break;
 	}
@@ -663,7 +709,9 @@ bool hitag2_authenticate(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txl
 	return true;
 }
 
-bool hitag2_test_auth_attempts(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
+
+static bool hitag2_test_auth_attempts(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
+
 	// Reset the transmission frame length 
 	*txlen = 0;
 	
@@ -675,17 +723,17 @@ bool hitag2_test_auth_attempts(byte_t* rx, const size_t rxlen, byte_t* tx, size_
 			if (bCrypto) {
 				Dbprintf("auth: %02x%02x%02x%02x%02x%02x%02x%02x Failed, removed entry!",NrAr[0],NrAr[1],NrAr[2],NrAr[3],NrAr[4],NrAr[5],NrAr[6],NrAr[7]);
 
-        // Removing failed entry from authentiations table
-        memcpy(auth_table+auth_table_pos,auth_table+auth_table_pos+8,8);
-        auth_table_len -= 8;
+				// Removing failed entry from authentiations table
+				memcpy(auth_table+auth_table_pos,auth_table+auth_table_pos+8,8);
+				auth_table_len -= 8;
 
-        // Return if we reached the end of the authentiactions table
+				// Return if we reached the end of the authentications table
 				bCrypto = false;
 				if (auth_table_pos == auth_table_len) {
 					return false;
 				}
-        
-        // Copy the next authentication attempt in row (at the same position, b/c we removed last failed entry)
+
+				// Copy the next authentication attempt in row (at the same position, b/c we removed last failed entry)
 				memcpy(NrAr,auth_table+auth_table_pos,8);
 			}
 			*txlen = 5;
@@ -718,6 +766,43 @@ bool hitag2_test_auth_attempts(byte_t* rx, const size_t rxlen, byte_t* tx, size_
 	return true;
 }
 
+static bool hitag2_read_uid(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
+	// Reset the transmission frame length
+	*txlen = 0;
+
+	// Try to find out which command was send by selecting on length (in bits)
+	switch (rxlen) {
+		// No answer, try to resurrect
+		case 0: {
+			// Just starting or if there is no answer
+			*txlen = 5;
+			memcpy(tx, "\xC0", nbytes(*txlen) );
+		} break;
+		// Received UID
+		case 32: {
+			// Check if we received answer tag (at)
+			if (bAuthenticating) {
+				bAuthenticating = false;
+			} else {
+				// Store the received block
+				memcpy(tag.sectors[blocknr], rx, 4);
+				blocknr++;
+			}
+			if (blocknr > 0) {
+				// DbpString("Read successful!");
+				bSuccessful = true;
+				return false;
+			}
+		} break;
+		// Unexpected response
+		default: {
+			Dbprintf("Uknown frame length: %d", rxlen);
+			return false;
+		} break;
+	}
+	return true;
+}
+
 void SnoopHitag(uint32_t type) {
 	int frame_count;
 	int response;
@@ -730,12 +815,19 @@ void SnoopHitag(uint32_t type) {
 	byte_t rx[HITAG_FRAME_LEN];
 	size_t rxlen=0;
 	
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+	
+	// free eventually allocated BigBuf memory
+	BigBuf_free(); BigBuf_Clear_ext(false);
+	
 	// Clean up trace and prepare it for storing frames
-	iso14a_set_tracing(TRUE);
-	iso14a_clear_trace();
-
+	clear_trace();
+	set_tracing(true);
+	
 	auth_table_len = 0;
 	auth_table_pos = 0;
+
+    auth_table = (byte_t *)BigBuf_malloc(AUTH_TABLE_LENGTH);
 	memset(auth_table, 0x00, AUTH_TABLE_LENGTH);
 	
 	DbpString("Starting Hitag2 snoop");
@@ -743,8 +835,7 @@ void SnoopHitag(uint32_t type) {
 	
 	// Set up eavesdropping mode, frequency divisor which will drive the FPGA
 	// and analog mux selection.
-	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT  | FPGA_LF_EDGE_DETECT_TOGGLE_MODE);
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
 	RELAY_OFF();
@@ -760,7 +851,7 @@ void SnoopHitag(uint32_t type) {
 	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC1);
 	AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
 	
-  // Disable timer during configuration	
+	// Disable timer during configuration	
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 	
 	// Capture mode, defaul timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
@@ -772,7 +863,7 @@ void SnoopHitag(uint32_t type) {
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 	
 	// Reset the received frame, frame count and timing info
-	memset(rx,0x00,sizeof(rx));
+	memset(rx, 0x00, sizeof(rx));
 	frame_count = 0;
 	response = 0;
 	overflow = 0;
@@ -781,7 +872,7 @@ void SnoopHitag(uint32_t type) {
 	bSkip = true;
 	tag_sof = 4;
 	
-	while(!BUTTON_PRESS()) {
+	while(!BUTTON_PRESS() && !usb_poll_validate_length()) {
 		// Watchdog hit
 		WDT_HIT();
 		
@@ -923,7 +1014,7 @@ void SnoopHitag(uint32_t type) {
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LED_A_OFF();
-	
+	set_tracing(false);
 //	Dbprintf("frame received: %d",frame_count);
 //	Dbprintf("Authentication Attempts: %d",(auth_table_len/8));
 //	DbpString("All done");
@@ -940,11 +1031,20 @@ void SimulateHitagTag(bool tag_mem_supplied, byte_t* data) {
 	bool bQuitTraceFull = false;
 	bQuiet = false;
 	
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+
+	// free eventually allocated BigBuf memory
+	BigBuf_free(); BigBuf_Clear_ext(false);
+
 	// Clean up trace and prepare it for storing frames
-  iso14a_set_tracing(TRUE);
-  iso14a_clear_trace();
+	clear_trace();
+	set_tracing(true);
+	
 	auth_table_len = 0;
 	auth_table_pos = 0;
+    byte_t* auth_table;
+
+    auth_table = (byte_t *)BigBuf_malloc(AUTH_TABLE_LENGTH);
 	memset(auth_table, 0x00, AUTH_TABLE_LENGTH);
 
 	DbpString("Starting Hitag2 simulation");
@@ -967,8 +1067,8 @@ void SimulateHitagTag(bool tag_mem_supplied, byte_t* data) {
 	
 	// Set up simulator mode, frequency divisor which will drive the FPGA
 	// and analog mux selection.
-	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
+	SpinDelay(50);
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
 	RELAY_OFF();
@@ -987,23 +1087,23 @@ void SimulateHitagTag(bool tag_mem_supplied, byte_t* data) {
 	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC1);
 	AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
 	
-  // Disable timer during configuration	
+    // Disable timer during configuration	
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 
-	// Capture mode, defaul timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
+	// Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
 	// external trigger rising edge, load RA on rising edge of TIOA.
 	AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK | AT91C_TC_ETRGEDG_RISING | AT91C_TC_ABETRG | AT91C_TC_LDRA_RISING;
 	
-	// Enable and reset counter
-	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-
 	// Reset the received frame, frame count and timing info
 	memset(rx,0x00,sizeof(rx));
 	frame_count = 0;
 	response = 0;
 	overflow = 0;
+
+	// Enable and reset counter
+	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 	
-	while(!BUTTON_PRESS()) {
+	while(!BUTTON_PRESS() && !usb_poll_validate_length()) {
 		// Watchdog hit
 		WDT_HIT();
 		
@@ -1105,12 +1205,312 @@ void SimulateHitagTag(bool tag_mem_supplied, byte_t* data) {
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-//	Dbprintf("frame received: %d",frame_count);
-//	Dbprintf("Authentication Attempts: %d",(auth_table_len/8));
-//	DbpString("All done");
+	
+	DbpString("Sim Stopped");
+	set_tracing(false);
 }
 
 void ReaderHitag(hitag_function htf, hitag_data* htd) {
+	int frame_count = 0;
+	int response = 0;
+	byte_t rx[HITAG_FRAME_LEN];
+	size_t rxlen = 0;
+	byte_t txbuf[HITAG_FRAME_LEN];
+	byte_t* tx = txbuf;
+	size_t txlen = 0;
+	int lastbit = 1;
+	bool bSkip;
+	int reset_sof; 
+	int tag_sof;
+	int t_wait = HITAG_T_WAIT_MAX;
+	bool bStop = false;
+	bool bQuitTraceFull = false;
+  
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+	// Reset the return status
+	bSuccessful = false;
+  
+	// Clean up trace and prepare it for storing frames
+	clear_trace();
+	set_tracing(true);
+	
+	//DbpString("Starting Hitag reader family");
+
+	// Check configuration
+	switch (htf) {
+		case RHT2F_PASSWORD: {
+			Dbprintf("List identifier in password mode");
+			memcpy(password,htd->pwd.password, 4);
+      		blocknr = 0;
+			bQuitTraceFull = false;
+			bQuiet = false;
+			bPwd = false;
+		} break;
+      
+		case RHT2F_AUTHENTICATE: {
+			DbpString("Authenticating using nr,ar pair:");
+			memcpy(NrAr,htd->auth.NrAr, 8);
+			Dbhexdump(8,NrAr,false);
+			bQuiet = false;
+			bCrypto = false;
+			bAuthenticating = false;
+			bQuitTraceFull = true;
+		} break;
+      
+		case RHT2F_CRYPTO: {
+			DbpString("Authenticating using key:");
+			memcpy(key,htd->crypto.key, 6);	  //HACK; 4 or 6??  I read both in the code.
+			Dbhexdump(6,key,false);
+			blocknr = 0;
+			bQuiet = false;
+			bCrypto = false;
+			bAuthenticating = false;
+			bQuitTraceFull = true;
+		} break;
+
+		case RHT2F_TEST_AUTH_ATTEMPTS: {
+			Dbprintf("Testing %d authentication attempts",(auth_table_len/8));
+			auth_table_pos = 0;
+			memcpy(NrAr, auth_table, 8);
+			bQuitTraceFull = false;
+			bQuiet = false;
+			bCrypto = false;
+		} break;
+		case RHT2F_UID_ONLY: {
+			blocknr = 0;
+			bQuiet = false;
+			bCrypto = false;
+			bAuthenticating = false;
+			bQuitTraceFull = true;
+		} break;
+		default: {
+			Dbprintf("Error, unknown function: %d",htf);
+			set_tracing(false);
+			return;
+		} break;
+	}
+	
+	LED_D_ON();
+	hitag2_init();
+	
+	// Configure output and enable pin that is connected to the FPGA (for modulating)
+	AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
+	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
+	
+	// Set fpga in edge detect with reader field, we can modulate as reader now
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD);
+	SpinDelay(20);
+	
+	// Set Frequency divisor which will drive the FPGA and analog mux selection
+	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
+	RELAY_OFF();
+
+	// Disable modulation at default, which means enable the field
+	LOW(GPIO_SSC_DOUT);
+
+	// Give it a bit of time for the resonant antenna to settle.
+	SpinDelay(30);
+	
+	// Enable Peripheral Clock for TIMER_CLOCK0, used to measure exact timing before answering
+	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC0);
+
+	// Enable Peripheral Clock for TIMER_CLOCK1, used to capture edges of the tag frames
+	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC1);
+	AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
+	
+    // Disable timer during configuration	
+	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+	
+	// Capture mode, defaul timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
+	// external trigger rising edge, load RA on falling edge of TIOA.
+	AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK | AT91C_TC_ETRGEDG_FALLING | AT91C_TC_ABETRG | AT91C_TC_LDRA_FALLING;
+	
+	// Enable and reset counters
+	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+
+	// Tag specific configuration settings (sof, timings, etc.)
+	if (htf < 10){
+		// hitagS settings
+		reset_sof = 1;
+		t_wait = 200;
+    // DbpString("Configured for hitagS reader");
+	} else if (htf < 20) {
+		// hitag1 settings
+		reset_sof = 1;
+		t_wait = 200;
+    // DbpString("Configured for hitag1 reader");
+	} else if (htf < 30) {
+		// hitag2 settings
+		reset_sof = 4;
+		t_wait = HITAG_T_WAIT_2;
+    // DbpString("Configured for hitag2 reader");
+	} else {
+		Dbprintf("Error, unknown hitag reader type: %d",htf);
+		set_tracing(false);	
+		return;
+	}
+	uint8_t attempt_count=0;
+	while (!bStop && !BUTTON_PRESS()) {
+		// Watchdog hit
+		WDT_HIT();
+		
+		// Check if frame was captured and store it
+		if (rxlen > 0) {
+			frame_count++;
+			if (!bQuiet) {
+				if (!LogTraceHitag(rx,rxlen, response, 0, false)) {
+					DbpString("Trace full");
+					if (bQuitTraceFull)
+						break;
+					else
+						bQuiet = true;
+				}
+			}
+		}
+		
+		// By default reset the transmission buffer
+		tx = txbuf;
+		switch (htf) {
+			case RHT2F_PASSWORD: {
+				bStop = !hitag2_password(rx,rxlen,tx,&txlen);
+			} break;
+			case RHT2F_AUTHENTICATE: {
+				bStop = !hitag2_authenticate(rx,rxlen,tx,&txlen);
+			} break;
+			case RHT2F_CRYPTO: {
+			bStop = !hitag2_crypto(rx,rxlen,tx,&txlen, false);
+			} break;
+			case RHT2F_TEST_AUTH_ATTEMPTS: {
+				bStop = !hitag2_test_auth_attempts(rx,rxlen,tx,&txlen);
+			} break;
+			case RHT2F_UID_ONLY: {
+				bStop = !hitag2_read_uid(rx, rxlen, tx, &txlen);
+				attempt_count++; //attempt 3 times to get uid then quit
+				if (!bStop && attempt_count == 3) bStop = true;
+			} break;
+			default: {
+				Dbprintf("Error, unknown function: %d",htf);
+				set_tracing(false);
+				return;
+			} break;
+		}
+		
+		// Send and store the reader command
+		// Disable timer 1 with external trigger to avoid triggers during our own modulation
+		AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+			
+		// Wait for HITAG_T_WAIT_2 carrier periods after the last tag bit before transmitting,
+		// Since the clock counts since the last falling edge, a 'one' means that the
+		// falling edge occured halfway the period. with respect to this falling edge,
+		// we need to wait (T_Wait2 + half_tag_period) when the last was a 'one'.
+		// All timer values are in terms of T0 units
+		while (AT91C_BASE_TC0->TC_CV < T0 * (t_wait + (HITAG_T_TAG_HALF_PERIOD * lastbit)));
+		
+		// Transmit the reader frame
+		hitag_reader_send_frame(tx, txlen);
+
+		// Enable and reset external trigger in timer for capturing future frames
+		AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+
+		// Add transmitted frame to total count
+		if (txlen > 0) {
+			frame_count++;
+			if (!bQuiet) {
+				// Store the frame in the trace
+				if (!LogTraceHitag(tx, txlen, HITAG_T_WAIT_2, 0, true)) {
+					if (bQuitTraceFull) {
+						break;
+					} else {
+						bQuiet = true;
+					}
+				}
+			}
+		}
+				
+		// Reset values for receiving frames
+		memset(rx, 0x00, sizeof(rx));
+		rxlen = 0;
+		lastbit = 1;
+		bSkip = true;
+		tag_sof = reset_sof;
+		response = 0;
+		uint32_t errorCount = 0;
+		
+		// Receive frame, watch for at most T0*EOF periods
+		while (AT91C_BASE_TC1->TC_CV < T0 * HITAG_T_WAIT_MAX) {
+			// Check if falling edge in tag modulation is detected
+			if (AT91C_BASE_TC1->TC_SR & AT91C_TC_LDRAS) {
+				// Retrieve the new timing values 
+				int ra = (AT91C_BASE_TC1->TC_RA/T0);
+				
+				// Reset timer every frame, we have to capture the last edge for timing
+				AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
+				
+				LED_B_ON();
+				
+				// Capture tag frame (manchester decoding using only falling edges)
+				if (ra >= HITAG_T_EOF) {
+					// Capture the T0 periods that have passed since last communication or field drop (reset)
+					// We always recieve a 'one' first, which has the falling edge after a half period |-_|
+					response = ra-HITAG_T_TAG_HALF_PERIOD;
+				} else if (ra >= HITAG_T_TAG_CAPTURE_FOUR_HALF) {
+					// Manchester coding example |-_|_-|-_| (101)
+					rx[rxlen / 8] |= 0 << (7-(rxlen%8));
+					rxlen++;
+					rx[rxlen / 8] |= 1 << (7-(rxlen%8));
+					rxlen++;
+				} else if (ra >= HITAG_T_TAG_CAPTURE_THREE_HALF) {
+					// Manchester coding example |_-|...|_-|-_| (0...01)
+					rx[rxlen / 8] |= 0 << (7-(rxlen%8));
+					rxlen++;
+					// We have to skip this half period at start and add the 'one' the second time 
+					if (!bSkip) {
+						rx[rxlen / 8] |= 1 << (7-(rxlen%8));
+						rxlen++;
+					}
+					lastbit = !lastbit;
+					bSkip = !bSkip;
+				} else if (ra >= HITAG_T_TAG_CAPTURE_TWO_HALF) {
+					// Manchester coding example |_-|_-| (00) or |-_|-_| (11)
+					if (tag_sof) {
+						// Ignore bits that are transmitted during SOF
+						tag_sof--;
+					} else {
+						// bit is same as last bit
+						rx[rxlen / 8] |= lastbit << (7-(rxlen%8));
+						rxlen++;
+					}
+				} else {
+						//Dbprintf("DEBUG: Wierd2");
+						errorCount++;
+					// Ignore wierd value, is to small to mean anything
+				}
+			}
+			//if we saw over 100 wierd values break it probably isn't hitag...
+			if (errorCount > 100) break;
+			// We can break this loop if we received the last bit from a frame
+			if (AT91C_BASE_TC1->TC_CV > T0*HITAG_T_EOF) {
+				if (rxlen > 0) break;
+			}
+		}
+	}
+	LED_B_OFF();
+	LED_D_OFF();
+	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+
+	if ( bSuccessful )
+		cmd_send(CMD_ACK, bSuccessful, 0, 0, (byte_t*)tag.sectors, 48);
+	else
+		cmd_send(CMD_ACK, bSuccessful, 0, 0, 0, 0);
+
+	set_tracing(false);
+}
+
+void WriterHitag(hitag_function htf, hitag_data* htd, int page) {
 	int frame_count;
 	int response;
 	byte_t rx[HITAG_FRAME_LEN];
@@ -1126,60 +1526,34 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 	bool bStop;
 	bool bQuitTraceFull = false;
   
-  FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-  // Reset the return status
-  bSuccessful = false;
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+	// Reset the return status
+	bSuccessful = false;
   
 	// Clean up trace and prepare it for storing frames
-  iso14a_set_tracing(TRUE);
-  iso14a_clear_trace();
-	DbpString("Starting Hitag reader family");
+	set_tracing(true);
+	clear_trace();
+
+	// DbpString("Starting Hitag reader family");
 
 	// Check configuration
 	switch(htf) {
-		case RHT2F_PASSWORD: {
-      Dbprintf("List identifier in password mode");
-			memcpy(password,htd->pwd.password,4);
-      blocknr = 0;
-			bQuitTraceFull = false;
-			bQuiet = false;
-			bPwd = false;
-		} break;
-      
-		case RHT2F_AUTHENTICATE: {
-			DbpString("Authenticating using nr,ar pair:");
-			memcpy(NrAr,htd->auth.NrAr,8);
-			Dbhexdump(8,NrAr,false);
-			bQuiet = false;
-			bCrypto = false;
-      bAuthenticating = false;
-			bQuitTraceFull = true;
-		} break;
-      
-		case RHT2F_CRYPTO: {
-			DbpString("Authenticating using key:");
-			memcpy(key,htd->crypto.key,6);
-			Dbhexdump(6,key,false);
-      blocknr = 0;
-			bQuiet = false;
-			bCrypto = false;
-      bAuthenticating = false;
-			bQuitTraceFull = true;
-		} break;
-
-		case RHT2F_TEST_AUTH_ATTEMPTS: {
-			Dbprintf("Testing %d authentication attempts",(auth_table_len/8));
-			auth_table_pos = 0;
-			memcpy(NrAr,auth_table,8);
-			bQuitTraceFull = false;
-			bQuiet = false;
-			bCrypto = false;
-		} break;
-			
-		default: {
-			Dbprintf("Error, unknown function: %d",htf);
-			return;
-		} break;
+	case WHT2F_CRYPTO: {
+		DbpString("Authenticating using key:");
+		memcpy(key,htd->crypto.key,6);	  //HACK; 4 or 6??  I read both in the code.
+		memcpy(writedata, htd->crypto.data, 4);
+		Dbhexdump(6,key,false);
+		blocknr = page;
+		bQuiet = false;
+		bCrypto = false;
+		bAuthenticating = false;
+		bQuitTraceFull = true;
+		writestate = WRITE_STATE_START;
+	} break;
+	default: {
+		Dbprintf("Error, unknown function: %d",htf);
+		return;
+	} break;
 	}
 	
 	LED_D_ON();
@@ -1210,7 +1584,7 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC1);
 	AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
 	
-    // Disable timer during configuration	
+	// Disable timer during configuration	
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 	
 	// Capture mode, defaul timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
@@ -1227,27 +1601,26 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 	lastbit = 1;
 	bStop = false;
 
-  // Tag specific configuration settings (sof, timings, etc.)
-  if (htf < 10){
-    // hitagS settings
-    reset_sof = 1;
-    t_wait = 200;
-    DbpString("Configured for hitagS reader");
-  } else if (htf < 20) {
-    // hitag1 settings
-    reset_sof = 1;
-    t_wait = 200;
-    DbpString("Configured for hitag1 reader");
-  } else if (htf < 30) {
-    // hitag2 settings
-    reset_sof = 4;
-    t_wait = HITAG_T_WAIT_2;
-    DbpString("Configured for hitag2 reader");
+	// Tag specific configuration settings (sof, timings, etc.)
+	if (htf < 10){
+		// hitagS settings
+		reset_sof = 1;
+		t_wait = 200;
+		// DbpString("Configured for hitagS reader");
+	} else if (htf < 20) {
+		// hitag1 settings
+		reset_sof = 1;
+		t_wait = 200;
+		// DbpString("Configured for hitag1 reader");
+	} else if (htf < 30) {
+		// hitag2 settings
+		reset_sof = 4;
+		t_wait = HITAG_T_WAIT_2;
+		// DbpString("Configured for hitag2 reader");
 	} else {
-    Dbprintf("Error, unknown hitag reader type: %d",htf);
-    return;
-  }
-		
+		Dbprintf("Error, unknown hitag reader type: %d",htf);
+		return;
+	}
 	while(!bStop && !BUTTON_PRESS()) {
 		// Watchdog hit
 		WDT_HIT();
@@ -1270,22 +1643,13 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 		// By default reset the transmission buffer
 		tx = txbuf;
 		switch(htf) {
-			case RHT2F_PASSWORD: {
-				bStop = !hitag2_password(rx,rxlen,tx,&txlen);
-			} break;
-			case RHT2F_AUTHENTICATE: {
-				bStop = !hitag2_authenticate(rx,rxlen,tx,&txlen);
-			} break;
-			case RHT2F_CRYPTO: {
-				bStop = !hitag2_crypto(rx,rxlen,tx,&txlen);
-			} break;
-			case RHT2F_TEST_AUTH_ATTEMPTS: {
-				bStop = !hitag2_test_auth_attempts(rx,rxlen,tx,&txlen);
-			} break;
-			default: {
-				Dbprintf("Error, unknown function: %d",htf);
-				return;
-			} break;
+		case WHT2F_CRYPTO: {
+			bStop = !hitag2_crypto(rx,rxlen,tx,&txlen, true);
+		} break;
+		default: {
+			Dbprintf("Error, unknown function: %d",htf);
+			return;
+		} break;
 		}
 		
 		// Send and store the reader command
@@ -1298,6 +1662,8 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 		// we need to wait (T_Wait2 + half_tag_period) when the last was a 'one'.
 		// All timer values are in terms of T0 units
 		while(AT91C_BASE_TC0->TC_CV < T0*(t_wait+(HITAG_T_TAG_HALF_PERIOD*lastbit)));
+			
+		// Dbprintf("DEBUG: Sending reader frame");
 		
 		// Transmit the reader frame
 		hitag_reader_send_frame(tx,txlen);
@@ -1319,7 +1685,7 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 				}
 			}
 		}
-				
+
 		// Reset values for receiving frames
 		memset(rx,0x00,sizeof(rx));
 		rxlen = 0;
@@ -1327,7 +1693,9 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 		bSkip = true;
 		tag_sof = reset_sof;
 		response = 0;
-		
+		// Dbprintf("DEBUG: Waiting to receive frame");
+		uint32_t errorCount = 0;
+
 		// Receive frame, watch for at most T0*EOF periods
 		while (AT91C_BASE_TC1->TC_CV < T0*HITAG_T_WAIT_MAX) {
 			// Check if falling edge in tag modulation is detected
@@ -1339,23 +1707,33 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 				AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
 				
 				LED_B_ON();
-				
+				 
 				// Capture tag frame (manchester decoding using only falling edges)
 				if(ra >= HITAG_T_EOF) {
 					if (rxlen != 0) {
-						//DbpString("wierd1?");
+						//Dbprintf("DEBUG: Wierd1");
 					}
 					// Capture the T0 periods that have passed since last communication or field drop (reset)
 					// We always recieve a 'one' first, which has the falling edge after a half period |-_|
 					response = ra-HITAG_T_TAG_HALF_PERIOD;
 				} else if(ra >= HITAG_T_TAG_CAPTURE_FOUR_HALF) {
 					// Manchester coding example |-_|_-|-_| (101)
+
+					// need to test to verify we don't exceed memory...
+					// if ( ((rxlen+2) / 8) > HITAG_FRAME_LEN) {
+					//	break;
+					// }
 					rx[rxlen / 8] |= 0 << (7-(rxlen%8));
 					rxlen++;
 					rx[rxlen / 8] |= 1 << (7-(rxlen%8));
 					rxlen++;
 				} else if(ra >= HITAG_T_TAG_CAPTURE_THREE_HALF) {
 					// Manchester coding example |_-|...|_-|-_| (0...01)
+					
+					// need to test to verify we don't exceed memory...
+					// if ( ((rxlen+2) / 8) > HITAG_FRAME_LEN) {
+					//	break;
+					// }
 					rx[rxlen / 8] |= 0 << (7-(rxlen%8));
 					rxlen++;
 					// We have to skip this half period at start and add the 'one' the second time 
@@ -1367,6 +1745,11 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 					bSkip = !bSkip;
 				} else if(ra >= HITAG_T_TAG_CAPTURE_TWO_HALF) {
 					// Manchester coding example |_-|_-| (00) or |-_|-_| (11)
+
+					// need to test to verify we don't exceed memory...
+					// if ( ((rxlen+2) / 8) > HITAG_FRAME_LEN) {
+					//	break;
+					// }
 					if (tag_sof) {
 						// Ignore bits that are transmitted during SOF
 						tag_sof--;
@@ -1376,22 +1759,34 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 						rxlen++;
 					}
 				} else {
+					// Dbprintf("DEBUG: Wierd2");
+					errorCount++;
 					// Ignore wierd value, is to small to mean anything
 				}
 			}
-
+			// if we saw over 100 wierd values break it probably isn't hitag...
+			if (errorCount >100) break;
 			// We can break this loop if we received the last bit from a frame
 			if (AT91C_BASE_TC1->TC_CV > T0*HITAG_T_EOF) {
 				if (rxlen>0) break;
 			}
 		}
+		
+		// Wait some extra time for flash to be programmed
+		if ((rxlen == 0) && (writestate == WRITE_STATE_PROG))
+		{
+			AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
+			while(AT91C_BASE_TC0->TC_CV < T0*(HITAG_T_PROG - HITAG_T_WAIT_MAX));
+		}
 	}
+	// Dbprintf("DEBUG: Done waiting for frame");
+	
 	LED_B_OFF();
 	LED_D_OFF();
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	Dbprintf("frame received: %d",frame_count);
-  DbpString("All done");
-  cmd_send(CMD_ACK,bSuccessful,0,0,(byte_t*)tag.sectors,48);
+	// Dbprintf("frame received: %d",frame_count);
+	// DbpString("All done");
+	cmd_send(CMD_ACK,bSuccessful,0,0,(byte_t*)tag.sectors,48);
 }

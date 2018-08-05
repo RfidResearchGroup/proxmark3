@@ -3,16 +3,18 @@ Signature="$Windows NT$"
 Class=Ports
 ClassGuid={4D36E978-E325-11CE-BFC1-08002BE10318}
 Provider=%ProviderName%
-DriverVer=10/15/2009,1.0.0.0
+DriverVer=03/05/2018,1.1.1.0
 
 [MANUFACTURER]
 %ProviderName%=DeviceList, NTx86, NTamd64
 
 [DeviceList.NTx86]
-%DeviceName%=DriverInstall,USB\VID_2d2d&PID_504d
+%DeviceName%=DriverInstall,USB\VID_9AC4&PID_4B8F
+%DeviceName_old%=DriverInstall,USB\VID_2d2d&PID_504d
 
 [DeviceList.NTamd64]
-%DeviceName%=DriverInstall,USB\VID_2d2d&PID_504d
+%DeviceName%=DriverInstall,USB\VID_9AC4&PID_4B8F
+%DeviceName_old%=DriverInstall,USB\VID_2d2d&PID_504d
 
 [DriverInstall]
 include=mdmcpq.inf
@@ -30,3 +32,4 @@ HKR,,EnumPropPages32,,"MsPorts.dll,SerialPortPropPageProvider"
 [Strings]
 ProviderName = "proxmark.org"
 DeviceName = "Proxmark3"
+DeviceName_old = "Proxmark3 (old)"

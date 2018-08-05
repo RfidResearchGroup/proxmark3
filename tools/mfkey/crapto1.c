@@ -15,7 +15,7 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor,
     Boston, MA  02110-1301, US$
 
-    Copyright (C) 2008-2008 bla <blapost@gmail.com>
+    Copyright (C) 2008-2014 bla <blapost@gmail.com>
 */
 #include "crapto1.h"
 #include <stdlib.h>
@@ -31,49 +31,75 @@ static void __attribute__((constructor)) fill_lut()
 #define filter(x) (filterlut[(x) & 0xfffff])
 #endif
 
-static void quicksort(uint32_t* const start, uint32_t* const stop)
+
+
+typedef struct bucket {
+	uint32_t *head;
+	uint32_t *bp;
+} bucket_t;
+
+typedef bucket_t bucket_array_t[2][0x100];
+
+typedef struct bucket_info {
+	struct {
+		uint32_t *head, *tail;
+		} bucket_info[2][0x100];
+		uint32_t numbuckets;
+	} bucket_info_t;
+
+
+static void bucket_sort_intersect(uint32_t* const estart, uint32_t* const estop,
+								  uint32_t* const ostart, uint32_t* const ostop,
+								  bucket_info_t *bucket_info, bucket_array_t bucket)
 {
-	uint32_t *it = start + 1, *rit = stop;
+	uint32_t *p1, *p2;
+	uint32_t *start[2];
+	uint32_t *stop[2];
 
-	if(it > rit)
-		return;
+	start[0] = estart;
+	stop[0] = estop;
+	start[1] = ostart;
+	stop[1] = ostop;
 
-	while(it < rit)
-		if(*it <= *start)
-			++it;
-		else if(*rit > *start)
-			--rit;
-		else
-			*it ^= (*it ^= *rit, *rit ^= *it);
+	// init buckets to be empty
+	for (uint32_t i = 0; i < 2; i++) {
+		for (uint32_t j = 0x00; j <= 0xff; j++) {
+			bucket[i][j].bp = bucket[i][j].head;
+		}
+	}
 
-	if(*rit >= *start)
-		--rit;
-	if(rit != start)
-		*rit ^= (*rit ^= *start, *start ^= *rit);
+	// sort the lists into the buckets based on the MSB (contribution bits)
+	for (uint32_t i = 0; i < 2; i++) {
+		for (p1 = start[i]; p1 <= stop[i]; p1++) {
+			uint32_t bucket_index = (*p1 & 0xff000000) >> 24;
+			*(bucket[i][bucket_index].bp++) = *p1;
+		}
+	}
 
-	quicksort(start, rit - 1);
-	quicksort(rit + 1, stop);
+
+	// write back intersecting buckets as sorted list.
+	// fill in bucket_info with head and tail of the bucket contents in the list and number of non-empty buckets.
+	uint32_t nonempty_bucket;
+	for (uint32_t i = 0; i < 2; i++) {
+		p1 = start[i];
+		nonempty_bucket = 0;
+		for (uint32_t j = 0x00; j <= 0xff; j++) {
+			if (bucket[0][j].bp != bucket[0][j].head && bucket[1][j].bp != bucket[1][j].head) { // non-empty intersecting buckets only
+				bucket_info->bucket_info[i][nonempty_bucket].head = p1;
+				for (p2 = bucket[i][j].head; p2 < bucket[i][j].bp; *p1++ = *p2++);
+				bucket_info->bucket_info[i][nonempty_bucket].tail = p1 - 1;
+				nonempty_bucket++;
+			}
+		}
+		bucket_info->numbuckets = nonempty_bucket;
+		}
 }
-/** binsearch
- * Binary search for the first occurence of *stop's MSB in sorted [start,stop]
- */
-static inline uint32_t* binsearch(uint32_t *start, uint32_t *stop)
-{
-	uint32_t mid, val = *stop & 0xff000000;
-	while(start != stop)
-		if(start[mid = (stop - start) >> 1] > val)
-			stop = &start[mid];
-		else
-			start += mid + 1;
 
-	return start;
-}
 
 /** update_contribution
  * helper, calculates the partial linear feedback contributions and puts in MSB
  */
-static inline void
-update_contribution(uint32_t *item, const uint32_t mask1, const uint32_t mask2)
+static inline void update_contribution(uint32_t *item, const uint32_t mask1, const uint32_t mask2)
 {
 	uint32_t p = *item >> 25;
 
@@ -85,8 +111,7 @@ update_contribution(uint32_t *item, const uint32_t mask1, const uint32_t mask2)
 /** extend_table
  * using a bit of the keystream extend the table of possible lfsr states
  */
-static inline void
-extend_table(uint32_t *tbl, uint32_t **end, int bit, int m1, int m2, uint32_t in)
+static inline void extend_table(uint32_t *tbl, uint32_t **end, int bit, int m1, int m2, uint32_t in)
 {
 	in <<= 24;
 	for(*tbl <<= 1; tbl <= *end; *++tbl <<= 1)
@@ -109,14 +134,16 @@ extend_table(uint32_t *tbl, uint32_t **end, int bit, int m1, int m2, uint32_t in
  */
 static inline void extend_table_simple(uint32_t *tbl, uint32_t **end, int bit)
 {
-	for(*tbl <<= 1; tbl <= *end; *++tbl <<= 1)
-		if(filter(*tbl) ^ filter(*tbl | 1))
+	for(*tbl <<= 1; tbl <= *end; *++tbl <<= 1) {
+		if(filter(*tbl) ^ filter(*tbl | 1)) {	// replace
 			*tbl |= filter(*tbl) ^ bit;
-		else if(filter(*tbl) == bit) {
+		} else if(filter(*tbl) == bit) {		// insert
 			*++*end = *++tbl;
 			*tbl = tbl[-1] | 1;
-		} else
+		} else	{								// drop
 			*tbl-- = *(*end)--;
+		}
+	}
 }
 /** recover
  * recursively narrow down the search space, 4 bits of keystream at a time
@@ -124,9 +151,10 @@ static inline void extend_table_simple(uint32_t *tbl, uint32_t **end, int bit)
 static struct Crypto1State*
 recover(uint32_t *o_head, uint32_t *o_tail, uint32_t oks,
 	uint32_t *e_head, uint32_t *e_tail, uint32_t eks, int rem,
-	struct Crypto1State *sl, uint32_t in)
+	struct Crypto1State *sl, uint32_t in, bucket_array_t bucket)
 {
-	uint32_t *o, *e, i;
+	uint32_t *o, *e;
+	bucket_info_t bucket_info;
 
 	if(rem == -1) {
 		for(e = e_head; e <= e_tail; ++e) {
@@ -140,35 +168,26 @@ recover(uint32_t *o_head, uint32_t *o_tail, uint32_t oks,
 		return sl;
 	}
 
-	for(i = 0; i < 4 && rem--; i++) {
+	for(uint32_t i = 0; i < 4 && rem--; i++) {
 		oks >>= 1;
 		eks >>= 1;
 		in >>= 2;
-		extend_table(o_head, &o_tail, oks & 1, LF_POLY_EVEN << 1 | 1,
-			     LF_POLY_ODD << 1, 0);
+		extend_table(o_head, &o_tail, oks & 1, LF_POLY_EVEN << 1 | 1, LF_POLY_ODD << 1, 0);
 		if(o_head > o_tail)
 			return sl;
 
-		extend_table(e_head, &e_tail, eks & 1, LF_POLY_ODD,
-			     LF_POLY_EVEN << 1 | 1, in & 3);
+		extend_table(e_head, &e_tail, eks & 1, LF_POLY_ODD, LF_POLY_EVEN << 1 | 1, in & 3);
 		if(e_head > e_tail)
 			return sl;
 	}
 
-	quicksort(o_head, o_tail);
-	quicksort(e_head, e_tail);
+	bucket_sort_intersect(e_head, e_tail, o_head, o_tail, &bucket_info, bucket);
 
-	while(o_tail >= o_head && e_tail >= e_head)
-		if(((*o_tail ^ *e_tail) >> 24) == 0) {
-			o_tail = binsearch(o_head, o = o_tail);
-			e_tail = binsearch(e_head, e = e_tail);
-			sl = recover(o_tail--, o, oks,
-				     e_tail--, e, eks, rem, sl, in);
+	for (int i = bucket_info.numbuckets - 1; i >= 0; i--) {
+		sl = recover(bucket_info.bucket_info[1][i].head, bucket_info.bucket_info[1][i].tail, oks,
+					 bucket_info.bucket_info[0][i].head, bucket_info.bucket_info[0][i].tail, eks,
+					 rem, sl, in, bucket);
 		}
-		else if(*o_tail > *e_tail)
-			o_tail = binsearch(o_head, o_tail) - 1;
-		else
-			e_tail = binsearch(e_head, e_tail) - 1;
 
 	return sl;
 }
@@ -184,6 +203,7 @@ struct Crypto1State* lfsr_recovery32(uint32_t ks2, uint32_t in)
 	uint32_t *even_head = 0, *even_tail = 0, eks = 0;
 	int i;
 
+	// split the keystream into an odd and even part
 	for(i = 31; i >= 0; i -= 2)
 		oks = oks << 1 | BEBIT(ks2, i);
 	for(i = 30; i >= 0; i -= 2)
@@ -200,6 +220,19 @@ struct Crypto1State* lfsr_recovery32(uint32_t ks2, uint32_t in)
 
 	statelist->odd = statelist->even = 0;
 
+	// allocate memory for out of place bucket_sort
+	bucket_array_t bucket;
+	
+	for (uint32_t i = 0; i < 2; i++) {
+		for (uint32_t j = 0; j <= 0xff; j++) {
+			bucket[i][j].head = malloc(sizeof(uint32_t)<<14);
+			if (!bucket[i][j].head) {
+				goto out;
+			}
+		}
+	}
+
+	// initialize statelists: add all possible states which would result into the rightmost 2 bits of the keystream
 	for(i = 1 << 20; i >= 0; --i) {
 		if(filter(i) == (oks & 1))
 			*++odd_tail = i;
@@ -207,16 +240,22 @@ struct Crypto1State* lfsr_recovery32(uint32_t ks2, uint32_t in)
 			*++even_tail = i;
 	}
 
+	// extend the statelists. Look at the next 8 Bits of the keystream (4 Bit each odd and even):
 	for(i = 0; i < 4; i++) {
 		extend_table_simple(odd_head,  &odd_tail, (oks >>= 1) & 1);
 		extend_table_simple(even_head, &even_tail, (eks >>= 1) & 1);
 	}
 
-	in = (in >> 16 & 0xff) | (in << 16) | (in & 0xff00);
-	recover(odd_head, odd_tail, oks,
-		even_head, even_tail, eks, 11, statelist, in << 1);
+	// the statelists now contain all states which could have generated the last 10 Bits of the keystream.
+	// 22 bits to go to recover 32 bits in total. From now on, we need to take the "in"
+	// parameter into account.
+	in = (in >> 16 & 0xff) | (in << 16) | (in & 0xff00);		// Byte swapping
+	recover(odd_head, odd_tail, oks, even_head, even_tail, eks, 11, statelist, in << 1, bucket);
 
 out:
+	for (uint32_t i = 0; i < 2; i++)
+		for (uint32_t j = 0; j <= 0xff; j++)
+			free(bucket[i][j].head);
 	free(odd_head);
 	free(even_head);
 	return statelist;
@@ -319,9 +358,10 @@ uint8_t lfsr_rollback_bit(struct Crypto1State *s, uint32_t in, int fb)
 {
 	int out;
 	uint8_t ret;
+	uint32_t t;
 
 	s->odd &= 0xffffff;
-	s->odd ^= (s->odd ^= s->even, s->even ^= s->odd);
+	t = s->odd, s->odd = s->even, s->even = t;
 
 	out = s->even & 1;
 	out ^= LF_POLY_EVEN & (s->even >>= 1);
@@ -337,9 +377,21 @@ uint8_t lfsr_rollback_bit(struct Crypto1State *s, uint32_t in, int fb)
  */
 uint8_t lfsr_rollback_byte(struct Crypto1State *s, uint32_t in, int fb)
 {
+	/*
 	int i, ret = 0;
 	for (i = 7; i >= 0; --i)
 		ret |= lfsr_rollback_bit(s, BIT(in, i), fb) << i;
+*/
+// unfold loop 20160112
+	uint8_t ret = 0;
+	ret |= lfsr_rollback_bit(s, BIT(in, 7), fb) << 7;
+	ret |= lfsr_rollback_bit(s, BIT(in, 6), fb) << 6;
+	ret |= lfsr_rollback_bit(s, BIT(in, 5), fb) << 5;
+	ret |= lfsr_rollback_bit(s, BIT(in, 4), fb) << 4;
+	ret |= lfsr_rollback_bit(s, BIT(in, 3), fb) << 3;
+	ret |= lfsr_rollback_bit(s, BIT(in, 2), fb) << 2;
+	ret |= lfsr_rollback_bit(s, BIT(in, 1), fb) << 1;
+	ret |= lfsr_rollback_bit(s, BIT(in, 0), fb) << 0;
 	return ret;
 }
 /** lfsr_rollback_word
@@ -347,10 +399,49 @@ uint8_t lfsr_rollback_byte(struct Crypto1State *s, uint32_t in, int fb)
  */
 uint32_t lfsr_rollback_word(struct Crypto1State *s, uint32_t in, int fb)
 {
+	/*
 	int i;
 	uint32_t ret = 0;
 	for (i = 31; i >= 0; --i)
 		ret |= lfsr_rollback_bit(s, BEBIT(in, i), fb) << (i ^ 24);
+*/
+// unfold loop 20160112
+	uint32_t ret = 0;
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 31), fb) << (31 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 30), fb) << (30 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 29), fb) << (29 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 28), fb) << (28 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 27), fb) << (27 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 26), fb) << (26 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 25), fb) << (25 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 24), fb) << (24 ^ 24);
+
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 23), fb) << (23 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 22), fb) << (22 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 21), fb) << (21 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 20), fb) << (20 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 19), fb) << (19 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 18), fb) << (18 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 17), fb) << (17 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 16), fb) << (16 ^ 24);
+	
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 15), fb) << (15 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 14), fb) << (14 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 13), fb) << (13 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 12), fb) << (12 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 11), fb) << (11 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 10), fb) << (10 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 9), fb) << (9 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 8), fb) << (8 ^ 24);
+	
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 7), fb) << (7 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 6), fb) << (6 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 5), fb) << (5 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 4), fb) << (4 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 3), fb) << (3 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 2), fb) << (2 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 1), fb) << (1 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 0), fb) << (0 ^ 24);
 	return ret;
 }
 
@@ -377,6 +468,8 @@ int nonce_distance(uint32_t from, uint32_t to)
 static uint32_t fastfwd[2][8] = {
 	{ 0, 0x4BC53, 0xECB1, 0x450E2, 0x25E29, 0x6E27A, 0x2B298, 0x60ECB},
 	{ 0, 0x1D962, 0x4BC53, 0x56531, 0xECB1, 0x135D3, 0x450E2, 0x58980}};
+
+
 /** lfsr_prefix_ks
  *
  * Is an exported helper function from the common prefix attack
@@ -388,11 +481,11 @@ static uint32_t fastfwd[2][8] = {
  */
 uint32_t *lfsr_prefix_ks(uint8_t ks[8], int isodd)
 {
-	uint32_t c, entry, *candidates = malloc(4 << 10);
-	int i, size = 0, good;
-
-	if(!candidates)
-		return 0;
+	uint32_t *candidates = malloc(4 << 10);
+	if(!candidates) return 0;
+	
+	uint32_t c,  entry;
+	int size = 0, i, good;
 
 	for(i = 0; i < 1 << 21; ++i) {
 		for(c = 0, good = 1; good && c < 8; ++c) {
@@ -412,9 +505,7 @@ uint32_t *lfsr_prefix_ks(uint8_t ks[8], int isodd)
 /** check_pfx_parity
  * helper function which eliminates possible secret states using parity bits
  */
-static struct Crypto1State*
-check_pfx_parity(uint32_t prefix, uint32_t rresp, uint8_t parities[8][8],
-          	uint32_t odd, uint32_t even, struct Crypto1State* sl)
+static struct Crypto1State* check_pfx_parity(uint32_t prefix, uint32_t rresp, uint8_t parities[8][8], uint32_t odd, uint32_t even, struct Crypto1State* sl)
 {
 	uint32_t ks1, nr, ks2, rr, ks3, c, good = 1;
 
@@ -442,12 +533,17 @@ check_pfx_parity(uint32_t prefix, uint32_t rresp, uint8_t parities[8][8],
 	return sl + good;
 } 
 
-
 /** lfsr_common_prefix
  * Implentation of the common prefix attack.
+ * Requires the 28 bit constant prefix used as reader nonce (pfx)
+ * The reader response used (rr)
+ * The keystream used to encrypt the observed NACK's (ks)
+ * The parity bits (par)
+ * It returns a zero terminated list of possible cipher states after the
+ * tag nonce was fed in
  */
-struct Crypto1State*
-lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8])
+
+struct Crypto1State* lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8])
 {
 	struct Crypto1State *statelist, *s;
 	uint32_t *odd, *even, *o, *e, top;
@@ -455,7 +551,7 @@ lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8])
 	odd = lfsr_prefix_ks(ks, 1);
 	even = lfsr_prefix_ks(ks, 0);
 
-	s = statelist = malloc((sizeof *statelist) << 20);
+	s = statelist = malloc((sizeof *statelist) << 24);
 	if(!s || !odd || !even) {
 		free(statelist);
 		statelist = 0;

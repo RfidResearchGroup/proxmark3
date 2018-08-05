@@ -15,7 +15,7 @@ def main(argv):
     if argc < 3:
         print 'Usage:', argv[0], 'input.eml output.mfd'
         sys.exit(1)
-    
+
     with file(argv[1], "r") as file_inp, file(argv[2], "wb") as file_out:
         for line in file_inp:
             line = line.rstrip('\n').rstrip('\r')

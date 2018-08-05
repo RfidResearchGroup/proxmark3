@@ -24,32 +24,35 @@ module hi_read_tx(
     output dbg;
     input shallow_modulation;
 
+// low frequency outputs, not relevant
+assign pwr_lo = 1'b0;
+assign pwr_oe2 = 1'b0;
+	
 // The high-frequency stuff. For now, for testing, just bring out the carrier,
 // and allow the ARM to modulate it over the SSP.
 reg pwr_hi;
 reg pwr_oe1;
-reg pwr_oe2;
 reg pwr_oe3;
 reg pwr_oe4;
+
 always @(ck_1356megb or ssp_dout or shallow_modulation)
 begin
     if(shallow_modulation)
     begin
         pwr_hi <= ck_1356megb;
-        pwr_oe1 <= ~ssp_dout;
-        pwr_oe2 <= ~ssp_dout;
-        pwr_oe3 <= ~ssp_dout;
-        pwr_oe4 <= 1'b0;
+        pwr_oe1 <= 1'b0;
+        pwr_oe3 <= 1'b0;
+        pwr_oe4 <= ~ssp_dout;
     end
     else
     begin
         pwr_hi <= ck_1356megb & ssp_dout;
         pwr_oe1 <= 1'b0;
-        pwr_oe2 <= 1'b0;
         pwr_oe3 <= 1'b0;
         pwr_oe4 <= 1'b0;
     end
 end
+
 
 // Then just divide the 13.56 MHz clock down to produce appropriate clocks
 // for the synchronous serial port.
@@ -76,14 +79,11 @@ assign adc_clk = ck_1356meg;
 reg after_hysteresis;
 always @(negedge adc_clk)
 begin
-    if(& adc_d[7:0]) after_hysteresis <= 1'b1;
-    else if(~(| adc_d[7:0])) after_hysteresis <= 1'b0;
+    if(& adc_d[6:4]) after_hysteresis <= 1'b1;
+    else if(~(| adc_d[6:4])) after_hysteresis <= 1'b0;
 end
 
-
 assign ssp_din = after_hysteresis;
-
-assign pwr_lo = 1'b0;
-assign dbg = ssp_din;
+assign dbg = after_hysteresis;
 
 endmodule

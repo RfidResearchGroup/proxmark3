@@ -1,22 +1,20 @@
 CC = gcc
 LD = gcc
-CFLAGS = -Wall -O4 -c
+CFLAGS = -std=c99 -Wall -O3 -c
 LDFLAGS =
 
 OBJS = crypto1.o crapto1.o
 HEADERS = crapto1.h
 EXES = nonce2key
+WINEXES = $(patsubst %, %.exe, $(EXES))
 
 all: $(OBJS) $(EXES)
 
 %.o : %.c
-	$(CC) $(CFLAGS) -o $@ $<
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 % : %.c
 	$(LD) $(LDFLAGS) -o $@ $(OBJS) $<
 
-crypto1test: libnfc $(OBJS)
-	$(LD) $(LDFLAGS) -o crypto1test crypto1test.c $(OBJS)
- 
 clean: 
-	rm -f $(OBJS) $(EXES)
+	rm -f $(OBJS) $(EXES) $(WINEXES)

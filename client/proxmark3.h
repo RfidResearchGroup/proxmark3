@@ -12,16 +12,25 @@
 #ifndef PROXMARK3_H__
 #define PROXMARK3_H__
 
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
-#define llx PRIx64
-#define lli PRIi64
-#define hhu PRIu8
-
 #include "usb_cmd.h"
+#include "cmdscript.h"  // CmdScriptRun  
 
-#define PROXPROMPT "proxmark3> "
+#define PROXPROMPT "pm3 --> "
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 void SendCommand(UsbCommand *c);
+const char *get_my_executable_path(void);
+const char *get_my_executable_directory(void);
+void main_loop(char *script_cmds_file, char *script_cmd, bool usb_present);
+
+bool hookUpPM3(void);
+void *uart_receiver(void *targ);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

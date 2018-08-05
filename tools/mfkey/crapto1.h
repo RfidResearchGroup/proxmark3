@@ -15,10 +15,10 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
     MA  02110-1301, US$
 
-    Copyright (C) 2008-2008 bla <blapost@gmail.com>
+    Copyright (C) 2008-2014 bla <blapost@gmail.com>
 */
-#ifndef CRAPTO1_INCLUDED
-#define CRAPTO1_INCLUDED
+#ifndef CRAPTO1_H__
+#define CRAPTO1_H__
 #include <stdint.h>
 #ifdef __cplusplus
 extern "C" {
@@ -36,13 +36,15 @@ uint32_t prng_successor(uint32_t x, uint32_t n);
 struct Crypto1State* lfsr_recovery32(uint32_t ks2, uint32_t in);
 struct Crypto1State* lfsr_recovery64(uint32_t ks2, uint32_t ks3);
 uint32_t *lfsr_prefix_ks(uint8_t ks[8], int isodd);
-struct Crypto1State*
-lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8]);
+struct Crypto1State* lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8]);
 
 uint8_t lfsr_rollback_bit(struct Crypto1State* s, uint32_t in, int fb);
 uint8_t lfsr_rollback_byte(struct Crypto1State* s, uint32_t in, int fb);
 uint32_t lfsr_rollback_word(struct Crypto1State* s, uint32_t in, int fb);
 int nonce_distance(uint32_t from, uint32_t to);
+#define SWAPENDIAN(x)\
+	(x = (x >> 8 & 0xff00ff) | (x & 0xff00ff) << 8, x = x >> 16 | x << 16)
+	
 #define FOREACH_VALID_NONCE(N, FILTER, FSIZE)\
 	uint32_t __n = 0,__M = 0, N = 0;\
 	int __i;\
@@ -66,7 +68,7 @@ static inline int parity(uint32_t x)
 	x ^= x >> 4;
 	return BIT(0x6996, x & 0xf);
 #else
-        asm(    "movl %1, %%eax\n"
+	__asm__(	"movl %1, %%eax\n"
 		"mov %%ax, %%cx\n"
 		"shrl $0x10, %%eax\n"
 		"xor %%ax, %%cx\n"

@@ -10,7 +10,17 @@
 #define __FLASH_H__
 
 #include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <inttypes.h>
+
+#include "proxmark3.h"
 #include "elf.h"
+#include "proxendian.h"
+#include "usb_cmd.h"
+#include "at91sam7s512.h"
+#include "util_posix.h"
 
 typedef struct {
 	void *data;

@@ -48,8 +48,8 @@ static void badcode(lua_State *L, int c)
 
 static int doendian(int c)
 {
- int x=1;
- int e=*(char*)&x;
+ int x = 1;
+ int e = *(char*)&x;
  if (c==OP_LITTLEENDIAN) return !e;
  if (c==OP_BIGENDIAN) return e;
  if (c==OP_NATIVE) return 0;
@@ -60,7 +60,7 @@ static void doswap(int swap, void *p, size_t n)
 {
  if (swap)
  {
-  char *a=(char*)p;
+  char *a = (char*)p;
   int i,j;
   for (i=0, j=n-1, n=n/2; n--; i++, j--)
   {
@@ -87,14 +87,14 @@ static void doswap(int swap, void *p, size_t n)
    case OP:				\
    {					\
     T l;				\
-    int m=sizeof(l);			\
-    if (i+m>len) { done = 1;	break; }	\
-    memcpy(&l,s+i,m);			\
+    int m = sizeof(l);			\
+    if (i + m > len) { done = 1;	break; }	\
+    memcpy(&l, s+i, m);			\
     doswap(swap,&l,m);			\
-    if (i+m+l>len) { done = 1; break;}		\
-    i+=m;				\
+    if (i + m + l > len) { done = 1; break;}		\
+    i += m;				\
     lua_pushlstring(L,s+i,l);		\
-    i+=l;				\
+    i += l;				\
     ++n;				\
     break;				\
    }
@@ -107,7 +107,8 @@ static int l_unpack(lua_State *L) 		/** unpack(f,s, [init]) */
  size_t len;
  const char *s=luaL_checklstring(L,2,&len); /* switched s and f */
  const char *f=luaL_checkstring(L,1);
- int i_read = luaL_optint(L,3,1)-1;
+ int i_read = luaL_optinteger(L,3,1)-1;
+ //int i_read = (int)luaL_optint(L,(3),(1))-1;
  unsigned int i;
  if (i_read >= 0) {
    i = i_read;
@@ -120,8 +121,8 @@ static int l_unpack(lua_State *L) 		/** unpack(f,s, [init]) */
  lua_pushnil(L);
  while (*f && done == 0)
  {
-  int c=*f++;
-  int N=1;
+  int c = *f++;
+  int N = 1;
   if (isdigit((int) (unsigned char) *f))
   {
    N=0;
@@ -233,15 +234,15 @@ static int l_unpack(lua_State *L) 		/** unpack(f,s, [init]) */
 
 static int l_pack(lua_State *L) 		/** pack(f,...) */
 {
- int i=2;
- const char *f=luaL_checkstring(L,1);
- int swap=0;
+ int i = 2;
+ const char *f = luaL_checkstring(L,1);
+ int swap = 0;
  luaL_Buffer b;
  luaL_buffinit(L,&b);
  while (*f)
  {
-  int c=*f++;
-  int N=1;
+  int c = *f++;
+  int N = 1;
   if (isdigit((int) (unsigned char) *f))
   {
    N=0;

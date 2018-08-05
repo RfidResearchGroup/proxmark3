@@ -4,8 +4,6 @@ local lib14a = require('read14a')
 
 example = "script run 14araw -x 6000F57b"
 author = "Martin Holst Swende"
-
-
 desc =
 [[
 This is a script to allow raw 1444a commands to be sent and received. 
@@ -17,6 +15,8 @@ Arguments:
 	-p 				stay connected - dont inactivate the field
 	-x <payload> 	Data to send (NO SPACES!)
 	-d 				Debug flag
+	-t				Topaz mode
+	-3				ISO14443-4 (use RATS)
 
 Examples : 
 
@@ -50,48 +50,47 @@ local DEBUG = false -- the debug flag
 
 --- 
 -- A debug printout-function
-function dbg(args)
+local function dbg(args)
 	if DEBUG then
 		print("###", args)
 	end
 end 
 --- 
 -- This is only meant to be used when errors occur
-function oops(err)
+local function oops(err)
 	print("ERROR: ",err)
 end
-
-
 --- 
 -- Usage help
-function help()
+local function help()
 	print(desc)
 	print("Example usage")
 	print(example)
 end
-
 --- 
 -- The main entry point
 function main(args)
 
-	if args == nil or #args == 0 then
-		return help()
-	end
+	if args == nil or #args == 0 then return help() end
 
 	local ignore_response = false
-	local appendcrc = false
+	local append_crc = false
 	local stayconnected = false
 	local payload = nil
 	local doconnect = true
-
+	local topaz_mode = false
+	local no_rats = false
+	
 	-- Read the parameters
-	for o, a in getopt.getopt(args, 'corcpx:') do
+	for o, a in getopt.getopt(args, 'orcpx:dt3') do
 		if o == "o" then doconnect = false end		
 		if o == "r" then ignore_response = true end
-		if o == "c" then appendcrc = true end
+		if o == "c" then append_crc = true end
 		if o == "p" then stayconnected = true end
 		if o == "x" then payload = a end
 		if o == "d" then DEBUG = true end
+		if o == "t" then topaz_mode = true end
+		if o == "3" then no_rats = true end
 	end
 
 	-- First of all, connect
@@ -99,7 +98,7 @@ function main(args)
 		dbg("doconnect")
 		-- We reuse the connect functionality from a 
 		-- common library
-		info, err = lib14a.read1443a(true)
+		info, err = lib14a.read(true, no_rats)
 
 		if err then return oops(err) end
 		print(("Connected to card, uid = %s"):format(info.uid))
@@ -107,7 +106,7 @@ function main(args)
 
 	-- The actual raw payload, if any
 	if payload then
-		res,err = sendRaw(payload,{ignore_response = ignore_response})
+		res,err = sendRaw(payload,{ignore_response = ignore_response, topaz_mode = topaz_mode, append_crc = append_crc})
 		if err then return oops(err) end
 	
 		if not ignoreresponse then 
@@ -136,13 +135,18 @@ function showdata(usbpacket)
 	--print("----------------")
 end
 
-
-
 function sendRaw(rawdata, options)
 	print(">> ", rawdata)
 	
 	local flags = lib14a.ISO14A_COMMAND.ISO14A_NO_DISCONNECT + lib14a.ISO14A_COMMAND.ISO14A_RAW
 
+	if options.topaz_mode then
+		flags = flags + lib14a.ISO14A_COMMAND.ISO14A_TOPAZMODE
+	end
+	if options.append_crc then
+		flags = flags + lib14a.ISO14A_COMMAND.ISO14A_APPEND_CRC
+	end	
+	
 	local command = Command:new{cmd = cmds.CMD_READER_ISO_14443a, 
 									arg1 = flags, -- Send raw 
 									-- arg2 contains the length, which is half the length 
@@ -154,15 +158,11 @@ end
 
 -- Sends an instruction to do nothing, only disconnect
 function disconnect()
-
-	local command = Command:new{cmd = cmds.CMD_READER_ISO_14443a, 
-									arg1 = 0, -- Nothing 
-									}
+	local command = Command:new{cmd = cmds.CMD_READER_ISO_14443a, arg1 = 0,	}
 	-- We can ignore the response here, no ACK is returned for this command
 	-- Check /armsrc/iso14443a.c, ReaderIso14443a() for details
 	return lib14a.sendToDevice(command,true) 
 end								
-
 
 -------------------------
 -- 	Testing

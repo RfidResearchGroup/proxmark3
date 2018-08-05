@@ -8,9 +8,8 @@
 // Snooper binary
 //-----------------------------------------------------------------------------
 
-#include "sleep.h"
+#include "util_posix.h"
 #include "ui.h"
-#include "proxusb.h"
 #include "cmdmain.h"
 
 #define HANDLE_ERROR if (error_occured) { \
@@ -26,7 +25,7 @@ int main()
   return_on_error = 1;
 
   while(1) {
-    while (!OpenProxmark(0)) { sleep(1); }
+    while (!OpenProxmark()) { sleep(1); }
     while (1) {
       UsbCommand cmdbuf;
       CommandReceived("hf 14a snoop");
@@ -37,7 +36,7 @@ int main()
         ReceiveCommandPoll(&cmdbuf);
       }
       HANDLE_ERROR;
-      CommandReceived("hf 14a list");
+      CommandReceived("hf list 14a");
       HANDLE_ERROR;
     }
   }

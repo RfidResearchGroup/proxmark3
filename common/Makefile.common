@@ -25,10 +25,11 @@ CC	= $(CROSS)gcc
 AS	= $(CROSS)as
 LD	= $(CROSS)ld
 OBJCOPY = $(CROSS)objcopy
+GZIP=gzip
 
 OBJDIR	= obj
 
-INCLUDE = -I../include -I../common
+INCLUDE = -I../include -I../common -I.
 
 TAR=tar
 TARFLAGS = -C .. -rvf
@@ -46,7 +47,6 @@ COPY=cp
 PATHSEP=/
 FLASH_TOOL=client/flasher
 DETECTED_OS=$(UNAME)
-
 else
 
 # Assume that we are running on Windows.
@@ -54,25 +54,24 @@ DELETE=del /q
 MOVE=ren
 COPY=copy
 PATHSEP=\\#
-FLASH_TOOL=winsrc\\prox.exe
+FLASH_TOOL=client\\flasher.exe
 DETECTED_OS=Windows
 
 endif
 
-
-# Also search prerequisites in the common directory (for usb.c), and the fpga directory (for fpga.bit)
-VPATH = . ../common/ ../fpga/
+# Also search prerequisites in the common directory (for usb.c), the fpga directory (for fpga.bit), and the zlib directory
+VPATH = . ../common ../common/crapto1 ../common/polarssl ../fpga ../zlib ../armsrc/Standalone ../uart
 
 INCLUDES = ../include/proxmark3.h ../include/at91sam7s512.h ../include/config_gpio.h ../include/usb_cmd.h $(APP_INCLUDES)
 
-CFLAGS =  -c $(INCLUDE) -Wall -Werror -pedantic -std=c99 $(APP_CFLAGS) -Os
+CFLAGS =  -c $(INCLUDE) -Wall -Werror -pedantic -Wunused -std=c99 $(APP_CFLAGS) -Os
 LDFLAGS = -nostartfiles -nodefaultlibs -Wl,-gc-sections -n
 LIBS = -lgcc
 
-THUMBOBJ = $(patsubst %.c,$(OBJDIR)/%.o,$(THUMBSRC))
-ARMOBJ   = $(ARMSRC:%.c=$(OBJDIR)/%.o)
-ASMOBJ   = $(patsubst %.s,$(OBJDIR)/%.o,$(ASMSRC))
-VERSIONOBJ = $(OBJDIR)/version.o
+THUMBOBJ = $(patsubst %.c,$(OBJDIR)/%.o,$(notdir $(THUMBSRC)))
+ARMOBJ   = $(patsubst %.c,$(OBJDIR)/%.o,$(notdir $(ARMSRC)))
+ASMOBJ   = $(patsubst %.s,$(OBJDIR)/%.o,$(notdir $(ASMSRC)))
+VERSIONOBJ = $(patsubst %.c,$(OBJDIR)/%.o,$(notdir $(VERSIONSRC)))
 
 $(THUMBOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
 	$(CC) $(CFLAGS) -mthumb -mthumb-interwork -o $@ $< 
@@ -91,22 +90,21 @@ $(VERSIONOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
 # See ldscript.common. -- Henryk Plötz <henryk@ploetzli.ch> 2009-08-27
 OBJCOPY_TRANSLATIONS = --no-change-warnings \
 	--change-addresses -0x100000 --change-start 0 \
-	--change-section-address .bss+0 --change-section-address .data+0 \
+	--change-section-address .bss+0 --change-section-address .data-0x100000 \
 	--change-section-address .commonarea+0
 $(OBJDIR)/%.s19: $(OBJDIR)/%.elf
 	$(OBJCOPY) -Osrec --srec-forceS3 --strip-debug $(OBJCOPY_TRANSLATIONS) $^ $@
 
-# version.c should be remade on every compilation
-.PHONY: version.c
-version.c: default_version.c
-	perl ../tools/mkversion.pl .. > $@ || $(COPY) $^ $@ 
-
+# easy printing of MAKE VARIABLES
+print-%: ; @echo $* = $($*) 
+	
 # Automatic dependency generation
 DEPENDENCY_FILES = $(patsubst %.c,$(OBJDIR)/%.d,$(notdir $(THUMBSRC))) \
 	$(patsubst %.c,$(OBJDIR)/%.d,$(notdir $(ARMSRC))) \
 	$(patsubst %.s,$(OBJDIR)/%.d,$(notdir $(ASMSRC)))
 
 $(DEPENDENCY_FILES): Makefile ../common/Makefile.common
+
 $(patsubst %.o,%.d,$(THUMBOBJ) $(ARMOBJ)): $(OBJDIR)/%.d: %.c
 	@$(CC) -MM -MT "$(@) $(@:.d=.o)" $(CFLAGS) $< > $@
 $(patsubst %.o,%.d,$(ASMOBJ)):$(OBJDIR)/%.d: %.s

@@ -16,29 +16,37 @@ Arguments:
 	-o <filename>	Specifies the output file. If omitted, <uid>.eml is used. 	
 
 ]]
-
+local DEBUG = false
 -------------------------------
 -- Some utilities 
 -------------------------------
 
 --- 
 -- A debug printout-function
-function dbg(args)
-	if DEBUG then
-		print("###", args)
+local function dbg(args)
+	if not DEBUG then return end
+	
+	if type(args) == 'table' then
+		local i = 1
+		while result[i] do
+			dbg(result[i])
+			i = i+1
+		end
+	else
+		print('###', args)
 	end
 end 
 --- 
 -- This is only meant to be used when errors occur
-function oops(err)
-	print("ERROR: ",err)
+local function oops(err)
+	print('ERROR: ',err)
+	return nil,err
 end
-
-
 --- 
 -- Usage help
 function help()
 	print(desc)
+	print(author)
 	print("Example usage")
 	print(example)
 end
@@ -58,10 +66,8 @@ end
 
 local function readdump(infile)
 	 t = infile:read("*all")
-	 --print(string.len(t))
 	 len = string.len(t)
 	 local len,hex = bin.unpack(("H%d"):format(len),t)
-	 --print(len,hex)
 	 return hex
 end
 
@@ -71,9 +77,9 @@ local function convert_to_emulform(hexdata)
 	end
 	local ascii,i = "";
 	for i = 1, string.len(hexdata),32 do
-		ascii = ascii  ..string.sub(hexdata,i,i+31).."\n"
+		ascii = ascii..string.sub(hexdata,i,i+31).."\n"
 	end
-	return ascii
+	return string.sub(ascii, 1, -2)
 end
 
 local function main(args)

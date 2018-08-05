@@ -1,271 +1,326 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
 //
+// Modified 2018 iceman <iceman at iuse.se>
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
 // Main command parser entry point
 //-----------------------------------------------------------------------------
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include "sleep.h"
-#include "cmdparser.h"
-#include "proxmark3.h"
-#include "data.h"
-#include "usb_cmd.h"
-#include "ui.h"
-#include "cmdhf.h"
-#include "cmddata.h"
-#include "cmdhw.h"
-#include "cmdlf.h"
 #include "cmdmain.h"
-#include "util.h"
-#include "cmdscript.h"
-
-
-unsigned int current_command = CMD_UNKNOWN;
-//unsigned int received_command = CMD_UNKNOWN;
-//UsbCommand current_response;
-//UsbCommand current_response_user;
 
 static int CmdHelp(const char *Cmd);
 static int CmdQuit(const char *Cmd);
+static int CmdRev(const char *Cmd);
 
 //For storing command that are received from the device
-#define CMD_BUFFER_SIZE 50
 static UsbCommand cmdBuffer[CMD_BUFFER_SIZE];
-//Points to the next empty position to write to
-static int cmd_head;//Starts as 0
-//Points to the position of the last unread command
-static int cmd_tail;//Starts as 0
 
-static command_t CommandTable[] = 
-{
-  {"help",  CmdHelp,  1, "This help. Use '<command> help' for details of a particular command."},
-  {"data",  CmdData,  1, "{ Plot window / data buffer manipulation... }"},
-  {"hf",    CmdHF,    1, "{ HF commands... }"},
-  {"hw",    CmdHW,    1, "{ Hardware commands... }"},
-  {"lf",    CmdLF,    1, "{ LF commands... }"},
-  {"script", CmdScript,   1,"{ Scripting commands }"},
-  {"quit",  CmdQuit,  1, "Exit program"},
-  {"exit",  CmdQuit,  1, "Exit program"},
-  {NULL, NULL, 0, NULL}
+//Points to the next empty position to write to
+static int cmd_head = 0;
+
+//Points to the position of the last unread command
+static int cmd_tail = 0;
+
+// to lock cmdBuffer operations from different threads
+static pthread_mutex_t cmdBufferMutex = PTHREAD_MUTEX_INITIALIZER;
+
+static command_t CommandTable[] = {
+	{"help",	CmdHelp,	1, "This help. Use '<command> help' for details of a particular command."},
+	{"analyse", CmdAnalyse, 1, "{ Analyse utils... }"},
+	{"data",	CmdData,	1, "{ Plot window / data buffer manipulation... }"},
+	{"hf",		CmdHF,		1, "{ High Frequency commands... }"},
+	{"hw",		CmdHW,		1, "{ Hardware commands... }"},
+	{"lf",		CmdLF,		1, "{ Low Frequency commands... }"},
+	{"reveng",	CmdRev, 	1, "{ Crc calculations from the software reveng 1.53... }"},
+	{"script",	CmdScript,	1, "{ Scripting commands }"},
+	{"trace",	CmdTrace,	1, "{ Trace manipulation... }"},
+#ifdef WITH_FLASH		
+	{"mem",		CmdFlashMem,	1, "{ RDV40, Flash Memory manipulation... }"},
+#endif
+#ifdef WITH_SMARTCARD
+	{"sc",		CmdSmartcard,	1, "{ RDV40, Smart card ISO7816 commands... }"},
+#endif
+	{"quit",	CmdQuit,	1, ""},
+	{"exit",	CmdQuit,	1, "Exit program"},
+	{NULL, NULL, 0, NULL}
 };
 
-command_t* getTopLevelCommandTable()
-{
-  return CommandTable;
-}
-int CmdHelp(const char *Cmd)
-{
-  CmdsHelp(CommandTable);
-  return 0;
+command_t* getTopLevelCommandTable() {
+	return CommandTable;
 }
 
-int CmdQuit(const char *Cmd)
-{
-  exit(0);
-  return 0;
+int CmdHelp(const char *Cmd) {
+	CmdsHelp(CommandTable);
+	return 0;
 }
+
+int CmdQuit(const char *Cmd) {
+	return 99;
+}
+
+int CmdRev(const char *Cmd) {
+	CmdCrc(Cmd);
+	return 0;
+}
+
+bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd);
 /**
  * @brief This method should be called when sending a new command to the pm3. In case any old
  *  responses from previous commands are stored in the buffer, a call to this method should clear them.
  *  A better method could have been to have explicit command-ACKS, so we can know which ACK goes to which
  *  operation. Right now we'll just have to live with this.
  */
-void clearCommandBuffer()
-{
+void clearCommandBuffer() {
     //This is a very simple operation
+	pthread_mutex_lock(&cmdBufferMutex);
     cmd_tail = cmd_head;
+	pthread_mutex_unlock(&cmdBufferMutex);
 }
 
 /**
  * @brief storeCommand stores a USB command in a circular buffer
  * @param UC
  */
-void storeCommand(UsbCommand *command)
-{
-    if( ( cmd_head+1) % CMD_BUFFER_SIZE == cmd_tail)
-    {
+void storeCommand(UsbCommand *command) {
+	
+	pthread_mutex_lock(&cmdBufferMutex);
+    if ( ( cmd_head+1) % CMD_BUFFER_SIZE == cmd_tail) {
         //If these two are equal, we're about to overwrite in the
         // circular buffer.
-        PrintAndLog("WARNING: Command buffer about to overwrite command! This needs to be fixed!");
+        PrintAndLogEx(FAILED, "WARNING: Command buffer about to overwrite command! This needs to be fixed!");
+		fflush(NULL);
     }
     //Store the command at the 'head' location
     UsbCommand* destination = &cmdBuffer[cmd_head];
     memcpy(destination, command, sizeof(UsbCommand));
 
-    cmd_head = (cmd_head +1) % CMD_BUFFER_SIZE; //increment head and wrap
-
+	 //increment head and wrap
+    cmd_head = (cmd_head +1) % CMD_BUFFER_SIZE;	
+	pthread_mutex_unlock(&cmdBufferMutex);
 }
 /**
  * @brief getCommand gets a command from an internal circular buffer.
  * @param response location to write command
  * @return 1 if response was returned, 0 if nothing has been received
  */
-int getCommand(UsbCommand* response)
-{
+int getCommand(UsbCommand* response) {
+	pthread_mutex_lock(&cmdBufferMutex);
     //If head == tail, there's nothing to read, or if we just got initialized
-    if(cmd_head == cmd_tail){
-        return 0;
-    }
+    if (cmd_head == cmd_tail)  {
+		pthread_mutex_unlock(&cmdBufferMutex);
+		return 0;
+	}
+	
     //Pick out the next unread command
     UsbCommand* last_unread = &cmdBuffer[cmd_tail];
     memcpy(response, last_unread, sizeof(UsbCommand));
+
     //Increment tail - this is a circular buffer, so modulo buffer size
     cmd_tail = (cmd_tail +1 ) % CMD_BUFFER_SIZE;
 
+	pthread_mutex_unlock(&cmdBufferMutex);
     return 1;
-
 }
 
 /**
- * Waits for a certain response type. This method waits for a maximum of
+ * @brief Waits for a certain response type. This method waits for a maximum of
  * ms_timeout milliseconds for a specified response command.
- *@brief WaitForResponseTimeout
- * @param cmd command to wait for
+ * @param cmd command to wait for, or CMD_UNKNOWN to take any command.
  * @param response struct to copy received command into.
- * @param ms_timeout
+ * @param ms_timeout display message after 2 seconds
  * @return true if command was returned, otherwise false
  */
-bool WaitForResponseTimeout(uint32_t cmd, UsbCommand* response, size_t ms_timeout) {
+bool WaitForResponseTimeoutW(uint32_t cmd, UsbCommand* response, size_t ms_timeout, bool show_warning) {
   
-  if (response == NULL) {
-    UsbCommand resp;
-    response = &resp;
-  }
+	UsbCommand resp;
 
-  // Wait until the command is received
-  for(size_t dm_seconds=0; dm_seconds < ms_timeout/10; dm_seconds++) {
+	if (response == NULL)
+		response = &resp;
 
-      while(getCommand(response))
-      {
-          if(response->cmd == cmd){
-          //We got what we expected
-          return true;
-          }
+	uint64_t start_time = msclock();
+	
+	// Wait until the command is received
+	while (true) {
 
-      }
-        msleep(10); // XXX ugh
-        if (dm_seconds == 200) { // Two seconds elapsed
-          PrintAndLog("Waiting for a response from the proxmark...");
-          PrintAndLog("Don't forget to cancel its operation first by pressing on the button");
-        }
+		while ( getCommand(response) ) {
+			if (cmd == CMD_UNKNOWN || response->cmd == cmd)
+				return true;			
+		}
+
+		if (msclock() - start_time > ms_timeout)
+			break;
+		
+		if (msclock() - start_time > 3000 && show_warning) {
+			// 3 seconds elapsed (but this doesn't mean the timeout was exceeded)
+			PrintAndLogEx(NORMAL, "Waiting for a response from the proxmark...");
+			PrintAndLogEx(NORMAL, "You can cancel this operation by pressing the pm3 button");
+			show_warning = false;
+		}
 	}
-    return false;
+	return false;
+}
+
+bool WaitForResponseTimeout(uint32_t cmd, UsbCommand* response, size_t ms_timeout) {
+	return WaitForResponseTimeoutW(cmd, response, ms_timeout, true);
 }
 
 bool WaitForResponse(uint32_t cmd, UsbCommand* response) {
-	return WaitForResponseTimeout(cmd,response,-1);
+	return WaitForResponseTimeoutW(cmd, response, -1, true);
 }
 
 //-----------------------------------------------------------------------------
 // Entry point into our code: called whenever the user types a command and
 // then presses Enter, which the full command line that they typed.
 //-----------------------------------------------------------------------------
-void CommandReceived(char *Cmd) {
-  CmdsParse(CommandTable, Cmd);
+int CommandReceived(char *Cmd) {
+	return CmdsParse(CommandTable, Cmd);
 }
 
 //-----------------------------------------------------------------------------
 // Entry point into our code: called whenever we received a packet over USB
 // that we weren't necessarily expecting, for example a debug print.
 //-----------------------------------------------------------------------------
-void UsbCommandReceived(UsbCommand *UC)
-{
-  /*
-  //  Debug
-  printf("UsbCommand length[len=%zd]\n",sizeof(UsbCommand));
-  printf("  cmd[len=%zd]: %"llx"\n",sizeof(UC->cmd),UC->cmd);
-  printf(" arg0[len=%zd]: %"llx"\n",sizeof(UC->arg[0]),UC->arg[0]);
-  printf(" arg1[len=%zd]: %"llx"\n",sizeof(UC->arg[1]),UC->arg[1]);
-  printf(" arg2[len=%zd]: %"llx"\n",sizeof(UC->arg[2]),UC->arg[2]);
-  printf(" data[len=%zd]: %02x%02x%02x...\n",sizeof(UC->d.asBytes),UC->d.asBytes[0],UC->d.asBytes[1],UC->d.asBytes[2]);
-  */
+void UsbCommandReceived(UsbCommand* _ch) {
 
-  //	printf("%s(%x) current cmd = %x\n", __FUNCTION__, c->cmd, current_command);
-  // If we recognize a response, return to avoid further processing
-  switch(UC->cmd) {
-      // First check if we are handling a debug message
-    case CMD_DEBUG_PRINT_STRING: {
-      char s[USB_CMD_DATA_SIZE+1];
-      size_t len = MIN(UC->arg[0],USB_CMD_DATA_SIZE);
-      memcpy(s,UC->d.asBytes,len);
-      s[len] = 0x00;
-      PrintAndLog("#db# %s       ", s);
-      return;
-    } break;
+	//UsbCommand *c = malloc(sizeof(UsbCommand));
+	//memset(cp, 0x00, sizeof(*cp));
 
-    case CMD_DEBUG_PRINT_INTEGERS: {
-      PrintAndLog("#db# %08x, %08x, %08x       \r\n", UC->arg[0], UC->arg[1], UC->arg[2]);
-      return;
-    } break;
+	pthread_mutex_lock(&cmdBufferMutex);
+	UsbCommand* c = _ch;
+	pthread_mutex_unlock(&cmdBufferMutex);	
+			
+	switch(c->cmd) {
+		// First check if we are handling a debug message
+		case CMD_DEBUG_PRINT_STRING: {
 
-    case CMD_MEASURED_ANTENNA_TUNING: {
-      int peakv, peakf;
-      int vLf125, vLf134, vHf;
-      vLf125 = UC->arg[0] & 0xffff;
-      vLf134 = UC->arg[0] >> 16;
-      vHf = UC->arg[1] & 0xffff;;
-      peakf = UC->arg[2] & 0xffff;
-      peakv = UC->arg[2] >> 16;
-      PrintAndLog("");
-      PrintAndLog("# LF antenna: %5.2f V @   125.00 kHz", vLf125/1000.0);
-      PrintAndLog("# LF antenna: %5.2f V @   134.00 kHz", vLf134/1000.0);
-      PrintAndLog("# LF optimal: %5.2f V @%9.2f kHz", peakv/1000.0, 12000.0/(peakf+1));
-      PrintAndLog("# HF antenna: %5.2f V @    13.56 MHz", vHf/1000.0);
-      if (peakv<2000)
-        PrintAndLog("# Your LF antenna is unusable.");
-      else if (peakv<10000)
-        PrintAndLog("# Your LF antenna is marginal.");
-      if (vHf<2000)
-        PrintAndLog("# Your HF antenna is unusable.");
-      else if (vHf<5000)
-        PrintAndLog("# Your HF antenna is marginal.");
-    } break;
-      
-    case CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K: {
-//      printf("received samples: ");
-//      print_hex(UC->d.asBytes,512);
-      sample_buf_len += UC->arg[1];
-//      printf("samples: %zd offset: %d\n",sample_buf_len,UC->arg[0]);
-      memcpy(sample_buf+(UC->arg[0]),UC->d.asBytes,UC->arg[1]);
-    } break;
-
-
-//    case CMD_ACK: {
-//      PrintAndLog("Receive ACK\n");
-//    } break;
-
-    default: {
-      // Maybe it's a response
-      /*
-      switch(current_command) {
-        case CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K: {
-          if (UC->cmd != CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K) {
-            PrintAndLog("unrecognized command %08x\n", UC->cmd);
-            break;
-          }
-//          int i;
-          PrintAndLog("received samples %d\n",UC->arg[0]);
-          memcpy(sample_buf+UC->arg[0],UC->d.asBytes,48);
-          sample_buf_len += 48;
-//          for(i=0; i<48; i++) sample_buf[i] = UC->d.asBytes[i];
-          //received_command = UC->cmd;
-        } break;
-
-        default: {
-        } break;
-      }*/
-    }
-      break;
-  }
-
-  storeCommand(UC);
-
+			char s[USB_CMD_DATA_SIZE+1];
+			memset(s, 0x00, sizeof(s)); 
+			size_t len = MIN(c->arg[0], USB_CMD_DATA_SIZE);
+			memcpy(s, c->d.asBytes, len);
+			
+			// print debug line on same row. escape seq \r
+			if ( c->arg[1] == CMD_MEASURE_ANTENNA_TUNING_HF) {
+				PrintAndLogEx(NORMAL, "\r#db# %s", s);
+			} else {
+				PrintAndLogEx(NORMAL, "#db# %s", s);
+			}
+			fflush(NULL);
+			break;
+		}
+		case CMD_DEBUG_PRINT_INTEGERS: {
+			PrintAndLogEx(NORMAL, "#db# %08x, %08x, %08x", c->arg[0], c->arg[1], c->arg[2]);
+			break;
+		}
+		// iceman:  hw status - down the path on device, runs printusbspeed which starts sending a lot of
+		// CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K packages which is not dealt with. I wonder if simply ignoring them will
+		// work. lets try it. 
+		default: {
+			storeCommand(c);
+			break;
+		}
+	}
 }
 
+/**
+* Data transfer from Proxmark to client. This method times out after
+* ms_timeout milliseconds.
+* @brief GetFromDevice
+* @param memtype Type of memory to download from proxmark
+* @param dest Destination address for transfer
+* @param bytes number of bytes to be transferred
+* @param start_index offset into Proxmark3 BigBuf[]
+* @param response struct to copy last command (CMD_ACK) into
+* @param ms_timeout timeout in milliseconds
+* @param show_warning display message after 2 seconds
+* @return true if command was returned, otherwise false
+*/
+bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning) {
+	
+	if (dest == NULL) return false;
+	if (bytes == 0) return true;
+
+	UsbCommand resp;
+	if (response == NULL)
+		response = &resp;
+
+	// clear 
+	clearCommandBuffer();
+			
+	switch (memtype) {
+		case BIG_BUF: {
+			UsbCommand c = {CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K, {start_index, bytes, 0}};
+			SendCommand(&c);
+			return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K);
+		}
+		case BIG_BUF_EML: {
+			UsbCommand c = {CMD_DOWNLOAD_EML_BIGBUF, {start_index, bytes, 0}};
+			SendCommand(&c);			
+			return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_EML_BIGBUF);
+		}
+		case FLASH_MEM: {			
+			UsbCommand c = {CMD_DOWNLOAND_FLASH_MEM, {start_index, bytes, 0}};
+			SendCommand(&c);
+			return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_FLASHMEM);
+		}
+		case SIM_MEM: {
+			//UsbCommand c = {CMD_DOWNLOAND_SIM_MEM, {start_index, bytes, 0}};
+			//SendCommand(&c);
+			//return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_SIMMEM);
+			return false;
+		}
+	}
+	return false;
+}
+
+bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd) {
+	
+	uint32_t bytes_completed = 0;
+	uint64_t start_time = msclock();
+	
+	while (true) {
+		
+		if (getCommand(response)) {
+
+			// sample_buf is a array pointer, located in data.c
+			// arg0 = offset in transfer. Startindex of this chunk
+			// arg1 = length bytes to transfer
+			// arg2 = bigbuff tracelength (?)			
+			if (response->cmd == rec_cmd) {
+				
+				uint32_t offset = response->arg[0];
+				uint32_t copy_bytes = MIN(bytes - bytes_completed, response->arg[1]);
+				//uint32_t tracelen = c->arg[2];
+				
+				// extended bounds check1.  upper limit is USB_CMD_DATA_SIZE
+				// shouldn't happen
+				copy_bytes = MIN(copy_bytes, USB_CMD_DATA_SIZE);
+				
+				// extended bounds check2. 
+				if ( offset + copy_bytes > bytes ) {
+					PrintAndLogEx(FAILED, "ERROR: Out of bounds when downloading from device,  offset %u | len %u | total len %u > buf_size %u", offset, copy_bytes,  offset+copy_bytes,  bytes);
+					break;
+				}			
+		
+				memcpy(dest + offset, response->d.asBytes, copy_bytes);
+				bytes_completed += copy_bytes;
+			} else if (response->cmd == CMD_ACK) {
+				return true;
+			}
+		}
+		
+		if (msclock() - start_time > ms_timeout) {
+			PrintAndLogEx(FAILED, "Timed out while trying to download data from device");
+			break;
+		}
+		
+		if (msclock() - start_time > 3000 && show_warning) {
+			// 3 seconds elapsed (but this doesn't mean the timeout was exceeded)
+			PrintAndLogEx(NORMAL, "Waiting for a response from the proxmark...");
+			PrintAndLogEx(NORMAL, "You can cancel this operation by pressing the pm3 button");
+			show_warning = false;
+		}
+	}
+	return false;
+}

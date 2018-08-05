@@ -1,0 +1,112 @@
+# known cloners
+# ref. http://www.proxmark.org/forum/viewtopic.php?id=2022
+51243648,
+000D8787,
+# ref. http://kazus.ru/forums/showpost.php?p=1045937&postcount=77
+05D73B9F,
+# ref. http://www.proxmark.org/forum/viewtopic.php?=
+89A69E60,
+# ref lock
+314159E0,
+# ref. http://www.proxmark.org/forum/viewtopic.php?pid=28115#p28115
+AA55BBBB,
+# ref.  http://www.proxmark.org/forum/viewtopic.php?pid=30379#p30379
+1C0B5848,
+# paxton bullit?
+575F4F4B,
+# Default pwd, simple:
+00000000,
+11111111,
+22222222,
+33333333,
+44444444,
+55555555,
+66666666,
+77777777,
+88888888,
+99999999,
+AAAAAAAA,
+BBBBBBBB,
+CCCCCCCC,
+DDDDDDDD,
+EEEEEEEE,
+FFFFFFFF,
+a0a1a2a3,
+b0b1b2b3,
+aabbccdd,
+bbccddee,
+ccddeeff,
+50415353,
+00000001,
+00000002,
+0000000a,
+0000000b,
+01020304,
+02030405,
+03040506,
+04050607,
+05060708,
+06070809,
+0708090A,
+08090A0B,
+090A0B0C,
+0A0B0C0D,
+0B0C0D0E,
+0C0D0E0F,
+01234567,
+12345678,
+10000000,
+20000000,
+30000000,
+40000000,
+50000000,
+60000000,
+70000000,
+80000000,
+90000000,
+A0000000,
+B0000000,
+C0000000,
+D0000000,
+E0000000,
+F0000000,
+10101010,
+01010101,
+11223344,
+22334455,
+33445566,
+44556677,
+55667788,
+66778899,
+778899AA,
+8899AABB,
+99AABBCC,
+AABBCCDD,
+BBCCDDEE,
+CCDDEEFF,
+0CB7E7FC, //rfidler?
+FABADA11, //china?
+# 20 most common len==8
+87654321,
+12341234,
+69696969,
+12121212,
+12344321,
+11112222,
+13131313,
+10041004,
+#
+31415926, //pii
+abcd1234,
+20002000,
+19721972,
+aa55aa55, //amiboo
+55aa55aa, //rev amiboo
+4f271149, // seeds ul-ev1
+07d7bb0b, // seeds ul-ev1
+9636ef8f, // seeds ul-ev1
+b5f44686, // seeds ul-ev1
+9E3779B9, // TEA
+C6EF3720, // TEA
+7854794A, // xbox tea constant :)
+F1EA5EED, //burtle

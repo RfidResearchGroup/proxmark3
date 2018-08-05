@@ -1,10 +1,10 @@
 #!/usr/bin/python
 
 #  findbits.py - find Binary, Octal, Decimal or Hex number in bitstream
-# 
+#
 #  Adam Laurie <adam@algroup.co.uk>
 #  http://rfidiot.org/
-# 
+#
 #  This code is copyright (c) Adam Laurie, 2009, All rights reserved.
 #  For non-commercial use only, the following terms apply - for all other
 #  uses, please contact the author:
@@ -77,7 +77,7 @@ def main():
 		print
 		os._exit(True)
 
-	bases=	{ 
+	bases=	{
 		2:'BINARY',
 		8:'OCTAL',
 		10:'DECIMAL',

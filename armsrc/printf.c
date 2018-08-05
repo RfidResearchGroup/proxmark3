@@ -33,23 +33,14 @@
  *
  *	@(#)subr_prf.c	8.3 (Berkeley) 1/21/94
  */
-
-#include <stddef.h>
-#include <stdarg.h>
 #include "printf.h"
-#include "util.h"
-#include "string.h"
-
-typedef uint32_t uintmax_t;
-typedef int32_t intmax_t;
 
 typedef unsigned char u_char;
 typedef unsigned int u_int;
-typedef unsigned long u_long;
-typedef unsigned short u_short;
 typedef unsigned long long u_quad_t;
 typedef long long quad_t;
-
+typedef unsigned long u_long;
+typedef unsigned short u_short;
 typedef int ssize_t;
 
 #define NBBY    8               /* number of bits in a byte */
@@ -431,7 +422,6 @@ sprintf(char *dest, const char *fmt, ...)
 	/* http://www.pagetable.com/?p=298 */
 	int retval;
 	va_list ap;
-
 	va_start(ap, fmt);
 	retval = kvsprintf(fmt, dest, 10, ap);
 	va_end(ap);
