@@ -97,6 +97,7 @@ static inline int32_t sample_power() {
 // has a delay loop that aligns rx_bit calls to the TAG tx timeslots.
 static inline bool rx_bit() {
   static int32_t p[5];
+
   for(size_t i = 0; i<5; ++i) {
     p[i] = sample_power();
   }
@@ -254,6 +255,7 @@ static void init_reader(bool clear_mem) {
                   | FPGA_HF_READER_RX_XCORR_848_KHZ
                   | FPGA_HF_READER_RX_XCORR_QUARTER);
   SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+  LED_A_ON();
 
   // configure SSC with defaults
   FpgaSetupSsc();
@@ -338,10 +340,12 @@ static int16_t read_byte(uint16_t index, uint8_t cmd_sz) {
   uint16_t cmd = (index << 1) | LEGIC_READ;
 
   // read one byte
+  LED_B_ON();
   legic_prng_forward(2);
   tx_frame(cmd, cmd_sz);
   legic_prng_forward(2);
   uint32_t frame = rx_frame(12);
+  LED_B_OFF();
 
   // split frame into data and crc
   uint8_t byte = BYTEx(frame, 0);
@@ -368,9 +372,11 @@ bool write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz) {
   cmd |= (crc & 0xF) << (addr_sz + 1 + 8);          // and crc
 
   // send write command
+  LED_C_ON();
   legic_prng_forward(2);
   tx_frame(cmd, addr_sz + 1 + 8 + 4); // cmd_sz = addr_sz + cmd + data + crc
   legic_prng_forward(3);
+  LED_C_OFF();
 
   // wait for ack
   return rx_ack();
