@@ -151,6 +151,9 @@ static void tx_frame(uint32_t frame, uint8_t len) {
   last_frame_end += RWD_FRAME_WAIT;
   while(GET_TICKS < last_frame_end) { };
 
+  // backup ts for trace log
+  uint32_t last_frame_start = last_frame_end;
+
   // transmit frame, MSB first
   for(uint8_t i = 0; i < len; ++i) {
     bool bit = (frame >> i) & 0x01;
@@ -163,6 +166,10 @@ static void tx_frame(uint32_t frame, uint8_t len) {
   last_frame_end += RWD_TIME_PAUSE;
   while(GET_TICKS < last_frame_end) { };
   HIGH(GPIO_SSC_DOUT);
+
+  // log
+  uint8_t cmdbytes[] = {len, BYTEx(frame, 0), BYTEx(frame, 1), BYTEx(frame, 2)};
+  LogTrace(cmdbytes, sizeof(cmdbytes), last_frame_start, last_frame_end, NULL, true);
 }
 
 static uint32_t rx_frame(uint8_t len) {
@@ -174,6 +181,9 @@ static uint32_t rx_frame(uint8_t len) {
   last_frame_end += TAG_FRAME_WAIT;
   while(GET_TICKS < last_frame_end) { };
 
+  // backup ts for trace log
+  uint32_t last_frame_start = last_frame_end;
+
   uint32_t frame = 0;
   for(uint8_t i = 0; i < len; i++) {
     frame |= (rx_bit() ^ legic_prng_get_bit()) << i;
@@ -183,6 +193,10 @@ static uint32_t rx_frame(uint8_t len) {
     last_frame_end += TAG_BIT_PERIOD;
     while(GET_TICKS < last_frame_end) { };
   }
+
+  // log
+  uint8_t cmdbytes[] = {len, BYTEx(frame, 0), BYTEx(frame, 1)};
+  LogTrace(cmdbytes, sizeof(cmdbytes), last_frame_start, last_frame_end, NULL, false);
 
   return frame;
 }
@@ -196,6 +210,9 @@ static bool rx_ack() {
   // hold sampling until card is expected to respond
   last_frame_end += TAG_FRAME_WAIT;
   while(GET_TICKS < last_frame_end) { };
+
+  // backup ts for trace log
+  uint32_t last_frame_start = last_frame_end;
 
   uint32_t ack = 0;
   for(uint8_t i = 0; i < TAG_WRITE_TIMEOUT; ++i) {
@@ -212,6 +229,10 @@ static bool rx_ack() {
       break;
     }
   }
+
+  // log
+  uint8_t cmdbytes[] = {1, BYTEx(ack, 0)};
+  LogTrace(cmdbytes, sizeof(cmdbytes), last_frame_start, last_frame_end, NULL, false);
 
   return ack;
 }
@@ -293,6 +314,8 @@ static uint32_t setup_phase_reader(uint8_t iv) {
   last_frame_end = GET_TICKS;
 
   // Switch on carrier and let the card charge for 5ms.
+  last_frame_end += 7500;
+
   // Use the time to calibrate the treshhold.
   input_threshold = 8; // heuristically determined
   do {
@@ -300,7 +323,7 @@ static uint32_t setup_phase_reader(uint8_t iv) {
     if(sample > input_threshold) {
       input_threshold = sample;
     }
-  } while(GET_TICKS < last_frame_end + 7500);
+  } while(GET_TICKS < last_frame_end);
 
   // Set threshold to noise floor * 2
   input_threshold <<= 1;

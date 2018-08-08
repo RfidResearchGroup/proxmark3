@@ -518,9 +518,9 @@ int CmdTraceList(const char *Cmd) {
 		if ( protocol == ISO_14443A || protocol == PROTO_MIFARE)
 			PrintAndLogEx(NORMAL, "iso14443a - All times are in carrier periods (1/13.56Mhz)");
 		if ( protocol == ICLASS )
-			PrintAndLogEx(NORMAL, "iClass    - Timings are not as accurate");
+			PrintAndLogEx(NORMAL, "iClass - Timings are not as accurate");
 		if ( protocol == LEGIC )
-			PrintAndLogEx(NORMAL, "LEGIC    - Timings are in ticks (1us == 1.5ticks)");
+			PrintAndLogEx(NORMAL, "LEGIC - Timings are in ticks (1us == 1.5ticks)");
 		if ( protocol == ISO_15693 )
 			PrintAndLogEx(NORMAL, "ISO15693 - Timings are not as accurate");
 		if ( protocol == FELICA )
