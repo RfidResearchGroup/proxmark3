@@ -72,15 +72,21 @@ end
 // Let us report a correlation every 4 subcarrier cycles, or 4*16=64 samples,
 // so we need a 6-bit counter.
 reg [5:0] corr_i_cnt;
-// And a couple of registers in which to accumulate the correlations.
-// We would add at most 32 times the difference between unmodulated and modulated signal. It should
-// be safe to assume that a tag will not be able to modulate the carrier signal by more than 25%.
-// 32 * 255 * 0,25 = 2040, which can be held in 11 bits. Add 1 bit for sign.
-reg signed [11:0] corr_i_accum;
-reg signed [11:0] corr_q_accum;
+
+// And a couple of registers in which to accumulate the correlations. Since
+// load modulation saturates the ADC we have to use a large enough register
+// 32 * 255 = 8160, which can be held in 13 bits. Add 1 bit for sign.
+//
+// The initial code assumed a phase shift of up to 25% and the accumulators were
+// 11 bits (32 * 255 * 0,25 = 2040), we will pack all bits exceeding 11 bits into
+// MSB. This prevents under/-overflows but preserves sensitivity on the lower end.
+reg signed [13:0] corr_i_accum;
+reg signed [13:0] corr_q_accum;
+
 // we will report maximum 8 significant bits
 reg signed [7:0] corr_i_out;
 reg signed [7:0] corr_q_out;
+
 // clock and frame signal for communication to ARM
 reg ssp_clk;
 reg ssp_frame;
@@ -100,19 +106,36 @@ begin
     // send out later over the SSP.
     if(corr_i_cnt == 6'd0)
     begin
-        if(snoop)
-			begin
-			// Send 7 most significant bits of tag signal (signed), plus 1 bit reader signal
-            corr_i_out <= {corr_i_accum[11:5], after_hysteresis_prev_prev};
-            corr_q_out <= {corr_q_accum[11:5], after_hysteresis_prev};
-				after_hysteresis_prev_prev <= after_hysteresis;
-			end
+        // send 10 bits of tag signal, 4 MSBs are stuffed into 2 MSB
+        if(~corr_i_accum[13])
+            corr_i_out <= {corr_i_accum[13],
+                           corr_i_accum[12] | corr_i_accum[11] | corr_i_accum[10],
+                           corr_i_accum[12] | corr_i_accum[11] | corr_i_accum[9],
+                           corr_i_accum[8:4]};
         else
-			begin
-            // 8 bits of tag signal
-            corr_i_out <= corr_i_accum[11:4];
-            corr_q_out <= corr_q_accum[11:4];
-			end
+            corr_i_out <= {corr_i_accum[13],
+                           corr_i_accum[12] & corr_i_accum[11] & corr_i_accum[10],
+                           corr_i_accum[12] & corr_i_accum[11] & corr_i_accum[9],
+                           corr_i_accum[8:4]};
+
+        if(~corr_q_accum[13])
+            corr_q_out <= {corr_q_accum[13],
+                           corr_q_accum[12] | corr_q_accum[11] | corr_q_accum[10],
+                           corr_q_accum[12] | corr_q_accum[11] | corr_q_accum[9],
+                           corr_q_accum[8:4]};
+        else
+            corr_q_out <= {corr_q_accum[13],
+                           corr_q_accum[12] & corr_q_accum[11] & corr_q_accum[10],
+                           corr_q_accum[12] & corr_q_accum[11] & corr_q_accum[9],
+                           corr_q_accum[8:4]};
+
+        if(snoop)
+        begin
+            // replace LSB with 1 bit reader signal
+            corr_i_out[0] <= after_hysteresis_prev_prev;
+            corr_q_out[0] <= after_hysteresis_prev;
+            after_hysteresis_prev_prev <= after_hysteresis;
+        end
 
         corr_i_accum <= adc_d;
         corr_q_accum <= adc_d;
