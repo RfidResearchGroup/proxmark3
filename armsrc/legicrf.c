@@ -19,7 +19,6 @@
 static uint8_t* legic_mem;      /* card memory, used for read, write and sim */
 static legic_card_select_t card;/* metadata of currently selected card */
 static crc_t legic_crc;
-static int32_t input_threshold; /* values > threshold are 1 else 0 */
 
 //-----------------------------------------------------------------------------
 // Frame timing and pseudorandom number generator
@@ -49,6 +48,9 @@ static uint32_t last_frame_end; /* ts of last bit of previews rx or tx frame */
 
 #define LEGIC_CARD_MEMSIZE 1024 /* The largest Legic Prime card is 1k */
 #define WRITE_LOWERLIMIT      4 /* UID and MCC are not writable */
+
+#define INPUT_THRESHOLD       8 /* heuristically determined, lower values */
+                                /* lead to detecting false ack during write */
 
 //-----------------------------------------------------------------------------
 // I/O interface abstraction (FPGA -> ARM)
@@ -91,26 +93,18 @@ static inline int32_t sample_power() {
 // Returns a demedulated bit
 //
 // An aproximated power measurement is available every 18.9us. The bit time
-// is 100us. The code samples 5 times and uses samples 3 and 4.
+// is 100us. The code samples 5 times and uses the last (most stable) sample.
 //
 // Note: The demodulator would be drifting (18.9us * 5 != 100us), rx_frame
 // has a delay loop that aligns rx_bit calls to the TAG tx timeslots.
 static inline bool rx_bit() {
-  static int32_t p[5];
+  int32_t power;
 
   for(size_t i = 0; i<5; ++i) {
-    p[i] = sample_power();
+    power = sample_power();
   }
 
-  if((p[2] > input_threshold) && (p[3] > input_threshold)) {
-    return true;
-  }
-  if((p[2] < input_threshold) && (p[3] < input_threshold)) {
-    return false;
-  }
-
-  Dbprintf("rx_bit failed %i vs %i (threshold %i)", p[2], p[3], input_threshold);
-  return false;
+  return (power > INPUT_THRESHOLD);
 }
 
 //-----------------------------------------------------------------------------
@@ -315,18 +309,7 @@ static uint32_t setup_phase_reader(uint8_t iv) {
 
   // Switch on carrier and let the card charge for 5ms.
   last_frame_end += 7500;
-
-  // Use the time to calibrate the treshhold.
-  input_threshold = 8; // heuristically determined
-  do {
-    int32_t sample = sample_power();
-    if(sample > input_threshold) {
-      input_threshold = sample;
-    }
-  } while(GET_TICKS < last_frame_end);
-
-  // Set threshold to noise floor * 2
-  input_threshold <<= 1;
+  while(GET_TICKS < last_frame_end) { };
 
   legic_prng_init(0);
   tx_frame(iv, 7);
