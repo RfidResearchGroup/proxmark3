@@ -31,7 +31,7 @@ static int32_t input_threshold; /* values > threshold are 1 else 0 */
 //
 // The data dependent timing makes writing comprehensible code significantly
 // harder. The current aproach forwards the prng data based if there is data on
-// air and time based, using GetCountUS(), during computational and wait periodes.
+// air and time based, using GET_TICKS, during computational and wait periodes.
 //
 // To not have the necessity to calculate/guess exection time dependend timeouts
 // tx_frame and rx_frame use a shared timestamp to coordinate tx and rx timeslots.
@@ -39,12 +39,12 @@ static int32_t input_threshold; /* values > threshold are 1 else 0 */
 
 static uint32_t last_frame_end; /* ts of last bit of previews rx or tx frame */
 
-#define RWD_TIME_PAUSE       20 /* 20us */
-#define RWD_TIME_1          100 /* READER_TIME_PAUSE 20us off + 80us on = 100us */
-#define RWD_TIME_0           60 /* READER_TIME_PAUSE 20us off + 40us on = 60us */
-#define RWD_FRAME_WAIT      220 /* 220us from TAG frame end to READER frame start */
-#define TAG_FRAME_WAIT      330 /* 330us from READER frame end to TAG frame start */
-#define TAG_BIT_PERIOD      100 /* 100us */
+#define RWD_TIME_PAUSE       30 /* 20us */
+#define RWD_TIME_1          150 /* READER_TIME_PAUSE 20us off + 80us on = 100us */
+#define RWD_TIME_0           90 /* READER_TIME_PAUSE 20us off + 40us on = 60us */
+#define RWD_FRAME_WAIT      330 /* 220us from TAG frame end to READER frame start */
+#define TAG_FRAME_WAIT      495 /* 330us from READER frame end to TAG frame start */
+#define TAG_BIT_PERIOD      150 /* 100us */
 
 #define LEGIC_CARD_MEMSIZE 1024 /* The largest Legic Prime card is 1k */
 
@@ -123,12 +123,12 @@ static inline void tx_bit(bool bit) {
   // insert pause
   LOW(GPIO_SSC_DOUT);
   last_frame_end += RWD_TIME_PAUSE;
-  while(GetCountUS() < last_frame_end) { };
+  while(GET_TICKS < last_frame_end) { };
   HIGH(GPIO_SSC_DOUT);
 
   // return to high, wait for bit periode to end
   last_frame_end += (bit ? RWD_TIME_1 : RWD_TIME_0) - RWD_TIME_PAUSE;
-  while(GetCountUS() < last_frame_end) { };
+  while(GET_TICKS < last_frame_end) { };
 }
 
 //-----------------------------------------------------------------------------
@@ -146,7 +146,7 @@ static void tx_frame(uint32_t frame, uint8_t len) {
 
   // wait for next tx timeslot
   last_frame_end += RWD_FRAME_WAIT;
-  while(GetCountUS() < last_frame_end) { };
+  while(GET_TICKS < last_frame_end) { };
 
   // transmit frame, MSB first
   for(uint8_t i = 0; i < len; ++i) {
@@ -158,7 +158,7 @@ static void tx_frame(uint32_t frame, uint8_t len) {
   // add pause to mark end of the frame
   LOW(GPIO_SSC_DOUT);
   last_frame_end += RWD_TIME_PAUSE;
-  while(GetCountUS() < last_frame_end) { };
+  while(GET_TICKS < last_frame_end) { };
   HIGH(GPIO_SSC_DOUT);
 }
 
@@ -169,7 +169,7 @@ static uint32_t rx_frame(uint8_t len) {
 
   // hold sampling until card is expected to respond
   last_frame_end += TAG_FRAME_WAIT;
-  while(GetCountUS() < last_frame_end) { };
+  while(GET_TICKS < last_frame_end) { };
 
   uint32_t frame = 0;
   for(uint8_t i = 0; i < len; i++) {
@@ -178,7 +178,7 @@ static uint32_t rx_frame(uint8_t len) {
 
     // rx_bit runs only 95us, resync to TAG_BIT_PERIOD
     last_frame_end += TAG_BIT_PERIOD;
-    while(GetCountUS() < last_frame_end) { };
+    while(GET_TICKS < last_frame_end) { };
   }
 
   return frame;
@@ -246,7 +246,7 @@ static void init_reader(bool clear_mem) {
   crc_init(&legic_crc, 4, 0x19 >> 1, 0x05, 0);
 
   // start us timer
-  StartCountUS();
+  StartTicks();
 }
 
 // Setup reader to card connection
@@ -257,7 +257,7 @@ static void init_reader(bool clear_mem) {
 //  - Acknowledge frame 6 bits
 static uint32_t setup_phase_reader(uint8_t iv) {
   // init coordination timestamp
-  last_frame_end = GetCountUS();
+  last_frame_end = GET_TICKS;
 
   // Switch on carrier and let the card charge for 5ms.
   // Use the time to calibrate the treshhold.
@@ -267,7 +267,7 @@ static uint32_t setup_phase_reader(uint8_t iv) {
     if(sample > input_threshold) {
       input_threshold = sample;
     }
-  } while(GetCountUS() < last_frame_end + 5000);
+  } while(GET_TICKS < last_frame_end + 7500);
 
   // Set threshold to noise floor * 2
   input_threshold <<= 1;
@@ -367,6 +367,7 @@ void LegicRfInfo(void) {
 
 OUT:
   switch_off();
+  StopTicks();
 }
 
 void LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
@@ -399,6 +400,7 @@ void LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
 
 OUT:
   switch_off();
+  StopTicks();
 }
 
 void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
