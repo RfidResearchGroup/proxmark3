@@ -45,8 +45,10 @@ static uint32_t last_frame_end; /* ts of last bit of previews rx or tx frame */
 #define RWD_FRAME_WAIT      330 /* 220us from TAG frame end to READER frame start */
 #define TAG_FRAME_WAIT      495 /* 330us from READER frame end to TAG frame start */
 #define TAG_BIT_PERIOD      150 /* 100us */
+#define TAG_WRITE_TIMEOUT    60 /* 40 * 100us (write should take at most 3.6ms) */
 
 #define LEGIC_CARD_MEMSIZE 1024 /* The largest Legic Prime card is 1k */
+#define WRITE_LOWERLIMIT      4 /* UID and MCC are not writable */
 
 //-----------------------------------------------------------------------------
 // I/O interface abstraction (FPGA -> ARM)
@@ -182,6 +184,35 @@ static uint32_t rx_frame(uint8_t len) {
   }
 
   return frame;
+}
+
+static bool rx_ack() {
+  // change fpga into rx mode
+  FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR
+                  | FPGA_HF_READER_RX_XCORR_848_KHZ
+                  | FPGA_HF_READER_RX_XCORR_QUARTER);
+
+  // hold sampling until card is expected to respond
+  last_frame_end += TAG_FRAME_WAIT;
+  while(GET_TICKS < last_frame_end) { };
+
+  uint32_t ack = 0;
+  for(uint8_t i = 0; i < TAG_WRITE_TIMEOUT; ++i) {
+    // sample bit
+    ack = rx_bit();
+    legic_prng_forward(1);
+
+    // rx_bit runs only 95us, resync to TAG_BIT_PERIOD
+    last_frame_end += TAG_BIT_PERIOD;
+    while(GET_TICKS < last_frame_end) { };
+
+    // check if it was an ACK
+    if(ack) {
+      break;
+    }
+  }
+
+  return ack;
 }
 
 //-----------------------------------------------------------------------------
@@ -328,6 +359,23 @@ static int16_t read_byte(uint16_t index, uint8_t cmd_sz) {
   return byte;
 }
 
+// Transmit write command, wait until (3.6ms) the tag sends back an unencrypted
+// ACK ('1' bit) and forward the prng time based.
+bool write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz) {
+  uint32_t cmd = index << 1 | LEGIC_WRITE;          // prepare command
+  uint8_t  crc = calc_crc4(cmd, addr_sz + 1, byte); // calculate crc
+  cmd |= byte << (addr_sz + 1);                     // append value
+  cmd |= (crc & 0xF) << (addr_sz + 1 + 8);          // and crc
+
+  // send write command
+  legic_prng_forward(2);
+  tx_frame(cmd, addr_sz + 1 + 8 + 4); // cmd_sz = addr_sz + cmd + data + crc
+  legic_prng_forward(3);
+
+  // wait for ack
+  return rx_ack();
+}
+
 //-----------------------------------------------------------------------------
 // Command Line Interface
 //
@@ -404,7 +452,42 @@ OUT:
 }
 
 void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
-  cmd_send(CMD_ACK, 0, 0, 0, 0, 0); //TODO Implement
+  // configure ARM and FPGA
+  init_reader(false);
+
+  // uid is not writeable
+  if(offset <= WRITE_LOWERLIMIT) {
+    cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
+    goto OUT;
+  }
+
+  // establish shared secret and detect card type
+  uint8_t card_type = setup_phase_reader(iv);
+  if(init_card(card_type, &card) != 0) {
+    cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
+    goto OUT;
+  }
+
+  // do not write beyond card memory
+  if(len + offset > card.cardsize) {
+    len = card.cardsize - offset;
+  }
+
+  // write in reverse order, only then is DCF (decremental field) writable
+  while(len-- > 0 && !BUTTON_PRESS()) {
+    if(!write_byte(len + offset, data[len], card.addrsize)) {
+      Dbprintf("operation failed | %02X | %02X | %02X", len + offset, len, data[len]);
+      cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
+      goto OUT;
+    }
+  }
+
+  // OK
+  cmd_send(CMD_ACK, 1, len, 0, legic_mem, len);
+
+OUT:
+  switch_off();
+  StopTicks();
 }
 
 void LegicRfSimulate(int phase, int frame, int reqresp) {
