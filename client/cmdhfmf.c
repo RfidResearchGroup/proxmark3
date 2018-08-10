@@ -1787,7 +1787,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 
 	
 	// check keys.
-	for (trgKeyType = !keyType;  trgKeyType < 2;  (keyType==2) ? (++trgKeyType) : (trgKeyType=2) ) {
+	for (trgKeyType = keyType;  trgKeyType < 2;  (keyType==2) ? (++trgKeyType) : (trgKeyType=2) ) {
 
 		int b = blockNo;
 		for (int i = 0; i < SectorsCnt; ++i) {
