@@ -19,7 +19,7 @@
 #include "proxmark3.h"
 
 #ifndef GET_TICKS
-# define GET_TICKS   (uint32_t)((AT91C_BASE_TC1->TC_CV << 16) | AT91C_BASE_TC0->TC_CV)
+#define GET_TICKS GetTicks()
 #endif
 
 void SpinDelay(int ms);
@@ -32,17 +32,15 @@ void StartCountUS(void);
 uint32_t RAMFUNC GetCountUS(void);
 void ResetUSClock(void);
 void SpinDelayCountUs(uint32_t us);
-//uint32_t RAMFUNC GetDeltaCountUS(void);
 
 void StartCountSspClk();
 void ResetSspClk(void);
 uint32_t RAMFUNC GetCountSspClk();
 
-extern void StartTicks(void);
-extern void WaitTicks(uint32_t ticks);
-extern void WaitUS(uint16_t us);
-extern void WaitMS(uint16_t ms);
-extern void ResetTicks();
-extern void ResetTimer(AT91PS_TC timer);
-extern void StopTicks(void);
+void StartTicks(void);
+uint32_t GetTicks(void);
+void WaitTicks(uint32_t ticks);
+void WaitUS(uint16_t us);
+void WaitMS(uint16_t ms);
+void StopTicks(void);
 #endif
