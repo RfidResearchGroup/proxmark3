@@ -33,14 +33,6 @@
 
 bool cmd_receive(UsbCommand* cmd) {
 
-	// check if there is a FPC USART1 message?
-	/*	
-	size_t fpc_rxlen = usart_read((uint8_t*)cmd, sizeof(UsbCommand));
-	if ( fpc_rxlen )
-		return true;
-	
-	*/
-
 	// Check if there is a usb packet available
 	if (!usb_poll_validate_length()) return false;
 
@@ -78,8 +70,6 @@ bool cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void* d
 			txcmd.d.asBytes[i] = ((uint8_t*)data)[i];
 		}
 	}
-
-	//usart_send( (uint8_t*)&txcmd, sizeof(UsbCommand));
 	 
 	// Send frame and make sure all bytes are transmitted
 	if ( usb_write( (uint8_t*)&txcmd, sizeof(UsbCommand)) != 0)

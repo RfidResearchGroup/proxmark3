@@ -47,7 +47,7 @@ int usage_trace_load(){
 	PrintAndLogEx(NORMAL, "Load protocol data from file to trace buffer.");
 	PrintAndLogEx(NORMAL, "Usage:  trace load <filename>");
 	PrintAndLogEx(NORMAL, "Examples:");
-	PrintAndLogEx(NORMAL, "        trace lload mytracefile.bin");
+	PrintAndLogEx(NORMAL, "        trace load mytracefile.bin");
 	return 0;
 }
 int usage_trace_save(){
@@ -396,6 +396,7 @@ void printFelica(uint16_t traceLen, uint8_t *trace) {
 }
 
 // sanity check. Don't use proxmark if it is offline and you didn't specify useTraceBuffer
+/*
 static int SanityOfflineCheck( bool useTraceBuffer ){
 	if ( !useTraceBuffer && offline) {
 		PrintAndLogEx(NORMAL, "Your proxmark3 device is offline. Specify [1] to use TraceBuffer data instead");
@@ -403,6 +404,7 @@ static int SanityOfflineCheck( bool useTraceBuffer ){
 	}
 	return 1;
 }
+*/
 
 int CmdTraceList(const char *Cmd) {
 
@@ -478,11 +480,10 @@ int CmdTraceList(const char *Cmd) {
 	if (errors) return usage_trace_list();
 	
 	uint16_t tracepos = 0;
+
 	// reserv some space.
-	if (!trace) {
-		printf("trace pointer not allocated\n");
+	if (!trace)
 		trace = calloc(USB_CMD_DATA_SIZE, sizeof(uint8_t));
-	}
 	
 	if ( isOnline ) {
 		// Query for the size of the trace,  downloading USB_CMD_DATA_SIZE

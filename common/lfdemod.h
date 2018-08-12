@@ -15,7 +15,7 @@
 #define LFDEMOD_H__
 #include <stdint.h>  // for uint_32+
 #include <stdbool.h> // for bool
-#include <string.h>  // for strcmp 
+#include <string.h>  // for strcmp, memset, memcmp and size_t
 #include <stdlib.h>  // for
 #include <stdbool.h> // for bool
 #include "parity.h"  // for parity test

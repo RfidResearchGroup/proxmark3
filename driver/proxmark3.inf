@@ -11,10 +11,12 @@ DriverVer=03/05/2018,1.1.1.0
 [DeviceList.NTx86]
 %DeviceName%=DriverInstall,USB\VID_9AC4&PID_4B8F
 %DeviceName_old%=DriverInstall,USB\VID_2d2d&PID_504d
+%DeviceName_easy%=DriverInstall,USB\VID_502d&PID_502d
 
 [DeviceList.NTamd64]
 %DeviceName%=DriverInstall,USB\VID_9AC4&PID_4B8F
 %DeviceName_old%=DriverInstall,USB\VID_2d2d&PID_504d
+%DeviceName_easy%=DriverInstall,USB\VID_502d&PID_502d
 
 [DriverInstall]
 include=mdmcpq.inf
@@ -33,3 +35,4 @@ HKR,,EnumPropPages32,,"MsPorts.dll,SerialPortPropPageProvider"
 ProviderName = "proxmark.org"
 DeviceName = "Proxmark3"
 DeviceName_old = "Proxmark3 (old)"
+DeviceName_easy = "Proxmark3 (easy?)"

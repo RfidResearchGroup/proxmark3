@@ -262,15 +262,17 @@ int CmdVersion(const char *Cmd) {
 		PrintAndLogEx(NORMAL, "\n\e[34mProxmark3 RFID instrument\e[0m\n");	
 #endif	
 		char s[50] = {0};
-#if defined(WITH_FLASH) || defined(WITH_SMARTCARD)
+#if defined(WITH_FLASH) || defined(WITH_SMARTCARD) || defined(WITH_FPC)
 		strncat(s, "build for RDV40 with ", sizeof(s) - strlen(s) - 1);
 #endif
-
 #ifdef WITH_FLASH
 		strncat(s, "flashmem; ", sizeof(s) - strlen(s) - 1);
 #endif	
 #ifdef WITH_SMARTCARD
 		strncat(s, "smartcard; ", sizeof(s) - strlen(s) - 1);
+#endif
+#ifdef WITH_FPC
+		strncat(s, "fpc; ", sizeof(s) - strlen(s) - 1);
 #endif
 		PrintAndLogEx(NORMAL, "\n [ CLIENT ]");
 		PrintAndLogEx(NORMAL, " client: iceman %s \n", s);

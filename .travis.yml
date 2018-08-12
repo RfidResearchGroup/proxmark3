@@ -1,4 +1,4 @@
-# Travis-CI Build for IcemanFork/Proxmark3
+# Travis-CI Build for RfidResearchGroup/Proxmark3
 language: c
 
 #default linux build env is: Ubuntu 14.04 trusty
@@ -28,7 +28,7 @@ before_install:
     sudo apt-get install -y gcc-arm-none-eabi;
   elif [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
     brew update;
-    brew tap iceman1001/proxmark3;
+    brew tap RfidResearchGroup/proxmark3;
   fi
 
 install:

@@ -38,9 +38,9 @@ struct hitag2_tag {
 		TAG_STATE_WRITING    = 0x04,       // In write command, awaiting sector contents to be written
 	} state;
 	unsigned int active_sector;
-	byte_t crypto_active;
+	uint8_t crypto_active;
 	uint64_t cs;
-	byte_t sectors[12][4];
+	uint8_t sectors[12][4];
 };
 
 static struct hitag2_tag tag = {
@@ -71,14 +71,14 @@ static enum {
 // ToDo: define a meaningful maximum size for auth_table. The bigger this is, the lower will be the available memory for traces. 
 // Historically it used to be FREE_BUFFER_SIZE, which was 2744.
 #define AUTH_TABLE_LENGTH 2744
-static byte_t* auth_table;
+static uint8_t* auth_table;
 static size_t auth_table_pos = 0;
 static size_t auth_table_len = AUTH_TABLE_LENGTH;
 
-static byte_t password[4];
-static byte_t NrAr[8];
-static byte_t key[8];
-static byte_t writedata[4];
+static uint8_t password[4];
+static uint8_t NrAr[8];
+static uint8_t key[8];
+static uint8_t writedata[4];
 static uint64_t cipher_state;
 
 /* Following is a modified version of cryptolib.com/ciphers/hitag2/ */
@@ -177,7 +177,7 @@ static int hitag2_init(void) {
 	return 0;
 }
 
-static void hitag2_cipher_reset(struct hitag2_tag *tag, const byte_t *iv)
+static void hitag2_cipher_reset(struct hitag2_tag *tag, const uint8_t *iv)
 {
 	uint64_t key =  ((uint64_t)tag->sectors[2][2]) |
                   ((uint64_t)tag->sectors[2][3] << 8) |
@@ -196,9 +196,9 @@ static void hitag2_cipher_reset(struct hitag2_tag *tag, const byte_t *iv)
 	tag->cs = _hitag2_init(rev64(key), rev32(uid), rev32(iv_));
 }
 
-static int hitag2_cipher_authenticate(uint64_t* cs, const byte_t *authenticator_is)
+static int hitag2_cipher_authenticate(uint64_t* cs, const uint8_t *authenticator_is)
 {
-	byte_t authenticator_should[4];
+	uint8_t authenticator_should[4];
 	authenticator_should[0] = ~_hitag2_byte(cs);
 	authenticator_should[1] = ~_hitag2_byte(cs);
 	authenticator_should[2] = ~_hitag2_byte(cs);
@@ -206,7 +206,7 @@ static int hitag2_cipher_authenticate(uint64_t* cs, const byte_t *authenticator_
 	return (memcmp(authenticator_should, authenticator_is, 4) == 0);
 }
 
-static int hitag2_cipher_transcrypt(uint64_t* cs, byte_t *data, unsigned int bytes, unsigned int bits)
+static int hitag2_cipher_transcrypt(uint64_t* cs, uint8_t *data, unsigned int bytes, unsigned int bits)
 {
 	int i;
 	for(i=0; i<bytes; i++) data[i] ^= _hitag2_byte(cs);
@@ -271,7 +271,7 @@ static void hitag_send_bit(int bit) {
 	LED_A_OFF();
 }
 
-static void hitag_send_frame(const byte_t* frame, size_t frame_len)
+static void hitag_send_frame(const uint8_t* frame, size_t frame_len)
 {
 	// Send start of frame
 	for(size_t i=0; i<5; i++) {
@@ -288,9 +288,9 @@ static void hitag_send_frame(const byte_t* frame, size_t frame_len)
 }
 
 
-static void hitag2_handle_reader_command(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen)
+static void hitag2_handle_reader_command(uint8_t* rx, const size_t rxlen, uint8_t* tx, size_t* txlen)
 {
-	byte_t rx_air[HITAG_FRAME_LEN];
+	uint8_t rx_air[HITAG_FRAME_LEN];
 	
 	// Copy the (original) received frame how it is send over the air
 	memcpy(rx_air,rx,nbytes(rxlen));
@@ -435,17 +435,17 @@ static void hitag_reader_send_bit(int bit) {
 	
 	if(bit == 0) {
 		// Zero bit: |_-|
-		while(AT91C_BASE_TC0->TC_CV < T0*22);
+		while (AT91C_BASE_TC0->TC_CV < T0*22) {};
 
 	} else {
 		// One bit: |_--|
-		while(AT91C_BASE_TC0->TC_CV < T0*28);
+		while (AT91C_BASE_TC0->TC_CV < T0*28) {};
 	}
 	LED_A_OFF();
 }
 
 
-static void hitag_reader_send_frame(const byte_t* frame, size_t frame_len)
+static void hitag_reader_send_frame(const uint8_t* frame, size_t frame_len)
 {
 	// Send the content of the frame
 	for(size_t i=0; i<frame_len; i++) {
@@ -463,7 +463,7 @@ static void hitag_reader_send_frame(const byte_t* frame, size_t frame_len)
 
 size_t blocknr;
 
-static bool hitag2_password(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
+static bool hitag2_password(uint8_t* rx, const size_t rxlen, uint8_t* tx, size_t* txlen) {
 	// Reset the transmission frame length
 	*txlen = 0;
 	
@@ -518,7 +518,7 @@ static bool hitag2_password(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* 
 	return true;
 }
 
-static bool hitag2_write_page(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen)
+static bool hitag2_write_page(uint8_t* rx, const size_t rxlen, uint8_t* tx, size_t* txlen)
 {
 	switch (writestate) {
 	case WRITE_STATE_START:
@@ -560,22 +560,19 @@ static bool hitag2_write_page(byte_t* rx, const size_t rxlen, byte_t* tx, size_t
 	return true;
 }
 
-static bool hitag2_crypto(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen, bool write) {
+static bool hitag2_crypto(uint8_t* rx, const size_t rxlen, uint8_t* tx, size_t* txlen, bool write) {
 	// Reset the transmission frame length
 	*txlen = 0;
 	
   if(bCrypto) {
 		hitag2_cipher_transcrypt(&cipher_state,rx,rxlen/8,rxlen%8);
-
 	}
 
 	if (bCrypto && !bAuthenticating && write) {
 		if (!hitag2_write_page(rx, rxlen, tx, txlen)) {
 			return false;
 		}
-	}
-	else
-	{
+	} else {
 
 	// Try to find out which command was send by selecting on length (in bits)
 	switch (rxlen) {
@@ -670,7 +667,7 @@ static bool hitag2_crypto(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* tx
 }
 
 
-static bool hitag2_authenticate(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
+static bool hitag2_authenticate(uint8_t* rx, const size_t rxlen, uint8_t* tx, size_t* txlen) {
 	// Reset the transmission frame length 
 	*txlen = 0;
 	
@@ -710,7 +707,7 @@ static bool hitag2_authenticate(byte_t* rx, const size_t rxlen, byte_t* tx, size
 }
 
 
-static bool hitag2_test_auth_attempts(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
+static bool hitag2_test_auth_attempts(uint8_t* rx, const size_t rxlen, uint8_t* tx, size_t* txlen) {
 
 	// Reset the transmission frame length 
 	*txlen = 0;
@@ -766,7 +763,7 @@ static bool hitag2_test_auth_attempts(byte_t* rx, const size_t rxlen, byte_t* tx
 	return true;
 }
 
-static bool hitag2_read_uid(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
+static bool hitag2_read_uid(uint8_t* rx, const size_t rxlen, uint8_t* tx, size_t* txlen) {
 	// Reset the transmission frame length
 	*txlen = 0;
 
@@ -812,7 +809,7 @@ void SnoopHitag(uint32_t type) {
 	int lastbit;
 	bool bSkip;
 	int tag_sof;
-	byte_t rx[HITAG_FRAME_LEN];
+	uint8_t rx[HITAG_FRAME_LEN];
 	size_t rxlen=0;
 	
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
@@ -827,7 +824,7 @@ void SnoopHitag(uint32_t type) {
 	auth_table_len = 0;
 	auth_table_pos = 0;
 
-    auth_table = (byte_t *)BigBuf_malloc(AUTH_TABLE_LENGTH);
+    auth_table = (uint8_t *)BigBuf_malloc(AUTH_TABLE_LENGTH);
 	memset(auth_table, 0x00, AUTH_TABLE_LENGTH);
 	
 	DbpString("Starting Hitag2 snoop");
@@ -1020,13 +1017,13 @@ void SnoopHitag(uint32_t type) {
 //	DbpString("All done");
 }
 
-void SimulateHitagTag(bool tag_mem_supplied, byte_t* data) {
+void SimulateHitagTag(bool tag_mem_supplied, uint8_t* data) {
 	int frame_count;
 	int response;
 	int overflow;
-	byte_t rx[HITAG_FRAME_LEN];
+	uint8_t rx[HITAG_FRAME_LEN];
 	size_t rxlen=0;
-	byte_t tx[HITAG_FRAME_LEN];
+	uint8_t tx[HITAG_FRAME_LEN];
 	size_t txlen=0;
 	bool bQuitTraceFull = false;
 	bQuiet = false;
@@ -1042,9 +1039,9 @@ void SimulateHitagTag(bool tag_mem_supplied, byte_t* data) {
 	
 	auth_table_len = 0;
 	auth_table_pos = 0;
-    byte_t* auth_table;
+    uint8_t* auth_table;
 
-    auth_table = (byte_t *)BigBuf_malloc(AUTH_TABLE_LENGTH);
+    auth_table = (uint8_t *)BigBuf_malloc(AUTH_TABLE_LENGTH);
 	memset(auth_table, 0x00, AUTH_TABLE_LENGTH);
 
 	DbpString("Starting Hitag2 simulation");
@@ -1053,7 +1050,7 @@ void SimulateHitagTag(bool tag_mem_supplied, byte_t* data) {
 	
 	if (tag_mem_supplied) {
 		DbpString("Loading hitag2 memory...");
-		memcpy((byte_t*)tag.sectors,data,48);
+		memcpy((uint8_t*)tag.sectors,data,48);
 	}
 
 	uint32_t block = 0;
@@ -1213,10 +1210,10 @@ void SimulateHitagTag(bool tag_mem_supplied, byte_t* data) {
 void ReaderHitag(hitag_function htf, hitag_data* htd) {
 	int frame_count = 0;
 	int response = 0;
-	byte_t rx[HITAG_FRAME_LEN];
+	uint8_t rx[HITAG_FRAME_LEN];
 	size_t rxlen = 0;
-	byte_t txbuf[HITAG_FRAME_LEN];
-	byte_t* tx = txbuf;
+	uint8_t txbuf[HITAG_FRAME_LEN];
+	uint8_t* tx = txbuf;
 	size_t txlen = 0;
 	int lastbit = 1;
 	bool bSkip;
@@ -1349,6 +1346,7 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 	} else {
 		Dbprintf("Error, unknown hitag reader type: %d",htf);
 		set_tracing(false);	
+		LED_D_OFF();
 		return;
 	}
 	uint8_t attempt_count=0;
@@ -1388,11 +1386,13 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 			case RHT2F_UID_ONLY: {
 				bStop = !hitag2_read_uid(rx, rxlen, tx, &txlen);
 				attempt_count++; //attempt 3 times to get uid then quit
-				if (!bStop && attempt_count == 3) bStop = true;
+				if (!bStop && attempt_count == 3)
+					bStop = true;
 			} break;
 			default: {
 				Dbprintf("Error, unknown function: %d",htf);
 				set_tracing(false);
+				LED_D_OFF();
 				return;
 			} break;
 		}
@@ -1501,22 +1501,21 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	set_tracing(false);
 
 	if ( bSuccessful )
-		cmd_send(CMD_ACK, bSuccessful, 0, 0, (byte_t*)tag.sectors, 48);
+		cmd_send(CMD_ACK, bSuccessful, 0, 0, (uint8_t*)tag.sectors, 48);
 	else
 		cmd_send(CMD_ACK, bSuccessful, 0, 0, 0, 0);
-
-	set_tracing(false);
 }
 
 void WriterHitag(hitag_function htf, hitag_data* htd, int page) {
 	int frame_count;
 	int response;
-	byte_t rx[HITAG_FRAME_LEN];
+	uint8_t rx[HITAG_FRAME_LEN];
 	size_t rxlen=0;
-	byte_t txbuf[HITAG_FRAME_LEN];
-	byte_t* tx = txbuf;
+	uint8_t txbuf[HITAG_FRAME_LEN];
+	uint8_t* tx = txbuf;
 	size_t txlen=0;
 	int lastbit;
 	bool bSkip;
@@ -1788,5 +1787,5 @@ void WriterHitag(hitag_function htf, hitag_data* htd, int page) {
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	// Dbprintf("frame received: %d",frame_count);
 	// DbpString("All done");
-	cmd_send(CMD_ACK,bSuccessful,0,0,(byte_t*)tag.sectors,48);
+	cmd_send(CMD_ACK,bSuccessful,0,0,(uint8_t*)tag.sectors,48);
 }

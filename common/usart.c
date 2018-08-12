@@ -222,7 +222,7 @@ void usart_init(void) {
 	pPIOA->PIO_PER |= (AT91C_PA21_RXD1 | AT91C_PA22_TXD1);
 
 	// Configure the pins to be outputs
-	pPIOA->PIO_OER |= (AT91C_PA21_RXD1 | AT91C_PA22_TXD1);
+	pPIOA->PIO_OER |= AT91C_PA22_TXD1;
 
 	//enable PIO in input mode
 	//pPIOA->PIO_ODR  = AT91C_PA21_RXD1;

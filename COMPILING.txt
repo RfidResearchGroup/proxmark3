@@ -30,64 +30,6 @@ Links
   https://github.com/Gator96100/ProxSpace/archive/master.zip
 
 
--- OR --
-
-Use the following list of packages required to setup the compile environment yourself.
-
-1 - Install QT SDK for Windows [1]
-
-In the following instructions, we'll assume you installed it to C:\QT
-
-2 - MSYS-1.0.11 [2]
-
-Just follow the installation procedure.
-When asked if you have MinGW installed and for its path, provide:
-C:/QT/mingw
-
-3 - readline-5.0-1-bin [5]
-
-From this archive, copy:
-bin/* to C:\QT\mingw\bin
-include/* to C:\QT\mingw\include
-lib/*.a to C:\QT\mingw\lib
-
-4 - libusb-win32-device-bin-0.1.12.2 [6]
-
-Be careful here, it is *NOT* working with the filter version!
-Likewise copy:
-include/usb.h to C:\QT\mingw\include
-lib/gcc/libusb.a to C:\QT\mingw\lib
-
-
-5 - Install DevkitPro [5]
-
-You'll need it to compile the firmware (ARM) side.
-You only need devkitARM, nothing more (no extra lib or anything else)
-Assuming you installed it to C:\devkitpro, make sure you set
-the DEVKITARM environment variable to /c/devkitPro/devkitARM :
-export DEVKITARM=/c/devkitPro/devkitARM
-Also, add its bin to your PATH:
-export PATH=$PATH:$DEVKITARM/bin
-
-6 - Install Strawberry Perl [6]
-
-7 - Setup a few variables
-
-In your shell from MSYS, make sure you set QTDIR to your QT installation:
-export QTDIR=/c/QT/qt
-And add its bin to your path as well:
-export PATH=$PATH:$QTDIR/bin
-
-Download links:
-
-[1] http://qt.nokia.com/downloads/sdk-windows-cpp
-[2] http://downloads.sourceforge.net/mingw/MSYS-1.0.11.exe
-[3] http://sourceforge.net/projects/gnuwin32/files/readline/5.0-1/readline-5.0-1-bin.zip/download
-[4] http://sourceforge.net/projects/libusb-win32/files/libusb-win32-releases/0.1.12.2/libusb-win32-device-bin-0.1.12.2.tar.gz/download
-[5] http://sourceforge.net/projects/devkitpro/files/Automated%20Installer/devkitProUpdater-1.5.0.exe/download
-[6] http://strawberry-perl.googlecode.com/files/strawberry-perl-5.10.1.1.msi
-
-
 ============
 = Mac OS X =
 ============

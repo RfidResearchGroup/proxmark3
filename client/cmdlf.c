@@ -837,12 +837,12 @@ int CheckChipType(bool getDeviceData) {
 int CmdLFfind(const char *Cmd) {
 	int ans = 0;
 	size_t minLength = 2000;
-	char cmdp = param_getchar(Cmd, 0);
+	char cmdp = tolower(param_getchar(Cmd, 0));
 	char testRaw = param_getchar(Cmd, 1);
 	
-	if (strlen(Cmd) > 3 || cmdp == 'h' || cmdp == 'H') return usage_lf_find();
+	if (strlen(Cmd) > 3 || cmdp == 'h') return usage_lf_find();
 	
-	if (cmdp == 'u' || cmdp == 'U') testRaw = 'u';
+	if (cmdp == 'u') testRaw = 'u';
 	
 	bool isOnline = (!offline && (cmdp != '1') );
 	
@@ -902,7 +902,7 @@ int CmdLFfind(const char *Cmd) {
 	
 	PrintAndLogEx(FAILED, "\nNo known 125/134 KHz tags Found!\n");
 	
-	if (testRaw=='u' || testRaw=='U'){
+	if (testRaw == 'u'){
 		//test unknown tag formats (raw mode)
 		PrintAndLogEx(INFO, "\nChecking for Unknown tags:\n");
 		ans = AutoCorrelate(GraphBuffer, GraphBuffer, GraphTraceLen, 4000, false, false);

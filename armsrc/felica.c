@@ -320,7 +320,6 @@ static void BuildFliteRdblk(uint8_t* idm, int blocknum, uint16_t *blocks ) {
 
 static void TransmitFor18092_AsReader(uint8_t * frame, int len, uint32_t *timing, uint8_t power, uint8_t highspeed) {
 	
-	volatile uint16_t b;
 	uint8_t flags = FPGA_MAJOR_MODE_ISO18092;
 
 	if ( power )
@@ -340,12 +339,11 @@ static void TransmitFor18092_AsReader(uint8_t * frame, int len, uint32_t *timing
 	// sending 0x00 0x00 0x00 0x00 0x00 0x00
 	uint16_t c = 0;	
 	while (c < 6) {
+
+		// keep tx buffer in a defined state anyway.	
 		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
 			AT91C_BASE_SSC->SSC_THR = 0x00;
 			c++;
-		}
-		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-			b = (uint16_t)(AT91C_BASE_SSC->SSC_RHR); (void)b;
 		}
 	}
 	// sending sync code
@@ -353,11 +351,10 @@ static void TransmitFor18092_AsReader(uint8_t * frame, int len, uint32_t *timing
 	// sending data
 	c = 0;
 	while (c < len) {
+
+		// Put byte into tx holding register as soon as it is ready		
 		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
 			AT91C_BASE_SSC->SSC_THR = frame[c++];
-		}
-		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-			b = (uint16_t)(AT91C_BASE_SSC->SSC_RHR); (void)b;
 		}
 	}
 
@@ -436,7 +433,7 @@ bool WaitForFelicaReply(uint16_t maxbytes) {
 // Set up FeliCa communication (similar to iso14443a_setup)
 // field is setup for "Sending as Reader"
 static void felica_setup(uint8_t fpga_minor_mode) {
-	if (MF_DBGLEVEL > 3) Dbprintf("FeliCa_setup Enter");
+
 	LEDsoff();
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
@@ -471,7 +468,6 @@ static void felica_setup(uint8_t fpga_minor_mode) {
 	StartCountSspClk();
 		
 	LED_D_ON();
-	if (MF_DBGLEVEL > 3) Dbprintf("FeliCa_setup Exit");
 }
 //-----------------------------------------------------------------------------
 // RAW FeliCa commands. Send out commands and store answers.

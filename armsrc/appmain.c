@@ -1070,6 +1070,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 #endif
 		case CMD_BUFF_CLEAR:
 			BigBuf_Clear();
+			BigBuf_free();
 			break;
 
 		case CMD_MEASURE_ANTENNA_TUNING:

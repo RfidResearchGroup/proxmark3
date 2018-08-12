@@ -652,29 +652,22 @@ int CmdHF14AMfDump(const char *Cmd) {
 	UsbCommand resp;
 	
 	while(param_getchar(Cmd, cmdp) != 0x00) {
-		switch(param_getchar(Cmd, cmdp)) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'h':
-		case 'H':
 			return usage_hf14_dump();
 		case 'k':
-		case 'K':
 			param_getstr(Cmd, cmdp+1, keyFilename, FILE_PATH_SIZE); 
 			cmdp += 2;
 			break;
 		case 'f':
-		case 'F':
 			param_getstr(Cmd, cmdp+1, dataFilename, FILE_PATH_SIZE); 
 			cmdp += 2;
 			break;
 		default:
-			if (cmdp==0)
-			{
+			if (cmdp == 0) {
 				numSectors = NumOfSectors(param_getchar(Cmd, cmdp));
 				cmdp++;
-			}
-			else
-			{
-			
+			} else {
 				PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
 				return usage_hf14_dump();
 			}
@@ -1662,10 +1655,12 @@ int CmdHF14AMfChk(const char *Cmd) {
 	clen = param_getlength(Cmd, 1);
 	if (clen == 1) {
 		switch (ctmp) {	
-		case 'a': case 'A':
+		case 'a':
+		case 'A':
 			keyType = 0;
 			break;
-		case 'b': case 'B':
+		case 'b':
+		case 'B':
 			keyType = 1;
 			break;
 		case '?':

@@ -66,7 +66,7 @@ int usage_analyse_nuid(void){
 	return 0;
 }
 int usage_analyse_a(void) {
-	PrintAndLogEx(NORMAL, "my personal garbage test command");
+	PrintAndLogEx(NORMAL, "Iceman's personal garbage test command");
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Usage:  analyse a [h] d <bytes>");
 	PrintAndLogEx(NORMAL, "Options:");
@@ -248,9 +248,17 @@ int CmdAnalyseLCR(const char *Cmd) {
 	if (strlen(Cmd) == 0|| cmdp == 'h' || cmdp == 'H') return usage_analyse_lcr();
 	
 	int len = 0;
-	param_gethex_ex(Cmd, 0, data, &len);
-	if ( len%2 ) return usage_analyse_lcr();
-	len >>= 1;	
+	switch (param_gethex_to_eol(Cmd, 0, data, sizeof(data), &len)) {
+	case 1:
+		PrintAndLogEx(WARNING, "Invalid HEX value.");
+		return 1;
+	case 2:
+		PrintAndLogEx(WARNING, "Too many bytes.  Max %d bytes", sizeof(data));
+		return 1;
+	case 3:
+		PrintAndLogEx(WARNING, "Hex must have even number of digits.");
+		return 1;
+	}
 	uint8_t finalXor = calculateLRC(data, len);
 	PrintAndLogEx(NORMAL, "Target [%02X] requires final LRC XOR byte value: 0x%02X",data[len-1] ,finalXor);
 	return 0;

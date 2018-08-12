@@ -17,8 +17,8 @@ sudo apt-get autoclean -y
 sudo apt-get clean -y
 sudo apt-get update
 
-# install iceman fork - proxmark3 
-git clone https://github.com/iceman1001/proxmark3.git
+# install RDV40 - proxmark3 
+git clone https://github.com/RfidResearchGroup/proxmark3.git
 (
    cd proxmark3 || exit 1
    git reset --hard

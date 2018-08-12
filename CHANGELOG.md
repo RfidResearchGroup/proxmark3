@@ -2,7 +2,16 @@
 All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
-## [unreleased][unreleased]
+## [unreleased][unreleased]							 
+ - Fix 'hf legic'  enhancement of rx / tx in legic commands (@drandreas)
+ - Fix 'data buffclear' - now frees bigbuff also (@iceman)
+ - Fix GET_TICKS  and signess while shifting (@drandreas)
+ - Added 'hf 14b dump' - now dumps to file (bin & eml)  (@iceman)
+ - Fix fixed xcorrelation for strong signal (@drandreas)
+ - Fix 'hf mf chk' - keytype was reversed (@TomHarkness)
+ - Added strange vid/pid found in wild.  Could be pm3 easy clones. (@iceman)
+ - Fix 'make udev'  -  udev filename could be in conflict,  renamed.  (@blshkv)
+ - Fix 'lf t55xx config'  - wrong sized array disabled FSK1a/FSK2a as options (@grauerfuchs)
  - Added more default keys  (@j8048188) (@iceman)
  - Added 'sc list/info/raw/reader/upgrade' - (RDV40) smart card module functionality  (@iceman)
  - Fix 'download eml buffer' (@drandreas)

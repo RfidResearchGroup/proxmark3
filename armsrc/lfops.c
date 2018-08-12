@@ -1930,7 +1930,7 @@ void Cotag(uint32_t arg0) {
 	// Turn the field off
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
 	cmd_send(CMD_ACK,0,0,0,0,0);    
-	LED_A_OFF();
+	LEDsoff();
 }
 
 /*

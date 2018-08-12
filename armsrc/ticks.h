@@ -37,10 +37,11 @@ void StartCountSspClk();
 void ResetSspClk(void);
 uint32_t RAMFUNC GetCountSspClk();
 
-void StartTicks(void);
-uint32_t GetTicks(void);
-void WaitTicks(uint32_t ticks);
-void WaitUS(uint16_t us);
-void WaitMS(uint16_t ms);
-void StopTicks(void);
+extern void StartTicks(void);
+extern uint32_t GetTicks(void);
+extern void WaitTicks(uint32_t ticks);
+extern void WaitUS(uint16_t us);
+extern void WaitMS(uint16_t ms);
+
+extern void StopTicks(void);
 #endif

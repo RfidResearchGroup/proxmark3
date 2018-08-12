@@ -166,8 +166,8 @@ int usage_legic_wipe(void){
  */
 int CmdLegicInfo(const char *Cmd) {
 
-	char cmdp = param_getchar(Cmd, 0);
-	if ( cmdp == 'H' || cmdp == 'h' ) return usage_legic_info();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if ( cmdp == 'h' ) return usage_legic_info();
 
 	int i = 0, k = 0, segmentNum = 0, segment_len = 0, segment_flag = 0;
 	int crc = 0, wrp = 0, wrc = 0;
@@ -477,8 +477,8 @@ out:
 // number of bytes to read
 int CmdLegicRdmem(const char *Cmd) {
 
-	char cmdp = param_getchar(Cmd, 0);
-	if ( cmdp == 'H' || cmdp == 'h' ) return usage_legic_rdmem();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if ( cmdp == 'h' ) return usage_legic_rdmem();
 	
 	uint32_t offset = 0, len = 0, iv = 1;
 	uint16_t datalen = 0;
@@ -524,9 +524,8 @@ int CmdLegicRfWrite(const char *Cmd) {
 	uint32_t offset = 0, IV = 0x55;
 	
 	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch(param_getchar(Cmd, cmdp)) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'd':
-		case 'D':
 			// peek at length of the input string so we can
 			// figure out how many elements to malloc in "data"
 			bg=en=0;
@@ -571,12 +570,10 @@ int CmdLegicRfWrite(const char *Cmd) {
 			cmdp += 2;
 			break;
 		case 'o':
-		case 'O':
 			offset = param_get32ex(Cmd, cmdp+1, 4, 16);
 			cmdp += 2;
 			break;
 		case 'h':
-		case 'H':
 			errors = true;
 			break;
 		default:
@@ -658,9 +655,8 @@ int CmdLegicCalcCrc(const char *Cmd){
 	int bg, en;
 	
 	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch(param_getchar(Cmd, cmdp)) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'd':
-		case 'D':
 			// peek at length of the input string so we can
 			// figure out how many elements to malloc in "data"
 			bg=en=0;
@@ -696,17 +692,14 @@ int CmdLegicCalcCrc(const char *Cmd){
 			cmdp += 2;
 			break;
 		case 'u':
-		case 'U':		 
 			uidcrc = param_get8ex(Cmd, cmdp+1, 0, 16);
 			cmdp += 2;
 			break;
 		case 'c':
-		case 'C':
 			type = param_get8ex(Cmd, cmdp+1, 0, 10);
 			cmdp += 2;
 			break;
 		case 'h':
-		case 'H':
 			errors = true;
 			break;
 		default:
@@ -789,7 +782,7 @@ int legic_get_type(legic_card_select_t *card){
 	clearCommandBuffer();
     SendCommand(&c);
 	UsbCommand resp;
-	if (!WaitForResponseTimeout(CMD_ACK, &resp, 500))
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500))
 		return 2;
 	
 	uint8_t isOK = resp.arg[0] & 0xFF;
@@ -825,11 +818,10 @@ void legic_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
 	}
 }
 
-
 int HFLegicReader(const char *Cmd, bool verbose) {
 
-	char cmdp = param_getchar(Cmd, 0);
-	if ( cmdp == 'H' || cmdp == 'h' ) return usage_legic_reader();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if ( cmdp == 'h' ) return usage_legic_reader();
 	
 	legic_card_select_t card;
 	switch(legic_get_type(&card)){
@@ -864,12 +856,10 @@ int CmdLegicDump(const char *Cmd){
 	memset(filename, 0, sizeof(filename));
 	
 	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch(param_getchar(Cmd, cmdp)) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 			case 'h':
-			case 'H':
 				return usage_legic_dump();
 			case 'o':
-			case 'O':
 				fileNlen = param_getstr(Cmd, cmdp+1, filename, FILE_PATH_SIZE);
 				if (!fileNlen) 
 					errors = true; 
@@ -964,13 +954,11 @@ int CmdLegicRestore(const char *Cmd){
 	memset(filename, 0, sizeof(filename));
 	
 	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch(param_getchar(Cmd, cmdp)) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 			case 'h':
-			case 'H':
 				errors = true;
 				break;
 			case 'i':
-			case 'I':
 				fileNlen = param_getstr(Cmd, cmdp+1, filename, FILE_PATH_SIZE);
 				if (!fileNlen) 
 					errors = true;
@@ -1079,8 +1067,8 @@ int CmdLegicELoad(const char *Cmd) {
 	int len, numofbytes;
 	int nameParamNo = 1;
 	
-	char cmdp = param_getchar(Cmd, 0);		
-	if ( cmdp == 'h' || cmdp == 'H' || cmdp == 0x00)
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if ( cmdp == 'h' || cmdp == 0x00)
 		return usage_legic_eload();
 
 	switch (cmdp) {
@@ -1142,9 +1130,9 @@ int CmdLegicESave(const char *Cmd) {
 	
 	memset(filename, 0, sizeof(filename));
 
-	char cmdp = param_getchar(Cmd, 0);
+	char cmdp = tolower(param_getchar(Cmd, 0));
 	
-	if ( cmdp == 'h' || cmdp == 'H' || cmdp == 0x00)
+	if ( cmdp == 'h' || cmdp == 0x00)
 		return usage_legic_esave();
 
 	switch (cmdp) {
@@ -1198,9 +1186,9 @@ int CmdLegicESave(const char *Cmd) {
 
 int CmdLegicWipe(const char *Cmd){
 
-	char cmdp = param_getchar(Cmd, 0);
+	char cmdp = tolower(param_getchar(Cmd, 0));
 	
-	if ( cmdp == 'h' || cmdp == 'H') return usage_legic_wipe();
+	if ( cmdp == 'h') return usage_legic_wipe();
 	
 	// tagtype
 	legic_card_select_t card;

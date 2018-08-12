@@ -658,12 +658,10 @@ int CmdHF15Dump(const char*Cmd) {
 	uint8_t uid[8] = {0,0,0,0,0,0,0,0};	
 	
 	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch(param_getchar(Cmd, cmdp)) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'h':
-		case 'H':
 			return usage_15_dump();
 		case 'f':
-		case 'F':
 			fileNameLen = param_getstr(Cmd, cmdp+1, filename, FILE_PATH_SIZE); 
 			cmdp += 2;
 			break;

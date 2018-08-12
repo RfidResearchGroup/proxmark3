@@ -990,9 +990,11 @@ static bool GetIClassCommandFromReader(uint8_t *received, int *len, int maxLen) 
 	while (!BUTTON_PRESS()) {
         WDT_HIT();
 
+		 // keep tx buffer in a defined state anyway.
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))
             AT91C_BASE_SSC->SSC_THR = 0x00;
 
+		// wait for byte to become available in rx holding register
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
@@ -1127,13 +1129,10 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 	LEDsoff();
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-
 	// this will clear out bigbuf memory,  the eload command must select this before!
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-	
-	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
-	
 	FpgaSetupSsc();
+	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 	
 	// Enable and clear the trace
 	clear_trace();
@@ -1586,11 +1585,17 @@ static int SendIClassAnswer(uint8_t *resp, int respLen, uint16_t delay) {
 	volatile uint8_t b = 0;
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_424K_8BIT);	
+	
 	AT91C_BASE_SSC->SSC_THR = 0x00;
+	
 	while (!BUTTON_PRESS()) {
+		
+		// Prevent rx holding register from overflowing
 		if ( (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY)){
 			b = AT91C_BASE_SSC->SSC_RHR; (void) b;
 		}
+
+		// Put byte into tx holding register as soon as it is ready
 		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)){
 			b = 0x00;
 			if ( i < respLen){
@@ -1630,6 +1635,7 @@ static void TransmitIClassCommand(const uint8_t *cmd, int len, int *samples, int
 
 		WDT_HIT();
 
+		// Put byte into tx holding register as soon as it is ready
 		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
 
 			// DOUBLE THE SAMPLES!
@@ -1649,6 +1655,7 @@ static void TransmitIClassCommand(const uint8_t *cmd, int len, int *samples, int
 			if (c >= len) break;
 		}
 
+		// Prevent rx holding register from overflowing
 		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 			b = AT91C_BASE_SSC->SSC_RHR; (void)b;
 		}		
@@ -1750,12 +1757,14 @@ static int GetIClassAnswer(uint8_t* receivedResponse, int maxLen, int *samples, 
 	while (!BUTTON_PRESS()) {
 		WDT_HIT();
 
+		 // keep tx buffer in a defined state anyway.
 		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
 			AT91C_BASE_SSC->SSC_THR = 0x00;  
 			// To make use of exact timing of next command from reader!!
 			if (elapsed) (*elapsed)++;
 		}
 
+		// Wait for byte be become available in rx holding register
 		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 			if (c >= timeout) return false;
 
@@ -1802,9 +1811,9 @@ void setupIclassReader() {
 	
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	
-    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
-	
     FpgaSetupSsc();
+
+    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 
     // Reset trace buffer
 	clear_trace();
