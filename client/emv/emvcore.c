@@ -221,7 +221,7 @@ struct tlvdb *GetdCVVRawFromTrack2(const struct tlv *track2) {
   return tlvdb_fixed(0x02, dCVVlen, dCVV);
 }
 
-int EMVExchangeEx(bool ActivateField, bool LeaveFieldON, sAPDU apdu, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
+int EMVExchangeEx(bool ActivateField, bool LeaveFieldON, sAPDU apdu, bool IncludeLe, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
 	uint8_t data[APDU_RES_LEN] = {0};
 
 	*ResultLen = 0;
@@ -237,10 +237,10 @@ int EMVExchangeEx(bool ActivateField, bool LeaveFieldON, sAPDU apdu, uint8_t *Re
 		memcpy(&data[5], apdu.data, apdu.Lc);
 	
 	if (APDULogging)
-		PrintAndLogEx(NORMAL, ">>>> %s", sprint_hex(data, 6 + apdu.Lc));
+		PrintAndLogEx(NORMAL, ">>>> %s", sprint_hex(data, (IncludeLe?6:5) + apdu.Lc));
 
-	// 6 byes + data = INS + CLA + P1 + P2 + Lc + <data = Nc> + Le
-	int res = ExchangeAPDU14a(data, 6 + apdu.Lc, ActivateField, LeaveFieldON, Result, (int)MaxResultLen, (int *)ResultLen);
+	// 6 byes + data = INS + CLA + P1 + P2 + Lc + <data = Nc> + Le(?IncludeLe)
+	int res = ExchangeAPDU14a(data, (IncludeLe?6:5) + apdu.Lc, ActivateField, LeaveFieldON, Result, (int)MaxResultLen, (int *)ResultLen);
 	
 	if (res) {
 		return res;
@@ -270,11 +270,11 @@ int EMVExchangeEx(bool ActivateField, bool LeaveFieldON, sAPDU apdu, uint8_t *Re
 }
 
 int EMVExchange(bool LeaveFieldON, sAPDU apdu, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
-	return EMVExchangeEx(false, LeaveFieldON, apdu, Result, MaxResultLen, ResultLen, sw, tlv);
+	return EMVExchangeEx(false, LeaveFieldON, apdu, true, Result, MaxResultLen, ResultLen, sw, tlv);
 }
 
 int EMVSelect(bool ActivateField, bool LeaveFieldON, uint8_t *AID, size_t AIDLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
-	return EMVExchangeEx(ActivateField, LeaveFieldON, (sAPDU){0x00, 0xa4, 0x04, 0x00, AIDLen, AID}, Result, MaxResultLen, ResultLen, sw, tlv);
+	return EMVExchangeEx(ActivateField, LeaveFieldON, (sAPDU){0x00, 0xa4, 0x04, 0x00, AIDLen, AID}, true, Result, MaxResultLen, ResultLen, sw, tlv);
 }
 
 int EMVSelectPSE(bool ActivateField, bool LeaveFieldON, uint8_t PSENum, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
@@ -453,7 +453,12 @@ int EMVGPO(bool LeaveFieldON, uint8_t *PDOL, size_t PDOLLen, uint8_t *Result, si
 }
 
 int EMVReadRecord(bool LeaveFieldON, uint8_t SFI, uint8_t SFIrec, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
-	return EMVExchange(LeaveFieldON, (sAPDU){0x00, 0xb2, SFIrec, (SFI << 3) | 0x04, 0, NULL}, Result, MaxResultLen, ResultLen, sw, tlv);
+	int res = EMVExchange(LeaveFieldON, (sAPDU){0x00, 0xb2, SFIrec, (SFI << 3) | 0x04, 0, NULL}, Result, MaxResultLen, ResultLen, sw, tlv);
+	if (*sw == 0x6700) {
+		PrintAndLogEx(INFO, ">>> trying to reissue command withouth Le...");
+		res = EMVExchangeEx(false, LeaveFieldON, (sAPDU){0x00, 0xb2, SFIrec, (SFI << 3) | 0x04, 0, NULL}, false, Result, MaxResultLen, ResultLen, sw, tlv);
+	}
+	return res;
 }
 
 int EMVAC(bool LeaveFieldON, uint8_t RefControl, uint8_t *CDOL, size_t CDOLLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
@@ -461,7 +466,12 @@ int EMVAC(bool LeaveFieldON, uint8_t RefControl, uint8_t *CDOL, size_t CDOLLen, 
 }
 
 int EMVGenerateChallenge(bool LeaveFieldON, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
-	return EMVExchange(LeaveFieldON, (sAPDU){0x00, 0x84, 0x00, 0x00, 0x00, NULL}, Result, MaxResultLen, ResultLen, sw, tlv);
+	int res = EMVExchange(LeaveFieldON, (sAPDU){0x00, 0x84, 0x00, 0x00, 0x00, NULL}, Result, MaxResultLen, ResultLen, sw, tlv);
+	if (*sw == 0x6700) {
+		PrintAndLogEx(INFO, ">>> trying to reissue command withouth Le...");
+		res = EMVExchangeEx(false, LeaveFieldON, (sAPDU){0x00, 0x84, 0x00, 0x00, 0x00, NULL}, false, Result, MaxResultLen, ResultLen, sw, tlv);
+	}
+	return res;
 }
 
 int EMVInternalAuthenticate(bool LeaveFieldON, uint8_t *DDOL, size_t DDOLLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
