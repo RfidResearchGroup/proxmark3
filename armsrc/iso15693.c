@@ -223,7 +223,6 @@ static void CodeIso15693AsReader256(uint8_t *cmd, int n) {
 static void TransmitTo15693Tag(const uint8_t *cmd, int len, int *samples, int *wait) {
 
     int c;
-	volatile uint32_t r;
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_TX);
 
 	if (wait) {
@@ -231,9 +230,6 @@ static void TransmitTo15693Tag(const uint8_t *cmd, int len, int *samples, int *w
 			if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
 				AT91C_BASE_SSC->SSC_THR = 0x00;		// For exact timing!
 				++c;
-			}
-			if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-				r = AT91C_BASE_SSC->SSC_RHR; (void)r;
 			}
 			WDT_HIT();
 		}
@@ -244,9 +240,6 @@ static void TransmitTo15693Tag(const uint8_t *cmd, int len, int *samples, int *w
 		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
             AT91C_BASE_SSC->SSC_THR = cmd[c];
             if( ++c >= len) break;
-        }
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            r = AT91C_BASE_SSC->SSC_RHR; (void)r;
         }
         WDT_HIT();		
     }
@@ -264,17 +257,13 @@ static void TransmitTo15693Tag(const uint8_t *cmd, int len, int *samples, int *w
 //-----------------------------------------------------------------------------
 static void TransmitTo15693Reader(const uint8_t *cmd, int len, int *samples, int *wait) {
     int c = 0;
-	volatile uint32_t r;
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR|FPGA_HF_SIMULATOR_MODULATE_424K);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_424K);
 	
 	if (wait) {
 		for (c = 0; c < *wait;) {
 			if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
 				AT91C_BASE_SSC->SSC_THR = 0x00;		// For exact timing!
 				++c;
-			}
-			if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-				r = AT91C_BASE_SSC->SSC_RHR; (void)r;
 			}
 			WDT_HIT();
 		}
@@ -285,9 +274,6 @@ static void TransmitTo15693Reader(const uint8_t *cmd, int len, int *samples, int
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
             AT91C_BASE_SSC->SSC_THR = cmd[c];
             if( ++c >= len) break;
-        }
-        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            r = AT91C_BASE_SSC->SSC_RHR; (void)r;
         }
         WDT_HIT();		
     }
@@ -403,27 +389,11 @@ static int GetIso15693AnswerFromTag(uint8_t *received, int *elapsed) {
 	uint32_t time_stop = 0;
 	bool getNext = false;
 	int counter = 0, ci = 0, cq = 0;
-	//volatile uint32_t r;
 	uint8_t *buf = BigBuf_malloc(SIGNAL_BUFF_SIZE);
 
 	if (elapsed) *elapsed = 0;
 	
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
-		
-	// for (counter = 0; counter < wait;) {
-		
-		// WDT_HIT();
-
-		// if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-			// AT91C_BASE_SSC->SSC_THR = 0x00;		// For exact timing!
-			// counter++;
-		// }
-		// if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-			 // r = AT91C_BASE_SSC->SSC_RHR; (void)r;
-		// }
-	// }
-	// counter = 0;
-
 
 	for(;;) {
 		WDT_HIT();
@@ -436,9 +406,6 @@ static int GetIso15693AnswerFromTag(uint8_t *received, int *elapsed) {
 		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 
 			ci = (int8_t)AT91C_BASE_SSC->SSC_RHR;
-			
-			// LSB is a FPGA singal bit
-			ci >>= 1;			
 			ci = ABS(ci);
 
 			// The samples are correlations against I and Q versions of the
@@ -483,15 +450,9 @@ static int GetIso15693AnswerFromSniff(uint8_t *received, int *samples, int *elap
 	for(;;) {
 		WDT_HIT();
 
-		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))
-			AT91C_BASE_SSC->SSC_THR = 0x43;
-
 		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 
 			ci = (int8_t)AT91C_BASE_SSC->SSC_RHR;
-			
-			// LSB is a FPGA singal bit
-			ci >>= 1;			
 			ci = ABS(ci);
 			
 			// The samples are correlations against I and Q versions of the
@@ -524,14 +485,11 @@ static int GetIso15693AnswerFromSniff(uint8_t *received, int *samples, int *elap
 //-----------------------------------------------------------------------------
 void AcquireRawAdcSamplesIso15693(void) {
 	int c = 0, getNext = false;
-	volatile uint32_t r;
 	int ci = 0, cq = 0;
 	
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 	FpgaSetupSsc();
-	// Give the tags time to energize
-	//FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
 	
 	// Now send the command
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_TX);
@@ -555,9 +513,6 @@ void AcquireRawAdcSamplesIso15693(void) {
 				break;
 			}
 		}
-		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-			r = AT91C_BASE_SSC->SSC_RHR; (void)r;
-		}
 	}
 
 	
@@ -569,16 +524,9 @@ void AcquireRawAdcSamplesIso15693(void) {
 	for(;;) {
 		WDT_HIT();
 		
-		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))
-			AT91C_BASE_SSC->SSC_THR = 0x43;
-		
 		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 
 			ci = (int8_t)AT91C_BASE_SSC->SSC_RHR;
-
-			// LSB is a FPGA singal bit
-			ci >>= 1;
-			
 			ci = ABS(ci);
 			
 			// The samples are correlations against I and Q versions of the
@@ -612,17 +560,10 @@ void RecordRawAdcSamplesIso15693(void) {
 
 	for(;;) { 
 		WDT_HIT();
-		
-		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-			AT91C_BASE_SSC->SSC_THR = 0x43;
-		}
-		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 
-			ci = (int8_t)AT91C_BASE_SSC->SSC_RHR;
-			
-			// LSB is a FPGA singal bit
-			ci >>= 1;
-			
+		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+
+			ci = (int8_t)AT91C_BASE_SSC->SSC_RHR;		
 			ci = ABS(ci);
 			// The samples are correlations against I and Q versions of the
 			// tone that the tag AM-modulates, so every other sample is I,
@@ -669,8 +610,6 @@ void Iso15693InitReader(void) {
 	
 	// Start the timer
 	StartCountSspClk();
-	
-	if (MF_DBGLEVEL >= MF_DBG_EXTENDED ) DbpString("[+] Iso15693InitReader Exit");
 
 	LED_A_ON();
 }
@@ -861,8 +800,6 @@ void DbdecodeIso15693Answer(int len, uint8_t *d) {
 // parameter is unused !?!
 void ReaderIso15693(uint32_t parameter) {
 	int answerLen1 = 0;
-	//int answerLen2 = 0;
-	//int answerLen3 = 0;
 	int tsamples = 0, wait = 0, elapsed = 0;
 	
 	uint8_t uid[8] = {0,0,0,0,0,0,0,0};
@@ -872,11 +809,10 @@ void ReaderIso15693(uint32_t parameter) {
 	
 	uint8_t *answer1 = BigBuf_malloc(50);
 	uint8_t *answer2 = BigBuf_malloc(50);
-	//uint8_t *answer3 = BigBuf_malloc(50);
+
 	// Blank arrays
 	memset(answer1, 0x00, 50);
 	memset(answer2, 0x00, 50);
-	//memset(answer3, 0x00, 50);
 
 	// Now send the IDENTIFY command
 	// FIRST WE RUN AN INVENTORY TO GET THE TAG UID
@@ -921,28 +857,6 @@ void ReaderIso15693(uint32_t parameter) {
 		Dbhexdump(answerLen1, answer1, true);
 	}
 
-	// DEBUG read all pages
-/*
-	if (answerLen1 >= 12 && MF_DBGLEVEL >= MF_DBG_EXTENDED) {
-		i = 0;			
-		while ( i < 32 ) {  // sanity check, assume max 32 pages
-			
-			cmdlen = BuildReadBlockRequest(cmd, uid, i);
-				
-			TransmitTo15693Tag(ToSend, ToSendMax, &tsamples, &wait); 
-			LogTrace(cmd, cmdlen, time_start<<4, (GetCountSspClk()-time_start)<<4, NULL, true);	
-			
-			answerLen2 = GetIso15693AnswerFromTag(answer2, &elapsed);
-			if (answerLen2 > 0) {
-				Dbprintf("READ SINGLE BLOCK %d returned %d octets:", i, answerLen2);
-				DbdecodeIso15693Answer(answerLen2, answer2);
-				Dbhexdump(answerLen2, answer2, true);
-				if ( *((uint32_t*) answer2) == 0x07160101 ) break; // exit on NoPageErr 
-			} 
-			i++;
-		} 
-	}
-*/
 	switch_off();
 }
 
@@ -950,6 +864,7 @@ void ReaderIso15693(uint32_t parameter) {
 // all demodulation performed in arm rather than host. - greg
 void SimTagIso15693(uint32_t parameter, uint8_t *uid) {
 	
+	LEDsoff();
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);	
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 	FpgaSetupSsc();
