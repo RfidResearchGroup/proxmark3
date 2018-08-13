@@ -1,8 +1,6 @@
-Iceman fork
+Proxmark3 RDV40 dedicated repo,  based on iceman fork
 ===============
 [![Latest release](https://img.shields.io/github/release/RfidResearchGroup/proxmark3.svg)](https://github.com/RfidResearchGroup/proxmark3/releases/latest)
-
-## Proxmark3 RDV40 dedicated
 
 ## Notice      
 This repo is based on iceman fork for proxmark3. It is dedicated to bring the most out of the new features for proxmark3 RDV40 device.
