@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]							 
+ - Fix 'hf emv' - some cards need to have Le=0x00, some need to not to have (@merlokk)
  - Fix 'hf legic'  enhancement of rx / tx in legic commands (@drandreas)
  - Fix 'data buffclear' - now frees bigbuff also (@iceman)
  - Fix GET_TICKS  and signess while shifting (@drandreas)
