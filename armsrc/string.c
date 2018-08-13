@@ -9,7 +9,7 @@
 //-----------------------------------------------------------------------------
 #include "string.h"
 
-RAMFUNC void *memcpy(void *dest, const void *src, int len)
+void *memcpy(void *dest, const void *src, int len)
 {
 	uint8_t *d = dest;
 	const uint8_t *s = src;
@@ -31,7 +31,7 @@ void *memset(void *dest, int c, int len)
 	return dest;
 }
 
-RAMFUNC int memcmp(const void *av, const void *bv, int len)
+int memcmp(const void *av, const void *bv, int len)
 {
 	const uint8_t *a = av;
 	const uint8_t *b = bv;
