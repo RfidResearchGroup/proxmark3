@@ -2,7 +2,8 @@
 All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
-## [unreleased][unreleased]							 
+## [unreleased][unreleased]						
+ - Modified 'install.sh' script to work in macOS and Linux + added the 'update.sh' and 'proxmark3.sh' from joanbono (@TomHarkness)	 
  - Fix 'hf emv' - some cards need to have Le=0x00, some need to not to have (@merlokk)
  - Fix 'hf legic'  enhancement of rx / tx in legic commands (@drandreas)
  - Fix 'data buffclear' - now frees bigbuff also (@iceman)
@@ -52,10 +53,10 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added to proxmark command line parameters `c` and `l` - execute command and lua script from command line (@merlokk)
  - Added to proxmark ability to execute commands from stdin (pipe) ((@merlokk)
  - Added new standalone mode "HF Mifare ultra fast sniff/sim/clone - aka VIGIKPWN"  (@cjbrigato)
- - Added to `hf 14a apdu` - exchange apdu via iso1443-4 (@merlokk) 
+ - Added to `hf 14a apdu` - exchange apdu via iso1443-4 (@merlokk)
  - Added to `hf 14a apdu` - apdu and tlv results parser (@merlokk)
  - Added 'hf emv' commands  (@merlokk)
- - lots of bug fixes (many many) 
+ - lots of bug fixes (many many)
 ### Fixed
 - Changed driver file proxmark3.inf to support both old and new Product/Vendor IDs (piwi)
 - Changed start sequence in Qt mode (fix: short commands hangs main Qt thread) (Merlok)
@@ -68,7 +69,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
   - Updated the Reveng 1.51 sourcecode to 1.52 from Reveng project homepage (iceman)
   - 'hf 14a read' - disconnects when failing to read tag (iceman)
   - 'hf mf csave' - renamed parameter 'i' to 'o' as in output (iceman)
-  
+
 ## [3.0.0][2017-08-29]
   Notes on this release
   this version includes a merge with the PM3 offical v3.0.1 code, a.k.a the "Monster merge"
@@ -91,7 +92,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
     - 'mifare_autopwn', now uses PRNG detection (iceman)
 	- 'mfkeys', fixed bug which only tested the first key (iceman)
 	- 'dumptoemul', removed last newline (iceman)
-	- ... 
+	- ...
   - Added USB/SERIAL communication enhancements (micolous)
   - Change 'hf 14a cuids', to be interrupted with keyboard press (iceman)
   - Change debugstatements for LF to show which function more unified (iceman)
@@ -127,7 +128,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
   - Added data fsktonrz, a fsk cleaning/demodulating routine for weak fsk signal. Note: follow this up with a `data rawdemod nr` to finish demoding your signal. (marshmellow)
   - Added lf em 410xbrute, LF EM410x reader bruteforce attack by simulating UIDs from a file (Fl0-0)
   - Compiles on OS X
-  - Compiles with gcc 4.9 
+  - Compiles with gcc 4.9
   - Compiles for non-Intel CPUs
   - Added lf hitag write 24, the command writes a block to hitag2 tags in crypto mode (henjo)
   - Added the improved 'hf mf hardnested', an attack working for hardened Mifare cards (EV1, Mifare Plus SL1)
@@ -164,11 +165,11 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
   - Renamed and rebuilt `lf em writeword` && writewordpwd to `lf em 4x05write` - it now also reads validation output from the tag (marshmellow/iceman)
   - Fixed bug in lf sim and continuous demods not turning off antenna when finished
   - Added lua script path fixes (pwpivi)
-  - `lf search` - Added EM4x05/EM4x69 chip detection (marshmellow) 
+  - `lf search` - Added EM4x05/EM4x69 chip detection (marshmellow)
   - Added lf em 4x05dump command to read and output all the blocks of the chip (marshmellow)
   - Added lf em 4x05info command to read and display information about the chip (marshmellow)
   - `lf em4x em4x50***` refactoring of em4x50 commands. (iceman)
-  
+
 ## [1.6.9 iceman fork] [2017-02-06]
   - Serial speedup,  if possible 408600baud otherwise default to 115200baud (iceman)
   - `hf emv` - Added Peter Fillmore's EMV branch now compiles on iceman fork.  See seperate issue. (iceman)
@@ -184,7 +185,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
   - `hw tune` - only prints out if voltage is detected from antenna. (iceman)
   - `hf iclass decrypt` - only decrypt Application1 (iceman)
   - `lf t55xx detect` - when finding multiple possible config blocks, see if a known configblock exists and select. (iceman)
-  
+
 ## [1.6.7 iceman fork] [2017-01-05]
   - `lf animal` - FDX-B animal commands (iceman)
   -  Fixed bugs in `lf sim` and other lf continuous demods not turning off antenna when finished (marshmellow)
@@ -210,39 +211,39 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
   - `hf 14a sim` Added emulation of Mifare cards with 10byte UID length. (iceman)
   - `hf mf sim` Added emulation of Mifare cards with 10byte UID length. (iceman)
   -  Added `lf guard clone/sim` (iceman)
-  -  Added `lf pyramd clone/sim` (iceman) 
+  -  Added `lf pyramd clone/sim` (iceman)
   - trying to fix `hf 14b` command to be able to read CALYPSO card.	 (iceman)
   - `hf legic load`, it now loads faster and a casting bug is gone. (iceman)
   -  Added `hf legic calccrc8` added a method to calculate the legic crc-8 value (iceman)
   - `hf legic decode` fixed the output overflow bugs, better printing (iceman)
   - Coverity Scan fixes a lot of resource leaks, etc (iceman)
-  -  Added `lf presco *` commands started (iceman) 
+  -  Added `lf presco *` commands started (iceman)
   -  Added `lf hid wiegand` added a method to calculate WIEGAND in different formats, (iceman)
   - `hf mf chkkeys` better printing, same table output as nested, faster execution and added Adam Lauries "try to read Key B if Key A is found" (iceman)
   - `hf mf nested` better printing and added Adam Lauries "try to read Key B if Key A is found" (iceman)
-  - `hf mf mifare` fixing the zero parity path, which doesn't got called. (iceman) 
-  - Updated the @blapost's Crapto1 implementation to v3.3 (blapost) 
+  - `hf mf mifare` fixing the zero parity path, which doesn't got called. (iceman)
+  - Updated the @blapost's Crapto1 implementation to v3.3 (blapost)
   - `hf mf c*` updated the calling structure and refactored of the chinese magic commands (iceman, marshmellow)
   - Started to add Peter Fillmore's  EMV fork into Iceman fork. ref: https://github.com/peterfillmore/proxmark3  (peter fillmore,  iceman)
   - Added Travis-CI automatic build integration with GitHub fork. (iceman)
   - Updated the Reveng 1.30 sourcecode to 1.31 from Reveng project homepage (iceman)
   - Updated the Reveng 1.31 sourcecode to 1.40 from Reveng project homepage (iceman)
-  
+
   - Added possibility to write direct to a Legic Prime Tag (MIM256/1024) without using values from the 'BigBuffer' -> 'hf legic writeRaw <addr> <value>' (icsom)
-  - Added possibility to decrease DCF values at address 0x05 & 0x06 on a Legic Prime Tag 
-		DCF-value will be pulled from the BigBuffer (address 0x05 & 0x06) so you have to 
+  - Added possibility to decrease DCF values at address 0x05 & 0x06 on a Legic Prime Tag
+		DCF-value will be pulled from the BigBuffer (address 0x05 & 0x06) so you have to
 		load the data into the BigBuffer before with 'hf legic load <path/to/legic.dump>' & then
 		write the DCF-Values (both at once) with 'hf legic write 0x05 0x02'  (icsom)
   - Added script `legic.lua` for display and edit Data of Legic-Prime Tags (icsom)
   - Added the experimental HITAG_S support (spenneb)
   - Added topaz detection to `hf search` (iceman)
   - Fixed the silent mode for 14b to be used inside `hf search` (iceman)
-  
+
 ### Added
 - Added a LF ASK Sequence Terminator detection option to the standard ask demod - and applied it to `lf search u`, `lf t55xx detect`, and `data rawdemod am s` (marshmellow)
 - `lf awid bruteforce <facilitycode>` - Simple bruteforce attack against a AWID reader.
 - `lf t55xx bruteforce <start password> <end password> [i <*.dic>]` - Simple bruteforce attack to find password - (iceman and others)
-- `lf viking clone`- clone viking tag to t55x7 or Q5 from 4byte hex ID input 
+- `lf viking clone`- clone viking tag to t55x7 or Q5 from 4byte hex ID input
 - `lf viking sim`  - sim full viking tag from 4byte hex ID input
 - `lf viking read` - read viking tag and output ID
 - `lf t55xx wipe`  - sets t55xx back to factory defaults
@@ -257,9 +258,9 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - `hf iclass clone` to take a saved dump file and clone selected blocks to a new tag (marshmellow + others)
 - `hf iclass calcnewkey` - to calculate the div_key change to change a key - (experimental) (marshmellow + others)
 - `hf iclass encryptblk` - to encrypt a data block hex to prep for writing that block (marshmellow)
-- ISO14443a stand-alone operation with ARM CFLAG="WITH_ISO14443a_StandAlone". This code can read & emulate two banks of 14a tag UIDs and write to "magic" cards  (Craig Young) 
+- ISO14443a stand-alone operation with ARM CFLAG="WITH_ISO14443a_StandAlone". This code can read & emulate two banks of 14a tag UIDs and write to "magic" cards  (Craig Young)
 - AWID26 command context added as 'lf awid' containing realtime demodulation as well as cloning/simulation based on tag numbers (Craig Young)
-- Added 'hw status'. This command makes the ARM print out some runtime information. (holiman) 
+- Added 'hw status'. This command makes the ARM print out some runtime information. (holiman)
 - Added 'hw ping'. This command just sends a usb packets and checks if the pm3 is responsive. Can be used to abort certain operations which supports abort over usb. (holiman)
 - Added `data hex2bin` and `data bin2hex` for command line conversion between binary and hexadecimal (holiman)
 - Added 'hf snoop'. This command take digitalized signal from FPGA and put in BigBuffer. (pwpiwi + enio)
@@ -280,17 +281,17 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Adjusted LF FSK demod to account for cross threshold fluctuations (898 count waves will adjust the 9 to 8 now...) more accurate. (marshmellow)
 - Adjusted timings for t55xx commands.  more reliable now. (marshmellow & iceman)
 - `lf cmdread` adjusted input methods and added help text (marshmellow & iceman)
-- changed `lf config t <threshold>` to be 0 - 128 and will trigger on + or - threshold value (marshmellow) 
+- changed `lf config t <threshold>` to be 0 - 128 and will trigger on + or - threshold value (marshmellow)
 - `hf iclass dump` cli options - can now dump AA1 and AA2 with different keys in one run (does not go to multiple pages for the larger tags yet) (marshmellow)
 - Revised workflow for StandAloneMode14a (Craig Young)
 - EPA functions (`hf epa`) now support both ISO 14443-A and 14443-B cards (frederikmoellers)
 - 'hw version' only talks to ARM at startup, after that the info is cached. (pwpiwi)
-- Added `r` option to iclass functions - allows key to be provided in raw block 3/4 format 
+- Added `r` option to iclass functions - allows key to be provided in raw block 3/4 format
 
 ## [2.2.0][2015-07-12]
 
 ### Changed
-- Added `hf 14b raw -s` option to auto select a 14b std tag before raw command 
+- Added `hf 14b raw -s` option to auto select a 14b std tag before raw command
 - Changed `hf 14b write` to `hf 14b sriwrite` as it only applied to sri tags (marshmellow)
 - Added `hf 14b info` to `hf search` (marshmellow)
 - Added compression of fpga config and data, *BOOTROM REFLASH REQUIRED* (piwi)
@@ -301,7 +302,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Add `hf 14b info` to find and print info about std 14b tags and sri tags (using 14b raw commands in the client)  (marshmellow)
 - Add PACE replay functionality (frederikmoellers)
 
-### Fixed 
+### Fixed
 - t55xx write timing (marshmellow)
 
 
@@ -321,7 +322,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Fixed various problems with iso14443b, issue #103 (piwi, marshmellow)
 
 ### Added
-- Added `hf search` - currently tests for 14443a tags, iclass tags, and 15693 tags (marshmellow) 
+- Added `hf search` - currently tests for 14443a tags, iclass tags, and 15693 tags (marshmellow)
 - Added `hf mfu info` Ultralight/NTAG info command - reads tag configuration and info, allows authentication if needed (iceman1001, marshmellow)
 - Added Mifare Ultralight C and Ultralight EV1/NTAG authentication. (iceman1001)
 - Added changelog			 
@@ -338,6 +339,4 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ### Added
 - iClass functionality: full simulation of iclass tags, so tags can be simulated with data (not only CSN). Not yet support for write/update, but readers don't seem to enforce update. (holiman).
-- iClass decryption. Proxmark can now decrypt data on an iclass tag, but requires you to have the HID decryption key locally on your computer, as this is not bundled with the sourcecode. 
-
-
+- iClass decryption. Proxmark can now decrypt data on an iclass tag, but requires you to have the HID decryption key locally on your computer, as this is not bundled with the sourcecode.

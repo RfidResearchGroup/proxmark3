@@ -10,5 +10,23 @@ function wait4proxmark {
 	echo $PM3
 }
 
+function wait4proxmark_macOS {
+	echo >&2 "Waiting for Proxmark to appear..."
+	while true; do
+		PM3=$(ls /dev/pm3-* /dev/cu.usbmodem* 2>/dev/null | head -1)
+		if [[ $PM3 != "" ]]; then
+			#echo >&2 -e "Found proxmark on $(ls /dev/pm3-* /dev/cu.usbmodem* 2>/dev/null | head -1)\n"
+			break
+		fi
+		sleep .1
+	done
+	echo $PM3
+}
+
 # start proxmark with first detected interface
-client/proxmark3 $(wait4proxmark)
+
+if [[ $(uname | awk '{print toupper($0)}') == "LINUX" ]]; then
+    client/proxmark3 $(wait4proxmark_Linux)
+elif [[ $(uname | awk '{print toupper($0)}') == "DARWIN" ]]; then
+    client/proxmark3 $(wait4proxmark_macOS)
+fi
