@@ -11,6 +11,12 @@ function installProxmark_Linux {
   sudo apt-get autoclean -y
   sudo apt-get clean -y
   sudo apt-get update
+
+  # Install libcanberragtk in Ubuntu 18.04
+  if [[ $(cat /etc/issue | awk '{print $2}') = *"18.04"* ]]; then 
+    apt-get install libcanberra-gtk-module
+  fi
+
 # install RDV40 - proxmark3
   git clone https://github.com/RfidResearchGroup/proxmark3.git
   (
@@ -18,7 +24,7 @@ function installProxmark_Linux {
       git reset --hard
       git clean -dfx
       make clean
-      make all
+      make -j$(nproc) all 
       # Copy blacklist rules into /etc/udev/rules.d
       # check the Makefile for details
       sudo make udev
@@ -46,7 +52,7 @@ local qt5Core=$(find /usr -name Qt5Core.pc 2>/dev/null)
         git reset --hard
         git clean -dfx
         make clean
-        make
+        make -j$(sysctl -n hw.physicalcpu)
       )
   }
 # Where is my device?
