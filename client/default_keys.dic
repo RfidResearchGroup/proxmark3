@@ -2,7 +2,7 @@
 # Mifare Default Keys
 #   -- iceman fork version --
 #   -- contribute to this list, sharing is caring --
-#  
+#
 ffffffffffff,//Defaultkey(firstkeyusedbyprogramifnouserdefinedkey)
 000000000000,//Blankkey
 a0a1a2a3a4a5,//NFCForumMADkey
@@ -154,7 +154,7 @@ AAFB06045877, --EPI Envisionte# 3dprinter
 3e65e4fb65b3, --Fysiken A
 25094df6f148, --Fysiken B
 #
-# 24-7 
+# 24-7
 D21762B2DE3B,
 0E83A374B513,
 1F1FFE000000,
@@ -352,25 +352,25 @@ a56c2df9a26d,
 4a6352684677,
 bf1f4424af76,
 536653644c65,
-# 
-# Intratone Cogelec 
+#
+# Intratone Cogelec
 # Data from http://bouzdeck.com/rfid/32-cloning-a-mifare-classic-1k-tag.html
 484558414354,
-a22ae129c013, 
-49fae4e3849f, 
-38fcf33072e0, 
+a22ae129c013,
+49fae4e3849f,
+38fcf33072e0,
 8ad5517b4b18,
-509359f131b1, 
+509359f131b1,
 6c78928e1317,
-aa0720018738, 
-a6cac2886412, 
-62d0c424ed8e, 
-e64a986a5d94, 
-8fa1d601d0a2, 
-89347350bd36, 
-66d2b7dc39ef, 
-6bc1e1ae547d, 
-22729a9bd40f, 
+aa0720018738,
+a6cac2886412,
+62d0c424ed8e,
+e64a986a5d94,
+8fa1d601d0a2,
+89347350bd36,
+66d2b7dc39ef,
+6bc1e1ae547d,
+22729a9bd40f,
 #
 # Data from https://dfir.lu/blog/cloning-a-mifare-classic-1k-tag.html
 925b158f796f,
@@ -450,8 +450,8 @@ E241E8AFCBAF,
 # Data from forum post
 123F8888F322,
 050908080008,
-# 
-# Data from hoist	
+#
+# Data from hoist
 4f9f59c9c875,
 #
 # Data from pastebin
@@ -501,7 +501,7 @@ f7a39753d018,
 410b9b40b872,
 2cb1a90071c8,
 #
-# data from 
+# data from
 8697389ACA26,
 1AB23CD45EF6,
 013889343891,
@@ -579,9 +579,9 @@ de1fcbec764b
 2b7f3253fac5
 eaac88e5dc99
 ae3d65a3dad4
-a73f5dc1d333   
-a82607b01c0d  
-2910989b6880  
+a73f5dc1d333
+a82607b01c0d
+2910989b6880
 0f1c63013dba
 fbf225dc5d58
 #
@@ -595,12 +595,12 @@ fbf225dc5d58
 560f7cff2d81
 66b31e64ca4b
 9e53491f685b
-3a09911d860c  
+3a09911d860c
 8a036920ac0c
 361f69d2c462
 d9bcde7fc489
 0c03a720f208
-6018522fac02  
+6018522fac02
 #
 # Data from https://pastebin.com/4t2yFMgt
 # Mifare technische Universität Graz TUG
@@ -611,3 +611,5 @@ C01FC822C6E5
 # More keys:
 8a19d40cf2b5
 ae8587108640
+8829DA9DAF76,-- Meriton Suites Syd, Aus ;). Not sure where this came from...
+135b88a94b8b, SafLock standalone door locks.
