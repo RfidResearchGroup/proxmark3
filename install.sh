@@ -4,7 +4,7 @@ set -x
 function installProxmark_Linux {
   # install dependencies for Proxmark3 source code.
   sudo apt-get install p7zip git build-essential libreadline5 libreadline-dev gcc-arm-none-eabi
-  sudo apt-get install libusb-0.1-4 libusb-dev libqt4-dev libncurses5-dev libcanberra-gtk-module perl pkg-config wget
+  sudo apt-get install libusb-0.1-4 libusb-dev libqt4-dev libncurses5-dev perl pkg-config wget
   #cleaning up
   sudo apt-get install -f -y
   sudo apt-get autoremove -y
