@@ -71,11 +71,11 @@ void SendCommand(UsbCommand *c) {
 static void showBanner(void){
 	printf("\n\n");
 	printf("\e[34m██████╗ ███╗   ███╗ ████╗\e[0m     ...iceman fork\n");
-	printf("\e[34m██╔══██╗████╗ ████║   ══█║\e[0m\n");
+	printf("\e[34m██╔══██╗████╗ ████║   ══█║\e[0m      ...dedicated to \e[34mRDV40\e[0m\n");
 	printf("\e[34m██████╔╝██╔████╔██║ ████╔╝\e[0m\n");
 	printf("\e[34m██╔═══╝ ██║╚██╔╝██║   ══█║\e[0m    iceman@icesql.net\n");
 	printf("\e[34m██║     ██║ ╚═╝ ██║ ████╔╝\e[0m  https://github.com/iceman1001/proxmark3\n");
-	printf("\e[34m╚═╝     ╚═╝     ╚═╝ ╚═══╝\e[0m v3.1.0\n");
+	printf("\e[34m╚═╝     ╚═╝     ╚═╝ ╚═══╝\e[0m pre v4.0\n");
 	printf("\nKeep iceman fork alive with a donation!           https://paypal.me/iceman1001/");
 	printf("\nMONERO: 43mNJLpgBVaTvyZmX9ajcohpvVkaRy1kbZPm8tqAb7itZgfuYecgkRF36rXrKFUkwEGeZedPsASRxgv4HPBHvJwyJdyvQuP");
 	printf("\n\n\n");
