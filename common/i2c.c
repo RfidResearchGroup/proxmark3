@@ -442,7 +442,7 @@ int16_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t d
 	I2C_Stop();
 	
 	// return bytecount - first byte (which is length byte)
-	return (readcount) ? --readcount : 0;
+	return --readcount;
 }
 
 int16_t I2C_ReadFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address) {
@@ -595,11 +595,12 @@ bool sc_rx_bytes(uint8_t* dest, uint8_t *destlen) {
 
 bool GetATR(smart_card_atr_t *card_ptr) {
 	
-	// clear 
-	if ( card_ptr ) {
-		card_ptr->atr_len = 0;
-		memset(card_ptr->atr, 0, sizeof(card_ptr->atr));
-	}
+	if ( !card_ptr )
+		return false;
+	
+	card_ptr->atr_len = 0;
+	memset(card_ptr->atr, 0, sizeof(card_ptr->atr));
+
 	
 	// Send ATR
 	// start [C0 01] stop start C1 len aa bb cc stop]
@@ -639,10 +640,8 @@ bool GetATR(smart_card_atr_t *card_ptr) {
 		}
 	}
 
-	if ( card_ptr ) {
-		card_ptr->atr_len = len;
-		LogTrace(card_ptr->atr, card_ptr->atr_len, 0, 0, NULL, false);
-	}
+	card_ptr->atr_len = len;
+	LogTrace(card_ptr->atr, card_ptr->atr_len, 0, 0, NULL, false);
 	return true;
 }
 
