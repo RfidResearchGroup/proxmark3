@@ -1502,11 +1502,11 @@ int CmdTuneSamples(const char *Cmd) {
 	memset(judgement, 0, sizeof(judgement));		
 	// LF evaluation
 	if (peakv < LF_UNUSABLE_V)
-		sprintf(judgement, "UNUSABLE");
+		sprintf(judgement, _RED_(UNUSABLE) );
 	else if (peakv < LF_MARGINAL_V)
-		sprintf(judgement, "MARGINAL");
+		sprintf(judgement, _YELLOW_(MARGINAL) );
 	else
-		sprintf(judgement, "OK");
+		sprintf(judgement, _GREEN_(OK) );
 	
 	PrintAndLogEx(NORMAL, "%sLF antenna is %s \n"
 			, (peakv < LF_UNUSABLE_V) ? _CYAN_([!]) : _GREEN_([+])
@@ -1520,11 +1520,11 @@ int CmdTuneSamples(const char *Cmd) {
 	memset(judgement, 0, sizeof(judgement));
 	
 	if (v_hf < HF_UNUSABLE_V)  
-		sprintf(judgement, "UNUSABLE");
+		sprintf(judgement, _RED_(UNUSABLE) );
 	else if (v_hf < HF_MARGINAL_V)
-		sprintf(judgement, "MARGINAL");
+		sprintf(judgement, _YELLOW_(MARGINAL) );
 	else
-		sprintf(judgement, "OK");
+		sprintf(judgement, _GREEN_(OK) );
 	
 	PrintAndLogEx(NORMAL, "%sHF antenna is %s"
 			, (v_hf < HF_UNUSABLE_V) ? _CYAN_([!]) : _GREEN_([+])
