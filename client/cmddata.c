@@ -1498,7 +1498,7 @@ int CmdTuneSamples(const char *Cmd) {
 	if ( peakv > NON_VOLTAGE && peakf > 0 )
 		PrintAndLogEx(SUCCESS, "LF optimal: %5.2f V - %6.2f kHz", (peakv * ANTENNA_ERROR)/1000.0, 12000.0/(peakf+1));
 
-	char judgement[10];
+	char judgement[15];
 	memset(judgement, 0, sizeof(judgement));		
 	// LF evaluation
 	if (peakv < LF_UNUSABLE_V)
