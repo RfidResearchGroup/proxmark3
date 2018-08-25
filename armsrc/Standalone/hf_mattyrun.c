@@ -59,23 +59,23 @@ void RunMod() {
     /*
 		Pseudo-configuration block.
     */
-	char keyTypec = '?'; // 'A'/'B' or both keys '?'
-	bool printKeys = false; // Prints keys
-	bool transferToEml = true; // Transfer keys to emulator memory
-	bool ecfill = true; // Fill emulator memory with cards content.
-	bool simulation = true; // Simulates an exact copy of the target tag
-	bool fillFromEmulator = false; // Dump emulator memory.
+	char keyTypec = '?'; 			// 'A'/'B' or both keys '?'
+	bool printKeys = false; 		// Prints keys
+	bool transferToEml = true; 		// Transfer keys to emulator memory
+	bool ecfill = true; 			// Fill emulator memory with cards content.
+	bool simulation = true; 		// Simulates an exact copy of the target tag
+	bool fillFromEmulator = false; 	// Dump emulator memory.
 
 
-	uint16_t mifare_size = 1024; // Mifare 1k (only 1k supported for now)
-	uint8_t sectorSize = 64; // 1k's sector size is 64 bytes.
-	uint8_t blockNo = 3; // Security block is number 3 for each sector.
+	uint16_t mifare_size = 1024; 	// Mifare 1k (only 1k supported for now)
+	uint8_t sectorSize = 64; 		// 1k's sector size is 64 bytes.
+	uint8_t blockNo = 3; 			// Security block is number 3 for each sector.
 	uint8_t sectorsCnt = (mifare_size/sectorSize);
-	uint8_t keyType; // Keytype buffer
-	uint64_t key64; // Defines current key
-	uint8_t *keyBlock = NULL; // Where the keys will be held in memory.
-	uint8_t stKeyBlock = 20; // Set the quantity of keys in the block.
-	uint8_t filled = 0; // Used to check if the memory was filled with success.
+	uint8_t keyType; 				// Keytype buffer
+	uint64_t key64; 				// Defines current key
+	uint8_t *keyBlock = NULL; 		// Where the keys will be held in memory.
+	uint8_t stKeyBlock = 20; 		// Set the quantity of keys in the block.
+	uint8_t filled = 0; 			// Used to check if the memory was filled with success.
 	bool keyFound = false;
 
 	/*
@@ -162,6 +162,7 @@ void RunMod() {
 	bool err = 0;
 	bool allKeysFound = true;
 	uint32_t size = mfKeysCnt;
+	
 	for (int type = !keyType; type < 2 && !err; keyType == 2 ? (type++) : (type = 2)) {
 		block = blockNo;
 		for (int sec = 0; sec < sectorsCnt && !err; ++sec) {
@@ -179,17 +180,22 @@ void RunMod() {
 				num_to_bytes(key64, 6, foundKey[type][sec]);
 				validKey[type][sec] = true;
 				keyFound = true;
-				Dbprintf("\t✓ Found valid key: [%02x%02x%02x%02x%02x%02x]\n", (keyBlock + 6*key)[0],(keyBlock + 6*key)[1], (keyBlock + 6*key)[2],(keyBlock + 6*key)[3], (keyBlock + 6*key)[4], (keyBlock + 6*key)[5], 6);
+				Dbprintf("\t✓ Found valid key: [%02x%02x%02x%02x%02x%02x]\n", 
+					(keyBlock + 6*key)[0], (keyBlock + 6*key)[1], (keyBlock + 6*key)[2],
+					(keyBlock + 6*key)[3], (keyBlock + 6*key)[4], (keyBlock + 6*key)[5]
+				);
 			}
-		block < 127 ? (block += 4) : (block += 16);
+			
+			block < 127 ? (block += 4) : (block += 16);
 		}
 	}
-
 
 	/*
 		TODO: This.
 
-		If at least one key was found, start a nested attack based on that key, and continue.
+		- If at least one key was found, start a nested attack based on that key, and continue.
+		
+		- Get UID from tag and set accordingly in emulator memory and call mifare1ksim with right flags (iceman)
 	*/
 	if (!allKeysFound && keyFound) {
 		Dbprintf("\t✕ There's currently no nested attack in MattyRun, sorry!");
@@ -202,12 +208,13 @@ void RunMod() {
 		LED_C_ON(); //red
 	}
 
-
 	/*
 		If enabled, transfers found keys to memory and loads target content in emulator memory. Then it simulates to be the tag it has basically cloned.
 	*/
 	if ((transferToEml) && (allKeysFound)) {
+		
 		emlClearMem();
+		
 		uint8_t mblock[16];
 		for (uint16_t sectorNo = 0; sectorNo < sectorsCnt; sectorNo++) {
 			if (validKey[0][sectorNo] || validKey[1][sectorNo]) {
@@ -222,22 +229,28 @@ void RunMod() {
 			}
 		Dbprintf("\t✓ Found keys have been transferred to the emulator memory.");
 		if (ecfill) {
+			
 			Dbprintf("\tFilling in with key A.");
-			MifareECardLoad(sectorsCnt, 0, 0, &filled);
+			MifareECardLoad(sectorsCnt, 0, 0, &filled);			
 			if (filled != 1) {
 				Dbprintf("\t✕ Failed filling with A.");
 			}
+			
 			Dbprintf("\tFilling in with key B.");
 			MifareECardLoad(sectorsCnt, 1, 0, &filled);
 			if (filled != 1) {
 				Dbprintf("\t✕ Failed filling with B.");
 			}
+			
 			if ((filled == 1) && simulation) {
 				Dbprintf("\t✓ Filled, simulation started.");
+				
 				// This will tell the fpga to emulate using previous keys and current target tag content.
 				Dbprintf("\t Press button to abort simulation at anytime.");
-				LED_B_ON(); //green
-				Mifare1ksim(0, 0, 0, NULL);
+				
+				LED_B_ON(); // green
+				// assuming arg0==0,  use hardcoded uid 0xdeadbeaf
+				Mifare1ksim( 0, 0, 0, NULL);
 				LED_B_OFF();
 
 				/*

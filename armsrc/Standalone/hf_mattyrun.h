@@ -14,8 +14,8 @@
 
 //#include <stdbool.h> // for bool
 #include "standalone.h" // standalone definitions
-#include "apps.h" // debugstatements, lfops?
-
+#include "apps.h" 		// debugstatements, lfops?
+#include "usb_cmd.h"	// mifare1ksim flags
 
 #define OPTS 2
 
