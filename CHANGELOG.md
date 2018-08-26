@@ -2,7 +2,8 @@
 All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
-## [unreleased][unreleased]		
+## [unreleased][unreleased]
+ - Fix 'StandAloneMode Colin' - mifare1ksim called with right params (@cjbrigato)
  - Improved 'install.sh' to install dependencies for Ubuntu 18.04 and using max number of processors during compilation (@joanbono)				
  - Modified 'install.sh' script to work in macOS and Linux + added the 'update.sh' and 'proxmark3.sh' from joanbono (@TomHarkness)	 
  - Fix 'hf emv' - some cards need to have Le=0x00, some need to not to have (@merlokk)
