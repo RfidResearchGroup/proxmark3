@@ -16,20 +16,18 @@
 #ifndef __HF_COLIN_H
 #define __HF_COLIN_H
 
-
+#include <stdbool.h>    	// for bool
+#include <stdio.h>
+#include <string.h>
+#include "standalone.h" 	// standalone definitions
 #include "proxmark3.h"
 #include "mifareutil.h"
 #include "iso14443a.h"
-//#include "printf.h"
 #include "protocols.h"
 #include "util.h"
-#include "standalone.h" // standalone definitions
-#include <stdbool.h>    // for bool
-#include <stdio.h>
-#include <string.h>
-//#include <stdio.h>
 #include "vtsend.h"
 #include "apps.h"
+#include "usb_cmd.h"		// mifare1ksim flags
 
 #define _RED_ "\x1b[31m"
 #define _GREEN_ "\x1b[32m"

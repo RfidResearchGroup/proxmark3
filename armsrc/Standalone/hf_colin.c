@@ -607,7 +607,7 @@ failtag:
     vtsend_set_attribute(NULL, 5);
     DbprintfEx(FLAG_NOLOG, "[    SIMULATION   ]");
     vtsend_set_attribute(NULL, 0);
-    Mifare1ksim(0, 0, 0, NULL);
+    Mifare1ksim((FLAG_4B_UID_IN_DATA | FLAG_UID_IN_EMUL ), 0, 0, cjuid);
     vtsend_cursor_position_restore(NULL);
     DbprintfEx(FLAG_NOLOG, "[   SIMUL ENDED   ]%s", _GREEN_, _WHITE_);
     cjSetCursLeft();
