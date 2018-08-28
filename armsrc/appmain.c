@@ -33,6 +33,10 @@
 #include "i2c.h"
 #endif
 
+#ifdef WITH_FPC
+#include "usart.h"
+#endif
+
 //=============================================================================
 // A buffer where we can queue things up to be sent through the FPGA, for
 // any purpose (fake tag, as reader, whatever). We go MSB first, since that
@@ -74,24 +78,26 @@ void PrintToSendBuffer(void) {
 }
 
 void print_result(char *name, uint8_t *buf, size_t len) {
-	uint8_t *p = buf;
 
-	if ( len % 16 == 0 ) {
-		for(; p-buf < len; p += 16)
-			Dbprintf("[%s:%d/%d] %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
+	uint8_t *p = buf;
+	uint16_t tmp = len & 0xFFF0;
+
+	for(; p-buf < tmp; p += 16) {
+		Dbprintf("[%s: %02d/%02d] %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
 				name,
 				p-buf,
 				len,
 				p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7],p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15]
 			);
 	}
-	else {
-		for(; p-buf < len; p += 8)
-			Dbprintf("[%s:%d/%d] %02x %02x %02x %02x %02x %02x %02x %02x",
-				name,
-				p-buf,
-				len,
-				p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
+	if (len % 16 != 0) {
+		char s[46] = {0};
+		char *sp = s;
+		for (; p-buf < len; p++ ) {
+			sprintf(sp, "%02x ", p[0] );
+			sp += 3;
+		}
+		Dbprintf("[%s: %02d/%02d] %s", name, p-buf, len, s);
 	}
 }
 
@@ -101,7 +107,7 @@ void print_result(char *name, uint8_t *buf, size_t len) {
 
 void DbpStringEx(char *str, uint32_t cmd) {
 #if DEBUG
-	byte_t len = strlen(str);
+	uint8_t len = strlen(str);
 	cmd_send(CMD_DEBUG_PRINT_STRING, len, cmd, 0, (byte_t*)str, len);
 #endif	
 }
@@ -442,6 +448,7 @@ void printStandAloneModes(void) {
 	
 	//DbpString("Running ");	
 	//Dbprintf("  Is Device attached to USB| %s", USB_ATTACHED() ? "Yes" : "No"); 
+	//Dbprintf("  Is Device attached to FPC| %s", 0 ? "Yes" : "No"); 
 	//Dbprintf("  Is USB_reconnect value   | %d", GetUSBreconnect() );
 	//Dbprintf("  Is USB_configured value  | %d", GetUSBconfigured() );
 	
@@ -1106,8 +1113,8 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			for(size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
 				len = MIN( (numofbytes - i), USB_CMD_DATA_SIZE);
 				isok = cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, i, len, BigBuf_get_traceLen(), mem + startidx + i, len);
-				if (!isok) 
-					Dbprintf("transfer to client failed ::  | bytes between %d - %d", i, len);
+				if (isok != 0) 
+					Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d)", i, i+len, len);
 			}
 			// Trigger a finish downloading signal with an ACK frame
 			// iceman,  when did sending samplingconfig array got attached here?!?
@@ -1152,8 +1159,8 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			for (size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
 				len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
 				isok = cmd_send(CMD_DOWNLOADED_EML_BIGBUF, i, len, 0, mem + startidx + i, len);
-				if (!isok) 
-					Dbprintf("transfer to client failed ::  | bytes between %d - %d", i, len);
+				if (isok != 0) 
+					Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d)", i, i+len, len);
 			}
 			// Trigger a finish downloading signal with an ACK frame
 			cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
@@ -1179,6 +1186,8 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 	
 			for(size_t i = 0; i < len; i += size) {
 				len = MIN((len - i), size);
+				
+				memset(mem, 0, len);
 				
 				Dbprintf("FlashMem reading  | %d | %d | %d", startidx + i, i, len);
 				
@@ -1273,8 +1282,8 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 					Dbprintf("reading flash memory failed ::  | bytes between %d - %d", i, len);
 				
 				isok = cmd_send(CMD_DOWNLOADED_FLASHMEM, i, len, 0, mem, len);
-				if (!isok) 
-					Dbprintf("transfer to client failed ::  | bytes between %d - %d", i, len);
+				if (isok != 0) 
+					Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d)", i, i+len, len);
 			}
 
 			cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
@@ -1455,10 +1464,6 @@ void  __attribute__((noreturn)) AppMain(void) {
 			RunMod();
 #endif
 
-			// when here,  we are no longer in standalone mode.
-			// reseting the variables which keeps track of usb re-attached/configured
-			//SetUSBreconnect(0);
-			//SetUSBconfigured(0);
 		}
 	}
 }
