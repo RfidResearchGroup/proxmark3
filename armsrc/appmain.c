@@ -1113,7 +1113,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			for(size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
 				len = MIN( (numofbytes - i), USB_CMD_DATA_SIZE);
 				isok = cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, i, len, BigBuf_get_traceLen(), mem + startidx + i, len);
-				if (isok != 0) 
+				if (!isok) 
 					Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d)", i, i+len, len);
 			}
 			// Trigger a finish downloading signal with an ACK frame
@@ -1159,7 +1159,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			for (size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
 				len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
 				isok = cmd_send(CMD_DOWNLOADED_EML_BIGBUF, i, len, 0, mem + startidx + i, len);
-				if (isok != 0) 
+				if (!isok) 
 					Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d)", i, i+len, len);
 			}
 			// Trigger a finish downloading signal with an ACK frame
@@ -1282,7 +1282,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 					Dbprintf("reading flash memory failed ::  | bytes between %d - %d", i, len);
 				
 				isok = cmd_send(CMD_DOWNLOADED_FLASHMEM, i, len, 0, mem, len);
-				if (isok != 0) 
+				if (!isok) 
 					Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d)", i, i+len, len);
 			}
 
