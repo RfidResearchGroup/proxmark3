@@ -13,18 +13,18 @@ function installProxmark_Linux {
   sudo apt-get update
 
   # Install libcanberragtk in Ubuntu 18.04
-  if [[ $(cat /etc/issue | awk '{print $2}') = *"18.04"* ]]; then 
+  if [[ $(cat /etc/issue | awk '{print $2}') = *"18.04"* ]]; then
     apt-get install libcanberra-gtk-module
   fi
 
 # install RDV40 - proxmark3
-  git clone https://github.com/RfidResearchGroup/proxmark3.git
+  git clone https://github.com/RfidResearchGroup/proxmark3.git .
   (
       cd proxmark3 || exit 1
       git reset --hard
       git clean -dfx
       make clean
-      make -j$(nproc) all 
+      make -j$(nproc) all
       # Copy blacklist rules into /etc/udev/rules.d
       # check the Makefile for details
       sudo make udev
