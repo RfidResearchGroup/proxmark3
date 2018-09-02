@@ -199,7 +199,31 @@ void UsbCommandReceived(UsbCommand* _ch) {
 			memset(s, 0x00, sizeof(s)); 
 			size_t len = MIN(c->arg[0], USB_CMD_DATA_SIZE);
 			memcpy(s, c->d.asBytes, len);
-			
+		
+		        //#define FLAG_RAWPRINT 0x0111
+		        //#define FLAG_NOOPT 0x0000
+		        //#define FLAG_NOLOG 0x0001
+		        //#define FLAG_NONEWLINE 0x0010
+		        //#define FLAG_NOPROMPT 0x0100
+		        uint64_t flag = c->arg[1];
+		        if (flag > 0) { // FLAG_RAWPRINT) {
+		            switch (flag) {
+		            case FLAG_RAWPRINT: {
+		                printf("%s", s);
+		            } return; break;
+		            case FLAG_NONEWLINE: {
+		                printf("%s\r", s);
+		            } return; break;
+		            case FLAG_NOLOG: {
+		                printf("%s\r\n", s);
+		            } return; break;
+		                // printf("%s", s);
+		                fflush(stdout);
+		                return;
+		            }
+			}
+
+	
 			// print debug line on same row. escape seq \r
 			if ( c->arg[1] == CMD_MEASURE_ANTENNA_TUNING_HF) {
 				PrintAndLogEx(NORMAL, "\r#db# %s", s);

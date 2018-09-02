@@ -24,7 +24,7 @@ APP_CFLAGS = -DWITH_CRC \
 			 -DWITH_FLASH \
 			 -DWITH_SMARTCARD \
 			 -DWITH_HFSNOOP \
-			 -DWITH_LF_SAMYRUN \
+			 -DWITH_HF_COLIN \
 			 -fno-strict-aliasing -ffunction-sections -fdata-sections
 
 ### IMPORTANT -  move the commented variable below this line
@@ -106,12 +106,9 @@ ARMSRC = fpgaloader.c \
 	parity.c \
 	usb_cdc.c \
 	cmd.c \
-	lf_samyrun.c \
-    vtsend.c 
-	#	lf_samyrun.c \
-	#	lf_hidbrute.c \
-	#	lf_proxbrute.c \
-	#	hf_mattyrun.c \
+	vtsend.c \
+	hf_colin.c \
+	lib_AT91SAM7.c
 	
 VERSIONSRC = version.c \
 	fpga_version_info.c
@@ -120,7 +117,6 @@ VERSIONSRC = version.c \
 include ../common/Makefile.common
 
 COMMON_FLAGS =  -Os 
-
 OBJS = $(OBJDIR)/fullimage.s19 
 FPGA_COMPRESSOR = ../client/fpga_compress
 

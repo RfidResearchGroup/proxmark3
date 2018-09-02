@@ -15,9 +15,10 @@
 static int CmdHelp(const char *Cmd);
 int usage_flashmem_read(void){
 	PrintAndLogEx(NORMAL, "Read flash memory on device");
-	PrintAndLogEx(NORMAL, "Usage:  mem read o <offset> l <len>");
+	PrintAndLogEx(NORMAL, "Usage:  mem read o <offset> l <len> [f]");
 	PrintAndLogEx(NORMAL, "  o <offset>    :      offset in memory");
 	PrintAndLogEx(NORMAL, "  l <len>       :      length");
+	PrintAndLogEx(NORMAL, "  f             :      fastRead mode");
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Examples:");
 	PrintAndLogEx(NORMAL, "        mem read o 0 l 32");		// read 32 bytes starting at offset 0
@@ -41,6 +42,7 @@ int usage_flashmem_save(void){
 	PrintAndLogEx(NORMAL, "  o <offset>    :      offset in memory");
 	PrintAndLogEx(NORMAL, "  l <length>    :      length");
 	PrintAndLogEx(NORMAL, "  f <filename>  :      file name");
+	PrintAndLogEx(NORMAL, "  +  	       :      fast read mode");
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Examples:");
 	PrintAndLogEx(NORMAL, "        mem save f myfile");					// download whole flashmem to file myfile
@@ -79,9 +81,14 @@ int CmdFlashMemRead(const char *Cmd) {
 	uint8_t cmdp = 0;
 	bool errors = false;
 	uint32_t start_index = 0, len  = 0;
+	uint8_t fast = 0;
 	
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch (tolower(param_getchar(Cmd, cmdp))) {
+		case 'f':
+			fast = 1;
+			cmdp += 1;
+			break;
 		case 'o':
 			start_index = param_get32ex(Cmd, cmdp+1, 0, 10);
 			cmdp += 2;
@@ -107,7 +114,7 @@ int CmdFlashMemRead(const char *Cmd) {
 		return 1;
 	}
 
-	UsbCommand c = {CMD_READ_FLASH_MEM, {start_index, len, 0}};		
+	UsbCommand c = {CMD_READ_FLASH_MEM, {start_index, len, fast}};		
 	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;
@@ -221,6 +228,7 @@ int CmdFlashMemSave(const char *Cmd){
 	uint8_t cmdp = 0;
 	bool errors = false;
 	uint32_t start_index = 0, len = FLASH_MEM_MAX_SIZE;
+	uint8_t fast = 0;
 	
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -233,6 +241,10 @@ int CmdFlashMemSave(const char *Cmd){
 			start_index = param_get32ex(Cmd, cmdp+1, 0, 10);
 			cmdp += 2;
 			break;
+                case '+':
+                        fast = 1;
+                        cmdp += 1;
+                        break;
 		case 'f':
 			//File handling
 			if ( param_getstr(Cmd, cmdp+1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE ) {
