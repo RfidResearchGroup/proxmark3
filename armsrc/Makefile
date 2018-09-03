@@ -24,7 +24,8 @@ APP_CFLAGS = -DWITH_CRC \
 			 -DWITH_FLASH \
 			 -DWITH_SMARTCARD \
 			 -DWITH_HFSNOOP \
-			 -DWITH_LF_SAMYRUN \
+			 -DWITH_HF_COLIN\
+			 -DWITH_FPC \
 			 -fno-strict-aliasing -ffunction-sections -fdata-sections
 
 ### IMPORTANT -  move the commented variable below this line
@@ -54,10 +55,70 @@ SRC_CRAPTO1 = crypto1.c des.c aes.c desfire_key.c desfire_crypto.c mifaredesfire
 SRC_CRC = crc.c crc16.c crc32.c 
 SRC_ICLASS = iclass.c optimized_cipher.c
 SRC_LEGIC = legicrf.c legic_prng.c
-SRC_FLASH = flashmem.c
-SRC_SMARTCARD = i2c.c
-#SRC_FPC = usart.c
 SRC_BEE = bee.c
+
+# RDV40 related hardware support
+ifneq (,$(findstring WITH_FLASH,$(APP_CFLAGS)))
+	SRC_FLASH = flashmem.c
+else
+	SRC_FLASH = 
+endif
+
+ifneq (,$(findstring WITH_SMARTCARD,$(APP_CFLAGS)))
+	SRC_SMARTCARD = i2c.c
+else
+	SRC_SMARTCARD = 
+endif
+
+ifneq (,$(findstring WITH_FPC,$(APP_CFLAGS)))
+	SRC_FPC = usart.c
+else
+	SRC_FPC = 
+endif
+
+# Generic standalone Mode injection of source code
+# WITH_LF_ICERUN
+ifneq (,$(findstring WITH_LF_ICERUN,$(APP_CFLAGS)))
+	SRC_STANDALONE =
+else
+	SRC_STANDALONE = 
+endif
+# WITH_LF_SAMYRUN
+ifneq (,$(findstring WITH_LF_SAMYRUN,$(APP_CFLAGS)))
+	SRC_STANDALONE = lf_samyrun.c
+else
+	SRC_STANDALONE = 
+endif
+# WITH_LF_PROXBRUTE
+ifneq (,$(findstring WITH_LF_PROXBRUTE,$(APP_CFLAGS)))
+	SRC_STANDALONE = lf_proxbrute.c
+else
+	SRC_STANDALONE = 
+endif
+# WITH_LF_HIDBRUTE
+ifneq (,$(findstring WITH_LF_HIDBRUTE,$(APP_CFLAGS)))
+	SRC_STANDALONE = lf_hidbrute.c 
+else
+	SRC_STANDALONE = 
+endif
+# WITH_HF_YOUNG
+ifneq (,$(findstring WITH_HF_YOUNG,$(APP_CFLAGS)))
+	SRC_STANDALONE = hf_young.c
+else
+	SRC_STANDALONE = 
+endif
+# WITH_HF_MATTYRUN
+ifneq (,$(findstring WITH_HF_MATTYRUN,$(APP_CFLAGS)))
+	SRC_STANDALONE = hf_mattyrun.c
+else
+	SRC_STANDALONE = 
+endif
+# WITH_HF_COLIN
+ifneq (,$(findstring WITH_HF_COLIN,$(APP_CFLAGS)))
+	SRC_STANDALONE = hf_colin.c vtsend.c
+else
+	SRC_STANDALONE =
+endif
 
 #the FPGA bitstream files. Note: order matters!
 FPGA_BITSTREAMS = fpga_lf.bit fpga_hf.bit
@@ -103,15 +164,10 @@ ARMSRC = fpgaloader.c \
 	$(SRC_EMV) \
 	$(SRC_CRC) \
 	$(SRC_FELICA) \
+	$(SRC_STANDALONE) \
 	parity.c \
 	usb_cdc.c \
-	cmd.c \
-	lf_samyrun.c \
-    vtsend.c 
-	#	lf_samyrun.c \
-	#	lf_hidbrute.c \
-	#	lf_proxbrute.c \
-	#	hf_mattyrun.c \
+	cmd.c
 	
 VERSIONSRC = version.c \
 	fpga_version_info.c
