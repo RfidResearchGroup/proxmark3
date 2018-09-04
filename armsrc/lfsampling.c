@@ -202,6 +202,10 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
 		Dbprintf("buffer samples: %02x %02x %02x %02x %02x %02x %02x %02x ...",
 					dest[0], dest[1], dest[2], dest[3], dest[4], dest[5], dest[6], dest[7]);
 	}
+	
+	// Ensure that noise check is performed for any device-side processing
+	justNoise(dest, bufsize);
+	
 	return data.numbits;
 }
 /**
