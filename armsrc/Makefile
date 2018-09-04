@@ -24,7 +24,7 @@ APP_CFLAGS = -DWITH_CRC \
 			 -DWITH_FLASH \
 			 -DWITH_SMARTCARD \
 			 -DWITH_HFSNOOP \
-			 -DWITH_HF_COLIN\
+			 -DWITH_LF_SAMYRUN \
 			 -DWITH_FPC \
 			 -fno-strict-aliasing -ffunction-sections -fdata-sections
 
@@ -77,47 +77,34 @@ else
 endif
 
 # Generic standalone Mode injection of source code
+SRC_STANDALONE =
 # WITH_LF_ICERUN
 ifneq (,$(findstring WITH_LF_ICERUN,$(APP_CFLAGS)))
 	SRC_STANDALONE =
-else
-	SRC_STANDALONE = 
 endif
 # WITH_LF_SAMYRUN
 ifneq (,$(findstring WITH_LF_SAMYRUN,$(APP_CFLAGS)))
 	SRC_STANDALONE = lf_samyrun.c
-else
-	SRC_STANDALONE = 
 endif
 # WITH_LF_PROXBRUTE
 ifneq (,$(findstring WITH_LF_PROXBRUTE,$(APP_CFLAGS)))
 	SRC_STANDALONE = lf_proxbrute.c
-else
-	SRC_STANDALONE = 
 endif
 # WITH_LF_HIDBRUTE
 ifneq (,$(findstring WITH_LF_HIDBRUTE,$(APP_CFLAGS)))
 	SRC_STANDALONE = lf_hidbrute.c 
-else
-	SRC_STANDALONE = 
 endif
 # WITH_HF_YOUNG
 ifneq (,$(findstring WITH_HF_YOUNG,$(APP_CFLAGS)))
 	SRC_STANDALONE = hf_young.c
-else
-	SRC_STANDALONE = 
 endif
 # WITH_HF_MATTYRUN
 ifneq (,$(findstring WITH_HF_MATTYRUN,$(APP_CFLAGS)))
 	SRC_STANDALONE = hf_mattyrun.c
-else
-	SRC_STANDALONE = 
 endif
 # WITH_HF_COLIN
 ifneq (,$(findstring WITH_HF_COLIN,$(APP_CFLAGS)))
 	SRC_STANDALONE = hf_colin.c vtsend.c
-else
-	SRC_STANDALONE =
 endif
 
 #the FPGA bitstream files. Note: order matters!
