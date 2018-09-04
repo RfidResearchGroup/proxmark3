@@ -27,10 +27,10 @@
 #endif
 
 
-#define START_GAP 31*8 // was 250 // SPEC:  1*8 to 50*8 - typ 15*8 (15fc)
-#define WRITE_GAP 20*8 // was 160 // SPEC:  1*8 to 20*8 - typ 10*8 (10fc)
-#define WRITE_0   18*8 // was 144 // SPEC: 16*8 to 32*8 - typ 24*8 (24fc)
-#define WRITE_1   50*8 // was 400 // SPEC: 48*8 to 64*8 - typ 56*8 (56fc)  432 for T55x7; 448 for E5550
+#define START_GAP 48*8 // was 250 // SPEC:  1*8 to 50*8 - typ 15*8 (15fc)
+#define WRITE_GAP 18*8 // was 160 // SPEC:  1*8 to 20*8 - typ 10*8 (10fc)
+#define WRITE_0   24*8 // was 144 // SPEC: 16*8 to 32*8 - typ 24*8 (24fc)
+#define WRITE_1   54*8 // was 400 // SPEC: 48*8 to 64*8 - typ 56*8 (56fc)  432 for T55x7; 448 for E5550
 #define READ_GAP  15*8 
 
 //  VALUES TAKEN FROM EM4x function: SendForward
@@ -474,10 +474,10 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc)
 	StopTicks();
 }
 
+// note:   a call to FpgaDownloadAndGo(FPGA_BITSTREAM_LF) must be done before, but
+//  this may destroy the bigbuf so be sure this is called before calling SimulateTagLowFrequencyEx
 void SimulateTagLowFrequencyEx(int period, int gap, int ledcontrol, int numcycles) {
-	// note this may destroy the bigbuf so be sure this is called before now...
-	//FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-	
+
 	//FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_TOGGLE_MODE );
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
 	SpinDelay(20);
@@ -514,7 +514,7 @@ void SimulateTagLowFrequencyEx(int period, int gap, int ledcontrol, int numcycle
 				
 		// wait until SSC_CLK goes HIGH
 		// used as a simple detection of a reader field?
-		while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
+		while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
 			WDT_HIT();
 			if ( usb_poll_validate_length() || BUTTON_PRESS() )
 				goto OUT;
@@ -526,7 +526,7 @@ void SimulateTagLowFrequencyEx(int period, int gap, int ledcontrol, int numcycle
 			SHORT_COIL();
 	
 		//wait until SSC_CLK goes LOW
-		while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
+		while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
 			WDT_HIT();
 			//if ( usb_poll_validate_length() || BUTTON_PRESS() )
 			if ( BUTTON_PRESS() )
@@ -918,7 +918,7 @@ void CmdHIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) 
 		idx = HIDdemodFSK(dest, &size, &hi2, &hi, &lo, &dummyIdx);
 		if ( idx < 0 ) continue;
 		
-		if (idx>0 && lo>0 && (size==96 || size==192)){
+		if (idx > 0 && lo > 0 && (size == 96 || size == 192)){
 			// go over previously decoded manchester data and decode into usable tag ID
 			if (hi2 != 0){ //extra large HID tags  88/192 bits
 				Dbprintf("TAG ID: %x%08x%08x (%d)",
@@ -1007,7 +1007,7 @@ void CmdAWIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol)
 
 	LFSetupFPGAForADC(95, true);
 
-	while(!BUTTON_PRESS() && !usb_poll_validate_length()) {
+	while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
 
 		WDT_HIT();
 		if (ledcontrol) LED_A_ON();
@@ -1107,6 +1107,7 @@ void CmdEM410xdemod(int findone, uint32_t *high, uint64_t *low, int ledcontrol) 
 		if (ledcontrol) LED_A_ON();
 
 		DoAcquisition_default(-1, true);
+		
 		size  = BigBuf_max_traceLen();
 		//askdemod and manchester decode
 		if (size > 16385) size = 16385; //big enough to catch 2 sequences of largest format
@@ -1169,7 +1170,9 @@ void CmdIOdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
 	while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
 		WDT_HIT();
 		if (ledcontrol) LED_A_ON();
-		DoAcquisition_default(-1,true);
+
+		DoAcquisition_default(-1, true);
+
 		//fskdemod and get start index
 		WDT_HIT();
 		idx = detectIOProx(dest, &size, &dummyIdx);
