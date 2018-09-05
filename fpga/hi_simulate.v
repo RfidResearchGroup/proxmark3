@@ -51,8 +51,8 @@ begin
 end
 
 
-// Divide 13.56 MHz by 32 to produce the SSP_CLK
-// The register is bigger to allow higher division factors of up to /128
+// Divide 13.56 MHz to produce various frequencies for SSP_CLK
+// and modulation. 11 bits allow for factors of up to /128.
 reg [10:0] ssp_clk_divider;
 
 always @(posedge adc_clk)
@@ -106,7 +106,7 @@ reg ssp_din;
 always @(posedge ssp_clk)
     ssp_din = after_hysteresis;
 
-// Modulating carrier frequency is fc/16, reuse ssp_clk divider for that
+// Modulating carrier frequency is fc/64 (212kHz) to fc/16 (848kHz). Reuse ssp_clk divider for that.
 reg modulating_carrier;
 always @(mod_type or ssp_clk or ssp_dout)
     if(mod_type == 3'b000)
