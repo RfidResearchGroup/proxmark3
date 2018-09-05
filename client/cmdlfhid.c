@@ -167,6 +167,7 @@ int CmdHIDDemod(const char *Cmd) {
 		PrintAndLogEx(NORMAL, "HID Prox TAG ID: %x%08x%08x (%u)", hi2, hi, lo, (lo>>1) & 0xFFFF);
 	} else {  //standard HID tags <38 bits
 		uint8_t fmtLen = 0;
+		uint32_t cc = 0;
 		uint32_t fc = 0;
 		uint32_t cardnum = 0;
 		if ((( hi >> 5) & 1) == 1){//if bit 38 is set then < 37 bit format is used
@@ -183,6 +184,11 @@ int CmdHIDDemod(const char *Cmd) {
 			if(fmtLen==26){
 				cardnum = (lo >> 1) & 0xFFFF;
 				fc = ( lo >> 17) & 0xFF;
+			}
+			if(fmtLen==32 && (lo & 0x40000000)){//if 32 bit and Kastle bit set
+				cardnum = (lo >> 1) & 0xFFFF;
+				fc = (lo >> 17) & 0xFF;
+				cc = (lo >> 25) & 0x1F;
 			}
 			if(fmtLen==34){
 				cardnum = (lo >> 1) & 0xFFFF;
@@ -202,7 +208,11 @@ int CmdHIDDemod(const char *Cmd) {
 				fc = ((hi & 0xF) << 12) | (lo >> 20);
 			}
 		}
-		PrintAndLogEx(NORMAL, "HID Prox TAG ID: %x%08x (%u) - Format Len: %ubit - FC: %u - Card: %u", hi, lo, (lo>>1) & 0xFFFF, fmtLen, fc, cardnum);
+		if(fmtLen==32 && (lo & 0x40000000)){//if 32 bit and Kastle bit set
+			PrintAndLogEx(NORMAL, "HID Prox TAG (Kastle format) ID: %08x (%u) - Format Len: 32bit - CC: %u - FC: %u - Card: %u", lo, (lo >> 1) & 0xFFFF, cc, fc, cardnum);
+		}else{
+			PrintAndLogEx(NORMAL, "HID Prox TAG ID: %x%08x (%u) - Format Len: %ubit - FC: %u - Card: %u", hi, lo, (lo >> 1) & 0xFFFF, fmtLen, fc, cardnum);
+		}
 	}
 
 	PrintAndLogEx(DEBUG, "DEBUG: HID idx: %d, Len: %d, Printing Demod Buffer:", idx, size);
