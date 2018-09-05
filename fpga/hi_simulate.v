@@ -59,7 +59,7 @@ always @(posedge adc_clk)
     ssp_clk_divider <= (ssp_clk_divider + 1);
 
 reg ssp_clk;
-reg ssp_frame;
+
 always @(negedge adc_clk)
 begin
     //If we're in 101, we only need a new bit every 8th carrier bit (53Hz). Otherwise, get next bit at 424Khz
@@ -81,8 +81,6 @@ begin
 end
 
 
-//assign ssp_clk = ssp_clk_divider[4];
-
 // Divide SSP_CLK by 8 to produce the byte framing signal; the phase of
 // this is arbitrary, because it's just a bitstream.
 // One nasty issue, though: I can't make it work with both rx and tx at
@@ -96,12 +94,12 @@ always @(negedge ssp_clk)
     ssp_frame_divider_from_arm <= (ssp_frame_divider_from_arm + 1);
 
 
-
+reg ssp_frame;
 always @(ssp_frame_divider_to_arm or ssp_frame_divider_from_arm or mod_type)
     if(mod_type == 3'b000) // not modulating, so listening, to ARM
         ssp_frame = (ssp_frame_divider_to_arm == 3'b000);
     else
-	ssp_frame = (ssp_frame_divider_from_arm == 3'b000);
+        ssp_frame = (ssp_frame_divider_from_arm == 3'b000);
 
 // Synchronize up the after-hysteresis signal, to produce DIN.
 reg ssp_din;
@@ -116,9 +114,9 @@ always @(mod_type or ssp_clk or ssp_dout)
     else if(mod_type == 3'b001)
         modulating_carrier <= ssp_dout ^ ssp_clk_divider[3]; // XOR means BPSK
     else if(mod_type == 3'b010)
-	modulating_carrier <= ssp_dout & ssp_clk_divider[5]; // switch 212kHz subcarrier on/off
+        modulating_carrier <= ssp_dout & ssp_clk_divider[5]; // switch 212kHz subcarrier on/off
     else if(mod_type == 3'b100 || mod_type == 3'b101)
-	modulating_carrier <= ssp_dout & ssp_clk_divider[4]; // switch 424kHz modulation on/off
+        modulating_carrier <= ssp_dout & ssp_clk_divider[4]; // switch 424kHz modulation on/off
     else
         modulating_carrier <= 1'b0;                           // yet unused
 
@@ -134,8 +132,5 @@ assign pwr_oe4 = modulating_carrier;
 assign pwr_oe3 = 1'b0;
 
 assign dbg = modulating_carrier;
-//reg dbg;
-//always @(ssp_dout)
-//    dbg <= ssp_dout;
 
 endmodule
