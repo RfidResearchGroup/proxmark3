@@ -302,8 +302,8 @@ static void init_reader(bool clear_mem) {
 // The setup consists of a three way handshake:
 //  - Transmit initialisation vector 7 bits
 //  - Receive card type 6 bits
-//  - Acknowledge frame 6 bits
-static uint32_t setup_phase_reader(uint8_t iv) {
+//  - Transmit Acknowledge 6 bits
+static uint32_t setup_phase(uint8_t iv) {
   // init coordination timestamp
   last_frame_end = GET_TICKS;
 
@@ -398,7 +398,7 @@ void LegicRfInfo(void) {
   init_reader(false);
 
   // establish shared secret and detect card type
-  uint8_t card_type = setup_phase_reader(0x01);
+  uint8_t card_type = setup_phase(0x01);
   if(init_card(card_type, &card) != 0) {
     cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
     goto OUT;
@@ -435,7 +435,7 @@ void LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
   init_reader(false);
 
   // establish shared secret and detect card type
-  uint8_t card_type = setup_phase_reader(iv);
+  uint8_t card_type = setup_phase(iv);
   if(init_card(card_type, &card) != 0) {
     cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
     goto OUT;
@@ -474,7 +474,7 @@ void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
   }
 
   // establish shared secret and detect card type
-  uint8_t card_type = setup_phase_reader(iv);
+  uint8_t card_type = setup_phase(iv);
   if(init_card(card_type, &card) != 0) {
     cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
     goto OUT;

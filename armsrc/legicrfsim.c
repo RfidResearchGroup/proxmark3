@@ -321,6 +321,78 @@ static void init_tag() {
   StartCountSspClk();
 }
 
+// Setup reader to card connection
+//
+// The setup consists of a three way handshake:
+//  - Receive initialisation vector 7 bits
+//  - Transmit card type 6 bits
+//  - Receive Acknowledge 6 bits
+static int32_t setup_phase(legic_card_select_t *p_card) {
+  uint8_t len = 0;
+
+  // init coordination timestamp
+  last_frame_end = GetCountSspClk();
+
+  // reset prng
+  legic_prng_init(0);
+
+  // wait for iv
+  int32_t iv = rx_frame(&len);
+  if((len != 7) || (iv < 0)) {
+    return -1;
+  }
+
+  // configure prng
+  legic_prng_init(iv);
+
+  // reply with card type
+  switch(p_card->tagtype) {
+    case 0:
+      tx_frame(0x0D, 6);
+      break;
+    case 1:
+      tx_frame(0x1D, 6);
+      break;
+    case 2:
+      tx_frame(0x3D, 6);
+      break;
+  }
+
+  // wait for ack
+  int32_t ack = rx_frame(&len);
+  if((len != 6) || (ack < 0)) {
+    return -1;
+  }
+
+  // validate data
+  switch(p_card->tagtype) {
+    case 0:
+      if(ack != 0x19) return -1;
+      break;
+    case 1:
+      if(ack != 0x39) return -1;
+      break;
+    case 2:
+      if(ack != 0x39) return -1;
+      break;
+  }
+
+  // During rx the prng is clocked using the variable reader period.
+  // Since rx_frame detects end of frame by detecting a code violation,
+  // the prng is off by one bit period after each rx phase. Hence, tx
+  // code advances the prng by (TAG_FRAME_WAIT/TAG_BIT_PERIOD - 1).
+  // This is not possible for back to back rx, so this quirk reduces
+  // the gap by one period.
+  last_frame_end += TAG_BIT_PERIOD;
+
+  return 0;
+}
+
+// TODO Commands are left as an exercise to the reader
+static int32_t connected_phase(legic_card_select_t *p_card) {
+  return 0;
+}
+
 //-----------------------------------------------------------------------------
 // Command Line Interface
 //
@@ -342,11 +414,20 @@ void LegicRfSimulate(uint8_t cardtype) {
   while(!BUTTON_PRESS()) {
     WDT_HIT();
 
-    // init coordination timestamp
-    last_frame_end = GetCountSspClk();
+    // wait for carrier, restart after timeout
+    if(!wait_for(RWD_PULSE, GetCountSspClk() + TAG_BIT_PERIOD)) {
+      continue;
+    }
 
-    // reset prng
-    legic_prng_init(0);
+    // wait for connection, restart on error
+    if(setup_phase(&card)) {
+      continue;
+    }
+
+    // conection is established, process commands until one fails
+    while(!connected_phase(&card)) {
+      WDT_HIT();
+    }
   }
 
 OUT:
