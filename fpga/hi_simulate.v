@@ -65,9 +65,12 @@ begin
     if(mod_type == 3'b101)
       // Get bit every at 53KHz (every 8th carrier bit of 424kHz)
       ssp_clk <= ssp_clk_divider[7];
+    else if(mod_type == 3'b010)
+      // Get next bit at 212kHz
+      ssp_clk <= ssp_clk_divider[5];
     else
       // Get next bit at 424Khz
-      ssp_clk <= ssp_clk_divider[4]
+      ssp_clk <= ssp_clk_divider[4];
 end
 
 
@@ -121,6 +124,6 @@ assign pwr_oe4 = modulating_carrier;
 // This one is always on, so that we can watch the carrier.
 assign pwr_oe3 = 1'b0;
 
-assign dbg = modulating_carrier;
+assign dbg = ssp_din;
 
 endmodule
