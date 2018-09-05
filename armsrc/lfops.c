@@ -1117,7 +1117,7 @@ void CmdEM410xdemod(int findone, uint32_t *high, uint64_t *low, int ledcontrol) 
 		if (errCnt < 0) continue;
 	
 			errCnt = Em410xDecode(dest, &size, &idx, &hi, &lo);
-			if (errCnt){
+			if (errCnt == 1){
 				if (size == 128){
 					Dbprintf("EM XL TAG ID: %06x%08x%08x - (%05d_%03d_%08d)",
 					  hi,
