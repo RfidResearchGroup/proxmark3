@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+
+ - Changed 'proxmark3 client threading'  - remake from official repo (@micolous)
+ - Add 'rem' - new command that adds a line to the log file (@didierStevens)
+ - Fix 'EM410xdemod  empty tag id in lfops.c' (@Defensor7)  
  - Fix 'usb device descriptor' - some android phones will enumerate better when iSerialnumber isn't a multiple of 8 (@micolous, @megabug)
  - Fix 'StandaloneMode LF' -  when collecting signal, justNoise detection is needed (@didierStevens, @Megabug)
  - Fix 'StandAloneMode Colin' - mifare1ksim called with right params (@cjbrigato)
