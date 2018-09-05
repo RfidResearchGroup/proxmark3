@@ -979,7 +979,6 @@ void CmdHIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) 
 					);
 			}
 			if (findone){
-				if (ledcontrol)	LED_A_OFF();
 				*high = hi;
 				*low = lo;
 				break;
