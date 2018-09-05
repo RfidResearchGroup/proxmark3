@@ -32,10 +32,16 @@ extern signal_t* getSignalProperties(void);
 
 extern uint32_t	compute_mean_uint(uint8_t *in, size_t N);
 extern int32_t	compute_mean_int(int *in, size_t N);
+bool isNoise_int(int *bits, uint32_t size);
+bool isNoise(uint8_t *bits, uint32_t size);
 
-extern bool		justNoise_int(int *bits, uint32_t size);
-extern bool		justNoise(uint8_t *bits, uint32_t size);
-
+// buffer is unsigned on DEVIE
+#ifdef ON_DEVICE
+	#define justNoise(a, b) isNoise((a), (b))
+#else
+	#define justNoise(a, b) isNoise_int((a), (b))
+#endif
+		
 void getNextLow(uint8_t *samples, size_t size, int low, size_t *i);
 void getNextHigh(uint8_t *samples, size_t size, int high, size_t *i);
 bool loadWaveCounters(uint8_t *samples, size_t size, int lowToLowWaveLen[], int highToLowWaveLen[], int *waveCnt, int *skip, int *minClk, int *high, int *low);
