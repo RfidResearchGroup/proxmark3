@@ -373,17 +373,15 @@ static const char StrManufacturer[] = {
 };
 
 static const char StrProduct[] = {
-	22,			// Length
+	20,			// Length
 	0x03,		// Type is string
-	'P',0,'M',0,'3',0,' ',0,'D',0,'e',0,'v',0,'i',0,'c',0,'e',0
+	'p',0,'r',0,'o',0,'x',0,'m',0,'a',0,'r',0,'k',0,'3',0
 };
 
 static const char StrSerialNumber[] = {
-	8,			// Length
+	14,			// Length
 	0x03,		// Type is string
-	'8',0,
-	'8',0,
-	'8',0
+	'i',0,'c',0,'e',0,'m',0,'a',0,'n',0
 };
 
 // size includes their own field.

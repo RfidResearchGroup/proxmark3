@@ -817,6 +817,9 @@ extern void str_lower(char *s ){
 	for(int i=0; i < strlen(s); i++)
 		s[i] = tolower( s[i] );
 }
+extern bool str_startswith(const char *s,  const char *pre) {	
+    return strncmp(pre, s, strlen(pre)) == 0;
+}
 
 // Replace unprintable characters with a dot in char buffer
 extern void clean_ascii(unsigned char *buf, size_t len) {

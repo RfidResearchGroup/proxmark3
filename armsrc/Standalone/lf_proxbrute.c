@@ -32,7 +32,7 @@ void RunMod() {
 
 		// Was our button held down or pressed?
 		int button_pressed = BUTTON_HELD(1000);
-		//SpinDelay(300);
+		SpinDelay(300);
 
 		// Button was held for a second, begin recording
 		if (button_pressed > 0 && cardRead == 0) {
@@ -41,7 +41,7 @@ void RunMod() {
 			LED(LED_RED2, 0);
 
 			// record
-			DbpString("[+] starting recording");
+			DbpString("[=] starting recording");
 
 			// wait for button to be released
 			while (BUTTON_PRESS())
@@ -51,7 +51,7 @@ void RunMod() {
 			SpinDelay(500);
 
 			CmdHIDdemodFSK(1, &high[selected], &low[selected], 0);
-			Dbprintf("[+] recorded %x %x %08x", selected, high[selected], low[selected]);
+			Dbprintf("[=] recorded %x %x %08x", selected, high[selected], low[selected]);
 
 			LEDsoff();
 			LED(selected + 1, 0);
@@ -67,7 +67,7 @@ void RunMod() {
 			LED(LED_ORANGE, 0);
 
 			// record
-			Dbprintf("[+] cloning %x %x %08x", selected, high[selected], low[selected]);
+			Dbprintf("[=] cloning %x %x %08x", selected, high[selected], low[selected]);
 
 			// wait for button to be released
 			while (BUTTON_PRESS())
@@ -77,7 +77,7 @@ void RunMod() {
 			SpinDelay(500);
 
 			CopyHIDtoT55x7(0, high[selected], low[selected], 0);
-			Dbprintf("[+] cloned %x %x %08x", selected, high[selected], low[selected]);
+			Dbprintf("[=] cloned %x %x %08x", selected, high[selected], low[selected]);
 
 			LEDsoff();
 			LED(selected + 1, 0);
@@ -102,7 +102,7 @@ void RunMod() {
 			// Begin transmitting
 			if (playing) {
 				LED(LED_GREEN, 0);
-				DbpString("[+] playing");
+				DbpString("[=] playing");
 				// wait for button to be released
 				while (BUTTON_PRESS())
 					WDT_HIT();
@@ -120,7 +120,7 @@ void RunMod() {
 				*/
 				if ( selected == 1 ) {
 					DbpString("[=] entering ProxBrute Mode");
-					Dbprintf("[+] current Tag: Selected = %x Facility = %08x ID = %08x", selected, high[selected], low[selected]);
+					Dbprintf("[=] current Tag: Selected = %x Facility = %08x ID = %08x", selected, high[selected], low[selected]);
 					LED(LED_ORANGE, 0);
 					LED(LED_RED, 0);
 					for (uint16_t i = low[selected]-1; i > 0; i--) {
@@ -135,20 +135,17 @@ void RunMod() {
 					}
 
 				} else {
-					DbpString("[+] RED is lit, not entering ProxBrute Mode");
-					Dbprintf("[+] %x %x %x", selected, high[selected], low[selected]);
+					DbpString("[=] RED is lit, not entering ProxBrute Mode");
+					Dbprintf("[=] %x %x %x", selected, high[selected], low[selected]);
 					CmdHIDsimTAGEx(high[selected], low[selected], 0, 20000);
-					DbpString("[+] done playing");
+					DbpString("[=] done playing");
 				}
 
 				/*   END PROXBRUTE */
 
 				
-				if (BUTTON_HELD(1000) > 0) {
-					DbpString("[+] exiting");
-					LEDsoff();
-					return;
-				}
+				if (BUTTON_HELD(1000) > 0)
+					goto out;
 
 				/* We pressed a button so ignore it here with a delay */
 				SpinDelay(300);
@@ -165,4 +162,7 @@ void RunMod() {
 			}
 		}
 	}
+out:	
+	DbpString("[=] exiting");
+	LEDsoff();	
 }

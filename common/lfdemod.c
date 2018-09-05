@@ -51,7 +51,9 @@
 #define NOICE_AMPLITUDE_THRESHOLD 10
 //to allow debug print calls when used not on dev
 
-void dummy(char *fmt, ...){}
+//void dummy(char *fmt, ...){}
+extern void Dbprintf(const char *fmt, ...);
+
 #ifndef ON_DEVICE
 #include "ui.h"
 # include "cmdparser.h"
@@ -59,7 +61,7 @@ void dummy(char *fmt, ...){}
 # define prnt PrintAndLog
 #else 
   uint8_t g_debugMode = 0;
-# define prnt dummy
+# define prnt Dbprintf
 #endif
 
 signal_t signalprop = { 255, -255, 0, 0, true };
@@ -105,10 +107,9 @@ int32_t compute_mean_int(int *in, size_t N) {
 
 //test samples are not just noise
 // By measuring mean and look at amplitude of signal from HIGH / LOW,   we can detect noise
-bool justNoise_int(int *bits, uint32_t size) {
+bool isNoise_int(int *bits, uint32_t size) {
 	resetSignal();
-	if ( bits == NULL ) return true;
-	if ( size < 100 ) return true;
+	if ( bits == NULL || size < 100 ) return true;
 
 	int32_t sum = 0;
 	for ( size_t i = 0; i < size; i++) {
@@ -130,10 +131,9 @@ bool justNoise_int(int *bits, uint32_t size) {
 //test samples are not just noise
 // By measuring mean and look at amplitude of signal from HIGH / LOW, 
 // we can detect noise
-bool justNoise(uint8_t *bits, uint32_t size) {
+bool isNoise(uint8_t *bits, uint32_t size) {
 	resetSignal();
-	if ( bits == NULL ) return true;
-	if ( size < 100 ) return true;
+	if ( bits == NULL || size < 100 ) return true;
 	
 	uint32_t sum = 0;
 	for ( uint32_t i = 0; i < size; i++) {
@@ -1553,16 +1553,15 @@ size_t fsk_wave_demod(uint8_t *dest, size_t size, uint8_t fchigh, uint8_t fclow,
 	size_t currSample = 0;
 	size_t last_transition = 0;
 	size_t idx = 1;
+	size_t numBits = 0;
 	
 	//find start of modulating data in trace 	
 	idx = findModStart(dest, size, fchigh);
 	// Need to threshold first sample
-	if(dest[idx] < FSK_PSK_THRESHOLD) dest[0] = 0;
-	else dest[0] = 1;
+	dest[0] = (dest[idx] < FSK_PSK_THRESHOLD) ? 0 : 1;
 	
 	last_transition = idx;
 	idx++;
-	size_t numBits = 0;
 	
 	// Definition:  cycles between consecutive lo-hi transitions
 	// Lets define some expected lengths. FSK1 is easier since it has bigger differences between.
@@ -1595,9 +1594,9 @@ size_t fsk_wave_demod(uint8_t *dest, size_t size, uint8_t fchigh, uint8_t fclow,
 	// the 1-0 to 0-1  width should be divided with exp_zero.   Ie: 3+5+6+7 = 21/6 = 3	
 	
 	for(; idx < size-20; idx++) {
+		
 		// threshold current value
-		if (dest[idx] < FSK_PSK_THRESHOLD) dest[idx] = 0;
-		else dest[idx] = 1;
+		dest[idx] = (dest[idx] < FSK_PSK_THRESHOLD) ? 0 : 1;
 
 		// Check for 0->1 transition
 		if (dest[idx-1] < dest[idx]) {
@@ -1612,16 +1611,24 @@ size_t fsk_wave_demod(uint8_t *dest, size_t size, uint8_t fchigh, uint8_t fclow,
 					dest[numBits-1]=1;
 				}
 				dest[numBits++]=1;
-			if (numBits > 0 && *startIdx==0) *startIdx = idx - fclow;
+				
+				
+				if (numBits > 0 && *startIdx == 0)
+					*startIdx = idx - fclow;
+				
 			} else if (currSample > (fchigh+1) && numBits < 3) { //12 + and first two bit = unusable garbage
 				//do nothing with beginning garbage and reset..  should be rare..
 				numBits = 0; 
 			} else if (currSample == (fclow+1) && LastSample == (fclow-1)) { // had a 7 then a 9 should be two 8's (or 4 then a 6 should be two 5's)
 				dest[numBits++]=1;
-			if (numBits > 0 && *startIdx==0) *startIdx = idx - fclow;
+				if (numBits > 0 && *startIdx == 0) {
+					*startIdx = idx - fclow;
+				}
 			} else {                                        //9+ = 10 sample waves (or 6+ = 7)
 				dest[numBits++]=0;
-			if (numBits > 0 && *startIdx==0) *startIdx = idx - fchigh;
+					if (numBits > 0 && *startIdx == 0) {
+						*startIdx = idx - fchigh;
+					}
 			}
 			last_transition = idx;
 		}
@@ -1632,6 +1639,7 @@ size_t fsk_wave_demod(uint8_t *dest, size_t size, uint8_t fchigh, uint8_t fclow,
 //translate 11111100000 to 10
 //rfLen = clock, fchigh = larger field clock, fclow = smaller field clock
 size_t aggregate_bits(uint8_t *dest, size_t size, uint8_t clk, uint8_t invert, uint8_t fchigh, uint8_t fclow, int *startIdx) {
+
 	uint8_t lastval = dest[0];
 	size_t i = 0;
 	size_t numBits = 0;
@@ -1643,13 +1651,16 @@ size_t aggregate_bits(uint8_t *dest, size_t size, uint8_t clk, uint8_t invert, u
 		if (dest[i] == lastval) continue; //skip until we hit a transition
 		
 		//find out how many bits (n) we collected (use 1/2 clk tolerance)
+		
+		if (dest[i-1] == 1)
 		//if lastval was 1, we have a 1->0 crossing
-		if (dest[i-1] == 1) {
 			n = (n * fclow + hclk) / clk;
-		} else {// 0->1 crossing 
+		else 
+			// 0->1 crossing 
 			n = (n * fchigh + hclk) / clk; 
-		}
-		if (n == 0) n = 1;
+
+		if (n == 0) 
+			n = 1;
 
 		//first transition - save startidx
 		if (numBits == 0) {
@@ -1664,12 +1675,13 @@ size_t aggregate_bits(uint8_t *dest, size_t size, uint8_t clk, uint8_t invert, u
 
 		//add to our destination the bits we collected		
 		memset(dest+numBits, dest[i-1] ^ invert , n);
-		//if (g_debugMode == 2) prnt("ICCE::  n %u | numbits %u", n, numBits);
+
 		numBits += n;
 		n = 0;
 		lastval = dest[i];
 
 	}//end for
+	
 	// if valid extra bits at the end were all the same frequency - add them in
 	if (n > clk/fchigh) {
 		if (dest[i-2] == 1) {
@@ -1696,14 +1708,15 @@ size_t fskdemod(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t invert, uint8
 // by marshmellow
 // convert psk1 demod to psk2 demod
 // only transition waves are 1s
+//TODO: Iceman - hard coded value 7,  should be #define
 void psk1TOpsk2(uint8_t *bits, size_t size) {
-	uint8_t lastBit = bits[0];
+	uint8_t lastbit = bits[0];
 	for (size_t i = 1; i < size; i++){
 		//ignore errors		
 		if (bits[i] == 7) continue;
 			
-		if (lastBit != bits[i]){
-			lastBit = bits[i];
+		if (lastbit != bits[i]){
+			lastbit = bits[i];
 			bits[i] = 1;
 		} else {
 			bits[i] = 0;
@@ -1726,6 +1739,7 @@ void psk2TOpsk1(uint8_t *bits, size_t size) {
 
 //by marshmellow - demodulate PSK1 wave 
 //uses wave lengths (# Samples) 
+//TODO: Iceman - hard coded value 7,  should be #define
 int pskRawDemod_ext(uint8_t *dest, size_t *size, int *clock, int *invert, int *startIdx) {
 	
 	// sanity check
@@ -1763,7 +1777,7 @@ int pskRawDemod_ext(uint8_t *dest, size_t *size, int *clock, int *invert, int *s
 	//set start of wave as clock align
 	lastClkBit = firstFullWave;
 	if (g_debugMode==2) prnt("DEBUG PSK: firstFullWave: %u, waveLen: %u, startIdx %i",firstFullWave,fullWaveLen, *startIdx);
-	if (g_debugMode==2) prnt("DEBUG PSK: clk: %d, lastClkBit: %u, fc: %u", *clock, lastClkBit,(unsigned int) fc);
+	if (g_debugMode == 2) prnt("DEBUG PSK: clk: %d, lastClkBit: %u, fc: %u", *clock, lastClkBit, fc);
 	waveStart = 0;
 	dest[numBits++] = curPhase; //set first read bit
 	for (i = firstFullWave + fullWaveLen - 1; i < *size-3; i++){
@@ -1809,8 +1823,8 @@ int pskRawDemod_ext(uint8_t *dest, size_t *size, int *clock, int *invert, int *s
 }
 
 int pskRawDemod(uint8_t *dest, size_t *size, int *clock, int *invert) {
-	int startIdx = 0;
-	return pskRawDemod_ext(dest, size, clock, invert, &startIdx);
+	int start_idx = 0;
+	return pskRawDemod_ext(dest, size, clock, invert, &start_idx);
 }
 
 
@@ -1833,38 +1847,38 @@ int detectAWID(uint8_t *dest, size_t *size, int *waveStartIdx) {
 	//did we get a good demod?
 	if (*size < 96) return -3;
 
-	size_t startIdx = 0;
+	size_t start_idx = 0;
 	uint8_t preamble[] = {0,0,0,0,0,0,0,1};
-	if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
+	if (!preambleSearch(dest, preamble, sizeof(preamble), size, &start_idx))
 		return -4; //preamble not found
 	
 	// wrong size?  (between to preambles)
 	if (*size != 96) return -5;
 	
-	return (int)startIdx;
+	return (int)start_idx;
 }
 
 //by marshmellow
 //takes 1s and 0s and searches for EM410x format - output EM ID
-int Em410xDecode(uint8_t *bits, size_t *size, size_t *startIdx, uint32_t *hi, uint64_t *lo) {
+int Em410xDecode(uint8_t *bits, size_t *size, size_t *start_idx, uint32_t *hi, uint64_t *lo) {
 	// sanity check
 	if (bits[1] > 1) return -1; 
 	if (*size < 64) return -2;	
 
 	uint8_t fmtlen;
-	*startIdx = 0;
+	*start_idx = 0;
 	
 	// preamble 0111111111
 	// include 0 in front to help get start pos
 	uint8_t preamble[] = {0,1,1,1,1,1,1,1,1,1};
-	if (!preambleSearch(bits, preamble, sizeof(preamble), size, startIdx))
+	if (!preambleSearch(bits, preamble, sizeof(preamble), size, start_idx))
 		return -4;
 
 	// (iceman) if the preamble doesn't find two occuriences, this identification fails.
 	fmtlen = (*size == 128) ? 22 : 10;
 
 	//skip last 4bit parity row for simplicity
-	*size = removeParity(bits, *startIdx + sizeof(preamble), 5, 0, fmtlen * 5);  
+	*size = removeParity(bits, *start_idx + sizeof(preamble), 5, 0, fmtlen * 5);  
 	
 	switch (*size) {
 	   case 40: { 
@@ -1898,14 +1912,17 @@ int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32
 	if (*size < 96*2) return -3;
 
 	// 00011101 bit pattern represent start of frame, 01 pattern represents a 0 and 10 represents a 1
-	size_t startIdx = 0;	
+	size_t start_idx = 0;	
 	uint8_t preamble[] = {0,0,0,1,1,1,0,1};
-	if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx)) 
+	if (!preambleSearch(dest, preamble, sizeof(preamble), size, &start_idx)) 
 		return -4; //preamble not found
 
-	size_t numStart = startIdx + sizeof(preamble);
+	// wrong size?  (between to preambles)
+	//if (*size != 96) return -5;
+	
+	size_t num_start = start_idx + sizeof(preamble);
 	// final loop, go over previously decoded FSK data and manchester decode into usable tag ID
-	for (size_t idx = numStart; (idx-numStart) < *size - sizeof(preamble); idx+=2){
+	for (size_t idx = num_start; (idx - num_start) < *size - sizeof(preamble); idx += 2) {
 		if (dest[idx] == dest[idx+1]){
 			return -5; //not manchester data
 		}
@@ -1918,7 +1935,7 @@ int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32
 		else // 0 1
 			*lo |= 0;
 	}
-	return (int)startIdx;
+	return (int)start_idx;
 }
 
 // Find IDTEC PSK1, RF  Preamble == 0x4944544B, Demodsize 64bits
@@ -1943,7 +1960,7 @@ int detectIOProx(uint8_t *dest, size_t *size, int *waveStartIdx) {
 	// FSK demodulator  RF/64, fsk2a so invert, and fc/10/8
 	*size = fskdemod(dest, *size, 64, 1, 10, 8, waveStartIdx);  //io fsk2a
 	
-	//did we get a good demod?
+	//did we get enough demod data?
 	if (*size < 64) return -3;
 	
 	//Index map
@@ -1955,18 +1972,23 @@ int detectIOProx(uint8_t *dest, size_t *size, int *waveStartIdx) {
 	//
 	//XSF(version)facility:codeone+codetwo
 
-	size_t startIdx = 0;
+	size_t start_idx = 0;
 	uint8_t preamble[] = {0,0,0,0,0,0,0,0,0,1};
-	if (! preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
+	if (!preambleSearch(dest, preamble, sizeof(preamble), size, &start_idx))
 		return -4; //preamble not found
 
 	// wrong size?  (between to preambles)
 	if (*size != 64) return -5;
 	
-	if (!dest[startIdx+8] && dest[startIdx+17]==1 && dest[startIdx+26]==1 && dest[startIdx+35]==1 && dest[startIdx+44]==1 && dest[startIdx+53]==1){
+	if (  !dest[start_idx + 8] 
+		&& dest[start_idx + 17] == 1 
+		&& dest[start_idx + 26] == 1 
+		&& dest[start_idx + 35] == 1
+		&& dest[start_idx + 44] == 1 
+		&& dest[start_idx + 53] == 1) {
 		//confirmed proper separator bits found
 		//return start position
-		return (int) startIdx;
+		return (int) start_idx;
 	}
 	return -6;
 }

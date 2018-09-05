@@ -34,14 +34,12 @@ static uint16_t traceLen = 0;
 int tracing = 1; //Last global one.. todo static?
 
 // get the address of BigBuf
-uint8_t *BigBuf_get_addr(void)
-{
+uint8_t *BigBuf_get_addr(void) {
 	return (uint8_t *)BigBuf;
 }
 
 // get the address of the emulator memory. Allocate part of Bigbuf for it, if not yet done
-uint8_t *BigBuf_get_EM_addr(void)
-{
+uint8_t *BigBuf_get_EM_addr(void) {
 	// not yet allocated
 	if (emulator_memory == NULL)
 		emulator_memory = BigBuf_malloc(CARD_MEMORY_SIZE);
@@ -50,53 +48,45 @@ uint8_t *BigBuf_get_EM_addr(void)
 }
 
 // clear ALL of BigBuf
-void BigBuf_Clear(void)
-{
+void BigBuf_Clear(void) {
 	BigBuf_Clear_ext(true);
 }
 
 // clear ALL of BigBuf
-void BigBuf_Clear_ext(bool verbose)
-{
+void BigBuf_Clear_ext(bool verbose) {
 	memset(BigBuf, 0, BIGBUF_SIZE);
 	if (verbose) 
 		Dbprintf("Buffer cleared (%i bytes)", BIGBUF_SIZE);
 }
 
-void BigBuf_Clear_EM(void){
+void BigBuf_Clear_EM(void) {
 	memset(BigBuf_get_EM_addr(), 0, CARD_MEMORY_SIZE);
 }
 
-void BigBuf_Clear_keep_EM(void)
-{
+void BigBuf_Clear_keep_EM(void) {
 	memset(BigBuf, 0, BigBuf_hi);
 }
 
 // allocate a chunk of memory from BigBuf. We allocate high memory first. The unallocated memory
 // at the beginning of BigBuf is always for traces/samples
-uint8_t *BigBuf_malloc(uint16_t chunksize)
-{
-	if (BigBuf_hi - chunksize < 0) { 
+uint8_t *BigBuf_malloc(uint16_t chunksize) {
+	if (BigBuf_hi - chunksize < 0)
 		return NULL;							// no memory left
-	} else {
-		chunksize = (chunksize + 3) & 0xfffc;	// round to next multiple of 4
-		BigBuf_hi -= chunksize; 		  		// aligned to 4 Byte boundary 
-		return (uint8_t *)BigBuf + BigBuf_hi;
-	}
+
+	chunksize = (chunksize + 3) & 0xfffc;	// round to next multiple of 4
+	BigBuf_hi -= chunksize; 		  		// aligned to 4 Byte boundary 
+	return (uint8_t *)BigBuf + BigBuf_hi;
 }
 
 // free ALL allocated chunks. The whole BigBuf is available for traces or samples again.
-void BigBuf_free(void)
-{
+void BigBuf_free(void){
 	BigBuf_hi = BIGBUF_SIZE;
 	emulator_memory = NULL;
-	
 	// shouldn't this empty BigBuf also?
 }
 
 // free allocated chunks EXCEPT the emulator memory
-void BigBuf_free_keep_EM(void)
-{
+void BigBuf_free_keep_EM(void) {
 	if (emulator_memory != NULL)
 		BigBuf_hi = emulator_memory - (uint8_t *)BigBuf;
 	else
@@ -105,8 +95,7 @@ void BigBuf_free_keep_EM(void)
 	// shouldn't this empty BigBuf also?
 }
 
-void BigBuf_print_status(void)
-{
+void BigBuf_print_status(void) {
 	Dbprintf("Memory");
 	Dbprintf("  BIGBUF_SIZE.............%d", BIGBUF_SIZE);
 	Dbprintf("  Available memory........%d", BigBuf_hi);
@@ -116,12 +105,11 @@ void BigBuf_print_status(void)
 }
 
 // return the maximum trace length (i.e. the unallocated size of BigBuf)
-uint16_t BigBuf_max_traceLen(void)
-{
+uint16_t BigBuf_max_traceLen(void) {
 	return BigBuf_hi;
 }
 
-void clear_trace() {
+void clear_trace(void) {
 	traceLen = 0;
 }
 void set_tracelen(uint16_t value) {
@@ -139,8 +127,7 @@ bool get_tracing(void) {
  * Get the number of bytes traced
  * @return
  */
-uint16_t BigBuf_get_traceLen(void)
-{
+uint16_t BigBuf_get_traceLen(void) {
 	return traceLen;
 }
 
@@ -150,8 +137,7 @@ uint16_t BigBuf_get_traceLen(void)
   by 'hf list raw', alternatively 'hf list <proto>' for protocol-specific
   annotation of commands/responses.
 **/
-bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool readerToTag)
-{
+bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool readerToTag) {
 	if (!tracing) return false;
 
 	uint8_t *trace = BigBuf_get_addr();
@@ -209,9 +195,7 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
 	return true;
 }
 
-
-int LogTraceHitag(const uint8_t * btBytes, int iBits, int iSamples, uint32_t dwParity, int readerToTag)
-{
+int LogTraceHitag(const uint8_t * btBytes, int iBits, int iSamples, uint32_t dwParity, int readerToTag) {
 	/**
 	  Todo, rewrite the logger to use the generic functionality instead. It should be noted, however,
 	  that this logger takes number of bits as argument, not number of bytes.
@@ -252,15 +236,13 @@ int LogTraceHitag(const uint8_t * btBytes, int iBits, int iSamples, uint32_t dwP
 	return true;
 }
 
-
 // Emulator memory
 uint8_t emlSet(uint8_t *data, uint32_t offset, uint32_t length){
 	uint8_t* mem = BigBuf_get_EM_addr();
-	if(offset+length < CARD_MEMORY_SIZE) {
+	if (offset + length < CARD_MEMORY_SIZE) {
 		memcpy(mem+offset, data, length);
 		return 0;
-	} else {
-		Dbprintf("Error, trying to set memory outside of bounds! %d  > %d", (offset+length), CARD_MEMORY_SIZE);
-		return 1;
-	}
+	} 
+	Dbprintf("Error, trying to set memory outside of bounds! %d  > %d", (offset + length), CARD_MEMORY_SIZE);
+	return 1;
 }
