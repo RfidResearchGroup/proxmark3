@@ -152,6 +152,9 @@ static void tx_frame(uint32_t frame, uint8_t len) {
   legic_prng_forward(TAG_FRAME_WAIT/TAG_BIT_PERIOD - 1);
   while(GetCountSspClk() < last_frame_end) { };
 
+  // backup ts for trace log
+  uint32_t last_frame_start = last_frame_end;
+
   // transmit frame, MSB first
   for(uint8_t i = 0; i < len; ++i) {
     bool bit = (frame >> i) & 0x01;
@@ -161,6 +164,10 @@ static void tx_frame(uint32_t frame, uint8_t len) {
 
   // disable subcarrier
   LOW(GPIO_SSC_DOUT);
+
+  // log
+  uint8_t cmdbytes[] = {len, BYTEx(frame, 0), BYTEx(frame, 1)};
+  LogTrace(cmdbytes, sizeof(cmdbytes), last_frame_start, last_frame_end, NULL, false);
 }
 
 static void tx_ack() {
@@ -169,12 +176,19 @@ static void tx_ack() {
   legic_prng_forward(TAG_ACK_WAIT/TAG_BIT_PERIOD - 1);
   while(GetCountSspClk() < last_frame_end) { };
 
+  // backup ts for trace log
+  uint32_t last_frame_start = last_frame_end;
+
   // transmit ack (ack is not encrypted)
   tx_bit(true);
   legic_prng_forward(1);
 
   // disable subcarrier
   LOW(GPIO_SSC_DOUT);
+
+  // log
+  uint8_t cmdbytes[] = {1, 1};
+  LogTrace(cmdbytes, sizeof(cmdbytes), last_frame_start, last_frame_end, NULL, false);
 }
 
 // Returns a demedulated frame or -1 on code violation
@@ -209,6 +223,9 @@ static int32_t rx_frame(uint8_t *len) {
     }
   }
 
+  // backup ts for trace log
+  uint32_t last_frame_start = last_frame_end;
+
   // receive frame
   for(*len = 0; true; ++(*len)) {
     // receive next bit
@@ -235,6 +252,10 @@ static int32_t rx_frame(uint8_t *len) {
   // and substract 2 SSP clock cycles (1 for rx and 1 for tx pipeline delay) to
   // obtain exact end of frame.
   last_frame_end += RWD_TIME_PAUSE - 2;
+
+  // log
+  uint8_t cmdbytes[] = {*len, BYTEx(frame, 0), BYTEx(frame, 1), BYTEx(frame, 2)};
+  LogTrace(cmdbytes, sizeof(cmdbytes), last_frame_start, last_frame_end, NULL, true);
 
   return frame;
 }
@@ -288,6 +309,10 @@ static void init_tag() {
 
   // reserve a cardmem, meaning we can use the tracelog function in bigbuff easier.
   legic_mem = BigBuf_get_EM_addr();
+
+  // start trace
+  clear_trace();
+  set_tracing(true);
 
   // init crc calculator
   crc_init(&legic_crc, 4, 0x19 >> 1, 0x05, 0);
