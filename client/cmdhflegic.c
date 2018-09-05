@@ -46,19 +46,15 @@ int usage_legic_rdmem(void){
 int usage_legic_sim(void){
 	PrintAndLogEx(NORMAL, "Simulates a LEGIC Prime tag. MIM22, MIM256, MIM1024 types can be emulated");
 	PrintAndLogEx(NORMAL, "Use eload/esave to upload a dump into emulator memory");
-	PrintAndLogEx(NORMAL, "Usage:  hf legic sim [h] <tagtype> <phase> <frame> <reqresp>");
+	PrintAndLogEx(NORMAL, "Usage:  hf legic sim [h] <tagtype>");
 	PrintAndLogEx(NORMAL, "Options:");
 	PrintAndLogEx(NORMAL, "      h             : this help");
 	PrintAndLogEx(NORMAL, "      <tagtype>     : 0 = MIM22");
 	PrintAndLogEx(NORMAL, "                    : 1 = MIM256 (default)");
-	PrintAndLogEx(NORMAL, "                    : 2 = MIM1024");	
-	PrintAndLogEx(NORMAL, "      <phase>       : phase drift");
-	PrintAndLogEx(NORMAL, "      <frame>       : frame drift");
-	PrintAndLogEx(NORMAL, "      <reqresp>     : reqresp drift");
+	PrintAndLogEx(NORMAL, "                    : 2 = MIM1024");
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Examples:");
 	PrintAndLogEx(NORMAL, "      hf legic sim");
-	PrintAndLogEx(NORMAL, "      hf legic sim ");
 	return 0;
 }
 int usage_legic_write(void){
@@ -504,12 +500,13 @@ int CmdLegicRdmem(const char *Cmd) {
 	return status;
 }
 
-// should say which tagtype
-// should load a tag to device mem.
-// int phase, int frame, int reqresp
 int CmdLegicRfSim(const char *Cmd) {
-	UsbCommand c = {CMD_SIMULATE_TAG_LEGIC_RF, {6,3,0}};
-	sscanf(Cmd, " %" SCNi64 " %" SCNi64 " %" SCNi64 , &c.arg[0], &c.arg[1], &c.arg[2]);
+
+	char cmdp = param_getchar(Cmd, 0);
+	if ( cmdp == 'H' || cmdp == 'h' ) return usage_legic_sim();
+
+	UsbCommand c = {CMD_SIMULATE_TAG_LEGIC_RF, {1}};
+	sscanf(Cmd, " %" SCNi64, &c.arg[0]);
 	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;

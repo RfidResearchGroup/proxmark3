@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------------
 // (c) 2009 Henryk Plötz <henryk@ploetzli.ch>
 //     2016 Iceman
-//     2018 AntiCat (rwd rewritten)
+//     2018 AntiCat
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -16,7 +16,7 @@
 #include "legic_prng.h"         /* legic PRNG impl */
 #include "legic.h"              /* legic_card_select_t struct */
 
-static uint8_t* legic_mem;      /* card memory, used for read, write and sim */
+static uint8_t* legic_mem;      /* card memory, used for read, write */
 static legic_card_select_t card;/* metadata of currently selected card */
 static crc_t legic_crc;
 
@@ -179,7 +179,7 @@ static uint32_t rx_frame(uint8_t len) {
   uint32_t last_frame_start = last_frame_end;
 
   uint32_t frame = 0;
-  for(uint8_t i = 0; i < len; i++) {
+  for(uint8_t i = 0; i < len; ++i) {
     frame |= (rx_bit() ^ legic_prng_get_bit()) << i;
     legic_prng_forward(1);
 
@@ -235,7 +235,7 @@ static bool rx_ack() {
 // Legic Reader
 //-----------------------------------------------------------------------------
 
-int init_card(uint8_t cardtype, legic_card_select_t *p_card) {
+static int init_card(uint8_t cardtype, legic_card_select_t *p_card) {
   p_card->tagtype = cardtype;
 
   switch(p_card->tagtype) {
@@ -314,7 +314,7 @@ static uint32_t setup_phase_reader(uint8_t iv) {
   legic_prng_init(0);
   tx_frame(iv, 7);
 
-  // configure iv
+  // configure prng
   legic_prng_init(iv);
   legic_prng_forward(2);
 
@@ -500,8 +500,4 @@ void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
 OUT:
   switch_off();
   StopTicks();
-}
-
-void LegicRfSimulate(int phase, int frame, int reqresp) {
-  cmd_send(CMD_ACK, 0, 0, 0, 0, 0); //TODO Implement
 }
