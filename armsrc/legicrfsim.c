@@ -388,9 +388,33 @@ static int32_t setup_phase(legic_card_select_t *p_card) {
   return 0;
 }
 
-// TODO Commands are left as an exercise to the reader
+static uint8_t calc_crc4(uint16_t cmd, uint8_t cmd_sz, uint8_t value) {
+  crc_clear(&legic_crc);
+  crc_update(&legic_crc, (value << cmd_sz) | cmd, 8 + cmd_sz);
+  return crc_finish(&legic_crc);
+}
+
 static int32_t connected_phase(legic_card_select_t *p_card) {
-  return 0;
+  uint8_t len = 0;
+
+  // wait for command
+  int32_t cmd = rx_frame(&len);
+  if(cmd < 0) {
+    return -1;
+  }
+
+  // check if command is LEGIC_READ
+  if(len == p_card->cmdsize) {
+    // prepare data
+    uint8_t byte = legic_mem[cmd >> 1];
+    uint8_t crc = calc_crc4(cmd, p_card->cmdsize, byte);
+
+    // transmit data
+    tx_frame((crc << 8) | byte, 12);
+    return 0;
+  }
+
+  return -1;
 }
 
 //-----------------------------------------------------------------------------
