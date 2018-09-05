@@ -411,6 +411,31 @@ static int32_t connected_phase(legic_card_select_t *p_card) {
 
     // transmit data
     tx_frame((crc << 8) | byte, 12);
+
+    return 0;
+  }
+
+  // check if command is LEGIC_WRITE
+  if(len == p_card->cmdsize + 8 + 4) {
+    // decode data
+    uint16_t mask = (1 << p_card->addrsize) - 1;
+    uint16_t addr = (cmd >> 1) & mask;
+    uint8_t  byte = (cmd >> p_card->cmdsize) & 0xff;
+    uint8_t  crc  = (cmd >> (p_card->cmdsize + 8)) & 0xf;
+
+    // check received against calculated crc
+    uint8_t calc_crc = calc_crc4(addr << 1, p_card->cmdsize, byte);
+    if(calc_crc != crc) {
+      Dbprintf("!!! crc mismatch: %x != %x !!!",  calc_crc, crc);
+      return -1;
+    }
+
+    // store data
+    legic_mem[addr] = byte;
+
+    // transmit ack
+    tx_ack();
+
     return 0;
   }
 
