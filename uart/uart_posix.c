@@ -117,10 +117,19 @@ serial_port uart_open(const char* pcPortName)
   // Flush all lingering data that may exist
   tcflush(sp->fd, TCIOFLUSH);
 
+#ifdef WITH_FPC
+  uart_set_speed(sp, 115200);
+  printf("[=] UART Setting serial baudrate 115200 [FPC enabled]\n");  
+#else	
   // set speed, works for UBUNTU 14.04
-  bool err = uart_set_speed(sp, 460800);
-  if (!err)
-	  uart_set_speed(sp, 115200);  		  
+  bool success = uart_set_speed(sp, 460800);
+  if (success) {
+    printf("[=] UART Setting serial baudrate 460800\n");
+  } else {
+    uart_set_speed(sp, 115200);
+    printf("[=] UART Setting serial baudrate 115200\n");
+  }
+#endif  
   return sp;
 }
 
@@ -144,7 +153,7 @@ void uart_close(const serial_port sp) {
   free(sp);
 }
 
-bool uart_receive(const serial_port sp, byte_t* pbtRx, size_t pszMaxRxLen, size_t* pszRxLen) {
+bool uart_receive(const serial_port sp, uint8_t* pbtRx, size_t pszMaxRxLen, size_t* pszRxLen) {
   int res;
   int byteCount;
   fd_set rfds;
@@ -156,9 +165,9 @@ bool uart_receive(const serial_port sp, byte_t* pbtRx, size_t pszMaxRxLen, size_
   do {
     // Reset file descriptor
     FD_ZERO(&rfds);
-    FD_SET(((serial_port_unix*)sp)->fd,&rfds);
+    FD_SET(((serial_port_unix*)sp)->fd, &rfds);
     tv = timeout;
-    res = select(((serial_port_unix*)sp)->fd+1, &rfds, NULL, NULL, &tv);
+    res = select(((serial_port_unix*)sp)->fd + 1, &rfds, NULL, NULL, &tv);
     
     // Read error
     if (res < 0) {
@@ -186,7 +195,7 @@ bool uart_receive(const serial_port sp, byte_t* pbtRx, size_t pszMaxRxLen, size_
     }
 
     // There is something available, read the data
-    res = read(((serial_port_unix*)sp)->fd, pbtRx+(*pszRxLen), byteCount);
+    res = read(((serial_port_unix*)sp)->fd, pbtRx + (*pszRxLen), byteCount);
 
     // Stop if the OS has some troubles reading the data
     if (res <= 0) return false;
@@ -203,7 +212,7 @@ bool uart_receive(const serial_port sp, byte_t* pbtRx, size_t pszMaxRxLen, size_
   return true;
 }
 
-bool uart_send(const serial_port sp, const byte_t* pbtTx, const size_t len) {
+bool uart_send(const serial_port sp, const uint8_t* pbtTx, const size_t len) {
   int32_t res;
   size_t pos = 0;
   fd_set rfds;
@@ -229,13 +238,10 @@ bool uart_send(const serial_port sp, const byte_t* pbtTx, const size_t len) {
     }
     
     // Send away the bytes
-    res = write(((serial_port_unix*)sp)->fd, pbtTx+pos, len-pos);
+    res = write(((serial_port_unix*)sp)->fd, pbtTx + pos, len - pos);
     
     // Stop if the OS has some troubles sending the data
-    if (res <= 0) {
-		printf("UART:: os troubles (%d)\n", res);
-		return false;
-	}
+    if (res <= 0) return false;
     
     pos += res;
   }

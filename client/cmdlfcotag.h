@@ -15,7 +15,7 @@
 #include "util.h"       // FALSE / TRUE
 #include "cmddata.h"	// getSamples
 #include "cmdparser.h"  // CmdsParse, CmdsHelp
-#include "cmdmain.h"
+#include "comms.h"
 #include "ui.h"			// PrintAndLog
 #include "cmdlf.h"		// Setconfig 
 

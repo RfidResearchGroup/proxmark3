@@ -544,7 +544,7 @@ int CmdHIDBrute(const char *Cmd){
 	// main loop
 	for (;;){
 		
-		if ( offline ) {
+		if ( IsOffline() ) {
 			PrintAndLogEx(WARNING, "Device offline\n");
 			return  2;
 		}

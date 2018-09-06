@@ -21,8 +21,7 @@
 #include "graph.h"
 #include "cmdparser.h"
 #include "cmddata.h"
-#include "cmdmain.h"
-#include "cmdmain.h"
+#include "comms.h"
 #include "cmdlf.h"
 #include "lfdemod.h"
 

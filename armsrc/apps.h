@@ -230,8 +230,8 @@ void WritePageHitagS(hitag_function htf, hitag_data* htd,int page);
 void check_challenges(bool file_given, byte_t* data);
 
 // cmd.h
-bool cmd_receive(UsbCommand* cmd);
-bool cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void* data, size_t len);
+uint8_t cmd_receive(UsbCommand* cmd);
+uint8_t cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void* data, size_t len);
 
 // util.h
 void HfSnoop(int , int);

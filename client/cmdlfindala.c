@@ -122,7 +122,7 @@ int CmdIndalaDemod(const char *Cmd) {
 		ans = PSKDemod("32", 0);
 
 	if (!ans){
-		PrintAndLogEx(DEBUG, "DEBUG: Error - Indala can't demod signal: %d",ans);
+		PrintAndLogEx(DEBUG, "DEBUG: Error - Indala can't demod signal: %d", ans);
 		return 0;
 	}
 

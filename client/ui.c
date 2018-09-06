@@ -13,8 +13,7 @@
 
 double CursorScaleFactor = 1;
 int PlotGridX=0, PlotGridY=0, PlotGridXdefault= 64, PlotGridYdefault= 64, CursorCPos= 0, CursorDPos= 0;
-int offline;
-int g_flushAfterWrite = 0;  //buzzy
+bool flushAfterWrite = 0;
 int GridOffset = 0;
 bool GridLocked = false;
 bool showDemod = true;
@@ -178,7 +177,7 @@ void PrintAndLog(char *fmt, ...) {
 	}
 	va_end(argptr2);
 
-	if (g_flushAfterWrite == 1)
+	if (flushAfterWrite)
 		fflush(NULL);
 
 	//release lock
@@ -189,7 +188,11 @@ void SetLogFilename(char *fn) {
 	logfilename = fn;
 }
  
-void iceIIR_Butterworth(int *data, const size_t len){
+void SetFlushAfterWrite(bool value) {
+	flushAfterWrite = value;
+}
+
+ void iceIIR_Butterworth(int *data, const size_t len){
 
 	int i,j;
 	

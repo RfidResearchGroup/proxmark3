@@ -441,7 +441,7 @@ void printStandAloneModes(void) {
 	DbpString("   LF HID corporate 1000 bruteforce - (Federico dotta & Maurizio Agazzini)");
 #endif 
 #if defined(WITH_HF_MATTYRUN)
-	DbpString("   HF Mifare sniff/clone - aka MattyRun (Mat�as A. R� Medina)");
+	DbpString("   HF Mifare sniff/clone - aka MattyRun (Matías A. Ré Medina)");
 #endif 
 #if defined(WITH_HF_COLIN)
     DbpString("   HF Mifare ultra fast sniff/sim/clone - aka VIGIKPWN (Colin Brigato)");
@@ -1063,15 +1063,45 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 
 #ifdef WITH_FPC
 		case CMD_FPC_SEND: {
-//			char header[] = {"*** Iceman Usart ***"};
-//			uint32_t res = usart_writebuffer((uint8_t *)header, sizeof(header), 10000);
+
+			char dest[USB_CMD_DATA_SIZE] = { '\0' };
+
+			static const char* welcome = "Proxmark3 Serial interface ready\n";
+			strncat(dest, welcome, sizeof(dest) - strlen(dest) - 1);
 			
-			//temp++;
-			uint8_t got = usart_read(10000);
-			if ( got > 0 ) {
-				Dbprintf("got %02x", got);			
-				usart_write(got, 10000);
+			sprintf(dest + strlen(dest) - 1, "Arg0  | 0x%" PRIx64 " \n", c->arg[0]);
+			sprintf(dest + strlen(dest) - 1, "Arg1  | 0x%" PRIx64 " \n", c->arg[1]);
+			sprintf(dest + strlen(dest) - 1, "Arg2  | 0x%" PRIx64 " \n", c->arg[2]);
+			sprintf(dest + strlen(dest) - 1, "bytes | 0x%02x 0x%02x 0x%02x 0x%02x \n"
+						,c->d.asBytes[0], c->d.asBytes[1], c->d.asBytes[2], c->d.asBytes[3]);
+			
+/*
+			UsbCommand txcmd;
+			for (size_t i=0; i < sizeof(UsbCommand); i++)
+				((uint8_t*)&txcmd)[i] = 0x00;
+
+			// Compose the outgoing command frame
+			txcmd.cmd = CMD_DEBUG_PRINT_STRING;
+			txcmd.arg[0] = len;
+			txcmd.arg[1] = 0;	
+			txcmd.arg[2] = 0;
+			memcpy(txcmd.d.asBytes, dest, USB_CMD_DATA_SIZE);		
+			usart_writebuffer((uint8_t*)&txcmd, sizeof(UsbCommand));
+*/
+			DbpString("Starting to listen");
+			LED_A_ON();
+			/*
+			uint8_t rx[sizeof(UsbCommand)];
+			usart_init();
+			while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
+				WaitMS(1);
+				if (usart_readbuffer(rx, sizeof(rx)) )
+					DbpString("got 544");
 			}
+			*/
+			cmd_send(CMD_DEBUG_PRINT_STRING, strlen(dest), 0, 0, dest, strlen(dest));
+			//DbpString("finished");
+			LED_A_OFF();
 			cmd_send(CMD_ACK,0,0,0,0,0);
 			break;
 		}
@@ -1114,7 +1144,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			for(size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
 				len = MIN( (numofbytes - i), USB_CMD_DATA_SIZE);
 				isok = cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, i, len, BigBuf_get_traceLen(), mem + startidx + i, len);
-				if (!isok) 
+				if (isok != 0) 
 					Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d)", i, i+len, len);
 			}
 			// Trigger a finish downloading signal with an ACK frame
@@ -1160,8 +1190,8 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			for (size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
 				len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
 				isok = cmd_send(CMD_DOWNLOADED_EML_BIGBUF, i, len, 0, mem + startidx + i, len);
-				if (!isok) 
-					Dbprintf("transfer to client failed ::  | bytes between %d - %d", i, len);
+				if (isok != 0) 
+					Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d)", i, i+len, len);
 			}
 			// Trigger a finish downloading signal with an ACK frame
 			cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
@@ -1180,7 +1210,6 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			uint16_t isok = 0;
 			uint32_t startidx = c->arg[0];
 			uint16_t len = c->arg[1];
-			//uint8_t fast = c->arg[2];
 			
 			Dbprintf("FlashMem read | %d - %d | ", startidx, len);
 			
@@ -1285,8 +1314,6 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			size_t len = 0;
 			uint32_t startidx = c->arg[0];
 			uint32_t numofbytes = c->arg[1];
-			//uint8_t fast = c->arg[2];
-
 			// arg0 = startindex
 			// arg1 = length bytes to transfer
 			// arg2 = RFU
@@ -1301,7 +1328,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 					Dbprintf("reading flash memory failed ::  | bytes between %d - %d", i, len);
 
 				isok = cmd_send(CMD_FLASHMEM_DOWNLOADED, i, len, 0, mem, len);
-				if (!isok) 
+				if (isok != 0)
 					Dbprintf("transfer to client failed ::  | bytes between %d - %d", i, len);
 			}
 				FlashStop();
@@ -1458,19 +1485,20 @@ void  __attribute__((noreturn)) AppMain(void) {
 	for(;;) {
 		WDT_HIT();
 		
-#ifdef WITH_FPC
-		// check if there is a FPC USART1 message?
-		/*
-		uint32_t fpc_rxlen = usart_read(rx, sizeof(UsbCommand));
-		if ( fpc_rxlen > 0)
-			Dbprintf("got a package [len %d] %02x", fpc_rxlen, rx[0]);
-		*/
-#endif
-		
 		// Check if there is a usb packet available
-		if ( cmd_receive( (UsbCommand*)rx ) ) {
-			UsbPacketReceived(rx, sizeof(UsbCommand) );
+		if (usb_poll_validate_length()) {
+			if (usb_read(rx, sizeof(rx)) )
+				UsbPacketReceived(rx, sizeof(rx));
 		}
+#ifdef WITH_FPC
+		// Check is there is FPC package available
+		/*
+		usart_init();
+		if (usart_readbuffer(rx, sizeof(rx)) )
+			UsbPacketReceived(rx, sizeof(rx) );
+		*/
+
+#endif
 		
 		// Press button for one second to enter a possible standalone mode
 		if (BUTTON_HELD(1000) > 0) {
@@ -1487,6 +1515,7 @@ void  __attribute__((noreturn)) AppMain(void) {
 #if defined (WITH_ISO14443a) && ( defined (WITH_HF_YOUNG) || defined(WITH_HF_COLIN) || defined(WITH_HF_MATTYRUN) )
 			RunMod();
 #endif
+
 		}
 	}
 }

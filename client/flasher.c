@@ -10,30 +10,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
+#include <pthread.h>
 #include "util_posix.h"
 #include "proxmark3.h"
+#include "util.h"
 #include "flash.h"
-#include "uart.h"
+#include "comms.h"
 #include "usb_cmd.h"
 
 #define MAX_FILES 4
-
-#ifdef _WIN32
-# define unlink(x)
-#else
-# include <unistd.h>
-#endif
-
-#if defined (_WIN32)
-#define SERIAL_PORT_H	"com3"
-#elif defined(__APPLE__)
-#define SERIAL_PORT_H   "/dev/cu.usbmodem888"
-#else
-#define SERIAL_PORT_H	"/dev/ttyACM0"
-#endif
-
-static serial_port sp;
-static char* serial_port_name;
 
 void cmd_debug(UsbCommand* c) {
 	//  Debug
@@ -48,49 +33,6 @@ void cmd_debug(UsbCommand* c) {
 		printf("%02x", c->d.asBytes[i]);
 
 	printf("...\n");
-}
-
-void SendCommand(UsbCommand* txcmd) {
-	//  printf("send: ");
-	//  cmd_debug(txcmd);
-	if (!uart_send(sp, (byte_t*)txcmd, sizeof(UsbCommand))) {
-		printf("Sending bytes to proxmark failed\n");
-		exit(1);
-	}
-}
-
-void ReceiveCommand(UsbCommand* rxcmd) {
-	byte_t* prxcmd = (byte_t*)rxcmd;
-	byte_t* prx = prxcmd;
-	size_t rxlen;
-	while (true) {
-		if (uart_receive(sp, prx, sizeof(UsbCommand) - (prx-prxcmd), &rxlen)) {
-			prx += rxlen;
-			if ((prx-prxcmd) >= sizeof(UsbCommand)) {
-				return;
-			}
-		}
-	}
-}
-
-void CloseProxmark() {
-	// Clean up the port
-	uart_close(sp);
-	// Fix for linux, it seems that it is extremely slow to release the serial port file descriptor /dev/*
-	unlink(serial_port_name);
-}
-
-int OpenProxmark() {
-	sp = uart_open(serial_port_name);
-
-	//poll once a second
-	if (sp == INVALID_SERIAL_PORT) {
-		return 0;
-	} else if (sp == CLAIMED_SERIAL_PORT) {
-		fprintf(stderr, "ERROR: serial port is claimed by another process\n");
-		return 0;
-	} 	
-	return 1;
 }
 
 static void usage(char *argv0) {
@@ -129,30 +71,28 @@ int main(int argc, char **argv) {
 			}
 		} else {
 			res = flash_load(&files[num_files], argv[i], can_write_bl);
-			if (res < 0) {
-				fprintf(stderr, "Error while loading %s\n", argv[i]);
+			if (res < 0)
 				return -1;
-			}
+
 			fprintf(stderr, "\n");
 			num_files++;
 		}
 	}
+	
+	char* serial_port_name = argv[1];
 
-	serial_port_name = argv[1];
-  
-	fprintf(stdout, "Waiting for Proxmark to appear on %s", serial_port_name);
-	do {
-		msleep(500);
-		fprintf(stderr, "."); fflush(stdout);
-	} while (!OpenProxmark());
-
-	fprintf(stdout, " Found.\n");
+	if (!OpenProxmark(serial_port_name, true, 60, true)) {
+		fprintf(stderr, "Could not find Proxmark on " _RED_(%s) ".\n\n", serial_port_name);
+		return -1;
+	} else {
+		fprintf(stderr, _GREEN_(Found) "\n");
+	}
 
 	res = flash_start_flashing(can_write_bl, serial_port_name);
 	if (res < 0)
 		return -1;
 
-	fprintf(stdout, "\nFlashing...\n");
+	fprintf(stdout, "\n" _BLUE_(Flashing...)"\n");
 
 	for (int i = 0; i < num_files; i++) {
 		res = flash_write(&files[i]);
@@ -162,7 +102,7 @@ int main(int argc, char **argv) {
 		fprintf(stdout, "\n");
 	}
 
-	fprintf(stdout, "Resetting hardware...\n");
+	fprintf(stdout, _BLUE_(Resetting hardware...) "\n");
 
 	res = flash_stop_flashing();
 	if (res < 0)
@@ -170,7 +110,6 @@ int main(int argc, char **argv) {
 
 	CloseProxmark();
 
-	fprintf(stdout, "All done.\n\n");
-	fprintf(stdout, "Have a nice day!\n");
+	fprintf(stdout, _BLUE_(All done.) "\n\nHave a nice day!\n");
 	return 0;
 }

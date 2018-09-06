@@ -25,7 +25,7 @@
 #include "proxmark3.h"	// sendcommand
 #include "ui.h"       // for show graph controls
 #include "graph.h"    // for graph data
-#include "usb_cmd.h"  // already included in cmdmain.h and proxmark3.h
+#include "comms.h"
 #include "lfdemod.h"  // for demod code
 #include "crc.h"      // for pyramid checksum maxim
 #include "crc16.h"    // for FDXB demod checksum

@@ -31,29 +31,9 @@
  */
 #include "cmd.h"
 
-bool cmd_receive(UsbCommand* cmd) {
-
-	// Check if there is a usb packet available
-	if (!usb_poll_validate_length()) return false;
-
-	// Try to retrieve the available command frame
-	usb_read((uint8_t*)cmd, sizeof(UsbCommand));
-
-	// (iceman) this check is wrong.  Since USB can send packages which is not sizeof(usbcommand) 544 bytes.
-	//  hence, I comment it out
-
-	// Check if the transfer was complete
-	//if (rxlen != sizeof(UsbCommand)) return false;
-	// Received command successfully
-	//return true;
-	return true;
-}
-
-bool cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void* data, size_t len) {
-
+uint8_t cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void* data, size_t len) {
 	UsbCommand txcmd;
 
-	// 0x00 the whole command.
 	for (size_t i=0; i < sizeof(UsbCommand); i++)
 		((uint8_t*)&txcmd)[i] = 0x00;
 
@@ -70,10 +50,15 @@ bool cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void* d
 			txcmd.d.asBytes[i] = ((uint8_t*)data)[i];
 		}
 	}
-	 
-	// Send frame and make sure all bytes are transmitted
-	if ( usb_write( (uint8_t*)&txcmd, sizeof(UsbCommand)) != 0)
-		return false;  
 	
-	return true;
+	uint32_t sendlen = 0;
+	// Send frame and make sure all bytes are transmitted
+	sendlen = usb_write( (uint8_t*)&txcmd, sizeof(UsbCommand) );
+
+#ifdef WITH_FPC
+	usart_init();
+	usart_writebuffer( (uint8_t*)&txcmd, sizeof(UsbCommand) );
+#endif
+	
+	return sendlen;
 }

@@ -21,7 +21,7 @@
 #include "common.h"
 #include "util.h"
 #include "loclass/fileutils.h"	// saveFile
-#include "cmdmain.h"			// getfromdevice
+#include "comms.h"			// getfromdevice
 #include "emv/emvcore.h"		// decodeTVL
 #include "emv/apduinfo.h"		// APDUcode description
 

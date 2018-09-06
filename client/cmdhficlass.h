@@ -21,7 +21,7 @@
 #include "cmdparser.h"
 #include "common.h"
 #include "util.h"
-#include "cmdmain.h"
+#include "comms.h"
 #include "des.h"
 #include "loclass/cipherutils.h"
 #include "loclass/cipher.h"

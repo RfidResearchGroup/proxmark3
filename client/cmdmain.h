@@ -13,7 +13,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -24,7 +23,6 @@
 #include "util.h"
 #include "ui.h"
 #include "cmdparser.h"
-#include "loclass/fileutils.h"
 #include "cmdhf.h"
 #include "cmddata.h"
 #include "cmdhw.h"
@@ -33,26 +31,16 @@
 #include "cmdscript.h"
 #include "cmdcrc.h"
 #include "cmdanalyse.h"
+
+#ifdef WITH_FLASH
 #include "cmdflashmem.h"	// rdv40 flashmem commands
+#endif
+
+#ifdef WITH_SMARTCARD
 #include "cmdsmartcard.h"	// rdv40 smart card ISO7816 commands
+#endif
 
-//For storing command that are received from the device
-#define CMD_BUFFER_SIZE 100
-typedef enum {
-	BIG_BUF,
-	BIG_BUF_EML,
-	FLASH_MEM,
-	SIM_MEM,
-	} DeviceMemType_t;
-	
-extern void UsbCommandReceived(UsbCommand *c);
 extern int CommandReceived(char *Cmd);
-extern bool WaitForResponseTimeoutW(uint32_t cmd, UsbCommand* response, size_t ms_timeout, bool show_warning);
-extern bool WaitForResponseTimeout(uint32_t cmd, UsbCommand* response, size_t ms_timeout);
-extern bool WaitForResponse(uint32_t cmd, UsbCommand* response);
-extern void clearCommandBuffer();
 extern command_t* getTopLevelCommandTable();
-
-extern bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning);
 
 #endif

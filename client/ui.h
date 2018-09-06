@@ -37,14 +37,13 @@ extern void PrintAndLog(char *fmt, ...);
 void PrintAndLogOptions(char *str[][2], size_t size, size_t space);
 void PrintAndLogEx(logLevel_t level, char *fmt, ...);
 extern void SetLogFilename(char *fn);
+void SetFlushAfterWrite(bool value);
 
 extern double CursorScaleFactor;
 extern int PlotGridX, PlotGridY, PlotGridXdefault, PlotGridYdefault, CursorCPos, CursorDPos, GridOffset;
 extern bool GridLocked;
 extern bool showDemod;
 
-extern int offline;
-extern int g_flushAfterWrite;   //buzzy
 //extern uint8_t g_debugMode;
 
 extern pthread_mutex_t print_lock;

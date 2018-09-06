@@ -18,7 +18,7 @@
 #include "proxmark3.h"
 #include "ui.h"
 #include "graph.h"
-#include "cmdmain.h"
+#include "comms.h"
 #include "cmdparser.h"
 #include "cmddata.h"
 #include "cmdlf.h"

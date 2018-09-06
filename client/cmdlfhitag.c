@@ -20,7 +20,7 @@
 #include "hitag2.h"
 #include "hitagS.h"
 #include "util_posix.h"
-#include "cmdmain.h"
+#include "comms.h"
 #include "cmddata.h"
 
 static int CmdHelp(const char *Cmd);

@@ -47,16 +47,6 @@ typedef struct {
   DCB dcb;          // Device control settings
   COMMTIMEOUTS ct;  // Serial port time-out configuration
 } serial_port_windows;
-/*
-void upcase(char *p) {
-  while(*p != '\0') {
-    if(*p >= 97 && *p <= 122) {
-      *p -= 32;
-    }
-    ++p;
-  }
-}
-*/
 
 serial_port uart_open(const char* pcPortName) {
 	char acPortName[255];
@@ -110,10 +100,17 @@ serial_port uart_open(const char* pcPortName) {
   
 	PurgeComm(sp->hPort, PURGE_RXABORT | PURGE_RXCLEAR);
 
+#ifdef WITH_FPC
+	uart_set_speed(sp, 115200);
+#else
 	bool success = uart_set_speed(sp, 460800);
-	if (!success)
+	if (success) {
+		printf("[=] UART Setting serial baudrate 460800\n");
+	} else {
 		uart_set_speed(sp, 115200);
-  
+		printf("[=] UART Setting serial baudrate 115200\n");
+	}
+#endif  
 	return sp;
 }
 
@@ -155,32 +152,13 @@ uint32_t uart_get_speed(const serial_port sp) {
 	return 0;
 }
 
-bool uart_receive(const serial_port sp, byte_t* p_rx, size_t pszMaxRxLen, size_t* p_rxlen) {
-	int res = ReadFile(((serial_port_windows*)sp)->hPort, p_rx, pszMaxRxLen, (LPDWORD)p_rxlen, NULL);
-	if ( res == 0 ) {
-		//printf("[!] UART error reading from port\n");
-		return false;
-	}
-	
-	bool read_test = ( pszMaxRxLen ==  *p_rxlen );
-	if ( !read_test && *p_rxlen > 0 ) {
-		printf("[!] UART error, not all data read from port  len %u | read %u\n", pszMaxRxLen, *p_rxlen);
-	}
-	return read_test;
+bool uart_receive(const serial_port sp, uint8_t* p_rx, size_t pszMaxRxLen, size_t* len) {
+	return ReadFile(((serial_port_windows*)sp)->hPort, p_rx, pszMaxRxLen, (LPDWORD)len, NULL);
 }
 
-bool uart_send(const serial_port sp, const byte_t* p_tx, const size_t len) {
+bool uart_send(const serial_port sp, const uint8_t* p_tx, const size_t len) {
 	DWORD txlen = 0;		
-	int res = WriteFile(((serial_port_windows*)sp)->hPort, p_tx, len, &txlen, NULL);
-	if ( res == 0) {
-		printf("[!] UART error writing to port\n");
-		return false;
-	}
-	bool write_test = ( len == txlen );
-	if ( !write_test ) {
-		printf("[!] UART error, not all data written to port  len %u | sent %lu\n", len, txlen);
-	}	
-	return write_test;
+	return WriteFile(((serial_port_windows*)sp)->hPort, p_tx, len, &txlen, NULL);
 }
 
 #endif

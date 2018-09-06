@@ -21,7 +21,7 @@
 #include "ui.h"
 #include "util.h"
 #include "cmdparser.h"
-#include "cmdmain.h"
+#include "comms.h"		// getfromdevice
 #include "iso14443crc.h"
 #include "cmdhf.h"		// list cmd
 #include "mifare.h" 	// felica_card_select_t struct

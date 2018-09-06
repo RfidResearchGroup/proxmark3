@@ -17,55 +17,16 @@
 #include <unistd.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+
+#include "util_posix.h"
 #include "proxgui.h"
 #include "cmdmain.h"
-#include "uart.h"
 #include "ui.h"
 #include "util.h"
 #include "cmdparser.h"
 #include "cmdhw.h"
 #include "whereami.h"
-
-#if defined (_WIN32)
-#define SERIAL_PORT_H	"com3"
-#elif defined(__APPLE__)
-#define SERIAL_PORT_H   "/dev/cu.usbmodem888"
-#else
-#define SERIAL_PORT_H	"/dev/ttyACM0"
-#endif
-
-static serial_port sp;
-static UsbCommand txcmd;
-static char comport[255];
-byte_t rx[sizeof(UsbCommand)];
-byte_t* prx = rx;
-volatile static bool txcmd_pending = false;
-struct receiver_arg {
-	int run;
-};
-
-void SendCommand(UsbCommand *c) {
-	#if 0
-	//pthread_mutex_lock(&print_lock);
-	PrintAndLogEx(NORMAL, "Sending %d bytes\n", sizeof(UsbCommand));
-	//pthread_mutex_unlock(&print_lock);
-	#endif
-
-	if (offline) {
-		PrintAndLogEx(NORMAL, "Sending bytes to proxmark failed - offline");
-		return;
-	}
-	/**
-	The while-loop below causes hangups at times, when the pm3 unit is unresponsive
-	or disconnected. The main console thread is alive, but comm thread just spins here.
-	Not good.../holiman
-	**/
-	while (txcmd_pending);
-
-	txcmd = *c;
-	 __atomic_test_and_set(&txcmd_pending, __ATOMIC_SEQ_CST);
-}
-
+#include "comms.h"
 
 #if defined(__linux__) || (__APPLE__)
 static void showBanner(void){
@@ -83,84 +44,6 @@ static void showBanner(void){
 }
 #endif
 
-bool hookUpPM3() {	
-	bool ret = false;
-	sp = uart_open( comport );
-	
-	//pthread_mutex_lock(&print_lock);
-
-	if (sp == INVALID_SERIAL_PORT) {
-		PrintAndLogEx(WARNING, "Reconnect failed, retrying...  (reason: invalid serial port)\n");
-		sp = NULL;
-		ret = false;
-		offline = 1;
-	} else if (sp == CLAIMED_SERIAL_PORT) {
-		PrintAndLogEx(WARNING, "Reconnect failed, retrying... (reason: serial port is claimed by another process)\n");
-		sp = NULL;
-		ret = false;
-		offline = 1;
-	} else {	
-		PrintAndLogEx(SUCCESS, "Proxmark reconnected\n");
-		ret = true;
-		offline = 0;
-	}
-	//pthread_mutex_unlock(&print_lock);
-	return ret;
-}
-
-// (iceman) if uart_receiver fails a command three times,  we conside the device to be offline.
-void
-#ifdef __has_attribute
-#if __has_attribute(force_align_arg_pointer)
-__attribute__((force_align_arg_pointer)) 
-#endif
-#endif
-*uart_receiver(void *targ) {
-	struct receiver_arg *arg = (struct receiver_arg*)targ;
-	size_t rxlen;
-	bool tmpsignal;
-	int counter_to_offline = 0;
-	
-	while (arg->run) {
-		rxlen = 0;
-		
-		if (uart_receive(sp, prx, sizeof(UsbCommand) - (prx-rx), &rxlen)) {
-			
-			if ( rxlen == 0 ) continue;
-			
-			prx += rxlen;
-			if ( (prx-rx) < sizeof(UsbCommand)) {
-				continue;
-			}
-			
-			UsbCommandReceived((UsbCommand*)rx);
-		}
-		prx = rx;
-
-		__atomic_load(&txcmd_pending, &tmpsignal, __ATOMIC_SEQ_CST);
-		if ( tmpsignal ) {
-			bool res = uart_send(sp, (byte_t*) &txcmd, sizeof(UsbCommand));
-			if (!res) {
-				counter_to_offline++;
-				PrintAndLogEx(NORMAL, "sending bytes to proxmark failed");
-			}
-			 __atomic_clear(&txcmd_pending, __ATOMIC_SEQ_CST);
-			
-			// set offline flag
-			if ( counter_to_offline == 3 ) {
-				__atomic_test_and_set(&offline, __ATOMIC_SEQ_CST);
-				break;
-			}			
-		}
-	}
-
-	// when this reader thread dies, we close the serial port.
-	uart_close(sp);
-	
-	pthread_exit(NULL);
-	return NULL;
-}
-
 void
 #ifdef __has_attribute
 #if __has_attribute(force_align_arg_pointer)
@@ -169,9 +52,7 @@ __attribute__((force_align_arg_pointer))
 #endif
 main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 
-	struct receiver_arg rarg;
 	char *cmd = NULL;
-	pthread_t reader_thread;
 	bool execCommand = (script_cmd != NULL);
 	bool stdinOnPipe = !isatty(STDIN_FILENO);
 	FILE *sf = NULL;
@@ -180,13 +61,14 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 	PrintAndLogEx(DEBUG, "ISATTY/STDIN_FILENO == %s\n", (stdinOnPipe) ? "true" : "false");
 	
 	if (usb_present) {
-		rarg.run = 1;
-		pthread_create(&reader_thread, NULL, &uart_receiver, &rarg);
+		SetOffline(false);
 		// cache Version information now:
 		if ( execCommand || script_cmds_file || stdinOnPipe)
 			CmdVersion("s");
 		else 
 			CmdVersion("");
+	} else {
+		SetOffline(true);
 	}
 
 	if (script_cmds_file) {
@@ -202,13 +84,14 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 	while (1) {
 		
 		// this should hook up the PM3 again.
-		if (offline) {
+		/*
+		if ( IsOffline() ) {
 			
 			// sets the global variable, SP and offline)
 			usb_present = hookUpPM3();
 		
 			// usb and the reader_thread is NULL,  create a new reader thread.
-			if (usb_present && !offline) {
+			if (usb_present && !IsOffline() ) {
 				rarg.run = 1;
 				pthread_create(&reader_thread, NULL, &uart_receiver, &rarg);
 				// cache Version information now:
@@ -218,6 +101,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 					CmdVersion("");
 			}
 		}
+		*/
 
 		// If there is a script file
 		if (sf) {
@@ -304,11 +188,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 
 	free(cmd);
 	cmd = NULL;
-			
-	if (usb_present) {
-		rarg.run = 0;
-		pthread_join(reader_thread, NULL);
-	}
+
 }
 
 static void dumpAllHelp(int markdown) {
@@ -346,7 +226,7 @@ static void set_my_executable_path(void) {
 }
 
 static void show_help(bool showFullHelp, char *command_line){
-	PrintAndLogEx(NORMAL, "syntax: %s <port> [-h|-help|-m|-f|-flush|-w|-wait|-c|-command|-l|-lua] [cmd_script_file_name] [command][lua_script_name]\n", command_line);
+	PrintAndLogEx(NORMAL, "syntax: %s <port> [-h | -help | -m | -f | -flush | -w | -wait | -c | -command | -l | -lua] [cmd_script_file_name] [command][lua_script_name]\n", command_line);
 	PrintAndLogEx(NORMAL, "\texample:'%s "SERIAL_PORT_H"'\n\n", command_line);
 	
 	if (showFullHelp){
@@ -384,10 +264,6 @@ int main(int argc, char* argv[]) {
 		show_help(true, argv[0]);
 		return 1;
 	}
-	
-	// lets copy the comport string.
-	memset(comport, 0, sizeof(comport));
-	memcpy(comport, argv[1], strlen(argv[1]));
 
 	for (int i = 1; i < argc; i++) {
 	
@@ -406,7 +282,7 @@ int main(int argc, char* argv[]) {
 
 		// flush output
 		if(strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "-flush") == 0){
-			g_flushAfterWrite = 1;
+			SetFlushAfterWrite(true);
 			PrintAndLogEx(INFO, "Output will be flushed after every print.\n");
 		}
 		
@@ -474,39 +350,11 @@ int main(int argc, char* argv[]) {
 	// set global variables
 	set_my_executable_path();
 	
-	// open uart
-	if (!waitCOMPort) {
-		sp = uart_open(argv[1]);
-	} else {
-		PrintAndLogEx(SUCCESS, "waiting for Proxmark to appear on %s ", argv[1]);
-		fflush(stdout);
-		int openCount = 0;
-		do {
-			sp = uart_open(argv[1]);
-			msleep(500);
-			printf("."); fflush(stdout);
-		} while (++openCount < 30 && (sp == INVALID_SERIAL_PORT || sp == CLAIMED_SERIAL_PORT));
-		PrintAndLogEx(NORMAL, "\n");
-	}
+	// try to open USB connection to Proxmark
+	usb_present = OpenProxmark(argv[1], waitCOMPort, 20, false);
 
-	// check result of uart opening
-	if (sp == INVALID_SERIAL_PORT) {
-		PrintAndLogEx(WARNING, "ERROR: invalid serial port");
-		usb_present = false;
-		offline = 1;
-	} else if (sp == CLAIMED_SERIAL_PORT) {
-		PrintAndLogEx(WARNING, "ERROR: serial port is claimed by another process");
-		usb_present = false;
-		offline = 1;
-	} else {
-		usb_present = true;
-		offline = 0;
-	}
-
-	fflush(NULL);
-	// create a mutex to avoid interlacing print commands from our different threads
-	pthread_mutex_init(&print_lock, NULL);
-
+	
+	printf("\x1b[31m test\n");
 #ifdef HAVE_GUI
 
 #  ifdef _WIN32
@@ -527,8 +375,10 @@ int main(int argc, char* argv[]) {
 	main_loop(script_cmds_file, script_cmd, usb_present);
 #endif	
  
-	// clean up mutex
-	pthread_mutex_destroy(&print_lock);
+ 	// Clean up the port
+	if (usb_present) {
+		CloseProxmark();
+	}
 	
 	exit(0);
 }

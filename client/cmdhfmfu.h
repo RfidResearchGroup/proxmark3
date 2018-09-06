@@ -9,6 +9,7 @@
 #include "mifare.h"
 #include "util.h"
 #include "protocols.h"
+#include "comms.h"
 
 typedef struct {
 	uint8_t version[8];

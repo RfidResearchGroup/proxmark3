@@ -21,6 +21,8 @@
 #include "usb_cmd.h"
 #include "at91sam7s512.h"
 #include "util_posix.h"
+#include "util.h"
+#include "comms.h"
 
 typedef struct {
 	void *data;

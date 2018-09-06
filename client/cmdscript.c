@@ -24,6 +24,7 @@
 #include "graph.h"
 #include "cmdparser.h"
 #include "cmdmain.h"
+#include "comms.h"
 #include "cmdscript.h"
 #include "cmdhfmf.h"
 #include "pm3_binlib.h"

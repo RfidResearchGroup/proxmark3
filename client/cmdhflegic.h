@@ -16,7 +16,7 @@
 #include "proxmark3.h"
 #include "ui.h"
 #include "cmdparser.h"
-#include "cmdmain.h"
+#include "comms.h"
 #include "util.h"
 #include "crc.h"
 #include "legic_prng.h"

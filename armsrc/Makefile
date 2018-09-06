@@ -104,7 +104,7 @@ ifneq (,$(findstring WITH_HF_MATTYRUN,$(APP_CFLAGS)))
 endif
 # WITH_HF_COLIN
 ifneq (,$(findstring WITH_HF_COLIN,$(APP_CFLAGS)))
-	SRC_STANDALONE = hf_colin.c vtsend.c
+	SRC_STANDALONE = vtsend.c hf_colin.c
 endif
 
 #the FPGA bitstream files. Note: order matters!

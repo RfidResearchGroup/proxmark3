@@ -27,7 +27,7 @@
 #endif
 
 
-#define START_GAP 48*8 // was 250 // SPEC:  1*8 to 50*8 - typ 15*8 (15fc)
+#define START_GAP 52*8 // was 250 // SPEC:  1*8 to 50*8 - typ 15*8 (15fc)
 #define WRITE_GAP 18*8 // was 160 // SPEC:  1*8 to 20*8 - typ 10*8 (10fc)
 #define WRITE_0   24*8 // was 144 // SPEC: 16*8 to 32*8 - typ 24*8 (24fc)
 #define WRITE_1   54*8 // was 400 // SPEC: 48*8 to 64*8 - typ 56*8 (56fc)  432 for T55x7; 448 for E5550

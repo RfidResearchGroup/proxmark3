@@ -15,12 +15,13 @@
 #include "ui.h"
 #include "cmdparser.h"
 #include "proxmark3.h"
+#include "comms.h"
 
 void CmdsHelp(const command_t Commands[]) {
 	if (Commands[0].Name == NULL) return;
 	int i = 0;
 	while (Commands[i].Name) {
-		if (!offline || Commands[i].Offline)
+		if (!IsOffline() || Commands[i].Offline)
 			PrintAndLogEx(NORMAL, "%-16s %s", Commands[i].Name, Commands[i].Help);
 		++i;
 	}

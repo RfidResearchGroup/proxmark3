@@ -452,7 +452,7 @@ bool DecodeT5555TraceBlock() {
 
 // sanity check. Don't use proxmark if it is offline and you didn't specify useGraphbuf
 static int SanityOfflineCheck( bool useGraphBuffer ){
-	if ( !useGraphBuffer && offline) {
+	if ( !useGraphBuffer && IsOffline() ) {
 		PrintAndLogEx(NORMAL, "Your proxmark3 device is offline. Specify [1] to use graphbuffer data instead");
 		return 0;
 	}
@@ -466,13 +466,11 @@ int CmdT55xxDetect(const char *Cmd){
 	uint32_t password = 0;
 	uint8_t cmdp = 0;
 
-	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch(param_getchar(Cmd, cmdp)) {
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch ( tolower(param_getchar(Cmd, cmdp))) {
 		case 'h':
-		case 'H':
 			return usage_t55xx_detect();
 		case 'p':
-		case 'P':
 			password = param_get32ex(Cmd, cmdp+1, 0, 16);
 			usepwd = true;
 			cmdp += 2;
@@ -1572,7 +1570,7 @@ int CmdT55xxBruteForce(const char *Cmd) {
 		uint64_t testpwd = 0x00;
 		for (uint16_t c = 0; c < keycnt; ++c ) {
 
-			if ( offline ) {
+			if ( IsOffline() ) {
 				PrintAndLogEx(WARNING, "Device offline\n");
 				free(keyBlock);
 				return  2;

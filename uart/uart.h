@@ -41,6 +41,16 @@
 #include "common.h"
 #include "util_posix.h" // msclock
 
+
+
+#if defined (_WIN32)
+#define SERIAL_PORT_H	"com3"
+#elif defined(__APPLE__)
+#define SERIAL_PORT_H   "/dev/cu.usbmodem"
+#else
+#define SERIAL_PORT_H	"/dev/ttyACM0"
+#endif
+
 /* serial_port is declared as a void*, which you should cast to whatever type
  * makes sense to your connection method. Both the posix and win32
  * implementations define their own structs in place.
@@ -78,13 +88,13 @@ void uart_close(const serial_port sp);
  * partial read may have completed into the buffer by the corresponding
  * implementation, so pszRxLen should be checked to see if any data was written. 
  */
-bool uart_receive(const serial_port sp, byte_t* pbtRx, size_t pszMaxRxLen, size_t* pszRxLen);
+bool uart_receive(const serial_port sp, uint8_t* pbtRx, size_t pszMaxRxLen, size_t* pszRxLen);
 
 /* Sends a buffer to a given serial port.
  *   pbtTx: A pointer to a buffer containing the data to send.
  *   len: The amount of data to be sent.
  */
-bool uart_send(const serial_port sp, const byte_t* pbtTx, const size_t len);
+bool uart_send(const serial_port sp, const uint8_t* pbtTx, const size_t len);
 
 /* Sets the current speed of the serial port, in baud.
  */

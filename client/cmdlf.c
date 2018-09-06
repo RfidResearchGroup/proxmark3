@@ -320,7 +320,7 @@ int CmdLFSetConfig(const char *Cmd) {
 }
 
 bool lf_read(bool silent, uint32_t samples) {
-	if (offline) return false;
+	if ( IsOffline() ) return false;
 	UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_125K, {silent, samples, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
@@ -342,7 +342,7 @@ bool lf_read(bool silent, uint32_t samples) {
 
 int CmdLFRead(const char *Cmd) {
 	
-	if (offline) return 0;
+	if ( IsOffline() ) return 0;
 	
 	bool errors = false;
 	bool silent = false;
@@ -844,7 +844,7 @@ int CmdLFfind(const char *Cmd) {
 	
 	if (cmdp == 'u') testRaw = 'u';
 	
-	bool isOnline = (!offline && (cmdp != '1') );
+	bool isOnline = (!IsOffline() && (cmdp != '1') );
 	
 	if (isOnline)
 		lf_read(true, 30000);

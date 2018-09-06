@@ -24,7 +24,7 @@
 #include "util.h"			// for parsing cli command utils
 #include "ui.h"				// for show graph controls
 #include "cmdparser.h"		// for getting cli commands included in cmdmain.h
-#include "cmdmain.h"		// for sending cmds to device. GetFromBigBuf
+#include "comms.h"		// for sending cmds to device. GetFromBigBuf
 #include "loclass/fileutils.h"		// for saveFile
 
 extern int CmdTrace(const char *Cmd);

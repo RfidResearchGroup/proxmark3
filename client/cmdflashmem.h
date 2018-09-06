@@ -22,7 +22,7 @@
 #include "util.h"
 #include "util_posix.h"			// msclock
 #include "loclass/fileutils.h"	//saveFile
-#include "cmdmain.h"			//getfromdevice
+#include "comms.h"			//getfromdevice
 
 extern int CmdFlashMem(const char *Cmd);
 

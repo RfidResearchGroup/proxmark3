@@ -191,7 +191,7 @@ static void flash_mode(int externally_entered) {
 	start_addr = 0;
 	end_addr = 0;
 	bootrom_unlocked = 0;
-	byte_t rx[sizeof(UsbCommand)];
+	uint8_t rx[sizeof(UsbCommand)];
 
 	usb_enable();
 	
@@ -200,10 +200,12 @@ static void flash_mode(int externally_entered) {
 
 	for(;;) {
 		WDT_HIT();
-		
+				
 		// Check if there is a usb packet available
-		if ( cmd_receive( (UsbCommand*)rx ) )
-			UsbPacketReceived(rx, sizeof(UsbCommand) );
+		if (usb_poll_validate_length()) {
+			if (usb_read(rx, sizeof(rx)) )
+				UsbPacketReceived(rx, sizeof(rx));
+		}
 		
 		if (!externally_entered && !BUTTON_PRESS()) {
 			/* Perform a reset to leave flash mode */

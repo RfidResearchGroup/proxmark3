@@ -10,11 +10,6 @@
 
 #include "flash.h"
 
-void SendCommand(UsbCommand* txcmd);
-void ReceiveCommand(UsbCommand* rxcmd);
-void CloseProxmark();
-int OpenProxmark();
-
 #define FLASH_START            0x100000
 
 #ifdef HAS_512_FLASH
@@ -192,12 +187,12 @@ int flash_load(flash_file_t *ctx, const char *name, int can_write_bl) {
 
 	fd = fopen(name, "rb");
 	if (!fd) {
-		fprintf(stderr, "Could not open file '%s': ", name);
+		fprintf(stderr, _RED_(Could not open file) "%s  >>> ", name);
 		perror(NULL);
 		goto fail;
 	}
 
-	fprintf(stdout, "Loading ELF file '%s'...\n", name);
+	fprintf(stdout, _BLUE_(Loading ELF file) "%s\n", name);
 
 	if (fread(&ehdr, sizeof(ehdr), 1, fd) != 1) {
 		fprintf(stderr, "Error while reading ELF file header\n");
@@ -268,7 +263,7 @@ static int get_proxmark_state(uint32_t *state) {
 	UsbCommand c = {CMD_DEVICE_INFO};
 	SendCommand(&c);
 	UsbCommand resp;
-	ReceiveCommand(&resp);
+	WaitForResponse(CMD_UNKNOWN, &resp);  // wait for any response. No timeout.
 
 	// Three outcomes:
 	// 1. The old bootrom code will ignore CMD_DEVICE_INFO, but respond with an ACK
@@ -286,7 +281,7 @@ static int get_proxmark_state(uint32_t *state) {
 			*state = resp.arg[0];
 			break;
 		default:
-			fprintf(stderr, "Error: Couldn't get proxmark state, bad response type: 0x%04" PRIx64 "\n", resp.cmd);
+			fprintf(stderr, _RED_(Error:) "Couldn't get proxmark state, bad response type: 0x%04" PRIx64 "\n", resp.cmd);
 			return -1;
 			break;
 	}
@@ -305,7 +300,7 @@ static int enter_bootloader(char *serial_port_name) {
 		return 0;
 
 	if (state & DEVICE_INFO_FLAG_CURRENT_MODE_OS) {
-		fprintf(stdout, "Entering bootloader...\n");
+		fprintf(stdout, _BLUE_(Entering bootloader...) "\n");
 		UsbCommand c;
 		memset(&c, 0, sizeof (c));
 
@@ -325,21 +320,22 @@ static int enter_bootloader(char *serial_port_name) {
 		msleep(100);
 		CloseProxmark();
 
-		fprintf(stdout, "Waiting for Proxmark to reappear on %s", serial_port_name);
-		do {
-			msleep(1000);
-			fprintf(stdout, "."); fflush(stdout);
-		} while ( !OpenProxmark());
-		fprintf(stdout, " Found.\n");
-		return 0;
+		bool opened = OpenProxmark(serial_port_name, true, 60, true);
+		if (opened) {
+			fprintf(stdout, " " _GREEN_(Found) "\n");
+			return 0;
+		} else {
+			fprintf(stdout, _RED_(Error:) "Proxmark not found.\n");
+			return -1;
+		}
 	}
 
-	fprintf(stderr, "Error: Unknown Proxmark mode\n");
+	fprintf(stderr, _RED_(Error:) "Unknown Proxmark mode\n");
 	return -1;
 }
 
 static int wait_for_ack(UsbCommand *ack) {
-	ReceiveCommand(ack);
+	WaitForResponse(CMD_UNKNOWN, ack);
 
 	if (ack->cmd != CMD_ACK) {
 		printf("Error: Unexpected reply 0x%04" PRIx64 " %s (expected ACK)\n",
@@ -378,10 +374,9 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name) {
 		SendCommand(&c);
 		return wait_for_ack(&c);
 	} else {
-		fprintf(stderr, "Note: Your bootloader does not understand the new START_FLASH command\n");
-		fprintf(stderr, "      It is recommended that you update your bootloader\n\n");
+		fprintf(stderr, _RED_(Note: Your bootloader does not understand the new START_FLASH command) "\n");
+		fprintf(stderr, _RED_(      It is recommended that you update your bootloader) "\n\n");
 	}
-
 	return 0;
 }
 
@@ -439,7 +434,7 @@ int flash_write(flash_file_t *ctx) {
 			block++;
 			fprintf(stdout, "."); fflush(stdout);
 		}
-		fprintf(stdout, " OK\n");
+		fprintf(stdout, _GREEN_(OK) "\n");
 		fflush(stdout);
 	}
 	return 0;

@@ -515,6 +515,7 @@ int CmdAnalyseA(const char *Cmd){
 
 		
 	UsbCommand c = {CMD_FPC_SEND, {0, 0, 0}};
+	memcpy(c.d.asBytes, data, USB_CMD_DATA_SIZE);
 	clearCommandBuffer();
 	SendCommand(&c);
 
@@ -522,7 +523,7 @@ int CmdAnalyseA(const char *Cmd){
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
 		return 1;
 	}
-	PrintAndLogEx(NORMAL, "got ack");
+	PrintAndLogEx(NORMAL, "got ack.  Status %d", resp.arg[0]);
 	return 0;
 		
 	PrintAndLogEx(NORMAL, "-- " _BLUE_(its my message) "\n");
