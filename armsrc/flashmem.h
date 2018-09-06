@@ -45,6 +45,7 @@
 #define WRITEENABLE		0x06
 
 #define READDATA		0x03
+#define FASTREAD		0x0B
 #define PAGEPROG		0x02
 
 #define SECTORERASE		0x20
@@ -57,27 +58,17 @@
 //	Not used or not support command
 #define RELEASE			0xAB
 #define POWERDOWN		0xB9
-#define FASTREAD		0x0B
 #define SUSPEND			0x75
 #define RESUME			0x7A
 
+#define BUSY_TIMEOUT  1000000000L
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-//					Chip specific instructions 						  //
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~ Winbond ~~~~~~~~~~~~~~~~~~~~~~~~~//
 #define WINBOND_MANID	0xEF
 #define WINBOND_DEVID	0x11
 #define PAGESIZE	 	0x100
+#define WINBOND_WRITE_DELAY 0x02
 
-//~~~~~~~~~~~~~~~~~~~~~~~~ Microchip ~~~~~~~~~~~~~~~~~~~~~~~~//
-#define MICROCHIP_MANID	0xBF
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-//							Definitions 							  //
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-
-#define SPI_CLK       75000000       //Hex equivalent of 75MHz
+#define SPI_CLK       48000000
 
 #define BUSY          0x01
 #define WRTEN         0x02
@@ -111,15 +102,33 @@
 #define MAX_SECTORS		16
 
 
+
+
+#define MCK 48000000
+//#define FLASH_BAUD 24000000
+#define FLASH_MINFAST 24000000 //33000000
+#define FLASH_BAUD MCK/2
+#define FLASH_FASTBAUD MCK
+#define FLASH_MINBAUD FLASH_FASTBAUD
+
+#define FASTFLASH (FLASHMEM_SPIBAUDRATE > FLASH_MINFAST)
+
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 extern void Dbprintf(const char *fmt, ...);
 
-void FlashSetup(void);
+void FlashmemSetSpiBaudrate(uint32_t baudrate);
+bool FlashInit();
+void FlashSetup(uint32_t baudrate);
 void FlashStop(void);
 bool Flash_WaitIdle(void);
 uint8_t Flash_ReadStat1(void);
 uint8_t Flash_ReadStat2(void);
 uint16_t FlashSendByte(uint32_t data);
+void Flash_TransferAdresse(uint32_t address);
+
+bool Flash_CheckBusy(uint32_t timeout);
+
 
 void Flash_WriteEnable();
 bool Flash_WipeMemoryPage(uint8_t page);
@@ -128,12 +137,17 @@ bool Flash_Erase4k(uint8_t block, uint8_t sector);
 //bool Flash_Erase32k(uint32_t address);
 bool Flash_Erase64k(uint8_t block);
 
-bool FlashInit();
 
 void Flash_UniqueID(uint8_t *uid);
 uint8_t Flash_ReadID(void);
 uint16_t Flash_ReadData(uint32_t address, uint8_t *out, uint16_t len);
+
+uint16_t Flash_ReadDataCont(uint32_t address, uint8_t *out, uint16_t len);
+
 uint16_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len);
+uint16_t Flash_WriteDataCont(uint32_t address, uint8_t *in, uint16_t len);
 void Flashmem_print_status(void);
+
+
 
 #endif

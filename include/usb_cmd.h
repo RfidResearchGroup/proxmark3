@@ -67,13 +67,17 @@ typedef struct{
 #define CMD_DOWNLOAD_EML_BIGBUF											  0x0110
 #define CMD_DOWNLOADED_EML_BIGBUF										  0x0111
 
+
+
+
 // RDV40, Flash memory operations
-#define CMD_READ_FLASH_MEM												  0x0120
-#define CMD_WRITE_FLASH_MEM												  0x0121
-#define CMD_WIPE_FLASH_MEM												  0x0122
-#define CMD_DOWNLOAND_FLASH_MEM											  0x0123
-#define CMD_DOWNLOADED_FLASHMEM											  0x0124
-#define CMD_INFO_FLASH_MEM												  0x0125
+#define CMD_FLASHMEM_READ												  0x0120
+#define CMD_FLASHMEM_WRITE												  0x0121
+#define CMD_FLASHMEM_WIPE												  0x0122
+#define CMD_FLASHMEM_DOWNLOAD											  0x0123
+#define CMD_FLASHMEM_DOWNLOADED											  0x0124
+#define CMD_FLASHMEM_INFO												  0x0125
+#define CMD_FLASHMEM_SET_SPIBAUDRATE                                      0x0126
 
 // RDV40,  Smart card operations
 #define CMD_SMART_RAW													  0x0140

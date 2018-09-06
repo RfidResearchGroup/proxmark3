@@ -12,8 +12,6 @@
 
 #define MF1KSZ 1024
 #define MF1KSZSIZE 64
-//#define FALSE false
-//#define TRUE true
 #define AUTHENTICATION_TIMEOUT 848
 
 uint8_t cjuid[10];
@@ -27,58 +25,349 @@ int curlline;
 
 // Colin's VIGIKPWN sniff/simulate/clone repeat routine for HF Mifare
 
-void cjPrintBigArray(const char *bigar, int len, uint8_t newlines, uint8_t debug) {
+void cjPrintBigArray(const char *bigar, int len, uint8_t newlines, uint8_t debug)
+{
     uint32_t chunksize = (USB_CMD_DATA_SIZE / 4);
     uint8_t totalchunks = len / chunksize;
     uint8_t last_chunksize = len - (totalchunks * chunksize);
     char chunk[chunksize + 1];
     memset(chunk, 0x00, sizeof(chunk));
-    if (debug > 0) {
+    if (debug > 0)
+    {
         Dbprintf("len : %d", len);
         Dbprintf("chunksize : %d bytes", chunksize);
         Dbprintf("totalchunks : %d", totalchunks);
         Dbprintf("last_chunksize: %d", last_chunksize);
     }
-    for (uint8_t i = 0; i < totalchunks; i++) {
+    for (uint8_t i = 0; i < totalchunks; i++)
+    {
         memset(chunk, 0x00, sizeof(chunk));
         memcpy(chunk, &bigar[i * chunksize], chunksize);
         DbprintfEx(FLAG_RAWPRINT, "%s", chunk);
     }
-    if (last_chunksize > 0) {
+    if (last_chunksize > 0)
+    {
         memset(chunk, 0x00, sizeof(chunk));
         memcpy(chunk, &bigar[totalchunks * chunksize], last_chunksize);
         DbprintfEx(FLAG_RAWPRINT, "%s", chunk);
     }
-    if (newlines > 0) {
+    if (newlines > 0)
+    {
         DbprintfEx(FLAG_NOLOG, " ");
     }
 }
 
-void cjSetCursFRight() {
+void cjSetCursFRight()
+{
     vtsend_cursor_position(NULL, 98, (currfline));
     currfline++;
 }
 
-void cjSetCursRight() {
+void cjSetCursRight()
+{
     vtsend_cursor_position(NULL, 59, (currline));
     currline++;
 }
 
-void cjSetCursLeft() {
+void cjSetCursLeft()
+{
     vtsend_cursor_position(NULL, 0, (curlline));
     curlline++;
 }
 
 void cjTabulize() { DbprintfEx(FLAG_RAWPRINT, "\t\t\t"); }
 
-void cjPrintKey(uint64_t key, uint8_t *foundKey, uint16_t sectorNo, uint8_t type) {
+void cjPrintKey(uint64_t key, uint8_t *foundKey, uint16_t sectorNo, uint8_t type)
+{
     char tosendkey[13];
     sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[0], foundKey[1], foundKey[2], foundKey[3], foundKey[4], foundKey[5]);
     cjSetCursRight();
     DbprintfEx(FLAG_NOLOG, "SEC: %02x | KEY : %s | TYP: %d", sectorNo, tosendkey, type);
 }
 
-void RunMod() {
+void SpinOff(uint32_t pause)
+{
+    LED_A_OFF();
+    LED_B_OFF();
+    LED_C_OFF();
+    LED_D_OFF();
+    SpinDelay(pause);
+}
+
+// 0=A, 1=B, 2=C, 3=D
+void SpinErr(uint8_t led, uint32_t speed, uint8_t times)
+{
+    SpinOff(speed);
+    NTIME(times)
+    {
+        switch (led)
+        {
+        case 0:
+            LED_A_INV();
+            break;
+        case 1:
+            LED_B_INV();
+            break;
+        case 2:
+            LED_C_INV();
+            break;
+        case 3:
+            LED_D_INV();
+            break;
+        }
+        SpinDelay(speed);
+    }
+}
+
+void SpinDown(uint32_t speed)
+{
+    SpinOff(speed);
+    LED_D_ON();
+    SpinDelay(speed);
+    LED_D_OFF();
+    LED_C_ON();
+    SpinDelay(speed);
+    LED_C_OFF();
+    LED_B_ON();
+    SpinDelay(speed);
+    LED_B_OFF();
+    LED_A_ON();
+    SpinDelay(speed);
+    LED_A_OFF();
+}
+
+void SpinUp(uint32_t speed)
+{
+    SpinOff(speed);
+    LED_A_ON();
+    SpinDelay(speed);
+    LED_A_OFF();
+    LED_B_ON();
+    SpinDelay(speed);
+    LED_B_OFF();
+    LED_C_ON();
+    SpinDelay(speed);
+    LED_C_OFF();
+    LED_D_ON();
+    SpinDelay(speed);
+    LED_D_OFF();
+}
+
+void TestFlashmemSpeed(size_t buffersize, uint32_t spibaudrate)
+{
+
+    FLASHMEM_SPIBAUDRATE = spibaudrate*1000000;
+    DbprintfEx(FLAG_NOLOG, "%s---+----[ %s %s[%dKB] %s] (%d)", _GREEN_, _WHITE_, _YELLOW_, buffersize / 1024, _WHITE_, FLASHMEM_SPIBAUDRATE);
+    uint16_t t = 0;
+
+    LED_B_ON();
+    uint8_t *mem = BigBuf_malloc(buffersize);
+    bool isok = false;
+    size_t len = 0;
+    uint32_t startidx = 0;
+    uint32_t numofbytes = 0x3FFFF;
+
+    if (!FlashInit()) {
+        return;
+    }
+    //Flash_CheckBusy(BUSY_TIMEOUT);
+
+    //Flash_ReadStat1();
+
+    uint32_t end_time;
+    uint32_t start_time = end_time = GetTickCount();
+
+    for (size_t i = 0; i < numofbytes; i += buffersize)
+    {
+        len = MIN((numofbytes - i), buffersize);
+
+        //isok = Flash_ReadData(startidx + i, mem, len);
+        //uint32_t iend_time;
+        //uint32_t istart_time = iend_time = GetTickCount();
+        isok = Flash_ReadDataCont(startidx + i, mem, len);
+        //iend_time = GetTickCount();
+        //DbprintfEx(FLAG_RAWPRINT, "%s%dms%s>", _YELLOW_, iend_time - istart_time, _WHITE_);
+        //cjSetCursLeft();
+        if (!isok)
+        {
+            Dbprintf("[FAIL] reading flash memory failed ::  | bytes between %d - %d", i, len);
+            return;
+        }
+        //isok = cmd_send(CMD_FLASHMEM_DOWNLOADED, i, len, 0, mem, len);
+        //if (!isok)
+        //	Dbprintf("transfer to client failed ::  | bytes between %d - %d", i, len);
+        t++;
+    }
+    end_time = GetTickCount();
+    DbprintfEx(FLAG_NOLOG, "%s   |--< %s %s%dms%s for FULL_FLASH_READ", _GREEN_, _WHITE_, _YELLOW_, end_time - start_time, _WHITE_);
+    DbprintfEx(FLAG_NOLOG, "%s   `--= %s %d runs of %s~%dms%s each", _GREEN_, _WHITE_, t, _YELLOW_, (end_time - start_time) / t, _WHITE_);
+    DbprintfEx(FLAG_NOLOG, "");
+    //cjSetCursLeft();
+    LED_B_OFF();
+    FlashStop();
+}
+
+void TestFlashmemRoutine()
+{
+    DbprintfEx(FLAG_NOLOG, "%s>>%s Will Now Test dumping Full flash [256Kb] (2Mbits)through Bigbuf buffers\n", _GREEN_, _WHITE_);
+    MF_DBGLEVEL = MF_DBG_NONE;
+    //DbprintfEx(FLAG_NOLOG, "---------\n%s[A]%s Using NORMAL Reads @Max (24Mhz=MCK/2)\n--------", _GREEN_, _WHITE_);
+    TestFlashmemSpeed(32768,24);
+    TestFlashmemSpeed(16384 + 4096 + 4096,24);
+    TestFlashmemSpeed(16384,24);
+    TestFlashmemSpeed(4096,24);
+    TestFlashmemSpeed(1024,24);
+    //SpinDelay(1000);
+    //WDT_HIT();
+    //DbprintfEx(FLAG_NOLOG, "--------\n%s[B]%s Using FAST Reads @Max (48Mhz=MCK=CPUClock/2=MAXSPI)\n--------", _GREEN_, _WHITE_);
+    TestFlashmemSpeed(32768,48);
+    TestFlashmemSpeed(16384 + 4096 + 4096,48);
+    TestFlashmemSpeed(16384,48);
+    TestFlashmemSpeed(4096,48);
+    TestFlashmemSpeed(1024,48);
+    //SpinDelay(1000);
+    //WDT_HIT();
+    return;
+}
+
+void ReadLastTagFromFlash()
+{
+
+    SpinOff(0);
+    LED_A_ON();
+    LED_B_ON();
+    LED_C_ON();
+    LED_D_ON();
+    uint16_t isok = 0;
+    uint32_t startidx = 0;
+    uint16_t len = 1024;
+
+    DbprintfEx(FLAG_NOLOG, "Button HELD ! Using LAST Known TAG for Simulation...");
+    cjSetCursLeft();
+
+    size_t size = len;
+    uint8_t *mem = BigBuf_malloc(size);
+
+    if (!FlashInit())
+    {
+        return;
+    }
+    Flash_CheckBusy(BUSY_TIMEOUT);
+
+    //Flash_ReadStat1();
+
+    uint32_t end_time;
+    uint32_t start_time = end_time = GetTickCount();
+
+    for (size_t i = 0; i < len; i += size)
+    {
+        len = MIN((len - i), size);
+
+        // isok = Flash_FastReadDataCont(startidx + i, mem, len);
+        isok = Flash_ReadDataCont(startidx + i, mem, len);
+        if (isok == len)
+        {
+            //print_result("Chunk: ", mem, len);
+            emlSetMem(mem, 0, 64);
+        }
+        else
+        {
+            DbprintfEx(FLAG_NOLOG, "FlashMem reading failed | %d | %d", len, isok);
+            cjSetCursLeft();
+            FlashStop();
+            SpinOff(100);
+            return;
+        }
+    }
+    end_time = GetTickCount();
+    DbprintfEx(FLAG_NOLOG, "[OK] Last tag recovered from FLASHMEM set to emulator");
+    cjSetCursLeft();
+    DbprintfEx(FLAG_NOLOG, "%s[IN]%s %s%dms%s for TAG_FLASH_READ", _GREEN_, _WHITE_, _YELLOW_, end_time - start_time, _WHITE_);
+    cjSetCursLeft();
+    FlashStop();
+    SpinOff(0);
+    return;
+}
+
+void WriteTagToFlash(uint8_t index, size_t size)
+{
+
+    SpinOff(0);
+    LED_A_ON();
+    LED_B_ON();
+    LED_C_ON();
+    LED_D_ON();
+
+    uint8_t isok = 0;
+    uint16_t res = 0;
+    uint32_t len = size;
+    uint32_t bytes_sent = 0;
+    uint32_t bytes_remaining = len;
+
+    uint8_t data[(size * (16 * 64))/1024];
+    uint8_t buff[PAGESIZE];
+    // cnt = 0;
+    emlGetMem(data, 0, (size * 64)/1024);
+
+    //if (!FlashFastReadInit()){
+    if (!FlashInit())
+    {
+        return;
+    }
+    
+    Flash_CheckBusy(BUSY_TIMEOUT);
+    Flash_WriteEnable();
+    Flash_Erase4k(0,0);
+
+    uint32_t end_time;
+    uint32_t start_time = end_time = GetTickCount();
+
+    while (bytes_remaining > 0)
+    {
+
+	Flash_CheckBusy(BUSY_TIMEOUT);
+	Flash_WriteEnable();
+
+        uint32_t bytes_in_packet = MIN(FLASH_MEM_BLOCK_SIZE, bytes_remaining);
+
+        memcpy(buff, data + bytes_sent, bytes_in_packet);
+
+        bytes_remaining -= bytes_in_packet;
+        res = Flash_WriteDataCont(bytes_sent + (index * size), buff, bytes_in_packet);
+        bytes_sent += bytes_in_packet;
+
+        isok = (res == bytes_in_packet) ? 1 : 0;
+
+        if (!isok)
+        {
+            DbprintfEx(FLAG_NOLOG, "FlashMem write FAILEd [offset %u]", bytes_sent);
+            cjSetCursLeft();
+            SpinOff(100);
+
+            return;
+        }
+
+        LED_A_INV();
+        LED_B_INV();
+        LED_C_INV();
+        LED_D_INV();
+    }
+    end_time = GetTickCount();
+
+    DbprintfEx(FLAG_NOLOG, "[OK] TAG WRITTEN TO FLASH ! [0-to offset %u]", bytes_sent);
+    cjSetCursLeft();
+    DbprintfEx(FLAG_NOLOG, "%s[IN]%s %s%dms%s for TAG_FLASH_WRITE", _GREEN_, _WHITE_, _YELLOW_, end_time - start_time, _WHITE_);
+    cjSetCursLeft();
+
+    FlashStop();
+
+    SpinOff(0);
+
+    return;
+}
+
+void RunMod()
+{
     currline = 20;
     curlline = 20;
     currfline = 24;
@@ -89,7 +378,7 @@ void RunMod() {
     uint64_t key64;           // Defines current key
     uint8_t *keyBlock = NULL; // Where the keys will be held in memory.
 
-/* VIGIK EXPIRED DUMP FOR STUDY
+    /* VIGIK EXPIRED DUMP FOR STUDY
 Sector 0
 121C7F730208040001FA33F5CB2D021D
 44001049164916491649000000000000
@@ -125,11 +414,11 @@ KEY A : 1KGIV ;
 ACCBITS : 796788[00]+VALUE
 */
 
-//----------------------------
-//   Set of keys to be used.
-//  This should cover ~98% of
-//  French VIGIK system @2017
-//----------------------------
+    //----------------------------
+    //   Set of keys to be used.
+    //  This should cover ~98% of
+    //  French VIGIK system @2017
+    //----------------------------
 
 #define STKEYS 37
 
@@ -177,7 +466,8 @@ ACCBITS : 796788[00]+VALUE
     keyBlock = BigBuf_malloc(STKEYS * 6);
     int mfKeysCnt = sizeof(mfKeys) / sizeof(uint64_t);
 
-    for (int mfKeyCounter = 0; mfKeyCounter < mfKeysCnt; mfKeyCounter++) {
+    for (int mfKeyCounter = 0; mfKeyCounter < mfKeysCnt; mfKeyCounter++)
+    {
         num_to_bytes(mfKeys[mfKeyCounter], 6, (uint8_t *)(keyBlock + mfKeyCounter * 6));
     }
 
@@ -185,10 +475,13 @@ ACCBITS : 796788[00]+VALUE
     //   and why not a simple memset abuse to 0xffize the whole space in one go ?
     // uint8_t foundKey[2][40][6]; //= [ {0xff} ]; /* C99 abusal 6.7.8.21
     uint8_t foundKey[2][40][6];
-    for (uint16_t t = 0; t < 2; t++) {
-        for (uint16_t sectorNo = 0; sectorNo < sectorsCnt; sectorNo++) {
+    for (uint16_t t = 0; t < 2; t++)
+    {
+        for (uint16_t sectorNo = 0; sectorNo < sectorsCnt; sectorNo++)
+        {
             //          validKey[t][sectorNo] = false;
-            for (uint16_t i = 0; i < 6; i++) {
+            for (uint16_t i = 0; i < 6; i++)
+            {
                 foundKey[t][sectorNo][i] = 0xff;
             }
         }
@@ -200,11 +493,6 @@ ACCBITS : 796788[00]+VALUE
     bool allKeysFound = true;
 
     uint32_t size = mfKeysCnt;
-    LED_A_OFF();
-    LED_B_OFF();
-    LED_C_OFF();
-    LED_D_OFF();
-    LED_A_ON();
 
     // banner:
     vtsend_reset(NULL);
@@ -218,7 +506,19 @@ ACCBITS : 796788[00]+VALUE
     currfline = 24;
     cjSetCursLeft();
 
+    SpinDown(50);
+    SpinOff(50);
+    SpinUp(50);
+    SpinOff(50);
+    SpinDown(50);
+
+#if 0
+TestFlashmemRoutine();
+return;
+#endif
+
 failtag:
+
     vtsend_cursor_position_save(NULL);
     vtsend_set_attribute(NULL, 1);
     vtsend_set_attribute(NULL, 5);
@@ -226,11 +526,32 @@ failtag:
     vtsend_set_attribute(NULL, 0);
 
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-    while (!iso14443a_select_card(cjuid, NULL, &cjcuid, true, 0, true)) {
+    SpinOff(50);
+    LED_A_ON();
+    uint8_t ticker = 0;
+    //while (!BUTTON_PRESS() && !iso14443a_select_card(cjuid, NULL, &cjcuid, true, 0, true))
+    while (!iso14443a_select_card(cjuid, NULL, &cjcuid, true, 0, true))
+    {
         WDT_HIT();
+
+        ticker++;
+        if (ticker % 64 == 0)
+        {
+            LED_A_INV();
+        }
+
+        if (BUTTON_HELD(10) > 0)
+        {
+            WDT_HIT();
+            DbprintfEx(FLAG_NOLOG, "\t\t\t[    READING FLASH   ]");
+            ReadLastTagFromFlash();
+            goto readysim;
+        }
     }
+
+    SpinOff(50);
+
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    SpinDelay(200);
     vtsend_cursor_position_restore(NULL);
     DbprintfEx(FLAG_NOLOG, "\t\t\t%s[   GOT a Tag !   ]%s", _GREEN_, _WHITE_);
     cjSetCursLeft();
@@ -239,12 +560,16 @@ failtag:
 
     DbprintfEx(FLAG_NOLOG, "\t%sGOT TAG :%s %08x%s", _RED_, _CYAN_, cjcuid, _WHITE_);
 
-    if (cjcuid == 0) {
+    if (cjcuid == 0)
+    {
         cjSetCursLeft();
-
         DbprintfEx(FLAG_NOLOG, "%s>>%s BUG: 0000_CJCUID! Retrying...", _RED_, _WHITE_);
+        SpinErr(0, 100, 8);
         goto failtag;
     }
+
+    SpinOff(50);
+    LED_B_ON();
     cjSetCursRight();
     DbprintfEx(FLAG_NOLOG, "--------+--------------------+-------");
     cjSetCursRight();
@@ -283,31 +608,38 @@ failtag:
     // also we could avoid first UID check for every block
 
     // then let’s expose this “optimal case” of “well known vigik schemes” :
-    for (uint8_t type = 0; type < 2 && !err && !trapped; type++) {
-        for (int sec = 0; sec < sectorsCnt && !err && !trapped; ++sec) {
+    for (uint8_t type = 0; type < 2 && !err && !trapped; type++)
+    {
+        for (int sec = 0; sec < sectorsCnt && !err && !trapped; ++sec)
+        {
             key = cjat91_saMifareChkKeys(sec * 4, type, NULL, size, &keyBlock[0], &key64);
             // key = saMifareChkKeys(sec * 4, type, NULL, size, &keyBlock[0], &key64);
-            if (key == -1) {
+            if (key == -1)
+            {
                 err = 1;
                 allKeysFound = false;
                 // used in “portable” imlementation on microcontroller: it reports back the fail and open the standalone lock
                 // cmd_send(CMD_CJB_FSMSTATE_MENU, 0, 0, 0, 0, 0);
                 break;
-            } else if (key == -2) {
+            }
+            else if (key == -2)
+            {
                 err = 1; // Can't select card.
                 allKeysFound = false;
                 // cmd_send(CMD_CJB_FSMSTATE_MENU, 0, 0, 0, 0, 0);
                 break;
-            } else {
+            }
+            else
+            {
                 /*  BRACE YOURSELF : AS LONG AS WE TRAP A KNOWN KEY, WE STOP CHECKING AND ENFORCE KNOWN SCHEMES */
                 // uint8_t tosendkey[12];
-                char tosendkey[13];
+                char tosendkey[12];
                 num_to_bytes(key64, 6, foundKey[type][sec]);
                 cjSetCursRight();
                 DbprintfEx(FLAG_NOLOG, "SEC: %02x ; KEY : %012" PRIx64 " ; TYP: %i", sec, key64, type);
                 /*cmd_send(CMD_CJB_INFORM_CLIENT_KEY, 12, sec, type, tosendkey, 12);*/
-
-                switch (key64) {
+                switch (key64)
+                {
                 /////////////////////////////////////////////////////////
                 // COMMON SCHEME 1  : INFINITRON/HEXACT
                 case 0x484558414354:
@@ -328,7 +660,8 @@ failtag:
                     ;
                     // Type 0 / A first
                     uint16_t t = 0;
-                    for (uint16_t sectorNo = 0; sectorNo < sectorsCnt; sectorNo++) {
+                    for (uint16_t sectorNo = 0; sectorNo < sectorsCnt; sectorNo++)
+                    {
                         num_to_bytes(0x484558414354, 6, foundKey[t][sectorNo]);
                         sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[t][sectorNo][0], foundKey[t][sectorNo][1], foundKey[t][sectorNo][2],
                                 foundKey[t][sectorNo][3], foundKey[t][sectorNo][4], foundKey[t][sectorNo][5]);
@@ -474,8 +807,10 @@ failtag:
 
                     // emlClearMem();
                     // A very weak one...
-                    for (uint16_t t = 0; t < 2; t++) {
-                        for (uint16_t sectorNo = 0; sectorNo < sectorsCnt; sectorNo++) {
+                    for (uint16_t t = 0; t < 2; t++)
+                    {
+                        for (uint16_t sectorNo = 0; sectorNo < sectorsCnt; sectorNo++)
+                        {
                             num_to_bytes(key64, 6, foundKey[t][sectorNo]);
                             sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[t][sectorNo][0], foundKey[t][sectorNo][1], foundKey[t][sectorNo][2],
                                     foundKey[t][sectorNo][3], foundKey[t][sectorNo][4], foundKey[t][sectorNo][5]);
@@ -509,7 +844,8 @@ failtag:
                     DbprintfEx(FLAG_NOLOG, "%s>>>>>>>>>>>>!*DONE*!<<<<<<<<<<<<<<%s", _GREEN_, _WHITE_);
                     ;
                     t = 0;
-                    for (uint16_t sectorNo = 0; sectorNo < sectorsCnt; sectorNo++) {
+                    for (uint16_t sectorNo = 0; sectorNo < sectorsCnt; sectorNo++)
+                    {
                         num_to_bytes(0x414c41524f4e, 6, foundKey[t][sectorNo]);
                         sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[t][sectorNo][0], foundKey[t][sectorNo][1], foundKey[t][sectorNo][2],
                                 foundKey[t][sectorNo][3], foundKey[t][sectorNo][4], foundKey[t][sectorNo][5]);
@@ -519,7 +855,8 @@ failtag:
                         ;
                     }
                     t = 1;
-                    for (uint16_t sectorNo = 0; sectorNo < sectorsCnt; sectorNo++) {
+                    for (uint16_t sectorNo = 0; sectorNo < sectorsCnt; sectorNo++)
+                    {
                         num_to_bytes(0x424c41524f4e, 6, foundKey[t][sectorNo]);
                         sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[t][sectorNo][0], foundKey[t][sectorNo][1], foundKey[t][sectorNo][2],
                                 foundKey[t][sectorNo][3], foundKey[t][sectorNo][4], foundKey[t][sectorNo][5]);
@@ -536,21 +873,25 @@ failtag:
         }
     }
 
-    if (!allKeysFound) {
-        // cmd_send(CMD_CJB_FSMSTATE_MENU, 0, 0, 0, 0, 0);
+    if (!allKeysFound)
+    {
         cjSetCursLeft();
         cjTabulize();
         DbprintfEx(FLAG_NOLOG, "%s[ FAIL ]%s\r\n->did not found all the keys :'(", _RED_, _WHITE_);
         cjSetCursLeft();
+        SpinErr(1, 100, 8);
+        SpinOff(100);
         return;
     }
 
     /* Settings keys to emulator */
     emlClearMem();
     uint8_t mblock[16];
-    for (uint8_t sectorNo = 0; sectorNo < sectorsCnt; sectorNo++) {
+    for (uint8_t sectorNo = 0; sectorNo < sectorsCnt; sectorNo++)
+    {
         emlGetMem(mblock, FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 1);
-        for (uint8_t t = 0; t < 2; t++) {
+        for (uint8_t t = 0; t < 2; t++)
+        {
             memcpy(mblock + t * 10, foundKey[t][sectorNo], 6);
         }
         emlSetMem(mblock, FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 1);
@@ -565,27 +906,41 @@ failtag:
 
     DbprintfEx(FLAG_NOLOG, "%s>>%s Filling Emulator <- from A keys...", _YELLOW_, _WHITE_);
     e_MifareECardLoad(sectorsCnt, 0, 0, &filled);
-    if (filled != 1) {
+    if (filled != 1)
+    {
         cjSetCursLeft();
 
         DbprintfEx(FLAG_NOLOG, "%s>>%s W_FAILURE ! %sTrying fallback B keys....", _RED_, _ORANGE_, _WHITE_);
 
         /* no trace, no dbg  */
         e_MifareECardLoad(sectorsCnt, 1, 0, &filled);
-        if (filled != 1) {
+        if (filled != 1)
+        {
             cjSetCursLeft();
 
             DbprintfEx(FLAG_NOLOG, "FATAL:EML_FALLBACKFILL_B");
-            // cmd_send(CMD_CJB_FSMSTATE_MENU, 0, 0, 0, 0, 0);
+            SpinErr(2, 100, 8);
+            SpinOff(100);
             return;
         }
     }
+
     end_time = GetTickCount();
     cjSetCursLeft();
 
     DbprintfEx(FLAG_NOLOG, "%s>>%s Time for VIGIK break :%s%dms%s", _GREEN_, _WHITE_, _YELLOW_, end_time - start_time, _WHITE_);
-    // cmd_send(CMD_CJB_FSMSTATE_MENU, 0, 0, 0, 0, 0);
 
+    vtsend_cursor_position_save(NULL);
+    vtsend_set_attribute(NULL, 1);
+    vtsend_set_attribute(NULL, 5);
+    cjTabulize();
+    DbprintfEx(FLAG_NOLOG, "[    WRITING FLASH   ]");
+    cjSetCursLeft();
+    cjSetCursLeft();
+
+    WriteTagToFlash(0,1024);
+
+readysim:
     // SIM ?
     cjSetCursLeft();
 
@@ -602,12 +957,14 @@ failtag:
 
     cjTabulize();
 
-    vtsend_cursor_position_save(NULL);
-    vtsend_set_attribute(NULL, 1);
-    vtsend_set_attribute(NULL, 5);
     DbprintfEx(FLAG_NOLOG, "[    SIMULATION   ]");
     vtsend_set_attribute(NULL, 0);
-    Mifare1ksim((FLAG_4B_UID_IN_DATA | FLAG_UID_IN_EMUL ), 0, 0, cjuid);
+
+    SpinOff(100);
+    LED_C_ON();
+    Mifare1ksim(FLAG_4B_UID_IN_DATA | FLAG_UID_IN_EMUL, 0, 0, cjuid);
+    LED_C_OFF();
+    SpinOff(50);
     vtsend_cursor_position_restore(NULL);
     DbprintfEx(FLAG_NOLOG, "[   SIMUL ENDED   ]%s", _GREEN_, _WHITE_);
     cjSetCursLeft();
@@ -652,7 +1009,9 @@ failtag:
     DbprintfEx(FLAG_NOLOG, "- [ LA FIN ] -\r\n%s`-> You can take shell back :) ...", _WHITE_);
     cjSetCursLeft();
     vtsend_set_attribute(NULL, 0);
-
+    SpinErr(3, 100, 16);
+    SpinDown(75);
+    SpinOff(100);
     return;
 }
 
@@ -660,7 +1019,8 @@ failtag:
  * - *datain used as error return
  * - tracing is falsed
  */
-void e_MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
+void e_MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
+{
     MF_DBGLEVEL = MF_DBG_NONE;
 
     uint8_t numSectors = arg0;
@@ -675,9 +1035,6 @@ void e_MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *dat
     byte_t dataoutbuf2[16];
     // uint8_t uid[10];
 
-    LED_A_ON();
-    LED_B_OFF();
-    LED_C_OFF();
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
     clear_trace();
@@ -686,23 +1043,30 @@ void e_MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *dat
     bool isOK = true;
     // iso14443a_fast_select_card(cjuid, 0);
 
-    if (!iso14443a_select_card(cjuid, NULL, &cjcuid, true, 0, true)) {
+    if (!iso14443a_select_card(cjuid, NULL, &cjcuid, true, 0, true))
+    {
         isOK = false;
         if (MF_DBGLEVEL >= 1)
             DbprintfEx(FLAG_RAWPRINT, "Can't select card");
     }
 
-    for (uint8_t sectorNo = 0; isOK && sectorNo < numSectors; sectorNo++) {
+    for (uint8_t sectorNo = 0; isOK && sectorNo < numSectors; sectorNo++)
+    {
         ui64Key = emlGetKey(sectorNo, keyType);
-        if (sectorNo == 0) {
-            if (isOK && mifare_classic_auth(pcs, cjcuid, FirstBlockOfSector(sectorNo), keyType, ui64Key, AUTH_FIRST)) {
+        if (sectorNo == 0)
+        {
+            if (isOK && mifare_classic_auth(pcs, cjcuid, FirstBlockOfSector(sectorNo), keyType, ui64Key, AUTH_FIRST))
+            {
                 isOK = false;
                 if (MF_DBGLEVEL >= 1)
                     DbprintfEx(FLAG_NOLOG, "Sector[%2d]. Auth error", sectorNo);
                 break;
             }
-        } else {
-            if (isOK && mifare_classic_auth(pcs, cjcuid, FirstBlockOfSector(sectorNo), keyType, ui64Key, AUTH_NESTED)) {
+        }
+        else
+        {
+            if (isOK && mifare_classic_auth(pcs, cjcuid, FirstBlockOfSector(sectorNo), keyType, ui64Key, AUTH_NESTED))
+            {
                 isOK = false;
                 if (MF_DBGLEVEL >= 1)
                     DbprintfEx(FLAG_NOLOG, "Sector[%2d]. Auth nested error", sectorNo);
@@ -710,29 +1074,38 @@ void e_MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *dat
             }
         }
 
-        for (uint8_t blockNo = 0; isOK && blockNo < NumBlocksPerSector(sectorNo); blockNo++) {
-            if (isOK && mifare_classic_readblock(pcs, cjcuid, FirstBlockOfSector(sectorNo) + blockNo, dataoutbuf)) {
+        for (uint8_t blockNo = 0; isOK && blockNo < NumBlocksPerSector(sectorNo); blockNo++)
+        {
+            if (isOK && mifare_classic_readblock(pcs, cjcuid, FirstBlockOfSector(sectorNo) + blockNo, dataoutbuf))
+            {
                 isOK = false;
                 if (MF_DBGLEVEL >= 1)
                     DbprintfEx(FLAG_NOLOG, "Error reading sector %2d block %2d", sectorNo, blockNo);
                 break;
             };
-            if (isOK) {
+            if (isOK)
+            {
                 *datain = 1;
-                if (blockNo < NumBlocksPerSector(sectorNo) - 1) {
+                if (blockNo < NumBlocksPerSector(sectorNo) - 1)
+                {
                     emlSetMem(dataoutbuf, FirstBlockOfSector(sectorNo) + blockNo, 1);
-                } else { // sector trailer, keep the keys, set only the AC
+                }
+                else
+                { // sector trailer, keep the keys, set only the AC
                     emlGetMem(dataoutbuf2, FirstBlockOfSector(sectorNo) + blockNo, 1);
                     memcpy(&dataoutbuf2[6], &dataoutbuf[6], 4);
                     emlSetMem(dataoutbuf2, FirstBlockOfSector(sectorNo) + blockNo, 1);
                 }
-            } else {
+            }
+            else
+            {
                 *datain = 0;
             }
         }
     }
 
-    if (mifare_classic_halt(pcs, cjcuid)) {
+    if (mifare_classic_halt(pcs, cjcuid))
+    {
         if (MF_DBGLEVEL >= 1)
             DbprintfEx(FLAG_NOLOG, "Halt error");
     };
@@ -741,7 +1114,6 @@ void e_MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *dat
     crypto1_destroy(pcs);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    LEDsoff();
 
     if (MF_DBGLEVEL >= 2)
         DbpString("EMUL FILL SECTORS FINISHED\n");
@@ -752,7 +1124,8 @@ void e_MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *dat
 /* the chk function is a piwi’ed(tm) check that will try all keys for
 a particular sector. also no tracing no dbg */
 
-int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, uint8_t keyCount, uint8_t *datain, uint64_t *key) {
+int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, uint8_t keyCount, uint8_t *datain, uint64_t *key)
+{
     MF_DBGLEVEL = MF_DBG_NONE;
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
     set_tracing(false);
@@ -763,40 +1136,41 @@ int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, ui
     pcs = &mpcs;
     // byte_t isOK = 0;
 
-    for (int i = 0; i < keyCount; ++i) {
-        LEDsoff();
+    for (int i = 0; i < keyCount; ++i)
+    {
 
         /* no need for anticollision. just verify tag is still here */
         // if (!iso14443a_fast_select_card(cjuid, 0)) {
-        if (!iso14443a_select_card(cjuid, NULL, &cjcuid, true, 0, true)) {
+        if (!iso14443a_select_card(cjuid, NULL, &cjcuid, true, 0, true))
+        {
             cjSetCursLeft();
             DbprintfEx(FLAG_NOLOG, "%sFATAL%s : E_MF_LOSTTAG", _RED_, _WHITE_);
             return -1;
         }
 
         uint64_t ui64Key = bytes_to_num(datain + i * 6, 6);
-        if (mifare_classic_auth(pcs, cjcuid, blockNo, keyType, ui64Key, AUTH_FIRST)) {
+        if (mifare_classic_auth(pcs, cjcuid, blockNo, keyType, ui64Key, AUTH_FIRST))
+        {
             uint8_t dummy_answer = 0;
             ReaderTransmit(&dummy_answer, 1, NULL);
             // wait for the card to become ready again
             SpinDelayUs(AUTHENTICATION_TIMEOUT);
             continue;
         }
-        LED_A_ON();
         crypto1_destroy(pcs);
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
         *key = ui64Key;
         return i;
     }
-    LED_A_ON();
     crypto1_destroy(pcs);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
     return -1;
 }
 
-void saMifareMakeTag(void) {
-    // uint8_t cfail = 0;`
+void saMifareMakeTag(void)
+{
+    uint8_t cfail = 0;
     cjSetCursLeft();
     cjTabulize();
     vtsend_cursor_position_save(NULL);
@@ -808,8 +1182,8 @@ void saMifareMakeTag(void) {
 
     DbprintfEx(FLAG_NOLOG, ">> Write to Special:");
     int flags = 0;
-    LED_A_ON(); // yellow
-    for (int blockNum = 0; blockNum < 16 * 4; blockNum++) {
+    for (int blockNum = 0; blockNum < 16 * 4; blockNum++)
+    {
         uint8_t mblock[16];
         // cnt = 0;
         emlGetMem(mblock, blockNum, 1);
@@ -825,10 +1199,12 @@ void saMifareMakeTag(void) {
         if (blockNum == 16 * 4 - 1)
             flags = 0x04 + 0x10;
 
-        if (saMifareCSetBlock(0, flags & 0xFE, blockNum, mblock)) { //&& cnt <= retry) {
-                                                                    // cnt++;
+        if (saMifareCSetBlock(0, flags & 0xFE, blockNum, mblock))
+        { //&& cnt <= retry) {
+            // cnt++;
             cjSetCursFRight();
-            if (currfline > 53) {
+            if (currfline > 53)
+            {
                 currfline = 54;
             }
             DbprintfEx(FLAG_NOLOG, "Block :%02x %sOK%s", blockNum, _GREEN_, _WHITE_);
@@ -836,14 +1212,16 @@ void saMifareMakeTag(void) {
             //                                                      cfail=1;
             // return;
             continue;
-        } else {
+        }
+        else
+        {
             cjSetCursLeft();
             cjSetCursLeft();
 
             DbprintfEx(FLAG_NOLOG, "`--> %sFAIL%s : CHN_FAIL_BLK_%02x_NOK", _RED_, _WHITE_, blockNum);
             cjSetCursFRight();
             DbprintfEx(FLAG_NOLOG, "%s>>>>%s STOP AT %02x", _RED_, _WHITE_, blockNum);
-
+            cfail++;
             break;
         }
         cjSetCursFRight();
@@ -855,13 +1233,20 @@ void saMifareMakeTag(void) {
                 break;
         } */
     }
+    if (cfail == 0)
+    {
+        SpinUp(50);
+        SpinUp(50);
+        SpinUp(50);
+    }
 }
 
 //-----------------------------------------------------------------------------
 // Matt's StandAlone mod.
 // Work with "magic Chinese" card (email him: ouyangweidaxian@live.cn)
 //-----------------------------------------------------------------------------
-int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
+int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
+{
 
     // params
     uint8_t needWipe = arg0;
@@ -888,30 +1273,32 @@ int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *data
     uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE];
 
     // reset FPGA and LED
-    if (workFlags & 0x08) {
-        LED_A_ON();
-        LED_B_OFF();
-        LED_C_OFF();
+    if (workFlags & 0x08)
+    {
         iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
         //  clear_trace();
         set_tracing(FALSE);
     }
 
-    while (true) {
-        // cjSetCursLeft();
+    while (true)
+    {
+        cjSetCursLeft();
 
         // get UID from chip
-        if (workFlags & 0x01) {
+        if (workFlags & 0x01)
+        {
             // if (!iso14443a_fast_select_card(cjuid, 0)) {
 
-            if (!iso14443a_select_card(cjuid, NULL, &cjcuid, true, 0, true)) {
+            if (!iso14443a_select_card(cjuid, NULL, &cjcuid, true, 0, true))
+            {
                 if (MF_DBGLEVEL >= 1)
                     DbprintfEx(FLAG_NOLOG, "Can't select card");
                 break;
             };
 
-            if (mifare_classic_halt(NULL, cjcuid)) {
+            if (mifare_classic_halt(NULL, cjcuid))
+            {
                 if (MF_DBGLEVEL >= 1)
                     DbprintfEx(FLAG_NOLOG, "Halt error");
                 break;
@@ -919,22 +1306,26 @@ int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *data
         };
 
         // reset chip
-        if (needWipe) {
+        if (needWipe)
+        {
             ReaderTransmitBitsPar(wupC1, 7, 0, NULL);
-            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a))
+            {
                 // if (MF_DBGLEVEL >= 1)
                 DbprintfEx(FLAG_NOLOG, "wupC1 error");
                 break;
             };
 
             ReaderTransmit(wipeC, sizeof(wipeC), NULL);
-            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a))
+            {
                 if (MF_DBGLEVEL >= 1)
                     DbprintfEx(FLAG_NOLOG, "wipeC error");
                 break;
             };
 
-            if (mifare_classic_halt(NULL, cjcuid)) {
+            if (mifare_classic_halt(NULL, cjcuid))
+            {
                 if (MF_DBGLEVEL >= 1)
                     DbprintfEx(FLAG_NOLOG, "Halt error");
                 break;
@@ -943,39 +1334,46 @@ int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *data
 
         // chaud
         // write block
-        if (workFlags & 0x02) {
+        if (workFlags & 0x02)
+        {
             ReaderTransmitBitsPar(wupC1, 7, 0, NULL);
-            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a))
+            {
                 // if (MF_DBGLEVEL >= 1)
                 DbprintfEx(FLAG_NOLOG, "wupC1 error");
                 break;
             };
 
             ReaderTransmit(wupC2, sizeof(wupC2), NULL);
-            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a))
+            {
                 // if (MF_DBGLEVEL >= 1)
                 DbprintfEx(FLAG_NOLOG, "wupC2 errorv");
                 break;
             };
         }
 
-        if ((mifare_sendcmd_short(NULL, 0, 0xA0, blockNo, receivedAnswer, receivedAnswerPar, NULL) != 1) || (receivedAnswer[0] != 0x0a)) {
+        if ((mifare_sendcmd_short(NULL, 0, 0xA0, blockNo, receivedAnswer, receivedAnswerPar, NULL) != 1) || (receivedAnswer[0] != 0x0a))
+        {
             // if (MF_DBGLEVEL >= 1)
             DbprintfEx(FLAG_NOLOG, "write block send command error");
             break;
         };
 
         memcpy(d_block, datain, 16);
-	AddCrc14A(d_block,16);
+        AddCrc14A(d_block, 16);
         ReaderTransmit(d_block, sizeof(d_block), NULL);
-        if ((ReaderReceive(receivedAnswer, receivedAnswerPar) != 1) || (receivedAnswer[0] != 0x0a)) {
+        if ((ReaderReceive(receivedAnswer, receivedAnswerPar) != 1) || (receivedAnswer[0] != 0x0a))
+        {
             // if (MF_DBGLEVEL >= 1)
             DbprintfEx(FLAG_NOLOG, "write block send data error");
             break;
         };
 
-        if (workFlags & 0x04) {
-            if (mifare_classic_halt(NULL, cjcuid)) {
+        if (workFlags & 0x04)
+        {
+            if (mifare_classic_halt(NULL, cjcuid))
+            {
                 // if (MF_DBGLEVEL >= 1)
                 cjSetCursFRight();
 
@@ -988,12 +1386,10 @@ int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *data
         break;
     }
 
-    if ((workFlags & 0x10) || (!isOK)) {
+    if ((workFlags & 0x10) || (!isOK))
+    {
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-        LEDsoff();
     }
 
     return isOK;
 }
-
-

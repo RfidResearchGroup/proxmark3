@@ -440,7 +440,7 @@ void printStandAloneModes(void) {
 	DbpString("   LF HID corporate 1000 bruteforce - (Federico dotta & Maurizio Agazzini)");
 #endif 
 #if defined(WITH_HF_MATTYRUN)
-	DbpString("   HF Mifare sniff/clone - aka MattyRun (Matías A. Ré Medina)");
+	DbpString("   HF Mifare sniff/clone - aka MattyRun (Matï¿½as A. Rï¿½ Medina)");
 #endif 
 #if defined(WITH_HF_COLIN)
     DbpString("   HF Mifare ultra fast sniff/sim/clone - aka VIGIKPWN (Colin Brigato)");
@@ -1160,7 +1160,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 				len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
 				isok = cmd_send(CMD_DOWNLOADED_EML_BIGBUF, i, len, 0, mem + startidx + i, len);
 				if (!isok) 
-					Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d)", i, i+len, len);
+					Dbprintf("transfer to client failed ::  | bytes between %d - %d", i, len);
 			}
 			// Trigger a finish downloading signal with an ACK frame
 			cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
@@ -1171,27 +1171,30 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			ReadMem(c->arg[0]);
 			break;
 #ifdef WITH_FLASH	
-		case CMD_READ_FLASH_MEM: {
-
+		case CMD_FLASHMEM_SET_SPIBAUDRATE:
+			FlashmemSetSpiBaudrate(c->arg[0]);
+			break;
+		case CMD_FLASHMEM_READ: {
 			LED_B_ON();
 			uint16_t isok = 0;
 			uint32_t startidx = c->arg[0];
 			uint16_t len = c->arg[1];
+			//uint8_t fast = c->arg[2];
 			
-			Dbprintf("FlashMem read | %d - %d", startidx, len);
+			Dbprintf("FlashMem read | %d - %d | ", startidx, len);
 			
 			size_t size = MIN(USB_CMD_DATA_SIZE, len);
 			
 			uint8_t *mem = BigBuf_malloc(size);
 	
+			FlashInit();
+			//Flash_CheckBusy(BUSY_TIMEOUT);
+			
 			for(size_t i = 0; i < len; i += size) {
 				len = MIN((len - i), size);
 				
-				memset(mem, 0, len);
-				
-				Dbprintf("FlashMem reading  | %d | %d | %d", startidx + i, i, len);
-				
-				isok = Flash_ReadData(startidx + i, mem, len);
+				Dbprintf("FlashMem reading  | %d | %d | %d |", startidx + i, i, len);
+				isok = Flash_ReadDataCont(startidx + i, mem, len);
 				if ( isok == len ) {
 					print_result("Chunk: ", mem, len);
 				} else {
@@ -1199,10 +1202,11 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 					break;
 				}
 			}
+			FlashStop();
 			LED_B_OFF();
 			break;
 		}
-		case CMD_WRITE_FLASH_MEM: {
+		case CMD_FLASHMEM_WRITE: {
 			LED_B_ON();
 			uint8_t isok = 0;
 			uint16_t res = 0;
@@ -1212,6 +1216,14 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			
 			uint32_t tmp = startidx + len;
 			
+  			if (!FlashInit())
+  		    {
+   		       break;
+  		    }
+    
+  		    Flash_CheckBusy(BUSY_TIMEOUT);
+  		    Flash_WriteEnable();
+
 			// inside 256b page?
 			if ( (tmp & 0xFF) != 0) {				
 				
@@ -1225,27 +1237,28 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 						uint8_t first_len =  (~startidx & 0xFF)+1;
 												
 						// first mem page						
-						res = Flash_WriteData(startidx, data, first_len);
+						res = Flash_WriteDataCont(startidx, data, first_len);
 						
 						// second mem page
-						res = Flash_WriteData(startidx + first_len, data + first_len, len - first_len);
+						res = Flash_WriteDataCont(startidx + first_len, data + first_len, len - first_len);
 						
 						isok = (res == (len - first_len)) ? 1 : 0;
 						
 					} else {
-						res = Flash_WriteData(startidx, data, len);
+						res = Flash_WriteDataCont(startidx, data, len);
 						isok = (res == len) ? 1 : 0;
 					}					
 			} else {				
-				res = Flash_WriteData(startidx, data, len);
+				res = Flash_WriteDataCont(startidx, data, len);
 				isok = (res == len) ? 1 : 0;
 			}
+  		    FlashStop();
 
 			cmd_send(CMD_ACK, isok, 0, 0, 0, 0);
 			LED_B_OFF();
 			break;
 		}
-		case CMD_WIPE_FLASH_MEM: {
+		case CMD_FLASHMEM_WIPE: {
 			LED_B_ON();
 			uint8_t page = c->arg[0];
 			uint8_t initalwipe = c->arg[1];
@@ -1263,7 +1276,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			LED_B_OFF();
 			break;
 		}
-		case CMD_DOWNLOAND_FLASH_MEM: {
+		case CMD_FLASHMEM_DOWNLOAD: {
 
 			LED_B_ON();
 			uint8_t *mem = BigBuf_malloc(USB_CMD_DATA_SIZE);
@@ -1271,26 +1284,32 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			size_t len = 0;
 			uint32_t startidx = c->arg[0];
 			uint32_t numofbytes = c->arg[1];
+			//uint8_t fast = c->arg[2];
+
 			// arg0 = startindex
 			// arg1 = length bytes to transfer
 			// arg2 = RFU
+
+				FlashInit();
+
 			for (size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
 				len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
-				
-				isok = Flash_ReadData(startidx + i, mem, len);
+
+				isok = Flash_ReadDataCont(startidx + i, mem, len);
 				if (!isok )
 					Dbprintf("reading flash memory failed ::  | bytes between %d - %d", i, len);
-				
-				isok = cmd_send(CMD_DOWNLOADED_FLASHMEM, i, len, 0, mem, len);
-				if (!isok) 
-					Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d)", i, i+len, len);
-			}
 
+				isok = cmd_send(CMD_FLASHMEM_DOWNLOADED, i, len, 0, mem, len);
+				if (!isok) 
+					Dbprintf("transfer to client failed ::  | bytes between %d - %d", i, len);
+			}
+				FlashStop();
+		
 			cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
 			LED_B_OFF();
 			break;
 		}
-		case CMD_INFO_FLASH_MEM: {
+		case CMD_FLASHMEM_INFO: {
 
 			LED_B_ON();
 			rdv40_validation_t *info = (rdv40_validation_t*)BigBuf_malloc( sizeof(rdv40_validation_t) );
@@ -1392,8 +1411,6 @@ void  __attribute__((noreturn)) AppMain(void) {
 
 	LEDsoff();
 	
-    usb_enable();
-
 	// The FPGA gets its clock from us from PCK0 output, so set that up.
 	AT91C_BASE_PIOA->PIO_BSR = GPIO_PCK0;
 	AT91C_BASE_PIOA->PIO_PDR = GPIO_PCK0;
@@ -1429,6 +1446,12 @@ void  __attribute__((noreturn)) AppMain(void) {
 #ifdef WITH_FPC
 	usart_init();
 #endif	
+
+	// This is made as late as possible to ensure enumeration without timeout
+	// against device such as http://www.hobbytronics.co.uk/usb-host-board-v2 
+	usb_disable();
+	usb_enable();
+
 	uint8_t rx[sizeof(UsbCommand)];
    
 	for(;;) {
@@ -1463,7 +1486,6 @@ void  __attribute__((noreturn)) AppMain(void) {
 #if defined (WITH_ISO14443a) && ( defined (WITH_HF_YOUNG) || defined(WITH_HF_COLIN) || defined(WITH_HF_MATTYRUN) )
 			RunMod();
 #endif
-
 		}
 	}
 }

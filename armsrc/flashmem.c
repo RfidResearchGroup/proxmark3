@@ -1,39 +1,45 @@
 #include "flashmem.h"
 
+
+
 /* here: use NCPS2 @ PA10: */
-#define SPI_CSR_NUM      2          		// Chip Select register[] 0,1,2,3  (at91samv512 has 4)
-
-/* PCS_0 for NPCS0, PCS_1 for NPCS1 ... */
-#define PCS_0  ((0<<0)|(1<<1)|(1<<2)|(1<<3)) // 0xE - 1110
-#define PCS_1  ((1<<0)|(0<<1)|(1<<2)|(1<<3)) // 0xD - 1101
-#define PCS_2  ((1<<0)|(1<<1)|(0<<2)|(1<<3)) // 0xB - 1011
-#define PCS_3  ((1<<0)|(1<<1)|(1<<2)|(0<<3)) // 0x7 - 0111
-
-// TODO
-#if (SPI_CSR_NUM == 0)
-#define SPI_MR_PCS       PCS_0
-#elif (SPI_CSR_NUM == 1)
-#define SPI_MR_PCS       PCS_1
-#elif (SPI_CSR_NUM == 2)
-#define SPI_MR_PCS       PCS_2
-#elif (SPI_CSR_NUM == 3)
-#define SPI_MR_PCS       PCS_3
-#else
-#error "SPI_CSR_NUM invalid"
-// not realy - when using an external address decoder...
-// but this code takes over the complete SPI-interace anyway
-#endif
+#define SPI_CSR_NUM      2
+#define SPI_PCS(npcs)       ((~(1 << (npcs)) & 0xF) << 16)
+/// Calculates the value of the CSR SCBR field given the baudrate and MCK.
+#define SPI_SCBR(baudrate, masterClock) ((uint32_t) ((masterClock) / (baudrate)) << 8) 
+/// Calculates the value of the CSR DLYBS field given the desired delay (in ns)
+#define SPI_DLYBS(delay, masterClock) ((uint32_t) ((((masterClock) / 1000000) * (delay)) / 1000) << 16) 
+/// Calculates the value of the CSR DLYBCT field given the desired delay (in ns)
+#define SPI_DLYBCT(delay, masterClock) ((uint32_t) ((((masterClock) / 1000000) * (delay)) / 32000) << 24)
 
 
-/*
-	读取指令，可以从一个位置开始持续的读，最多能将整块芯片读取完
-	页写指令，每次写入为1-256字节，但是不能跨越256字节边界
-	擦除指令，擦除指令后必须将CS拉高，否则不会执行
-*/
+uint32_t FLASHMEM_SPIBAUDRATE = FLASH_BAUD;
 
-void FlashSetup(void) {
-	// PA1	-> SPI_NCS3 chip select (MEM)
-	// PA10 -> SPI_NCS2 chip select (LCD)
+
+void FlashmemSetSpiBaudrate(uint32_t baudrate){
+   FLASHMEM_SPIBAUDRATE = baudrate;
+   Dbprintf("Spi Baudrate : %dMhz", FLASHMEM_SPIBAUDRATE/1000000);
+}
+
+//	initialize
+bool FlashInit() {
+	FlashSetup(FLASHMEM_SPIBAUDRATE);
+
+	StartTicks();
+
+	if (Flash_CheckBusy(BUSY_TIMEOUT)) {
+		StopTicks();
+		return false;
+	}
+
+	return true;
+}
+
+void FlashSetup(uint32_t baudrate){
+   //WDT_DISABLE
+    AT91C_BASE_WDTC->WDTC_WDMR = AT91C_WDTC_WDDIS;
+
+	// PA10 -> SPI_NCS2 chip select (FLASHMEM)
 	// PA11 -> SPI_NCS0 chip select (FPGA)
 	// PA12 -> SPI_MISO Master-In Slave-Out
 	// PA13 -> SPI_MOSI Master-Out Slave-In
@@ -54,27 +60,70 @@ void FlashSetup(void) {
 	//enable the SPI Peripheral clock
 	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_SPI);
 
+
+	//reset spi needs double SWRST, see atmel's errata on this case
+	AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SWRST;
+	AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SWRST;
+
 	// Enable SPI
 	AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SPIEN;
 
 	//	NPCS2 Mode 0
 	AT91C_BASE_SPI->SPI_MR =
-		( 0 << 24)	|		// Delay between chip selects (take default: 6 MCK periods)
-		(0xB << 16)	|		// Peripheral Chip Select (selects SPI_NCS2 or PA10)
-		( 0 << 7)	|		// Local Loopback Disabled
-		( 1 << 4)	|		// Mode Fault Detection disabled
-		( 0 << 2)	|		// Chip selects connected directly to peripheral
-		( 0 << 1) 	|		// Fixed Peripheral Select
-		( 1 << 0);			// Master Mode
+		(0 << 24)	|		// Delay between chip selects = DYLBCS/MCK BUT: 
+		                    // If DLYBCS is less than or equal to six, six MCK periods
+		            	    // will be inserted by default.
+		SPI_PCS(SPI_CSR_NUM) | 		// Peripheral Chip Select (selects SPI_NCS2 or PA10)
+		( 0 << 7)	|		// Disable LLB (1=MOSI2MISO test mode)
+		( 1 << 4)	|		// Disable ModeFault Protection
+		( 0 << 3)  |        // makes spi operate at MCK (1 is MCK/2)
+ 		( 0 << 2)	|		// Chip selects connected directly to peripheral
+		AT91C_SPI_PS_FIXED 	|		// Fixed Peripheral Select
+		AT91C_SPI_MSTR;			// Master Mode
 
-	//	8 bit
+	uint8_t csaat = 1;
+	uint32_t dlybct = 0;
+    if (baudrate > FLASH_MINFAST) {
+		baudrate = 	FLASH_FASTBAUD;
+		//csaat = 0;
+		dlybct = 1500;
+	}
+
 	AT91C_BASE_SPI->SPI_CSR[2] =
-		( 0 << 24)	|		// Delay between Consecutive Transfers (32 MCK periods)
-		( 0 << 16)	|		// Delay Before SPCK (1 MCK period)
-		( 6 << 8)	|		// Serial Clock Baud Rate (baudrate = MCK/6 = 24Mhz/6 = 4M baud
-		( 0 << 4)	|		// Bits per Transfer (8 bits)
-		( 1 << 3)	|		// Chip Select inactive after transfer
-		( 1 << 1)	|		// Clock Phase data captured on leading edge, changes on following edge
+        SPI_DLYBCT(dlybct,MCK)		| // Delay between Consecutive Transfers (32 MCK periods)
+		SPI_DLYBS(0,MCK)		| // Delay Beforce SPCK CLock		
+		SPI_SCBR(baudrate,MCK)	| // SPI Baudrate Selection
+		AT91C_SPI_BITS_8		|	  // Bits per Transfer (8 bits)
+		//AT91C_SPI_CSAAT	|	// Chip Select inactive after transfer 
+							// 40.4.6.2 SPI: Bad tx_ready Behavior when CSAAT = 1 and SCBR = 1
+							// If the SPI is programmed with CSAAT = 1, SCBR(baudrate) = 1 and two transfers are performed consecutively on
+							// the same slave with an IDLE state between them, the tx_ready signal does not rise after the second data has been
+							// transferred in the shifter. This can imply for example, that the second data is sent twice.
+							// COLIN :: For now we STILL use CSAAT=1 to avoid having to (de)assert  NPCS manually via PIO lines and we deal with delay
+		( csaat << 3) |
+		/* Spi modes:
+			Mode 	CPOL 	CPHA  NCPHA
+			0 	0 	0     1       clock normally low    read on rising edge
+			1 	0 	1     0       clock normally low    read on falling edge
+			2 	1 	0     1       clock normally high   read on falling edge
+			3 	1 	1     0       clock normally high   read on rising edge
+			However, page 512 of the AT91SAM7Sx datasheet say "Note that in SPI
+			master mode the ATSAM7S512/256/128/64/321/32 does not sample the data
+			(MISO) on the opposite edge where data clocks out (MOSI) but the same
+			edge is used as shown in Figure 36-3 and Figure 36-4."  Figure 36-3
+			shows that CPOL=NCPHA=0 or CPOL=NCPHA=1 samples on the rising edge and
+			that the data changes sometime after the rising edge (about 2 ns).  To
+			be consistent with normal SPI operation, it is probably safe to say
+			that the data changes on the falling edge and should be sampled on the
+			rising edge.  Therefore, it appears that NCPHA should be treated the
+			same as CPHA.  Thus:
+			Mode	CPOL	CPHA	NCPHA
+			0	0	0     0       clock normally low    read on rising edge
+			1	0 	1     1       clock normally low    read on falling edge
+			2	1 	0     0       clock normally high   read on falling edge
+			3	1 	1     1       clock normally high   read on rising edge
+		*/
+		( 0 << 1)	|		// Clock Phase data captured on leading edge, changes on following edge
 		( 0 << 0);			// Clock Polarity inactive state is logic 0
 
 	//	read first, empty buffer
@@ -82,6 +131,7 @@ void FlashSetup(void) {
 }
 
 void FlashStop(void) {
+	//Bof
 	//* Reset all the Chip Select register
     AT91C_BASE_SPI->SPI_CSR[0] = 0;
     AT91C_BASE_SPI->SPI_CSR[1] = 0;
@@ -104,24 +154,21 @@ void FlashStop(void) {
 
 //	send one byte over SPI
 uint16_t FlashSendByte(uint32_t data) {	
-	uint16_t incoming = 0;
-
-	WDT_HIT();
 
 	// wait until SPI is ready for transfer
-	while ((AT91C_BASE_SPI->SPI_SR & AT91C_SPI_TXEMPTY) == 0) {};
+	//if you are checking for incoming data returned then the TXEMPTY flag is redundant
+	//while ((AT91C_BASE_SPI->SPI_SR & AT91C_SPI_TXEMPTY) == 0) {};
 
 	// send the data
 	AT91C_BASE_SPI->SPI_TDR = data;
 
+    //while ((AT91C_BASE_SPI->SPI_SR & AT91C_SPI_TDRE) == 0){};
+
 	// wait recive transfer is complete
-	while ((AT91C_BASE_SPI->SPI_SR & AT91C_SPI_RDRF) == 0)
-		WDT_HIT();
+	while ((AT91C_BASE_SPI->SPI_SR & AT91C_SPI_RDRF) == 0){};
 
 	// reading incoming data
-	incoming = ((AT91C_BASE_SPI->SPI_RDR) & 0xFFFF);
-
-	return incoming;
+	return ((AT91C_BASE_SPI->SPI_RDR) & 0xFFFF);
 }
 
 //	send last byte over SPI
@@ -132,41 +179,37 @@ uint16_t FlashSendLastByte(uint32_t data) {
 //	read state register 1
 uint8_t Flash_ReadStat1(void) {
 	FlashSendByte(READSTAT1);
-	uint8_t stat1 = FlashSendLastByte(0xFF);
-//	if ( MF_DBGLEVEL > 3 )  Dbprintf("stat1 [%02x]", stat1);
-	return stat1;
+	return FlashSendLastByte(0xFF);	
 }
 
-// read state register 2
-uint8_t Flash_ReadStat2(void) {
-	FlashSendByte(READSTAT2);
-	uint8_t stat2 = FlashSendLastByte(0xFF);
-//	if ( MF_DBGLEVEL > 3 ) Dbprintf("stat2 [%02x]", stat2);
-	return stat2;
-}
+bool Flash_CheckBusy(uint32_t timeout)
+{
+	WaitUS(WINBOND_WRITE_DELAY);
+	StartCountUS();
+	uint32_t _time = GetCountUS();
 
-// determine whether FLASHMEM is busy
-bool Flash_CheckBusy(uint16_t times) {
-	bool ret = (Flash_ReadStat1() & BUSY);
+	if ( MF_DBGLEVEL > 3 ) Dbprintf("Checkbusy in...");
 
-	if (!ret || !times || !(times--))
-		return ret;
+	do
+	{
+		if (!(Flash_ReadStat1() & BUSY))
+		{
+			return false;
+		}
+	} while ((GetCountUS() - _time) < timeout);
 
-	while (times) {
-		WDT_HIT();
-		SpinDelay(1);
-		ret = (Flash_ReadStat1() & BUSY);
-		if (!ret)
-			break;
-		times--;
+	if (timeout <= (GetCountUS() - _time))
+	{
+		return true;
 	}
-	return ret;
+
+	return false;
 }
 
 // read ID out
 uint8_t Flash_ReadID(void) {
 
-	if (Flash_CheckBusy(100)) return 0;
+	if (Flash_CheckBusy(BUSY_TIMEOUT)) return 0;
 
 	// Manufacture ID / device ID
 	FlashSendByte(ID);
@@ -188,7 +231,7 @@ uint8_t Flash_ReadID(void) {
 // read unique id for chip.
 void Flash_UniqueID(uint8_t *uid) {
 
-	if (Flash_CheckBusy(100)) return;
+	if (Flash_CheckBusy(BUSY_TIMEOUT)) return;
 
 	// reading unique serial number
 	FlashSendByte(UNIQUE_ID);
@@ -210,26 +253,71 @@ void Flash_UniqueID(uint8_t *uid) {
 uint16_t Flash_ReadData(uint32_t address, uint8_t *out, uint16_t len) {
 	
 	if (!FlashInit()) return 0;
-	
-	Flash_ReadStat1();
-	
+		
 	// length should never be zero
-	if (!len || Flash_CheckBusy(100)) return 0;
+	if (!len || Flash_CheckBusy(BUSY_TIMEOUT)) return 0;
 
-	FlashSendByte(READDATA);
-	FlashSendByte((address >> 16) & 0xFF);
-	FlashSendByte((address >> 8) & 0xFF);
-	FlashSendByte((address >> 0) & 0xFF);
+
+    uint8_t cmd = READDATA;
+
+	if(FASTFLASH) {
+		cmd = FASTREAD;
+	} 
+
+	FlashSendByte(cmd);
+	Flash_TransferAdresse(address);
+
+	if (FASTFLASH){
+		FlashSendByte(DUMMYBYTE);
+	}
 
 	uint16_t i = 0;
 	for (; i < (len - 1); i++)
 		out[i] = FlashSendByte(0xFF);
 
 	out[i] = FlashSendLastByte(0xFF);
-	
+
+
 	FlashStop();	
 	return len;	
 }
+
+void Flash_TransferAdresse(uint32_t address){
+	FlashSendByte((address >> 16) & 	0xFF);
+	FlashSendByte((address >> 8) & 0xFF);
+	FlashSendByte((address >> 0) & 0xFF);
+}
+
+/* This ensure we can ReadData without having to cycle through initialization everytime */
+uint16_t Flash_ReadDataCont(uint32_t address, uint8_t *out, uint16_t len) {
+	
+	// length should never be zero
+	if (!len) return 0;
+	
+    uint8_t cmd = READDATA;
+
+	if(FASTFLASH) {
+		cmd = FASTREAD;
+	} 
+
+	FlashSendByte(cmd);
+	Flash_TransferAdresse(address);
+
+    if (FASTFLASH){
+		FlashSendByte(DUMMYBYTE);
+	}
+ 
+	uint16_t i = 0;
+	for (; i < (len - 1); i++)
+		out[i] = FlashSendByte(0xFF);
+
+	out[i] = FlashSendLastByte(0xFF);
+	
+	return len;	
+}
+
+
+////////////////////////////////////////
 
 // Write data can only program one page. A page has 256 bytes. 
 // if len > 256, it might wrap around and overwrite pos 0.
@@ -256,7 +344,7 @@ uint16_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len) {
 		return 0;
 	}
 	
-	Flash_ReadStat1();
+	Flash_CheckBusy(BUSY_TIMEOUT);
 
 	Flash_WriteEnable();
 	
@@ -275,6 +363,39 @@ uint16_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len) {
 	return len;	
 }
 
+uint16_t Flash_WriteDataCont(uint32_t address, uint8_t *in, uint16_t len) {
+
+	// length should never be zero
+	if (!len)
+		return 0;
+	
+	//	Max 256 bytes write
+	if (((address & 0xFF) + len) > 256) {
+		Dbprintf("Flash_WriteData 256 fail [ 0x%02x ] [ %u ]", (address & 0xFF)+len, len );
+		return 0;
+	}
+	
+	// out-of-range
+	if ( (( address >> 16 ) & 0xFF ) > MAX_BLOCKS) {
+		Dbprintf("Flash_WriteData,  block out-of-range");
+		return 0;
+	}
+
+
+	FlashSendByte(PAGEPROG);
+	FlashSendByte((address >> 16) & 0xFF);
+	FlashSendByte((address >> 8) & 0xFF);
+	FlashSendByte((address >> 0) & 0xFF);
+
+	uint16_t i = 0;
+	for (; i < (len - 1); i++)
+		FlashSendByte(in[i]);
+
+	FlashSendLastByte(in[i]);
+
+	return len;	
+}
+
 bool Flash_WipeMemoryPage(uint8_t page) {
 	if (!FlashInit()) {
 		if ( MF_DBGLEVEL > 3 ) Dbprintf("Flash_WriteData init fail");
@@ -283,7 +404,7 @@ bool Flash_WipeMemoryPage(uint8_t page) {
 	Flash_ReadStat1();
 	
 	// Each block is 64Kb. One block erase takes 1s ( 1000ms )
-	Flash_WriteEnable(); Flash_Erase64k(page); Flash_CheckBusy(1000);	
+	Flash_WriteEnable(); Flash_Erase64k(page); Flash_CheckBusy(BUSY_TIMEOUT);	
 
 	FlashStop();
 	return true;	
@@ -298,10 +419,10 @@ bool Flash_WipeMemory() {
 	
 	// Each block is 64Kb.  Four blocks
 	// one block erase takes 1s ( 1000ms )
-	Flash_WriteEnable(); Flash_Erase64k(0); Flash_CheckBusy(1000);	
-	Flash_WriteEnable(); Flash_Erase64k(1); Flash_CheckBusy(1000);
-	Flash_WriteEnable(); Flash_Erase64k(2); Flash_CheckBusy(1000);
-	Flash_WriteEnable(); Flash_Erase64k(3); Flash_CheckBusy(1000);
+	Flash_WriteEnable(); Flash_Erase64k(0); Flash_CheckBusy(BUSY_TIMEOUT);	
+	Flash_WriteEnable(); Flash_Erase64k(1); Flash_CheckBusy(BUSY_TIMEOUT);
+	Flash_WriteEnable(); Flash_Erase64k(2); Flash_CheckBusy(BUSY_TIMEOUT);
+	Flash_WriteEnable(); Flash_Erase64k(3); Flash_CheckBusy(BUSY_TIMEOUT);
 	
 	FlashStop();
 	return true;
@@ -366,29 +487,18 @@ void Flash_EraseChip(void) {
 	FlashSendLastByte(CHIPERASE);
 }
 
-//	initialize
-bool FlashInit(void) {
-	FlashSetup();
 
-	StartTicks();
-	
-	if (Flash_CheckBusy(100)) {
-		StopTicks();
-		return false;
-	}
 
-	if ( MF_DBGLEVEL > 3 ) Dbprintf("FlashInit OK");
-	return true;
-}
 
 void Flashmem_print_status(void) {
 	DbpString("Flash memory");
+	Dbprintf("  Baudrate................%dMHz",FLASHMEM_SPIBAUDRATE/1000000);
 
 	if (!FlashInit()) {
-		DbpString("  init....................FAIL");
+		DbpString("  Init....................FAIL");
 		return;
 	}
-	DbpString("  init....................OK");
+	DbpString("  Init....................OK");
 	
 	uint8_t dev_id = Flash_ReadID();
 	switch (dev_id) {
