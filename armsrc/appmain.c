@@ -33,6 +33,10 @@
 #include "i2c.h"
 #endif
 
+#ifdef WITH_FPC
+#include "usart.h"
+#endif
+
 //=============================================================================
 // A buffer where we can queue things up to be sent through the FPGA, for
 // any purpose (fake tag, as reader, whatever). We go MSB first, since that
@@ -74,24 +78,26 @@ void PrintToSendBuffer(void) {
 }
 
 void print_result(char *name, uint8_t *buf, size_t len) {
-	uint8_t *p = buf;
 
-	if ( len % 16 == 0 ) {
-		for(; p-buf < len; p += 16)
-			Dbprintf("[%s:%d/%d] %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
+	uint8_t *p = buf;
+	uint16_t tmp = len & 0xFFF0;
+
+	for(; p-buf < tmp; p += 16) {
+		Dbprintf("[%s: %02d/%02d] %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
 				name,
 				p-buf,
 				len,
 				p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7],p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15]
 			);
 	}
-	else {
-		for(; p-buf < len; p += 8)
-			Dbprintf("[%s:%d/%d] %02x %02x %02x %02x %02x %02x %02x %02x",
-				name,
-				p-buf,
-				len,
-				p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
+	if (len % 16 != 0) {
+		char s[46] = {0};
+		char *sp = s;
+		for (; p-buf < len; p++ ) {
+			sprintf(sp, "%02x ", p[0] );
+			sp += 3;
+		}
+		Dbprintf("[%s: %02d/%02d] %s", name, p-buf, len, s);
 	}
 }
 
@@ -101,7 +107,7 @@ void print_result(char *name, uint8_t *buf, size_t len) {
 
 void DbpStringEx(char *str, uint32_t cmd) {
 #if DEBUG
-	byte_t len = strlen(str);
+	uint8_t len = strlen(str);
 	cmd_send(CMD_DEBUG_PRINT_STRING, len, cmd, 0, (byte_t*)str, len);
 #endif	
 }
@@ -113,7 +119,7 @@ void DbpString(char *str) {
 }
 
 #if 0
-void DbpIntegers(inst x1, int x2, int x3) {
+void DbpIntegers(int x1, int x2, int x3) {
 	cmd_send(CMD_DEBUG_PRINT_INTEGERS,x1,x2,x3,0,0);
 }
 #endif
@@ -442,6 +448,7 @@ void printStandAloneModes(void) {
 	
 	//DbpString("Running ");	
 	//Dbprintf("  Is Device attached to USB| %s", USB_ATTACHED() ? "Yes" : "No"); 
+	//Dbprintf("  Is Device attached to FPC| %s", 0 ? "Yes" : "No"); 
 	//Dbprintf("  Is USB_reconnect value   | %d", GetUSBreconnect() );
 	//Dbprintf("  Is USB_configured value  | %d", GetUSBconfigured() );
 	
@@ -1070,6 +1077,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 #endif
 		case CMD_BUFF_CLEAR:
 			BigBuf_Clear();
+			BigBuf_free();
 			break;
 
 		case CMD_MEASURE_ANTENNA_TUNING:
@@ -1106,7 +1114,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 				len = MIN( (numofbytes - i), USB_CMD_DATA_SIZE);
 				isok = cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, i, len, BigBuf_get_traceLen(), mem + startidx + i, len);
 				if (!isok) 
-					Dbprintf("transfer to client failed ::  | bytes between %d - %d", i, len);
+					Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d)", i, i+len, len);
 			}
 			// Trigger a finish downloading signal with an ACK frame
 			// iceman,  when did sending samplingconfig array got attached here?!?
@@ -1163,37 +1171,30 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			ReadMem(c->arg[0]);
 			break;
 #ifdef WITH_FLASH	
-		case CMD_READ_FLASH_MEM: {
-
+		case CMD_FLASHMEM_SET_SPIBAUDRATE:
+			FlashmemSetSpiBaudrate(c->arg[0]);
+			break;
+		case CMD_FLASHMEM_READ: {
 			LED_B_ON();
 			uint16_t isok = 0;
 			uint32_t startidx = c->arg[0];
 			uint16_t len = c->arg[1];
-			uint8_t fast = c->arg[2];
+			//uint8_t fast = c->arg[2];
 			
-			Dbprintf("FlashMem read | %d - %d", startidx, len);
+			Dbprintf("FlashMem read | %d - %d | ", startidx, len);
 			
 			size_t size = MIN(USB_CMD_DATA_SIZE, len);
 			
 			uint8_t *mem = BigBuf_malloc(size);
 	
-
-			if (fast) {
-				FlashInit(1);
-				//FlashInit();
-				Flash_CheckBusy(BUSY_TIMEOUT);
-			}
+			FlashInit();
+			//Flash_CheckBusy(BUSY_TIMEOUT);
+			
 			for(size_t i = 0; i < len; i += size) {
 				len = MIN((len - i), size);
 				
-				Dbprintf("FlashMem reading  | %d | %d | %d", startidx + i, i, len);
-				
-				if (!fast){
-				isok = Flash_ReadData(startidx + i, mem, len);
-				}
-				if (fast){
-				isok =	Flash_FastReadDataCont(startidx + i, mem, len);
-				}
+				Dbprintf("FlashMem reading  | %d | %d | %d |", startidx + i, i, len);
+				isok = Flash_ReadDataCont(startidx + i, mem, len);
 				if ( isok == len ) {
 					print_result("Chunk: ", mem, len);
 				} else {
@@ -1201,13 +1202,11 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 					break;
 				}
 			}
-			if (fast){
-				FlashStop();
-			}
+			FlashStop();
 			LED_B_OFF();
 			break;
 		}
-		case CMD_WRITE_FLASH_MEM: {
+		case CMD_FLASHMEM_WRITE: {
 			LED_B_ON();
 			uint8_t isok = 0;
 			uint16_t res = 0;
@@ -1217,6 +1216,14 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			
 			uint32_t tmp = startidx + len;
 			
+  			if (!FlashInit())
+  		    {
+   		       break;
+  		    }
+    
+  		    Flash_CheckBusy(BUSY_TIMEOUT);
+  		    Flash_WriteEnable();
+
 			// inside 256b page?
 			if ( (tmp & 0xFF) != 0) {				
 				
@@ -1230,27 +1237,28 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 						uint8_t first_len =  (~startidx & 0xFF)+1;
 												
 						// first mem page						
-						res = Flash_WriteData(startidx, data, first_len);
+						res = Flash_WriteDataCont(startidx, data, first_len);
 						
 						// second mem page
-						res = Flash_WriteData(startidx + first_len, data + first_len, len - first_len);
+						res = Flash_WriteDataCont(startidx + first_len, data + first_len, len - first_len);
 						
 						isok = (res == (len - first_len)) ? 1 : 0;
 						
 					} else {
-						res = Flash_WriteData(startidx, data, len);
+						res = Flash_WriteDataCont(startidx, data, len);
 						isok = (res == len) ? 1 : 0;
 					}					
 			} else {				
-				res = Flash_WriteData(startidx, data, len);
+				res = Flash_WriteDataCont(startidx, data, len);
 				isok = (res == len) ? 1 : 0;
 			}
+  		    FlashStop();
 
 			cmd_send(CMD_ACK, isok, 0, 0, 0, 0);
 			LED_B_OFF();
 			break;
 		}
-		case CMD_WIPE_FLASH_MEM: {
+		case CMD_FLASHMEM_WIPE: {
 			LED_B_ON();
 			uint8_t page = c->arg[0];
 			uint8_t initalwipe = c->arg[1];
@@ -1268,7 +1276,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			LED_B_OFF();
 			break;
 		}
-		case CMD_DOWNLOAND_FLASH_MEM: {
+		case CMD_FLASHMEM_DOWNLOAD: {
 
 			LED_B_ON();
 			uint8_t *mem = BigBuf_malloc(USB_CMD_DATA_SIZE);
@@ -1276,48 +1284,39 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			size_t len = 0;
 			uint32_t startidx = c->arg[0];
 			uint32_t numofbytes = c->arg[1];
-			uint8_t fast = c->arg[2];
+			//uint8_t fast = c->arg[2];
 
 			// arg0 = startindex
 			// arg1 = length bytes to transfer
 			// arg2 = RFU
 
+				FlashInit();
 
-			if (fast) {
-				FlashInit(1);
-				//FlashInit();
-				Flash_CheckBusy(BUSY_TIMEOUT);
-			}
 			for (size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
 				len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
-				if (!fast){
-				isok = Flash_ReadData(startidx + i, mem, len);
-				}
-				if (fast){
-				isok =	Flash_FastReadDataCont(startidx + i, mem, len);
-				}
+
+				isok = Flash_ReadDataCont(startidx + i, mem, len);
 				if (!isok )
 					Dbprintf("reading flash memory failed ::  | bytes between %d - %d", i, len);
-				
-				isok = cmd_send(CMD_DOWNLOADED_FLASHMEM, i, len, 0, mem, len);
+
+				isok = cmd_send(CMD_FLASHMEM_DOWNLOADED, i, len, 0, mem, len);
 				if (!isok) 
 					Dbprintf("transfer to client failed ::  | bytes between %d - %d", i, len);
 			}
-			if (fast){
 				FlashStop();
-			}
+		
 			cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
 			LED_B_OFF();
 			break;
 		}
-		case CMD_INFO_FLASH_MEM: {
+		case CMD_FLASHMEM_INFO: {
 
 			LED_B_ON();
 			rdv40_validation_t *info = (rdv40_validation_t*)BigBuf_malloc( sizeof(rdv40_validation_t) );
 			
 			bool isok = Flash_ReadData(FLASH_MEM_SIGNATURE_OFFSET, info->signature, FLASH_MEM_SIGNATURE_LEN);
 
-			if (FlashInit(0)) {
+			if (FlashInit()) {
 				Flash_UniqueID( info->flashid);
 				FlashStop();
 			}
@@ -1437,15 +1436,15 @@ void  __attribute__((noreturn)) AppMain(void) {
 	StartTickCount();
   	
 #ifdef WITH_LCD
-//	LCDInit();
+	LCDInit();
 #endif
 
 #ifdef WITH_SMARTCARD
-//	I2C_init();
+	I2C_init();
 #endif
 
 #ifdef WITH_FPC
-//	usart_init();
+	usart_init();
 #endif	
 
 	// This is made as late as possible to ensure enumeration without timeout
@@ -1487,11 +1486,6 @@ void  __attribute__((noreturn)) AppMain(void) {
 #if defined (WITH_ISO14443a) && ( defined (WITH_HF_YOUNG) || defined(WITH_HF_COLIN) || defined(WITH_HF_MATTYRUN) )
 			RunMod();
 #endif
-
-			// when here,  we are no longer in standalone mode.
-			// reseting the variables which keeps track of usb re-attached/configured
-			//SetUSBreconnect(0);
-			//SetUSBconfigured(0);
 		}
 	}
 }

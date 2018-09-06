@@ -1,11 +1,6 @@
 #include "flashmem.h"
 
 
-#define MCK 48000000
-//#define FLASH_BAUD 24000000
-//define FLASH_BAUD 33000000
-#define FLASH_BAUD MCK/2
-#define FLASH_FASTBAUD MCK
 
 /* here: use NCPS2 @ PA10: */
 #define SPI_CSR_NUM      2
@@ -18,10 +13,17 @@
 #define SPI_DLYBCT(delay, masterClock) ((uint32_t) ((((masterClock) / 1000000) * (delay)) / 32000) << 24)
 
 
+uint32_t FLASHMEM_SPIBAUDRATE = FLASH_BAUD;
+
+
+void FlashmemSetSpiBaudrate(uint32_t baudrate){
+   FLASHMEM_SPIBAUDRATE = baudrate;
+   Dbprintf("Spi Baudrate : %dMhz", FLASHMEM_SPIBAUDRATE/1000000);
+}
 
 //	initialize
-bool FlashInit(bool fast) {
-	FlashSetup(fast);
+bool FlashInit() {
+	FlashSetup(FLASHMEM_SPIBAUDRATE);
 
 	StartTicks();
 
@@ -33,7 +35,7 @@ bool FlashInit(bool fast) {
 	return true;
 }
 
-void FlashSetup(bool fast){
+void FlashSetup(uint32_t baudrate){
    //WDT_DISABLE
     AT91C_BASE_WDTC->WDTC_WDMR = AT91C_WDTC_WDDIS;
 
@@ -79,13 +81,12 @@ void FlashSetup(bool fast){
 		AT91C_SPI_PS_FIXED 	|		// Fixed Peripheral Select
 		AT91C_SPI_MSTR;			// Master Mode
 
-	int baudrate = FLASH_BAUD;
 	uint8_t csaat = 1;
-	int dlybct = 0;
-    if (fast) {
+	uint32_t dlybct = 0;
+    if (baudrate > FLASH_MINFAST) {
 		baudrate = 	FLASH_FASTBAUD;
 		//csaat = 0;
-		dlybct = MCK/32;
+		dlybct = 1500;
 	}
 
 	AT91C_BASE_SPI->SPI_CSR[2] =
@@ -100,28 +101,28 @@ void FlashSetup(bool fast){
 							// transferred in the shifter. This can imply for example, that the second data is sent twice.
 							// COLIN :: For now we STILL use CSAAT=1 to avoid having to (de)assert  NPCS manually via PIO lines and we deal with delay
 		( csaat << 3) |
-/* Spi modes:
-Mode 	CPOL 	CPHA  NCPHA
-0 	0 	0     1       clock normally low    read on rising edge
-1 	0 	1     0       clock normally low    read on falling edge
-2 	1 	0     1       clock normally high   read on falling edge
-3 	1 	1     0       clock normally high   read on rising edge
-However, page 512 of the AT91SAM7Sx datasheet say "Note that in SPI
-master mode the ATSAM7S512/256/128/64/321/32 does not sample the data
-(MISO) on the opposite edge where data clocks out (MOSI) but the same
-edge is used as shown in Figure 36-3 and Figure 36-4."  Figure 36-3
-shows that CPOL=NCPHA=0 or CPOL=NCPHA=1 samples on the rising edge and
-that the data changes sometime after the rising edge (about 2 ns).  To
-be consistent with normal SPI operation, it is probably safe to say
-that the data changes on the falling edge and should be sampled on the
-rising edge.  Therefore, it appears that NCPHA should be treated the
-same as CPHA.  Thus:
-Mode	CPOL	CPHA	NCPHA
-0	0	0     0       clock normally low    read on rising edge
-1	0 	1     1       clock normally low    read on falling edge
-2	1 	0     0       clock normally high   read on falling edge
-3	1 	1     1       clock normally high   read on rising edge
-*/
+		/* Spi modes:
+			Mode 	CPOL 	CPHA  NCPHA
+			0 	0 	0     1       clock normally low    read on rising edge
+			1 	0 	1     0       clock normally low    read on falling edge
+			2 	1 	0     1       clock normally high   read on falling edge
+			3 	1 	1     0       clock normally high   read on rising edge
+			However, page 512 of the AT91SAM7Sx datasheet say "Note that in SPI
+			master mode the ATSAM7S512/256/128/64/321/32 does not sample the data
+			(MISO) on the opposite edge where data clocks out (MOSI) but the same
+			edge is used as shown in Figure 36-3 and Figure 36-4."  Figure 36-3
+			shows that CPOL=NCPHA=0 or CPOL=NCPHA=1 samples on the rising edge and
+			that the data changes sometime after the rising edge (about 2 ns).  To
+			be consistent with normal SPI operation, it is probably safe to say
+			that the data changes on the falling edge and should be sampled on the
+			rising edge.  Therefore, it appears that NCPHA should be treated the
+			same as CPHA.  Thus:
+			Mode	CPOL	CPHA	NCPHA
+			0	0	0     0       clock normally low    read on rising edge
+			1	0 	1     1       clock normally low    read on falling edge
+			2	1 	0     0       clock normally high   read on falling edge
+			3	1 	1     1       clock normally high   read on rising edge
+		*/
 		( 0 << 1)	|		// Clock Phase data captured on leading edge, changes on following edge
 		( 0 << 0);			// Clock Polarity inactive state is logic 0
 
@@ -161,10 +162,10 @@ uint16_t FlashSendByte(uint32_t data) {
 	// send the data
 	AT91C_BASE_SPI->SPI_TDR = data;
 
-    while ((AT91C_BASE_SPI->SPI_SR & AT91C_SPI_TDRE) == 0){};
+    //while ((AT91C_BASE_SPI->SPI_SR & AT91C_SPI_TDRE) == 0){};
 
 	// wait recive transfer is complete
-	while ((AT91C_BASE_SPI->SPI_SR & AT91C_SPI_RDRF) == 0);
+	while ((AT91C_BASE_SPI->SPI_SR & AT91C_SPI_RDRF) == 0){};
 
 	// reading incoming data
 	return ((AT91C_BASE_SPI->SPI_RDR) & 0xFFFF);
@@ -186,6 +187,8 @@ bool Flash_CheckBusy(uint32_t timeout)
 	WaitUS(WINBOND_WRITE_DELAY);
 	StartCountUS();
 	uint32_t _time = GetCountUS();
+
+	if ( MF_DBGLEVEL > 3 ) Dbprintf("Checkbusy in...");
 
 	do
 	{
@@ -249,24 +252,40 @@ void Flash_UniqueID(uint8_t *uid) {
 
 uint16_t Flash_ReadData(uint32_t address, uint8_t *out, uint16_t len) {
 	
-	if (!FlashInit(0)) return 0;
+	if (!FlashInit()) return 0;
 		
 	// length should never be zero
 	if (!len || Flash_CheckBusy(BUSY_TIMEOUT)) return 0;
 
-	FlashSendByte(READDATA);
-	FlashSendByte((address >> 16) & 0xFF);
-	FlashSendByte((address >> 8) & 0xFF);
-	FlashSendByte((address >> 0) & 0xFF);
+
+    uint8_t cmd = READDATA;
+
+	if(FASTFLASH) {
+		cmd = FASTREAD;
+	} 
+
+	FlashSendByte(cmd);
+	Flash_TransferAdresse(address);
+
+	if (FASTFLASH){
+		FlashSendByte(DUMMYBYTE);
+	}
 
 	uint16_t i = 0;
 	for (; i < (len - 1); i++)
 		out[i] = FlashSendByte(0xFF);
 
 	out[i] = FlashSendLastByte(0xFF);
-	
+
+
 	FlashStop();	
 	return len;	
+}
+
+void Flash_TransferAdresse(uint32_t address){
+	FlashSendByte((address >> 16) & 	0xFF);
+	FlashSendByte((address >> 8) & 0xFF);
+	FlashSendByte((address >> 0) & 0xFF);
 }
 
 /* This ensure we can ReadData without having to cycle through initialization everytime */
@@ -274,12 +293,20 @@ uint16_t Flash_ReadDataCont(uint32_t address, uint8_t *out, uint16_t len) {
 	
 	// length should never be zero
 	if (!len) return 0;
+	
+    uint8_t cmd = READDATA;
 
-	FlashSendByte(READDATA);
-	FlashSendByte((address >> 16) & 0xFF);
-	FlashSendByte((address >> 8) & 0xFF);
-	FlashSendByte((address >> 0) & 0xFF);
+	if(FASTFLASH) {
+		cmd = FASTREAD;
+	} 
 
+	FlashSendByte(cmd);
+	Flash_TransferAdresse(address);
+
+    if (FASTFLASH){
+		FlashSendByte(DUMMYBYTE);
+	}
+ 
 	uint16_t i = 0;
 	for (; i < (len - 1); i++)
 		out[i] = FlashSendByte(0xFF);
@@ -288,32 +315,6 @@ uint16_t Flash_ReadDataCont(uint32_t address, uint8_t *out, uint16_t len) {
 	
 	return len;	
 }
-
-uint16_t Flash_FastReadDataCont(uint32_t address, uint8_t *out, uint16_t len) {
-	
-	// length should never be zero
-	if (!len) return 0;
-
-	//if (Flash_CheckBusy(BUSY_TIMEOUT))
-	//{return 0;}
-
-	FlashSendByte(FASTREAD);
-	FlashSendByte((address >> 16) & 0xFF);
-	FlashSendByte((address >> 8) & 0xFF);
-	FlashSendByte((address >> 0) & 0xFF);
-	FlashSendByte(0xFF);
-	//Flash_CheckBusy(BUSY_TIMEOUT);
-
-
-	uint16_t i = 0;
-	for (; i < (len - 1); i++)
-		out[i] = FlashSendByte(0xFF);
-
-	out[i] = FlashSendLastByte(0xFF);
-	
-	return len;	
-}
-
 
 
 ////////////////////////////////////////
@@ -338,13 +339,12 @@ uint16_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len) {
 		return 0;
 	}
 
-	if (!FlashInit(0)) {
+	if (!FlashInit()) {
 		if ( MF_DBGLEVEL > 3 ) Dbprintf("Flash_WriteData init fail");
 		return 0;
 	}
 	
 	Flash_CheckBusy(BUSY_TIMEOUT);
-	//Flash_ReadStat1();
 
 	Flash_WriteEnable();
 	
@@ -382,10 +382,8 @@ uint16_t Flash_WriteDataCont(uint32_t address, uint8_t *in, uint16_t len) {
 	}
 
 
-	//Flash_CheckBusy(100);
-	//SpinDelay(1);
+
 	Flash_CheckBusy(BUSY_TIMEOUT);
-	//Flash_ReadStat1();
     Flash_WriteEnable();
 
 	FlashSendByte(PAGEPROG);
@@ -403,7 +401,7 @@ uint16_t Flash_WriteDataCont(uint32_t address, uint8_t *in, uint16_t len) {
 }
 
 bool Flash_WipeMemoryPage(uint8_t page) {
-	if (!FlashInit(0)) {
+	if (!FlashInit()) {
 		if ( MF_DBGLEVEL > 3 ) Dbprintf("Flash_WriteData init fail");
 		return false;
 	}
@@ -417,7 +415,7 @@ bool Flash_WipeMemoryPage(uint8_t page) {
 }
 // Wipes flash memory completely, fills with 0xFF
 bool Flash_WipeMemory() {
-	if (!FlashInit(0)) {
+	if (!FlashInit()) {
 		if ( MF_DBGLEVEL > 3 ) Dbprintf("Flash_WriteData init fail");
 		return false;
 	}
@@ -498,12 +496,13 @@ void Flash_EraseChip(void) {
 
 void Flashmem_print_status(void) {
 	DbpString("Flash memory");
+	Dbprintf("  Baudrate................%dMHz",FLASHMEM_SPIBAUDRATE/1000000);
 
-	if (!FlashInit(0)) {
-		DbpString("  init....................FAIL");
+	if (!FlashInit()) {
+		DbpString("  Init....................FAIL");
 		return;
 	}
-	DbpString("  init....................OK");
+	DbpString("  Init....................OK");
 	
 	uint8_t dev_id = Flash_ReadID();
 	switch (dev_id) {

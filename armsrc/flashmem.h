@@ -102,15 +102,30 @@
 #define MAX_SECTORS		16
 
 
+
+
+#define MCK 48000000
+//#define FLASH_BAUD 24000000
+#define FLASH_MINFAST 24000000 //33000000
+#define FLASH_BAUD MCK/2
+#define FLASH_FASTBAUD MCK
+#define FLASH_MINBAUD FLASH_FASTBAUD
+
+#define FASTFLASH (FLASHMEM_SPIBAUDRATE > FLASH_MINFAST)
+
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 extern void Dbprintf(const char *fmt, ...);
-bool FlashInit(bool fast);
-void FlashSetup(bool fast);
+
+void FlashmemSetSpiBaudrate(uint32_t baudrate);
+bool FlashInit();
+void FlashSetup(uint32_t baudrate);
 void FlashStop(void);
 bool Flash_WaitIdle(void);
 uint8_t Flash_ReadStat1(void);
 uint8_t Flash_ReadStat2(void);
 uint16_t FlashSendByte(uint32_t data);
+void Flash_TransferAdresse(uint32_t address);
 
 bool Flash_CheckBusy(uint32_t timeout);
 
@@ -128,10 +143,11 @@ uint8_t Flash_ReadID(void);
 uint16_t Flash_ReadData(uint32_t address, uint8_t *out, uint16_t len);
 
 uint16_t Flash_ReadDataCont(uint32_t address, uint8_t *out, uint16_t len);
-uint16_t Flash_FastReadDataCont(uint32_t address, uint8_t *out, uint16_t len);
 
 uint16_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len);
 uint16_t Flash_WriteDataCont(uint32_t address, uint8_t *in, uint16_t len);
 void Flashmem_print_status(void);
+
+
 
 #endif

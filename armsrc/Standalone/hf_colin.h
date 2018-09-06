@@ -52,6 +52,7 @@ void WriteTagToFlash(uint8_t index, size_t size);
 
 const char clearTerm[8] = {0x1b, 0x5b, 0x48, 0x1b, 0x5b, 0x32, 0x4a, '\0'};
 
+void TestFlashmemSpeed(size_t buffersize, uint32_t spibaudrate);
 
 
 #define LOGO logo_kigiv

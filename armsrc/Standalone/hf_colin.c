@@ -153,10 +153,11 @@ void SpinUp(uint32_t speed)
     LED_D_OFF();
 }
 
-void TestFlashmemSpeed(size_t buffersize, bool fastmode)
+void TestFlashmemSpeed(size_t buffersize, uint32_t spibaudrate)
 {
 
-    DbprintfEx(FLAG_NOLOG, "%s---+----[ %s %s[%dKB] %s]", _GREEN_, _WHITE_, _YELLOW_, buffersize / 1024, _WHITE_);
+    FLASHMEM_SPIBAUDRATE = spibaudrate*1000000;
+    DbprintfEx(FLAG_NOLOG, "%s---+----[ %s %s[%dKB] %s] (%d)", _GREEN_, _WHITE_, _YELLOW_, buffersize / 1024, _WHITE_, FLASHMEM_SPIBAUDRATE);
     uint16_t t = 0;
 
     LED_B_ON();
@@ -166,10 +167,10 @@ void TestFlashmemSpeed(size_t buffersize, bool fastmode)
     uint32_t startidx = 0;
     uint32_t numofbytes = 0x3FFFF;
 
-    if (!FlashInit(fastmode)) {
+    if (!FlashInit()) {
         return;
     }
-    Flash_CheckBusy(BUSY_TIMEOUT);
+    //Flash_CheckBusy(BUSY_TIMEOUT);
 
     //Flash_ReadStat1();
 
@@ -183,14 +184,7 @@ void TestFlashmemSpeed(size_t buffersize, bool fastmode)
         //isok = Flash_ReadData(startidx + i, mem, len);
         //uint32_t iend_time;
         //uint32_t istart_time = iend_time = GetTickCount();
-        if (fastmode)
-        {
-            isok = Flash_FastReadDataCont(startidx + i, mem, len);
-        }
-        else
-        {
-            isok = Flash_ReadDataCont(startidx + i, mem, len);
-        }
+        isok = Flash_ReadDataCont(startidx + i, mem, len);
         //iend_time = GetTickCount();
         //DbprintfEx(FLAG_RAWPRINT, "%s%dms%s>", _YELLOW_, iend_time - istart_time, _WHITE_);
         //cjSetCursLeft();
@@ -199,7 +193,7 @@ void TestFlashmemSpeed(size_t buffersize, bool fastmode)
             Dbprintf("[FAIL] reading flash memory failed ::  | bytes between %d - %d", i, len);
             return;
         }
-        //isok = cmd_send(CMD_DOWNLOADED_FLASHMEM, i, len, 0, mem, len);
+        //isok = cmd_send(CMD_FLASHMEM_DOWNLOADED, i, len, 0, mem, len);
         //if (!isok)
         //	Dbprintf("transfer to client failed ::  | bytes between %d - %d", i, len);
         t++;
@@ -211,6 +205,29 @@ void TestFlashmemSpeed(size_t buffersize, bool fastmode)
     //cjSetCursLeft();
     LED_B_OFF();
     FlashStop();
+}
+
+void TestFlashmemRoutine()
+{
+    DbprintfEx(FLAG_NOLOG, "%s>>%s Will Now Test dumping Full flash [256Kb] (2Mbits)through Bigbuf buffers\n", _GREEN_, _WHITE_);
+    MF_DBGLEVEL = MF_DBG_NONE;
+    //DbprintfEx(FLAG_NOLOG, "---------\n%s[A]%s Using NORMAL Reads @Max (24Mhz=MCK/2)\n--------", _GREEN_, _WHITE_);
+    TestFlashmemSpeed(32768,24);
+    TestFlashmemSpeed(16384 + 4096 + 4096,24);
+    TestFlashmemSpeed(16384,24);
+    TestFlashmemSpeed(4096,24);
+    TestFlashmemSpeed(1024,24);
+    //SpinDelay(1000);
+    //WDT_HIT();
+    //DbprintfEx(FLAG_NOLOG, "--------\n%s[B]%s Using FAST Reads @Max (48Mhz=MCK=CPUClock/2=MAXSPI)\n--------", _GREEN_, _WHITE_);
+    TestFlashmemSpeed(32768,48);
+    TestFlashmemSpeed(16384 + 4096 + 4096,48);
+    TestFlashmemSpeed(16384,48);
+    TestFlashmemSpeed(4096,48);
+    TestFlashmemSpeed(1024,48);
+    //SpinDelay(1000);
+    //WDT_HIT();
+    return;
 }
 
 void ReadLastTagFromFlash()
@@ -231,11 +248,12 @@ void ReadLastTagFromFlash()
     size_t size = len;
     uint8_t *mem = BigBuf_malloc(size);
 
-    //if (!FlashFastReadInit()){
-    if (!FlashInit(0))
+    if (!FlashInit())
     {
         return;
     }
+    Flash_CheckBusy(BUSY_TIMEOUT);
+
     //Flash_ReadStat1();
 
     uint32_t end_time;
@@ -256,8 +274,8 @@ void ReadLastTagFromFlash()
         {
             DbprintfEx(FLAG_NOLOG, "FlashMem reading failed | %d | %d", len, isok);
             cjSetCursLeft();
-            SpinOff(100);
             FlashStop();
+            SpinOff(100);
             return;
         }
     }
@@ -292,11 +310,12 @@ void WriteTagToFlash(uint8_t index, size_t size)
     emlGetMem(data, 0, (size * 64)/1024);
 
     //if (!FlashFastReadInit()){
-    if (!FlashInit(0))
+    if (!FlashInit())
     {
         return;
     }
     
+    Flash_CheckBusy(BUSY_TIMEOUT);
     Flash_WriteEnable();
     Flash_Erase4k(0,0);
     Flash_CheckBusy(BUSY_TIMEOUT);
@@ -492,25 +511,8 @@ ACCBITS : 796788[00]+VALUE
     SpinDown(50);
 
 #if 0
-    DbprintfEx(FLAG_NOLOG, "%s>>%s Will Now Test dumping Full flash [256Kb] (2Mbits)through Bigbuf buffers\n", _GREEN_, _WHITE_);
-    MF_DBGLEVEL = MF_DBG_NONE;
-    DbprintfEx(FLAG_NOLOG, "---------\n%s[A]%s Using NORMAL Reads @Max (24Mhz=MCK/2)\n--------", _GREEN_, _WHITE_);
-    TestFlashmemSpeed(32768,0);
-    TestFlashmemSpeed(16384 + 4096 + 4096,0);
-    TestFlashmemSpeed(16384,0);
-    TestFlashmemSpeed(4096,0);
-    TestFlashmemSpeed(1024,0);
-    SpinDelay(1000);
-    WDT_HIT();
-    DbprintfEx(FLAG_NOLOG, "--------\n%s[B]%s Using FAST Reads @Max (48Mhz=MCK=CPUClock/2=MAXSPI)\n--------", _GREEN_, _WHITE_);
-    TestFlashmemSpeed(32768,1);
-    TestFlashmemSpeed(16384 + 4096 + 4096,1);
-    TestFlashmemSpeed(16384,1);
-    TestFlashmemSpeed(4096,1);
-    TestFlashmemSpeed(1024,1);
-    SpinDelay(1000);
-    WDT_HIT();
-    return;
+TestFlashmemRoutine();
+return;
 #endif
 
 failtag:
