@@ -12,13 +12,36 @@
 #include "rsa.h"
 #include "sha1.h"
 
+#define MCK 48000000
+//#define FLASH_BAUD 24000000
+#define FLASH_MINFAST 24000000 //33000000
+#define FLASH_BAUD MCK/2
+#define FLASH_FASTBAUD MCK
+#define FLASH_MINBAUD FLASH_FASTBAUD
+
+#define FASTFLASH (FLASHMEM_SPIBAUDRATE > FLASH_MINFAST)
+
 static int CmdHelp(const char *Cmd);
+
+int usage_flashmem_spibaud(void){
+	PrintAndLogEx(NORMAL, "Usage:  mem spibaud [h] <baudrate>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "           h    this help");	
+	PrintAndLogEx(NORMAL, "      <baudrate>    SPI baudrate in MHz [24|48]");
+	PrintAndLogEx(NORMAL, "           ");
+	PrintAndLogEx(NORMAL, "           If >= 24Mhz, FASTREADS instead of READS instruction will be used.");
+	PrintAndLogEx(NORMAL, "           Reading Flash ID will virtually always fail under 48Mhz setting");
+	PrintAndLogEx(NORMAL, "           Unless you know what you are doing, please stay at 24Mhz");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "           mem spibaud 48");
+	return 0;
+}
+
 int usage_flashmem_read(void){
 	PrintAndLogEx(NORMAL, "Read flash memory on device");
-	PrintAndLogEx(NORMAL, "Usage:  mem read o <offset> l <len> [f]");
+	PrintAndLogEx(NORMAL, "Usage:  mem read o <offset> l <len>");
 	PrintAndLogEx(NORMAL, "  o <offset>    :      offset in memory");
 	PrintAndLogEx(NORMAL, "  l <len>       :      length");
-	PrintAndLogEx(NORMAL, "  f             :      fastRead mode");
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Examples:");
 	PrintAndLogEx(NORMAL, "        mem read o 0 l 32");		// read 32 bytes starting at offset 0
@@ -42,7 +65,6 @@ int usage_flashmem_save(void){
 	PrintAndLogEx(NORMAL, "  o <offset>    :      offset in memory");
 	PrintAndLogEx(NORMAL, "  l <length>    :      length");
 	PrintAndLogEx(NORMAL, "  f <filename>  :      file name");
-	PrintAndLogEx(NORMAL, "  +  	       :      fast read mode");
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Examples:");
 	PrintAndLogEx(NORMAL, "        mem save f myfile");					// download whole flashmem to file myfile
@@ -81,14 +103,9 @@ int CmdFlashMemRead(const char *Cmd) {
 	uint8_t cmdp = 0;
 	bool errors = false;
 	uint32_t start_index = 0, len  = 0;
-	uint8_t fast = 0;
 	
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch (tolower(param_getchar(Cmd, cmdp))) {
-		case 'f':
-			fast = 1;
-			cmdp += 1;
-			break;
 		case 'o':
 			start_index = param_get32ex(Cmd, cmdp+1, 0, 10);
 			cmdp += 2;
@@ -114,11 +131,24 @@ int CmdFlashMemRead(const char *Cmd) {
 		return 1;
 	}
 
-	UsbCommand c = {CMD_READ_FLASH_MEM, {start_index, len, fast}};		
+	UsbCommand c = {CMD_FLASHMEM_READ, {start_index, len, 0}};		
 	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;
 }
+
+int CmdFlashmemSpiBaudrate(const char *Cmd) {
+
+	char ctmp = param_getchar(Cmd, 0);
+	if (strlen(Cmd) < 1 || ctmp == 'h' || ctmp == 'H') return usage_flashmem_spibaud();
+	uint32_t baudrate = param_get32ex(Cmd, 0, 0, 10);
+	baudrate = baudrate*1000000;
+	if (baudrate != FLASH_BAUD && baudrate != FLASH_MINBAUD ) return usage_flashmem_spibaud();
+	UsbCommand c = {CMD_FLASHMEM_SET_SPIBAUDRATE, {baudrate, 0, 0}};
+	SendCommand(&c);
+	return 0;
+}
+
 int CmdFlashMemLoad(const char *Cmd){
 
 	FILE *f;
@@ -196,7 +226,7 @@ int CmdFlashMemLoad(const char *Cmd){
 	while (bytes_remaining > 0){
 		uint32_t bytes_in_packet = MIN(FLASH_MEM_BLOCK_SIZE, bytes_remaining);
 		
-		UsbCommand c = {CMD_WRITE_FLASH_MEM, {start_index + bytes_sent, bytes_in_packet, 0}};
+		UsbCommand c = {CMD_FLASHMEM_WRITE, {start_index + bytes_sent, bytes_in_packet, 0}};
 				
 		memcpy(c.d.asBytes, dump + bytes_sent, bytes_in_packet);
 		clearCommandBuffer();
@@ -228,7 +258,6 @@ int CmdFlashMemSave(const char *Cmd){
 	uint8_t cmdp = 0;
 	bool errors = false;
 	uint32_t start_index = 0, len = FLASH_MEM_MAX_SIZE;
-	uint8_t fast = 0;
 	
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -241,10 +270,6 @@ int CmdFlashMemSave(const char *Cmd){
 			start_index = param_get32ex(Cmd, cmdp+1, 0, 10);
 			cmdp += 2;
 			break;
-                case '+':
-                        fast = 1;
-                        cmdp += 1;
-                        break;
 		case 'f':
 			//File handling
 			if ( param_getstr(Cmd, cmdp+1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE ) {
@@ -314,7 +339,7 @@ int CmdFlashMemWipe(const char *Cmd){
 	//Validations
 	if (errors || cmdp == 0 ) return usage_flashmem_wipe();			
 			
-	UsbCommand c = {CMD_WIPE_FLASH_MEM, {page, initalwipe, 0}};
+	UsbCommand c = {CMD_FLASHMEM_WIPE, {page, initalwipe, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
@@ -359,7 +384,7 @@ int CmdFlashMemInfo(const char *Cmd){
 	//Validations
 	if (errors ) return usage_flashmem_info();
 			
-	UsbCommand c = {CMD_INFO_FLASH_MEM, {0, 0, 0}};
+	UsbCommand c = {CMD_FLASHMEM_INFO, {0, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
@@ -488,7 +513,7 @@ int CmdFlashMemInfo(const char *Cmd){
 
 		if (shall_write) {
 			// save to mem
-			c = (UsbCommand){CMD_WRITE_FLASH_MEM, {FLASH_MEM_SIGNATURE_OFFSET, FLASH_MEM_SIGNATURE_LEN, 0}};				
+			c = (UsbCommand){CMD_FLASHMEM_WRITE, {FLASH_MEM_SIGNATURE_OFFSET, FLASH_MEM_SIGNATURE_LEN, 0}};				
 			memcpy(c.d.asBytes, sign, sizeof(sign));	
 			clearCommandBuffer();
 			SendCommand(&c);
@@ -520,6 +545,7 @@ int CmdFlashMemInfo(const char *Cmd){
 
 static command_t CommandTable[] = {
 	{"help",	CmdHelp,            1, "This help"},
+	{"spibaud", CmdFlashmemSpiBaudrate,	1, "Set Flash memory Spi baudrate [rdv40]"},
 	{"read",	CmdFlashMemRead,	1, "Read Flash memory [rdv40]"},
 	{"info",	CmdFlashMemInfo,	1, "Flash memory information [rdv40]"},
 	{"load",	CmdFlashMemLoad,	1, "Load data into flash memory [rdv40]"},

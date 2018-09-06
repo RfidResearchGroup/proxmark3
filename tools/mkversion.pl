@@ -18,13 +18,23 @@ my $fullgitinfo = 'iceman';
 my $ctime;
 # GIT status  0 = dirty,  1 = clean ,  2 = undecided
 my $clean = 2;
+
 # Do we have acces to git command? 
-my $commandGIT = `bash which git`;
+#######
+# solves some bug on macos i.e: 
+##
+# perl ../tools/mkversion.pl .. > version.c || cp ../common/default_version.c version.c
+# /usr/bin/which: /usr/bin/which: cannot execute binary file
+# fatal: No names found, cannot describe anything.
+##
+# anyway forcing any kind of shell is at least useless, at worst fatal.
+my $commandGIT = "env -S which git";
 
 if ( defined($commandGIT) )  {
 
 	my $githistory = `git fetch --all`;
-	my $gitversion = `git describe --dirty`;
+	# now avoiding the "fatal: No names found, cannot describe anything." error by fallbacking to abbrev hash in such case
+	my $gitversion = `git describe --dirty --always`;
 	my $gitbranch = `git rev-parse --abbrev-ref HEAD`;
 	$clean = $gitversion =~ '-dirty' ? 0 : 1;
 

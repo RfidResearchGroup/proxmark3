@@ -30,6 +30,9 @@ typedef unsigned char byte_t;
 #define MF_DBG_EXTENDED      4
 extern int MF_DBGLEVEL;
 
+// Flashmem spi baudrate
+extern uint32_t FLASHMEM_SPIBAUDRATE;
+
 // reader voltage field detector
 #define MF_MINFIELDV      4000
 
