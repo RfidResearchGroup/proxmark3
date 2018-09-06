@@ -382,10 +382,6 @@ uint16_t Flash_WriteDataCont(uint32_t address, uint8_t *in, uint16_t len) {
 	}
 
 
-
-	Flash_CheckBusy(BUSY_TIMEOUT);
-    Flash_WriteEnable();
-
 	FlashSendByte(PAGEPROG);
 	FlashSendByte((address >> 16) & 0xFF);
 	FlashSendByte((address >> 8) & 0xFF);

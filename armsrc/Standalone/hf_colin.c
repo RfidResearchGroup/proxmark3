@@ -318,14 +318,16 @@ void WriteTagToFlash(uint8_t index, size_t size)
     Flash_CheckBusy(BUSY_TIMEOUT);
     Flash_WriteEnable();
     Flash_Erase4k(0,0);
-    Flash_CheckBusy(BUSY_TIMEOUT);
-    Flash_WriteEnable();
 
     uint32_t end_time;
     uint32_t start_time = end_time = GetTickCount();
 
     while (bytes_remaining > 0)
     {
+
+	Flash_CheckBusy(BUSY_TIMEOUT);
+	Flash_WriteEnable();
+
         uint32_t bytes_in_packet = MIN(FLASH_MEM_BLOCK_SIZE, bytes_remaining);
 
         memcpy(buff, data + bytes_sent, bytes_in_packet);
