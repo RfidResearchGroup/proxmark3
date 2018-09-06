@@ -9,13 +9,11 @@
 // LEGIC RF emulation public interface
 //-----------------------------------------------------------------------------
 
-#ifndef __LEGICRF_H
-#define __LEGICRF_H
+#ifndef __LEGICRFSIM_H
+#define __LEGICRFSIM_H
 
 #include "proxmark3.h"
 
-extern void LegicRfInfo(void);
-extern void LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv);
-extern void LegicRfWriter(uint16_t offset, uint16_t byte, uint8_t iv, uint8_t *data);
+extern void LegicRfSimulate(uint8_t tagtype);
 
-#endif /* __LEGICRF_H */
+#endif /* __LEGICRFSIM_H */

@@ -521,7 +521,8 @@ int CmdTraceList(const char *Cmd) {
 		if ( protocol == ICLASS )
 			PrintAndLogEx(NORMAL, "iClass - Timings are not as accurate");
 		if ( protocol == LEGIC )
-			PrintAndLogEx(NORMAL, "LEGIC - Timings are in ticks (1us == 1.5ticks)");
+			PrintAndLogEx(NORMAL, "LEGIC - Reader Mode: Timings are in ticks (1us == 1.5ticks)\n"
+			                      "        Tag Mode: Timings are in sub carrier periods (1/212 kHz == 4.7us)");
 		if ( protocol == ISO_15693 )
 			PrintAndLogEx(NORMAL, "ISO15693 - Timings are not as accurate");
 		if ( protocol == FELICA )
