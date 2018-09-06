@@ -3,7 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-
+ - Chg adaptations for FPC communications (work in progress)  (@iceman)
+ - Fix 'stand-alone Colin' - remake to benefit from flashmem for persistence. (@cjbrigato)
+ - Fix 'LEGIC SIM' - remake of legic sim (@drandreas)
  - Changed 'proxmark3 client threading'  - remake from official repo (@micolous)
  - Add 'rem' - new command that adds a line to the log file (@didierStevens)
  - Fix 'EM410xdemod  empty tag id in lfops.c' (@Defensor7)  
