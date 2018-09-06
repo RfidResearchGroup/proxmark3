@@ -1697,11 +1697,11 @@ size_t aggregate_bits(uint8_t *dest, size_t size, uint8_t clk, uint8_t invert, u
 
 //by marshmellow  (from holiman's base)
 // full fsk demod from GraphBuffer wave to decoded 1s and 0s (no mandemod)
-size_t fskdemod(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t invert, uint8_t fchigh, uint8_t fclow, int *startIdx) {
+size_t fskdemod(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t invert, uint8_t fchigh, uint8_t fclow, int *start_idx) {
 	if (signalprop.isnoise) return 0;
 	// FSK demodulator
-	size = fsk_wave_demod(dest, size, fchigh, fclow, startIdx);
-	size = aggregate_bits(dest, size, rfLen, invert, fchigh, fclow, startIdx);
+	size = fsk_wave_demod(dest, size, fchigh, fclow, start_idx);
+	size = aggregate_bits(dest, size, rfLen, invert, fchigh, fclow, start_idx);
 	return size;
 }
 
@@ -1905,6 +1905,16 @@ int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32
 	
 	if (signalprop.isnoise) return -2;
 		
+	// zero mean data
+	int i, accum = 0;
+	for (i = 10; i < *size; ++i)
+		accum += dest[i];
+	
+	accum /= (*size - 10);
+	
+	for (i = 0; i < *size; ++i)
+		dest[i] -= accum;
+	
 	// FSK demodulator  fsk2a so invert and fc/10/8
 	*size = fskdemod(dest, *size, 50, 1, 10, 8, waveStartIdx); //hid fsk2a
 
@@ -1943,12 +1953,19 @@ int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32
 int detectIdteck(uint8_t *dest, size_t *size) {
 	//make sure buffer has data
 	if (*size < 64*2) return -1;	
-	size_t startIdx = 0;
+	
+	if (signalprop.isnoise) return -2;
+	
+	size_t start_idx = 0;
 	uint8_t preamble[] = {0,1,0,0,1,0,0,1,0,1,0,0,0,1,0,0,0,1,0,1,0,1,0,0,0,1,0,0,1,0,1,1};
-	if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
-		return -2; //preamble not found
-	if (*size != 64) return -3; // wrong demoded size
-	return (int) startIdx;
+	
+	//preamble not found
+	if (!preambleSearch(dest, preamble, sizeof(preamble), size, &start_idx))
+		return -3; 
+	
+	 // wrong demoded size
+	if (*size != 64) return -4;
+	return (int)start_idx;
 }
 
 int detectIOProx(uint8_t *dest, size_t *size, int *waveStartIdx) {
