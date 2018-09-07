@@ -45,7 +45,7 @@ int usage_legic_rdmem(void){
 }
 int usage_legic_sim(void){
 	PrintAndLogEx(NORMAL, "Simulates a LEGIC Prime tag. MIM22, MIM256, MIM1024 types can be emulated");
-	PrintAndLogEx(NORMAL, "Use eload/esave to upload a dump into emulator memory");
+	PrintAndLogEx(NORMAL, "Use ELOAD/ESAVE to upload a dump into emulator memory");
 	PrintAndLogEx(NORMAL, "Usage:  hf legic sim [h] <tagtype>");
 	PrintAndLogEx(NORMAL, "Options:");
 	PrintAndLogEx(NORMAL, "      h             : this help");
@@ -502,8 +502,8 @@ int CmdLegicRdmem(const char *Cmd) {
 
 int CmdLegicRfSim(const char *Cmd) {
 
-	char cmdp = param_getchar(Cmd, 0);
-	if ( cmdp == 'H' || cmdp == 'h' ) return usage_legic_sim();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if ( strlen(Cmd) = 0 | |cmdp == 'h' ) return usage_legic_sim();
 
 	UsbCommand c = {CMD_SIMULATE_TAG_LEGIC_RF, {1}};
 	sscanf(Cmd, " %" SCNi64, &c.arg[0]);
@@ -520,7 +520,7 @@ int CmdLegicRfWrite(const char *Cmd) {
 	int len = 0, bg, en;
 	uint32_t offset = 0, IV = 0x55;
 	
-	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'd':
 			// peek at length of the input string so we can
@@ -651,7 +651,7 @@ int CmdLegicCalcCrc(const char *Cmd){
 	int len = 0;
 	int bg, en;
 	
-	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'd':
 			// peek at length of the input string so we can
@@ -821,7 +821,7 @@ int HFLegicReader(const char *Cmd, bool verbose) {
 	if ( cmdp == 'h' ) return usage_legic_reader();
 	
 	legic_card_select_t card;
-	switch(legic_get_type(&card)){
+	switch (legic_get_type(&card)){
 		case 1: 
 			return 2;
 		case 2: 
@@ -852,7 +852,7 @@ int CmdLegicDump(const char *Cmd){
 	
 	memset(filename, 0, sizeof(filename));
 	
-	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch (tolower(param_getchar(Cmd, cmdp))) {
 			case 'h':
 				return usage_legic_dump();
@@ -950,7 +950,7 @@ int CmdLegicRestore(const char *Cmd){
 	
 	memset(filename, 0, sizeof(filename));
 	
-	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch (tolower(param_getchar(Cmd, cmdp))) {
 			case 'h':
 				errors = true;
