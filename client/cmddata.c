@@ -932,14 +932,13 @@ int CmdAskEdgeDetect(const char *Cmd) {
 /* Print our clock rate */
 // uses data from graphbuffer
 // adjusted to take char parameter for type of modulation to find the clock - by marshmellow.
-int CmdDetectClockRate(const char *Cmd)
-{
-	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) > 6 || strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H')
+int CmdDetectClockRate(const char *Cmd) {
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (strlen(Cmd) > 6 || strlen(Cmd) == 0 || cmdp == 'h')
 		return usage_data_detectclock();
 
 	int clock = 0;
-	switch ( tolower(cmdp) ) {
+	switch ( cmdp ) {
 		case 'a' :
 			clock = GetAskClock(Cmd+1, true);
 			break;
@@ -965,16 +964,21 @@ char *GetFSKType(uint8_t fchigh, uint8_t fclow, uint8_t invert)
 	static char fType[8];
 	memset(fType, 0x00, 8);	
 	char *fskType = fType;
-	if (fchigh==10 && fclow==8){
-		if (invert) //fsk2a
+	
+	if (fchigh == 10 && fclow == 8){
+		
+		if (invert)
 			memcpy(fskType, "FSK2a", 5);
-		else //fsk2
+		else
 			memcpy(fskType, "FSK2", 4);
+		
 	} else if (fchigh == 8 && fclow == 5) {
+		
 		if (invert)
 			memcpy(fskType, "FSK1", 4);
 		else
 			memcpy(fskType, "FSK1a", 5);
+		
 	} else {
 		memcpy(fskType, "FSK??", 5);
 	}
@@ -985,8 +989,7 @@ char *GetFSKType(uint8_t fchigh, uint8_t fclow, uint8_t invert)
 //fsk raw demod and print binary
 //takes 4 arguments - Clock, invert, fchigh, fclow
 //defaults: clock = 50, invert=1, fchigh=10, fclow=8 (RF/10 RF/8 (fsk2a))
-int FSKrawDemod(const char *Cmd, bool verbose)
-{
+int FSKrawDemod(const char *Cmd, bool verbose) {
 	//raw fsk demod  no manchester decoding no start bit finding just get binary from wave
 	uint8_t rfLen, invert, fchigh, fclow;
 
@@ -996,18 +999,20 @@ int FSKrawDemod(const char *Cmd, bool verbose)
 	invert = param_get8(Cmd, 1);
 	fchigh = param_get8(Cmd, 2);
 	fclow = param_get8(Cmd, 3);
-	if (strlen(Cmd)>0 && strlen(Cmd)<=2) {
-		if (rfLen==1) {
+	
+	if (strlen(Cmd) > 0 && strlen(Cmd) <= 2) {
+		if (rfLen == 1) {
 			invert = 1;   //if invert option only is used
 			rfLen = 0;
 		}
 	}
 
-	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
+	uint8_t BitStream[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t BitLen = getFromGraphBuf(BitStream);
-	if (BitLen==0) return 0;
+	if (BitLen == 0) return 0;
+	
 	//get field clock lengths
-	uint16_t fcs=0;
+	uint16_t fcs = 0;
 	if (!fchigh || !fclow) {
 		fcs = countFC(BitStream, BitLen, 1);
 		if (!fcs) {
@@ -1061,7 +1066,7 @@ int PSKDemod(const char *Cmd, bool verbose) {
 	sscanf(Cmd, "%i %i %i", &clk, &invert, &maxErr);
 	if (clk == 1) {
 		invert = 1;
-		clk=0;
+		clk = 0;
 	}
 	if (invert != 0 && invert != 1) {
 		if (g_debugMode || verbose) PrintAndLogEx(WARNING, "Invalid argument: %s", Cmd);
