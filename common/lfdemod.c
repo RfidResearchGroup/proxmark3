@@ -105,6 +105,21 @@ int32_t compute_mean_int(int *in, size_t N) {
 	return mean / (int)N;
 }
 
+
+void zeromean(uint8_t* data, size_t size) {
+			
+	// zero mean data
+	int i, accum = 0;
+	for (i = 10; i < size; ++i)
+		accum += data[i];
+	
+	accum /= (size - 10);
+	
+	for (i = 0; i < size; ++i)
+		data[i] -= accum;
+}
+
+
 //test samples are not just noise
 // By measuring mean and look at amplitude of signal from HIGH / LOW,   we can detect noise
 bool isNoise_int(int *bits, uint32_t size) {
@@ -1841,6 +1856,8 @@ int detectAWID(uint8_t *dest, size_t *size, int *waveStartIdx) {
 
 	if (signalprop.isnoise) return -2;
 
+	zeromean(dest, *size);
+	
 	// FSK2a demodulator  clock 50, invert 1, fcHigh 10, fcLow 8
 	*size = fskdemod(dest, *size, 50, 1, 10, 8, waveStartIdx); //awid fsk2a
 
@@ -1898,22 +1915,15 @@ int Em410xDecode(uint8_t *bits, size_t *size, size_t *start_idx, uint32_t *hi, u
 	return 1;
 }
 
+
 // loop to get raw HID waveform then FSK demodulate the TAG ID from it
 int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo, int *waveStartIdx) {
 	//make sure buffer has data
 	if (*size < 96*50) return -1;
 	
 	if (signalprop.isnoise) return -2;
-		
-	// zero mean data
-	int i, accum = 0;
-	for (i = 10; i < *size; ++i)
-		accum += dest[i];
-	
-	accum /= (*size - 10);
-	
-	for (i = 0; i < *size; ++i)
-		dest[i] -= accum;
+
+	zeromean(dest, *size);
 	
 	// FSK demodulator  fsk2a so invert and fc/10/8
 	*size = fskdemod(dest, *size, 50, 1, 10, 8, waveStartIdx); //hid fsk2a
@@ -1974,6 +1984,8 @@ int detectIOProx(uint8_t *dest, size_t *size, int *waveStartIdx) {
 	
 	if (signalprop.isnoise) return -2;
 	
+	zeromean(dest, *size);
+		
 	// FSK demodulator  RF/64, fsk2a so invert, and fc/10/8
 	*size = fskdemod(dest, *size, 64, 1, 10, 8, waveStartIdx);  //io fsk2a
 	

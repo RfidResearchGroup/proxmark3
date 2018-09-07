@@ -34,6 +34,7 @@ extern uint32_t	compute_mean_uint(uint8_t *in, size_t N);
 extern int32_t	compute_mean_int(int *in, size_t N);
 bool isNoise_int(int *bits, uint32_t size);
 bool isNoise(uint8_t *bits, uint32_t size);
+extern void zeromean(uint8_t* data, size_t size);
 
 // buffer is unsigned on DEVIE
 #ifdef ON_DEVICE
