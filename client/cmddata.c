@@ -701,8 +701,8 @@ int ASKbiphaseDemod(const char *Cmd, bool verbose)
 //by marshmellow - see ASKbiphaseDemod
 int Cmdaskbiphdemod(const char *Cmd)
 {
-	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) > 25 || cmdp == 'h' || cmdp == 'H') return usage_data_rawdemod_ab();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (strlen(Cmd) > 25 || cmdp == 'h') return usage_data_rawdemod_ab();
 
 	return ASKbiphaseDemod(Cmd, true);
 }
@@ -710,8 +710,8 @@ int Cmdaskbiphdemod(const char *Cmd)
 //by marshmellow - see ASKDemod
 int Cmdaskrawdemod(const char *Cmd)
 {
-	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) > 25 || cmdp == 'h' || cmdp == 'H')	return usage_data_rawdemod_ar();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (strlen(Cmd) > 25 || cmdp == 'h') return usage_data_rawdemod_ar();
 	
 	return ASKDemod(Cmd, true, false, 0);
 }

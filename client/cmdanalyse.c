@@ -244,8 +244,8 @@ int CmdAnalyseLfsr(const char *Cmd){
 }
 int CmdAnalyseLCR(const char *Cmd) {
 	uint8_t data[50];
-	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) == 0|| cmdp == 'h' || cmdp == 'H') return usage_analyse_lcr();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (strlen(Cmd) == 0|| cmdp == 'h') return usage_analyse_lcr();
 	
 	int len = 0;
 	switch (param_gethex_to_eol(Cmd, 0, data, sizeof(data), &len)) {
@@ -265,8 +265,8 @@ int CmdAnalyseLCR(const char *Cmd) {
 }
 int CmdAnalyseCRC(const char *Cmd) {
 
-	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_analyse_crc();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (strlen(Cmd) == 0 || cmdp == 'h') return usage_analyse_crc();
 	
 	int len = strlen(Cmd);
 	if ( len & 1 ) return usage_analyse_crc();
@@ -867,8 +867,8 @@ int CmdAnalyseNuid(const char *Cmd){
 	uint8_t nuid[4] = {0};	
 	uint8_t uid[7] = {0};
 	int len = 0;
-	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) == 0|| cmdp == 'h' || cmdp == 'H') return usage_analyse_nuid();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (strlen(Cmd) == 0|| cmdp == 'h') return usage_analyse_nuid();
 
 	/* selftest  UID 040D681AB52281  -> NUID 8F430FEF */
 	if (cmdp == 't' || cmdp == 'T') {

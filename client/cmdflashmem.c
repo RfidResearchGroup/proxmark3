@@ -139,10 +139,10 @@ int CmdFlashMemRead(const char *Cmd) {
 
 int CmdFlashmemSpiBaudrate(const char *Cmd) {
 
-	char ctmp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) < 1 || ctmp == 'h' || ctmp == 'H') return usage_flashmem_spibaud();
+	char ctmp = tolower(param_getchar(Cmd, 0));
+	if (strlen(Cmd) < 1 || ctmp == 'h') return usage_flashmem_spibaud();
 	uint32_t baudrate = param_get32ex(Cmd, 0, 0, 10);
-	baudrate = baudrate*1000000;
+	baudrate = baudrate * 1000000;
 	if (baudrate != FLASH_BAUD && baudrate != FLASH_MINBAUD ) return usage_flashmem_spibaud();
 	UsbCommand c = {CMD_FLASHMEM_SET_SPIBAUDRATE, {baudrate, 0, 0}};
 	SendCommand(&c);
