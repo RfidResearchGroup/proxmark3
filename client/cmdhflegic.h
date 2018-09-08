@@ -22,6 +22,7 @@
 #include "legic_prng.h"
 #include "legic.h" // legic_card_select_t struct
 #include "cmdhf.h" // "hf list"
+#include "loclass/fileutils.h"  //saveFile
 
 int CmdHFLegic(const char *Cmd);
 

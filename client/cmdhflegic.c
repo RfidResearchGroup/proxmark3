@@ -54,7 +54,7 @@ int usage_legic_sim(void){
 	PrintAndLogEx(NORMAL, "                    : 2 = MIM1024");
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Examples:");
-	PrintAndLogEx(NORMAL, "      hf legic sim");
+	PrintAndLogEx(NORMAL, "      hf legic sim 2");
 	return 0;
 }
 int usage_legic_write(void){
@@ -1120,7 +1120,7 @@ int CmdLegicELoad(const char *Cmd) {
 }
 
 int CmdLegicESave(const char *Cmd) {
-	FILE *f;
+
 	char filename[FILE_PATH_SIZE];
 	char *fnameptr = filename;
 	int fileNlen, numofbytes, nameParamNo = 1;
@@ -1160,24 +1160,14 @@ int CmdLegicESave(const char *Cmd) {
 		free(data);
 		return 4;
 	}
-
 	// user supplied filename?
 	if (fileNlen < 1)		
 		sprintf(fnameptr,"%02X%02X%02X%02X.bin", data[0], data[1], data[2], data[3]);
 	else
 		sprintf(fnameptr + fileNlen,".bin");
 	
-	// open file
-	f = fopen(filename,"wb");
-	if (!f) { 
-		PrintAndLogEx(WARNING, "Could not create file name %s", filename);
-		free(data);
-		return 1;
-	}
-	fwrite(data, 1, numofbytes, f);
-	fclose(f);
-	free(data);
-	PrintAndLogEx(NORMAL, "\nSaved %d bytes from emulator memory to file: %s", numofbytes, filename);
+	saveFileEML(filename, "eml", data, numofbytes, 8);	
+	saveFile(filename, "bin", data, numofbytes);
 	return 0;
 }
 
