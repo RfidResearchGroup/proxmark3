@@ -503,7 +503,7 @@ int CmdLegicRdmem(const char *Cmd) {
 int CmdLegicRfSim(const char *Cmd) {
 
 	char cmdp = tolower(param_getchar(Cmd, 0));
-	if ( strlen(Cmd) == 0 | |cmdp == 'h' ) return usage_legic_sim();
+	if ( strlen(Cmd) == 0 || cmdp == 'h' ) return usage_legic_sim();
 
 	UsbCommand c = {CMD_SIMULATE_TAG_LEGIC_RF, {1}};
 	sscanf(Cmd, " %" SCNi64, &c.arg[0]);
