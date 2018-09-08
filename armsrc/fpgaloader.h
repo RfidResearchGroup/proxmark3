@@ -62,7 +62,9 @@ extern void switch_off(void);
 #define FPGA_MAJOR_MODE_HF_SNOOP				    (4<<5)
 #define FPGA_MAJOR_MODE_HF_FELICA      				(5<<5)
 // BOTH
+#define FPGA_MAJOR_MODE_OFF_LF						(6<<5)
 #define FPGA_MAJOR_MODE_OFF							(7<<5)
+
 // Options for LF_ADC
 #define FPGA_LF_ADC_READER_FIELD					(1<<0)
 // Options for LF_EDGE_DETECT
@@ -76,11 +78,11 @@ extern void switch_off(void);
 #define FPGA_HF_READER_RX_XCORR_SNOOP				(1<<1)
 #define FPGA_HF_READER_RX_XCORR_QUARTER				(1<<2)
 // Options for the HF simulated tag, how to modulate
-#define FPGA_HF_SIMULATOR_NO_MODULATION				(0<<0) // 0000
-#define FPGA_HF_SIMULATOR_MODULATE_BPSK				(1<<0) // 0001
-#define FPGA_HF_SIMULATOR_MODULATE_212K				(2<<0) // 0010
-#define FPGA_HF_SIMULATOR_MODULATE_424K				(4<<0) // 0100
-#define FPGA_HF_SIMULATOR_MODULATE_424K_8BIT		0x5    // 0101
+#define FPGA_HF_SIMULATOR_NO_MODULATION				0x0 // 0000
+#define FPGA_HF_SIMULATOR_MODULATE_BPSK				0x1 // 0001
+#define FPGA_HF_SIMULATOR_MODULATE_212K				0x2 // 0010
+#define FPGA_HF_SIMULATOR_MODULATE_424K				0x4 // 0100
+#define FPGA_HF_SIMULATOR_MODULATE_424K_8BIT		0x5 // 0101
 //  no 848K 
 
 // Options for ISO14443A

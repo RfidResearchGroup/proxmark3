@@ -26,10 +26,9 @@
 # define OPEN_COIL()	HIGH(GPIO_SSC_DOUT)
 #endif
 
-
-#define START_GAP 52*8 // was 250 // SPEC:  1*8 to 50*8 - typ 15*8 (15fc)
-#define WRITE_GAP 18*8 // was 160 // SPEC:  1*8 to 20*8 - typ 10*8 (10fc)
-#define WRITE_0   24*8 // was 144 // SPEC: 16*8 to 32*8 - typ 24*8 (24fc)
+#define START_GAP 31*8 // was 250 // SPEC:  1*8 to 50*8 - typ 15*8 (15fc)
+#define WRITE_GAP 20*8 // was 160 // SPEC:  1*8 to 20*8 - typ 10*8 (10fc)
+#define WRITE_0   18*8 // was 144 // SPEC: 16*8 to 32*8 - typ 24*8 (24fc)
 #define WRITE_1   54*8 // was 400 // SPEC: 48*8 to 64*8 - typ 56*8 (56fc)  432 for T55x7; 448 for E5550
 #define READ_GAP  15*8 
 
@@ -1260,7 +1259,7 @@ void TurnReadLFOn(uint32_t delay) {
 	WaitUS(delay);
 }
 void TurnReadLF_off(uint32_t delay) {
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF_LF);
 	WaitUS(delay);
 }
 
