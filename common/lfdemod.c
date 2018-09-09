@@ -180,6 +180,12 @@ void getHiLo(int *high, int *low, uint8_t fuzzHi, uint8_t fuzzLo) {
 		*low =  signalprop.low + ((range * (100-fuzzLo))/100);
 	}
 	
+	// if fuzzing to great and overlap
+	if ( *high < *low ) {
+		*high = signalprop.high;
+		*low =  signalprop.low;
+	}
+	
 	if (g_debugMode) 
 		prnt("getHiLo fuzzed: High %d | Low %d", *high, *low);
 }
@@ -388,7 +394,7 @@ bool loadWaveCounters(uint8_t *samples, size_t size, int lowToLowWaveLen[], int 
 			break;
 
 		highToLowWaveLen[*waveCnt] = i - firstHigh; //first high to first low
-		lowToLowWaveLen[*waveCnt] = i - firstLow;
+		lowToLowWaveLen[*waveCnt] = i - firstLow;	
 		*waveCnt += 1;
 		if (i-firstLow < *minClk && i < size) {
 			*minClk = i - firstLow;
