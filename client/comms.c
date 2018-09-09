@@ -288,6 +288,7 @@ __attribute__((force_align_arg_pointer))
 
 	// when this reader thread dies, we close the serial port.
 	uart_close(sp);
+	sp = NULL;
 	
 	pthread_exit(NULL);
 	return NULL;
