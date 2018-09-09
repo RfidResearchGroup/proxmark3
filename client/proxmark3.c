@@ -186,9 +186,10 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 	
 	write_history(".history");
 
-	free(cmd);
-	cmd = NULL;
-
+	if (cmd) {
+		free(cmd);
+		cmd = NULL;
+	}		
 }
 
 static void dumpAllHelp(int markdown) {
@@ -353,8 +354,6 @@ int main(int argc, char* argv[]) {
 	// try to open USB connection to Proxmark
 	usb_present = OpenProxmark(argv[1], waitCOMPort, 20, false);
 
-	
-	printf("\x1b[31m test\n");
 #ifdef HAVE_GUI
 
 #  ifdef _WIN32
