@@ -77,9 +77,9 @@ int CmdTIDemod(const char *Cmd)
     1, 1, 1, 1, 1, 1, 1,      -1, -1, -1, -1, -1, -1, -1,
     1, 1, 1, 1, 1, 1, 1, 1
   };
-	int lowLen = sizeof(LowTone)/sizeof(int);
-	int highLen = sizeof(HighTone)/sizeof(int);
-	int convLen = (highLen>lowLen)?highLen:lowLen;
+	int lowLen = sizeof(LowTone) / sizeof(int);
+	int highLen = sizeof(HighTone) / sizeof(int);
+	int convLen = (highLen > lowLen) ? highLen : lowLen;
 	uint16_t crc;
 	int i, j, TagType;
 	int lowSum = 0, highSum = 0;;
@@ -90,15 +90,15 @@ int CmdTIDemod(const char *Cmd)
 		highSum = 0;;
 
 		for (j = 0; j < lowLen; j++) {
-			lowSum += LowTone[j]*GraphBuffer[i+j];
+			lowSum += LowTone[j] * GraphBuffer[i+j];
 		}
 		for (j = 0; j < highLen; j++) {
-			highSum += HighTone[j]*GraphBuffer[i+j];
+			highSum += HighTone[j] * GraphBuffer[i+j];
 		}
 		lowSum = abs((100*lowSum) / lowLen);
 		highSum = abs((100*highSum) / highLen);
-		lowSum = (lowSum<0)?-lowSum:lowSum;
-		highSum = (highSum<0)?-highSum:highSum;
+		lowSum = (lowSum<0) ? -lowSum : lowSum;
+		highSum = (highSum<0) ? -highSum : highSum;
 
 		GraphBuffer[i] = (highSum << 16) | lowSum;
 	}
