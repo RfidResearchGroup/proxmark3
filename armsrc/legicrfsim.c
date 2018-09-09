@@ -460,7 +460,7 @@ void LegicRfSimulate(uint8_t cardtype) {
 
   LED_A_ON();
   DbpString("Starting Legic emulator, press button to end");
-  while(!BUTTON_PRESS()) {
+  while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
     WDT_HIT();
 
     // wait for carrier, restart after timeout
