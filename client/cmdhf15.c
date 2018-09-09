@@ -396,8 +396,8 @@ int usage_15_readmulti(void){
 // Mode 3
 //helptext
 int CmdHF15Demod(const char *Cmd) {
-	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H') return usage_15_demod();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (cmdp == 'h') return usage_15_demod();
 	
 	// The sampling rate is 106.353 ksps/s, for T = 18.8 us
 	int i, j;
