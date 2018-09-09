@@ -204,7 +204,7 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
 	}
 	
 	// Ensure that noise check is performed for any device-side processing
-	justNoise(dest, bufsize);
+	isNoise(dest, bufsize);
 	
 	return data.numbits;
 }
