@@ -372,7 +372,6 @@ bool loadWaveCounters(uint8_t *samples, size_t size, int lowToLowWaveLen[], int 
 		return false;
 	}
 	
-	//getHiLo(samples, testsize, high, low, 80, 80);
 	getHiLo(high, low, 80, 80);
 
 	// get to first full low to prime loop and skip incomplete first pulse
@@ -512,8 +511,6 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
 	size_t i = 100;
 	size_t minClk = 512;
 	int shortestWaveIdx = 0;
-	
-	if (g_debugMode == 1) prnt("DEBUG ASK: DetectStrongAskClock: hi %d | low  %d ", high, low);
 	
 	// get to first full low to prime loop and skip incomplete first pulse
 	getNextHigh(dest, size, high, &i);
@@ -1409,10 +1406,15 @@ int manrawdecode(uint8_t *bits, size_t *size, uint8_t invert, uint8_t *alignPos)
 //RETURN: num of errors.  if 0, is ok.
 int cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int invert, int high, int low, int *startIdx) {
 	*startIdx = 0;
-	size_t bitCnt=0, smplCnt=1, errCnt=0;
-	bool waveHigh = (bits[0] >= high);
+	size_t bitCnt = 0, smplCnt = 1, errCnt = 0, pos = 0;
+
+	uint8_t cl_4 = clk / 4;
+	uint8_t cl_2 = clk / 2;
+
+	getNextHigh(bits, *size, high, &pos);
+	bool waveHigh = true;
 	
-	for (size_t i=1; i < *size; i++){
+	for (size_t i=pos; i < *size; i++){
 		if (bits[i] >= high && waveHigh){
 			smplCnt++;
 		} else if (bits[i] <= low && !waveHigh){
@@ -1420,8 +1422,8 @@ int cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int invert, int high,
 		} else { //transition
 			if ((bits[i] >= high && !waveHigh) || (bits[i] <= low && waveHigh)){
 
-				if (smplCnt > clk-(clk/4)-1) { //full clock
-					if (smplCnt > clk + (clk/4)+1) { //too many samples
+				if (smplCnt > clk - cl_4 - 1) { //full clock
+					if (smplCnt > clk + cl_4 + 1) { //too many samples
 						errCnt++;
 						if (g_debugMode == 2) prnt("DEBUG:(cleanAskRawDemod) ASK Modulation Error at: %u", i);
 						bits[bitCnt++] = 7;
@@ -1432,18 +1434,18 @@ int cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int invert, int high,
 						bits[bitCnt++] = invert ^ 1;
 						bits[bitCnt++] = invert ^ 1;
 					}
-					if (*startIdx==0)
-						*startIdx = i-clk;
+					if (*startIdx == 0)
+						*startIdx = i - clk;
 					waveHigh = !waveHigh;  
 					smplCnt = 0;
-				} else if (smplCnt > (clk/2) - (clk/4)-1) { //half clock
+				} else if (smplCnt > cl_2 - cl_4 - 1) { //half clock
 					if (waveHigh) {
 						bits[bitCnt++] = invert;
 					} else if (!waveHigh) {
 						bits[bitCnt++] = invert ^ 1;
 					}
-					if (*startIdx==0)
-						*startIdx = i-(clk/2);
+					if (*startIdx == 0)
+						*startIdx = i - cl_2;
 					waveHigh = !waveHigh;  
 					smplCnt = 0;
 				} else {
