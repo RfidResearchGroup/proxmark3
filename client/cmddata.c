@@ -1007,14 +1007,14 @@ int FSKrawDemod(const char *Cmd, bool verbose) {
 		}
 	}
 
-	uint8_t BitStream[MAX_GRAPH_TRACE_LEN] = {0};
-	size_t BitLen = getFromGraphBuf(BitStream);
+	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
+	size_t BitLen = getFromGraphBuf(bits);
 	if (BitLen == 0) return 0;
 	
 	//get field clock lengths
 	uint16_t fcs = 0;
 	if (!fchigh || !fclow) {
-		fcs = countFC(BitStream, BitLen, 1);
+		fcs = countFC(bits, BitLen, true);
 		if (!fcs) {
 			fchigh = 10;
 			fclow = 8;
@@ -1026,13 +1026,13 @@ int FSKrawDemod(const char *Cmd, bool verbose) {
 	//get bit clock length
 	if (!rfLen) {
 		int firstClockEdge = 0; //todo - align grid on graph with this...
-		rfLen = detectFSKClk(BitStream, BitLen, fchigh, fclow, &firstClockEdge);
+		rfLen = detectFSKClk(bits, BitLen, fchigh, fclow, &firstClockEdge);
 		if (!rfLen) rfLen = 50;
 	}
 	int startIdx = 0;
-	int size = fskdemod(BitStream, BitLen, rfLen, invert, fchigh, fclow, &startIdx);
+	int size = fskdemod(bits, BitLen, rfLen, invert, fchigh, fclow, &startIdx);
 	if (size > 0) {
-		setDemodBuf(BitStream, size, 0);
+		setDemodBuf(bits, size, 0);
 		setClockGrid(rfLen, startIdx);
 
 		// Now output the bitstream to the scrollback by line of 16 bits
@@ -1574,7 +1574,9 @@ int CmdLoad(const char *Cmd) {
 	
 	//ICEMAN todo	
 	// set signal properties low/high/mean/amplitude and isnoice detection
-	isNoise_int(GraphBuffer, GraphTraceLen);
+	uint8_t bits[GraphTraceLen];
+	size_t size = getFromGraphBuf(bits);
+	isNoise(bits, sizeof(bits));
 	return 0;
 }
 
@@ -1638,11 +1640,13 @@ int CmdNorm(const char *Cmd) {
 			//marshmelow: adjusted *1000 to *256 to make +/- 128 so demod commands still work
 		}
 	}
-	RepaintGraphWindow();
-	
+
 	//ICEMAN todo	
 	// set signal properties low/high/mean/amplitude and isnoice detection
-	isNoise_int(GraphBuffer, GraphTraceLen);	
+	uint8_t bits[GraphTraceLen];
+	size_t size = getFromGraphBuf(bits);
+	isNoise(bits, sizeof(bits));
+	RepaintGraphWindow();
 	return 0;
 }
 
@@ -1729,8 +1733,10 @@ int CmdDirectionalThreshold(const char *Cmd) {
 	
 	//ICEMAN todo	
 	// set signal properties low/high/mean/amplitude and isnoice detection
-	isNoise_int(GraphBuffer, GraphTraceLen);
-	
+	uint8_t bits[GraphTraceLen];
+	size_t size = getFromGraphBuf(bits);
+	isNoise(bits, sizeof(bits));
+
 	RepaintGraphWindow();
 	return 0;
 }
@@ -1759,8 +1765,10 @@ int CmdZerocrossings(const char *Cmd) {
 
 	//ICEMAN todo	
 	// set signal properties low/high/mean/amplitude and isnoice detection
-	isNoise_int(GraphBuffer, GraphTraceLen);
-	
+	uint8_t bits[GraphTraceLen];
+	size_t size = getFromGraphBuf(bits);
+	isNoise(bits, sizeof(bits));
+
 	RepaintGraphWindow();
 	return 0;
 }
@@ -2012,11 +2020,14 @@ int CmdDataIIR(const char *Cmd){
 	uint8_t k = param_get8(Cmd, 0);
 	//iceIIR_Butterworth(GraphBuffer, GraphTraceLen);
 	iceSimple_Filter(GraphBuffer, GraphTraceLen, k);
+
 	//ICEMAN todo	
 	// set signal properties low/high/mean/amplitude and isnoice detection
-	isNoise_int(GraphBuffer, GraphTraceLen);
-	
-	RepaintGraphWindow();
+	uint8_t bits[GraphTraceLen];
+	size_t size = getFromGraphBuf(bits);
+	isNoise(bits, sizeof(bits));
+
+	RepaintGraphWindow();	
 	return 0;
 }
 
