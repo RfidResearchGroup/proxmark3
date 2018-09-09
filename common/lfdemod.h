@@ -49,7 +49,7 @@ extern int      BiphaseRawDecode(uint8_t *bits, size_t *size, int *offset, int i
 extern uint8_t bits_to_array(const uint8_t *bits, size_t size, uint8_t *dest);
 extern uint32_t bytebits_to_byte(uint8_t *src, size_t numbits);
 extern uint32_t bytebits_to_byteLSBF(uint8_t *src, size_t numbits);
-extern uint16_t countFC(uint8_t *bits, size_t size, uint8_t fskAdj);
+extern uint16_t countFC(uint8_t *bits, size_t size, bool fskAdj);
 extern int      DetectASKClock(uint8_t *dest, size_t size, int *clock, int maxErr);
 extern bool		DetectCleanAskWave(uint8_t *dest, size_t size, uint8_t high, uint8_t low);
 extern uint8_t  detectFSKClk(uint8_t *bits, size_t size, uint8_t fcHigh, uint8_t fcLow, int *firstClockEdge);

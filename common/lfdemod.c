@@ -123,7 +123,6 @@ void zeromean(uint8_t* data, size_t size) {
 bool isNoise_int(int *bits, uint32_t size) {
 	resetSignal();
 	if ( bits == NULL || size < 100 ) return true;
-	//zeromean(bits, size);
 	
 	int32_t sum = 0;
 	for ( size_t i = 0; i < size; i++) {
@@ -148,7 +147,6 @@ bool isNoise_int(int *bits, uint32_t size) {
 bool isNoise(uint8_t *bits, uint32_t size) {
 	resetSignal();
 	if ( bits == NULL || size < 100 ) return true;
-	zeromean(bits, size);
 	
 	uint32_t sum = 0;
 	for ( uint32_t i = 0; i < size; i++) {
@@ -835,7 +833,7 @@ int DetectNRZClock(uint8_t *dest, size_t size, int clock, size_t *clockStartIdx)
 //countFC is to detect the field clock lengths.
 //counts and returns the 2 most common wave lengths
 //mainly used for FSK field clock detection
-uint16_t countFC(uint8_t *bits, size_t size, uint8_t fskAdj) {
+uint16_t countFC(uint8_t *bits, size_t size, bool fskAdj) {
 	uint8_t fcLens[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 	uint16_t fcCnts[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 	uint8_t fcLensFnd = 0;
@@ -855,17 +853,18 @@ uint16_t countFC(uint8_t *bits, size_t size, uint8_t fskAdj) {
 			fcCounter++;
 			if (fskAdj){
 				//if we had 5 and now have 9 then go back to 8 (for when we get a fc 9 instead of an 8)
-				if (lastFCcnt==5 && fcCounter==9) fcCounter--;
+				if (lastFCcnt == 5 && fcCounter == 9) fcCounter--;
+				
 				//if fc=9 or 4 add one (for when we get a fc 9 instead of 10 or a 4 instead of a 5)
-				if ((fcCounter==9) || fcCounter==4) fcCounter++;
-			// save last field clock count  (fc/xx)
-			lastFCcnt = fcCounter;
+				if ((fcCounter == 9) || fcCounter == 4) fcCounter++;
+				// save last field clock count  (fc/xx)
+				lastFCcnt = fcCounter;
 			}
 			// find which fcLens to save it to:
-			for (int ii=0; ii<15; ii++){
-				if (fcLens[ii]==fcCounter){
-					fcCnts[ii]++;
-					fcCounter=0;
+			for (int m=0; m<15; m++){
+				if (fcLens[m] == fcCounter){
+					fcCnts[m]++;
+					fcCounter = 0;
 					break;
 				}
 			}
@@ -881,36 +880,37 @@ uint16_t countFC(uint8_t *bits, size_t size, uint8_t fskAdj) {
 		}
 	}
 	
-	uint8_t best1=14, best2=14, best3=14;
-	uint16_t maxCnt1=0;
+	uint8_t best1 = 14, best2 = 14, best3 = 14;
+	uint16_t maxCnt1 = 0;
 	// go through fclens and find which ones are bigest 2  
 	for (i=0; i<15; i++){
 		// get the 3 best FC values
-		if (fcCnts[i]>maxCnt1) {
-			best3=best2;
-			best2=best1;
-			maxCnt1=fcCnts[i];
-			best1=i;
-		} else if(fcCnts[i]>fcCnts[best2]){
-			best3=best2;
-			best2=i;
-		} else if(fcCnts[i]>fcCnts[best3]){
-			best3=i;
+		if (fcCnts[i] > maxCnt1) {
+			best3 = best2;
+			best2 = best1;
+			maxCnt1 = fcCnts[i];
+			best1 = i;
+		} else if(fcCnts[i] > fcCnts[best2]){
+			best3 = best2;
+			best2 = i;
+		} else if(fcCnts[i] > fcCnts[best3]){
+			best3 = i;
 		}
-		if (g_debugMode == 2) prnt("DEBUG countfc: FC %u, Cnt %u, best fc: %u, best2 fc: %u",fcLens[i],fcCnts[i],fcLens[best1],fcLens[best2]);
-		if (fcLens[i]==0) break;
+		if (g_debugMode == 2) prnt("DEBUG countfc: FC %u, Cnt %u, best fc: %u, best2 fc: %u", fcLens[i], fcCnts[i], fcLens[best1], fcLens[best2]);
+		if (fcLens[i] == 0) break;
 	}
-	if (fcLens[best1]==0) return 0;
-	uint8_t fcH=0, fcL=0;
-	if (fcLens[best1]>fcLens[best2]){
-		fcH=fcLens[best1];
-		fcL=fcLens[best2];
+	
+	if (fcLens[best1] == 0) return 0;
+	uint8_t fcH = 0, fcL = 0;
+	if (fcLens[best1] > fcLens[best2]){
+		fcH = fcLens[best1];
+		fcL = fcLens[best2];
 	} else{
-		fcH=fcLens[best2];
-		fcL=fcLens[best1];
+		fcH = fcLens[best2];
+		fcL = fcLens[best1];
 	}
-	if ((size-180)/fcH/3 > fcCnts[best1]+fcCnts[best2]) {
-		if (g_debugMode == 2) prnt("DEBUG countfc: fc is too large: %u > %u. Not psk or fsk",(size-180)/fcH/3,fcCnts[best1]+fcCnts[best2]);
+	if ((size-180)/fcH/3 > fcCnts[best1] + fcCnts[best2]) {
+		if (g_debugMode == 2) prnt("DEBUG countfc: fc is too large: %u > %u. Not psk or fsk", (size-180)/fcH/3, fcCnts[best1] + fcCnts[best2]);
 		return 0; //lots of waves not psk or fsk
 	}
 	// TODO: take top 3 answers and compare to known Field clocks to get top 2
@@ -1036,7 +1036,7 @@ uint8_t detectFSKClk(uint8_t *bits, size_t size, uint8_t fcHigh, uint8_t fcLow, 
 	uint16_t rfCounter = 0;
 	uint8_t firstBitFnd = 0;
 	size_t i;
-	uint8_t fcTol = ((fcHigh*100 - fcLow*100)/2 + 50)/100; //(uint8_t)(0.5+(float)(fcHigh-fcLow)/2);
+	uint8_t fcTol = ((fcHigh * 100 - fcLow * 100)/2 + 50)/100; //(uint8_t)(0.5+(float)(fcHigh-fcLow)/2);
 
 	// prime i to first peak / up transition
 	for (i = 160; i < size-20; i++)
@@ -1084,7 +1084,7 @@ uint8_t detectFSKClk(uint8_t *bits, size_t size, uint8_t fcHigh, uint8_t fcLow, 
 		}
 		fcCounter = 0;
 	}
-	uint8_t rfHighest=15, rfHighest2=15, rfHighest3=15;
+	uint8_t rfHighest = 15, rfHighest2 = 15, rfHighest3 = 15;
 
 	for (i=0; i<15; i++){
 		//get highest 2 RF values  (might need to get more values to compare or compare all?)
@@ -1111,22 +1111,22 @@ uint8_t detectFSKClk(uint8_t *bits, size_t size, uint8_t fcHigh, uint8_t fcLow, 
 	// loop to find the highest clock that has a remainder less than the tolerance
 	//   compare samples counted divided by
 	// test 128 down to 32 (shouldn't be possible to have fc/10 & fc/8 and rf/16 or less)
-	int ii=7;
-	for (; ii>=2; ii--){
-		if (rfLens[rfHighest] % clk[ii] < tol1 || rfLens[rfHighest] % clk[ii] > clk[ii]-tol1){
-			if (rfLens[rfHighest2] % clk[ii] < tol1 || rfLens[rfHighest2] % clk[ii] > clk[ii]-tol1){
-				if (rfLens[rfHighest3] % clk[ii] < tol1 || rfLens[rfHighest3] % clk[ii] > clk[ii]-tol1){
+	int m = 7;
+	for (; m >= 2; m--){
+		if (rfLens[rfHighest] % clk[m] < tol1 || rfLens[rfHighest] % clk[m] > clk[m]-tol1){
+			if (rfLens[rfHighest2] % clk[m] < tol1 || rfLens[rfHighest2] % clk[m] > clk[m]-tol1){
+				if (rfLens[rfHighest3] % clk[m] < tol1 || rfLens[rfHighest3] % clk[m] > clk[m]-tol1){
 					if (g_debugMode == 2) 
-						prnt("DEBUG FSK: clk %d divides into the 3 most rf values within tolerance",clk[ii]);
+						prnt("DEBUG FSK: clk %d divides into the 3 most rf values within tolerance", clk[m]);
 					break;
 				}
 			}
 		}
 	}
 
-	if (ii < 2) return 0; // oops we went too far
+	if (m < 2) return 0; // oops we went too far
 
-	return clk[ii];
+	return clk[m];
 }
 
 
