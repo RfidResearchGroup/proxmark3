@@ -130,7 +130,7 @@ int CmdHIDDemod(const char *Cmd) {
 
 	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t size = getFromGraphBuf(bits);
-	if (size==0) {
+	if (size == 0) {
 		PrintAndLogEx(DEBUG, "DEBUG: Error - HID not enough samples");
 		return 0;
 	}

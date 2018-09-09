@@ -1576,7 +1576,7 @@ int CmdLoad(const char *Cmd) {
 	// set signal properties low/high/mean/amplitude and isnoice detection
 	uint8_t bits[GraphTraceLen];
 	size_t size = getFromGraphBuf(bits);
-	isNoise(bits, sizeof(bits));
+	isNoise(bits, size);
 	return 0;
 }
 

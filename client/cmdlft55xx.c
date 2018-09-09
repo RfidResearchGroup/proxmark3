@@ -538,7 +538,7 @@ bool tryDetectModulation(){
 		}
 	} else {
 		clk = GetAskClock("", false);
-		if (clk>0) {
+		if (clk > 0) {
 			tests[hits].ST = true;
 			// "0 0 1 " == clock auto, invert false, maxError 1.
 			// false = no verbose
@@ -583,7 +583,7 @@ bool tryDetectModulation(){
 			}
 		}
 		clk = GetNrzClock("", false);
-		if (clk>8) { //clock of rf/8 is likely a false positive, so don't use it.
+		if (clk > 8) { //clock of rf/8 is likely a false positive, so don't use it.
 			if ( NRZrawDemod("0 0 1", false)  && test(DEMOD_NRZ, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
 				tests[hits].modulation = DEMOD_NRZ;
 				tests[hits].bitrate = bitRate;
@@ -604,7 +604,7 @@ bool tryDetectModulation(){
 		}
 		
 		clk = GetPskClock("", false);
-		if (clk>0) {
+		if (clk > 0) {
 			// allow undo
 			save_restoreGB(GRAPH_SAVE);
 			// skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)

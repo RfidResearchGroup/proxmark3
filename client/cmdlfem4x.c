@@ -799,7 +799,6 @@ int EM4x50Read(const char *Cmd, bool verbose) {
 	
 	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t size = getFromGraphBuf(bits);
-	
 	isNoise(bits, size);
 	
 	signal_t *sp = getSignalProperties();
