@@ -411,7 +411,7 @@ int CmdEM410xRead(const char *Cmd) {
 // this read loops on device side.
 // uses the demod in lfops.c
 int CmdEM410xRead_device(const char *Cmd) {
-	char cmdp = param_getchar(Cmd, 0);
+	char cmdp = tolower(param_getchar(Cmd, 0));
 	uint8_t findone = (cmdp == '1') ? 1 : 0;
 	UsbCommand c = {CMD_EM410X_DEMOD, {findone, 0, 0}};
 	SendCommand(&c);
@@ -423,13 +423,13 @@ int CmdEM410xRead_device(const char *Cmd) {
 //attempts to demodulate ask while decoding manchester
 //prints binary found and saves in graphbuffer for further commands
 int CmdEM410xDemod(const char *Cmd) {
-	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) > 10 || cmdp == 'h' || cmdp == 'H')	return usage_lf_em410x_demod();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (strlen(Cmd) > 10 || cmdp == 'h') return usage_lf_em410x_demod();
 	
 	uint32_t hi = 0;
 	uint64_t lo = 0;
 
-	if(AskEm410xDemod(Cmd, &hi, &lo, true) != 1) return 0;
+	if (AskEm410xDemod(Cmd, &hi, &lo, true) != 1) return 0;
 	
 	g_em410xid = lo;
 	return 1;
@@ -437,8 +437,8 @@ int CmdEM410xDemod(const char *Cmd) {
 
 // emulate an EM410X tag
 int CmdEM410xSim(const char *Cmd) {
-	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H') return usage_lf_em410x_sim();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (cmdp == 'h') return usage_lf_em410x_sim();
 
 	uint8_t uid[5] = {0x00};
 
@@ -594,8 +594,8 @@ int CmdEM410xWatch(const char *Cmd) {
 //currently only supports manchester modulations
 int CmdEM410xWatchnSpoof(const char *Cmd) {
 	
-	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H') return usage_lf_em410x_ws();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (cmdp == 'h') return usage_lf_em410x_ws();
 	
 	// loops if the captured ID was in XL-format.
 	CmdEM410xWatch(Cmd);
@@ -784,64 +784,59 @@ uint32_t OutputEM4x50_Block(uint8_t *BitStream, size_t size, bool verbose, bool 
  //completed by Marshmellow
 int EM4x50Read(const char *Cmd, bool verbose) {
 	uint8_t fndClk[] = {8,16,32,40,50,64,128};
-	int clk = 0; 
-	int invert = 0;
-	int tol = 0;
-	int i, j, startblock, skip, block, start, end, low, high, minClk;
-	bool complete = false;
-	int tmpbuff[MAX_GRAPH_TRACE_LEN / 64];
+	int clk = 0, invert = 0, tol = 0, phaseoff;
+	int i = 0, j = 0, startblock, skip, block, start, end, low = 0, high = 0, minClk = 255;
 	uint32_t Code[6];
 	char tmp[6];
 	char tmp2[20];
-	int phaseoff;
-	high = low = 0;
+	bool complete = false;
+
+	int tmpbuff[MAX_GRAPH_TRACE_LEN / 64];
 	memset(tmpbuff, 0, sizeof(tmpbuff) );
 
 	// get user entry if any
 	sscanf(Cmd, "%i %i", &clk, &invert);
 	
-	// first get high and low values
-	for (i = 0; i < GraphTraceLen; i++) {
-		if (GraphBuffer[i] > high)
-			high = GraphBuffer[i];
-		else if (GraphBuffer[i] < low)
-			low = GraphBuffer[i];
-	}
+	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
+	size_t size = getFromGraphBuf(bits);
+	
+	isNoise(bits, size);
+	
+	signal_t *sp = getSignalProperties();
+	high = sp->high;
+	low = sp->low;
 
-	i = 0;
-	j = 0;
-	minClk = 255;
 	// get to first full low to prime loop and skip incomplete first pulse
-	while ((GraphBuffer[i] < high) && (i < GraphTraceLen))
+	while ((bits[i] < high) && (i < size))
 		++i;
-	while ((GraphBuffer[i] > low) && (i < GraphTraceLen))
+	while ((bits[i] > low) && (i < size))
 		++i;
 	skip = i;
 
 	// populate tmpbuff buffer with pulse lengths
-	while (i < GraphTraceLen) {
+	while (i < size) {
 		// measure from low to low
-		while ((GraphBuffer[i] > low) && (i < GraphTraceLen))
+		while ((bits[i] > low) && (i < size))
 			++i;
 		start= i;
-		while ((GraphBuffer[i] < high) && (i < GraphTraceLen))
+		while ((bits[i] < high) && (i < size))
 			++i;
-		while ((GraphBuffer[i] > low) && (i < GraphTraceLen))
+		while ((bits[i] > low) && (i < size))
 			++i;
-		if (j>=(MAX_GRAPH_TRACE_LEN/64)) {
+		if (j >= (MAX_GRAPH_TRACE_LEN/64)) {
 			break;
 		}
-		tmpbuff[j++]= i - start;
-		if (i-start < minClk && i < GraphTraceLen) {
+		tmpbuff[j++] = i - start;
+		if (i-start < minClk && i < size) {
 			minClk = i - start;
 		}
 	}
 	// set clock
 	if (!clk) {
-		for (uint8_t clkCnt = 0; clkCnt<7; clkCnt++) {
-			tol = fndClk[clkCnt]/8;
-			if (minClk >= fndClk[clkCnt]-tol && minClk <= fndClk[clkCnt]+1) { 
-				clk=fndClk[clkCnt];
+		for (uint8_t clkCnt = 0; clkCnt < 7; clkCnt++) {
+			tol = fndClk[clkCnt] / 8;
+			if (minClk >= fndClk[clkCnt] - tol && minClk <= fndClk[clkCnt] + 1) { 
+				clk = fndClk[clkCnt];
 				break;
 			}
 		}
@@ -849,15 +844,15 @@ int EM4x50Read(const char *Cmd, bool verbose) {
 			if (verbose || g_debugMode) PrintAndLogEx(WARNING, "Error: EM4x50 - didn't find a clock");
 			return 0;
 		}
-	} else tol = clk/8;
+	} else tol = clk / 8;
 
 	// look for data start - should be 2 pairs of LW (pulses of clk*3,clk*2)
 	start = -1;
 	for (i= 0; i < j - 4 ; ++i) {
 		skip += tmpbuff[i];
-		if (tmpbuff[i] >= clk*3-tol && tmpbuff[i] <= clk*3+tol)  //3 clocks
-			if (tmpbuff[i+1] >= clk*2-tol && tmpbuff[i+1] <= clk*2+tol)  //2 clocks
-				if (tmpbuff[i+2] >= clk*3-tol && tmpbuff[i+2] <= clk*3+tol) //3 clocks
+		if (tmpbuff[i] >= clk * 3 - tol && tmpbuff[i] <= clk * 3 + tol)  //3 clocks
+			if (tmpbuff[i+1] >= clk * 2 - tol && tmpbuff[i+1] <= clk * 2 + tol)  //2 clocks
+				if (tmpbuff[i+2] >= clk * 3 - tol && tmpbuff[i+2] <= clk * 3 + tol) //3 clocks
 					if (tmpbuff[i+3] >= clk-tol)  //1.5 to 2 clocks - depends on bit following
 					{
 						start= i + 4;
@@ -867,18 +862,20 @@ int EM4x50Read(const char *Cmd, bool verbose) {
 	startblock = i + 4;
 
 	// skip over the remainder of LW
-	skip += tmpbuff[i+1] + tmpbuff[i+2] + clk;
-	if (tmpbuff[i+3]>clk) 
-		phaseoff = tmpbuff[i+3]-clk;
+	skip += (tmpbuff[i+1] + tmpbuff[i+2] + clk);
+	
+	if (tmpbuff[i+3] > clk) 
+		phaseoff = tmpbuff[i+3] - clk;
 	else
 		phaseoff = 0;
+	
 	// now do it again to find the end
 	end = skip;
 	for (i += 3; i < j - 4 ; ++i) {
 		end += tmpbuff[i];
-		if (tmpbuff[i] >= clk*3-tol && tmpbuff[i] <= clk*3+tol)  //3 clocks
-			if (tmpbuff[i+1] >= clk*2-tol && tmpbuff[i+1] <= clk*2+tol)  //2 clocks
-				if (tmpbuff[i+2] >= clk*3-tol && tmpbuff[i+2] <= clk*3+tol) //3 clocks
+		if (tmpbuff[i] >= clk * 3 - tol && tmpbuff[i] <= clk * 3 + tol)  //3 clocks
+			if (tmpbuff[i+1] >= clk * 2 - tol && tmpbuff[i+1] <= clk * 2 + tol)  //2 clocks
+				if (tmpbuff[i+2] >= clk * 3 - tol && tmpbuff[i+2] <= clk * 3 + tol) //3 clocks
 					if (tmpbuff[i+3] >= clk-tol)  //1.5 to 2 clocks - depends on bit following
 					{
 						complete= true;
@@ -897,8 +894,9 @@ int EM4x50Read(const char *Cmd, bool verbose) {
 			return 0;
 		}
 	} else if (start < 0) return 0;
+	
 	start = skip;
-	snprintf(tmp2, sizeof(tmp2),"%d %d 1000 %d", clk, invert, clk*47);
+	snprintf(tmp2, sizeof(tmp2),"%d %d 1000 %d", clk, invert, clk * 47);
 	// save GraphBuffer - to restore it later	
 	save_restoreGB(GRAPH_SAVE);
 	// get rid of leading crap 
@@ -916,17 +914,19 @@ int EM4x50Read(const char *Cmd, bool verbose) {
 		// look for LW before start of next block
 		for ( ; i < j - 4 ; ++i) {
 			skip += tmpbuff[i];
-			if (tmpbuff[i] >= clk*3-tol && tmpbuff[i] <= clk*3+tol)
+			if (tmpbuff[i] >= clk * 3 - tol && tmpbuff[i] <= clk * 3 + tol)
 				if (tmpbuff[i+1] >= clk-tol)
 					break;
 		}
 		if (i >= j-4) break; //next LW not found
 		skip += clk;
-		if (tmpbuff[i+1]>clk)
-			phaseoff = tmpbuff[i+1]-clk;
+		if (tmpbuff[i+1] > clk)
+			phaseoff = tmpbuff[i+1] - clk;
 		else
 			phaseoff = 0;
+		
 		i += 2;
+		
 		if (ASKDemod(tmp2, false, false, 1) < 1) {
 			save_restoreGB(GRAPH_RESTORE);
 			return 0;
@@ -934,14 +934,14 @@ int EM4x50Read(const char *Cmd, bool verbose) {
 		//set DemodBufferLen to just one block
 		DemodBufferLen = skip/clk;
 		//test parities
-		pTest = EM_ByteParityTest(DemodBuffer,DemodBufferLen,5,9,0);	
-		pTest &= EM_EndParityTest(DemodBuffer,DemodBufferLen,5,9,0);
+		pTest = EM_ByteParityTest(DemodBuffer,DemodBufferLen, 5, 9, 0);	
+		pTest &= EM_EndParityTest(DemodBuffer,DemodBufferLen, 5, 9, 0);
 		AllPTest &= pTest;
 		//get output
-		Code[block] = OutputEM4x50_Block(DemodBuffer,DemodBufferLen,verbose, pTest);
+		Code[block] = OutputEM4x50_Block(DemodBuffer, DemodBufferLen, verbose, pTest);
 		PrintAndLogEx(DEBUG, "\nskipping %d samples, bits:%d", skip, skip/clk);
 		//skip to start of next block
-		snprintf(tmp,sizeof(tmp),"%i",skip);
+		snprintf(tmp, sizeof(tmp), "%i", skip);
 		CmdLtrim(tmp);
 		block++;
 		if (i >= end) break; //in case chip doesn't output 6 blocks
@@ -956,7 +956,7 @@ int EM4x50Read(const char *Cmd, bool verbose) {
 		PrintAndLogEx(NORMAL, "Found data at sample: %i - using clock: %i", start, clk);    
 		end = block;
 		for (block=0; block < end; block++){
-			PrintAndLogEx(NORMAL, "Block %d: %08x",block,Code[block]);
+			PrintAndLogEx(NORMAL, "Block %d: %08x", block, Code[block]);
 		}
 		if (AllPTest) {
 			PrintAndLogEx(NORMAL, "Parities Passed");
@@ -972,19 +972,19 @@ int EM4x50Read(const char *Cmd, bool verbose) {
 }
 
 int CmdEM4x50Read(const char *Cmd) {
-	uint8_t ctmp = param_getchar(Cmd, 0);
-	if ( ctmp == 'H' || ctmp == 'h' ) return usage_lf_em4x50_read();	
+	uint8_t ctmp = tolower(param_getchar(Cmd, 0));
+	if ( ctmp == 'h' ) return usage_lf_em4x50_read();	
 	return EM4x50Read(Cmd, true);
 }
 int CmdEM4x50Write(const char *Cmd){
-	uint8_t ctmp = param_getchar(Cmd, 0);
-	if ( ctmp == 'H' || ctmp == 'h' ) return usage_lf_em4x50_write();
+	uint8_t ctmp = tolower(param_getchar(Cmd, 0));
+	if ( ctmp == 'h' ) return usage_lf_em4x50_write();
 	PrintAndLogEx(NORMAL, "no implemented yet");
 	return 0;
 }
 int CmdEM4x50Dump(const char *Cmd){
-	uint8_t ctmp = param_getchar(Cmd, 0);
-	if ( ctmp == 'H' || ctmp == 'h' ) return usage_lf_em4x50_dump();
+	uint8_t ctmp = tolower(param_getchar(Cmd, 0));
+	if ( ctmp == 'h' ) return usage_lf_em4x50_dump();
 	PrintAndLogEx(NORMAL, "no implemented yet");
 	return 0;
 }
@@ -1000,6 +1000,11 @@ bool downloadSamplesEM(){
 		return false;
 	}
 	setGraphBuf(got, sizeof(got));
+
+	if (isNoise(got, sizeof(got))) {
+		PrintAndLogEx(DEBUG, "No tag found");
+		return false;
+	}
 	return true;
 }
 
@@ -1146,12 +1151,7 @@ int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word) 
 	if ( !downloadSamplesEM() ) {
 		return -1;
 	}
-	int testLen = (GraphTraceLen < 1000) ? GraphTraceLen : 1000;
 	
-	if (justNoise(GraphBuffer, testLen)) {
-		PrintAndLogEx(DEBUG, "No tag found");
-		return -1;
-	}
 	return demodEM4x05resp(word);
 }
 

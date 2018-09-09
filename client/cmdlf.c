@@ -147,10 +147,9 @@ int CmdLFCommandRead(const char *Cmd) {
 	bool errors = false;
 
   	uint8_t cmdp = 0;
-	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch(param_getchar(Cmd, cmdp)) {
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'h':
-		case 'H':
 			return usage_lf_cmdread();
 		case 'c':
 			param_getstr(Cmd, cmdp+1, (char *)&c.d.asBytes, sizeof(c.d.asBytes));
@@ -188,16 +187,20 @@ int CmdLFCommandRead(const char *Cmd) {
 
 int CmdFlexdemod(const char *Cmd) {
 #define LONG_WAIT 100	
-	int i, j, start, bit, sum;
-	int phase = 0;
+	int i, j, start, bit, sum, phase = 0;
 
-	for (i = 0; i < GraphTraceLen; ++i)
-		GraphBuffer[i] = (GraphBuffer[i] < 0) ? -1 : 1;
+	uint8_t data[MAX_GRAPH_TRACE_LEN] = {0};
+	size_t size = getFromGraphBuf(data);
+	if (size == 0) 
+		return 0;
+	
+	for (i = 0; i < size; ++i)
+		data[i] = (data[i] < 0) ? -1 : 1;
 
-	for (start = 0; start < GraphTraceLen - LONG_WAIT; start++) {
-		int first = GraphBuffer[start];
+	for (start = 0; start < size - LONG_WAIT; start++) {
+		int first = data[start];
 		for (i = start; i < start + LONG_WAIT; i++) {
-			if (GraphBuffer[i] != first) {
+			if (data[i] != first) {
 				break;
 			}
 		}
@@ -205,20 +208,21 @@ int CmdFlexdemod(const char *Cmd) {
 			break;
 	}
 	
-	if (start == GraphTraceLen - LONG_WAIT) {
+	if (start == size - LONG_WAIT) {
 		PrintAndLogEx(NORMAL, "nothing to wait for");
 		return 0;
 	}
 
-	GraphBuffer[start] = 2;
-	GraphBuffer[start+1] = -2;
+	data[start] = 4;
+	data[start+1] = 0;
+	
 	uint8_t bits[64] = {0x00};
 
 	i = start;
 	for (bit = 0; bit < 64; bit++) {
 		sum = 0;
 		for (int j = 0; j < 16; j++) {
-			sum += GraphBuffer[i++];
+			sum += data[i++];
 		}
 		bits[bit] = (sum > 0) ? 1 : 0;
 		PrintAndLogEx(NORMAL, "bit %d sum %d", bit, sum);
@@ -227,7 +231,7 @@ int CmdFlexdemod(const char *Cmd) {
 	for (bit = 0; bit < 64; bit++) {
 		sum = 0;
 		for (j = 0; j < 16; j++)
-			sum += GraphBuffer[i++];
+			sum += data[i++];
 
 		if (sum > 0 && bits[bit] != 1) PrintAndLogEx(NORMAL, "oops1 at %d", bit);
 
@@ -235,8 +239,9 @@ int CmdFlexdemod(const char *Cmd) {
 
 	}
 
+	// iceman,  use demod buffer?  blue line?
 	// HACK writing back to graphbuffer.
-	GraphTraceLen = 32*64;
+	GraphTraceLen = 32 * 64;
 	i = 0;
 	for (bit = 0; bit < 64; bit++) {
 		
@@ -261,8 +266,8 @@ int CmdLFSetConfig(const char *Cmd) {
 	uint8_t unsigned_trigg = 0;
 
 	uint8_t cmdp = 0;
-	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch(param_getchar(Cmd, cmdp)) {
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch (param_getchar(Cmd, cmdp)) {
 		case 'h':
 			return usage_lf_config();
 		case 'H':
@@ -348,18 +353,15 @@ int CmdLFRead(const char *Cmd) {
 	bool silent = false;
 	uint32_t samples = 0;
 	uint8_t cmdp = 0;
-	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch(param_getchar(Cmd, cmdp)) {
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'h':
-		case 'H':
 			return usage_lf_read();
 		case 's':
-		case 'S':
 			silent = true;
 			cmdp++;
 			break;
 		case 'd':
-		case 'D':  
 			samples = param_get32ex(Cmd, cmdp, 0, 10);
 			cmdp +=2;
 			break;
@@ -377,8 +379,8 @@ int CmdLFRead(const char *Cmd) {
 }
 
 int CmdLFSnoop(const char *Cmd) {
-	uint8_t cmdp = param_getchar(Cmd, 0);
-	if(cmdp == 'h' || cmdp == 'H') return usage_lf_snoop();
+	uint8_t cmdp = tolower(param_getchar(Cmd, 0));
+	if (cmdp == 'h') return usage_lf_snoop();
 	
 	UsbCommand c = {CMD_LF_SNOOP_RAW_ADC_SAMPLES,{0,0,0}};
 	clearCommandBuffer();	
@@ -444,8 +446,8 @@ int CmdLFfskSim(const char *Cmd) {
 	int dataLen = 0;
 	uint8_t cmdp = 0;	
 	
-	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch(param_getchar(Cmd, cmdp)){
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch (param_getchar(Cmd, cmdp)){
 			case 'h':
 				return usage_lf_simfsk();
 			case 'c':
@@ -473,7 +475,7 @@ int CmdLFfskSim(const char *Cmd) {
 				   
 				if (dataLen == 0) errors = true; 
 				if (errors) PrintAndLogEx(WARNING, "Error getting hex data");
-				cmdp+=2;
+				cmdp += 2;
 				break;
 			default:
 				PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
@@ -533,13 +535,12 @@ int CmdLFaskSim(const char *Cmd) {
 	uint8_t encoding = 1, separator = 0, clk = 0, invert = 0;
 	bool errors = false;
 	char hexData[64] = {0x00}; 
-	uint8_t data[255]= {0x00}; // store entered hex data
+	uint8_t data[255] = {0x00}; // store entered hex data
 	int dataLen = 0;
 	uint8_t cmdp = 0;
 	
 	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch(param_getchar(Cmd, cmdp)) {
-			case 'H':
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 			case 'h': return usage_lf_simask();
 			case 'i':
 				invert = 1;
@@ -632,8 +633,8 @@ int CmdLFpskSim(const char *Cmd) {
 	uint8_t cmdp = 0;
 	uint8_t pskType = 1;
 	
-	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch(param_getchar(Cmd, cmdp)) {
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 			case 'h':
 				return usage_lf_simpsk();
 			case 'i':
@@ -735,6 +736,7 @@ int CmdLFSimBidir(const char *Cmd) {
 	return 0;
 }
 
+// ICEMAN,  todo,   swap from Graphbuffer.
 int CmdVchDemod(const char *Cmd) {
 	// Is this the entire sync pattern, or does this also include some
 	// data bits that happen to be the same everywhere? That would be

@@ -35,14 +35,7 @@ extern int32_t	compute_mean_int(int *in, size_t N);
 bool isNoise_int(int *bits, uint32_t size);
 bool isNoise(uint8_t *bits, uint32_t size);
 extern void zeromean(uint8_t* data, size_t size);
-
-// buffer is unsigned on DEVIE
-#ifdef ON_DEVICE
-	#define justNoise(a, b) isNoise((a), (b))
-#else
-	#define justNoise(a, b) isNoise_int((a), (b))
-#endif
-		
+	
 void getNextLow(uint8_t *samples, size_t size, int low, size_t *i);
 void getNextHigh(uint8_t *samples, size_t size, int high, size_t *i);
 bool loadWaveCounters(uint8_t *samples, size_t size, int lowToLowWaveLen[], int highToLowWaveLen[], int *waveCnt, int *skip, int *minClk, int *high, int *low);
@@ -58,14 +51,15 @@ extern uint32_t bytebits_to_byte(uint8_t *src, size_t numbits);
 extern uint32_t bytebits_to_byteLSBF(uint8_t *src, size_t numbits);
 extern uint16_t countFC(uint8_t *bits, size_t size, uint8_t fskAdj);
 extern int      DetectASKClock(uint8_t *dest, size_t size, int *clock, int maxErr);
-extern uint8_t  DetectCleanAskWave(uint8_t *dest, size_t size, uint8_t high, uint8_t low);
+extern bool		DetectCleanAskWave(uint8_t *dest, size_t size, uint8_t high, uint8_t low);
 extern uint8_t  detectFSKClk(uint8_t *bits, size_t size, uint8_t fcHigh, uint8_t fcLow, int *firstClockEdge);
 extern int      DetectNRZClock(uint8_t *dest, size_t size, int clock, size_t *clockStartIdx);
 extern int      DetectPSKClock(uint8_t *dest, size_t size, int clock, size_t *firstPhaseShift, uint8_t *curPhase, uint8_t *fc);
 extern int      DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clock);
 extern bool     DetectST(uint8_t *buffer, size_t *size, int *foundclock, size_t *ststart, size_t *stend);
 extern size_t   fskdemod(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t invert, uint8_t fchigh, uint8_t fclow, int *startIdx);
-extern int      getHiLo(uint8_t *bits, size_t size, int *high, int *low, uint8_t fuzzHi, uint8_t fuzzLo);
+//extern void     getHiLo(uint8_t *bits, size_t size, int *high, int *low, uint8_t fuzzHi, uint8_t fuzzLo);
+extern void     getHiLo(int *high, int *low, uint8_t fuzzHi, uint8_t fuzzLo);
 extern uint32_t manchesterEncode2Bytes(uint16_t datain);
 extern int      ManchesterEncode(uint8_t *bits, size_t size);
 extern int      manrawdecode(uint8_t *bits, size_t *size, uint8_t invert, uint8_t *alignPos);

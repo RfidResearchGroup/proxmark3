@@ -504,12 +504,13 @@ int CmdT55xxDetect(const char *Cmd){
 
 // detect configuration?
 bool tryDetectModulation(){
-	uint8_t hits = 0;
+
 	t55xx_conf_block_t tests[15];
-	int bitRate=0;
-	uint8_t fc1 = 0, fc2 = 0, ans = 0;
-	int clk = 0, firstClockEdge = 0;
+	int bitRate = 0, clk = 0, firstClockEdge = 0;
+	uint8_t hits = 0, fc1 = 0, fc2 = 0, ans = 0;
+	
 	ans = fskClocks(&fc1, &fc2, (uint8_t *)&clk, &firstClockEdge);
+
 	if (ans && ((fc1==10 && fc2==8) || (fc1==8 && fc2==5))) {
 		if ( FSKrawDemod("0 0", false) && test(DEMOD_FSK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)){
 			tests[hits].modulation = DEMOD_FSK;
@@ -1305,15 +1306,13 @@ bool AquireData( uint8_t page, uint8_t block, bool pwdmode, uint32_t password ){
 		return false;
 	}
 
-	//uint8_t got[12288];
-	uint8_t got[7679];
-	if ( !GetFromDevice(BIG_BUF, got, sizeof(got), 0, NULL, 6000, true)) {
+	uint8_t got[8000];
+	if ( !GetFromDevice(BIG_BUF, got, sizeof(got), 0, NULL, 4000, true)) {
 		PrintAndLogEx(WARNING, "command execution time out");
 		return false;
 	}
 	setGraphBuf(got, sizeof(got));
-
-	return !justNoise(GraphBuffer, sizeof(got));
+	return !isNoise(got, sizeof(got));
 }
 
 char * GetBitRateStr(uint32_t id, bool xmode) {

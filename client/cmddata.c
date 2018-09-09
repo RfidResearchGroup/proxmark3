@@ -456,8 +456,8 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
 	int maxErr = 100;
 	int maxLen = 0;
 	uint8_t askamp = 0;
-	char amp = param_getchar(Cmd, 0);
-	uint8_t BitStream[MAX_GRAPH_TRACE_LEN] = {0};
+	char amp = tolower(param_getchar(Cmd, 0));
+	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
 
 	sscanf(Cmd, "%i %i %i %i %c", &clk, &invert, &maxErr, &maxLen, &amp);
 
@@ -473,7 +473,7 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
 		clk = 0;
 	}
 
-	size_t BitLen = getFromGraphBuf(BitStream);
+	size_t BitLen = getFromGraphBuf(bits);
 
 	PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) Bitlen from grphbuff: %d", BitLen);
 
@@ -483,13 +483,13 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
 
 	int foundclk = 0;
 	//amp before ST check
-	if (amp == 'a' || amp == 'A')
-		askAmp(BitStream, BitLen); 
+	if (amp == 'a')
+		askAmp(bits, BitLen); 
 
 	bool st = false;
 	size_t ststart = 0, stend = 0;
 	if (*stCheck) 
-		st = DetectST(BitStream, &BitLen, &foundclk, &ststart, &stend);
+		st = DetectST(bits, &BitLen, &foundclk, &ststart, &stend);
 
 	if (st) {
 		*stCheck = st;
@@ -501,10 +501,10 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
 	}
 
 	int startIdx = 0;
-	int errCnt = askdemod_ext(BitStream, &BitLen, &clk, &invert, maxErr, askamp, askType, &startIdx);
+	int errCnt = askdemod_ext(bits, &BitLen, &clk, &invert, maxErr, askamp, askType, &startIdx);
 
 	if (errCnt < 0 || BitLen < 16){  //if fatal error (or -1)
-		PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) No data found errors:%d, invert:%d, bitlen:%d, clock:%d", errCnt, invert, BitLen, clk);
+		PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) No data found errors:%d, invert:%c, bitlen:%d, clock:%d", errCnt, (invert)?'Y':'N', BitLen, clk);
 		return 0;
 	}
 
@@ -516,7 +516,7 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
 	if (verbose || g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) Using clock:%d, invert:%d, bits found:%d", clk, invert, BitLen);
 
 	//output
-	setDemodBuf(BitStream,BitLen,0);
+	setDemodBuf(bits, BitLen, 0);
 	setClockGrid(clk, startIdx);
 
 	if (verbose || g_debugMode){
@@ -1429,6 +1429,7 @@ int getSamples(int n, bool silent) {
 		GraphTraceLen = j;
 		
 		if (!silent) PrintAndLogEx(NORMAL, "Unpacked %d samples" , j );
+		
 	} else {
 		for (int j = 0; j < n; j++) {
 			GraphBuffer[j] = ((int)got[j]) - 128;
@@ -1436,9 +1437,11 @@ int getSamples(int n, bool silent) {
 		GraphTraceLen = n;
 	}
 
-//ICEMAN todo
-  // set signal properties low/high/mean/amplitude and is_noice detection
-	justNoise(GraphBuffer, GraphTraceLen);
+	//ICEMAN todo
+	uint8_t bits[GraphTraceLen];
+	size_t size = getFromGraphBuf(bits);
+	// set signal properties low/high/mean/amplitude and is_noice detection
+	isNoise(bits, size);
 	
 	setClockGrid(0, 0);
 	DemodBufferLen = 0;
@@ -1569,9 +1572,9 @@ int CmdLoad(const char *Cmd) {
 	DemodBufferLen = 0;
 	RepaintGraphWindow();
 	
-//ICEMAN todo	
+	//ICEMAN todo	
 	// set signal properties low/high/mean/amplitude and isnoice detection
-	justNoise(GraphBuffer, GraphTraceLen);
+	isNoise_int(GraphBuffer, GraphTraceLen);
 	return 0;
 }
 
@@ -1637,9 +1640,9 @@ int CmdNorm(const char *Cmd) {
 	}
 	RepaintGraphWindow();
 	
-//ICEMAN todo	
+	//ICEMAN todo	
 	// set signal properties low/high/mean/amplitude and isnoice detection
-	justNoise(GraphBuffer, GraphTraceLen);	
+	isNoise_int(GraphBuffer, GraphTraceLen);	
 	return 0;
 }
 
@@ -1722,7 +1725,12 @@ int CmdDirectionalThreshold(const char *Cmd) {
 
 	PrintAndLogEx(INFO, "Applying Up Threshold: %d, Down Threshold: %d\n", up, down);
 
-	directionalThreshold(GraphBuffer, GraphBuffer,GraphTraceLen, up, down);
+	directionalThreshold(GraphBuffer, GraphBuffer, GraphTraceLen, up, down);
+	
+	//ICEMAN todo	
+	// set signal properties low/high/mean/amplitude and isnoice detection
+	isNoise_int(GraphBuffer, GraphTraceLen);
+	
 	RepaintGraphWindow();
 	return 0;
 }
@@ -1751,7 +1759,7 @@ int CmdZerocrossings(const char *Cmd) {
 
 	//ICEMAN todo	
 	// set signal properties low/high/mean/amplitude and isnoice detection
-	justNoise(GraphBuffer, GraphTraceLen);
+	isNoise_int(GraphBuffer, GraphTraceLen);
 	
 	RepaintGraphWindow();
 	return 0;
@@ -2004,6 +2012,10 @@ int CmdDataIIR(const char *Cmd){
 	uint8_t k = param_get8(Cmd, 0);
 	//iceIIR_Butterworth(GraphBuffer, GraphTraceLen);
 	iceSimple_Filter(GraphBuffer, GraphTraceLen, k);
+	//ICEMAN todo	
+	// set signal properties low/high/mean/amplitude and isnoice detection
+	isNoise_int(GraphBuffer, GraphTraceLen);
+	
 	RepaintGraphWindow();
 	return 0;
 }

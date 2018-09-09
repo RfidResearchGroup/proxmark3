@@ -83,10 +83,10 @@ int CmdIOProxRead_device(const char *Cmd) {
 int CmdIOProxDemod(const char *Cmd) {
 	int retval = 0;
 	int idx = 0;
-	uint8_t bits[MAX_GRAPH_TRACE_LEN]={0};
+	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t size = getFromGraphBuf(bits);
 	if (size < 65) {
-		if (g_debugMode)PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox not enough samples in GraphBuffer");
+		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox not enough samples in GraphBuffer");
 		return 0;
 	}	
 	//get binary from fsk wave	

@@ -105,7 +105,6 @@ int32_t compute_mean_int(int *in, size_t N) {
 	return mean / (int)N;
 }
 
-
 void zeromean(uint8_t* data, size_t size) {
 			
 	// zero mean data
@@ -119,13 +118,13 @@ void zeromean(uint8_t* data, size_t size) {
 		data[i] -= accum;
 }
 
-
 //test samples are not just noise
 // By measuring mean and look at amplitude of signal from HIGH / LOW,   we can detect noise
 bool isNoise_int(int *bits, uint32_t size) {
 	resetSignal();
 	if ( bits == NULL || size < 100 ) return true;
-
+	//zeromean(bits, size);
+	
 	int32_t sum = 0;
 	for ( size_t i = 0; i < size; i++) {
 		if ( bits[i] < signalprop.low ) signalprop.low = bits[i];
@@ -138,7 +137,7 @@ bool isNoise_int(int *bits, uint32_t size) {
 	signalprop.amplitude = ABS(signalprop.high - signalprop.mean);
 	signalprop.isnoise = signalprop.amplitude < NOICE_AMPLITUDE_THRESHOLD;
 	
-	if (g_debugMode == 1) 
+	if (g_debugMode) 
 		printSignal();
 	
 	return signalprop.isnoise;
@@ -149,6 +148,7 @@ bool isNoise_int(int *bits, uint32_t size) {
 bool isNoise(uint8_t *bits, uint32_t size) {
 	resetSignal();
 	if ( bits == NULL || size < 100 ) return true;
+	zeromean(bits, size);
 	
 	uint32_t sum = 0;
 	for ( uint32_t i = 0; i < size; i++) {
@@ -162,7 +162,7 @@ bool isNoise(uint8_t *bits, uint32_t size) {
 	signalprop.amplitude = signalprop.high - signalprop.mean;
 	signalprop.isnoise =  signalprop.amplitude < NOICE_AMPLITUDE_THRESHOLD;
 	
-	if (g_debugMode == 1) 
+	if (g_debugMode) 
 		printSignal();
 
 	return signalprop.isnoise;
@@ -170,22 +170,20 @@ bool isNoise(uint8_t *bits, uint32_t size) {
 
 //by marshmellow
 //get high and low values of a wave with passed in fuzz factor. also return noise test = 1 for passed or 0 for only noise
-int getHiLo(uint8_t *bits, size_t size, int *high, int *low, uint8_t fuzzHi, uint8_t fuzzLo) {
-
-	// just noise - no super good detection. good enough
-	if (signalprop.isnoise) return -1; 
-	
+//void getHiLo(uint8_t *bits, size_t size, int *high, int *low, uint8_t fuzzHi, uint8_t fuzzLo) {
+void getHiLo(int *high, int *low, uint8_t fuzzHi, uint8_t fuzzLo) {
 	// add fuzz.
 	*high = (signalprop.high * fuzzHi) / 100;
 	if ( signalprop.low < 0 ) {
 		*low = (signalprop.low * fuzzLo) / 100;
-	} else {	
-		*low = signalprop.low * (100 + (100 - fuzzLo))/100;
+	} else {
+		uint8_t range = signalprop.high - signalprop.low;
+		
+		*low =  signalprop.low + ((range * (100-fuzzLo))/100);
 	}
 	
-	if (g_debugMode > 0) 
+	if (g_debugMode) 
 		prnt("getHiLo fuzzed: High %d | Low %d", *high, *low);
-	return 1;
 }
 
 // by marshmellow
@@ -361,13 +359,17 @@ void getNextHigh(uint8_t *samples, size_t size, int high, size_t *i) {
 
 // load wave counters
 bool loadWaveCounters(uint8_t *samples, size_t size, int lowToLowWaveLen[], int highToLowWaveLen[], int *waveCnt, int *skip, int *minClk, int *high, int *low) {
-	size_t i=0, firstLow, firstHigh;
-	size_t testsize = (size < 512) ? size : 512;
-
-	if ( getHiLo(samples, testsize, high, low, 80, 80) == -1 ) {
+	size_t i = 0, firstLow, firstHigh;
+	//size_t testsize = (size < 512) ? size : 512;
+	
+	// just noise - no super good detection. good enough
+	if (signalprop.isnoise) {
 		if (g_debugMode == 2) prnt("DEBUG STT: just noise detected - quitting");
-		return false; //just noise
+		return false;
 	}
+	
+	//getHiLo(samples, testsize, high, low, 80, 80);
+	getHiLo(high, low, 80, 80);
 
 	// get to first full low to prime loop and skip incomplete first pulse
 	getNextHigh(samples, size, *high, &i);
@@ -469,7 +471,8 @@ int ManchesterEncode(uint8_t *bits, size_t size) {
 
 // by marshmellow
 // to detect a wave that has heavily clipped (clean) samples
-uint8_t DetectCleanAskWave(uint8_t *dest, size_t size, uint8_t high, uint8_t low) {
+// loop 512 samples,   if 300 of them is deemed maxed out,  we assume the wave is clipped.
+bool DetectCleanAskWave(uint8_t *dest, size_t size, uint8_t high, uint8_t low) {
 	bool allArePeaks = true;
 	uint16_t cntPeaks = 0;
 	size_t loopEnd = 512 + 160;
@@ -484,8 +487,9 @@ uint8_t DetectCleanAskWave(uint8_t *dest, size_t size, uint8_t high, uint8_t low
 		else
 			cntPeaks++;
 	}
+	
 	if (!allArePeaks){
-		if (cntPeaks > 300) return true;
+		if (cntPeaks > 250) return true;
 	}
 	return allArePeaks;
 }
@@ -504,11 +508,13 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
 	size_t i = 100;
 	size_t minClk = 512;
 	int shortestWaveIdx = 0;
-
+	
+	if (g_debugMode == 1) prnt("DEBUG ASK: DetectStrongAskClock: hi %d | low  %d ", high, low);
+	
 	// get to first full low to prime loop and skip incomplete first pulse
 	getNextHigh(dest, size, high, &i);
 	getNextLow(dest, size, low, &i);
-
+	
 	// loop through all samples
 	while (i < size) {
 		// measure from low to low
@@ -516,7 +522,7 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
 
 		getNextHigh(dest, size, high, &i);
 		getNextLow(dest, size, low, &i);
-		
+
 		//get minimum measured distance
 		if (i-startwave < minClk && i < size) {
 			minClk = i - startwave;
@@ -546,18 +552,29 @@ int DetectASKClock(uint8_t *dest, size_t size, int *clock, int maxErr) {
 	size -= 60; //sometimes there is a strange end wave - filter out this....
 	//if we already have a valid clock
 	uint8_t clockFnd = 0;
-	for (; i < clkEnd; ++i)
-		if (clk[i] == *clock) clockFnd = i;
-		//clock found but continue to find best startpos
+	for (; i < clkEnd; ++i) {
+		if (clk[i] == *clock) {
+			//clock found but continue to find best startpos
+			clockFnd = i;
+		}
+	}
 
+	// just noise - no super good detection. good enough
+	if (signalprop.isnoise) {
+		if (g_debugMode == 2) prnt("DEBUG DetectASKClock: just noise detected - quitting");
+		return -1;
+	}
+	
 	//get high and low peak
-	int peak, low;
-	if (getHiLo(dest, loopCnt, &peak, &low, 75, 75) < 1) return -1;
+	int peak_hi, peak_low;
+	//getHiLo(dest, loopCnt, &peak_hi, &peak_low, 75, 75);
+	getHiLo(&peak_hi, &peak_low, 75, 75);
 	
 	//test for large clean peaks
 	if (!clockFnd){
-		if (DetectCleanAskWave(dest, size, peak, low)==1){
-			int ans = DetectStrongAskClock(dest, size, peak, low, clock);
+		if (DetectCleanAskWave(dest, size, peak_hi, peak_low)){
+		
+			int ans = DetectStrongAskClock(dest, size, peak_hi, peak_low, clock);
 			if (g_debugMode == 2) prnt("DEBUG ASK: detectaskclk Clean Ask Wave Detected: clk %i, ShortestWave: %i", *clock ,ans);
 			if (ans > 0){
 				return ans; //return shortest wave start position
@@ -570,8 +587,8 @@ int DetectASKClock(uint8_t *dest, size_t size, int *clock, int maxErr) {
 	
 	uint16_t ii;
 	uint8_t clkCnt, tol = 0;
-	uint16_t bestErr[]={1000,1000,1000,1000,1000,1000,1000,1000,1000};
-	uint8_t bestStart[]={0,0,0,0,0,0,0,0,0};
+	uint16_t bestErr[] = {1000,1000,1000,1000,1000,1000,1000,1000,1000};
+	uint8_t bestStart[] = {0,0,0,0,0,0,0,0,0};
 	size_t errCnt = 0;
 	size_t arrLoc, loopEnd;
 
@@ -585,9 +602,9 @@ int DetectASKClock(uint8_t *dest, size_t size, int *clock, int maxErr) {
 	//test each valid clock from smallest to greatest to see which lines up
 	for (; clkCnt < clkEnd; clkCnt++) {
 		if (clk[clkCnt] <= 32) {
-			tol=1;
+			tol = 1;
 		} else {
-			tol=0;
+			tol = 0;
 		}
 		//if no errors allowed - keep start within the first clock
 		if (!maxErr && size > clk[clkCnt]*2 + tol && clk[clkCnt] < 128) 
@@ -597,17 +614,17 @@ int DetectASKClock(uint8_t *dest, size_t size, int *clock, int maxErr) {
 
 		//try lining up the peaks by moving starting point (try first few clocks)
 		for (ii=0; ii < loopCnt; ii++){
-			if (dest[ii] < peak && dest[ii] > low) continue;
+			if (dest[ii] < peak_hi && dest[ii] > peak_low) continue;
 
 			errCnt = 0;
 			// now that we have the first one lined up test rest of wave array
 			loopEnd = ((size-ii-tol) / clk[clkCnt]) - 1;
 			for (i=0; i < loopEnd; ++i){
 				arrLoc = ii + (i * clk[clkCnt]);
-				if (dest[arrLoc] >= peak || dest[arrLoc] <= low){
-				}else if (dest[arrLoc-tol] >= peak || dest[arrLoc-tol] <= low){
-				}else if (dest[arrLoc+tol] >= peak || dest[arrLoc+tol] <= low){
-				}else{  //error no peak detected
+				if (dest[arrLoc] >= peak_hi || dest[arrLoc] <= peak_low){
+				} else if (dest[arrLoc-tol] >= peak_hi || dest[arrLoc-tol] <= peak_low){
+				} else if (dest[arrLoc+tol] >= peak_hi || dest[arrLoc+tol] <= peak_low){
+				} else {  //error no peak detected
 					errCnt++;
 				}
 			}
@@ -618,7 +635,7 @@ int DetectASKClock(uint8_t *dest, size_t size, int *clock, int maxErr) {
 				if (!clockFnd) 
 					*clock = clk[clkCnt];
 				return ii;
-			}
+			}	
 			//if we found errors see if it is lowest so far and save it as best run
 			if (errCnt < bestErr[clkCnt]) {
 				bestErr[clkCnt] = errCnt;
@@ -701,10 +718,18 @@ int DetectNRZClock(uint8_t *dest, size_t size, int clock, size_t *clockStartIdx)
 	// size must be larger than 20 here
 	if (size < loopCnt) loopCnt = size-20;
 
+	
+	// just noise - no super good detection. good enough
+	if (signalprop.isnoise) {
+		if (g_debugMode == 2) prnt("DEBUG DetectNZRClock: just noise detected - quitting");
+		return 0;
+	}
+	
 	//get high and low peak
 	int peak, low;
-	if (getHiLo(dest, loopCnt, &peak, &low, 90, 90) < 1) return 0;
-
+	//getHiLo(dest, loopCnt, &peak, &low, 90, 90);
+	getHiLo(&peak, &low, 90, 90);
+	
 	bool strong = false;
 	int lowestTransition = DetectStrongNRZClk(dest, size-20, peak, low, &strong);
 	if (strong) return lowestTransition;
@@ -1431,11 +1456,18 @@ int cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int invert, int high,
 //by marshmellow
 //attempts to demodulate ask modulations, askType == 0 for ask/raw, askType==1 for ask/manchester
 int askdemod_ext(uint8_t *bits, size_t *size, int *clk, int *invert, int maxErr, uint8_t amp, uint8_t askType, int *startIdx) {
-	if (*size==0) return -1;
-	int start = DetectASKClock(bits, *size, clk, maxErr); //clock default
-	if (*clk==0 || start < 0) return -3;
+	
+	if (*size == 0) return -1;
+	
+	int start = DetectASKClock(bits, *size, clk, maxErr);
+	if (*clk == 0 || start < 0) return -3;
+	
 	if (*invert != 1) *invert = 0;
-	if (amp==1) askAmp(bits, *size);
+	
+	// amplify signal data.
+	// ICEMAN todo,  
+	if (amp == 1) askAmp(bits, *size);
+	
 	if (g_debugMode == 2) prnt("DEBUG ASK: clk %d, beststart %d, amp %d", *clk, start, amp);
 		
 	//start pos from detect ask clock is 1/2 clock offset
@@ -1443,12 +1475,19 @@ int askdemod_ext(uint8_t *bits, size_t *size, int *clk, int *invert, int maxErr,
 	*startIdx = start - (*clk/2); 
 	uint16_t initLoopMax = 1024;
 	if (initLoopMax > *size) initLoopMax = *size;
+	
+	// just noise - no super good detection. good enough
+	if (signalprop.isnoise) {
+		if (g_debugMode == 2) prnt("DEBUG askdemod_ext: just noise detected - quitting");
+		return -2;
+	}
+	
 	// Detect high and lows
 	//25% clip in case highs and lows aren't clipped [marshmellow]
 	int high, low;
-	if (getHiLo(bits, initLoopMax, &high, &low, 75, 75) < 1) 
-		return -2; //just noise
-
+	//getHiLo(bits, initLoopMax, &high, &low, 75, 75);
+	getHiLo(&high, &low, 75, 75);
+	
 	size_t errCnt = 0;
 	// if clean clipped waves detected run alternate demod
 	if (DetectCleanAskWave(bits, *size, high, low)) {
@@ -1461,11 +1500,13 @@ int askdemod_ext(uint8_t *bits, size_t *size, int *clk, int *invert, int maxErr,
 			uint8_t alignPos = 0;
 			errCnt = manrawdecode(bits, size, 0, &alignPos);
 			*startIdx += *clk/2 * alignPos;
+			
 			if (g_debugMode) 
 				prnt("DEBUG: (askdemod_ext) CLEAN: startIdx %i, alignPos %u", *startIdx, alignPos);
 		} 
 		return errCnt;
 	}
+	
 	if (g_debugMode) prnt("DEBUG: (askdemod_ext) Weak wave detected: startIdx %i", *startIdx);
 	
 	int lastBit;  //set first clock check - can go negative
@@ -1477,28 +1518,28 @@ int askdemod_ext(uint8_t *bits, size_t *size, int *clk, int *invert, int maxErr,
 	lastBit = start - *clk;
 
 	for (i = start; i < *size; ++i) {
-		if (i-lastBit >= *clk-tol){
+		if (i - lastBit >= *clk - tol){
 			if (bits[i] >= high) {
 				bits[bitnum++] = *invert;
 			} else if (bits[i] <= low) {
 				bits[bitnum++] = *invert ^ 1;
-			} else if (i-lastBit >= *clk+tol) {
+			} else if (i-lastBit >= *clk + tol) {
 				if (bitnum > 0) {
 					if (g_debugMode == 2) prnt("DEBUG: (askdemod_ext) Modulation Error at: %u", i);
-					bits[bitnum++]=7;
-					errCnt++;						
+					bits[bitnum++] = 7;
+					errCnt++;
 				} 
 			} else { //in tolerance - looking for peak
 				continue;
 			}
 			midBit = 0;
 			lastBit += *clk;
-		} else if (i-lastBit >= (*clk/2-tol) && !midBit && !askType){
+		} else if (i-lastBit >= (*clk/2 - tol) && !midBit && !askType){
 			if (bits[i] >= high) {
 				bits[bitnum++] = *invert;
 			} else if (bits[i] <= low) {
 				bits[bitnum++] = *invert ^ 1;
-			} else if (i-lastBit >= *clk/2+tol) {
+			} else if (i-lastBit >= *clk/2 + tol) {
 				bits[bitnum] = bits[bitnum-1];
 				bitnum++;
 			} else { //in tolerance - looking for peak
@@ -1530,8 +1571,17 @@ int nrzRawDemod(uint8_t *dest, size_t *size, int *clk, int *invert, int *startId
 	if (gLen > *size) 
 		gLen = *size-20;
 	
+	
+	// just noise - no super good detection. good enough
+	if (signalprop.isnoise) {
+		if (g_debugMode == 2) prnt("DEBUG nrzRawDemod: just noise detected - quitting");
+		return -3;
+	}
+	
 	int high, low;
-	if (getHiLo(dest, gLen, &high, &low, 75, 75) < 1) return -3; //25% fuzz on high 25% fuzz on low
+	//getHiLo(dest, gLen, &high, &low, 75, 75);
+	getHiLo(&high, &low, 75, 75);
+	getHiLo(&high, &low, 75, 75);
 
 	uint8_t bit=0;
 	//convert wave samples to 1's and 0's

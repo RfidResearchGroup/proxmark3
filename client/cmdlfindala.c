@@ -184,9 +184,11 @@ int CmdIndalaDemodAlt(const char *Cmd) {
 	int count = 0;
 	int i, j;
 
-	// worst case with GraphTraceLen=64000 is < 4096
+	// worst case with GraphTraceLen=40000 is < 4096
 	// under normal conditions it's < 2048
-
+	uint8_t data[MAX_GRAPH_TRACE_LEN] = {0};
+	size_t datasize = getFromGraphBuf(data);
+	
 	uint8_t rawbits[4096];
 	int rawbit = 0;
 	int worst = 0, worstPos = 0;
@@ -197,9 +199,9 @@ int CmdIndalaDemodAlt(const char *Cmd) {
 	
 	// PrintAndLogEx(NORMAL, "Expecting a bit less than %d raw bits", GraphTraceLen / 32);
 	// loop through raw signal - since we know it is psk1 rf/32 fc/2 skip every other value (+=2)
-	for (i = 0; i < GraphTraceLen-1; i += 2) {
+	for (i = 0; i < datasize-1; i += 2) {
 		count += 1;
-		if ((GraphBuffer[i] > GraphBuffer[i + 1]) && (state != 1)) {
+		if ((data[i] > data[i + 1]) && (state != 1)) {
 			// appears redundant - marshmellow
 			if (state == 0) {
 				for (j = 0; j <  count - 8; j += 16) {
@@ -212,7 +214,7 @@ int CmdIndalaDemodAlt(const char *Cmd) {
 			}
 			state = 1;
 			count = 0;
-		} else if ((GraphBuffer[i] < GraphBuffer[i + 1]) && (state != 0)) {
+		} else if ((data[i] < data[i + 1]) && (state != 0)) {
 			//appears redundant
 			if (state == 1) {
 				for (j = 0; j <  count - 8; j += 16) {
@@ -228,7 +230,7 @@ int CmdIndalaDemodAlt(const char *Cmd) {
 		}
 	}
 	
-	if (rawbit>0){
+	if (rawbit > 0){
 		PrintAndLogEx(NORMAL, "Recovered %d raw bits, expected: %d", rawbit, GraphTraceLen/32);
 		PrintAndLogEx(NORMAL, "worst metric (0=best..7=worst): %d at pos %d", worst, worstPos);
 	} else {
@@ -301,14 +303,14 @@ int CmdIndalaDemodAlt(const char *Cmd) {
 	int idx;
 	uid1 = uid2 = 0;
 	
-	if (uidlen==64){
-		for( idx=0; idx<64; idx++) {
+	if (uidlen == 64){
+		for( idx=0; idx < 64; idx++) {
 				if (showbits[idx] == '0') {
-				uid1=(uid1<<1)|(uid2>>31);
-				uid2=(uid2<<1)|0;
+					uid1 = (uid1<<1) | (uid2>>31);
+					uid2 = (uid2<<1) | 0;
 				} else {
-				uid1=(uid1<<1)|(uid2>>31);
-				uid2=(uid2<<1)|1;
+					uid1 = (uid1<<1) | (uid2>>31);
+					uid2 = (uid2<<1) | 1;
 				} 
 			}
 		PrintAndLogEx(NORMAL, "UID=%s (%x%08x)", showbits, uid1, uid2);
@@ -317,12 +319,12 @@ int CmdIndalaDemodAlt(const char *Cmd) {
 		uid3 = uid4 = uid5 = uid6 = uid7 = 0;
 
 		for( idx=0; idx<224; idx++) {
-				uid1=(uid1<<1)|(uid2>>31);
-				uid2=(uid2<<1)|(uid3>>31);
-				uid3=(uid3<<1)|(uid4>>31);
-				uid4=(uid4<<1)|(uid5>>31);
-				uid5=(uid5<<1)|(uid6>>31);
-				uid6=(uid6<<1)|(uid7>>31);
+				uid1 = (uid1<<1) | (uid2>>31);
+				uid2 = (uid2<<1) | (uid3>>31);
+				uid3 = (uid3<<1) | (uid4>>31);
+				uid4 = (uid4<<1) | (uid5>>31);
+				uid5 = (uid5<<1) | (uid6>>31);
+				uid6 = (uid6<<1) | (uid7>>31);
 			
 			if (showbits[idx] == '0') 
 				uid7 = (uid7<<1) | 0;
@@ -353,7 +355,7 @@ int CmdIndalaDemodAlt(const char *Cmd) {
 	// Remodulating for tag cloning
 	// HACK: 2015-01-04 this will have an impact on our new way of seening lf commands (demod) 
 	// since this changes graphbuffer data.
-	GraphTraceLen = 32*uidlen;
+	GraphTraceLen = 32 * uidlen;
 	i = 0;
 	int phase = 0;
 	for (bit = 0; bit < uidlen; bit++) {
