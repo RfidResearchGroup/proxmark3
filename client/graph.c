@@ -57,7 +57,6 @@ void save_restoreGB(uint8_t saveOpt) {
 	return;
 }
 
-// DETECT CLOCK NOW IN LFDEMOD.C
 void setGraphBuf(uint8_t *buf, size_t size) {
 	if ( buf == NULL ) return;
 	
@@ -73,6 +72,7 @@ void setGraphBuf(uint8_t *buf, size_t size) {
 	RepaintGraphWindow();
 	return;
 }
+
 size_t getFromGraphBuf(uint8_t *buf) {
 	if (buf == NULL ) return 0;
 	uint32_t i;
@@ -102,18 +102,18 @@ int GetAskClock(const char *str, bool printAns) {
 		return clock;
 	
 	// Auto-detect clock
-	uint8_t grph[MAX_GRAPH_TRACE_LEN] = {0};
-	size_t size = getFromGraphBuf(grph);
+	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
+	size_t size = getFromGraphBuf(bits);
 	if (size == 0) {
 		PrintAndLogEx(WARNING, "Failed to copy from graphbuffer");
 		return -1;
 	}
-	//, size_t *ststart, size_t *stend
+
 	size_t ststart = 0, stend = 0;
-	bool st = DetectST(grph, &size, &clock, &ststart, &stend);
+	bool st = DetectST(bits, &size, &clock, &ststart, &stend);
 	int start = stend;
 	if (st == false) {
-		start = DetectASKClock(grph, size, &clock, 20);
+		start = DetectASKClock(bits, size, &clock, 20);
 	}
 	setClockGrid(clock, start);
 	// Only print this message if we're not looping something
@@ -125,13 +125,13 @@ int GetAskClock(const char *str, bool printAns) {
 
 uint8_t GetPskCarrier(const char *str, bool printAns) {
 	uint8_t carrier = 0;
-	uint8_t grph[MAX_GRAPH_TRACE_LEN] = {0};
-	size_t size = getFromGraphBuf(grph);
+	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
+	size_t size = getFromGraphBuf(bits);
 	if ( size == 0 ) {
 		PrintAndLogEx(WARNING, "Failed to copy from graphbuffer");
 		return 0;
 	}
-	uint16_t fc = countFC(grph, size, 0);
+	uint16_t fc = countFC(bits, size, false);
 	carrier = fc & 0xFF;
 	if (carrier != 2 && carrier != 4 && carrier != 8) return 0;
 	if (( fc >> 8) == 10 && carrier == 8) return 0;
@@ -194,12 +194,13 @@ int GetFskClock(const char* str, bool printAns) {
 
 	uint8_t fc1 = 0, fc2 = 0, rf1 = 0;
 	int firstClockEdge = 0;
-	int ans = fskClocks(&fc1, &fc2, &rf1, &firstClockEdge);
-	if (ans == 0) 
+	
+	if ( !fskClocks(&fc1, &fc2, &rf1, &firstClockEdge))
 		return 0;
 	
 	if ((fc1==10 && fc2==8) || (fc1==8 && fc2==5)){
-		if (printAns) PrintAndLogEx(NORMAL, "Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d", fc1, fc2, rf1);
+		if (printAns) 
+			PrintAndLogEx(NORMAL, "Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d", fc1, fc2, rf1);
 		setClockGrid(rf1, firstClockEdge);
 		return rf1;
 	}
@@ -208,26 +209,25 @@ int GetFskClock(const char* str, bool printAns) {
 	PrintAndLogEx(DEBUG, "Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d", fc1, fc2, rf1);
 	return 0;
 }
-int fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, int *firstClockEdge) {
+bool fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, int *firstClockEdge) {
 	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t size = getFromGraphBuf(bits);
 	if (size == 0) 
-		return 0;
+		return false;
 	
-	uint16_t ans = countFC(bits, size, 1); 
+	uint16_t ans = countFC(bits, size, true);
 	if (ans == 0) {
 		PrintAndLogEx(DEBUG, "DEBUG: No data found");
-		return 0;
+		return false;
 	}
 	
 	*fc1 = (ans >> 8) & 0xFF;
 	*fc2 = ans & 0xFF;
-	//int firstClockEdge = 0;
 	*rf1 = detectFSKClk(bits, size, *fc1, *fc2, firstClockEdge);
 	if (*rf1 == 0) {
 		PrintAndLogEx(DEBUG, "DEBUG: Clock detect error");
-		return 0;
+		return false;
 	}
-	return 1;
+	return true;
 }
 
