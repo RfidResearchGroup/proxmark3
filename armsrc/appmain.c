@@ -534,87 +534,91 @@ void ListenReaderField(int limit) {
 	}
 
 	for(;;) {
-		// Switch modes with button
-		if (BUTTON_PRESS()) {
-			SpinDelay(500);
-			switch (mode) {
-				case 1:
-					mode = 2;
-					DbpString("Signal Strength Mode");
-					break;
-				case 2:
-				default:
-					DbpString("Stopped");
-					LEDsoff();
-					return;
-					break;
+		while(!usb_poll_validate_length()) {
+			// Switch modes with button
+			if (BUTTON_PRESS()) {
+				SpinDelay(500);
+				switch (mode) {
+					case 1:
+						mode = 2;
+						DbpString("Signal Strength Mode");
+						break;
+					case 2:
+					default:
+						DbpString("Stopped");
+						LEDsoff();
+						return;
+						break;
+				}
 			}
-		}
-		WDT_HIT();
+			WDT_HIT();
 
-		if (limit != HF_ONLY) {
-			if(mode == 1) {
-				if (ABS(lf_av - lf_baseline) > REPORT_CHANGE) 
-					LED_D_ON();
-				else
-					LED_D_OFF();
-			}
+			if (limit != HF_ONLY) {
+				if(mode == 1) {
+					if (ABS(lf_av - lf_baseline) > REPORT_CHANGE) 
+						LED_D_ON();
+					else
+						LED_D_OFF();
+				}
 
-			lf_av_new = AvgAdc(ADC_CHAN_LF);
-			// see if there's a significant change
-			if (ABS(lf_av - lf_av_new) > REPORT_CHANGE) {
-				Dbprintf("LF 125/134kHz Field Change: %5dmV", (MAX_ADC_LF_VOLTAGE * lf_av_new) >> 10);
-				lf_av = lf_av_new;
-				if (lf_av > lf_max)
-					lf_max = lf_av;
-			}
-		}
-
-		if (limit != LF_ONLY) {
-			if (mode == 1){
-				if (ABS(hf_av - hf_baseline) > REPORT_CHANGE) 	
-					LED_B_ON();
-				else
-					LED_B_OFF();
+				lf_av_new = AvgAdc(ADC_CHAN_LF);
+				// see if there's a significant change
+				if (ABS(lf_av - lf_av_new) > REPORT_CHANGE) {
+					Dbprintf("LF 125/134kHz Field Change: %5dmV", (MAX_ADC_LF_VOLTAGE * lf_av_new) >> 10);
+					lf_av = lf_av_new;
+					if (lf_av > lf_max)
+						lf_max = lf_av;
+				}
 			}
 
-			hf_av_new = (use_high) ? AvgAdc(ADC_CHAN_HF_RDV40) :  AvgAdc(ADC_CHAN_HF);
+			if (limit != LF_ONLY) {
+				if (mode == 1){
+					if (ABS(hf_av - hf_baseline) > REPORT_CHANGE) 	
+						LED_B_ON();
+					else
+						LED_B_OFF();
+				}
 
-			// see if there's a significant change
-			if(ABS(hf_av - hf_av_new) > REPORT_CHANGE) {
-				Dbprintf("HF 13.56MHz Field Change: %5dmV", (MAX_ADC_HF_VOLTAGE * hf_av_new) >> 10);
-				hf_av = hf_av_new;
-				if (hf_av > hf_max)
-					hf_max = hf_av;
+				hf_av_new = (use_high) ? AvgAdc(ADC_CHAN_HF_RDV40) :  AvgAdc(ADC_CHAN_HF);
+
+				// see if there's a significant change
+				if(ABS(hf_av - hf_av_new) > REPORT_CHANGE) {
+					Dbprintf("HF 13.56MHz Field Change: %5dmV", (MAX_ADC_HF_VOLTAGE * hf_av_new) >> 10);
+					hf_av = hf_av_new;
+					if (hf_av > hf_max)
+						hf_max = hf_av;
+				}
 			}
-		}
 
-		if (mode == 2) {
-			if (limit == LF_ONLY) {
-				display_val = lf_av;
-				display_max = lf_max;
-			} else if (limit == HF_ONLY) {
-				display_val = hf_av;
-				display_max = hf_max;
-			} else { /* Pick one at random */
-				if( (hf_max - hf_baseline) > (lf_max - lf_baseline) ) {
-					display_val = hf_av;
-					display_max = hf_max;
-				} else {
+			if (mode == 2) {
+				if (limit == LF_ONLY) {
 					display_val = lf_av;
 					display_max = lf_max;
+				} else if (limit == HF_ONLY) {
+					display_val = hf_av;
+					display_max = hf_max;
+				} else { /* Pick one at random */
+					if( (hf_max - hf_baseline) > (lf_max - lf_baseline) ) {
+						display_val = hf_av;
+						display_max = hf_max;
+					} else {
+						display_val = lf_av;
+						display_max = lf_max;
+					}
 				}
+				for (i=0; i<LIGHT_LEN; i++) {
+					if (display_val >= ((display_max/LIGHT_LEN)*i) && display_val <= ((display_max/LIGHT_LEN)*(i+1))) {
+						if (LIGHT_SCHEME[i] & 0x1) LED_C_ON(); else LED_C_OFF();
+						if (LIGHT_SCHEME[i] & 0x2) LED_A_ON(); else LED_A_OFF();
+						if (LIGHT_SCHEME[i] & 0x4) LED_B_ON(); else LED_B_OFF();
+						if (LIGHT_SCHEME[i] & 0x8) LED_D_ON(); else LED_D_OFF();
+						break;
+					}
+				}		
 			}
-			for (i=0; i<LIGHT_LEN; i++) {
-				if (display_val >= ((display_max/LIGHT_LEN)*i) && display_val <= ((display_max/LIGHT_LEN)*(i+1))) {
-					if (LIGHT_SCHEME[i] & 0x1) LED_C_ON(); else LED_C_OFF();
-					if (LIGHT_SCHEME[i] & 0x2) LED_A_ON(); else LED_A_OFF();
-					if (LIGHT_SCHEME[i] & 0x4) LED_B_ON(); else LED_B_OFF();
-					if (LIGHT_SCHEME[i] & 0x8) LED_D_ON(); else LED_D_OFF();
-					break;
-				}
-			}		
 		}
+		DbpString("Stopped");
+		break;
 	}
 }
 

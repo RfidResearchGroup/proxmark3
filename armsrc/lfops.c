@@ -753,6 +753,7 @@ void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *bits) {
 	if (ledcontrol)	LED_A_ON();
 	SimulateTagLowFrequency(n, 0, ledcontrol);
 	if (ledcontrol)	LED_A_OFF();
+	DbpString("[!] simulation finished");
 }
 
 // compose ask waveform for one bit(ASK)
@@ -1513,6 +1514,7 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT) {
 	LED_D_ON();
 	WriteT55xx(data, 0, last_block+1);
 	LED_D_OFF();
+	Dbprintf("HID Tag written to T55x7 with %08x\n", (uint32_t)lo);
 }
 
 void CopyIOtoT55x7(uint32_t hi, uint32_t lo) {
