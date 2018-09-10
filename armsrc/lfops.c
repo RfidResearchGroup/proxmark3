@@ -26,10 +26,10 @@
 # define OPEN_COIL()	HIGH(GPIO_SSC_DOUT)
 #endif
 
-#define START_GAP 31*8 // was 250 // SPEC:  1*8 to 50*8 - typ 15*8 (15fc)
-#define WRITE_GAP 20*8 // was 160 // SPEC:  1*8 to 20*8 - typ 10*8 (10fc)
-#define WRITE_0   18*8 // was 144 // SPEC: 16*8 to 32*8 - typ 24*8 (24fc)
-#define WRITE_1   54*8 // was 400 // SPEC: 48*8 to 64*8 - typ 56*8 (56fc)  432 for T55x7; 448 for E5550
+#define START_GAP 28*8 // was 250 // SPEC:  1*8 to 50*8 - typ 15*8 (15fc)
+#define WRITE_GAP 17*8 // was 160 // SPEC:  1*8 to 20*8 - typ 10*8 (10fc)
+#define WRITE_0   15*8 // was 144 // SPEC: 16*8 to 32*8 - typ 24*8 (24fc)
+#define WRITE_1   47*8 // was 400 // SPEC: 48*8 to 64*8 - typ 56*8 (56fc)  432 for T55x7; 448 for E5550
 #define READ_GAP  15*8 
 
 //  VALUES TAKEN FROM EM4x function: SendForward
@@ -68,7 +68,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
 
 	// Make sure the tag is reset
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF_LF);
 	WaitMS(500);
 
 	// clear read buffer
@@ -109,7 +109,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
 			if (command[counter] == '0') {
 				// if field already off leave alone (affects timing otherwise)
 				if (off == false) {
-					FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+					FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF_LF);
 					LED_D_OFF();
 					off = true;
 				}
@@ -136,7 +136,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
 				TurnReadLFOn(period_1);
 
 			LED_D_OFF();
-			FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+			FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF_LF);
 			WaitUS(delay_off);
 		}
 
@@ -1269,7 +1269,7 @@ void T55xxWriteBit(int bit) {
 		TurnReadLFOn(WRITE_0);
 	else
 		TurnReadLFOn(WRITE_1);
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF_LF);
 	WaitUS(WRITE_GAP);
 }
 
@@ -1279,14 +1279,15 @@ void T55xxResetRead(void) {
 	//clear buffer now so it does not interfere with timing later
 	BigBuf_Clear_keep_EM();
 
+	StartTicks();
+
 	// Set up FPGA, 125kHz
 	LFSetupFPGAForADC(95, true);
-	StartTicks();
 	// make sure tag is fully powered up...
-	WaitMS(5);
+	WaitMS(6);
 
 	// Trigger T55x7 in mode.
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF_LF);
 	WaitUS(START_GAP);
 
 	// reset tag - op code 00
@@ -1312,13 +1313,15 @@ void T55xxWriteBlockExt(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t arg)
 	bool testMode = arg & 0x4;
 	uint32_t i = 0;
 
+	StartTicks();
+		
 	// Set up FPGA, 125kHz
 	LFSetupFPGAForADC(95, true);
-	StartTicks();
+
 	// make sure tag is fully powered up...
-	WaitMS(5);
+	WaitMS(6);
 	// Trigger T55x7 in mode.
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF_LF);
 	WaitUS(START_GAP);
 
 	if (testMode) Dbprintf("TestMODE");
@@ -1396,13 +1399,14 @@ void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 	//make sure block is at max 7
 	Block &= 0x7;
 
+	StartTicks();
+
 	// Set up FPGA, 125kHz to power up the tag
 	LFSetupFPGAForADC(95, true);
-	StartTicks();
 	// make sure tag is fully powered up...
-	WaitMS(5);
+	WaitMS(6);
 	// Trigger T55x7 Direct Access Mode with start gap
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF_LF);
 	WaitUS(START_GAP);
 	
 	// Opcode 1[page]
@@ -1440,15 +1444,16 @@ void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 void T55xxWakeUp(uint32_t Pwd){
 	LED_B_ON();
 	uint32_t i = 0;
+
+	StartTicks();
 	
 	// Set up FPGA, 125kHz
 	LFSetupFPGAForADC(95, true);
-	StartTicks();
 	// make sure tag is fully powered up...
-	WaitMS(5);
+	WaitMS(6);
 	
 	// Trigger T55x7 Direct Access Mode
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF_LF);
 	WaitUS(START_GAP);
 	
 	// Opcode 10
@@ -1888,7 +1893,7 @@ This triggers a COTAG tag to response
 */
 void Cotag(uint32_t arg0) {
 #ifndef OFF
-# define OFF 	{ FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); WaitUS(2035); }
+# define OFF 	{ FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF_LF); WaitUS(2035); }
 #endif
 #ifndef ON
 # define ON(x)   { FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD); WaitUS((x)); }
