@@ -55,7 +55,7 @@ extern uint32_t FLASHMEM_SPIBAUDRATE;
 #endif
 
 #ifndef FLASH_MEM_MAX_SIZE
-# define FLASH_MEM_MAX_SIZE     0x3FFFF
+# define FLASH_MEM_MAX_SIZE     0x3FFFF  // (262143)
 #endif
 
 #ifndef FLASH_MEM_ID_LEN
@@ -70,6 +70,15 @@ extern uint32_t FLASHMEM_SPIBAUDRATE;
 # define FLASH_MEM_SIGNATURE_OFFSET	(FLASH_MEM_MAX_SIZE - FLASH_MEM_SIGNATURE_LEN)
 #endif
 
+#if WITH_FLASH
+#ifndef T55XX_CONFIG_LEN
+# define T55XX_CONFIG_LEN	sizeof( t55xx_config )
+#endif
+
+#ifndef T55XX_CONFIG_OFFSET
+#define T55XX_CONFIG_OFFSET	(FLASH_MEM_MAX_SIZE - FLASH_MEM_SIGNATURE_LEN - T55XX_CONFIG_LEN)
+#endif
+#endif
 
 // RDV40,  validation structure to help identifying that client/firmware is talking with RDV40
 typedef struct {

@@ -1,7 +1,5 @@
 #include "flashmem.h"
 
-
-
 /* here: use NCPS2 @ PA10: */
 #define SPI_CSR_NUM      2
 #define SPI_PCS(npcs)       ((~(1 << (npcs)) & 0xF) << 16)

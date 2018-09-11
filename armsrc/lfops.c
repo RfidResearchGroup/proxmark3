@@ -18,6 +18,8 @@
 #include "lfsampling.h"
 #include "protocols.h"
 #include "usb_cdc.h" // for usb_poll_validate_length
+#include "common.h"
+#include "flashmem.h" // persistence on mem
 
 #ifndef SHORT_COIL
 # define SHORT_COIL()	LOW(GPIO_SSC_DOUT)
@@ -26,11 +28,11 @@
 # define OPEN_COIL()	HIGH(GPIO_SSC_DOUT)
 #endif
 
-#define START_GAP 28*8 // was 250 // SPEC:  1*8 to 50*8 - typ 15*8 (15fc)
-#define WRITE_GAP 17*8 // was 160 // SPEC:  1*8 to 20*8 - typ 10*8 (10fc)
-#define WRITE_0   15*8 // was 144 // SPEC: 16*8 to 32*8 - typ 24*8 (24fc)
-#define WRITE_1   47*8 // was 400 // SPEC: 48*8 to 64*8 - typ 56*8 (56fc)  432 for T55x7; 448 for E5550
-#define READ_GAP  15*8 
+//#define START_GAP 31*8 // was 250 // SPEC:  1*8 to 50*8 - typ 15*8 (15fc)
+//#define WRITE_GAP 8*8 // 17*8 // was 160 // SPEC:  1*8 to 20*8 - typ 10*8 (10fc)
+//#define WRITE_0   15*8 // 18*8 // was 144 // SPEC: 16*8 to 32*8 - typ 24*8 (24fc)
+//#define WRITE_1   47*8 // 50*8 // was 400 // SPEC: 48*8 to 64*8 - typ 56*8 (56fc)  432 for T55x7; 448 for E5550
+//#define READ_GAP  15*8 
 
 //  VALUES TAKEN FROM EM4x function: SendForward
 //  START_GAP = 440;       (55*8) cycles at 125Khz (8us = 1cycle)
@@ -49,7 +51,68 @@
 // new timer:
 //     = 1us = 1.5ticks
 // 1fc = 8us = 12ticks
+/*
+Default LF T55xx config is set to:
+	startgap = 31*8
+	writegap = 17*8
+	write_0 = 15*8
+	write_1 = 47*8
+	read_gap = 15*8
+*/
+t55xx_config t_config = { 31*8, 17*8, 15*8, 47*8, 15*8 } ;
 
+void printT55xxConfig(void) {
+	Dbprintf("LF T55XX config");
+	Dbprintf("  [q] startgap............%d*8 (%d)", t_config.start_gap/8, t_config.start_gap);
+	Dbprintf("  [b] writegap............%d*8 (%d)", t_config.write_gap/8, t_config.write_gap);
+	Dbprintf("  [d] write_0.............%d*8 (%d)", t_config.write_0/8,   t_config.write_0);
+	Dbprintf("  [a] write_1.............%d*8 (%d)", t_config.write_1/8,   t_config.write_1);
+	Dbprintf("  [t] readgap.............%d*8 (%d)", t_config.read_gap/8,  t_config.read_gap);
+}
+void setT55xxConfig(t55xx_config *c) {
+	
+	if (c->start_gap != 0) t_config.start_gap = c->start_gap*8;
+	if (c->write_gap != 0) t_config.write_gap = c->write_gap*8;
+	if (c->write_0   != 0) t_config.write_0 = c->write_0*8;
+	if (c->write_1   != 0) t_config.write_1 = c->write_1*8;
+	if (c->read_gap  != 0) t_config.read_gap = c->read_gap*8;	
+
+	printT55xxConfig();
+	
+#if WITH_FLASH
+    if (!FlashInit())
+        return;
+	
+	Flash_CheckBusy(BUSY_TIMEOUT);
+	
+	uint16_t isok = Flash_WriteDataCont(T55XX_CONFIG_OFFSET, (uint8_t *)&t_config, sizeof(t55xx_config));
+	FlashStop();
+	
+	if ( isok == T55XX_CONFIG_LEN) {
+		if (MF_DBGLEVEL > 1) DbpString("T55XX Config save success");
+	}
+#endif
+}
+
+t55xx_config* getT55xxConfig(void) {
+	return &t_config;
+}
+
+void loadT55xxConfig(void) {
+#if WITH_FLASH
+    if (!FlashInit())
+        return;
+	Flash_CheckBusy(BUSY_TIMEOUT);
+	Flash_WriteEnable();
+	
+	uint16_t isok = Flash_ReadDataCont(T55XX_CONFIG_OFFSET, (uint8_t *)&t_config, T55XX_CONFIG_LEN);
+	FlashStop();
+	
+	if ( isok == T55XX_CONFIG_LEN) {
+		if (MF_DBGLEVEL > 1) DbpString("T55XX Config load success");
+	}
+#endif
+}
 
 /**
  * Function to do a modulation and then get samples.
@@ -1266,11 +1329,11 @@ void TurnReadLF_off(uint32_t delay) {
 // Write one bit to card
 void T55xxWriteBit(int bit) {
 	if (!bit)
-		TurnReadLFOn(WRITE_0);
+		TurnReadLFOn(t_config.write_0);
 	else
-		TurnReadLFOn(WRITE_1);
+		TurnReadLFOn(t_config.write_1);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF_LF);
-	WaitUS(WRITE_GAP);
+	WaitUS(t_config.write_gap);
 }
 
 // Send T5577 reset command then read stream (see if we can identify the start of the stream)
@@ -1284,17 +1347,17 @@ void T55xxResetRead(void) {
 	// Set up FPGA, 125kHz
 	LFSetupFPGAForADC(95, true);
 	// make sure tag is fully powered up...
-	WaitMS(6);
+	WaitMS(4);
 
 	// Trigger T55x7 in mode.
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF_LF);
-	WaitUS(START_GAP);
+	WaitUS(t_config.start_gap);
 
 	// reset tag - op code 00
 	T55xxWriteBit(0);
 	T55xxWriteBit(0);
 
-	TurnReadLFOn(READ_GAP);
+	TurnReadLFOn(t_config.read_gap);
 
 	// Acquisition
 	DoPartialAcquisition(0, true, BigBuf_max_traceLen(), 0);
@@ -1319,10 +1382,10 @@ void T55xxWriteBlockExt(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t arg)
 	LFSetupFPGAForADC(95, true);
 
 	// make sure tag is fully powered up...
-	WaitMS(6);
+	WaitMS(4);
 	// Trigger T55x7 in mode.
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF_LF);
-	WaitUS(START_GAP);
+	WaitUS(t_config.start_gap);
 
 	if (testMode) Dbprintf("TestMODE");
 	// Std Opcode 10
@@ -1404,10 +1467,10 @@ void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 	// Set up FPGA, 125kHz to power up the tag
 	LFSetupFPGAForADC(95, true);
 	// make sure tag is fully powered up...
-	WaitMS(6);
+	WaitMS(4);
 	// Trigger T55x7 Direct Access Mode with start gap
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF_LF);
-	WaitUS(START_GAP);
+	WaitUS(t_config.start_gap);
 	
 	// Opcode 1[page]
 	T55xxWriteBit(1);
@@ -1450,11 +1513,11 @@ void T55xxWakeUp(uint32_t Pwd){
 	// Set up FPGA, 125kHz
 	LFSetupFPGAForADC(95, true);
 	// make sure tag is fully powered up...
-	WaitMS(6);
+	WaitMS(4);
 	
 	// Trigger T55x7 Direct Access Mode
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF_LF);
-	WaitUS(START_GAP);
+	WaitUS(t_config.start_gap);
 	
 	// Opcode 10
 	T55xxWriteBit(1);

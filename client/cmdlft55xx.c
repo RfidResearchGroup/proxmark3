@@ -187,6 +187,22 @@ int usage_t55xx_recoverpw(){
 	PrintAndLogEx(NORMAL, "      lf t55xx wipe Q5 -  wipes a t5555 Q5 tag, config block 0x6001F004");
 	return 0;
 }
+int usage_lf_deviceconfig(){
+	PrintAndLogEx(NORMAL, "Usage: lf t55xx deviceconfig a <gap> b <gap> c <gap> d <gap> e <gap>");
+	PrintAndLogEx(NORMAL, "Options:");
+	PrintAndLogEx(NORMAL, "       h             - This help");
+	PrintAndLogEx(NORMAL, "       a <8..28>     - Set start gap");
+	PrintAndLogEx(NORMAL, "       b <8..28>     - Set write gap");
+	PrintAndLogEx(NORMAL, "       c <8..28>     - Set write ZERO gap");
+	PrintAndLogEx(NORMAL, "       d <8..28>     - Set write ONE gap");
+	PrintAndLogEx(NORMAL, "       e <8..28>     - Set read gap");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "      lf t55xx deviceconfig a 31           - start gap 31*8");
+	PrintAndLogEx(NORMAL, "      lf t55xx deviceconfig a 31 b 20      - start gap 31*8,  write gap 20*8");
+	PrintAndLogEx(NORMAL, "");
+	return 0;
+}
 static int CmdHelp(const char *Cmd);
 
 void printT5xxHeader(uint8_t page){
@@ -461,8 +477,7 @@ static int SanityOfflineCheck( bool useGraphBuffer ){
 
 int CmdT55xxDetect(const char *Cmd){
 	bool errors = false;
-	bool useGB = false;
-	bool usepwd = false;
+	bool useGB = false, usepwd = false;
 	uint32_t password = 0;
 	uint8_t cmdp = 0;
 
@@ -1291,7 +1306,7 @@ int CmdT55xxDump(const char *Cmd){
 	return 1;
 }
 
-bool AquireData( uint8_t page, uint8_t block, bool pwdmode, uint32_t password ){
+bool AquireData( uint8_t page, uint8_t block, bool pwdmode, uint32_t password ) {
 	// arg0 bitmodes:
 	// 	bit0 = pwdmode
 	// 	bit1 = page to read from
@@ -1882,11 +1897,60 @@ int CmdT55xxDetectPage1(const char *Cmd){
 	return success;
 }
 
+int CmdT55xxSetDeviceConfig(const char *Cmd){
+	uint8_t startgap = 0, writegap = 0;
+	uint8_t write0 = 0, write1 = 0, readgap = 0;
+	bool errors = false;
+	uint8_t cmdp = 0;
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
+		case 'h':
+			return usage_lf_deviceconfig();
+		case 'a':
+			errors |= param_getdec(Cmd, cmdp+1, &startgap);
+			cmdp += 2;
+			break;
+		case 'b':
+			errors |= param_getdec(Cmd, cmdp+1, &writegap);
+			cmdp += 2;
+			break;
+		case 'c':
+			errors |= param_getdec(Cmd, cmdp+1, &write0);
+			cmdp += 2;
+			break;
+		case 'd':
+			errors |= param_getdec(Cmd, cmdp+1, &write1);
+			cmdp += 2;
+			break;
+		case 'e':
+			errors |= param_getdec(Cmd, cmdp+1, &readgap);
+			cmdp += 2;
+			break;			
+		default:
+			PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+			errors = 1;
+			break;
+		}
+	}
+
+	//Validations
+	if (errors || cmdp == 0) return usage_lf_deviceconfig();
+	
+	t55xx_config config = { startgap, writegap, write0, write1, readgap };
+
+	UsbCommand c = {CMD_SET_LF_T55XX_CONFIG, {0,0,0} };
+	memcpy(c.d.asBytes, &config, sizeof(t55xx_config));
+	clearCommandBuffer();
+	SendCommand(&c);
+	return 0;
+}
+
 static command_t CommandTable[] = {
 	{"help",		CmdHelp,           1, "This help"},
 	{"bruteforce",	CmdT55xxBruteForce,0, "<start password> <end password> [i <*.dic>] Simple bruteforce attack to find password"},
 	{"config",		CmdT55xxSetConfig, 1, "Set/Get T55XX configuration (modulation, inverted, offset, rate)"},
 	{"detect",		CmdT55xxDetect,    1, "[1] Try detecting the tag modulation from reading the configuration block."},
+	{"deviceconfig", CmdT55xxSetDeviceConfig, 1, "Set/Get T55XX device configuration (startgap, writegap, write0, write1, readgap"},
 	{"p1detect",	CmdT55xxDetectPage1,1, "[1] Try detecting if this is a t55xx tag by reading page 1"},
 	{"dump",		CmdT55xxDump,      0, "[password] [o] Dump T55xx card block 0-7. Optional [password], [override]"},
 	{"info",		CmdT55xxInfo,      1, "[1] Show T55x7 configuration data (page 0/ blk 0)"},

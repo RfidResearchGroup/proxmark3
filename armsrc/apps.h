@@ -108,6 +108,10 @@ void TurnReadLFOn(uint32_t delay);
 void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd);
 void EM4xWriteWord(uint32_t flag, uint32_t data, uint32_t pwd);
 void Cotag(uint32_t arg0);
+void setT55xxConfig(t55xx_config *c);
+t55xx_config * getT55xxConfig(void);
+void printT55xxConfig(void);
+void loadT55xxConfig(void);
 
 /// iso14443b.h
 void SimulateIso14443bTag(uint32_t pupi);

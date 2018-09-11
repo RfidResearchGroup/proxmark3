@@ -43,6 +43,14 @@ typedef struct{
 	int trigger_threshold;
 } sample_config;
 
+typedef struct{
+	uint16_t start_gap;
+	uint16_t write_gap;
+	uint16_t write_0;
+	uint16_t write_1;
+	uint16_t read_gap; 
+} t55xx_config;
+
 // For the bootloader
 #define CMD_DEVICE_INFO                                                   0x0000
 #define CMD_SETUP_WRITE                                                   0x0001
@@ -130,6 +138,7 @@ typedef struct{
 #define CMD_VIKING_CLONE_TAG                                              0x0222
 #define CMD_T55XX_WAKEUP	                                              0x0224
 #define CMD_COTAG														  0x0225
+#define CMD_SET_LF_T55XX_CONFIG											  0x0226
 
 /* CMD_SET_ADC_MUX: ext1 is 0 for lopkd, 1 for loraw, 2 for hipkd, 3 for hiraw */
 

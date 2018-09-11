@@ -392,7 +392,8 @@ void SendStatus(void) {
 	I2C_print_status();
 #endif	
 #ifdef WITH_LF
-	printConfig(); //LF Sampling config
+	printConfig(); 		// LF Sampling config
+	printT55xxConfig();	// LF T55XX Config
 #endif	
 	printUSBSpeed();
 	Dbprintf("Various");
@@ -625,6 +626,9 @@ void UsbPacketReceived(uint8_t *packet, int len) {
   
 	switch(c->cmd) {
 #ifdef WITH_LF
+		case CMD_SET_LF_T55XX_CONFIG:
+			setT55xxConfig((t55xx_config *) c->d.asBytes);
+			break;			
 		case CMD_SET_LF_SAMPLING_CONFIG:
 			setSamplingConfig((sample_config *) c->d.asBytes);
 			break;
@@ -701,10 +705,11 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 				c->d.asDwords[4], c->d.asDwords[5], c->d.asDwords[6]
 				);
 			break;
-		case CMD_T55XX_READ_BLOCK:
+		case CMD_T55XX_READ_BLOCK: {				
 			T55xxReadBlock(c->arg[0], c->arg[1], c->arg[2]);
 			break;
-		case CMD_T55XX_WRITE_BLOCK:
+		}
+		case CMD_T55XX_WRITE_BLOCK:		
 			T55xxWriteBlock(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes[0]);
 			break;
 		case CMD_T55XX_WAKEUP:
@@ -1474,6 +1479,10 @@ void  __attribute__((noreturn)) AppMain(void) {
 #ifdef WITH_FPC
 	usart_init();
 #endif	
+
+#ifdef WITH_FLASH
+	loadT55xxConfig();
+#endif
 
 	// This is made as late as possible to ensure enumeration without timeout
 	// against device such as http://www.hobbytronics.co.uk/usb-host-board-v2 
