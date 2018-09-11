@@ -199,11 +199,13 @@ int usage_lf_deviceconfig(){
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Examples:");
 	PrintAndLogEx(NORMAL, "      lf t55xx deviceconfig a 31           - start gap 31*8");
-	PrintAndLogEx(NORMAL, "      lf t55xx deviceconfig a 31 b 20      - start gap 31*8,  write gap 20*8");
+	PrintAndLogEx(NORMAL, "      lf t55xx deviceconfig a 29 b 17 c 15 d 47 e 15   -  Default T55XX");
+	PrintAndLogEx(NORMAL, "      lf t55xx deviceconfig a 55 b 14 c 21 d 30        -  Default EM4305");
 	PrintAndLogEx(NORMAL, "");
 	return 0;
 }
-static int CmdHelp(const char *Cmd);
+
+ CmdHelp(const char *Cmd);
 
 void printT5xxHeader(uint8_t page){
 	PrintAndLogEx(NORMAL, "Reading Page %d:", page);	
