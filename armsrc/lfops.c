@@ -63,11 +63,11 @@ t55xx_config t_config = { 31*8, 17*8, 15*8, 47*8, 15*8 } ;
 
 void printT55xxConfig(void) {
 	Dbprintf("LF T55XX config");
-	Dbprintf("  [q] startgap............%d*8 (%d)", t_config.start_gap/8, t_config.start_gap);
+	Dbprintf("  [a] startgap............%d*8 (%d)", t_config.start_gap/8, t_config.start_gap);
 	Dbprintf("  [b] writegap............%d*8 (%d)", t_config.write_gap/8, t_config.write_gap);
-	Dbprintf("  [d] write_0.............%d*8 (%d)", t_config.write_0/8,   t_config.write_0);
-	Dbprintf("  [a] write_1.............%d*8 (%d)", t_config.write_1/8,   t_config.write_1);
-	Dbprintf("  [t] readgap.............%d*8 (%d)", t_config.read_gap/8,  t_config.read_gap);
+	Dbprintf("  [c] write_0.............%d*8 (%d)", t_config.write_0/8,   t_config.write_0);
+	Dbprintf("  [d] write_1.............%d*8 (%d)", t_config.write_1/8,   t_config.write_1);
+	Dbprintf("  [e] readgap.............%d*8 (%d)", t_config.read_gap/8,  t_config.read_gap);
 }
 void setT55xxConfig(t55xx_config *c) {
 	
@@ -102,6 +102,7 @@ void loadT55xxConfig(void) {
 #if WITH_FLASH
     if (!FlashInit())
         return;
+	
 	Flash_CheckBusy(BUSY_TIMEOUT);
 	Flash_WriteEnable();
 	
@@ -1317,8 +1318,6 @@ void TurnReadLFOn(uint32_t delay) {
 
 	// measure antenna strength.
 	//int adcval = ((MAX_ADC_LF_VOLTAGE * AvgAdc(ADC_CHAN_LF)) >> 10);
-
-	// Give it a bit of time for the resonant antenna to settle.
 	WaitUS(delay);
 }
 void TurnReadLF_off(uint32_t delay) {
