@@ -111,14 +111,14 @@ int GetAskClock(const char *str, bool printAns) {
 
 	size_t ststart = 0, stend = 0;
 	bool st = DetectST(bits, &size, &clock, &ststart, &stend);
-	int start = stend;
+	int idx = stend;
 	if (st == false) {
-		start = DetectASKClock(bits, size, &clock, 20);
+		idx = DetectASKClock(bits, size, &clock, 20);
 	}
-	setClockGrid(clock, start);
+	setClockGrid(clock, idx);
 	// Only print this message if we're not looping something
 	if (printAns || g_debugMode)
-		PrintAndLogEx(NORMAL, "Auto-detected clock rate: %d, Best Starting Position: %d", clock, start);
+		PrintAndLogEx(NORMAL, "Auto-detected clock rate: %d, Best Starting Position: %d", clock, idx);
 
 	return clock;
 }
