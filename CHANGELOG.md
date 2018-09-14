@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Change 'lf hid' - got an  updated to Kastle format (@xilni)
  - Added 'lf t55xx deviceconfig' - enables custom t55xx timing settings. (RDV40) (@iceman)
  - Chg adaptations for FPC communications (work in progress)  (@iceman)
  - Fix 'stand-alone Colin' - remake to benefit from flashmem for persistence. (@cjbrigato)
