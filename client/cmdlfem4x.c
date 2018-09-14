@@ -41,7 +41,7 @@ int usage_lf_em410x_write(void) {
 	PrintAndLogEx(NORMAL, "       <card>    - 0|1 T5555 (Q5) / T55x7");
 	PrintAndLogEx(NORMAL, "       <clock>   - 16|32|40|64, optional, set R/F clock rate, defaults to 64");
 	PrintAndLogEx(NORMAL, "Examples:");
-	PrintAndLogEx(NORMAL, "      lf em 410x_write 0F0368568B");
+	PrintAndLogEx(NORMAL, "      lf em 410x_write 0F0368568B 1       = write ID to t55x7 card");
 	return 0;
 }
 int usage_lf_em410x_ws(void) {
