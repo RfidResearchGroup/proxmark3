@@ -141,7 +141,6 @@ static int getCommand(UsbCommand* response) {
     return 1;
 }
 
-
 //-----------------------------------------------------------------------------
 // Entry point into our code: called whenever we received a packet over USB
 // that we weren't necessarily expecting, for example a debug print.
@@ -339,9 +338,17 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode) 
 
 void CloseProxmark(void) {
 	conn.run = false;
+
+
+#ifdef __BIONIC__
+	if (USB_communication_thread != 0) {
+		pthread_join(USB_communication_thread, NULL);
+	}
+#else
 	pthread_join(USB_communication_thread, NULL);	
 	//pthread_join(FPC_communication_thread, NULL);
-
+#endif
+	
 	if (sp) {
 		uart_close(sp);
 	}
@@ -358,6 +365,7 @@ void CloseProxmark(void) {
 	// Clean up our state
 	sp = NULL;
 	serial_port_name = NULL;
+	memset(&USB_communication_thread, 0, sizeof(pthread_t));
 }
 
 /**
