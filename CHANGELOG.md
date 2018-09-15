@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fix 'compiler warning on macos and gcc7.1 or higher'  (@TomHarkness)
+ - Fix 'crash on Bionic libc if CloseProxmark is called twice' (@micolous)
  - Change 'lf hid' - got an  updated to Kastle format (@xilni)
  - Added 'lf t55xx deviceconfig' - enables custom t55xx timing settings. (RDV40) (@iceman)
  - Chg adaptations for FPC communications (work in progress)  (@iceman)
