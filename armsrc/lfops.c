@@ -32,15 +32,15 @@
 //#define WRITE_GAP 8*8 // 17*8 // was 160 // SPEC:  1*8 to 20*8 - typ 10*8 (10fc)
 //#define WRITE_0   15*8 // 18*8 // was 144 // SPEC: 16*8 to 32*8 - typ 24*8 (24fc)
 //#define WRITE_1   47*8 // 50*8 // was 400 // SPEC: 48*8 to 64*8 - typ 56*8 (56fc)  432 for T55x7; 448 for E5550
-//#define READ_GAP  15*8 
+//#define READ_GAP  15*8
 
 //  VALUES TAKEN FROM EM4x function: SendForward
 //  START_GAP = 440;       (55*8) cycles at 125Khz (8us = 1cycle)
 //  WRITE_GAP = 128;       (16*8)
-//  WRITE_1   = 256 32*8;  (32*8) 
+//  WRITE_1   = 256 32*8;  (32*8)
 
 //  These timings work for 4469/4269/4305 (with the 55*8 above)
-//  WRITE_0 = 23*8 , 9*8 
+//  WRITE_0 = 23*8 , 9*8
 
 // Sam7s has several timers, we will use the source TIMER_CLOCK1 (aka AT91C_TC_CLKS_TIMER_DIV1_CLOCK)
 // TIMER_CLOCK1 = MCK/2, MCK is running at 48 MHz, Timer is running at 48/2 = 24 MHz
@@ -70,24 +70,25 @@ void printT55xxConfig(void) {
 	Dbprintf("  [e] readgap.............%d*8 (%d)", t_config.read_gap/8,  t_config.read_gap);
 }
 void setT55xxConfig(t55xx_config *c) {
-	
+
 	if (c->start_gap != 0) t_config.start_gap = c->start_gap*8;
 	if (c->write_gap != 0) t_config.write_gap = c->write_gap*8;
 	if (c->write_0   != 0) t_config.write_0 = c->write_0*8;
 	if (c->write_1   != 0) t_config.write_1 = c->write_1*8;
-	if (c->read_gap  != 0) t_config.read_gap = c->read_gap*8;	
+	if (c->read_gap  != 0) t_config.read_gap = c->read_gap*8;
 
 	printT55xxConfig();
-	
+
 #if WITH_FLASH
-    if (!FlashInit())
+    if (!FlashInit()) {
         return;
-	
+			}
+
 	Flash_CheckBusy(BUSY_TIMEOUT);
-	
+
 	uint16_t isok = Flash_WriteDataCont(T55XX_CONFIG_OFFSET, (uint8_t *)&t_config, sizeof(t55xx_config));
 	FlashStop();
-	
+
 	if ( isok == T55XX_CONFIG_LEN) {
 		if (MF_DBGLEVEL > 1) DbpString("T55XX Config save success");
 	}
@@ -100,15 +101,16 @@ t55xx_config* getT55xxConfig(void) {
 
 void loadT55xxConfig(void) {
 #if WITH_FLASH
-    if (!FlashInit())
+    if (!FlashInit()) {
         return;
-	
+			}
+
 	Flash_CheckBusy(BUSY_TIMEOUT);
 	Flash_WriteEnable();
-	
+
 	uint16_t isok = Flash_ReadDataCont(T55XX_CONFIG_OFFSET, (uint8_t *)&t_config, T55XX_CONFIG_LEN);
 	FlashStop();
-	
+
 	if ( isok == T55XX_CONFIG_LEN) {
 		if (MF_DBGLEVEL > 1) DbpString("T55XX Config load success");
 	}
@@ -139,10 +141,10 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
 	BigBuf_Clear_keep_EM();
 
 	LFSetupFPGAForADC(sc->divisor, 1);
-	
+
 	// little more time for the tag to fully power up
 	WaitMS(200);
-	
+
 	// if delay_off = 0 then just bitbang 1 = antenna on 0 = off for respective periods.
 	bool bitbang = delay_off == 0;
 	// now modulate the reader field
@@ -156,8 +158,8 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
 			return;
 		}
 
-		// hack2 needed---  it appears to take about 8-16us to turn the antenna back on 
-		// leading to ~ 1 to 2 125khz samples extra in every off period 
+		// hack2 needed---  it appears to take about 8-16us to turn the antenna back on
+		// leading to ~ 1 to 2 125khz samples extra in every off period
 		// so we should test for last 0 before next 1 and reduce period_0 by this extra amount...
 		// but is this time different for every antenna or other hw builds???  more testing needed
 
@@ -212,10 +214,10 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
 	// now do the read
 	DoAcquisition_config(false, 0);
 
-	// Turn off antenna	
+	// Turn off antenna
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	// tell client we are done	
-	cmd_send(CMD_ACK,0,0,0,0,0);    
+	// tell client we are done
+	cmd_send(CMD_ACK,0,0,0,0,0);
 }
 
 /* blank r/w tag data stream
@@ -370,7 +372,7 @@ void WriteTIbyte(uint8_t b)
 			LOW(GPIO_SSC_DOUT);
 			WaitUS(1000);
 			// modulate antenna 1ms
-			HIGH(GPIO_SSC_DOUT); 
+			HIGH(GPIO_SSC_DOUT);
 			WaitUS(1000);
 		} else {
 			// stop modulating antenna 0.3ms
@@ -435,7 +437,7 @@ void AcquireTiType(void)
 	for (;;) {
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
 			buf[i] = AT91C_BASE_SSC->SSC_RHR;	// store 32 bit values in buffer
-			i++; 
+			i++;
 			if (i >= TIBUFLEN) break;
 		}
 		WDT_HIT();
@@ -447,7 +449,7 @@ void AcquireTiType(void)
 
 	char *dest = (char *)BigBuf_get_addr();
 	n = TIBUFLEN * 32;
-	
+
 	// unpack buffer
 	for (i = TIBUFLEN-1; i >= 0; i--) {
 		for (j = 0; j < 32; j++) {
@@ -458,7 +460,7 @@ void AcquireTiType(void)
 			}
 		}
 	}
-	
+
 	// reset SSC
 	FpgaSetupSsc();
 }
@@ -489,9 +491,9 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc)
 	// or listening to the antenna (low)
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_PASSTHRU);
 	StartTicks();
-	
+
 	LED_A_ON();
-	
+
 	// steal this pin from the SSP and use it to control the modulation
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
 	AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
@@ -547,7 +549,7 @@ void SimulateTagLowFrequencyEx(int period, int gap, int ledcontrol, int numcycle
 
 	int i = 0, x = 0;
 	uint8_t *buf = BigBuf_get_addr();
-	
+
 	// set frequency,  get values from 'lf config' command
 	sample_config *sc = getSamplingConfig();
 
@@ -557,7 +559,7 @@ void SimulateTagLowFrequencyEx(int period, int gap, int ledcontrol, int numcycle
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 	else
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, sc->divisor);
-	
+
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;
 	AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
 	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
@@ -567,14 +569,14 @@ void SimulateTagLowFrequencyEx(int period, int gap, int ledcontrol, int numcycle
 		if ( numcycles > -1 ) {
 			if ( x != numcycles ) {
 				++x;
-			} else { 
+			} else {
 				// exit without turning of field
-				return; 
+				return;
 			}
 		}
-	
+
 		if (ledcontrol) LED_D_ON();
-				
+
 		// wait until SSC_CLK goes HIGH
 		// used as a simple detection of a reader field?
 		while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
@@ -582,12 +584,12 @@ void SimulateTagLowFrequencyEx(int period, int gap, int ledcontrol, int numcycle
 			if ( usb_poll_validate_length() || BUTTON_PRESS() )
 				goto OUT;
 		}
-		
+
 		if(buf[i])
 			OPEN_COIL();
 		else
 			SHORT_COIL();
-	
+
 		//wait until SSC_CLK goes LOW
 		while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
 			WDT_HIT();
@@ -595,7 +597,7 @@ void SimulateTagLowFrequencyEx(int period, int gap, int ledcontrol, int numcycle
 			if ( BUTTON_PRESS() )
 				goto OUT;
 		}
-				
+
 		i++;
 		if(i == period) {
 			i = 0;
@@ -604,10 +606,10 @@ void SimulateTagLowFrequencyEx(int period, int gap, int ledcontrol, int numcycle
 				SpinDelayUs(gap);
 			}
 		}
-		
+
 		if (ledcontrol) LED_D_OFF();
 	}
-OUT: 
+OUT:
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LED_D_OFF();
 }
@@ -624,7 +626,7 @@ void SimulateTagLowFrequencyBidir(int divisor, int t0)
 // compose fc/5 fc/8  waveform (FSK1)
 
 // compose fc/8 fc/10 waveform (FSK2)
-// also manchester, 
+// also manchester,
 static void fc(int c, int *n)
 {
 	uint8_t *dest = BigBuf_get_addr();
@@ -675,15 +677,15 @@ static void fc(int c, int *n)
 
 // special start of frame marker containing invalid bit sequences
 // this one is focused on HID,  with manchester encoding.
-static void fcSTT(int *n) {	
-	fc(8,  n);	fc(8,  n); // invalid   
+static void fcSTT(int *n) {
+	fc(8,  n);	fc(8,  n); // invalid
 	fc(8,  n);	fc(10, n); // logical 0
 	fc(10, n);	fc(10, n); // invalid
 	fc(8,  n);	fc(10, n); // logical 0
 }
 
 // compose fc/X fc/Y waveform (FSKx)
-static void fcAll(uint8_t fc, int *n, uint8_t clock, uint16_t *modCnt) 
+static void fcAll(uint8_t fc, int *n, uint8_t clock, uint16_t *modCnt)
 {
 	uint8_t *dest = BigBuf_get_addr();
 	uint8_t halfFC = fc/2;
@@ -700,7 +702,7 @@ static void fcAll(uint8_t fc, int *n, uint8_t clock, uint16_t *modCnt)
 		*n += fc;
 	}
 	if (mod>0) (*modCnt)++;
-	if ((mod>0) && modAdjOk){  //fsk2 
+	if ((mod>0) && modAdjOk){  //fsk2
 		if ((*modCnt % modAdj) == 0){ //if 4th 8 length wave in a rf/50 add extra 8 length wave
 			memset(dest+(*n), 0, fc-halfFC);
 			memset(dest+(*n)+(fc-halfFC), 1, halfFC);
@@ -722,15 +724,15 @@ void CmdHIDsimTAGEx( uint32_t hi, uint32_t lo, int ledcontrol, int numcycles) {
 		DbpString("[!] tags can only have 44 bits. - USE lf simfsk for larger tags");
 		return;
 	}
-	
+
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	set_tracing(false);
-		
+
 	int n = 0, i = 0;
 	/*
 	 HID tag bitstream format
 	 The tag contains a 44bit unique code. This is sent out MSB first in sets of 4 bits
-	 A 1 bit is represented as 6 fc8 and 5 fc10 patterns  (manchester 10) during 2 clock periods. (1bit = 1clock period)  
+	 A 1 bit is represented as 6 fc8 and 5 fc10 patterns  (manchester 10) during 2 clock periods. (1bit = 1clock period)
 	 A 0 bit is represented as 5 fc10 and 6 fc8 patterns  (manchester 01)
 	 A fc8 is inserted before every 4 bits
 	 A special start of frame pattern is used consisting a0b0 where a and b are neither 0
@@ -745,12 +747,12 @@ void CmdHIDsimTAGEx( uint32_t hi, uint32_t lo, int ledcontrol, int numcycles) {
 
 	// special start of frame marker containing invalid bit sequences
 	fcSTT(&n);
-	
+
 	// manchester encode bits 43 to 32
 	for (i=11; i>=0; i--) {
-		
+
 		if ((i%4)==3) fc(0, &n);
-		
+
 		if ((hi>>i) & 1) {
 			fc(10, &n); fc(8,  &n);		// low-high transition
 		} else {
@@ -760,9 +762,9 @@ void CmdHIDsimTAGEx( uint32_t hi, uint32_t lo, int ledcontrol, int numcycles) {
 
 	// manchester encode bits 31 to 0
 	for (i=31; i>=0; i--) {
-		
+
 		if ((i%4)==3) fc(0, &n);
-		
+
 		if ((lo>>i) & 1) {
 			fc(10, &n); fc(8,  &n);		// low-high transition
 		} else {
@@ -790,7 +792,7 @@ void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *bits) {
 	BigBuf_free(); BigBuf_Clear_ext(false);
 	clear_trace();
 	set_tracing(false);
-	
+
 	int ledcontrol = 1, n = 0, i = 0;
 	uint8_t fcHigh = arg1 >> 8;
 	uint8_t fcLow = arg1 & 0xFF;
@@ -799,19 +801,19 @@ void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *bits) {
 	uint8_t stt = (arg2 >> 8) & 1;
 
 	if ( stt ) {
-		//int fsktype = ( fcHigh == 8 && fcLow == 5) ? 1 : 2;			
+		//int fsktype = ( fcHigh == 8 && fcLow == 5) ? 1 : 2;
 		//fcSTT(&n);
 	}
-	
+
 	for (i=0; i<size; i++){
 		if (bits[i])
 			fcAll(fcLow, &n, clk, &modCnt);
 		else
 			fcAll(fcHigh, &n, clk, &modCnt);
 	}
-	
+
 	WDT_HIT();
-	
+
 	Dbprintf("Simulating with fcHigh: %d, fcLow: %d, clk: %d, STT: %d, n: %d", fcHigh, fcLow, clk, stt, n);
 
 	if (ledcontrol)	LED_A_ON();
@@ -851,7 +853,7 @@ static void biphaseSimBit(uint8_t c, int *n, uint8_t clock, uint8_t *phase)
 static void stAskSimBit(int *n, uint8_t clock) {
 	uint8_t *dest = BigBuf_get_addr();
 	uint8_t halfClk = clock/2;
-	//ST = .5 high .5 low 1.5 high .5 low 1 high	
+	//ST = .5 high .5 low 1.5 high .5 low 1 high
 	memset(dest+(*n), 1, halfClk);
 	memset(dest+(*n) + halfClk, 0, halfClk);
 	memset(dest+(*n) + clock, 1, clock + halfClk);
@@ -863,9 +865,9 @@ static void stAskSimBit(int *n, uint8_t clock) {
 // args clock, ask/man or askraw, invert, transmission separator
 void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 {
-	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);	
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	set_tracing(false);
-	
+
 	int ledcontrol = 1, n = 0, i = 0;
 	uint8_t clk = (arg1 >> 8) & 0xFF;
 	uint8_t encoding = arg1 & 0xFF;
@@ -898,7 +900,7 @@ void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 		Dbprintf("sorry but separator option not yet available");
 
 	WDT_HIT();
-	
+
 	Dbprintf("Simulating with clk: %d, invert: %d, encoding: %d, separator: %d, n: %d",clk, invert, encoding, separator, n);
 
 	if (ledcontrol)	LED_A_ON();
@@ -932,9 +934,9 @@ static void pskSimBit(uint8_t waveLen, int *n, uint8_t clk, uint8_t *curPhase, b
 // args clock, carrier, invert,
 void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 {
-	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);	
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	set_tracing(false);
-	
+
 	int ledcontrol = 1, n = 0, i = 0;
 	uint8_t clk = arg1 >> 8;
 	uint8_t carrier = arg1 & 0xFF;
@@ -947,11 +949,11 @@ void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 			pskSimBit(carrier, &n, clk, &curPhase, true);
 		}
 	}
-	
+
 	WDT_HIT();
-	
+
 	Dbprintf("Simulating with Carrier: %d, clk: %d, invert: %d, n: %d",carrier, clk, invert, n);
-		   
+
 	if (ledcontrol)	LED_A_ON();
 	SimulateTagLowFrequency(n, 0, ledcontrol);
 	if (ledcontrol)	LED_A_OFF();
@@ -960,7 +962,7 @@ void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 // loop to get raw HID waveform then FSK demodulate the TAG ID from it
 void CmdHIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
 	uint8_t *dest = BigBuf_get_addr();
-	size_t size = 0; 
+	size_t size = 0;
 	uint32_t hi2 = 0, hi = 0, lo = 0;
 	int idx = 0;
 	int dummyIdx = 0;
@@ -980,7 +982,7 @@ void CmdHIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) 
 		size = 50*128*2; //big enough to catch 2 sequences of largest format
 		idx = HIDdemodFSK(dest, &size, &hi2, &hi, &lo, &dummyIdx);
 		if ( idx < 0 ) continue;
-		
+
 		if (idx > 0 && lo > 0 && (size == 96 || size == 192)){
 			// go over previously decoded manchester data and decode into usable tag ID
 			if (hi2 != 0){ //extra large HID tags  88/192 bits
@@ -994,7 +996,7 @@ void CmdHIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) 
 				uint8_t bitlen = 0;
 				uint32_t fc = 0;
 				uint32_t cardnum = 0;
-				
+
 				if (((hi >> 5) & 1) == 1){//if bit 38 is set then < 37 bit format is used
 					uint32_t lo2 = 0;
 					lo2=(((hi & 31) << 12) | (lo>>20)); //get bits 21-37 to check for format len bit
@@ -1059,9 +1061,9 @@ void CmdHIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) 
 void CmdAWIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
 
 	uint8_t *dest = BigBuf_get_addr();
-	
+
 	//big enough to catch 2 sequences of largest format
-	size_t size = 12800; //50 * 128 * 2; 
+	size_t size = 12800; //50 * 128 * 2;
 
 	int idx = 0, dummyIdx = 0;
 
@@ -1078,7 +1080,7 @@ void CmdAWIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol)
 		// FSK demodulator
 
 		idx = detectAWID(dest, &size, &dummyIdx);
-		
+
 		if (idx <= 0 || size != 96) continue;
 		// Index map
 		// 0            10            20            30              40            50              60
@@ -1169,7 +1171,7 @@ void CmdEM410xdemod(int findone, uint32_t *high, uint64_t *low, int ledcontrol) 
 		if (ledcontrol) LED_A_ON();
 
 		DoAcquisition_default(-1, true);
-		
+
 		size  = BigBuf_max_traceLen();
 		//askdemod and manchester decode
 		if (size > 16385) size = 16385; //big enough to catch 2 sequences of largest format
@@ -1177,7 +1179,7 @@ void CmdEM410xdemod(int findone, uint32_t *high, uint64_t *low, int ledcontrol) 
 		WDT_HIT();
 
 		if (errCnt < 0) continue;
-	
+
 			errCnt = Em410xDecode(dest, &size, &idx, &hi, &lo);
 			if (errCnt == 1){
 				if (size == 128){
@@ -1208,7 +1210,7 @@ void CmdEM410xdemod(int findone, uint32_t *high, uint64_t *low, int ledcontrol) 
 		hi = lo = size = idx = 0;
 		clk = invert = errCnt = 0;
 	}
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);		
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	DbpString("Stopped");
 	if (ledcontrol) LED_A_OFF();
 }
@@ -1223,9 +1225,9 @@ void CmdIOdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
 	uint16_t number = 0, calccrc = 0;
 
 	size_t size = BigBuf_max_traceLen();
-	
+
 	BigBuf_Clear_keep_EM();
-	
+
 	// Configure to go in 125Khz listen mode
 	LFSetupFPGAForADC(95, true);
 
@@ -1248,7 +1250,7 @@ void CmdIOdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
 			//-----------------------------------------------------------------------------
             //00000000 0 11110000 1 facility 1 version* 1 code*one 1 code*two 1 checksum 11
 			//
-			//Checksum:  
+			//Checksum:
 			//00000000 0 11110000 1 11100000 1 00000001 1 00000011 1 10110110 1 01110101 11
 			//preamble      F0         E0         01         03         B6         75
 			// How to calc checksum,
@@ -1279,7 +1281,7 @@ void CmdIOdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
 				calccrc += bytebits_to_byte(dest+idx+9*i, 8);
 			calccrc &= 0xff;
 			calccrc = 0xff - calccrc;
-			
+
 			char *crcStr = (crc == calccrc) ? "ok" : "!crc";
 
             Dbprintf("IO Prox XSF(%02d)%02x:%05d (%08x%08x)  [%02x %s]", version, facilitycode, number, code, code2, crc, crcStr);
@@ -1297,7 +1299,7 @@ void CmdIOdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
 
 		WDT_HIT();
 	}
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);		
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	DbpString("Stopped");
 	if (ledcontrol) LED_A_OFF();
 }
@@ -1305,12 +1307,12 @@ void CmdIOdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
 /*------------------------------
  * T5555/T5557/T5567/T5577 routines
  *------------------------------
- * NOTE: T55x7/T5555 configuration register definitions moved to protocols.h 
+ * NOTE: T55x7/T5555 configuration register definitions moved to protocols.h
  *
  * Relevant communication times in microsecond
  * To compensate antenna falling times shorten the write times
  * and enlarge the gap ones.
- * Q5 tags seems to have issues when these values changes. 
+ * Q5 tags seems to have issues when these values changes.
  */
 
 void TurnReadLFOn(uint32_t delay) {
@@ -1363,7 +1365,7 @@ void T55xxResetRead(void) {
 
 	// Turn the field off
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
-	cmd_send(CMD_ACK,0,0,0,0,0);    
+	cmd_send(CMD_ACK,0,0,0,0,0);
 	LED_A_OFF();
 }
 
@@ -1376,7 +1378,7 @@ void T55xxWriteBlockExt(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t arg)
 	uint32_t i = 0;
 
 	StartTicks();
-		
+
 	// Set up FPGA, 125kHz
 	LFSetupFPGAForADC(95, true);
 
@@ -1410,32 +1412,32 @@ void T55xxWriteBlockExt(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t arg)
 	// Perform write (nominal is 5.6 ms for T55x7 and 18ms for E5550,
 	// so wait a little more)
 
-	// "there is a clock delay before programming" 
+	// "there is a clock delay before programming"
 	//  - programming takes ~5.6ms for t5577 ~18ms for E5550 or t5567
-	//  so we should wait 1 clock + 5.6ms then read response? 
+	//  so we should wait 1 clock + 5.6ms then read response?
 	//  but we need to know we are dealing with t5577 vs t5567 vs e5550 (or q5) marshmellow...
 	if (testMode) {
-		//TESTMODE TIMING TESTS: 
-		// <566us does nothing 
+		//TESTMODE TIMING TESTS:
+		// <566us does nothing
 		// 566-568 switches between wiping to 0s and doing nothing
 		// 5184 wipes and allows 1 block to be programmed.
 		// indefinite power on wipes and then programs all blocks with bitshifted data sent.
-		TurnReadLFOn(5184); 
+		TurnReadLFOn(5184);
 
 	} else {
 		TurnReadLFOn(20 * 1000);
-	
+
 		//could attempt to do a read to confirm write took
-		// as the tag should repeat back the new block 
-		// until it is reset, but to confirm it we would 
+		// as the tag should repeat back the new block
+		// until it is reset, but to confirm it we would
 		// need to know the current block 0 config mode for
 		// modulation clock an other details to demod the response...
-		// response should be (for t55x7) a 0 bit then (ST if on) 
-		// block data written in on repeat until reset. 
+		// response should be (for t55x7) a 0 bit then (ST if on)
+		// block data written in on repeat until reset.
 
 		//DoPartialAcquisition(20, true, 12000);
 	}
-	
+
 	// turn field off
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LED_A_OFF();
@@ -1454,7 +1456,7 @@ void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 	uint8_t Page = (arg0 & 0x2) >> 1;
 	uint32_t i = 0;
 	bool RegReadMode = (Block == 0xFF);//regular read mode
-	
+
 	//clear buffer now so it does not interfere with timing later
 	BigBuf_Clear_keep_EM();
 
@@ -1470,7 +1472,7 @@ void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 	// Trigger T55x7 Direct Access Mode with start gap
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF_LF);
 	WaitUS(t_config.start_gap);
-	
+
 	// Opcode 1[page]
 	T55xxWriteBit(1);
 	T55xxWriteBit(Page); //Page 0
@@ -1482,24 +1484,24 @@ void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 	}
 	// Send a zero bit separation
 	T55xxWriteBit(0);
-	
+
 	// Send Block number (if direct access mode)
 	if (!RegReadMode)
 		for (i = 0x04; i != 0; i >>= 1)
 			T55xxWriteBit(Block & i);
 
 	// Turn field on to read the response
-	// 137*8 seems to get to the start of data pretty well... 
+	// 137*8 seems to get to the start of data pretty well...
 	//  but we want to go past the start and let the repeating data settle in...
-	TurnReadLFOn(210*8); 
-	
+	TurnReadLFOn(210*8);
+
 	// Acquisition
 	// Now do the acquisition
 	DoPartialAcquisition(0, true, 12000, 0);
-	
+
 	// Turn the field off
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
-	cmd_send(CMD_ACK,0,0,0,0,0);    
+	cmd_send(CMD_ACK,0,0,0,0,0);
 	LED_A_OFF();
 }
 
@@ -1508,16 +1510,16 @@ void T55xxWakeUp(uint32_t Pwd){
 	uint32_t i = 0;
 
 	StartTicks();
-	
+
 	// Set up FPGA, 125kHz
 	LFSetupFPGAForADC(95, true);
 	// make sure tag is fully powered up...
 	WaitMS(4);
-	
+
 	// Trigger T55x7 Direct Access Mode
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF_LF);
 	WaitUS(t_config.start_gap);
-	
+
 	// Opcode 10
 	T55xxWriteBit(1);
 	T55xxWriteBit(0); //Page 0
@@ -1610,7 +1612,7 @@ void CopyIndala64toT55x7(uint32_t hi, uint32_t lo) {
 void CopyIndala224toT55x7(uint32_t uid1, uint32_t uid2, uint32_t uid3, uint32_t uid4, uint32_t uid5, uint32_t uid6, uint32_t uid7) {
 	//Program the 7 data blocks for supplied 224bit UID
 	uint32_t data[] = {0, uid1, uid2, uid3, uid4, uid5, uid6, uid7};
-	// and the block 0 for Indala224 format	
+	// and the block 0 for Indala224 format
 	//Config for Indala (RF/32;PSK2 with RF/2;Maxblock=7)
 	data[0] = T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK2 | (7 << T55x7_MAXBLOCK_SHIFT);
 	//TODO add selection of chip for Q5 or T55x7
@@ -1708,7 +1710,7 @@ void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo) {
 	} else { //t5555 (Q5)
 		data[0] = T5555_SET_BITRATE(clock) | T5555_MODULATION_MANCHESTER | (2 << T5555_MAXBLOCK_SHIFT);
 	}
- 
+
 	WriteT55xx(data, 0, 3);
 
 	LED_D_OFF();
@@ -1721,9 +1723,9 @@ void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo) {
 //-----------------------------------
 // EM4469 / EM4305 routines
 //-----------------------------------
-// Below given command set. 
+// Below given command set.
 // Commands are including the even parity, binary mirrored
-#define FWD_CMD_LOGIN   0xC 
+#define FWD_CMD_LOGIN   0xC
 #define FWD_CMD_WRITE   0xA
 #define FWD_CMD_READ    0x9
 #define FWD_CMD_DISABLE 0x5
@@ -1741,7 +1743,7 @@ uint8_t * fwd_write_ptr; //forwardlink bit pointer
 //  VALUES TAKEN FROM EM4x function: SendForward
 //  START_GAP = 440;       (55*8) cycles at 125Khz (8us = 1cycle)
 //  WRITE_GAP = 128;       (16*8)
-//  WRITE_1   = 256 32*8;  (32*8) 
+//  WRITE_1   = 256 32*8;  (32*8)
 
 //  These timings work for 4469/4269/4305 (with the 55*8 above)
 //  WRITE_0 = 23*8 , 9*8
@@ -1829,7 +1831,7 @@ void SendForward(uint8_t fwd_bit_count) {
 // iceman,   21.3us increments for the USclock verification.
 // 55FC * 8us == 440us / 21.3 === 20.65 steps.  could be too short. Go for 56FC instead
 // 32FC * 8us == 256us / 21.3 ==  12.018 steps. ok
-// 16FC * 8us == 128us / 21.3 ==  6.009 steps. ok 
+// 16FC * 8us == 128us / 21.3 ==  6.009 steps. ok
 #ifndef EM_START_GAP
 #define EM_START_GAP 55*8
 #endif
@@ -1839,11 +1841,11 @@ void SendForward(uint8_t fwd_bit_count) {
 
 	// Set up FPGA, 125kHz or 95 divisor
 	LFSetupFPGAForADC(95, true);
-	
+
 	// force 1st mod pulse (start gap must be longer for 4305)
 	fwd_bit_sz--; //prepare next bit modulation
 	fwd_write_ptr++;
-	
+
 	TurnReadLF_off(EM_START_GAP);
 	TurnReadLFOn(18*8);
 
@@ -1874,11 +1876,11 @@ void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd) {
 
 	LED_A_ON();
 	uint8_t len;
-	
+
 	//clear buffer now so it does not interfere with timing later
 	BigBuf_Clear_ext(false);
-	
-	StartTicks();	
+
+	StartTicks();
 	/* should we read answer from Logincommand?
 	*
 	* should receive
@@ -1905,11 +1907,11 @@ void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd) {
 void EM4xWriteWord(uint32_t flag, uint32_t data, uint32_t pwd) {
 
 	LED_A_ON();
-	
+
 	bool usePwd = (flag & 0xF);
 	uint8_t addr = (flag >> 8) & 0xFF;
 	uint8_t len;
-	
+
 	//clear buffer now so it does not interfere with timing later
 	BigBuf_Clear_ext(false);
 	StartTicks();
@@ -1918,7 +1920,7 @@ void EM4xWriteWord(uint32_t flag, uint32_t data, uint32_t pwd) {
 	* should receive
 	* 0000 1010 ok.
 	* 0000 0001 fail
-	**/	
+	**/
 	if (usePwd) EM4xLogin(pwd);
 
 	forward_ptr = forwardLink_data;
@@ -1933,7 +1935,7 @@ void EM4xWriteWord(uint32_t flag, uint32_t data, uint32_t pwd) {
 
 	//Capture response if one exists
 	DoPartialAcquisition(20, true, 6000, 1000);
-	
+
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	cmd_send(CMD_ACK,0,0,0,0,0);
 	LED_A_OFF();
@@ -1962,27 +1964,27 @@ void Cotag(uint32_t arg0) {
 #endif
 	uint8_t rawsignal = arg0 & 0xF;
 
-	LED_A_ON();	
+	LED_A_ON();
 
 	// Switching to LF image on FPGA. This might empty BigBuff
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-	
+
 	//clear buffer now so it does not interfere with timing later
 	BigBuf_Clear_ext(false);
-	
-	// Set up FPGA, 132kHz to power up the tag	
+
+	// Set up FPGA, 132kHz to power up the tag
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 89);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 
 	// Connect the A/D to the peak-detected low-frequency path.
 	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-	
+
 	// Now set up the SSC to get the ADC samples that are now streaming at us.
 	FpgaSetupSsc();
 
 	// start clock - 1.5ticks is 1us
 	StartTicks();
-	
+
 	//send COTAG start pulse
 	ON(740)  OFF
 	ON(3330) OFF
@@ -1994,10 +1996,10 @@ void Cotag(uint32_t arg0) {
 		case 1: doCotagAcquisitionManchester(); break;
 		case 2: DoAcquisition_config(true, 0); break;
 	}
-	
+
 	// Turn the field off
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
-	cmd_send(CMD_ACK,0,0,0,0,0);    
+	cmd_send(CMD_ACK,0,0,0,0,0);
 	LEDsoff();
 }
 
