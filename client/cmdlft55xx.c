@@ -206,7 +206,7 @@ int usage_lf_deviceconfig(){
 	return 0;
 }
 
-CmdHelp(const char *Cmd);
+int CmdHelp(const char *Cmd);
 
 void printT5xxHeader(uint8_t page){
 	PrintAndLogEx(NORMAL, "Reading Page %d:", page);	
