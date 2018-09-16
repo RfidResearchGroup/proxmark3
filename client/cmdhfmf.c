@@ -2427,80 +2427,49 @@ int CmdHF14AMfELoad(const char *Cmd) {
 	return 0;
 }
 
+#define MFBLOCK_SIZE 16
 int CmdHF14AMfESave(const char *Cmd) {
-	FILE * f;
+
 	char filename[FILE_PATH_SIZE];
 	char * fnameptr = filename;
-	uint8_t buf[64];
-	int i, j, len, numBlocks;
-	int nameParamNo = 1;
-	
+	uint8_t *dump;
+	int len, bytes, nameParamNo = 1;
+	uint16_t blocks;
+
 	memset(filename, 0, sizeof(filename));
-	memset(buf, 0, sizeof(buf));
 
-	char c = param_getchar(Cmd, 0);
-	
-	if ( c == 'h' || c == 'H') return usage_hf14_esave();
+	char c = tolower(param_getchar(Cmd, 0));	
+	if (c == 'h') return usage_hf14_esave();
 
-	switch (c) {
-		case '0' : numBlocks = 5*4; break;
-		case '1' : 
-		case '\0': numBlocks = 16*4; break;
-		case '2' : numBlocks = 32*4; break;
-		case '4' : numBlocks = 256; break;
-		default:  {
-			numBlocks = 16*4;
-			nameParamNo = 0;
-		}
+	blocks = NumOfBlocks(c);
+	bytes = blocks * MFBLOCK_SIZE;	
+
+	dump = malloc(bytes);
+	if (!dump) {
+		PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+		return 1;
 	}
+	memset(dump, 0, bytes);
+	
+	PrintAndLogEx(INFO, "dowingloading from emulator memory");
+	if (!GetFromDevice( BIG_BUF_EML, dump, bytes, 0, NULL, 2500, false)) {
+		PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
+		free(dump);
+		return 2;
+	}	
 
 	len = param_getstr(Cmd, nameParamNo, filename, sizeof(filename));
-	
 	if (len > FILE_PATH_SIZE - 5) len = FILE_PATH_SIZE - 5;
 	
 	// user supplied filename?
 	if (len < 1) {
-		// get filename (UID from memory)
-		if (mfEmlGetMem(buf, 0, 1)) {
-			PrintAndLogEx(WARNING, "Can\'t get UID from block: %d", 0);
-			len = sprintf(fnameptr, "dump");
-			fnameptr += len;
-		}
-		else {
-			for (j = 0; j < 7; j++, fnameptr += 2)
-				sprintf(fnameptr, "%02X", buf[j]);
-		}
-	} else {
-		fnameptr += len;
-	}
-
-	// add file extension
-	sprintf(fnameptr, ".eml"); 
-	
-	// open file
-	f = fopen(filename, "w+");
-
-	if ( !f ) {
-		PrintAndLogEx(WARNING, "Can't open file %s ", filename);
-		return 1;
+		fnameptr += sprintf(fnameptr, "hf-mf-");
+		FillFileNameByUID(fnameptr, dump, "-dump", 4);
 	}
 	
-	// put hex
-	for (i = 0; i < numBlocks; i++) {
-		if (mfEmlGetMem(buf, i, 1)) {
-			PrintAndLogEx(WARNING, "Cant get block: %d", i);
-			break;
-		}
-		for (j = 0; j < 16; j++)
-			fprintf(f, "%02X", buf[j]); 
-		
-		if (i != numBlocks -1)
-			fprintf(f, "\n");
-		printf("."); fflush(stdout);
-	}
-	PrintAndLogEx(NORMAL, "\n");
-	fclose(f);
-	PrintAndLogEx(SUCCESS, "Saved %d blocks to file: %s", numBlocks, filename);
+	saveFile(filename, "bin", dump, bytes);
+	saveFileEML(filename, "eml", dump, bytes, MFBLOCK_SIZE);
+	free(dump);
 	return 0;
 }
 
@@ -2811,75 +2780,50 @@ int CmdHF14AMfCGetSc(const char *Cmd) {
 
 int CmdHF14AMfCSave(const char *Cmd) {
 
-	FILE * feml;
-	FILE * fbin;
-	char filename[2][FILE_PATH_SIZE];
-	char * femlptr = filename[0];
-	char * fbinptr = filename[1];
-	bool fillFromEmulator = false;
-	bool errors = false;
-	bool hasname = false;
-	uint8_t buf[16];
-	int i, j, len, flags;
-	uint8_t numblocks = 0;
-	uint8_t cmdp = 0;
+	char filename[FILE_PATH_SIZE];
+	char * fnameptr = filename;
+	uint8_t *dump;	
+	bool fillEmulator = false;
+	bool errors = false, hasname = false, useuid = false;
+	int i, len, flags;
+	uint8_t numblocks = 0, cmdp = 0;
+	uint16_t bytes = 0;
 	char ctmp;
-	
-	memset(filename, 0, sizeof(filename));
-	memset(buf, 0, sizeof(buf));
 
-	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		ctmp = param_getchar(Cmd, cmdp);
-		switch(ctmp) {	
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		ctmp = tolower(param_getchar(Cmd, cmdp));
+		switch (ctmp) {	
 		case 'e':
-		case 'E':
-			fillFromEmulator = true;
+			useuid = true;
+			fillEmulator = true;
 			cmdp++;
 			break;
 		case 'h':
-		case 'H':
 			return usage_hf14_csave();
 		case '0':
 		case '1':
 		case '2':
 		case '4':
 			numblocks = NumOfBlocks(ctmp);
+			bytes =  numblocks * MFBLOCK_SIZE;
 			PrintAndLogEx(SUCCESS, "Saving magic mifare %cK", ctmp);
 			cmdp++;
 			break;
 		case 'u':
-		case 'U':
-			// get filename based on UID
-			if (mfCGetBlock(0, buf, MAGIC_SINGLE)) {
-				PrintAndLogEx(FAILED, "Cant get block: %d", 0);
-				femlptr += sprintf(femlptr, "dump");
-				fbinptr += sprintf(fbinptr, "dump");
-			} else {
-				for (j = 0; j < 7; j++) {
-					femlptr += sprintf(femlptr, "%02x", buf[j]); 
-					fbinptr += sprintf(fbinptr, "%02x", buf[j]); 
-				}
-			}
+			useuid = true;
 			hasname = true;
 			cmdp++;			
 			break;
 		case 'o':
-		case 'O':
-			// input file
-			len = param_getstr(Cmd, cmdp+1, filename[0], FILE_PATH_SIZE);
-			len = param_getstr(Cmd, cmdp+1, filename[1], FILE_PATH_SIZE);
-			
+			len = param_getstr(Cmd, cmdp+1, filename, FILE_PATH_SIZE);
 			if (len < 1) {
 				errors = true;
 				break;
 			}
-			
 			if (len > FILE_PATH_SIZE - 5) len = FILE_PATH_SIZE - 5;				
 
-			femlptr += len;
-			fbinptr += len;
-
-			hasname = true;					
+			useuid = false;
+			hasname = true;		
 			cmdp += 2;
 			break;			
 		default:
@@ -2889,75 +2833,49 @@ int CmdHF14AMfCSave(const char *Cmd) {
 		}
 	}
 
-	// must have filename when saving.
-	if (!hasname && !fillFromEmulator) errors = true;
+	if (!hasname && !fillEmulator) errors = true;
 	
-	//Validations
 	if (errors || cmdp == 0) return usage_hf14_csave();
-	
-	if (fillFromEmulator) {
-		// put into emulator
-		flags = MAGIC_INIT + MAGIC_WUPC;
-		for (i = 0; i < numblocks; i++) {
-			if (i == 1) flags = 0;
-			if (i == numblocks - 1) flags = MAGIC_HALT + MAGIC_OFF;
-		
-			if (mfCGetBlock(i, buf, flags)) {
-				PrintAndLogEx(WARNING, "Cant get block: %d", i);
-				return 3;
-			}
-			
-			if (mfEmlSetMem(buf, i, 1)) {
-				PrintAndLogEx(WARNING, "Cant set emul block: %d", i);
-				return 3;
-			}
-			printf("."); fflush(stdout);
-		}
-		PrintAndLogEx(NORMAL, "\n");
-		return 0;
-	}
 
-	sprintf(femlptr, ".eml"); 
-	sprintf(fbinptr, ".bin");
-
-	if ((feml = fopen(filename[0], "w+")) == NULL ) {
-		PrintAndLogEx(WARNING, "File not found or locked");
+	dump = malloc(bytes);
+	if (!dump) {
+		PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
 		return 1;
 	}
+	memset(dump, 0, bytes);
 	
-	if ((fbin = fopen(filename[1], "wb")) == NULL) {
-		PrintAndLogEx(WARNING, "File not found or locked");
-		return 1;
-	}
-	
-	// dump to files
 	flags = MAGIC_INIT + MAGIC_WUPC;
 	for (i = 0; i < numblocks; i++) {
 		if (i == 1) flags = 0;
 		if (i == numblocks - 1) flags = MAGIC_HALT + MAGIC_OFF;
 	
-		if (mfCGetBlock(i, buf, flags)) {
+		if (mfCGetBlock(i, dump + (i*MFBLOCK_SIZE), flags)) {
 			PrintAndLogEx(WARNING, "Cant get block: %d", i);
-			break;
+			free(dump);
+			return 2;
 		}
-		// eml
-		for (j = 0; j < 16; j++)
-			fprintf(feml, "%02x", buf[j]); 
-
-		if (i != numblocks -1)		
-			fprintf(feml,"\n");
-		
-		// bin
-		fwrite(buf, 1, sizeof(buf), fbin);
-		printf("."); fflush(stdout);
 	}
-	PrintAndLogEx(NORMAL, "\n");	
-	fflush(feml); fflush(fbin);
-	fclose(feml); fclose(fbin);
+	
+	if ( useuid ){
+		fnameptr += sprintf(fnameptr, "hf-mf-");		
+		FillFileNameByUID(fnameptr, dump, "-dump", 4);
+	}
+	
+	if (fillEmulator) {
+		PrintAndLogEx(INFO, "uploading to emulator memory");
+		for (i = 0; i < numblocks; i += 5) {			
+			if (mfEmlSetMem(dump + (i*MFBLOCK_SIZE), i, 5)) {
+				PrintAndLogEx(WARNING, "Cant set emul block: %d", i);
+			}
+			printf("."); fflush(stdout);
+		}
+		PrintAndLogEx(NORMAL, "\n");
+		PrintAndLogEx(SUCCESS, "uploaded %d bytes to emulator memory", bytes);
+	}
 
-	for (uint8_t i=0; i<2; ++i)
-		PrintAndLogEx(SUCCESS, "Saved %d blocks to file: %s", numblocks, filename[i]);
-
+	saveFile(filename, "bin", dump, bytes);
+	saveFileEML(filename, "eml", dump, bytes, MFBLOCK_SIZE);
+	free(dump);
 	return 0;
 }
 
