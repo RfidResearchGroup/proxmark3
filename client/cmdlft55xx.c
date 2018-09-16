@@ -188,24 +188,25 @@ int usage_t55xx_recoverpw(){
 	return 0;
 }
 int usage_lf_deviceconfig(){
+	PrintAndLogEx(NORMAL, "Sets t55x7 timings for direkt commands. The timings are set here in Field Clocks (FC), \nwhich is converted to (US) on device");
 	PrintAndLogEx(NORMAL, "Usage: lf t55xx deviceconfig a <gap> b <gap> c <gap> d <gap> e <gap>");
 	PrintAndLogEx(NORMAL, "Options:");
-	PrintAndLogEx(NORMAL, "       h             - This help");
-	PrintAndLogEx(NORMAL, "       a <8..28>     - Set start gap");
-	PrintAndLogEx(NORMAL, "       b <8..28>     - Set write gap");
-	PrintAndLogEx(NORMAL, "       c <8..28>     - Set write ZERO gap");
-	PrintAndLogEx(NORMAL, "       d <8..28>     - Set write ONE gap");
-	PrintAndLogEx(NORMAL, "       e <8..28>     - Set read gap");
+	PrintAndLogEx(NORMAL, "       h              - This help");
+	PrintAndLogEx(NORMAL, "       a <8..255>     - Set start gap");
+	PrintAndLogEx(NORMAL, "       b <8..255>     - Set write gap");
+	PrintAndLogEx(NORMAL, "       c <8..255>     - Set write ZERO gap");
+	PrintAndLogEx(NORMAL, "       d <8..255>     - Set write ONE gap");
+	PrintAndLogEx(NORMAL, "       e <8..255>     - Set read gap");
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Examples:");
-	PrintAndLogEx(NORMAL, "      lf t55xx deviceconfig a 31           - start gap 31*8");
-	PrintAndLogEx(NORMAL, "      lf t55xx deviceconfig a 29 b 17 c 15 d 47 e 15   -  Default T55XX");
-	PrintAndLogEx(NORMAL, "      lf t55xx deviceconfig a 55 b 14 c 21 d 30        -  Default EM4305");
+	PrintAndLogEx(NORMAL, "      lf t55xx deviceconfig a 31                       - start gap 31*8");
+	PrintAndLogEx(NORMAL, "      lf t55xx deviceconfig a 29 b 17 c 15 d 47 e 15   - default T55XX");
+	PrintAndLogEx(NORMAL, "      lf t55xx deviceconfig a 55 b 14 c 21 d 30        - default EM4305");
 	PrintAndLogEx(NORMAL, "");
 	return 0;
 }
 
- CmdHelp(const char *Cmd);
+CmdHelp(const char *Cmd);
 
 void printT5xxHeader(uint8_t page){
 	PrintAndLogEx(NORMAL, "Reading Page %d:", page);	
@@ -1938,7 +1939,7 @@ int CmdT55xxSetDeviceConfig(const char *Cmd){
 	//Validations
 	if (errors || cmdp == 0) return usage_lf_deviceconfig();
 	
-	t55xx_config config = { startgap, writegap, write0, write1, readgap };
+	t55xx_config config = { startgap*8, writegap*8, write0*8, write1*8, readgap*8 };
 
 	UsbCommand c = {CMD_SET_LF_T55XX_CONFIG, {0,0,0} };
 	memcpy(c.d.asBytes, &config, sizeof(t55xx_config));
