@@ -57,7 +57,7 @@ int fileExists(const char *filename) {
 
 int saveFile(const char *preferredName, const char *suffix, const void* data, size_t datalen) {
 	int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
-	char * fileName = calloc(size,sizeof(char));
+	char * fileName = calloc(size, sizeof(char));
 	int num = 1;
 	sprintf(fileName,"%s.%s", preferredName, suffix);
 	while (fileExists(fileName)) {
