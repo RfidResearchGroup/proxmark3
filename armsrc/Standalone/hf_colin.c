@@ -153,8 +153,7 @@ void SpinUp(uint32_t speed)
     LED_D_OFF();
 }
 
-void TestFlashmemSpeed(size_t buffersize, uint32_t spibaudrate)
-{
+void TestFlashmemSpeed(size_t buffersize, uint32_t spibaudrate) {
 
     FLASHMEM_SPIBAUDRATE = spibaudrate*1000000;
     DbprintfEx(FLAG_NOLOG, "%s---+----[ %s %s[%dKB] %s] (%d)", _GREEN_, _WHITE_, _YELLOW_, buffersize / 1024, _WHITE_, FLASHMEM_SPIBAUDRATE);
@@ -230,9 +229,7 @@ void TestFlashmemRoutine()
     return;
 }
 
-void ReadLastTagFromFlash()
-{
-
+void ReadLastTagFromFlash() {
     SpinOff(0);
     LED_A_ON();
     LED_B_ON();
@@ -248,8 +245,7 @@ void ReadLastTagFromFlash()
     size_t size = len;
     uint8_t *mem = BigBuf_malloc(size);
 
-    if (!FlashInit())
-    {
+    if (!FlashInit()) {
         return;
     }
     Flash_CheckBusy(BUSY_TIMEOUT);
@@ -309,9 +305,7 @@ void WriteTagToFlash(uint8_t index, size_t size)
     // cnt = 0;
     emlGetMem(data, 0, (size * 64)/1024);
 
-    //if (!FlashFastReadInit()){
-    if (!FlashInit())
-    {
+    if (!FlashInit()){
         return;
     }
     

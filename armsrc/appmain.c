@@ -38,6 +38,10 @@
 #include "usart.h"
 #endif
 
+#ifdef WITH_FLASH
+#include "flashmem.h"
+#endif
+
 //=============================================================================
 // A buffer where we can queue things up to be sent through the FPGA, for
 // any purpose (fake tag, as reader, whatever). We go MSB first, since that
@@ -387,7 +391,9 @@ void printUSBSpeed(void) {
 void SendStatus(void) {
 	BigBuf_print_status();
 	Fpga_print_status();
+#ifdef WITH_FLASH	
 	Flashmem_print_status();
+#endif
 #ifdef WITH_SMARTCARD	
 	I2C_print_status();
 #endif	
@@ -1222,7 +1228,9 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			
 			uint8_t *mem = BigBuf_malloc(size);
 	
-			FlashInit();
+  			if (!FlashInit()) {
+   		       break;
+  		    }
 			//Flash_CheckBusy(BUSY_TIMEOUT);
 			
 			for(size_t i = 0; i < len; i += size) {
@@ -1251,8 +1259,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			
 			uint32_t tmp = startidx + len;
 			
-  			if (!FlashInit())
-  		    {
+  			if (!FlashInit()) {
    		       break;
   		    }
     
@@ -1322,8 +1329,10 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			// arg0 = startindex
 			// arg1 = length bytes to transfer
 			// arg2 = RFU
-
-				FlashInit();
+			
+  			if (!FlashInit()) {
+   		       break;
+  		    }
 
 			for (size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
 				len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);

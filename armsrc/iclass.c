@@ -1815,7 +1815,6 @@ void setupIclassReader() {
 
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 
-    // Reset trace buffer
 	clear_trace();
 	set_tracing(true);
 
@@ -1824,7 +1823,6 @@ void setupIclassReader() {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
     SpinDelay(300);
 	
-	// Start the timer
 	StartCountSspClk();
 	
     LED_A_ON();

@@ -485,9 +485,6 @@ void Flash_EraseChip(void) {
 	FlashSendLastByte(CHIPERASE);
 }
 
-
-
-
 void Flashmem_print_status(void) {
 	DbpString("Flash memory");
 	Dbprintf("  Baudrate................%dMHz",FLASHMEM_SPIBAUDRATE/1000000);
