@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Change 'hf mf csave' - now saves both EML/BIN formats (@iceman)
+ - Change 'hf mf esave' - now saves both EML/BIN formats (@iceman)
  - Fix 'compiler warning on macos and gcc7.1 or higher'  (@TomHarkness)
  - Fix 'crash on Bionic libc if CloseProxmark is called twice' (@micolous)
  - Change 'lf hid' - got an  updated to Kastle format (@xilni)
