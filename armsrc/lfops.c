@@ -59,7 +59,7 @@ Default LF T55xx config is set to:
 	write_1 = 47*8
 	read_gap = 15*8
 */
-t55xx_config t_config = { 31*8, 17*8, 15*8, 47*8, 15*8 } ;
+t55xx_config t_config = { 29*8, 17*8, 15*8, 47*8, 15*8 } ;
 
 void printT55xxConfig(void) {
 	Dbprintf("LF T55XX config");
@@ -69,28 +69,35 @@ void printT55xxConfig(void) {
 	Dbprintf("  [d] write_1.............%d*8 (%d)", t_config.write_1/8,   t_config.write_1);
 	Dbprintf("  [e] readgap.............%d*8 (%d)", t_config.read_gap/8,  t_config.read_gap);
 }
+
 void setT55xxConfig(t55xx_config *c) {
 
-	if (c->start_gap != 0) t_config.start_gap = c->start_gap*8;
-	if (c->write_gap != 0) t_config.write_gap = c->write_gap*8;
-	if (c->write_0   != 0) t_config.write_0 = c->write_0*8;
-	if (c->write_1   != 0) t_config.write_1 = c->write_1*8;
-	if (c->read_gap  != 0) t_config.read_gap = c->read_gap*8;
+	if (c->start_gap != 0) t_config.start_gap = c->start_gap;
+	if (c->write_gap != 0) t_config.write_gap = c->write_gap;
+	if (c->write_0   != 0) t_config.write_0 = c->write_0;
+	if (c->write_1   != 0) t_config.write_1 = c->write_1;
+	if (c->read_gap  != 0) t_config.read_gap = c->read_gap;
 
 	printT55xxConfig();
 
 #if WITH_FLASH
     if (!FlashInit()) {
         return;
-			}
-
+	}
+	
+	uint8_t buf[T55XX_CONFIG_LEN];
+	memcpy(buf, &t_config, T55XX_CONFIG_LEN);
+	
 	Flash_CheckBusy(BUSY_TIMEOUT);
-
-	uint16_t isok = Flash_WriteDataCont(T55XX_CONFIG_OFFSET, (uint8_t *)&t_config, sizeof(t55xx_config));
+	Flash_WriteEnable();
+	uint16_t isok = Flash_WriteDataCont(T55XX_CONFIG_OFFSET, buf, sizeof(buf));
 	FlashStop();
 
 	if ( isok == T55XX_CONFIG_LEN) {
-		if (MF_DBGLEVEL > 1) DbpString("T55XX Config save success");
+		if (MF_DBGLEVEL > 1) {
+			DbpString("T55XX Config save success");
+			Dbhexdump(sizeof(buf), buf, false);
+		}
 	}
 #endif
 }
@@ -103,11 +110,9 @@ void loadT55xxConfig(void) {
 #if WITH_FLASH
     if (!FlashInit()) {
         return;
-			}
+	}
 
 	Flash_CheckBusy(BUSY_TIMEOUT);
-	Flash_WriteEnable();
-
 	uint16_t isok = Flash_ReadDataCont(T55XX_CONFIG_OFFSET, (uint8_t *)&t_config, T55XX_CONFIG_LEN);
 	FlashStop();
 
