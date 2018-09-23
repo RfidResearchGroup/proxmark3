@@ -62,6 +62,53 @@ int usage_sm_setclock(void) {
 	return 0;
 }
 
+static int smart_wait(uint8_t *data) {
+	UsbCommand resp;
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+		PrintAndLogEx(WARNING, "smart card response failed");
+		return -1;
+	}
+	
+	uint32_t len = resp.arg[0];	
+	if ( !len ) {
+		PrintAndLogEx(WARNING, "smart card response failed");
+		return -2;			
+	}	
+	memcpy(data, resp.d.asBytes, len);	
+	PrintAndLogEx(SUCCESS, "%s", sprint_hex(data,  len));
+	return len;
+}
+
+static int smart_response(uint8_t *data) {
+		
+	int len = -1; 
+	int datalen = smart_wait(data);	
+	
+	if ( datalen == 3 && data[1] == 0x61 ) {
+		len = data[2];		
+	} else if ( datalen == 2 && data[0] == 0x61 ) {
+		len = data[1];
+	}
+	
+	if (len == -1 ) {
+		goto out;
+	}
+
+	PrintAndLogEx(INFO, "Requesting response");	
+	uint8_t getstatus[] = {0x00, ISO7816_GETSTATUS, 0x00, 0x00, len };
+	UsbCommand cStatus = {CMD_SMART_RAW, {SC_RAW, sizeof(getstatus), 0}};	
+	memcpy(cStatus.d.asBytes, getstatus, sizeof(getstatus) );
+	clearCommandBuffer();
+	SendCommand(&cStatus);
+
+	datalen = smart_wait(data);
+out:
+	if (data)
+		free(data);
+	
+	return datalen;
+}
+
 int CmdSmartRaw(const char *Cmd) {
 
 	int hexlen = 0;
@@ -135,41 +182,35 @@ int CmdSmartRaw(const char *Cmd) {
 	
 	memcpy(c.d.asBytes, data, hexlen );
 	clearCommandBuffer();
-	SendCommand(&c);
-
+	SendCommand(&c);	
+	
 	// reading response from smart card
 	if ( reply ) {
-		UsbCommand resp;
-		if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
-			PrintAndLogEx(WARNING, "smart card response failed");
-			return 1;
-		}
-		uint32_t datalen = resp.arg[0];
-		
-		if ( !datalen ) {
-			PrintAndLogEx(WARNING, "smart card response failed");
-			return 1;			
-		}
 
-		PrintAndLogEx(INFO, "received %i bytes", datalen);
-				
-        if (!datalen)
-            return 1;
+		uint8_t* buf = malloc(USB_CMD_DATA_SIZE);
+		if ( !buf )
+			return 1;		
 		
-		uint8_t *data = resp.d.asBytes;
+		int len = smart_response(buf);
+		if ( len < 0 ) {
+			free(buf);
+			return 2;
+		}
 
 		// TLV decoder
 		if (decodeTLV ) {
 			
-			if (datalen >= 2) {
-				PrintAndLogEx(SUCCESS, "%02x %02x | %s", data[datalen - 2], data[datalen - 1], GetAPDUCodeDescription(data[datalen - 2], data[datalen - 1])); 
+			if (len >= 2) {
+				PrintAndLogEx(SUCCESS, "%02x %02x | %s", buf[len - 2], buf[len - 1], GetAPDUCodeDescription(buf[len - 2], buf[len - 1])); 
 			}
-			if (datalen > 4) {
-				TLVPrintFromBuffer(data, datalen - 2);
+			if (len > 4) {
+				TLVPrintFromBuffer(buf, len - 2);
 			}
 		} else {
-			PrintAndLogEx(SUCCESS, "%s", sprint_hex(data,  datalen)); 
+			PrintAndLogEx(SUCCESS, "%s", sprint_hex(buf, len)); 
 		}
+		
+		free(buf);
 	}
 	return 0;
 }
