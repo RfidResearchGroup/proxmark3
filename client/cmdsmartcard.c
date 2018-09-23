@@ -15,13 +15,14 @@ int usage_sm_raw(void) {
 	PrintAndLogEx(NORMAL, "Usage: sc raw [h|r|c] d <0A 0B 0C ... hex>");
 	PrintAndLogEx(NORMAL, "       h          :  this help");
 	PrintAndLogEx(NORMAL, "       r          :  do not read response");
-	PrintAndLogEx(NORMAL, "       a          :  active signal field ON without select");
-	PrintAndLogEx(NORMAL, "       s          :  active signal field ON with select");
+	PrintAndLogEx(NORMAL, "       a          :  active smartcard without select");
+	PrintAndLogEx(NORMAL, "       s          :  active smartcard with select");
 	PrintAndLogEx(NORMAL, "       t          :  executes TLV decoder if it possible");
 	PrintAndLogEx(NORMAL, "       d <bytes>  :  bytes to send");
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Examples:");
-	PrintAndLogEx(NORMAL, "        sc raw d 11223344");	
+	PrintAndLogEx(NORMAL, "        sc raw d 00a404000e315041592e5359532e444446303100    - “1PAY.SYS.DDF01” PPSE directory");
+	PrintAndLogEx(NORMAL, "        sc raw d 00a404000e325041592e5359532e444446303100    - “2PAY.SYS.DDF01” PPSE directory");
 	return 0;
 }
 int usage_sm_reader(void) {
@@ -61,6 +62,15 @@ int usage_sm_setclock(void) {
 	PrintAndLogEx(NORMAL, "        sc setclock c 2");	
 	return 0;
 }
+int usage_sm_brute(void) {
+	PrintAndLogEx(NORMAL, "Tries to bruteforce SFI, ");
+	PrintAndLogEx(NORMAL, "Usage: sc brute [h]");
+	PrintAndLogEx(NORMAL, "       h          :  this help");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "Examples:");
+	PrintAndLogEx(NORMAL, "        sc brute");
+	return 0;
+}
 
 static int smart_wait(uint8_t *data) {
 	UsbCommand resp;
@@ -75,10 +85,10 @@ static int smart_wait(uint8_t *data) {
 		return -2;			
 	}
 	memcpy(data, resp.d.asBytes, len);	
-	PrintAndLogEx(SUCCESS, "%s", sprint_hex(data,  len));	
+	PrintAndLogEx(SUCCESS, "%s", sprint_hex_inrow_ex(data,  len, 32));	
 
 	if (len >= 2) {		
-		PrintAndLogEx(SUCCESS, "%02x %02x | %s", data[len - 2], data[len - 1], GetAPDUCodeDescription(data[len - 2], data[len - 1])); 
+		PrintAndLogEx(SUCCESS, "%02X%02X | %s", data[len - 2], data[len - 1], GetAPDUCodeDescription(data[len - 2], data[len - 1])); 
 	}
 	return len;
 }
@@ -88,7 +98,7 @@ static int smart_response(uint8_t *data) {
 	int len = -1; 
 	int datalen = smart_wait(data);	
 	
-	if ( data[datalen - 2] == 0x61 ) {
+	if ( data[datalen - 2] == 0x61 || data[datalen - 2] == 0x9F ) {
 		len = data[datalen - 1];
 	}
 
@@ -198,15 +208,9 @@ int CmdSmartRaw(const char *Cmd) {
 		}
 
 		// TLV decoder
-		if (decodeTLV ) {
-			
-			if (len >= 2) {
-				PrintAndLogEx(SUCCESS, "%02x %02x | %s", buf[len - 2], buf[len - 1], GetAPDUCodeDescription(buf[len - 2], buf[len - 1])); 
-			}
-			if (len > 4) {
-				TLVPrintFromBuffer(buf, len - 2);
-			}
-		}		
+		if (decodeTLV && len > 4) {
+			TLVPrintFromBuffer(buf+1, len-2);
+		}
 		free(buf);
 	}
 	return 0;
@@ -469,14 +473,64 @@ int CmdSmartList(const char *Cmd) {
 	return 0;
 }
 
+int CmdSmartBruteforceSFI(const char *Cmd) {
+
+	char ctmp = tolower(param_getchar(Cmd, 0));
+	if (ctmp == 'h') return usage_sm_brute();
+
+	uint8_t data[5] = {0x00, 0xB2, 0x00, 0x00, 0x00};
+
+	PrintAndLogEx(INFO, "Selecting");
+	CmdSmartRaw("d 00a404000e325041592e5359532e444446303100");
+	CmdSmartRaw("d 00a4040007a000000004101000");
+	
+	PrintAndLogEx(INFO, "starting");
+	
+	UsbCommand c = {CMD_SMART_RAW, {SC_RAW, sizeof(data), 0}};
+
+	uint8_t* buf = malloc(USB_CMD_DATA_SIZE);
+	if ( !buf )
+		return 1;		
+		
+	for (uint8_t i=1; i < 4; i++) {
+		for (int p1=1; p1 < 5; p1++) {
+			
+			data[2] = p1;
+			data[3] = (i << 3) + 4;
+
+			memcpy(c.d.asBytes, data, sizeof(data) );
+			clearCommandBuffer();
+			SendCommand(&c);
+			
+			smart_response(buf);
+			
+			// if 0x6C
+			if ( buf[0] == 0x6C ) {
+				data[4]	= buf[1];
+				
+				memcpy(c.d.asBytes, data, sizeof(data) );
+				clearCommandBuffer();
+				SendCommand(&c);
+				smart_response(buf);
+				
+				data[4] = 0;
+			}
+			memset(buf, 0x00, USB_CMD_DATA_SIZE);
+		}
+	}	
+	free(buf);
+	return 0;
+}
+
 static command_t CommandTable[] = {
 	{"help",	CmdHelp,            1, "This help"},
 	{"list",	CmdSmartList,       0, "List ISO 7816 history"},	
-	{"info",	CmdSmartInfo,		1, "Tag information [rdv40]"},
-	{"reader",	CmdSmartReader,		1, "Act like an IS07816 reader [rdv40]"},
-	{"raw",		CmdSmartRaw,		1, "Send raw hex data to tag [rdv40]"},
-	{"upgrade",	CmdSmartUpgrade,	1, "Upgrade firmware [rdv40]"},
+	{"info",	CmdSmartInfo,		1, "Tag information"},
+	{"reader",	CmdSmartReader,		1, "Act like an IS07816 reader"},
+	{"raw",		CmdSmartRaw,		1, "Send raw hex data to tag"},
+	{"upgrade",	CmdSmartUpgrade,	1, "Upgrade firmware"},
 	{"setclock", CmdSmartSetClock,	1, "Set clock speed"},
+	{"brute", 	CmdSmartBruteforceSFI, 1, "Bruteforce SFI"},
 	{NULL, NULL, 0, NULL}
 };
 
