@@ -255,7 +255,7 @@ const APDUCode APDUCodeTable[] = {
 	{"9F00", 	APDUCODE_TYPE_NONE, 		"PIN blocked and Unblock Try Counter is 3"},
 	{"9F04", 	APDUCODE_TYPE_NONE, 		"PIN not succesfully verified, PIN blocked and Unblock Try Counter is 3"},
 	{"9FXX", 	APDUCODE_TYPE_NONE, 		"Command successfully executed; 'xx' bytes of data are available and can be requested using GET RESPONSE."},
-	{"9xXX", 	APDUCODE_TYPE_NONE, 		"Application related status, (ISO 7816-3)"}
+	{"9XXX", 	APDUCODE_TYPE_NONE, 		"Application related status, (ISO 7816-3)"}
 };
 const size_t APDUCodeTableLen = sizeof(APDUCodeTable)/sizeof(APDUCode);
 
@@ -280,11 +280,10 @@ int CodeCmp(const char *code1, const char *code2) {
 const APDUCode* const GetAPDUCode(uint8_t sw1, uint8_t sw2) {
 	char buf[6] = {0};
 	int res;
-	int mineq = 100;
+	int mineq = APDUCodeTableLen;
 	int mineqindx = 0;
 	
-	sprintf(&buf[0], "%02X", sw1);
-	sprintf(&buf[2], "%02X", sw2);
+	sprintf(buf, "%02X%02X", sw1, sw2);
 	
 	for (int i = 0; i < APDUCodeTableLen; i++) {
 		res = CodeCmp(APDUCodeTable[i].ID, buf);
@@ -302,7 +301,7 @@ const APDUCode* const GetAPDUCode(uint8_t sw1, uint8_t sw2) {
 	}
 
 	// if we have not equal, but with some 'X'
-	if (mineqindx < 100) {
+	if (mineqindx < APDUCodeTableLen) {
 		return &APDUCodeTable[mineqindx];
 	}
 	
