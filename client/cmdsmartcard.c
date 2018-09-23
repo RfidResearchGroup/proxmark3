@@ -73,9 +73,13 @@ static int smart_wait(uint8_t *data) {
 	if ( !len ) {
 		PrintAndLogEx(WARNING, "smart card response failed");
 		return -2;			
-	}	
+	}
 	memcpy(data, resp.d.asBytes, len);	
-	PrintAndLogEx(SUCCESS, "%s", sprint_hex(data,  len));
+	PrintAndLogEx(SUCCESS, "%s", sprint_hex(data,  len));	
+
+	if (len >= 2) {		
+		PrintAndLogEx(SUCCESS, "%02x %02x | %s", data[len - 2], data[len - 1], GetAPDUCodeDescription(data[len - 2], data[len - 1])); 
+	}
 	return len;
 }
 
@@ -84,12 +88,10 @@ static int smart_response(uint8_t *data) {
 	int len = -1; 
 	int datalen = smart_wait(data);	
 	
-	if ( datalen == 3 && data[1] == 0x61 ) {
-		len = data[2];		
-	} else if ( datalen == 2 && data[0] == 0x61 ) {
-		len = data[1];
+	if ( data[datalen - 2] == 0x61 ) {
+		len = data[datalen - 1];
 	}
-	
+
 	if (len == -1 ) {
 		goto out;
 	}
@@ -103,8 +105,6 @@ static int smart_response(uint8_t *data) {
 
 	datalen = smart_wait(data);
 out:
-	if (data)
-		free(data);
 	
 	return datalen;
 }
@@ -206,10 +206,7 @@ int CmdSmartRaw(const char *Cmd) {
 			if (len > 4) {
 				TLVPrintFromBuffer(buf, len - 2);
 			}
-		} else {
-			PrintAndLogEx(SUCCESS, "%s", sprint_hex(buf, len)); 
-		}
-		
+		}		
 		free(buf);
 	}
 	return 0;
