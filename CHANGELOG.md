@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added 'sc brute' - a naive SFI bruteforcer for contact smartcards (RDV40) (@iceman)
+ - Change 'lf t55xx detectconfig' - now optional to persist settings to flashmem (RDV40) (@iceman)
  - Change 'hf mf csave' - now saves both EML/BIN formats (@iceman)
  - Change 'hf mf esave' - now saves both EML/BIN formats (@iceman)
  - Fix 'compiler warning on macos and gcc7.1 or higher'  (@TomHarkness)
