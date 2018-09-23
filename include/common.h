@@ -50,6 +50,13 @@ extern uint32_t FLASHMEM_SPIBAUDRATE;
 #define RAMFUNC __attribute((long_call, section(".ramfunc")))
 
 // RDV40 Section
+// 256kb divided into 4k sectors.
+// 
+// last 4k sector = signature
+// second last 4k sector = settings
+// third last 4k sector = default MF keys dictionary
+// forth last 4k sector = default LF keys dictionary
+
 #ifndef FLASH_MEM_BLOCK_SIZE
 # define FLASH_MEM_BLOCK_SIZE   256
 #endif
@@ -57,6 +64,11 @@ extern uint32_t FLASHMEM_SPIBAUDRATE;
 #ifndef FLASH_MEM_MAX_SIZE
 # define FLASH_MEM_MAX_SIZE     0x3FFFF  // (262143)
 #endif
+
+#ifndef FLASH_MEM_MAX_4K_SECTOR
+# define FLASH_MEM_MAX_4K_SECTOR   0x3F000
+#endif
+
 
 #ifndef FLASH_MEM_ID_LEN
 # define FLASH_MEM_ID_LEN			8
@@ -71,13 +83,21 @@ extern uint32_t FLASHMEM_SPIBAUDRATE;
 #endif
 
 #if WITH_FLASH
-#ifndef T55XX_CONFIG_LEN
-# define T55XX_CONFIG_LEN	sizeof( t55xx_config )
-#endif
+	#ifndef T55XX_CONFIG_LEN
+	# define T55XX_CONFIG_LEN	sizeof( t55xx_config )
+	#endif
 
-#ifndef T55XX_CONFIG_OFFSET
-#define T55XX_CONFIG_OFFSET	(FLASH_MEM_MAX_SIZE - FLASH_MEM_SIGNATURE_LEN - T55XX_CONFIG_LEN)
-#endif
+	#ifndef T55XX_CONFIG_OFFSET
+	# define T55XX_CONFIG_OFFSET	(FLASH_MEM_MAX_4K_SECTOR - 0x2000)
+	#endif
+	
+	#ifndef DEFAULT_MF_KEYS_OFFSET
+	# define DEFAULT_MF_KEYS_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x3000)
+	#endif
+	
+	#ifndef DEFAULT_LF_KEYS_OFFSET
+	# define DEFAULT_LF_KEYS_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x4000)
+	#endif
 #endif
 
 // RDV40,  validation structure to help identifying that client/firmware is talking with RDV40

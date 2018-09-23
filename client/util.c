@@ -110,8 +110,8 @@ void FillFileNameByUID(char *filenamePrefix, uint8_t *uid, const char *ext, int 
 		return;
 	}
 	
-	int len=0;
-	len=strlen(filenamePrefix);
+	int len = 0;
+	len = strlen(filenamePrefix);
 	//memset(fn, 0x00, FILE_PATH_SIZE);
 	
 	for (int j = 0; j < uidlen; j++)

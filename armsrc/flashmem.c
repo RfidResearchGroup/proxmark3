@@ -13,7 +13,6 @@
 
 uint32_t FLASHMEM_SPIBAUDRATE = FLASH_BAUD;
 
-
 void FlashmemSetSpiBaudrate(uint32_t baudrate){
    FLASHMEM_SPIBAUDRATE = baudrate;
    Dbprintf("Spi Baudrate : %dMhz", FLASHMEM_SPIBAUDRATE/1000000);
@@ -316,7 +315,6 @@ uint16_t Flash_ReadDataCont(uint32_t address, uint8_t *out, uint16_t len) {
 
 
 ////////////////////////////////////////
-
 // Write data can only program one page. A page has 256 bytes. 
 // if len > 256, it might wrap around and overwrite pos 0.
 uint16_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len) {
@@ -361,24 +359,24 @@ uint16_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len) {
 	return len;	
 }
 
+
+// length should never be zero
+//	Max 256 bytes write
+// out-of-range
 uint16_t Flash_WriteDataCont(uint32_t address, uint8_t *in, uint16_t len) {
 
-	// length should never be zero
 	if (!len)
 		return 0;
 	
-	//	Max 256 bytes write
 	if (((address & 0xFF) + len) > 256) {
-		Dbprintf("Flash_WriteData 256 fail [ 0x%02x ] [ %u ]", (address & 0xFF)+len, len );
+		Dbprintf("Flash_WriteDataCont 256 fail [ 0x%02x ] [ %u ]", (address & 0xFF)+len, len );
 		return 0;
 	}
 	
-	// out-of-range
 	if ( (( address >> 16 ) & 0xFF ) > MAX_BLOCKS) {
-		Dbprintf("Flash_WriteData,  block out-of-range");
+		Dbprintf("Flash_WriteDataCont,  block out-of-range");
 		return 0;
 	}
-
 
 	FlashSendByte(PAGEPROG);
 	FlashSendByte((address >> 16) & 0xFF);
@@ -390,9 +388,41 @@ uint16_t Flash_WriteDataCont(uint32_t address, uint8_t *in, uint16_t len) {
 		FlashSendByte(in[i]);
 
 	FlashSendLastByte(in[i]);
-
 	return len;	
 }
+
+// assumes valid start 256 based 00 address
+//
+uint16_t Flash_Write(uint32_t address, uint8_t *in, uint16_t len) {
+
+	bool isok;
+	uint16_t res, bytes_sent = 0, bytes_remaining = len;
+    uint8_t buf[FLASH_MEM_BLOCK_SIZE];
+    while (bytes_remaining > 0) {
+
+		Flash_CheckBusy(BUSY_TIMEOUT);
+		Flash_WriteEnable();
+
+        uint32_t bytes_in_packet = MIN(FLASH_MEM_BLOCK_SIZE, bytes_remaining);
+
+        memcpy(buf, in + bytes_sent, bytes_in_packet);
+
+        res = Flash_WriteDataCont(address + bytes_sent, buf, bytes_in_packet);
+
+		bytes_remaining -= bytes_in_packet;
+        bytes_sent += bytes_in_packet;
+
+        isok = (res == bytes_in_packet);
+
+        if (!isok)
+			goto out;
+    }
+
+out:
+	FlashStop();
+	return len;
+}
+
 
 bool Flash_WipeMemoryPage(uint8_t page) {
 	if (!FlashInit()) {

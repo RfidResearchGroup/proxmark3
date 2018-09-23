@@ -144,6 +144,7 @@ uint16_t Flash_ReadData(uint32_t address, uint8_t *out, uint16_t len);
 
 uint16_t Flash_ReadDataCont(uint32_t address, uint8_t *out, uint16_t len);
 
+uint16_t Flash_Write(uint32_t address, uint8_t *in, uint16_t len);
 uint16_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len);
 uint16_t Flash_WriteDataCont(uint32_t address, uint8_t *in, uint16_t len);
 void Flashmem_print_status(void);

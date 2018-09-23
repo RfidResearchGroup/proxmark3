@@ -304,6 +304,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO7816_GET_CHALLENGE 			0xB4
 #define ISO7816_MANAGE_CHANNEL 			0x70
 
+#define ISO7816_GETSTATUS				0xC0
 // ISO7816-4	For response APDU's
 #define ISO7816_OK						0x9000
 //	6x xx = ERROR

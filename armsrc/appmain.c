@@ -633,7 +633,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 	switch(c->cmd) {
 #ifdef WITH_LF
 		case CMD_SET_LF_T55XX_CONFIG:
-			setT55xxConfig((t55xx_config *) c->d.asBytes);
+			setT55xxConfig( c->arg[0], (t55xx_config *) c->d.asBytes);
 			break;			
 		case CMD_SET_LF_SAMPLING_CONFIG:
 			setSamplingConfig((sample_config *) c->d.asBytes);

@@ -88,11 +88,11 @@ void I2C_SetResetStatus(uint8_t LineRST, uint8_t LineSCK, uint8_t LineSDA) {
 // Reset the SIM_Adapter, then  enter the main program
 // Note: the SIM_Adapter will not enter the main program after power up. Please run this function before use SIM_Adapter.
 void I2C_Reset_EnterMainProgram(void) {
-	I2C_SetResetStatus(0, 0, 0);		//	拉低复位线
+	I2C_SetResetStatus(0, 0, 0);
 	SpinDelay(30);
-	I2C_SetResetStatus(1, 0, 0);		//	解除复位
+	I2C_SetResetStatus(1, 0, 0);
 	SpinDelay(30);
-	I2C_SetResetStatus(1, 1, 1);		//	拉高数据线
+	I2C_SetResetStatus(1, 1, 1);
 	SpinDelay(10);
 }
 
@@ -100,9 +100,9 @@ void I2C_Reset_EnterMainProgram(void) {
 // Reset the SIM_Adapter, then enter the bootloader program
 // Reserve：For firmware update.
 void I2C_Reset_EnterBootloader(void) {
-	I2C_SetResetStatus(0, 1, 1);		//	拉低复位线
+	I2C_SetResetStatus(0, 1, 1);
 	SpinDelay(100);
-	I2C_SetResetStatus(1, 1, 1);		//	解除复位
+	I2C_SetResetStatus(1, 1, 1);
 	SpinDelay(10);
 }
 
