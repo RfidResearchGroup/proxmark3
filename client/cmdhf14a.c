@@ -657,10 +657,10 @@ int CmdHF14ASniff(const char *Cmd) {
 	int param = 0;	
 	uint8_t ctmp;
 	for (int i = 0; i < 2; i++) {
-		ctmp = param_getchar(Cmd, i);
-		if (ctmp == 'h' || ctmp == 'H') return usage_hf_14a_sniff();
-		if (ctmp == 'c' || ctmp == 'C') param |= 0x01;
-		if (ctmp == 'r' || ctmp == 'R') param |= 0x02;
+		ctmp = tolower(param_getchar(Cmd, i));
+		if (ctmp == 'h') return usage_hf_14a_sniff();
+		if (ctmp == 'c') param |= 0x01;
+		if (ctmp == 'r') param |= 0x02;
 	}
 	UsbCommand c = {CMD_SNOOP_ISO_14443a, {param, 0, 0}};
 	clearCommandBuffer();

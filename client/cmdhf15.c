@@ -686,7 +686,6 @@ int CmdHF15Dump(const char*Cmd) {
 		
 		fptr += sprintf(fptr, "hf-15-"); 
 		FillFileNameByUID(fptr,uid,"-dump",sizeof(uid));
-
 	}	
 	// detect blocksize from card :)
 	

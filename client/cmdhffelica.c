@@ -350,8 +350,8 @@ uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace,uint16_t tracelen) {
 
 int CmdHFFelicaDumpLite(const char *Cmd) {
 
-	char ctmp = param_getchar(Cmd, 0);
-	if ( ctmp == 'h' || ctmp == 'H') return usage_hf_felica_dumplite();
+	char ctmp = tolower(param_getchar(Cmd, 0));
+	if ( ctmp == 'h') return usage_hf_felica_dumplite();
 
 	PrintAndLogEx(SUCCESS, "FeliCa lite - dump started");
 	PrintAndLogEx(SUCCESS, "press pm3-button to cancel");
