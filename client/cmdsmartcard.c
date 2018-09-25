@@ -72,6 +72,24 @@ int usage_sm_brute(void) {
 	return 0;
 }
 
+static bool smart_select(bool silent) {
+	UsbCommand c = {CMD_SMART_ATR, {0, 0, 0}};
+	clearCommandBuffer();
+	SendCommand(&c);
+	UsbCommand resp;
+	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 2500) ) {
+		if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
+		return false;
+	}
+	
+	uint8_t isok = resp.arg[0] & 0xFF;
+	if (!isok) {
+		if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
+		return false;
+	}	
+	return true;
+}
+
 static int smart_wait(uint8_t *data) {
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
@@ -85,7 +103,7 @@ static int smart_wait(uint8_t *data) {
 		return -2;			
 	}
 	memcpy(data, resp.d.asBytes, len);	
-	PrintAndLogEx(SUCCESS, "%s", sprint_hex_inrow_ex(data,  len, 32));	
+	PrintAndLogEx(SUCCESS, " %d | %s", len, sprint_hex_inrow_ex(data,  len, 32));
 
 	if (len >= 2) {		
 		PrintAndLogEx(SUCCESS, "%02X%02X | %s", data[len - 2], data[len - 1], GetAPDUCodeDescription(data[len - 2], data[len - 1])); 
@@ -197,7 +215,7 @@ int CmdSmartRaw(const char *Cmd) {
 	// reading response from smart card
 	if ( reply ) {
 
-		uint8_t* buf = malloc(USB_CMD_DATA_SIZE);
+		uint8_t* buf = calloc(USB_CMD_DATA_SIZE, sizeof(uint8_t));
 		if ( !buf )
 			return 1;		
 		
@@ -208,9 +226,9 @@ int CmdSmartRaw(const char *Cmd) {
 		}
 
 		// TLV decoder
-		if (decodeTLV && len > 4) {
-			TLVPrintFromBuffer(buf+1, len-2);
-		}
+		if (decodeTLV && len > 4)
+			TLVPrintFromBuffer(buf+1, len-3);
+
 		free(buf);
 	}
 	return 0;
@@ -477,17 +495,22 @@ int CmdSmartBruteforceSFI(const char *Cmd) {
 
 	char ctmp = tolower(param_getchar(Cmd, 0));
 	if (ctmp == 'h') return usage_sm_brute();
-
+	
+	
 	uint8_t data[5] = {0x00, 0xB2, 0x00, 0x00, 0x00};
 
-	PrintAndLogEx(INFO, "Selecting");
+	PrintAndLogEx(INFO, "Selecting card");
+	if ( !smart_select(false) ) {
+		return 1;
+	}
+	
+	PrintAndLogEx(INFO, "Selecting PPSE aid");
 	CmdSmartRaw("d 00a404000e325041592e5359532e444446303100");
 	CmdSmartRaw("d 00a4040007a000000004101000");
 	
 	PrintAndLogEx(INFO, "starting");
 	
-	UsbCommand c = {CMD_SMART_RAW, {SC_RAW, sizeof(data), 0}};
-
+	UsbCommand c = {CMD_SMART_RAW, {SC_RAW, sizeof(data), 0}};	
 	uint8_t* buf = malloc(USB_CMD_DATA_SIZE);
 	if ( !buf )
 		return 1;		
@@ -511,8 +534,12 @@ int CmdSmartBruteforceSFI(const char *Cmd) {
 				memcpy(c.d.asBytes, data, sizeof(data) );
 				clearCommandBuffer();
 				SendCommand(&c);
-				smart_response(buf);
+				uint8_t len = smart_response(buf);
 				
+				// TLV decoder
+				if (len > 4)
+					TLVPrintFromBuffer(buf+1, len-3);
+	
 				data[4] = 0;
 			}
 			memset(buf, 0x00, USB_CMD_DATA_SIZE);

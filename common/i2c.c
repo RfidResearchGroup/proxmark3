@@ -34,38 +34,29 @@ volatile unsigned long c;
 void __attribute__((optimize("O0"))) I2CSpinDelayClk(uint16_t delay) {
 	for (c = delay * 2; c; c--) {};
 }
-				  
-//	通讯延迟函数			ommunication delay function	
+
 #define I2C_DELAY_1CLK 		I2CSpinDelayClk(1)
 #define I2C_DELAY_2CLK		I2CSpinDelayClk(2)
 #define I2C_DELAY_XCLK(x)	I2CSpinDelayClk((x))
 
-
 #define  ISO7618_MAX_FRAME 255
 
 void I2C_init(void) {
-	// 配置复位引脚，关闭上拉，推挽输出，默认高
 	// Configure reset pin, close up pull up, push-pull output, default high
 	AT91C_BASE_PIOA->PIO_PPUDR = GPIO_RST;
 	AT91C_BASE_PIOA->PIO_MDDR = GPIO_RST;
   
-	// 配置 I2C 引脚，开启上拉，开漏输出
 	// Configure I2C pin, open up, open leakage
 	AT91C_BASE_PIOA->PIO_PPUER |= (GPIO_SCL | GPIO_SDA);	// 打开上拉  Open up the pull up
 	AT91C_BASE_PIOA->PIO_MDER |= (GPIO_SCL | GPIO_SDA);
 
-	// 默认三根线全部拉高
 	// default three lines all pull up
 	AT91C_BASE_PIOA->PIO_SODR |= (GPIO_SCL | GPIO_SDA | GPIO_RST);
 
-	// 允许输出
-	// allow output
 	AT91C_BASE_PIOA->PIO_OER |= (GPIO_SCL | GPIO_SDA | GPIO_RST);
 	AT91C_BASE_PIOA->PIO_PER |= (GPIO_SCL | GPIO_SDA | GPIO_RST);
 }
 
-
-// 设置复位状态
 // set the reset state
 void I2C_SetResetStatus(uint8_t LineRST, uint8_t LineSCK, uint8_t LineSDA) {
 	if (LineRST)
@@ -84,7 +75,6 @@ void I2C_SetResetStatus(uint8_t LineRST, uint8_t LineSCK, uint8_t LineSDA) {
 		LOW(GPIO_SDA);
 }
 
-// 复位进入主程序
 // Reset the SIM_Adapter, then  enter the main program
 // Note: the SIM_Adapter will not enter the main program after power up. Please run this function before use SIM_Adapter.
 void I2C_Reset_EnterMainProgram(void) {
@@ -96,9 +86,8 @@ void I2C_Reset_EnterMainProgram(void) {
 	SpinDelay(10);
 }
 
-// 复位进入引导模式
 // Reset the SIM_Adapter, then enter the bootloader program
-// Reserve：For firmware update.
+// Reserve for firmware update.
 void I2C_Reset_EnterBootloader(void) {
 	I2C_SetResetStatus(0, 1, 1);
 	SpinDelay(100);
@@ -106,7 +95,6 @@ void I2C_Reset_EnterBootloader(void) {
 	SpinDelay(10);
 }
 
-//	等待时钟变高	
 // Wait for the clock to go High.	
 bool WaitSCL_H_delay(uint32_t delay) {
 	while (delay--)	{
@@ -301,7 +289,6 @@ bool I2C_WriteCmd(uint8_t device_cmd, uint8_t device_address) {
 	return true;
 }
 
-// 写入1字节数据 （待写入数据，待写入地址，器件类型）
 // Sends 1 byte data (Data to be written, command to be written , SlaveDevice address  ).
 bool I2C_WriteByte(uint8_t data, uint8_t device_cmd, uint8_t device_address) {
 	bool bBreak = true;
@@ -332,8 +319,7 @@ bool I2C_WriteByte(uint8_t data, uint8_t device_cmd, uint8_t device_address) {
 	return true;
 }
 
-//	写入1串数据（待写入数组地址，待写入长度，待写入地址，器件类型）	
-//Sends a string of data (Array, length, command to be written , SlaveDevice address  ).
+//Sends array of data (Array, length, command to be written , SlaveDevice address  ).
 // len = uint8 (max buffer to write 256bytes)
 bool I2C_BufferWrite(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t device_address) {
 	bool bBreak = true;
@@ -371,8 +357,7 @@ bool I2C_BufferWrite(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t dev
 	return true;	
 }
 
-// 读出1串数据（存放读出数据，待读出长度，带读出地址，器件类型）
-// read 1 strings of data (Data array, Readout length, command to be written , SlaveDevice address  ).
+// read one array of data (Data array, Readout length, command to be written , SlaveDevice address  ).
 // len = uint8 (max buffer to read 256bytes)
 int16_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t device_address) {
 
@@ -460,12 +445,10 @@ int16_t I2C_ReadFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t
 		if (!I2C_WaitAck())
 			break;
 
-		// msb
 		I2C_SendByte(msb);
 		if (!I2C_WaitAck())
 			break;
 
-		// lsb
 		I2C_SendByte(lsb);
 		if (!I2C_WaitAck())
 			break;
@@ -522,12 +505,10 @@ bool I2C_WriteFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t d
 		if (!I2C_WaitAck())
 			break;
 		
-		// msb
 		I2C_SendByte(msb);
 		if (!I2C_WaitAck())
 			break;
 
-		// lsb
 		I2C_SendByte(lsb);
 		if (!I2C_WaitAck())
 			break;
@@ -698,8 +679,12 @@ void SmartCardRaw( uint64_t arg0, uint64_t arg1, uint8_t *data ) {
 				
 		// read bytes from module
 		len = ISO7618_MAX_FRAME;
-		sc_rx_bytes(resp, &len);
-		LogTrace(resp, len, 0, 0, NULL, false);
+		bool res = sc_rx_bytes(resp, &len);
+		if ( res ) {
+			LogTrace(resp, len, 0, 0, NULL, false);
+		} else {
+			len = 0;
+		}
 	}
 OUT:	
 	cmd_send(CMD_ACK, len, 0, 0, resp, len);
