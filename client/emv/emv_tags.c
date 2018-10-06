@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define PRINT_INDENT(level) 	{for (int i = 0; i < (level); i++) fprintf(f, "\t");}
+#define PRINT_INDENT(level) 	{for (int i = 0; i < (level); i++) fprintf(f, "   ");}
 
 enum emv_tag_t {
 	EMV_TAG_GENERIC,

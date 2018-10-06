@@ -20,7 +20,7 @@
 #include "dump.h"
 
 
-#define PRINT_INDENT(level) 	{for (int i = 0; i < (level); i++) fprintf(f, "\t");}
+#define PRINT_INDENT(level) 	{for (int i = 0; i < (level); i++) fprintf(f, "   ");}
 
 void dump_buffer_simple(const unsigned char *ptr, size_t len, FILE *f)
 {
