@@ -215,24 +215,19 @@ int CmdHFEMVPPSE(const char *cmd) {
 	while(param_getchar(cmd, cmdp) != 0x00) {
 		char c = param_getchar(cmd, cmdp);
 		if ((c == '-') && (param_getlength(cmd, cmdp) == 2))
-			switch (param_getchar_indx(cmd, 1, cmdp)) {
+			switch (tolower(param_getchar_indx(cmd, 1, cmdp))) {
 				case 'h':
-				case 'H':
 					return usage_emv_ppse();
 				case 's':
-				case 'S':
 					activateField = true;
 					break;
 				case 'k':
-				case 'K':
 					leaveSignalON = true;
 					break;
 				case 'a':
-				case 'A':
 					SetAPDULogging(true);
 					break;
 				case 't':
-				case 'T':
 					decodeTLV = true;
 					break;
 				case '1':
@@ -316,40 +311,31 @@ int CmdHFEMVExec(const char *cmd) {
 	while(param_getchar(cmd, cmdp) != 0x00) {
 		char c = param_getchar(cmd, cmdp);
 		if ((c == '-') && (param_getlength(cmd, cmdp) == 2))
-			switch (param_getchar_indx(cmd, 1, cmdp)) {
+			switch (tolower(param_getchar_indx(cmd, 1, cmdp))) {
 				case 'h':
-				case 'H':
 					return usage_emv_exec();
 				case 's':
-				case 'S':
 					activateField = true;
 					break;
 				case 'a':
-				case 'A':
 					showAPDU = true;
 					break;
 				case 't':
-				case 'T':
 					decodeTLV = true;
 					break;
 				case 'f':
-				case 'F':
 					forceSearch = true;
 					break;
 				case 'x':
-				case 'X':
 					TrType = TT_VSDC;
 					break;
 				case 'v':
-				case 'V':
 					TrType = TT_QVSDCMCHIP;
 					break;
 				case 'c':
-				case 'C':
 					TrType = TT_CDA;
 					break;
 				case 'g':
-				case 'G':
 					GenACGPO = true;
 					break;
 				default:
