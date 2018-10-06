@@ -242,6 +242,11 @@ __attribute__((force_align_arg_pointer))
 	UsbCommand *prx = &rx;
 	
 	//int counter_to_offline = 0;
+
+#if defined(__MACH__) && defined(__APPLE__)
+	disableAppNap("Proxmark3 polling UART");
+#endif
+	
 	
 	while (conn->run) {
 		rxlen = 0;
@@ -288,6 +293,11 @@ __attribute__((force_align_arg_pointer))
 	// when this reader thread dies, we close the serial port.
 	uart_close(sp);
 	sp = NULL;
+
+#if defined(__MACH__) && defined(__APPLE__)
+	enableAppNap();
+#endif
+
 	
 	pthread_exit(NULL);
 	return NULL;

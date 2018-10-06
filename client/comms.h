@@ -21,6 +21,7 @@
 #include "common.h"
 #include "util_posix.h"
 #include "util.h" 
+#include "util_darwin.h"
 
 #if defined(__linux__) && !defined(NO_UNLINK)
 #include <unistd.h>		// for unlink()

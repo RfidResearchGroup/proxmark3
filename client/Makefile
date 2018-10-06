@@ -34,9 +34,11 @@ LUAPLATFORM = generic
 platform = $(shell uname)
 ifneq (,$(findstring MINGW,$(platform))) 
     LUAPLATFORM = mingw
-    else
+else
 	ifeq ($(platform),Darwin)
     LUAPLATFORM = macosx
+	OBJCSRCS = util_darwin.m
+	LDFLAGS += -framework Foundation	
 else
     LUALIB +=  -ldl
     LDLIBS +=  -ltermcap -lncurses
@@ -223,6 +225,7 @@ QTGUISRCS = proxgui.cpp proxguiqt.cpp proxguiqt.moc.cpp guidummy.cpp
 
 COREOBJS = $(CORESRCS:%.c=$(OBJDIR)/%.o)
 CMDOBJS = $(CMDSRCS:%.c=$(OBJDIR)/%.o)
+OBJCOBJS = $(OBJCSRCS:%.m=$(OBJDIR)/%.o)
 ZLIBOBJS = $(ZLIBSRCS:%.c=$(OBJDIR)/%.o)
 MULTIARCHOBJS = $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_NOSIMD.o) \
 			$(MULTIARCHSRCS:%.c=$(OBJDIR)/%_MMX.o) \
@@ -249,7 +252,7 @@ endif
 
 BINS = proxmark3 flasher fpga_compress
 WINBINS = $(patsubst %, %.exe, $(BINS))
-CLEAN = $(BINS) $(WINBINS) $(COREOBJS) $(CMDOBJS) $(ZLIBOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(OBJDIR)/*.o *.moc.cpp ui/ui_overlays.h lualibs/usb_cmd.lua lualibs/mf_default_keys.lua
+CLEAN = $(BINS) $(WINBINS) $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(ZLIBOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(OBJDIR)/*.o *.moc.cpp ui/ui_overlays.h lualibs/usb_cmd.lua lualibs/mf_default_keys.lua
 
 # need to assign dependancies to build these first...
 all: lua_build $(BINS) 
@@ -258,10 +261,10 @@ all-static: LDLIBS:=-static $(LDLIBS)
 all-static: proxmark3 flasher fpga_compress
 
 proxmark3: LDLIBS+=$(LUALIB) $(QTLDLIBS)
-proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(ZLIBOBJS) lualibs/usb_cmd.lua lualibs/mf_default_keys.lua
-	$(LD) $(LDFLAGS) $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(ZLIBOBJS) $(LDLIBS)  -o $@
+proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(ZLIBOBJS) lualibs/usb_cmd.lua lualibs/mf_default_keys.lua
+	$(LD) $(LDFLAGS) $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(ZLIBOBJS) $(LDLIBS)  -o $@
 	
-flasher: $(OBJDIR)/flash.o $(OBJDIR)/flasher.o $(COREOBJS)
+flasher: $(OBJDIR)/flash.o $(OBJDIR)/flasher.o $(COREOBJS) $(OBJCOBJS)
 	$(LD) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 fpga_compress: $(OBJDIR)/fpga_compress.o $(ZLIBOBJS)
@@ -325,6 +328,11 @@ $(OBJDIR)/%.o : %.cpp $(OBJDIR)/%.d
 	$(CXX) $(DEPFLAGS) $(CXXFLAGS) $(QTINCLUDES) -c -o $@ $<
 	$(POSTCOMPILE)
 
+%.o: %.m
+$(OBJDIR)/%.o : %.m $(OBJDIR)/%.d
+	$(CC) $(DEPFLAGS) $(CFLAGS) -c -o $@ $<
+	$(POSTCOMPILE)
+	
 #$(CMDOBJS) $(COREOBJS): $(notdir $(%.c)) %.d
 #	$(CC) $(DEPFLAGS) $(CFLAGS) -c -o $@ $<
 #	$(POSTCOMPILE)
@@ -339,6 +347,7 @@ $(OBJDIR)/%.o : %.cpp $(OBJDIR)/%.d
 
 DEPENDENCY_FILES = $(patsubst %.c, $(OBJDIR)/%.d, $(CORESRCS) $(CMDSRCS) $(ZLIBSRCS) $(MULTIARCHSRCS)) \
 	$(patsubst %.cpp, $(OBJDIR)/%.d, $(QTGUISRCS)) \
+	$(patsubst %.m, $(OBJDIR)/%.d, $(OBJCSRCS)) \
 	$(OBJDIR)/proxmark3.d $(OBJDIR)/flash.d $(OBJDIR)/flasher.d $(OBJDIR)/fpga_compress.d
 
 $(DEPENDENCY_FILES): ;
