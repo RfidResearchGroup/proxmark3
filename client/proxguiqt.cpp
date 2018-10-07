@@ -170,7 +170,7 @@ void ProxWidget::vchange_dthr_down(int v) {
 }
 ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
 	this->master = master;
-	resize(800,500);
+	resize(800, 400);
 
 	// Setup the controller widget
 	controlWidget = new QWidget();
@@ -203,7 +203,7 @@ ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
 
 	// Move controller widget below plot
 	controlWidget->move(x(),y()+frameSize().height());
-	controlWidget->resize(size().width(), controlWidget->size().height());
+	controlWidget->resize(size().width(), 200);
 	controlWidget->show();
 }
 
@@ -553,7 +553,7 @@ Plot::Plot(QWidget *parent) : QWidget(parent), GraphStart(0), GraphPixelsPerPoin
 {
 	//Need to set this, otherwise we don't receive keypress events
 	setFocusPolicy( Qt::StrongFocus);
-	resize(600, 300);
+	resize(400, 200);
 
 	QPalette palette(QColor(0,0,0,0));
 	palette.setColor(QPalette::WindowText, QColor(255,255,255));
