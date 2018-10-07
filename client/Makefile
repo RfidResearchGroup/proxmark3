@@ -38,7 +38,7 @@ else
 	ifeq ($(platform),Darwin)
     LUAPLATFORM = macosx
 	OBJCSRCS = util_darwin.m
-	LDFLAGS += -framework Foundation	
+	LDFLAGS += -framework Foundation -framework AppKit	
 else
     LUALIB +=  -ldl
     LDLIBS +=  -ltermcap -lncurses

@@ -12,6 +12,7 @@
 
 #import <Foundation/NSString.h>
 #import <Foundation/NSProcessInfo.h>
+#import <AppKit/NSApplication.h>
 
 static id activity = nil;
 
@@ -37,4 +38,18 @@ void enableAppNap() {
 #else
 void disableAppNap(const char* reason) { }
 void enableAppNap() { }
+#endif
+
+
+//OS X Version 10.6 is defined in OS X 10.6 and later
+#if defined(MAC_OS_X_VERSION_10_6)
+void makeUnfocusable() {
+	[NSApp setActivationPolicy:NSApplicationActivationPolicyProhibited];
+}
+void makeFocusable() {
+	[NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+}
+#else
+void makeUnfocusable() { }
+void makeFocusable() { }
 #endif
