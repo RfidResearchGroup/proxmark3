@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fix 'Lining up plot and control window' (@anticat)
  - Fix 'annoying focus behaviour' on OSX  (@Anticat)
  - Implemented AppNap API, fixing #283 and #627 OSX USB comm issues (@AntiCat)
  - Added 'sc brute' - a naive SFI bruteforcer for contact smartcards (RDV40) (@iceman)
