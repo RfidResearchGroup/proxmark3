@@ -53,7 +53,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "cliparser/argtable3.h"
+#include "cliparser/getopt.h"
 #ifdef _WIN32
 #  include <io.h>
 #  include <fcntl.h>
@@ -96,7 +96,7 @@ int reveng_main(int argc, char *argv[]) {
 
 	SETBMP();
 
-	pos=0;
+//	pos=0; --- not in this ver of getopt
 	optind=1;
 	do {
 		c=getopt(argc, argv, "?A:BDFGLMP:SVXa:bcdefhi:k:lm:p:q:rstuvw:x:yz");
