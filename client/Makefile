@@ -110,6 +110,8 @@ CMDSRCS =	crapto1/crapto1.c \
 			polarssl/sha1.c \
 			polarssl/sha256.c \
 			polarssl/base64.c \
+			cliparser/argtable3.c\
+			cliparser/cliparser.c\
 			loclass/cipher.c \
 			loclass/cipherutils.c \
 			loclass/ikeys.c \
@@ -203,7 +205,6 @@ CMDSRCS =	crapto1/crapto1.c \
 			reveng/bmpbit.c \
 			reveng/model.c \
 			reveng/poly.c \
-			reveng/getopt.c \
 			bucketsort.c
 
 cpu_arch = $(shell uname -m)

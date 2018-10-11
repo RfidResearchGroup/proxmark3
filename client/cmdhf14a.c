@@ -668,6 +668,95 @@ int CmdHF14ASniff(const char *Cmd) {
 	return 0;
 }
 
+int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
+	uint16_t cmdc = 0;
+	*dataoutlen = 0;
+	
+	if (activateField) {
+		UsbCommand resp;
+
+		// Anticollision + SELECT card
+		UsbCommand ca = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}};
+		SendCommand(&ca);
+		if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+			PrintAndLogEx(ERROR, "Proxmark connection timeout.");
+			return 1;
+		}
+
+		// check result
+		if (resp.arg[0] == 0) {
+			PrintAndLogEx(NORMAL, "No card in field.");
+			return 1;
+		}
+
+		if (resp.arg[0] != 1 && resp.arg[0] != 2) {
+			PrintAndLogEx(ERROR, "Card not in iso14443-4. res=%d.", resp.arg[0]);
+			return 1;
+		}
+
+		if (resp.arg[0] == 2) {		// 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
+			// get ATS 
+			UsbCommand cr = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0}}; 
+			uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
+			memcpy(cr.d.asBytes, rats, 2);
+			SendCommand(&cr);
+			if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+				PrintAndLogEx(ERROR, "Proxmark connection timeout.");
+				return 1;
+			}
+			
+			if (resp.arg[0] <= 0) { // ats_len
+				PrintAndLogEx(ERROR, "Can't get ATS.");
+				return 1;
+			}
+		}
+	}
+	
+	if (leaveSignalON)
+		cmdc |= ISO14A_NO_DISCONNECT;
+
+	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_APPEND_CRC | cmdc, (datainlen & 0xFFFF), 0}}; 
+	memcpy(c.d.asBytes, datain, datainlen);
+	SendCommand(&c);
+	
+    uint8_t *recv;
+    UsbCommand resp;
+
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+        recv = resp.d.asBytes;
+        int iLen = resp.arg[0];
+		
+		*dataoutlen = iLen - 2;
+		if (*dataoutlen < 0)
+			*dataoutlen = 0;
+		
+		if (maxdataoutlen && *dataoutlen > maxdataoutlen) {
+			PrintAndLogEx(ERROR, "Buffer too small(%d). Needs %d bytes", *dataoutlen, maxdataoutlen);
+			return 2;
+		}
+		
+		memcpy(dataout, recv, *dataoutlen);
+		
+        if(!iLen) {
+			PrintAndLogEx(ERROR, "No card response.");
+            return 1;
+		}
+
+		// CRC Check
+		if (iLen == -1) {
+			PrintAndLogEx(ERROR, "ISO 14443A CRC error.");
+			return 3;
+		}
+
+
+    } else {
+        PrintAndLogEx(ERROR, "Reply timeout.");
+		return 4;
+    }
+	
+	return 0;
+}
+
 int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
 	uint16_t cmdc = 0;
 	

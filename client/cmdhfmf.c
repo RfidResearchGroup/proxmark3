@@ -3067,6 +3067,149 @@ out:
 	return 0;
 }
 
+int aes_encode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length){
+	uint8_t iiv[16] = {0};
+	if (iv)
+		memcpy(iiv, iv, 16);
+	
+	aes_context aes;
+	aes_init(&aes);
+	if (aes_setkey_enc(&aes, key, 128))
+		return 1;
+	if (aes_crypt_cbc(&aes, AES_ENCRYPT, length, iiv, input, output))
+		return 2;
+	aes_free(&aes);
+
+	return 0;
+}
+
+int aes_decode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length){
+	uint8_t iiv[16] = {0};
+	if (iv)
+		memcpy(iiv, iv, 16);
+	
+	aes_context aes;
+	aes_init(&aes);
+	if (aes_setkey_dec(&aes, key, 128))
+		return 1;
+	if (aes_crypt_cbc(&aes, AES_DECRYPT, length, iiv, input, output))
+		return 2;
+	aes_free(&aes);
+
+	return 0;
+}
+
+int CmdHF14AMfAuth4(const char *cmd) {
+	uint8_t keyn[20] = {0};
+	int keynlen = 0;
+	uint8_t key[16] = {0};
+	int keylen = 0;
+	uint8_t data[257] = {0};
+	int datalen = 0;
+	
+	uint8_t Rnd1[17] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x00};
+	uint8_t Rnd2[17] = {0};
+	
+	
+	CLIParserInit("hf mf auth4", 
+		"Executes AES authentication command in ISO14443-4", 
+		"Usage:\n\thf mf auth4 4000 000102030405060708090a0b0c0d0e0f -> executes authentication\n"
+			"\thf mf auth4 9003 FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF -> executes authentication\n");
+
+	void* argtable[] = {
+		arg_param_begin,
+		arg_str1(NULL,  NULL,     "<Key Num (HEX 2 bytes)>", NULL),
+		arg_str1(NULL,  NULL,     "<Key Value (HEX 16 bytes)>", NULL),
+		arg_param_end
+	};
+	CLIExecWithReturn(cmd, argtable, true);
+	
+	CLIGetStrWithReturn(1, keyn, &keynlen);
+	CLIGetStrWithReturn(2, key, &keylen);
+	CLIParserFree();
+	
+	if (keynlen != 2) {
+		PrintAndLogEx(ERROR, "<Key Num> must be 2 bytes long instead of: %d", keynlen);
+		return 1;
+	}
+	
+	if (keylen != 16) {
+		PrintAndLogEx(ERROR, "<Key Value> must be 16 bytes long instead of: %d", keylen);
+		return 1;
+	}
+
+	uint8_t cmd1[] = {0x0a, 0x00, 0x70, keyn[1], keyn[0], 0x00};
+	int res = ExchangeRAW14a(cmd1, sizeof(cmd1), true, true, data, sizeof(data), &datalen);
+	if (res) {
+		PrintAndLog("ERROR exchande raw error: %d", res);
+		return 2;
+	}
+	
+	PrintAndLog("<phase1: %s", sprint_hex(data, datalen));
+		
+	if (datalen < 3) {
+		PrintAndLogEx(ERROR, "card response length: %d", datalen);
+		return 3;
+	}
+	
+	if (data[0] != 0x0a || data[1] != 0x00) {
+		PrintAndLogEx(ERROR, "Framing error in card response. :%s", sprint_hex(data, 2));
+		return 3;
+	}
+
+	if (data[2] != 0x90) {
+		PrintAndLogEx(ERROR, "card response error: %02x", data[2]);
+		return 3;
+	}
+
+	if (datalen != 19) {
+		PrintAndLogEx(ERROR, "card response must be 16 bytes long instead of: %d", datalen);
+		return 3;
+	}
+	
+    aes_decode(NULL, key, &data[3], Rnd2, 16);
+	Rnd2[16] = Rnd2[0];
+	PrintAndLog("Rnd2: %s", sprint_hex(Rnd2, 16));
+
+	uint8_t cmd2[35] = {0};
+	cmd2[0] = 0x0b;
+	cmd2[1] = 0x00;
+	cmd2[2] = 0x72;
+
+	uint8_t raw[32] = {0};
+	memmove(raw, Rnd1, 16);
+	memmove(&raw[16], &Rnd2[1], 16);
+
+    aes_encode(NULL, key, raw, &cmd2[3], 32);
+	PrintAndLog(">phase2: %s", sprint_hex(cmd2, 35));
+	
+	res = ExchangeRAW14a(cmd2, sizeof(cmd2), false, false, data, sizeof(data), &datalen);
+	if (res) {
+		PrintAndLogEx(ERROR, "exchande raw error: %d", res);
+		DropField();
+		return 4;
+	}
+	
+	PrintAndLog("<phase2: %s", sprint_hex(data, datalen));
+
+    aes_decode(NULL, key, &data[3], raw, 32);
+	PrintAndLog("res: %s", sprint_hex(raw, 32));
+	
+	PrintAndLog("Rnd1`: %s", sprint_hex(&raw[4], 16));
+	if (memcmp(&raw[4], &Rnd1[1], 16)) {
+		PrintAndLogEx(ERROR, "\nAuthentication FAILED. rnd not equal");
+		PrintAndLog("rnd1 reader: %s", sprint_hex(&Rnd1[1], 16));
+		PrintAndLog("rnd1   card: %s", sprint_hex(&raw[4], 16));
+		DropField();
+		return 5;
+	}
+
+	DropField();
+	PrintAndLog("\nAuthentication OK");
+	
+	return 0;
+}
+
 static command_t CommandTable[] = {
 	{"help",		CmdHelp,				1, "This help"},
 	{"darkside",	CmdHF14ADarkside,		0, "Darkside attack. read parity error messages."},
@@ -3085,6 +3228,7 @@ static command_t CommandTable[] = {
 	{"restore",		CmdHF14AMfRestore,		0, "Restore MIFARE classic binary file to BLANK tag"},
 	{"wrbl",		CmdHF14AMfWrBl,			0, "Write MIFARE classic block"},
 	{"setmod",		CmdHf14AMfSetMod, 		0, "Set MIFARE Classic EV1 load modulation strength"},	
+	{"auth4",		CmdHF14AMfAuth4,		0, "ISO14443-4 AES authentication"},
 //	{"sniff",		CmdHF14AMfSniff,		0, "Sniff card-reader communication"},
 	{"-----------",	CmdHelp,				1, ""},
 	{"sim",			CmdHF14AMf1kSim,		0, "Simulate MIFARE card"},

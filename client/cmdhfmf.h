@@ -16,6 +16,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
+#include <aes.h>
 #include "proxmark3.h"
 #include "iso14443crc.h"
 #include "ui.h"
@@ -29,6 +30,7 @@
 #include "util_posix.h"		// msclock
 #include "mifaredefault.h"  // mifare default key array
 #include "cmdhf14a.h" 		// dropfield
+#include "cliparser/cliparser.h" // argtable
 
 extern int CmdHFMF(const char *Cmd);
 
