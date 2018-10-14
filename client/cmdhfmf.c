@@ -3129,12 +3129,12 @@ int CmdHF14AMfAuth4(const char *cmd) {
 	CLIParserFree();
 	
 	if (keynlen != 2) {
-		PrintAndLogEx(ERROR, "<Key Num> must be 2 bytes long instead of: %d", keynlen);
+		PrintAndLogEx(ERR, "<Key Num> must be 2 bytes long instead of: %d", keynlen);
 		return 1;
 	}
 	
 	if (keylen != 16) {
-		PrintAndLogEx(ERROR, "<Key Value> must be 16 bytes long instead of: %d", keylen);
+		PrintAndLogEx(ERR, "<Key Value> must be 16 bytes long instead of: %d", keylen);
 		return 1;
 	}
 
@@ -3148,22 +3148,22 @@ int CmdHF14AMfAuth4(const char *cmd) {
 	PrintAndLog("<phase1: %s", sprint_hex(data, datalen));
 		
 	if (datalen < 3) {
-		PrintAndLogEx(ERROR, "card response length: %d", datalen);
+		PrintAndLogEx(ERR, "card response length: %d", datalen);
 		return 3;
 	}
 	
 	if (data[0] != 0x0a || data[1] != 0x00) {
-		PrintAndLogEx(ERROR, "Framing error in card response. :%s", sprint_hex(data, 2));
+		PrintAndLogEx(ERR, "Framing error in card response. :%s", sprint_hex(data, 2));
 		return 3;
 	}
 
 	if (data[2] != 0x90) {
-		PrintAndLogEx(ERROR, "card response error: %02x", data[2]);
+		PrintAndLogEx(ERR, "card response error: %02x", data[2]);
 		return 3;
 	}
 
 	if (datalen != 19) {
-		PrintAndLogEx(ERROR, "card response must be 16 bytes long instead of: %d", datalen);
+		PrintAndLogEx(ERR, "card response must be 16 bytes long instead of: %d", datalen);
 		return 3;
 	}
 	
@@ -3185,7 +3185,7 @@ int CmdHF14AMfAuth4(const char *cmd) {
 	
 	res = ExchangeRAW14a(cmd2, sizeof(cmd2), false, false, data, sizeof(data), &datalen);
 	if (res) {
-		PrintAndLogEx(ERROR, "exchande raw error: %d", res);
+		PrintAndLogEx(ERR, "exchande raw error: %d", res);
 		DropField();
 		return 4;
 	}
@@ -3197,7 +3197,7 @@ int CmdHF14AMfAuth4(const char *cmd) {
 	
 	PrintAndLog("Rnd1`: %s", sprint_hex(&raw[4], 16));
 	if (memcmp(&raw[4], &Rnd1[1], 16)) {
-		PrintAndLogEx(ERROR, "\nAuthentication FAILED. rnd not equal");
+		PrintAndLogEx(ERR, "\nAuthentication FAILED. rnd not equal");
 		PrintAndLog("rnd1 reader: %s", sprint_hex(&Rnd1[1], 16));
 		PrintAndLog("rnd1   card: %s", sprint_hex(&raw[4], 16));
 		DropField();
@@ -3205,7 +3205,7 @@ int CmdHF14AMfAuth4(const char *cmd) {
 	}
 
 	DropField();
-	PrintAndLog("\nAuthentication OK");
+	PrintAndLogEx(INFO, "Authentication OK");
 	
 	return 0;
 }
