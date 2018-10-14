@@ -51,6 +51,7 @@ extern int CmdHF14AAntiFuzz(const char *cmd);
 
 extern char* getTagInfo(uint8_t uid);
 extern int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);									
+extern int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);
 
 extern int usage_hf_14a_sim(void);
 extern int usage_hf_14a_sniff(void);
