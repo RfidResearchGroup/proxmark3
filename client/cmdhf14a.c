@@ -679,7 +679,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
 		UsbCommand ca = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}};
 		SendCommand(&ca);
 		if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-			PrintAndLogEx(ERROR, "Proxmark connection timeout.");
+			PrintAndLogEx(ERR, "Proxmark connection timeout.");
 			return 1;
 		}
 
@@ -690,7 +690,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
 		}
 
 		if (resp.arg[0] != 1 && resp.arg[0] != 2) {
-			PrintAndLogEx(ERROR, "Card not in iso14443-4. res=%d.", resp.arg[0]);
+			PrintAndLogEx(ERR, "Card not in iso14443-4. res=%d.", resp.arg[0]);
 			return 1;
 		}
 
@@ -701,12 +701,12 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
 			memcpy(cr.d.asBytes, rats, 2);
 			SendCommand(&cr);
 			if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-				PrintAndLogEx(ERROR, "Proxmark connection timeout.");
+				PrintAndLogEx(ERR, "Proxmark connection timeout.");
 				return 1;
 			}
 			
 			if (resp.arg[0] <= 0) { // ats_len
-				PrintAndLogEx(ERROR, "Can't get ATS.");
+				PrintAndLogEx(ERR, "Can't get ATS.");
 				return 1;
 			}
 		}
@@ -731,26 +731,26 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
 			*dataoutlen = 0;
 		
 		if (maxdataoutlen && *dataoutlen > maxdataoutlen) {
-			PrintAndLogEx(ERROR, "Buffer too small(%d). Needs %d bytes", *dataoutlen, maxdataoutlen);
+			PrintAndLogEx(ERR, "Buffer too small(%d). Needs %d bytes", *dataoutlen, maxdataoutlen);
 			return 2;
 		}
 		
 		memcpy(dataout, recv, *dataoutlen);
 		
         if(!iLen) {
-			PrintAndLogEx(ERROR, "No card response.");
+			PrintAndLogEx(ERR, "No card response.");
             return 1;
 		}
 
 		// CRC Check
 		if (iLen == -1) {
-			PrintAndLogEx(ERROR, "ISO 14443A CRC error.");
+			PrintAndLogEx(ERR, "ISO 14443A CRC error.");
 			return 3;
 		}
 
 
     } else {
-        PrintAndLogEx(ERROR, "Reply timeout.");
+        PrintAndLogEx(ERR, "Reply timeout.");
 		return 4;
     }
 	
