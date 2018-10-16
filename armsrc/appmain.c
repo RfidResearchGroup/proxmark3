@@ -1530,7 +1530,7 @@ void  __attribute__((noreturn)) AppMain(void) {
 			RunMod();
 #endif
 		
-#if defined (WITH_ISO14443a) && ( defined (WITH_HF_YOUNG) || defined(WITH_HF_COLIN) || defined(WITH_HF_MATTYRUN) )
+#if defined (WITH_ISO14443a) && ( defined (WITH_HF_YOUNG) || defined(WITH_HF_COLIN) || defined(WITH_HF_MATTYRUN) || defined(WITH_HF_BOG) )
 			RunMod();
 #endif
 
