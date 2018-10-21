@@ -32,6 +32,7 @@ luac
 fpga_compress
 mfkey32
 mfkey64
+tools/nonce2key/nonce2key
 
 fpga/*
 !fpga/tests
