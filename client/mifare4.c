@@ -29,28 +29,28 @@ int MifareAuth4(mf4Session *session, uint8_t *keyn, uint8_t *key, bool activateF
 	uint8_t cmd1[] = {0x70, keyn[1], keyn[0], 0x00};
 	int res = ExchangeRAW14a(cmd1, sizeof(cmd1), activateField, true, data, sizeof(data), &datalen);
 	if (res) {
-		PrintAndLog("ERROR exchande raw error: %d", res);
+		PrintAndLogEx(ERR, "Exchande raw error: %d", res);
 		DropField();
 		return 2;
 	}
 	
 	if (verbose)
-		PrintAndLog("<phase1: %s", sprint_hex(data, datalen));
+		PrintAndLogEx(INFO, "<phase1: %s", sprint_hex(data, datalen));
 		
 	if (datalen < 1) {
-		PrintAndLog("ERROR: card response length: %d", datalen);
+		PrintAndLogEx(ERR, "Card response wrong length: %d", datalen);
 		DropField();
 		return 3;
 	}
 	
 	if (data[0] != 0x90) {
-		PrintAndLog("ERROR: card response error: %02x", data[2]);
+		PrintAndLogEx(ERR, "Card response error: %02x", data[2]);
 		DropField();
 		return 3;
 	}
 
 	if (datalen != 19) { // code 1b + 16b + crc 2b
-		PrintAndLog("ERROR: card response must be 19 bytes long instead of: %d", datalen);
+		PrintAndLogEx(ERR, "Card response must be 19 bytes long instead of: %d", datalen);
 		DropField();
 		return 3;
 	}
@@ -58,7 +58,7 @@ int MifareAuth4(mf4Session *session, uint8_t *keyn, uint8_t *key, bool activateF
     aes_decode(NULL, key, &data[1], Rnd2, 16);
 	Rnd2[16] = Rnd2[0];
 	if (verbose)
-		PrintAndLog("Rnd2: %s", sprint_hex(Rnd2, 16));
+		PrintAndLogEx(INFO, "Rnd2: %s", sprint_hex(Rnd2, 16));
 
 	uint8_t cmd2[33] = {0};
 	cmd2[0] = 0x72;
@@ -69,30 +69,30 @@ int MifareAuth4(mf4Session *session, uint8_t *keyn, uint8_t *key, bool activateF
 
 	aes_encode(NULL, key, raw, &cmd2[1], 32);
 	if (verbose)
-		PrintAndLog(">phase2: %s", sprint_hex(cmd2, 33));
+		PrintAndLogEx(INFO, ">phase2: %s", sprint_hex(cmd2, 33));
 	
 	res = ExchangeRAW14a(cmd2, sizeof(cmd2), false, true, data, sizeof(data), &datalen);
 	if (res) {
-		PrintAndLog("ERROR exchande raw error: %d", res);
+		PrintAndLogEx(ERR, "Exchande raw error: %d", res);
 		DropField();
 		return 4;
 	}
 	
 	if (verbose)
-		PrintAndLog("<phase2: %s", sprint_hex(data, datalen));
+		PrintAndLogEx(INFO, "<phase2: %s", sprint_hex(data, datalen));
 
 	aes_decode(NULL, key, &data[1], raw, 32);
 	
 	if (verbose) {
-		PrintAndLog("res: %s", sprint_hex(raw, 32));
-		PrintAndLog("Rnd1`: %s", sprint_hex(&raw[4], 16));
+		PrintAndLogEx(INFO, "res: %s", sprint_hex(raw, 32));
+		PrintAndLogEx(INFO, "Rnd1`: %s", sprint_hex(&raw[4], 16));
 	}
 
 	if (memcmp(&raw[4], &Rnd1[1], 16)) {
-		PrintAndLog("\nERROR: Authentication FAILED. rnd not equal");
+		PrintAndLogEx(ERR, "\nAuthentication FAILED. rnd not equal");
 		if (verbose) {
-			PrintAndLog("rnd1 reader: %s", sprint_hex(&Rnd1[1], 16));
-			PrintAndLog("rnd1   card: %s", sprint_hex(&raw[4], 16));
+			PrintAndLogEx(ERR, "rnd1 reader: %s", sprint_hex(&Rnd1[1], 16));
+			PrintAndLogEx(ERR, "rnd1   card: %s", sprint_hex(&raw[4], 16));
 		}
 		DropField();
 		return 5;
@@ -111,7 +111,7 @@ int MifareAuth4(mf4Session *session, uint8_t *keyn, uint8_t *key, bool activateF
 		memmove(session->Rnd2, Rnd2, 16);
 	}
 	
-	PrintAndLog("Authentication OK");
+	PrintAndLogEx(INFO, "Authentication OK");
 	
 	return 0;
 }
