@@ -62,12 +62,12 @@ void SetVerboseMode(bool verbose) {
 
 int intExchangeRAW14aPlus(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
 	if(VerboseMode)
-		PrintAndLog(">>> %s", sprint_hex(datain, datainlen));
+		PrintAndLogEx(INFO, ">>> %s", sprint_hex(datain, datainlen));
 	
 	int res = ExchangeRAW14a(datain, datainlen, activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
 
 	if(VerboseMode)
-		PrintAndLog("<<< %s", sprint_hex(dataout, *dataoutlen));
+		PrintAndLogEx(INFO, "<<< %s", sprint_hex(dataout, *dataoutlen));
 	
 	return res;
 }
@@ -101,7 +101,7 @@ int MFPWriteBlock(mf4Session *session, uint8_t blockNum, uint8_t *data, bool act
 int CmdHFMFPInfo(const char *cmd) {
 	
 	if (cmd && strlen(cmd) > 0)
-		PrintAndLog("WARNING: command don't have any parameters.\n");
+		PrintAndLogEx(WARNING, "command don't have any parameters.\n");
 	
 	// info about 14a part
 	CmdHF14AInfo("");
@@ -119,8 +119,8 @@ int CmdHFMFPInfo(const char *cmd) {
 	uint64_t select_status = resp.arg[0];		// 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
 	
 	if (select_status == 1 || select_status == 2) {
-		PrintAndLog("----------------------------------------------");
-		PrintAndLog("Mifare Plus info:");
+		PrintAndLogEx(INFO, "----------------------------------------------");
+		PrintAndLogEx(INFO, "Mifare Plus info:");
 		
 		// MIFARE Type Identification Procedure
 		// https://www.nxp.com/docs/en/application-note/AN10833.pdf
@@ -165,11 +165,11 @@ int CmdHFMFPInfo(const char *cmd) {
 		}
 		
 		if (SLmode != 0xff)
-			PrintAndLog("Mifare Plus SL mode: SL%d", SLmode);
+			PrintAndLogEx(INFO, "Mifare Plus SL mode: SL%d", SLmode);
 		else
-			PrintAndLog("Mifare Plus SL mode: unknown(");
+			PrintAndLogEx(WARNING, "Mifare Plus SL mode: unknown(");
 	} else {
-		PrintAndLog("Mifare Plus info not available.");
+		PrintAndLogEx(INFO, "Mifare Plus info not available.");
 	}
 	
 	DropField();
@@ -210,11 +210,11 @@ int CmdHFMFPWritePerso(const char *cmd) {
 	}
 	
 	if (keyNumLen != 2) {
-		PrintAndLog("Key number length must be 2 bytes instead of: %d", keyNumLen);
+		PrintAndLogEx(ERR, "Key number length must be 2 bytes instead of: %d", keyNumLen);
 		return 1;
 	}
 	if (keyLen != 16) {
-		PrintAndLog("Key length must be 16 bytes instead of: %d", keyLen);
+		PrintAndLogEx(ERR, "Key length must be 16 bytes instead of: %d", keyLen);
 		return 1;
 	}
 
@@ -223,20 +223,20 @@ int CmdHFMFPWritePerso(const char *cmd) {
 
 	int res = MFPWritePerso(keyNum, key, true, false, data, sizeof(data), &datalen);
 	if (res) {
-		PrintAndLog("Exchange error: %d", res);
+		PrintAndLogEx(ERR, "Exchange error: %d", res);
 		return res;
 	}
 	
 	if (datalen != 3) {
-		PrintAndLog("Command must return 3 bytes instead of: %d", datalen);
+		PrintAndLogEx(ERR, "Command must return 3 bytes instead of: %d", datalen);
 		return 1;
 	}
 
 	if (data[0] != 0x90) {
-		PrintAndLog("Command error: %02x %s", data[0], GetErrorDescription(data[0]));
+		PrintAndLogEx(ERR, "Command error: %02x %s", data[0], GetErrorDescription(data[0]));
 		return 1;
 	}
-	PrintAndLog("Write OK.");
+	PrintAndLogEx(INFO, "Write OK.");
 	
 	return 0;
 }
@@ -270,7 +270,7 @@ int CmdHFMFPInitPerso(const char *cmd) {
 	CLIParserFree();
 
 	if (keyLen && keyLen != 16) {
-		PrintAndLog("Key length must be 16 bytes instead of: %d", keyLen);
+		PrintAndLogEx(ERR, "Key length must be 16 bytes instead of: %d", keyLen);
 		return 1;
 	}
 	
@@ -283,11 +283,11 @@ int CmdHFMFPInitPerso(const char *cmd) {
 		keyNum[1] = sn & 0xff;
 		res = MFPWritePerso(keyNum, key, (sn == 0x4000), true, data, sizeof(data), &datalen);
 		if (!res && (datalen == 3) && data[0] == 0x09) {
-			PrintAndLog("2k card detected.");
+			PrintAndLogEx(INFO, "2k card detected.");
 			break;
 		}
 		if (res || (datalen != 3) || data[0] != 0x90) {
-			PrintAndLog("Write error on address %04x", sn);
+			PrintAndLogEx(ERR, "Write error on address %04x", sn);
 			break;
 		}
 	}
@@ -298,10 +298,10 @@ int CmdHFMFPInitPerso(const char *cmd) {
 		keyNum[1] = CardAddresses[i] & 0xff;
 		res = MFPWritePerso(keyNum, key, false, true, data, sizeof(data), &datalen);
 		if (!res && (datalen == 3) && data[0] == 0x09) {
-			PrintAndLog("Skipped[%04x]...", CardAddresses[i]);
+			PrintAndLogEx(WARNING, "Skipped[%04x]...", CardAddresses[i]);
 		} else {
 			if (res || (datalen != 3) || data[0] != 0x90) {
-				PrintAndLog("Write error on address %04x", CardAddresses[i]);
+				PrintAndLogEx(ERR, "Write error on address %04x", CardAddresses[i]);
 				break;
 			}
 		}
@@ -312,7 +312,7 @@ int CmdHFMFPInitPerso(const char *cmd) {
 	if (res)
 		return res;
 	
-	PrintAndLog("Done.");
+	PrintAndLogEx(INFO, "Done.");
 	
 	return 0;
 }
@@ -340,20 +340,20 @@ int CmdHFMFPCommitPerso(const char *cmd) {
 
 	int res = MFPCommitPerso(true, false, data, sizeof(data), &datalen);
 	if (res) {
-		PrintAndLog("Exchange error: %d", res);
+		PrintAndLogEx(ERR, "Exchange error: %d", res);
 		return res;
 	}
 	
 	if (datalen != 3) {
-		PrintAndLog("Command must return 3 bytes instead of: %d", datalen);
+		PrintAndLogEx(ERR, "Command must return 3 bytes instead of: %d", datalen);
 		return 1;
 	}
 
 	if (data[0] != 0x90) {
-		PrintAndLog("Command error: %02x %s", data[0], GetErrorDescription(data[0]));
+		PrintAndLogEx(ERR, "Command error: %02x %s", data[0], GetErrorDescription(data[0]));
 		return 1;
 	}
-	PrintAndLog("Switch level OK.");
+	PrintAndLogEx(INFO, "Switch level OK.");
 
 	return 0;
 }
@@ -384,12 +384,12 @@ int CmdHFMFPAuth(const char *cmd) {
 	CLIParserFree();
 	
 	if (keynlen != 2) {
-		PrintAndLog("ERROR: <Key Num> must be 2 bytes long instead of: %d", keynlen);
+		PrintAndLogEx(ERR, "ERROR: <Key Num> must be 2 bytes long instead of: %d", keynlen);
 		return 1;
 	}
 	
 	if (keylen != 16) {
-		PrintAndLog("ERROR: <Key Value> must be 16 bytes long instead of: %d", keylen);
+		PrintAndLogEx(ERR, "ERROR: <Key Value> must be 16 bytes long instead of: %d", keylen);
 		return 1;
 	}
 
@@ -432,18 +432,18 @@ int CmdHFMFPRdbl(const char *cmd) {
 	}
 	
 	if (blockn > 255) {
-		PrintAndLog("ERROR: <Block Num> must be in range [0..255] instead of: %d", blockn);
+		PrintAndLogEx(ERR, "<Block Num> must be in range [0..255] instead of: %d", blockn);
 		return 1;
 	}
 	
 	if (keylen != 16) {
-		PrintAndLog("ERROR: <Key Value> must be 16 bytes long instead of: %d", keylen);
+		PrintAndLogEx(ERR, "<Key Value> must be 16 bytes long instead of: %d", keylen);
 		return 1;
 	}
 
 	// 3 blocks - wo iso14443-4 chaining
 	if (blocksCount > 3) {
-		PrintAndLog("ERROR: blocks count must be less than 3 instead of: %d", blocksCount);
+		PrintAndLogEx(ERR, "blocks count must be less than 3 instead of: %d", blocksCount);
 		return 1;
 	}
 	
@@ -452,12 +452,12 @@ int CmdHFMFPRdbl(const char *cmd) {
 	keyn[0] = uKeyNum >> 8;
 	keyn[1] = uKeyNum & 0xff;
 	if (verbose)
-		PrintAndLog("--block:%d sector[%d]:%02x key:%04x", blockn, mfNumBlocksPerSector(sectorNum), sectorNum, uKeyNum);
+		PrintAndLogEx(INFO, "--block:%d sector[%d]:%02x key:%04x", blockn, mfNumBlocksPerSector(sectorNum), sectorNum, uKeyNum);
 	
 	mf4Session session;
 	int res = MifareAuth4(&session, keyn, key, true, true, verbose);
 	if (res) {
-		PrintAndLog("Authentication error: %d", res);
+		PrintAndLogEx(ERR, "Authentication error: %d", res);
 		return res;
 	}
 	
@@ -465,32 +465,32 @@ int CmdHFMFPRdbl(const char *cmd) {
 	int datalen = 0;
 	res = MFPReadBlock(&session, plain, blockn & 0xff, blocksCount, false, false, data, sizeof(data), &datalen);
 	if (res) {
-		PrintAndLog("Read error: %d", res);
+		PrintAndLogEx(ERR, "Read error: %d", res);
 		return res;
 	}
 	
 	if (datalen && data[0] != 0x90) {
-		PrintAndLog("Card read error: %02x %s", data[0], GetErrorDescription(data[0]));
+		PrintAndLogEx(ERR, "Card read error: %02x %s", data[0], GetErrorDescription(data[0]));
 		return 6;
 	}
 	
 	if (datalen != 1 + blocksCount * 16 + 8 + 2) {
-		PrintAndLog("Error return length:%d", datalen);
+		PrintAndLogEx(ERR, "Error return length:%d", datalen);
 		return 5;
 	}
 
 	int indx = blockn;
 	for(int i = 0; i < blocksCount; i++)  {
-		PrintAndLog("data[%03d]: %s", indx, sprint_hex(&data[1 + i * 16], 16));
+		PrintAndLogEx(INFO, "data[%03d]: %s", indx, sprint_hex(&data[1 + i * 16], 16));
 		indx++;
 		if (mfIsSectorTrailer(indx)){
-			PrintAndLog("data[%03d]: ------------------- trailer -------------------", indx);
+			PrintAndLogEx(INFO, "data[%03d]: ------------------- trailer -------------------", indx);
 			indx++;
 		}
 	}
 
 	if(verbose)
-		PrintAndLog("MAC: %s", sprint_hex(&data[blocksCount * 16 + 1], 8));
+		PrintAndLogEx(INFO, "MAC: %s", sprint_hex(&data[blocksCount * 16 + 1], 8));
 	
 	return 0;
 }

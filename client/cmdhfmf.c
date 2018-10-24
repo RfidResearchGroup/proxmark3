@@ -3092,12 +3092,12 @@ int CmdHF14AMfAuth4(const char *cmd) {
 	CLIParserFree();
 	
 	if (keynlen != 2) {
-		PrintAndLog(ERROR, "<Key Num> must be 2 bytes long instead of: %d", keynlen);
+		PrintAndLogEx(ERR, "<Key Num> must be 2 bytes long instead of: %d", keynlen);
 		return 1;
 	}
 	
 	if (keylen != 16) {
-		PrintAndLog(ERROR, "<Key Value> must be 16 bytes long instead of: %d", keylen);
+		PrintAndLogEx(ERR, "<Key Value> must be 16 bytes long instead of: %d", keylen);
 		return 1;
 	}
 
