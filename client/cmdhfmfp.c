@@ -119,36 +119,36 @@ int CmdHFMFPInfo(const char *cmd) {
 	uint64_t select_status = resp.arg[0];		// 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
 	
 	if (select_status == 1 || select_status == 2) {
-		PrintAndLogEx(INFO, "----------------------------------------------");
-		PrintAndLogEx(INFO, "Mifare Plus info:");
+		PrintAndLogEx(NORMAL, "----------------------------------------------");
+		PrintAndLogEx(NORMAL, "Mifare Plus info:");
 		
 		// MIFARE Type Identification Procedure
 		// https://www.nxp.com/docs/en/application-note/AN10833.pdf
 		uint16_t ATQA = card.atqa[0] + (card.atqa[1] << 8);
-		if (ATQA == 0x0004) PrintAndLog("ATQA: Mifare Plus 2k 4bUID");
-		if (ATQA == 0x0002) PrintAndLog("ATQA: Mifare Plus 4k 4bUID");
-		if (ATQA == 0x0044) PrintAndLog("ATQA: Mifare Plus 2k 7bUID");
-		if (ATQA == 0x0042) PrintAndLog("ATQA: Mifare Plus 4k 7bUID");
+		if (ATQA == 0x0004) PrintAndLogEx(INFO, "ATQA: Mifare Plus 2k 4bUID");
+		if (ATQA == 0x0002) PrintAndLogEx(INFO, "ATQA: Mifare Plus 4k 4bUID");
+		if (ATQA == 0x0044) PrintAndLogEx(INFO, "ATQA: Mifare Plus 2k 7bUID");
+		if (ATQA == 0x0042) PrintAndLogEx(INFO, "ATQA: Mifare Plus 4k 7bUID");
 		
 		uint8_t SLmode = 0xff;
 		if (card.sak == 0x08) {
-			PrintAndLog("SAK: Mifare Plus 2k 7bUID");
+			PrintAndLogEx(INFO, "SAK: Mifare Plus 2k 7bUID");
 			if (select_status == 2) SLmode = 1;
 		}
 		if (card.sak == 0x18) {
-			PrintAndLog("SAK: Mifare Plus 4k 7bUID");
+			PrintAndLogEx(INFO, "SAK: Mifare Plus 4k 7bUID");
 			if (select_status == 2) SLmode = 1;
 		}
 		if (card.sak == 0x10) {
-			PrintAndLog("SAK: Mifare Plus 2k");
+			PrintAndLogEx(INFO, "SAK: Mifare Plus 2k");
 			if (select_status == 2) SLmode = 2;
 		}
 		if (card.sak == 0x11) {
-			PrintAndLog("SAK: Mifare Plus 4k");
+			PrintAndLogEx(INFO, "SAK: Mifare Plus 4k");
 			if (select_status == 2) SLmode = 2;
 		}
 		if (card.sak == 0x20) {
-			PrintAndLog("SAK: Mifare Plus SL0/SL3 or Mifare desfire");
+			PrintAndLogEx(INFO, "SAK: Mifare Plus SL0/SL3 or Mifare desfire");
 			if (card.ats_len > 0) {
 				SLmode = 3;
 
@@ -529,12 +529,12 @@ int CmdHFMFPRdsc(const char *cmd) {
 	}
 	
 	if (sectorNum > 39) {
-		PrintAndLog("ERROR: <Sector Num> must be in range [0..39] instead of: %d", sectorNum);
+		PrintAndLogEx(ERR, "<Sector Num> must be in range [0..39] instead of: %d", sectorNum);
 		return 1;
 	}
 	
 	if (keylen != 16) {
-		PrintAndLog("ERROR: <Key Value> must be 16 bytes long instead of: %d", keylen);
+		PrintAndLogEx(ERR, "<Key Value> must be 16 bytes long instead of: %d", keylen);
 		return 1;
 	}
 	
@@ -542,12 +542,12 @@ int CmdHFMFPRdsc(const char *cmd) {
 	keyn[0] = uKeyNum >> 8;
 	keyn[1] = uKeyNum & 0xff;
 	if (verbose)
-		PrintAndLog("--sector[%d]:%02x key:%04x", mfNumBlocksPerSector(sectorNum), sectorNum, uKeyNum);
+		PrintAndLogEx(INFO, "--sector[%d]:%02x key:%04x", mfNumBlocksPerSector(sectorNum), sectorNum, uKeyNum);
 	
 	mf4Session session;
 	int res = MifareAuth4(&session, keyn, key, true, true, verbose);
 	if (res) {
-		PrintAndLog("Authentication error: %d", res);
+		PrintAndLogEx(ERR, "Authentication error: %d", res);
 		return res;
 	}
 	
@@ -556,26 +556,26 @@ int CmdHFMFPRdsc(const char *cmd) {
 	for(int n = mfFirstBlockOfSector(sectorNum); n < mfFirstBlockOfSector(sectorNum) + mfNumBlocksPerSector(sectorNum); n++) {
 		res = MFPReadBlock(&session, plain, n & 0xff, 1, false, true, data, sizeof(data), &datalen);
 		if (res) {
-			PrintAndLog("Read error: %d", res);
+			PrintAndLogEx(ERR, "Read error: %d", res);
 			DropField();
 			return res;
 		}
 		
 		if (datalen && data[0] != 0x90) {
-			PrintAndLog("Card read error: %02x %s", data[0], GetErrorDescription(data[0]));
+			PrintAndLogEx(ERR, "Card read error: %02x %s", data[0], GetErrorDescription(data[0]));
 			DropField();
 			return 6;
 		}
 		if (datalen != 1 + 16 + 8 + 2) {
-			PrintAndLog("Error return length:%d", datalen);
+			PrintAndLogEx(ERR, "Error return length:%d", datalen);
 			DropField();
 			return 5;
 		}
 
-		PrintAndLog("data[%03d]: %s", n, sprint_hex(&data[1], 16));
+		PrintAndLogEx(INFO, "data[%03d]: %s", n, sprint_hex(&data[1], 16));
 			
 		if(verbose)
-			PrintAndLog("MAC: %s", sprint_hex(&data[1 + 16], 8));
+			PrintAndLogEx(INFO, "MAC: %s", sprint_hex(&data[1 + 16], 8));
 	}
 	DropField();
 	
@@ -618,17 +618,17 @@ int CmdHFMFPWrbl(const char *cmd) {
 	}
 	
 	if (blockNum > 39) {
-		PrintAndLog("ERROR: <Block Num> must be in range [0..255] instead of: %d", blockNum);
+		PrintAndLogEx(ERR, "<Block Num> must be in range [0..255] instead of: %d", blockNum);
 		return 1;
 	}
 	
 	if (keylen != 16) {
-		PrintAndLog("ERROR: <Key> must be 16 bytes long instead of: %d", keylen);
+		PrintAndLogEx(ERR, "<Key> must be 16 bytes long instead of: %d", keylen);
 		return 1;
 	}
 
 	if (datainlen != 16) {
-		PrintAndLog("ERROR: <Data> must be 16 bytes long instead of: %d", datainlen);
+		PrintAndLogEx(ERR, "<Data> must be 16 bytes long instead of: %d", datainlen);
 		return 1;
 	}
 	
@@ -637,12 +637,12 @@ int CmdHFMFPWrbl(const char *cmd) {
 	keyn[0] = uKeyNum >> 8;
 	keyn[1] = uKeyNum & 0xff;
 	if (verbose)
-		PrintAndLog("--block:%d sector[%d]:%02x key:%04x", blockNum & 0xff, mfNumBlocksPerSector(sectorNum), sectorNum, uKeyNum);
+		PrintAndLogEx(INFO, "--block:%d sector[%d]:%02x key:%04x", blockNum & 0xff, mfNumBlocksPerSector(sectorNum), sectorNum, uKeyNum);
 	
 	mf4Session session;
 	int res = MifareAuth4(&session, keyn, key, true, true, verbose);
 	if (res) {
-		PrintAndLog("Authentication error: %d", res);
+		PrintAndLogEx(ERR, "Authentication error: %d", res);
 		return res;
 	}
 
@@ -650,22 +650,22 @@ int CmdHFMFPWrbl(const char *cmd) {
 	int datalen = 0;
 	res = MFPWriteBlock(&session, blockNum & 0xff, datain, false, false, data, sizeof(data), &datalen);
 	if (res) {
-		PrintAndLog("Write error: %d", res);
+		PrintAndLogEx(ERR, "Write error: %d", res);
 		return res;
 	}
 	
 	if (datalen != 3 && (datalen != 3 + 8)) {
-		PrintAndLog("Error return length:%d", datalen);
+		PrintAndLogEx(ERR, "Error return length:%d", datalen);
 		return 5;
 	}
 	
 	if (datalen && data[0] != 0x90) {
-		PrintAndLog("Card write error: %02x %s", data[0], GetErrorDescription(data[0]));
+		PrintAndLogEx(ERR, "Card write error: %02x %s", data[0], GetErrorDescription(data[0]));
 		return 6;
 	}
 	
 	if(verbose)
-		PrintAndLog("MAC: %s", sprint_hex(&data[1], 8));
+		PrintAndLogEx(INFO, "MAC: %s", sprint_hex(&data[1], 8));
 	
 	return 0;
 }
