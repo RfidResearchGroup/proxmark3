@@ -16,6 +16,18 @@
 #include "ui.h"
 #include "polarssl/libpcrypto.h"
 
+int CalulateMAC(mf4Session *session, uint8_t *data, int datalen, uint8_t *mac, bool verbose) {
+	if (!session || !session->Authenticated || !mac || !data || !datalen)
+		return 1;
+	
+	memset(mac, 0x00, 8);
+	
+	if (verbose)
+		PrintAndLog("MAC data[%d]: %s", datalen, sprint_hex(data, datalen));
+	
+	return aes_cmac8(NULL, session->Key, data, mac, datalen);
+}
+
 int MifareAuth4(mf4Session *session, uint8_t *keyn, uint8_t *key, bool activateField, bool leaveSignalON, bool verbose) {
 	uint8_t data[257] = {0};
 	int datalen = 0;
