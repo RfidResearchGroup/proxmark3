@@ -426,6 +426,8 @@ int CmdHFMFPRdbl(const char *cmd) {
 	CLIGetHexWithReturn(6, key, &keylen);
 	CLIParserFree();
 	
+	SetVerboseMode(verbose);
+
 	if (!keylen) {
 		memmove(key, DefaultKey, 16);
 		keylen = 16;
@@ -523,6 +525,8 @@ int CmdHFMFPRdsc(const char *cmd) {
 	CLIGetHexWithReturn(5, key, &keylen);
 	CLIParserFree();
 	
+	SetVerboseMode(verbose);
+
 	if (!keylen) {
 		memmove(key, DefaultKey, 16);
 		keylen = 16;
@@ -612,6 +616,8 @@ int CmdHFMFPWrbl(const char *cmd) {
 	CLIGetHexWithReturn(5, key, &keylen);
 	CLIParserFree();
 	
+	SetVerboseMode(verbose);
+
 	if (!keylen) {
 		memmove(key, DefaultKey, 16);
 		keylen = 16;
