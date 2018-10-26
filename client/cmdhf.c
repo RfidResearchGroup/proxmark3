@@ -117,6 +117,7 @@ static command_t CommandTable[] = {
 	{"legic",       CmdHFLegic,       1, "{ LEGIC RFIDs...                }"},
 	{"iclass",      CmdHFiClass,      1, "{ ICLASS RFIDs...               }"},
 	{"mf",      	CmdHFMF,		  1, "{ MIFARE RFIDs...               }"},
+	{"mfp",			CmdHFMFP,		  1, "{ MIFARE Plus RFIDs...          }"},
 	{"mfu",         CmdHFMFUltra,     1, "{ MIFARE Ultralight RFIDs...    }"},
 	{"mfdes",		CmdHFMFDes,		  1, "{ MIFARE Desfire RFIDs...       }"},
 	{"topaz",		CmdHFTopaz,		  1, "{ TOPAZ (NFC Type 1) RFIDs...   }"},
