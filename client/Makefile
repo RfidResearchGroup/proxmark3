@@ -105,6 +105,7 @@ CMDSRCS =	crapto1/crapto1.c \
 			tea.c \
 			polarssl/des.c \
 			polarssl/aes.c \
+			polarssl/aes_cmac128.c \
 			polarssl/bignum.c \
 			polarssl/rsa.c \
 			polarssl/sha1.c \
