@@ -5,6 +5,19 @@
 //-----------------------------------------------------------------------------
 // main code for standalone HF Sniff (and ULC/NTAG/ULEV1 pwd storing)
 //-----------------------------------------------------------------------------
+
+/*
+This can actually be used in two separate ways.
+It can either be used to just HF 14a sniff on the go and/or grab the 
+authentication attempts for ULC/NTAG/ULEV1 into the flash mem (RDV4).
+
+The retrieved sniffing session can be acquired by connecting the device
+to a client that supports the reconnect capability and issue 'hf 14a list'.
+
+In order to view the grabbed authentication attempts in the flash mem,
+you can simply 'mem read l 256' from the client to view the stored quadlets.
+*/
+
 #include "hf_bog.h"
 
 #define DELAY_READER_AIR2ARM_AS_SNIFFER (2 + 3 + 8) 
@@ -12,7 +25,6 @@
 
 // Maximum number of auth attempts per standalone session
 #define MAX_PWDS_PER_SESSION 64
-
 
 uint8_t FindOffsetInFlash() {
 	uint8_t mem[4] = { 0x00, 0x00, 0x00, 0x00 };
