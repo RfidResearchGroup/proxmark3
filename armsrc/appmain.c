@@ -453,7 +453,10 @@ void printStandAloneModes(void) {
 #if defined(WITH_HF_COLIN)
     DbpString("   HF Mifare ultra fast sniff/sim/clone - aka VIGIKPWN (Colin Brigato)");
 #endif
-	
+#if defined(WITH_HF_BOG)
+	DbpString("   HF 14a sniff standalone with ULC/ULEV1/NTAG auth storing in flashmem - aka BogitoRun (Bogito)");
+#endif
+
 	//DbpString("Running ");	
 	//Dbprintf("  Is Device attached to USB| %s", USB_ATTACHED() ? "Yes" : "No"); 
 	//Dbprintf("  Is Device attached to FPC| %s", 0 ? "Yes" : "No"); 
@@ -1530,7 +1533,7 @@ void  __attribute__((noreturn)) AppMain(void) {
 			RunMod();
 #endif
 		
-#if defined (WITH_ISO14443a) && ( defined (WITH_HF_YOUNG) || defined(WITH_HF_COLIN) || defined(WITH_HF_MATTYRUN) )
+#if defined (WITH_ISO14443a) && ( defined (WITH_HF_YOUNG) || defined(WITH_HF_COLIN) || defined(WITH_HF_MATTYRUN) || defined(WITH_HF_BOG) )
 			RunMod();
 #endif
 

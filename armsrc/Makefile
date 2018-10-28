@@ -42,6 +42,7 @@ APP_CFLAGS = -DWITH_CRC \
 #			 -DWITH_HF_YOUNG
 #			 -DWITH_HF_MATTYRUN
 #			 -DWITH_HF_COLIN
+#			 -DWITH_HF_BOG
 
 
 SRC_LCD = fonts.c LCD.c
@@ -105,6 +106,10 @@ endif
 # WITH_HF_COLIN
 ifneq (,$(findstring WITH_HF_COLIN,$(APP_CFLAGS)))
 	SRC_STANDALONE = vtsend.c hf_colin.c
+endif
+# WITH_HF_BOG
+ifneq (,$(findstring WITH_HF_BOG,$(APP_CFLAGS)))
+	SRC_STANDALONE = hf_bog.c
 endif
 
 #the FPGA bitstream files. Note: order matters!
