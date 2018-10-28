@@ -11,7 +11,7 @@
 #define DELAY_TAG_AIR2ARM_AS_SNIFFER (3 + 14 + 8)
 
 // Maximum number of auth attempts per standalone session
-#define MAX_PWDS_PER_SESSION 20
+#define MAX_PWDS_PER_SESSION 64
 
 
 uint8_t FindOffsetInFlash() {
@@ -19,16 +19,16 @@ uint8_t FindOffsetInFlash() {
 	uint8_t eom[4] = { 0xFF, 0xFF, 0xFF, 0xFF };
 	uint8_t memcnt = 0;
 	
-	while (1)
+	while (memcnt < 4096)
 	{
 		Flash_ReadData(memcnt, mem, 4);
 		if (memcmp(mem, eom, 4) == 0) {
-			break;
+			return memcnt;
 		}
 		memcnt += 4;
 	}
 	
-	return memcnt;
+	return 0; // wrap-around
 }
 
 void EraseMemory()
@@ -48,11 +48,6 @@ void EraseMemory()
 
 void RAMFUNC SniffAndStore(uint8_t param) {
 	
-	// Array to store the authpwds
-	uint8_t *capturedPwds = BigBuf_malloc(4 * MAX_PWDS_PER_SESSION);
-	
-	SpinDelay(500);
-
 	/* This is actually copied from SniffIso14443a */
 	
 	iso14443a_setup(FPGA_HF_ISO14443A_SNIFFER);
@@ -62,6 +57,9 @@ void RAMFUNC SniffAndStore(uint8_t param) {
 	BigBuf_free(); BigBuf_Clear_ext(false);
 	clear_trace();
 	set_tracing(true);
+	
+	// Array to store the authpwds
+	uint8_t *capturedPwds = BigBuf_malloc(4 * MAX_PWDS_PER_SESSION);
 	
 	// The command (reader -> tag) that we're receiving.
 	uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
@@ -265,7 +263,8 @@ void RAMFUNC SniffAndStore(uint8_t param) {
 void RunMod()
 {
 	Dbprintf("Sniffing started");
-    SpinDelay(200);
+	
+    	SpinDelay(200);
 	
 	// param:
 	// bit 0 - trigger from first card answer
