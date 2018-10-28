@@ -8,67 +8,28 @@
 #include "hf_bog.h"
 
 #define DELAY_READER_AIR2ARM_AS_SNIFFER (2 + 3 + 8) 
-#define DELAY_TAG_AIR2ARM_AS_SNIFFER (3 + 14 + 8) 
-#define MAX_PWDS_PER_SESSION 15
+#define DELAY_TAG_AIR2ARM_AS_SNIFFER (3 + 14 + 8)
 
-uint8_t ReadCounterFromFlash() {
-	uint8_t mem = 0;
+// Maximum number of auth attempts per standalone session
+#define MAX_PWDS_PER_SESSION 20
 
-	uint8_t isok = Flash_ReadData(0, &mem, 1);
-	if (isok == 1)
+
+uint8_t FindOffsetInFlash() {
+	uint8_t mem[4] = { 0x00, 0x00, 0x00, 0x00 };
+	uint8_t eom[4] = { 0xFF, 0xFF, 0xFF, 0xFF };
+	uint8_t memcnt = 0;
+	
+	while (1)
 	{
-		return mem;
+		Flash_ReadData(memcnt, mem, 4);
+		if (memcmp(mem, eom, 4) == 0) {
+			break;
+		}
+		memcnt += 4;
 	}
 	
-	Dbprintf("Reading of counter from flashmem failed");
-	return -1;
+	return memcnt;
 }
-
-uint8_t* ReadDataFromFlash(uint8_t datacnt) {
-
-    uint16_t isok = 0;
-	
-	if (!datacnt)
-	{
-		uint8_t *tmp = BigBuf_malloc(4);
-		for (int i=0;i<4;i++)
-			tmp[i] = 0x00;
-		return tmp;
-	}
-	
-	size_t size = (datacnt + 1) * 4;
-	uint8_t *mem = BigBuf_malloc(size);
-	
-	isok = Flash_ReadData(0, mem, (datacnt + 1) * 4);
-	if (isok == ((datacnt + 1) * 4))
-	{
-		Dbprintf("[OK] Data recovered from flashmem");
-		return mem;
-	}
-
-	Dbprintf("FlashMem reading failed | isok = %d", isok);
-	SpinDelay(100);
-	return 0;
-}
-
-/*
-void WriteDataToFlash(uint8_t *data, size_t size)
-{
-    uint8_t isok = 0;
-	
-	isok = Flash_WriteData(0, data, size);
-
-	if (!isok)
-	{
-		Dbprintf("FlashMem write failed");
-		SpinDelay(100);
-
-		return;
-	}
-
-    Dbprintf("[OK] Data written to flash!");
-}
-*/
 
 void EraseMemory()
 {
@@ -80,58 +41,9 @@ void EraseMemory()
     Flash_WriteEnable();
     Flash_Erase4k(0,0);
 
-    Dbprintf("[OK] Erased flash!");
+    if (MF_DBGLEVEL > 1) Dbprintf("[!] Erased flash!");
     FlashStop();
 	SpinDelay(100);
-}
-
-
-void WriteDataToFlash(uint8_t* data, size_t size)
-{
-    uint8_t isok = 0;
-    uint16_t res = 0;
-    uint32_t len = size;
-    uint32_t bytes_sent = 0;
-    uint32_t bytes_remaining = len;
-
-    uint8_t buff[PAGESIZE];
-
-    if (!FlashInit()){
-        return;
-    }
-    
-    Flash_CheckBusy(BUSY_TIMEOUT);
-    Flash_WriteEnable();
-    Flash_Erase4k(0,0);
-
-    while (bytes_remaining > 0)
-    {
-		Flash_CheckBusy(BUSY_TIMEOUT);
-		Flash_WriteEnable();
-
-        uint32_t bytes_in_packet = MIN(FLASH_MEM_BLOCK_SIZE, bytes_remaining);
-
-        memcpy(buff, data + bytes_sent, bytes_in_packet);
-
-        bytes_remaining -= bytes_in_packet;
-        res = Flash_WriteDataCont(bytes_sent, buff, bytes_in_packet);
-        bytes_sent += bytes_in_packet;
-
-        isok = (res == bytes_in_packet) ? 1 : 0;
-
-        if (!isok)
-        {
-            Dbprintf("FlashMem write failed [offset %u]", bytes_sent);
-            SpinDelay(100);
-
-            return;
-        }
-    }
-
-    Dbprintf("[OK] Data written to flash! [0-to offset %u]", bytes_sent);
-    FlashStop();
-
-    return;
 }
 
 void RAMFUNC SniffAndStore(uint8_t param) {
@@ -242,7 +154,7 @@ void RAMFUNC SniffAndStore(uint8_t param) {
 
 					if (triggered) {
 						if ((receivedCmd) && ((receivedCmd[0] == MIFARE_ULEV1_AUTH) || (receivedCmd[0] == MIFARE_ULC_AUTH_1))) {
-							Dbprintf("PWD-AUTH KEY: 0x%02x%02x%02x%02x", receivedCmd[1], receivedCmd[2], receivedCmd[3], receivedCmd[4]);
+							if (MF_DBGLEVEL > 1) Dbprintf("PWD-AUTH KEY: 0x%02x%02x%02x%02x", receivedCmd[1], receivedCmd[2], receivedCmd[3], receivedCmd[4]);
 							
 							// temporarily save the captured pwd in our array
 							memcpy(&capturedPwds[4 * auth_attempts], receivedCmd+1, 4);
@@ -309,50 +221,51 @@ void RAMFUNC SniffAndStore(uint8_t param) {
 	
 	// Write stuff to flash
 	if (auth_attempts > 0) {
-		Dbprintf("[!] auth_attempts = %u", auth_attempts);
+		if (MF_DBGLEVEL > 1) Dbprintf("[!] Authentication attempts = %u", auth_attempts);
 		
-		// Read from flash the counter of pwds (to be used as flash mem offset)
-		uint8_t pwdcnt = 0;
-		pwdcnt = ReadCounterFromFlash();
-		if (pwdcnt == 255) {
-			// Same as zero
-			pwdcnt = 0;
-		}
-		Dbprintf("[!] PWDs Offset = %u", pwdcnt);
+		// Setting the SPI Baudrate to 48MHz to avoid the bit-flip issue (https://github.com/RfidResearchGroup/proxmark3/issues/34)
+		FlashmemSetSpiBaudrate(48000000);
 		
-		uint8_t *previousdata = ReadDataFromFlash(pwdcnt);
+		// Find the offset in flash mem to continue writing the auth attempts
+		uint8_t memoffset = FindOffsetInFlash();
+		if (MF_DBGLEVEL > 1) Dbprintf("[!] Memory offset = %u", memoffset);
 		
-		// total size = (pwdcnt+1)*4 + 4 * auth_attempts
-		size_t total_size = (pwdcnt+1)*4 + 4 * auth_attempts;
+		// Get previous data from flash mem
+		uint8_t *previousdata = BigBuf_malloc(memoffset);
+		uint16_t readlen = Flash_ReadData(0, previousdata, memoffset);
+		if (MF_DBGLEVEL > 1) Dbprintf("[!] Read %u bytes from flash mem", readlen);
+				
 		// create new bigbuf to hold all data
+		size_t total_size = memoffset + 4 * auth_attempts;
 		uint8_t *total_data = BigBuf_malloc(total_size);
 		
 		// Add the previousdata array into total_data array
-		memcpy(total_data, previousdata, sizeof(*previousdata) * ((pwdcnt+1)*4));
+		memcpy(total_data, previousdata, memoffset);
 		
 		// Copy bytes of capturedPwds immediately following bytes of previousdata
-		memcpy(total_data + ((pwdcnt+1)*4), capturedPwds, sizeof(*capturedPwds) * (4 * auth_attempts));
+		memcpy(total_data + memoffset, capturedPwds, 4 * auth_attempts);
 		
-		// change the counter byte
-		//memset (total_data,pwdcnt + auth_attempts,1);
-		total_data[0] = (uint8_t)(pwdcnt + auth_attempts);
+		// Erase first page of flash mem
+		EraseMemory();
 		
-		//EraseMemory();
+		//for (int i=0; i<memoffset + 4 * auth_attempts; i++)
+		//	if (MF_DBGLEVEL > 1) Dbprintf("[-] total_data[%d] = 0x%02x", i, total_data[i]);
 		
-		//for (int i=0;i<(pwdcnt+1)*4 + 4 * auth_attempts;i++)
-		//	Dbprintf("[!] total_data[%d] = 0x%02x", i, total_data[i]);
+		// Write total data to flash mem
+		uint16_t writelen = Flash_WriteData(0, total_data, memoffset + 4 * auth_attempts);
+		if (MF_DBGLEVEL > 1) Dbprintf("[!] Wrote %u bytes into flash mem", writelen);
 		
-		//Flash_WriteData(0, total_data, (pwdcnt+1)*4 + 4 * auth_attempts);
-		WriteDataToFlash(total_data, (pwdcnt+1)*4 + 4 * auth_attempts);
+		SpinDelay(100);
 		
-		SpinDelay(200);
+		// Reset the SPI Baudrate to the default value (24MHz)
+		FlashmemSetSpiBaudrate(24000000);
 	}
 }
 
 void RunMod()
 {
 	Dbprintf("Sniffing started");
-    SpinDelay(500);
+    SpinDelay(200);
 	
 	// param:
 	// bit 0 - trigger from first card answer
@@ -363,4 +276,3 @@ void RunMod()
 	
 	SpinDelay(300);
 }
-
