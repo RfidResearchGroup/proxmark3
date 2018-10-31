@@ -1,5 +1,6 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 2018 Merlok
+// Copyright (C) 2018 drHatson
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -16,24 +17,85 @@
 #include "ui.h"
 #include "polarssl/libpcrypto.h"
 
-int CalulateMAC(mf4Session *session, uint8_t *data, int datalen, uint8_t *mac, bool verbose) {
-	if (!session || !session->Authenticated || !mac || !data || !datalen)
+int CalculateEncIVCommand(mf4Session *session, uint8_t *iv, bool verbose) {
+	memcpy(&iv[0], session->TI, 4);
+	memcpy(&iv[4], &session->R_Ctr, 2);
+	memcpy(&iv[6], &session->W_Ctr, 2);
+	memcpy(&iv[8], &session->R_Ctr, 2);
+	memcpy(&iv[10], &session->W_Ctr, 2);
+	memcpy(&iv[12], &session->R_Ctr, 2);
+	memcpy(&iv[14], &session->W_Ctr, 2);
+
+	return 0;
+}
+
+int CalculateEncIVResponse(mf4Session *session, uint8_t *iv, bool verbose) {
+	memcpy(&iv[0], &session->R_Ctr, 2);
+	memcpy(&iv[2], &session->W_Ctr, 2);
+	memcpy(&iv[4], &session->R_Ctr, 2);
+	memcpy(&iv[6], &session->W_Ctr, 2);
+	memcpy(&iv[8], &session->R_Ctr, 2);
+	memcpy(&iv[10], &session->W_Ctr, 2);
+	memcpy(&iv[12], session->TI, 4);
+
+	return 0;
+}
+
+
+int CalculateMAC(mf4Session *session, MACType_t mtype, uint8_t blockNum, uint8_t blockCount, uint8_t *data, int datalen, uint8_t *mac, bool verbose) {
+	if (!session || !session->Authenticated || !mac || !data || !datalen || datalen < 1)
 		return 1;
 	
 	memset(mac, 0x00, 8);
 	
-	if (verbose)
-		PrintAndLog("MAC data[%d]: %s", datalen, sprint_hex(data, datalen));
+	uint16_t ctr = session->R_Ctr;
+	switch(mtype) {
+	case mtypWriteCmd:
+	case mtypWriteResp:
+		ctr = session->W_Ctr;
+		break;
+	case mtypReadCmd:
+	case mtypReadResp:
+		break;
+	}
+
+	uint8_t macdata[2049] = {data[0], (ctr & 0xFF), (ctr >> 8), 0};
+	int macdatalen = datalen;
+	memcpy(&macdata[3], session->TI, 4);
+
+	switch(mtype) {
+	case mtypReadCmd:
+		memcpy(&macdata[7], &data[1], datalen - 1);
+		macdatalen = datalen + 6;
+		break;
+	case mtypReadResp:
+		macdata[7] = blockNum;
+		macdata[8] = 0;
+		macdata[9] = blockCount;
+		memcpy(&macdata[10], &data[1], datalen - 1);
+		macdatalen = datalen + 9;
+		break;
+	case mtypWriteCmd:
+		memcpy(&macdata[7], &data[1], datalen - 1);
+		macdatalen = datalen + 6;
+		break;
+	case mtypWriteResp:
+		macdatalen = 1 + 6;
+		break;
+	}
 	
-	return aes_cmac8(NULL, session->Key, data, mac, datalen);
+	if (verbose)
+		PrintAndLog("MAC data[%d]: %s", macdatalen, sprint_hex(macdata, macdatalen));
+	
+	return aes_cmac8(NULL, session->Kmac, macdata, mac, macdatalen);
 }
 
 int MifareAuth4(mf4Session *session, uint8_t *keyn, uint8_t *key, bool activateField, bool leaveSignalON, bool verbose) {
 	uint8_t data[257] = {0};
 	int datalen = 0;
 	
-	uint8_t Rnd1[17] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x00};
-	uint8_t Rnd2[17] = {0};
+	uint8_t RndA[17] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x00};
+	uint8_t RndB[17] = {0};
 	
 	if (session)
 		session->Authenticated = false;	
@@ -67,17 +129,17 @@ int MifareAuth4(mf4Session *session, uint8_t *keyn, uint8_t *key, bool activateF
 		return 3;
 	}
 	
-    aes_decode(NULL, key, &data[1], Rnd2, 16);
-	Rnd2[16] = Rnd2[0];
+    aes_decode(NULL, key, &data[1], RndB, 16);
+	RndB[16] = RndB[0];
 	if (verbose)
-		PrintAndLogEx(INFO, "Rnd2: %s", sprint_hex(Rnd2, 16));
+		PrintAndLogEx(INFO, "RndB: %s", sprint_hex(RndB, 16));
 
 	uint8_t cmd2[33] = {0};
 	cmd2[0] = 0x72;
 
 	uint8_t raw[32] = {0};
-	memmove(raw, Rnd1, 16);
-	memmove(&raw[16], &Rnd2[1], 16);
+	memmove(raw, RndA, 16);
+	memmove(&raw[16], &RndB[1], 16);
 
 	aes_encode(NULL, key, raw, &cmd2[1], 32);
 	if (verbose)
@@ -97,19 +159,49 @@ int MifareAuth4(mf4Session *session, uint8_t *keyn, uint8_t *key, bool activateF
 	
 	if (verbose) {
 		PrintAndLogEx(INFO, "res: %s", sprint_hex(raw, 32));
-		PrintAndLogEx(INFO, "Rnd1`: %s", sprint_hex(&raw[4], 16));
+		PrintAndLogEx(INFO, "RndA`: %s", sprint_hex(&raw[4], 16));
 	}
 
-	if (memcmp(&raw[4], &Rnd1[1], 16)) {
+	if (memcmp(&raw[4], &RndA[1], 16)) {
 		PrintAndLogEx(ERR, "\nAuthentication FAILED. rnd not equal");
 		if (verbose) {
-			PrintAndLogEx(ERR, "rnd1 reader: %s", sprint_hex(&Rnd1[1], 16));
-			PrintAndLogEx(ERR, "rnd1   card: %s", sprint_hex(&raw[4], 16));
+			PrintAndLogEx(ERR, "RndA reader: %s", sprint_hex(&RndA[1], 16));
+			PrintAndLogEx(ERR, "RndA   card: %s", sprint_hex(&raw[4], 16));
 		}
 		DropField();
 		return 5;
 	}
 
+	if (verbose) {
+		PrintAndLogEx(INFO, " TI: %s", sprint_hex(raw, 4));
+		PrintAndLogEx(INFO, "pic: %s", sprint_hex(&raw[20], 6));
+		PrintAndLogEx(INFO, "pcd: %s", sprint_hex(&raw[26], 6));
+	}
+	
+	uint8_t kenc[16] = {0};
+	memcpy(&kenc[0], &RndA[11], 5);
+	memcpy(&kenc[5], &RndB[11], 5);
+	for(int i = 0; i < 5; i++)
+		kenc[10 + i] = RndA[4 + i] ^ RndB[4 + i];
+	kenc[15] = 0x11;
+	
+	aes_encode(NULL, key, kenc, kenc, 16);
+	if (verbose) {
+		PrintAndLogEx(INFO, "kenc: %s", sprint_hex(kenc, 16));
+	}
+	
+	uint8_t kmac[16] = {0};
+	memcpy(&kmac[0], &RndA[7], 5);
+	memcpy(&kmac[5], &RndB[7], 5);
+	for(int i = 0; i < 5; i++)
+		kmac[10 + i] = RndA[0 + i] ^ RndB[0 + i];
+	kmac[15] = 0x22;
+	
+	aes_encode(NULL, key, kmac, kmac, 16);
+	if (verbose) {
+		PrintAndLogEx(INFO, "kmac: %s", sprint_hex(kmac, 16));
+	}	
+	
 	if (!leaveSignalON)
 		DropField();
 
@@ -118,9 +210,17 @@ int MifareAuth4(mf4Session *session, uint8_t *keyn, uint8_t *key, bool activateF
 
 	if (session) {
 		session->Authenticated = true;
+		session->R_Ctr = 0;
+		session->W_Ctr = 0;
 		session->KeyNum = keyn[1] + (keyn[0] << 8);
-		memmove(session->Rnd1, Rnd1, 16);
-		memmove(session->Rnd2, Rnd2, 16);
+		memmove(session->RndA, RndA, 16);
+		memmove(session->RndB, RndB, 16);
+		memmove(session->Key, key, 16);
+		memmove(session->TI, raw, 4);
+		memmove(session->PICCap2, &raw[20], 6);
+		memmove(session->PCDCap2, &raw[26], 6);
+		memmove(session->Kenc, kenc, 16);
+		memmove(session->Kmac, kmac, 16);
 	}
 	
 	PrintAndLogEx(INFO, "Authentication OK");

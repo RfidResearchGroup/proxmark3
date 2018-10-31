@@ -1,5 +1,6 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 2018 Merlok
+// Copyright (C) 2018 drHatson
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -34,13 +35,15 @@ typedef struct {
 
 static const PlusErrorsElm PlusErrors[] = {
 	{0xFF, ""},
-	{0x00, "Unknown error"},
-	{0x06, "Block use error"},
-	{0x07, "Command use error"},
-	{0x08, "Invalid write command"},
-	{0x09, "Invalid block number"},
-	{0x0b, "Command code error"},
+	{0x00, "Transfer cannot be granted within the current authentication."},
+	{0x06, "Access Conditions not fulfilled. Block does not exist, block is not a value block."},
+	{0x07, "Too many read or write commands in the session or in the transaction."},
+	{0x08, "Invalid MAC in command or response"},
+	{0x09, "Block Number is not valid"},
+	{0x0a, "Invalid block number, not existing block number"},
+	{0x0b, "The current command code not available at the current card state."},
 	{0x0c, "Length error"},
+	{0x0f, "General Manipulation Error. Failure in the operation of the PICC (cannot write to the data block), etc."},
 	{0x90, "OK"},
 };
 int PlusErrorsLen = sizeof(PlusErrors) / sizeof(PlusErrorsElm);
@@ -85,17 +88,41 @@ int MFPCommitPerso(bool activateField, bool leaveSignalON, uint8_t *dataout, int
 	return intExchangeRAW14aPlus(rcmd, sizeof(rcmd), activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
 }
 
-int MFPReadBlock(mf4Session *session, bool plain, uint8_t blockNum, uint8_t blockCount, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
+int MFPReadBlock(mf4Session *session, bool plain, uint8_t blockNum, uint8_t blockCount, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, uint8_t *mac) {
 	uint8_t rcmd[4 + 8] = {(plain?(0x37):(0x33)), blockNum, 0x00, blockCount}; 
+	if (!plain && session)
+		CalculateMAC(session, mtypReadCmd, blockNum, blockCount, rcmd, 4, &rcmd[4], VerboseMode);
 	
-	return intExchangeRAW14aPlus(rcmd, plain?4:sizeof(rcmd), activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
+	int res = intExchangeRAW14aPlus(rcmd, plain?4:sizeof(rcmd), activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
+	if(res)
+		return res;
+
+	if (session) 
+		session->R_Ctr++;
+	
+	if(session && mac && *dataoutlen > 11)
+		CalculateMAC(session, mtypReadResp, blockNum, blockCount, dataout, *dataoutlen - 8 - 2, mac, VerboseMode);
+	
+	return 0;
 }
 
-int MFPWriteBlock(mf4Session *session, uint8_t blockNum, uint8_t *data, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
+int MFPWriteBlock(mf4Session *session, uint8_t blockNum, uint8_t *data, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, uint8_t *mac) {
 	uint8_t rcmd[1 + 2 + 16 + 8] = {0xA3, blockNum, 0x00};
 	memmove(&rcmd[3], data, 16);
+	if (session)
+		CalculateMAC(session, mtypWriteCmd, blockNum, 1, rcmd, 19, &rcmd[19], VerboseMode);
 	
-	return intExchangeRAW14aPlus(rcmd, sizeof(rcmd), activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
+	int res = intExchangeRAW14aPlus(rcmd, sizeof(rcmd), activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
+	if(res)
+		return res;
+
+	if (session) 
+		session->W_Ctr++;
+	
+	if(session && mac && *dataoutlen > 3)
+		CalculateMAC(session, mtypWriteResp, blockNum, 1, dataout, *dataoutlen, mac, VerboseMode);
+	
+	return 0;
 }
 
 int CmdHFMFPInfo(const char *cmd) {
@@ -402,7 +429,7 @@ int CmdHFMFPRdbl(const char *cmd) {
 	int keylen = 0;
 	
 	CLIParserInit("hf mfp rdbl", 
-		"Reads several blocks from Mifare Plus card in plain mode.", 
+		"Reads several blocks from Mifare Plus card.", 
 		"Usage:\n\thf mfp rdbl 0 000102030405060708090a0b0c0d0e0f -> executes authentication and read block 0 data\n"
 			"\thf mfp rdbl 1 -v -> executes authentication and shows sector 1 data with default key 0xFF..0xFF and some additional data\n");
 
@@ -411,7 +438,7 @@ int CmdHFMFPRdbl(const char *cmd) {
 		arg_lit0("vV",  "verbose", "show internal data."),
 		arg_int0("nN",  "count",   "blocks count (by default 1).", NULL),
 		arg_lit0("bB",  "keyb",    "use key B (by default keyA)."),
-		arg_lit0("pP",  "plain",   "plain communication between reader and card."),
+		arg_lit0("pP",  "plain",   "plain communication mode between reader and card."),
 		arg_int1(NULL,  NULL,      "<Block Num (0..255)>", NULL),
 		arg_str0(NULL,  NULL,      "<Key Value (HEX 16 bytes)>", NULL),
 		arg_param_end
@@ -421,7 +448,7 @@ int CmdHFMFPRdbl(const char *cmd) {
 	bool verbose = arg_get_lit(1);
 	int blocksCount = arg_get_int_def(2, 1);
 	bool keyB = arg_get_lit(3);
-	int plain = arg_get_lit(4) | true;
+	int plain = arg_get_lit(4);
 	uint32_t blockn = arg_get_int(5);
 	CLIGetHexWithReturn(6, key, &keylen);
 	CLIParserFree();
@@ -449,6 +476,10 @@ int CmdHFMFPRdbl(const char *cmd) {
 		return 1;
 	}
 	
+	if (blocksCount > 1 && mfIsSectorTrailer(blockn)) {
+		PrintAndLog("WARNING: trailer!");
+	}
+	
 	uint8_t sectorNum = mfSectorNum(blockn & 0xff);
 	uint16_t uKeyNum = 0x4000 + sectorNum * 2 + (keyB ? 1 : 0);
 	keyn[0] = uKeyNum >> 8;
@@ -465,7 +496,8 @@ int CmdHFMFPRdbl(const char *cmd) {
 	
 	uint8_t data[250] = {0};
 	int datalen = 0;
-	res = MFPReadBlock(&session, plain, blockn & 0xff, blocksCount, false, false, data, sizeof(data), &datalen);
+	uint8_t mac[8] = {0};
+	res = MFPReadBlock(&session, plain, blockn & 0xff, blocksCount, false, false, data, sizeof(data), &datalen, mac);
 	if (res) {
 		PrintAndLogEx(ERR, "Read error: %d", res);
 		return res;
@@ -485,14 +517,20 @@ int CmdHFMFPRdbl(const char *cmd) {
 	for(int i = 0; i < blocksCount; i++)  {
 		PrintAndLogEx(INFO, "data[%03d]: %s", indx, sprint_hex(&data[1 + i * 16], 16));
 		indx++;
-		if (mfIsSectorTrailer(indx)){
+		if (mfIsSectorTrailer(indx) && i != blocksCount - 1){
 			PrintAndLogEx(INFO, "data[%03d]: ------------------- trailer -------------------", indx);
 			indx++;
 		}
 	}
 
+	if (memcmp(&data[blocksCount * 16 + 1], mac, 8)) {
+		PrintAndLogEx(WARNING, "WARNING: mac not equal...");
+		PrintAndLogEx(WARNING, "MAC   card: %s", sprint_hex(&data[blocksCount * 16 + 1], 8));
+		PrintAndLogEx(WARNING, "MAC reader: %s", sprint_hex(mac, 8));
+	} else {	
 	if(verbose)
-		PrintAndLogEx(INFO, "MAC: %s", sprint_hex(&data[blocksCount * 16 + 1], 8));
+			PrintAndLogEx(INFO, "MAC: %s", sprint_hex(&data[blocksCount * 16 + 1], 8));
+	}
 	
 	return 0;
 }
@@ -503,7 +541,7 @@ int CmdHFMFPRdsc(const char *cmd) {
 	int keylen = 0;
 	
 	CLIParserInit("hf mfp rdsc", 
-		"Reads one sector from Mifare Plus card in plain mode.", 
+		"Reads one sector from Mifare Plus card.", 
 		"Usage:\n\thf mfp rdsc 0 000102030405060708090a0b0c0d0e0f -> executes authentication and read sector 0 data\n"
 			"\thf mfp rdsc 1 -v -> executes authentication and shows sector 1 data with default key 0xFF..0xFF and some additional data\n");
 
@@ -511,7 +549,7 @@ int CmdHFMFPRdsc(const char *cmd) {
 		arg_param_begin,
 		arg_lit0("vV",  "verbose", "show internal data."),
 		arg_lit0("bB",  "keyb",    "use key B (by default keyA)."),
-		arg_lit0("pP",  "plain",   "plain communication between reader and card."),
+		arg_lit0("pP",  "plain",   "plain communication mode between reader and card."),
 		arg_int1(NULL,  NULL,      "<Sector Num (0..255)>", NULL),
 		arg_str0(NULL,  NULL,      "<Key Value (HEX 16 bytes)>", NULL),
 		arg_param_end
@@ -520,7 +558,7 @@ int CmdHFMFPRdsc(const char *cmd) {
 	
 	bool verbose = arg_get_lit(1);
 	bool keyB = arg_get_lit(2);
-	bool plain = arg_get_lit(3) | true;
+	bool plain = arg_get_lit(3);
 	uint32_t sectorNum = arg_get_int(4);
 	CLIGetHexWithReturn(5, key, &keylen);
 	CLIParserFree();
@@ -557,8 +595,9 @@ int CmdHFMFPRdsc(const char *cmd) {
 	
 	uint8_t data[250] = {0};
 	int datalen = 0;
+	uint8_t mac[8] = {0};
 	for(int n = mfFirstBlockOfSector(sectorNum); n < mfFirstBlockOfSector(sectorNum) + mfNumBlocksPerSector(sectorNum); n++) {
-		res = MFPReadBlock(&session, plain, n & 0xff, 1, false, true, data, sizeof(data), &datalen);
+		res = MFPReadBlock(&session, plain, n & 0xff, 1, false, true, data, sizeof(data), &datalen, mac);
 		if (res) {
 			PrintAndLogEx(ERR, "Read error: %d", res);
 			DropField();
@@ -578,8 +617,14 @@ int CmdHFMFPRdsc(const char *cmd) {
 
 		PrintAndLogEx(INFO, "data[%03d]: %s", n, sprint_hex(&data[1], 16));
 			
-		if(verbose)
-			PrintAndLogEx(INFO, "MAC: %s", sprint_hex(&data[1 + 16], 8));
+		if (memcmp(&data[1 + 16], mac, 8)) {
+			PrintAndLogEx(WARNING, "WARNING: mac on block %d not equal...", n);
+			PrintAndLogEx(WARNING, "MAC   card: %s", sprint_hex(&data[1 + 16], 8));
+			PrintAndLogEx(WARNING, "MAC reader: %s", sprint_hex(mac, 8));
+		} else {	
+			if(verbose)
+				PrintAndLogEx(INFO, "MAC: %s", sprint_hex(&data[1 + 16], 8));
+		}
 	}
 	DropField();
 	
@@ -654,25 +699,37 @@ int CmdHFMFPWrbl(const char *cmd) {
 
 	uint8_t data[250] = {0};
 	int datalen = 0;
-	res = MFPWriteBlock(&session, blockNum & 0xff, datain, false, false, data, sizeof(data), &datalen);
+	uint8_t mac[8] = {0};
+	res = MFPWriteBlock(&session, blockNum & 0xff, datain, false, false, data, sizeof(data), &datalen, mac);
 	if (res) {
 		PrintAndLogEx(ERR, "Write error: %d", res);
+		DropField();
 		return res;
 	}
 	
 	if (datalen != 3 && (datalen != 3 + 8)) {
 		PrintAndLogEx(ERR, "Error return length:%d", datalen);
+		DropField();
 		return 5;
 	}
 	
 	if (datalen && data[0] != 0x90) {
 		PrintAndLogEx(ERR, "Card write error: %02x %s", data[0], GetErrorDescription(data[0]));
+		DropField();
 		return 6;
 	}
 	
-	if(verbose)
-		PrintAndLogEx(INFO, "MAC: %s", sprint_hex(&data[1], 8));
+	if (memcmp(&data[1], mac, 8)) {
+		PrintAndLogEx(WARNING, "WARNING: mac not equal...");
+		PrintAndLogEx(WARNING, "MAC   card: %s", sprint_hex(&data[1], 8));
+		PrintAndLogEx(WARNING, "MAC reader: %s", sprint_hex(mac, 8));
+	} else {	
+		if(verbose)
+			PrintAndLogEx(INFO, "MAC: %s", sprint_hex(&data[1], 8));
+	}
 	
+	DropField();
+	PrintAndLogEx(INFO, "Write OK.");	
 	return 0;
 }
 
@@ -686,7 +743,7 @@ static command_t CommandTable[] =
   {"auth",  	       CmdHFMFPAuth,			0, "Authentication"},
   {"rdbl",  	       CmdHFMFPRdbl,			0, "Read blocks"},
   {"rdsc",  	       CmdHFMFPRdsc,			0, "Read sectors"},
-//  {"wrbl",  	       CmdHFMFPWrbl,			0, "Write blocks"},
+  {"wrbl",  	       CmdHFMFPWrbl,			0, "Write blocks"},
   {NULL,               NULL,					0, NULL}
 };
 
