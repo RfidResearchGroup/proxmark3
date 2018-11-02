@@ -19,7 +19,7 @@
 #include <stdlib.h>  // for
 #include <stdbool.h> // for bool
 #include "parity.h"  // for parity test
-
+#include "util.h"	 // for ARRAYLEN
 //generic
 typedef struct {
 	int low;

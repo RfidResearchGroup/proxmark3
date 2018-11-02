@@ -320,14 +320,14 @@ size_t findModStart(uint8_t *src, size_t size, uint8_t expWaveSize) {
 	size_t i = 0;
 	size_t waveSizeCnt = 0;
 	uint8_t thresholdCnt = 0;
-	bool isAboveThreshold = src[i++] >= FSK_PSK_THRESHOLD;
+	bool isAboveThreshold = src[i++] >= signalprop.mean; //FSK_PSK_THRESHOLD;
 	for (; i < size-20; i++ ) {
-		if(src[i] < FSK_PSK_THRESHOLD && isAboveThreshold) {
+		if(src[i] < signalprop.mean && isAboveThreshold) {
 			thresholdCnt++;
 			if (thresholdCnt > 2 && waveSizeCnt < expWaveSize+1) break;			
 			isAboveThreshold = false;
 			waveSizeCnt = 0;
-		} else if (src[i] >= FSK_PSK_THRESHOLD && !isAboveThreshold) {
+		} else if (src[i] >= signalprop.mean && !isAboveThreshold) {
 			thresholdCnt++;
 			if (thresholdCnt > 2 && waveSizeCnt < expWaveSize+1) break;			
 			isAboveThreshold = true;
@@ -337,15 +337,24 @@ size_t findModStart(uint8_t *src, size_t size, uint8_t expWaveSize) {
 		}
 		if (thresholdCnt > 10) break;
 	}
-	if (g_debugMode == 2) prnt("DEBUG: threshold Count reached at %u, count: %u", i, thresholdCnt);
+	if (g_debugMode == 2) prnt("DEBUG: threshold Count reached at index %u, count: %u", i, thresholdCnt);
 	return i;
 }
 
+// iceman:  ranges the old defintion,  becomes very forgiving when clock speed increase.
+//  clocks[i] - (clocks[i]/8) && testclk <= clocks[i]+1 )
+//  8 (7-9)
+// 16 (14-17)
+// 32 (28-33)
+// 40 (35-41)
+// 50 (46-51)
+// 64 (56-65)
+// 128 (112-129)
 int getClosestClock(int testclk) {
 	uint8_t clocks[] = {8,16,32,40,50,64,128};
 
 	for (uint8_t i = 0; i < 7; i++)
-		if ( testclk >= clocks[i] - (clocks[i]/8) && testclk <= clocks[i]+1 )
+		if ( testclk >= clocks[i]-2 && testclk <= clocks[i]+1 )
 			return clocks[i];
 
 	return 0;
@@ -474,7 +483,7 @@ int ManchesterEncode(uint8_t *bits, size_t size) {
 
 // by marshmellow
 // to detect a wave that has heavily clipped (clean) samples
-// loop 512 samples,   if 300 of them is deemed maxed out,  we assume the wave is clipped.
+// loop 512 samples,   if 250 of them is deemed maxed out,  we assume the wave is clipped.
 bool DetectCleanAskWave(uint8_t *dest, size_t size, uint8_t high, uint8_t low) {
 	bool allArePeaks = true;
 	uint16_t cntPeaks = 0;
@@ -516,8 +525,8 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
 	getNextHigh(dest, size, high, &i);
 	getNextLow(dest, size, low, &i);
 	
-	// loop through all samples
-	while (i < size) {
+	// loop through all samples (well, we don't want to go out-of-bounds)
+	while (i < size-512) {
 		// measure from low to low
 		startwave = i;
 
@@ -562,36 +571,35 @@ int DetectASKClock(uint8_t *dest, size_t size, int *clock, int maxErr) {
 
 	// just noise - no super good detection. good enough
 	if (signalprop.isnoise) {
-		if (g_debugMode == 2) prnt("DEBUG DetectASKClock: just noise detected - quitting");
+		if (g_debugMode == 2) prnt("DEBUG DetectASKClock: just noise detected - aborting");
 		return -1;
 	}
 	
 	//get high and low peak
 	int peak_hi, peak_low;
-	//getHiLo(dest, loopCnt, &peak_hi, &peak_low, 75, 75);
 	getHiLo(&peak_hi, &peak_low, 75, 75);
 	
 	//test for large clean peaks
 	if (!clockFnd){
 		if (DetectCleanAskWave(dest, size, peak_hi, peak_low)){
 		
-			int ans = DetectStrongAskClock(dest, size, peak_hi, peak_low, clock);
-			if (g_debugMode == 2) prnt("DEBUG ASK: detectaskclk Clean Ask Wave Detected: clk %i, ShortestWave: %i", *clock ,ans);
-			if (ans > 0){
-				return ans; //return shortest wave start position
-			}
+			int idx = DetectStrongAskClock(dest, size, peak_hi, peak_low, clock);
+			if (g_debugMode == 2) 
+				prnt("DEBUG ASK: detectaskclk Clean Ask Wave Detected: clk %i, Best Starting Position: %i", *clock, idx);
+			if (idx > 0)
+				return idx; //return shortest wave start position
+
 		}
 	}
 	// test clock if given as cmd parameter
 	if ( *clock > 0 )
 		clk[0] = *clock;
 	
-	uint16_t ii;
 	uint8_t clkCnt, tol = 0;
+	size_t j = 0;
 	uint16_t bestErr[] = {1000,1000,1000,1000,1000,1000,1000,1000,1000};
 	uint8_t bestStart[] = {0,0,0,0,0,0,0,0,0};
-	size_t errCnt = 0;
-	size_t arrLoc, loopEnd;
+	size_t errCnt = 0, arrLoc, loopEnd;
 
 	if (clockFnd > 0) {
 		clkCnt = clockFnd;
@@ -614,14 +622,17 @@ int DetectASKClock(uint8_t *dest, size_t size, int *clock, int maxErr) {
 		bestErr[clkCnt] = 1000;
 
 		//try lining up the peaks by moving starting point (try first few clocks)
-		for (ii=0; ii < loopCnt; ii++){
-			if (dest[ii] < peak_hi && dest[ii] > peak_low) continue;
 
+		// get to first full low to prime loop and skip incomplete first pulse
+		getNextHigh(dest, size, peak_hi, &j);
+		getNextLow(dest, size, peak_low, &j);
+	
+		for (; j < loopCnt; j++){
 			errCnt = 0;
 			// now that we have the first one lined up test rest of wave array
-			loopEnd = ((size-ii-tol) / clk[clkCnt]) - 1;
+			loopEnd = ((size-j-tol) / clk[clkCnt]) - 1;
 			for (i=0; i < loopEnd; ++i){
-				arrLoc = ii + (i * clk[clkCnt]);
+				arrLoc = j + (i * clk[clkCnt]);
 				if (dest[arrLoc] >= peak_hi || dest[arrLoc] <= peak_low){
 				} else if (dest[arrLoc-tol] >= peak_hi || dest[arrLoc-tol] <= peak_low){
 				} else if (dest[arrLoc+tol] >= peak_hi || dest[arrLoc+tol] <= peak_low){
@@ -631,21 +642,22 @@ int DetectASKClock(uint8_t *dest, size_t size, int *clock, int maxErr) {
 			}
 			//if we found no errors then we can stop here and a low clock (common clocks)
 			//  this is correct one - return this clock
-			//if (g_debugMode == 2) prnt("DEBUG ASK: clk %d, err %d, startpos %d, endpos %d", clk[clkCnt], errCnt, ii, i);
+			//if (g_debugMode == 2) prnt("DEBUG ASK: clk %d, err %d, startpos %d, endpos %d", clk[clkCnt], errCnt, j, i);
 			if (errCnt == 0 && clkCnt < 7) { 
 				if (!clockFnd) 
 					*clock = clk[clkCnt];
-				return ii;
+				return j;
 			}	
 			//if we found errors see if it is lowest so far and save it as best run
 			if (errCnt < bestErr[clkCnt]) {
 				bestErr[clkCnt] = errCnt;
-				bestStart[clkCnt] = ii;
+				bestStart[clkCnt] = j;
 			}
 		}
 	}
-	uint8_t k;
-	uint8_t best = 0;
+	
+	uint8_t k, best = 0;
+	
 	for (k=1; k < clkEnd; ++k){
 		if (bestErr[k] < bestErr[best]){
 			if (bestErr[k] == 0) bestErr[k] = 1;
@@ -1486,7 +1498,7 @@ int askdemod_ext(uint8_t *bits, size_t *size, int *clk, int *invert, int maxErr,
 	
 	// just noise - no super good detection. good enough
 	if (signalprop.isnoise) {
-		if (g_debugMode == 2) prnt("DEBUG askdemod_ext: just noise detected - quitting");
+		if (g_debugMode == 2) prnt("DEBUG askdemod_ext: just noise detected - aborting");
 		return -2;
 	}
 	
@@ -1636,7 +1648,7 @@ size_t fsk_wave_demod(uint8_t *dest, size_t size, uint8_t fchigh, uint8_t fclow,
 	//find start of modulating data in trace 	
 	idx = findModStart(dest, size, fchigh);
 	// Need to threshold first sample
-	dest[0] = (dest[idx] < FSK_PSK_THRESHOLD) ? 0 : 1;
+	dest[0] = (dest[idx] < signalprop.mean) ? 0 : 1;
 	
 	last_transition = idx;
 	idx++;
@@ -1674,7 +1686,7 @@ size_t fsk_wave_demod(uint8_t *dest, size_t size, uint8_t fchigh, uint8_t fclow,
 	for(; idx < size-20; idx++) {
 		
 		// threshold current value
-		dest[idx] = (dest[idx] < FSK_PSK_THRESHOLD) ? 0 : 1;
+		dest[idx] = (dest[idx] < signalprop.mean) ? 0 : 1;
 
 		// Check for 0->1 transition
 		if (dest[idx-1] < dest[idx]) {
