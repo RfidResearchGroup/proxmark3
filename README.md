@@ -47,6 +47,9 @@ This fork now compiles just fine on
    - Mac OS X / Homebrew
    - Docker container
 
+## KALI and ARCHLINUX users
+Kali and ArchLinux users usually must kill their modem manager in order for the proxmark3 to enumerate properly.   
+   
 ## Setup and build for UBUNTU
 GC made updates to allow this to build easily on Ubuntu 14.04.2 LTS, 15.10 or 16.04
 See https://github.com/Proxmark/proxmark3/wiki/Ubuntu%20Linux
@@ -57,7 +60,7 @@ I have also added this script to the fork.
 https://github.com/RfidResearchGroup/proxmark3/blob/master/install.sh
 
 - Run
-`sudo apt-get install p7zip git build-essential libreadline5 libreadline-dev libusb-0.1-4 libusb-dev libqt4-dev perl pkg-config wget libncurses5-dev gcc-arm-none-eabi`
+`sudo apt-get install p7zip git build-essential libreadline5 libreadline-dev libusb-0.1-4 libusb-dev libqt4-dev perl pkg-config wget libncurses5-dev gcc-arm-none-eabi libjansson-dev`
 
 - Clone fork
 `git clone https://github.com/RfidResearchGroup/proxmark3.git`
@@ -82,7 +85,7 @@ https://github.com/RfidResearchGroup/proxmark3/blob/master/install.sh
 
 ## Setup and build for ArchLinux
 - Run
-`sudo pacman -Sy base-devel p7zip libusb readline ncurses arm-none-eabi-newlib --needed`
+`sudo pacman -Sy base-devel p7zip libusb readline ncurses libjansson-dev arm-none-eabi-newlib --needed`
 `yaourt -S termcap`
 
 - Clone fork
@@ -148,8 +151,8 @@ Afterwards just clone the iceman repo or download someone elses.
 Read instructions on @Gator96100 repo page. (https://github.com/Gator96100/ProxSpace/)
 
 Links
-- https://github.com/Gator96100/ProxSpace/archive/master.zip
-- https://github.com/Gator96100/ProxSpace/releases/tag/v2.2     (release v2.2   with gcc v5.3.0 arm-none-eabi-gcc v7.1.0)
+- https://github.com/Gator96100/ProxSpace/releases/tag/v3.1   (release v3.1 with gcc v7.3.0 )
+- https://github.com/Gator96100/ProxSpace/releases/tag/v2.2   (release v2.2 with gcc v5.3.0 arm-none-eabi-gcc v7.1.0)
 
 
 ### 7. Build and run
