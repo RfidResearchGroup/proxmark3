@@ -261,7 +261,9 @@ int main(int argc, char* argv[]) {
 	 /* initialize history */
 	using_history();
 
+#ifdef RL_STATE_READCMD
   	rl_extend_line_buffer(1024);		
+#endif
   
 	if (argc < 2) {
 		show_help(true, argv[0]);
