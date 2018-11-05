@@ -2047,7 +2047,7 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 		return 1;
 	}
 	
-	PrintPreCalcMac(keyBlock, keycnt, pre);
+	//PrintPreCalcMac(keyBlock, keycnt, pre);
 
 	// max 42 keys inside USB_COMMAND.  512/4 = 103 mac
 	uint32_t chunksize = keycnt > (USB_CMD_DATA_SIZE/4) ? (USB_CMD_DATA_SIZE/4) : keycnt;
