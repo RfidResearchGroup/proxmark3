@@ -66,8 +66,8 @@ static int l_GetFromBigBuf(lua_State *L){
         return 2; // two return values
     }
     if (n >= 2) {
-        len = luaL_checknumber(L, 1);
-        startindex = luaL_checknumber(L, 2);
+        startindex = luaL_checknumber(L, 1);
+		len = luaL_checknumber(L, 2);
     }
 
 	uint8_t *data = calloc(len, sizeof(uint8_t));
@@ -115,8 +115,8 @@ static int l_GetFromFlashMem(lua_State *L){
         return 2;
     }
     if (n >= 2) {
-        len = luaL_checknumber(L, 1);
-        startindex = luaL_checknumber(L, 2);
+        startindex = luaL_checknumber(L, 1);
+		len = luaL_checknumber(L, 2);
     }
 
 	uint8_t *data = calloc(len, sizeof(uint8_t));
