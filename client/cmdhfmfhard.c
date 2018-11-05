@@ -1750,7 +1750,7 @@ static void add_matching_states(statelist_t *candidates, uint8_t part_sum_a0, ui
 		PrintAndLogEx(WARNING, "Out of memory error in add_matching_states() - statelist.\n");
 		exit(4);
 	}
-	uint32_t *candidates_bitarray = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * (1<<19));
+	uint32_t *candidates_bitarray = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * worstcase_size);
 	if (candidates_bitarray == NULL) {
 		PrintAndLogEx(WARNING, "Out of memory error in add_matching_states() - bitarray.\n");
 		free(candidates->states[odd_even]);
