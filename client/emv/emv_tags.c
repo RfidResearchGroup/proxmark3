@@ -353,15 +353,13 @@ static void emv_tag_dump_dol(const struct tlv *tlv, const struct emv_tag *tag, F
 	}
 }
 
-static void emv_tag_dump_string(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level)
-{
+static void emv_tag_dump_string(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level){
 	fprintf(f, "\tString value '");
 	fwrite(tlv->value, 1, tlv->len, f);
 	fprintf(f, "'\n");
 }
 
-static unsigned long emv_value_numeric(const struct tlv *tlv, unsigned start, unsigned end)
-{
+static unsigned long emv_value_numeric(const struct tlv *tlv, unsigned start, unsigned end) {
 	unsigned long ret = 0;
 	int i;
 
@@ -391,14 +389,12 @@ static unsigned long emv_value_numeric(const struct tlv *tlv, unsigned start, un
 	return ret;
 }
 
-static void emv_tag_dump_numeric(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level)
-{
+static void emv_tag_dump_numeric(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
 	PRINT_INDENT(level);
-	fprintf(f, "\tNumeric value %lu\n", emv_value_numeric(tlv, 0, tlv->len * 2));
+	fprintf(f, "\tNumeric value %" PRIu32 " \n", emv_value_numeric(tlv, 0, tlv->len * 2));
 }
 
-static void emv_tag_dump_yymmdd(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level)
-{
+static void emv_tag_dump_yymmdd(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
 	PRINT_INDENT(level);
 	fprintf(f, "\tDate: 20%02ld.%ld.%ld\n",
 			emv_value_numeric(tlv, 0, 2),
@@ -406,8 +402,7 @@ static void emv_tag_dump_yymmdd(const struct tlv *tlv, const struct emv_tag *tag
 			emv_value_numeric(tlv, 4, 6));
 }
 
-static uint32_t emv_get_binary(const unsigned char *S)
-{
+static uint32_t emv_get_binary(const unsigned char *S) {
 	return (S[0] << 24) | (S[1] << 16) | (S[2] << 8) | (S[3] << 0);
 }
 
