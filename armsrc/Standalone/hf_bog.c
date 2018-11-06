@@ -15,7 +15,8 @@ The retrieved sniffing session can be acquired by connecting the device
 to a client that supports the reconnect capability and issue 'hf 14a list'.
 
 In order to view the grabbed authentication attempts in the flash mem,
-you can simply 'mem read l 256' from the client to view the stored quadlets.
+you can simply run 'script run read_pwd_mem' or just 'mem read l 256' 
+from the client to view the stored quadlets.
 */
 
 #include "hf_bog.h"
@@ -31,7 +32,7 @@ uint8_t FindOffsetInFlash() {
 	uint8_t eom[4] = { 0xFF, 0xFF, 0xFF, 0xFF };
 	uint8_t memcnt = 0;
 	
-	while (memcnt < 4096)
+	while (memcnt < 0xFF)
 	{
 		Flash_ReadData(memcnt, mem, 4);
 		if (memcmp(mem, eom, 4) == 0) {
@@ -240,10 +241,20 @@ void RAMFUNC SniffAndStore(uint8_t param) {
 		uint8_t memoffset = FindOffsetInFlash();
 		if (MF_DBGLEVEL > 1) Dbprintf("[!] Memory offset = %u", memoffset);
 		
+		if ((memoffset + 4 * auth_attempts) > 0xFF)
+		{
+			// We opt to keep the new data only
+			memoffset = 0;
+			if (MF_DBGLEVEL > 1) Dbprintf("[!] Size of total data > 256 bytes. Discarding the old data.");
+		}
+		
 		// Get previous data from flash mem
 		uint8_t *previousdata = BigBuf_malloc(memoffset);
-		uint16_t readlen = Flash_ReadData(0, previousdata, memoffset);
-		if (MF_DBGLEVEL > 1) Dbprintf("[!] Read %u bytes from flash mem", readlen);
+		if (memoffset > 0)
+		{
+			uint16_t readlen = Flash_ReadData(0, previousdata, memoffset);
+			if (MF_DBGLEVEL > 1) Dbprintf("[!] Read %u bytes from flash mem", readlen);
+		}
 				
 		// create new bigbuf to hold all data
 		size_t total_size = memoffset + 4 * auth_attempts;
@@ -276,7 +287,7 @@ void RunMod()
 {
 	Dbprintf("Sniffing started");
 	
-    	SpinDelay(200);
+	SpinDelay(200);
 	
 	// param:
 	// bit 0 - trigger from first card answer
