@@ -39,6 +39,10 @@
 # define ARRAYLEN(x) (sizeof(x)/sizeof((x)[0]))
 #endif
 
+#ifndef NTIME
+# define NTIME(n) for (int _index = 0; _index < n; _index++)
+#endif
+
 size_t nbytes(size_t nbits);
 
 extern uint32_t reflect(uint32_t v, int b); // used in crc.c ...
@@ -53,7 +57,12 @@ int32_t le24toh (uint8_t data[3]);
 uint8_t hex2int(char hexchar);
 
 void LED(int led, int ms);
-void LEDsoff();
+void LEDsoff(void);
+void SpinOff(uint32_t pause);
+void SpinErr(uint8_t led, uint32_t speed, uint8_t times);
+void SpinDown(uint32_t speed);
+void SpinUp(uint32_t speed);
+
 int BUTTON_CLICKED(int ms);
 int BUTTON_HELD(int ms);
 void FormatVersionInformation(char *dst, int len, const char *prefix, void *version_information);

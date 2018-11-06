@@ -57,9 +57,8 @@ void EraseMemory() {
 	SpinDelay(100);
 }
 
+// This is actually copied from SniffIso14443a
 void RAMFUNC SniffAndStore(uint8_t param) {
-	
-	/* This is actually copied from SniffIso14443a */
 	
 	iso14443a_setup(FPGA_HF_ISO14443A_SNIFFER);
 	
@@ -269,7 +268,16 @@ void RAMFUNC SniffAndStore(uint8_t param) {
 }
 
 void RunMod() {
-	Dbprintf("Sniffing started");
+	
+	Dbprintf(">>  Bogiton 14a Sniff UL/UL-EV1/NTAG a.k.a BogitoRun Started  <<");
+	Dbprintf("Starting to sniff");
+	
+	SpinDown(50);
+    SpinOff(50);
+    SpinUp(50);
+    SpinOff(50);
+    SpinDown(50);
+	SpinDelay(500);
 	
 	// param:
 	// bit 0 - trigger from first card answer
@@ -277,4 +285,5 @@ void RunMod() {
 	SniffAndStore(0);	
 	LEDsoff();	
 	SpinDelay(300);
+	Dbprintf("- [ End ] -> You can take shell back ...");
 }

@@ -38,8 +38,6 @@
 #define _WHITE_ "\x1b[0m"
 #define _ORANGE_ _YELLOW_
 
-#define NTIME(n) for (int _index = 0; _index < n; _index++)
-
 int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, uint8_t keyCount, uint8_t *datain, uint64_t *key);
 void e_MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 void saMifareMakeTag(void);
