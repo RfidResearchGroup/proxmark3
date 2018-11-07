@@ -331,10 +331,10 @@ static int l_aes128decrypt_cbc(lua_State *L) {
 		aes_key[i / 2] = tmp & 0xFF;
 	}
 
-    aes_context ctx;
-    aes_init(&ctx);
-	aes_setkey_dec(&ctx, aes_key, 128);
-	aes_crypt_cbc(&ctx, AES_DECRYPT, sizeof(indata), iv, indata, outdata );
+    mbedtls_aes_context ctx;
+    mbedtls_aes_init(&ctx);
+	mbedtls_aes_setkey_dec(&ctx, aes_key, 128);
+	mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, sizeof(indata), iv, indata, outdata );
     //Push decrypted array as a string
 	lua_pushlstring(L,(const char *)&outdata, sizeof(outdata));
 	return 1;// return 1 to signal one return value
@@ -360,10 +360,10 @@ static int l_aes128decrypt_ecb(lua_State *L) {
 		sscanf(&p_key[i], "%02x", &tmp);
 		aes_key[i / 2] = tmp & 0xFF;
 	}
-    aes_context ctx;
-    aes_init(&ctx);
-	aes_setkey_dec(&ctx, aes_key, 128);
-	aes_crypt_ecb(&ctx, AES_DECRYPT, indata, outdata );
+    mbedtls_aes_context ctx;
+    mbedtls_aes_init(&ctx);
+	mbedtls_aes_setkey_dec(&ctx, aes_key, 128);
+	mbedtls_aes_crypt_ecb(&ctx, MBEDTLS_AES_DECRYPT, indata, outdata );
 
     //Push decrypted array as a string
 	lua_pushlstring(L,(const char *)&outdata, sizeof(outdata));
@@ -392,10 +392,10 @@ static int l_aes128encrypt_cbc(lua_State *L) {
 		aes_key[i / 2] = tmp & 0xFF;
 	}
 
-    aes_context ctx;
-    aes_init(&ctx);
-	aes_setkey_enc(&ctx, aes_key, 128);
-	aes_crypt_cbc(&ctx, AES_ENCRYPT, sizeof(indata), iv, indata, outdata );
+    mbedtls_aes_context ctx;
+    mbedtls_aes_init(&ctx);
+	mbedtls_aes_setkey_enc(&ctx, aes_key, 128);
+	mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_ENCRYPT, sizeof(indata), iv, indata, outdata );
 	//Push encrypted array as a string
 	lua_pushlstring(L,(const char *)&outdata, sizeof(outdata));
 	return 1;// return 1 to signal one return value
@@ -421,10 +421,10 @@ static int l_aes128encrypt_ecb(lua_State *L) {
 		sscanf(&p_key[i], "%02x", &tmp);
 		aes_key[i / 2] = tmp & 0xFF;
 	}	
-    aes_context ctx;
-    aes_init(&ctx);
-	aes_setkey_enc(&ctx, aes_key, 128);
-	aes_crypt_ecb(&ctx, AES_ENCRYPT, indata, outdata );
+    mbedtls_aes_context ctx;
+    mbedtls_aes_init(&ctx);
+	mbedtls_aes_setkey_enc(&ctx, aes_key, 128);
+	mbedtls_aes_crypt_ecb(&ctx, MBEDTLS_AES_ENCRYPT, indata, outdata );
 	//Push encrypted array as a string
 	lua_pushlstring(L,(const char *)&outdata, sizeof(outdata));
 	return 1;// return 1 to signal one return value
@@ -498,7 +498,7 @@ static int l_sha1(lua_State *L) {
 	size_t size;
 	const char *p_str = luaL_checklstring(L, 1, &size);	
 	unsigned char outdata[20] = {0x00};                                                                                                                                                                     
-    sha1( (uint8_t*) p_str, size, outdata);                                                                                                                                                                 
+    mbedtls_sha1( (uint8_t*) p_str, size, outdata);                                                                                                                                                                 
     lua_pushlstring(L, (const char *)&outdata, sizeof(outdata));
     return 1;	
 }
