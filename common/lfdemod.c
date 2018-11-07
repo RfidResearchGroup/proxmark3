@@ -322,7 +322,7 @@ size_t findModStart(uint8_t *src, size_t size, uint8_t expWaveSize) {
 	uint8_t thresholdCnt = 0;
 	bool isAboveThreshold = src[i++] >= signalprop.mean; //FSK_PSK_THRESHOLD;
 	for (; i < size-20; i++ ) {
-		if(src[i] < signalprop.mean && isAboveThreshold) {
+		if (src[i] < signalprop.mean && isAboveThreshold) {
 			thresholdCnt++;
 			if (thresholdCnt > 2 && waveSizeCnt < expWaveSize+1) break;			
 			isAboveThreshold = false;
@@ -341,20 +341,12 @@ size_t findModStart(uint8_t *src, size_t size, uint8_t expWaveSize) {
 	return i;
 }
 
-// iceman:  ranges the old defintion,  becomes very forgiving when clock speed increase.
-//  clocks[i] - (clocks[i]/8) && testclk <= clocks[i]+1 )
-//  8 (7-9)
-// 16 (14-17)
-// 32 (28-33)
-// 40 (35-41)
-// 50 (46-51)
-// 64 (56-65)
-// 128 (112-129)
 int getClosestClock(int testclk) {
-	uint8_t clocks[] = {8,16,32,40,50,64,128};
+	uint16_t clocks[] = {8, 16, 32, 40, 50, 64, 128, 256, 384};
+	uint8_t limit[]  = {1,  2,  4,  4,  5,  8,   8,   8,   8};
 
-	for (uint8_t i = 0; i < 7; i++)
-		if ( testclk >= clocks[i]-2 && testclk <= clocks[i]+1 )
+	for (uint8_t i = 0; i < 9; i++)
+		if ( testclk >= clocks[i]-limit[i] && testclk <= clocks[i]+limit[i] )
 			return clocks[i];
 
 	return 0;
@@ -543,8 +535,9 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
 	// set clock
 	if (g_debugMode == 2) prnt("DEBUG ASK: DetectStrongAskClock smallest wave: %d", minClk);
 	*clock = getClosestClock(minClk);
+
 	if (*clock == 0) 
-		return 0;
+		return -1;
 	
 	return shortestWaveIdx;
 }
@@ -554,43 +547,60 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
 // maybe somehow adjust peak trimming value based on samples to fix?
 // return start index of best starting position for that clock and return clock (by reference)
 int DetectASKClock(uint8_t *dest, size_t size, int *clock, int maxErr) {
-	size_t i = 1;
-	uint16_t clk[] = {255,8,16,32,40,50,64,100,128,255};
-	uint16_t clkEnd = 9;
-	uint16_t loopCnt = 1500;  //don't need to loop through entire array...  (cotag has clock of 384)
-	if (size <= loopCnt + 60) return -1; //not enough samples
-	size -= 60; //sometimes there is a strange end wave - filter out this....
-	//if we already have a valid clock
-	uint8_t clockFnd = 0;
-	for (; i < clkEnd; ++i) {
-		if (clk[i] == *clock) {
-			//clock found but continue to find best startpos
-			clockFnd = i;
-		}
-	}
 
+	//don't need to loop through entire array. (cotag has clock of 384)
+	uint16_t loopCnt = 1500;  
+
+	// not enough samples
+	if (size <= loopCnt + 60){
+		if (g_debugMode == 2) prnt("DEBUG DetectASKClock: not enough samples - aborting");
+		return -1; 
+	}
+	
 	// just noise - no super good detection. good enough
 	if (signalprop.isnoise) {
 		if (g_debugMode == 2) prnt("DEBUG DetectASKClock: just noise detected - aborting");
-		return -1;
+		return -2;
 	}
 	
-	//get high and low peak
+	size_t i = 1;
+	uint16_t num_clks = 9;
+	// first 255 value pos0 is placeholder for user inputed clock.
+	uint16_t clk[] = {255, 8, 16, 32, 40, 50, 64, 100, 128, 255};
+	
+	// sometimes there is a strange end wave - filter out this
+	size -= 60; 
+
+	// What is purpose?
+	// already have a valid clock?
+	uint8_t found_clk = 0;
+	for (; i < num_clks; ++i) {
+		if (clk[i] == *clock) {
+			found_clk = i;
+		}
+	}
+
+	// threshold 75% of high, low peak
 	int peak_hi, peak_low;
 	getHiLo(&peak_hi, &peak_low, 75, 75);
 	
-	//test for large clean peaks
-	if (!clockFnd){
+	// test for large clean, STRONG, CLIPPED peaks
+	
+	if (!found_clk) {
+		
 		if (DetectCleanAskWave(dest, size, peak_hi, peak_low)){
 		
 			int idx = DetectStrongAskClock(dest, size, peak_hi, peak_low, clock);
 			if (g_debugMode == 2) 
-				prnt("DEBUG ASK: detectaskclk Clean Ask Wave Detected: clk %i, Best Starting Position: %i", *clock, idx);
-			if (idx > 0)
-				return idx; //return shortest wave start position
-
+				prnt("DEBUG ASK: DetectASKClock Clean ASK Wave detected: clk %i, Best Starting Position: %i", *clock, idx);
+			
+			// return shortest wave start position
+			if (idx > -1)
+				return idx;
 		}
 	}
+	// test for weak peaks
+	
 	// test clock if given as cmd parameter
 	if ( *clock > 0 )
 		clk[0] = *clock;
@@ -601,15 +611,15 @@ int DetectASKClock(uint8_t *dest, size_t size, int *clock, int maxErr) {
 	uint8_t bestStart[] = {0,0,0,0,0,0,0,0,0};
 	size_t errCnt = 0, arrLoc, loopEnd;
 
-	if (clockFnd > 0) {
-		clkCnt = clockFnd;
-		clkEnd = clockFnd+1;
+	if (found_clk) {
+		clkCnt = found_clk;
+		num_clks = found_clk + 1;
 	} else {
 		clkCnt = 1;
 	}
 
 	//test each valid clock from smallest to greatest to see which lines up
-	for (; clkCnt < clkEnd; clkCnt++) {
+	for (; clkCnt < num_clks; clkCnt++) {
 		if (clk[clkCnt] <= 32) {
 			tol = 1;
 		} else {
@@ -640,15 +650,15 @@ int DetectASKClock(uint8_t *dest, size_t size, int *clock, int maxErr) {
 					errCnt++;
 				}
 			}
-			//if we found no errors then we can stop here and a low clock (common clocks)
+			// if we found no errors then we can stop here and a low clock (common clocks)
 			//  this is correct one - return this clock
-			//if (g_debugMode == 2) prnt("DEBUG ASK: clk %d, err %d, startpos %d, endpos %d", clk[clkCnt], errCnt, j, i);
+			// if (g_debugMode == 2) prnt("DEBUG ASK: clk %d, err %d, startpos %d, endpos %d", clk[clkCnt], errCnt, j, i);
 			if (errCnt == 0 && clkCnt < 7) { 
-				if (!clockFnd) 
+				if (!found_clk) 
 					*clock = clk[clkCnt];
 				return j;
 			}	
-			//if we found errors see if it is lowest so far and save it as best run
+			// if we found errors see if it is lowest so far and save it as best run
 			if (errCnt < bestErr[clkCnt]) {
 				bestErr[clkCnt] = errCnt;
 				bestStart[clkCnt] = j;
@@ -658,7 +668,7 @@ int DetectASKClock(uint8_t *dest, size_t size, int *clock, int maxErr) {
 	
 	uint8_t k, best = 0;
 	
-	for (k=1; k < clkEnd; ++k){
+	for (k=1; k < num_clks; ++k){
 		if (bestErr[k] < bestErr[best]){
 			if (bestErr[k] == 0) bestErr[k] = 1;
 			// current best bit to error ratio     vs  new bit to error ratio
@@ -668,7 +678,9 @@ int DetectASKClock(uint8_t *dest, size_t size, int *clock, int maxErr) {
 		}
 		//if (g_debugMode == 2) prnt("DEBUG ASK: clk %d, # Errors %d, Current Best Clk %d, bestStart %d", clk[k], bestErr[k], clk[best], bestStart[best]);
 	}
-	if (!clockFnd) *clock = clk[best];
+	
+	if (!found_clk) 
+		*clock = clk[best];
 	
 	return bestStart[best];
 }
@@ -1419,14 +1431,14 @@ int manrawdecode(uint8_t *bits, size_t *size, uint8_t invert, uint8_t *alignPos)
 int cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int invert, int high, int low, int *startIdx) {
 	*startIdx = 0;
 	size_t bitCnt = 0, smplCnt = 1, errCnt = 0, pos = 0;
-
 	uint8_t cl_4 = clk / 4;
 	uint8_t cl_2 = clk / 2;
-
-	getNextHigh(bits, *size, high, &pos);
 	bool waveHigh = true;
 	
-	for (size_t i=pos; i < *size; i++){
+	getNextHigh(bits, *size, high, &pos);
+
+	// sample counts,   like clock = 32.. it tries to find  32/4 = 8,  32/2 = 16
+	for (size_t i = pos; i < *size; i++){
 		if (bits[i] >= high && waveHigh){
 			smplCnt++;
 		} else if (bits[i] <= low && !waveHigh){
@@ -1434,10 +1446,13 @@ int cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int invert, int high,
 		} else { //transition
 			if ((bits[i] >= high && !waveHigh) || (bits[i] <= low && waveHigh)){
 
+				// 32-8-1 = 23
+				// 32+8+1 = 41
 				if (smplCnt > clk - cl_4 - 1) { //full clock
+				
 					if (smplCnt > clk + cl_4 + 1) { //too many samples
 						errCnt++;
-						if (g_debugMode == 2) prnt("DEBUG:(cleanAskRawDemod) ASK Modulation Error at: %u", i);
+						if (g_debugMode == 2) prnt("DEBUG ASK: cleanAskRawDemod ASK Modulation Error FULL at: %u  [%u]", i, smplCnt);
 						bits[bitCnt++] = 7;
 					} else if (waveHigh) {
 						bits[bitCnt++] = invert;
@@ -1450,7 +1465,16 @@ int cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int invert, int high,
 						*startIdx = i - clk;
 					waveHigh = !waveHigh;  
 					smplCnt = 0;
+					
+				// 16-8-1 = 7
 				} else if (smplCnt > cl_2 - cl_4 - 1) { //half clock
+				
+					if (smplCnt > cl_2 + cl_4 + 1) { //too many samples
+						errCnt++;
+						if (g_debugMode == 2) prnt("DEBUG ASK: cleanAskRawDemod ASK Modulation Error HALF at: %u  [%u]", i, smplCnt);
+						bits[bitCnt++] = 7;
+					}
+				
 					if (waveHigh) {
 						bits[bitCnt++] = invert;
 					} else if (!waveHigh) {
