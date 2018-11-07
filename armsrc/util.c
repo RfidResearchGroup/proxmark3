@@ -154,6 +154,70 @@ void LED(int led, int ms) {
 		LED_D_OFF();
 }
 
+void SpinOff(uint32_t pause) {
+    LED_A_OFF();
+    LED_B_OFF();
+    LED_C_OFF();
+    LED_D_OFF();
+    SpinDelay(pause);
+}
+
+// 0=A, 1=B, 2=C, 3=D
+void SpinErr(uint8_t led, uint32_t speed, uint8_t times) {
+    SpinOff(speed);
+    NTIME(times) 
+	{
+        switch (led) {
+        case 0:
+            LED_A_INV();
+            break;
+        case 1:
+            LED_B_INV();
+            break;
+        case 2:
+            LED_C_INV();
+            break;
+        case 3:
+            LED_D_INV();
+            break;
+        }
+        SpinDelay(speed);
+    }
+}
+
+void SpinDown(uint32_t speed) {
+    SpinOff(speed);
+    LED_D_ON();
+    SpinDelay(speed);
+    LED_D_OFF();
+    LED_C_ON();
+    SpinDelay(speed);
+    LED_C_OFF();
+    LED_B_ON();
+    SpinDelay(speed);
+    LED_B_OFF();
+    LED_A_ON();
+    SpinDelay(speed);
+    LED_A_OFF();
+}
+
+void SpinUp(uint32_t speed) {
+    SpinOff(speed);
+    LED_A_ON();
+    SpinDelay(speed);
+    LED_A_OFF();
+    LED_B_ON();
+    SpinDelay(speed);
+    LED_B_OFF();
+    LED_C_ON();
+    SpinDelay(speed);
+    LED_C_OFF();
+    LED_D_ON();
+    SpinDelay(speed);
+    LED_D_OFF();
+}
+
+
 // Determine if a button is double clicked, single clicked,
 // not clicked, or held down (for ms || 1sec)
 // In general, don't use this function unless you expect a

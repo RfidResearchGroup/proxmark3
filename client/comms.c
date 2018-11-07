@@ -107,7 +107,7 @@ static void storeCommand(UsbCommand *command) {
         //If these two are equal, we're about to overwrite in the
         // circular buffer.
         PrintAndLogEx(FAILED, "WARNING: Command buffer about to overwrite command! This needs to be fixed!");
-		fflush(NULL);
+		fflush(stdout);
     }
     //Store the command at the 'head' location
     UsbCommand* destination = &rxBuffer[cmd_head];
@@ -185,7 +185,7 @@ static void UsbCommandReceived(UsbCommand* c) {
 			} else {
 				PrintAndLogEx(NORMAL, "#db# %s", s);
 			}
-			fflush(NULL);
+			fflush(stdout);
 			break;
 		}
 		case CMD_DEBUG_PRINT_INTEGERS: {
@@ -339,7 +339,7 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode) 
 		pthread_create(&USB_communication_thread, NULL, &uart_communication, &conn);		
 		//pthread_create(&FPC_communication_thread, NULL, &uart_communication, &conn);
 
-		fflush(NULL);
+		fflush(stdout);
 		// create a mutex to avoid interlacing print commands from our different threads
 		//pthread_mutex_init(&print_lock, NULL);
 		return true;

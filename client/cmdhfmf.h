@@ -31,6 +31,7 @@
 #include "mifaredefault.h"  // mifare default key array
 #include "cmdhf14a.h" 		// dropfield
 #include "cliparser/cliparser.h" // argtable
+#include "hardnested/hardnested_bf_core.h"	// SetSIMDInstr
 
 extern int CmdHFMF(const char *Cmd);
 

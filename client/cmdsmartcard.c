@@ -21,8 +21,8 @@ int usage_sm_raw(void) {
 	PrintAndLogEx(NORMAL, "       d <bytes>  :  bytes to send");
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Examples:");
-	PrintAndLogEx(NORMAL, "        sc raw d 00a404000e315041592e5359532e444446303100    - “1PAY.SYS.DDF01” PPSE directory");
-	PrintAndLogEx(NORMAL, "        sc raw d 00a404000e325041592e5359532e444446303100    - “2PAY.SYS.DDF01” PPSE directory");
+	PrintAndLogEx(NORMAL, "        sc raw d 00a404000e315041592e5359532e444446303100    - `1PAY.SYS.DDF01` PPSE directory");
+	PrintAndLogEx(NORMAL, "        sc raw d 00a404000e325041592e5359532e444446303100    - `2PAY.SYS.DDF01` PPSE directory");
 	return 0;
 }
 int usage_sm_reader(void) {
@@ -225,7 +225,6 @@ int CmdSmartRaw(const char *Cmd) {
 			return 2;
 		}
 
-		// TLV decoder
 		if (decodeTLV && len > 4)
 			TLVPrintFromBuffer(buf+1, len-3);
 
@@ -495,7 +494,6 @@ int CmdSmartBruteforceSFI(const char *Cmd) {
 
 	char ctmp = tolower(param_getchar(Cmd, 0));
 	if (ctmp == 'h') return usage_sm_brute();
-	
 	
 	uint8_t data[5] = {0x00, 0xB2, 0x00, 0x00, 0x00};
 

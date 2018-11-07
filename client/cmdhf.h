@@ -26,6 +26,7 @@
 #include "cmdhficlass.h"	// ICLASS
 #include "cmdhfmf.h"		// CLASSIC
 #include "cmdhfmfu.h"		// ULTRALIGHT/NTAG etc
+#include "cmdhfmfp.h"		// Mifare Plus
 #include "cmdhfmfdes.h"		// DESFIRE
 #include "cmdhftopaz.h"		// TOPAZ
 #include "cmdhffelica.h"	// ISO18092 / FeliCa

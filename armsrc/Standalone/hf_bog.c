@@ -44,8 +44,7 @@ uint8_t FindOffsetInFlash() {
 	return 0; // wrap-around
 }
 
-void EraseMemory()
-{
+void EraseMemory() {
     if (!FlashInit()){
         return;
     }
@@ -59,9 +58,8 @@ void EraseMemory()
 	SpinDelay(100);
 }
 
+// This is actually copied from SniffIso14443a
 void RAMFUNC SniffAndStore(uint8_t param) {
-	
-	/* This is actually copied from SniffIso14443a */
 	
 	iso14443a_setup(FPGA_HF_ISO14443A_SNIFFER);
 	
@@ -268,10 +266,7 @@ void RAMFUNC SniffAndStore(uint8_t param) {
 		
 		// Erase first page of flash mem
 		EraseMemory();
-		
-		//for (int i=0; i<memoffset + 4 * auth_attempts; i++)
-		//	if (MF_DBGLEVEL > 1) Dbprintf("[-] total_data[%d] = 0x%02x", i, total_data[i]);
-		
+				
 		// Write total data to flash mem
 		uint16_t writelen = Flash_WriteData(0, total_data, memoffset + 4 * auth_attempts);
 		if (MF_DBGLEVEL > 1) Dbprintf("[!] Wrote %u bytes into flash mem", writelen);
@@ -283,18 +278,23 @@ void RAMFUNC SniffAndStore(uint8_t param) {
 	}
 }
 
-void RunMod()
-{
-	Dbprintf("Sniffing started");
+void RunMod() {
 	
-	SpinDelay(200);
+	Dbprintf(">>  Bogiton 14a Sniff UL/UL-EV1/NTAG a.k.a BogitoRun Started  <<");
+	Dbprintf("Starting to sniff");
+	
+	SpinDown(50);
+    SpinOff(50);
+    SpinUp(50);
+    SpinOff(50);
+    SpinDown(50);
+	SpinDelay(500);
 	
 	// param:
 	// bit 0 - trigger from first card answer
 	// bit 1 - trigger from first reader 7-bit request	
-	SniffAndStore(0);
-	
-	LEDsoff();
-	
+	SniffAndStore(0);	
+	LEDsoff();	
 	SpinDelay(300);
+	Dbprintf("- [ End ] -> You can take shell back ...");
 }

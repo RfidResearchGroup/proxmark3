@@ -90,9 +90,9 @@ void setT55xxConfig(uint8_t arg0, t55xx_config *c) {
         return;
 	}
 	
-	uint8_t *buf = BigBuf_malloc(4096);
+	uint8_t *buf = BigBuf_malloc(T55XX_CONFIG_LEN);
 	Flash_CheckBusy(BUSY_TIMEOUT);
-	uint16_t res = Flash_ReadDataCont(T55XX_CONFIG_OFFSET, buf, 4096);
+	uint16_t res = Flash_ReadDataCont(T55XX_CONFIG_OFFSET, buf, T55XX_CONFIG_LEN);
 	if ( res == 0) {
 		FlashStop();
 		BigBuf_free();
@@ -104,9 +104,9 @@ void setT55xxConfig(uint8_t arg0, t55xx_config *c) {
 	Flash_CheckBusy(BUSY_TIMEOUT);
     Flash_WriteEnable();
 	Flash_Erase4k(3, 0xD);	
-	res = Flash_Write(T55XX_CONFIG_OFFSET, buf, 4096);
+	res = Flash_Write(T55XX_CONFIG_OFFSET, buf, T55XX_CONFIG_LEN);
 
-	if ( res == 4096 && MF_DBGLEVEL > 1) {
+	if ( res == T55XX_CONFIG_LEN && MF_DBGLEVEL > 1) {
 		DbpString("T55XX Config save success");
 	}
 	
@@ -124,10 +124,25 @@ void loadT55xxConfig(void) {
         return;
 	}
 
+	uint8_t *buf = BigBuf_malloc(T55XX_CONFIG_LEN);
+	
 	Flash_CheckBusy(BUSY_TIMEOUT);
-	uint16_t isok = Flash_ReadDataCont(T55XX_CONFIG_OFFSET, (uint8_t *)&t_config, T55XX_CONFIG_LEN);
+	uint16_t isok = Flash_ReadDataCont(T55XX_CONFIG_OFFSET, buf, T55XX_CONFIG_LEN);
 	FlashStop();
-
+	
+	// verify read mem is actual data.
+	uint8_t cntA = T55XX_CONFIG_LEN, cntB = T55XX_CONFIG_LEN;
+	for (int i=0; i< T55XX_CONFIG_LEN; i++) {
+		if ( buf[i] == 0xFF) cntA--;
+		if ( buf[i] == 0x00) cntB--;
+	}
+	if ( !cntA || !cntB ) {
+		BigBuf_free();
+		return;
+	}
+	
+	memcpy((uint8_t *)&t_config, buf, T55XX_CONFIG_LEN);
+	
 	if ( isok == T55XX_CONFIG_LEN) {
 		if (MF_DBGLEVEL > 1) DbpString("T55XX Config load success");
 	}

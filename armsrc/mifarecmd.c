@@ -1425,6 +1425,8 @@ OUT:
 
 void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+
 	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
 	pcs = &mpcs;

@@ -105,11 +105,13 @@ CMDSRCS =	crapto1/crapto1.c \
 			tea.c \
 			polarssl/des.c \
 			polarssl/aes.c \
+			polarssl/aes_cmac128.c \
 			polarssl/bignum.c \
 			polarssl/rsa.c \
 			polarssl/sha1.c \
 			polarssl/sha256.c \
 			polarssl/base64.c \
+			polarssl/libpcrypto.c \
 			cliparser/argtable3.c\
 			cliparser/cliparser.c\
 			loclass/cipher.c \
@@ -147,6 +149,7 @@ CMDSRCS =	crapto1/crapto1.c \
 			emv/test/dda_test.c\
 			emv/test/cda_test.c\
 			emv/cmdemv.c \
+            mifare4.c \
 			cmdanalyse.c \
 			cmdhf.c \
 			cmdhflist.c \
@@ -158,6 +161,7 @@ CMDSRCS =	crapto1/crapto1.c \
 			cmdhficlass.c \
 			cmdhfmf.c \
             cmdhfmfu.c \
+            cmdhfmfp.c \
 			cmdhfmfhard.c \
             hardnested/hardnested_bruteforce.c \
 			cmdhfmfdes.c \

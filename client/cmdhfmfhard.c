@@ -33,6 +33,7 @@
 #include "crapto1/crapto1.h"
 #include "parity.h"
 #include "hardnested/hardnested_bruteforce.h"
+#include "hardnested/hardnested_bf_core.h"
 #include "hardnested/hardnested_bitarray_core.h"
 #include "zlib.h"
 
@@ -72,22 +73,27 @@ static float brute_force_per_second;
 
 
 static void get_SIMD_instruction_set(char* instruction_set) {
-#if defined (__i386__) || defined (__x86_64__)	
-	#if !defined(__APPLE__) || (defined(__APPLE__) && (__clang_major__ > 8 || __clang_major__ == 8 && __clang_minor__ >= 1))	
-		#if (__GNUC__ >= 5) && (__GNUC__ > 5 || __GNUC_MINOR__ > 2)
-	if (__builtin_cpu_supports("avx512f")) strcpy(instruction_set, "AVX512F");
-	else if (__builtin_cpu_supports("avx2")) strcpy(instruction_set, "AVX2");
-		#else 
-	if (__builtin_cpu_supports("avx2")) strcpy(instruction_set, "AVX2");
-		#endif
-	else if (__builtin_cpu_supports("avx")) strcpy(instruction_set, "AVX");
-	else if (__builtin_cpu_supports("sse2")) strcpy(instruction_set, "SSE2");
-	else if (__builtin_cpu_supports("mmx")) strcpy(instruction_set, "MMX");
-	else 
-	#endif
-#endif
-		strcpy(instruction_set, "no");
-}
+	switch(GetSIMDInstrAuto()) {
+		case SIMD_AVX512:
+			strcpy(instruction_set, "AVX512F");
+			break;
+		case SIMD_AVX2:
+			strcpy(instruction_set, "AVX2");
+			break;
+		case SIMD_AVX:
+			strcpy(instruction_set, "AVX");
+			break;
+		case SIMD_SSE2:
+			strcpy(instruction_set, "SSE2");
+			break;
+		case SIMD_MMX:
+			strcpy(instruction_set, "MMX");
+			break;
+		default:
+			strcpy(instruction_set, "no");
+			break;
+	}	
+}		  
 
 
 static void print_progress_header(void) {
@@ -267,6 +273,7 @@ static void init_bitflip_bitarrays(void)
 				if (bytesread != filesize) {
 					PrintAndLogEx(WARNING, "File read error with %s. Aborting...\n", state_file_name);
 					fclose(statesfile);
+					inflateEnd(&compressed_stream);
 					exit(5);
 				}
 				fclose(statesfile);
@@ -1743,7 +1750,7 @@ static void add_matching_states(statelist_t *candidates, uint8_t part_sum_a0, ui
 		PrintAndLogEx(WARNING, "Out of memory error in add_matching_states() - statelist.\n");
 		exit(4);
 	}
-	uint32_t *candidates_bitarray = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * (1<<19));
+	uint32_t *candidates_bitarray = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * worstcase_size);
 	if (candidates_bitarray == NULL) {
 		PrintAndLogEx(WARNING, "Out of memory error in add_matching_states() - bitarray.\n");
 		free(candidates->states[odd_even]);
@@ -2208,6 +2215,10 @@ static void set_test_state(uint8_t byte)
 int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *trgkey, bool nonce_file_read, bool nonce_file_write, bool slow, int tests, uint64_t *foundkey, char *filename) 
 {
 	char progress_text[80];
+	
+	char instr_set[12] = {0};
+	get_SIMD_instruction_set(instr_set);
+	PrintAndLog("Using %s SIMD core.", instr_set);
 
 	srand((unsigned) time(NULL));
 	brute_force_per_second = brute_force_benchmark();

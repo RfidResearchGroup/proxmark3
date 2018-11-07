@@ -9,6 +9,7 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdhfmf.h"
+#include "mifare4.h"
 
 #define MIFARE_4K_MAXBLOCK 255
 #define MIFARE_2K_MAXBLOCK 128 
@@ -130,6 +131,13 @@ int usage_hf14_hardnested(void){
 	PrintAndLogEx(NORMAL, "      u <UID>   read/write hf-mf-<UID>-nonces.bin instead of default name");
 	PrintAndLogEx(NORMAL, "      f <name>  read/write <name> instead of default name");
 	PrintAndLogEx(NORMAL, "      t         tests?");
+	PrintAndLogEx(NORMAL, "      i <X>     set type of SIMD instructions. Without this flag programs autodetect it.");
+	PrintAndLogEx(NORMAL, "        i 5   = AVX512");
+	PrintAndLogEx(NORMAL, "        i 2   = AVX2");
+	PrintAndLogEx(NORMAL, "        i a   = AVX");
+	PrintAndLogEx(NORMAL, "        i s   = SSE2");
+	PrintAndLogEx(NORMAL, "        i m   = MMX");
+	PrintAndLogEx(NORMAL, "        i n   = none (use CPU regular instruction set)");	
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Examples:");
 	PrintAndLogEx(NORMAL, "      hf mf hardnested 0 A FFFFFFFFFFFF 4 A");
@@ -1251,8 +1259,8 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 	switch(tolower(param_getchar(Cmd, cmdp))) {
 		case 'h': return usage_hf14_hardnested();
 		case 'r':
-			fptr=GenerateFilename("hf-mf-","-nonces.bin");
-			if(fptr==NULL) 
+			fptr = GenerateFilename("hf-mf-","-nonces.bin");
+			if (fptr == NULL) 
 				strncpy(filename,"nonces.bin", FILE_PATH_SIZE);
 			else
 				strncpy(filename,fptr, FILE_PATH_SIZE);
@@ -1268,10 +1276,10 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 			if (!param_gethex(Cmd, cmdp+2, trgkey, 12)) {
 				know_target_key = true;
 			}
-			cmdp+=2;
+			cmdp += 2;
 			break;
 		default:
-			if(param_getchar(Cmd, cmdp) == 0x00)
+			if (param_getchar(Cmd, cmdp) == 0x00)
 			{
 				PrintAndLogEx(NORMAL, "Block number is missing");
 				return 1;
@@ -1308,7 +1316,7 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 			if (ctmp != 'A' && ctmp != 'a') {
 				trgKeyType = 1;
 			}
-			cmdp+=5;
+			cmdp += 5;
 	}
 	if (!param_gethex(Cmd, cmdp, trgkey, 12)) {
 		know_target_key = true;
@@ -1316,14 +1324,13 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 	}
 
 	while ((ctmp = param_getchar(Cmd, cmdp))) {
-		switch(tolower(ctmp))
-		{
+		switch(tolower(ctmp)) {
 		case 's':
 			slow = true;
 			break;
 		case 'w':
 			nonce_file_write = true;
-			fptr=GenerateFilename("hf-mf-","-nonces.bin");
+			fptr = GenerateFilename("hf-mf-","-nonces.bin");
 			if (fptr == NULL) 
 				return 1;
 			strncpy(filename, fptr, FILE_PATH_SIZE);
@@ -1337,6 +1344,34 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 			param_getstr(Cmd, cmdp+1, szTemp, FILE_PATH_SIZE);
 			strncpy(filename, szTemp, FILE_PATH_SIZE);
 			cmdp++;
+			break;
+		case 'i': 
+			SetSIMDInstr(SIMD_AUTO);
+			ctmp = tolower(param_getchar(Cmd, cmdp+1));
+			switch (ctmp) {
+				case '5':
+					SetSIMDInstr(SIMD_AVX512);
+					break;
+				case '2':
+					SetSIMDInstr(SIMD_AVX2);
+					break;
+				case 'a':
+					SetSIMDInstr(SIMD_AVX);
+					break;
+				case 's':
+					SetSIMDInstr(SIMD_SSE2);
+					break;
+				case 'm':
+					SetSIMDInstr(SIMD_MMX);
+					break;
+				case 'n':
+					SetSIMDInstr(SIMD_NONE);
+					break;
+				default:
+					PrintAndLog("Unknown SIMD type. %c", ctmp);
+					return 1;
+			}
+			cmdp += 2;
 			break;
 		default:
 			PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", ctmp);
@@ -3067,50 +3102,12 @@ out:
 	return 0;
 }
 
-int aes_encode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length){
-	uint8_t iiv[16] = {0};
-	if (iv)
-		memcpy(iiv, iv, 16);
-	
-	aes_context aes;
-	aes_init(&aes);
-	if (aes_setkey_enc(&aes, key, 128))
-		return 1;
-	if (aes_crypt_cbc(&aes, AES_ENCRYPT, length, iiv, input, output))
-		return 2;
-	aes_free(&aes);
-
-	return 0;
-}
-
-int aes_decode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length){
-	uint8_t iiv[16] = {0};
-	if (iv)
-		memcpy(iiv, iv, 16);
-	
-	aes_context aes;
-	aes_init(&aes);
-	if (aes_setkey_dec(&aes, key, 128))
-		return 1;
-	if (aes_crypt_cbc(&aes, AES_DECRYPT, length, iiv, input, output))
-		return 2;
-	aes_free(&aes);
-
-	return 0;
-}
-
 int CmdHF14AMfAuth4(const char *cmd) {
 	uint8_t keyn[20] = {0};
 	int keynlen = 0;
 	uint8_t key[16] = {0};
 	int keylen = 0;
-	uint8_t data[257] = {0};
-	int datalen = 0;
-	
-	uint8_t Rnd1[17] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x00};
-	uint8_t Rnd2[17] = {0};
-	
-	
+
 	CLIParserInit("hf mf auth4", 
 		"Executes AES authentication command in ISO14443-4", 
 		"Usage:\n\thf mf auth4 4000 000102030405060708090a0b0c0d0e0f -> executes authentication\n"
@@ -3124,8 +3121,8 @@ int CmdHF14AMfAuth4(const char *cmd) {
 	};
 	CLIExecWithReturn(cmd, argtable, true);
 	
-	CLIGetStrWithReturn(1, keyn, &keynlen);
-	CLIGetStrWithReturn(2, key, &keylen);
+	CLIGetHexWithReturn(1, keyn, &keynlen);
+	CLIGetHexWithReturn(2, key, &keylen);
 	CLIParserFree();
 	
 	if (keynlen != 2) {
@@ -3138,76 +3135,7 @@ int CmdHF14AMfAuth4(const char *cmd) {
 		return 1;
 	}
 
-	uint8_t cmd1[] = {0x0a, 0x00, 0x70, keyn[1], keyn[0], 0x00};
-	int res = ExchangeRAW14a(cmd1, sizeof(cmd1), true, true, data, sizeof(data), &datalen);
-	if (res) {
-		PrintAndLog("ERROR exchande raw error: %d", res);
-		return 2;
-	}
-	
-	PrintAndLog("<phase1: %s", sprint_hex(data, datalen));
-		
-	if (datalen < 3) {
-		PrintAndLogEx(ERR, "card response length: %d", datalen);
-		return 3;
-	}
-	
-	if (data[0] != 0x0a || data[1] != 0x00) {
-		PrintAndLogEx(ERR, "Framing error in card response. :%s", sprint_hex(data, 2));
-		return 3;
-	}
-
-	if (data[2] != 0x90) {
-		PrintAndLogEx(ERR, "card response error: %02x", data[2]);
-		return 3;
-	}
-
-	if (datalen != 19) {
-		PrintAndLogEx(ERR, "card response must be 16 bytes long instead of: %d", datalen);
-		return 3;
-	}
-	
-    aes_decode(NULL, key, &data[3], Rnd2, 16);
-	Rnd2[16] = Rnd2[0];
-	PrintAndLog("Rnd2: %s", sprint_hex(Rnd2, 16));
-
-	uint8_t cmd2[35] = {0};
-	cmd2[0] = 0x0b;
-	cmd2[1] = 0x00;
-	cmd2[2] = 0x72;
-
-	uint8_t raw[32] = {0};
-	memmove(raw, Rnd1, 16);
-	memmove(&raw[16], &Rnd2[1], 16);
-
-    aes_encode(NULL, key, raw, &cmd2[3], 32);
-	PrintAndLog(">phase2: %s", sprint_hex(cmd2, 35));
-	
-	res = ExchangeRAW14a(cmd2, sizeof(cmd2), false, false, data, sizeof(data), &datalen);
-	if (res) {
-		PrintAndLogEx(ERR, "exchande raw error: %d", res);
-		DropField();
-		return 4;
-	}
-	
-	PrintAndLog("<phase2: %s", sprint_hex(data, datalen));
-
-    aes_decode(NULL, key, &data[3], raw, 32);
-	PrintAndLog("res: %s", sprint_hex(raw, 32));
-	
-	PrintAndLog("Rnd1`: %s", sprint_hex(&raw[4], 16));
-	if (memcmp(&raw[4], &Rnd1[1], 16)) {
-		PrintAndLogEx(ERR, "\nAuthentication FAILED. rnd not equal");
-		PrintAndLog("rnd1 reader: %s", sprint_hex(&Rnd1[1], 16));
-		PrintAndLog("rnd1   card: %s", sprint_hex(&raw[4], 16));
-		DropField();
-		return 5;
-	}
-
-	DropField();
-	PrintAndLogEx(INFO, "Authentication OK");
-	
-	return 0;
+	return MifareAuth4(NULL, keyn, key, true, false, true);
 }
 
 static command_t CommandTable[] = {

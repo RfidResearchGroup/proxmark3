@@ -55,20 +55,19 @@ static int l_SendCommand(lua_State *L){
  */
 static int l_GetFromBigBuf(lua_State *L){
 	
-	int len = 0;
-    int startindex = 0;
+	int len = 0, startindex = 0;
 	
     //Check number of arguments
     int n = lua_gettop(L);
-    if(n == 0) {
+    if (n == 0) {
         //signal error by returning Nil, errorstring
         lua_pushnil(L);
-        lua_pushstring(L,"You need to supply number of len and startindex");
+        lua_pushstring(L, "You need to supply number of bytes and startindex");
         return 2; // two return values
     }
-    if(n >= 2) {
-        len = luaL_checknumber(L, 1);
-        startindex = luaL_checknumber(L, 2);
+    if (n >= 2) {
+        startindex = luaL_checknumber(L, 1);
+		len = luaL_checknumber(L, 2);
     }
 
 	uint8_t *data = calloc(len, sizeof(uint8_t));
@@ -78,11 +77,11 @@ static int l_GetFromBigBuf(lua_State *L){
         lua_pushstring(L,"Allocating memory failed");
         return 2; // two return values
 	}
-		
+
 	if ( !GetFromDevice(BIG_BUF, data, len, startindex, NULL, 2500, false)) {
 		free(data);
 		lua_pushnil(L);
-        lua_pushstring(L,"command execution time out");		
+        lua_pushstring(L, "command execution time out");		
 		return 2;
 	}
 	
@@ -91,6 +90,56 @@ static int l_GetFromBigBuf(lua_State *L){
 	free(data);
 	return 1;// return 1 to signal one return value
 }
+
+/**
+ * @brief The following params expected:
+ * uint8_t *dest
+ * int bytes
+ * int start_index
+ * @param L
+ * @return
+ */
+static int l_GetFromFlashMem(lua_State *L){
+
+#ifndef WITH_FLASH
+	lua_pushnil(L);
+	lua_pushstring(L, "Not compiled with FLASH MEM support");		
+	return 2;
+#else
+	int len = 0, startindex = 0;
+	
+    int n = lua_gettop(L);
+    if (n == 0) {
+        lua_pushnil(L);
+        lua_pushstring(L, "You need to supply number of bytes and startindex");
+        return 2;
+    }
+    if (n >= 2) {
+        startindex = luaL_checknumber(L, 1);
+		len = luaL_checknumber(L, 2);
+    }
+
+	uint8_t *data = calloc(len, sizeof(uint8_t));
+	if ( !data ) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Allocating memory failed");
+        return 2; 
+	}
+	
+	if ( !GetFromDevice(FLASH_MEM, data, len, startindex, NULL, -1, false)) {
+		free(data);
+		lua_pushnil(L);
+        lua_pushstring(L, "command execution time out");		
+		return 2;
+	}
+
+	lua_pushlstring(L,(const char *)data, len);
+	free(data);
+	return 1;
+#endif
+}
+
+
 /**
  * @brief The following params expected:
  * uint32_t cmd
@@ -655,6 +704,7 @@ int set_pm3_libraries(lua_State *L) {
     static const luaL_Reg libs[] = {
         {"SendCommand",                 l_SendCommand},
 		{"GetFromBigBuf",               l_GetFromBigBuf},
+		{"GetFromFlashMem",            	l_GetFromFlashMem},
         {"WaitForResponseTimeout",      l_WaitForResponseTimeout},
 		{"mfDarkside",                  l_mfDarkside},
         {"foobar",                      l_foobar},

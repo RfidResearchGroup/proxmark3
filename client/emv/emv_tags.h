@@ -18,6 +18,7 @@
 
 #include "tlv.h"
 #include <stdio.h>
+#include <inttypes.h>
 
 // AC
 # define EMVAC_AC_MASK   0xC0

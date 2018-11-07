@@ -254,12 +254,7 @@ uint16_t Flash_ReadData(uint32_t address, uint8_t *out, uint16_t len) {
 	// length should never be zero
 	if (!len || Flash_CheckBusy(BUSY_TIMEOUT)) return 0;
 
-
-    uint8_t cmd = READDATA;
-
-	if(FASTFLASH) {
-		cmd = FASTREAD;
-	} 
+    uint8_t cmd = (FASTFLASH) ? FASTREAD : READDATA;
 
 	FlashSendByte(cmd);
 	Flash_TransferAdresse(address);
@@ -273,8 +268,6 @@ uint16_t Flash_ReadData(uint32_t address, uint8_t *out, uint16_t len) {
 		out[i] = FlashSendByte(0xFF);
 
 	out[i] = FlashSendLastByte(0xFF);
-
-
 	FlashStop();	
 	return len;	
 }
@@ -291,11 +284,7 @@ uint16_t Flash_ReadDataCont(uint32_t address, uint8_t *out, uint16_t len) {
 	// length should never be zero
 	if (!len) return 0;
 	
-    uint8_t cmd = READDATA;
-
-	if(FASTFLASH) {
-		cmd = FASTREAD;
-	} 
+    uint8_t cmd = (FASTFLASH) ? FASTREAD : READDATA;
 
 	FlashSendByte(cmd);
 	Flash_TransferAdresse(address);
@@ -309,7 +298,6 @@ uint16_t Flash_ReadDataCont(uint32_t address, uint8_t *out, uint16_t len) {
 		out[i] = FlashSendByte(0xFF);
 
 	out[i] = FlashSendLastByte(0xFF);
-	
 	return len;	
 }
 

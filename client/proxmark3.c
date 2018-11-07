@@ -40,7 +40,7 @@ static void showBanner(void){
 	printf("\nKeep iceman fork alive with a donation!           https://paypal.me/iceman1001/");
 	printf("\nMONERO: 43mNJLpgBVaTvyZmX9ajcohpvVkaRy1kbZPm8tqAb7itZgfuYecgkRF36rXrKFUkwEGeZedPsASRxgv4HPBHvJwyJdyvQuP");
 	printf("\n\n\n");
-	fflush(NULL);
+	fflush(stdout);
 }
 #endif
 
@@ -260,6 +260,10 @@ int main(int argc, char* argv[]) {
 
 	 /* initialize history */
 	using_history();
+
+#ifdef RL_STATE_READCMD
+  	rl_extend_line_buffer(1024);		
+#endif
   
 	if (argc < 2) {
 		show_help(true, argv[0]);
@@ -282,23 +286,23 @@ int main(int argc, char* argv[]) {
 		}	   
 
 		// flush output
-		if(strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "-flush") == 0){
+		if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "-flush") == 0){
 			SetFlushAfterWrite(true);
 			PrintAndLogEx(INFO, "Output will be flushed after every print.\n");
 		}
 		
 		// wait for comport
-		if(strcmp(argv[i], "-w") == 0 || strcmp(argv[i], "-wait") == 0){
+		if (strcmp(argv[i], "-w") == 0 || strcmp(argv[i], "-wait") == 0){
 			waitCOMPort = true;
 		}
 
 		// execute pm3 command
-		if(strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "-command") == 0){
+		if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "-command") == 0){
 			executeCommand = true;
 		}
 
 		// execute lua script
-		if(strcmp(argv[i], "-l") == 0 || strcmp(argv[i], "-lua") == 0){
+		if (strcmp(argv[i], "-l") == 0 || strcmp(argv[i], "-lua") == 0){
 			executeCommand = true;
 			addLuaExec = true;
 		}

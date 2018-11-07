@@ -63,9 +63,10 @@ int scandir (const char *dir,
 	if (err_no != 0) {
 		closedir (dirp);
 		if (nl)	{
-			while (count > 0)
+			while (count > 0) {
 				free (nl[--count]);
-				free (nl);
+			}
+			free (nl);
 		}
 		return -1;
 	}
