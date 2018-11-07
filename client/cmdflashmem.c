@@ -9,8 +9,8 @@
 //-----------------------------------------------------------------------------
 #include "cmdflashmem.h"
 
-#include "rsa.h"
-#include "sha1.h"
+#include "mbedtls/rsa.h"
+#include "mbedtls/sha1.h"
 
 #define MCK 48000000
 //#define FLASH_BAUD 24000000
@@ -358,7 +358,7 @@ int CmdFlashMemWipe(const char *Cmd){
 int CmdFlashMemInfo(const char *Cmd){
 
 	uint8_t sha_hash[20] = {0};
-	rsa_context rsa;
+	mbedtls_rsa_context rsa;
 	
 	uint8_t cmdp = 0;
 	bool errors = false,  shall_write = false, shall_sign = false;
@@ -404,7 +404,7 @@ int CmdFlashMemInfo(const char *Cmd){
 	memcpy(&mem, (rdv40_validation_t *)resp.d.asBytes, sizeof(rdv40_validation_t));
 
 	// Flash ID hash (sha1)
-	sha1( mem.flashid, sizeof(mem.flashid), sha_hash );
+	mbedtls_sha1( mem.flashid, sizeof(mem.flashid), sha_hash );
 	
 	// print header
 	PrintAndLogEx(INFO, "\n--- Flash memory Information ---------");
@@ -471,22 +471,22 @@ int CmdFlashMemInfo(const char *Cmd){
 				
 #define KEY_LEN 128
 
-	rsa_init(&rsa, RSA_PKCS_V15, 0);
+	mbedtls_rsa_init(&rsa, MBEDTLS_RSA_PKCS_V15, 0);
 
 	rsa.len = KEY_LEN;
 
-	mpi_read_string( &rsa.N , 16, RSA_N  );
-	mpi_read_string( &rsa.E , 16, RSA_E  );
-	mpi_read_string( &rsa.D , 16, RSA_D  );
-	mpi_read_string( &rsa.P , 16, RSA_P  );
-	mpi_read_string( &rsa.Q , 16, RSA_Q  );
-	mpi_read_string( &rsa.DP, 16, RSA_DP );
-	mpi_read_string( &rsa.DQ, 16, RSA_DQ );
-	mpi_read_string( &rsa.QP, 16, RSA_QP );
+	mbedtls_mpi_read_string( &rsa.N , 16, RSA_N  );
+	mbedtls_mpi_read_string( &rsa.E , 16, RSA_E  );
+	mbedtls_mpi_read_string( &rsa.D , 16, RSA_D  );
+	mbedtls_mpi_read_string( &rsa.P , 16, RSA_P  );
+	mbedtls_mpi_read_string( &rsa.Q , 16, RSA_Q  );
+	mbedtls_mpi_read_string( &rsa.DP, 16, RSA_DP );
+	mbedtls_mpi_read_string( &rsa.DQ, 16, RSA_DQ );
+	mbedtls_mpi_read_string( &rsa.QP, 16, RSA_QP );
 
 	PrintAndLogEx(INFO, "KEY length   | %d", KEY_LEN);
 		
-	bool is_keyok = ( rsa_check_pubkey(  &rsa ) == 0 || rsa_check_privkey( &rsa ) == 0 );
+	bool is_keyok = ( mbedtls_rsa_check_pubkey(  &rsa ) == 0 || mbedtls_rsa_check_privkey( &rsa ) == 0 );
 	if (is_keyok)
 		PrintAndLogEx(SUCCESS, "RSA key validation ok");
 	else
@@ -505,7 +505,7 @@ int CmdFlashMemInfo(const char *Cmd){
 	// Signing (private key)
 	if (shall_sign) {
 			
-		int is_signed = rsa_pkcs1_sign( &rsa, NULL, NULL, RSA_PRIVATE, SIG_RSA_SHA1, 20, sha_hash, sign );
+		int is_signed = mbedtls_rsa_pkcs1_sign( &rsa, NULL, NULL, MBEDTLS_RSA_PRIVATE, MBEDTLS_MD_SHA1, 20, sha_hash, sign );
 		if (is_signed == 0) 
 			PrintAndLogEx(SUCCESS, "RSA Signing ok");
 		else
@@ -533,13 +533,13 @@ int CmdFlashMemInfo(const char *Cmd){
 	}
 	
 	// Verify (public key)
-	int is_verified = rsa_pkcs1_verify( &rsa, RSA_PUBLIC, SIG_RSA_SHA1, 20, sha_hash, from_device );
+	int is_verified = mbedtls_rsa_pkcs1_verify( &rsa, NULL, NULL, MBEDTLS_RSA_PUBLIC, MBEDTLS_MD_SHA1, 20, sha_hash, from_device );
 	if (is_verified == 0)
 		PrintAndLogEx(SUCCESS, "RSA Verification ok");
 	else
 		PrintAndLogEx(FAILED, "RSA Verification failed");
 
-	rsa_free(&rsa);
+	mbedtls_rsa_free(&rsa);
 	return 0;
 }
 
