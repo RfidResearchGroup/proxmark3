@@ -9,6 +9,7 @@
 //-----------------------------------------------------------------------------
 #include "util.h"
 
+#define UTIL_BUFFER_SIZE_SPRINT 4097
 // global client debug variable
 uint8_t g_debugMode = 0;
 
@@ -170,13 +171,13 @@ void print_hex_break(const uint8_t *data, const size_t len, uint8_t breaks) {
 }
 
 char *sprint_hex(const uint8_t *data, const size_t len) {
-	static char buf[1025] = {0};
+	static char buf[UTIL_BUFFER_SIZE_SPRINT] = {0};
 	hex_to_buffer((uint8_t *)buf, data, len, sizeof(buf) - 1, 0, 1, true);
 	return buf;
 }
 
 char *sprint_hex_inrow_ex(const uint8_t *data, const size_t len, const size_t min_str_len) {
-	static char buf[1025] = {0};
+	static char buf[UTIL_BUFFER_SIZE_SPRINT] = {0};
 	hex_to_buffer((uint8_t *)buf, data, len, sizeof(buf) - 1, min_str_len, 0, true);
 	return buf;
 }
@@ -185,12 +186,10 @@ char *sprint_hex_inrow(const uint8_t *data, const size_t len) {
 	return sprint_hex_inrow_ex(data, len, 0);
 }
 char *sprint_hex_inrow_spaces(const uint8_t *data, const size_t len, size_t spaces_between) {
-	static char buf[1025] = {0};
+	static char buf[UTIL_BUFFER_SIZE_SPRINT] = {0};
 	hex_to_buffer((uint8_t *)buf, data, len, sizeof(buf) - 1, 0, spaces_between, true);
 	return buf;
 }
-
-
 
 char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t breaks) {
 	
@@ -268,9 +267,9 @@ char *sprint_bin(const uint8_t *data, const size_t len) {
 }
 
 char *sprint_hex_ascii(const uint8_t *data, const size_t len) {
-	static char buf[1024];
+	static char buf[UTIL_BUFFER_SIZE_SPRINT];
 	char *tmp = buf;
-	memset(buf, 0x00, 1024);
+	memset(buf, 0x00, UTIL_BUFFER_SIZE_SPRINT);
 	size_t max_len = (len > 1010) ? 1010 : len;
 
 	sprintf(tmp, "%s| ", sprint_hex(data, max_len) );
@@ -288,9 +287,9 @@ char *sprint_hex_ascii(const uint8_t *data, const size_t len) {
 }
 
 char *sprint_ascii_ex(const uint8_t *data, const size_t len, const size_t min_str_len) {
-	static char buf[1024];
+	static char buf[UTIL_BUFFER_SIZE_SPRINT];
 	char *tmp = buf;
-	memset(buf, 0x00, 1024);
+	memset(buf, 0x00, UTIL_BUFFER_SIZE_SPRINT);
 	size_t max_len = (len > 1010) ? 1010 : len;
 	size_t i = 0;
 	while(i < max_len){

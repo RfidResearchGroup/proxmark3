@@ -23,7 +23,7 @@ ENV_CFLAGS := $(CFLAGS)
 VPATH = ../common ../zlib ../uart
 OBJDIR = obj
 
-LDLIBS = -L/opt/local/lib -L/usr/local/lib -lreadline -lpthread -lm
+LDLIBS = -L/opt/local/lib -L/usr/local/lib -lreadline -lpthread -lm -ljansson
 LUALIB = ../liblua/liblua.a
 LDFLAGS = $(ENV_LDFLAGS)
 INCLUDES_CLIENT = -I. -I../include -I../common -I../common/polarssl -I../zlib -I../uart -I/opt/local/include -I../liblua
@@ -134,6 +134,7 @@ CMDSRCS =	crapto1/crapto1.c \
 			lfdemod.c \
 			emv/crypto_polarssl.c\
 			emv/crypto.c\
+			emv/emvjson.c\
 			emv/emv_pk.c\
 			emv/emv_pki.c\
 			emv/emv_pki_priv.c\
@@ -166,6 +167,7 @@ CMDSRCS =	crapto1/crapto1.c \
             hardnested/hardnested_bruteforce.c \
 			cmdhfmfdes.c \
 			cmdhftopaz.c \
+			cmdhffido.c \
 			cmdhffelica.c \
 			cmdhw.c \
 			cmdlf.c \
