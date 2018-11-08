@@ -224,6 +224,21 @@ int CmdSmartRaw(const char *Cmd) {
 			free(buf);
 			return 2;
 		}
+		
+		if ( buf[0] == 0x6C ) {
+			data[4]	= buf[1];
+			
+			memcpy(c.d.asBytes, data, sizeof(data) );
+			clearCommandBuffer();
+			SendCommand(&c);
+			len = smart_response(buf);
+			
+			// TLV decoder
+			if (len > 4)
+				TLVPrintFromBuffer(buf+1, len-3);
+
+			data[4] = 0;
+		}
 
 		if (decodeTLV && len > 4)
 			TLVPrintFromBuffer(buf+1, len-3);
