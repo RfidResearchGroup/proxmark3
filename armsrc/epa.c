@@ -108,7 +108,7 @@ int EPA_APDU(uint8_t *apdu, size_t length, uint8_t *response)
 	switch(iso_type)
 	{
 		case 'a':
-			return iso14_apdu(apdu, (uint16_t) length, response);
+			return iso14_apdu(apdu, (uint16_t) length, response, NULL);
 			break;
 		case 'b':
 			return iso14443b_apdu(apdu, length, response);
