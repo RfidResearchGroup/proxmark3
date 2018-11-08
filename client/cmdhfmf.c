@@ -1621,12 +1621,12 @@ out:
 
 		FILE *fkeys = fopen(fptr,"wb");
 		if (fkeys == NULL) { 
-			PrintAndLogEx(WARNING, "Could not create file %s", filename);
+			PrintAndLogEx(WARNING, "Could not create file %s", fptr);
 			free(keyBlock);
 			free(e_sector);
 			return 1;
 		}
-		PrintAndLogEx(NORMAL, "Printing keys to binary file %s...", filename);
+		PrintAndLogEx(NORMAL, "Printing keys to binary file %s...", fptr);
 	
 		for (i=0; i<sectorsCnt; i++) {
 			num_to_bytes(e_sector[i].Key[0], 6, tempkey);
@@ -1639,7 +1639,7 @@ out:
 		}
 
 		fclose(fkeys);
-		PrintAndLogEx(NORMAL, "Found keys have been dumped to file %s. 0xffffffffffff has been inserted for unknown keys.", filename);			
+		PrintAndLogEx(NORMAL, "Found keys have been dumped to %s --> 0xffffffffffff has been inserted for unknown keys.", fptr);			
 	}
 	
 	free(keyBlock);
