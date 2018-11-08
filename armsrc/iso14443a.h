@@ -114,7 +114,7 @@ extern void ReaderTransmitPar(uint8_t *frame, uint16_t len, uint8_t *par, uint32
 extern int ReaderReceive(uint8_t *receivedAnswer, uint8_t *par);
 
 extern void iso14443a_setup(uint8_t fpga_minor_mode);
-extern int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, void *data);
+extern int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, void *data, uint8_t *res);
 extern int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *resp_data, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats);
 extern int iso14443a_fast_select_card(uint8_t *uid_ptr, uint8_t num_cascades);
 extern void iso14a_set_trigger(bool enable);

@@ -2212,15 +2212,21 @@ b8 b7 b6 b5 b4 b3 b2 b1
 b5,b6 = 00 - DESELECT
         11 - WTX 
 */    
-int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, void *data) {
+int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, void *data, uint8_t *res) {
 	uint8_t parity[MAX_PARITY_SIZE] = {0x00};
-	uint8_t real_cmd[cmd_len+4];
+	uint8_t real_cmd[cmd_len + 4];
 	
-	// ISO 14443 APDU frame: PCB [CID] [NAD] APDU CRC PCB=0x02
-	real_cmd[0] = 0x02; // bnr,nad,cid,chn=0; i-block(0x00)	
-	// put block number into the PCB
-	real_cmd[0] |= iso14_pcb_blocknum;
-	memcpy(real_cmd + 1, cmd, cmd_len);
+	if (cmd_len) {
+		// ISO 14443 APDU frame: PCB [CID] [NAD] APDU CRC PCB=0x02
+		real_cmd[0] = 0x02; // bnr,nad,cid,chn=0; i-block(0x00)	
+		// put block number into the PCB
+		real_cmd[0] |= iso14_pcb_blocknum;
+		memcpy(real_cmd + 1, cmd, cmd_len);
+	} else {
+		// R-block. ACK
+		real_cmd[0] = 0xA2; // r-block + ACK	
+		real_cmd[0] |= iso14_pcb_blocknum;
+	}
 	AddCrc14A(real_cmd, cmd_len + 1);
  
 	ReaderTransmit(real_cmd, cmd_len + 3, NULL);
@@ -2259,6 +2265,10 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, void *data) {
 	{
 		iso14_pcb_blocknum ^= 1;
 	}
+		
+		// if we received I-block with chaining we need to send ACK and receive another block of data
+		if (res)
+			*res = data_bytes[0];
 
 		// crc check
 		if (len >=3 && !check_crc(CRC_14443_A, data_bytes, len)) {
@@ -2320,8 +2330,9 @@ void ReaderIso14443a(UsbCommand *c) {
 		iso14a_set_timeout(timeout);
 
 	if ((param & ISO14A_APDU)) {
-		arg0 = iso14_apdu(cmd, len, buf);
-		cmd_send(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
+		uint8_t res;
+		arg0 = iso14_apdu(cmd, len, buf, &res);
+		cmd_send(CMD_ACK, arg0, res, 0, buf, sizeof(buf));
 	}
 
 	if ((param & ISO14A_RAW)) {
