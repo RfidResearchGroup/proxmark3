@@ -12,6 +12,7 @@
 
 #include <jansson.h>
 #include "tlv.h"
+#include "jansson/path.h"
 
 typedef struct {
 	tlv_tag_t Tag;

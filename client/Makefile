@@ -23,10 +23,10 @@ ENV_CFLAGS := $(CFLAGS)
 VPATH = ../common ../zlib ../uart
 OBJDIR = obj
 
-LDLIBS = -L/opt/local/lib -L/usr/local/lib -lreadline -lpthread -lm -ljansson
+LDLIBS = -L/opt/local/lib -L/usr/local/lib -lreadline -lpthread -lm -L/usr/include
 LUALIB = ../liblua/liblua.a
 LDFLAGS = $(ENV_LDFLAGS)
-INCLUDES_CLIENT = -I. -I../include -I../common -I../common/polarssl -I../zlib -I../uart -I/opt/local/include -I../liblua
+INCLUDES_CLIENT = -I/usr/include -I. -I../include -I../common -I../common/polarssl -I../zlib -I../uart -I/opt/local/include -I../liblua
 CFLAGS = $(ENV_CFLAGS) -std=c99 -D_ISOC99_SOURCE -DPRESETS $(INCLUDES_CLIENT) -Wall -g -O3
 CXXFLAGS = -I../include -Wall -O3
 
@@ -103,6 +103,7 @@ CMDSRCS =	crapto1/crapto1.c \
 			crapto1/crypto1.c \
 			mfkey.c \
 			tea.c \
+			jansson/path.c \
 			polarssl/des.c \
 			polarssl/aes.c \
 			polarssl/aes_cmac128.c \
@@ -134,7 +135,6 @@ CMDSRCS =	crapto1/crapto1.c \
 			lfdemod.c \
 			emv/crypto_polarssl.c\
 			emv/crypto.c\
-			emv/emvjson.c\
 			emv/emv_pk.c\
 			emv/emv_pki.c\
 			emv/emv_pki_priv.c\
@@ -144,6 +144,7 @@ CMDSRCS =	crapto1/crapto1.c \
 			emv/tlv.c \
 			emv/emv_tags.c \
 			emv/dol.c \
+			emv/emvjson.c\
 			emv/emvcore.c \
 			emv/test/crypto_test.c\
 			emv/test/sda_test.c\
