@@ -23,7 +23,7 @@ ENV_CFLAGS := $(CFLAGS)
 VPATH = ../common ../zlib ../uart
 OBJDIR = obj
 
-LDLIBS = -L/opt/local/lib -L/usr/local/lib -lreadline -lpthread -lm -L/usr/include
+LDLIBS = -L/opt/local/lib -L/usr/local/lib -lreadline -lpthread -lm -L/usr/lib -ljansson
 LUALIB = ../liblua/liblua.a
 LDFLAGS = $(ENV_LDFLAGS)
 INCLUDES_CLIENT = -I/usr/include -I. -I../include -I../common -I../common/polarssl -I../zlib -I../uart -I/opt/local/include -I../liblua
