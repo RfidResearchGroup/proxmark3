@@ -391,7 +391,7 @@ static unsigned long emv_value_numeric(const struct tlv *tlv, unsigned start, un
 
 static void emv_tag_dump_numeric(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
 	PRINT_INDENT(level);
-	fprintf(f, "\tNumeric value %" PRIu32 " \n", emv_value_numeric(tlv, 0, tlv->len * 2));
+	fprintf(f, "\tNumeric value %lu \n", emv_value_numeric(tlv, 0, tlv->len * 2));
 }
 
 static void emv_tag_dump_yymmdd(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {

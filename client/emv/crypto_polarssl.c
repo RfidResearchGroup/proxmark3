@@ -24,13 +24,14 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-#include "rsa.h"
-#include "sha1.h"
+#include "mbedtls/rsa.h"
+#include "mbedtls/sha1.h"
 
 struct crypto_hash_polarssl {
 	struct crypto_hash ch;
-	sha1_context ctx;
+	mbedtls_sha1_context ctx;
 };
 
 static void crypto_hash_polarssl_close(struct crypto_hash *_ch)
@@ -44,7 +45,7 @@ static void crypto_hash_polarssl_write(struct crypto_hash *_ch, const unsigned c
 {
 	struct crypto_hash_polarssl *ch = (struct crypto_hash_polarssl *)_ch;
 
-	sha1_update(&(ch->ctx), buf, len);
+	mbedtls_sha1_update(&(ch->ctx), buf, len);
 }
 
 static unsigned char *crypto_hash_polarssl_read(struct crypto_hash *_ch)
@@ -52,7 +53,7 @@ static unsigned char *crypto_hash_polarssl_read(struct crypto_hash *_ch)
 	struct crypto_hash_polarssl *ch = (struct crypto_hash_polarssl *)_ch;
 
 	static unsigned char sha1sum[20];
-	sha1_finish(&(ch->ctx), sha1sum);
+	mbedtls_sha1_finish(&(ch->ctx), sha1sum);
 	return sha1sum;
 }
 
@@ -71,7 +72,7 @@ static struct crypto_hash *crypto_hash_polarssl_open(enum crypto_algo_hash hash)
 
 	struct crypto_hash_polarssl *ch = malloc(sizeof(*ch));
 
-	sha1_starts(&(ch->ctx));
+	mbedtls_sha1_starts(&(ch->ctx));
 
 	ch->ch.write = crypto_hash_polarssl_write;
 	ch->ch.read = crypto_hash_polarssl_read;
@@ -83,7 +84,7 @@ static struct crypto_hash *crypto_hash_polarssl_open(enum crypto_algo_hash hash)
 
 struct crypto_pk_polarssl {
 	struct crypto_pk cp;
-	rsa_context ctx;
+	mbedtls_rsa_context ctx;
 };
 
 static struct crypto_pk *crypto_pk_polarssl_open_rsa(va_list vl)
@@ -96,13 +97,13 @@ static struct crypto_pk *crypto_pk_polarssl_open_rsa(va_list vl)
 	char *exp = va_arg(vl, char *);	 // E
 	int explen = va_arg(vl, size_t);
 
-	rsa_init(&cp->ctx, RSA_PKCS_V15, 0);
+	mbedtls_rsa_init(&cp->ctx, MBEDTLS_RSA_PKCS_V15, 0);
 	
 	cp->ctx.len = modlen; // size(N) in bytes
-	mpi_read_binary(&cp->ctx.N, (const unsigned char *)mod, modlen);
-	mpi_read_binary(&cp->ctx.E, (const unsigned char *)exp, explen);
+	mbedtls_mpi_read_binary(&cp->ctx.N, (const unsigned char *)mod, modlen);
+	mbedtls_mpi_read_binary(&cp->ctx.E, (const unsigned char *)exp, explen);
 	
-	int res = rsa_check_pubkey(&cp->ctx);
+	int res = mbedtls_rsa_check_pubkey(&cp->ctx);
 	if(res != 0) {
 		fprintf(stderr, "PolarSSL public key error res=%x exp=%d mod=%d.\n", res * -1, explen, modlen);
 		free(cp);
@@ -134,23 +135,23 @@ static struct crypto_pk *crypto_pk_polarssl_open_priv_rsa(va_list vl)
 //	char *inv = va_arg(vl, char *);
 //	int invlen = va_arg(vl, size_t);	
 	
-	rsa_init(&cp->ctx, RSA_PKCS_V15, 0);
+	mbedtls_rsa_init(&cp->ctx, MBEDTLS_RSA_PKCS_V15, 0);
 	
 	cp->ctx.len = modlen; // size(N) in bytes
-	mpi_read_binary(&cp->ctx.N,  (const unsigned char *)mod, modlen);
-	mpi_read_binary(&cp->ctx.E,  (const unsigned char *)exp, explen);
+	mbedtls_mpi_read_binary(&cp->ctx.N,  (const unsigned char *)mod, modlen);
+	mbedtls_mpi_read_binary(&cp->ctx.E,  (const unsigned char *)exp, explen);
 
-	mpi_read_binary(&cp->ctx.D,  (const unsigned char *)d, dlen);
-	mpi_read_binary(&cp->ctx.P,  (const unsigned char *)p, plen);
-	mpi_read_binary(&cp->ctx.Q,  (const unsigned char *)q, qlen);
-	mpi_read_binary(&cp->ctx.DP, (const unsigned char *)dp, dplen);
-	mpi_read_binary(&cp->ctx.DQ, (const unsigned char *)dq, dqlen);
-	mpi_inv_mod(&cp->ctx.QP, &cp->ctx.Q, &cp->ctx.P);
+	mbedtls_mpi_read_binary(&cp->ctx.D,  (const unsigned char *)d, dlen);
+	mbedtls_mpi_read_binary(&cp->ctx.P,  (const unsigned char *)p, plen);
+	mbedtls_mpi_read_binary(&cp->ctx.Q,  (const unsigned char *)q, qlen);
+	mbedtls_mpi_read_binary(&cp->ctx.DP, (const unsigned char *)dp, dplen);
+	mbedtls_mpi_read_binary(&cp->ctx.DQ, (const unsigned char *)dq, dqlen);
+	mbedtls_mpi_inv_mod(&cp->ctx.QP, &cp->ctx.Q, &cp->ctx.P);
 	
-	int res = rsa_check_privkey(&cp->ctx);
+	int res = mbedtls_rsa_check_privkey(&cp->ctx);
 	if(res != 0) {
 		fprintf(stderr, "PolarSSL private key error res=%x exp=%d mod=%d.\n", res * -1, explen, modlen);
-		free(cp);		
+		free(cp);
 		return NULL;
 	}
 
@@ -182,10 +183,10 @@ static struct crypto_pk *crypto_pk_polarssl_genkey_rsa(va_list vl)
 	if (transient) {
 	}
 	
-	int res = rsa_gen_key(&cp->ctx, &myrand, NULL, nbits, exp);
+	int res = mbedtls_rsa_gen_key(&cp->ctx, &myrand, NULL, nbits, exp);
 	if (res) {
 		fprintf(stderr, "PolarSSL private key generation error res=%x exp=%d nbits=%d.\n", res * -1, exp, nbits);
-		free(cp);		
+		free(cp);
 		return NULL;
 	}
 	
@@ -196,7 +197,7 @@ static void crypto_pk_polarssl_close(struct crypto_pk *_cp)
 {
 	struct crypto_pk_polarssl *cp = (struct crypto_pk_polarssl *)_cp;
 
-	rsa_free(&cp->ctx);
+	mbedtls_rsa_free(&cp->ctx);
 	free(cp);
 }
 
@@ -207,7 +208,7 @@ static unsigned char *crypto_pk_polarssl_encrypt(const struct crypto_pk *_cp, co
 	unsigned char *result;
 	
 	*clen = 0;
-	size_t keylen = mpi_size(&cp->ctx.N);
+	size_t keylen = mbedtls_mpi_size(&cp->ctx.N);
 
 	result = malloc(keylen);
 	if (!result) {
@@ -215,9 +216,9 @@ static unsigned char *crypto_pk_polarssl_encrypt(const struct crypto_pk *_cp, co
 		return NULL;
 	}
 
-	res = rsa_public(&cp->ctx, buf, result);
-	if (res) {
-		printf("RSA encrypt failed. Error: %x data len: %zu key len: %zu\n", res * -1, len, keylen);
+	res = mbedtls_rsa_public(&cp->ctx, buf, result);
+	if(res) {
+		printf("RSA encrypt failed. Error: %x data len: %zd key len: %zd\n", res * -1, len, keylen);
 		free(result);
 		return NULL;
 	}
@@ -234,7 +235,7 @@ static unsigned char *crypto_pk_polarssl_decrypt(const struct crypto_pk *_cp, co
 	unsigned char *result;
 	
 	*clen = 0;
-	size_t keylen = mpi_size(&cp->ctx.N);
+	size_t keylen = mbedtls_mpi_size(&cp->ctx.N);
 
 	result = malloc(keylen);
 	if (!result) {
@@ -242,9 +243,9 @@ static unsigned char *crypto_pk_polarssl_decrypt(const struct crypto_pk *_cp, co
 		return NULL;
 	}
 
-	res = rsa_private(&cp->ctx, buf, result); // CHECK???
+	res = mbedtls_rsa_private(&cp->ctx, NULL, NULL, buf, result); // CHECK???
 	if(res) {
-		printf("RSA decrypt failed. Error: %x data len: %zu key len: %zu\n", res * -1, len, keylen);
+		printf("RSA decrypt failed. Error: %x data len: %zd key len: %zd\n", res * -1, len, keylen);
 		free(result);
 		return NULL;
 	}
@@ -269,17 +270,17 @@ static unsigned char *crypto_pk_polarssl_get_parameter(const struct crypto_pk *_
 	switch(param){
 		// mod
 		case 0:
-			*plen = mpi_size(&cp->ctx.N);
+			*plen = mbedtls_mpi_size(&cp->ctx.N);
 			result = malloc(*plen);
 			memset(result, 0x00, *plen);
-			mpi_write_binary(&cp->ctx.N, result, *plen);
+			mbedtls_mpi_write_binary(&cp->ctx.N, result, *plen);
 			break;
 		// exp
 		case 1:
-			*plen = mpi_size(&cp->ctx.E);
+			*plen = mbedtls_mpi_size(&cp->ctx.E);
 			result = malloc(*plen);
 			memset(result, 0x00, *plen);
-			mpi_write_binary(&cp->ctx.E, result, *plen);
+			mbedtls_mpi_write_binary(&cp->ctx.E, result, *plen);
 			break;
 		default:
 			printf("Error get parameter. Param=%d", param);
