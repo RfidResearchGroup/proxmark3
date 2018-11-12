@@ -151,20 +151,16 @@ int CmdFlashmemSpiBaudrate(const char *Cmd) {
 
 int CmdFlashMemLoad(const char *Cmd){
 
-	FILE *f;
-	char filename[FILE_PATH_SIZE] = {0};	
-	uint8_t cmdp = 0;
-	bool errors = false;
 	uint32_t start_index = 0;
+	char filename[FILE_PATH_SIZE] = {0};	
+	bool errors = false;
+	uint8_t cmdp = 0;
 	
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch (tolower(param_getchar(Cmd, cmdp))) {
-		case 'o':
-			start_index = param_get32ex(Cmd, cmdp+1, 0, 10);
-			cmdp += 2;
-			break;
+		case 'h':
+			return usage_flashmem_load();
 		case 'f':
-			//File handling and reading
 			if ( param_getstr(Cmd, cmdp+1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE ) {
 				PrintAndLogEx(FAILED, "Filename too long");
 				errors = true;
@@ -172,8 +168,10 @@ int CmdFlashMemLoad(const char *Cmd){
 			}			
 			cmdp += 2;			
 			break;
-		case 'h':
-			return usage_flashmem_load();
+		case 'o':
+			start_index = param_get32ex(Cmd, cmdp+1, 0, 10);
+			cmdp += 2;
+			break;	
 		default:
 			PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
 			errors = true;
@@ -183,52 +181,32 @@ int CmdFlashMemLoad(const char *Cmd){
 	
 	//Validations
 	if (errors || cmdp == 0 ) return usage_flashmem_load();			
-
-	// load file
-	f = fopen(filename, "rb");
-	if ( !f ){
-		PrintAndLogEx(FAILED, "File: %s: not found or locked.", filename);
-		return 1;
-	}	
 	
-	// get filesize in order to malloc memory
-	fseek(f, 0, SEEK_END);
-	long fsize = ftell(f);
-	fseek(f, 0, SEEK_SET);
-
-	if (fsize < 0) 	{
-		PrintAndLogDevice(WARNING, "error, when getting filesize");
-		fclose(f);
+	uint8_t *data = NULL;
+	size_t datalen = 0;
+	int res = loadFile(filename, "bin", &data, &datalen);
+	//int res = loadFileEML( filename, "eml", data, &datalen);
+	if ( res ) {
+		free(data);
 		return 1;
 	}
 	
-	if (fsize > FLASH_MEM_MAX_SIZE) {
+	if (datalen > FLASH_MEM_MAX_SIZE) {
 		PrintAndLogDevice(WARNING, "error, filesize is larger than available memory");
-		fclose(f);
+		free(data);
 		return 1;
 	}
 
-	uint8_t *dump = calloc(fsize, sizeof(uint8_t));
-	if (!dump) {
-		PrintAndLogDevice(WARNING, "error, cannot allocate memory ");
-		fclose(f);
-		return 1;
-	}
-	
-	size_t bytes_read = fread(dump, 1, fsize, f);
-	if (f)
-		fclose(f);
-	
 	//Send to device
 	uint32_t bytes_sent = 0;
-	uint32_t bytes_remaining = bytes_read;
+	uint32_t bytes_remaining = datalen;
 
 	while (bytes_remaining > 0){
 		uint32_t bytes_in_packet = MIN(FLASH_MEM_BLOCK_SIZE, bytes_remaining);
 		
 		UsbCommand c = {CMD_FLASHMEM_WRITE, {start_index + bytes_sent, bytes_in_packet, 0}};
 				
-		memcpy(c.d.asBytes, dump + bytes_sent, bytes_in_packet);
+		memcpy(c.d.asBytes, data + bytes_sent, bytes_in_packet);
 		clearCommandBuffer();
 		SendCommand(&c);
 
@@ -238,7 +216,7 @@ int CmdFlashMemLoad(const char *Cmd){
 		UsbCommand resp;
 		if ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
 			PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-			free(dump);
+			free(data);
 			return 1;
 		}
 		
@@ -247,9 +225,9 @@ int CmdFlashMemLoad(const char *Cmd){
 			PrintAndLogEx(FAILED, "Flash write fail [offset %u]", bytes_sent);
 		
 	}
-	free(dump);
+	free(data);
 	
-	PrintAndLogEx(SUCCESS, "Wrote %u bytes to offset %u", bytes_read, start_index);
+	PrintAndLogEx(SUCCESS, "Wrote %u bytes to offset %u", datalen, start_index);
 	return 0;
 }
 int CmdFlashMemSave(const char *Cmd){

@@ -184,7 +184,11 @@ int loadFile(const char *preferredName, const char *suffix, void* data, size_t* 
 		goto out;		
 	}
 	
-	memcpy(data, dump, bytes_read);
+	if ( (data) == NULL) {
+		(data) = calloc( bytes_read, sizeof(uint8_t));
+	}
+	
+	memcpy( (data), dump, bytes_read);
 	free(dump);
 	
 	PrintAndLogDevice(SUCCESS, "loaded %d bytes from binary file %s", bytes_read, fileName);
