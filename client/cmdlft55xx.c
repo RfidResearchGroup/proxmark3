@@ -1507,7 +1507,7 @@ int CmdT55xxBruteForce(const char *Cmd) {
 	
 	// load a default pwd file.
 	char line[9];
-	char filename[FILE_PATH_SIZE]={0};
+	char filename[FILE_PATH_SIZE] = {0};
 	int	keycnt = 0;
 	uint8_t stKeyBlock = 20;
 	uint8_t *keyBlock = NULL, *p = NULL;
@@ -1752,9 +1752,10 @@ int CmdT55xxRecoverPW(const char *Cmd) {
 
 	return 0;
 }
+
 // note length of data returned is different for different chips.  
-//   some return all page 1 (64 bits) and others return just that block (32 bits) 
-//   unfortunately the 64 bits makes this more likely to get a false positive...
+// some return all page 1 (64 bits) and others return just that block (32 bits) 
+// unfortunately the 64 bits makes this more likely to get a false positive...
 bool tryDetectP1(bool getData) {
 	uint8_t preamble[] = {1,1,1,0,0,0,0,0,0,0,0,1,0,1,0,1};
 	size_t startIdx = 0;
@@ -1771,7 +1772,7 @@ bool tryDetectP1(bool getData) {
 	ans = fskClocks(&fc1, &fc2, (uint8_t *)&clk, &firstClockEdge);
 	if (ans && ((fc1==10 && fc2==8) || (fc1==8 && fc2==5))) {
 		if ( FSKrawDemod("0 0", false) && 
-			  preambleSearchEx(DemodBuffer, preamble,sizeof(preamble), &DemodBufferLen, &startIdx, false) && 
+			  preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) && 
 			  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
 			return true;
 		}
@@ -1781,40 +1782,6 @@ bool tryDetectP1(bool getData) {
 			return true;
 		}
 		return false;
-	}
-
-	// try psk clock detect. if successful it cannot be any other type of modulation... (in theory...)
-	clk = GetPskClock("", false);
-	if (clk > 0) {
-		// allow undo
-		// save_restoreGB(1);
-		// skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
-		//CmdLtrim("160");
-		if ( PSKDemod("0 0 6", false) &&
-			  preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) && 
-			  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
-			//save_restoreGB(0);
-			return true;
-		}
-		if ( PSKDemod("0 1 6", false) &&
-			  preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) && 
-			  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
-			//save_restoreGB(0);
-			return true;
-		}
-		// PSK2 - needs a call to psk1TOpsk2.
-		if ( PSKDemod("0 0 6", false)) {
-			psk1TOpsk2(DemodBuffer, DemodBufferLen);
-			if (preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) && 
-				  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
-				//save_restoreGB(0);
-				return true;
-			}
-		} // inverse waves does not affect PSK2 demod
-		//undo trim samples
-		//save_restoreGB(0); 
-		// no other modulation clocks = 2 or 4 so quit searching
-		if (fc1 != 8) return false;
 	}
 
 	// try ask clock detect.  it could be another type even if successful.
@@ -1857,6 +1824,42 @@ bool tryDetectP1(bool getData) {
 			return true;
 		}
 	}
+	
+	// Fewer card uses PSK
+	// try psk clock detect. if successful it cannot be any other type of modulation... (in theory...)
+	clk = GetPskClock("", false);
+	if (clk > 0) {
+		// allow undo
+		// save_restoreGB(1);
+		// skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
+		//CmdLtrim("160");
+		if ( PSKDemod("0 0 6", false) &&
+			  preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) && 
+			  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
+			//save_restoreGB(0);
+			return true;
+		}
+		if ( PSKDemod("0 1 6", false) &&
+			  preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) && 
+			  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
+			//save_restoreGB(0);
+			return true;
+		}
+		// PSK2 - needs a call to psk1TOpsk2.
+		if ( PSKDemod("0 0 6", false)) {
+			psk1TOpsk2(DemodBuffer, DemodBufferLen);
+			if (preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) && 
+				  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
+				//save_restoreGB(0);
+				return true;
+			}
+		} // inverse waves does not affect PSK2 demod
+		//undo trim samples
+		//save_restoreGB(0); 
+		// no other modulation clocks = 2 or 4 so quit searching
+		if (fc1 != 8) return false;
+	}
+
 	return false;
 }
 //  does this need to be a callable command?
