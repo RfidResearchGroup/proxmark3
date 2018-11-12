@@ -39,6 +39,8 @@
 #include "emv/emvjson.h"
 #include "emv/dump.h"
 #include "cliparser/cliparser.h"
+#include "crypto/asn1utils.h"
+#include "crypto/libpcrypto.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -328,11 +330,47 @@ int CmdHFFidoRegister(const char *cmd) {
 		PrintAndLog("DER certificate[%d]: %s...", derLen, sprint_hex(&buf[derp], 20));
 	}
 	
+	// check and print DER certificate
+	uint8_t public_key[65] = {0}; 
 	
+	// get hash
 	int hashp = 1 + 65 + 1 + keyHandleLen + derLen;
 	PrintAndLog("Hash[%d]: %s", len - hashp, sprint_hex(&buf[hashp], len - hashp));
-	
+
 	// check ANSI X9.62 format ECDSA signature (on P-256)
+	uint8_t rval[300] = {0}; 
+	uint8_t sval[300] = {0}; 
+	res = ecdsa_asn1_get_signature(&buf[hashp], len - hashp, rval, sval);
+	if (!res) {
+		if (verbose) {
+			PrintAndLog("  r: %s", sprint_hex(rval, 32));
+			PrintAndLog("  s: %s", sprint_hex(sval, 32));
+		}
+
+		uint8_t xbuf[4096] = {0};
+		size_t xbuflen = 0;
+		res = FillBuffer(xbuf, sizeof(xbuf), &xbuflen,
+			"\x00", 1,
+			adata, 32, 
+			cdata, 32, 
+			&buf[67], keyHandleLen,  // keyHandle
+			&buf[1], 65,             // user public key
+			NULL, 0);
+		//PrintAndLog("--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
+		res = ecdsa_signature_verify(public_key, xbuf, xbuflen, &buf[hashp], len - hashp);
+		if (res) {
+			if (res == -0x4e00) {
+				PrintAndLog("Signature is NOT VALID.");
+			} else {
+				PrintAndLog("Other signature check error: %x %s", (res<0)?-res:res, ecdsa_get_error(res));
+			}
+		} else {
+			PrintAndLog("Signature is OK.");
+		}
+		
+	} else {
+		PrintAndLog("Invalid signature. res=%d.", res);
+	}
 	
 	PrintAndLog("\nauth command: ");
 	printf("hf fido auth %s%s", paramsPlain?"-p ":"", sprint_hex_inrow(&buf[67], keyHandleLen));
