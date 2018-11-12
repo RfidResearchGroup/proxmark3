@@ -135,26 +135,126 @@ out:
 	return retval;
 }
 
-/**
- * Utility function to print to console. This is used consistently within the library instead
- * of printf, but it actually only calls printf (and adds a linebreak).
- * The reason to have this method is to
- * make it simple to plug this library into proxmark, which has this function already to
- * write also to a logfile. When doing so, just delete this function.
- * @param fmt
- */
- /*
-void PrintAndLogDevice(logLevel_t level, char *fmt, ...) {
-	char buffer[2048] = {0};
-	va_list args;
-	va_start(args, fmt);
-	vsnprintf(buffer, sizeof(buffer), fmt, args);
-	va_end(args);
-	PrintAndLogEx(level, buffer);
+int saveFileJSON(const char *preferredName, const char *suffix, uint8_t* data, size_t datalen) {
+	//stub - for merlokk ;)
+	return 1;
 }
-*/
-#else //if we're on ARM
 
-//void PrintAndLogDevice(logLevel_t level, char *fmt, ...) { return; }
+int loadFile(const char *preferredName, const char *suffix, void* data, size_t* datalen) {
+
+	if ( preferredName == NULL ) return 1;
+	if ( suffix == NULL ) return 1;
+
+	int retval = 0;
+	int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
+	char * fileName = calloc(size, sizeof(char));
+	sprintf(fileName,"%s.%s", preferredName, suffix);
+
+	FILE *f = fopen(fileName, "rb");
+	if ( !f ) {
+		PrintAndLogDevice(FAILED, "file: %s: not found or locked.", fileName);
+		retval = 1;
+		goto out;
+	}
+	
+	// get filesize in order to malloc memory
+	fseek(f, 0, SEEK_END);
+	long fsize = ftell(f);
+	fseek(f, 0, SEEK_SET);
+
+	if ( fsize < 0 ) 	{
+		PrintAndLogDevice(FAILED, "error, when getting filesize");
+		retval = 1;
+		goto out;
+	}
+	
+	uint8_t *dump = calloc(fsize, sizeof(uint8_t));
+	if ( !dump ) {
+		PrintAndLogDevice(FAILED, "error, cannot allocate memory");
+		retval = 2;
+		goto out;
+	}
+	
+	size_t bytes_read = fread(dump, 1, fsize, f);
+
+	if ( bytes_read != fsize ) {
+		PrintAndLogDevice(FAILED, "error, bytes read mismatch file size");
+		free(dump);
+		retval = 3;
+		goto out;		
+	}
+	
+	memcpy(data, dump, bytes_read);
+	free(dump);
+	
+	PrintAndLogDevice(SUCCESS, "loaded %d bytes from binary file %s", bytes_read, fileName);
+	
+	*datalen = bytes_read;
+
+out:	
+	fclose(f);
+	free(fileName);
+	return retval;
+}
+
+int loadFileEML(const char *preferredName, const char *suffix, void* data, size_t* datalen) {
+
+	if ( preferredName == NULL ) return 1;
+	if ( suffix == NULL ) return 1;
+
+    size_t counter = 0;
+	int retval = 0, hexlen = 0;
+	int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
+	char * fileName = calloc(size, sizeof(char));
+	sprintf(fileName,"%s.%s", preferredName, suffix);
+
+	FILE *f = fopen(fileName, "r");
+	if ( !f ) {
+		PrintAndLogDevice(FAILED, "file: %s: not found or locked.", fileName);
+		retval = 1;
+		goto out;
+	}
+	
+	// 128 + 2 newline chars + 1 null terminator	
+	char line[131];
+	memset(line, 0, sizeof(line));
+	uint8_t buf[64] = {0x00};
+	
+	while ( !feof(f) ) {
+
+		memset(line, 0, sizeof(line));
+
+		if (fgets(line, sizeof(line), f) == NULL){
+			fclose(f);
+			PrintAndLogEx(FAILED, "File reading error.");
+			retval = 2;
+			goto out;
+		}
+	
+		if ( line[0] == '#' )
+			continue;
+		
+		int res = param_gethex_to_eol(line, 0, buf, sizeof(buf), &hexlen);
+		if (res == 0 || res == 1) {
+			memcpy(data + counter, buf, hexlen);
+			counter += hexlen;
+		}
+	}
+	fclose(f);
+	PrintAndLogDevice(SUCCESS, "loaded %d bytes from text file %s", counter, fileName);
+	*datalen = counter;
+		
+out:	
+	free(fileName);
+	return retval;
+}
+
+int loadFileJSON(const char *preferredName, const char *suffix, void* data, size_t* datalen) {
+	//stub - for merlokk ;)
+	datalen = 0;
+	return 1;
+}
+
+#else //if we're on ARM
 
 #endif
