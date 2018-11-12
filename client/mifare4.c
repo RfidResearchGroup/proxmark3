@@ -15,7 +15,7 @@
 #include "cmdhf14a.h"
 #include "util.h"
 #include "ui.h"
-#include "polarssl/libpcrypto.h"
+#include "crypto/libpcrypto.h"
 
 int CalculateEncIVCommand(mf4Session *session, uint8_t *iv, bool verbose) {
 	memcpy(&iv[0], session->TI, 4);

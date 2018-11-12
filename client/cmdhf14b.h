@@ -25,7 +25,7 @@
 #include "cmdhf14a.h"
 #include "cmdhf.h"
 #include "prng.h"
-#include "sha1.h"
+#include "mbedtls/sha1.h"
 #include "mifare.h"		// structs/enum for ISO14B
 #include "protocols.h"	// definitions of ISO14B protocol
 
