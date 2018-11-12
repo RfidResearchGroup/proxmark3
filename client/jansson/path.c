@@ -13,7 +13,6 @@
 #include <jansson.h>
 #include "jansson_private.h"
 
-
 json_t *json_path_get(const json_t *json, const char *path)
 {
     static const char root_chr = '$', array_open = '[';

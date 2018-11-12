@@ -23,11 +23,13 @@ ENV_CFLAGS := $(CFLAGS)
 VPATH = ../common ../zlib ../uart
 OBJDIR = obj
 
-LDLIBS = -L/opt/local/lib -L/usr/local/lib -lreadline -lpthread -lm -L/usr/lib -ljansson
+LDLIBS = -L/opt/local/lib -L/usr/local/lib -lreadline -lpthread -lm
 LUALIB = ../liblua/liblua.a
+JANSSONLIBPATH = ./jansson
+JANSSONLIB = $(JANSSONLIBPATH)/libjansson.a
 LDFLAGS = $(ENV_LDFLAGS)
-INCLUDES_CLIENT = -I/usr/include -I. -I../include -I../common -I../common/polarssl -I../zlib -I../uart -I/opt/local/include -I../liblua
-CFLAGS = $(ENV_CFLAGS) -std=c99 -D_ISOC99_SOURCE -DPRESETS $(INCLUDES_CLIENT) -Wall -g -O3
+INCLUDES_CLIENT = -I. -I../include -I../common -I../common/polarssl -I../zlib -I../uart -I/opt/local/include -I../liblua
+CFLAGS = $(ENV_CFLAGS) -std=c99 -D_ISOC99_SOURCE -DPRESETS $(INCLUDES_CLIENT) -I$(JANSSONLIBPATH) -Wall -g -O3
 CXXFLAGS = -I../include -Wall -O3
 
 LUAPLATFORM = generic
@@ -103,7 +105,6 @@ CMDSRCS =	crapto1/crapto1.c \
 			crapto1/crypto1.c \
 			mfkey.c \
 			tea.c \
-			jansson/path.c \
 			polarssl/des.c \
 			polarssl/aes.c \
 			polarssl/aes_cmac128.c \
@@ -263,12 +264,12 @@ WINBINS = $(patsubst %, %.exe, $(BINS))
 CLEAN = $(BINS) $(WINBINS) $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(ZLIBOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(OBJDIR)/*.o *.moc.cpp ui/ui_overlays.h lualibs/usb_cmd.lua lualibs/mf_default_keys.lua
 
 # need to assign dependancies to build these first...
-all: lua_build $(BINS) 
+all: lua_build jansson_build $(BINS) 
 
 all-static: LDLIBS:=-static $(LDLIBS)
 all-static: proxmark3 flasher fpga_compress
 
-proxmark3: LDLIBS+=$(LUALIB) $(QTLDLIBS)
+proxmark3: LDLIBS+=$(LUALIB) $(JANSSONLIB) $(QTLDLIBS)
 proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(ZLIBOBJS) lualibs/usb_cmd.lua lualibs/mf_default_keys.lua
 	$(LD) $(LDFLAGS) $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(ZLIBOBJS) $(LDLIBS)  -o $@
 	
@@ -295,6 +296,7 @@ lualibs/mf_default_keys.lua : default_keys.dic
 clean:
 	$(RM) $(CLEAN)
 	cd ../liblua && make clean
+	cd $(JANSSONLIBPATH) && make clean
 
 tarbin: $(BINS)
 	$(TAR) $(TARFLAGS) ../proxmark3-$(platform)-bin.tar $(BINS:%=client/%) $(WINBINS:%=client/%)
@@ -302,6 +304,10 @@ tarbin: $(BINS)
 lua_build:
 	@echo Compiling liblua, using platform $(LUAPLATFORM)
 	cd ../liblua && make $(LUAPLATFORM)
+	
+jansson_build:
+	@echo Compiling jansson
+	cd $(JANSSONLIBPATH) && make all
 
 .PHONY: all clean
 
