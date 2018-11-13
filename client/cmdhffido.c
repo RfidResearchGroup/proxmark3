@@ -207,7 +207,7 @@ int CmdHFFidoRegister(const char *cmd) {
 	void* argtable[] = {
 		arg_param_begin,
 		arg_lit0("aA",  "apdu",     "show APDU reqests and responses"),
-		arg_lit0("vV",  "verbose",  "show technical data. vv - show full certificates data"),
+		arg_litn("vV",  "verbose",  0, 2, "show technical data. vv - show full certificates data"),
 		arg_lit0("pP",  "plain",    "send plain ASCII to challenge and application parameters instead of HEX"),
 		arg_str0("jJ",  "json",		"fido.json", "JSON input / output file name for parameters."),
 		arg_str0(NULL,  NULL,       "<HEX/ASCII challenge parameter (32b HEX/1..16 chars)>", NULL),
