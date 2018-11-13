@@ -29,6 +29,7 @@ mbedtls_SOURCES = \
 	arc4.c \
 	pk.c \
 	pk_wrap.c \
+	pkwrite.c \
 	pkcs5.c \
 	pkcs12.c \
 	pkparse.c \

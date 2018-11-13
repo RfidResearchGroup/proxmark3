@@ -41,6 +41,10 @@
 #include "cliparser/cliparser.h"
 #include "crypto/asn1utils.h"
 #include "crypto/libpcrypto.h"
+#include "fido/additional_ca.h"
+#include "mbedtls/x509_crt.h"
+#include "mbedtls/x509.h"
+#include "mbedtls/pk.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -203,7 +207,7 @@ int CmdHFFidoRegister(const char *cmd) {
 	void* argtable[] = {
 		arg_param_begin,
 		arg_lit0("aA",  "apdu",     "show APDU reqests and responses"),
-		arg_lit0("vV",  "verbose",  "show technical data"),
+		arg_lit0("vV",  "verbose",  "show technical data. vv - show full certificates data"),
 		arg_lit0("pP",  "plain",    "send plain ASCII to challenge and application parameters instead of HEX"),
 		arg_str0("jJ",  "json",		"fido.json", "JSON input / output file name for parameters."),
 		arg_str0(NULL,  NULL,       "<HEX/ASCII challenge parameter (32b HEX/1..16 chars)>", NULL),
@@ -214,6 +218,7 @@ int CmdHFFidoRegister(const char *cmd) {
 	
 	bool APDULogging = arg_get_lit(1);
 	bool verbose = arg_get_lit(2);
+	bool verbose2 = arg_get_lit(2) > 1;
 	bool paramsPlain = arg_get_lit(3);
 
 	char fname[250] = {0};
@@ -304,7 +309,7 @@ int CmdHFFidoRegister(const char *cmd) {
 	if (APDULogging)
 		PrintAndLog("---------------------------------------------------------------");
 	PrintAndLog("data len: %d", len);
-	if (verbose) {
+	if (verbose2) {
 		PrintAndLog("--------------data----------------------");
 		dump_buffer((const unsigned char *)buf, len, NULL, 0);
 		PrintAndLog("--------------data----------------------");
@@ -321,8 +326,7 @@ int CmdHFFidoRegister(const char *cmd) {
 	
 	int derp = 67 + keyHandleLen;
 	int derLen = (buf[derp + 2] << 8) + buf[derp + 3] + 4;
-	// needs to decode DER certificate
-	if (verbose) {
+	if (verbose2) {
 		PrintAndLog("DER certificate[%d]:------------------DER-------------------", derLen);
 		dump_buffer_simple((const unsigned char *)&buf[67 + keyHandleLen], derLen, NULL);
 		PrintAndLog("\n----------------DER---------------------");
@@ -331,7 +335,56 @@ int CmdHFFidoRegister(const char *cmd) {
 	}
 	
 	// check and print DER certificate
-	uint8_t public_key[65] = {0}; 
+	uint8_t public_key[65] = {0};
+	
+	// TODO: print DER certificate in DER view
+	
+	// load CA's
+	mbedtls_x509_crt cacert;
+	mbedtls_x509_crt_init(&cacert);
+	res = mbedtls_x509_crt_parse(&cacert, (const unsigned char *) additional_ca_pem, additional_ca_pem_len);
+	if (res < 0) {
+		PrintAndLog("ERROR: CA parse certificate returned -0x%x - %s", -res, ecdsa_get_error(res));
+	}
+	if (verbose) 
+		PrintAndLog("CA load OK. %d skipped", res);
+	
+	// load DER certificate from authenticator's data
+	mbedtls_x509_crt cert;
+	mbedtls_x509_crt_init(&cert);
+	res = mbedtls_x509_crt_parse_der(&cert, &buf[67 + keyHandleLen], derLen);
+	if (res) {
+		PrintAndLog("ERROR: DER parse returned 0x%x - %s", (res<0)?-res:res, ecdsa_get_error(res));
+	}
+	
+	// get certificate info
+	char linfo[300] = {0};
+	mbedtls_x509_crt_info(linfo, sizeof(linfo), "  ", &cert);
+	PrintAndLog("DER certificate info:\n%s", linfo);
+	
+	// verify certificate
+	uint32_t verifyflags = 0;
+	memset(linfo, 0x00, sizeof(linfo));
+
+	res = mbedtls_x509_crt_verify(&cert, &cacert, NULL, NULL, &verifyflags, NULL, NULL);
+	if (res) {
+		PrintAndLog("ERROR: DER verify returned 0x%x - %s", (res<0)?-res:res, ecdsa_get_error(res));
+	}
+	
+	mbedtls_x509_crt_verify_info(linfo, sizeof(linfo), "  ", verifyflags);
+	PrintAndLog("Verification info:\n%s", linfo);
+	
+	// get public key
+	res = ecdsa_public_key_from_pk(&cert.pk, public_key, sizeof(public_key));
+	if (res) {
+		PrintAndLog("ERROR: getting public key from certificate 0x%x - %s", (res<0)?-res:res, ecdsa_get_error(res));
+	} else {
+		if (verbose)
+			PrintAndLog("Got a public key from certificate.");
+	}
+
+	mbedtls_x509_crt_free(&cert);
+	mbedtls_x509_crt_free(&cacert);
 	
 	// get hash
 	int hashp = 1 + 65 + 1 + keyHandleLen + derLen;
@@ -351,8 +404,8 @@ int CmdHFFidoRegister(const char *cmd) {
 		size_t xbuflen = 0;
 		res = FillBuffer(xbuf, sizeof(xbuf), &xbuflen,
 			"\x00", 1,
-			adata, 32, 
-			cdata, 32, 
+			&data[32], 32,           // application parameter  
+			&data[0], 32,            // challenge parameter
 			&buf[67], keyHandleLen,  // keyHandle
 			&buf[1], 65,             // user public key
 			NULL, 0);
