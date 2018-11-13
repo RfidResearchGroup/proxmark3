@@ -404,6 +404,8 @@ int CmdHFFidoRegister(const char *cmd) {
 int CmdHFFidoAuthenticate(const char *cmd) {
 	uint8_t data[512] = {0};
 	uint8_t hdata[250] = {0};
+	bool public_key_loaded = false;
+	uint8_t public_key[65] = {0}; 
 	int hdatalen = 0;
 	uint8_t keyHandleLen = 0;
 	json_t *root = NULL;
@@ -423,6 +425,7 @@ int CmdHFFidoAuthenticate(const char *cmd) {
 		arg_lit0("uU",  "user",     "mode: enforce-user-presence-and-sign"),
 		arg_lit0("cC",  "check",    "mode: check-only"),
 		arg_str0("jJ",  "json",		"fido.json", "JSON input / output file name for parameters."),
+		arg_str0("kK",  "key",		"public key to verify signature", NULL),
 		arg_str0(NULL,  NULL,       "<HEX key handle (var 0..255b)>", NULL),
 		arg_str0(NULL,  NULL,       "<HEX/ASCII challenge parameter (32b HEX/1..16 chars)>", NULL),
 		arg_str0(NULL,  NULL,       "<HEX/ASCII application parameter (32b HEX/1..16 chars)>", NULL),
@@ -431,7 +434,7 @@ int CmdHFFidoAuthenticate(const char *cmd) {
 	CLIExecWithReturn(cmd, argtable, true);
 	
 	bool APDULogging = arg_get_lit(1);
-	//bool verbose = arg_get_lit(2);
+	bool verbose = arg_get_lit(2);
 	bool paramsPlain = arg_get_lit(3);
 	uint8_t controlByte = 0x08;
 	if (arg_get_lit(5))
@@ -449,11 +452,25 @@ int CmdHFFidoAuthenticate(const char *cmd) {
 		JsonLoadBufAsHex(root, "$.ChallengeParam", data, 32, &jlen);
 		JsonLoadBufAsHex(root, "$.ApplicationParam", &data[32], 32, &jlen);
 		JsonLoadBufAsHex(root, "$.KeyHandle", &data[65], 512 - 67, &jlen);
+		JsonLoadBufAsHex(root, "$.PublicKey", public_key, 65, &jlen);
+		if (jlen > 0)
+			public_key_loaded = true;
 		keyHandleLen = jlen & 0xff;
 		data[64] = keyHandleLen;
 	} 
 
+	// public key
 	CLIGetHexWithReturn(8, hdata, &hdatalen);
+	if (hdatalen && hdatalen != 130) {
+		PrintAndLog("ERROR: public key length must be 65 bytes only.");
+		return 1;
+	}
+	if (hdatalen) {
+		memmove(public_key, hdata, hdatalen);
+		public_key_loaded = true;
+	}	
+	
+	CLIGetHexWithReturn(9, hdata, &hdatalen);
 	if (hdatalen > 255) {
 		PrintAndLog("ERROR: application parameter length must be less than 255.");
 		return 1;
@@ -472,7 +489,7 @@ int CmdHFFidoAuthenticate(const char *cmd) {
 			return 1;
 		}
 	} else {
-		CLIGetHexWithReturn(9, hdata, &hdatalen);
+		CLIGetHexWithReturn(10, hdata, &hdatalen);
 		if (hdatalen && hdatalen != 32) {
 			PrintAndLog("ERROR: challenge parameter length must be 32 bytes only.");
 			return 1;
@@ -483,7 +500,7 @@ int CmdHFFidoAuthenticate(const char *cmd) {
 
 	if (paramsPlain) {
 		memset(hdata, 0x00, 32);
-		CLIGetStrWithReturn(10, hdata, &hdatalen);
+		CLIGetStrWithReturn(11, hdata, &hdatalen);
 		if (hdatalen && hdatalen > 16) {
 			PrintAndLog("ERROR: application parameter length in ASCII mode must be less than 16 chars instead of: %d", hdatalen);
 			return 1;
@@ -547,6 +564,42 @@ int CmdHFFidoAuthenticate(const char *cmd) {
 	PrintAndLog("Counter: %d", cntr);
 	PrintAndLog("Hash[%d]: %s", len - 5, sprint_hex(&buf[5], len - 5));
 
+	// check ANSI X9.62 format ECDSA signature (on P-256)
+	uint8_t rval[300] = {0}; 
+	uint8_t sval[300] = {0}; 
+	res = ecdsa_asn1_get_signature(&buf[5], len - 5, rval, sval);
+	if (!res) {
+		if (verbose) {
+			PrintAndLog("  r: %s", sprint_hex(rval, 32));
+			PrintAndLog("  s: %s", sprint_hex(sval, 32));
+		}
+		if (public_key_loaded) {
+			uint8_t xbuf[4096] = {0};
+			size_t xbuflen = 0;
+			res = FillBuffer(xbuf, sizeof(xbuf), &xbuflen,
+				&data[32], 32, // application parameter
+				&buf[0], 1,    // user presence
+				&buf[1], 4,    // counter
+				data, 32,      // challenge parameter
+				NULL, 0);
+			PrintAndLog("--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
+			res = ecdsa_signature_verify(public_key, xbuf, xbuflen, &buf[5], len - 5);
+			if (res) {
+				if (res == -0x4e00) {
+					PrintAndLog("Signature is NOT VALID.");
+				} else {
+					PrintAndLog("Other signature check error: %x %s", (res<0)?-res:res, ecdsa_get_error(res));
+				}
+			} else {
+				PrintAndLog("Signature is OK.");
+			}
+		} else {		
+			PrintAndLog("No public key provided. can't check signature.");
+		}
+	} else {
+		PrintAndLog("Invalid signature. res=%d.", res);
+	}
+	
 	if (root) {
 		JsonSaveBufAsHex(root, "ChallengeParam", data, 32);
 		JsonSaveBufAsHex(root, "ApplicationParam", &data[32], 32);
