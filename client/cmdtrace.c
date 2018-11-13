@@ -174,6 +174,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 			case ISO_15693:
 				crcStatus = iso15693_CRC_check(frame, data_len);
 				break;
+			case ISO_7816_4:
 			default: 
 				break;
 		}
@@ -526,7 +527,9 @@ int CmdTraceList(const char *Cmd) {
 		if ( protocol == ISO_15693 )
 			PrintAndLogEx(NORMAL, "ISO15693 - Timings are not as accurate");
 		if ( protocol == FELICA )
-			PrintAndLogEx(NORMAL, "ISO18092 / FeliCa - Timings are not as accurate");	
+			PrintAndLogEx(NORMAL, "ISO18092 / FeliCa - Timings are not as accurate");
+		if ( protocol == ISO_7816_4 )
+			PrintAndLogEx(NORMAL, "ISO7816-4 / Smartcard - Timings N/A yet");
 		
 		PrintAndLogEx(NORMAL, "");
 		PrintAndLogEx(NORMAL, "      Start |        End | Src | Data (! denotes parity error)                                           | CRC | Annotation");

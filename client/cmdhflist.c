@@ -326,8 +326,19 @@ void annotateIso7816(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 	}
 	// I-block
 	else {
-
-		int pos = (cmd[0] == 2 ||  cmd[0] == 3) ? 2 : 3;
+		int pos = 0;
+		switch ( cmd[0] ) {
+			case 2:
+			case 3:
+				pos = 2;
+				break;
+			case 0:
+				pos = 1;
+				break;
+			default:
+				pos = 3;
+				break;
+		}
 		switch ( cmd[pos] ){
 			case ISO7816_READ_BINARY				:snprintf(exp, size, "READ BIN");break;
 			case ISO7816_WRITE_BINARY				:snprintf(exp, size, "WRITE BIN");break;
