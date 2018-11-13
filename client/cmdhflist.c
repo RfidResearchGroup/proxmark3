@@ -356,6 +356,7 @@ void annotateIso7816(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 			case ISO7816_EXTERNAL_AUTHENTICATION 	:snprintf(exp, size, "EXTERNAL AUTH");break;
 			case ISO7816_GET_CHALLENGE				:snprintf(exp, size, "GET CHALLENGE");break;
 			case ISO7816_MANAGE_CHANNEL				:snprintf(exp, size, "MANAGE CHANNEL");break;
+			case ISO7816_GETSTATUS					:snprintf(exp, size, "GET RESPONSE");break;
 			default									:snprintf(exp,size,"?"); break;
 		}
 	}

@@ -200,8 +200,8 @@ int CmdSmartRaw(const char *Cmd) {
 	
 	if (active || active_select) {
         c.arg[0] |= SC_CONNECT;
-        if (active)
-            c.arg[0] |= SC_NO_SELECT;
+        if (active_select)
+            c.arg[0] |= SC_SELECT;
     }
 
 	if (hexlen > 0) {
