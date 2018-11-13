@@ -39,15 +39,22 @@ struct tlvdb *tlvdb_parse(const unsigned char *buf, size_t len);
 struct tlvdb *tlvdb_parse_multi(const unsigned char *buf, size_t len);
 void tlvdb_free(struct tlvdb *tlvdb);
 
+struct tlvdb *tlvdb_elm_get_next(struct tlvdb *tlvdb);
+struct tlvdb *tlvdb_elm_get_children(struct tlvdb *tlvdb);
+struct tlvdb *tlvdb_elm_get_parent(struct tlvdb *tlvdb);
+
+struct tlvdb *tlvdb_find_full(struct tlvdb *tlvdb, tlv_tag_t tag); // search also in childrens
 struct tlvdb *tlvdb_find(struct tlvdb *tlvdb, tlv_tag_t tag);
 struct tlvdb *tlvdb_find_next(struct tlvdb *tlvdb, tlv_tag_t tag);
 struct tlvdb *tlvdb_find_path(struct tlvdb *tlvdb, tlv_tag_t tag[]);
 
 void tlvdb_add(struct tlvdb *tlvdb, struct tlvdb *other);
+void tlvdb_change_or_add_node(struct tlvdb *tlvdb, tlv_tag_t tag, size_t len, const unsigned char *value);
 
 void tlvdb_visit(const struct tlvdb *tlvdb, tlv_cb cb, void *data, int level);
 const struct tlv *tlvdb_get(const struct tlvdb *tlvdb, tlv_tag_t tag, const struct tlv *prev);
 const struct tlv *tlvdb_get_inchild(const struct tlvdb *tlvdb, tlv_tag_t tag, const struct tlv *prev);
+const struct tlv *tlvdb_get_tlv(const struct tlvdb *tlvdb);
 
 bool tlv_parse_tl(const unsigned char **buf, size_t *len, struct tlv *tlv);
 unsigned char *tlv_encode(const struct tlv *tlv, size_t *len);

@@ -25,10 +25,12 @@ OBJDIR = obj
 
 LDLIBS = -L/opt/local/lib -L/usr/local/lib -lreadline -lpthread -lm
 LUALIB = ../liblua/liblua.a
+JANSSONLIBPATH = ./jansson
+JANSSONLIB = $(JANSSONLIBPATH)/libjansson.a
 MBEDTLSLIBPATH = ../common/mbedtls
 MBEDTLSLIB = $(MBEDTLSLIBPATH)/libmbedtls.a
 LDFLAGS = $(ENV_LDFLAGS)
-INCLUDES_CLIENT = -I. -I../include -I../common -I../common/polarssl -I../zlib -I../uart -I/opt/local/include -I../liblua -I$(MBEDTLSLIBPATH)
+INCLUDES_CLIENT = -I. -I../include -I../common -I../common/polarssl -I../zlib -I../uart -I/opt/local/include -I../liblua -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH)
 CFLAGS = $(ENV_CFLAGS) -std=c99 -D_ISOC99_SOURCE -DPRESETS $(INCLUDES_CLIENT) -Wall -g -O3
 CXXFLAGS = -I../include -Wall -O3
 
@@ -105,6 +107,7 @@ CMDSRCS =	crapto1/crapto1.c \
 			crapto1/crypto1.c \
 			mfkey.c \
 			tea.c \
+			fido/additional_ca.c \
 			polarssl/des.c \
 			crypto/libpcrypto.c\
 			crypto/asn1utils.c\
@@ -139,6 +142,7 @@ CMDSRCS =	crapto1/crapto1.c \
 			emv/tlv.c \
 			emv/emv_tags.c \
 			emv/dol.c \
+			emv/emvjson.c\
 			emv/emvcore.c \
 			emv/test/crypto_test.c\
 			emv/test/sda_test.c\
@@ -162,6 +166,7 @@ CMDSRCS =	crapto1/crapto1.c \
             hardnested/hardnested_bruteforce.c \
 			cmdhfmfdes.c \
 			cmdhftopaz.c \
+			cmdhffido.c \
 			cmdhffelica.c \
 			cmdhw.c \
 			cmdlf.c \
@@ -256,12 +261,12 @@ WINBINS = $(patsubst %, %.exe, $(BINS))
 CLEAN = $(BINS) $(WINBINS) $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(ZLIBOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(OBJDIR)/*.o *.moc.cpp ui/ui_overlays.h lualibs/usb_cmd.lua lualibs/mf_default_keys.lua
 
 # need to assign dependancies to build these first...
-all: lua_build mbedtls_build $(BINS) 
+all: lua_build jansson_build mbedtls_build $(BINS) 
 
 all-static: LDLIBS:=-static $(LDLIBS)
 all-static: proxmark3 flasher fpga_compress
 
-proxmark3: LDLIBS+=$(LUALIB) $(QTLDLIBS) $(MBEDTLSLIB)
+proxmark3: LDLIBS+=$(LUALIB) $(JANSSONLIB) $(MBEDTLSLIB) $(QTLDLIBS)
 proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(ZLIBOBJS) lualibs/usb_cmd.lua lualibs/mf_default_keys.lua
 	$(LD) $(LDFLAGS) $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(ZLIBOBJS) $(LDLIBS)  -o $@
 	
@@ -288,6 +293,7 @@ lualibs/mf_default_keys.lua : default_keys.dic
 clean:
 	$(RM) $(CLEAN)
 	cd ../liblua && make clean
+	cd $(JANSSONLIBPATH) && make clean
 	cd $(MBEDTLSLIBPATH) && make clean
 
 tarbin: $(BINS)
@@ -297,6 +303,10 @@ lua_build:
 	@echo Compiling liblua, using platform $(LUAPLATFORM)
 	cd ../liblua && make $(LUAPLATFORM)
 	
+jansson_build:
+	@echo Compiling jansson
+	cd $(JANSSONLIBPATH) && make all
+
 mbedtls_build:
 	@echo Compiling mbedtls
 	cd $(MBEDTLSLIBPATH) && make all

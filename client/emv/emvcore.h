@@ -68,6 +68,9 @@ extern struct tlvdb *GetdCVVRawFromTrack2(const struct tlv *track2);
 
 extern void SetAPDULogging(bool logging);
 
+// exchange
+extern int EMVExchange(bool LeaveFieldON, sAPDU apdu, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv);
+
 // search application
 extern int EMVSearchPSE(bool ActivateField, bool LeaveFieldON, bool decodeTLV, struct tlvdb *tlv);
 extern int EMVSearch(bool ActivateField, bool LeaveFieldON, bool decodeTLV, struct tlvdb *tlv);

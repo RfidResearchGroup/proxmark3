@@ -16,6 +16,7 @@
 #include <mbedtls/asn1.h>
 #include <mbedtls/aes.h>
 #include <mbedtls/cmac.h>
+#include <mbedtls/pk.h>
 #include <mbedtls/ecdsa.h>
 #include <mbedtls/sha256.h>
 #include <mbedtls/ctr_drbg.h>
@@ -206,6 +207,31 @@ char *ecdsa_get_error(int ret) {
 	memset(retstr, 0x00, sizeof(retstr));
 	mbedtls_strerror(ret, retstr, sizeof(retstr));
 	return retstr;
+}
+
+int ecdsa_public_key_from_pk(mbedtls_pk_context *pk, uint8_t *key, size_t keylen) {
+	int res = 0;
+	size_t realkeylen = 0;
+	if (keylen < 65) 
+		return 1;
+	
+	mbedtls_ecdsa_context ctx;
+	mbedtls_ecdsa_init(&ctx);
+	
+	res = mbedtls_ecp_group_load(&ctx.grp, MBEDTLS_ECP_DP_SECP256R1); // secp256r1
+	if (res)
+		goto exit;
+	
+	res = mbedtls_ecdsa_from_keypair(&ctx, mbedtls_pk_ec(*pk) );
+	if (res)
+		goto exit;
+	
+	res = mbedtls_ecp_point_write_binary(&ctx.grp, &ctx.Q, MBEDTLS_ECP_PF_UNCOMPRESSED, &realkeylen, key, keylen);
+	if (realkeylen != 65)
+		res = 2;
+exit:
+	mbedtls_ecdsa_free(&ctx);
+	return res;
 }
 
 int ecdsa_signature_create(uint8_t *key_d, uint8_t *key_xy, uint8_t *input, int length, uint8_t *signature, size_t *signaturelen) {

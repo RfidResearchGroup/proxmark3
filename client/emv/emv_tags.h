@@ -18,7 +18,6 @@
 
 #include "tlv.h"
 #include <stdio.h>
-#include <inttypes.h>
 
 // AC
 # define EMVAC_AC_MASK   0xC0
@@ -32,5 +31,6 @@
 # define EMVCID_REASON_MASK  0x07
 
 bool emv_tag_dump(const struct tlv *tlv, FILE *f, int level);
+char *emv_get_tag_name(const struct tlv *tlv);
 
 #endif

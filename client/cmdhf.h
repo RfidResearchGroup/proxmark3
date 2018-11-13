@@ -31,6 +31,7 @@
 #include "cmdhftopaz.h"		// TOPAZ
 #include "cmdhffelica.h"	// ISO18092 / FeliCa
 #include "emv/cmdemv.h"		// EMV				  
+#include "cmdhffido.h"		// FIDO authenticators
 #include "cmdtrace.h"		// trace list
 
 extern int CmdHF(const char *Cmd);

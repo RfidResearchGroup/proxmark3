@@ -272,7 +272,7 @@ static const struct emv_tag emv_tags[] = {
 	{ 0x9f6a, "Unpredictable Number", EMV_TAG_NUMERIC },
 	{ 0x9f6b, "Track 2 Data" },
 	{ 0x9f6c, "Card Transaction Qualifiers (CTQ)", EMV_TAG_BITMASK, &EMV_CTQ },
-	{ 0x9f6e, "Form Factor Indicator" },	
+	{ 0x9f6e, "Form Factor Indicator" },
 	{ 0xa5  , "File Control Information (FCI) Proprietary Template" },
 	{ 0xbf0c, "File Control Information (FCI) Issuer Discretionary Data" },
 	{ 0xdf20, "Issuer Proprietary Bitmap (IPB)" },
@@ -391,7 +391,7 @@ static unsigned long emv_value_numeric(const struct tlv *tlv, unsigned start, un
 
 static void emv_tag_dump_numeric(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
 	PRINT_INDENT(level);
-	fprintf(f, "\tNumeric value %lu \n", emv_value_numeric(tlv, 0, tlv->len * 2));
+	fprintf(f, "\tNumeric value %lu\n", emv_value_numeric(tlv, 0, tlv->len * 2));
 }
 
 static void emv_tag_dump_yymmdd(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
@@ -680,4 +680,18 @@ bool emv_tag_dump(const struct tlv *tlv, FILE *f, int level)
 	};
 
 	return true;
+}
+
+char *emv_get_tag_name(const struct tlv *tlv)
+{
+	static char *defstr = "";
+	
+	if (!tlv) 
+		return defstr;
+
+	const struct emv_tag *tag = emv_get_tag(tlv);
+	if (tag)
+		return tag->name;
+	
+	return defstr;
 }

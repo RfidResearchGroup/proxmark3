@@ -9,6 +9,7 @@
 //-----------------------------------------------------------------------------
 #include "util.h"
 
+#define UTIL_BUFFER_SIZE_SPRINT 4097
 // global client debug variable
 uint8_t g_debugMode = 0;
 
@@ -22,6 +23,7 @@ uint8_t g_debugMode = 0;
 #include <termios.h>
 #include <sys/ioctl.h> 
 #include <unistd.h>
+#include <stdarg.h>
 
 int ukbhit(void) {
 	int cnt = 0;
@@ -119,6 +121,35 @@ void FillFileNameByUID(char *filenamePrefix, uint8_t *uid, const char *ext, int 
 	strcat(filenamePrefix, ext); 
 }
 
+// fill buffer from structure [{uint8_t data, size_t length},...]
+int FillBuffer(uint8_t *data, size_t maxDataLength, size_t *dataLength, ...) {
+	*dataLength = 0;
+	va_list valist;
+	va_start(valist, dataLength);
+	
+	uint8_t *vdata = NULL;
+	size_t vlength = 0;
+	do{
+		vdata = va_arg(valist, uint8_t *);
+		if (!vdata)
+			break;
+		
+		vlength = va_arg(valist, size_t);
+		if (*dataLength + vlength >  maxDataLength) {
+			va_end(valist);
+			return 1;
+		}
+		
+		memcpy(&data[*dataLength], vdata, vlength);
+		*dataLength += vlength;
+		
+	} while (vdata);
+	
+	va_end(valist);
+
+	return 0;
+}
+
 void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex_len, const size_t hex_max_len, 
 	const size_t min_str_len, const size_t spaces_between, bool uppercase) {
 		
@@ -170,13 +201,13 @@ void print_hex_break(const uint8_t *data, const size_t len, uint8_t breaks) {
 }
 
 char *sprint_hex(const uint8_t *data, const size_t len) {
-	static char buf[1025] = {0};
+	static char buf[UTIL_BUFFER_SIZE_SPRINT] = {0};
 	hex_to_buffer((uint8_t *)buf, data, len, sizeof(buf) - 1, 0, 1, true);
 	return buf;
 }
 
 char *sprint_hex_inrow_ex(const uint8_t *data, const size_t len, const size_t min_str_len) {
-	static char buf[1025] = {0};
+	static char buf[UTIL_BUFFER_SIZE_SPRINT] = {0};
 	hex_to_buffer((uint8_t *)buf, data, len, sizeof(buf) - 1, min_str_len, 0, true);
 	return buf;
 }
@@ -185,12 +216,10 @@ char *sprint_hex_inrow(const uint8_t *data, const size_t len) {
 	return sprint_hex_inrow_ex(data, len, 0);
 }
 char *sprint_hex_inrow_spaces(const uint8_t *data, const size_t len, size_t spaces_between) {
-	static char buf[1025] = {0};
+	static char buf[UTIL_BUFFER_SIZE_SPRINT] = {0};
 	hex_to_buffer((uint8_t *)buf, data, len, sizeof(buf) - 1, 0, spaces_between, true);
 	return buf;
 }
-
-
 
 char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t breaks) {
 	
@@ -268,9 +297,9 @@ char *sprint_bin(const uint8_t *data, const size_t len) {
 }
 
 char *sprint_hex_ascii(const uint8_t *data, const size_t len) {
-	static char buf[1024];
+	static char buf[UTIL_BUFFER_SIZE_SPRINT];
 	char *tmp = buf;
-	memset(buf, 0x00, 1024);
+	memset(buf, 0x00, UTIL_BUFFER_SIZE_SPRINT);
 	size_t max_len = (len > 1010) ? 1010 : len;
 
 	sprintf(tmp, "%s| ", sprint_hex(data, max_len) );
@@ -288,9 +317,9 @@ char *sprint_hex_ascii(const uint8_t *data, const size_t len) {
 }
 
 char *sprint_ascii_ex(const uint8_t *data, const size_t len, const size_t min_str_len) {
-	static char buf[1024];
+	static char buf[UTIL_BUFFER_SIZE_SPRINT];
 	char *tmp = buf;
-	memset(buf, 0x00, 1024);
+	memset(buf, 0x00, UTIL_BUFFER_SIZE_SPRINT);
 	size_t max_len = (len > 1010) ? 1010 : len;
 	size_t i = 0;
 	while(i < max_len){
