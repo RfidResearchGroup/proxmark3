@@ -383,6 +383,7 @@ int CmdHFFidoRegister(const char *cmd) {
 	if (root) {
 		JsonSaveBufAsHex(root, "ChallengeParam", data, 32);
 		JsonSaveBufAsHex(root, "ApplicationParam", &data[32], 32);
+		JsonSaveBufAsHexCompact(root, "PublicKey", &buf[1], 65);
 		JsonSaveInt(root, "KeyHandleLen", keyHandleLen);
 		JsonSaveBufAsHexCompact(root, "KeyHandle", &buf[67], keyHandleLen);
 		JsonSaveBufAsHexCompact(root, "DER", &buf[67 + keyHandleLen], derLen);
@@ -452,11 +453,10 @@ int CmdHFFidoAuthenticate(const char *cmd) {
 		JsonLoadBufAsHex(root, "$.ChallengeParam", data, 32, &jlen);
 		JsonLoadBufAsHex(root, "$.ApplicationParam", &data[32], 32, &jlen);
 		JsonLoadBufAsHex(root, "$.KeyHandle", &data[65], 512 - 67, &jlen);
-		JsonLoadBufAsHex(root, "$.PublicKey", public_key, 65, &jlen);
-		if (jlen > 0)
-			public_key_loaded = true;
 		keyHandleLen = jlen & 0xff;
 		data[64] = keyHandleLen;
+		JsonLoadBufAsHex(root, "$.PublicKey", public_key, 65, &jlen);
+		public_key_loaded = (jlen > 0);
 	} 
 
 	// public key
@@ -582,7 +582,7 @@ int CmdHFFidoAuthenticate(const char *cmd) {
 				&buf[1], 4,    // counter
 				data, 32,      // challenge parameter
 				NULL, 0);
-			PrintAndLog("--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
+			//PrintAndLog("--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
 			res = ecdsa_signature_verify(public_key, xbuf, xbuflen, &buf[5], len - 5);
 			if (res) {
 				if (res == -0x4e00) {
