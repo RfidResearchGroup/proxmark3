@@ -327,10 +327,12 @@ int CmdHFFidoRegister(const char *cmd) {
 	int derp = 67 + keyHandleLen;
 	int derLen = (buf[derp + 2] << 8) + buf[derp + 3] + 4;
 	if (verbose2) {
-		PrintAndLog("DER certificate[%d]:------------------DER-------------------", derLen);
+		PrintAndLog("DER certificate[%d]:\n------------------DER-------------------", derLen);
 		dump_buffer_simple((const unsigned char *)&buf[67 + keyHandleLen], derLen, NULL);
 		PrintAndLog("\n----------------DER---------------------");
 	} else {
+		if (verbose)
+			PrintAndLog("------------------DER-------------------");
 		PrintAndLog("DER certificate[%d]: %s...", derLen, sprint_hex(&buf[derp], 20));
 	}
 	
@@ -359,20 +361,25 @@ int CmdHFFidoRegister(const char *cmd) {
 	
 	// get certificate info
 	char linfo[300] = {0};
-	mbedtls_x509_crt_info(linfo, sizeof(linfo), "  ", &cert);
-	PrintAndLog("DER certificate info:\n%s", linfo);
+	if (verbose) {
+		mbedtls_x509_crt_info(linfo, sizeof(linfo), "  ", &cert);
+		PrintAndLog("DER certificate info:\n%s", linfo);
+	}
 	
 	// verify certificate
 	uint32_t verifyflags = 0;
-	memset(linfo, 0x00, sizeof(linfo));
-
 	res = mbedtls_x509_crt_verify(&cert, &cacert, NULL, NULL, &verifyflags, NULL, NULL);
 	if (res) {
 		PrintAndLog("ERROR: DER verify returned 0x%x - %s", (res<0)?-res:res, ecdsa_get_error(res));
+	} else {
+		PrintAndLog("Certificate OK.");
 	}
 	
-	mbedtls_x509_crt_verify_info(linfo, sizeof(linfo), "  ", verifyflags);
-	PrintAndLog("Verification info:\n%s", linfo);
+	if (verbose) {
+		memset(linfo, 0x00, sizeof(linfo));
+		mbedtls_x509_crt_verify_info(linfo, sizeof(linfo), "  ", verifyflags);
+		PrintAndLog("Verification info:\n%s", linfo);
+	}
 	
 	// get public key
 	res = ecdsa_public_key_from_pk(&cert.pk, public_key, sizeof(public_key));
@@ -380,8 +387,11 @@ int CmdHFFidoRegister(const char *cmd) {
 		PrintAndLog("ERROR: getting public key from certificate 0x%x - %s", (res<0)?-res:res, ecdsa_get_error(res));
 	} else {
 		if (verbose)
-			PrintAndLog("Got a public key from certificate.");
+			PrintAndLog("Got a public key from certificate:\n%s", sprint_hex_inrow(public_key, 65));
 	}
+
+	if (verbose)
+		PrintAndLog("------------------DER-------------------");
 
 	mbedtls_x509_crt_free(&cert);
 	mbedtls_x509_crt_free(&cacert);
