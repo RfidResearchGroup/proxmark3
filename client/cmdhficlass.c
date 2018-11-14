@@ -766,8 +766,8 @@ int CmdHFiClassDecrypt(const char *Cmd) {
 			 hdr->csn[4],hdr->csn[5],hdr->csn[6],hdr->csn[7]);
 
 	// tripledes
-	des3_context ctx = { DES_DECRYPT ,{ 0 } };
-	des3_set2key_dec( &ctx, key);
+	mbedtls_des3_context ctx = { 0 };
+	mbedtls_des3_set2key_dec( &ctx, key);
 
 	uint8_t enc_dump[8] = {0};
 	uint8_t empty[8] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
@@ -778,7 +778,7 @@ int CmdHFiClassDecrypt(const char *Cmd) {
 		
 		// block 7 or higher,  and not empty 0xFF
 		if(blocknum > 6 &&  memcmp(enc_dump, empty, 8) != 0 ) {
-			des3_crypt_ecb(&ctx, enc_dump, decrypted + idx );
+			mbedtls_des3_crypt_ecb(&ctx, enc_dump, decrypted + idx );
 		}
 	}
 	
@@ -797,10 +797,10 @@ static int iClassEncryptBlkData(uint8_t *blkData) {
 	PrintAndLogEx(SUCCESS, "decryption file found");
 	uint8_t encryptedData[16];
 	uint8_t *encrypted = encryptedData;
-	des3_context ctx = { DES_DECRYPT ,{ 0 } };
-	des3_set2key_enc( &ctx, key);
+	mbedtls_des3_context ctx = { 0 };
+	mbedtls_des3_set2key_enc( &ctx, key);
 	
-	des3_crypt_ecb(&ctx, blkData,encrypted);
+	mbedtls_des3_crypt_ecb(&ctx, blkData,encrypted);
 	memcpy(blkData,encrypted,8);
 	return 1;
 }
