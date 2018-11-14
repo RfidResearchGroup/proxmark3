@@ -31,7 +31,6 @@ APP_CFLAGS = -DWITH_CRC \
 ### IMPORTANT -  move the commented variable below this line
 #			 -DWITH_LCD \
 #			 -DWITH_EMV \
-#			 -DWITH_FPC \
 #
 # Standalone Mods
 #-------------------------------------------------------
