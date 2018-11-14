@@ -2441,10 +2441,10 @@ int CmdHF14AMfuGenDiverseKeys(const char *Cmd){
 	mix[6] = block ^ uid[2];
 	mix[7] = uid[3];
 	
-	des3_context ctx = { 0x00 };
-	des3_set2key_enc(&ctx, masterkey);
+	mbedtls_des3_context ctx = { 0x00 };
+	mbedtls_des3_set2key_enc(&ctx, masterkey);
 
-	des3_crypt_cbc(&ctx  // des3_context
+	mbedtls_des3_crypt_cbc(&ctx  // des3_context
 		, DES_ENCRYPT    // int mode
 		, sizeof(mix)    // length
 		, iv             // iv[8]
@@ -2478,9 +2478,9 @@ int CmdHF14AMfuGenDiverseKeys(const char *Cmd){
 	memcpy(dmkey+16, dkeyA, 8);
 	memset(iv, 0x00, 8);
 	
-	des3_set3key_enc(&ctx, dmkey);
+	mbedtls_des3_set3key_enc(&ctx, dmkey);
 
-	des3_crypt_cbc(&ctx  // des3_context
+	mbedtls_des3_crypt_cbc(&ctx  // des3_context
 		, DES_ENCRYPT    // int mode
 		, sizeof(newpwd) // length
 		, iv             // iv[8]
