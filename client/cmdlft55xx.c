@@ -1517,13 +1517,13 @@ int CmdT55xxBruteForce(const char *Cmd) {
 
 	memset(line, 0, sizeof(line));
 	
-    char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H') return usage_t55xx_bruteforce();
+    char cmdp = tolower(param_getchar(Cmd, 0));
+	if (cmdp == 'h') return usage_t55xx_bruteforce();
 
 	keyBlock = calloc(stKeyBlock, 4);
 	if (keyBlock == NULL) return 1;
 
-	if (cmdp == 'i' || cmdp == 'I') {
+	if (cmdp == 'i') {
 	
 		int len = strlen(Cmd+2);
 		if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
@@ -1786,7 +1786,7 @@ bool tryDetectP1(bool getData) {
 
 	// try ask clock detect.  it could be another type even if successful.
 	clk = GetAskClock("", false);
-	if (clk>0) {
+	if (clk > 0) {
 		if ( ASKDemod_ext("0 0 1", false, false, 1, &st) &&
 			  preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) && 
 			  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
