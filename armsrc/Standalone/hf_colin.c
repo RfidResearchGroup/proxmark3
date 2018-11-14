@@ -469,8 +469,8 @@ failtag:
             else
             {
                 /*  BRACE YOURSELF : AS LONG AS WE TRAP A KNOWN KEY, WE STOP CHECKING AND ENFORCE KNOWN SCHEMES */
-                // uint8_t tosendkey[12];
-                char tosendkey[12];
+                // uint8_t tosendkey[13];
+                char tosendkey[13];
                 num_to_bytes(key64, 6, foundKey[type][sec]);
                 cjSetCursRight();
                 DbprintfEx(FLAG_NOLOG, "SEC: %02x ; KEY : %012" PRIx64 " ; TYP: %i", sec, key64, type);
