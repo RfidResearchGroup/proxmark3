@@ -47,6 +47,7 @@
 #include <sys/stat.h>
 #include <stdarg.h>
 #include "../ui.h"
+#include "../emv/emvjson.h"
 
 int fileExists(const char *filename);
 

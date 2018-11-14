@@ -136,8 +136,39 @@ out:
 }
 
 int saveFileJSON(const char *preferredName, const char *suffix, uint8_t* data, size_t datalen) {
-	//stub - for merlokk ;)
-	return 1;
+	if ( preferredName == NULL ) return 1;
+	if ( suffix == NULL ) return 1;
+	if ( data == NULL ) return 1;
+
+	int retval = 0;
+	int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
+	char * fileName = calloc(size, sizeof(char));
+	int num = 1;
+	sprintf(fileName,"%s.%s", preferredName, suffix);
+	while (fileExists(fileName)) {
+		sprintf(fileName,"%s-%d.%s", preferredName, num, suffix);
+		num++;
+	}
+
+	json_t *root = json_object();
+	JsonSaveStr(root, "Created", "proxmark3");
+	JsonSaveBufAsHexCompact(root, "raw", data, datalen);
+
+	int res = json_dump_file(root, fileName, JSON_INDENT(2));
+	if (res) {
+		PrintAndLog("ERROR: can't save the file: %s", fileName);
+		json_decref(root);
+		retval = 200;
+		goto out;
+	}
+	PrintAndLog("File `%s` saved.", fileName);
+	
+	// free json object
+	json_decref(root);
+
+out:	
+	free(fileName);
+	return retval;
 }
 
 int loadFile(const char *preferredName, const char *suffix, void* data, size_t* datalen) {
