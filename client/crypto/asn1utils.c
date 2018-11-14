@@ -55,7 +55,7 @@ exit:
 	return res;
 }
 
-int asn1_print(uint8_t *asn1buf, int level) {
+int asn1_print(uint8_t *asn1buf, size_t asn1buflen, char *indent) {
 	
 	return 0;
 }

@@ -340,6 +340,9 @@ int CmdHFFidoRegister(const char *cmd) {
 	uint8_t public_key[65] = {0};
 	
 	// TODO: print DER certificate in DER view
+	PrintAndLog("----------------DER TLV-----------------");
+	asn1_print(&buf[67 + keyHandleLen], derLen, "  ");
+	PrintAndLog("----------------DER TLV-----------------");
 	
 	// load CA's
 	mbedtls_x509_crt cacert;
