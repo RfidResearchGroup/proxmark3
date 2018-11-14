@@ -328,7 +328,7 @@ int CmdHFFidoRegister(const char *cmd) {
 	int derLen = (buf[derp + 2] << 8) + buf[derp + 3] + 4;
 	if (verbose2) {
 		PrintAndLog("DER certificate[%d]:\n------------------DER-------------------", derLen);
-		dump_buffer_simple((const unsigned char *)&buf[67 + keyHandleLen], derLen, NULL);
+		dump_buffer_simple((const unsigned char *)&buf[derp], derLen, NULL);
 		PrintAndLog("\n----------------DER---------------------");
 	} else {
 		if (verbose)
@@ -341,7 +341,7 @@ int CmdHFFidoRegister(const char *cmd) {
 	
 	// TODO: print DER certificate in DER view
 	PrintAndLog("----------------DER TLV-----------------");
-	asn1_print(&buf[67 + keyHandleLen], derLen, "  ");
+	asn1_print(&buf[derp], derLen, "  ");
 	PrintAndLog("----------------DER TLV-----------------");
 	
 	// load CA's
@@ -357,7 +357,7 @@ int CmdHFFidoRegister(const char *cmd) {
 	// load DER certificate from authenticator's data
 	mbedtls_x509_crt cert;
 	mbedtls_x509_crt_init(&cert);
-	res = mbedtls_x509_crt_parse_der(&cert, &buf[67 + keyHandleLen], derLen);
+	res = mbedtls_x509_crt_parse_der(&cert, &buf[derp], derLen);
 	if (res) {
 		PrintAndLog("ERROR: DER parse returned 0x%x - %s", (res<0)?-res:res, ecdsa_get_error(res));
 	}
