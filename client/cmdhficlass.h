@@ -22,7 +22,7 @@
 #include "common.h"
 #include "util.h"
 #include "comms.h"
-#include "des.h"
+#include "mbedtls/des.h"
 #include "loclass/cipherutils.h"
 #include "loclass/cipher.h"
 #include "loclass/ikeys.h"

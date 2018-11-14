@@ -45,7 +45,7 @@
 #include "ikeys.h"
 #include "elite_crack.h"
 #include "fileutils.h"
-#include "des.h"
+#include "mbedtls/des.h"
 #include "util_posix.h"
 
 /**
@@ -172,21 +172,21 @@ void rk(uint8_t *key, uint8_t n, uint8_t *outp_key) {
     return;
 }
 
-static des_context ctx_enc = {DES_ENCRYPT,{0}};
-static des_context ctx_dec = {DES_DECRYPT,{0}};
+static mbedtls_des_context ctx_enc = {0};
+static mbedtls_des_context ctx_dec = {0};
 
 void desdecrypt_iclass(uint8_t *iclass_key, uint8_t *input, uint8_t *output) {
     uint8_t key_std_format[8] = {0};
     permutekey_rev(iclass_key, key_std_format);
-    des_setkey_dec( &ctx_dec, key_std_format);
-    des_crypt_ecb(&ctx_dec,input,output);
+    mbedtls_des_setkey_dec( &ctx_dec, key_std_format);
+    mbedtls_des_crypt_ecb(&ctx_dec,input,output);
 }
 
 void desencrypt_iclass(uint8_t *iclass_key, uint8_t *input, uint8_t *output) {
     uint8_t key_std_format[8] = {0};
     permutekey_rev(iclass_key, key_std_format);
-    des_setkey_enc( &ctx_enc, key_std_format);
-    des_crypt_ecb(&ctx_enc,input,output);
+    mbedtls_des_setkey_enc( &ctx_enc, key_std_format);
+    mbedtls_des_crypt_ecb(&ctx_enc,input,output);
 }
 
 /**
@@ -431,7 +431,7 @@ int bruteforceItem(dumpdata item, uint16_t keytable[]) {
  * @return 0 for ok, 1 for failz
  */
 int calculateMasterKey(uint8_t first16bytes[], uint64_t master_key[] ){
-	des_context ctx_e = {DES_ENCRYPT,{0}};
+	mbedtls_des_context ctx_e = {0};
 
 	uint8_t z_0[8] = {0};
 	uint8_t y_0[8] = {0};
@@ -450,8 +450,8 @@ int calculateMasterKey(uint8_t first16bytes[], uint64_t master_key[] ){
 	permutekey_rev(z_0, z_0_rev);
 
 	// ~K_cus = DESenc(z[0], y[0])
-	des_setkey_enc( &ctx_e, z_0_rev );
-	des_crypt_ecb(&ctx_e, y_0, key64_negated);
+	mbedtls_des_setkey_enc( &ctx_e, z_0_rev );
+	mbedtls_des_crypt_ecb(&ctx_e, y_0, key64_negated);
 
 	int i;
 	for (i = 0; i < 8 ; i++)
@@ -462,8 +462,8 @@ int calculateMasterKey(uint8_t first16bytes[], uint64_t master_key[] ){
 	uint8_t key64_stdformat[8] = {0};
 	permutekey_rev(key64, key64_stdformat);
 
-	des_setkey_enc( &ctx_e, key64_stdformat );
-	des_crypt_ecb(&ctx_e, key64_negated, result);
+	mbedtls_des_setkey_enc( &ctx_e, key64_stdformat );
+	mbedtls_des_crypt_ecb(&ctx_e, key64_negated, result);
 	PrintAndLogDevice(NORMAL, "\n"); PrintAndLogDevice(SUCCESS, "-- High security custom key (Kcus) --");
 	printvar("[+] Standard format   ", key64_stdformat, 8);
 	printvar("[+] iClass format     ", key64, 8);
