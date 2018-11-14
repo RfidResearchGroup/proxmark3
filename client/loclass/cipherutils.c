@@ -205,19 +205,17 @@ int testBitStream()
 	uint8_t input [] = {0xDE,0xAD,0xBE,0xEF,0xDE,0xAD,0xBE,0xEF};
 	uint8_t output [] = {0,0,0,0,0,0,0,0};
 	BitstreamIn in = { input, sizeof(input) * 8,0};
-	BitstreamOut out ={ output, 0,0}
+	BitstreamOut out = { output, 0,0}
 					  ;
-	while(bitsLeft(&in) > 0)
-	{
+	while (bitsLeft(&in) > 0) {
 		pushBit(&out, headBit(&in));
 		//printf("Bits left: %d\n", bitsLeft(&in));
 		//printf("Bits out: %d\n", numBits(&out));
 	}
-	if(memcmp(input, output, sizeof(input)) == 0)
-	{
+	
+	if(memcmp(input, output, sizeof(input)) == 0) {
 		PrintAndLogDevice(SUCCESS, "    Bitstream test 1 ok");
-	}else
-	{
+	} else {
 		PrintAndLogDevice(FAILED, "    Bitstream test 1 failed");
 		uint8_t i;
 		for(i = 0 ; i < sizeof(input) ; i++)
@@ -235,27 +233,24 @@ int testReversedBitstream()
 	uint8_t reverse [] = {0,0,0,0,0,0,0,0};
 	uint8_t output [] = {0,0,0,0,0,0,0,0};
 	BitstreamIn in = { input, sizeof(input) * 8,0};
-	BitstreamOut out ={ output, 0,0};
-	BitstreamIn reversed_in ={ reverse, sizeof(input)*8,0};
-	BitstreamOut reversed_out ={ reverse,0 ,0};
+	BitstreamOut out = { output, 0,0};
+	BitstreamIn reversed_in = { reverse, sizeof(input)*8,0};
+	BitstreamOut reversed_out = { reverse,0 ,0};
 
-	while(bitsLeft(&in) > 0)
-	{
+	while (bitsLeft(&in) > 0) {
 		pushBit(&reversed_out, tailBit(&in));
 	}
-	while(bitsLeft(&reversed_in) > 0)
-	{
+	
+	while (bitsLeft(&reversed_in) > 0) {
 		pushBit(&out, tailBit(&reversed_in));
 	}
-	if(memcmp(input, output, sizeof(input)) == 0)
-	{
+	
+	if (memcmp(input, output, sizeof(input)) == 0) {
 		PrintAndLogDevice(SUCCESS, "    Bitstream test 2 ok");
-	}else
-	{
+	} else {
 		PrintAndLogDevice(FAILED, "    Bitstream test 2 failed");
 		uint8_t i;
-		for(i = 0 ; i < sizeof(input) ; i++)
-		{
+		for (i = 0 ; i < sizeof(input) ; i++) {
 			PrintAndLogDevice(NORMAL, "    IN %02x, MIDDLE: %02x, OUT %02x", input[i],reverse[i], output[i]);
 		}
 		return 1;

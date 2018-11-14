@@ -69,8 +69,8 @@ From "Dismantling iclass":
 
 uint8_t pi[35] = {0x0F,0x17,0x1B,0x1D,0x1E,0x27,0x2B,0x2D,0x2E,0x33,0x35,0x39,0x36,0x3A,0x3C,0x47,0x4B,0x4D,0x4E,0x53,0x55,0x56,0x59,0x5A,0x5C,0x63,0x65,0x66,0x69,0x6A,0x6C,0x71,0x72,0x74,0x78};
 
-static mbedtls_des_context ctx_enc = {0};
-static mbedtls_des_context ctx_dec = {0};
+static mbedtls_des_context ctx_enc;
+static mbedtls_des_context ctx_dec;
 
 static int debug_print = 0;
 
@@ -442,11 +442,10 @@ int testDES(Testcase testcase, mbedtls_des_context ctx_enc, mbedtls_des_context 
 	uint8_t des_encrypted_csn[8] = {0};
 	uint8_t decrypted[8] = {0};
 	uint8_t div_key[8] = {0};
-	int retval = mbedtls_des_crypt_ecb(&ctx_enc,testcase.uid,des_encrypted_csn);
-	retval |= mbedtls_des_crypt_ecb(&ctx_dec,des_encrypted_csn,decrypted);
+	int retval = mbedtls_des_crypt_ecb(&ctx_enc, testcase.uid, des_encrypted_csn);
+	retval |= mbedtls_des_crypt_ecb(&ctx_dec, des_encrypted_csn, decrypted);
 
-	if(memcmp(testcase.uid,decrypted,8) != 0)
-	{
+	if (memcmp(testcase.uid, decrypted, 8) != 0) {
 		//Decryption fail
 		PrintAndLogDevice(FAILED, "Encryption <-> Decryption FAIL");
 		printarr("Input", testcase.uid, 8);
@@ -454,8 +453,7 @@ int testDES(Testcase testcase, mbedtls_des_context ctx_enc, mbedtls_des_context 
 		retval = 1;
 	}
 
-	if(memcmp(des_encrypted_csn,testcase.t_key,8) != 0)
-	{
+	if (memcmp(des_encrypted_csn, testcase.t_key, 8) != 0) {
 		//Encryption fail
 		PrintAndLogDevice(FAILED, "Encryption != Expected result");
 		printarr("Output", des_encrypted_csn, 8);
@@ -465,8 +463,7 @@ int testDES(Testcase testcase, mbedtls_des_context ctx_enc, mbedtls_des_context 
     uint64_t crypted_csn = x_bytes_to_num(des_encrypted_csn,8);
 	hash0(crypted_csn, div_key);
 
-	if(memcmp(div_key, testcase.div_key ,8) != 0)
-	{
+	if (memcmp(div_key, testcase.div_key, 8) != 0) {
 		//Key diversification fail
 		PrintAndLogDevice(FAILED, "Div key != expected result");
 		printarr("  csn   ", testcase.uid,8);
@@ -575,13 +572,12 @@ Testcase testcases[] ={
 };
 
 int testKeyDiversificationWithMasterkeyTestcases() {
-	int error = 0;
-	int i;
-	uint8_t empty[8]={0};
+	int i, error = 0;
+	uint8_t empty[8] = {0};
 
 	PrintAndLogDevice(INFO, "Testing encryption/decryption");
 
-	for (i = 0;  memcmp(testcases+i, empty, 8); i++)
+	for (i = 0; memcmp(testcases+i, empty, 8); i++)
 		error += testDES(testcases[i], ctx_enc, ctx_dec);
 
 	if (error)
@@ -592,26 +588,26 @@ int testKeyDiversificationWithMasterkeyTestcases() {
 }
 
 void print64bits(char*name, uint64_t val) {
-	printf("%s%08x%08x\n",name,(uint32_t) (val >> 32) ,(uint32_t) (val & 0xFFFFFFFF));
+	printf("%s%08x%08x\n", name, (uint32_t) (val >> 32) ,(uint32_t) (val & 0xFFFFFFFF));
 }
 
 uint64_t testCryptedCSN(uint64_t crypted_csn, uint64_t expected)
 {
 	int retval = 0;
 	uint8_t result[8] = {0};
-	if(debug_print) PrintAndLogDevice(DEBUG, "debug_print %d", debug_print);
-	if(debug_print) print64bits("    {csn}      ", crypted_csn );
+	if (debug_print) PrintAndLogDevice(DEBUG, "debug_print %d", debug_print);
+	if (debug_print) print64bits("    {csn}      ", crypted_csn );
 
 	uint64_t crypted_csn_swapped = swapZvalues(crypted_csn);
 
-	if(debug_print) print64bits("    {csn-revz} ", crypted_csn_swapped);
+	if (debug_print) print64bits("    {csn-revz} ", crypted_csn_swapped);
 
 	hash0(crypted_csn, result);
     uint64_t resultbyte = x_bytes_to_num(result,8 );
-	if(debug_print) print64bits("    hash0      " , resultbyte );
+	if (debug_print) print64bits("    hash0      " , resultbyte );
 
-	if(resultbyte != expected ) {
-		if(debug_print) {
+	if (resultbyte != expected ) {
+		if (debug_print) {
 			PrintAndLogDevice(NORMAL, "\n"); PrintAndLogDevice(FAILED, "FAIL!");
 			print64bits("    expected       " ,  expected );
 		}
@@ -627,9 +623,9 @@ int testDES2(uint64_t csn, uint64_t expected) {
 	uint8_t input[8] = {0};
 
 	print64bits("   csn ", csn);
-    x_num_to_bytes(csn, 8,input);
+    x_num_to_bytes(csn, 8, input);
 
-	mbedtls_des_crypt_ecb(&ctx_enc,input, result);
+	mbedtls_des_crypt_ecb(&ctx_enc, input, result);
 
     uint64_t crypt_csn = x_bytes_to_num(result, 8);
 	print64bits("   {csn}    ", crypt_csn );
@@ -678,10 +674,21 @@ int doTestsWithKnownInputs() {
 
 static bool readKeyFile(uint8_t key[8]) {
 	bool retval = false;
-	FILE *f = fopen("iclass_key.bin", "rb");
+	
+	//Test a few variants
+	char filename[30];
+	if (fileExists("iclass_key.bin")){
+		sprintf(filename, "%s.bin", "iclass_key");
+	} else if (fileExists("loclass/iclass_key.bin")){
+		sprintf(filename, "%s.bin", "loclass/iclass_key");
+	} else if (fileExists("client/loclass/iclass_key.bin")){
+		sprintf(filename, "%s.bin", "client/loclass/iclass_key");
+	}
+	
+	FILE *f = fopen(filename, "rb");
 	if (!f)
 		return retval;
-	
+		
 	size_t bytes_read = fread(key, sizeof(uint8_t), 8, f);
 	if ( bytes_read == 8)
 		retval = true;	
@@ -696,7 +703,7 @@ int doKeyTests(uint8_t debuglevel) {
 
 	PrintAndLogDevice(INFO, "Checking if the master key is present (iclass_key.bin)...");
 	uint8_t key[8] = {0};
-	if (readKeyFile(key)) {
+	if (!readKeyFile(key)) {
 		PrintAndLogDevice(FAILED, "Master key not present, will not be able to do all testcases");
 	} else {
 

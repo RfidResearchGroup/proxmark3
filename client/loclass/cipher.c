@@ -275,18 +275,14 @@ int testMAC()
 	uint8_t calculated_mac[4] = {0};
 	doMAC(cc_nr,div_key, calculated_mac);
 
-	if(memcmp(calculated_mac, correct_MAC,4) == 0)
-	{
+	if (memcmp(calculated_mac, correct_MAC,4) == 0) {
 		PrintAndLogDevice(SUCCESS, "MAC calculation OK!");
-
-	}else
-	{
+	} else {
 		PrintAndLogDevice(FAILED, "FAILED: MAC calculation failed:");
 		printarr("    Calculated_MAC", calculated_mac, 4);
 		printarr("    Correct_MAC   ", correct_MAC, 4);
-	return 1;
-}
-
+		return 1;
+	}
 	return 0;
 }
 #endif
