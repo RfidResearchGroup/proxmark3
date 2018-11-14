@@ -10,7 +10,6 @@
 //-----------------------------------------------------------------------------
 #include "i2c.h"
 
-//	定义连接引脚
 #define	GPIO_RST	AT91C_PIO_PA1
 #define GPIO_SCL	AT91C_PIO_PA5
 #define GPIO_SDA	AT91C_PIO_PA7
@@ -41,13 +40,41 @@ void __attribute__((optimize("O0"))) I2CSpinDelayClk(uint16_t delay) {
 
 #define  ISO7618_MAX_FRAME 255
 
+// try i2c bus recovery at 100kHz = 5uS high, 5uS low
+void I2C_recovery(void) {
+	
+	DbpString("Performing i2c bus recovery");	
+			
+	// reset I2C
+	SDA_H; SCL_H;
+	
+	 //9nth cycle acts as NACK
+	for (int i = 0; i < 10; i++)  {
+		SCL_H; WaitUS(5);
+		SCL_L; WaitUS(5);
+	}
+	
+    //a STOP signal (SDA from low to high while CLK is high)	
+	SDA_L; WaitUS(5);
+	SCL_H; WaitUS(2);
+	SDA_H; WaitUS(2);
+	
+	bool isok = (SCL_read && SDA_read); 
+    if (!SDA_read)
+		DbpString("I2C bus recovery  error: SDA still LOW");
+	if (!SCL_read)
+		DbpString("I2C bus recovery  error: SCL still LOW");
+	if (isok)
+		DbpString("I2C bus recovery complete");
+}
+
 void I2C_init(void) {
 	// Configure reset pin, close up pull up, push-pull output, default high
 	AT91C_BASE_PIOA->PIO_PPUDR = GPIO_RST;
 	AT91C_BASE_PIOA->PIO_MDDR = GPIO_RST;
   
 	// Configure I2C pin, open up, open leakage
-	AT91C_BASE_PIOA->PIO_PPUER |= (GPIO_SCL | GPIO_SDA);	// 打开上拉  Open up the pull up
+	AT91C_BASE_PIOA->PIO_PPUER |= (GPIO_SCL | GPIO_SDA);
 	AT91C_BASE_PIOA->PIO_MDER |= (GPIO_SCL | GPIO_SDA);
 
 	// default three lines all pull up
@@ -55,6 +82,12 @@ void I2C_init(void) {
 
 	AT91C_BASE_PIOA->PIO_OER |= (GPIO_SCL | GPIO_SDA | GPIO_RST);
 	AT91C_BASE_PIOA->PIO_PER |= (GPIO_SCL | GPIO_SDA | GPIO_RST);
+	
+	
+	bool isok =  (SCL_read && SDA_read); 
+	if ( !isok )
+		I2C_recovery();
+	
 }
 
 // set the reset state
@@ -78,6 +111,8 @@ void I2C_SetResetStatus(uint8_t LineRST, uint8_t LineSCK, uint8_t LineSDA) {
 // Reset the SIM_Adapter, then  enter the main program
 // Note: the SIM_Adapter will not enter the main program after power up. Please run this function before use SIM_Adapter.
 void I2C_Reset_EnterMainProgram(void) {
+	I2C_init();
+	
 	I2C_SetResetStatus(0, 0, 0);
 	SpinDelay(30);
 	I2C_SetResetStatus(1, 0, 0);
@@ -157,7 +192,7 @@ bool I2C_Start(void) {
 }
 
 bool I2C_WaitForSim() {
-	// variable delay here.
+
 	if (!WaitSCL_L_300ms())
 		return false;
 
@@ -631,6 +666,7 @@ void SmartCardAtr(void) {
 	LED_D_ON();
 	clear_trace();
 	set_tracing(true);
+	I2C_init();
 	I2C_Reset_EnterMainProgram();
 	bool isOK = GetATR( &card );
 	cmd_send(CMD_ACK, isOK, sizeof(smart_card_atr_t), 0, &card, sizeof(smart_card_atr_t));
@@ -650,12 +686,12 @@ void SmartCardRaw( uint64_t arg0, uint64_t arg1, uint8_t *data ) {
 		clear_trace();
 
 	set_tracing(true);
-
-	if ((flags & SC_CONNECT)) {	
 	
+	if ((flags & SC_CONNECT)) {	
+
 		I2C_Reset_EnterMainProgram();
 		
-		if ( !(flags & SC_NO_SELECT) ) {
+		if ((flags & SC_SELECT)) {
 			smart_card_atr_t card;
 			bool gotATR = GetATR( &card );
 			//cmd_send(CMD_ACK, gotATR, sizeof(smart_card_atr_t), 0, &card, sizeof(smart_card_atr_t));
