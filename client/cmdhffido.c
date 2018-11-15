@@ -341,7 +341,7 @@ int CmdHFFidoRegister(const char *cmd) {
 	// check and print DER certificate
 	uint8_t public_key[65] = {0};
 	
-	// print DER certificate in DER view
+	// print DER certificate in TLV view
 	if (showDERTLV) {
 		PrintAndLog("----------------DER TLV-----------------");
 		asn1_print(&buf[derp], derLen, "  ");
