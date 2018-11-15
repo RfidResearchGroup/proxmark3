@@ -11,6 +11,8 @@
 #include "asn1dump.h"
 #include <ctype.h>
 #include <stdlib.h>
+#include <unistd.h> 
+#include <stdio.h>
 #include <jansson.h>
 #include <mbedtls/asn1.h>
 #include <mbedtls/oid.h>
@@ -18,6 +20,7 @@
 #include "emv/dump.h"
 #include "emv/emvjson.h"
 #include "util.h"
+#include "proxmark3.h"
 
 #define PRINT_INDENT(level) 	{for (int i = 0; i < (level); i++) fprintf(f, "   ");}
 
@@ -217,26 +220,22 @@ static void asn1_tag_dump_integer(const struct tlv *tlv, const struct asn1_tag *
 }
 
 static char *asn1_oid_description(const char *oid, bool with_group_desc) {
+	json_error_t error;
+	char fname[300] = {0};
 	static char res[300];
 	memset(res, 0x00, sizeof(res));
 
-/*
+	strcpy(fname, get_my_executable_directory());
+	strcat(fname, "crypto/oids.json");
+	if (access(fname, F_OK) < 0) {
 		strcpy(fname, get_my_executable_directory());
-		strcat(fname, cjsonname);
-		if (access(fname, F_OK) != -1) {
-			root = json_load_file(fname, 0, &error);
-			if (!root) {
-				PrintAndLog("ERROR: json error on line %d: %s", error.line, error.text);
-				*err = true;
-				return NULL; 
-			}
-			
-*/
-
-
+		strcat(fname, "oids.json");
+		if (access(fname, F_OK) < 0) {
+			goto error; // file not found
+		}
+	}
 	
-	json_error_t error;
-	char fname[] = "crypto/oids.json";
+	// load `oids.json`
 	json_t *root = json_load_file(fname, 0, &error);
 	
 	if (!root || !json_is_object(root)) {
