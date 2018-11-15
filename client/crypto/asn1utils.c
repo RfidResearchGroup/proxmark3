@@ -10,6 +10,7 @@
 
 #include "asn1utils.h"
 #include <ctype.h>
+#include <stdlib.h>
 #include <mbedtls/asn1.h>
 #include <mbedtls/oid.h>
 #include "util.h"
@@ -92,14 +93,26 @@ static const struct asn1_tag asn1_tags[] = {
 	{ 0x04, "OCTET STRING", ASN1_TAG_OCTET_STRING},
 	{ 0x05, "NULL" },
 	{ 0x06, "OBJECT IDENTIFIER", ASN1_TAG_OBJECT_ID },
+	{ 0x07, "OBJECT DESCRIPTOR" },
+	{ 0x08, "EXTERNAL" },
+	{ 0x09, "REAL" },
+	{ 0x0A, "ENUMERATED" },
+	{ 0x0B, "EMBEDDED_PDV" },
 	{ 0x0C, "UTF8String", ASN1_TAG_STRING },
 	{ 0x10, "SEQUENCE" },
 	{ 0x11, "SET" },
+	{ 0x12, "NumericString", ASN1_TAG_STRING },
 	{ 0x13, "PrintableString", ASN1_TAG_STRING },
-	{ 0x14, "T61String", ASN1_TAG_STRING },
-	{ 0x16, "IA5String", ASN1_TAG_STRING },
+	{ 0x14, "T61String" },
+	{ 0x15, "VideotexString" },
+	{ 0x16, "IA5String" },
 	{ 0x17, "UTCTime", ASN1_TAG_UTC_TIME },
 	{ 0x18, "GeneralizedTime", ASN1_TAG_STR_TIME },
+	{ 0x19, "GraphicString" },
+	{ 0x1A, "VisibleString", ASN1_TAG_STRING },
+	{ 0x1B, "GeneralString", ASN1_TAG_STRING },
+	{ 0x1C, "UniversalString", ASN1_TAG_STRING },
+	{ 0x1E, "BMPString" },
 	{ 0x30, "SEQUENCE" },
 	{ 0x31, "SET" },
 	{ 0xa0, "[0]" },
@@ -128,44 +141,48 @@ static const struct asn1_tag *asn1_get_tag(const struct tlv *tlv) {
 	return tag ? tag : &asn1_tags[0];
 }
 
-static void asn1_tag_dump_str_time(const struct tlv *tlv, const struct asn1_tag *tag, FILE *f, int level, bool *needdump){
+static void asn1_tag_dump_str_time(const struct tlv *tlv, const struct asn1_tag *tag, FILE *f, int level, bool longyear, bool *needdump){
 	int len = tlv->len;
-	*needdump = true;
+	*needdump = false;
 
+	int startindx = longyear ? 4 : 2;
+	
 	if (len > 4) {
 		fprintf(f, "\tvalue: '");
 		while (true) {
 			// year
-			fwrite(tlv->value, 1, 4, f);
+			if (!longyear)
+				fprintf(f, "20");
+			fwrite(tlv->value, 1, longyear ? 4 : 2, f);
 			fprintf(f, "-");
-			if (len < 6) 
+			if (len < startindx + 2) 
 				break;
 			// month
-			fwrite(&tlv->value[4], 1, 2, f);
+			fwrite(&tlv->value[startindx], 1, 2, f);
 			fprintf(f, "-");
-			if (len < 8) 
+			if (len < startindx + 4) 
 				break;
 			// day
-			fwrite(&tlv->value[6], 1, 2, f);
+			fwrite(&tlv->value[startindx + 2], 1, 2, f);
 			fprintf(f, " ");
-			if (len < 10) 
+			if (len < startindx + 6) 
 				break;
 			// hour
-			fwrite(&tlv->value[8], 1, 2, f);
+			fwrite(&tlv->value[startindx + 4], 1, 2, f);
 			fprintf(f, ":");
-			if (len < 12) 
+			if (len < startindx + 8) 
 				break;
 			// min
-			fwrite(&tlv->value[10], 1, 2, f);
+			fwrite(&tlv->value[startindx + 6], 1, 2, f);
 			fprintf(f, ":");
-			if (len < 14) 
+			if (len < startindx + 10) 
 				break;
 			// sec
-			fwrite(&tlv->value[12], 1, 2, f);
-			if (len < 15) 
+			fwrite(&tlv->value[startindx + 8], 1, 2, f);
+			if (len < startindx + 11) 
 				break;
 			// time zone
-			fprintf(f, " zone: %.*s", len - 14, &tlv->value[14]);
+			fprintf(f, " zone: %.*s", len - 10 - (longyear ? 4 : 2), &tlv->value[startindx + 10]);
 	
 			break;
 		}
@@ -283,11 +300,10 @@ bool asn1_tag_dump(const struct tlv *tlv, FILE *f, int level, bool *candump) {
 		*candump = false;
 		break;
 	case ASN1_TAG_UTC_TIME:
-//		asn1_tag_dump_utc_time(tlv, tag, f, level);
-		fprintf(f, "\n");
+		asn1_tag_dump_str_time(tlv, tag, f, level, false, candump);
 		break;
 	case ASN1_TAG_STR_TIME:
-		asn1_tag_dump_str_time(tlv, tag, f, level, candump);
+		asn1_tag_dump_str_time(tlv, tag, f, level, true, candump);
 		break;
 	case ASN1_TAG_OBJECT_ID:
 		asn1_tag_dump_object_id(tlv, tag, f, level);
