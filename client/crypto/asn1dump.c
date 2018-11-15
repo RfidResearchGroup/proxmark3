@@ -216,11 +216,19 @@ static void asn1_tag_dump_boolean(const struct tlv *tlv, const struct asn1_tag *
 
 static void asn1_tag_dump_integer(const struct tlv *tlv, const struct asn1_tag *tag, FILE *f, int level) {
 	PRINT_INDENT(level);
+	if (tlv->len == 4) {
+		int32_t val = 0;
+		for (int i = 0; i < tlv->len; i++)
+			val = (val << 8) + tlv->value[i];
+		fprintf(f, "\tvalue4b: %d\n", val);
+		return;
+	}
 	fprintf(f, "\tvalue: %lu\n", asn1_value_integer(tlv, 0, tlv->len * 2));
 }
 
 static char *asn1_oid_description(const char *oid, bool with_group_desc) {
 	json_error_t error;
+	json_t *root = NULL;
 	char fname[300] = {0};
 	static char res[300];
 	memset(res, 0x00, sizeof(res));
@@ -236,7 +244,7 @@ static char *asn1_oid_description(const char *oid, bool with_group_desc) {
 	}
 	
 	// load `oids.json`
-	json_t *root = json_load_file(fname, 0, &error);
+	root = json_load_file(fname, 0, &error);
 	
 	if (!root || !json_is_object(root)) {
 		goto error;
