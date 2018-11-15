@@ -209,6 +209,7 @@ int CmdHFFidoRegister(const char *cmd) {
 		arg_lit0("aA",  "apdu",     "show APDU reqests and responses"),
 		arg_litn("vV",  "verbose",  0, 2, "show technical data. vv - show full certificates data"),
 		arg_lit0("pP",  "plain",    "send plain ASCII to challenge and application parameters instead of HEX"),
+		arg_lit0("tT",  "tlv",      "Show DER certificate contents in TLV representation"),
 		arg_str0("jJ",  "json",		"fido.json", "JSON input / output file name for parameters."),
 		arg_str0(NULL,  NULL,       "<HEX/ASCII challenge parameter (32b HEX/1..16 chars)>", NULL),
 		arg_str0(NULL,  NULL,       "<HEX/ASCII application parameter (32b HEX/1..16 chars)>", NULL),
@@ -220,10 +221,11 @@ int CmdHFFidoRegister(const char *cmd) {
 	bool verbose = arg_get_lit(2);
 	bool verbose2 = arg_get_lit(2) > 1;
 	bool paramsPlain = arg_get_lit(3);
+	bool showDERTLV = arg_get_lit(4);
 
 	char fname[250] = {0};
 	bool err;
-	root = OpenJson(4, fname, argtable, &err);
+	root = OpenJson(5, fname, argtable, &err);
 	if(err)
 		return 1;
 	if (root) {	
@@ -234,13 +236,13 @@ int CmdHFFidoRegister(const char *cmd) {
 	
 	if (paramsPlain) {
 		memset(cdata, 0x00, 32);
-		CLIGetStrWithReturn(5, cdata, &chlen);
+		CLIGetStrWithReturn(6, cdata, &chlen);
 		if (chlen && chlen > 16) {
 			PrintAndLog("ERROR: challenge parameter length in ASCII mode must be less than 16 chars instead of: %d", chlen);
 			return 1;
 		}
 	} else {
-		CLIGetHexWithReturn(5, cdata, &chlen);
+		CLIGetHexWithReturn(6, cdata, &chlen);
 		if (chlen && chlen != 32) {
 			PrintAndLog("ERROR: challenge parameter length must be 32 bytes only.");
 			return 1;
@@ -252,13 +254,13 @@ int CmdHFFidoRegister(const char *cmd) {
 	
 	if (paramsPlain) {
 		memset(adata, 0x00, 32);
-		CLIGetStrWithReturn(6, adata, &applen);
+		CLIGetStrWithReturn(7, adata, &applen);
 		if (applen && applen > 16) {
 			PrintAndLog("ERROR: application parameter length in ASCII mode must be less than 16 chars instead of: %d", applen);
 			return 1;
 		}
 	} else {
-		CLIGetHexWithReturn(6, adata, &applen);
+		CLIGetHexWithReturn(7, adata, &applen);
 		if (applen && applen != 32) {
 			PrintAndLog("ERROR: application parameter length must be 32 bytes only.");
 			return 1;
@@ -340,9 +342,11 @@ int CmdHFFidoRegister(const char *cmd) {
 	uint8_t public_key[65] = {0};
 	
 	// TODO: print DER certificate in DER view
-	PrintAndLog("----------------DER TLV-----------------");
-	asn1_print(&buf[derp], derLen, "  ");
-	PrintAndLog("----------------DER TLV-----------------");
+	if (showDERTLV) {
+		PrintAndLog("----------------DER TLV-----------------");
+		asn1_print(&buf[derp], derLen, "  ");
+		PrintAndLog("----------------DER TLV-----------------");
+	}
 	
 	// load CA's
 	mbedtls_x509_crt cacert;
