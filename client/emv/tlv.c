@@ -92,16 +92,15 @@ static size_t tlv_parse_len(const unsigned char **buf, size_t *len)
 		return l;
 
 	size_t ll = l &~ TLV_LEN_LONG;
-	if (*len < ll)
+	if (ll > 5)
 		return TLV_LEN_INVALID;
 
-	/* FIXME */
-	if (ll != 1)
-		return TLV_LEN_INVALID;
-
-	l = **buf;
-	--*len;
-	++*buf;
+	l = 0;
+	for (int i = 1; i <= ll; i++) {
+		l = (l << 8) + **buf;
+		--*len;
+		++*buf;
+	}
 
 	return l;
 }

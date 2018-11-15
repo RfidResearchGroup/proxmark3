@@ -264,6 +264,23 @@ bool HexToBuffer(const char *errormsg, const char *hexvalue, uint8_t * buffer, s
 	return true;
 }
 
+int JsonLoadStr(json_t *root, char *path, char *value) {
+	if (!value)
+		return 1;
+
+	json_t *jelm = json_path_get((const json_t *)root, path);
+	if (!jelm || !json_is_string(jelm))
+		return 2;
+	
+	const char * strval = json_string_value(jelm);
+	if (!strval)
+		return 1;
+	
+	memcpy(value, strval, strlen(strval));
+	
+	return 0;
+}
+
 int JsonLoadBufAsHex(json_t *elm, char *path, uint8_t *data, size_t maxbufferlen, size_t *datalen) {
 	if (datalen)
 		*datalen = 0;

@@ -9,7 +9,13 @@
 //-----------------------------------------------------------------------------
 
 #include "asn1utils.h"
+#include <ctype.h>
+#include <stdlib.h>
 #include <mbedtls/asn1.h>
+#include "emv/tlv.h"
+#include "emv/dump.h"
+#include "asn1dump.h"
+#include "util.h"
 
 int ecdsa_asn1_get_signature(uint8_t *signature, size_t signaturelen, uint8_t *rval, uint8_t *sval) {
 	if (!signature || !signaturelen || !rval || !sval)
@@ -55,7 +61,27 @@ exit:
 	return res;
 }
 
-int asn1_print(uint8_t *asn1buf, int level) {
+static bool print_cb(void *data, const struct tlv *tlv, int level, bool is_leaf) {
+	bool candump = true;
+	asn1_tag_dump(tlv, stdout, level, &candump);
+	if (is_leaf && candump) {
+		dump_buffer(tlv->value, tlv->len, stdout, level);
+	}
+
+	return true;
+}
+
+int asn1_print(uint8_t *asn1buf, size_t asn1buflen, char *indent) {
+	
+	struct tlvdb *t = NULL;
+	t = tlvdb_parse_multi(asn1buf, asn1buflen);
+	if (t) {
+		tlvdb_visit(t, print_cb, NULL, 0);
+		tlvdb_free(t);
+	} else {
+		PrintAndLogEx(ERR, "Can't parse data as TLV tree.");
+		return 1;
+	}
 	
 	return 0;
 }
