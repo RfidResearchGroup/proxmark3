@@ -11,10 +11,12 @@
 #include "asn1dump.h"
 #include <ctype.h>
 #include <stdlib.h>
+#include <jansson.h>
 #include <mbedtls/asn1.h>
 #include <mbedtls/oid.h>
 #include "emv/emv_tags.h"
 #include "emv/dump.h"
+#include "emv/emvjson.h"
 #include "util.h"
 
 #define PRINT_INDENT(level) 	{for (int i = 0; i < (level); i++) fprintf(f, "   ");}
@@ -214,6 +216,57 @@ static void asn1_tag_dump_integer(const struct tlv *tlv, const struct asn1_tag *
 	fprintf(f, "\tvalue: %lu\n", asn1_value_integer(tlv, 0, tlv->len * 2));
 }
 
+static char *asn1_oid_description(const char *oid, bool with_group_desc) {
+	static char res[300];
+	memset(res, 0x00, sizeof(res));
+
+/*
+		strcpy(fname, get_my_executable_directory());
+		strcat(fname, cjsonname);
+		if (access(fname, F_OK) != -1) {
+			root = json_load_file(fname, 0, &error);
+			if (!root) {
+				PrintAndLog("ERROR: json error on line %d: %s", error.line, error.text);
+				*err = true;
+				return NULL; 
+			}
+			
+*/
+
+
+	
+	json_error_t error;
+	char fname[] = "crypto/oids.json";
+	json_t *root = json_load_file(fname, 0, &error);
+	
+	if (!root || !json_is_object(root)) {
+		goto error;
+	}
+	
+	json_t *elm = json_object_get(root, oid);
+	if (!elm) {
+		goto error;
+	}
+	
+	if (JsonLoadStr(elm, "$.d", res))
+		goto error;
+
+	char strext[300] = {0};
+	if (!JsonLoadStr(elm, "$.c", strext)) {
+		strcat(res, " (");
+		strcat(res, strext);
+		strcat(res, ")");
+	}
+	
+	json_decref(root);
+	return res;
+	
+error:
+	if (root)
+		json_decref(root);
+	return NULL;
+}
+
 static void asn1_tag_dump_object_id(const struct tlv *tlv, const struct asn1_tag *tag, FILE *f, int level) {
 	PRINT_INDENT(level);
 	mbedtls_asn1_buf asn1_buf;
@@ -222,23 +275,28 @@ static void asn1_tag_dump_object_id(const struct tlv *tlv, const struct asn1_tag
 	char pstr[300];
 	mbedtls_oid_get_numeric_string(pstr, sizeof(pstr), &asn1_buf); 
 	fprintf(f, " %s", pstr);
-	const char *ppstr;
-	mbedtls_oid_get_attr_short_name(&asn1_buf, &ppstr); 
-	if (ppstr && strnlen(ppstr, 1)) {
-		fprintf(f, " (%s)\n", ppstr);
-		return;
-	}
-	mbedtls_oid_get_sig_alg_desc(&asn1_buf, &ppstr);
-	if (ppstr && strnlen(ppstr, 1)) {
-		fprintf(f, " (%s)\n", ppstr);
-		return;
-	}
-	mbedtls_oid_get_extended_key_usage(&asn1_buf, &ppstr);
-	if (ppstr && strnlen(ppstr, 1)) {
-		fprintf(f, " (%s)\n", ppstr);
-		return;
-	}
 	
+	char *jsondesc = asn1_oid_description(pstr, true);
+	if (jsondesc) {
+		fprintf(f, " -  %s", jsondesc);
+	} else {	
+		const char *ppstr;
+		mbedtls_oid_get_attr_short_name(&asn1_buf, &ppstr); 
+		if (ppstr && strnlen(ppstr, 1)) {
+			fprintf(f, " (%s)\n", ppstr);
+			return;
+		}
+		mbedtls_oid_get_sig_alg_desc(&asn1_buf, &ppstr);
+		if (ppstr && strnlen(ppstr, 1)) {
+			fprintf(f, " (%s)\n", ppstr);
+			return;
+		}
+		mbedtls_oid_get_extended_key_usage(&asn1_buf, &ppstr);
+		if (ppstr && strnlen(ppstr, 1)) {
+			fprintf(f, " (%s)\n", ppstr);
+			return;
+		}
+	}
 	fprintf(f, "\n");
 }
 
