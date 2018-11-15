@@ -1,6 +1,12 @@
 {
 "copyright": "https://www.cs.auckland.ac.nz/~pgut001/dumpasn1.cfg",
 
+"1.3.6.1.4.1.41482": { "d": "Yubico", "c": "FIDO Alliance" },
+"1.3.6.1.4.1.45724": { "d": "FIDO Alliance, Inc.", "c": "FIDO Alliance" },
+"1.3.6.1.4.1.41482.2": { "d": "Device ID", "c": "Yubico" },
+"1.3.6.1.4.1.45724.2.1.1": { "d": "FIDO U2F Transports", "c": "FIDO Alliance" },
+"1.3.6.1.4.1.45724.1.1.4": { "d": "Authenticator Attestation GUID", "c": "FIDO Alliance" },
+
 "0.2.262.1.10": { "d": "Telesec", "c": "Deutsche Telekom" },
 "0.2.262.1.10.0": { "d": "extension", "c": "Telesec" },
 "0.2.262.1.10.1": { "d": "mechanism", "c": "Telesec" },
