@@ -190,7 +190,7 @@ int TinyCborInit(uint8_t *data, size_t length, CborValue *cb) {
 int TinyCborPrintFIDOPackage(uint8_t *data, size_t length) {
 	CborValue cb;
 	int res;
-	res = TinyCborInit(&data[1], length - 1, &cb);
+	res = TinyCborInit(data, length, &cb);
 	if (res)
 		return res;
 	

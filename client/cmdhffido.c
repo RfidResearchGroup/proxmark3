@@ -140,10 +140,15 @@ int CmdHFFidoInfo(const char *cmd) {
 		
 		return 0;
 	}
+	
+	if(buf[0]) {
+		PrintAndLog("FIDO2 ger version error: %d", buf[0]); 
+		return 0;
+	}
 
 	PrintAndLog("FIDO2 version: (%d)", len); 
 	dump_buffer((const unsigned char *)buf, len, NULL, 0);
-	TinyCborPrintFIDOPackage(buf, len);
+	TinyCborPrintFIDOPackage(&buf[1], len - 1);
 	
 	return 0;
 }
