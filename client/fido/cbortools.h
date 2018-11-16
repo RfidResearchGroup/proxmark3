@@ -17,6 +17,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-extern int TinyCborPrintFIDOPackage(uint8_t *data, size_t length);
+extern int TinyCborPrintFIDOPackage(uint8_t cmdCode, uint8_t *data, size_t length);
 
 #endif /* __CBORTOOLS_H__ */

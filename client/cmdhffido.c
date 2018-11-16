@@ -49,6 +49,8 @@
 
 static int CmdHelp(const char *Cmd);
 
+#define FIDO2_CMD_INFO 0x04
+
 int FIDOSelect(bool ActivateField, bool LeaveFieldON, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
 	uint8_t data[] = {0xA0, 0x00, 0x00, 0x06, 0x47, 0x2F, 0x00, 0x01};
 	
@@ -82,7 +84,7 @@ int FIDOAuthentication(uint8_t *params, uint8_t paramslen, uint8_t controlb, uin
 }
 
 int FIDO2GetInfo(uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
-	uint8_t data[] = {0x04};
+	uint8_t data[] = {FIDO2_CMD_INFO};
 	return FIDOExchange((sAPDU){0x80, 0x10, 0x00, 0x00, sizeof(data), data}, Result, MaxResultLen, ResultLen, sw);
 }
 
@@ -148,7 +150,7 @@ int CmdHFFidoInfo(const char *cmd) {
 
 	PrintAndLog("FIDO2 version: (%d)", len); 
 	dump_buffer((const unsigned char *)buf, len, NULL, 0);
-	TinyCborPrintFIDOPackage(&buf[1], len - 1);
+	TinyCborPrintFIDOPackage(FIDO2_CMD_INFO, &buf[1], len - 1);
 	
 	return 0;
 }

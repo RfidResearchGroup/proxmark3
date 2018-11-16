@@ -121,7 +121,11 @@ static CborError dumpelm(CborValue *it, bool *got_next, int nestingLevel) {
 	return CborNoError;
 }
 
-static CborError dumprecursive(CborValue *it, bool isMapType, int nestingLevel) {
+char *getCmdCodeDescription (uint8_t cmdCode, uint8_t memberNum) {
+	return NULL;
+}
+
+static CborError dumprecursive(uint8_t cmdCode, CborValue *it, bool isMapType, int nestingLevel) {
 	int elmCount = 0;
 	while (!cbor_value_at_end(it)) {
 		CborError err;
@@ -141,7 +145,7 @@ static CborError dumprecursive(CborValue *it, bool isMapType, int nestingLevel) 
 			err = cbor_value_enter_container(it, &recursed);
 			if (err)
 				return err;       // parse error
-			err = dumprecursive(&recursed, (type == CborMapType), nestingLevel + 1);
+			err = dumprecursive(cmdCode, &recursed, (type == CborMapType), nestingLevel + 1);
 			if (err)
 				return err;       // parse error
 			err = cbor_value_leave_container(it, &recursed);
@@ -157,8 +161,13 @@ static CborError dumprecursive(CborValue *it, bool isMapType, int nestingLevel) 
 			err = dumpelm(it, &got_next, (isMapType && (elmCount % 2)) ? 0 : nestingLevel);
 			if (err)
 				return err;
-//			if (nestingLevel == 1 && isMapType && !(elmCount % 2))
-//				printf(" ()");
+			if (cmdCode > 0 && nestingLevel == 1 && isMapType && !(elmCount % 2)) {
+				int64_t val;
+				cbor_value_get_int64(it, &val);
+				char *desc = getCmdCodeDescription(cmdCode, val);
+				if (desc)
+					printf(" (%s)", desc);
+			}
 			break;
 		}
 		}
@@ -187,7 +196,7 @@ int TinyCborInit(uint8_t *data, size_t length, CborValue *cb) {
 	return 0;
 }
 
-int TinyCborPrintFIDOPackage(uint8_t *data, size_t length) {
+int TinyCborPrintFIDOPackage(uint8_t cmdCode, uint8_t *data, size_t length) {
 	CborValue cb;
 	int res;
 	res = TinyCborInit(data, length, &cb);
@@ -196,7 +205,7 @@ int TinyCborPrintFIDOPackage(uint8_t *data, size_t length) {
 	
 	
 	
-    CborError err = dumprecursive(&cb, false, 0);
+    CborError err = dumprecursive(cmdCode, &cb, false, 0);
 
 	if (err) {
 		fprintf(stderr, "CBOR parsing failure at offset %d: %s\n",
