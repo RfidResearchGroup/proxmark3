@@ -575,10 +575,13 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc)
 //  this may destroy the bigbuf so be sure this is called before calling SimulateTagLowFrequencyEx
 void SimulateTagLowFrequencyEx(int period, int gap, int ledcontrol, int numcycles) {
 
+	// start us timer
+	StartTicks();
+
 	//FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_TOGGLE_MODE );
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
-	SpinDelay(20);
-
+	WaitMS(20);
+	
 	int i = 0, x = 0;
 	uint8_t *buf = BigBuf_get_addr();
 
@@ -617,7 +620,7 @@ void SimulateTagLowFrequencyEx(int period, int gap, int ledcontrol, int numcycle
 				goto OUT;
 		}
 
-		if(buf[i])
+		if (buf[i])
 			OPEN_COIL();
 		else
 			SHORT_COIL();
@@ -631,17 +634,18 @@ void SimulateTagLowFrequencyEx(int period, int gap, int ledcontrol, int numcycle
 		}
 
 		i++;
-		if(i == period) {
+		if (i == period) {
 			i = 0;
 			if (gap) {
 				SHORT_COIL();
-				SpinDelayUs(gap);
+				WaitUS(gap);
 			}
 		}
 
 		if (ledcontrol) LED_D_OFF();
 	}
 OUT:
+	StopTicks();
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LED_D_OFF();
 }
@@ -665,44 +669,44 @@ static void fc(int c, int *n)
 	int idx;
 
 	// for when we want an fc8 pattern every 4 logical bits
-	if(c==0) {
-		dest[((*n)++)]=1;
-		dest[((*n)++)]=1;
-		dest[((*n)++)]=1;
-		dest[((*n)++)]=1;
-		dest[((*n)++)]=0;
-		dest[((*n)++)]=0;
-		dest[((*n)++)]=0;
-		dest[((*n)++)]=0;
+	if (c == 0) {
+		dest[((*n)++)] = 1;
+		dest[((*n)++)] = 1;
+		dest[((*n)++)] = 1;
+		dest[((*n)++)] = 1;
+		dest[((*n)++)] = 0;
+		dest[((*n)++)] = 0;
+		dest[((*n)++)] = 0;
+		dest[((*n)++)] = 0;
 	}
 
 	//	an fc/8  encoded bit is a bit pattern of  11110000  x6 = 48 samples
-	if(c==8) {
-		for (idx=0; idx<6; idx++) {
-			dest[((*n)++)]=1;
-			dest[((*n)++)]=1;
-			dest[((*n)++)]=1;
-			dest[((*n)++)]=1;
-			dest[((*n)++)]=0;
-			dest[((*n)++)]=0;
-			dest[((*n)++)]=0;
-			dest[((*n)++)]=0;
+	if (c == 8) {
+		for (idx=0; idx < 6; idx++) {
+			dest[((*n)++)] = 1;
+			dest[((*n)++)] = 1;
+			dest[((*n)++)] = 1;
+			dest[((*n)++)] = 1;
+			dest[((*n)++)] = 0;
+			dest[((*n)++)] = 0;
+			dest[((*n)++)] = 0;
+			dest[((*n)++)] = 0;
 		}
 	}
 
 	//	an fc/10 encoded bit is a bit pattern of 1111100000 x5 = 50 samples
-	if(c==10) {
-		for (idx=0; idx<5; idx++) {
-			dest[((*n)++)]=1;
-			dest[((*n)++)]=1;
-			dest[((*n)++)]=1;
-			dest[((*n)++)]=1;
-			dest[((*n)++)]=1;
-			dest[((*n)++)]=0;
-			dest[((*n)++)]=0;
-			dest[((*n)++)]=0;
-			dest[((*n)++)]=0;
-			dest[((*n)++)]=0;
+	if (c == 10) {
+		for (idx = 0; idx < 5; idx++) {
+			dest[((*n)++)] = 1;
+			dest[((*n)++)] = 1;
+			dest[((*n)++)] = 1;
+			dest[((*n)++)] = 1;
+			dest[((*n)++)] = 1;
+			dest[((*n)++)] = 0;
+			dest[((*n)++)] = 0;
+			dest[((*n)++)] = 0;
+			dest[((*n)++)] = 0;
+			dest[((*n)++)] = 0;
 		}
 	}
 }
@@ -720,7 +724,7 @@ static void fcSTT(int *n) {
 static void fcAll(uint8_t fc, int *n, uint8_t clock, uint16_t *modCnt)
 {
 	uint8_t *dest = BigBuf_get_addr();
-	uint8_t halfFC = fc/2;
+	uint8_t halfFC = fc >> 1;
 	uint8_t wavesPerClock = clock/fc;
 	uint8_t mod = clock % fc;    //modifier
 	uint8_t modAdj = fc/mod;     //how often to apply modifier
@@ -729,21 +733,22 @@ static void fcAll(uint8_t fc, int *n, uint8_t clock, uint16_t *modCnt)
 	// loop through clock - step field clock
 	for (uint8_t idx=0; idx < wavesPerClock; idx++){
 		// put 1/2 FC length 1's and 1/2 0's per field clock wave (to create the wave)
-		memset(dest+(*n), 0, fc-halfFC);  //in case of odd number use extra here
-		memset(dest+(*n)+(fc-halfFC), 1, halfFC);
+		memset(dest + (*n), 0, fc - halfFC);  //in case of odd number use extra here
+		memset(dest + (*n) + (fc - halfFC), 1, halfFC);
 		*n += fc;
 	}
-	if (mod>0) (*modCnt)++;
-	if ((mod>0) && modAdjOk){  //fsk2
+	if (mod > 0) (*modCnt)++;
+	
+	if ((mod > 0) && modAdjOk){  //fsk2
 		if ((*modCnt % modAdj) == 0){ //if 4th 8 length wave in a rf/50 add extra 8 length wave
-			memset(dest+(*n), 0, fc-halfFC);
-			memset(dest+(*n)+(fc-halfFC), 1, halfFC);
+			memset(dest + (*n), 0, fc - halfFC);
+			memset(dest + (*n) + ( fc - halfFC), 1, halfFC);
 			*n += fc;
 		}
 	}
-	if (mod>0 && !modAdjOk){  //fsk1
-		memset(dest+(*n), 0, mod-(mod/2));
-		memset(dest+(*n)+(mod-(mod/2)), 1, mod/2);
+	if (mod > 0 && !modAdjOk){  //fsk1
+		memset(dest + (*n), 0, mod - (mod >> 1));
+		memset(dest + (*n) + (mod - (mod >> 1)), 1, mod >> 1);
 		*n += mod;
 	}
 }
@@ -781,11 +786,11 @@ void CmdHIDsimTAGEx( uint32_t hi, uint32_t lo, int ledcontrol, int numcycles) {
 	fcSTT(&n);
 
 	// manchester encode bits 43 to 32
-	for (i=11; i>=0; i--) {
+	for (i = 11; i >= 0; i--) {
 
-		if ((i%4)==3) fc(0, &n);
+		if ((i % 4) == 3) fc(0, &n);
 
-		if ((hi>>i) & 1) {
+		if ((hi >> i) & 1) {
 			fc(10, &n); fc(8,  &n);		// low-high transition
 		} else {
 			fc(8,  &n); fc(10, &n);		// high-low transition
@@ -793,11 +798,11 @@ void CmdHIDsimTAGEx( uint32_t hi, uint32_t lo, int ledcontrol, int numcycles) {
 	}
 
 	// manchester encode bits 31 to 0
-	for (i=31; i>=0; i--) {
+	for (i = 31; i >= 0; i--) {
 
-		if ((i%4)==3) fc(0, &n);
+		if ((i % 4) == 3) fc(0, &n);
 
-		if ((lo>>i) & 1) {
+		if (( lo >> i ) & 1) {
 			fc(10, &n); fc(8,  &n);		// low-high transition
 		} else {
 			fc(8,  &n); fc(10, &n);		// high-low transition
