@@ -29,8 +29,11 @@ JANSSONLIBPATH = ./jansson
 JANSSONLIB = $(JANSSONLIBPATH)/libjansson.a
 MBEDTLSLIBPATH = ../common/mbedtls
 MBEDTLSLIB = $(MBEDTLSLIBPATH)/libmbedtls.a
+CBORLIBPATH = ./tinycbor
+CBORLIB = $(MBEDTLSLIBPATH)/tinycbor.a
+LIBS = -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH)
+INCLUDES_CLIENT = -I. -I../include -I../common -I../common/polarssl -I../zlib -I../uart -I/opt/local/include -I../liblua $(LIBS)
 LDFLAGS = $(ENV_LDFLAGS)
-INCLUDES_CLIENT = -I. -I../include -I../common -I../common/polarssl -I../zlib -I../uart -I/opt/local/include -I../liblua -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH)
 CFLAGS = $(ENV_CFLAGS) -std=c99 -D_ISOC99_SOURCE -DPRESETS $(INCLUDES_CLIENT) -Wall -g -O3
 CXXFLAGS = -I../include -Wall -O3
 
@@ -261,7 +264,7 @@ WINBINS = $(patsubst %, %.exe, $(BINS))
 CLEAN = $(BINS) $(WINBINS) $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(ZLIBOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(OBJDIR)/*.o *.moc.cpp ui/ui_overlays.h lualibs/usb_cmd.lua lualibs/mf_default_keys.lua
 
 # need to assign dependancies to build these first...
-all: lua_build jansson_build mbedtls_build $(BINS) 
+all: lua_build jansson_build mbedtls_build cbor_build $(BINS) 
 
 all-static: LDLIBS:=-static $(LDLIBS)
 all-static: proxmark3 flasher fpga_compress
@@ -295,6 +298,7 @@ clean:
 	cd ../liblua && make clean
 	cd $(JANSSONLIBPATH) && make clean
 	cd $(MBEDTLSLIBPATH) && make clean
+	cd $(CBORLIBPATH) && make clean
 
 tarbin: $(BINS)
 	$(TAR) $(TARFLAGS) ../proxmark3-$(platform)-bin.tar $(BINS:%=client/%) $(WINBINS:%=client/%)
@@ -310,6 +314,10 @@ jansson_build:
 mbedtls_build:
 	@echo Compiling mbedtls
 	cd $(MBEDTLSLIBPATH) && make all
+	
+cbor_build:
+	@echo Compiling tinycbor
+	cd $(CBORLIBPATH) && make all
 	
 .PHONY: all clean
 
