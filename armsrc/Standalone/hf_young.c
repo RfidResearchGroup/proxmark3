@@ -20,6 +20,7 @@ typedef struct {
 
 void RunMod() {
 	StandAloneMode();
+	Dbprintf(">>  Craig Young Mifare sniff UID/clone uid 2 magic/sim  a.k.a YoungRun Started  <<");
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
 	int selected = 0, playing = 0, iGotoRecord = 0, iGotoClone = 0;

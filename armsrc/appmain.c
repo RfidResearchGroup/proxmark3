@@ -415,22 +415,19 @@ void SendStatus(void) {
 void StandAloneMode(void) {
 	
 	DbpString("Stand-alone mode! No PC necessary.");
-	// Oooh pretty -- notify user we're in elite samy mode now
-	LED(LED_RED,	200);
-	LED(LED_ORANGE, 200);
-	LED(LED_GREEN,	200);
-	LED(LED_ORANGE, 200);
-	LED(LED_RED,	200);
-	LED(LED_ORANGE, 200);
-	LED(LED_GREEN,	200);
-	LED(LED_ORANGE, 200);
-	LED(LED_RED,	200);
+	
+	SpinDown(50);
+    SpinOff(50);
+    SpinUp(50);
+    SpinOff(50);
+    SpinDown(50);
+	SpinDelay(500);
 }
 // detection of which Standalone Modes is installed
 // (iceman)
 void printStandAloneModes(void) {
 
-	DbpString("Installed StandAlone Mods");
+	DbpString("Installed StandAlone Mode");
 	
 #if defined(WITH_LF_ICERUN)
 	DbpString("   LF sniff/clone/simulation -  aka IceRun (iceman)");
@@ -445,7 +442,7 @@ void printStandAloneModes(void) {
 	DbpString("   LF HID ProxII bruteforce - aka Proxbrute (Brad Antoniewicz)");
 #endif 
 #if defined(WITH_LF_HIDBRUTE)
-	DbpString("   LF HID corporate 1000 bruteforce - (Federico dotta & Maurizio Agazzini)");
+	DbpString("   LF HID corporate 1000 bruteforce - aka Corporatebrute (Federico dotta & Maurizio Agazzini)");
 #endif 
 #if defined(WITH_HF_MATTYRUN)
 	DbpString("   HF Mifare sniff/clone - aka MattyRun (Matías A. Ré Medina)");

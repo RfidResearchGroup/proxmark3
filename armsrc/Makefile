@@ -23,9 +23,9 @@ APP_CFLAGS = -DWITH_CRC \
 			 -DWITH_FELICA \
 			 -DWITH_FLASH \
 			 -DWITH_SMARTCARD \
+			 -DWITH_FPC \
 			 -DWITH_HFSNOOP \
 			 -DWITH_LF_SAMYRUN \
-			 -DWITH_FPC \
 			 -fno-strict-aliasing -ffunction-sections -fdata-sections
 
 ### IMPORTANT -  move the commented variable below this line
@@ -39,7 +39,7 @@ APP_CFLAGS = -DWITH_CRC \
 #			 -DWITH_LF_PROXBRUTE
 #			 -DWITH_LF_HIDBRUTE
 #			 -DWITH_HF_YOUNG
-#			 -DWITH_HF_MATTYRUN
+#			 -DWITH_HF_MATTYRUN -
 #			 -DWITH_HF_COLIN
 #			 -DWITH_HF_BOG
 
