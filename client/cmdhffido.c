@@ -28,6 +28,9 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <jansson.h>
+#include <mbedtls/x509_crt.h>
+#include <mbedtls/x509.h>
+#include <mbedtls/pk.h>
 #include "comms.h"
 #include "cmdmain.h"
 #include "util.h"
@@ -42,9 +45,7 @@
 #include "crypto/asn1utils.h"
 #include "crypto/libpcrypto.h"
 #include "fido/additional_ca.h"
-#include "mbedtls/x509_crt.h"
-#include "mbedtls/x509.h"
-#include "mbedtls/pk.h"
+#include "fido/cbortools.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -142,6 +143,7 @@ int CmdHFFidoInfo(const char *cmd) {
 
 	PrintAndLog("FIDO2 version: (%d)", len); 
 	dump_buffer((const unsigned char *)buf, len, NULL, 0);
+	TinyCborPrintFIDOPackage(buf, len);
 	
 	return 0;
 }

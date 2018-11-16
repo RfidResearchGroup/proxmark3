@@ -30,9 +30,9 @@ JANSSONLIB = $(JANSSONLIBPATH)/libjansson.a
 MBEDTLSLIBPATH = ../common/mbedtls
 MBEDTLSLIB = $(MBEDTLSLIBPATH)/libmbedtls.a
 CBORLIBPATH = ./tinycbor
-CBORLIB = $(MBEDTLSLIBPATH)/tinycbor.a
-LIBS = -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH)
-INCLUDES_CLIENT = -I. -I../include -I../common -I../common/polarssl -I../zlib -I../uart -I/opt/local/include -I../liblua $(LIBS)
+CBORLIB = $(CBORLIBPATH)/tinycbor.a
+LIBS = -I../zlib -I../uart -I../liblua -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH)
+INCLUDES_CLIENT = -I. -I../include -I../common -I/opt/local/include $(LIBS)
 LDFLAGS = $(ENV_LDFLAGS)
 CFLAGS = $(ENV_CFLAGS) -std=c99 -D_ISOC99_SOURCE -DPRESETS $(INCLUDES_CLIENT) -Wall -g -O3
 CXXFLAGS = -I../include -Wall -O3
@@ -111,6 +111,7 @@ CMDSRCS =	crapto1/crapto1.c \
 			mfkey.c \
 			tea.c \
 			fido/additional_ca.c \
+			fido/cbortools.c \
 			crypto/asn1dump.c \
 			crypto/libpcrypto.c\
 			crypto/asn1utils.c\
@@ -269,7 +270,7 @@ all: lua_build jansson_build mbedtls_build cbor_build $(BINS)
 all-static: LDLIBS:=-static $(LDLIBS)
 all-static: proxmark3 flasher fpga_compress
 
-proxmark3: LDLIBS+=$(LUALIB) $(JANSSONLIB) $(MBEDTLSLIB) $(QTLDLIBS)
+proxmark3: LDLIBS+=$(LUALIB) $(JANSSONLIB) $(MBEDTLSLIB) $(CBORLIB) $(QTLDLIBS)
 proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(ZLIBOBJS) lualibs/usb_cmd.lua lualibs/mf_default_keys.lua
 	$(LD) $(LDFLAGS) $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(ZLIBOBJS) $(LDLIBS)  -o $@
 	
