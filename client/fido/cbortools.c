@@ -121,7 +121,8 @@ static CborError dumpelm(CborValue *it, bool *got_next, int nestingLevel) {
 	return CborNoError;
 }
 
-static CborError dumprecursive(CborValue *it, int nestingLevel) {
+static CborError dumprecursive(CborValue *it, bool isMapType, int nestingLevel) {
+	int elmCount = 0;
 	while (!cbor_value_at_end(it)) {
 		CborError err;
 		CborType type = cbor_value_get_type(it);
@@ -129,63 +130,35 @@ static CborError dumprecursive(CborValue *it, int nestingLevel) {
 		bool got_next;
 
 		switch (type) {
-		case CborMapType: /*{
-			// recursive type
-			CborValue recursed;
-			assert(cbor_value_is_container(it));
-			printf("Map[\n");
-			err = cbor_value_enter_container(it, &recursed);
-			if (err)
-				return err;       // parse error
-
-			// name
-			err = dumpelm(&recursed, next!!!!, nestingLevel + 1);
-			if (err)
-				return err;
-
-			printf(":");
-			err = cbor_value_advance_fixed(it);
-			if (err)
-				return err;
-
-			// value
-printf("*");
-			err = dumprecursive(&recursed, nestingLevel + 1);
-			if (err)
-				return err;       // parse error
-
-			err = cbor_value_leave_container(it, &recursed);
-			if (err)
-				return err;       // parse error
-			indent(nestingLevel);
-			printf("]\n");
-			continue;
-		}*/
+		case CborMapType: 
 		case CborArrayType: {
 			// recursive type
 			CborValue recursed;
 			assert(cbor_value_is_container(it));
-			indent(nestingLevel);
+			if (!(isMapType && (elmCount % 2)))
+				indent(nestingLevel);
 			printf(type == CborArrayType ? "Array[\n" : "Map[\n");
 			err = cbor_value_enter_container(it, &recursed);
 			if (err)
 				return err;       // parse error
-			err = dumprecursive(&recursed, nestingLevel + 1);
+			err = dumprecursive(&recursed, (type == CborMapType), nestingLevel + 1);
 			if (err)
 				return err;       // parse error
 			err = cbor_value_leave_container(it, &recursed);
 			if (err)
 				return err;       // parse error
 			indent(nestingLevel);
-			printf("]\n");
-			continue;
+			printf("]");
+			got_next = true;
+			break;
 		}
 
 		default: {
-			err = dumpelm(it, &got_next, nestingLevel);
-			printf("\n");
+			err = dumpelm(it, &got_next, (isMapType && (elmCount % 2)) ? 0 : nestingLevel);
 			if (err)
 				return err;
+//			if (nestingLevel == 1 && isMapType && !(elmCount % 2))
+//				printf(" ()");
 			break;
 		}
 		}
@@ -195,6 +168,12 @@ printf("*");
 			if (err)
 				return err;
 		}
+		if (isMapType && !(elmCount % 2)) {
+			printf(": ");
+		} else {
+			printf("\n");
+		}
+		elmCount++;
 	}
 	return CborNoError;
 }
@@ -217,7 +196,7 @@ int TinyCborPrintFIDOPackage(uint8_t *data, size_t length) {
 	
 	
 	
-    CborError err = dumprecursive(&cb, 0);
+    CborError err = dumprecursive(&cb, false, 0);
 
 	if (err) {
 		fprintf(stderr, "CBOR parsing failure at offset %d: %s\n",
