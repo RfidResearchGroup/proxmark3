@@ -720,13 +720,66 @@ int CmdHFFidoAuthenticate(const char *cmd) {
 	return 0;
 };
 
+int CmdHFFido2MakeCredential(const char *cmd) {
+	
+	
+	uint8_t data[2048] = {0};
+	size_t datalen = 0;
+	uint8_t buf[2048] = {0};
+	size_t len = 0;
+	uint16_t sw = 0;
+
+	DropField();
+	int res = FIDOSelect(true, true, buf, sizeof(buf), &len, &sw);
+
+	if (res) {
+		PrintAndLog("Can't select authenticator. res=%x. Exit...", res);
+		DropField();
+		return res;
+	}
+	
+	if (sw != 0x9000) {
+		PrintAndLog("Can't select FIDO application. APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff)); 
+		DropField();
+		return 2;
+	}
+
+	res = FIDO2MakeCredential(data, datalen, buf,  sizeof(buf), &len, &sw);
+	DropField();
+	if (res) {
+		PrintAndLog("Can't execute register command. res=%x. Exit...", res);
+		return res;
+	}
+	
+	if (sw != 0x9000) {
+		PrintAndLog("ERROR execute register command. APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff)); 
+		return 3;
+	}
+	
+	if(buf[0]) {
+		PrintAndLog("FIDO2 ger version error: %d - %s", buf[0], fido2GetCmdErrorDescription(buf[0])); 
+		return 0;
+	}
+
+	PrintAndLog("res[%d]: %s", len, sprint_hex(buf, len));
+
+	return 0;
+};
+
+int CmdHFFido2GetAssertion(const char *cmd) {
+
+	return 0;
+};
+
 static command_t CommandTable[] =
 {
-  {"help",             CmdHelp,					1, "This help."},
-  {"info",  	       CmdHFFidoInfo,			0, "Info about FIDO tag."},
-  {"reg",  	  	 	   CmdHFFidoRegister,		0, "FIDO U2F Registration Message."},
-  {"auth",  	       CmdHFFidoAuthenticate,	0, "FIDO U2F Authentication Message."},
-  {NULL,               NULL,					0, NULL}
+  {"help",             CmdHelp,						1, "This help."},
+  {"info",  	       CmdHFFidoInfo,				0, "Info about FIDO tag."},
+  {"reg",  	  	 	   CmdHFFidoRegister,			0, "FIDO U2F Registration Message."},
+  {"auth",  	       CmdHFFidoAuthenticate,		0, "FIDO U2F Authentication Message."},
+  {"make",  	       CmdHFFido2MakeCredential,	0, "FIDO2 MakeCredential command."},
+  {"accert",  	       CmdHFFido2GetAssertion,		0, "FIDO2 GetAssertion command."},
+  {NULL,               NULL,						0, NULL}
 };
 
 int CmdHFFido(const char *Cmd) {
