@@ -5,17 +5,18 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Tools for work with CBOR format http://cbor.io/spec.html
-// via Intel tinycbor (https://github.com/intel/tinycbor) library
+// FIDO2 authenticators core data and commands
+// https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html
 //-----------------------------------------------------------------------------
 //
 
-#ifndef __CBORTOOLS_H__
-#define __CBORTOOLS_H__
+#include "fidocore.h"
 
-#include <stddef.h>
-#include <stdint.h>
+char *fido2GetCmdMemberDescription(uint8_t cmdCode, uint8_t memberNum) {
+	
+	
+	
+	
+	return NULL;
+}
 
-extern int TinyCborPrintFIDOPackage(uint8_t cmdCode, uint8_t *data, size_t length);
-
-#endif /* __CBORTOOLS_H__ */

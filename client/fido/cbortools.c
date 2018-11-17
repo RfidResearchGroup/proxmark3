@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include "cbor.h"
 #include "util.h"
+#include "fidocore.h"
 
 static void indent(int nestingLevel) {
 	while (nestingLevel--)
@@ -121,10 +122,6 @@ static CborError dumpelm(CborValue *it, bool *got_next, int nestingLevel) {
 	return CborNoError;
 }
 
-char *getCmdCodeDescription (uint8_t cmdCode, uint8_t memberNum) {
-	return NULL;
-}
-
 static CborError dumprecursive(uint8_t cmdCode, CborValue *it, bool isMapType, int nestingLevel) {
 	int elmCount = 0;
 	while (!cbor_value_at_end(it)) {
@@ -164,7 +161,7 @@ static CborError dumprecursive(uint8_t cmdCode, CborValue *it, bool isMapType, i
 			if (cmdCode > 0 && nestingLevel == 1 && isMapType && !(elmCount % 2)) {
 				int64_t val;
 				cbor_value_get_int64(it, &val);
-				char *desc = getCmdCodeDescription(cmdCode, val);
+				char *desc = fido2GetCmdMemberDescription(cmdCode, val);
 				if (desc)
 					printf(" (%s)", desc);
 			}
