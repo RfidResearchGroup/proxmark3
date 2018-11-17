@@ -11,6 +11,7 @@
 //
 
 #include "fidocore.h"
+
 typedef struct {
 	uint8_t ErrorCode;
 	char *ShortDescription;
@@ -69,30 +70,38 @@ fido2Error_t fido2Errors[] = {
 };
 
 typedef struct {
+	fido2Commands Command;
+	fido2PacketType PckType;
 	uint8_t MemberNumber;
 	char *Description;
 } fido2Desc_t;
 
-typedef fido2Desc_t fido2ArrayDesc_t[];
-/*
-typedef struct {
-	fido2Desc_t Query[];
-	fido2Desc_t Resp[];
-} fido2CmdDesc_t;
-
-fido2CmdDesc_t fido2CmdDesc[] = { // fido2CommandsCount
-	{fido2CmdGetInfoRespDesc, fido2CmdGetInfoRespDesc},
-	{fido2CmdGetInfoRespDesc, fido2CmdGetInfoRespDesc},
-};
-*/
 fido2Desc_t fido2CmdGetInfoRespDesc[] = {
-	{0x01, "versions"},
-	{0x02, "extensions"},
-	{0x03, "aaguid"},
-	{0x04, "options"},
-	{0x05, "maxMsgSize"},
-	{0x06, "pinProtocols"},
-	{0xff, ""},
+	{fido2CmdMakeCredential, 	ptResponse, 0x01, "fmt"},
+	{fido2CmdMakeCredential, 	ptResponse, 0x02, "authData"},
+	{fido2CmdMakeCredential, 	ptResponse, 0x03, "attStmt"},
+	
+	{fido2CmdGetAssertion, 		ptResponse, 0x01, "credential"},
+	{fido2CmdGetAssertion, 		ptResponse, 0x02, "authData"},
+	{fido2CmdGetAssertion, 		ptResponse, 0x03, "signature"},
+	{fido2CmdGetAssertion, 		ptResponse, 0x04, "publicKeyCredentialUserEntity"},
+	{fido2CmdGetAssertion, 		ptResponse, 0x05, "numberOfCredentials"},
+	
+	{fido2CmdGetNextAssertion, 	ptResponse, 0x01, "credential"},
+	{fido2CmdGetNextAssertion, 	ptResponse, 0x02, "authData"},
+	{fido2CmdGetNextAssertion, 	ptResponse, 0x03, "signature"},
+	{fido2CmdGetNextAssertion, 	ptResponse, 0x04, "publicKeyCredentialUserEntity"},
+	
+	{fido2CmdGetInfo, 			ptResponse, 0x01, "versions"},
+	{fido2CmdGetInfo, 			ptResponse, 0x02, "extensions"},
+	{fido2CmdGetInfo, 			ptResponse, 0x03, "aaguid"},
+	{fido2CmdGetInfo, 			ptResponse, 0x04, "options"},
+	{fido2CmdGetInfo, 			ptResponse, 0x05, "maxMsgSize"},
+	{fido2CmdGetInfo, 			ptResponse, 0x06, "pinProtocols"},
+
+	{fido2CmdClientPIN, 		ptResponse, 0x06, "keyAgreement"},
+	{fido2CmdClientPIN, 		ptResponse, 0x06, "pinToken"},
+	{fido2CmdClientPIN, 		ptResponse, 0x06, "retries"},
 };
 
 char *fido2GetCmdErrorDescription(uint8_t errorCode) {
@@ -104,10 +113,12 @@ char *fido2GetCmdErrorDescription(uint8_t errorCode) {
 }
 
 char *fido2GetCmdMemberDescription(uint8_t cmdCode, uint8_t memberNum) {
-	
-	
-	
-	
+	for (int i = 0; i < sizeof(fido2CmdGetInfoRespDesc) / sizeof(fido2Desc_t); i++)
+		if (fido2CmdGetInfoRespDesc[i].Command == cmdCode &&
+			fido2CmdGetInfoRespDesc[i].PckType == ptResponse &&
+			fido2CmdGetInfoRespDesc[i].MemberNumber == memberNum )
+			return fido2CmdGetInfoRespDesc[i].Description;
+
 	return NULL;
 }
 

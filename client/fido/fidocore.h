@@ -15,7 +15,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-enum fido2Commands {
+typedef enum {
 	fido2CmdMakeCredential		= 0x01,
 	fido2CmdGetAssertion		= 0x02,
 	fido2CmdCancel				= 0x03,
@@ -23,10 +23,12 @@ enum fido2Commands {
 	fido2CmdClientPIN			= 0x06,
 	fido2CmdReset				= 0x07,
 	fido2CmdGetNextAssertion	= 0x08,
-};
-#define fido2CommandsCount 9 
+} fido2Commands;
 
-
+typedef enum  {
+	ptQuery,
+	ptResponse,
+} fido2PacketType;
 
 extern char *fido2GetCmdMemberDescription(uint8_t cmdCode, uint8_t memberNum);
 extern char *fido2GetCmdErrorDescription(uint8_t errorCode);

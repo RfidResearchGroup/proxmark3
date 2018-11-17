@@ -147,10 +147,18 @@ int CmdHFFidoInfo(const char *cmd) {
 		return 0;
 	}
 
-	PrintAndLog("FIDO2 version: (%d)", len); 
-	dump_buffer((const unsigned char *)buf, len, NULL, 0);
-	TinyCborPrintFIDOPackage(fido2CmdGetInfo, &buf[1], len - 1);
-	
+	if (len > 1) {
+//		if (false) {
+//			PrintAndLog("FIDO2 version: (len=%d)", len); 
+//			dump_buffer((const unsigned char *)buf, len, NULL, 0);
+//		}
+
+		PrintAndLog("FIDO2 version CBOR decoded:"); 
+		TinyCborPrintFIDOPackage(fido2CmdGetInfo, &buf[1], len - 1);
+	} else {
+		PrintAndLog("FIDO2 version length error"); 
+	}
+		
 	return 0;
 }
 
