@@ -143,7 +143,7 @@ int CmdHFFidoInfo(const char *cmd) {
 	}
 	
 	if(buf[0]) {
-		PrintAndLog("FIDO2 ger version error: %d", buf[0]); 
+		PrintAndLog("FIDO2 ger version error: %d - %s", buf[0], fido2GetCmdErrorDescription(buf[0])); 
 		return 0;
 	}
 

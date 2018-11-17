@@ -24,9 +24,11 @@ enum fido2Commands {
 	fido2CmdReset				= 0x07,
 	fido2CmdGetNextAssertion	= 0x08,
 };
+#define fido2CommandsCount 9 
 
 
 
 extern char *fido2GetCmdMemberDescription(uint8_t cmdCode, uint8_t memberNum);
+extern char *fido2GetCmdErrorDescription(uint8_t errorCode);
 
 #endif /* __FIDOCORE_H__ */
