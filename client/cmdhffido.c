@@ -87,6 +87,20 @@ int FIDO2GetInfo(uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16
 	return FIDOExchange((sAPDU){0x80, 0x10, 0x00, 0x00, sizeof(data), data}, Result, MaxResultLen, ResultLen, sw);
 }
 
+int FIDO2MakeCredential(uint8_t *params, uint8_t paramslen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
+	uint8_t data[paramslen + 1];
+	data[0] = fido2CmdMakeCredential;
+	memcpy(&data[1], params, paramslen);
+	return FIDOExchange((sAPDU){0x80, 0x10, 0x00, 0x00, sizeof(data), data}, Result, MaxResultLen, ResultLen, sw);
+}
+
+int FIDO2GetAssertion(uint8_t *params, uint8_t paramslen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
+	uint8_t data[paramslen + 1];
+	data[0] = fido2CmdGetAssertion;
+	memcpy(&data[1], params, paramslen);
+	return FIDOExchange((sAPDU){0x80, 0x10, 0x00, 0x00, sizeof(data), data}, Result, MaxResultLen, ResultLen, sw);
+}
+
 int CmdHFFidoInfo(const char *cmd) {
 	
 	if (cmd && strlen(cmd) > 0)
