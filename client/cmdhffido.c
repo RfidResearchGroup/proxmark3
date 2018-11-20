@@ -720,15 +720,19 @@ int CmdHFFidoAuthenticate(const char *cmd) {
 	return 0;
 };
 
+void CheckSlash(char *fileName) {
+	if ((fileName[strlen(fileName) - 1] != '/') && 
+		(fileName[strlen(fileName) - 1] != '\\'))
+		strcat(fileName, "/");
+}
+
 int GetExistsFileNameJson(char *prefixDir, char *reqestedFileName, char *fileName) {
 	fileName[0] = 0x00;
 	strcpy(fileName, get_my_executable_directory());
-	if (fileName[strlen(fileName) - 1] != '/')
-		strcat(fileName, "/");
+	CheckSlash(fileName);
 	
 	strcat(fileName, prefixDir);
-	if (fileName[strlen(fileName) - 1] != '/')
-		strcat(fileName, "/");
+	CheckSlash(fileName);
 	
 	strcat(fileName, reqestedFileName);
 	if (!strstr(fileName, ".json"))
@@ -736,8 +740,7 @@ int GetExistsFileNameJson(char *prefixDir, char *reqestedFileName, char *fileNam
 	
 	if (access(fileName, F_OK) < 0) {
 		strcpy(fileName, get_my_executable_directory());
-		if (fileName[strlen(fileName) - 1] != '/')
-			strcat(fileName, "/");
+		CheckSlash(fileName);
 		
 		strcat(fileName, reqestedFileName);
 		if (!strstr(fileName, ".json"))
@@ -758,10 +761,16 @@ int CmdHFFido2MakeCredential(const char *cmd) {
 	char fname[300] = {0};
 
 	int res = GetExistsFileNameJson("fido", "fido2", fname);
-	if(res)
+	if(res) {
+		PrintAndLog("ERROR: Can't found json file.");
 		return res;
-	
+	}
+	PrintAndLog("fname: %s\n", fname);
 	root = json_load_file(fname, 0, &error);	
+	if (!root) {
+		PrintAndLog("ERROR: json error on line %d: %s", error.line, error.text);
+		return 1;
+	}
 	
 	uint8_t data[2048] = {0};
 	size_t datalen = 0;
