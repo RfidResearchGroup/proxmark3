@@ -171,13 +171,6 @@ int usage_hf_14a_info(void){
 	PrintAndLogEx(NORMAL, "       n    test for nack bug");
 	return 0;
 }
-int usage_hf_14a_apdu(void) {
-	PrintAndLogEx(NORMAL, "Usage: hf 14a apdu [-s] [-k] [-t] <APDU (hex)>");
-	PrintAndLogEx(NORMAL, "       -s    activate field and select card");
-	PrintAndLogEx(NORMAL, "       -k    leave the signal field ON after receive response");
-	PrintAndLogEx(NORMAL, "       -t    executes TLV decoder if it possible. TODO!!!!");
-	return 0;
-}
 int usage_hf_14a_antifuzz(void) {
 	PrintAndLogEx(NORMAL, "Usage: hf 14a antifuzz [4|7|10]");
 	PrintAndLogEx(NORMAL, "       <len>    determine which anticollision phase the command will target.");
@@ -921,51 +914,28 @@ int CmdHF14AAPDU(const char *cmd) {
 	bool activateField = false;
 	bool leaveSignalON = false;
 	bool decodeTLV = false;
-	
-	if (strlen(cmd) < 2) return usage_hf_14a_apdu();
 
-	int cmdp = 0;
-	while(param_getchar(cmd, cmdp) != 0x00) {
-		char c = param_getchar(cmd, cmdp);
-		if ((c == '-') && (param_getlength(cmd, cmdp) == 2))
-			switch (tolower(param_getchar_indx(cmd, 1, cmdp))) {
-				case 'h':
-					return usage_hf_14a_apdu();
-				case 's':
-					activateField = true;
-					break;
-				case 'k':
-					leaveSignalON = true;
-					break;
-				case 't':
-					decodeTLV = true;
-					break;
-				default:
-					PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar_indx(cmd, 1, cmdp));
-					return 1;
-			}
+	CLIParserInit("hf 14a apdu", 
+		"Sends an ISO 7816-4 APDU via ISO 14443-4 block transmission protocol (T=CL)", 
+		"Sample:\n\thf 14a apdu -st 00A404000E325041592E5359532E444446303100\n");
+
+	void* argtable[] = {
+		arg_param_begin,
+		arg_lit0("sS",  "select",  "activate field and select card"),
+		arg_lit0("kK",  "keep",    "leave the signal field ON after receive response"),
+		arg_lit0("tT",  "tlv",     "executes TLV decoder if it possible"),
+		arg_strx1(NULL, NULL,      "<APDU (hex)>", NULL),
+		arg_param_end
+	};
+	CLIExecWithReturn(cmd, argtable, false);
 			
-		if (isxdigit(c)) {
+	activateField = arg_get_lit(1);
+	leaveSignalON = arg_get_lit(2);
+	decodeTLV = arg_get_lit(3);
 			// len = data + PCB(1b) + CRC(2b)
-			switch(param_gethex_to_eol(cmd, cmdp, data, sizeof(data) - 1 - 2, &datalen)) {
-			case 1:
-				PrintAndLogEx(WARNING, "invalid HEX value.");
-				return 1;
-			case 2:
-				PrintAndLogEx(WARNING, "APDU too large.");
-				return 1;
-			case 3:
-				PrintAndLogEx(WARNING, "hex must have even number of digits.");
-				return 1;
-			}
-			
-			// we get all the hex to end of line with spaces
-			break;
-		}
-		
-		cmdp++;
-	}
+	CLIGetHexBLessWithReturn(4, data, &datalen, 1 + 2);
 
+CLIParserFree();
 	PrintAndLogEx(NORMAL, ">>>>[%s%s%s] %s", activateField ? "sel ": "", leaveSignalON ? "keep ": "", decodeTLV ? "TLV": "", sprint_hex(data, datalen));
 	
 	int res = ExchangeAPDU14a(data, datalen, activateField, leaveSignalON, data, USB_CMD_DATA_SIZE, &datalen);
