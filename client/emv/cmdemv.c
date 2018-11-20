@@ -75,7 +75,7 @@ int CmdHFEMVSelect(const char *cmd) {
 	int res = EMVSelect(activateField, leaveSignalON, data, datalen, buf, sizeof(buf), &len, &sw, NULL);
 
 	if (sw)
-		PrintAndLog("APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff)); 
+		PrintAndLogEx(INFO, "APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff)); 
 	
 	if (res)
 		return res;
@@ -119,7 +119,7 @@ int CmdHFEMVSearch(const char *cmd) {
 		return 2;
 	}
 	
-	PrintAndLog("Search completed.");
+	PrintAndLogEx(SUCCESS, "Search completed.");
 
 	// print list here
 	if (!decodeTLV) {  
@@ -169,7 +169,7 @@ int CmdHFEMVPPSE(const char *cmd) {
 	int res = EMVSelectPSE(activateField, leaveSignalON, PSENum, buf, sizeof(buf), &len, &sw);
 	
 	if (sw)
-		PrintAndLog("APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff)); 
+		PrintAndLogEx(INFO, "APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff)); 
 
 	if (res)
 		return res;
@@ -228,19 +228,19 @@ int CmdHFEMVGPO(const char *cmd) {
 		ParamLoadDefaults(tlvRoot);
 
 		if (paramsLoadFromFile) {
-			PrintAndLog("Params loading from file...");
+			PrintAndLogEx(INFO, "Params loading from file...");
 			ParamLoadFromJson(tlvRoot);
 		};
 		
 		pdol_data_tlv = dol_process((const struct tlv *)tlvdb_external(0x9f38, datalen, data), tlvRoot, 0x83);
 		if (!pdol_data_tlv){
-			PrintAndLog("ERROR: can't create PDOL TLV.");
+			PrintAndLogEx(ERR, "Can't create PDOL TLV.");
 			tlvdb_free(tlvRoot);
 			return 4;
 		}
 	} else {
 		if (paramsLoadFromFile) {
-			PrintAndLog("WARNING: don't need to load parameters. Sending plain PDOL data...");
+			PrintAndLogEx(WARNING, "Don't need to load parameters. Sending plain PDOL data...");
 		}
 		pdol_data_tlv = &data_tlv;
 	}
@@ -248,11 +248,11 @@ int CmdHFEMVGPO(const char *cmd) {
 	size_t pdol_data_tlv_data_len = 0;
 	unsigned char *pdol_data_tlv_data = tlv_encode(pdol_data_tlv, &pdol_data_tlv_data_len);
 	if (!pdol_data_tlv_data) {
-		PrintAndLog("ERROR: can't create PDOL data.");
+		PrintAndLogEx(ERR, "Can't create PDOL data.");
 		tlvdb_free(tlvRoot);
 		return 4;
 	}
-	PrintAndLog("PDOL data[%d]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
+	PrintAndLogEx(INFO, "PDOL data[%d]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
 	
 	// exec
 	uint8_t buf[APDU_RES_LEN] = {0};
@@ -265,7 +265,7 @@ int CmdHFEMVGPO(const char *cmd) {
 	tlvdb_free(tlvRoot);
 	
 	if (sw)
-		PrintAndLog("APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff)); 
+		PrintAndLogEx(INFO, "APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff)); 
 
 	if (res)
 		return res;
@@ -301,7 +301,7 @@ int CmdHFEMVReadRecord(const char *cmd) {
 	CLIParserFree();
 	
 	if (datalen != 2) {
-		PrintAndLog("ERROR: Command needs to have 2 bytes of data");
+		PrintAndLogEx(ERR, "Command needs to have 2 bytes of data");
 		return 1;
 	}
 	
@@ -314,7 +314,7 @@ int CmdHFEMVReadRecord(const char *cmd) {
 	int res = EMVReadRecord(leaveSignalON, data[0], data[1], buf, sizeof(buf), &len, &sw, NULL);
 	
 	if (sw)
-		PrintAndLog("APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff)); 
+		PrintAndLogEx(INFO, "APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff)); 
 
 	if (res)
 		return res;
@@ -396,24 +396,24 @@ int CmdHFEMVAC(const char *cmd) {
 		ParamLoadDefaults(tlvRoot);
 
 		if (paramsLoadFromFile) {
-			PrintAndLog("Params loading from file...");
+			PrintAndLogEx(INFO, "Params loading from file...");
 			ParamLoadFromJson(tlvRoot);
 		};
 		
 		cdol_data_tlv = dol_process((const struct tlv *)tlvdb_external(0x8c, datalen, data), tlvRoot, 0x01); // 0x01 - dummy tag
 		if (!cdol_data_tlv){
-			PrintAndLog("ERROR: can't create CDOL TLV.");
+			PrintAndLogEx(ERR, "Can't create CDOL TLV.");
 			tlvdb_free(tlvRoot);
 			return 4;
 		}
 	} else {
 		if (paramsLoadFromFile) {
-			PrintAndLog("WARNING: don't need to load parameters. Sending plain CDOL data...");
+			PrintAndLogEx(WARNING, "Don't need to load parameters. Sending plain CDOL data...");
 		}
 		cdol_data_tlv = &data_tlv;
 	}
 	
-	PrintAndLog("CDOL data[%d]: %s", cdol_data_tlv->len, sprint_hex(cdol_data_tlv->value, cdol_data_tlv->len));
+	PrintAndLogEx(INFO, "CDOL data[%d]: %s", cdol_data_tlv->len, sprint_hex(cdol_data_tlv->value, cdol_data_tlv->len));
 
 	// exec
 	uint8_t buf[APDU_RES_LEN] = {0};
@@ -426,7 +426,7 @@ int CmdHFEMVAC(const char *cmd) {
 	tlvdb_free(tlvRoot);
 	
 	if (sw)
-		PrintAndLog("APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff)); 
+		PrintAndLogEx(INFO, "APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff)); 
 
 	if (res)
 		return res;
@@ -464,15 +464,15 @@ int CmdHFEMVGenerateChallenge(const char *cmd) {
 	int res = EMVGenerateChallenge(leaveSignalON, buf, sizeof(buf), &len, &sw, NULL);
 	
 	if (sw)
-		PrintAndLog("APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff)); 
+		PrintAndLogEx(INFO, "APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff)); 
 
 	if (res)
 		return res;
 
-	PrintAndLog("Challenge: %s", sprint_hex(buf, len));
+	PrintAndLogEx(SUCCESS, "Challenge: %s", sprint_hex(buf, len));
 	
 	if (len != 4 && len != 8)
-		PrintAndLog("WARNING: length of challenge must be 4 or 8, but it %d", len);
+		PrintAndLogEx(WARNING, "Length of challenge must be 4 or 8, but it %d", len);
 	
 	return 0;
 }
@@ -525,24 +525,24 @@ int CmdHFEMVInternalAuthenticate(const char *cmd) {
 		ParamLoadDefaults(tlvRoot);
 
 		if (paramsLoadFromFile) {
-			PrintAndLog("Params loading from file...");
+			PrintAndLogEx(INFO, "Params loading from file...");
 			ParamLoadFromJson(tlvRoot);
 		};
 		
 		ddol_data_tlv = dol_process((const struct tlv *)tlvdb_external(0x9f49, datalen, data), tlvRoot, 0x01); // 0x01 - dummy tag
 		if (!ddol_data_tlv){
-			PrintAndLog("ERROR: can't create DDOL TLV.");
+			PrintAndLogEx(ERR, "Can't create DDOL TLV.");
 			tlvdb_free(tlvRoot);
 			return 4;
 		}
 	} else {
 		if (paramsLoadFromFile) {
-			PrintAndLog("WARNING: don't need to load parameters. Sending plain DDOL data...");
+			PrintAndLogEx(WARNING, "Don't need to load parameters. Sending plain DDOL data...");
 		}
 		ddol_data_tlv = &data_tlv;
 	}
 	
-	PrintAndLog("DDOL data[%d]: %s", ddol_data_tlv->len, sprint_hex(ddol_data_tlv->value, ddol_data_tlv->len));
+	PrintAndLogEx(INFO, "DDOL data[%d]: %s", ddol_data_tlv->len, sprint_hex(ddol_data_tlv->value, ddol_data_tlv->len));
 	
 	// exec
 	uint8_t buf[APDU_RES_LEN] = {0};
@@ -555,7 +555,7 @@ int CmdHFEMVInternalAuthenticate(const char *cmd) {
 	tlvdb_free(tlvRoot);	
 	
 	if (sw)
-		PrintAndLog("APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff)); 
+		PrintAndLogEx(INFO, "APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff)); 
 
 	if (res)
 		return res;
@@ -609,13 +609,13 @@ void ProcessGPOResponseFormat1(struct tlvdb *tlvRoot, uint8_t *buf, size_t len, 
 		}
 		
 		if (len < 4 || (len - 4) % 4) {
-			PrintAndLog("ERROR: GPO response format1 parsing error. length=%d", len);
+			PrintAndLogEx(ERR, "GPO response format1 parsing error. length=%d", len);
 		} else {
 			// AIP
 			struct tlvdb * f1AIP = tlvdb_fixed(0x82, 2, buf + 2);
 			tlvdb_add(tlvRoot, f1AIP);
 			if (decodeTLV){
-				PrintAndLog("\n* * Decode response format 1 (0x80) AIP and AFL:");
+				PrintAndLogEx(INFO, "\n* * Decode response format 1 (0x80) AIP and AFL:");
 				TLVPrintFromTLV(f1AIP);
 			}
 
@@ -1137,12 +1137,12 @@ int CmdHFEMVScan(const char *cmd) {
 	if (MergeJSON) {
 		root = json_load_file(fname, 0, &error);
 		if (!root) {
-			PrintAndLog("ERROR: json error on line %d: %s", error.line, error.text);
+			PrintAndLogEx(ERR, "Json error on line %d: %s", error.line, error.text);
 			return 1; 
 		}
 		
 		if (!json_is_object(root)) {
-			PrintAndLog("ERROR: Invalid json format. root must be an object.");
+			PrintAndLogEx(ERR, "Invalid json format. root must be an object.");
 			return 1; 
 		}
 	} else {
@@ -1153,7 +1153,7 @@ int CmdHFEMVScan(const char *cmd) {
 	DropField();
 
 	// iso 14443 select
-	PrintAndLog("--> GET UID, ATS.");
+	PrintAndLogEx(NORMAL, "--> GET UID, ATS.");
 	
 	iso14a_card_select_t card;
 	if (Hf14443_4aGetCardData(&card)) {
@@ -1173,7 +1173,7 @@ int CmdHFEMVScan(const char *cmd) {
 	struct tlvdb *tlvSelect = tlvdb_fixed(1, strlen(al), (const unsigned char *)al);
 	
 	// EMV PPSE
-	PrintAndLog("--> PPSE.");
+	PrintAndLogEx(NORMAL, "--> PPSE.");
 	res = EMVSelectPSE(true, true, 2, buf, sizeof(buf), &len, &sw);
 
 	if (!res && sw == 0x9000){
@@ -1199,9 +1199,9 @@ int CmdHFEMVScan(const char *cmd) {
 	} else {
 		// EMV SEARCH with AID list
 		SetAPDULogging(false);
-		PrintAndLog("--> AID search.");
+		PrintAndLogEx(NORMAL, "--> AID search.");
 		if (EMVSearch(false, true, decodeTLV, tlvSelect)) {
-			PrintAndLog("E->Can't found any of EMV AID. Exit...");
+			PrintAndLogEx(ERR, "Can't found any of EMV AID. Exit...");
 			tlvdb_free(tlvSelect);
 			DropField();
 			return 3;
@@ -1218,7 +1218,7 @@ int CmdHFEMVScan(const char *cmd) {
 	tlvdb_free(tlvSelect);
 
 	if (!AIDlen) {
-		PrintAndLog("Can't select AID. EMV AID not found. Exit...");
+		PrintAndLogEx(INFO, "Can't select AID. EMV AID not found. Exit...");
 		DropField();
 		return 4;
 	}
@@ -1231,12 +1231,12 @@ int CmdHFEMVScan(const char *cmd) {
 
 	// EMV SELECT applet
 
-	PrintAndLog("\n-->Selecting AID:%s.", sprint_hex_inrow(AID, AIDlen));
+	PrintAndLogEx(NORMAL, "\n-->Selecting AID:%s.", sprint_hex_inrow(AID, AIDlen));
 	SetAPDULogging(showAPDU);
 	res = EMVSelect(false, true, AID, AIDlen, buf, sizeof(buf), &len, &sw, tlvRoot);
 	
 	if (res) {	
-		PrintAndLog("E->Can't select AID (%d). Exit...", res);
+		PrintAndLogEx(ERR, "Can't select AID (%d). Exit...", res);
 		tlvdb_free(tlvRoot);
 		DropField();
 		return 5;
@@ -1258,13 +1258,13 @@ int CmdHFEMVScan(const char *cmd) {
 	tlvdb_free(fci);
 
 	// create transaction parameters
-	PrintAndLog("-->Init transaction parameters.");
+	PrintAndLogEx(NORMAL, "-->Init transaction parameters.");
 	InitTransactionParameters(tlvRoot, paramLoadJSON, TrType, GenACGPO);
 	
-	PrintAndLog("-->Calc PDOL.");
+	PrintAndLogEx(NORMAL, "-->Calc PDOL.");
 	struct tlv *pdol_data_tlv = dol_process(tlvdb_get(tlvRoot, 0x9f38, NULL), tlvRoot, 0x83);
 	if (!pdol_data_tlv){
-		PrintAndLog("E->Can't create PDOL TLV.");
+		PrintAndLogEx(ERR, "Can't create PDOL TLV.");
 		tlvdb_free(tlvRoot);
 		DropField();
 		return 6;
@@ -1273,21 +1273,21 @@ int CmdHFEMVScan(const char *cmd) {
 	size_t pdol_data_tlv_data_len;
 	unsigned char *pdol_data_tlv_data = tlv_encode(pdol_data_tlv, &pdol_data_tlv_data_len);
 	if (!pdol_data_tlv_data) {
-		PrintAndLog("E->Can't create PDOL data.");
+		PrintAndLogEx(ERR, "Can't create PDOL data.");
 		tlvdb_free(tlvRoot);
 		DropField();
 		return 6;
 	}
-	PrintAndLog("PDOL data[%d]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
+	PrintAndLogEx(INFO, "PDOL data[%d]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
 
-	PrintAndLog("-->GPO.");
+	PrintAndLogEx(INFO, "-->GPO.");
 	res = EMVGPO(true, pdol_data_tlv_data, pdol_data_tlv_data_len, buf, sizeof(buf), &len, &sw, tlvRoot);
 	
 	free(pdol_data_tlv_data);
 	free(pdol_data_tlv);
 	
 	if (res) {	
-		PrintAndLog("GPO error(%d): %4x. Exit...", res, sw);
+		PrintAndLogEx(ERR, "GPO error(%d): %4x. Exit...", res, sw);
 		tlvdb_free(tlvRoot);
 		DropField();
 		return 7;
@@ -1305,12 +1305,12 @@ int CmdHFEMVScan(const char *cmd) {
 
 	tlvdb_free(gpofci);
 
-	PrintAndLog("-->Read records from AFL.");
+	PrintAndLogEx(INFO, "-->Read records from AFL.");
 	const struct tlv *AFL = tlvdb_get(tlvRoot, 0x94, NULL);
 	
 	while(AFL && AFL->len) {
 		if (AFL->len % 4) {
-			PrintAndLog("E->Wrong AFL length: %d", AFL->len);
+			PrintAndLogEx(ERR, "Wrong AFL length: %d", AFL->len);
 			break;
 		}
 
@@ -1322,7 +1322,7 @@ int CmdHFEMVScan(const char *cmd) {
 			sfijson = json_path_get(root, "$.Application.Records");
 		}
 		if (!json_is_array(sfijson)) {
-			PrintAndLog("E->Internal logic error. `$.Application.Records` is not an array.");
+			PrintAndLogEx(ERR, "Internal logic error. `$.Application.Records` is not an array.");
 			break;
 		}
 		for (int i = 0; i < AFL->len / 4; i++) {
@@ -1333,16 +1333,16 @@ int CmdHFEMVScan(const char *cmd) {
 			
 			PrintAndLog("--->SFI[%02x] start:%02x end:%02x offline:%02x", SFI, SFIstart, SFIend, SFIoffline);
 			if (SFI == 0 || SFI == 31 || SFIstart == 0 || SFIstart > SFIend) {
-				PrintAndLog("SFI ERROR! Skipped...");
+				PrintAndLogEx(ERR, "SFI ERROR! Skipped...");
 				continue;
 			}
 			
 			for(int n = SFIstart; n <= SFIend; n++) {
-				PrintAndLog("---->SFI[%02x] %d", SFI, n);
+				PrintAndLogEx(INFO, "---->SFI[%02x] %d", SFI, n);
 				
 				res = EMVReadRecord(true, SFI, n, buf, sizeof(buf), &len, &sw, tlvRoot);
 				if (res) {
-					PrintAndLog("E->SFI[%02x]. APDU error %4x", SFI, sw);
+					PrintAndLogEx(ERR, "SFI[%02x]. APDU error %4x", SFI, sw);
 					continue;
 				}
 				
@@ -1372,7 +1372,7 @@ int CmdHFEMVScan(const char *cmd) {
 	
 	// getting certificates
 	if (tlvdb_get(tlvRoot, 0x90, NULL)) {
-		PrintAndLog("-->Recovering certificates.");
+		PrintAndLogEx(INFO, "-->Recovering certificates.");
 		PKISetStrictExecution(false);
 		RecoveryCertificates(tlvRoot, root);
 		PKISetStrictExecution(true);
@@ -1386,10 +1386,10 @@ int CmdHFEMVScan(const char *cmd) {
 	
 	res = json_dump_file(root, fname, JSON_INDENT(2));
 	if (res) {
-		PrintAndLog("ERROR: can't save the file: %s", fname);
+		PrintAndLogEx(ERR, "Can't save the file: %s", fname);
 		return 200;
 	}
-	PrintAndLog("File `%s` saved.", fname);
+	PrintAndLogEx(SUCCESS, "File `%s` saved.", fname);
 	
 	// free json object
 	json_decref(root);
