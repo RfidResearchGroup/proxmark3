@@ -86,12 +86,20 @@ serial_port uart_open(const char* pcPortName) {
 	}
 	// all zero's configure: no timeout for read/write used.
 	// took settings from libnfc/buses/uart.c
+#ifdef WITH_FPC
+	sp->ct.ReadIntervalTimeout         = 1000;
+	sp->ct.ReadTotalTimeoutMultiplier  = 0;
+	sp->ct.ReadTotalTimeoutConstant    = 1500;
+	sp->ct.WriteTotalTimeoutMultiplier = 1000;
+	sp->ct.WriteTotalTimeoutConstant   = 0;
+#else	
 	sp->ct.ReadIntervalTimeout         = 30;
 	sp->ct.ReadTotalTimeoutMultiplier  = 0;
 	sp->ct.ReadTotalTimeoutConstant    = 30;
 	sp->ct.WriteTotalTimeoutMultiplier = 30;
 	sp->ct.WriteTotalTimeoutConstant   = 0;
-  
+#endif 
+ 
 	if (!SetCommTimeouts(sp->hPort, &sp->ct)) {
 		uart_close(sp);
 		printf("[!] UART error while setting comm time outs\n");
@@ -101,7 +109,12 @@ serial_port uart_open(const char* pcPortName) {
 	PurgeComm(sp->hPort, PURGE_RXABORT | PURGE_RXCLEAR);
 
 #ifdef WITH_FPC
-	uart_set_speed(sp, 115200);
+	if ( uart_set_speed(sp, 115200) ) {
+		printf("[=] UART Setting serial baudrate 115200 [FPC enabled]\n");
+	} else {
+		uart_set_speed(sp, 9600);
+		printf("[=] UART Setting serial baudrate 9600 [FPC enabled]\n");		
+	}
 #else
 	bool success = uart_set_speed(sp, 460800);
 	if (success) {

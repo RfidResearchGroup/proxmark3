@@ -56,8 +56,8 @@ uint8_t cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void
 	sendlen = usb_write( (uint8_t*)&txcmd, sizeof(UsbCommand) );
 
 #ifdef WITH_FPC
-	usart_init();
-	usart_writebuffer( (uint8_t*)&txcmd, sizeof(UsbCommand) );
+//	usart_init();
+//	usart_writebuffer( (uint8_t*)&txcmd, sizeof(UsbCommand) );
 #endif
 	
 	return sendlen;
