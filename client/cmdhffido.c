@@ -720,8 +720,48 @@ int CmdHFFidoAuthenticate(const char *cmd) {
 	return 0;
 };
 
-int CmdHFFido2MakeCredential(const char *cmd) {
+int GetExistsFileNameJson(char *prefixDir, char *reqestedFileName, char *fileName) {
+	fileName[0] = 0x00;
+	strcpy(fileName, get_my_executable_directory());
+	if (fileName[strlen(fileName) - 1] != '/')
+		strcat(fileName, "/");
 	
+	strcat(fileName, prefixDir);
+	if (fileName[strlen(fileName) - 1] != '/')
+		strcat(fileName, "/");
+	
+	strcat(fileName, reqestedFileName);
+	if (!strstr(fileName, ".json"))
+		strcat(fileName, ".json");
+	
+	if (access(fileName, F_OK) < 0) {
+		strcpy(fileName, get_my_executable_directory());
+		if (fileName[strlen(fileName) - 1] != '/')
+			strcat(fileName, "/");
+		
+		strcat(fileName, reqestedFileName);
+		if (!strstr(fileName, ".json"))
+			strcat(fileName, ".json");
+		
+		if (access(fileName, F_OK) < 0) {
+			return 1; // file not found
+		}
+	}
+	return 0;
+}
+
+int CmdHFFido2MakeCredential(const char *cmd) {
+
+
+	json_error_t error;
+	json_t *root = NULL;
+	char fname[300] = {0};
+
+	int res = GetExistsFileNameJson("fido", "fido2", fname);
+	if(res)
+		return res;
+	
+	root = json_load_file(fname, 0, &error);	
 	
 	uint8_t data[2048] = {0};
 	size_t datalen = 0;
@@ -730,7 +770,7 @@ int CmdHFFido2MakeCredential(const char *cmd) {
 	uint16_t sw = 0;
 
 	DropField();
-	int res = FIDOSelect(true, true, buf, sizeof(buf), &len, &sw);
+	res = FIDOSelect(true, true, buf, sizeof(buf), &len, &sw);
 
 	if (res) {
 		PrintAndLog("Can't select authenticator. res=%x. Exit...", res);
@@ -747,17 +787,17 @@ int CmdHFFido2MakeCredential(const char *cmd) {
 	res = FIDO2MakeCredential(data, datalen, buf,  sizeof(buf), &len, &sw);
 	DropField();
 	if (res) {
-		PrintAndLog("Can't execute register command. res=%x. Exit...", res);
+		PrintAndLog("Can't execute make credential command. res=%x. Exit...", res);
 		return res;
 	}
 	
 	if (sw != 0x9000) {
-		PrintAndLog("ERROR execute register command. APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff)); 
+		PrintAndLog("ERROR execute make credential command. APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff)); 
 		return 3;
 	}
 	
 	if(buf[0]) {
-		PrintAndLog("FIDO2 ger version error: %d - %s", buf[0], fido2GetCmdErrorDescription(buf[0])); 
+		PrintAndLog("FIDO2 make credential error: %d - %s", buf[0], fido2GetCmdErrorDescription(buf[0])); 
 		return 0;
 	}
 
