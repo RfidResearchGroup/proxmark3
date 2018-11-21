@@ -14,6 +14,8 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <jansson.h>
+#include "cmdhf14a.h"
 
 typedef enum {
 	fido2CmdMakeCredential		= 0x01,
@@ -30,7 +32,17 @@ typedef enum  {
 	ptResponse,
 } fido2PacketType;
 
+extern int FIDOSelect(bool ActivateField, bool LeaveFieldON, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
+extern int FIDOExchange(sAPDU apdu, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
+extern int FIDORegister(uint8_t *params, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
+extern int FIDOAuthentication(uint8_t *params, uint8_t paramslen, uint8_t controlb, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
+extern int FIDO2GetInfo(uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
+extern int FIDO2MakeCredential(uint8_t *params, uint8_t paramslen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
+extern int FIDO2GetAssertion(uint8_t *params, uint8_t paramslen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
+
 extern char *fido2GetCmdMemberDescription(uint8_t cmdCode, uint8_t memberNum);
 extern char *fido2GetCmdErrorDescription(uint8_t errorCode);
+
+extern int FIDO2CreateMakeCredentionalReq(json_t *root, uint8_t *data, size_t maxdatalen, size_t *datalen);
 
 #endif /* __FIDOCORE_H__ */

@@ -11,6 +11,10 @@
 //
 
 #include "fidocore.h"
+#include "emv/emvcore.h"
+#include "emv/emvjson.h"
+#include <cbor.h>
+#include "cbortools.h"
 
 typedef struct {
 	uint8_t ErrorCode;
@@ -122,3 +126,156 @@ char *fido2GetCmdMemberDescription(uint8_t cmdCode, uint8_t memberNum) {
 	return NULL;
 }
 
+int FIDOSelect(bool ActivateField, bool LeaveFieldON, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
+	uint8_t data[] = {0xA0, 0x00, 0x00, 0x06, 0x47, 0x2F, 0x00, 0x01};
+	
+	return EMVSelect(ActivateField, LeaveFieldON, data, sizeof(data), Result, MaxResultLen, ResultLen, sw, NULL);
+}
+
+int FIDOExchange(sAPDU apdu, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
+	int res = EMVExchange(true, apdu, Result, MaxResultLen, ResultLen, sw, NULL);
+	if (res == 5) // apdu result (sw) not a 0x9000
+		res = 0;
+	// software chaining
+	while (!res && (*sw >> 8) == 0x61) {
+		size_t oldlen = *ResultLen;
+		res = EMVExchange(true, (sAPDU){0x00, 0xC0, 0x00, 0x00, 0x00, NULL}, &Result[oldlen], MaxResultLen - oldlen, ResultLen, sw, NULL);
+		if (res == 5) // apdu result (sw) not a 0x9000
+			res = 0;
+		
+		*ResultLen += oldlen;
+		if (*ResultLen > MaxResultLen) 
+			return 100;
+	}
+	return res;
+}
+
+int FIDORegister(uint8_t *params, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
+	return FIDOExchange((sAPDU){0x00, 0x01, 0x03, 0x00, 64, params}, Result, MaxResultLen, ResultLen, sw);
+}
+
+int FIDOAuthentication(uint8_t *params, uint8_t paramslen, uint8_t controlb, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
+	return FIDOExchange((sAPDU){0x00, 0x02, controlb, 0x00, paramslen, params}, Result, MaxResultLen, ResultLen, sw);
+}
+
+int FIDO2GetInfo(uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
+	uint8_t data[] = {fido2CmdGetInfo};
+	return FIDOExchange((sAPDU){0x80, 0x10, 0x00, 0x00, sizeof(data), data}, Result, MaxResultLen, ResultLen, sw);
+}
+
+int FIDO2MakeCredential(uint8_t *params, uint8_t paramslen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
+	uint8_t data[paramslen + 1];
+	data[0] = fido2CmdMakeCredential;
+	memcpy(&data[1], params, paramslen);
+	return FIDOExchange((sAPDU){0x80, 0x10, 0x00, 0x00, sizeof(data), data}, Result, MaxResultLen, ResultLen, sw);
+}
+
+int FIDO2GetAssertion(uint8_t *params, uint8_t paramslen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
+	uint8_t data[paramslen + 1];
+	data[0] = fido2CmdGetAssertion;
+	memcpy(&data[1], params, paramslen);
+	return FIDOExchange((sAPDU){0x80, 0x10, 0x00, 0x00, sizeof(data), data}, Result, MaxResultLen, ResultLen, sw);
+}
+
+#define fido_check_if(r) if ((r) != CborNoError) {return r;} else
+#define fido_check(r) if ((r) != CborNoError) return r;
+
+int CBOREncodeClientDataHash(json_t *root, CborEncoder *encoder) {
+	uint8_t buf[100] = {0};
+	size_t jlen;
+
+	JsonLoadBufAsHex(root, "$.ClientDataHash", buf, sizeof(buf), &jlen);
+	
+	// fill with 0x00 if not found
+	if (!jlen)
+		jlen = 32;
+	
+	int res = cbor_encode_byte_string(encoder, buf, jlen);
+	fido_check(res);
+
+	return 0;
+}
+
+int CBOREncodeRp(json_t *root, CborEncoder *encoder) {
+	json_t *elm = json_object_get(root, "RelyingPartyEntity");
+	if (!elm)
+		return 1;
+	
+	JsonToCbor(elm, encoder);
+
+	return 0;
+}
+
+int CBOREncodeUser(json_t *root, CborEncoder *encoder) {
+	json_t *elm = json_object_get(root, "UserEntity");
+	if (!elm)
+		return 1;
+
+	JsonToCbor(elm, encoder);
+	
+	return 0;
+}
+
+int CBOREncodePubKeyParams(json_t *root, CborEncoder *encoder) {
+	json_t *elm = json_object_get(root, "pubKeyCredParams");
+	if (!elm)
+		return 1;
+
+	JsonToCbor(elm, encoder);
+	
+	return 0;
+}
+
+int FIDO2CreateMakeCredentionalReq(json_t *root, uint8_t *data, size_t maxdatalen, size_t *datalen) {
+	if (datalen)
+		*datalen = 0;
+	if (!root || !data || !maxdatalen)
+		return 1;
+
+	int res;
+	CborEncoder encoder;
+	CborEncoder map;
+	
+	cbor_encoder_init(&encoder, data, maxdatalen, 0);
+
+	// create main map
+	res = cbor_encoder_create_map(&encoder, &map, 4);
+	fido_check_if(res) {
+		// clientDataHash
+		res = cbor_encode_uint(&map, 1);
+		fido_check_if(res) {
+			res = CBOREncodeClientDataHash(root, &map);
+			fido_check(res);
+		}
+
+		// rp
+		res = cbor_encode_uint(&map, 2);
+		fido_check_if(res) {
+			res = CBOREncodeRp(root, &map);
+			fido_check(res);
+		}
+
+		// user
+		res = cbor_encode_uint(&map, 3);
+		fido_check_if(res) {
+			res = CBOREncodeUser(root, &map);
+			fido_check(res);
+		}
+
+		// pubKeyCredParams
+		res = cbor_encode_uint(&map, 4);
+		fido_check_if(res) {
+			res = CBOREncodePubKeyParams(root, &map);
+			fido_check(res);
+		}
+	
+	}
+	res = cbor_encoder_close_container(&encoder, &map);
+	fido_check(res);
+	
+	size_t len = cbor_encoder_get_buffer_size(&encoder, data);
+	if (datalen)
+		*datalen = len;
+	
+	return 0;
+}
