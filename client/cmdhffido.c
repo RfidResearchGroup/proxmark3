@@ -116,7 +116,7 @@ int CmdHFFidoInfo(const char *cmd) {
 //		}
 
 		PrintAndLog("FIDO2 version CBOR decoded:"); 
-		TinyCborPrintFIDOPackage(fido2CmdGetInfo, &buf[1], len - 1);
+		TinyCborPrintFIDOPackage(fido2CmdGetInfo, true, &buf[1], len - 1);
 	} else {
 		PrintAndLog("FIDO2 version length error"); 
 	}
@@ -744,7 +744,7 @@ int CmdHFFido2MakeCredential(const char *cmd) {
 		return res;
 	
 	PrintAndLog("CBOR make credentional request:");
-	TinyCborPrintFIDOPackage(fido2CmdMakeCredential, data, datalen);
+	TinyCborPrintFIDOPackage(fido2CmdMakeCredential, false, data, datalen);
 	
 	res = FIDO2MakeCredential(data, datalen, buf,  sizeof(buf), &len, &sw);
 	DropField();
@@ -763,9 +763,9 @@ int CmdHFFido2MakeCredential(const char *cmd) {
 		return 0;
 	}
 
-	PrintAndLog("MakeCredential result (%d) OK.", len);
+	PrintAndLog("MakeCredential result (%d b) OK.", len);
 	PrintAndLog("CBOR make credentional response:");
-	TinyCborPrintFIDOPackage(fido2CmdMakeCredential, &buf[1], len - 1);
+	TinyCborPrintFIDOPackage(fido2CmdMakeCredential, true, &buf[1], len - 1);
 
 	json_decref(root);
 

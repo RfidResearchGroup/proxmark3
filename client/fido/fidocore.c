@@ -84,12 +84,30 @@ fido2Desc_t fido2CmdGetInfoRespDesc[] = {
 	{fido2CmdMakeCredential, 	ptResponse, 0x01, "fmt"},
 	{fido2CmdMakeCredential, 	ptResponse, 0x02, "authData"},
 	{fido2CmdMakeCredential, 	ptResponse, 0x03, "attStmt"},
+
+	{fido2CmdMakeCredential, 	ptQuery,    0x01, "clientDataHash"},
+	{fido2CmdMakeCredential, 	ptQuery,    0x02, "rp"},
+	{fido2CmdMakeCredential, 	ptQuery,    0x03, "user"},
+	{fido2CmdMakeCredential, 	ptQuery,    0x04, "pubKeyCredParams"},
+	{fido2CmdMakeCredential, 	ptQuery,    0x05, "excludeList"},
+	{fido2CmdMakeCredential, 	ptQuery,    0x06, "extensions"},
+	{fido2CmdMakeCredential, 	ptQuery,    0x07, "options"},
+	{fido2CmdMakeCredential, 	ptQuery,    0x08, "pinAuth"},
+	{fido2CmdMakeCredential, 	ptQuery,    0x09, "pinProtocol"},
 	
 	{fido2CmdGetAssertion, 		ptResponse, 0x01, "credential"},
 	{fido2CmdGetAssertion, 		ptResponse, 0x02, "authData"},
 	{fido2CmdGetAssertion, 		ptResponse, 0x03, "signature"},
 	{fido2CmdGetAssertion, 		ptResponse, 0x04, "publicKeyCredentialUserEntity"},
 	{fido2CmdGetAssertion, 		ptResponse, 0x05, "numberOfCredentials"},
+
+	{fido2CmdGetAssertion, 		ptQuery,    0x01, "rpId"},
+	{fido2CmdGetAssertion, 		ptQuery,    0x02, "clientDataHash"},
+	{fido2CmdGetAssertion, 		ptQuery,    0x03, "allowList"},
+	{fido2CmdGetAssertion, 		ptQuery,    0x04, "extensions"},
+	{fido2CmdGetAssertion, 		ptQuery,    0x05, "options"},
+	{fido2CmdGetAssertion, 		ptQuery,    0x06, "pinAuth"},
+	{fido2CmdGetAssertion, 		ptQuery,    0x07, "pinProtocol"},
 	
 	{fido2CmdGetNextAssertion, 	ptResponse, 0x01, "credential"},
 	{fido2CmdGetNextAssertion, 	ptResponse, 0x02, "authData"},
@@ -103,9 +121,18 @@ fido2Desc_t fido2CmdGetInfoRespDesc[] = {
 	{fido2CmdGetInfo, 			ptResponse, 0x05, "maxMsgSize"},
 	{fido2CmdGetInfo, 			ptResponse, 0x06, "pinProtocols"},
 
-	{fido2CmdClientPIN, 		ptResponse, 0x06, "keyAgreement"},
-	{fido2CmdClientPIN, 		ptResponse, 0x06, "pinToken"},
-	{fido2CmdClientPIN, 		ptResponse, 0x06, "retries"},
+	{fido2CmdClientPIN, 		ptResponse, 0x01, "keyAgreement"},
+	{fido2CmdClientPIN, 		ptResponse, 0x02, "pinToken"},
+	{fido2CmdClientPIN, 		ptResponse, 0x03, "retries"},
+
+	{fido2CmdClientPIN, 		ptQuery,    0x01, "pinProtocol"},
+	{fido2CmdClientPIN, 		ptQuery,    0x02, "subCommand"},
+	{fido2CmdClientPIN, 		ptQuery,    0x03, "keyAgreement"},
+	{fido2CmdClientPIN, 		ptQuery,    0x04, "pinAuth"},
+	{fido2CmdClientPIN, 		ptQuery,    0x05, "newPinEnc"},
+	{fido2CmdClientPIN, 		ptQuery,    0x06, "pinHashEnc"},
+	{fido2CmdClientPIN, 		ptQuery,    0x07, "getKeyAgreement"},
+	{fido2CmdClientPIN, 		ptQuery,    0x08, "getRetries"},
 };
 
 char *fido2GetCmdErrorDescription(uint8_t errorCode) {
@@ -116,10 +143,10 @@ char *fido2GetCmdErrorDescription(uint8_t errorCode) {
 	return fido2Errors[0].Description;
 }
 
-char *fido2GetCmdMemberDescription(uint8_t cmdCode, uint8_t memberNum) {
+char *fido2GetCmdMemberDescription(uint8_t cmdCode, bool isResponse, uint8_t memberNum) {
 	for (int i = 0; i < sizeof(fido2CmdGetInfoRespDesc) / sizeof(fido2Desc_t); i++)
 		if (fido2CmdGetInfoRespDesc[i].Command == cmdCode &&
-			fido2CmdGetInfoRespDesc[i].PckType == ptResponse &&
+			fido2CmdGetInfoRespDesc[i].PckType == (isResponse ? ptResponse : ptQuery) &&
 			fido2CmdGetInfoRespDesc[i].MemberNumber == memberNum )
 			return fido2CmdGetInfoRespDesc[i].Description;
 

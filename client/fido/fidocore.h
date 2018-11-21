@@ -40,7 +40,7 @@ extern int FIDO2GetInfo(uint8_t *Result, size_t MaxResultLen, size_t *ResultLen,
 extern int FIDO2MakeCredential(uint8_t *params, uint8_t paramslen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
 extern int FIDO2GetAssertion(uint8_t *params, uint8_t paramslen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
 
-extern char *fido2GetCmdMemberDescription(uint8_t cmdCode, uint8_t memberNum);
+extern char *fido2GetCmdMemberDescription(uint8_t cmdCode, bool isResponse, uint8_t memberNum);
 extern char *fido2GetCmdErrorDescription(uint8_t errorCode);
 
 extern int FIDO2CreateMakeCredentionalReq(json_t *root, uint8_t *data, size_t maxdatalen, size_t *datalen);

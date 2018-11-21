@@ -122,7 +122,7 @@ static CborError dumpelm(CborValue *it, bool *got_next, int nestingLevel) {
 	return CborNoError;
 }
 
-static CborError dumprecursive(uint8_t cmdCode, CborValue *it, bool isMapType, int nestingLevel) {
+static CborError dumprecursive(uint8_t cmdCode, bool isResponse, CborValue *it, bool isMapType, int nestingLevel) {
 	int elmCount = 0;
 	while (!cbor_value_at_end(it)) {
 		CborError err;
@@ -142,7 +142,7 @@ static CborError dumprecursive(uint8_t cmdCode, CborValue *it, bool isMapType, i
 			err = cbor_value_enter_container(it, &recursed);
 			if (err)
 				return err;       // parse error
-			err = dumprecursive(cmdCode, &recursed, (type == CborMapType), nestingLevel + 1);
+			err = dumprecursive(cmdCode, isResponse, &recursed, (type == CborMapType), nestingLevel + 1);
 			if (err)
 				return err;       // parse error
 			err = cbor_value_leave_container(it, &recursed);
@@ -161,7 +161,7 @@ static CborError dumprecursive(uint8_t cmdCode, CborValue *it, bool isMapType, i
 			if (cmdCode > 0 && nestingLevel == 1 && isMapType && !(elmCount % 2)) {
 				int64_t val;
 				cbor_value_get_int64(it, &val);
-				char *desc = fido2GetCmdMemberDescription(cmdCode, val);
+				char *desc = fido2GetCmdMemberDescription(cmdCode, isResponse, val);
 				if (desc)
 					printf(" (%s)", desc);
 			}
@@ -193,14 +193,14 @@ int TinyCborInit(uint8_t *data, size_t length, CborValue *cb) {
 	return 0;
 }
 
-int TinyCborPrintFIDOPackage(uint8_t cmdCode, uint8_t *data, size_t length) {
+int TinyCborPrintFIDOPackage(uint8_t cmdCode, bool isResponse, uint8_t *data, size_t length) {
 	CborValue cb;
 	int res;
 	res = TinyCborInit(data, length, &cb);
 	if (res)
 		return res;
 		
-    CborError err = dumprecursive(cmdCode, &cb, false, 0);
+    CborError err = dumprecursive(cmdCode, isResponse, &cb, false, 0);
 
 	if (err) {
 		fprintf(stderr, "CBOR parsing failure at offset %d: %s\n",
