@@ -15,7 +15,13 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <jansson.h>
+#include <cbor.h>
+
+#define cbor_check_if(r) if ((r) != CborNoError) {return r;} else
+#define cbor_check(r) if ((r) != CborNoError) return r;
 
 extern int TinyCborPrintFIDOPackage(uint8_t cmdCode, uint8_t *data, size_t length);
+extern int JsonToCbor(json_t *elm, CborEncoder *encoder);
 
 #endif /* __CBORTOOLS_H__ */

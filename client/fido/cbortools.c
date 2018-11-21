@@ -12,7 +12,7 @@
 
 #include "cbortools.h"
 #include <stdlib.h>
-#include "cbor.h"
+#include "emv/emvjson.h"
 #include "util.h"
 #include "fidocore.h"
 
@@ -199,9 +199,7 @@ int TinyCborPrintFIDOPackage(uint8_t cmdCode, uint8_t *data, size_t length) {
 	res = TinyCborInit(data, length, &cb);
 	if (res)
 		return res;
-	
-	
-	
+		
     CborError err = dumprecursive(cmdCode, &cb, false, 0);
 
 	if (err) {
@@ -209,6 +207,105 @@ int TinyCborPrintFIDOPackage(uint8_t cmdCode, uint8_t *data, size_t length) {
 				cb.ptr - data, cbor_error_string(err));
 		return 1;
 	}	
+	
+	return 0;
+}
+
+int JsonObjElmCount(json_t *elm) {
+	int res = 0;
+	const char *key;
+	json_t *value;
+	
+	if (!json_is_object(elm))
+		return 0;
+	
+	json_object_foreach(elm, key, value) {
+		if (strlen(key) > 0 && key[0] != '.')
+			res++;		
+	}
+	
+	return res;
+}
+
+int JsonToCbor(json_t *elm, CborEncoder *encoder) {
+	if (!elm || !encoder)
+		return 1;
+
+	int res;
+	
+	// CBOR map == JSON object
+	if (json_is_object(elm)) {
+		CborEncoder map;
+		const char *key;
+		json_t *value;
+
+		res = cbor_encoder_create_map(encoder, &map, JsonObjElmCount(elm));
+		cbor_check(res);
+		
+		json_object_foreach(elm, key, value) {
+			if (strlen(key) > 0 && key[0] != '.') {
+				res = cbor_encode_text_stringz(&map, key);		
+				cbor_check(res);
+				
+				// RECURSION!
+				JsonToCbor(value, &map);
+			}
+		}
+		
+		res = cbor_encoder_close_container(encoder, &map);
+		cbor_check(res);
+	}
+
+	// CBOR array == JSON array
+	if (json_is_array(elm)) {
+		size_t index;
+		json_t *value;
+		CborEncoder array;
+		
+		res = cbor_encoder_create_array(encoder, &array, json_array_size(elm));
+		cbor_check(res);
+		
+		json_array_foreach(elm, index, value) {
+			// RECURSION!
+			JsonToCbor(value, &array);
+		}
+		
+		res = cbor_encoder_close_container(encoder, &array);
+		cbor_check(res);
+	}
+
+	if (json_is_boolean(elm)) {
+		res = cbor_encode_boolean(encoder, json_is_true(elm));
+		cbor_check(res);
+	}
+
+	if (json_is_integer(elm)) {
+		res = cbor_encode_int(encoder, json_integer_value(elm));
+		cbor_check(res);
+	}
+
+	if (json_is_real(elm)) {
+		res = cbor_encode_float(encoder, json_real_value(elm));
+		cbor_check(res);
+	}
+
+	if (json_is_string(elm)) {
+		const char * val = json_string_value(elm);
+		if (CheckStringIsHEXValue(val)) {
+			size_t datalen = 0;
+			uint8_t data[4096] = {0};
+			res = JsonLoadBufAsHex(elm, "$", data, sizeof(data), &datalen);
+			if (res)
+				return 100;
+
+			res = cbor_encode_byte_string(encoder, data, datalen);
+			cbor_check(res);			
+		} else {
+			res = cbor_encode_text_stringz(encoder, val);
+			cbor_check(res);
+		}
+	}
+	
 	
 	
 	return 0;
