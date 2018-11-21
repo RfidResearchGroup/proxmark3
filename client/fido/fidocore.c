@@ -223,34 +223,14 @@ int CBOREncodeClientDataHash(json_t *root, CborEncoder *encoder) {
 	return 0;
 }
 
-int CBOREncodeRp(json_t *root, CborEncoder *encoder) {
-	json_t *elm = json_object_get(root, "RelyingPartyEntity");
+int CBOREncodeElm(json_t *root, char *rootElmId, CborEncoder *encoder) {
+	json_t *elm = json_object_get(root, rootElmId);
 	if (!elm)
 		return 1;
 	
-	JsonToCbor(elm, encoder);
+	int res = JsonToCbor(elm, encoder);
 
-	return 0;
-}
-
-int CBOREncodeUser(json_t *root, CborEncoder *encoder) {
-	json_t *elm = json_object_get(root, "UserEntity");
-	if (!elm)
-		return 1;
-
-	JsonToCbor(elm, encoder);
-	
-	return 0;
-}
-
-int CBOREncodePubKeyParams(json_t *root, CborEncoder *encoder) {
-	json_t *elm = json_object_get(root, "pubKeyCredParams");
-	if (!elm)
-		return 1;
-
-	JsonToCbor(elm, encoder);
-	
-	return 0;
+	return res;
 }
 
 int FIDO2CreateMakeCredentionalReq(json_t *root, uint8_t *data, size_t maxdatalen, size_t *datalen) {
@@ -266,7 +246,7 @@ int FIDO2CreateMakeCredentionalReq(json_t *root, uint8_t *data, size_t maxdatale
 	cbor_encoder_init(&encoder, data, maxdatalen, 0);
 
 	// create main map
-	res = cbor_encoder_create_map(&encoder, &map, 4);
+	res = cbor_encoder_create_map(&encoder, &map, 5);
 	fido_check_if(res) {
 		// clientDataHash
 		res = cbor_encode_uint(&map, 1);
@@ -278,24 +258,30 @@ int FIDO2CreateMakeCredentionalReq(json_t *root, uint8_t *data, size_t maxdatale
 		// rp
 		res = cbor_encode_uint(&map, 2);
 		fido_check_if(res) {
-			res = CBOREncodeRp(root, &map);
+			res = CBOREncodeElm(root, "RelyingPartyEntity", &map);
 			fido_check(res);
 		}
 
 		// user
 		res = cbor_encode_uint(&map, 3);
 		fido_check_if(res) {
-			res = CBOREncodeUser(root, &map);
+			res = CBOREncodeElm(root, "UserEntity", &map);
 			fido_check(res);
 		}
 
 		// pubKeyCredParams
 		res = cbor_encode_uint(&map, 4);
 		fido_check_if(res) {
-			res = CBOREncodePubKeyParams(root, &map);
+			res = CBOREncodeElm(root, "pubKeyCredParams", &map);
 			fido_check(res);
 		}
-	
+
+		// options
+		res = cbor_encode_uint(&map, 7);
+		fido_check_if(res) {
+			res = CBOREncodeElm(root, "options", &map);
+			fido_check(res);
+		}
 	}
 	res = cbor_encoder_close_container(&encoder, &map);
 	fido_check(res);

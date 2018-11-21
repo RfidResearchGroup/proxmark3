@@ -23,8 +23,8 @@
     }
   ],
   "options": {
-    "up": false,
     "uv": false,
-    "keyStorageDevice": true
+    ".up": false,
+    ".keyStorageDevice": true
   }
 }
