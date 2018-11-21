@@ -5,7 +5,7 @@
     "name": "Acme"
   },
   "UserEntity": {
-    "id": "00000000000000000000000000000000",
+    "id": "00000000000000000000000000000001",
     "icon": "https://pics.acme.com/00/p/aBjjjpqPb.png",
     "name": "johnpsmith@acme.com",
     "displayName": "John P. Smith"
@@ -24,7 +24,6 @@
   ],
   "options": {
     "uv": false,
-    ".up": false,
-    ".keyStorageDevice": true
+    "rk": false,
   }
 }
