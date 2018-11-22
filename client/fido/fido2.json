@@ -24,6 +24,6 @@
   ],
   "options": {
     "uv": false,
-    "rk": false,
+    "rk": false
   }
 }

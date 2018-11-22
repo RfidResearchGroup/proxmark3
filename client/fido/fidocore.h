@@ -40,6 +40,8 @@ extern int FIDO2GetInfo(uint8_t *Result, size_t MaxResultLen, size_t *ResultLen,
 extern int FIDO2MakeCredential(uint8_t *params, uint8_t paramslen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
 extern int FIDO2GetAssertion(uint8_t *params, uint8_t paramslen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
 
+extern int FIDOCheckDERAndGetKey(uint8_t *der, size_t derLen, bool verbose, uint8_t *publicKey, size_t publicKeyMaxLen);
+
 extern char *fido2GetCmdMemberDescription(uint8_t cmdCode, bool isResponse, uint8_t memberNum);
 extern char *fido2GetCmdErrorDescription(uint8_t errorCode);
 

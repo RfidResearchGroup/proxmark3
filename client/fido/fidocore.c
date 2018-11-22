@@ -15,6 +15,12 @@
 #include "emv/emvjson.h"
 #include <cbor.h>
 #include "cbortools.h"
+#include <mbedtls/x509_crt.h>
+#include <mbedtls/x509.h>
+#include <mbedtls/pk.h>
+#include "crypto/asn1utils.h"
+#include "crypto/libpcrypto.h"
+#include "fido/additional_ca.h"
 
 typedef struct {
 	uint8_t ErrorCode;
@@ -204,6 +210,67 @@ int FIDO2GetAssertion(uint8_t *params, uint8_t paramslen, uint8_t *Result, size_
 	return FIDOExchange((sAPDU){0x80, 0x10, 0x00, 0x00, sizeof(data), data}, Result, MaxResultLen, ResultLen, sw);
 }
 
+int FIDOCheckDERAndGetKey(uint8_t *der, size_t derLen, bool verbose, uint8_t *publicKey, size_t publicKeyMaxLen) {
+	int res;
+	
+	// load CA's
+	mbedtls_x509_crt cacert;
+	mbedtls_x509_crt_init(&cacert);
+	res = mbedtls_x509_crt_parse(&cacert, (const unsigned char *) additional_ca_pem, additional_ca_pem_len);
+	if (res < 0) {
+		PrintAndLog("ERROR: CA parse certificate returned -0x%x - %s", -res, ecdsa_get_error(res));
+	}
+	if (verbose) 
+		PrintAndLog("CA load OK. %d skipped", res);
+	
+	// load DER certificate from authenticator's data
+	mbedtls_x509_crt cert;
+	mbedtls_x509_crt_init(&cert);
+	res = mbedtls_x509_crt_parse_der(&cert, der, derLen);
+	if (res) {
+		PrintAndLog("ERROR: DER parse returned 0x%x - %s", (res<0)?-res:res, ecdsa_get_error(res));
+	}
+	
+	// get certificate info
+	char linfo[300] = {0};
+	if (verbose) {
+		mbedtls_x509_crt_info(linfo, sizeof(linfo), "  ", &cert);
+		PrintAndLog("DER certificate info:\n%s", linfo);
+	}
+	
+	// verify certificate
+	uint32_t verifyflags = 0;
+	res = mbedtls_x509_crt_verify(&cert, &cacert, NULL, NULL, &verifyflags, NULL, NULL);
+	if (res) {
+		PrintAndLog("ERROR: DER verify returned 0x%x - %s", (res<0)?-res:res, ecdsa_get_error(res));
+	} else {
+		PrintAndLog("Certificate OK.");
+	}
+	
+	if (verbose) {
+		memset(linfo, 0x00, sizeof(linfo));
+		mbedtls_x509_crt_verify_info(linfo, sizeof(linfo), "  ", verifyflags);
+		PrintAndLog("Verification info:\n%s", linfo);
+	}
+	
+	// get public key
+	res = ecdsa_public_key_from_pk(&cert.pk, publicKey, publicKeyMaxLen);
+	if (res) {
+		PrintAndLog("ERROR: getting public key from certificate 0x%x - %s", (res<0)?-res:res, ecdsa_get_error(res));
+	} else {
+		if (verbose)
+			PrintAndLog("Got a public key from certificate:\n%s", sprint_hex_inrow(publicKey, 65));
+	}
+
+	if (verbose)
+		PrintAndLog("------------------DER-------------------");
+
+	mbedtls_x509_crt_free(&cert);
+	mbedtls_x509_crt_free(&cacert);
+	
+	return 0;
+}
+
 #define fido_check_if(r) if ((r) != CborNoError) {return r;} else
 #define fido_check(r) if ((r) != CborNoError) return r;
 
@@ -292,3 +359,5 @@ int FIDO2CreateMakeCredentionalReq(json_t *root, uint8_t *data, size_t maxdatale
 	
 	return 0;
 }
+
+

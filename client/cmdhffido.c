@@ -43,7 +43,6 @@
 #include "cliparser/cliparser.h"
 #include "crypto/asn1utils.h"
 #include "crypto/libpcrypto.h"
-#include "fido/additional_ca.h"
 #include "fido/cbortools.h"
 #include "fido/fidocore.h"
 
@@ -326,60 +325,7 @@ int CmdHFFidoRegister(const char *cmd) {
 		PrintAndLog("----------------DER TLV-----------------");
 	}
 	
-	// load CA's
-	mbedtls_x509_crt cacert;
-	mbedtls_x509_crt_init(&cacert);
-	res = mbedtls_x509_crt_parse(&cacert, (const unsigned char *) additional_ca_pem, additional_ca_pem_len);
-	if (res < 0) {
-		PrintAndLog("ERROR: CA parse certificate returned -0x%x - %s", -res, ecdsa_get_error(res));
-	}
-	if (verbose) 
-		PrintAndLog("CA load OK. %d skipped", res);
-	
-	// load DER certificate from authenticator's data
-	mbedtls_x509_crt cert;
-	mbedtls_x509_crt_init(&cert);
-	res = mbedtls_x509_crt_parse_der(&cert, &buf[derp], derLen);
-	if (res) {
-		PrintAndLog("ERROR: DER parse returned 0x%x - %s", (res<0)?-res:res, ecdsa_get_error(res));
-	}
-	
-	// get certificate info
-	char linfo[300] = {0};
-	if (verbose) {
-		mbedtls_x509_crt_info(linfo, sizeof(linfo), "  ", &cert);
-		PrintAndLog("DER certificate info:\n%s", linfo);
-	}
-	
-	// verify certificate
-	uint32_t verifyflags = 0;
-	res = mbedtls_x509_crt_verify(&cert, &cacert, NULL, NULL, &verifyflags, NULL, NULL);
-	if (res) {
-		PrintAndLog("ERROR: DER verify returned 0x%x - %s", (res<0)?-res:res, ecdsa_get_error(res));
-	} else {
-		PrintAndLog("Certificate OK.");
-	}
-	
-	if (verbose) {
-		memset(linfo, 0x00, sizeof(linfo));
-		mbedtls_x509_crt_verify_info(linfo, sizeof(linfo), "  ", verifyflags);
-		PrintAndLog("Verification info:\n%s", linfo);
-	}
-	
-	// get public key
-	res = ecdsa_public_key_from_pk(&cert.pk, public_key, sizeof(public_key));
-	if (res) {
-		PrintAndLog("ERROR: getting public key from certificate 0x%x - %s", (res<0)?-res:res, ecdsa_get_error(res));
-	} else {
-		if (verbose)
-			PrintAndLog("Got a public key from certificate:\n%s", sprint_hex_inrow(public_key, 65));
-	}
-
-	if (verbose)
-		PrintAndLog("------------------DER-------------------");
-
-	mbedtls_x509_crt_free(&cert);
-	mbedtls_x509_crt_free(&cacert);
+    FIDOCheckDERAndGetKey(&buf[derp], derLen, verbose, public_key, sizeof(public_key));
 	
 	// get hash
 	int hashp = 1 + 65 + 1 + keyHandleLen + derLen;
