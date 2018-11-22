@@ -344,7 +344,7 @@ int CmdSmartUpgrade(const char *Cmd) {
 		PrintAndLogEx(WARNING, "timeout while waiting for reply.");
 		return 1;
 	}
-	if ( (resp.arg[0] && 0xFF ) )
+	if ( (resp.arg[0] & 0xFF ) )
 		PrintAndLogEx(SUCCESS, "Smartcard socket firmware upgraded successful");
 	else
 		PrintAndLogEx(FAILED, "Smartcard socket firmware updating failed");
