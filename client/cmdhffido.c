@@ -647,10 +647,144 @@ int GetExistsFileNameJson(char *prefixDir, char *reqestedFileName, char *fileNam
 	return 0;
 }
 
+int MakeCredentionalParseRes(uint8_t *data, size_t dataLen, bool verbose) {
+	CborParser parser;
+	CborValue map, mapsmt, array;
+	int res;
+	char *buf;
+	uint8_t *ubuf;
+	size_t n;
+	
+	// fmt
+	res = CborMapGetKeyById(&parser, &map, data, dataLen, 1);
+	if (res)
+		return res;
+	
+	res = cbor_value_dup_text_string(&map, &buf, &n, &map);
+	cbor_check(res);
+	PrintAndLog("format: %s", buf);
+	free(buf);
+
+	// authData
+	res = CborMapGetKeyById(&parser, &map, data, dataLen, 2);
+	if (res)
+		return res;
+	res = cbor_value_dup_byte_string(&map, &ubuf, &n, &map);
+	cbor_check(res);
+	
+	PrintAndLog("authData: %s", sprint_hex(ubuf, n));
+	
+	PrintAndLog("RP ID Hash: %s", sprint_hex(ubuf, 32));
+	
+	// check RP ID Hash
+
+	PrintAndLog("Flags 0x%02x:", ubuf[32]);
+	if (!ubuf[32])
+		PrintAndLog("none");
+	if (ubuf[32] & 0x01)
+		PrintAndLog("up - user presence");
+	if (ubuf[32] & 0x04)
+		PrintAndLog("uv - user verification (fingerprint scan or a PIN or ...)");
+	if (ubuf[32] & 0x40)
+		PrintAndLog("at - ");
+	if (ubuf[32] & 0x80)
+		PrintAndLog("ed - ");
+
+	uint32_t cntr =  (uint32_t)bytes_to_num(&ubuf[33], 4);
+	PrintAndLog("Counter: %d", cntr);
+	
+	// attestation data
+	PrintAndLog("AAGUID: %s", sprint_hex(&ubuf[37], 16));
+	
+	// Credential ID
+	uint8_t cridlen = (uint16_t)bytes_to_num(&ubuf[53], 2);
+	PrintAndLog("Credential id[%d]: %s", cridlen, sprint_hex(&ubuf[55], cridlen));
+	
+	//Credentional public key (COSE_KEY)
+	uint16_t cplen = n - 55 - cridlen;
+	PrintAndLog("Credentional public key (COSE_KEY)[%d]: %s", cplen, sprint_hex(&ubuf[55 + cridlen], cplen));
+	
+	free(ubuf);
+
+	// attStmt - we are check only as DER certificate
+	int64_t alg = 0;
+	uint8_t sign[128] = {0};
+	size_t signLen = 0;
+	uint8_t der[4097] = {0};
+	size_t derLen = 0;
+	
+	res = CborMapGetKeyById(&parser, &map, data, dataLen, 3);
+	if (res)
+		return res;
+
+	res = cbor_value_enter_container(&map, &mapsmt);
+	cbor_check(res);
+	
+printf("--1\n");
+	while (!cbor_value_at_end(&mapsmt)) {
+		char key[100] = {0};
+		res = CborGetStringValue(&mapsmt, key, sizeof(key), &n);
+		cbor_check(res);
+		printf("--key: %s\n", key);
+		if (!strcmp(key, "alg")) {
+			cbor_value_get_int64(&mapsmt, &alg);    
+			PrintAndLog("Alg [%lld]", (long long)alg);
+			res = cbor_value_advance_fixed(&mapsmt);
+			cbor_check(res);
+		}
+
+		if (!strcmp(key, "sig")) {
+			res = CborGetBinStringValue(&mapsmt, sign, sizeof(sign), &signLen);
+			cbor_check(res);
+			PrintAndLog("signature [%d] %s", signLen, sprint_hex(sign, signLen));
+		}
+
+		if (!strcmp(key, "x5c")) {
+			res = CborGetBinStringValue(&mapsmt, der, sizeof(der), &derLen);
+			cbor_check(res);
+			PrintAndLog("signature [%d] %s", signLen, sprint_hex(der, derLen));
+		}		
+	}
+	res = cbor_value_leave_container(&map, &mapsmt);
+	cbor_check(res);
+	
+	
+/*	res = cbor_value_enter_container(&map, &array);
+	cbor_check(res);
+	CborType type = cbor_value_get_type(&array);
+	printf("--type:%d\n", type);
+	while (!cbor_value_at_end(&array)) {
+	res = cbor_value_dup_text_string(&array, &ubuf, &n, &array);
+	cbor_check(res);
+	PrintAndLog("DER: %s", ubuf);
+	PrintAndLog("DER: %s", sprint_hex(ubuf, n));
+	}
+	res = cbor_value_leave_container(&map, &array);
+	cbor_check(res);
+	
+	PrintAndLog("DER: %s", ubuf);
+	PrintAndLog("DER: %s", sprint_hex(ubuf, n));
+	
+	uint8_t public_key[65] = {0};
+
+	// print DER certificate in TLV view
+	if (true) { // showDERTLV
+		PrintAndLog("----------------DER TLV-----------------");
+		asn1_print(ubuf, n, "  ");
+		PrintAndLog("----------------DER TLV-----------------");
+	}
+    FIDOCheckDERAndGetKey(ubuf, n, verbose, public_key, sizeof(public_key));
+*/
+	free(ubuf);
+	
+	return 0;
+}
+
 int CmdHFFido2MakeCredential(const char *cmd) {
 	json_error_t error;
 	json_t *root = NULL;
 	char fname[300] = {0};
+	bool verbose = true;
 
 	int res = GetExistsFileNameJson("fido", "fido2", fname);
 	if(res) {
@@ -713,6 +847,9 @@ int CmdHFFido2MakeCredential(const char *cmd) {
 	PrintAndLog("CBOR make credentional response:");
 	TinyCborPrintFIDOPackage(fido2CmdMakeCredential, true, &buf[1], len - 1);
 
+	// parse returned cbor
+	MakeCredentionalParseRes(&buf[1], len - 1, verbose);
+	
 	json_decref(root);
 
 	return 0;
