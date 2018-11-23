@@ -310,3 +310,78 @@ int JsonToCbor(json_t *elm, CborEncoder *encoder) {
 	
 	return 0;
 }
+
+int CborMapGetKeyById(CborParser *parser, CborValue *map, uint8_t *data, size_t dataLen, int key) {
+	CborValue cb;
+
+	CborError err = cbor_parser_init(data, dataLen, 0, parser, &cb);
+	cbor_check(err);
+
+	if (cbor_value_get_type(&cb) != CborMapType)
+		return 1;
+		
+	err = cbor_value_enter_container(&cb, map);
+	cbor_check(err);
+
+	int64_t indx;
+	while (!cbor_value_at_end(map)) {
+		// check number
+		if (cbor_value_get_type(map) != CborIntegerType)
+			return 1;
+
+		cbor_value_get_int64(map, &indx);    
+		printf("--id %lld\n", (long long)indx);
+		
+		err = cbor_value_advance(map);
+		cbor_check(err);
+		
+		if (indx == key)
+			return 0;
+
+		// pass value
+		err = cbor_value_advance(map);
+		cbor_check(err);
+	}
+
+	err = cbor_value_leave_container(&cb, map);
+	cbor_check(err);
+
+	return 2;
+}
+
+CborError CborGetBinStringValue(CborValue *elm, uint8_t *data, size_t maxdatalen, size_t *datalen) {
+	if (datalen)
+		*datalen = 0;
+	
+	size_t slen = 0;
+
+	CborError res = cbor_value_copy_byte_string(elm, data, &slen, elm);
+	cbor_check(res);
+
+	if (datalen)
+		*datalen = slen;
+
+	return CborNoError;	
+};
+
+CborError CborGetStringValue(CborValue *elm, char *data, size_t maxdatalen, size_t *datalen) {
+	if (datalen)
+		*datalen = 0;
+	
+	size_t slen = 0;
+
+	CborError res = cbor_value_copy_text_string(elm, data, &slen, elm);
+	cbor_check(res);
+
+	if (datalen)
+		*datalen = slen;
+
+	return CborNoError;	
+};
+
+CborError CborGetStringValueBuf(CborValue *elm) {
+	static char stringBuf[2048];
+	memset(stringBuf, 0x00, sizeof(stringBuf));
+	
+	return CborGetStringValue(elm, stringBuf, sizeof(stringBuf), NULL);
+};

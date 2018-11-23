@@ -24,4 +24,9 @@
 extern int TinyCborPrintFIDOPackage(uint8_t cmdCode, bool isResponse, uint8_t *data, size_t length);
 extern int JsonToCbor(json_t *elm, CborEncoder *encoder);
 
+extern int CborMapGetKeyById(CborParser *parser, CborValue *map, uint8_t *data, size_t dataLen, int key);
+extern CborError CborGetBinStringValue(CborValue *elm, uint8_t *data, size_t maxdatalen, size_t *datalen);
+extern CborError CborGetStringValue(CborValue *elm, char *data, size_t maxdatalen, size_t *datalen);
+extern CborError CborGetStringValueBuf(CborValue *elm);
+
 #endif /* __CBORTOOLS_H__ */
