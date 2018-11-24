@@ -348,7 +348,11 @@ int CborMapGetKeyById(CborParser *parser, CborValue *map, uint8_t *data, size_t 
 	return 2;
 }
 
-CborError CborGetArrayBinStringValue(CborValue *elm, uint8_t *data, size_t maxdatalen, size_t *datalen, uint8_t *delimeter) {
+CborError CborGetArrayBinStringValue(CborValue *elm, uint8_t *data, size_t maxdatalen, size_t *datalen) {
+	return CborGetArrayBinStringValueEx(elm, data, maxdatalen, datalen, NULL, 0);
+}
+
+CborError CborGetArrayBinStringValueEx(CborValue *elm, uint8_t *data, size_t maxdatalen, size_t *datalen, uint8_t *delimeter, size_t delimeterlen) {
 	CborValue array;
 	if (datalen)
 		*datalen = 0;
@@ -365,8 +369,8 @@ CborError CborGetArrayBinStringValue(CborValue *elm, uint8_t *data, size_t maxda
 		
 		totallen += slen;
 		if (delimeter) {
-			memcpy(&data[totallen], delimeter, 1); // TODO: multibyte
-			totallen += 1;
+			memcpy(&data[totallen], delimeter, delimeterlen);
+			totallen += delimeterlen;
 		}
 		slen = maxdatalen - totallen;
 	}
@@ -391,6 +395,39 @@ CborError CborGetBinStringValue(CborValue *elm, uint8_t *data, size_t maxdatalen
 
 	if (datalen)
 		*datalen = slen;
+
+	return CborNoError;	
+};
+
+CborError CborGetArrayStringValue(CborValue *elm, char *data, size_t maxdatalen, size_t *datalen, char *delimeter) {
+	CborValue array;
+	if (datalen)
+		*datalen = 0;
+	
+	size_t slen = maxdatalen;
+	size_t totallen = 0;
+
+	CborError res = cbor_value_enter_container(elm, &array);
+	cbor_check(res);
+	
+	while (!cbor_value_at_end(&array)) {
+		res = cbor_value_copy_text_string(&array, &data[totallen], &slen, &array);
+		cbor_check(res);
+		
+		totallen += slen;
+		if (delimeter) {
+			strcat(data, delimeter);
+			totallen += strlen(delimeter);
+		}
+		slen = maxdatalen - totallen;
+		data[totallen] = 0x00;
+	}
+
+	res = cbor_value_leave_container(elm, &array);
+	cbor_check(res);
+
+	if (datalen)
+		*datalen = totallen;
 
 	return CborNoError;	
 };

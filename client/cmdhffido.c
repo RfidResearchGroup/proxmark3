@@ -739,7 +739,7 @@ int MakeCredentionalParseRes(uint8_t *data, size_t dataLen, bool verbose, bool s
 		}
 
 		if (!strcmp(key, "x5c")) {
-			res = CborGetArrayBinStringValue(&mapsmt, der, sizeof(der), &derLen, NULL);
+			res = CborGetArrayBinStringValue(&mapsmt, der, sizeof(der), &derLen);
 			cbor_check(res);
 			PrintAndLog("DER [%d]: %s", derLen, sprint_hex(der, derLen));
 		}		
