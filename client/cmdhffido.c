@@ -720,7 +720,6 @@ int MakeCredentionalParseRes(uint8_t *data, size_t dataLen, bool verbose) {
 	res = cbor_value_enter_container(&map, &mapsmt);
 	cbor_check(res);
 	
-printf("--1\n");
 	while (!cbor_value_at_end(&mapsmt)) {
 		char key[100] = {0};
 		res = CborGetStringValue(&mapsmt, key, sizeof(key), &n);
@@ -736,13 +735,13 @@ printf("--1\n");
 		if (!strcmp(key, "sig")) {
 			res = CborGetBinStringValue(&mapsmt, sign, sizeof(sign), &signLen);
 			cbor_check(res);
-			PrintAndLog("signature [%d] %s", signLen, sprint_hex(sign, signLen));
+			PrintAndLog("signature [%d]: %s", signLen, sprint_hex(sign, signLen));
 		}
 
 		if (!strcmp(key, "x5c")) {
-			res = CborGetBinStringValue(&mapsmt, der, sizeof(der), &derLen);
+			res = CborGetArrayBinStringValue(&mapsmt, der, sizeof(der), &derLen, NULL);
 			cbor_check(res);
-			PrintAndLog("signature [%d] %s", signLen, sprint_hex(der, derLen));
+			PrintAndLog("der [%d]: %s", derLen, sprint_hex(der, derLen));
 		}		
 	}
 	res = cbor_value_leave_container(&map, &mapsmt);
