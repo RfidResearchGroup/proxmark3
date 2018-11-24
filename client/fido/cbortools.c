@@ -329,8 +329,7 @@ int CborMapGetKeyById(CborParser *parser, CborValue *map, uint8_t *data, size_t 
 		if (cbor_value_get_type(map) != CborIntegerType)
 			return 1;
 
-		cbor_value_get_int64(map, &indx);    
-		printf("--id %lld\n", (long long)indx);
+		cbor_value_get_int64(map, &indx);
 		
 		err = cbor_value_advance(map);
 		cbor_check(err);
@@ -349,11 +348,43 @@ int CborMapGetKeyById(CborParser *parser, CborValue *map, uint8_t *data, size_t 
 	return 2;
 }
 
+CborError CborGetArrayBinStringValue(CborValue *elm, uint8_t *data, size_t maxdatalen, size_t *datalen, uint8_t *delimeter) {
+	CborValue array;
+	if (datalen)
+		*datalen = 0;
+	
+	size_t slen = maxdatalen;
+	size_t totallen = 0;
+
+	CborError res = cbor_value_enter_container(elm, &array);
+	cbor_check(res);
+	
+	while (!cbor_value_at_end(&array)) {
+		res = cbor_value_copy_byte_string(&array, &data[totallen], &slen, &array);
+		cbor_check(res);
+		
+		totallen += slen;
+		if (delimeter) {
+			memcpy(&data[totallen], delimeter, 1); // TODO: multibyte
+			totallen += 1;
+		}
+		slen = maxdatalen - totallen;
+	}
+
+	res = cbor_value_leave_container(elm, &array);
+	cbor_check(res);
+
+	if (datalen)
+		*datalen = totallen;
+
+	return CborNoError;	
+};
+
 CborError CborGetBinStringValue(CborValue *elm, uint8_t *data, size_t maxdatalen, size_t *datalen) {
 	if (datalen)
 		*datalen = 0;
 	
-	size_t slen = 0;
+	size_t slen = maxdatalen;
 
 	CborError res = cbor_value_copy_byte_string(elm, data, &slen, elm);
 	cbor_check(res);
@@ -368,7 +399,7 @@ CborError CborGetStringValue(CborValue *elm, char *data, size_t maxdatalen, size
 	if (datalen)
 		*datalen = 0;
 	
-	size_t slen = 0;
+	size_t slen = maxdatalen;
 
 	CborError res = cbor_value_copy_text_string(elm, data, &slen, elm);
 	cbor_check(res);
