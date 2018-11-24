@@ -647,9 +647,9 @@ int GetExistsFileNameJson(char *prefixDir, char *reqestedFileName, char *fileNam
 	return 0;
 }
 
-int MakeCredentionalParseRes(uint8_t *data, size_t dataLen, bool verbose) {
+int MakeCredentionalParseRes(uint8_t *data, size_t dataLen, bool verbose, bool showDERTLV) {
 	CborParser parser;
-	CborValue map, mapsmt, array;
+	CborValue map, mapsmt;
 	int res;
 	char *buf;
 	uint8_t *ubuf;
@@ -741,40 +741,21 @@ int MakeCredentionalParseRes(uint8_t *data, size_t dataLen, bool verbose) {
 		if (!strcmp(key, "x5c")) {
 			res = CborGetArrayBinStringValue(&mapsmt, der, sizeof(der), &derLen, NULL);
 			cbor_check(res);
-			PrintAndLog("der [%d]: %s", derLen, sprint_hex(der, derLen));
+			PrintAndLog("DER [%d]: %s", derLen, sprint_hex(der, derLen));
 		}		
 	}
 	res = cbor_value_leave_container(&map, &mapsmt);
 	cbor_check(res);
 	
-	
-/*	res = cbor_value_enter_container(&map, &array);
-	cbor_check(res);
-	CborType type = cbor_value_get_type(&array);
-	printf("--type:%d\n", type);
-	while (!cbor_value_at_end(&array)) {
-	res = cbor_value_dup_text_string(&array, &ubuf, &n, &array);
-	cbor_check(res);
-	PrintAndLog("DER: %s", ubuf);
-	PrintAndLog("DER: %s", sprint_hex(ubuf, n));
-	}
-	res = cbor_value_leave_container(&map, &array);
-	cbor_check(res);
-	
-	PrintAndLog("DER: %s", ubuf);
-	PrintAndLog("DER: %s", sprint_hex(ubuf, n));
-	
 	uint8_t public_key[65] = {0};
 
 	// print DER certificate in TLV view
-	if (true) { // showDERTLV
+	if (showDERTLV) {
 		PrintAndLog("----------------DER TLV-----------------");
-		asn1_print(ubuf, n, "  ");
+		asn1_print(der, derLen, "  ");
 		PrintAndLog("----------------DER TLV-----------------");
 	}
-    FIDOCheckDERAndGetKey(ubuf, n, verbose, public_key, sizeof(public_key));
-*/
-	free(ubuf);
+    FIDOCheckDERAndGetKey(der, derLen, verbose, public_key, sizeof(public_key));
 	
 	return 0;
 }
@@ -784,6 +765,7 @@ int CmdHFFido2MakeCredential(const char *cmd) {
 	json_t *root = NULL;
 	char fname[300] = {0};
 	bool verbose = true;
+	bool showDERTLV = true;
 
 	int res = GetExistsFileNameJson("fido", "fido2", fname);
 	if(res) {
@@ -847,7 +829,7 @@ int CmdHFFido2MakeCredential(const char *cmd) {
 	TinyCborPrintFIDOPackage(fido2CmdMakeCredential, true, &buf[1], len - 1);
 
 	// parse returned cbor
-	MakeCredentionalParseRes(&buf[1], len - 1, verbose);
+	MakeCredentionalParseRes(&buf[1], len - 1, verbose, showDERTLV);
 	
 	json_decref(root);
 
