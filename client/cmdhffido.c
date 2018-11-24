@@ -724,7 +724,6 @@ int MakeCredentionalParseRes(uint8_t *data, size_t dataLen, bool verbose, bool s
 		char key[100] = {0};
 		res = CborGetStringValue(&mapsmt, key, sizeof(key), &n);
 		cbor_check(res);
-		printf("--key: %s\n", key);
 		if (!strcmp(key, "alg")) {
 			cbor_value_get_int64(&mapsmt, &alg);    
 			PrintAndLog("Alg [%lld]", (long long)alg);
