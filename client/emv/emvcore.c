@@ -9,6 +9,8 @@
 //-----------------------------------------------------------------------------
 
 #include "emvcore.h"
+#include "emvjson.h"
+#include "util_posix.h"
 
 // Got from here. Thanks)
 // https://eftlab.co.uk/index.php/site-map/knowledge-base/211-emv-aid-rid-pix
@@ -17,6 +19,13 @@ static const char *PSElist [] = {
 	"315041592E5359532E4444463031"  // 1PAY.SYS.DDF01 - Visa Payment System Environment - PSE
 };
 //static const size_t PSElistLen = sizeof(PSElist)/sizeof(char*);
+
+char *TransactionTypeStr[] = {
+	"MSD",
+	"VSDC",
+	"qVCDCMCHIP",
+	"CDA"
+};
 
 typedef struct {
 	enum CardPSVendor vendor;
@@ -257,9 +266,14 @@ int EMVExchangeEx(bool ActivateField, bool LeaveFieldON, sAPDU apdu, bool Includ
 		*sw = isw;
 
 	if (isw != 0x9000) {
-		if (APDULogging)
-			PrintAndLogEx(WARNING, "APDU(%02x%02x) ERROR: [%4X] %s", apdu.CLA, apdu.INS, isw, GetAPDUCodeDescription(*sw >> 8, *sw & 0xff));
-		return 5;
+		if (APDULogging) {
+			if (*sw >> 8 == 0x61) {
+				PrintAndLogEx(ERR, "APDU chaining len:%02x -->", *sw & 0xff);
+			} else {
+				PrintAndLogEx(ERR, "APDU(%02x%02x) ERROR: [%4X] %s", apdu.CLA, apdu.INS, isw, GetAPDUCodeDescription(*sw >> 8, *sw & 0xff));
+				return 5;
+			}
+		}
 	}
 
 	// add to tlv tree
@@ -527,7 +541,7 @@ int trSDA(struct tlvdb *tlv) {
 	if (!sda_tlv || sda_tlv->len < 1) {
 		emv_pk_free(issuer_pk);
 		emv_pk_free(pk);
-		PrintAndLogEx(WARNING, "Error: Can't find input list for Offline Data Authentication. Exit.");
+		PrintAndLogEx(WARNING, "Can't find input list for Offline Data Authentication. Exit.");
 		return 3;
 	}
 	
@@ -539,7 +553,7 @@ int trSDA(struct tlvdb *tlv) {
 	} else {
 		emv_pk_free(issuer_pk);
 		emv_pk_free(pk);
-		PrintAndLogEx(WARNING, "Error: SSAD verify error");
+		PrintAndLogEx(WARNING, "SSAD verify error");
 		return 4;
 	}
 	
@@ -849,5 +863,65 @@ int trCDA(struct tlvdb *tlv, struct tlvdb *ac_tlv, struct tlv *pdol_data_tlv, st
 	emv_pk_free(pk);
 	emv_pk_free(issuer_pk);
 	emv_pk_free(icc_pk);
+	return 0;
+}
+
+int RecoveryCertificates(struct tlvdb *tlvRoot, json_t *root) {
+	
+	struct emv_pk *pk = get_ca_pk(tlvRoot);
+	if (!pk) {
+		PrintAndLog("ERROR: Key not found. Exit.");
+		return 1;
+	}
+
+	struct emv_pk *issuer_pk = emv_pki_recover_issuer_cert(pk, tlvRoot);
+	if (!issuer_pk) {
+		emv_pk_free(pk);
+		PrintAndLog("WARNING: Issuer certificate not found. Exit.");
+		return 2;
+	}
+	PrintAndLog("Issuer PK recovered. RID %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx CSN %02hhx:%02hhx:%02hhx",
+			issuer_pk->rid[0],
+			issuer_pk->rid[1],
+			issuer_pk->rid[2],
+			issuer_pk->rid[3],
+			issuer_pk->rid[4],
+			issuer_pk->index,
+			issuer_pk->serial[0],
+			issuer_pk->serial[1],
+			issuer_pk->serial[2]
+			);
+
+	JsonSaveBufAsHex(root, "$.ApplicationData.RID", issuer_pk->rid, 5);
+
+	char *issuer_pk_c = emv_pk_dump_pk(issuer_pk);
+	JsonSaveStr(root, "$.ApplicationData.IssuerPublicKeyDec", issuer_pk_c);
+	JsonSaveBufAsHex(root, "$.ApplicationData.IssuerPublicKeyModulus", issuer_pk->modulus, issuer_pk->mlen);
+	free(issuer_pk_c);
+
+	struct emv_pk *icc_pk = emv_pki_recover_icc_cert(issuer_pk, tlvRoot, NULL);
+	if (!icc_pk) {
+		emv_pk_free(pk);
+		emv_pk_free(issuer_pk);
+		PrintAndLog("WARNING: ICC certificate not found. Exit.");
+		return 2;
+	}
+	printf("ICC PK recovered. RID %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx CSN %02hhx:%02hhx:%02hhx\n",
+			icc_pk->rid[0],
+			icc_pk->rid[1],
+			icc_pk->rid[2],
+			icc_pk->rid[3],
+			icc_pk->rid[4],
+			icc_pk->index,
+			icc_pk->serial[0],
+			icc_pk->serial[1],
+			icc_pk->serial[2]
+			);
+	
+	char *icc_pk_c = emv_pk_dump_pk(icc_pk);
+	JsonSaveStr(root, "$.ApplicationData.ICCPublicKeyDec", icc_pk_c);
+	JsonSaveBufAsHex(root, "$.ApplicationData.ICCPublicKeyModulus", icc_pk->modulus, icc_pk->mlen);
+	free(issuer_pk_c);
+	
 	return 0;
 }

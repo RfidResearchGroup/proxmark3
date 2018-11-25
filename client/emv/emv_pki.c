@@ -27,6 +27,11 @@
 #include <string.h>
 #include <stdarg.h>
 
+static bool strictExecution = true;
+void PKISetStrictExecution(bool se) {
+	strictExecution = se;
+}
+
 static const unsigned char empty_tlv_value[] = {};
 static const struct tlv empty_tlv = {.tag = 0x0, .len = 0, .value = empty_tlv_value};
 
@@ -108,9 +113,12 @@ static unsigned char *emv_pki_decode_message(const struct emv_pk *enc_pk,
 		printf("ERROR: Calculated wrong hash\n");
 		printf("decoded:    %s\n",sprint_hex(data + data_len - 1 - hash_len, hash_len));
 		printf("calculated: %s\n",sprint_hex(crypto_hash_read(ch), hash_len));
-		crypto_hash_close(ch);
-		free(data);
-		return NULL;
+		
+		if (strictExecution) {
+			crypto_hash_close(ch);
+			free(data);
+			return NULL;
+		}
 	}
 
 	crypto_hash_close(ch);
