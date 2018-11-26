@@ -20,4 +20,6 @@
 extern const char *GetCOSEAlgName(int id);
 extern const char *GetCOSEAlgDescription(int id);
 
+extern int COSEGetECDSAKey(uint8_t *data, size_t datalen, bool verbose, uint8_t *public_key);
+
 #endif /* __COSE_H__ */

@@ -82,7 +82,7 @@ fido2Error_t fido2Errors[] = {
 typedef struct {
 	fido2Commands Command;
 	fido2PacketType PckType;
-	uint8_t MemberNumber;
+	int MemberNumber;
 	char *Description;
 } fido2Desc_t;
 
@@ -139,6 +139,13 @@ fido2Desc_t fido2CmdGetInfoRespDesc[] = {
 	{fido2CmdClientPIN, 		ptQuery,    0x06, "pinHashEnc"},
 	{fido2CmdClientPIN, 		ptQuery,    0x07, "getKeyAgreement"},
 	{fido2CmdClientPIN, 		ptQuery,    0x08, "getRetries"},
+	
+	{fido2COSEKey,		 		ptResponse, 0x01, "kty"},
+	{fido2COSEKey,		 		ptResponse, 0x03, "alg"},
+	{fido2COSEKey,		 		ptResponse,   -1, "crv"},
+	{fido2COSEKey,		 		ptResponse,   -2, "x - coordinate"},
+	{fido2COSEKey,		 		ptResponse,   -3, "y - coordinate"},
+	{fido2COSEKey,		 		ptResponse,   -4, "d - private key"},
 };
 
 char *fido2GetCmdErrorDescription(uint8_t errorCode) {
@@ -149,7 +156,7 @@ char *fido2GetCmdErrorDescription(uint8_t errorCode) {
 	return fido2Errors[0].Description;
 }
 
-char *fido2GetCmdMemberDescription(uint8_t cmdCode, bool isResponse, uint8_t memberNum) {
+char *fido2GetCmdMemberDescription(uint8_t cmdCode, bool isResponse, int memberNum) {
 	for (int i = 0; i < sizeof(fido2CmdGetInfoRespDesc) / sizeof(fido2Desc_t); i++)
 		if (fido2CmdGetInfoRespDesc[i].Command == cmdCode &&
 			fido2CmdGetInfoRespDesc[i].PckType == (isResponse ? ptResponse : ptQuery) &&

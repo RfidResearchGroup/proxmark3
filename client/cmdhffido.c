@@ -721,8 +721,15 @@ int MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, bool v
 	PrintAndLog("Credential id[%d]: %s", cridlen, sprint_hex(&ubuf[55], cridlen));
 	
 	//Credentional public key (COSE_KEY)
+	uint8_t coseKey[65] = {0};
 	uint16_t cplen = n - 55 - cridlen;
 	PrintAndLog("Credentional public key (COSE_KEY)[%d]: %s", cplen, sprint_hex(&ubuf[55 + cridlen], cplen));
+	if (verbose) {
+		TinyCborPrintFIDOPackage(fido2COSEKey, true, &ubuf[55 + cridlen], cplen);		
+	}
+	res = COSEGetECDSAKey(&ubuf[55 + cridlen], cplen, verbose, coseKey);
+	if (res)
+		PrintAndLog("ERROR: Can't get COSE_KEY.");
 
 	free(ubuf);
 	

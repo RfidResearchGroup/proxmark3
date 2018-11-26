@@ -126,5 +126,10 @@ const char *GetCOSEAlgDescription(int id) {
 	return COSEEmptyStr;
 }
 
+int COSEGetECDSAKey(uint8_t *data, size_t datalen, bool verbose, uint8_t *public_key) {
+	
+	
+	return 0;
+}
 
 

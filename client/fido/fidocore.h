@@ -25,6 +25,9 @@ typedef enum {
 	fido2CmdClientPIN			= 0x06,
 	fido2CmdReset				= 0x07,
 	fido2CmdGetNextAssertion	= 0x08,
+	
+	// another data
+	fido2COSEKey                = 0xF0
 } fido2Commands;
 
 typedef enum  {
@@ -42,7 +45,7 @@ extern int FIDO2GetAssertion(uint8_t *params, uint8_t paramslen, uint8_t *Result
 
 extern int FIDOCheckDERAndGetKey(uint8_t *der, size_t derLen, bool verbose, uint8_t *publicKey, size_t publicKeyMaxLen);
 
-extern char *fido2GetCmdMemberDescription(uint8_t cmdCode, bool isResponse, uint8_t memberNum);
+extern char *fido2GetCmdMemberDescription(uint8_t cmdCode, bool isResponse, int memberNum);
 extern char *fido2GetCmdErrorDescription(uint8_t errorCode);
 
 extern int FIDO2CreateMakeCredentionalReq(json_t *root, uint8_t *data, size_t maxdatalen, size_t *datalen);
