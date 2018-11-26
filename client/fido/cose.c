@@ -171,6 +171,8 @@ int COSEGetECDSAKey(uint8_t *data, size_t datalen, bool verbose, uint8_t *public
 		cbor_value_get_int64(&map, &i64);    
 		if(verbose)
 			PrintAndLog("kty [%lld] %s", (long long)i64, GetCOSEktyDescription(i64));
+		if (i64 != 2)
+			PrintAndLog("ERROR: kty must be 2.");
 	}
 
 	// algorithm
@@ -179,6 +181,8 @@ int COSEGetECDSAKey(uint8_t *data, size_t datalen, bool verbose, uint8_t *public
 		cbor_value_get_int64(&map, &i64);    
 		if(verbose)
 			PrintAndLog("algorithm [%lld] %s", (long long)i64, GetCOSEAlgDescription(i64));
+		if (i64 != -7)
+			PrintAndLog("ERROR: algorithm must be -7.");
 	}
 	
 	// curve
@@ -187,6 +191,8 @@ int COSEGetECDSAKey(uint8_t *data, size_t datalen, bool verbose, uint8_t *public
 		cbor_value_get_int64(&map, &i64);    
 		if(verbose)
 			PrintAndLog("curve [%lld] %s", (long long)i64, GetCOSECurveDescription(i64));
+		if (i64 != 1)
+			PrintAndLog("ERROR: curve must be 1.");
 	}
 	
 	// plain key
@@ -199,6 +205,8 @@ int COSEGetECDSAKey(uint8_t *data, size_t datalen, bool verbose, uint8_t *public
 		cbor_check(res);
 		if(verbose)
 			PrintAndLog("x - coordinate [%d]: %s", len, sprint_hex(&public_key[1], 32));
+		if (len != 32)
+			PrintAndLog("ERROR: x - coordinate length must be 32.");
 	}
 
 	// y - coordinate
@@ -208,6 +216,8 @@ int COSEGetECDSAKey(uint8_t *data, size_t datalen, bool verbose, uint8_t *public
 		cbor_check(res);
 		if(verbose)
 			PrintAndLog("y - coordinate [%d]: %s", len, sprint_hex(&public_key[33], 32));
+		if (len != 32)
+			PrintAndLog("ERROR: y - coordinate length must be 32.");
 	}
 
 	// d - private key
