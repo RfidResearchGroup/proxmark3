@@ -658,7 +658,7 @@ bool CheckrpIdHash(json_t *json, uint8_t *hash) {
 	return !memcmp(hash, hash2, 32);
 }
 
-int MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, bool verbose, bool showDERTLV) {
+int MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, bool verbose, bool showCBOR, bool showDERTLV) {
 	CborParser parser;
 	CborValue map, mapsmt;
 	int res;
@@ -724,7 +724,7 @@ int MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, bool v
 	uint8_t coseKey[65] = {0};
 	uint16_t cplen = n - 55 - cridlen;
 	PrintAndLog("Credentional public key (COSE_KEY)[%d]: %s", cplen, sprint_hex(&ubuf[55 + cridlen], cplen));
-	if (verbose) {
+	if (showCBOR) {
 		TinyCborPrintFIDOPackage(fido2COSEKey, true, &ubuf[55 + cridlen], cplen);		
 	}
 	res = COSEGetECDSAKey(&ubuf[55 + cridlen], cplen, verbose, coseKey);
@@ -831,6 +831,7 @@ int CmdHFFido2MakeCredential(const char *cmd) {
 	char fname[300] = {0};
 	bool verbose = true;
 	bool showDERTLV = true;
+	bool showCBOR = true;
 
 	int res = GetExistsFileNameJson("fido", "fido2", fname);
 	if(res) {
@@ -869,8 +870,10 @@ int CmdHFFido2MakeCredential(const char *cmd) {
 	if (res)
 		return res;
 	
-	PrintAndLog("CBOR make credentional request:");
-	TinyCborPrintFIDOPackage(fido2CmdMakeCredential, false, data, datalen);
+	if (showCBOR) {
+		PrintAndLog("CBOR make credentional request:");
+		TinyCborPrintFIDOPackage(fido2CmdMakeCredential, false, data, datalen);
+	}
 	
 	res = FIDO2MakeCredential(data, datalen, buf,  sizeof(buf), &len, &sw);
 	DropField();
@@ -890,11 +893,13 @@ int CmdHFFido2MakeCredential(const char *cmd) {
 	}
 
 	PrintAndLog("MakeCredential result (%d b) OK.", len);
-	PrintAndLog("CBOR make credentional response:");
-	TinyCborPrintFIDOPackage(fido2CmdMakeCredential, true, &buf[1], len - 1);
+	if (showCBOR) {
+		PrintAndLog("CBOR make credentional response:");
+		TinyCborPrintFIDOPackage(fido2CmdMakeCredential, true, &buf[1], len - 1);
+	}
 
 	// parse returned cbor
-	MakeCredentionalParseRes(root, &buf[1], len - 1, verbose, showDERTLV);
+	MakeCredentionalParseRes(root, &buf[1], len - 1, verbose, showCBOR, showDERTLV);
 	
 	json_decref(root);
 
