@@ -648,7 +648,17 @@ int GetExistsFileNameJson(char *prefixDir, char *reqestedFileName, char *fileNam
 	return 0;
 }
 
-int MakeCredentionalParseRes(uint8_t *data, size_t dataLen, bool verbose, bool showDERTLV) {
+bool CheckHash(json_t *json, uint8_t *hash) {
+	char hashval[300] = {0};
+	uint8_t hash2[32] = {0};
+	
+	JsonLoadStr(json, "$.RelyingPartyEntity.id", hashval);
+	sha256hash((uint8_t *)hashval, strlen(hashval), hash2);
+
+	return !memcmp(hash, hash2, 32);
+}
+
+int MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, bool verbose, bool showDERTLV) {
 	CborParser parser;
 	CborValue map, mapsmt;
 	int res;
@@ -667,17 +677,26 @@ int MakeCredentionalParseRes(uint8_t *data, size_t dataLen, bool verbose, bool s
 	free(buf);
 
 	// authData
+	uint8_t authDataStatic[37] = {0};
 	res = CborMapGetKeyById(&parser, &map, data, dataLen, 2);
 	if (res)
 		return res;
 	res = cbor_value_dup_byte_string(&map, &ubuf, &n, &map);
 	cbor_check(res);
 	
+	if (n >= 37)
+		memcpy(authDataStatic, ubuf, 37);
+	
 	PrintAndLog("authData: %s", sprint_hex(ubuf, n));
 	
 	PrintAndLog("RP ID Hash: %s", sprint_hex(ubuf, 32));
 	
 	// check RP ID Hash
+	if (CheckHash(root, ubuf)) {
+		PrintAndLog("rpIdHash OK.");
+	} else {
+		PrintAndLog("rpIdHash ERROR!");
+	}
 
 	PrintAndLog("Flags 0x%02x:", ubuf[32]);
 	if (!ubuf[32])
@@ -704,9 +723,9 @@ int MakeCredentionalParseRes(uint8_t *data, size_t dataLen, bool verbose, bool s
 	//Credentional public key (COSE_KEY)
 	uint16_t cplen = n - 55 - cridlen;
 	PrintAndLog("Credentional public key (COSE_KEY)[%d]: %s", cplen, sprint_hex(&ubuf[55 + cridlen], cplen));
-	
-	free(ubuf);
 
+	free(ubuf);
+	
 	// attStmt - we are check only as DER certificate
 	int64_t alg = 0;
 	uint8_t sign[128] = {0};
@@ -756,6 +775,37 @@ int MakeCredentionalParseRes(uint8_t *data, size_t dataLen, bool verbose, bool s
 		PrintAndLog("----------------DER TLV-----------------");
 	}
     FIDOCheckDERAndGetKey(der, derLen, verbose, public_key, sizeof(public_key));
+
+	// check ANSI X9.62 format ECDSA signature (on P-256)
+	uint8_t rval[300] = {0}; 
+	uint8_t sval[300] = {0}; 
+	res = ecdsa_asn1_get_signature(sign, signLen, rval, sval);
+	if (!res) {
+		if (verbose) {
+			PrintAndLog("  r: %s", sprint_hex(rval, 32));
+			PrintAndLog("  s: %s", sprint_hex(sval, 32));
+		}
+
+		uint8_t xbuf[4096] = {0};
+		size_t xbuflen = 0;
+		res = FillBuffer(xbuf, sizeof(xbuf), &xbuflen,
+			authDataStatic, 37,  // rpIdHash[32] + flags[1] + signCount[4]
+			&data[0], 32,        // Hash of the serialized client data
+			NULL, 0);
+		//PrintAndLog("--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
+		res = ecdsa_signature_verify(public_key, xbuf, xbuflen, sign, signLen);
+		if (res) {
+			if (res == -0x4e00) {
+				PrintAndLog("Signature is NOT VALID.");
+			} else {
+				PrintAndLog("Other signature check error: %x %s", (res<0)?-res:res, ecdsa_get_error(res));
+			}
+		} else {
+			PrintAndLog("Signature is OK.");
+		}	
+	} else {
+		PrintAndLog("Invalid signature. res=%d.", res);
+	}
 	
 	return 0;
 }
@@ -829,7 +879,7 @@ int CmdHFFido2MakeCredential(const char *cmd) {
 	TinyCborPrintFIDOPackage(fido2CmdMakeCredential, true, &buf[1], len - 1);
 
 	// parse returned cbor
-	MakeCredentionalParseRes(&buf[1], len - 1, verbose, showDERTLV);
+	MakeCredentionalParseRes(root, &buf[1], len - 1, verbose, showDERTLV);
 	
 	json_decref(root);
 
