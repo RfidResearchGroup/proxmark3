@@ -702,13 +702,13 @@ int MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, bool v
 	if (!ubuf[32])
 		PrintAndLog("none");
 	if (ubuf[32] & 0x01)
-		PrintAndLog("up - user presence");
+		PrintAndLog("up - user presence result");
 	if (ubuf[32] & 0x04)
-		PrintAndLog("uv - user verification (fingerprint scan or a PIN or ...)");
+		PrintAndLog("uv - user verification (fingerprint scan or a PIN or ...) result");
 	if (ubuf[32] & 0x40)
-		PrintAndLog("at - ");
+		PrintAndLog("at - attested credential data included");
 	if (ubuf[32] & 0x80)
-		PrintAndLog("ed - ");
+		PrintAndLog("ed - extension data included");
 
 	uint32_t cntr =  (uint32_t)bytes_to_num(&ubuf[33], 4);
 	PrintAndLog("Counter: %d", cntr);
