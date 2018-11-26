@@ -901,6 +901,15 @@ int CmdHFFido2MakeCredential(const char *cmd) {
 	// parse returned cbor
 	MakeCredentionalParseRes(root, &buf[1], len - 1, verbose, showCBOR, showDERTLV);
 	
+	if (root) {
+		res = json_dump_file(root, fname, JSON_INDENT(2));
+		if (res) {
+			PrintAndLog("ERROR: can't save the file: %s", fname);
+			return 200;
+		}
+		PrintAndLog("File `%s` saved.", fname);
+	}
+	
 	json_decref(root);
 
 	return 0;
