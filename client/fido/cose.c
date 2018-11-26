@@ -38,8 +38,22 @@ COSEValueNameDesc_t COSEKeyTypeValueDesc[] = {
 	{4, "Symmetric", "Symmetric Key"},
 };
 
+COSEValueNameDesc_t *GetCOSEktyElm(int id) {
+	for (int i = 0; i < ARRAYLEN(COSEKeyTypeValueDesc); i++)
+		if (COSEKeyTypeValueDesc[i].Value == id)
+			return &COSEKeyTypeValueDesc[i];
+	return NULL;
+}
+
+const char *GetCOSEktyDescription(int id) {
+	COSEValueNameDesc_t *elm = GetCOSEktyElm(id);
+	if (elm)
+		return elm->Description;
+	return COSEEmptyStr;
+}
+
 // keys
-COSEValueTypeNameDesc_t COSEKeyTypeDesc[] = {
+COSEValueTypeNameDesc_t COSECurvesDesc[] = {
 	{1, "EC2", "P-256",    "NIST P-256 also known as secp256r1"},
 	{2, "EC2", "P-384",    "NIST P-384 also known as secp384r1"},
 	{3, "EC2", "P-521",    "NIST P-521 also known as secp521r1"},
@@ -48,6 +62,20 @@ COSEValueTypeNameDesc_t COSEKeyTypeDesc[] = {
 	{6, "OKP", "Ed25519",  "Ed25519 for use w/ EdDSA only"},
 	{7, "OKP", "Ed448",    "Ed448 for use w/ EdDSA only"},
 };
+
+COSEValueTypeNameDesc_t *GetCOSECurveElm(int id) {
+	for (int i = 0; i < ARRAYLEN(COSECurvesDesc); i++)
+		if (COSECurvesDesc[i].Value == id)
+			return &COSECurvesDesc[i];
+	return NULL;
+}
+
+const char *GetCOSECurveDescription(int id) {
+	COSEValueNameDesc_t *elm = GetCOSECurveElm(id);
+	if (elm)
+		return elm->Description;
+	return COSEEmptyStr;
+}
 
 // RFC8152 https://www.iana.org/assignments/cose/cose.xhtml#algorithms
 COSEValueNameDesc_t COSEAlg[] = {
@@ -128,20 +156,6 @@ const char *GetCOSEAlgDescription(int id) {
 	return COSEEmptyStr;
 }
 
-COSEValueNameDesc_t *GetCOSEktyElm(int id) {
-	for (int i = 0; i < ARRAYLEN(COSEKeyTypeValueDesc); i++)
-		if (COSEKeyTypeValueDesc[i].Value == id)
-			return &COSEKeyTypeValueDesc[i];
-	return NULL;
-}
-
-const char *GetCOSEktyDescription(int id) {
-	COSEValueNameDesc_t *elm = GetCOSEktyElm(id);
-	if (elm)
-		return elm->Description;
-	return COSEEmptyStr;
-}
-
 int COSEGetECDSAKey(uint8_t *data, size_t datalen, bool verbose, uint8_t *public_key) {
 	CborParser parser;
 	CborValue map;
@@ -171,8 +185,11 @@ int COSEGetECDSAKey(uint8_t *data, size_t datalen, bool verbose, uint8_t *public
 	if(!res) {
 		cbor_value_get_int64(&map, &i64);    
 		if(verbose)
-			PrintAndLog("curve [%lld] %s", (long long)i64, GetCOSEAlgDescription(i64));
+			PrintAndLog("curve [%lld] %s", (long long)i64, GetCOSECurveDescription(i64));
 	}
+	
+	// plain key
+	public_key[0] = 0x04;
 	
 	
 	if(verbose)

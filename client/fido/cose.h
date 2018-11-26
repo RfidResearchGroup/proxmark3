@@ -20,6 +20,7 @@
 extern const char *GetCOSEAlgName(int id);
 extern const char *GetCOSEAlgDescription(int id);
 extern const char *GetCOSEktyDescription(int id);
+extern const char *GetCOSECurveDescription(int id);
 
 extern int COSEGetECDSAKey(uint8_t *data, size_t datalen, bool verbose, uint8_t *public_key);
 
