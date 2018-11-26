@@ -720,22 +720,27 @@ int MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, bool v
 	
 	// Credential ID
 	uint8_t cridlen = (uint16_t)bytes_to_num(&ubuf[53], 2);
-	PrintAndLog("Credential id[%d]: %s", cridlen, sprint_hex(&ubuf[55], cridlen));
+	PrintAndLog("Credential id[%d]: %s", cridlen, sprint_hex_inrow(&ubuf[55], cridlen));
 	JsonSaveBufAsHexCompact(root, "$.AppData.CredentialId", &ubuf[55], cridlen);
 	
 	//Credentional public key (COSE_KEY)
 	uint8_t coseKey[65] = {0};
 	uint16_t cplen = n - 55 - cridlen;
-	PrintAndLog("Credentional public key (COSE_KEY)[%d]: %s", cplen, sprint_hex(&ubuf[55 + cridlen], cplen));
+	PrintAndLog("Credentional public key (COSE_KEY)[%d]: %s", cplen, sprint_hex_inrow(&ubuf[55 + cridlen], cplen));
 	JsonSaveBufAsHexCompact(root, "$.AppData.COSE_KEY", &ubuf[55 + cridlen], cplen);
 	if (showCBOR) {
+		PrintAndLog("COSE structure:");
+		PrintAndLog("---------------- CBOR ------------------");
 		TinyCborPrintFIDOPackage(fido2COSEKey, true, &ubuf[55 + cridlen], cplen);		
+		PrintAndLog("---------------- CBOR ------------------");
 	}
 	res = COSEGetECDSAKey(&ubuf[55 + cridlen], cplen, verbose, coseKey);
-	if (res)
+	if (res) {
 		PrintAndLog("ERROR: Can't get COSE_KEY.");
-	else
+	} else {
+		PrintAndLog("COSE public key: %s", sprint_hex_inrow(coseKey, sizeof(coseKey)));
 		JsonSaveBufAsHexCompact(root, "$.AppData.COSEPublicKey", coseKey, sizeof(coseKey));
+	}
 
 	free(ubuf);
 	
@@ -767,13 +772,13 @@ int MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, bool v
 		if (!strcmp(key, "sig")) {
 			res = CborGetBinStringValue(&mapsmt, sign, sizeof(sign), &signLen);
 			cbor_check(res);
-			PrintAndLog("signature [%d]: %s", signLen, sprint_hex(sign, signLen));
+			PrintAndLog("signature [%d]: %s", signLen, sprint_hex_inrow(sign, signLen));
 		}
 
 		if (!strcmp(key, "x5c")) {
 			res = CborGetArrayBinStringValue(&mapsmt, der, sizeof(der), &derLen);
 			cbor_check(res);
-			PrintAndLog("DER [%d]: %s", derLen, sprint_hex(der, derLen));
+			PrintAndLog("DER [%d]: %s", derLen, sprint_hex_inrow(der, derLen));
 			JsonSaveBufAsHexCompact(root, "$.AppData.DER", der, derLen);
 		}		
 	}
@@ -816,7 +821,7 @@ int MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, bool v
 			clientDataHash, 32,  // Hash of the serialized client data. "$.ClientDataHash" from json
 			NULL, 0);
 		PrintAndLog("--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
-		res = ecdsa_signature_verify(public_key, xbuf, xbuflen, sign, signLen);
+		res = ecdsa_signature_verify(coseKey, xbuf, xbuflen, sign, signLen);
 		if (res) {
 			if (res == -0x4e00) {
 				PrintAndLog("Signature is NOT VALID.");
@@ -880,7 +885,9 @@ int CmdHFFido2MakeCredential(const char *cmd) {
 	
 	if (showCBOR) {
 		PrintAndLog("CBOR make credentional request:");
+		PrintAndLog("---------------- CBOR ------------------");
 		TinyCborPrintFIDOPackage(fido2CmdMakeCredential, false, data, datalen);
+		PrintAndLog("---------------- CBOR ------------------");
 	}
 	
 	res = FIDO2MakeCredential(data, datalen, buf,  sizeof(buf), &len, &sw);
@@ -903,7 +910,9 @@ int CmdHFFido2MakeCredential(const char *cmd) {
 	PrintAndLog("MakeCredential result (%d b) OK.", len);
 	if (showCBOR) {
 		PrintAndLog("CBOR make credentional response:");
+		PrintAndLog("---------------- CBOR ------------------");
 		TinyCborPrintFIDOPackage(fido2CmdMakeCredential, true, &buf[1], len - 1);
+		PrintAndLog("---------------- CBOR ------------------");
 	}
 
 	// parse returned cbor

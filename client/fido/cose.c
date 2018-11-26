@@ -71,7 +71,7 @@ COSEValueTypeNameDesc_t *GetCOSECurveElm(int id) {
 }
 
 const char *GetCOSECurveDescription(int id) {
-	COSEValueNameDesc_t *elm = GetCOSECurveElm(id);
+	COSEValueTypeNameDesc_t *elm = GetCOSECurveElm(id);
 	if (elm)
 		return elm->Description;
 	return COSEEmptyStr;
@@ -160,6 +160,7 @@ int COSEGetECDSAKey(uint8_t *data, size_t datalen, bool verbose, uint8_t *public
 	CborParser parser;
 	CborValue map;
 	int64_t i64;
+	size_t len;
 
 	if(verbose)
 		PrintAndLog("----------- CBOR decode ----------------");
@@ -191,6 +192,33 @@ int COSEGetECDSAKey(uint8_t *data, size_t datalen, bool verbose, uint8_t *public
 	// plain key
 	public_key[0] = 0x04;
 	
+	// x - coordinate
+	res = CborMapGetKeyById(&parser, &map, data, datalen, -2);
+	if(!res) {
+		res = CborGetBinStringValue(&map, &public_key[1], 32, &len);
+		cbor_check(res);
+		if(verbose)
+			PrintAndLog("x - coordinate [%d]: %s", len, sprint_hex(&public_key[1], 32));
+	}
+
+	// y - coordinate
+	res = CborMapGetKeyById(&parser, &map, data, datalen, -3);
+	if(!res) {
+		res = CborGetBinStringValue(&map, &public_key[33], 32, &len);
+		cbor_check(res);
+		if(verbose)
+			PrintAndLog("y - coordinate [%d]: %s", len, sprint_hex(&public_key[33], 32));
+	}
+
+	// d - private key
+	uint8_t private_key[128] = {0};
+	res = CborMapGetKeyById(&parser, &map, data, datalen, -4);
+	if(!res) {
+		res = CborGetBinStringValue(&map, private_key, sizeof(private_key), &len);
+		cbor_check(res);
+		if(verbose)
+			PrintAndLog("d - private key [%d]: %s", len, sprint_hex(private_key, len));
+	}
 	
 	if(verbose)
 		PrintAndLog("----------- CBOR decode ----------------");
