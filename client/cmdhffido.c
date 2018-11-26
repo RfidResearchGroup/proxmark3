@@ -45,6 +45,7 @@
 #include "crypto/libpcrypto.h"
 #include "fido/cbortools.h"
 #include "fido/fidocore.h"
+#include "fido/cose.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -726,7 +727,7 @@ int MakeCredentionalParseRes(uint8_t *data, size_t dataLen, bool verbose, bool s
 		cbor_check(res);
 		if (!strcmp(key, "alg")) {
 			cbor_value_get_int64(&mapsmt, &alg);    
-			PrintAndLog("Alg [%lld]", (long long)alg);
+			PrintAndLog("Alg [%lld] %s", (long long)alg, GetCOSEAlgDescription(alg));
 			res = cbor_value_advance_fixed(&mapsmt);
 			cbor_check(res);
 		}

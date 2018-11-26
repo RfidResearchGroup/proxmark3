@@ -29,7 +29,7 @@ typedef struct {
 } fido2Error_t;
 
 fido2Error_t fido2Errors[] = {
-	{0xFF, "n/a",									"n/a"},
+	{0xFF, "n/a",								"n/a"},
 	{0x00, "CTAP1_ERR_SUCCESS",					"Indicates successful response."},
 	{0x01, "CTAP1_ERR_INVALID_COMMAND",			"The command is not a valid CTAP command."},
 	{0x02, "CTAP1_ERR_INVALID_PARAMETER",		"The command included an invalid parameter."},
