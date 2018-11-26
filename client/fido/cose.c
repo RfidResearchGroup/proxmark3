@@ -11,6 +11,8 @@
 //
 
 #include "cose.h"
+#include <cbor.h>
+#include "cbortools.h"
 #include "util.h"
 
 static const char COSEEmptyStr[] = "";
@@ -126,8 +128,55 @@ const char *GetCOSEAlgDescription(int id) {
 	return COSEEmptyStr;
 }
 
+COSEValueNameDesc_t *GetCOSEktyElm(int id) {
+	for (int i = 0; i < ARRAYLEN(COSEKeyTypeValueDesc); i++)
+		if (COSEKeyTypeValueDesc[i].Value == id)
+			return &COSEKeyTypeValueDesc[i];
+	return NULL;
+}
+
+const char *GetCOSEktyDescription(int id) {
+	COSEValueNameDesc_t *elm = GetCOSEktyElm(id);
+	if (elm)
+		return elm->Description;
+	return COSEEmptyStr;
+}
+
 int COSEGetECDSAKey(uint8_t *data, size_t datalen, bool verbose, uint8_t *public_key) {
+	CborParser parser;
+	CborValue map;
+	int64_t i64;
+
+	if(verbose)
+		PrintAndLog("----------- CBOR decode ----------------");
 	
+	// kty
+	int res = CborMapGetKeyById(&parser, &map, data, datalen, 1);
+	if(!res) {
+		cbor_value_get_int64(&map, &i64);    
+		if(verbose)
+			PrintAndLog("kty [%lld] %s", (long long)i64, GetCOSEktyDescription(i64));
+	}
+
+	// algorithm
+	res = CborMapGetKeyById(&parser, &map, data, datalen, 3);
+	if(!res) {
+		cbor_value_get_int64(&map, &i64);    
+		if(verbose)
+			PrintAndLog("algorithm [%lld] %s", (long long)i64, GetCOSEAlgDescription(i64));
+	}
+	
+	// curve
+	res = CborMapGetKeyById(&parser, &map, data, datalen, -1);
+	if(!res) {
+		cbor_value_get_int64(&map, &i64);    
+		if(verbose)
+			PrintAndLog("curve [%lld] %s", (long long)i64, GetCOSEAlgDescription(i64));
+	}
+	
+	
+	if(verbose)
+		PrintAndLog("----------- CBOR decode ----------------");
 	
 	return 0;
 }
