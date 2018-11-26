@@ -687,7 +687,7 @@ int MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, bool v
 	if (n >= 37)
 		memcpy(authDataStatic, ubuf, 37);
 	
-	PrintAndLog("authData: %s", sprint_hex(ubuf, n));
+	PrintAndLog("authData: %s", sprint_hex_inrow(ubuf, n));
 	
 	PrintAndLog("RP ID Hash: %s", sprint_hex(ubuf, 32));
 	
@@ -721,6 +721,7 @@ int MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, bool v
 	// Credential ID
 	uint8_t cridlen = (uint16_t)bytes_to_num(&ubuf[53], 2);
 	PrintAndLog("Credential id[%d]: %s", cridlen, sprint_hex_inrow(&ubuf[55], cridlen));
+	JsonSaveInt(root, "$.AppData.CredentialIdLen", cridlen);
 	JsonSaveBufAsHexCompact(root, "$.AppData.CredentialId", &ubuf[55], cridlen);
 	
 	//Credentional public key (COSE_KEY)
@@ -821,7 +822,7 @@ int MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, bool v
 			clientDataHash, 32,  // Hash of the serialized client data. "$.ClientDataHash" from json
 			NULL, 0);
 		PrintAndLog("--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
-		res = ecdsa_signature_verify(coseKey, xbuf, xbuflen, sign, signLen);
+		res = ecdsa_signature_verify(public_key, xbuf, xbuflen, sign, signLen);
 		if (res) {
 			if (res == -0x4e00) {
 				PrintAndLog("Signature is NOT VALID.");
@@ -842,9 +843,36 @@ int CmdHFFido2MakeCredential(const char *cmd) {
 	json_error_t error;
 	json_t *root = NULL;
 	char fname[300] = {0};
-	bool verbose = true;
-	bool showDERTLV = true;
-	bool showCBOR = true;
+	
+	CLIParserInit("hf fido make", 
+		"Execute a FIDO2 Make Credentional command. Needs json file with parameters. Sample file `fido2.json`. File can be placed in proxmark directory or in `proxmark/fido` directory.", 
+		"Usage:\n\thf fido make -> execute command default parameters file `fido2.json`\n"
+			"\thf fido make test.json -> execute command with parameters file `text.json`");
+
+	void* argtable[] = {
+		arg_param_begin,
+		arg_lit0("aA",  "apdu",     "show APDU reqests and responses"),
+		arg_litn("vV",  "verbose",  0, 2, "show technical data. vv - show full certificates data"),
+		arg_lit0("tT",  "tlv",      "Show DER certificate contents in TLV representation"),
+		arg_lit0("cC",  "cbor",     "show CBOR decoded data"),
+		arg_str0(NULL,  NULL,		"fido2.json", "JSON input / output file name for parameters. Default `fido2.json`"),
+		arg_param_end
+	};
+	CLIExecWithReturn(cmd, argtable, true);
+	
+	bool APDULogging = arg_get_lit(1);
+	bool verbose = arg_get_lit(2);
+	bool verbose2 = arg_get_lit(2) > 1;
+	bool showDERTLV = arg_get_lit(3);
+	bool showCBOR = arg_get_lit(4);
+
+
+
+	
+	
+	CLIParserFree();	
+	
+	SetAPDULogging(APDULogging);
 
 	int res = GetExistsFileNameJson("fido", "fido2", fname);
 	if(res) {
