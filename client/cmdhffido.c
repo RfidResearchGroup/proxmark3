@@ -982,7 +982,94 @@ int CmdHFFido2MakeCredential(const char *cmd) {
 };
 
 int CmdHFFido2GetAssertion(const char *cmd) {
+	json_error_t error;
+	json_t *root = NULL;
+	char fname[300] = {0};
+	
+	
+	bool APDULogging = false;
+	bool verbose = true;
+	bool verbose2 = true;
+	bool showCBOR = true;
 
+
+
+	
+	
+	//CLIParserFree();	
+	
+	SetAPDULogging(APDULogging);
+	
+	
+	int res = GetExistsFileNameJson("fido", "fido2", fname);
+	if(res) {
+		PrintAndLog("ERROR: Can't found the json file.");
+		return res;
+	}
+	PrintAndLog("fname: %s\n", fname);
+	root = json_load_file(fname, 0, &error);	
+	if (!root) {
+		PrintAndLog("ERROR: json error on line %d: %s", error.line, error.text);
+		return 1;
+	}
+	
+	uint8_t data[2048] = {0};
+	size_t datalen = 0;
+	uint8_t buf[2048] = {0};
+	size_t len = 0;
+	uint16_t sw = 0;
+
+	DropField();
+	res = FIDOSelect(true, true, buf, sizeof(buf), &len, &sw);
+
+	if (res) {
+		PrintAndLog("Can't select authenticator. res=%x. Exit...", res);
+		DropField();
+		return res;
+	}
+	
+	if (sw != 0x9000) {
+		PrintAndLog("Can't select FIDO application. APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff)); 
+		DropField();
+		return 2;
+	}
+/*
+	res = FIDO2CreateMakeCredentionalReq(root, data, sizeof(data), &datalen);
+	if (res)
+		return res;
+	
+	if (showCBOR) {
+		PrintAndLog("CBOR get assertion request:");
+		PrintAndLog("---------------- CBOR ------------------");
+		TinyCborPrintFIDOPackage(fido2CmdMakeCredential, false, data, datalen);
+		PrintAndLog("---------------- CBOR ------------------");
+	}
+*/	
+	res = FIDO2GetAssertion(data, datalen, buf,  sizeof(buf), &len, &sw);
+	DropField();
+	if (res) {
+		PrintAndLog("Can't execute get assertion command. res=%x. Exit...", res);
+		return res;
+	}
+	
+	if (sw != 0x9000) {
+		PrintAndLog("ERROR execute get assertion command. APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff)); 
+		return 3;
+	}
+	
+	if(buf[0]) {
+		PrintAndLog("FIDO2 get assertion error: %d - %s", buf[0], fido2GetCmdErrorDescription(buf[0])); 
+		return 0;
+	}
+
+/*	PrintAndLog("MakeCredential result (%d b) OK.", len);
+	if (showCBOR) {
+		PrintAndLog("CBOR get assertion response:");
+		PrintAndLog("---------------- CBOR ------------------");
+		TinyCborPrintFIDOPackage(fido2CmdMakeCredential, true, &buf[1], len - 1);
+		PrintAndLog("---------------- CBOR ------------------");
+	}
+*/
 	return 0;
 };
 
@@ -993,7 +1080,7 @@ static command_t CommandTable[] =
   {"reg",  	  	 	   CmdHFFidoRegister,			0, "FIDO U2F Registration Message."},
   {"auth",  	       CmdHFFidoAuthenticate,		0, "FIDO U2F Authentication Message."},
   {"make",  	       CmdHFFido2MakeCredential,	0, "FIDO2 MakeCredential command."},
-  {"accert",  	       CmdHFFido2GetAssertion,		0, "FIDO2 GetAssertion command."},
+  {"assert",  	       CmdHFFido2GetAssertion,		0, "FIDO2 GetAssertion command."},
   {NULL,               NULL,						0, NULL}
 };
 
