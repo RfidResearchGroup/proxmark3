@@ -712,24 +712,30 @@ int MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, bool v
 
 	uint32_t cntr =  (uint32_t)bytes_to_num(&ubuf[33], 4);
 	PrintAndLog("Counter: %d", cntr);
+	JsonSaveInt(root, "$.AppData.Counter", cntr);
 	
 	// attestation data
 	PrintAndLog("AAGUID: %s", sprint_hex(&ubuf[37], 16));
+	JsonSaveBufAsHexCompact(root, "$.AppData.AAGUID", &ubuf[37], 16);
 	
 	// Credential ID
 	uint8_t cridlen = (uint16_t)bytes_to_num(&ubuf[53], 2);
 	PrintAndLog("Credential id[%d]: %s", cridlen, sprint_hex(&ubuf[55], cridlen));
+	JsonSaveBufAsHexCompact(root, "$.AppData.CredentialId", &ubuf[55], cridlen);
 	
 	//Credentional public key (COSE_KEY)
 	uint8_t coseKey[65] = {0};
 	uint16_t cplen = n - 55 - cridlen;
 	PrintAndLog("Credentional public key (COSE_KEY)[%d]: %s", cplen, sprint_hex(&ubuf[55 + cridlen], cplen));
+	JsonSaveBufAsHexCompact(root, "$.AppData.COSE_KEY", &ubuf[55 + cridlen], cplen);
 	if (showCBOR) {
 		TinyCborPrintFIDOPackage(fido2COSEKey, true, &ubuf[55 + cridlen], cplen);		
 	}
 	res = COSEGetECDSAKey(&ubuf[55 + cridlen], cplen, verbose, coseKey);
 	if (res)
 		PrintAndLog("ERROR: Can't get COSE_KEY.");
+	else
+		JsonSaveBufAsHexCompact(root, "$.AppData.COSEPublicKey", coseKey, sizeof(coseKey));
 
 	free(ubuf);
 	
@@ -768,6 +774,7 @@ int MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, bool v
 			res = CborGetArrayBinStringValue(&mapsmt, der, sizeof(der), &derLen);
 			cbor_check(res);
 			PrintAndLog("DER [%d]: %s", derLen, sprint_hex(der, derLen));
+			JsonSaveBufAsHexCompact(root, "$.AppData.DER", der, derLen);
 		}		
 	}
 	res = cbor_value_leave_container(&map, &mapsmt);
@@ -782,6 +789,7 @@ int MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, bool v
 		PrintAndLog("----------------DER TLV-----------------");
 	}
     FIDOCheckDERAndGetKey(der, derLen, verbose, public_key, sizeof(public_key));
+	JsonSaveBufAsHexCompact(root, "$.AppData.DERPublicKey", public_key, sizeof(public_key));
 
 	// check ANSI X9.62 format ECDSA signature (on P-256)
 	uint8_t rval[300] = {0}; 
