@@ -648,7 +648,7 @@ int GetExistsFileNameJson(char *prefixDir, char *reqestedFileName, char *fileNam
 	return 0;
 }
 
-bool CheckHash(json_t *json, uint8_t *hash) {
+bool CheckrpIdHash(json_t *json, uint8_t *hash) {
 	char hashval[300] = {0};
 	uint8_t hash2[32] = {0};
 	
@@ -692,7 +692,7 @@ int MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, bool v
 	PrintAndLog("RP ID Hash: %s", sprint_hex(ubuf, 32));
 	
 	// check RP ID Hash
-	if (CheckHash(root, ubuf)) {
+	if (CheckrpIdHash(root, ubuf)) {
 		PrintAndLog("rpIdHash OK.");
 	} else {
 		PrintAndLog("rpIdHash ERROR!");
@@ -786,13 +786,21 @@ int MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, bool v
 			PrintAndLog("  s: %s", sprint_hex(sval, 32));
 		}
 
+		uint8_t clientDataHash[32] = {0};
+		size_t clientDataHashLen = 0;
+		res = JsonLoadBufAsHex(root, "$.ClientDataHash", clientDataHash, sizeof(clientDataHash), &clientDataHashLen);
+		if (res || clientDataHashLen != 32) {
+			PrintAndLog("ERROR: Can't get clientDataHash from json!");
+			return 2;
+		}			
+		
 		uint8_t xbuf[4096] = {0};
 		size_t xbuflen = 0;
 		res = FillBuffer(xbuf, sizeof(xbuf), &xbuflen,
 			authDataStatic, 37,  // rpIdHash[32] + flags[1] + signCount[4]
-			&data[0], 32,        // Hash of the serialized client data
+			clientDataHash, 32,  // Hash of the serialized client data. "$.ClientDataHash" from json
 			NULL, 0);
-		//PrintAndLog("--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
+		PrintAndLog("--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
 		res = ecdsa_signature_verify(public_key, xbuf, xbuflen, sign, signLen);
 		if (res) {
 			if (res == -0x4e00) {
