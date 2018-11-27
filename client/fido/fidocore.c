@@ -788,6 +788,16 @@ int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool 
 	}
 
 	free(ubuf);
+
+	// numberOfCredentials
+	res = CborMapGetKeyById(&parser, &map, data, dataLen, 5);
+	if (res) {
+		PrintAndLog("numberOfCredentials: 1 by default");
+	} else {
+		int64_t numberOfCredentials = 0;
+		cbor_value_get_int64(&map, &numberOfCredentials);    
+		PrintAndLog("numberOfCredentials: %lld", (long long)numberOfCredentials);
+	}
 	
 	return 0;
 }
