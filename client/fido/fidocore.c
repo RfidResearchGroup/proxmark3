@@ -352,7 +352,7 @@ bool CheckrpIdHash(json_t *json, uint8_t *hash) {
 	return !memcmp(hash, hash2, 32);
 }
 
-int MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, bool verbose, bool verbose2, bool showCBOR, bool showDERTLV) {
+int FIDO2MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, bool verbose, bool verbose2, bool showCBOR, bool showDERTLV) {
 	CborParser parser;
 	CborValue map, mapsmt;
 	int res;
@@ -567,17 +567,15 @@ int FIDO2CreateGetAssertionReq(json_t *root, uint8_t *data, size_t maxdatalen, s
 	cbor_encoder_init(&encoder, data, maxdatalen, 0);
 
 	// create main map
-	res = cbor_encoder_create_map(&encoder, &map, 5);
+	res = cbor_encoder_create_map(&encoder, &map, 3);
 	fido_check_if(res) {
 		// rpId
 		res = cbor_encode_uint(&map, 1);
 		fido_check_if(res) {
-//		char hashval[300] = {0};
-//		JsonLoadStr(json, "$.RelyingPartyEntity.id", hashval);
 
-		res = CBOREncodeElm(root, "RelyingPartyEntity", &map);
+		res = CBOREncodeElm(root, "$.RelyingPartyEntity.id", &map);
 		fido_check(res);
-	}
+		}
 
 		// clientDataHash
 		res = cbor_encode_uint(&map, 2);
@@ -599,6 +597,11 @@ int FIDO2CreateGetAssertionReq(json_t *root, uint8_t *data, size_t maxdatalen, s
 	size_t len = cbor_encoder_get_buffer_size(&encoder, data);
 	if (datalen)
 		*datalen = len;
+	
+	return 0;
+}
+
+int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool verbose, bool verbose2, bool showCBOR) {
 	
 	return 0;
 }

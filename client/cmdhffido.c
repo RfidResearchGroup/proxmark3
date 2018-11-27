@@ -759,7 +759,7 @@ int CmdHFFido2MakeCredential(const char *cmd) {
 	}
 
 	// parse returned cbor
-	MakeCredentionalParseRes(root, &buf[1], len - 1, verbose, verbose2, showCBOR, showDERTLV);
+	FIDO2MakeCredentionalParseRes(root, &buf[1], len - 1, verbose, verbose2, showCBOR, showDERTLV);
 	
 	if (root) {
 		res = json_dump_file(root, fname, JSON_INDENT(2));
@@ -875,14 +875,28 @@ int CmdHFFido2GetAssertion(const char *cmd) {
 		return 0;
 	}
 
-/*	PrintAndLog("MakeCredential result (%d b) OK.", len);
+	PrintAndLog("GetAssertion result (%d b) OK.", len);
 	if (showCBOR) {
 		PrintAndLog("CBOR get assertion response:");
 		PrintAndLog("---------------- CBOR ------------------");
-		TinyCborPrintFIDOPackage(fido2CmdMakeCredential, true, &buf[1], len - 1);
+		TinyCborPrintFIDOPackage(fido2CmdGetAssertion, true, &buf[1], len - 1);
 		PrintAndLog("---------------- CBOR ------------------");
 	}
+
+	// parse returned cbor
+	FIDO2GetAssertionParseRes(root, &buf[1], len - 1, verbose, verbose2, showCBOR);
+	
+/*	if (root) {
+		res = json_dump_file(root, fname, JSON_INDENT(2));
+		if (res) {
+			PrintAndLog("ERROR: can't save the file: %s", fname);
+			return 200;
+		}
+		PrintAndLog("File `%s` saved.", fname);
+	}
 */
+	json_decref(root);
+	
 	return 0;
 };
 

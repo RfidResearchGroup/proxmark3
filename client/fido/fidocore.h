@@ -50,7 +50,8 @@ extern char *fido2GetCmdErrorDescription(uint8_t errorCode);
 
 extern bool CheckrpIdHash(json_t *json, uint8_t *hash);
 extern int FIDO2CreateMakeCredentionalReq(json_t *root, uint8_t *data, size_t maxdatalen, size_t *datalen);
-extern int MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, bool verbose, bool verbose2, bool showCBOR, bool showDERTLV);
+extern int FIDO2MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, bool verbose, bool verbose2, bool showCBOR, bool showDERTLV);
 extern int FIDO2CreateGetAssertionReq(json_t *root, uint8_t *data, size_t maxdatalen, size_t *datalen);
+extern int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool verbose, bool verbose2, bool showCBOR);
 
 #endif /* __FIDOCORE_H__ */
