@@ -602,6 +602,46 @@ int FIDO2CreateGetAssertionReq(json_t *root, uint8_t *data, size_t maxdatalen, s
 }
 
 int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool verbose, bool verbose2, bool showCBOR) {
+	CborParser parser;
+	CborValue map, mapint;
+	int res;
+//	char *buf;
+//	uint8_t *ubuf;
+	size_t n;
+	
+	// credential
+	res = CborMapGetKeyById(&parser, &map, data, dataLen, 1);
+	if (res)
+		return res;
+
+	res = cbor_value_enter_container(&map, &mapint);
+	cbor_check(res);
+	
+	while (!cbor_value_at_end(&mapint)) {
+		char key[100] = {0};
+		res = CborGetStringValue(&mapint, key, sizeof(key), &n);
+		cbor_check(res);
+
+		if (!strcmp(key, "type")) {
+			char ctype[200] = {0};
+			res = CborGetStringValue(&mapint, ctype, sizeof(ctype), &n);
+			cbor_check(res);
+			PrintAndLog("credential type: %s", ctype);
+		}
+
+		if (!strcmp(key, "id")) {
+			uint8_t cid[200] = {0};
+			res = CborGetBinStringValue(&mapint, cid, sizeof(cid), &n);
+			cbor_check(res);
+			PrintAndLog("credential id [%d]: %s", n, sprint_hex(cid, n));
+		}
+	}
+	res = cbor_value_leave_container(&map, &mapint);
+	cbor_check(res);
+	
+	
+	
+	
 	
 	return 0;
 }
