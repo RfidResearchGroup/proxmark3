@@ -298,16 +298,6 @@ int CBOREncodeClientDataHash(json_t *root, CborEncoder *encoder) {
 	return 0;
 }
 
-int CBOREncodeElm(json_t *root, char *rootElmId, CborEncoder *encoder) {
-	json_t *elm = json_object_get(root, rootElmId);
-	if (!elm)
-		return 1;
-	
-	int res = JsonToCbor(elm, encoder);
-
-	return res;
-}
-
 int FIDO2CreateMakeCredentionalReq(json_t *root, uint8_t *data, size_t maxdatalen, size_t *datalen) {
 	if (datalen)
 		*datalen = 0;

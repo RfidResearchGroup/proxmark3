@@ -453,3 +453,13 @@ CborError CborGetStringValueBuf(CborValue *elm) {
 	
 	return CborGetStringValue(elm, stringBuf, sizeof(stringBuf), NULL);
 };
+
+int CBOREncodeElm(json_t *root, char *rootElmId, CborEncoder *encoder) {
+	json_t *elm = json_object_get(root, rootElmId);
+	if (!elm)
+		return 1;
+	
+	int res = JsonToCbor(elm, encoder);
+
+	return res;
+}

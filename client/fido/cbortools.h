@@ -32,4 +32,6 @@ extern CborError CborGetArrayStringValue(CborValue *elm, char *data, size_t maxd
 extern CborError CborGetStringValue(CborValue *elm, char *data, size_t maxdatalen, size_t *datalen);
 extern CborError CborGetStringValueBuf(CborValue *elm);
 
+extern int CBOREncodeElm(json_t *root, char *rootElmId, CborEncoder *encoder);
+
 #endif /* __CBORTOOLS_H__ */
