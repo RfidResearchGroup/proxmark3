@@ -1,0 +1,33 @@
+{
+  "ClientDataHash": "000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f",
+  "RelyingPartyEntity": {
+    "id": "acme.com",
+    "name": "Acme"
+  },
+  "UserEntity": {
+    "id": "00000000000000000000000000000001",
+    "icon": "https://pics.acme.com/00/p/aBjjjpqPb.png",
+    "name": "johnpsmith@acme.com",
+    "displayName": "John P. Smith"
+  },
+  "pubKeyCredParams": [
+    {
+      "type": "public-key",
+      "alg": -7,
+      ".name": "ES256"
+    },
+    {
+      "type": "public-key",
+      "alg": -257,
+      ".name": "RS256"
+    }
+  ],
+  "MakeCredentialOptions": {
+    "uv": false,
+    "rk": true
+  },
+  "GetAssertionOptions": {
+    "up": true,
+    "uv": false
+  }
+}

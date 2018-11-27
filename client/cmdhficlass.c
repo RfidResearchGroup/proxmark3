@@ -2290,7 +2290,6 @@ int CmdHFiClassLookUp(const char *Cmd) {
 
 	t1 = msclock() - t1;
 	PrintAndLogEx(NORMAL, "\nTime in iclass : %.0f seconds\n", (float)t1/1000.0);
-	DropField();
 	free(prekey);
 	free(keyBlock);
 	PrintAndLogEx(NORMAL, "");		
@@ -2527,7 +2526,7 @@ static command_t CommandTable[] = {
 	{"encryptblk",  CmdHFiClassEncryptBlk,     	1,	"<BlockData> Encrypt given block data"},
 	{"list",        CmdHFiClassList,           	0,	"            (Deprecated) List iClass history"},
 	{"loclass",     CmdHFiClass_loclass,       	1,	"[options..] Use loclass to perform bruteforce of reader attack dump"},
-	{"lookup",		CmdHFiClassLookUp,     		0,	"[options..] Uses authentication trace to check for key in dictionary file"},
+	{"lookup",		CmdHFiClassLookUp,     		1,	"[options..] Uses authentication trace to check for key in dictionary file"},
 	{"managekeys",  CmdHFiClassManageKeys,     	1,	"[options..] Manage the keys to use with iClass"},
 	{"permutekey",  CmdHFiClassPermuteKey,		0,	"            Permute function from 'heart of darkness' paper"},
 	{"readblk",     CmdHFiClass_ReadBlock,      0,	"[options..] Authenticate and Read iClass block"},

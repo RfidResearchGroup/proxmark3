@@ -28,12 +28,14 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <jansson.h>
+#include <mbedtls/x509_crt.h>
+#include <mbedtls/x509.h>
+#include <mbedtls/pk.h>
 #include "comms.h"
 #include "cmdmain.h"
 #include "util.h"
 #include "ui.h"
 #include "proxmark3.h"
-#include "cmdhf14a.h"
 #include "mifare.h"
 #include "emv/emvcore.h"
 #include "emv/emvjson.h"
@@ -41,49 +43,11 @@
 #include "cliparser/cliparser.h"
 #include "crypto/asn1utils.h"
 #include "crypto/libpcrypto.h"
-#include "fido/additional_ca.h"
-#include "mbedtls/x509_crt.h"
-#include "mbedtls/x509.h"
-#include "mbedtls/pk.h"
+#include "fido/cbortools.h"
+#include "fido/fidocore.h"
+#include "fido/cose.h"
 
 static int CmdHelp(const char *Cmd);
-
-int FIDOSelect(bool ActivateField, bool LeaveFieldON, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
-	uint8_t data[] = {0xA0, 0x00, 0x00, 0x06, 0x47, 0x2F, 0x00, 0x01};
-	
-	return EMVSelect(ActivateField, LeaveFieldON, data, sizeof(data), Result, MaxResultLen, ResultLen, sw, NULL);
-}
-
-int FIDOExchange(sAPDU apdu, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
-	int res = EMVExchange(true, apdu, Result, MaxResultLen, ResultLen, sw, NULL);
-	if (res == 5) // apdu result (sw) not a 0x9000
-		res = 0;
-	// software chaining
-	while (!res && (*sw >> 8) == 0x61) {
-		size_t oldlen = *ResultLen;
-		res = EMVExchange(true, (sAPDU){0x00, 0xC0, 0x00, 0x00, 0x00, NULL}, &Result[oldlen], MaxResultLen - oldlen, ResultLen, sw, NULL);
-		if (res == 5) // apdu result (sw) not a 0x9000
-			res = 0;
-		
-		*ResultLen += oldlen;
-		if (*ResultLen > MaxResultLen) 
-			return 100;
-	}
-	return res;
-}
-
-int FIDORegister(uint8_t *params, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
-	return FIDOExchange((sAPDU){0x00, 0x01, 0x03, 0x00, 64, params}, Result, MaxResultLen, ResultLen, sw);
-}
-
-int FIDOAuthentication(uint8_t *params, uint8_t paramslen, uint8_t controlb, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
-	return FIDOExchange((sAPDU){0x00, 0x02, controlb, 0x00, paramslen, params}, Result, MaxResultLen, ResultLen, sw);
-}
-
-int FIDO2GetInfo(uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
-	uint8_t data[] = {0x04};
-	return FIDOExchange((sAPDU){0x80, 0x10, 0x00, 0x00, sizeof(data), data}, Result, MaxResultLen, ResultLen, sw);
-}
 
 int CmdHFFidoInfo(const char *cmd) {
 	
@@ -139,10 +103,24 @@ int CmdHFFidoInfo(const char *cmd) {
 		
 		return 0;
 	}
-
-	PrintAndLog("FIDO2 version: (%d)", len); 
-	dump_buffer((const unsigned char *)buf, len, NULL, 0);
 	
+	if(buf[0]) {
+		PrintAndLog("FIDO2 ger version error: %d - %s", buf[0], fido2GetCmdErrorDescription(buf[0])); 
+		return 0;
+	}
+
+	if (len > 1) {
+//		if (false) {
+//			PrintAndLog("FIDO2 version: (len=%d)", len); 
+//			dump_buffer((const unsigned char *)buf, len, NULL, 0);
+//		}
+
+		PrintAndLog("FIDO2 version CBOR decoded:"); 
+		TinyCborPrintFIDOPackage(fido2CmdGetInfo, true, &buf[1], len - 1);
+	} else {
+		PrintAndLog("FIDO2 version length error"); 
+	}
+		
 	return 0;
 }
 
@@ -348,60 +326,7 @@ int CmdHFFidoRegister(const char *cmd) {
 		PrintAndLog("----------------DER TLV-----------------");
 	}
 	
-	// load CA's
-	mbedtls_x509_crt cacert;
-	mbedtls_x509_crt_init(&cacert);
-	res = mbedtls_x509_crt_parse(&cacert, (const unsigned char *) additional_ca_pem, additional_ca_pem_len);
-	if (res < 0) {
-		PrintAndLog("ERROR: CA parse certificate returned -0x%x - %s", -res, ecdsa_get_error(res));
-	}
-	if (verbose) 
-		PrintAndLog("CA load OK. %d skipped", res);
-	
-	// load DER certificate from authenticator's data
-	mbedtls_x509_crt cert;
-	mbedtls_x509_crt_init(&cert);
-	res = mbedtls_x509_crt_parse_der(&cert, &buf[derp], derLen);
-	if (res) {
-		PrintAndLog("ERROR: DER parse returned 0x%x - %s", (res<0)?-res:res, ecdsa_get_error(res));
-	}
-	
-	// get certificate info
-	char linfo[300] = {0};
-	if (verbose) {
-		mbedtls_x509_crt_info(linfo, sizeof(linfo), "  ", &cert);
-		PrintAndLog("DER certificate info:\n%s", linfo);
-	}
-	
-	// verify certificate
-	uint32_t verifyflags = 0;
-	res = mbedtls_x509_crt_verify(&cert, &cacert, NULL, NULL, &verifyflags, NULL, NULL);
-	if (res) {
-		PrintAndLog("ERROR: DER verify returned 0x%x - %s", (res<0)?-res:res, ecdsa_get_error(res));
-	} else {
-		PrintAndLog("Certificate OK.");
-	}
-	
-	if (verbose) {
-		memset(linfo, 0x00, sizeof(linfo));
-		mbedtls_x509_crt_verify_info(linfo, sizeof(linfo), "  ", verifyflags);
-		PrintAndLog("Verification info:\n%s", linfo);
-	}
-	
-	// get public key
-	res = ecdsa_public_key_from_pk(&cert.pk, public_key, sizeof(public_key));
-	if (res) {
-		PrintAndLog("ERROR: getting public key from certificate 0x%x - %s", (res<0)?-res:res, ecdsa_get_error(res));
-	} else {
-		if (verbose)
-			PrintAndLog("Got a public key from certificate:\n%s", sprint_hex_inrow(public_key, 65));
-	}
-
-	if (verbose)
-		PrintAndLog("------------------DER-------------------");
-
-	mbedtls_x509_crt_free(&cert);
-	mbedtls_x509_crt_free(&cacert);
+    FIDOCheckDERAndGetKey(&buf[derp], derLen, verbose, public_key, sizeof(public_key));
 	
 	// get hash
 	int hashp = 1 + 65 + 1 + keyHandleLen + derLen;
@@ -690,13 +615,302 @@ int CmdHFFidoAuthenticate(const char *cmd) {
 	return 0;
 };
 
+void CheckSlash(char *fileName) {
+	if ((fileName[strlen(fileName) - 1] != '/') && 
+		(fileName[strlen(fileName) - 1] != '\\'))
+		strcat(fileName, "/");
+}
+
+int GetExistsFileNameJson(char *prefixDir, char *reqestedFileName, char *fileName) {
+	fileName[0] = 0x00;
+	strcpy(fileName, get_my_executable_directory());
+	CheckSlash(fileName);
+	
+	strcat(fileName, prefixDir);
+	CheckSlash(fileName);
+	
+	strcat(fileName, reqestedFileName);
+	if (!strstr(fileName, ".json"))
+		strcat(fileName, ".json");
+	
+	if (access(fileName, F_OK) < 0) {
+		strcpy(fileName, get_my_executable_directory());
+		CheckSlash(fileName);
+		
+		strcat(fileName, reqestedFileName);
+		if (!strstr(fileName, ".json"))
+			strcat(fileName, ".json");
+		
+		if (access(fileName, F_OK) < 0) {
+			return 1; // file not found
+		}
+	}
+	return 0;
+}
+
+int CmdHFFido2MakeCredential(const char *cmd) {
+	json_error_t error;
+	json_t *root = NULL;
+	char fname[300] = {0};
+	
+	CLIParserInit("hf fido make", 
+		"Execute a FIDO2 Make Credentional command. Needs json file with parameters. Sample file `fido2.json`. File can be placed in proxmark directory or in `proxmark/fido` directory.", 
+		"Usage:\n\thf fido make -> execute command default parameters file `fido2.json`\n"
+			"\thf fido make test.json -> execute command with parameters file `text.json`");
+
+	void* argtable[] = {
+		arg_param_begin,
+		arg_lit0("aA",  "apdu",     "show APDU reqests and responses"),
+		arg_litn("vV",  "verbose",  0, 2, "show technical data. vv - show full certificates data"),
+		arg_lit0("tT",  "tlv",      "Show DER certificate contents in TLV representation"),
+		arg_lit0("cC",  "cbor",     "show CBOR decoded data"),
+		arg_str0(NULL,  NULL,		"<json file name>", "JSON input / output file name for parameters. Default `fido2.json`"),
+		arg_param_end
+	};
+	CLIExecWithReturn(cmd, argtable, true);
+	
+	bool APDULogging = arg_get_lit(1);
+	bool verbose = arg_get_lit(2);
+	bool verbose2 = arg_get_lit(2) > 1;
+	bool showDERTLV = arg_get_lit(3);
+	bool showCBOR = arg_get_lit(4);
+
+	uint8_t jsonname[250] ={0};
+	char *cjsonname = (char *)jsonname;
+	int jsonnamelen = 0;
+	CLIGetStrWithReturn(5, jsonname, &jsonnamelen);
+
+	if (!jsonnamelen) {
+		strcat(cjsonname, "fido2");
+		jsonnamelen = strlen(cjsonname);
+	}
+
+	CLIParserFree();	
+	
+	SetAPDULogging(APDULogging);
+
+	int res = GetExistsFileNameJson("fido", cjsonname, fname);
+	if(res) {
+		PrintAndLog("ERROR: Can't found the json file.");
+		return res;
+	}
+	PrintAndLog("fname: %s\n", fname);
+	root = json_load_file(fname, 0, &error);	
+	if (!root) {
+		PrintAndLog("ERROR: json error on line %d: %s", error.line, error.text);
+		return 1;
+	}
+	
+	uint8_t data[2048] = {0};
+	size_t datalen = 0;
+	uint8_t buf[2048] = {0};
+	size_t len = 0;
+	uint16_t sw = 0;
+
+	DropField();
+	res = FIDOSelect(true, true, buf, sizeof(buf), &len, &sw);
+
+	if (res) {
+		PrintAndLog("Can't select authenticator. res=%x. Exit...", res);
+		DropField();
+		return res;
+	}
+	
+	if (sw != 0x9000) {
+		PrintAndLog("Can't select FIDO application. APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff)); 
+		DropField();
+		return 2;
+	}
+
+	res = FIDO2CreateMakeCredentionalReq(root, data, sizeof(data), &datalen);
+	if (res)
+		return res;
+	
+	if (showCBOR) {
+		PrintAndLog("CBOR make credentional request:");
+		PrintAndLog("---------------- CBOR ------------------");
+		TinyCborPrintFIDOPackage(fido2CmdMakeCredential, false, data, datalen);
+		PrintAndLog("---------------- CBOR ------------------");
+	}
+	
+	res = FIDO2MakeCredential(data, datalen, buf,  sizeof(buf), &len, &sw);
+	DropField();
+	if (res) {
+		PrintAndLog("Can't execute make credential command. res=%x. Exit...", res);
+		return res;
+	}
+	
+	if (sw != 0x9000) {
+		PrintAndLog("ERROR execute make credential command. APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff)); 
+		return 3;
+	}
+	
+	if(buf[0]) {
+		PrintAndLog("FIDO2 make credential error: %d - %s", buf[0], fido2GetCmdErrorDescription(buf[0])); 
+		return 0;
+	}
+
+	PrintAndLog("MakeCredential result (%d b) OK.", len);
+	if (showCBOR) {
+		PrintAndLog("CBOR make credentional response:");
+		PrintAndLog("---------------- CBOR ------------------");
+		TinyCborPrintFIDOPackage(fido2CmdMakeCredential, true, &buf[1], len - 1);
+		PrintAndLog("---------------- CBOR ------------------");
+	}
+
+	// parse returned cbor
+	FIDO2MakeCredentionalParseRes(root, &buf[1], len - 1, verbose, verbose2, showCBOR, showDERTLV);
+	
+	if (root) {
+		res = json_dump_file(root, fname, JSON_INDENT(2));
+		if (res) {
+			PrintAndLog("ERROR: can't save the file: %s", fname);
+			return 200;
+		}
+		PrintAndLog("File `%s` saved.", fname);
+	}
+	
+	json_decref(root);
+
+	return 0;
+};
+
+int CmdHFFido2GetAssertion(const char *cmd) {
+	json_error_t error;
+	json_t *root = NULL;
+	char fname[300] = {0};
+	
+	CLIParserInit("hf fido assert", 
+		"Execute a FIDO2 Get Assertion command. Needs json file with parameters. Sample file `fido2.json`. File can be placed in proxmark directory or in `proxmark/fido` directory.", 
+		"Usage:\n\thf fido assert -> execute command default parameters file `fido2.json`\n"
+			"\thf fido assert test.json -l -> execute command with parameters file `text.json` and add to request CredentialId");
+
+	void* argtable[] = {
+		arg_param_begin,
+		arg_lit0("aA",  "apdu",     "show APDU reqests and responses"),
+		arg_litn("vV",  "verbose",  0, 2, "show technical data. vv - show full certificates data"),
+		arg_lit0("cC",  "cbor",     "show CBOR decoded data"),
+		arg_lit0("lL",  "list",     "add CredentialId from json to allowList. Needs if `rk` option is `false` (authenticator don't store credential to its memory)"),
+		arg_str0(NULL,  NULL,		"<json file name>", "JSON input / output file name for parameters. Default `fido2.json`"),
+		arg_param_end
+	};
+	CLIExecWithReturn(cmd, argtable, true);
+	
+	bool APDULogging = arg_get_lit(1);
+	bool verbose = arg_get_lit(2);
+	bool verbose2 = arg_get_lit(2) > 1;
+	bool showCBOR = arg_get_lit(3);
+	bool createAllowList = arg_get_lit(4);
+
+	uint8_t jsonname[250] ={0};
+	char *cjsonname = (char *)jsonname;
+	int jsonnamelen = 0;
+	CLIGetStrWithReturn(5, jsonname, &jsonnamelen);
+
+	if (!jsonnamelen) {
+		strcat(cjsonname, "fido2");
+		jsonnamelen = strlen(cjsonname);
+	}
+
+	CLIParserFree();	
+	
+	SetAPDULogging(APDULogging);
+
+	int res = GetExistsFileNameJson("fido", "fido2", fname);
+	if(res) {
+		PrintAndLog("ERROR: Can't found the json file.");
+		return res;
+	}
+	PrintAndLog("fname: %s\n", fname);
+	root = json_load_file(fname, 0, &error);	
+	if (!root) {
+		PrintAndLog("ERROR: json error on line %d: %s", error.line, error.text);
+		return 1;
+	}
+	
+	uint8_t data[2048] = {0};
+	size_t datalen = 0;
+	uint8_t buf[2048] = {0};
+	size_t len = 0;
+	uint16_t sw = 0;
+
+	DropField();
+	res = FIDOSelect(true, true, buf, sizeof(buf), &len, &sw);
+
+	if (res) {
+		PrintAndLog("Can't select authenticator. res=%x. Exit...", res);
+		DropField();
+		return res;
+	}
+	
+	if (sw != 0x9000) {
+		PrintAndLog("Can't select FIDO application. APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff)); 
+		DropField();
+		return 2;
+	}
+
+	res = FIDO2CreateGetAssertionReq(root, data, sizeof(data), &datalen, createAllowList);
+	if (res)
+		return res;
+	
+	if (showCBOR) {
+		PrintAndLog("CBOR get assertion request:");
+		PrintAndLog("---------------- CBOR ------------------");
+		TinyCborPrintFIDOPackage(fido2CmdGetAssertion, false, data, datalen);
+		PrintAndLog("---------------- CBOR ------------------");
+	}
+	
+	res = FIDO2GetAssertion(data, datalen, buf,  sizeof(buf), &len, &sw);
+	DropField();
+	if (res) {
+		PrintAndLog("Can't execute get assertion command. res=%x. Exit...", res);
+		return res;
+	}
+	
+	if (sw != 0x9000) {
+		PrintAndLog("ERROR execute get assertion command. APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff)); 
+		return 3;
+	}
+	
+	if(buf[0]) {
+		PrintAndLog("FIDO2 get assertion error: %d - %s", buf[0], fido2GetCmdErrorDescription(buf[0])); 
+		return 0;
+	}
+
+	PrintAndLog("GetAssertion result (%d b) OK.", len);
+	if (showCBOR) {
+		PrintAndLog("CBOR get assertion response:");
+		PrintAndLog("---------------- CBOR ------------------");
+		TinyCborPrintFIDOPackage(fido2CmdGetAssertion, true, &buf[1], len - 1);
+		PrintAndLog("---------------- CBOR ------------------");
+	}
+
+	// parse returned cbor
+	FIDO2GetAssertionParseRes(root, &buf[1], len - 1, verbose, verbose2, showCBOR);
+	
+	if (root) {
+		res = json_dump_file(root, fname, JSON_INDENT(2));
+		if (res) {
+			PrintAndLog("ERROR: can't save the file: %s", fname);
+			return 200;
+		}
+		PrintAndLog("File `%s` saved.", fname);
+	}
+
+	json_decref(root);
+	
+	return 0;
+};
+
 static command_t CommandTable[] =
 {
-  {"help",             CmdHelp,					1, "This help."},
-  {"info",  	       CmdHFFidoInfo,			0, "Info about FIDO tag."},
-  {"reg",  	  	 	   CmdHFFidoRegister,		0, "FIDO U2F Registration Message."},
-  {"auth",  	       CmdHFFidoAuthenticate,	0, "FIDO U2F Authentication Message."},
-  {NULL,               NULL,					0, NULL}
+  {"help",             CmdHelp,						1, "This help."},
+  {"info",  	       CmdHFFidoInfo,				0, "Info about FIDO tag."},
+  {"reg",  	  	 	   CmdHFFidoRegister,			0, "FIDO U2F Registration Message."},
+  {"auth",  	       CmdHFFidoAuthenticate,		0, "FIDO U2F Authentication Message."},
+  {"make",  	       CmdHFFido2MakeCredential,	0, "FIDO2 MakeCredential command."},
+  {"assert",  	       CmdHFFido2GetAssertion,		0, "FIDO2 GetAssertion command."},
+  {NULL,               NULL,						0, NULL}
 };
 
 int CmdHFFido(const char *Cmd) {

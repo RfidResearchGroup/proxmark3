@@ -150,6 +150,17 @@ int FillBuffer(uint8_t *data, size_t maxDataLength, size_t *dataLength, ...) {
 	return 0;
 }
 
+bool CheckStringIsHEXValue(const char *value) {
+	for (int i = 0; i < strlen(value); i++)
+		if (!isxdigit(value[i]))
+			return false;
+
+	if (strlen(value) % 2)
+		return false;
+	
+	return true;
+}
+
 void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex_len, const size_t hex_max_len, 
 	const size_t min_str_len, const size_t spaces_between, bool uppercase) {
 		

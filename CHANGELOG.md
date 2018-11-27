@@ -83,6 +83,10 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added `hf fido` commands that work with FIDO U2F authenticators (@merlokk)
  - Added mbedtls instead of old polarssl (@merlokk)
  - Added jansson (@merlokk)
+ - Added `hf emv scan` - save card's data to json file (@merlokk)
+ - Added `hf emv` `gpo`, `readrec`, `genac`, `challenge`, `intauth` - separate commands from `hf emc exec` (@merlokk)
+ - Added  `hf fido` `assert` and `make` commands from fido2 protocol (authenticatorMakeCredential and authenticatorGetAssertion) (@merlokk)
+ 
 ### Fixed
 - Changed driver file proxmark3.inf to support both old and new Product/Vendor IDs (piwi)
 - Changed start sequence in Qt mode (fix: short commands hangs main Qt thread) (Merlok)
