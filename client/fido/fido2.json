@@ -25,5 +25,9 @@
   "options": {
     "uv": false,
     "rk": false
+  },
+  "GetAssertionOptions": {
+    "up": true,
+    "uv": false
   }
 }
