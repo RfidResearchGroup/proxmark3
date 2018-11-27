@@ -682,6 +682,49 @@ int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool 
 	JsonSaveInt(root, "$.AppData.Counter", cntr);
 	
 	free(ubuf);
+
+	// publicKeyCredentialUserEntity
+	res = CborMapGetKeyById(&parser, &map, data, dataLen, 4);
+	if (res)
+		return res;
+	
+	res = cbor_value_enter_container(&map, &mapint);
+	cbor_check(res);
+	
+	while (!cbor_value_at_end(&mapint)) {
+		char key[100] = {0};
+		res = CborGetStringValue(&mapint, key, sizeof(key), &n);
+		cbor_check(res);
+
+		if (!strcmp(key, "name") || !strcmp(key, "displayName")) {
+			char cname[200] = {0};
+			res = CborGetStringValue(&mapint, cname, sizeof(cname), &n);
+			cbor_check(res);
+			PrintAndLog("UserEntity %s: %s", key, cname);
+		}
+
+		if (!strcmp(key, "id")) {
+			uint8_t cid[200] = {0};
+			res = CborGetBinStringValue(&mapint, cid, sizeof(cid), &n);
+			cbor_check(res);
+			PrintAndLog("UserEntity id [%d]: %s", n, sprint_hex(cid, n));
+			
+			// check
+			uint8_t idbuf[100] = {0};
+			size_t idbuflen;
+
+			JsonLoadBufAsHex(root, "$.UserEntity.id", idbuf, sizeof(idbuf), &idbuflen);
+
+			if (idbuflen == n && !memcmp(idbuf, cid, idbuflen)) {
+				PrintAndLog("UserEntity id OK.");
+			} else {
+				PrintAndLog("ERROR: Wrong UserEntity id (from json: %s)", sprint_hex(idbuf, idbuflen));
+			}
+		}
+	}
+	res = cbor_value_leave_container(&map, &mapint);
+	cbor_check(res);
+	
 	
 	// signature
 	res = CborMapGetKeyById(&parser, &map, data, dataLen, 3);
@@ -704,7 +747,6 @@ int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool 
 	uint8_t PublicKey[65] = {0};
 	size_t PublicKeyLen = 0;
 	JsonLoadBufAsHex(root, "$.AppData.COSEPublicKey", PublicKey, 65, &PublicKeyLen);
-	PrintAndLog("--pkey[%d]: %s", PublicKeyLen, sprint_hex(PublicKey, PublicKeyLen));
 	
 	// check ANSI X9.62 format ECDSA signature (on P-256)
 	uint8_t rval[300] = {0}; 
@@ -730,7 +772,7 @@ int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool 
 			authData, authDataLen,  // rpIdHash[32] + flags[1] + signCount[4] 
 			clientDataHash, 32,     // Hash of the serialized client data. "$.ClientDataHash" from json
 			NULL, 0);
-		PrintAndLog("--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
+		//PrintAndLog("--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
 		res = ecdsa_signature_verify(PublicKey, xbuf, xbuflen, sign, signLen);
 		if (res) {
 			if (res == -0x4e00) {
