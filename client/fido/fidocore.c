@@ -352,6 +352,52 @@ bool CheckrpIdHash(json_t *json, uint8_t *hash) {
 	return !memcmp(hash, hash2, 32);
 }
 
+// check ANSI X9.62 format ECDSA signature (on P-256)
+int FIDO2CheckSignature(json_t *root, uint8_t *publickey, uint8_t *sign, size_t signLen, uint8_t *authData, size_t authDataLen, bool verbose) {
+	int res;
+	uint8_t rval[300] = {0}; 
+	uint8_t sval[300] = {0}; 
+	res = ecdsa_asn1_get_signature(sign, signLen, rval, sval);
+	if (!res) {
+		if (verbose) {
+			PrintAndLog("  r: %s", sprint_hex(rval, 32));
+			PrintAndLog("  s: %s", sprint_hex(sval, 32));
+		}
+
+		uint8_t clientDataHash[32] = {0};
+		size_t clientDataHashLen = 0;
+		res = JsonLoadBufAsHex(root, "$.ClientDataHash", clientDataHash, sizeof(clientDataHash), &clientDataHashLen);
+		if (res || clientDataHashLen != 32) {
+			PrintAndLog("ERROR: Can't get clientDataHash from json!");
+			return 2;
+		}			
+		
+		uint8_t xbuf[4096] = {0};
+		size_t xbuflen = 0;
+		res = FillBuffer(xbuf, sizeof(xbuf), &xbuflen,
+			authData, authDataLen,  // rpIdHash[32] + flags[1] + signCount[4] 
+			clientDataHash, 32,     // Hash of the serialized client data. "$.ClientDataHash" from json
+			NULL, 0);
+		//PrintAndLog("--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
+		res = ecdsa_signature_verify(publickey, xbuf, xbuflen, sign, signLen);
+		if (res) {
+			if (res == -0x4e00) {
+				PrintAndLog("Signature is NOT VALID.");
+			} else {
+				PrintAndLog("Other signature check error: %x %s", (res<0)?-res:res, ecdsa_get_error(res));
+			}
+			return res;
+		} else {
+			PrintAndLog("Signature is OK.");
+		}	
+	} else {
+		PrintAndLog("Invalid signature. res=%d.", res);
+		return res;
+	}
+	
+	return 0;
+}
+
 int FIDO2MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, bool verbose, bool verbose2, bool showCBOR, bool showDERTLV) {
 	CborParser parser;
 	CborValue map, mapsmt;
@@ -513,43 +559,7 @@ int FIDO2MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, b
 	JsonSaveBufAsHexCompact(root, "$.AppData.DERPublicKey", public_key, sizeof(public_key));
 
 	// check ANSI X9.62 format ECDSA signature (on P-256)
-	uint8_t rval[300] = {0}; 
-	uint8_t sval[300] = {0}; 
-	res = ecdsa_asn1_get_signature(sign, signLen, rval, sval);
-	if (!res) {
-		if (verbose) {
-			PrintAndLog("  r: %s", sprint_hex(rval, 32));
-			PrintAndLog("  s: %s", sprint_hex(sval, 32));
-		}
-
-		uint8_t clientDataHash[32] = {0};
-		size_t clientDataHashLen = 0;
-		res = JsonLoadBufAsHex(root, "$.ClientDataHash", clientDataHash, sizeof(clientDataHash), &clientDataHashLen);
-		if (res || clientDataHashLen != 32) {
-			PrintAndLog("ERROR: Can't get clientDataHash from json!");
-			return 2;
-		}			
-		
-		uint8_t xbuf[4096] = {0};
-		size_t xbuflen = 0;
-		res = FillBuffer(xbuf, sizeof(xbuf), &xbuflen,
-			authData, authDataLen,  // rpIdHash[32] + flags[1] + signCount[4] + ...
-			clientDataHash, 32,     // Hash of the serialized client data. "$.ClientDataHash" from json
-			NULL, 0);
-		//PrintAndLog("--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
-		res = ecdsa_signature_verify(public_key, xbuf, xbuflen, sign, signLen);
-		if (res) {
-			if (res == -0x4e00) {
-				PrintAndLog("Signature is NOT VALID.");
-			} else {
-				PrintAndLog("Other signature check error: %x %s", (res<0)?-res:res, ecdsa_get_error(res));
-			}
-		} else {
-			PrintAndLog("Signature is OK.");
-		}	
-	} else {
-		PrintAndLog("Invalid signature. res=%d.", res);
-	}
+	FIDO2CheckSignature(root, public_key, sign, signLen, authData, authDataLen, verbose);
 	
 	return 0;
 }
@@ -749,43 +759,7 @@ int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool 
 	JsonLoadBufAsHex(root, "$.AppData.COSEPublicKey", PublicKey, 65, &PublicKeyLen);
 	
 	// check ANSI X9.62 format ECDSA signature (on P-256)
-	uint8_t rval[300] = {0}; 
-	uint8_t sval[300] = {0}; 
-	res = ecdsa_asn1_get_signature(sign, signLen, rval, sval);
-	if (!res) {
-		if (verbose) {
-			PrintAndLog("  r: %s", sprint_hex(rval, 32));
-			PrintAndLog("  s: %s", sprint_hex(sval, 32));
-		}
-
-		uint8_t clientDataHash[32] = {0};
-		size_t clientDataHashLen = 0;
-		res = JsonLoadBufAsHex(root, "$.ClientDataHash", clientDataHash, sizeof(clientDataHash), &clientDataHashLen);
-		if (res || clientDataHashLen != 32) {
-			PrintAndLog("ERROR: Can't get clientDataHash from json!");
-			return 2;
-		}			
-		
-		uint8_t xbuf[4096] = {0};
-		size_t xbuflen = 0;
-		res = FillBuffer(xbuf, sizeof(xbuf), &xbuflen,
-			authData, authDataLen,  // rpIdHash[32] + flags[1] + signCount[4] 
-			clientDataHash, 32,     // Hash of the serialized client data. "$.ClientDataHash" from json
-			NULL, 0);
-		//PrintAndLog("--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
-		res = ecdsa_signature_verify(PublicKey, xbuf, xbuflen, sign, signLen);
-		if (res) {
-			if (res == -0x4e00) {
-				PrintAndLog("Signature is NOT VALID.");
-			} else {
-				PrintAndLog("Other signature check error: %x %s", (res<0)?-res:res, ecdsa_get_error(res));
-			}
-		} else {
-			PrintAndLog("Signature is OK.");
-		}	
-	} else {
-		PrintAndLog("Invalid signature. res=%d.", res);
-	}
+	FIDO2CheckSignature(root, PublicKey, sign, signLen, authData, authDataLen, verbose);
 
 	free(ubuf);
 
