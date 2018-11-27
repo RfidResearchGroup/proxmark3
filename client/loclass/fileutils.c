@@ -163,7 +163,6 @@ int saveFileJSON(const char *preferredName, const char *suffix, uint8_t* data, s
 	}
 	PrintAndLog("File `%s` saved.", fileName);
 	
-	// free json object
 	json_decref(root);
 
 out:	
