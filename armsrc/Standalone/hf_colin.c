@@ -210,12 +210,14 @@ void WriteTagToFlash(uint8_t index, size_t size)
 
 void RunMod()
 {
+	StandAloneMode();
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+	
     currline = 20;
     curlline = 20;
     currfline = 24;
     memset(cjuid, 0, sizeof(cjuid));
     cjcuid = 0;
-    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     uint8_t sectorsCnt = (MF1KSZ / MF1KSZSIZE);
     uint64_t key64;           // Defines current key
     uint8_t *keyBlock = NULL; // Where the keys will be held in memory.
@@ -347,12 +349,6 @@ ACCBITS : 796788[00]+VALUE
     curlline = 20;
     currfline = 24;
     cjSetCursLeft();
-
-    SpinDown(50);
-    SpinOff(50);
-    SpinUp(50);
-    SpinOff(50);
-    SpinDown(50);
 
 failtag:
 

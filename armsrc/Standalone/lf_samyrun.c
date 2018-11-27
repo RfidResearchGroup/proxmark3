@@ -13,6 +13,7 @@
 // samy's sniff and repeat routine for LF
 void RunMod() {
 	StandAloneMode();
+	Dbprintf(">>  LF HID Read/Clone/Sim a.k.a SamyRun Started  <<");		
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
 	uint32_t high[OPTS], low[OPTS];

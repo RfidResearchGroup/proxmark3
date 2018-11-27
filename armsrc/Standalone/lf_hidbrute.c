@@ -29,6 +29,7 @@
 // samy's sniff and repeat routine for LF
 void RunMod() {
 	StandAloneMode();
+	Dbprintf(">>  LF HID corporate bruteforce a.k.a CorporateBrute Started  <<");	
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
 	uint32_t high[OPTS], low[OPTS];

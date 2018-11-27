@@ -35,8 +35,189 @@ on a blank card.
 
 #include "hf_mattyrun.h"
 
+uint8_t uid[10];
+uint32_t cuid;
+
+//-----------------------------------------------------------------------------
+// Matt's StandAlone mod.
+// Work with "magic Chinese" card (email him: ouyangweidaxian@live.cn)
+//-----------------------------------------------------------------------------
+static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
+{
+    // params
+    uint8_t needWipe = arg0;
+    // bit 0 - need get UID
+    // bit 1 - need wupC
+    // bit 2 - need HALT after sequence
+    // bit 3 - need init FPGA and field before sequence
+    // bit 4 - need reset FPGA and LED
+    uint8_t workFlags = arg1;
+    uint8_t blockNo = arg2;
+
+    // card commands
+    uint8_t wupC1[] = {0x40};
+    uint8_t wupC2[] = {0x43};
+    uint8_t wipeC[] = {0x41};
+
+    // variables
+    byte_t isOK = 0;
+    uint8_t d_block[18] = {0x00};
+
+    uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
+    uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE];
+
+    // reset FPGA and LED
+    if (workFlags & 0x08)
+    {
+        iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+        set_tracing(false);
+    }
+
+    while (true)
+    {
+        // get UID from chip
+        if (workFlags & 0x01)
+        {
+            if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true))
+            {
+                DbprintfEx(FLAG_NOLOG, "Can't select card");
+                break;
+            };
+
+            if (mifare_classic_halt(NULL, cuid))
+            {
+                DbprintfEx(FLAG_NOLOG, "Halt error");
+                break;
+            };
+        };
+
+        // reset chip
+        if (needWipe)
+        {
+            ReaderTransmitBitsPar(wupC1, 7, 0, NULL);
+            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a))
+            {
+                DbprintfEx(FLAG_NOLOG, "wupC1 error");
+                break;
+            };
+
+            ReaderTransmit(wipeC, sizeof(wipeC), NULL);
+            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a))
+            {
+                DbprintfEx(FLAG_NOLOG, "wipeC error");
+                break;
+            };
+
+            if (mifare_classic_halt(NULL, cuid))
+            {
+                DbprintfEx(FLAG_NOLOG, "Halt error");
+                break;
+            };
+        };
+
+        // chaud
+        // write block
+        if (workFlags & 0x02)
+        {
+            ReaderTransmitBitsPar(wupC1, 7, 0, NULL);
+            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a))
+            {
+                DbprintfEx(FLAG_NOLOG, "wupC1 error");
+                break;
+            };
+
+            ReaderTransmit(wupC2, sizeof(wupC2), NULL);
+            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a))
+            {
+                DbprintfEx(FLAG_NOLOG, "wupC2 errorv");
+                break;
+            };
+        }
+
+        if ((mifare_sendcmd_short(NULL, 0, 0xA0, blockNo, receivedAnswer, receivedAnswerPar, NULL) != 1) || (receivedAnswer[0] != 0x0a))
+        {
+            DbprintfEx(FLAG_NOLOG, "write block send command error");
+            break;
+        };
+
+        memcpy(d_block, datain, 16);
+        AddCrc14A(d_block, 16);
+        ReaderTransmit(d_block, sizeof(d_block), NULL);
+        if ((ReaderReceive(receivedAnswer, receivedAnswerPar) != 1) || (receivedAnswer[0] != 0x0a))
+        {
+            DbprintfEx(FLAG_NOLOG, "write block send data error");
+            break;
+        };
+
+        if (workFlags & 0x04)
+        {
+            if (mifare_classic_halt(NULL, cuid))
+            {
+                DbprintfEx(FLAG_NOLOG, "Halt error");
+                break;
+            };
+        }
+
+        isOK = 1;
+        break;
+    }
+
+    if ((workFlags & 0x10) || (!isOK))
+    {
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    }
+
+    return isOK;
+}
+
+/* the chk function is a piwi’ed(tm) check that will try all keys for
+a particular sector. also no tracing no dbg */
+static int saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, uint8_t keyCount, uint8_t *datain, uint64_t *key)
+{
+    MF_DBGLEVEL = MF_DBG_NONE;
+    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+    set_tracing(false);
+
+    struct Crypto1State mpcs = {0, 0};
+    struct Crypto1State *pcs;
+    pcs = &mpcs;
+
+    for (int i = 0; i < keyCount; ++i)
+    {
+
+        /* no need for anticollision. just verify tag is still here */
+        // if (!iso14443a_fast_select_card(cjuid, 0)) {
+        if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true))
+        {
+            DbprintfEx(FLAG_NOLOG, "FATAL : E_MF_LOSTTAG");
+            return -1;
+        }
+
+        uint64_t ui64Key = bytes_to_num(datain + i * 6, 6);
+        if (mifare_classic_auth(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST))
+        {
+            uint8_t dummy_answer = 0;
+            ReaderTransmit(&dummy_answer, 1, NULL);
+            // wait for the card to become ready again
+            SpinDelayUs(AUTHENTICATION_TIMEOUT);
+            continue;
+        }
+        crypto1_destroy(pcs);
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+        *key = ui64Key;
+        return i;
+    }
+    crypto1_destroy(pcs);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+
+    return -1;
+}
+
+
 void RunMod() {
 	StandAloneMode();
+	Dbprintf(">>  Matty mifare chk/dump/sim  a.k.a MattyRun Started  <<");
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	
 	/*
 		It will check if the keys from the attacked tag are a subset from
@@ -51,15 +232,13 @@ void RunMod() {
 		If you're using the proxmark connected to a device that has an OS, and you're not using the proxmark3 client to see the debug
 		messages, you MUST uncomment usb_disable().
 	*/
-
-    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-    // usb_disable(); // Comment this line if you want to see debug messages.
-
+	
+	// Comment this line below if you want to see debug messages.
+    // usb_disable(); 
 
     /*
 		Pseudo-configuration block.
     */
-	char keyTypec = '?'; 			// 'A'/'B' or both keys '?'
 	bool printKeys = false; 		// Prints keys
 	bool transferToEml = true; 		// Transfer keys to emulator memory
 	bool ecfill = true; 			// Fill emulator memory with cards content.
@@ -71,7 +250,7 @@ void RunMod() {
 	uint8_t sectorSize = 64; 		// 1k's sector size is 64 bytes.
 	uint8_t blockNo = 3; 			// Security block is number 3 for each sector.
 	uint8_t sectorsCnt = (mifare_size/sectorSize);
-	uint8_t keyType; 				// Keytype buffer
+	uint8_t keyType = 2; 			// Keytype buffer
 	uint64_t key64; 				// Defines current key
 	uint8_t *keyBlock = NULL; 		// Where the keys will be held in memory.
 	uint8_t stKeyBlock = 20; 		// Set the quantity of keys in the block.
@@ -106,24 +285,6 @@ void RunMod() {
 
 	for (int mfKeyCounter = 0; mfKeyCounter < mfKeysCnt; mfKeyCounter++) {
 		num_to_bytes(mfKeys[mfKeyCounter], 6, (uint8_t*)(keyBlock + mfKeyCounter * 6));
-	}
-
-	/*
-		Simple switch just to handle keytpes.
-	*/
-	switch (keyTypec) {
-	case 'a': case 'A':
-		keyType = !0;
-		break;
-	case 'b': case 'B':
-		keyType = !1;
-		break;
-	case '?':
-		keyType = 2;
-		break;
-	default:
-		Dbprintf("[!] Key type must be A , B or ?");
-		keyType = 2;
 	}
 
 	/*
@@ -191,16 +352,14 @@ void RunMod() {
 	}
 
 	/*
-		TODO: This.
-
-		- If at least one key was found, start a nested attack based on that key, and continue.
-		
+		TODO: 
 		- Get UID from tag and set accordingly in emulator memory and call mifare1ksim with right flags (iceman)
 	*/
 	if (!allKeysFound && keyFound) {
 		Dbprintf("\t✕ There's currently no nested attack in MattyRun, sorry!");
 		LED_C_ON(); //red
 		LED_A_ON(); //yellow
+		// no room to run nested attack on device (iceman)
 		// Do nested attack, set allKeysFound = true;
 		// allKeysFound = true;
 	} else {
@@ -250,7 +409,7 @@ void RunMod() {
 				
 				LED_B_ON(); // green
 				// assuming arg0==0,  use hardcoded uid 0xdeadbeaf
-				Mifare1ksim( 0, 0, 0, NULL);
+				Mifare1ksim( FLAG_4B_UID_IN_DATA | FLAG_UID_IN_EMUL, 0, 0, uid);
 				LED_B_OFF();
 
 				/*

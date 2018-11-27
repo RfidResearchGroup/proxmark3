@@ -5,17 +5,17 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// asn.1 utils
+// asn.1 dumping
 //-----------------------------------------------------------------------------
-
-#ifndef ASN1UTILS_H
-#define ASN1UTILS_H
+#ifndef ASN1DUMP_H
+#define ASN1DUMP_H
 
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
+#include "emv/tlv.h"
 
-extern int asn1_print(uint8_t *asn1buf, size_t asn1buflen, char *indent);
-extern int ecdsa_asn1_get_signature(uint8_t *signature, size_t signaturelen, uint8_t *rval, uint8_t *sval);
+extern bool asn1_tag_dump(const struct tlv *tlv, FILE *f, int level, bool *candump);
 
 #endif /* asn1utils.h */

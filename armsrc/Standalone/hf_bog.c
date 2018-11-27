@@ -280,15 +280,10 @@ void RAMFUNC SniffAndStore(uint8_t param) {
 
 void RunMod() {
 	
+	StandAloneMode();
+	
 	Dbprintf(">>  Bogiton 14a Sniff UL/UL-EV1/NTAG a.k.a BogitoRun Started  <<");
 	Dbprintf("Starting to sniff");
-	
-	SpinDown(50);
-    SpinOff(50);
-    SpinUp(50);
-    SpinOff(50);
-    SpinDown(50);
-	SpinDelay(500);
 	
 	// param:
 	// bit 0 - trigger from first card answer
@@ -297,4 +292,5 @@ void RunMod() {
 	LEDsoff();	
 	SpinDelay(300);
 	Dbprintf("- [ End ] -> You can take shell back ...");
+	Dbprintf("- [  !  ] -> use 'script run read_pwd_mem' to print passwords");	
 }

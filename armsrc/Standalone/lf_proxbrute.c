@@ -14,6 +14,7 @@
 // samy's sniff and repeat routine for LF
 void RunMod() {
 	StandAloneMode();
+	Dbprintf(">>  LF HID proxII bruteforce a.k.a ProxBrute Started (Brad Antoniewicz) <<");		
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
 	uint32_t high[OPTS], low[OPTS];

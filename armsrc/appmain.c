@@ -415,22 +415,19 @@ void SendStatus(void) {
 void StandAloneMode(void) {
 	
 	DbpString("Stand-alone mode! No PC necessary.");
-	// Oooh pretty -- notify user we're in elite samy mode now
-	LED(LED_RED,	200);
-	LED(LED_ORANGE, 200);
-	LED(LED_GREEN,	200);
-	LED(LED_ORANGE, 200);
-	LED(LED_RED,	200);
-	LED(LED_ORANGE, 200);
-	LED(LED_GREEN,	200);
-	LED(LED_ORANGE, 200);
-	LED(LED_RED,	200);
+	
+	SpinDown(50);
+    SpinOff(50);
+    SpinUp(50);
+    SpinOff(50);
+    SpinDown(50);
+	SpinDelay(500);
 }
 // detection of which Standalone Modes is installed
 // (iceman)
 void printStandAloneModes(void) {
 
-	DbpString("Installed StandAlone Mods");
+	DbpString("Installed StandAlone Mode");
 	
 #if defined(WITH_LF_ICERUN)
 	DbpString("   LF sniff/clone/simulation -  aka IceRun (iceman)");
@@ -445,7 +442,7 @@ void printStandAloneModes(void) {
 	DbpString("   LF HID ProxII bruteforce - aka Proxbrute (Brad Antoniewicz)");
 #endif 
 #if defined(WITH_LF_HIDBRUTE)
-	DbpString("   LF HID corporate 1000 bruteforce - (Federico dotta & Maurizio Agazzini)");
+	DbpString("   LF HID corporate 1000 bruteforce - aka Corporatebrute (Federico dotta & Maurizio Agazzini)");
 #endif 
 #if defined(WITH_HF_MATTYRUN)
 	DbpString("   HF Mifare sniff/clone - aka MattyRun (Matías A. Ré Medina)");
@@ -631,7 +628,7 @@ void ListenReaderField(int limit) {
 void UsbPacketReceived(uint8_t *packet, int len) {
 	UsbCommand *c = (UsbCommand *)packet;
 
-	//Dbprintf("received %d bytes, with command: 0x%04x and args: %d %d %d",len,c->cmd,c->arg[0],c->arg[1],c->arg[2]);
+	//Dbprintf("received %d bytes, with command: 0x%04x and args: %d %d %d", len, c->cmd, c->arg[0], c->arg[1], c->arg[2]);
   
 	switch(c->cmd) {
 #ifdef WITH_LF
@@ -1078,45 +1075,70 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 #ifdef WITH_FPC
 		case CMD_FPC_SEND: {
 
-			char dest[USB_CMD_DATA_SIZE] = { '\0' };
-
-			static const char* welcome = "Proxmark3 Serial interface ready\n";
-			strncat(dest, welcome, sizeof(dest) - strlen(dest) - 1);
-			
-			sprintf(dest + strlen(dest) - 1, "Arg0  | 0x%" PRIx64 " \n", c->arg[0]);
-			sprintf(dest + strlen(dest) - 1, "Arg1  | 0x%" PRIx64 " \n", c->arg[1]);
-			sprintf(dest + strlen(dest) - 1, "Arg2  | 0x%" PRIx64 " \n", c->arg[2]);
-			sprintf(dest + strlen(dest) - 1, "bytes | 0x%02x 0x%02x 0x%02x 0x%02x \n"
-						,c->d.asBytes[0], c->d.asBytes[1], c->d.asBytes[2], c->d.asBytes[3]);
-			
-/*
-			UsbCommand txcmd;
-			for (size_t i=0; i < sizeof(UsbCommand); i++)
-				((uint8_t*)&txcmd)[i] = 0x00;
-
-			// Compose the outgoing command frame
-			txcmd.cmd = CMD_DEBUG_PRINT_STRING;
-			txcmd.arg[0] = len;
-			txcmd.arg[1] = 0;	
-			txcmd.arg[2] = 0;
-			memcpy(txcmd.d.asBytes, dest, USB_CMD_DATA_SIZE);		
-			usart_writebuffer((uint8_t*)&txcmd, sizeof(UsbCommand));
-*/
-			DbpString("Starting to listen");
-			LED_A_ON();
+		
+			StartTicks();
+			DbpString("Mutual USB/FPC sending from device to client");
+	
 			/*
-			uint8_t rx[sizeof(UsbCommand)];
+			char at[11] = {'\0'};
+			static const char* s_at = "AT+BAUD8\0D\0A";
+			strncat(at, s_at, sizeof(at) - strlen(at) - 1);			
+			DbpString("Try AT baud rate setting");
 			usart_init();
+			int16_t res = usart_writebuffer((uint8_t*)&at, sizeof(at));
+			WaitMS(1);
+			Dbprintf("SEND %d | %c%c%c%c%c%c%c%c%c%c%c", res,  at[0], at[1], at[2], at[3], at[4], at[5], at[6], at[7], at[8], at[9], at[10]);
+			
+			uint8_t my_rx[20];
+			memset(my_rx, 0, sizeof(my_rx));
+			res = usart_readbuffer(my_rx, sizeof(my_rx));
+			WaitMS(1);
+			Dbprintf("GOT  %d | %c%c%c%c%c%c%c%c", res,  my_rx[0], my_rx[1], my_rx[2], my_rx[3], my_rx[4], my_rx[5], my_rx[6], my_rx[7]);
+			*/
+			
+			
+			char dest[USB_CMD_DATA_SIZE] = { '\0' };
+			static const char* welcome = "Proxmark3 Serial interface via FPC ready\n";
+			strncat(dest, welcome, sizeof(dest) - strlen(dest) - 1);
+			sprintf(dest + strlen(dest) - 1, "| bytes 0x%02x 0x%02x 0x%02x 0x%02x \n"
+						, c->d.asBytes[0]
+						, c->d.asBytes[1]
+						, c->d.asBytes[2]
+						, c->d.asBytes[3]
+						);
+			
+			UsbCommand txcmd = { CMD_DEBUG_PRINT_STRING, { strlen(dest), 0, 0 } };
+			memcpy(txcmd.d.asBytes, dest, sizeof(dest));		
+
+			LED_A_ON();
+			
+			usart_init();			
+			usart_writebuffer((uint8_t*)&txcmd, sizeof(UsbCommand));
+			
+			//usb
+			cmd_send(CMD_DEBUG_PRINT_STRING, strlen(dest), 0, 0, dest, strlen(dest));
+			LED_A_OFF();
+			
+			
+			/*
+			uint8_t my_rx[sizeof(UsbCommand)];
 			while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
-				WaitMS(1);
-				if (usart_readbuffer(rx, sizeof(rx)) )
-					DbpString("got 544");
+				LED_B_INV();
+				if (usart_readbuffer(my_rx, sizeof(UsbCommand)) ) {
+					//UsbPacketReceived(my_rx, sizeof(my_rx));
+					
+					UsbCommand *my = (UsbCommand *)my_rx;
+					if (mc->cmd > 0 ) {
+						Dbprintf("received command: 0x%04x and args: %d %d %d", my->cmd, my->arg[0], my->arg[1], my->arg[2]);
+					}
+				}
 			}
 			*/
-			cmd_send(CMD_DEBUG_PRINT_STRING, strlen(dest), 0, 0, dest, strlen(dest));
-			//DbpString("finished");
-			LED_A_OFF();
+
+			//cmd_send(CMD_DEBUG_PRINT_STRING, strlen(dest), 0, 0, dest, strlen(dest));
+
 			cmd_send(CMD_ACK,0,0,0,0,0);
+			StopTicks();
 			break;
 		}
 #endif
@@ -1199,7 +1221,6 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			// arg0 = startindex
 			// arg1 = length bytes to transfer
 			// arg2 = RFU
-			//Dbprintf("transfer to client parameters: %" PRIu32 " | %" PRIu32 " | %" PRIu32, startidx, numofbytes, c->arg[2]);
 
 			for (size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
 				len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
@@ -1234,7 +1255,6 @@ void UsbPacketReceived(uint8_t *packet, int len) {
   			if (!FlashInit()) {
    		       break;
   		    }
-			//Flash_CheckBusy(BUSY_TIMEOUT);
 			
 			for(size_t i = 0; i < len; i += size) {
 				len = MIN((len - i), size);

@@ -108,6 +108,7 @@ CMDSRCS =	crapto1/crapto1.c \
 			mfkey.c \
 			tea.c \
 			fido/additional_ca.c \
+			crypto/asn1dump.c \
 			crypto/libpcrypto.c\
 			crypto/asn1utils.c\
 			cliparser/argtable3.c\

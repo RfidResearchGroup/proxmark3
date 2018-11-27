@@ -146,7 +146,7 @@ static int getCommand(UsbCommand* response) {
 // that we weren't necessarily expecting, for example a debug print.
 //-----------------------------------------------------------------------------
 static void UsbCommandReceived(UsbCommand* c) {
-			
+		
 	switch(c->cmd) {
 		// First check if we are handling a debug message
 		case CMD_DEBUG_PRINT_STRING: {
@@ -237,7 +237,7 @@ __attribute__((force_align_arg_pointer))
 #endif
 *uart_communication(void *targ) {
 	communication_arg_t *conn = (communication_arg_t*)targ;
-	size_t rxlen;	
+	size_t rxlen, totallen = 0;	
 	UsbCommand rx;
 	UsbCommand *prx = &rx;
 	
@@ -247,22 +247,29 @@ __attribute__((force_align_arg_pointer))
 	disableAppNap("Proxmark3 polling UART");
 #endif
 	
-	
 	while (conn->run) {
 		rxlen = 0;
 		bool ACK_received = false;
+		
 		if (uart_receive(sp, (uint8_t *)prx, sizeof(UsbCommand) - (prx - &rx), &rxlen) && rxlen) {
 			prx += rxlen;
+			totallen += rxlen;
 			
-			if (prx - &rx < sizeof(UsbCommand)) {
-				PrintAndLogEx(NORMAL, "Foo %d | %d (will loop)", prx - &rx, rxlen);
+			if ( totallen < sizeof(UsbCommand)) {
+				
+				// iceman: this looping is no working as expected at all. The reassemble of package is nonfunctional.
+				// solved so far with increasing the timeouts of the serial port configuration.
+				PrintAndLogEx(NORMAL, "Foo %d | %d (loop)", prx - &rx, rxlen);
 				continue;
 			}
+		
+			totallen = 0;
 			UsbCommandReceived(&rx);
 			if (rx.cmd == CMD_ACK) {
 				ACK_received = true;
 			}
 		}
+		
 		prx = &rx;
 
 		pthread_mutex_lock(&txBufferMutex);
@@ -297,7 +304,6 @@ __attribute__((force_align_arg_pointer))
 #if defined(__MACH__) && defined(__APPLE__)
 	enableAppNap();
 #endif
-
 	
 	pthread_exit(NULL);
 	return NULL;
