@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include <string.h>
+#include <jansson.h>
 #include "util.h"
 #include "common.h"
 #include "ui.h"
@@ -37,6 +38,7 @@ enum TransactionType {
 	TT_QVSDCMCHIP,
 	TT_CDA,
 };
+extern char *TransactionTypeStr[];
 
 typedef struct {
 	uint8_t CLA;
@@ -92,6 +94,8 @@ int MSCComputeCryptoChecksum(bool LeaveFieldON, uint8_t *UDOL, uint8_t UDOLlen, 
 extern int trSDA(struct tlvdb *tlv);
 extern int trDDA(bool decodeTLV, struct tlvdb *tlv);
 extern int trCDA(struct tlvdb *tlv, struct tlvdb *ac_tlv, struct tlv *pdol_data_tlv, struct tlv *ac_data_tlv);
+
+extern int RecoveryCertificates(struct tlvdb *tlvRoot, json_t *root);
 
 #endif
 

@@ -118,8 +118,12 @@ serial_port uart_open(const char* pcPortName)
   tcflush(sp->fd, TCIOFLUSH);
 
 #ifdef WITH_FPC
-  uart_set_speed(sp, 115200);
+	if ( uart_set_speed(sp, 115200) ) {
   printf("[=] UART Setting serial baudrate 115200 [FPC enabled]\n");  
+	} else {
+		uart_set_speed(sp, 9600);
+		printf("[=] UART Setting serial baudrate 9600 [FPC enabled]\n");		
+	}
 #else	
   // set speed, works for UBUNTU 14.04
   bool success = uart_set_speed(sp, 460800);

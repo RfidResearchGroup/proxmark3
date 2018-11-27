@@ -171,13 +171,6 @@ int usage_hf_14a_info(void){
 	PrintAndLogEx(NORMAL, "       n    test for nack bug");
 	return 0;
 }
-int usage_hf_14a_apdu(void) {
-	PrintAndLogEx(NORMAL, "Usage: hf 14a apdu [-s] [-k] [-t] <APDU (hex)>");
-	PrintAndLogEx(NORMAL, "       -s    activate field and select card");
-	PrintAndLogEx(NORMAL, "       -k    leave the signal field ON after receive response");
-	PrintAndLogEx(NORMAL, "       -t    executes TLV decoder if it possible. TODO!!!!");
-	return 0;
-}
 int usage_hf_14a_antifuzz(void) {
 	PrintAndLogEx(NORMAL, "Usage: hf 14a antifuzz [4|7|10]");
 	PrintAndLogEx(NORMAL, "       <len>    determine which anticollision phase the command will target.");
@@ -187,6 +180,45 @@ int usage_hf_14a_antifuzz(void) {
 int CmdHF14AList(const char *Cmd) {
 	//PrintAndLogEx(NORMAL, "Deprecated command, use 'hf list 14a' instead");
 	CmdTraceList("14a");
+	return 0;
+}
+
+int Hf14443_4aGetCardData(iso14a_card_select_t * card) {
+	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT, 0, 0}};
+	SendCommand(&c);
+
+	UsbCommand resp;
+	WaitForResponse(CMD_ACK,&resp);
+	
+	memcpy(card, (iso14a_card_select_t *)resp.d.asBytes, sizeof(iso14a_card_select_t));
+
+	uint64_t select_status = resp.arg[0];		// 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
+	
+	if(select_status == 0) {
+		PrintAndLog("E->iso14443a card select failed");
+		return 1;
+	}
+
+	if(select_status == 2) {
+		PrintAndLog("E->Card doesn't support iso14443-4 mode");
+		return 1;
+	}
+
+	if(select_status == 3) {
+		PrintAndLog("E->Card doesn't support standard iso14443-3 anticollision");
+		PrintAndLog("\tATQA : %02x %02x", card->atqa[1], card->atqa[0]);
+		return 1;
+	}
+
+	PrintAndLog(" UID: %s", sprint_hex(card->uid, card->uidlen));
+	PrintAndLog("ATQA: %02x %02x", card->atqa[1], card->atqa[0]);
+	PrintAndLog(" SAK: %02x [%" PRIu64 "]", card->sak, resp.arg[0]);
+	if(card->ats_len < 3) {			// a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
+		PrintAndLog("E-> Error ATS length(%d) : %s", card->ats_len, sprint_hex(card->ats, card->ats_len));
+		return 1;
+	}
+	PrintAndLog(" ATS: %s", sprint_hex(card->ats, card->ats_len));
+	
 	return 0;
 }
 
@@ -875,57 +907,35 @@ int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool lea
 	return 0;
 }
 
+// ISO14443-4. 7. Half-duplex block transmission protocol
 int CmdHF14AAPDU(const char *cmd) {
 	uint8_t data[USB_CMD_DATA_SIZE];
 	int datalen = 0;
 	bool activateField = false;
 	bool leaveSignalON = false;
 	bool decodeTLV = false;
-	
-	if (strlen(cmd) < 2) return usage_hf_14a_apdu();
 
-	int cmdp = 0;
-	while(param_getchar(cmd, cmdp) != 0x00) {
-		char c = param_getchar(cmd, cmdp);
-		if ((c == '-') && (param_getlength(cmd, cmdp) == 2))
-			switch (tolower(param_getchar_indx(cmd, 1, cmdp))) {
-				case 'h':
-					return usage_hf_14a_apdu();
-				case 's':
-					activateField = true;
-					break;
-				case 'k':
-					leaveSignalON = true;
-					break;
-				case 't':
-					decodeTLV = true;
-					break;
-				default:
-					PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar_indx(cmd, 1, cmdp));
-					return 1;
-			}
+	CLIParserInit("hf 14a apdu", 
+		"Sends an ISO 7816-4 APDU via ISO 14443-4 block transmission protocol (T=CL)", 
+		"Sample:\n\thf 14a apdu -st 00A404000E325041592E5359532E444446303100\n");
+
+	void* argtable[] = {
+		arg_param_begin,
+		arg_lit0("sS",  "select",  "activate field and select card"),
+		arg_lit0("kK",  "keep",    "leave the signal field ON after receive response"),
+		arg_lit0("tT",  "tlv",     "executes TLV decoder if it possible"),
+		arg_strx1(NULL, NULL,      "<APDU (hex)>", NULL),
+		arg_param_end
+	};
+	CLIExecWithReturn(cmd, argtable, false);
 			
-		if (isxdigit(c)) {
+	activateField = arg_get_lit(1);
+	leaveSignalON = arg_get_lit(2);
+	decodeTLV = arg_get_lit(3);
 			// len = data + PCB(1b) + CRC(2b)
-			switch(param_gethex_to_eol(cmd, cmdp, data, sizeof(data) - 1 - 2, &datalen)) {
-			case 1:
-				PrintAndLogEx(WARNING, "invalid HEX value.");
-				return 1;
-			case 2:
-				PrintAndLogEx(WARNING, "APDU too large.");
-				return 1;
-			case 3:
-				PrintAndLogEx(WARNING, "hex must have even number of digits.");
-				return 1;
-			}
-			
-			// we get all the hex to end of line with spaces
-			break;
-		}
-		
-		cmdp++;
-	}
+	CLIGetHexBLessWithReturn(4, data, &datalen, 1 + 2);
 
+CLIParserFree();
 	PrintAndLogEx(NORMAL, ">>>>[%s%s%s] %s", activateField ? "sel ": "", leaveSignalON ? "keep ": "", decodeTLV ? "TLV": "", sprint_hex(data, datalen));
 	
 	int res = ExchangeAPDU14a(data, datalen, activateField, leaveSignalON, data, USB_CMD_DATA_SIZE, &datalen);

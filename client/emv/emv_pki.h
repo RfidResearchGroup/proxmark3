@@ -21,6 +21,8 @@
 
 #include <stddef.h>
 
+extern void PKISetStrictExecution(bool se);
+
 struct emv_pk *emv_pki_recover_issuer_cert(const struct emv_pk *pk, struct tlvdb *db);
 struct emv_pk *emv_pki_recover_icc_cert(const struct emv_pk *pk, struct tlvdb *db, const struct tlv *sda_tlv);
 struct emv_pk *emv_pki_recover_icc_pe_cert(const struct emv_pk *pk, struct tlvdb *db);
