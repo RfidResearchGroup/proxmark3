@@ -605,8 +605,7 @@ int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool 
 	CborParser parser;
 	CborValue map, mapint;
 	int res;
-//	char *buf;
-//	uint8_t *ubuf;
+	uint8_t *ubuf;
 	size_t n;
 	
 	// credential
@@ -639,9 +638,114 @@ int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool 
 	res = cbor_value_leave_container(&map, &mapint);
 	cbor_check(res);
 	
+	// authData
+	uint8_t authData[400] = {0}; 
+	size_t authDataLen = 0;
+	res = CborMapGetKeyById(&parser, &map, data, dataLen, 2);
+	if (res)
+		return res;
+	res = cbor_value_dup_byte_string(&map, &ubuf, &n, &map);
+	cbor_check(res);
 	
+	authDataLen = n;
+	memcpy(authData, ubuf, authDataLen); 
 	
+	if (verbose2) {
+		PrintAndLog("authData[%d]: %s", n, sprint_hex_inrow(authData, authDataLen));
+	} else {
+		PrintAndLog("authData[%d]: %s...", n, sprint_hex(authData, MIN(authDataLen, 16)));
+	}
 	
+	PrintAndLog("RP ID Hash: %s", sprint_hex(ubuf, 32));
+	
+	// check RP ID Hash
+	if (CheckrpIdHash(root, ubuf)) {
+		PrintAndLog("rpIdHash OK.");
+	} else {
+		PrintAndLog("rpIdHash ERROR!");
+	}
+
+	PrintAndLog("Flags 0x%02x:", ubuf[32]);
+	if (!ubuf[32])
+		PrintAndLog("none");
+	if (ubuf[32] & 0x01)
+		PrintAndLog("up - user presence result");
+	if (ubuf[32] & 0x04)
+		PrintAndLog("uv - user verification (fingerprint scan or a PIN or ...) result");
+	if (ubuf[32] & 0x40)
+		PrintAndLog("at - attested credential data included");
+	if (ubuf[32] & 0x80)
+		PrintAndLog("ed - extension data included");
+
+	uint32_t cntr =  (uint32_t)bytes_to_num(&ubuf[33], 4);
+	PrintAndLog("Counter: %d", cntr);
+	JsonSaveInt(root, "$.AppData.Counter", cntr);
+	
+	free(ubuf);
+	
+	// signature
+	res = CborMapGetKeyById(&parser, &map, data, dataLen, 3);
+	if (res)
+		return res;
+	res = cbor_value_dup_byte_string(&map, &ubuf, &n, &map);
+	cbor_check(res);
+	
+	uint8_t *sign = ubuf;
+	size_t signLen = n;
+
+	cbor_check(res);
+	if (verbose2) {
+		PrintAndLog("signature [%d]: %s", signLen, sprint_hex_inrow(sign, signLen));
+	} else {
+		PrintAndLog("signature [%d]: %s...", signLen, sprint_hex(sign, MIN(signLen, 16)));
+	}
+
+	// get public key from json
+	uint8_t PublicKey[65] = {0};
+	size_t PublicKeyLen = 0;
+	JsonLoadBufAsHex(root, "$.AppData.COSEPublicKey", PublicKey, 65, &PublicKeyLen);
+	PrintAndLog("--pkey[%d]: %s", PublicKeyLen, sprint_hex(PublicKey, PublicKeyLen));
+	
+	// check ANSI X9.62 format ECDSA signature (on P-256)
+	uint8_t rval[300] = {0}; 
+	uint8_t sval[300] = {0}; 
+	res = ecdsa_asn1_get_signature(sign, signLen, rval, sval);
+	if (!res) {
+		if (verbose) {
+			PrintAndLog("  r: %s", sprint_hex(rval, 32));
+			PrintAndLog("  s: %s", sprint_hex(sval, 32));
+		}
+
+		uint8_t clientDataHash[32] = {0};
+		size_t clientDataHashLen = 0;
+		res = JsonLoadBufAsHex(root, "$.ClientDataHash", clientDataHash, sizeof(clientDataHash), &clientDataHashLen);
+		if (res || clientDataHashLen != 32) {
+			PrintAndLog("ERROR: Can't get clientDataHash from json!");
+			return 2;
+		}			
+		
+		uint8_t xbuf[4096] = {0};
+		size_t xbuflen = 0;
+		res = FillBuffer(xbuf, sizeof(xbuf), &xbuflen,
+			authData, authDataLen,  // rpIdHash[32] + flags[1] + signCount[4] 
+			clientDataHash, 32,     // Hash of the serialized client data. "$.ClientDataHash" from json
+			NULL, 0);
+		PrintAndLog("--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
+		res = ecdsa_signature_verify(PublicKey, xbuf, xbuflen, sign, signLen);
+		if (res) {
+			if (res == -0x4e00) {
+				PrintAndLog("Signature is NOT VALID.");
+			} else {
+				PrintAndLog("Other signature check error: %x %s", (res<0)?-res:res, ecdsa_get_error(res));
+			}
+		} else {
+			PrintAndLog("Signature is OK.");
+		}	
+	} else {
+		PrintAndLog("Invalid signature. res=%d.", res);
+	}
+
+	free(ubuf);
 	
 	return 0;
 }

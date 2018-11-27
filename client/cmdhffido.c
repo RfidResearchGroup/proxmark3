@@ -886,7 +886,7 @@ int CmdHFFido2GetAssertion(const char *cmd) {
 	// parse returned cbor
 	FIDO2GetAssertionParseRes(root, &buf[1], len - 1, verbose, verbose2, showCBOR);
 	
-/*	if (root) {
+	if (root) {
 		res = json_dump_file(root, fname, JSON_INDENT(2));
 		if (res) {
 			PrintAndLog("ERROR: can't save the file: %s", fname);
@@ -894,7 +894,7 @@ int CmdHFFido2GetAssertion(const char *cmd) {
 		}
 		PrintAndLog("File `%s` saved.", fname);
 	}
-*/
+
 	json_decref(root);
 	
 	return 0;
