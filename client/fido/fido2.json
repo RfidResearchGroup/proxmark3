@@ -22,7 +22,7 @@
       ".name": "RS256"
     }
   ],
-  "options": {
+  "MakeCredentialOptions": {
     "uv": false,
     "rk": false
   },

@@ -344,7 +344,7 @@ int FIDO2CreateMakeCredentionalReq(json_t *root, uint8_t *data, size_t maxdatale
 		// options
 		res = cbor_encode_uint(&map, 7);
 		fido_check_if(res) {
-			res = CBOREncodeElm(root, "options", &map);
+			res = CBOREncodeElm(root, "MakeCredentialOptions", &map);
 			fido_check(res);
 		}
 	}
