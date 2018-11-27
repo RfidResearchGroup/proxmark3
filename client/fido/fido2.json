@@ -24,7 +24,7 @@
   ],
   "MakeCredentialOptions": {
     "uv": false,
-    "rk": false
+    "rk": true
   },
   "GetAssertionOptions": {
     "up": true,

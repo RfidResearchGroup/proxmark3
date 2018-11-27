@@ -564,7 +564,7 @@ int FIDO2MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, b
 	return 0;
 }
 
-int FIDO2CreateGetAssertionReq(json_t *root, uint8_t *data, size_t maxdatalen, size_t *datalen) {
+int FIDO2CreateGetAssertionReq(json_t *root, uint8_t *data, size_t maxdatalen, size_t *datalen, bool createAllowList) {
 	if (datalen)
 		*datalen = 0;
 	if (!root || !data || !maxdatalen)
@@ -572,19 +572,18 @@ int FIDO2CreateGetAssertionReq(json_t *root, uint8_t *data, size_t maxdatalen, s
 
 	int res;
 	CborEncoder encoder;
-	CborEncoder map;
+	CborEncoder map, array, mapint;
 	
 	cbor_encoder_init(&encoder, data, maxdatalen, 0);
 
 	// create main map
-	res = cbor_encoder_create_map(&encoder, &map, 3);
+	res = cbor_encoder_create_map(&encoder, &map, createAllowList ? 4 : 3);
 	fido_check_if(res) {
 		// rpId
 		res = cbor_encode_uint(&map, 1);
 		fido_check_if(res) {
-
-		res = CBOREncodeElm(root, "$.RelyingPartyEntity.id", &map);
-		fido_check(res);
+			res = CBOREncodeElm(root, "$.RelyingPartyEntity.id", &map);
+			fido_check(res);
 		}
 
 		// clientDataHash
@@ -592,6 +591,34 @@ int FIDO2CreateGetAssertionReq(json_t *root, uint8_t *data, size_t maxdatalen, s
 		fido_check_if(res) {
 			res = CBOREncodeClientDataHash(root, &map);
 			fido_check(res);
+		}
+
+		// allowList
+		if (createAllowList) {
+			res = cbor_encode_uint(&map, 3);
+			fido_check_if(res) {
+				res = cbor_encoder_create_array(&map, &array, 1);
+				fido_check_if(res) {
+					res = cbor_encoder_create_map(&array, &mapint, 2);
+					fido_check_if(res) {
+						res = cbor_encode_text_stringz(&mapint, "type");
+						fido_check(res);
+						
+						res = cbor_encode_text_stringz(&mapint, "public-key");
+						fido_check(res);					
+						
+						res = cbor_encode_text_stringz(&mapint, "id");
+						fido_check(res);					
+						
+						res = CBOREncodeElm(root, "$.AppData.CredentialId", &mapint);
+						fido_check(res);					
+					}
+					res = cbor_encoder_close_container(&array, &mapint);
+					fido_check(res);
+				}
+				res = cbor_encoder_close_container(&map, &array);
+				fido_check(res);
+			}
 		}
 
 		// options
@@ -695,45 +722,46 @@ int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool 
 
 	// publicKeyCredentialUserEntity
 	res = CborMapGetKeyById(&parser, &map, data, dataLen, 4);
-	if (res)
-		return res;
-	
-	res = cbor_value_enter_container(&map, &mapint);
-	cbor_check(res);
-	
-	while (!cbor_value_at_end(&mapint)) {
-		char key[100] = {0};
-		res = CborGetStringValue(&mapint, key, sizeof(key), &n);
+	if (res) {	
+		PrintAndLog("UserEntity n/a");
+	} else {
+		res = cbor_value_enter_container(&map, &mapint);
 		cbor_check(res);
-
-		if (!strcmp(key, "name") || !strcmp(key, "displayName")) {
-			char cname[200] = {0};
-			res = CborGetStringValue(&mapint, cname, sizeof(cname), &n);
+		
+		while (!cbor_value_at_end(&mapint)) {
+			char key[100] = {0};
+			res = CborGetStringValue(&mapint, key, sizeof(key), &n);
 			cbor_check(res);
-			PrintAndLog("UserEntity %s: %s", key, cname);
-		}
 
-		if (!strcmp(key, "id")) {
-			uint8_t cid[200] = {0};
-			res = CborGetBinStringValue(&mapint, cid, sizeof(cid), &n);
-			cbor_check(res);
-			PrintAndLog("UserEntity id [%d]: %s", n, sprint_hex(cid, n));
-			
-			// check
-			uint8_t idbuf[100] = {0};
-			size_t idbuflen;
+			if (!strcmp(key, "name") || !strcmp(key, "displayName")) {
+				char cname[200] = {0};
+				res = CborGetStringValue(&mapint, cname, sizeof(cname), &n);
+				cbor_check(res);
+				PrintAndLog("UserEntity %s: %s", key, cname);
+			}
 
-			JsonLoadBufAsHex(root, "$.UserEntity.id", idbuf, sizeof(idbuf), &idbuflen);
+			if (!strcmp(key, "id")) {
+				uint8_t cid[200] = {0};
+				res = CborGetBinStringValue(&mapint, cid, sizeof(cid), &n);
+				cbor_check(res);
+				PrintAndLog("UserEntity id [%d]: %s", n, sprint_hex(cid, n));
+				
+				// check
+				uint8_t idbuf[100] = {0};
+				size_t idbuflen;
 
-			if (idbuflen == n && !memcmp(idbuf, cid, idbuflen)) {
-				PrintAndLog("UserEntity id OK.");
-			} else {
-				PrintAndLog("ERROR: Wrong UserEntity id (from json: %s)", sprint_hex(idbuf, idbuflen));
+				JsonLoadBufAsHex(root, "$.UserEntity.id", idbuf, sizeof(idbuf), &idbuflen);
+
+				if (idbuflen == n && !memcmp(idbuf, cid, idbuflen)) {
+					PrintAndLog("UserEntity id OK.");
+				} else {
+					PrintAndLog("ERROR: Wrong UserEntity id (from json: %s)", sprint_hex(idbuf, idbuflen));
+				}
 			}
 		}
+		res = cbor_value_leave_container(&map, &mapint);
+		cbor_check(res);
 	}
-	res = cbor_value_leave_container(&map, &mapint);
-	cbor_check(res);
 	
 	
 	// signature

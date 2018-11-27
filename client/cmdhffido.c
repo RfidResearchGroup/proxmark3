@@ -783,13 +783,14 @@ int CmdHFFido2GetAssertion(const char *cmd) {
 	CLIParserInit("hf fido assert", 
 		"Execute a FIDO2 Get Assertion command. Needs json file with parameters. Sample file `fido2.json`. File can be placed in proxmark directory or in `proxmark/fido` directory.", 
 		"Usage:\n\thf fido assert -> execute command default parameters file `fido2.json`\n"
-			"\thf fido assert test.json -> execute command with parameters file `text.json`");
+			"\thf fido assert test.json -l -> execute command with parameters file `text.json` and add to request CredentialId");
 
 	void* argtable[] = {
 		arg_param_begin,
 		arg_lit0("aA",  "apdu",     "show APDU reqests and responses"),
 		arg_litn("vV",  "verbose",  0, 2, "show technical data. vv - show full certificates data"),
 		arg_lit0("cC",  "cbor",     "show CBOR decoded data"),
+		arg_lit0("lL",  "list",     "add CredentialId from json to allowList. Needs if `rk` option is `false` (authenticator don't store credential to its memory)"),
 		arg_str0(NULL,  NULL,		"<json file name>", "JSON input / output file name for parameters. Default `fido2.json`"),
 		arg_param_end
 	};
@@ -799,11 +800,12 @@ int CmdHFFido2GetAssertion(const char *cmd) {
 	bool verbose = arg_get_lit(2);
 	bool verbose2 = arg_get_lit(2) > 1;
 	bool showCBOR = arg_get_lit(3);
+	bool createAllowList = arg_get_lit(4);
 
 	uint8_t jsonname[250] ={0};
 	char *cjsonname = (char *)jsonname;
 	int jsonnamelen = 0;
-	CLIGetStrWithReturn(4, jsonname, &jsonnamelen);
+	CLIGetStrWithReturn(5, jsonname, &jsonnamelen);
 
 	if (!jsonnamelen) {
 		strcat(cjsonname, "fido2");
@@ -847,7 +849,7 @@ int CmdHFFido2GetAssertion(const char *cmd) {
 		return 2;
 	}
 
-	res = FIDO2CreateGetAssertionReq(root, data, sizeof(data), &datalen);
+	res = FIDO2CreateGetAssertionReq(root, data, sizeof(data), &datalen, createAllowList);
 	if (res)
 		return res;
 	
