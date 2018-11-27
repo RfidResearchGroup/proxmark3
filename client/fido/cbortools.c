@@ -463,3 +463,19 @@ int CBOREncodeElm(json_t *root, char *rootElmId, CborEncoder *encoder) {
 
 	return res;
 }
+
+CborError CBOREncodeClientDataHash(json_t *root, CborEncoder *encoder) {
+	uint8_t buf[100] = {0};
+	size_t jlen;
+
+	JsonLoadBufAsHex(root, "$.ClientDataHash", buf, sizeof(buf), &jlen);
+	
+	// fill with 0x00 if not found
+	if (!jlen)
+		jlen = 32;
+	
+	int res = cbor_encode_byte_string(encoder, buf, jlen);
+	cbor_check(res);
+
+	return 0;
+}

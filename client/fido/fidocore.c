@@ -282,22 +282,6 @@ int FIDOCheckDERAndGetKey(uint8_t *der, size_t derLen, bool verbose, uint8_t *pu
 #define fido_check_if(r) if ((r) != CborNoError) {return r;} else
 #define fido_check(r) if ((r) != CborNoError) return r;
 
-int CBOREncodeClientDataHash(json_t *root, CborEncoder *encoder) {
-	uint8_t buf[100] = {0};
-	size_t jlen;
-
-	JsonLoadBufAsHex(root, "$.ClientDataHash", buf, sizeof(buf), &jlen);
-	
-	// fill with 0x00 if not found
-	if (!jlen)
-		jlen = 32;
-	
-	int res = cbor_encode_byte_string(encoder, buf, jlen);
-	fido_check(res);
-
-	return 0;
-}
-
 int FIDO2CreateMakeCredentionalReq(json_t *root, uint8_t *data, size_t maxdatalen, size_t *datalen) {
 	if (datalen)
 		*datalen = 0;

@@ -33,5 +33,6 @@ extern CborError CborGetStringValue(CborValue *elm, char *data, size_t maxdatale
 extern CborError CborGetStringValueBuf(CborValue *elm);
 
 extern int CBOREncodeElm(json_t *root, char *rootElmId, CborEncoder *encoder);
+extern CborError CBOREncodeClientDataHash(json_t *root, CborEncoder *encoder);
 
 #endif /* __CBORTOOLS_H__ */
