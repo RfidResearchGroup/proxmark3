@@ -7,12 +7,14 @@
 //-----------------------------------------------------------------------------
 // asn.1 dumping
 //-----------------------------------------------------------------------------
+#define _POSIX_C_SOURCE 200809L                 // need for strnlen()
 
 #include "asn1dump.h"
 #include <ctype.h>
 #include <stdlib.h>
 #include <unistd.h> 
 #include <stdio.h>
+#include <string.h>
 #include <jansson.h>
 #include <mbedtls/asn1.h>
 #include <mbedtls/oid.h>

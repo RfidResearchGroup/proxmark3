@@ -203,8 +203,13 @@ int TinyCborPrintFIDOPackage(uint8_t cmdCode, bool isResponse, uint8_t *data, si
     CborError err = dumprecursive(cmdCode, isResponse, &cb, false, 0);
 
 	if (err) {
-		fprintf(stderr, "CBOR parsing failure at offset %d: %s\n",
-				cb.ptr - data, cbor_error_string(err));
+		fprintf(stderr,
+#if __WORDSIZE == 64		
+		"CBOR parsing failure at offset %" PRId64 " : %s\n",
+#else
+		"CBOR parsing failure at offset %" PRId32 " : %s\n",	
+#endif
+		cb.ptr - data, cbor_error_string(err));
 		return 1;
 	}	
 	
