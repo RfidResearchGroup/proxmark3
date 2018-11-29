@@ -57,7 +57,7 @@ CLEAN = $(CMDOBJS)
 CC= gcc
 CFLAGS= -O2 -Wall -Wno-unused-variable -Wno-unused-function
 LDFLAGS= $(SYSLDFLAGS) $(mbedtls_LDFLAGS)
-LIBS= -lm $(SYSLIBS) $(MYLIBS)
+LIBS=  $(SYSLIBS) $(MYLIBS)
 DEFAULT_INCLUDES = -I. -I..
 DEFS = -DHAVE_STDINT_H
 
