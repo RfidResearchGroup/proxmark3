@@ -203,7 +203,6 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
 					memset(path, 0x00, sizeof(path));
 					sprintf(path, "$.SectorKeys.%d.AccessConditionsText.UserData", mfSectorNum(i));
 					JsonSaveBufAsHexCompact(root, path, &adata[3], 1);
-
 				}
 			}
 			break;
