@@ -17,6 +17,52 @@
 #include "ui.h"
 #include "crypto/libpcrypto.h"
 
+AccessConditions_t MFAccessConditions[] = {
+	{0x00, "rdAB wrAB incAB dectrAB"},
+	{0x01, "rdAB dectrAB"},
+	{0x02, "rdAB"},
+	{0x03, "rdB wrB"},
+	{0x04, "rdAB wrB"},
+	{0x05, "rdB"},
+	{0x06, "rdAB wrB incB dectrAB"},
+	{0x07, "none"}
+};
+
+AccessConditions_t MFAccessConditionsTrailer[] = {
+	{0x00, "rdAbyA rdCbyA rdBbyA wrBbyA"},
+	{0x01, "wrAbyA rdCbyA wrCbyA rdBbyA wrBbyA"},
+	{0x02, "rdCbyA rdBbyA"},
+	{0x03, "wrAbyB rdCbyAB wrCbyB wrBbyB"},
+	{0x04, "wrAbyB rdCbyAB wrBbyB"},
+	{0x05, "rdCbyAB wrCbyB"},
+	{0x06, "rdCbyAB"},
+	{0x07, "rdCbyAB"}
+};
+
+char *mfGetAccessConditionsDesc(uint8_t blockn, uint8_t *data) {
+	static char StaticNone[] = "none";
+	
+	uint8_t data1 = ((data[1] >> 4) & 0x0f) >> blockn;
+	uint8_t data2 = ((data[2]) & 0x0f) >> blockn;
+	uint8_t data3 = ((data[2] >> 4) & 0x0f) >> blockn;
+	
+	uint8_t cond = (data1 & 0x01) << 2 | (data2 & 0x01) << 1 | (data3 & 0x01);
+
+	if (blockn == 3) {
+		for (int i = 0; i < ARRAYLEN(MFAccessConditionsTrailer); i++)
+			if (MFAccessConditionsTrailer[i].cond == cond) {
+				return MFAccessConditionsTrailer[i].description;
+			}
+	} else {
+		for (int i = 0; i < ARRAYLEN(MFAccessConditions); i++)
+			if (MFAccessConditions[i].cond == cond) {
+				return MFAccessConditions[i].description;
+			}
+	};
+	
+	return StaticNone;
+};
+
 int CalculateEncIVCommand(mf4Session *session, uint8_t *iv, bool verbose) {
 	memcpy(&iv[0], session->TI, 4);
 	memcpy(&iv[4], &session->R_Ctr, 2);
