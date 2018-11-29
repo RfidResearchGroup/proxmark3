@@ -48,6 +48,12 @@
 #include <stdarg.h>
 #include "../ui.h"
 #include "../emv/emvjson.h"
+#include "mifare4.h"
+
+typedef enum {
+	jsfRaw,
+	jsfCardMemory,
+} JSONFileType;
 
 int fileExists(const char *filename);
 
@@ -85,11 +91,12 @@ extern int saveFileEML(const char *preferredName, const char *suffix, uint8_t* d
  *
  * @param preferredName
  * @param suffix the file suffix. Leave out the ".".
+ * @param ftype type of file.
  * @param data The binary data to write to the file
  * @param datalen the length of the data
  * @return 0 for ok, 1 for failz
  */
-extern int saveFileJSON(const char *preferredName, const char *suffix, uint8_t* data, size_t datalen);
+extern int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType ftype, uint8_t* data, size_t datalen);
 
 /** STUB
  * @brief Utility function to load data from a binary file. This method takes a preferred name.

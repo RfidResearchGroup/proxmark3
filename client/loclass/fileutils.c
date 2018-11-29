@@ -135,7 +135,7 @@ out:
 	return retval;
 }
 
-int saveFileJSON(const char *preferredName, const char *suffix, uint8_t* data, size_t datalen) {
+int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType ftype, uint8_t* data, size_t datalen) {
 	if ( preferredName == NULL ) return 1;
 	if ( suffix == NULL ) return 1;
 	if ( data == NULL ) return 1;
@@ -152,7 +152,58 @@ int saveFileJSON(const char *preferredName, const char *suffix, uint8_t* data, s
 
 	json_t *root = json_object();
 	JsonSaveStr(root, "Created", "proxmark3");
-	JsonSaveBufAsHexCompact(root, "raw", data, datalen);
+	switch(ftype) {
+		case jsfRaw:
+			JsonSaveStr(root, "FileType", "raw");
+			JsonSaveBufAsHexCompact(root, "raw", data, datalen);
+			break;
+		case jsfCardMemory:
+			JsonSaveStr(root, "FileType", "mifare card dump");
+			for (int i = 0; i < (datalen / 16); i++) {
+				char path[30] = {0};
+				sprintf(path, "$.blocks.%d", i);
+				JsonSaveBufAsHexCompact(root, path, &data[i * 16], 16);
+				
+				if (i == 0) {
+					JsonSaveBufAsHexCompact(root, "$.Card.UID", &data[0], 4);
+					JsonSaveBufAsHexCompact(root, "$.Card.SAK", &data[5], 1);
+					JsonSaveBufAsHexCompact(root, "$.Card.ATQA", &data[6], 2);
+				}
+				
+				if (mfIsSectorTrailer(i)) {
+					char patha[30] = {0};
+					sprintf(patha, "$.SectorKeys.%d.KeyA", mfSectorNum(i));
+					JsonSaveBufAsHexCompact(root, patha, &data[i * 16], 6);
+
+					char pathb[30] = {0};
+					sprintf(pathb, "$.SectorKeys.%d.KeyB", mfSectorNum(i));
+					JsonSaveBufAsHexCompact(root, pathb, &data[i * 16 + 10], 6);
+
+					char pathc[30] = {0};
+					uint8_t *adata = &data[i * 16 + 6];
+					sprintf(pathc, "$.SectorKeys.%d.AccessConditions", mfSectorNum(i));
+					JsonSaveBufAsHexCompact(root, pathc, &data[i * 16 + 6], 4);
+
+					memset(path, 0x00, sizeof(path));
+					sprintf(path, "$.SectorKeys.%d.AccessConditionsText.block%d", mfSectorNum(i), i - 3);
+					JsonSaveStr(root, path, mfGetAccessConditionsDesc(0, adata));
+
+					memset(path, 0x00, sizeof(path));
+					sprintf(path, "$.SectorKeys.%d.AccessConditionsText.block%d", mfSectorNum(i), i - 2);
+					JsonSaveStr(root, path, mfGetAccessConditionsDesc(1, adata));
+
+					memset(path, 0x00, sizeof(path));
+					sprintf(path, "$.SectorKeys.%d.AccessConditionsText.block%d", mfSectorNum(i), i - 1);
+					JsonSaveStr(root, path, mfGetAccessConditionsDesc(2, adata));
+
+					memset(path, 0x00, sizeof(path));
+					sprintf(path, "$.SectorKeys.%d.AccessConditionsText.block%d", mfSectorNum(i), i);
+					JsonSaveStr(root, path, mfGetAccessConditionsDesc(3, adata));
+
+				}
+			}
+			break;
+	}
 
 	int res = json_dump_file(root, fileName, JSON_INDENT(2));
 	if (res) {
