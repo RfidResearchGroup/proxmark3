@@ -89,7 +89,7 @@ static void error_set(json_error_t *error, const lex_t *lex,
 {
     va_list ap;
     char msg_text[JSON_ERROR_TEXT_LENGTH];
-    char msg_with_context[JSON_ERROR_TEXT_LENGTH + 28];
+    char msg_with_context[JSON_ERROR_TEXT_LENGTH];
 
     int line = -1, col = -1;
     size_t pos = 0;
@@ -114,7 +114,7 @@ static void error_set(json_error_t *error, const lex_t *lex,
         if(saved_text && saved_text[0])
         {
             if(lex->saved_text.length <= 20) {
-                snprintf(msg_with_context, JSON_ERROR_TEXT_LENGTH + 28,
+                snprintf(msg_with_context, JSON_ERROR_TEXT_LENGTH,
                          "%s near '%s'", msg_text, saved_text);
                 msg_with_context[JSON_ERROR_TEXT_LENGTH - 1] = '\0';
                 result = msg_with_context;
@@ -131,7 +131,7 @@ static void error_set(json_error_t *error, const lex_t *lex,
                 result = msg_text;
             }
             else {
-                snprintf(msg_with_context, JSON_ERROR_TEXT_LENGTH + 17,
+                snprintf(msg_with_context, JSON_ERROR_TEXT_LENGTH,
                          "%s near end of file", msg_text);
                 msg_with_context[JSON_ERROR_TEXT_LENGTH - 1] = '\0';
                 result = msg_with_context;
@@ -829,10 +829,8 @@ static json_t *parse_value(lex_t *lex, size_t flags, json_error_t *error)
             }
 
             json = jsonp_stringn_nocheck_own(value, len);
-            if(json) {
-                lex->value.string.val = NULL;
-                lex->value.string.len = 0;
-            }
+            lex->value.string.val = NULL;
+            lex->value.string.len = 0;
             break;
         }
 
@@ -1036,8 +1034,8 @@ json_t *json_loadf(FILE *input, size_t flags, json_error_t *error)
 
 static int fd_get_func(int *fd)
 {
-    uint8_t c;
 #ifdef HAVE_UNISTD_H
+    uint8_t c;
     if (read(*fd, &c, 1) == 1)
         return c;
 #endif
