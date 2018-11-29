@@ -200,6 +200,10 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
 					sprintf(path, "$.SectorKeys.%d.AccessConditionsText.block%d", mfSectorNum(i), i);
 					JsonSaveStr(root, path, mfGetAccessConditionsDesc(3, adata));
 
+					memset(path, 0x00, sizeof(path));
+					sprintf(path, "$.SectorKeys.%d.AccessConditionsText.UserData", mfSectorNum(i));
+					JsonSaveBufAsHexCompact(root, path, &adata[3], 1);
+
 				}
 			}
 			break;
@@ -369,7 +373,6 @@ int loadFileJSON(const char *preferredName, const char *suffix, void* data, size
 	}
 
 	if (!strcmp(ctype, "mfcard")) {
-		printf("--mfcard--\n");
 		size_t sptr = 0;
 		for (int i = 0; i < 256; i++) {
 			if (sptr + 16 > maxdatalen) {
@@ -384,7 +387,6 @@ int loadFileJSON(const char *preferredName, const char *suffix, void* data, size
 			JsonLoadBufAsHex(root, path, &udata[sptr], 16, &len);
 			if (!len)
 				break;
-			printf("--- (%d) (%d) %s \n", i, len, sprint_hex(&udata[sptr], len));
 			
 			sptr += len;
 		}
