@@ -652,8 +652,7 @@ static json_t *string_create(const char *value, size_t len, int own)
 
     string = jsonp_malloc(sizeof(json_string_t));
     if(!string) {
-        if(!own)
-            jsonp_free(v);
+        jsonp_free(v);
         return NULL;
     }
     json_init(&string->json, JSON_STRING);
@@ -768,9 +767,6 @@ static int json_string_equal(const json_t *string1, const json_t *string2)
 {
     json_string_t *s1, *s2;
 
-    if(!json_is_string(string1) || !json_is_string(string2))
-        return 0;
-
     s1 = json_to_string(string1);
     s2 = json_to_string(string2);
     return s1->length == s2->length && !memcmp(s1->value, s2->value, s1->length);
@@ -780,34 +776,38 @@ static json_t *json_string_copy(const json_t *string)
 {
     json_string_t *s;
 
-    if(!json_is_string(string))
-        return NULL;
-
     s = json_to_string(string);
     return json_stringn_nocheck(s->value, s->length);
 }
 
 json_t *json_vsprintf(const char *fmt, va_list ap) {
+    json_t *json = NULL;
     int length;
     char *buf;
     va_list aq;
     va_copy(aq, ap);
 
     length = vsnprintf(NULL, 0, fmt, ap);
-    if (length == 0)
-        return json_string("");
+    if (length == 0) {
+        json = json_string("");
+        goto out;
+    }
 
     buf = jsonp_malloc(length + 1);
     if (!buf)
-        return NULL;
+        goto out;
 
     vsnprintf(buf, length + 1, fmt, aq);
     if (!utf8_check_string(buf, length)) {
         jsonp_free(buf);
-        return NULL;
+        goto out;
     }
 
-    return jsonp_stringn_nocheck_own(buf, length);
+    json = jsonp_stringn_nocheck_own(buf, length);
+
+out:
+    va_end(aq);
+    return json;
 }
 
 json_t *json_sprintf(const char *fmt, ...) {
@@ -1044,8 +1044,6 @@ json_t *json_copy(json_t *json)
         default:
             return NULL;
     }
-
-    return NULL;
 }
 
 json_t *json_deep_copy(const json_t *json)
@@ -1073,6 +1071,4 @@ json_t *json_deep_copy(const json_t *json)
         default:
             return NULL;
     }
-
-    return NULL;
 }

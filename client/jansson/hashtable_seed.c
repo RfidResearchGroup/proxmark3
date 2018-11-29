@@ -164,7 +164,7 @@ static int seed_from_timestamp_and_pid(uint32_t *seed) {
 }
 
 static uint32_t generate_seed() {
-    uint32_t seed;
+    uint32_t seed = 0;
     int done = 0;
 
 #if !defined(_WIN32) && defined(USE_URANDOM)
