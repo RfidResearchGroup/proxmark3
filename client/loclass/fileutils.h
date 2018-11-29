@@ -122,10 +122,11 @@ extern int loadFileEML(const char *preferredName, const char *suffix, void* data
  * @param preferredName
  * @param suffix the file suffix. Leave out the ".".
  * @param data The data array to store the loaded bytes from file
+ * @param maxdatalen maximum size of data array in bytes
  * @param datalen the number of bytes loaded from file
  * @return 0 for ok, 1 for failz
 */
-extern int loadFileJSON(const char *preferredName, const char *suffix, void* data, size_t* datalen);
+extern int loadFileJSON(const char *preferredName, const char *suffix, void* data, size_t maxdatalen, size_t* datalen);
 
 #define PrintAndLogDevice(level, format, args...)  PrintAndLogEx(level, format , ## args)
 #else 

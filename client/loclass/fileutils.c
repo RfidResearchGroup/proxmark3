@@ -283,10 +283,38 @@ out:
 	return retval;
 }
 
-int loadFileJSON(const char *preferredName, const char *suffix, void* data, size_t* datalen) {
-	//stub - for merlokk ;)
+int loadFileJSON(const char *preferredName, const char *suffix, void* data, size_t maxdatalen, size_t* datalen) {
 	datalen = 0;
-	return 1;
+	json_t *root;
+	json_error_t error;
+
+	if ( preferredName == NULL ) return 1;
+	if ( suffix == NULL ) return 1;
+
+	int retval = 0;
+	int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
+	char * fileName = calloc(size, sizeof(char));
+	sprintf(fileName,"%s.%s", preferredName, suffix);
+
+	root = json_load_file(fileName, 0, &error);
+	if (!root) {
+		PrintAndLog("ERROR: json (%s) error on line %d: %s", fileName, error.line, error.text);
+		retval = 2; 
+		goto out;
+	}
+	
+	if (!json_is_object(root)) {
+		PrintAndLog("ERROR: Invalid json (%s) format. root must be an object.", fileName);
+		retval = 3; 
+		goto out;
+	}
+	
+	JsonLoadBufAsHex(root, "$.raw", data, maxdatalen, datalen);
+	
+out:	
+	json_decref(root);
+	free(fileName);
+	return retval;
 }
 
 #else //if we're on ARM
