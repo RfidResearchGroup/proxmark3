@@ -111,23 +111,23 @@ void I2C_SetResetStatus(uint8_t LineRST, uint8_t LineSCK, uint8_t LineSDA) {
 // Reset the SIM_Adapter, then  enter the main program
 // Note: the SIM_Adapter will not enter the main program after power up. Please run this function before use SIM_Adapter.
 void I2C_Reset_EnterMainProgram(void) {
+	StartTicks();
 	I2C_init();
-	
 	I2C_SetResetStatus(0, 0, 0);
-	SpinDelay(30);
+	WaitMS(30);
 	I2C_SetResetStatus(1, 0, 0);
-	SpinDelay(30);
+	WaitMS(30);
 	I2C_SetResetStatus(1, 1, 1);
-	SpinDelay(10);
+	WaitMS(10);
 }
 
 // Reset the SIM_Adapter, then enter the bootloader program
 // Reserve for firmware update.
 void I2C_Reset_EnterBootloader(void) {
 	I2C_SetResetStatus(0, 1, 1);
-	SpinDelay(100);
+	WaitMS(100);
 	I2C_SetResetStatus(1, 1, 1);
-	SpinDelay(10);
+	WaitMS(10);
 }
 
 // Wait for the clock to go High.	
@@ -170,7 +170,7 @@ bool WaitSCL_L_300ms(void){
 		if (!SCL_read)
 			return true;
 		
-		SpinDelay(1);
+		WaitMS(1);
 	}
 	return (delay == 0);
 }
@@ -401,7 +401,7 @@ int16_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t d
 
 	// extra wait  500us (514us measured)
 	// 200us  (xx measured)
-	SpinDelayUs(600);
+	WaitUs(600);
 	bool bBreak = true;
 	uint16_t readcount = 0;
 	
@@ -572,7 +572,6 @@ bool I2C_WriteFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t d
 void I2C_print_status(void) {
 	DbpString("Smart card module (ISO 7816)");
 	uint8_t resp[] = {0,0,0,0};
-	I2C_init();
 	I2C_Reset_EnterMainProgram();
 	uint8_t len = I2C_BufferRead(resp, sizeof(resp), I2C_DEVICE_CMD_GETVERSION, I2C_DEVICE_ADDRESS_MAIN);
 	if ( len > 0 )
@@ -666,7 +665,6 @@ void SmartCardAtr(void) {
 	LED_D_ON();
 	clear_trace();
 	set_tracing(true);
-	I2C_init();
 	I2C_Reset_EnterMainProgram();
 	bool isOK = GetATR( &card );
 	cmd_send(CMD_ACK, isOK, sizeof(smart_card_atr_t), 0, &card, sizeof(smart_card_atr_t));
@@ -707,12 +705,9 @@ void SmartCardRaw( uint64_t arg0, uint64_t arg1, uint8_t *data ) {
 		// Send raw bytes
 		// asBytes = A0 A4 00 00 02
 		// arg1 = len 5
-		I2C_BufferWrite(data, arg1, I2C_DEVICE_CMD_SEND, I2C_DEVICE_ADDRESS_MAIN);
-
-		if ( !I2C_WaitForSim() )
-			goto OUT;
-
-				
+		bool res = I2C_BufferWrite(data, arg1, I2C_DEVICE_CMD_SEND, I2C_DEVICE_ADDRESS_MAIN);
+		if ( !res && MF_DBGLEVEL > 3 ) DbpString(I2C_ERROR);		
+		
 		// read bytes from module
 		len = ISO7618_MAX_FRAME;
 		bool res = sc_rx_bytes(resp, &len);
@@ -724,8 +719,9 @@ void SmartCardRaw( uint64_t arg0, uint64_t arg1, uint8_t *data ) {
 	}
 OUT:	
 	cmd_send(CMD_ACK, len, 0, 0, resp, len);
+	BigBuf_free();
 	set_tracing(false);
-	LEDsoff();
+	LEDsoff();	
 }
 
 void SmartCardUpgrade(uint64_t arg0) {
@@ -763,7 +759,7 @@ void SmartCardUpgrade(uint64_t arg0) {
 		}
 		
 		// writing takes time.
-		SpinDelay(50);
+		WaitMS(50);
 
 		// read
 		res = I2C_ReadFW(verfiydata, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT);
@@ -785,6 +781,7 @@ void SmartCardUpgrade(uint64_t arg0) {
 	}			
 	cmd_send(CMD_ACK, isOK, pos, 0, 0, 0);
 	LED_C_OFF();
+	BigBuf_free();	
 }
 
 void SmartCardSetBaud(uint64_t arg0) {
