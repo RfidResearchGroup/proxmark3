@@ -36,7 +36,9 @@
  ****************************************************************************/
 #include "fileutils.h"
 
- #ifndef ON_DEVICE
+#ifndef ON_DEVICE
+
+#define PATH_MAX_LENGTH 100
 
 /**
  * @brief checks if a file exists
@@ -160,7 +162,7 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
 		case jsfCardMemory:
 			JsonSaveStr(root, "FileType", "mfcard");
 			for (int i = 0; i < (datalen / 16); i++) {
-				char path[30] = {0};
+				char path[PATH_MAX_LENGTH] = {0};
 				sprintf(path, "$.blocks.%d", i);
 				JsonSaveBufAsHexCompact(root, path, &data[i * 16], 16);
 				
@@ -171,18 +173,18 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
 				}
 				
 				if (mfIsSectorTrailer(i)) {
-					char patha[30] = {0};
-					sprintf(patha, "$.SectorKeys.%d.KeyA", mfSectorNum(i));
-					JsonSaveBufAsHexCompact(root, patha, &data[i * 16], 6);
+					memset(path, 0x00, sizeof(path));
+					sprintf(path, "$.SectorKeys.%d.KeyA", mfSectorNum(i));
+					JsonSaveBufAsHexCompact(root, path, &data[i * 16], 6);
 
-					char pathb[30] = {0};
-					sprintf(pathb, "$.SectorKeys.%d.KeyB", mfSectorNum(i));
-					JsonSaveBufAsHexCompact(root, pathb, &data[i * 16 + 10], 6);
+					memset(path, 0x00, sizeof(path));
+					sprintf(path, "$.SectorKeys.%d.KeyB", mfSectorNum(i));
+					JsonSaveBufAsHexCompact(root, path, &data[i * 16 + 10], 6);
 
-					char pathc[30] = {0};
+					memset(path, 0x00, sizeof(path));
 					uint8_t *adata = &data[i * 16 + 6];
-					sprintf(pathc, "$.SectorKeys.%d.AccessConditions", mfSectorNum(i));
-					JsonSaveBufAsHexCompact(root, pathc, &data[i * 16 + 6], 4);
+					sprintf(path, "$.SectorKeys.%d.AccessConditions", mfSectorNum(i));
+					JsonSaveBufAsHexCompact(root, path, &data[i * 16 + 6], 4);
 
 					memset(path, 0x00, sizeof(path));
 					sprintf(path, "$.SectorKeys.%d.AccessConditionsText.block%d", mfSectorNum(i), i - 3);
