@@ -2878,6 +2878,7 @@ int CmdHF14AMfCSave(const char *Cmd) {
 
 	saveFile(filename, "bin", dump, bytes);
 	saveFileEML(filename, "eml", dump, bytes, MFBLOCK_SIZE);
+	saveFileJSON(filename, "json", dump, bytes);
 	free(dump);
 	return 0;
 }
