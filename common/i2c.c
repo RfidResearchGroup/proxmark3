@@ -401,7 +401,7 @@ int16_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t d
 
 	// extra wait  500us (514us measured)
 	// 200us  (xx measured)
-	WaitUs(600);
+	WaitUS(600);
 	bool bBreak = true;
 	uint16_t readcount = 0;
 	
@@ -710,7 +710,7 @@ void SmartCardRaw( uint64_t arg0, uint64_t arg1, uint8_t *data ) {
 		
 		// read bytes from module
 		len = ISO7618_MAX_FRAME;
-		bool res = sc_rx_bytes(resp, &len);
+		res = sc_rx_bytes(resp, &len);
 		if ( res ) {
 			LogTrace(resp, len, 0, 0, NULL, false);
 		} else {
