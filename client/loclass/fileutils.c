@@ -158,7 +158,7 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
 			JsonSaveBufAsHexCompact(root, "raw", data, datalen);
 			break;
 		case jsfCardMemory:
-			JsonSaveStr(root, "FileType", "mifare card dump");
+			JsonSaveStr(root, "FileType", "mfcard");
 			for (int i = 0; i < (datalen / 16); i++) {
 				char path[30] = {0};
 				sprintf(path, "$.blocks.%d", i);
@@ -335,7 +335,7 @@ out:
 }
 
 int loadFileJSON(const char *preferredName, const char *suffix, void* data, size_t maxdatalen, size_t* datalen) {
-	datalen = 0;
+	*datalen = 0;
 	json_t *root;
 	json_error_t error;
 
@@ -360,8 +360,39 @@ int loadFileJSON(const char *preferredName, const char *suffix, void* data, size
 		goto out;
 	}
 	
-	JsonLoadBufAsHex(root, "$.raw", data, maxdatalen, datalen);
+	uint8_t *udata = (uint8_t *)data;
+	char ctype[100] = {0};
+	JsonLoadStr(root, "$.FileType", ctype);
 	
+	if (!strcmp(ctype, "raw")) {
+		JsonLoadBufAsHex(root, "$.raw", udata, maxdatalen, datalen);
+	}
+
+	if (!strcmp(ctype, "mfcard")) {
+		printf("--mfcard--\n");
+		size_t sptr = 0;
+		for (int i = 0; i < 256; i++) {
+			if (sptr + 16 > maxdatalen) {
+				retval = 5;
+				goto out;
+			}
+
+			char path[30] = {0};
+			sprintf(path, "$.blocks.%d", i);
+			
+			size_t len = 0;
+			JsonLoadBufAsHex(root, path, &udata[sptr], 16, &len);
+			if (!len)
+				break;
+			printf("--- (%d) (%d) %s \n", i, len, sprint_hex(&udata[sptr], len));
+			
+			sptr += len;
+		}
+		
+		*datalen = sptr;
+	}
+
+	PrintAndLog("Loaded JSON: (%s) OK.", fileName);
 out:	
 	json_decref(root);
 	free(fileName);

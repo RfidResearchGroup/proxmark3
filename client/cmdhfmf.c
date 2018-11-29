@@ -330,7 +330,9 @@ int usage_hf14_cload(void){
 	PrintAndLogEx(NORMAL, "Options:");
 	PrintAndLogEx(NORMAL, "       h            this help");
 	PrintAndLogEx(NORMAL, "       e            load card with data from emulator memory");
-	PrintAndLogEx(NORMAL, "       <filename>   load card with data from file");
+	PrintAndLogEx(NORMAL, "       j <filename> load card with data from json file");
+	PrintAndLogEx(NORMAL, "       b <filename> load card with data from binary file");
+	PrintAndLogEx(NORMAL, "       <filename>   load card with data from eml file");
 	PrintAndLogEx(NORMAL, "Examples:");
 	PrintAndLogEx(NORMAL, "       hf mf cload mydump");
 	PrintAndLogEx(NORMAL, "       hf mf cload e");	
@@ -2631,12 +2633,21 @@ int CmdHF14AMfCLoad(const char *Cmd) {
 	uint8_t buf8[16] = {0x00};
 	uint8_t fillFromEmulator = 0;
 	int blockNum, flags = 0;
+	bool fillFromJson = false;
+	bool fillFromBin = false;
+	char fileName[50] = {0};
 	
 	char ctmp = tolower(param_getchar(Cmd, 0));
-	if ( strlen(Cmd) == 1 ) {
+	if ( param_getlength(Cmd, 0) == 1 ) {
 		if (ctmp == 'h' || ctmp == 0x00) return usage_hf14_cload();
 		if (ctmp == 'e' ) fillFromEmulator = 1;
+		if (ctmp == 'j' ) fillFromJson = true;
+		if (ctmp == 'b' ) fillFromBin = true;
 	}
+
+	if (fillFromJson || fillFromBin)
+		param_getstr(Cmd, 1, fileName, sizeof(fileName));
+
 	
 	if (fillFromEmulator) {
 		for (blockNum = 0; blockNum < 16 * 4; blockNum += 1) {
@@ -2658,10 +2669,19 @@ int CmdHF14AMfCLoad(const char *Cmd) {
 		return 0;
 	}
 
-	uint8_t *data = calloc(1, 4096);
+	size_t maxdatalen = 4096;
+	uint8_t *data = calloc(1, maxdatalen);
 	size_t datalen = 0;
-	//int res = loadFile(Cmd, "bin", data, &datalen);
-	int res = loadFileEML( Cmd, "eml", data, &datalen);
+	int res = 0;
+	if (fillFromBin) {
+		res = loadFile(fileName, "bin", data, &datalen);
+	} else {
+		if (fillFromJson) {
+			res = loadFileJSON(fileName, "json", data, maxdatalen, &datalen);
+		} else {
+			res = loadFileEML( Cmd, "eml", data, &datalen);
+		}
+	}
 	if ( res ) {
 		free(data);
 		return 1;
