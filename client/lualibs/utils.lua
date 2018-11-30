@@ -109,7 +109,19 @@ local Utils =
 		end
 		return nil		
 	end,
-	
+	----ISO15693 CRC
+	Crc15 = function(s)
+		if s == nil then return nil end
+		if #s == 0 then return nil end
+		if  type(s) == 'string' then
+			local utils = require('utils')
+			return utils.ConvertAsciiToHex(
+							core.iso15693_crc(s)
+							)
+		end
+		return nil		
+	end,
+		
 	------------ CRC-8 Legic checksums
 	-- Takes a hex string and calculates a crc8
 	Crc8Legic = function(s)

@@ -41,7 +41,7 @@ local function parse1443b(data)
 	--]]
 	
 	local count, uid, uidlen, atqb, chipid, cid = bin.unpack('H10CH7CC',data)
-	uid = uid:sub(1,2*uidlen)
+	uid = uid:sub(1, 2*uidlen)
 	return { uid = uid, uidlen = uidlen, atqb = atqb, chipid = chipid, cid = cid }
 end
 
@@ -96,7 +96,7 @@ local function read14443b(disconnect)
 	end
 
 	command = Command:new{cmd = cmds.CMD_ISO_14443B_COMMAND, arg1 = flags}
-	local result,err = sendToDevice(command, false) 
+	local result, err = sendToDevice(command, false) 
 	if result then
 		local count,cmd,arg0,arg1,arg2 = bin.unpack('LLLL',result)
 		if arg0 == 0 then 
@@ -147,9 +147,9 @@ local function waitFor14443b()
 end
 
 local library = {
-	parse1443b  = parse1443b,
-	read1443b 	= read14443b,
+	read = read14443b,
 	waitFor14443b = waitFor14443b,
+	parse1443b  = parse1443b,
 	sendToDevice = sendToDevice,
 	showData = showData,
 	ISO14B_COMMAND = ISO14B_COMMAND,
