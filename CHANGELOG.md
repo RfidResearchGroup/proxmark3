@@ -87,6 +87,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added `hf emv scan` - save card's data to json file (@merlokk)
  - Added `hf emv` `gpo`, `readrec`, `genac`, `challenge`, `intauth` - separate commands from `hf emc exec` (@merlokk)
  - Added  `hf fido` `assert` and `make` commands from fido2 protocol (authenticatorMakeCredential and authenticatorGetAssertion) (@merlokk)
+ - Added trailer block decoding to `hf mf rdbl` and `hf mf cgetbl` (@merlokk)
  
 ### Fixed
 - Changed driver file proxmark3.inf to support both old and new Product/Vendor IDs (piwi)
