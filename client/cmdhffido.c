@@ -456,7 +456,7 @@ int CmdHFFidoAuthenticate(const char *cmd) {
 
 	// public key
 	CLIGetHexWithReturn(8, hdata, &hdatalen);
-	if (hdatalen && hdatalen != 130) {
+	if (hdatalen && hdatalen != 65) {
 		PrintAndLog("ERROR: public key length must be 65 bytes only.");
 		return 1;
 	}
