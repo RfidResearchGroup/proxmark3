@@ -33,11 +33,11 @@
  * proxmark3 project.
  */
 
-#include "uart.h"
-
 // Test if we are dealing with posix operating systems
 #ifndef _WIN32	 
 #define _DEFAULT_SOURCE
+
+#include "uart.h"
 
 #include <termios.h>
 #include <sys/ioctl.h>
