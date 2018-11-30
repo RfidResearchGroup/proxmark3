@@ -554,8 +554,11 @@ int CmdHF14AMfRdBl(const char *Cmd) {
 
 		if (mfIsSectorTrailer(blockNo) && (data[6] || data[7] || data[8])) {
 			PrintAndLogEx(NORMAL, "Trailer decoded:");
+			int bln = mfFirstBlockOfSector(mfSectorNum(blockNo));
+			int blinc = (mfNumBlocksPerSector(mfSectorNum(blockNo)) > 4) ? 5 : 1;
 			for (int i = 0; i < 4; i++) {
-				PrintAndLogEx(NORMAL, "Access block %d: %s", i + mfFirstBlockOfSector(mfSectorNum(blockNo)), mfGetAccessConditionsDesc(i, &data[6]));
+				PrintAndLogEx(NORMAL, "Access block %d%s: %s", bln, ((blinc > 1) && (i < 3) ? "+" : "") , mfGetAccessConditionsDesc(i, &data[6]));
+				bln += blinc;
 			}
 			PrintAndLogEx(NORMAL, "UserData: %s", sprint_hex_inrow(&data[9], 1));
 		}
@@ -2775,8 +2778,11 @@ int CmdHF14AMfCGetBlk(const char *Cmd) {
 		PrintAndLogEx(NORMAL, "Trailer decoded:");
 		PrintAndLogEx(NORMAL, "Key A: %s", sprint_hex_inrow(data, 6));
 		PrintAndLogEx(NORMAL, "Key B: %s", sprint_hex_inrow(&data[10], 6));
+		int bln = mfFirstBlockOfSector(mfSectorNum(blockNo));
+		int blinc = (mfNumBlocksPerSector(mfSectorNum(blockNo)) > 4) ? 5 : 1;
 		for (int i = 0; i < 4; i++) {
-			PrintAndLogEx(NORMAL, "Access block %d: %s", i + mfFirstBlockOfSector(mfSectorNum(blockNo)), mfGetAccessConditionsDesc(i, &data[6]));
+			PrintAndLogEx(NORMAL, "Access block %d%s: %s", bln, ((blinc > 1) && (i < 3) ? "+" : "") , mfGetAccessConditionsDesc(i, &data[6]));
+			bln += blinc;
 		}
 		PrintAndLogEx(NORMAL, "UserData: %s", sprint_hex_inrow(&data[9], 1));
 	}
