@@ -72,8 +72,7 @@ local function parse15693(data)
 	end
 	local uid = utils.ConvertBytesToHex( bytes, true )
 	uid = uid:sub(5, #uid-4)
-	return { uid = uid, }micref_modelcode = micref_modelcode,
-	}
+	return { uid = uid, }
 end
 
 -- This function does a connect and retrieves som info
