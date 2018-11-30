@@ -2,6 +2,7 @@
  * Generic uart / rs232/ serial port library
  *
  * Copyright (c) 2013, Roel Verdult
+ * Copyright (c) 2018 Google
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,6 +37,7 @@
 
 // Test if we are dealing with posix operating systems
 #ifndef _WIN32	 
+#define _DEFAULT_SOURCE
 
 #include <termios.h>
 #include <sys/ioctl.h>
@@ -46,7 +48,12 @@
 #include <limits.h>
 #include <sys/time.h>
 #include <errno.h>
-
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <arpa/inet.h>
+#include <netdb.h>
 
 typedef struct termios term_info;
 typedef struct {
@@ -58,13 +65,66 @@ typedef struct {
 // Set time-out on 30 miliseconds
 const struct timeval timeout = {
   .tv_sec  =     0, // 0 second
-  .tv_usec = 30000  // 30000 micro seconds
+  .tv_usec = 300000  // 300 000 micro seconds
 };
 
 serial_port uart_open(const char* pcPortName)
 {
   serial_port_unix* sp = malloc(sizeof(serial_port_unix));
   if (sp == 0) return INVALID_SERIAL_PORT;
+
+  if (memcmp(pcPortName, "tcp:", 4) == 0) {
+    struct addrinfo *addr, *rp;
+    char *addrstr = strdup(pcPortName + 4);
+
+    if (addrstr == NULL) {
+      printf("Error: strdup\n");
+      return INVALID_SERIAL_PORT;
+    }
+
+    char *colon = strrchr(addrstr, ':');
+    char *portstr;
+    if (colon) {
+      portstr = colon + 1;
+      *colon = '\0';
+    } else {
+      portstr = "7901";
+	}
+	
+	int s = getaddrinfo(addrstr, portstr, NULL, &addr);
+    if (s != 0) {
+      printf("Error: getaddrinfo: %s\n", gai_strerror(s));
+      return INVALID_SERIAL_PORT;
+    }
+
+    int sfd;
+    for (rp = addr; rp != NULL; rp = rp->ai_next) {
+      sfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+
+      if (sfd == -1)
+		continue;
+	
+      if (connect(sfd, rp->ai_addr, rp->ai_addrlen) != -1)
+		break;
+	
+      close(sfd);
+    }
+	
+    if (rp == NULL) {               /* No address succeeded */
+      printf("Error: Could not connect\n");
+      return INVALID_SERIAL_PORT;
+    }
+	
+    freeaddrinfo(addr);
+    free(addrstr);
+	
+    sp->fd = sfd;
+
+    int one = 1;
+    setsockopt(sp->fd, SOL_TCP, TCP_NODELAY, &one, sizeof(one));
+    return sp;
+  }
+
   
   sp->fd = open(pcPortName, O_RDWR | O_NOCTTY | O_NDELAY | O_NONBLOCK);
   if(sp->fd == -1) {
