@@ -212,12 +212,12 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
 
 	int res = json_dump_file(root, fileName, JSON_INDENT(2));
 	if (res) {
-		PrintAndLog("ERROR: can't save the file: %s", fileName);
+		PrintAndLogDevice(FAILED, "error: can't save the file: %s", fileName);
 		json_decref(root);
 		retval = 200;
 		goto out;
 	}
-	PrintAndLog("File `%s` saved.", fileName);
+	PrintAndLogDevice(SUCCESS, "File `%s` saved.", fileName);
 	
 	json_decref(root);
 
