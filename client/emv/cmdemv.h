@@ -26,13 +26,13 @@
 #include "emvcore.h"
 #include "apduinfo.h"
 
-int CmdHFEMV(const char *Cmd);
+int CmdEMV(const char *Cmd);
 
-extern int CmdHFEMVSelect(const char *cmd);
-extern int CmdHFEMVSearch(const char *cmd);
-extern int CmdHFEMVPPSE(const char *cmd);
-extern int CmdHFEMVExec(const char *cmd);
-extern int CmdHfEMVGetrng(const char *Cmd);
-extern int CmdHfEMVList(const char *Cmd);
+extern int CmdEMVSelect(const char *cmd);
+extern int CmdEMVSearch(const char *cmd);
+extern int CmdEMVPPSE(const char *cmd);
+extern int CmdEMVExec(const char *cmd);
+extern int CmdEMVGetrng(const char *Cmd);
+extern int CmdEMVList(const char *Cmd);
 
 #endif

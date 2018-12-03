@@ -40,7 +40,7 @@ void ParamLoadDefaults(struct tlvdb *tlvRoot) {
 	TLV_ADD(0x9F66, "\x26\x00\x00\x00"); // qVSDC
 }
 
-int CmdHFEMVSelect(const char *cmd) {
+int CmdEMVSelect(const char *cmd) {
 	uint8_t data[APDU_AID_LEN] = {0};
 	int datalen = 0;
 
@@ -86,7 +86,7 @@ int CmdHFEMVSelect(const char *cmd) {
 	return 0;
 }
 
-int CmdHFEMVSearch(const char *cmd) {
+int CmdEMVSearch(const char *cmd) {
 
 	CLIParserInit("hf emv search", 
 		"Tries to select all applets from applet list:\n", 
@@ -131,7 +131,7 @@ int CmdHFEMVSearch(const char *cmd) {
 	return 0;
 }
 
-int CmdHFEMVPPSE(const char *cmd) {
+int CmdEMVPPSE(const char *cmd) {
 	
 	CLIParserInit("hf emv pse", 
 		"Executes PSE/PPSE select command. It returns list of applet on the card:\n", 
@@ -181,7 +181,7 @@ int CmdHFEMVPPSE(const char *cmd) {
 	return 0;
 }
 
-int CmdHFEMVGPO(const char *cmd) {
+int CmdEMVGPO(const char *cmd) {
 	uint8_t data[APDU_RES_LEN] = {0};
 	int datalen = 0;
 
@@ -276,7 +276,7 @@ int CmdHFEMVGPO(const char *cmd) {
 	return 0;
 }
 
-int CmdHFEMVReadRecord(const char *cmd) {
+int CmdEMVReadRecord(const char *cmd) {
 	uint8_t data[APDU_RES_LEN] = {0};
 	int datalen = 0;
 
@@ -326,7 +326,7 @@ int CmdHFEMVReadRecord(const char *cmd) {
 	return 0;
 }
 
-int CmdHFEMVAC(const char *cmd) {
+int CmdEMVAC(const char *cmd) {
 	uint8_t data[APDU_RES_LEN] = {0};
 	int datalen = 0;
 
@@ -437,7 +437,7 @@ int CmdHFEMVAC(const char *cmd) {
 	return 0;	
 }
 
-int CmdHFEMVGenerateChallenge(const char *cmd) {
+int CmdEMVGenerateChallenge(const char *cmd) {
 
 	CLIParserInit("hf emv challenge", 
 		"Executes Generate Challenge command. It returns 4 or 8-byte random number from card.\nNeeds a EMV applet to be selected and GPO to be executed.", 
@@ -477,7 +477,7 @@ int CmdHFEMVGenerateChallenge(const char *cmd) {
 	return 0;
 }
 
-int CmdHFEMVInternalAuthenticate(const char *cmd) {
+int CmdEMVInternalAuthenticate(const char *cmd) {
 	uint8_t data[APDU_RES_LEN] = {0};
 	int datalen = 0;
 
@@ -631,7 +631,7 @@ void ProcessGPOResponseFormat1(struct tlvdb *tlvRoot, uint8_t *buf, size_t len, 
 	}
 }
 
-int CmdHFEMVExec(const char *cmd) {
+int CmdEMVExec(const char *cmd) {
 	uint8_t buf[APDU_RES_LEN] = {0};
 	size_t len = 0;
 	uint16_t sw = 0;
@@ -1071,7 +1071,7 @@ int CmdHFEMVExec(const char *cmd) {
 	return 0;
 }
 
-int CmdHFEMVScan(const char *cmd) {
+int CmdEMVScan(const char *cmd) {
 	uint8_t AID[APDU_AID_LEN] = {0};
 	size_t AIDlen = 0;
 	uint8_t buf[APDU_RES_LEN] = {0};
@@ -1409,46 +1409,46 @@ int usage_emv_getrnd(void){
 }
 
 //retrieve the UN number from a terminal
-int CmdHfEMVGetrng(const char *Cmd) {
+int CmdEMVGetrng(const char *Cmd) {
 	char cmdp = param_getchar(Cmd, 0);
 	if ( cmdp == 'h' || cmdp == 'H') return usage_emv_getrnd();
 
 	return 0;
 }
 
-int CmdHfEMVList(const char *Cmd) {
+int CmdEMVList(const char *Cmd) {
 	return CmdTraceList("7816");
 }
 
-int CmdHFEMVTest(const char *cmd) {
+int CmdEMVTest(const char *cmd) {
 	return ExecuteCryptoTests(true);
 }
 
 static command_t CommandTable[] =  {
-	{"help",	CmdHelp,		1,	"This help"},
-	{"exec",	CmdHFEMVExec,	0,	"Executes EMV contactless transaction."},
-	{"pse",		CmdHFEMVPPSE,	0,	"Execute PPSE. It selects 2PAY.SYS.DDF01 or 1PAY.SYS.DDF01 directory."},
-	{"search",	CmdHFEMVSearch,	0,	"Try to select all applets from applets list and print installed applets."},
-	{"select",	CmdHFEMVSelect,	0,	"Select applet."},
-	{"gpo",			CmdHFEMVGPO,					0,	"Execute GetProcessingOptions."},
-	{"readrec",		CmdHFEMVReadRecord,				0,	"Read files from card."},
-	{"genac",		CmdHFEMVAC,						0,	"Generate ApplicationCryptogram."},
-	{"challenge",	CmdHFEMVGenerateChallenge,		0,	"Generate challenge."},
-	{"intauth",		CmdHFEMVInternalAuthenticate,	0,	"Internal authentication."},
-	{"scan",		CmdHFEMVScan,					0,	"Scan EMV card and save it contents to json file for emulator."},
-	{"test",	CmdHFEMVTest,	0,	"Crypto logic test."},
+	{"help",		CmdHelp,						1,	"This help"},
+	{"exec",		CmdEMVExec,						0,	"Executes EMV contactless transaction."},
+	{"pse",			CmdEMVPPSE,						0,	"Execute PPSE. It selects 2PAY.SYS.DDF01 or 1PAY.SYS.DDF01 directory."},
+	{"search",		CmdEMVSearch,					0,	"Try to select all applets from applets list and print installed applets."},
+	{"select",		CmdEMVSelect,					0,	"Select applet."},
+	{"gpo",			CmdEMVGPO,						0,	"Execute GetProcessingOptions."},
+	{"readrec",		CmdEMVReadRecord,				0,	"Read files from card."},
+	{"genac",		CmdEMVAC,						0,	"Generate ApplicationCryptogram."},
+	{"challenge",	CmdEMVGenerateChallenge,		0,	"Generate challenge."},
+	{"intauth",		CmdEMVInternalAuthenticate,		0,	"Internal authentication."},
+	{"scan",		CmdEMVScan,						0,	"Scan EMV card and save it contents to json file for emulator."},
+	{"test",		CmdEMVTest,						0,	"Crypto logic test."},
 	/*
-	{"getrng",		CmdHfEMVGetrng,	  0, "get random number from terminal"}, 
-	{"eload",		CmdHfEmvELoad, 	  0, "load EMV tag into device"},
-	{"dump",		CmdHfEmvDump,	  0, "dump EMV tag values"},
-	{"sim",			CmdHfEmvSim,	  0, "simulate EMV tag"},
-	{"clone",		CmdHfEmvClone,	  0, "clone an EMV tag"}, 
+	{"getrng",		CmdEMVGetrng,	  0, "get random number from terminal"}, 
+	{"eload",		CmdEmvELoad, 	  0, "load EMV tag into device"},
+	{"dump",		CmdEmvDump,	  0, "dump EMV tag values"},
+	{"sim",			CmdEmvSim,	  0, "simulate EMV tag"},
+	{"clone",		CmdEmvClone,	  0, "clone an EMV tag"}, 
 	*/
-	{"list",	CmdHfEMVList,	  0, "[Deprecated] List ISO7816 history"}, 
+	{"list",	CmdEMVList,	  0, "[Deprecated] List ISO7816 history"}, 
 	{NULL, NULL, 0, NULL}
 };
 
-int CmdHFEMV(const char *Cmd) {
+int CmdEMV(const char *Cmd) {
 	clearCommandBuffer();
 	CmdsParse(CommandTable, Cmd);
 	return 0;
