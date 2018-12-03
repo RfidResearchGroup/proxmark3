@@ -44,9 +44,9 @@ int CmdEMVSelect(const char *cmd) {
 	uint8_t data[APDU_AID_LEN] = {0};
 	int datalen = 0;
 
-	CLIParserInit("hf emv select", 
+	CLIParserInit("emv select", 
 		"Executes select applet command", 
-		"Usage:\n\thf emv select -s a00000000101 -> select card, select applet\n\thf emv select -st a00000000101 -> select card, select applet, show result in TLV\n");
+		"Usage:\n\temv select -s a00000000101 -> select card, select applet\n\temv select -st a00000000101 -> select card, select applet, show result in TLV\n");
 
 	void* argtable[] = {
 		arg_param_begin,
@@ -88,9 +88,9 @@ int CmdEMVSelect(const char *cmd) {
 
 int CmdEMVSearch(const char *cmd) {
 
-	CLIParserInit("hf emv search", 
+	CLIParserInit("emv search", 
 		"Tries to select all applets from applet list:\n", 
-		"Usage:\n\thf emv search -s -> select card and search\n\thf emv search -st -> select card, search and show result in TLV\n");
+		"Usage:\n\temv search -s -> select card and search\n\temv search -st -> select card, search and show result in TLV\n");
 
 	void* argtable[] = {
 		arg_param_begin,
@@ -133,9 +133,9 @@ int CmdEMVSearch(const char *cmd) {
 
 int CmdEMVPPSE(const char *cmd) {
 	
-	CLIParserInit("hf emv pse", 
+	CLIParserInit("emv pse", 
 		"Executes PSE/PPSE select command. It returns list of applet on the card:\n", 
-		"Usage:\n\thf emv pse -s1 -> select, get pse\n\thf emv pse -st2 -> select, get ppse, show result in TLV\n");
+		"Usage:\n\temv pse -s1 -> select, get pse\n\temv pse -st2 -> select, get ppse, show result in TLV\n");
 
 	void* argtable[] = {
 		arg_param_begin,
@@ -185,11 +185,11 @@ int CmdEMVGPO(const char *cmd) {
 	uint8_t data[APDU_RES_LEN] = {0};
 	int datalen = 0;
 
-	CLIParserInit("hf emv gpo", 
+	CLIParserInit("emv gpo", 
 		"Executes Get Processing Options command. It returns data in TLV format (0x77 - format2) or plain format (0x80 - format1).\nNeeds a EMV applet to be selected.", 
-		"Usage:\n\thf emv gpo -k -> execute GPO\n"
-			"\thf emv gpo -t 01020304 -> execute GPO with 4-byte PDOL data, show result in TLV\n"
-			"\thf emv gpo -pmt 9F 37 04 -> load params from file, make PDOL data from PDOL, execute GPO with PDOL, show result in TLV\n"); 
+		"Usage:\n\temv gpo -k -> execute GPO\n"
+			"\temv gpo -t 01020304 -> execute GPO with 4-byte PDOL data, show result in TLV\n"
+			"\temv gpo -pmt 9F 37 04 -> load params from file, make PDOL data from PDOL, execute GPO with PDOL, show result in TLV\n"); 
 
 	void* argtable[] = {
 		arg_param_begin,
@@ -280,9 +280,9 @@ int CmdEMVReadRecord(const char *cmd) {
 	uint8_t data[APDU_RES_LEN] = {0};
 	int datalen = 0;
 
-	CLIParserInit("hf emv readrec", 
+	CLIParserInit("emv readrec", 
 		"Executes Read Record command. It returns data in TLV format.\nNeeds a bank applet to be selected and sometimes needs GPO to be executed.", 
-		"Usage:\n\thf emv readrec -k 0101 -> read file SFI=01, SFIrec=01\n\thf emv readrec -kt 0201-> read file 0201 and show result in TLV\n");
+		"Usage:\n\temv readrec -k 0101 -> read file SFI=01, SFIrec=01\n\temv readrec -kt 0201-> read file 0201 and show result in TLV\n");
 
 	void* argtable[] = {
 		arg_param_begin,
@@ -330,12 +330,12 @@ int CmdEMVAC(const char *cmd) {
 	uint8_t data[APDU_RES_LEN] = {0};
 	int datalen = 0;
 
-	CLIParserInit("hf emv genac", 
+	CLIParserInit("emv genac", 
 		"Generate Application Cryptogram command. It returns data in TLV format .\nNeeds a EMV applet to be selected and GPO to be executed.", 
-		"Usage:\n\thf emv genac -k 0102 -> generate AC with 2-byte CDOLdata and keep field ON after command\n"
-			"\thf emv genac -t 01020304 -> generate AC with 4-byte CDOL data, show result in TLV\n"
-			"\thf emv genac -Daac 01020304 -> generate AC with 4-byte CDOL data and terminal decision 'declined'\n"
-			"\thf emv genac -pmt 9F 37 04 -> load params from file, make CDOL data from CDOL, generate AC with CDOL, show result in TLV"); 
+		"Usage:\n\temv genac -k 0102 -> generate AC with 2-byte CDOLdata and keep field ON after command\n"
+			"\temv genac -t 01020304 -> generate AC with 4-byte CDOL data, show result in TLV\n"
+			"\temv genac -Daac 01020304 -> generate AC with 4-byte CDOL data and terminal decision 'declined'\n"
+			"\temv genac -pmt 9F 37 04 -> load params from file, make CDOL data from CDOL, generate AC with CDOL, show result in TLV"); 
 
 	void* argtable[] = {
 		arg_param_begin,
@@ -439,9 +439,9 @@ int CmdEMVAC(const char *cmd) {
 
 int CmdEMVGenerateChallenge(const char *cmd) {
 
-	CLIParserInit("hf emv challenge", 
+	CLIParserInit("emv challenge", 
 		"Executes Generate Challenge command. It returns 4 or 8-byte random number from card.\nNeeds a EMV applet to be selected and GPO to be executed.", 
-		"Usage:\n\thf emv challenge -> get challenge\n\thf emv challenge -k -> get challenge, keep fileld ON\n");
+		"Usage:\n\temv challenge -> get challenge\n\temv challenge -k -> get challenge, keep fileld ON\n");
 
 	void* argtable[] = {
 		arg_param_begin,
@@ -481,11 +481,11 @@ int CmdEMVInternalAuthenticate(const char *cmd) {
 	uint8_t data[APDU_RES_LEN] = {0};
 	int datalen = 0;
 
-	CLIParserInit("hf emv intauth", 
+	CLIParserInit("emv intauth", 
 		"Generate Internal Authenticate command. Usually needs 4-byte random number. It returns data in TLV format .\nNeeds a EMV applet to be selected and GPO to be executed.", 
-		"Usage:\n\thf emv intauth -k 01020304 -> execute Internal Authenticate with 4-byte DDOLdata and keep field ON after command\n"
-			"\thf emv intauth -t 01020304 -> execute Internal Authenticate with 4-byte DDOL data, show result in TLV\n"
-			"\thf emv intauth -pmt 9F 37 04 -> load params from file, make DDOL data from DDOL, Internal Authenticate with DDOL, show result in TLV"); 
+		"Usage:\n\temv intauth -k 01020304 -> execute Internal Authenticate with 4-byte DDOLdata and keep field ON after command\n"
+			"\temv intauth -t 01020304 -> execute Internal Authenticate with 4-byte DDOL data, show result in TLV\n"
+			"\temv intauth -pmt 9F 37 04 -> load params from file, make DDOL data from DDOL, Internal Authenticate with DDOL, show result in TLV"); 
 
 	void* argtable[] = {
 		arg_param_begin,
@@ -646,10 +646,10 @@ int CmdEMVExec(const char *cmd) {
 	struct tlvdb *tlvRoot = NULL;
 	struct tlv *pdol_data_tlv = NULL;
 
-	CLIParserInit("hf emv exec", 
+	CLIParserInit("emv exec", 
 		"Executes EMV contactless transaction", 
-		"Usage:\n\thf emv exec -sat -> select card, execute MSD transaction, show APDU and TLV\n"
-			"\thf emv exec -satc -> select card, execute CDA transaction, show APDU and TLV\n");
+		"Usage:\n\temv exec -sat -> select card, execute MSD transaction, show APDU and TLV\n"
+			"\temv exec -satc -> select card, execute CDA transaction, show APDU and TLV\n");
 
 	void* argtable[] = {
 		arg_param_begin,
@@ -1081,11 +1081,11 @@ int CmdEMVScan(const char *cmd) {
 	json_t *root;
 	json_error_t error;
 
-	CLIParserInit("hf emv scan", 
+	CLIParserInit("emv scan", 
 		"Scan EMV card and save it contents to a file.", 
 		"It executes EMV contactless transaction and saves result to a file which can be used for emulation\n"
-			"Usage:\n\thf emv scan -at -> scan MSD transaction mode and show APDU and TLV\n"
-			"\thf emv scan -c -> scan CDA transaction mode\n");
+			"Usage:\n\temv scan -at -> scan MSD transaction mode and show APDU and TLV\n"
+			"\temv scan -c -> scan CDA transaction mode\n");
 
 	void* argtable[] = {
 		arg_param_begin,
@@ -1160,7 +1160,7 @@ int CmdEMVScan(const char *cmd) {
 		return 2;
 	}
 
-	JsonSaveStr(root, "$.File.Created", "proxmark3 `hf emv scan`");
+	JsonSaveStr(root, "$.File.Created", "proxmark3 `emv scan`");
 	
 	JsonSaveStr(root, "$.Card.Communication", "iso14443-4a");
 	JsonSaveBufAsHex(root, "$.Card.UID", (uint8_t *)&card.uid, card.uidlen);
@@ -1399,12 +1399,12 @@ int CmdEMVScan(const char *cmd) {
 
 int usage_emv_getrnd(void){
 	PrintAndLogEx(NORMAL, "retrieve the UN number from a terminal");
-	PrintAndLogEx(NORMAL, "Usage:  hf emv getrnd [h]");
+	PrintAndLogEx(NORMAL, "Usage:  emv getrnd [h]");
 	PrintAndLogEx(NORMAL, "Options:");
 	PrintAndLogEx(NORMAL, "      h             : this help");
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Examples:");
-	PrintAndLogEx(NORMAL, "      hf emv getrnd");
+	PrintAndLogEx(NORMAL, "      emv getrnd");
 	return 0;
 }
 
