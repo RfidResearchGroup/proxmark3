@@ -260,6 +260,10 @@ int EMVExchangeEx(bool ActivateField, bool LeaveFieldON, sAPDU apdu, bool Includ
 	if (APDULogging)
 		PrintAndLogEx(NORMAL, "<<<< %s", sprint_hex(Result, *ResultLen));
 
+	if (*ResultLen < 2) {
+		return 200;
+	}
+	
 	*ResultLen -= 2;
 	isw = Result[*ResultLen] * 0x0100 + Result[*ResultLen + 1];
 	if (sw)
@@ -400,8 +404,8 @@ int EMVSearch(bool ActivateField, bool LeaveFieldON, bool decodeTLV, struct tlvd
 			if (++retrycnt < 3){
 				i--;
 			} else {
-				// card select error, proxmark error
-				if (res == 1) {
+				// (1) - card select error, proxmark error OR (200) - result length = 0
+				if (res == 1 || res == 200) {
 					PrintAndLogEx(WARNING, "Exit...");
 					return 1;
 				}
