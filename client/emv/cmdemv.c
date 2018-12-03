@@ -54,6 +54,7 @@ int CmdEMVSelect(const char *cmd) {
 		arg_lit0("kK",  "keep",    "keep field for next command"),
 		arg_lit0("aA",  "apdu",    "show APDU reqests and responses"),
 		arg_lit0("tT",  "tlv",     "TLV decode results"),
+		arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
 		arg_strx0(NULL,  NULL,     "<HEX applet AID>", NULL),
 		arg_param_end
 	};
@@ -63,7 +64,10 @@ int CmdEMVSelect(const char *cmd) {
 	bool leaveSignalON = arg_get_lit(2);
 	bool APDULogging = arg_get_lit(3);
 	bool decodeTLV = arg_get_lit(4);
-	CLIGetHexWithReturn(5, data, &datalen);
+	EMVCommandChannel channel = ECC_CONTACTLESS;
+	if (arg_get_lit(5))
+		channel = ECC_CONTACT;
+	CLIGetHexWithReturn(6, data, &datalen);
 	CLIParserFree();
 	
 	SetAPDULogging(APDULogging);
@@ -72,7 +76,7 @@ int CmdEMVSelect(const char *cmd) {
 	uint8_t buf[APDU_RES_LEN] = {0};
 	size_t len = 0;
 	uint16_t sw = 0;
-	int res = EMVSelect(activateField, leaveSignalON, data, datalen, buf, sizeof(buf), &len, &sw, NULL);
+	int res = EMVSelect(channel, activateField, leaveSignalON, data, datalen, buf, sizeof(buf), &len, &sw, NULL);
 
 	if (sw)
 		PrintAndLogEx(INFO, "APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff)); 
@@ -98,6 +102,7 @@ int CmdEMVSearch(const char *cmd) {
 		arg_lit0("kK",  "keep",    "keep field ON for next command"),
 		arg_lit0("aA",  "apdu",    "show APDU reqests and responses"),
 		arg_lit0("tT",  "tlv",     "TLV decode results of selected applets"),
+		arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
 		arg_param_end
 	};
 	CLIExecWithReturn(cmd, argtable, true);
@@ -106,6 +111,9 @@ int CmdEMVSearch(const char *cmd) {
 	bool leaveSignalON = arg_get_lit(2);
 	bool APDULogging = arg_get_lit(3);
 	bool decodeTLV = arg_get_lit(4);
+	EMVCommandChannel channel = ECC_CONTACTLESS;
+	if (arg_get_lit(5))
+		channel = ECC_CONTACT;
 	CLIParserFree();
 	
 	SetAPDULogging(APDULogging);
@@ -114,7 +122,7 @@ int CmdEMVSearch(const char *cmd) {
 	const char *al = "Applets list";
 	t = tlvdb_fixed(1, strlen(al), (const unsigned char *)al);
 
-	if (EMVSearch(activateField, leaveSignalON, decodeTLV, t)) {
+	if (EMVSearch(channel, activateField, leaveSignalON, decodeTLV, t)) {
 		tlvdb_free(t);
 		return 2;
 	}
@@ -145,6 +153,7 @@ int CmdEMVPPSE(const char *cmd) {
 		arg_lit0("2",   "ppse",    "ppse (2PAY.SYS.DDF01) mode (default mode)"),
 		arg_lit0("aA",  "apdu",    "show APDU reqests and responses"),
 		arg_lit0("tT",  "tlv",     "TLV decode results of selected applets"),
+		arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
 		arg_param_end
 	};
 	CLIExecWithReturn(cmd, argtable, true);
@@ -158,6 +167,9 @@ int CmdEMVPPSE(const char *cmd) {
 		PSENum = 2;
 	bool APDULogging = arg_get_lit(5);
 	bool decodeTLV = arg_get_lit(6);
+	EMVCommandChannel channel = ECC_CONTACTLESS;
+	if (arg_get_lit(7))
+		channel = ECC_CONTACT;
 	CLIParserFree();	
 	
 	SetAPDULogging(APDULogging);
@@ -166,7 +178,7 @@ int CmdEMVPPSE(const char *cmd) {
 	uint8_t buf[APDU_RES_LEN] = {0};
 	size_t len = 0;
 	uint16_t sw = 0;
-	int res = EMVSelectPSE(activateField, leaveSignalON, PSENum, buf, sizeof(buf), &len, &sw);
+	int res = EMVSelectPSE(channel, activateField, leaveSignalON, PSENum, buf, sizeof(buf), &len, &sw);
 	
 	if (sw)
 		PrintAndLogEx(INFO, "APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff)); 
@@ -198,6 +210,7 @@ int CmdEMVGPO(const char *cmd) {
 		arg_lit0("mM",  "make",    "make PDOLdata from PDOL (tag 9F38) and parameters (by default uses default parameters)"),
 		arg_lit0("aA",  "apdu",    "show APDU reqests and responses"),
 		arg_lit0("tT",  "tlv",     "TLV decode results of selected applets"),
+		arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
 		arg_strx0(NULL,  NULL,     "<HEX PDOLdata/PDOL>", NULL),
 		arg_param_end
 	};
@@ -208,7 +221,10 @@ int CmdEMVGPO(const char *cmd) {
 	bool dataMakeFromPDOL = arg_get_lit(3);
 	bool APDULogging = arg_get_lit(4);
 	bool decodeTLV = arg_get_lit(5);
-	CLIGetHexWithReturn(6, data, &datalen);
+	EMVCommandChannel channel = ECC_CONTACTLESS;
+	if (arg_get_lit(6))
+		channel = ECC_CONTACT;
+	CLIGetHexWithReturn(7, data, &datalen);
 	CLIParserFree();	
 	
 	SetAPDULogging(APDULogging);
@@ -258,7 +274,7 @@ int CmdEMVGPO(const char *cmd) {
 	uint8_t buf[APDU_RES_LEN] = {0};
 	size_t len = 0;
 	uint16_t sw = 0;
-	int res = EMVGPO(leaveSignalON, pdol_data_tlv_data, pdol_data_tlv_data_len, buf, sizeof(buf), &len, &sw, tlvRoot);
+	int res = EMVGPO(channel, leaveSignalON, pdol_data_tlv_data, pdol_data_tlv_data_len, buf, sizeof(buf), &len, &sw, tlvRoot);
 	
 	if (pdol_data_tlv != &data_tlv)
 		free(pdol_data_tlv);
@@ -289,6 +305,7 @@ int CmdEMVReadRecord(const char *cmd) {
 		arg_lit0("kK",  "keep",    "keep field ON for next command"),
 		arg_lit0("aA",  "apdu",    "show APDU reqests and responses"),
 		arg_lit0("tT",  "tlv",     "TLV decode results of selected applets"),
+		arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
 		arg_strx1(NULL,  NULL,     "<SFI 1byte HEX><SFIrec 1byte HEX>", NULL),
 		arg_param_end
 	};
@@ -297,7 +314,10 @@ int CmdEMVReadRecord(const char *cmd) {
 	bool leaveSignalON = arg_get_lit(1);
 	bool APDULogging = arg_get_lit(2);
 	bool decodeTLV = arg_get_lit(3);
-	CLIGetHexWithReturn(4, data, &datalen);
+	EMVCommandChannel channel = ECC_CONTACTLESS;
+	if (arg_get_lit(4))
+		channel = ECC_CONTACT;
+	CLIGetHexWithReturn(5, data, &datalen);
 	CLIParserFree();
 	
 	if (datalen != 2) {
@@ -311,7 +331,7 @@ int CmdEMVReadRecord(const char *cmd) {
 	uint8_t buf[APDU_RES_LEN] = {0};
 	size_t len = 0;
 	uint16_t sw = 0;
-	int res = EMVReadRecord(leaveSignalON, data[0], data[1], buf, sizeof(buf), &len, &sw, NULL);
+	int res = EMVReadRecord(channel, leaveSignalON, data[0], data[1], buf, sizeof(buf), &len, &sw, NULL);
 	
 	if (sw)
 		PrintAndLogEx(INFO, "APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff)); 
@@ -346,6 +366,7 @@ int CmdEMVAC(const char *cmd) {
 		arg_lit0("mM",  "make",     "make CDOLdata from CDOL (tag 8C and 8D) and parameters (by default uses default parameters)"),
 		arg_lit0("aA",  "apdu",     "show APDU reqests and responses"),
 		arg_lit0("tT",  "tlv",      "TLV decode results of selected applets"),
+		arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
 		arg_strx1(NULL,  NULL,      "<HEX CDOLdata/CDOL>", NULL),
 		arg_param_end
 	};
@@ -375,7 +396,10 @@ int CmdEMVAC(const char *cmd) {
 	bool dataMakeFromCDOL = arg_get_lit(5);
 	bool APDULogging = arg_get_lit(6);
 	bool decodeTLV = arg_get_lit(7);
-	CLIGetHexWithReturn(8, data, &datalen);
+	EMVCommandChannel channel = ECC_CONTACTLESS;
+	if (arg_get_lit(8))
+		channel = ECC_CONTACT;
+	CLIGetHexWithReturn(9, data, &datalen);
 	CLIParserFree();	
 	
 	SetAPDULogging(APDULogging);
@@ -419,7 +443,7 @@ int CmdEMVAC(const char *cmd) {
 	uint8_t buf[APDU_RES_LEN] = {0};
 	size_t len = 0;
 	uint16_t sw = 0;
-	int res = EMVAC(leaveSignalON, termDecision, (uint8_t *)cdol_data_tlv->value, cdol_data_tlv->len, buf, sizeof(buf), &len, &sw, tlvRoot);
+	int res = EMVAC(channel, leaveSignalON, termDecision, (uint8_t *)cdol_data_tlv->value, cdol_data_tlv->len, buf, sizeof(buf), &len, &sw, tlvRoot);
 	
 	if (cdol_data_tlv != &data_tlv)
 		free(cdol_data_tlv);
@@ -447,12 +471,16 @@ int CmdEMVGenerateChallenge(const char *cmd) {
 		arg_param_begin,
 		arg_lit0("kK",  "keep",    "keep field ON for next command"),
 		arg_lit0("aA",  "apdu",    "show APDU reqests and responses"),
+		arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
 		arg_param_end
 	};
 	CLIExecWithReturn(cmd, argtable, true);
 	
 	bool leaveSignalON = arg_get_lit(1);
 	bool APDULogging = arg_get_lit(2);
+	EMVCommandChannel channel = ECC_CONTACTLESS;
+	if (arg_get_lit(3))
+		channel = ECC_CONTACT;
 	CLIParserFree();	
 	
 	SetAPDULogging(APDULogging);
@@ -461,7 +489,7 @@ int CmdEMVGenerateChallenge(const char *cmd) {
 	uint8_t buf[APDU_RES_LEN] = {0};
 	size_t len = 0;
 	uint16_t sw = 0;
-	int res = EMVGenerateChallenge(leaveSignalON, buf, sizeof(buf), &len, &sw, NULL);
+	int res = EMVGenerateChallenge(channel, leaveSignalON, buf, sizeof(buf), &len, &sw, NULL);
 	
 	if (sw)
 		PrintAndLogEx(INFO, "APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff)); 
@@ -494,6 +522,7 @@ int CmdEMVInternalAuthenticate(const char *cmd) {
 		arg_lit0("mM",  "make",    "make DDOLdata from DDOL (tag 9F49) and parameters (by default uses default parameters)"),
 		arg_lit0("aA",  "apdu",    "show APDU reqests and responses"),
 		arg_lit0("tT",  "tlv",     "TLV decode results of selected applets"),
+		arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
 		arg_strx1(NULL,  NULL,     "<HEX DDOLdata/DDOL>", NULL),
 		arg_param_end
 	};
@@ -504,7 +533,10 @@ int CmdEMVInternalAuthenticate(const char *cmd) {
 	bool dataMakeFromDDOL = arg_get_lit(3);
 	bool APDULogging = arg_get_lit(4);
 	bool decodeTLV = arg_get_lit(5);
-	CLIGetHexWithReturn(6, data, &datalen);
+	EMVCommandChannel channel = ECC_CONTACTLESS;
+	if (arg_get_lit(6))
+		channel = ECC_CONTACT;
+	CLIGetHexWithReturn(7, data, &datalen);
 	CLIParserFree();	
 	
 	SetAPDULogging(APDULogging);
@@ -548,7 +580,7 @@ int CmdEMVInternalAuthenticate(const char *cmd) {
 	uint8_t buf[APDU_RES_LEN] = {0};
 	size_t len = 0;
 	uint16_t sw = 0;
-	int res = EMVInternalAuthenticate(leaveSignalON, data, datalen, buf, sizeof(buf), &len, &sw, NULL);
+	int res = EMVInternalAuthenticate(channel, leaveSignalON, data, datalen, buf, sizeof(buf), &len, &sw, NULL);
 	
 	if (ddol_data_tlv != &data_tlv)
 		free(ddol_data_tlv);
@@ -663,6 +695,7 @@ int CmdEMVExec(const char *cmd) {
 		arg_lit0("cC",  "qvsdccda", "Transaction type - qVSDC or M/Chip plus CDA (SDAD generation)."),
 		arg_lit0("xX",  "vsdc",     "Transaction type - VSDC. For test only. Not a standart behavior."),
 		arg_lit0("gG",  "acgpo",    "VISA. generate AC from GPO."),
+		arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
 		arg_param_end
 	};
 	CLIExecWithReturn(cmd, argtable, true);
@@ -682,6 +715,9 @@ int CmdEMVExec(const char *cmd) {
 		TrType = TT_VSDC;
 
 	bool GenACGPO = arg_get_lit(9);
+	EMVCommandChannel channel = ECC_CONTACTLESS;
+	if (arg_get_lit(10))
+		channel = ECC_CONTACT;
 	CLIParserFree();
 	
 	SetAPDULogging(showAPDU);
@@ -696,7 +732,7 @@ int CmdEMVExec(const char *cmd) {
 		// PPSE
 		PrintAndLogEx(NORMAL, "\n* PPSE.");
 		SetAPDULogging(showAPDU);
-		res = EMVSearchPSE(activateField, true, decodeTLV, tlvSelect);
+		res = EMVSearchPSE(channel, activateField, true, decodeTLV, tlvSelect);
 
 		// check PPSE and select application id
 		if (!res) {	
@@ -709,7 +745,7 @@ int CmdEMVExec(const char *cmd) {
 	if (!AIDlen) {
 		PrintAndLogEx(NORMAL, "\n* Search AID in list.");
 		SetAPDULogging(false);
-		if (EMVSearch(activateField, true, decodeTLV, tlvSelect)) {
+		if (EMVSearch(channel, activateField, true, decodeTLV, tlvSelect)) {
 			dreturn(2);
 		}
 
@@ -731,7 +767,7 @@ int CmdEMVExec(const char *cmd) {
 	// Select
 	PrintAndLogEx(NORMAL, "\n* Selecting AID:%s", sprint_hex_inrow(AID, AIDlen));
 	SetAPDULogging(showAPDU);
-	res = EMVSelect(false, true, AID, AIDlen, buf, sizeof(buf), &len, &sw, tlvRoot);
+	res = EMVSelect(channel, false, true, AID, AIDlen, buf, sizeof(buf), &len, &sw, tlvRoot);
 	
 	if (res) {	
 		PrintAndLogEx(WARNING, "Can't select AID (%d). Exit...", res);
@@ -762,7 +798,7 @@ int CmdEMVExec(const char *cmd) {
 	PrintAndLogEx(NORMAL, "PDOL data[%d]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
 
 	PrintAndLogEx(NORMAL, "\n* GPO.");
-	res = EMVGPO(true, pdol_data_tlv_data, pdol_data_tlv_data_len, buf, sizeof(buf), &len, &sw, tlvRoot);
+	res = EMVGPO(channel, true, pdol_data_tlv_data, pdol_data_tlv_data_len, buf, sizeof(buf), &len, &sw, tlvRoot);
 	
 	free(pdol_data_tlv_data);
 	//free(pdol_data_tlv); --- free on exit.
@@ -818,7 +854,7 @@ int CmdEMVExec(const char *cmd) {
 			for (int n = SFIstart; n <= SFIend; n++) {
 				PrintAndLogEx(NORMAL, "* * * SFI[%02x] %d", SFI, n);
 				
-				res = EMVReadRecord(true, SFI, n, buf, sizeof(buf), &len, &sw, tlvRoot);
+				res = EMVReadRecord(channel, true, SFI, n, buf, sizeof(buf), &len, &sw, tlvRoot);
 				if (res) {
 					PrintAndLogEx(WARNING, "Error SFI[%02x]. APDU error %4x", SFI, sw);
 					continue;
@@ -874,7 +910,7 @@ int CmdEMVExec(const char *cmd) {
 	// DDA
 	if (AIP & 0x0020) {
 		PrintAndLogEx(NORMAL, "\n* DDA");		
-		trDDA(decodeTLV, tlvRoot);
+		trDDA(channel, decodeTLV, tlvRoot);
 	}	
 	
 	// transaction check
@@ -924,7 +960,7 @@ int CmdEMVExec(const char *cmd) {
 			PrintAndLogEx(NORMAL, "\n--> Mastercard M/Chip transaction.");
 
 			PrintAndLogEx(NORMAL, "* * Generate challenge");
-			res = EMVGenerateChallenge(true, buf, sizeof(buf), &len, &sw, tlvRoot);
+			res = EMVGenerateChallenge(channel, true, buf, sizeof(buf), &len, &sw, tlvRoot);
 			if (res) {
 				PrintAndLogEx(WARNING, "Error GetChallenge. APDU error %4x", sw);
 				dreturn(6);
@@ -952,7 +988,7 @@ int CmdEMVExec(const char *cmd) {
 			
 			PrintAndLogEx(NORMAL, "* * AC1");
 			// EMVAC_TC + EMVAC_CDAREQ --- to get SDAD
-			res = EMVAC(true, (TrType == TT_CDA) ? EMVAC_TC + EMVAC_CDAREQ : EMVAC_TC, (uint8_t *)cdol_data_tlv->value, cdol_data_tlv->len, buf, sizeof(buf), &len, &sw, tlvRoot);
+			res = EMVAC(channel, true, (TrType == TT_CDA) ? EMVAC_TC + EMVAC_CDAREQ : EMVAC_TC, (uint8_t *)cdol_data_tlv->value, cdol_data_tlv->len, buf, sizeof(buf), &len, &sw, tlvRoot);
 			
 			if (res) {	
 				PrintAndLogEx(NORMAL, "AC1 error(%d): %4x. Exit...", res, sw);
@@ -1041,7 +1077,7 @@ int CmdEMVExec(const char *cmd) {
 				
 				PrintAndLogEx(NORMAL, "\n* Mastercard compute cryptographic checksum(UDOL)");
 				
-				res = MSCComputeCryptoChecksum(true, (uint8_t *)udol_data_tlv->value, udol_data_tlv->len, buf, sizeof(buf), &len, &sw, tlvRoot);
+				res = MSCComputeCryptoChecksum(channel, true, (uint8_t *)udol_data_tlv->value, udol_data_tlv->len, buf, sizeof(buf), &len, &sw, tlvRoot);
 				if (res) {
 					PrintAndLogEx(WARNING, "Error Compute Crypto Checksum. APDU error %4x", sw);
 					free(udol_data_tlv);
@@ -1099,6 +1135,7 @@ int CmdEMVScan(const char *cmd) {
 		arg_lit0("xX",  "vsdc",     "Transaction type - VSDC. For test only. Not a standart behavior."),
 		arg_lit0("gG",  "acgpo",    "VISA. generate AC from GPO."),
 		arg_lit0("mM",  "merge",    "Merge output file with card's data. (warning: the file may be corrupted!)"),
+		arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
 		arg_str1(NULL,  NULL,		"output.json", "JSON output file name"),
 		arg_param_end
 	};
@@ -1119,10 +1156,13 @@ int CmdEMVScan(const char *cmd) {
 
 	bool GenACGPO = arg_get_lit(9);
 	bool MergeJSON = arg_get_lit(10);
+	EMVCommandChannel channel = ECC_CONTACTLESS;
+	if (arg_get_lit(11))
+		channel = ECC_CONTACT;
 	uint8_t relfname[250] ={0};
 	char *crelfname = (char *)relfname;
 	int relfnamelen = 0;
-	CLIGetStrWithReturn(11, relfname, &relfnamelen);
+	CLIGetStrWithReturn(12, relfname, &relfnamelen);
 	CLIParserFree();
 	
 	SetAPDULogging(showAPDU);
@@ -1174,7 +1214,7 @@ int CmdEMVScan(const char *cmd) {
 	
 	// EMV PPSE
 	PrintAndLogEx(NORMAL, "--> PPSE.");
-	res = EMVSelectPSE(true, true, 2, buf, sizeof(buf), &len, &sw);
+	res = EMVSelectPSE(channel, true, true, 2, buf, sizeof(buf), &len, &sw);
 
 	if (!res && sw == 0x9000){
 		if (decodeTLV)
@@ -1191,7 +1231,7 @@ int CmdEMVScan(const char *cmd) {
 		tlvdb_free(fci);
 	}
 
-	res = EMVSearchPSE(false, true, decodeTLV, tlvSelect);
+	res = EMVSearchPSE(channel, false, true, decodeTLV, tlvSelect);
 
 	// check PPSE and select application id
 	if (!res) {	
@@ -1200,7 +1240,7 @@ int CmdEMVScan(const char *cmd) {
 		// EMV SEARCH with AID list
 		SetAPDULogging(false);
 		PrintAndLogEx(NORMAL, "--> AID search.");
-		if (EMVSearch(false, true, decodeTLV, tlvSelect)) {
+		if (EMVSearch(channel, false, true, decodeTLV, tlvSelect)) {
 			PrintAndLogEx(ERR, "Can't found any of EMV AID. Exit...");
 			tlvdb_free(tlvSelect);
 			DropField();
@@ -1233,7 +1273,7 @@ int CmdEMVScan(const char *cmd) {
 
 	PrintAndLogEx(NORMAL, "\n-->Selecting AID:%s.", sprint_hex_inrow(AID, AIDlen));
 	SetAPDULogging(showAPDU);
-	res = EMVSelect(false, true, AID, AIDlen, buf, sizeof(buf), &len, &sw, tlvRoot);
+	res = EMVSelect(channel, false, true, AID, AIDlen, buf, sizeof(buf), &len, &sw, tlvRoot);
 	
 	if (res) {	
 		PrintAndLogEx(ERR, "Can't select AID (%d). Exit...", res);
@@ -1281,7 +1321,7 @@ int CmdEMVScan(const char *cmd) {
 	PrintAndLogEx(INFO, "PDOL data[%d]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
 
 	PrintAndLogEx(INFO, "-->GPO.");
-	res = EMVGPO(true, pdol_data_tlv_data, pdol_data_tlv_data_len, buf, sizeof(buf), &len, &sw, tlvRoot);
+	res = EMVGPO(channel, true, pdol_data_tlv_data, pdol_data_tlv_data_len, buf, sizeof(buf), &len, &sw, tlvRoot);
 	
 	free(pdol_data_tlv_data);
 	free(pdol_data_tlv);
@@ -1340,7 +1380,7 @@ int CmdEMVScan(const char *cmd) {
 			for(int n = SFIstart; n <= SFIend; n++) {
 				PrintAndLogEx(INFO, "---->SFI[%02x] %d", SFI, n);
 				
-				res = EMVReadRecord(true, SFI, n, buf, sizeof(buf), &len, &sw, tlvRoot);
+				res = EMVReadRecord(channel, true, SFI, n, buf, sizeof(buf), &len, &sw, tlvRoot);
 				if (res) {
 					PrintAndLogEx(ERR, "SFI[%02x]. APDU error %4x", SFI, sw);
 					continue;

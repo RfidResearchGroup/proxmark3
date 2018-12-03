@@ -170,17 +170,17 @@ char *fido2GetCmdMemberDescription(uint8_t cmdCode, bool isResponse, int memberN
 int FIDOSelect(bool ActivateField, bool LeaveFieldON, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
 	uint8_t data[] = {0xA0, 0x00, 0x00, 0x06, 0x47, 0x2F, 0x00, 0x01};
 	
-	return EMVSelect(ActivateField, LeaveFieldON, data, sizeof(data), Result, MaxResultLen, ResultLen, sw, NULL);
+	return EMVSelect(ECC_CONTACTLESS, ActivateField, LeaveFieldON, data, sizeof(data), Result, MaxResultLen, ResultLen, sw, NULL);
 }
 
 int FIDOExchange(sAPDU apdu, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
-	int res = EMVExchange(true, apdu, Result, MaxResultLen, ResultLen, sw, NULL);
+	int res = EMVExchange(ECC_CONTACTLESS, true, apdu, Result, MaxResultLen, ResultLen, sw, NULL);
 	if (res == 5) // apdu result (sw) not a 0x9000
 		res = 0;
 	// software chaining
 	while (!res && (*sw >> 8) == 0x61) {
 		size_t oldlen = *ResultLen;
-		res = EMVExchange(true, (sAPDU){0x00, 0xC0, 0x00, 0x00, 0x00, NULL}, &Result[oldlen], MaxResultLen - oldlen, ResultLen, sw, NULL);
+		res = EMVExchange(ECC_CONTACTLESS, true, (sAPDU){0x00, 0xC0, 0x00, 0x00, 0x00, NULL}, &Result[oldlen], MaxResultLen - oldlen, ResultLen, sw, NULL);
 		if (res == 5) // apdu result (sw) not a 0x9000
 			res = 0;
 		
