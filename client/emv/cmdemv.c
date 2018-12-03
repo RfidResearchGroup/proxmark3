@@ -1048,10 +1048,10 @@ int CmdEMVExec(const char *cmd) {
 					dreturn(9);
 				}
 				
-				if (decodeTLV) {
-					TLVPrintFromBuffer(buf, len);
-					PrintAndLogEx(NORMAL, "");
-				}
+				// Mastercard compute cryptographic checksum result
+				TLVPrintFromBuffer(buf, len);
+				PrintAndLogEx(NORMAL, "");
+
 				free(udol_data_tlv);
 
 			}
