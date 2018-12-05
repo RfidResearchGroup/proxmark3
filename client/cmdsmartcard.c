@@ -244,6 +244,12 @@ int CmdSmartRaw(const char *Cmd) {
 	return 0;
 }
 
+int ExchangeAPDUSC(uint8_t *datain, int datainlen, bool activateCard, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
+
+	return 0;
+}	
+
+
 int CmdSmartUpgrade(const char *Cmd) {
 
 	PrintAndLogEx(WARNING, "WARNING - Smartcard socket firmware upgrade.");

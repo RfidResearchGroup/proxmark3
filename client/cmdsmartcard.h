@@ -32,6 +32,8 @@ extern int CmdSmartUpgrade(const char* cmd);
 extern int CmdSmartInfo(const char* cmd);
 extern int CmdSmartReader(const char *Cmd);
 
+extern int ExchangeAPDUSC(uint8_t *datain, int datainlen, bool activateCard, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);
+
 extern int usage_sm_raw(void);
 extern int usage_sm_reader(void);
 extern int usage_sm_info(void);

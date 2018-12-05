@@ -260,6 +260,11 @@ int EMVExchangeEx(EMVCommandChannel channel, bool ActivateField, bool LeaveField
 		}
 		break;
 	case ECC_CONTACT:
+		//int ExchangeAPDUSC(uint8_t *datain, int datainlen, bool activateCard, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);
+		res = ExchangeAPDU14a(data, (IncludeLe?6:5) + apdu.Lc, ActivateField, LeaveFieldON, Result, (int)MaxResultLen, (int *)ResultLen);
+		if (res) {
+			return res;
+		}
 		break;
 	}
 	
