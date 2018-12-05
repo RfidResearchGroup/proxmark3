@@ -87,6 +87,14 @@ static bool smart_select(bool silent) {
 		if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
 		return false;
 	}	
+
+	if (!silent) {
+		smart_card_atr_t card;
+		memcpy(&card, (smart_card_atr_t *)resp.d.asBytes, sizeof(smart_card_atr_t));
+		
+		PrintAndLogEx(INFO, "ISO7816-3 ATR : %s", sprint_hex(card.atr, card.atr_len));	
+	}
+
 	return true;
 }
 
@@ -124,8 +132,8 @@ static int smart_response(uint8_t *data) {
 		goto out;
 	}
 
-	PrintAndLogEx(INFO, "Requesting response");	
-	uint8_t getstatus[] = {0x00, ISO7816_GETSTATUS, 0x00, 0x00, len };
+	PrintAndLogEx(INFO, "Requesting response. len=0x%x", len);	
+	uint8_t getstatus[] = {ISO7816_GETSTATUS, 0x00, 0x00, len};
 	UsbCommand cStatus = {CMD_SMART_RAW, {SC_RAW, sizeof(getstatus), 0}};	
 	memcpy(cStatus.d.asBytes, getstatus, sizeof(getstatus) );
 	clearCommandBuffer();
@@ -245,6 +253,27 @@ int CmdSmartRaw(const char *Cmd) {
 }
 
 int ExchangeAPDUSC(uint8_t *datain, int datainlen, bool activateCard, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
+	*dataoutlen = 0;
+	
+	if (activateCard)
+		smart_select(false);
+	printf("* APDU SC\n");
+
+	UsbCommand c = {CMD_SMART_RAW, {SC_RAW | SC_CONNECT, datainlen, 0}};	
+	if (activateCard) {
+		c.arg[0] |= SC_SELECT;
+	}
+	memcpy(c.d.asBytes, datain, datainlen);
+	clearCommandBuffer();
+	SendCommand(&c);	
+	
+	int len = smart_response(dataout);
+	
+	if ( len < 0 ) {
+		return 2;
+	}
+	
+	*dataoutlen = len;
 
 	return 0;
 }	
