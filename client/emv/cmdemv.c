@@ -895,11 +895,16 @@ int CmdEMVExec(const char *cmd) {
 		tlvdb_add(tlvRoot, oda); 
 		PrintAndLogEx(NORMAL, "* Input list for Offline Data Authentication added to TLV. len=%d \n", ODAiListLen);
 	}
-	
+
 	// get AIP
+	uint16_t AIP = 0;
 	const struct tlv *AIPtlv = tlvdb_get(tlvRoot, 0x82, NULL);	
-	uint16_t AIP = AIPtlv->value[0] + AIPtlv->value[1] * 0x100;
-	PrintAndLogEx(NORMAL, "* * AIP=%04x", AIP);
+	if (AIPtlv) {
+		AIP = AIPtlv->value[0] + AIPtlv->value[1] * 0x100;
+		PrintAndLogEx(NORMAL, "* * AIP=%04x", AIP);
+	} else {
+		PrintAndLogEx(ERR, "Can't found AIP.");
+	}
 
 	// SDA
 	if (AIP & 0x0040) {
