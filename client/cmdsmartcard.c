@@ -119,29 +119,56 @@ static int smart_wait(uint8_t *data) {
 	return len;
 }
 
-static int smart_response(uint8_t *data) {
+static int smart_response(uint8_t apduINS, uint8_t *data) {
 		
-	int len = -1; 
 	int datalen = smart_wait(data);	
+	bool needGetData = false;
 	
-	if ( data[datalen - 2] == 0x61 || data[datalen - 2] == 0x9F ) {
-		len = data[datalen - 1];
-	}
-
-	if (len == -1 ) {
+	if (datalen < 2 ) {
 		goto out;
 	}
 
-	PrintAndLogEx(INFO, "Requesting response. len=0x%x", len);	
-	uint8_t getstatus[] = {ISO7816_GETSTATUS, 0x00, 0x00, len};
-	UsbCommand cStatus = {CMD_SMART_RAW, {SC_RAW, sizeof(getstatus), 0}};	
-	memcpy(cStatus.d.asBytes, getstatus, sizeof(getstatus) );
-	clearCommandBuffer();
-	SendCommand(&cStatus);
-
-	datalen = smart_wait(data);
-out:
+	if (datalen > 2 && data[0] != apduINS) {
+		PrintAndLogEx(ERR, "Card ACK error. len=0x%x data[0]=%02x", datalen, data[0]);	
+		datalen = 0;
+		goto out;
+	}
 	
+	if ( data[datalen - 2] == 0x61 || data[datalen - 2] == 0x9F ) {
+		needGetData = true;
+	}
+
+	if (needGetData) {
+		int len = data[datalen - 1];
+		PrintAndLogEx(INFO, "Requesting response. len=0x%x", len);	
+		uint8_t getstatus[] = {ISO7816_GETSTATUS, 0x00, 0x00, len};
+		UsbCommand cStatus = {CMD_SMART_RAW, {SC_RAW, sizeof(getstatus), 0}};	
+		memcpy(cStatus.d.asBytes, getstatus, sizeof(getstatus) );
+		clearCommandBuffer();
+		SendCommand(&cStatus);
+
+		datalen = smart_wait(data);
+
+		if (datalen < 2 ) {
+			goto out;
+		}
+
+		if (datalen > 2 && data[0] != ISO7816_GETSTATUS) {
+			PrintAndLogEx(ERR, "GetResponse ACK error. len=0x%x data[0]=%02x", len, data[0]);	
+			datalen = 0;
+			goto out;
+		}
+		
+		if (datalen != len + 2 + 1) { // 2 - response, 1 - ACK
+			PrintAndLogEx(WARNING, "GetResponse wrong length. Must be: 0x%02x but: 0x%02x", len, datalen - 3);	
+		}
+	}
+	
+	if (datalen > 2) {
+		datalen--;
+		memmove(data, &data[1], datalen);
+	}
+out:
 	return datalen;
 }
 
@@ -227,7 +254,7 @@ int CmdSmartRaw(const char *Cmd) {
 		if ( !buf )
 			return 1;		
 		
-		int len = smart_response(buf);
+		int len = smart_response(data[1], buf);
 		if ( len < 0 ) {
 			free(buf);
 			return 2;
@@ -239,7 +266,7 @@ int CmdSmartRaw(const char *Cmd) {
 			memcpy(c.d.asBytes, data, sizeof(data) );
 			clearCommandBuffer();
 			SendCommand(&c);
-			len = smart_response(buf);
+			len = smart_response(data[1], buf);
 
 			data[4] = 0;
 		}
@@ -267,11 +294,28 @@ int ExchangeAPDUSC(uint8_t *datain, int datainlen, bool activateCard, bool leave
 	clearCommandBuffer();
 	SendCommand(&c);	
 	
-	int len = smart_response(dataout);
+	int len = smart_response(datain[1], dataout);
 	
 	if ( len < 0 ) {
 		return 2;
 	}
+	
+	// retry
+	if (len > 1 && dataout[len - 2] == 0x6c && datainlen > 4) {
+		UsbCommand c2 = {CMD_SMART_RAW, {SC_RAW, datainlen, 0}};	
+		memcpy(c2.d.asBytes, datain, datainlen);
+		
+		int vlen = 5 + datain[4];
+		if (datainlen == vlen)
+			datainlen++;
+		
+		c2.d.asBytes[vlen] = dataout[len - 1];
+		
+		clearCommandBuffer();
+		SendCommand(&c2);	
+		
+		len = smart_response(datain[1], dataout);
+	}	
 	
 	*dataoutlen = len;
 
@@ -569,7 +613,7 @@ int CmdSmartBruteforceSFI(const char *Cmd) {
 			clearCommandBuffer();
 			SendCommand(&c);
 			
-			smart_response(buf);
+			smart_response(data[1], buf);
 			
 			// if 0x6C
 			if ( buf[0] == 0x6C ) {
@@ -578,7 +622,7 @@ int CmdSmartBruteforceSFI(const char *Cmd) {
 				memcpy(c.d.asBytes, data, sizeof(data) );
 				clearCommandBuffer();
 				SendCommand(&c);
-				uint8_t len = smart_response(buf);
+				uint8_t len = smart_response(data[1], buf);
 				
 				// TLV decoder
 				if (len > 4)
