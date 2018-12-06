@@ -707,16 +707,16 @@ int CmdEMVExec(const char *cmd) {
 	bool forceSearch = arg_get_lit(5);
 
 	enum TransactionType TrType = TT_MSD;
-	if (arg_get_lit(6))
-					TrType = TT_QVSDCMCHIP;
 	if (arg_get_lit(7))
-					TrType = TT_CDA;
+					TrType = TT_QVSDCMCHIP;
 	if (arg_get_lit(8))
+					TrType = TT_CDA;
+	if (arg_get_lit(9))
 		TrType = TT_VSDC;
 
-	bool GenACGPO = arg_get_lit(9);
+	bool GenACGPO = arg_get_lit(10);
 	EMVCommandChannel channel = ECC_CONTACTLESS;
-	if (arg_get_lit(10))
+	if (arg_get_lit(11))
 		channel = ECC_CONTACT;
 	CLIParserFree();
 	
@@ -1166,6 +1166,12 @@ int CmdEMVScan(const char *cmd) {
 	CLIParserFree();
 	
 	SetAPDULogging(showAPDU);
+	
+	// TODO
+	if (channel == ECC_CONTACT) {
+		PrintAndLogEx(ERR, "Do not use contact interface. Exit.");
+		return 1;
+	}
 	
 	// current path + file name
 	if (!strstr(crelfname, ".json"))
