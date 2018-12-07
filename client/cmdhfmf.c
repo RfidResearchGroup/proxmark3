@@ -624,6 +624,15 @@ int CmdHF14AMfRdSc(const char *Cmd) {
 				PrintAndLogEx(NORMAL, "data   : %s", sprint_hex(data + i * 16, 16));
 			}
 			PrintAndLogEx(NORMAL, "trailer: %s", sprint_hex(data + (sectorNo<32?3:15) * 16, 16));
+					
+			PrintAndLogEx(NORMAL, "Trailer decoded:");
+            int bln = mfFirstBlockOfSector(sectorNo);
+			int blinc = (mfNumBlocksPerSector(sectorNo) > 4) ? 5 : 1;
+            for (i = 0; i < 4; i++) {
+                PrintAndLogEx(NORMAL, "Access block %d%s: %s", bln, ((blinc > 1) && (i < 3) ? "+" : "") , mfGetAccessConditionsDesc(i, &(data + (sectorNo<32?3:15) * 16)[6]));
+                bln += blinc;
+            }
+            PrintAndLogEx(NORMAL, "UserData: %s", sprint_hex_inrow(&(data + (sectorNo<32?3:15) * 16)[9], 1));
 		}
 	} else {
 		PrintAndLogEx(WARNING, "Command execute timeout");
