@@ -72,6 +72,106 @@ int usage_sm_brute(void) {
 	return 0;
 }
 
+static int PrintATR(uint8_t *atr, size_t atrlen) {
+	uint8_t vxor = 0;
+	for (int i = 1; i < atrlen; i++)
+		vxor ^= atr[i];
+	
+	if (vxor)
+		PrintAndLogEx(WARNING, "Check summ error. Must be 0 but: 0x%02x", vxor);
+	else
+		PrintAndLogEx(INFO, "Check summ OK.");
+
+	if (atr[0] != 0x3b)
+		PrintAndLogEx(WARNING, "Not a direct convention: 0x%02x", atr[0]);
+	
+	uint8_t T0 = atr[1];
+	uint8_t K = T0 & 0x0F;
+	uint8_t TD1 = 0;
+	
+	uint8_t T1len = 0;
+	uint8_t TD1len = 0;
+	uint8_t TDilen = 0;
+	
+	if (T0 & 0x10) {
+		PrintAndLog("TA1 (Maximum clock frequency, proposed bit duration): 0x%02x", atr[2 + T1len]);
+		T1len++;
+	}
+	if (T0 & 0x20) {
+		PrintAndLog("TB1 (Deprecated: VPP requirements): 0x%02x", atr[2 + T1len]);
+		T1len++;
+	}
+	if (T0 & 0x40) {
+		PrintAndLog("TC1 (Extra delay between bytes required by card): 0x%02x", atr[2 + T1len]);
+		T1len++;
+	}
+	if (T0 & 0x80) {
+		PrintAndLog("TD1 (First offered transmission protocol, presence of TA2..TD2): 0x%02x", atr[2 + T1len]);
+		TD1 = atr[2 + T1len];
+		T1len++;
+		
+		if (TD1 & 0x10) {
+			PrintAndLog("TA2 (Specific protocol and parameters to be used after the ATR): 0x%02x", atr[2 + T1len + TD1len]);
+			TD1len++;
+		}
+		if (TD1 & 0x20) {
+			PrintAndLog("TB2 (Deprecated: VPP precise voltage requirement): 0x%02x", atr[2 + T1len + TD1len]);
+			TD1len++;
+		}
+		if (TD1 & 0x40) {
+			PrintAndLog("TC2 (Maximum waiting time for protocol T=0): 0x%02x", atr[2 + T1len + TD1len]);
+			TD1len++;
+		}
+		if (TD1 & 0x80) {
+			PrintAndLog("TD2 (A supported protocol or more global parameters, presence of TA3..TD3): 0x%02x", atr[2 + T1len + TD1len]);
+			uint8_t TDi = atr[2 + T1len + TD1len];
+			TD1len++;
+
+			bool nextCycle = true;
+			uint8_t vi = 3;
+			while (nextCycle) {
+				nextCycle = false;
+				if (TDi & 0x10) {
+					PrintAndLog("TA%d: 0x%02x", vi, atr[2 + T1len + TD1len + TDilen]);
+					TDilen++;
+				}
+				if (TDi & 0x20) {
+					PrintAndLog("TB%d: 0x%02x", vi, atr[2 + T1len + TD1len + TDilen]);
+					TDilen++;
+				}
+				if (TDi & 0x40) {
+					PrintAndLog("TC%d: 0x%02x", vi, atr[2 + T1len + TD1len + TDilen]);
+					TDilen++;
+				}
+				if (TDi & 0x80) {
+					PrintAndLog("TD%d: 0x%02x", vi, atr[2 + T1len + TD1len + TDilen]);
+					TDi = atr[2 + T1len + TD1len + TDilen];
+					TDilen++;
+					
+					nextCycle = true;
+					vi++;
+				}
+			}
+		}
+	}
+	
+	uint8_t calen = 2 + T1len + TD1len + TDilen + K;
+	
+	if (atrlen != calen && atrlen != calen + 1)  // may be CRC
+		PrintAndLogEx(ERR, "ATR length error. len: %d, T1len: %d, TD1len: %d, TDilen: %d, K: %d", atrlen, T1len, TD1len, TDilen, K);
+	else
+		PrintAndLogEx(INFO, "ATR length OK.");
+	
+	PrintAndLog("Historical bytes len: 0x%02x", K);
+	if (K > 0)
+		PrintAndLog("The format of historical bytes: %02x", atr[2 + T1len + TD1len + TDilen]);
+	if (K > 1)
+		PrintAndLog("Historical bytes: %s", sprint_hex(&atr[2 + T1len + TD1len + TDilen], K));
+	
+	return 0;
+}
+
+
 static bool smart_select(bool silent) {
 	UsbCommand c = {CMD_SMART_ATR, {0, 0, 0}};
 	clearCommandBuffer();
@@ -475,6 +575,9 @@ int CmdSmartInfo(const char *Cmd){
 	PrintAndLogEx(INFO, "ISO76183 ATR : %s", sprint_hex(card.atr, card.atr_len));
 	PrintAndLogEx(INFO, "look up ATR");
 	PrintAndLogEx(INFO, "http://smartcard-atr.appspot.com/parse?ATR=%s", sprint_hex_inrow(card.atr, card.atr_len) );
+	PrintAndLogEx(INFO, "");
+	PrintAndLogEx(INFO, "ATR:");
+	PrintATR(card.atr, card.atr_len);
 	return 0;
 }
 
