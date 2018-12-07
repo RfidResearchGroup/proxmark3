@@ -31,6 +31,7 @@
 #include "cmdscript.h"
 #include "cmdcrc.h"
 #include "cmdanalyse.h"
+#include "emv/cmdemv.h"		// EMV				  
 
 #ifdef WITH_FLASH
 #include "cmdflashmem.h"	// rdv40 flashmem commands
