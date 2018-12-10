@@ -72,6 +72,91 @@ int usage_sm_brute(void) {
 	return 0;
 }
 
+uint8_t GetATRTA1(uint8_t *atr, size_t atrlen) {
+	if (atrlen > 2) {		
+		uint8_t T0 = atr[1];
+		if (T0 & 0x10)
+			return atr[2];
+	}
+	
+	return 0x11; // default value is ‘0x11’, corresponding to fmax=5 MHz, Fi=372, Di=1.
+}
+
+int DiArray[] = {
+	0,  // b0000 RFU
+	1,  // b0001
+	2,
+	4,
+	8,
+	16,
+	32,  // b0110
+	64,  // b0111. This was RFU in ISO/IEC 7816-3:1997 and former. Some card readers or drivers may erroneously reject cards using this value
+	12,
+	20,
+	0,   // b1010 RFU
+	0,
+	0,   // ...
+	0,
+	0,
+	0    // b1111 RFU
+};
+
+int FiArray[] = {
+	372,    // b0000 Historical note: in ISO/IEC 7816-3:1989, this was assigned to cards with internal clock
+	372,    // b0001
+	558,    // b0010
+	744,    // b0011
+	1116,   // b0100
+	1488,   // b0101
+	1860,   // b0110
+	0,      // b0111 RFU
+	0,      // b1000 RFU
+	512,    // b1001
+	768,    // b1010
+	1024,   // b1011
+	1536,   // b1100
+	2048,   // b1101
+	0,      // b1110 RFU
+	0       // b1111 RFU
+};
+
+float FArray[] = {
+	4,    // b0000 Historical note: in ISO/IEC 7816-3:1989, this was assigned to cards with internal clock
+	5,    // b0001
+	6,    // b0010
+	8,    // b0011
+	12,   // b0100
+	16,   // b0101
+	20,   // b0110
+	0,    // b0111 RFU
+	0,    // b1000 RFU
+	5,    // b1001
+	7.5,  // b1010
+	10,   // b1011
+	15,   // b1100
+	20,   // b1101
+	0,    // b1110 RFU
+	0     // b1111 RFU
+};
+
+int GetATRDi(uint8_t *atr, size_t atrlen) {
+	uint8_t TA1 = GetATRTA1(atr, atrlen);
+	
+	return DiArray[TA1 & 0x0f];  // The 4 low-order bits of TA1 (4th MSbit to 1st LSbit) encode Di 
+}
+
+int GetATRFi(uint8_t *atr, size_t atrlen) {
+	uint8_t TA1 = GetATRTA1(atr, atrlen);
+
+	return FiArray[TA1 >> 4];  // The 4 high-order bits of TA1 (8th MSbit to 5th LSbit) encode fmax and Fi
+}
+
+float GetATRF(uint8_t *atr, size_t atrlen) {
+	uint8_t TA1 = GetATRTA1(atr, atrlen);
+
+	return FArray[TA1 >> 4];  // The 4 high-order bits of TA1 (8th MSbit to 5th LSbit) encode fmax and Fi
+}
+
 static int PrintATR(uint8_t *atr, size_t atrlen) {
 	uint8_t vxor = 0;
 	for (int i = 1; i < atrlen; i++)
@@ -106,8 +191,8 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
 		T1len++;
 	}
 	if (T0 & 0x80) {
-		PrintAndLog("TD1 (First offered transmission protocol, presence of TA2..TD2): 0x%02x", atr[2 + T1len]);
 		TD1 = atr[2 + T1len];
+		PrintAndLog("TD1 (First offered transmission protocol, presence of TA2..TD2): 0x%02x. Protocol T=%d", TD1, TD1 & 0x0f);
 		T1len++;
 		
 		if (TD1 & 0x10) {
@@ -123,8 +208,8 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
 			TD1len++;
 		}
 		if (TD1 & 0x80) {
-			PrintAndLog("TD2 (A supported protocol or more global parameters, presence of TA3..TD3): 0x%02x", atr[2 + T1len + TD1len]);
 			uint8_t TDi = atr[2 + T1len + TD1len];
+			PrintAndLog("TD2 (A supported protocol or more global parameters, presence of TA3..TD3): 0x%02x. Protocol T=%d", TDi, TDi & 0x0f);
 			TD1len++;
 
 			bool nextCycle = true;
@@ -144,8 +229,8 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
 					TDilen++;
 				}
 				if (TDi & 0x80) {
-					PrintAndLog("TD%d: 0x%02x", vi, atr[2 + T1len + TD1len + TDilen]);
 					TDi = atr[2 + T1len + TD1len + TDilen];
+					PrintAndLog("TD%d: 0x%02x. Protocol T=%d", vi, TDi, TDi & 0x0f);
 					TDilen++;
 					
 					nextCycle = true;
@@ -165,8 +250,10 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
 	PrintAndLog("Historical bytes len: 0x%02x", K);
 	if (K > 0)
 		PrintAndLog("The format of historical bytes: %02x", atr[2 + T1len + TD1len + TDilen]);
-	if (K > 1)
-		PrintAndLog("Historical bytes: %s", sprint_hex(&atr[2 + T1len + TD1len + TDilen], K));
+	if (K > 1) {
+		PrintAndLog("Historical bytes:");
+		dump_buffer(&atr[2 + T1len + TD1len + TDilen], K, NULL, 1);
+	}
 	
 	return 0;
 }
@@ -575,9 +662,23 @@ int CmdSmartInfo(const char *Cmd){
 	PrintAndLogEx(INFO, "ISO76183 ATR : %s", sprint_hex(card.atr, card.atr_len));
 	PrintAndLogEx(INFO, "look up ATR");
 	PrintAndLogEx(INFO, "http://smartcard-atr.appspot.com/parse?ATR=%s", sprint_hex_inrow(card.atr, card.atr_len) );
-	PrintAndLogEx(INFO, "");
-	PrintAndLogEx(INFO, "ATR:");
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "* ATR:");
 	PrintATR(card.atr, card.atr_len);
+	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(NORMAL, "* D/F (TA1):");
+	int Di = GetATRDi(card.atr, card.atr_len);
+	int Fi = GetATRFi(card.atr, card.atr_len);
+	float F = GetATRF(card.atr, card.atr_len);
+	if (GetATRTA1(card.atr, card.atr_len) == 0x11)
+		PrintAndLogEx(INFO, "Using default values...");
+	PrintAndLogEx(NORMAL, "Di=%d", Di);
+	PrintAndLogEx(NORMAL, "Fi=%d", Fi);
+	PrintAndLogEx(NORMAL, "F=%.1f MHz", F);
+	PrintAndLogEx(NORMAL, "Cycles/ETU=%d", Fi/Di);
+	PrintAndLogEx(NORMAL, "%.1f bits/sec at 4MHz", (float)4000000 / (Fi/Di));
+	PrintAndLogEx(NORMAL, "%.1f bits/sec at Fmax=%.1fMHz", (F * 1000000) / (Fi/Di), F);
+	
 	return 0;
 }
 
