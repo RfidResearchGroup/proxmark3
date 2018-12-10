@@ -662,9 +662,13 @@ int CmdSmartInfo(const char *Cmd){
 	PrintAndLogEx(INFO, "ISO76183 ATR : %s", sprint_hex(card.atr, card.atr_len));
 	PrintAndLogEx(INFO, "look up ATR");
 	PrintAndLogEx(INFO, "http://smartcard-atr.appspot.com/parse?ATR=%s", sprint_hex_inrow(card.atr, card.atr_len) );
+
+	// print ATR
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "* ATR:");
 	PrintATR(card.atr, card.atr_len);
+	
+	// print D/F (brom byte TA1 or defaults)
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "* D/F (TA1):");
 	int Di = GetATRDi(card.atr, card.atr_len);
@@ -672,6 +676,7 @@ int CmdSmartInfo(const char *Cmd){
 	float F = GetATRF(card.atr, card.atr_len);
 	if (GetATRTA1(card.atr, card.atr_len) == 0x11)
 		PrintAndLogEx(INFO, "Using default values...");
+	
 	PrintAndLogEx(NORMAL, "Di=%d", Di);
 	PrintAndLogEx(NORMAL, "Fi=%d", Fi);
 	PrintAndLogEx(NORMAL, "F=%.1f MHz", F);
