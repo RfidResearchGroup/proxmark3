@@ -1553,7 +1553,6 @@ int usage_hf_mfu_pwdgen(void){
 	return 0;
 }
 
-#define DUMP_PREFIX_LENGTH 48 
 void printMFUdump(mfu_dump_t* card) {
 	printMFUdumpEx(card, 255, 0);
 }
@@ -1659,9 +1658,9 @@ void printMFUdumpEx(mfu_dump_t* card, uint16_t pages, uint8_t startpage) {
 //  Read and Dump Card Contents,  using auto detection of tag size.
 int CmdHF14AMfUDump(const char *Cmd){
 
-	FILE *fout;
+	uint8_t fileNameLen = 0;
 	char filename[FILE_PATH_SIZE] = {0x00};
-	char *fnameptr = filename;
+	char *fptr = filename;
 
 	uint8_t data[1024] = {0x00};
 	memset(data, 0x00, sizeof(data));
@@ -1674,7 +1673,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 	uint8_t authenticationkey[16] = {0x00};
 	memset(authenticationkey, 0x00, sizeof(authenticationkey));
 	uint8_t	*authKeyPtr = authenticationkey;
-	size_t fileNlen = 0;
+
 	bool errors = false;
 	bool swapEndian = false;
 	bool manualPages = false;
@@ -1703,9 +1702,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 			cmdp++;
 			break;
 		case 'f':
-			fileNlen = param_getstr(Cmd, cmdp+1, filename, sizeof(filename));
-			if (!fileNlen) errors = true; 
-			if (fileNlen > FILE_PATH_SIZE-5) fileNlen = FILE_PATH_SIZE-5;
+			fileNameLen = param_getstr(Cmd, cmdp+1, filename, sizeof(filename));
 			cmdp += 2;
 			break;
 		case 'p': //set start page
@@ -1785,9 +1782,9 @@ int CmdHF14AMfUDump(const char *Cmd){
 		
 	pages = bufferSize/4;
 	
-	uint8_t	get_pack[] = {0,0};
 	iso14a_card_select_t card;
 	mfu_dump_t dump_file_data;
+	uint8_t	get_pack[] = {0,0};
 	uint8_t get_version[] = {0,0,0,0,0,0,0,0};
 	uint8_t	get_tearing[] = {0,0,0};
 	uint8_t	get_counter[] = {0,0,0};
@@ -1801,8 +1798,8 @@ int CmdHF14AMfUDump(const char *Cmd){
 		//attempt to read pack
 		if (!ul_auth_select( &card, tagtype, true, authKeyPtr, get_pack, sizeof(get_pack))) {
 			//reset pack
-			get_pack[0]=0;
-			get_pack[1]=0;
+			get_pack[0] = 0;
+			get_pack[1] = 0;
 		}
 		DropField();
 		
@@ -1864,23 +1861,16 @@ int CmdHF14AMfUDump(const char *Cmd){
 	printMFUdumpEx(&dump_file_data, pages, startPage);
 	
 	// user supplied filename?
-	if (fileNlen < 1) {
-		// UID = data 0-1-2 4-5-6-7  (skips a beat)
-		sprintf(fnameptr,"%02X%02X%02X%02X%02X%02X%02X.bin",
-			data[0],data[1], data[2], data[4],data[5],data[6], data[7]);
-	} else {
-		sprintf(fnameptr + fileNlen,".bin");
-	}
+	if (fileNameLen < 1) {
 
-	if ((fout = fopen(filename,"wb")) == NULL) { 
-		PrintAndLogEx(WARNING, "Could not create file name %s", filename);
-		return 1;
-	}
-	fwrite( &dump_file_data, 1, pages*4 + DUMP_PREFIX_LENGTH, fout );
-	if (fout)
-		fclose(fout);
-		
-	PrintAndLogEx(SUCCESS, "Dumped %d pages, wrote %d bytes to %s", pages + (DUMP_PREFIX_LENGTH/4), pages*4 + DUMP_PREFIX_LENGTH, filename);
+		PrintAndLogEx(INFO, "Using UID as filename");
+	
+		fptr += sprintf(fptr, "hf-mfu-"); 
+		FillFileNameByUID(fptr, card.uid, "-dump", card.uidlen);
+	}	
+	uint16_t datalen = pages*4 + DUMP_PREFIX_LENGTH;
+	saveFile(filename, "bin", (uint8_t*)&dump_file_data, datalen);
+	saveFileJSON(filename, "json", jsfMfuMemory, (uint8_t*)&dump_file_data, datalen);
 	
 	if ( is_partial ) 
 		PrintAndLogEx(WARNING, "Partial dump created. (%d of %d blocks)", pages, card_mem_size);

@@ -208,6 +208,34 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
 				}
 			}
 			break;
+		case jsfMfuMemory:
+			JsonSaveStr(root, "FileType", "mfu");
+
+			mfu_dump_t* tmp = (mfu_dump_t*)data;
+
+			uint8_t uid[7] = {0};
+			memcpy(uid, tmp->data, 3);
+			memcpy(uid+3, tmp->data+4, 4);
+			
+			JsonSaveBufAsHexCompact(root, "$.Card.UID", uid, sizeof(uid));
+			JsonSaveBufAsHexCompact(root, "$.Card.Version", tmp->version, sizeof(tmp->version));
+			JsonSaveBufAsHexCompact(root, "$.Card.TBO_0", tmp->tbo, sizeof(tmp->tbo));
+			JsonSaveBufAsHexCompact(root, "$.Card.Tearing", tmp->tearing, sizeof(tmp->tearing));
+			JsonSaveBufAsHexCompact(root, "$.Card.Pack",  tmp->pack, sizeof(tmp->pack));
+			JsonSaveBufAsHexCompact(root, "$.Card.TBO_1", tmp->tbo1, sizeof(tmp->tbo1));
+			JsonSaveBufAsHexCompact(root, "$.Card.Signature", tmp->signature, sizeof(tmp->signature));
+			JsonSaveStr(root, "$.Card.Counter", "N/A");
+
+			// size of header 48b
+			size_t len = (datalen - DUMP_PREFIX_LENGTH) / 4;
+
+			for (int i = 0; i < len; i++) {
+
+				char path[PATH_MAX_LENGTH] = {0};
+				sprintf(path, "$.blocks.%d", i);
+				JsonSaveBufAsHexCompact(root, path, tmp->data + (i * 4), 4);				
+			}
+		break;
 	}
 
 	int res = json_dump_file(root, fileName, JSON_INDENT(2));
@@ -395,6 +423,29 @@ int loadFileJSON(const char *preferredName, const char *suffix, void* data, size
 		*datalen = sptr;
 	}
 
+	if (!strcmp(ctype, "mfu")) {
+		size_t sptr = 0;
+		for (int i = 0; i < 256; i++) {
+			if (sptr + 4 > maxdatalen) {
+				retval = 5;
+				goto out;
+			}
+
+			char path[30] = {0};
+			sprintf(path, "$.blocks.%d", i);
+			
+			size_t len = 0;
+			JsonLoadBufAsHex(root, path, &udata[sptr], 4, &len);
+			if (!len)
+				break;
+			
+			sptr += len;
+		}
+		
+		*datalen = sptr;
+	}
+
+	
 	PrintAndLog("Loaded JSON: (%s) OK.", fileName);
 out:	
 	json_decref(root);

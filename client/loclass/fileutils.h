@@ -49,10 +49,12 @@
 #include "../ui.h"
 #include "../emv/emvjson.h"
 #include "mifare4.h"
+#include "cmdhfmfu.h"
 
 typedef enum {
 	jsfRaw,
 	jsfCardMemory,
+	jsfMfuMemory,
 } JSONFileType;
 
 int fileExists(const char *filename);

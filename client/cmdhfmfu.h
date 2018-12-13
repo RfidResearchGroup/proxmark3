@@ -10,6 +10,9 @@
 #include "util.h"
 #include "protocols.h"
 #include "comms.h"
+#include "loclass/fileutils.h"
+
+#define DUMP_PREFIX_LENGTH 48 
 
 typedef struct {
 	uint8_t version[8];
