@@ -3,6 +3,7 @@
 local getopt = require('getopt')
 local cmds = require('commands')
 local taglib = require('taglib')
+local lib14a = require('read14a')
 
 local desc = 
 [[This script will automatically check Mifare cards for MADs
@@ -15,29 +16,24 @@ Arguments:
 ]]
 local example = "script run xxx"
 local author = "Mazodude"
----
--- PrintAndLog
-function prlog(...)
-	print(...)
-end
 --- 
 -- This is only meant to be used when errors occur
-function oops(err)
-	prlog("ERROR: ",err)
+local function oops(err)
+	print("ERROR: ",err)
 	return nil,err
 end
 
 --- 
 -- Usage help
-function help()
-	prlog(desc)
-	prlog("Example usage")
-	prlog(example)
+local function help()
+	print(desc)
+	print("Example usage")
+	print(example)
 end
 
-function debug(...)
+local function debug(...)
 	if DEBUG then 
-		prlog("debug:", ...)
+		print("debug:", ...)
 	end
 end
 
@@ -53,18 +49,21 @@ end
 -- @return UID if successfull
 -- @return nil, errormessage if unsuccessfull
 local function open()
-	debug("Opening connection")
+	-- debug("Opening connection")
+	-- core.clearCommandBuffer()
+	-- local x = string.format("hf 14a raw -r -p -s")
+	-- debug(x)
+	-- core.console(x)	
+	-- debug("done")
+	-- data, err = waitCmd(true)
+	-- if err then return oops(err) end		
+	-- show(data)
+	-- local formatString = ("H%d"):format(string.len(data))
+	-- local _,uid = bin.unpack(formatString, data)
+	tag, err = lib14a.read(false, true)
+	if not tag then return oops(err) end
 	core.clearCommandBuffer()
-	local x = string.format("hf 14a raw -r -p -s")
-	debug(x)
-	core.console(x)	
-	debug("done")
-	data, err = waitCmd(true)
-	if err then return oops(err) end		
-	show(data)
-	local formatString = ("H%d"):format(string.len(data))
-	local _,uid = bin.unpack(formatString, data)
-	return uid
+	return tag
 end
 --- Shut down tag communication
 -- return no return values
@@ -120,7 +119,7 @@ local function getBlock(block)
 	local keyType = 0
 	local key = "A0A1A2A3A4A5";
 	debug(("Testing to auth with key %s"):format(key))
-	-- prlog(key);
+	-- print(key);
 	local command = Command:new{cmd = cmds.CMD_MIFARE_READSC,
 								arg1 = sectorNo,
 								arg2 = keyType,
@@ -128,7 +127,7 @@ local function getBlock(block)
 								data = key}
 	local data = checkCommand(command)
 	-- debug(command)
-	-- prlog(data)
+	-- print(data)
 	if (data == nil) then return err, ("Could not auth with card - this tag does not have MADs") end
 	if string.len(data) < 32 then
 		return nil, ("Expected at least 32 bytes, got %d - this tag does not have MADs"):format(string.len(data))
@@ -141,7 +140,7 @@ end
 
 --- This function is a lua-implementation of
 -- cmdhf14a.c:waitCmd(uint8_t iSelect)
-function waitCmd(iSelect)
+local function waitCmd(iSelect)
 	local response = core.WaitForResponseTimeout(cmds.CMD_ACK,1000)
 	if response then
 		local count,cmd,arg0,arg1,arg2 = bin.unpack('LLLL',response)
@@ -168,7 +167,7 @@ local function main( args)
 
 	local uid = open()
 	if (uid==nil) then oops("No card present") return end
-	print(("UID: %s"):format(uid))
+	print(("UID: %s"):format(uid.uid))
 
 	-- First, get block 1 byte 1
 	local block, err = getBlock(0)
