@@ -146,9 +146,8 @@ local function main( args)
 	end
 
 	local tag, err = lib14a.read(false, true)
-	if not tag then return oops(err) end
+	if not tag then return oops("No card present") end
 	core.clearCommandBuffer()
-	if (tag==nil) then oops("No card present") return end
 	print(("UID: %s"):format(tag.uid))
 
 	-- First, get block 1 byte 1
@@ -160,6 +159,7 @@ local function main( args)
 	if block == "0F" then
 		print('Card has MADs v1')
 	end
+	--(iceman) Should be able to detect MAD v2 aswell..
 
 	-- Deactivate field
 	close()
