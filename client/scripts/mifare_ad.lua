@@ -45,26 +45,6 @@ local function show(data)
 	    debug("Hexdata" , hexdata)
 	end
 end
---- Fire up a connection with a tag, return uid
--- @return UID if successfull
--- @return nil, errormessage if unsuccessfull
-local function open()
-	-- debug("Opening connection")
-	-- core.clearCommandBuffer()
-	-- local x = string.format("hf 14a raw -r -p -s")
-	-- debug(x)
-	-- core.console(x)	
-	-- debug("done")
-	-- data, err = waitCmd(true)
-	-- if err then return oops(err) end		
-	-- show(data)
-	-- local formatString = ("H%d"):format(string.len(data))
-	-- local _,uid = bin.unpack(formatString, data)
-	tag, err = lib14a.read(false, true)
-	if not tag then return oops(err) end
-	core.clearCommandBuffer()
-	return tag
-end
 --- Shut down tag communication
 -- return no return values
 local function close()
@@ -165,9 +145,11 @@ local function main( args)
 		if o == "d" then DEBUG = true end
 	end
 
-	local uid = open()
-	if (uid==nil) then oops("No card present") return end
-	print(("UID: %s"):format(uid.uid))
+	local tag, err = lib14a.read(false, true)
+	if not tag then return oops(err) end
+	core.clearCommandBuffer()
+	if (tag==nil) then oops("No card present") return end
+	print(("UID: %s"):format(tag.uid))
 
 	-- First, get block 1 byte 1
 	local block, err = getBlock(0)
