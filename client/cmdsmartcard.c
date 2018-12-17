@@ -473,9 +473,9 @@ int ExchangeAPDUSC(uint8_t *datain, int datainlen, bool activateCard, bool leave
 		smart_select(false);
 	printf("* APDU SC\n");
 
-	UsbCommand c = {CMD_SMART_RAW, {SC_RAW | SC_CONNECT, datainlen, 0}};	
+	UsbCommand c = {CMD_SMART_RAW, {SC_RAW_T0, datainlen, 0}};	
 	if (activateCard) {
-		c.arg[0] |= SC_SELECT;
+		c.arg[0] |= SC_SELECT | SC_CONNECT;
 	}
 	memcpy(c.d.asBytes, datain, datainlen);
 	clearCommandBuffer();
@@ -489,7 +489,7 @@ int ExchangeAPDUSC(uint8_t *datain, int datainlen, bool activateCard, bool leave
 	
 	// retry
 	if (len > 1 && dataout[len - 2] == 0x6c && datainlen > 4) {
-		UsbCommand c2 = {CMD_SMART_RAW, {SC_RAW, datainlen, 0}};	
+		UsbCommand c2 = {CMD_SMART_RAW, {SC_RAW_T0, datainlen, 0}};	
 		memcpy(c2.d.asBytes, datain, datainlen);
 		
 		int vlen = 5 + datain[4];
