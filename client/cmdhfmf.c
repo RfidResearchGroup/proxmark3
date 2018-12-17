@@ -2414,7 +2414,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
 
 	param_getstr(Cmd, nameParamNo, filename, sizeof(filename));
 	
-	uint8_t *data = calloc(1, 4096);
+	uint8_t *data = calloc(4096, sizeof(uint8_t));
 	size_t datalen = 0;
 	//int res = loadFile(filename, "bin", data, &datalen);
 	int res = loadFileEML( filename, "eml", data, &datalen);
@@ -2693,7 +2693,7 @@ int CmdHF14AMfCLoad(const char *Cmd) {
 	}
 
 	size_t maxdatalen = 4096;
-	uint8_t *data = calloc(1, maxdatalen);
+	uint8_t *data = calloc(maxdatalen, sizeof(uint8_t));
 	size_t datalen = 0;
 	int res = 0;
 	if (fillFromBin) {

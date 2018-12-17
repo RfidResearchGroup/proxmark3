@@ -182,9 +182,9 @@ int CmdFlashMemLoad(const char *Cmd){
 	//Validations
 	if (errors || cmdp == 0 ) return usage_flashmem_load();			
 	
-	uint8_t *data = NULL;
+	uint8_t *data = calloc(FLASH_MEM_MAX_SIZE, sizeof(uint8_t));
 	size_t datalen = 0;
-	int res = loadFile(filename, "bin", &data, &datalen);
+	int res = loadFile(filename, "bin", data, &datalen);
 	//int res = loadFileEML( filename, "eml", data, &datalen);
 	if ( res ) {
 		free(data);
@@ -196,6 +196,8 @@ int CmdFlashMemLoad(const char *Cmd){
 		free(data);
 		return 1;
 	}
+	
+	data = realloc(data, datalen);
 
 	//Send to device
 	uint32_t bytes_sent = 0;
