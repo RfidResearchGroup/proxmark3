@@ -322,7 +322,7 @@ static int smart_response(uint8_t *data) {
 	if (needGetData) {
 		int len = data[datalen - 1];
 		PrintAndLogEx(INFO, "Requesting response. len=0x%x", len);	
-		uint8_t getstatus[] = {ISO7816_GETSTATUS, 0x00, 0x00, len};
+		uint8_t getstatus[] = {0x00, ISO7816_GETSTATUS, 0x00, 0x00, len};
 		UsbCommand cStatus = {CMD_SMART_RAW, {SC_RAW, sizeof(getstatus), 0}};	
 		memcpy(cStatus.d.asBytes, getstatus, sizeof(getstatus) );
 		clearCommandBuffer();
