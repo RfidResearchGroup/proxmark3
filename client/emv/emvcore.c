@@ -249,7 +249,7 @@ int EMVExchangeEx(EMVCommandChannel channel, bool ActivateField, bool LeaveField
 		memcpy(&data[5], apdu.data, apdu.Lc);
 	
 	if (APDULogging)
-		PrintAndLogEx(NORMAL, ">>>> %s", sprint_hex(data, (IncludeLe?6:5) + apdu.Lc));
+		PrintAndLogEx(SUCCESS, ">>>> %s", sprint_hex(data, (IncludeLe?6:5) + apdu.Lc));
 
 	switch(channel) {
 	case ECC_CONTACTLESS:
@@ -269,7 +269,7 @@ int EMVExchangeEx(EMVCommandChannel channel, bool ActivateField, bool LeaveField
 	}
 	
 	if (APDULogging)
-		PrintAndLogEx(NORMAL, "<<<< %s", sprint_hex(Result, *ResultLen));
+		PrintAndLogEx(SUCCESS, "<<<< %s", sprint_hex(Result, *ResultLen));
 
 	if (*ResultLen < 2) {
 		return 200;
@@ -422,7 +422,7 @@ int EMVSearch(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, 
 				}
 				
 				retrycnt = 0;
-				PrintAndLogEx(FAILED, "Retry failed [%s]. Skiped...", AIDlist[i].aid);
+				PrintAndLogEx(FAILED, "Retry failed [%s]. Skipped...", AIDlist[i].aid);
 			}
 			continue;
 		}
@@ -431,8 +431,11 @@ int EMVSearch(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, 
 		if (res)
 			continue;
 		
-		if (decodeTLV){
-			PrintAndLogEx(NORMAL, "%s:", AIDlist[i].aid);
+		if (!datalen)
+			continue;
+		
+		if (decodeTLV) {
+			PrintAndLogEx(SUCCESS, "%s", AIDlist[i].aid);
 			TLVPrintFromBuffer(data, datalen);
 		}
 	}
