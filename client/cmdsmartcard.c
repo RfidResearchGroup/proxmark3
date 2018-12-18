@@ -306,7 +306,7 @@ static int smart_wait(uint8_t *data) {
 	return len;
 }
 
-static int smart_response(uint8_t apduINS, uint8_t *data) {
+static int smart_response(uint8_t *data) {
 		
 	int datalen = smart_wait(data);	
 	bool needGetData = false;
@@ -315,12 +315,6 @@ static int smart_response(uint8_t apduINS, uint8_t *data) {
 		goto out;
 	}
 
-	if (datalen > 2 && data[0] != apduINS) {
-		PrintAndLogEx(ERR, "Card ACK error. len=0x%x data[0]=%02x", datalen, data[0]);	
-		datalen = 0;
-		goto out;
-	}
-	
 	if ( data[datalen - 2] == 0x61 || data[datalen - 2] == 0x9F ) {
 		needGetData = true;
 	}
@@ -339,22 +333,26 @@ static int smart_response(uint8_t apduINS, uint8_t *data) {
 		if (datalen < 2 ) {
 			goto out;
 		}
-
-		if (datalen > 2 && data[0] != ISO7816_GETSTATUS) {
-			PrintAndLogEx(ERR, "GetResponse ACK error. len=0x%x data[0]=%02x", len, data[0]);	
-			datalen = 0;
-			goto out;
-		}
 		
-		if (datalen != len + 2 + 1) { // 2 - response, 1 - ACK
-			PrintAndLogEx(WARNING, "GetResponse wrong length. Must be: 0x%02x but: 0x%02x", len, datalen - 3);	
+		// data wo ACK
+		if (datalen != len + 2) { 
+			// data with ACK
+			if (datalen == len + 2 + 1) { // 2 - response, 1 - ACK
+				if (data[0] != ISO7816_GETSTATUS) {
+					PrintAndLogEx(ERR, "GetResponse ACK error. len=0x%x data[0]=%02x", len, data[0]);	
+					datalen = 0;
+					goto out;
+				}
+
+				datalen--;
+				memmove(data, &data[1], datalen);
+			} else {
+				// wrong length
+				PrintAndLogEx(WARNING, "GetResponse wrong length. Must be: 0x%02x but: 0x%02x", len, datalen - 3);	
+			}
 		}
 	}
 	
-	if (datalen > 2) {
-		datalen--;
-		memmove(data, &data[1], datalen);
-	}
 out:
 	return datalen;
 }
@@ -441,7 +439,7 @@ int CmdSmartRaw(const char *Cmd) {
 		if ( !buf )
 			return 1;		
 		
-		int len = smart_response(data[1], buf);
+		int len = smart_response(buf);
 		if ( len < 0 ) {
 			free(buf);
 			return 2;
@@ -453,7 +451,7 @@ int CmdSmartRaw(const char *Cmd) {
 			memcpy(c.d.asBytes, data, sizeof(data) );
 			clearCommandBuffer();
 			SendCommand(&c);
-			len = smart_response(data[1], buf);
+			len = smart_response(buf);
 
 			data[4] = 0;
 		}
@@ -481,7 +479,7 @@ int ExchangeAPDUSC(uint8_t *datain, int datainlen, bool activateCard, bool leave
 	clearCommandBuffer();
 	SendCommand(&c);	
 	
-	int len = smart_response(datain[1], dataout);
+	int len = smart_response(dataout);
 	
 	if ( len < 0 ) {
 		return 2;
@@ -501,7 +499,7 @@ int ExchangeAPDUSC(uint8_t *datain, int datainlen, bool activateCard, bool leave
 		clearCommandBuffer();
 		SendCommand(&c2);	
 		
-		len = smart_response(datain[1], dataout);
+		len = smart_response(dataout);
 	}	
 	
 	*dataoutlen = len;
@@ -822,7 +820,7 @@ int CmdSmartBruteforceSFI(const char *Cmd) {
 			clearCommandBuffer();
 			SendCommand(&c);
 			
-			smart_response(data[1], buf);
+			smart_response(buf);
 			
 			// if 0x6C
 			if ( buf[0] == 0x6C ) {
@@ -831,7 +829,7 @@ int CmdSmartBruteforceSFI(const char *Cmd) {
 				memcpy(c.d.asBytes, data, sizeof(data) );
 				clearCommandBuffer();
 				SendCommand(&c);
-				uint8_t len = smart_response(data[1], buf);
+				uint8_t len = smart_response(buf);
 				
 				// TLV decoder
 				if (len > 4)
