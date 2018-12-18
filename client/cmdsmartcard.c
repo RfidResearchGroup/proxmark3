@@ -488,13 +488,10 @@ int ExchangeAPDUSC(uint8_t *datain, int datainlen, bool activateCard, bool leave
 	// retry
 	if (len > 1 && dataout[len - 2] == 0x6c && datainlen > 4) {
 		UsbCommand c2 = {CMD_SMART_RAW, {SC_RAW_T0, datainlen, 0}};	
-		memcpy(c2.d.asBytes, datain, datainlen);
+		memcpy(c2.d.asBytes, datain, 5);
 		
-		int vlen = 5 + datain[4];
-		if (datainlen == vlen)
-			datainlen++;
-		
-		c2.d.asBytes[vlen] = dataout[len - 1];
+		// transfer length via T=0
+		c2.d.asBytes[4] = dataout[len - 1];
 		
 		clearCommandBuffer();
 		SendCommand(&c2);	
