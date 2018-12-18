@@ -58,6 +58,9 @@ void PrintAndLogEx(logLevel_t level, char *fmt, ...) {
 	static char *prefixes[7] = { "", "[+] ", "[=] ", "[-] ", "[!] ", "[!!] ", "[#] "};
 	
 	switch( level ) {
+		case ERR:
+			strncpy(prefix,_RED_([!!] ), sizeof(prefix)-1);
+			break;
 		case FAILED:
 			strncpy(prefix,_RED_([-] ), sizeof(prefix)-1);
 			break;
