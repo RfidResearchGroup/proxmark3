@@ -301,11 +301,11 @@ int EMVExchangeEx(EMVCommandChannel channel, bool ActivateField, bool LeaveField
 }
 
 int EMVExchange(EMVCommandChannel channel, bool LeaveFieldON, sAPDU apdu, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
-	return EMVExchangeEx(channel, false, LeaveFieldON, apdu, true, Result, MaxResultLen, ResultLen, sw, tlv);
+	return EMVExchangeEx(channel, false, LeaveFieldON, apdu, (channel == ECC_CONTACTLESS), Result, MaxResultLen, ResultLen, sw, tlv);
 }
 
 int EMVSelect(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t *AID, size_t AIDLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
-	return EMVExchangeEx(channel, ActivateField, LeaveFieldON, (sAPDU){0x00, 0xa4, 0x04, 0x00, AIDLen, AID}, true, Result, MaxResultLen, ResultLen, sw, tlv);
+	return EMVExchangeEx(channel, ActivateField, LeaveFieldON, (sAPDU){0x00, 0xa4, 0x04, 0x00, AIDLen, AID}, (channel == ECC_CONTACTLESS), Result, MaxResultLen, ResultLen, sw, tlv);
 }
 
 int EMVSelectPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t PSENum, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
