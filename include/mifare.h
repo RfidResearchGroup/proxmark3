@@ -109,7 +109,8 @@ typedef enum SMARTCARD_COMMAND {
 	SC_CONNECT = 			(1 << 0),
 	SC_NO_DISCONNECT =		(1 << 1),
 	SC_RAW =				(1 << 2),
-	SC_SELECT =				(1 << 3)
+	SC_SELECT =				(1 << 3),
+	SC_RAW_T0 =				(1 << 4),
 } smartcard_command_t;
 
 //-----------------------------------------------------------------------------
