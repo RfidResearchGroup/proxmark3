@@ -575,7 +575,7 @@ void I2C_print_status(void) {
 	I2C_Reset_EnterMainProgram();
 	uint8_t len = I2C_BufferRead(resp, sizeof(resp), I2C_DEVICE_CMD_GETVERSION, I2C_DEVICE_ADDRESS_MAIN);
 	if ( len > 0 )
-	  	Dbprintf("  version.................v%x.%02x", resp[0], resp[1]);
+	  	Dbprintf("  version.................v%x.%02d", resp[0], resp[1]);
 	else
 		DbpString("  version.................FAILED");	
 }
