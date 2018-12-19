@@ -37,13 +37,21 @@ local function debug(...)
 	end
 end
 
-
 local function show(data)
 	if DEBUG then
 	    local formatString = ("H%d"):format(string.len(data))
 	    local _,hexdata = bin.unpack(formatString, data)
 	    debug("Hexdata" , hexdata)
 	end
+end
+
+local function bits(num)
+    local t={}
+    while num>0 do
+        rest=num%2
+        table.insert(t,1,rest)
+        num=(num-rest)/2
+    end return table.concat(t)
 end
 --- Shut down tag communication
 -- return no return values
@@ -71,8 +79,8 @@ local function checkCommand(command)
 		local count, cmd, arg0 = bin.unpack('LL',result)
 		if(arg0==1) then
 			local count, arg1, arg2, data = bin.unpack('LLH511',result,count)
-			block = data:sub(33,64)
-			return block
+			sector = data
+			return sector
 		else
 			return nil
 		end
@@ -82,10 +90,10 @@ local function checkCommand(command)
 	end
 end
 
----_ Gets data from a block
--- @return block if successfull
+---_ Gets data from a sector
+-- @return sector if successfull
 -- @return nil, errormessage if unsuccessfull
-local function getBlock(block)
+local function getSector(sector,typ)
 	local data, err
 
 	core.clearCommandBuffer()
@@ -95,9 +103,12 @@ local function getBlock(block)
 	-- uint8_t keyType = arg1;
 	-- uint64_t ui64Key = 0;
 	-- ui64Key = bytes_to_num(datain, 6);
-	local sectorNo = 0
+	local sectorNo = sector
 	local keyType = 0
-	local key = "A0A1A2A3A4A5";
+	local key = ""
+	if typ == 1 then
+		key = "A0A1A2A3A4A5"
+	end
 	debug(("Testing to auth with key %s"):format(key))
 	-- print(key);
 	local command = Command:new{cmd = cmds.CMD_MIFARE_READSC,
@@ -112,9 +123,7 @@ local function getBlock(block)
 	if string.len(data) < 32 then
 		return nil, ("Expected at least 32 bytes, got %d - this tag does not have MADs"):format(string.len(data))
 	end
-	-- -- Now, parse out the block data
-	b0 = string.sub(data,3,4)
-	return b0
+	return data
 end
 
 
@@ -149,17 +158,64 @@ local function main( args)
 	if not tag then return oops("No card present") end
 	core.clearCommandBuffer()
 	print(("UID: %s"):format(tag.uid))
+	print(("SAK: %x"):format(tag.sak))
 
-	-- First, get block 1 byte 1
-	local block, err = getBlock(0)
+	local typ = 1
+	if 0x18 == sak then --NXP MIFARE Classic 4k | Plus 4k | Ev1 4k
+		typ = 4
+	elseif 0x08 == sak then -- NXP MIFARE CLASSIC 1k | Plus 2k | Ev1 1K
+		typ= 1
+	elseif 0x09 == sak then -- NXP MIFARE Mini 0.3k
+		typ = 0
+	elseif  0x10 == sak then-- "NXP MIFARE Plus 2k"
+		typ = 2
+	elseif  0x01 == sak then-- "NXP MIFARE TNP3xxx 1K"
+		typ = 1
+	else
+		debug("Defaulting to CLASSIC")
+	end
+
+	-- # | data    |  Sector | 00/ 0x00
+	-- ----+------------------------------------------------
+	-- 0 | 5C 71 B0 14 89 88 04 00 C0 8E 3C 90 49 50 12 13
+	-- 1 | 80 0F 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+	-- 2 | 00 00 00 00 00 00 00 00 00 00 00 00 00 00 12 48
+	-- 3 | A0 A1 A2 A3 A4 A5 78 77 88 E9 B0 B1 B2 B3 B4 B5
+
+	-- E9 = 1 1 1010 01
+	-- C1 = 1 1 0000 01
+	-- 69 = 0 1 1010 01
+	-- 99 = 1 0 0110 01
+
+	-- Need to check the sector trailer GPB
+	-- First, get Sector 0 block 3 byte 10
+	local sector, err = getSector(0,1)
 	if err then return oops(err) end
-	debug(("Checking block 0 sector 1 byte 1"))
-	debug(("Got byte: %s"):format(block))
+	-- -- Now, parse out the block data
+	sector = sector:sub(0,128)
+	debug(sector)
+	local trailer = sector:sub(97,128)
+	debug(trailer)
+	local gpb = string.sub(trailer,19,20)
+	debug(("Checking block 0 sector 3 byte 10"))
+	debug(("Got byte: %s"):format(gpb))
+	local gpbbits = bits(tonumber(gpb,16))
+	debug(gpbbits)
+	local adv = gpbbits:sub(7,8)
+	print(("ADV: %s"):format(adv))
+	local rfu = gpbbits:sub(3,6)
+	print(("RFU: %s"):format(rfu))
+	local ma = gpbbits:sub(2,2)
+	print(("MA: %s"):format(ma))
+	local da = gpbbits:sub(1,1)
+	print(("DA: %s"):format(da))
 	-- prlog(block)
-	if block == "0F" then
+	if adv == "01" then
 		print('Card has MADs v1')
 	end
-	--(iceman) Should be able to detect MAD v2 aswell..
+	if adv == "10" then
+		print('Card has MADs v2')
+	end
 
 	-- Deactivate field
 	close()
