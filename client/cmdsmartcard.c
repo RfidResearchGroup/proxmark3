@@ -15,14 +15,15 @@ int usage_sm_raw(void) {
 	PrintAndLogEx(NORMAL, "Usage: sc raw [h|r|c] d <0A 0B 0C ... hex>");
 	PrintAndLogEx(NORMAL, "       h          :  this help");
 	PrintAndLogEx(NORMAL, "       r          :  do not read response");
-	PrintAndLogEx(NORMAL, "       a          :  active smartcard without select");
-	PrintAndLogEx(NORMAL, "       s          :  active smartcard with select");
+	PrintAndLogEx(NORMAL, "       a          :  active smartcard without select (reset sc module)");
+	PrintAndLogEx(NORMAL, "       s          :  active smartcard with select (get ATR)");
 	PrintAndLogEx(NORMAL, "       t          :  executes TLV decoder if it possible");
+	PrintAndLogEx(NORMAL, "       0          :  use protocol T=0");
 	PrintAndLogEx(NORMAL, "       d <bytes>  :  bytes to send");
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Examples:");
-	PrintAndLogEx(NORMAL, "        sc raw d 00a404000e315041592e5359532e444446303100    - `1PAY.SYS.DDF01` PPSE directory");
-	PrintAndLogEx(NORMAL, "        sc raw d 00a404000e325041592e5359532e444446303100    - `2PAY.SYS.DDF01` PPSE directory");
+	PrintAndLogEx(NORMAL, "        sc raw s 0 d 00a404000e315041592e5359532e444446303100  - `1PAY.SYS.DDF01` PPSE directory with get ATR");
+	PrintAndLogEx(NORMAL, "        sc raw 0 d 00a404000e325041592e5359532e444446303100    - `2PAY.SYS.DDF01` PPSE directory");
 	return 0;
 }
 int usage_sm_reader(void) {
@@ -362,6 +363,7 @@ int CmdSmartRaw(const char *Cmd) {
 	int hexlen = 0;
     bool active = false;
     bool active_select = false;	
+    bool useT0 = false;	
 	uint8_t cmdp = 0;
 	bool errors = false, reply = true, decodeTLV = false, breakloop = false;
 	uint8_t data[USB_CMD_DATA_SIZE] = {0x00};
@@ -383,6 +385,10 @@ int CmdSmartRaw(const char *Cmd) {
 			break;
 		case 't':
 			decodeTLV = true;
+			cmdp++;
+			break;			
+		case '0':
+			useT0 = true;
 			cmdp++;
 			break;			
 		case 'd': {
@@ -425,7 +431,10 @@ int CmdSmartRaw(const char *Cmd) {
     }
 
 	if (hexlen > 0) {
-        c.arg[0] |= SC_RAW;
+		if (useT0)
+			c.arg[0] |= SC_RAW_T0;
+		else
+			c.arg[0] |= SC_RAW;
 	}	
 	
 	memcpy(c.d.asBytes, data, hexlen );
