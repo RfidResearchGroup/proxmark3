@@ -22,8 +22,8 @@ int usage_sm_raw(void) {
 	PrintAndLogEx(NORMAL, "       d <bytes>  :  bytes to send");
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Examples:");
-	PrintAndLogEx(NORMAL, "        sc raw s 0 d 00a404000e315041592e5359532e444446303100  - `1PAY.SYS.DDF01` PPSE directory with get ATR");
-	PrintAndLogEx(NORMAL, "        sc raw 0 d 00a404000e325041592e5359532e444446303100    - `2PAY.SYS.DDF01` PPSE directory");
+	PrintAndLogEx(NORMAL, "        sc raw s 0 d 00a404000e315041592e5359532e4444463031  - `1PAY.SYS.DDF01` PPSE directory with get ATR");
+	PrintAndLogEx(NORMAL, "        sc raw 0 d 00a404000e325041592e5359532e4444463031    - `2PAY.SYS.DDF01` PPSE directory");
 	return 0;
 }
 int usage_sm_reader(void) {
@@ -289,7 +289,7 @@ static bool smart_select(bool silent) {
 static int smart_wait(uint8_t *data) {
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
-		PrintAndLogEx(WARNING, "smart card response failed");
+		PrintAndLogEx(WARNING, "smart card response timeout");
 		return -1;
 	}
 	
@@ -299,11 +299,12 @@ static int smart_wait(uint8_t *data) {
 		return -2;			
 	}
 	memcpy(data, resp.d.asBytes, len);	
-	PrintAndLogEx(SUCCESS, " %d | %s", len, sprint_hex_inrow_ex(data,  len, 32));
-
 	if (len >= 2) {		
 		PrintAndLogEx(SUCCESS, "%02X%02X | %s", data[len - 2], data[len - 1], GetAPDUCodeDescription(data[len - 2], data[len - 1])); 
+	} else {
+		PrintAndLogEx(SUCCESS, " %d | %s", len, sprint_hex_inrow_ex(data,  len, 8));
 	}
+	
 	return len;
 }
 
@@ -466,7 +467,7 @@ int CmdSmartRaw(const char *Cmd) {
 		}
 
 		if (decodeTLV && len > 4)
-			TLVPrintFromBuffer(buf+1, len-3);
+			TLVPrintFromBuffer(buf, len-2);
 
 		free(buf);
 	}
@@ -478,7 +479,8 @@ int ExchangeAPDUSC(uint8_t *datain, int datainlen, bool activateCard, bool leave
 	
 	if (activateCard)
 		smart_select(false);
-	printf("* APDU SC\n");
+
+	PrintAndLogEx(DEBUG, "APDU SC");
 
 	UsbCommand c = {CMD_SMART_RAW, {SC_RAW_T0, datainlen, 0}};	
 	if (activateCard) {
@@ -806,8 +808,8 @@ int CmdSmartBruteforceSFI(const char *Cmd) {
 	}
 	
 	PrintAndLogEx(INFO, "Selecting PPSE aid");
-	CmdSmartRaw("d 00a404000e325041592e5359532e444446303100");
-	CmdSmartRaw("d 00a4040007a000000004101000");
+	CmdSmartRaw("s 0 d 00a404000e325041592e5359532e4444463031");
+	CmdSmartRaw("0 d 00a4040007a000000004101000");
 	
 	PrintAndLogEx(INFO, "starting");
 	
