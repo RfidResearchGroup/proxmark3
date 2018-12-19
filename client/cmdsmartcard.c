@@ -159,58 +159,46 @@ float GetATRF(uint8_t *atr, size_t atrlen) {
 }
 
 static int PrintATR(uint8_t *atr, size_t atrlen) {
-	uint8_t vxor = 0;
-	for (int i = 1; i < atrlen; i++)
-		vxor ^= atr[i];
-	
-	if (vxor)
-		PrintAndLogEx(WARNING, "Check summ error. Must be 0 but: 0x%02x", vxor);
-	else
-		PrintAndLogEx(INFO, "Check summ OK.");
-
-	if (atr[0] != 0x3b)
-		PrintAndLogEx(WARNING, "Not a direct convention: 0x%02x", atr[0]);
 	
 	uint8_t T0 = atr[1];
 	uint8_t K = T0 & 0x0F;
-	uint8_t TD1 = 0;
-	
-	uint8_t T1len = 0;
-	uint8_t TD1len = 0;
-	uint8_t TDilen = 0;
+	uint8_t TD1 = 0, T1len = 0, TD1len = 0, TDilen = 0;
 	
 	if (T0 & 0x10) {
-		PrintAndLog("TA1 (Maximum clock frequency, proposed bit duration): 0x%02x", atr[2 + T1len]);
+		PrintAndLog("\t- TA1 (Maximum clock frequency, proposed bit duration) [ 0x%02x ]", atr[2 + T1len]);
 		T1len++;
 	}
+	
 	if (T0 & 0x20) {
-		PrintAndLog("TB1 (Deprecated: VPP requirements): 0x%02x", atr[2 + T1len]);
+		PrintAndLog("\t- TB1 (Deprecated: VPP requirements) [ 0x%02x ]", atr[2 + T1len]);
 		T1len++;
 	}
+	
 	if (T0 & 0x40) {
-		PrintAndLog("TC1 (Extra delay between bytes required by card): 0x%02x", atr[2 + T1len]);
+		PrintAndLog("\t- TC1 (Extra delay between bytes required by card) [ 0x%02x ]", atr[2 + T1len]);
 		T1len++;
 	}
+	
 	if (T0 & 0x80) {
 		TD1 = atr[2 + T1len];
-		PrintAndLog("TD1 (First offered transmission protocol, presence of TA2..TD2): 0x%02x. Protocol T=%d", TD1, TD1 & 0x0f);
+		PrintAndLog("\t- TD1 (First offered transmission protocol, presence of TA2..TD2) [ 0x%02x ] Protocol T%d", TD1, TD1 & 0x0f);
 		T1len++;
 		
 		if (TD1 & 0x10) {
-			PrintAndLog("TA2 (Specific protocol and parameters to be used after the ATR): 0x%02x", atr[2 + T1len + TD1len]);
+			PrintAndLog("\t- TA2 (Specific protocol and parameters to be used after the ATR) [ 0x%02x ]", atr[2 + T1len + TD1len]);
 			TD1len++;
 		}
 		if (TD1 & 0x20) {
-			PrintAndLog("TB2 (Deprecated: VPP precise voltage requirement): 0x%02x", atr[2 + T1len + TD1len]);
+			PrintAndLog("\t- TB2 (Deprecated: VPP precise voltage requirement) [ 0x%02x ]", atr[2 + T1len + TD1len]);
 			TD1len++;
 		}
 		if (TD1 & 0x40) {
-			PrintAndLog("TC2 (Maximum waiting time for protocol T=0): 0x%02x", atr[2 + T1len + TD1len]);
+			PrintAndLog("\t- TC2 (Maximum waiting time for protocol T=0) [ 0x%02x ]", atr[2 + T1len + TD1len]);
 			TD1len++;
 		}
 		if (TD1 & 0x80) {
 			uint8_t TDi = atr[2 + T1len + TD1len];
-			PrintAndLog("TD2 (A supported protocol or more global parameters, presence of TA3..TD3): 0x%02x. Protocol T=%d", TDi, TDi & 0x0f);
+			PrintAndLog("\t- TD2 (A supported protocol or more global parameters, presence of TA3..TD3) [ 0x%02x ] Protocol T%d", TDi, TDi & 0x0f);
 			TD1len++;
 
 			bool nextCycle = true;
@@ -218,20 +206,20 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
 			while (nextCycle) {
 				nextCycle = false;
 				if (TDi & 0x10) {
-					PrintAndLog("TA%d: 0x%02x", vi, atr[2 + T1len + TD1len + TDilen]);
+					PrintAndLog("\t- TA%d: 0x%02x", vi, atr[2 + T1len + TD1len + TDilen]);
 					TDilen++;
 				}
 				if (TDi & 0x20) {
-					PrintAndLog("TB%d: 0x%02x", vi, atr[2 + T1len + TD1len + TDilen]);
+					PrintAndLog("\t- TB%d: 0x%02x", vi, atr[2 + T1len + TD1len + TDilen]);
 					TDilen++;
 				}
 				if (TDi & 0x40) {
-					PrintAndLog("TC%d: 0x%02x", vi, atr[2 + T1len + TD1len + TDilen]);
+					PrintAndLog("\t- TC%d: 0x%02x", vi, atr[2 + T1len + TD1len + TDilen]);
 					TDilen++;
 				}
 				if (TDi & 0x80) {
 					TDi = atr[2 + T1len + TD1len + TDilen];
-					PrintAndLog("TD%d: 0x%02x. Protocol T=%d", vi, TDi, TDi & 0x0f);
+					PrintAndLog("\t- TD%d [ 0x%02x ] Protocol T%d", vi, TDi, TDi & 0x0f);
 					TDilen++;
 					
 					nextCycle = true;
@@ -240,25 +228,35 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
 			}
 		}
 	}
+
+	uint8_t vxor = 0;
+	for (int i = 1; i < atrlen; i++)
+		vxor ^= atr[i];
+	
+	if (vxor)
+		PrintAndLogEx(WARNING, "Check summ error. Must be 0 got 0x%02X", vxor);
+	else
+		PrintAndLogEx(INFO, "Check summ OK.");
+
+	if (atr[0] != 0x3b)
+		PrintAndLogEx(WARNING, "Not a direct convention [ 0x%02x ]", atr[0]);
+
 	
 	uint8_t calen = 2 + T1len + TD1len + TDilen + K;
 	
 	if (atrlen != calen && atrlen != calen + 1)  // may be CRC
 		PrintAndLogEx(ERR, "ATR length error. len: %d, T1len: %d, TD1len: %d, TDilen: %d, K: %d", atrlen, T1len, TD1len, TDilen, K);
-	else
-		PrintAndLogEx(INFO, "ATR length OK.");
 	
-	PrintAndLog("Historical bytes len: 0x%02x", K);
 	if (K > 0)
-		PrintAndLog("The format of historical bytes: %02x", atr[2 + T1len + TD1len + TDilen]);
+		PrintAndLogEx(INFO, "\nHistorical bytes | len 0x%02d | format %02x", K, atr[2 + T1len + TD1len + TDilen]);
+	
 	if (K > 1) {
-		PrintAndLog("Historical bytes:");
+		PrintAndLogEx(INFO, "\tHistorical bytes");
 		dump_buffer(&atr[2 + T1len + TD1len + TDilen], K, NULL, 1);
 	}
 	
 	return 0;
 }
-
 
 static bool smart_select(bool silent) {
 	UsbCommand c = {CMD_SMART_ATR, {0, 0, 0}};
@@ -515,7 +513,6 @@ int ExchangeAPDUSC(uint8_t *datain, int datainlen, bool activateCard, bool leave
 	return 0;
 }	
 
-
 int CmdSmartUpgrade(const char *Cmd) {
 
 	PrintAndLogEx(WARNING, "WARNING - Smartcard socket firmware upgrade.");
@@ -663,32 +660,31 @@ int CmdSmartInfo(const char *Cmd){
 	memcpy(&card, (smart_card_atr_t *)resp.d.asBytes, sizeof(smart_card_atr_t));
 	
 	// print header
-	PrintAndLogEx(INFO, "\n--- Smartcard Information ---------");
+	PrintAndLogEx(INFO, "--- Smartcard Information ---------");
 	PrintAndLogEx(INFO, "-------------------------------------------------------------");
-	PrintAndLogEx(INFO, "ISO76183 ATR : %s", sprint_hex(card.atr, card.atr_len));
-	PrintAndLogEx(INFO, "look up ATR");
-	PrintAndLogEx(INFO, "http://smartcard-atr.appspot.com/parse?ATR=%s", sprint_hex_inrow(card.atr, card.atr_len) );
+	PrintAndLogEx(INFO, "ISO7618-3 ATR : %s", sprint_hex(card.atr, card.atr_len));
+	PrintAndLogEx(INFO, "\nhttp://smartcard-atr.appspot.com/parse?ATR=%s", sprint_hex_inrow(card.atr, card.atr_len) );
 
 	// print ATR
 	PrintAndLogEx(NORMAL, "");
-	PrintAndLogEx(NORMAL, "* ATR:");
+	PrintAndLogEx(INFO, "ATR");
 	PrintATR(card.atr, card.atr_len);
 	
 	// print D/F (brom byte TA1 or defaults)
 	PrintAndLogEx(NORMAL, "");
-	PrintAndLogEx(NORMAL, "* D/F (TA1):");
+	PrintAndLogEx(INFO, "D/F (TA1)");
 	int Di = GetATRDi(card.atr, card.atr_len);
 	int Fi = GetATRFi(card.atr, card.atr_len);
 	float F = GetATRF(card.atr, card.atr_len);
 	if (GetATRTA1(card.atr, card.atr_len) == 0x11)
 		PrintAndLogEx(INFO, "Using default values...");
 	
-	PrintAndLogEx(NORMAL, "Di=%d", Di);
-	PrintAndLogEx(NORMAL, "Fi=%d", Fi);
-	PrintAndLogEx(NORMAL, "F=%.1f MHz", F);
-	PrintAndLogEx(NORMAL, "Cycles/ETU=%d", Fi/Di);
-	PrintAndLogEx(NORMAL, "%.1f bits/sec at 4MHz", (float)4000000 / (Fi/Di));
-	PrintAndLogEx(NORMAL, "%.1f bits/sec at Fmax=%.1fMHz", (F * 1000000) / (Fi/Di), F);
+	PrintAndLogEx(NORMAL, "\t- Di %d", Di);
+	PrintAndLogEx(NORMAL, "\t- Fi %d", Fi);
+	PrintAndLogEx(NORMAL, "\t- F  %.1f MHz", F);
+	PrintAndLogEx(NORMAL, "\t- Cycles/ETU %d", Fi/Di);
+	PrintAndLogEx(NORMAL, "\t- %.1f bits/sec at 4 MHz", (float)4000000 / (Fi/Di));
+	PrintAndLogEx(NORMAL, "\t- %.1f bits/sec at Fmax (%.1f MHz)", (F * 1000000) / (Fi/Di), F);
 	
 	return 0;
 }
