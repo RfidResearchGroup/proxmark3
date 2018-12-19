@@ -323,7 +323,7 @@ static int smart_response(uint8_t *data) {
 
 	if (needGetData) {
 		int len = data[datalen - 1];
-		PrintAndLogEx(INFO, "Requesting response. len=0x%x", len);	
+		PrintAndLogEx(INFO, "Requesting 0x%02X bytes response", len);	
 		uint8_t getstatus[] = {0x00, ISO7816_GETSTATUS, 0x00, 0x00, len};
 		UsbCommand cStatus = {CMD_SMART_RAW, {SC_RAW, sizeof(getstatus), 0}};	
 		memcpy(cStatus.d.asBytes, getstatus, sizeof(getstatus) );
@@ -341,7 +341,7 @@ static int smart_response(uint8_t *data) {
 			// data with ACK
 			if (datalen == len + 2 + 1) { // 2 - response, 1 - ACK
 				if (data[0] != ISO7816_GETSTATUS) {
-					PrintAndLogEx(ERR, "GetResponse ACK error. len=0x%x data[0]=%02x", len, data[0]);	
+					PrintAndLogEx(ERR, "GetResponse ACK error. len 0x%x | data[0] %02X", len, data[0]);	
 					datalen = 0;
 					goto out;
 				}
@@ -350,7 +350,7 @@ static int smart_response(uint8_t *data) {
 				memmove(data, &data[1], datalen);
 			} else {
 				// wrong length
-				PrintAndLogEx(WARNING, "GetResponse wrong length. Must be: 0x%02x but: 0x%02x", len, datalen - 3);	
+				PrintAndLogEx(WARNING, "GetResponse wrong length. Must be 0x%02X got 0x%02X", len, datalen - 3);	
 			}
 		}
 	}
@@ -808,8 +808,9 @@ int CmdSmartBruteforceSFI(const char *Cmd) {
 	}
 	
 	PrintAndLogEx(INFO, "Selecting PPSE aid");
-	CmdSmartRaw("s 0 d 00a404000e325041592e5359532e4444463031");
-	CmdSmartRaw("0 d 00a4040007a000000004101000");
+	CmdSmartRaw("s 0 t d 00a404000e325041592e5359532e4444463031");
+	CmdSmartRaw("0 t d 00a4040007a000000004101000");  // mastercard
+//	CmdSmartRaw("0 t d 00a4040007a0000000031010"); // visa
 	
 	PrintAndLogEx(INFO, "starting");
 	
@@ -830,7 +831,6 @@ int CmdSmartBruteforceSFI(const char *Cmd) {
 			
 			smart_response(buf);
 			
-			// if 0x6C
 			if ( buf[0] == 0x6C ) {
 				data[4]	= buf[1];
 				
