@@ -80,7 +80,7 @@ uint8_t GetATRTA1(uint8_t *atr, size_t atrlen) {
 			return atr[2];
 	}
 	
-	return 0x11; // default value is ‘0x11’, corresponding to fmax=5 MHz, Fi=372, Di=1.
+	return 0x11; // default value is â€˜0x11â€™, corresponding to fmax=5 MHz, Fi=372, Di=1.
 }
 
 int DiArray[] = {
@@ -679,13 +679,18 @@ int CmdSmartInfo(const char *Cmd){
 	if (GetATRTA1(card.atr, card.atr_len) == 0x11)
 		PrintAndLogEx(INFO, "Using default values...");
 	
-	PrintAndLogEx(NORMAL, "\t- Di %d", Di);
-	PrintAndLogEx(NORMAL, "\t- Fi %d", Fi);
-	PrintAndLogEx(NORMAL, "\t- F  %.1f MHz", F);
-	PrintAndLogEx(NORMAL, "\t- Cycles/ETU %d", Fi/Di);
-	PrintAndLogEx(NORMAL, "\t- %.1f bits/sec at 4 MHz", (float)4000000 / (Fi/Di));
-	PrintAndLogEx(NORMAL, "\t- %.1f bits/sec at Fmax (%.1f MHz)", (F * 1000000) / (Fi/Di), F);
-	
+	PrintAndLogEx(NORMAL, "\t- Di=%d", Di);
+	PrintAndLogEx(NORMAL, "\t- Fi=%d", Fi);
+	PrintAndLogEx(NORMAL, "\t- F=%.1f MHz", F);
+  
+	if (Di && Fi) {
+		PrintAndLogEx(NORMAL, "\t- Cycles/ETU=%d", Fi/Di);
+		PrintAndLogEx(NORMAL, "\t- %.1f bits/sec at 4MHz", (float)4000000 / (Fi/Di));
+		PrintAndLogEx(NORMAL, "\t- %.1f bits/sec at Fmax=%.1fMHz", (F * 1000000) / (Fi/Di), F);
+	} else {
+		PrintAndLogEx(WARNING, "\t- Di or Fi is RFU.");
+	};
+
 	return 0;
 }
 
