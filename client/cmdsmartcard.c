@@ -675,10 +675,14 @@ int CmdSmartInfo(const char *Cmd){
 	PrintAndLogEx(NORMAL, "Di=%d", Di);
 	PrintAndLogEx(NORMAL, "Fi=%d", Fi);
 	PrintAndLogEx(NORMAL, "F=%.1f MHz", F);
-	PrintAndLogEx(NORMAL, "Cycles/ETU=%d", Fi/Di);
-	PrintAndLogEx(NORMAL, "%.1f bits/sec at 4MHz", (float)4000000 / (Fi/Di));
-	PrintAndLogEx(NORMAL, "%.1f bits/sec at Fmax=%.1fMHz", (F * 1000000) / (Fi/Di), F);
-	
+	if (Di && Fi) {
+		PrintAndLogEx(NORMAL, "Cycles/ETU=%d", Fi/Di);
+		PrintAndLogEx(NORMAL, "%.1f bits/sec at 4MHz", (float)4000000 / (Fi/Di));
+		PrintAndLogEx(NORMAL, "%.1f bits/sec at Fmax=%.1fMHz", (F * 1000000) / (Fi/Di), F);
+	} else {
+		PrintAndLogEx(WARNING, "Di or Fi is RFU.");
+	};
+
 	return 0;
 }
 
