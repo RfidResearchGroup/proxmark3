@@ -8,6 +8,7 @@
 // Proxmark3 RDV40 Smartcard module commands
 //-----------------------------------------------------------------------------
 #include "cmdsmartcard.h"
+#include "../emv/emvjson.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -24,6 +25,9 @@ int usage_sm_raw(void) {
 	PrintAndLogEx(NORMAL, "Examples:");
 	PrintAndLogEx(NORMAL, "        sc raw s 0 d 00a404000e315041592e5359532e4444463031  - `1PAY.SYS.DDF01` PPSE directory with get ATR");
 	PrintAndLogEx(NORMAL, "        sc raw 0 d 00a404000e325041592e5359532e4444463031    - `2PAY.SYS.DDF01` PPSE directory");
+	PrintAndLogEx(NORMAL, "        sc raw 0 t d 00a4040007a000000004101000              - Mastercard");
+	PrintAndLogEx(NORMAL, "        sc raw 0 t d 00a4040007a0000000031010                - Visa");
+
 	return 0;
 }
 int usage_sm_reader(void) {
@@ -64,13 +68,46 @@ int usage_sm_setclock(void) {
 	return 0;
 }
 int usage_sm_brute(void) {
-	PrintAndLogEx(NORMAL, "Tries to bruteforce SFI, ");
+	PrintAndLogEx(NORMAL, "Tries to bruteforce SFI, using a known list of AID's ");
 	PrintAndLogEx(NORMAL, "Usage: sc brute [h]");
 	PrintAndLogEx(NORMAL, "       h          :  this help");
+	PrintAndLogEx(NORMAL, "       t          :  executes TLV decoder if it possible");
+//	PrintAndLogEx(NORMAL, "       0          :  use protocol T=0");
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Examples:");
-	PrintAndLogEx(NORMAL, "        sc brute");
+	PrintAndLogEx(NORMAL, "        sc brute t");
 	return 0;
+}
+
+static int smart_loadjson(const char *preferredName, const char *suffix, json_t **root) {
+
+	json_error_t error;
+
+	if ( preferredName == NULL ) return 1;
+	if ( suffix == NULL ) return 1;
+
+	int retval = 0;
+	int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
+	char * fileName = calloc(size, sizeof(char));
+	sprintf(fileName, "%s.%s", preferredName, suffix);
+
+	*root = json_load_file(fileName, 0, &error);
+	if (!*root) {
+		PrintAndLogEx(ERR, "json (%s) error on line %d: %s", fileName, error.line, error.text);
+		retval = 2; 
+		goto out;
+	}
+	
+	if (!json_is_array(*root)) {
+		PrintAndLogEx(ERR, "Invalid json (%s) format. root must be an array.", fileName);
+		retval = 3; 
+		goto out;
+	}
+
+	PrintAndLogEx(SUCCESS, "Loaded file (%s) OK.", fileName);
+out:	
+	free(fileName);
+	return retval;	
 }
 
 uint8_t GetATRTA1(uint8_t *atr, size_t atrlen) {
@@ -142,19 +179,16 @@ float FArray[] = {
 
 int GetATRDi(uint8_t *atr, size_t atrlen) {
 	uint8_t TA1 = GetATRTA1(atr, atrlen);
-	
-	return DiArray[TA1 & 0x0f];  // The 4 low-order bits of TA1 (4th MSbit to 1st LSbit) encode Di 
+	return DiArray[TA1 & 0x0F];  // The 4 low-order bits of TA1 (4th MSbit to 1st LSbit) encode Di 
 }
 
 int GetATRFi(uint8_t *atr, size_t atrlen) {
 	uint8_t TA1 = GetATRTA1(atr, atrlen);
-
 	return FiArray[TA1 >> 4];  // The 4 high-order bits of TA1 (8th MSbit to 5th LSbit) encode fmax and Fi
 }
 
 float GetATRF(uint8_t *atr, size_t atrlen) {
 	uint8_t TA1 = GetATRTA1(atr, atrlen);
-
 	return FArray[TA1 >> 4];  // The 4 high-order bits of TA1 (8th MSbit to 5th LSbit) encode fmax and Fi
 }
 
@@ -284,31 +318,31 @@ static bool smart_select(bool silent) {
 	return true;
 }
 
-static int smart_wait(uint8_t *data) {
+static int smart_wait(uint8_t *data, bool silent) {
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
-		PrintAndLogEx(WARNING, "smart card response timeout");
+		if (!silent) PrintAndLogEx(WARNING, "smart card response timeout");
 		return -1;
 	}
 	
 	uint32_t len = resp.arg[0];	
 	if ( !len ) {
-		PrintAndLogEx(WARNING, "smart card response failed");
+		if (!silent) PrintAndLogEx(WARNING, "smart card response failed");
 		return -2;			
 	}
 	memcpy(data, resp.d.asBytes, len);	
 	if (len >= 2) {		
-		PrintAndLogEx(SUCCESS, "%02X%02X | %s", data[len - 2], data[len - 1], GetAPDUCodeDescription(data[len - 2], data[len - 1])); 
+		if (!silent) PrintAndLogEx(SUCCESS, "%02X%02X | %s", data[len - 2], data[len - 1], GetAPDUCodeDescription(data[len - 2], data[len - 1])); 
 	} else {
-		PrintAndLogEx(SUCCESS, " %d | %s", len, sprint_hex_inrow_ex(data,  len, 8));
+		if (!silent) PrintAndLogEx(SUCCESS, " %d | %s", len, sprint_hex_inrow_ex(data,  len, 8));
 	}
 	
 	return len;
 }
 
-static int smart_response(uint8_t *data) {
+static int smart_responseEx(uint8_t *data, bool silent) {
 		
-	int datalen = smart_wait(data);	
+	int datalen = smart_wait(data, silent);	
 	bool needGetData = false;
 	
 	if (datalen < 2 ) {
@@ -321,14 +355,14 @@ static int smart_response(uint8_t *data) {
 
 	if (needGetData) {
 		int len = data[datalen - 1];
-		PrintAndLogEx(INFO, "Requesting 0x%02X bytes response", len);	
+		if (!silent) PrintAndLogEx(INFO, "Requesting 0x%02X bytes response", len);	
 		uint8_t getstatus[] = {0x00, ISO7816_GETSTATUS, 0x00, 0x00, len};
 		UsbCommand cStatus = {CMD_SMART_RAW, {SC_RAW, sizeof(getstatus), 0}};	
 		memcpy(cStatus.d.asBytes, getstatus, sizeof(getstatus) );
 		clearCommandBuffer();
 		SendCommand(&cStatus);
 
-		datalen = smart_wait(data);
+		datalen = smart_wait(data, silent);
 
 		if (datalen < 2 ) {
 			goto out;
@@ -339,7 +373,9 @@ static int smart_response(uint8_t *data) {
 			// data with ACK
 			if (datalen == len + 2 + 1) { // 2 - response, 1 - ACK
 				if (data[0] != ISO7816_GETSTATUS) {
-					PrintAndLogEx(ERR, "GetResponse ACK error. len 0x%x | data[0] %02X", len, data[0]);	
+					if (!silent) {
+						PrintAndLogEx(ERR, "GetResponse ACK error. len 0x%x | data[0] %02X", len, data[0]);	
+					}
 					datalen = 0;
 					goto out;
 				}
@@ -348,13 +384,19 @@ static int smart_response(uint8_t *data) {
 				memmove(data, &data[1], datalen);
 			} else {
 				// wrong length
-				PrintAndLogEx(WARNING, "GetResponse wrong length. Must be 0x%02X got 0x%02X", len, datalen - 3);	
+				if (!silent) {
+					PrintAndLogEx(WARNING, "GetResponse wrong length. Must be 0x%02X got 0x%02X", len, datalen - 3);	
+				}
 			}
 		}
 	}
 	
 out:
 	return datalen;
+}
+
+static int smart_response(uint8_t *data) {
+	return smart_responseEx(data, false);
 }
 
 int CmdSmartRaw(const char *Cmd) {
@@ -488,7 +530,7 @@ int ExchangeAPDUSC(uint8_t *datain, int datainlen, bool activateCard, bool leave
 	clearCommandBuffer();
 	SendCommand(&c);	
 	
-	int len = smart_response(dataout);
+	int len = smart_responseEx(dataout, true);
 	
 	if ( len < 0 ) {
 		return 2;
@@ -505,11 +547,10 @@ int ExchangeAPDUSC(uint8_t *datain, int datainlen, bool activateCard, bool leave
 		clearCommandBuffer();
 		SendCommand(&c2);	
 		
-		len = smart_response(dataout);
+		len = smart_responseEx(dataout, true);
 	}	
 	
 	*dataoutlen = len;
-
 	return 0;
 }	
 
@@ -679,14 +720,14 @@ int CmdSmartInfo(const char *Cmd){
 	if (GetATRTA1(card.atr, card.atr_len) == 0x11)
 		PrintAndLogEx(INFO, "Using default values...");
 	
-	PrintAndLogEx(NORMAL, "\t- Di=%d", Di);
-	PrintAndLogEx(NORMAL, "\t- Fi=%d", Fi);
-	PrintAndLogEx(NORMAL, "\t- F=%.1f MHz", F);
+	PrintAndLogEx(NORMAL, "\t- Di %d", Di);
+	PrintAndLogEx(NORMAL, "\t- Fi %d", Fi);
+	PrintAndLogEx(NORMAL, "\t- F  %.1f MHz", F);
   
 	if (Di && Fi) {
-		PrintAndLogEx(NORMAL, "\t- Cycles/ETU=%d", Fi/Di);
+		PrintAndLogEx(NORMAL, "\t- Cycles/ETU %d", Fi/Di);
 		PrintAndLogEx(NORMAL, "\t- %.1f bits/sec at 4MHz", (float)4000000 / (Fi/Di));
-		PrintAndLogEx(NORMAL, "\t- %.1f bits/sec at Fmax=%.1fMHz", (F * 1000000) / (Fi/Di), F);
+		PrintAndLogEx(NORMAL, "\t- %.1f bits/sec at Fmax (%.1fMHz)", (F * 1000000) / (Fi/Di), F);
 	} else {
 		PrintAndLogEx(WARNING, "\t- Di or Fi is RFU.");
 	};
@@ -798,58 +839,210 @@ int CmdSmartList(const char *Cmd) {
 
 int CmdSmartBruteforceSFI(const char *Cmd) {
 
-	char ctmp = tolower(param_getchar(Cmd, 0));
-	if (ctmp == 'h') return usage_sm_brute();
-	
-	uint8_t data[5] = {0x00, 0xB2, 0x00, 0x00, 0x00};
-
-	PrintAndLogEx(INFO, "Selecting card");
-	if ( !smart_select(false) ) {
-		return 1;
+	uint8_t cmdp = 0;
+	bool errors = false, decodeTLV = false; //, useT0 = false;	
+		
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
+		case 'h': return usage_sm_brute();		
+		case 't':
+			decodeTLV = true;
+			cmdp++;
+			break;
+/*			
+		case '0':
+			useT0 = true;
+			cmdp++;
+			break;
+*/			
+		default:
+			PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+			errors = true;
+			break;
+		}
 	}
 	
-	PrintAndLogEx(INFO, "Selecting PPSE aid");
-	CmdSmartRaw("s 0 t d 00a404000e325041592e5359532e4444463031");
-	CmdSmartRaw("0 t d 00a4040007a000000004101000");  // mastercard
-//	CmdSmartRaw("0 t d 00a4040007a0000000031010"); // visa
+	//Validations
+	if (errors) return usage_sm_brute();			
+
+	const char *SELECT = "00a40400%02x%s";	
 	
-	PrintAndLogEx(INFO, "starting");
+	uint8_t READ_RECORD[] = {0x00, 0xB2, 0x00, 0x00, 0x00};
+	uint8_t GET_PROCESSING_OPTIONS[] = {0x80, 0xA8, 0x00, 0x00, 0x02, 0x83, 0x00, 0x00};
+
+//	uint8_t GENERATE_AC[] = {0x80, 0xAE};
+//	uint8_t GET_CHALLENGE[] = {0x00, 0x84, 0x00};
+//	uint8_t GET_DATA[] = {0x80, 0xCA, 0x00, 0x00, 0x00};
+//	uint8_t SELECT[] = {0x00, 0xA4, 0x04, 0x00};
+//	uint8_t UNBLOCK_PIN[] = {0x84, 0x24, 0x00, 0x00, 0x00};
+//	uint8_t VERIFY[] = {0x00, 0x20, 0x00, 0x80};
 	
-	UsbCommand c = {CMD_SMART_RAW, {SC_RAW, sizeof(data), 0}};	
+	
+	// Select AID command
+	UsbCommand cAid = {CMD_SMART_RAW, {SC_RAW_T0, 0, 0}};
+		
+	// Get processing options command
+	UsbCommand cOpt = {CMD_SMART_RAW, {SC_RAW_T0, sizeof(GET_PROCESSING_OPTIONS), 0}};	
+	memcpy(cOpt.d.asBytes, GET_PROCESSING_OPTIONS, sizeof(GET_PROCESSING_OPTIONS) );
+	
+	// READ RECORD
+	UsbCommand cSFI = {CMD_SMART_RAW, {SC_RAW_T0, sizeof(READ_RECORD), 0}};	
+			
+	
+	PrintAndLogEx(INFO, "Importing AID list");
+	json_t *root = NULL;
+	smart_loadjson("aidlist", "json", &root);
+
 	uint8_t* buf = malloc(USB_CMD_DATA_SIZE);
 	if ( !buf )
 		return 1;		
-		
-	for (uint8_t i=1; i < 4; i++) {
-		for (int p1=1; p1 < 5; p1++) {
-			
-			data[2] = p1;
-			data[3] = (i << 3) + 4;
 
-			memcpy(c.d.asBytes, data, sizeof(data) );
-			clearCommandBuffer();
-			SendCommand(&c);
-			
-			smart_response(buf);
-			
-			if ( buf[0] == 0x6C ) {
-				data[4]	= buf[1];
-				
-				memcpy(c.d.asBytes, data, sizeof(data) );
-				clearCommandBuffer();
-				SendCommand(&c);
-				uint8_t len = smart_response(buf);
-				
-				// TLV decoder
-				if (len > 4)
-					TLVPrintFromBuffer(buf+1, len-3);
+	uint8_t* sfibuf = malloc(USB_CMD_DATA_SIZE);
+	if ( !sfibuf ) 
+		return 1;
+
+	PrintAndLogEx(INFO, "Selecting card");
+	if ( !smart_select(false) )
+		return 1;
+
 	
-				data[4] = 0;
-			}
-			memset(buf, 0x00, USB_CMD_DATA_SIZE);
+	for (int i = 0; i < json_array_size(root); i++) {
+		json_t *data, *jaid;
+
+		data = json_array_get(root, i);
+		if (!json_is_object(data)) {
+			PrintAndLogEx(ERR, "data %d is not an object\n", i + 1);
+			json_decref(root);
+			return 1;
 		}
-	}	
+		
+		jaid = json_object_get(data, "AID");
+		if (!json_is_string(jaid)) {
+			PrintAndLogEx(ERR, "AID data [%d] is not a string", i + 1);
+			json_decref(root);
+			return 1;
+		}
+		
+		const char* aid = json_string_value(jaid);
+		if ( !aid ) continue;
+
+		size_t aidlen = strlen(aid);
+		char* caid = calloc( 8+2+aidlen+1, sizeof(uint8_t));
+		snprintf(caid, 8+2+aidlen+1, SELECT, aidlen >> 1, aid);		
+		
+		int hexlen = 0;
+		int res = param_gethex_to_eol(caid, 0, cAid.d.asBytes, sizeof(cAid.d.asBytes), &hexlen);
+		if ( res ) continue;
+		
+		cAid.arg[1] = hexlen;
+
+		clearCommandBuffer();
+		SendCommand(&cAid);	
+		
+		int len = smart_responseEx(buf, true);		
+		if ( len < 3 ) {
+			free(caid);			
+			continue;
+		}
+		
+		json_t *jvendor, *jname;
+		jvendor = json_object_get(data, "Vendor");
+		if (!json_is_string(jvendor)) {
+			PrintAndLogEx(ERR, "Vendor data [%d] is not a string", i + 1);
+			continue;
+		}
+		
+		const char* vendor = json_string_value(jvendor);
+		if ( !vendor ) continue;
+
+		jname = json_object_get(data, "Name");
+		if (!json_is_string(jname)) {
+			PrintAndLogEx(ERR, "Name data [%d] is not a string", i + 1);
+			continue;
+		}
+		const char* name = json_string_value(jname);
+		if ( !name ) continue;
+
+		PrintAndLogEx(SUCCESS, "AID %s | %s | %s", aid, vendor, name);
+
+		// Get processing options
+		clearCommandBuffer();
+		SendCommand(&cOpt);
+		
+		uint8_t optionslen = smart_responseEx(buf, true);
+		if ( optionslen > 4 ) {
+			PrintAndLogEx(SUCCESS, "Got processing options");			
+			if ( decodeTLV ) {
+				TLVPrintFromBuffer(buf, optionslen-2);
+			}
+		} else {
+			PrintAndLogEx(FAILED, "Getting processing options failed");
+		}
+		
+		PrintAndLogEx(INFO, "Start SFI brute forcing");
+		
+		for (uint8_t sfi=1; sfi <= 31; sfi++) {
+
+			printf("."); fflush(stdout);
+			
+			for (uint16_t rec=1; rec <= 5; rec++) {
+
+				if (ukbhit()) {
+					int gc = getchar();	(void)gc;
+					PrintAndLogEx(NORMAL, "\naborted via keyboard!\n");
+					free(caid);
+					goto out;
+				}			
+			
+				READ_RECORD[2] = rec;
+				READ_RECORD[3] = (sfi << 3) | 4;
+
+				memcpy(cSFI.d.asBytes, READ_RECORD, sizeof(READ_RECORD) );
+				clearCommandBuffer();
+				SendCommand(&cSFI);
+				
+				uint8_t sfilen = smart_responseEx(sfibuf, true);
+				
+				if ( sfibuf[0] == 0x6C ) {
+					READ_RECORD[4]	= sfibuf[1];
+					
+					memcpy(cSFI.d.asBytes, READ_RECORD, sizeof(READ_RECORD) );
+					clearCommandBuffer();
+					SendCommand(&cSFI);
+					sfilen = smart_responseEx(sfibuf, true);
+					
+					READ_RECORD[4] = 0;				
+				}
+				
+				if ( sfilen > 4 ) {
+				
+					PrintAndLogEx(SUCCESS, "\n\t file %02d, record %02d found", sfi, rec);
+					
+					uint8_t modifier = (sfibuf[0] == 0xC0) ? 1 : 0;
+					
+					if ( decodeTLV ) {
+						if (!TLVPrintFromBuffer(sfibuf + modifier, sfilen-2-modifier)) {
+							PrintAndLogEx(SUCCESS, "\tHEX: %s", sprint_hex(sfibuf, sfilen));
+						}
+					}
+										
+				}
+				memset(sfibuf, 0x00, USB_CMD_DATA_SIZE);
+			}
+		}
+		
+		free(sfibuf);	
+		free(caid);		
+		PrintAndLogEx(SUCCESS, "\nSFI brute force done\n");
+	}
+out:
+	if ( sfibuf )
+		free(sfibuf);
+	
 	free(buf);
+	json_decref(root);
+	
+	PrintAndLogEx(SUCCESS, "Search completed.");
 	return 0;
 }
 

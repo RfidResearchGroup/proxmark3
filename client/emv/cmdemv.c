@@ -1464,6 +1464,7 @@ int CmdEMVGetrng(const char *Cmd) {
 	char cmdp = param_getchar(Cmd, 0);
 	if ( cmdp == 'h' || cmdp == 'H') return usage_emv_getrnd();
 
+	PrintAndLogEx(INFO, "Not implemented yet");
 	return 0;
 }
 

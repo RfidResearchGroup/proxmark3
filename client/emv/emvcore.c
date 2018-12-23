@@ -120,7 +120,7 @@ static bool print_cb(void *data, const struct tlv *tlv, int level, bool is_leaf)
 	return true;
 }
 
-void TLVPrintFromBuffer(uint8_t *data, int datalen) {
+bool TLVPrintFromBuffer(uint8_t *data, int datalen) {
 	struct tlvdb *t = NULL;
 	t = tlvdb_parse_multi(data, datalen);
 	if (t) {
@@ -128,9 +128,11 @@ void TLVPrintFromBuffer(uint8_t *data, int datalen) {
 		
 		tlvdb_visit(t, print_cb, NULL, 0);
 		tlvdb_free(t);
+		return true;
 	} else {
 		PrintAndLogEx(WARNING, "TLV ERROR: Can't parse response as TLV tree.");
 	}
+	return false;
 }
 
 void TLVPrintFromTLVLev(struct tlvdb *tlv, int level) {

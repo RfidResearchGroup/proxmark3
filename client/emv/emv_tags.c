@@ -259,6 +259,21 @@ static const struct emv_tag emv_tags[] = {
 	{ 0x9f4c, "ICC Dynamic Number" },
 	{ 0x9f4d, "Log Entry" },
 	{ 0x9f4f, "Log Format", EMV_TAG_DOL },
+	
+	{ 0x9f50, "Offline Accumulator Balance" },
+	{ 0x9f51, "Application Currency Code" },
+	{ 0x9f51, "DRDOL" },
+	{ 0x9f52, "Application Default Action (ADA)" },
+	{ 0x9f52, "Terminal Compatibility Indicator" },
+	{ 0x9f55, "Issuer Authentication Flags" },
+	{ 0x9f56, "Issuer Authentication Indicator" },
+	{ 0x9f57, "Issuer Country Code" },
+	{ 0x9f58, "Consecutive Transaction Counter Limit (CTCL)" },
+	{ 0x9f59, "Consecutive Transaction Counter Upper Limit (CTCUL)" },
+	{ 0x9f5A, "Application Program Identifier" },
+	{ 0x9f5b, "Issuer Script Results" },
+	{ 0x9f5c, "Cumulative Total Transaction Amount Upper Limit (CTTAUL)" },
+	
 	{ 0x9f60, "CVC3 (Track1)" },
 	{ 0x9f61, "CVC3 (Track2)" },
 	{ 0x9f62, "PCVC3(Track1)" },
@@ -278,21 +293,18 @@ static const struct emv_tag emv_tags[] = {
 	{ 0xdf20, "Issuer Proprietary Bitmap (IPB)" },
 };
 
-static int emv_sort_tag(tlv_tag_t tag)
-{
+static int emv_sort_tag(tlv_tag_t tag) {
 	return (int)(tag >= 0x100 ? tag : tag << 8);
 }
 
-static int emv_tlv_compare(const void *a, const void *b)
-{
+static int emv_tlv_compare(const void *a, const void *b) {
 	const struct tlv *tlv = a;
 	const struct emv_tag *tag = b;
 
 	return emv_sort_tag(tlv->tag) - (emv_sort_tag(tag->tag));
 }
 
-static const struct emv_tag *emv_get_tag(const struct tlv *tlv)
-{
+static const struct emv_tag *emv_get_tag(const struct tlv *tlv) {
 	struct emv_tag *tag = bsearch(tlv, emv_tags, sizeof(emv_tags)/sizeof(emv_tags[0]),
 			sizeof(emv_tags[0]), emv_tlv_compare);
 
@@ -310,8 +322,7 @@ static const char *bitstrings[] = {
 	"1.......",
 };
 
-static void emv_tag_dump_bitmask(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level)
-{
+static void emv_tag_dump_bitmask(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
 	const struct emv_tag_bit *bits = tag->data;
 	unsigned bit, byte;
 
@@ -331,8 +342,7 @@ static void emv_tag_dump_bitmask(const struct tlv *tlv, const struct emv_tag *ta
 	}
 }
 
-static void emv_tag_dump_dol(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level)
-{
+static void emv_tag_dump_dol(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
 	const unsigned char *buf = tlv->value;
 	size_t left = tlv->len;
 
@@ -353,7 +363,7 @@ static void emv_tag_dump_dol(const struct tlv *tlv, const struct emv_tag *tag, F
 	}
 }
 
-static void emv_tag_dump_string(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level){
+static void emv_tag_dump_string(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
 	fprintf(f, "\tString value '");
 	fwrite(tlv->value, 1, tlv->len, f);
 	fprintf(f, "'\n");
@@ -468,8 +478,6 @@ static void emv_tag_dump_cvr(const struct tlv *tlv, const struct emv_tag *tag, F
 	
 	if (data[0] || data[1] || data[2] || data[3])
 		emv_tag_dump_bitmask(&bit_tlv, &bit_tag, f, level);
-	
-	return;
 }
 
 // EMV Book 3
@@ -512,12 +520,9 @@ static void emv_tag_dump_cid(const struct tlv *tlv, const struct emv_tag *tag, F
 				break;
 		}
 	}
-
-	return;
 }
 
-static void emv_tag_dump_cvm_list(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level)
-{
+static void emv_tag_dump_cvm_list(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
 	uint32_t X, Y;
 	int i;
 
@@ -615,7 +620,7 @@ static void emv_tag_dump_cvm_list(const struct tlv *tlv, const struct emv_tag *t
 	}
 }
 
-static void emv_tag_dump_afl(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level){
+static void emv_tag_dump_afl(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
 	if (tlv->len < 4 || tlv->len % 4) {
 		PRINT_INDENT(level);
 		fprintf(f, "\tINVALID!\n");
@@ -628,8 +633,7 @@ static void emv_tag_dump_afl(const struct tlv *tlv, const struct emv_tag *tag, F
 	}
 }
 
-bool emv_tag_dump(const struct tlv *tlv, FILE *f, int level)
-{
+bool emv_tag_dump(const struct tlv *tlv, FILE *f, int level) {
 	if (!tlv) {
 		fprintf(f, "NULL\n");
 		return false;
@@ -682,8 +686,7 @@ bool emv_tag_dump(const struct tlv *tlv, FILE *f, int level)
 	return true;
 }
 
-char *emv_get_tag_name(const struct tlv *tlv)
-{
+char *emv_get_tag_name(const struct tlv *tlv) {
 	static char *defstr = "";
 	
 	if (!tlv) 
