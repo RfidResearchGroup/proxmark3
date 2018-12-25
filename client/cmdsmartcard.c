@@ -25,7 +25,7 @@ int usage_sm_raw(void) {
 	PrintAndLogEx(NORMAL, "Examples:");
 	PrintAndLogEx(NORMAL, "        sc raw s 0 d 00a404000e315041592e5359532e4444463031  - `1PAY.SYS.DDF01` PPSE directory with get ATR");
 	PrintAndLogEx(NORMAL, "        sc raw 0 d 00a404000e325041592e5359532e4444463031    - `2PAY.SYS.DDF01` PPSE directory");
-	PrintAndLogEx(NORMAL, "        sc raw 0 t d 00a4040007a000000004101000              - Mastercard");
+	PrintAndLogEx(NORMAL, "        sc raw 0 t d 00a4040007a0000000041010              - Mastercard");
 	PrintAndLogEx(NORMAL, "        sc raw 0 t d 00a4040007a0000000031010                - Visa");
 
 	return 0;
@@ -837,6 +837,137 @@ int CmdSmartList(const char *Cmd) {
 	return 0;
 }
 
+static void smart_brute_prim(){
+
+	uint8_t* buf = calloc(USB_CMD_DATA_SIZE, sizeof(uint8_t));
+	if ( !buf ) 
+		return;
+	
+	int len = 0;
+	uint8_t get_card_data[] = { 
+		0x80, 0xCA, 0x9F, 0x13, 0x00,
+		0x80, 0xCA, 0x9F, 0x17, 0x00,
+		0x80, 0xCA,	0x9F, 0x36, 0x00,
+		0x80, 0xCA, 0x9F, 0x4f, 0x00
+	};
+	
+	UsbCommand c = {CMD_SMART_RAW, {SC_RAW_T0, 5, 0}};	
+	
+	PrintAndLogEx(INFO, "Reading primitives");
+
+	for (int i = 0; i < sizeof(get_card_data); i += 5) {
+		
+		memcpy(c.d.asBytes, get_card_data+i, 5 );
+		clearCommandBuffer();
+		SendCommand(&c);
+	
+		len = smart_responseEx(buf, true);
+
+		if ( len > 2 ) {
+			
+			//if ( decodeTLV ) {
+				//if (!TLVPrintFromBuffer(buf, len-2)) {
+					PrintAndLogEx(SUCCESS, "\tHEX  %d |: %s", len, sprint_hex(buf, len));
+				//}
+			//}										
+		}
+		len = 0;
+	}
+	free(buf);
+}
+
+static int smart_brute_sfi(bool decodeTLV){
+
+	uint8_t* buf = calloc(USB_CMD_DATA_SIZE, sizeof(uint8_t));
+	if ( !buf ) 
+		return 1;
+	
+	int len = 0;
+	// READ RECORD
+	uint8_t READ_RECORD[] = {0x00, 0xB2, 0x00, 0x00, 0x00};
+	UsbCommand c = {CMD_SMART_RAW, {SC_RAW_T0, sizeof(READ_RECORD), 0}};	
+
+	PrintAndLogEx(INFO, "Start SFI brute forcing");
+	
+	for (uint8_t sfi=1; sfi <= 3; sfi++) {
+
+		printf("."); fflush(stdout);
+		
+		for (uint16_t rec=1; rec <= 3; rec++) {
+
+			if (ukbhit()) {
+				int gc = getchar();	(void)gc;
+				PrintAndLogEx(NORMAL, "\naborted via keyboard!\n");
+				free(buf);
+				return 1;
+			}			
+		
+			READ_RECORD[2] = rec;
+			READ_RECORD[3] = (sfi << 3) | 4;
+
+			memcpy(c.d.asBytes, READ_RECORD, sizeof(READ_RECORD) );
+			clearCommandBuffer();
+			SendCommand(&c);
+			
+			len = smart_responseEx(buf, true);
+			
+			if ( buf[0] == 0x6C ) {
+				READ_RECORD[4]	= buf[1];
+				
+				memcpy(c.d.asBytes, READ_RECORD, sizeof(READ_RECORD) );
+				clearCommandBuffer();
+				SendCommand(&c);
+				len = smart_responseEx(buf, true);
+				
+				READ_RECORD[4] = 0;				
+			}
+			
+			if ( len > 4 ) {
+			
+				PrintAndLogEx(SUCCESS, "\n\t file %02d, record %02d found", sfi, rec);
+				
+				uint8_t modifier = (buf[0] == 0xC0) ? 1 : 0;
+				
+				if ( decodeTLV ) {
+					if (!TLVPrintFromBuffer(buf + modifier, len-2-modifier)) {
+						PrintAndLogEx(SUCCESS, "\tHEX: %s", sprint_hex(buf, len));
+					}
+				}										
+			}		
+			memset(buf, 0x00, USB_CMD_DATA_SIZE);
+		}
+	}
+	free(buf);
+	return 0;
+}
+
+static void smart_brute_options(bool decodeTLV){
+	
+	uint8_t* buf = calloc(USB_CMD_DATA_SIZE, sizeof(uint8_t));
+	if ( !buf ) 
+		return;
+	
+	uint8_t GET_PROCESSING_OPTIONS[] = {0x80, 0xA8, 0x00, 0x00, 0x02, 0x83, 0x00, 0x00};
+	
+	// Get processing options command
+	UsbCommand c = {CMD_SMART_RAW, {SC_RAW_T0, sizeof(GET_PROCESSING_OPTIONS), 0}};	
+	memcpy(c.d.asBytes, GET_PROCESSING_OPTIONS, sizeof(GET_PROCESSING_OPTIONS) );	
+	clearCommandBuffer();
+	SendCommand(&c);
+	
+	int len = smart_responseEx(buf, true);
+	if ( len > 4 ) {
+		PrintAndLogEx(SUCCESS, "Got processing options");			
+		if ( decodeTLV ) {
+			TLVPrintFromBuffer(buf, len-2);
+		}
+	} else {
+		PrintAndLogEx(FAILED, "Getting processing options failed");
+	}
+	
+	free(buf);
+}
+
 int CmdSmartBruteforceSFI(const char *Cmd) {
 
 	uint8_t cmdp = 0;
@@ -867,27 +998,15 @@ int CmdSmartBruteforceSFI(const char *Cmd) {
 
 	const char *SELECT = "00a40400%02x%s";	
 	
-	uint8_t READ_RECORD[] = {0x00, 0xB2, 0x00, 0x00, 0x00};
-	uint8_t GET_PROCESSING_OPTIONS[] = {0x80, 0xA8, 0x00, 0x00, 0x02, 0x83, 0x00, 0x00};
-
 //	uint8_t GENERATE_AC[] = {0x80, 0xAE};
 //	uint8_t GET_CHALLENGE[] = {0x00, 0x84, 0x00};
 //	uint8_t GET_DATA[] = {0x80, 0xCA, 0x00, 0x00, 0x00};
 //	uint8_t SELECT[] = {0x00, 0xA4, 0x04, 0x00};
 //	uint8_t UNBLOCK_PIN[] = {0x84, 0x24, 0x00, 0x00, 0x00};
 //	uint8_t VERIFY[] = {0x00, 0x20, 0x00, 0x80};
-	
-	
-	// Select AID command
-	UsbCommand cAid = {CMD_SMART_RAW, {SC_RAW_T0, 0, 0}};
 		
-	// Get processing options command
-	UsbCommand cOpt = {CMD_SMART_RAW, {SC_RAW_T0, sizeof(GET_PROCESSING_OPTIONS), 0}};	
-	memcpy(cOpt.d.asBytes, GET_PROCESSING_OPTIONS, sizeof(GET_PROCESSING_OPTIONS) );
-	
-	// READ RECORD
-	UsbCommand cSFI = {CMD_SMART_RAW, {SC_RAW_T0, sizeof(READ_RECORD), 0}};	
-			
+	// Select AID command
+	UsbCommand cAid = {CMD_SMART_RAW, {SC_RAW_T0, 0, 0}};	
 	
 	PrintAndLogEx(INFO, "Importing AID list");
 	json_t *root = NULL;
@@ -897,16 +1016,19 @@ int CmdSmartBruteforceSFI(const char *Cmd) {
 	if ( !buf )
 		return 1;		
 
-	uint8_t* sfibuf = malloc(USB_CMD_DATA_SIZE);
-	if ( !sfibuf ) 
-		return 1;
-
 	PrintAndLogEx(INFO, "Selecting card");
 	if ( !smart_select(false) )
 		return 1;
 
+	char* caid = NULL;
 	
 	for (int i = 0; i < json_array_size(root); i++) {
+		
+		printf("+"); fflush(stdout);
+
+		if (caid)
+			free(caid);
+		
 		json_t *data, *jaid;
 
 		data = json_array_get(root, i);
@@ -924,7 +1046,8 @@ int CmdSmartBruteforceSFI(const char *Cmd) {
 		}
 		
 		const char* aid = json_string_value(jaid);
-		if ( !aid ) continue;
+		if ( !aid ) 
+			continue;
 
 		size_t aidlen = strlen(aid);
 		char* caid = calloc( 8+2+aidlen+1, sizeof(uint8_t));
@@ -932,7 +1055,8 @@ int CmdSmartBruteforceSFI(const char *Cmd) {
 		
 		int hexlen = 0;
 		int res = param_gethex_to_eol(caid, 0, cAid.d.asBytes, sizeof(cAid.d.asBytes), &hexlen);
-		if ( res ) continue;
+		if ( res ) 
+			continue;
 		
 		cAid.arg[1] = hexlen;
 
@@ -940,10 +1064,8 @@ int CmdSmartBruteforceSFI(const char *Cmd) {
 		SendCommand(&cAid);	
 		
 		int len = smart_responseEx(buf, true);		
-		if ( len < 3 ) {
-			free(caid);			
+		if ( len < 3 )
 			continue;
-		}
 		
 		json_t *jvendor, *jname;
 		jvendor = json_object_get(data, "Vendor");
@@ -953,96 +1075,36 @@ int CmdSmartBruteforceSFI(const char *Cmd) {
 		}
 		
 		const char* vendor = json_string_value(jvendor);
-		if ( !vendor ) continue;
-
+		if ( !vendor )
+			continue;
+		
 		jname = json_object_get(data, "Name");
 		if (!json_is_string(jname)) {
 			PrintAndLogEx(ERR, "Name data [%d] is not a string", i + 1);
 			continue;
 		}
 		const char* name = json_string_value(jname);
-		if ( !name ) continue;
+		if ( !name )
+			continue;
 
-		PrintAndLogEx(SUCCESS, "AID %s | %s | %s", aid, vendor, name);
+		PrintAndLogEx(SUCCESS, "\nAID %s | %s | %s", aid, vendor, name);
 
-		// Get processing options
-		clearCommandBuffer();
-		SendCommand(&cOpt);
-		
-		uint8_t optionslen = smart_responseEx(buf, true);
-		if ( optionslen > 4 ) {
-			PrintAndLogEx(SUCCESS, "Got processing options");			
-			if ( decodeTLV ) {
-				TLVPrintFromBuffer(buf, optionslen-2);
-			}
-		} else {
-			PrintAndLogEx(FAILED, "Getting processing options failed");
-		}
-		
-		PrintAndLogEx(INFO, "Start SFI brute forcing");
-		
-		for (uint8_t sfi=1; sfi <= 31; sfi++) {
+		smart_brute_options(decodeTLV);
 
-			printf("."); fflush(stdout);
-			
-			for (uint16_t rec=1; rec <= 5; rec++) {
+		smart_brute_prim();
 
-				if (ukbhit()) {
-					int gc = getchar();	(void)gc;
-					PrintAndLogEx(NORMAL, "\naborted via keyboard!\n");
-					free(caid);
-					goto out;
-				}			
-			
-				READ_RECORD[2] = rec;
-				READ_RECORD[3] = (sfi << 3) | 4;
+		smart_brute_sfi(decodeTLV);
 
-				memcpy(cSFI.d.asBytes, READ_RECORD, sizeof(READ_RECORD) );
-				clearCommandBuffer();
-				SendCommand(&cSFI);
-				
-				uint8_t sfilen = smart_responseEx(sfibuf, true);
-				
-				if ( sfibuf[0] == 0x6C ) {
-					READ_RECORD[4]	= sfibuf[1];
-					
-					memcpy(cSFI.d.asBytes, READ_RECORD, sizeof(READ_RECORD) );
-					clearCommandBuffer();
-					SendCommand(&cSFI);
-					sfilen = smart_responseEx(sfibuf, true);
-					
-					READ_RECORD[4] = 0;				
-				}
-				
-				if ( sfilen > 4 ) {
-				
-					PrintAndLogEx(SUCCESS, "\n\t file %02d, record %02d found", sfi, rec);
-					
-					uint8_t modifier = (sfibuf[0] == 0xC0) ? 1 : 0;
-					
-					if ( decodeTLV ) {
-						if (!TLVPrintFromBuffer(sfibuf + modifier, sfilen-2-modifier)) {
-							PrintAndLogEx(SUCCESS, "\tHEX: %s", sprint_hex(sfibuf, sfilen));
-						}
-					}
-										
-				}
-				memset(sfibuf, 0x00, USB_CMD_DATA_SIZE);
-			}
-		}
-		
-		free(sfibuf);	
-		free(caid);		
 		PrintAndLogEx(SUCCESS, "\nSFI brute force done\n");
 	}
-out:
-	if ( sfibuf )
-		free(sfibuf);
+
+	if (caid) 
+		free(caid);
 	
 	free(buf);
 	json_decref(root);
 	
-	PrintAndLogEx(SUCCESS, "Search completed.");
+	PrintAndLogEx(SUCCESS, "\nSearch completed.");
 	return 0;
 }
 
