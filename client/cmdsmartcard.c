@@ -889,11 +889,11 @@ static int smart_brute_sfi(bool decodeTLV){
 
 	PrintAndLogEx(INFO, "Start SFI brute forcing");
 	
-	for (uint8_t sfi=1; sfi <= 3; sfi++) {
+	for (uint8_t sfi=1; sfi <= 31; sfi++) {
 
 		printf("."); fflush(stdout);
 		
-		for (uint16_t rec=1; rec <= 3; rec++) {
+		for (uint16_t rec=1; rec <= 255; rec++) {
 
 			if (ukbhit()) {
 				int gc = getchar();	(void)gc;
