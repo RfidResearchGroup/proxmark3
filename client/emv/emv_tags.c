@@ -237,6 +237,7 @@ static const struct emv_tag emv_tags[] = {
 	{ 0x9f17, "Personal Identification Number (PIN) Try Counter" },
 	{ 0x9f1a, "Terminal Country Code" },
 	{ 0x9f1f, "Track 1 Discretionary Data", EMV_TAG_STRING },
+	{ 0x9f20, "Track 2 Discretionary Data", EMV_TAG_STRING },
 	{ 0x9f21, "Transaction Time" },
 	{ 0x9f26, "Application Cryptogram" },
 	{ 0x9f27, "Cryptogram Information Data", EMV_TAG_CID },
