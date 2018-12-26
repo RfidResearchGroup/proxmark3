@@ -519,7 +519,7 @@ int MSCComputeCryptoChecksum(EMVCommandChannel channel, bool LeaveFieldON, uint8
 }
 
 // Authentication 
-static struct emv_pk *get_ca_pk(struct tlvdb *db) {
+struct emv_pk *get_ca_pk(struct tlvdb *db) {
 	const struct tlv *df_tlv = tlvdb_get(db, 0x84, NULL);
 	const struct tlv *caidx_tlv = tlvdb_get(db, 0x8f, NULL);
 
@@ -900,7 +900,7 @@ int RecoveryCertificates(struct tlvdb *tlvRoot, json_t *root) {
 		PrintAndLog("WARNING: Issuer certificate not found. Exit.");
 		return 2;
 	}
-	PrintAndLog("Issuer PK recovered. RID %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx CSN %02hhx:%02hhx:%02hhx",
+	PrintAndLogEx(SUCCESS, "Issuer PK recovered. RID %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx CSN %02hhx:%02hhx:%02hhx",
 			issuer_pk->rid[0],
 			issuer_pk->rid[1],
 			issuer_pk->rid[2],
@@ -923,10 +923,10 @@ int RecoveryCertificates(struct tlvdb *tlvRoot, json_t *root) {
 	if (!icc_pk) {
 		emv_pk_free(pk);
 		emv_pk_free(issuer_pk);
-		PrintAndLog("WARNING: ICC certificate not found. Exit.");
+		PrintAndLogEx(WARNING, "WARNING: ICC certificate not found. Exit.");
 		return 2;
 	}
-	printf("ICC PK recovered. RID %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx CSN %02hhx:%02hhx:%02hhx\n",
+	PrintAndLogEx(SUCCESS, "ICC PK recovered. RID %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx CSN %02hhx:%02hhx:%02hhx\n",
 			icc_pk->rid[0],
 			icc_pk->rid[1],
 			icc_pk->rid[2],

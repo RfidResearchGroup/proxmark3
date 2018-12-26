@@ -102,6 +102,7 @@ extern int trCDA(struct tlvdb *tlv, struct tlvdb *ac_tlv, struct tlv *pdol_data_
 
 extern int RecoveryCertificates(struct tlvdb *tlvRoot, json_t *root);
 
+extern struct emv_pk *get_ca_pk(struct tlvdb *db);
 #endif
 
 

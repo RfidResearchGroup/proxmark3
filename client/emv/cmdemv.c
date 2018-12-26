@@ -1382,7 +1382,7 @@ int CmdEMVScan(const char *cmd) {
 			uint8_t SFIend = AFL->value[i * 4 + 2];
 			uint8_t SFIoffline = AFL->value[i * 4 + 3];
 			
-			PrintAndLog("--->SFI[%02x] start:%02x end:%02x offline:%02x", SFI, SFIstart, SFIend, SFIoffline);
+			PrintAndLogEx(INFO, "--->SFI[%02x] start:%02x end:%02x offline:%02x", SFI, SFIstart, SFIend, SFIoffline);
 			if (SFI == 0 || SFI == 31 || SFIstart == 0 || SFIstart > SFIend) {
 				PrintAndLogEx(ERR, "SFI ERROR! Skipped...");
 				continue;
@@ -1476,6 +1476,89 @@ int CmdEMVTest(const char *cmd) {
 	return ExecuteCryptoTests(true);
 }
 
+int CmdEMVRoca(const char *cmd) {
+		
+	CLIParserInit("emv roca", 
+		"Tries to extract public keys and run the ROCA test against them.\n", 
+		"Usage:\n\temv roca -w -> select CONTACT card and run test\n\temv roca -> select CONTACTLESS card and run test\n");
+
+	void* argtable[] = {
+		arg_param_begin,
+		arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
+		arg_param_end
+	};
+	CLIExecWithReturn(cmd, argtable, true);
+	
+	EMVCommandChannel channel = ECC_CONTACTLESS;
+	if (arg_get_lit(1))
+		channel = ECC_CONTACT;
+
+	// Init TLV tree
+	const char *alr = "Root terminal TLV tree";
+	struct tlvdb *tlvRoot = tlvdb_fixed(1, strlen(alr), (const unsigned char *)alr);
+
+	
+	
+	int res = EMVSelect(channel, false, true, AID, AIDlen, buf, sizeof(buf), &len, &sw, tlvRoot);
+	
+	// getting certificates
+ 	if (tlvdb_get(tlvRoot, 0x90, NULL)) {
+		PrintAndLogEx(INFO, "-->Recovering certificates.");
+		PKISetStrictExecution(false);
+
+		struct emv_pk *pk = get_ca_pk(tlvRoot);
+		if (!pk) {
+			PrintAndLogEx(ERR, "ERROR: Key not found. Exit.");
+			goto out;
+		}
+
+		struct emv_pk *issuer_pk = emv_pki_recover_issuer_cert(pk, tlvRoot);
+		if (!issuer_pk) {
+			emv_pk_free(pk);
+			PrintAndLogEx(WARNING, "WARNING: Issuer certificate not found. Exit.");
+			goto out;
+		}
+	
+		PrintAndLogEx(SUCCESS, "Issuer PK recovered. RID %s IDX %02hhx CSN %s",
+				sprint_hex(issuer_pk->rid, 5),
+				issuer_pk->index,
+				sprint_hex(issuer_pk->serial, 3)
+				);
+
+
+		struct emv_pk *icc_pk = emv_pki_recover_icc_cert(issuer_pk, tlvRoot, NULL);
+		if (!icc_pk) {
+			emv_pk_free(pk);
+			emv_pk_free(issuer_pk);
+			PrintAndLogEx(WARNING, "WARNING: ICC certificate not found. Exit.");
+			goto out;
+		}
+		PrintAndLogEx(SUCCESS, "ICC PK recovered. RID %s IDX %02hhx CSN %s\n",
+				sprint_hex(icc_pk->rid, 5),
+				icc_pk->index,
+				sprint_hex(icc_pk->serial, 3)
+				);
+		
+//	icc_pk->exp, icc_pk->elen
+//	icc_pk->modulus, icc_pk->mlen
+		
+		
+		PKISetStrictExecution(true);
+	}
+
+out:
+	
+	// free tlv object
+	tlvdb_free(tlvRoot);
+
+	if ( channel == ECC_CONTACTLESS)
+		DropField();
+
+
+	return 0;
+}
+
+
 static command_t CommandTable[] =  {
 	{"help",		CmdHelp,						1,	"This help"},
 	{"exec",		CmdEMVExec,						0,	"Executes EMV contactless transaction."},
@@ -1490,13 +1573,14 @@ static command_t CommandTable[] =  {
 	{"scan",		CmdEMVScan,						0,	"Scan EMV card and save it contents to json file for emulator."},
 	{"test",		CmdEMVTest,						0,	"Crypto logic test."},
 	/*
-	{"getrng",		CmdEMVGetrng,	  0, "get random number from terminal"}, 
-	{"eload",		CmdEmvELoad, 	  0, "load EMV tag into device"},
-	{"dump",		CmdEmvDump,	  0, "dump EMV tag values"},
-	{"sim",			CmdEmvSim,	  0, "simulate EMV tag"},
-	{"clone",		CmdEmvClone,	  0, "clone an EMV tag"}, 
+	{"getrng",		CmdEMVGetrng,	  				0, "get random number from terminal"}, 
+	{"eload",		CmdEmvELoad, 	  				0, "load EMV tag into device"},
+	{"dump",		CmdEmvDump,	  					0, "dump EMV tag values"},
+	{"sim",			CmdEmvSim,	  					0, "simulate EMV tag"},
+	{"clone",		CmdEmvClone,	  				0, "clone an EMV tag"}, 
 	*/
-	{"list",	CmdEMVList,	  0, "[Deprecated] List ISO7816 history"}, 
+	{"list",		CmdEMVList,	  					0, "[Deprecated] List ISO7816 history"}, 
+	{"roca",		CmdEMVRoca,	  					0, "Extract public keys and run ROCA test"}, 
 	{NULL, NULL, 0, NULL}
 };
 
