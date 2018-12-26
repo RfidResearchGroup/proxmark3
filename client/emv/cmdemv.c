@@ -306,7 +306,7 @@ int CmdEMVReadRecord(const char *cmd) {
 		arg_lit0("aA",  "apdu",    "show APDU reqests and responses"),
 		arg_lit0("tT",  "tlv",     "TLV decode results of selected applets"),
 		arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
-		arg_strx1(NULL,  NULL,     "<SFI 1byte HEX><SFIrec 1byte HEX>", NULL),
+		arg_strx1(NULL,  NULL,     "<SFI 1byte HEX><SFIrecord 1byte HEX>", NULL),
 		arg_param_end
 	};
 	CLIExecWithReturn(cmd, argtable, true);
@@ -510,8 +510,11 @@ int CmdEMVInternalAuthenticate(const char *cmd) {
 	int datalen = 0;
 
 	CLIParserInit("emv intauth", 
-		"Generate Internal Authenticate command. Usually needs 4-byte random number. It returns data in TLV format .\nNeeds a EMV applet to be selected and GPO to be executed.", 
-		"Usage:\n\temv intauth -k 01020304 -> execute Internal Authenticate with 4-byte DDOLdata and keep field ON after command\n"
+		"Generate Internal Authenticate command. Usually needs 4-byte random number. It returns data in TLV format .\n"
+		"Needs a EMV applet to be selected and GPO to be executed.", 
+		
+		"Usage:\n"
+		"\temv intauth -k 01020304 -> execute Internal Authenticate with 4-byte DDOLdata and keep field ON after command\n"
 			"\temv intauth -t 01020304 -> execute Internal Authenticate with 4-byte DDOL data, show result in TLV\n"
 			"\temv intauth -pmt 9F 37 04 -> load params from file, make DDOL data from DDOL, Internal Authenticate with DDOL, show result in TLV"); 
 
@@ -680,7 +683,8 @@ int CmdEMVExec(const char *cmd) {
 
 	CLIParserInit("emv exec", 
 		"Executes EMV contactless transaction", 
-		"Usage:\n\temv exec -sat -> select card, execute MSD transaction, show APDU and TLV\n"
+		"Usage:\n"
+			"\temv exec -sat -> select card, execute MSD transaction, show APDU and TLV\n"
 			"\temv exec -satc -> select card, execute CDA transaction, show APDU and TLV\n");
 
 	void* argtable[] = {
@@ -921,7 +925,7 @@ int CmdEMVExec(const char *cmd) {
 	// transaction check
 
 	// qVSDC
-	if (TrType == TT_QVSDCMCHIP|| TrType == TT_CDA){
+	if (TrType == TT_QVSDCMCHIP || TrType == TT_CDA){
 		// 9F26: Application Cryptogram
 		const struct tlv *AC = tlvdb_get(tlvRoot, 0x9F26, NULL);
 		if (AC) {
@@ -938,7 +942,7 @@ int CmdEMVExec(const char *cmd) {
 				// print AC data
 				PrintAndLogEx(NORMAL, "ATC: %s", sprint_hex(ATC->value, ATC->len));
 				PrintAndLogEx(NORMAL, "AC: %s", sprint_hex(AC->value, AC->len));
-				if (IAD){
+				if (IAD) {
 					PrintAndLogEx(NORMAL, "IAD: %s", sprint_hex(IAD->value, IAD->len));
 					
 					if (IAD->len >= IAD->value[0] + 1) {
@@ -978,17 +982,18 @@ int CmdEMVExec(const char *cmd) {
 			// ICC Dynamic Number
 			struct tlvdb * ICCDynN = tlvdb_fixed(0x9f4c, len, buf);
 			tlvdb_add(tlvRoot, ICCDynN);
-			if (decodeTLV){
+			if (decodeTLV) {
 				PrintAndLogEx(NORMAL, "\n* * ICC Dynamic Number:");
 				TLVPrintFromTLV(ICCDynN);
 			}
 			
 			PrintAndLogEx(NORMAL, "* * Calc CDOL1");
 			struct tlv *cdol_data_tlv = dol_process(tlvdb_get(tlvRoot, 0x8c, NULL), tlvRoot, 0x01); // 0x01 - dummy tag
-			if (!cdol_data_tlv){
+			if (!cdol_data_tlv) {
 				PrintAndLogEx(WARNING, "Error: can't create CDOL1 TLV.");
 				dreturn(6);
 			}
+			
 			PrintAndLogEx(NORMAL, "CDOL1 data[%d]: %s", cdol_data_tlv->len, sprint_hex(cdol_data_tlv->value, cdol_data_tlv->len));
 			
 			PrintAndLogEx(NORMAL, "* * AC1");
@@ -1010,6 +1015,7 @@ int CmdEMVExec(const char *cmd) {
 			if (res) {	
 				PrintAndLogEx(NORMAL, "CDA error (%d)", res);
 			}
+			
 			free(ac_tlv);
 			free(cdol_data_tlv);
 			
@@ -1073,7 +1079,7 @@ int CmdEMVExec(const char *cmd) {
 					PrintAndLogEx(NORMAL, "Use default UDOL.");
 
 				struct tlv *udol_data_tlv = dol_process(UDOL ? UDOL : &defUDOL, tlvRoot, 0x01); // 0x01 - dummy tag
-				if (!udol_data_tlv){
+				if (!udol_data_tlv) {
 					PrintAndLogEx(WARNING, "Error: can't create UDOL TLV.");
 					dreturn(8);
 				}
@@ -1448,25 +1454,6 @@ int CmdEMVScan(const char *cmd) {
 	return 0;
 }
 
-int usage_emv_getrnd(void){
-	PrintAndLogEx(NORMAL, "retrieve the UN number from a terminal");
-	PrintAndLogEx(NORMAL, "Usage:  emv getrnd [h]");
-	PrintAndLogEx(NORMAL, "Options:");
-	PrintAndLogEx(NORMAL, "      h             : this help");
-	PrintAndLogEx(NORMAL, "");
-	PrintAndLogEx(NORMAL, "Examples:");
-	PrintAndLogEx(NORMAL, "      emv getrnd");
-	return 0;
-}
-
-//retrieve the UN number from a terminal
-int CmdEMVGetrng(const char *Cmd) {
-	char cmdp = param_getchar(Cmd, 0);
-	if ( cmdp == 'h' || cmdp == 'H') return usage_emv_getrnd();
-
-	PrintAndLogEx(INFO, "Not implemented yet");
-	return 0;
-}
 
 int CmdEMVList(const char *Cmd) {
 	return CmdTraceList("7816");
@@ -1480,7 +1467,8 @@ int CmdEMVRoca(const char *cmd) {
 		
 	CLIParserInit("emv roca", 
 		"Tries to extract public keys and run the ROCA test against them.\n", 
-		"Usage:\n\temv roca -w -> select CONTACT card and run test\n\temv roca -> select CONTACTLESS card and run test\n");
+		"Usage:\n"
+			"\temv roca -w -> select CONTACT card and run test\n\temv roca -> select CONTACTLESS card and run test\n");
 
 	void* argtable[] = {
 		arg_param_begin,
@@ -1497,9 +1485,12 @@ int CmdEMVRoca(const char *cmd) {
 	const char *alr = "Root terminal TLV tree";
 	struct tlvdb *tlvRoot = tlvdb_fixed(1, strlen(alr), (const unsigned char *)alr);
 
-	
-	
-	int res = EMVSelect(channel, false, true, AID, AIDlen, buf, sizeof(buf), &len, &sw, tlvRoot);
+	// select card
+	uint8_t buf[APDU_RES_LEN] = {0};
+	size_t len = 0;
+	uint16_t sw = 0;
+	uint8_t psenum = (channel == ECC_CONTACT) ? 1: 2;
+	int res = EMVSelectPSE(channel, true, true, psenum, buf, sizeof(buf), &len, &sw);
 	
 	// getting certificates
  	if (tlvdb_get(tlvRoot, 0x90, NULL)) {
@@ -1557,7 +1548,6 @@ out:
 
 	return 0;
 }
-
 
 static command_t CommandTable[] =  {
 	{"help",		CmdHelp,						1,	"This help"},
