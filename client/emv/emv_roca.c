@@ -69,7 +69,7 @@ mbedtls_mpi_uint mpi_get_uint(const mbedtls_mpi *X) {
 	if (X->n == 1 && X->s > 0) {
 		return X->p[0];
 	}
-	
+	printf("ZERRRRO!!!\n");
 	return 0;
 }
 
@@ -89,7 +89,7 @@ bool emv_rocacheck(const unsigned char *buf, size_t buflen) {
 	MBEDTLS_MPI_CHK( mbedtls_mpi_read_string(&g_one, 10, "1") );
 	
 	for (int i = 0; i < ROCA_PRINTS_LENGTH; i++) {
-printf("--p:%d\n", i);
+printf("--roca:%d\n", i);
 
 		mbedtls_mpi t_temp;
 		mbedtls_mpi t_prime;
