@@ -31,11 +31,8 @@
 
 #define ROCA_PRINTS_LENGTH	17
 
-void rocacheck_init(void);
-void rocacheck_cleanup(void);
-int bitand_is_zero(	mbedtls_mpi* a, mbedtls_mpi* b );
-
-extern bool emv_rocacheck( const unsigned char *buf, size_t buflen );
+extern bool emv_rocacheck( const unsigned char *buf, size_t buflen, bool verbose );
+extern int roca_self_test( int verbose );
 
 #endif
 

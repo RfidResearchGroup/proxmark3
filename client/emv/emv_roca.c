@@ -82,12 +82,12 @@ void print_mpi(const char *msg, int radix, const mbedtls_mpi *X) {
 	printf("%s[%d] %s\n", msg, len, Xchar);	
 }
 
-bool emv_rocacheck(const unsigned char *buf, size_t buflen) {
+bool emv_rocacheck(const unsigned char *buf, size_t buflen, bool verbose) {
 
 	mbedtls_mpi t_modulus;
 	mbedtls_mpi_init(&t_modulus);
 
-	bool ret = true;
+	bool ret = false;
 
 	rocacheck_init();
 
@@ -112,8 +112,8 @@ bool emv_rocacheck(const unsigned char *buf, size_t buflen) {
 		MBEDTLS_MPI_CHK( mbedtls_mpi_shift_l(&g_one, mpi_get_uint(&t_temp)) );
 		
 		if (bitand_is_zero(&g_one, &g_prints[i])) {
-			PrintAndLogEx(FAILED, "No fingerprint found.\n");
-			ret = false;
+			if (verbose)
+				PrintAndLogEx(FAILED, "No fingerprint found.\n");
 			goto cleanup;
 		}
 		
@@ -122,11 +122,59 @@ bool emv_rocacheck(const unsigned char *buf, size_t buflen) {
 		mbedtls_mpi_free(&t_prime);
 	}
 
-	PrintAndLogEx(SUCCESS, "Fingerprint found!\n");
+	ret = true;
+	if (verbose)
+		PrintAndLogEx(SUCCESS, "Fingerprint found!\n");
 
 cleanup:
 	mbedtls_mpi_free(&t_modulus);
 
 	rocacheck_cleanup();
+	return ret;
+}
+
+int roca_self_test( int verbose ) {
+	int ret = 0;
+
+	if( verbose != 0 )
+		printf( "\nROCA check vulnerability tests\n" );
+
+	// positive
+	uint8_t keyp[] = "\x94\x4e\x13\x20\x8a\x28\x0c\x37\xef\xc3\x1c\x31\x14\x48\x5e\x59"\
+	                "\x01\x92\xad\xbb\x8e\x11\xc8\x7c\xad\x60\xcd\xef\x00\x37\xce\x99"\
+					"\x27\x83\x30\xd3\xf4\x71\xa2\x53\x8f\xa6\x67\x80\x2e\xd2\xa3\xc4"\
+					"\x4a\x8b\x7d\xea\x82\x6e\x88\x8d\x0a\xa3\x41\xfd\x66\x4f\x7f\xa7";
+
+	if( verbose != 0 )
+		printf( "  ROCA positive test: " );
+	
+	if (emv_rocacheck(keyp, 64, false)) {
+		if( verbose != 0 )
+			printf( "passed\n" );
+	} else {
+		ret = 1;
+		if( verbose != 0 )
+			printf( "failed\n" );
+	}
+
+	// negative
+	uint8_t keyn[] = "\x84\x4e\x13\x20\x8a\x28\x0c\x37\xef\xc3\x1c\x31\x14\x48\x5e\x59"\
+	                "\x01\x92\xad\xbb\x8e\x11\xc8\x7c\xad\x60\xcd\xef\x00\x37\xce\x99"\
+					"\x27\x83\x30\xd3\xf4\x71\xa2\x53\x8f\xa6\x67\x80\x2e\xd2\xa3\xc4"\
+					"\x4a\x8b\x7d\xea\x82\x6e\x88\x8d\x0a\xa3\x41\xfd\x66\x4f\x7f\xa7";
+
+	if( verbose != 0 )
+		printf( "  ROCA negative test: " );
+
+	if (emv_rocacheck(keyn, 64, false)) {
+		ret = 1;
+		if( verbose != 0 )
+			printf( "failed\n" );
+	} else {
+		if( verbose != 0 )
+			printf( "passed\n" );
+	}
+
+	
 	return ret;
 }

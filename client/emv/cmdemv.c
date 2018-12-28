@@ -1661,26 +1661,15 @@ int CmdEMVRoca(const char *cmd) {
 		
 		PrintAndLogEx(INFO, "ICC pk modulus: %s", sprint_hex_inrow(icc_pk->modulus, icc_pk->mlen));
 		
-		
-		uint8_t key[] = "\x94\x4e\x13\x20\x8a\x28\x0c\x37\xef\xc3\x1c\x31\x14\x48\x5e\x59"\
-		                "\x01\x92\xad\xbb\x8e\x11\xc8\x7c\xad\x60\xcd\xef\x00\x37\xce\x99"\
-						"\x27\x83\x30\xd3\xf4\x71\xa2\x53\x8f\xa6\x67\x80\x2e\xd2\xa3\xc4"\
-						"\x4a\x8b\x7d\xea\x82\x6e\x88\x8d\x0a\xa3\x41\xfd\x66\x4f\x7f\xa7";
-		PrintAndLogEx(INFO, "DEMO ICC pk modulus: %s", sprint_hex_inrow(key, 64));
-		if (emv_rocacheck(key, 64)) 
-				PrintAndLogEx(INFO, "DEMO ICC pk is vulnerable by roca.");
-		
-		
 		//	icc_pk->exp, icc_pk->elen
 		//	icc_pk->modulus, icc_pk->mlen
 		if (icc_pk->elen > 0 && icc_pk->mlen > 0) {
-			if (emv_rocacheck(icc_pk->modulus, icc_pk->mlen)) {
+			if (emv_rocacheck(icc_pk->modulus, icc_pk->mlen, true)) {
 				PrintAndLogEx(INFO, "ICC pk is a subject to ROCA vulnerability, insecure..");
 			} else {
 				PrintAndLogEx(INFO, "ICC pk is OK(");
 			}
-		}
-		
+		}		
 		
 		PKISetStrictExecution(true);
 	}
