@@ -1553,8 +1553,74 @@ int CmdEMVRoca(const char *cmd) {
 	PrintAndLog("\n* Init transaction parameters.");
 	InitTransactionParameters(tlvRoot, true, TT_QVSDCMCHIP, false);
 
-
+	PrintAndLogEx(NORMAL, "-->Calc PDOL.");
+	struct tlv *pdol_data_tlv = dol_process(tlvdb_get(tlvRoot, 0x9f38, NULL), tlvRoot, 0x83);
+	if (!pdol_data_tlv){
+		PrintAndLogEx(ERR, "Can't create PDOL TLV.");
+		tlvdb_free(tlvRoot);
+		DropField();
+		return 6;
+	}
 	
+	size_t pdol_data_tlv_data_len;
+	unsigned char *pdol_data_tlv_data = tlv_encode(pdol_data_tlv, &pdol_data_tlv_data_len);
+	if (!pdol_data_tlv_data) {
+		PrintAndLogEx(ERR, "Can't create PDOL data.");
+		tlvdb_free(tlvRoot);
+		DropField();
+		return 6;
+	}
+	PrintAndLogEx(INFO, "PDOL data[%d]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
+
+	PrintAndLogEx(INFO, "-->GPO.");
+	res = EMVGPO(channel, true, pdol_data_tlv_data, pdol_data_tlv_data_len, buf, sizeof(buf), &len, &sw, tlvRoot);
+	
+	free(pdol_data_tlv_data);
+	free(pdol_data_tlv);
+	
+	if (res) {	
+		PrintAndLogEx(ERR, "GPO error(%d): %4x. Exit...", res, sw);
+		tlvdb_free(tlvRoot);
+		DropField();
+		return 7;
+	}
+	ProcessGPOResponseFormat1(tlvRoot, buf, len, false);
+	
+	PrintAndLogEx(INFO, "-->Read records from AFL.");
+	const struct tlv *AFL = tlvdb_get(tlvRoot, 0x94, NULL);
+	
+	while(AFL && AFL->len) {
+		if (AFL->len % 4) {
+			PrintAndLogEx(ERR, "Wrong AFL length: %d", AFL->len);
+			break;
+		}
+
+		for (int i = 0; i < AFL->len / 4; i++) {
+			uint8_t SFI = AFL->value[i * 4 + 0] >> 3;
+			uint8_t SFIstart = AFL->value[i * 4 + 1];
+			uint8_t SFIend = AFL->value[i * 4 + 2];
+			uint8_t SFIoffline = AFL->value[i * 4 + 3];
+			
+			PrintAndLogEx(INFO, "--->SFI[%02x] start:%02x end:%02x offline:%02x", SFI, SFIstart, SFIend, SFIoffline);
+			if (SFI == 0 || SFI == 31 || SFIstart == 0 || SFIstart > SFIend) {
+				PrintAndLogEx(ERR, "SFI ERROR! Skipped...");
+				continue;
+			}
+			
+			for(int n = SFIstart; n <= SFIend; n++) {
+				PrintAndLogEx(INFO, "---->SFI[%02x] %d", SFI, n);
+				
+				res = EMVReadRecord(channel, true, SFI, n, buf, sizeof(buf), &len, &sw, tlvRoot);
+				if (res) {
+					PrintAndLogEx(ERR, "SFI[%02x]. APDU error %4x", SFI, sw);
+					continue;
+				}
+			}
+		}
+		
+		break;
+	}
+
 	// getting certificates
  	if (tlvdb_get(tlvRoot, 0x90, NULL)) {
 		PrintAndLogEx(INFO, "-->Recovering certificates.");
@@ -1593,9 +1659,10 @@ int CmdEMVRoca(const char *cmd) {
 				sprint_hex(icc_pk->serial, 3)
 				);
 		
-
-//	icc_pk->exp, icc_pk->elen
-//	icc_pk->modulus, icc_pk->mlen
+		PrintAndLogEx(INFO, "ICC pk modulus: %s", sprint_hex_inrow(icc_pk->modulus, icc_pk->mlen));
+		
+		//	icc_pk->exp, icc_pk->elen
+		//	icc_pk->modulus, icc_pk->mlen
 		if (icc_pk->elen > 0 && icc_pk->mlen > 0) {
 			if (emv_rocacheck(icc_pk->modulus, icc_pk->mlen)) {
 				PrintAndLogEx(INFO, "ICC pk is vulnerable by roca.");
