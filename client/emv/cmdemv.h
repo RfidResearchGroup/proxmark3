@@ -25,6 +25,7 @@
 #include "cmdmain.h"
 #include "emvcore.h"
 #include "apduinfo.h"
+#include "emv_roca.h"
 
 int CmdEMV(const char *Cmd);
 

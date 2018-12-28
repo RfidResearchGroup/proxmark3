@@ -73,7 +73,7 @@ mbedtls_mpi_uint mpi_get_uint(const mbedtls_mpi *X) {
 	return 0;
 }
 
-bool emv_rocacheck(char *modulus) {
+bool emv_rocacheck(const unsigned char *buf, size_t buflen) {
 
 	mbedtls_mpi *t_modulus = NULL;
 	mbedtls_mpi_init(t_modulus);
@@ -82,8 +82,7 @@ bool emv_rocacheck(char *modulus) {
 
 	rocacheck_init();
 
-	// 
-	MBEDTLS_MPI_CHK( mbedtls_mpi_read_string(t_modulus, 10, modulus) );
+	MBEDTLS_MPI_CHK( mbedtls_mpi_read_binary(t_modulus, buf, buflen) );
 	
 	
 	for (int i = 0; i < ROCA_PRINTS_LENGTH; i++) {

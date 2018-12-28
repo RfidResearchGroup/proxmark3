@@ -35,7 +35,7 @@ void rocacheck_init(void);
 void rocacheck_cleanup(void);
 int bitand_is_zero(	mbedtls_mpi* a, mbedtls_mpi* b );
 
-extern bool emv_rocacheck( char *modulus );
+extern bool emv_rocacheck( const unsigned char *buf, size_t buflen );
 
 #endif
 
