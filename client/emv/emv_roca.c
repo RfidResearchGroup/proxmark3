@@ -92,11 +92,8 @@ bool emv_rocacheck(const unsigned char *buf, size_t buflen) {
 	rocacheck_init();
 
 	MBEDTLS_MPI_CHK( mbedtls_mpi_read_binary(&t_modulus, buf, buflen) );
-	print_mpi("--t_modulus:", 16, &t_modulus);
-	
 	
 	for (int i = 0; i < ROCA_PRINTS_LENGTH; i++) {
-printf("--roca:%d\n", i);
 
 		mbedtls_mpi t_temp;
 		mbedtls_mpi t_prime;
@@ -109,17 +106,13 @@ printf("--roca:%d\n", i);
 		MBEDTLS_MPI_CHK( mbedtls_mpi_read_string(&g_one, 10, "1") );
 
 		MBEDTLS_MPI_CHK( mbedtls_mpi_add_int(&t_prime, &t_prime, g_primes[i]) );
-		print_mpi("--t_prime:", 10, &t_prime);
 		
 		MBEDTLS_MPI_CHK( mbedtls_mpi_mod_mpi(&t_temp, &t_modulus, &t_prime) ); 
-		print_mpi("--t_temp:", 10, &t_temp);
 		
 		MBEDTLS_MPI_CHK( mbedtls_mpi_shift_l(&g_one, mpi_get_uint(&t_temp)) );
-		print_mpi("--g_one:", 10, &g_one);
 		
-		print_mpi("--g_prints:", 10, &g_prints[i]);
-		if (bitand_is_zero(&t_temp, &g_prints[i])) {
-			PrintAndLogEx(FAILED, "No fingerprint found\n");
+		if (bitand_is_zero(&g_one, &g_prints[i])) {
+			PrintAndLogEx(FAILED, "No fingerprint found.\n");
 			ret = false;
 			goto cleanup;
 		}
