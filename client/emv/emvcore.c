@@ -332,14 +332,14 @@ int EMVSelectPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
 	return res;
 }
 
-int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, bool decodeTLV, struct tlvdb *tlv) {
+int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t PSENum, bool decodeTLV, struct tlvdb *tlv) {
 	uint8_t data[APDU_RES_LEN] = {0};
 	size_t datalen = 0;
 	uint16_t sw = 0;
 	int res;
 
 	// select PPSE
-	res = EMVSelectPSE(channel, ActivateField, true, 2, data, sizeof(data), &datalen, &sw);
+	res = EMVSelectPSE(channel, ActivateField, true, PSENum, data, sizeof(data), &datalen, &sw);
 
 	if (!res){
 		struct tlvdb *t = NULL;
