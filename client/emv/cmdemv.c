@@ -722,6 +722,7 @@ int CmdEMVExec(const char *cmd) {
 	EMVCommandChannel channel = ECC_CONTACTLESS;
 	if (arg_get_lit(11))
 		channel = ECC_CONTACT;
+	uint8_t psenum = (channel == ECC_CONTACT) ? 1 : 2;
 	CLIParserFree();
 	
 	SetAPDULogging(showAPDU);
@@ -736,7 +737,7 @@ int CmdEMVExec(const char *cmd) {
 		// PPSE
 		PrintAndLogEx(NORMAL, "\n* PPSE.");
 		SetAPDULogging(showAPDU);
-		res = EMVSearchPSE(channel, activateField, true, decodeTLV, tlvSelect);
+		res = EMVSearchPSE(channel, activateField, true, psenum, decodeTLV, tlvSelect);
 
 		// check PPSE and select application id
 		if (!res) {	
@@ -1170,6 +1171,7 @@ int CmdEMVScan(const char *cmd) {
 	EMVCommandChannel channel = ECC_CONTACTLESS;
 	if (arg_get_lit(11))
 		channel = ECC_CONTACT;
+	uint8_t psenum = (channel == ECC_CONTACT) ? 1 : 2;
 	uint8_t relfname[250] ={0};
 	char *crelfname = (char *)relfname;
 	int relfnamelen = 0;
@@ -1248,7 +1250,7 @@ int CmdEMVScan(const char *cmd) {
 		tlvdb_free(fci);
 	}
 
-	res = EMVSearchPSE(channel, false, true, decodeTLV, tlvSelect);
+	res = EMVSearchPSE(channel, false, true, psenum, decodeTLV, tlvSelect);
 
 	// check PPSE and select application id
 	if (!res) {	
@@ -1490,21 +1492,15 @@ int CmdEMVRoca(const char *cmd) {
 	// select card
 	uint8_t psenum = (channel == ECC_CONTACT) ? 1 : 2;
 	
+	SetAPDULogging(false);
+	
 	// init applets list tree
 	const char *al = "Applets list";
 	struct tlvdb *tlvSelect = tlvdb_fixed(1, strlen(al), (const unsigned char *)al);
 
 	// EMV PPSE
 	PrintAndLogEx(NORMAL, "--> PPSE.");
-	res = EMVSelectPSE(channel, true, true, psenum, buf, sizeof(buf), &len, &sw);
-
-	if (!res && sw == 0x9000){
-		struct tlvdb *fci = tlvdb_parse_multi(buf, len);
-		tlvdb_free(fci);
-	}
-
-	SetAPDULogging(false);
-	res = EMVSearchPSE(channel, false, true, false, tlvSelect);
+	res = EMVSearchPSE(channel, false, true, psenum, false, tlvSelect);
 
 	// check PPSE and select application id
 	if (!res) {	
