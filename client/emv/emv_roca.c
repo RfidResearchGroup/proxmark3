@@ -64,6 +64,15 @@ int bitand_is_zero(	mbedtls_mpi* a, mbedtls_mpi* b ) {
 }
 
 
+mbedtls_mpi_uint mpi_get_uint(const mbedtls_mpi *X) {
+	
+	if (X->n == 1) {
+		return X->p[0];
+	}
+	
+	return 0;
+}
+
 bool emv_rocacheck(char *modulus) {
 
 	mbedtls_mpi *t_modulus = NULL;
@@ -93,7 +102,7 @@ bool emv_rocacheck(char *modulus) {
 		
 		MBEDTLS_MPI_CHK( mbedtls_mpi_mod_mpi(t_temp, t_modulus, t_prime) ); 
 		
-		MBEDTLS_MPI_CHK( mbedtls_mpi_shift_l(g_one, t_temp) );
+		MBEDTLS_MPI_CHK( mbedtls_mpi_shift_l(g_one, mpi_get_uint(t_temp)) );
 		
 		if (bitand_is_zero(t_temp, g_prints[i])) {
 			PrintAndLogEx(FAILED, "No fingerprint found\n");
