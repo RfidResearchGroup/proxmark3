@@ -1464,6 +1464,12 @@ int CmdEMVTest(const char *cmd) {
 }
 
 int CmdEMVRoca(const char *cmd) {
+	uint8_t AID[APDU_AID_LEN] = {0};
+	size_t AIDlen = 0;
+	uint8_t buf[APDU_RES_LEN] = {0};
+	size_t len = 0;
+	uint16_t sw = 0;
+	int res;
 		
 	CLIParserInit("emv roca", 
 		"Tries to extract public keys and run the ROCA test against them.\n", 
@@ -1481,16 +1487,71 @@ int CmdEMVRoca(const char *cmd) {
 	if (arg_get_lit(1))
 		channel = ECC_CONTACT;
 
+	// select card
+	uint8_t psenum = (channel == ECC_CONTACT) ? 1 : 2;
+	
+	// init applets list tree
+	const char *al = "Applets list";
+	struct tlvdb *tlvSelect = tlvdb_fixed(1, strlen(al), (const unsigned char *)al);
+
+	// EMV PPSE
+	PrintAndLogEx(NORMAL, "--> PPSE.");
+	res = EMVSelectPSE(channel, true, true, psenum, buf, sizeof(buf), &len, &sw);
+
+	if (!res && sw == 0x9000){
+		struct tlvdb *fci = tlvdb_parse_multi(buf, len);
+		tlvdb_free(fci);
+	}
+
+	SetAPDULogging(false);
+	res = EMVSearchPSE(channel, false, true, false, tlvSelect);
+
+	// check PPSE and select application id
+	if (!res) {	
+		TLVPrintAIDlistFromSelectTLV(tlvSelect);		
+	} else {
+		// EMV SEARCH with AID list
+		PrintAndLogEx(NORMAL, "--> AID search.");
+		if (EMVSearch(channel, false, true, false, tlvSelect)) {
+			PrintAndLogEx(ERR, "Can't found any of EMV AID. Exit...");
+			tlvdb_free(tlvSelect);
+			DropField();
+			return 3;
+		}
+
+		// check search and select application id
+		TLVPrintAIDlistFromSelectTLV(tlvSelect);
+	}
+
+	// EMV SELECT application
+	SetAPDULogging(false);
+	EMVSelectApplication(tlvSelect, AID, &AIDlen);
+
+	tlvdb_free(tlvSelect);
+
+	if (!AIDlen) {
+		PrintAndLogEx(INFO, "Can't select AID. EMV AID not found. Exit...");
+		DropField();
+		return 4;
+	}
+
 	// Init TLV tree
 	const char *alr = "Root terminal TLV tree";
 	struct tlvdb *tlvRoot = tlvdb_fixed(1, strlen(alr), (const unsigned char *)alr);
 
-	// select card
-	uint8_t buf[APDU_RES_LEN] = {0};
-	size_t len = 0;
-	uint16_t sw = 0;
-	uint8_t psenum = (channel == ECC_CONTACT) ? 1: 2;
-	int res = EMVSelectPSE(channel, true, true, psenum, buf, sizeof(buf), &len, &sw);
+	// EMV SELECT applet
+	PrintAndLogEx(NORMAL, "\n-->Selecting AID:%s.", sprint_hex_inrow(AID, AIDlen));
+	res = EMVSelect(channel, false, true, AID, AIDlen, buf, sizeof(buf), &len, &sw, tlvRoot);
+	
+	if (res) {	
+		PrintAndLogEx(ERR, "Can't select AID (%d). Exit...", res);
+		tlvdb_free(tlvRoot);
+		DropField();
+		return 5;
+	}
+
+
+
 	
 	// getting certificates
  	if (tlvdb_get(tlvRoot, 0x90, NULL)) {
@@ -1530,8 +1591,16 @@ int CmdEMVRoca(const char *cmd) {
 				sprint_hex(icc_pk->serial, 3)
 				);
 		
+
 //	icc_pk->exp, icc_pk->elen
 //	icc_pk->modulus, icc_pk->mlen
+		if (icc_pk->elen > 0 && icc_pk->mlen > 0) {
+			if (emv_rocacheck(icc_pk->modulus, icc_pk->mlen)) {
+				PrintAndLogEx(INFO, "ICC pk is vulnerable by roca.");
+			} else {
+				PrintAndLogEx(INFO, "ICC pk is OK(");
+			}
+		}
 		
 		
 		PKISetStrictExecution(true);
