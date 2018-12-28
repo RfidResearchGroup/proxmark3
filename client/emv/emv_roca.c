@@ -84,18 +84,19 @@ bool emv_rocacheck(const unsigned char *buf, size_t buflen) {
 
 	MBEDTLS_MPI_CHK( mbedtls_mpi_read_binary(&t_modulus, buf, buflen) );
 	
-	mbedtls_mpi g_one;
-	mbedtls_mpi_init(&g_one);
-	MBEDTLS_MPI_CHK( mbedtls_mpi_read_string(&g_one, 10, "1") );
 	
 	for (int i = 0; i < ROCA_PRINTS_LENGTH; i++) {
 printf("--roca:%d\n", i);
 
 		mbedtls_mpi t_temp;
 		mbedtls_mpi t_prime;
+		mbedtls_mpi g_one;
 		
 		mbedtls_mpi_init(&t_temp);
 		mbedtls_mpi_init(&t_prime);
+		mbedtls_mpi_init(&g_one);
+
+		MBEDTLS_MPI_CHK( mbedtls_mpi_read_string(&g_one, 10, "1") );
 
 		MBEDTLS_MPI_CHK( mbedtls_mpi_add_int(&t_prime, &t_prime, g_primes[i]) );
 		
