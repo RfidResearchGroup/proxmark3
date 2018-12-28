@@ -1674,7 +1674,7 @@ int CmdEMVRoca(const char *cmd) {
 		//	icc_pk->modulus, icc_pk->mlen
 		if (icc_pk->elen > 0 && icc_pk->mlen > 0) {
 			if (emv_rocacheck(icc_pk->modulus, icc_pk->mlen)) {
-				PrintAndLogEx(INFO, "ICC pk is vulnerable by roca.");
+				PrintAndLogEx(INFO, "ICC pk is a subject to ROCA vulnerability, insecure..");
 			} else {
 				PrintAndLogEx(INFO, "ICC pk is OK(");
 			}
