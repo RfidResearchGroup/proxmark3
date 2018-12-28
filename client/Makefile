@@ -155,6 +155,7 @@ CMDSRCS =	crapto1/crapto1.c \
 			emv/test/dda_test.c\
 			emv/test/cda_test.c\
 			emv/cmdemv.c \
+			emv/emv_roca.c \
             mifare4.c \
 			cmdanalyse.c \
 			cmdhf.c \
