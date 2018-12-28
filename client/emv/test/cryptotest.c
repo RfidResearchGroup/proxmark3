@@ -31,6 +31,7 @@
 #include "dda_test.h"
 #include "cda_test.h"
 #include "crypto/libpcrypto.h"
+#include "emv/emv_roca.h"
 
 int ExecuteCryptoTests(bool verbose) {
 	int res;
@@ -88,6 +89,9 @@ int ExecuteCryptoTests(bool verbose) {
 	if (res) TestFail = true;
 
 	res = exec_crypto_test(verbose);
+	if (res) TestFail = true;
+
+	res = roca_self_test(verbose);
 	if (res) TestFail = true;
 
 	PrintAndLog("\n--------------------------");
