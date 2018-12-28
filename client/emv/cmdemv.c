@@ -1550,6 +1550,8 @@ int CmdEMVRoca(const char *cmd) {
 		return 5;
 	}
 
+	PrintAndLog("\n* Init transaction parameters.");
+	InitTransactionParameters(tlvRoot, true, TT_QVSDCMCHIP, false);
 
 
 	
