@@ -1661,6 +1661,12 @@ int CmdEMVRoca(const char *cmd) {
 		
 		PrintAndLogEx(INFO, "ICC pk modulus: %s", sprint_hex_inrow(icc_pk->modulus, icc_pk->mlen));
 		
+		
+		uint8_t key[] = "944e13208a280c37efc31c3114485e590192adbb8e11c87cad60cdef0037ce99278330d3f471a2538fa667802ed2a3c44a8b7dea826e888d0aa341fd664f7fa7";
+		if (emv_rocacheck(key, 64)) 
+				PrintAndLogEx(INFO, "DEMO ICC pk is vulnerable by roca.");
+		
+		
 		//	icc_pk->exp, icc_pk->elen
 		//	icc_pk->modulus, icc_pk->mlen
 		if (icc_pk->elen > 0 && icc_pk->mlen > 0) {
