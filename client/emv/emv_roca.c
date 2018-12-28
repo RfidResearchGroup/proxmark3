@@ -66,7 +66,7 @@ int bitand_is_zero(	mbedtls_mpi* a, mbedtls_mpi* b ) {
 
 mbedtls_mpi_uint mpi_get_uint(const mbedtls_mpi *X) {
 	
-	if (X->n == 1) {
+	if (X->n == 1 && X->s > 0) {
 		return X->p[0];
 	}
 	
