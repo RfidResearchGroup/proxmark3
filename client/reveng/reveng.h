@@ -1,5 +1,5 @@
 /* reveng.h
- * Greg Cook, 26/Jul/2018
+ * Greg Cook, 21/Nov/2018
  */
 
 /* CRC RevEng: arbitrary-precision CRC calculator and algorithm finder
@@ -93,7 +93,7 @@
 /* Global definitions */
 
 /* CRC RevEng version string */
-#define VERSION "1.5.3"
+#define VERSION "1.6.0"
 
 /* bmpbit.c */
 typedef BMP_T bmp_t;
@@ -110,6 +110,19 @@ extern void setbmp(void);
 #define P_SPACE     32
 #define P_LTLBYT    64
 #define P_DIRECT   128
+
+/* class flags */
+#define P_CLBIT0   256
+#define P_CLBIT1   512
+#define P_SOLID   1024
+#define P_CLMASK (P_SOLID | P_CLBIT1 | P_CLBIT0)
+
+#define P_UNDFCL     0
+#define P_UNCONF (P_CLBIT0)
+#define P_THIRDP (P_CLBIT1)
+#define P_ACADEM (P_CLBIT1 | P_CLBIT0)
+#define P_CONFIR (P_SOLID | P_CLBIT0)
+#define P_ATTEST (P_SOLID | P_CLBIT1)
 
 /* default flags */
 #define P_BE     (P_RTJUST | P_MULXN)
@@ -187,7 +200,7 @@ extern void mrev(model_t *model);
 extern void mnovel(model_t *model);
 
 /* preset.c */
-#define M_OVERWR   256
+#define M_OVERWR     1
 
 extern int mbynam(model_t *dest, const char *key);
 extern void mbynum(model_t *dest, int num);
@@ -196,12 +209,12 @@ extern char *mnames(void);
 extern void mmatch(model_t *model, int flags);
 
 /* reveng.c */
-#define R_HAVEP    512
-#define R_HAVEI   1024
-#define R_HAVERI  2048
-#define R_HAVERO  4096
-#define R_HAVEX   8192
-#define R_HAVEQ  16384
+#define R_HAVEP      1
+#define R_HAVEI      2
+#define R_HAVERI     4
+#define R_HAVERO     8
+#define R_HAVEX     16
+#define R_HAVEQ     32
 
 #define R_SPMASK 0x7FFFFFFUL
 
