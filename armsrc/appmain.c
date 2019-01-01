@@ -1285,10 +1285,20 @@ void UsbPacketReceived(uint8_t *packet, int len) {
   			if (!FlashInit()) {
    		       break;
   		    }
-    
+
   		    Flash_CheckBusy(BUSY_TIMEOUT);
   		    Flash_WriteEnable();
+			
+			if ( startidx == DEFAULT_T55XX_KEYS_OFFSET  )
+				Flash_Erase4k(3, 0xC);
+			else if (startidx ==  DEFAULT_MF_KEYS_OFFSET )
+				Flash_Erase4k(3, 0xB);
+			else if (startidx == DEFAULT_ICLASS_KEYS_OFFSET)
+				Flash_Erase4k(3, 0xA);
 
+  		    Flash_CheckBusy(BUSY_TIMEOUT);
+  		    Flash_WriteEnable();			
+			
 			// inside 256b page?
 			if ( (tmp & 0xFF) != 0) {				
 				

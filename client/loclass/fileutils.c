@@ -453,6 +453,72 @@ out:
 	return retval;
 }
 
+int loadFileDICTIONARY(const char *preferredName, const char *suffix, void* data, size_t* datalen, uint8_t keylen, uint16_t* keycnt ) {
+
+	if ( preferredName == NULL ) return 1;
+	if ( suffix == NULL ) return 1;
+
+	// t5577 == 4bytes
+	// mifare == 6 bytes
+	// iclass == 8 bytes
+	// default to 6 bytes.
+	if (keylen != 4 && keylen != 6 && keylen != 8) {
+		keylen = 6;
+	}
+	
+	// double up since its chars
+	keylen <<= 1;	
+	
+	char line[255];
+	
+    size_t counter = 0;
+	int retval = 0;
+	int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
+	char * fileName = calloc(size, sizeof(char));
+	sprintf(fileName,"%s.%s", preferredName, suffix);
+
+	FILE *f = fopen(fileName, "r");
+	if ( !f ) {
+		PrintAndLogDevice(FAILED, "file: %s: not found or locked.", fileName);
+		retval = 1;
+		goto out;
+	}
+	
+	// read file
+	while ( fgets(line, sizeof(line), f) ) {
+		
+		// add null terminator
+		line[keylen] = 0;
+
+		// smaller keys than expected is skipped
+		if (strlen(line) < keylen)
+			continue;
+
+	
+		// The line start with # is comment, skip
+		if( line[0] == '#' )
+			continue;
+	
+		if (!isxdigit(line[0])){
+			PrintAndLogEx(FAILED, "file content error. '%s' must include " _BLUE_(%2d) "HEX symbols", line, keylen);
+			continue;
+		}	
+
+		uint64_t key = strtoull(line, NULL, 16);
+		
+		num_to_bytes(key, keylen >> 1, data + counter);
+		(*keycnt)++;
+		memset(line, 0, sizeof(line));
+		counter += (keylen >> 1);
+	}
+	fclose(f);
+	PrintAndLogDevice(SUCCESS, "loaded " _GREEN_(%2d) "keys from dictionary file %s", *keycnt, fileName);	
+	*datalen = counter;	
+out:	
+	free(fileName);
+	return retval;	
+}
+
 #else //if we're on ARM
 
 #endif

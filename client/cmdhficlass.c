@@ -2316,7 +2316,8 @@ int LoadDictionaryKeyFile( char* filename, uint8_t **keys, int *keycnt) {
 		while (fgetc(f) != '\n' && !feof(f)) {}; 
 		
 		//The line start with # is comment, skip		
-		if( buf[0]=='#' ) continue;
+		if( buf[0]=='#' ) 
+			continue;
 
 		// doesn't this only test first char only?
 		if (!isxdigit(buf[0])){
@@ -2329,7 +2330,7 @@ int LoadDictionaryKeyFile( char* filename, uint8_t **keys, int *keycnt) {
 
 		p = realloc(*keys, 8 * (keyitems += 64));
 		if (!p) {
-			PrintAndLogEx(NORMAL, _RED_([!])" cannot allocate memory for default keys");
+			PrintAndLogEx(ERR, "cannot allocate memory for default keys");
 			fclose(f);
 			return 2;
 		}
@@ -2341,7 +2342,7 @@ int LoadDictionaryKeyFile( char* filename, uint8_t **keys, int *keycnt) {
 		memset(buf, 0, sizeof(buf));
 	}
 	fclose(f);
-	PrintAndLogEx(NORMAL, _BLUE_([+]) "Loaded " _GREEN_(%2d) " keys from %s", *keycnt, filename);	
+	PrintAndLogEx(SUCCESS, "Loaded " _GREEN_(%2d) " keys from %s", *keycnt, filename);
 	return 0;
 }
 

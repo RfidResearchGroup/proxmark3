@@ -103,7 +103,7 @@ void setT55xxConfig(uint8_t arg0, t55xx_config *c) {
 	
 	Flash_CheckBusy(BUSY_TIMEOUT);
     Flash_WriteEnable();
-	Flash_Erase4k(3, 0xD);	
+	Flash_Erase4k(3, 0xD);
 	res = Flash_Write(T55XX_CONFIG_OFFSET, buf, T55XX_CONFIG_LEN);
 
 	if ( res == T55XX_CONFIG_LEN && MF_DBGLEVEL > 1) {
