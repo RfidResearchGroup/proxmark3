@@ -138,11 +138,10 @@ cleanup:
 	return ret;
 }
 
-int roca_self_test( int verbose ) {
+int roca_self_test(void) {
 	int ret = 0;
 
-	if( verbose != 0 )
-		printf( "\nROCA check vulnerability tests\n" );
+	PrintAndLogEx(INFO, "ROCA check vulnerability tests" );
 
 	// positive
 	uint8_t keyp[] = "\x94\x4e\x13\x20\x8a\x28\x0c\x37\xef\xc3\x1c\x31\x14\x48\x5e\x59"\
@@ -150,16 +149,13 @@ int roca_self_test( int verbose ) {
 					"\x27\x83\x30\xd3\xf4\x71\xa2\x53\x8f\xa6\x67\x80\x2e\xd2\xa3\xc4"\
 					"\x4a\x8b\x7d\xea\x82\x6e\x88\x8d\x0a\xa3\x41\xfd\x66\x4f\x7f\xa7";
 
-	if( verbose != 0 )
-		printf( "  ROCA positive test: " );
 	
 	if (emv_rocacheck(keyp, 64, false)) {
-		if( verbose != 0 )
-			printf( "passed\n" );
-	} else {
-		ret = 1;
-		if( verbose != 0 )
-			printf( "failed\n" );
+		PrintAndLogEx(SUCCESS, "Weak modulus [ %s]", _GREEN_(PASS) );	
+	}
+	else {
+		ret++;
+		PrintAndLogEx(FAILED, "Weak modulus [ %s]", _RED_(FAIL) );
 	}
 
 	// negative
@@ -168,18 +164,12 @@ int roca_self_test( int verbose ) {
 					"\x27\x83\x30\xd3\xf4\x71\xa2\x53\x8f\xa6\x67\x80\x2e\xd2\xa3\xc4"\
 					"\x4a\x8b\x7d\xea\x82\x6e\x88\x8d\x0a\xa3\x41\xfd\x66\x4f\x7f\xa7";
 
-	if( verbose != 0 )
-		printf( "  ROCA negative test: " );
-
 	if (emv_rocacheck(keyn, 64, false)) {
-		ret = 1;
-		if( verbose != 0 )
-			printf( "failed\n" );
+		ret++;
+		PrintAndLogEx(FAILED, "Strong modulus [ %s]", _RED_(FAIL) );
 	} else {
-		if( verbose != 0 )
-			printf( "passed\n" );
+		PrintAndLogEx(SUCCESS, "Strong modulus [ %s]", _GREEN_(PASS) );	
 	}
-
 	
 	return ret;
 }

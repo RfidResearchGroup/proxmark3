@@ -1456,7 +1456,6 @@ int CmdEMVScan(const char *cmd) {
 	return 0;
 }
 
-
 int CmdEMVList(const char *Cmd) {
 	return CmdTraceList("7816");
 }
@@ -1476,10 +1475,13 @@ int CmdEMVRoca(const char *cmd) {
 	CLIParserInit("emv roca", 
 		"Tries to extract public keys and run the ROCA test against them.\n", 
 		"Usage:\n"
-			"\temv roca -w -> select CONTACT card and run test\n\temv roca -> select CONTACTLESS card and run test\n");
+			"\temv roca -w -> select --CONTACT-- card and run test\n"
+			"\temv roca -> select --CONTACTLESS-- card and run test\n"
+			);
 
 	void* argtable[] = {
 		arg_param_begin,
+		arg_lit0("tT",  "selftest",   "self test"),
 		arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
 		arg_param_end
 	};
@@ -1487,6 +1489,9 @@ int CmdEMVRoca(const char *cmd) {
 	
 	EMVCommandChannel channel = ECC_CONTACTLESS;
 	if (arg_get_lit(1))
+		return roca_self_test();
+
+	if (arg_get_lit(2))
 		channel = ECC_CONTACT;
 
 	// select card
