@@ -68,9 +68,9 @@ end
 --- 
 -- This is only meant to be used when errors occur
 local function oops(err)
-	print("ERROR: ",err)
+	print("ERROR: ", err)
 	calypso_switch_off_field()
-	return nil,err
+	return nil, err
 end
 --- 
 -- Usage help
