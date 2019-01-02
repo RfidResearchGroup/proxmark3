@@ -170,7 +170,7 @@ int usage_hf14_chk(void){
 }
 int usage_hf14_chk_fast(void){
 	PrintAndLogEx(NORMAL, "This is a improved checkkeys method speedwise. It checks Mifare Classic tags sector keys against a dictionary file with keys");
-	PrintAndLogEx(NORMAL, "Usage:  hf mf fchk [h] <card memory> [t|d] [<key (12 hex symbols)>] [<dic (*.dic)>]");
+	PrintAndLogEx(NORMAL, "Usage:  hf mf fchk [h] <card memory> [t|d|f] [<key (12 hex symbols)>] [<dic (*.dic)>]");
 	PrintAndLogEx(NORMAL, "Options:");
 	PrintAndLogEx(NORMAL, "      h    this help");	
 	PrintAndLogEx(NORMAL, "      <cardmem> all sectors based on card memory, other values than below defaults to 1k");
@@ -179,12 +179,16 @@ int usage_hf14_chk_fast(void){
 	PrintAndLogEx(NORMAL, "      			 2 - 2K");
 	PrintAndLogEx(NORMAL, "      			 4 - 4K");
 	PrintAndLogEx(NORMAL, "      d    write keys to binary file");
-	PrintAndLogEx(NORMAL, "      t    write keys to emulator memory\n");
+	PrintAndLogEx(NORMAL, "      t    write keys to emulator memory");
+	PrintAndLogEx(NORMAL, "      m    use dictionary from flashmemory\n");
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Examples:");
 	PrintAndLogEx(NORMAL, "      hf mf fchk 1 1234567890ab keys.dic    -- target 1K using key 1234567890ab, using dictionary file");
 	PrintAndLogEx(NORMAL, "      hf mf fchk 1 t                        -- target 1K, write to emulator memory");
 	PrintAndLogEx(NORMAL, "      hf mf fchk 1 d                        -- target 1K, write to file");
+#ifdef WITH_FLASH
+	PrintAndLogEx(NORMAL, "      hf mf fchk 1 m                        -- target 1K, use dictionary from flashmemory");
+#endif
 	return 0;
 }
 int usage_hf14_keybrute(void){
@@ -1136,7 +1140,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 		}
 
 		PrintAndLogEx(SUCCESS, "Testing known keys. Sector count=%d", SectorsCnt);
-		res = mfCheckKeys_fast( SectorsCnt, true, true, 1, MIFARE_DEFAULTKEYS_SIZE + 1, keyBlock, e_sector);
+		res = mfCheckKeys_fast( SectorsCnt, true, true, 1, MIFARE_DEFAULTKEYS_SIZE + 1, keyBlock, e_sector, false);
 				
 		uint64_t t2 = msclock() - t1;
 		PrintAndLogEx(SUCCESS, "Time to check %d known keys: %.0f seconds\n", MIFARE_DEFAULTKEYS_SIZE, (float)t2/1000.0 );
@@ -1167,7 +1171,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 							e_sector[sectorNo].foundKey[trgKeyType] = 1;
 							e_sector[sectorNo].Key[trgKeyType] = bytes_to_num(keyBlock, 6);
 
-							res = mfCheckKeys_fast( SectorsCnt, true, true, 2, 1, keyBlock, e_sector);
+							res = mfCheckKeys_fast( SectorsCnt, true, true, 2, 1, keyBlock, e_sector, false);
 							continue;
 							
 						default : PrintAndLogEx(WARNING, "unknown Error.\n");
@@ -1467,8 +1471,8 @@ void shuffle( uint8_t *array, uint16_t len) {
 int CmdHF14AMfChk_fast(const char *Cmd) {
 
 	char ctmp = 0x00;
-	ctmp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) < 1 || ctmp == 'h' || ctmp == 'H') return usage_hf14_chk_fast();
+	ctmp = tolower(param_getchar(Cmd, 0));
+	if (strlen(Cmd) < 1 || ctmp == 'h') return usage_hf14_chk_fast();
 
 	FILE * f;
 	char filename[FILE_PATH_SIZE]={0};
@@ -1481,6 +1485,7 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 	int clen = 0;
 	int transferToEml = 0, createDumpFile = 0;
 	uint32_t keyitems = MIFARE_DEFAULTKEYS_SIZE;
+	bool use_flashmemory = false;
 
 	sector_t *e_sector = NULL;
 	
@@ -1501,7 +1506,7 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 
 	for (i = 1; param_getchar(Cmd, i); i++) {
 		
-		ctmp = param_getchar(Cmd, i);
+		ctmp = tolower(param_getchar(Cmd, i));
 		clen = param_getlength(Cmd, i);
 		
 		if (clen == 12) {
@@ -1523,8 +1528,11 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 			PrintAndLogEx(NORMAL, "[%2d] key %s", keycnt, sprint_hex( (keyBlock + 6*keycnt), 6 ) );
 			keycnt++;
 		} else if ( clen == 1) {
-			if (ctmp == 't' || ctmp == 'T') { transferToEml = 1; continue; }
-			if (ctmp == 'd' || ctmp == 'D') { createDumpFile = 1; continue; }
+			if (ctmp == 't' ) { transferToEml = 1; continue; }
+			if (ctmp == 'd' ) { createDumpFile = 1; continue; }
+#ifdef WITH_FLASH			
+			if (ctmp == 'm' ) { use_flashmemory = true; continue; }
+#endif			
 		} else {
 			// May be a dic file
 			if ( param_getstr(Cmd, i, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE ) {
@@ -1574,7 +1582,7 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 		}
 	}
 		
-	if (keycnt == 0) {
+	if (keycnt == 0 && !use_flashmemory) {
 		PrintAndLogEx(SUCCESS, "No key specified, trying default keys");
 		for (;keycnt < MIFARE_DEFAULTKEYS_SIZE; keycnt++)
 			PrintAndLogEx(NORMAL, "[%2d] %02x%02x%02x%02x%02x%02x", keycnt,
@@ -1594,37 +1602,45 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 	
 	// time
 	uint64_t t1 = msclock();
-	
-	// strategys. 1= deep first on sector 0 AB,  2= width first on all sectors
-	for (uint8_t strategy = 1; strategy < 3; strategy++) {
-		PrintAndLogEx(SUCCESS, "Running strategy %u", strategy);
-		// main keychunk loop			
-		for (uint32_t i = 0; i < keycnt; i += chunksize) {
-			
-			if (ukbhit()) {
-				int gc = getchar(); (void)gc;
-				PrintAndLogEx(NORMAL, "\naborted via keyboard!\n");
-				goto out;
-			}
-			
-			uint32_t size = ((keycnt - i)  > chunksize) ? chunksize : keycnt - i;
-			
-			// last chunk?
-			if ( size == keycnt - i)
-				lastChunk = true;
-			
-			int res = mfCheckKeys_fast( sectorsCnt, firstChunk, lastChunk, strategy, size, keyBlock + (i * 6), e_sector);
 
-			if ( firstChunk )
-				firstChunk = false;
-						
-			// all keys,  aborted
-			if ( res == 0 || res == 2 )
-				goto out;
-		} // end chunks of keys
-		firstChunk = true;
-		lastChunk = false;
-	} // end strategy
+	if ( use_flashmemory ) {
+		 mfCheckKeys_fast( sectorsCnt, true, true, 1, 0, keyBlock, e_sector, use_flashmemory);
+	} else {
+	
+		// strategys. 1= deep first on sector 0 AB,  2= width first on all sectors
+		for (uint8_t strategy = 1; strategy < 3; strategy++) {
+			PrintAndLogEx(SUCCESS, "Running strategy %u", strategy);
+			
+
+				
+				// main keychunk loop			
+				for (uint32_t i = 0; i < keycnt; i += chunksize) {
+					
+					if (ukbhit()) {
+						int gc = getchar(); (void)gc;
+						PrintAndLogEx(NORMAL, "\naborted via keyboard!\n");
+						goto out;
+					}
+					
+					uint32_t size = ((keycnt - i)  > chunksize) ? chunksize : keycnt - i;
+					
+					// last chunk?
+					if ( size == keycnt - i)
+						lastChunk = true;
+					
+					int res = mfCheckKeys_fast( sectorsCnt, firstChunk, lastChunk, strategy, size, keyBlock + (i * 6), e_sector, false);
+
+					if ( firstChunk )
+						firstChunk = false;
+								
+					// all keys,  aborted
+					if ( res == 0 || res == 2 )
+						goto out;
+				} // end chunks of keys
+			firstChunk = true;
+			lastChunk = false;
+		} // end strategy
+	}
 out: 
 	t1 = msclock() - t1;
 	PrintAndLogEx(SUCCESS, "Time in checkkeys (fast):  %.1fs\n", (float)(t1/1000.0));

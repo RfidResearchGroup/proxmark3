@@ -17,7 +17,7 @@
 #include <inttypes.h>
 
 #ifndef HARDNESTED_AUTHENTICATION_TIMEOUT
-# define HARDNESTED_AUTHENTICATION_TIMEOUT  848 //848			// card times out 1ms after wrong authentication (according to NXP documentation)
+# define HARDNESTED_AUTHENTICATION_TIMEOUT  848			// card times out 1ms after wrong authentication (according to NXP documentation)
 #endif
 #ifndef HARDNESTED_PRE_AUTHENTICATION_LEADTIME
 # define HARDNESTED_PRE_AUTHENTICATION_LEADTIME 400		// some (non standard) cards need a pause after select before they are ready for first authentication 
@@ -1122,7 +1122,6 @@ uint8_t chkKey_readb(struct chk_t *c, uint8_t *keyb) {
 }
 
 void chkKey_scanA(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, uint8_t *sectorcnt, uint8_t *foundkeys) { 
-	uint8_t status;
 	for (uint8_t s = 0; s < *sectorcnt; s++) { 
 
 		// skip already found A keys 
@@ -1130,8 +1129,7 @@ void chkKey_scanA(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, ui
 			continue;
 
 		c->block = FirstBlockOfSector( s );
-		status = chkKey( c ); 
-		if ( status == 0 ) { 
+		if ( chkKey( c ) == 0 ) { 
 			num_to_bytes(c->key, 6, k_sector[s].keyA);
 			found[(s*2)] = 1; 
 			++*foundkeys; 
@@ -1142,7 +1140,6 @@ void chkKey_scanA(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, ui
 }
 
 void chkKey_scanB(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, uint8_t *sectorcnt, uint8_t *foundkeys) { 
-	uint8_t status;	
 	for (uint8_t s = 0; s < *sectorcnt; s++) { 
 
 		// skip already found B keys 
@@ -1150,8 +1147,7 @@ void chkKey_scanB(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, ui
 			continue;
 
 		c->block = FirstBlockOfSector( s );
-		status = chkKey( c ); 
-		if ( status == 0 ) { 
+		if ( chkKey( c ) == 0 ) { 
 			num_to_bytes(c->key, 6, k_sector[s].keyB);	
 			found[(s*2)+1] = 1; 
 			++*foundkeys; 
@@ -1167,7 +1163,12 @@ void chkKey_loopBonly(struct chk_t *c, struct sector_t *k_sector, uint8_t *found
 
 	// read Block B, if A is found.
 	for (uint8_t s = 0; s < *sectorcnt; ++s) {
+		
+		if ( found[(s*2)] && found[(s*2)+1] )
+			continue;
+		
 		c->block = (FirstBlockOfSector( s ) + NumBlocksPerSector( s ) - 1);
+
 		// A but not B
 		if ( found[(s*2)]  &&  !found[(s*2)+1] ){	
 			c->key = bytes_to_num(k_sector[s].keyA, 6);
@@ -1187,6 +1188,9 @@ void chkKey_loopBonly(struct chk_t *c, struct sector_t *k_sector, uint8_t *found
 		}
 	}
 }
+
+
+
 // get Chunks of keys, to test authentication against card.
 // arg0 = antal sectorer
 // arg0 = first time
@@ -1200,7 +1204,8 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 	uint8_t firstchunk = (arg0 >> 8) & 0xF;	
 	uint8_t lastchunk = (arg0 >> 12) & 0xF;	
 	uint8_t strategy = arg1 & 0xFF;
-	uint8_t keyCount = arg2 & 0xFF;
+	uint8_t use_flashmem = (arg1 >> 8) & 0xFF;
+	uint16_t keyCount = arg2 & 0xFF;
 	uint8_t status = 0;
 
 	struct Crypto1State mpcs = {0, 0};
@@ -1217,33 +1222,57 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 	static uint8_t found[80];
 	static uint8_t *uid;
 
-	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+#ifdef WITH_FLASH	
+	if ( use_flashmem ) {
+		BigBuf_free();
+		uint16_t isok = 0;
+		uint8_t size[2] = {0x00, 0x00};		
+		isok = Flash_ReadData(DEFAULT_MF_KEYS_OFFSET, size, 2);
+		if ( isok != 2 )
+			goto OUT;
+		
+		keyCount = size[1] << 8 | size[0];
+		
+		if ( keyCount == 0 && keyCount == 0xFFFF) 
+			goto OUT;
+			
+		datain = BigBuf_malloc( keyCount * 6);
+		if (datain == NULL )
+			goto OUT;
+
+		isok = Flash_ReadData(DEFAULT_MF_KEYS_OFFSET+2, datain, keyCount * 6);
+		if ( isok != keyCount * 6 )
+			goto OUT;
+		
+	}
+#endif
 		
 	if (uid == NULL || firstchunk) {
 		uid = BigBuf_malloc(10);
-		if (uid == NULL ) {
-			if (MF_DBGLEVEL >= 3) Dbprintf("ChkKeys: uid malloc failed");
+		if (uid == NULL )
 			goto OUT;
-		}
 	}
+
+	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 	
 	LEDsoff();
 	LED_A_ON();
 		
 	if ( firstchunk ) {
-		
+							
 		clear_trace();
 		set_tracing(false);
 		
 		memset(k_sector, 0x00, 480+10);
 		memset(found, 0x00, sizeof(found));
 		foundkeys = 0;		
-	
+			
 		iso14a_card_select_t card_info;		
 		if ( !iso14443a_select_card(uid, &card_info, &cuid, true, 0, true)) {
-			if (MF_DBGLEVEL >= 1) Dbprintf("ChkKeys: Can't select card (ALL)");
+			if (MF_DBGLEVEL >= 1) Dbprintf("ChkKeys_fast: Can't select card (ALL)");
 			goto OUT;
 		}
+		
 		switch (card_info.uidlen) {
 			case 4 : cascade_levels = 1; break;
 			case 7 : cascade_levels = 2; break;
@@ -1262,19 +1291,23 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 	chk_data.block = 0;	
 	
 	// keychunk loop - depth first one sector.
-	if ( strategy == 1 ) {
+	if ( strategy == 1 || use_flashmem) {
 
 		uint8_t newfound = foundkeys;
 
+		uint16_t lastpos = 0;
+		uint16_t s_point = 0;
 		// Sector main loop
 		// keep track of how many sectors on card.
 		for (uint8_t s = 0; s < sectorcnt; ++s) {
 
-			if ( found[(s*2)] && found[(s*2)+1] )  
+			if ( found[(s*2)] && found[(s*2)+1] )
 				continue;
 
-			for (uint8_t i = 0; i < keyCount; ++i) {
-
+			for (uint16_t i = s_point; i < keyCount; ++i) {
+						
+				//if ( i % 100 == 0) Dbprintf("ChkKeys_fast: sector %d | checking %d | %d found | s_point %d", s, i, foundkeys, s_point);
+			
 				// Allow button press / usb cmd to interrupt device
 				if (BUTTON_PRESS() && !usb_poll_validate_length()) {
 					goto OUT;
@@ -1292,8 +1325,6 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 				// new key
 				chk_data.key = bytes_to_num(datain + i * 6, 6);
 
-				// assume: block0,1,2 has more read rights in accessbits than the sectortrailer. authenticating against block0 in each sector
-
 				// skip already found A keys 
 				if( !found[(s*2)] ) {
 					chk_data.keyType = 0;
@@ -1303,12 +1334,26 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 						found[(s*2)] = 1;
 						++foundkeys;
 						
-						chkKey_scanA(&chk_data, k_sector, found, &sectorcnt, &foundkeys);
+						chkKey_scanA(&chk_data, k_sector, found, &sectorcnt, &foundkeys);				
 						
 						// read Block B, if A is found.
 						chkKey_loopBonly( &chk_data, k_sector, found, &sectorcnt, &foundkeys);
 						
+						chk_data.keyType = 1;
+						chkKey_scanB(&chk_data, k_sector, found, &sectorcnt, &foundkeys);
+						
+						chk_data.keyType = 0;						
 						chk_data.block = FirstBlockOfSector( s );
+						
+						if ( use_flashmem ) {
+							if ( lastpos != i && lastpos != 0) {							
+								if ( i - lastpos < 0xF) {
+									s_point = i & 0xFFF0;
+								}
+							} else {
+								lastpos = i;	
+							}
+						}
 					}
 				}
 				
@@ -1322,25 +1367,46 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 						++foundkeys;
 						
 						chkKey_scanB(&chk_data, k_sector, found, &sectorcnt, &foundkeys);
+
+						if ( use_flashmem ) {						
+							if ( lastpos != i && lastpos != 0) {
+								
+								if ( i - lastpos < 0xF)
+									s_point = i & 0xFFF0;
+							} else {
+								lastpos = i;	
+							}
+						}
 					}
 				}
-
+				
+				if ( found[(s*2)] && found[(s*2)+1] )
+					break;
+				
 			} // end keys test loop - depth first 
 
 			// assume1. if no keys found in first sector, get next keychunk from client
-			if ( newfound-foundkeys  == 0 )
+			if ( !use_flashmem && (newfound-foundkeys == 0) )
 				goto OUT;
 
 		} // end loop - sector
 	} // end strategy 1
+	
+	if ( foundkeys == allkeys ) 
+		goto OUT;
 
-	if ( strategy == 2 ) {
+	if ( strategy == 2 || use_flashmem ) {
+			
 		// Keychunk loop
-		for (uint8_t i = 0; i < keyCount; i++) {
-
+		for (uint16_t i = 0; i < keyCount; i++) {
+					
 			// Allow button press / usb cmd to interrupt device
 			if (BUTTON_PRESS() && !usb_poll_validate_length()) break;
 
+			// found all keys?
+			if ( foundkeys == allkeys )
+				goto OUT;
+				
 			WDT_HIT();
 		
 			// new key
@@ -1349,7 +1415,9 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 			// Sector main loop
 			// keep track of how many sectors on card.
 			for (uint8_t s = 0; s < sectorcnt; ++s) {
-
+				
+				if ( found[(s*2)] && found[(s*2)+1] ) continue;
+				
 				// found all keys?
 				if ( foundkeys == allkeys )
 					goto OUT;
@@ -1387,8 +1455,6 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 						chkKey_scanB(&chk_data, k_sector, found, &sectorcnt, &foundkeys);
 					}
 				}
-
-
 			} // end loop sectors		
 		} // end loop keys	
 	} // end loop strategy 2
@@ -1416,7 +1482,7 @@ OUT:
 
 		set_tracing(false);		
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-		BigBuf_free(); BigBuf_Clear_ext(false);			
+		BigBuf_free(); BigBuf_Clear_ext(false);
 	} else {
 		// partial/none keys found
 		cmd_send(CMD_ACK, foundkeys, 0, 0, 0, 0);

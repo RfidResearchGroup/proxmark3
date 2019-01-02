@@ -73,7 +73,7 @@ extern int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key);
 extern int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t * ResultKeys, bool calibrate);
 extern int mfCheckKeys (uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keycnt, uint8_t * keyBlock, uint64_t * key);
 extern int mfCheckKeys_fast( uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk,
-						uint8_t strategy, uint32_t size, uint8_t *keyBlock, sector_t *e_sector);
+						uint8_t strategy, uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory);
 extern int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultkey);
 
 
