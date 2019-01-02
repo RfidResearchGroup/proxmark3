@@ -335,6 +335,8 @@ int EMVSelectPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
 int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t PSENum, bool decodeTLV, struct tlvdb *tlv) {
 	uint8_t data[APDU_RES_LEN] = {0};
 	size_t datalen = 0;
+	uint8_t sfidata[APDU_RES_LEN] = {0};
+	size_t sfidatalen = 0;
 	uint16_t sw = 0;
 	int res;
 
@@ -342,9 +344,47 @@ int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
 	res = EMVSelectPSE(channel, ActivateField, true, PSENum, data, sizeof(data), &datalen, &sw);
 
 	if (!res){
+		if (sw != 0x9000) {
+			PrintAndLogEx(FAILED, "Select PSE error. APDU error: %04x.", sw);
+			return 1;
+		}
+		
 		struct tlvdb *t = NULL;
 		t = tlvdb_parse_multi(data, datalen);
 		if (t) {
+			struct tlvdb *tsfi = tlvdb_find_path(t, (tlv_tag_t[]){0x6f, 0xa5, 0x88, 0x00});
+			if (tsfi) {
+				const struct tlv *tsfi_tlv = tlvdb_get_tlv(tsfi);
+				uint8_t sfin = tsfi_tlv->value[0];
+				PrintAndLogEx(INFO, "* PPSE get SFI: 0x%02x.", sfin);
+				
+				for (uint8_t ui = 0x01; ui <= 0x10; ui++) {
+					PrintAndLogEx(INFO, "* * Get SFI: 0x%02x. num: 0x%02x", sfin, ui);
+					res = EMVReadRecord(channel, true, sfin, ui, sfidata, sizeof(sfidata), &sfidatalen, &sw, NULL);
+					
+					// end of records
+					if (sw == 0x6a83) {
+						PrintAndLogEx(INFO, "* * PPSE get SFI. End of records.");
+						break;
+					}
+					
+					// here must bee an error catch!
+					if (sw != 0x9000) {
+						PrintAndLogEx(FAILED, "PPSE get Error. APDU error: %04x.", sw);
+						break;
+					}
+
+					if (decodeTLV){
+						TLVPrintFromBuffer(sfidata, sfidatalen);
+					}
+					
+				}
+				
+				
+			}
+
+
+
 			int retrycnt = 0;
 			struct tlvdb *ttmp = tlvdb_find_path(t, (tlv_tag_t[]){0x6f, 0xa5, 0xbf0c, 0x61, 0x00});
 			if (!ttmp)
