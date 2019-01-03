@@ -25,7 +25,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdlib.h>
-#include <math.h>
 
 #define TLV_TAG_CLASS_MASK	0xc0
 #define TLV_TAG_COMPLEX		0x20
@@ -565,7 +564,7 @@ bool tlv_get_int(const struct tlv *etlv, int *value)
 		{
 			for (int i = 0; i < etlv->len; i++)
 			{
-				*value += etlv->value[i] * pow(0x100, i);
+				*value += etlv->value[i] * (1 << (i * 8));
 			}
 			return true;
 		}
