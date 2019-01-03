@@ -25,6 +25,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <math.h>
 
 #define TLV_TAG_CLASS_MASK	0xc0
 #define TLV_TAG_COMPLEX		0x20
@@ -533,4 +534,41 @@ struct tlvdb *tlvdb_elm_get_children(struct tlvdb *tlvdb)
 struct tlvdb *tlvdb_elm_get_parent(struct tlvdb *tlvdb)
 {
 	return tlvdb->parent;
+}
+
+bool tlv_get_uint8(const struct tlv *etlv, uint8_t *value) 
+{
+	*value = 0;
+	if (etlv)
+	{
+		if (etlv->len == 0)
+			return true;
+		
+		if (etlv->len == 1)
+		{
+			*value = etlv->value[0];
+			return true;
+		}
+	}
+	return false;
+}
+
+bool tlv_get_int(const struct tlv *etlv, int *value)
+{
+	*value = 0;
+	if (etlv)
+	{
+		if (etlv->len == 0)
+			return true;
+		
+		if (etlv->len <= 4)
+		{
+			for (int i = 0; i < etlv->len; i++)
+			{
+				*value += etlv->value[i] * pow(0x100, i);
+			}
+			return true;
+		}
+	}
+	return false;
 }
