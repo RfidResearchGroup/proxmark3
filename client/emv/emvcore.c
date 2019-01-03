@@ -332,11 +332,38 @@ int EMVSelectPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
 	return res;
 }
 
+int EMVSelectWithRetry(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t *AID, size_t AIDLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
+	int retrycnt = 0;
+	int res = 0;
+	do {
+		res = EMVSelect(channel, false, true, AID, AIDLen, Result, MaxResultLen, ResultLen, sw, tlv);
+
+		// retry if error and not returned sw error
+		if (res && res != 5) {
+			if (++retrycnt < 3){
+				continue;
+			} else {
+				// card select error, proxmark error
+				if (res == 1) {
+					PrintAndLogEx(WARNING, "Exit...");
+					return 1;
+				}
+				
+				retrycnt = 0;
+				PrintAndLogEx(NORMAL, "Retry failed [%s]. Skiped...", sprint_hex_inrow(AID, AIDLen));
+				return res;
+			}	
+		}
+	} while (res && res != 5);
+
+	return res;
+}
+
 int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t PSENum, bool decodeTLV, struct tlvdb *tlv) {
 	uint8_t data[APDU_RES_LEN] = {0};
 	size_t datalen = 0;
-	uint8_t sfidata[APDU_RES_LEN] = {0};
-	size_t sfidatalen = 0;
+	uint8_t sfidata[0x11][APDU_RES_LEN] = {0};
+	size_t sfidatalen[0x11] = {0};
 	uint16_t sw = 0;
 	int res;
 
@@ -360,24 +387,45 @@ int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
 				
 				for (uint8_t ui = 0x01; ui <= 0x10; ui++) {
 					PrintAndLogEx(INFO, "* * Get SFI: 0x%02x. num: 0x%02x", sfin, ui);
-					res = EMVReadRecord(channel, true, sfin, ui, sfidata, sizeof(sfidata), &sfidatalen, &sw, NULL);
+					res = EMVReadRecord(channel, true, sfin, ui, sfidata[ui], APDU_RES_LEN, &sfidatalen[ui], &sw, NULL);
 					
 					// end of records
 					if (sw == 0x6a83) {
+						sfidatalen[ui] = 0;
 						PrintAndLogEx(INFO, "* * PPSE get SFI. End of records.");
 						break;
 					}
 					
-					// here must bee an error catch!
+					// error catch!
 					if (sw != 0x9000) {
+						sfidatalen[ui] = 0;
 						PrintAndLogEx(FAILED, "PPSE get Error. APDU error: %04x.", sw);
 						break;
 					}
 
 					if (decodeTLV){
-						TLVPrintFromBuffer(sfidata, sfidatalen);
+						TLVPrintFromBuffer(sfidata[ui], sfidatalen[ui]);
 					}
-					
+				}
+
+				for (uint8_t ui = 0x01; ui <= 0x10; ui++) {
+					if (sfidatalen[ui]) {
+						struct tlvdb *tsfi = NULL;
+						tsfi = tlvdb_parse_multi(sfidata[ui], sfidatalen[ui]);
+						if (tsfi) {
+							struct tlvdb *tsfitmp = tlvdb_find_path(tsfi, (tlv_tag_t[]){0x70, 0x61, 0x00});
+							if (!tsfitmp) {
+								PrintAndLogEx(FAILED, "SFI 0x%02d don't have records.", sfidatalen[ui]);
+								continue;
+							}
+							
+							// todo: check
+							PrintAndLogEx(INFO, "OK SFI 0x%02d.", sfidatalen[ui]);
+							
+							
+						}
+						tlvdb_free(tsfi);
+					}
 				}
 				
 				
@@ -385,7 +433,6 @@ int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
 
 
 
-			int retrycnt = 0;
 			struct tlvdb *ttmp = tlvdb_find_path(t, (tlv_tag_t[]){0x6f, 0xa5, 0xbf0c, 0x61, 0x00});
 			if (!ttmp)
 				PrintAndLogEx(FAILED, "PPSE don't have records.");
@@ -393,28 +440,17 @@ int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
 			while (ttmp) {
 				const struct tlv *tgAID = tlvdb_get_inchild(ttmp, 0x4f, NULL);
 				if (tgAID) {
-					res = EMVSelect(channel, false, true, (uint8_t *)tgAID->value, tgAID->len, data, sizeof(data), &datalen, &sw, tlv);
+					res = EMVSelectWithRetry(channel, false, true, (uint8_t *)tgAID->value, tgAID->len, data, sizeof(data), &datalen, &sw, tlv);
 
-					// retry if error and not returned sw error
-					if (res && res != 5) {
-						if (++retrycnt < 3){
-							continue;
-						} else {
-							// card select error, proxmark error
-							if (res == 1) {
-								PrintAndLogEx(WARNING, "Exit...");
-								return 1;
-							}
-							
-							retrycnt = 0;
-							PrintAndLogEx(NORMAL, "Retry failed [%s]. Skiped...", sprint_hex_inrow(tgAID->value, tgAID->len));
-						}
-						
+					// if returned sw error
+					if (res == 5) {
 						// next element
 						ttmp = tlvdb_find_next(ttmp, 0x61);
 						continue;
 					}
-					retrycnt = 0;
+					
+					if (res)
+						break;
 
 					// all is ok
 					if (decodeTLV){
