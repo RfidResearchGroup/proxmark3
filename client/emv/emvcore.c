@@ -359,6 +359,38 @@ int EMVSelectWithRetry(EMVCommandChannel channel, bool ActivateField, bool Leave
 	return res;
 }
 
+int EMVCheckAID(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlvdbelm, struct tlvdb *tlv){
+	uint8_t data[APDU_RES_LEN] = {0};
+	size_t datalen = 0;
+	int res = 0;
+	uint16_t sw = 0;
+
+	while (tlvdbelm) {
+		const struct tlv *tgAID = tlvdb_get_inchild(tlvdbelm, 0x4f, NULL);
+		if (tgAID) {
+			res = EMVSelectWithRetry(channel, false, true, (uint8_t *)tgAID->value, tgAID->len, data, sizeof(data), &datalen, &sw, tlv);
+
+			// if returned sw error
+			if (res == 5) {
+				// next element
+				tlvdbelm = tlvdb_find_next(tlvdbelm, 0x61);
+				continue;
+			}
+			
+			if (res)
+				break;
+
+			// all is ok
+			if (decodeTLV){
+				PrintAndLogEx(NORMAL, "%s:", sprint_hex_inrow(tgAID->value, tgAID->len));
+				TLVPrintFromBuffer(data, datalen);
+			}
+		}
+		tlvdbelm = tlvdb_find_next(tlvdbelm, 0x61);
+	}
+	return res;
+}
+
 int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t PSENum, bool decodeTLV, struct tlvdb *tlv) {
 	uint8_t data[APDU_RES_LEN] = {0};
 	size_t datalen = 0;
@@ -366,6 +398,7 @@ int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
 	size_t sfidatalen[0x11] = {0};
 	uint16_t sw = 0;
 	int res;
+	bool fileFound = false;
 
 	// select PPSE
 	res = EMVSelectPSE(channel, ActivateField, true, PSENum, data, sizeof(data), &datalen, &sw);
@@ -379,6 +412,7 @@ int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
 		struct tlvdb *t = NULL;
 		t = tlvdb_parse_multi(data, datalen);
 		if (t) {
+			// PSE/PPSE with SFI
 			struct tlvdb *tsfi = tlvdb_find_path(t, (tlv_tag_t[]){0x6f, 0xa5, 0x88, 0x00});
 			if (tsfi) {
 				uint8_t sfin = 0;
@@ -418,49 +452,24 @@ int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
 								PrintAndLogEx(FAILED, "SFI 0x%02d don't have records.", sfidatalen[ui]);
 								continue;
 							}
-							
-							// todo: check
-							PrintAndLogEx(INFO, "OK SFI 0x%02d.", sfidatalen[ui]);
-							
-							
+							res = EMVCheckAID(channel, decodeTLV, tsfitmp, tlv);							
+							fileFound = true;
 						}
 						tlvdb_free(tsfi);
 					}
 				}
-				
-				
 			}
 
 
-
+			// PSE/PPSE plain (wo SFI)
 			struct tlvdb *ttmp = tlvdb_find_path(t, (tlv_tag_t[]){0x6f, 0xa5, 0xbf0c, 0x61, 0x00});
-			if (!ttmp)
-				PrintAndLogEx(FAILED, "PPSE don't have records.");
-			
-			while (ttmp) {
-				const struct tlv *tgAID = tlvdb_get_inchild(ttmp, 0x4f, NULL);
-				if (tgAID) {
-					res = EMVSelectWithRetry(channel, false, true, (uint8_t *)tgAID->value, tgAID->len, data, sizeof(data), &datalen, &sw, tlv);
-
-					// if returned sw error
-					if (res == 5) {
-						// next element
-						ttmp = tlvdb_find_next(ttmp, 0x61);
-						continue;
-					}
-					
-					if (res)
-						break;
-
-					// all is ok
-					if (decodeTLV){
-						PrintAndLogEx(NORMAL, "%s:", sprint_hex_inrow(tgAID->value, tgAID->len));
-						TLVPrintFromBuffer(data, datalen);
-					}
-				}
-				
-				ttmp = tlvdb_find_next(ttmp, 0x61);
+			if (ttmp) {
+				res = EMVCheckAID(channel, decodeTLV, ttmp, tlv);
+				fileFound = true;
 			}
+			
+			if (!fileFound)
+				PrintAndLogEx(FAILED, "PPSE don't have records.");
 
 			tlvdb_free(t);
 		} else {
