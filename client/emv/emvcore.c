@@ -381,8 +381,8 @@ int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
 		if (t) {
 			struct tlvdb *tsfi = tlvdb_find_path(t, (tlv_tag_t[]){0x6f, 0xa5, 0x88, 0x00});
 			if (tsfi) {
-				const struct tlv *tsfi_tlv = tlvdb_get_tlv(tsfi);
-				uint8_t sfin = tsfi_tlv->value[0];
+				uint8_t sfin = 0;
+				tlv_get_uint8(tlvdb_get_tlv(tsfi), &sfin);
 				PrintAndLogEx(INFO, "* PPSE get SFI: 0x%02x.", sfin);
 				
 				for (uint8_t ui = 0x01; ui <= 0x10; ui++) {
