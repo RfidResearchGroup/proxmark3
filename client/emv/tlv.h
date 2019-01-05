@@ -61,4 +61,7 @@ unsigned char *tlv_encode(const struct tlv *tlv, size_t *len);
 bool tlv_is_constructed(const struct tlv *tlv);
 bool tlv_equal(const struct tlv *a, const struct tlv *b);
 
+bool tlv_get_uint8(const struct tlv *etlv, uint8_t *value);
+bool tlv_get_int(const struct tlv *etlv, int *value);
+
 #endif
