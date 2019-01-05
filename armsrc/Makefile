@@ -122,8 +122,9 @@ APP_CFLAGS += $(ZLIB_CFLAGS)
 # zlib includes:
 APP_CFLAGS += -I../zlib
 
-# stdint.h provided locally until GCC 4.5 becomes C99 compliant
-APP_CFLAGS += -I.
+# stdint.h provided locally until GCC 4.5 becomes C99 compliant,
+# stack-protect , no-pie reduces size on Gentoo Hardened 8.2 gcc
+APP_CFLAGS += -I. -fno-stack-protector -fno-pie
 
 # Compile these in thumb mode (small size)
 THUMBSRC = start.c \
