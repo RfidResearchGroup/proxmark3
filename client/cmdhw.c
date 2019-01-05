@@ -74,7 +74,7 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
 	if ( mem_avail > 0 ) 
 		mem_left = (mem_avail * 1024) - mem_used;
 	
-	PrintAndLogEx(NORMAL, "  --= Nonvolatile Program Memory Size: %uK bytes, Used: %u bytes (%2.0f\%) Free: %u bytes (%2.0f\%)", 
+	PrintAndLogEx(NORMAL, "  --= Nonvolatile Program Memory Size: %uK bytes, Used: %u bytes (%2.0f%%) Free: %u bytes (%2.0f%%)", 
 				mem_avail, 
 				mem_used, 
 				mem_avail == 0 ? 0.0f : (float)mem_used/(mem_avail*1024)*100,

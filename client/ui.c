@@ -41,7 +41,7 @@ void PrintAndLogOptions(char *str[][2], size_t size, size_t space) {
 		if (i < size-1)
 			strncat(buff, "\n", sizeof(buff)-strlen(buff) -1);
     }
-    PrintAndLogEx(NORMAL, buff);
+    PrintAndLogEx(NORMAL, "%s", buff);
 }
 void PrintAndLogEx(logLevel_t level, char *fmt, ...) {
 
@@ -85,7 +85,7 @@ void PrintAndLogEx(logLevel_t level, char *fmt, ...) {
 
 	// no prefixes for normal
 	if ( level == NORMAL ) {
-		PrintAndLog(buffer);
+		PrintAndLog("%s", buffer);
 		return;
 	}
 	
@@ -110,10 +110,10 @@ void PrintAndLogEx(logLevel_t level, char *fmt, ...) {
 			
 			token = strtok(NULL, delim);
 		}
-		PrintAndLog(buffer2);
+		PrintAndLog("%s", buffer2);
 	} else {
 		snprintf(buffer2, sizeof(buffer2), "%s%s", prefix, buffer);
-		PrintAndLog(buffer2);
+		PrintAndLog("%s", buffer2);
 	}
 }
 
