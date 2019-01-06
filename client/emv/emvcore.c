@@ -394,7 +394,7 @@ int EMVCheckAID(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlvdbel
 int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t PSENum, bool decodeTLV, struct tlvdb *tlv) {
 	uint8_t data[APDU_RES_LEN] = {0};
 	size_t datalen = 0;
-	uint8_t sfidata[0x11][APDU_RES_LEN] = {0};
+	uint8_t sfidata[0x11][APDU_RES_LEN];
 	size_t sfidatalen[0x11] = {0};
 	uint16_t sw = 0;
 	int res;
