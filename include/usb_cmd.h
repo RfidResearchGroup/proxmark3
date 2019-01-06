@@ -300,11 +300,12 @@ typedef struct{
 #define FLAG_ICLASS_READER_CEDITKEY     0x40
 
 // Dbprintf flags
-#define FLAG_RAWPRINT 0x0111
-#define FLAG_NOOPT 0x0000
-#define FLAG_NOLOG 0x0001
-#define FLAG_NONEWLINE 0x0010
-#define FLAG_NOPROMPT 0x0100
+#define FLAG_RAWPRINT	0x0111
+#define FLAG_NOOPT		0x0000
+#define FLAG_NOLOG		0x0001
+#define FLAG_NONEWLINE	0x0010
+#define FLAG_NOPROMPT	0x0100
+
 
 // CMD_DEVICE_INFO response packet has flags in arg[0], flag definitions:
 /* Whether a bootloader that understands the common_area is present */

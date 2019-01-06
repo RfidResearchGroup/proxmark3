@@ -113,7 +113,7 @@ void print_result(char *name, uint8_t *buf, size_t len) {
 void DbpStringEx(char *str, uint32_t cmd) {
 #if DEBUG
 	uint8_t len = strlen(str);
-	cmd_send(CMD_DEBUG_PRINT_STRING, len, cmd, 0, (byte_t*)str, len);
+	cmd_send(CMD_DEBUG_PRINT_STRING, len, cmd, 0, (uint8_t*)str, len);
 #endif	
 }
 
@@ -307,10 +307,10 @@ void MeasureAntennaTuningHf(void) {
 		} else {
 			volt = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
 		}
-		DbprintfEx(CMD_MEASURE_ANTENNA_TUNING_HF, "%u mV / %5u V", volt, (uint16_t)(volt/1000));
+		DbprintfEx(FLAG_NONEWLINE, "%u mV / %5u V", volt, (uint16_t)(volt/1000));
 	}
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	DbpString("\n[+] cancelled");
+	DbprintfEx(FLAG_NOOPT, "\n[+] cancelled", 1);
 }
 
 void ReadMem(int addr) {
