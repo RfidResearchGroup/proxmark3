@@ -310,51 +310,51 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 //	6x xx = ERROR
 	
 // MIFARE DESFire command set:
-#define  MFDES_CREATE_APPLICATION 			 0xca
-#define  MFDES_DELETE_APPLICATION 			 0xda
-#define  MFDES_GET_APPLICATION_IDS 			 0x6a
-#define      MFDES_SELECT_APPLICATION 		 0x5a
-#define      MFDES_FORMAT_PICC 				 0xfc
-#define      MFDES_GET_VERSION 				 0x60
-#define      MFDES_READ_DATA 				 0xbd
-#define      MFDES_WRITE_DATA				 0x3d
-#define      MFDES_GET_VALUE 				 0x6c
-#define      MFDES_CREDIT 					 0x0c
-#define      MFDES_DEBIT 					 0xdc
-#define      MFDES_LIMITED_CREDIT 			 0x1c
-#define      MFDES_WRITE_RECORD 			 0x3b
-#define      MFDES_READ_RECORDS 			 0xbb
-#define     MFDES_CLEAR_RECORD_FILE 		 0xeb
-#define      MFDES_COMMIT_TRANSACTION 		 0xc7
-#define      MFDES_ABORT_TRANSACTION 		 0xa7
-#define      MFDES_GET_FREE_MEMORY           0x6e
-#define  	MFDES_GET_FILE_IDS 				 0x6f
-#define  	MFDES_GET_ISOFILE_IDS 			 0x61
-#define     MFDES_GET_FILE_SETTINGS 		 0xf5
-#define     MFDES_CHANGE_FILE_SETTINGS 		 0x5f
-#define     MFDES_CREATE_STD_DATA_FILE 		 0xcd
-#define     MFDES_CREATE_BACKUP_DATA_FILE 	 0xcb
-#define     MFDES_CREATE_VALUE_FILE 		 0xcc
-#define     MFDES_CREATE_LINEAR_RECORD_FILE	 0xc1
-#define     MFDES_CREATE_CYCLIC_RECORD_FILE	 0xc0
-#define     MFDES_DELETE_FILE 				 0xdf
-#define     MFDES_AUTHENTICATE	 			 0x0a  // AUTHENTICATE_NATIVE
-#define  	MFDES_AUTHENTICATE_ISO 			 0x1a  // AUTHENTICATE_STANDARD
-#define  	MFDES_AUTHENTICATE_AES 			 0xaa
-#define     MFDES_CHANGE_KEY_SETTINGS 		 0x54
-#define     MFDES_GET_KEY_SETTINGS 			 0x45
-#define     MFDES_CHANGE_KEY 				 0xc4
-#define     MFDES_GET_KEY_VERSION 			 0x64
-#define     MFDES_AUTHENTICATION_FRAME 		 0xAF
+#define MFDES_CREATE_APPLICATION 		0xca
+#define MFDES_DELETE_APPLICATION 		0xda
+#define MFDES_GET_APPLICATION_IDS 		0x6a
+#define MFDES_SELECT_APPLICATION 		0x5a
+#define MFDES_FORMAT_PICC 				0xfc
+#define MFDES_GET_VERSION 				0x60
+#define MFDES_READ_DATA 				0xbd
+#define MFDES_WRITE_DATA				0x3d
+#define MFDES_GET_VALUE 				0x6c
+#define MFDES_CREDIT 					0x0c
+#define MFDES_DEBIT 					0xdc
+#define MFDES_LIMITED_CREDIT 			0x1c
+#define MFDES_WRITE_RECORD 				0x3b
+#define MFDES_READ_RECORDS 				0xbb
+#define MFDES_CLEAR_RECORD_FILE 		0xeb
+#define MFDES_COMMIT_TRANSACTION 		0xc7
+#define MFDES_ABORT_TRANSACTION 		0xa7
+#define MFDES_GET_FREE_MEMORY			0x6e
+#define MFDES_GET_FILE_IDS 				0x6f
+#define MFDES_GET_ISOFILE_IDS 			0x61
+#define MFDES_GET_FILE_SETTINGS 		0xf5
+#define MFDES_CHANGE_FILE_SETTINGS 		0x5f
+#define MFDES_CREATE_STD_DATA_FILE 		0xcd
+#define MFDES_CREATE_BACKUP_DATA_FILE 	0xcb
+#define MFDES_CREATE_VALUE_FILE 		0xcc
+#define MFDES_CREATE_LINEAR_RECORD_FILE	0xc1
+#define MFDES_CREATE_CYCLIC_RECORD_FILE	0xc0
+#define MFDES_DELETE_FILE 				0xdf
+#define MFDES_AUTHENTICATE	 			0x0a  // AUTHENTICATE_NATIVE
+#define MFDES_AUTHENTICATE_ISO 			0x1a  // AUTHENTICATE_STANDARD
+#define MFDES_AUTHENTICATE_AES 			0xaa
+#define MFDES_CHANGE_KEY_SETTINGS 		0x54
+#define MFDES_GET_KEY_SETTINGS 			0x45
+#define MFDES_CHANGE_KEY 				0xc4
+#define MFDES_GET_KEY_VERSION 			0x64
+#define MFDES_AUTHENTICATION_FRAME 		0xAF
 
 // LEGIC Commands
-#define		LEGIC_MIM_22	0x0D
-#define		LEGIC_MIM_256	0x1D
-#define		LEGIC_MIM_1024	0x3D
-#define 	LEGIC_ACK_22	0x19
-#define 	LEGIC_ACK_256	0x39
-#define		LEGIC_READ		0x01
-#define 	LEGIC_WRITE		0x00
+#define LEGIC_MIM_22	0x0D
+#define	LEGIC_MIM_256	0x1D
+#define	LEGIC_MIM_1024	0x3D
+#define LEGIC_ACK_22	0x19
+#define LEGIC_ACK_256	0x39
+#define	LEGIC_READ		0x01
+#define LEGIC_WRITE		0x00
 
 void printIclassDumpInfo(uint8_t* iclass_dump);
 void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *max_blk, uint8_t *app_areas, uint8_t *kb);
@@ -379,7 +379,7 @@ void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *max_blk, uint8_t *
 #define T55x7_MODULATION_MANCHESTER	0x00008000
 #define T55x7_MODULATION_BIPHASE	0x00010000
 #define T55x7_MODULATION_DIPHASE	0x00018000
-#define T55x7_X_MODE                0x00020000
+#define T55x7_X_MODE				0x00020000
 #define T55x7_BITRATE_RF_8			0
 #define T55x7_BITRATE_RF_16			0x00040000
 #define T55x7_BITRATE_RF_32			0x00080000
@@ -406,9 +406,9 @@ void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *max_blk, uint8_t *
 #define T5555_PSK_RF_8				0x00000200
 #define T5555_USE_PWD				0x00000400
 #define T5555_USE_AOR				0x00000800
-#define T5555_SET_BITRATE(x)        (((x-2)/2)<<12)
-#define T5555_GET_BITRATE(x)        ((((x >> 12) & 0x3F)*2)+2)
-#define T5555_BITRATE_SHIFT         12 //(RF=2n+2)   ie 64=2*0x1F+2   or n = (RF-2)/2
+#define T5555_SET_BITRATE(x)		(((x-2)/2)<<12)
+#define T5555_GET_BITRATE(x)		((((x >> 12) & 0x3F)*2)+2)
+#define T5555_BITRATE_SHIFT			12 //(RF=2n+2)   ie 64=2*0x1F+2   or n = (RF-2)/2
 #define T5555_FAST_WRITE			0x00004000
 #define T5555_PAGE_SELECT			0x00008000
 
@@ -446,58 +446,61 @@ uint32_t GetT55xxClockBit(uint32_t clock);
 
 
 // FeliCa protocol
-#define FELICA_POLL_REQ 0x00
-#define FELICA_POLL_ACK 0x01
+#define FELICA_POLL_REQ			0x00
+#define FELICA_POLL_ACK			0x01
 
-#define FELICA_REQSRV_REQ 0x02
-#define FELICA_REQSRV_ACK 0x03
+#define FELICA_REQSRV_REQ		0x02
+#define FELICA_REQSRV_ACK		0x03
 
-#define FELICA_RDBLK_REQ 0x06
-#define FELICA_RDBLK_ACK 0x07
+#define FELICA_REQRESP_REQ		0x04
+#define FELICA_REQRESP_ACK		0x05
 
-#define FELICA_WRTBLK_REQ 0x08
-#define FELICA_WRTBLK_ACK 0x09
+#define FELICA_RDBLK_REQ		0x06
+#define FELICA_RDBLK_ACK		0x07
 
-#define FELICA_SRCHSYSCODE_REQ 0x0a
-#define FELICA_SRCHSYSCODE_ACK 0x0b
+#define FELICA_WRTBLK_REQ		0x08
+#define FELICA_WRTBLK_ACK		0x09
 
-#define FELICA_REQSYSCODE_REQ 0x0c
-#define FELICA_REQSYSCODE_ACK 0x0d
+#define FELICA_SRCHSYSCODE_REQ	0x0a
+#define FELICA_SRCHSYSCODE_ACK	0x0b
 
-#define FELICA_AUTH1_REQ 0x10
-#define FELICA_AUTH1_ACK 0x11
+#define FELICA_REQSYSCODE_REQ	0x0c
+#define FELICA_REQSYSCODE_ACK	0x0d
 
-#define FELICA_AUTH2_REQ 0x12
-#define FELICA_AUTH2_ACK 0x13
+#define FELICA_AUTH1_REQ		0x10
+#define FELICA_AUTH1_ACK		0x11
 
-#define FELICA_RDSEC_REQ 0x14
-#define FELICA_RDSEC_ACK 0x15
+#define FELICA_AUTH2_REQ		0x12
+#define FELICA_AUTH2_ACK		0x13
 
-#define FELICA_WRTSEC_REQ 0x16
-#define FELICA_WRTSEC_ACK 0x17
+#define FELICA_RDSEC_REQ		0x14
+#define FELICA_RDSEC_ACK		0x15
 
-#define FELICA_REQSRV2_REQ 0x32
-#define FELICA_REQSRV2_ACK 0x33
+#define FELICA_WRTSEC_REQ		0x16
+#define FELICA_WRTSEC_ACK		0x17
 
-#define FELICA_GETSTATUS_REQ 0x38
-#define FELICA_GETSTATUS_ACK 0x39
+#define FELICA_REQSRV2_REQ		0x32
+#define FELICA_REQSRV2_ACK		0x33
 
-#define FELICA_OSVER_REQ 0x3c
-#define FELICA_OSVER_ACK 0x3d
+#define FELICA_GETSTATUS_REQ	0x38
+#define FELICA_GETSTATUS_ACK	0x39
 
-#define FELICA_RESET_MODE_REQ 0x3e
-#define FELICA_RESET_MODE_ACK 0x3f
+#define FELICA_OSVER_REQ		0x3c
+#define FELICA_OSVER_ACK		0x3d
 
-#define FELICA_AUTH1V2_REQ 0x40
-#define FELICA_AUTH1V2_ACK 0x41
+#define FELICA_RESET_MODE_REQ	0x3e
+#define FELICA_RESET_MODE_ACK	0x3f
 
-#define FELICA_AUTH2V2_REQ 0x42
-#define FELICA_AUTH2V2_ACK 0x43
+#define FELICA_AUTH1V2_REQ		0x40
+#define FELICA_AUTH1V2_ACK		0x41
 
-#define FELICA_RDSECV2_REQ 0x44
-#define FELICA_RDSECV2_ACK 0x45
-#define FELICA_WRTSECV2_REQ 0x46
-#define FELICA_WRTSECV2_ACK 0x47
+#define FELICA_AUTH2V2_REQ		0x42
+#define FELICA_AUTH2V2_ACK		0x43
+
+#define FELICA_RDSECV2_REQ		0x44
+#define FELICA_RDSECV2_ACK		0x45
+#define FELICA_WRTSECV2_REQ		0x46
+#define FELICA_WRTSECV2_ACK		0x47
 
 #define FELICA_UPDATE_RNDID_REQ 0x4C
 #define FELICA_UPDATE_RNDID_ACK 0x4D
