@@ -178,7 +178,7 @@ static void UsbCommandReceived(UsbCommand* c) {
 			break;
 		}
 		case CMD_DEBUG_PRINT_INTEGERS: {
-			PrintAndLogEx(NORMAL, "#db# %08x, %08x, %08x", c->arg[0], c->arg[1], c->arg[2]);
+			PrintAndLogEx(NORMAL, "#db# %" PRIx64 ", %" PRIx64 ", %" PRIx64 "", c->arg[0], c->arg[1], c->arg[2]);
 			break;
 		}
 		// iceman:  hw status - down the path on device, runs printusbspeed which starts sending a lot of
