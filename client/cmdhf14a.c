@@ -213,11 +213,6 @@ int usage_hf_14a_info(void){
 	PrintAndLogEx(NORMAL, "       n    test for nack bug");
 	return 0;
 }
-int usage_hf_14a_antifuzz(void) {
-	PrintAndLogEx(NORMAL, "Usage: hf 14a antifuzz [4|7|10]");
-	PrintAndLogEx(NORMAL, "       <len>    determine which anticollision phase the command will target.");
-	return 0;
-}
 
 int CmdHF14AList(const char *Cmd) {
 	//PrintAndLogEx(NORMAL, "Deprecated command, use 'hf list 14a' instead");
@@ -1183,11 +1178,27 @@ static int waitCmd(uint8_t iSelect) {
 
 int CmdHF14AAntiFuzz(const char *cmd) {
 	
-	if (strlen(cmd) < 1) return usage_hf_14a_antifuzz();
+	CLIParserInit("hf 14a antifuzz", 
+		"Tries to fuzz the ISO14443a anticollision phase", 
+		"Usage:\n"
+		"\thf 14a antifuzz -4\n");
 
-	//	read param length
-	uint8_t arg0 = 4;
-	
+	void* argtable[] = {
+		arg_param_begin,
+		arg_lit0("4",   NULL,  "4 byte uid"),
+		arg_lit0("7",   NULL,  "7 byte uid"),
+		arg_lit0(NULL,  "10",  "10 byte uid"),
+		arg_param_end
+	};
+	CLIExecWithReturn(cmd, argtable, false);
+
+	uint8_t arg0 = FLAG_4B_UID_IN_DATA;
+	if (arg_get_lit(2))
+		arg0 = FLAG_7B_UID_IN_DATA;		
+	if (arg_get_lit(3))
+		arg0 = FLAG_10B_UID_IN_DATA;
+
+	CLIParserFree();
 	UsbCommand c = {CMD_ANTIFUZZ_ISO_14443a, {arg0, 0, 0}};	
 	clearCommandBuffer();
     SendCommand(&c);	

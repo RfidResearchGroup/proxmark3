@@ -122,8 +122,10 @@ extern void iso14a_set_trigger(bool enable);
 extern int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen);
 extern int EmSend4bit(uint8_t resp);
 extern int EmSendCmd(uint8_t *resp, uint16_t respLen);
+extern int EmSendCmdEx(uint8_t *resp, uint16_t respLen, bool collision);
 extern int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *parity);
 extern int EmSendCmdPar(uint8_t *resp, uint16_t respLen, uint8_t *par);
+extern int EmSendCmdParEx(uint8_t *resp, uint16_t respLen, uint8_t *par, bool collision);
 extern int EmSendPrecompiledCmd(tag_response_info_t *response_info);
 
 bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_StartTime, uint32_t reader_EndTime, uint8_t *reader_Parity,
