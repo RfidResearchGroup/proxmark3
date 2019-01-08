@@ -1294,9 +1294,9 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 		case 'r':
 			fptr = GenerateFilename("hf-mf-","-nonces.bin");
 			if (fptr == NULL) 
-				strncpy(filename,"nonces.bin", FILE_PATH_SIZE);
+				strncpy(filename, "nonces.bin", FILE_PATH_SIZE);
 			else
-				strncpy(filename,fptr, FILE_PATH_SIZE);
+				strncpy(filename, fptr, FILE_PATH_SIZE-1);
 				
 			nonce_file_read = true;
 			if (!param_gethex(Cmd, cmdp+1, trgkey, 12)) {
@@ -1367,7 +1367,7 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 			fptr = GenerateFilename("hf-mf-","-nonces.bin");
 			if (fptr == NULL) 
 				return 1;
-			strncpy(filename, fptr, FILE_PATH_SIZE);
+			strncpy(filename, fptr, FILE_PATH_SIZE-1);
 			break;
 		case 'u':
 			param_getstr(Cmd, cmdp+1, szTemp, FILE_PATH_SIZE-20);
