@@ -89,7 +89,7 @@ static void error_set(json_error_t *error, const lex_t *lex,
 {
     va_list ap;
     char msg_text[JSON_ERROR_TEXT_LENGTH];
-    char msg_with_context[JSON_ERROR_TEXT_LENGTH];
+    char msg_with_context[JSON_ERROR_TEXT_LENGTH + 20];
 
     int line = -1, col = -1;
     size_t pos = 0;
@@ -114,9 +114,8 @@ static void error_set(json_error_t *error, const lex_t *lex,
         if(saved_text && saved_text[0])
         {
             if(lex->saved_text.length <= 20) {
-                snprintf(msg_with_context, JSON_ERROR_TEXT_LENGTH,
-                         "%s near '%s'", msg_text, saved_text);
-                msg_with_context[JSON_ERROR_TEXT_LENGTH - 1] = '\0';
+                snprintf(msg_with_context, JSON_ERROR_TEXT_LENGTH, "%s near '%s'", msg_text, saved_text);
+                msg_with_context[JSON_ERROR_TEXT_LENGTH + 20 - 1] = '\0';
                 result = msg_with_context;
             }
         }
@@ -131,9 +130,8 @@ static void error_set(json_error_t *error, const lex_t *lex,
                 result = msg_text;
             }
             else {
-                snprintf(msg_with_context, JSON_ERROR_TEXT_LENGTH,
-                         "%s near end of file", msg_text);
-                msg_with_context[JSON_ERROR_TEXT_LENGTH - 1] = '\0';
+                snprintf(msg_with_context, JSON_ERROR_TEXT_LENGTH, "%s near end of file", msg_text);
+                msg_with_context[JSON_ERROR_TEXT_LENGTH + 20 - 1] = '\0';
                 result = msg_with_context;
             }
         }
