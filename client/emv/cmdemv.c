@@ -40,6 +40,17 @@ void ParamLoadDefaults(struct tlvdb *tlvRoot) {
 	TLV_ADD(0x9F66, "\x26\x00\x00\x00"); // qVSDC
 }
 
+void PrintChannel(EMVCommandChannel channel) {
+	switch(channel) {
+	case ECC_CONTACTLESS:
+		PrintAndLogEx(INFO, "Channel: CONTACTLESS");
+		break;
+	case ECC_CONTACT:
+		PrintAndLogEx(INFO, "Channel: CONTACT");
+		break;
+	}
+}
+
 int CmdEMVSelect(const char *cmd) {
 	uint8_t data[APDU_AID_LEN] = {0};
 	int datalen = 0;
@@ -67,6 +78,7 @@ int CmdEMVSelect(const char *cmd) {
 	EMVCommandChannel channel = ECC_CONTACTLESS;
 	if (arg_get_lit(5))
 		channel = ECC_CONTACT;
+	PrintChannel(channel);
 	CLIGetHexWithReturn(6, data, &datalen);
 	CLIParserFree();
 	
@@ -114,6 +126,7 @@ int CmdEMVSearch(const char *cmd) {
 	EMVCommandChannel channel = ECC_CONTACTLESS;
 	if (arg_get_lit(5))
 		channel = ECC_CONTACT;
+	PrintChannel(channel);
 	CLIParserFree();
 	
 	SetAPDULogging(APDULogging);
@@ -170,6 +183,7 @@ int CmdEMVPPSE(const char *cmd) {
 	EMVCommandChannel channel = ECC_CONTACTLESS;
 	if (arg_get_lit(7))
 		channel = ECC_CONTACT;
+	PrintChannel(channel);
 	CLIParserFree();	
 	
 	SetAPDULogging(APDULogging);
@@ -224,6 +238,7 @@ int CmdEMVGPO(const char *cmd) {
 	EMVCommandChannel channel = ECC_CONTACTLESS;
 	if (arg_get_lit(6))
 		channel = ECC_CONTACT;
+	PrintChannel(channel);
 	CLIGetHexWithReturn(7, data, &datalen);
 	CLIParserFree();	
 	
@@ -317,6 +332,7 @@ int CmdEMVReadRecord(const char *cmd) {
 	EMVCommandChannel channel = ECC_CONTACTLESS;
 	if (arg_get_lit(4))
 		channel = ECC_CONTACT;
+	PrintChannel(channel);
 	CLIGetHexWithReturn(5, data, &datalen);
 	CLIParserFree();
 	
@@ -399,6 +415,7 @@ int CmdEMVAC(const char *cmd) {
 	EMVCommandChannel channel = ECC_CONTACTLESS;
 	if (arg_get_lit(8))
 		channel = ECC_CONTACT;
+	PrintChannel(channel);
 	CLIGetHexWithReturn(9, data, &datalen);
 	CLIParserFree();	
 	
@@ -481,6 +498,7 @@ int CmdEMVGenerateChallenge(const char *cmd) {
 	EMVCommandChannel channel = ECC_CONTACTLESS;
 	if (arg_get_lit(3))
 		channel = ECC_CONTACT;
+	PrintChannel(channel);
 	CLIParserFree();	
 	
 	SetAPDULogging(APDULogging);
@@ -539,6 +557,7 @@ int CmdEMVInternalAuthenticate(const char *cmd) {
 	EMVCommandChannel channel = ECC_CONTACTLESS;
 	if (arg_get_lit(6))
 		channel = ECC_CONTACT;
+	PrintChannel(channel);
 	CLIGetHexWithReturn(7, data, &datalen);
 	CLIParserFree();	
 	
@@ -722,6 +741,7 @@ int CmdEMVExec(const char *cmd) {
 	EMVCommandChannel channel = ECC_CONTACTLESS;
 	if (arg_get_lit(11))
 		channel = ECC_CONTACT;
+	PrintChannel(channel);
 	uint8_t psenum = (channel == ECC_CONTACT) ? 1 : 2;
 	CLIParserFree();
 	
@@ -1171,6 +1191,7 @@ int CmdEMVScan(const char *cmd) {
 	EMVCommandChannel channel = ECC_CONTACTLESS;
 	if (arg_get_lit(11))
 		channel = ECC_CONTACT;
+	PrintChannel(channel);
 	uint8_t psenum = (channel == ECC_CONTACT) ? 1 : 2;
 	uint8_t relfname[250] ={0};
 	char *crelfname = (char *)relfname;
@@ -1493,6 +1514,7 @@ int CmdEMVRoca(const char *cmd) {
 
 	if (arg_get_lit(2))
 		channel = ECC_CONTACT;
+	PrintChannel(channel);
 
 	// select card
 	uint8_t psenum = (channel == ECC_CONTACT) ? 1 : 2;
