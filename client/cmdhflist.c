@@ -159,6 +159,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize) {
 			MifareAuthState = masNone;
 			break;
 		case ISO14443A_CMD_RATS:		snprintf(exp,size,"RATS"); break;
+		case ISO14443A_CMD_OPTS:        snprintf(exp,size,"OPTIONAL TIMESLOT"); break;		
 		case MIFARE_CMD_INC:			snprintf(exp,size,"INC(%d)",cmd[1]); break;
 		case MIFARE_CMD_DEC:			snprintf(exp,size,"DEC(%d)",cmd[1]); break;
 		case MIFARE_CMD_RESTORE:		snprintf(exp,size,"RESTORE(%d)",cmd[1]); break;
