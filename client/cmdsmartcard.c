@@ -533,7 +533,7 @@ int ExchangeAPDUSC(uint8_t *datain, int datainlen, bool activateCard, bool leave
 	int len = smart_responseEx(dataout, true);
 	
 	if ( len < 0 ) {
-		return 2;
+		return 1;
 	}
 	
 	// retry
