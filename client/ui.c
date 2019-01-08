@@ -48,10 +48,10 @@ void PrintAndLogEx(logLevel_t level, char *fmt, ...) {
 	// skip debug messages if client debugging is turned off i.e. 'DATA SETDEBUG 0' 
 	if (g_debugMode	== 0 && level == DEBUG)
 		return;
-	
+
+	char prefix[20] = {0};	
 	char buffer[MAX_PRINT_BUFFER] = {0};
-	char buffer2[MAX_PRINT_BUFFER] = {0};
-	char prefix[20] = {0};
+	char buffer2[MAX_PRINT_BUFFER+20] = {0};
 	char *token = NULL;
 	int size = 0;
 						//   {NORMAL, SUCCESS, INFO, FAILED, WARNING, ERR, DEBUG}
