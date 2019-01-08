@@ -22,7 +22,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-typedef uint16_t tlv_tag_t;
+typedef uint32_t tlv_tag_t;
 
 struct tlv {
 	tlv_tag_t tag;
