@@ -34,7 +34,6 @@ extern "C" {
 
 extern const uint8_t OddByteParity[256];
 extern int rsamples;   // = 0;
-extern int tracing;    // = TRUE;
 extern uint8_t trigger;
 
 // This may be used (sparingly) to declare a function to be copied to

@@ -710,7 +710,7 @@ void SimulateIso14443bTag(uint32_t pupi) {
 		++cmdsReceived;
 	}
 	if (MF_DBGLEVEL >= 2) 
-		Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ", tracing, BigBuf_get_traceLen());
+		Dbprintf("Emulator stopped. Trace length: %d ", BigBuf_get_traceLen());
 	switch_off(); //simulate
 }
 

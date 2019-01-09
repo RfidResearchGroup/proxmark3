@@ -651,7 +651,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 //-----------------------------------------------------------------------------
 static void CodeIso14443aAsTagPar(const uint8_t *cmd, uint16_t len, uint8_t *parity, bool collision) {
 	
-	uint8_t localCol = 0;
+	//uint8_t localCol = 0;
 	ToSendReset();
 
 	// Correction bit, might be removed when not needed
@@ -673,24 +673,32 @@ static void CodeIso14443aAsTagPar(const uint8_t *cmd, uint16_t len, uint8_t *par
 
 		// Data bits
 		for(uint16_t j = 0; j < 8; j++) {
-			if (collision && (localCol >= colpos)){
+			//if (collision && (localCol >= colpos)){
+			if (collision) {
 				ToSend[++ToSendMax] = SEC_COLL;
-            } else if(b & 1) {
-				ToSend[++ToSendMax] = SEC_D;
-			} else {
-				ToSend[++ToSendMax] = SEC_E;
+				//localCol++;				
+            } else {
+				if (b & 1) {
+					ToSend[++ToSendMax] = SEC_D;
+				} else {
+					ToSend[++ToSendMax] = SEC_E;
+				}
+				b >>= 1;
 			}
-			b >>= 1;
-            localCol++;
 		}
 
-		// Get the parity bit
-		if (parity[i>>3] & (0x80>>(i&0x0007))) {
-			ToSend[++ToSendMax] = SEC_D;
-			LastProxToAirDuration = 8 * ToSendMax - 4;
+		if (collision) {
+			ToSend[++ToSendMax] = SEC_COLL;
+			LastProxToAirDuration = 8 * ToSendMax;			
 		} else {
-			ToSend[++ToSendMax] = SEC_E;
-			LastProxToAirDuration = 8 * ToSendMax;
+			// Get the parity bit
+			if (parity[i>>3] & (0x80>>(i&0x0007))) {
+				ToSend[++ToSendMax] = SEC_D;
+				LastProxToAirDuration = 8 * ToSendMax - 4;
+			} else {
+				ToSend[++ToSendMax] = SEC_E;
+				LastProxToAirDuration = 8 * ToSendMax;
+			}
 		}
 	}
 
@@ -795,12 +803,12 @@ bool prepare_tag_modulation(tag_response_info_t* response_info, size_t max_buffe
 	// Make sure we do not exceed the free buffer space
 	if (ToSendMax > max_buffer_size) {
 		Dbprintf("Out of memory, when modulating bits for tag answer:");
-		Dbhexdump(response_info->response_n,response_info->response,false);
+		Dbhexdump(response_info->response_n, response_info->response, false);
 		return false;
 	}
 
 	// Copy the byte array, used for this modulation to the buffer position
-	memcpy(response_info->modulation,ToSend,ToSendMax);
+	memcpy(response_info->modulation, ToSend, ToSendMax);
 
 	// Store the number of bytes that were used for encoding/modulation and the time needed to transfer them
 	response_info->modulation_n = ToSendMax;
@@ -1047,7 +1055,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t* data) {
 		
 		// Clean receive command buffer
 		if (!GetIso14443aCommandFromReader(receivedCmd, receivedCmdPar, &len)) {
-			Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ", tracing, BigBuf_get_traceLen());
+			Dbprintf("Emulator stopped.  Trace length: %d ", BigBuf_get_traceLen());
 			break;
 		}	
 		p_response = NULL;
@@ -1836,15 +1844,17 @@ void iso14443a_antifuzz(uint32_t flags){
 	// allocate buffers:
 	uint8_t *received = BigBuf_malloc(MAX_FRAME_SIZE);
 	uint8_t *receivedPar = BigBuf_malloc(MAX_PARITY_SIZE);
-	uint8_t *resp = BigBuf_malloc(8);
+	uint8_t *resp = BigBuf_malloc(20);
 
+	memset(resp, 0xFF , 20);
+	
 	LED_A_ON();
 	for (;;) {	
 		WDT_HIT();
 		
 		// Clean receive command buffer
 		if (!GetIso14443aCommandFromReader(received, receivedPar, &len)) {
-			Dbprintf("Anti-fuzz stopped. Tracing: %d  trace length: %d ", tracing, BigBuf_get_traceLen());
+			Dbprintf("Anti-fuzz stopped. Trace length: %d ", BigBuf_get_traceLen());
 			break;
 		}
 		if ( received[0] == ISO14443A_CMD_WUPA || received[0] == ISO14443A_CMD_REQA) {
@@ -1860,21 +1870,24 @@ void iso14443a_antifuzz(uint32_t flags){
 		}
 		
 		// Received request for UID (cascade 1)
-		if (received[1] >= 0x20 && received[1] <= 0x57 && received[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT) {
-			resp[0] = 0x04;		
-			resp[1] = 0x1C;
-			resp[2] = 0xE1; 
-			resp[3] = 0xCE;
+		//if (received[1] >= 0x20 && received[1] <= 0x57 && received[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT) {
+		if (received[1] >= 0x20 && received[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT) {
+			resp[0] = 0xFF;
+			resp[1] = 0xFF;
+			resp[2] = 0xFF;
+			resp[3] = 0xFF;
+			resp[4] =  resp[0] ^ resp[1] ^ resp[2] ^ resp[3];
 			colpos = 0;
 			
 			if ( (flags & FLAG_7B_UID_IN_DATA) == FLAG_7B_UID_IN_DATA ) {
 				resp[0] = 0x88; 
 				colpos = 8;
 			}
-	
-			EmSendCmdEx(resp, 4, true);			
-			if (MF_DBGLEVEL >= 4) Dbprintf("ANTICOLL or SELECT %x", received[1]);
 			
+			EmSendCmdEx(resp, 5, true);
+			if (MF_DBGLEVEL >= 4) Dbprintf("ANTICOLL or SELECT %x", received[1]);
+			LED_D_INV();
+	
 			continue;
 		} else if (received[1] == 0x20 && received[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2) { 	// Received request for UID (cascade 2)
 			if (MF_DBGLEVEL >= 4) Dbprintf("ANTICOLL or SELECT_2");
@@ -3489,7 +3502,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 	}
 
 	if (MF_DBGLEVEL >= 1) 
-		Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ", tracing, BigBuf_get_traceLen());
+		Dbprintf("Emulator stopped. Trace length: %d ", BigBuf_get_traceLen());
 	
 	cmd_send(CMD_ACK,1,0,0,0,0);	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
