@@ -6,8 +6,13 @@
 #include <stddef.h>
 
 //structure buffer definitions
-#define TAG_LENGTH 2
-#define VALUE_LENGTH 1024
+#ifndef TAG_LENGTH
+# define TAG_LENGTH 4
+#endif
+
+#ifndef VALUE_LENGTH
+# define VALUE_LENGTH 1024
+#endif
 
 //masks
 //if TLV_TAG_NUMBER_MASK bits are set, refer to the next byte for the tag number
@@ -19,13 +24,13 @@
 #define TLV_TAG_MASK 0x80
 #define TLV_LENGTH_MASK 0x80
 
-//tlv tag structure, tag can be max of 2 bytes, length up to 65535 and value 1024 bytes long 
+//tlv tag structure, tag can be max of 4 bytes, length up to 0xFFFFFFFF and value 1024 bytes long 
 typedef struct {
     uint8_t tag[TAG_LENGTH];
     uint16_t fieldlength;
     uint16_t valuelength; 
     uint8_t value[VALUE_LENGTH];
-}tlvtag;
+} tlvtag;
 
 //decode a BER TLV 
 extern int decode_ber_tlv_item(uint8_t* data, tlvtag* returnedtag);

@@ -371,7 +371,6 @@ bool ParamLoadFromJson(struct tlvdb *tlv) {
 		uint8_t buf[251] = {0};
 		size_t buflen = 0;
 		
-		// here max length must be 4, but now tlv_tag_t is 2-byte var. so let it be 2 by now...  TODO: needs refactoring tlv_tag_t...
 		if (!HexToBuffer("TLV Error type:", tlvTag, buf, 4, &buflen)) { 
 			json_decref(root);
 			return false;

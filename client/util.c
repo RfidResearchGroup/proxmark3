@@ -212,7 +212,7 @@ void print_hex_break(const uint8_t *data, const size_t len, uint8_t breaks) {
 }
 
 char *sprint_hex(const uint8_t *data, const size_t len) {
-	static char buf[UTIL_BUFFER_SIZE_SPRINT] = {0};
+	static char buf[UTIL_BUFFER_SIZE_SPRINT - 3] = {0};
 	hex_to_buffer((uint8_t *)buf, data, len, sizeof(buf) - 1, 0, 1, true);
 	return buf;
 }

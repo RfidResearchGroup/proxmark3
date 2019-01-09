@@ -24,7 +24,9 @@
 #include "util.h"
 #include "proxmark3.h"
 
-#define PRINT_INDENT(level) 	{for (int i = 0; i < (level); i++) fprintf(f, "   ");}
+#ifndef PRINT_INDENT
+# define PRINT_INDENT(level) 	{for (int i = 0; i < (level); i++) fprintf(f, "   ");}
+#endif
 
 enum asn1_tag_t {
 	ASN1_TAG_GENERIC,
