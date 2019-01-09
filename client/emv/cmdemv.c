@@ -870,7 +870,7 @@ int CmdEMVExec(const char *cmd) {
 			uint8_t SFIend = AFL->value[i * 4 + 2];
 			uint8_t SFIoffline = AFL->value[i * 4 + 3];
 			
-			PrintAndLogEx(NORMAL, "* * SFI[%02x] start:%02x end:%02x offline:%02x", SFI, SFIstart, SFIend, SFIoffline);
+			PrintAndLogEx(NORMAL, "* * SFI[%02x] start:%02x end:%02x offline count:%02x", SFI, SFIstart, SFIend, SFIoffline);
 			if (SFI == 0 || SFI == 31 || SFIstart == 0 || SFIstart > SFIend) {
 				PrintAndLogEx(NORMAL, "SFI ERROR! Skipped...");
 				continue;
