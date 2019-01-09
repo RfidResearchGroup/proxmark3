@@ -781,7 +781,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
 		struct tlvdb *dac_db = emv_pki_recover_dac(issuer_pk, tlv, sda_tlv);
 		if (dac_db) {
 			const struct tlv *dac_tlv = tlvdb_get(dac_db, 0x9f45, NULL);
-			PrintAndLogEx(NORMAL, "SDA verified OK. (%02hhx:%02hhx)\n", dac_tlv->value[0], dac_tlv->value[1]);
+			PrintAndLogEx(NORMAL, "SDA verified OK. (Data Authentication Code: %02hhx:%02hhx)\n", dac_tlv->value[0], dac_tlv->value[1]);
 			tlvdb_add(tlv, dac_db);
 		} else {
 			PrintAndLogEx(WARNING, "Error: SSAD verify error");
