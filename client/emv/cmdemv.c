@@ -892,7 +892,7 @@ int CmdEMVExec(const char *cmd) {
 				
 				// Build Input list for Offline Data Authentication
 				// EMV 4.3 book3 10.3, page 96
-				if (SFIoffline) {
+				if (SFIoffline > 0) {
 					if (SFI < 11) {
 						const unsigned char *abuf = buf;
 						size_t elmlen = len;
@@ -907,6 +907,8 @@ int CmdEMVExec(const char *cmd) {
 						memcpy(&ODAiList[ODAiListLen], buf, len);
 						ODAiListLen += len;
 					}
+					
+					SFIoffline--;
 				}
 			}
 		}
