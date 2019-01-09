@@ -313,14 +313,57 @@ struct emv_pk *emv_pki_recover_icc_pe_cert(const struct emv_pk *pk, struct tlvdb
 			NULL);
 }
 
+unsigned char *emv_pki_sdatl_fill(const struct tlvdb *db, size_t *sdatl_len) {
+	uint8_t buf[2048] = {0};
+	size_t len = 0;
+	
+	*sdatl_len = 0;
+	
+	const struct tlv *sda_tl = tlvdb_get(db, 0x9f4a, NULL);
+	if (!sda_tl || sda_tl->len <= 0)
+		return NULL;
+
+	for (int i = 0; i < sda_tl->len; i++) {
+		uint32_t tag = sda_tl->value[i]; // here may be multibyte, but now not
+		const struct tlv *elm = tlvdb_get(db, tag, NULL);
+		if (elm) {
+			memcpy(&buf[len], elm->value, elm->len);
+			len += elm->len;
+		}		
+	}
+	
+	if (len) {
+		*sdatl_len = len;
+		unsigned char *value = malloc(len);
+		memcpy(value, buf, len);
+		return value;
+	}
+	
+	return NULL;
+}
+
+
 struct tlvdb *emv_pki_recover_dac_ex(const struct emv_pk *enc_pk, const struct tlvdb *db, const struct tlv *sda_tlv, bool showData)
 {
 	size_t data_len;
+	
+	// Static Data Authentication Tag List
+	size_t sdatl_len;
+	unsigned char *sdatl = emv_pki_sdatl_fill(db, &sdatl_len);
+	struct tlv sda_tdata = {
+		.tag = 0x00,        // dummy tag
+		.len = sdatl_len,
+		.value = sdatl
+	};
+
 	unsigned char *data = emv_pki_decode_message(enc_pk, 3, &data_len,
 			tlvdb_get(db, 0x93, NULL),
 			sda_tlv,
+			&sda_tdata,
 			NULL);
 
+	free(sdatl); // malloc here: emv_pki_sdatl_fill
+	
 	if (!data || data_len < 5)
 		return NULL;
 
