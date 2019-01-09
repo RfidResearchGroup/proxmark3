@@ -596,7 +596,7 @@ int EMVGenerateChallenge(EMVCommandChannel channel, bool LeaveFieldON, uint8_t *
 }
 
 int EMVInternalAuthenticate(EMVCommandChannel channel, bool LeaveFieldON, uint8_t *DDOL, size_t DDOLLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
-	return EMVExchange(channel, LeaveFieldON, (sAPDU){0x00, 0x88, 0x00, 0x00, DDOLLen, DDOL}, Result, MaxResultLen, ResultLen, sw, tlv);
+	return EMVExchangeEx(channel, false, LeaveFieldON, (sAPDU){0x00, 0x88, 0x00, 0x00, DDOLLen, DDOL}, true, Result, MaxResultLen, ResultLen, sw, tlv);
 }
 
 int MSCComputeCryptoChecksum(EMVCommandChannel channel, bool LeaveFieldON, uint8_t *UDOL, uint8_t UDOLlen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
@@ -682,12 +682,12 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
 	}
 
 	const struct tlv *sda_tlv = tlvdb_get(tlv, 0x21, NULL);
-	if (!sda_tlv || sda_tlv->len < 1) {
+/*	if (!sda_tlv || sda_tlv->len < 1) { it may be 0!!!!
 		emv_pk_free(pk);
 		PrintAndLogEx(WARNING, "Error: Can't find input list for Offline Data Authentication. Exit.");
 		return 3;
 	}
-
+*/
 	struct emv_pk *issuer_pk = emv_pki_recover_issuer_cert(pk, tlv);
 	if (!issuer_pk) {
 		emv_pk_free(pk);
@@ -710,7 +710,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
 	if (!icc_pk) {
 		emv_pk_free(pk);
 		emv_pk_free(issuer_pk);
-		PrintAndLogEx(WARNING, "Error: ICC setrificate not found. Exit.");
+		PrintAndLogEx(WARNING, "Error: ICC certificate not found. Exit.");
 		return 2;
 	}
 	PrintAndLogEx(SUCCESS, "ICC PK recovered. RID %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx CSN %02hhx:%02hhx:%02hhx\n",
@@ -725,21 +725,25 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
 			icc_pk->serial[2]
 			);
 
-	struct emv_pk *icc_pe_pk = emv_pki_recover_icc_pe_cert(issuer_pk, tlv);
-	if (!icc_pe_pk) {
-		PrintAndLogEx(WARNING, "WARNING: ICC PE PK recover error. ");
+	if (tlvdb_get(tlv, 0x9f2d, NULL)) {
+		struct emv_pk *icc_pe_pk = emv_pki_recover_icc_pe_cert(issuer_pk, tlv);
+		if (!icc_pe_pk) {
+			PrintAndLogEx(WARNING, "WARNING: ICC PE PK recover error. ");
+		} else {
+			PrintAndLogEx(SUCCESS, "ICC PE PK recovered. RID %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx CSN %02hhx:%02hhx:%02hhx\n",
+					icc_pe_pk->rid[0],
+					icc_pe_pk->rid[1],
+					icc_pe_pk->rid[2],
+					icc_pe_pk->rid[3],
+					icc_pe_pk->rid[4],
+					icc_pe_pk->index,
+					icc_pe_pk->serial[0],
+					icc_pe_pk->serial[1],
+					icc_pe_pk->serial[2]
+					);
+		}
 	} else {
-		PrintAndLogEx(SUCCESS, "ICC PE PK recovered. RID %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx CSN %02hhx:%02hhx:%02hhx\n",
-				icc_pe_pk->rid[0],
-				icc_pe_pk->rid[1],
-				icc_pe_pk->rid[2],
-				icc_pe_pk->rid[3],
-				icc_pe_pk->rid[4],
-				icc_pe_pk->index,
-				icc_pe_pk->serial[0],
-				icc_pe_pk->serial[1],
-				icc_pe_pk->serial[2]
-				);
+		PrintAndLogEx(INFO, "ICC PE PK (PIN Encipherment Public Key Certificate) not found.\n");
 	}
 
 	// 9F4B: Signed Dynamic Application Data
