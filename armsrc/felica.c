@@ -29,27 +29,25 @@ static uint32_t felica_timeout;
 static uint32_t felica_nexttransfertime;
 static uint32_t felica_lasttime_prox2air_start;
 
-static void felica_setup(uint8_t fpga_minor_mode);
+static void iso18092_setup(uint8_t fpga_minor_mode);
 static uint8_t felica_select_card(felica_card_select_t *card);
 static void TransmitFor18092_AsReader(uint8_t * frame, int len, uint32_t *timing, uint8_t power, uint8_t highspeed);
 bool WaitForFelicaReply(uint16_t maxbytes);
 
-void felica_set_timeout(uint32_t timeout) {
+void iso18092_set_timeout(uint32_t timeout) {
 	felica_timeout = timeout + (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER)/(16*8) + 2;
 }
 
-uint32_t felica_get_timeout(void) {
+uint32_t iso18092_get_timeout(void) {
 	return felica_timeout - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER)/(16*8) - 2;
 }
 
-//random service RW: 0x0009
-//random service RO: 0x000B
-#ifndef NFC_MAX_FRAME_SIZE
- #define NFC_MAX_FRAME_SIZE 260
+#ifndef FELICA_MAX_FRAME_SIZE
+ #define FELICA_MAX_FRAME_SIZE 260
 #endif
 
 //structure to hold outgoing NFC frame 
-static uint8_t frameSpace[NFC_MAX_FRAME_SIZE+4];
+static uint8_t frameSpace[FELICA_MAX_FRAME_SIZE+4];
 
 //structure to hold incoming NFC frame, used for ISO/IEC 18092-compatible frames
 static struct {
@@ -85,7 +83,7 @@ static void FelicaFrameReset() {
     FelicaFrame.crc_ok = false;
     FelicaFrame.byte_offset = 0;
 }
-static void NFCInit(uint8_t *data) {
+static void FelicaFrameinit(uint8_t *data) {
 	FelicaFrame.framebytes = data;
 	FelicaFrameReset();
 }
@@ -105,7 +103,7 @@ static void shiftInByte(uint8_t bt) {
     }
 }
 
-static void ProcessNFCByte(uint8_t bt) {
+static void Process18092Byte(uint8_t bt) {
     switch (FelicaFrame.state) {
 		case STATE_UNSYNCD: {
 			//almost any nonzero byte can be start of SYNC. SYNC should be preceded by zeros, but that is not alsways the case
@@ -127,7 +125,7 @@ static void ProcessNFCByte(uint8_t bt) {
 						//SYNC done!
 						FelicaFrame.state = STATE_GET_LENGTH;
 						FelicaFrame.framebytes[0] = 0xb2;
-						FelicaFrame.framebytes[1] = 0x4d; //write SYNC
+						FelicaFrame.framebytes[1] = 0x4d;
 						FelicaFrame.byte_offset = i;
 						//shift in remaining byte, slowly...
 						for(uint8_t j=i; j<8; j++) {
@@ -269,7 +267,7 @@ static uint8_t felica_select_card(felica_card_select_t *card) {
 static void BuildFliteRdblk(uint8_t* idm, int blocknum, uint16_t *blocks ) {
 
     if (blocknum > 4 || blocknum <= 0)
-        Dbprintf("Invalid number of blocks, %d. Up to 4 are allowed.", blocknum);
+        Dbprintf("Invalid number of blocks, %d != 4", blocknum);
 	
     uint8_t c = 0, i = 0;
 	
@@ -394,13 +392,13 @@ bool WaitForFelicaReply(uint16_t maxbytes) {
 	// clear RXRDY:
 	uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 	
-	uint32_t timeout = felica_get_timeout();
+	uint32_t timeout = iso18092_get_timeout();
 	for(;;) {
         WDT_HIT();		
 		
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
 			b = (uint8_t)(AT91C_BASE_SSC->SSC_RHR);			
-			ProcessNFCByte(b);		
+			Process18092Byte(b);		
 			if (FelicaFrame.state == STATE_FULL) {
 				felica_nexttransfertime = 
 					MAX(
@@ -432,7 +430,7 @@ bool WaitForFelicaReply(uint16_t maxbytes) {
 
 // Set up FeliCa communication (similar to iso14443a_setup)
 // field is setup for "Sending as Reader"
-static void felica_setup(uint8_t fpga_minor_mode) {
+static void iso18092_setup(uint8_t fpga_minor_mode) {
 
 	LEDsoff();
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
@@ -442,11 +440,13 @@ static void felica_setup(uint8_t fpga_minor_mode) {
 	
 	// Initialize Demod and Uart structs
 	//DemodInit(BigBuf_malloc(MAX_FRAME_SIZE));
-	NFCInit(BigBuf_malloc(NFC_MAX_FRAME_SIZE));
+	FelicaFrameinit(BigBuf_malloc(FELICA_MAX_FRAME_SIZE));
 
 	felica_nexttransfertime = 2 * DELAY_ARM2AIR_AS_READER;
-	felica_set_timeout(2120); // 106 * 20ms  maximum start-up time of card
+	iso18092_set_timeout(2120); // 106 * 20ms  maximum start-up time of card
 	
+	init_table(CRC_FELICA);
+		
 	// connect Demodulated Signal to ADC:
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 
@@ -455,8 +455,6 @@ static void felica_setup(uint8_t fpga_minor_mode) {
 	
 	// LSB transfer.  Remember to set it back to MSB with
 	AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
-	
-	init_table(CRC_FELICA);
 		
 	// Signal field is on with the appropriate LED
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_ISO18092 | fpga_minor_mode);
@@ -492,7 +490,7 @@ void felica_sendraw(UsbCommand *c) {
 	set_tracing(true);
 
 	if ((param & FELICA_CONNECT)) {
-		felica_setup(FPGA_HF_ISO18092_FLAG_READER | FPGA_HF_ISO18092_FLAG_NOMOD);
+		iso18092_setup(FPGA_HF_ISO18092_FLAG_READER | FPGA_HF_ISO18092_FLAG_NOMOD);
 
 		// notify client selecting status.
 		// if failed selecting, turn off antenna and quite.
@@ -547,7 +545,7 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
 
     Dbprintf("Snoop FelicaLiteS: Getting first %d frames, Skipping %d triggers.\n", samplesToSkip, triggersToSkip);
   
-  	felica_setup( FPGA_HF_ISO18092_FLAG_NOMOD);
+  	iso18092_setup( FPGA_HF_ISO18092_FLAG_NOMOD);
 
     //the frame bits are slow enough. 
     int n = BigBuf_max_traceLen() / sizeof(uint8_t); // take all memory
@@ -563,7 +561,7 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
 				
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
             uint8_t dist = (uint8_t)(AT91C_BASE_SSC->SSC_RHR);
-            ProcessNFCByte(dist);
+            Process18092Byte(dist);
             
 			//to be sure we are in frame
             if (FelicaFrame.state == STATE_GET_LENGTH) {
@@ -643,7 +641,7 @@ void felica_sim_lite(uint64_t nfcid) {
     AddCrc(resp_poll1, resp_poll1[2]);
     AddCrc(resp_readblk, resp_readblk[2]);
 
-	felica_setup( FPGA_HF_ISO18092_FLAG_NOMOD);
+	iso18092_setup( FPGA_HF_ISO18092_FLAG_NOMOD);
 
 	bool listenmode = true;
 	//uint32_t frtm = GetCountSspClk();
@@ -657,7 +655,7 @@ void felica_sim_lite(uint64_t nfcid) {
 
 				uint8_t dist = (uint8_t)(AT91C_BASE_SSC->SSC_RHR);
 				//frtm = GetCountSspClk();
-				ProcessNFCByte(dist);
+				Process18092Byte(dist);
 				
                 if (FelicaFrame.state == STATE_FULL) {
 
@@ -725,7 +723,7 @@ void felica_dump_lite_s() {
 	uint16_t liteblks[28] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x80,0x81,0x82,0x83,0x84,0x85,0x86,0x87,0x88,0x90,0x91,0x92,0xa0};
 		
 	// setup device.
-	felica_setup(FPGA_HF_ISO18092_FLAG_READER | FPGA_HF_ISO18092_FLAG_NOMOD);
+	iso18092_setup(FPGA_HF_ISO18092_FLAG_READER | FPGA_HF_ISO18092_FLAG_NOMOD);
 	
 	uint8_t blknum;
 	bool isOK = false;
