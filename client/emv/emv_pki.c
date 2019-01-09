@@ -109,7 +109,8 @@ static unsigned char *emv_pki_decode_message(const struct emv_pk *enc_pk,
 	}
 	va_end(vl);
 
-	uint8_t hash[20] = {0};
+	uint8_t hash[hash_len];
+	memset(hash, 0, hash_len);
 	memcpy(hash, crypto_hash_read(ch), hash_len);
 	if (memcmp(data + data_len - 1 - hash_len, hash, hash_len)) {
 		printf("ERROR: Calculated wrong hash\n");
