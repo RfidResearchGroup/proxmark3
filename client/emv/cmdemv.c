@@ -731,9 +731,9 @@ int CmdEMVExec(const char *cmd) {
 
 	enum TransactionType TrType = TT_MSD;
 	if (arg_get_lit(7))
-					TrType = TT_QVSDCMCHIP;
+		TrType = TT_QVSDCMCHIP;
 	if (arg_get_lit(8))
-					TrType = TT_CDA;
+		TrType = TT_CDA;
 	if (arg_get_lit(9))
 		TrType = TT_VSDC;
 
@@ -1130,6 +1130,13 @@ int CmdEMVExec(const char *cmd) {
 		}
 	}
 
+	// VSDC
+	if (GetCardPSVendor(AID, AIDlen) == CV_VISA && (TrType == TT_VSDC)){
+		PrintAndLogEx(NORMAL, "\n--> VSDC transaction.");
+		
+		
+	}
+	
 	DropField();
 	
 	// Destroy TLV's
