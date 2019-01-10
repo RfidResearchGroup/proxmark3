@@ -65,4 +65,6 @@ bool tlv_equal(const struct tlv *a, const struct tlv *b);
 bool tlv_get_uint8(const struct tlv *etlv, uint8_t *value);
 bool tlv_get_int(const struct tlv *etlv, int *value);
 
+bool tlvdb_get_uint8(struct tlvdb *tlvRoot, tlv_tag_t tag, uint8_t *value);
+
 #endif

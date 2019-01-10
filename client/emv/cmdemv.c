@@ -1209,6 +1209,23 @@ int CmdEMVExec(const char *cmd) {
 		PrintAndLogEx(NORMAL, "* * Host Response: `%s`", HostResponse);
 		tlvdb_change_or_add_node(tlvRoot, 0x8a, sizeof(HostResponse) - 1, (const unsigned char *)HostResponse);		
 		
+		// needs to send AC2 command (res == ARQC)
+		uint8_t CID = 0;
+		tlvdb_get_uint8(tlvRoot, 0x9f27, &CID);
+		if ((CID & 0xc0) == 0x80) {
+			PrintAndLogEx(NORMAL, "* * Calc CDOL2");
+			struct tlv *cdol_data_tlv = dol_process(tlvdb_get(tlvRoot, 0x8d, NULL), tlvRoot, 0x01); // 0x01 - dummy tag
+			if (!cdol_data_tlv) {
+				PrintAndLogEx(WARNING, "Error: can't create CDOL2 TLV.");
+				dreturn(6);
+			}
+			
+			PrintAndLogEx(NORMAL, "CDOL2 data[%d]: %s", cdol_data_tlv->len, sprint_hex(cdol_data_tlv->value, cdol_data_tlv->len));
+			
+			PrintAndLogEx(NORMAL, "* * AC2");
+			
+			
+		}
 		
 	}
 	
