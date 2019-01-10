@@ -829,9 +829,16 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
 			if (len < 3 ) {
 				PrintAndLogEx(WARNING, "Error: Internal Authenticate format1 parsing error. length=%d", len);
 			} else {
+				// parse response 0x80
+				struct tlvdb *t80 = tlvdb_parse_multi(buf, len);
+				const struct tlv * t80tlv = tlvdb_get_tlv(t80);
+				
 				// 9f4b Signed Dynamic Application Data
-				dda_db = tlvdb_fixed(0x9f4b, len - 2, buf + 2);
+				dda_db = tlvdb_fixed(0x9f4b, t80tlv->len, t80tlv->value);
 				tlvdb_add(tlv, dda_db);
+				
+				tlvdb_free(t80);
+				
 				if (decodeTLV){
 					PrintAndLogEx(NORMAL, "* * Decode response format 1:");
 					TLVPrintFromTLV(dda_db);
