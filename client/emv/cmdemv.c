@@ -38,6 +38,9 @@ void ParamLoadDefaults(struct tlvdb *tlvRoot) {
 	TLV_ADD(0x9F6A, "\x01\x02\x03\x04");
 	//9F66:(Terminal Transaction Qualifiers (TTQ)) len:4
 	TLV_ADD(0x9F66, "\x26\x00\x00\x00"); // qVSDC
+	//95:(Terminal Verification Results) len:5
+	// all OK TVR
+	TLV_ADD(0x95,   "\x00\x00\x00\x00\x00");
 }
 
 void PrintChannel(EMVCommandChannel channel) {
@@ -685,6 +688,50 @@ void ProcessGPOResponseFormat1(struct tlvdb *tlvRoot, uint8_t *buf, size_t len, 
 	}
 }
 
+void ProcessACResponseFormat1(struct tlvdb *tlvRoot, uint8_t *buf, size_t len, bool decodeTLV) {
+	if (buf[0] == 0x80) {
+		if (decodeTLV){
+			PrintAndLog("GPO response format1:");
+			TLVPrintFromBuffer(buf, len);
+		}
+		
+		uint8_t elmlen = len - 2; // wo 0x80XX
+		
+		if (len < 4 + 2 || (elmlen - 2) % 4 || elmlen != buf[1]) {
+			PrintAndLogEx(ERR, "GPO response format1 parsing error. length=%d", len);
+		} else {
+			struct tlvdb *tlvElm = NULL;
+			if (decodeTLV)
+				PrintAndLog("\n------------ Format1 decoded ------------");
+			
+			// CID (Cryptogram Information Data)
+			tlvdb_change_or_add_node_ex(tlvRoot, 0x9f27, 1, &buf[2], &tlvElm);
+			if (decodeTLV)
+				TLVPrintFromTLV(tlvElm);
+
+			// ATC (Application Transaction Counter)
+			tlvdb_change_or_add_node_ex(tlvRoot, 0x9f36, 2, &buf[3], &tlvElm);		
+			if (decodeTLV)
+				TLVPrintFromTLV(tlvElm);
+
+			// AC (Application Cryptogram)
+			tlvdb_change_or_add_node_ex(tlvRoot, 0x9f26, min(8, elmlen - 3), &buf[5], &tlvElm);		
+			if (decodeTLV)
+				TLVPrintFromTLV(tlvElm);
+
+			// IAD (Issuer Application Data) - optional
+			if (len > 11 + 2) {
+				tlvdb_change_or_add_node_ex(tlvRoot, 0x9f10, elmlen - 11, &buf[13], &tlvElm);		
+				if (decodeTLV)
+					TLVPrintFromTLV(tlvElm);
+			}			
+		}		
+	} else {
+		if (decodeTLV)
+			TLVPrintFromBuffer(buf, len);
+	}
+}
+
 int CmdEMVExec(const char *cmd) {
 	uint8_t buf[APDU_RES_LEN] = {0};
 	size_t len = 0;
@@ -731,9 +778,9 @@ int CmdEMVExec(const char *cmd) {
 
 	enum TransactionType TrType = TT_MSD;
 	if (arg_get_lit(7))
-					TrType = TT_QVSDCMCHIP;
+		TrType = TT_QVSDCMCHIP;
 	if (arg_get_lit(8))
-					TrType = TT_CDA;
+		TrType = TT_CDA;
 	if (arg_get_lit(9))
 		TrType = TT_VSDC;
 
@@ -870,7 +917,7 @@ int CmdEMVExec(const char *cmd) {
 			uint8_t SFIend = AFL->value[i * 4 + 2];
 			uint8_t SFIoffline = AFL->value[i * 4 + 3];
 			
-			PrintAndLogEx(NORMAL, "* * SFI[%02x] start:%02x end:%02x offline:%02x", SFI, SFIstart, SFIend, SFIoffline);
+			PrintAndLogEx(NORMAL, "* * SFI[%02x] start:%02x end:%02x offline count:%02x", SFI, SFIstart, SFIend, SFIoffline);
 			if (SFI == 0 || SFI == 31 || SFIstart == 0 || SFIstart > SFIend) {
 				PrintAndLogEx(NORMAL, "SFI ERROR! Skipped...");
 				continue;
@@ -892,7 +939,7 @@ int CmdEMVExec(const char *cmd) {
 				
 				// Build Input list for Offline Data Authentication
 				// EMV 4.3 book3 10.3, page 96
-				if (SFIoffline) {
+				if (SFIoffline > 0) {
 					if (SFI < 11) {
 						const unsigned char *abuf = buf;
 						size_t elmlen = len;
@@ -907,6 +954,8 @@ int CmdEMVExec(const char *cmd) {
 						memcpy(&ODAiList[ODAiListLen], buf, len);
 						ODAiListLen += len;
 					}
+					
+					SFIoffline--;
 				}
 			}
 		}
@@ -1128,6 +1177,41 @@ int CmdEMVExec(const char *cmd) {
 		}
 	}
 
+	// VSDC
+	if (GetCardPSVendor(AID, AIDlen) == CV_VISA && (TrType == TT_VSDC || TrType == TT_CDA)){
+		PrintAndLogEx(NORMAL, "\n--> VSDC transaction.");
+		
+		PrintAndLogEx(NORMAL, "* * Calc CDOL1");
+		struct tlv *cdol_data_tlv = dol_process(tlvdb_get(tlvRoot, 0x8c, NULL), tlvRoot, 0x01); // 0x01 - dummy tag
+		if (!cdol_data_tlv) {
+			PrintAndLogEx(WARNING, "Error: can't create CDOL1 TLV.");
+			dreturn(6);
+		}
+		
+		PrintAndLogEx(NORMAL, "CDOL1 data[%d]: %s", cdol_data_tlv->len, sprint_hex(cdol_data_tlv->value, cdol_data_tlv->len));
+		
+		PrintAndLogEx(NORMAL, "* * AC1");
+		// EMVAC_TC + EMVAC_CDAREQ --- to get SDAD
+		res = EMVAC(channel, true, (TrType == TT_CDA) ? EMVAC_TC + EMVAC_CDAREQ : EMVAC_TC, (uint8_t *)cdol_data_tlv->value, cdol_data_tlv->len, buf, sizeof(buf), &len, &sw, tlvRoot);
+		
+		if (res) {	
+			PrintAndLogEx(NORMAL, "AC1 error(%d): %4x. Exit...", res, sw);
+			dreturn(7);
+		}
+
+		// process Format1 (0x80) anf print Format2 (0x77)
+		ProcessACResponseFormat1(tlvRoot, buf, len, decodeTLV);
+		
+		PrintAndLogEx(NORMAL, "\n* * Processing online request\n");
+
+		// authorization response code from acquirer
+		const char HostResponse[] = "00"; // 0x3030
+		PrintAndLogEx(NORMAL, "* * Host Response: `%s`", HostResponse);
+		tlvdb_change_or_add_node(tlvRoot, 0x8a, sizeof(HostResponse) - 1, (const unsigned char *)HostResponse);		
+		
+		
+	}
+	
 	DropField();
 	
 	// Destroy TLV's

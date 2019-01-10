@@ -41,7 +41,8 @@ static unsigned char *emv_pki_decode_message(const struct emv_pk *enc_pk,
 		uint8_t msgtype,
 		size_t *len,
 		const struct tlv *cert_tlv,
-		... /* A list of tlv pointers, end with NULL */
+		int tlv_count,
+		... /* A list of tlv pointers */
 		)
 {
 	struct crypto_pk *kcp;
@@ -99,20 +100,23 @@ static unsigned char *emv_pki_decode_message(const struct emv_pk *enc_pk,
 	size_t hash_len = crypto_hash_get_size(ch);
 	crypto_hash_write(ch, data + 1, data_len - 2 - hash_len);
 
-	va_start(vl, cert_tlv);
-	while (true) {
+	va_start(vl, tlv_count);
+	for (int i = 0; i < tlv_count; i++) {
 		const struct tlv *add_tlv = va_arg(vl, const struct tlv *);
 		if (!add_tlv)
-			break;
+			continue;
 
 		crypto_hash_write(ch, add_tlv->value, add_tlv->len);
 	}
 	va_end(vl);
 
-	if (memcmp(data + data_len - 1 - hash_len, crypto_hash_read(ch), hash_len)) {
+	uint8_t hash[hash_len];
+	memset(hash, 0, hash_len);
+	memcpy(hash, crypto_hash_read(ch), hash_len);
+	if (memcmp(data + data_len - 1 - hash_len, hash, hash_len)) {
 		printf("ERROR: Calculated wrong hash\n");
 		printf("decoded:    %s\n",sprint_hex(data + data_len - 1 - hash_len, hash_len));
-		printf("calculated: %s\n",sprint_hex(crypto_hash_read(ch), hash_len));
+		printf("calculated: %s\n",sprint_hex(hash, hash_len));
 		
 		if (strictExecution) {
 			crypto_hash_close(ch);
@@ -165,6 +169,7 @@ static struct emv_pk *emv_pki_decode_key_ex(const struct emv_pk *enc_pk,
 		const struct tlv *exp_tlv,
 		const struct tlv *rem_tlv,
 		const struct tlv *add_tlv,
+		const struct tlv *sdatl_tlv,
 		bool showData
 		)
 {
@@ -190,9 +195,11 @@ static struct emv_pk *emv_pki_decode_key_ex(const struct emv_pk *enc_pk,
 
 	data = emv_pki_decode_message(enc_pk, msgtype, &data_len,
 			cert_tlv,
+			5,
 			rem_tlv,
 			exp_tlv,
 			add_tlv,
+			sdatl_tlv,
 			NULL);
 	if (!data || data_len < 11 + pan_length) {
 		printf("ERROR: Can't decode message\n");
@@ -275,9 +282,10 @@ static struct emv_pk *emv_pki_decode_key(const struct emv_pk *enc_pk,
 		const struct tlv *cert_tlv,
 		const struct tlv *exp_tlv,
 		const struct tlv *rem_tlv,
-		const struct tlv *add_tlv
+		const struct tlv *add_tlv,
+		const struct tlv *sdatl_tlv
 		) {
-	return emv_pki_decode_key_ex(enc_pk, msgtype, pan_tlv, cert_tlv, exp_tlv, rem_tlv, add_tlv, false);
+	return emv_pki_decode_key_ex(enc_pk, msgtype, pan_tlv, cert_tlv, exp_tlv, rem_tlv, add_tlv, sdatl_tlv, false);
 }
 
 struct emv_pk *emv_pki_recover_issuer_cert(const struct emv_pk *pk, struct tlvdb *db)
@@ -287,17 +295,30 @@ struct emv_pk *emv_pki_recover_issuer_cert(const struct emv_pk *pk, struct tlvdb
 			tlvdb_get(db, 0x90, NULL),
 			tlvdb_get(db, 0x9f32, NULL),
 			tlvdb_get(db, 0x92, NULL),
+			NULL,
 			NULL);
 }
 
 struct emv_pk *emv_pki_recover_icc_cert(const struct emv_pk *pk, struct tlvdb *db, const struct tlv *sda_tlv)
 {
-	return emv_pki_decode_key(pk, 4,
+	size_t sdatl_len;
+	unsigned char *sdatl = emv_pki_sdatl_fill(db, &sdatl_len);
+	struct tlv sda_tdata = {
+		.tag = 0x00,        // dummy tag
+		.len = sdatl_len,
+		.value = sdatl
+	};
+	
+	struct emv_pk *res = emv_pki_decode_key(pk, 4,
 			tlvdb_get(db, 0x5a, NULL),
 			tlvdb_get(db, 0x9f46, NULL),
 			tlvdb_get(db, 0x9f47, NULL),
 			tlvdb_get(db, 0x9f48, NULL),
-			sda_tlv);
+			sda_tlv,
+			&sda_tdata);
+			
+	free(sdatl); // malloc here: emv_pki_sdatl_fill
+	return res;
 }
 
 struct emv_pk *emv_pki_recover_icc_pe_cert(const struct emv_pk *pk, struct tlvdb *db)
@@ -307,17 +328,62 @@ struct emv_pk *emv_pki_recover_icc_pe_cert(const struct emv_pk *pk, struct tlvdb
 			tlvdb_get(db, 0x9f2d, NULL),
 			tlvdb_get(db, 0x9f2e, NULL),
 			tlvdb_get(db, 0x9f2f, NULL),
+			NULL,
 			NULL);
 }
+
+unsigned char *emv_pki_sdatl_fill(const struct tlvdb *db, size_t *sdatl_len) {
+	uint8_t buf[2048] = {0};
+	size_t len = 0;
+	
+	*sdatl_len = 0;
+	
+	const struct tlv *sda_tl = tlvdb_get(db, 0x9f4a, NULL);
+	if (!sda_tl || sda_tl->len <= 0)
+		return NULL;
+
+	for (int i = 0; i < sda_tl->len; i++) {
+		uint32_t tag = sda_tl->value[i]; // here may be multibyte, but now not
+		const struct tlv *elm = tlvdb_get(db, tag, NULL);
+		if (elm) {
+			memcpy(&buf[len], elm->value, elm->len);
+			len += elm->len;
+		}		
+	}
+	
+	if (len) {
+		*sdatl_len = len;
+		unsigned char *value = malloc(len);
+		memcpy(value, buf, len);
+		return value;
+	}
+	
+	return NULL;
+}
+
 
 struct tlvdb *emv_pki_recover_dac_ex(const struct emv_pk *enc_pk, const struct tlvdb *db, const struct tlv *sda_tlv, bool showData)
 {
 	size_t data_len;
+	
+	// Static Data Authentication Tag List
+	size_t sdatl_len;
+	unsigned char *sdatl = emv_pki_sdatl_fill(db, &sdatl_len);
+	struct tlv sda_tdata = {
+		.tag = 0x00,        // dummy tag
+		.len = sdatl_len,
+		.value = sdatl
+	};
+
 	unsigned char *data = emv_pki_decode_message(enc_pk, 3, &data_len,
 			tlvdb_get(db, 0x93, NULL),
+			3,
 			sda_tlv,
+			&sda_tdata,
 			NULL);
 
+	free(sdatl); // malloc here: emv_pki_sdatl_fill
+	
 	if (!data || data_len < 5)
 		return NULL;
 
@@ -345,6 +411,7 @@ struct tlvdb *emv_pki_recover_idn_ex(const struct emv_pk *enc_pk, const struct t
 	size_t data_len;
 	unsigned char *data = emv_pki_decode_message(enc_pk, 5, &data_len,
 			tlvdb_get(db, 0x9f4b, NULL),
+			2,
 			dyn_tlv,
 			NULL);
 
@@ -380,6 +447,7 @@ struct tlvdb *emv_pki_recover_atc_ex(const struct emv_pk *enc_pk, const struct t
 	size_t data_len;
 	unsigned char *data = emv_pki_decode_message(enc_pk, 5, &data_len,
 			tlvdb_get(db, 0x9f4b, NULL),
+			5,
 			tlvdb_get(db, 0x9f37, NULL),
 			tlvdb_get(db, 0x9f02, NULL),
 			tlvdb_get(db, 0x5f2a, NULL),
@@ -456,6 +524,7 @@ struct tlvdb *emv_pki_perform_cda_ex(const struct emv_pk *enc_pk, const struct t
 	size_t data_len = 0;
 	unsigned char *data = emv_pki_decode_message(enc_pk, 5, &data_len,
 			tlvdb_get(this_db, 0x9f4b, NULL),
+			2,
 			un_tlv,
 			NULL);
 	if (!data || data_len < 3) {

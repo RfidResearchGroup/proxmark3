@@ -596,7 +596,7 @@ int EMVGenerateChallenge(EMVCommandChannel channel, bool LeaveFieldON, uint8_t *
 }
 
 int EMVInternalAuthenticate(EMVCommandChannel channel, bool LeaveFieldON, uint8_t *DDOL, size_t DDOLLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
-	return EMVExchange(channel, LeaveFieldON, (sAPDU){0x00, 0x88, 0x00, 0x00, DDOLLen, DDOL}, Result, MaxResultLen, ResultLen, sw, tlv);
+	return EMVExchangeEx(channel, false, LeaveFieldON, (sAPDU){0x00, 0x88, 0x00, 0x00, DDOLLen, DDOL}, true, Result, MaxResultLen, ResultLen, sw, tlv);
 }
 
 int MSCComputeCryptoChecksum(EMVCommandChannel channel, bool LeaveFieldON, uint8_t *UDOL, uint8_t UDOLlen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
@@ -653,7 +653,7 @@ int trSDA(struct tlvdb *tlv) {
 	struct tlvdb *dac_db = emv_pki_recover_dac(issuer_pk, tlv, sda_tlv);
 	if (dac_db) {
 		const struct tlv *dac_tlv = tlvdb_get(dac_db, 0x9f45, NULL);
-		PrintAndLogEx(NORMAL, "SDA verified OK. (%02hhx:%02hhx)\n", dac_tlv->value[0], dac_tlv->value[1]);
+		PrintAndLogEx(NORMAL, "SDA verified OK. (Data Authentication Code: %02hhx:%02hhx)\n", dac_tlv->value[0], dac_tlv->value[1]);
 		tlvdb_add(tlv, dac_db);
 	} else {
 		emv_pk_free(issuer_pk);
@@ -682,12 +682,12 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
 	}
 
 	const struct tlv *sda_tlv = tlvdb_get(tlv, 0x21, NULL);
-	if (!sda_tlv || sda_tlv->len < 1) {
+/*	if (!sda_tlv || sda_tlv->len < 1) { it may be 0!!!!
 		emv_pk_free(pk);
 		PrintAndLogEx(WARNING, "Error: Can't find input list for Offline Data Authentication. Exit.");
 		return 3;
 	}
-
+*/
 	struct emv_pk *issuer_pk = emv_pki_recover_issuer_cert(pk, tlv);
 	if (!issuer_pk) {
 		emv_pk_free(pk);
@@ -710,7 +710,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
 	if (!icc_pk) {
 		emv_pk_free(pk);
 		emv_pk_free(issuer_pk);
-		PrintAndLogEx(WARNING, "Error: ICC setrificate not found. Exit.");
+		PrintAndLogEx(WARNING, "Error: ICC certificate not found. Exit.");
 		return 2;
 	}
 	PrintAndLogEx(SUCCESS, "ICC PK recovered. RID %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx CSN %02hhx:%02hhx:%02hhx\n",
@@ -725,21 +725,25 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
 			icc_pk->serial[2]
 			);
 
-	struct emv_pk *icc_pe_pk = emv_pki_recover_icc_pe_cert(issuer_pk, tlv);
-	if (!icc_pe_pk) {
-		PrintAndLogEx(WARNING, "WARNING: ICC PE PK recover error. ");
+	if (tlvdb_get(tlv, 0x9f2d, NULL)) {
+		struct emv_pk *icc_pe_pk = emv_pki_recover_icc_pe_cert(issuer_pk, tlv);
+		if (!icc_pe_pk) {
+			PrintAndLogEx(WARNING, "WARNING: ICC PE PK recover error. ");
+		} else {
+			PrintAndLogEx(SUCCESS, "ICC PE PK recovered. RID %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx CSN %02hhx:%02hhx:%02hhx\n",
+					icc_pe_pk->rid[0],
+					icc_pe_pk->rid[1],
+					icc_pe_pk->rid[2],
+					icc_pe_pk->rid[3],
+					icc_pe_pk->rid[4],
+					icc_pe_pk->index,
+					icc_pe_pk->serial[0],
+					icc_pe_pk->serial[1],
+					icc_pe_pk->serial[2]
+					);
+		}
 	} else {
-		PrintAndLogEx(SUCCESS, "ICC PE PK recovered. RID %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx CSN %02hhx:%02hhx:%02hhx\n",
-				icc_pe_pk->rid[0],
-				icc_pe_pk->rid[1],
-				icc_pe_pk->rid[2],
-				icc_pe_pk->rid[3],
-				icc_pe_pk->rid[4],
-				icc_pe_pk->index,
-				icc_pe_pk->serial[0],
-				icc_pe_pk->serial[1],
-				icc_pe_pk->serial[2]
-				);
+		PrintAndLogEx(INFO, "ICC PE PK (PIN Encipherment Public Key Certificate) not found.\n");
 	}
 
 	// 9F4B: Signed Dynamic Application Data
@@ -781,7 +785,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
 		struct tlvdb *dac_db = emv_pki_recover_dac(issuer_pk, tlv, sda_tlv);
 		if (dac_db) {
 			const struct tlv *dac_tlv = tlvdb_get(dac_db, 0x9f45, NULL);
-			PrintAndLogEx(NORMAL, "SDA verified OK. (%02hhx:%02hhx)\n", dac_tlv->value[0], dac_tlv->value[1]);
+			PrintAndLogEx(NORMAL, "SDAD verified OK. (Data Authentication Code: %02hhx:%02hhx)\n", dac_tlv->value[0], dac_tlv->value[1]);
 			tlvdb_add(tlv, dac_db);
 		} else {
 			PrintAndLogEx(WARNING, "Error: SSAD verify error");
@@ -825,9 +829,16 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
 			if (len < 3 ) {
 				PrintAndLogEx(WARNING, "Error: Internal Authenticate format1 parsing error. length=%d", len);
 			} else {
+				// parse response 0x80
+				struct tlvdb *t80 = tlvdb_parse_multi(buf, len);
+				const struct tlv * t80tlv = tlvdb_get_tlv(t80);
+				
 				// 9f4b Signed Dynamic Application Data
-				dda_db = tlvdb_fixed(0x9f4b, len - 2, buf + 2);
+				dda_db = tlvdb_fixed(0x9f4b, t80tlv->len, t80tlv->value);
 				tlvdb_add(tlv, dda_db);
+				
+				tlvdb_free(t80);
+				
 				if (decodeTLV){
 					PrintAndLogEx(NORMAL, "* * Decode response format 1:");
 					TLVPrintFromTLV(dda_db);
