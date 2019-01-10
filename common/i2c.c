@@ -161,10 +161,11 @@ bool WaitSCL_L(void) {
 	return WaitSCL_L_delay(15000);
 }
 
-// Wait max 300ms or until SCL goes LOW.
+// Wait max 1800ms or until SCL goes LOW.
+// It timeout reading response from card
 // Which ever comes first
-bool WaitSCL_L_300ms(void){
-	volatile uint16_t delay = 310;
+bool WaitSCL_L_timeout(void){
+	volatile uint16_t delay = 1800;
 	while ( delay-- ) {		
 		// exit on SCL LOW
 		if (!SCL_read)
@@ -193,7 +194,8 @@ bool I2C_Start(void) {
 
 bool I2C_WaitForSim() {
 
-	if (!WaitSCL_L_300ms())
+	// wait for data from card
+	if (!WaitSCL_L_timeout())
 		return false;
 
 	// 8051 speaks with smart card.
