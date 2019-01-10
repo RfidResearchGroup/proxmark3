@@ -1131,7 +1131,7 @@ int CmdEMVExec(const char *cmd) {
 	}
 
 	// VSDC
-	if (GetCardPSVendor(AID, AIDlen) == CV_VISA && (TrType == TT_VSDC)){
+	if (GetCardPSVendor(AID, AIDlen) == CV_VISA && (TrType == TT_VSDC || TrType == TT_CDA)){
 		PrintAndLogEx(NORMAL, "\n--> VSDC transaction.");
 		
 		PrintAndLogEx(NORMAL, "* * Calc CDOL1");
@@ -1158,7 +1158,7 @@ int CmdEMVExec(const char *cmd) {
 		PrintAndLogEx(NORMAL, "\n* * Processing online request\n");
 
 		// authorization response code from acquirer
-		const char HostResponse[] = "0";
+		const char HostResponse[] = "00"; // 0x3030
 		PrintAndLogEx(NORMAL, "* * Host Response: `%s`", HostResponse);
 		tlvdb_change_or_add_node(tlvRoot, 0x8a, sizeof(HostResponse) - 1, (const unsigned char *)HostResponse);		
 		
