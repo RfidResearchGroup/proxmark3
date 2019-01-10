@@ -1134,6 +1134,34 @@ int CmdEMVExec(const char *cmd) {
 	if (GetCardPSVendor(AID, AIDlen) == CV_VISA && (TrType == TT_VSDC)){
 		PrintAndLogEx(NORMAL, "\n--> VSDC transaction.");
 		
+		PrintAndLogEx(NORMAL, "* * Calc CDOL1");
+		struct tlv *cdol_data_tlv = dol_process(tlvdb_get(tlvRoot, 0x8c, NULL), tlvRoot, 0x01); // 0x01 - dummy tag
+		if (!cdol_data_tlv) {
+			PrintAndLogEx(WARNING, "Error: can't create CDOL1 TLV.");
+			dreturn(6);
+		}
+		
+		PrintAndLogEx(NORMAL, "CDOL1 data[%d]: %s", cdol_data_tlv->len, sprint_hex(cdol_data_tlv->value, cdol_data_tlv->len));
+		
+		PrintAndLogEx(NORMAL, "* * AC1");
+		// EMVAC_TC + EMVAC_CDAREQ --- to get SDAD
+		res = EMVAC(channel, true, (TrType == TT_CDA) ? EMVAC_TC + EMVAC_CDAREQ : EMVAC_TC, (uint8_t *)cdol_data_tlv->value, cdol_data_tlv->len, buf, sizeof(buf), &len, &sw, tlvRoot);
+		
+		if (res) {	
+			PrintAndLogEx(NORMAL, "AC1 error(%d): %4x. Exit...", res, sw);
+			dreturn(7);
+		}
+		
+		if (decodeTLV)
+			TLVPrintFromBuffer(buf, len);
+		
+		PrintAndLogEx(NORMAL, "\n* * Processing online request\n");
+
+		// authorization response code from acquirer
+		const char HostResponse[] = "0";
+		PrintAndLogEx(NORMAL, "* * Host Response: `%s`", HostResponse);
+		tlvdb_change_or_add_node(tlvRoot, 0x8a, sizeof(HostResponse) - 1, (const unsigned char *)HostResponse);		
+		
 		
 	}
 	
