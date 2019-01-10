@@ -795,7 +795,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
 			return 4;
 		}
 		
-		PrintAndLogEx(NORMAL, "\n* Calc DDOL");
+		PrintAndLogEx(NORMAL, "\n* * Calc DDOL");
 		const struct tlv *ddol_tlv = tlvdb_get(tlv, 0x9f49, NULL);
 		if (!ddol_tlv) {
 			ddol_tlv = &default_ddol_tlv;
@@ -813,7 +813,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
 
 		PrintAndLogEx(NORMAL, "DDOL data[%d]: %s", ddol_data_tlv->len, sprint_hex(ddol_data_tlv->value, ddol_data_tlv->len));
 
-		PrintAndLogEx(NORMAL, "\n* Internal Authenticate");
+		PrintAndLogEx(NORMAL, "\n* * Internal Authenticate");
 		int res = EMVInternalAuthenticate(channel, true, (uint8_t *)ddol_data_tlv->value, ddol_data_tlv->len, buf, sizeof(buf), &len, &sw, NULL);
 		if (res) {	
 			PrintAndLogEx(WARNING, "Internal Authenticate error(%d): %4x. Exit...", res, sw);
@@ -840,7 +840,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
 				tlvdb_free(t80);
 				
 				if (decodeTLV){
-					PrintAndLogEx(NORMAL, "* * Decode response format 1:");
+					PrintAndLogEx(NORMAL, "* * * Decode response format 1:");
 					TLVPrintFromTLV(dda_db);
 				}
 			}
@@ -875,12 +875,12 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
 		// 9f4c ICC Dynamic Number
 		const struct tlv *idn_tlv = tlvdb_get(idn_db, 0x9f4c, NULL);
 		if(idn_tlv) {
-			PrintAndLogEx(NORMAL, "\nIDN (ICC Dynamic Number) [%zu] %s", idn_tlv->len, sprint_hex_inrow(idn_tlv->value, idn_tlv->len));
-			PrintAndLogEx(NORMAL, "DDA verified OK.");
+			PrintAndLogEx(INFO, "\nIDN (ICC Dynamic Number) [%zu] %s", idn_tlv->len, sprint_hex_inrow(idn_tlv->value, idn_tlv->len));
+			PrintAndLogEx(INFO, "DDA verified OK.");
 			tlvdb_add(tlv, idn_db);
 			tlvdb_free(idn_db);
 		} else {
-			PrintAndLogEx(NORMAL, "\nERROR: DDA verify error");
+			PrintAndLogEx(ERR, "\nDDA verify error");
 			tlvdb_free(idn_db);
 
 			emv_pk_free(pk);
