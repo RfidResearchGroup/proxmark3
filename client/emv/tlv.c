@@ -359,12 +359,15 @@ void tlvdb_add(struct tlvdb *tlvdb, struct tlvdb *other)
 	tlvdb->next = other;
 }
 
-void tlvdb_change_or_add_node(struct tlvdb *tlvdb, tlv_tag_t tag, size_t len, const unsigned char *value)
+void tlvdb_change_or_add_node_ex(struct tlvdb *tlvdb, tlv_tag_t tag, size_t len, const unsigned char *value, struct tlvdb **tlvdb_elm)
 {
 	struct tlvdb *telm = tlvdb_find_full(tlvdb, tag);
 	if (telm == NULL) {
 		// new tlv element
-		tlvdb_add(tlvdb, tlvdb_fixed(tag, len, value));
+		struct tlvdb *elm = tlvdb_fixed(tag, len, value);
+		tlvdb_add(tlvdb, elm);
+		if (tlvdb_elm)
+			*tlvdb_elm = elm;
 	} else {
 		// the same tlv structure
 		if (telm->tag.tag == tag && telm->tag.len == len && !memcmp(telm->tag.value, value, len))
@@ -400,9 +403,17 @@ void tlvdb_change_or_add_node(struct tlvdb *tlvdb, tlv_tag_t tag, size_t len, co
 		// free old element with childrens
 		telm->next = NULL;
 		tlvdb_free(telm);
+		
+		if (tlvdb_elm)
+			*tlvdb_elm = tnewelm;
 	}
 	
 	return;
+}
+
+void tlvdb_change_or_add_node(struct tlvdb *tlvdb, tlv_tag_t tag, size_t len, const unsigned char *value)
+{
+	tlvdb_change_or_add_node_ex(tlvdb, tag, len, value, NULL);
 }
 
 void tlvdb_visit(const struct tlvdb *tlvdb, tlv_cb cb, void *data, int level)

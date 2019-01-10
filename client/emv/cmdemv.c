@@ -38,6 +38,9 @@ void ParamLoadDefaults(struct tlvdb *tlvRoot) {
 	TLV_ADD(0x9F6A, "\x01\x02\x03\x04");
 	//9F66:(Terminal Transaction Qualifiers (TTQ)) len:4
 	TLV_ADD(0x9F66, "\x26\x00\x00\x00"); // qVSDC
+	//95:(Terminal Verification Results) len:5
+	// all OK TVR
+	TLV_ADD(0x95,   "\x00\x00\x00\x00\x00");
 }
 
 void PrintChannel(EMVCommandChannel channel) {
@@ -685,6 +688,50 @@ void ProcessGPOResponseFormat1(struct tlvdb *tlvRoot, uint8_t *buf, size_t len, 
 	}
 }
 
+void ProcessACResponseFormat1(struct tlvdb *tlvRoot, uint8_t *buf, size_t len, bool decodeTLV) {
+	if (buf[0] == 0x80) {
+		if (decodeTLV){
+			PrintAndLog("GPO response format1:");
+			TLVPrintFromBuffer(buf, len);
+		}
+		
+		uint8_t elmlen = len - 2; // wo 0x80XX
+		
+		if (len < 4 + 2 || (elmlen - 2) % 4 || elmlen != buf[1]) {
+			PrintAndLogEx(ERR, "GPO response format1 parsing error. length=%d", len);
+		} else {
+			struct tlvdb *tlvElm = NULL;
+			if (decodeTLV)
+				PrintAndLog("\n------------ Format1 decoded ------------");
+			
+			// CID (Cryptogram Information Data)
+			tlvdb_change_or_add_node_ex(tlvRoot, 0x9f27, 1, &buf[2], &tlvElm);
+			if (decodeTLV)
+				TLVPrintFromTLV(tlvElm);
+
+			// ATC (Application Transaction Counter)
+			tlvdb_change_or_add_node_ex(tlvRoot, 0x9f36, 2, &buf[3], &tlvElm);		
+			if (decodeTLV)
+				TLVPrintFromTLV(tlvElm);
+
+			// AC (Application Cryptogram)
+			tlvdb_change_or_add_node_ex(tlvRoot, 0x9f26, min(8, elmlen - 3), &buf[5], &tlvElm);		
+			if (decodeTLV)
+				TLVPrintFromTLV(tlvElm);
+
+			// IAD (Issuer Application Data) - optional
+			if (len > 11 + 2) {
+				tlvdb_change_or_add_node_ex(tlvRoot, 0x9f10, elmlen - 11, &buf[13], &tlvElm);		
+				if (decodeTLV)
+					TLVPrintFromTLV(tlvElm);
+			}			
+		}		
+	} else {
+		if (decodeTLV)
+			TLVPrintFromBuffer(buf, len);
+	}
+}
+
 int CmdEMVExec(const char *cmd) {
 	uint8_t buf[APDU_RES_LEN] = {0};
 	size_t len = 0;
@@ -1151,9 +1198,9 @@ int CmdEMVExec(const char *cmd) {
 			PrintAndLogEx(NORMAL, "AC1 error(%d): %4x. Exit...", res, sw);
 			dreturn(7);
 		}
-		
-		if (decodeTLV)
-			TLVPrintFromBuffer(buf, len);
+
+		// process Format1 (0x80) anf print Format2 (0x77)
+		ProcessACResponseFormat1(tlvRoot, buf, len, decodeTLV);
 		
 		PrintAndLogEx(NORMAL, "\n* * Processing online request\n");
 

@@ -50,6 +50,7 @@ struct tlvdb *tlvdb_find_path(struct tlvdb *tlvdb, tlv_tag_t tag[]);
 
 void tlvdb_add(struct tlvdb *tlvdb, struct tlvdb *other);
 void tlvdb_change_or_add_node(struct tlvdb *tlvdb, tlv_tag_t tag, size_t len, const unsigned char *value);
+void tlvdb_change_or_add_node_ex(struct tlvdb *tlvdb, tlv_tag_t tag, size_t len, const unsigned char *value, struct tlvdb **tlvdb_elm);
 
 void tlvdb_visit(const struct tlvdb *tlvdb, tlv_cb cb, void *data, int level);
 const struct tlv *tlvdb_get(const struct tlvdb *tlvdb, tlv_tag_t tag, const struct tlv *prev);
