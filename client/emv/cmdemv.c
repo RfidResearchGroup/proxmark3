@@ -715,7 +715,7 @@ void ProcessACResponseFormat1(struct tlvdb *tlvRoot, uint8_t *buf, size_t len, b
 				TLVPrintFromTLV(tlvElm);
 
 			// AC (Application Cryptogram)
-			tlvdb_change_or_add_node_ex(tlvRoot, 0x9f26, min(8, elmlen - 3), &buf[5], &tlvElm);		
+			tlvdb_change_or_add_node_ex(tlvRoot, 0x9f26, MIN(8, elmlen - 3), &buf[5], &tlvElm);		
 			if (decodeTLV)
 				TLVPrintFromTLV(tlvElm);
 
