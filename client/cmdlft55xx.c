@@ -1553,18 +1553,18 @@ int CmdT55xxChkPwds(const char *Cmd) {
 			PrintAndLogEx(SUCCESS, "\nFound a candidate [ %08X ]. Trying to validate", resp.arg[1]);
 			
 			if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, resp.arg[1])) {
-				PrintAndLogEx(NORMAL, "Aquireing data from device failed. Quitting");
+				PrintAndLogEx(INFO, "Aquireing data from device failed. Quitting");
 				return 2;
 			}
 			
 			found = tryDetectModulation();
 			if (found) {
-				PrintAndLogEx(NORMAL, "Found valid password: [ %08X ]", resp.arg[1]);
+				PrintAndLogEx(SUCCESS, "Found valid password: [ %08X ]", resp.arg[1]);
 			} else {
-				PrintAndLogEx(NORMAL, "Password NOT found.");
+				PrintAndLogEx(WARNING, "Password NOT found.");
 			}
 		} else {
-			PrintAndLogEx(NORMAL, "Password NOT found.");
+			PrintAndLogEx(WARNING, "Password NOT found.");
 		}
 		
 		goto out;
@@ -1581,7 +1581,7 @@ int CmdT55xxChkPwds(const char *Cmd) {
 	
 		FILE * f = fopen( filename , "r");		
 		if ( !f ) {
-			PrintAndLogEx(NORMAL, "File: %s: not found or locked.", filename);
+			PrintAndLogEx(WARNING, "File: %s: not found or locked.", filename);
 			free(keyBlock);
 			return 1;
 		}			
@@ -1596,7 +1596,7 @@ int CmdT55xxChkPwds(const char *Cmd) {
 			if( line[0]=='#' ) continue;
 
 			if (!isxdigit(line[0])) {
-				PrintAndLogEx(NORMAL, "File content error. '%s' must include 8 HEX symbols", line);
+				PrintAndLogEx(WARNING, "File content error. '%s' must include 8 HEX symbols", line);
 				continue;
 			}
 			
@@ -1627,11 +1627,11 @@ int CmdT55xxChkPwds(const char *Cmd) {
 			fclose(f);
 		
 		if (keycnt == 0) {
-			PrintAndLogEx(NORMAL, "No keys found in file");
+			PrintAndLogEx(WARNING, "No keys found in file");
 			free(keyBlock);
 			return 1;
 		}
-		PrintAndLogEx(NORMAL, "Loaded %d keys", keycnt);
+		PrintAndLogEx(SUCCESS, "Loaded %d keys", keycnt);
 		
 		// loop
 		uint64_t testpwd = 0x00;
@@ -1650,10 +1650,10 @@ int CmdT55xxChkPwds(const char *Cmd) {
 		
 			testpwd = bytes_to_num(keyBlock + 4*c, 4);
 
-			PrintAndLogEx(NORMAL, "Testing %08X", testpwd);
+			PrintAndLogEx(INFO, "Testing %08X", testpwd);
 						
 			if ( !AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, testpwd)) {
-				PrintAndLogEx(NORMAL, "Aquireing data from device failed. Quitting");
+				PrintAndLogEx(INFO, "Aquireing data from device failed. Quitting");
 				free(keyBlock);
 				return 0;
 			}
@@ -1664,9 +1664,9 @@ int CmdT55xxChkPwds(const char *Cmd) {
  
 		}
 		if ( found ) 
-			PrintAndLogEx(NORMAL, "Found valid password: [ %08X ]", testpwd);
+			PrintAndLogEx(SUCCESS, "Found valid password: [ %08X ]", testpwd);
 		else
-			PrintAndLogEx(NORMAL, "Password NOT found.");		
+			PrintAndLogEx(WARNING, "Password NOT found.");		
 	}
 	
 	free(keyBlock);
@@ -1702,7 +1702,7 @@ int CmdT55xxBruteForce(const char *Cmd) {
 		return usage_t55xx_bruteforce();
 	}
 	
-    PrintAndLogEx(NORMAL, "Search password range [%08X -> %08X]", start_password, end_password);
+    PrintAndLogEx(INFO, "Search password range [%08X -> %08X]", start_password, end_password);
 
     while ((!found) || (curr <= end_password)){
 
@@ -1713,7 +1713,7 @@ int CmdT55xxBruteForce(const char *Cmd) {
 		}
 			
 		if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, curr)) {
-			PrintAndLogEx(NORMAL, "Aquireing data from device failed. Quitting");
+			PrintAndLogEx(WARNING, "Aquireing data from device failed. Quitting");
 			return 0;
 		}
 		found = tryDetectModulation();
@@ -1725,9 +1725,9 @@ int CmdT55xxBruteForce(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
 	
     if (found)
-		PrintAndLogEx(NORMAL, "Found valid password: [ %08X ]", curr);
+		PrintAndLogEx(SUCCESS, "Found valid password: [ %08X ]", curr);
     else
-		PrintAndLogEx(NORMAL, "Password NOT found. Last tried: [ %08X ]", --curr);
+		PrintAndLogEx(WARNING, "Password NOT found. Last tried: [ %08X ]", --curr);
 
 	t1 = msclock() - t1;
 	PrintAndLogEx(SUCCESS, "\nTime in bruteforce: %.0f seconds\n", (float)t1/1000.0);	
