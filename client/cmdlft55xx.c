@@ -1814,9 +1814,9 @@ int CmdT55xxRecoverPW(const char *Cmd) {
 	PrintAndLogEx(NORMAL, "");
 
 	if (found == 1)
-		PrintAndLogEx(NORMAL, "Found valid password: [%08x]", curr_password);
+		PrintAndLogEx(SUCCESS, "Found valid password: [%08x]", curr_password);
 	else
-		PrintAndLogEx(NORMAL, "Password NOT found.");
+		PrintAndLogEx(WARNING, "Password NOT found.");
 
 	return 0;
 }
