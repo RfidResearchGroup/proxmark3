@@ -1548,7 +1548,7 @@ void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 	// Turn field on to read the response
 	// 137*8 seems to get to the start of data pretty well...
 	// but we want to go past the start and let the repeating data settle in...
-	TurnReadLFOn(210*8);
+	TurnReadLFOn(200*8);
 
 	// Acquisition
 	// Now do the acquisition
@@ -2089,7 +2089,6 @@ void EM4xWriteWord(uint32_t flag, uint32_t data, uint32_t pwd) {
 	//Wait 20ms for write to complete?
 	WaitMS(7);
 
-	//Capture response if one exists
 	DoPartialAcquisition(20, true, 6000, 1000);
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -2113,7 +2112,7 @@ This triggers a COTAG tag to response
 */
 void Cotag(uint32_t arg0) {
 #ifndef OFF
-# define OFF 	{ FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); WaitUS(2035); }
+# define OFF(x) 	{ FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); WaitUS((x)); }
 #endif
 #ifndef ON
 # define ON(x)   { FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD); WaitUS((x)); }
@@ -2122,29 +2121,15 @@ void Cotag(uint32_t arg0) {
 
 	LED_A_ON();
 
-	// Switching to LF image on FPGA. This might empty BigBuff
-	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-
+	LFSetupFPGAForADC(89, true);
+		
 	//clear buffer now so it does not interfere with timing later
 	BigBuf_Clear_ext(false);
 
-	// Set up FPGA, 132kHz to power up the tag
-	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 89);
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
-
-	// Connect the A/D to the peak-detected low-frequency path.
-	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-
-	// Now set up the SSC to get the ADC samples that are now streaming at us.
-	FpgaSetupSsc();
-
-	// start clock - 1.5ticks is 1us
-	StartTicks();
-
 	//send COTAG start pulse
-	ON(740)  OFF
-	ON(3330) OFF
-	ON(740)  OFF
+	ON(740)  OFF(2035)
+	ON(3330) OFF(2035)
+	ON(740)  OFF(2035)
 	ON(1000)
 
 	switch(rawsignal) {
