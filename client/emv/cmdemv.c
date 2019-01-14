@@ -715,7 +715,7 @@ void ProcessACResponseFormat1(struct tlvdb *tlvRoot, uint8_t *buf, size_t len, b
 				TLVPrintFromTLV(tlvElm);
 
 			// AC (Application Cryptogram)
-			tlvdb_change_or_add_node_ex(tlvRoot, 0x9f26, min(8, elmlen - 3), &buf[5], &tlvElm);		
+			tlvdb_change_or_add_node_ex(tlvRoot, 0x9f26, MIN(8, elmlen - 3), &buf[5], &tlvElm);		
 			if (decodeTLV)
 				TLVPrintFromTLV(tlvElm);
 
@@ -1233,12 +1233,12 @@ int CmdEMVExec(const char *cmd) {
 			PrintAndLogEx(NORMAL, "* * AC2");
 			
 			
-/*		// AC2
-		PRINT_INDENT(level);
-		if ((CID & EMVAC_AC2_MASK) == EMVAC_AAC2)	fprintf(f, "\tAC2: AAC (Transaction declined)\n");
-		if ((CID & EMVAC_AC2_MASK) == EMVAC_TC2)	fprintf(f, "\tAC2: TC (Transaction approved)\n");
-		if ((CID & EMVAC_AC2_MASK) == EMVAC_ARQC2)	fprintf(f, "\tAC2: not requested (ARQC)\n");
-		if ((CID & EMVAC_AC2_MASK) == EMVAC_AC2_MASK)	fprintf(f, "\tAC2: RFU\n");
+/*			// AC2
+			PRINT_INDENT(level);
+			if ((CID & EMVAC_AC2_MASK) == EMVAC_AAC2)	fprintf(f, "\tAC2: AAC (Transaction declined)\n");
+			if ((CID & EMVAC_AC2_MASK) == EMVAC_TC2)	fprintf(f, "\tAC2: TC (Transaction approved)\n");
+			if ((CID & EMVAC_AC2_MASK) == EMVAC_ARQC2)	fprintf(f, "\tAC2: not requested (ARQC)\n");
+			if ((CID & EMVAC_AC2_MASK) == EMVAC_AC2_MASK)	fprintf(f, "\tAC2: RFU\n");
 */
 		}
 		
