@@ -140,18 +140,7 @@ local function main(args)
 		end
 	end
 	core.clearCommandBuffer()
-	
-	local b3 = readblock(3, keyA)
-	if not b3 then
-		print('[-] failed reading block with factorydefault key. Trying chinese magic read.')
-		b3, err = readmagicblock(0)
-		if not b3 then 
-			oops('[!] '..err) 
-			return oops('[!] failed reading block with chinese magic command. Quitting...')
-		end
-	end
-	core.clearCommandBuffer()
-	
+
 	-- wipe card.
 	local cmd  = (csetuid..'%s %s %s w'):format(result.uid, atqa, sak)	
 	core.console(cmd) 
