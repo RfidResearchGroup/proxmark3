@@ -96,6 +96,7 @@ FABADA11, //china?
 69696969,
 12121212,
 12344321,
+1234ABCD,
 11112222,
 13131313,
 10041004,
@@ -104,8 +105,8 @@ FABADA11, //china?
 abcd1234,
 20002000,
 19721972,
-aa55aa55, //amiboo
-55aa55aa, //rev amiboo
+aa55aa55, // amiboo
+55aa55aa, // rev amiboo
 4f271149, // seeds ul-ev1
 07d7bb0b, // seeds ul-ev1
 9636ef8f, // seeds ul-ev1
@@ -113,4 +114,4 @@ b5f44686, // seeds ul-ev1
 9E3779B9, // TEA
 C6EF3720, // TEA
 7854794A, // xbox tea constant :)
-F1EA5EED, //burtle
+F1EA5EED, // burtle
