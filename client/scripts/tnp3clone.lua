@@ -178,7 +178,7 @@ local function main(args)
 	core.clearCommandBuffer()
 	
 	-- Set sector trailer S0, since it has different access rights
-	cmd = ('%s 3 %s%s'):format(cset, keyA, b3:sub(13) )
+	cmd = ('%s 3 %s0f0f0f69000000000000'):format(cset, keyA)
 	core.console(cmd)
 	core.clearCommandBuffer()
 end
