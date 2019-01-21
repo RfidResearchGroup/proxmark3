@@ -93,7 +93,7 @@ local function main(args)
 	local csetuid = 'hf mf csetuid '
 	local cget = 'hf mf cgetbl '
 	local empty = '00000000000000000000000000000000'
-	local AccAndKeyB = '7F070869000000000000'
+	local AccAndKeyB = '7F0F0869000000000000'
 	local atqa = '0F01'
 	local sak = '81'
 	-- Defaults to Gusto
