@@ -899,10 +899,17 @@ int CmdLegicDump(const char *Cmd){
 	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
-	if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
-		PrintAndLogEx(WARNING, "Command execute time-out");
-		return 1;
-	}
+
+	uint8_t timeout = 0;
+	while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+		++timeout;
+		printf("."); fflush(stdout);
+		if (timeout > 7) {
+			PrintAndLogEx(WARNING, "\ncommand execution time out");
+			return 1;
+		}
+	}	
+	PrintAndLogEx(NORMAL, "\n");
 		
 	uint8_t isOK = resp.arg[0] & 0xFF;
 	if ( !isOK ) {
