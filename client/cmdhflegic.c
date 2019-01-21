@@ -634,10 +634,18 @@ int CmdLegicRfWrite(const char *Cmd) {
 	clearCommandBuffer();
 	SendCommand(&c);
 	
-	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-		PrintAndLogEx(WARNING, "command execution time out");
-		return 1;
-	}
+
+	uint8_t timeout = 0;
+	while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+		++timeout;
+		printf("."); fflush(stdout);
+		if (timeout > 7) {
+			PrintAndLogEx(WARNING, "\ncommand execution time out");
+			return 1;
+		}
+	}	
+	PrintAndLogEx(NORMAL, "\n");
+	
 	uint8_t isOK = resp.arg[0] & 0xFF;
 	if ( !isOK ) {
 		PrintAndLogEx(WARNING, "Failed writing tag");
@@ -1054,11 +1062,18 @@ int CmdLegicRestore(const char *Cmd){
 		clearCommandBuffer();
 		SendCommand(&c);
 	
-		if (!WaitForResponseTimeout(CMD_ACK, &resp, 4000)) {
-			PrintAndLogEx(WARNING, "command execution time out");
-			free(data);	
-			return 1;
-		}
+		uint8_t timeout = 0;
+		while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+			++timeout;
+			printf("."); fflush(stdout);
+			if (timeout > 7) {
+				PrintAndLogEx(WARNING, "\ncommand execution time out");
+				free(data);	
+				return 1;
+			}
+		}	
+		PrintAndLogEx(NORMAL, "\n");
+		
 		uint8_t isOK = resp.arg[0] & 0xFF;
 		if ( !isOK ) {
 			PrintAndLogEx(WARNING, "Failed writing tag [msg = %u]", resp.arg[1] & 0xFF);
@@ -1223,11 +1238,18 @@ int CmdLegicWipe(const char *Cmd){
 		clearCommandBuffer();
 		SendCommand(&c);
 	
-		if (!WaitForResponseTimeout(CMD_ACK, &resp, 4000)) {
-			PrintAndLogEx(WARNING, "command execution time out");
-			free(data);	
-			return 3;
-		}
+		uint8_t timeout = 0;
+		while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+			++timeout;
+			printf("."); fflush(stdout);
+			if (timeout > 7) {
+				PrintAndLogEx(WARNING, "\ncommand execution time out");
+				free(data);					
+				return 3;
+			}
+		}	
+		PrintAndLogEx(NORMAL, "\n");		
+
 		uint8_t isOK = resp.arg[0] & 0xFF;
 		if ( !isOK ) {
 			PrintAndLogEx(WARNING, "Failed writing tag [msg = %u]", resp.arg[1] & 0xFF);
