@@ -2463,7 +2463,7 @@ static void shave(uint8_t *data, uint8_t len){
 		data[i] &= 0xFE;
 }
 static void generate_rev(uint8_t *data, uint8_t len) {
-	uint8_t *key = calloc(len,1);	
+	uint8_t *key = calloc(len, sizeof(uint8_t));	
 	PrintAndLogEx(SUCCESS, "input permuted key | %s \n", sprint_hex(data, len));
 	permute_rev(data, len, key);
 	PrintAndLogEx(SUCCESS, "    unpermuted key | %s \n", sprint_hex(key, len));
@@ -2472,8 +2472,8 @@ static void generate_rev(uint8_t *data, uint8_t len) {
 	free(key);	
 }
 static void generate(uint8_t *data, uint8_t len) {
-	uint8_t *key = calloc(len,1);
-	uint8_t *pkey = calloc(len,1);	
+	uint8_t *key = calloc(len, sizeof(uint8_t));
+	uint8_t *pkey = calloc(len, sizeof(uint8_t));	
 	PrintAndLogEx(SUCCESS, "   input key | %s \n", sprint_hex(data, len));
 	permute(data, len, pkey);
 	PrintAndLogEx(SUCCESS, "permuted key | %s \n", sprint_hex(pkey, len));

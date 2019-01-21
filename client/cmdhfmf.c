@@ -2496,7 +2496,7 @@ int CmdHF14AMfESave(const char *Cmd) {
 	blocks = NumOfBlocks(c);
 	bytes = blocks * MFBLOCK_SIZE;	
 
-	dump = calloc(sizeof(uint8_t), bytes);
+	dump = calloc(bytes, sizeof(uint8_t));
 	if (!dump) {
 		PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
 		return 1;

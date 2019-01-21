@@ -483,7 +483,7 @@ int CmdLegicRdmem(const char *Cmd) {
 	PrintAndLogEx(NORMAL, "Reading %d bytes, from offset %d", len, offset);
 	
 	// allocate receiver buffer
-	uint8_t *data = malloc(len);
+	uint8_t *data = calloc(len, sizeof(uint8_t));
 	if ( !data ){
 		PrintAndLogEx(WARNING, "Cannot allocate memory");
 		return 2;
@@ -923,7 +923,7 @@ int CmdLegicDump(const char *Cmd){
 	else
 		sprintf(fnameptr + fileNlen,".bin");
 
-	f = fopen(filename,"wb");
+	f = fopen(filename, "wb");
 	if (!f) { 
 		PrintAndLogEx(WARNING, "Could not create file name %s", filename);
 		if (data)
