@@ -61,7 +61,7 @@ I have also added this script to the fork.
 https://github.com/RfidResearchGroup/proxmark3/blob/master/install.sh
 
 - Run
-`sudo apt-get install p7zip git build-essential libreadline5 libreadline-dev libusb-0.1-4 libusb-dev libqt4-dev perl pkg-config wget libncurses5-dev gcc-arm-none-eabi libjansson-dev`
+`sudo apt-get install p7zip git build-essential libreadline5 libreadline-dev libusb-0.1-4 libusb-dev libqt4-dev perl pkg-config wget libncurses5-dev gcc-arm-none-eabi`
 
 - Clone fork
 `git clone https://github.com/RfidResearchGroup/proxmark3.git`
@@ -86,7 +86,7 @@ https://github.com/RfidResearchGroup/proxmark3/blob/master/install.sh
 
 ## Setup and build for ArchLinux
 - Run
-`sudo pacman -Sy base-devel p7zip libusb readline ncurses libjansson-dev arm-none-eabi-newlib --needed`
+`sudo pacman -Sy base-devel p7zip libusb readline ncurses arm-none-eabi-newlib --needed`
 `yaourt -S termcap`
 
 - Remove modemmanager
