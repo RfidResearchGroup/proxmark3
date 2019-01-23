@@ -1591,11 +1591,11 @@ void T55xx_ChkPwds() {
 
 	
 	uint8_t *pwds = BigBuf_get_EM_addr();
-	bool use_flashmem = true;
 	uint16_t pwdCount = 0;
 	uint32_t candidate = 0;
 
-#ifdef WITH_FLASH	
+#ifdef WITH_FLASH
+	bool use_flashmem = true;
 	if ( use_flashmem ) {
 		BigBuf_Clear_EM();
 		uint16_t isok = 0;

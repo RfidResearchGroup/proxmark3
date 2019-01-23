@@ -8,6 +8,8 @@
 // Proxmark3 RDV40 Flash memory commands
 //-----------------------------------------------------------------------------
 
+#ifdef WITH_FLASH
+
 #ifndef CMDFLASHMEM_H__
 #define CMDFLASHMEM_H__
 
@@ -38,4 +40,6 @@ extern int CmdFlashMemLoad(const char* cmd);
 extern int CmdFlashMemSave(const char* cmd);
 extern int CmdFlashMemWipe(const char *Cmd);
 extern int CmdFlashMemInfo(const char *Cmd);
+#endif
+
 #endif
