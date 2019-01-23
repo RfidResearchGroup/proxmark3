@@ -7,6 +7,8 @@
 //-----------------------------------------------------------------------------
 // Proxmark3 RDV40 Flash memory commands
 //-----------------------------------------------------------------------------
+#ifdef WITH_FLASH
+
 #include "cmdflashmem.h"
 
 #include "mbedtls/rsa.h"
@@ -604,3 +606,5 @@ int CmdHelp(const char *Cmd) {
 	CmdsHelp(CommandTable);
 	return 0;
 }
+
+#endif
