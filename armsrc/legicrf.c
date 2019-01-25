@@ -61,7 +61,7 @@ static inline uint8_t rx_byte_from_fpga() {
     WDT_HIT();
 
     // wait for byte be become available in rx holding register
-    if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+    if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
       return AT91C_BASE_SSC->SSC_RHR;
     }
   }
@@ -81,7 +81,7 @@ static inline uint8_t rx_byte_from_fpga() {
 // To reduce CPU time the amplitude is approximated by using linear functions:
 //   am = MAX(ABS(i),ABS(q)) + 1/2*MIN(ABS(i),ABSq))
 //
-// Note: The SSC receiver is never synchronized the calculation my be performed
+// Note: The SSC receiver is never synchronized the calculation may be performed
 // on a i/q pair from two subsequent correlations, but does not matter.
 static inline int32_t sample_power() {
   int32_t q = (int8_t)rx_byte_from_fpga(); q = ABS(q);
@@ -100,7 +100,7 @@ static inline int32_t sample_power() {
 static inline bool rx_bit() {
   int32_t power;
 
-  for(size_t i = 0; i<5; ++i) {
+  for (size_t i = 0; i<5; ++i) {
     power = sample_power();
   }
 
@@ -120,12 +120,12 @@ static inline void tx_bit(bool bit) {
   // insert pause
   LOW(GPIO_SSC_DOUT);
   last_frame_end += RWD_TIME_PAUSE;
-  while(GET_TICKS < last_frame_end) { };
+  while (GET_TICKS < last_frame_end) { };
   HIGH(GPIO_SSC_DOUT);
 
   // return to high, wait for bit periode to end
   last_frame_end += (bit ? RWD_TIME_1 : RWD_TIME_0) - RWD_TIME_PAUSE;
-  while(GET_TICKS < last_frame_end) { };
+  while (GET_TICKS < last_frame_end) { };
 }
 
 //-----------------------------------------------------------------------------
@@ -143,13 +143,13 @@ static void tx_frame(uint32_t frame, uint8_t len) {
 
   // wait for next tx timeslot
   last_frame_end += RWD_FRAME_WAIT;
-  while(GET_TICKS < last_frame_end) { };
+  while (GET_TICKS < last_frame_end) { };
 
   // backup ts for trace log
   uint32_t last_frame_start = last_frame_end;
 
   // transmit frame, MSB first
-  for(uint8_t i = 0; i < len; ++i) {
+  for (uint8_t i = 0; i < len; ++i) {
     bool bit = (frame >> i) & 0x01;
     tx_bit(bit ^ legic_prng_get_bit());
     legic_prng_forward(1);
@@ -158,7 +158,7 @@ static void tx_frame(uint32_t frame, uint8_t len) {
   // add pause to mark end of the frame
   LOW(GPIO_SSC_DOUT);
   last_frame_end += RWD_TIME_PAUSE;
-  while(GET_TICKS < last_frame_end) { };
+  while (GET_TICKS < last_frame_end) { };
   HIGH(GPIO_SSC_DOUT);
 
   // log
@@ -173,19 +173,19 @@ static uint32_t rx_frame(uint8_t len) {
 
   // hold sampling until card is expected to respond
   last_frame_end += TAG_FRAME_WAIT;
-  while(GET_TICKS < last_frame_end) { };
+  while (GET_TICKS < last_frame_end) { };
 
   // backup ts for trace log
   uint32_t last_frame_start = last_frame_end;
 
   uint32_t frame = 0;
-  for(uint8_t i = 0; i < len; ++i) {
+  for (uint8_t i = 0; i < len; ++i) {
     frame |= (rx_bit() ^ legic_prng_get_bit()) << i;
     legic_prng_forward(1);
 
     // rx_bit runs only 95us, resync to TAG_BIT_PERIOD
     last_frame_end += TAG_BIT_PERIOD;
-    while(GET_TICKS < last_frame_end) { };
+    while (GET_TICKS < last_frame_end) { };
   }
 
   // log
@@ -203,23 +203,23 @@ static bool rx_ack() {
 
   // hold sampling until card is expected to respond
   last_frame_end += TAG_FRAME_WAIT;
-  while(GET_TICKS < last_frame_end) { };
+  while (GET_TICKS < last_frame_end) { };
 
   // backup ts for trace log
   uint32_t last_frame_start = last_frame_end;
 
   uint32_t ack = 0;
-  for(uint8_t i = 0; i < TAG_WRITE_TIMEOUT; ++i) {
+  for (uint8_t i = 0; i < TAG_WRITE_TIMEOUT; ++i) {
     // sample bit
     ack = rx_bit();
     legic_prng_forward(1);
 
     // rx_bit runs only 95us, resync to TAG_BIT_PERIOD
     last_frame_end += TAG_BIT_PERIOD;
-    while(GET_TICKS < last_frame_end) { };
+    while (GET_TICKS < last_frame_end) { };
 
     // check if it was an ACK
-    if(ack) {
+    if (ack) {
       break;
     }
   }
@@ -282,7 +282,7 @@ static void init_reader(bool clear_mem) {
 
   // reserve a cardmem, meaning we can use the tracelog function in bigbuff easier.
   legic_mem = BigBuf_get_EM_addr();
-  if(legic_mem) {
+  if (legic_mem) {
     memset(legic_mem, 0x00, LEGIC_CARD_MEMSIZE);
   }
 
@@ -309,7 +309,7 @@ static uint32_t setup_phase(uint8_t iv) {
 
   // Switch on carrier and let the card charge for 5ms.
   last_frame_end += 7500;
-  while(GET_TICKS < last_frame_end) { };
+  while (GET_TICKS < last_frame_end) { };
 
   legic_prng_init(0);
   tx_frame(iv, 7);
@@ -359,7 +359,7 @@ static int16_t read_byte(uint16_t index, uint8_t cmd_sz) {
 
   // check received against calculated crc
   uint8_t calc_crc = calc_crc4(cmd, cmd_sz, byte);
-  if(calc_crc != crc) {
+  if (calc_crc != crc) {
     Dbprintf("!!! crc mismatch: %x != %x !!!",  calc_crc, crc);
     return -1;
   }
@@ -399,15 +399,15 @@ void LegicRfInfo(void) {
 
   // establish shared secret and detect card type
   uint8_t card_type = setup_phase(0x01);
-  if(init_card(card_type, &card) != 0) {
+  if (init_card(card_type, &card) != 0) {
     cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
     goto OUT;
   }
 
   // read UID
-  for(uint8_t i = 0; i < sizeof(card.uid); ++i) {
+  for (uint8_t i = 0; i < sizeof(card.uid); ++i) {
     int16_t byte = read_byte(i, card.cmdsize);
-    if(byte == -1) {
+    if (byte == -1) {
       cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
       goto OUT;
     }
@@ -417,7 +417,7 @@ void LegicRfInfo(void) {
   // read MCC and check against UID
   int16_t mcc = read_byte(4, card.cmdsize);
   int16_t calc_mcc = CRC8Legic(card.uid, 4);;
-  if(mcc != calc_mcc) {
+  if (mcc != calc_mcc) {
     cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
     goto OUT;
   }
@@ -436,19 +436,19 @@ void LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
 
   // establish shared secret and detect card type
   uint8_t card_type = setup_phase(iv);
-  if(init_card(card_type, &card) != 0) {
+  if (init_card(card_type, &card) != 0) {
     cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
     goto OUT;
   }
 
   // do not read beyond card memory
-  if(len + offset > card.cardsize) {
+  if (len + offset > card.cardsize) {
     len = card.cardsize - offset;
   }
 
-  for(uint16_t i = 0; i < len; ++i) {
+  for (uint16_t i = 0; i < len; ++i) {
     int16_t byte = read_byte(offset + i, card.cmdsize);
-    if(byte == -1) {
+    if (byte == -1) {
       cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
       goto OUT;
     }
@@ -468,26 +468,26 @@ void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
   init_reader(false);
 
   // uid is not writeable
-  if(offset <= WRITE_LOWERLIMIT) {
+  if (offset <= WRITE_LOWERLIMIT) {
     cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
     goto OUT;
   }
 
   // establish shared secret and detect card type
   uint8_t card_type = setup_phase(iv);
-  if(init_card(card_type, &card) != 0) {
+  if (init_card(card_type, &card) != 0) {
     cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
     goto OUT;
   }
 
   // do not write beyond card memory
-  if(len + offset > card.cardsize) {
+  if (len + offset > card.cardsize) {
     len = card.cardsize - offset;
   }
 
   // write in reverse order, only then is DCF (decremental field) writable
-  while(len-- > 0 && !BUTTON_PRESS()) {
-    if(!write_byte(len + offset, data[len], card.addrsize)) {
+  while (len-- > 0 && !BUTTON_PRESS()) {
+    if (!write_byte(len + offset, data[len], card.addrsize)) {
       Dbprintf("operation failed | %02X | %02X | %02X", len + offset, len, data[len]);
       cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
       goto OUT;
