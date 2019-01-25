@@ -1599,6 +1599,14 @@ int CmdEMVRoca(const char *cmd) {
 	if (arg_get_lit(2))
 		channel = ECC_CONTACT;
 	PrintChannel(channel);
+	
+#ifndef WITH_SMARTCARD
+	// not compiled with smartcard functionality,  we need to exit
+	if ( channel == ECC_CONTACT ) {
+		PrintAndLogEx(WARNING, "PM3 Client is not compiled with support for SMARTCARD. Exiting.");
+		return 0;
+	}
+#endif	
 
 	// select card
 	uint8_t psenum = (channel == ECC_CONTACT) ? 1 : 2;
