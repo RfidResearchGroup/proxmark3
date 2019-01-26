@@ -24,13 +24,13 @@ local example = "script run xxx"
 local author = "Martin Holst Swende & Asper"
 ---
 -- PrintAndLog
-function prlog(...)
+local function prlog(...)
 	-- TODO; replace this with a call to the proper PrintAndLog
 	print(...)
 end
 --- 
 -- This is only meant to be used when errors occur
-function oops(err)
+local function oops(err)
 	prlog("ERROR: ",err)
 	return nil,err
 end
@@ -70,13 +70,13 @@ local utils = {
 
 --- 
 -- Usage help
-function help()
+local function help()
 	prlog(desc)
 	prlog("Example usage")
 	prlog(example)
 end
 
-function debug(...)
+local function debug(...)
 	if DEBUG then 
 		prlog("debug:", ...)
 	end
@@ -158,7 +158,7 @@ end
 
 --- This function is a lua-implementation of
 -- cmdhf14a.c:waitCmd(uint8_t iSelect)
-function waitCmd(iSelect)
+local function waitCmd(iSelect)
 	local response = core.WaitForResponseTimeout(cmds.CMD_ACK,1000)
 	if response then
 		local count,cmd,arg0,arg1,arg2 = bin.unpack('LLLL',response)
