@@ -5,6 +5,33 @@ Proxmark3 RDV40 dedicated repo,  based on iceman fork
 ## Notice      
 This repo is based on iceman fork for proxmark3. It is dedicated to bring the most out of the new features for proxmark3 RDV40 device.
 
+# Donations
+Nothing says thank you as much as a donation,  https://www.patreon.com/iceman1001
+
+## ToC
+
+- Coverity Scan Config & Run
+- Whats changed?
+- Why didn't you based it on offical PM3 Master?
+- Why don't you add this or that functionality?	
+- PM3 GUI
+- Development
+- KALI and ARCHLINUX users
+- Setup and build for UBUNTU
+- Setup and build for ArchLinux
+- Homebrew (Mac OS X)
+- Upgrading HomeBrew tap formula
+- Building on Windows
+- Gator96100 distro
+- Build and run
+- Validating proxmark client functionality
+- Run the following commands
+- Quit client
+- First things on your RDV40
+- Verify sim module firmware version
+
+- The end
+
 ## Coverity Scan Config & Run
 Download the Coverity Scan Self-buld and install it.
 You will need to configure  ARM-NON-EABI- Compiler for it to use:
@@ -37,14 +64,16 @@ The separation from offical pm3 repo gives us very much freedom to create a firm
 Give us a hint, and we'll see if we can't merge in the stuff you have. 
 	
 ## PM3 GUI
-The official PM3-GUI from Gaucho will not work. 
-The new universial GUI will work.
+The official PM3-GUI from Gaucho will not work.
+The new universial GUI will work. [Proxmark3 Univerisal GUI](https://github.com/burma69/PM3UniversalGUI) 
 
 ## Development
 This fork now compiles just fine on 
    - Windows/mingw environment with Qt5.6.1 & GCC 4.8
    - Ubuntu 1404, 1510, 1604, 1804
    - Mac OS X / Homebrew
+   - ParrotOS
+   - WSL (Windows subsystem linux) on Windows 10
    - Docker container
 
 ## KALI and ARCHLINUX users
@@ -224,7 +253,7 @@ If all went well you should get some information about the firmware and memory u
 >
 > pm3 -->
 
-### run the following commands
+### Run the following commands
     pm3 --> hw status
     pm3 --> hw version
     pm3 --> hw tune
