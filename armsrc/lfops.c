@@ -80,7 +80,7 @@ void setT55xxConfig(uint8_t arg0, t55xx_config *c) {
 
 	printT55xxConfig();
 
-#if WITH_FLASH
+#ifdef WITH_FLASH
 	// shall persist to flashmem
 	if (arg0 == 0) {
 		return;
@@ -119,7 +119,7 @@ t55xx_config* getT55xxConfig(void) {
 }
 
 void loadT55xxConfig(void) {
-#if WITH_FLASH
+#ifdef WITH_FLASH
     if (!FlashInit()) {
         return;
 	}
