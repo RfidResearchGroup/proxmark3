@@ -2226,6 +2226,9 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, void *data, uint8_t *res) {
 	if (cmd_len) {
 		// ISO 14443 APDU frame: PCB [CID] [NAD] APDU CRC PCB=0x02
 		real_cmd[0] = 0x02; // bnr,nad,cid,chn=0; i-block(0x00)	
+		if (param & ISO14A_SEND_CHAINING) {
+			real_cmd[0] |= 0x10;
+		}
 		// put block number into the PCB
 		real_cmd[0] |= iso14_pcb_blocknum;
 		memcpy(real_cmd + 1, cmd, cmd_len);
