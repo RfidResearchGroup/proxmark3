@@ -241,7 +241,7 @@ int EMVExchangeEx(EMVCommandChannel channel, bool ActivateField, bool LeaveField
 	int res = 0;
 	
 	if (ActivateField) {
-		DropField();
+		DropFieldEx( channel );
 		msleep(50);
 	}
 	
@@ -484,7 +484,7 @@ int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
 	}
 	
 	if(!LeaveFieldON)
-		DropField();
+		DropFieldEx( channel );
 	
 	return res;
 }
