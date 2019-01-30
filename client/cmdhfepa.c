@@ -43,7 +43,7 @@ int CmdHFEPACollectPACENonces(const char *Cmd)
 			PrintAndLogEx(FAILED, "Error in step %d, Return code: %d",resp.arg[0],(int)resp.arg[1]);
 		} else {
 			size_t nonce_length = resp.arg[1];
-			char *nonce = (char *) malloc(2 * nonce_length + 1);
+			char *nonce = (char *) calloc(2 * nonce_length + 1, sizeof(uint8_t));
 			for(int j = 0; j < nonce_length; j++) {
 				sprintf(nonce + (2 * j), "%02X", resp.d.asBytes[j]);
 			}

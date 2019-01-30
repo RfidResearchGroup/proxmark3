@@ -1786,7 +1786,7 @@ int Cmdbin2hex(const char *Cmd) {
 	//Number of digits supplied as argument
 	size_t length = en - bg + 1;
 	size_t bytelen = (length+7) / 8;
-	uint8_t* arr = (uint8_t *) malloc(bytelen);
+	uint8_t* arr = (uint8_t *) calloc(bytelen, sizeof(uint8_t));
 	memset(arr, 0, bytelen);
 	BitstreamOut bout = { arr, 0, 0 };
 
