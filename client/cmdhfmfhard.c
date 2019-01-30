@@ -209,7 +209,7 @@ static int compare_count_bitflip_bitarrays(const void *b1, const void *b2)
 
 static voidpf inflate_malloc(voidpf opaque, uInt items, uInt size)
 {
-	return malloc(items*size);
+	return calloc(items*size, sizeof(uint8_t));
 }
 
 

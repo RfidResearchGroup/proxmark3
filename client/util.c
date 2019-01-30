@@ -280,7 +280,7 @@ void sprint_bin_break_ex(uint8_t *src, size_t srclen, char *dest , uint8_t break
 	printf("(sprint_bin_break) rowlen %d\n", rowlen);
 	
 	// 3072 + end of line characters if broken at 8 bits
-	dest = (char *)malloc(MAX_BIN_BREAK_LENGTH); 
+	dest = (char *)calloc(MAX_BIN_BREAK_LENGTH, sizeof(uint8_t)); 
 	if (dest == NULL) return;
 	
 	//clear memory

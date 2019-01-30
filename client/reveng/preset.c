@@ -811,7 +811,9 @@ int mbynam(model_t *dest, const char *key) {
 
 	if (!aliases->name)
 		return(-1);
-	if (!(ukey = malloc((size_t) 1 + strlen(key) + 1))) {
+	
+	ukey = calloc((size_t) 1 + strlen(key) + 1, sizeof(char));
+	if (!ukey) {
 		uerror("[!] cannot allocate memory for comparison string");
 		return(0);
 	}
@@ -861,7 +863,9 @@ char * mnames(void) {
 		++aptr;
 	}
 	if (!size) return(NULL);
-	if ((string = malloc(size))) {
+	
+	string = calloc(size, sizeof(char));
+	if (string) {
 		aptr = aliases;
 		sptr = string;
 		while (aptr->name) {

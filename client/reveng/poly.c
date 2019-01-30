@@ -349,7 +349,7 @@ pxsubs(const poly_t poly, int flags, int bperhx, unsigned long start, unsigned l
 	size *= cperhx;
 	if(!size || ~flags & P_SPACE) ++size; /* for trailing null */
 
-	if(!(sptr = string = (char *) malloc(size)))
+	if(!(sptr = string = (char *) calloc(size, sizeof(char))))
 		uerror("cannot allocate memory for string");
 
 	size = end - start;

@@ -224,7 +224,7 @@ void doMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t mac[4])
 {
 	uint8_t cc_nr[13] = { 0 };
     uint8_t div_key[8];
-	//cc_nr=(uint8_t*)malloc(length+1);
+	//cc_nr=(uint8_t*) calloc(length+1, sizeof(uint8_t));
 
 	memcpy(cc_nr, cc_nr_p, 12);
     memcpy(div_key, div_key_p, 8);
@@ -244,7 +244,7 @@ void doMAC_N(uint8_t *address_data_p, uint8_t address_data_size, uint8_t *div_ke
 {
 	uint8_t *address_data;
 	uint8_t div_key[8];
-	address_data = (uint8_t*) malloc(address_data_size);
+	address_data = (uint8_t*) calloc(address_data_size, sizeof(uint8_t));
 
 	memcpy(address_data, address_data_p, address_data_size);
 	memcpy(div_key, div_key_p, 8);

@@ -493,7 +493,7 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[]) {
 
 	uint64_t t1 = msclock();
 
-	dumpdata* attack = (dumpdata* ) malloc(itemsize);
+	dumpdata* attack = (dumpdata* ) calloc(itemsize, sizeof(uint8_t));
 
 	for (i = 0 ; i * itemsize < dumpsize ; i++ ) {
 		memcpy(attack, dump + i * itemsize, itemsize);
