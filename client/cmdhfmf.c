@@ -415,7 +415,7 @@ int GetHFMF14AUID(uint8_t *uid, int *uidlen) {
 char * GenerateFilename(const char *prefix, const char *suffix){
 	uint8_t uid[10] = {0,0,0,0,0,0,0,0,0,0};
 	int uidlen=0;
-	char * fptr = malloc (sizeof (char) * (strlen(prefix) + strlen(suffix)) + sizeof(uid)*2 + 1);
+	char * fptr = calloc (sizeof (char) * (strlen(prefix) + strlen(suffix)) + sizeof(uid)*2 + 1,  sizeof(uint8_t));
 	
 	GetHFMF14AUID(uid, &uidlen);
 	if (!uidlen) {
@@ -2195,7 +2195,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 				if (traceLen > bufsize || buf == NULL) {
 					uint8_t *p;
 					if (buf == NULL)				// not yet allocated
-						p = malloc(traceLen);
+						p = calloc(traceLen, sizeof(uint8_t));
 					else							// need more memory
 						p = realloc(buf, traceLen);
 					
@@ -2912,7 +2912,7 @@ int CmdHF14AMfCSave(const char *Cmd) {
 	
 	if (errors || cmdp == 0) return usage_hf14_csave();
 
-	dump = malloc(bytes);
+	dump = calloc(bytes, sizeof(uint8_t));
 	if (!dump) {
 		PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
 		return 1;

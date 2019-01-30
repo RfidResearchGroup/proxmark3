@@ -1012,7 +1012,7 @@ int CmdSmartBruteforceSFI(const char *Cmd) {
 	json_t *root = NULL;
 	smart_loadjson("aidlist", "json", &root);
 
-	uint8_t* buf = malloc(USB_CMD_DATA_SIZE);
+	uint8_t* buf = calloc(USB_CMD_DATA_SIZE, sizeof(uint8_t));
 	if ( !buf )
 		return 1;		
 
