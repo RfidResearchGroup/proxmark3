@@ -147,6 +147,10 @@ char* getTagInfo(uint8_t uid) {
 	return manufactureMapping[len-1].desc; 
 }
 
+// iso14a apdu input frame length
+static uint16_t frameLength = 0;
+uint16_t atsFSC[] = {16, 24, 32, 40, 48, 64, 96, 128, 256};
+
 int usage_hf_14a_sim(void) {
 //	PrintAndLogEx(NORMAL, "\n Emulating ISO/IEC 14443 type A tag with 4,7 or 10 byte UID\n");
 	PrintAndLogEx(NORMAL, "\n Emulating ISO/IEC 14443 type A tag with 4,7 byte UID\n");
@@ -486,10 +490,7 @@ int CmdHF14AInfo(const char *Cmd) {
 				(tb1 ? "" : " NOT"),
 				(tc1 ? "" : " NOT"),
 				fsci,
-				fsci < 5 ? (fsci - 2) * 8 : 
-					fsci < 8 ? (fsci - 3) * 32 :
-					fsci == 8 ? 256 :
-					-1
+				fsci < sizeof(atsFSC) ? atsFSC[fsci] : -1
 				);
 		}
 		pos = 2;
