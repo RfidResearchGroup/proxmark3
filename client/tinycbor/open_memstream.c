@@ -90,7 +90,7 @@ static int close_buffer(void *cookie)
 
 FILE *open_memstream(char **bufptr, size_t *lenptr)
 {
-    struct Buffer *b = (struct Buffer *)malloc(sizeof(struct Buffer));
+    struct Buffer *b = (struct Buffer *)calloc(sizeof(struct Buffer), sizeof(uint8_t));
     if (b == NULL)
         return NULL;
     b->alloc = 0;

@@ -884,8 +884,8 @@ extern void strcreplace(char *buf, size_t len, char from, char to) {
 }
 
 extern char *strmcopy(char *buf) {
-	char* str = NULL;
-	if ((str = (char*) malloc(strlen(buf) + 1)) != NULL) {
+	char* str = (char*) calloc(strlen(buf) + 1, sizeof(uint8_t));
+	if (str != NULL) {
 		memset(str, 0, strlen(buf) + 1);
 		strcpy(str, buf);
 	}	

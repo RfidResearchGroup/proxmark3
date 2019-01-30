@@ -75,7 +75,7 @@ const struct timeval timeout = {
 
 serial_port uart_open(const char* pcPortName)
 {
-  serial_port_unix* sp = malloc(sizeof(serial_port_unix));
+  serial_port_unix* sp = calloc(sizeof(serial_port_unix), sizeof(uint8_t));
   if (sp == 0) return INVALID_SERIAL_PORT;
 
   if (memcmp(pcPortName, "tcp:", 4) == 0) {

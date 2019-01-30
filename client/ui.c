@@ -196,7 +196,7 @@ void SetFlushAfterWrite(bool value) {
 
 	int i,j;
 	
-	int * output =  (int* ) malloc(sizeof(int) * len);	
+	int * output =  (int* ) calloc(sizeof(int) * len, sizeof(uint8_t));	
 	if ( !output ) return;
 	
 	// clear mem
