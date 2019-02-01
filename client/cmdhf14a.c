@@ -998,7 +998,6 @@ int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool lea
 	bool chaining = false;
 	int res;
 
-printf("framelen=%d datainlen=%d\n", frameLength, datainlen);
 	// 3 byte here - 1b framing header, 2b crc16
 	if (APDUInFramingEnable && 
 		( (frameLength && (datainlen > frameLength - 3)) || (datainlen > USB_CMD_DATA_SIZE - 3)) ) {
