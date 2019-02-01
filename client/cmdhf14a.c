@@ -1323,6 +1323,37 @@ int CmdHF14AAntiFuzz(const char *cmd) {
 	return 0;
 }
 
+int CmdHF14AChaining(const char *cmd) {
+	
+	CLIParserInit("hf 14a chaining", 
+		"Enable/Disable ISO14443a input chaining. Maximum input length goes from ATS.", 
+		"Usage:\n"
+		"\thf 14a chaining disable -> disable chaining\n"
+		"\thf 14a chaining         -> show chaining enable/disable state\n");
+
+	void* argtable[] = {
+		arg_param_begin,
+		arg_str0(NULL, NULL,      "<enable/disable or 0/1>", NULL),
+		arg_param_end
+	};
+	CLIExecWithReturn(cmd, argtable, true);
+
+	struct arg_str *str = arg_get_str(1);
+	int len = arg_get_str_len(1);
+	
+	if (len && (!strcmp(str->sval[0], "enable") || !strcmp(str->sval[0], "1")))
+		APDUInFramingEnable = true;
+	
+	if (len && (!strcmp(str->sval[0], "disable") || !strcmp(str->sval[0], "0")))
+		APDUInFramingEnable = false;
+
+	CLIParserFree();
+
+	PrintAndLogEx(INFO, "\nISO 14443-4 input chaining %s.\n", APDUInFramingEnable ? "enabled" : "disabled");
+	
+	return 0;
+}
+
 static command_t CommandTable[] = {
 	{"help",		CmdHelp,              1, "This help"},
 	{"list",		CmdHF14AList,         0, "[Deprecated] List ISO 14443-a history"},
@@ -1332,6 +1363,7 @@ static command_t CommandTable[] = {
 	{"sim",		CmdHF14ASim,          0, "<UID> -- Simulate ISO 14443-a tag"},
 	{"sniff",		CmdHF14ASniff,        0, "sniff ISO 14443-a traffic"},
 	{"apdu",		CmdHF14AAPDU,         0, "Send ISO 14443-4 APDU to tag"},
+	{"chaining",	CmdHF14AChaining,     0, "Control ISO 14443-4 input chaining"},
 	{"raw",		CmdHF14ACmdRaw,       0, "Send raw hex data to tag"},
 	{"antifuzz",	CmdHF14AAntiFuzz,     0, "Fuzzing the anticollision phase.  Warning! Readers may react strange"},
 	{NULL, NULL, 0, NULL}
