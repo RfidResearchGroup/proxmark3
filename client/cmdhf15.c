@@ -1241,7 +1241,7 @@ int CmdHF15Write(const char *Cmd) {
 	AddCrc(req, reqlen);
 	c.arg[0] = reqlen+2;
 	
-	PrintAndLogEx(NORMAL, "iso15693 writing to page %02d (0x&02X) | data ", pagenum, pagenum);
+	PrintAndLogEx(NORMAL, "iso15693 writing to page %02d (0x%02X) | data ", pagenum, pagenum);
 	
 	clearCommandBuffer();
 	SendCommand(&c);
