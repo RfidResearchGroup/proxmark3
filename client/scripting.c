@@ -758,6 +758,15 @@ int set_pm3_libraries(lua_State *L) {
     //-- remove the global environment table from the stack
     lua_pop(L, 1);
 
+	
+	//--add to the LUA_PATH (package.path in lua)
+    // so we can load scripts from the ./scripts/ - directory
+	char scripts_path[strlen(get_my_executable_directory()) + strlen(LUA_SCRIPTS_DIRECTORY) + strlen(LUA_LIBRARIES_WILDCARD) + 1];
+	strcpy(scripts_path, get_my_executable_directory());
+	strcat(scripts_path, LUA_SCRIPTS_DIRECTORY);
+	strcat(scripts_path, LUA_LIBRARIES_WILDCARD);
+	setLuaPath(L, scripts_path);
+	
     //-- Last but not least, add to the LUA_PATH (package.path in lua)
     // so we can load libraries from the ./lualib/ - directory
 	char libraries_path[strlen(get_my_executable_directory()) + strlen(LUA_LIBRARIES_DIRECTORY) + strlen(LUA_LIBRARIES_WILDCARD) + 1];
@@ -765,6 +774,5 @@ int set_pm3_libraries(lua_State *L) {
 	strcat(libraries_path, LUA_LIBRARIES_DIRECTORY);
 	strcat(libraries_path, LUA_LIBRARIES_WILDCARD);
 	setLuaPath(L, libraries_path);
-
     return 1;
 }
