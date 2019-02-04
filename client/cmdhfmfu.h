@@ -21,7 +21,8 @@ typedef struct {
 	uint8_t	pack[2];
 	uint8_t tbo1[1];
 	uint8_t	signature[32];	
-	//uint8_t	counter[3];
+	uint8_t	counter[3][3];
+	uint8_t pwd[4];
 	uint8_t data[1024];
 } mfu_dump_t;
 
