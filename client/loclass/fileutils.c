@@ -221,10 +221,15 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
 			JsonSaveBufAsHexCompact(root, "$.Card.Version", tmp->version, sizeof(tmp->version));
 			JsonSaveBufAsHexCompact(root, "$.Card.TBO_0", tmp->tbo, sizeof(tmp->tbo));
 			JsonSaveBufAsHexCompact(root, "$.Card.Tearing", tmp->tearing, sizeof(tmp->tearing));
+			JsonSaveBufAsHexCompact(root, "$.Card.Pwd",  tmp->pwd, sizeof(tmp->pwd));
 			JsonSaveBufAsHexCompact(root, "$.Card.Pack",  tmp->pack, sizeof(tmp->pack));
 			JsonSaveBufAsHexCompact(root, "$.Card.TBO_1", tmp->tbo1, sizeof(tmp->tbo1));
 			JsonSaveBufAsHexCompact(root, "$.Card.Signature", tmp->signature, sizeof(tmp->signature));
-			JsonSaveStr(root, "$.Card.Counter", "N/A");
+			for ( uint8_t i = 0; i<3; ++i) {
+				char counterpath[PATH_MAX_LENGTH] = {0};
+				sprintf(counterpath, "$.Card.Counter.%d", i);
+				JsonSaveBufAsHexCompact(root, counterpath, tmp->counter[i], sizeof(tmp->counter[i]));
+			}
 
 			// size of header 48b
 			size_t len = (datalen - DUMP_PREFIX_LENGTH) / 4;
