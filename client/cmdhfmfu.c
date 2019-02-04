@@ -604,7 +604,7 @@ static int ulc_print_configuration( uint8_t *data){
 	return 0;
 }
 
-static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t startPage){
+static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t startPage, bool hasAuthKey){
 
 	PrintAndLogEx(NORMAL, "\n--- Tag Configuration");
 
@@ -1070,7 +1070,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 					memcpy(ulev1_conf+8, authkeyptr, 4);
 					memcpy(ulev1_conf+12, pack, 2);
 				}
-				ulev1_print_configuration(tagtype, ulev1_conf, startconfigblock);
+				ulev1_print_configuration(tagtype, ulev1_conf, startconfigblock, hasAuthKey);
 			}
 		}
 
