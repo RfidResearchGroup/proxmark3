@@ -271,6 +271,11 @@ void RAMFUNC SniffAndStore(uint8_t param) {
 		uint16_t writelen = Flash_WriteData(0, total_data, memoffset + 4 * auth_attempts);
 		if (MF_DBGLEVEL > 1) Dbprintf("[!] Wrote %u bytes into flash mem", writelen);
 		
+		// If pwd saved successfully, blink led A three times
+		if (writelen > 0) {
+			SpinErr(0, 200, 5); // blink led A
+		}
+		
 		SpinDelay(100);
 		
 		// Reset the SPI Baudrate to the default value (24MHz)
