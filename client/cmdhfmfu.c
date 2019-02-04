@@ -678,9 +678,16 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
 	PrintAndLogEx(NORMAL, "                    - user configuration %s", cfglck ? "permanently locked":"writeable");
 	PrintAndLogEx(NORMAL, "                    - %s access is protected with password", prot ? "read and write":"write");
 	PrintAndLogEx(NORMAL, "                    - %02X, Virtual Card Type Identifier is %s default", vctid, (vctid==0x05)? "":"not");
-	PrintAndLogEx(NORMAL, "  PWD  [%u/0x%02X] : %s- (cannot be read)", startPage + 2, startPage + 2,  sprint_hex(data+8, 4));
-	PrintAndLogEx(NORMAL, "  PACK [%u/0x%02X] : %s      - (cannot be read)", startPage + 3, startPage + 3,  sprint_hex(data+12, 2));
-	PrintAndLogEx(NORMAL, "  RFU  [%u/0x%02X] :       %s- (cannot be read)", startPage + 3, startPage + 3,  sprint_hex(data+14, 2));
+	if (hasAuthKey)	{
+		PrintAndLogEx(NORMAL, "  PWD  [%u/0x%02X] : %s", startPage + 2, startPage + 2,  sprint_hex(data+8, 4));
+		PrintAndLogEx(NORMAL, "  PACK [%u/0x%02X] : %s", startPage + 3, startPage + 3,  sprint_hex(data+12, 2));
+		PrintAndLogEx(NORMAL, "  RFU  [%u/0x%02X] :       %s", startPage + 3, startPage + 3,  sprint_hex(data+14, 2));
+	}
+	else {
+		PrintAndLogEx(NORMAL, "  PWD  [%u/0x%02X] : %s- (cannot be read)", startPage + 2, startPage + 2,  sprint_hex(data+8, 4));
+		PrintAndLogEx(NORMAL, "  PACK [%u/0x%02X] : %s      - (cannot be read)", startPage + 3, startPage + 3,  sprint_hex(data+12, 2));
+		PrintAndLogEx(NORMAL, "  RFU  [%u/0x%02X] :       %s- (cannot be read)", startPage + 3, startPage + 3,  sprint_hex(data+14, 2));		
+	}
 	return 0;
 }
 
@@ -1819,6 +1826,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 		for ( uint8_t i = 0; i<3; ++i) {
 			ulev1_readTearing(i, get_tearing+i, 1);
 			ulev1_readCounter(i, get_counter, sizeof(get_counter) );
+			memcpy(dump_file_data.counter[i], get_counter, sizeof(dump_file_data.counter));
 		}
 		
 		DropField();
@@ -1851,9 +1859,12 @@ int CmdHF14AMfUDump(const char *Cmd){
 	}
 
 	//add *special* blocks to dump
-	//iceman:  need to add counters and pwd values to the dump format
 	memcpy(dump_file_data.version, get_version, sizeof(dump_file_data.version));
 	memcpy(dump_file_data.tearing, get_tearing, sizeof(dump_file_data.tearing));
+	if (hasAuthKey)
+		memcpy(dump_file_data.pwd, authenticationkey, sizeof(dump_file_data.pwd));
+	else
+		memset(dump_file_data.pwd, 0, sizeof(dump_file_data.pwd));
 	memcpy(dump_file_data.pack, get_pack, sizeof(dump_file_data.pack));
 	memcpy(dump_file_data.signature, get_signature, sizeof(dump_file_data.signature));
 	memcpy(dump_file_data.data, data, pages*4);
