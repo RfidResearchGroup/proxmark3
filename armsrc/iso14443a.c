@@ -2266,32 +2266,34 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
 			iso14a_set_timeout(save_iso14a_timeout);
 		}
 
-	// if we received an I- or R(ACK)-Block with a block number equal to the
-	// current block number, toggle the current block number
+		// if we received an I- or R(ACK)-Block with a block number equal to the
+		// current block number, toggle the current block number
 		if (len >= 3 // PCB+CRC = 3 bytes
 	         && ((data_bytes[0] & 0xC0) == 0 // I-Block
 	             || (data_bytes[0] & 0xD0) == 0x80) // R-Block with ACK bit set to 0
 	         && (data_bytes[0] & 0x01) == iso14_pcb_blocknum) // equal block numbers
-	{
-		iso14_pcb_blocknum ^= 1;
-	}
+		{
+			iso14_pcb_blocknum ^= 1;
+		}
 		
 		// if we received I-block with chaining we need to send ACK and receive another block of data
 		if (res)
 			*res = data_bytes[0];
 
 		// crc check
-		if (len >=3 && !check_crc(CRC_14443_A, data_bytes, len)) {
+		if (len >= 3 && !check_crc(CRC_14443_A, data_bytes, len)) {
 			return -1;
 		}
 		
 	}
 	
-	// cut frame byte
-	len -= 1;
-	// memmove(data_bytes, data_bytes + 1, len);
-	for (int i = 0; i < len; i++)
-		data_bytes[i] = data_bytes[i + 1];
+	if (len) {
+		// cut frame byte
+		len -= 1;
+		// memmove(data_bytes, data_bytes + 1, len);
+		for (int i = 0; i < len; i++)
+			data_bytes[i] = data_bytes[i + 1];
+	}
 	
 	return len;
 }
