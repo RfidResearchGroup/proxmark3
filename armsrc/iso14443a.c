@@ -2248,7 +2248,7 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
 		return 0; //DATA LINK ERROR
 	} else{
 		// S-Block WTX 
-		while((data_bytes[0] & 0xF2) == 0xF2) {
+		while(len && ((data_bytes[0] & 0xF2) == 0xF2)) {
 			uint32_t save_iso14a_timeout = iso14a_get_timeout();
 			// temporarily increase timeout
 			iso14a_set_timeout( MAX((data_bytes[1] & 0x3f) * save_iso14a_timeout, MAX_ISO14A_TIMEOUT) );
