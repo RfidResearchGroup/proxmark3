@@ -645,7 +645,7 @@ int CmdHF14AMfRdSc(const char *Cmd) {
   return 0;
 }
 
-uint8_t NumOfBlocks(char card){
+uint16_t NumOfBlocks(char card){
 	switch(card){
 		case '0' : return MIFARE_MINI_MAXBLOCK;
 		case '1' : return MIFARE_1K_MAXBLOCK;
