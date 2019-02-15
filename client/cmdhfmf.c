@@ -11,7 +11,7 @@
 #include "cmdhfmf.h"
 #include "mifare4.h"
 
-#define MIFARE_4K_MAXBLOCK 255
+#define MIFARE_4K_MAXBLOCK 256
 #define MIFARE_2K_MAXBLOCK 128 
 #define MIFARE_1K_MAXBLOCK 64
 #define MIFARE_MINI_MAXBLOCK 20
@@ -2503,7 +2503,7 @@ int CmdHF14AMfESave(const char *Cmd) {
 	}
 	memset(dump, 0, bytes);
 	
-	PrintAndLogEx(INFO, "dowingloading from emulator memory");
+	PrintAndLogEx(INFO, "downloading from emulator memory");
 	if (!GetFromDevice( BIG_BUF_EML, dump, bytes, 0, NULL, 2500, false)) {
 		PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
 		free(dump);
