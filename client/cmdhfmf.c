@@ -16,6 +16,11 @@
 #define MIFARE_1K_MAXBLOCK 64
 #define MIFARE_MINI_MAXBLOCK 20
 
+#define MIFARE_MINI_MAXSECTOR 5
+#define MIFARE_1K_MAXSECTOR 16
+#define MIFARE_2K_MAXSECTOR 32
+#define MIFARE_4K_MAXSECTOR 40
+
 static int CmdHelp(const char *Cmd);
 
 int usage_hf14_ice(void){
@@ -591,7 +596,7 @@ int CmdHF14AMfRdSc(const char *Cmd) {
 	}	
 	
 	sectorNo = param_get8(Cmd, 0);
-	if (sectorNo > 39) {
+	if (sectorNo > MIFARE_4K_MAXSECTOR ) {
 		PrintAndLogEx(NORMAL, "Sector number must be less than 40");
 		return 1;
 	}
@@ -656,11 +661,11 @@ uint16_t NumOfBlocks(char card){
 }
 uint8_t NumOfSectors(char card){
 	switch(card){
-		case '0' : return 5;
-		case '1' : return 16;
-		case '2' : return 32;
-		case '4' : return 40;
-		default  : return 16;
+		case '0' : return MIFARE_MINI_MAXSECTOR; 
+		case '1' : return MIFARE_1K_MAXSECTOR; 
+		case '2' : return MIFARE_2K_MAXSECTOR; 
+		case '4' : return MIFARE_4K_MAXSECTOR; 
+		default  : return MIFARE_1K_MAXSECTOR;
 	}
 }
 
@@ -1497,11 +1502,11 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 	
 	// sectors
 	switch(ctmp) {
-		case '0': sectorsCnt =  5; break;
-		case '1': sectorsCnt = 16; break;
-		case '2': sectorsCnt = 32; break;
-		case '4': sectorsCnt = 40; break;
-		default:  sectorsCnt = 16;
+		case '0': sectorsCnt =  MIFARE_MINI_MAXSECTOR; break;
+		case '1': sectorsCnt = MIFARE_1K_MAXSECTOR; break;
+		case '2': sectorsCnt = MIFARE_2K_MAXSECTOR; break;
+		case '4': sectorsCnt = MIFARE_4K_MAXSECTOR; break;
+		default:  sectorsCnt = MIFARE_1K_MAXSECTOR;
 	}
 
 	for (i = 1; param_getchar(Cmd, i); i++) {
@@ -2412,14 +2417,14 @@ int CmdHF14AMfELoad(const char *Cmd) {
 		return usage_hf14_eload();
 	
 	switch (c) {
-		case '0' : numBlocks = 5*4; break;
+		case '0' : numBlocks = MIFARE_MINI_MAXBLOCK; break;
 		case '1' : 
-		case '\0': numBlocks = 16*4; break;
-		case '2' : numBlocks = 32*4; break;
-		case '4' : numBlocks = 256; break;
+		case '\0': numBlocks = MIFARE_1K_MAXBLOCK; break;
+		case '2' : numBlocks = MIFARE_2K_MAXBLOCK; break;
+		case '4' : numBlocks = MIFARE_4K_MAXBLOCK; break;
 		case 'u' : numBlocks = 255; blockWidth = 4; break;
 		default:  {
-			numBlocks = 16*4;
+			numBlocks = MIFARE_1K_MAXBLOCK;
 			nameParamNo = 0;
 		}
 	}
@@ -2761,7 +2766,7 @@ int CmdHF14AMfCLoad(const char *Cmd) {
 		blockNum++;
 		
 		// magic card type - mifare 1K
-		if (blockNum >= 16 * 4) break;  
+		if (blockNum >= MIFARE_1K_MAXBLOCK ) break;  
 	}
 	PrintAndLogEx(NORMAL, "\n");
 
