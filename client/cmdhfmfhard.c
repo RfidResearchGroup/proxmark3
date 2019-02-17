@@ -1038,8 +1038,11 @@ static bool shrink_key_space(float *brute_forces)
 	}
 	*brute_forces = MIN(brute_forces1, brute_forces2);
 	float reduction_rate = update_reduction_rate(*brute_forces, false);
-	return ((hardnested_stage & CHECK_2ND_BYTES) 
-		&& reduction_rate >= 0.0 && reduction_rate < brute_force_per_second * sample_period / 1000.0);
+
+//iceman 2018
+	return ((hardnested_stage & CHECK_2ND_BYTES) &&
+				reduction_rate >= 0.0 && 
+			   ( reduction_rate < brute_force_per_second * (float)sample_period / 1000.0  || *brute_forces < 0x1F000000000));			  
 }
 
 	
