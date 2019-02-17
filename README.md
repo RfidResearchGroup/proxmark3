@@ -78,7 +78,14 @@ This fork now compiles just fine on
 
 ## KALI and ARCHLINUX users
 Kali and ArchLinux users usually must kill their modem manager in order for the proxmark3 to enumerate properly.   
-`sudo apt remove modemmanager`
+```sh
+sudo apt remove modemmanager
+```
+or 
+```sh
+systemctl stop ModemManager
+systemctl disable ModemManager
+```
 
 ## Setup and build for UBUNTU
 GC made updates to allow this to build easily on Ubuntu 14.04.2 LTS, 15.10 or 16.04
