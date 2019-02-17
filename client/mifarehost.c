@@ -173,18 +173,19 @@ int mfCheckKeys_fast( uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk,
 		
 		// success array. each byte is status of key 
 		uint8_t arr[80];
-		uint64_t foo = bytes_to_num(resp.d.asBytes+480, 8);
-		for (uint8_t i = 0; i < 64;  ++i) {
-			arr[i] = (foo >> i) & 0x1;
-		}
-		foo = bytes_to_num(resp.d.asBytes+488, 2);
-		for (uint8_t i = 0; i < 16;  ++i) {
-			arr[i+64] = (foo >> i) & 0x1;
-		}
+		uint64_t foo = 0;
+		uint16_t bar = 0;
+		foo = bytes_to_num(resp.d.asBytes+480, 8);
+		bar = (resp.d.asBytes[489]  << 8 | resp.d.asBytes[488]);
 
+		for (uint8_t i = 0; i < 64; i++)
+			arr[i] = (foo >> i) & 0x1;
+	
+		for (uint8_t i = 0; i < 16; i++)
+			arr[i+64] = (bar >> i) & 0x1;
+		
 		// initialize storage for found keys
-		icesector_t *tmp = NULL;
-		tmp = calloc(sectorsCnt, sizeof(icesector_t));
+		icesector_t *tmp = calloc(sectorsCnt, sizeof(icesector_t));
 		if (tmp == NULL)
 			return 1;
 		memcpy(tmp, resp.d.asBytes, sectorsCnt * sizeof(icesector_t) );
