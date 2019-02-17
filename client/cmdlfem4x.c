@@ -404,8 +404,7 @@ int AskEm410xDemod(const char *Cmd, uint32_t *hi, uint64_t *lo, bool verbose) {
 // this read is the "normal" read,  which download lf signal and tries to demod here.
 int CmdEM410xRead(const char *Cmd) {
 	lf_read(true, 8192);
-	CmdEM410xDemod(Cmd);
-	return 0;
+	return CmdEM410xDemod(Cmd);
 }
 
 // this read loops on device side.
