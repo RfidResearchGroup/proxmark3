@@ -245,7 +245,7 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
 		retval = 200;
 		goto out;
 	}
-	PrintAndLogDevice(SUCCESS, "Save to json file " _YELLOW_(%s), fileName);
+	PrintAndLogDevice(SUCCESS, "saved to json file " _YELLOW_(%s), fileName);
 	json_decref(root);
 
 out:	
