@@ -518,57 +518,57 @@ int ul_print_type(uint32_t tagtype, uint8_t spaces){
 	char *spacer = spc + (10-spaces);
 
 	if ( tagtype & UL )	
-		PrintAndLogEx(NORMAL, "%sTYPE : MIFARE Ultralight (MF0ICU1) %s", spacer, (tagtype & MAGIC) ? "<magic>" : "" );
+		PrintAndLogEx(SUCCESS, "%sTYPE : MIFARE Ultralight (MF0ICU1) %s", spacer, (tagtype & MAGIC) ? "<magic>" : "" );
 	else if ( tagtype & UL_C)
-		PrintAndLogEx(NORMAL, "%sTYPE : MIFARE Ultralight C (MF0ULC) %s", spacer, (tagtype & MAGIC) ? "<magic>" : "" );
+		PrintAndLogEx(SUCCESS, "%sTYPE : MIFARE Ultralight C (MF0ULC) %s", spacer, (tagtype & MAGIC) ? "<magic>" : "" );
 	else if ( tagtype & UL_NANO_40)
-		PrintAndLogEx(NORMAL, "%sTYPE : MIFARE Ultralight Nano 40bytes (MF0UNH00)", spacer); 		
+		PrintAndLogEx(SUCCESS, "%sTYPE : MIFARE Ultralight Nano 40bytes (MF0UNH00)", spacer); 		
 	else if ( tagtype & UL_EV1_48)
-		PrintAndLogEx(NORMAL, "%sTYPE : MIFARE Ultralight EV1 48bytes (MF0UL1101)", spacer); 
+		PrintAndLogEx(SUCCESS, "%sTYPE : MIFARE Ultralight EV1 48bytes (MF0UL1101)", spacer); 
 	else if ( tagtype & UL_EV1_128)	
-		PrintAndLogEx(NORMAL, "%sTYPE : MIFARE Ultralight EV1 128bytes (MF0UL2101)", spacer);
+		PrintAndLogEx(SUCCESS, "%sTYPE : MIFARE Ultralight EV1 128bytes (MF0UL2101)", spacer);
 	else if ( tagtype & UL_EV1 )
-		PrintAndLogEx(NORMAL, "%sTYPE : MIFARE Ultralight EV1 UNKNOWN", spacer);
+		PrintAndLogEx(SUCCESS, "%sTYPE : MIFARE Ultralight EV1 UNKNOWN", spacer);
 	else if ( tagtype & NTAG )
-		PrintAndLogEx(NORMAL, "%sTYPE : NTAG UNKNOWN", spacer);
+		PrintAndLogEx(SUCCESS, "%sTYPE : NTAG UNKNOWN", spacer);
 	else if ( tagtype & NTAG_203 )
-		PrintAndLogEx(NORMAL, "%sTYPE : NTAG 203 144bytes (NT2H0301F0DT)", spacer);
+		PrintAndLogEx(SUCCESS, "%sTYPE : NTAG 203 144bytes (NT2H0301F0DT)", spacer);
 	else if ( tagtype & NTAG_210 )
-		PrintAndLogEx(NORMAL, "%sTYPE : NTAG 210 48bytes (NT2L1011G0DU)", spacer);
+		PrintAndLogEx(SUCCESS, "%sTYPE : NTAG 210 48bytes (NT2L1011G0DU)", spacer);
 	else if ( tagtype & NTAG_212 )
-		PrintAndLogEx(NORMAL, "%sTYPE : NTAG 212 128bytes (NT2L1211G0DU)", spacer);
+		PrintAndLogEx(SUCCESS, "%sTYPE : NTAG 212 128bytes (NT2L1211G0DU)", spacer);
 	else if ( tagtype & NTAG_213 )
-		PrintAndLogEx(NORMAL, "%sTYPE : NTAG 213 144bytes (NT2H1311G0DU)", spacer);
+		PrintAndLogEx(SUCCESS, "%sTYPE : NTAG 213 144bytes (NT2H1311G0DU)", spacer);
 	else if ( tagtype & NTAG_213_F )
-		PrintAndLogEx(NORMAL, "%sTYPE : NTAG 213F 144bytes (NT2H1311F0DTL)", spacer);
+		PrintAndLogEx(SUCCESS, "%sTYPE : NTAG 213F 144bytes (NT2H1311F0DTL)", spacer);
 	else if ( tagtype & NTAG_215 )
-		PrintAndLogEx(NORMAL, "%sTYPE : NTAG 215 504bytes (NT2H1511G0DU)", spacer);
+		PrintAndLogEx(SUCCESS, "%sTYPE : NTAG 215 504bytes (NT2H1511G0DU)", spacer);
 	else if ( tagtype & NTAG_216 )
-		PrintAndLogEx(NORMAL, "%sTYPE : NTAG 216 888bytes (NT2H1611G0DU)", spacer);
+		PrintAndLogEx(SUCCESS, "%sTYPE : NTAG 216 888bytes (NT2H1611G0DU)", spacer);
 	else if ( tagtype & NTAG_216_F )
-		PrintAndLogEx(NORMAL, "%sTYPE : NTAG 216F 888bytes (NT2H1611F0DTL)", spacer);	
+		PrintAndLogEx(SUCCESS, "%sTYPE : NTAG 216F 888bytes (NT2H1611F0DTL)", spacer);	
 	else if ( tagtype & NTAG_I2C_1K )
-		PrintAndLogEx(NORMAL, "%sTYPE : NTAG I%sC 888bytes (NT3H1101FHK)", spacer, "\xFD");
+		PrintAndLogEx(SUCCESS, "%sTYPE : NTAG I%sC 888bytes (NT3H1101FHK)", spacer, "\xFD");
 	else if ( tagtype & NTAG_I2C_2K )	
-		PrintAndLogEx(NORMAL, "%sTYPE : NTAG I%sC 1904bytes (NT3H1201FHK)", spacer, "\xFD");
+		PrintAndLogEx(SUCCESS, "%sTYPE : NTAG I%sC 1904bytes (NT3H1201FHK)", spacer, "\xFD");
 	else if ( tagtype & NTAG_I2C_1K_PLUS )
-		PrintAndLogEx(NORMAL, "%sTYPE : NTAG I%sC plus 888bytes (NT3H2111FHK)", spacer, "\xFD");
+		PrintAndLogEx(SUCCESS, "%sTYPE : NTAG I%sC plus 888bytes (NT3H2111FHK)", spacer, "\xFD");
 	else if ( tagtype & NTAG_I2C_2K_PLUS )	
-		PrintAndLogEx(NORMAL, "%sTYPE : NTAG I%sC plus 1912bytes (NT3H2211FHK)", spacer, "\xFD");
+		PrintAndLogEx(SUCCESS, "%sTYPE : NTAG I%sC plus 1912bytes (NT3H2211FHK)", spacer, "\xFD");
 	else if ( tagtype & MY_D )
-		PrintAndLogEx(NORMAL, "%sTYPE : INFINEON my-d\x99 (SLE 66RxxS)", spacer);
+		PrintAndLogEx(SUCCESS, "%sTYPE : INFINEON my-d\x99 (SLE 66RxxS)", spacer);
 	else if ( tagtype & MY_D_NFC )
-		PrintAndLogEx(NORMAL, "%sTYPE : INFINEON my-d\x99 NFC (SLE 66RxxP)", spacer);
+		PrintAndLogEx(SUCCESS, "%sTYPE : INFINEON my-d\x99 NFC (SLE 66RxxP)", spacer);
 	else if ( tagtype & MY_D_MOVE )
-		PrintAndLogEx(NORMAL, "%sTYPE : INFINEON my-d\x99 move (SLE 66R01P)", spacer);
+		PrintAndLogEx(SUCCESS, "%sTYPE : INFINEON my-d\x99 move (SLE 66R01P)", spacer);
 	else if ( tagtype & MY_D_MOVE_NFC )
-		PrintAndLogEx(NORMAL, "%sTYPE : INFINEON my-d\x99 move NFC (SLE 66R01P)", spacer);
+		PrintAndLogEx(SUCCESS, "%sTYPE : INFINEON my-d\x99 move NFC (SLE 66R01P)", spacer);
 	else if ( tagtype & MY_D_MOVE_LEAN )
-		PrintAndLogEx(NORMAL, "%sTYPE : INFINEON my-d\x99 move lean (SLE 66R01L)", spacer);
+		PrintAndLogEx(SUCCESS, "%sTYPE : INFINEON my-d\x99 move lean (SLE 66R01L)", spacer);
 	else if ( tagtype & FUDAN_UL )
-		PrintAndLogEx(NORMAL, "%sTYPE : FUDAN Ultralight Compatible (or other compatible) %s", spacer, (tagtype & MAGIC) ? "<magic>" : "" );
+		PrintAndLogEx(SUCCESS, "%sTYPE : FUDAN Ultralight Compatible (or other compatible) %s", spacer, (tagtype & MAGIC) ? "<magic>" : "" );
 	else
-		PrintAndLogEx(NORMAL, "%sTYPE : Unknown %06x", spacer, tagtype);
+		PrintAndLogEx(SUCCESS, "%sTYPE : Unknown %06x", spacer, tagtype);
 	return 0;
 }
 
@@ -606,7 +606,7 @@ static int ulc_print_configuration( uint8_t *data){
 
 static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t startPage){
 
-	PrintAndLogEx(NORMAL, "\n--- Tag Configuration");
+	PrintAndLogEx(SUCCESS, "\n--- Tag Configuration");
 
 	bool strg_mod_en = (data[0] & 2);
 	uint8_t authlim = (data[4] & 0x07);
@@ -1743,7 +1743,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 		}
 	}
 	ul_print_type(tagtype, 0);
-	PrintAndLogEx(NORMAL, "Reading tag memory...");
+	PrintAndLogEx(SUCCESS, "Reading tag memory...");
 	UsbCommand c = {CMD_MIFAREU_READCARD, {startPage, pages}};
 	if ( hasAuthKey ) {
 		if (tagtype & UL_C)

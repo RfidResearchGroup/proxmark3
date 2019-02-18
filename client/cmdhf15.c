@@ -519,21 +519,21 @@ int CmdHF15Info(const char *Cmd) {
 	SendCommand(&c);
 
 	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
-		PrintAndLogEx(NORMAL, "iso15693 card select failed");
+		PrintAndLogEx(WARNING, "iso15693 card select failed");
 		return 1;
 	}
 	
 	uint32_t status = resp.arg[0];
 	
 	if ( status < 2 ) {
-		PrintAndLogEx(NORMAL, "iso15693 card doesn't answer to systeminfo command");
+		PrintAndLogEx(WARNING, "iso15693 card doesn't answer to systeminfo command");
 		return 1;		
 	}
 	
 	recv = resp.d.asBytes;	
 	
 	if ( recv[0] & ISO15_RES_ERROR ) {
-		PrintAndLogEx(NORMAL, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0])); 
+		PrintAndLogEx(WARNING, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0])); 
 		return 3;
 	}
 	
@@ -575,8 +575,8 @@ int CmdHF15Info(const char *Cmd) {
 // Record Activity without enabeling carrier
 //helptext
 int CmdHF15Record(const char *Cmd) {
-	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H') return usage_15_record();
+	char cmdp =  tolower(param_getchar(Cmd, 0));
+	if (cmdp == 'h') return usage_15_record();
 	
 	UsbCommand c = {CMD_RECORD_RAW_ADC_SAMPLES_ISO_15693, {0,0,0}};
 	clearCommandBuffer();
@@ -598,8 +598,8 @@ int HF15Reader(const char *Cmd, bool verbose) {
 }
 
 int CmdHF15Reader(const char *Cmd) {
-	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H') return usage_15_reader();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (cmdp == 'h') return usage_15_reader();
 	
 	HF15Reader(Cmd, true);
 	return 0;
@@ -608,16 +608,16 @@ int CmdHF15Reader(const char *Cmd) {
 // Simulation is still not working very good
 // helptext
 int CmdHF15Sim(const char *Cmd) {
-	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) < 1 || cmdp == 'h' || cmdp == 'H') return usage_15_sim();
+	char cmdp =tolower(param_getchar(Cmd, 0));
+	if (strlen(Cmd) < 1 || cmdp == 'h') return usage_15_sim();
 
 	uint8_t uid[8] = {0,0,0,0,0,0,0,0};	
 	if (param_gethex(Cmd, 0, uid, 16)) {
-		PrintAndLogEx(NORMAL, "UID must include 16 HEX symbols");
+		PrintAndLogEx(WARNING, "UID must include 16 HEX symbols");
 		return 0;
 	}
 	
-	PrintAndLogEx(NORMAL, "Starting simulating UID %s", sprint_hex(uid, sizeof(uid)) );
+	PrintAndLogEx(SUCCESS, "Starting simulating UID %s", sprint_hex(uid, sizeof(uid)) );
 
 	UsbCommand c = {CMD_SIMTAG_ISO_15693, {0, 0, 0}};
 	memcpy(c.d.asBytes, uid, 8);
@@ -630,10 +630,10 @@ int CmdHF15Sim(const char *Cmd) {
 // (There is no standard way of reading the AFI, allthough some tags support this)
 // helptext
 int CmdHF15Afi(const char *Cmd) {
-	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H') return usage_15_findafi();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (cmdp == 'h') return usage_15_findafi();
 
-	PrintAndLogEx(NORMAL, "press pm3-button to cancel");
+	PrintAndLogEx(SUCCESS, "press pm3-button to cancel");
 	
 	UsbCommand c = {CMD_ISO_15693_FIND_AFI, {strtol(Cmd, NULL, 0), 0, 0}};
 	clearCommandBuffer();
@@ -689,7 +689,7 @@ int CmdHF15Dump(const char*Cmd) {
 	}	
 	// detect blocksize from card :)
 	
-	PrintAndLogEx(NORMAL, "Reading memory from tag UID %s", sprintUID(NULL, uid));
+	PrintAndLogEx(NORMAL, "Reading memory from tag UID " _YELLOW_(%s), sprintUID(NULL, uid));
 
 	int blocknum = 0;
 	uint8_t *recv = NULL;

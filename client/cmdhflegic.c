@@ -180,7 +180,7 @@ int CmdLegicInfo(const char *Cmd) {
 		return 1;
 	}
 
-	PrintAndLogEx(NORMAL, "Reading tag memory %d b...", card.cardsize);
+	PrintAndLogEx(SUCCESS, "Reading tag memory %d b...", card.cardsize);
 	
 	// allocate receiver buffer
 	uint8_t *data = calloc(card.cardsize, sizeof(uint8_t));
