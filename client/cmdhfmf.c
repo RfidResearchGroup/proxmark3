@@ -1834,7 +1834,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 	}
 	
 	if (keycnt == 0) {
-		PrintAndLogEx(NORMAL, "No key specified, trying default keys");
+		PrintAndLogEx(INFO, "No key specified, trying default keys");
 		for (;keycnt < MIFARE_DEFAULTKEYS_SIZE; keycnt++)
 			PrintAndLogEx(NORMAL, "[%2d] %02x%02x%02x%02x%02x%02x", keycnt,
 				(keyBlock + 6*keycnt)[0],(keyBlock + 6*keycnt)[1], (keyBlock + 6*keycnt)[2],
