@@ -1676,7 +1676,7 @@ out:
 					num_to_bytes(e_sector[i].Key[1], 6, block+10);
 				mfEmlSetMem(block, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1);
 			}
-			PrintAndLogEx(NORMAL, "Found keys have been transferred to the emulator memory");
+			PrintAndLogEx(SUCCESS, "Found keys have been transferred to the emulator memory");
 		}
 		
 		if (createDumpFile) {
@@ -1691,7 +1691,7 @@ out:
 				free(e_sector);
 				return 1;
 			}
-			PrintAndLogEx(NORMAL, "Printing keys to binary file %s...", fptr);
+			PrintAndLogEx(SUCCESS, "Printing keys to binary file %s...", fptr);
 		
 			for (i=0; i<sectorsCnt; i++) {
 				num_to_bytes(e_sector[i].Key[0], 6, tempkey);
@@ -1704,7 +1704,7 @@ out:
 			}
 
 			fclose(fkeys);
-			PrintAndLogEx(NORMAL, "Found keys have been dumped to %s --> 0xffffffffffff has been inserted for unknown keys.", fptr);			
+			PrintAndLogEx(SUCCESS, "Found keys have been dumped to %s --> 0xffffffffffff has been inserted for unknown keys.", fptr);			
 		}	
 	}
 	
