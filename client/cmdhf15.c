@@ -764,7 +764,7 @@ int CmdHF15Dump(const char*Cmd) {
 }
 
 int CmdHF15Restore(const char*Cmd) {
-	FILE *file;
+	FILE *f;
 	
 	uint8_t uid[8]={0x00};
 	char filename[FILE_PATH_SIZE] = {0x00};
@@ -774,10 +774,10 @@ int CmdHF15Restore(const char*Cmd) {
 	char newCmdPrefix[255] = {0x00}, tmpCmd[255] = {0x00};
 	char param[FILE_PATH_SIZE]="";
 	char hex[255]="";
-	uint8_t retries = 3, tried = 0;
+	uint8_t retries = 3, tried = 0, i = 0;
 	int retval=0;
 	size_t bytes_read;
-	uint8_t i=0;
+
 		while(param_getchar(Cmd, cmdp) != 0x00) {
 		switch(tolower(param_getchar(Cmd, cmdp))) {
 			case '-':
@@ -785,7 +785,8 @@ int CmdHF15Restore(const char*Cmd) {
 				switch(param[1])
 				{
 					case '2':
-					case 'o': strncpy(newCmdPrefix, " ",sizeof(newCmdPrefix)-1);
+					case 'o':
+						strncpy(newCmdPrefix, " ", sizeof(newCmdPrefix)-1);
 						strncat(newCmdPrefix, param, sizeof(newCmdPrefix)-1);
 								break;
 					default:
@@ -815,18 +816,18 @@ int CmdHF15Restore(const char*Cmd) {
 			default:
 				PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
 				return usage_15_restore();
-				break;
 		}
 		cmdp++;
 	}
+
 	PrintAndLogEx(INFO,"Blocksize: %u",blocksize);
-	if(filename[0]=='\0')
-	{
+	
+	if ( !strlen(filename)) {
 		PrintAndLogEx(WARNING,"Please provide a filename");
-		return 1;
+		return usage_15_restore();
 	}
 
-	if ((file = fopen(filename,"rb")) == NULL) {
+	if ((f = fopen(filename, "rb")) == NULL) {
 		PrintAndLogEx(WARNING, "Could not find file %s", filename);
 		return 2;
 	}
@@ -835,40 +836,43 @@ int CmdHF15Restore(const char*Cmd) {
 		PrintAndLogEx(WARNING, "No tag found");
 		return 3;
 	}
+	
 	while (1) {
-		tried=0;
-		hex[0]=0x00;
-		tmpCmd[0]=0x00;
+		tried = 0;
+		hex[0] = 0x00;
+		tmpCmd[0] = 0x00;
 		
-		bytes_read = fread( buff, 1, blocksize, file );
+		bytes_read = fread( buff, 1, blocksize, f );
 		if ( bytes_read == 0) {
-			PrintAndLogEx(SUCCESS, "File reading done (%s).", filename);
-			fclose(file);
+			PrintAndLogEx(SUCCESS, "File reading done `%s`", filename);
+			fclose(f);
 			return 0;
-		}
-		else if ( bytes_read != blocksize) {
+		} else if ( bytes_read != blocksize) {
 			PrintAndLogEx(WARNING, "File reading error (%s), %u bytes read instead of %u bytes.", filename, bytes_read, blocksize);
-			fclose(file);
+			fclose(f);
 			return 2;
 		}
-		for(int j=0;j<blocksize;j++)
-			snprintf(hex+j*2,3,"%02X", (unsigned char)buff[j]);
-		for(int j=0;j<sizeof(uid)/sizeof(uid[0]);j++)
+		
+		for(int j=0; j < blocksize; j++)
+			snprintf(hex+j*2, 3, "%02X", buff[j]);
+		
+		for(int j=0; j < sizeof(uid)/sizeof(uid[0]); j++)
 			snprintf(buff+j*2,3,"%02X", uid[j]);
 		
 		//TODO: Addressed mode currently not work
 		//snprintf(tmpCmd, sizeof(tmpCmd), "%s %s %d %s", newCmdPrefix, buff, i, hex);
-		snprintf(tmpCmd, sizeof(tmpCmd), "%s u %d %s", newCmdPrefix, i, hex);
-		PrintAndLogEx(DEBUG, "Command to be sent: %s", tmpCmd);
+		snprintf(tmpCmd, sizeof(tmpCmd), "%s u %u %s", newCmdPrefix, i, hex);
+		PrintAndLogEx(DEBUG, "Command to be sent| %s", tmpCmd);
 
-		for(tried=0;tried<retries;tried++)
-			if(!(retval=CmdHF15Write(tmpCmd)))
+		for(tried=0; tried < retries; tried++)
+			if(!(retval = CmdHF15Write(tmpCmd)))
 				break;
 		if(tried >= retries)
 			return retval;
+
 		i++;
 	}
-	fclose(file);
+	fclose(f);
 }
 
 int CmdHF15List(const char *Cmd) {
