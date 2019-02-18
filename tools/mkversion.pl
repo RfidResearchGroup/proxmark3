@@ -28,7 +28,7 @@ my $clean = 2;
 # fatal: No names found, cannot describe anything.
 ##
 # anyway forcing any kind of shell is at least useless, at worst fatal.
-my $commandGIT = "env -S which git";
+my $commandGIT = "env which git";
 
 if ( defined($commandGIT) )  {
 
