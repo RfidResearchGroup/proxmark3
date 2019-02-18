@@ -945,7 +945,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 	}
 
 	if ((fkeys = fopen(keyFilename, "rb")) == NULL) {
-		PrintAndLogEx(WARNING, "Could not find file %s", keyFilename);
+		PrintAndLogEx(WARNING, "Could not find file " _YELLOW_(%s), keyFilename);
 		return 1;
 	}
 	
@@ -979,10 +979,10 @@ int CmdHF14AMfRestore(const char *Cmd) {
 	}
 
 	if ((fdump = fopen(dataFilename, "rb")) == NULL) {
-		PrintAndLogEx(WARNING, "Could not find file %s", dataFilename);
+		PrintAndLogEx(WARNING, "Could not find file " _YELLOW_(%s), dataFilename);
 		return 1;
 	}	
-	PrintAndLogEx(INFO, "Restoring %s to card", dataFilename);
+	PrintAndLogEx(INFO, "Restoring " _YELLOW_(%s)" to card", dataFilename);
 
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		for (blockNo = 0; blockNo < NumBlocksPerSector(sectorNo); blockNo++) {
@@ -1561,7 +1561,7 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 				if( buf[0]=='#' ) continue;	//The line start with # is comment, skip
 
 				if (!isxdigit(buf[0])){
-					PrintAndLogEx(FAILED, "File content error. '%s' must include 12 HEX symbols", buf);
+					PrintAndLogEx(FAILED, "File content error. '" _YELLOW_(%s)"' must include 12 HEX symbols", buf);
 					continue;
 				}
 				
@@ -1622,7 +1622,7 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 					
 					if (ukbhit()) {
 						int gc = getchar(); (void)gc;
-						PrintAndLogEx(NORMAL, "\naborted via keyboard!\n");
+						PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
 						goto out;
 					}
 					
@@ -1686,7 +1686,7 @@ out:
 
 			FILE *fkeys = fopen(fptr, "wb");
 			if (fkeys == NULL) { 
-				PrintAndLogEx(WARNING, "Could not create file %s", fptr);
+				PrintAndLogEx(WARNING, "Could not create file " _YELLOW_(%s), fptr);
 				free(keyBlock);
 				free(e_sector);
 				return 1;
@@ -1750,23 +1750,21 @@ int CmdHF14AMfChk(const char *Cmd) {
 		blockNo = param_get8(Cmd, 0);
 	}
 	
-	ctmp = param_getchar(Cmd, 1);
+	ctmp = tolower(param_getchar(Cmd, 1));
 	clen = param_getlength(Cmd, 1);
 	if (clen == 1) {
 		switch (ctmp) {	
 		case 'a':
-		case 'A':
 			keyType = 0;
 			break;
 		case 'b':
-		case 'B':
 			keyType = 1;
 			break;
 		case '?':
 			keyType = 2;
 			break;
 		default:
-			PrintAndLogEx(NORMAL, "Key type must be A , B or ?");
+			PrintAndLogEx(FAILED, "Key type must be A , B or ?");
 			free(keyBlock);
 			return 1;
 		};
@@ -1774,7 +1772,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 
 	for (i = 2; param_getchar(Cmd, i); i++) {
 
-		ctmp = param_getchar(Cmd, i);	
+		ctmp = tolower(param_getchar(Cmd, i));
 		clen = param_getlength(Cmd, i);
 		
 		if (clen == 12) {
@@ -1796,8 +1794,8 @@ int CmdHF14AMfChk(const char *Cmd) {
 			PrintAndLogEx(NORMAL, "[%2d] key %s", keycnt, sprint_hex( (keyBlock + 6*keycnt), 6 ) );;
 			keycnt++;
 		} else if ( clen == 1 ) {
-			if (ctmp == 't' || ctmp == 'T') { transferToEml = 1; continue; }
-			if (ctmp == 'd' || ctmp == 'D') { createDumpFile = 1; continue; }
+			if (ctmp == 't' ) { transferToEml = 1; continue; }
+			if (ctmp == 'd' ) { createDumpFile = 1; continue; }
 		} else {
 			// May be a dic file
 			if ( param_getstr(Cmd, i, filename, sizeof(filename)) >= FILE_PATH_SIZE ) {
@@ -1822,7 +1820,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 
 				// codesmell, only checks first char?
 				if (!isxdigit(buf[0])){
-					PrintAndLogEx(FAILED, "File content error. '%s' must include 12 HEX symbols",buf);
+					PrintAndLogEx(FAILED, "File content error. '" _YELLOW_(%s)"' must include 12 HEX symbols",buf);
 					continue;
 				}
 				
@@ -1964,7 +1962,7 @@ out:
 				num_to_bytes(e_sector[i].Key[1], 6, block+10);
 			mfEmlSetMem(block, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1);
 		}
-		PrintAndLogEx(INFO, "Found keys have been transferred to the emulator memory");
+		PrintAndLogEx(SUCCESS, "Found keys have been transferred to the emulator memory");
 	}
 	
 	if (createDumpFile) {
@@ -1974,7 +1972,7 @@ out:
 
 		FILE *fkeys = fopen(fptr, "wb");
 		if (fkeys == NULL) { 
-			PrintAndLogEx(WARNING, "Could not create file %s", fptr);
+			PrintAndLogEx(WARNING, "Could not create file " _YELLOW_(%s), fptr);
 			free(keyBlock);
 			free(e_sector);
 			return 1;
@@ -2039,7 +2037,7 @@ void readerAttack(nonces_t data, bool setEmulatorMem, bool verbose) {
 		uint8_t sector = data.sector;
 		uint8_t keytype = data.keytype;
 
-		PrintAndLogEx(NORMAL, "Reader is trying authenticate with: Key %s, sector %02d: [%012" PRIx64 "]"
+		PrintAndLogEx(INFO, "Reader is trying authenticate with: Key %s, sector %02d: [%012" PRIx64 "]"
 			, keytype ? "B" : "A"
 			, sector
 			, key
@@ -2054,7 +2052,7 @@ void readerAttack(nonces_t data, bool setEmulatorMem, bool verbose) {
 			num_to_bytes( k_sector[sector].Key[0], 6, memBlock);
 			num_to_bytes( k_sector[sector].Key[1], 6, memBlock+10);
 			//iceman,  guessing this will not work so well for 4K tags.
-			PrintAndLogEx(NORMAL, "Setting Emulator Memory Block %02d: [%s]"
+			PrintAndLogEx(INFO, "Setting Emulator Memory Block %02d: [%s]"
 				, (sector*4) + 3
 				, sprint_hex( memBlock, sizeof(memBlock))
 				);
@@ -2129,7 +2127,7 @@ int CmdHF14AMf1kSim(const char *Cmd) {
 	UsbCommand resp;		
 
 	if(flags & FLAG_INTERACTIVE) {
-		PrintAndLogEx(NORMAL, "Press pm3-button or send another cmd to abort simulation");
+		PrintAndLogEx(INFO, "Press pm3-button or send another cmd to abort simulation");
 
 		while( !ukbhit() ){	
 			if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500) ) continue;
@@ -2165,8 +2163,8 @@ int CmdHF14AMfSniff(const char *Cmd){
 	
 	memset(uid, 0x00, sizeof(uid));
 	
-	char ctmp = param_getchar(Cmd, 0);
-	if ( ctmp == 'h' || ctmp == 'H' ) return usage_hf14_sniff();
+	char ctmp = tolower(param_getchar(Cmd, 0));
+	if ( ctmp == 'h') return usage_hf14_sniff();
 	
 	for (int i = 0; i < 4; i++) {
 		ctmp = tolower(param_getchar(Cmd, i));
@@ -2193,7 +2191,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 		printf("."); fflush(stdout);
 		if (ukbhit()) {
 			int gc = getchar(); (void)gc;
-			PrintAndLogEx(NORMAL, "\n[!] aborted via keyboard!\n");
+			PrintAndLogEx(INFO, "\naborted via keyboard!\n");
 			break;
 		}
 		
@@ -2496,7 +2494,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
 			return 4;
 		}
 	}
-	PrintAndLogEx(SUCCESS, "Loaded %d blocks from file: %s", blockNum, filename);
+	PrintAndLogEx(SUCCESS, "Loaded %d blocks from file: " _YELLOW_(%s), blockNum, filename);
 	return 0;
 }
 
@@ -2804,8 +2802,8 @@ int CmdHF14AMfCGetBlk(const char *Cmd) {
 	int res;
 	memset(data, 0x00, sizeof(data));
 
-	char ctmp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) < 1 || ctmp == 'h' || ctmp == 'H') return usage_hf14_cgetblk();
+	char ctmp = tolower(param_getchar(Cmd, 0));
+	if (strlen(Cmd) < 1 || ctmp == 'h') return usage_hf14_cgetblk();
 
 	blockNo = param_get8(Cmd, 0);
 
@@ -2840,8 +2838,8 @@ int CmdHF14AMfCGetSc(const char *Cmd) {
 	uint8_t sector = 0;
 	int i, res, flags;
 
-	char ctmp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) < 1 || ctmp == 'h' || ctmp == 'H') return usage_hf14_cgetsc();
+	char ctmp = tolower(param_getchar(Cmd, 0));
+	if (strlen(Cmd) < 1 || ctmp == 'h') return usage_hf14_cgetsc();
 
 	sector = param_get8(Cmd, 0);
 	if (sector > 39) {
@@ -2979,8 +2977,8 @@ int CmdHF14AMfCSave(const char *Cmd) {
 //needs nt, ar, at, Data to decrypt
 int CmdHf14AMfDecryptBytes(const char *Cmd){
 	
-	char ctmp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) < 1 || ctmp == 'h' || ctmp == 'H') return usage_hf14_decryptbytes();
+	char ctmp = tolower(param_getchar(Cmd, 0));
+	if (strlen(Cmd) < 1 || ctmp == 'h') return usage_hf14_decryptbytes();
 	
 	uint32_t nt 	= param_get32ex(Cmd,0,0,16);
 	uint32_t ar_enc = param_get32ex(Cmd,1,0,16);
@@ -3031,7 +3029,7 @@ int CmdHf14AMfSetMod(const char *Cmd) {
 	UsbCommand resp;
 	if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
 		uint8_t ok = resp.arg[0] & 0xff;
-		PrintAndLogEx(NORMAL, "isOk:%02x", ok);
+		PrintAndLogEx(SUCCESS, "isOk:%02x", ok);
 		if (!ok)
 			PrintAndLogEx(FAILED, "Failed.");
 	} else {
@@ -3044,12 +3042,12 @@ int CmdHf14AMfSetMod(const char *Cmd) {
 int CmdHf14AMfNack(const char *Cmd) {
 
 	bool verbose = false;
-	char ctmp = param_getchar(Cmd, 0);	
-	if ( ctmp == 'h' || ctmp == 'H' ) return usage_hf14_nack();
-	if ( ctmp == 'v' || ctmp == 'V' ) verbose = true;
+	char ctmp = tolower(param_getchar(Cmd, 0));
+	if ( ctmp == 'h' ) return usage_hf14_nack();
+	if ( ctmp == 'v' ) verbose = true;
 
 	if ( verbose )
-		PrintAndLogEx(NORMAL, "Started testing card for NACK bug. Press key to abort");
+		PrintAndLogEx(INFO, "Started testing card for NACK bug. Press key to abort");
 	
 	detect_classic_nackbug(verbose);
 	return 0;
@@ -3107,7 +3105,7 @@ int CmdHF14AMfice(const char *Cmd) {
 	PrintAndLogEx(NORMAL, "Collecting %u nonces \n", limit);
 	
 	if ((fnonces = fopen(filename,"wb")) == NULL) { 
-		PrintAndLogEx(WARNING, "Could not create file %s",filename);
+		PrintAndLogEx(WARNING, "Could not create file " _YELLOW_(%s),filename);
 		return 3;
 	}
 
@@ -3118,7 +3116,7 @@ int CmdHF14AMfice(const char *Cmd) {
 	do {
 		if (ukbhit()) {
 			int gc = getchar(); (void)gc;
-			PrintAndLogEx(NORMAL, "\naborted via keyboard!\n");
+			PrintAndLogEx(INFO, "\naborted via keyboard!\n");
 			break;
 		}
 		
@@ -3140,7 +3138,7 @@ int CmdHF14AMfice(const char *Cmd) {
 	
 		total_num_nonces += items;
 		if ( total_num_nonces > part_limit ) {
-			PrintAndLogEx(NORMAL, "Total nonces %u\n", total_num_nonces);
+			PrintAndLogEx(INFO, "Total nonces %u\n", total_num_nonces);
 			part_limit += 3000;
 		}
 		
@@ -3151,7 +3149,7 @@ int CmdHF14AMfice(const char *Cmd) {
 	} while (!acquisition_completed);
 
 out:
-	PrintAndLogEx(NORMAL, "time: %" PRIu64 " seconds\n", (msclock()-t1)/1000);
+	PrintAndLogEx(SUCCESS, "time: %" PRIu64 " seconds\n", (msclock()-t1)/1000);
 	
 	if ( fnonces ) {
 		fflush(fnonces);
