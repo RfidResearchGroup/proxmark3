@@ -734,7 +734,7 @@ int CmdHF14AMfDump(const char *Cmd) {
 	}
 
 	if ((fin = fopen(keyFilename, "rb")) == NULL) {
-		PrintAndLogEx(WARNING, "Could not find file %s", keyFilename);
+		PrintAndLogEx(WARNING, "Could not find file " _YELLOW_(%s), keyFilename);
 		return 1;
 	}
 	
@@ -743,7 +743,7 @@ int CmdHF14AMfDump(const char *Cmd) {
 	for (sectorNo=0; sectorNo<numSectors; sectorNo++) {
 		bytes_read = fread( keyA[sectorNo], 1, 6, fin );
 		if ( bytes_read != 6) {
-			PrintAndLogEx(NORMAL, "File reading error.");
+			PrintAndLogEx(WARNING, "File reading error.");
 			fclose(fin);
 			return 2;
 		}
@@ -753,7 +753,7 @@ int CmdHF14AMfDump(const char *Cmd) {
 	for (sectorNo=0; sectorNo<numSectors; sectorNo++) {
 		bytes_read = fread( keyB[sectorNo], 1, 6, fin );
 		if ( bytes_read != 6) {
-			PrintAndLogEx(NORMAL, "File reading error.");
+			PrintAndLogEx(WARNING, "File reading error.");
 			fclose(fin);
 			return 2;
 		}
@@ -879,13 +879,13 @@ int CmdHF14AMfDump(const char *Cmd) {
 		}
 		
 		if ((fout = fopen(dataFilename,"wb")) == NULL) { 
-			PrintAndLogEx(WARNING, "could not create file name %s", dataFilename);
+			PrintAndLogEx(WARNING, "could not create file name " _YELLOW_(%s), dataFilename);
 			return 1;
 		}
 		uint16_t numblocks = FirstBlockOfSector(numSectors - 1) + NumBlocksPerSector(numSectors - 1);
 		fwrite(carddata, 1, 16*numblocks, fout);
 		fclose(fout);
-		PrintAndLogEx(SUCCESS, "dumped %d blocks (%d bytes) to file %s", numblocks, 16*numblocks, dataFilename);
+		PrintAndLogEx(SUCCESS, "dumped %d blocks (%d bytes) to file " _YELLOW_(%s), numblocks, 16*numblocks, dataFilename);
 	}
 	return 0;
 }
@@ -953,7 +953,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		bytes_read = fread( keyA[sectorNo], 1, 6, fkeys );
 		if ( bytes_read != 6 ) {
-			PrintAndLogEx(NORMAL, "File reading error (%s).", keyFilename);
+			PrintAndLogEx(WARNING, "File reading error  " _YELLOW_(%s), keyFilename);
 			fclose(fkeys);
 			return 2;
 		}
@@ -962,7 +962,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		bytes_read = fread( keyB[sectorNo], 1, 6, fkeys );
 		if ( bytes_read != 6 ) {
-			PrintAndLogEx(NORMAL, "File reading error (%s).", keyFilename);
+			PrintAndLogEx(WARNING, "File reading error " _YELLOW_(%s), keyFilename);
 			fclose(fkeys);
 			return 2;
 		}
@@ -982,7 +982,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 		PrintAndLogEx(WARNING, "Could not find file %s", dataFilename);
 		return 1;
 	}	
-	PrintAndLogEx(NORMAL, "Restoring %s to card", dataFilename);
+	PrintAndLogEx(INFO, "Restoring %s to card", dataFilename);
 
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		for (blockNo = 0; blockNo < NumBlocksPerSector(sectorNo); blockNo++) {
@@ -990,7 +990,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 			memcpy(c.d.asBytes, key, 6);			
 			bytes_read = fread(bldata, 1, 16, fdump);
 			if ( bytes_read != 16) {
-				PrintAndLogEx(NORMAL, "File reading error (%s).", dataFilename);
+				PrintAndLogEx(WARNING, "File reading error " _YELLOW_(%s), dataFilename);
 				fclose(fdump);
 				fdump = NULL;				
 				return 2;
@@ -1020,9 +1020,9 @@ int CmdHF14AMfRestore(const char *Cmd) {
 			UsbCommand resp;
 			if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
 				uint8_t isOK  = resp.arg[0] & 0xff;
-				PrintAndLogEx(NORMAL, "isOk:%02x", isOK);
+				PrintAndLogEx(SUCCESS, "isOk:%02x", isOK);
 			} else {
-				PrintAndLogEx(NORMAL, "Command execute timeout");
+				PrintAndLogEx(WARNING, "Command execute timeout");
 			}
 		}
 	}
@@ -1192,7 +1192,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 
 
 		// 20160116 If Sector A is found, but not Sector B,  try just reading it of the tag?
-		PrintAndLogEx(SUCCESS, "trying to read key B...");
+		PrintAndLogEx(INFO, "trying to read key B...");
 		for (i = 0; i < SectorsCnt; i++) {
 			// KEY A  but not KEY B
 			if ( e_sector[i].foundKey[0] && !e_sector[i].foundKey[1] ) {
@@ -1246,12 +1246,12 @@ int CmdHF14AMfNested(const char *Cmd) {
 				return 1;
 			
 			if ((fkeys = fopen(fptr, "wb")) == NULL) { 
-				PrintAndLogEx(WARNING, "could not create file %s", fptr);
+				PrintAndLogEx(WARNING, "could not create file " _YELLOW_(%s), fptr);
 				free(e_sector);
 				return 1;
 			}
 			
-			PrintAndLogEx(SUCCESS, "saving keys to binary file %s...", fptr);
+			PrintAndLogEx(SUCCESS, "saving keys to binary file " _YELLOW_(%s), fptr);
 			for (i=0; i<SectorsCnt; i++) {
 				if (e_sector[i].foundKey[0]){
 					num_to_bytes(e_sector[i].Key[0], 6, tempkey);
@@ -1319,14 +1319,14 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 		default:
 			if (param_getchar(Cmd, cmdp) == 0x00)
 			{
-				PrintAndLogEx(NORMAL, "Block number is missing");
+				PrintAndLogEx(WARNING, "Block number is missing");
 				return 1;
 			
 			}
 			blockNo = param_get8(Cmd, cmdp);
 			ctmp = tolower(param_getchar(Cmd, cmdp+1));
 			if (ctmp != 'a' && ctmp != 'b') {
-				PrintAndLogEx(NORMAL, "Key type must be A or B");
+				PrintAndLogEx(WARNING, "Key type must be A or B");
 				return 1;
 			}
 			
@@ -1335,13 +1335,13 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 			}
 			
 			if (param_gethex(Cmd, cmdp+2, key, 12)) {
-				PrintAndLogEx(NORMAL, "Key must include 12 HEX symbols");
+				PrintAndLogEx(WARNING, "Key must include 12 HEX symbols");
 				return 1;
 			}
 			
 			if (param_getchar(Cmd, cmdp+3) == 0x00)
 			{
-				PrintAndLogEx(NORMAL, "Target block number is missing");
+				PrintAndLogEx(WARNING, "Target block number is missing");
 				return 1;
 			}
 			
@@ -1349,7 +1349,7 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 
 			ctmp = tolower(param_getchar(Cmd, cmdp+4));
 			if (ctmp != 'a' && ctmp != 'b') {
-				PrintAndLogEx(NORMAL, "Target key type must be A or B");
+				PrintAndLogEx(WARNING, "Target key type must be A or B");
 				return 1;
 			}
 			if (ctmp != 'a') {
@@ -1407,7 +1407,7 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 					SetSIMDInstr(SIMD_NONE);
 					break;
 				default:
-					PrintAndLog("Unknown SIMD type. %c", ctmp);
+					PrintAndLogEx(WARNING, "Unknown SIMD type. %c", ctmp);
 					return 1;
 			}
 			cmdp += 2;
@@ -1425,7 +1425,7 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 		// check if we can authenticate to sector
 		int res = mfCheckKeys(blockNo, keyType, true, 1, key, &key64);
 		if (res) {
-			PrintAndLogEx(NORMAL, "Key is wrong. Can't authenticate to block:%3d key type:%c", blockNo, keyType ? 'B' : 'A');
+			PrintAndLogEx(WARNING, "Key is wrong. Can't authenticate to block:%3d key type:%c", blockNo, keyType ? 'B' : 'A');
 			return 3;
 		}	
 	}
@@ -1547,7 +1547,7 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 			
 			f = fopen( filename, "r");
 			if ( !f ){
-				PrintAndLogEx(FAILED, "File: %s: not found or locked.", filename);
+				PrintAndLogEx(FAILED, "File: " _YELLOW_(%s) ": not found or locked.", filename);
 				continue;
 			}
 			
@@ -1561,7 +1561,7 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 				if( buf[0]=='#' ) continue;	//The line start with # is comment, skip
 
 				if (!isxdigit(buf[0])){
-					PrintAndLogEx(FAILED, "File content error. '%s' must include 12 HEX symbols",buf);
+					PrintAndLogEx(FAILED, "File content error. '%s' must include 12 HEX symbols", buf);
 					continue;
 				}
 				
@@ -1583,7 +1583,7 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
 				memset(buf, 0, sizeof(buf));
 			}
 			fclose(f);
-			PrintAndLogEx(SUCCESS, "Loaded %2d keys from %s", keycnt, filename);
+			PrintAndLogEx(SUCCESS, "Loaded %2d keys from " _YELLOW_(%s), keycnt, filename);
 		}
 	}
 		
@@ -1716,8 +1716,8 @@ out:
 
 int CmdHF14AMfChk(const char *Cmd) {
 
-	char ctmp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) < 3 || ctmp == 'h' || ctmp == 'H') return usage_hf14_chk();
+	char ctmp = tolower(param_getchar(Cmd, 0));
+	if (strlen(Cmd) < 3 || ctmp == 'h') return usage_hf14_chk();
 
 	FILE * f;
 	char filename[FILE_PATH_SIZE]={0};
@@ -1807,7 +1807,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 			
 			f = fopen( filename , "r");
 			if ( !f ) {
-				PrintAndLogEx(FAILED, "File: %s: not found or locked.", filename);
+				PrintAndLogEx(FAILED, "File: " _YELLOW_(%s)": not found or locked.", filename);
 				continue;
 			}
 			
@@ -1845,7 +1845,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 				memset(buf, 0, sizeof(buf));
 			}
 			fclose(f);
-			PrintAndLogEx(SUCCESS, "Loaded %2d keys from %s", keycnt, filename);
+			PrintAndLogEx(SUCCESS, "Loaded %2d keys from " _YELLOW_(%s), keycnt, filename);
 		}
 	}
 	
@@ -1894,7 +1894,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 				printf("."); fflush(stdout);
 				if (ukbhit()) {
 					int gc = getchar();	(void)gc;
-					PrintAndLogEx(NORMAL, "\naborted via keyboard!\n");
+					PrintAndLogEx(INFO, "\naborted via keyboard!\n");
 					goto out;
 				}
 								
@@ -1913,12 +1913,12 @@ int CmdHF14AMfChk(const char *Cmd) {
 		}
 	}
 	t1 = msclock() - t1;
-	PrintAndLogEx(NORMAL, "\nTime in checkkeys: %.0f seconds\n", (float)t1/1000.0);
+	PrintAndLogEx(SUCCESS, "\nTime in checkkeys: %.0f seconds\n", (float)t1/1000.0);
 
 		
 	// 20160116 If Sector A is found, but not Sector B,  try just reading it of the tag?
 	if ( keyType != 1 ) {
-		PrintAndLogEx(NORMAL, "testing to read key B...");
+		PrintAndLogEx(INFO, "testing to read key B...");
 		for (i = 0; i < SectorsCnt; i++) {
 			// KEY A  but not KEY B
 			if ( e_sector[i].foundKey[0] && !e_sector[i].foundKey[1] ) {
