@@ -245,7 +245,7 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
 		retval = 200;
 		goto out;
 	}
-	PrintAndLogDevice(SUCCESS, "File `" _YELLOW_(%s)"` saved.", fileName);
+	PrintAndLogDevice(SUCCESS, "Save to json file " _YELLOW_(%s), fileName);
 	json_decref(root);
 
 out:	
@@ -445,7 +445,7 @@ int loadFileJSON(const char *preferredName, const char *suffix, void* data, size
 	}
 
 	
-	PrintAndLog("Loaded JSON: " _YELLOW_(%s) " OK.", fileName);
+	PrintAndLog("loaded from JSON file " _YELLOW_(%s), fileName);
 out:	
 	json_decref(root);
 	free(fileName);
