@@ -1649,47 +1649,63 @@ out:
 	t1 = msclock() - t1;
 	PrintAndLogEx(SUCCESS, "Time in checkkeys (fast):  %.1fs\n", (float)(t1/1000.0));
 
-	printKeyTable( sectorsCnt, e_sector );
-
-	if (transferToEml) {
-		uint8_t block[16] = {0x00};
-		for (uint8_t i = 0; i < sectorsCnt; ++i ) {
-			mfEmlGetMem(block, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1);
-			if (e_sector[i].foundKey[0])
-				num_to_bytes(e_sector[i].Key[0], 6, block);
-			if (e_sector[i].foundKey[1])
-				num_to_bytes(e_sector[i].Key[1], 6, block+10);
-			mfEmlSetMem(block, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1);
-		}
-		PrintAndLogEx(NORMAL, "Found keys have been transferred to the emulator memory");
+	// check..
+	uint8_t found_keys = 0;
+	for (uint8_t i = 0; i < sectorsCnt; ++i) {
+		
+		if ( e_sector[i].foundKey[0] ) 
+			found_keys++;
+		
+		if ( e_sector[i].foundKey[1] )
+			found_keys++;
 	}
 	
-	if (createDumpFile) {
-		fptr = GenerateFilename("hf-mf-", "-key.bin");
-		if (fptr == NULL) 
-			return 1;
-
-		FILE *fkeys = fopen(fptr, "wb");
-		if (fkeys == NULL) { 
-			PrintAndLogEx(WARNING, "Could not create file %s", fptr);
-			free(keyBlock);
-			free(e_sector);
-			return 1;
-		}
-		PrintAndLogEx(NORMAL, "Printing keys to binary file %s...", fptr);
+	if ( found_keys == 0 ) {
+		PrintAndLogEx(WARNING, "No keys found");
+	} else {
 	
-		for (i=0; i<sectorsCnt; i++) {
-			num_to_bytes(e_sector[i].Key[0], 6, tempkey);
-			fwrite (tempkey, 1, 6, fkeys);
-		}
+		printKeyTable( sectorsCnt, e_sector );
 
-		for (i=0; i<sectorsCnt; i++) {
-			num_to_bytes(e_sector[i].Key[1], 6, tempkey);
-			fwrite (tempkey, 1, 6, fkeys );
+		if (transferToEml) {
+			uint8_t block[16] = {0x00};
+			for (uint8_t i = 0; i < sectorsCnt; ++i ) {
+				mfEmlGetMem(block, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1);
+				if (e_sector[i].foundKey[0])
+					num_to_bytes(e_sector[i].Key[0], 6, block);
+				if (e_sector[i].foundKey[1])
+					num_to_bytes(e_sector[i].Key[1], 6, block+10);
+				mfEmlSetMem(block, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1);
+			}
+			PrintAndLogEx(NORMAL, "Found keys have been transferred to the emulator memory");
 		}
+		
+		if (createDumpFile) {
+			fptr = GenerateFilename("hf-mf-", "-key.bin");
+			if (fptr == NULL) 
+				return 1;
 
-		fclose(fkeys);
-		PrintAndLogEx(NORMAL, "Found keys have been dumped to %s --> 0xffffffffffff has been inserted for unknown keys.", fptr);			
+			FILE *fkeys = fopen(fptr, "wb");
+			if (fkeys == NULL) { 
+				PrintAndLogEx(WARNING, "Could not create file %s", fptr);
+				free(keyBlock);
+				free(e_sector);
+				return 1;
+			}
+			PrintAndLogEx(NORMAL, "Printing keys to binary file %s...", fptr);
+		
+			for (i=0; i<sectorsCnt; i++) {
+				num_to_bytes(e_sector[i].Key[0], 6, tempkey);
+				fwrite (tempkey, 1, 6, fkeys);
+			}
+
+			for (i=0; i<sectorsCnt; i++) {
+				num_to_bytes(e_sector[i].Key[1], 6, tempkey);
+				fwrite (tempkey, 1, 6, fkeys );
+			}
+
+			fclose(fkeys);
+			PrintAndLogEx(NORMAL, "Found keys have been dumped to %s --> 0xffffffffffff has been inserted for unknown keys.", fptr);			
+		}	
 	}
 	
 	free(keyBlock);
