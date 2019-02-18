@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+1//-----------------------------------------------------------------------------
 // Copyright (C) 2011,2012 Merlok
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
@@ -1235,8 +1235,8 @@ int CmdHF14AMfNested(const char *Cmd) {
 				if (e_sector[i].foundKey[1])
 					num_to_bytes(e_sector[i].Key[1], 6, &keyBlock[10]);
 				mfEmlSetMem(keyBlock, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1);
-				PrintAndLogEx(SUCCESS, "key transferred to emulator memory.");
-			}		
+			}
+			PrintAndLogEx(SUCCESS, "key transferred to emulator memory.");
 		}
 		
 		// Create dump file
