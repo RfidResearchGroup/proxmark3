@@ -263,7 +263,6 @@ int EMVExchangeEx(EMVCommandChannel channel, bool ActivateField, bool LeaveField
 		break;
 	case ECC_CONTACT:
 #ifdef WITH_SMARTCARD		
-		//int ExchangeAPDUSC(uint8_t *datain, int datainlen, bool activateCard, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);
 		res = ExchangeAPDUSC(data, (IncludeLe?6:5) + apdu.Lc, ActivateField, LeaveFieldON, Result, (int)MaxResultLen, (int *)ResultLen);
 #else
 		res = 1;
