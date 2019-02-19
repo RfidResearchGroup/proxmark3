@@ -551,8 +551,7 @@ struct tlvdb *tlvdb_elm_get_parent(struct tlvdb *tlvdb)
 
 bool tlvdb_get_uint8(struct tlvdb *tlvRoot, tlv_tag_t tag, uint8_t *value)
 {
-	const struct tlvdb *tlvdb = tlvdb_get(tlvRoot, tag, NULL);
-	const struct tlv *tlvelm = tlvdb_get_tlv(tlvdb); 	
+	const struct tlv *tlvelm = tlvdb_get(tlvRoot, tag, NULL); 	
 	return tlv_get_uint8(tlvelm, value);
 }
 
