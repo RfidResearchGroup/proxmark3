@@ -405,7 +405,7 @@ int nonce_distance(uint32_t from, uint32_t to)
 {
 	uint16_t x, i;
 	if(!dist) {
-		dist = malloc(2 << 16);
+		dist = calloc(2 << 16,  sizeof(uint8_t));
 		if(!dist)
 			return -1;
 		for (x = i = 1; i; ++i) {
@@ -443,7 +443,7 @@ static uint32_t fastfwd[2][8] = {
  */
 uint32_t *lfsr_prefix_ks(uint8_t ks[8], int isodd)
 {
-	uint32_t *candidates = malloc(4 << 10);
+	uint32_t *candidates = calloc(4 << 10, sizeof(uint8_t));
 	if (!candidates) return 0;
 	
 	uint32_t c,  entry;

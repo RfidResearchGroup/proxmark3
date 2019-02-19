@@ -12,8 +12,10 @@ This is a script which automates cracking and dumping mifare classic cards. It s
 place by the device. 
 
 Arguments:
-	-d 				debug logging on
-	-h 				this help
+	-h 			this help
+	-d 			debug logging on
+	-k			known key for Sector 0 ,  keytype A
+
 
 Output files from this operation:
 	<uid>.eml 		- emulator file
@@ -73,12 +75,12 @@ local function nested(key,sak)
 	if 0x18 == sak then --NXP MIFARE Classic 4k | Plus 4k | Ev1 4k
 		typ = 4
 	elseif 0x08 == sak then -- NXP MIFARE CLASSIC 1k | Plus 2k | Ev1 1K
-		typ= 1
+		typ = 1
 	elseif 0x09 == sak then -- NXP MIFARE Mini 0.3k
 		typ = 0
-	elseif  0x10 == sak then-- "NXP MIFARE Plus 2k"
+	elseif 0x10 == sak then-- "NXP MIFARE Plus 2k"
 		typ = 2
-	elseif  0x01 == sak then-- "NXP MIFARE TNP3xxx 1K"
+	elseif 0x01 == sak then-- "NXP MIFARE TNP3xxx 1K"
 		typ = 1
 	else
 		print("I don't know how many sectors there are on this type of card, defaulting to 16")
@@ -87,22 +89,40 @@ local function nested(key,sak)
 	core.console(cmd)
 end
 
-local function dump(uid)
+local function dump(uid, numsectors)
 	dbg('dumping tag memory')
+
+	local typ = 1
+	if 0x18 == sak then --NXP MIFARE Classic 4k | Plus 4k | Ev1 4k
+		typ = 4
+	elseif 0x08 == sak then -- NXP MIFARE CLASSIC 1k | Plus 2k | Ev1 1K
+		typ = 1
+	elseif 0x09 == sak then -- NXP MIFARE Mini 0.3k
+		typ = 0
+	elseif 0x10 == sak then-- "NXP MIFARE Plus 2k"
+		typ = 2
+	elseif 0x01 == sak then-- "NXP MIFARE TNP3xxx 1K"
+		typ = 1
+	end
 
 	if utils.confirm('Do you wish to create a memory dump of tag?') then 
 
-		core.console("hf mf dump")
+		local dumpfile = 'hf-mf-'..uid..'-data.bin'
+
+		local dmp = ('hf mf dump %s f %s'):format(typ, dumpfile)
+		core.console(dmp)
+
 		-- Save the global args, those are *our* arguments
 		local myargs = args
 		-- Set the arguments for htmldump script
-		args =("-o %s.html"):format(uid)
+		args =('-i %s -o %s.html'):format(dumpfile, uid)
 		-- call it 
-		require('../scripts/htmldump')
+		require('htmldump')
 
-		args =""
 		-- dump to emulator
-		require('../scripts/dumptoemul')
+		args =('-i %s -o %s.eml'):format(dumpfile, uid)
+		require('dumptoemul')
+
 		-- Set back args. Not that it's used, just for the karma... 
 		args = myargs
 	end
@@ -177,9 +197,9 @@ local function main(args)
 					print("Found valid key: "..key);
 				end
 				-- Use nested attack
-				nested(key,sak)
+				nested(key, sak)
 				-- Dump info
-				dump(uid)
+				dump(uid, sak)
 
 				if #key == 12 then exit = true end
 			else

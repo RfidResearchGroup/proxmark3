@@ -46,7 +46,7 @@ static uint32_t last_frame_end; /* ts of last bit of previews rx or tx frame */
 #define RWD_TIME_PAUSE        4 /* 18.9us */
 #define RWD_TIME_1           21 /* RWD_TIME_PAUSE 18.9us off + 80.2us on = 99.1us */
 #define RWD_TIME_0           13 /* RWD_TIME_PAUSE 18.9us off + 42.4us on = 61.3us */
-#define RWD_CMD_TIMEOUT      40 /* 40 * 99.1us (arbitrary value) */
+#define RWD_CMD_TIMEOUT     120 /* 120 * 99.1us (arbitrary value) */
 #define RWD_MIN_FRAME_LEN     6 /* Shortest frame is 6 bits */
 #define RWD_MAX_FRAME_LEN    23 /* Longest frame is 23 bits */
 
@@ -59,8 +59,8 @@ static uint32_t last_frame_end; /* ts of last bit of previews rx or tx frame */
 
 // Returns true if a pulse/pause is received within timeout
 static inline bool wait_for(bool value, const uint32_t timeout) {
-  while((bool)(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_DIN) != value) {
-    if(GetCountSspClk() > timeout) {
+  while ((bool)(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_DIN) != value) {
+    if (GetCountSspClk() > timeout) {
       return false;
     }
   }
@@ -81,12 +81,12 @@ static inline int8_t rx_bit() {
   uint32_t bit_start = last_frame_end;
 
   // wait for pause to end
-  if(!wait_for(RWD_PULSE, bit_start + RWD_TIME_1*3/2)) {
+  if (!wait_for(RWD_PULSE, bit_start + RWD_TIME_1*3/2)) {
     return -1;
   }
 
   // wait for next pause
-  if(!wait_for(RWD_PAUSE, bit_start + RWD_TIME_1*3/2)) {
+  if (!wait_for(RWD_PAUSE, bit_start + RWD_TIME_1*3/2)) {
     return -1;
   }
 
@@ -94,7 +94,7 @@ static inline int8_t rx_bit() {
   last_frame_end = GetCountSspClk();
 
   // check for code violation (bit to short)
-  if(last_frame_end - bit_start < RWD_TIME_PAUSE) {
+  if (last_frame_end - bit_start < RWD_TIME_PAUSE) {
     return -1;
   }
 
@@ -122,7 +122,7 @@ static inline int8_t rx_bit() {
 static inline void tx_bit(bool bit) {
   LED_C_ON();
 
-  if(bit) {
+  if (bit) {
     // modulate subcarrier
     HIGH(GPIO_SSC_DOUT);
   } else {
@@ -132,7 +132,7 @@ static inline void tx_bit(bool bit) {
 
   // wait for tx timeslot to end
   last_frame_end += TAG_BIT_PERIOD;
-  while(GetCountSspClk() < last_frame_end) { };
+  while (GetCountSspClk() < last_frame_end) { };
   LED_C_OFF();
 }
 
@@ -150,13 +150,13 @@ static void tx_frame(uint32_t frame, uint8_t len) {
   // wait for next tx timeslot
   last_frame_end += TAG_FRAME_WAIT;
   legic_prng_forward(TAG_FRAME_WAIT/TAG_BIT_PERIOD - 1);
-  while(GetCountSspClk() < last_frame_end) { };
+  while (GetCountSspClk() < last_frame_end) { };
 
   // backup ts for trace log
   uint32_t last_frame_start = last_frame_end;
 
   // transmit frame, MSB first
-  for(uint8_t i = 0; i < len; ++i) {
+  for (uint8_t i = 0; i < len; ++i) {
     bool bit = (frame >> i) & 0x01;
     tx_bit(bit ^ legic_prng_get_bit());
     legic_prng_forward(1);
@@ -174,7 +174,7 @@ static void tx_ack() {
   // wait for ack timeslot
   last_frame_end += TAG_ACK_WAIT;
   legic_prng_forward(TAG_ACK_WAIT/TAG_BIT_PERIOD - 1);
-  while(GetCountSspClk() < last_frame_end) { };
+  while (GetCountSspClk() < last_frame_end) { };
 
   // backup ts for trace log
   uint32_t last_frame_start = last_frame_end;
@@ -206,19 +206,19 @@ static int32_t rx_frame(uint8_t *len) {
   last_frame_end -= 2;
 
   // wait for first pause (start of frame)
-  for(uint8_t i = 0; true; ++i) {
+  for (uint8_t i = 0; true; ++i) {
     // increment prng every TAG_BIT_PERIOD
     last_frame_end += TAG_BIT_PERIOD;
     legic_prng_forward(1);
 
     // if start of frame was received exit delay loop
-    if(wait_for(RWD_PAUSE, last_frame_end)) {
+    if (wait_for(RWD_PAUSE, last_frame_end)) {
       last_frame_end = GetCountSspClk();
       break;
     }
 
     // check for code violation
-    if(i > RWD_CMD_TIMEOUT) {
+    if (i > RWD_CMD_TIMEOUT) {
       return -1;
     }
   }
@@ -227,19 +227,19 @@ static int32_t rx_frame(uint8_t *len) {
   uint32_t last_frame_start = last_frame_end;
 
   // receive frame
-  for(*len = 0; true; ++(*len)) {
+  for (*len = 0; true; ++(*len)) {
     // receive next bit
     LED_B_ON();
     int8_t bit = rx_bit();
     LED_B_OFF();
 
     // check for code violation and to short / long frame
-    if((bit < 0) && ((*len < RWD_MIN_FRAME_LEN) || (*len > RWD_MAX_FRAME_LEN))) {
+    if ((bit < 0) && ((*len < RWD_MIN_FRAME_LEN) || (*len > RWD_MAX_FRAME_LEN))) {
       return -1;
     }
 
     // check for code violation caused by end of frame
-    if(bit < 0) {
+    if (bit < 0) {
       break;
     }
 
@@ -256,7 +256,6 @@ static int32_t rx_frame(uint8_t *len) {
   // log
   uint8_t cmdbytes[] = {*len, BYTEx(frame, 0), BYTEx(frame, 1), BYTEx(frame, 2)};
   LogTrace(cmdbytes, sizeof(cmdbytes), last_frame_start, last_frame_end, NULL, true);
-
   return frame;
 }
 
@@ -267,7 +266,7 @@ static int32_t rx_frame(uint8_t *len) {
 static int32_t init_card(uint8_t cardtype, legic_card_select_t *p_card) {
   p_card->tagtype = cardtype;
 
-  switch(p_card->tagtype) {
+  switch (p_card->tagtype) {
     case 0:
       p_card->cmdsize = 6;
       p_card->addrsize = 5;
@@ -338,7 +337,7 @@ static int32_t setup_phase(legic_card_select_t *p_card) {
 
   // wait for iv
   int32_t iv = rx_frame(&len);
-  if((len != 7) || (iv < 0)) {
+  if ((len != 7) || (iv < 0)) {
     return -1;
   }
 
@@ -346,7 +345,7 @@ static int32_t setup_phase(legic_card_select_t *p_card) {
   legic_prng_init(iv);
 
   // reply with card type
-  switch(p_card->tagtype) {
+  switch (p_card->tagtype) {
     case 0:
       tx_frame(0x0D, 6);
       break;
@@ -360,12 +359,12 @@ static int32_t setup_phase(legic_card_select_t *p_card) {
 
   // wait for ack
   int32_t ack = rx_frame(&len);
-  if((len != 6) || (ack < 0)) {
+  if ((len != 6) || (ack < 0)) {
     return -1;
   }
 
   // validate data
-  switch(p_card->tagtype) {
+  switch (p_card->tagtype) {
     case 0:
       if(ack != 0x19) return -1;
       break;
@@ -399,12 +398,12 @@ static int32_t connected_phase(legic_card_select_t *p_card) {
 
   // wait for command
   int32_t cmd = rx_frame(&len);
-  if(cmd < 0) {
+  if (cmd < 0) {
     return -1;
   }
 
   // check if command is LEGIC_READ
-  if(len == p_card->cmdsize) {
+  if (len == p_card->cmdsize) {
     // prepare data
     uint8_t byte = legic_mem[cmd >> 1];
     uint8_t crc = calc_crc4(cmd, p_card->cmdsize, byte);
@@ -416,7 +415,7 @@ static int32_t connected_phase(legic_card_select_t *p_card) {
   }
 
   // check if command is LEGIC_WRITE
-  if(len == p_card->cmdsize + 8 + 4) {
+  if (len == p_card->cmdsize + 8 + 4) {
     // decode data
     uint16_t mask = (1 << p_card->addrsize) - 1;
     uint16_t addr = (cmd >> 1) & mask;
@@ -425,7 +424,7 @@ static int32_t connected_phase(legic_card_select_t *p_card) {
 
     // check received against calculated crc
     uint8_t calc_crc = calc_crc4(addr << 1, p_card->cmdsize, byte);
-    if(calc_crc != crc) {
+    if (calc_crc != crc) {
       Dbprintf("!!! crc mismatch: %x != %x !!!",  calc_crc, crc);
       return -1;
     }
@@ -453,7 +452,7 @@ void LegicRfSimulate(uint8_t cardtype) {
   init_tag();
 
   // verify command line input
-  if(init_card(cardtype, &card) != 0) {
+  if (init_card(cardtype, &card) != 0) {
     DbpString("Unknown tagtype.");
     goto OUT;
   }
@@ -464,17 +463,17 @@ void LegicRfSimulate(uint8_t cardtype) {
     WDT_HIT();
 
     // wait for carrier, restart after timeout
-    if(!wait_for(RWD_PULSE, GetCountSspClk() + TAG_BIT_PERIOD)) {
+    if (!wait_for(RWD_PULSE, GetCountSspClk() + TAG_BIT_PERIOD)) {
       continue;
     }
 
     // wait for connection, restart on error
-    if(setup_phase(&card)) {
+    if (setup_phase(&card)) {
       continue;
     }
 
     // conection is established, process commands until one fails
-    while(!connected_phase(&card)) {
+    while (!connected_phase(&card)) {
       WDT_HIT();
     }
   }

@@ -356,7 +356,7 @@ static int smart_responseEx(uint8_t *data, bool silent) {
 	if (needGetData) {
 		int len = data[datalen - 1];
 		if (!silent) PrintAndLogEx(INFO, "Requesting 0x%02X bytes response", len);	
-		uint8_t getstatus[] = {0x00, ISO7816_GETSTATUS, 0x00, 0x00, len};
+		uint8_t getstatus[] = {0x00, ISO7816_GET_RESPONSE, 0x00, 0x00, len};
 		UsbCommand cStatus = {CMD_SMART_RAW, {SC_RAW, sizeof(getstatus), 0}};	
 		memcpy(cStatus.d.asBytes, getstatus, sizeof(getstatus) );
 		clearCommandBuffer();
@@ -372,7 +372,7 @@ static int smart_responseEx(uint8_t *data, bool silent) {
 		if (datalen != len + 2) { 
 			// data with ACK
 			if (datalen == len + 2 + 1) { // 2 - response, 1 - ACK
-				if (data[0] != ISO7816_GETSTATUS) {
+				if (data[0] != ISO7816_GET_RESPONSE) {
 					if (!silent) {
 						PrintAndLogEx(ERR, "GetResponse ACK error. len 0x%x | data[0] %02X", len, data[0]);	
 					}
@@ -1012,7 +1012,7 @@ int CmdSmartBruteforceSFI(const char *Cmd) {
 	json_t *root = NULL;
 	smart_loadjson("aidlist", "json", &root);
 
-	uint8_t* buf = malloc(USB_CMD_DATA_SIZE);
+	uint8_t* buf = calloc(USB_CMD_DATA_SIZE, sizeof(uint8_t));
 	if ( !buf )
 		return 1;		
 

@@ -5,6 +5,33 @@ Proxmark3 RDV40 dedicated repo,  based on iceman fork
 ## Notice      
 This repo is based on iceman fork for proxmark3. It is dedicated to bring the most out of the new features for proxmark3 RDV40 device.
 
+# Donations
+Nothing says thank you as much as a donation,  https://www.patreon.com/iceman1001
+
+## ToC
+
+- Coverity Scan Config & Run
+- Whats changed?
+- Why didn't you based it on offical PM3 Master?
+- Why don't you add this or that functionality?	
+- PM3 GUI
+- Development
+- KALI and ARCHLINUX users
+- Setup and build for UBUNTU
+- Setup and build for ArchLinux
+- Homebrew (Mac OS X)
+- Upgrading HomeBrew tap formula
+- Building on Windows
+- Gator96100 distro
+- Build and run
+- Validating proxmark client functionality
+- Run the following commands
+- Quit client
+- First things on your RDV40
+- Verify sim module firmware version
+
+- The end
+
 ## Coverity Scan Config & Run
 Download the Coverity Scan Self-buld and install it.
 You will need to configure  ARM-NON-EABI- Compiler for it to use:
@@ -37,19 +64,28 @@ The separation from offical pm3 repo gives us very much freedom to create a firm
 Give us a hint, and we'll see if we can't merge in the stuff you have. 
 	
 ## PM3 GUI
-The official PM3-GUI from Gaucho will not work. 
-The new universial GUI will work.
+The official PM3-GUI from Gaucho will not work.
+The new universial GUI will work. [Proxmark3 Univerisal GUI](https://github.com/burma69/PM3UniversalGUI) 
 
 ## Development
 This fork now compiles just fine on 
    - Windows/mingw environment with Qt5.6.1 & GCC 4.8
    - Ubuntu 1404, 1510, 1604, 1804
    - Mac OS X / Homebrew
+   - ParrotOS
+   - WSL (Windows subsystem linux) on Windows 10
    - Docker container
 
 ## KALI and ARCHLINUX users
 Kali and ArchLinux users usually must kill their modem manager in order for the proxmark3 to enumerate properly.   
-`sudo apt remove modemmanager`
+```sh
+sudo apt remove modemmanager
+```
+or 
+```sh
+systemctl stop ModemManager
+systemctl disable ModemManager
+```
 
 ## Setup and build for UBUNTU
 GC made updates to allow this to build easily on Ubuntu 14.04.2 LTS, 15.10 or 16.04
@@ -61,7 +97,7 @@ I have also added this script to the fork.
 https://github.com/RfidResearchGroup/proxmark3/blob/master/install.sh
 
 - Run
-`sudo apt-get install p7zip git build-essential libreadline5 libreadline-dev libusb-0.1-4 libusb-dev libqt4-dev perl pkg-config wget libncurses5-dev gcc-arm-none-eabi libjansson-dev`
+`sudo apt-get install p7zip git build-essential libreadline5 libreadline-dev libusb-0.1-4 libusb-dev libqt4-dev perl pkg-config wget libncurses5-dev gcc-arm-none-eabi`
 
 - Clone fork
 `git clone https://github.com/RfidResearchGroup/proxmark3.git`
@@ -86,7 +122,7 @@ https://github.com/RfidResearchGroup/proxmark3/blob/master/install.sh
 
 ## Setup and build for ArchLinux
 - Run
-`sudo pacman -Sy base-devel p7zip libusb readline ncurses libjansson-dev arm-none-eabi-newlib --needed`
+`sudo pacman -Sy base-devel p7zip libusb readline ncurses arm-none-eabi-newlib --needed`
 `yaourt -S termcap`
 
 - Remove modemmanager
@@ -224,7 +260,7 @@ If all went well you should get some information about the firmware and memory u
 >
 > pm3 -->
 
-### run the following commands
+### Run the following commands
     pm3 --> hw status
     pm3 --> hw version
     pm3 --> hw tune
@@ -239,6 +275,46 @@ You are now ready to use your newly upgraded proxmark3 device.  Many commands us
 ### Quit client
     pm3 --> quit
 
+
+### First things on your RDV40
+You will need to run these commands to make sure your rdv4 is prepared
+
+    pm3 --> mem load f default_keys m
+    pm3 --> mem load f default_pwd t
+    pm3 --> mem load f default_iclass_keys i
+    pm3 --> lf t55xx deviceconfig a 29 b 17 c 15 d 47 e 15 p
+
+### Verify sim module firmware version
+To make sure you got the latest sim module firmware.
+_Lastest version is v3.10_
+
+    pm3 --> hw status
+
+Find version in the long output,  look for these two lines
+
+    #db# Smart card module (ISO 7816)
+    #db#   version.................v2.06
+
+This version is obselete. The following command upgrades your device sim module firmware.
+Don't not turn of your device during the execution of this command.
+
+    pm3 --> sc upgrade f ../tools/simmodule/SIM010.BIN 
+    
+You get the following output,  this is a successful execution.    
+    
+    [!] WARNING - Smartcard socket firmware upgrade.          
+    [!] A dangerous command, do wrong and you will brick the smart card socket          
+    [+] Smartcard socket firmware uploading to PM3          
+    ..
+    [+] Smartcard socket firmware updating,  don't turn off your PM3!          
+    #db# FW 0000          
+    #db# FW 0080          
+    #db# FW 0100          
+    #db# FW 0180          
+    #db# FW 0200          
+    #db# FW 0280          
+    [+] Smartcard socket firmware upgraded successful        
+    
 
 ## the end
 

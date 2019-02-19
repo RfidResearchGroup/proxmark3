@@ -2219,13 +2219,16 @@ b8 b7 b6 b5 b4 b3 b2 b1
 b5,b6 = 00 - DESELECT
         11 - WTX 
 */    
-int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, void *data, uint8_t *res) {
+int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, uint8_t *res) {
 	uint8_t parity[MAX_PARITY_SIZE] = {0x00};
 	uint8_t real_cmd[cmd_len + 4];
 	
 	if (cmd_len) {
 		// ISO 14443 APDU frame: PCB [CID] [NAD] APDU CRC PCB=0x02
 		real_cmd[0] = 0x02; // bnr,nad,cid,chn=0; i-block(0x00)	
+		if (send_chaining) {
+			real_cmd[0] |= 0x10;
+		}
 		// put block number into the PCB
 		real_cmd[0] |= iso14_pcb_blocknum;
 		memcpy(real_cmd + 1, cmd, cmd_len);
@@ -2245,7 +2248,7 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, void *data, uint8_t *res) {
 		return 0; //DATA LINK ERROR
 	} else{
 		// S-Block WTX 
-		while((data_bytes[0] & 0xF2) == 0xF2) {
+		while(len && ((data_bytes[0] & 0xF2) == 0xF2)) {
 			uint32_t save_iso14a_timeout = iso14a_get_timeout();
 			// temporarily increase timeout
 			iso14a_set_timeout( MAX((data_bytes[1] & 0x3f) * save_iso14a_timeout, MAX_ISO14A_TIMEOUT) );
@@ -2263,32 +2266,34 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, void *data, uint8_t *res) {
 			iso14a_set_timeout(save_iso14a_timeout);
 		}
 
-	// if we received an I- or R(ACK)-Block with a block number equal to the
-	// current block number, toggle the current block number
+		// if we received an I- or R(ACK)-Block with a block number equal to the
+		// current block number, toggle the current block number
 		if (len >= 3 // PCB+CRC = 3 bytes
 	         && ((data_bytes[0] & 0xC0) == 0 // I-Block
 	             || (data_bytes[0] & 0xD0) == 0x80) // R-Block with ACK bit set to 0
 	         && (data_bytes[0] & 0x01) == iso14_pcb_blocknum) // equal block numbers
-	{
-		iso14_pcb_blocknum ^= 1;
-	}
+		{
+			iso14_pcb_blocknum ^= 1;
+		}
 		
 		// if we received I-block with chaining we need to send ACK and receive another block of data
 		if (res)
 			*res = data_bytes[0];
 
 		// crc check
-		if (len >=3 && !check_crc(CRC_14443_A, data_bytes, len)) {
+		if (len >= 3 && !check_crc(CRC_14443_A, data_bytes, len)) {
 			return -1;
 		}
 		
 	}
 	
-	// cut frame byte
-	len -= 1;
-	// memmove(data_bytes, data_bytes + 1, len);
-	for (int i = 0; i < len; i++)
-		data_bytes[i] = data_bytes[i + 1];
+	if (len) {
+		// cut frame byte
+		len -= 1;
+		// memmove(data_bytes, data_bytes + 1, len);
+		for (int i = 0; i < len; i++)
+			data_bytes[i] = data_bytes[i + 1];
+	}
 	
 	return len;
 }
@@ -2338,7 +2343,7 @@ void ReaderIso14443a(UsbCommand *c) {
 
 	if ((param & ISO14A_APDU)) {
 		uint8_t res;
-		arg0 = iso14_apdu(cmd, len, buf, &res);
+		arg0 = iso14_apdu(cmd, len, (param & ISO14A_SEND_CHAINING), buf, &res);
 		cmd_send(CMD_ACK, arg0, res, 0, buf, sizeof(buf));
 	}
 

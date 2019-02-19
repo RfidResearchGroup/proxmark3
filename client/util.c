@@ -280,7 +280,7 @@ void sprint_bin_break_ex(uint8_t *src, size_t srclen, char *dest , uint8_t break
 	printf("(sprint_bin_break) rowlen %d\n", rowlen);
 	
 	// 3072 + end of line characters if broken at 8 bits
-	dest = (char *)malloc(MAX_BIN_BREAK_LENGTH); 
+	dest = (char *)calloc(MAX_BIN_BREAK_LENGTH, sizeof(uint8_t)); 
 	if (dest == NULL) return;
 	
 	//clear memory
@@ -884,8 +884,8 @@ extern void strcreplace(char *buf, size_t len, char from, char to) {
 }
 
 extern char *strmcopy(char *buf) {
-	char* str = NULL;
-	if ((str = (char*) malloc(strlen(buf) + 1)) != NULL) {
+	char* str = (char*) calloc(strlen(buf) + 1, sizeof(uint8_t));
+	if (str != NULL) {
 		memset(str, 0, strlen(buf) + 1);
 		strcpy(str, buf);
 	}	

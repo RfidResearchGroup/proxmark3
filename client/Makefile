@@ -299,29 +299,29 @@ lualibs/mf_default_keys.lua : default_keys.dic
 	
 clean:
 	$(RM) $(CLEAN)
-	cd ../liblua && make clean
-	cd $(JANSSONLIBPATH) && make clean
-	cd $(MBEDTLSLIBPATH) && make clean
-	cd $(CBORLIBPATH) && make clean
+	cd ../liblua && $(MAKE) clean
+	cd $(JANSSONLIBPATH) && $(MAKE) clean
+	cd $(MBEDTLSLIBPATH) && $(MAKE) clean
+	cd $(CBORLIBPATH) && $(MAKE) clean
 
 tarbin: $(BINS)
 	$(TAR) $(TARFLAGS) ../proxmark3-$(platform)-bin.tar $(BINS:%=client/%) $(WINBINS:%=client/%)
 
 lua_build:
 	@echo Compiling liblua, using platform $(LUAPLATFORM)
-	cd ../liblua && make $(LUAPLATFORM)
+	cd ../liblua && $(MAKE) $(LUAPLATFORM)
 	
 jansson_build:
 	@echo Compiling jansson
-	cd $(JANSSONLIBPATH) && make all
+	cd $(JANSSONLIBPATH) && $(MAKE) all
 
 mbedtls_build:
 	@echo Compiling mbedtls
-	cd $(MBEDTLSLIBPATH) && make all
+	cd $(MBEDTLSLIBPATH) && $(MAKE) all
 	
 cbor_build:
 	@echo Compiling tinycbor
-	cd $(CBORLIBPATH) && make all
+	cd $(CBORLIBPATH) && $(MAKE) all
 	
 .PHONY: all clean
 

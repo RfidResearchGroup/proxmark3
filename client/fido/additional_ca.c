@@ -58,6 +58,23 @@
 "U9psmyPzK+Vsgw2jeRQ5JlKDyqE0hebfC1tvFu0CCrJFcw==\r\n" \
 "-----END CERTIFICATE-----\r\n"
 
+// Name: SoloKey U2F Root CA Serial 14143382635911888524 (0xc44763928ff4be8c)
+// Issued: 2018-11-11
+#define SOLOKEY_CA	\
+"-----BEGIN CERTIFICATE-----\r\n" \
+"MIIB9DCCAZoCCQDER2OSj/S+jDAKBggqhkjOPQQDAjCBgDELMAkGA1UEBhMCVVMx\r\n" \
+"ETAPBgNVBAgMCE1hcnlsYW5kMRIwEAYDVQQKDAlTb2xvIEtleXMxEDAOBgNVBAsM\r\n" \
+"B1Jvb3QgQ0ExFTATBgNVBAMMDHNvbG9rZXlzLmNvbTEhMB8GCSqGSIb3DQEJARYS\r\n" \
+"aGVsbG9Ac29sb2tleXMuY29tMCAXDTE4MTExMTEyNTE0MloYDzIwNjgxMDI5MTI1\r\n" \
+"MTQyWjCBgDELMAkGA1UEBhMCVVMxETAPBgNVBAgMCE1hcnlsYW5kMRIwEAYDVQQK\r\n" \
+"DAlTb2xvIEtleXMxEDAOBgNVBAsMB1Jvb3QgQ0ExFTATBgNVBAMMDHNvbG9rZXlz\r\n" \
+"LmNvbTEhMB8GCSqGSIb3DQEJARYSaGVsbG9Ac29sb2tleXMuY29tMFkwEwYHKoZI\r\n" \
+"zj0CAQYIKoZIzj0DAQcDQgAEWHAN0CCJVZdMs0oktZ5m93uxmB1iyq8ELRLtqVFL\r\n" \
+"SOiHQEab56qRTB/QzrpGAY++Y2mw+vRuQMNhBiU0KzwjBjAKBggqhkjOPQQDAgNI\r\n" \
+"ADBFAiEAz9SlrAXIlEu87vra54rICPs+4b0qhp3PdzcTg7rvnP0CIGjxzlteQQx+\r\n" \
+"jQGd7rwSZuE5RWUPVygYhUstQO9zNUOs\r\n" \
+"-----END CERTIFICATE-----\r\n"
+
 /* Concatenation of all additional CA certificates in PEM format if available */
-const char   additional_ca_pem[] = GLOBALSIGN_CA YUBICO_CA;
+const char   additional_ca_pem[] = GLOBALSIGN_CA YUBICO_CA SOLOKEY_CA;
 const size_t additional_ca_pem_len = sizeof(additional_ca_pem);

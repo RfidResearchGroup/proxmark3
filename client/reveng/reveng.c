@@ -173,8 +173,9 @@ modpol(const poly_t init, int rflags, int args, const poly_t *argpolys) {
 	unsigned long alen, blen;
 
 	if(args < 2) return(NULL);
-
-	if(!(result = malloc(((((args - 1) * args) >> 1) + 1) * sizeof(poly_t))))
+	
+	result = calloc(((((args - 1) * args) >> 1) + 1) * sizeof(poly_t), sizeof(char));
+	if(!result)
 		uerror("cannot allocate memory for codeword table");
 
 	rptr = result;
@@ -240,7 +241,8 @@ engini(int *resc, model_t **result, const poly_t divisor, int flags, int args, c
 	dlen = plen(divisor);
 
 	/* Allocate the CRC matrix */
-	if(!(mat = (poly_t *) malloc((dlen << 1) * sizeof(poly_t))))
+	mat = (poly_t *) calloc((dlen << 1) * sizeof(poly_t), sizeof(char));
+	if(!mat)
 		uerror("cannot allocate memory for CRC matrix");
 
 	/* Find arguments of the two shortest lengths */

@@ -37,13 +37,12 @@ Arguments:
 	0020 - Swapforce
 ]]
 
-
 -- This is only meant to be used when errors occur
-function oops(err)
+local function oops(err)
 	print("ERROR: ",err)
 end
 -- Usage help
-function help()
+local function help()
 	print(desc)
 	print("Example usage")
 	print(example)
@@ -64,7 +63,7 @@ local function waitCmd()
 end
 
 local function readblock( blocknum, keyA )
-	-- Read block 0
+	-- Read block N
 	cmd = Command:new{cmd = cmds.CMD_MIFARE_READBL, arg1 = blocknum, arg2 = 0, arg3 = 0, data = keyA}
 	err = core.SendCommand(cmd:getBytes())
 	if err then return nil, err end
@@ -72,8 +71,9 @@ local function readblock( blocknum, keyA )
 	if err then return nil, err end
 	return block0
 end
+
 local function readmagicblock( blocknum )
-	-- Read block 0
+	-- Read block N
 	local CSETBLOCK_SINGLE_OPERATION = 0x1F
 	cmd = Command:new{cmd = cmds.CMD_MIFARE_CGETBLOCK, arg1 = CSETBLOCK_SINGLE_OPERATION, arg2 = 0, arg3 = blocknum}
  	err = core.SendCommand(cmd:getBytes())
@@ -89,11 +89,13 @@ local function main(args)
 	print( string.rep('--',20) )
 	
 	local numBlocks = 64
-    local cset = 'hf mf csetbl '
+	local cset = 'hf mf csetbl '
 	local csetuid = 'hf mf csetuid '
 	local cget = 'hf mf cgetbl '
 	local empty = '00000000000000000000000000000000'
-	local AccAndKeyB = '7F078869000000000000'
+	local AccAndKeyB = '7F0F0869000000000000'
+	local atqa = '0F01'
+	local sak = '81'
 	-- Defaults to Gusto
 	local toytype = 'C201'
 	local subtype = '0030'
@@ -107,42 +109,43 @@ local function main(args)
 		if o == "l" then return toys.List() end
 	end
 
-	if #toytype ~= 4 then return oops('Wrong size - toytype. (4hex symbols)') end	
-	if #subtype ~= 4 then return oops('Wrong size - subtype. (4hex symbols)') end	
+	if #toytype ~= 4 then return oops('[!] Wrong size - toytype. (4hex symbols)') end	
+	if #subtype ~= 4 then return oops('[!] Wrong size - subtype. (4hex symbols)') end	
 
 	-- look up type, find & validate types
 	local item = toys.Find( toytype, subtype)
 	if item then
-		print( (' Looking up input: Found %s - %s (%s)'):format(item[6],item[5], item[4]) )
+		print( ('[+] Looking up input: Found %s - %s (%s)'):format(item[6],item[5], item[4]) )
 	else
-		print('Didn\'t find item type. If you are sure about it, report it in')
+		print('[-] Didn\'t find item type. If you are sure about it, post on forum')
 	end
 	--15,16
-	--13-14 
-
+	--13-14
 	
 	-- find tag
 	result, err = lib14a.read(false, true)
-	if not result then return oops(err)	end
+	if not result then return oops(err) end
 
 	-- load keys
 	local akeys  = pre.GetAll(result.uid)
-	local  keyA = akeys:sub(1, 12 ) 
+	local keyA = akeys:sub(1, 12 ) 
 
-	local b0 = readblock(0,keyA)
+	local b0 = readblock(0, keyA)
 	if not b0 then
-		print('failed reading block with factorydefault key.  Trying chinese magic read.')
+		print('[-] failed reading block with factorydefault key. Trying chinese magic read.')
 	    b0, err = readmagicblock(0)
 		if not b0 then 
-			oops(err) 
-			return oops('failed reading block with chinese magic command.  quitting...')
+			oops('[!] '..err) 
+			return oops('[!] failed reading block with chinese magic command. Quitting...')
 		end
 	end
-	
-	-- wipe card.
-	local cmd  = (csetuid..'%s 0004 08 w'):format(result.uid)	
-	core.console(cmd) 
+	core.clearCommandBuffer()
 
+	-- wipe card.
+	local cmd  = (csetuid..'%s %s %s w'):format(result.uid, atqa, sak)	
+	core.console(cmd) 
+	core.clearCommandBuffer()
+	
 	local b1 = toytype..string.rep('00',10)..subtype
 	
 	local calc = utils.Crc16(b0..b1)
@@ -150,6 +153,7 @@ local function main(args)
 	
 	local cmd  = (cset..'1 %s%04x'):format( b1, calcEndian)	
 	core.console(cmd) 
+	core.clearCommandBuffer()
 	
 	local pos, key
 	for blockNo = 2, numBlocks-1, 1 do
@@ -160,6 +164,11 @@ local function main(args)
 			core.console(cmd)
 		end		
 	end 
+	core.clearCommandBuffer()
+	
+	-- Set sector trailer S0, since it has different access rights
+	cmd = ('%s 3 %s0f0f0f69000000000000'):format(cset, keyA)
+	core.console(cmd)
 	core.clearCommandBuffer()
 end
 main(args)

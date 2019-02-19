@@ -51,7 +51,8 @@ int scandir (const char *dir,
 				nl = ntmp;
 			}
 
-			if (!(etmp = (struct dirent *) malloc (sizeof *ent))) {
+			etmp = (struct dirent *) calloc (sizeof *ent, sizeof(char));
+			if (!etmp) {
 				err_no = 1;
 				break;
 			}

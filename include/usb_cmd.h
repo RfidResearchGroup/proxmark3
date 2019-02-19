@@ -140,6 +140,8 @@ typedef struct{
 #define CMD_COTAG														  0x0225
 #define CMD_SET_LF_T55XX_CONFIG											  0x0226
 
+#define CMD_T55XX_CHKPWDS                                                 0x0230
+
 /* CMD_SET_ADC_MUX: ext1 is 0 for lopkd, 1 for loraw, 2 for hipkd, 3 for hiraw */
 
 // For the 13.56 MHz tags

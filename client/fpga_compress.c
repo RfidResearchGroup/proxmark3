@@ -59,7 +59,7 @@ static void usage(void)
 
 static voidpf fpga_deflate_malloc(voidpf opaque, uInt items, uInt size)
 {
-	return malloc(items*size);
+	return calloc(items*size, sizeof(uint8_t));
 }
 
 
@@ -89,9 +89,9 @@ int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, bool hardn
 	z_stream compressed_fpga_stream;
 
 	if (hardnested_mode) {
-		fpga_config = malloc(num_infiles * HARDNESTED_TABLE_SIZE);
+		fpga_config = calloc(num_infiles * HARDNESTED_TABLE_SIZE, sizeof(uint8_t));
 	} else {
-	fpga_config = malloc(num_infiles * FPGA_CONFIG_SIZE);
+		fpga_config = calloc(num_infiles * FPGA_CONFIG_SIZE, sizeof(uint8_t));
 	}		
 	// read the input files. Interleave them into fpga_config[]
 	i = 0;

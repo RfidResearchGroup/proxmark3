@@ -21,6 +21,9 @@ Arguments:
 	-o <offset>     :  memory offset, default is 0
 	-l <length>     :  length in bytes, default is 256
 	-k <keylen>     :  key length in bytes <4|6|8> ,  default is 4
+	-m              :  print Mifare dictionary keys
+	-t              :  print t55xx dictionary passwords
+	-i              :  print iClass dictionary keys
 ]]
 example =
 [[
@@ -67,7 +70,7 @@ local function main(args)
 	local keylength = 4
 	local usedkey = false
 	
-	for o, a in getopt.getopt(args, 'ho:l:k:') do
+	for o, a in getopt.getopt(args, 'ho:l:k:mti') do
 	
 		-- help
 		if o == "h" then return help() end
@@ -80,6 +83,10 @@ local function main(args)
 		
 		-- keylength
 		if o == "k" then keylength = tonumber(a); usedkey = true end
+		
+		if o == "m" then keylength =6; usedkey = true; offset = 0x3F000-0x4000; end
+		if o == "t" then keylength =4; usedkey = true; offset = 0x3F000-0x3000; end
+		if o == "i" then keylength =8; usedkey = true; offset = 0x3F000-0x5000; end
 	end
 	
 	if length < 0 or length > 256 then

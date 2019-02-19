@@ -105,7 +105,7 @@ CborError _cbor_value_dup_string(const CborValue *value, void **buffer, size_t *
         return err;
 
     ++*buflen;
-    *buffer = malloc(*buflen);
+    *buffer = calloc(*buflen, sizeof(uint8_t));
     if (!*buffer) {
         /* out of memory */
         return CborErrorOutOfMemory;

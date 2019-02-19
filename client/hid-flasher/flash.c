@@ -40,7 +40,7 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
 	flash_seg_t *seg;
 	uint32_t last_end = 0;
 
-	ctx->segments = malloc(sizeof(flash_seg_t) * num_phdrs);
+	ctx->segments = calloc(sizeof(flash_seg_t) * num_phdrs, sizeof(uint8_t));
 	if (!ctx->segments) {
 		fprintf(stderr, "Out of memory\n");
 		return -1;
@@ -90,7 +90,7 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
 
 		uint8_t *data;
 		// make extra space if we need to move the data forward
-		data = malloc(filesz + BLOCK_SIZE);
+		data = calloc(filesz + BLOCK_SIZE, sizeof(uint8_t));
 		if (!data) {
 			fprintf(stderr, "Out of memory\n");
 			return -1;
@@ -226,7 +226,7 @@ int flash_load(flash_file_t *ctx, const char *name, int can_write_bl)
 	}
 	num_phdrs = le16(ehdr.e_phnum);
 
-	phdrs = malloc(le16(ehdr.e_phnum) * sizeof(Elf32_Phdr));
+	phdrs = calloc(le16(ehdr.e_phnum) * sizeof(Elf32_Phdr), sizeof(uint8_t));
 	if (!phdrs) {
 		fprintf(stderr, "Out of memory\n");
 		goto fail;

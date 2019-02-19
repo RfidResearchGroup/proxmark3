@@ -1259,7 +1259,6 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 	LED_A_ON();
 		
 	if ( firstchunk ) {
-							
 		clear_trace();
 		set_tracing(false);
 		
@@ -1458,26 +1457,31 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 			} // end loop sectors		
 		} // end loop keys	
 	} // end loop strategy 2
-OUT:	
+OUT:
 	LEDsoff();
 
 	crypto1_destroy(pcs);
 
 	// All keys found, send to client, or last keychunk from client
 	if (foundkeys == allkeys || lastchunk ) {
-		
+
 		uint64_t foo = 0;
+		for (uint8_t m = 0; m < 64; m++) {
+			foo |= ((uint64_t)(found[m] & 1) << m);
+		}
+
 		uint16_t bar = 0;
-		for (uint8_t m = 0; m < 64; ++m)
-			foo |= (found[m] << m);
-		for (uint8_t m=64; m < sizeof(found); ++m) 
-			bar |= (found[m] << (m-64));
-		
+		uint8_t j = 0;
+		for (uint8_t m=64; m < sizeof(found); m++) {
+			bar |= ((uint16_t)(found[m] & 1) << j++);
+		}
+	
 		uint8_t *tmp =  BigBuf_malloc(480+10);
 		memcpy(tmp, k_sector, sectorcnt * sizeof(sector_t) );
 		num_to_bytes(foo, 8, tmp+480);		
 		tmp[488] = bar & 0xFF;
 		tmp[489] = bar >> 8 & 0xFF;
+		
 		cmd_send(CMD_ACK, foundkeys, 0, 0, tmp, 480+10);
 
 		set_tracing(false);		

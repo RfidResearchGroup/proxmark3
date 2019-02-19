@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Change 'hf 14a antifuzz' - original implementation (@asfabw),  reworked a bit
+ - Fix 'hf mf fchk' (@iceman)
+ - Fix 'usb slow on posix based systems' (@fl0-0)
  - Change 'lf pcf7931' - improved read code (@sguerrini97)
  - Change 'hf felica list' - started with some FeliCa annotations (@iceman)
  - Fix 'hf tune' - now works as expected (@iceman)
