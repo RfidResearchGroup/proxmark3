@@ -1283,7 +1283,7 @@ int CmdEMVExec(const char *cmd) {
 		
 
 		// needs to send AC2 command (res == ARQC)
-		if ((CID & 0xc0) == 0x80) {
+		if ((CID & EMVAC_AC_MASK) == EMVAC_ARQC) {
 			PrintAndLogEx(NORMAL, "\n* * Calc CDOL2");
 			struct tlv *cdol2_data_tlv = dol_process(tlvdb_get(tlvRoot, 0x8d, NULL), tlvRoot, 0x01); // 0x01 - dummy tag
 			if (!cdol2_data_tlv) {
