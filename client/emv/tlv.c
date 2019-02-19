@@ -469,7 +469,10 @@ const struct tlv *tlvdb_get_inchild(const struct tlvdb *tlvdb, tlv_tag_t tag, co
 }
 
 const struct tlv *tlvdb_get_tlv(const struct tlvdb *tlvdb) {
-	return &tlvdb->tag;
+	if (tlvdb)
+		return &tlvdb->tag;
+	else
+		return NULL;
 }
 
 unsigned char *tlv_encode(const struct tlv *tlv, size_t *len)
@@ -544,6 +547,12 @@ struct tlvdb *tlvdb_elm_get_children(struct tlvdb *tlvdb)
 struct tlvdb *tlvdb_elm_get_parent(struct tlvdb *tlvdb)
 {
 	return tlvdb->parent;
+}
+
+bool tlvdb_get_uint8(struct tlvdb *tlvRoot, tlv_tag_t tag, uint8_t *value)
+{
+	const struct tlv *tlvelm = tlvdb_get(tlvRoot, tag, NULL); 	
+	return tlv_get_uint8(tlvelm, value);
 }
 
 bool tlv_get_uint8(const struct tlv *etlv, uint8_t *value) 
