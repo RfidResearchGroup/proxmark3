@@ -435,7 +435,7 @@ int mfReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data)
 			
 			return 0;
 		} else {
-			return 1;
+			return isOK;
 		}
 	} else {
 		PrintAndLogEx(ERR, "Command execute timeout");
