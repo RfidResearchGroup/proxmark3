@@ -1421,8 +1421,7 @@ int CmdEMVScan(const char *cmd) {
 	}
 
 	// drop field at start
-	if (channel == ECC_CONTACTLESS)
-		DropFieldEx( channel );
+	DropFieldEx( channel );
 
 	JsonSaveStr(root, "$.File.Created", "proxmark3 `emv scan`");
 	
@@ -1663,8 +1662,7 @@ int CmdEMVScan(const char *cmd) {
 	// free tlv object
 	tlvdb_free(tlvRoot);
 
-	if (channel == ECC_CONTACTLESS)
-		DropFieldEx( channel );
+	DropFieldEx( channel );
 	
 	res = json_dump_file(root, fname, JSON_INDENT(2));
 	if (res) {
