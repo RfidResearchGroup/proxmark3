@@ -292,7 +292,10 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
 	return 0;
 }
 
-static bool smart_select(bool silent) {
+bool smart_select(bool silent, smart_card_atr_t *atr) {
+	if (atr)
+		memset(atr, 0, sizeof(smart_card_atr_t));		
+
 	UsbCommand c = {CMD_SMART_ATR, {0, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
@@ -308,12 +311,14 @@ static bool smart_select(bool silent) {
 		return false;
 	}	
 
-	if (!silent) {
-		smart_card_atr_t card;
-		memcpy(&card, (smart_card_atr_t *)resp.d.asBytes, sizeof(smart_card_atr_t));
-		
+	smart_card_atr_t card;
+	memcpy(&card, (smart_card_atr_t *)resp.d.asBytes, sizeof(smart_card_atr_t));
+
+	if (atr)
+		memcpy(atr, &card, sizeof(smart_card_atr_t));		
+
+	if (!silent)
 		PrintAndLogEx(INFO, "ISO7816-3 ATR : %s", sprint_hex(card.atr, card.atr_len));	
-	}
 
 	return true;
 }
@@ -518,7 +523,7 @@ int ExchangeAPDUSC(uint8_t *datain, int datainlen, bool activateCard, bool leave
 	*dataoutlen = 0;
 	
 	if (activateCard)
-		smart_select(false);
+		smart_select(false, NULL);
 
 	PrintAndLogEx(DEBUG, "APDU SC");
 
@@ -1017,7 +1022,7 @@ int CmdSmartBruteforceSFI(const char *Cmd) {
 		return 1;		
 
 	PrintAndLogEx(INFO, "Selecting card");
-	if ( !smart_select(false) )
+	if ( !smart_select(false, NULL) )
 		return 1;
 
 	char* caid = NULL;
