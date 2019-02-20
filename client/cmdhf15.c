@@ -834,6 +834,7 @@ int CmdHF15Restore(const char*Cmd) {
 	
 	if (!getUID(uid)) {
 		PrintAndLogEx(WARNING, "No tag found");
+		fclose(f);
 		return 3;
 	}
 	

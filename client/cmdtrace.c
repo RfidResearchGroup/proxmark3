@@ -14,7 +14,6 @@ static int CmdHelp(const char *Cmd);
 // trace pointer
 static uint8_t *trace;
 long traceLen = 0;
-bool preRDV40 = true;
 	
 int usage_trace_list(){
 	PrintAndLogEx(NORMAL, "List protocol data in trace buffer.");
@@ -297,8 +296,9 @@ void printFelica(uint16_t traceLen, uint8_t *trace) {
 
 		if (tracepos + 3 >= traceLen) break;
 
-		uint16_t gap = (uint16_t)trace[tracepos+1] + ((uint16_t)trace[tracepos] >> 8);
-		uint16_t crc_ok = trace[tracepos+2];
+		
+		uint16_t gap = *((uint16_t *)(trace + tracepos));
+		uint8_t crc_ok = trace[tracepos+2];
 		tracepos += 3;
 
 		if (tracepos + 3 >= traceLen) break;

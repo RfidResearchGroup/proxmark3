@@ -1204,6 +1204,7 @@ int CmdEMVExec(const char *cmd) {
 		
 		if (res) {	
 			PrintAndLogEx(NORMAL, "AC1 error(%d): %4x. Exit...", res, sw);
+			free(cdol1_data_tlv);
 			dreturn(7);
 		}
 

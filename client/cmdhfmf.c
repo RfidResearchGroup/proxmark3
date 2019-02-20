@@ -425,6 +425,7 @@ char * GenerateFilename(const char *prefix, const char *suffix){
 	GetHFMF14AUID(uid, &uidlen);
 	if (!uidlen) {
 		PrintAndLogEx(WARNING, "No tag found.");
+		free(fptr);
 		return NULL;
 	}
 	
@@ -1082,19 +1083,21 @@ int CmdHF14AMfNested(const char *Cmd) {
 	} else {
 		SectorsCnt = NumOfSectors(cmdp);
 	}
-
-	ctmp = tolower(param_getchar(Cmd, 4));
-	transferToEml |= (ctmp == 't');
-	createDumpFile |= (ctmp == 'd');
 	
-	ctmp = tolower(param_getchar(Cmd, 6));
-	transferToEml |= (ctmp == 't');
-	createDumpFile |= (ctmp == 'd');
+	uint8_t j = 4;
+	while ( ctmp != 0x00 ) {
+
+		ctmp = tolower(param_getchar(Cmd, j));
+		transferToEml |= (ctmp == 't');
+		createDumpFile |= (ctmp == 'd');
+		
+		j++;
+	}
 	
 	// check if we can authenticate to sector
 	res = mfCheckKeys(blockNo, keyType, true, 1, key, &key64);
 	if (res) {
-		PrintAndLogEx(WARNING, "key is wrong. Can't authenticate to block:%3d key type:%c", blockNo, keyType ? 'B' : 'A');
+		PrintAndLogEx(WARNING, "Wrong key. Can't authenticate to block:%3d key type:%c", blockNo, keyType ? 'B' : 'A');
 		return 3;
 	}	
 	
@@ -1112,9 +1115,9 @@ int CmdHF14AMfNested(const char *Cmd) {
 				if (transferToEml) {
 					uint8_t sectortrailer;
 					if (trgBlockNo < 32*4) { 	// 4 block sector
-						sectortrailer = (trgBlockNo & ~0x03) + 3;
+					sectortrailer = trgBlockNo | 0x03;
 					} else {					// 16 block sector
-						sectortrailer = (trgBlockNo & ~0x0f) + 15;
+					sectortrailer = trgBlockNo | 0x0f;
 					}
 					mfEmlGetMem(keyBlock, sectortrailer, 1);
 			
@@ -1236,7 +1239,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 					num_to_bytes(e_sector[i].Key[1], 6, &keyBlock[10]);
 				mfEmlSetMem(keyBlock, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1);
 			}
-			PrintAndLogEx(SUCCESS, "key transferred to emulator memory.");
+			PrintAndLogEx(SUCCESS, "keys transferred to emulator memory.");
 		}
 		
 		// Create dump file
