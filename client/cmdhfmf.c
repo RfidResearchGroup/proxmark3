@@ -3198,6 +3198,39 @@ int CmdHF14AMfAuth4(const char *cmd) {
 	return MifareAuth4(NULL, keyn, key, true, false, true);
 }
 
+// https://www.nxp.com/docs/en/application-note/AN10787.pdf
+int CmdHF14AMfMAD(const char *cmd) {
+
+	CLIParserInit("hf mf mad", 
+		"Checks and prints Mifare Application Directory (MAD)", 
+		"Usage:\n\thf mf mad -> shows MAD if exists\n");
+
+	void* argtable[] = {
+		arg_param_begin,
+		arg_lit0("vV",  "verbose",  "show technical data"),
+		arg_param_end
+	};
+	CLIExecWithReturn(cmd, argtable, true);
+	bool verbose = arg_get_lit(1);
+	
+	CLIParserFree();
+
+	uint8_t sector[16 * 4] = {0};
+	if (mfReadSector(0, 0, (uint8_t *)g_mifare_mad_key, sector)) {
+		PrintAndLogEx(ERR, "read sector 0 error. card don't have MAD or don't have MAD on default keys.");
+		return 2;
+	}
+	
+	if (verbose) {
+		for(int i = 0; i < 3; i ++)
+			PrintAndLogEx(NORMAL, "[i] %s", sprint_hex(&sector[i * 16], 16));		
+	}
+	
+//	MADDecodeAndPrint(sector, verbose);
+	
+	return 0;
+}
+
 static command_t CommandTable[] = {
 	{"help",		CmdHelp,				1, "This help"},
 	{"darkside",	CmdHF14ADarkside,		0, "Darkside attack. read parity error messages."},
@@ -3234,6 +3267,9 @@ static command_t CommandTable[] = {
 	{"cgetsc",		CmdHF14AMfCGetSc,		0, "Read sector - Magic Chinese card"},
 	{"cload",		CmdHF14AMfCLoad,		0, "Load dump into magic Chinese card"},
 	{"csave",		CmdHF14AMfCSave,		0, "Save dump from magic Chinese card into file or emulator"},
+	{"-----------",	CmdHelp,				1, ""},
+	{"mad",			CmdHF14AMfMAD,			0, "Checks and prints MAD"},
+//	{"ndef",		CmdHF14AMfHDEF,			0, "Checks and prints NDEF records from card"},
 
 	{"ice",			CmdHF14AMfice,			0, "collect Mifare Classic nonces to file"},
 	{NULL, NULL, 0, NULL}
