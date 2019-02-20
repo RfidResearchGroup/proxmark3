@@ -1382,12 +1382,6 @@ int CmdEMVScan(const char *cmd) {
 	
 	SetAPDULogging(showAPDU);
 	
-	// TODO
-	if (channel == ECC_CONTACT) {
-		PrintAndLogEx(ERR, "Do not use contact interface. Exit.");
-		return 1;
-	}
-	
 	// current path + file name
 	if (!strstr(crelfname, ".json"))
 		strcat(crelfname, ".json");
@@ -1411,23 +1405,35 @@ int CmdEMVScan(const char *cmd) {
 	}
 
 	// drop field at start
-	DropFieldEx( channel );
-
-	// iso 14443 select
-	PrintAndLogEx(NORMAL, "--> GET UID, ATS.");
-	
-	iso14a_card_select_t card;
-	if (Hf14443_4aGetCardData(&card)) {
-		return 2;
-	}
+	if (channel == ECC_CONTACTLESS)
+		DropFieldEx( channel );
 
 	JsonSaveStr(root, "$.File.Created", "proxmark3 `emv scan`");
 	
-	JsonSaveStr(root, "$.Card.Communication", "iso14443-4a");
-	JsonSaveBufAsHex(root, "$.Card.UID", (uint8_t *)&card.uid, card.uidlen);
-	JsonSaveHex(root, "$.Card.ATQA", card.atqa[0] + (card.atqa[1] << 2), 2);
-	JsonSaveHex(root, "$.Card.SAK", card.sak, 0);
-	JsonSaveBufAsHex(root, "$.Card.ATS", (uint8_t *)card.ats, card.ats_len);
+	if (channel == ECC_CONTACTLESS) {
+		// iso 14443 select
+		PrintAndLogEx(NORMAL, "--> GET UID, ATS.");
+		
+		iso14a_card_select_t card;
+		if (Hf14443_4aGetCardData(&card)) {
+			return 2;
+		}
+
+		
+		JsonSaveStr(root, "$.Card.Contactless.Communication", "iso14443-4a");
+		JsonSaveBufAsHex(root, "$.Card.Contactless.UID", (uint8_t *)&card.uid, card.uidlen);
+		JsonSaveHex(root, "$.Card.Contactless.ATQA", card.atqa[0] + (card.atqa[1] << 2), 2);
+		JsonSaveHex(root, "$.Card.Contactless.SAK", card.sak, 0);
+		JsonSaveBufAsHex(root, "$.Card.Contactless.ATS", (uint8_t *)card.ats, card.ats_len);
+	} else {
+		PrintAndLogEx(NORMAL, "--> GET ATR.");
+		
+		smart_card_atr_t card;
+		smart_select(true, &card);
+		
+		JsonSaveStr(root, "$.Card.Contact.Communication", "iso7816");
+		JsonSaveBufAsHex(root, "$.Card.Contact.ATR", (uint8_t *)card.atr, card.atr_len);
+	}
 	
 	// init applets list tree
 	const char *al = "Applets list";
@@ -1642,7 +1648,8 @@ int CmdEMVScan(const char *cmd) {
 	// free tlv object
 	tlvdb_free(tlvRoot);
 
-	DropFieldEx( channel );
+	if (channel == ECC_CONTACTLESS)
+		DropFieldEx( channel );
 	
 	res = json_dump_file(root, fname, JSON_INDENT(2));
 	if (res) {
