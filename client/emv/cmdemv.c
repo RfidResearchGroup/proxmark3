@@ -1444,6 +1444,10 @@ int CmdEMVScan(const char *cmd) {
 		
 		smart_card_atr_t card;
 		smart_select(true, &card);
+		if (!card.atr_len) {
+			PrintAndLogEx(ERR, "Can't get ATR from a smart card.");
+			return 1;
+		}
 		
 		JsonSaveStr(root, "$.Card.Contact.Communication", "iso7816");
 		JsonSaveBufAsHex(root, "$.Card.Contact.ATR", (uint8_t *)card.atr, card.atr_len);
