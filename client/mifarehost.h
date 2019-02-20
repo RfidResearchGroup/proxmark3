@@ -76,7 +76,7 @@ extern int mfCheckKeys_fast( uint8_t sectorsCnt, uint8_t firstChunk, uint8_t las
 						uint8_t strategy, uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory);
 extern int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultkey);
 
-
+extern int mfReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data);
 
 extern int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount);
 extern int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount);

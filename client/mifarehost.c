@@ -414,6 +414,37 @@ out:
 	return -4;
 }
 
+// MIFARE
+int mfReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data) {
+	
+	UsbCommand c = {CMD_MIFARE_READSC, {sectorNo, keyType, 0}};
+	memcpy(c.d.asBytes, key, 6);
+	clearCommandBuffer();
+	SendCommand(&c);
+
+	UsbCommand resp;
+	if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+		uint8_t isOK  = resp.arg[0] & 0xff;
+
+		if (isOK) {
+			memcpy(data, resp.d.asBytes, mfNumBlocksPerSector(sectorNo) * 16);
+			for (int i = 0; i < (sectorNo<32?3:15); i++) {
+				PrintAndLogEx(NORMAL, "data   : %s", sprint_hex(data + i * 16, 16));
+			}
+			PrintAndLogEx(NORMAL, "trailer: %s", sprint_hex(data + (sectorNo<32?3:15) * 16, 16));
+			
+			return 0;
+		} else {
+			return 1;
+		}
+	} else {
+		PrintAndLogEx(ERR, "Command execute timeout");
+		return 2;
+	}
+	
+	return 0;
+}
+
 // EMULATOR
 int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount) {
 	UsbCommand c = {CMD_MIFARE_EML_MEMGET, {blockNum, blocksCount, 0}};
