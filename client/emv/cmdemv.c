@@ -792,6 +792,14 @@ int CmdEMVExec(const char *cmd) {
 	uint8_t psenum = (channel == ECC_CONTACT) ? 1 : 2;
 	CLIParserFree();
 	
+#ifndef WITH_SMARTCARD
+	// not compiled with smartcard functionality,  we need to exit
+	if ( channel == ECC_CONTACT ) {
+		PrintAndLogEx(WARNING, "PM3 Client is not compiled with support for SMARTCARD. Exiting.");
+		return 0;
+	}
+#endif	
+
 	SetAPDULogging(showAPDU);
 	
 	// init applets list tree
@@ -1380,6 +1388,14 @@ int CmdEMVScan(const char *cmd) {
 	CLIGetStrWithReturn(12, relfname, &relfnamelen);
 	CLIParserFree();
 	
+#ifndef WITH_SMARTCARD
+	// not compiled with smartcard functionality,  we need to exit
+	if ( channel == ECC_CONTACT ) {
+		PrintAndLogEx(WARNING, "PM3 Client is not compiled with support for SMARTCARD. Exiting.");
+		return 0;
+	}
+#endif	
+
 	SetAPDULogging(showAPDU);
 	
 	// current path + file name
@@ -1418,7 +1434,6 @@ int CmdEMVScan(const char *cmd) {
 		if (Hf14443_4aGetCardData(&card)) {
 			return 2;
 		}
-
 		
 		JsonSaveStr(root, "$.Card.Contactless.Communication", "iso14443-4a");
 		JsonSaveBufAsHex(root, "$.Card.Contactless.UID", (uint8_t *)&card.uid, card.uidlen);
@@ -1702,6 +1717,7 @@ int CmdEMVRoca(const char *cmd) {
 	if (arg_get_lit(2))
 		channel = ECC_CONTACT;
 	PrintChannel(channel);
+	CLIParserFree();
 	
 #ifndef WITH_SMARTCARD
 	// not compiled with smartcard functionality,  we need to exit
