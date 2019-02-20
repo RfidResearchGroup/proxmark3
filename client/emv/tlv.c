@@ -352,7 +352,13 @@ struct tlvdb *tlvdb_find_path(struct tlvdb *tlvdb, tlv_tag_t tag[]) {
 
 void tlvdb_add(struct tlvdb *tlvdb, struct tlvdb *other)
 {
+	if (tlvdb == other)
+		return;
+	
 	while (tlvdb->next) {
+		if (tlvdb->next == other)
+			return;
+		
 		tlvdb = tlvdb->next;
 	}
 
