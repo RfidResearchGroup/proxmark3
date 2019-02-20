@@ -1199,7 +1199,7 @@ int CmdEMVExec(const char *cmd) {
 			dreturn(7);
 		}
 
-		// process Format1 (0x80) anf print Format2 (0x77)
+		// process Format1 (0x80) and print Format2 (0x77)
 		ProcessACResponseFormat1(tlvRoot, buf, len, decodeTLV);
 
 		uint8_t CID = 0;
