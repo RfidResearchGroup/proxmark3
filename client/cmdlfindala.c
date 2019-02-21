@@ -377,8 +377,8 @@ int CmdIndalaDemodAlt(const char *Cmd) {
 
 int CmdIndalaSim(const char *Cmd) {
 
-	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_indala_sim();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_indala_sim();
 
 	uint8_t bits[224];
 	size_t size = sizeof(bits);
@@ -392,9 +392,9 @@ int CmdIndalaSim(const char *Cmd) {
 		return usage_lf_indala_sim();
 	
 	// convert to binarray
-	uint8_t counter = 224;
-	for (uint8_t i=0; i< len; i++) {
-		for(uint8_t j=0; j<8; j++) {
+	uint8_t counter = 223;
+	for (uint8_t i = 0; i < len; i++) {
+		for(uint8_t j = 0; j < 8; j++) {
 			bits[counter--] = hexuid[i] & 1;
 			hexuid[i] >>= 1;
 		}
