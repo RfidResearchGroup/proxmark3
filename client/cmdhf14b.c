@@ -461,6 +461,7 @@ bool HF14B_Std_Info(bool verbose){
 			PrintAndLogEx(NORMAL, " CHIPID : %02X", card.chipid);
 			print_atqb_resp(card.atqb, card.cid);
 			isSuccess = true;
+			break;
 		case 2:
 			if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 ATTRIB fail");
 			break;
