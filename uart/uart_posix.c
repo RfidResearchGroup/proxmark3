@@ -102,6 +102,7 @@ serial_port uart_open(const char* pcPortName) {
 			printf("Error: getaddrinfo: %s\n", gai_strerror(s));
 			freeaddrinfo(addr);
 			free(addrstr);
+			free(sp);
 			return INVALID_SERIAL_PORT;
 		}
 
