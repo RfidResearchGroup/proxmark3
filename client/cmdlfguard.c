@@ -192,7 +192,7 @@ int CmdGuardDemod(const char *Cmd) {
 			PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII preamble not found");
 		else if (preambleIndex == -3)
 			PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII size not correct: %d", size);
-		else if (preambleIndex == -3)
+		else if (preambleIndex == -5)
 			PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII wrong spacerbits");
 		else				
 			PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII ans: %d", preambleIndex);
