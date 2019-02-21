@@ -2752,10 +2752,9 @@ int CmdHF14AMfCLoad(const char *Cmd) {
 			res = loadFileEML( Cmd, "eml", data, &datalen);
 		}
 	}
-	if ( res ) {
-		free(data);
+	
+	if ( res )
 		return 1;
-	}
 	
 //	PrintAndLogEx(INFO, "DATA | %s", sprint_hex(data+1000, 24) );
 	
