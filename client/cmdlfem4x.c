@@ -474,14 +474,14 @@ int CmdEM410xBrute(const char *Cmd) {
 	/* default pause time: 1 second */
 	uint32_t delay = 1000;
 	
-	char cmdp = param_getchar(Cmd, 0);	
-	if (cmdp == 'h' || cmdp == 'H') return usage_lf_em410x_brute();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (cmdp == 'h') return usage_lf_em410x_brute();
 	
-	cmdp = param_getchar(Cmd, 1);	
-	if (cmdp == 'd' || cmdp == 'D') {
+	cmdp = tolower(param_getchar(Cmd, 1));
+	if (cmdp == 'd') {
 		delay = param_get32ex(Cmd, 2, 1000, 10);
 		param_getdec(Cmd, 4, &clock);
-	} else if (cmdp == 'c' || cmdp == 'C') {
+	} else if (cmdp == 'c') {
 		param_getdec(Cmd, 2, &clock);
 		delay = param_get32ex(Cmd, 4, 1000, 10);
 	}
@@ -498,7 +498,10 @@ int CmdEM410xBrute(const char *Cmd) {
 	}
 
 	uidBlock = calloc(stUidBlock, 5);
-	if (uidBlock == NULL) return 1;
+	if (uidBlock == NULL) {
+		fclose(f);
+		return 1;
+	}
 	
 	while( fgets(buf, sizeof(buf), f) ) {
 		if (strlen(buf) < 10 || buf[9] == '\n') continue;
