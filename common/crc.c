@@ -99,14 +99,15 @@ uint32_t CRC8Maxim(uint8_t *buff, size_t size) {
 		crc_update2(&crc, buff[i], 8);
 	return crc_finish(&crc);
 }
-// width=8  poly=0x1d, reversed poly=0x??  init=0xe3  refin=true  refout=true  xorout=0x0000  check=0xC6  name="CRC-8/MAD"
+// width=8 poly=0x1d, init=0xc7 (0xe3 - WRONG! but it mentioned in MAD datasheet) refin=true  refout=true  xorout=0x00 name="CRC-8/MAD"
 // the CRC needs to be reversed before returned.
+//  init c7, poly 1d, final 0x00.
 uint32_t CRC8Mad(uint8_t *buff, size_t size) {
 	crc_t crc;
-	crc_init_ref(&crc, 8, 0x1d, 0xe3, 0, true, true);
+	crc_init_ref(&crc, 8, 0x1d, 0xc7, 0, false, false);
 	for ( int i = 0; i < size; ++i)
 		crc_update2(&crc, buff[i], 8);
-	return reflect8(crc_finish(&crc));
+	return crc_finish(&crc);
 }
 // width=4  poly=0xC, reversed poly=0x7  init=0x5   refin=true  refout=true  xorout=0x0000  check=  name="CRC-4/LEGIC"
 uint32_t CRC4Legic(uint8_t *cmd, size_t size) {
