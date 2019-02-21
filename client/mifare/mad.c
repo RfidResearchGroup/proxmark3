@@ -22,6 +22,37 @@ madAIDDescr madKnownAIDs[] = {
 
 int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2) {
 	
+	uint8_t GPB = sector[3 * 16 + 9];
+	PrintAndLogEx(NORMAL, "GPB: 0x%02x", GPB);
+	
+	// DA (MAD available)
+	if (!(GPB & 0x80)) {
+		PrintAndLogEx(ERR, "DA=0! MAD not available.");
+		return 1;
+	}
+	
+	// MA (multi-application card)
+	if (GPB & 0x40)
+		PrintAndLogEx(NORMAL, "Multi application card.");
+	else
+		PrintAndLogEx(NORMAL, "Single application card.");
+	
+	uint8_t MADVer = GPB & 0x03;
+	
+	//  MAD version
+	if ((MADVer != 0x01) && (MADVer != 0x02)) {
+		PrintAndLogEx(ERR, "Wrong MAD version: 0x%02x", MADVer);
+		return 2;
+	};
+	
+	if (haveMAD2)
+		*haveMAD2 = (MADVer == 2);
+	
+	
+	
+	
+	
+	
 	return 0;
 };
 
