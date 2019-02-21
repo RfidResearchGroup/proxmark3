@@ -246,7 +246,7 @@ static bool get_14b_UID(iso14b_card_select_t *card) {
 	if (!card)
 		return false;
 	
-	uint8_t retry = 3;
+	int8_t retry = 3;
 	UsbCommand resp;
 	UsbCommand c = {CMD_ISO_14443B_COMMAND, {ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0}};
 		
