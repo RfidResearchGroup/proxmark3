@@ -1723,7 +1723,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 	if (strlen(Cmd) < 3 || ctmp == 'h') return usage_hf14_chk();
 
 	FILE * f;
-	char filename[FILE_PATH_SIZE]={0};
+	char filename[FILE_PATH_SIZE] = {0};
 	char buf[13];
 	uint8_t *keyBlock = NULL, *p;
 	sector_t *e_sector = NULL;
@@ -1970,8 +1970,10 @@ out:
 	
 	if (createDumpFile) {
 		fptr = GenerateFilename("hf-mf-", "-key.bin");
-		if (fptr == NULL) 
+		if (fptr == NULL) {
+			free(keyBlock);			
 			return 1;
+		}
 
 		FILE *fkeys = fopen(fptr, "wb");
 		if (fkeys == NULL) { 
@@ -2489,15 +2491,18 @@ int CmdHF14AMfELoad(const char *Cmd) {
 	if ( blockWidth == 4 ) {
 		if ((blockNum != numBlocks)) {		
 			PrintAndLogEx(FAILED, "Warning, Ultralight/Ntag file content, Loaded %d blocks into emulator memory", blockNum);
+			free(data);
 			return 0;
 		}
 	} else {
 		if ((blockNum != numBlocks)) {
 			PrintAndLogEx(FAILED, "Error, file content, Only loaded %d blocks, must be %d blocks into emulator memory", blockNum, numBlocks);
+			free(data);
 			return 4;
 		}
 	}
 	PrintAndLogEx(SUCCESS, "Loaded %d blocks from file: " _YELLOW_(%s), blockNum, filename);
+	free(data);
 	return 0;
 }
 
