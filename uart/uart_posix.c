@@ -86,7 +86,7 @@ serial_port uart_open(const char* pcPortName) {
 			return INVALID_SERIAL_PORT;
 		}
 
-		timeout.tv_usec = 300000  // 300 000 micro seconds
+		timeout.tv_usec = 300000;  // 300 000 micro seconds
 		
 		char *colon = strrchr(addrstr, ':');
 		char *portstr;
