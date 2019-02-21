@@ -1245,8 +1245,10 @@ int CmdHF14AMfNested(const char *Cmd) {
 		// Create dump file
 		if (createDumpFile) {
 			fptr = GenerateFilename("hf-mf-", "-key.bin");
-			if (fptr == NULL) 
+			if (fptr == NULL) {
+				free(e_sector);
 				return 1;
+			}
 			
 			if ((fkeys = fopen(fptr, "wb")) == NULL) { 
 				PrintAndLogEx(WARNING, "could not create file " _YELLOW_(%s), fptr);
@@ -1276,6 +1278,8 @@ int CmdHF14AMfNested(const char *Cmd) {
 		}		
 		free(e_sector);
 	}
+
+	free(e_sector);	
 	return 0;
 }
 
@@ -1971,7 +1975,8 @@ out:
 	if (createDumpFile) {
 		fptr = GenerateFilename("hf-mf-", "-key.bin");
 		if (fptr == NULL) {
-			free(keyBlock);			
+			free(keyBlock);
+			free(e_sector);			
 			return 1;
 		}
 

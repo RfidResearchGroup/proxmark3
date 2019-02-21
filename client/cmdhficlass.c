@@ -2163,7 +2163,7 @@ int CmdHFiClassLookUp(const char *Cmd) {
 	
 	uint8_t CSN[8];
 	uint8_t EPURSE[8] = { 0,0,0,0,0,0,0,0 };
-	uint8_t MACS[8];
+	uint8_t MACS[8]= { 0,0,0,0,0,0,0,0 };
 	uint8_t CCNR[12];
 	uint8_t MAC_TAG[4] = { 0,0,0,0 };
 	

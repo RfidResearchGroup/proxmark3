@@ -685,7 +685,7 @@ static bool readKeyFile(uint8_t key[8]) {
 		sprintf(filename, "%s.bin", "client/loclass/iclass_key");
 	}
 	
-	if ( filename == NULL )
+	if ( strlen(filename) == 0 )
 		return retval;
 	
 	FILE *f = fopen(filename, "rb");

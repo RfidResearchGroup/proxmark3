@@ -1982,6 +1982,7 @@ int CmdHF14AMfURestore(const char *Cmd){
 	uint8_t *dump = calloc(fsize, sizeof(uint8_t));
 	if ( !dump ) {
 		PrintAndLogEx(WARNING, "Failed to allocate memory");
+		fclose(f);
 		return 1;
 	}
 
@@ -1990,6 +1991,7 @@ int CmdHF14AMfURestore(const char *Cmd){
 	fclose(f);
 	if ( bytes_read < 48 ) {
 		PrintAndLogEx(WARNING, "Error, dump file is too small");
+		free(dump);
 		return 1;
 	}
 	

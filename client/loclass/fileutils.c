@@ -266,8 +266,8 @@ int loadFile(const char *preferredName, const char *suffix, void* data, size_t* 
 	FILE *f = fopen(fileName, "rb");
 	if ( !f ) {
 		PrintAndLogDevice(WARNING, "file not found or locked. '" _YELLOW_(%s)"'", fileName);
-		retval = 1;
-		goto out;
+		free(fileName);
+		return 1;
 	}
 	
 	// get filesize in order to malloc memory
@@ -310,7 +310,12 @@ int loadFile(const char *preferredName, const char *suffix, void* data, size_t* 
 
 out:	
 	fclose(f);
+	
+	if (data)
+		free(data);
+	
 	free(fileName);
+	
 	return retval;
 }
 

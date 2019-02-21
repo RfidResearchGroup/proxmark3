@@ -1022,8 +1022,10 @@ int CmdSmartBruteforceSFI(const char *Cmd) {
 		return 1;		
 
 	PrintAndLogEx(INFO, "Selecting card");
-	if ( !smart_select(false, NULL) )
+	if ( !smart_select(false, NULL) ) {
+		free(buf);
 		return 1;
+	}
 
 	char* caid = NULL;
 	

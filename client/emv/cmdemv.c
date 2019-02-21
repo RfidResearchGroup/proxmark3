@@ -1807,6 +1807,7 @@ int CmdEMVRoca(const char *cmd) {
 		PrintAndLogEx(ERR, "Can't create PDOL data.");
 		tlvdb_free(tlvRoot);
 		DropFieldEx( channel );
+		free(pdol_data_tlv);
 		return 6;
 	}
 	PrintAndLogEx(INFO, "PDOL data[%d]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));

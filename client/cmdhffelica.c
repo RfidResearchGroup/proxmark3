@@ -242,7 +242,7 @@ static void printSep() {
 	PrintAndLogEx(NORMAL, "------------------------------------------------------------------------------------");
 }
 
-uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace,uint16_t tracelen) {
+uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace, uint16_t tracelen) {
 	if (tracepos+19 >= tracelen) 
 		return tracelen;
 	
@@ -273,8 +273,8 @@ uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace,uint16_t tracelen) {
 		case 0x0c: PrintAndLogEx(NORMAL,  "S_PAD12: %s",line);break;
 		case 0x0d: PrintAndLogEx(NORMAL,  "S_PAD13: %s",line);break;
 		case 0x0E: {
-			uint32_t regA = trace[3] + (trace[4]>>8) + (trace[5]>>16) + (trace[6]>>24);
-			uint32_t regB = trace[7] + (trace[8]>>8) + (trace[9]>>16) + (trace[10]>>24);
+			uint32_t regA = trace[3] | trace[4] << 8 | trace[5] << 16 | trace[ 6] << 24;
+			uint32_t regB = trace[7] | trace[8] << 8 | trace[9] << 16 | trace[10] << 24;
 			line[0] = 0;
 			for (int j = 0; j < 8; j++) 
 				snprintf(line+( j  * 2),110, "%02x", trace[j+11]);
