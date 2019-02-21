@@ -22,7 +22,7 @@
 #include "ui.h"
 #include "cmdhf14a.h"
 #include "mifare.h"
-#include "mifare4.h"
+#include "mifare/mifare4.h"
 #include "cliparser/cliparser.h"
 #include "crypto/libpcrypto.h"
 

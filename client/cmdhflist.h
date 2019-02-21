@@ -31,8 +31,8 @@
 #include "emv/cmdemv.h"		// EMV
 #include "protocols.h"
 #include "crapto1/crapto1.h"
-#include "mifarehost.h"
-#include "mifaredefault.h"
+#include "mifare/mifarehost.h"
+#include "mifare/mifaredefault.h"
 #include "parity.h"			// oddparity
 #include "iso15693tools.h"	// ISO15693 crc
 

@@ -48,7 +48,7 @@
 #include <stdarg.h>
 #include "../ui.h"
 #include "../emv/emvjson.h"
-#include "mifare4.h"
+#include "mifare/mifare4.h"
 #include "cmdhfmfu.h"
 
 typedef enum {

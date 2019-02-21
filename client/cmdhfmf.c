@@ -9,7 +9,7 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdhfmf.h"
-#include "mifare4.h"
+#include "mifare/mifare4.h"
 
 #define MIFARE_4K_MAXBLOCK 256
 #define MIFARE_2K_MAXBLOCK 128 
@@ -3216,18 +3216,28 @@ int CmdHF14AMfMAD(const char *cmd) {
 	CLIParserFree();
 
 	uint8_t sector[16 * 4] = {0};
-	if (mfReadSector(0, 0, (uint8_t *)g_mifare_mad_key, sector)) {
+	if (mfReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector)) {
 		PrintAndLogEx(ERR, "read sector 0 error. card don't have MAD or don't have MAD on default keys.");
 		return 2;
 	}
 	
 	if (verbose) {
-		for(int i = 0; i < 3; i ++)
-			PrintAndLogEx(NORMAL, "[i] %s", sprint_hex(&sector[i * 16], 16));		
+		for(int i = 0; i < 4; i ++)
+			PrintAndLogEx(NORMAL, "[%d] %s", i, sprint_hex(&sector[i * 16], 16));		
 	}
+	/*
+	bool haveMAD2 = false;
+	MAD1DecodeAndPrint(sector, verbose, &haveMAD2);
 	
-//	MADDecodeAndPrint(sector, verbose);
-	
+	if (haveMAD2) {
+		if (mfReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector)) {
+			PrintAndLogEx(ERR, "read sector 0 error. card don't have MAD or don't have MAD on default keys.");
+			return 2;
+		}
+
+		MAD2DecodeAndPrint(sector, verbose);
+	}
+	*/
 	return 0;
 }
 
