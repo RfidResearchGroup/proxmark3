@@ -10,6 +10,7 @@
 
 #include "mad.h"
 #include "ui.h"
+#include "crc.h"
 
 madAIDDescr madKnownAIDs[] = {
 	{0x0000, "free"}, 
@@ -48,7 +49,11 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2) {
 	if (haveMAD2)
 		*haveMAD2 = (MADVer == 2);
 	
-	
+	uint8_t crc = CRC8Mad(&sector[16 + 1], 31);
+	if (crc != sector[16]) {
+		PrintAndLogEx(ERR, "Wrong MAD CRC. Calculated crc: 0x%02x, from sector: 0x%02x", crc, sector[16]);
+		return 3;
+	};
 	
 	
 	
