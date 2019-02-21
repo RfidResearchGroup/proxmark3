@@ -10,6 +10,7 @@
 
 #include "cmdhfmf.h"
 #include "mifare/mifare4.h"
+#include "mifare/mad.h"
 
 #define MIFARE_4K_MAXBLOCK 256
 #define MIFARE_2K_MAXBLOCK 128 
@@ -3225,7 +3226,7 @@ int CmdHF14AMfMAD(const char *cmd) {
 		for(int i = 0; i < 4; i ++)
 			PrintAndLogEx(NORMAL, "[%d] %s", i, sprint_hex(&sector[i * 16], 16));		
 	}
-	/*
+
 	bool haveMAD2 = false;
 	MAD1DecodeAndPrint(sector, verbose, &haveMAD2);
 	
@@ -3237,7 +3238,7 @@ int CmdHF14AMfMAD(const char *cmd) {
 
 		MAD2DecodeAndPrint(sector, verbose);
 	}
-	*/
+	
 	return 0;
 }
 
