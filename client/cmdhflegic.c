@@ -1022,6 +1022,7 @@ int CmdLegicRestore(const char *Cmd){
 	f = fopen(filename,"rb");
 	if (!f) {
 		PrintAndLogEx(WARNING, "File %s not found or locked", filename);
+		free(data);
 		return 3;
 	}	
 	

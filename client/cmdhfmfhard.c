@@ -266,14 +266,20 @@ static void init_bitflip_bitarrays(void)
 				continue;
 			} else {
 				fseek(statesfile, 0, SEEK_END);
-				uint32_t filesize = (uint32_t)ftell(statesfile);
+				int fsize = ftell(statesfile);
+				if ( fsize == -1 ){
+					PrintAndLogEx(WARNING, "File read error with %s. Aborting...\n", state_file_name);
+					fclose(statesfile);
+					exit(5);
+				}
+				uint32_t filesize = (uint32_t)fsize;
 				rewind(statesfile);
 				uint8_t input_buffer[filesize];
 				size_t bytesread = fread(input_buffer, 1, filesize, statesfile);
 				if (bytesread != filesize) {
 					PrintAndLogEx(WARNING, "File read error with %s. Aborting...\n", state_file_name);
 					fclose(statesfile);
-					inflateEnd(&compressed_stream);
+					//inflateEnd(&compressed_stream);
 					exit(5);
 				}
 				fclose(statesfile);

@@ -2162,10 +2162,10 @@ static int cmp_uint32( const void *a, const void *b) {
 int CmdHFiClassLookUp(const char *Cmd) {
 	
 	uint8_t CSN[8];
-	uint8_t EPURSE[8];
+	uint8_t EPURSE[8] = { 0,0,0,0,0,0,0,0 };
 	uint8_t MACS[8];
 	uint8_t CCNR[12];
-	uint8_t MAC_TAG[4] = {0x00,0x00,0x00,0x00};
+	uint8_t MAC_TAG[4] = { 0,0,0,0 };
 	
 	// elite key,  raw key, standard key
 	bool use_elite = false;

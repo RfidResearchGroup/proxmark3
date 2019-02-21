@@ -284,6 +284,7 @@ int CmdEMVGPO(const char *cmd) {
 	if (!pdol_data_tlv_data) {
 		PrintAndLogEx(ERR, "Can't create PDOL data.");
 		tlvdb_free(tlvRoot);
+		free(pdol_data_tlv);
 		return 4;
 	}
 	PrintAndLogEx(INFO, "PDOL data[%d]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
@@ -296,6 +297,7 @@ int CmdEMVGPO(const char *cmd) {
 	
 	if (pdol_data_tlv != &data_tlv)
 		free(pdol_data_tlv);
+	
 	tlvdb_free(tlvRoot);
 	
 	if (sw)
