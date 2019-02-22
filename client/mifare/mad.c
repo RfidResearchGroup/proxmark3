@@ -13,6 +13,7 @@
 #include "crc.h"
 #include "util.h"
 
+// https://www.nxp.com/docs/en/application-note/AN10787.pdf
 static madAIDDescr madKnownAIDs[] = {
 	{0x0000, "free"}, 
 	{0x0001, "defect, e.g. access keys are destroyed or unknown"},
