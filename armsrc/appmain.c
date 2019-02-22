@@ -1253,11 +1253,11 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			
 			size_t size = MIN(USB_CMD_DATA_SIZE, len);
 			
-			uint8_t *mem = BigBuf_malloc(size);
-	
-  			if (!FlashInit()) {
+			if (!FlashInit()) {
    		       break;
   		    }
+
+			uint8_t *mem = BigBuf_malloc(size);
 			
 			for(size_t i = 0; i < len; i += size) {
 				len = MIN((len - i), size);
@@ -1271,6 +1271,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 					break;
 				}
 			}
+			BigBuf_free();
 			FlashStop();
 			LED_B_OFF();
 			break;
