@@ -3230,9 +3230,9 @@ int CmdHF14AMfMAD(const char *cmd) {
 	bool haveMAD2 = false;
 	MAD1DecodeAndPrint(sector, verbose, &haveMAD2);
 	
-	if (haveMAD2) {
-		if (mfReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector)) {
-			PrintAndLogEx(ERR, "read sector 0 error. card don't have MAD or don't have MAD on default keys.");
+	if (haveMAD2) { // MF_MAD2_SECTOR
+		if (mfReadSector(1, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector)) {
+			PrintAndLogEx(ERR, "read sector 0x10 error. card don't have MAD or don't have MAD on default keys.");
 			return 2;
 		}
 

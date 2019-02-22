@@ -122,7 +122,10 @@ int madCRCCheck(uint8_t *sector, bool verbose, int MADver) {
 }
 
 uint16_t madGetAID(uint8_t *sector, int MADver, int sectorNo) {
-	return (sector[16 + 2 + (sectorNo - 1) * 2] << 8) + (sector[16 + 2 + (sectorNo - 1) * 2 + 1]);	
+	if (MADver == 1)
+		return (sector[16 + 2 + (sectorNo - 1) * 2] << 8) + (sector[16 + 2 + (sectorNo - 1) * 2 + 1]);	
+	else
+		return (sector[2 + (sectorNo - 1) * 2] << 8) + (sector[2 + (sectorNo - 1) * 2 + 1]);	
 }
 
 int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2) {
@@ -185,6 +188,11 @@ int MAD2DecodeAndPrint(uint8_t *sector, bool verbose) {
 	if (res)
 		return res;	
 
+	for(int i = 1; i < 8 + 8 + 7; i++) {
+		uint16_t AID = madGetAID(sector, 2, i);
+		PrintAndLogEx(NORMAL, "%02d [%04X] %s", i + 15, AID, GetAIDDescription(AID));
+	};
+		
 	
 	return 0;
 };
