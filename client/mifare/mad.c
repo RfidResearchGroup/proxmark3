@@ -161,6 +161,17 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2) {
 	if (verbose)
 		PrintAndLogEx(NORMAL, "CRC8-MAD OK.");
 	
+	// info byte
+	uint8_t InfoByte = sector[16 + 1] & 0x3f;
+	if (InfoByte) {
+		PrintAndLogEx(NORMAL, "Card publisher sector: 0x%02x", InfoByte);
+	} else {
+		if (verbose)
+			PrintAndLogEx(NORMAL, "Card publisher sector not present.");
+	}
+	if (InfoByte == 0x10 || InfoByte >= 0x28)
+		PrintAndLogEx(WARNING, "Info byte error");
+	
 	for(int i = 1; i < 16; i++) {
 		uint16_t AID = madGetAID(sector, 1, i);
 		PrintAndLogEx(NORMAL, "%02d [%04X] %s", i, AID, GetAIDDescription(AID));
