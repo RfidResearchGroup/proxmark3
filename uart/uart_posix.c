@@ -123,6 +123,7 @@ serial_port uart_open(const char* pcPortName) {
 			printf("Error: Could not connect\n");
 			freeaddrinfo(addr);
 			free(addrstr);
+			free(sp);
 			return INVALID_SERIAL_PORT;
 		}
 
@@ -132,13 +133,17 @@ serial_port uart_open(const char* pcPortName) {
 		sp->fd = sfd;
 
 		int one = 1;
-		setsockopt(sp->fd, SOL_TCP, TCP_NODELAY, &one, sizeof(one));
+		int res = setsockopt(sp->fd, SOL_TCP, TCP_NODELAY, &one, sizeof(one));
+		if ( res != 0) {
+			free(sp);
+			return INVALID_SERIAL_PORT;
+		}
 		return sp;
 	}
 
   
 	sp->fd = open(pcPortName, O_RDWR | O_NOCTTY | O_NDELAY | O_NONBLOCK);
-	if(sp->fd == -1) {
+	if (sp->fd == -1) {
 		uart_close(sp);
 		return INVALID_SERIAL_PORT;
 	}
@@ -160,7 +165,7 @@ serial_port uart_open(const char* pcPortName) {
 	}
 
 	// Try to retrieve the old (current) terminal info struct
-	if(tcgetattr(sp->fd,&sp->tiOld) == -1) {
+	if (tcgetattr(sp->fd,&sp->tiOld) == -1) {
 		uart_close(sp);
 		return INVALID_SERIAL_PORT;
 	}
@@ -180,7 +185,7 @@ serial_port uart_open(const char* pcPortName) {
 	sp->tiNew.c_cc[VTIME] = 0;
 
 	// Try to set the new terminal info struct
-	if(tcsetattr(sp->fd, TCSANOW, &sp->tiNew) == -1) {
+	if (tcsetattr(sp->fd, TCSANOW, &sp->tiNew) == -1) {
 		uart_close(sp);
 		return INVALID_SERIAL_PORT;
 	}
@@ -359,8 +364,11 @@ bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed) {
 #  endif
 		default: return false;
 	};
+	
 	struct termios ti;
-	if (tcgetattr(spu->fd,&ti) == -1) return false;
+	if (tcgetattr(spu->fd,&ti) == -1) 
+		return false;
+	
 	// Set port speed (Input and Output)
 	cfsetispeed(&ti, stPortSpeed);
 	cfsetospeed(&ti, stPortSpeed);
