@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Add 'hf mf list' - readded it again (@iceman)
  - Fix - A lot of bugfixes, like memory leaks (@iceman)
  - Change 'hf 14a antifuzz' - original implementation (@asfabw),  reworked a bit
  - Fix 'hf mf fchk' (@iceman)
