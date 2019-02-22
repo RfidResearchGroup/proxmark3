@@ -434,7 +434,7 @@ char * GenerateFilename(const char *prefix, const char *suffix){
 	return fptr;
 }
 
-int CmdHF14ADarkside(const char *Cmd) {
+int CmdHF14AMfDarkside(const char *Cmd) {
 	uint8_t blockno = 0, key_type = MIFARE_AUTH_KEYA;
 	uint64_t key = 0;
 	
@@ -3174,7 +3174,7 @@ out:
 	return 0;
 }
 
-int CmdHF14AMfAuth4(const char *cmd) {
+int CmdHF14AMfAuth4(const char *Cmd) {
 	uint8_t keyn[20] = {0};
 	int keynlen = 0;
 	uint8_t key[16] = {0};
@@ -3191,7 +3191,7 @@ int CmdHF14AMfAuth4(const char *cmd) {
 		arg_str1(NULL,  NULL,     "<Key Value (HEX 16 bytes)>", NULL),
 		arg_param_end
 	};
-	CLIExecWithReturn(cmd, argtable, true);
+	CLIExecWithReturn(Cmd, argtable, true);
 	
 	CLIGetHexWithReturn(1, keyn, &keynlen);
 	CLIGetHexWithReturn(2, key, &keylen);
@@ -3210,9 +3210,15 @@ int CmdHF14AMfAuth4(const char *cmd) {
 	return MifareAuth4(NULL, keyn, key, true, false, true);
 }
 
+int CmdHF14AMfList(const char *Cmd) {
+	CmdTraceList("mf");
+	return 0;
+}
+
 static command_t CommandTable[] = {
 	{"help",		CmdHelp,				1, "This help"},
-	{"darkside",	CmdHF14ADarkside,		0, "Darkside attack. read parity error messages."},
+	{"list",		CmdHF14AMfList,         0, "[Deprecated] List ISO 14443-a / Mifare history"},	
+	{"darkside",	CmdHF14AMfDarkside,		0, "Darkside attack. read parity error messages."},
 	{"nested",		CmdHF14AMfNested,		0, "Nested attack. Test nested authentication"},
 	{"hardnested", 	CmdHF14AMfNestedHard, 	0, "Nested attack for hardened Mifare cards"},
 	{"keybrute",	CmdHF14AMfKeyBrute,		0, "J_Run's 2nd phase of multiple sector nested authentication key recovery"},	
