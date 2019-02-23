@@ -891,6 +891,7 @@ int CmdLFfind(const char *Cmd) {
 	if (CmdLFNedapDemod(""))	{ PrintAndLogEx(SUCCESS, "\nValid NEDAP ID Found!"); goto out;}
 	if (CmdNexWatchDemod("")) 	{ PrintAndLogEx(SUCCESS, "\nValid NexWatch ID Found!"); goto out;}
 	if (CmdNoralsyDemod(""))	{ PrintAndLogEx(SUCCESS, "\nValid Noralsy ID Found!"); goto out;}
+	if (CmdKeriDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid KERI ID Found!"); goto out;}
 	if (CmdPacDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid PAC/Stanley ID Found!"); goto out;}	
 	if (CmdParadoxDemod(""))	{ PrintAndLogEx(SUCCESS, "\nValid Paradox ID Found!"); goto out;}
 	if (CmdPrescoDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid Presco ID Found!"); goto out;}				 
