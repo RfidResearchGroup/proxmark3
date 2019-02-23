@@ -2397,7 +2397,6 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
 			key_found = brute_force(foundkey);
 			free(candidates->states[ODD_STATE]);
 			free(candidates->states[EVEN_STATE]);
-			free_statelist_cache();
 			free_candidates_memory(candidates);
 			candidates = NULL;
 		} else {
