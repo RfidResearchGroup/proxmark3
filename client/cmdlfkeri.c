@@ -92,10 +92,8 @@ int CmdKeriDemod(const char *Cmd) {
 	uint32_t raw2 = bytebits_to_byte(DemodBuffer+32, 32);
 	
 	//get internal id
-	uint32_t ID = 0;
-	for (uint8_t i = 30; i < 59; i++){
-		ID = (ID << 1) | DemodBuffer[i];
-	}
+	uint32_t ID = bytebits_to_byte(DemodBuffer+29, 32);	
+	ID &= 0x7FFFFFFF;
 	
 	/*
 		000000000000000000000000000001XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX111
@@ -111,18 +109,16 @@ int CmdKeriDemod(const char *Cmd) {
 		Might be a hash of FC & CN to generate Internal ID
 	*/
 	
-	PrintAndLogEx(NORMAL, "KERI Tag Found -- Raw: %08X%08X", raw1 ,raw2);
-	
-	PrintAndLogEx(NORMAL, "KERI Internal ID: %d", ID);
+	PrintAndLogEx(NORMAL, "KERI Tag Found -- Raw: %08X%08X", raw1 ,raw2);	
+	PrintAndLogEx(NORMAL, "KERI Internal ID: %u", ID);
 	
 	if (invert){
 		PrintAndLogEx(NORMAL, "Had to Invert - probably KERI");
 		for (size_t i = 0; i < size; i++)
 			DemodBuffer[i] ^= 1;
+		
+		CmdPrintDemodBuff("x");
 	} 
-
-	CmdPrintDemodBuff("x");
-	
 	return 1;
 }
 
