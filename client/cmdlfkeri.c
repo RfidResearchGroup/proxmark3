@@ -129,10 +129,15 @@ int CmdKeriRead(const char *Cmd) {
 
 int CmdKeriClone(const char *Cmd) {
 	
-	PrintAndLogEx(ERR, "TO BE DONE - Cloning KERI is not implemented yet");
-	/*
+
 	uint32_t internalid = 0;
-	uint32_t blocks[3] = {T55x7_MODULATION_PSK1 | T55x7_PSKCF_RF_2 | 2 << T55x7_MAXBLOCK_SHIFT | T55x7_BITRATE_RF_16, 0, 0};
+	uint32_t blocks[3] = {
+			T55x7_X_MODE | T55x7_MODULATION_PSK1 | T55x7_PSKCF_RF_2 | 2 << T55x7_MAXBLOCK_SHIFT | T55x7_BITRATE_RF_128,
+			0,
+			0};
+	
+	// safe key
+	blocks[0] |= 6 << 28;
 	
 	char cmdp = tolower(param_getchar(Cmd, 0));
 	if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_keri_clone();
@@ -141,18 +146,20 @@ int CmdKeriClone(const char *Cmd) {
 	
 	//Q5
 	if (tolower(param_getchar(Cmd, 1)) == 'q')
-		blocks[0] = T5555_MODULATION_PSK1 | T5555_SET_BITRATE(16) | T5555_PSK_RF_2 | 2 << T5555_MAXBLOCK_SHIFT;
+		blocks[0] = T5555_MODULATION_PSK1 | T5555_SET_BITRATE(128) | T5555_PSK_RF_2 | 2 << T5555_MAXBLOCK_SHIFT;
 	
 	
-	// MSB is ONE,  and 3 LSB is ONE
-	uint32_t pre = 
-	internalid &= 0x80000003;
+	// MSB is ONE
+	internalid |= 0x80000000;
 
+	// 3 LSB is ONE
+	uint64_t data =  ((uint64_t)internalid << 3 ) + 7;
+	
 	// 
-	blocks[1] = internalid & 0x
-	blocks[2] = bytebits_to_byte(bits + 32, 32);
+	blocks[1] = data >> 32;
+	blocks[2] = data & 0xFFFFFFFF;
 
-	PrintAndLogEx(NORMAL, "Preparing to clone KERI to T55x7 with Internal Id: %u", id);
+	PrintAndLogEx(NORMAL, "Preparing to clone KERI to T55x7 with Internal Id: %u", internalid);
 	print_blocks(blocks, 3);
 	
 	UsbCommand resp;
@@ -168,7 +175,7 @@ int CmdKeriClone(const char *Cmd) {
 			return -1;
 		}
 	}
-	*/
+
     return 0;
 }
 
