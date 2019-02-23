@@ -42,13 +42,14 @@
 #include "cmdlfnoralsy.h"	// for NORALSY meny
 #include "cmdlffdx.h"		// for FDX-B meny
 #include "cmdlfcotag.h"		// for COTAG meny
-#include "cmdlfindala.h" // for indala menu
-#include "cmdlfguard.h"// for gproxii menu
-#include "cmdlffdx.h"    // for fdx-b menu
-#include "cmdlfparadox.h"// for paradox menu
+#include "cmdlfindala.h"	// for indala menu
+#include "cmdlfguard.h"		// for gproxii menu
+#include "cmdlffdx.h"		// for fdx-b menu
+#include "cmdlfparadox.h"	// for paradox menu
 #include "cmdlfnexwatch.h"	//for nexwatch menu
 #include "cmdlfsecurakey.h"	//for securakey menu
 #include "cmdlfpac.h"		// for pac menu
+#include "cmdlfkeri.h"		// for keri menu
 
 #define T55XX_WRITE_TIMEOUT	1500
 
