@@ -215,7 +215,7 @@ int CmdKeriSim(const char *Cmd) {
 	PrintAndLogEx(NORMAL, "Simulating KERI - Internal Id: %u", internalid);
 	
 	UsbCommand c = {CMD_PSK_SIM_TAG, {arg1, arg2, size}};
-	memcpy(c.d.asBytes, bs, size);
+	memcpy(c.d.asBytes, bits, size);
 	clearCommandBuffer();
 	SendCommand(&c);
 
