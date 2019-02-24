@@ -82,11 +82,11 @@ int detectFDXB(uint8_t *dest, size_t *size) {
 static void verify_values(uint32_t countryid, uint64_t animalid){
 	if ((animalid & 0x3FFFFFFFFF) != animalid) {
 		animalid &= 0x3FFFFFFFFF;
-		PrintAndLogEx(NORMAL, "Animal ID Truncated to 38bits: %"PRIx64, animalid);
+		PrintAndLogEx(INFO, "Animal ID Truncated to 38bits: %"PRIx64, animalid);
 	}	
 	if ( (countryid & 0x3ff) != countryid ) {
 		countryid &= 0x3ff;
-		PrintAndLogEx(NORMAL, "Country ID Truncated to 10bits: %03d", countryid);
+		PrintAndLogEx(INFO, "Country ID Truncated to 10bits: %03d", countryid);
 	}
 }
 
