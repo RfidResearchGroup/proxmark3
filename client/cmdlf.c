@@ -189,12 +189,15 @@ int CmdFlexdemod(const char *Cmd) {
 #define LONG_WAIT 100	
 	int i, j, start, bit, sum, phase = 0;
 
-	uint8_t data[MAX_GRAPH_TRACE_LEN] = {0};
-	size_t size = getFromGraphBuf(data);
-	if (size == 0) 
+	int data[GraphTraceLen];
+	memcpy(data, GraphBuffer, GraphTraceLen);
+	
+	if ( GraphTraceLen < 0 )
 		return 0;
 	
-	for (i = 0; i < size; ++i)
+	size_t size = GraphTraceLen;
+	
+	for (i = 0; i < GraphTraceLen; ++i)
 		data[i] = (data[i] < 0) ? -1 : 1;
 
 	for (start = 0; start < size - LONG_WAIT; start++) {
