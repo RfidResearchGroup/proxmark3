@@ -109,11 +109,11 @@ int CmdKeriDemod(const char *Cmd) {
 		Might be a hash of FC & CN to generate Internal ID
 	*/
 	
-	PrintAndLogEx(NORMAL, "KERI Tag Found -- Raw: %08X%08X", raw1 ,raw2);	
-	PrintAndLogEx(NORMAL, "KERI Internal ID: %u", ID);
+	PrintAndLogEx(SUCCESS, "KERI Tag Found -- Internal ID: %u", ID);
+	PrintAndLogEx(SUCCESS, "Raw: %08X%08X", raw1 ,raw2);
 	
 	if (invert){
-		PrintAndLogEx(NORMAL, "Had to Invert - probably KERI");
+		PrintAndLogEx(INFO, "Had to Invert - probably KERI");
 		for (size_t i = 0; i < size; i++)
 			DemodBuffer[i] ^= 1;
 		
@@ -167,7 +167,7 @@ int CmdKeriClone(const char *Cmd) {
 	blocks[1] = data >> 32;
 	blocks[2] = data & 0xFFFFFFFF;
 
-	PrintAndLogEx(NORMAL, "Preparing to clone KERI to T55x7 with Internal Id: %u", internalid);
+	PrintAndLogEx(INFO, "Preparing to clone KERI to T55x7 with Internal Id: %u", internalid);
 	print_blocks(blocks, 3);
 
 
@@ -212,7 +212,7 @@ int CmdKeriSim(const char *Cmd) {
 	arg1 = clk << 8 | carrier;
 	arg2 = invert;
 	
-	PrintAndLogEx(NORMAL, "Simulating KERI - Internal Id: %u", internalid);
+	PrintAndLogEx(SUCCESS, "Simulating KERI - Internal Id: %u", internalid);
 	
 	UsbCommand c = {CMD_PSK_SIM_TAG, {arg1, arg2, size}};
 	memcpy(c.d.asBytes, bits, size);

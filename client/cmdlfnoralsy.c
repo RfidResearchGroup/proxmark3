@@ -161,10 +161,10 @@ int CmdNoralsyDemod(const char *Cmd) {
 		return 0;
 	}
 	
-	PrintAndLogEx(NORMAL, "Noralsy Tag Found: Card ID %u, Year: %u Raw: %08X%08X%08X", cardid, year, raw1 ,raw2, raw3);
+	PrintAndLogEx(SUCCESS, "Noralsy Tag Found: Card ID %u, Year: %u Raw: %08X%08X%08X", cardid, year, raw1 ,raw2, raw3);
 	if (raw1 != 0xBB0214FF) {
-		PrintAndLogEx(NORMAL, "Unknown bits set in first block! Expected 0xBB0214FF, Found: 0x%08X", raw1);
-		PrintAndLogEx(NORMAL, "Please post this output in forum to further research on this format");
+		PrintAndLogEx(WARNING, "Unknown bits set in first block! Expected 0xBB0214FF, Found: 0x%08X", raw1);
+		PrintAndLogEx(WARNING, "Please post this output in forum to further research on this format");
 	}
 	return 1;
 }
@@ -202,7 +202,7 @@ int CmdNoralsyClone(const char *Cmd) {
 	blocks[2] = bytebits_to_byte(bits + 32, 32);
 	blocks[3] = bytebits_to_byte(bits + 64, 32);
 
-	PrintAndLogEx(NORMAL, "Preparing to clone Noralsy to T55x7 with CardId: %u", id);
+	PrintAndLogEx(INFO, "Preparing to clone Noralsy to T55x7 with CardId: %u", id);
 	print_blocks(blocks, 4);
 	
 	UsbCommand resp;
@@ -247,7 +247,7 @@ int CmdNoralsySim(const char *Cmd) {
 		return 1;
 	}	
 	
-	PrintAndLogEx(NORMAL, "Simulating Noralsy - CardId: %u", id);
+	PrintAndLogEx(SUCCESS, "Simulating Noralsy - CardId: %u", id);
 
 	UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};
 	memcpy(c.d.asBytes, bs, size);
