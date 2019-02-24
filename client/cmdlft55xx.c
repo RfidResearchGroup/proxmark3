@@ -1475,7 +1475,7 @@ int CmdT55xxWipe(const char *Cmd) {
 
 	// Try with the default password to reset block 0
 	// With a pwd should work even if pwd bit not set
-	PrintAndLogEx(NORMAL, "\nBeginning Wipe of a T55xx tag (assuming the tag is not password protected)\n");
+	PrintAndLogEx(INFO, "\nBeginning Wipe of a T55xx tag (assuming the tag is not password protected)\n");
 		
 	if ( Q5 )
 		snprintf(ptrData,sizeof(writeData),"b 0 d 6001F004 p 0");
@@ -1490,7 +1490,7 @@ int CmdT55xxWipe(const char *Cmd) {
 		
 		if (!CmdT55xxWriteBlock(ptrData)) PrintAndLogEx(WARNING, "Error writing blk %d", blk);
 		
-		memset(writeData,0x00, sizeof(writeData));
+		memset(writeData, 0x00, sizeof(writeData));
 	}
 	return 0;
 }
@@ -1517,7 +1517,7 @@ int CmdT55xxChkPwds(const char *Cmd) {
 	memset(line, 0, sizeof(line));
 	
     char cmdp = tolower(param_getchar(Cmd, 0));
-	if (cmdp == 'h') return usage_t55xx_chk();
+	if (strlen(Cmd) == 0 || cmdp == 'h') return usage_t55xx_chk();
 	
 	/*
 	if ( T55xxReadBlock(7, 0, 0, 0, 0) ) {
@@ -1618,7 +1618,8 @@ int CmdT55xxChkPwds(const char *Cmd) {
 //			PrintAndLogEx(NORMAL, "chk custom pwd[%2d] %08X", keycnt, bytes_to_num(keyBlock + 4 * keycnt, 4) );
 			keycnt++;			
 			memset(line, 0, sizeof(line));
-		}		
+		}
+		
 		if (f)
 			fclose(f);
 		
@@ -1731,7 +1732,7 @@ int CmdT55xxBruteForce(const char *Cmd) {
 }
 
 int tryOnePassword(uint32_t password) {
-	PrintAndLogEx(NORMAL, "Trying password %08x", password);
+	PrintAndLogEx(INFO, "Trying password %08x", password);
 	if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, password)) {
 		PrintAndLogEx(NORMAL, "Acquire data from device failed. Quitting");
 		return -1;
@@ -1750,8 +1751,8 @@ int CmdT55xxRecoverPW(const char *Cmd) {
 	uint32_t prev_password = 0xffffffff;
 	uint32_t mask = 0x0;
 	int found = 0;
-	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H') return usage_t55xx_recoverpw();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (cmdp == 'h' ) return usage_t55xx_recoverpw();
 
 	orig_password = param_get32ex(Cmd, 0, 0x51243648, 16); //password used by handheld cloners
 
@@ -1934,13 +1935,11 @@ int CmdT55xxDetectPage1(const char *Cmd){
 	uint32_t password = 0;
 	uint8_t cmdp = 0;
 
-	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch(param_getchar(Cmd, cmdp)) {
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'h':
-		case 'H':
 			return usage_t55xx_detectP1();
 		case 'p':
-		case 'P':
 			password = param_get32ex(Cmd, cmdp+1, 0, 16);
 			usepwd = true;
 			cmdp += 2;
@@ -1963,7 +1962,7 @@ int CmdT55xxDetectPage1(const char *Cmd){
 			return false;
 	}
 	bool success = tryDetectP1(false);
-	if (success) PrintAndLogEx(NORMAL, "T55xx chip found!");
+	if (success) PrintAndLogEx(SUCCESS, "T55xx chip found!");
 	return success;
 }
 
