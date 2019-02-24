@@ -136,7 +136,7 @@ int CmdIndalaDemod(const char *Cmd) {
 		idx = indala224decode(DemodBuffer, &size, &invert);
 		if (idx < 0 || size != 224) {
 			PrintAndLogEx(DEBUG, "DEBUG: Error - Indala wrong size, expected [64|224] got: %d (startindex %i)", size, idx);
-			return -1;
+			return 0;
 		}
 	}
 	
