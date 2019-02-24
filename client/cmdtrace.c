@@ -165,7 +165,8 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 				crcStatus = iso14443B_CRC_check(frame, data_len);
 				break;
 			case PROTO_MIFARE:
-				crcStatus = mifare_CRC_check(isResponse, frame, data_len);		
+				crcStatus = mifare_CRC_check(isResponse, frame, data_len);	
+				break;				
 			case ISO_14443A:
 			case MFDES:
 				crcStatus = iso14443A_CRC_check(isResponse, frame, data_len);
@@ -288,6 +289,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 
 void printFelica(uint16_t traceLen, uint8_t *trace) {
 
+	PrintAndLogEx(NORMAL, "ISO18092 / FeliCa - Timings are not as accurate");
 	PrintAndLogEx(NORMAL, "    Gap | Src | Data                            | CRC      | Annotation        |");
 	PrintAndLogEx(NORMAL, "--------|-----|---------------------------------|----------|-------------------|");
     uint16_t tracepos = 0;
@@ -511,8 +513,8 @@ int CmdTraceList(const char *Cmd) {
 		}		
 	}
 
-	PrintAndLogEx(NORMAL, "Recorded Activity (TraceLen = %d bytes)", traceLen);
-	PrintAndLogEx(NORMAL, "");
+	PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = %d bytes)", traceLen);
+	PrintAndLogEx(INFO, "");
 	if (protocol == FELICA) {
 		printFelica(traceLen, trace);
 	} else { 
@@ -526,8 +528,6 @@ int CmdTraceList(const char *Cmd) {
 			                      "        Tag Mode: Timings are in sub carrier periods (1/212 kHz == 4.7us)");
 		if ( protocol == ISO_15693 )
 			PrintAndLogEx(NORMAL, "ISO15693 - Timings are not as accurate");
-		if ( protocol == FELICA )
-			PrintAndLogEx(NORMAL, "ISO18092 / FeliCa - Timings are not as accurate");
 		if ( protocol == ISO_7816_4 )
 			PrintAndLogEx(NORMAL, "ISO7816-4 / Smartcard - Timings N/A yet");
 		
