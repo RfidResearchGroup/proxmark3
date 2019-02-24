@@ -266,9 +266,11 @@ int CmdEMVGPO(const char *cmd) {
 			ParamLoadFromJson(tlvRoot);
 		};
 		
-		pdol_data_tlv = dol_process((const struct tlv *)tlvdb_external(0x9f38, datalen, data), tlvRoot, 0x83);
+		struct tlvdb *tmp_ext = tlvdb_external(0x9f38, datalen, data);
+		pdol_data_tlv = dol_process((const struct tlv *)tmp_ext, tlvRoot, 0x83);
 		if (!pdol_data_tlv){
 			PrintAndLogEx(ERR, "Can't create PDOL TLV.");
+			tlvdb_free(tmp_ext);
 			tlvdb_free(tlvRoot);
 			return 4;
 		}
@@ -446,9 +448,11 @@ int CmdEMVAC(const char *cmd) {
 			ParamLoadFromJson(tlvRoot);
 		};
 		
-		cdol_data_tlv = dol_process((const struct tlv *)tlvdb_external(0x8c, datalen, data), tlvRoot, 0x01); // 0x01 - dummy tag
+		struct tlvdb *tmp_ext = tlvdb_external(0x8c, datalen, data);
+		cdol_data_tlv = dol_process((const struct tlv *)tmp_ext, tlvRoot, 0x01); // 0x01 - dummy tag
 		if (!cdol_data_tlv){
 			PrintAndLogEx(ERR, "Can't create CDOL TLV.");
+			tlvdb_free(tmp_ext);
 			tlvdb_free(tlvRoot);
 			return 4;
 		}
@@ -588,9 +592,11 @@ int CmdEMVInternalAuthenticate(const char *cmd) {
 			ParamLoadFromJson(tlvRoot);
 		};
 		
-		ddol_data_tlv = dol_process((const struct tlv *)tlvdb_external(0x9f49, datalen, data), tlvRoot, 0x01); // 0x01 - dummy tag
+		struct tlvdb *tmp_ext = tlvdb_external(0x9f49, datalen, data);
+		ddol_data_tlv = dol_process((const struct tlv *)tmp_ext, tlvRoot, 0x01); // 0x01 - dummy tag
 		if (!ddol_data_tlv){
 			PrintAndLogEx(ERR, "Can't create DDOL TLV.");
+			tlvdb_free(tmp_ext);
 			tlvdb_free(tlvRoot);
 			return 4;
 		}
