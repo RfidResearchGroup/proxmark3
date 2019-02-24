@@ -16,7 +16,7 @@ int usage_lf_keri_clone(void){
 	PrintAndLogEx(NORMAL, "Usage: lf keri clone [h] <id> <Q5>");
 	PrintAndLogEx(NORMAL, "Options:");
 	PrintAndLogEx(NORMAL, "      h          : This help");
-	PrintAndLogEx(NORMAL, "      <id>       : KERI Internal ID");
+	PrintAndLogEx(NORMAL, "      <id>       : Keri Internal ID");
 	PrintAndLogEx(NORMAL, "      <Q5>       : specify write to Q5 (t5555 instead of t55x7)");
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Examples:");
@@ -128,8 +128,6 @@ int CmdKeriRead(const char *Cmd) {
 }
 
 int CmdKeriClone(const char *Cmd) {
-	
-
 
 	uint32_t internalid = 0;
 	uint32_t blocks[3] = {
@@ -196,19 +194,17 @@ int CmdKeriSim(const char *Cmd) {
 	char cmdp = tolower(param_getchar(Cmd, 0));
 	if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_keri_sim();
 
-	uint8_t bits[64];
-	uint8_t *bs = bits;
-	memset(bs, 0, sizeof(bits));
-
-	uint32_t internalid = param_get32ex(Cmd, 0, 0, 10);
-
-	// loop to bits.
+	uint64_t internalid = param_get32ex(Cmd, 0, 0, 10);
 	internalid |= 0x80000000;
+	internalid <<= 3;
+	internalid += 7;
 
-	// 3 LSB is ONE
-	uint64_t data =  ((uint64_t)internalid << 3 ) + 7;
-	
-
+	uint8_t bits[64] = {0x00};	
+	// loop to bits
+	uint8_t j = 0;
+	for ( int8_t i = 63; i >= 0; --i) {
+		bits[j++] = ((internalid >> i) & 1 );
+	}
 	
 	uint8_t clk = 32, carrier = 2, invert = 0;
 	uint16_t arg1, arg2;
@@ -216,14 +212,13 @@ int CmdKeriSim(const char *Cmd) {
 	arg1 = clk << 8 | carrier;
 	arg2 = invert;
 	
-	
 	PrintAndLogEx(NORMAL, "Simulating KERI - Internal Id: %u", internalid);
-
+	
 	UsbCommand c = {CMD_PSK_SIM_TAG, {arg1, arg2, size}};
 	memcpy(c.d.asBytes, bs, size);
 	clearCommandBuffer();
 	SendCommand(&c);
-	
+
 	return 0;
 }
 
