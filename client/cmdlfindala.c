@@ -409,7 +409,7 @@ int CmdIndalaSim(const char *Cmd) {
 	// It has to send either 64bits (8bytes) or 224bits (28bytes).  Zero padding needed if not.
 	// lf simpsk 1 c 32 r 2 d 0102030405060708
 	
-	PrintAndLogEx(SUCCESS, "Simulating Indala UID: %u \n", cn);
+	PrintAndLogEx(SUCCESS, "Simulating Indala UID: %s",  sprint_hex(hexuid, len));
 	PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or run another command");
 	
 	UsbCommand c = {CMD_PSK_SIM_TAG, {arg1, arg2, size}};  
