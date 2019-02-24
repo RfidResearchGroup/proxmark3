@@ -170,7 +170,9 @@ crack_states_thread(void* x){
 				__atomic_fetch_add(&found_bs_key, key, __ATOMIC_SEQ_CST);
 
 				char progress_text[80];
-				sprintf(progress_text, "Brute force phase completed. Key found: %012" PRIx64, key);
+				char keystr[18];
+				sprintf(keystr, "%012" PRIx64, key);
+				sprintf(progress_text, "Brute force phase completed. Key found: " _GREEN_(keystr));
 				hardnested_print_progress(thread_arg->num_acquired_nonces, progress_text, 0.0, 0);				
                 break;
             } else if(keys_found){
