@@ -858,9 +858,10 @@ int CmdLFfind(const char *Cmd) {
 		return 0;
 	}
 
-	PrintAndLogEx(NORMAL, "NOTE: some demods output possible binary\n  if it finds something that looks like a tag");
-	PrintAndLogEx(NORMAL, "False Positives ARE possible\n");  
-	PrintAndLogEx(NORMAL, "\nChecking for known tags:\n");
+	PrintAndLogEx(INFO, "NOTE: some demods output possible binary");
+	PrintAndLogEx(INFO, "if it finds something that looks like a tag");
+	PrintAndLogEx(INFO, "False Positives " _YELLOW_(ARE) "possible\n");  
+	PrintAndLogEx(INFO, "\nChecking for known tags:\n");
 	
 	// only run these tests if device is online
 	if (isOnline) {
