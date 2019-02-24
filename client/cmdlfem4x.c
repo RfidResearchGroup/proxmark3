@@ -364,9 +364,7 @@ int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo ) {
 	int ans = Em410xDecode(bits, &size, &idx, hi, lo);
 	if ( ans < 0){
 
-		if (ans == -1)
-			PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x not only 0|1 in decoded bitstream");
-		else if (ans == -2)
+		if (ans == -2)
 			PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x not enough samples after demod");
 		else if (ans == -4)
 			PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x preamble not found");
