@@ -231,8 +231,8 @@ int CmdIndalaDemodAlt(const char *Cmd) {
 	}
 	
 	if (rawbit > 0){
-		PrintAndLogEx(NORMAL, "Recovered %d raw bits, expected: %d", rawbit, GraphTraceLen/32);
-		PrintAndLogEx(NORMAL, "worst metric (0=best..7=worst): %d at pos %d", worst, worstPos);
+		PrintAndLogEx(INFO, "Recovered %d raw bits, expected: %d", rawbit, GraphTraceLen/32);
+		PrintAndLogEx(INFO, "worst metric (0=best..7=worst): %d at pos %d", worst, worstPos);
 	} else {
 		return 0;
 	}
@@ -262,7 +262,7 @@ int CmdIndalaDemodAlt(const char *Cmd) {
 	}
 	
 	if (start == rawbit - uidlen + 1) {
-		PrintAndLogEx(NORMAL, "nothing to wait for");
+		PrintAndLogEx(FAILED, "nothing to wait for");
 		return 0;
 	}
 
@@ -288,7 +288,7 @@ int CmdIndalaDemodAlt(const char *Cmd) {
 			showbits[bit] = '.' + bits[bit];
 		}
 		showbits[bit+1]='\0';
-		PrintAndLogEx(NORMAL, "Partial UID=%s", showbits);
+		PrintAndLogEx(SUCCESS, "Partial UID | %s", showbits);
 		return 0;
 	} else {
 		for (bit = 0; bit < uidlen; bit++) {
@@ -313,7 +313,7 @@ int CmdIndalaDemodAlt(const char *Cmd) {
 					uid2 = (uid2<<1) | 1;
 				} 
 			}
-		PrintAndLogEx(NORMAL, "UID=%s (%x%08x)", showbits, uid1, uid2);
+		PrintAndLogEx(SUCCESS, "UID | %s (%x%08x)", showbits, uid1, uid2);
 	}
 	else {
 		uid3 = uid4 = uid5 = uid6 = uid7 = 0;
@@ -331,7 +331,7 @@ int CmdIndalaDemodAlt(const char *Cmd) {
 			else 
 				uid7 = (uid7<<1) | 1;
 			}
-		PrintAndLogEx(NORMAL, "UID=%s (%x%08x%08x%08x%08x%08x%08x)", showbits, uid1, uid2, uid3, uid4, uid5, uid6, uid7);
+		PrintAndLogEx(SUCCESS, "UID | %s (%x%08x%08x%08x%08x%08x%08x)", showbits, uid1, uid2, uid3, uid4, uid5, uid6, uid7);
 	}
 
 	// Checking UID against next occurrences
@@ -350,7 +350,7 @@ int CmdIndalaDemodAlt(const char *Cmd) {
 		times += 1;
 	}
 
-	PrintAndLogEx(NORMAL, "Occurrences: %d (expected %d)", times, (rawbit - start) / uidlen);
+	PrintAndLogEx(DEBUG, "Occurrences: %d (expected %d)", times, (rawbit - start) / uidlen);
 
 	// Remodulating for tag cloning
 	// HACK: 2015-01-04 this will have an impact on our new way of seening lf commands (demod) 
@@ -409,8 +409,8 @@ int CmdIndalaSim(const char *Cmd) {
 	// It has to send either 64bits (8bytes) or 224bits (28bytes).  Zero padding needed if not.
 	// lf simpsk 1 c 32 r 2 d 0102030405060708
 	
-//	PrintAndLogEx(NORMAL, "Emulating Indala UID: %u \n", cn);
-//	PrintAndLogEx(NORMAL, "Press pm3-button to abort simulation or run another command");
+	PrintAndLogEx(SUCCESS, "Simulating Indala UID: %u \n", cn);
+	PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or run another command");
 	
 	UsbCommand c = {CMD_PSK_SIM_TAG, {arg1, arg2, size}};  
 	memcpy(c.d.asBytes, bits, size);
@@ -427,6 +427,7 @@ int CmdIndalaClone(const char *Cmd) {
 	uint32_t n = 0, i = 0;
 
 	if (strchr(Cmd,'l') != 0) {
+		
 		while (sscanf(&Cmd[i++], "%1x", &n ) == 1) {
 			uid1 = (uid1 << 4) | (uid2 >> 28);
 			uid2 = (uid2 << 4) | (uid3 >> 28);
@@ -436,7 +437,8 @@ int CmdIndalaClone(const char *Cmd) {
 			uid6 = (uid6 << 4) | (uid7 >> 28);
 			uid7 = (uid7 << 4) | (n & 0xf);
 		}
-		PrintAndLogEx(NORMAL, "Cloning 224bit tag with UID %x%08x%08x%08x%08x%08x%08x", uid1, uid2, uid3, uid4, uid5, uid6, uid7);
+	
+		PrintAndLogEx(INFO, "Preparing to clone Indala 224bit tag with UID %x%08x%08x%08x%08x%08x%08x", uid1, uid2, uid3, uid4, uid5, uid6, uid7);
 		c.cmd = CMD_INDALA_CLONE_TAG_L;
 		c.d.asDwords[0] = uid1;
 		c.d.asDwords[1] = uid2;
@@ -450,7 +452,7 @@ int CmdIndalaClone(const char *Cmd) {
 			uid1 = (uid1 << 4) | (uid2 >> 28);
 			uid2 = (uid2 << 4) | (n & 0xf);
 		}
-		PrintAndLogEx(NORMAL, "Cloning 64bit tag with UID %x%08x", uid1, uid2);
+		PrintAndLogEx(INFO, "Preparing to clone Indala 64bit tag with UID %x%08x", uid1, uid2);
 		c.cmd = CMD_INDALA_CLONE_TAG;
 		c.arg[0] = uid1;
 		c.arg[1] = uid2;
