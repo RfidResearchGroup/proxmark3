@@ -819,14 +819,16 @@ int CheckChipType(bool getDeviceData) {
 	//check for em4x05/em4x69 chips first
 	uint32_t word = 0;
 	if (EM4x05IsBlock0(&word)) {
-		PrintAndLogEx(NORMAL, "\nValid EM4x05/EM4x69 Chip Found\nTry lf em 4x05... commands\n");
+		PrintAndLogEx(SUCCESS, "\nValid EM4x05/EM4x69 Chip Found");
+		PrintAndLogEx(SUCCESS, "Try lf em 4x05... commands");
 		save_restoreGB(GRAPH_RESTORE);
 		return 1;
 	}
 
 	//check for t55xx chip...
 	if (tryDetectP1(true)) {
-		PrintAndLogEx(NORMAL, "\nValid T55xx Chip Found\nTry `lf t55xx` commands\n");
+		PrintAndLogEx(SUCCESS, "\nValid T55xx Chip Found");
+		PrintAndLogEx(SUCCESS, "Try `lf t55xx` commands");
 		save_restoreGB(GRAPH_RESTORE);
 		return 1;		
 	}
