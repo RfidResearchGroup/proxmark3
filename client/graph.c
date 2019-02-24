@@ -115,10 +115,13 @@ int GetAskClock(const char *str, bool printAns) {
 	if (st == false) {
 		idx = DetectASKClock(bits, size, &clock, 20);
 	}
-	setClockGrid(clock, idx);
+	
+	if ( clock > 0 ) {
+		setClockGrid(clock, idx);
+	}
 	// Only print this message if we're not looping something
 	if (printAns || g_debugMode)
-		PrintAndLogEx(NORMAL, "Auto-detected clock rate: %d, Best Starting Position: %d", clock, idx);
+		PrintAndLogEx(DEBUG, "Auto-detected clock rate: %d, Best Starting Position: %d", clock, idx);
 
 	return clock;
 }
