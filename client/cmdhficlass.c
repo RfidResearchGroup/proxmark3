@@ -626,7 +626,7 @@ int CmdHFiClassELoad(const char *Cmd) {
 	
 	f = fopen(filename, "rb");
 	if ( !f ){
-		PrintAndLogEx(FAILED, "File: %s: not found or locked.", filename);
+		PrintAndLogEx(FAILED, "File: " _YELLOW_(%s) ": not found or locked.", filename);
 		return 1;
 	}
 	
@@ -2304,7 +2304,7 @@ int LoadDictionaryKeyFile( char* filename, uint8_t **keys, int *keycnt) {
 	int keyitems = 0;
 	
 	if ( !(f = fopen( filename , "r")) ) {
-		PrintAndLogEx(ERR, "file: %s: not found or locked.", filename);
+		PrintAndLogEx(FAILED, "File: " _YELLOW_(%s) ": not found or locked.", filename);
 		return 1;
 	}
 

@@ -1812,7 +1812,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 			
 			f = fopen( filename , "r");
 			if ( !f ) {
-				PrintAndLogEx(FAILED, "File: " _YELLOW_(%s)": not found or locked.", filename);
+				PrintAndLogEx(FAILED, "File: " _YELLOW_(%s) ": not found or locked.", filename);
 				continue;
 			}
 			
