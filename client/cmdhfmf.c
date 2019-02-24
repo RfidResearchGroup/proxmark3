@@ -2239,11 +2239,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 				bufsize = traceLen;
 				memset(buf, 0x00, traceLen);
 			}
-			if (bufPtr == NULL) {
-				PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
-				free(buf);
-				return 2;
-			}
+
 			// what happens if LEN is bigger then TRACELEN --iceman
 			memcpy(bufPtr, resp.d.asBytes, len);
 			bufPtr += len;
