@@ -246,9 +246,9 @@ int CmdGuardDemod(const char *Cmd) {
 			break;
 	}
 	if ( !unknown)
-		PrintAndLogEx(NORMAL, "G-Prox-II Found: Format Len: %ubit - FC: %u - Card: %u, Raw: %08x%08x%08x", fmtLen, FC, Card, raw1, raw2, raw3);
+		PrintAndLogEx(SUCCESS, "G-Prox-II Found: Format Len: %ubit - FC: %u - Card: %u, Raw: %08x%08x%08x", fmtLen, FC, Card, raw1, raw2, raw3);
 	else
-		PrintAndLogEx(NORMAL, "Unknown G-Prox-II Fmt Found: Format Len: %u, Raw: %08x%08x%08x", fmtLen, raw1, raw2, raw3);
+		PrintAndLogEx(SUCCESS, "Unknown G-Prox-II Fmt Found: Format Len: %u, Raw: %08x%08x%08x", fmtLen, raw1, raw2, raw3);
 
 	return 1;
 }
@@ -290,7 +290,7 @@ int CmdGuardClone(const char *Cmd) {
 	blocks[2] = bytebits_to_byte(bs + 32, 32);
 	blocks[3] = bytebits_to_byte(bs + 64, 32);
 
-	PrintAndLogEx(NORMAL, "Preparing to clone Guardall to T55x7 with Facility Code: %u, Card Number: %u", facilitycode, cardnumber);
+	PrintAndLogEx(INFO, "Preparing to clone Guardall to T55x7 with Facility Code: %u, Card Number: %u", facilitycode, cardnumber);
 	print_blocks(blocks, 4);
 
 	UsbCommand resp;
@@ -333,7 +333,7 @@ int CmdGuardSim(const char *Cmd) {
 		return 1;
 	}	
 
-	PrintAndLogEx(NORMAL, "Simulating Guardall - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber );
+	PrintAndLogEx(SUCCESS, "Simulating Guardall - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber );
 
 	uint64_t arg1, arg2;
 	arg1 = (clock << 8) | encoding;
