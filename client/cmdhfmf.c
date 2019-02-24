@@ -2749,8 +2749,11 @@ int CmdHF14AMfCLoad(const char *Cmd) {
 		}
 	}
 	
-	if ( res )
+	if ( res ) {
+		if ( data )
+			free(data);
 		return 1;
+	}
 	
 //	PrintAndLogEx(INFO, "DATA | %s", sprint_hex(data+1000, 24) );
 	
@@ -2922,7 +2925,6 @@ int CmdHF14AMfCSave(const char *Cmd) {
 				errors = true;
 				break;
 			}
-			if (len > FILE_PATH_SIZE - 5) len = FILE_PATH_SIZE - 5;				
 
 			useuid = false;
 			hasname = true;		
