@@ -956,7 +956,7 @@ int detect_classic_nackbug(bool verbose){
 							if (verbose) {
 								PrintAndLogEx(FAILED, "card random number generator seems to be based on the well-known generating polynomial");
 								PrintAndLogEx(NORMAL, "[- ]with 16 effective bits only, but shows unexpected behavior, try again."); 
-x							}
+							}
 							return 2;
 						}				
 				case  2 : PrintAndLogEx(SUCCESS, "always leak NACK detected"); return 3;
