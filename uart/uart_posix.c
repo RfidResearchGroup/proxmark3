@@ -83,6 +83,7 @@ serial_port uart_open(const char* pcPortName) {
 
 		if (addrstr == NULL) {
 			printf("Error: strdup\n");
+			free(sp);
 			return INVALID_SERIAL_PORT;
 		}
 
