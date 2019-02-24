@@ -186,14 +186,17 @@ int CmdLFCommandRead(const char *Cmd) {
 }
 
 int CmdFlexdemod(const char *Cmd) {
-#define LONG_WAIT 100	
+
+	if ( GraphTraceLen < 0 )
+		return 0;
+
+#ifndef LONG_WAIT
+#define LONG_WAIT 100
+#endif
 	int i, j, start, bit, sum, phase = 0;
 
 	int data[GraphTraceLen];
 	memcpy(data, GraphBuffer, GraphTraceLen);
-	
-	if ( GraphTraceLen < 0 )
-		return 0;
 	
 	size_t size = GraphTraceLen;
 	
