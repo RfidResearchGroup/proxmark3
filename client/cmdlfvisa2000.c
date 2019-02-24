@@ -165,8 +165,8 @@ int CmdVisa2kClone(const char *Cmd) {
 	uint64_t id = 0;
 	uint32_t blocks[4] = {T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_64 | T55x7_ST_TERMINATOR | 3 << T55x7_MAXBLOCK_SHIFT, BL0CK1, 0};
 
-	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_visa2k_clone();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_visa2k_clone();
 
 	id = param_get32ex(Cmd, 0, 0, 10);
 	
@@ -210,7 +210,7 @@ int CmdVisa2kSim(const char *Cmd) {
 	arg1 = clk << 8 | encoding;
 	arg2 = invert << 8 | separator;
 
-	PrintAndLogEx(NORMAL, "Simulating Visa2000 - CardId: %u", id);
+	PrintAndLogEx(SUCCESS, "Simulating Visa2000 - CardId: %u", id);
 
 	UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};
 
