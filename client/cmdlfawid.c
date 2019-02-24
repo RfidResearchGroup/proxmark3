@@ -290,7 +290,7 @@ int CmdAWIDDemod(const char *Cmd) {
 	uint32_t rawHi2 = bytebits_to_byte(bits + idx, 32);
 
 	size = removeParity(bits, idx+8, 4, 1, 88);
-	if (size != 66){
+	if (size != 66) {
 		PrintAndLogEx(DEBUG, "DEBUG: Error - AWID at parity check-tag size does not match AWID format");
 		return 0;
 	}
@@ -386,7 +386,7 @@ int CmdAWIDSim(const char *Cmd) {
 	
 	verify_values(&fmtlen, &fc, &cn);
 	
-	PrintAndLogEx(SUCCESS, "Emulating AWID %u -- FC: %u; CN: %u\n", fmtlen, fc, cn);
+	PrintAndLogEx(SUCCESS, "Simulating AWID %u -- FC: %u; CN: %u\n", fmtlen, fc, cn);
 	PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or run another command");
 	
 	if (!getAWIDBits(fmtlen, fc, cn, bits)) {
