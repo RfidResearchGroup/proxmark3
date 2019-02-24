@@ -130,14 +130,19 @@ int CmdKeriRead(const char *Cmd) {
 int CmdKeriClone(const char *Cmd) {
 	
 
+
 	uint32_t internalid = 0;
 	uint32_t blocks[3] = {
-			T55x7_X_MODE | T55x7_MODULATION_PSK1 | T55x7_PSKCF_RF_2 | 2 << T55x7_MAXBLOCK_SHIFT | T55x7_BITRATE_RF_128,
+			T55x7_TESTMODE_DISABLED |
+			T55x7_X_MODE | 
+			T55x7_MODULATION_PSK1 | 
+			T55x7_PSKCF_RF_2 | 
+			2 << T55x7_MAXBLOCK_SHIFT,
 			0,
 			0};
 	
-	// safe key
-	blocks[0] |= 6 << 28;
+	// dynamic bitrate used
+	blocks[0] |= 0xF << 18;
 	
 	char cmdp = tolower(param_getchar(Cmd, 0));
 	if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_keri_clone();
@@ -145,8 +150,13 @@ int CmdKeriClone(const char *Cmd) {
 	internalid = param_get32ex(Cmd, 0, 0, 10);
 	
 	//Q5
-	if (tolower(param_getchar(Cmd, 1)) == 'q')
-		blocks[0] = T5555_MODULATION_PSK1 | T5555_SET_BITRATE(128) | T5555_PSK_RF_2 | 2 << T5555_MAXBLOCK_SHIFT;
+	if (tolower(param_getchar(Cmd, 1)) == 'q') {
+		blocks[0] = 
+			T5555_MODULATION_PSK1 | 
+			T5555_SET_BITRATE(128) | 
+			T5555_PSK_RF_2 | 
+			2 << T5555_MAXBLOCK_SHIFT;
+	}
 	
 	
 	// MSB is ONE
@@ -161,11 +171,13 @@ int CmdKeriClone(const char *Cmd) {
 
 	PrintAndLogEx(NORMAL, "Preparing to clone KERI to T55x7 with Internal Id: %u", internalid);
 	print_blocks(blocks, 3);
-	
+
+
 	UsbCommand resp;
 	UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}};
 
-	for (uint8_t i=0; i<3; i++) {
+
+	for (uint8_t i = 0; i < 3; i++) {
 		c.arg[0] = blocks[i];
 		c.arg[1] = i;
 		clearCommandBuffer();
@@ -181,37 +193,37 @@ int CmdKeriClone(const char *Cmd) {
 
 int CmdKeriSim(const char *Cmd) {
 
-	PrintAndLogEx(ERR, "TO BE DONE - Simulating KERI is not implemented yet");
-/*
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_keri_sim();
+
 	uint8_t bits[64];
 	uint8_t *bs = bits;
 	memset(bs, 0, sizeof(bits));
 
-	uint32_t internalid = 0;
+	uint32_t internalid = param_get32ex(Cmd, 0, 0, 10);
 
-	char cmdp = tolower(param_getchar(Cmd, 0));
-	if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_keri_sim();
+	// loop to bits.
+	internalid |= 0x80000000;
 
-	internalid = param_get32ex(Cmd, 0, 0, 10);
+	// 3 LSB is ONE
+	uint64_t data =  ((uint64_t)internalid << 3 ) + 7;
+	
 
-	uint8_t clk = 32, encoding = 1, separator = 1, invert = 0;
+	
+	uint8_t clk = 32, carrier = 2, invert = 0;
 	uint16_t arg1, arg2;
 	size_t size = 64;
-	arg1 = clk << 8 | encoding;
-	arg2 = invert << 8 | separator;
+	arg1 = clk << 8 | carrier;
+	arg2 = invert;
 	
-	 if ( !getkeriBits(internalid, bs)) {
-		PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
-		return 1;
-	}	
 	
-	PrintAndLogEx(NORMAL, "Simulating KERI - Internal Id: %u", id);
+	PrintAndLogEx(NORMAL, "Simulating KERI - Internal Id: %u", internalid);
 
 	UsbCommand c = {CMD_PSK_SIM_TAG, {arg1, arg2, size}};
 	memcpy(c.d.asBytes, bs, size);
 	clearCommandBuffer();
 	SendCommand(&c);
-*/	
+	
 	return 0;
 }
 
