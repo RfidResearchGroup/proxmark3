@@ -287,7 +287,7 @@ int CmdFdxDemod(const char *Cmd) {
 	PrintAndLogEx(SUCCESS, "Reserved/RFU       %u (0x04%X)", reservedCode,  reservedCode);
 	PrintAndLogEx(SUCCESS, "Animal Tag         %s", animalBit ? _YELLOW_(True) : "False");	
 	PrintAndLogEx(SUCCESS, "Has extended data  %s [0x%X]", dataBlockBit ? _YELLOW_(True) : "False", extended);	
-	PrintAndLogEx(SUCCESS, "CRC-16             0x%04X - 0x%04X [%s]", crc16, calcCrc, (calcCrc == crc16) ? _GREEN_(Ok) : _RED_(Failed);
+	PrintAndLogEx(SUCCESS, "CRC-16             0x%04X - 0x%04X [%s]", crc16, calcCrc, (calcCrc == crc16) ? _GREEN_(Ok) : "Failed");
 
 	if (g_debugMode) {
 		PrintAndLogEx(DEBUG, "Start marker %d;   Size %d", preambleIndex, size);	
