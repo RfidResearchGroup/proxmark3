@@ -159,26 +159,24 @@ int getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t
 */
 int CmdFDXBdemodBI(const char *Cmd){
 
-	int invert = 1;
-	int clk = 32;		
-	int errCnt = 0;
-	int offset = 0, maxErr = 0;
-	uint8_t BitStream[MAX_DEMOD_BUF_LEN];	
-	size_t size = getFromGraphBuf(BitStream);	
+	int clk = 32;
+	int invert = 1, errCnt = 0, offset = 0, maxErr = 0;
+	uint8_t bs[MAX_DEMOD_BUF_LEN];	
+	size_t size = getFromGraphBuf(bs);	
 	
-	errCnt = askdemod(BitStream, &size, &clk, &invert, maxErr, 0, 0);
+	errCnt = askdemod(bs, &size, &clk, &invert, maxErr, 0, 0);
 	if ( errCnt < 0 || errCnt > maxErr ) { 
 		PrintAndLogEx(DEBUG, "DEBUG: Error - FDXB no data or error found %d, clock: %d", errCnt, clk);
 		return 0;
 	}
 
-	errCnt = BiphaseRawDecode(BitStream, &size, &offset, 1);
+	errCnt = BiphaseRawDecode(bs, &size, &offset, 1);
 	if (errCnt < 0 || errCnt > maxErr ) {
 		PrintAndLogEx(DEBUG, "DEBUG: Error - FDXB BiphaseRawDecode: %d", errCnt);
 		return 0;
 	} 
 	
-	int preambleIndex = detectFDXB(BitStream, &size);
+	int preambleIndex = detectFDXB(bs, &size);
 	if (preambleIndex < 0){
 		PrintAndLogEx(DEBUG, "DEBUG: Error - FDXB preamble not found :: %d",preambleIndex);
 		return 0;
@@ -188,10 +186,10 @@ int CmdFDXBdemodBI(const char *Cmd){
 		return 0;
 	}
 	
-	setDemodBuf(BitStream, 128, preambleIndex);
+	setDemodBuf(bs, 128, preambleIndex);
 
 	// remove marker bits (1's every 9th digit after preamble) (pType = 2)
-	size = removeParity(BitStream, preambleIndex + 11, 9, 2, 117);
+	size = removeParity(bs, preambleIndex + 11, 9, 2, 117);
 	if ( size != 104 ) {
 		PrintAndLogEx(DEBUG, "DEBUG: Error - FDXB error removeParity:: %d", size);
 		return 0;
@@ -199,15 +197,15 @@ int CmdFDXBdemodBI(const char *Cmd){
 	PrintAndLogEx(SUCCESS, "\nFDX-B / ISO 11784/5 Animal Tag ID Found:");
 
 	//got a good demod
-	uint64_t NationalCode = ((uint64_t)(bytebits_to_byteLSBF(BitStream+32,6)) << 32) | bytebits_to_byteLSBF(BitStream,32);
-	uint32_t countryCode = bytebits_to_byteLSBF(BitStream+38,10);
-	uint8_t dataBlockBit = BitStream[48];
-	uint32_t reservedCode = bytebits_to_byteLSBF(BitStream+49,14);
-	uint8_t animalBit = BitStream[63];
-	uint32_t crc16 = bytebits_to_byteLSBF(BitStream+64,16);
-	uint32_t extended = bytebits_to_byteLSBF(BitStream+80,24);
+	uint64_t NationalCode = ((uint64_t)(bytebits_to_byteLSBF(bs+32, 6)) << 32) | bytebits_to_byteLSBF(bs, 32);
+	uint32_t countryCode = bytebits_to_byteLSBF(bs+38, 10);
+	uint8_t dataBlockBit = bs[48];
+	uint32_t reservedCode = bytebits_to_byteLSBF(bs+49, 14);
+	uint8_t animalBit = bs[63];
+	uint32_t crc16 = bytebits_to_byteLSBF(bs+64, 16);
+	uint32_t extended = bytebits_to_byteLSBF(bs+80, 24);
 
-	uint64_t rawid = ((uint64_t)bytebits_to_byte(BitStream,32)<<32) | bytebits_to_byte(BitStream+32,32);
+	uint64_t rawid = ((uint64_t)bytebits_to_byte(bs, 32) << 32) | bytebits_to_byte(bs+32, 32);
 	uint8_t raw[8];
 	num_to_bytes(rawid, 8, raw);
 
@@ -219,13 +217,13 @@ int CmdFDXBdemodBI(const char *Cmd){
 	PrintAndLogEx(SUCCESS, "CountryCode:   %04u", countryCode);
 
 	PrintAndLogEx(SUCCESS, "Reserved/RFU:      %u", reservedCode);
-	PrintAndLogEx(SUCCESS, "Animal Tag:        %s", animalBit ? "True" : "False");
-	PrintAndLogEx(SUCCESS, "Has extended data: %s [0x%X]", dataBlockBit ? "True" : "False", extended);
-	PrintAndLogEx(SUCCESS, "CRC:           0x%04X - [%04X] - %s", crc16, calcCrc, (calcCrc == crc16) ? "Passed" : "Failed");
+	PrintAndLogEx(SUCCESS, "Animal Tag:        %s", animalBit ? _YELLOW_(True) : "False");
+	PrintAndLogEx(SUCCESS, "Has extended data: %s [0x%X]", dataBlockBit ? _YELLOW_(True) : "False", extended);
+	PrintAndLogEx(SUCCESS, "CRC:           0x%04X - [%04X] - %s", crc16, calcCrc, (calcCrc == crc16) ? _GREEN_(Passed) : "Failed");
 
 	if (g_debugMode) {
 		PrintAndLogEx(DEBUG, "Start marker %d;   Size %d", preambleIndex, size);
-		char *bin = sprint_bin_break(BitStream,size,16);
+		char *bin = sprint_bin_break(bs, size, 16);
 		PrintAndLogEx(DEBUG, "DEBUG BinStream:\n%s",bin);
 	}
 	return 1;
@@ -287,9 +285,9 @@ int CmdFdxDemod(const char *Cmd) {
 	PrintAndLogEx(SUCCESS, "National Code      %012" PRIu64 " (0x%" PRIx64 ")", NationalCode, NationalCode);
 	PrintAndLogEx(SUCCESS, "Country Code       %04u", countryCode);
 	PrintAndLogEx(SUCCESS, "Reserved/RFU       %u (0x04%X)", reservedCode,  reservedCode);
-	PrintAndLogEx(SUCCESS, "Animal Tag         %s", animalBit ? "True" : "False");	
-	PrintAndLogEx(SUCCESS, "Has extended data  %s [0x%X]", dataBlockBit ? "True" : "False", extended);	
-	PrintAndLogEx(SUCCESS, "CRC-16             0x%04X - 0x%04X [%s]", crc16, calcCrc, (calcCrc == crc16) ? "Ok" : "Failed");
+	PrintAndLogEx(SUCCESS, "Animal Tag         %s", animalBit ? _YELLOW_(True) : "False");	
+	PrintAndLogEx(SUCCESS, "Has extended data  %s [0x%X]", dataBlockBit ? _YELLOW_(True) : "False", extended);	
+	PrintAndLogEx(SUCCESS, "CRC-16             0x%04X - 0x%04X [%s]", crc16, calcCrc, (calcCrc == crc16) ? _GREEN_(Ok) : _RED_(Failed);
 
 	if (g_debugMode) {
 		PrintAndLogEx(DEBUG, "Start marker %d;   Size %d", preambleIndex, size);	
