@@ -283,7 +283,7 @@ static bool get_14b_UID(iso14b_card_select_t *card) {
 		} 
 	} // retry	
 	
-	if ( !retry )
+	if ( retry <= 0 )
 		PrintAndLogEx(WARNING, "timeout while waiting for reply.");
 	
 	return false;
