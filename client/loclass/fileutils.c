@@ -323,6 +323,7 @@ int loadFileEML(const char *preferredName, const char *suffix, void* data, size_
 
 	if ( preferredName == NULL ) return 1;
 	if ( suffix == NULL ) return 1;
+	if ( data == NULL ) return 1;
 
     size_t counter = 0;
 	int retval = 0, hexlen = 0;
@@ -364,7 +365,9 @@ int loadFileEML(const char *preferredName, const char *suffix, void* data, size_
 	}
 	fclose(f);
 	PrintAndLogDevice(SUCCESS, "loaded %d bytes from text file " _YELLOW_(%s), counter, fileName);
-	*datalen = counter;
+	
+	if ( datalen )
+		*datalen = counter;
 		
 out:	
 	free(fileName);
@@ -372,12 +375,14 @@ out:
 }
 
 int loadFileJSON(const char *preferredName, const char *suffix, void* data, size_t maxdatalen, size_t* datalen) {
-	*datalen = 0;
-	json_t *root;
-	json_error_t error;
 
 	if ( preferredName == NULL ) return 1;
 	if ( suffix == NULL ) return 1;
+	if ( data == NULL ) return 1;
+	
+	*datalen = 0;
+	json_t *root;
+	json_error_t error;
 
 	int retval = 0;
 	int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
@@ -461,6 +466,7 @@ int loadFileDICTIONARY(const char *preferredName, const char *suffix, void* data
 
 	if ( preferredName == NULL ) return 1;
 	if ( suffix == NULL ) return 1;
+	if ( data == NULL ) return 1;
 
 	// t5577 == 4bytes
 	// mifare == 6 bytes
@@ -516,8 +522,10 @@ int loadFileDICTIONARY(const char *preferredName, const char *suffix, void* data
 		counter += (keylen >> 1);
 	}
 	fclose(f);
-	PrintAndLogDevice(SUCCESS, "loaded " _GREEN_(%2d) "keys from dictionary file " _YELLOW_(%s), *keycnt, fileName);	
-	*datalen = counter;	
+	PrintAndLogDevice(SUCCESS, "loaded " _GREEN_(%2d) "keys from dictionary file " _YELLOW_(%s), *keycnt, fileName);
+	
+	if ( datalen ) 
+		*datalen = counter;	
 out:	
 	free(fileName);
 	return retval;	
