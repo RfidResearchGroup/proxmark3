@@ -11,6 +11,9 @@
 #include "cmdhfmf.h"
 #include "mifare4.h"
 
+
+#define MFBLOCK_SIZE 16
+
 #define MIFARE_4K_MAXBLOCK 256
 #define MIFARE_2K_MAXBLOCK 128 
 #define MIFARE_1K_MAXBLOCK 64
@@ -697,10 +700,13 @@ int CmdHF14AMfDump(const char *Cmd) {
 	uint8_t cmdp = 0;
 	
 	char keyFilename[FILE_PATH_SIZE] = {0};
-	char dataFilename[FILE_PATH_SIZE] = {0};
+	char dataFilename[FILE_PATH_SIZE];
 	char * fptr;
 	
-	FILE *fin, *fout;	
+	memset(keyFilename, 0, sizeof(keyFilename));
+	memset(dataFilename, 0, sizeof(dataFilename));
+	
+	FILE *f;	
 	UsbCommand resp;
 	
 	while(param_getchar(Cmd, cmdp) != 0x00) {
@@ -734,7 +740,7 @@ int CmdHF14AMfDump(const char *Cmd) {
 		strcpy(keyFilename, fptr);
 	}
 
-	if ((fin = fopen(keyFilename, "rb")) == NULL) {
+	if ((f = fopen(keyFilename, "rb")) == NULL) {
 		PrintAndLogEx(WARNING, "Could not find file " _YELLOW_(%s), keyFilename);
 		return 1;
 	}
@@ -742,29 +748,29 @@ int CmdHF14AMfDump(const char *Cmd) {
 	// Read keys A from file
 	size_t bytes_read;
 	for (sectorNo=0; sectorNo<numSectors; sectorNo++) {
-		bytes_read = fread( keyA[sectorNo], 1, 6, fin );
+		bytes_read = fread( keyA[sectorNo], 1, 6, f );
 		if ( bytes_read != 6) {
 			PrintAndLogEx(WARNING, "File reading error.");
-			fclose(fin);
+			fclose(f);
 			return 2;
 		}
 	}
 	
 	// Read keys B from file
 	for (sectorNo=0; sectorNo<numSectors; sectorNo++) {
-		bytes_read = fread( keyB[sectorNo], 1, 6, fin );
+		bytes_read = fread( keyB[sectorNo], 1, 6, f );
 		if ( bytes_read != 6) {
 			PrintAndLogEx(WARNING, "File reading error.");
-			fclose(fin);
+			fclose(f);
 			return 2;
 		}
 	}
 	
-	fclose(fin);
+	fclose(f);
 			
-	PrintAndLogEx(NORMAL, "|-----------------------------------------|");
-	PrintAndLogEx(NORMAL, "|------ Reading sector access bits...-----|");
-	PrintAndLogEx(NORMAL, "|-----------------------------------------|");
+
+	PrintAndLogEx(INFO, "Reading sector access bits...");
+
 	uint8_t tries = 0;
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		for (tries = 0; tries < MIFARE_SECTOR_RETRY; tries++) {
@@ -796,9 +802,8 @@ int CmdHF14AMfDump(const char *Cmd) {
 		}
 	}
 	
-	PrintAndLogEx(NORMAL, "|-----------------------------------------|");
-	PrintAndLogEx(NORMAL, "|----- Dumping all blocks to file... -----|");
-	PrintAndLogEx(NORMAL, "|-----------------------------------------|");
+	PrintAndLogEx(SUCCESS, "Finished reading sector access bits");
+	PrintAndLogEx(INFO, "Dumping all blocks from card...");
 	
 	bool isOK = true;
 	for (sectorNo = 0; isOK && sectorNo < numSectors; sectorNo++) {
@@ -870,24 +875,24 @@ int CmdHF14AMfDump(const char *Cmd) {
 		}
 	}
 
-	if (isOK) {
-		if (dataFilename[0] == 0x00) {
-			fptr = GenerateFilename("hf-mf-", "-data.bin");
-			if (fptr == NULL) 
-				return 1;
-			
-			strcpy(dataFilename, fptr);
-		}
-		
-		if ((fout = fopen(dataFilename,"wb")) == NULL) { 
-			PrintAndLogEx(WARNING, "could not create file name " _YELLOW_(%s), dataFilename);
-			return 1;
-		}
-		uint16_t numblocks = FirstBlockOfSector(numSectors - 1) + NumBlocksPerSector(numSectors - 1);
-		fwrite(carddata, 1, 16*numblocks, fout);
-		fclose(fout);
-		PrintAndLogEx(SUCCESS, "dumped %d blocks (%d bytes) to file " _YELLOW_(%s), numblocks, 16*numblocks, dataFilename);
+	if (isOK == 0) { 
+		PrintAndLogEx(FAILED, "Something went wrong");
+		return 0;
 	}
+
+	PrintAndLogEx(SUCCESS, "\nSuccedded in dumping all blocks");
+	
+	if ( strlen(dataFilename) < 1 ) {
+		fptr = dataFilename;
+		fptr += sprintf(fptr, "hf-mf-");
+		FillFileNameByUID(fptr, (uint8_t *)carddata, "-data", 4);
+	}
+
+	uint16_t bytes = 16*(FirstBlockOfSector(numSectors - 1) + NumBlocksPerSector(numSectors - 1));
+	
+	saveFile(dataFilename, "bin", (uint8_t *)carddata, bytes);
+	saveFileEML(dataFilename, "eml", (uint8_t *)carddata, bytes, MFBLOCK_SIZE);
+	saveFileJSON(dataFilename, "json", jsfCardMemory, (uint8_t *)carddata, bytes);
 	return 0;
 }
 
@@ -2507,7 +2512,6 @@ int CmdHF14AMfELoad(const char *Cmd) {
 	return 0;
 }
 
-#define MFBLOCK_SIZE 16
 int CmdHF14AMfESave(const char *Cmd) {
 
 	char filename[FILE_PATH_SIZE];
@@ -2549,6 +2553,7 @@ int CmdHF14AMfESave(const char *Cmd) {
 	
 	saveFile(filename, "bin", dump, bytes);
 	saveFileEML(filename, "eml", dump, bytes, MFBLOCK_SIZE);
+	saveFileJSON(filename, "json", jsfCardMemory, dump, bytes);
 	free(dump);
 	return 0;
 }
