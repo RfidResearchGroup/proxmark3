@@ -259,7 +259,8 @@ bool HexToBuffer(const char *errormsg, const char *hexvalue, uint8_t * buffer, s
 		return false;
 	}
 	
-	*bufferlen = buflen;
+	if ( bufferlen )
+		*bufferlen = buflen;
 	
 	return true;
 }
