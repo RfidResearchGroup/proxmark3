@@ -758,14 +758,14 @@ int AutoCorrelate(const int *in, int *out, size_t len, int window, bool SaveGrph
 	// 
 	int hi = 0, idx = 0;
 	int distance = 0, hi_1 = 0, idx_1 = 0;
-	for (int i=0; i<=len; ++i){
+	for (int i = 0; i <= len; ++i){
 		if ( CorrelBuffer[i] > hi) {
 			hi = CorrelBuffer[i];
 			idx = i;
 		}
 	}
 	
-	for (int i=idx+1; i<=window; ++i){
+	for (int i = idx+1; i <= window; ++i){
 		if ( CorrelBuffer[i] > hi_1 ) {
 			hi_1 = CorrelBuffer[i];
 			idx_1 = i;
@@ -773,7 +773,7 @@ int AutoCorrelate(const int *in, int *out, size_t len, int window, bool SaveGrph
 	}
 
 	int foo = ABS(hi-hi_1);
-	int bar = ((int)(((hi+hi_1) / 2) * 0.03));  
+	int bar = (int)(((hi+hi_1) / 2) * 0.03);  
 	if ( verbose && foo < bar ) {
 		distance = idx_1 - idx;
 		PrintAndLogEx(SUCCESS, "possible 3% visible correlation %4d samples", distance);
