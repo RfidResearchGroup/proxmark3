@@ -66,8 +66,6 @@ local utils = {
 	end,
 }
 
-
-
 --- 
 -- Usage help
 local function help()
@@ -80,6 +78,24 @@ local function debug(...)
 	if DEBUG then 
 		prlog("debug:", ...)
 	end
+end
+
+
+--- This function is a lua-implementation of
+-- cmdhf14a.c:waitCmd(uint8_t iSelect)
+local function waitCmd(iSelect)
+	local response = core.WaitForResponseTimeout(cmds.CMD_ACK,1000)
+	if response then
+		local count,cmd,arg0,arg1,arg2 = bin.unpack('LLLL',response)
+		
+		local iLen = arg0
+		if iSelect then	iLen = arg1 end
+	    debug(("Received %i octets (arg0:%d, arg1:%d)"):format(iLen, arg0, arg1))
+	    if iLen == 0 then return nil, "No response from tag" end
+		local recv = string.sub(response,count, iLen+count-1)
+	    return recv
+	end
+	return nil, "No response from device"
 end
 
 
@@ -155,23 +171,6 @@ local function getBlock(block)
 	return {b0,b1,b2,b3}
 end
 
-
---- This function is a lua-implementation of
--- cmdhf14a.c:waitCmd(uint8_t iSelect)
-local function waitCmd(iSelect)
-	local response = core.WaitForResponseTimeout(cmds.CMD_ACK,1000)
-	if response then
-		local count,cmd,arg0,arg1,arg2 = bin.unpack('LLLL',response)
-		
-		local iLen = arg0
-		if iSelect then	iLen = arg1 end
-	    debug(("Received %i octets (arg0:%d, arg1:%d)"):format(iLen, arg0, arg1))
-	    if iLen == 0 then return nil, "No response from tag" end
-		local recv = string.sub(response,count, iLen+count-1)
-	    return recv
-	end
-	return nil, "No response from device"
-end
 
 
 
