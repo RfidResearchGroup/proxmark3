@@ -285,7 +285,7 @@ int CmdPyramidClone(const char *Cmd) {
 	blocks[3] = bytebits_to_byte(bs + 64, 32);
 	blocks[4] = bytebits_to_byte(bs + 96, 32);
 
-	PrintAndLogEx(NORMAL, "Preparing to clone Farpointe/Pyramid to T55x7 with Facility Code: %u, Card Number: %u", facilitycode, cardnumber);
+	PrintAndLogEx(INFO, "Preparing to clone Farpointe/Pyramid to T55x7 with Facility Code: %u, Card Number: %u", facilitycode, cardnumber);
 	print_blocks(blocks, 5);
 
 	UsbCommand resp;
@@ -331,7 +331,7 @@ int CmdPyramidSim(const char *Cmd) {
 		return 1;
 	}	
 
-	PrintAndLogEx(NORMAL, "Simulating Farpointe/Pyramid - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber );
+	PrintAndLogEx(SUCCESS, "Simulating Farpointe/Pyramid - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber );
 	
 	UsbCommand c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}};
 	memcpy(c.d.asBytes, bs, size);

@@ -253,6 +253,7 @@ int CmdEMVGPO(const char *cmd) {
 	
 	// calc PDOL
 	struct tlv *pdol_data_tlv = NULL;
+	struct tlvdb *tmp_ext = NULL;
 	struct tlv data_tlv = {
 		.tag = 0x83,
 		.len = datalen,
@@ -266,9 +267,11 @@ int CmdEMVGPO(const char *cmd) {
 			ParamLoadFromJson(tlvRoot);
 		};
 		
-		pdol_data_tlv = dol_process((const struct tlv *)tlvdb_external(0x9f38, datalen, data), tlvRoot, 0x83);
+		tmp_ext = tlvdb_external(0x9f38, datalen, data);
+		pdol_data_tlv = dol_process((const struct tlv *)tmp_ext, tlvRoot, 0x83);
 		if (!pdol_data_tlv){
 			PrintAndLogEx(ERR, "Can't create PDOL TLV.");
+			tlvdb_free(tmp_ext);
 			tlvdb_free(tlvRoot);
 			return 4;
 		}
@@ -283,6 +286,7 @@ int CmdEMVGPO(const char *cmd) {
 	unsigned char *pdol_data_tlv_data = tlv_encode(pdol_data_tlv, &pdol_data_tlv_data_len);
 	if (!pdol_data_tlv_data) {
 		PrintAndLogEx(ERR, "Can't create PDOL data.");
+		tlvdb_free(tmp_ext);
 		tlvdb_free(tlvRoot);
 		return 4;
 	}
@@ -296,6 +300,8 @@ int CmdEMVGPO(const char *cmd) {
 	
 	if (pdol_data_tlv != &data_tlv)
 		free(pdol_data_tlv);
+
+	tlvdb_free(tmp_ext);	
 	tlvdb_free(tlvRoot);
 	
 	if (sw)
@@ -430,6 +436,7 @@ int CmdEMVAC(const char *cmd) {
 	
 	// calc CDOL
 	struct tlv *cdol_data_tlv = NULL;
+	struct tlvdb *tmp_ext = NULL;
 	struct tlv data_tlv = {
 		.tag = 0x01,
 		.len = datalen,
@@ -444,9 +451,11 @@ int CmdEMVAC(const char *cmd) {
 			ParamLoadFromJson(tlvRoot);
 		};
 		
-		cdol_data_tlv = dol_process((const struct tlv *)tlvdb_external(0x8c, datalen, data), tlvRoot, 0x01); // 0x01 - dummy tag
+		tmp_ext = tlvdb_external(0x8c, datalen, data);
+		cdol_data_tlv = dol_process((const struct tlv *)tmp_ext, tlvRoot, 0x01); // 0x01 - dummy tag
 		if (!cdol_data_tlv){
 			PrintAndLogEx(ERR, "Can't create CDOL TLV.");
+			tlvdb_free(tmp_ext);
 			tlvdb_free(tlvRoot);
 			return 4;
 		}
@@ -467,6 +476,8 @@ int CmdEMVAC(const char *cmd) {
 	
 	if (cdol_data_tlv != &data_tlv)
 		free(cdol_data_tlv);
+
+	tlvdb_free(tmp_ext);
 	tlvdb_free(tlvRoot);
 	
 	if (sw)
@@ -572,6 +583,7 @@ int CmdEMVInternalAuthenticate(const char *cmd) {
 	
 	// calc DDOL
 	struct tlv *ddol_data_tlv = NULL;
+	struct tlvdb *tmp_ext = NULL;
 	struct tlv data_tlv = {
 		.tag = 0x01,
 		.len = datalen,
@@ -586,9 +598,11 @@ int CmdEMVInternalAuthenticate(const char *cmd) {
 			ParamLoadFromJson(tlvRoot);
 		};
 		
-		ddol_data_tlv = dol_process((const struct tlv *)tlvdb_external(0x9f49, datalen, data), tlvRoot, 0x01); // 0x01 - dummy tag
+		tmp_ext = tlvdb_external(0x9f49, datalen, data);
+		ddol_data_tlv = dol_process((const struct tlv *)tmp_ext, tlvRoot, 0x01); // 0x01 - dummy tag
 		if (!ddol_data_tlv){
 			PrintAndLogEx(ERR, "Can't create DDOL TLV.");
+			tlvdb_free(tmp_ext);
 			tlvdb_free(tlvRoot);
 			return 4;
 		}
@@ -609,6 +623,8 @@ int CmdEMVInternalAuthenticate(const char *cmd) {
 	
 	if (ddol_data_tlv != &data_tlv)
 		free(ddol_data_tlv);
+
+	tlvdb_free(tmp_ext);	
 	tlvdb_free(tlvRoot);	
 	
 	if (sw)
@@ -1204,6 +1220,7 @@ int CmdEMVExec(const char *cmd) {
 		
 		if (res) {	
 			PrintAndLogEx(NORMAL, "AC1 error(%d): %4x. Exit...", res, sw);
+			free(cdol1_data_tlv);
 			dreturn(7);
 		}
 
@@ -1804,6 +1821,7 @@ int CmdEMVRoca(const char *cmd) {
 		PrintAndLogEx(ERR, "Can't create PDOL data.");
 		tlvdb_free(tlvRoot);
 		DropFieldEx( channel );
+		free(pdol_data_tlv);
 		return 6;
 	}
 	PrintAndLogEx(INFO, "PDOL data[%d]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));

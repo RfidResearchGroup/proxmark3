@@ -389,6 +389,7 @@ void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *max_blk, uint8_t *
 #define T55x7_BITRATE_RF_64			0x00140000
 #define T55x7_BITRATE_RF_100		0x00180000
 #define T55x7_BITRATE_RF_128		0x001C0000
+#define T55x7_TESTMODE_DISABLED		0x60000000
 
 /* T5555 (Q5) configuration register definitions */
 #define T5555_ST_TERMINATOR			0x00000001

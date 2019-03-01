@@ -35,6 +35,7 @@
 
 extern int CmdHFMF(const char *Cmd);
 
+extern int CmdHF14AMfList(const char *Cmd);
 extern int CmdHF14AMfDbg(const char* cmd);
 extern int CmdHF14AMfRdBl(const char* cmd);
 extern int CmdHF14AMfURdBl(const char* cmd);
@@ -45,7 +46,7 @@ extern int CmdHF14AMfRestore(const char* cmd);
 extern int CmdHF14AMfWrBl(const char* cmd);
 extern int CmdHF14AMfUWrBl(const char* cmd);
 extern int CmdHF14AMfChk(const char* cmd);
-extern int CmdHF14ADarkside(const char* cmd);
+extern int CmdHF14AMfDarkside(const char* cmd);
 extern int CmdHF14AMfNested(const char* cmd);
 extern int CmdHF14AMfNestedHard(const char *Cmd);
 //extern int CmdHF14AMfSniff(const char* cmd);

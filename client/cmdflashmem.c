@@ -13,6 +13,7 @@
 
 #include "mbedtls/rsa.h"
 #include "mbedtls/sha1.h"
+#include "mbedtls/base64.h"
 
 #define MCK 48000000
 //#define FLASH_BAUD 24000000
@@ -247,7 +248,6 @@ int CmdFlashMemLoad(const char *Cmd){
 			res = loadFile(filename, "bin", data, &datalen);
 			//int res = loadFileEML( filename, "eml", data, &datalen);
 			if ( res ) {
-				free(data);
 				return 1;
 			}
 			

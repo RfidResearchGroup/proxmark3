@@ -188,6 +188,7 @@ CMDSRCS =	crapto1/crapto1.c \
 			cmdlfio.c \
 			cmdlfindala.c \
 			cmdlfjablotron.c \
+			cmdlfkeri.c \
 			cmdlfnexwatch.c \
 			cmdlfnedap.c \
 			cmdlfnoralsy.c \

@@ -77,7 +77,7 @@ static void resetSignal(void) {
 	signalprop.isnoise = true;
 }
 static void printSignal(void) {
-	prnt("LF Signal properties:");
+	prnt("LF signal properties:");
 	prnt("  high..........%d", signalprop.high);
 	prnt("  low...........%d", signalprop.low);
 	prnt("  mean..........%d", signalprop.mean);
@@ -1922,7 +1922,7 @@ int pskRawDemod_ext(uint8_t *dest, size_t *size, int *clock, int *invert, int *s
 					dest[numBits++] = curPhase;
 				} else if (waveLenCnt < fc - 1) { //wave is smaller than field clock (shouldn't happen often)
 					errCnt2++;
-					if(errCnt2 > 101) return errCnt2;
+					if (errCnt2 > 101) return errCnt2;
 					avgWaveVal += dest[i+1];
 					continue;
 				}

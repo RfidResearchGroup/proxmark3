@@ -106,7 +106,7 @@ static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, ui
 
 	// this should be optional.
 	if ( verbose )
-		PrintAndLogEx(NORMAL, "Trying FC: %u; CN: %u", fc, cn);
+		PrintAndLogEx(INFO, "Trying FC: %u; CN: %u", fc, cn);
 	
 	calcWiegand( fmtlen, fc, cn, bits);
 
@@ -164,7 +164,7 @@ int CmdHIDDemod(const char *Cmd) {
 	}
 	
 	if (hi2 != 0){ //extra large HID tags
-		PrintAndLogEx(NORMAL, "HID Prox TAG ID: %x%08x%08x (%u)", hi2, hi, lo, (lo>>1) & 0xFFFF);
+		PrintAndLogEx(SUCCESS, "HID Prox TAG ID: %x%08x%08x (%u)", hi2, hi, lo, (lo>>1) & 0xFFFF);
 	} else {  //standard HID tags <38 bits
 		uint8_t fmtLen = 0;
 		uint32_t cc = 0;
@@ -209,9 +209,9 @@ int CmdHIDDemod(const char *Cmd) {
 			}
 		}
 		if(fmtLen==32 && (lo & 0x40000000)){//if 32 bit and Kastle bit set
-			PrintAndLogEx(NORMAL, "HID Prox TAG (Kastle format) ID: %08x (%u) - Format Len: 32bit - CC: %u - FC: %u - Card: %u", lo, (lo >> 1) & 0xFFFF, cc, fc, cardnum);
+			PrintAndLogEx(SUCCESS, "HID Prox TAG (Kastle format) ID: %08x (%u) - Format Len: 32bit - CC: %u - FC: %u - Card: %u", lo, (lo >> 1) & 0xFFFF, cc, fc, cardnum);
 		}else{
-			PrintAndLogEx(NORMAL, "HID Prox TAG ID: %x%08x (%u) - Format Len: %ubit - FC: %u - Card: %u", hi, lo, (lo >> 1) & 0xFFFF, fmtLen, fc, cardnum);
+			PrintAndLogEx(SUCCESS, "HID Prox TAG ID: %x%08x (%u) - Format Len: %ubit - FC: %u - Card: %u", hi, lo, (lo >> 1) & 0xFFFF, fmtLen, fc, cardnum);
 		}
 	}
 
@@ -244,16 +244,16 @@ int CmdHIDSim(const char *Cmd) {
 	uint32_t hi = 0, lo = 0;
 	uint32_t n = 0, i = 0;
 
-	uint8_t ctmp = param_getchar(Cmd, 0);
-	if ( strlen(Cmd) == 0 || ctmp == 'H' || ctmp == 'h' ) return usage_lf_hid_sim();
+	uint8_t ctmp = tolower(param_getchar(Cmd, 0));
+	if ( strlen(Cmd) == 0 || ctmp == 'h' ) return usage_lf_hid_sim();
 	
 	while (sscanf(&Cmd[i++], "%1x", &n ) == 1) {
 		hi = (hi << 4) | (lo >> 28);
 		lo = (lo << 4) | (n & 0xf);
 	}
 
-	PrintAndLogEx(NORMAL, "Emulating tag with ID %x%08x", hi, lo);
-	PrintAndLogEx(NORMAL, "Press pm3-button to abort simulation");
+	PrintAndLogEx(SUCCESS, "Simulating HID tag with ID %x%08x", hi, lo);
+	PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation");
 
 	UsbCommand c = {CMD_HID_SIM_TAG, {hi, lo, 0}};
 	clearCommandBuffer();
@@ -277,7 +277,7 @@ int CmdHIDClone(const char *Cmd) {
 			lo = (lo << 4) | (n & 0xf);
 		}
 
-		PrintAndLogEx(NORMAL, "Cloning tag with long ID %x%08x%08x", hi2, hi, lo);
+		PrintAndLogEx(INFO, "Preparing to clone HID tag with long ID %x%08x%08x", hi2, hi, lo);
 
 		c.d.asBytes[0] = 1;
 	} else {
@@ -285,7 +285,7 @@ int CmdHIDClone(const char *Cmd) {
 			hi = (hi << 4) | (lo >> 28);
 			lo = (lo << 4) | (n & 0xf);
 		}
-		PrintAndLogEx(NORMAL, "Cloning tag with ID %x%08x", hi, lo);
+		PrintAndLogEx(INFO, "Preparing to clone HID tag with ID %x%08x", hi, lo);
 		hi2 = 0;
 		c.d.asBytes[0] = 0;
 	}
@@ -492,33 +492,28 @@ int CmdHIDBrute(const char *Cmd){
 	memset(bits, 0, sizeof(bits));
 	uint8_t cmdp = 0;
 		
-	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch(param_getchar(Cmd, cmdp)) {
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'h':
-		case 'H':
 			return usage_lf_hid_brute();
 		case 'f':
-		case 'F':
 		  	fc =  param_get32ex(Cmd ,cmdp+1, 0, 10);
 			if ( !fc )
 				errors = true;
 			cmdp += 2;
 			break;
 		case 'd':
-		case 'D':
 			// delay between attemps,  defaults to 1000ms. 
 			delay = param_get32ex(Cmd, cmdp+1, 1000, 10);
 			cmdp += 2;
 			break;
 		case 'c':
-		case 'C':
 			cn = param_get32ex(Cmd, cmdp+1, 0, 10);
 			// truncate cardnumber.
 			cn &= 0xFFFF;
 			cmdp += 2;
 			break;
 		case 'a':
-		case 'A':
 			fmtlen = param_get8(Cmd, cmdp+1);
 			cmdp += 2;
 			bool is_ftm_ok = false;
@@ -532,7 +527,6 @@ int CmdHIDBrute(const char *Cmd){
 			errors = !is_ftm_ok;
 			break;
 		case 'v':		
-		case 'V':
 			verbose = true;
 			cmdp++;
 			break;
@@ -545,8 +539,8 @@ int CmdHIDBrute(const char *Cmd){
 	if ( fc == 0 ) errors = true;
 	if ( errors ) return usage_lf_hid_brute();
 	
-	PrintAndLogEx(NORMAL, "Brute-forcing HID reader");
-	PrintAndLogEx(NORMAL, "Press pm3-button to abort simulation or run another command");
+	PrintAndLogEx(INFO, "Brute-forcing HID reader");
+	PrintAndLogEx(INFO, "Press pm3-button to abort simulation or run another command");
 	
 	uint16_t up = cn;
 	uint16_t down = cn;

@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Chg 'data autocorrelate' - better visual representation and added extra peak detection (@iceman)
+ - Fix 'lf search' - false positive indala identification fixed (@iceman)
+ - Add 'lf keri' - basic support for Keri tags (@iceman)
+ - Add 'hf mf list' - re-added it again (@iceman)
+ - Fix - A lot of bugfixes, like memory leaks (@iceman)
  - Change 'hf 14a antifuzz' - original implementation (@asfabw),  reworked a bit
  - Fix 'hf mf fchk' (@iceman)
  - Fix 'usb slow on posix based systems' (@fl0-0)

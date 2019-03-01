@@ -579,11 +579,11 @@ int CmdHF14AInfo(const char *Cmd) {
 	if (isMifareClassic) {
 		int res = detect_classic_prng();
 		if ( res == 1 )
-			PrintAndLogEx(SUCCESS, "Prng detection: WEAK");
+			PrintAndLogEx(SUCCESS, "Prng detection: " _GREEN_(WEAK));
 		else if (res == 0 )
-			PrintAndLogEx(SUCCESS, "Prng detection: HARD");
+			PrintAndLogEx(SUCCESS, "Prng detection: " _YELLOW_(HARD));
 		else
-			PrintAndLogEx(FAILED, "prng detection: failed");
+			PrintAndLogEx(FAILED, "prng detection:  " _RED_(failed));
 		
 		if ( do_nack_test )
 			detect_classic_nackbug(silent);

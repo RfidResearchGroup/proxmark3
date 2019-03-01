@@ -691,7 +691,7 @@ bool tryDetectModulation(){
 	
 	bool retval = false;
 	if ( hits > 1) {
-		PrintAndLogEx(NORMAL, "Found [%d] possible matches for modulation.",hits);
+		PrintAndLogEx(SUCCESS, "Found [%d] possible matches for modulation.", hits);
 		for(int i=0; i<hits; ++i){
 			retval = testKnownConfigBlock(tests[i].block0);
 			if ( retval ) {				
@@ -942,9 +942,9 @@ int printConfiguration( t55xx_conf_block_t b){
 	PrintAndLogEx(NORMAL, "Chip Type  : %s", (b.Q5) ? "T5555(Q5)" : "T55x7");
 	PrintAndLogEx(NORMAL, "Modulation : %s", GetSelectedModulationStr(b.modulation) );
 	PrintAndLogEx(NORMAL, "Bit Rate   : %s", GetBitRateStr(b.bitrate, (b.block0 & T55x7_X_MODE && (b.block0>>28==6 || b.block0>>28==9))) );
-	PrintAndLogEx(NORMAL, "Inverted   : %s", (b.inverted) ? "Yes" : "No" );
+	PrintAndLogEx(NORMAL, "Inverted   : %s", (b.inverted) ? _GREEN_(Yes) : "No" );
 	PrintAndLogEx(NORMAL, "Offset     : %d", b.offset);
-	PrintAndLogEx(NORMAL, "Seq. Term. : %s", (b.ST) ? "Yes" : "No" );
+	PrintAndLogEx(NORMAL, "Seq. Term. : %s", (b.ST) ? _GREEN_(Yes) : "No" );
 	PrintAndLogEx(NORMAL, "Block0     : 0x%08X", b.block0);
 	PrintAndLogEx(NORMAL, "");
 	return 0;
@@ -954,13 +954,11 @@ int CmdT55xxWakeUp(const char *Cmd) {
 	uint32_t password = 0;
 	uint8_t cmdp = 0;
 	bool errors = false;
-	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch(param_getchar(Cmd, cmdp)) {
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'h':
-		case 'H':
 			return usage_t55xx_wakup();
 		case 'p':
-		case 'P':
 			password = param_get32ex(Cmd, cmdp+1, 0, 16);
 			cmdp += 2;
 			errors = false;
@@ -976,7 +974,7 @@ int CmdT55xxWakeUp(const char *Cmd) {
 	UsbCommand c = {CMD_T55XX_WAKEUP, {password, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
-	PrintAndLogEx(NORMAL, "Wake up command sent. Try read now");
+	PrintAndLogEx(SUCCESS, "Wake up command sent. Try read now");
 	return 0;
 }
 
@@ -990,30 +988,25 @@ int CmdT55xxWriteBlock(const char *Cmd) {
 	bool testMode = false;
 	bool errors = false;
 	uint8_t cmdp = 0;
-	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch(param_getchar(Cmd, cmdp)) {
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'h':
-		case 'H':
 			return usage_t55xx_write();
 		case 'b':
-		case 'B':
 			errors |= param_getdec(Cmd, cmdp+1, &block);
 			cmdp += 2;
 			break;
 		case 'd':
-		case 'D':
 			data = param_get32ex(Cmd, cmdp+1, 0, 16);
 			gotdata	= true;
 			cmdp += 2;
 			break;
 		case 'p':
-		case 'P':
 			password = param_get32ex(Cmd, cmdp+1, 0, 16);
 			usepwd = true;
 			cmdp += 2;
 			break;
 		case 't':
-		case 'T':
 			testMode = true;
 			cmdp++;
 			break;
@@ -1030,7 +1023,7 @@ int CmdT55xxWriteBlock(const char *Cmd) {
 	if (errors || !gotdata) return usage_t55xx_write();
 
 	if (block > 7) {
-		PrintAndLogEx(NORMAL, "Block number must be between 0 and 7");
+		PrintAndLogEx(WARNING, "Block number must be between 0 and 7");
 		return 0;
 	}
 	
@@ -1042,7 +1035,7 @@ int CmdT55xxWriteBlock(const char *Cmd) {
 	char pwdStr[16] = {0};
 	snprintf(pwdStr, sizeof(pwdStr), "pwd: 0x%08X", password);
 	
-	PrintAndLogEx(NORMAL, "Writing page %d  block: %02d  data: 0x%08X %s", page1, block, data,  (usepwd) ? pwdStr : "" );
+	PrintAndLogEx(INFO, "Writing page %d  block: %02d  data: 0x%08X %s", page1, block, data,  (usepwd) ? pwdStr : "" );
 
 	//Password mode
 	if (usepwd) {
@@ -1059,12 +1052,13 @@ int CmdT55xxWriteBlock(const char *Cmd) {
 }
 
 int CmdT55xxReadTrace(const char *Cmd) {
-	char cmdp = param_getchar(Cmd, 0);
-	bool pwdmode = false;
-	uint32_t password = 0;	
-	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') return usage_t55xx_trace();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (strlen(Cmd) > 1 || cmdp == 'h') return usage_t55xx_trace();
 
-	if (strlen(Cmd)==0) {
+	bool pwdmode = false;
+	uint32_t password = 0;
+	
+	if (strlen(Cmd) == 0) {
 		// sanity check.
 		if (!SanityOfflineCheck(false)) return 1;
 
@@ -1091,7 +1085,7 @@ int CmdT55xxReadTrace(const char *Cmd) {
 		uint32_t hdr = PackBits(si, 9,  DemodBuffer); si += 9;
     
 		if (hdr != 0x1FF) {
-		  PrintAndLogEx(NORMAL, "Invalid Q5 Trace data header (expected 0x1FF, found %X)", hdr);
+		  PrintAndLogEx(FAILED, "Invalid Q5 Trace data header (expected 0x1FF, found %X)", hdr);
 		  return 1;
 		}
     
@@ -1130,7 +1124,7 @@ int CmdT55xxReadTrace(const char *Cmd) {
 		
 		data.acl = PackBits(si, 8,  DemodBuffer); si += 8;
 		if ( data.acl != 0xE0 ) {
-			PrintAndLogEx(NORMAL, "The modulation is most likely wrong since the ACL is not 0xE0. ");
+			PrintAndLogEx(FAILED, "The modulation is most likely wrong since the ACL is not 0xE0. ");
 			return 1;
 		}
 
@@ -1227,11 +1221,11 @@ int CmdT55xxInfo(const char *Cmd){
 	*/
 	bool pwdmode = false;
 	uint32_t password = 0;
-	char cmdp = param_getchar(Cmd, 0);
+	char cmdp = tolower(param_getchar(Cmd, 0));
 
-	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') return usage_t55xx_info();
+	if (strlen(Cmd) > 1 || cmdp == 'h') return usage_t55xx_info();
 	
-	if (strlen(Cmd)==0){
+	if (strlen(Cmd) == 0) {
 		// sanity check.
 		if (!SanityOfflineCheck(false)) return 1;
 		
@@ -1264,24 +1258,26 @@ int CmdT55xxInfo(const char *Cmd){
 	uint32_t inv      = PackBits(si, 1, DemodBuffer); si += 1;	
 	uint32_t por      = PackBits(si, 1, DemodBuffer); si += 1;
 	
-	if (config.Q5) PrintAndLogEx(NORMAL, "*** Warning *** Config Info read off a Q5 will not display as expected");
+	if (config.Q5) 
+		PrintAndLogEx(NORMAL, _RED_(*** Warning ***) " Config Info read off a Q5 will not display as expected");
+	
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "-- T55x7 Configuration & Tag Information --------------------");
 	PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
 	PrintAndLogEx(NORMAL, " Safer key                 : %s", GetSaferStr(safer));
 	PrintAndLogEx(NORMAL, " reserved                  : %d", resv);
 	PrintAndLogEx(NORMAL, " Data bit rate             : %s", GetBitRateStr(dbr, extend));
-	PrintAndLogEx(NORMAL, " eXtended mode             : %s", (extend) ? "Yes - Warning":"No");
+	PrintAndLogEx(NORMAL, " eXtended mode             : %s", (extend) ? _YELLOW_(Yes - Warning) : "No");
 	PrintAndLogEx(NORMAL, " Modulation                : %s", GetModulationStr(datamod));
 	PrintAndLogEx(NORMAL, " PSK clock frequency       : %d", pskcf);
-	PrintAndLogEx(NORMAL, " AOR - Answer on Request   : %s", (aor) ? "Yes":"No");
-	PrintAndLogEx(NORMAL, " OTP - One Time Pad        : %s", (otp) ? "Yes - Warning":"No" );
+	PrintAndLogEx(NORMAL, " AOR - Answer on Request   : %s", (aor) ? _GREEN_(Yes) : "No");
+	PrintAndLogEx(NORMAL, " OTP - One Time Pad        : %s", (otp) ? _YELLOW_(Yes - Warning) : "No" );
 	PrintAndLogEx(NORMAL, " Max block                 : %d", maxblk);
-	PrintAndLogEx(NORMAL, " Password mode             : %s", (pwd) ? "Yes":"No");
-	PrintAndLogEx(NORMAL, " Sequence Start Terminator : %s", (sst) ? "Yes":"No");
-	PrintAndLogEx(NORMAL, " Fast Write                : %s", (fw)  ? "Yes":"No");
-	PrintAndLogEx(NORMAL, " Inverse data              : %s", (inv) ? "Yes":"No");
-	PrintAndLogEx(NORMAL, " POR-Delay                 : %s", (por) ? "Yes":"No");
+	PrintAndLogEx(NORMAL, " Password mode             : %s", (pwd) ? _GREEN_(Yes) : "No");
+	PrintAndLogEx(NORMAL, " Sequence Start Terminator : %s", (sst) ? _GREEN_(Yes) : "No");
+	PrintAndLogEx(NORMAL, " Fast Write                : %s", (fw)  ? _GREEN_(Yes) : "No");
+	PrintAndLogEx(NORMAL, " Inverse data              : %s", (inv) ? _GREEN_(Yes) : "No");
+	PrintAndLogEx(NORMAL, " POR-Delay                 : %s", (por) ? _GREEN_(Yes) : "No");
 	PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
 	PrintAndLogEx(NORMAL, " Raw Data - Page 0");
 	PrintAndLogEx(NORMAL, "     Block 0  : 0x%08X  %s", block0, sprint_bin(DemodBuffer + config.offset, 32) );
@@ -1293,8 +1289,8 @@ int CmdT55xxDump(const char *Cmd){
 
 	uint32_t password = 0;
 	bool override = false;
-	char cmdp = param_getchar(Cmd, 0);	
-	if ( cmdp == 'h' || cmdp == 'H') return usage_t55xx_dump();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if ( cmdp == 'h') return usage_t55xx_dump();
 
 	bool usepwd = ( strlen(Cmd) > 0);	
 	if ( usepwd ){
@@ -1479,7 +1475,7 @@ int CmdT55xxWipe(const char *Cmd) {
 
 	// Try with the default password to reset block 0
 	// With a pwd should work even if pwd bit not set
-	PrintAndLogEx(NORMAL, "\nBeginning Wipe of a T55xx tag (assuming the tag is not password protected)\n");
+	PrintAndLogEx(INFO, "\nBeginning Wipe of a T55xx tag (assuming the tag is not password protected)\n");
 		
 	if ( Q5 )
 		snprintf(ptrData,sizeof(writeData),"b 0 d 6001F004 p 0");
@@ -1494,7 +1490,7 @@ int CmdT55xxWipe(const char *Cmd) {
 		
 		if (!CmdT55xxWriteBlock(ptrData)) PrintAndLogEx(WARNING, "Error writing blk %d", blk);
 		
-		memset(writeData,0x00, sizeof(writeData));
+		memset(writeData, 0x00, sizeof(writeData));
 	}
 	return 0;
 }
@@ -1521,7 +1517,7 @@ int CmdT55xxChkPwds(const char *Cmd) {
 	memset(line, 0, sizeof(line));
 	
     char cmdp = tolower(param_getchar(Cmd, 0));
-	if (cmdp == 'h') return usage_t55xx_chk();
+	if (strlen(Cmd) == 0 || cmdp == 'h') return usage_t55xx_chk();
 	
 	/*
 	if ( T55xxReadBlock(7, 0, 0, 0, 0) ) {
@@ -1581,7 +1577,7 @@ int CmdT55xxChkPwds(const char *Cmd) {
 	
 		FILE * f = fopen( filename , "r");		
 		if ( !f ) {
-			PrintAndLogEx(WARNING, "File: %s: not found or locked.", filename);
+			PrintAndLogEx(FAILED, "File: " _YELLOW_(%s) ": not found or locked.", filename);
 			free(keyBlock);
 			return 1;
 		}			
@@ -1622,7 +1618,8 @@ int CmdT55xxChkPwds(const char *Cmd) {
 //			PrintAndLogEx(NORMAL, "chk custom pwd[%2d] %08X", keycnt, bytes_to_num(keyBlock + 4 * keycnt, 4) );
 			keycnt++;			
 			memset(line, 0, sizeof(line));
-		}		
+		}
+		
 		if (f)
 			fclose(f);
 		
@@ -1704,7 +1701,7 @@ int CmdT55xxBruteForce(const char *Cmd) {
 	
     PrintAndLogEx(INFO, "Search password range [%08X -> %08X]", start_password, end_password);
 
-    while ((!found) || (curr <= end_password)){
+    while ( !found || (curr <= end_password)){
 
 		printf("."); fflush(stdout);
 		
@@ -1716,9 +1713,9 @@ int CmdT55xxBruteForce(const char *Cmd) {
 			PrintAndLogEx(WARNING, "Aquireing data from device failed. Quitting");
 			return 0;
 		}
+		
 		found = tryDetectModulation();
-        
-		if (found) break;
+
 		++curr;
     }
     
@@ -1735,7 +1732,7 @@ int CmdT55xxBruteForce(const char *Cmd) {
 }
 
 int tryOnePassword(uint32_t password) {
-	PrintAndLogEx(NORMAL, "Trying password %08x", password);
+	PrintAndLogEx(INFO, "Trying password %08x", password);
 	if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, password)) {
 		PrintAndLogEx(NORMAL, "Acquire data from device failed. Quitting");
 		return -1;
@@ -1754,8 +1751,8 @@ int CmdT55xxRecoverPW(const char *Cmd) {
 	uint32_t prev_password = 0xffffffff;
 	uint32_t mask = 0x0;
 	int found = 0;
-	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H') return usage_t55xx_recoverpw();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (cmdp == 'h' ) return usage_t55xx_recoverpw();
 
 	orig_password = param_get32ex(Cmd, 0, 0x51243648, 16); //password used by handheld cloners
 
@@ -1938,13 +1935,11 @@ int CmdT55xxDetectPage1(const char *Cmd){
 	uint32_t password = 0;
 	uint8_t cmdp = 0;
 
-	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch(param_getchar(Cmd, cmdp)) {
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'h':
-		case 'H':
 			return usage_t55xx_detectP1();
 		case 'p':
-		case 'P':
 			password = param_get32ex(Cmd, cmdp+1, 0, 16);
 			usepwd = true;
 			cmdp += 2;
@@ -1967,7 +1962,7 @@ int CmdT55xxDetectPage1(const char *Cmd){
 			return false;
 	}
 	bool success = tryDetectP1(false);
-	if (success) PrintAndLogEx(NORMAL, "T55xx chip found!");
+	if (success) PrintAndLogEx(SUCCESS, "T55xx chip found!");
 	return success;
 }
 

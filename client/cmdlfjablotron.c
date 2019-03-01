@@ -130,14 +130,14 @@ int CmdJablotronDemod(const char *Cmd) {
 	PrintAndLogEx(SUCCESS, "Jablotron Tag Found: Card ID: %"PRIx64" :: Raw: %08X%08X", id, raw1, raw2);
 
 	uint8_t chksum = raw2 & 0xFF;
-	PrintAndLogEx(NORMAL, "Checksum: %02X [%s]",
+	PrintAndLogEx(INFO, "Checksum: %02X [%s]",
 		chksum,
-		(chksum == jablontron_chksum(DemodBuffer)) ? "OK":"FAIL"		
+		(chksum == jablontron_chksum(DemodBuffer)) ? _GREEN_(OK) : _RED_(FAIL)
 	);
 
 	id = DEC2BCD(id);
 	// Printed format: 1410-nn-nnnn-nnnn	
-	PrintAndLogEx(NORMAL, "Printed: 1410-%02X-%04X-%04X",
+	PrintAndLogEx(SUCCESS, "Printed: 1410-%02X-%04X-%04X",
 		(uint8_t)(id >> 32) & 0xFF,
 		(uint16_t)(id >> 16) & 0xFFFF,
 		(uint16_t)id & 0xFFFF
@@ -158,8 +158,8 @@ int CmdJablotronClone(const char *Cmd) {
 	uint8_t bits[64];
 	memset(bits, 0, sizeof(bits));
 	
-	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_jablotron_clone();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_jablotron_clone();
 
 	fullcode = param_get64ex(Cmd, 0, 0, 16);
 	
@@ -170,7 +170,7 @@ int CmdJablotronClone(const char *Cmd) {
 	// clearing the topbit needed for the preambl detection. 
 	if ((fullcode & 0x7FFFFFFFFF) != fullcode) {
 		fullcode &= 0x7FFFFFFFFF;
-		PrintAndLogEx(NORMAL, "Card Number Truncated to 39bits: %"PRIx64, fullcode);
+		PrintAndLogEx(INFO, "Card Number Truncated to 39bits: %"PRIx64, fullcode);
 	}
 	
 	if ( !getJablotronBits(fullcode, bits)) {
@@ -181,13 +181,13 @@ int CmdJablotronClone(const char *Cmd) {
 	blocks[1] = bytebits_to_byte(bits, 32);
 	blocks[2] = bytebits_to_byte(bits + 32, 32);
 
-	PrintAndLogEx(NORMAL, "Preparing to clone Jablotron to T55x7 with FullCode: %"PRIx64, fullcode);
+	PrintAndLogEx(INFO, "Preparing to clone Jablotron to T55x7 with FullCode: %"PRIx64, fullcode);
 	print_blocks(blocks, 3);
 	
 	UsbCommand resp;
 	UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}};
 
-	for (uint8_t i=0; i<4; i++) {
+	for (uint8_t i=0; i<3; i++) {
 		c.arg[0] = blocks[i];
 		c.arg[1] = i;
 		clearCommandBuffer();
@@ -203,15 +203,15 @@ int CmdJablotronClone(const char *Cmd) {
 int CmdJablotronSim(const char *Cmd) {
 	uint64_t fullcode = 0;
 
-	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_jablotron_sim();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_jablotron_sim();
 
 	fullcode = param_get64ex(Cmd, 0, 0, 16);
 
 	// clearing the topbit needed for the preambl detection. 
 	if ((fullcode & 0x7FFFFFFFFF) != fullcode) {
 		fullcode &= 0x7FFFFFFFFF;
-		PrintAndLogEx(NORMAL, "Card Number Truncated to 39bits: %"PRIx64, fullcode);
+		PrintAndLogEx(INFO, "Card Number Truncated to 39bits: %"PRIx64, fullcode);
 	}
 	
 	uint8_t clk = 64, encoding = 2, separator = 0, invert = 1;
@@ -220,7 +220,7 @@ int CmdJablotronSim(const char *Cmd) {
 	arg1 = clk << 8 | encoding;
 	arg2 = invert << 8 | separator;
 
-	PrintAndLogEx(NORMAL, "Simulating Jablotron - FullCode: %"PRIx64, fullcode);
+	PrintAndLogEx(SUCCESS, "Simulating Jablotron - FullCode: %"PRIx64, fullcode);
 
 	UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};
 	getJablotronBits(fullcode, c.d.asBytes);

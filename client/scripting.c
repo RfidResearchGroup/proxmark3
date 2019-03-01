@@ -608,7 +608,7 @@ static int l_hardnested(lua_State *L){
 	char filename[FILE_PATH_SIZE]="nonces.bin";
 	const char *p_filename = luaL_checklstring(L, 11, &size);
 	if(size != 0)
-		strcpy(filename, p_filename);
+		memcpy(filename, p_filename, FILE_PATH_SIZE-1);
 
 	uint32_t blockNo = 0, keyType = 0;
 	uint32_t trgBlockNo = 0, trgKeyType = 0;

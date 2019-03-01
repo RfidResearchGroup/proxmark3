@@ -595,7 +595,7 @@ int CmdSmartUpgrade(const char *Cmd) {
 	// load file
 	f = fopen(filename, "rb");
 	if ( !f ){
-		PrintAndLogEx(FAILED, "File: %s: not found or locked.", filename);
+		PrintAndLogEx(FAILED, "File: " _YELLOW_(%s) ": not found or locked.", filename);
 		return 1;
 	}	
 	
@@ -946,8 +946,8 @@ static int smart_brute_sfi(bool decodeTLV){
 	return 0;
 }
 
-static void smart_brute_options(bool decodeTLV){
-	
+static void smart_brute_options(bool decodeTLV) {
+
 	uint8_t* buf = calloc(USB_CMD_DATA_SIZE, sizeof(uint8_t));
 	if ( !buf ) 
 		return;
@@ -1022,8 +1022,10 @@ int CmdSmartBruteforceSFI(const char *Cmd) {
 		return 1;		
 
 	PrintAndLogEx(INFO, "Selecting card");
-	if ( !smart_select(false, NULL) )
+	if ( !smart_select(false, NULL) ) {
+		free(buf);
 		return 1;
+	}
 
 	char* caid = NULL;
 	
@@ -1055,7 +1057,7 @@ int CmdSmartBruteforceSFI(const char *Cmd) {
 			continue;
 
 		size_t aidlen = strlen(aid);
-		char* caid = calloc( 8+2+aidlen+1, sizeof(uint8_t));
+		caid = calloc( 8+2+aidlen+1, sizeof(uint8_t));
 		snprintf(caid, 8+2+aidlen+1, SELECT, aidlen >> 1, aid);		
 		
 		int hexlen = 0;

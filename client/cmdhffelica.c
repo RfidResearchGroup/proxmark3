@@ -242,7 +242,7 @@ static void printSep() {
 	PrintAndLogEx(NORMAL, "------------------------------------------------------------------------------------");
 }
 
-uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace,uint16_t tracelen) {
+uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace, uint16_t tracelen) {
 	if (tracepos+19 >= tracelen) 
 		return tracelen;
 	
@@ -253,7 +253,7 @@ uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace,uint16_t tracelen) {
 
 	char line[110] = {0};
 	for (int j = 0; j < 16; j++) {
-		snprintf(line+( j  * 4),110, "%02x  ", trace[j+3]);
+		snprintf(line + (j * 4), sizeof(line) - 1 - (j*4) , "%02x  ", trace[j+3]);
 	}
 
 	PrintAndLogEx(NORMAL, "block number %02x, status: %02x %02x",blocknum,status1, status2);
@@ -273,11 +273,12 @@ uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace,uint16_t tracelen) {
 		case 0x0c: PrintAndLogEx(NORMAL,  "S_PAD12: %s",line);break;
 		case 0x0d: PrintAndLogEx(NORMAL,  "S_PAD13: %s",line);break;
 		case 0x0E: {
-			uint32_t regA = trace[3] + (trace[4]>>8) + (trace[5]>>16) + (trace[6]>>24);
-			uint32_t regB = trace[7] + (trace[8]>>8) + (trace[9]>>16) + (trace[10]>>24);
+			uint32_t regA = trace[3] | trace[4] << 8 | trace[5] << 16 | trace[ 6] << 24;
+			uint32_t regB = trace[7] | trace[8] << 8 | trace[9] << 16 | trace[10] << 24;
 			line[0] = 0;
 			for (int j = 0; j < 8; j++) 
-				snprintf(line+( j  * 2),110, "%02x", trace[j+11]);
+				snprintf(line + (j*2), sizeof(line)-1-(j*2), "%02x", trace[j+11]);
+			
 			PrintAndLogEx(NORMAL,  "REG: regA: %d regB: %d regC: %s ", regA, regB, line);
 			}
 		break;
@@ -287,10 +288,10 @@ uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace,uint16_t tracelen) {
 			char idd[20];
 			char idm[20];
 			for (int j = 0; j < 8; j++) 
-				snprintf(idd+( j  * 2),20, "%02x", trace[j+3]);
+				snprintf(idd + (j*2), sizeof(idd)-1-(j*2), "%02x", trace[j+3]);
 			
 			for (int j = 0; j < 6; j++) 
-				snprintf(idm+( j  * 2),20, "%02x", trace[j+13]);
+				snprintf(idm + (j*2), sizeof(idm)-1-(j*2), "%02x", trace[j+13]);
 				
 			PrintAndLogEx(NORMAL,  "ID Block, IDd: 0x%s DFC: 0x%02x%02x Arb: %s ", idd, trace[11], trace [12], idm);
 			}
@@ -299,10 +300,10 @@ uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace,uint16_t tracelen) {
 			char idm[20];
 			char pmm[20];
 			for (int j = 0; j < 8; j++)
-				snprintf(idm+( j  * 2),20, "%02x", trace[j+3]);
+				snprintf(idm + (j*2), sizeof(idm)-1-(j*2), "%02x", trace[j+3]);
 			
 			for (int j = 0; j < 8; j++)
-				snprintf(pmm+( j  * 2),20, "%02x", trace[j+11]);
+				snprintf(pmm + (j*2), sizeof(pmm)-1-(j*2), "%02x", trace[j+11]);
 			
 			PrintAndLogEx(NORMAL,  "DeviceId:  IDm: 0x%s PMm: 0x%s ", idm, pmm);
 			}

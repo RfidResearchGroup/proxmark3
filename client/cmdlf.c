@@ -186,15 +186,21 @@ int CmdLFCommandRead(const char *Cmd) {
 }
 
 int CmdFlexdemod(const char *Cmd) {
-#define LONG_WAIT 100	
+
+	if ( GraphTraceLen < 0 )
+		return 0;
+
+#ifndef LONG_WAIT
+#define LONG_WAIT 100
+#endif
 	int i, j, start, bit, sum, phase = 0;
 
-	uint8_t data[MAX_GRAPH_TRACE_LEN] = {0};
-	size_t size = getFromGraphBuf(data);
-	if (size == 0) 
-		return 0;
+	int data[GraphTraceLen];
+	memcpy(data, GraphBuffer, GraphTraceLen);
 	
-	for (i = 0; i < size; ++i)
+	size_t size = GraphTraceLen;
+	
+	for (i = 0; i < GraphTraceLen; ++i)
 		data[i] = (data[i] < 0) ? -1 : 1;
 
 	for (start = 0; start < size - LONG_WAIT; start++) {
@@ -819,14 +825,16 @@ int CheckChipType(bool getDeviceData) {
 	//check for em4x05/em4x69 chips first
 	uint32_t word = 0;
 	if (EM4x05IsBlock0(&word)) {
-		PrintAndLogEx(NORMAL, "\nValid EM4x05/EM4x69 Chip Found\nTry lf em 4x05... commands\n");
+		PrintAndLogEx(SUCCESS, "\nValid EM4x05/EM4x69 Chip Found");
+		PrintAndLogEx(SUCCESS, "Try " _YELLOW_(`lf em 4x05`) " commands");
 		save_restoreGB(GRAPH_RESTORE);
 		return 1;
 	}
 
 	//check for t55xx chip...
 	if (tryDetectP1(true)) {
-		PrintAndLogEx(NORMAL, "\nValid T55xx Chip Found\nTry `lf t55xx` commands\n");
+		PrintAndLogEx(SUCCESS, "\nValid T55xx Chip Found");
+		PrintAndLogEx(SUCCESS, "Try " _YELLOW_(`lf t55xx`)" commands");
 		save_restoreGB(GRAPH_RESTORE);
 		return 1;		
 	}
@@ -856,9 +864,10 @@ int CmdLFfind(const char *Cmd) {
 		return 0;
 	}
 
-	PrintAndLogEx(NORMAL, "NOTE: some demods output possible binary\n  if it finds something that looks like a tag");
-	PrintAndLogEx(NORMAL, "False Positives ARE possible\n");  
-	PrintAndLogEx(NORMAL, "\nChecking for known tags:\n");
+	PrintAndLogEx(INFO, "NOTE: some demods output possible binary");
+	PrintAndLogEx(INFO, "if it finds something that looks like a tag");
+	PrintAndLogEx(INFO, "False Positives " _YELLOW_(ARE) "possible\n");  
+	PrintAndLogEx(INFO, "\nChecking for known tags:\n");
 	
 	// only run these tests if device is online
 	if (isOnline) {
@@ -891,6 +900,7 @@ int CmdLFfind(const char *Cmd) {
 	if (CmdLFNedapDemod(""))	{ PrintAndLogEx(SUCCESS, "\nValid NEDAP ID Found!"); goto out;}
 	if (CmdNexWatchDemod("")) 	{ PrintAndLogEx(SUCCESS, "\nValid NexWatch ID Found!"); goto out;}
 	if (CmdNoralsyDemod(""))	{ PrintAndLogEx(SUCCESS, "\nValid Noralsy ID Found!"); goto out;}
+	if (CmdKeriDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid KERI ID Found!"); goto out;}
 	if (CmdPacDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid PAC/Stanley ID Found!"); goto out;}	
 	if (CmdParadoxDemod(""))	{ PrintAndLogEx(SUCCESS, "\nValid Paradox ID Found!"); goto out;}
 	if (CmdPrescoDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid Presco ID Found!"); goto out;}				 
@@ -957,6 +967,7 @@ static command_t CommandTable[] = {
 	{"indala",      CmdLFINDALA,        1, "{ Indala RFIDs...            }"},
 	{"io",          CmdLFIO,            1, "{ ioProx RFIDs...            }"},
 	{"jablotron",	CmdLFJablotron,		1, "{ Jablotron RFIDs...         }"},
+	{"keri",		CmdLFKeri,			1, "{ KERI RFIDs...              }"},
 	{"nedap",		CmdLFNedap,			1, "{ Nedap RFIDs...             }"},
 	{"nexwatch",    CmdLFNEXWATCH,      1, "{ NexWatch RFIDs...          }"},
 	{"noralsy",		CmdLFNoralsy,		1, "{ Noralsy RFIDs...           }"},	

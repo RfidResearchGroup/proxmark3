@@ -538,18 +538,19 @@ int bruteforceFile(const char *filename, uint16_t keytable[]) {
 
 	if (fsize < 0) {
 		PrintAndLogDevice(WARNING, "Error, when getting filesize");
-		if (f) fclose(f);
+		fclose(f);
 		return 1;
 	}
 
 	uint8_t *dump = calloc(fsize, sizeof(uint8_t));
 	if ( !dump ) {
 		PrintAndLogDevice(WARNING, "Failed to allocate memory");
+		fclose(f);
 		return 2;
 	}
 	size_t bytes_read = fread(dump, 1, fsize, f);
 
-	if (f) fclose(f);
+	fclose(f);
 	
     if (bytes_read < fsize) {
         PrintAndLogDevice(WARNING, "Error, could only read %d bytes (should be %d)", bytes_read, fsize );

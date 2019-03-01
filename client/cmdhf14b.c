@@ -246,7 +246,7 @@ static bool get_14b_UID(iso14b_card_select_t *card) {
 	if (!card)
 		return false;
 	
-	uint8_t retry = 3;
+	int8_t retry = 3;
 	UsbCommand resp;
 	UsbCommand c = {CMD_ISO_14443B_COMMAND, {ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0}};
 		
@@ -283,7 +283,7 @@ static bool get_14b_UID(iso14b_card_select_t *card) {
 		} 
 	} // retry	
 	
-	if ( !retry )
+	if ( retry <= 0 )
 		PrintAndLogEx(WARNING, "timeout while waiting for reply.");
 	
 	return false;
@@ -461,6 +461,7 @@ bool HF14B_Std_Info(bool verbose){
 			PrintAndLogEx(NORMAL, " CHIPID : %02X", card.chipid);
 			print_atqb_resp(card.atqb, card.cid);
 			isSuccess = true;
+			break;
 		case 2:
 			if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 ATTRIB fail");
 			break;

@@ -34,14 +34,13 @@ int detectNexWatch(uint8_t *dest, size_t *size, bool *invert) {
 int CmdNexWatchDemod(const char *Cmd) {
 
 	if (!PSKDemod("", false)) {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch can't demod signal");
+		PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch can't demod signal");
 		return 0;
 	}
 	bool invert = false;
 	size_t size = DemodBufferLen;
 	int idx = detectNexWatch(DemodBuffer, &size, &invert);
-	if (idx <= 0){
-		if (g_debugMode){
+	if (idx <= 0) {
 			if (idx == -1)
 				PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch not enough samples");
 			// else if (idx == -2)
@@ -54,7 +53,7 @@ int CmdNexWatchDemod(const char *Cmd) {
 				// PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch size not correct: %d", size);
 			else
 				PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch error %d",idx);
-		}
+
 		return 0;
 	}
 	
@@ -101,6 +100,7 @@ static command_t CommandTable[] = {
 };
 
 int CmdLFNEXWATCH(const char *Cmd) {
+	clearCommandBuffer();	
 	CmdsParse(CommandTable, Cmd);
 	return 0;
 }

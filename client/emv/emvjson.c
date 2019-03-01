@@ -242,24 +242,25 @@ int JsonSaveTLVTree(json_t *root, json_t *elm, char *path, struct tlvdb *tlvdbel
 bool HexToBuffer(const char *errormsg, const char *hexvalue, uint8_t * buffer, size_t maxbufferlen, size_t *bufferlen) {
 	int buflen = 0;	
 	
-	switch(param_gethex_to_eol(hexvalue, 0, buffer, maxbufferlen, &buflen)) {
-	case 1:
-		PrintAndLog("%s Invalid HEX value.", errormsg);
-		return false;
-	case 2:
-		PrintAndLog("%s Hex value too large.", errormsg);
-		return false;
-	case 3:
-		PrintAndLog("%s Hex value must have even number of digits.", errormsg);
-		return false;
+	switch (param_gethex_to_eol(hexvalue, 0, buffer, maxbufferlen, &buflen)) {
+		case 1:
+			PrintAndLog("%s Invalid HEX value.", errormsg);
+			return false;
+		case 2:
+			PrintAndLog("%s Hex value too large.", errormsg);
+			return false;
+		case 3:
+			PrintAndLog("%s Hex value must have even number of digits.", errormsg);
+			return false;
 	}
 	
 	if (buflen > maxbufferlen) {
-		PrintAndLog("%s HEX length (%d) more than %d", errormsg, *bufferlen, maxbufferlen);
+		PrintAndLog("%s HEX length (%d) more than %d", errormsg, (bufferlen) ? *bufferlen : -1, maxbufferlen);
 		return false;
 	}
 	
-	*bufferlen = buflen;
+	if ( bufferlen )
+		*bufferlen = buflen;
 	
 	return true;
 }

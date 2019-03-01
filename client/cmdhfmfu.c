@@ -1982,6 +1982,7 @@ int CmdHF14AMfURestore(const char *Cmd){
 	uint8_t *dump = calloc(fsize, sizeof(uint8_t));
 	if ( !dump ) {
 		PrintAndLogEx(WARNING, "Failed to allocate memory");
+		fclose(f);
 		return 1;
 	}
 
@@ -1990,6 +1991,7 @@ int CmdHF14AMfURestore(const char *Cmd){
 	fclose(f);
 	if ( bytes_read < 48 ) {
 		PrintAndLogEx(WARNING, "Error, dump file is too small");
+		free(dump);
 		return 1;
 	}
 	
@@ -2379,7 +2381,7 @@ int CmdHF14AMfuGenDiverseKeys(const char *Cmd){
 	if (strlen(Cmd) == 0  || cmdp == 'h') return usage_hf_mfu_gendiverse();
 
 	if ( cmdp == 'r' ) {
-			// read uid from tag
+		// read uid from tag
 		UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0}};
 		clearCommandBuffer();
 		SendCommand(&c);
@@ -2388,8 +2390,13 @@ int CmdHF14AMfuGenDiverseKeys(const char *Cmd){
 		iso14a_card_select_t card;
 		memcpy(&card, (iso14a_card_select_t *)resp.d.asBytes, sizeof(iso14a_card_select_t));
 		
-		uint64_t select_status = resp.arg[0];		// 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
-		if(select_status == 0) {
+		uint64_t select_status = resp.arg[0];	
+		// 0: couldn't read,
+		// 1: OK, with ATS
+		// 2: OK, no ATS
+		// 3: proprietary Anticollision
+		
+		if ( select_status == 0 ) {
 			PrintAndLogEx(WARNING, "iso14443a card select failed");
 			return 1;
 		}
@@ -2444,12 +2451,12 @@ int CmdHF14AMfuGenDiverseKeys(const char *Cmd){
 	PrintAndLogEx(NORMAL, "Diversified key: %s", sprint_hex(divkey+1, 6));
 	
 	for (int i=0; i < sizeof(mifarekeyA); ++i){
-		dkeyA[i] = (mifarekeyA[i] << 1) & 0xff;
-		dkeyA[6] |=  ((mifarekeyA[i] >> 7) & 1) << (i+1);
+		dkeyA[i]  = (mifarekeyA[i] << 1) & 0xff;
+		dkeyA[6] |= ((mifarekeyA[i] >> 7) & 1) << (i+1);
 	}
 	
 	for (int i=0; i < sizeof(mifarekeyB); ++i){
-		dkeyB[1] |=  ((mifarekeyB[i] >> 7) & 1) << (i+1);
+		dkeyB[1]  |= ((mifarekeyB[i] >> 7) & 1) << (i+1);
 		dkeyB[2+i] = (mifarekeyB[i] << 1) & 0xff;
 	}
 	
@@ -2486,6 +2493,7 @@ int CmdHF14AMfuPwdGen(const char *Cmd){
 	uint8_t uid[7] = {0x00};	
 	char cmdp = tolower(param_getchar(Cmd, 0));
 	if (strlen(Cmd) == 0  || cmdp == 'h') return usage_hf_mfu_pwdgen();
+	
 	if (cmdp == 't') return ul_ev1_pwdgen_selftest();
 	
 	if ( cmdp == 'r') {
@@ -2498,8 +2506,12 @@ int CmdHF14AMfuPwdGen(const char *Cmd){
 		iso14a_card_select_t card;
 		memcpy(&card, (iso14a_card_select_t *)resp.d.asBytes, sizeof(iso14a_card_select_t));
 		
-		uint64_t select_status = resp.arg[0];		// 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
-		if(select_status == 0) {
+		uint64_t select_status = resp.arg[0];
+		// 0: couldn't read
+		// 1: OK with ATS
+		// 2: OK, no ATS
+		// 3: proprietary Anticollision
+		if ( select_status == 0 ) {
 			PrintAndLogEx(WARNING, "iso14443a card select failed");
 			return 1;
 		}
@@ -2512,6 +2524,7 @@ int CmdHF14AMfuPwdGen(const char *Cmd){
 	else {
 		if (param_gethex(Cmd, 0, uid, 14)) return usage_hf_mfu_pwdgen();
 	}
+	
 	PrintAndLogEx(NORMAL, "---------------------------------");
 	PrintAndLogEx(NORMAL, " Using UID : %s", sprint_hex(uid, 7));
 	PrintAndLogEx(NORMAL, "---------------------------------");
@@ -2529,8 +2542,7 @@ int CmdHF14AMfuPwdGen(const char *Cmd){
 //------------------------------------
 // Menu Stuff
 //------------------------------------
-static command_t CommandTable[] =
-{
+static command_t CommandTable[] = {
 	{"help",	CmdHelp,			1, "This help"},
 	{"dbg",		CmdHF14AMfDbg,		0, "Set default debug mode"},
 	{"info",	CmdHF14AMfUInfo,	0, "Tag information"},
@@ -2550,7 +2562,6 @@ static command_t CommandTable[] =
 
 int CmdHFMFUltra(const char *Cmd){
 	clearCommandBuffer();
-	//WaitForResponseTimeout(CMD_ACK,NULL,100);
 	CmdsParse(CommandTable, Cmd);
 	return 0;
 }

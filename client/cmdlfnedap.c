@@ -194,15 +194,15 @@ int CmdLFNedapDemod(const char *Cmd) {
 	chksum2 =  bytebits_to_byte(DemodBuffer+110, 8);
 	chksum2 |= bytebits_to_byte(DemodBuffer+119, 8) << 8;
 
-	PrintAndLogEx(NORMAL, "NEDAP ID Found - Raw: %08x%08x%08x%08x", raw[3], raw[2], raw[1], raw[0]);
-	PrintAndLogEx(NORMAL, " - UID: %06X", uid);
-	PrintAndLogEx(NORMAL, " - i: %04X", two);
-	PrintAndLogEx(NORMAL, " - Checksum2 %04X", chksum2);
+	PrintAndLogEx(SUCCESS, "NEDAP ID Found - Raw: %08x%08x%08x%08x", raw[3], raw[2], raw[1], raw[0]);
+	PrintAndLogEx(SUCCESS, " - UID: %06X", uid);
+	PrintAndLogEx(SUCCESS, " - i: %04X", two);
+	PrintAndLogEx(SUCCESS, " - Checksum2 %04X", chksum2);
 
 	if (g_debugMode){
 		PrintAndLogEx(DEBUG, "DEBUG: idx: %d, Len: %d, Printing Demod Buffer:", idx, 128);
 		printDemodBuff();
-		PrintAndLogEx(NORMAL, "BIN:\n%s", sprint_bin_break( DemodBuffer, 128, 64) );
+		PrintAndLogEx(DEBUG, "BIN:\n%s", sprint_bin_break( DemodBuffer, 128, 64) );
 	}
 
 	return 1;
@@ -268,7 +268,7 @@ int CmdLFNedapClone(const char *Cmd) {
 	blocks[3] = bytebits_to_byte(bits + 64, 32);
 	blocks[4] = bytebits_to_byte(bits + 96, 32);
 
-	PrintAndLogEx(NORMAL, "Preparing to clone NEDAP to T55x7 with card number: %u", cardnumber);
+	PrintAndLogEx(INFO, "Preparing to clone NEDAP to T55x7 with card number: %u", cardnumber);
 	print_blocks(blocks, 5);
 
 	UsbCommand resp;
@@ -314,8 +314,8 @@ int CmdLFNedapSim(const char *Cmd) {
 		return 1;
 	}	
 
-	PrintAndLogEx(NORMAL, "bin  %s", sprint_bin_break(bs, 128, 32));
-	PrintAndLogEx(NORMAL, "Simulating Nedap - CardNumber: %u", cardnumber );
+	PrintAndLogEx(SUCCESS, "bin  %s", sprint_bin_break(bs, 128, 32));
+	PrintAndLogEx(SUCCESS, "Simulating Nedap - CardNumber: %u", cardnumber );
 	
 	UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};
 	memcpy(c.d.asBytes, bs, size);
@@ -332,7 +332,7 @@ int CmdLFNedapChk(const char *Cmd){
 	
 	len = ( len == 0 ) ? 5 : len>>1;
 	
-	PrintAndLogEx(NORMAL, "Input: [%d] %s", len, sprint_hex(data, len));
+	PrintAndLogEx(SUCCESS, "Input: [%d] %s", len, sprint_hex(data, len));
 	
 	//uint8_t last = GetParity(data, EVEN, 62);
 	//PrintAndLogEx(NORMAL, "TEST PARITY::  %d | %d ", DemodBuffer[62], last);
@@ -367,7 +367,7 @@ int CmdLFNedapChk(const char *Cmd){
         }
     }
 	
-	PrintAndLogEx(NORMAL, "Nedap checksum: 0x%X", ((ch << 8) | cl) );
+	PrintAndLogEx(SUCCESS, "Nedap checksum: 0x%X", ((ch << 8) | cl) );
 	return 0;
 }
 

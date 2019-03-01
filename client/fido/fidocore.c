@@ -347,8 +347,10 @@ bool CheckrpIdHash(json_t *json, uint8_t *hash) {
 	uint8_t hash2[32] = {0};
 	
 	JsonLoadStr(json, "$.RelyingPartyEntity.id", hashval);
-	sha256hash((uint8_t *)hashval, strlen(hashval), hash2);
-
+	int res = sha256hash((uint8_t *)hashval, strlen(hashval), hash2);
+	if (res)
+		return false;
+	
 	return !memcmp(hash, hash2, 32);
 }
 

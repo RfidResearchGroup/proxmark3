@@ -86,15 +86,15 @@ int CmdIOProxDemod(const char *Cmd) {
 	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t size = getFromGraphBuf(bits);
 	if (size < 65) {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox not enough samples in GraphBuffer");
+		PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox not enough samples in GraphBuffer");
 		return 0;
 	}	
 	//get binary from fsk wave	
 	int waveIdx = 0;
 	idx = detectIOProx(bits, &size, &waveIdx);
-	if (idx < 0){
-		if (g_debugMode){
-			if (idx == -1){
+	if (idx < 0) {
+		if (g_debugMode) {
+			if (idx == -1) {
 				PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox not enough samples");				
 			} else if (idx == -2) {
 				PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox just noise detected");
@@ -115,10 +115,10 @@ int CmdIOProxDemod(const char *Cmd) {
 	setDemodBuf(bits, size, idx);
 	setClockGrid(64, waveIdx + (idx*64));
 	
-	if (idx==0){
-		if (g_debugMode){
+	if (idx == 0) {
+		if (g_debugMode) {
 			PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox data not found - FSK Bits: %d", size);
-			if (size > 92) PrintAndLogEx(NORMAL, "%s", sprint_bin_break(bits, 92, 16));
+			if (size > 92) PrintAndLogEx(DEBUG, "%s", sprint_bin_break(bits, 92, 16));
 		} 
 		return retval;
 	}
@@ -132,15 +132,13 @@ int CmdIOProxDemod(const char *Cmd) {
 	//
 	//XSF(version)facility:codeone+codetwo (raw)
 	
-	if (g_debugMode) {
-		PrintAndLogEx(NORMAL, "%d%d%d%d%d%d%d%d %d", bits[idx], bits[idx+1], bits[idx+2], bits[idx+3], bits[idx+4], bits[idx+5], bits[idx+6], bits[idx+7], bits[idx+8]);
-		PrintAndLogEx(NORMAL, "%d%d%d%d%d%d%d%d %d", bits[idx+9], bits[idx+10], bits[idx+11],bits[idx+12],bits[idx+13],bits[idx+14],bits[idx+15],bits[idx+16],bits[idx+17]);
-		PrintAndLogEx(NORMAL, "%d%d%d%d%d%d%d%d %d facility", bits[idx+18], bits[idx+19], bits[idx+20],bits[idx+21],bits[idx+22],bits[idx+23],bits[idx+24],bits[idx+25],bits[idx+26]);
-		PrintAndLogEx(NORMAL, "%d%d%d%d%d%d%d%d %d version", bits[idx+27], bits[idx+28], bits[idx+29],bits[idx+30],bits[idx+31],bits[idx+32],bits[idx+33],bits[idx+34],bits[idx+35]);
-		PrintAndLogEx(NORMAL, "%d%d%d%d%d%d%d%d %d code1", bits[idx+36], bits[idx+37], bits[idx+38],bits[idx+39],bits[idx+40],bits[idx+41],bits[idx+42],bits[idx+43],bits[idx+44]);
-		PrintAndLogEx(NORMAL, "%d%d%d%d%d%d%d%d %d code2", bits[idx+45], bits[idx+46], bits[idx+47],bits[idx+48],bits[idx+49],bits[idx+50],bits[idx+51],bits[idx+52],bits[idx+53]);
-		PrintAndLogEx(NORMAL, "%d%d%d%d%d%d%d%d %d%d checksum", bits[idx+54],bits[idx+55],bits[idx+56],bits[idx+57],bits[idx+58],bits[idx+59],bits[idx+60],bits[idx+61],bits[idx+62],bits[idx+63]);
-	}
+	PrintAndLogEx(DEBUG, "%d%d%d%d%d%d%d%d %d", bits[idx], bits[idx+1], bits[idx+2], bits[idx+3], bits[idx+4], bits[idx+5], bits[idx+6], bits[idx+7], bits[idx+8]);
+	PrintAndLogEx(DEBUG, "%d%d%d%d%d%d%d%d %d", bits[idx+9], bits[idx+10], bits[idx+11],bits[idx+12],bits[idx+13],bits[idx+14],bits[idx+15],bits[idx+16],bits[idx+17]);
+	PrintAndLogEx(DEBUG, "%d%d%d%d%d%d%d%d %d facility", bits[idx+18], bits[idx+19], bits[idx+20],bits[idx+21],bits[idx+22],bits[idx+23],bits[idx+24],bits[idx+25],bits[idx+26]);
+	PrintAndLogEx(DEBUG, "%d%d%d%d%d%d%d%d %d version", bits[idx+27], bits[idx+28], bits[idx+29],bits[idx+30],bits[idx+31],bits[idx+32],bits[idx+33],bits[idx+34],bits[idx+35]);
+	PrintAndLogEx(DEBUG, "%d%d%d%d%d%d%d%d %d code1", bits[idx+36], bits[idx+37], bits[idx+38],bits[idx+39],bits[idx+40],bits[idx+41],bits[idx+42],bits[idx+43],bits[idx+44]);
+	PrintAndLogEx(DEBUG, "%d%d%d%d%d%d%d%d %d code2", bits[idx+45], bits[idx+46], bits[idx+47],bits[idx+48],bits[idx+49],bits[idx+50],bits[idx+51],bits[idx+52],bits[idx+53]);
+	PrintAndLogEx(DEBUG, "%d%d%d%d%d%d%d%d %d%d checksum", bits[idx+54],bits[idx+55],bits[idx+56],bits[idx+57],bits[idx+58],bits[idx+59],bits[idx+60],bits[idx+61],bits[idx+62],bits[idx+63]);
 	
 	uint32_t code = bytebits_to_byte(bits+idx,32);
 	uint32_t code2 = bytebits_to_byte(bits+idx+32,32);
@@ -163,13 +161,13 @@ int CmdIOProxDemod(const char *Cmd) {
 		snprintf(crcStr, 3, "ok");
 		retval = 1;
 	} else {
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox crc failed");
+		PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox crc failed");
 			
 		snprintf(crcStr, sizeof(crcStr), "failed 0x%02X != 0x%02X", crc, calccrc);
 		retval = 0;
 	}
 
-	PrintAndLogEx(NORMAL, "IO Prox XSF(%02d)%02x:%05d (%08x%08x) [crc %s]", version, facilitycode, number, code, code2, crcStr);
+	PrintAndLogEx(SUCCESS, "IO Prox XSF(%02d)%02x:%05d (%08x%08x) [crc %s]", version, facilitycode, number, code, code2, crcStr);
 
 	if (g_debugMode){
 		PrintAndLogEx(DEBUG, "DEBUG: IO prox idx: %d, Len: %d, Printing demod buffer:", idx, size);
@@ -241,7 +239,7 @@ int getIOProxBits(uint8_t version, uint8_t fc, uint16_t cn, uint8_t *bits) {
 
 	memcpy(bits, pre, sizeof(pre));
 	
-	PrintAndLogEx(NORMAL, "IO raw bits:\n %s \n", sprint_bin(bits, 64));
+	PrintAndLogEx(SUCCESS, "IO raw bits:\n %s \n", sprint_bin(bits, 64));
 	return 1;
 }
 
@@ -252,8 +250,8 @@ int CmdIOProxSim(const char *Cmd) {
 	size_t size = sizeof(bits);
 	memset(bits, 0x00, size);
  
-	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_io_sim();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_io_sim();
 	
   	version = param_get8(Cmd, 0);
 	fc = param_get8(Cmd, 1);
@@ -263,7 +261,7 @@ int CmdIOProxSim(const char *Cmd) {
 	
 	if ((cn & 0xFFFF) != cn) {
 		cn &= 0xFFFF;
-		PrintAndLogEx(NORMAL, "Card Number Truncated to 16-bits (IOProx): %u", cn);
+		PrintAndLogEx(INFO, "Card Number Truncated to 16-bits (IOProx): %u", cn);
 	}
 	
 	// clock 64, FSK2a fcHIGH 10 | fcLOW 8
@@ -272,8 +270,8 @@ int CmdIOProxSim(const char *Cmd) {
 	arg1 = high << 8 | low;
 	arg2 = invert << 8 | clk;
 
-	PrintAndLogEx(NORMAL, "Emulating IOProx Version: %u FC: %u; CN: %u\n", version, fc, cn);
-	PrintAndLogEx(NORMAL, "Press pm3-button to abort simulation or run another command");
+	PrintAndLogEx(SUCCESS, "Simulating IOProx version: %u FC: %u; CN: %u\n", version, fc, cn);
+	PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or run another command");
 	
 	if ( !getIOProxBits(version, fc, cn, bits)) {
 		PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
@@ -309,7 +307,7 @@ int CmdIOProxClone(const char *Cmd) {
 	
 	if ((cn & 0xFFFF) != cn) {
 		cn &= 0xFFFF;
-		PrintAndLogEx(NORMAL, "Card Number Truncated to 16-bits (IOProx): %u", cn);
+		PrintAndLogEx(INFO, "Card Number Truncated to 16-bits (IOProx): %u", cn);
 	}
 	
 	if ( !getIOProxBits(version, fc, cn, bits)) {
@@ -323,7 +321,7 @@ int CmdIOProxClone(const char *Cmd) {
 	blocks[1] = bytebits_to_byte(bits, 32);
 	blocks[2] = bytebits_to_byte(bits + 32, 32);
 
-	PrintAndLogEx(NORMAL, "Preparing to clone IOProx to T55x7 with Version: %u FC: %u, CN: %u", version, fc, cn);
+	PrintAndLogEx(INFO, "Preparing to clone IOProx to T55x7 with Version: %u FC: %u, CN: %u", version, fc, cn);
 	print_blocks(blocks, 3);
 	
 	//UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}};

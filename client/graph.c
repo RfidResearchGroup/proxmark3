@@ -115,10 +115,13 @@ int GetAskClock(const char *str, bool printAns) {
 	if (st == false) {
 		idx = DetectASKClock(bits, size, &clock, 20);
 	}
-	setClockGrid(clock, idx);
+	
+	if ( clock > 0 ) {
+		setClockGrid(clock, idx);
+	}
 	// Only print this message if we're not looping something
 	if (printAns || g_debugMode)
-		PrintAndLogEx(NORMAL, "Auto-detected clock rate: %d, Best Starting Position: %d", clock, idx);
+		PrintAndLogEx(SUCCESS, "Auto-detected clock rate: %d, Best Starting Position: %d", clock, idx);
 
 	return clock;
 }
@@ -137,7 +140,7 @@ uint8_t GetPskCarrier(const char *str, bool printAns) {
 	if (( fc >> 8) == 10 && carrier == 8) return 0;
 	// Only print this message if we're not looping something
 	if (printAns)
-		PrintAndLogEx(NORMAL, "Auto-detected PSK carrier rate: %d", carrier);
+		PrintAndLogEx(SUCCESS, "Auto-detected PSK carrier rate: %d", carrier);
 	return carrier;
 }
 
@@ -159,7 +162,7 @@ int GetPskClock(const char* str, bool printAns) {
 	setClockGrid(clock, firstPhaseShiftLoc);
 	// Only print this message if we're not looping something
 	if (printAns)
-		PrintAndLogEx(NORMAL, "Auto-detected clock rate: %d", clock);
+		PrintAndLogEx(SUCCESS, "Auto-detected clock rate: %d", clock);
 	return clock;
 }
 
@@ -181,7 +184,7 @@ int GetNrzClock(const char* str, bool printAns) {
 	setClockGrid(clock, clkStartIdx);
 	// Only print this message if we're not looping something
 	if (printAns)
-		PrintAndLogEx(NORMAL, "Auto-detected clock rate: %d", clock);
+		PrintAndLogEx(SUCCESS, "Auto-detected clock rate: %d", clock);
 	return clock;
 }
 //by marshmellow
@@ -200,7 +203,7 @@ int GetFskClock(const char* str, bool printAns) {
 	
 	if ((fc1==10 && fc2==8) || (fc1==8 && fc2==5)){
 		if (printAns) 
-			PrintAndLogEx(NORMAL, "Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d", fc1, fc2, rf1);
+			PrintAndLogEx(SUCCESS, "Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d", fc1, fc2, rf1);
 		setClockGrid(rf1, firstClockEdge);
 		return rf1;
 	}

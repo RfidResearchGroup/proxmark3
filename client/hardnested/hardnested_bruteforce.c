@@ -170,7 +170,9 @@ crack_states_thread(void* x){
 				__atomic_fetch_add(&found_bs_key, key, __ATOMIC_SEQ_CST);
 
 				char progress_text[80];
-				sprintf(progress_text, "Brute force phase completed. Key found: %012" PRIx64, key);
+				char keystr[18];
+				sprintf(keystr, "%012" PRIx64 "  ", key);
+				sprintf(progress_text, "Brute force phase completed. Key found: " _YELLOW_(%s), keystr);
 				hardnested_print_progress(thread_arg->num_acquired_nonces, progress_text, 0.0, 0);				
                 break;
             } else if(keys_found){
@@ -311,6 +313,11 @@ bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint
 
 	uint64_t start_time = msclock();
 
+#if defined(__linux__) ||  defined(__APPLE__)	
+	if ( NUM_BRUTE_FORCE_THREADS < 0 )
+		return false;
+#endif
+
 	pthread_t threads[NUM_BRUTE_FORCE_THREADS];
 	struct args {
 		bool silent;
@@ -322,7 +329,7 @@ bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint
 		uint8_t *best_first_bytes;
 	} thread_args[NUM_BRUTE_FORCE_THREADS];
 	
-	for(uint32_t i = 0; i < NUM_BRUTE_FORCE_THREADS; i++){
+	for (uint32_t i = 0; i < NUM_BRUTE_FORCE_THREADS; i++){
 		thread_args[i].thread_ID = i;
 		thread_args[i].silent = silent;
 		thread_args[i].cuid = cuid;
@@ -332,7 +339,7 @@ bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint
 		thread_args[i].best_first_bytes = best_first_bytes;
 		pthread_create(&threads[i], NULL, crack_states_thread, (void*)&thread_args[i]);
 	}
-	for(uint32_t i = 0; i < NUM_BRUTE_FORCE_THREADS; i++){
+	for (uint32_t i = 0; i < NUM_BRUTE_FORCE_THREADS; i++){
 		pthread_join(threads[i], 0);
 	}
 

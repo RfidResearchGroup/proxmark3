@@ -12,6 +12,9 @@
 #include "mifare/mifare4.h"
 #include "mifare/mad.h"
 
+
+#define MFBLOCK_SIZE 16
+
 #define MIFARE_4K_MAXBLOCK 256
 #define MIFARE_2K_MAXBLOCK 128 
 #define MIFARE_1K_MAXBLOCK 64
@@ -426,6 +429,7 @@ char * GenerateFilename(const char *prefix, const char *suffix){
 	GetHFMF14AUID(uid, &uidlen);
 	if (!uidlen) {
 		PrintAndLogEx(WARNING, "No tag found.");
+		free(fptr);
 		return NULL;
 	}
 	
@@ -434,7 +438,7 @@ char * GenerateFilename(const char *prefix, const char *suffix){
 	return fptr;
 }
 
-int CmdHF14ADarkside(const char *Cmd) {
+int CmdHF14AMfDarkside(const char *Cmd) {
 	uint8_t blockno = 0, key_type = MIFARE_AUTH_KEYA;
 	uint64_t key = 0;
 	
@@ -697,10 +701,13 @@ int CmdHF14AMfDump(const char *Cmd) {
 	uint8_t cmdp = 0;
 	
 	char keyFilename[FILE_PATH_SIZE] = {0};
-	char dataFilename[FILE_PATH_SIZE] = {0};
+	char dataFilename[FILE_PATH_SIZE];
 	char * fptr;
 	
-	FILE *fin, *fout;	
+	memset(keyFilename, 0, sizeof(keyFilename));
+	memset(dataFilename, 0, sizeof(dataFilename));
+	
+	FILE *f;	
 	UsbCommand resp;
 	
 	while(param_getchar(Cmd, cmdp) != 0x00) {
@@ -734,7 +741,7 @@ int CmdHF14AMfDump(const char *Cmd) {
 		strcpy(keyFilename, fptr);
 	}
 
-	if ((fin = fopen(keyFilename, "rb")) == NULL) {
+	if ((f = fopen(keyFilename, "rb")) == NULL) {
 		PrintAndLogEx(WARNING, "Could not find file " _YELLOW_(%s), keyFilename);
 		return 1;
 	}
@@ -742,29 +749,29 @@ int CmdHF14AMfDump(const char *Cmd) {
 	// Read keys A from file
 	size_t bytes_read;
 	for (sectorNo=0; sectorNo<numSectors; sectorNo++) {
-		bytes_read = fread( keyA[sectorNo], 1, 6, fin );
+		bytes_read = fread( keyA[sectorNo], 1, 6, f );
 		if ( bytes_read != 6) {
 			PrintAndLogEx(WARNING, "File reading error.");
-			fclose(fin);
+			fclose(f);
 			return 2;
 		}
 	}
 	
 	// Read keys B from file
 	for (sectorNo=0; sectorNo<numSectors; sectorNo++) {
-		bytes_read = fread( keyB[sectorNo], 1, 6, fin );
+		bytes_read = fread( keyB[sectorNo], 1, 6, f );
 		if ( bytes_read != 6) {
 			PrintAndLogEx(WARNING, "File reading error.");
-			fclose(fin);
+			fclose(f);
 			return 2;
 		}
 	}
 	
-	fclose(fin);
+	fclose(f);
 			
-	PrintAndLogEx(NORMAL, "|-----------------------------------------|");
-	PrintAndLogEx(NORMAL, "|------ Reading sector access bits...-----|");
-	PrintAndLogEx(NORMAL, "|-----------------------------------------|");
+
+	PrintAndLogEx(INFO, "Reading sector access bits...");
+
 	uint8_t tries = 0;
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		for (tries = 0; tries < MIFARE_SECTOR_RETRY; tries++) {
@@ -796,9 +803,8 @@ int CmdHF14AMfDump(const char *Cmd) {
 		}
 	}
 	
-	PrintAndLogEx(NORMAL, "|-----------------------------------------|");
-	PrintAndLogEx(NORMAL, "|----- Dumping all blocks to file... -----|");
-	PrintAndLogEx(NORMAL, "|-----------------------------------------|");
+	PrintAndLogEx(SUCCESS, "Finished reading sector access bits");
+	PrintAndLogEx(INFO, "Dumping all blocks from card...");
 	
 	bool isOK = true;
 	for (sectorNo = 0; isOK && sectorNo < numSectors; sectorNo++) {
@@ -870,24 +876,24 @@ int CmdHF14AMfDump(const char *Cmd) {
 		}
 	}
 
-	if (isOK) {
-		if (dataFilename[0] == 0x00) {
-			fptr = GenerateFilename("hf-mf-", "-data.bin");
-			if (fptr == NULL) 
-				return 1;
-			
-			strcpy(dataFilename, fptr);
-		}
-		
-		if ((fout = fopen(dataFilename,"wb")) == NULL) { 
-			PrintAndLogEx(WARNING, "could not create file name " _YELLOW_(%s), dataFilename);
-			return 1;
-		}
-		uint16_t numblocks = FirstBlockOfSector(numSectors - 1) + NumBlocksPerSector(numSectors - 1);
-		fwrite(carddata, 1, 16*numblocks, fout);
-		fclose(fout);
-		PrintAndLogEx(SUCCESS, "dumped %d blocks (%d bytes) to file " _YELLOW_(%s), numblocks, 16*numblocks, dataFilename);
+	if (isOK == 0) { 
+		PrintAndLogEx(FAILED, "Something went wrong");
+		return 0;
 	}
+
+	PrintAndLogEx(SUCCESS, "\nSuccedded in dumping all blocks");
+	
+	if ( strlen(dataFilename) < 1 ) {
+		fptr = dataFilename;
+		fptr += sprintf(fptr, "hf-mf-");
+		FillFileNameByUID(fptr, (uint8_t *)carddata, "-data", 4);
+	}
+
+	uint16_t bytes = 16*(FirstBlockOfSector(numSectors - 1) + NumBlocksPerSector(numSectors - 1));
+	
+	saveFile(dataFilename, "bin", (uint8_t *)carddata, bytes);
+	saveFileEML(dataFilename, "eml", (uint8_t *)carddata, bytes, MFBLOCK_SIZE);
+	saveFileJSON(dataFilename, "json", jsfCardMemory, (uint8_t *)carddata, bytes);
 	return 0;
 }
 
@@ -1083,19 +1089,21 @@ int CmdHF14AMfNested(const char *Cmd) {
 	} else {
 		SectorsCnt = NumOfSectors(cmdp);
 	}
-
-	ctmp = tolower(param_getchar(Cmd, 4));
-	transferToEml |= (ctmp == 't');
-	createDumpFile |= (ctmp == 'd');
 	
-	ctmp = tolower(param_getchar(Cmd, 6));
-	transferToEml |= (ctmp == 't');
-	createDumpFile |= (ctmp == 'd');
+	uint8_t j = 4;
+	while ( ctmp != 0x00 ) {
+
+		ctmp = tolower(param_getchar(Cmd, j));
+		transferToEml |= (ctmp == 't');
+		createDumpFile |= (ctmp == 'd');
+		
+		j++;
+	}
 	
 	// check if we can authenticate to sector
 	res = mfCheckKeys(blockNo, keyType, true, 1, key, &key64);
 	if (res) {
-		PrintAndLogEx(WARNING, "key is wrong. Can't authenticate to block:%3d key type:%c", blockNo, keyType ? 'B' : 'A');
+		PrintAndLogEx(WARNING, "Wrong key. Can't authenticate to block:%3d key type:%c", blockNo, keyType ? 'B' : 'A');
 		return 3;
 	}	
 	
@@ -1113,9 +1121,9 @@ int CmdHF14AMfNested(const char *Cmd) {
 				if (transferToEml) {
 					uint8_t sectortrailer;
 					if (trgBlockNo < 32*4) { 	// 4 block sector
-						sectortrailer = (trgBlockNo & ~0x03) + 3;
+					sectortrailer = trgBlockNo | 0x03;
 					} else {					// 16 block sector
-						sectortrailer = (trgBlockNo & ~0x0f) + 15;
+					sectortrailer = trgBlockNo | 0x0f;
 					}
 					mfEmlGetMem(keyBlock, sectortrailer, 1);
 			
@@ -1237,14 +1245,16 @@ int CmdHF14AMfNested(const char *Cmd) {
 					num_to_bytes(e_sector[i].Key[1], 6, &keyBlock[10]);
 				mfEmlSetMem(keyBlock, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1);
 			}
-			PrintAndLogEx(SUCCESS, "key transferred to emulator memory.");
+			PrintAndLogEx(SUCCESS, "keys transferred to emulator memory.");
 		}
 		
 		// Create dump file
 		if (createDumpFile) {
 			fptr = GenerateFilename("hf-mf-", "-key.bin");
-			if (fptr == NULL) 
+			if (fptr == NULL) {
+				free(e_sector);
 				return 1;
+			}
 			
 			if ((fkeys = fopen(fptr, "wb")) == NULL) { 
 				PrintAndLogEx(WARNING, "could not create file " _YELLOW_(%s), fptr);
@@ -1274,6 +1284,8 @@ int CmdHF14AMfNested(const char *Cmd) {
 		}		
 		free(e_sector);
 	}
+
+	free(e_sector);	
 	return 0;
 }
 
@@ -1721,7 +1733,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 	if (strlen(Cmd) < 3 || ctmp == 'h') return usage_hf14_chk();
 
 	FILE * f;
-	char filename[FILE_PATH_SIZE]={0};
+	char filename[FILE_PATH_SIZE] = {0};
 	char buf[13];
 	uint8_t *keyBlock = NULL, *p;
 	sector_t *e_sector = NULL;
@@ -1806,7 +1818,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 			
 			f = fopen( filename , "r");
 			if ( !f ) {
-				PrintAndLogEx(FAILED, "File: " _YELLOW_(%s)": not found or locked.", filename);
+				PrintAndLogEx(FAILED, "File: " _YELLOW_(%s) ": not found or locked.", filename);
 				continue;
 			}
 			
@@ -1968,8 +1980,11 @@ out:
 	
 	if (createDumpFile) {
 		fptr = GenerateFilename("hf-mf-", "-key.bin");
-		if (fptr == NULL) 
+		if (fptr == NULL) {
+			free(keyBlock);
+			free(e_sector);			
 			return 1;
+		}
 
 		FILE *fkeys = fopen(fptr, "wb");
 		if (fkeys == NULL) { 
@@ -2230,11 +2245,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 				bufsize = traceLen;
 				memset(buf, 0x00, traceLen);
 			}
-			if (bufPtr == NULL) {
-				PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
-				free(buf);
-				return 2;
-			}
+
 			// what happens if LEN is bigger then TRACELEN --iceman
 			memcpy(bufPtr, resp.d.asBytes, len);
 			bufPtr += len;
@@ -2487,19 +2498,21 @@ int CmdHF14AMfELoad(const char *Cmd) {
 	if ( blockWidth == 4 ) {
 		if ((blockNum != numBlocks)) {		
 			PrintAndLogEx(FAILED, "Warning, Ultralight/Ntag file content, Loaded %d blocks into emulator memory", blockNum);
+			free(data);
 			return 0;
 		}
 	} else {
 		if ((blockNum != numBlocks)) {
 			PrintAndLogEx(FAILED, "Error, file content, Only loaded %d blocks, must be %d blocks into emulator memory", blockNum, numBlocks);
+			free(data);
 			return 4;
 		}
 	}
 	PrintAndLogEx(SUCCESS, "Loaded %d blocks from file: " _YELLOW_(%s), blockNum, filename);
+	free(data);
 	return 0;
 }
 
-#define MFBLOCK_SIZE 16
 int CmdHF14AMfESave(const char *Cmd) {
 
 	char filename[FILE_PATH_SIZE];
@@ -2541,6 +2554,7 @@ int CmdHF14AMfESave(const char *Cmd) {
 	
 	saveFile(filename, "bin", dump, bytes);
 	saveFileEML(filename, "eml", dump, bytes, MFBLOCK_SIZE);
+	saveFileJSON(filename, "json", jsfCardMemory, dump, bytes);
 	free(dump);
 	return 0;
 }
@@ -2740,8 +2754,10 @@ int CmdHF14AMfCLoad(const char *Cmd) {
 			res = loadFileEML( Cmd, "eml", data, &datalen);
 		}
 	}
+	
 	if ( res ) {
-		free(data);
+		if ( data )
+			free(data);
 		return 1;
 	}
 	
@@ -2915,7 +2931,6 @@ int CmdHF14AMfCSave(const char *Cmd) {
 				errors = true;
 				break;
 			}
-			if (len > FILE_PATH_SIZE - 5) len = FILE_PATH_SIZE - 5;				
 
 			useuid = false;
 			hasname = true;		
@@ -3163,7 +3178,7 @@ out:
 	return 0;
 }
 
-int CmdHF14AMfAuth4(const char *cmd) {
+int CmdHF14AMfAuth4(const char *Cmd) {
 	uint8_t keyn[20] = {0};
 	int keynlen = 0;
 	uint8_t key[16] = {0};
@@ -3180,7 +3195,7 @@ int CmdHF14AMfAuth4(const char *cmd) {
 		arg_str1(NULL,  NULL,     "<Key Value (HEX 16 bytes)>", NULL),
 		arg_param_end
 	};
-	CLIExecWithReturn(cmd, argtable, true);
+	CLIExecWithReturn(Cmd, argtable, true);
 	
 	CLIGetHexWithReturn(1, keyn, &keynlen);
 	CLIGetHexWithReturn(2, key, &keylen);
@@ -3242,9 +3257,15 @@ int CmdHF14AMfMAD(const char *cmd) {
 	return 0;
 }
 
+int CmdHF14AMfList(const char *Cmd) {
+	CmdTraceList("mf");
+	return 0;
+}
+
 static command_t CommandTable[] = {
 	{"help",		CmdHelp,				1, "This help"},
-	{"darkside",	CmdHF14ADarkside,		0, "Darkside attack. read parity error messages."},
+	{"list",		CmdHF14AMfList,         0, "[Deprecated] List ISO 14443-a / Mifare history"},	
+	{"darkside",	CmdHF14AMfDarkside,		0, "Darkside attack. read parity error messages."},
 	{"nested",		CmdHF14AMfNested,		0, "Nested attack. Test nested authentication"},
 	{"hardnested", 	CmdHF14AMfNestedHard, 	0, "Nested attack for hardened Mifare cards"},
 	{"keybrute",	CmdHF14AMfKeyBrute,		0, "J_Run's 2nd phase of multiple sector nested authentication key recovery"},	

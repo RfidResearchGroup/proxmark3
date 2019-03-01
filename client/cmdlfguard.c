@@ -107,21 +107,21 @@ int GetGuardBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *guardBits) {
 	for (i = 0; i < 4; ++i)
 		rawbytes[i+4] = bytebits_to_byte( pre + (i*8), 8);
 	
-	if (g_debugMode) PrintAndLogEx(NORMAL, " WIE | %s\n", sprint_hex(rawbytes, sizeof(rawbytes)));	
+	PrintAndLogEx(DEBUG, " WIE | %s\n", sprint_hex(rawbytes, sizeof(rawbytes)));	
 	
 	
 	// XOR (only works on wiegand stuff)
 	for (i = 1; i < 12; ++i)
 		rawbytes[i] ^= xorKey ;
 	
-	if (g_debugMode) PrintAndLogEx(NORMAL, " XOR | %s \n", sprint_hex(rawbytes, sizeof(rawbytes)));
+	PrintAndLogEx(DEBUG, " XOR | %s \n", sprint_hex(rawbytes, sizeof(rawbytes)));
 
 	// convert rawbytes to bits in pre
 	for (i = 0; i < 12; ++i)
 		num_to_bytebitsLSBF( rawbytes[i], 8, pre + (i*8));
 
-	if (g_debugMode) PrintAndLogEx(NORMAL, "\n Raw | %s \n", sprint_hex(rawbytes, sizeof(rawbytes)));
-	if (g_debugMode) PrintAndLogEx(NORMAL, " Raw | %s\n", sprint_bin(pre, 64) );
+	PrintAndLogEx(DEBUG, "\n Raw | %s \n", sprint_hex(rawbytes, sizeof(rawbytes)));
+	PrintAndLogEx(DEBUG, " Raw | %s\n", sprint_bin(pre, 64) );
 	
 	// add spacer bit 0 every 4 bits, starting with index 0,
 	// 12 bytes, 24 nibbles.  24+1 extra bites. 3bytes.  ie 9bytes | 1byte xorkey, 8bytes rawdata (64bits, should be enough for a 40bit wiegand)
@@ -135,7 +135,7 @@ int GetGuardBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *guardBits) {
 	guardBits[4] = 1;
 	guardBits[5] = 0;
 	
-	if (g_debugMode) PrintAndLogEx(NORMAL, " FIN | %s\n", sprint_bin(guardBits, 96) );
+	PrintAndLogEx(DEBUG, " FIN | %s\n", sprint_bin(guardBits, 96) );
 	return 1;
 }
 
@@ -192,7 +192,7 @@ int CmdGuardDemod(const char *Cmd) {
 			PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII preamble not found");
 		else if (preambleIndex == -3)
 			PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII size not correct: %d", size);
-		else if (preambleIndex == -3)
+		else if (preambleIndex == -5)
 			PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII wrong spacerbits");
 		else				
 			PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII ans: %d", preambleIndex);
@@ -246,9 +246,9 @@ int CmdGuardDemod(const char *Cmd) {
 			break;
 	}
 	if ( !unknown)
-		PrintAndLogEx(NORMAL, "G-Prox-II Found: Format Len: %ubit - FC: %u - Card: %u, Raw: %08x%08x%08x", fmtLen, FC, Card, raw1, raw2, raw3);
+		PrintAndLogEx(SUCCESS, "G-Prox-II Found: Format Len: %ubit - FC: %u - Card: %u, Raw: %08x%08x%08x", fmtLen, FC, Card, raw1, raw2, raw3);
 	else
-		PrintAndLogEx(NORMAL, "Unknown G-Prox-II Fmt Found: Format Len: %u, Raw: %08x%08x%08x", fmtLen, raw1, raw2, raw3);
+		PrintAndLogEx(SUCCESS, "Unknown G-Prox-II Fmt Found: Format Len: %u, Raw: %08x%08x%08x", fmtLen, raw1, raw2, raw3);
 
 	return 1;
 }
@@ -290,7 +290,7 @@ int CmdGuardClone(const char *Cmd) {
 	blocks[2] = bytebits_to_byte(bs + 32, 32);
 	blocks[3] = bytebits_to_byte(bs + 64, 32);
 
-	PrintAndLogEx(NORMAL, "Preparing to clone Guardall to T55x7 with Facility Code: %u, Card Number: %u", facilitycode, cardnumber);
+	PrintAndLogEx(INFO, "Preparing to clone Guardall to T55x7 with Facility Code: %u, Card Number: %u", facilitycode, cardnumber);
 	print_blocks(blocks, 4);
 
 	UsbCommand resp;
@@ -333,7 +333,7 @@ int CmdGuardSim(const char *Cmd) {
 		return 1;
 	}	
 
-	PrintAndLogEx(NORMAL, "Simulating Guardall - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber );
+	PrintAndLogEx(SUCCESS, "Simulating Guardall - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber );
 
 	uint64_t arg1, arg2;
 	arg1 = (clock << 8) | encoding;
