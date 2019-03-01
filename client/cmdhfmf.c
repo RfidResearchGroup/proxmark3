@@ -9,7 +9,8 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdhfmf.h"
-#include "mifare4.h"
+#include "mifare/mifare4.h"
+#include "mifare/mad.h"
 
 
 #define MFBLOCK_SIZE 16
@@ -3213,6 +3214,49 @@ int CmdHF14AMfAuth4(const char *Cmd) {
 	return MifareAuth4(NULL, keyn, key, true, false, true);
 }
 
+// https://www.nxp.com/docs/en/application-note/AN10787.pdf
+int CmdHF14AMfMAD(const char *cmd) {
+
+	CLIParserInit("hf mf mad", 
+		"Checks and prints Mifare Application Directory (MAD)", 
+		"Usage:\n\thf mf mad -> shows MAD if exists\n");
+
+	void* argtable[] = {
+		arg_param_begin,
+		arg_lit0("vV",  "verbose",  "show technical data"),
+		arg_param_end
+	};
+	CLIExecWithReturn(cmd, argtable, true);
+	bool verbose = arg_get_lit(1);
+	
+	CLIParserFree();
+
+	uint8_t sector[16 * 4] = {0};
+	if (mfReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector)) {
+		PrintAndLogEx(ERR, "read sector 0 error. card don't have MAD or don't have MAD on default keys.");
+		return 2;
+	}
+	
+	if (verbose) {
+		for(int i = 0; i < 4; i ++)
+			PrintAndLogEx(NORMAL, "[%d] %s", i, sprint_hex(&sector[i * 16], 16));		
+	}
+
+	bool haveMAD2 = false;
+	MAD1DecodeAndPrint(sector, verbose, &haveMAD2);
+	
+	if (haveMAD2) {
+		if (mfReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector)) {
+			PrintAndLogEx(ERR, "read sector 0x10 error. card don't have MAD or don't have MAD on default keys.");
+			return 2;
+		}
+
+		MAD2DecodeAndPrint(sector, verbose);
+	}
+	
+	return 0;
+}
+
 int CmdHF14AMfList(const char *Cmd) {
 	CmdTraceList("mf");
 	return 0;
@@ -3255,6 +3299,9 @@ static command_t CommandTable[] = {
 	{"cgetsc",		CmdHF14AMfCGetSc,		0, "Read sector - Magic Chinese card"},
 	{"cload",		CmdHF14AMfCLoad,		0, "Load dump into magic Chinese card"},
 	{"csave",		CmdHF14AMfCSave,		0, "Save dump from magic Chinese card into file or emulator"},
+	{"-----------",	CmdHelp,				1, ""},
+	{"mad",			CmdHF14AMfMAD,			0, "Checks and prints MAD"},
+//	{"ndef",		CmdHF14AMfHDEF,			0, "Checks and prints NDEF records from card"},
 
 	{"ice",			CmdHF14AMfice,			0, "collect Mifare Classic nonces to file"},
 	{NULL, NULL, 0, NULL}

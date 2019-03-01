@@ -19,7 +19,7 @@
 #include "cmdmain.h"
 #include "comms.h"
 #include "util.h"
-#include "mifarehost.h"
+#include "mifare/mifarehost.h"
 #include "crc.h"
 #include "crc16.h"
 #include "crc64.h"

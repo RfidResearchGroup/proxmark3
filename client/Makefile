@@ -108,7 +108,7 @@ CORESRCS =  uart_posix.c \
 
 CMDSRCS =	crapto1/crapto1.c \
 			crapto1/crypto1.c \
-			mfkey.c \
+			mifare/mfkey.c \
 			tea.c \
 			fido/additional_ca.c \
 			fido/cose.c \
@@ -126,7 +126,7 @@ CMDSRCS =	crapto1/crapto1.c \
 			loclass/elite_crack.c \
 			loclass/fileutils.c \
 			whereami.c \
-			mifarehost.c \
+			mifare/mifarehost.c \
 			parity.c \
 			crc.c \
 			crc16.c \
@@ -156,7 +156,8 @@ CMDSRCS =	crapto1/crapto1.c \
 			emv/test/cda_test.c\
 			emv/cmdemv.c \
 			emv/emv_roca.c \
-            mifare4.c \
+            mifare/mifare4.c \
+            mifare/mad.c \
 			cmdanalyse.c \
 			cmdhf.c \
 			cmdhflist.c \
