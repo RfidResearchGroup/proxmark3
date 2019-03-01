@@ -101,7 +101,7 @@ static const char *GetAIDDescription(uint16_t AID) {
 			return madKnownAIDs[i].Description;
 
 	for(int i = 0; i < ARRAYLEN(madKnownClusterCodes); i++)
-		if (madKnownClusterCodes[i].AID == AID)
+		if (madKnownClusterCodes[i].AID == (AID >> 8)) // high byte - cluster code
 			return madKnownClusterCodes[i].Description;
 		
 	return unknownAID;
@@ -175,6 +175,7 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2) {
 	if (InfoByte == 0x10 || InfoByte >= 0x28)
 		PrintAndLogEx(WARNING, "Info byte error");
 	
+	PrintAndLogEx(NORMAL, "00 MAD1");
 	for(int i = 1; i < 16; i++) {
 		uint16_t AID = madGetAID(sector, 1, i);
 		PrintAndLogEx(NORMAL, "%02d [%04X] %s", i, AID, GetAIDDescription(AID));
@@ -184,15 +185,19 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2) {
 };
 
 int MAD2DecodeAndPrint(uint8_t *sector, bool verbose) {
+	PrintAndLogEx(NORMAL, "16 MAD2");
+
 	int res = madCRCCheck(sector, true, 2);
 	if (res)
 		return res;	
 
-	for(int i = 1; i < 8 + 8 + 7; i++) {
+	uint8_t InfoByte = sector[1] & 0x3f;
+	PrintAndLogEx(NORMAL, "MAD2 Card publisher sector: 0x%02x", InfoByte);
+
+	for(int i = 1; i < 8 + 8 + 7 + 1; i++) {
 		uint16_t AID = madGetAID(sector, 2, i);
-		PrintAndLogEx(NORMAL, "%02d [%04X] %s", i + 15, AID, GetAIDDescription(AID));
-	};
-		
+		PrintAndLogEx(NORMAL, "%02d [%04X] %s", i + 16, AID, GetAIDDescription(AID));
+	};	
 	
 	return 0;
 };
