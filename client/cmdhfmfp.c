@@ -23,6 +23,7 @@
 #include "cmdhf14a.h"
 #include "mifare.h"
 #include "mifare/mifare4.h"
+#include "mifare/mad.h"
 #include "cliparser/cliparser.h"
 #include "crypto/libpcrypto.h"
 
@@ -733,6 +734,112 @@ int CmdHFMFPWrbl(const char *cmd) {
 	return 0;
 }
 
+int mfpReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *dataout, bool verbose){
+	uint8_t keyn[2] = {0};
+	bool plain = false;
+	
+	uint16_t uKeyNum = 0x4000 + sectorNo * 2 + (keyType ? 1 : 0);
+	keyn[0] = uKeyNum >> 8;
+	keyn[1] = uKeyNum & 0xff;
+	if (verbose)
+		PrintAndLogEx(INFO, "--sector[%d]:%02x key:%04x", mfNumBlocksPerSector(sectorNo), sectorNo, uKeyNum);
+	
+	mf4Session session;
+	int res = MifareAuth4(&session, keyn, key, true, true, verbose);
+	if (res) {
+		PrintAndLogEx(ERR, "Sector %d authentication error: %d", sectorNo, res);
+		return res;
+	}
+	
+	uint8_t data[250] = {0};
+	int datalen = 0;
+	uint8_t mac[8] = {0};
+	uint8_t firstBlockNo = mfFirstBlockOfSector(sectorNo);
+	for(int n = firstBlockNo; n < firstBlockNo + mfNumBlocksPerSector(sectorNo); n++) {
+		res = MFPReadBlock(&session, plain, n & 0xff, 1, false, true, data, sizeof(data), &datalen, mac);
+		if (res) {
+			PrintAndLogEx(ERR, "Sector %d read error: %d", sectorNo, res);
+			DropField();
+			return res;
+		}
+		
+		if (datalen && data[0] != 0x90) {
+			PrintAndLogEx(ERR, "Sector %d card read error: %02x %s", sectorNo, data[0], GetErrorDescription(data[0]));
+			DropField();
+			return 5;
+		}
+		if (datalen != 1 + 16 + 8 + 2) {
+			PrintAndLogEx(ERR, "Sector %d error returned data length:%d", sectorNo, datalen);
+			DropField();
+			return 6;
+		}
+
+		memcpy(&dataout[(n - firstBlockNo) * 16], &data[1], 16);
+		
+		if (verbose)
+			PrintAndLogEx(INFO, "data[%03d]: %s", n, sprint_hex(&data[1], 16));
+			
+		if (memcmp(&data[1 + 16], mac, 8)) {
+			PrintAndLogEx(WARNING, "WARNING: mac on block %d not equal...", n);
+			PrintAndLogEx(WARNING, "MAC   card: %s", sprint_hex(&data[1 + 16], 8));
+			PrintAndLogEx(WARNING, "MAC reader: %s", sprint_hex(mac, 8));
+			
+			if (!verbose)
+				return 7;			
+		} else {	
+			if(verbose)
+				PrintAndLogEx(INFO, "MAC: %s", sprint_hex(&data[1 + 16], 8));
+		}
+	}
+	DropField();
+
+	return 0;	
+}
+
+int CmdHFMFPMAD(const char *cmd) {
+
+	CLIParserInit("hf mfp mad", 
+		"Checks and prints Mifare Application Directory (MAD)", 
+		"Usage:\n\thf mfp mad -> shows MAD if exists\n");
+
+	void* argtable[] = {
+		arg_param_begin,
+		arg_lit0("vV",  "verbose",  "show technical data"),
+		arg_param_end
+	};
+	CLIExecWithReturn(cmd, argtable, true);
+	bool verbose = arg_get_lit(1);
+	
+	CLIParserFree();
+
+	uint8_t sector[16 * 4] = {0};
+	if (mfpReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector, verbose)) {
+		PrintAndLogEx(NORMAL, "");
+		PrintAndLogEx(ERR, "read sector 0 error. card don't have MAD or don't have MAD on default keys.");
+		return 2;
+	}
+	
+	if (verbose) {
+		for(int i = 0; i < 4; i ++)
+			PrintAndLogEx(NORMAL, "[%d] %s", i, sprint_hex(&sector[i * 16], 16));		
+	}
+
+	bool haveMAD2 = false;
+	MAD1DecodeAndPrint(sector, verbose, &haveMAD2);
+	
+	if (haveMAD2) {
+		if (mfpReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector, verbose)) {
+			PrintAndLogEx(NORMAL, "");
+			PrintAndLogEx(ERR, "read sector 0x10 error. card don't have MAD or don't have MAD on default keys.");
+			return 2;
+		}
+
+		MAD2DecodeAndPrint(sector, verbose);
+	}
+	
+	return 0;
+}
+
 static command_t CommandTable[] =
 {
   {"help",             CmdHelp,					1, "This help"},
@@ -744,6 +851,7 @@ static command_t CommandTable[] =
   {"rdbl",  	       CmdHFMFPRdbl,			0, "Read blocks"},
   {"rdsc",  	       CmdHFMFPRdsc,			0, "Read sectors"},
   {"wrbl",  	       CmdHFMFPWrbl,			0, "Write blocks"},
+  {"mad",  	           CmdHFMFPMAD,				0, "Checks and prints MAD"},
   {NULL,               NULL,					0, NULL}
 };
 
