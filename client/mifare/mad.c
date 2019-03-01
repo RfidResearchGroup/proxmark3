@@ -109,13 +109,19 @@ static const char *GetAIDDescription(uint16_t AID) {
 
 int madCRCCheck(uint8_t *sector, bool verbose, int MADver) {
 	if (MADver == 1) {
-		uint8_t crc = CRC8Mad(&sector[16 + 1], 31);
+		uint8_t crc = CRC8Mad(&sector[16 + 1], 15 + 16);
 		if (crc != sector[16]) {
 			if (verbose)
 				PrintAndLogEx(ERR, "Wrong MAD%d CRC. Calculated: 0x%02x, from card: 0x%02x", MADver, crc, sector[16]);
 			return 3;
 		};
 	} else {
+		uint8_t crc = CRC8Mad(&sector[1], 15 + 16 + 16);
+		if (crc != sector[0]) {
+			if (verbose)
+				PrintAndLogEx(ERR, "Wrong MAD%d CRC. Calculated: 0x%02x, from card: 0x%02x", MADver, crc, sector[16]);
+			return 3;
+		};
 	}
 	
 	return 0;
@@ -190,6 +196,9 @@ int MAD2DecodeAndPrint(uint8_t *sector, bool verbose) {
 	int res = madCRCCheck(sector, true, 2);
 	if (res)
 		return res;	
+
+	if (verbose)
+		PrintAndLogEx(NORMAL, "CRC8-MAD OK.");
 
 	uint8_t InfoByte = sector[1] & 0x3f;
 	PrintAndLogEx(NORMAL, "MAD2 Card publisher sector: 0x%02x", InfoByte);
