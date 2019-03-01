@@ -1495,6 +1495,13 @@ int CmdTuneSamples(const char *Cmd) {
 #define HF_UNUSABLE_V	3000
 #define HF_MARGINAL_V	5000
 #define ANTENNA_ERROR	1.03	// current algo has 3% error margin.
+
+	// hide demod plot line
+	DemodBufferLen = 0;
+	setClockGrid(0, 0);
+	RepaintGraphWindow();
+	
+	
 	int timeout = 0;
 	PrintAndLogEx(INFO, "\nmeasuring antenna characteristics, please wait...");
 
@@ -1575,6 +1582,7 @@ int CmdTuneSamples(const char *Cmd) {
 
 		PrintAndLogEx(FAILED, "\nNot showing LF tuning graph since all values is zero.\n\n");
 	}
+
 	return 0;
 }
 
