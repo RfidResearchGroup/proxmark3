@@ -29,102 +29,7 @@
 
 static const uint8_t DefaultKey[16] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
-typedef struct {
-	uint8_t Code;
-	const char *Description;
-} PlusErrorsElm;
-
-static const PlusErrorsElm PlusErrors[] = {
-	{0xFF, ""},
-	{0x00, "Transfer cannot be granted within the current authentication."},
-	{0x06, "Access Conditions not fulfilled. Block does not exist, block is not a value block."},
-	{0x07, "Too many read or write commands in the session or in the transaction."},
-	{0x08, "Invalid MAC in command or response"},
-	{0x09, "Block Number is not valid"},
-	{0x0a, "Invalid block number, not existing block number"},
-	{0x0b, "The current command code not available at the current card state."},
-	{0x0c, "Length error"},
-	{0x0f, "General Manipulation Error. Failure in the operation of the PICC (cannot write to the data block), etc."},
-	{0x90, "OK"},
-};
-int PlusErrorsLen = sizeof(PlusErrors) / sizeof(PlusErrorsElm);
-
-const char * GetErrorDescription(uint8_t errorCode) {
-	for(int i = 0; i < PlusErrorsLen; i++)
-		if (errorCode == PlusErrors[i].Code)
-			return PlusErrors[i].Description;
-		
-	return PlusErrors[0].Description;
-}
-
 static int CmdHelp(const char *Cmd);
-
-static bool VerboseMode = false;
-void SetVerboseMode(bool verbose) {
-	VerboseMode = verbose;
-}
-
-int intExchangeRAW14aPlus(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
-	if(VerboseMode)
-		PrintAndLogEx(INFO, ">>> %s", sprint_hex(datain, datainlen));
-	
-	int res = ExchangeRAW14a(datain, datainlen, activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
-
-	if(VerboseMode)
-		PrintAndLogEx(INFO, "<<< %s", sprint_hex(dataout, *dataoutlen));
-	
-	return res;
-}
-
-int MFPWritePerso(uint8_t *keyNum, uint8_t *key, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
-	uint8_t rcmd[3 + 16] = {0xa8, keyNum[1], keyNum[0], 0x00};
-	memmove(&rcmd[3], key, 16);
-	
-	return intExchangeRAW14aPlus(rcmd, sizeof(rcmd), activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
-}
-
-int MFPCommitPerso(bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
-	uint8_t rcmd[1] = {0xaa};
-	
-	return intExchangeRAW14aPlus(rcmd, sizeof(rcmd), activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
-}
-
-int MFPReadBlock(mf4Session *session, bool plain, uint8_t blockNum, uint8_t blockCount, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, uint8_t *mac) {
-	uint8_t rcmd[4 + 8] = {(plain?(0x37):(0x33)), blockNum, 0x00, blockCount}; 
-	if (!plain && session)
-		CalculateMAC(session, mtypReadCmd, blockNum, blockCount, rcmd, 4, &rcmd[4], VerboseMode);
-	
-	int res = intExchangeRAW14aPlus(rcmd, plain?4:sizeof(rcmd), activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
-	if(res)
-		return res;
-
-	if (session) 
-		session->R_Ctr++;
-	
-	if(session && mac && *dataoutlen > 11)
-		CalculateMAC(session, mtypReadResp, blockNum, blockCount, dataout, *dataoutlen - 8 - 2, mac, VerboseMode);
-	
-	return 0;
-}
-
-int MFPWriteBlock(mf4Session *session, uint8_t blockNum, uint8_t *data, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, uint8_t *mac) {
-	uint8_t rcmd[1 + 2 + 16 + 8] = {0xA3, blockNum, 0x00};
-	memmove(&rcmd[3], data, 16);
-	if (session)
-		CalculateMAC(session, mtypWriteCmd, blockNum, 1, rcmd, 19, &rcmd[19], VerboseMode);
-	
-	int res = intExchangeRAW14aPlus(rcmd, sizeof(rcmd), activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
-	if(res)
-		return res;
-
-	if (session) 
-		session->W_Ctr++;
-	
-	if(session && mac && *dataoutlen > 3)
-		CalculateMAC(session, mtypWriteResp, blockNum, 1, dataout, *dataoutlen, mac, VerboseMode);
-	
-	return 0;
-}
 
 int CmdHFMFPInfo(const char *cmd) {
 	
@@ -230,7 +135,7 @@ int CmdHFMFPWritePerso(const char *cmd) {
 	CLIGetHexWithReturn(3, key, &keyLen);
 	CLIParserFree();
 	
-	SetVerboseMode(verbose);
+	mfpSetVerboseMode(verbose);
 	
 	if (!keyLen) {
 		memmove(key, DefaultKey, 16);
@@ -261,7 +166,7 @@ int CmdHFMFPWritePerso(const char *cmd) {
 	}
 
 	if (data[0] != 0x90) {
-		PrintAndLogEx(ERR, "Command error: %02x %s", data[0], GetErrorDescription(data[0]));
+		PrintAndLogEx(ERR, "Command error: %02x %s", data[0], mfpGetErrorDescription(data[0]));
 		return 1;
 	}
 	PrintAndLogEx(INFO, "Write OK.");
@@ -305,7 +210,7 @@ int CmdHFMFPInitPerso(const char *cmd) {
 	if (!keyLen)
 		memmove(key, DefaultKey, 16);
 
-	SetVerboseMode(verbose2);
+	mfpSetVerboseMode(verbose2);
 	for (uint16_t sn = 0x4000; sn < 0x4050; sn++) {
 		keyNum[0] = sn >> 8;
 		keyNum[1] = sn & 0xff;
@@ -320,7 +225,7 @@ int CmdHFMFPInitPerso(const char *cmd) {
 		}
 	}
 	
-	SetVerboseMode(verbose);
+	mfpSetVerboseMode(verbose);
 	for (int i = 0; i < sizeof(CardAddresses) / 2; i++) {
 		keyNum[0] = CardAddresses[i] >> 8;
 		keyNum[1] = CardAddresses[i] & 0xff;
@@ -361,7 +266,7 @@ int CmdHFMFPCommitPerso(const char *cmd) {
 	bool verbose = arg_get_lit(1);
 	CLIParserFree();
 	
-	SetVerboseMode(verbose);
+	mfpSetVerboseMode(verbose);
 	
 	uint8_t data[250] = {0};
 	int datalen = 0;
@@ -378,7 +283,7 @@ int CmdHFMFPCommitPerso(const char *cmd) {
 	}
 
 	if (data[0] != 0x90) {
-		PrintAndLogEx(ERR, "Command error: %02x %s", data[0], GetErrorDescription(data[0]));
+		PrintAndLogEx(ERR, "Command error: %02x %s", data[0], mfpGetErrorDescription(data[0]));
 		return 1;
 	}
 	PrintAndLogEx(INFO, "Switch level OK.");
@@ -454,7 +359,7 @@ int CmdHFMFPRdbl(const char *cmd) {
 	CLIGetHexWithReturn(6, key, &keylen);
 	CLIParserFree();
 	
-	SetVerboseMode(verbose);
+	mfpSetVerboseMode(verbose);
 
 	if (!keylen) {
 		memmove(key, DefaultKey, 16);
@@ -505,7 +410,7 @@ int CmdHFMFPRdbl(const char *cmd) {
 	}
 	
 	if (datalen && data[0] != 0x90) {
-		PrintAndLogEx(ERR, "Card read error: %02x %s", data[0], GetErrorDescription(data[0]));
+		PrintAndLogEx(ERR, "Card read error: %02x %s", data[0], mfpGetErrorDescription(data[0]));
 		return 6;
 	}
 	
@@ -564,7 +469,7 @@ int CmdHFMFPRdsc(const char *cmd) {
 	CLIGetHexWithReturn(5, key, &keylen);
 	CLIParserFree();
 	
-	SetVerboseMode(verbose);
+	mfpSetVerboseMode(verbose);
 
 	if (!keylen) {
 		memmove(key, DefaultKey, 16);
@@ -606,7 +511,7 @@ int CmdHFMFPRdsc(const char *cmd) {
 		}
 		
 		if (datalen && data[0] != 0x90) {
-			PrintAndLogEx(ERR, "Card read error: %02x %s", data[0], GetErrorDescription(data[0]));
+			PrintAndLogEx(ERR, "Card read error: %02x %s", data[0], mfpGetErrorDescription(data[0]));
 			DropField();
 			return 6;
 		}
@@ -662,7 +567,7 @@ int CmdHFMFPWrbl(const char *cmd) {
 	CLIGetHexWithReturn(5, key, &keylen);
 	CLIParserFree();
 	
-	SetVerboseMode(verbose);
+	mfpSetVerboseMode(verbose);
 
 	if (!keylen) {
 		memmove(key, DefaultKey, 16);
@@ -715,7 +620,7 @@ int CmdHFMFPWrbl(const char *cmd) {
 	}
 	
 	if (datalen && data[0] != 0x90) {
-		PrintAndLogEx(ERR, "Card write error: %02x %s", data[0], GetErrorDescription(data[0]));
+		PrintAndLogEx(ERR, "Card write error: %02x %s", data[0], mfpGetErrorDescription(data[0]));
 		DropField();
 		return 6;
 	}
@@ -732,68 +637,6 @@ int CmdHFMFPWrbl(const char *cmd) {
 	DropField();
 	PrintAndLogEx(INFO, "Write OK.");	
 	return 0;
-}
-
-int mfpReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *dataout, bool verbose){
-	uint8_t keyn[2] = {0};
-	bool plain = false;
-	
-	uint16_t uKeyNum = 0x4000 + sectorNo * 2 + (keyType ? 1 : 0);
-	keyn[0] = uKeyNum >> 8;
-	keyn[1] = uKeyNum & 0xff;
-	if (verbose)
-		PrintAndLogEx(INFO, "--sector[%d]:%02x key:%04x", mfNumBlocksPerSector(sectorNo), sectorNo, uKeyNum);
-	
-	mf4Session session;
-	int res = MifareAuth4(&session, keyn, key, true, true, verbose);
-	if (res) {
-		PrintAndLogEx(ERR, "Sector %d authentication error: %d", sectorNo, res);
-		return res;
-	}
-	
-	uint8_t data[250] = {0};
-	int datalen = 0;
-	uint8_t mac[8] = {0};
-	uint8_t firstBlockNo = mfFirstBlockOfSector(sectorNo);
-	for(int n = firstBlockNo; n < firstBlockNo + mfNumBlocksPerSector(sectorNo); n++) {
-		res = MFPReadBlock(&session, plain, n & 0xff, 1, false, true, data, sizeof(data), &datalen, mac);
-		if (res) {
-			PrintAndLogEx(ERR, "Sector %d read error: %d", sectorNo, res);
-			DropField();
-			return res;
-		}
-		
-		if (datalen && data[0] != 0x90) {
-			PrintAndLogEx(ERR, "Sector %d card read error: %02x %s", sectorNo, data[0], GetErrorDescription(data[0]));
-			DropField();
-			return 5;
-		}
-		if (datalen != 1 + 16 + 8 + 2) {
-			PrintAndLogEx(ERR, "Sector %d error returned data length:%d", sectorNo, datalen);
-			DropField();
-			return 6;
-		}
-
-		memcpy(&dataout[(n - firstBlockNo) * 16], &data[1], 16);
-		
-		if (verbose)
-			PrintAndLogEx(INFO, "data[%03d]: %s", n, sprint_hex(&data[1], 16));
-			
-		if (memcmp(&data[1 + 16], mac, 8)) {
-			PrintAndLogEx(WARNING, "WARNING: mac on block %d not equal...", n);
-			PrintAndLogEx(WARNING, "MAC   card: %s", sprint_hex(&data[1 + 16], 8));
-			PrintAndLogEx(WARNING, "MAC reader: %s", sprint_hex(mac, 8));
-			
-			if (!verbose)
-				return 7;			
-		} else {	
-			if(verbose)
-				PrintAndLogEx(INFO, "MAC: %s", sprint_hex(&data[1 + 16], 8));
-		}
-	}
-	DropField();
-
-	return 0;	
 }
 
 int CmdHFMFPMAD(const char *cmd) {

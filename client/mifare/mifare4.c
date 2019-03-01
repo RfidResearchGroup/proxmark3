@@ -17,6 +17,39 @@
 #include "ui.h"
 #include "crypto/libpcrypto.h"
 
+static bool VerboseMode = false;
+void mfpSetVerboseMode(bool verbose) {
+	VerboseMode = verbose;
+}
+
+typedef struct {
+	uint8_t Code;
+	const char *Description;
+} PlusErrorsElm;
+
+static const PlusErrorsElm PlusErrors[] = {
+	{0xFF, ""},
+	{0x00, "Transfer cannot be granted within the current authentication."},
+	{0x06, "Access Conditions not fulfilled. Block does not exist, block is not a value block."},
+	{0x07, "Too many read or write commands in the session or in the transaction."},
+	{0x08, "Invalid MAC in command or response"},
+	{0x09, "Block Number is not valid"},
+	{0x0a, "Invalid block number, not existing block number"},
+	{0x0b, "The current command code not available at the current card state."},
+	{0x0c, "Length error"},
+	{0x0f, "General Manipulation Error. Failure in the operation of the PICC (cannot write to the data block), etc."},
+	{0x90, "OK"},
+};
+int PlusErrorsLen = sizeof(PlusErrors) / sizeof(PlusErrorsElm);
+
+const char * mfpGetErrorDescription(uint8_t errorCode) {
+	for(int i = 0; i < PlusErrorsLen; i++)
+		if (errorCode == PlusErrors[i].Code)
+			return PlusErrors[i].Description;
+		
+	return PlusErrors[0].Description;
+}
+
 AccessConditions_t MFAccessConditions[] = {
 	{0x00, "rdAB wrAB incAB dectrAB"},
 	{0x01, "rdAB dectrAB"},
@@ -272,6 +305,130 @@ int MifareAuth4(mf4Session *session, uint8_t *keyn, uint8_t *key, bool activateF
 	PrintAndLogEx(INFO, "Authentication OK");
 	
 	return 0;
+}
+
+int intExchangeRAW14aPlus(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
+	if(VerboseMode)
+		PrintAndLogEx(INFO, ">>> %s", sprint_hex(datain, datainlen));
+	
+	int res = ExchangeRAW14a(datain, datainlen, activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
+
+	if(VerboseMode)
+		PrintAndLogEx(INFO, "<<< %s", sprint_hex(dataout, *dataoutlen));
+	
+	return res;
+}
+
+int MFPWritePerso(uint8_t *keyNum, uint8_t *key, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
+	uint8_t rcmd[3 + 16] = {0xa8, keyNum[1], keyNum[0], 0x00};
+	memmove(&rcmd[3], key, 16);
+	
+	return intExchangeRAW14aPlus(rcmd, sizeof(rcmd), activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
+}
+
+int MFPCommitPerso(bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
+	uint8_t rcmd[1] = {0xaa};
+	
+	return intExchangeRAW14aPlus(rcmd, sizeof(rcmd), activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
+}
+
+int MFPReadBlock(mf4Session *session, bool plain, uint8_t blockNum, uint8_t blockCount, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, uint8_t *mac) {
+	uint8_t rcmd[4 + 8] = {(plain?(0x37):(0x33)), blockNum, 0x00, blockCount}; 
+	if (!plain && session)
+		CalculateMAC(session, mtypReadCmd, blockNum, blockCount, rcmd, 4, &rcmd[4], VerboseMode);
+	
+	int res = intExchangeRAW14aPlus(rcmd, plain?4:sizeof(rcmd), activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
+	if(res)
+		return res;
+
+	if (session) 
+		session->R_Ctr++;
+	
+	if(session && mac && *dataoutlen > 11)
+		CalculateMAC(session, mtypReadResp, blockNum, blockCount, dataout, *dataoutlen - 8 - 2, mac, VerboseMode);
+	
+	return 0;
+}
+
+int MFPWriteBlock(mf4Session *session, uint8_t blockNum, uint8_t *data, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, uint8_t *mac) {
+	uint8_t rcmd[1 + 2 + 16 + 8] = {0xA3, blockNum, 0x00};
+	memmove(&rcmd[3], data, 16);
+	if (session)
+		CalculateMAC(session, mtypWriteCmd, blockNum, 1, rcmd, 19, &rcmd[19], VerboseMode);
+	
+	int res = intExchangeRAW14aPlus(rcmd, sizeof(rcmd), activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
+	if(res)
+		return res;
+
+	if (session) 
+		session->W_Ctr++;
+	
+	if(session && mac && *dataoutlen > 3)
+		CalculateMAC(session, mtypWriteResp, blockNum, 1, dataout, *dataoutlen, mac, VerboseMode);
+	
+	return 0;
+}
+
+int mfpReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *dataout, bool verbose){
+	uint8_t keyn[2] = {0};
+	bool plain = false;
+	
+	uint16_t uKeyNum = 0x4000 + sectorNo * 2 + (keyType ? 1 : 0);
+	keyn[0] = uKeyNum >> 8;
+	keyn[1] = uKeyNum & 0xff;
+	if (verbose)
+		PrintAndLogEx(INFO, "--sector[%d]:%02x key:%04x", mfNumBlocksPerSector(sectorNo), sectorNo, uKeyNum);
+	
+	mf4Session session;
+	int res = MifareAuth4(&session, keyn, key, true, true, verbose);
+	if (res) {
+		PrintAndLogEx(ERR, "Sector %d authentication error: %d", sectorNo, res);
+		return res;
+	}
+	
+	uint8_t data[250] = {0};
+	int datalen = 0;
+	uint8_t mac[8] = {0};
+	uint8_t firstBlockNo = mfFirstBlockOfSector(sectorNo);
+	for(int n = firstBlockNo; n < firstBlockNo + mfNumBlocksPerSector(sectorNo); n++) {
+		res = MFPReadBlock(&session, plain, n & 0xff, 1, false, true, data, sizeof(data), &datalen, mac);
+		if (res) {
+			PrintAndLogEx(ERR, "Sector %d read error: %d", sectorNo, res);
+			DropField();
+			return res;
+		}
+		
+		if (datalen && data[0] != 0x90) {
+			PrintAndLogEx(ERR, "Sector %d card read error: %02x %s", sectorNo, data[0], mfpGetErrorDescription(data[0]));
+			DropField();
+			return 5;
+		}
+		if (datalen != 1 + 16 + 8 + 2) {
+			PrintAndLogEx(ERR, "Sector %d error returned data length:%d", sectorNo, datalen);
+			DropField();
+			return 6;
+		}
+
+		memcpy(&dataout[(n - firstBlockNo) * 16], &data[1], 16);
+		
+		if (verbose)
+			PrintAndLogEx(INFO, "data[%03d]: %s", n, sprint_hex(&data[1], 16));
+			
+		if (memcmp(&data[1 + 16], mac, 8)) {
+			PrintAndLogEx(WARNING, "WARNING: mac on block %d not equal...", n);
+			PrintAndLogEx(WARNING, "MAC   card: %s", sprint_hex(&data[1 + 16], 8));
+			PrintAndLogEx(WARNING, "MAC reader: %s", sprint_hex(mac, 8));
+			
+			if (!verbose)
+				return 7;			
+		} else {	
+			if(verbose)
+				PrintAndLogEx(INFO, "MAC: %s", sprint_hex(&data[1 + 16], 8));
+		}
+	}
+	DropField();
+
+	return 0;	
 }
 
 // Mifare Memory Structure: up to 32 Sectors with 4 blocks each (1k and 2k cards),
