@@ -1,18 +1,26 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2018 Merlok
+// Copyright (C) 2019 Merlok
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// High frequency MIFARE  Plus commands
+// MIFARE Application Directory (MAD) functions
 //-----------------------------------------------------------------------------
-#ifndef CMDHFMFP_H__
-#define CMDHFMFP_H__
 
-#include "mifare/mifaredefault.h"
+#ifndef _MAD_H_
+#define _MAD_H_
 
-extern int CmdHFMFP(const char *Cmd);
+#include <stdint.h>
+#include <stdbool.h>
+
+typedef struct {
+	uint16_t AID;
+	const char *Description;
+} madAIDDescr;	
+
+int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2);
+int MAD2DecodeAndPrint(uint8_t *sector, bool verbose);
 
 
-#endif
+#endif // _MAD_H_
