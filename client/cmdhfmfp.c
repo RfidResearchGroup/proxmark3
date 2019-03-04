@@ -725,7 +725,7 @@ int CmdHFMFPMAD(const char *cmd) {
 				}
 				
 				for(int j = 0; j < (verbose ? 4 : 3); j ++)
-					PrintAndLogEx(NORMAL, "---[%03d] %s", (i + 1) * 4 + j, sprint_hex(&vsector[j * 16], 16));		
+					PrintAndLogEx(NORMAL, " [%03d] %s", (i + 1) * 4 + j, sprint_hex(&vsector[j * 16], 16));		
 			}
 		}		
 	}

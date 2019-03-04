@@ -302,7 +302,8 @@ int MifareAuth4(mf4Session *session, uint8_t *keyn, uint8_t *key, bool activateF
 		memmove(session->Kmac, kmac, 16);
 	}
 	
-	PrintAndLogEx(INFO, "Authentication OK");
+	if (verbose)
+		PrintAndLogEx(INFO, "Authentication OK");
 	
 	return 0;
 }
