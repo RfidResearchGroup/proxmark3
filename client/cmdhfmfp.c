@@ -733,6 +733,49 @@ int CmdHFMFPMAD(const char *cmd) {
 	return 0;
 }
 
+int CmdHFMFPNDEF(const char *cmd) {
+
+	CLIParserInit("hf mfp ndef", 
+		"Prints NFC Data Exchange Format (NDEF)", 
+		"Usage:\n\thf mfp ndef -> shows NDEF data\n"
+			"\thf mfp ndef -a 03e1 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data with custom AID and key\n");
+
+	void* argtable[] = {
+		arg_param_begin,
+		arg_lit0("vV",  "verbose",  "show technical data"),
+		arg_str0("aA",  "aid",      "replace default aid for NDEF", NULL),
+		arg_str0("kK",  "key",      "replace default key for NDEF", NULL),
+		arg_lit0("bB",  "keyb",     "use key B for access sectors (by default: key A)"),
+		arg_param_end
+	};
+	CLIExecWithReturn(cmd, argtable, true);
+	
+	bool verbose = arg_get_lit(1);
+	uint8_t aid[2] = {0};
+	int aidlen;
+	CLIGetHexWithReturn(2, aid, &aidlen);
+	uint8_t key[16] = {0};
+	int keylen;
+	CLIGetHexWithReturn(3, key, &keylen);
+	bool keyB = arg_get_lit(4);
+	
+	CLIParserFree();
+
+	uint16_t ndefAID = 0x03e1;
+	if (aidlen == 2)
+		ndefAID = (aid[0] << 8) + aid[1];
+	
+	uint8_t ndefkey[16] = {0};
+	memcpy(ndefkey, g_mifarep_ndef_key, 16);
+	if (keylen == 16) {
+		memcpy(ndefkey, key, 16);
+	}
+	
+	uint8_t data[4096] = {0};
+	int datalen = 0;
+	
+	return 0;
+}
 static command_t CommandTable[] =
 {
   {"help",             CmdHelp,					1, "This help"},
@@ -745,6 +788,7 @@ static command_t CommandTable[] =
   {"rdsc",  	       CmdHFMFPRdsc,			0, "Read sectors"},
   {"wrbl",  	       CmdHFMFPWrbl,			0, "Write blocks"},
   {"mad",  	           CmdHFMFPMAD,				0, "Checks and prints MAD"},
+  {"ndef",  	       CmdHFMFPNDEF,			0, "Prints NDEF"},
   {NULL,               NULL,					0, NULL}
 };
 
