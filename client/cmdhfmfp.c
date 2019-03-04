@@ -26,6 +26,7 @@
 #include "mifare/mad.h"
 #include "cliparser/cliparser.h"
 #include "crypto/libpcrypto.h"
+#include "emv/dump.h"
 
 static const uint8_t DefaultKey[16] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
@@ -771,9 +772,65 @@ int CmdHFMFPNDEF(const char *cmd) {
 		memcpy(ndefkey, key, 16);
 	}
 	
+	uint8_t sector0[16 * 4] = {0};
+	uint8_t sector10[16 * 4] = {0};
 	uint8_t data[4096] = {0};
 	int datalen = 0;
+
+	PrintAndLogEx(NORMAL, "");
 	
+	if (mfpReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector0, verbose)) {
+		PrintAndLogEx(ERR, "read sector 0 error. card don't have MAD or don't have MAD on default keys.");
+		return 2;
+	}
+	
+	bool haveMAD2 = false;
+	int res = MADCheck(sector0, NULL, verbose, &haveMAD2);
+	if (res) {
+		PrintAndLogEx(ERR, "MAD error %d.", res);
+		return res;
+	}
+	
+	if (haveMAD2) {
+		if (mfpReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector10, verbose)) {
+			PrintAndLogEx(ERR, "read sector 0x10 error. card don't have MAD or don't have MAD on default keys.");
+			return 2;
+		}
+	}
+
+	uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
+	size_t madlen = 0;
+	if (MADDecode(sector0, (haveMAD2 ? sector10 : NULL), mad, &madlen)) {
+		PrintAndLogEx(ERR, "can't decode mad.");
+		return 10;
+	}
+
+	printf("data reading:");
+	for (int i = 0; i < madlen; i++) {
+		if (ndefAID == mad[i]) {
+			uint8_t vsector[16 * 4] = {0};
+			if (mfpReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, ndefkey, vsector, false)) {
+				PrintAndLogEx(ERR, "read sector %d error.", i + 1);
+				return 2;
+			}
+			
+			memcpy(&data[datalen], vsector, 16 * 3);
+			datalen += 16 * 3;
+			
+			printf(".");
+		}
+	}
+	printf(" OK\n");
+	
+	if (!datalen) {
+		PrintAndLogEx(ERR, "no NDEF data.");
+		return 11;
+	}
+	
+//	if (verbose)
+		PrintAndLogEx(NORMAL, "NDEF data:");
+		dump_buffer(data, datalen, stdout, 1);
+
 	return 0;
 }
 static command_t CommandTable[] =
