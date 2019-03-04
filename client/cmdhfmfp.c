@@ -643,20 +643,38 @@ int CmdHFMFPMAD(const char *cmd) {
 
 	CLIParserInit("hf mfp mad", 
 		"Checks and prints Mifare Application Directory (MAD)", 
-		"Usage:\n\thf mfp mad -> shows MAD if exists\n");
+		"Usage:\n\thf mfp mad -> shows MAD if exists\n"
+			"\thf mfp mad -a 03e1 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data if exists\n");
 
 	void* argtable[] = {
 		arg_param_begin,
 		arg_lit0("vV",  "verbose",  "show technical data"),
+		arg_str0("aA",  "aid",      "print all sectors with aid", NULL),
+		arg_str0("kK",  "key",      "key for printing sectors", NULL),
+		arg_lit0("bB",  "keyb",     "use key B for access printing sectors (by default: key A)"),
 		arg_param_end
 	};
 	CLIExecWithReturn(cmd, argtable, true);
+	
 	bool verbose = arg_get_lit(1);
+	uint8_t aid[2] = {0};
+	int aidlen;
+	CLIGetHexWithReturn(2, aid, &aidlen);
+	uint8_t key[16] = {0};
+	int keylen;
+	CLIGetHexWithReturn(3, key, &keylen);
+	bool keyB = arg_get_lit(4);
 	
 	CLIParserFree();
+	
+	if (aidlen != 2 && keylen > 0) {
+		PrintAndLogEx(WARNING, "do not need a key without aid.");
+	}
 
-	uint8_t sector[16 * 4] = {0};
-	if (mfpReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector, verbose)) {
+	uint8_t sector0[16 * 4] = {0};
+	uint8_t sector10[16 * 4] = {0};
+	
+	if (mfpReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector0, verbose)) {
 		PrintAndLogEx(NORMAL, "");
 		PrintAndLogEx(ERR, "read sector 0 error. card don't have MAD or don't have MAD on default keys.");
 		return 2;
@@ -664,20 +682,52 @@ int CmdHFMFPMAD(const char *cmd) {
 	
 	if (verbose) {
 		for(int i = 0; i < 4; i ++)
-			PrintAndLogEx(NORMAL, "[%d] %s", i, sprint_hex(&sector[i * 16], 16));		
+			PrintAndLogEx(NORMAL, "[%d] %s", i, sprint_hex(&sector0[i * 16], 16));		
 	}
 
 	bool haveMAD2 = false;
-	MAD1DecodeAndPrint(sector, verbose, &haveMAD2);
+	MAD1DecodeAndPrint(sector0, verbose, &haveMAD2);
 	
 	if (haveMAD2) {
-		if (mfpReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector, verbose)) {
+		if (mfpReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector10, verbose)) {
 			PrintAndLogEx(NORMAL, "");
 			PrintAndLogEx(ERR, "read sector 0x10 error. card don't have MAD or don't have MAD on default keys.");
 			return 2;
 		}
 
-		MAD2DecodeAndPrint(sector, verbose);
+		MAD2DecodeAndPrint(sector10, verbose);
+	}
+
+	if (aidlen == 2) {
+		uint16_t aaid = (aid[0] << 8) + aid[1];
+		PrintAndLogEx(NORMAL, "\n-------------- AID 0x%04x ---------------", aaid);
+		
+		uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
+		size_t madlen = 0;
+		if (MADDecode(sector0, sector10, mad, &madlen)) {
+			PrintAndLogEx(ERR, "can't decode mad.");
+			return 10;
+		}
+
+		uint8_t akey[16] = {0};
+		memcpy(akey, g_mifarep_ndef_key, 16);
+		if (keylen == 16) {
+			memcpy(akey, key, 16);
+		}
+		
+		for (int i = 0; i < madlen; i++) {
+			if (aaid == mad[i]) {
+				uint8_t vsector[16 * 4] = {0};
+				if (mfpReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector, false)) {
+					PrintAndLogEx(NORMAL, "");
+					PrintAndLogEx(ERR, "read sector %d error.", i + 1);
+					return 2;
+				}
+				
+				for(int j = 0; j < (verbose ? 4 : 3); j ++)
+					PrintAndLogEx(NORMAL, "---[%03d] %s", (i + 1) * 4 + j, sprint_hex(&vsector[j * 16], 16));		
+			}
+		}		
 	}
 	
 	return 0;

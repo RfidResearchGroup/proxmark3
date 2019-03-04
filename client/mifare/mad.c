@@ -134,10 +134,13 @@ uint16_t madGetAID(uint8_t *sector, int MADver, int sectorNo) {
 		return (sector[2 + (sectorNo - 1) * 2] << 8) + (sector[2 + (sectorNo - 1) * 2 + 1]);	
 }
 
-int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2) {
+int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) {
+	if (!sector0)
+		return 1;
 	
-	uint8_t GPB = sector[3 * 16 + 9];
-	PrintAndLogEx(NORMAL, "GPB: 0x%02x", GPB);
+	uint8_t GPB = sector0[3 * 16 + 9];
+	if (verbose)
+		PrintAndLogEx(NORMAL, "GPB: 0x%02x", GPB);
 	
 	// DA (MAD available)
 	if (!(GPB & 0x80)) {
@@ -146,13 +149,16 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2) {
 	}
 	
 	// MA (multi-application card)
-	if (GPB & 0x40)
-		PrintAndLogEx(NORMAL, "Multi application card.");
-	else
-		PrintAndLogEx(NORMAL, "Single application card.");
+	if (verbose) {
+		if (GPB & 0x40)
+			PrintAndLogEx(NORMAL, "Multi application card.");
+		else
+			PrintAndLogEx(NORMAL, "Single application card.");
+	}
 	
 	uint8_t MADVer = GPB & 0x03;
-	PrintAndLogEx(NORMAL, "MAD version: %d", MADVer);
+	if (verbose)
+		PrintAndLogEx(NORMAL, "MAD version: %d", MADVer);
 	
 	//  MAD version
 	if ((MADVer != 0x01) && (MADVer != 0x02)) {
@@ -163,7 +169,56 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2) {
 	if (haveMAD2)
 		*haveMAD2 = (MADVer == 2);
 
-	int res = madCRCCheck(sector, true, 1);
+	int res = madCRCCheck(sector0, true, 1);
+	if (res)
+		return res;	
+	
+	if (verbose)
+		PrintAndLogEx(NORMAL, "CRC8-MAD1 OK.");
+	
+	if (MADVer == 2 && sector10) {
+		int res = madCRCCheck(sector10, true, 2);
+		if (res)
+			return res;	
+
+		if (verbose)
+			PrintAndLogEx(NORMAL, "CRC8-MAD2 OK.");
+	}
+	
+	return 0;
+}
+
+int MADDecode(uint8_t *sector0, uint8_t *sector10, uint16_t *mad, size_t *madlen) {
+	*madlen = 0;
+	bool haveMAD2 = false;
+	int res = MADCheck(sector0, sector10, false, &haveMAD2);
+	if (res)
+		return res;
+	
+	for (int i = 1; i < 16; i++) {
+		mad[*madlen] = madGetAID(sector0, 1, i);
+		(*madlen)++;
+	}
+	
+	if (haveMAD2) {
+		// mad2 sector (0x10 == 16dec) here
+		mad[*madlen] = 0x0005;
+		(*madlen)++;
+
+		for (int i = 1; i < 24; i++) {
+			mad[*madlen] = madGetAID(sector10, 2, i);
+			(*madlen)++;
+		}
+	}
+	
+	return 0;
+}
+
+
+int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2) {
+
+	// check MAD1 only
+	int res = MADCheck(sector, NULL, verbose, haveMAD2);
 	if (res)
 		return res;	
 	
