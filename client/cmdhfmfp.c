@@ -24,6 +24,7 @@
 #include "mifare.h"
 #include "mifare/mifare4.h"
 #include "mifare/mad.h"
+#include "mifare/ndef.h"
 #include "cliparser/cliparser.h"
 #include "crypto/libpcrypto.h"
 #include "emv/dump.h"
@@ -743,7 +744,7 @@ int CmdHFMFPNDEF(const char *cmd) {
 
 	void* argtable[] = {
 		arg_param_begin,
-		arg_lit0("vV",  "verbose",  "show technical data"),
+		arg_litn("vV",  "verbose",  0, 2, "show technical data"),
 		arg_str0("aA",  "aid",      "replace default aid for NDEF", NULL),
 		arg_str0("kK",  "key",      "replace default key for NDEF", NULL),
 		arg_lit0("bB",  "keyb",     "use key B for access sectors (by default: key A)"),
@@ -752,6 +753,7 @@ int CmdHFMFPNDEF(const char *cmd) {
 	CLIExecWithReturn(cmd, argtable, true);
 	
 	bool verbose = arg_get_lit(1);
+	bool verbose2 = arg_get_lit(1) > 1;
 	uint8_t aid[2] = {0};
 	int aidlen;
 	CLIGetHexWithReturn(2, aid, &aidlen);
@@ -827,9 +829,12 @@ int CmdHFMFPNDEF(const char *cmd) {
 		return 11;
 	}
 	
-//	if (verbose)
+	if (verbose2) {
 		PrintAndLogEx(NORMAL, "NDEF data:");
 		dump_buffer(data, datalen, stdout, 1);
+	}
+		
+	NDEFDecodeAndPrint(data, datalen, verbose);
 
 	return 0;
 }
