@@ -24,6 +24,14 @@ uint16_t ndefTLVGetLength(uint8_t *data, size_t *indx) {
 	return len;
 }
 
+int ndefRecordDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
+	
+	
+	
+	
+	return 0;
+}
+
 int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
 	
 	size_t indx = 0;
@@ -44,9 +52,9 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
 				uint16_t len = ndefTLVGetLength(&ndef[indx], &indx);
 				PrintAndLogEx(INFO, "NDEF message. len: %d", len);
 				
-				// ndef decode
-				
-				
+				int res = ndefRecordDecodeAndPrint(&ndef[indx], len);
+				if (res)
+					return res;
 				
 				indx += len;
 				break;
