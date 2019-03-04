@@ -36,12 +36,13 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
 	
 	size_t indx = 0;
 	
+	PrintAndLogEx(INFO, "NDEF decoding:");
 	while (indx < ndefLen) {
 		switch (ndef[indx]) {
 			case 0x00: {
 				indx++;
 				uint16_t len = ndefTLVGetLength(&ndef[indx], &indx);
-				PrintAndLogEx(INFO, "NDEF NULL block.");
+				PrintAndLogEx(INFO, "-- NDEF NULL block.");
 				if (len)
 					PrintAndLogEx(WARNING, "NDEF NULL block size must be 0 instead of %d.", len);
 				indx += len;
@@ -50,7 +51,7 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
 			case 0x03: {
 				indx++;
 				uint16_t len = ndefTLVGetLength(&ndef[indx], &indx);
-				PrintAndLogEx(INFO, "NDEF message. len: %d", len);
+				PrintAndLogEx(INFO, "-- NDEF message. len: %d", len);
 				
 				int res = ndefRecordDecodeAndPrint(&ndef[indx], len);
 				if (res)
@@ -62,12 +63,12 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
 			case 0xfd: {
 				indx++;
 				uint16_t len = ndefTLVGetLength(&ndef[indx], &indx);
-				PrintAndLogEx(INFO, "NDEF proprietary info. Skipped %d bytes.", len);
+				PrintAndLogEx(INFO, "-- NDEF proprietary info. Skipped %d bytes.", len);
 				indx += len;
 				break;
 			}
 			case 0xfe: {
-				PrintAndLogEx(INFO, "NDEF Terminator. Done.");
+				PrintAndLogEx(INFO, "-- NDEF Terminator. Done.");
 				return 0;
 				break;
 			}
