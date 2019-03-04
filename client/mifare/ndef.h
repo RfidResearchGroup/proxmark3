@@ -13,6 +13,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 extern int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose);
 
