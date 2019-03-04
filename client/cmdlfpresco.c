@@ -12,11 +12,11 @@ static int CmdHelp(const char *Cmd);
 
 int usage_lf_presco_clone(void){
 	PrintAndLogEx(NORMAL, "clone a Presco tag to a T55x7 tag.");
-	PrintAndLogEx(NORMAL, "Usage: lf presco clone [h] d <Card-ID> H <hex-ID> <Q5>");
+	PrintAndLogEx(NORMAL, "Usage: lf presco clone [h] d <Card-ID> c <hex-ID> <Q5>");
 	PrintAndLogEx(NORMAL, "Options:");
 	PrintAndLogEx(NORMAL, "  h             : this help");	
 	PrintAndLogEx(NORMAL, "  d <Card-ID>   : 9 digit presco card ID");
-	PrintAndLogEx(NORMAL, "  H <hex-ID>    : 8 digit hex card number");
+	PrintAndLogEx(NORMAL, "  c <hex-ID>    : 8 digit hex card number");
 	PrintAndLogEx(NORMAL, "  <Q5>          : specify write to Q5 (t5555 instead of t55x7)");
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Examples:");
@@ -29,11 +29,11 @@ int usage_lf_presco_sim(void) {
 	PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
 	PrintAndLogEx(NORMAL, "Per presco format, the card number is 9 digit number and can contain *# chars. Larger values are truncated.");
 	PrintAndLogEx(NORMAL, "");
-	PrintAndLogEx(NORMAL, "Usage:  lf presco sim [h] d <Card-ID> or H <hex-ID>");
+	PrintAndLogEx(NORMAL, "Usage:  lf presco sim [h] d <Card-ID> or c <hex-ID>");
 	PrintAndLogEx(NORMAL, "Options:");
 	PrintAndLogEx(NORMAL, "  h             : this help");	
 	PrintAndLogEx(NORMAL, "  d <Card-ID>   : 9 digit presco card number");
-	PrintAndLogEx(NORMAL, "  H <hex-ID>    : 8 digit hex card number");
+	PrintAndLogEx(NORMAL, "  c <hex-ID>    : 8 digit hex card number");
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Examples:");
 	PrintAndLogEx(NORMAL, "       lf presco sim d 123456789");
@@ -62,24 +62,22 @@ int GetWiegandFromPresco(const char *Cmd, uint32_t *sitecode, uint32_t *usercode
 	int stringlen = 0;
 	memset(id, 0x00, sizeof(id));
 	
-	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch(param_getchar(Cmd, cmdp)) {
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 			case 'h':
 				return -1;
-			case 'H':
+			case 'c':
 				hex = true;
 				//get hex
 				*fullcode = param_get32ex(Cmd, cmdp+1, 0, 16);
 				cmdp+=2;
 				break;
-			case 'D':
 			case 'd':
 				//param get string int param_getstr(const char *line, int paramnum, char * str)
 				stringlen = param_getstr(Cmd, cmdp+1, id, sizeof(id));
 				if (stringlen < 2) return -1;
 				cmdp += 2;
 				break;
-			case 'Q':
 			case 'q':
 				*Q5 = true;
 				cmdp++;
@@ -136,7 +134,6 @@ int CmdPrescoDemod(const char *Cmd) {
 	size_t size = DemodBufferLen;
 	int ans = detectPresco(DemodBuffer, &size);
 	if (ans < 0) {
-
 		if (ans == -1)
 			PrintAndLogEx(DEBUG, "DEBUG: Error - Presco: too few bits found");
 		else if (ans == -2)
@@ -163,7 +160,7 @@ int CmdPrescoDemod(const char *Cmd) {
 	char cmd[12] = {0};
 	sprintf(cmd, "H %08X", cardid);
 	GetWiegandFromPresco(cmd, &sitecode, &usercode, &fullcode, &Q5);
-	PrintAndLogEx(NORMAL, "SiteCode %u, UserCode %u, FullCode, %08X", sitecode, usercode, fullcode);
+	PrintAndLogEx(SUCCESS, "SiteCode %u, UserCode %u, FullCode, %08X", sitecode, usercode, fullcode);
 	return 1;
 }
 
@@ -190,12 +187,12 @@ int CmdPrescoClone(const char *Cmd) {
 
 	if ((sitecode & 0xFF) != sitecode) {
 		sitecode &= 0xFF;
-		PrintAndLogEx(NORMAL, "Facility-Code Truncated to 8-bits (Presco): %u", sitecode);
+		PrintAndLogEx(INFO, "Facility-Code Truncated to 8-bits (Presco): %u", sitecode);
 	}
 
 	if ((usercode & 0xFFFF) != usercode) {
 		usercode &= 0xFFFF;
-		PrintAndLogEx(NORMAL, "Card Number Truncated to 16-bits (Presco): %u", usercode);
+		PrintAndLogEx(INFO, "Card Number Truncated to 16-bits (Presco): %u", usercode);
 	}
 	
 	blocks[1] = 0x10D00000; //preamble
@@ -203,7 +200,7 @@ int CmdPrescoClone(const char *Cmd) {
 	blocks[3] = 0x00000000;
 	blocks[4] = fullcode;
 
-	PrintAndLogEx(NORMAL, "Preparing to clone Presco to T55x7 with SiteCode: %u, UserCode: %u, FullCode: %08x", sitecode, usercode, fullcode);
+	PrintAndLogEx(INFO, "Preparing to clone Presco to T55x7 with SiteCode: %u, UserCode: %u, FullCode: %08x", sitecode, usercode, fullcode);
 	print_blocks(blocks, 5);
 	
 	UsbCommand resp;
@@ -236,7 +233,7 @@ int CmdPrescoSim(const char *Cmd) {
 	arg1 = clk << 8 | encoding;
 	arg2 = invert << 8 | separator;
 
-	PrintAndLogEx(NORMAL, "Simulating Presco - SiteCode: %u, UserCode: %u, FullCode: %08X",sitecode, usercode, fullcode);
+	PrintAndLogEx(SUCCESS, "Simulating Presco - SiteCode: %u, UserCode: %u, FullCode: %08X",sitecode, usercode, fullcode);
 
 	UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};
 	GetPrescoBits(fullcode, c.d.asBytes);

@@ -3,8 +3,7 @@
 #define T0_PCF 8 //period for the pcf7931 in us
 #define ALLOC 16
 
-int DemodPCF7931(uint8_t **outBlocks) {
-
+size_t DemodPCF7931(uint8_t **outBlocks) {
     uint8_t bits[256] = {0x00};
 	uint8_t blocks[8][16];
     uint8_t *dest = BigBuf_get_addr();
@@ -18,7 +17,7 @@ int DemodPCF7931(uint8_t **outBlocks) {
 	int tolerance = clock / 8;
 	int pmc, block_done;
 	int lc, warnings = 0;
-	int num_blocks = 0;
+	size_t num_blocks = 0;
 	int lmin=128, lmax=128;
 	uint8_t dir;
 	//clear read buffer
@@ -40,8 +39,7 @@ int DemodPCF7931(uint8_t **outBlocks) {
 			i++;
 		}
 		dir = 0;
-	}
-	else {
+	} else {
 		while(i < GraphTraceLen) {
             if( !(dest[i] < dest[i-1]) && dest[i] < lmin)
 				break;
@@ -55,10 +53,8 @@ int DemodPCF7931(uint8_t **outBlocks) {
 	pmc = 0;
 	block_done = 0;
 
-	for (bitidx = 0; i < GraphTraceLen; i++)
-	{
-        if ( (dest[i-1] > dest[i] && dir == 1 && dest[i] > lmax) || (dest[i-1] < dest[i] && dir == 0 && dest[i] < lmin))
-		{
+	for (bitidx = 0; i < GraphTraceLen; i++) {
+		if ((dest[i-1] > dest[i] && dir == 1 && dest[i] > lmax) || (dest[i-1] < dest[i] && dir == 0 && dest[i] < lmin)) {
 			lc = i - lastval;
 			lastval = i;
 
@@ -72,8 +68,7 @@ int DemodPCF7931(uint8_t **outBlocks) {
 					lastval = i;
 					pmc = 0;
 					block_done = 1;
-				}
-				else {
+				} else {
 					pmc = i;
 				}
 			} else if (ABS(lc-clock/2) < tolerance) {
@@ -84,8 +79,7 @@ int DemodPCF7931(uint8_t **outBlocks) {
 					lastval = i;
 					pmc = 0;
 					block_done = 1;
-				}
-				else if(half_switch == 1) {
+				} else if(half_switch == 1) {
                     bits[bitidx++] = 0;
 					half_switch = 0;
 				}
@@ -96,26 +90,25 @@ int DemodPCF7931(uint8_t **outBlocks) {
                 bits[bitidx++] = 1;
 			} else {
 				// Error
-				warnings++;
-				if (warnings > 10)
-				{
-					Dbprintf("Error: too many detection errors, aborting...");
+				if (++warnings > 10) {
+					Dbprintf("Error: too many detection errors, aborting.");
 					return 0;
 				}
 			}
 
 			if(block_done == 1) {
 				if(bitidx == 128) {
-					for(j=0; j<16; j++) {
-                        blocks[num_blocks][j] = 128*bits[j*8+7]+
+					for(j = 0; j < 16; ++j) {
+						blocks[num_blocks][j] =
+							128 * bits[j*8 + 7]+
                                 64*bits[j*8+6]+
                                 32*bits[j*8+5]+
                                 16*bits[j*8+4]+
                                 8*bits[j*8+3]+
                                 4*bits[j*8+2]+
                                 2*bits[j*8+1]+
-                                bits[j*8];
-						
+							bits[j*8]
+						;
 					}
 					num_blocks++;
 				}
@@ -135,185 +128,209 @@ int DemodPCF7931(uint8_t **outBlocks) {
 	return num_blocks;
 }
 
-int IsBlock0PCF7931(uint8_t *Block) {
-	// Assume RFU means 0 :)
-	if((memcmp(Block, "\x00\x00\x00\x00\x00\x00\x00\x01", 8) == 0) && memcmp(Block+9, "\x00\x00\x00\x00\x00\x00\x00", 7) == 0) // PAC enabled
-		return 1;
-	if((memcmp(Block+9, "\x00\x00\x00\x00\x00\x00\x00", 7) == 0) && Block[7] == 0) // PAC disabled, can it *really* happen ?
-		return 1;
-	return 0;
+bool IsBlock0PCF7931(uint8_t *block) {
+	// assuming all RFU bits are set to 0
+	// if PAC is enabled password is set to 0
+	if (block[7] == 0x01)
+	{
+		if (!memcmp(block, "\x00\x00\x00\x00\x00\x00\x00", 7) && !memcmp(block+9, "\x00\x00\x00\x00\x00\x00\x00", 7))
+			return true;
+	}
+	else if (block[7] == 0x00)
+	{
+		if (!memcmp(block+9, "\x00\x00\x00\x00\x00\x00\x00", 7))
+			return true;
+	}
+	return false;
 }
 
-int IsBlock1PCF7931(uint8_t *Block) {
-	// Assume RFU means 0 :)
-	if( Block[10] == 0 && 
-	    Block[11] == 0 && 
-		Block[12] == 0 && 
-		Block[13] == 0)
-		 if ( (Block[14] & 0x7f) <= 9 && Block[15] <= 9)
-			return 1;
-	return 0;
+bool IsBlock1PCF7931(uint8_t *block) {
+	// assuming all RFU bits are set to 0
+	if (block[10] == 0 && block[11] == 0 && block[12] == 0 && block[13] == 0)
+		if((block[14] & 0x7f) <= 9 && block[15] <= 9)
+			return true;
+
+	return false;
 }
 
 void ReadPCF7931() {
-	uint8_t Blocks[8][17];
-	uint8_t tmpBlocks[4][16];
-	int i, j, ind, ind2, n;
-	int num_blocks = 0;
-	int max_blocks = 8;
-	int ident = 0;
-	int error = 0;
-	int tries = 0;
+	int found_blocks = 0; // successfully read blocks
+	int max_blocks = 8;	// readable blocks	
+	uint8_t memory_blocks[8][17]; // PCF content
+	
+	uint8_t single_blocks[8][17]; // PFC blocks with unknown position
+	int single_blocks_cnt = 0;
 
-	memset(Blocks, 0, 8*17*sizeof(uint8_t));
+	size_t n = 0; // transmitted blocks	
+	uint8_t tmp_blocks[4][16]; // temporary read buffer
+	
+	uint8_t found_0_1 = 0; // flag: blocks 0 and 1 were found
+	int errors = 0; // error counter
+	int tries = 0; // tries counter
+	
+	memset(memory_blocks, 0, 8*17*sizeof(uint8_t));
+	memset(single_blocks, 0, 8*17*sizeof(uint8_t));
+	
+	int i = 0, j = 0;
 
 	do {
-		memset(tmpBlocks, 0, 4*16*sizeof(uint8_t));
-		n = DemodPCF7931((uint8_t**)tmpBlocks);
+		i = 0;
+		
+		memset(tmp_blocks, 0, 4*16*sizeof(uint8_t));
+		n = DemodPCF7931((uint8_t**)tmp_blocks);
 		if(!n)
-			error++;
-		if(error==10 && num_blocks == 0) {
+			++errors;
+		
+		// exit if no block is received 
+		if (errors >= 10 && found_blocks == 0 && single_blocks_cnt == 0) {
 			Dbprintf("Error, no tag or bad tag");
 			return;
 		}
-		else if (tries==20 || error==10) {
+		// exit if too many errors during reading 
+		if (tries > 50 && (2*errors > tries)) {
 			Dbprintf("Error reading the tag");
 			Dbprintf("Here is the partial content");
 			goto end;
 		}
 
-		for(i=0; i<n; i++)
-			Dbprintf("(dbg) %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
-					 tmpBlocks[i][0], tmpBlocks[i][1], tmpBlocks[i][2], tmpBlocks[i][3], tmpBlocks[i][4], tmpBlocks[i][5], tmpBlocks[i][6], tmpBlocks[i][7],
-					tmpBlocks[i][8], tmpBlocks[i][9], tmpBlocks[i][10], tmpBlocks[i][11], tmpBlocks[i][12], tmpBlocks[i][13], tmpBlocks[i][14], tmpBlocks[i][15]);
-		if(!ident) {
-			for(i=0; i<n; i++) {
-				if(IsBlock0PCF7931(tmpBlocks[i])) {
-					// Found block 0 ?
-					if(i < n-1 && IsBlock1PCF7931(tmpBlocks[i+1])) {
-						// Found block 1!
-						// \o/
-						ident = 1;
-						memcpy(Blocks[0], tmpBlocks[i], 16);
-						Blocks[0][ALLOC] = 1;
-						memcpy(Blocks[1], tmpBlocks[i+1], 16);
-						Blocks[1][ALLOC] = 1;
-						max_blocks = MAX((Blocks[1][14] & 0x7f), Blocks[1][15]) + 1;
-						// Debug print
-						Dbprintf("(dbg) Max blocks: %d", max_blocks);
-						num_blocks = 2;
-						// Handle following blocks
-						for(j=i+2, ind2=2; j!=i; j++, ind2++, num_blocks++) {
-							if(j==n) j=0;
-							if(j==i) break;
-							memcpy(Blocks[ind2], tmpBlocks[j], 16);
-							Blocks[ind2][ALLOC] = 1;
-						}
+		// our logic breaks if we don't get at least two blocks
+		if (n < 2) {
+			if (n == 0 || !memcmp(tmp_blocks[0], "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 16))
+				continue;
+
+			if (single_blocks_cnt < max_blocks) {
+				for (i = 0; i < single_blocks_cnt; ++i) {
+					if (!memcmp(single_blocks[i], tmp_blocks[0], 16)) {
+						j = 1;
 						break;
 					}
 				}
+				if (j != 1) {
+					memcpy(single_blocks[single_blocks_cnt], tmp_blocks[0], 16);
+					single_blocks_cnt++;
+				}
+				j = 0;
 			}
-		}
-		else {
-			for(i=0; i<n; i++) { // Look for identical block in known blocks
-				if(memcmp(tmpBlocks[i], "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 16)) { // Block is not full of 00
-					for(j=0; j<max_blocks; j++) {
-						if(Blocks[j][ALLOC] == 1 && !memcmp(tmpBlocks[i], Blocks[j], 16)) {
-							// Found an identical block
-							for(ind=i-1,ind2=j-1; ind >= 0; ind--,ind2--) {
-								if(ind2 < 0)
-									ind2 = max_blocks;
-								if(!Blocks[ind2][ALLOC]) { // Block ind2 not already found
-									// Dbprintf("Tmp %d -> Block %d", ind, ind2);
-									memcpy(Blocks[ind2], tmpBlocks[ind], 16);
-									Blocks[ind2][ALLOC] = 1;
-									num_blocks++;
-									if(num_blocks == max_blocks) goto end;
-								}
-							}
-							for(ind=i+1,ind2=j+1; ind < n; ind++,ind2++) {
-								if(ind2 > max_blocks)
-									ind2 = 0;
-								if(!Blocks[ind2][ALLOC]) { // Block ind2 not already found
-									// Dbprintf("Tmp %d -> Block %d", ind, ind2);
-									memcpy(Blocks[ind2], tmpBlocks[ind], 16);
-									Blocks[ind2][ALLOC] = 1;
-									num_blocks++;
-									if(num_blocks == max_blocks) goto end;
-								}
-							}
+			++tries;
+			continue;
+	 	}
+	 	
+	 	Dbprintf("(dbg) got %d blocks (%d/%d found) (%d tries, %d errors)", n, found_blocks, (max_blocks == 0 ? found_blocks : max_blocks), tries, errors);
+
+		i = 0;
+		if(!found_0_1) {			
+			while (i < n - 1) {
+				if (IsBlock0PCF7931(tmp_blocks[i]) && IsBlock1PCF7931(tmp_blocks[i+1])) {
+					found_0_1 = 1;
+					memcpy(memory_blocks[0], tmp_blocks[i], 16);
+					memcpy(memory_blocks[1], tmp_blocks[i+1], 16);
+					memory_blocks[0][ALLOC] = memory_blocks[1][ALLOC] = 1;
+					// block 1 tells how many blocks are going to be sent
+					max_blocks = MAX((memory_blocks[1][14] & 0x7f), memory_blocks[1][15]) + 1;
+					found_blocks = 2;
+					
+					Dbprintf("Found blocks 0 and 1. PCF is transmitting %d blocks.", max_blocks);
+					
+					// handle the following blocks
+					for (j = i + 2; j < n; ++j) {
+						memcpy(memory_blocks[found_blocks], tmp_blocks[j], 16);
+						memory_blocks[found_blocks][ALLOC] = 1;
+						++found_blocks;
+					}
+					break;
+				}
+				++i;
+			}
+		} else {
+			// Trying to re-order blocks
+			// Look for identical block in memory blocks
+			while (i < n-1) {
+				// skip all zeroes blocks
+				if (memcmp(tmp_blocks[i], "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 16)) {
+					for (j = 1; j < max_blocks - 1; ++j) {
+						if (!memcmp(tmp_blocks[i], memory_blocks[j], 16) && !memory_blocks[j+1][ALLOC]) {
+							memcpy(memory_blocks[j+1], tmp_blocks[i+1], 16);
+							memory_blocks[j+1][ALLOC] = 1;
+							if (++found_blocks >= max_blocks) goto end;
 						}
 					}
 				}
+				if (memcmp(tmp_blocks[i+1], "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 16)) {
+					for (j = 0; j < max_blocks; ++j) {
+						if (!memcmp(tmp_blocks[i+1], memory_blocks[j], 16) && !memory_blocks[(j == 0 ? max_blocks : j) -1][ALLOC]) {
+							if (j == 0) {
+								memcpy(memory_blocks[max_blocks - 1], tmp_blocks[i], 16);
+								memory_blocks[max_blocks - 1][ALLOC] = 1;
+							} else {
+								memcpy(memory_blocks[j-1], tmp_blocks[i], 16);
+								memory_blocks[j-1][ALLOC] = 1;
+							}
+							if (++found_blocks >= max_blocks) goto end;
+						}
+					}
+				}
+				++i;
 			}
 		}
-		tries++;
-		if (BUTTON_PRESS()) return;
-	} while (num_blocks != max_blocks);
+		++tries;
+		if (BUTTON_PRESS()) {
+			Dbprintf("Button pressed, stopping.");
+			goto end;
+		}
+	}
+	while (found_blocks != max_blocks);
+
  end:
 	Dbprintf("-----------------------------------------");
 	Dbprintf("Memory content:");
 	Dbprintf("-----------------------------------------");
-	for(i=0; i<max_blocks; i++) {
-		if(Blocks[i][ALLOC]==1)
-			Dbprintf("%02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
-					 Blocks[i][0], Blocks[i][1], Blocks[i][2], Blocks[i][3], Blocks[i][4], Blocks[i][5], Blocks[i][6], Blocks[i][7],
-					Blocks[i][8], Blocks[i][9], Blocks[i][10], Blocks[i][11], Blocks[i][12], Blocks[i][13], Blocks[i][14], Blocks[i][15]);
+	for (i = 0; i < max_blocks; ++i) {
+		if (memory_blocks[i][ALLOC])
+			print_result("Block", memory_blocks[i], 16);
 		else
 			Dbprintf("<missing block %d>", i);
 	}
 	Dbprintf("-----------------------------------------");
 
+	if (found_blocks < max_blocks) {
+		Dbprintf("-----------------------------------------");
+		Dbprintf("Blocks with unknown position:");
+		Dbprintf("-----------------------------------------");
+		for (i = 0; i < single_blocks_cnt; ++i)
+			print_result("Block", single_blocks[i], 16);
+		
+		Dbprintf("-----------------------------------------");
+	}
 	cmd_send(CMD_ACK,0,0,0,0,0);
 }
 
-
-/* Write on a byte of a PCF7931 tag
- * @param address : address of the block to write
-   @param byte : address of the byte to write
-    @param data : data to write
- */
-void WritePCF7931(uint8_t pass1, uint8_t pass2, uint8_t pass3, uint8_t pass4, uint8_t pass5, uint8_t pass6, uint8_t pass7, uint16_t init_delay, int32_t l, int32_t p, uint8_t address, uint8_t byte, uint8_t data)
-{
+static void RealWritePCF7931(uint8_t *pass, uint16_t init_delay, int32_t l, int32_t p, uint8_t address, uint8_t byte, uint8_t data) {
 	uint32_t tab[1024] = {0}; // data times frame
 	uint32_t u = 0;
 	uint8_t parity = 0;
 	bool comp = 0;
 
 	//BUILD OF THE DATA FRAME
-
 	//alimentation of the tag (time for initializing)
 	AddPatternPCF7931(init_delay, 0, 8192/2*T0_PCF, tab);
-
-	//PMC
-	Dbprintf("Initialization delay : %d us", init_delay);
 	AddPatternPCF7931(8192/2*T0_PCF + 319*T0_PCF+70, 3*T0_PCF, 29*T0_PCF, tab);
-
-	Dbprintf("Offsets : %d us on the low pulses width, %d us on the low pulses positions", l, p);
-
 	//password indication bit
 	AddBitPCF7931(1, tab, l, p);
-
 	//password (on 56 bits)
-	Dbprintf("Password (LSB first on each byte) : %02x %02x %02x %02x %02x %02x %02x", pass1,pass2,pass3,pass4,pass5,pass6,pass7);
-	AddBytePCF7931(pass1, tab, l, p);
-	AddBytePCF7931(pass2, tab, l, p);
-	AddBytePCF7931(pass3, tab, l, p);
-	AddBytePCF7931(pass4, tab, l, p);
-	AddBytePCF7931(pass5, tab, l, p);
-	AddBytePCF7931(pass6, tab, l, p);
-	AddBytePCF7931(pass7, tab, l, p);
-
-
+	AddBytePCF7931(pass[0], tab, l, p);
+	AddBytePCF7931(pass[1], tab, l, p);
+	AddBytePCF7931(pass[2], tab, l, p);
+	AddBytePCF7931(pass[3], tab, l, p);
+	AddBytePCF7931(pass[4], tab, l, p);
+	AddBytePCF7931(pass[5], tab, l, p);
+	AddBytePCF7931(pass[6], tab, l, p);
 	//programming mode (0 or 1)
 	AddBitPCF7931(0, tab, l, p);
 
 	//block adress on 6 bits
-	Dbprintf("Block address : %02x", address);
-	for (u=0; u<6; u++)
-	{
+	for (u = 0; u < 6; ++u) {
 		if (address&(1<<u)) {	// bit 1
-			 parity++;
+			 ++parity;
 			 AddBitPCF7931(1, tab, l, p);
 		} else{					// bit 0
 			 AddBitPCF7931(0, tab, l, p);
@@ -321,59 +338,70 @@ void WritePCF7931(uint8_t pass1, uint8_t pass2, uint8_t pass3, uint8_t pass4, ui
 	}
 
 	//byte address on 4 bits
-	Dbprintf("Byte address : %02x", byte);
-	for (u=0; u<4; u++)
+	for (u = 0; u < 4; ++u)
 	{
 		if (byte&(1<<u)) {	// bit 1
 			 parity++;
 			 AddBitPCF7931(1, tab, l, p);
-		} else{				// bit 0
-			 AddBitPCF7931(0, tab, l, p);
 		}
+		else				// bit 0
+			 AddBitPCF7931(0, tab, l, p);
 	}
 
 	//data on 8 bits
-	Dbprintf("Data : %02x", data);
 	for (u=0; u<8; u++)
 	{
 		if (data&(1<<u)) {	// bit 1
 			 parity++;
 			 AddBitPCF7931(1, tab, l, p);
-		} else{				//bit 0
+		} 
+		else				//bit 0
 			 AddBitPCF7931(0, tab, l, p);
 		}
-	}
-
 
 	//parity bit
-	if((parity%2)==0){
+	if ((parity % 2) == 0)
 	 	AddBitPCF7931(0, tab, l, p); //even parity
-	}else{
+	else
 		AddBitPCF7931(1, tab, l, p);//odd parity
-	}
 
 	//time access memory
 	AddPatternPCF7931(5120+2680, 0, 0, tab);
 
 	//conversion of the scale time
-	for(u=0;u<500;u++){
+	for (u = 0; u < 500; ++u)
 		tab[u]=(tab[u] * 3)/2;
-	}
 
 	//compensation of the counter reload
 	while (!comp){
 		comp = 1;
-		for(u=0;tab[u]!=0;u++){
+		for (u = 0; tab[u] != 0; ++u)
 			if(tab[u] > 0xFFFF){
 			  tab[u] -= 0xFFFF;
 			  comp = 0;
 			}
 		}
-	}
 
 	SendCmdPCF7931(tab);
 }
 
+/* Write on a byte of a PCF7931 tag
+ * @param address : address of the block to write
+   @param byte : address of the byte to write
+    @param data : data to write
+ */
+void WritePCF7931(uint8_t pass1, uint8_t pass2, uint8_t pass3, uint8_t pass4, uint8_t pass5, uint8_t pass6, uint8_t pass7, uint16_t init_delay, int32_t l, int32_t p, uint8_t address, uint8_t byte, uint8_t data) {
+	Dbprintf("Initialization delay : %d us", init_delay);
+	Dbprintf("Offsets : %d us on the low pulses width, %d us on the low pulses positions", l, p);
+	Dbprintf("Password (LSB first on each byte): %02x %02x %02x %02x %02x %02x %02x", pass1, pass2, pass3, pass4, pass5, pass6, pass7);
+	Dbprintf("Block address : %02x", address);
+	Dbprintf("Byte address : %02x", byte);
+	Dbprintf("Data : %02x", data);
+	
+	uint8_t password[7] = {pass1, pass2, pass3, pass4, pass5, pass6, pass7};
+	
+	RealWritePCF7931 (password, init_delay, l, p, address, byte, data);
+}
 
 
 /* Send a trame to a PCF7931 tags
@@ -386,9 +414,7 @@ void SendCmdPCF7931(uint32_t * tab){
 	Dbprintf("Sending data frame...");
 
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_PASSTHRU );
 	
 	LED_A_ON();
@@ -405,21 +431,22 @@ void SendCmdPCF7931(uint32_t * tab){
 	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN;
 	AT91C_BASE_TCB->TCB_BCR = 1;
 
-
 	tempo = AT91C_BASE_TC0->TC_CV;
 	for( u = 0; tab[u] != 0; u += 3){
-
 		// modulate antenna
 		HIGH(GPIO_SSC_DOUT);
-		while(tempo != tab[u]) tempo = AT91C_BASE_TC0->TC_CV;		
+		while (tempo !=  tab[u])
+			tempo = AT91C_BASE_TC0->TC_CV;
 
 		// stop modulating antenna
 		LOW(GPIO_SSC_DOUT);
-		while(tempo != tab[u+1]) tempo = AT91C_BASE_TC0->TC_CV;
+		while (tempo !=  tab[u+1])
+			tempo = AT91C_BASE_TC0->TC_CV;
 
 		// modulate antenna
 		HIGH(GPIO_SSC_DOUT);
-		while(tempo != tab[u+2]) tempo = AT91C_BASE_TC0->TC_CV;		
+		while (tempo !=  tab[u+2])
+			tempo = AT91C_BASE_TC0->TC_CV;
 	}
 
 	LED_A_OFF();
@@ -437,18 +464,16 @@ void SendCmdPCF7931(uint32_t * tab){
  * @param l : offset on low pulse width
  * @param p : offset on low pulse positioning
  */
-
 bool AddBytePCF7931(uint8_t byte, uint32_t * tab, int32_t l, int32_t p){
-
 	uint32_t u;
-	for ( u=0; u<8; u++)
-	{
-		if (byte&(1<<u)) {	//bit à 1
+	for (u = 0; u < 8; ++u) {
+		if (byte & (1 << u)) {	//bit is 1
 			if( AddBitPCF7931(1, tab, l, p)==1) return 1;
-		} else { //bit à 0
+		} else { //bit is 0
 			if (AddBitPCF7931(0, tab, l, p)==1) return 1;
 		}
 	}
+
 	return 0;
 }
 

@@ -108,7 +108,7 @@ CORESRCS =  uart_posix.c \
 
 CMDSRCS =	crapto1/crapto1.c \
 			crapto1/crypto1.c \
-			mfkey.c \
+			mifare/mfkey.c \
 			tea.c \
 			fido/additional_ca.c \
 			fido/cose.c \
@@ -126,7 +126,7 @@ CMDSRCS =	crapto1/crapto1.c \
 			loclass/elite_crack.c \
 			loclass/fileutils.c \
 			whereami.c \
-			mifarehost.c \
+			mifare/mifarehost.c \
 			parity.c \
 			crc.c \
 			crc16.c \
@@ -155,7 +155,9 @@ CMDSRCS =	crapto1/crapto1.c \
 			emv/test/dda_test.c\
 			emv/test/cda_test.c\
 			emv/cmdemv.c \
-            mifare4.c \
+			emv/emv_roca.c \
+            mifare/mifare4.c \
+            mifare/mad.c \
 			cmdanalyse.c \
 			cmdhf.c \
 			cmdhflist.c \
@@ -186,6 +188,7 @@ CMDSRCS =	crapto1/crapto1.c \
 			cmdlfio.c \
 			cmdlfindala.c \
 			cmdlfjablotron.c \
+			cmdlfkeri.c \
 			cmdlfnexwatch.c \
 			cmdlfnedap.c \
 			cmdlfnoralsy.c \
@@ -298,29 +301,29 @@ lualibs/mf_default_keys.lua : default_keys.dic
 	
 clean:
 	$(RM) $(CLEAN)
-	cd ../liblua && make clean
-	cd $(JANSSONLIBPATH) && make clean
-	cd $(MBEDTLSLIBPATH) && make clean
-	cd $(CBORLIBPATH) && make clean
+	cd ../liblua && $(MAKE) clean
+	cd $(JANSSONLIBPATH) && $(MAKE) clean
+	cd $(MBEDTLSLIBPATH) && $(MAKE) clean
+	cd $(CBORLIBPATH) && $(MAKE) clean
 
 tarbin: $(BINS)
 	$(TAR) $(TARFLAGS) ../proxmark3-$(platform)-bin.tar $(BINS:%=client/%) $(WINBINS:%=client/%)
 
 lua_build:
 	@echo Compiling liblua, using platform $(LUAPLATFORM)
-	cd ../liblua && make $(LUAPLATFORM)
+	cd ../liblua && $(MAKE) $(LUAPLATFORM)
 	
 jansson_build:
 	@echo Compiling jansson
-	cd $(JANSSONLIBPATH) && make all
+	cd $(JANSSONLIBPATH) && $(MAKE) all
 
 mbedtls_build:
 	@echo Compiling mbedtls
-	cd $(MBEDTLSLIBPATH) && make all
+	cd $(MBEDTLSLIBPATH) && $(MAKE) all
 	
 cbor_build:
 	@echo Compiling tinycbor
-	cd $(CBORLIBPATH) && make all
+	cd $(CBORLIBPATH) && $(MAKE) all
 	
 .PHONY: all clean
 

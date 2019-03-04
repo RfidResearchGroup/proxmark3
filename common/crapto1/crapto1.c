@@ -33,21 +33,6 @@ static void __attribute__((constructor)) fill_lut()
 #define filter(x) (filterlut[(x) & 0xfffff])
 #endif
 
-/** binsearch
- * Binary search for the first occurence of *stop's MSB in sorted [start,stop]
- */
-/* static inline uint32_t* binsearch(uint32_t *start, uint32_t *stop)
-{
-	uint32_t mid, val = *stop & 0xff000000;
-	while(start != stop)
-		if(start[mid = (stop - start) >> 1] > val)
-			stop = &start[mid];
-		else
-			start += mid + 1;
-
-	return start;
-}
- */
 /** update_contribution
  * helper, calculates the partial linear feedback contributions and puts in MSB
  */
@@ -174,7 +159,7 @@ struct Crypto1State* lfsr_recovery32(uint32_t ks2, uint32_t in)
 
 	// allocate memory for out of place bucket_sort
 	bucket_array_t bucket;
-	
+
 	for (uint32_t i = 0; i < 2; i++) {
 		for (uint32_t j = 0; j <= 0xff; j++) {
 			bucket[i][j].head = malloc(sizeof(uint32_t) << 14);
@@ -311,7 +296,7 @@ uint8_t lfsr_rollback_bit(struct Crypto1State *s, uint32_t in, int fb)
 	int out;
 	uint8_t ret;
 	uint32_t t;
-	
+
 	s->odd &= 0xffffff;
 	t = s->odd, s->odd = s->even, s->even = t;
 
@@ -329,12 +314,6 @@ uint8_t lfsr_rollback_bit(struct Crypto1State *s, uint32_t in, int fb)
  */
 uint8_t lfsr_rollback_byte(struct Crypto1State *s, uint32_t in, int fb)
 {
-	/*
-	int i, ret=0;
-	for (i = 7; i >= 0; --i)
-		ret |= lfsr_rollback_bit(s, BIT(in, i), fb) << i;
-*/
-// unfold loop 20160112
 	uint8_t ret = 0;
 	ret |= lfsr_rollback_bit(s, BIT(in, 7), fb) << 7;
 	ret |= lfsr_rollback_bit(s, BIT(in, 6), fb) << 6;
@@ -351,13 +330,7 @@ uint8_t lfsr_rollback_byte(struct Crypto1State *s, uint32_t in, int fb)
  */
 uint32_t lfsr_rollback_word(struct Crypto1State *s, uint32_t in, int fb)
 {
-	/*
-	int i;
-	uint32_t ret = 0;
-	for (i = 31; i >= 0; --i)
-		ret |= lfsr_rollback_bit(s, BEBIT(in, i), fb) << (i ^ 24);
-*/
-// unfold loop 20160112
+
 	uint32_t ret = 0;
 	ret |= lfsr_rollback_bit(s, BEBIT(in, 31), fb) << (31 ^ 24);
 	ret |= lfsr_rollback_bit(s, BEBIT(in, 30), fb) << (30 ^ 24);
@@ -376,7 +349,7 @@ uint32_t lfsr_rollback_word(struct Crypto1State *s, uint32_t in, int fb)
 	ret |= lfsr_rollback_bit(s, BEBIT(in, 18), fb) << (18 ^ 24);
 	ret |= lfsr_rollback_bit(s, BEBIT(in, 17), fb) << (17 ^ 24);
 	ret |= lfsr_rollback_bit(s, BEBIT(in, 16), fb) << (16 ^ 24);
-	
+
 	ret |= lfsr_rollback_bit(s, BEBIT(in, 15), fb) << (15 ^ 24);
 	ret |= lfsr_rollback_bit(s, BEBIT(in, 14), fb) << (14 ^ 24);
 	ret |= lfsr_rollback_bit(s, BEBIT(in, 13), fb) << (13 ^ 24);
@@ -385,7 +358,7 @@ uint32_t lfsr_rollback_word(struct Crypto1State *s, uint32_t in, int fb)
 	ret |= lfsr_rollback_bit(s, BEBIT(in, 10), fb) << (10 ^ 24);
 	ret |= lfsr_rollback_bit(s, BEBIT(in, 9), fb) << (9 ^ 24);
 	ret |= lfsr_rollback_bit(s, BEBIT(in, 8), fb) << (8 ^ 24);
-	
+
 	ret |= lfsr_rollback_bit(s, BEBIT(in, 7), fb) << (7 ^ 24);
 	ret |= lfsr_rollback_bit(s, BEBIT(in, 6), fb) << (6 ^ 24);
 	ret |= lfsr_rollback_bit(s, BEBIT(in, 5), fb) << (5 ^ 24);
@@ -405,7 +378,7 @@ int nonce_distance(uint32_t from, uint32_t to)
 {
 	uint16_t x, i;
 	if(!dist) {
-		dist = malloc(2 << 16);
+		dist = calloc(2 << 16,  sizeof(uint8_t));
 		if(!dist)
 			return -1;
 		for (x = i = 1; i; ++i) {
@@ -443,9 +416,9 @@ static uint32_t fastfwd[2][8] = {
  */
 uint32_t *lfsr_prefix_ks(uint8_t ks[8], int isodd)
 {
-	uint32_t *candidates = malloc(4 << 10);
+	uint32_t *candidates = calloc(4 << 10, sizeof(uint8_t));
 	if (!candidates) return 0;
-	
+
 	uint32_t c,  entry;
 	int size = 0, i, good;
 
@@ -458,7 +431,7 @@ uint32_t *lfsr_prefix_ks(uint8_t ks[8], int isodd)
 		if (good)
 			candidates[size++] = i;
 	}
-	
+
 	candidates[size] = -1;
 
 	return candidates;

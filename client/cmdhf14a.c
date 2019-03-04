@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 2010 iZsh <izsh at fail0verflow.com>, Hagen Fritsch
-// 2011, 2017 Merlok
+// 2011, 2017 - 2019 Merlok
 // 2014, Peter Fillmore
 // 2015, 2016, 2017 Iceman
 //
@@ -11,6 +11,8 @@
 // High frequency ISO14443A commands
 //-----------------------------------------------------------------------------
 #include "cmdhf14a.h"
+
+bool APDUInFramingEnable = true;
 
 static int CmdHelp(const char *Cmd);
 static int waitCmd(uint8_t iLen);
@@ -147,6 +149,10 @@ char* getTagInfo(uint8_t uid) {
 	return manufactureMapping[len-1].desc; 
 }
 
+// iso14a apdu input frame length
+static uint16_t frameLength = 0;
+uint16_t atsFSC[] = {16, 24, 32, 40, 48, 64, 96, 128, 256};
+
 int usage_hf_14a_sim(void) {
 //	PrintAndLogEx(NORMAL, "\n Emulating ISO/IEC 14443 type A tag with 4,7 or 10 byte UID\n");
 	PrintAndLogEx(NORMAL, "\n Emulating ISO/IEC 14443 type A tag with 4,7 byte UID\n");
@@ -211,11 +217,6 @@ int usage_hf_14a_info(void){
 	PrintAndLogEx(NORMAL, "Usage: hf 14a info [h|s]");
 	PrintAndLogEx(NORMAL, "       s    silent (no messages)");
 	PrintAndLogEx(NORMAL, "       n    test for nack bug");
-	return 0;
-}
-int usage_hf_14a_antifuzz(void) {
-	PrintAndLogEx(NORMAL, "Usage: hf 14a antifuzz [4|7|10]");
-	PrintAndLogEx(NORMAL, "       <len>    determine which anticollision phase the command will target.");
 	return 0;
 }
 
@@ -491,10 +492,7 @@ int CmdHF14AInfo(const char *Cmd) {
 				(tb1 ? "" : " NOT"),
 				(tc1 ? "" : " NOT"),
 				fsci,
-				fsci < 5 ? (fsci - 2) * 8 : 
-					fsci < 8 ? (fsci - 3) * 32 :
-					fsci == 8 ? 256 :
-					-1
+				fsci < sizeof(atsFSC) ? atsFSC[fsci] : -1
 				);
 		}
 		pos = 2;
@@ -581,11 +579,11 @@ int CmdHF14AInfo(const char *Cmd) {
 	if (isMifareClassic) {
 		int res = detect_classic_prng();
 		if ( res == 1 )
-			PrintAndLogEx(SUCCESS, "Prng detection: WEAK");
+			PrintAndLogEx(SUCCESS, "Prng detection: " _GREEN_(WEAK));
 		else if (res == 0 )
-			PrintAndLogEx(SUCCESS, "Prng detection: HARD");
+			PrintAndLogEx(SUCCESS, "Prng detection: " _YELLOW_(HARD));
 		else
-			PrintAndLogEx(FAILED, "prng detection: failed");
+			PrintAndLogEx(FAILED, "prng detection:  " _RED_(failed));
 		
 		if ( do_nack_test )
 			detect_classic_nackbug(silent);
@@ -841,15 +839,90 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
 	return 0;
 }
 
-int CmdExchangeAPDU(uint8_t *datain, int datainlen, bool activateField, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, bool *chaining) {
-	uint16_t cmdc = 0;
+int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
+    UsbCommand resp;
 
-	*chaining = false;
+	frameLength = 0;
+
+	if (card)
+		memset(card, 0, sizeof(iso14a_card_select_t));
 	
-	if (activateField) {
-		cmdc |= ISO14A_CONNECT;
+	DropField();	
+
+	// Anticollision + SELECT card
+	UsbCommand ca = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}};
+	SendCommand(&ca);
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+		PrintAndLogEx(ERR, "Proxmark connection timeout.");
+		return 1;
 	}
 
+	// check result
+	if (resp.arg[0] == 0) {
+		PrintAndLogEx(ERR, "No card in field.");
+		return 1;
+	}
+
+	if (resp.arg[0] != 1 && resp.arg[0] != 2) {
+		PrintAndLogEx(ERR, "Card not in iso14443-4. res=%d.", resp.arg[0]);
+		return 1;
+	}
+
+	if (resp.arg[0] == 2) {		// 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
+		// get ATS 
+		UsbCommand cr = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0}}; 
+		uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
+		memcpy(cr.d.asBytes, rats, 2);
+		SendCommand(&cr);
+		if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+			PrintAndLogEx(ERR, "Proxmark connection timeout.");
+			return 1;
+		}
+		
+		if (resp.arg[0] <= 0) { // ats_len
+			PrintAndLogEx(ERR, "Can't get ATS.");
+			return 1;
+		}
+
+		// get frame length from ATS in data field
+		if (resp.arg[0] > 1) {
+			uint8_t fsci = resp.d.asBytes[1] & 0x0f;
+			if (fsci < sizeof(atsFSC))
+				frameLength = atsFSC[fsci];
+		}
+	} else {
+		// get frame length from ATS in card data structure
+		iso14a_card_select_t *vcard = (iso14a_card_select_t *) resp.d.asBytes;
+		if (vcard->ats_len > 1) {
+			uint8_t fsci = vcard->ats[1] & 0x0f;
+			if (fsci < sizeof(atsFSC))
+				frameLength = atsFSC[fsci];
+		}
+		
+		if (card)
+			memcpy(card, vcard, sizeof(iso14a_card_select_t));
+	}
+	
+	if (disconnect)
+		DropField();	
+
+	return 0;
+}
+
+int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool activateField, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, bool *chainingout) {
+	*chainingout = false;
+	
+	if (activateField) {
+		// select with no disconnect and set frameLength
+		int selres = SelectCard14443_4(false, NULL);
+		if (selres)
+			return selres;
+	}
+	
+	uint16_t cmdc = 0;
+	if (chainingin)
+		cmdc = ISO14A_SEND_CHAINING;
+	
 	// "Command APDU" length should be 5+255+1, but javacard's APDU buffer might be smaller - 133 bytes
 	// https://stackoverflow.com/questions/32994936/safe-max-java-card-apdu-data-command-and-respond-size
 	// here length USB_CMD_DATA_SIZE=512
@@ -860,18 +933,6 @@ int CmdExchangeAPDU(uint8_t *datain, int datainlen, bool activateField, uint8_t 
 	
     uint8_t *recv;
     UsbCommand resp;
-
-	if (activateField) {
-		if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-			PrintAndLogEx(ERR, "APDU: Proxmark connection timeout.");
-			return 1;
-		}
-		if (resp.arg[0] != 1) {
-			PrintAndLogEx(ERR, "APDU: Proxmark error %d.", resp.arg[0]);
-			DropField();
-			return 1;
-		}
-	}
 
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         recv = resp.d.asBytes;
@@ -888,13 +949,20 @@ int CmdExchangeAPDU(uint8_t *datain, int datainlen, bool activateField, uint8_t 
 			return 2;
 		}
 		
+		// I-block ACK
+		if ((res & 0xf2) == 0xa2) {
+			*dataoutlen = 0;
+			*chainingout = true;
+			return 0;
+		}
+		
         if(!iLen) {
 			PrintAndLogEx(ERR, "APDU: No APDU response.");
             return 1;
 		}
 
 		// check apdu length
-		if (iLen < 4 && iLen >= 0) {
+		if (iLen < 2 && iLen >= 0) {
 			PrintAndLogEx(ERR, "APDU: Small APDU response. Len=%d", iLen);
 			return 2;
 		}
@@ -909,7 +977,7 @@ int CmdExchangeAPDU(uint8_t *datain, int datainlen, bool activateField, uint8_t 
 		
 		// chaining
 		if ((res & 0x10) != 0) {
-			*chaining = true;
+			*chainingout = true;
 		}
 		
 		// CRC Check
@@ -928,12 +996,57 @@ int CmdExchangeAPDU(uint8_t *datain, int datainlen, bool activateField, uint8_t 
 int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
 	*dataoutlen = 0;
 	bool chaining = false;
-	
-	int res = CmdExchangeAPDU(datain, datainlen, activateField, dataout, maxdataoutlen, dataoutlen, &chaining);
+	int res;
 
+	// 3 byte here - 1b framing header, 2b crc16
+	if (APDUInFramingEnable && 
+		( (frameLength && (datainlen > frameLength - 3)) || (datainlen > USB_CMD_DATA_SIZE - 3)) ) {
+		int clen = 0;
+		
+		bool vActivateField = activateField;
+		
+		do {
+			int vlen = MIN(frameLength - 3, datainlen - clen);
+			bool chainBlockNotLast = ((clen + vlen) < datainlen);
+
+			*dataoutlen = 0;
+			res = CmdExchangeAPDU(chainBlockNotLast, &datain[clen], vlen, vActivateField, dataout, maxdataoutlen, dataoutlen, &chaining);
+			if (res) {
+				if (!leaveSignalON)
+					DropField();
+
+				return 200;
+			}
+
+			// check R-block ACK
+			if ((*dataoutlen == 0) && (*dataoutlen != 0 || chaining != chainBlockNotLast)) {
+				if (!leaveSignalON)
+					DropField();
+				
+				return 201;
+			}
+			
+			clen += vlen;
+			vActivateField = false;
+			if (*dataoutlen) {
+				if (clen != datainlen)
+					PrintAndLogEx(WARNING, "APDU: I-block/R-block sequence error. Data len=%d, Sent=%d, Last packet len=%d", datainlen, clen, *dataoutlen);
+				break;
+			}
+		} while (clen < datainlen);		
+	} else {
+		res = CmdExchangeAPDU(false, datain, datainlen, activateField, dataout, maxdataoutlen, dataoutlen, &chaining);
+		if (res) {
+			if (!leaveSignalON)
+				DropField();
+			
+			return res;
+		}
+	}
+	
 	while (chaining) {
 		// I-block with chaining
-		res = CmdExchangeAPDU(NULL, 0, false, &dataout[*dataoutlen], maxdataoutlen, dataoutlen, &chaining);
+		res = CmdExchangeAPDU(false, NULL, 0, false, &dataout[*dataoutlen], maxdataoutlen, dataoutlen, &chaining);
 		
 		if (res) {
 			if (!leaveSignalON)
@@ -1183,14 +1296,61 @@ static int waitCmd(uint8_t iSelect) {
 
 int CmdHF14AAntiFuzz(const char *cmd) {
 	
-	if (strlen(cmd) < 1) return usage_hf_14a_antifuzz();
+	CLIParserInit("hf 14a antifuzz", 
+		"Tries to fuzz the ISO14443a anticollision phase", 
+		"Usage:\n"
+		"\thf 14a antifuzz -4\n");
 
-	//	read param length
-	uint8_t arg0 = 4;
-	
+	void* argtable[] = {
+		arg_param_begin,
+		arg_lit0("4",   NULL,  "4 byte uid"),
+		arg_lit0("7",   NULL,  "7 byte uid"),
+		arg_lit0(NULL,  "10",  "10 byte uid"),
+		arg_param_end
+	};
+	CLIExecWithReturn(cmd, argtable, false);
+
+	uint8_t arg0 = FLAG_4B_UID_IN_DATA;
+	if (arg_get_lit(2))
+		arg0 = FLAG_7B_UID_IN_DATA;		
+	if (arg_get_lit(3))
+		arg0 = FLAG_10B_UID_IN_DATA;
+
+	CLIParserFree();
 	UsbCommand c = {CMD_ANTIFUZZ_ISO_14443a, {arg0, 0, 0}};	
 	clearCommandBuffer();
     SendCommand(&c);	
+	return 0;
+}
+
+int CmdHF14AChaining(const char *cmd) {
+	
+	CLIParserInit("hf 14a chaining", 
+		"Enable/Disable ISO14443a input chaining. Maximum input length goes from ATS.", 
+		"Usage:\n"
+		"\thf 14a chaining disable -> disable chaining\n"
+		"\thf 14a chaining         -> show chaining enable/disable state\n");
+
+	void* argtable[] = {
+		arg_param_begin,
+		arg_str0(NULL, NULL,      "<enable/disable or 0/1>", NULL),
+		arg_param_end
+	};
+	CLIExecWithReturn(cmd, argtable, true);
+
+	struct arg_str *str = arg_get_str(1);
+	int len = arg_get_str_len(1);
+	
+	if (len && (!strcmp(str->sval[0], "enable") || !strcmp(str->sval[0], "1")))
+		APDUInFramingEnable = true;
+	
+	if (len && (!strcmp(str->sval[0], "disable") || !strcmp(str->sval[0], "0")))
+		APDUInFramingEnable = false;
+
+	CLIParserFree();
+
+	PrintAndLogEx(INFO, "\nISO 14443-4 input chaining %s.\n", APDUInFramingEnable ? "enabled" : "disabled");
+	
 	return 0;
 }
 
@@ -1198,12 +1358,13 @@ static command_t CommandTable[] = {
 	{"help",		CmdHelp,              1, "This help"},
 	{"list",		CmdHF14AList,         0, "[Deprecated] List ISO 14443-a history"},
 	{"info",		CmdHF14AInfo,         0, "Tag information"},
-	{"reader",	CmdHF14AReader,       0, "Act like an ISO14443-a reader"},
+	{"reader",		CmdHF14AReader,       0, "Act like an ISO14443-a reader"},
 	{"cuids",		CmdHF14ACUIDs,        0, "<n> Collect n>0 ISO14443-a UIDs in one go"},
-	{"sim",		CmdHF14ASim,          0, "<UID> -- Simulate ISO 14443-a tag"},
+	{"sim",			CmdHF14ASim,          0, "<UID> -- Simulate ISO 14443-a tag"},
 	{"sniff",		CmdHF14ASniff,        0, "sniff ISO 14443-a traffic"},
 	{"apdu",		CmdHF14AAPDU,         0, "Send ISO 14443-4 APDU to tag"},
-	{"raw",		CmdHF14ACmdRaw,       0, "Send raw hex data to tag"},
+	{"chaining",	CmdHF14AChaining,     0, "Control ISO 14443-4 input chaining"},
+	{"raw",			CmdHF14ACmdRaw,       0, "Send raw hex data to tag"},
 	{"antifuzz",	CmdHF14AAntiFuzz,     0, "Fuzzing the anticollision phase.  Warning! Readers may react strange"},
 	{NULL, NULL, 0, NULL}
 };

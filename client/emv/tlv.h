@@ -22,7 +22,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-typedef uint16_t tlv_tag_t;
+typedef uint32_t tlv_tag_t;
 
 struct tlv {
 	tlv_tag_t tag;
@@ -50,6 +50,7 @@ struct tlvdb *tlvdb_find_path(struct tlvdb *tlvdb, tlv_tag_t tag[]);
 
 void tlvdb_add(struct tlvdb *tlvdb, struct tlvdb *other);
 void tlvdb_change_or_add_node(struct tlvdb *tlvdb, tlv_tag_t tag, size_t len, const unsigned char *value);
+void tlvdb_change_or_add_node_ex(struct tlvdb *tlvdb, tlv_tag_t tag, size_t len, const unsigned char *value, struct tlvdb **tlvdb_elm);
 
 void tlvdb_visit(const struct tlvdb *tlvdb, tlv_cb cb, void *data, int level);
 const struct tlv *tlvdb_get(const struct tlvdb *tlvdb, tlv_tag_t tag, const struct tlv *prev);
@@ -60,5 +61,10 @@ bool tlv_parse_tl(const unsigned char **buf, size_t *len, struct tlv *tlv);
 unsigned char *tlv_encode(const struct tlv *tlv, size_t *len);
 bool tlv_is_constructed(const struct tlv *tlv);
 bool tlv_equal(const struct tlv *a, const struct tlv *b);
+
+bool tlv_get_uint8(const struct tlv *etlv, uint8_t *value);
+bool tlv_get_int(const struct tlv *etlv, int *value);
+
+bool tlvdb_get_uint8(struct tlvdb *tlvRoot, tlv_tag_t tag, uint8_t *value);
 
 #endif

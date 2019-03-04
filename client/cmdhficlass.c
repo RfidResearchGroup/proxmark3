@@ -404,7 +404,7 @@ int CmdHFiClassSim(const char *Cmd) {
 				break;
 			
 			size_t datalen = NUM_CSNS * 24;
-			void* dump = malloc(datalen);
+			void* dump = calloc(datalen, sizeof(uint8_t));
 			if ( !dump ) {
 				PrintAndLogEx(WARNING, "Failed to allocate memory");
 				return 2;
@@ -456,7 +456,7 @@ int CmdHFiClassSim(const char *Cmd) {
 				break;
 			
 			size_t datalen = NUM_CSNS * 24;
-			void* dump = malloc(datalen);
+			void* dump = calloc(datalen, sizeof(uint8_t));
 			if ( !dump ) {
 				PrintAndLogEx(WARNING, "Failed to allocate memory");
 				return 2;
@@ -626,7 +626,7 @@ int CmdHFiClassELoad(const char *Cmd) {
 	
 	f = fopen(filename, "rb");
 	if ( !f ){
-		PrintAndLogEx(FAILED, "File: %s: not found or locked.", filename);
+		PrintAndLogEx(FAILED, "File: " _YELLOW_(%s) ": not found or locked.", filename);
 		return 1;
 	}
 	
@@ -2162,10 +2162,10 @@ static int cmp_uint32( const void *a, const void *b) {
 int CmdHFiClassLookUp(const char *Cmd) {
 	
 	uint8_t CSN[8];
-	uint8_t EPURSE[8];
-	uint8_t MACS[8];
+	uint8_t EPURSE[8] = { 0,0,0,0,0,0,0,0 };
+	uint8_t MACS[8]= { 0,0,0,0,0,0,0,0 };
 	uint8_t CCNR[12];
-	uint8_t MAC_TAG[4] = {0x00,0x00,0x00,0x00};
+	uint8_t MAC_TAG[4] = { 0,0,0,0 };
 	
 	// elite key,  raw key, standard key
 	bool use_elite = false;
@@ -2304,7 +2304,7 @@ int LoadDictionaryKeyFile( char* filename, uint8_t **keys, int *keycnt) {
 	int keyitems = 0;
 	
 	if ( !(f = fopen( filename , "r")) ) {
-		PrintAndLogEx(ERR, "file: %s: not found or locked.", filename);
+		PrintAndLogEx(FAILED, "File: " _YELLOW_(%s) ": not found or locked.", filename);
 		return 1;
 	}
 
@@ -2316,7 +2316,8 @@ int LoadDictionaryKeyFile( char* filename, uint8_t **keys, int *keycnt) {
 		while (fgetc(f) != '\n' && !feof(f)) {}; 
 		
 		//The line start with # is comment, skip		
-		if( buf[0]=='#' ) continue;
+		if( buf[0]=='#' ) 
+			continue;
 
 		// doesn't this only test first char only?
 		if (!isxdigit(buf[0])){
@@ -2329,7 +2330,7 @@ int LoadDictionaryKeyFile( char* filename, uint8_t **keys, int *keycnt) {
 
 		p = realloc(*keys, 8 * (keyitems += 64));
 		if (!p) {
-			PrintAndLogEx(NORMAL, _RED_([!])" cannot allocate memory for default keys");
+			PrintAndLogEx(ERR, "cannot allocate memory for default keys");
 			fclose(f);
 			return 2;
 		}
@@ -2341,7 +2342,7 @@ int LoadDictionaryKeyFile( char* filename, uint8_t **keys, int *keycnt) {
 		memset(buf, 0, sizeof(buf));
 	}
 	fclose(f);
-	PrintAndLogEx(NORMAL, _BLUE_([+]) "Loaded " _GREEN_(%2d) " keys from %s", *keycnt, filename);	
+	PrintAndLogEx(SUCCESS, "Loaded " _GREEN_(%2d) " keys from %s", *keycnt, filename);
 	return 0;
 }
 
@@ -2462,7 +2463,7 @@ static void shave(uint8_t *data, uint8_t len){
 		data[i] &= 0xFE;
 }
 static void generate_rev(uint8_t *data, uint8_t len) {
-	uint8_t *key = calloc(len,1);	
+	uint8_t *key = calloc(len, sizeof(uint8_t));	
 	PrintAndLogEx(SUCCESS, "input permuted key | %s \n", sprint_hex(data, len));
 	permute_rev(data, len, key);
 	PrintAndLogEx(SUCCESS, "    unpermuted key | %s \n", sprint_hex(key, len));
@@ -2471,8 +2472,8 @@ static void generate_rev(uint8_t *data, uint8_t len) {
 	free(key);	
 }
 static void generate(uint8_t *data, uint8_t len) {
-	uint8_t *key = calloc(len,1);
-	uint8_t *pkey = calloc(len,1);	
+	uint8_t *key = calloc(len, sizeof(uint8_t));
+	uint8_t *pkey = calloc(len, sizeof(uint8_t));	
 	PrintAndLogEx(SUCCESS, "   input key | %s \n", sprint_hex(data, len));
 	permute(data, len, pkey);
 	PrintAndLogEx(SUCCESS, "permuted key | %s \n", sprint_hex(pkey, len));

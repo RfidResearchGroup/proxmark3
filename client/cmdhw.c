@@ -74,7 +74,7 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
 	if ( mem_avail > 0 ) 
 		mem_left = (mem_avail * 1024) - mem_used;
 	
-	PrintAndLogEx(NORMAL, "  --= Nonvolatile Program Memory Size: %uK bytes, Used: %u bytes (%2.0f\%) Free: %u bytes (%2.0f\%)", 
+	PrintAndLogEx(NORMAL, "  --= Nonvolatile Program Memory Size: %uK bytes, Used: %u bytes (%2.0f%%) Free: %u bytes (%2.0f%%)", 
 				mem_avail, 
 				mem_used, 
 				mem_avail == 0 ? 0.0f : (float)mem_used/(mem_avail*1024)*100,
@@ -257,9 +257,9 @@ int CmdVersion(const char *Cmd) {
 	SendCommand(&c);
 	if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
 #ifdef __WIN32
-		PrintAndLogEx(NORMAL, "\nProxmark3 RFID instrument\n");
+		PrintAndLogEx(NORMAL, "\n [ Proxmark3 RFID instrument ]\n");
 #else
-		PrintAndLogEx(NORMAL, "\n\e[34mProxmark3 RFID instrument\e[0m\n");	
+		PrintAndLogEx(NORMAL, "\n\e[34m [ Proxmark3 RFID instrument ]\e[0m\n");	
 #endif	
 		char s[50] = {0};
 #if defined(WITH_FLASH) || defined(WITH_SMARTCARD) || defined(WITH_FPC)
@@ -275,7 +275,7 @@ int CmdVersion(const char *Cmd) {
 		strncat(s, "fpc; ", sizeof(s) - strlen(s) - 1);
 #endif
 		PrintAndLogEx(NORMAL, "\n [ CLIENT ]");
-		PrintAndLogEx(NORMAL, " client: iceman %s \n", s);
+		PrintAndLogEx(NORMAL, "  client: iceman %s \n", s);
 		
 		PrintAndLogEx(NORMAL, (char*)resp.d.asBytes);
 		lookupChipID(resp.arg[0], resp.arg[1]);			

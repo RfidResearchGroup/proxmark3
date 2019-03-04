@@ -7,10 +7,13 @@
 //-----------------------------------------------------------------------------
 // Proxmark3 RDV40 Flash memory commands
 //-----------------------------------------------------------------------------
+#ifdef WITH_FLASH
+
 #include "cmdflashmem.h"
 
 #include "mbedtls/rsa.h"
 #include "mbedtls/sha1.h"
+#include "mbedtls/base64.h"
 
 #define MCK 48000000
 //#define FLASH_BAUD 24000000
@@ -50,13 +53,19 @@ int usage_flashmem_read(void){
 }
 int usage_flashmem_load(void){
 	PrintAndLogEx(NORMAL, "Loads binary file into flash memory on device");
-	PrintAndLogEx(NORMAL, "Usage:  mem load o <offset> f <file name>");
+	PrintAndLogEx(NORMAL, "Usage:  mem load o <offset> f <file name> m t i");
 	PrintAndLogEx(NORMAL, "  o <offset>    :      offset in memory");
 	PrintAndLogEx(NORMAL, "  f <filename>  :      file name");
+	PrintAndLogEx(NORMAL, "  m             :      upload 6 bytes keys (mifare key dictionary)");
+	PrintAndLogEx(NORMAL, "  i             :      upload 8 bytes keys (iClass key dictionary)");
+	PrintAndLogEx(NORMAL, "  t             :      upload 4 bytes keys (pwd dictionary)");
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Examples:");
 	PrintAndLogEx(NORMAL, "        mem load f myfile");			// upload file myfile at default offset 0
 	PrintAndLogEx(NORMAL, "        mem load f myfile o 1024");	// upload file myfile at offset 1024
+	PrintAndLogEx(NORMAL, "        mem load f default_keys m");
+	PrintAndLogEx(NORMAL, "        mem load f default_pwd t");
+	PrintAndLogEx(NORMAL, "        mem load f default_iclass_keys i");
 	return 0;
 }
 int usage_flashmem_save(void){
@@ -154,7 +163,8 @@ int CmdFlashMemLoad(const char *Cmd){
 	uint32_t start_index = 0;
 	char filename[FILE_PATH_SIZE] = {0};	
 	bool errors = false;
-	uint8_t cmdp = 0;
+	uint8_t cmdp = 0;	
+	Dictionary_t d = DICTIONARY_NONE;
 	
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -171,7 +181,19 @@ int CmdFlashMemLoad(const char *Cmd){
 		case 'o':
 			start_index = param_get32ex(Cmd, cmdp+1, 0, 10);
 			cmdp += 2;
-			break;	
+			break;
+		case 'm':
+			d = DICTIONARY_MIFARE;
+			cmdp++;
+			break;
+		case 't':
+			d = DICTIONARY_T55XX;
+			cmdp++;
+			break;
+		case 'i':
+			d = DICTIONARY_ICLASS;
+			cmdp++;
+			break;
 		default:
 			PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
 			errors = true;
@@ -181,20 +203,60 @@ int CmdFlashMemLoad(const char *Cmd){
 	
 	//Validations
 	if (errors || cmdp == 0 ) return usage_flashmem_load();			
-	
-	uint8_t *data = calloc(FLASH_MEM_MAX_SIZE, sizeof(uint8_t));
+
 	size_t datalen = 0;
-	int res = loadFile(filename, "bin", data, &datalen);
-	//int res = loadFileEML( filename, "eml", data, &datalen);
-	if ( res ) {
-		free(data);
-		return 1;
-	}
+	uint16_t keycount = 0;
+	int res = 0;
+	uint8_t *data = calloc(FLASH_MEM_MAX_SIZE, sizeof(uint8_t));
 	
-	if (datalen > FLASH_MEM_MAX_SIZE) {
-		PrintAndLogDevice(WARNING, "error, filesize is larger than available memory");
-		free(data);
-		return 1;
+	switch (d) {
+		case DICTIONARY_MIFARE:
+			start_index = DEFAULT_MF_KEYS_OFFSET;
+			res = loadFileDICTIONARY(filename, "dic", data+2, &datalen, 6, &keycount );
+			if ( res || !keycount) {
+				free(data);
+				return 1;
+			}
+			data[0] = (keycount >> 0) & 0xFF;
+			data[1] = (keycount >> 8) & 0xFF;			
+			datalen += 2;	
+			break;
+		case DICTIONARY_T55XX:
+			start_index = DEFAULT_T55XX_KEYS_OFFSET;
+			res = loadFileDICTIONARY(filename, "dic", data+2, &datalen, 4, &keycount );
+			if ( res || !keycount) {
+				free(data);
+				return 1;
+			}
+			data[0] = (keycount >> 0) & 0xFF;
+			data[1] = (keycount >> 8) & 0xFF;			
+			datalen += 2;
+			break;
+		case DICTIONARY_ICLASS:
+			start_index = DEFAULT_ICLASS_KEYS_OFFSET;
+			res = loadFileDICTIONARY(filename, "dic", data+2, &datalen, 8, &keycount );
+			if ( res || !keycount) {
+				free(data);
+				return 1;
+			}
+			data[0] = (keycount >> 0) & 0xFF;
+			data[1] = (keycount >> 8) & 0xFF;			
+			datalen += 2;		
+			break;
+		default:
+			
+			res = loadFile(filename, "bin", data, &datalen);
+			//int res = loadFileEML( filename, "eml", data, &datalen);
+			if ( res ) {
+				return 1;
+			}
+			
+			if (datalen > FLASH_MEM_MAX_SIZE) {
+				PrintAndLogDevice(WARNING, "error, filesize is larger than available memory");
+				free(data);
+				return 1;
+			}
+			break;		
 	}
 	
 	data = realloc(data, datalen);
@@ -544,3 +606,5 @@ int CmdHelp(const char *Cmd) {
 	CmdsHelp(CommandTable);
 	return 0;
 }
+
+#endif

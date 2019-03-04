@@ -38,6 +38,20 @@ void ParamLoadDefaults(struct tlvdb *tlvRoot) {
 	TLV_ADD(0x9F6A, "\x01\x02\x03\x04");
 	//9F66:(Terminal Transaction Qualifiers (TTQ)) len:4
 	TLV_ADD(0x9F66, "\x26\x00\x00\x00"); // qVSDC
+	//95:(Terminal Verification Results) len:5
+	// all OK TVR
+	TLV_ADD(0x95,   "\x00\x00\x00\x00\x00");
+}
+
+void PrintChannel(EMVCommandChannel channel) {
+	switch(channel) {
+	case ECC_CONTACTLESS:
+		PrintAndLogEx(INFO, "Channel: CONTACTLESS");
+		break;
+	case ECC_CONTACT:
+		PrintAndLogEx(INFO, "Channel: CONTACT");
+		break;
+	}
 }
 
 int CmdEMVSelect(const char *cmd) {
@@ -67,6 +81,7 @@ int CmdEMVSelect(const char *cmd) {
 	EMVCommandChannel channel = ECC_CONTACTLESS;
 	if (arg_get_lit(5))
 		channel = ECC_CONTACT;
+	PrintChannel(channel);
 	CLIGetHexWithReturn(6, data, &datalen);
 	CLIParserFree();
 	
@@ -114,6 +129,7 @@ int CmdEMVSearch(const char *cmd) {
 	EMVCommandChannel channel = ECC_CONTACTLESS;
 	if (arg_get_lit(5))
 		channel = ECC_CONTACT;
+	PrintChannel(channel);
 	CLIParserFree();
 	
 	SetAPDULogging(APDULogging);
@@ -170,6 +186,7 @@ int CmdEMVPPSE(const char *cmd) {
 	EMVCommandChannel channel = ECC_CONTACTLESS;
 	if (arg_get_lit(7))
 		channel = ECC_CONTACT;
+	PrintChannel(channel);
 	CLIParserFree();	
 	
 	SetAPDULogging(APDULogging);
@@ -224,6 +241,7 @@ int CmdEMVGPO(const char *cmd) {
 	EMVCommandChannel channel = ECC_CONTACTLESS;
 	if (arg_get_lit(6))
 		channel = ECC_CONTACT;
+	PrintChannel(channel);
 	CLIGetHexWithReturn(7, data, &datalen);
 	CLIParserFree();	
 	
@@ -235,6 +253,7 @@ int CmdEMVGPO(const char *cmd) {
 	
 	// calc PDOL
 	struct tlv *pdol_data_tlv = NULL;
+	struct tlvdb *tmp_ext = NULL;
 	struct tlv data_tlv = {
 		.tag = 0x83,
 		.len = datalen,
@@ -248,9 +267,11 @@ int CmdEMVGPO(const char *cmd) {
 			ParamLoadFromJson(tlvRoot);
 		};
 		
-		pdol_data_tlv = dol_process((const struct tlv *)tlvdb_external(0x9f38, datalen, data), tlvRoot, 0x83);
+		tmp_ext = tlvdb_external(0x9f38, datalen, data);
+		pdol_data_tlv = dol_process((const struct tlv *)tmp_ext, tlvRoot, 0x83);
 		if (!pdol_data_tlv){
 			PrintAndLogEx(ERR, "Can't create PDOL TLV.");
+			tlvdb_free(tmp_ext);
 			tlvdb_free(tlvRoot);
 			return 4;
 		}
@@ -265,6 +286,7 @@ int CmdEMVGPO(const char *cmd) {
 	unsigned char *pdol_data_tlv_data = tlv_encode(pdol_data_tlv, &pdol_data_tlv_data_len);
 	if (!pdol_data_tlv_data) {
 		PrintAndLogEx(ERR, "Can't create PDOL data.");
+		tlvdb_free(tmp_ext);
 		tlvdb_free(tlvRoot);
 		return 4;
 	}
@@ -278,6 +300,8 @@ int CmdEMVGPO(const char *cmd) {
 	
 	if (pdol_data_tlv != &data_tlv)
 		free(pdol_data_tlv);
+
+	tlvdb_free(tmp_ext);	
 	tlvdb_free(tlvRoot);
 	
 	if (sw)
@@ -306,7 +330,7 @@ int CmdEMVReadRecord(const char *cmd) {
 		arg_lit0("aA",  "apdu",    "show APDU reqests and responses"),
 		arg_lit0("tT",  "tlv",     "TLV decode results of selected applets"),
 		arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
-		arg_strx1(NULL,  NULL,     "<SFI 1byte HEX><SFIrec 1byte HEX>", NULL),
+		arg_strx1(NULL,  NULL,     "<SFI 1byte HEX><SFIrecord 1byte HEX>", NULL),
 		arg_param_end
 	};
 	CLIExecWithReturn(cmd, argtable, true);
@@ -317,6 +341,7 @@ int CmdEMVReadRecord(const char *cmd) {
 	EMVCommandChannel channel = ECC_CONTACTLESS;
 	if (arg_get_lit(4))
 		channel = ECC_CONTACT;
+	PrintChannel(channel);
 	CLIGetHexWithReturn(5, data, &datalen);
 	CLIParserFree();
 	
@@ -399,6 +424,7 @@ int CmdEMVAC(const char *cmd) {
 	EMVCommandChannel channel = ECC_CONTACTLESS;
 	if (arg_get_lit(8))
 		channel = ECC_CONTACT;
+	PrintChannel(channel);
 	CLIGetHexWithReturn(9, data, &datalen);
 	CLIParserFree();	
 	
@@ -410,6 +436,7 @@ int CmdEMVAC(const char *cmd) {
 	
 	// calc CDOL
 	struct tlv *cdol_data_tlv = NULL;
+	struct tlvdb *tmp_ext = NULL;
 	struct tlv data_tlv = {
 		.tag = 0x01,
 		.len = datalen,
@@ -424,9 +451,11 @@ int CmdEMVAC(const char *cmd) {
 			ParamLoadFromJson(tlvRoot);
 		};
 		
-		cdol_data_tlv = dol_process((const struct tlv *)tlvdb_external(0x8c, datalen, data), tlvRoot, 0x01); // 0x01 - dummy tag
+		tmp_ext = tlvdb_external(0x8c, datalen, data);
+		cdol_data_tlv = dol_process((const struct tlv *)tmp_ext, tlvRoot, 0x01); // 0x01 - dummy tag
 		if (!cdol_data_tlv){
 			PrintAndLogEx(ERR, "Can't create CDOL TLV.");
+			tlvdb_free(tmp_ext);
 			tlvdb_free(tlvRoot);
 			return 4;
 		}
@@ -447,6 +476,8 @@ int CmdEMVAC(const char *cmd) {
 	
 	if (cdol_data_tlv != &data_tlv)
 		free(cdol_data_tlv);
+
+	tlvdb_free(tmp_ext);
 	tlvdb_free(tlvRoot);
 	
 	if (sw)
@@ -481,6 +512,7 @@ int CmdEMVGenerateChallenge(const char *cmd) {
 	EMVCommandChannel channel = ECC_CONTACTLESS;
 	if (arg_get_lit(3))
 		channel = ECC_CONTACT;
+	PrintChannel(channel);
 	CLIParserFree();	
 	
 	SetAPDULogging(APDULogging);
@@ -510,8 +542,11 @@ int CmdEMVInternalAuthenticate(const char *cmd) {
 	int datalen = 0;
 
 	CLIParserInit("emv intauth", 
-		"Generate Internal Authenticate command. Usually needs 4-byte random number. It returns data in TLV format .\nNeeds a EMV applet to be selected and GPO to be executed.", 
-		"Usage:\n\temv intauth -k 01020304 -> execute Internal Authenticate with 4-byte DDOLdata and keep field ON after command\n"
+		"Generate Internal Authenticate command. Usually needs 4-byte random number. It returns data in TLV format .\n"
+		"Needs a EMV applet to be selected and GPO to be executed.", 
+		
+		"Usage:\n"
+		"\temv intauth -k 01020304 -> execute Internal Authenticate with 4-byte DDOLdata and keep field ON after command\n"
 			"\temv intauth -t 01020304 -> execute Internal Authenticate with 4-byte DDOL data, show result in TLV\n"
 			"\temv intauth -pmt 9F 37 04 -> load params from file, make DDOL data from DDOL, Internal Authenticate with DDOL, show result in TLV"); 
 
@@ -536,6 +571,7 @@ int CmdEMVInternalAuthenticate(const char *cmd) {
 	EMVCommandChannel channel = ECC_CONTACTLESS;
 	if (arg_get_lit(6))
 		channel = ECC_CONTACT;
+	PrintChannel(channel);
 	CLIGetHexWithReturn(7, data, &datalen);
 	CLIParserFree();	
 	
@@ -547,6 +583,7 @@ int CmdEMVInternalAuthenticate(const char *cmd) {
 	
 	// calc DDOL
 	struct tlv *ddol_data_tlv = NULL;
+	struct tlvdb *tmp_ext = NULL;
 	struct tlv data_tlv = {
 		.tag = 0x01,
 		.len = datalen,
@@ -561,9 +598,11 @@ int CmdEMVInternalAuthenticate(const char *cmd) {
 			ParamLoadFromJson(tlvRoot);
 		};
 		
-		ddol_data_tlv = dol_process((const struct tlv *)tlvdb_external(0x9f49, datalen, data), tlvRoot, 0x01); // 0x01 - dummy tag
+		tmp_ext = tlvdb_external(0x9f49, datalen, data);
+		ddol_data_tlv = dol_process((const struct tlv *)tmp_ext, tlvRoot, 0x01); // 0x01 - dummy tag
 		if (!ddol_data_tlv){
 			PrintAndLogEx(ERR, "Can't create DDOL TLV.");
+			tlvdb_free(tmp_ext);
 			tlvdb_free(tlvRoot);
 			return 4;
 		}
@@ -584,6 +623,8 @@ int CmdEMVInternalAuthenticate(const char *cmd) {
 	
 	if (ddol_data_tlv != &data_tlv)
 		free(ddol_data_tlv);
+
+	tlvdb_free(tmp_ext);	
 	tlvdb_free(tlvRoot);	
 	
 	if (sw)
@@ -598,7 +639,7 @@ int CmdEMVInternalAuthenticate(const char *cmd) {
 	return 0;	
 }
 
-#define dreturn(n) {free(pdol_data_tlv);tlvdb_free(tlvSelect);tlvdb_free(tlvRoot);DropField();return n;}
+#define dreturn(n) {free(pdol_data_tlv); tlvdb_free(tlvSelect); tlvdb_free(tlvRoot); DropFieldEx( channel ); return n;}
 
 void InitTransactionParameters(struct tlvdb *tlvRoot, bool paramLoadJSON, enum TransactionType TrType, bool GenACGPO) {
 	
@@ -663,6 +704,50 @@ void ProcessGPOResponseFormat1(struct tlvdb *tlvRoot, uint8_t *buf, size_t len, 
 	}
 }
 
+void ProcessACResponseFormat1(struct tlvdb *tlvRoot, uint8_t *buf, size_t len, bool decodeTLV) {
+	if (buf[0] == 0x80) {
+		if (decodeTLV){
+			PrintAndLog("GPO response format1:");
+			TLVPrintFromBuffer(buf, len);
+		}
+		
+		uint8_t elmlen = len - 2; // wo 0x80XX
+		
+		if (len < 4 + 2 || (elmlen - 2) % 4 || elmlen != buf[1]) {
+			PrintAndLogEx(ERR, "GPO response format1 parsing error. length=%d", len);
+		} else {
+			struct tlvdb *tlvElm = NULL;
+			if (decodeTLV)
+				PrintAndLog("\n------------ Format1 decoded ------------");
+			
+			// CID (Cryptogram Information Data)
+			tlvdb_change_or_add_node_ex(tlvRoot, 0x9f27, 1, &buf[2], &tlvElm);
+			if (decodeTLV)
+				TLVPrintFromTLV(tlvElm);
+
+			// ATC (Application Transaction Counter)
+			tlvdb_change_or_add_node_ex(tlvRoot, 0x9f36, 2, &buf[3], &tlvElm);		
+			if (decodeTLV)
+				TLVPrintFromTLV(tlvElm);
+
+			// AC (Application Cryptogram)
+			tlvdb_change_or_add_node_ex(tlvRoot, 0x9f26, MIN(8, elmlen - 3), &buf[5], &tlvElm);		
+			if (decodeTLV)
+				TLVPrintFromTLV(tlvElm);
+
+			// IAD (Issuer Application Data) - optional
+			if (len > 11 + 2) {
+				tlvdb_change_or_add_node_ex(tlvRoot, 0x9f10, elmlen - 11, &buf[13], &tlvElm);		
+				if (decodeTLV)
+					TLVPrintFromTLV(tlvElm);
+			}			
+		}		
+	} else {
+		if (decodeTLV)
+			TLVPrintFromBuffer(buf, len);
+	}
+}
+
 int CmdEMVExec(const char *cmd) {
 	uint8_t buf[APDU_RES_LEN] = {0};
 	size_t len = 0;
@@ -680,7 +765,8 @@ int CmdEMVExec(const char *cmd) {
 
 	CLIParserInit("emv exec", 
 		"Executes EMV contactless transaction", 
-		"Usage:\n\temv exec -sat -> select card, execute MSD transaction, show APDU and TLV\n"
+		"Usage:\n"
+			"\temv exec -sat -> select card, execute MSD transaction, show APDU and TLV\n"
 			"\temv exec -satc -> select card, execute CDA transaction, show APDU and TLV\n");
 
 	void* argtable[] = {
@@ -708,9 +794,9 @@ int CmdEMVExec(const char *cmd) {
 
 	enum TransactionType TrType = TT_MSD;
 	if (arg_get_lit(7))
-					TrType = TT_QVSDCMCHIP;
+		TrType = TT_QVSDCMCHIP;
 	if (arg_get_lit(8))
-					TrType = TT_CDA;
+		TrType = TT_CDA;
 	if (arg_get_lit(9))
 		TrType = TT_VSDC;
 
@@ -718,8 +804,18 @@ int CmdEMVExec(const char *cmd) {
 	EMVCommandChannel channel = ECC_CONTACTLESS;
 	if (arg_get_lit(11))
 		channel = ECC_CONTACT;
+	PrintChannel(channel);
+	uint8_t psenum = (channel == ECC_CONTACT) ? 1 : 2;
 	CLIParserFree();
 	
+#ifndef WITH_SMARTCARD
+	// not compiled with smartcard functionality,  we need to exit
+	if ( channel == ECC_CONTACT ) {
+		PrintAndLogEx(WARNING, "PM3 Client is not compiled with support for SMARTCARD. Exiting.");
+		return 0;
+	}
+#endif	
+
 	SetAPDULogging(showAPDU);
 	
 	// init applets list tree
@@ -732,7 +828,7 @@ int CmdEMVExec(const char *cmd) {
 		// PPSE
 		PrintAndLogEx(NORMAL, "\n* PPSE.");
 		SetAPDULogging(showAPDU);
-		res = EMVSearchPSE(channel, activateField, true, decodeTLV, tlvSelect);
+		res = EMVSearchPSE(channel, activateField, true, psenum, decodeTLV, tlvSelect);
 
 		// check PPSE and select application id
 		if (!res) {	
@@ -845,7 +941,7 @@ int CmdEMVExec(const char *cmd) {
 			uint8_t SFIend = AFL->value[i * 4 + 2];
 			uint8_t SFIoffline = AFL->value[i * 4 + 3];
 			
-			PrintAndLogEx(NORMAL, "* * SFI[%02x] start:%02x end:%02x offline:%02x", SFI, SFIstart, SFIend, SFIoffline);
+			PrintAndLogEx(NORMAL, "* * SFI[%02x] start:%02x end:%02x offline count:%02x", SFI, SFIstart, SFIend, SFIoffline);
 			if (SFI == 0 || SFI == 31 || SFIstart == 0 || SFIstart > SFIend) {
 				PrintAndLogEx(NORMAL, "SFI ERROR! Skipped...");
 				continue;
@@ -867,7 +963,7 @@ int CmdEMVExec(const char *cmd) {
 				
 				// Build Input list for Offline Data Authentication
 				// EMV 4.3 book3 10.3, page 96
-				if (SFIoffline) {
+				if (SFIoffline > 0) {
 					if (SFI < 11) {
 						const unsigned char *abuf = buf;
 						size_t elmlen = len;
@@ -882,6 +978,8 @@ int CmdEMVExec(const char *cmd) {
 						memcpy(&ODAiList[ODAiListLen], buf, len);
 						ODAiListLen += len;
 					}
+					
+					SFIoffline--;
 				}
 			}
 		}
@@ -921,7 +1019,7 @@ int CmdEMVExec(const char *cmd) {
 	// transaction check
 
 	// qVSDC
-	if (TrType == TT_QVSDCMCHIP|| TrType == TT_CDA){
+	if (TrType == TT_QVSDCMCHIP || TrType == TT_CDA){
 		// 9F26: Application Cryptogram
 		const struct tlv *AC = tlvdb_get(tlvRoot, 0x9F26, NULL);
 		if (AC) {
@@ -938,7 +1036,7 @@ int CmdEMVExec(const char *cmd) {
 				// print AC data
 				PrintAndLogEx(NORMAL, "ATC: %s", sprint_hex(ATC->value, ATC->len));
 				PrintAndLogEx(NORMAL, "AC: %s", sprint_hex(AC->value, AC->len));
-				if (IAD){
+				if (IAD) {
 					PrintAndLogEx(NORMAL, "IAD: %s", sprint_hex(IAD->value, IAD->len));
 					
 					if (IAD->len >= IAD->value[0] + 1) {
@@ -978,17 +1076,18 @@ int CmdEMVExec(const char *cmd) {
 			// ICC Dynamic Number
 			struct tlvdb * ICCDynN = tlvdb_fixed(0x9f4c, len, buf);
 			tlvdb_add(tlvRoot, ICCDynN);
-			if (decodeTLV){
+			if (decodeTLV) {
 				PrintAndLogEx(NORMAL, "\n* * ICC Dynamic Number:");
 				TLVPrintFromTLV(ICCDynN);
 			}
 			
 			PrintAndLogEx(NORMAL, "* * Calc CDOL1");
 			struct tlv *cdol_data_tlv = dol_process(tlvdb_get(tlvRoot, 0x8c, NULL), tlvRoot, 0x01); // 0x01 - dummy tag
-			if (!cdol_data_tlv){
+			if (!cdol_data_tlv) {
 				PrintAndLogEx(WARNING, "Error: can't create CDOL1 TLV.");
 				dreturn(6);
 			}
+			
 			PrintAndLogEx(NORMAL, "CDOL1 data[%d]: %s", cdol_data_tlv->len, sprint_hex(cdol_data_tlv->value, cdol_data_tlv->len));
 			
 			PrintAndLogEx(NORMAL, "* * AC1");
@@ -1010,6 +1109,7 @@ int CmdEMVExec(const char *cmd) {
 			if (res) {	
 				PrintAndLogEx(NORMAL, "CDA error (%d)", res);
 			}
+			
 			free(ac_tlv);
 			free(cdol_data_tlv);
 			
@@ -1073,7 +1173,7 @@ int CmdEMVExec(const char *cmd) {
 					PrintAndLogEx(NORMAL, "Use default UDOL.");
 
 				struct tlv *udol_data_tlv = dol_process(UDOL ? UDOL : &defUDOL, tlvRoot, 0x01); // 0x01 - dummy tag
-				if (!udol_data_tlv){
+				if (!udol_data_tlv) {
 					PrintAndLogEx(WARNING, "Error: can't create UDOL TLV.");
 					dreturn(8);
 				}
@@ -1101,7 +1201,140 @@ int CmdEMVExec(const char *cmd) {
 		}
 	}
 
-	DropField();
+	// VSDC
+	if (GetCardPSVendor(AID, AIDlen) == CV_VISA && (TrType == TT_VSDC || TrType == TT_CDA)){
+		PrintAndLogEx(NORMAL, "\n--> VSDC transaction.");
+		
+		PrintAndLogEx(NORMAL, "* * Calc CDOL1");
+		struct tlv *cdol1_data_tlv = dol_process(tlvdb_get(tlvRoot, 0x8c, NULL), tlvRoot, 0x01); // 0x01 - dummy tag
+		if (!cdol1_data_tlv) {
+			PrintAndLogEx(WARNING, "Error: can't create CDOL1 TLV.");
+			dreturn(6);
+		}
+		
+		PrintAndLogEx(NORMAL, "CDOL1 data[%d]: %s", cdol1_data_tlv->len, sprint_hex(cdol1_data_tlv->value, cdol1_data_tlv->len));
+		
+		PrintAndLogEx(NORMAL, "* * AC1");
+		// EMVAC_TC + EMVAC_CDAREQ --- to get SDAD
+		res = EMVAC(channel, true, (TrType == TT_CDA) ? EMVAC_TC + EMVAC_CDAREQ : EMVAC_TC, (uint8_t *)cdol1_data_tlv->value, cdol1_data_tlv->len, buf, sizeof(buf), &len, &sw, tlvRoot);
+		
+		if (res) {	
+			PrintAndLogEx(NORMAL, "AC1 error(%d): %4x. Exit...", res, sw);
+			free(cdol1_data_tlv);
+			dreturn(7);
+		}
+
+		// process Format1 (0x80) and print Format2 (0x77)
+		ProcessACResponseFormat1(tlvRoot, buf, len, decodeTLV);
+
+		uint8_t CID = 0;
+		tlvdb_get_uint8(tlvRoot, 0x9f27, &CID);
+
+		// AC1 print result
+		PrintAndLog("");
+		if ((CID & EMVAC_AC_MASK) == EMVAC_AAC)		PrintAndLogEx(INFO, "AC1 result: AAC (Transaction declined)");
+		if ((CID & EMVAC_AC_MASK) == EMVAC_TC)		PrintAndLogEx(INFO, "AC1 result: TC (Transaction approved)");
+		if ((CID & EMVAC_AC_MASK) == EMVAC_ARQC)	PrintAndLogEx(INFO, "AC1 result: ARQC (Online authorisation requested)");
+		if ((CID & EMVAC_AC_MASK) == EMVAC_AC_MASK)	PrintAndLogEx(INFO, "AC1 result: RFU");
+
+		// decode Issuer Application Data (IAD)
+		uint8_t CryptoVersion = 0;
+		const struct tlv *IAD = tlvdb_get(tlvRoot, 0x9f10, NULL);
+		if (IAD && (IAD->len > 1)) {
+			PrintAndLogEx(NORMAL, "\n* * Issuer Application Data (IAD):");
+			uint8_t VDDlen = IAD->value[0]; // Visa discretionary data length
+			uint8_t IDDlen = 0;             // Issuer discretionary data length
+			PrintAndLogEx(NORMAL, "IAD length: %d", IAD->len);
+			PrintAndLogEx(NORMAL, "VDDlen: %d", VDDlen);
+			if (VDDlen < IAD->len - 1) 
+				IDDlen = IAD->value[VDDlen + 1];
+			PrintAndLogEx(NORMAL, "IDDlen: %d", IDDlen);
+						
+			uint8_t DerivKeyIndex = IAD->value[1];
+			CryptoVersion = IAD->value[2];
+
+			PrintAndLogEx(NORMAL, "CryptoVersion: %d", CryptoVersion);
+			PrintAndLogEx(NORMAL, "DerivKeyIndex: %d", DerivKeyIndex);
+
+			// Card Verification Results (CVR) decode
+			if ((VDDlen - 2) > 0) {
+				uint8_t CVRlen = IAD->value[3];
+				if (CVRlen == (VDDlen - 2 - 1)) {
+					PrintAndLogEx(NORMAL, "CVR length: %d", CVRlen);
+					PrintAndLogEx(NORMAL, "CVR: %s", sprint_hex(&IAD->value[4], CVRlen));
+				} else {
+					PrintAndLogEx(NORMAL, "Wrong CVR length! CVR: %s", sprint_hex(&IAD->value[3], VDDlen - 2));
+				}
+			}
+			if (IDDlen)
+				PrintAndLogEx(NORMAL, "IDD: %s", sprint_hex(&IAD->value[VDDlen + 1], IDDlen));		
+		} else {
+			PrintAndLogEx(NORMAL, "Issuer Application Data (IAD) not found.");
+		}
+		
+		PrintAndLogEx(NORMAL, "\n* * Processing online request");
+
+		// authorization response code from acquirer
+		const char HostResponse[] = "00"; // 0x3030
+		size_t HostResponseLen = sizeof(HostResponse) - 1;
+		PrintAndLogEx(NORMAL, "Host Response: `%s`", HostResponse);
+		tlvdb_change_or_add_node(tlvRoot, 0x8a, HostResponseLen, (const unsigned char *)HostResponse);		
+		
+		if (CryptoVersion == 10) {
+			PrintAndLogEx(NORMAL, "\n* * Generate ARPC");
+			
+			// Application Cryptogram (AC)
+			const struct tlv *AC = tlvdb_get(tlvRoot, 0x9f26, NULL);
+			if (AC && (AC->len > 0)) {
+				PrintAndLogEx(NORMAL, "AC: %s", sprint_hex(AC->value, AC->len));
+
+				size_t rawARPClen = AC->len;
+				uint8_t rawARPC[rawARPClen];
+				memcpy(rawARPC, AC->value, AC->len);
+				for (int i = 0; (i < HostResponseLen) && (i < rawARPClen); i++)
+					rawARPC[i] ^= HostResponse[i];
+				PrintAndLogEx(NORMAL, "raw ARPC: %s", sprint_hex(rawARPC, rawARPClen));
+				
+				// here must be calculation of ARPC, but we dont know a bank keys.
+				PrintAndLogEx(NORMAL, "ARPC: n/a");
+				
+			} else {
+				PrintAndLogEx(NORMAL, "Application Cryptogram (AC) not found.");
+			}
+
+			// here must be external authenticate, but we dont know ARPC
+			
+		}
+		
+
+		// needs to send AC2 command (res == ARQC)
+		if ((CID & EMVAC_AC_MASK) == EMVAC_ARQC) {
+			PrintAndLogEx(NORMAL, "\n* * Calc CDOL2");
+			struct tlv *cdol2_data_tlv = dol_process(tlvdb_get(tlvRoot, 0x8d, NULL), tlvRoot, 0x01); // 0x01 - dummy tag
+			if (!cdol2_data_tlv) {
+				PrintAndLogEx(WARNING, "Error: can't create CDOL2 TLV.");
+				dreturn(6);
+			}
+			
+			PrintAndLogEx(NORMAL, "CDOL2 data[%d]: %s", cdol2_data_tlv->len, sprint_hex(cdol2_data_tlv->value, cdol2_data_tlv->len));
+			
+			//PrintAndLogEx(NORMAL, "* * AC2");
+			
+			
+			// here must be AC2, but we dont make external authenticate (
+		
+/*			// AC2
+			PRINT_INDENT(level);
+			if ((CID & EMVAC_AC2_MASK) == EMVAC_AAC2)	fprintf(f, "\tAC2: AAC (Transaction declined)\n");
+			if ((CID & EMVAC_AC2_MASK) == EMVAC_TC2)	fprintf(f, "\tAC2: TC (Transaction approved)\n");
+			if ((CID & EMVAC_AC2_MASK) == EMVAC_ARQC2)	fprintf(f, "\tAC2: not requested (ARQC)\n");
+			if ((CID & EMVAC_AC2_MASK) == EMVAC_AC2_MASK)	fprintf(f, "\tAC2: RFU\n");
+*/
+		}
+		
+	}
+	
+	DropFieldEx( channel );
 	
 	// Destroy TLV's
 	free(pdol_data_tlv);
@@ -1164,19 +1397,23 @@ int CmdEMVScan(const char *cmd) {
 	EMVCommandChannel channel = ECC_CONTACTLESS;
 	if (arg_get_lit(11))
 		channel = ECC_CONTACT;
+	PrintChannel(channel);
+	uint8_t psenum = (channel == ECC_CONTACT) ? 1 : 2;
 	uint8_t relfname[250] ={0};
 	char *crelfname = (char *)relfname;
 	int relfnamelen = 0;
 	CLIGetStrWithReturn(12, relfname, &relfnamelen);
 	CLIParserFree();
 	
-	SetAPDULogging(showAPDU);
-	
-	// TODO
-	if (channel == ECC_CONTACT) {
-		PrintAndLogEx(ERR, "Do not use contact interface. Exit.");
-		return 1;
+#ifndef WITH_SMARTCARD
+	// not compiled with smartcard functionality,  we need to exit
+	if ( channel == ECC_CONTACT ) {
+		PrintAndLogEx(WARNING, "PM3 Client is not compiled with support for SMARTCARD. Exiting.");
+		return 0;
 	}
+#endif	
+
+	SetAPDULogging(showAPDU);
 	
 	// current path + file name
 	if (!strstr(crelfname, ".json"))
@@ -1201,23 +1438,37 @@ int CmdEMVScan(const char *cmd) {
 	}
 
 	// drop field at start
-	DropField();
-
-	// iso 14443 select
-	PrintAndLogEx(NORMAL, "--> GET UID, ATS.");
-	
-	iso14a_card_select_t card;
-	if (Hf14443_4aGetCardData(&card)) {
-		return 2;
-	}
+	DropFieldEx( channel );
 
 	JsonSaveStr(root, "$.File.Created", "proxmark3 `emv scan`");
 	
-	JsonSaveStr(root, "$.Card.Communication", "iso14443-4a");
-	JsonSaveBufAsHex(root, "$.Card.UID", (uint8_t *)&card.uid, card.uidlen);
-	JsonSaveHex(root, "$.Card.ATQA", card.atqa[0] + (card.atqa[1] << 2), 2);
-	JsonSaveHex(root, "$.Card.SAK", card.sak, 0);
-	JsonSaveBufAsHex(root, "$.Card.ATS", (uint8_t *)card.ats, card.ats_len);
+	if (channel == ECC_CONTACTLESS) {
+		// iso 14443 select
+		PrintAndLogEx(NORMAL, "--> GET UID, ATS.");
+		
+		iso14a_card_select_t card;
+		if (Hf14443_4aGetCardData(&card)) {
+			return 2;
+		}
+		
+		JsonSaveStr(root, "$.Card.Contactless.Communication", "iso14443-4a");
+		JsonSaveBufAsHex(root, "$.Card.Contactless.UID", (uint8_t *)&card.uid, card.uidlen);
+		JsonSaveHex(root, "$.Card.Contactless.ATQA", card.atqa[0] + (card.atqa[1] << 2), 2);
+		JsonSaveHex(root, "$.Card.Contactless.SAK", card.sak, 0);
+		JsonSaveBufAsHex(root, "$.Card.Contactless.ATS", (uint8_t *)card.ats, card.ats_len);
+	} else {
+		PrintAndLogEx(NORMAL, "--> GET ATR.");
+		
+		smart_card_atr_t card;
+		smart_select(true, &card);
+		if (!card.atr_len) {
+			PrintAndLogEx(ERR, "Can't get ATR from a smart card.");
+			return 1;
+		}
+		
+		JsonSaveStr(root, "$.Card.Contact.Communication", "iso7816");
+		JsonSaveBufAsHex(root, "$.Card.Contact.ATR", (uint8_t *)card.atr, card.atr_len);
+	}
 	
 	// init applets list tree
 	const char *al = "Applets list";
@@ -1242,7 +1493,7 @@ int CmdEMVScan(const char *cmd) {
 		tlvdb_free(fci);
 	}
 
-	res = EMVSearchPSE(channel, false, true, decodeTLV, tlvSelect);
+	res = EMVSearchPSE(channel, false, true, psenum, decodeTLV, tlvSelect);
 
 	// check PPSE and select application id
 	if (!res) {	
@@ -1254,7 +1505,7 @@ int CmdEMVScan(const char *cmd) {
 		if (EMVSearch(channel, false, true, decodeTLV, tlvSelect)) {
 			PrintAndLogEx(ERR, "Can't found any of EMV AID. Exit...");
 			tlvdb_free(tlvSelect);
-			DropField();
+			DropFieldEx( channel );
 			return 3;
 		}
 
@@ -1270,7 +1521,7 @@ int CmdEMVScan(const char *cmd) {
 
 	if (!AIDlen) {
 		PrintAndLogEx(INFO, "Can't select AID. EMV AID not found. Exit...");
-		DropField();
+		DropFieldEx( channel );
 		return 4;
 	}
 
@@ -1289,7 +1540,7 @@ int CmdEMVScan(const char *cmd) {
 	if (res) {	
 		PrintAndLogEx(ERR, "Can't select AID (%d). Exit...", res);
 		tlvdb_free(tlvRoot);
-		DropField();
+		DropFieldEx( channel );
 		return 5;
 	}
 	
@@ -1317,7 +1568,7 @@ int CmdEMVScan(const char *cmd) {
 	if (!pdol_data_tlv){
 		PrintAndLogEx(ERR, "Can't create PDOL TLV.");
 		tlvdb_free(tlvRoot);
-		DropField();
+		DropFieldEx( channel );
 		return 6;
 	}
 	
@@ -1326,7 +1577,7 @@ int CmdEMVScan(const char *cmd) {
 	if (!pdol_data_tlv_data) {
 		PrintAndLogEx(ERR, "Can't create PDOL data.");
 		tlvdb_free(tlvRoot);
-		DropField();
+		DropFieldEx( channel );
 		return 6;
 	}
 	PrintAndLogEx(INFO, "PDOL data[%d]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
@@ -1340,7 +1591,7 @@ int CmdEMVScan(const char *cmd) {
 	if (res) {	
 		PrintAndLogEx(ERR, "GPO error(%d): %4x. Exit...", res, sw);
 		tlvdb_free(tlvRoot);
-		DropField();
+		DropFieldEx( channel );
 		return 7;
 	}
 	ProcessGPOResponseFormat1(tlvRoot, buf, len, decodeTLV);
@@ -1382,7 +1633,7 @@ int CmdEMVScan(const char *cmd) {
 			uint8_t SFIend = AFL->value[i * 4 + 2];
 			uint8_t SFIoffline = AFL->value[i * 4 + 3];
 			
-			PrintAndLog("--->SFI[%02x] start:%02x end:%02x offline:%02x", SFI, SFIstart, SFIend, SFIoffline);
+			PrintAndLogEx(INFO, "--->SFI[%02x] start:%02x end:%02x offline:%02x", SFI, SFIstart, SFIend, SFIoffline);
 			if (SFI == 0 || SFI == 31 || SFIstart == 0 || SFIstart > SFIend) {
 				PrintAndLogEx(ERR, "SFI ERROR! Skipped...");
 				continue;
@@ -1432,8 +1683,7 @@ int CmdEMVScan(const char *cmd) {
 	// free tlv object
 	tlvdb_free(tlvRoot);
 
-	// DropField
-	DropField();
+	DropFieldEx( channel );
 	
 	res = json_dump_file(root, fname, JSON_INDENT(2));
 	if (res) {
@@ -1448,31 +1698,243 @@ int CmdEMVScan(const char *cmd) {
 	return 0;
 }
 
-int usage_emv_getrnd(void){
-	PrintAndLogEx(NORMAL, "retrieve the UN number from a terminal");
-	PrintAndLogEx(NORMAL, "Usage:  emv getrnd [h]");
-	PrintAndLogEx(NORMAL, "Options:");
-	PrintAndLogEx(NORMAL, "      h             : this help");
-	PrintAndLogEx(NORMAL, "");
-	PrintAndLogEx(NORMAL, "Examples:");
-	PrintAndLogEx(NORMAL, "      emv getrnd");
-	return 0;
-}
-
-//retrieve the UN number from a terminal
-int CmdEMVGetrng(const char *Cmd) {
-	char cmdp = param_getchar(Cmd, 0);
-	if ( cmdp == 'h' || cmdp == 'H') return usage_emv_getrnd();
-
-	return 0;
-}
-
 int CmdEMVList(const char *Cmd) {
 	return CmdTraceList("7816");
 }
 
 int CmdEMVTest(const char *cmd) {
 	return ExecuteCryptoTests(true);
+}
+
+int CmdEMVRoca(const char *cmd) {
+	uint8_t AID[APDU_AID_LEN] = {0};
+	size_t AIDlen = 0;
+	uint8_t buf[APDU_RES_LEN] = {0};
+	size_t len = 0;
+	uint16_t sw = 0;
+	int res;
+		
+	CLIParserInit("emv roca", 
+		"Tries to extract public keys and run the ROCA test against them.\n", 
+		"Usage:\n"
+			"\temv roca -w -> select --CONTACT-- card and run test\n"
+			"\temv roca -> select --CONTACTLESS-- card and run test\n"
+			);
+
+	void* argtable[] = {
+		arg_param_begin,
+		arg_lit0("tT",  "selftest",   "self test"),
+		arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
+		arg_param_end
+	};
+	CLIExecWithReturn(cmd, argtable, true);
+	
+	EMVCommandChannel channel = ECC_CONTACTLESS;
+	if (arg_get_lit(1))
+		return roca_self_test();
+
+	if (arg_get_lit(2))
+		channel = ECC_CONTACT;
+	PrintChannel(channel);
+	CLIParserFree();
+	
+#ifndef WITH_SMARTCARD
+	// not compiled with smartcard functionality,  we need to exit
+	if ( channel == ECC_CONTACT ) {
+		PrintAndLogEx(WARNING, "PM3 Client is not compiled with support for SMARTCARD. Exiting.");
+		return 0;
+	}
+#endif	
+
+	// select card
+	uint8_t psenum = (channel == ECC_CONTACT) ? 1 : 2;
+	
+	SetAPDULogging(false);
+	
+	// init applets list tree
+	const char *al = "Applets list";
+	struct tlvdb *tlvSelect = tlvdb_fixed(1, strlen(al), (const unsigned char *)al);
+
+	// EMV PPSE
+	PrintAndLogEx(NORMAL, "--> PPSE.");
+	res = EMVSearchPSE(channel, false, true, psenum, false, tlvSelect);
+
+	// check PPSE and select application id
+	if (!res) {	
+		TLVPrintAIDlistFromSelectTLV(tlvSelect);		
+	} else {
+		// EMV SEARCH with AID list
+		PrintAndLogEx(NORMAL, "--> AID search.");
+		if (EMVSearch(channel, false, true, false, tlvSelect)) {
+			PrintAndLogEx(ERR, "Can't found any of EMV AID. Exit...");
+			tlvdb_free(tlvSelect);
+			DropFieldEx( channel );
+			return 3;
+		}
+
+		// check search and select application id
+		TLVPrintAIDlistFromSelectTLV(tlvSelect);
+	}
+
+	// EMV SELECT application
+	SetAPDULogging(false);
+	EMVSelectApplication(tlvSelect, AID, &AIDlen);
+
+	tlvdb_free(tlvSelect);
+
+	if (!AIDlen) {
+		PrintAndLogEx(INFO, "Can't select AID. EMV AID not found. Exit...");
+		DropFieldEx( channel );
+		return 4;
+	}
+
+	// Init TLV tree
+	const char *alr = "Root terminal TLV tree";
+	struct tlvdb *tlvRoot = tlvdb_fixed(1, strlen(alr), (const unsigned char *)alr);
+
+	// EMV SELECT applet
+	PrintAndLogEx(NORMAL, "\n-->Selecting AID:%s.", sprint_hex_inrow(AID, AIDlen));
+	res = EMVSelect(channel, false, true, AID, AIDlen, buf, sizeof(buf), &len, &sw, tlvRoot);
+	
+	if (res) {	
+		PrintAndLogEx(ERR, "Can't select AID (%d). Exit...", res);
+		tlvdb_free(tlvRoot);
+		DropFieldEx( channel );
+		return 5;
+	}
+
+	PrintAndLog("\n* Init transaction parameters.");
+	InitTransactionParameters(tlvRoot, true, TT_QVSDCMCHIP, false);
+
+	PrintAndLogEx(NORMAL, "-->Calc PDOL.");
+	struct tlv *pdol_data_tlv = dol_process(tlvdb_get(tlvRoot, 0x9f38, NULL), tlvRoot, 0x83);
+	if (!pdol_data_tlv){
+		PrintAndLogEx(ERR, "Can't create PDOL TLV.");
+		tlvdb_free(tlvRoot);
+		DropFieldEx( channel );
+		return 6;
+	}
+	
+	size_t pdol_data_tlv_data_len;
+	unsigned char *pdol_data_tlv_data = tlv_encode(pdol_data_tlv, &pdol_data_tlv_data_len);
+	if (!pdol_data_tlv_data) {
+		PrintAndLogEx(ERR, "Can't create PDOL data.");
+		tlvdb_free(tlvRoot);
+		DropFieldEx( channel );
+		free(pdol_data_tlv);
+		return 6;
+	}
+	PrintAndLogEx(INFO, "PDOL data[%d]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
+
+	PrintAndLogEx(INFO, "-->GPO.");
+	res = EMVGPO(channel, true, pdol_data_tlv_data, pdol_data_tlv_data_len, buf, sizeof(buf), &len, &sw, tlvRoot);
+	
+	free(pdol_data_tlv_data);
+	free(pdol_data_tlv);
+	
+	if (res) {	
+		PrintAndLogEx(ERR, "GPO error(%d): %4x. Exit...", res, sw);
+		tlvdb_free(tlvRoot);
+		DropFieldEx( channel );
+		return 7;
+	}
+	ProcessGPOResponseFormat1(tlvRoot, buf, len, false);
+	
+	PrintAndLogEx(INFO, "-->Read records from AFL.");
+	const struct tlv *AFL = tlvdb_get(tlvRoot, 0x94, NULL);
+	
+	while(AFL && AFL->len) {
+		if (AFL->len % 4) {
+			PrintAndLogEx(ERR, "Wrong AFL length: %d", AFL->len);
+			break;
+		}
+
+		for (int i = 0; i < AFL->len / 4; i++) {
+			uint8_t SFI = AFL->value[i * 4 + 0] >> 3;
+			uint8_t SFIstart = AFL->value[i * 4 + 1];
+			uint8_t SFIend = AFL->value[i * 4 + 2];
+			uint8_t SFIoffline = AFL->value[i * 4 + 3];
+			
+			PrintAndLogEx(INFO, "--->SFI[%02x] start:%02x end:%02x offline:%02x", SFI, SFIstart, SFIend, SFIoffline);
+			if (SFI == 0 || SFI == 31 || SFIstart == 0 || SFIstart > SFIend) {
+				PrintAndLogEx(ERR, "SFI ERROR! Skipped...");
+				continue;
+			}
+			
+			for(int n = SFIstart; n <= SFIend; n++) {
+				PrintAndLogEx(INFO, "---->SFI[%02x] %d", SFI, n);
+				
+				res = EMVReadRecord(channel, true, SFI, n, buf, sizeof(buf), &len, &sw, tlvRoot);
+				if (res) {
+					PrintAndLogEx(ERR, "SFI[%02x]. APDU error %4x", SFI, sw);
+					continue;
+				}
+			}
+		}
+		
+		break;
+	}
+
+	// getting certificates
+ 	if (tlvdb_get(tlvRoot, 0x90, NULL)) {
+		PrintAndLogEx(INFO, "-->Recovering certificates.");
+		PKISetStrictExecution(false);
+
+		struct emv_pk *pk = get_ca_pk(tlvRoot);
+		if (!pk) {
+			PrintAndLogEx(ERR, "ERROR: Key not found. Exit.");
+			goto out;
+		}
+
+		struct emv_pk *issuer_pk = emv_pki_recover_issuer_cert(pk, tlvRoot);
+		if (!issuer_pk) {
+			emv_pk_free(pk);
+			PrintAndLogEx(WARNING, "WARNING: Issuer certificate not found. Exit.");
+			goto out;
+		}
+	
+		PrintAndLogEx(SUCCESS, "Issuer PK recovered. RID %s IDX %02hhx CSN %s",
+				sprint_hex(issuer_pk->rid, 5),
+				issuer_pk->index,
+				sprint_hex(issuer_pk->serial, 3)
+				);
+
+
+		struct emv_pk *icc_pk = emv_pki_recover_icc_cert(issuer_pk, tlvRoot, NULL);
+		if (!icc_pk) {
+			emv_pk_free(pk);
+			emv_pk_free(issuer_pk);
+			PrintAndLogEx(WARNING, "WARNING: ICC certificate not found. Exit.");
+			goto out;
+		}
+		PrintAndLogEx(SUCCESS, "ICC PK recovered. RID %s IDX %02hhx CSN %s\n",
+				sprint_hex(icc_pk->rid, 5),
+				icc_pk->index,
+				sprint_hex(icc_pk->serial, 3)
+				);
+		
+		PrintAndLogEx(INFO, "ICC pk modulus: %s", sprint_hex_inrow(icc_pk->modulus, icc_pk->mlen));
+		
+		//	icc_pk->exp, icc_pk->elen
+		//	icc_pk->modulus, icc_pk->mlen
+		if (icc_pk->elen > 0 && icc_pk->mlen > 0) {
+			if (emv_rocacheck(icc_pk->modulus, icc_pk->mlen, true)) {
+				PrintAndLogEx(INFO, "ICC pk is a subject to ROCA vulnerability, insecure..");
+			} else {
+				PrintAndLogEx(INFO, "ICC pk is OK(");
+			}
+		}		
+		
+		PKISetStrictExecution(true);
+	}
+
+out:
+	
+	// free tlv object
+	tlvdb_free(tlvRoot);
+
+	DropFieldEx( channel );
+	return 0;
 }
 
 static command_t CommandTable[] =  {
@@ -1489,13 +1951,14 @@ static command_t CommandTable[] =  {
 	{"scan",		CmdEMVScan,						0,	"Scan EMV card and save it contents to json file for emulator."},
 	{"test",		CmdEMVTest,						0,	"Crypto logic test."},
 	/*
-	{"getrng",		CmdEMVGetrng,	  0, "get random number from terminal"}, 
-	{"eload",		CmdEmvELoad, 	  0, "load EMV tag into device"},
-	{"dump",		CmdEmvDump,	  0, "dump EMV tag values"},
-	{"sim",			CmdEmvSim,	  0, "simulate EMV tag"},
-	{"clone",		CmdEmvClone,	  0, "clone an EMV tag"}, 
+	{"getrng",		CmdEMVGetrng,	  				0, "get random number from terminal"}, 
+	{"eload",		CmdEmvELoad, 	  				0, "load EMV tag into device"},
+	{"dump",		CmdEmvDump,	  					0, "dump EMV tag values"},
+	{"sim",			CmdEmvSim,	  					0, "simulate EMV tag"},
+	{"clone",		CmdEmvClone,	  				0, "clone an EMV tag"}, 
 	*/
-	{"list",	CmdEMVList,	  0, "[Deprecated] List ISO7816 history"}, 
+	{"list",		CmdEMVList,	  					0, "[Deprecated] List ISO7816 history"}, 
+	{"roca",		CmdEMVRoca,	  					0, "Extract public keys and run ROCA test"}, 
 	{NULL, NULL, 0, NULL}
 };
 

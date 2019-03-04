@@ -80,7 +80,7 @@ void setT55xxConfig(uint8_t arg0, t55xx_config *c) {
 
 	printT55xxConfig();
 
-#if WITH_FLASH
+#ifdef WITH_FLASH
 	// shall persist to flashmem
 	if (arg0 == 0) {
 		return;
@@ -103,7 +103,7 @@ void setT55xxConfig(uint8_t arg0, t55xx_config *c) {
 	
 	Flash_CheckBusy(BUSY_TIMEOUT);
     Flash_WriteEnable();
-	Flash_Erase4k(3, 0xD);	
+	Flash_Erase4k(3, 0xD);
 	res = Flash_Write(T55XX_CONFIG_OFFSET, buf, T55XX_CONFIG_LEN);
 
 	if ( res == T55XX_CONFIG_LEN && MF_DBGLEVEL > 1) {
@@ -119,7 +119,7 @@ t55xx_config* getT55xxConfig(void) {
 }
 
 void loadT55xxConfig(void) {
-#if WITH_FLASH
+#ifdef WITH_FLASH
     if (!FlashInit()) {
         return;
 	}
@@ -598,9 +598,11 @@ void SimulateTagLowFrequencyEx(int period, int gap, int ledcontrol, int numcycle
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;
 	AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
 	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
+	
+	uint8_t check = 1;
 
 	for(;;) {
-
+	
 		if ( numcycles > -1 ) {
 			if ( x != numcycles ) {
 				++x;
@@ -616,9 +618,11 @@ void SimulateTagLowFrequencyEx(int period, int gap, int ledcontrol, int numcycle
 		// used as a simple detection of a reader field?
 		while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
 			WDT_HIT();
-			if ( usb_poll_validate_length() || BUTTON_PRESS() )
-				goto OUT;
-		}
+			if ( !check ) {
+				if ( usb_poll_validate_length() || BUTTON_PRESS() )
+					goto OUT;
+			}
+			++check;		}
 
 		if (buf[i])
 			OPEN_COIL();
@@ -628,9 +632,11 @@ void SimulateTagLowFrequencyEx(int period, int gap, int ledcontrol, int numcycle
 		//wait until SSC_CLK goes LOW
 		while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
 			WDT_HIT();
-			//if ( usb_poll_validate_length() || BUTTON_PRESS() )
-			if ( BUTTON_PRESS() )
-				goto OUT;
+			if ( !check ) {
+				if ( usb_poll_validate_length() || BUTTON_PRESS() )
+					goto OUT;
+			}
+			++check;
 		}
 
 		i++;
@@ -1489,11 +1495,22 @@ void T55xxWriteBlock(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t arg) {
 // Read one card block in page [page]
 void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 	LED_A_ON();
-	bool PwdMode = arg0 & 0x1;
-	uint8_t Page = (arg0 & 0x2) >> 1;
-	uint32_t i = 0;
-	bool RegReadMode = (Block == 0xFF);//regular read mode
+	bool PwdMode =    arg0 & 0x1;
+	uint8_t Page =  ( arg0 & 0x2 ) >> 1;
+	bool brute_mem =  arg0 & 0x4;
 
+	uint32_t i = 0;
+	
+	// regular read mode
+	bool RegReadMode = (Block == 0xFF); 
+
+	uint8_t start_wait = 4;
+	size_t samples = 12000;
+	if ( brute_mem ) {
+		start_wait = 0;
+		samples = 1024;
+	}
+	
 	//clear buffer now so it does not interfere with timing later
 	BigBuf_Clear_keep_EM();
 
@@ -1505,7 +1522,8 @@ void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 	// Set up FPGA, 125kHz to power up the tag
 	LFSetupFPGAForADC(95, true);
 	// make sure tag is fully powered up...
-	WaitMS(4);
+	WaitMS(start_wait);
+	
 	// Trigger T55x7 Direct Access Mode with start gap
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	WaitUS(t_config.start_gap);
@@ -1529,17 +1547,118 @@ void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 
 	// Turn field on to read the response
 	// 137*8 seems to get to the start of data pretty well...
-	//  but we want to go past the start and let the repeating data settle in...
-	TurnReadLFOn(210*8);
+	// but we want to go past the start and let the repeating data settle in...
+	TurnReadLFOn(200*8);
 
 	// Acquisition
 	// Now do the acquisition
-	DoPartialAcquisition(0, true, 12000, 0);
+	DoPartialAcquisition(0, true, samples, 0);
 
 	// Turn the field off
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
-	cmd_send(CMD_ACK,0,0,0,0,0);
-	LED_A_OFF();
+	if ( !brute_mem ) {
+		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+		cmd_send(CMD_ACK,0,0,0,0,0);
+		LED_A_OFF();
+	}
+}
+
+void T55xx_ChkPwds() {
+
+	DbpString("[+] T55XX Check pwds using flashmemory starting");
+
+	uint8_t ret = 0;
+	// First get baseline and setup LF mode.
+	// tends to mess up BigBuf
+	uint8_t *buf = BigBuf_get_addr();
+	
+	uint32_t b1, baseline = 0;
+	
+	// collect baseline for failed attempt
+	uint8_t x = 32;
+	while (x--) {
+		b1 = 0;
+		T55xxReadBlock(4, 1, 0);
+		for (uint16_t j=0; j < 1024; ++j)
+			b1 += buf[j];
+		
+		b1 *= b1;
+		b1 >>= 8; 		
+		baseline += b1;
+	}
+
+	baseline >>= 5;
+	Dbprintf("[=] Baseline determined [%u]", baseline);	
+
+	
+	uint8_t *pwds = BigBuf_get_EM_addr();
+	uint16_t pwdCount = 0;
+	uint32_t candidate = 0;
+
+#ifdef WITH_FLASH
+	bool use_flashmem = true;
+	if ( use_flashmem ) {
+		BigBuf_Clear_EM();
+		uint16_t isok = 0;
+		uint8_t counter[2] = {0x00, 0x00};		
+		isok = Flash_ReadData(DEFAULT_T55XX_KEYS_OFFSET, counter, sizeof(counter) );
+		if ( isok != sizeof(counter) )
+			goto OUT;
+		
+		pwdCount = counter[1] << 8 | counter[0];
+		
+		if ( pwdCount == 0 && pwdCount == 0xFFFF) 
+			goto OUT;
+
+		isok = Flash_ReadData(DEFAULT_T55XX_KEYS_OFFSET+2, pwds, pwdCount * 4);
+		if ( isok != pwdCount * 4 )
+			goto OUT;
+		
+		Dbprintf("[=] Password dictionary count %d ", pwdCount);
+	}
+#endif
+
+	uint32_t pwd = 0, curr = 0, prev = 0;
+	for (uint16_t i =0; i< pwdCount; ++i) {
+
+		if (BUTTON_PRESS() && !usb_poll_validate_length()) {
+			goto OUT;
+		}
+		
+		pwd = bytes_to_num(pwds + i * 4, 4);
+	
+
+		T55xxReadBlock(5, 0, pwd);
+		
+		// calc mean of BigBuf 1024 samples.
+		uint32_t sum = 0;
+		for (uint16_t j=0; j<1024; ++j) {
+			sum += buf[j];
+		}
+		
+		sum *= sum;
+		sum >>= 8;
+		
+		int32_t tmp = (sum - baseline);
+		curr = ABS(tmp);
+		
+		Dbprintf("[=] Pwd %08X  | ABS %u", pwd, curr );
+			
+		if ( curr > prev ) {
+			
+					
+			Dbprintf("[=]  --> ABS %u  Candidate %08X <--", curr, pwd );
+			candidate = pwd;
+			prev = curr;
+		}
+	}
+	
+	if ( candidate )
+		ret = 1;
+		
+OUT:
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	cmd_send(CMD_ACK,ret,candidate,0,0,0);
+	LEDsoff();
 }
 
 void T55xxWakeUp(uint32_t Pwd){
@@ -1970,7 +2089,6 @@ void EM4xWriteWord(uint32_t flag, uint32_t data, uint32_t pwd) {
 	//Wait 20ms for write to complete?
 	WaitMS(7);
 
-	//Capture response if one exists
 	DoPartialAcquisition(20, true, 6000, 1000);
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -1994,7 +2112,7 @@ This triggers a COTAG tag to response
 */
 void Cotag(uint32_t arg0) {
 #ifndef OFF
-# define OFF 	{ FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); WaitUS(2035); }
+# define OFF(x) 	{ FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); WaitUS((x)); }
 #endif
 #ifndef ON
 # define ON(x)   { FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD); WaitUS((x)); }
@@ -2003,29 +2121,15 @@ void Cotag(uint32_t arg0) {
 
 	LED_A_ON();
 
-	// Switching to LF image on FPGA. This might empty BigBuff
-	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-
+	LFSetupFPGAForADC(89, true);
+		
 	//clear buffer now so it does not interfere with timing later
 	BigBuf_Clear_ext(false);
 
-	// Set up FPGA, 132kHz to power up the tag
-	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 89);
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
-
-	// Connect the A/D to the peak-detected low-frequency path.
-	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-
-	// Now set up the SSC to get the ADC samples that are now streaming at us.
-	FpgaSetupSsc();
-
-	// start clock - 1.5ticks is 1us
-	StartTicks();
-
 	//send COTAG start pulse
-	ON(740)  OFF
-	ON(3330) OFF
-	ON(740)  OFF
+	ON(740)  OFF(2035)
+	ON(3330) OFF(2035)
+	ON(740)  OFF(2035)
 	ON(1000)
 
 	switch(rawsignal) {

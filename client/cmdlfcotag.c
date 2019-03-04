@@ -58,7 +58,7 @@ int CmdCOTAGDemod(const char *Cmd) {
 	  0 1001 1100 1100 0001 1000 0101 0000 0000 100001010000000001111011100000011010000010000000000000000000000000000000000000000000000000000000100111001100000110000101000
         1001 1100 1100 0001                     10000101                                                                                         
 	*/
-	PrintAndLogEx(NORMAL, "COTAG Found: FC %u, CN: %u Raw: %08X%08X%08X%08X", fc, cn, raw1 ,raw2, raw3, raw4);
+	PrintAndLogEx(SUCCESS, "COTAG Found: FC %u, CN: %u Raw: %08X%08X%08X%08X", fc, cn, raw1 ,raw2, raw3, raw4);
 	return 1;
 }
 

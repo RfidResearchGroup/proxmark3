@@ -23,18 +23,19 @@
 #include "cmdparser.h"
 #include "common.h"
 #include "util.h"
-#include "mifare.h" 		// nonces_t struct
-#include "mfkey.h"  		// mfkey32_moebious
+#include "mifare.h" 				// nonces_t struct
+#include "mifare/mfkey.h"   		// mfkey32_moebious
 #include "cmdhfmfhard.h"
-#include "mifarehost.h"		// icesector_t,  sector_t
-#include "util_posix.h"		// msclock
-#include "mifaredefault.h"  // mifare default key array
-#include "cmdhf14a.h" 		// dropfield
-#include "cliparser/cliparser.h" // argtable
+#include "mifare/mifarehost.h"		// icesector_t,  sector_t
+#include "util_posix.h"				// msclock
+#include "mifare/mifaredefault.h"  	// mifare default key array
+#include "cmdhf14a.h" 				// dropfield
+#include "cliparser/cliparser.h" 	// argtable
 #include "hardnested/hardnested_bf_core.h"	// SetSIMDInstr
 
 extern int CmdHFMF(const char *Cmd);
 
+extern int CmdHF14AMfList(const char *Cmd);
 extern int CmdHF14AMfDbg(const char* cmd);
 extern int CmdHF14AMfRdBl(const char* cmd);
 extern int CmdHF14AMfURdBl(const char* cmd);
@@ -45,7 +46,7 @@ extern int CmdHF14AMfRestore(const char* cmd);
 extern int CmdHF14AMfWrBl(const char* cmd);
 extern int CmdHF14AMfUWrBl(const char* cmd);
 extern int CmdHF14AMfChk(const char* cmd);
-extern int CmdHF14ADarkside(const char* cmd);
+extern int CmdHF14AMfDarkside(const char* cmd);
 extern int CmdHF14AMfNested(const char* cmd);
 extern int CmdHF14AMfNestedHard(const char *Cmd);
 //extern int CmdHF14AMfSniff(const char* cmd);

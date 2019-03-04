@@ -113,7 +113,7 @@ void print_result(char *name, uint8_t *buf, size_t len) {
 void DbpStringEx(char *str, uint32_t cmd) {
 #if DEBUG
 	uint8_t len = strlen(str);
-	cmd_send(CMD_DEBUG_PRINT_STRING, len, cmd, 0, (byte_t*)str, len);
+	cmd_send(CMD_DEBUG_PRINT_STRING, len, cmd, 0, (uint8_t*)str, len);
 #endif	
 }
 
@@ -307,10 +307,10 @@ void MeasureAntennaTuningHf(void) {
 		} else {
 			volt = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
 		}
-		DbprintfEx(CMD_MEASURE_ANTENNA_TUNING_HF, "%u mV / %5u V", volt, (uint16_t)(volt/1000));
+		DbprintfEx(FLAG_NONEWLINE, "%u mV / %5u V", volt, (uint16_t)(volt/1000));
 	}
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	DbpString("\n[+] cancelled");
+	DbprintfEx(FLAG_NOOPT, "\n[+] cancelled", 1);
 }
 
 void ReadMem(int addr) {
@@ -723,6 +723,9 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			break;
 		case CMD_T55XX_RESET_READ:
 			T55xxResetRead();
+			break;
+		case CMD_T55XX_CHKPWDS:
+			T55xx_ChkPwds();
 			break;
 		case CMD_PCF7931_READ:
 			ReadPCF7931();
@@ -1250,11 +1253,11 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			
 			size_t size = MIN(USB_CMD_DATA_SIZE, len);
 			
-			uint8_t *mem = BigBuf_malloc(size);
-	
-  			if (!FlashInit()) {
+			if (!FlashInit()) {
    		       break;
   		    }
+
+			uint8_t *mem = BigBuf_malloc(size);
 			
 			for(size_t i = 0; i < len; i += size) {
 				len = MIN((len - i), size);
@@ -1268,6 +1271,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 					break;
 				}
 			}
+			BigBuf_free();
 			FlashStop();
 			LED_B_OFF();
 			break;
@@ -1285,10 +1289,20 @@ void UsbPacketReceived(uint8_t *packet, int len) {
   			if (!FlashInit()) {
    		       break;
   		    }
-    
+
   		    Flash_CheckBusy(BUSY_TIMEOUT);
   		    Flash_WriteEnable();
+			
+			if ( startidx == DEFAULT_T55XX_KEYS_OFFSET  )
+				Flash_Erase4k(3, 0xC);
+			else if (startidx ==  DEFAULT_MF_KEYS_OFFSET )
+				Flash_Erase4k(3, 0xB);
+			else if (startidx == DEFAULT_ICLASS_KEYS_OFFSET)
+				Flash_Erase4k(3, 0xA);
 
+  		    Flash_CheckBusy(BUSY_TIMEOUT);
+  		    Flash_WriteEnable();			
+			
 			// inside 256b page?
 			if ( (tmp & 0xFF) != 0) {				
 				

@@ -3,6 +3,20 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Chg 'data autocorrelate' - better visual representation and added extra peak detection (@iceman)
+ - Fix 'lf search' - false positive indala identification fixed (@iceman)
+ - Add 'lf keri' - basic support for Keri tags (@iceman)
+ - Add 'hf mf list' - re-added it again (@iceman)
+ - Fix - A lot of bugfixes, like memory leaks (@iceman)
+ - Change 'hf 14a antifuzz' - original implementation (@asfabw),  reworked a bit
+ - Fix 'hf mf fchk' (@iceman)
+ - Fix 'usb slow on posix based systems' (@fl0-0)
+ - Change 'lf pcf7931' - improved read code (@sguerrini97)
+ - Change 'hf felica list' - started with some FeliCa annotations (@iceman)
+ - Fix 'hf tune' - now works as expected (@iceman)
+ - Add 'option to use flash memory to upload dictionary files' (RDV40) (@iceman)
+ - Fix 'printing percentage now standard compliant' (@fabled)
+ - Add 'emv roca' - command to test for ROCA vuln in public RSA modulus (@merlokk / @iceman)
  - Added TCP ports support (on linux) (@phcoder)
  - Added HF sniff standalone mode with optional storing of ULC/NTAG/ULEV1 authentication attempts (@bogiton)
  - Fix 'Lining up plot and control window' (@anticat)
@@ -88,6 +102,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added `hf emv` `gpo`, `readrec`, `genac`, `challenge`, `intauth` - separate commands from `hf emc exec` (@merlokk)
  - Added  `hf fido` `assert` and `make` commands from fido2 protocol (authenticatorMakeCredential and authenticatorGetAssertion) (@merlokk)
  - Added trailer block decoding to `hf mf rdbl` and `hf mf cgetbl` (@merlokk)
+ - Added `hf mf mad` and `hf mfp mad` MAD decode, check and print commands (@merlokk)
  
 ### Fixed
 - Changed driver file proxmark3.inf to support both old and new Product/Vendor IDs (piwi)

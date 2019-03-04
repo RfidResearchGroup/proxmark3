@@ -175,7 +175,8 @@ static const struct emv_tag emv_tags[] = {
 	// internal
 	{ 0x00  , "Unknown ???" },
 	{ 0x01  , "", EMV_TAG_STRING }, // string for headers
-	{ 0x02  , "Raw data", }, // data
+	{ 0x02  , "Raw data" }, // data
+	{ 0x06  , "Object Identifier (OID)" },
 	{ 0x20  , "Cardholder Verification Results (CVR)", EMV_TAG_CVR }, // not standard!
 	{ 0x21  , "Input list for Offline Data Authentication" }, // not standard! data for "Offline Data Authentication" come from "read records" command. (EMV book3 10.3)
 
@@ -184,6 +185,9 @@ static const struct emv_tag emv_tags[] = {
 	{ 0x42  , "Issuer Identification Number (IIN)" },
 	{ 0x4f  , "Application Dedicated File (ADF) Name" },
 	{ 0x50  , "Application Label", EMV_TAG_STRING },
+	{ 0x51  , "File reference data element" },
+	{ 0x52  , "Command APDU" },
+	{ 0x53  , "Discretionary data (or template)" },
 	{ 0x56  , "Track 1 Data" },
 	{ 0x57  , "Track 2 Equivalent Data" },
 	{ 0x5a  , "Application Primary Account Number (PAN)" },
@@ -195,16 +199,29 @@ static const struct emv_tag emv_tags[] = {
 	{ 0x5f2d, "Language Preference", EMV_TAG_STRING },
 	{ 0x5f30, "Service Code", EMV_TAG_NUMERIC },
 	{ 0x5f34, "Application Primary Account Number (PAN) Sequence Number", EMV_TAG_NUMERIC },
+	{ 0x5f36, "Transaction Currency Exponent",  EMV_TAG_NUMERIC },	
+	{ 0x5f50, "Issuer URL", EMV_TAG_STRING },
+	{ 0x5f53, "International Bank Account Number (IBAN)" },
+	{ 0x5f54, "Bank Identifier Code (BIC)" },
+	{ 0x5f55, "Issuer Country Code (alpha2 format)", EMV_TAG_STRING },
+	{ 0x5f56, "Issuer Country Code (alpha3 format)", EMV_TAG_STRING },
+		
 	{ 0x61  , "Application Template" },
 	{ 0x6f  , "File Control Information (FCI) Template" },
 	{ 0x70  , "READ RECORD Response Message Template" },
+	{ 0x71  , "Issues Script Template 1" },
+	{ 0x72  , "Issues Script Template 2" },
+	{ 0x73  , "Directory Discretionary Template" },
 	{ 0x77  , "Response Message Template Format 2" },
 	{ 0x80  , "Response Message Template Format 1" },
+	{ 0x81  , "Amount, Authorised (Binary)" },
 	{ 0x82  , "Application Interchange Profile", EMV_TAG_BITMASK, &EMV_AIP },
 	{ 0x83  , "Command Template" },
 	{ 0x84  , "Dedicated File (DF) Name" },
+	{ 0x86	, "Issuer Script Command" },
 	{ 0x87  , "Application Priority Indicator" },
 	{ 0x88  , "Short File Identifier (SFI)" },
+	{ 0x89  , "Authorisation Code" },
 	{ 0x8a  , "Authorisation Response Code" },
 	{ 0x8c  , "Card Risk Management Data Object List 1 (CDOL1)", EMV_TAG_DOL },
 	{ 0x8d  , "Card Risk Management Data Object List 2 (CDOL2)", EMV_TAG_DOL },
@@ -216,14 +233,25 @@ static const struct emv_tag emv_tags[] = {
 	{ 0x93  , "Signed Static Application Data" },
 	{ 0x94  , "Application File Locator (AFL)", EMV_TAG_AFL },
 	{ 0x95  , "Terminal Verification Results" },
+	{ 0x97  , "Transaction Certificate Data Object List (TDOL)" },
+	{ 0x98  , "Transaction Certificate (TC) Hash Value" },
+	{ 0x99  , "Transaction Personal Identification Number (PIN) Data" },
 	{ 0x9a  , "Transaction Date", EMV_TAG_YYMMDD },
-	{ 0x9c  , "Transaction Type" },
+	{ 0x9b  , "Transaction Status Information" },
+	{ 0x9c  , "Transaction Type", EMV_TAG_NUMERIC },
+	{ 0x9d  , "Directory Definition File (DDF) Name" },
+	
+	{ 0x9f01, "Acquirer Identifier", EMV_TAG_NUMERIC },
 	{ 0x9f02, "Amount, Authorised (Numeric)", EMV_TAG_NUMERIC },
-	{ 0x9f03, "Amount, Other (Numeric)", EMV_TAG_NUMERIC, },
+	{ 0x9f03, "Amount, Other (Numeric)", EMV_TAG_NUMERIC },
+	{ 0x9f04, "Amount, Other (Binary)", EMV_TAG_NUMERIC },
+	{ 0x9f05, "Application Discretionary Data" },
 	{ 0x9f06, "Application Identifier (AID), Terminal. ISO 7816-5" },
 	{ 0x9f07, "Application Usage Control", EMV_TAG_BITMASK, &EMV_AUC },
 	{ 0x9f08, "Application Version Number" },
+	{ 0x9f09, "Application Version Number - terminal" },
 	{ 0x9f0a, "Application Selection Registered Proprietary Data" }, // https://blog.ul-ts.com/posts/electronic-card-identifier-one-more-step-for-mif-compliance/
+	{ 0x9f0b, "Cardholder Name Extended", EMV_TAG_STRING },
 	{ 0x9f0d, "Issuer Action Code - Default", EMV_TAG_BITMASK, &EMV_TVR },
 	{ 0x9f0e, "Issuer Action Code - Denial", EMV_TAG_BITMASK, &EMV_TVR },
 	{ 0x9f0f, "Issuer Action Code - Online", EMV_TAG_BITMASK, &EMV_TVR },
@@ -231,10 +259,21 @@ static const struct emv_tag emv_tags[] = {
 	{ 0x9f11, "Issuer Code Table Index", EMV_TAG_NUMERIC },
 	{ 0x9f12, "Application Preferred Name", EMV_TAG_STRING },
 	{ 0x9f13, "Last Online Application Transaction Counter (ATC) Register" },
+	{ 0x9f14, "Lower Consecutive Offline Limit" },
+	{ 0x9f15, "Merchant Category Code", EMV_TAG_NUMERIC },
+	{ 0x9f16, "Merchant Identifier", EMV_TAG_STRING },
 	{ 0x9f17, "Personal Identification Number (PIN) Try Counter" },
+	{ 0x9f18, "Issuer Script Identifier" },
 	{ 0x9f1a, "Terminal Country Code" },
+	{ 0x9f1b, "Terminal Floor Limit" },
+	{ 0x9f1c, "Terminal Identification", EMV_TAG_STRING },
+	{ 0x9f1d, "Terminal Risk Management Data" },
+	{ 0x9f1e, "Interface Device (IFD) Serial Number", EMV_TAG_STRING },	
 	{ 0x9f1f, "Track 1 Discretionary Data", EMV_TAG_STRING },
-	{ 0x9f21, "Transaction Time" },
+	{ 0x9f20, "Track 2 Discretionary Data", EMV_TAG_STRING },
+	{ 0x9f21, "Transaction Time" },	
+	{ 0x9f22, "Certification Authority Public Key Index - Terminal" },
+	{ 0x9f23, "Upper Consecutive Offline Limit" },
 	{ 0x9f26, "Application Cryptogram" },
 	{ 0x9f27, "Cryptogram Information Data", EMV_TAG_CID },
 	{ 0x9f2a, "Kernel Identifier" },
@@ -242,12 +281,21 @@ static const struct emv_tag emv_tags[] = {
 	{ 0x9f2e, "ICC PIN Encipherment Public Key Exponent" },
 	{ 0x9f2f, "ICC PIN Encipherment Public Key Remainder" },
 	{ 0x9f32, "Issuer Public Key Exponent" },
+	{ 0x9f33, "Terminal Capabilities" },
 	{ 0x9f34, "Cardholder Verification Method (CVM) Results" },
 	{ 0x9f35, "Terminal Type" },
 	{ 0x9f36, "Application Transaction Counter (ATC)" },
 	{ 0x9f37, "Unpredictable Number" },
 	{ 0x9f38, "Processing Options Data Object List (PDOL)", EMV_TAG_DOL },
+	{ 0x9f39, "Point-of-Service (POS) Entry Mode", EMV_TAG_NUMERIC },
+	{ 0x9f3a, "Amount, Reference Currency" },
+	{ 0x9f3b, "Application Reference Currency", EMV_TAG_NUMERIC },
+	{ 0x9f3c, "Transaction Reference Currency Code", EMV_TAG_NUMERIC },
+	{ 0x9f3d, "Transaction Reference Currency Exponent", EMV_TAG_NUMERIC },
+	{ 0x9f40, "Additional Terminal Capabilities" },
+	{ 0x9f41, "Transaction Sequence Counter", EMV_TAG_NUMERIC },
 	{ 0x9f42, "Application Currency Code", EMV_TAG_NUMERIC },
+	{ 0x9f43, "Application Reference Currency Exponent", EMV_TAG_NUMERIC },
 	{ 0x9f44, "Application Currency Exponent", EMV_TAG_NUMERIC },
 	{ 0x9f45, "Data Authentication Code" },
 	{ 0x9f46, "ICC Public Key Certificate" },
@@ -258,41 +306,136 @@ static const struct emv_tag emv_tags[] = {
 	{ 0x9f4b, "Signed Dynamic Application Data" },
 	{ 0x9f4c, "ICC Dynamic Number" },
 	{ 0x9f4d, "Log Entry" },
+	{ 0x9f4e, "Merchant Name and Location", EMV_TAG_STRING },
 	{ 0x9f4f, "Log Format", EMV_TAG_DOL },
+	
+	{ 0x9f50, "Offline Accumulator Balance" },
+	{ 0x9f51, "Application Currency Code" },
+	{ 0x9f51, "DRDOL" },
+
+	{ 0x9f52, "Application Default Action (ADA)" },
+	{ 0x9f52, "Terminal Compatibility Indicator" },
+	
+	{ 0x9f53, "Transaction Category Code" },
+	{ 0x9f54, "DS ODS Card" },
+	
+	{ 0x9f55, "Mobile Support Indicator" },	
+	{ 0x9f55, "Issuer Authentication Flags" },
+	
+	{ 0x9f56, "Issuer Authentication Indicator" },
+	{ 0x9f57, "Issuer Country Code" },
+	{ 0x9f58, "Consecutive Transaction Counter Limit (CTCL)" },
+	{ 0x9f59, "Consecutive Transaction Counter Upper Limit (CTCUL)" },
+	{ 0x9f5A, "Application Program Identifier" },
+	{ 0x9f5b, "Issuer Script Results" },
+	{ 0x9f5c, "Cumulative Total Transaction Amount Upper Limit (CTTAUL)" },
+	{ 0x9f5d, "Application Capabilities Information" },
+	{ 0x9f5e, "Data Storage Identifier" },
+	{ 0x9f5f, "DS Slot Availability" },
+	
 	{ 0x9f60, "CVC3 (Track1)" },
 	{ 0x9f61, "CVC3 (Track2)" },
-	{ 0x9f62, "PCVC3(Track1)" },
-	{ 0x9f63, "PUNATC(Track1)" },
-	{ 0x9f64, "NATC(Track1)" },
-	{ 0x9f65, "PCVC3(Track2)" },
-	{ 0x9f66, "PUNATC(Track2) / Terminal Transaction Qualifiers (TTQ)", EMV_TAG_BITMASK, &EMV_TTQ },
-	{ 0x9f67, "NATC(Track2) / MSD Offset" },
+	{ 0x9f62, "PCVC3 (Track1)" },
+	{ 0x9f63, "PUNATC (Track1)" },
+	{ 0x9f64, "NATC (Track1)" },
+	{ 0x9f65, "PCVC3 (Track2)" },
+	{ 0x9f66, "PUNATC (Track2) / Terminal Transaction Qualifiers (TTQ)", EMV_TAG_BITMASK, &EMV_TTQ },
+	{ 0x9f67, "NATC (Track2) / MSD Offset" },
 	{ 0x9f68, "Cardholder verification method list (PayPass)" },
-	{ 0x9f69, "Card Authentication Related Data" },
+	{ 0x9f69, "Card Authentication Related Data (UDOL)" },
 	{ 0x9f6a, "Unpredictable Number", EMV_TAG_NUMERIC },
 	{ 0x9f6b, "Track 2 Data" },
 	{ 0x9f6c, "Card Transaction Qualifiers (CTQ)", EMV_TAG_BITMASK, &EMV_CTQ },
+	{ 0x9f6d, "Mag-stripe Application Version Number (Reader)" },
 	{ 0x9f6e, "Form Factor Indicator" },
+	{ 0x9f6f, "DS Slot Management Control" },
+
+	{ 0x9f70, "Protected Data Envelope 1" },
+	{ 0x9f71, "Protected Data Envelope 2" },
+	{ 0x9f72, "Protected Data Envelope 3" },
+	{ 0x9f73, "Protected Data Envelope 4" },
+	{ 0x9f74, "Protected Data Envelope 5" },
+	{ 0x9f75, "Unprotected Data Envelope 1" },
+	{ 0x9f76, "Unprotected Data Envelope 2" },
+	{ 0x9f77, "Unprotected Data Envelope 3" },
+	{ 0x9f78, "Unprotected Data Envelope 4" },
+	{ 0x9f79, "Unprotected Data Envelope 5" },
+	{ 0x9f7c, "Merchant Custom Data / Customer Exclusive Data (CED)" },
+	{ 0x9f7d, "DS Summary 1" },
+	{ 0x9f7f, "DS Unpredictable Number" },
+
 	{ 0xa5  , "File Control Information (FCI) Proprietary Template" },
 	{ 0xbf0c, "File Control Information (FCI) Issuer Discretionary Data" },
 	{ 0xdf20, "Issuer Proprietary Bitmap (IPB)" },
+	{ 0xdf4b, "POS Cardholder Interaction Information" },
+	{ 0xdf60, "VISA Log Entry" },
+	{ 0xdf61, "DS Digest H" },
+	{ 0xdf62, "DS ODS Info" },
+	{ 0xdf63, "DS ODS Term" },
+
+	{ 0xdf8104, "Balance Read Before Gen AC" },
+	{ 0xdf8105, "Balance Read After Gen AC" },
+	{ 0xdf8106, "Data Needed" },
+	{ 0xdf8107, "CDOL1 Related Data" },
+	{ 0xdf8108, "DS AC Type" },
+	{ 0xdf8109, "DS Input (Term)" },
+	{ 0xdf810a, "DS ODS Info For Reader" },
+	{ 0xdf810b, "DS Summary Status" },
+	{ 0xdf810c, "Kernel ID" },
+	{ 0xdf810d, "DSVN Term" },
+	{ 0xdf810e, "Post-Gen AC Put Data Status" },
+	{ 0xdf810f, "Pre-Gen AC Put Data Status" },
+	{ 0xdf8110, "Proceed To First Write Flag" },
+	{ 0xdf8111, "PDOL Related Data" },
+	{ 0xdf8112, "Tags To Read" },
+	{ 0xdf8113, "DRDOL Related Data" },
+	{ 0xdf8114, "Reference Control Parameter" },
+	{ 0xdf8115, "Error Indication" },
+	{ 0xdf8116, "User Interface Request Data" },
+	{ 0xdf8117, "Card Data Input Capability" },
+	{ 0xdf8118, "CVM Capability - CVM Required" },
+	{ 0xdf8119, "CVM Capability - No CVM Required" },
+	{ 0xdf811a, "Default UDOL" },
+	{ 0xdf811b, "Kernel Configuration" },
+	{ 0xdf811c, "Max Lifetime of Torn Transaction Log Record" },
+	{ 0xdf811d, "Max Number of Torn Transaction Log Records" },
+	{ 0xdf811e, "Mag-stripe CVM Capability – CVM Required" },
+	{ 0xdf811f, "Security Capability" },
+	{ 0xdf8120, "Terminal Action Code – Default" },
+	{ 0xdf8121, "Terminal Action Code – Denial" },
+	{ 0xdf8122, "Terminal Action Code – Online" },
+	{ 0xdf8123, "Reader Contactless Floor Limit" },
+	{ 0xdf8124, "Reader Contactless Transaction Limit (No On-device CVM)" },
+	{ 0xdf8125, "Reader Contactless Transaction Limit (On-device CVM)" },
+	{ 0xdf8126, "Reader CVM Required Limit" },
+	{ 0xdf8127, "TIME_OUT_VALUE" },
+	{ 0xdf8128, "IDS Status" },
+	{ 0xdf8129, "Outcome Parameter Set" },
+	{ 0xdf812a, "DD Card (Track1)" },
+	{ 0xdf812b, "DD Card (Track2)" },
+	{ 0xdf812c, "Mag-stripe CVM Capability – No CVM Required" },
+	{ 0xdf812d, "Message Hold Time" },
+
+	{ 0xff8101, "Torn Record" },
+	{ 0xff8102, "Tags To Write Before Gen AC" },
+	{ 0xff8103, "Tags To Write After Gen AC" },
+	{ 0xff8104, "Data To Send" },
+	{ 0xff8105, "Data Record" },
+	{ 0xff8106, "Discretionary Data" },	
 };
 
-static int emv_sort_tag(tlv_tag_t tag)
-{
+static int emv_sort_tag(tlv_tag_t tag) {
 	return (int)(tag >= 0x100 ? tag : tag << 8);
 }
 
-static int emv_tlv_compare(const void *a, const void *b)
-{
+static int emv_tlv_compare(const void *a, const void *b) {
 	const struct tlv *tlv = a;
 	const struct emv_tag *tag = b;
 
 	return emv_sort_tag(tlv->tag) - (emv_sort_tag(tag->tag));
 }
 
-static const struct emv_tag *emv_get_tag(const struct tlv *tlv)
-{
+static const struct emv_tag *emv_get_tag(const struct tlv *tlv) {
 	struct emv_tag *tag = bsearch(tlv, emv_tags, sizeof(emv_tags)/sizeof(emv_tags[0]),
 			sizeof(emv_tags[0]), emv_tlv_compare);
 
@@ -310,8 +453,7 @@ static const char *bitstrings[] = {
 	"1.......",
 };
 
-static void emv_tag_dump_bitmask(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level)
-{
+static void emv_tag_dump_bitmask(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
 	const struct emv_tag_bit *bits = tag->data;
 	unsigned bit, byte;
 
@@ -331,8 +473,7 @@ static void emv_tag_dump_bitmask(const struct tlv *tlv, const struct emv_tag *ta
 	}
 }
 
-static void emv_tag_dump_dol(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level)
-{
+static void emv_tag_dump_dol(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
 	const unsigned char *buf = tlv->value;
 	size_t left = tlv->len;
 
@@ -353,7 +494,7 @@ static void emv_tag_dump_dol(const struct tlv *tlv, const struct emv_tag *tag, F
 	}
 }
 
-static void emv_tag_dump_string(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level){
+static void emv_tag_dump_string(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
 	fprintf(f, "\tString value '");
 	fwrite(tlv->value, 1, tlv->len, f);
 	fprintf(f, "'\n");
@@ -468,8 +609,6 @@ static void emv_tag_dump_cvr(const struct tlv *tlv, const struct emv_tag *tag, F
 	
 	if (data[0] || data[1] || data[2] || data[3])
 		emv_tag_dump_bitmask(&bit_tlv, &bit_tag, f, level);
-	
-	return;
 }
 
 // EMV Book 3
@@ -512,12 +651,9 @@ static void emv_tag_dump_cid(const struct tlv *tlv, const struct emv_tag *tag, F
 				break;
 		}
 	}
-
-	return;
 }
 
-static void emv_tag_dump_cvm_list(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level)
-{
+static void emv_tag_dump_cvm_list(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
 	uint32_t X, Y;
 	int i;
 
@@ -615,7 +751,7 @@ static void emv_tag_dump_cvm_list(const struct tlv *tlv, const struct emv_tag *t
 	}
 }
 
-static void emv_tag_dump_afl(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level){
+static void emv_tag_dump_afl(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
 	if (tlv->len < 4 || tlv->len % 4) {
 		PRINT_INDENT(level);
 		fprintf(f, "\tINVALID!\n");
@@ -628,8 +764,7 @@ static void emv_tag_dump_afl(const struct tlv *tlv, const struct emv_tag *tag, F
 	}
 }
 
-bool emv_tag_dump(const struct tlv *tlv, FILE *f, int level)
-{
+bool emv_tag_dump(const struct tlv *tlv, FILE *f, int level) {
 	if (!tlv) {
 		fprintf(f, "NULL\n");
 		return false;
@@ -682,8 +817,7 @@ bool emv_tag_dump(const struct tlv *tlv, FILE *f, int level)
 	return true;
 }
 
-char *emv_get_tag_name(const struct tlv *tlv)
-{
+char *emv_get_tag_name(const struct tlv *tlv) {
 	static char *defstr = "";
 	
 	if (!tlv) 

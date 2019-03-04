@@ -428,8 +428,8 @@ void testPermute()
 	printarr("permuted", res, 8);
 }
 
-//These testcases are
-//{ UID , TEMP_KEY, DIV_KEY} using the specific key
+// These testcases are
+// { UID , TEMP_KEY, DIV_KEY} using the specific key
 typedef struct
 {
 	uint8_t uid[8];
@@ -475,7 +475,7 @@ int testDES(Testcase testcase, mbedtls_des_context ctx_enc, mbedtls_des_context 
 	return retval;
 }
 bool des_getParityBitFromKey(uint8_t key)
-{//The top 7 bits is used
+{ // The top 7 bits is used
 	bool parity = ((key & 0x80) >> 7)
 			^ ((key & 0x40) >> 6) ^ ((key & 0x20) >> 5)
 			^ ((key & 0x10) >> 4) ^ ((key & 0x08) >> 3)
@@ -676,7 +676,8 @@ static bool readKeyFile(uint8_t key[8]) {
 	bool retval = false;
 	
 	//Test a few variants
-	char filename[30];
+	char filename[30] = {0};
+	
 	if (fileExists("iclass_key.bin")){
 		sprintf(filename, "%s.bin", "iclass_key");
 	} else if (fileExists("loclass/iclass_key.bin")){
@@ -684,6 +685,9 @@ static bool readKeyFile(uint8_t key[8]) {
 	} else if (fileExists("client/loclass/iclass_key.bin")){
 		sprintf(filename, "%s.bin", "client/loclass/iclass_key");
 	}
+	
+	if ( strlen(filename) == 0 )
+		return retval;
 	
 	FILE *f = fopen(filename, "rb");
 	if (!f)

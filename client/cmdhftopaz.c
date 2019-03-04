@@ -194,7 +194,7 @@ static int topaz_print_CC(uint8_t *data) {
 	PrintAndLogEx(NORMAL, "  %02x: version %d.%d supported by tag", data[1], (data[1] & 0xF0) >> 4, data[1] & 0x0f);
 	uint16_t memsize = (data[2] + 1) * 8;
 	topaz_tag.size = memsize;
-	topaz_tag.dynamic_memory = malloc(memsize - TOPAZ_STATIC_MEMORY);
+	topaz_tag.dynamic_memory = calloc(memsize - TOPAZ_STATIC_MEMORY, sizeof(uint8_t));
 	PrintAndLogEx(NORMAL, "  %02x: Physical Memory Size of this tag: %d bytes", data[2], memsize);
 	PrintAndLogEx(NORMAL, "  %02x: %s / %s", data[3], 
 				(data[3] & 0xF0) ? "(RFU)" : "Read access granted without any security", 
@@ -278,12 +278,12 @@ static void topaz_print_control_TLVs(uint8_t *memory) {
 			dynamic_lock_area_t *old = topaz_tag.dynamic_lock_areas;
 			dynamic_lock_area_t *new = topaz_tag.dynamic_lock_areas;
 			if (old == NULL) {
-				new = topaz_tag.dynamic_lock_areas = (dynamic_lock_area_t *)malloc(sizeof(dynamic_lock_area_t));
+				new = topaz_tag.dynamic_lock_areas = (dynamic_lock_area_t *) calloc(sizeof(dynamic_lock_area_t) , sizeof(uint8_t));
 			} else {
 				while(old->next != NULL) {
 					old = old->next;
 				}
-				new = old->next = (dynamic_lock_area_t *)malloc(sizeof(dynamic_lock_area_t));
+				new = old->next = (dynamic_lock_area_t *) calloc(sizeof(dynamic_lock_area_t), sizeof(uint8_t));
 			}
 			new->next = NULL;
 			if (area_start <= next_lockable_byte) {

@@ -178,6 +178,14 @@
 }
 #endif
 
+#ifndef DropFieldEx
+#define DropFieldEx(x) { \
+	if ( (x) == ECC_CONTACTLESS) { \
+		DropField(); \
+	} \
+}
+#endif
+
 extern uint8_t g_debugMode;
 
 extern int ukbhit(void);

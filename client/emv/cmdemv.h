@@ -25,6 +25,7 @@
 #include "cmdmain.h"
 #include "emvcore.h"
 #include "apduinfo.h"
+#include "emv_roca.h"
 
 int CmdEMV(const char *Cmd);
 
@@ -34,5 +35,6 @@ extern int CmdEMVPPSE(const char *cmd);
 extern int CmdEMVExec(const char *cmd);
 extern int CmdEMVGetrng(const char *Cmd);
 extern int CmdEMVList(const char *Cmd);
+extern int CmdEMVRoca(const char *Cmd);
 
 #endif

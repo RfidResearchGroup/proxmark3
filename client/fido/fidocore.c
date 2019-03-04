@@ -250,9 +250,9 @@ int FIDOCheckDERAndGetKey(uint8_t *der, size_t derLen, bool verbose, uint8_t *pu
 	uint32_t verifyflags = 0;
 	res = mbedtls_x509_crt_verify(&cert, &cacert, NULL, NULL, &verifyflags, NULL, NULL);
 	if (res) {
-		PrintAndLog("ERROR: DER verify returned 0x%x - %s", (res<0)?-res:res, ecdsa_get_error(res));
+		PrintAndLog("ERROR: DER verify returned 0x%x - %s\n", (res<0)?-res:res, ecdsa_get_error(res));
 	} else {
-		PrintAndLog("Certificate OK.");
+		PrintAndLog("Certificate OK.\n");
 	}
 	
 	if (verbose) {
@@ -347,8 +347,10 @@ bool CheckrpIdHash(json_t *json, uint8_t *hash) {
 	uint8_t hash2[32] = {0};
 	
 	JsonLoadStr(json, "$.RelyingPartyEntity.id", hashval);
-	sha256hash((uint8_t *)hashval, strlen(hashval), hash2);
-
+	int res = sha256hash((uint8_t *)hashval, strlen(hashval), hash2);
+	if (res)
+		return false;
+	
 	return !memcmp(hash, hash2, 32);
 }
 

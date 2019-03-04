@@ -118,10 +118,10 @@ char * mtostr(const model_t *model) {
 		+ (checkstr && *checkstr ? strlen(checkstr) : 6)
 		+ (magicstr && *magicstr ? strlen(magicstr) : 6)
 		+ (model->name && *model->name ? 2 + strlen(model->name) : 6);
-	if ((string = malloc(size))) {
+	if ((string = calloc(size, sizeof(uint8_t)))) {
 		sprintf(strbuf, "\"%s\"", model->name);
 		sprintf(string,
-				"width=%lu"
+				"width=%lu  "
 				"poly=0x%s  "
 				"init=0x%s  "
 				"refin=%s  "

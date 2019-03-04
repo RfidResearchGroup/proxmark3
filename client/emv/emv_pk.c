@@ -429,9 +429,6 @@ char *emv_pk_get_ca_pk_file(const char *dirname, const unsigned char *rid, unsig
 	if (!dirname)
 		dirname = ".";//openemv_config_get_str("capk.dir", NULL);
 
-	if (!dirname)
-		return NULL;
-
 	char *filename;
 	int ret = asprintf(&filename, "%s/%02hhx%02hhx%02hhx%02hhx%02hhx_%02hhx.0",
 			dirname,
@@ -452,9 +449,6 @@ char *emv_pk_get_ca_pk_rid_file(const char *dirname, const unsigned char *rid)
 {
 	if (!dirname)
 		dirname = "."; //openemv_config_get_str("capk.dir", NULL);
-
-	if (!dirname)
-		return NULL;
 
 	char *filename;
 	int ret = asprintf(&filename, "%s/%02hhx%02hhx%02hhx%02hhx%02hhx.pks",

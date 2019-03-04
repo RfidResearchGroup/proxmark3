@@ -21,7 +21,7 @@ APP_CFLAGS = -DWITH_CRC \
 			 -DWITH_ISO14443a \
 			 -DWITH_ICLASS \
 			 -DWITH_FELICA \
-			 -DWITH_FLASH \
+ 			 -DWITH_FLASH \
 			 -DWITH_SMARTCARD \
 			 -DWITH_FPC \
 			 -DWITH_HFSNOOP \
@@ -122,8 +122,9 @@ APP_CFLAGS += $(ZLIB_CFLAGS)
 # zlib includes:
 APP_CFLAGS += -I../zlib
 
-# stdint.h provided locally until GCC 4.5 becomes C99 compliant
-APP_CFLAGS += -I.
+# stdint.h provided locally until GCC 4.5 becomes C99 compliant,
+# stack-protect , no-pie reduces size on Gentoo Hardened 8.2 gcc
+APP_CFLAGS += -I. -fno-stack-protector -fno-pie
 
 # Compile these in thumb mode (small size)
 THUMBSRC = start.c \
@@ -190,7 +191,7 @@ $(OBJDIR)/fpga_all.bit.z: $(FPGA_BITSTREAMS) $(FPGA_COMPRESSOR)
 	$(FPGA_COMPRESSOR) $(filter %.bit,$^) $@  
 
 $(FPGA_COMPRESSOR):
-		make -C ../client $(notdir $(FPGA_COMPRESSOR))
+		$(MAKE) -C ../client $(notdir $(FPGA_COMPRESSOR))
 		
 $(OBJDIR)/fullimage.stage1.elf: $(VERSIONOBJ) $(OBJDIR)/fpga_all.o $(THUMBOBJ) $(ARMOBJ)
 	$(CC) $(LDFLAGS) -Wl,-T,ldscript,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)

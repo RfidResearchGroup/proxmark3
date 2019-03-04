@@ -59,6 +59,7 @@ THE SOFTWARE.
 #include <string.h>
 #include "crapto1/crapto1.h"
 #include "parity.h"
+#include "util.h"
 
 // bitslice type
 // while AVX supports 256 bit vector floating point operations, we need integer operations for boolean logic
@@ -98,9 +99,6 @@ typedef union {
 #define STATE_SIZE 48
 // size of nonce to be decrypted
 #define KEYSTREAM_SIZE 24
-
-// endianness conversion
-#define rev32(word) ((((word) & 0xff) << 24) | ((((word) >> 8) & 0xff) << 16) | ((((word) >> 16) & 0xff) << 8) | ((((word) >> 24) & 0xff)))
 
 // this needs to be compiled several times for each instruction set. 
 // For each instruction set, define a dedicated function name:
@@ -184,7 +182,7 @@ void BITSLICE_TEST_NONCES(uint32_t nonces_to_bruteforce, uint32_t *bf_test_nonce
 	// bitslice nonces' 2nd to 4th byte
 	for (uint32_t i = 0; i < nonces_to_bruteforce; i++) {
 		for(uint32_t bit_idx = 0; bit_idx < KEYSTREAM_SIZE; bit_idx++){
-			bool bit = get_bit(KEYSTREAM_SIZE-1-bit_idx, rev32(bf_test_nonce[i] << 8));
+			bool bit = get_bit(KEYSTREAM_SIZE-1-bit_idx, BSWAP_32(bf_test_nonce[i] << 8));
 			if(bit){
 				bitsliced_encrypted_nonces[i][bit_idx].value = bs_ones.value;
 			} else {

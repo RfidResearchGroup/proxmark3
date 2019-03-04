@@ -519,21 +519,21 @@ int CmdHF15Info(const char *Cmd) {
 	SendCommand(&c);
 
 	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
-		PrintAndLogEx(NORMAL, "iso15693 card select failed");
+		PrintAndLogEx(WARNING, "iso15693 card select failed");
 		return 1;
 	}
 	
 	uint32_t status = resp.arg[0];
 	
 	if ( status < 2 ) {
-		PrintAndLogEx(NORMAL, "iso15693 card doesn't answer to systeminfo command");
+		PrintAndLogEx(WARNING, "iso15693 card doesn't answer to systeminfo command");
 		return 1;		
 	}
 	
 	recv = resp.d.asBytes;	
 	
 	if ( recv[0] & ISO15_RES_ERROR ) {
-		PrintAndLogEx(NORMAL, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0])); 
+		PrintAndLogEx(WARNING, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0])); 
 		return 3;
 	}
 	
@@ -575,8 +575,8 @@ int CmdHF15Info(const char *Cmd) {
 // Record Activity without enabeling carrier
 //helptext
 int CmdHF15Record(const char *Cmd) {
-	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H') return usage_15_record();
+	char cmdp =  tolower(param_getchar(Cmd, 0));
+	if (cmdp == 'h') return usage_15_record();
 	
 	UsbCommand c = {CMD_RECORD_RAW_ADC_SAMPLES_ISO_15693, {0,0,0}};
 	clearCommandBuffer();
@@ -598,8 +598,8 @@ int HF15Reader(const char *Cmd, bool verbose) {
 }
 
 int CmdHF15Reader(const char *Cmd) {
-	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H') return usage_15_reader();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (cmdp == 'h') return usage_15_reader();
 	
 	HF15Reader(Cmd, true);
 	return 0;
@@ -608,16 +608,16 @@ int CmdHF15Reader(const char *Cmd) {
 // Simulation is still not working very good
 // helptext
 int CmdHF15Sim(const char *Cmd) {
-	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) < 1 || cmdp == 'h' || cmdp == 'H') return usage_15_sim();
+	char cmdp =tolower(param_getchar(Cmd, 0));
+	if (strlen(Cmd) < 1 || cmdp == 'h') return usage_15_sim();
 
 	uint8_t uid[8] = {0,0,0,0,0,0,0,0};	
 	if (param_gethex(Cmd, 0, uid, 16)) {
-		PrintAndLogEx(NORMAL, "UID must include 16 HEX symbols");
+		PrintAndLogEx(WARNING, "UID must include 16 HEX symbols");
 		return 0;
 	}
 	
-	PrintAndLogEx(NORMAL, "Starting simulating UID %s", sprint_hex(uid, sizeof(uid)) );
+	PrintAndLogEx(SUCCESS, "Starting simulating UID %s", sprint_hex(uid, sizeof(uid)) );
 
 	UsbCommand c = {CMD_SIMTAG_ISO_15693, {0, 0, 0}};
 	memcpy(c.d.asBytes, uid, 8);
@@ -630,10 +630,10 @@ int CmdHF15Sim(const char *Cmd) {
 // (There is no standard way of reading the AFI, allthough some tags support this)
 // helptext
 int CmdHF15Afi(const char *Cmd) {
-	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H') return usage_15_findafi();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (cmdp == 'h') return usage_15_findafi();
 
-	PrintAndLogEx(NORMAL, "press pm3-button to cancel");
+	PrintAndLogEx(SUCCESS, "press pm3-button to cancel");
 	
 	UsbCommand c = {CMD_ISO_15693_FIND_AFI, {strtol(Cmd, NULL, 0), 0, 0}};
 	clearCommandBuffer();
@@ -689,7 +689,7 @@ int CmdHF15Dump(const char*Cmd) {
 	}	
 	// detect blocksize from card :)
 	
-	PrintAndLogEx(NORMAL, "Reading memory from tag UID %s", sprintUID(NULL, uid));
+	PrintAndLogEx(NORMAL, "Reading memory from tag UID " _YELLOW_(%s), sprintUID(NULL, uid));
 
 	int blocknum = 0;
 	uint8_t *recv = NULL;
@@ -764,7 +764,7 @@ int CmdHF15Dump(const char*Cmd) {
 }
 
 int CmdHF15Restore(const char*Cmd) {
-	FILE *file;
+	FILE *f;
 	
 	uint8_t uid[8]={0x00};
 	char filename[FILE_PATH_SIZE] = {0x00};
@@ -774,10 +774,10 @@ int CmdHF15Restore(const char*Cmd) {
 	char newCmdPrefix[255] = {0x00}, tmpCmd[255] = {0x00};
 	char param[FILE_PATH_SIZE]="";
 	char hex[255]="";
-	uint8_t retries = 3, tried = 0;
+	uint8_t retries = 3, tried = 0, i = 0;
 	int retval=0;
 	size_t bytes_read;
-	uint8_t i=0;
+
 		while(param_getchar(Cmd, cmdp) != 0x00) {
 		switch(tolower(param_getchar(Cmd, cmdp))) {
 			case '-':
@@ -785,7 +785,8 @@ int CmdHF15Restore(const char*Cmd) {
 				switch(param[1])
 				{
 					case '2':
-					case 'o': strncpy(newCmdPrefix, " ",sizeof(newCmdPrefix)-1);
+					case 'o':
+						strncpy(newCmdPrefix, " ", sizeof(newCmdPrefix)-1);
 						strncat(newCmdPrefix, param, sizeof(newCmdPrefix)-1);
 								break;
 					default:
@@ -815,60 +816,64 @@ int CmdHF15Restore(const char*Cmd) {
 			default:
 				PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
 				return usage_15_restore();
-				break;
 		}
 		cmdp++;
 	}
+
 	PrintAndLogEx(INFO,"Blocksize: %u",blocksize);
-	if(filename[0]=='\0')
-	{
+	
+	if ( !strlen(filename)) {
 		PrintAndLogEx(WARNING,"Please provide a filename");
-		return 1;
+		return usage_15_restore();
 	}
 
-	if ((file = fopen(filename,"rb")) == NULL) {
+	if ((f = fopen(filename, "rb")) == NULL) {
 		PrintAndLogEx(WARNING, "Could not find file %s", filename);
 		return 2;
 	}
 	
 	if (!getUID(uid)) {
 		PrintAndLogEx(WARNING, "No tag found");
+		fclose(f);
 		return 3;
 	}
+	
 	while (1) {
-		tried=0;
-		hex[0]=0x00;
-		tmpCmd[0]=0x00;
+		tried = 0;
+		hex[0] = 0x00;
+		tmpCmd[0] = 0x00;
 		
-		bytes_read = fread( buff, 1, blocksize, file );
+		bytes_read = fread( buff, 1, blocksize, f );
 		if ( bytes_read == 0) {
-			PrintAndLogEx(SUCCESS, "File reading done (%s).", filename);
-			fclose(file);
+			PrintAndLogEx(SUCCESS, "File reading done `%s`", filename);
+			fclose(f);
 			return 0;
-		}
-		else if ( bytes_read != blocksize) {
+		} else if ( bytes_read != blocksize) {
 			PrintAndLogEx(WARNING, "File reading error (%s), %u bytes read instead of %u bytes.", filename, bytes_read, blocksize);
-			fclose(file);
+			fclose(f);
 			return 2;
 		}
-		for(int j=0;j<blocksize;j++)
-			snprintf(hex+j*2,3,"%02X", (unsigned char)buff[j]);
-		for(int j=0;j<sizeof(uid)/sizeof(uid[0]);j++)
+		
+		for(int j=0; j < blocksize; j++)
+			snprintf(hex+j*2, 3, "%02X", buff[j]);
+		
+		for(int j=0; j < sizeof(uid)/sizeof(uid[0]); j++)
 			snprintf(buff+j*2,3,"%02X", uid[j]);
 		
 		//TODO: Addressed mode currently not work
 		//snprintf(tmpCmd, sizeof(tmpCmd), "%s %s %d %s", newCmdPrefix, buff, i, hex);
-		snprintf(tmpCmd, sizeof(tmpCmd), "%s u %d %s", newCmdPrefix, i, hex);
-		PrintAndLogEx(DEBUG, "Command to be sent: %s", tmpCmd);
+		snprintf(tmpCmd, sizeof(tmpCmd), "%s u %u %s", newCmdPrefix, i, hex);
+		PrintAndLogEx(DEBUG, "Command to be sent| %s", tmpCmd);
 
-		for(tried=0;tried<retries;tried++)
-			if(!(retval=CmdHF15Write(tmpCmd)))
+		for(tried=0; tried < retries; tried++)
+			if(!(retval = CmdHF15Write(tmpCmd)))
 				break;
 		if(tried >= retries)
 			return retval;
+
 		i++;
 	}
-	fclose(file);
+	fclose(f);
 }
 
 int CmdHF15List(const char *Cmd) {
@@ -1241,7 +1246,7 @@ int CmdHF15Write(const char *Cmd) {
 	AddCrc(req, reqlen);
 	c.arg[0] = reqlen+2;
 	
-	PrintAndLogEx(NORMAL, "iso15693 writing to page %02d (0x&02X) | data ", pagenum, pagenum);
+	PrintAndLogEx(NORMAL, "iso15693 writing to page %02d (0x%02X) | data ", pagenum, pagenum);
 	
 	clearCommandBuffer();
 	SendCommand(&c);

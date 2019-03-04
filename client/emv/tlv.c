@@ -352,19 +352,28 @@ struct tlvdb *tlvdb_find_path(struct tlvdb *tlvdb, tlv_tag_t tag[]) {
 
 void tlvdb_add(struct tlvdb *tlvdb, struct tlvdb *other)
 {
+	if (tlvdb == other)
+		return;
+	
 	while (tlvdb->next) {
+		if (tlvdb->next == other)
+			return;
+		
 		tlvdb = tlvdb->next;
 	}
 
 	tlvdb->next = other;
 }
 
-void tlvdb_change_or_add_node(struct tlvdb *tlvdb, tlv_tag_t tag, size_t len, const unsigned char *value)
+void tlvdb_change_or_add_node_ex(struct tlvdb *tlvdb, tlv_tag_t tag, size_t len, const unsigned char *value, struct tlvdb **tlvdb_elm)
 {
 	struct tlvdb *telm = tlvdb_find_full(tlvdb, tag);
 	if (telm == NULL) {
 		// new tlv element
-		tlvdb_add(tlvdb, tlvdb_fixed(tag, len, value));
+		struct tlvdb *elm = tlvdb_fixed(tag, len, value);
+		tlvdb_add(tlvdb, elm);
+		if (tlvdb_elm)
+			*tlvdb_elm = elm;
 	} else {
 		// the same tlv structure
 		if (telm->tag.tag == tag && telm->tag.len == len && !memcmp(telm->tag.value, value, len))
@@ -400,9 +409,17 @@ void tlvdb_change_or_add_node(struct tlvdb *tlvdb, tlv_tag_t tag, size_t len, co
 		// free old element with childrens
 		telm->next = NULL;
 		tlvdb_free(telm);
+		
+		if (tlvdb_elm)
+			*tlvdb_elm = tnewelm;
 	}
 	
 	return;
+}
+
+void tlvdb_change_or_add_node(struct tlvdb *tlvdb, tlv_tag_t tag, size_t len, const unsigned char *value)
+{
+	tlvdb_change_or_add_node_ex(tlvdb, tag, len, value, NULL);
 }
 
 void tlvdb_visit(const struct tlvdb *tlvdb, tlv_cb cb, void *data, int level)
@@ -458,7 +475,10 @@ const struct tlv *tlvdb_get_inchild(const struct tlvdb *tlvdb, tlv_tag_t tag, co
 }
 
 const struct tlv *tlvdb_get_tlv(const struct tlvdb *tlvdb) {
-	return &tlvdb->tag;
+	if (tlvdb)
+		return &tlvdb->tag;
+	else
+		return NULL;
 }
 
 unsigned char *tlv_encode(const struct tlv *tlv, size_t *len)
@@ -533,4 +553,47 @@ struct tlvdb *tlvdb_elm_get_children(struct tlvdb *tlvdb)
 struct tlvdb *tlvdb_elm_get_parent(struct tlvdb *tlvdb)
 {
 	return tlvdb->parent;
+}
+
+bool tlvdb_get_uint8(struct tlvdb *tlvRoot, tlv_tag_t tag, uint8_t *value)
+{
+	const struct tlv *tlvelm = tlvdb_get(tlvRoot, tag, NULL); 	
+	return tlv_get_uint8(tlvelm, value);
+}
+
+bool tlv_get_uint8(const struct tlv *etlv, uint8_t *value) 
+{
+	*value = 0;
+	if (etlv)
+	{
+		if (etlv->len == 0)
+			return true;
+		
+		if (etlv->len == 1)
+		{
+			*value = etlv->value[0];
+			return true;
+		}
+	}
+	return false;
+}
+
+bool tlv_get_int(const struct tlv *etlv, int *value)
+{
+	*value = 0;
+	if (etlv)
+	{
+		if (etlv->len == 0)
+			return true;
+		
+		if (etlv->len <= 4)
+		{
+			for (int i = 0; i < etlv->len; i++)
+			{
+				*value += etlv->value[i] * (1 << (i * 8));
+			}
+			return true;
+		}
+	}
+	return false;
 }

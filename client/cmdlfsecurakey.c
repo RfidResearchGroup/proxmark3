@@ -97,12 +97,12 @@ int CmdSecurakeyDemod(const char *Cmd) {
 	// test parities - evenparity32 looks to add an even parity returns 0 if already even...
 	bool parity = !evenparity32(lWiegand) && !oddparity32(rWiegand);
 
-	PrintAndLogEx(NORMAL, "Securakey Tag Found--BitLen: %u, Card ID: %u, FC: 0x%X, Raw: %08X%08X%08X", bitLen, cardid, fc, raw1 ,raw2, raw3);
+	PrintAndLogEx(SUCCESS, "Securakey Tag Found--BitLen: %u, Card ID: %u, FC: 0x%X, Raw: %08X%08X%08X", bitLen, cardid, fc, raw1 ,raw2, raw3);
 	if (bitLen <= 32)
-		PrintAndLogEx(NORMAL, "Wiegand: %08X, Parity: %s", (lWiegand<<(bitLen/2)) | rWiegand, parity ? "Passed" : "Failed");
-	PrintAndLogEx(NORMAL, "\nHow the FC translates to printed FC is unknown");
-	PrintAndLogEx(NORMAL, "How the checksum is calculated is unknown");
-	PrintAndLogEx(NORMAL, "Help the community identify this format further\n by sharing your tag on the pm3 forum or with forum members");
+		PrintAndLogEx(SUCCESS, "Wiegand: %08X, Parity: %s", (lWiegand<<(bitLen/2)) | rWiegand, parity ? "Passed" : "Failed");
+	PrintAndLogEx(INFO, "\nHow the FC translates to printed FC is unknown");
+	PrintAndLogEx(INFO, "How the checksum is calculated is unknown");
+	PrintAndLogEx(INFO, "Help the community identify this format further\n by sharing your tag on the pm3 forum or with forum members");
 	return 1;
 }
 

@@ -215,11 +215,11 @@ const char *get_my_executable_directory(void) {
 static void set_my_executable_path(void) {
 	int path_length = wai_getExecutablePath(NULL, 0, NULL);
 	if (path_length != -1) {
-		my_executable_path = (char*)malloc(path_length + 1);
+		my_executable_path = (char*)calloc(path_length + 1, sizeof(uint8_t));
 		int dirname_length = 0;
 		if (wai_getExecutablePath(my_executable_path, path_length, &dirname_length) != -1) {
 			my_executable_path[path_length] = '\0';
-			my_executable_directory = (char *)malloc(dirname_length + 2);
+			my_executable_directory = (char *)calloc(dirname_length + 2, sizeof(uint8_t));
 			strncpy(my_executable_directory, my_executable_path, dirname_length+1);
 			my_executable_directory[dirname_length+1] = '\0';
 		}
@@ -321,9 +321,9 @@ int main(int argc, char* argv[]) {
 			} else {
 				if (addLuaExec){
 					// add "script run " to command
-					char *ctmp = NULL;
 					int len = strlen(script_cmd) + 11 + 1;
-					if ((ctmp = (char*) malloc(len)) != NULL) {
+					char *ctmp = (char*) calloc(len, sizeof(uint8_t));
+					if (ctmp != NULL) {
 						memset(ctmp, 0, len);
 						strcpy(ctmp, "script run ");
 						strcpy(&ctmp[11], script_cmd);

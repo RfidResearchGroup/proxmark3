@@ -178,7 +178,7 @@ static CborError dump_bytestring_base16(char **result, CborValue *it)
         return err;
 
     /* a Base16 (hex) output is twice as big as our buffer */
-    buffer = (uint8_t *)malloc(n * 2 + 1);
+    buffer = (uint8_t *)calloc(n * 2 + 1, sizeof(uint8_t));
     *result = (char *)buffer;
 
     /* let cbor_value_copy_byte_string know we have an extra byte for the terminating NUL */
@@ -204,7 +204,7 @@ static CborError generic_dump_base64(char **result, CborValue *it, const char al
 
     /* a Base64 output (untruncated) has 4 bytes for every 3 in the input */
     size_t len = (n + 5) / 3 * 4;
-    out = buffer = (uint8_t *)malloc(len + 1);
+    out = buffer = (uint8_t *)calloc(len + 1, sizeof(uint8_t));
     *result = (char *)buffer;
 
     /* we read our byte string at the tail end of the buffer

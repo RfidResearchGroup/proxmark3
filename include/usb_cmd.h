@@ -140,6 +140,8 @@ typedef struct{
 #define CMD_COTAG														  0x0225
 #define CMD_SET_LF_T55XX_CONFIG											  0x0226
 
+#define CMD_T55XX_CHKPWDS                                                 0x0230
+
 /* CMD_SET_ADC_MUX: ext1 is 0 for lopkd, 1 for loraw, 2 for hipkd, 3 for hiraw */
 
 // For the 13.56 MHz tags
@@ -300,11 +302,12 @@ typedef struct{
 #define FLAG_ICLASS_READER_CEDITKEY     0x40
 
 // Dbprintf flags
-#define FLAG_RAWPRINT 0x0111
-#define FLAG_NOOPT 0x0000
-#define FLAG_NOLOG 0x0001
-#define FLAG_NONEWLINE 0x0010
-#define FLAG_NOPROMPT 0x0100
+#define FLAG_RAWPRINT	0x0111
+#define FLAG_NOOPT		0x0000
+#define FLAG_NOLOG		0x0001
+#define FLAG_NONEWLINE	0x0010
+#define FLAG_NOPROMPT	0x0100
+
 
 // CMD_DEVICE_INFO response packet has flags in arg[0], flag definitions:
 /* Whether a bootloader that understands the common_area is present */

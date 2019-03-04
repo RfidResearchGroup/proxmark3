@@ -14,7 +14,10 @@
 #define MAX_ISO14A_TIMEOUT 524288
 static uint32_t iso14a_timeout;
 
+uint8_t colpos = 0;
 int rsamples = 0;
+//int ReqCount;
+//char CollisionIndicators[10*8];
 
 uint8_t trigger = 0;
 // the block number for the ISO14443-4 PCB
@@ -103,6 +106,8 @@ static uint32_t LastProxToAirDuration;
 // Sequence D: 11110000 modulation with subcarrier during first half
 // Sequence E: 00001111 modulation with subcarrier during second half
 // Sequence F: 00000000 no modulation with subcarrier
+// Sequence COLL: 11111111 load modulation over the full bitlenght. 
+//                         Tricks the reader to think that multiple cards answer (at least one card with 1 and at least one card with 0).
 // READER TO CARD - miller
 // Sequence X: 00001100 drop after half a period
 // Sequence Y: 00000000 no drop
@@ -110,6 +115,7 @@ static uint32_t LastProxToAirDuration;
 #define	SEC_D 0xf0
 #define	SEC_E 0x0f
 #define	SEC_F 0x00
+#define SEC_COLL 0xff
 #define	SEC_X 0x0c
 #define	SEC_Y 0x00
 #define	SEC_Z 0xc0
@@ -643,7 +649,9 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 //-----------------------------------------------------------------------------
 // Prepare tag messages
 //-----------------------------------------------------------------------------
-static void CodeIso14443aAsTagPar(const uint8_t *cmd, uint16_t len, uint8_t *parity) {
+static void CodeIso14443aAsTagPar(const uint8_t *cmd, uint16_t len, uint8_t *parity, bool collision) {
+	
+	//uint8_t localCol = 0;
 	ToSendReset();
 
 	// Correction bit, might be removed when not needed
@@ -651,7 +659,7 @@ static void CodeIso14443aAsTagPar(const uint8_t *cmd, uint16_t len, uint8_t *par
 	ToSendStuffBit(0);
 	ToSendStuffBit(0);
 	ToSendStuffBit(0);
-	ToSendStuffBit(1);  // 1
+	ToSendStuffBit(1);  // <-----
 	ToSendStuffBit(0);
 	ToSendStuffBit(0);
 	ToSendStuffBit(0);
@@ -665,21 +673,32 @@ static void CodeIso14443aAsTagPar(const uint8_t *cmd, uint16_t len, uint8_t *par
 
 		// Data bits
 		for(uint16_t j = 0; j < 8; j++) {
-			if(b & 1) {
-				ToSend[++ToSendMax] = SEC_D;
-			} else {
-				ToSend[++ToSendMax] = SEC_E;
+			//if (collision && (localCol >= colpos)){
+			if (collision) {
+				ToSend[++ToSendMax] = SEC_COLL;
+				//localCol++;				
+            } else {
+				if (b & 1) {
+					ToSend[++ToSendMax] = SEC_D;
+				} else {
+					ToSend[++ToSendMax] = SEC_E;
+				}
+				b >>= 1;
 			}
-			b >>= 1;
 		}
 
-		// Get the parity bit
-		if (parity[i>>3] & (0x80>>(i&0x0007))) {
-			ToSend[++ToSendMax] = SEC_D;
-			LastProxToAirDuration = 8 * ToSendMax - 4;
+		if (collision) {
+			ToSend[++ToSendMax] = SEC_COLL;
+			LastProxToAirDuration = 8 * ToSendMax;			
 		} else {
-			ToSend[++ToSendMax] = SEC_E;
-			LastProxToAirDuration = 8 * ToSendMax;
+			// Get the parity bit
+			if (parity[i>>3] & (0x80>>(i&0x0007))) {
+				ToSend[++ToSendMax] = SEC_D;
+				LastProxToAirDuration = 8 * ToSendMax - 4;
+			} else {
+				ToSend[++ToSendMax] = SEC_E;
+				LastProxToAirDuration = 8 * ToSendMax;
+			}
 		}
 	}
 
@@ -690,10 +709,13 @@ static void CodeIso14443aAsTagPar(const uint8_t *cmd, uint16_t len, uint8_t *par
 	ToSendMax++;
 }
 
-static void CodeIso14443aAsTag(const uint8_t *cmd, uint16_t len) {
+static void CodeIso14443aAsTagEx(const uint8_t *cmd, uint16_t len, bool collision) {
 	uint8_t par[MAX_PARITY_SIZE] = {0};
 	GetParity(cmd, len, par);
-	CodeIso14443aAsTagPar(cmd, len, par);
+	CodeIso14443aAsTagPar(cmd, len, par, collision);
+}
+static void CodeIso14443aAsTag(const uint8_t *cmd, uint16_t len) {
+	CodeIso14443aAsTagEx(cmd, len, false);
 }
 
 static void Code4bitAnswerAsTag(uint8_t cmd) {
@@ -781,12 +803,12 @@ bool prepare_tag_modulation(tag_response_info_t* response_info, size_t max_buffe
 	// Make sure we do not exceed the free buffer space
 	if (ToSendMax > max_buffer_size) {
 		Dbprintf("Out of memory, when modulating bits for tag answer:");
-		Dbhexdump(response_info->response_n,response_info->response,false);
+		Dbhexdump(response_info->response_n, response_info->response, false);
 		return false;
 	}
 
 	// Copy the byte array, used for this modulation to the buffer position
-	memcpy(response_info->modulation,ToSend,ToSendMax);
+	memcpy(response_info->modulation, ToSend, ToSendMax);
 
 	// Store the number of bytes that were used for encoding/modulation and the time needed to transfer them
 	response_info->modulation_n = ToSendMax;
@@ -1033,7 +1055,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t* data) {
 		
 		// Clean receive command buffer
 		if (!GetIso14443aCommandFromReader(receivedCmd, receivedCmdPar, &len)) {
-			Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ", tracing, BigBuf_get_traceLen());
+			Dbprintf("Emulator stopped.  Trace length: %d ", BigBuf_get_traceLen());
 			break;
 		}	
 		p_response = NULL;
@@ -1680,9 +1702,11 @@ int EmSend4bit(uint8_t resp){
 				par);
 	return res;
 }
-
-int EmSendCmdPar(uint8_t *resp, uint16_t respLen, uint8_t *par){
-	CodeIso14443aAsTagPar(resp, respLen, par);
+int EmSendCmdPar(uint8_t *resp, uint16_t respLen, uint8_t *par) {
+	return EmSendCmdParEx(resp, respLen, par, false);
+}
+int EmSendCmdParEx(uint8_t *resp, uint16_t respLen, uint8_t *par, bool collision){
+	CodeIso14443aAsTagPar(resp, respLen, par, collision);
 	int res = EmSendCmd14443aRaw(ToSend, ToSendMax);
 	// do the tracing for the previous reader request and this tag answer:
 	EmLogTrace(Uart.output, 
@@ -1697,11 +1721,13 @@ int EmSendCmdPar(uint8_t *resp, uint16_t respLen, uint8_t *par){
 				par);
 	return res;
 }
-
 int EmSendCmd(uint8_t *resp, uint16_t respLen){
+	return EmSendCmdEx(resp, respLen, false);
+}
+int EmSendCmdEx(uint8_t *resp, uint16_t respLen, bool collision){
 	uint8_t par[MAX_PARITY_SIZE] = {0x00};
 	GetParity(resp, respLen, par);
-	return EmSendCmdPar(resp, respLen, par);
+	return EmSendCmdParEx(resp, respLen, par, collision);
 }
 
 bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_StartTime, uint32_t reader_EndTime, uint8_t *reader_Parity,
@@ -1805,44 +1831,22 @@ int ReaderReceive(uint8_t *receivedAnswer, uint8_t *parity) {
 // by fooling the reader there is a collision and forceing the reader to 
 // increase the uid bytes.   The might be an overflow, DoS will occure.
 void iso14443a_antifuzz(uint32_t flags){
-	/*
-	uint8_t uidlen = 4+1+1+2;
-	if (( flags & 2 ) == 2 )
-		uidlen = 7+1+1+2;
-	if (( flags & 4 ) == 4 )
-		uidlen = 10+1+1+2;
-		
-	uint8_t *uid = BigBuf_malloc(uidlen);
-	
-	// The first response contains the ATQA (note: bytes are transmitted in reverse order).
-	// Mifare Classic 1K
-	uint8_t atqa[] = {0x04, 0};
-
-	if ( (flags & 2) == 2 ) {
-		uid[0] = 0x88;  // Cascade Tag marker
-		uid[1] = 0x01;
-
-		// Configure the ATQA accordingly
-		atqa[0] |= 0x40;
-	} else {
-		memcpy(response2, data, 4);
-		// Configure the ATQA accordingly
-		atqa[0] &= 0xBF;
-	}	
 	
 	// We need to listen to the high-frequency, peak-detected path.
 	iso14443a_setup(FPGA_HF_ISO14443A_TAGSIM_LISTEN);
 
+	BigBuf_free_keep_EM();
+	clear_trace();
+	set_tracing(true);
+	
+	int len = 0;
+		
 	// allocate buffers:
 	uint8_t *received = BigBuf_malloc(MAX_FRAME_SIZE);
 	uint8_t *receivedPar = BigBuf_malloc(MAX_PARITY_SIZE);
-	uint16_t counter = 0;
-		
-	int len = 0;
-		
-	BigBuf_free();
-	clear_trace();
-	set_tracing(true);
+	uint8_t *resp = BigBuf_malloc(20);
+
+	memset(resp, 0xFF , 20);
 	
 	LED_A_ON();
 	for (;;) {	
@@ -1850,50 +1854,53 @@ void iso14443a_antifuzz(uint32_t flags){
 		
 		// Clean receive command buffer
 		if (!GetIso14443aCommandFromReader(received, receivedPar, &len)) {
-			Dbprintf("Anti-fuzz stopped. Tracing: %d  trace length: %d ", tracing, BigBuf_get_traceLen());
+			Dbprintf("Anti-fuzz stopped. Trace length: %d ", BigBuf_get_traceLen());
 			break;
 		}
-		p_response = NULL;
+		if ( received[0] == ISO14443A_CMD_WUPA || received[0] == ISO14443A_CMD_REQA) {
+				resp[0] = 0x04;
+				resp[1] = 0x00;
+				
+				if ( (flags & FLAG_7B_UID_IN_DATA) == FLAG_7B_UID_IN_DATA ) {
+					resp[0] = 0x44;
+				}
+				
+				EmSendCmd(resp, 2);
+				continue;
+		}
 		
-		// look at the command now.
-		if (received[0] == ISO14443A_CMD_REQA) { // Received a REQUEST
-			p_response = &responses[0];
-		} else if (received[0] == ISO14443A_CMD_WUPA) { // Received a WAKEUP
-			p_response = &responses[0];
-		} else if (received[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT) {	// Received request for UID (cascade 1)
-			p_response = &responses[1];
-		} else if (received[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2) { 	// Received request for UID (cascade 2)
-			p_response = &responses[2];
-		} else if (received[1] == 0x70 && received[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT) {	// Received a SELECT (cascade 1)
-			p_response = &responses[3];
-		} else if (received[1] == 0x70 && received[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2) {	// Received a SELECT (cascade 2)
-			p_response = &responses[4];
-		}
-		if (p_response != NULL) {
+		// Received request for UID (cascade 1)
+		//if (received[1] >= 0x20 && received[1] <= 0x57 && received[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT) {
+		if (received[1] >= 0x20 && received[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT) {
+			resp[0] = 0xFF;
+			resp[1] = 0xFF;
+			resp[2] = 0xFF;
+			resp[3] = 0xFF;
+			resp[4] =  resp[0] ^ resp[1] ^ resp[2] ^ resp[3];
+			colpos = 0;
 			
-			EmSendCmd14443aRaw(p_response->modulation, p_response->modulation_n);
-			// do the tracing for the previous reader request and this tag answer:
-			uint8_t par[MAX_PARITY_SIZE] = {0x00};
-			GetParity(p_response->response, p_response->response_n, par);
+			if ( (flags & FLAG_7B_UID_IN_DATA) == FLAG_7B_UID_IN_DATA ) {
+				resp[0] = 0x88; 
+				colpos = 8;
+			}
+			
+			EmSendCmdEx(resp, 5, true);
+			if (MF_DBGLEVEL >= 4) Dbprintf("ANTICOLL or SELECT %x", received[1]);
+			LED_D_INV();
 	
-			EmLogTrace(Uart.output, 
-						Uart.len, 
-						Uart.startTime*16 - DELAY_AIR2ARM_AS_TAG, 
-						Uart.endTime*16 - DELAY_AIR2ARM_AS_TAG, 
-						Uart.parity,
-						p_response->response, 
-						p_response->response_n,
-						LastTimeProxToAirStart*16 + DELAY_ARM2AIR_AS_TAG,
-						(LastTimeProxToAirStart + p_response->ProxToAirDuration)*16 + DELAY_ARM2AIR_AS_TAG, 
-						par);
+			continue;
+		} else if (received[1] == 0x20 && received[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2) { 	// Received request for UID (cascade 2)
+			if (MF_DBGLEVEL >= 4) Dbprintf("ANTICOLL or SELECT_2");
+		} else if (received[1] == 0x70 && received[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT) {	// Received a SELECT (cascade 1)			
+		} else if (received[1] == 0x70 && received[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2) {	// Received a SELECT (cascade 2)				
+		} else {
+			Dbprintf("unknown command %x", received[0]); 
 		}
-		counter++;
 	}
 
 	cmd_send(CMD_ACK,1,0,0,0,0);
-	switch_off();	
-	Dbprintf("-[ UID until no response [%d]", counter);
-*/
+	switch_off();
+	BigBuf_free_keep_EM();
 }
 
 static void iso14a_set_ATS_times(uint8_t *ats) {
@@ -2212,13 +2219,16 @@ b8 b7 b6 b5 b4 b3 b2 b1
 b5,b6 = 00 - DESELECT
         11 - WTX 
 */    
-int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, void *data, uint8_t *res) {
+int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, uint8_t *res) {
 	uint8_t parity[MAX_PARITY_SIZE] = {0x00};
 	uint8_t real_cmd[cmd_len + 4];
 	
 	if (cmd_len) {
 		// ISO 14443 APDU frame: PCB [CID] [NAD] APDU CRC PCB=0x02
 		real_cmd[0] = 0x02; // bnr,nad,cid,chn=0; i-block(0x00)	
+		if (send_chaining) {
+			real_cmd[0] |= 0x10;
+		}
 		// put block number into the PCB
 		real_cmd[0] |= iso14_pcb_blocknum;
 		memcpy(real_cmd + 1, cmd, cmd_len);
@@ -2238,7 +2248,7 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, void *data, uint8_t *res) {
 		return 0; //DATA LINK ERROR
 	} else{
 		// S-Block WTX 
-		while((data_bytes[0] & 0xF2) == 0xF2) {
+		while(len && ((data_bytes[0] & 0xF2) == 0xF2)) {
 			uint32_t save_iso14a_timeout = iso14a_get_timeout();
 			// temporarily increase timeout
 			iso14a_set_timeout( MAX((data_bytes[1] & 0x3f) * save_iso14a_timeout, MAX_ISO14A_TIMEOUT) );
@@ -2256,32 +2266,34 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, void *data, uint8_t *res) {
 			iso14a_set_timeout(save_iso14a_timeout);
 		}
 
-	// if we received an I- or R(ACK)-Block with a block number equal to the
-	// current block number, toggle the current block number
+		// if we received an I- or R(ACK)-Block with a block number equal to the
+		// current block number, toggle the current block number
 		if (len >= 3 // PCB+CRC = 3 bytes
 	         && ((data_bytes[0] & 0xC0) == 0 // I-Block
 	             || (data_bytes[0] & 0xD0) == 0x80) // R-Block with ACK bit set to 0
 	         && (data_bytes[0] & 0x01) == iso14_pcb_blocknum) // equal block numbers
-	{
-		iso14_pcb_blocknum ^= 1;
-	}
+		{
+			iso14_pcb_blocknum ^= 1;
+		}
 		
 		// if we received I-block with chaining we need to send ACK and receive another block of data
 		if (res)
 			*res = data_bytes[0];
 
 		// crc check
-		if (len >=3 && !check_crc(CRC_14443_A, data_bytes, len)) {
+		if (len >= 3 && !check_crc(CRC_14443_A, data_bytes, len)) {
 			return -1;
 		}
 		
 	}
 	
-	// cut frame byte
-	len -= 1;
-	// memmove(data_bytes, data_bytes + 1, len);
-	for (int i = 0; i < len; i++)
-		data_bytes[i] = data_bytes[i + 1];
+	if (len) {
+		// cut frame byte
+		len -= 1;
+		// memmove(data_bytes, data_bytes + 1, len);
+		for (int i = 0; i < len; i++)
+			data_bytes[i] = data_bytes[i + 1];
+	}
 	
 	return len;
 }
@@ -2331,7 +2343,7 @@ void ReaderIso14443a(UsbCommand *c) {
 
 	if ((param & ISO14A_APDU)) {
 		uint8_t res;
-		arg0 = iso14_apdu(cmd, len, buf, &res);
+		arg0 = iso14_apdu(cmd, len, (param & ISO14A_SEND_CHAINING), buf, &res);
 		cmd_send(CMD_ACK, arg0, res, 0, buf, sizeof(buf));
 	}
 
@@ -3495,7 +3507,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 	}
 
 	if (MF_DBGLEVEL >= 1) 
-		Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ", tracing, BigBuf_get_traceLen());
+		Dbprintf("Emulator stopped. Trace length: %d ", BigBuf_get_traceLen());
 	
 	cmd_send(CMD_ACK,1,0,0,0,0);	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();

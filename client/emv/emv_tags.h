@@ -25,6 +25,10 @@
 # define EMVAC_TC        0x40
 # define EMVAC_ARQC      0x80
 # define EMVAC_CDAREQ    0x10
+# define EMVAC_AC2_MASK  0x30
+# define EMVAC_AAC2      0x00
+# define EMVAC_TC2       0x10
+# define EMVAC_ARQC2     0x20
 
 // CID
 # define EMVCID_ADVICE       0x08

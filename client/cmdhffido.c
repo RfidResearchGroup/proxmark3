@@ -914,7 +914,7 @@ static command_t CommandTable[] =
 };
 
 int CmdHFFido(const char *Cmd) {
-	(void)WaitForResponseTimeout(CMD_ACK,NULL,100);
+	(void)WaitForResponseTimeout(CMD_ACK, NULL, 100);
 	CmdsParse(CommandTable, Cmd);
 	return 0;
 }

@@ -364,9 +364,7 @@ int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo ) {
 	int ans = Em410xDecode(bits, &size, &idx, hi, lo);
 	if ( ans < 0){
 
-		if (ans == -1)
-			PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x not only 0|1 in decoded bitstream");
-		else if (ans == -2)
+		if (ans == -2)
 			PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x not enough samples after demod");
 		else if (ans == -4)
 			PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x preamble not found");
@@ -404,8 +402,7 @@ int AskEm410xDemod(const char *Cmd, uint32_t *hi, uint64_t *lo, bool verbose) {
 // this read is the "normal" read,  which download lf signal and tries to demod here.
 int CmdEM410xRead(const char *Cmd) {
 	lf_read(true, 8192);
-	CmdEM410xDemod(Cmd);
-	return 0;
+	return CmdEM410xDemod(Cmd);
 }
 
 // this read loops on device side.
@@ -446,14 +443,14 @@ int CmdEM410xSim(const char *Cmd) {
 	uint8_t clock = 64;
 
 	if (param_gethex(Cmd, 0, uid, 10)) {
-		PrintAndLogEx(NORMAL, "UID must include 10 HEX symbols");
+		PrintAndLogEx(FAILED, "UID must include 10 HEX symbols");
 		return 0;
 	}
 	
 	param_getdec(Cmd, 1, &clock);
 	
-	PrintAndLogEx(NORMAL, "Starting simulating UID %02X%02X%02X%02X%02X  clock: %d", uid[0],uid[1],uid[2],uid[3],uid[4],clock);
-	PrintAndLogEx(NORMAL, "Press pm3-button to abort simulation");
+	PrintAndLogEx(SUCCESS, "Starting simulating UID %02X%02X%02X%02X%02X  clock: %d", uid[0],uid[1],uid[2],uid[3],uid[4],clock);
+	PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation");
 
 	ConstructEM410xEmulGraph(Cmd, clock);
  
@@ -474,14 +471,14 @@ int CmdEM410xBrute(const char *Cmd) {
 	/* default pause time: 1 second */
 	uint32_t delay = 1000;
 	
-	char cmdp = param_getchar(Cmd, 0);	
-	if (cmdp == 'h' || cmdp == 'H') return usage_lf_em410x_brute();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (cmdp == 'h') return usage_lf_em410x_brute();
 	
-	cmdp = param_getchar(Cmd, 1);	
-	if (cmdp == 'd' || cmdp == 'D') {
+	cmdp = tolower(param_getchar(Cmd, 1));
+	if (cmdp == 'd') {
 		delay = param_get32ex(Cmd, 2, 1000, 10);
 		param_getdec(Cmd, 4, &clock);
-	} else if (cmdp == 'c' || cmdp == 'C') {
+	} else if (cmdp == 'c') {
 		param_getdec(Cmd, 2, &clock);
 		delay = param_get32ex(Cmd, 4, 1000, 10);
 	}
@@ -498,7 +495,10 @@ int CmdEM410xBrute(const char *Cmd) {
 	}
 
 	uidBlock = calloc(stUidBlock, 5);
-	if (uidBlock == NULL) return 1;
+	if (uidBlock == NULL) {
+		fclose(f);
+		return 1;
+	}
 	
 	while( fgets(buf, sizeof(buf), f) ) {
 		if (strlen(buf) < 10 || buf[9] == '\n') continue;
@@ -508,7 +508,7 @@ int CmdEM410xBrute(const char *Cmd) {
 		if( buf[0]=='#' ) continue;
 		
 		if (param_gethex(buf, 0, uid, 10)) {
-			PrintAndLogEx(NORMAL, "UIDs must include 10 HEX symbols");
+			PrintAndLogEx(FAILED, "UIDs must include 10 HEX symbols");
 			free(uidBlock);
 			fclose(f);
 			return 1;
@@ -535,11 +535,12 @@ int CmdEM410xBrute(const char *Cmd) {
 	fclose(f);
 	
 	if (uidcnt == 0) {
-		PrintAndLogEx(NORMAL, "No UIDs found in file");
+		PrintAndLogEx(FAILED, "No UIDs found in file");
 		free(uidBlock);
 		return 1;
 	}
-	PrintAndLogEx(NORMAL, "Loaded %d UIDs from %s, pause delay: %d ms", uidcnt, filename, delay);
+	
+	PrintAndLogEx(SUCCESS, "Loaded %d UIDs from %s, pause delay: %d ms", uidcnt, filename, delay);
 	
 	// loop
 	for(uint32_t c = 0; c < uidcnt; ++c ) {
@@ -599,7 +600,7 @@ int CmdEM410xWatchnSpoof(const char *Cmd) {
 	
 	// loops if the captured ID was in XL-format.
 	CmdEM410xWatch(Cmd);
-	PrintAndLogEx(NORMAL, "# Replaying captured ID: %010" PRIx64 , g_em410xid);
+	PrintAndLogEx(SUCCESS, "# Replaying captured ID: %010" PRIx64 , g_em410xid);
 	CmdLFaskSim("");
 	return 0;
 }
@@ -645,17 +646,17 @@ int CmdEM410xWrite(const char *Cmd) {
 	}
 
 	if (card == 1) {
-		PrintAndLogEx(NORMAL, "Writing %s tag with UID 0x%010" PRIx64 " (clock rate: %d)", "T55x7", id, clock);
+		PrintAndLogEx(SUCCESS, "Writing %s tag with UID 0x%010" PRIx64 " (clock rate: %d)", "T55x7", id, clock);
 		// NOTE: We really should pass the clock in as a separate argument, but to
 		//   provide for backwards-compatibility for older firmware, and to avoid
 		//   having to add another argument to CMD_EM410X_WRITE_TAG, we just store
 		//   the clock rate in bits 8-15 of the card value
 		card = (card & 0xFF) | ((clock << 8) & 0xFF00);
 	}	else if (card == 0) {
-		PrintAndLogEx(NORMAL, "Writing %s tag with UID 0x%010" PRIx64, "T5555", id, clock);
+		PrintAndLogEx(SUCCESS, "Writing %s tag with UID 0x%010" PRIx64, "T5555", id, clock);
 		card = (card & 0xFF) | ((clock << 8) & 0xFF00);
 	} else {
-		PrintAndLogEx(WARNING, "Error! Bad card type selected.\n");
+		PrintAndLogEx(FAILED, "Error! Bad card type selected.\n");
 		return 0;
 	}
 

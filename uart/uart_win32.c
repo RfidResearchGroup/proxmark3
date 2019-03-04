@@ -50,7 +50,7 @@ typedef struct {
 
 serial_port uart_open(const char* pcPortName) {
 	char acPortName[255];
-	serial_port_windows* sp = malloc(sizeof(serial_port_windows));
+	serial_port_windows* sp = calloc(sizeof(serial_port_windows), sizeof(uint8_t));
 
 	if (sp == 0) {
 		printf("[!] UART failed to allocate memory\n");

@@ -29,7 +29,7 @@
 #include "cmdhfmf.h"
 #include "cmdhfmfu.h"
 #include "cmdhf.h"		// list cmd
-#include "mifarehost.h"
+#include "mifare/mifarehost.h"
 #include "emv/apduinfo.h"
 #include "emv/emvcore.h"						  
 

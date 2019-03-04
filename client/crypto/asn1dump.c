@@ -24,7 +24,9 @@
 #include "util.h"
 #include "proxmark3.h"
 
-#define PRINT_INDENT(level) 	{for (int i = 0; i < (level); i++) fprintf(f, "   ");}
+#ifndef PRINT_INDENT
+# define PRINT_INDENT(level) 	{for (int i = 0; i < (level); i++) fprintf(f, "   ");}
+#endif
 
 enum asn1_tag_t {
 	ASN1_TAG_GENERIC,
@@ -235,10 +237,13 @@ static char *asn1_oid_description(const char *oid, bool with_group_desc) {
 	static char res[300];
 	memset(res, 0x00, sizeof(res));
 
-	strcpy(fname, get_my_executable_directory());
+	size_t len = strlen(get_my_executable_directory());
+	if ( len > 300 ) len = 299;
+	
+	strncpy(fname, get_my_executable_directory(), len);
 	strcat(fname, "crypto/oids.json");
 	if (access(fname, F_OK) < 0) {
-		strcpy(fname, get_my_executable_directory());
+		strncpy(fname, get_my_executable_directory(), len);
 		strcat(fname, "oids.json");
 		if (access(fname, F_OK) < 0) {
 			goto error; // file not found

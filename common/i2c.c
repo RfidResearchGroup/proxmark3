@@ -161,10 +161,11 @@ bool WaitSCL_L(void) {
 	return WaitSCL_L_delay(15000);
 }
 
-// Wait max 300ms or until SCL goes LOW.
+// Wait max 1800ms or until SCL goes LOW.
+// It timeout reading response from card
 // Which ever comes first
-bool WaitSCL_L_300ms(void){
-	volatile uint16_t delay = 310;
+bool WaitSCL_L_timeout(void){
+	volatile uint16_t delay = 1800;
 	while ( delay-- ) {		
 		// exit on SCL LOW
 		if (!SCL_read)
@@ -193,7 +194,8 @@ bool I2C_Start(void) {
 
 bool I2C_WaitForSim() {
 
-	if (!WaitSCL_L_300ms())
+	// wait for data from card
+	if (!WaitSCL_L_timeout())
 		return false;
 
 	// 8051 speaks with smart card.
@@ -575,7 +577,7 @@ void I2C_print_status(void) {
 	I2C_Reset_EnterMainProgram();
 	uint8_t len = I2C_BufferRead(resp, sizeof(resp), I2C_DEVICE_CMD_GETVERSION, I2C_DEVICE_ADDRESS_MAIN);
 	if ( len > 0 )
-	  	Dbprintf("  version.................v%x.%02x", resp[0], resp[1]);
+	  	Dbprintf("  version.................v%x.%02d", resp[0], resp[1]);
 	else
 		DbpString("  version.................FAILED");	
 }

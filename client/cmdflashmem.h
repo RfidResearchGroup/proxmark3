@@ -8,6 +8,8 @@
 // Proxmark3 RDV40 Flash memory commands
 //-----------------------------------------------------------------------------
 
+#ifdef WITH_FLASH
+
 #ifndef CMDFLASHMEM_H__
 #define CMDFLASHMEM_H__
 
@@ -24,6 +26,13 @@
 #include "loclass/fileutils.h"	//saveFile
 #include "comms.h"			//getfromdevice
 
+typedef enum {
+	DICTIONARY_NONE = 0,
+	DICTIONARY_MIFARE,
+	DICTIONARY_T55XX,
+	DICTIONARY_ICLASS
+} Dictionary_t;
+
 extern int CmdFlashMem(const char *Cmd);
 
 extern int CmdFlashMemRead(const char* cmd);
@@ -31,4 +40,6 @@ extern int CmdFlashMemLoad(const char* cmd);
 extern int CmdFlashMemSave(const char* cmd);
 extern int CmdFlashMemWipe(const char *Cmd);
 extern int CmdFlashMemInfo(const char *Cmd);
+#endif
+
 #endif

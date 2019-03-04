@@ -515,7 +515,7 @@ static int l_sha1(lua_State *L) {
 static int l_reveng_models(lua_State *L){
 
 // This array needs to be adjusted if RevEng adds more crc-models.
-#define NMODELS 103
+#define NMODELS 105
 
 	int count = 0;
 	uint8_t in_width = luaL_checkunsigned(L, 1);
@@ -608,7 +608,7 @@ static int l_hardnested(lua_State *L){
 	char filename[FILE_PATH_SIZE]="nonces.bin";
 	const char *p_filename = luaL_checklstring(L, 11, &size);
 	if(size != 0)
-		strcpy(filename, p_filename);
+		memcpy(filename, p_filename, FILE_PATH_SIZE-1);
 
 	uint32_t blockNo = 0, keyType = 0;
 	uint32_t trgBlockNo = 0, trgKeyType = 0;
@@ -758,6 +758,15 @@ int set_pm3_libraries(lua_State *L) {
     //-- remove the global environment table from the stack
     lua_pop(L, 1);
 
+	
+	//--add to the LUA_PATH (package.path in lua)
+    // so we can load scripts from the ./scripts/ - directory
+	char scripts_path[strlen(get_my_executable_directory()) + strlen(LUA_SCRIPTS_DIRECTORY) + strlen(LUA_LIBRARIES_WILDCARD) + 1];
+	strcpy(scripts_path, get_my_executable_directory());
+	strcat(scripts_path, LUA_SCRIPTS_DIRECTORY);
+	strcat(scripts_path, LUA_LIBRARIES_WILDCARD);
+	setLuaPath(L, scripts_path);
+	
     //-- Last but not least, add to the LUA_PATH (package.path in lua)
     // so we can load libraries from the ./lualib/ - directory
 	char libraries_path[strlen(get_my_executable_directory()) + strlen(LUA_LIBRARIES_DIRECTORY) + strlen(LUA_LIBRARIES_WILDCARD) + 1];
@@ -765,6 +774,5 @@ int set_pm3_libraries(lua_State *L) {
 	strcat(libraries_path, LUA_LIBRARIES_DIRECTORY);
 	strcat(libraries_path, LUA_LIBRARIES_WILDCARD);
 	setLuaPath(L, libraries_path);
-
     return 1;
 }

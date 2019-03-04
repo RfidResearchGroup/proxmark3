@@ -3,7 +3,7 @@
 uint64_t * radixSort(uint64_t * array, uint32_t size) {
     rscounts_t counts;
     memset(&counts, 0, 256 * 8 * sizeof(uint32_t));
-    uint64_t * cpy = (uint64_t *)malloc(size * sizeof(uint64_t));
+    uint64_t * cpy = (uint64_t *)calloc(size * sizeof(uint64_t), sizeof(uint8_t));
     uint32_t o8=0, o7=0, o6=0, o5=0, o4=0, o3=0, o2=0, o1=0;
     uint32_t t8, t7, t6, t5, t4, t3, t2, t1;
     uint32_t x;

@@ -980,11 +980,11 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			if ( hasAuthKey ) return 1;
 
 			// also try to diversify default keys..  look into CmdHF14AMfuGenDiverseKeys
-			PrintAndLogEx(NORMAL, "Trying some default 3des keys");
+			PrintAndLogEx(INFO, "Trying some default 3des keys");
 			for (uint8_t i = 0; i < KEYS_3DES_COUNT; ++i ) {
 				key = default_3des_keys[i];
 				if (ulc_authentication(key, true)) {
-					PrintAndLogEx(NORMAL, "Found default 3des key: ");
+					PrintAndLogEx(SUCCESS, "Found default 3des key: ");
 					uint8_t keySwap[16];
 					memcpy(keySwap, SwapEndian64(key,16,8), 16);
 					ulc_print_3deskey(keySwap);
@@ -1079,7 +1079,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			num_to_bytes( ul_ev1_pwdgenA(card.uid), 4, key);
 			len = ulev1_requestAuthentication(key, pack, sizeof(pack));
 			if (len > -1) {
-				PrintAndLogEx(NORMAL, "Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
+				PrintAndLogEx(SUCCESS, "Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
 				goto out;
 			}
 
@@ -1089,7 +1089,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			num_to_bytes( ul_ev1_pwdgenB(card.uid), 4, key);
 			len = ulev1_requestAuthentication(key, pack, sizeof(pack));
 			if (len > -1) {
-				PrintAndLogEx(NORMAL, "Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
+				PrintAndLogEx(SUCCESS, "Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
 				goto out;
 			}
 
@@ -1099,7 +1099,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			num_to_bytes( ul_ev1_pwdgenC(card.uid), 4, key);
 			len = ulev1_requestAuthentication(key, pack, sizeof(pack));
 			if (len > -1) {
-				PrintAndLogEx(NORMAL, "Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
+				PrintAndLogEx(SUCCESS, "Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
 				goto out;
 			}
 			
@@ -1109,7 +1109,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			num_to_bytes( ul_ev1_pwdgenD(card.uid), 4, key);
 			len = ulev1_requestAuthentication(key, pack, sizeof(pack));
 			if (len > -1) {
-				PrintAndLogEx(NORMAL, "Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
+				PrintAndLogEx(SUCCESS, "Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
 				goto out;
 			}
 			
@@ -1119,13 +1119,13 @@ int CmdHF14AMfUInfo(const char *Cmd){
 				key = default_pwd_pack[i];
 				len = ulev1_requestAuthentication(key, pack, sizeof(pack));
 				if (len > -1) {
-					PrintAndLogEx(NORMAL, "Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
+					PrintAndLogEx(SUCCESS, "Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
 					break;
 				} else {
 					if (!ul_auth_select( &card, tagtype, hasAuthKey, authkeyptr, pack, sizeof(pack))) return -1;
 				}
 			}
-			if (len < 1) PrintAndLogEx(NORMAL, "password not known");
+			if (len < 1) PrintAndLogEx(WARNING, "password not known");
 		}
 	}
 out:
@@ -1250,7 +1250,7 @@ int CmdHF14AMfUWrBl(const char *Cmd){
 	UsbCommand resp;
 	if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
 		uint8_t isOK  = resp.arg[0] & 0xff;
-		PrintAndLogEx(NORMAL, "isOk:%02x", isOK);
+		PrintAndLogEx(SUCCESS, "isOk:%02x", isOK);
 	} else {
 		PrintAndLogEx(WARNING, "Command execute timeout");
 	}
@@ -1365,7 +1365,7 @@ int CmdHF14AMfURdBl(const char *Cmd){
 			PrintAndLogEx(WARNING, "Failed reading block: (%02x)", isOK);
 		}
 	} else {
-		PrintAndLogEx(NORMAL, "Command execute time-out");
+		PrintAndLogEx(WARNING, "Command execute time-out");
 	}
 	return 0;
 }
@@ -1743,7 +1743,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 		}
 	}
 	ul_print_type(tagtype, 0);
-	PrintAndLogEx(NORMAL, "Reading tag memory...");
+	PrintAndLogEx(SUCCESS, "Reading tag memory...");
 	UsbCommand c = {CMD_MIFAREU_READCARD, {startPage, pages}};
 	if ( hasAuthKey ) {
 		if (tagtype & UL_C)
@@ -1912,12 +1912,10 @@ int CmdHF14AMfURestore(const char *Cmd){
 	memset(authkey, 0x00, sizeof(authkey));
 	
 	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch(param_getchar(Cmd, cmdp)) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'h':
-		case 'H':
 			return usage_hf_mfu_restore();
 		case 'k':
-		case 'K':
 			keylen = param_getstr(Cmd, cmdp+1, tempStr, sizeof(tempStr));
 			if (keylen == 32 || keylen == 8) { //ul-c or ev1/ntag key length
 				errors = param_gethex(tempStr, 0, authkey, keylen);
@@ -1930,12 +1928,10 @@ int CmdHF14AMfURestore(const char *Cmd){
 			hasKey = true;
 			break;
 		case 'l':
-		case 'L':
 			swapEndian = true;
 			cmdp++;
 			break;
 		case 'f':
-		case 'F':
 			filelen = param_getstr(Cmd, cmdp+1, filename, FILE_PATH_SIZE);
 
 			if (filelen > FILE_PATH_SIZE-5)
@@ -1947,17 +1943,14 @@ int CmdHF14AMfURestore(const char *Cmd){
 			cmdp += 2;
 			break;
 		case 's':
-		case 'S':
 			cmdp++;
 			write_special = true;
 			break;
 		case 'e':
-		case 'E':
 			cmdp++;
 			write_extra = true;
 			break;
 		case 'r':
-		case 'R':
 			cmdp++;
 			read_key = true;
 			break;
@@ -1972,7 +1965,7 @@ int CmdHF14AMfURestore(const char *Cmd){
 	if (errors || cmdp == 0) return usage_hf_mfu_restore();
 	
 	if ((f = fopen(filename,"rb")) == NULL) {
-		PrintAndLogEx(WARNING, "Could not find file %s", filename);
+		PrintAndLogEx(WARNING, "Could not find file " _YELLOW_(%s), filename);
 		return 1;
 	}	
 
@@ -1989,6 +1982,7 @@ int CmdHF14AMfURestore(const char *Cmd){
 	uint8_t *dump = calloc(fsize, sizeof(uint8_t));
 	if ( !dump ) {
 		PrintAndLogEx(WARNING, "Failed to allocate memory");
+		fclose(f);
 		return 1;
 	}
 
@@ -1997,10 +1991,11 @@ int CmdHF14AMfURestore(const char *Cmd){
 	fclose(f);
 	if ( bytes_read < 48 ) {
 		PrintAndLogEx(WARNING, "Error, dump file is too small");
+		free(dump);
 		return 1;
 	}
 	
-	PrintAndLogEx(NORMAL, "Restoring %s to card", filename);
+	PrintAndLogEx(INFO, "Restoring " _YELLOW_(%s)" to card", filename);
 	
 	mfu_dump_t *mem = (mfu_dump_t*)dump;
 	uint8_t pages = (bytes_read-48)/4;
@@ -2084,7 +2079,7 @@ int CmdHF14AMfURestore(const char *Cmd){
 		}
 	}
 	
-	PrintAndLogEx(NORMAL, "Restoring data blocks.");
+	PrintAndLogEx(INFO, "Restoring data blocks.");
 	// write all other data 
 	// Skip block 0,1,2,3 (only magic tags can write to them)
 	// Skip last 5 blocks usually is configuration
@@ -2103,7 +2098,7 @@ int CmdHF14AMfURestore(const char *Cmd){
 	// write special data last
 	if (write_special) {
 		
-		PrintAndLogEx(NORMAL, "Restoring configuration blocks.\n");
+		PrintAndLogEx(INFO, "Restoring configuration blocks.\n");
 		
 		PrintAndLogEx(NORMAL, "authentication with keytype[%x]  %s\n", (uint8_t)(c.arg[1] & 0xff), sprint_hex(p_authkey,4));
 		
@@ -2128,16 +2123,16 @@ int CmdHF14AMfURestore(const char *Cmd){
 //  Load emulator with dump file
 //
 int CmdHF14AMfUeLoad(const char *Cmd){
-	char c = param_getchar(Cmd, 0);
-	if ( c == 'h' || c == 'H' || c == 0x00) return usage_hf_mfu_eload();
+	char c = tolower(param_getchar(Cmd, 0));
+	if ( c == 'h' || c == 0x00) return usage_hf_mfu_eload();
 	return CmdHF14AMfELoad(Cmd);
 }
 //
 //  Simulate tag
 //
 int CmdHF14AMfUSim(const char *Cmd){
-	char c = param_getchar(Cmd, 0);
-	if ( c == 'h' || c == 'H' || c == 0x00) return usage_hf_mfu_sim();
+	char c = tolower(param_getchar(Cmd, 0));
+	if ( c == 'h' || c == 0x00) return usage_hf_mfu_sim();
 	return CmdHF14ASim(Cmd);
 }
 
@@ -2153,16 +2148,16 @@ int CmdHF14AMfucAuth(const char *Cmd){
 	uint8_t keyNo = 3;
 	bool errors = false;
 
-	char cmdp = param_getchar(Cmd, 0);
+	char cmdp = tolower(param_getchar(Cmd, 0));
 
 	//Change key to user defined one
-	if (cmdp == 'k' || cmdp == 'K'){
+	if (cmdp == 'k'){
 		keyNo = param_get8(Cmd, 1);
 		if(keyNo >= KEYS_3DES_COUNT) 
 			errors = true;
 	}
 
-	if (cmdp == 'h' || cmdp == 'H') errors = true;
+	if (cmdp == 'h') errors = true;
 	
 	if (errors) return usage_hf_mfu_ucauth(); 
 
@@ -2278,9 +2273,9 @@ int CmdTestDES(const char * cmd)
 int CmdHF14AMfucSetPwd(const char *Cmd){
 
 	uint8_t pwd[16] = {0x00};	
-	char cmdp = param_getchar(Cmd, 0);
+	char cmdp = tolower(param_getchar(Cmd, 0));
 
-	if (strlen(Cmd) == 0  || cmdp == 'h' || cmdp == 'H') return usage_hf_mfu_ucsetpwd();
+	if (strlen(Cmd) == 0  || cmdp == 'h') return usage_hf_mfu_ucsetpwd();
 	
 	if (param_gethex(Cmd, 0, pwd, 32)) {
 		PrintAndLogEx(WARNING, "Password must include 32 HEX symbols");
@@ -2295,7 +2290,7 @@ int CmdHF14AMfucSetPwd(const char *Cmd){
 	UsbCommand resp;
 	if (WaitForResponseTimeout(CMD_ACK,&resp,1500) ) {
 		if ( (resp.arg[0] & 0xff) == 1) {
-			PrintAndLogEx(NORMAL, "Ultralight-C new password: %s", sprint_hex(pwd,16));
+			PrintAndLogEx(INFO, "Ultralight-C new password: %s", sprint_hex(pwd,16));
 		} else {
 			PrintAndLogEx(WARNING, "Failed writing at block %d", resp.arg[1] & 0xff);
 			return 1;
@@ -2315,9 +2310,9 @@ int CmdHF14AMfucSetUid(const char *Cmd){
 	UsbCommand c = {CMD_MIFAREU_READBL};
 	UsbCommand resp;
 	uint8_t uid[7] = {0x00};
-	char cmdp = param_getchar(Cmd, 0);
+	char cmdp = tolower(param_getchar(Cmd, 0));
 	
-	if (strlen(Cmd) == 0  || cmdp == 'h' || cmdp == 'H') return usage_hf_mfu_ucsetuid();
+	if (strlen(Cmd) == 0  || cmdp == 'h') return usage_hf_mfu_ucsetuid();
 
 	if (param_gethex(Cmd, 0, uid, 14)) {
 		PrintAndLogEx(WARNING, "UID must include 14 HEX symbols");
@@ -2386,7 +2381,7 @@ int CmdHF14AMfuGenDiverseKeys(const char *Cmd){
 	if (strlen(Cmd) == 0  || cmdp == 'h') return usage_hf_mfu_gendiverse();
 
 	if ( cmdp == 'r' ) {
-			// read uid from tag
+		// read uid from tag
 		UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0}};
 		clearCommandBuffer();
 		SendCommand(&c);
@@ -2395,8 +2390,13 @@ int CmdHF14AMfuGenDiverseKeys(const char *Cmd){
 		iso14a_card_select_t card;
 		memcpy(&card, (iso14a_card_select_t *)resp.d.asBytes, sizeof(iso14a_card_select_t));
 		
-		uint64_t select_status = resp.arg[0];		// 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
-		if(select_status == 0) {
+		uint64_t select_status = resp.arg[0];	
+		// 0: couldn't read,
+		// 1: OK, with ATS
+		// 2: OK, no ATS
+		// 3: proprietary Anticollision
+		
+		if ( select_status == 0 ) {
 			PrintAndLogEx(WARNING, "iso14443a card select failed");
 			return 1;
 		}
@@ -2451,12 +2451,12 @@ int CmdHF14AMfuGenDiverseKeys(const char *Cmd){
 	PrintAndLogEx(NORMAL, "Diversified key: %s", sprint_hex(divkey+1, 6));
 	
 	for (int i=0; i < sizeof(mifarekeyA); ++i){
-		dkeyA[i] = (mifarekeyA[i] << 1) & 0xff;
-		dkeyA[6] |=  ((mifarekeyA[i] >> 7) & 1) << (i+1);
+		dkeyA[i]  = (mifarekeyA[i] << 1) & 0xff;
+		dkeyA[6] |= ((mifarekeyA[i] >> 7) & 1) << (i+1);
 	}
 	
 	for (int i=0; i < sizeof(mifarekeyB); ++i){
-		dkeyB[1] |=  ((mifarekeyB[i] >> 7) & 1) << (i+1);
+		dkeyB[1]  |= ((mifarekeyB[i] >> 7) & 1) << (i+1);
 		dkeyB[2+i] = (mifarekeyB[i] << 1) & 0xff;
 	}
 	
@@ -2493,6 +2493,7 @@ int CmdHF14AMfuPwdGen(const char *Cmd){
 	uint8_t uid[7] = {0x00};	
 	char cmdp = tolower(param_getchar(Cmd, 0));
 	if (strlen(Cmd) == 0  || cmdp == 'h') return usage_hf_mfu_pwdgen();
+	
 	if (cmdp == 't') return ul_ev1_pwdgen_selftest();
 	
 	if ( cmdp == 'r') {
@@ -2505,8 +2506,12 @@ int CmdHF14AMfuPwdGen(const char *Cmd){
 		iso14a_card_select_t card;
 		memcpy(&card, (iso14a_card_select_t *)resp.d.asBytes, sizeof(iso14a_card_select_t));
 		
-		uint64_t select_status = resp.arg[0];		// 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
-		if(select_status == 0) {
+		uint64_t select_status = resp.arg[0];
+		// 0: couldn't read
+		// 1: OK with ATS
+		// 2: OK, no ATS
+		// 3: proprietary Anticollision
+		if ( select_status == 0 ) {
 			PrintAndLogEx(WARNING, "iso14443a card select failed");
 			return 1;
 		}
@@ -2519,6 +2524,7 @@ int CmdHF14AMfuPwdGen(const char *Cmd){
 	else {
 		if (param_gethex(Cmd, 0, uid, 14)) return usage_hf_mfu_pwdgen();
 	}
+	
 	PrintAndLogEx(NORMAL, "---------------------------------");
 	PrintAndLogEx(NORMAL, " Using UID : %s", sprint_hex(uid, 7));
 	PrintAndLogEx(NORMAL, "---------------------------------");
@@ -2536,8 +2542,7 @@ int CmdHF14AMfuPwdGen(const char *Cmd){
 //------------------------------------
 // Menu Stuff
 //------------------------------------
-static command_t CommandTable[] =
-{
+static command_t CommandTable[] = {
 	{"help",	CmdHelp,			1, "This help"},
 	{"dbg",		CmdHF14AMfDbg,		0, "Set default debug mode"},
 	{"info",	CmdHF14AMfUInfo,	0, "Tag information"},
@@ -2557,7 +2562,6 @@ static command_t CommandTable[] =
 
 int CmdHFMFUltra(const char *Cmd){
 	clearCommandBuffer();
-	//WaitForResponseTimeout(CMD_ACK,NULL,100);
 	CmdsParse(CommandTable, Cmd);
 	return 0;
 }

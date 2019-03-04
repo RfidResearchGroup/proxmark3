@@ -72,6 +72,7 @@ local function sendCmds( cmds )
 		if cmds[i]  then 
 			print ( cmds[i]  )
 			core.console( cmds[i] )
+			core.clearCommandBuffer()
 		end
 	end
 end

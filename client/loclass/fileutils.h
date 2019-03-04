@@ -48,7 +48,7 @@
 #include <stdarg.h>
 #include "../ui.h"
 #include "../emv/emvjson.h"
-#include "mifare4.h"
+#include "mifare/mifare4.h"
 #include "cmdhfmfu.h"
 
 typedef enum {
@@ -124,7 +124,7 @@ extern int loadFile(const char *preferredName, const char *suffix, void* data, s
 */
 extern int loadFileEML(const char *preferredName, const char *suffix, void* data, size_t* datalen);
 
-/** STUB
+/**
  * @brief  Utility function to load data from a JSON textfile. This method takes a preferred name.
  * E.g. dumpdata-15.json
  *
@@ -136,6 +136,21 @@ extern int loadFileEML(const char *preferredName, const char *suffix, void* data
  * @return 0 for ok, 1 for failz
 */
 extern int loadFileJSON(const char *preferredName, const char *suffix, void* data, size_t maxdatalen, size_t* datalen);
+
+
+/**
+ * @brief  Utility function to load data from a DICTIONARY textfile. This method takes a preferred name.
+ * E.g. default_keys.dic
+ *
+ * @param preferredName
+ * @param suffix the file suffix. Leave out the ".".
+ * @param data The data array to store the loaded bytes from file
+ * @param maxdatalen maximum size of data array in bytes
+ * @param datalen the number of bytes loaded from file
+ * @param keylen  the number of bytes a key per row is
+ * @return 0 for ok, 1 for failz
+*/
+extern int loadFileDICTIONARY(const char *preferredName, const char *suffix, void* data, size_t* datalen, uint8_t keylen, uint16_t* keycnt );
 
 #define PrintAndLogDevice(level, format, args...)  PrintAndLogEx(level, format , ## args)
 #else 

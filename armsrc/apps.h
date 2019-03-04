@@ -34,7 +34,6 @@ extern "C" {
 
 extern const uint8_t OddByteParity[256];
 extern int rsamples;   // = 0;
-extern int tracing;    // = TRUE;
 extern uint8_t trigger;
 
 // This may be used (sparingly) to declare a function to be copied to
@@ -104,6 +103,8 @@ void T55xxWriteBlock(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t PwdMode
 void T55xxWriteBlockExt(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t PwdMode);
 void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd);
 void T55xxWakeUp(uint32_t Pwd);
+void T55xx_ChkPwds(void);
+
 void TurnReadLFOn(uint32_t delay);
 void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd);
 void EM4xWriteWord(uint32_t flag, uint32_t data, uint32_t pwd);

@@ -5,7 +5,7 @@ local utils =  require('utils')
 
 copyright = 'Copyright (c) 2018 IceSQL AB. All rights reserved.'
 author = 'Christian Herrmann'
-version = 'v1.0.3'
+version = 'v1.0.4'
 desc = [[
 This script tries to set UID on a IS15693 SLIX magic card 
 Remember the UID  ->MUST<- start with 0xE0
@@ -15,6 +15,8 @@ example = [[
 	 -- ISO15693 slix magic tag
 
 	 script run iso15_magic -u E004013344556677
+	 
+	 script run iso15_magic -u E004013344556677 -a
 ]]
 usage = [[
 script run iso15_magic -h -u <uid>
@@ -22,6 +24,7 @@ script run iso15_magic -h -u <uid>
 Arguments:
 	-h             : this help
 	-u <UID>       : UID (16 hexsymbols)
+	-a             : use offical pm3 repo ISO15 commands instead of iceman fork.
 ]]
 
 local DEBUG = true
@@ -82,11 +85,13 @@ function main(args)
 	print()
 
 	local uid = 'E004013344556677'
+	local use_iceman = true
 	
 	-- Read the parameters
-	for o, a in getopt.getopt(args, 'hu:') do
+	for o, a in getopt.getopt(args, 'hu:a') do
 		if o == "h" then return help() end
 		if o == "u" then uid = a end
+		if o == "a" then use_iceman = false end
 	end	
 	
 	-- uid string checks
@@ -103,8 +108,11 @@ function main(args)
 	
 	core.clearCommandBuffer()
 	
-	magicUID_iceman(block0, block1)
-	--magicUID_offical(block0, block1)
+	if use_iceman then
+		magicUID_iceman(block0, block1)
+	else
+		magicUID_offical(block0, block1)
+	end
 end
 
 main(args)

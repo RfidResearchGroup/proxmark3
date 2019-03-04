@@ -39,7 +39,7 @@ typedef enum {
 
 enum TransactionType {
 	TT_MSD,
-	TT_VSDC,        // not standart for contactless!!!!
+	TT_VSDC,        // contact only. not standart for contactless
 	TT_QVSDCMCHIP,
 	TT_CDA,
 };
@@ -65,7 +65,7 @@ enum CardPSVendor {
 };
 extern enum CardPSVendor GetCardPSVendor(uint8_t * AID, size_t AIDlen);
 
-extern void TLVPrintFromBuffer(uint8_t *data, int datalen);
+extern bool TLVPrintFromBuffer(uint8_t *data, int datalen);
 extern void TLVPrintFromTLV(struct tlvdb *tlv);
 extern void TLVPrintFromTLVLev(struct tlvdb *tlv, int level);
 extern void TLVPrintAIDlistFromSelectTLV(struct tlvdb *tlv);
@@ -79,7 +79,7 @@ extern void SetAPDULogging(bool logging);
 extern int EMVExchange(EMVCommandChannel channel, bool LeaveFieldON, sAPDU apdu, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv);
 
 // search application
-extern int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, bool decodeTLV, struct tlvdb *tlv);
+extern int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t PSENum, bool decodeTLV, struct tlvdb *tlv);
 extern int EMVSearch(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, bool decodeTLV, struct tlvdb *tlv);
 extern int EMVSelectPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t PSENum, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
 extern int EMVSelect(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t *AID, size_t AIDLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv);
@@ -102,6 +102,7 @@ extern int trCDA(struct tlvdb *tlv, struct tlvdb *ac_tlv, struct tlv *pdol_data_
 
 extern int RecoveryCertificates(struct tlvdb *tlvRoot, json_t *root);
 
+extern struct emv_pk *get_ca_pk(struct tlvdb *db);
 #endif
 
 

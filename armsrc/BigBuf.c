@@ -30,8 +30,8 @@ static uint16_t BigBuf_hi = BIGBUF_SIZE;
 static uint8_t *emulator_memory = NULL;
 
 // trace related variables
-static uint16_t traceLen = 0;
-int tracing = 1; //Last global one.. todo static?
+static uint32_t traceLen = 0;
+static bool tracing = true; //todo static?
 
 // get the address of BigBuf
 uint8_t *BigBuf_get_addr(void) {
@@ -112,7 +112,7 @@ uint16_t BigBuf_max_traceLen(void) {
 void clear_trace(void) {
 	traceLen = 0;
 }
-void set_tracelen(uint16_t value) {
+void set_tracelen(uint32_t value) {
     traceLen = value;
 }
 void set_tracing(bool enable) {
@@ -127,7 +127,7 @@ bool get_tracing(void) {
  * Get the number of bytes traced
  * @return
  */
-uint16_t BigBuf_get_traceLen(void) {
+uint32_t BigBuf_get_traceLen(void) {
 	return traceLen;
 }
 
@@ -142,8 +142,8 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
 
 	uint8_t *trace = BigBuf_get_addr();
 
-	uint16_t num_paritybytes = (iLen-1)/8 + 1;	// number of valid paritybytes in *parity
-	uint16_t duration = timestamp_end - timestamp_start;
+	uint32_t num_paritybytes = (iLen-1)/8 + 1;	// number of valid paritybytes in *parity
+	uint32_t duration = timestamp_end - timestamp_start;
 
 	// Return when trace is full
 	if (traceLen + sizeof(iLen) + sizeof(timestamp_start) + sizeof(duration) + num_paritybytes + iLen >= BigBuf_max_traceLen()) {
@@ -204,7 +204,7 @@ int LogTraceHitag(const uint8_t * btBytes, int iBits, int iSamples, uint32_t dwP
 	if (!tracing) return false;
 
 	uint8_t *trace = BigBuf_get_addr();
-	uint16_t iLen = nbytes(iBits);
+	uint32_t iLen = nbytes(iBits);
 	// Return when trace is full
 	if (traceLen + sizeof(rsamples) + sizeof(dwParity) + sizeof(iBits) + iLen > BigBuf_max_traceLen()) return false;
 

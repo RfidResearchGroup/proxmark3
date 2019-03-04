@@ -159,6 +159,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize) {
 			MifareAuthState = masNone;
 			break;
 		case ISO14443A_CMD_RATS:		snprintf(exp,size,"RATS"); break;
+		case ISO14443A_CMD_OPTS:        snprintf(exp,size,"OPTIONAL TIMESLOT"); break;		
 		case MIFARE_CMD_INC:			snprintf(exp,size,"INC(%d)",cmd[1]); break;
 		case MIFARE_CMD_DEC:			snprintf(exp,size,"DEC(%d)",cmd[1]); break;
 		case MIFARE_CMD_RESTORE:		snprintf(exp,size,"RESTORE(%d)",cmd[1]); break;
@@ -356,7 +357,7 @@ void annotateIso7816(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 			case ISO7816_EXTERNAL_AUTHENTICATION 	:snprintf(exp, size, "EXTERNAL AUTH");break;
 			case ISO7816_GET_CHALLENGE				:snprintf(exp, size, "GET CHALLENGE");break;
 			case ISO7816_MANAGE_CHANNEL				:snprintf(exp, size, "MANAGE CHANNEL");break;
-			case ISO7816_GETSTATUS					:snprintf(exp, size, "GET RESPONSE");break;
+			case ISO7816_GET_RESPONSE				:snprintf(exp, size, "GET RESPONSE");break;
 			default									:snprintf(exp,size,"?"); break;
 		}
 	}
@@ -535,7 +536,48 @@ void annotateLegic(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 }
 
 void annotateFelica(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){	
+
 	switch(cmd[0]){
+		case FELICA_POLL_REQ: snprintf(exp,size ,"POLLING");break;
+		case FELICA_POLL_ACK: snprintf(exp,size ,"POLL ACK");break;
+		case FELICA_REQSRV_REQ: snprintf(exp,size ,"REQUEST SERVICE");break;
+		case FELICA_REQSRV_ACK: snprintf(exp,size ,"REQ SERV ACK");break;
+		case FELICA_REQRESP_REQ: snprintf(exp,size ,"REQUEST RESPONSE");break;
+		case FELICA_REQRESP_ACK: snprintf(exp,size ,"REQ RESP ACK");break;
+		case FELICA_RDBLK_REQ: snprintf(exp,size ,"READ BLK");break;
+		case FELICA_RDBLK_ACK: snprintf(exp,size ,"READ BLK ACK");break;
+		case FELICA_WRTBLK_REQ:	snprintf(exp,size ,"WRITE BLK");break;
+		case FELICA_WRTBLK_ACK: snprintf(exp,size ,"WRITE BLK ACK");break;		
+		case FELICA_SRCHSYSCODE_REQ: snprintf(exp,size ,"SEARCH SERVICE CODE");break;
+		case FELICA_SRCHSYSCODE_ACK: snprintf(exp,size ,"SSC ACK");break;
+		case FELICA_REQSYSCODE_REQ: snprintf(exp,size ,"REQUEST SYSTEM CODE");break;
+		case FELICA_REQSYSCODE_ACK: snprintf(exp,size ,"RSC ACK");break;
+		case FELICA_AUTH1_REQ: snprintf(exp,size ,"AUTH 1");break;
+		case FELICA_AUTH1_ACK: snprintf(exp,size ,"AUTH 1 ACK");break;
+		case FELICA_AUTH2_REQ: snprintf(exp,size ,"AUTH 2");break;
+		case FELICA_AUTH2_ACK: snprintf(exp,size ,"AUTH 2 ACK");break;		
+		case FELICA_RDSEC_REQ: snprintf(exp,size ,"READ");break;
+		case FELICA_RDSEC_ACK: snprintf(exp,size ,"READ ACK");break;
+		case FELICA_WRTSEC_REQ: snprintf(exp,size ,"WRITE");break;
+		case FELICA_WRTSEC_ACK: snprintf(exp,size ,"WRITE ACK");break;	
+		case FELICA_REQSRV2_REQ: snprintf(exp,size ,"REQUEST SERVICE v2");break;
+		case FELICA_REQSRV2_ACK: snprintf(exp,size ,"REQ SERV v2 ACK");break;
+		case FELICA_GETSTATUS_REQ: snprintf(exp,size ,"GET STATUS");break;
+		case FELICA_GETSTATUS_ACK: snprintf(exp,size ,"GET STATUS ACK");break;
+		case FELICA_OSVER_REQ: snprintf(exp,size ,"REQUEST SPECIFIC VERSION");break;
+		case FELICA_OSVER_ACK: snprintf(exp,size ,"RSV ACK");break;
+		case FELICA_RESET_MODE_REQ: snprintf(exp,size ,"RESET MODE");break;
+		case FELICA_RESET_MODE_ACK: snprintf(exp,size ,"RESET MODE ACK");break;		
+		case FELICA_AUTH1V2_REQ: snprintf(exp,size ,"AUTH 1 v2");break;
+		case FELICA_AUTH1V2_ACK: snprintf(exp,size ,"AUTH 1 v2 ACK");break;
+		case FELICA_AUTH2V2_REQ: snprintf(exp,size ,"AUTH 2 v2");break;
+		case FELICA_AUTH2V2_ACK: snprintf(exp,size ,"AUTH 2 v2 ACK");break;		
+		case FELICA_RDSECV2_REQ: snprintf(exp,size ,"READ v2");break;
+		case FELICA_RDSECV2_ACK: snprintf(exp,size ,"READ v2 ACK");break;
+		case FELICA_WRTSECV2_REQ: snprintf(exp,size ,"WRITE v2");break;
+		case FELICA_WRTSECV2_ACK: snprintf(exp,size ,"WRITE v2 ACK");break;		
+		case FELICA_UPDATE_RNDID_REQ: snprintf(exp,size ,"UPDATE RANDOM ID");break;
+		case FELICA_UPDATE_RNDID_ACK: snprintf(exp,size ,"URI ACK");break;		
 		default                     : snprintf(exp,size ,"?");break;
 	}
 }
@@ -644,7 +686,7 @@ bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isRes
 			PrintAndLogEx(NORMAL, "            |            |  *  |%49s %012"PRIx64" prng %s |     |", 
 				"key", 
 				mfLastKey,
-				validate_prng_nonce(AuthData.nt) ? "WEAK": "HARD");
+				validate_prng_nonce(AuthData.nt) ? _GREEN_(WEAK): _YELLOW_(HARD));
 			
 			AuthData.first_auth = false;
 

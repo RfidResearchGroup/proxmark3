@@ -71,14 +71,14 @@ int saveFile(const char *preferredName, const char *suffix, const void* data, si
 	/*Opening file for writing in binary mode*/
 	FILE *f = fopen(fileName, "wb");
 	if (!f) {
-		PrintAndLogDevice(WARNING, "file not found or locked. '%s'", fileName);
+		PrintAndLogDevice(WARNING, "file not found or locked. '" _YELLOW_(%s)"'", fileName);
 		free(fileName);
 		return 1;
 	}
 	fwrite(data, 1,	datalen, f);
 	fflush(f);
 	fclose(f);
-	PrintAndLogDevice(SUCCESS, "saved %u bytes to binary file %s", datalen, fileName);
+	PrintAndLogDevice(SUCCESS, "saved %u bytes to binary file " _YELLOW_(%s), datalen, fileName);
 	free(fileName);
 	return 0;
 }
@@ -106,8 +106,8 @@ int saveFileEML(const char *preferredName, const char *suffix, uint8_t* data, si
 
 	/*Opening file for writing in text mode*/
 	FILE *f = fopen(fileName, "w+");
-	if (!f) {
-		PrintAndLogDevice(WARNING, "file not found or locked. '%s'", fileName);
+	if (!f) {		
+		PrintAndLogDevice(WARNING, "file not found or locked. '" _YELLOW_(%s)"'", fileName);
 		retval =  1;
 		goto out;
 	}
@@ -130,7 +130,7 @@ int saveFileEML(const char *preferredName, const char *suffix, uint8_t* data, si
 	}
 	fflush(f);
 	fclose(f);
-	PrintAndLogDevice(SUCCESS, "saved %d blocks to text file %s", blocks, fileName);
+	PrintAndLogDevice(SUCCESS, "saved %d blocks to text file " _YELLOW_(%s), blocks, fileName);
 	
 out:	
 	free(fileName);
@@ -240,13 +240,12 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
 
 	int res = json_dump_file(root, fileName, JSON_INDENT(2));
 	if (res) {
-		PrintAndLogDevice(FAILED, "error: can't save the file: %s", fileName);
+		PrintAndLogDevice(FAILED, "error: can't save the file: " _YELLOW_(%s), fileName);
 		json_decref(root);
 		retval = 200;
 		goto out;
 	}
-	PrintAndLogDevice(SUCCESS, "File `%s` saved.", fileName);
-	
+	PrintAndLogDevice(SUCCESS, "saved to json file " _YELLOW_(%s), fileName);
 	json_decref(root);
 
 out:	
@@ -266,9 +265,9 @@ int loadFile(const char *preferredName, const char *suffix, void* data, size_t* 
 
 	FILE *f = fopen(fileName, "rb");
 	if ( !f ) {
-		PrintAndLogDevice(FAILED, "file: %s: not found or locked.", fileName);
-		retval = 1;
-		goto out;
+		PrintAndLogDevice(WARNING, "file not found or locked. '" _YELLOW_(%s)"'", fileName);
+		free(fileName);
+		return 1;
 	}
 	
 	// get filesize in order to malloc memory
@@ -305,13 +304,18 @@ int loadFile(const char *preferredName, const char *suffix, void* data, size_t* 
 	memcpy( (data), dump, bytes_read);
 	free(dump);
 	
-	PrintAndLogDevice(SUCCESS, "loaded %d bytes from binary file %s", bytes_read, fileName);
+	PrintAndLogDevice(SUCCESS, "loaded %d bytes from binary file " _YELLOW_(%s), bytes_read, fileName);
 	
 	*datalen = bytes_read;
 
 out:	
 	fclose(f);
+	
+	if (data)
+		free(data);
+	
 	free(fileName);
+	
 	return retval;
 }
 
@@ -319,6 +323,7 @@ int loadFileEML(const char *preferredName, const char *suffix, void* data, size_
 
 	if ( preferredName == NULL ) return 1;
 	if ( suffix == NULL ) return 1;
+	if ( data == NULL ) return 1;
 
     size_t counter = 0;
 	int retval = 0, hexlen = 0;
@@ -328,7 +333,7 @@ int loadFileEML(const char *preferredName, const char *suffix, void* data, size_
 
 	FILE *f = fopen(fileName, "r");
 	if ( !f ) {
-		PrintAndLogDevice(FAILED, "file: %s: not found or locked.", fileName);
+		PrintAndLogDevice(WARNING, "file not found or locked. '" _YELLOW_(%s)"'", fileName);
 		retval = 1;
 		goto out;
 	}
@@ -359,8 +364,10 @@ int loadFileEML(const char *preferredName, const char *suffix, void* data, size_
 		}
 	}
 	fclose(f);
-	PrintAndLogDevice(SUCCESS, "loaded %d bytes from text file %s", counter, fileName);
-	*datalen = counter;
+	PrintAndLogDevice(SUCCESS, "loaded %d bytes from text file " _YELLOW_(%s), counter, fileName);
+	
+	if ( datalen )
+		*datalen = counter;
 		
 out:	
 	free(fileName);
@@ -368,12 +375,14 @@ out:
 }
 
 int loadFileJSON(const char *preferredName, const char *suffix, void* data, size_t maxdatalen, size_t* datalen) {
-	*datalen = 0;
-	json_t *root;
-	json_error_t error;
 
 	if ( preferredName == NULL ) return 1;
 	if ( suffix == NULL ) return 1;
+	if ( data == NULL ) return 1;
+	
+	*datalen = 0;
+	json_t *root;
+	json_error_t error;
 
 	int retval = 0;
 	int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
@@ -382,13 +391,13 @@ int loadFileJSON(const char *preferredName, const char *suffix, void* data, size
 
 	root = json_load_file(fileName, 0, &error);
 	if (!root) {
-		PrintAndLog("ERROR: json (%s) error on line %d: %s", fileName, error.line, error.text);
+		PrintAndLog("ERROR: json " _YELLOW_(%s) " error on line %d: %s", fileName, error.line, error.text);
 		retval = 2; 
 		goto out;
 	}
 	
 	if (!json_is_object(root)) {
-		PrintAndLog("ERROR: Invalid json (%s) format. root must be an object.", fileName);
+		PrintAndLog("ERROR: Invalid json " _YELLOW_(%s) " format. root must be an object.", fileName);
 		retval = 3; 
 		goto out;
 	}
@@ -446,11 +455,80 @@ int loadFileJSON(const char *preferredName, const char *suffix, void* data, size
 	}
 
 	
-	PrintAndLog("Loaded JSON: (%s) OK.", fileName);
+	PrintAndLog("loaded from JSON file " _YELLOW_(%s), fileName);
 out:	
 	json_decref(root);
 	free(fileName);
 	return retval;
+}
+
+int loadFileDICTIONARY(const char *preferredName, const char *suffix, void* data, size_t* datalen, uint8_t keylen, uint16_t* keycnt ) {
+
+	if ( preferredName == NULL ) return 1;
+	if ( suffix == NULL ) return 1;
+	if ( data == NULL ) return 1;
+
+	// t5577 == 4bytes
+	// mifare == 6 bytes
+	// iclass == 8 bytes
+	// default to 6 bytes.
+	if (keylen != 4 && keylen != 6 && keylen != 8) {
+		keylen = 6;
+	}
+	
+	// double up since its chars
+	keylen <<= 1;	
+	
+	char line[255];
+	
+    size_t counter = 0;
+	int retval = 0;
+	int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
+	char * fileName = calloc(size, sizeof(char));
+	sprintf(fileName,"%s.%s", preferredName, suffix);
+
+	FILE *f = fopen(fileName, "r");
+	if ( !f ) {
+		PrintAndLogDevice(WARNING, "file not found or locked. '" _YELLOW_(%s)"'", fileName);
+		retval = 1;
+		goto out;
+	}
+	
+	// read file
+	while ( fgets(line, sizeof(line), f) ) {
+		
+		// add null terminator
+		line[keylen] = 0;
+
+		// smaller keys than expected is skipped
+		if (strlen(line) < keylen)
+			continue;
+
+	
+		// The line start with # is comment, skip
+		if( line[0] == '#' )
+			continue;
+	
+		if (!isxdigit(line[0])){
+			PrintAndLogEx(FAILED, "file content error. '%s' must include " _BLUE_(%2d) "HEX symbols", line, keylen);
+			continue;
+		}	
+
+		uint64_t key = strtoull(line, NULL, 16);
+		
+		num_to_bytes(key, keylen >> 1, data + counter);
+		(*keycnt)++;
+		memset(line, 0, sizeof(line));
+		counter += (keylen >> 1);
+	}
+	fclose(f);
+	PrintAndLogDevice(SUCCESS, "loaded " _GREEN_(%2d) "keys from dictionary file " _YELLOW_(%s), *keycnt, fileName);
+	
+	if ( datalen ) 
+		*datalen = counter;	
+out:	
+	free(fileName);
+	return retval;	
 }
 
 #else //if we're on ARM

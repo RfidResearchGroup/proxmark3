@@ -7,9 +7,9 @@
 #include "pcf7931.h"
 #include "string.h"
 
-int DemodPCF7931(uint8_t **outBlocks);
-int IsBlock0PCF7931(uint8_t *Block);
-int IsBlock1PCF7931(uint8_t *Block);
+size_t DemodPCF7931(uint8_t **outBlocks);
+bool IsBlock0PCF7931(uint8_t *Block);
+bool IsBlock1PCF7931(uint8_t *Block);
 void ReadPCF7931();
 void SendCmdPCF7931(uint32_t * tab);
 bool AddBytePCF7931(uint8_t byte, uint32_t * tab, int32_t l, int32_t p);

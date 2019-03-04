@@ -154,42 +154,31 @@ static void UsbCommandReceived(UsbCommand* c) {
 			char s[USB_CMD_DATA_SIZE+1];
 			memset(s, 0x00, sizeof(s)); 
 			size_t len = MIN(c->arg[0], USB_CMD_DATA_SIZE);
-			memcpy(s, c->d.asBytes, len);
-			
-					
-			//#define FLAG_RAWPRINT 0x0111
-			//#define FLAG_NOOPT 0x0000
-			//#define FLAG_NOLOG 0x0001
-			//#define FLAG_NONEWLINE 0x0010
-			//#define FLAG_NOPROMPT 0x0100
+			memcpy(s, c->d.asBytes, len);			
 			uint64_t flag = c->arg[1];
-			if (flag > 0) { // FLAG_RAWPRINT) {
-				switch (flag) {
-					case FLAG_RAWPRINT:
-						printf("%s", s);
-						return;
-					case FLAG_NONEWLINE:
-						printf("%s\r", s);
-						return;
-					case FLAG_NOLOG:
-						printf("%s\r\n", s);
-						return; 
-				}
-				fflush(stdout);
-				return;
-			}
-
-			// print debug line on same row. escape seq \r
-			if ( c->arg[1] == CMD_MEASURE_ANTENNA_TUNING_HF) {
-				PrintAndLogEx(NORMAL, "\r#db# %s", s);
-			} else {
-				PrintAndLogEx(NORMAL, "#db# %s", s);
+			
+			switch (flag) {
+				case FLAG_RAWPRINT:
+					printf("%s", s);
+					break;
+				case FLAG_NONEWLINE:
+					printf("\r%s", s);
+					break;
+				case FLAG_NOLOG:
+					printf("%s\r\n", s);
+					break;
+				//case FLAG_NOPROMPT:
+				//	break;
+				case FLAG_NOOPT:
+				default:
+					PrintAndLogEx(NORMAL, "#db# %s", s);
+					break;
 			}
 			fflush(stdout);
 			break;
 		}
 		case CMD_DEBUG_PRINT_INTEGERS: {
-			PrintAndLogEx(NORMAL, "#db# %08x, %08x, %08x", c->arg[0], c->arg[1], c->arg[2]);
+			PrintAndLogEx(NORMAL, "#db# %" PRIx64 ", %" PRIx64 ", %" PRIx64 "", c->arg[0], c->arg[1], c->arg[2]);
 			break;
 		}
 		// iceman:  hw status - down the path on device, runs printusbspeed which starts sending a lot of

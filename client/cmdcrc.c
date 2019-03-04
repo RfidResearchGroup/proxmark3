@@ -39,8 +39,7 @@ int split(char *str, char *arr[MAX_ARGS]){
     return wordCnt;
 }
 
-int CmdCrc(const char *Cmd)
-{
+int CmdCrc(const char *Cmd) {
 	char name[] = {"reveng "};
 	char Cmd2[100 + 7];
 	memcpy(Cmd2, name, 7);
@@ -198,6 +197,11 @@ int GetModels(char *Models[], int *count, uint8_t *width){
 				pfree(qptr);
 			}
 		}
+		if(uflags & C_NOBFS && ~rflags & R_HAVEP) {
+			PrintAndLogEx(WARNING, "no models found");
+			return 0;
+		}
+			
 		if (!(model.flags & P_REFIN) != !(model.flags & P_REFOUT)){		
 			PrintAndLogEx(WARNING, "cannot search for crossed-endian models");
 			return 0;
@@ -259,8 +263,9 @@ int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *res
 
 	SETBMP();
 	//set model
-	if (!(c = mbynam(&model, inModel))) {
-		PrintAndLogEx(WARNING, "error: preset model '%s' not found.  Use reveng -D to list presets.", inModel);
+	c = mbynam(&model, inModel);
+	if (!c) {
+		PrintAndLogEx(WARNING, "error: preset model '%s' not found.  Use reveng -D to list presets. [%d]", inModel, c);
 		return 0;
 	}
 	if (c < 0){
@@ -396,7 +401,7 @@ char *SwapEndianStr(const char *inStr, const size_t len, const uint8_t blockSize
 // takes hex string in and searches for a matching result (hex string must include checksum)
 int CmdrevengSearch(const char *Cmd){
 
-#define NMODELS 103	
+#define NMODELS 105	
 	
 	char inHexStr[100] = {0x00};
 	int dataLen = param_getstr(Cmd, 0, inHexStr, sizeof(inHexStr));
@@ -432,7 +437,7 @@ int CmdrevengSearch(const char *Cmd){
 		char *outHex = calloc(dataLen-crcChars+1, sizeof(char));
 		memcpy(outHex, inHexStr, dataLen-crcChars);
 
-		// PrintAndLogEx(DEBUG, "DEBUG: dataLen: %d, crcChars: %d, Model: %s, CRC: %s, width: %d, outHex: %s",dataLen, crcChars, Models[i], inCRC, width[i], outHex);
+		PrintAndLogEx(DEBUG, "DEBUG: dataLen: %d, crcChars: %d, Model: %s, CRC: %s, width: %d, outHex: %s",dataLen, crcChars, Models[i], inCRC, width[i], outHex);
 		ans = RunModel(Models[i], outHex, false, 0, result);
 		if (ans) {
 			// test for match
