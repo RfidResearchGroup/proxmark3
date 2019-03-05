@@ -142,7 +142,7 @@ int ndefRecordsDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
 		
 		ndefRecordDecodeAndPrint(&ndefRecord[len], NDEFHeader.RecLen);		
 		
-		len += NDEFHeader.len + NDEFHeader.TypeLen + NDEFHeader.PayloadLen + NDEFHeader.IDLen;
+		len += NDEFHeader.RecLen;
 		
 		if (NDEFHeader.MessageEnd)
 			break;
