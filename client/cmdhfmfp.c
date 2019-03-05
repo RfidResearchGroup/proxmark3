@@ -838,6 +838,7 @@ int CmdHFMFPNDEF(const char *cmd) {
 
 	return 0;
 }
+
 static command_t CommandTable[] =
 {
   {"help",             CmdHelp,					1, "This help"},
@@ -850,7 +851,7 @@ static command_t CommandTable[] =
   {"rdsc",  	       CmdHFMFPRdsc,			0, "Read sectors"},
   {"wrbl",  	       CmdHFMFPWrbl,			0, "Write blocks"},
   {"mad",  	           CmdHFMFPMAD,				0, "Checks and prints MAD"},
-  {"ndef",  	       CmdHFMFPNDEF,			0, "Prints NDEF"},
+  {"ndef",  	       CmdHFMFPNDEF,			0, "Prints NDEF records from card"},
   {NULL,               NULL,					0, NULL}
 };
 

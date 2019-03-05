@@ -11,6 +11,7 @@
 #include "cmdhfmf.h"
 #include "mifare/mifare4.h"
 #include "mifare/mad.h"
+#include "mifare/ndef.h"
 
 
 #define MFBLOCK_SIZE 16
@@ -3220,7 +3221,7 @@ int CmdHF14AMfMAD(const char *cmd) {
 	CLIParserInit("hf mf mad", 
 		"Checks and prints Mifare Application Directory (MAD)", 
 		"Usage:\n\thf mf mad -> shows MAD if exists\n"
-			"\thf mf mad -a 03e1 -k d3f7d3f7d3f7 -> shows NDEF data if exists\n");
+			"\thf mf mad -a 03e1 -k ffffffffffff -b -> shows NDEF data if exists. read card with custom key and key B\n");
 
 	void* argtable[] = {
 		arg_param_begin,
@@ -3305,6 +3306,110 @@ int CmdHF14AMfMAD(const char *cmd) {
 	return 0;
 }
 
+int CmdHFMFNDEF(const char *cmd) {
+
+	CLIParserInit("hf mf ndef", 
+		"Prints NFC Data Exchange Format (NDEF)", 
+		"Usage:\n\thf mf ndef -> shows NDEF data\n"
+			"\thf mf ndef -a 03e1 -k ffffffffffff -b -> shows NDEF data with custom AID, key and with key B\n");
+
+	void* argtable[] = {
+		arg_param_begin,
+		arg_litn("vV",  "verbose",  0, 2, "show technical data"),
+		arg_str0("aA",  "aid",      "replace default aid for NDEF", NULL),
+		arg_str0("kK",  "key",      "replace default key for NDEF", NULL),
+		arg_lit0("bB",  "keyb",     "use key B for access sectors (by default: key A)"),
+		arg_param_end
+	};
+	CLIExecWithReturn(cmd, argtable, true);
+	
+	bool verbose = arg_get_lit(1);
+	bool verbose2 = arg_get_lit(1) > 1;
+	uint8_t aid[2] = {0};
+	int aidlen;
+	CLIGetHexWithReturn(2, aid, &aidlen);
+	uint8_t key[6] = {0};
+	int keylen;
+	CLIGetHexWithReturn(3, key, &keylen);
+	bool keyB = arg_get_lit(4);
+	
+	CLIParserFree();
+
+	uint16_t ndefAID = 0x03e1;
+	if (aidlen == 2)
+		ndefAID = (aid[0] << 8) + aid[1];
+	
+	uint8_t ndefkey[6] = {0};
+	memcpy(ndefkey, g_mifare_ndef_key, 6);
+	if (keylen == 6) {
+		memcpy(ndefkey, key, 6);
+	}
+	
+	uint8_t sector0[16 * 4] = {0};
+	uint8_t sector10[16 * 4] = {0};
+	uint8_t data[4096] = {0};
+	int datalen = 0;
+
+	PrintAndLogEx(NORMAL, "");
+	
+	if (mfReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector0)) {
+		PrintAndLogEx(ERR, "read sector 0 error. card don't have MAD or don't have MAD on default keys.");
+		return 2;
+	}
+	
+	bool haveMAD2 = false;
+	int res = MADCheck(sector0, NULL, verbose, &haveMAD2);
+	if (res) {
+		PrintAndLogEx(ERR, "MAD error %d.", res);
+		return res;
+	}
+	
+	if (haveMAD2) {
+		if (mfReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector10)) {
+			PrintAndLogEx(ERR, "read sector 0x10 error. card don't have MAD or don't have MAD on default keys.");
+			return 2;
+		}
+	}
+
+	uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
+	size_t madlen = 0;
+	if (MADDecode(sector0, (haveMAD2 ? sector10 : NULL), mad, &madlen)) {
+		PrintAndLogEx(ERR, "can't decode mad.");
+		return 10;
+	}
+
+	printf("data reading:");
+	for (int i = 0; i < madlen; i++) {
+		if (ndefAID == mad[i]) {
+			uint8_t vsector[16 * 4] = {0};
+			if (mfReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, ndefkey, vsector)) {
+				PrintAndLogEx(ERR, "read sector %d error.", i + 1);
+				return 2;
+			}
+			
+			memcpy(&data[datalen], vsector, 16 * 3);
+			datalen += 16 * 3;
+			
+			printf(".");
+		}
+	}
+	printf(" OK\n");
+	
+	if (!datalen) {
+		PrintAndLogEx(ERR, "no NDEF data.");
+		return 11;
+	}
+	
+	if (verbose2) {
+		PrintAndLogEx(NORMAL, "NDEF data:");
+		dump_buffer(data, datalen, stdout, 1);
+	}
+		
+	NDEFDecodeAndPrint(data, datalen, verbose);
+
+	return 0;
+}
+
 int CmdHF14AMfList(const char *Cmd) {
 	CmdTraceList("mf");
 	return 0;
@@ -3349,7 +3454,7 @@ static command_t CommandTable[] = {
 	{"csave",		CmdHF14AMfCSave,		0, "Save dump from magic Chinese card into file or emulator"},
 	{"-----------",	CmdHelp,				1, ""},
 	{"mad",			CmdHF14AMfMAD,			0, "Checks and prints MAD"},
-//	{"ndef",		CmdHF14AMfHDEF,			0, "Checks and prints NDEF records from card"},
+	{"ndef",		CmdHFMFNDEF,			0, "Prints NDEF records from card"},
 
 	{"ice",			CmdHF14AMfice,			0, "collect Mifare Classic nonces to file"},
 	{NULL, NULL, 0, NULL}
