@@ -167,7 +167,9 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 
 			if (cmd[0] != 0x00) {
 				int ret = CommandReceived(cmd);
-				add_history(cmd);
+				HIST_ENTRY * entry = history_get(history_length);
+				if ((!entry) || (strcmp(entry->line, cmd) != 0))
+					add_history(cmd);
 				
 				// exit or quit
 				if (ret == 99) 
