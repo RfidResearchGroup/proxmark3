@@ -124,6 +124,8 @@ void I2C_Reset_EnterMainProgram(void) {
 // Reset the SIM_Adapter, then enter the bootloader program
 // Reserve for firmware update.
 void I2C_Reset_EnterBootloader(void) {
+	StartTicks();
+	I2C_init();
 	I2C_SetResetStatus(0, 1, 1);
 	WaitMS(100);
 	I2C_SetResetStatus(1, 1, 1);
