@@ -111,15 +111,13 @@ int madCRCCheck(uint8_t *sector, bool verbose, int MADver) {
 	if (MADver == 1) {
 		uint8_t crc = CRC8Mad(&sector[16 + 1], 15 + 16);
 		if (crc != sector[16]) {
-			if (verbose)
-				PrintAndLogEx(WARNING, "Wrong MAD%d CRC. Calculated: 0x%02x, from card: 0x%02x", MADver, crc, sector[16]);
+			PrintAndLogEx(WARNING, "Wrong MAD%d CRC. Calculated: 0x%02x, from card: 0x%02x", MADver, crc, sector[16]);
 			return 3;
 		};
 	} else {
 		uint8_t crc = CRC8Mad(&sector[1], 15 + 16 + 16);
 		if (crc != sector[0]) {
-			if (verbose)
-				PrintAndLogEx(WARNING, "Wrong MAD%d CRC. Calculated: 0x%02x, from card: 0x%02x", MADver, crc, sector[16]);
+			PrintAndLogEx(WARNING, "Wrong MAD%d CRC. Calculated: 0x%02x, from card: 0x%02x", MADver, crc, sector[16]);
 			return 3;
 		};
 	}
