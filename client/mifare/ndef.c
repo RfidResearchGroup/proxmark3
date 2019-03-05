@@ -11,6 +11,7 @@
 #include "ndef.h"
 #include "ui.h"
 #include "emv/dump.h"
+#include "crypto/asn1utils.h"
 
 #define STRBOOL(p) ((p) ? "+" : "-")
 
@@ -134,13 +135,44 @@ int ndefPrintHeader(NDEFHeader_t *header) {
 }
 
 int ndefDecodeSig(uint8_t *sig, size_t siglen) {
+	size_t indx = 0;
 	PrintAndLogEx(NORMAL, "\tsignature version: 0x%02x", sig[0]);
 	if (sig[0] != 0x01) {
 		PrintAndLogEx(ERR, "signature version unknown.");
 		return 1;
 	}
+	indx++;
 	
-	
+	while (indx < siglen) {
+		if (sig[indx] == 0x04) {
+			size_t intsiglen = (sig[indx + 1] << 8) + sig[indx + 2];
+			indx += 3;
+			PrintAndLogEx(NORMAL, "\tsignature [%d]: %s", intsiglen, sprint_hex_inrow(&sig[indx], intsiglen));
+			
+			uint8_t rval[300] = {0}; 
+			uint8_t sval[300] = {0}; 
+			int res = ecdsa_asn1_get_signature(&sig[indx], intsiglen, rval, sval);
+			if (!res) {
+				PrintAndLogEx(NORMAL ,"\t\tr: %s", sprint_hex(rval, 32));
+				PrintAndLogEx(NORMAL ,"\t\ts: %s", sprint_hex(sval, 32));
+			}
+			
+			indx += intsiglen;
+			continue;
+		}
+
+		if (sig[indx] == 0x80) {
+			size_t intchainlen = (sig[indx + 1] << 8) + sig[indx + 2];
+			indx += 3;
+			PrintAndLogEx(NORMAL, "\tchain [%d]: %.*s", intchainlen, intchainlen, &sig[indx]);			
+			indx += intchainlen;
+			continue;
+		}
+		
+		size_t skiplen = (sig[indx + 1] << 8) + sig[indx + 2];
+		indx += skiplen;
+	}
+
 	return 0;
 };
 
