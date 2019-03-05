@@ -544,7 +544,7 @@ int EPA_Setup()
 	iso14443b_setup();
 	// select the card
 	return_code = iso14443b_select_card( &card_b_info );
-	if (return_code == 1) {
+	if (return_code == 0) {
 		Dbprintf("ISO 14443 Type B");
 		iso_type = 'b';
 		return 0;
