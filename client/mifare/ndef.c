@@ -10,6 +10,20 @@
 
 #include "ndef.h"
 #include "ui.h"
+#include "emv/dump.h"
+
+#define STRBOOL(p) ((p) ? "+" : "-")
+
+static const char *TypeNameFormat_s[] = {
+	"Empty Record",
+	"Well Known Record",
+	"MIME Media Record",
+	"Absolute URI Record",
+	"External Record",
+	"Unknown Record",
+	"Unchanged Record"
+	"n/a"
+};
 
 uint16_t ndefTLVGetLength(uint8_t *data, size_t *indx) {
 	uint16_t len = 0;
@@ -24,10 +38,115 @@ uint16_t ndefTLVGetLength(uint8_t *data, size_t *indx) {
 	return len;
 }
 
+int ndefDecodeHeader(uint8_t *data, size_t datalen, NDEFHeader_t *header) {
+	header->MessageBegin	= data[0] & 0x80;
+	header->MessageEnd		= data[0] & 0x40;
+	header->ChunkFlag		= data[0] & 0x20;
+	header->ShortRecordBit	= data[0] & 0x10;
+	header->IDLenPresent	= data[0] & 0x08;
+	header->TypeNameFormat	= data[0] & 0x07;
+	header->len				= 1 + 1 + (header->ShortRecordBit ? 1 : 4) + (header->IDLenPresent ? 1 : 0); // header + typelen + payloadlen + idlen
+	if (header->len > datalen)
+		return 1;
+	
+	header->TypeLen			= data[1];
+	
+	header->PayloadLen		= (header->ShortRecordBit ? (data[2]) : ((data[2] << 24) + (data[3] << 16) + (data[4] << 8) + data[5]));
+	
+	if (header->IDLenPresent)
+		header->IDLen = (header->ShortRecordBit ? (data[3]) : (data[6]));
+	else
+		header->IDLen = 0;
+	
+	header->RecLen			= header->len + header->TypeLen + header->PayloadLen + header->IDLen;
+	
+	if (header->RecLen > datalen)
+		return 3;
+
+	return 0;
+}
+
+int ndefPrintHeader(NDEFHeader_t *header) {
+	PrintAndLogEx(INFO, "Header:");
+	
+	PrintAndLogEx(NORMAL, "\tMessage Begin:    %s", STRBOOL(header->MessageBegin));
+	PrintAndLogEx(NORMAL, "\tMessage End:      %s", STRBOOL(header->MessageEnd));
+	PrintAndLogEx(NORMAL, "\tChunk Flag:       %s", STRBOOL(header->ChunkFlag));
+	PrintAndLogEx(NORMAL, "\tShort Record Bit: %s", STRBOOL(header->ShortRecordBit));
+	PrintAndLogEx(NORMAL, "\tID Len Present:   %s", STRBOOL(header->IDLenPresent));
+	PrintAndLogEx(NORMAL, "\tType Name Format: [0x%02x] %s", header->TypeNameFormat, TypeNameFormat_s[header->TypeNameFormat]);
+
+	PrintAndLogEx(NORMAL, "\tHeader length    : %d", header->len);
+	PrintAndLogEx(NORMAL, "\tType length      : %d", header->TypeLen);
+	PrintAndLogEx(NORMAL, "\tPayload length   : %d", header->PayloadLen);
+	PrintAndLogEx(NORMAL, "\tID length        : %d", header->IDLen);
+	PrintAndLogEx(NORMAL, "\tRecord length    : %d", header->RecLen);
+
+	return 0;
+}
+
+int ndefRecordDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
+	
+	NDEFHeader_t NDEFHeader = {0};
+	int res = ndefDecodeHeader(ndefRecord, ndefRecordLen, &NDEFHeader);
+	if (res)
+		return res;
+	
+	ndefPrintHeader(&NDEFHeader);
+	
+	size_t indx = NDEFHeader.len;
+	if (NDEFHeader.TypeLen) {
+		PrintAndLogEx(INFO, "Type data:");
+		dump_buffer(&ndefRecord[indx], NDEFHeader.TypeLen, stdout, 1);
+		
+		indx += NDEFHeader.TypeLen;
+	}
+	if (NDEFHeader.IDLen) {
+		PrintAndLogEx(INFO, "ID data:");
+		dump_buffer(&ndefRecord[indx], NDEFHeader.IDLen, stdout, 1);
+
+		indx += NDEFHeader.IDLen;
+	}
+	if (NDEFHeader.PayloadLen) {
+		PrintAndLogEx(INFO, "Payload data:");
+		dump_buffer(&ndefRecord[indx], NDEFHeader.PayloadLen, stdout, 1);
+
+		indx += NDEFHeader.PayloadLen;
+	}
+
+	return 0;
+}
+
 int ndefRecordsDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
+	bool firstRec = true;
+	size_t len = 0;
 	
-	
-	
+	while (len < ndefRecordLen) {
+		NDEFHeader_t NDEFHeader = {0};
+		int res = ndefDecodeHeader(&ndefRecord[len], ndefRecordLen - len, &NDEFHeader);
+		if (res)
+			return res;
+		
+		if (firstRec) {
+			if (!NDEFHeader.MessageBegin) {
+				PrintAndLogEx(ERR, "NDEF first record have MessageBegin=false!");
+				return 1;
+			}
+			firstRec = false;
+		}
+		
+		if (NDEFHeader.MessageEnd && len + NDEFHeader.RecLen != ndefRecordLen) {
+			PrintAndLogEx(ERR, "NDEF records have wrong length. Must be %d, calculated %d", ndefRecordLen, len + NDEFHeader.RecLen);
+			return 1;
+		}
+		
+		ndefRecordDecodeAndPrint(&ndefRecord[len], NDEFHeader.RecLen);		
+		
+		len += NDEFHeader.len + NDEFHeader.TypeLen + NDEFHeader.PayloadLen + NDEFHeader.IDLen;
+		
+		if (NDEFHeader.MessageEnd)
+			break;
+	}	
 	
 	return 0;
 }

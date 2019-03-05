@@ -15,6 +15,30 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+typedef enum {
+	tnfEmptyRecord			= 0x00,
+	tnfWellKnownRecord		= 0x01,
+	tnfMIMEMediaRecord		= 0x02,
+	tnfAbsoluteURIRecord	= 0x03,
+	tnfExternalRecord		= 0x04,
+	tnfUnknownRecord		= 0x05,
+	tnfUnchangedRecord		= 0x06
+} TypeNameFormat_t;
+
+typedef struct {
+	bool MessageBegin;
+	bool MessageEnd;
+	bool ChunkFlag;
+	bool ShortRecordBit;
+	bool IDLenPresent;
+	TypeNameFormat_t TypeNameFormat;
+	size_t TypeLen;
+	size_t PayloadLen;
+	size_t IDLen;
+	size_t len;
+	size_t RecLen;
+} NDEFHeader_t;
+
 extern int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose);
 
 #endif // _NDEF_H_
