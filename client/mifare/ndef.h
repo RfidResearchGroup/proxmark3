@@ -25,6 +25,21 @@ typedef enum {
 	tnfUnchangedRecord		= 0x06
 } TypeNameFormat_t;
 
+typedef enum {
+	stNotPresent			= 0x00,
+	stRSASSA_PSS_SHA_1		= 0x01,
+	stRSASSA_PKCS1_v1_5_WITH_SHA_1 = 0x02,
+	stDSA					= 0x03,
+	stECDSA					= 0x04,
+	stNA					= 0x05
+} ndefSigType_t;
+
+typedef enum {
+	sfX_509 = 0x00,
+	sfX9_68 = 0x01,
+	sfNA    = 0x02
+} ndefCertificateFormat_t;
+
 typedef struct {
 	bool MessageBegin;
 	bool MessageEnd;

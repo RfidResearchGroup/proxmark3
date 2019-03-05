@@ -26,6 +26,21 @@ static const char *TypeNameFormat_s[] = {
 	"n/a"
 };
 
+static const char *ndefSigType_s[] = {
+	"Not present",                   // No signature present
+	"RSASSA_PSS_SHA_1",              // PKCS_1
+	"RSASSA_PKCS1_v1_5_WITH_SHA_1",  // PKCS_1
+	"DSA",
+	"ECDSA",
+	"n/a"
+};
+
+static const char *ndefCertificateFormat_s[] = {
+	"X_509",
+	"X9_68",
+	"n/a"
+};
+
 static const char *URI_s[] = {
 	"",                           // 0x00
 	"http://www.",                // 0x01
@@ -143,36 +158,60 @@ int ndefDecodeSig(uint8_t *sig, size_t siglen) {
 	}
 	indx++;
 	
-	while (indx < siglen) {
-		if (sig[indx] == 0x04) {
-			size_t intsiglen = (sig[indx + 1] << 8) + sig[indx + 2];
-			indx += 3;
-			PrintAndLogEx(NORMAL, "\tsignature [%d]: %s", intsiglen, sprint_hex_inrow(&sig[indx], intsiglen));
-			
-			uint8_t rval[300] = {0}; 
-			uint8_t sval[300] = {0}; 
-			int res = ecdsa_asn1_get_signature(&sig[indx], intsiglen, rval, sval);
-			if (!res) {
-				PrintAndLogEx(NORMAL ,"\t\tr: %s", sprint_hex(rval, 32));
-				PrintAndLogEx(NORMAL ,"\t\ts: %s", sprint_hex(sval, 32));
-			}
-			
-			indx += intsiglen;
-			continue;
-		}
+	uint8_t sigType = sig[indx] & 0x7f;
+	bool sigURI = sig[indx] & 0x80;
 
-		if (sig[indx] == 0x80) {
-			size_t inturilen = (sig[indx + 1] << 8) + sig[indx + 2];
-			indx += 3;
-			PrintAndLogEx(NORMAL, "\tsignature uri [%d]: %.*s", inturilen, inturilen, &sig[indx]);			
-			indx += inturilen;
-			continue;
-		}
+	PrintAndLogEx(NORMAL, "\tsignature type: %s", ((sigType < stNA) ? ndefSigType_s[sigType] : ndefSigType_s[stNA]));
+	PrintAndLogEx(NORMAL, "\tsignature uri: %s", (sigURI ? "present" : "not present"));
+	
+	size_t intsiglen = (sig[indx + 1] << 8) + sig[indx + 2];
+	// ecdsa 0x04
+	if (sigType == stECDSA) {
+		indx += 3;
+		PrintAndLogEx(NORMAL, "\tsignature [%d]: %s", intsiglen, sprint_hex_inrow(&sig[indx], intsiglen));
 		
-		size_t skiplen = (sig[indx + 1] << 8) + sig[indx + 2];
-		indx += skiplen;
+		uint8_t rval[300] = {0}; 
+		uint8_t sval[300] = {0}; 
+		int res = ecdsa_asn1_get_signature(&sig[indx], intsiglen, rval, sval);
+		if (!res) {
+			PrintAndLogEx(NORMAL ,"\t\tr: %s", sprint_hex(rval, 32));
+			PrintAndLogEx(NORMAL ,"\t\ts: %s", sprint_hex(sval, 32));
+		}
+	}
+	indx += intsiglen;
+	
+	if (sigURI) {
+		size_t intsigurilen = (sig[indx] << 8) + sig[indx + 1];
+		indx += 2;
+		PrintAndLogEx(NORMAL, "\tsignature uri [%d]: %.*s", intsigurilen, intsigurilen, &sig[indx]);			
+		indx += intsigurilen;
+	}
+		
+	uint8_t certFormat = (sig[indx] >> 4) & 0x07;
+	uint8_t certCount = sig[indx] & 0x0f;
+	bool certURI = sig[indx] & 0x80;
+	
+	PrintAndLogEx(NORMAL, "\tcertificate format: %s", ((certFormat < sfNA) ? ndefCertificateFormat_s[certFormat] : ndefCertificateFormat_s[sfNA]));
+	PrintAndLogEx(NORMAL, "\tcertificates count: %d", certCount);
+	
+	// print certificates
+	indx++;
+	for (int i = 0; i < certCount; i++) {
+		size_t intcertlen = (sig[indx + 1] << 8) + sig[indx + 2];
+		indx += 2;
+		
+		PrintAndLogEx(NORMAL, "\tcertificate %d [%d]: %s", i + 1, intcertlen, sprint_hex_inrow(&sig[indx], intcertlen));			
+		indx += intcertlen;
 	}
 
+	// have certificate uri
+	if ((indx <= siglen) && certURI) {
+		size_t inturilen = (sig[indx] << 8) + sig[indx + 1];
+		indx += 2;
+		PrintAndLogEx(NORMAL, "\tcertificate uri [%d]: %.*s", inturilen, inturilen, &sig[indx]);			
+		indx += inturilen;
+	}
+	
 	return 0;
 };
 
