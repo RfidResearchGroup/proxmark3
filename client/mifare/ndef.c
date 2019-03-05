@@ -162,10 +162,10 @@ int ndefDecodeSig(uint8_t *sig, size_t siglen) {
 		}
 
 		if (sig[indx] == 0x80) {
-			size_t intchainlen = (sig[indx + 1] << 8) + sig[indx + 2];
+			size_t inturilen = (sig[indx + 1] << 8) + sig[indx + 2];
 			indx += 3;
-			PrintAndLogEx(NORMAL, "\tchain [%d]: %.*s", intchainlen, intchainlen, &sig[indx]);			
-			indx += intchainlen;
+			PrintAndLogEx(NORMAL, "\tsignature uri [%d]: %.*s", inturilen, inturilen, &sig[indx]);			
+			indx += inturilen;
 			continue;
 		}
 		
