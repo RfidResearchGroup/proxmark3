@@ -87,10 +87,9 @@ static int smart_loadjson(const char *preferredName, const char *suffix, json_t 
 	if ( suffix == NULL ) return 1;
 
 	int retval = 0;
-	int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
+	int size = sizeof(char) * (strlen(get_my_executable_directory()) + strlen(preferredName) + strlen(suffix) + 10);
 	char * fileName = calloc(size, sizeof(char));
-	sprintf(fileName, "%s.%s", preferredName, suffix);
-
+	sprintf(fileName, "%s%s.%s", get_my_executable_directory(), preferredName, suffix);
 	*root = json_load_file(fileName, 0, &error);
 	if (!*root) {
 		PrintAndLogEx(ERR, "json (%s) error on line %d: %s", fileName, error.line, error.text);
