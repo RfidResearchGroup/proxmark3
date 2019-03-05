@@ -133,6 +133,8 @@ uint16_t madGetAID(uint8_t *sector, int MADver, int sectorNo) {
 }
 
 int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) {
+	int res = 0;
+	
 	if (!sector0)
 		return 1;
 	
@@ -167,23 +169,21 @@ int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) 
 	if (haveMAD2)
 		*haveMAD2 = (MADVer == 2);
 
-	int res = madCRCCheck(sector0, true, 1);
-	if (res)
-		return res;	
+	res = madCRCCheck(sector0, true, 1);
 	
-	if (verbose)
+	if (verbose && !res)
 		PrintAndLogEx(NORMAL, "CRC8-MAD1 OK.");
 	
 	if (MADVer == 2 && sector10) {
-		int res = madCRCCheck(sector10, true, 2);
-		if (res)
-			return res;	
+		int res2 = madCRCCheck(sector10, true, 2);
+		if (!res)
+			res = res2;	
 
-		if (verbose)
+		if (verbose & !res2)
 			PrintAndLogEx(NORMAL, "CRC8-MAD2 OK.");
 	}
 	
-	return 0;
+	return res;
 }
 
 int MADDecode(uint8_t *sector0, uint8_t *sector10, uint16_t *mad, size_t *madlen) {
@@ -214,11 +214,8 @@ int MADDecode(uint8_t *sector0, uint8_t *sector10, uint16_t *mad, size_t *madlen
 int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2) {
 
 	// check MAD1 only
-	int res = MADCheck(sector, NULL, verbose, haveMAD2);
-	
-	if (verbose && !res)
-		PrintAndLogEx(NORMAL, "CRC8-MAD OK.");
-	
+	MADCheck(sector, NULL, verbose, haveMAD2);
+		
 	// info byte
 	uint8_t InfoByte = sector[16 + 1] & 0x3f;
 	if (InfoByte) {
@@ -245,7 +242,7 @@ int MAD2DecodeAndPrint(uint8_t *sector, bool verbose) {
 	int res = madCRCCheck(sector, true, 2);
 
 	if (verbose && !res)
-		PrintAndLogEx(NORMAL, "CRC8-MAD OK.");
+		PrintAndLogEx(NORMAL, "CRC8-MAD2 OK.");
 
 	uint8_t InfoByte = sector[1] & 0x3f;
 	PrintAndLogEx(NORMAL, "MAD2 Card publisher sector: 0x%02x", InfoByte);
