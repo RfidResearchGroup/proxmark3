@@ -25,6 +25,45 @@ static const char *TypeNameFormat_s[] = {
 	"n/a"
 };
 
+static const char *URI_s[] = {
+	"",                           // 0x00
+	"http://www.",                // 0x01
+	"https://www.",               // 0x02
+	"http://",                    // 0x03
+	"https://",                   // 0x04
+	"tel:",                       // 0x05
+	"mailto:",                    // 0x06
+	"ftp://anonymous:anonymous@", // 0x07
+	"ftp://ftp.",                 // 0x08
+	"ftps://",                    // 0x09
+	"sftp://",                    // 0x0A
+	"smb://",                     // 0x0B
+	"nfs://",                     // 0x0C
+	"ftp://",                     // 0x0D
+	"dav://",                     // 0x0E
+	"news:",                      // 0x0F
+	"telnet://",                  // 0x10
+	"imap:",                      // 0x11
+	"rtsp://",                    // 0x12
+	"urn:",                       // 0x13
+	"pop:",                       // 0x14
+	"sip:",                       // 0x15
+	"sips:",                      // 0x16
+	"tftp:",                      // 0x17
+	"btspp://",                   // 0x18
+	"btl2cap://",                 // 0x19
+	"btgoep://",                  // 0x1A
+	"tcpobex://",                 // 0x1B
+	"irdaobex://",                // 0x1C
+	"file://",                    // 0x1D
+	"urn:epc:id:",                // 0x1E
+	"urn:epc:tag:",               // 0x1F
+	"urn:epc:pat:",               // 0x20
+	"urn:epc:raw:",               // 0x21
+	"urn:epc:",                   // 0x22
+	"urn:nfc:"                    // 0x23
+};
+
 uint16_t ndefTLVGetLength(uint8_t *data, size_t *indx) {
 	uint16_t len = 0;
 	if (data[0] == 0xff) {
@@ -94,6 +133,17 @@ int ndefPrintHeader(NDEFHeader_t *header) {
 	return 0;
 }
 
+int ndefDecodeSig(uint8_t *sig, size_t siglen) {
+	PrintAndLogEx(NORMAL, "\tsignature version: 0x%02x", sig[0]);
+	if (sig[0] != 0x01) {
+		PrintAndLogEx(ERR, "signature version unknown.");
+		return 1;
+	}
+	
+	
+	return 0;
+};
+
 int ndefDecodePayload(NDEFHeader_t *ndef) {
 	
 	switch(ndef->TypeNameFormat) {
@@ -106,11 +156,11 @@ int ndefDecodePayload(NDEFHeader_t *ndef) {
 		}
 		
 		if (!strncmp((char *)ndef->Type, "U", ndef->TypeLen)) {
-			PrintAndLogEx(NORMAL, "\turi    : %.*s", ndef->PayloadLen, ndef->Payload);
+			PrintAndLogEx(NORMAL, "\turi    : %s%.*s", (ndef->Payload[0] <= 0x23 ? URI_s[ndef->Payload[0]] : "[err]"), ndef->PayloadLen, &ndef->Payload[1]);
 		}
 		
 		if (!strncmp((char *)ndef->Type, "Sig", ndef->TypeLen)) {
-			printf("--sig\n");
+			ndefDecodeSig(ndef->Payload, ndef->PayloadLen);
 		}
 		
 		break;
