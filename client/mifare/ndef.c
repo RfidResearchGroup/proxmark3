@@ -39,6 +39,10 @@ uint16_t ndefTLVGetLength(uint8_t *data, size_t *indx) {
 }
 
 int ndefDecodeHeader(uint8_t *data, size_t datalen, NDEFHeader_t *header) {
+	header->Type = NULL;
+	header->Payload = NULL;
+	header->ID = NULL;
+
 	header->MessageBegin	= data[0] & 0x80;
 	header->MessageEnd		= data[0] & 0x40;
 	header->ChunkFlag		= data[0] & 0x20;
@@ -49,16 +53,21 @@ int ndefDecodeHeader(uint8_t *data, size_t datalen, NDEFHeader_t *header) {
 	if (header->len > datalen)
 		return 1;
 	
-	header->TypeLen			= data[1];
+	header->TypeLen = data[1];
+	header->Type = data + header->len;
 	
-	header->PayloadLen		= (header->ShortRecordBit ? (data[2]) : ((data[2] << 24) + (data[3] << 16) + (data[4] << 8) + data[5]));
+	header->PayloadLen = (header->ShortRecordBit ? (data[2]) : ((data[2] << 24) + (data[3] << 16) + (data[4] << 8) + data[5]));
 	
-	if (header->IDLenPresent)
+	if (header->IDLenPresent) {
 		header->IDLen = (header->ShortRecordBit ? (data[3]) : (data[6]));
-	else
+		header->Payload = header->Type + header->TypeLen;
+	} else {
 		header->IDLen = 0;
+	}
+
+	header->Payload = header->Type + header->TypeLen + header->IDLen;
 	
-	header->RecLen			= header->len + header->TypeLen + header->PayloadLen + header->IDLen;
+	header->RecLen = header->len + header->TypeLen + header->PayloadLen + header->IDLen;
 	
 	if (header->RecLen > datalen)
 		return 3;
@@ -85,8 +94,38 @@ int ndefPrintHeader(NDEFHeader_t *header) {
 	return 0;
 }
 
-int ndefRecordDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
+int ndefDecodePayload(NDEFHeader_t *ndef) {
 	
+	switch(ndef->TypeNameFormat) {
+	case tnfWellKnownRecord:
+		PrintAndLogEx(INFO, "Well Known Record");
+		PrintAndLogEx(NORMAL, "\ttype:    %.*s", ndef->TypeLen, ndef->Type);
+		
+		if (!strncmp((char *)ndef->Type, "T", ndef->TypeLen)) {
+			PrintAndLogEx(NORMAL, "\ttext   : %.*s", ndef->PayloadLen, ndef->Payload);
+		}
+		
+		if (!strncmp((char *)ndef->Type, "U", ndef->TypeLen)) {
+			PrintAndLogEx(NORMAL, "\turi    : %.*s", ndef->PayloadLen, ndef->Payload);
+		}
+		
+		if (!strncmp((char *)ndef->Type, "Sig", ndef->TypeLen)) {
+			printf("--sig\n");
+		}
+		
+		break;
+	case tnfAbsoluteURIRecord:
+		PrintAndLogEx(INFO, "Absolute URI Record");
+		PrintAndLogEx(NORMAL, "\ttype:    %.*s", ndef->TypeLen, ndef->Type);
+		PrintAndLogEx(NORMAL, "\tpayload: %.*s", ndef->PayloadLen, ndef->Payload);
+		break;
+	default:
+		break;
+	}	
+	return 0;
+}
+
+int ndefRecordDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
 	NDEFHeader_t NDEFHeader = {0};
 	int res = ndefDecodeHeader(ndefRecord, ndefRecordLen, &NDEFHeader);
 	if (res)
@@ -94,24 +133,19 @@ int ndefRecordDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
 	
 	ndefPrintHeader(&NDEFHeader);
 	
-	size_t indx = NDEFHeader.len;
 	if (NDEFHeader.TypeLen) {
 		PrintAndLogEx(INFO, "Type data:");
-		dump_buffer(&ndefRecord[indx], NDEFHeader.TypeLen, stdout, 1);
-		
-		indx += NDEFHeader.TypeLen;
+		dump_buffer(NDEFHeader.Type, NDEFHeader.TypeLen, stdout, 1);
 	}
 	if (NDEFHeader.IDLen) {
 		PrintAndLogEx(INFO, "ID data:");
-		dump_buffer(&ndefRecord[indx], NDEFHeader.IDLen, stdout, 1);
-
-		indx += NDEFHeader.IDLen;
+		dump_buffer(NDEFHeader.ID, NDEFHeader.IDLen, stdout, 1);
 	}
 	if (NDEFHeader.PayloadLen) {
 		PrintAndLogEx(INFO, "Payload data:");
-		dump_buffer(&ndefRecord[indx], NDEFHeader.PayloadLen, stdout, 1);
-
-		indx += NDEFHeader.PayloadLen;
+		dump_buffer(NDEFHeader.Payload, NDEFHeader.PayloadLen, stdout, 1);
+		if (NDEFHeader.TypeLen)
+			ndefDecodePayload(&NDEFHeader);
 	}
 
 	return 0;
