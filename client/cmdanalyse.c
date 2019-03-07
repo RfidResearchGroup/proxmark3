@@ -848,7 +848,7 @@ void generate4bNUID(uint8_t *uid, uint8_t *nuid){
 	uint8_t b1, b2;
 		
 	compute_crc(CRC_14443_A, uid, 3, &b1, &b2);
-	nuid[0] |= (b2 & 0xE0) | 0xF;
+	nuid[0] = (b2 & 0xE0) | 0xF;
 	nuid[1] = b1;
 	crc = b1;
 	crc |= b2 << 8;
@@ -864,15 +864,22 @@ int CmdAnalyseNuid(const char *Cmd){
 	char cmdp = tolower(param_getchar(Cmd, 0));
 	if (strlen(Cmd) == 0|| cmdp == 'h') return usage_analyse_nuid();
 
-	/* src: http://www.gorferay.com/mifare-and-handling-of-uids/ */
-	/* selftest  UID 040D681AB52281  -> NUID 8F430FEF */
+	/* src: https://www.nxp.com/docs/en/application-note/AN10927.pdf */
+	/* selftest1  UID 040D681AB52281  -> NUID 8F430FEF */
+	/* selftest2  UID 04183F09321B85  -> NUID 4F505D7D */
 	if (cmdp == 't' || cmdp == 'T') {
 		memcpy(uid, "\x04\x0d\x68\x1a\xb5\x22\x81", 7);
 		generate4bNUID(uid, nuid);
 		if ( 0 == memcmp(nuid, "\x8f\x43\x0f\xef", 4))
-			PrintAndLogEx(SUCCESS, "Selftest OK\n");
+			PrintAndLogEx(SUCCESS, "Selftest1 OK\n");
 		else
-			PrintAndLogEx(FAILED, "Selftest Failed\n");
+			PrintAndLogEx(FAILED, "Selftest1 Failed\n");
+		memcpy(uid, "\x04\x18\x3f\x09\x32\x1b\x85", 7);
+		generate4bNUID(uid, nuid);
+		if ( 0 == memcmp(nuid, "\x4f\x50\x5d\x7d", 4))
+			PrintAndLogEx(SUCCESS, "Selftest2 OK\n");
+		else
+			PrintAndLogEx(FAILED, "Selftest2 Failed\n");
 		return 0;
 	}
 
