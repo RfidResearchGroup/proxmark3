@@ -867,19 +867,17 @@ int CmdAnalyseNuid(const char *Cmd){
 	/* src: https://www.nxp.com/docs/en/application-note/AN10927.pdf */
 	/* selftest1  UID 040D681AB52281  -> NUID 8F430FEF */
 	/* selftest2  UID 04183F09321B85  -> NUID 4F505D7D */
-	if (cmdp == 't' || cmdp == 'T') {
+	if (cmdp == 't') {
 		memcpy(uid, "\x04\x0d\x68\x1a\xb5\x22\x81", 7);
 		generate4bNUID(uid, nuid);
-		if ( 0 == memcmp(nuid, "\x8f\x43\x0f\xef", 4))
-			PrintAndLogEx(SUCCESS, "Selftest1 OK\n");
-		else
-			PrintAndLogEx(FAILED, "Selftest1 Failed\n");
+		
+		bool test1 = (0 == memcmp(nuid, "\x8f\x43\x0f\xef", 4));
+		PrintAndLogEx(SUCCESS, "Selftest1 %s\n",  test1 ? _GREEN_(OK): _RED_(Fail));
+		
 		memcpy(uid, "\x04\x18\x3f\x09\x32\x1b\x85", 7);
 		generate4bNUID(uid, nuid);
-		if ( 0 == memcmp(nuid, "\x4f\x50\x5d\x7d", 4))
-			PrintAndLogEx(SUCCESS, "Selftest2 OK\n");
-		else
-			PrintAndLogEx(FAILED, "Selftest2 Failed\n");
+		bool test2 = (0 == memcmp(nuid, "\x4f\x50\x5d\x7d", 4));		
+		PrintAndLogEx(SUCCESS, "Selftest2 %s\n", test2 ? _GREEN_(OK) : _RED_(Fail));
 		return 0;
 	}
 
