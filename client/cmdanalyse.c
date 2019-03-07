@@ -850,15 +850,9 @@ void generate4bNUID(uint8_t *uid, uint8_t *nuid){
 	compute_crc(CRC_14443_A, uid, 3, &b1, &b2);
 	nuid[0] |= (b2 & 0xE0) | 0xF;
 	nuid[1] = b1;
-	
 	crc = b1;
 	crc |= b2 << 8;
-	
-	crc = update_crc16(uid[3], crc);
-	crc = update_crc16(uid[4], crc);
-	crc = update_crc16(uid[5], crc);
-	crc = update_crc16(uid[6], crc);
-		
+	crc = crc16_fast(&uid[3], 4, reflect16(crc), true, true);
 	nuid[2] = (crc >> 8) & 0xFF ;
 	nuid[3] = crc & 0xFF;
 }
@@ -870,6 +864,7 @@ int CmdAnalyseNuid(const char *Cmd){
 	char cmdp = tolower(param_getchar(Cmd, 0));
 	if (strlen(Cmd) == 0|| cmdp == 'h') return usage_analyse_nuid();
 
+	/* src: http://www.gorferay.com/mifare-and-handling-of-uids/ */
 	/* selftest  UID 040D681AB52281  -> NUID 8F430FEF */
 	if (cmdp == 't' || cmdp == 'T') {
 		memcpy(uid, "\x04\x0d\x68\x1a\xb5\x22\x81", 7);
