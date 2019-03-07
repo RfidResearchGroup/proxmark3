@@ -106,16 +106,23 @@ int32_t compute_mean_int(int *in, size_t N) {
 }
 
 void zeromean(uint8_t* data, size_t size) {
-			
+
 	// zero mean data
 	int i, accum = 0;
 	for (i = 10; i < size; ++i)
-		accum += data[i];
-	
-	accum /= (size - 10);
-	
-	for (i = 0; i < size; ++i)
-		data[i] -= accum;
+		accum += data[i] - 128;
+	accum /= (int)(size - 10);
+
+	for (i = 0; i < size; ++i) {
+		if (accum > 0) {
+			data[i] = (data[i] >= accum)? data[i] - accum : 0;
+		}
+		if (accum < 0) {
+			data[i] = (255 - data[i] >=  -accum)? data[i] - accum : 255;
+		}
+	}
+	// recompute signal characteristics:
+	isNoise(data, size);
 }
 
 //test samples are not just noise
@@ -1668,11 +1675,11 @@ size_t fsk_wave_demod(uint8_t *dest, size_t size, uint8_t fchigh, uint8_t fclow,
 	size_t last_transition = 0;
 	size_t idx = 1;
 	size_t numBits = 0;
-	
+
 	//find start of modulating data in trace 	
 	idx = findModStart(dest, size, fchigh);
 	// Need to threshold first sample
-	dest[0] = (dest[idx] < signalprop.mean) ? 0 : 1;
+	dest[idx] = (dest[idx] < signalprop.mean) ? 0 : 1;
 	
 	last_transition = idx;
 	idx++;
