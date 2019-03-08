@@ -1701,7 +1701,7 @@ int CmdT55xxBruteForce(const char *Cmd) {
 	
     PrintAndLogEx(INFO, "Search password range [%08X -> %08X]", start_password, end_password);
 
-    while ( !found || (curr <= end_password)){
+    while ( !found ){
 
 		printf("."); fflush(stdout);
 		
@@ -1710,13 +1710,15 @@ int CmdT55xxBruteForce(const char *Cmd) {
 		}
 			
 		if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, curr)) {
-			PrintAndLogEx(WARNING, "Aquireing data from device failed. Quitting");
+			PrintAndLogEx(WARNING, "Aquiring data from device failed. Quitting");
 			return 0;
 		}
 		
 		found = tryDetectModulation();
 
-		++curr;
+		if (curr == end_password)
+			break;
+		curr++;
     }
     
     PrintAndLogEx(NORMAL, "");
