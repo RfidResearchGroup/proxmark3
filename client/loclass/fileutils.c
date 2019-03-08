@@ -257,6 +257,7 @@ int loadFile(const char *preferredName, const char *suffix, void* data, size_t* 
 
 	if ( preferredName == NULL ) return 1;
 	if ( suffix == NULL ) return 1;
+	if ( data == NULL ) return 1;
 
 	int retval = 0;
 	int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
@@ -275,7 +276,7 @@ int loadFile(const char *preferredName, const char *suffix, void* data, size_t* 
 	long fsize = ftell(f);
 	fseek(f, 0, SEEK_SET);
 
-	if ( fsize < 0 ) 	{
+	if ( fsize < 0 ) {
 		PrintAndLogDevice(FAILED, "error, when getting filesize");
 		retval = 1;
 		goto out;
@@ -294,11 +295,7 @@ int loadFile(const char *preferredName, const char *suffix, void* data, size_t* 
 		PrintAndLogDevice(FAILED, "error, bytes read mismatch file size");
 		free(dump);
 		retval = 3;
-		goto out;		
-	}
-	
-	if ( (data) == NULL) {
-		(data) = calloc( bytes_read, sizeof(uint8_t));
+		goto out;
 	}
 	
 	memcpy( (data), dump, bytes_read);
@@ -310,10 +307,6 @@ int loadFile(const char *preferredName, const char *suffix, void* data, size_t* 
 
 out:	
 	fclose(f);
-	
-	if (data)
-		free(data);
-	
 	free(fileName);
 	
 	return retval;

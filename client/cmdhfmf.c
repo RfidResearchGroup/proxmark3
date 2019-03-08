@@ -2768,7 +2768,7 @@ int CmdHF14AMfCLoad(const char *Cmd) {
 	// 64 or 256blocks.
 	if (datalen != 1024 && datalen != 4096) {
 		PrintAndLogEx(WARNING, "File content error. ");
-		free(data);		
+		free(data);
 		return 2;
 	}
 	
