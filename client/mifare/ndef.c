@@ -22,7 +22,7 @@ static const char *TypeNameFormat_s[] = {
 	"Absolute URI Record",
 	"External Record",
 	"Unknown Record",
-	"Unchanged Record"
+	"Unchanged Record",
 	"n/a"
 };
 
