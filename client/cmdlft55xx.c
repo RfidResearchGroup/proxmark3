@@ -1330,8 +1330,12 @@ bool AquireData( uint8_t page, uint8_t block, bool pwdmode, uint32_t password ) 
 		PrintAndLogEx(WARNING, "command execution time out");
 		return false;
 	}
+	// set signal properties low/high/mean/amplitude and is_noise detection
+	removeSignalOffset(got, sizeof(got));
+	computeSignalProperties(got, sizeof(got));
 	setGraphBuf(got, sizeof(got));
-	return !isNoise(got, sizeof(got));
+	RepaintGraphWindow();
+	return !getSignalProperties()->isnoise;
 }
 
 char * GetBitRateStr(uint32_t id, bool xmode) {

@@ -1393,15 +1393,13 @@ int CmdHide(const char *Cmd) {
 
 //zero mean GraphBuffer
 int CmdHpf(const char *Cmd) {
-	int i, accum = 0;
-
-	for (i = 10; i < GraphTraceLen; ++i)
-		accum += GraphBuffer[i];
-	
-	accum /= (GraphTraceLen - 10);
-	
-	for (i = 0; i < GraphTraceLen; ++i)
-		GraphBuffer[i] -= accum;
+	uint8_t bits[GraphTraceLen];
+	size_t size = getFromGraphBuf(bits);
+	removeSignalOffset(bits, size);
+	// push it back to graph
+	setGraphBuf(bits, size);
+	// set signal properties low/high/mean/amplitude and is_noise detection
+	computeSignalProperties(bits, size);
 
 	RepaintGraphWindow();
 	return 0;
@@ -1471,12 +1469,15 @@ int getSamples(int n, bool silent) {
 		GraphTraceLen = n;
 	}
 
-	//ICEMAN todo
 	uint8_t bits[GraphTraceLen];
 	size_t size = getFromGraphBuf(bits);
-	// set signal properties low/high/mean/amplitude and is_noice detection
-	isNoise(bits, size);
-	
+	// TODO now DC removal is done already on device, right ?
+	// removeSignalOffset(bits, size);
+	// push it back to graph
+	// setGraphBuf(bits, size);
+	// set signal properties low/high/mean/amplitude and is_noise detection
+	computeSignalProperties(bits, size);
+
 	setClockGrid(0, 0);
 	DemodBufferLen = 0;
 	RepaintGraphWindow();
@@ -1610,15 +1611,19 @@ int CmdLoad(const char *Cmd) {
 		fclose(f);
 
 	PrintAndLogEx(SUCCESS, "loaded %d samples", GraphTraceLen);
+	
+	uint8_t bits[GraphTraceLen];
+	size_t size = getFromGraphBuf(bits);
+	// set signal properties low/high/mean/amplitude and is_noise detection
+	removeSignalOffset(bits, size);
+	// push it back to graph
+	setGraphBuf(bits, size);
+	// set signal properties low/high/mean/amplitude and is_noise detection
+	computeSignalProperties(bits, size);
+
 	setClockGrid(0,0);
 	DemodBufferLen = 0;
 	RepaintGraphWindow();
-	
-	//ICEMAN todo	
-	// set signal properties low/high/mean/amplitude and isnoice detection
-	uint8_t bits[GraphTraceLen];
-	size_t size = getFromGraphBuf(bits);
-	isNoise(bits, size);
 	return 0;
 }
 
@@ -1683,11 +1688,11 @@ int CmdNorm(const char *Cmd) {
 		}
 	}
 
-	//ICEMAN todo	
-	// set signal properties low/high/mean/amplitude and isnoice detection
 	uint8_t bits[GraphTraceLen];
 	size_t size = getFromGraphBuf(bits);
-	isNoise(bits, size);
+	// set signal properties low/high/mean/amplitude and is_noise detection
+	computeSignalProperties(bits, size);
+
 	RepaintGraphWindow();
 	return 0;
 }
@@ -1773,11 +1778,11 @@ int CmdDirectionalThreshold(const char *Cmd) {
 
 	directionalThreshold(GraphBuffer, GraphBuffer, GraphTraceLen, up, down);
 	
-	//ICEMAN todo	
 	// set signal properties low/high/mean/amplitude and isnoice detection
 	uint8_t bits[GraphTraceLen];
 	size_t size = getFromGraphBuf(bits);
-	isNoise(bits, size);
+	// set signal properties low/high/mean/amplitude and is_noice detection
+	computeSignalProperties(bits, size);
 
 	RepaintGraphWindow();
 	return 0;
@@ -1805,11 +1810,10 @@ int CmdZerocrossings(const char *Cmd) {
 		}
 	}
 
-	//ICEMAN todo	
-	// set signal properties low/high/mean/amplitude and isnoice detection
 	uint8_t bits[GraphTraceLen];
 	size_t size = getFromGraphBuf(bits);
-	isNoise(bits, size);
+	// set signal properties low/high/mean/amplitude and is_noise detection
+	computeSignalProperties(bits, size);
 
 	RepaintGraphWindow();
 	return 0;
@@ -2063,13 +2067,11 @@ int CmdDataIIR(const char *Cmd){
 	//iceIIR_Butterworth(GraphBuffer, GraphTraceLen);
 	iceSimple_Filter(GraphBuffer, GraphTraceLen, k);
 
-	//ICEMAN todo	
-	// set signal properties low/high/mean/amplitude and isnoice detection
 	uint8_t bits[GraphTraceLen];
 	size_t size = getFromGraphBuf(bits);
-	isNoise(bits, size);
-
-	RepaintGraphWindow();	
+	// set signal properties low/high/mean/amplitude and is_noise detection
+	computeSignalProperties(bits, size);
+	RepaintGraphWindow();
 	return 0;
 }
 

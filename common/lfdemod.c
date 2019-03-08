@@ -47,8 +47,7 @@
 //**********************************************************************************************
 #define LOWEST_DEFAULT_CLOCK 32
 #define FSK_PSK_THRESHOLD   123
-//might not be high enough for noisy environments
-#define NOICE_AMPLITUDE_THRESHOLD 10
+
 //to allow debug print calls when used not on dev
 
 //void dummy(char *fmt, ...){}
@@ -76,6 +75,7 @@ static void resetSignal(void) {
 	signalprop.amplitude = 0;
 	signalprop.isnoise = true;
 }
+
 static void printSignal(void) {
 	prnt("LF signal properties:");
 	prnt("  high..........%d", signalprop.high);
@@ -83,94 +83,47 @@ static void printSignal(void) {
 	prnt("  mean..........%d", signalprop.mean);
 	prnt("  amplitude.....%d", signalprop.amplitude);
 	prnt("  is Noise......%s", (signalprop.isnoise) ? "Yes" : "No");
-	prnt("  THRESHOLD noice amplitude......%d" , NOICE_AMPLITUDE_THRESHOLD);
+	prnt("  THRESHOLD noise amplitude......%d" , NOISE_AMPLITUDE_THRESHOLD);
 }
 
-// Function to compute mean for a series
-// rounded to integer..
-uint32_t compute_mean_uint(uint8_t *in, size_t N) {
-	uint32_t mean = 0;
-	for (size_t i = 0; i < N; i++)
-		mean += in[i];		
-
-	return mean / N;
-}
-// Function to compute mean for a series
-// rounded to integer..
-int32_t compute_mean_int(int *in, size_t N) {
-	int32_t mean = 0;
-	for (size_t i = 0; i < N; i++)
-		mean += in[i];
-	
-	return mean / (int)N;
-}
-
-void zeromean(uint8_t* data, size_t size) {
-
-	// zero mean data
-	int i, accum = 0;
-	for (i = 10; i < size; ++i)
-		accum += data[i] - 128;
-	accum /= (int)(size - 10);
-
-	for (i = 0; i < size; ++i) {
-		if (accum > 0) {
-			data[i] = (data[i] >= accum)? data[i] - accum : 0;
-		}
-		if (accum < 0) {
-			data[i] = (255 - data[i] >=  -accum)? data[i] - accum : 255;
-		}
-	}
-	// recompute signal characteristics:
-	isNoise(data, size);
-}
-
-//test samples are not just noise
-// By measuring mean and look at amplitude of signal from HIGH / LOW,   we can detect noise
-bool isNoise_int(int *bits, uint32_t size) {
+void computeSignalProperties(uint8_t *samples, uint32_t size) {
 	resetSignal();
-	if ( bits == NULL || size < 100 ) return true;
-	
-	int32_t sum = 0;
-	for ( size_t i = 0; i < size; i++) {
-		if ( bits[i] < signalprop.low ) signalprop.low = bits[i];
-		if ( bits[i] > signalprop.high ) signalprop.high = bits[i];
-		sum += bits[i];		
-	}
 
-	// measure amplitude of signal
-	signalprop.mean = sum / (int)size;
-	signalprop.amplitude = ABS(signalprop.high - signalprop.mean);
-	signalprop.isnoise = signalprop.amplitude < NOICE_AMPLITUDE_THRESHOLD;
-	
-	if (g_debugMode) 
-		printSignal();
-	
-	return signalprop.isnoise;
-}
-//test samples are not just noise
-// By measuring mean and look at amplitude of signal from HIGH / LOW, 
-// we can detect noise
-bool isNoise(uint8_t *bits, uint32_t size) {
-	resetSignal();
-	if ( bits == NULL || size < 100 ) return true;
-	
 	uint32_t sum = 0;
 	for ( uint32_t i = 0; i < size; i++) {
-		if ( bits[i] < signalprop.low ) signalprop.low = bits[i];
-		if ( bits[i] > signalprop.high ) signalprop.high = bits[i];
-		sum += bits[i];		
+		if ( samples[i] < signalprop.low ) signalprop.low = samples[i];
+		if ( samples[i] > signalprop.high ) signalprop.high = samples[i];
+		sum += samples[i];
 	}
 
 	// measure amplitude of signal
 	signalprop.mean = sum / size;
 	signalprop.amplitude = signalprop.high - signalprop.mean;
-	signalprop.isnoise =  signalprop.amplitude < NOICE_AMPLITUDE_THRESHOLD;
-	
+	// By measuring mean and look at amplitude of signal from HIGH / LOW, 
+	// we can detect noise
+	signalprop.isnoise =  signalprop.amplitude < NOISE_AMPLITUDE_THRESHOLD;
+
 	if (g_debugMode) 
 		printSignal();
+}
 
-	return signalprop.isnoise;
+void removeSignalOffset(uint8_t *samples, uint32_t size) {
+	if ( samples == NULL || size < SIGNAL_MIN_SAMPLES ) return;
+
+	int acc_off = 0;
+	for (uint32_t i = SIGNAL_IGNORE_FIRST_SAMPLES; i < size; i++)
+		acc_off += samples[i] - 128;
+	acc_off /= (int)(size - SIGNAL_IGNORE_FIRST_SAMPLES);
+
+	// shift and saturate samples to center the mean
+	for ( uint32_t i = 0; i < size; i++) {
+		if (acc_off > 0) {
+			samples[i] = (samples[i] >= acc_off)? samples[i] - acc_off : 0;
+		}
+		if (acc_off < 0) {
+			samples[i] = (255 - samples[i] >=  -acc_off)? samples[i] - acc_off : 255;
+		}
+	}
 }
 
 //by marshmellow
@@ -1962,8 +1915,6 @@ int detectAWID(uint8_t *dest, size_t *size, int *waveStartIdx) {
 
 	if (signalprop.isnoise) return -2;
 
-	zeromean(dest, *size);
-	
 	// FSK2a demodulator  clock 50, invert 1, fcHigh 10, fcLow 8
 	*size = fskdemod(dest, *size, 50, 1, 10, 8, waveStartIdx); //awid fsk2a
 
@@ -2029,8 +1980,6 @@ int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32
 	
 	if (signalprop.isnoise) return -2;
 
-	zeromean(dest, *size);
-	
 	// FSK demodulator  fsk2a so invert and fc/10/8
 	*size = fskdemod(dest, *size, 50, 1, 10, 8, waveStartIdx); //hid fsk2a
 
@@ -2090,8 +2039,6 @@ int detectIOProx(uint8_t *dest, size_t *size, int *waveStartIdx) {
 	
 	if (signalprop.isnoise) return -2;
 	
-	zeromean(dest, *size);
-		
 	// FSK demodulator  RF/64, fsk2a so invert, and fc/10/8
 	*size = fskdemod(dest, *size, 64, 1, 10, 8, waveStartIdx);  //io fsk2a
 	

@@ -20,6 +20,14 @@
 #include <stdbool.h> // for bool
 #include "parity.h"  // for parity test
 #include "util.h"	 // for ARRAYLEN
+
+//might not be high enough for noisy environments
+#define NOISE_AMPLITUDE_THRESHOLD 10
+//ignore buffer with less than x samples
+#define SIGNAL_MIN_SAMPLES 100
+//ignore first x samples of the buffer
+#define SIGNAL_IGNORE_FIRST_SAMPLES 10
+
 //generic
 typedef struct {
 	int low;
@@ -28,14 +36,10 @@ typedef struct {
 	int amplitude;
 	bool isnoise;
 } signal_t;
-extern signal_t* getSignalProperties(void);
+signal_t* getSignalProperties(void);
 
-extern uint32_t	compute_mean_uint(uint8_t *in, size_t N);
-extern int32_t	compute_mean_int(int *in, size_t N);
-bool isNoise_int(int *bits, uint32_t size);
-bool isNoise(uint8_t *bits, uint32_t size);
-extern void zeromean(uint8_t* data, size_t size);
-	
+void computeSignalProperties(uint8_t *bits, uint32_t size);
+void removeSignalOffset(uint8_t *samples, uint32_t size);
 void getNextLow(uint8_t *samples, size_t size, int low, size_t *i);
 void getNextHigh(uint8_t *samples, size_t size, int high, size_t *i);
 bool loadWaveCounters(uint8_t *samples, size_t size, int lowToLowWaveLen[], int highToLowWaveLen[], int *waveCnt, int *skip, int *minClk, int *high, int *low);

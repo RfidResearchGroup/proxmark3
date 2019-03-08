@@ -800,7 +800,7 @@ int EM4x50Read(const char *Cmd, bool verbose) {
 	
 	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t size = getFromGraphBuf(bits);
-	isNoise(bits, size);
+	computeSignalProperties(bits, size);
 	
 	signal_t *sp = getSignalProperties();
 	high = sp->high;
@@ -999,9 +999,14 @@ bool downloadSamplesEM(){
 		PrintAndLogEx(WARNING, "command execution time out");
 		return false;
 	}
-	setGraphBuf(got, sizeof(got));
 
-	if (isNoise(got, sizeof(got))) {
+	// TODO now DC removal is done already on device, right ?
+	// removeSignalOffset(got, sizeof(got));
+	setGraphBuf(got, sizeof(got));
+	// set signal properties low/high/mean/amplitude and is_noise detection
+	computeSignalProperties(got, sizeof(got));
+	RepaintGraphWindow();
+	if (getSignalProperties()->isnoise) {
 		PrintAndLogEx(DEBUG, "No tag found");
 		return false;
 	}
