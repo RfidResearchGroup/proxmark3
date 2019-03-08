@@ -1471,10 +1471,6 @@ int getSamples(int n, bool silent) {
 
 	uint8_t bits[GraphTraceLen];
 	size_t size = getFromGraphBuf(bits);
-	// TODO now DC removal is done already on device, right ?
-	// removeSignalOffset(bits, size);
-	// push it back to graph
-	// setGraphBuf(bits, size);
 	// set signal properties low/high/mean/amplitude and is_noise detection
 	computeSignalProperties(bits, size);
 

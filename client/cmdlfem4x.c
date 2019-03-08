@@ -1000,8 +1000,6 @@ bool downloadSamplesEM(){
 		return false;
 	}
 
-	// TODO now DC removal is done already on device, right ?
-	// removeSignalOffset(got, sizeof(got));
 	setGraphBuf(got, sizeof(got));
 	// set signal properties low/high/mean/amplitude and is_noise detection
 	computeSignalProperties(got, sizeof(got));
