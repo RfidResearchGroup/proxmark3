@@ -8,16 +8,16 @@
 /**
 * Definition 1 (Cipher state). A cipher state of iClass s is an element of F 40/2
 * consisting of the following four components:
-* 	1. the left register l = (l 0 . . . l 7 ) ∈ F 8/2 ;
-* 	2. the right register r = (r 0 . . . r 7 ) ∈ F 8/2 ;
-* 	3. the top register t = (t 0 . . . t 15 ) ∈ F 16/2 .
-* 	4. the bottom register b = (b 0 . . . b 7 ) ∈ F 8/2 .
+*   1. the left register l = (l 0 . . . l 7 ) ∈ F 8/2 ;
+*   2. the right register r = (r 0 . . . r 7 ) ∈ F 8/2 ;
+*   3. the top register t = (t 0 . . . t 15 ) ∈ F 16/2 .
+*   4. the bottom register b = (b 0 . . . b 7 ) ∈ F 8/2 .
 **/
 typedef struct {
-	uint8_t l;
-	uint8_t r;
-	uint8_t b;
-	uint16_t t;
+    uint8_t l;
+    uint8_t r;
+    uint8_t b;
+    uint16_t t;
 } State;
 
 /** The reader MAC is MAC(key, CC * NR )

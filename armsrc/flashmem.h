@@ -23,7 +23,7 @@
  * <http://www.gnu.org/licenses/>.
  */
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-//						Common Instructions 						  //
+//                      Common Instructions                           //
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 #ifndef __FLASHMEM_H
 #define __FLASHMEM_H
@@ -32,74 +32,74 @@
 #include "apps.h"
 #include "ticks.h"
 
-//	Used Command
-#define ID				0x90
-#define	MANID			0x90
-#define JEDECID			0x9F
+//    Used Command
+#define ID              0x90
+#define MANID           0x90
+#define JEDECID         0x9F
 
-#define READSTAT1		0x05
-#define READSTAT2		0x35
-#define WRITESTAT		0x01
+#define READSTAT1       0x05
+#define READSTAT2       0x35
+#define WRITESTAT       0x01
 
-#define WRITEDISABLE	0x04
-#define WRITEENABLE		0x06
+#define WRITEDISABLE    0x04
+#define WRITEENABLE     0x06
 
-#define READDATA		0x03
-#define FASTREAD		0x0B
-#define PAGEPROG		0x02
+#define READDATA        0x03
+#define FASTREAD        0x0B
+#define PAGEPROG        0x02
 
-#define SECTORERASE		0x20
-#define BLOCK32ERASE	0x52
-#define BLOCK64ERASE	0xD8
-#define CHIPERASE		0xC7
+#define SECTORERASE     0x20
+#define BLOCK32ERASE    0x52
+#define BLOCK64ERASE    0xD8
+#define CHIPERASE       0xC7
 
-#define UNIQUE_ID		0x4B
+#define UNIQUE_ID       0x4B
 
-//	Not used or not support command
-#define RELEASE			0xAB
-#define POWERDOWN		0xB9
-#define SUSPEND			0x75
-#define RESUME			0x7A
+//    Not used or not support command
+#define RELEASE         0xAB
+#define POWERDOWN       0xB9
+#define SUSPEND         0x75
+#define RESUME          0x7A
 
-#define BUSY_TIMEOUT  1000000000L
+#define BUSY_TIMEOUT    1000000000L
 
-#define WINBOND_MANID	0xEF
-#define WINBOND_DEVID	0x11
-#define PAGESIZE	 	0x100
+#define WINBOND_MANID   0xEF
+#define WINBOND_DEVID   0x11
+#define PAGESIZE        0x100
 #define WINBOND_WRITE_DELAY 0x02
 
-#define SPI_CLK       48000000
+#define SPI_CLK         48000000
 
-#define BUSY          0x01
-#define WRTEN         0x02
-#define SUS           0x40
+#define BUSY            0x01
+#define WRTEN           0x02
+#define SUS             0x40
 
-#define DUMMYBYTE     0xEE
-#define NULLBYTE      0x00
-#define NULLINT       0x0000
-#define NO_CONTINUE   0x00
-#define PASS          0x01
-#define FAIL          0x00
-#define maxAddress    capacity
+#define DUMMYBYTE       0xEE
+#define NULLBYTE        0x00
+#define NULLINT         0x0000
+#define NO_CONTINUE     0x00
+#define PASS            0x01
+#define FAIL            0x00
+#define maxAddress      capacity
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-//     					   List of Error codes						  //
+//                            List of Error codes                          //
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-#define SUCCESS      0x00
-#define CALLBEGIN    0x01
-#define UNKNOWNCHIP  0x02
-#define UNKNOWNCAP   0x03
-#define CHIPBUSY     0x04
-#define OUTOFBOUNDS  0x05
-#define CANTENWRITE  0x06
-#define PREVWRITTEN  0x07
-#define LOWRAM       0x08
-#define NOSUSPEND    0x09
-#define UNKNOWNERROR 0xFF
+#define SUCCESS         0x00
+#define CALLBEGIN       0x01
+#define UNKNOWNCHIP     0x02
+#define UNKNOWNCAP      0x03
+#define CHIPBUSY        0x04
+#define OUTOFBOUNDS     0x05
+#define CANTENWRITE     0x06
+#define PREVWRITTEN     0x07
+#define LOWRAM          0x08
+#define NOSUSPEND       0x09
+#define UNKNOWNERROR    0xFF
 
 // List of blocks
-#define MAX_BLOCKS		4
-#define MAX_SECTORS		16
+#define MAX_BLOCKS      4
+#define MAX_SECTORS     16
 
 
 

@@ -18,9 +18,9 @@
 // this struct is used by EPA_Parse_CardAccess and contains info about the
 // PACE protocol supported by the chip
 typedef struct {
-	uint8_t oid[10];
-	uint8_t version;
-	uint8_t parameter_id;
+    uint8_t oid[10];
+    uint8_t version;
+    uint8_t parameter_id;
 } pace_version_info_t;
 
 // note: EPA_PACE_Collect_Nonce and EPA_PACE_Replay are declared in apps.h

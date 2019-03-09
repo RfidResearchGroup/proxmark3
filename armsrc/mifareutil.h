@@ -21,7 +21,7 @@
 #include "iso14443a.h"
 #include "crapto1/crapto1.h"
 #include "des.h"
-#include "random.h"			// fast_prand, prand
+#include "random.h" // fast_prand, prand
 
 // mifare authentication
 #define CRYPT_NONE    0
@@ -30,8 +30,8 @@
 #define AUTH_FIRST    0
 #define AUTH_NESTED   2
 
-#define AUTHENTICATION_TIMEOUT 848			// card times out 1ms after wrong authentication (according to NXP documentation)
-#define PRE_AUTHENTICATION_LEADTIME 400		// some (non standard) cards need a pause after select before they are ready for first authentication
+#define AUTHENTICATION_TIMEOUT 848      // card times out 1ms after wrong authentication (according to NXP documentation)
+#define PRE_AUTHENTICATION_LEADTIME 400 // some (non standard) cards need a pause after select before they are ready for first authentication
 
 // mifare 4bit card answers
 #define CARD_ACK      0x0A  // 1010 - ACK
@@ -48,7 +48,7 @@
 #define MFEMUL_SELECT3      4
 #define MFEMUL_AUTH1        5
 #define MFEMUL_AUTH2        6
-#define MFEMUL_WORK	        7
+#define MFEMUL_WORK         7
 #define MFEMUL_WRITEBL2     8
 #define MFEMUL_INTREG_INC   9
 #define MFEMUL_INTREG_DEC   10

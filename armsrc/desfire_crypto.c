@@ -85,20 +85,20 @@ void cmac (const desfirekey_t key, uint8_t *ivect, const uint8_t *data, size_t l
     mifare_cypher_blocks_chained (NULL, key, ivect, buffer, len, MCD_SEND, MCO_ENCYPHER);
 
     memcpy (cmac, ivect, kbs);
-	free(buffer);
+    free(buffer);
 }
 
 size_t key_block_size (const desfirekey_t key) {
     size_t block_size = 8;
     switch (key->type) {
-		case T_DES:
-		case T_3DES:
-		case T_3K3DES:
-			block_size = 8;
-			break;
-		case T_AES:
-			block_size = 16;
-			break;
+        case T_DES:
+        case T_3DES:
+        case T_3K3DES:
+            block_size = 8;
+            break;
+        case T_AES:
+            block_size = 16;
+            break;
     }
     return block_size;
 }
@@ -211,7 +211,7 @@ void* mifare_cryto_preprocess_data (desfiretag_t tag, void *data, size_t *nbytes
                 break;
             // Append MAC
             size_t bla = maced_data_length (DESFIRE(tag)->session_key, *nbytes - offset) + offset;
-			bla++;
+            bla++;
 
             memcpy (res + *nbytes, mac, 4);
 
@@ -224,7 +224,7 @@ void* mifare_cryto_preprocess_data (desfiretag_t tag, void *data, size_t *nbytes
 
             if (append_mac) {
                 size_t len = maced_data_length (key, *nbytes);
-				++len;
+                ++len;
                 memcpy (res, data, *nbytes);
                 memcpy (res + *nbytes, DESFIRE (tag)->cmac, CMAC_LENGTH);
                 *nbytes += CMAC_LENGTH;
@@ -448,7 +448,7 @@ void* mifare_cryto_postprocess_data (desfiretag_t tag, void *data, size_t *nbyte
             case AS_LEGACY:
                 AddCrc14A( (uint8_t*)res, end_crc_pos);
                 end_crc_pos = crc_pos + 2;
-				//
+                //
 
 
                 crc = crc16;
@@ -529,11 +529,11 @@ void mifare_cypher_single_block (desfirekey_t key, uint8_t *data, uint8_t *ivect
         switch (operation) {
         case MCO_ENCYPHER:
             //DES_ecb_encrypt ((DES_cblock *) data, (DES_cblock *) edata, &(key->ks1), DES_ENCRYPT);
-			des_enc(edata, data, key->data);
+            des_enc(edata, data, key->data);
             break;
         case MCO_DECYPHER:
             //DES_ecb_encrypt ((DES_cblock *) data, (DES_cblock *) edata, &(key->ks1), DES_DECRYPT);
-			des_dec(edata, data, key->data);
+            des_dec(edata, data, key->data);
             break;
         }
         break;
@@ -543,27 +543,27 @@ void mifare_cypher_single_block (desfirekey_t key, uint8_t *data, uint8_t *ivect
             // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_ENCRYPT);
             // DES_ecb_encrypt ((DES_cblock *) edata, (DES_cblock *) data,  &(key->ks2), DES_DECRYPT);
             // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_ENCRYPT);
-			tdes_enc(edata,data, key->data);
+            tdes_enc(edata,data, key->data);
             break;
         case MCO_DECYPHER:
             // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_DECRYPT);
             // DES_ecb_encrypt ((DES_cblock *) edata, (DES_cblock *) data,  &(key->ks2), DES_ENCRYPT);
             // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_DECRYPT);
-			tdes_dec(data, edata, key->data);
+            tdes_dec(data, edata, key->data);
             break;
         }
         break;
     case T_3K3DES:
         switch (operation) {
         case MCO_ENCYPHER:
-			tdes_enc(edata,data, key->data);
+            tdes_enc(edata,data, key->data);
             // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_ENCRYPT);
             // DES_ecb_encrypt ((DES_cblock *) edata, (DES_cblock *) data,  &(key->ks2), DES_DECRYPT);
             // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks3), DES_ENCRYPT);
             break;
         case MCO_DECYPHER:
-			tdes_dec(data, edata, key->data);
-			// DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks3), DES_DECRYPT);
+            tdes_dec(data, edata, key->data);
+            // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks3), DES_DECRYPT);
             // DES_ecb_encrypt ((DES_cblock *) edata, (DES_cblock *) data,  &(key->ks2), DES_ENCRYPT);
             // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_DECRYPT);
             break;
@@ -571,21 +571,21 @@ void mifare_cypher_single_block (desfirekey_t key, uint8_t *data, uint8_t *ivect
         break;
     case T_AES:
         switch (operation)
-		{
-			case MCO_ENCYPHER:
-			{
-				AesCtx ctx;
-				AesCtxIni(&ctx, ivect, key->data, KEY128,CBC);
-				AesEncrypt(&ctx, data, edata, sizeof(edata) );
-				break;
-			}
-			case MCO_DECYPHER:
-			{
-				AesCtx ctx;
-				AesCtxIni(&ctx, ivect, key->data, KEY128,CBC);
-				AesDecrypt(&ctx, edata, data, sizeof(edata));
-				break;
-			}
+        {
+            case MCO_ENCYPHER:
+            {
+                AesCtx ctx;
+                AesCtxIni(&ctx, ivect, key->data, KEY128,CBC);
+                AesEncrypt(&ctx, data, edata, sizeof(edata) );
+                break;
+            }
+            case MCO_DECYPHER:
+            {
+                AesCtx ctx;
+                AesCtxIni(&ctx, ivect, key->data, KEY128,CBC);
+                AesDecrypt(&ctx, edata, data, sizeof(edata));
+                break;
+            }
         }
         break;
     }
@@ -620,11 +620,11 @@ void mifare_cypher_blocks_chained (desfiretag_t tag, desfirekey_t key, uint8_t *
             ivect = DESFIRE (tag)->ivect;
 
         switch (DESFIRE (tag)->authentication_scheme) {
-			case AS_LEGACY:
-				memset (ivect, 0, MAX_CRYPTO_BLOCK_SIZE);
-				break;
-			case AS_NEW:
-				break;
+            case AS_LEGACY:
+                memset (ivect, 0, MAX_CRYPTO_BLOCK_SIZE);
+                break;
+            case AS_NEW:
+                break;
         }
     }
 

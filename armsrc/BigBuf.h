@@ -17,13 +17,13 @@
 #include "string.h"
 #include "ticks.h"
 
-#define BIGBUF_SIZE				40000
-#define MAX_FRAME_SIZE			256		// maximum allowed ISO14443 frame
-#define MAX_PARITY_SIZE			((MAX_FRAME_SIZE + 7) / 8)
-#define MAX_MIFARE_FRAME_SIZE	18		// biggest Mifare frame is answer to a read (one block = 16 Bytes) + 2 Bytes CRC
-#define MAX_MIFARE_PARITY_SIZE	3		// need 18 parity bits for the 18 Byte above. 3 Bytes are enough to store these
-#define CARD_MEMORY_SIZE		4096
-#define DMA_BUFFER_SIZE    		256 	//128  (how big is the dma?!?
+#define BIGBUF_SIZE             40000
+#define MAX_FRAME_SIZE          256 // maximum allowed ISO14443 frame
+#define MAX_PARITY_SIZE         ((MAX_FRAME_SIZE + 7) / 8)
+#define MAX_MIFARE_FRAME_SIZE   18  // biggest Mifare frame is answer to a read (one block = 16 Bytes) + 2 Bytes CRC
+#define MAX_MIFARE_PARITY_SIZE  3   // need 18 parity bits for the 18 Byte above. 3 Bytes are enough to store these
+#define CARD_MEMORY_SIZE        4096
+#define DMA_BUFFER_SIZE         256 //128  (how big is the dma?!?
 
 extern uint8_t *BigBuf_get_addr(void);
 extern uint8_t *BigBuf_get_EM_addr(void);
