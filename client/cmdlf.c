@@ -878,8 +878,7 @@ int CmdLFfind(const char *Cmd) {
 	if (isOnline) {
 		// only run if graphbuffer is just noise as it should be for hitag
 		// The improved noise detection will find Cotag.
-		signal_t *sp = getSignalProperties();
-		if (sp->isnoise) {
+		if (getSignalProperties()->isnoise) {
 
 			PrintAndLogEx(INFO, "Signal looks just like noise. Looking for Hitag signal now.");
 

@@ -41,9 +41,8 @@ int usage_lf_paradox_sim(void) {
 int detectParadox(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo, int *waveStartIdx) {
 	//make sure buffer has data
 	if (*size < 96*50) return -1;
-
-	signal_t *sp = getSignalProperties();
-	if (sp->isnoise) return -2;
+	
+	if (getSignalProperties()->isnoise) return -2;
 
 	// FSK demodulator
 	*size = fskdemod(dest, *size, 50, 1, 10, 8, waveStartIdx); // paradox fsk2a

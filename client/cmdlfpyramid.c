@@ -52,8 +52,7 @@ int detectPyramid(uint8_t *dest, size_t *size, int *waveStartIdx) {
 	if (*size < 128*50) return -1;
 
 	//test samples are not just noise
-	signal_t *sp = getSignalProperties();
-	if (sp->isnoise) return -2;
+	if (getSignalProperties()->isnoise) return -2;
 
 	// FSK demodulator RF/50 FSK 10,8
 	*size = fskdemod(dest, *size, 50, 0, 10, 8, waveStartIdx);  // pyramid fsk2
