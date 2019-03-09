@@ -86,221 +86,221 @@ int CmdTIDemod(const char *Cmd) {
     int i, j, TagType;
     int lowSum = 0, highSum = 0;;
     int lowTot = 0, highTot = 0;
-    int retval = 0;     
-    
-	for (i = 0; i < GraphTraceLen - convLen; i++) {
-		lowSum = 0;
-		highSum = 0;;
+    int retval = 0;
 
-		for (j = 0; j < lowLen; j++) {
-			lowSum += LowTone[j] * GraphBuffer[i+j];
-		}
-		for (j = 0; j < highLen; j++) {
-			highSum += HighTone[j] * GraphBuffer[i+j];
-		}
-		lowSum = abs((100 * lowSum) / lowLen);
-		highSum = abs((100 * highSum) / highLen);
-		lowSum = (lowSum < 0) ? -lowSum : lowSum;
-		highSum = (highSum < 0) ? -highSum : highSum;
+    for (i = 0; i < GraphTraceLen - convLen; i++) {
+        lowSum = 0;
+        highSum = 0;;
 
-		GraphBuffer[i] = (highSum << 16) | lowSum;
-	}
+        for (j = 0; j < lowLen; j++) {
+            lowSum += LowTone[j] * GraphBuffer[i+j];
+        }
+        for (j = 0; j < highLen; j++) {
+            highSum += HighTone[j] * GraphBuffer[i+j];
+        }
+        lowSum = abs((100 * lowSum) / lowLen);
+        highSum = abs((100 * highSum) / highLen);
+        lowSum = (lowSum < 0) ? -lowSum : lowSum;
+        highSum = (highSum < 0) ? -highSum : highSum;
 
-	for (i = 0; i < GraphTraceLen - convLen - 16; i++) {
-		lowTot = 0;
-		highTot = 0;
-		// 16 and 15 are f_s divided by f_l and f_h, rounded
-		for (j = 0; j < 16; j++) {
-			lowTot += (GraphBuffer[i+j] & 0xffff);
-		}
-		for (j = 0; j < 15; j++) {
-			highTot += (GraphBuffer[i+j] >> 16);
-		}
-		GraphBuffer[i] = lowTot - highTot;
-	}
+        GraphBuffer[i] = (highSum << 16) | lowSum;
+    }
 
-	GraphTraceLen -= (convLen + 16);
+    for (i = 0; i < GraphTraceLen - convLen - 16; i++) {
+        lowTot = 0;
+        highTot = 0;
+        // 16 and 15 are f_s divided by f_l and f_h, rounded
+        for (j = 0; j < 16; j++) {
+            lowTot += (GraphBuffer[i+j] & 0xffff);
+        }
+        for (j = 0; j < 15; j++) {
+            highTot += (GraphBuffer[i+j] >> 16);
+        }
+        GraphBuffer[i] = lowTot - highTot;
+    }
 
-	RepaintGraphWindow();
+    GraphTraceLen -= (convLen + 16);
 
-	// TI tag data format is 16 prebits, 8 start bits, 64 data bits,
-	// 16 crc CCITT bits, 8 stop bits, 15 end bits
+    RepaintGraphWindow();
 
-	// the 16 prebits are always low
-	// the 8 start and stop bits of a tag must match
-	// the start/stop prebits of a ro tag are 01111110
-	// the start/stop prebits of a rw tag are 11111110
-	// the 15 end bits of a ro tag are all low
-	// the 15 end bits of a rw tag match bits 15-1 of the data bits
+    // TI tag data format is 16 prebits, 8 start bits, 64 data bits,
+    // 16 crc CCITT bits, 8 stop bits, 15 end bits
 
-	// Okay, so now we have unsliced soft decisions;
-	// find bit-sync, and then get some bits.
-	// look for 17 low bits followed by 6 highs (common pattern for ro and rw tags)
-	int max = 0, maxPos = 0;
-	for (i = 0; i < 6000; i++) {
-		int j;
-		int dec = 0;
-		// searching 17 consecutive lows
-		for (j = 0; j < 17*lowLen; j++) {
-			dec -= GraphBuffer[i+j];
-		}
-		// searching 7 consecutive highs
-		for (; j < 17*lowLen + 6*highLen; j++) {
-			dec += GraphBuffer[i+j];
-		}
-		if (dec > max) {
-			max = dec;
-			maxPos = i;
-		}
-	}
+    // the 16 prebits are always low
+    // the 8 start and stop bits of a tag must match
+    // the start/stop prebits of a ro tag are 01111110
+    // the start/stop prebits of a rw tag are 11111110
+    // the 15 end bits of a ro tag are all low
+    // the 15 end bits of a rw tag match bits 15-1 of the data bits
 
-	// place a marker in the buffer to visually aid location
-	// of the start of sync
-	GraphBuffer[maxPos] = 800;
-	GraphBuffer[maxPos+1] = -800;
+    // Okay, so now we have unsliced soft decisions;
+    // find bit-sync, and then get some bits.
+    // look for 17 low bits followed by 6 highs (common pattern for ro and rw tags)
+    int max = 0, maxPos = 0;
+    for (i = 0; i < 6000; i++) {
+        int j;
+        int dec = 0;
+        // searching 17 consecutive lows
+        for (j = 0; j < 17*lowLen; j++) {
+            dec -= GraphBuffer[i+j];
+        }
+        // searching 7 consecutive highs
+        for (; j < 17*lowLen + 6*highLen; j++) {
+            dec += GraphBuffer[i+j];
+        }
+        if (dec > max) {
+            max = dec;
+            maxPos = i;
+        }
+    }
 
-	// advance pointer to start of actual data stream (after 16 pre and 8 start bits)
-	maxPos += 17 * lowLen;
-	maxPos +=  6 * highLen;
+    // place a marker in the buffer to visually aid location
+    // of the start of sync
+    GraphBuffer[maxPos] = 800;
+    GraphBuffer[maxPos+1] = -800;
 
-	// place a marker in the buffer to visually aid location
-	// of the end of sync
-	GraphBuffer[maxPos] = 800;
-	GraphBuffer[maxPos+1] = -800;
+    // advance pointer to start of actual data stream (after 16 pre and 8 start bits)
+    maxPos += 17 * lowLen;
+    maxPos +=  6 * highLen;
 
-	PrintAndLogEx(DEBUG, "actual data bits start at sample %d", maxPos);
-	PrintAndLogEx(DEBUG, "length %d/%d", highLen, lowLen);
+    // place a marker in the buffer to visually aid location
+    // of the end of sync
+    GraphBuffer[maxPos] = 800;
+    GraphBuffer[maxPos+1] = -800;
 
-	uint8_t bits[1+64+16+8+16];
-	bits[sizeof(bits)-1] = '\0';
+    PrintAndLogEx(DEBUG, "actual data bits start at sample %d", maxPos);
+    PrintAndLogEx(DEBUG, "length %d/%d", highLen, lowLen);
 
-	uint32_t shift3 = 0x7e000000, shift2 = 0, shift1 = 0, shift0 = 0;
+    uint8_t bits[1+64+16+8+16];
+    bits[sizeof(bits)-1] = '\0';
 
-	for (i = 0; i < ARRAYLEN(bits)-1; i++) {
-		int high = 0;
-		int low = 0;
-		int j;
-		for (j = 0; j < lowLen; j++) {
-			low -= GraphBuffer[maxPos+j];
-		}
-		for (j = 0; j < highLen; j++) {
-			high += GraphBuffer[maxPos+j];
-		}
+    uint32_t shift3 = 0x7e000000, shift2 = 0, shift1 = 0, shift0 = 0;
 
-		if (high > low) {
-			bits[i] = '1';
-			maxPos += highLen;
-			// bitstream arrives lsb first so shift right
-			shift3 |= (1<<31);
-		} else {
-			bits[i] = '.';
-			maxPos += lowLen;
-		}
+    for (i = 0; i < ARRAYLEN(bits)-1; i++) {
+        int high = 0;
+        int low = 0;
+        int j;
+        for (j = 0; j < lowLen; j++) {
+            low -= GraphBuffer[maxPos+j];
+        }
+        for (j = 0; j < highLen; j++) {
+            high += GraphBuffer[maxPos+j];
+        }
 
-		// 128 bit right shift register
-		shift0 = (shift0>>1) | (shift1 << 31);
-		shift1 = (shift1>>1) | (shift2 << 31);
-		shift2 = (shift2>>1) | (shift3 << 31);
-		shift3 >>= 1;
+        if (high > low) {
+            bits[i] = '1';
+            maxPos += highLen;
+            // bitstream arrives lsb first so shift right
+            shift3 |= (1<<31);
+        } else {
+            bits[i] = '.';
+            maxPos += lowLen;
+        }
 
-		// place a marker in the buffer between bits to visually aid location
-		GraphBuffer[maxPos] = 800;
-		GraphBuffer[maxPos+1] = -800;
-	}
+        // 128 bit right shift register
+        shift0 = (shift0>>1) | (shift1 << 31);
+        shift1 = (shift1>>1) | (shift2 << 31);
+        shift2 = (shift2>>1) | (shift3 << 31);
+        shift3 >>= 1;
 
-	RepaintGraphWindow();
+        // place a marker in the buffer between bits to visually aid location
+        GraphBuffer[maxPos] = 800;
+        GraphBuffer[maxPos+1] = -800;
+    }
 
-	PrintAndLogEx(INFO, "raw tag bits = %s", bits);
+    RepaintGraphWindow();
 
-	TagType = (shift3 >> 8) & 0xFF;
-	if ( TagType != ((shift0 >> 16) & 0xFF) ) {
-		PrintAndLogEx(WARNING, "Error: start and stop bits do not match!");
+    PrintAndLogEx(INFO, "raw tag bits = %s", bits);
+
+    TagType = (shift3 >> 8) & 0xFF;
+    if ( TagType != ((shift0 >> 16) & 0xFF) ) {
+        PrintAndLogEx(WARNING, "Error: start and stop bits do not match!");
         goto out;
-	}
-	else if (TagType == 0x7E) {
-		PrintAndLogEx(INFO, "Readonly TI tag detected.");
-		retval = 1;
-        goto out;
-	}
-	else if (TagType == 0xFE) {
-		PrintAndLogEx(INFO, "Rewriteable TI tag detected.");
-
-		// put 64 bit data into shift1 and shift0
-		shift0 = (shift0 >> 24) | (shift1 << 8);
-		shift1 = (shift1 >> 24) | (shift2 << 8);
-
-		// align 16 bit crc into lower half of shift2
-		shift2 = ((shift2 >> 24) | (shift3 << 8)) & 0x0FFFF;
-
-		// align 16 bit "end bits" or "ident" into lower half of shift3
-		shift3 >>= 16;
-
-		// only 15 bits compare, last bit of ident is not valid
-		if ( (shift3 ^ shift0) & 0x7FFF ) {
-		  PrintAndLogEx(WARNING, "Error: Ident mismatch!");
-		}
-		// WARNING the order of the bytes in which we calc crc below needs checking
-		// i'm 99% sure the crc algorithm is correct, but it may need to eat the
-		// bytes in reverse or something
-		// calculate CRC
-		crc = 0;
-		crc = update_crc16(crc, (shift0 >>  0) & 0xFF);
-		crc = update_crc16(crc, (shift0 >>  8) & 0xFF);
-		crc = update_crc16(crc, (shift0 >> 16) & 0xFF);
-		crc = update_crc16(crc, (shift0 >> 24) & 0xFF);
-        
-		crc = update_crc16(crc, (shift1 >>  0) & 0xFF);
-		crc = update_crc16(crc, (shift1 >>  8) & 0xFF);
-		crc = update_crc16(crc, (shift1 >> 16) & 0xFF);
-		crc = update_crc16(crc, (shift1 >> 24) & 0xFF);
-
-		//crc =  crc16_ccitt(message, sizeof(message);
-
-		char *crcStr = (crc == (shift2 & 0xFFFF) ) ? "Passed" : "Failed";
-
-		PrintAndLogEx(INFO, "Tag data = %08X%08X  [Crc %04X %s]", shift1, shift0, crc, crcStr );
-
-		if (crc != (shift2 & 0xFFFF))
-			PrintAndLogEx(WARNING, "Error: CRC mismatch, calculated %04X, got %04X", crc, shift2 & 0xFFFF);
-        
+    }
+    else if (TagType == 0x7E) {
+        PrintAndLogEx(INFO, "Readonly TI tag detected.");
         retval = 1;
         goto out;
-	}
-	else {
-		PrintAndLogEx(WARNING, "Unknown tag type.");
-	}
-    
+    }
+    else if (TagType == 0xFE) {
+        PrintAndLogEx(INFO, "Rewriteable TI tag detected.");
+
+        // put 64 bit data into shift1 and shift0
+        shift0 = (shift0 >> 24) | (shift1 << 8);
+        shift1 = (shift1 >> 24) | (shift2 << 8);
+
+        // align 16 bit crc into lower half of shift2
+        shift2 = ((shift2 >> 24) | (shift3 << 8)) & 0x0FFFF;
+
+        // align 16 bit "end bits" or "ident" into lower half of shift3
+        shift3 >>= 16;
+
+        // only 15 bits compare, last bit of ident is not valid
+        if ( (shift3 ^ shift0) & 0x7FFF ) {
+          PrintAndLogEx(WARNING, "Error: Ident mismatch!");
+        }
+        // WARNING the order of the bytes in which we calc crc below needs checking
+        // i'm 99% sure the crc algorithm is correct, but it may need to eat the
+        // bytes in reverse or something
+        // calculate CRC
+        crc = 0;
+        crc = update_crc16(crc, (shift0 >>  0) & 0xFF);
+        crc = update_crc16(crc, (shift0 >>  8) & 0xFF);
+        crc = update_crc16(crc, (shift0 >> 16) & 0xFF);
+        crc = update_crc16(crc, (shift0 >> 24) & 0xFF);
+
+        crc = update_crc16(crc, (shift1 >>  0) & 0xFF);
+        crc = update_crc16(crc, (shift1 >>  8) & 0xFF);
+        crc = update_crc16(crc, (shift1 >> 16) & 0xFF);
+        crc = update_crc16(crc, (shift1 >> 24) & 0xFF);
+
+        //crc =  crc16_ccitt(message, sizeof(message);
+
+        char *crcStr = (crc == (shift2 & 0xFFFF) ) ? "Passed" : "Failed";
+
+        PrintAndLogEx(INFO, "Tag data = %08X%08X  [Crc %04X %s]", shift1, shift0, crc, crcStr );
+
+        if (crc != (shift2 & 0xFFFF))
+            PrintAndLogEx(WARNING, "Error: CRC mismatch, calculated %04X, got %04X", crc, shift2 & 0xFFFF);
+
+        retval = 1;
+        goto out;
+    }
+    else {
+        PrintAndLogEx(WARNING, "Unknown tag type.");
+    }
+
 out:
     if ( retval == 0)
         save_restoreGB(GRAPH_RESTORE);
-    
-	return retval;
+
+    return retval;
 }
 
 // read a TI tag and return its ID
 int CmdTIRead(const char *Cmd) {
-	UsbCommand c = {CMD_READ_TI_TYPE};
-	clearCommandBuffer();
-	SendCommand(&c);
-	return 0;
+    UsbCommand c = {CMD_READ_TI_TYPE};
+    clearCommandBuffer();
+    SendCommand(&c);
+    return 0;
 }
 
 // write new data to a r/w TI tag
 int CmdTIWrite(const char *Cmd) {
-	int res = 0;
-	UsbCommand c = {CMD_WRITE_TI_TYPE};
-	res = sscanf(Cmd, "%012" SCNx64 " %012" SCNx64 " %012" SCNx64 "", &c.arg[0], &c.arg[1], &c.arg[2]);
+    int res = 0;
+    UsbCommand c = {CMD_WRITE_TI_TYPE};
+    res = sscanf(Cmd, "%012" SCNx64 " %012" SCNx64 " %012" SCNx64 "", &c.arg[0], &c.arg[1], &c.arg[2]);
 
-	if (res == 2) 
+    if (res == 2)
         c.arg[2] = 0;
-    
-	if (res < 2) {
-		PrintAndLogEx(WARNING, "Please specify the data as two hex strings, optionally the CRC as a third");
-		return 1;
-	}
-	clearCommandBuffer();
-	SendCommand(&c);
-	return 0;
+
+    if (res < 2) {
+        PrintAndLogEx(WARNING, "Please specify the data as two hex strings, optionally the CRC as a third");
+        return 1;
+    }
+    clearCommandBuffer();
+    SendCommand(&c);
+    return 0;
 }
 
 static command_t CommandTable[] = {

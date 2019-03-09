@@ -17,39 +17,39 @@
 #include <string.h>
 #include "util.h"
 #include "ui.h"
-#include "cmdhf14a.h"		// ISO14443-A
-#include "cmdhf14b.h"		// ISO14443-B
-#include "cmdhf15.h"		// ISO15693
+#include "cmdhf14a.h"       // ISO14443-A
+#include "cmdhf14b.h"       // ISO14443-B
+#include "cmdhf15.h"        // ISO15693
 #include "cmdhfepa.h"
-#include "cmdhflegic.h"		// LEGIC
-#include "cmdhficlass.h"	// ICLASS
-#include "cmdhfmf.h"		// CLASSIC
-#include "cmdhfmfu.h"		// ULTRALIGHT/NTAG etc
-#include "cmdhfmfdes.h"		// DESFIRE
-#include "cmdhftopaz.h"		// TOPAZ
-#include "cmdhffelica.h"	// ISO18092 / FeliCa
-#include "emv/cmdemv.h"		// EMV
+#include "cmdhflegic.h"     // LEGIC
+#include "cmdhficlass.h"    // ICLASS
+#include "cmdhfmf.h"        // CLASSIC
+#include "cmdhfmfu.h"       // ULTRALIGHT/NTAG etc
+#include "cmdhfmfdes.h"     // DESFIRE
+#include "cmdhftopaz.h"     // TOPAZ
+#include "cmdhffelica.h"    // ISO18092 / FeliCa
+#include "emv/cmdemv.h"     // EMV
 #include "protocols.h"
 #include "crapto1/crapto1.h"
 #include "mifare/mifarehost.h"
 #include "mifare/mifaredefault.h"
-#include "parity.h"			// oddparity
-#include "iso15693tools.h"	// ISO15693 crc
+#include "parity.h"         // oddparity
+#include "iso15693tools.h"  // ISO15693 crc
 
 
 typedef struct {
-	uint32_t uid;       // UID
-	uint32_t nt;        // tag challenge
-	uint32_t nt_enc;    // encrypted tag challenge
-	uint8_t nt_enc_par; // encrypted tag challenge parity
-	uint32_t nr_enc;    // encrypted reader challenge
-	uint32_t ar_enc;    // encrypted reader response
-	uint8_t ar_enc_par; // encrypted reader response parity
-	uint32_t at_enc;    // encrypted tag response
-	uint8_t at_enc_par; // encrypted tag response parity
-	bool first_auth;    // is first authentication
-	uint32_t ks2;		// ar ^ ar_enc
-	uint32_t ks3;       // at ^ at_enc
+    uint32_t uid;       // UID
+    uint32_t nt;        // tag challenge
+    uint32_t nt_enc;    // encrypted tag challenge
+    uint8_t nt_enc_par; // encrypted tag challenge parity
+    uint32_t nr_enc;    // encrypted reader challenge
+    uint32_t ar_enc;    // encrypted reader response
+    uint8_t ar_enc_par; // encrypted reader response parity
+    uint32_t at_enc;    // encrypted tag response
+    uint8_t at_enc_par; // encrypted tag response parity
+    bool first_auth;    // is first authentication
+    uint32_t ks2;       // ar ^ ar_enc
+    uint32_t ks3;       // at ^ at_enc
 } TAuthData;
 extern void ClearAuthData();
 

@@ -69,30 +69,30 @@ bool endsWith(char* base, char* str) {
 */
 int CmdScriptList(const char *Cmd) {
 
-	char const * exedir = get_my_executable_directory();
-	if (exedir == NULL)
-	    return 0;
-	char script_directory_path[strlen(exedir) + strlen(LUA_SCRIPTS_DIRECTORY) + 1];
-	strcpy(script_directory_path, exedir);
-	strcpy(script_directory_path, get_my_executable_directory());
-	strcat(script_directory_path, LUA_SCRIPTS_DIRECTORY);
+    char const * exedir = get_my_executable_directory();
+    if (exedir == NULL)
+        return 0;
+    char script_directory_path[strlen(exedir) + strlen(LUA_SCRIPTS_DIRECTORY) + 1];
+    strcpy(script_directory_path, exedir);
+    strcpy(script_directory_path, get_my_executable_directory());
+    strcat(script_directory_path, LUA_SCRIPTS_DIRECTORY);
 
-	struct dirent **namelist;
-	int n;
+    struct dirent **namelist;
+    int n;
 
-	n = scandir(script_directory_path, &namelist, NULL, alphasort);
-	if (n == -1) {
-		PrintAndLogEx(FAILED, "Couldn't open the scripts-directory");
-		return 1;
-	}
+    n = scandir(script_directory_path, &namelist, NULL, alphasort);
+    if (n == -1) {
+        PrintAndLogEx(FAILED, "Couldn't open the scripts-directory");
+        return 1;
+    }
 
-	for (uint16_t i = 0; i < n; i++) {
-		if (str_ends_with(namelist[i]->d_name, ".lua"))
-			PrintAndLogEx(NORMAL, "%-21s", namelist[i]->d_name);
-		free(namelist[i]);
-	}
-	free(namelist);
-	return 0;
+    for (uint16_t i = 0; i < n; i++) {
+        if (str_ends_with(namelist[i]->d_name, ".lua"))
+            PrintAndLogEx(NORMAL, "%-21s", namelist[i]->d_name);
+        free(namelist[i]);
+    }
+    free(namelist);
+    return 0;
 }
 
 /**
@@ -115,8 +115,8 @@ int CmdScriptRun(const char *Cmd) {
     //Add the 'bin' library
     set_bin_library(lua_state);
 
-	//Add the 'bit' library
-	set_bit_library(lua_state);
+    //Add the 'bit' library
+    set_bit_library(lua_state);
 
     char script_name[128] = {0};
     char arguments[256] = {0};
@@ -128,13 +128,13 @@ int CmdScriptRun(const char *Cmd) {
     char *suffix = "";
     if (!endsWith(script_name, ".lua")) {
         suffix = ".lua";
-	}
+    }
 
-	char script_path[strlen(get_my_executable_directory()) + strlen(LUA_SCRIPTS_DIRECTORY) + strlen(script_name) + strlen(suffix) + 1];
-	strcpy(script_path, get_my_executable_directory());
-	strcat(script_path, LUA_SCRIPTS_DIRECTORY);
-	strcat(script_path, script_name);
-	strcat(script_path, suffix);
+    char script_path[strlen(get_my_executable_directory()) + strlen(LUA_SCRIPTS_DIRECTORY) + strlen(script_name) + strlen(suffix) + 1];
+    strcpy(script_path, get_my_executable_directory());
+    strcat(script_path, LUA_SCRIPTS_DIRECTORY);
+    strcat(script_path, script_name);
+    strcat(script_path, suffix);
 
     PrintAndLogEx(SUCCESS, "Executing: %s%s, args '%s'\n", script_name, suffix, arguments);
 
@@ -167,10 +167,10 @@ int CmdScriptRun(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-	{"help",  CmdHelp,			1, "This help"},
-	{"list",  CmdScriptList,	1, "List available scripts"},
-	{"run",   CmdScriptRun,		1, "<name> -- Execute a script"},
-	{NULL, NULL, 0, NULL}
+    {"help",  CmdHelp,          1, "This help"},
+    {"list",  CmdScriptList,    1, "List available scripts"},
+    {"run",   CmdScriptRun,     1, "<name> -- Execute a script"},
+    {NULL, NULL, 0, NULL}
 };
 
 /**
@@ -180,9 +180,9 @@ static command_t CommandTable[] = {
  * @return
  */
 int CmdScript(const char *Cmd) {
-	clearCommandBuffer();
-	CmdsParse(CommandTable, Cmd);
-	return 0;
+    clearCommandBuffer();
+    CmdsParse(CommandTable, Cmd);
+    return 0;
 }
 
 /**

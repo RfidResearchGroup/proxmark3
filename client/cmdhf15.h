@@ -21,10 +21,10 @@
 #include "ui.h"
 #include "util.h"
 #include "cmdparser.h"
-#include "crc16.h"	// iso15 crc
+#include "crc16.h"             // iso15 crc
 #include "cmdmain.h"
-#include "cmddata.h"		// getsamples
-#include "loclass/fileutils.h" 		// savefileEML
+#include "cmddata.h"           // getsamples
+#include "loclass/fileutils.h" // savefileEML
 
 int CmdHF15(const char *Cmd);
 

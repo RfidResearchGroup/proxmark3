@@ -28,15 +28,15 @@
 #include "mifare.h"
 #include "cmdhfmf.h"
 #include "cmdhfmfu.h"
-#include "cmdhf.h"		// list cmd
+#include "cmdhf.h"  // list cmd
 #include "mifare/mifarehost.h"
 #include "emv/apduinfo.h"
 #include "emv/emvcore.h"
 
 // structure and database for uid -> tagtype lookups
 typedef struct {
-	uint8_t uid;
-	char* desc;
+    uint8_t uid;
+    char* desc;
 } manufactureName;
 
 extern int CmdHF14A(const char *Cmd);

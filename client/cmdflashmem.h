@@ -22,15 +22,15 @@
 #include "cmdparser.h"
 #include "common.h"
 #include "util.h"
-#include "util_posix.h"			// msclock
-#include "loclass/fileutils.h"	//saveFile
-#include "comms.h"			//getfromdevice
+#include "util_posix.h"         // msclock
+#include "loclass/fileutils.h"  //saveFile
+#include "comms.h"              //getfromdevice
 
 typedef enum {
-	DICTIONARY_NONE = 0,
-	DICTIONARY_MIFARE,
-	DICTIONARY_T55XX,
-	DICTIONARY_ICLASS
+    DICTIONARY_NONE = 0,
+    DICTIONARY_MIFARE,
+    DICTIONARY_T55XX,
+    DICTIONARY_ICLASS
 } Dictionary_t;
 
 extern int CmdFlashMem(const char *Cmd);

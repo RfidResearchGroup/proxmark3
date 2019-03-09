@@ -23,15 +23,15 @@
 #include "cmdparser.h"
 #include "common.h"
 #include "util.h"
-#include "mifare.h" 				// nonces_t struct
-#include "mifare/mfkey.h"   		// mfkey32_moebious
+#include "mifare.h"                        // nonces_t struct
+#include "mifare/mfkey.h"                  // mfkey32_moebious
 #include "cmdhfmfhard.h"
-#include "mifare/mifarehost.h"		// icesector_t,  sector_t
-#include "util_posix.h"				// msclock
-#include "mifare/mifaredefault.h"  	// mifare default key array
-#include "cmdhf14a.h" 				// dropfield
-#include "cliparser/cliparser.h" 	// argtable
-#include "hardnested/hardnested_bf_core.h"	// SetSIMDInstr
+#include "mifare/mifarehost.h"             // icesector_t,  sector_t
+#include "util_posix.h"                    // msclock
+#include "mifare/mifaredefault.h"          // mifare default key array
+#include "cmdhf14a.h"                      // dropfield
+#include "cliparser/cliparser.h"           // argtable
+#include "hardnested/hardnested_bf_core.h" // SetSIMDInstr
 
 extern int CmdHFMF(const char *Cmd);
 

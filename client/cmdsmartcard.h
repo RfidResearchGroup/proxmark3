@@ -20,11 +20,11 @@
 #include "cmdparser.h"
 #include "common.h"
 #include "util.h"
-#include "loclass/fileutils.h"	// saveFile
-#include "comms.h"				// getfromdevice
-#include "emv/emvcore.h"		// decodeTVL
-#include "emv/apduinfo.h"		// APDUcode description
-#include "emv/dump.h"			// dump_buffer
+#include "loclass/fileutils.h"  // saveFile
+#include "comms.h"              // getfromdevice
+#include "emv/emvcore.h"        // decodeTVL
+#include "emv/apduinfo.h"       // APDUcode description
+#include "emv/dump.h"           // dump_buffer
 
 extern int CmdSmartcard(const char *Cmd);
 

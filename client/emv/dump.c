@@ -20,40 +20,40 @@
 #include "dump.h"
 
 
-#define PRINT_INDENT(level) 	{for (int i = 0; i < (level); i++) fprintf(f, "   ");}
+#define PRINT_INDENT(level) {for (int i = 0; i < (level); i++) fprintf(f, "   ");}
 
 void dump_buffer_simple(const unsigned char *ptr, size_t len, FILE *f)
 {
-	int i;
+    int i;
 
-	if (!f)
-		f = stdout;
+    if (!f)
+        f = stdout;
 
-	for (i = 0; i < len; i ++)
-		fprintf(f, "%s%02hhX", i ? " " : "", ptr[i]);
+    for (i = 0; i < len; i ++)
+        fprintf(f, "%s%02hhX", i ? " " : "", ptr[i]);
 }
 
 void dump_buffer(const unsigned char *ptr, size_t len, FILE *f, int level)
 {
-	int i, j;
+    int i, j;
 
-	if (!f)
-		f = stdout;
+    if (!f)
+        f = stdout;
 
-	for (i = 0; i < len; i += 16) {
-		PRINT_INDENT(level);
-		fprintf(f, "\t%02x:", i);
-		for (j = 0; j < 16; j++) {
-			if (i + j < len)
-				fprintf(f, " %02hhx", ptr[i + j]);
-			else
-				fprintf(f, "   ");
-		}
-		fprintf(f, " |");
-		for (j = 0; j < 16 && i + j < len; j++) {
-			fprintf(f, "%c", (ptr[i+j] >= 0x20 && ptr[i+j] < 0x7f) ? ptr[i+j] : '.' );
-		}
-		fprintf(f, "\n");
-	}
+    for (i = 0; i < len; i += 16) {
+        PRINT_INDENT(level);
+        fprintf(f, "\t%02x:", i);
+        for (j = 0; j < 16; j++) {
+            if (i + j < len)
+                fprintf(f, " %02hhx", ptr[i + j]);
+            else
+                fprintf(f, "   ");
+        }
+        fprintf(f, " |");
+        for (j = 0; j < 16 && i + j < len; j++) {
+            fprintf(f, "%c", (ptr[i+j] >= 0x20 && ptr[i+j] < 0x7f) ? ptr[i+j] : '.' );
+        }
+        fprintf(f, "\n");
+    }
 }
 

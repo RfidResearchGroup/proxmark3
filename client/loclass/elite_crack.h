@@ -47,9 +47,9 @@ void permutekey(uint8_t key[8], uint8_t dest[8]);
  */
 void permutekey_rev(uint8_t key[8], uint8_t dest[8]);
 //Crack status, see below
-#define CRACKED			0x0100
-#define BEING_CRACKED	0x0200
-#define CRACK_FAILED	0x0400
+#define CRACKED         0x0100
+#define BEING_CRACKED   0x0200
+#define CRACK_FAILED    0x0400
 
 /**
  * Perform a bruteforce against a file which has been saved by pm3
@@ -81,9 +81,9 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[]);
   This is how we expect each 'entry' in a dumpfile to look
 **/
 typedef struct {
-	uint8_t csn[8];
-	uint8_t cc_nr[12];
-	uint8_t mac[4];
+    uint8_t csn[8];
+    uint8_t cc_nr[12];
+    uint8_t mac[4];
 } dumpdata;
 
 /**
@@ -108,12 +108,12 @@ void hash1(uint8_t csn[] , uint8_t k[]);
 void hash2(uint8_t *key64, uint8_t *outp_keytable);
 /**
  * From dismantling iclass-paper:
- *	Assume that an adversary somehow learns the first 16 bytes of hash2(K_cus ), i.e., y [0] and z [0] .
- *	Then he can simply recover the master custom key K_cus by computing
- *	K_cus = ~DES(z[0] , y[0] ) .
+ *  Assume that an adversary somehow learns the first 16 bytes of hash2(K_cus ), i.e., y [0] and z [0] .
+ *  Then he can simply recover the master custom key K_cus by computing
+ *  K_cus = ~DES(z[0] , y[0] ) .
  *
- *	Furthermore, the adversary is able to verify that he has the correct K cus by
- *	checking whether z [0] = DES enc (K_cus , ~K_cus ).
+ *  Furthermore, the adversary is able to verify that he has the correct K cus by
+ *  checking whether z [0] = DES enc (K_cus , ~K_cus ).
  * @param keytable an array (128 bytes) of hash2(kcus)
  * @param master_key where to put the master key
  * @return 0 for ok, 1 for failz
@@ -127,8 +127,8 @@ int calculateMasterKey(uint8_t first16bytes[], uint64_t master_key[] );
 int testElite();
 
 /**
-	  Here are some pretty optimal values that can be used to recover necessary data in only
-	  eight auth attempts.
+      Here are some pretty optimal values that can be used to recover necessary data in only
+      eight auth attempts.
 // CSN                                        HASH1                                      Bytes recovered //
 { {0x00,0x0B,0x0F,0xFF,0xF7,0xFF,0x12,0xE0} , {0x01,0x01,0x00,0x00,0x45,0x01,0x45,0x45 } ,{0,1 }},
 { {0x00,0x13,0x94,0x7e,0x76,0xff,0x12,0xe0} , {0x02,0x0c,0x01,0x00,0x45,0x01,0x45,0x45} , {2,12}},

@@ -89,7 +89,7 @@ endif
 print-%: ; @echo $* = $($*) 
 
 style:
-	find . \( -name "*.[ch]" -or -name "*.cpp" \) -exec perl -pi -e 's/[ \t\r]+$$//' {} \;
+	find . \( -name "*.[ch]" -or -name "*.cpp" -or -name "*.lua" \) -exec perl -pi -e 's/[ \t\r]+$$//' {} \;
 
 # Dummy target to test for GNU make availability
 _test:

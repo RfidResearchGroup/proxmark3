@@ -11,20 +11,20 @@
 #ifndef CMDANALYSE_H__
 #define CMDANALYSE_H__
 
-#include <stdlib.h>  //size_t
+#include <stdlib.h>       // size_t
 #include <string.h>
 #include <unistd.h>
 #include "cmdmain.h"
 #include "proxmark3.h"
-#include "ui.h"				// PrintAndLog
+#include "ui.h"           // PrintAndLog
 #include "util.h"
 #include "crc.h"
-#include "crc16.h"			// crc16 ccitt
+#include "crc16.h"        // crc16 ccitt
 #include "tea.h"
 #include "legic_prng.h"
 #include "loclass/elite_crack.h"
-#include "mifare/mfkey.h"	//nonce2key
-#include "util_posix.h" 	// msclock
+#include "mifare/mfkey.h" // nonce2key
+#include "util_posix.h"   // msclock
 
 
 int usage_analyse_lcr(void);

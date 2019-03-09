@@ -34,12 +34,12 @@
 
 static inline uint16_t le16(uint16_t v)
 {
-	return (v>>8) | (v<<8);
+    return (v>>8) | (v<<8);
 }
 
 static inline uint32_t le32(uint32_t v)
 {
-	return (le16(v)<<16) | (le16(v>>16));
+    return (le16(v)<<16) | (le16(v>>16));
 }
 #endif // HOST_LITTLE_ENDIAN
 

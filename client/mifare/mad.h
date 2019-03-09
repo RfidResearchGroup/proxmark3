@@ -16,8 +16,8 @@
 #include <stddef.h>
 
 typedef struct {
-	uint16_t AID;
-	const char *Description;
+    uint16_t AID;
+    const char *Description;
 } madAIDDescr;
 
 extern int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2);

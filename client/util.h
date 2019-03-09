@@ -10,7 +10,7 @@
 #ifndef __UTIL_H_
 #define __UTIL_H_
 
-#include <stdint.h>		//included in data.h
+#include <stdint.h> //included in data.h
 #include <stddef.h>
 #include <inttypes.h>
 #include <string.h>
@@ -18,7 +18,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
-#include "ui.h"			// PrintAndLog
+#include "ui.h"     // PrintAndLog
 
 #ifdef ANDROID
   #include <endian.h>
@@ -43,63 +43,63 @@
 
 // endian change for 64bit
 #ifdef __GNUC__
-	#ifndef BSWAP_64
-		#define BSWAP_64(x) __builtin_bswap64(x)
-	#endif
+    #ifndef BSWAP_64
+        #define BSWAP_64(x) __builtin_bswap64(x)
+    #endif
 #else
-	#ifdef _MSC_VER
-		#ifndef BSWAP_64
-			#define BSWAP_64(x) _byteswap_uint64(x)
-		#endif
-	#else
-	#ifndef BSWAP_64
-		#define	BSWAP_64(x) \
-			(((uint64_t)(x) << 56) | \
-			(((uint64_t)(x) << 40) & 0xff000000000000ULL) | \
-			(((uint64_t)(x) << 24) & 0xff0000000000ULL) | \
-			(((uint64_t)(x) << 8)  & 0xff00000000ULL) | \
-			(((uint64_t)(x) >> 8)  & 0xff000000ULL) | \
-			(((uint64_t)(x) >> 24) & 0xff0000ULL) | \
-			(((uint64_t)(x) >> 40) & 0xff00ULL) | \
-			((uint64_t)(x)  >> 56))
-		#endif
-	#endif
+    #ifdef _MSC_VER
+        #ifndef BSWAP_64
+            #define BSWAP_64(x) _byteswap_uint64(x)
+        #endif
+    #else
+    #ifndef BSWAP_64
+        #define BSWAP_64(x) \
+            (((uint64_t)(x) << 56) | \
+            (((uint64_t)(x) << 40) & 0xff000000000000ULL) | \
+            (((uint64_t)(x) << 24) & 0xff0000000000ULL) | \
+            (((uint64_t)(x) << 8)  & 0xff00000000ULL) | \
+            (((uint64_t)(x) >> 8)  & 0xff000000ULL) | \
+            (((uint64_t)(x) >> 24) & 0xff0000ULL) | \
+            (((uint64_t)(x) >> 40) & 0xff00ULL) | \
+            ((uint64_t)(x)  >> 56))
+        #endif
+    #endif
 #endif
 
 // endian change for 32bit
 #ifdef __GNUC__
-	#ifndef BSWAP_32
-		#define BSWAP_32(x) __builtin_bswap32(x)
-	#endif
+    #ifndef BSWAP_32
+        #define BSWAP_32(x) __builtin_bswap32(x)
+    #endif
 #else
-	#ifdef _MSC_VER
-		#ifndef BSWAP_32
-			#define BSWAP_32(x) _byteswap_ulong(x)
-		#endif
-	#else
-		#ifndef BSWAP_32
-			# define BSWAP_32(x) \
-			 ((((x) & 0xff000000) >> 24) | (((x) & 0x00ff0000) >>  8) | \
-			  (((x) & 0x0000ff00) <<  8) | (((x) & 0x000000ff) << 24))
-		#endif
-	#endif
+    #ifdef _MSC_VER
+        #ifndef BSWAP_32
+            #define BSWAP_32(x) _byteswap_ulong(x)
+        #endif
+    #else
+        #ifndef BSWAP_32
+            # define BSWAP_32(x) \
+             ((((x) & 0xff000000) >> 24) | (((x) & 0x00ff0000) >>  8) | \
+              (((x) & 0x0000ff00) <<  8) | (((x) & 0x000000ff) << 24))
+        #endif
+    #endif
 #endif
 
 // endian change for 16bit
 #ifdef __GNUC__
-	#ifndef BSWAP_16
-		#define BSWAP_16(x) __builtin_bswap16(x)
-	#endif
+    #ifndef BSWAP_16
+        #define BSWAP_16(x) __builtin_bswap16(x)
+    #endif
 #else
-	#ifdef _MSC_VER
-		#ifndef BSWAP_16
-			#define BSWAP_16(x) _byteswap_ushort(x)
-		#endif
-	#else
-		#ifndef BSWAP_16
-			# define BSWAP_16(x) ((( ((x) & 0xFF00 ) >> 8))| ( (((x) & 0x00FF) << 8)))
-		#endif
-	#endif
+    #ifdef _MSC_VER
+        #ifndef BSWAP_16
+            #define BSWAP_16(x) _byteswap_ushort(x)
+        #endif
+    #else
+        #ifndef BSWAP_16
+            # define BSWAP_16(x) ((( ((x) & 0xFF00 ) >> 8))| ( (((x) & 0x00FF) << 8)))
+        #endif
+    #endif
 #endif
 
 #define EVEN                        0
@@ -136,37 +136,37 @@
 # define ARRAYLEN(x) (sizeof(x)/sizeof((x)[0]))
 #endif
 
-#if defined(__linux__)	|| (__APPLE__)
+#if defined(__linux__) || (__APPLE__)
 # define _BLUE_(s) "\x1b[34m" #s "\x1b[0m "
 #else
 # define _BLUE_(s) #s " "
 #endif
 
-#if defined(__linux__)	|| (__APPLE__)
+#if defined(__linux__) || (__APPLE__)
 # define _RED_(s) "\x1b[31m" #s "\x1b[0m "
 #else
 # define _RED_(s) #s " "
 #endif
 
-#if defined(__linux__)	|| (__APPLE__)
+#if defined(__linux__) || (__APPLE__)
 # define _GREEN_(s) "\x1b[32m" #s "\x1b[0m "
 #else
 # define _GREEN_(s) #s " "
 #endif
 
-#if defined(__linux__)	|| (__APPLE__)
+#if defined(__linux__) || (__APPLE__)
 # define _YELLOW_(s) "\x1b[33m" #s "\x1b[0m "
 #else
 # define _YELLOW_(s) #s " "
 #endif
 
-#if defined(__linux__)	|| (__APPLE__)
+#if defined(__linux__) || (__APPLE__)
 # define _MAGENTA_(s) "\x1b[35m" #s "\x1b[0m "
 #else
 # define _MAGENTA_(s) #s " "
 #endif
 
-#if defined(__linux__)	|| (__APPLE__)
+#if defined(__linux__) || (__APPLE__)
 # define _CYAN_(s) "\x1b[36m" #s "\x1b[0m "
 #else
 # define _CYAN_(s) #s " "
@@ -174,15 +174,15 @@
 
 #ifndef DropField
 #define DropField() { \
-	UsbCommand c = {CMD_READER_ISO_14443a, {0,0,0}}; clearCommandBuffer(); SendCommand(&c); \
+    UsbCommand c = {CMD_READER_ISO_14443a, {0,0,0}}; clearCommandBuffer(); SendCommand(&c); \
 }
 #endif
 
 #ifndef DropFieldEx
 #define DropFieldEx(x) { \
-	if ( (x) == ECC_CONTACTLESS) { \
-		DropField(); \
-	} \
+    if ( (x) == ECC_CONTACTLESS) { \
+        DropField(); \
+    } \
 }
 #endif
 
@@ -200,8 +200,8 @@ extern int FillBuffer(uint8_t *data, size_t maxDataLength, size_t *dataLength, .
 
 extern bool CheckStringIsHEXValue(const char *value);
 extern void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex_len,
-						  const size_t hex_max_len, const size_t min_str_len, const size_t spaces_between,
-						  bool uppercase);
+                          const size_t hex_max_len, const size_t min_str_len, const size_t spaces_between,
+                          bool uppercase);
 
 extern void print_hex(const uint8_t * data, const size_t len);
 extern void print_hex_break(const uint8_t *data, const size_t len, const uint8_t breaks);
@@ -252,13 +252,13 @@ extern int32_t le24toh (uint8_t data[3]);
 extern uint32_t PackBits(uint8_t start, uint8_t len, uint8_t* bits);
 extern void rol(uint8_t *data, const size_t len);
 extern uint32_t reflect(uint32_t v, int b);
-extern uint8_t reflect8(uint8_t b);		// dedicated 8bit reversal
-extern uint16_t reflect16(uint16_t b);	// dedicated 16bit reversal
+extern uint8_t reflect8(uint8_t b); // dedicated 8bit reversal
+extern uint16_t reflect16(uint16_t b); // dedicated 16bit reversal
 extern uint64_t HornerScheme(uint64_t num, uint64_t divider, uint64_t factor);
 
-extern int num_CPUs(void);			// number of logical CPUs
+extern int num_CPUs(void); // number of logical CPUs
 
-extern void str_lower(char* s);	 // converts string to lower case
+extern void str_lower(char* s); // converts string to lower case
 extern bool str_startswith(const char *s,  const char *pre);  // check for prefix in string
 extern void strcleanrn(char *buf, size_t len);
 extern void strcreplace(char *buf, size_t len, char from, char to);

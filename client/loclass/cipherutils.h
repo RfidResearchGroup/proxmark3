@@ -43,15 +43,15 @@
 #include <stdlib.h>
 
 typedef struct {
-	uint8_t * buffer;
-	uint8_t numbits;
-	uint8_t position;
+    uint8_t * buffer;
+    uint8_t numbits;
+    uint8_t position;
 } BitstreamIn;
 
 typedef struct {
-	uint8_t * buffer;
-	uint8_t numbits;
-	uint8_t position;
+    uint8_t * buffer;
+    uint8_t numbits;
+    uint8_t position;
 } BitstreamOut;
 
 bool headBit( BitstreamIn *stream);

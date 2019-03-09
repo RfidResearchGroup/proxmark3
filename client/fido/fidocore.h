@@ -18,21 +18,21 @@
 #include "cmdhf14a.h"
 
 typedef enum {
-	fido2CmdMakeCredential		= 0x01,
-	fido2CmdGetAssertion		= 0x02,
-	fido2CmdCancel				= 0x03,
-	fido2CmdGetInfo				= 0x04,
-	fido2CmdClientPIN			= 0x06,
-	fido2CmdReset				= 0x07,
-	fido2CmdGetNextAssertion	= 0x08,
+    fido2CmdMakeCredential      = 0x01,
+    fido2CmdGetAssertion        = 0x02,
+    fido2CmdCancel              = 0x03,
+    fido2CmdGetInfo             = 0x04,
+    fido2CmdClientPIN           = 0x06,
+    fido2CmdReset               = 0x07,
+    fido2CmdGetNextAssertion    = 0x08,
 
-	// another data
-	fido2COSEKey                = 0xF0
+    // another data
+    fido2COSEKey                = 0xF0
 } fido2Commands;
 
 typedef enum  {
-	ptQuery,
-	ptResponse,
+    ptQuery,
+    ptResponse,
 } fido2PacketType;
 
 extern int FIDOSelect(bool ActivateField, bool LeaveFieldON, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);

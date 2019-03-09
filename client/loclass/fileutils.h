@@ -52,9 +52,9 @@
 #include "cmdhfmfu.h"
 
 typedef enum {
-	jsfRaw,
-	jsfCardMemory,
-	jsfMfuMemory,
+    jsfRaw,
+    jsfCardMemory,
+    jsfMfuMemory,
 } JSONFileType;
 
 int fileExists(const char *filename);
@@ -155,7 +155,7 @@ extern int loadFileDICTIONARY(const char *preferredName, const char *suffix, voi
 #define PrintAndLogDevice(level, format, args...)  PrintAndLogEx(level, format , ## args)
 #else
 
-	/**
+    /**
  * Utility function to print to console. This is used consistently within the library instead
  * of printf, but it actually only calls printf. The reason to have this method is to
  *make it simple to plug this library into proxmark, which has this function already to

@@ -21,7 +21,7 @@
 #include "protocols.h"  // for T55xx config register definitions
 #include "cmdmain.h"
 #include "cmddata.h"
-#include "cmdlf.h"		// lf_read
+#include "cmdlf.h"      // lf_read
 
 extern int CmdLFINDALA(const char *Cmd);
 

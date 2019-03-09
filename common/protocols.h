@@ -350,11 +350,11 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 
 // LEGIC Commands
 #define LEGIC_MIM_22                    0x0D
-#define	LEGIC_MIM_256                   0x1D
-#define	LEGIC_MIM_1024                  0x3D
+#define LEGIC_MIM_256                   0x1D
+#define LEGIC_MIM_1024                  0x3D
 #define LEGIC_ACK_22                    0x19
 #define LEGIC_ACK_256                   0x39
-#define	LEGIC_READ                      0x01
+#define LEGIC_READ                      0x01
 #define LEGIC_WRITE                     0x00
 
 void printIclassDumpInfo(uint8_t* iclass_dump);

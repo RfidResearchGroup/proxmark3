@@ -168,9 +168,9 @@ void dbg_printf(const char *fmt, ...)
 
 #include "getopt.h"
 
-/*	$Id: getopt_long.c,v 1.1 2009/10/16 19:50:28 rodney Exp rodney $	*/
-/*	$OpenBSD: getopt_long.c,v 1.23 2007/10/31 12:34:57 chl Exp $	*/
-/*	$NetBSD: getopt_long.c,v 1.15 2002/01/31 22:43:40 tv Exp $	*/
+/* $Id: getopt_long.c,v 1.1 2009/10/16 19:50:28 rodney Exp rodney $ */
+/* $OpenBSD: getopt_long.c,v 1.23 2007/10/31 12:34:57 chl Exp $     */
+/* $NetBSD: getopt_long.c,v 1.15 2002/01/31 22:43:40 tv Exp $       */
 
 /*
  * Copyright (c) 2002 Todd C. Miller <Todd.Miller@courtesan.com>
@@ -231,33 +231,33 @@ void dbg_printf(const char *fmt, ...)
 #include <string.h>
 
 
-#define	REPLACE_GETOPT		/* use this getopt as the system getopt(3) */
+#define REPLACE_GETOPT  /* use this getopt as the system getopt(3) */
 
 #ifdef REPLACE_GETOPT
-int	opterr = 1;		/* if error message should be printed */
-int	optind = 1;		/* index into parent argv vector */
-int	optopt = '?';		/* character checked for validity */
-int	optreset;		/* reset getopt */
-char    *optarg;		/* argument associated with option */
+int opterr = 1;         /* if error message should be printed */
+int optind = 1;         /* index into parent argv vector */
+int optopt = '?';       /* character checked for validity */
+int optreset;           /* reset getopt */
+char *optarg;           /* argument associated with option */
 #endif
 
-#define PRINT_ERROR	((opterr) && (*options != ':'))
+#define PRINT_ERROR     ((opterr) && (*options != ':'))
 
-#define FLAG_PERMUTE	0x01	/* permute non-options to the end of argv */
-#define FLAG_ALLARGS	0x02	/* treat non-options as args to option "-1" */
-#define FLAG_LONGONLY	0x04	/* operate as getopt_long_only */
+#define FLAG_PERMUTE    0x01 /* permute non-options to the end of argv */
+#define FLAG_ALLARGS    0x02 /* treat non-options as args to option "-1" */
+#define FLAG_LONGONLY   0x04 /* operate as getopt_long_only */
 
 /* return values */
-#define	BADCH		(int)'?'
-#define	BADARG		((*options == ':') ? (int)':' : (int)'?')
-#define	INORDER 	(int)1
+#define BADCH           (int)'?'
+#define BADARG          ((*options == ':') ? (int)':' : (int)'?')
+#define INORDER         (int)1
 
-#define	EMSG		""
+#define EMSG            ""
 
 static int getopt_internal(int, char * const *, const char *,
-			   const struct option *, int *, int);
+               const struct option *, int *, int);
 static int parse_long_options(char * const *, const char *,
-			      const struct option *, int *, int);
+                  const struct option *, int *, int);
 static int gcd(int, int);
 static void permute_args(int, int, int, char * const *);
 
@@ -296,22 +296,22 @@ char opterrmsg[MAX_OPTER_MSG_SIZE]; /* buffer for the last error message */
 
 static void warnx(const char *fmt, ...)
 {
-	va_list ap;
-	va_start(ap, fmt);
+    va_list ap;
+    va_start(ap, fmt);
     /*
     Make sure opterrmsg is always zero-terminated despite the _vsnprintf()
     implementation specifics and manually suppress the warning.
     */
     memset(opterrmsg, 0, sizeof opterrmsg);
-	if (fmt != NULL)
+    if (fmt != NULL)
 #ifdef __STDC_WANT_SECURE_LIB__
         _vsnprintf_s(opterrmsg, MAX_OPTER_MSG_SIZE, sizeof(opterrmsg) - 1, fmt, ap);
 #else
         _vsnprintf(opterrmsg, sizeof(opterrmsg) - 1, fmt, ap);
 #endif
-	va_end(ap);
+    va_end(ap);
 
-	fprintf(stderr, "%s\n", opterrmsg);
+    fprintf(stderr, "%s\n", opterrmsg);
 }
 
 #else
@@ -325,16 +325,16 @@ static void warnx(const char *fmt, ...)
 static int
 gcd(int a, int b)
 {
-	int c;
+    int c;
 
-	c = a % b;
-	while (c != 0) {
-		a = b;
-		b = c;
-		c = a % b;
-	}
+    c = a % b;
+    while (c != 0) {
+        a = b;
+        b = c;
+        c = a % b;
+    }
 
-	return (b);
+    return (b);
 }
 
 /*
@@ -344,179 +344,179 @@ gcd(int a, int b)
  */
 static void
 permute_args(int panonopt_start, int panonopt_end, int opt_end,
-	char * const *nargv)
+    char * const *nargv)
 {
-	int cstart, cyclelen, i, j, ncycle, nnonopts, nopts, pos;
-	char *swap;
+    int cstart, cyclelen, i, j, ncycle, nnonopts, nopts, pos;
+    char *swap;
 
-	/*
-	 * compute lengths of blocks and number and size of cycles
-	 */
-	nnonopts = panonopt_end - panonopt_start;
-	nopts = opt_end - panonopt_end;
-	ncycle = gcd(nnonopts, nopts);
-	cyclelen = (opt_end - panonopt_start) / ncycle;
+    /*
+     * compute lengths of blocks and number and size of cycles
+     */
+    nnonopts = panonopt_end - panonopt_start;
+    nopts = opt_end - panonopt_end;
+    ncycle = gcd(nnonopts, nopts);
+    cyclelen = (opt_end - panonopt_start) / ncycle;
 
-	for (i = 0; i < ncycle; i++) {
-		cstart = panonopt_end+i;
-		pos = cstart;
-		for (j = 0; j < cyclelen; j++) {
-			if (pos >= panonopt_end)
-				pos -= nnonopts;
-			else
-				pos += nopts;
-			swap = nargv[pos];
-			/* LINTED const cast */
-			((char **) nargv)[pos] = nargv[cstart];
-			/* LINTED const cast */
-			((char **)nargv)[cstart] = swap;
-		}
-	}
+    for (i = 0; i < ncycle; i++) {
+        cstart = panonopt_end+i;
+        pos = cstart;
+        for (j = 0; j < cyclelen; j++) {
+            if (pos >= panonopt_end)
+                pos -= nnonopts;
+            else
+                pos += nopts;
+            swap = nargv[pos];
+            /* LINTED const cast */
+            ((char **) nargv)[pos] = nargv[cstart];
+            /* LINTED const cast */
+            ((char **)nargv)[cstart] = swap;
+        }
+    }
 }
 
 /*
  * parse_long_options --
- *	Parse long options in argc/argv argument vector.
+ * Parse long options in argc/argv argument vector.
  * Returns -1 if short_too is set and the option does not match long_options.
  */
 static int
 parse_long_options(char * const *nargv, const char *options,
-	const struct option *long_options, int *idx, int short_too)
+    const struct option *long_options, int *idx, int short_too)
 {
-	char *current_argv, *has_equal;
-	size_t current_argv_len;
-	int i, match;
+    char *current_argv, *has_equal;
+    size_t current_argv_len;
+    int i, match;
 
-	current_argv = place;
-	match = -1;
+    current_argv = place;
+    match = -1;
 
-	optind++;
+    optind++;
 
-	if ((has_equal = strchr(current_argv, '=')) != NULL) {
-		/* argument found (--option=arg) */
-		current_argv_len = has_equal - current_argv;
-		has_equal++;
-	} else
-		current_argv_len = strlen(current_argv);
+    if ((has_equal = strchr(current_argv, '=')) != NULL) {
+        /* argument found (--option=arg) */
+        current_argv_len = has_equal - current_argv;
+        has_equal++;
+    } else
+        current_argv_len = strlen(current_argv);
 
-	for (i = 0; long_options[i].name; i++) {
-		/* find matching long option */
-		if (strncmp(current_argv, long_options[i].name,
-		    current_argv_len))
-			continue;
+    for (i = 0; long_options[i].name; i++) {
+        /* find matching long option */
+        if (strncmp(current_argv, long_options[i].name,
+            current_argv_len))
+            continue;
 
-		if (strlen(long_options[i].name) == current_argv_len) {
-			/* exact match */
-			match = i;
-			break;
-		}
-		/*
-		 * If this is a known short option, don't allow
-		 * a partial match of a single character.
-		 */
-		if (short_too && current_argv_len == 1)
-			continue;
+        if (strlen(long_options[i].name) == current_argv_len) {
+            /* exact match */
+            match = i;
+            break;
+        }
+        /*
+         * If this is a known short option, don't allow
+         * a partial match of a single character.
+         */
+        if (short_too && current_argv_len == 1)
+            continue;
 
-		if (match == -1)	/* partial match */
-			match = i;
-		else {
-			/* ambiguous abbreviation */
-			if (PRINT_ERROR)
-				warnx(ambig, (int)current_argv_len,
-				     current_argv);
-			optopt = 0;
-			return (BADCH);
-		}
-	}
-	if (match != -1) {		/* option found */
-		if (long_options[match].has_arg == no_argument
-		    && has_equal) {
-			if (PRINT_ERROR)
-				warnx(noarg, (int)current_argv_len,
-				     current_argv);
-			/*
-			 * XXX: GNU sets optopt to val regardless of flag
-			 */
-			if (long_options[match].flag == NULL)
-				optopt = long_options[match].val;
-			else
-				optopt = 0;
-			return (BADARG);
-		}
-		if (long_options[match].has_arg == required_argument ||
-		    long_options[match].has_arg == optional_argument) {
-			if (has_equal)
-				optarg = has_equal;
-			else if (long_options[match].has_arg ==
-			    required_argument) {
-				/*
-				 * optional argument doesn't use next nargv
-				 */
-				optarg = nargv[optind++];
-			}
-		}
-		if ((long_options[match].has_arg == required_argument)
-		    && (optarg == NULL)) {
-			/*
-			 * Missing argument; leading ':' indicates no error
-			 * should be generated.
-			 */
-			if (PRINT_ERROR)
-				warnx(recargstring,
-				    current_argv);
-			/*
-			 * XXX: GNU sets optopt to val regardless of flag
-			 */
-			if (long_options[match].flag == NULL)
-				optopt = long_options[match].val;
-			else
-				optopt = 0;
-			--optind;
-			return (BADARG);
-		}
-	} else {			/* unknown option */
-		if (short_too) {
-			--optind;
-			return (-1);
-		}
-		if (PRINT_ERROR)
-			warnx(illoptstring, current_argv);
-		optopt = 0;
-		return (BADCH);
-	}
-	if (idx)
-		*idx = match;
-	if (long_options[match].flag) {
-		*long_options[match].flag = long_options[match].val;
-		return (0);
-	} else
-		return (long_options[match].val);
+        if (match == -1) /* partial match */
+            match = i;
+        else {
+            /* ambiguous abbreviation */
+            if (PRINT_ERROR)
+                warnx(ambig, (int)current_argv_len,
+                     current_argv);
+            optopt = 0;
+            return (BADCH);
+        }
+    }
+    if (match != -1) { /* option found */
+        if (long_options[match].has_arg == no_argument
+            && has_equal) {
+            if (PRINT_ERROR)
+                warnx(noarg, (int)current_argv_len,
+                     current_argv);
+            /*
+             * XXX: GNU sets optopt to val regardless of flag
+             */
+            if (long_options[match].flag == NULL)
+                optopt = long_options[match].val;
+            else
+                optopt = 0;
+            return (BADARG);
+        }
+        if (long_options[match].has_arg == required_argument ||
+            long_options[match].has_arg == optional_argument) {
+            if (has_equal)
+                optarg = has_equal;
+            else if (long_options[match].has_arg ==
+                required_argument) {
+                /*
+                 * optional argument doesn't use next nargv
+                 */
+                optarg = nargv[optind++];
+            }
+        }
+        if ((long_options[match].has_arg == required_argument)
+            && (optarg == NULL)) {
+            /*
+             * Missing argument; leading ':' indicates no error
+             * should be generated.
+             */
+            if (PRINT_ERROR)
+                warnx(recargstring,
+                    current_argv);
+            /*
+             * XXX: GNU sets optopt to val regardless of flag
+             */
+            if (long_options[match].flag == NULL)
+                optopt = long_options[match].val;
+            else
+                optopt = 0;
+            --optind;
+            return (BADARG);
+        }
+    } else { /* unknown option */
+        if (short_too) {
+            --optind;
+            return (-1);
+        }
+        if (PRINT_ERROR)
+            warnx(illoptstring, current_argv);
+        optopt = 0;
+        return (BADCH);
+    }
+    if (idx)
+        *idx = match;
+    if (long_options[match].flag) {
+        *long_options[match].flag = long_options[match].val;
+        return (0);
+    } else
+        return (long_options[match].val);
 }
 
 /*
  * getopt_internal --
- *	Parse argc/argv argument vector.  Called by user level routines.
+ * Parse argc/argv argument vector.  Called by user level routines.
  */
 static int
 getopt_internal(int nargc, char * const *nargv, const char *options,
-	const struct option *long_options, int *idx, int flags)
+    const struct option *long_options, int *idx, int flags)
 {
-	char *oli;				/* option letter list index */
-	int optchar, short_too;
-	static int posixly_correct = -1;
+    char *oli; /* option letter list index */
+    int optchar, short_too;
+    static int posixly_correct = -1;
 #ifdef __STDC_WANT_SECURE_LIB__
     char* buffer = NULL;
     size_t buffer_size = 0;
     errno_t err = 0;
 #endif
 
-	if (options == NULL)
-		return (-1);
+    if (options == NULL)
+        return (-1);
 
-	/*
-	 * Disable GNU extensions if POSIXLY_CORRECT is set or options
-	 * string begins with a '+'.
-	 */
+    /*
+     * Disable GNU extensions if POSIXLY_CORRECT is set or options
+     * string begins with a '+'.
+     */
 
 #ifdef __STDC_WANT_SECURE_LIB__
     if (posixly_correct == -1) {
@@ -530,183 +530,183 @@ getopt_internal(int nargc, char * const *nargv, const char *options,
     if (posixly_correct == -1)
         posixly_correct = (getenv("POSIXLY_CORRECT") != NULL);
 #endif
-	if (posixly_correct || *options == '+')
-		flags &= ~FLAG_PERMUTE;
-	else if (*options == '-')
-		flags |= FLAG_ALLARGS;
-	if (*options == '+' || *options == '-')
-		options++;
+    if (posixly_correct || *options == '+')
+        flags &= ~FLAG_PERMUTE;
+    else if (*options == '-')
+        flags |= FLAG_ALLARGS;
+    if (*options == '+' || *options == '-')
+        options++;
 
-	/*
-	 * XXX Some GNU programs (like cvs) set optind to 0 instead of
-	 * XXX using optreset.  Work around this braindamage.
-	 */
-	if (optind == 0)
-		optind = optreset = 1;
+    /*
+     * XXX Some GNU programs (like cvs) set optind to 0 instead of
+     * XXX using optreset.  Work around this braindamage.
+     */
+    if (optind == 0)
+        optind = optreset = 1;
 
-	optarg = NULL;
-	if (optreset)
-		nonopt_start = nonopt_end = -1;
+    optarg = NULL;
+    if (optreset)
+        nonopt_start = nonopt_end = -1;
 start:
-	if (optreset || !*place) {		/* update scanning pointer */
-		optreset = 0;
-		if (optind >= nargc) {          /* end of argument vector */
-			place = EMSG;
-			if (nonopt_end != -1) {
-				/* do permutation, if we have to */
-				permute_args(nonopt_start, nonopt_end,
-				    optind, nargv);
-				optind -= nonopt_end - nonopt_start;
-			}
-			else if (nonopt_start != -1) {
-				/*
-				 * If we skipped non-options, set optind
-				 * to the first of them.
-				 */
-				optind = nonopt_start;
-			}
-			nonopt_start = nonopt_end = -1;
-			return (-1);
-		}
-		if (*(place = nargv[optind]) != '-' ||
-		    (place[1] == '\0' && strchr(options, '-') == NULL)) {
-			place = EMSG;		/* found non-option */
-			if (flags & FLAG_ALLARGS) {
-				/*
-				 * GNU extension:
-				 * return non-option as argument to option 1
-				 */
-				optarg = nargv[optind++];
-				return (INORDER);
-			}
-			if (!(flags & FLAG_PERMUTE)) {
-				/*
-				 * If no permutation wanted, stop parsing
-				 * at first non-option.
-				 */
-				return (-1);
-			}
-			/* do permutation */
-			if (nonopt_start == -1)
-				nonopt_start = optind;
-			else if (nonopt_end != -1) {
-				permute_args(nonopt_start, nonopt_end,
-				    optind, nargv);
-				nonopt_start = optind -
-				    (nonopt_end - nonopt_start);
-				nonopt_end = -1;
-			}
-			optind++;
-			/* process next argument */
-			goto start;
-		}
-		if (nonopt_start != -1 && nonopt_end == -1)
-			nonopt_end = optind;
+    if (optreset || !*place) { /* update scanning pointer */
+        optreset = 0;
+        if (optind >= nargc) { /* end of argument vector */
+            place = EMSG;
+            if (nonopt_end != -1) {
+                /* do permutation, if we have to */
+                permute_args(nonopt_start, nonopt_end,
+                    optind, nargv);
+                optind -= nonopt_end - nonopt_start;
+            }
+            else if (nonopt_start != -1) {
+                /*
+                 * If we skipped non-options, set optind
+                 * to the first of them.
+                 */
+                optind = nonopt_start;
+            }
+            nonopt_start = nonopt_end = -1;
+            return (-1);
+        }
+        if (*(place = nargv[optind]) != '-' ||
+            (place[1] == '\0' && strchr(options, '-') == NULL)) {
+            place = EMSG; /* found non-option */
+            if (flags & FLAG_ALLARGS) {
+                /*
+                 * GNU extension:
+                 * return non-option as argument to option 1
+                 */
+                optarg = nargv[optind++];
+                return (INORDER);
+            }
+            if (!(flags & FLAG_PERMUTE)) {
+                /*
+                 * If no permutation wanted, stop parsing
+                 * at first non-option.
+                 */
+                return (-1);
+            }
+            /* do permutation */
+            if (nonopt_start == -1)
+                nonopt_start = optind;
+            else if (nonopt_end != -1) {
+                permute_args(nonopt_start, nonopt_end,
+                    optind, nargv);
+                nonopt_start = optind -
+                    (nonopt_end - nonopt_start);
+                nonopt_end = -1;
+            }
+            optind++;
+            /* process next argument */
+            goto start;
+        }
+        if (nonopt_start != -1 && nonopt_end == -1)
+            nonopt_end = optind;
 
-		/*
-		 * If we have "-" do nothing, if "--" we are done.
-		 */
-		if (place[1] != '\0' && *++place == '-' && place[1] == '\0') {
-			optind++;
-			place = EMSG;
-			/*
-			 * We found an option (--), so if we skipped
-			 * non-options, we have to permute.
-			 */
-			if (nonopt_end != -1) {
-				permute_args(nonopt_start, nonopt_end,
-				    optind, nargv);
-				optind -= nonopt_end - nonopt_start;
-			}
-			nonopt_start = nonopt_end = -1;
-			return (-1);
-		}
-	}
+        /*
+         * If we have "-" do nothing, if "--" we are done.
+         */
+        if (place[1] != '\0' && *++place == '-' && place[1] == '\0') {
+            optind++;
+            place = EMSG;
+            /*
+             * We found an option (--), so if we skipped
+             * non-options, we have to permute.
+             */
+            if (nonopt_end != -1) {
+                permute_args(nonopt_start, nonopt_end,
+                    optind, nargv);
+                optind -= nonopt_end - nonopt_start;
+            }
+            nonopt_start = nonopt_end = -1;
+            return (-1);
+        }
+    }
 
-	/*
-	 * Check long options if:
-	 *  1) we were passed some
-	 *  2) the arg is not just "-"
-	 *  3) either the arg starts with -- we are getopt_long_only()
-	 */
-	if (long_options != NULL && place != nargv[optind] &&
-	    (*place == '-' || (flags & FLAG_LONGONLY))) {
-		short_too = 0;
-		if (*place == '-')
-			place++;		/* --foo long option */
-		else if (*place != ':' && strchr(options, *place) != NULL)
-			short_too = 1;		/* could be short option too */
+    /*
+     * Check long options if:
+     *  1) we were passed some
+     *  2) the arg is not just "-"
+     *  3) either the arg starts with -- we are getopt_long_only()
+     */
+    if (long_options != NULL && place != nargv[optind] &&
+        (*place == '-' || (flags & FLAG_LONGONLY))) {
+        short_too = 0;
+        if (*place == '-')
+            place++; /* --foo long option */
+        else if (*place != ':' && strchr(options, *place) != NULL)
+            short_too = 1; /* could be short option too */
 
-		optchar = parse_long_options(nargv, options, long_options,
-		    idx, short_too);
-		if (optchar != -1) {
-			place = EMSG;
-			return (optchar);
-		}
-	}
+        optchar = parse_long_options(nargv, options, long_options,
+            idx, short_too);
+        if (optchar != -1) {
+            place = EMSG;
+            return (optchar);
+        }
+    }
 
-	if ((optchar = (int)*place++) == (int)':' ||
-	    (optchar == (int)'-' && *place != '\0') ||
-	    (oli = strchr(options, optchar)) == NULL) {
-		/*
-		 * If the user specified "-" and  '-' isn't listed in
-		 * options, return -1 (non-option) as per POSIX.
-		 * Otherwise, it is an unknown option character (or ':').
-		 */
-		if (optchar == (int)'-' && *place == '\0')
-			return (-1);
-		if (!*place)
-			++optind;
-		if (PRINT_ERROR)
-			warnx(illoptchar, optchar);
-		optopt = optchar;
-		return (BADCH);
-	}
-	if (long_options != NULL && optchar == 'W' && oli[1] == ';') {
-		/* -W long-option */
-		if (*place)			/* no space */
-			/* NOTHING */;
-		else if (++optind >= nargc) {	/* no arg */
-			place = EMSG;
-			if (PRINT_ERROR)
-				warnx(recargchar, optchar);
-			optopt = optchar;
-			return (BADARG);
-		} else				/* white space */
-			place = nargv[optind];
-		optchar = parse_long_options(nargv, options, long_options,
-		    idx, 0);
-		place = EMSG;
-		return (optchar);
-	}
-	if (*++oli != ':') {			/* doesn't take argument */
-		if (!*place)
-			++optind;
-	} else {				/* takes (optional) argument */
-		optarg = NULL;
-		if (*place)			/* no white space */
-			optarg = place;
-		else if (oli[1] != ':') {	/* arg not optional */
-			if (++optind >= nargc) {	/* no arg */
-				place = EMSG;
-				if (PRINT_ERROR)
-					warnx(recargchar, optchar);
-				optopt = optchar;
-				return (BADARG);
-			} else
-				optarg = nargv[optind];
-		}
-		place = EMSG;
-		++optind;
-	}
-	/* dump back option letter */
-	return (optchar);
+    if ((optchar = (int)*place++) == (int)':' ||
+        (optchar == (int)'-' && *place != '\0') ||
+        (oli = strchr(options, optchar)) == NULL) {
+        /*
+         * If the user specified "-" and  '-' isn't listed in
+         * options, return -1 (non-option) as per POSIX.
+         * Otherwise, it is an unknown option character (or ':').
+         */
+        if (optchar == (int)'-' && *place == '\0')
+            return (-1);
+        if (!*place)
+            ++optind;
+        if (PRINT_ERROR)
+            warnx(illoptchar, optchar);
+        optopt = optchar;
+        return (BADCH);
+    }
+    if (long_options != NULL && optchar == 'W' && oli[1] == ';') {
+        /* -W long-option */
+        if (*place)                   /* no space */
+            /* NOTHING */;
+        else if (++optind >= nargc) { /* no arg */
+            place = EMSG;
+            if (PRINT_ERROR)
+                warnx(recargchar, optchar);
+            optopt = optchar;
+            return (BADARG);
+        } else                        /* white space */
+            place = nargv[optind];
+        optchar = parse_long_options(nargv, options, long_options,
+            idx, 0);
+        place = EMSG;
+        return (optchar);
+    }
+    if (*++oli != ':') {              /* doesn't take argument */
+        if (!*place)
+            ++optind;
+    } else {                          /* takes (optional) argument */
+        optarg = NULL;
+        if (*place)                   /* no white space */
+            optarg = place;
+        else if (oli[1] != ':') {     /* arg not optional */
+            if (++optind >= nargc) {  /* no arg */
+                place = EMSG;
+                if (PRINT_ERROR)
+                    warnx(recargchar, optchar);
+                optopt = optchar;
+                return (BADARG);
+            } else
+                optarg = nargv[optind];
+        }
+        place = EMSG;
+        ++optind;
+    }
+    /* dump back option letter */
+    return (optchar);
 }
 
 #ifdef REPLACE_GETOPT
 /*
  * getopt --
- *	Parse argc/argv argument vector.
+ * Parse argc/argv argument vector.
  *
  * [eventually this will replace the BSD getopt]
  */
@@ -714,42 +714,42 @@ int
 getopt(int nargc, char * const *nargv, const char *options)
 {
 
-	/*
-	 * We don't pass FLAG_PERMUTE to getopt_internal() since
-	 * the BSD getopt(3) (unlike GNU) has never done this.
-	 *
-	 * Furthermore, since many privileged programs call getopt()
-	 * before dropping privileges it makes sense to keep things
-	 * as simple (and bug-free) as possible.
-	 */
-	return (getopt_internal(nargc, nargv, options, NULL, NULL, 0));
+    /*
+     * We don't pass FLAG_PERMUTE to getopt_internal() since
+     * the BSD getopt(3) (unlike GNU) has never done this.
+     *
+     * Furthermore, since many privileged programs call getopt()
+     * before dropping privileges it makes sense to keep things
+     * as simple (and bug-free) as possible.
+     */
+    return (getopt_internal(nargc, nargv, options, NULL, NULL, 0));
 }
 #endif /* REPLACE_GETOPT */
 
 /*
  * getopt_long --
- *	Parse argc/argv argument vector.
+ * Parse argc/argv argument vector.
  */
 int
 getopt_long(int nargc, char * const *nargv, const char *options,
     const struct option *long_options, int *idx)
 {
 
-	return (getopt_internal(nargc, nargv, options, long_options, idx,
-	    FLAG_PERMUTE));
+    return (getopt_internal(nargc, nargv, options, long_options, idx,
+        FLAG_PERMUTE));
 }
 
 /*
  * getopt_long_only --
- *	Parse argc/argv argument vector.
+ * Parse argc/argv argument vector.
  */
 int
 getopt_long_only(int nargc, char * const *nargv, const char *options,
     const struct option *long_options, int *idx)
 {
 
-	return (getopt_internal(nargc, nargv, options, long_options, idx,
-	    FLAG_PERMUTE|FLAG_LONGONLY));
+    return (getopt_internal(nargc, nargv, options, long_options, idx,
+        FLAG_PERMUTE|FLAG_LONGONLY));
 }
 /*******************************************************************************
  * This file is part of the argtable3 library.
@@ -2573,29 +2573,29 @@ struct arg_rem *arg_rem(const char *datatype, const char *glossary)
 #ifndef _TREX_H_
 #define _TREX_H_
 /***************************************************************
-	T-Rex a tiny regular expression library
+    T-Rex a tiny regular expression library
 
-	Copyright (C) 2003-2006 Alberto Demichelis
+    Copyright (C) 2003-2006 Alberto Demichelis
 
-	This software is provided 'as-is', without any express
-	or implied warranty. In no event will the authors be held
-	liable for any damages arising from the use of this software.
+    This software is provided 'as-is', without any express
+    or implied warranty. In no event will the authors be held
+    liable for any damages arising from the use of this software.
 
-	Permission is granted to anyone to use this software for
-	any purpose, including commercial applications, and to alter
-	it and redistribute it freely, subject to the following restrictions:
+    Permission is granted to anyone to use this software for
+    any purpose, including commercial applications, and to alter
+    it and redistribute it freely, subject to the following restrictions:
 
-		1. The origin of this software must not be misrepresented;
-		you must not claim that you wrote the original software.
-		If you use this software in a product, an acknowledgment
-		in the product documentation would be appreciated but
-		is not required.
+        1. The origin of this software must not be misrepresented;
+        you must not claim that you wrote the original software.
+        If you use this software in a product, an acknowledgment
+        in the product documentation would be appreciated but
+        is not required.
 
-		2. Altered source versions must be plainly marked as such,
-		and must not be misrepresented as being the original software.
+        2. Altered source versions must be plainly marked as such,
+        and must not be misrepresented as being the original software.
 
-		3. This notice may not be removed or altered from any
-		source distribution.
+        3. This notice may not be removed or altered from any
+        source distribution.
 
 ****************************************************************/
 
@@ -2630,8 +2630,8 @@ typedef unsigned int TRexBool;
 typedef struct TRex TRex;
 
 typedef struct {
-	const TRexChar *begin;
-	int len;
+    const TRexChar *begin;
+    int len;
 } TRexMatch;
 
 TREX_API TRex *trex_compile(const TRexChar *pattern, const TRexChar **error, int flags);
@@ -2899,26 +2899,26 @@ struct arg_rex * arg_rexn(const char * shortopts,
 
 static const TRexChar *g_nnames[] =
 {
-	_SC("NONE"),_SC("OP_GREEDY"),	_SC("OP_OR"),
-	_SC("OP_EXPR"),_SC("OP_NOCAPEXPR"),_SC("OP_DOT"),	_SC("OP_CLASS"),
-	_SC("OP_CCLASS"),_SC("OP_NCLASS"),_SC("OP_RANGE"),_SC("OP_CHAR"),
-	_SC("OP_EOL"),_SC("OP_BOL"),_SC("OP_WB")
+    _SC("NONE"),_SC("OP_GREEDY"), _SC("OP_OR"),
+    _SC("OP_EXPR"),_SC("OP_NOCAPEXPR"),_SC("OP_DOT"), _SC("OP_CLASS"),
+    _SC("OP_CCLASS"),_SC("OP_NCLASS"),_SC("OP_RANGE"),_SC("OP_CHAR"),
+    _SC("OP_EOL"),_SC("OP_BOL"),_SC("OP_WB")
 };
 
 #endif
-#define OP_GREEDY		(MAX_CHAR+1) // * + ? {n}
-#define OP_OR			(MAX_CHAR+2)
-#define OP_EXPR			(MAX_CHAR+3) //parentesis ()
-#define OP_NOCAPEXPR	(MAX_CHAR+4) //parentesis (?:)
-#define OP_DOT			(MAX_CHAR+5)
-#define OP_CLASS		(MAX_CHAR+6)
-#define OP_CCLASS		(MAX_CHAR+7)
-#define OP_NCLASS		(MAX_CHAR+8) //negates class the [^
-#define OP_RANGE		(MAX_CHAR+9)
-#define OP_CHAR			(MAX_CHAR+10)
-#define OP_EOL			(MAX_CHAR+11)
-#define OP_BOL			(MAX_CHAR+12)
-#define OP_WB			(MAX_CHAR+13)
+#define OP_GREEDY       (MAX_CHAR+1) // * + ? {n}
+#define OP_OR           (MAX_CHAR+2)
+#define OP_EXPR         (MAX_CHAR+3) //parentesis ()
+#define OP_NOCAPEXPR    (MAX_CHAR+4) //parentesis (?:)
+#define OP_DOT          (MAX_CHAR+5)
+#define OP_CLASS        (MAX_CHAR+6)
+#define OP_CCLASS       (MAX_CHAR+7)
+#define OP_NCLASS       (MAX_CHAR+8) //negates class the [^
+#define OP_RANGE        (MAX_CHAR+9)
+#define OP_CHAR         (MAX_CHAR+10)
+#define OP_EOL          (MAX_CHAR+11)
+#define OP_BOL          (MAX_CHAR+12)
+#define OP_WB           (MAX_CHAR+13)
 
 #define TREX_SYMBOL_ANY_CHAR ('.')
 #define TREX_SYMBOL_GREEDY_ONE_OR_MORE ('+')
@@ -2933,610 +2933,610 @@ static const TRexChar *g_nnames[] =
 typedef int TRexNodeType;
 
 typedef struct tagTRexNode{
-	TRexNodeType type;
-	int left;
-	int right;
-	int next;
+    TRexNodeType type;
+    int left;
+    int right;
+    int next;
 }TRexNode;
 
 struct TRex{
-	const TRexChar *_eol;
-	const TRexChar *_bol;
-	const TRexChar *_p;
-	int _first;
-	int _op;
-	TRexNode *_nodes;
-	int _nallocated;
-	int _nsize;
-	int _nsubexpr;
-	TRexMatch *_matches;
-	int _currsubexp;
-	void *_jmpbuf;
-	const TRexChar **_error;
-	int _flags;
+    const TRexChar *_eol;
+    const TRexChar *_bol;
+    const TRexChar *_p;
+    int _first;
+    int _op;
+    TRexNode *_nodes;
+    int _nallocated;
+    int _nsize;
+    int _nsubexpr;
+    TRexMatch *_matches;
+    int _currsubexp;
+    void *_jmpbuf;
+    const TRexChar **_error;
+    int _flags;
 };
 
 static int trex_list(TRex *exp);
 
 static int trex_newnode(TRex *exp, TRexNodeType type)
 {
-	TRexNode n;
-	int newid;
-	n.type = type;
-	n.next = n.right = n.left = -1;
-	if(type == OP_EXPR)
-		n.right = exp->_nsubexpr++;
-	if(exp->_nallocated < (exp->_nsize + 1)) {
-		exp->_nallocated *= 2;
-		exp->_nodes = (TRexNode *)realloc(exp->_nodes, exp->_nallocated * sizeof(TRexNode));
-	}
-	exp->_nodes[exp->_nsize++] = n;
-	newid = exp->_nsize - 1;
-	return (int)newid;
+    TRexNode n;
+    int newid;
+    n.type = type;
+    n.next = n.right = n.left = -1;
+    if(type == OP_EXPR)
+        n.right = exp->_nsubexpr++;
+    if(exp->_nallocated < (exp->_nsize + 1)) {
+        exp->_nallocated *= 2;
+        exp->_nodes = (TRexNode *)realloc(exp->_nodes, exp->_nallocated * sizeof(TRexNode));
+    }
+    exp->_nodes[exp->_nsize++] = n;
+    newid = exp->_nsize - 1;
+    return (int)newid;
 }
 
 static void trex_error(TRex *exp,const TRexChar *error)
 {
-	if(exp->_error) *exp->_error = error;
-	longjmp(*((jmp_buf*)exp->_jmpbuf),-1);
+    if(exp->_error) *exp->_error = error;
+    longjmp(*((jmp_buf*)exp->_jmpbuf),-1);
 }
 
 static void trex_expect(TRex *exp, int n){
-	if((*exp->_p) != n)
-		trex_error(exp, _SC("expected paren"));
-	exp->_p++;
+    if((*exp->_p) != n)
+        trex_error(exp, _SC("expected paren"));
+    exp->_p++;
 }
 
 static TRexChar trex_escapechar(TRex *exp)
 {
-	if(*exp->_p == TREX_SYMBOL_ESCAPE_CHAR){
-		exp->_p++;
-		switch(*exp->_p) {
-		case 'v': exp->_p++; return '\v';
-		case 'n': exp->_p++; return '\n';
-		case 't': exp->_p++; return '\t';
-		case 'r': exp->_p++; return '\r';
-		case 'f': exp->_p++; return '\f';
-		default: return (*exp->_p++);
-		}
-	} else if(!scisprint(*exp->_p)) trex_error(exp,_SC("letter expected"));
-	return (*exp->_p++);
+    if(*exp->_p == TREX_SYMBOL_ESCAPE_CHAR){
+        exp->_p++;
+        switch(*exp->_p) {
+        case 'v': exp->_p++; return '\v';
+        case 'n': exp->_p++; return '\n';
+        case 't': exp->_p++; return '\t';
+        case 'r': exp->_p++; return '\r';
+        case 'f': exp->_p++; return '\f';
+        default: return (*exp->_p++);
+        }
+    } else if(!scisprint(*exp->_p)) trex_error(exp,_SC("letter expected"));
+    return (*exp->_p++);
 }
 
 static int trex_charclass(TRex *exp,int classid)
 {
-	int n = trex_newnode(exp,OP_CCLASS);
-	exp->_nodes[n].left = classid;
-	return n;
+    int n = trex_newnode(exp,OP_CCLASS);
+    exp->_nodes[n].left = classid;
+    return n;
 }
 
 static int trex_charnode(TRex *exp,TRexBool isclass)
 {
-	TRexChar t;
-	if(*exp->_p == TREX_SYMBOL_ESCAPE_CHAR) {
-		exp->_p++;
-		switch(*exp->_p) {
-			case 'n': exp->_p++; return trex_newnode(exp,'\n');
-			case 't': exp->_p++; return trex_newnode(exp,'\t');
-			case 'r': exp->_p++; return trex_newnode(exp,'\r');
-			case 'f': exp->_p++; return trex_newnode(exp,'\f');
-			case 'v': exp->_p++; return trex_newnode(exp,'\v');
-			case 'a': case 'A': case 'w': case 'W': case 's': case 'S':
-			case 'd': case 'D': case 'x': case 'X': case 'c': case 'C':
-			case 'p': case 'P': case 'l': case 'u':
-				{
-				t = *exp->_p; exp->_p++;
-				return trex_charclass(exp,t);
-				}
-			case 'b':
-			case 'B':
-				if(!isclass) {
-					int node = trex_newnode(exp,OP_WB);
-					exp->_nodes[node].left = *exp->_p;
-					exp->_p++;
-					return node;
-				} //else default
-			default:
-				t = *exp->_p; exp->_p++;
-				return trex_newnode(exp,t);
-		}
-	}
-	else if(!scisprint(*exp->_p)) {
+    TRexChar t;
+    if(*exp->_p == TREX_SYMBOL_ESCAPE_CHAR) {
+        exp->_p++;
+        switch(*exp->_p) {
+            case 'n': exp->_p++; return trex_newnode(exp,'\n');
+            case 't': exp->_p++; return trex_newnode(exp,'\t');
+            case 'r': exp->_p++; return trex_newnode(exp,'\r');
+            case 'f': exp->_p++; return trex_newnode(exp,'\f');
+            case 'v': exp->_p++; return trex_newnode(exp,'\v');
+            case 'a': case 'A': case 'w': case 'W': case 's': case 'S':
+            case 'd': case 'D': case 'x': case 'X': case 'c': case 'C':
+            case 'p': case 'P': case 'l': case 'u':
+                {
+                t = *exp->_p; exp->_p++;
+                return trex_charclass(exp,t);
+                }
+            case 'b':
+            case 'B':
+                if(!isclass) {
+                    int node = trex_newnode(exp,OP_WB);
+                    exp->_nodes[node].left = *exp->_p;
+                    exp->_p++;
+                    return node;
+                } //else default
+            default:
+                t = *exp->_p; exp->_p++;
+                return trex_newnode(exp,t);
+        }
+    }
+    else if(!scisprint(*exp->_p)) {
 
-		trex_error(exp,_SC("letter expected"));
-	}
-	t = *exp->_p; exp->_p++;
-	return trex_newnode(exp,t);
+        trex_error(exp,_SC("letter expected"));
+    }
+    t = *exp->_p; exp->_p++;
+    return trex_newnode(exp,t);
 }
 static int trex_class(TRex *exp)
 {
-	int ret = -1;
-	int first = -1,chain;
-	if(*exp->_p == TREX_SYMBOL_BEGINNING_OF_STRING){
-		ret = trex_newnode(exp,OP_NCLASS);
-		exp->_p++;
-	}else ret = trex_newnode(exp,OP_CLASS);
+    int ret = -1;
+    int first = -1,chain;
+    if(*exp->_p == TREX_SYMBOL_BEGINNING_OF_STRING){
+        ret = trex_newnode(exp,OP_NCLASS);
+        exp->_p++;
+    }else ret = trex_newnode(exp,OP_CLASS);
 
-	if(*exp->_p == ']') trex_error(exp,_SC("empty class"));
-	chain = ret;
-	while(*exp->_p != ']' && exp->_p != exp->_eol) {
-		if(*exp->_p == '-' && first != -1){
-			int r,t;
-			if(*exp->_p++ == ']') trex_error(exp,_SC("unfinished range"));
-			r = trex_newnode(exp,OP_RANGE);
-			if(first>*exp->_p) trex_error(exp,_SC("invalid range"));
-			if(exp->_nodes[first].type == OP_CCLASS) trex_error(exp,_SC("cannot use character classes in ranges"));
-			exp->_nodes[r].left = exp->_nodes[first].type;
-			t = trex_escapechar(exp);
-			exp->_nodes[r].right = t;
+    if(*exp->_p == ']') trex_error(exp,_SC("empty class"));
+    chain = ret;
+    while(*exp->_p != ']' && exp->_p != exp->_eol) {
+        if(*exp->_p == '-' && first != -1){
+            int r,t;
+            if(*exp->_p++ == ']') trex_error(exp,_SC("unfinished range"));
+            r = trex_newnode(exp,OP_RANGE);
+            if(first>*exp->_p) trex_error(exp,_SC("invalid range"));
+            if(exp->_nodes[first].type == OP_CCLASS) trex_error(exp,_SC("cannot use character classes in ranges"));
+            exp->_nodes[r].left = exp->_nodes[first].type;
+            t = trex_escapechar(exp);
+            exp->_nodes[r].right = t;
             exp->_nodes[chain].next = r;
-			chain = r;
-			first = -1;
-		}
-		else{
-			if(first!=-1){
-				int c = first;
-				exp->_nodes[chain].next = c;
-				chain = c;
-				first = trex_charnode(exp,TRex_True);
-			}
-			else{
-				first = trex_charnode(exp,TRex_True);
-			}
-		}
-	}
-	if(first!=-1){
-		int c = first;
-		exp->_nodes[chain].next = c;
-		chain = c;
-		first = -1;
-	}
-	/* hack? */
-	exp->_nodes[ret].left = exp->_nodes[ret].next;
-	exp->_nodes[ret].next = -1;
-	return ret;
+            chain = r;
+            first = -1;
+        }
+        else{
+            if(first!=-1){
+                int c = first;
+                exp->_nodes[chain].next = c;
+                chain = c;
+                first = trex_charnode(exp,TRex_True);
+            }
+            else{
+                first = trex_charnode(exp,TRex_True);
+            }
+        }
+    }
+    if(first!=-1){
+        int c = first;
+        exp->_nodes[chain].next = c;
+        chain = c;
+        first = -1;
+    }
+    /* hack? */
+    exp->_nodes[ret].left = exp->_nodes[ret].next;
+    exp->_nodes[ret].next = -1;
+    return ret;
 }
 
 static int trex_parsenumber(TRex *exp)
 {
-	int ret = *exp->_p-'0';
-	int positions = 10;
-	exp->_p++;
-	while(isdigit(*exp->_p)) {
-		ret = ret*10+(*exp->_p++-'0');
-		if(positions==1000000000) trex_error(exp,_SC("overflow in numeric constant"));
-		positions *= 10;
-	};
-	return ret;
+    int ret = *exp->_p-'0';
+    int positions = 10;
+    exp->_p++;
+    while(isdigit(*exp->_p)) {
+        ret = ret*10+(*exp->_p++-'0');
+        if(positions==1000000000) trex_error(exp,_SC("overflow in numeric constant"));
+        positions *= 10;
+    };
+    return ret;
 }
 
 static int trex_element(TRex *exp)
 {
-	int ret = -1;
-	switch(*exp->_p)
-	{
-	case '(': {
-		int expr,newn;
-		exp->_p++;
+    int ret = -1;
+    switch(*exp->_p)
+    {
+    case '(': {
+        int expr,newn;
+        exp->_p++;
 
 
-		if(*exp->_p =='?') {
-			exp->_p++;
-			trex_expect(exp,':');
-			expr = trex_newnode(exp,OP_NOCAPEXPR);
-		}
-		else
-			expr = trex_newnode(exp,OP_EXPR);
-		newn = trex_list(exp);
-		exp->_nodes[expr].left = newn;
-		ret = expr;
-		trex_expect(exp,')');
-			  }
-			  break;
-	case '[':
-		exp->_p++;
-		ret = trex_class(exp);
-		trex_expect(exp,']');
-		break;
-	case TREX_SYMBOL_END_OF_STRING: exp->_p++; ret = trex_newnode(exp,OP_EOL);break;
-	case TREX_SYMBOL_ANY_CHAR: exp->_p++; ret = trex_newnode(exp,OP_DOT);break;
-	default:
-		ret = trex_charnode(exp,TRex_False);
-		break;
-	}
+        if(*exp->_p =='?') {
+            exp->_p++;
+            trex_expect(exp,':');
+            expr = trex_newnode(exp,OP_NOCAPEXPR);
+        }
+        else
+            expr = trex_newnode(exp,OP_EXPR);
+        newn = trex_list(exp);
+        exp->_nodes[expr].left = newn;
+        ret = expr;
+        trex_expect(exp,')');
+              }
+              break;
+    case '[':
+        exp->_p++;
+        ret = trex_class(exp);
+        trex_expect(exp,']');
+        break;
+    case TREX_SYMBOL_END_OF_STRING: exp->_p++; ret = trex_newnode(exp,OP_EOL);break;
+    case TREX_SYMBOL_ANY_CHAR: exp->_p++; ret = trex_newnode(exp,OP_DOT);break;
+    default:
+        ret = trex_charnode(exp,TRex_False);
+        break;
+    }
 
-	{
-		TRexBool isgreedy = TRex_False;
-		unsigned short p0 = 0, p1 = 0;
-		switch(*exp->_p){
-			case TREX_SYMBOL_GREEDY_ZERO_OR_MORE: p0 = 0; p1 = 0xFFFF; exp->_p++; isgreedy = TRex_True; break;
-			case TREX_SYMBOL_GREEDY_ONE_OR_MORE: p0 = 1; p1 = 0xFFFF; exp->_p++; isgreedy = TRex_True; break;
-			case TREX_SYMBOL_GREEDY_ZERO_OR_ONE: p0 = 0; p1 = 1; exp->_p++; isgreedy = TRex_True; break;
-			case '{':
-				exp->_p++;
-				if(!isdigit(*exp->_p)) trex_error(exp,_SC("number expected"));
-				p0 = (unsigned short)trex_parsenumber(exp);
-				/*******************************/
-				switch(*exp->_p) {
-			case '}':
-				p1 = p0; exp->_p++;
-				break;
-			case ',':
-				exp->_p++;
-				p1 = 0xFFFF;
-				if(isdigit(*exp->_p)){
-					p1 = (unsigned short)trex_parsenumber(exp);
-				}
-				trex_expect(exp,'}');
-				break;
-			default:
-				trex_error(exp,_SC(", or } expected"));
-		}
-		/*******************************/
-		isgreedy = TRex_True;
-		break;
+    {
+        TRexBool isgreedy = TRex_False;
+        unsigned short p0 = 0, p1 = 0;
+        switch(*exp->_p){
+            case TREX_SYMBOL_GREEDY_ZERO_OR_MORE: p0 = 0; p1 = 0xFFFF; exp->_p++; isgreedy = TRex_True; break;
+            case TREX_SYMBOL_GREEDY_ONE_OR_MORE: p0 = 1; p1 = 0xFFFF; exp->_p++; isgreedy = TRex_True; break;
+            case TREX_SYMBOL_GREEDY_ZERO_OR_ONE: p0 = 0; p1 = 1; exp->_p++; isgreedy = TRex_True; break;
+            case '{':
+                exp->_p++;
+                if(!isdigit(*exp->_p)) trex_error(exp,_SC("number expected"));
+                p0 = (unsigned short)trex_parsenumber(exp);
+                /*******************************/
+                switch(*exp->_p) {
+            case '}':
+                p1 = p0; exp->_p++;
+                break;
+            case ',':
+                exp->_p++;
+                p1 = 0xFFFF;
+                if(isdigit(*exp->_p)){
+                    p1 = (unsigned short)trex_parsenumber(exp);
+                }
+                trex_expect(exp,'}');
+                break;
+            default:
+                trex_error(exp,_SC(", or } expected"));
+        }
+        /*******************************/
+        isgreedy = TRex_True;
+        break;
 
-		}
-		if(isgreedy) {
-			int nnode = trex_newnode(exp,OP_GREEDY);
-			exp->_nodes[nnode].left = ret;
-			exp->_nodes[nnode].right = ((p0)<<16)|p1;
-			ret = nnode;
-		}
-	}
-	if((*exp->_p != TREX_SYMBOL_BRANCH) && (*exp->_p != ')') && (*exp->_p != TREX_SYMBOL_GREEDY_ZERO_OR_MORE) && (*exp->_p != TREX_SYMBOL_GREEDY_ONE_OR_MORE) && (*exp->_p != '\0')) {
-		int nnode = trex_element(exp);
-		exp->_nodes[ret].next = nnode;
-	}
+        }
+        if(isgreedy) {
+            int nnode = trex_newnode(exp,OP_GREEDY);
+            exp->_nodes[nnode].left = ret;
+            exp->_nodes[nnode].right = ((p0)<<16)|p1;
+            ret = nnode;
+        }
+    }
+    if((*exp->_p != TREX_SYMBOL_BRANCH) && (*exp->_p != ')') && (*exp->_p != TREX_SYMBOL_GREEDY_ZERO_OR_MORE) && (*exp->_p != TREX_SYMBOL_GREEDY_ONE_OR_MORE) && (*exp->_p != '\0')) {
+        int nnode = trex_element(exp);
+        exp->_nodes[ret].next = nnode;
+    }
 
-	return ret;
+    return ret;
 }
 
 static int trex_list(TRex *exp)
 {
-	int ret=-1,e;
-	if(*exp->_p == TREX_SYMBOL_BEGINNING_OF_STRING) {
-		exp->_p++;
-		ret = trex_newnode(exp,OP_BOL);
-	}
-	e = trex_element(exp);
-	if(ret != -1) {
-		exp->_nodes[ret].next = e;
-	}
-	else ret = e;
+    int ret=-1,e;
+    if(*exp->_p == TREX_SYMBOL_BEGINNING_OF_STRING) {
+        exp->_p++;
+        ret = trex_newnode(exp,OP_BOL);
+    }
+    e = trex_element(exp);
+    if(ret != -1) {
+        exp->_nodes[ret].next = e;
+    }
+    else ret = e;
 
-	if(*exp->_p == TREX_SYMBOL_BRANCH) {
-		int temp,tright;
-		exp->_p++;
-		temp = trex_newnode(exp,OP_OR);
-		exp->_nodes[temp].left = ret;
-		tright = trex_list(exp);
-		exp->_nodes[temp].right = tright;
-		ret = temp;
-	}
-	return ret;
+    if(*exp->_p == TREX_SYMBOL_BRANCH) {
+        int temp,tright;
+        exp->_p++;
+        temp = trex_newnode(exp,OP_OR);
+        exp->_nodes[temp].left = ret;
+        tright = trex_list(exp);
+        exp->_nodes[temp].right = tright;
+        ret = temp;
+    }
+    return ret;
 }
 
 static TRexBool trex_matchcclass(int cclass,TRexChar c)
 {
-	switch(cclass) {
-	case 'a': return isalpha(c)?TRex_True:TRex_False;
-	case 'A': return !isalpha(c)?TRex_True:TRex_False;
-	case 'w': return (isalnum(c) || c == '_')?TRex_True:TRex_False;
-	case 'W': return (!isalnum(c) && c != '_')?TRex_True:TRex_False;
-	case 's': return ISSPACE(c)?TRex_True:TRex_False;
-	case 'S': return !ISSPACE(c)?TRex_True:TRex_False;
-	case 'd': return isdigit(c)?TRex_True:TRex_False;
-	case 'D': return !isdigit(c)?TRex_True:TRex_False;
-	case 'x': return isxdigit(c)?TRex_True:TRex_False;
-	case 'X': return !isxdigit(c)?TRex_True:TRex_False;
-	case 'c': return iscntrl(c)?TRex_True:TRex_False;
-	case 'C': return !iscntrl(c)?TRex_True:TRex_False;
-	case 'p': return ispunct(c)?TRex_True:TRex_False;
-	case 'P': return !ispunct(c)?TRex_True:TRex_False;
-	case 'l': return islower(c)?TRex_True:TRex_False;
-	case 'u': return isupper(c)?TRex_True:TRex_False;
-	}
-	return TRex_False; /*cannot happen*/
+    switch(cclass) {
+    case 'a': return isalpha(c)?TRex_True:TRex_False;
+    case 'A': return !isalpha(c)?TRex_True:TRex_False;
+    case 'w': return (isalnum(c) || c == '_')?TRex_True:TRex_False;
+    case 'W': return (!isalnum(c) && c != '_')?TRex_True:TRex_False;
+    case 's': return ISSPACE(c)?TRex_True:TRex_False;
+    case 'S': return !ISSPACE(c)?TRex_True:TRex_False;
+    case 'd': return isdigit(c)?TRex_True:TRex_False;
+    case 'D': return !isdigit(c)?TRex_True:TRex_False;
+    case 'x': return isxdigit(c)?TRex_True:TRex_False;
+    case 'X': return !isxdigit(c)?TRex_True:TRex_False;
+    case 'c': return iscntrl(c)?TRex_True:TRex_False;
+    case 'C': return !iscntrl(c)?TRex_True:TRex_False;
+    case 'p': return ispunct(c)?TRex_True:TRex_False;
+    case 'P': return !ispunct(c)?TRex_True:TRex_False;
+    case 'l': return islower(c)?TRex_True:TRex_False;
+    case 'u': return isupper(c)?TRex_True:TRex_False;
+    }
+    return TRex_False; /*cannot happen*/
 }
 
 static TRexBool trex_matchclass(TRex* exp,TRexNode *node,TRexChar c)
 {
-	do {
-		switch(node->type) {
-			case OP_RANGE:
-				if (exp->_flags & TREX_ICASE)
-				{
-					if(c >= toupper(node->left) && c <= toupper(node->right)) return TRex_True;
-					if(c >= tolower(node->left) && c <= tolower(node->right)) return TRex_True;
-				}
-				else
-				{
-					if(c >= node->left && c <= node->right) return TRex_True;
-				}
-				break;
-			case OP_CCLASS:
-				if(trex_matchcclass(node->left,c)) return TRex_True;
-				break;
-			default:
-				if (exp->_flags & TREX_ICASE)
-				{
-					if (c == tolower(node->type) || c == toupper(node->type)) return TRex_True;
-				}
-				else
-				{
-					if(c == node->type)return TRex_True;
-				}
+    do {
+        switch(node->type) {
+            case OP_RANGE:
+                if (exp->_flags & TREX_ICASE)
+                {
+                    if(c >= toupper(node->left) && c <= toupper(node->right)) return TRex_True;
+                    if(c >= tolower(node->left) && c <= tolower(node->right)) return TRex_True;
+                }
+                else
+                {
+                    if(c >= node->left && c <= node->right) return TRex_True;
+                }
+                break;
+            case OP_CCLASS:
+                if(trex_matchcclass(node->left,c)) return TRex_True;
+                break;
+            default:
+                if (exp->_flags & TREX_ICASE)
+                {
+                    if (c == tolower(node->type) || c == toupper(node->type)) return TRex_True;
+                }
+                else
+                {
+                    if(c == node->type)return TRex_True;
+                }
 
-		}
-	} while((node->next != -1) && (node = &exp->_nodes[node->next]));
-	return TRex_False;
+        }
+    } while((node->next != -1) && (node = &exp->_nodes[node->next]));
+    return TRex_False;
 }
 
 static const TRexChar *trex_matchnode(TRex* exp,TRexNode *node,const TRexChar *str,TRexNode *next)
 {
 
-	TRexNodeType type = node->type;
-	switch(type) {
-	case OP_GREEDY: {
-		//TRexNode *greedystop = (node->next != -1) ? &exp->_nodes[node->next] : NULL;
-		TRexNode *greedystop = NULL;
-		int p0 = (node->right >> 16)&0x0000FFFF, p1 = node->right&0x0000FFFF, nmaches = 0;
-		const TRexChar *s=str, *good = str;
+    TRexNodeType type = node->type;
+    switch(type) {
+    case OP_GREEDY: {
+        //TRexNode *greedystop = (node->next != -1) ? &exp->_nodes[node->next] : NULL;
+        TRexNode *greedystop = NULL;
+        int p0 = (node->right >> 16)&0x0000FFFF, p1 = node->right&0x0000FFFF, nmaches = 0;
+        const TRexChar *s=str, *good = str;
 
-		if(node->next != -1) {
-			greedystop = &exp->_nodes[node->next];
-		}
-		else {
-			greedystop = next;
-		}
+        if(node->next != -1) {
+            greedystop = &exp->_nodes[node->next];
+        }
+        else {
+            greedystop = next;
+        }
 
-		while((nmaches == 0xFFFF || nmaches < p1)) {
+        while((nmaches == 0xFFFF || nmaches < p1)) {
 
-			const TRexChar *stop;
-			if(!(s = trex_matchnode(exp,&exp->_nodes[node->left],s,greedystop)))
-				break;
-			nmaches++;
-			good=s;
-			if(greedystop) {
-				//checks that 0 matches satisfy the expression(if so skips)
-				//if not would always stop(for instance if is a '?')
-				if(greedystop->type != OP_GREEDY ||
-				(greedystop->type == OP_GREEDY && ((greedystop->right >> 16)&0x0000FFFF) != 0))
-				{
-					TRexNode *gnext = NULL;
-					if(greedystop->next != -1) {
-						gnext = &exp->_nodes[greedystop->next];
-					}else if(next && next->next != -1){
-						gnext = &exp->_nodes[next->next];
-					}
-					stop = trex_matchnode(exp,greedystop,s,gnext);
-					if(stop) {
-						//if satisfied stop it
-						if(p0 == p1 && p0 == nmaches) break;
-						else if(nmaches >= p0 && p1 == 0xFFFF) break;
-						else if(nmaches >= p0 && nmaches <= p1) break;
-					}
-				}
-			}
+            const TRexChar *stop;
+            if(!(s = trex_matchnode(exp,&exp->_nodes[node->left],s,greedystop)))
+                break;
+            nmaches++;
+            good=s;
+            if(greedystop) {
+                //checks that 0 matches satisfy the expression(if so skips)
+                //if not would always stop(for instance if is a '?')
+                if(greedystop->type != OP_GREEDY ||
+                (greedystop->type == OP_GREEDY && ((greedystop->right >> 16)&0x0000FFFF) != 0))
+                {
+                    TRexNode *gnext = NULL;
+                    if(greedystop->next != -1) {
+                        gnext = &exp->_nodes[greedystop->next];
+                    }else if(next && next->next != -1){
+                        gnext = &exp->_nodes[next->next];
+                    }
+                    stop = trex_matchnode(exp,greedystop,s,gnext);
+                    if(stop) {
+                        //if satisfied stop it
+                        if(p0 == p1 && p0 == nmaches) break;
+                        else if(nmaches >= p0 && p1 == 0xFFFF) break;
+                        else if(nmaches >= p0 && nmaches <= p1) break;
+                    }
+                }
+            }
 
-			if(s >= exp->_eol)
-				break;
-		}
-		if(p0 == p1 && p0 == nmaches) return good;
-		else if(nmaches >= p0 && p1 == 0xFFFF) return good;
-		else if(nmaches >= p0 && nmaches <= p1) return good;
-		return NULL;
-	}
-	case OP_OR: {
-			const TRexChar *asd = str;
-			TRexNode *temp=&exp->_nodes[node->left];
-			while( (asd = trex_matchnode(exp,temp,asd,NULL)) ) {
-				if(temp->next != -1)
-					temp = &exp->_nodes[temp->next];
-				else
-					return asd;
-			}
-			asd = str;
-			temp = &exp->_nodes[node->right];
-			while( (asd = trex_matchnode(exp,temp,asd,NULL)) ) {
-				if(temp->next != -1)
-					temp = &exp->_nodes[temp->next];
-				else
-					return asd;
-			}
-			return NULL;
-			break;
-	}
-	case OP_EXPR:
-	case OP_NOCAPEXPR:{
-			TRexNode *n = &exp->_nodes[node->left];
-			const TRexChar *cur = str;
-			int capture = -1;
-			if(node->type != OP_NOCAPEXPR && node->right == exp->_currsubexp) {
-				capture = exp->_currsubexp;
-				exp->_matches[capture].begin = cur;
-				exp->_currsubexp++;
-			}
+            if(s >= exp->_eol)
+                break;
+        }
+        if(p0 == p1 && p0 == nmaches) return good;
+        else if(nmaches >= p0 && p1 == 0xFFFF) return good;
+        else if(nmaches >= p0 && nmaches <= p1) return good;
+        return NULL;
+    }
+    case OP_OR: {
+            const TRexChar *asd = str;
+            TRexNode *temp=&exp->_nodes[node->left];
+            while( (asd = trex_matchnode(exp,temp,asd,NULL)) ) {
+                if(temp->next != -1)
+                    temp = &exp->_nodes[temp->next];
+                else
+                    return asd;
+            }
+            asd = str;
+            temp = &exp->_nodes[node->right];
+            while( (asd = trex_matchnode(exp,temp,asd,NULL)) ) {
+                if(temp->next != -1)
+                    temp = &exp->_nodes[temp->next];
+                else
+                    return asd;
+            }
+            return NULL;
+            break;
+    }
+    case OP_EXPR:
+    case OP_NOCAPEXPR:{
+            TRexNode *n = &exp->_nodes[node->left];
+            const TRexChar *cur = str;
+            int capture = -1;
+            if(node->type != OP_NOCAPEXPR && node->right == exp->_currsubexp) {
+                capture = exp->_currsubexp;
+                exp->_matches[capture].begin = cur;
+                exp->_currsubexp++;
+            }
 
-			do {
-				TRexNode *subnext = NULL;
-				if(n->next != -1) {
-					subnext = &exp->_nodes[n->next];
-				}else {
-					subnext = next;
-				}
-				if(!(cur = trex_matchnode(exp,n,cur,subnext))) {
-					if(capture != -1){
-						exp->_matches[capture].begin = 0;
-						exp->_matches[capture].len = 0;
-					}
-					return NULL;
-				}
-			} while((n->next != -1) && (n = &exp->_nodes[n->next]));
+            do {
+                TRexNode *subnext = NULL;
+                if(n->next != -1) {
+                    subnext = &exp->_nodes[n->next];
+                }else {
+                    subnext = next;
+                }
+                if(!(cur = trex_matchnode(exp,n,cur,subnext))) {
+                    if(capture != -1){
+                        exp->_matches[capture].begin = 0;
+                        exp->_matches[capture].len = 0;
+                    }
+                    return NULL;
+                }
+            } while((n->next != -1) && (n = &exp->_nodes[n->next]));
 
-			if(capture != -1)
-				exp->_matches[capture].len = (int)(cur - exp->_matches[capture].begin);
-			return cur;
-	}
-	case OP_WB:
-		if((str == exp->_bol && !ISSPACE(*str))
-		 || ((str == exp->_eol && !ISSPACE(*(str-1))))
-		 || ((!ISSPACE(*str) && ISSPACE(*(str+1))))
-		 || ((ISSPACE(*str) && !ISSPACE(*(str+1)))) ) {
-			return (node->left == 'b')?str:NULL;
-		}
-		return (node->left == 'b')?NULL:str;
-	case OP_BOL:
-		if(str == exp->_bol) return str;
-		return NULL;
-	case OP_EOL:
-		if(str == exp->_eol) return str;
-		return NULL;
-	case OP_DOT:
-		str++;
-		return str;
-	case OP_NCLASS:
-	case OP_CLASS:
-		if(trex_matchclass(exp,&exp->_nodes[node->left],*str)?(type == OP_CLASS?TRex_True:TRex_False):(type == OP_NCLASS?TRex_True:TRex_False)) {
+            if(capture != -1)
+                exp->_matches[capture].len = (int)(cur - exp->_matches[capture].begin);
+            return cur;
+    }
+    case OP_WB:
+        if((str == exp->_bol && !ISSPACE(*str))
+         || ((str == exp->_eol && !ISSPACE(*(str-1))))
+         || ((!ISSPACE(*str) && ISSPACE(*(str+1))))
+         || ((ISSPACE(*str) && !ISSPACE(*(str+1)))) ) {
+            return (node->left == 'b')?str:NULL;
+        }
+        return (node->left == 'b')?NULL:str;
+    case OP_BOL:
+        if(str == exp->_bol) return str;
+        return NULL;
+    case OP_EOL:
+        if(str == exp->_eol) return str;
+        return NULL;
+    case OP_DOT:
+        str++;
+        return str;
+    case OP_NCLASS:
+    case OP_CLASS:
+        if(trex_matchclass(exp,&exp->_nodes[node->left],*str)?(type == OP_CLASS?TRex_True:TRex_False):(type == OP_NCLASS?TRex_True:TRex_False)) {
                         str++;
-			return str;
-		}
-		return NULL;
-	case OP_CCLASS:
-		if(trex_matchcclass(node->left,*str)) {
+            return str;
+        }
+        return NULL;
+    case OP_CCLASS:
+        if(trex_matchcclass(node->left,*str)) {
                         str++;
-			return str;
-		}
-		return NULL;
-	default: /* char */
-		if (exp->_flags & TREX_ICASE)
-		{
-			if(*str != tolower(node->type) && *str != toupper(node->type)) return NULL;
-		}
-		else
-		{
-			if (*str != node->type) return NULL;
-		}
-		str++;
-		return str;
-	}
-	return NULL;
+            return str;
+        }
+        return NULL;
+    default: /* char */
+        if (exp->_flags & TREX_ICASE)
+        {
+            if(*str != tolower(node->type) && *str != toupper(node->type)) return NULL;
+        }
+        else
+        {
+            if (*str != node->type) return NULL;
+        }
+        str++;
+        return str;
+    }
+    return NULL;
 }
 
 /* public api */
 TRex *trex_compile(const TRexChar *pattern,const TRexChar **error,int flags)
 {
-	TRex *exp = (TRex *)malloc(sizeof(TRex));
-	exp->_eol = exp->_bol = NULL;
-	exp->_p = pattern;
-	exp->_nallocated = (int)scstrlen(pattern) * sizeof(TRexChar);
-	exp->_nodes = (TRexNode *)malloc(exp->_nallocated * sizeof(TRexNode));
-	exp->_nsize = 0;
-	exp->_matches = 0;
-	exp->_nsubexpr = 0;
-	exp->_first = trex_newnode(exp,OP_EXPR);
-	exp->_error = error;
-	exp->_jmpbuf = malloc(sizeof(jmp_buf));
-	exp->_flags = flags;
-	if(setjmp(*((jmp_buf*)exp->_jmpbuf)) == 0) {
-		int res = trex_list(exp);
-		exp->_nodes[exp->_first].left = res;
-		if(*exp->_p!='\0')
-			trex_error(exp,_SC("unexpected character"));
+    TRex *exp = (TRex *)malloc(sizeof(TRex));
+    exp->_eol = exp->_bol = NULL;
+    exp->_p = pattern;
+    exp->_nallocated = (int)scstrlen(pattern) * sizeof(TRexChar);
+    exp->_nodes = (TRexNode *)malloc(exp->_nallocated * sizeof(TRexNode));
+    exp->_nsize = 0;
+    exp->_matches = 0;
+    exp->_nsubexpr = 0;
+    exp->_first = trex_newnode(exp,OP_EXPR);
+    exp->_error = error;
+    exp->_jmpbuf = malloc(sizeof(jmp_buf));
+    exp->_flags = flags;
+    if(setjmp(*((jmp_buf*)exp->_jmpbuf)) == 0) {
+        int res = trex_list(exp);
+        exp->_nodes[exp->_first].left = res;
+        if(*exp->_p!='\0')
+            trex_error(exp,_SC("unexpected character"));
 #ifdef _DEBUG
-		{
-			int nsize,i;
-			TRexNode *t;
-			nsize = exp->_nsize;
-			t = &exp->_nodes[0];
-			scprintf(_SC("\n"));
-			for(i = 0;i < nsize; i++) {
-				if(exp->_nodes[i].type>MAX_CHAR)
-					scprintf(_SC("[%02d] %10s "),i,g_nnames[exp->_nodes[i].type-MAX_CHAR]);
-				else
-					scprintf(_SC("[%02d] %10c "),i,exp->_nodes[i].type);
-				scprintf(_SC("left %02d right %02d next %02d\n"),exp->_nodes[i].left,exp->_nodes[i].right,exp->_nodes[i].next);
-			}
-			scprintf(_SC("\n"));
-		}
+        {
+            int nsize,i;
+            TRexNode *t;
+            nsize = exp->_nsize;
+            t = &exp->_nodes[0];
+            scprintf(_SC("\n"));
+            for(i = 0;i < nsize; i++) {
+                if(exp->_nodes[i].type>MAX_CHAR)
+                    scprintf(_SC("[%02d] %10s "),i,g_nnames[exp->_nodes[i].type-MAX_CHAR]);
+                else
+                    scprintf(_SC("[%02d] %10c "),i,exp->_nodes[i].type);
+                scprintf(_SC("left %02d right %02d next %02d\n"),exp->_nodes[i].left,exp->_nodes[i].right,exp->_nodes[i].next);
+            }
+            scprintf(_SC("\n"));
+        }
 #endif
-		exp->_matches = (TRexMatch *) malloc(exp->_nsubexpr * sizeof(TRexMatch));
-		memset(exp->_matches,0,exp->_nsubexpr * sizeof(TRexMatch));
-	}
-	else{
-		trex_free(exp);
-		return NULL;
-	}
-	return exp;
+        exp->_matches = (TRexMatch *) malloc(exp->_nsubexpr * sizeof(TRexMatch));
+        memset(exp->_matches,0,exp->_nsubexpr * sizeof(TRexMatch));
+    }
+    else{
+        trex_free(exp);
+        return NULL;
+    }
+    return exp;
 }
 
 void trex_free(TRex *exp)
 {
-	if(exp)	{
-		if(exp->_nodes) free(exp->_nodes);
-		if(exp->_jmpbuf) free(exp->_jmpbuf);
-		if(exp->_matches) free(exp->_matches);
-		free(exp);
-	}
+    if(exp) {
+        if(exp->_nodes) free(exp->_nodes);
+        if(exp->_jmpbuf) free(exp->_jmpbuf);
+        if(exp->_matches) free(exp->_matches);
+        free(exp);
+    }
 }
 
 TRexBool trex_match(TRex* exp,const TRexChar* text)
 {
-	const TRexChar* res = NULL;
-	exp->_bol = text;
-	exp->_eol = text + scstrlen(text);
-	exp->_currsubexp = 0;
-	res = trex_matchnode(exp,exp->_nodes,text,NULL);
-	if(res == NULL || res != exp->_eol)
-		return TRex_False;
-	return TRex_True;
+    const TRexChar* res = NULL;
+    exp->_bol = text;
+    exp->_eol = text + scstrlen(text);
+    exp->_currsubexp = 0;
+    res = trex_matchnode(exp,exp->_nodes,text,NULL);
+    if(res == NULL || res != exp->_eol)
+        return TRex_False;
+    return TRex_True;
 }
 
 TRexBool trex_searchrange(TRex* exp,const TRexChar* text_begin,const TRexChar* text_end,const TRexChar** out_begin, const TRexChar** out_end)
 {
-	const TRexChar *cur = NULL;
-	int node = exp->_first;
-	if(text_begin >= text_end) return TRex_False;
-	exp->_bol = text_begin;
-	exp->_eol = text_end;
-	do {
-		cur = text_begin;
-		while(node != -1) {
-			exp->_currsubexp = 0;
-			cur = trex_matchnode(exp,&exp->_nodes[node],cur,NULL);
-			if(!cur)
-				break;
-			node = exp->_nodes[node].next;
-		}
-		text_begin++;
-	} while(cur == NULL && text_begin != text_end);
+    const TRexChar *cur = NULL;
+    int node = exp->_first;
+    if(text_begin >= text_end) return TRex_False;
+    exp->_bol = text_begin;
+    exp->_eol = text_end;
+    do {
+        cur = text_begin;
+        while(node != -1) {
+            exp->_currsubexp = 0;
+            cur = trex_matchnode(exp,&exp->_nodes[node],cur,NULL);
+            if(!cur)
+                break;
+            node = exp->_nodes[node].next;
+        }
+        text_begin++;
+    } while(cur == NULL && text_begin != text_end);
 
-	if(cur == NULL)
-		return TRex_False;
+    if(cur == NULL)
+        return TRex_False;
 
-	--text_begin;
+    --text_begin;
 
-	if(out_begin) *out_begin = text_begin;
-	if(out_end) *out_end = cur;
-	return TRex_True;
+    if(out_begin) *out_begin = text_begin;
+    if(out_end) *out_end = cur;
+    return TRex_True;
 }
 
 TRexBool trex_search(TRex* exp,const TRexChar* text, const TRexChar** out_begin, const TRexChar** out_end)
 {
-	return trex_searchrange(exp,text,text + scstrlen(text),out_begin,out_end);
+    return trex_searchrange(exp,text,text + scstrlen(text),out_begin,out_end);
 }
 
 int trex_getsubexpcount(TRex* exp)
 {
-	return exp->_nsubexpr;
+    return exp->_nsubexpr;
 }
 
 TRexBool trex_getsubexp(TRex* exp, int n, TRexMatch *subexp)
 {
-	if( n<0 || n >= exp->_nsubexpr) return TRex_False;
-	*subexp = exp->_matches[n];
-	return TRex_True;
+    if( n<0 || n >= exp->_nsubexpr) return TRex_False;
+    *subexp = exp->_matches[n];
+    return TRex_True;
 }
 /*******************************************************************************
  * This file is part of the argtable3 library.

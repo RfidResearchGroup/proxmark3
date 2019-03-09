@@ -17,30 +17,30 @@
 #include <stddef.h>
 
 typedef struct {
-	bool Authenticated;
-	uint8_t Key[16];
-	uint16_t KeyNum;
-	uint8_t RndA[16];
-	uint8_t RndB[16];
-	uint8_t TI[4];
-	uint8_t PICCap2[6];
-	uint8_t PCDCap2[6];
-	uint8_t Kenc[16];
-	uint8_t Kmac[16];
-	uint16_t R_Ctr;
-	uint16_t W_Ctr;
+    bool Authenticated;
+    uint8_t Key[16];
+    uint16_t KeyNum;
+    uint8_t RndA[16];
+    uint8_t RndB[16];
+    uint8_t TI[4];
+    uint8_t PICCap2[6];
+    uint8_t PCDCap2[6];
+    uint8_t Kenc[16];
+    uint8_t Kmac[16];
+    uint16_t R_Ctr;
+    uint16_t W_Ctr;
 }mf4Session;
 
 typedef enum {
-	mtypReadCmd,
-	mtypReadResp,
-	mtypWriteCmd,
-	mtypWriteResp,
+    mtypReadCmd,
+    mtypReadResp,
+    mtypWriteCmd,
+    mtypWriteResp,
 } MACType_t;
 
 typedef struct {
-	uint8_t cond;
-	char *description;
+    uint8_t cond;
+    char *description;
 } AccessConditions_t;
 
 extern void mfpSetVerboseMode(bool verbose);

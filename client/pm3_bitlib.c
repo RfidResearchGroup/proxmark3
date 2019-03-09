@@ -126,11 +126,11 @@ static const struct luaL_Reg bitlib[] = {
 };
 
 LUALIB_API int luaopen_bit (lua_State *L) {
-	luaL_newlib(L, bitlib);
-	//luaL_register(L, "bit", bitlib);
-	lua_pushnumber(L, BIT_BITS);
-	lua_setfield(L, -2, "bits");
-	return 1;
+    luaL_newlib(L, bitlib);
+    //luaL_register(L, "bit", bitlib);
+    lua_pushnumber(L, BIT_BITS);
+    lua_setfield(L, -2, "bits");
+    return 1;
 }
 
 /**

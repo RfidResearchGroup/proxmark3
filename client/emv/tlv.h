@@ -25,9 +25,9 @@
 typedef uint32_t tlv_tag_t;
 
 struct tlv {
-	tlv_tag_t tag;
-	size_t len;
-	const unsigned char *value;
+    tlv_tag_t tag;
+    size_t len;
+    const unsigned char *value;
 };
 
 struct tlvdb;

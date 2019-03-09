@@ -66,13 +66,13 @@ int CmdHF14AMfDESAuth(const char *Cmd){
     UsbCommand resp;
     if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
         uint8_t isOK  = resp.arg[0] & 0xff;
-	        cuid  = resp.arg[1];
+            cuid  = resp.arg[1];
         uint8_t * data= resp.d.asBytes;
 
          if (isOK){
              PrintAndLogEx(NORMAL, "enc(nc)/b0:%s", sprint_hex(data+2,8));
              memcpy(b0,data+2,8);
-		}
+        }
     } else {
         PrintAndLogEx(WARNING, "Command execute timeout");
     }
@@ -154,7 +154,7 @@ int CmdHF14AMfAESAuth(const char *Cmd){
     //
     // int private_AES_set_encrypt_key(const unsigned char *userKey, const int bits,AES_KEY *key);
      //int private_AES_set_decrypt_key(const unsigned char *userKey, const int bits,AES_KEY *key);
-	//
+    //
     //memcpy(key1,key,16);
     //memcpy(key2,key+8,8);
     AES_set_encrypt_key(key,128,&key_e);
@@ -166,20 +166,20 @@ int CmdHF14AMfAESAuth(const char *Cmd){
     UsbCommand resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK  = resp.arg[0] & 0xff;
-	        cuid  = resp.arg[1];
+            cuid  = resp.arg[1];
         uint8_t * data= resp.d.asBytes;
 
          if (isOK){
              PrintAndLogEx(NORMAL, "enc(nc)/b0:%s", sprint_hex(data+2,16));
              memcpy(b0,data+2,16);
-		}
+        }
     } else {
         PrintAndLogEx(WARNING, "Command execute timeout");
     }
     //
     // void AES_cbc_encrypt(const unsigned char *in, unsigned char *out,
-	//size_t length, const AES_KEY *key,
-	//unsigned char *ivec, const int enc);
+    //size_t length, const AES_KEY *key,
+    //unsigned char *ivec, const int enc);
 
    //Do crypto magic
     //DES_random_key(&nr);
@@ -230,16 +230,16 @@ int CmdHF14AMfAESAuth(const char *Cmd){
 //------------------------------------
 static command_t CommandTable[] =
 {
-    {"help",    CmdHelp,		1,"This help"},
-    {"dbg",     CmdHF14AMfDbg,		0,"Set default debug mode"},
-    {"des-auth",CmdHF14AMfDESAuth,	0,"Desfire Authentication"},
-    {"ev1-auth",CmdHF14AMfAESAuth,	0,"EV1 Authentication"},
+    {"help",    CmdHelp,            1,"This help"},
+    {"dbg",     CmdHF14AMfDbg,      0,"Set default debug mode"},
+    {"des-auth",CmdHF14AMfDESAuth,  0,"Desfire Authentication"},
+    {"ev1-auth",CmdHF14AMfAESAuth,  0,"EV1 Authentication"},
     {NULL, NULL, 0, NULL}
 };
 
 int CmdHFMFDesfire(const char *Cmd){
     // flush
-	clearCommandBuffer();
+    clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }

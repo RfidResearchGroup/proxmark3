@@ -33,35 +33,35 @@
 #define APDU_AID_LEN 50
 
 typedef enum {
-	ECC_CONTACTLESS,
-	ECC_CONTACT
+    ECC_CONTACTLESS,
+    ECC_CONTACT
 } EMVCommandChannel;
 
 enum TransactionType {
-	TT_MSD,
-	TT_VSDC,        // contact only. not standart for contactless
-	TT_QVSDCMCHIP,
-	TT_CDA,
+    TT_MSD,
+    TT_VSDC,        // contact only. not standart for contactless
+    TT_QVSDCMCHIP,
+    TT_CDA,
 };
 extern char *TransactionTypeStr[];
 
 typedef struct {
-	uint8_t CLA;
-	uint8_t INS;
-	uint8_t P1;
-	uint8_t P2;
-	uint8_t Lc;
-	uint8_t *data;
+    uint8_t CLA;
+    uint8_t INS;
+    uint8_t P1;
+    uint8_t P2;
+    uint8_t Lc;
+    uint8_t *data;
 } sAPDU;
 
 enum CardPSVendor {
-	CV_NA,
-	CV_VISA,
-	CV_MASTERCARD,
-	CV_AMERICANEXPRESS,
-	CV_JCB,
-	CV_CB,
-	CV_OTHER,
+    CV_NA,
+    CV_VISA,
+    CV_MASTERCARD,
+    CV_AMERICANEXPRESS,
+    CV_JCB,
+    CV_CB,
+    CV_OTHER,
 };
 extern enum CardPSVendor GetCardPSVendor(uint8_t * AID, size_t AIDlen);
 

@@ -26,9 +26,9 @@
 #define CONFIG_H 1
 
 /*****************************************
- *					 *
+ *                                       *
  *  Start of user configuration options  *
- *					 *
+ *                                       *
  *****************************************/
 
 /* A type to contain polynomial coefficient bitmaps.
@@ -85,9 +85,9 @@
 #define BMP_SUB   16
 
 /*****************************************
- *					 *
+ *                                       *
  *   End of user configuration options   *
- *					 *
+ *                                       *
  *****************************************/
 
 #endif /* CONFIG_H */

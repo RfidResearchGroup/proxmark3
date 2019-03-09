@@ -14,8 +14,8 @@
 #include "tlv.h"
 
 typedef struct {
-	tlv_tag_t Tag;
-	char *Name;
+    tlv_tag_t Tag;
+    char *Name;
 } ApplicationDataElm;
 
 extern char* GetApplicationDataName(tlv_tag_t tag);

@@ -19,20 +19,20 @@ static id activity = nil;
 //OS X Version 10.10 is defined in OS X 10.10 and later
 #if defined(MAC_OS_X_VERSION_10_10)
 void disableAppNap(const char* reason) {
-	if(activity == nil) {
-		//NSLog(@"disableAppNap: %@", @(reason));
-		activity = [[NSProcessInfo processInfo] beginActivityWithOptions:NSActivityBackground reason:@(reason)];
-		[activity retain];
-	}
+    if(activity == nil) {
+        //NSLog(@"disableAppNap: %@", @(reason));
+        activity = [[NSProcessInfo processInfo] beginActivityWithOptions:NSActivityBackground reason:@(reason)];
+        [activity retain];
+    }
 }
 
 void enableAppNap() {
-	if(activity != nil) {
-		//NSLog(@"enableAppNap");
-		[[NSProcessInfo processInfo] endActivity:activity];
-		[activity release];
-		activity = nil;
-	}
+    if(activity != nil) {
+        //NSLog(@"enableAppNap");
+        [[NSProcessInfo processInfo] endActivity:activity];
+        [activity release];
+        activity = nil;
+    }
 }
 
 #else
@@ -44,10 +44,10 @@ void enableAppNap() { }
 //OS X Version 10.6 is defined in OS X 10.6 and later
 #if defined(MAC_OS_X_VERSION_10_6)
 void makeUnfocusable() {
-	[NSApp setActivationPolicy:NSApplicationActivationPolicyProhibited];
+    [NSApp setActivationPolicy:NSApplicationActivationPolicyProhibited];
 }
 void makeFocusable() {
-	[NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+    [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
 }
 #else
 void makeUnfocusable() { }

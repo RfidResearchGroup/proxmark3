@@ -13,16 +13,16 @@
 #include "elf.h"
 
 typedef struct {
-	void *data;
-	uint32_t start;
-	uint32_t length;
+    void *data;
+    uint32_t start;
+    uint32_t length;
 } flash_seg_t;
 
 typedef struct {
-	const char *filename;
-	int can_write_bl;
-	int num_segs;
-	flash_seg_t *segments;
+    const char *filename;
+    int can_write_bl;
+    int num_segs;
+    flash_seg_t *segments;
 } flash_file_t;
 
 int flash_load(flash_file_t *ctx, const char *name, int can_write_bl);

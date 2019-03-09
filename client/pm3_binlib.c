@@ -8,25 +8,25 @@
 * Roberto Ierusalimschy <roberto@inf.puc-rio.br>.
 */
 
-#define	OP_ZSTRING	'z'		/* zero-terminated string */
-#define	OP_BSTRING	'p'		/* string preceded by length byte */
-#define	OP_WSTRING	'P'		/* string preceded by length word */
-#define	OP_SSTRING	'a'		/* string preceded by length size_t */
-#define	OP_STRING	'A'		/* string */
-#define	OP_FLOAT	'f'		/* float */
-#define	OP_DOUBLE	'd'		/* double */
-#define	OP_NUMBER	'n'		/* Lua number */
-#define	OP_CHAR		'c'		/* char (1-byte int) */
-#define	OP_BYTE		'C'		/* byte = unsigned char (1-byte unsigned int) */
-#define	OP_SHORT	's'		/* short (2-byte int) */
-#define	OP_USHORT	'S'		/* unsigned short (2-byte unsigned int) */
-#define	OP_INT		'i'		/* int (4-byte int) */
-#define	OP_UINT		'I'		/* unsigned int (4-byte unsigned int) */
-#define	OP_LONG		'l'		/* long (8-byte int) */
-#define	OP_ULONG	'L'		/* unsigned long (8-byte unsigned int) */
-#define	OP_LITTLEENDIAN	'<'		/* little endian */
-#define	OP_BIGENDIAN	'>'		/* big endian */
-#define	OP_NATIVE	'='		/* native endian */
+#define    OP_ZSTRING      'z'        /* zero-terminated string */
+#define    OP_BSTRING      'p'        /* string preceded by length byte */
+#define    OP_WSTRING      'P'        /* string preceded by length word */
+#define    OP_SSTRING      'a'        /* string preceded by length size_t */
+#define    OP_STRING       'A'        /* string */
+#define    OP_FLOAT        'f'        /* float */
+#define    OP_DOUBLE       'd'        /* double */
+#define    OP_NUMBER       'n'        /* Lua number */
+#define    OP_CHAR         'c'        /* char (1-byte int) */
+#define    OP_BYTE         'C'        /* byte = unsigned char (1-byte unsigned int) */
+#define    OP_SHORT        's'        /* short (2-byte int) */
+#define    OP_USHORT       'S'        /* unsigned short (2-byte unsigned int) */
+#define    OP_INT          'i'        /* int (4-byte int) */
+#define    OP_UINT         'I'        /* unsigned int (4-byte unsigned int) */
+#define    OP_LONG         'l'        /* long (8-byte int) */
+#define    OP_ULONG        'L'        /* unsigned long (8-byte unsigned int) */
+#define    OP_LITTLEENDIAN '<'        /* little endian */
+#define    OP_BIGENDIAN    '>'        /* big endian */
+#define    OP_NATIVE       '='        /* native endian */
 
 #define OP_HEX 'H'
 
@@ -69,40 +69,40 @@ static void doswap(int swap, void *p, size_t n)
  }
 }
 
-#define UNPACKNUMBER(OP,T)		\
-   case OP:				\
-   {					\
-    T a;				\
-    int m=sizeof(a);			\
-    if (i+m>len) { done = 1;	break;}	\
-    memcpy(&a,s+i,m);			\
-    i+=m;				\
-    doswap(swap,&a,m);			\
-    lua_pushnumber(L,(lua_Number)a);	\
-    ++n;				\
-    break;				\
+#define UNPACKNUMBER(OP,T)                      \
+   case OP:                                     \
+   {                                            \
+    T a;                                        \
+    int m=sizeof(a);                            \
+    if (i+m>len) { done = 1;    break;}         \
+    memcpy(&a,s+i,m);                           \
+    i+=m;                                       \
+    doswap(swap,&a,m);                          \
+    lua_pushnumber(L,(lua_Number)a);            \
+    ++n;                                        \
+    break;                                      \
    }
 
-#define UNPACKSTRING(OP,T)		\
-   case OP:				\
-   {					\
-    T l;				\
-    int m = sizeof(l);			\
-    if (i + m > len) { done = 1;	break; }	\
-    memcpy(&l, s+i, m);			\
-    doswap(swap,&l,m);			\
-    if (i + m + l > len) { done = 1; break;}		\
-    i += m;				\
-    lua_pushlstring(L,s+i,l);		\
-    i += l;				\
-    ++n;				\
-    break;				\
+#define UNPACKSTRING(OP,T)                      \
+   case OP:                                     \
+   {                                            \
+    T l;                                        \
+    int m = sizeof(l);                          \
+    if (i + m > len) { done = 1;    break; }    \
+    memcpy(&l, s+i, m);                         \
+    doswap(swap,&l,m);                          \
+    if (i + m + l > len) { done = 1; break;}    \
+    i += m;                                     \
+    lua_pushlstring(L,s+i,l);                   \
+    i += l;                                     \
+    ++n;                                        \
+    break;                                      \
    }
 
 #define HEXDIGITS(DIG) \
  "0123456789ABCDEF"[DIG]
 
-static int l_unpack(lua_State *L) 		/** unpack(f,s, [init]) */
+static int l_unpack(lua_State *L)         /** unpack(f,s, [init]) */
 {
  size_t len;
  const char *s=luaL_checklstring(L,2,&len); /* switched s and f */
@@ -211,28 +211,28 @@ static int l_unpack(lua_State *L) 		/** unpack(f,s, [init]) */
  return n+1;
 }
 
-#define PACKNUMBER(OP,T)			\
-   case OP:					\
-   {						\
-    T a=(T)luaL_checknumber(L,i++);		\
-    doswap(swap,&a,sizeof(a));			\
-    luaL_addlstring(&b,(char*)&a,sizeof(a));	\
-    break;					\
+#define PACKNUMBER(OP,T)                        \
+   case OP:                                     \
+   {                                            \
+    T a=(T)luaL_checknumber(L,i++);             \
+    doswap(swap,&a,sizeof(a));                  \
+    luaL_addlstring(&b,(char*)&a,sizeof(a));    \
+    break;                                      \
    }
 
-#define PACKSTRING(OP,T)			\
-   case OP:					\
-   {						\
-    size_t l;					\
-    const char *a=luaL_checklstring(L,i++,&l);	\
-    T ll=(T)l;					\
-    doswap(swap,&ll,sizeof(ll));		\
-    luaL_addlstring(&b,(char*)&ll,sizeof(ll));	\
-    luaL_addlstring(&b,a,l);			\
-    break;					\
+#define PACKSTRING(OP,T)                        \
+   case OP:                                     \
+   {                                            \
+    size_t l;                                   \
+    const char *a=luaL_checklstring(L,i++,&l);  \
+    T ll=(T)l;                                  \
+    doswap(swap,&ll,sizeof(ll));                \
+    luaL_addlstring(&b,(char*)&ll,sizeof(ll));  \
+    luaL_addlstring(&b,a,l);                    \
+    break;                                      \
    }
 
-static int l_pack(lua_State *L) 		/** pack(f,...) */
+static int l_pack(lua_State *L)         /** pack(f,...) */
 {
  int i = 2;
  const char *f = luaL_checkstring(L,1);
@@ -330,9 +330,9 @@ static int l_pack(lua_State *L) 		/** pack(f,...) */
 
 static const luaL_Reg binlib[] =
 {
-	{"pack",	l_pack},
-	{"unpack",	l_unpack},
-	{NULL,	NULL}
+    {"pack",   l_pack},
+    {"unpack", l_unpack},
+    {NULL,     NULL}
 };
 
 LUALIB_API int luaopen_binlib (lua_State *L) {

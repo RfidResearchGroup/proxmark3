@@ -12,12 +12,12 @@
 
 extern "C" void ShowGraphWindow(void)
 {
-	static int warned = 0;
+    static int warned = 0;
 
-	if (!warned) {
-		printf("No GUI in this build!\n");
-		warned = 1;
-	}
+    if (!warned) {
+        printf("No GUI in this build!\n");
+        warned = 1;
+    }
 }
 
 extern "C" void HideGraphWindow(void) {}

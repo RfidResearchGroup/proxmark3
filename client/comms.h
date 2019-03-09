@@ -24,7 +24,7 @@
 #include "util_darwin.h"
 
 #if defined(__linux__) && !defined(NO_UNLINK)
-#include <unistd.h>		// for unlink()
+#include <unistd.h> // for unlink()
 #endif
 
 //For storing command that are received from the device
@@ -33,15 +33,15 @@
 #endif
 
 typedef enum {
-	BIG_BUF,
-	BIG_BUF_EML,
-	FLASH_MEM,
-	SIM_MEM,
-	} DeviceMemType_t;
+    BIG_BUF,
+    BIG_BUF_EML,
+    FLASH_MEM,
+    SIM_MEM,
+    } DeviceMemType_t;
 
 typedef struct {
-	bool run; // If TRUE, continue running the uart_communication thread
-	bool block_after_ACK; // if true, block after receiving an ACK package
+    bool run; // If TRUE, continue running the uart_communication thread
+    bool block_after_ACK; // if true, block after receiving an ACK package
 } communication_arg_t;
 
 

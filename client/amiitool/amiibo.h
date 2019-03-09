@@ -19,8 +19,8 @@
 
 #pragma pack(1)
 typedef struct {
-	nfc3d_keygen_masterkeys data;
-	nfc3d_keygen_masterkeys tag;
+    nfc3d_keygen_masterkeys data;
+    nfc3d_keygen_masterkeys tag;
 } nfc3d_amiibo_keys;
 #pragma pack()
 

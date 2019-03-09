@@ -22,7 +22,7 @@
 #include <limits.h>   // for CmdNorm INT_MIN && INT_MAX
 #include "util.h"
 #include "cmdmain.h"
-#include "proxmark3.h"	// sendcommand
+#include "proxmark3.h"// sendcommand
 #include "ui.h"       // for show graph controls
 #include "graph.h"    // for graph data
 #include "comms.h"

@@ -134,9 +134,9 @@ extern void setbmp(void);
 #define PZERO {0UL, (bmp_t *) 0}
 
 typedef struct {
-	unsigned long length;	/* number of significant bits */
-	bmp_t *bitmap;		/* bitmap, MSB first, */
-				/* left-justified in each word */
+    unsigned long length; /* number of significant bits */
+    bmp_t *bitmap;        /* bitmap, MSB first, */
+                          /* left-justified in each word */
 } poly_t;
 
 extern poly_t filtop(FILE *input, unsigned long length, int flags, int bperhx);
@@ -181,13 +181,13 @@ extern int pident(const poly_t a, const poly_t b);
 #define MZERO {PZERO, PZERO, P_BE, PZERO, PZERO, PZERO, NULL}
 
 typedef struct {
-	poly_t spoly;		/* polynomial with highest-order term removed. length determines CRC width */
-	poly_t init;		/* initial register value. length == spoly.length */
-	int flags;		/* P_REFIN and P_REFOUT indicate reflected input/output */
-	poly_t xorout;		/* final register XOR mask. length == spoly.length */
-	poly_t check;		/* optional check value, the CRC of the UTF-8 string "123456789" */
-	poly_t magic;		/* optional magic check value, the residue of a valid codeword */
-	const char *name;	/* optional canonical name of the model */
+    poly_t spoly;       /* polynomial with highest-order term removed. length determines CRC width */
+    poly_t init;        /* initial register value. length == spoly.length */
+    int flags;          /* P_REFIN and P_REFOUT indicate reflected input/output */
+    poly_t xorout;      /* final register XOR mask. length == spoly.length */
+    poly_t check;       /* optional check value, the CRC of the UTF-8 string "123456789" */
+    poly_t magic;       /* optional magic check value, the residue of a valid codeword */
+    const char *name;   /* optional canonical name of the model */
 } model_t;
 
 extern void mcpy(model_t *dest, const model_t *src);

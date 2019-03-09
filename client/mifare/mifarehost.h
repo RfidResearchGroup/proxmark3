@@ -16,10 +16,10 @@
 #include <string.h>
 #include <pthread.h>
 
-#include "proxmark3.h"	// time_t
+#include "proxmark3.h"  // time_t
 #include "common.h"
-#include "util.h"		// FILE_PATH_SIZE
-#include "ui.h"			// PrintAndLog...
+#include "util.h"       // FILE_PATH_SIZE
+#include "ui.h"         // PrintAndLog...
 #include "crapto1/crapto1.h"
 #include "crc16.h"
 #include "protocols.h"
@@ -30,41 +30,41 @@
 #define MIFARE_SECTOR_RETRY     10
 
 // mifare tracer flags
-#define TRACE_IDLE		 		0x00
-#define TRACE_AUTH1		 		0x01
-#define TRACE_AUTH2		 		0x02
-#define TRACE_AUTH_OK	 		0x03
-#define TRACE_READ_DATA 		0x04
-#define TRACE_WRITE_OK			0x05
-#define TRACE_WRITE_DATA		0x06
-#define TRACE_ERROR		 		0xFF
+#define TRACE_IDLE              0x00
+#define TRACE_AUTH1             0x01
+#define TRACE_AUTH2             0x02
+#define TRACE_AUTH_OK           0x03
+#define TRACE_READ_DATA         0x04
+#define TRACE_WRITE_OK          0x05
+#define TRACE_WRITE_DATA        0x06
+#define TRACE_ERROR             0xFF
 
 typedef struct {
-		union {
-			struct Crypto1State *slhead;
-			uint64_t *keyhead;
-		} head;
-		union {
-			struct Crypto1State *sltail;
-			uint64_t *keytail;
-		} tail;
-		uint32_t len;
-		uint32_t uid;
-		uint32_t blockNo;
-		uint32_t keyType;
-		uint32_t nt;
-		uint32_t ks1;
+        union {
+            struct Crypto1State *slhead;
+            uint64_t *keyhead;
+        } head;
+        union {
+            struct Crypto1State *sltail;
+            uint64_t *keytail;
+        } tail;
+        uint32_t len;
+        uint32_t uid;
+        uint32_t blockNo;
+        uint32_t keyType;
+        uint32_t nt;
+        uint32_t ks1;
 } StateList_t;
 
 typedef struct {
-	uint64_t Key[2];
-	uint8_t foundKey[2];
+    uint64_t Key[2];
+    uint8_t foundKey[2];
 } sector_t;
 
 typedef struct {
-	uint8_t keyA[6];
-	uint8_t keyB[6];
-	//uint8_t foundKey[2];
+    uint8_t keyA[6];
+    uint8_t keyB[6];
+    //uint8_t foundKey[2];
 } icesector_t;
 
 extern char logHexFileName[FILE_PATH_SIZE];
@@ -73,7 +73,7 @@ extern int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key);
 extern int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t * ResultKeys, bool calibrate);
 extern int mfCheckKeys (uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keycnt, uint8_t * keyBlock, uint64_t * key);
 extern int mfCheckKeys_fast( uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk,
-						uint8_t strategy, uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory);
+                        uint8_t strategy, uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory);
 extern int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultkey);
 
 extern int mfReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data);

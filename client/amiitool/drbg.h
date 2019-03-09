@@ -12,16 +12,16 @@
 #include <stdint.h>
 #include "mbedtls/md.h"
 
-#define NFC3D_DRBG_MAX_SEED_SIZE	480	/* Hardcoded max size in 3DS NFC module */
-#define NFC3D_DRBG_OUTPUT_SIZE		32	/* Every iteration generates 32 bytes */
+#define NFC3D_DRBG_MAX_SEED_SIZE 480 /* Hardcoded max size in 3DS NFC module */
+#define NFC3D_DRBG_OUTPUT_SIZE   32  /* Every iteration generates 32 bytes */
 
 typedef struct {
-	mbedtls_md_context_t hmacCtx;
-	bool used;
-	uint16_t iteration;
+    mbedtls_md_context_t hmacCtx;
+    bool used;
+    uint16_t iteration;
 
-	uint8_t buffer[sizeof(uint16_t) + NFC3D_DRBG_MAX_SEED_SIZE];
-	size_t bufferSize;
+    uint8_t buffer[sizeof(uint16_t) + NFC3D_DRBG_MAX_SEED_SIZE];
+    size_t bufferSize;
 } nfc3d_drbg_ctx;
 
 void nfc3d_drbg_init(nfc3d_drbg_ctx * ctx, const uint8_t * hmacKey, size_t hmacKeySize, const uint8_t * seed, size_t seedSize);

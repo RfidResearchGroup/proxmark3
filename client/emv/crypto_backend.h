@@ -22,27 +22,27 @@
 #include <stdarg.h>
 
 struct crypto_hash {
-	enum crypto_algo_hash algo;
-	void (*write)(struct crypto_hash *ch, const unsigned char *buf, size_t len);
-	unsigned char *(*read)(struct crypto_hash *ch);
-	void (*close)(struct crypto_hash *ch);
-	size_t (*get_size)(const struct crypto_hash *ch);
+    enum crypto_algo_hash algo;
+    void (*write)(struct crypto_hash *ch, const unsigned char *buf, size_t len);
+    unsigned char *(*read)(struct crypto_hash *ch);
+    void (*close)(struct crypto_hash *ch);
+    size_t (*get_size)(const struct crypto_hash *ch);
 };
 
 struct crypto_pk {
-	enum crypto_algo_pk algo;
-	unsigned char *(*encrypt)(const struct crypto_pk *cp, const unsigned char *buf, size_t len, size_t *clen);
-	unsigned char *(*decrypt)(const struct crypto_pk *cp, const unsigned char *buf, size_t len, size_t *clen);
-	unsigned char *(*get_parameter)(const struct crypto_pk *cp, unsigned param, size_t *plen);
-	size_t (*get_nbits)(const struct crypto_pk *cp);
-	void (*close)(struct crypto_pk *cp);
+    enum crypto_algo_pk algo;
+    unsigned char *(*encrypt)(const struct crypto_pk *cp, const unsigned char *buf, size_t len, size_t *clen);
+    unsigned char *(*decrypt)(const struct crypto_pk *cp, const unsigned char *buf, size_t len, size_t *clen);
+    unsigned char *(*get_parameter)(const struct crypto_pk *cp, unsigned param, size_t *plen);
+    size_t (*get_nbits)(const struct crypto_pk *cp);
+    void (*close)(struct crypto_pk *cp);
 };
 
 struct crypto_backend {
-	struct crypto_hash *(*hash_open)(enum crypto_algo_hash hash);
-	struct crypto_pk *(*pk_open)(enum crypto_algo_pk pk, va_list vl);
-	struct crypto_pk *(*pk_open_priv)(enum crypto_algo_pk pk, va_list vl);
-	struct crypto_pk *(*pk_genkey)(enum crypto_algo_pk pk, va_list vl);
+    struct crypto_hash *(*hash_open)(enum crypto_algo_hash hash);
+    struct crypto_pk *(*pk_open)(enum crypto_algo_pk pk, va_list vl);
+    struct crypto_pk *(*pk_open_priv)(enum crypto_algo_pk pk, va_list vl);
+    struct crypto_pk *(*pk_genkey)(enum crypto_algo_pk pk, va_list vl);
 };
 
 struct crypto_backend *crypto_polarssl_init(void);

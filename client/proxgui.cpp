@@ -24,56 +24,56 @@ WorkerThread::~WorkerThread()
 }
 
 void WorkerThread::run() {
-	main_loop(script_cmds_file, script_cmd, usb_present);
+    main_loop(script_cmds_file, script_cmd, usb_present);
 }
 
 extern "C" void ShowGraphWindow(void)
 {
-	if (!gui)
-		return;
+    if (!gui)
+        return;
 
-	gui->ShowGraphWindow();
+    gui->ShowGraphWindow();
 }
 
 extern "C" void HideGraphWindow(void)
 {
-	if (!gui)
-		return;
+    if (!gui)
+        return;
 
-	gui->HideGraphWindow();
+    gui->HideGraphWindow();
 }
 
 extern "C" void RepaintGraphWindow(void)
 {
-	if (!gui)
-		return;
+    if (!gui)
+        return;
 
-	gui->RepaintGraphWindow();
+    gui->RepaintGraphWindow();
 }
 
 extern "C" void MainGraphics(void)
 {
-	if (!gui)
-		return;
+    if (!gui)
+        return;
 
-	gui->MainLoop();
+    gui->MainLoop();
 }
 
 extern "C" void InitGraphics(int argc, char **argv, char *script_cmds_file, char *script_cmd, bool usb_present)
 {
 #ifdef Q_WS_X11
-	if (getenv("DISPLAY") == NULL)
-		return;
+    if (getenv("DISPLAY") == NULL)
+        return;
 #endif
-	main_loop_thread = new WorkerThread(script_cmds_file, script_cmd, usb_present);
-	gui = new ProxGuiQT(argc, argv, main_loop_thread);
+    main_loop_thread = new WorkerThread(script_cmds_file, script_cmd, usb_present);
+    gui = new ProxGuiQT(argc, argv, main_loop_thread);
 }
 
 extern "C" void ExitGraphics(void)
 {
-	if (!gui)
-		return;
+    if (!gui)
+        return;
 
-	gui->Exit();
-	gui = NULL;
+    gui->Exit();
+    gui = NULL;
 }
