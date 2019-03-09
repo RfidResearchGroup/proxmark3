@@ -18,7 +18,7 @@
 #include "lualib.h"
 
 
-#define HOOKKEY		"_HKEY"
+#define HOOKKEY "_HKEY"
 
 
 
@@ -253,7 +253,7 @@ static int db_upvaluejoin (lua_State *L) {
 }
 
 
-#define gethooktable(L)	luaL_getsubtable(L, LUA_REGISTRYINDEX, HOOKKEY)
+#define gethooktable(L) luaL_getsubtable(L, LUA_REGISTRYINDEX, HOOKKEY)
 
 
 static void hookf (lua_State *L, lua_Debug *ar) {

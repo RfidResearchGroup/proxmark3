@@ -25,12 +25,12 @@
 ** pattern-matching. This limit is arbitrary.
 */
 #if !defined(LUA_MAXCAPTURES)
-#define LUA_MAXCAPTURES		32
+#define LUA_MAXCAPTURES 32
 #endif
 
 
 /* macro to `unsign' a character */
-#define uchar(c)	((unsigned char)(c))
+#define uchar(c) ((unsigned char)(c))
 
 
 
@@ -103,7 +103,7 @@ static int str_upper (lua_State *L) {
 
 
 /* reasonable limit to avoid arithmetic overflow */
-#define MAXSIZE		((~(size_t)0) >> 1)
+#define MAXSIZE ((~(size_t)0) >> 1)
 
 static int str_rep (lua_State *L) {
   size_t l, lsep;
@@ -191,8 +191,8 @@ static int str_dump (lua_State *L) {
 */
 
 
-#define CAP_UNFINISHED	(-1)
-#define CAP_POSITION	(-2)
+#define CAP_UNFINISHED (-1)
+#define CAP_POSITION   (-2)
 
 
 typedef struct MatchState {
@@ -215,12 +215,12 @@ static const char *match (MatchState *ms, const char *s, const char *p);
 
 /* maximum recursion depth for 'match' */
 #if !defined(MAXCCALLS)
-#define MAXCCALLS	200
+#define MAXCCALLS 200
 #endif
 
 
-#define L_ESC		'%'
-#define SPECIALS	"^$*+?.([%-"
+#define L_ESC '%'
+#define SPECIALS "^$*+?.([%-"
 
 
 static int check_capture (MatchState *ms, int l) {
@@ -791,19 +791,19 @@ static int str_gsub (lua_State *L) {
 ** 'string.format'; LUA_INTFRM_T is the integer type corresponding to
 ** the previous length
 */
-#if !defined(LUA_INTFRMLEN)	/* { */
+#if !defined(LUA_INTFRMLEN) /* { */
 #if defined(LUA_USE_LONGLONG)
 
-#define LUA_INTFRMLEN		"ll"
-#define LUA_INTFRM_T		long long
+#define LUA_INTFRMLEN "ll"
+#define LUA_INTFRM_T long long
 
 #else
 
-#define LUA_INTFRMLEN		"l"
-#define LUA_INTFRM_T		long
+#define LUA_INTFRMLEN "l"
+#define LUA_INTFRM_T long
 
 #endif
-#endif				/* } */
+#endif                      /* } */
 
 
 /*
@@ -813,21 +813,21 @@ static int str_gsub (lua_State *L) {
 */
 #if !defined(LUA_FLTFRMLEN)
 
-#define LUA_FLTFRMLEN		""
-#define LUA_FLTFRM_T		double
+#define LUA_FLTFRMLEN ""
+#define LUA_FLTFRM_T double
 
 #endif
 
 
 /* maximum size of each formatted item (> len(format('%99.99f', -1e308))) */
-#define MAX_ITEM	512
+#define MAX_ITEM 512
 /* valid flags in a format specification */
-#define FLAGS	"-+ #0"
+#define FLAGS "-+ #0"
 /*
 ** maximum size of each format specification (such as '%-099.99d')
 ** (+10 accounts for %99.99x plus margin of error)
 */
-#define MAX_FORMAT	(sizeof(FLAGS) + sizeof(LUA_INTFRMLEN) + 10)
+#define MAX_FORMAT (sizeof(FLAGS) + sizeof(LUA_INTFRMLEN) + 10)
 
 
 static void addquoted (lua_State *L, luaL_Buffer *b, int arg) {

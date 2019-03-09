@@ -35,17 +35,17 @@
 ** variables that Lua check to set its paths.
 */
 #if !defined(LUA_PATH)
-#define LUA_PATH	"LUA_PATH"
+#define LUA_PATH "LUA_PATH"
 #endif
 
 #if !defined(LUA_CPATH)
-#define LUA_CPATH	"LUA_CPATH"
+#define LUA_CPATH "LUA_CPATH"
 #endif
 
-#define LUA_PATHSUFFIX		"_" LUA_VERSION_MAJOR "_" LUA_VERSION_MINOR
+#define LUA_PATHSUFFIX "_" LUA_VERSION_MAJOR "_" LUA_VERSION_MINOR
 
-#define LUA_PATHVERSION		LUA_PATH LUA_PATHSUFFIX
-#define LUA_CPATHVERSION	LUA_CPATH LUA_PATHSUFFIX
+#define LUA_PATHVERSION LUA_PATH LUA_PATHSUFFIX
+#define LUA_CPATHVERSION LUA_CPATH LUA_PATHSUFFIX
 
 /*
 ** LUA_PATH_SEP is the character that separates templates in a path.
@@ -57,16 +57,16 @@
 ** luaopen_ function name.
 */
 #if !defined (LUA_PATH_SEP)
-#define LUA_PATH_SEP		";"
+#define LUA_PATH_SEP ";"
 #endif
 #if !defined (LUA_PATH_MARK)
-#define LUA_PATH_MARK		"?"
+#define LUA_PATH_MARK "?"
 #endif
 #if !defined (LUA_EXEC_DIR)
-#define LUA_EXEC_DIR		"!"
+#define LUA_EXEC_DIR "!"
 #endif
 #if !defined (LUA_IGMARK)
-#define LUA_IGMARK		"-"
+#define LUA_IGMARK "-"
 #endif
 
 
@@ -77,32 +77,32 @@
 ** when searching for a Lua loader.
 */
 #if !defined(LUA_CSUBSEP)
-#define LUA_CSUBSEP		LUA_DIRSEP
+#define LUA_CSUBSEP LUA_DIRSEP
 #endif
 
 #if !defined(LUA_LSUBSEP)
-#define LUA_LSUBSEP		LUA_DIRSEP
+#define LUA_LSUBSEP LUA_DIRSEP
 #endif
 
 
 /* prefix for open functions in C libraries */
-#define LUA_POF		"luaopen_"
+#define LUA_POF "luaopen_"
 
 /* separator for open functions in C libraries */
-#define LUA_OFSEP	"_"
+#define LUA_OFSEP "_"
 
 
 /* table (in the registry) that keeps handles for all loaded C libraries */
-#define CLIBS		"_CLIBS"
+#define CLIBS "_CLIBS"
 
-#define LIB_FAIL	"open"
+#define LIB_FAIL "open"
 
 
 /* error codes for ll_loadfunc */
-#define ERRLIB		1
-#define ERRFUNC		2
+#define ERRLIB  1
+#define ERRFUNC 2
 
-#define setprogdir(L)		((void)0)
+#define setprogdir(L) ((void)0)
 
 
 /*
@@ -161,7 +161,7 @@ static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
 ** optional flags for LoadLibraryEx
 */
 #if !defined(LUA_LLE_FLAGS)
-#define LUA_LLE_FLAGS	0
+#define LUA_LLE_FLAGS 0
 #endif
 
 
@@ -220,10 +220,10 @@ static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
 */
 
 #undef LIB_FAIL
-#define LIB_FAIL	"absent"
+#define LIB_FAIL "absent"
 
 
-#define DLMSG	"dynamic libraries not enabled; check your Lua installation"
+#define DLMSG "dynamic libraries not enabled; check your Lua installation"
 
 
 static void ll_unloadlib (void *lib) {
@@ -619,7 +619,7 @@ static int ll_seeall (lua_State *L) {
 
 
 /* auxiliary mark (for internal use) */
-#define AUXMARK		"\1"
+#define AUXMARK "\1"
 
 
 /*

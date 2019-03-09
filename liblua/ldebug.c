@@ -30,7 +30,7 @@
 
 
 
-#define noLuaClosure(f)		((f) == NULL || (f)->c.tt == LUA_TCCL)
+#define noLuaClosure(f) ((f) == NULL || (f)->c.tt == LUA_TCCL)
 
 
 static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name);

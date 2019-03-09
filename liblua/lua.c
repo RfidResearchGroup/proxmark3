@@ -19,24 +19,24 @@
 
 
 #if !defined(LUA_PROMPT)
-#define LUA_PROMPT		"> "
-#define LUA_PROMPT2		">> "
+#define LUA_PROMPT  "> "
+#define LUA_PROMPT2 ">> "
 #endif
 
 #if !defined(LUA_PROGNAME)
-#define LUA_PROGNAME		"lua"
+#define LUA_PROGNAME "lua"
 #endif
 
 #if !defined(LUA_MAXINPUT)
-#define LUA_MAXINPUT		512
+#define LUA_MAXINPUT 512
 #endif
 
 #if !defined(LUA_INIT)
-#define LUA_INIT		"LUA_INIT"
+#define LUA_INIT "LUA_INIT"
 #endif
 
 #define LUA_INITVERSION  \
-	LUA_INIT "_" LUA_VERSION_MAJOR "_" LUA_VERSION_MINOR
+    LUA_INIT "_" LUA_VERSION_MAJOR "_" LUA_VERSION_MINOR
 
 
 /*
@@ -45,13 +45,13 @@
 */
 #if defined(LUA_USE_ISATTY)
 #include <unistd.h>
-#define lua_stdin_is_tty()	isatty(0)
+#define lua_stdin_is_tty() isatty(0)
 #elif defined(LUA_WIN)
 #include <io.h>
 #include <stdio.h>
-#define lua_stdin_is_tty()	_isatty(_fileno(stdin))
+#define lua_stdin_is_tty() _isatty(_fileno(stdin))
 #else
-#define lua_stdin_is_tty()	1  /* assume stdin is a tty */
+#define lua_stdin_is_tty() 1  /* assume stdin is a tty */
 #endif
 
 
@@ -66,19 +66,19 @@
 #include <stdio.h>
 #include <readline/readline.h>
 #include <readline/history.h>
-#define lua_readline(L,b,p)	((void)L, ((b)=readline(p)) != NULL)
+#define lua_readline(L,b,p) ((void)L, ((b)=readline(p)) != NULL)
 #define lua_saveline(L,idx) \
         if (lua_rawlen(L,idx) > 0)  /* non-empty line? */ \
           add_history(lua_tostring(L, idx));  /* add it to history */
-#define lua_freeline(L,b)	((void)L, free(b))
+#define lua_freeline(L,b) ((void)L, free(b))
 
 #elif !defined(lua_readline)
 
 #define lua_readline(L,b,p) \
         ((void)L, fputs(p, stdout), fflush(stdout),  /* show prompt */ \
         fgets(b, LUA_MAXINPUT, stdin) != NULL)  /* get line */
-#define lua_saveline(L,idx)	{ (void)L; (void)idx; }
-#define lua_freeline(L,b)	{ (void)L; (void)b; }
+#define lua_saveline(L,idx) { (void)L; (void)idx; }
+#define lua_freeline(L,b) { (void)L; (void)b; }
 
 #endif
 
@@ -241,8 +241,8 @@ static const char *get_prompt (lua_State *L, int firstline) {
 }
 
 /* mark in error messages for incomplete statements */
-#define EOFMARK		"<eof>"
-#define marklen		(sizeof(EOFMARK)/sizeof(char) - 1)
+#define EOFMARK "<eof>"
+#define marklen (sizeof(EOFMARK)/sizeof(char) - 1)
 
 static int incomplete (lua_State *L, int status) {
   if (status == LUA_ERRSYNTAX) {
@@ -342,16 +342,16 @@ static int handle_script (lua_State *L, char **argv, int n) {
 
 
 /* check that argument has no extra characters at the end */
-#define noextrachars(x)		{if ((x)[2] != '\0') return -1;}
+#define noextrachars(x) {if ((x)[2] != '\0') return -1;}
 
 
 /* indices of various argument indicators in array args */
-#define has_i		0	/* -i */
-#define has_v		1	/* -v */
-#define has_e		2	/* -e */
-#define has_E		3	/* -E */
+#define has_i 0 /* -i */
+#define has_v 1 /* -v */
+#define has_e 2 /* -e */
+#define has_E 3 /* -E */
 
-#define num_has		4	/* number of 'has_*' */
+#define num_has 4 /* number of 'has_*' */
 
 
 static int collectargs (char **argv, int *args) {

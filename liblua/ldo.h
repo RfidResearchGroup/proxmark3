@@ -13,14 +13,14 @@
 #include "lzio.h"
 
 
-#define luaD_checkstack(L,n)	if (L->stack_last - L->top <= (n)) \
-				    luaD_growstack(L, n); else condmovestack(L);
+#define luaD_checkstack(L,n) if (L->stack_last - L->top <= (n)) \
+                    luaD_growstack(L, n); else condmovestack(L);
 
 
 #define incr_top(L) {L->top++; luaD_checkstack(L,0);}
 
-#define savestack(L,p)		((char *)(p) - (char *)L->stack)
-#define restorestack(L,n)	((TValue *)((char *)L->stack + (n)))
+#define savestack(L,p)    ((char *)(p) - (char *)L->stack)
+#define restorestack(L,n) ((TValue *)((char *)L->stack + (n)))
 
 
 /* type of protected functions, to be ran by `runprotected' */

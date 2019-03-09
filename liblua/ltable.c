@@ -40,33 +40,33 @@
 ** max size of array part is 2^MAXBITS
 */
 #if LUAI_BITSINT >= 32
-#define MAXBITS		30
+#define MAXBITS 30
 #else
-#define MAXBITS		(LUAI_BITSINT-2)
+#define MAXBITS (LUAI_BITSINT-2)
 #endif
 
-#define MAXASIZE	(1 << MAXBITS)
+#define MAXASIZE (1 << MAXBITS)
 
 
-#define hashpow2(t,n)		(gnode(t, lmod((n), sizenode(t))))
+#define hashpow2(t,n) (gnode(t, lmod((n), sizenode(t))))
 
-#define hashstr(t,str)		hashpow2(t, (str)->tsv.hash)
-#define hashboolean(t,p)	hashpow2(t, p)
+#define hashstr(t,str) hashpow2(t, (str)->tsv.hash)
+#define hashboolean(t,p) hashpow2(t, p)
 
 
 /*
 ** for some types, it is better to avoid modulus by power of 2, as
 ** they tend to have many 2 factors.
 */
-#define hashmod(t,n)	(gnode(t, ((n) % ((sizenode(t)-1)|1))))
+#define hashmod(t,n) (gnode(t, ((n) % ((sizenode(t)-1)|1))))
 
 
-#define hashpointer(t,p)	hashmod(t, IntPoint(p))
+#define hashpointer(t,p) hashmod(t, IntPoint(p))
 
 
-#define dummynode		(&dummynode_)
+#define dummynode (&dummynode_)
 
-#define isdummy(n)		((n) == dummynode)
+#define isdummy(n) ((n) == dummynode)
 
 static const Node dummynode_ = {
   {NILCONSTANT},  /* value */

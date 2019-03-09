@@ -15,11 +15,11 @@
 
 #define tostring(L,o) (ttisstring(o) || (luaV_tostring(L, o)))
 
-#define tonumber(o,n)	(ttisnumber(o) || (((o) = luaV_tonumber(o,n)) != NULL))
+#define tonumber(o,n) (ttisnumber(o) || (((o) = luaV_tonumber(o,n)) != NULL))
 
 #define equalobj(L,o1,o2)  (ttisequal(o1, o2) && luaV_equalobj_(L, o1, o2))
 
-#define luaV_rawequalobj(o1,o2)		equalobj(NULL,o1,o2)
+#define luaV_rawequalobj(o1,o2) equalobj(NULL,o1,o2)
 
 
 /* not to called directly */

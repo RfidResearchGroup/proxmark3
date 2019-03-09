@@ -17,25 +17,25 @@
 */
 
 typedef enum {
-  VVOID,	/* no value */
+  VVOID,        /* no value */
   VNIL,
   VTRUE,
   VFALSE,
-  VK,		/* info = index of constant in `k' */
-  VKNUM,	/* nval = numerical value */
-  VNONRELOC,	/* info = result register */
-  VLOCAL,	/* info = local register */
+  VK,           /* info = index of constant in `k' */
+  VKNUM,        /* nval = numerical value */
+  VNONRELOC,    /* info = result register */
+  VLOCAL,       /* info = local register */
   VUPVAL,       /* info = index of upvalue in 'upvalues' */
-  VINDEXED,	/* t = table register/upvalue; idx = index R/K */
-  VJMP,		/* info = instruction pc */
-  VRELOCABLE,	/* info = instruction pc */
-  VCALL,	/* info = instruction pc */
-  VVARARG	/* info = instruction pc */
+  VINDEXED,     /* t = table register/upvalue; idx = index R/K */
+  VJMP,         /* info = instruction pc */
+  VRELOCABLE,   /* info = instruction pc */
+  VCALL,        /* info = instruction pc */
+  VVARARG       /* info = instruction pc */
 } expkind;
 
 
-#define vkisvar(k)	(VLOCAL <= (k) && (k) <= VINDEXED)
-#define vkisinreg(k)	((k) == VNONRELOC || (k) == VLOCAL)
+#define vkisvar(k)   (VLOCAL <= (k) && (k) <= VINDEXED)
+#define vkisinreg(k) ((k) == VNONRELOC || (k) == VLOCAL)
 
 typedef struct expdesc {
   expkind k;

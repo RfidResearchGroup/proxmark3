@@ -16,7 +16,7 @@
 #include "lualib.h"
 
 
-#define aux_getn(L,n)	(luaL_checktype(L, n, LUA_TTABLE), luaL_len(L, n))
+#define aux_getn(L,n) (luaL_checktype(L, n, LUA_TTABLE), luaL_len(L, n))
 
 
 

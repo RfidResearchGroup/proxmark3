@@ -27,19 +27,19 @@
 
 
 #if !defined(LUAI_GCPAUSE)
-#define LUAI_GCPAUSE	200  /* 200% */
+#define LUAI_GCPAUSE 200  /* 200% */
 #endif
 
 #if !defined(LUAI_GCMAJOR)
-#define LUAI_GCMAJOR	200  /* 200% */
+#define LUAI_GCMAJOR 200  /* 200% */
 #endif
 
 #if !defined(LUAI_GCMUL)
-#define LUAI_GCMUL	200 /* GC runs 'twice the speed' of memory allocation */
+#define LUAI_GCMUL   200 /* GC runs 'twice the speed' of memory allocation */
 #endif
 
 
-#define MEMERRMSG	"not enough memory"
+#define MEMERRMSG "not enough memory"
 
 
 /*
@@ -48,7 +48,7 @@
 */
 #if !defined(luai_makeseed)
 #include <time.h>
-#define luai_makeseed()		cast(unsigned int, time(NULL))
+#define luai_makeseed() cast(unsigned int, time(NULL))
 #endif
 
 
@@ -74,7 +74,7 @@ typedef struct LG {
 
 
 
-#define fromstate(L)	(cast(LX *, cast(lu_byte *, (L)) - offsetof(LX, l)))
+#define fromstate(L) (cast(LX *, cast(lu_byte *, (L)) - offsetof(LX, l)))
 
 
 /*

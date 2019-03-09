@@ -18,8 +18,8 @@
 
 
 #undef PI
-#define PI	((lua_Number)(3.1415926535897932384626433832795))
-#define RADIANS_PER_DEGREE	((lua_Number)(PI/180.0))
+#define PI ((lua_Number)(3.1415926535897932384626433832795))
+#define RADIANS_PER_DEGREE ((lua_Number)(PI/180.0))
 
 
 

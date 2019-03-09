@@ -28,44 +28,44 @@
 ** cost of sweeping one element (the size of a small object divided
 ** by some adjust for the sweep speed)
 */
-#define GCSWEEPCOST	((sizeof(TString) + 4) / 4)
+#define GCSWEEPCOST ((sizeof(TString) + 4) / 4)
 
 /* maximum number of elements to sweep in each single step */
-#define GCSWEEPMAX	(cast_int((GCSTEPSIZE / GCSWEEPCOST) / 4))
+#define GCSWEEPMAX  (cast_int((GCSTEPSIZE / GCSWEEPCOST) / 4))
 
 /* maximum number of finalizers to call in each GC step */
-#define GCFINALIZENUM	4
+#define GCFINALIZENUM 4
 
 
 /*
 ** macro to adjust 'stepmul': 'stepmul' is actually used like
 ** 'stepmul / STEPMULADJ' (value chosen by tests)
 */
-#define STEPMULADJ		200
+#define STEPMULADJ    200
 
 
 /*
 ** macro to adjust 'pause': 'pause' is actually used like
 ** 'pause / PAUSEADJ' (value chosen by tests)
 */
-#define PAUSEADJ		100
+#define PAUSEADJ      100
 
 
 /*
 ** 'makewhite' erases all color bits plus the old bit and then
 ** sets only the current white bit
 */
-#define maskcolors	(~(bit2mask(BLACKBIT, OLDBIT) | WHITEBITS))
-#define makewhite(g,x)	\
+#define maskcolors (~(bit2mask(BLACKBIT, OLDBIT) | WHITEBITS))
+#define makewhite(g,x) \
  (gch(x)->marked = cast_byte((gch(x)->marked & maskcolors) | luaC_white(g)))
 
-#define white2gray(x)	resetbits(gch(x)->marked, WHITEBITS)
-#define black2gray(x)	resetbit(gch(x)->marked, BLACKBIT)
+#define white2gray(x) resetbits(gch(x)->marked, WHITEBITS)
+#define black2gray(x) resetbit(gch(x)->marked, BLACKBIT)
 
 
-#define isfinalized(x)		testbit(gch(x)->marked, FINALIZEDBIT)
+#define isfinalized(x) testbit(gch(x)->marked, FINALIZEDBIT)
 
-#define checkdeadkey(n)	lua_assert(!ttisdeadkey(gkey(n)) || ttisnil(gval(n)))
+#define checkdeadkey(n) lua_assert(!ttisdeadkey(gkey(n)) || ttisnil(gval(n)))
 
 
 #define checkconsistency(obj)  \
@@ -76,7 +76,7 @@
   if (valiswhite(o)) reallymarkobject(g,gcvalue(o)); }
 
 #define markobject(g,t) { if ((t) && iswhite(obj2gco(t))) \
-		reallymarkobject(g, obj2gco(t)); }
+        reallymarkobject(g, obj2gco(t)); }
 
 static void reallymarkobject (global_State *g, GCObject *o);
 
@@ -91,13 +91,13 @@ static void reallymarkobject (global_State *g, GCObject *o);
 /*
 ** one after last element in a hash array
 */
-#define gnodelast(h)	gnode(h, cast(size_t, sizenode(h)))
+#define gnodelast(h) gnode(h, cast(size_t, sizenode(h)))
 
 
 /*
 ** link table 'h' into list pointed by 'p'
 */
-#define linktable(h,p)	((h)->gclist = *(p), *(p) = obj2gco(h))
+#define linktable(h,p) ((h)->gclist = *(p), *(p) = obj2gco(h))
 
 
 /*
@@ -680,7 +680,7 @@ static void freeobj (lua_State *L, GCObject *o) {
 }
 
 
-#define sweepwholelist(L,p)	sweeplist(L,p,MAX_LUMEM)
+#define sweepwholelist(L,p) sweeplist(L,p,MAX_LUMEM)
 static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count);
 
 
@@ -915,7 +915,7 @@ static void setpause (global_State *g, l_mem estimate) {
 
 
 #define sweepphases  \
-	(bitmask(GCSsweepstring) | bitmask(GCSsweepudata) | bitmask(GCSsweep))
+    (bitmask(GCSsweepstring) | bitmask(GCSsweepudata) | bitmask(GCSsweep))
 
 
 /*

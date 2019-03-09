@@ -29,7 +29,7 @@
 
 
 
-#define currIsNewline(ls)	(ls->current == '\n' || ls->current == '\r')
+#define currIsNewline(ls) (ls->current == '\n' || ls->current == '\r')
 
 
 /* ORDER RESERVED */
@@ -201,11 +201,11 @@ static void buffreplace (LexState *ls, char from, char to) {
 #if ANDROID
 #define getlocaldecpoint() '.'
 #elif !defined(getlocaledecpoint)
-#define getlocaledecpoint()	(localeconv()->decimal_point[0])
+#define getlocaledecpoint() (localeconv()->decimal_point[0])
 #endif
 
 
-#define buff2d(b,e)	luaO_str2d(luaZ_buffer(b), luaZ_bufflen(b) - 1, e)
+#define buff2d(b,e) luaO_str2d(luaZ_buffer(b), luaZ_bufflen(b) - 1, e)
 
 /*
 ** in case of format error, try to change decimal point separator to

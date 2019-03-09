@@ -33,7 +33,7 @@ typedef enum {
   TM_LE,
   TM_CONCAT,
   TM_CALL,
-  TM_N		/* number of elements in the enum */
+  TM_N    /* number of elements in the enum */
 } TMS;
 
 
@@ -41,10 +41,10 @@ typedef enum {
 #define gfasttm(g,et,e) ((et) == NULL ? NULL : \
   ((et)->flags & (1u<<(e))) ? NULL : luaT_gettm(et, e, (g)->tmname[e]))
 
-#define fasttm(l,et,e)	gfasttm(G(l), et, e)
+#define fasttm(l,et,e) gfasttm(G(l), et, e)
 
-#define ttypename(x)	luaT_typenames_[(x) + 1]
-#define objtypename(x)	ttypename(ttypenv(x))
+#define ttypename(x)   luaT_typenames_[(x) + 1]
+#define objtypename(x) ttypename(ttypenv(x))
 
 LUAI_DDEC const char *const luaT_typenames_[LUA_TOTALTAGS];
 

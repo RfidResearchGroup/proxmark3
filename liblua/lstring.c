@@ -23,7 +23,7 @@
 ** compute its hash
 */
 #if !defined(LUAI_HASHLIMIT)
-#define LUAI_HASHLIMIT		5
+#define LUAI_HASHLIMIT 5
 #endif
 
 

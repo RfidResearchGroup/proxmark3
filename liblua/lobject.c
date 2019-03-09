@@ -241,13 +241,13 @@ const char *luaO_pushfstring (lua_State *L, const char *fmt, ...) {
 
 
 /* number of chars of a literal string without the ending \0 */
-#define LL(x)	(sizeof(x)/sizeof(char) - 1)
+#define LL(x) (sizeof(x)/sizeof(char) - 1)
 
-#define RETS	"..."
-#define PRE	"[string \""
-#define POS	"\"]"
+#define RETS "..."
+#define PRE "[string \""
+#define POS "\"]"
 
-#define addstr(a,b,l)	( memcpy(a,b,(l) * sizeof(char)), a += (l) )
+#define addstr(a,b,l) ( memcpy(a,b,(l) * sizeof(char)), a += (l) )
 
 void luaO_chunkid (char *out, const char *source, size_t bufflen) {
   size_t l = strlen(source);

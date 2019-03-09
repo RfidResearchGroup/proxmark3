@@ -29,10 +29,10 @@
 
 /* maximum number of local variables per function (must be smaller
    than 250, due to the bytecode format) */
-#define MAXVARS		200
+#define MAXVARS 200
 
 
-#define hasmultret(k)		((k) == VCALL || (k) == VVARARG)
+#define hasmultret(k) ((k) == VCALL || (k) == VVARARG)
 
 
 
@@ -119,7 +119,7 @@ static void checknext (LexState *ls, int c) {
 }
 
 
-#define check_condition(ls,c,msg)	{ if (!(c)) luaX_syntaxerror(ls, msg); }
+#define check_condition(ls,c,msg) { if (!(c)) luaX_syntaxerror(ls, msg); }
 
 
 
@@ -192,7 +192,7 @@ static void new_localvarliteral_ (LexState *ls, const char *name, size_t sz) {
 }
 
 #define new_localvarliteral(ls,v) \
-	new_localvarliteral_(ls, "" v, (sizeof(v)/sizeof(char))-1)
+    new_localvarliteral_(ls, "" v, (sizeof(v)/sizeof(char))-1)
 
 
 static LocVar *getlocvar (FuncState *fs, int i) {
@@ -334,7 +334,7 @@ static void enterlevel (LexState *ls) {
 }
 
 
-#define leavelevel(ls)	((ls)->L->nCcalls--)
+#define leavelevel(ls) ((ls)->L->nCcalls--)
 
 
 static void closegoto (LexState *ls, int g, Labeldesc *label) {
@@ -1027,7 +1027,7 @@ static const struct {
    {2, 2}, {1, 1}                   /* and, or */
 };
 
-#define UNARY_PRIORITY	8  /* priority for unary operators */
+#define UNARY_PRIORITY 8  /* priority for unary operators */
 
 
 /*

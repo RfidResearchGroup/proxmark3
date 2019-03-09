@@ -33,13 +33,13 @@ static l_noret error(LoadState* S, const char* why)
  luaD_throw(S->L,LUA_ERRSYNTAX);
 }
 
-#define LoadMem(S,b,n,size)	LoadBlock(S,b,(n)*(size))
-#define LoadByte(S)		(lu_byte)LoadChar(S)
-#define LoadVar(S,x)		LoadMem(S,&x,1,sizeof(x))
-#define LoadVector(S,b,n,size)	LoadMem(S,b,n,size)
+#define LoadMem(S,b,n,size)    LoadBlock(S,b,(n)*(size))
+#define LoadByte(S)            (lu_byte)LoadChar(S)
+#define LoadVar(S,x)           LoadMem(S,&x,1,sizeof(x))
+#define LoadVector(S,b,n,size) LoadMem(S,b,n,size)
 
 #if !defined(luai_verifycode)
-#define luai_verifycode(L,b,f)	/* empty */
+#define luai_verifycode(L,b,f) /* empty */
 #endif
 
 static void LoadBlock(LoadState* S, void* b, size_t size)
@@ -79,7 +79,7 @@ static TString* LoadString(LoadState* S)
  {
   char* s=luaZ_openspace(S->L,S->b,size);
   LoadBlock(S,s,size*sizeof(char));
-  return luaS_newlstr(S->L,s,size-1);		/* remove trailing '\0' */
+  return luaS_newlstr(S->L,s,size-1); /* remove trailing '\0' */
  }
 }
 
@@ -107,17 +107,17 @@ static void LoadConstants(LoadState* S, Proto* f)
   switch (t)
   {
    case LUA_TNIL:
-	setnilvalue(o);
-	break;
+    setnilvalue(o);
+    break;
    case LUA_TBOOLEAN:
-	setbvalue(o,LoadChar(S));
-	break;
+    setbvalue(o,LoadChar(S));
+    break;
    case LUA_TNUMBER:
-	setnvalue(o,LoadNumber(S));
-	break;
+    setnvalue(o,LoadNumber(S));
+    break;
    case LUA_TSTRING:
-	setsvalue2n(S->L,o,LoadString(S));
-	break;
+    setsvalue2n(S->L,o,LoadString(S));
+    break;
     default: lua_assert(0);
   }
  }
@@ -182,17 +182,17 @@ static void LoadFunction(LoadState* S, Proto* f)
 }
 
 /* the code below must be consistent with the code in luaU_header */
-#define N0	LUAC_HEADERSIZE
-#define N1	(sizeof(LUA_SIGNATURE)-sizeof(char))
-#define N2	N1+2
-#define N3	N2+6
+#define N0 LUAC_HEADERSIZE
+#define N1 (sizeof(LUA_SIGNATURE)-sizeof(char))
+#define N2 N1+2
+#define N3 N2+6
 
 static void LoadHeader(LoadState* S)
 {
  lu_byte h[LUAC_HEADERSIZE];
  lu_byte s[LUAC_HEADERSIZE];
  luaU_header(h);
- memcpy(s,h,sizeof(char));			/* first char already read */
+ memcpy(s,h,sizeof(char)); /* first char already read */
  LoadBlock(S,s+sizeof(char),LUAC_HEADERSIZE-sizeof(char));
  if (memcmp(h,s,N0)==0) return;
  if (memcmp(h,s,N1)!=0) error(S,"not a");
@@ -232,9 +232,9 @@ Closure* luaU_undump (lua_State* L, ZIO* Z, Mbuffer* buff, const char* name)
  return cl;
 }
 
-#define MYINT(s)	(s[0]-'0')
-#define VERSION		MYINT(LUA_VERSION_MAJOR)*16+MYINT(LUA_VERSION_MINOR)
-#define FORMAT		0		/* this is the official format */
+#define MYINT(s) (s[0]-'0')
+#define VERSION  MYINT(LUA_VERSION_MAJOR)*16+MYINT(LUA_VERSION_MINOR)
+#define FORMAT 0 /* this is the official format */
 
 /*
 * make header for precompiled chunks
@@ -248,11 +248,11 @@ void luaU_header (lu_byte* h)
  h+=sizeof(LUA_SIGNATURE)-sizeof(char);
  *h++=cast_byte(VERSION);
  *h++=cast_byte(FORMAT);
- *h++=cast_byte(*(char*)&x);			/* endianness */
+ *h++=cast_byte(*(char*)&x); /* endianness */
  *h++=cast_byte(sizeof(int));
  *h++=cast_byte(sizeof(size_t));
  *h++=cast_byte(sizeof(Instruction));
  *h++=cast_byte(sizeof(lua_Number));
- *h++=cast_byte(((lua_Number)0.5)==0);		/* is lua_Number integral? */
+ *h++=cast_byte(((lua_Number)0.5)==0); /* is lua_Number integral? */
  memcpy(h,LUAC_TAIL,sizeof(LUAC_TAIL)-sizeof(char));
 }

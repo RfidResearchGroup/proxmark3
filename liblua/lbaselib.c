@@ -43,7 +43,7 @@ static int luaB_print (lua_State *L) {
 }
 
 
-#define SPACECHARS	" \f\n\r\t\v"
+#define SPACECHARS " \f\n\r\t\v"
 
 static int luaB_tonumber (lua_State *L) {
   if (lua_isnoneornil(L, 2)) {  /* standard conversion */
@@ -280,7 +280,7 @@ static int luaB_loadfile (lua_State *L) {
 ** string to avoid it being collected while parsed. 'load' has four
 ** optional arguments (chunk, source name, mode, and environment).
 */
-#define RESERVEDSLOT	5
+#define RESERVEDSLOT 5
 
 
 /*

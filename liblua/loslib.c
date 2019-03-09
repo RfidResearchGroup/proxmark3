@@ -26,12 +26,12 @@
 #if !defined(LUA_STRFTIMEOPTIONS)
 
 #if !defined(LUA_USE_POSIX)
-#define LUA_STRFTIMEOPTIONS	{ "aAbBcdHIjmMpSUwWxXyYz%", "" }
+#define LUA_STRFTIMEOPTIONS { "aAbBcdHIjmMpSUwWxXyYz%", "" }
 #else
 #define LUA_STRFTIMEOPTIONS \
-	{ "aAbBcCdDeFgGhHIjmMnprRStTuUVwWxXyYzZ%", "" \
-	  "", "E", "cCxXyY",  \
-	  "O", "deHImMSuUVwWy" }
+    { "aAbBcCdDeFgGhHIjmMnprRStTuUVwWxXyYzZ%", "" \
+      "", "E", "cCxXyY",  \
+      "O", "deHImMSuUVwWy" }
 #endif
 
 #endif
@@ -44,7 +44,7 @@
 */
 #if defined(LUA_USE_MKSTEMP)
 #include <unistd.h>
-#define LUA_TMPNAMBUFSIZE	32
+#define LUA_TMPNAMBUFSIZE 32
 #define lua_tmpnam(b,e) { \
         strcpy(b, "/tmp/lua_XXXXXX"); \
         e = mkstemp(b); \
@@ -53,8 +53,8 @@
 
 #elif !defined(lua_tmpnam)
 
-#define LUA_TMPNAMBUFSIZE	L_tmpnam
-#define lua_tmpnam(b,e)		{ e = (tmpnam(b) == NULL); }
+#define LUA_TMPNAMBUFSIZE L_tmpnam
+#define lua_tmpnam(b,e) { e = (tmpnam(b) == NULL); }
 
 #endif
 
@@ -65,13 +65,13 @@
 */
 #if defined(LUA_USE_GMTIME_R)
 
-#define l_gmtime(t,r)		gmtime_r(t,r)
-#define l_localtime(t,r)	localtime_r(t,r)
+#define l_gmtime(t,r)    gmtime_r(t,r)
+#define l_localtime(t,r) localtime_r(t,r)
 
 #elif !defined(l_gmtime)
 
-#define l_gmtime(t,r)		((void)r, gmtime(t))
-#define l_localtime(t,r)  	((void)r, localtime(t))
+#define l_gmtime(t,r)    ((void)r, gmtime(t))
+#define l_localtime(t,r) ((void)r, localtime(t))
 
 #endif
 
