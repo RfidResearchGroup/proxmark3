@@ -252,7 +252,7 @@ void printEM410x(uint32_t hi, uint64_t id) {
 
 	if (!id && !hi) return;
 
-	PrintAndLogEx(NORMAL, "EM410x %s pattern found", (hi) ? "XL" : "" );
+	PrintAndLogEx(SUCCESS, "EM410x %s pattern found", (hi) ? "XL" : "" );
 
 	uint64_t iii=1;
 	uint64_t id2lo=0;
@@ -549,7 +549,7 @@ int CmdEM410xBrute(const char *Cmd) {
 
 		if (ukbhit()) {
 			int gc = getchar(); (void)gc;
-			PrintAndLogEx(NORMAL, "\nAborted via keyboard!\n");
+			PrintAndLogEx(WARNING, "\nAborted via keyboard!\n");
 			free(uidBlock);
 			return 0;
 		}
@@ -583,7 +583,7 @@ int CmdEM410xWatch(const char *Cmd) {
 	do {
 		if (ukbhit()) {
 			int gc = getchar(); (void)gc;
-			PrintAndLogEx(NORMAL, "\naborted via keyboard!\n");
+			PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
 			break;
 		}
 		lf_read(true, 8201);
@@ -606,8 +606,8 @@ int CmdEM410xWatchnSpoof(const char *Cmd) {
 }
 
 int CmdEM410xWrite(const char *Cmd) {
-	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H') return usage_lf_em410x_write();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (cmdp == 'h') return usage_lf_em410x_write();
 
 	uint64_t id = 0xFFFFFFFFFFFFFFFF; // invalid id value
 	int card = 0xFF; // invalid card value
@@ -666,26 +666,27 @@ int CmdEM410xWrite(const char *Cmd) {
 }
 
 //**************** Start of EM4x50 Code ************************
-bool EM_EndParityTest(uint8_t *BitStream, size_t size, uint8_t rows, uint8_t cols, uint8_t pType) {
-	if (rows*cols>size) return false;
-	uint8_t colP=0;
+bool EM_EndParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t cols, uint8_t pType) {
+	if (rows * cols > size) return false;
+	uint8_t colP = 0;
 	//assume last col is a parity and do not test
 	for (uint8_t colNum = 0; colNum < cols-1; colNum++) {
 		for (uint8_t rowNum = 0; rowNum < rows; rowNum++) {
-			colP ^= BitStream[(rowNum*cols)+colNum];
+			colP ^= bs[(rowNum * cols) + colNum];
 		}
 		if (colP != pType) return false;
 	}
 	return true;
 }
 
-bool EM_ByteParityTest(uint8_t *BitStream, size_t size, uint8_t rows, uint8_t cols, uint8_t pType) {
-	if (rows*cols>size) return false;
-	uint8_t rowP=0;
+bool EM_ByteParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t cols, uint8_t pType) {
+	if (rows * cols > size) return false;
+	
+	uint8_t rowP = 0;
 	//assume last row is a parity row and do not test
 	for (uint8_t rowNum = 0; rowNum < rows-1; rowNum++) {
 		for (uint8_t colNum = 0; colNum < cols; colNum++) {
-			rowP ^= BitStream[(rowNum*cols)+colNum];
+			rowP ^= bs[(rowNum * cols) + colNum];
 		}
 		if (rowP != pType) return false;
 	}
@@ -755,10 +756,8 @@ uint32_t OutputEM4x50_Block(uint8_t *BitStream, size_t size, bool verbose, bool 
 			    bytebits_to_byte(BitStream+i*9,8)
 			);
 		}
-		if (pTest)
-			PrintAndLogEx(NORMAL, "Parity Passed");
-		else
-			PrintAndLogEx(NORMAL, "Parity Failed");
+		
+		PrintAndLogEx(SUCCESS, "Parity checks | %s", (pTest)? _GREEN_(Passed) : _RED_(Failed));
 	}
 	return code;
 }
@@ -949,7 +948,7 @@ int EM4x50Read(const char *Cmd, bool verbose) {
 	//print full code:
 	if (verbose || g_debugMode || AllPTest){
 		if (!complete) {
-			PrintAndLogEx(NORMAL, "*** Warning!");
+			PrintAndLogEx(NORMAL, _RED_(*** Warning!) );
 			PrintAndLogEx(NORMAL, "Partial data - no end found!");
 			PrintAndLogEx(NORMAL, "Try again with more samples.");
 		}
@@ -958,11 +957,11 @@ int EM4x50Read(const char *Cmd, bool verbose) {
 		for (block=0; block < end; block++){
 			PrintAndLogEx(NORMAL, "Block %d: %08x", block, Code[block]);
 		}
-		if (AllPTest) {
-			PrintAndLogEx(NORMAL, "Parities Passed");
-		} else {
-			PrintAndLogEx(NORMAL, "Parities Failed");
-			PrintAndLogEx(NORMAL, "Try cleaning the read samples with 'data askedge'");
+		
+		PrintAndLogEx(NORMAL, "Parities checks | %s", (AllPTest) ? _GREEN_(Passed) : _RED_(Failed) );
+		
+		if (AllPTest == 0) {
+			PrintAndLogEx(NORMAL, "Try cleaning the read samples with " _YELLOW_('data askedge') );
 		}
 	}
 
@@ -1005,7 +1004,7 @@ bool downloadSamplesEM(){
 	computeSignalProperties(got, sizeof(got));
 	RepaintGraphWindow();
 	if (getSignalProperties()->isnoise) {
-		PrintAndLogEx(DEBUG, "No tag found");
+		PrintAndLogEx(DEBUG, "No tag found - signal looks like noise");
 		return false;
 	}
 	return true;
@@ -1148,7 +1147,7 @@ int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word) 
 	SendCommand(&c);
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)){
-		PrintAndLogEx(DEBUG, "Command timed out");
+		PrintAndLogEx(DEBUG, "timeout while waiting for reply.");
 		return -1;
 	}
 	if ( !downloadSamplesEM() ) {
@@ -1162,8 +1161,8 @@ int CmdEM4x05Dump(const char *Cmd) {
 	uint8_t addr = 0;
 	uint32_t pwd = 0;
 	bool usePwd = false;
-	uint8_t ctmp = param_getchar(Cmd, 0);
-	if ( ctmp == 'H' || ctmp == 'h' ) return usage_lf_em4x05_dump();
+	uint8_t ctmp = tolower(param_getchar(Cmd, 0));
+	if ( ctmp == 'h' ) return usage_lf_em4x05_dump();
 
 	// for now use default input of 1 as invalid (unlikely 1 will be a valid password...)
 	pwd = param_get32ex(Cmd, 0, 1, 16);
@@ -1181,7 +1180,7 @@ int CmdEM4x05Dump(const char *Cmd) {
 			if (usePwd) {
 				PrintAndLogEx(NORMAL, " %02u | %08X", addr, pwd, word );
 			} else {
-				PrintAndLogEx(NORMAL, " 02 | cannot read");
+				PrintAndLogEx(NORMAL, " 02 | " _RED_(cannot read) );
 			}
 		} else {
 			success &= EM4x05ReadWord_ext(addr, pwd, usePwd, &word);
@@ -1195,8 +1194,8 @@ int CmdEM4x05Read(const char *Cmd) {
 	uint8_t addr;
 	uint32_t pwd;
 	bool usePwd = false;
-	uint8_t ctmp = param_getchar(Cmd, 0);
-	if ( strlen(Cmd) == 0 || ctmp == 'H' || ctmp == 'h' ) return usage_lf_em4x05_read();
+	uint8_t ctmp = tolower(param_getchar(Cmd, 0));
+	if ( strlen(Cmd) == 0 || ctmp == 'h' ) return usage_lf_em4x05_read();
 
 	addr = param_get8ex(Cmd, 0, 50, 10);
 	pwd =  param_get32ex(Cmd, 1, 1, 16);
@@ -1217,13 +1216,13 @@ int CmdEM4x05Read(const char *Cmd) {
 	if (isOk)
 		PrintAndLogEx(NORMAL, "Address %02d | %08X - %s", addr, word, (addr > 13) ? "Lock" : "");
 	else
-		PrintAndLogEx(NORMAL, "Read Address %02d | failed",addr);
+		PrintAndLogEx(NORMAL, "Read Address %02d | " _RED_(failed), addr);
 	return isOk;
 }
 
 int CmdEM4x05Write(const char *Cmd) {
-	uint8_t ctmp = param_getchar(Cmd, 0);
-	if ( strlen(Cmd) == 0 || ctmp == 'H' || ctmp == 'h' ) return usage_lf_em4x05_write();
+	uint8_t ctmp = tolower(param_getchar(Cmd, 0));
+	if ( strlen(Cmd) == 0 || ctmp == 'h' ) return usage_lf_em4x05_write();
 
 	bool usePwd = false;
 	uint8_t addr = 50; // default to invalid address
@@ -1263,9 +1262,9 @@ int CmdEM4x05Write(const char *Cmd) {
 	uint32_t dummy = 0;
 	int isOk = demodEM4x05resp(&dummy);
 	if (isOk)
-		PrintAndLogEx(NORMAL, "Write Verified");
+		PrintAndLogEx(NORMAL, "Write " _GREEN_(Verified) );
 	else
-		PrintAndLogEx(NORMAL, "Write could not be verified");
+		PrintAndLogEx(NORMAL, "Write could " _RED_(not) "be verified");
 	return isOk;
 }
 
@@ -1385,8 +1384,8 @@ int CmdEM4x05Info(const char *Cmd) {
 	uint32_t pwd;
 	uint32_t word = 0, block0 = 0, serial = 0;
   	bool usePwd = false;
-	uint8_t ctmp = param_getchar(Cmd, 0);
-	if ( ctmp == 'H' || ctmp == 'h' ) return usage_lf_em4x05_info();
+	uint8_t ctmp = tolower(param_getchar(Cmd, 0));
+	if ( ctmp == 'h' ) return usage_lf_em4x05_info();
 
 	// for now use default input of 1 as invalid (unlikely 1 will be a valid password...)
 	pwd = param_get32ex(Cmd, 0, 1, 16);
