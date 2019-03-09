@@ -18,8 +18,8 @@
 #include "lfdemod.h"
 #include "cmddata.h" //for g_debugmode
 
-void AppendGraph(int redraw, int clock, int bit);
-int ClearGraph(int redraw);
+void AppendGraph(bool redraw, int clock, int bit);
+int ClearGraph(bool redraw);
 size_t getFromGraphBuf(uint8_t *buff);
 int GetAskClock(const char *str, bool printAns);
 int GetPskClock(const char *str, bool printAns);

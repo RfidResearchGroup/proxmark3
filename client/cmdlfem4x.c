@@ -206,11 +206,11 @@ void ConstructEM410xEmulGraph(const char *uid,const  uint8_t clock) {
 	int i, j, binary[4], parity[4];
 	uint32_t n;
 	/* clear our graph */
-	ClearGraph(0);
+	ClearGraph(false);
 
 	/* write 9 start bits */
 	for (i = 0; i < 9; i++)
-		AppendGraph(0, clock, 1);
+		AppendGraph(false, clock, 1);
 
 	/* for each hex char */
 	parity[0] = parity[1] = parity[2] = parity[3] = 0;
@@ -221,13 +221,13 @@ void ConstructEM410xEmulGraph(const char *uid,const  uint8_t clock) {
 			binary[j] = n % 2;
 
 		/* append each bit */
-		AppendGraph(0, clock, binary[0]);
-		AppendGraph(0, clock, binary[1]);
-		AppendGraph(0, clock, binary[2]);
-		AppendGraph(0, clock, binary[3]);
+		AppendGraph(false, clock, binary[0]);
+		AppendGraph(false, clock, binary[1]);
+		AppendGraph(false, clock, binary[2]);
+		AppendGraph(false, clock, binary[3]);
 
 		/* append parity bit */
-		AppendGraph(0, clock, binary[0] ^ binary[1] ^ binary[2] ^ binary[3]);
+		AppendGraph(false, clock, binary[0] ^ binary[1] ^ binary[2] ^ binary[3]);
 
 		/* keep track of column parity */
 		parity[0] ^= binary[0];
@@ -237,13 +237,13 @@ void ConstructEM410xEmulGraph(const char *uid,const  uint8_t clock) {
 	}
 
 	/* parity columns */
-	AppendGraph(0, clock, parity[0]);
-	AppendGraph(0, clock, parity[1]);
-	AppendGraph(0, clock, parity[2]);
-	AppendGraph(0, clock, parity[3]);
+	AppendGraph(false, clock, parity[0]);
+	AppendGraph(false, clock, parity[1]);
+	AppendGraph(false, clock, parity[2]);
+	AppendGraph(false, clock, parity[3]);
 
 	/* stop bit */
-	AppendGraph(1, clock, 0);
+	AppendGraph(true, clock, 0);
 }
 
 //by marshmellow

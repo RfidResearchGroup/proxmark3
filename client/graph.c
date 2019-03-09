@@ -13,8 +13,10 @@ int GraphBuffer[MAX_GRAPH_TRACE_LEN];
 int GraphTraceLen;
 int s_Buff[MAX_GRAPH_TRACE_LEN];
 
-/* write a manchester bit to the graph */
-void AppendGraph(int redraw, int clock, int bit) {
+/* write a manchester bit to the graph
+TODO,  verfy that this doesn't overflow buffer  (iceman)
+*/
+void AppendGraph(bool redraw, int clock, int bit) {
 	int i;
 	//set first half the clock bit (all 1's or 0's for a 0 or 1 bit)
 	for (i = 0; i < (int)(clock / 2); ++i)
@@ -28,7 +30,7 @@ void AppendGraph(int redraw, int clock, int bit) {
 }
 
 // clear out our graph window
-int ClearGraph(int redraw) {
+int ClearGraph(bool redraw) {
 	int gtl = GraphTraceLen;
 	memset(GraphBuffer, 0x00, GraphTraceLen);
 	GraphTraceLen = 0;
@@ -60,7 +62,7 @@ void save_restoreGB(uint8_t saveOpt) {
 void setGraphBuf(uint8_t *buf, size_t size) {
 	if ( buf == NULL ) return;
 
-	ClearGraph(0);
+	ClearGraph(false);
 
 	if ( size > MAX_GRAPH_TRACE_LEN )
 		size = MAX_GRAPH_TRACE_LEN;
