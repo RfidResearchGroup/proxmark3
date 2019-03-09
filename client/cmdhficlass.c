@@ -574,16 +574,16 @@ int HFiClassReader(const char *Cmd, bool loop, bool verbose) {
 }
 
 int CmdHFiClassReader(const char *Cmd) {
-	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H') return usage_hf_iclass_reader();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (cmdp == 'h') return usage_hf_iclass_reader();
 	bool findone = (cmdp == '1') ? false : true;
 	return HFiClassReader(Cmd, findone, true);
 }
 
 int CmdHFiClassReader_Replay(const char *Cmd) {
 
-	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd)<1 || cmdp == 'H' || cmdp == 'h') return usage_hf_iclass_replay();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (strlen(Cmd)<1 || cmdp == 'h') return usage_hf_iclass_replay();
 
 	uint8_t readerType = 0;
 	uint8_t MAC[4] = {0x00, 0x00, 0x00, 0x00};
@@ -610,13 +610,12 @@ int iclassEmlSetMem(uint8_t *data, int blockNum, int blocksCount) {
 
 int CmdHFiClassELoad(const char *Cmd) {
 
-	char ctmp = param_getchar(Cmd, 0);
-	if (strlen(Cmd)< 1 || ctmp == 'h' || ctmp == 'H') return usage_hf_iclass_eload();
+	char ctmp = tolower(param_getchar(Cmd, 0));
+	if (strlen(Cmd)< 1 || ctmp == 'h') return usage_hf_iclass_eload();
 
-	if ( ctmp != 'f' && ctmp != 'F') return usage_hf_iclass_eload();
+	if ( ctmp != 'f' ) return usage_hf_iclass_eload();
 
 	//File handling and reading
-	FILE *f;
 	char filename[FILE_PATH_SIZE];
 
 	if ( param_getstr(Cmd, 1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE ) {
@@ -624,7 +623,7 @@ int CmdHFiClassELoad(const char *Cmd) {
 		return 1;
 	}
 
-	f = fopen(filename, "rb");
+	FILE *f = fopen(filename, "rb");
 	if ( !f ){
 		PrintAndLogEx(FAILED, "File: " _YELLOW_(%s) ": not found or locked.", filename);
 		return 1;
@@ -703,8 +702,8 @@ static int readKeyfile(const char *filename, size_t len, uint8_t* buffer) {
 
 int CmdHFiClassDecrypt(const char *Cmd) {
 
-	char opt = param_getchar(Cmd, 0);
-	if (strlen(Cmd)<1 || opt == 'h' || opt == 'H') return usage_hf_iclass_decrypt();
+	char opt = tolower(param_getchar(Cmd, 0));
+	if (strlen(Cmd)<1 || opt == 'h') return usage_hf_iclass_decrypt();
 
 	uint8_t key[16] = { 0 };
 	if (readKeyfile("iclass_decryptionkey.bin", 16, key)) return usage_hf_iclass_decrypt();
@@ -807,8 +806,8 @@ static int iClassEncryptBlkData(uint8_t *blkData) {
 
 int CmdHFiClassEncryptBlk(const char *Cmd) {
 	uint8_t blkData[8] = {0};
-	char opt = param_getchar(Cmd, 0);
-	if (strlen(Cmd)<1 || opt == 'h' || opt == 'H') return usage_hf_iclass_encrypt();
+	char opt = tolower(param_getchar(Cmd, 0));
+	if (strlen(Cmd)<1 || opt == 'h') return usage_hf_iclass_encrypt();
 
 	//get the bytes to encrypt
 	if (param_gethex(Cmd, 0, blkData, 16)) {
@@ -924,12 +923,10 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 	uint8_t cmdp = 0;
 
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch (param_getchar(Cmd, cmdp)) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'h':
-		case 'H':
 			return usage_hf_iclass_dump();
 		case 'c':
-		case 'C':
 			have_credit_key = true;
 			dataLen = param_getstr(Cmd, cmdp+1, tempStr, sizeof(tempStr));
 			if (dataLen == 16) {
@@ -949,12 +946,10 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 			cmdp += 2;
 			break;
 		case 'e':
-		case 'E':
 			elite = true;
 			cmdp++;
 			break;
 		case 'f':
-		case 'F':
 			fileNameLen = param_getstr(Cmd, cmdp+1, filename, sizeof(filename));
 			if (fileNameLen < 1) {
 				PrintAndLogEx(WARNING, "no filename found after f");
@@ -963,7 +958,6 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 			cmdp += 2;
 			break;
 		case 'k':
-		case 'K':
 			have_debit_key = true;
 			dataLen = param_getstr(Cmd, cmdp+1, tempStr, sizeof(tempStr));
 			if (dataLen == 16) {
@@ -983,12 +977,10 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 			cmdp += 2;
 			break;
 		case 'r':
-		case 'R':
 			rawkey = true;
 			cmdp++;
 			break;
 		case 'v':
-		case 'V':
 			verbose = true;
 			cmdp++;
 			break;
@@ -1198,13 +1190,11 @@ int CmdHFiClass_WriteBlock(const char *Cmd) {
 	bool errors = false;
 	bool verbose = false;
 	uint8_t cmdp = 0;
-	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch(param_getchar(Cmd, cmdp)) {
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'h':
-		case 'H':
 			return usage_hf_iclass_writeblock();
 		case 'b':
-		case 'B':
 			if (param_gethex(Cmd, cmdp+1, &blockno, 2)) {
 				PrintAndLogEx(WARNING, "Block No must include 2 HEX symbols\n");
 				errors = true;
@@ -1212,12 +1202,10 @@ int CmdHFiClass_WriteBlock(const char *Cmd) {
 			cmdp += 2;
 			break;
 		case 'c':
-		case 'C':
 			use_credit_key = true;
 			cmdp++;
 			break;
 		case 'd':
-		case 'D':
 			if (param_gethex(Cmd, cmdp+1, bldata, 16)) {
 				PrintAndLogEx(WARNING, "Data must include 16 HEX symbols\n");
 				errors = true;
@@ -1225,12 +1213,10 @@ int CmdHFiClass_WriteBlock(const char *Cmd) {
 			cmdp += 2;
 			break;
 		case 'e':
-		case 'E':
 			elite = true;
 			cmdp++;
 			break;
 		case 'k':
-		case 'K':
 			dataLen = param_getstr(Cmd, cmdp+1, tempStr, sizeof(tempStr));
 			if (dataLen == 16) {
 				errors = param_gethex(tempStr, 0, KEY, dataLen);
@@ -1249,12 +1235,10 @@ int CmdHFiClass_WriteBlock(const char *Cmd) {
 			cmdp += 2;
 			break;
 		case 'r':
-		case 'R':
 			rawkey = true;
 			cmdp++;
 			break;
 		case 'v':
-		case 'V':
 			verbose = true;
 			cmdp++;
 			break;
@@ -1286,13 +1270,11 @@ int CmdHFiClassCloneTag(const char *Cmd) {
 	bool errors = false;
 	bool verbose = false;
 	uint8_t cmdp = 0;
-	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch(param_getchar(Cmd, cmdp)) {
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'h':
-		case 'H':
 			return usage_hf_iclass_clone();
 		case 'b':
-		case 'B':
 			if (param_gethex(Cmd, cmdp+1, &startblock, 2)) {
 				PrintAndLogEx(WARNING, "start block No must include 2 HEX symbols\n");
 				errors = true;
@@ -1300,17 +1282,14 @@ int CmdHFiClassCloneTag(const char *Cmd) {
 			cmdp += 2;
 			break;
 		case 'c':
-		case 'C':
 			use_credit_key = true;
 			cmdp++;
 			break;
 		case 'e':
-		case 'E':
 			elite = true;
 			cmdp++;
 			break;
 		case 'f':
-		case 'F':
 			fileNameLen = param_getstr(Cmd, cmdp+1, filename, sizeof(filename));
 			if (fileNameLen < 1) {
 				PrintAndLogEx(WARNING, "No filename found after f");
@@ -1319,7 +1298,6 @@ int CmdHFiClassCloneTag(const char *Cmd) {
 			cmdp += 2;
 			break;
 		case 'k':
-		case 'K':
 			dataLen = param_getstr(Cmd, cmdp+1, tempStr, sizeof(tempStr));
 			if (dataLen == 16) {
 				errors = param_gethex(tempStr, 0, KEY, dataLen);
@@ -1338,7 +1316,6 @@ int CmdHFiClassCloneTag(const char *Cmd) {
 			cmdp += 2;
 			break;
 		case 'l':
-		case 'L':
 			if (param_gethex(Cmd, cmdp+1, &endblock, 2)) {
 				PrintAndLogEx(WARNING, "start Block No must include 2 HEX symbols\n");
 				errors = true;
@@ -1346,12 +1323,10 @@ int CmdHFiClassCloneTag(const char *Cmd) {
 			cmdp += 2;
 			break;
 		case 'r':
-		case 'R':
 			rawkey = true;
 			cmdp++;
 			break;
 		case 'v':
-		case 'V':
 			verbose = true;
 			cmdp++;
 			break;
@@ -1368,17 +1343,17 @@ int CmdHFiClassCloneTag(const char *Cmd) {
 
 	iclass_block_t tag_data[USB_CMD_DATA_SIZE/12];
 
-	if ((endblock-startblock+1)*12 > USB_CMD_DATA_SIZE) {
+	if ((endblock - startblock + 1) * 12 > USB_CMD_DATA_SIZE) {
 		PrintAndLogEx(NORMAL, "Trying to write too many blocks at once.  Max: %d", USB_CMD_DATA_SIZE/8);
 	}
 	// file handling and reading
-	f = fopen(filename,"rb");
+	f = fopen(filename, "rb");
 	if(!f) {
 		PrintAndLogEx(WARNING, "failed to read file '%s'", filename);
 		return 1;
 	}
 
-	if (startblock<5) {
+	if (startblock < 5) {
 		PrintAndLogEx(WARNING, "you cannot write key blocks this way. yet... make your start block > 4");
 		fclose(f);
 		return 0;
@@ -1480,12 +1455,10 @@ int CmdHFiClass_ReadBlock(const char *Cmd) {
 	bool verbose = false;
 	uint8_t cmdp = 0;
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch (param_getchar(Cmd, cmdp)) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'h':
-		case 'H':
 			return usage_hf_iclass_readblock();
 		case 'b':
-		case 'B':
 			if (param_gethex(Cmd, cmdp+1, &blockno, 2)) {
 				PrintAndLogEx(WARNING, "Block No must include 2 HEX symbols\n");
 				errors = true;
@@ -1493,17 +1466,14 @@ int CmdHFiClass_ReadBlock(const char *Cmd) {
 			cmdp += 2;
 			break;
 		case 'c':
-		case 'C':
 			keyType = 0x18;
 			cmdp++;
 			break;
 		case 'e':
-		case 'E':
 			elite = true;
 			cmdp++;
 			break;
 		case 'k':
-		case 'K':
 			auth = true;
 			dataLen = param_getstr(Cmd, cmdp+1, tempStr, sizeof(tempStr));
 			if (dataLen == 16) {
@@ -1523,12 +1493,10 @@ int CmdHFiClass_ReadBlock(const char *Cmd) {
 			cmdp += 2;
 			break;
 		case 'r':
-		case 'R':
 			rawkey = true;
 			cmdp++;
 			break;
 		case 'v':
-		case 'V':
 			verbose = true;
 			cmdp++;
 			break;
@@ -1546,7 +1514,7 @@ int CmdHFiClass_ReadBlock(const char *Cmd) {
 }
 
 int CmdHFiClass_loclass(const char *Cmd) {
-	char opt = param_getchar(Cmd, 0);
+	char opt = tolower(param_getchar(Cmd, 0));
 
 	if (strlen(Cmd)<1 || opt == 'h')
 		usage_hf_iclass_loclass();
@@ -1617,15 +1585,15 @@ int CmdHFiClassReadTagFile(const char *Cmd) {
 	if (param_getstr(Cmd, 1, tempnum, sizeof(tempnum)) < 1)
 		startblock = 0;
 	else
-		sscanf(tempnum,"%d",&startblock);
+		sscanf(tempnum, "%d", &startblock);
 
 	if (param_getstr(Cmd,2, tempnum, sizeof(tempnum)) < 1)
 		endblock = 0;
 	else
-		sscanf(tempnum,"%d",&endblock);
+		sscanf(tempnum, "%d", &endblock);
 
 	// file handling and reading
-	f = fopen(filename,"rb");
+	f = fopen(filename, "rb");
 	if(!f) {
 		PrintAndLogEx(WARNING, "Failed to read from file '%s'", filename);
 		return 1;
@@ -1711,13 +1679,11 @@ int CmdHFiClassCalcNewKey(const char *Cmd) {
 	bool elite = false;
 	bool errors = false;
 	uint8_t cmdp = 0;
-	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch(param_getchar(Cmd, cmdp)) {
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'h':
-		case 'H':
 			return usage_hf_iclass_calc_newkey();
 		case 'e':
-		case 'E':
 			dataLen = param_getstr(Cmd, cmdp, tempStr, sizeof(tempStr));
 			if (dataLen==2)
 				oldElite = true;
@@ -1725,7 +1691,6 @@ int CmdHFiClassCalcNewKey(const char *Cmd) {
 			cmdp++;
 			break;
 		case 'n':
-		case 'N':
 			dataLen = param_getstr(Cmd, cmdp+1, tempStr, sizeof(tempStr));
 			if (dataLen == 16) {
 				errors = param_gethex(tempStr, 0, NEWKEY, dataLen);
@@ -1744,7 +1709,6 @@ int CmdHFiClassCalcNewKey(const char *Cmd) {
 			cmdp += 2;
 			break;
 		case 'o':
-		case 'O':
 			dataLen = param_getstr(Cmd, cmdp+1, tempStr, sizeof(tempStr));
 			if (dataLen == 16) {
 				errors = param_gethex(tempStr, 0, OLDKEY, dataLen);
@@ -1763,7 +1727,6 @@ int CmdHFiClassCalcNewKey(const char *Cmd) {
 			cmdp += 2;
 			break;
 		case 's':
-		case 'S':
 			givenCSN = true;
 			if (param_gethex(Cmd, cmdp+1, CSN, 16))
 				return usage_hf_iclass_calc_newkey();
@@ -1787,7 +1750,7 @@ int CmdHFiClassCalcNewKey(const char *Cmd) {
 
 static int loadKeys(char *filename) {
 	FILE *f;
-	f = fopen(filename,"rb");
+	f = fopen(filename, "rb");
 	if(!f) {
 		PrintAndLogEx(WARNING, "Failed to read from file '%s'", filename);
 		return 0;
@@ -1826,7 +1789,7 @@ static int loadKeys(char *filename) {
 
 static int saveKeys(char *filename) {
 	FILE *f;
-	f = fopen(filename,"wb");
+	f = fopen(filename, "wb");
 	if (!f) {
 		PrintAndLogEx(NORMAL, "[!] error opening file %s\n",filename);
 		return 0;
@@ -1860,13 +1823,11 @@ int CmdHFiClassManageKeys(const char *Cmd) {
 	char tempStr[20];
 	uint8_t cmdp = 0;
 
-	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch(param_getchar(Cmd, cmdp)) {
+	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'h':
-		case 'H':
 			return usage_hf_iclass_managekeys();
 		case 'f':
-		case 'F':
 			fileNameLen = param_getstr(Cmd, cmdp+1, filename, sizeof(filename));
 			if (fileNameLen < 1) {
 				PrintAndLogEx(WARNING, "No filename found after f");
@@ -1875,7 +1836,6 @@ int CmdHFiClassManageKeys(const char *Cmd) {
 			cmdp += 2;
 			break;
 		case 'n':
-		case 'N':
 			keyNbr = param_get8(Cmd, cmdp+1);
 			if (keyNbr >= ICLASS_KEYS_MAX) {
 				PrintAndLogEx(WARNING, "Invalid block number");
@@ -1884,7 +1844,6 @@ int CmdHFiClassManageKeys(const char *Cmd) {
 			cmdp += 2;
 			break;
 		case 'k':
-		case 'K':
 			operation += 3; //set key
 			dataLen = param_getstr(Cmd, cmdp+1, tempStr, sizeof(tempStr));
 			if (dataLen == 16) { //ul-c or ev1/ntag key length
@@ -1896,17 +1855,14 @@ int CmdHFiClassManageKeys(const char *Cmd) {
 			cmdp += 2;
 			break;
 		case 'p':
-		case 'P':
 			operation += 4; //print keys in memory
 			cmdp++;
 			break;
 		case 'l':
-		case 'L':
 			operation += 5; //load keys from file
 			cmdp++;
 			break;
 		case 's':
-		case 'S':
 			operation += 6; //save keys to file
 			cmdp++;
 			break;
@@ -2491,10 +2447,10 @@ int CmdHFiClassPermuteKey(const char *Cmd) {
 	uint8_t data[16] = {0};
 	bool isReverse = false;
 	int len = 0;
-	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) == 0|| cmdp == 'h' || cmdp == 'H') return usage_hf_iclass_permutekey();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (strlen(Cmd) == 0|| cmdp == 'h') return usage_hf_iclass_permutekey();
 
-	isReverse = ( cmdp == 'r' || cmdp == 'R' );
+	isReverse = ( cmdp == 'r' );
 
 	param_gethex_ex(Cmd, 1, data, &len);
 	if ( len%2 ) return usage_hf_iclass_permutekey();
