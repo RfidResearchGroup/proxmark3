@@ -607,7 +607,7 @@ int CmdEM410xWatchnSpoof(const char *Cmd) {
 
 int CmdEM410xWrite(const char *Cmd) {
 	char cmdp = tolower(param_getchar(Cmd, 0));
-	if (cmdp == 'h') return usage_lf_em410x_write();
+	if (cmdp == 0x00 || cmdp == 'h') return usage_lf_em410x_write();
 
 	uint64_t id = 0xFFFFFFFFFFFFFFFF; // invalid id value
 	int card = 0xFF; // invalid card value

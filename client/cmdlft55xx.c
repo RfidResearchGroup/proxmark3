@@ -1471,10 +1471,10 @@ int CmdResetRead(const char *Cmd) {
 int CmdT55xxWipe(const char *Cmd) {
 	char writeData[20] = {0};
 	char *ptrData = writeData;
-	char cmdp = param_getchar(Cmd, 0);
-	if ( cmdp == 'h' || cmdp == 'H') return usage_t55xx_wipe();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if ( cmdp == 'h') return usage_t55xx_wipe();
 
-	bool Q5 = (cmdp == 'q' || cmdp == 'Q');
+	bool Q5 = (cmdp == 'q');
 
 	// Try with the default password to reset block 0
 	// With a pwd should work even if pwd bit not set

@@ -863,8 +863,8 @@ int CmdBitsamples(const char *Cmd)
 
 int CmdBuffClear(const char *Cmd)
 {
-	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H') return usage_data_buffclear();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (cmdp == 'h') return usage_data_buffclear();
 
 	UsbCommand c = {CMD_BUFF_CLEAR, {0,0,0}};
 	clearCommandBuffer();
@@ -891,8 +891,8 @@ int CmdDec(const char *Cmd)
  */
 int CmdUndec(const char *Cmd)
 {
-	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H') return usage_data_undecimate();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (cmdp == 'h') return usage_data_undecimate();
 
 	uint8_t factor = param_get8ex(Cmd, 0, 2, 10);
 

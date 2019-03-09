@@ -277,8 +277,8 @@ int CmdHFiClassList(const char *Cmd) {
 }
 
 int CmdHFiClassSniff(const char *Cmd) {
-	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H')	return usage_hf_iclass_sniff();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (cmdp == 'h' ) return usage_hf_iclass_sniff();
 	UsbCommand c = {CMD_SNOOP_ICLASS};
 	SendCommand(&c);
 	return 0;
@@ -286,8 +286,8 @@ int CmdHFiClassSniff(const char *Cmd) {
 
 int CmdHFiClassSim(const char *Cmd) {
 
-	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd)<1 || cmdp == 'H' || cmdp == 'h') return usage_hf_iclass_sim();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (strlen(Cmd) < 1 || cmdp == 'h') return usage_hf_iclass_sim();
 
 	uint8_t simType = 0;
 	uint8_t CSN[8] = {0, 0, 0, 0, 0, 0, 0, 0};

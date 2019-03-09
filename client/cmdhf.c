@@ -38,8 +38,8 @@ int usage_hf_snoop(){
 
 int CmdHFSearch(const char *Cmd){
 
-	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H') return usage_hf_search();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (cmdp == 'h') return usage_hf_search();
 
 	int ans = CmdHF14AInfo("s");
 	if (ans > 0) {
@@ -94,8 +94,8 @@ int CmdHFTune(const char *Cmd) {
 }
 
 int CmdHFSnoop(const char *Cmd) {
-	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H') return usage_hf_snoop();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (cmdp == 'h') return usage_hf_snoop();
 
 	int skippairs =  param_get32ex(Cmd, 0, 0, 10);
 	int skiptriggers =  param_get32ex(Cmd, 1, 0, 10);

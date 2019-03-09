@@ -476,14 +476,13 @@ int CmdHF15Demod(const char *Cmd) {
 // * Acquire Samples as Reader (enables carrier, sends inquiry)
 //helptext
 int CmdHF15Samples(const char *Cmd) {
-	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H') return usage_15_samples();
+	char cmdp = tolower(param_getchar(Cmd, 0));
+	if (cmdp == 'h') return usage_15_samples();
 
 	UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693, {0,0,0}};
 	clearCommandBuffer();
 	SendCommand(&c);
 
-	//download samples
 	getSamples(0, false);
 	return 0;
 }
