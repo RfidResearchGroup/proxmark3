@@ -1501,7 +1501,7 @@ int CmdT55xxWipe(const char *Cmd) {
 bool IsCancelled(void) {
 	if (ukbhit()) {
 		int gc = getchar(); (void)gc;
-		PrintAndLogEx(NORMAL, "\naborted via keyboard!\n");
+		PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
 		return true;
 	}
 	return false;

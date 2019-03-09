@@ -901,7 +901,7 @@ static int smart_brute_sfi(bool decodeTLV){
 
 			if (ukbhit()) {
 				int gc = getchar();	(void)gc;
-				PrintAndLogEx(NORMAL, "\naborted via keyboard!\n");
+				PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
 				free(buf);
 				return 1;
 			}
