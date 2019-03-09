@@ -36,19 +36,19 @@ typedef struct {
 } PACKED UsbCommand;
 // A struct used to send sample-configs over USB
 typedef struct{
-	uint8_t decimation;
-	uint8_t bits_per_sample;
-	bool averaging;
-	int divisor;
-	int trigger_threshold;
+    uint8_t decimation;
+    uint8_t bits_per_sample;
+    bool averaging;
+    int divisor;
+    int trigger_threshold;
 } sample_config;
 
 typedef struct{
-	uint16_t start_gap;
-	uint16_t write_gap;
-	uint16_t write_0;
-	uint16_t write_1;
-	uint16_t read_gap;
+    uint16_t start_gap;
+    uint16_t write_gap;
+    uint16_t write_0;
+    uint16_t write_1;
+    uint16_t read_gap;
 } t55xx_config;
 
 // For the bootloader
@@ -69,35 +69,35 @@ typedef struct{
 #define CMD_BUFF_CLEAR                                                    0x0105
 #define CMD_READ_MEM                                                      0x0106
 #define CMD_VERSION                                                       0x0107
-#define CMD_STATUS														  0x0108
-#define CMD_PING														  0x0109
+#define CMD_STATUS                                                        0x0108
+#define CMD_PING                                                          0x0109
 
-#define CMD_DOWNLOAD_EML_BIGBUF											  0x0110
-#define CMD_DOWNLOADED_EML_BIGBUF										  0x0111
+#define CMD_DOWNLOAD_EML_BIGBUF                                           0x0110
+#define CMD_DOWNLOADED_EML_BIGBUF                                         0x0111
 
 
 
 
 // RDV40, Flash memory operations
-#define CMD_FLASHMEM_READ												  0x0120
-#define CMD_FLASHMEM_WRITE												  0x0121
-#define CMD_FLASHMEM_WIPE												  0x0122
-#define CMD_FLASHMEM_DOWNLOAD											  0x0123
-#define CMD_FLASHMEM_DOWNLOADED											  0x0124
-#define CMD_FLASHMEM_INFO												  0x0125
+#define CMD_FLASHMEM_READ                                                 0x0120
+#define CMD_FLASHMEM_WRITE                                                0x0121
+#define CMD_FLASHMEM_WIPE                                                 0x0122
+#define CMD_FLASHMEM_DOWNLOAD                                             0x0123
+#define CMD_FLASHMEM_DOWNLOADED                                           0x0124
+#define CMD_FLASHMEM_INFO                                                 0x0125
 #define CMD_FLASHMEM_SET_SPIBAUDRATE                                      0x0126
 
 // RDV40,  Smart card operations
-#define CMD_SMART_RAW													  0x0140
-#define CMD_SMART_UPGRADE												  0x0141
-#define CMD_SMART_UPLOAD												  0x0142
-#define CMD_SMART_ATR													  0x0143
-#define CMD_SMART_SETBAUD												  0x0144
-#define CMD_SMART_SETCLOCK												  0x0145
+#define CMD_SMART_RAW                                                     0x0140
+#define CMD_SMART_UPGRADE                                                 0x0141
+#define CMD_SMART_UPLOAD                                                  0x0142
+#define CMD_SMART_ATR                                                     0x0143
+#define CMD_SMART_SETBAUD                                                 0x0144
+#define CMD_SMART_SETCLOCK                                                0x0145
 
 // RDV40,  FPC serial
-#define CMD_FPC_SEND													  0x0160
-#define CMD_FPC_READ													  0x0161
+#define CMD_FPC_SEND                                                      0x0160
+#define CMD_FPC_READ                                                      0x0161
 
 // For low-frequency tags
 #define CMD_READ_TI_TYPE                                                  0x0202
@@ -136,9 +136,9 @@ typedef struct{
 #define CMD_PSK_SIM_TAG                                                   0x0220
 #define CMD_AWID_DEMOD_FSK                                                0x0221
 #define CMD_VIKING_CLONE_TAG                                              0x0222
-#define CMD_T55XX_WAKEUP	                                              0x0224
-#define CMD_COTAG														  0x0225
-#define CMD_SET_LF_T55XX_CONFIG											  0x0226
+#define CMD_T55XX_WAKEUP                                                  0x0224
+#define CMD_COTAG                                                         0x0225
+#define CMD_SET_LF_T55XX_CONFIG                                           0x0226
 
 #define CMD_T55XX_CHKPWDS                                                 0x0230
 
@@ -162,13 +162,13 @@ typedef struct{
 #define CMD_READER_HITAG                                                  0x0372
 
 // For HitagS
-#define CMD_TEST_HITAGS_TRACES											  0x0367
-#define CMD_SIMULATE_HITAG_S											  0x0368
-#define CMD_READ_HITAG_S												  0x0373
-#define CMD_WR_HITAG_S													  0x0375
-#define CMD_EMU_HITAG_S													  0x0376
+#define CMD_TEST_HITAGS_TRACES                                            0x0367
+#define CMD_SIMULATE_HITAG_S                                              0x0368
+#define CMD_READ_HITAG_S                                                  0x0373
+#define CMD_WR_HITAG_S                                                    0x0375
+#define CMD_EMU_HITAG_S                                                   0x0376
 
-#define CMD_ANTIFUZZ_ISO_14443a											  0x0380
+#define CMD_ANTIFUZZ_ISO_14443a                                           0x0380
 #define CMD_SIMULATE_TAG_ISO_14443B                                       0x0381
 #define CMD_SNOOP_ISO_14443B                                              0x0382
 
@@ -185,9 +185,9 @@ typedef struct{
 #define CMD_EPA_PACE_COLLECT_NONCE                                        0x038A
 #define CMD_EPA_PACE_REPLAY                                               0x038B
 
-#define CMD_LEGIC_INFO													  0x03BC
-#define CMD_LEGIC_ESET													  0x03BD
-#define CMD_LEGIC_EGET													  0x03BE
+#define CMD_LEGIC_INFO                                                    0x03BC
+#define CMD_LEGIC_ESET                                                    0x03BD
+#define CMD_LEGIC_EGET                                                    0x03BE
 
 #define CMD_ICLASS_READCHECK                                              0x038F
 #define CMD_ICLASS_CLONE                                                  0x0390
@@ -236,19 +236,19 @@ typedef struct{
 #define CMD_READER_MIFARE                                                 0x0611
 #define CMD_MIFARE_NESTED                                                 0x0612
 #define CMD_MIFARE_ACQUIRE_ENCRYPTED_NONCES                               0x0613
-#define CMD_MIFARE_ACQUIRE_NONCES										  0x0614
+#define CMD_MIFARE_ACQUIRE_NONCES                                         0x0614
 
 #define CMD_MIFARE_READBL                                                 0x0620
 #define CMD_MIFAREU_READBL                                                0x0720
 #define CMD_MIFARE_READSC                                                 0x0621
 #define CMD_MIFAREU_READCARD                                              0x0721
 #define CMD_MIFARE_WRITEBL                                                0x0622
-#define CMD_MIFAREU_WRITEBL						                          0x0722
-#define CMD_MIFAREU_WRITEBL_COMPAT					                      0x0723
+#define CMD_MIFAREU_WRITEBL                                               0x0722
+#define CMD_MIFAREU_WRITEBL_COMPAT                                        0x0723
 
 #define CMD_MIFARE_CHKKEYS                                                0x0623
 #define CMD_MIFARE_SETMOD                                                 0x0624
-#define CMD_MIFARE_CHKKEYS_FAST											  0x0625
+#define CMD_MIFARE_CHKKEYS_FAST                                           0x0625
 
 #define CMD_MIFARE_SNIFFER                                                0x0630
 //ultralightC
@@ -265,8 +265,8 @@ typedef struct{
 #define CMD_MIFARE_DESFIRE_INFO                                           0x072d
 #define CMD_MIFARE_DESFIRE                                                0x072e
 
-#define CMD_MIFARE_COLLECT_NONCES										  0x072f
-#define CMD_MIFARE_NACK_DETECT											  0x0730
+#define CMD_MIFARE_COLLECT_NONCES                                         0x072f
+#define CMD_MIFARE_NACK_DETECT                                            0x0730
 
 #define CMD_HF_SNIFFER                                                    0x0800
 
@@ -284,46 +284,46 @@ typedef struct{
 #define CMD_UNKNOWN                                                       0xFFFF
 
 //Mifare simulation flags
-#define FLAG_INTERACTIVE		0x01
-#define FLAG_4B_UID_IN_DATA 	0x02
-#define FLAG_7B_UID_IN_DATA 	0x04
-#define FLAG_10B_UID_IN_DATA 	0x08
-#define FLAG_UID_IN_EMUL		0x10
-#define FLAG_NR_AR_ATTACK 		0x20
-//#define FLAG_RANDOM_NONCE		0x40
+#define FLAG_INTERACTIVE        0x01
+#define FLAG_4B_UID_IN_DATA     0x02
+#define FLAG_7B_UID_IN_DATA     0x04
+#define FLAG_10B_UID_IN_DATA    0x08
+#define FLAG_UID_IN_EMUL        0x10
+#define FLAG_NR_AR_ATTACK       0x20
+//#define FLAG_RANDOM_NONCE       0x40
 
 //Iclass reader flags
-#define FLAG_ICLASS_READER_ONLY_ONCE	0x01
-#define FLAG_ICLASS_READER_CC			0x02
-#define FLAG_ICLASS_READER_CSN			0x04
-#define FLAG_ICLASS_READER_CONF			0x08
-#define FLAG_ICLASS_READER_AIA			0x10
-#define FLAG_ICLASS_READER_ONE_TRY      0x20
-#define FLAG_ICLASS_READER_CEDITKEY     0x40
+#define FLAG_ICLASS_READER_ONLY_ONCE   0x01
+#define FLAG_ICLASS_READER_CC          0x02
+#define FLAG_ICLASS_READER_CSN         0x04
+#define FLAG_ICLASS_READER_CONF        0x08
+#define FLAG_ICLASS_READER_AIA         0x10
+#define FLAG_ICLASS_READER_ONE_TRY     0x20
+#define FLAG_ICLASS_READER_CEDITKEY    0x40
 
 // Dbprintf flags
-#define FLAG_RAWPRINT	0x0111
-#define FLAG_NOOPT		0x0000
-#define FLAG_NOLOG		0x0001
-#define FLAG_NONEWLINE	0x0010
-#define FLAG_NOPROMPT	0x0100
+#define FLAG_RAWPRINT    0x0111
+#define FLAG_NOOPT       0x0000
+#define FLAG_NOLOG       0x0001
+#define FLAG_NONEWLINE   0x0010
+#define FLAG_NOPROMPT    0x0100
 
 
 // CMD_DEVICE_INFO response packet has flags in arg[0], flag definitions:
 /* Whether a bootloader that understands the common_area is present */
-#define DEVICE_INFO_FLAG_BOOTROM_PRESENT         	(1<<0)
+#define DEVICE_INFO_FLAG_BOOTROM_PRESENT             (1<<0)
 
 /* Whether a osimage that understands the common_area is present */
-#define DEVICE_INFO_FLAG_OSIMAGE_PRESENT         	(1<<1)
+#define DEVICE_INFO_FLAG_OSIMAGE_PRESENT             (1<<1)
 
 /* Set if the bootloader is currently executing */
-#define DEVICE_INFO_FLAG_CURRENT_MODE_BOOTROM    	(1<<2)
+#define DEVICE_INFO_FLAG_CURRENT_MODE_BOOTROM        (1<<2)
 
 /* Set if the OS is currently executing */
-#define DEVICE_INFO_FLAG_CURRENT_MODE_OS         	(1<<3)
+#define DEVICE_INFO_FLAG_CURRENT_MODE_OS             (1<<3)
 
 /* Set if this device understands the extend start flash command */
-#define DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH 	(1<<4)
+#define DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH     (1<<4)
 
 /* CMD_START_FLASH may have three arguments: start of area to flash,
    end of area to flash, optional magic.

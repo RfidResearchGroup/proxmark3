@@ -71,44 +71,44 @@ extern uint32_t FLASHMEM_SPIBAUDRATE;
 
 
 #ifndef FLASH_MEM_ID_LEN
-# define FLASH_MEM_ID_LEN			8
+# define FLASH_MEM_ID_LEN 8
 #endif
 
 #ifndef FLASH_MEM_SIGNATURE_LEN
-# define FLASH_MEM_SIGNATURE_LEN	128
+# define FLASH_MEM_SIGNATURE_LEN 128
 #endif
 
 #ifndef FLASH_MEM_SIGNATURE_OFFSET
-# define FLASH_MEM_SIGNATURE_OFFSET	(FLASH_MEM_MAX_SIZE - FLASH_MEM_SIGNATURE_LEN)
+# define FLASH_MEM_SIGNATURE_OFFSET (FLASH_MEM_MAX_SIZE - FLASH_MEM_SIGNATURE_LEN)
 #endif
 
 #ifdef WITH_FLASH
-	#ifndef T55XX_CONFIG_LEN
-	# define T55XX_CONFIG_LEN	sizeof( t55xx_config )
-	#endif
+    #ifndef T55XX_CONFIG_LEN
+    # define T55XX_CONFIG_LEN sizeof( t55xx_config )
+    #endif
 
-	#ifndef T55XX_CONFIG_OFFSET
-	# define T55XX_CONFIG_OFFSET	(FLASH_MEM_MAX_4K_SECTOR - 0x2000)
-	#endif
+    #ifndef T55XX_CONFIG_OFFSET
+    # define T55XX_CONFIG_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x2000)
+    #endif
 
-	#ifndef DEFAULT_T55XX_KEYS_OFFSET
-	# define DEFAULT_T55XX_KEYS_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x3000)
-	#endif
+    #ifndef DEFAULT_T55XX_KEYS_OFFSET
+    # define DEFAULT_T55XX_KEYS_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x3000)
+    #endif
 
-	#ifndef DEFAULT_MF_KEYS_OFFSET
-	# define DEFAULT_MF_KEYS_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x4000)
-	#endif
+    #ifndef DEFAULT_MF_KEYS_OFFSET
+    # define DEFAULT_MF_KEYS_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x4000)
+    #endif
 
-	#ifndef DEFAULT_ICLASS_KEYS_OFFSET
-	# define DEFAULT_ICLASS_KEYS_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x5000)
-	#endif
+    #ifndef DEFAULT_ICLASS_KEYS_OFFSET
+    # define DEFAULT_ICLASS_KEYS_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x5000)
+    #endif
 #endif
 
 // RDV40,  validation structure to help identifying that client/firmware is talking with RDV40
 typedef struct {
-	uint8_t magic[4];
-	uint8_t flashid[FLASH_MEM_ID_LEN];
-	uint8_t signature[FLASH_MEM_SIGNATURE_LEN];
+    uint8_t magic[4];
+    uint8_t flashid[FLASH_MEM_ID_LEN];
+    uint8_t signature[FLASH_MEM_SIGNATURE_LEN];
 } __attribute__((__packed__)) rdv40_validation_t;
 
 
