@@ -95,9 +95,8 @@ int detectVisa2k(uint8_t *dest, size_t *size) {
 **/
 //see ASKDemod for what args are accepted
 int CmdVisa2kDemod(const char *Cmd) {
-
-	// save GraphBuffer - to restore it later	
-	save_restoreGB(1);
+	
+	save_restoreGB(GRAPH_SAVE);
 	
 	//sCmdAskEdgeDetect("");
 	
@@ -105,7 +104,7 @@ int CmdVisa2kDemod(const char *Cmd) {
 	bool st = true;
 	if (!ASKDemod_ext("64 0 0", false, false, 1, &st)) {
 		PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: ASK/Manchester Demod failed");
-		save_restoreGB(0);
+		save_restoreGB(GRAPH_RESTORE);
 		return 0;
 	}
 	size_t size = DemodBufferLen;
@@ -120,7 +119,7 @@ int CmdVisa2kDemod(const char *Cmd) {
 		else
 			PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: ans: %d", ans);
 
-		save_restoreGB(0);
+		save_restoreGB(GRAPH_RESTORE);
 		return 0;
 	}
 	setDemodBuf(DemodBuffer, 96, ans);
@@ -138,7 +137,7 @@ int CmdVisa2kDemod(const char *Cmd) {
 	// test checksums
 	if ( chk != calc ) { 
 		PrintAndLogEx(DEBUG, "DEBUG: error: Visa2000 checksum failed %x - %x\n", chk, calc);
-		save_restoreGB(0);
+		save_restoreGB(GRAPH_RESTORE);
 		return 0;
 	}
 	// parity
@@ -146,17 +145,16 @@ int CmdVisa2kDemod(const char *Cmd) {
 	uint8_t chk_par = (raw3 & 0xFF0) >> 4;
 	if ( calc_par != chk_par) {
 		PrintAndLogEx(DEBUG, "DEBUG: error: Visa2000 parity failed %x - %x\n", chk_par, calc_par);
-		save_restoreGB(0);
+		save_restoreGB(GRAPH_RESTORE);
 		return 0;		
 	}
 	PrintAndLogEx(SUCCESS, "Visa2000 Tag Found: Card ID %u,  Raw: %08X%08X%08X", raw2,  raw1 ,raw2, raw3);
-	save_restoreGB(0);
 	return 1;
 }
 
 // 64*96*2=12288 samples just in case we just missed the first preamble we can still catch 2 of them
 int CmdVisa2kRead(const char *Cmd) {
-	lf_read(true, 12500);
+	lf_read(true, 14000);
 	return CmdVisa2kDemod(Cmd);
 }
 
@@ -225,21 +223,21 @@ int CmdVisa2kSim(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",	CmdHelp,		1, "This help"},
+	{"help",	CmdHelp,		1, "This help"},
 	{"demod",	CmdVisa2kDemod,	1, "demodulate an VISA2000 tag from the GraphBuffer"},	
 	{"read",	CmdVisa2kRead,	0, "attempt to read and extract tag data from the antenna"},
 	{"clone",	CmdVisa2kClone,	0, "clone Visa2000 to t55x7"},
 	{"sim",		CmdVisa2kSim,	0, "simulate Visa2000 tag"},
-    {NULL, NULL, 0, NULL}
+	{NULL, NULL, 0, NULL}
 };
 
 int CmdLFVisa2k(const char *Cmd) {
 	clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
-    return 0;
+	CmdsParse(CommandTable, Cmd);
+	return 0;
 }
 
 int CmdHelp(const char *Cmd) {
-    CmdsHelp(CommandTable);
-    return 0;
+	CmdsHelp(CommandTable);
+	return 0;
 }
