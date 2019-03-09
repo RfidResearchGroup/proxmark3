@@ -1900,19 +1900,19 @@ bool tryDetectP1(bool getData) {
 	clk = GetPskClock("", false);
 	if (clk > 0) {
 		// allow undo
-		// save_restoreGB(1);
+		// save_restoreGB(GRAPH_SAVE);
 		// skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
 		//CmdLtrim("160");
 		if ( PSKDemod("0 0 6", false) &&
 			  preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
 			  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
-			//save_restoreGB(0);
+			//save_restoreGB(GRAPH_RESTORE);
 			return true;
 		}
 		if ( PSKDemod("0 1 6", false) &&
 			  preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
 			  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
-			//save_restoreGB(0);
+			//save_restoreGB(GRAPH_RESTORE);
 			return true;
 		}
 		// PSK2 - needs a call to psk1TOpsk2.
@@ -1920,12 +1920,12 @@ bool tryDetectP1(bool getData) {
 			psk1TOpsk2(DemodBuffer, DemodBufferLen);
 			if (preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
 				  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
-				//save_restoreGB(0);
+				//save_restoreGB(GRAPH_RESTORE);
 				return true;
 			}
 		} // inverse waves does not affect PSK2 demod
 		//undo trim samples
-		//save_restoreGB(0);
+		//save_restoreGB(GRAPH_RESTORE); 
 		// no other modulation clocks = 2 or 4 so quit searching
 		if (fc1 != 8) return false;
 	}
