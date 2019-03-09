@@ -1325,15 +1325,8 @@ bool AquireData( uint8_t page, uint8_t block, bool pwdmode, uint32_t password ) 
 		return false;
 	}
 
-	uint8_t got[8000];
-	if ( !GetFromDevice(BIG_BUF, got, sizeof(got), 0, NULL, 4000, true)) {
-		PrintAndLogEx(WARNING, "command execution time out");
-		return false;
-	}
-	setGraphBuf(got, sizeof(got));
-	// set signal properties low/high/mean/amplitude and is_noise detection
-	computeSignalProperties(got, sizeof(got));
-	RepaintGraphWindow();
+    getSamples(12000, true);
+        
 	return !getSignalProperties()->isnoise;
 }
 
