@@ -96,7 +96,9 @@ bool HasGraphData(){
 
 // Get or auto-detect ask clock rate
 int GetAskClock(const char *str, bool printAns) {
-
+    if (getSignalProperties()->isnoise)
+        return false;
+    
 	int clock = param_get32ex(str, 0, 0, 10);
 	if (clock > 0)
 		return clock;
@@ -127,6 +129,9 @@ int GetAskClock(const char *str, bool printAns) {
 }
 
 uint8_t GetPskCarrier(const char *str, bool printAns) {
+    if (getSignalProperties()->isnoise)
+        return false;
+    
 	uint8_t carrier = 0;
 	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t size = getFromGraphBuf(bits);
@@ -145,6 +150,10 @@ uint8_t GetPskCarrier(const char *str, bool printAns) {
 }
 
 int GetPskClock(const char* str, bool printAns) {
+
+    if (getSignalProperties()->isnoise)
+        return -1;
+    
 	int clock = param_get32ex(str, 0, 0, 10);
 	if (clock != 0)
 		return clock;
@@ -168,10 +177,13 @@ int GetPskClock(const char* str, bool printAns) {
 
 int GetNrzClock(const char* str, bool printAns) {
 
+    if (getSignalProperties()->isnoise)
+        return -1;
+    
 	int clock = param_get32ex(str, 0, 0, 10);
 	if (clock != 0)
 		return clock;
-
+    
 	// Auto-detect clock
 	uint8_t grph[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t size = getFromGraphBuf(grph);
@@ -213,6 +225,10 @@ int GetFskClock(const char* str, bool printAns) {
 	return 0;
 }
 bool fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, int *firstClockEdge) {
+
+    if (getSignalProperties()->isnoise)
+        return false;
+
 	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t size = getFromGraphBuf(bits);
 	if (size == 0)
