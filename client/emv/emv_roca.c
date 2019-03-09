@@ -89,7 +89,7 @@ void print_mpi(const char *msg, int radix, const mbedtls_mpi *X)
     size_t len = 0;
 
     mbedtls_mpi_write_string(X, radix, Xchar, sizeof(Xchar), &len);
-    printf("%s[%d] %s\n", msg, len, Xchar);
+    printf("%s[%ld] %s\n", msg, len, Xchar);
 }
 
 bool emv_rocacheck(const unsigned char *buf, size_t buflen, bool verbose)
