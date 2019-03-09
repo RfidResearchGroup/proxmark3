@@ -88,10 +88,10 @@ local function emulate_amiibo (amiibo_data)
    local simCmd = Command:new{cmd = cmds.CMD_SIMULATE_TAG_ISO_14443a, arg1 = 7, arg2 = uid_first, arg3 = uid_second}
    local _, err = reader.sendToDevice(simCmd)
    if err then
-   	  print('Failed to start simulator', err)
-   	  return
+      print('Failed to start simulator', err)
+      return
    else
-   	  print('Starting simulator')
+      print('Starting simulator')
    end
 end
 

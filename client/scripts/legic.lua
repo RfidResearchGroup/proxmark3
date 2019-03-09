@@ -3,7 +3,7 @@ if it don't works with you tag-layout - be so kind and let me know ;-)
 
 Tested on Tags with those Layouts:
 
-(example)	Legic-Prime Layout with 'Kaba Group Header'
+(example)   Legic-Prime Layout with 'Kaba Group Header'
       +----+----+----+----+----+----+----+----+
   0x00|MCD |MSN0|MSN1|MSN2|MCC | 60 | ea | 9f |
       +----+----+----+----+----+----+----+----+
@@ -31,7 +31,7 @@ UID   = dec User-ID for online-Mapping
 kghC  = crc8 over MCD + MSN0..MSN2 + UID
 
 
-(example)	Legic-Cash on MIM256/1024 tag' (37 bytes)
+(example)   Legic-Cash on MIM256/1024 tag' (37 bytes)
       +----+----+----+----+----+----+----+----+
   0x00|Seg0|Seg1|Seg2|Seg3|SegC|STP0|STP1|STP2|
       +----+----+----+----+----+----+----+----+
@@ -56,7 +56,7 @@ LRS = ID of the reader that changed the shadow balance (?? should be always the 
 CV  = Counter value for transactions
 CHK = crc16 over SHD + LRS + CV
 
-(example)	Legic-Prime Layout 'gantner unsegmented user-credential'
+(example)   Legic-Prime Layout 'gantner unsegmented user-credential'
       +----+----+----+----+----+----+----+----+
   0x00|MCD |MSN0|MSN1|MSN2|MCC | 60 | ea | 08 |
       +----+----+----+----+----+----+----+----+
@@ -73,7 +73,7 @@ Dat   = Online-Mapping Data
 uCRC  = crc8 over addr 0x00..0x03+0x07..0x0E
 
 
-(example)	Legic-Prime Layout 'gantner unsegmented Master-Token (IAM) with a stamp_len of 4'
+(example)   Legic-Prime Layout 'gantner unsegmented Master-Token (IAM) with a stamp_len of 4'
       +----+----+----+----+----+----+----+----+
   0x00|MCD |MSN0|MSN1|MSN2|MCC | 20 | f8 | 08 |
       +----+----+----+----+----+----+----+----+
@@ -224,16 +224,16 @@ local currency = {
 ---
 -- This is only meant to be used when errors occur
 function oops(err)
-	print(acred.."ERROR: "..acoff ,err)
-	return nil, err
+    print(acred.."ERROR: "..acoff ,err)
+    return nil, err
 end
 
 ---
 -- Usage help
 function help()
-	print(desc)
-	print("Version: "..version)
-	print("Example usage: "..example)
+    print(desc)
+    print("Version: "..version)
+    print("Example usage: "..example)
 end
 
 ---
@@ -265,28 +265,28 @@ end
 ---
 -- xor single byte
 function xorme(hex, xor, index)
-	if ( index >= 23 ) then
-		return ('%02x'):format(bxor( tonumber(hex,16) , tonumber(xor,16) ))
-	else
-		return hex
-	end
+    if ( index >= 23 ) then
+        return ('%02x'):format(bxor( tonumber(hex,16) , tonumber(xor,16) ))
+    else
+        return hex
+    end
 end
 
 ---
 -- (de)obfuscate bytes
 function xorBytes(inBytes, crc)
-	local bytes = {}
-	for index = 1, #inBytes do
-		bytes[index] = xorme(inBytes[index], crc, index)
-	end
-	if (#inBytes == #bytes) then
-		-- replace crc
-		bytes[5] = string.sub(crc,-2)
-		return bytes
-	else
-		print("error: byte-count missmatch")
-		return false
-	end
+    local bytes = {}
+    for index = 1, #inBytes do
+        bytes[index] = xorme(inBytes[index], crc, index)
+    end
+    if (#inBytes == #bytes) then
+        -- replace crc
+        bytes[5] = string.sub(crc,-2)
+        return bytes
+    else
+        print("error: byte-count missmatch")
+        return false
+    end
 end
 
 ---
@@ -317,9 +317,9 @@ end
 ---
 -- put a string into a bytes-table
 function str2bytes(s)
-	if (string.len(s)%2 ~= 0) then
-		return print("stamp should be a even hexstring e.g.: deadbeef or 0badc0de")
-	end
+    if (string.len(s)%2 ~= 0) then
+        return print("stamp should be a even hexstring e.g.: deadbeef or 0badc0de")
+    end
   local res={}
   for i=1, string.len(s), 2 do
     table.insert(res, string.sub(s,i,(i+1)))
@@ -330,29 +330,29 @@ end
 ---
 -- put certain bytes into a new table
 function bytesToTable(bytes, bstart, bend)
-	local t={}
-	for i=0, (bend-bstart) do
-		t[i]=bytes[bstart+i]
-	end
-	return t
+    local t={}
+    for i=0, (bend-bstart) do
+        t[i]=bytes[bstart+i]
+    end
+    return t
 end
 
 ---
 -- read file into table
 function getInputBytes(infile)
-	local line
-	local bytes = {}
-	local fhi,err = io.open(infile,"rb")
-	if err then oops("faild to read from file ".. infile); return false; end
+    local line
+    local bytes = {}
+    local fhi,err = io.open(infile,"rb")
+    if err then oops("faild to read from file ".. infile); return false; end
 
-	file_data = fhi:read("*a");
-	for i = 1, #file_data do
-		bytes[i] = string.format("%x",file_data:byte(i))
-	end
-	fhi:close()
-	if (bytes[7]=='00') then return false end
-	print(#bytes .. " bytes from "..infile.." loaded")
-	return bytes
+    file_data = fhi:read("*a");
+    for i = 1, #file_data do
+        bytes[i] = string.format("%x",file_data:byte(i))
+    end
+    fhi:close()
+    if (bytes[7]=='00') then return false end
+    print(#bytes .. " bytes from "..infile.." loaded")
+    return bytes
 end
 
 ---
@@ -385,7 +385,7 @@ end
 ---
 -- put bytes into tag-table
 function bytesToTag(bytes, tag)
-	if istable(tag) == false then return oops("tag is no table in: bytesToTag ("..type(tag)..")") end
+    if istable(tag) == false then return oops("tag is no table in: bytesToTag ("..type(tag)..")") end
 
     tag.MCD =bytes[1];
     tag.MSN0=bytes[2];
@@ -453,7 +453,7 @@ end
 ---
 -- read Tag-Table in bytes-table
 function tagToBytes(tag)
-	if istable(tag) == false then return oops("tag is no table in tagToBytes ("..type(tag)..")") end
+    if istable(tag) == false then return oops("tag is no table in tagToBytes ("..type(tag)..")") end
 
     local bytes = {}
     local i, i2
@@ -524,249 +524,249 @@ end
 ---
 -- write virtual Tag to real Tag
 function writeToTag(tag)
-	local bytes
-	local filename = 'MylegicClone.hex'
-	local taglen = 22
-	if(utils.confirm(acred.."\nplace the (empty) Tag onto the PM3\nand confirm writing to this Tag: "..acoff) == false) then
-		return
-	end
-	
-	-- get used bytes / tag-len
-	if (istable(tag.SEG)) then
-		if (istable(tag.Bck)) then
-			for i=0, #tag.SEG do
-				taglen = taglen + tag.SEG[i] . len + 5
-			end
-		end
-		local uid_old = tag.MCD..tag.MSN0..tag.MSN1..tag.MSN2
-		
-		-- read new tag into memory so we can xor the new data with the new MCC
-		outTAG = readFromPM3()
-		outbytes = tagToBytes(outTAG)
-		-- copy 'inputbuffer' to 'outputbuffer'
-		tag.MCD  = outbytes[1]
-		tag.MSN0 = outbytes[2]
-		tag.MSN1 = outbytes[3]
-		tag.MSN2 = outbytes[4]
-		tag.MCC  = outbytes[5]
-		-- recheck all segments-crc/kghcrc (only on a credential)
-		if (istable(tag.Bck)) then
-			checkAllSegCrc(tag)
-			checkAllKghCrc(tag)
-			local uid_new = tag.MCD..tag.MSN0..tag.MSN1..tag.MSN2
-			for i=0, #tag.SEG do
-				if (check43rdPartyCash1(uid_old, tag.SEG[i].data)) then
-					io.write(accyan.."\nfixing known checksums"..acoff.." ... ")
-					if (fix3rdPartyCash1(uid_new, tag.SEG[i].data)) then
-						io.write(acgreen.." done\n"..acoff)
-					else 	
-						oops("\nsomething went wrong at the repair of the 3rd-party-cash-segment") 
-					end
-				end
-			end
-		end
-		bytes = tagToBytes(tag)
-		-- master-token-crc
-		if (tag.Type ~= "SAM") then 
-			bytes[22] = calcMtCrc(bytes) 
-		end
-		if (bytes) then
-			print("write temp-file '"..filename.."'")
-			print(accyan)
-			writeFile(bytes, filename..".bin")
-			print(acoff)
-		end
-	end
+    local bytes
+    local filename = 'MylegicClone.hex'
+    local taglen = 22
+    if(utils.confirm(acred.."\nplace the (empty) Tag onto the PM3\nand confirm writing to this Tag: "..acoff) == false) then
+        return
+    end
 
-	-- write data to file
-	if (taglen > 0) then
-		WriteBytes = utils.input(acyellow.."enter number of bytes to write?"..acoff, taglen)
-		-- load file into pm3-buffer
-		if (type(filename) ~= "string") then 
-			filename = input(acyellow.."filename to load to pm3-buffer?"..acoff, "legic.temp")
-		end
-		
-		cmd = 'hf legic eload 2 '..filename
-		core.console(cmd)
-		-- write pm3-buffer to Tag
-		for i=0, WriteBytes do
-			if (i > 6) then
-				cmd = ("hf legic write o %x d %s "):format(i, padString(bytes[i]))
-				print(acgreen..cmd..acoff)
-				core.console(cmd)
-				core.clearCommandBuffer()
-			elseif (i == 6) then
-				-- write DCF in reverse order (requires 'mosci-patch')
-				cmd = ('hf legic write o 05 d %s%s'):format(padString(bytes[i-1]), padString(bytes[i]))
-				print(acgreen..cmd..acoff)
-				core.console(cmd)
-				core.clearCommandBuffer()
-			elseif (i == 5) then
-				print(acgreen.."skip byte 0x05 - will be written next step"..acoff)
-			else
-				print(acgreen.."skip byte 0x00-0x04 - unwritable area"..acoff)
-			end
-			utils.Sleep(0.2)
-		end
-	end
+    -- get used bytes / tag-len
+    if (istable(tag.SEG)) then
+        if (istable(tag.Bck)) then
+            for i=0, #tag.SEG do
+                taglen = taglen + tag.SEG[i] . len + 5
+            end
+        end
+        local uid_old = tag.MCD..tag.MSN0..tag.MSN1..tag.MSN2
+
+        -- read new tag into memory so we can xor the new data with the new MCC
+        outTAG = readFromPM3()
+        outbytes = tagToBytes(outTAG)
+        -- copy 'inputbuffer' to 'outputbuffer'
+        tag.MCD  = outbytes[1]
+        tag.MSN0 = outbytes[2]
+        tag.MSN1 = outbytes[3]
+        tag.MSN2 = outbytes[4]
+        tag.MCC  = outbytes[5]
+        -- recheck all segments-crc/kghcrc (only on a credential)
+        if (istable(tag.Bck)) then
+            checkAllSegCrc(tag)
+            checkAllKghCrc(tag)
+            local uid_new = tag.MCD..tag.MSN0..tag.MSN1..tag.MSN2
+            for i=0, #tag.SEG do
+                if (check43rdPartyCash1(uid_old, tag.SEG[i].data)) then
+                    io.write(accyan.."\nfixing known checksums"..acoff.." ... ")
+                    if (fix3rdPartyCash1(uid_new, tag.SEG[i].data)) then
+                        io.write(acgreen.." done\n"..acoff)
+                    else
+                        oops("\nsomething went wrong at the repair of the 3rd-party-cash-segment")
+                    end
+                end
+            end
+        end
+        bytes = tagToBytes(tag)
+        -- master-token-crc
+        if (tag.Type ~= "SAM") then
+            bytes[22] = calcMtCrc(bytes)
+        end
+        if (bytes) then
+            print("write temp-file '"..filename.."'")
+            print(accyan)
+            writeFile(bytes, filename..".bin")
+            print(acoff)
+        end
+    end
+
+    -- write data to file
+    if (taglen > 0) then
+        WriteBytes = utils.input(acyellow.."enter number of bytes to write?"..acoff, taglen)
+        -- load file into pm3-buffer
+        if (type(filename) ~= "string") then
+            filename = input(acyellow.."filename to load to pm3-buffer?"..acoff, "legic.temp")
+        end
+
+        cmd = 'hf legic eload 2 '..filename
+        core.console(cmd)
+        -- write pm3-buffer to Tag
+        for i=0, WriteBytes do
+            if (i > 6) then
+                cmd = ("hf legic write o %x d %s "):format(i, padString(bytes[i]))
+                print(acgreen..cmd..acoff)
+                core.console(cmd)
+                core.clearCommandBuffer()
+            elseif (i == 6) then
+                -- write DCF in reverse order (requires 'mosci-patch')
+                cmd = ('hf legic write o 05 d %s%s'):format(padString(bytes[i-1]), padString(bytes[i]))
+                print(acgreen..cmd..acoff)
+                core.console(cmd)
+                core.clearCommandBuffer()
+            elseif (i == 5) then
+                print(acgreen.."skip byte 0x05 - will be written next step"..acoff)
+            else
+                print(acgreen.."skip byte 0x00-0x04 - unwritable area"..acoff)
+            end
+            utils.Sleep(0.2)
+        end
+    end
 end
 
 --- File I/O ---
 ---
 -- read file into virtual-tag
 local function readFile(filename)
-	print(accyan)
-	local bytes = {}
-	local tag = {}
-	if  file_check(filename) == false then 
-		return oops("input file: "..filename.." not found")
-	end
+    print(accyan)
+    local bytes = {}
+    local tag = {}
+    if  file_check(filename) == false then
+        return oops("input file: "..filename.." not found")
+    end
 
-	bytes = getInputBytes(filename)
+    bytes = getInputBytes(filename)
 
-	if bytes == false then return oops('couldnt get input bytes') end
+    if bytes == false then return oops('couldnt get input bytes') end
 
-	-- make plain bytes
-	bytes = xorBytes(bytes,bytes[5])
-	print("create virtual tag from ".. #bytes .. " bytes")
-	-- create Tag for plain bytes
-	tag = createTagTable()
-	-- load plain bytes to tag-table
-	print(acoff)
-	tag = bytesToTag(bytes, tag)
+    -- make plain bytes
+    bytes = xorBytes(bytes,bytes[5])
+    print("create virtual tag from ".. #bytes .. " bytes")
+    -- create Tag for plain bytes
+    tag = createTagTable()
+    -- load plain bytes to tag-table
+    print(acoff)
+    tag = bytesToTag(bytes, tag)
 
-	return tag
+    return tag
 end
 
 ---
 -- write bytes to file
 function writeFile(bytes, filename)
-	if (filename ~= 'MylegicClone.hex') then
-		if (file_check(filename)) then
-			local answer = confirm("\nthe output-file "..filename.." already exists!\nthis will delete the previous content!\ncontinue?")
-			if not answer then return print("user abort") end
-		end
-	end
-	local line
-	local bcnt = 0
-	local fho, err = io.open(filename, "w")
-	if err then 
-		return oops("OOps ... failed to open output-file ".. filename)
-	end
-	bytes = xorBytes(bytes, bytes[5])
-	for i = 1, #bytes do
-		if (bcnt == 0) then
-			line = bytes[i]
-		elseif (bcnt <= 7) then
-			line = line.." "..bytes[i]
-		end
-		if (bcnt == 7) then
-			-- write line to new file
-			fho:write(line.."\n")
-			-- reset counter & line
-			bcnt = -1
-			line = ""
-		end
-		bcnt = bcnt + 1
-	end
-	fho:close()
-	print("\nwrote ".. #bytes .." bytes to " .. filename)
-	return true
+    if (filename ~= 'MylegicClone.hex') then
+        if (file_check(filename)) then
+            local answer = confirm("\nthe output-file "..filename.." already exists!\nthis will delete the previous content!\ncontinue?")
+            if not answer then return print("user abort") end
+        end
+    end
+    local line
+    local bcnt = 0
+    local fho, err = io.open(filename, "w")
+    if err then
+        return oops("OOps ... failed to open output-file ".. filename)
+    end
+    bytes = xorBytes(bytes, bytes[5])
+    for i = 1, #bytes do
+        if (bcnt == 0) then
+            line = bytes[i]
+        elseif (bcnt <= 7) then
+            line = line.." "..bytes[i]
+        end
+        if (bcnt == 7) then
+            -- write line to new file
+            fho:write(line.."\n")
+            -- reset counter & line
+            bcnt = -1
+            line = ""
+        end
+        bcnt = bcnt + 1
+    end
+    fho:close()
+    print("\nwrote ".. #bytes .." bytes to " .. filename)
+    return true
 end
 
 --- Map related ---
 ---
 -- make tagMap
 local function makeTagMap()
-	local tagMap = {}
-	if (#tagMap == 0) then
-		tagMap['name'] = input(accyan.."enter Name for this Map: "..acoff , "newTagMap")
-		tagMap['mappings'] = {}
-		tagMap['crc8'] = {}
-		-- insert fixed Tag-CRC
-		table.insert(tagMap.crc8, {name = 'TAG-CRC', pos = 5, seq = {1, 4}})
-		tagMap['crc16'] = {}
-	end
-	print(accyan.."new tagMap created"..acoff)
-	return tagMap
+    local tagMap = {}
+    if (#tagMap == 0) then
+        tagMap['name'] = input(accyan.."enter Name for this Map: "..acoff , "newTagMap")
+        tagMap['mappings'] = {}
+        tagMap['crc8'] = {}
+        -- insert fixed Tag-CRC
+        table.insert(tagMap.crc8, {name = 'TAG-CRC', pos = 5, seq = {1, 4}})
+        tagMap['crc16'] = {}
+    end
+    print(accyan.."new tagMap created"..acoff)
+    return tagMap
 end
 
 ---
 -- save mapping to file
 local function saveTagMap(map, filename)
-	if (string.len(filename)>0) then
-		if (file_check(filename)) then
-			local answer = confirm("\nthe output-file "..filename.." alredy exists!\nthis will delete the previous content!\ncontinue?")
-			if not answer then return print("user abort") end
-		end
-	end
+    if (string.len(filename)>0) then
+        if (file_check(filename)) then
+            local answer = confirm("\nthe output-file "..filename.." alredy exists!\nthis will delete the previous content!\ncontinue?")
+            if not answer then return print("user abort") end
+        end
+    end
 
-	local line
-	local fho,err = io.open(filename, "w")
-	if err then oops("OOps ... faild to open output-file ".. filename) end
+    local line
+    local fho,err = io.open(filename, "w")
+    if err then oops("OOps ... faild to open output-file ".. filename) end
 
-	-- write line to new file
-	for k, v in pairs(map) do
-		if (istable(v)) then
-			for k2, v2 in pairs(v) do
-				if (k == 'mappings') then
-					fho:write(k..","..k2..","..v2['name']..","..v2['start']..","..v2['end']..","..((v2['highlight']) and "1" or "0").."\n")
-				elseif (k == "crc8") then
-					local tmp = ""
-					tmp = k..","..k2..","..v2['name']..","..v2['pos']..","
-					tmp=tmp..tbl2seqstr(v2['seq'])
-					fho:write(tmp.."\n")
-				end
-			end
-		else
-			fho:write(k..","..v.."\n")
-		end
-	end
-	fho:close()
-	return true
+    -- write line to new file
+    for k, v in pairs(map) do
+        if (istable(v)) then
+            for k2, v2 in pairs(v) do
+                if (k == 'mappings') then
+                    fho:write(k..","..k2..","..v2['name']..","..v2['start']..","..v2['end']..","..((v2['highlight']) and "1" or "0").."\n")
+                elseif (k == "crc8") then
+                    local tmp = ""
+                    tmp = k..","..k2..","..v2['name']..","..v2['pos']..","
+                    tmp=tmp..tbl2seqstr(v2['seq'])
+                    fho:write(tmp.."\n")
+                end
+            end
+        else
+            fho:write(k..","..v.."\n")
+        end
+    end
+    fho:close()
+    return true
 end
 
 ---
 -- toggle higligh
 local function toggleHighlight(tbl)
-	if (tbl['highlight']) then
-		tbl['highlight'] = false
-	else
-		tbl['highlight'] = true
-	end
-	return tbl
+    if (tbl['highlight']) then
+        tbl['highlight'] = false
+    else
+        tbl['highlight'] = true
+    end
+    return tbl
 end
 
 ---
 -- return table od seqence-string
 local function seqstr2tbl(seqstr)
-	local s = split(seqstr)
-	local res = {}
-	if (#s >= 1) then
-		for sk, sv in pairs(s) do
-			s2 = split(sv, '-')
-			if(#s2 == 2) then
-				table.insert(res, s2[1])
-				table.insert(res, s2[2])
-			end
-		end
-	end
-	return res
+    local s = split(seqstr)
+    local res = {}
+    if (#s >= 1) then
+        for sk, sv in pairs(s) do
+            s2 = split(sv, '-')
+            if(#s2 == 2) then
+                table.insert(res, s2[1])
+                table.insert(res, s2[2])
+            end
+        end
+    end
+    return res
 end
 
 ---
 -- return sequence-string from table
 local function tbl2seqstr(seqtbl)
-	local res = ""
-	if (istable(seqtbl)) then
-		for sk, sv in pairs(seqtbl) do
-			res = res..sv..((sk%2==0) and "," or "-")
-		end
-		if (string.sub(res, string.len(res))== ",") then
-			res = string.sub(res, 1, string.len(res)-1)
-		end
-	end
-	return res
+    local res = ""
+    if (istable(seqtbl)) then
+        for sk, sv in pairs(seqtbl) do
+            res = res..sv..((sk%2==0) and "," or "-")
+        end
+        if (string.sub(res, string.len(res))== ",") then
+            res = string.sub(res, 1, string.len(res)-1)
+        end
+    end
+    return res
 end
 
 ---
@@ -778,18 +778,18 @@ function loadTagMap(filename)
   local line, fields
   local temp={}
   local offset=0
-	if (file_check(filename)==false) then
-		return oops("input file: "..filename.." not found")
-	else
-		local fhi,err = io.open(filename)
-  	while true do
-  		line = fhi:read()
-  		if line == nil then
+    if (file_check(filename)==false) then
+        return oops("input file: "..filename.." not found")
+    else
+        local fhi,err = io.open(filename)
+    while true do
+        line = fhi:read()
+        if line == nil then
         break
       else
         fields=split(line)
       end
-  		if (#fields==2) then
+        if (#fields==2) then
         if (fields[1]=='offset') then
           offset=tonumber(fields[2],10)
         end
@@ -823,9 +823,9 @@ function loadTagMap(filename)
         end
         table.insert(map.crc8, temp)
       end
-  	end
-  	fhi:close()
-	end
+    end
+    fhi:close()
+  end
   return map
 end
 
@@ -1127,10 +1127,10 @@ function mapAllSegments(tag, tagMap)
   segs=getSegmentStats(bytes)
   if (istable(segs)) then
     for k, v in pairs(segs) do
-  	  -- wrp (write proteted) = byte 2
-  	  WRP = tonumber(bytes[v['start']+2],16)
-  	  -- wrc (write control) - bit 4-6 of byte 3
-  	  WRC = tonumber(bbit("0x"..bytes[v['start']+3],4,3),16)
+      -- wrp (write proteted) = byte 2
+      WRP = tonumber(bytes[v['start']+2],16)
+      -- wrc (write control) - bit 4-6 of byte 3
+      WRC = tonumber(bbit("0x"..bytes[v['start']+3],4,3),16)
       --tagMap=mapTokenData(tagMap, 'Segment '..("%02d"):format(v['index']).." HDR", v['start'], v['start']+3)
       tagMap=mapTokenData(tagMap, 'Segment '..("%02d"):format(v['index']).." CRC", v['start']+4, v['start']+4, true)
       table.insert(tagMap.crc8, {name = 'Segment '..("%02d"):format(v['index']).." CRC", pos=v['start']+4, seq={1,4,v['start'],v['start']+3}} )
@@ -1327,11 +1327,11 @@ function dumpTable(tab, header, tstart, tend)
   for i=tstart, tend do
     res=res..tab[i].." "
   end
-	if (#header == 0) then
-		return res
-	else
-		return (header.." #"..(tend-tstart+1).."\n"..res)
-	end
+    if (#header == 0) then
+        return res
+    else
+        return (header.." #"..(tend-tstart+1).."\n"..res)
+    end
 end
 
 ---
@@ -1377,7 +1377,7 @@ end
 -- dump Legic-Cash data
 function dumpLegicCash(tag, x)
 
-	if istable(tag.SEG[x]) == false then return end
+    if istable(tag.SEG[x]) == false then return end
 
      io.write("in Segment "..tag.SEG[x].index.." :\n")
      print("--------------------------------\n\tLegic-Cash Values\n--------------------------------")
@@ -1403,7 +1403,7 @@ function dumpLegicCash(tag, x)
 --  raw 3rd-party
 function print3rdPartyCash1(tag, x)
 
-	if istable(tag.SEG[x]) == false then return end
+    if istable(tag.SEG[x]) == false then return end
 
     local uid=tag.MCD..tag.MSN0..tag.MSN1..tag.MSN2
      print("\n\t\tStamp  :  "..dumpTable(tag.SEG[x].data, "", 0 , 2))
@@ -1608,25 +1608,25 @@ function getSegmentData(bytes, start, index)
   if (bytes[start]) then
     local i
     -- #index
-	  segment.index = index
-	  -- flag = high nibble of byte 1
-	  segment.flag = string.sub(bytes[start+1],0,1)
-	  -- valid = bit 6 of byte 1
-	  segment.valid = bbit("0x"..bytes[start+1],6,1)
-	  -- last = bit 7 of byte 1
-	  segment.last = bbit("0x"..bytes[start+1],7,1)
-	  -- len = (byte 0)+(bit0-3 of byte 1)
+      segment.index = index
+      -- flag = high nibble of byte 1
+      segment.flag = string.sub(bytes[start+1],0,1)
+      -- valid = bit 6 of byte 1
+      segment.valid = bbit("0x"..bytes[start+1],6,1)
+      -- last = bit 7 of byte 1
+      segment.last = bbit("0x"..bytes[start+1],7,1)
+      -- len = (byte 0)+(bit0-3 of byte 1)
     segment.len = tonumber(bbit("0x"..bytes[start+1],0,4)..bytes[start],16)
     -- raw segment header
     segment.raw = {bytes[start], bytes[start+1], bytes[start+2], bytes[start+3]}
-	  -- wrp (write proteted) = byte 2
-	  segment.WRP = tonumber(bytes[start+2],16)
-	  -- wrc (write control) - bit 4-6 of byte 3
-	  segment.WRC = tonumber(bbit("0x"..bytes[start+3],4,3),16)
-	  -- rd (read disabled) - bit 7 of byte 3
-	  segment.RD = tonumber(bbit("0x"..bytes[start+3],7,1),16)
-	  -- crc byte 4
-	  segment.crc = bytes[start+4]
+      -- wrp (write proteted) = byte 2
+      segment.WRP = tonumber(bytes[start+2],16)
+      -- wrc (write control) - bit 4-6 of byte 3
+      segment.WRC = tonumber(bbit("0x"..bytes[start+3],4,3),16)
+      -- rd (read disabled) - bit 7 of byte 3
+      segment.RD = tonumber(bbit("0x"..bytes[start+3],7,1),16)
+      -- crc byte 4
+      segment.crc = bytes[start+4]
     -- segment-data starts at segment.len - segment.header - segment.crc
     for i=0, (segment.len-5) do
       segment.data[i]=bytes[start+5+i]
@@ -1645,11 +1645,11 @@ function getSegmentStats(bytes)
   x=0
   repeat
     local s={}
-	  -- valid = bit 6 of byte 1
-	  sValid = bbit("0x"..bytes[sStart+1],6,1)
-	  -- last = bit 7 of byte 1
-	  sLast = bbit("0x"..bytes[sStart+1],7,1)
-	  -- len = (byte 0)+(bit0-3 of byte 1)
+      -- valid = bit 6 of byte 1
+      sValid = bbit("0x"..bytes[sStart+1],6,1)
+      -- last = bit 7 of byte 1
+      sLast = bbit("0x"..bytes[sStart+1],7,1)
+      -- len = (byte 0)+(bit0-3 of byte 1)
     sLen = tonumber(bbit("0x"..bytes[sStart+1],0,4)..bytes[sStart],16)
     --print("index: "..("%02d"):format(x).." Len: "..sLen.." start:"..sStart.." end: "..(sStart+sLen-1))
     s['index']=x
@@ -1721,18 +1721,18 @@ end
 ---
 -- edit Segment Data
 function editSegmentData(data)
-	io.write("\n")
-	if istable(data) == false then print("no Segment-Data found") end
+    io.write("\n")
+    if istable(data) == false then print("no Segment-Data found") end
 
-	local lc = check4LegicCash(data)
+    local lc = check4LegicCash(data)
 
     for i=0, #data-1 do
-		data[i]=input(accyan.."Data"..i..acoff..": ", data[i])
+        data[i]=input(accyan.."Data"..i..acoff..": ", data[i])
     end
-	if (lc) then
-		data = fixLegicCash(data)
-	end
-	return data
+    if (lc) then
+        data = fixLegicCash(data)
+    end
+    return data
 end
 
 ---
@@ -2302,10 +2302,10 @@ function modifyMode()
     ["lf"] = function(x)
 
               if (type(x)=='string' and file_check(x)) then
-				filename = x
+                filename = x
               else
-				filename = input("enter filename: ", "legic.temp")
-			  end
+                filename = input("enter filename: ", "legic.temp")
+              end
               inTAG=readFile(filename)
               -- check for existing tagMap
               if (file_check(filename..".map")) then
@@ -2408,10 +2408,10 @@ function modifyMode()
     -- dump single segment
     ["ds"] = function(x)
                 if (type(x)=="string" and string.len(x)>0) then
-					sel = tonumber(x,10)
+                    sel = tonumber(x,10)
                 else
-					sel = selectSegment(inTAG)
-				end
+                    sel = selectSegment(inTAG)
+                end
                 if (sel) then print("\n"..(dumpSegment(inTAG, sel) or acred.."no Segments available") ..acoff.."\n") end
               end,
     ---
@@ -2423,9 +2423,9 @@ function modifyMode()
                 if(istable(inTAG.SEG[0])) then
                   inTAG=editSegment(inTAG, sel)
                   inTAG.SEG[sel]=regenSegmentHeader(inTAG.SEG[sel])
-				else
-					print(acyellow.."no Segments in Tag"..acoff)
-				end
+                else
+                    print(acyellow.."no Segments in Tag"..acoff)
+                end
               end
             end,
     ---
@@ -2481,15 +2481,15 @@ function modifyMode()
     ["tk"] = function(x)
                if (istable(inTAG) and istable(inTAG.SEG[0])) then
                 if (type(x)=="string" and string.len(x)>0) then
-					sel = tonumber(x,10)
-				else
-					sel = selectSegment(inTAG)
-				end
-                if(inTAG.SEG[sel].kgh) then
-					inTAG.SEG[sel].kgh = false
+                    sel = tonumber(x,10)
                 else
-					inTAG.SEG[sel].kgh = true
-				end
+                    sel = selectSegment(inTAG)
+                end
+                if(inTAG.SEG[sel].kgh) then
+                    inTAG.SEG[sel].kgh = false
+                else
+                    inTAG.SEG[sel].kgh = true
+                end
                end
               end,
     ---
@@ -2508,10 +2508,10 @@ function modifyMode()
     ["xc"] = function(x)
                if (istable(inTAG) and istable(inTAG.SEG[0])) then
                  if (type(x)=="string" and string.len(x)>0) then
-					sel = tonumber(x,10)
+                    sel = tonumber(x,10)
                  else
-					sel = selectSegment(inTAG)
-				 end
+                    sel = selectSegment(inTAG)
+                 end
                  print("k "..kghCrcCredentials(inTAG, sel))
                end
               end,
@@ -2519,10 +2519,10 @@ function modifyMode()
     -- fix legic-cash checksums
     ["flc"] = function(x)
                 if (type(x)=="string" and string.len(x)>0) then
-					x = tonumber(x,10)
+                    x = tonumber(x,10)
                 else
-					x = selectSegment(inTAG)
-				end
+                    x = selectSegment(inTAG)
+                end
                 inTAG.SEG[x].data=fixLegicCash(inTAG.SEG[x].data)
               end,
     ---
@@ -2540,8 +2540,8 @@ function modifyMode()
                   print(string.format("User-Selected Index %02d", x))
                 else
                 -- or try to find match
-					x = autoSelectSegment(inTAG, "legiccash")
-				end
+                    x = autoSelectSegment(inTAG, "legiccash")
+                end
                 -- dump it
                 dumpLegicCash(inTAG, x)
               end,
@@ -2555,8 +2555,8 @@ function modifyMode()
                   print(string.format("User-Selected Index %02d", x))
                 else
                 -- or try to find match
-					x = autoSelectSegment(inTAG, "3rdparty")
-				end
+                    x = autoSelectSegment(inTAG, "3rdparty")
+                end
                 if (istable(inTAG) and istable(inTAG.SEG[x]) and inTAG.SEG[x].len == 100) then
                   uid=inTAG.MCD..inTAG.MSN0..inTAG.MSN1..inTAG.MSN2
                   if (check43rdPartyCash1(uid, inTAG.SEG[x].data)) then
@@ -2574,8 +2574,8 @@ function modifyMode()
                   print(string.format("User-Selected Index %02d", x))
                 else
                 -- or try to find match
-					x = autoSelectSegment(inTAG, "3rdparty")
-				end
+                    x = autoSelectSegment(inTAG, "3rdparty")
+                end
                 print3rdPartyCash1(inTAG, x)
               end,
     ---
@@ -2589,8 +2589,8 @@ function modifyMode()
 
                 else
                 -- or try to find match
-					x = autoSelectSegment(inTAG, "3rdparty")
-				end
+                    x = autoSelectSegment(inTAG, "3rdparty")
+                end
                 if (istable(inTAG) and istable(inTAG.SEG[x]) and inTAG.SEG[x].len == 100) then
                   inTAG=edit3rdPartyCash1(inTAG, x)
                     dump3rdPartyCash1(inTAG, x)
@@ -2600,10 +2600,10 @@ function modifyMode()
     -- force fixing 3rd-party-checksums
     ["f3p"] = function(x)
                if(type(x)=="string" and string.len(x)>=2) then
-					x = tonumber(x, 10)
-				else
-					x = selectSegment(inTAG)
-				end
+                    x = tonumber(x, 10)
+                else
+                    x = selectSegment(inTAG)
+                end
                if (istable(inTAG.SEG[x])) then
                   local uid=inTAG.MCD..inTAG.MSN0..inTAG.MSN1..inTAG.MSN2
                   inTAG.SEG[x].data=fix3rdPartyCash1(uid, inTAG.SEG[x].data)
@@ -2613,10 +2613,10 @@ function modifyMode()
     -- get stamp from single segment
     ["gs"] = function(x)
                 if(type(x)=="string" and string.len(x)>=2) then
-					x = tonumber(x, 10)
+                    x = tonumber(x, 10)
                 else
-					x = selectSegment(inTAG)
-				end
+                    x = selectSegment(inTAG)
+                end
                 local stamp=getSegmentStamp(inTAG.SEG[x])
                 print("Stamp : "..stamp)
                 stamp=str2bytes(stamp)
@@ -2663,8 +2663,8 @@ function modifyMode()
     elseif (type(actions[string.lower(string.sub(ic,0,1))])=='function') then
       actions[string.lower(string.sub(ic,0,1))](string.sub(ic,3))
     else
-	  actions.h('')
-	end
+      actions.h('')
+    end
   until (string.sub(ic,0,1)=="q")
 end
 
@@ -2673,40 +2673,40 @@ end
 function main(args)
   -- set init colors/switch (can be toggled with 'tac' => 'toggle ansicolors')
   load_colors(colored_output)
-	if (#args == 0 ) then modifyMode() end
+    if (#args == 0 ) then modifyMode() end
   --- variables
   local inTAG, backupTAG, outTAG, outfile, interactive, crc, ofs, cfs, dfs
-	-- just a spacer for better readability
+    -- just a spacer for better readability
   print()
   --- parse arguments
-	for o, a in getopt.getopt(args, 'hrmi:do:c:') do
+    for o, a in getopt.getopt(args, 'hrmi:do:c:') do
     -- display help
     if o == "h" then return help(); end
     -- read tag from PM3
     if o == "r" then inTAG=readFromPM3() end
     -- input file
-		if o == "i" then inTAG=readFile(a) end
+        if o == "i" then inTAG=readFile(a) end
     -- dump virtual-Tag
     if o == "d" then dfs=true end
     -- interacive modifying
     if o == "m" then
-		interactive = true
-		modifyMode()
-	end
+        interactive = true
+        modifyMode()
+    end
     -- xor (e.g. for clone or plain file)
     if o == "c" then
-		cfs = true
-		crc = a
-	end
+        cfs = true
+        crc = a
+    end
     -- output file
-	if o == "o" then
-		outfile = a
-		ofs = true
-	end
+    if o == "o" then
+        outfile = a
+        ofs = true
+    end
   end
 
   -- file conversion (output to file)
-	if ofs == false then return end
+    if ofs == false then return end
 
     -- dump infile / tag-read
     if (dfs) then
