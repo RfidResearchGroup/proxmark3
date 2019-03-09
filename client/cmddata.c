@@ -1041,6 +1041,9 @@ int FSKrawDemod(const char *Cmd, bool verbose) {
 		}
 	}
 
+    if (getSignalProperties()->isnoise)
+        return 0;
+    
 	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t BitLen = getFromGraphBuf(bits);
 	if (BitLen == 0) return 0;
@@ -1106,6 +1109,10 @@ int PSKDemod(const char *Cmd, bool verbose) {
 		if (g_debugMode || verbose) PrintAndLogEx(WARNING, "Invalid argument: %s", Cmd);
 		return 0;
 	}
+        
+    if (getSignalProperties()->isnoise)
+        return 0;
+    
 	uint8_t BitStream[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t BitLen = getFromGraphBuf(BitStream);
 	if (BitLen == 0) return 0;
@@ -1210,6 +1217,9 @@ int NRZrawDemod(const char *Cmd, bool verbose) {
 		PrintAndLogEx(WARNING, "(NRZrawDemod) Invalid argument: %s", Cmd);
 		return 0;
 	}
+        
+    if (getSignalProperties()->isnoise)
+        return 0;
 
 	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t BitLen = getFromGraphBuf(bits);
