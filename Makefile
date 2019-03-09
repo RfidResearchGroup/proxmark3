@@ -39,7 +39,7 @@ recovery/%: FORCE
 	$(MAKE) -C recovery $(patsubst recovery/%,%,$@)
 FORCE: # Dummy target to force remake in the subdirectories, even if files exist (this Makefile doesn't know about the prerequisites)
 
-.PHONY: all clean help _test flash-bootrom flash-os flash-all FORCE
+.PHONY: all clean help _test flash-bootrom flash-os flash-all style FORCE
 
 help:
 	@echo Multi-OS Makefile, you are running on $(DETECTED_OS)
@@ -87,6 +87,9 @@ endif
  
 # easy printing of MAKE VARIABLES
 print-%: ; @echo $* = $($*) 
+
+style:
+	find . \( -name "*.[ch]" -or -name "*.cpp" \) -exec perl -pi -e 's/[ \t\r]+$$//' {} \;
 
 # Dummy target to test for GNU make availability
 _test:
