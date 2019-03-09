@@ -857,7 +857,7 @@ int flush;
             case 1:                             /* fixed block */
 #ifdef ZLIB_PM3_TUNED
                 strm->msg = (char *)"fixed block coding not supported";
-				state->mode = BAD;
+                state->mode = BAD;
 #else
                 fixedtables(state);
                 Tracev((stderr, "inflate:     fixed codes block%s\n",

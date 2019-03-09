@@ -11,19 +11,19 @@ Each standalone mod needs to have its own compiler flag to be added in `armsrc\m
 The RunMod function is your "main" function when running.  You need to check for Usb commands,  in order to let the pm3 client break the standalone mode.  See this basic skeleton of main function RunMod().
 ````
 void RunMod() {
-	// led show
-	StandAloneMode();
-	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+    // led show
+    StandAloneMode();
+    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
-	// main loop
-	for (;;) {		
-		WDT_HIT();
-		
-		// exit from standalone mode, just send a usbcommand
-		if (usb_poll_validate_length()) break;
-		
-		// do your standalone stuff..
-	}
+    // main loop
+    for (;;) {
+        WDT_HIT();
+
+        // exit from standalone mode, just send a usbcommand
+        if (usb_poll_validate_length()) break;
+
+        // do your standalone stuff..
+    }
 ````
 
 As it is now, you can only have one standalone mode installed at the time.  
@@ -47,9 +47,9 @@ Add your source code file like the following sample in the `armsrc\makefile`
 ```
 # WITH_HF_COLIN
 ifneq (,$(findstring WITH_HF_COLIN,$(APP_CFLAGS)))
-	SRC_STANDALONE = hf_colin.c vtsend.c
+    SRC_STANDALONE = hf_colin.c vtsend.c
 else
-	SRC_STANDALONE =
+    SRC_STANDALONE =
 endif
 ```
 
@@ -67,36 +67,36 @@ Once all this is done, you and others can now easily compile different standalon
 ````
 #remove one of the following defines and comment out the relevant line
 #in the next section to remove that particular feature from compilation.
-# NO space,TABs after the "\" sign.  
+# NO space,TABs after the "\" sign.
 APP_CFLAGS = -DWITH_CRC \
-			 -DON_DEVICE \
-			 -DWITH_LF \
-			 -DWITH_HITAG \
- 			 -DWITH_ISO15693 \
-			 -DWITH_LEGICRF \
-			 -DWITH_ISO14443b \
-			 -DWITH_ISO14443a \
-			 -DWITH_ICLASS \
-			 -DWITH_FELICA \
-			 -DWITH_FLASH \
-			 -DWITH_SMARTCARD \
-			 -DWITH_HFSNOOP \
-			 -DWITH_HF_COLIN\
-			 -DWITH_FPC \
-			 -fno-strict-aliasing -ffunction-sections -fdata-sections
+             -DON_DEVICE \
+             -DWITH_LF \
+             -DWITH_HITAG \
+             -DWITH_ISO15693 \
+             -DWITH_LEGICRF \
+             -DWITH_ISO14443b \
+             -DWITH_ISO14443a \
+             -DWITH_ICLASS \
+             -DWITH_FELICA \
+             -DWITH_FLASH \
+             -DWITH_SMARTCARD \
+             -DWITH_HFSNOOP \
+             -DWITH_HF_COLIN\
+             -DWITH_FPC \
+             -fno-strict-aliasing -ffunction-sections -fdata-sections
 
 ### IMPORTANT -  move the commented variable below this line
-#			 -DWITH_LCD \
-#			 -DWITH_EMV \
-#			 -DWITH_FPC \
+#             -DWITH_LCD \
+#             -DWITH_EMV \
+#             -DWITH_FPC \
 #
 # Standalone Mods
 #-------------------------------------------------------
-#			 -DWITH_LF_ICERUN
-#			 -DWITH_LF_SAMYRUN
-#			 -DWITH_LF_PROXBRUTE
-#			 -DWITH_LF_HIDBRUTE
-#			 -DWITH_HF_YOUNG
-#			 -DWITH_HF_MATTYRUN
-#			 -DWITH_HF_COLIN
+#             -DWITH_LF_ICERUN
+#             -DWITH_LF_SAMYRUN
+#             -DWITH_LF_PROXBRUTE
+#             -DWITH_LF_HIDBRUTE
+#             -DWITH_HF_YOUNG
+#             -DWITH_HF_MATTYRUN
+#             -DWITH_HF_COLIN
 ````
