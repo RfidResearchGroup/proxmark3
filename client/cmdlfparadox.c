@@ -79,15 +79,15 @@ int detectParadox(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint
 //print full Paradox Prox ID and some bit format details if found
 int CmdParadoxDemod(const char *Cmd) {
 	//raw fsk demod no manchester decoding no start bit finding just get binary from wave
-	uint8_t bits[MAX_GRAPH_TRACE_LEN]={0};
+	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t size = getFromGraphBuf(bits);
 	if (size == 0) {
 		PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox not enough samples");
 		return 0;
 	}
 
-	uint32_t hi2=0, hi=0, lo=0;
-	int waveIdx=0;
+	uint32_t hi2 = 0, hi = 0, lo = 0;
+	int waveIdx = 0;
 	//get binary from fsk wave
 	int idx = detectParadox(bits, &size, &hi2, &hi, &lo, &waveIdx);
 	if (idx < 0){
@@ -109,24 +109,24 @@ int CmdParadoxDemod(const char *Cmd) {
 	}
 
 	setDemodBuf(bits, size, idx);
-	setClockGrid(50, waveIdx + (idx*50));
+	setClockGrid(50, waveIdx + (idx * 50));
 
-	if (hi2==0 && hi==0 && lo==0){
-		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox no value found");
+	if (hi2 == 0 && hi == 0 && lo == 0){
+		PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox no value found");
 		return 0;
 	}
 
-	uint32_t fc = ((hi & 0x3)<<6) | (lo>>26);
-	uint32_t cardnum = (lo>>10) & 0xFFFF;
+	uint32_t fc = ((hi & 0x3) << 6) | (lo >> 26);
+	uint32_t cardnum = (lo >> 10) & 0xFFFF;
 	uint32_t rawLo = bytebits_to_byte(bits + idx + 64, 32);
 	uint32_t rawHi = bytebits_to_byte(bits + idx + 32, 32);
 	uint32_t rawHi2 = bytebits_to_byte(bits + idx, 32);
 
 	PrintAndLogEx(NORMAL, "Paradox TAG ID: %x%08x - FC: %d - Card: %d - Checksum: %02x - RAW: %08x%08x%08x",
 		hi >> 10,
-		(hi & 0x3)<<26 | (lo>>10),
+		(hi & 0x3) << 26 | (lo >> 10),
 		fc, cardnum,
-		(lo>>2) & 0xFF,
+		(lo >> 2) & 0xFF,
 		rawHi2,
 		rawHi,
 		rawLo
@@ -193,6 +193,7 @@ static command_t CommandTable[] = {
 };
 
 int CmdLFParadox(const char *Cmd) {
+    clearCommandBuffer();    
 	CmdsParse(CommandTable, Cmd);
 	return 0;
 }
