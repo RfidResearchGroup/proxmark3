@@ -14,16 +14,16 @@ if [ "${1}" = "" ]; then
         echo "Syntax: ${0} </installation/target/directory> [download & build directory (default ${PWD})]"
         exit 1
 else
-	DESTDIR="${1}"
+    DESTDIR="${1}"
 fi
 
 # Where do you want to build the tools. This is where the log files
 # will be written (which you can monitor with 'tail' during compilation).
 # You can delete this directory after everything is done.
 if [ ! "${2}" = "" ]; then
-	SRCDIR="${2}"
+    SRCDIR="${2}"
 else
-	SRCDIR="${PWD}"
+    SRCDIR="${PWD}"
 fi
 BUILDDIR=${SRCDIR}/build-gnuarm4
 

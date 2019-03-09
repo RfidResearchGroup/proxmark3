@@ -32,28 +32,28 @@ my $commandGIT = "env which git";
 
 if ( defined($commandGIT) )  {
 
-	my $githistory = `git fetch --all`;
-	# now avoiding the "fatal: No names found, cannot describe anything." error by fallbacking to abbrev hash in such case
-	my $gitversion = `git describe --dirty --always`;
-	my $gitbranch = `git rev-parse --abbrev-ref HEAD`;
-	$clean = $gitversion =~ '-dirty' ? 0 : 1;
+    my $githistory = `git fetch --all`;
+    # now avoiding the "fatal: No names found, cannot describe anything." error by fallbacking to abbrev hash in such case
+    my $gitversion = `git describe --dirty --always`;
+    my $gitbranch = `git rev-parse --abbrev-ref HEAD`;
+    $clean = $gitversion =~ '-dirty' ? 0 : 1;
 
-	if ( defined($gitbranch) and defined($gitversion) ) {
-		$fullgitinfo =  $fullgitinfo.'/'. $gitbranch . '/' . $gitversion;
+    if ( defined($gitbranch) and defined($gitversion) ) {
+        $fullgitinfo =  $fullgitinfo.'/'. $gitbranch . '/' . $gitversion;
 
-		my @compiletime = localtime();
-		$compiletime[4] += 1;
-		$compiletime[5] += 1900;
-		$ctime = sprintf("%6\$04i-%5\$02i-%4\$02i %3\$02i:%2\$02i:%1\$02i", @compiletime);
-	} else {
-		$fullgitinfo =  $fullgitinfo.'/master/release (git)';
-	}
+        my @compiletime = localtime();
+        $compiletime[4] += 1;
+        $compiletime[5] += 1900;
+        $ctime = sprintf("%6\$04i-%5\$02i-%4\$02i %3\$02i:%2\$02i:%1\$02i", @compiletime);
+    } else {
+        $fullgitinfo =  $fullgitinfo.'/master/release (git)';
+    }
 } else {
-	$fullgitinfo =  $fullgitinfo.'/master/release (no_git)';
-	my @dl_time = localtime( (stat('../README.md'))[10] );
-	$dl_time[4] += 1;
-	$dl_time[5] += 1900;
-	$ctime = sprintf("%6\$04i-%5\$02i-%4\$02i %3\$02i:%2\$02i:%1\$02i", @dl_time);
+    $fullgitinfo =  $fullgitinfo.'/master/release (no_git)';
+    my @dl_time = localtime( (stat('../README.md'))[10] );
+    $dl_time[4] += 1;
+    $dl_time[5] += 1900;
+    $ctime = sprintf("%6\$04i-%5\$02i-%4\$02i %3\$02i:%2\$02i:%1\$02i", @dl_time);
 }
 
 $fullgitinfo =~ s/(\s)//g;
@@ -66,11 +66,11 @@ print <<EOF
 #include "proxmark3.h"
 /* Generated file, do not edit */
 const struct version_information __attribute__((section(".version_information"))) version_information = {
-	VERSION_INFORMATION_MAGIC,
-	1,
-	1,
-	$clean,
-	"$fullgitinfo",
-	"$ctime",
+    VERSION_INFORMATION_MAGIC,
+    1,
+    1,
+    $clean,
+    "$fullgitinfo",
+    "$ctime",
 };
 EOF
