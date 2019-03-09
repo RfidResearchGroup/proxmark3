@@ -20,7 +20,7 @@ static void RAMFUNC optimizedSnoop(void)
 			dest++;
 		}
 	}
-    //setting tracelen - importsnt!  it was set by buffer overflow before
+    //setting tracelen - important!  it was set by buffer overflow before
     set_tracelen( BigBuf_max_traceLen());
 }
 
