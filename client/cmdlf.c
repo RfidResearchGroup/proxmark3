@@ -816,10 +816,13 @@ int CmdVchDemod(const char *Cmd) {
 }
 
 //by marshmellow
-int CheckChipType(bool getDeviceData) {
+bool CheckChipType(bool getDeviceData) {
 
-	if (!getDeviceData) return 0;
+	bool retval = false;
 
+	if (!getDeviceData) return retval;
+
+	save_restoreGB(GRAPH_SAVE);
 	save_restoreDB(GRAPH_SAVE);
 
 	//check for em4x05/em4x69 chips first
@@ -827,20 +830,22 @@ int CheckChipType(bool getDeviceData) {
 	if (EM4x05IsBlock0(&word)) {
 		PrintAndLogEx(SUCCESS, "\nValid EM4x05/EM4x69 Chip Found");
 		PrintAndLogEx(SUCCESS, "Try " _YELLOW_(`lf em 4x05`) " commands");
-		save_restoreGB(GRAPH_RESTORE);
-		return 1;
+		retval = true;
+		goto out;
 	}
 
 	//check for t55xx chip...
 	if (tryDetectP1(true)) {
 		PrintAndLogEx(SUCCESS, "\nValid T55xx Chip Found");
 		PrintAndLogEx(SUCCESS, "Try " _YELLOW_(`lf t55xx`)" commands");
-		save_restoreGB(GRAPH_RESTORE);
-		return 1;
+		retval = true;
+		goto out;
 	}
 
+out:	
+	save_restoreGB(GRAPH_RESTORE);
 	save_restoreDB(GRAPH_RESTORE);
-	return 0;
+	return retval;
 }
 
 //by marshmellow
