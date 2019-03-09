@@ -11,13 +11,13 @@ ms of the GNU GPL, version 2 or,
 
 /* AT91SAM7S256 has 256k Flash and 64k RAM */
 /* AT91SAM7S512 has 512k Flash and 64k RAM */
-MEMORY 
+MEMORY
 {
-	bootphase1 : ORIGIN = 0x00100000, LENGTH = 0x200             /* Phase 1 bootloader: Copies real bootloader to RAM */
-	bootphase2 : ORIGIN = 0x00100200, LENGTH = 0x2000 - 0x200    /* Main bootloader code, stored in Flash, executed from RAM */
-	osimage    : ORIGIN = 0x00102000, LENGTH = 512K - 0x2000     /* Place where the main OS will end up */
-	ram        : ORIGIN = 0x00200000, LENGTH = 64K - 0x20        /* RAM, minus small common area */
-	commonarea : ORIGIN = 0x00200000 + 64K - 0x20, LENGTH = 0x20 /* Communication between bootloader and main OS */
+    bootphase1 : ORIGIN = 0x00100000, LENGTH = 0x200             /* Phase 1 bootloader: Copies real bootloader to RAM */
+    bootphase2 : ORIGIN = 0x00100200, LENGTH = 0x2000 - 0x200    /* Main bootloader code, stored in Flash, executed from RAM */
+    osimage    : ORIGIN = 0x00102000, LENGTH = 512K - 0x2000     /* Place where the main OS will end up */
+    ram        : ORIGIN = 0x00200000, LENGTH = 64K - 0x20        /* RAM, minus small common area */
+    commonarea : ORIGIN = 0x00200000 + 64K - 0x20, LENGTH = 0x20 /* Communication between bootloader and main OS */
 }
 
 /* Export some information that can be used from within the firmware */

@@ -6,7 +6,7 @@
 #define CRC64_ECMA_PRESET 0x0000000000000000
 
 const uint64_t crc64_table[] = {
-		 0x0000000000000000, 0x42F0E1EBA9EA3693, 0x85E1C3D753D46D26, 0xC711223CFA3E5BB5,
+         0x0000000000000000, 0x42F0E1EBA9EA3693, 0x85E1C3D753D46D26, 0xC711223CFA3E5BB5,
          0x493366450E42ECDF, 0x0BC387AEA7A8DA4C, 0xCCD2A5925D9681F9, 0x8E224479F47CB76A,
          0x9266CC8A1C85D9BE, 0xD0962D61B56FEF2D, 0x17870F5D4F51B498, 0x5577EEB6E6BB820B,
          0xDB55AACF12C73561, 0x99A54B24BB2D03F2, 0x5EB4691841135847, 0x1C4488F3E8F96ED4,
@@ -74,10 +74,10 @@ const uint64_t crc64_table[] = {
 
 void crc64 (const uint8_t *data, const size_t len, uint64_t *crc) {
 
-	for (size_t i = 0; i < len; i++) {
-		uint8_t tableIndex = (((uint8_t)(*crc >> 56)) ^ data[i]) & 0xff;
-		*crc = crc64_table[tableIndex] ^ (*crc << 8);
-	}
+    for (size_t i = 0; i < len; i++) {
+        uint8_t tableIndex = (((uint8_t)(*crc >> 56)) ^ data[i]) & 0xff;
+        *crc = crc64_table[tableIndex] ^ (*crc << 8);
+    }
 }
 
-//suint8_t x = 	(c & 0xFF00000000000000 ) >> 56;
+//suint8_t x = (c & 0xFF00000000000000 ) >> 56;

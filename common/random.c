@@ -14,17 +14,17 @@ static uint32_t g_nextrandom;
  */
 
 inline void fast_prand(){
-	fast_prandEx(GetTickCount());
+    fast_prandEx(GetTickCount());
 }
 inline void fast_prandEx(uint32_t seed) {
-	g_nextrandom = seed;
+    g_nextrandom = seed;
 }
 
 uint32_t prand() {
-//	g_nextrandom *= 6364136223846793005;
-//	g_nextrandom += 1;
+// g_nextrandom *= 6364136223846793005;
+// g_nextrandom += 1;
 //return (uint32_t)(g_nextrandom >> 32) % 0xffffffff;
-	g_nextrandom = (214013 * g_nextrandom + 2531011);
-	return (g_nextrandom>>16) & 0xFFFF;
+    g_nextrandom = (214013 * g_nextrandom + 2531011);
+    return (g_nextrandom>>16) & 0xFFFF;
 }
 

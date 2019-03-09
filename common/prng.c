@@ -17,7 +17,7 @@ uint32_t burtle_get_mod( prng_ctx *x ) {
 
 void burtle_init_mod(prng_ctx *x, uint32_t seed ) {
     x->a = 0xf1ea5eed;
-	x->b = x->c = x->d = seed;
+    x->b = x->c = x->d = seed;
     for (uint8_t i=0; i < 42; ++i) {
         (void)burtle_get_mod(x);
     }
@@ -33,7 +33,7 @@ void burtle_init(prng_ctx *x, uint32_t seed ) {
 
 
 uint32_t GetSimplePrng( uint32_t seed ){
-	seed *= 0x19660D;
-	seed += 0x3C6EF35F;
-	return seed;
+    seed *= 0x19660D;
+    seed += 0x3C6EF35F;
+    return seed;
 }

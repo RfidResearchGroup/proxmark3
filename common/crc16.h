@@ -14,20 +14,20 @@
 
 #define CRC16_POLY_CCITT  0x1021
 #define CRC16_POLY_LEGIC  0xc6c6 //0x6363
-#define CRC16_POLY_DNP	  0x3d65
+#define CRC16_POLY_DNP    0x3d65
 
-#define X25_CRC_CHECK		((uint16_t)(~0xF0B8 & 0xFFFF)) 	// use this for checking of a correct crc
+#define X25_CRC_CHECK     ((uint16_t)(~0xF0B8 & 0xFFFF)) // use this for checking of a correct crc
 
 typedef enum {
-	CRC_NONE,
-	CRC_14443_A,
-	CRC_14443_B,
-	CRC_15693,
-	CRC_ICLASS,
-	CRC_FELICA,
-	CRC_LEGIC,
-	CRC_CCITT,
-	CRC_KERMIT,
+    CRC_NONE,
+    CRC_14443_A,
+    CRC_14443_B,
+    CRC_15693,
+    CRC_ICLASS,
+    CRC_FELICA,
+    CRC_LEGIC,
+    CRC_CCITT,
+    CRC_KERMIT,
 } CrcType_t;
 
 uint16_t update_crc16_ex( uint16_t crc, uint8_t c, uint16_t polynomial );

@@ -19,7 +19,7 @@
 #include <stdlib.h>  // for
 #include <stdbool.h> // for bool
 #include "parity.h"  // for parity test
-#include "util.h"	 // for ARRAYLEN
+#include "util.h"    // for ARRAYLEN
 
 //might not be high enough for noisy environments
 #define NOISE_AMPLITUDE_THRESHOLD 10
@@ -30,11 +30,11 @@
 
 //generic
 typedef struct {
-	int low;
-	int high;
-	int mean;
-	int amplitude;
-	bool isnoise;
+    int low;
+    int high;
+    int mean;
+    int amplitude;
+    bool isnoise;
 } signal_t;
 signal_t* getSignalProperties(void);
 
@@ -50,12 +50,12 @@ extern int      askdemod(uint8_t *bits, size_t *size, int *clk, int *invert, int
 extern int      askdemod_ext(uint8_t *bits, size_t *size, int *clk, int *invert, int maxErr, uint8_t amp, uint8_t askType, int *startIdx);
 extern void     askAmp(uint8_t *bits, size_t size);
 extern int      BiphaseRawDecode(uint8_t *bits, size_t *size, int *offset, int invert);
-extern uint8_t bits_to_array(const uint8_t *bits, size_t size, uint8_t *dest);
+extern uint8_t  bits_to_array(const uint8_t *bits, size_t size, uint8_t *dest);
 extern uint32_t bytebits_to_byte(uint8_t *src, size_t numbits);
 extern uint32_t bytebits_to_byteLSBF(uint8_t *src, size_t numbits);
 extern uint16_t countFC(uint8_t *bits, size_t size, bool fskAdj);
 extern int      DetectASKClock(uint8_t *dest, size_t size, int *clock, int maxErr);
-extern bool		DetectCleanAskWave(uint8_t *dest, size_t size, uint8_t high, uint8_t low);
+extern bool     DetectCleanAskWave(uint8_t *dest, size_t size, uint8_t high, uint8_t low);
 extern uint8_t  detectFSKClk(uint8_t *bits, size_t size, uint8_t fcHigh, uint8_t fcLow, int *firstClockEdge);
 extern int      DetectNRZClock(uint8_t *dest, size_t size, int clock, size_t *clockStartIdx);
 extern int      DetectPSKClock(uint8_t *dest, size_t size, int clock, size_t *firstPhaseShift, uint8_t *curPhase, uint8_t *fc);
@@ -69,8 +69,8 @@ extern int      ManchesterEncode(uint8_t *bits, size_t size);
 extern int      manrawdecode(uint8_t *bits, size_t *size, uint8_t invert, uint8_t *alignPos);
 extern int      nrzRawDemod(uint8_t *dest, size_t *size, int *clk, int *invert, int *startIdx);
 extern bool     parityTest(uint32_t bits, uint8_t bitLen, uint8_t pType);
-extern bool		preambleSearch(uint8_t *bits, uint8_t *preamble, size_t pLen, size_t *size, size_t *startIdx);
-extern bool		preambleSearchEx(uint8_t *bits, uint8_t *preamble, size_t pLen, size_t *size, size_t *startIdx, bool findone);
+extern bool     preambleSearch(uint8_t *bits, uint8_t *preamble, size_t pLen, size_t *size, size_t *startIdx);
+extern bool     preambleSearchEx(uint8_t *bits, uint8_t *preamble, size_t pLen, size_t *size, size_t *startIdx, bool findone);
 extern int      pskRawDemod(uint8_t *dest, size_t *size, int *clock, int *invert);
 extern int      pskRawDemod_ext(uint8_t *dest, size_t *size, int *clock, int *invert, int *startIdx);
 extern void     psk2TOpsk1(uint8_t *bits, size_t size);

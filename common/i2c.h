@@ -8,16 +8,16 @@
 #include "BigBuf.h"
 #include "mifare.h"
 
-#define I2C_DEVICE_ADDRESS_BOOT		0xB0
-#define I2C_DEVICE_ADDRESS_MAIN		0xC0
+#define I2C_DEVICE_ADDRESS_BOOT     0xB0
+#define I2C_DEVICE_ADDRESS_MAIN     0xC0
 
-#define I2C_DEVICE_CMD_GENERATE_ATR	0x01
-#define I2C_DEVICE_CMD_SEND			0x02
-#define I2C_DEVICE_CMD_READ			0x03
-#define I2C_DEVICE_CMD_SETBAUD		0x04
-#define I2C_DEVICE_CMD_SIM_CLC		0x05
-#define I2C_DEVICE_CMD_GETVERSION	0x06
-#define I2C_DEVICE_CMD_SEND_T0		0x07
+#define I2C_DEVICE_CMD_GENERATE_ATR 0x01
+#define I2C_DEVICE_CMD_SEND         0x02
+#define I2C_DEVICE_CMD_READ         0x03
+#define I2C_DEVICE_CMD_SETBAUD      0x04
+#define I2C_DEVICE_CMD_SIM_CLC      0x05
+#define I2C_DEVICE_CMD_GETVERSION   0x06
+#define I2C_DEVICE_CMD_SEND_T0      0x07
 
 
 void I2C_recovery(void);
