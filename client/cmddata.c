@@ -1600,19 +1600,23 @@ int CmdLoad(const char *Cmd) {
 	len = strlen(Cmd);
 	if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
 	memcpy(filename, Cmd, len);
-
+	
 	FILE *f = fopen(filename, "r");
 	if (!f) {
 		PrintAndLogEx(WARNING, "couldn't open '%s'", filename);
 		return 0;
 	}
-
+        
 	GraphTraceLen = 0;
 	char line[80];
 	while (fgets(line, sizeof (line), f)) {
 		GraphBuffer[GraphTraceLen] = atoi(line);
 		GraphTraceLen++;
+    
+        if ( GraphTraceLen >= MAX_GRAPH_TRACE_LEN )
+            break;
 	}
+    
 	if (f)
 		fclose(f);
 
@@ -1620,11 +1624,9 @@ int CmdLoad(const char *Cmd) {
 
 	uint8_t bits[GraphTraceLen];
 	size_t size = getFromGraphBuf(bits);
-	// set signal properties low/high/mean/amplitude and is_noise detection
+    
 	removeSignalOffset(bits, size);
-	// push it back to graph
 	setGraphBuf(bits, size);
-	// set signal properties low/high/mean/amplitude and is_noise detection
 	computeSignalProperties(bits, size);
 
 	setClockGrid(0,0);

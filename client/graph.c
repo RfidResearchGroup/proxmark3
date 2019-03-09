@@ -67,7 +67,7 @@ void setGraphBuf(uint8_t *buf, size_t size) {
 	if ( size > MAX_GRAPH_TRACE_LEN )
 		size = MAX_GRAPH_TRACE_LEN;
 
-	for (uint16_t i = 0; i < size; ++i)
+	for (uint32_t i = 0; i < size; ++i)
 		GraphBuffer[i] = buf[i] - 128;
 
 	GraphTraceLen = size;
