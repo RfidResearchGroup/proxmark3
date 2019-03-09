@@ -1160,10 +1160,10 @@ local uInt longest_match(s, cur_match)
 {
     unsigned chain_length = s->max_chain_length;/* max hash chain length */
     register Bytef *scan = s->window + s->strstart; /* current string */
-    register Bytef *match;                       /* matched string */
+    register Bytef *match;                      /* matched string */
     register int len;                           /* length of current match */
 #ifdef ZLIB_PM3_TUNED
-	int best_len = 	MIN_MATCH-1;				// lift the restriction on prev-length
+    int best_len = MIN_MATCH-1;                 /* lift the restriction on prev-length */
 #else
     int best_len = s->prev_length;              /* best match length so far */
 #endif
@@ -1737,73 +1737,73 @@ local block_state deflate_fast(s, flush)
 
 #ifdef ZLIB_PM3_TUNED
 local uInt try_harder(s, strstart, lookahead, hash_head)
-	deflate_state *s;
-	uInt strstart;
-	uInt lookahead;
-	IPos hash_head;
+    deflate_state *s;
+    uInt strstart;
+    uInt lookahead;
+    IPos hash_head;
 {
-	uInt strstart_save = s->strstart;
-	s->strstart = strstart;
-	uInt lookahead_save = s->lookahead;
-	s->lookahead = lookahead;
-	uInt ins_h_save = s->ins_h;
-	uInt combined_gain;
-	uInt best_combined_gain = 0;
-	uInt match_length;
-	uInt prev_length = s->prev_length < MIN_MATCH ? 1 : s->prev_length;
-	uInt best_prev_length = prev_length;
-	uInt current_match_start = s->match_start;
-	uInt current_match_length = s->match_length;
+    uInt strstart_save = s->strstart;
+    s->strstart = strstart;
+    uInt lookahead_save = s->lookahead;
+    s->lookahead = lookahead;
+    uInt ins_h_save = s->ins_h;
+    uInt combined_gain;
+    uInt best_combined_gain = 0;
+    uInt match_length;
+    uInt prev_length = s->prev_length < MIN_MATCH ? 1 : s->prev_length;
+    uInt best_prev_length = prev_length;
+    uInt current_match_start = s->match_start;
+    uInt current_match_length = s->match_length;
 
-	do {
+    do {
         if (hash_head != NIL && s->strstart - hash_head <= MAX_DIST(s)) {
-			match_length = longest_match (s, hash_head);
-			/* longest_match() sets match_start */
-		} else {
-			match_length = MIN_MATCH - 1;
-		}
+            match_length = longest_match (s, hash_head);
+            /* longest_match() sets match_start */
+        } else {
+            match_length = MIN_MATCH - 1;
+        }
 #if TOO_FAR <= 32767
-		if (match_length == MIN_MATCH && s->strstart - s->match_start > TOO_FAR) {
-			match_length = MIN_MATCH-1;
-		}
+        if (match_length == MIN_MATCH && s->strstart - s->match_start > TOO_FAR) {
+            match_length = MIN_MATCH-1;
+        }
 #endif
-		if (s->strstart == strstart) {						// store match at current position
-			current_match_length = match_length;
-			current_match_start = s->match_start;
-		}
-		if (s->strstart - strstart + 1 < MIN_MATCH) { 		// previous match reduced to one or two literals
-			combined_gain = 0;								// need one literal per byte: no gain (assuming 8 bits per literal)
-		} else {
-			combined_gain = s->strstart - strstart + 1 - MIN_MATCH;  // (possibly truncated) previous_length - 3 literals
-		}
-		if (match_length < MIN_MATCH) {
-			combined_gain += 0;							// no gain
-		} else {
-			combined_gain += match_length - MIN_MATCH; 	// match_length bytes are coded as three literals
-		}
-		if (combined_gain >= best_combined_gain) {			// in case of a tie we prefer the longer prev_length
-			best_combined_gain = combined_gain;
-			best_prev_length = s->strstart - strstart + 1;
-		}
-		s->strstart++;
-		s->lookahead--;
-		UPDATE_HASH(s, s->ins_h, s->window[(s->strstart) + (MIN_MATCH-1)]);
-		hash_head = s->head[s->ins_h];
-	} while (s->strstart <= strstart-1 + prev_length 			// try to truncate the previous match to 1, 3, ... prev_length
-			&& s->strstart <= s->window_size - MIN_LOOKAHEAD);	// watch out for the end of the input
+        if (s->strstart == strstart) {                      // store match at current position
+            current_match_length = match_length;
+            current_match_start = s->match_start;
+        }
+        if (s->strstart - strstart + 1 < MIN_MATCH) {       // previous match reduced to one or two literals
+            combined_gain = 0;                              // need one literal per byte: no gain (assuming 8 bits per literal)
+        } else {
+            combined_gain = s->strstart - strstart + 1 - MIN_MATCH;  // (possibly truncated) previous_length - 3 literals
+        }
+        if (match_length < MIN_MATCH) {
+            combined_gain += 0;                             // no gain
+        } else {
+            combined_gain += match_length - MIN_MATCH;      // match_length bytes are coded as three literals
+        }
+        if (combined_gain >= best_combined_gain) {          // in case of a tie we prefer the longer prev_length
+            best_combined_gain = combined_gain;
+            best_prev_length = s->strstart - strstart + 1;
+        }
+        s->strstart++;
+        s->lookahead--;
+        UPDATE_HASH(s, s->ins_h, s->window[(s->strstart) + (MIN_MATCH-1)]);
+        hash_head = s->head[s->ins_h];
+    } while (s->strstart <= strstart-1 + prev_length        // try to truncate the previous match to 1, 3, ... prev_length
+            && s->strstart <= s->window_size - MIN_LOOKAHEAD); // watch out for the end of the input
 
-	s->strstart = strstart_save;
-	s->lookahead = lookahead_save;
-	s->ins_h = ins_h_save;
-	s->match_length = current_match_length;
-	s->match_start = current_match_start;
-	if (best_prev_length >= MIN_MATCH) {
-		s->prev_length = best_prev_length;
-		s->match_length = MIN_MATCH - 1;
-	} else {
-		s->prev_length = MIN_MATCH - 1;
-	}
-	return best_combined_gain;
+    s->strstart = strstart_save;
+    s->lookahead = lookahead_save;
+    s->ins_h = ins_h_save;
+    s->match_length = current_match_length;
+    s->match_start = current_match_start;
+    if (best_prev_length >= MIN_MATCH) {
+        s->prev_length = best_prev_length;
+        s->match_length = MIN_MATCH - 1;
+    } else {
+        s->prev_length = MIN_MATCH - 1;
+    }
+    return best_combined_gain;
 }
 #endif
 
@@ -1850,9 +1850,9 @@ local block_state deflate_slow(s, flush)
         s->match_length = MIN_MATCH-1;
 
 #ifdef ZLIB_PM3_TUNED
-		if (s->prev_length < s->max_lazy_match) {
-			try_harder(s, s->strstart, s->lookahead, hash_head);
-		}
+        if (s->prev_length < s->max_lazy_match) {
+            try_harder(s, s->strstart, s->lookahead, hash_head);
+        }
 
 #else
         if (hash_head != NIL && s->prev_length < s->max_lazy_match &&

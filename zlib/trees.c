@@ -989,7 +989,7 @@ void ZLIB_INTERNAL _tr_flush_block(s, buf, stored_len, last)
 #endif
     } else {
 #endif /* !ZLIB_PM3_TUNED */
-		send_bits(s, (DYN_TREES<<1)+last, 3);
+        send_bits(s, (DYN_TREES<<1)+last, 3);
         send_all_trees(s, s->l_desc.max_code+1, s->d_desc.max_code+1,
                        max_blindex+1);
         compress_block(s, (const ct_data *)s->dyn_ltree,
