@@ -607,7 +607,7 @@ int CmdHF14ACUIDs(const char *Cmd) {
 
 		if (ukbhit()) {
 			int gc = getchar(); (void)gc;
-			PrintAndLogEx(NORMAL, "\n[!] aborted via keyboard!\n");
+			PrintAndLogEx(WARNING, "\n[!] aborted via keyboard!\n");
 			break;
 		}
 

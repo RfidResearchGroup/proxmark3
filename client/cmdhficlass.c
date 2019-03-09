@@ -1057,7 +1057,7 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 		printf("."); fflush(stdout);
 		if (ukbhit()) {
 			int gc = getchar(); (void)gc;
-			PrintAndLogEx(NORMAL, "\n[!] aborted via keyboard!\n");
+			PrintAndLogEx(WARNING, "\n[!] aborted via keyboard!\n");
 			DropField();
 			return 0;
 		}
@@ -2061,7 +2061,7 @@ int CmdHFiClassCheckKeys(const char *Cmd) {
 
 		if (ukbhit()) {
 			int gc = getchar(); (void)gc;
-			PrintAndLogEx(NORMAL, "\n[!] Aborted via keyboard!\n");
+			PrintAndLogEx(WARNING, "\n[!] Aborted via keyboard!\n");
 			goto out;
 		}
 

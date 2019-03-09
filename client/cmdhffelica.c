@@ -367,7 +367,7 @@ int CmdHFFelicaDumpLite(const char *Cmd) {
 		printf("."); fflush(stdout);
 		if (ukbhit()) {
 			int gc = getchar(); (void)gc;
-			PrintAndLogEx(NORMAL, "\n[!] aborted via keyboard!\n");
+			PrintAndLogEx(WARNING, "\n[!] aborted via keyboard!\n");
 			DropField();
 			return 1;
 		}
