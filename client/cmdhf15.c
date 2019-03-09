@@ -723,7 +723,7 @@ int CmdHF15Dump(const char *Cmd)
     }
     // detect blocksize from card :)
 
-    PrintAndLogEx(NORMAL, "Reading memory from tag UID " _YELLOW_( % s), sprintUID(NULL, uid));
+    PrintAndLogEx(NORMAL, "Reading memory from tag UID " _YELLOW_("%s"), sprintUID(NULL, uid));
 
     int blocknum = 0;
     uint8_t *recv = NULL;

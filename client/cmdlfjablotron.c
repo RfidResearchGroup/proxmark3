@@ -139,7 +139,7 @@ int CmdJablotronDemod(const char *Cmd)
     uint8_t chksum = raw2 & 0xFF;
     PrintAndLogEx(INFO, "Checksum: %02X [%s]",
                   chksum,
-                  (chksum == jablontron_chksum(DemodBuffer)) ? _GREEN_(OK) : _RED_(FAIL)
+                  (chksum == jablontron_chksum(DemodBuffer)) ? _GREEN_("OK") : _RED_("FAIL")
                  );
 
     id = DEC2BCD(id);

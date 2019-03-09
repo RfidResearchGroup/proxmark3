@@ -61,19 +61,19 @@ void PrintAndLogEx(logLevel_t level, char *fmt, ...)
 
     switch (level) {
         case ERR:
-            strncpy(prefix, _RED_([!!]), sizeof(prefix) - 1);
+            strncpy(prefix, _RED_("[!!]"), sizeof(prefix) - 1);
             break;
         case FAILED:
-            strncpy(prefix, _RED_([-]), sizeof(prefix) - 1);
+            strncpy(prefix, _RED_("[-]"), sizeof(prefix) - 1);
             break;
         case DEBUG:
-            strncpy(prefix, _BLUE_([#]), sizeof(prefix) - 1);
+            strncpy(prefix, _BLUE_("[#]"), sizeof(prefix) - 1);
             break;
         case SUCCESS:
-            strncpy(prefix, _GREEN_([+]), sizeof(prefix) - 1);
+            strncpy(prefix, _GREEN_("[+]"), sizeof(prefix) - 1);
             break;
         case WARNING:
-            strncpy(prefix, _CYAN_([!]), sizeof(prefix) - 1);
+            strncpy(prefix, _CYAN_("[!]"), sizeof(prefix) - 1);
             break;
         default:
             strncpy(prefix, prefixes[level], sizeof(prefix) - 1);

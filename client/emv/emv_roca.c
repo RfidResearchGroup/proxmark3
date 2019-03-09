@@ -158,10 +158,10 @@ int roca_self_test(void)
 
 
     if (emv_rocacheck(keyp, 64, false)) {
-        PrintAndLogEx(SUCCESS, "Weak modulus [ %s]", _GREEN_(PASS));
+        PrintAndLogEx(SUCCESS, "Weak modulus [ %s]", _GREEN_("PASS"));
     } else {
         ret++;
-        PrintAndLogEx(FAILED, "Weak modulus [ %s]", _RED_(FAIL));
+        PrintAndLogEx(FAILED, "Weak modulus [ %s]", _RED_("FAIL"));
     }
 
     // negative
@@ -172,9 +172,9 @@ int roca_self_test(void)
 
     if (emv_rocacheck(keyn, 64, false)) {
         ret++;
-        PrintAndLogEx(FAILED, "Strong modulus [ %s]", _RED_(FAIL));
+        PrintAndLogEx(FAILED, "Strong modulus [ %s]", _RED_("FAIL"));
     } else {
-        PrintAndLogEx(SUCCESS, "Strong modulus [ %s]", _GREEN_(PASS));
+        PrintAndLogEx(SUCCESS, "Strong modulus [ %s]", _GREEN_("PASS"));
     }
 
     return ret;

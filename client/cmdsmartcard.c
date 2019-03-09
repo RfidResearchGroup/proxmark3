@@ -614,7 +614,7 @@ int CmdSmartUpgrade(const char *Cmd)
     // load file
     f = fopen(filename, "rb");
     if (!f) {
-        PrintAndLogEx(FAILED, "File: " _YELLOW_( % s) ": not found or locked.", filename);
+        PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
         return 1;
     }
 

@@ -853,7 +853,7 @@ bool CheckChipType(bool getDeviceData)
     uint32_t word = 0;
     if (EM4x05IsBlock0(&word)) {
         PrintAndLogEx(SUCCESS, "\nValid EM4x05/EM4x69 Chip Found");
-        PrintAndLogEx(SUCCESS, "Try " _YELLOW_(`lf em 4x05`) " commands");
+        PrintAndLogEx(SUCCESS, "Try " _YELLOW_("`lf em 4x05`") " commands");
         retval = true;
         goto out;
     }
@@ -861,7 +861,7 @@ bool CheckChipType(bool getDeviceData)
     //check for t55xx chip...
     if (tryDetectP1(true)) {
         PrintAndLogEx(SUCCESS, "\nValid T55xx Chip Found");
-        PrintAndLogEx(SUCCESS, "Try " _YELLOW_(`lf t55xx`)" commands");
+        PrintAndLogEx(SUCCESS, "Try " _YELLOW_("`lf t55xx`")" commands");
         retval = true;
         goto out;
     }
@@ -896,7 +896,7 @@ int CmdLFfind(const char *Cmd)
 
     PrintAndLogEx(INFO, "NOTE: some demods output possible binary");
     PrintAndLogEx(INFO, "if it finds something that looks like a tag");
-    PrintAndLogEx(INFO, "False Positives " _YELLOW_(ARE) "possible\n");
+    PrintAndLogEx(INFO, "False Positives " _YELLOW_("ARE") "possible\n");
     PrintAndLogEx(INFO, "\nChecking for known tags:\n");
 
     // only run these tests if device is online

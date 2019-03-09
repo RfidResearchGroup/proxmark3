@@ -1017,10 +1017,10 @@ int detect_classic_nackbug(bool verbose)
                     return 2;
                 }
                 case  2 :
-                    PrintAndLogEx(SUCCESS, _GREEN_(always leak NACK detected));
+                    PrintAndLogEx(SUCCESS, _GREEN_("always leak NACK detected"));
                     return 3;
                 case  1 :
-                    PrintAndLogEx(SUCCESS, _GREEN_(NACK bug detected));
+                    PrintAndLogEx(SUCCESS, _GREEN_("NACK bug detected"));
                     return 1;
                 case  0 :
                     PrintAndLogEx(SUCCESS, "No NACK bug detected");
@@ -1048,14 +1048,14 @@ void detect_classic_magic(void)
 
     switch (isGeneration) {
         case 1:
-            PrintAndLogEx(SUCCESS, "Answers to magic commands (GEN 1a): " _GREEN_(YES));
+            PrintAndLogEx(SUCCESS, "Answers to magic commands (GEN 1a): " _GREEN_("YES"));
             break;
         case 2:
-            PrintAndLogEx(SUCCESS, "Answers to magic commands (GEN 1b): " _GREEN_(YES));
+            PrintAndLogEx(SUCCESS, "Answers to magic commands (GEN 1b): " _GREEN_("YES"));
             break;
-        //case 4: PrintAndLogEx(SUCCESS, "Answers to magic commands (GEN 2): "  _GREEN_(YES)); break;
+        //case 4: PrintAndLogEx(SUCCESS, "Answers to magic commands (GEN 2): "  _GREEN_("YES")); break;
         default:
-            PrintAndLogEx(INFO, "Answers to magic commands: " _YELLOW_(NO));
+            PrintAndLogEx(INFO, "Answers to magic commands: " _YELLOW_("NO"));
             break;
     }
 }

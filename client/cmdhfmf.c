@@ -803,7 +803,7 @@ int CmdHF14AMfDump(const char *Cmd)
     }
 
     if ((f = fopen(keyFilename, "rb")) == NULL) {
-        PrintAndLogEx(WARNING, "Could not find file " _YELLOW_( % s), keyFilename);
+        PrintAndLogEx(WARNING, "Could not find file " _YELLOW_("%s"), keyFilename);
         return 1;
     }
 
@@ -1013,7 +1013,7 @@ int CmdHF14AMfRestore(const char *Cmd)
     }
 
     if ((fkeys = fopen(keyFilename, "rb")) == NULL) {
-        PrintAndLogEx(WARNING, "Could not find file " _YELLOW_( % s), keyFilename);
+        PrintAndLogEx(WARNING, "Could not find file " _YELLOW_("%s"), keyFilename);
         return 1;
     }
 
@@ -1021,7 +1021,7 @@ int CmdHF14AMfRestore(const char *Cmd)
     for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
         bytes_read = fread(keyA[sectorNo], 1, 6, fkeys);
         if (bytes_read != 6) {
-            PrintAndLogEx(WARNING, "File reading error  " _YELLOW_( % s), keyFilename);
+            PrintAndLogEx(WARNING, "File reading error  " _YELLOW_("%s"), keyFilename);
             fclose(fkeys);
             return 2;
         }
@@ -1030,7 +1030,7 @@ int CmdHF14AMfRestore(const char *Cmd)
     for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
         bytes_read = fread(keyB[sectorNo], 1, 6, fkeys);
         if (bytes_read != 6) {
-            PrintAndLogEx(WARNING, "File reading error " _YELLOW_( % s), keyFilename);
+            PrintAndLogEx(WARNING, "File reading error " _YELLOW_("%s"), keyFilename);
             fclose(fkeys);
             return 2;
         }
@@ -1047,10 +1047,10 @@ int CmdHF14AMfRestore(const char *Cmd)
     }
 
     if ((fdump = fopen(dataFilename, "rb")) == NULL) {
-        PrintAndLogEx(WARNING, "Could not find file " _YELLOW_( % s), dataFilename);
+        PrintAndLogEx(WARNING, "Could not find file " _YELLOW_("%s"), dataFilename);
         return 1;
     }
-    PrintAndLogEx(INFO, "Restoring " _YELLOW_( % s)" to card", dataFilename);
+    PrintAndLogEx(INFO, "Restoring " _YELLOW_("%s")" to card", dataFilename);
 
     for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
         for (blockNo = 0; blockNo < NumBlocksPerSector(sectorNo); blockNo++) {
@@ -1058,7 +1058,7 @@ int CmdHF14AMfRestore(const char *Cmd)
             memcpy(c.d.asBytes, key, 6);
             bytes_read = fread(bldata, 1, 16, fdump);
             if (bytes_read != 16) {
-                PrintAndLogEx(WARNING, "File reading error " _YELLOW_( % s), dataFilename);
+                PrintAndLogEx(WARNING, "File reading error " _YELLOW_("%s"), dataFilename);
                 fclose(fdump);
                 fdump = NULL;
                 return 2;
@@ -1334,12 +1334,12 @@ int CmdHF14AMfNested(const char *Cmd)
             }
 
             if ((fkeys = fopen(fptr, "wb")) == NULL) {
-                PrintAndLogEx(WARNING, "could not create file " _YELLOW_( % s), fptr);
+                PrintAndLogEx(WARNING, "could not create file " _YELLOW_("%s"), fptr);
                 free(e_sector);
                 return 1;
             }
 
-            PrintAndLogEx(SUCCESS, "saving keys to binary file " _YELLOW_( % s), fptr);
+            PrintAndLogEx(SUCCESS, "saving keys to binary file " _YELLOW_("%s"), fptr);
             for (i = 0; i < SectorsCnt; i++) {
                 if (e_sector[i].foundKey[0]) {
                     num_to_bytes(e_sector[i].Key[0], 6, tempkey);
@@ -1654,7 +1654,7 @@ int CmdHF14AMfChk_fast(const char *Cmd)
 
             f = fopen(filename, "r");
             if (!f) {
-                PrintAndLogEx(FAILED, "File: " _YELLOW_( % s) ": not found or locked.", filename);
+                PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
                 continue;
             }
 
@@ -1668,7 +1668,7 @@ int CmdHF14AMfChk_fast(const char *Cmd)
                 if (buf[0] == '#') continue; //The line start with # is comment, skip
 
                 if (!isxdigit(buf[0])) {
-                    PrintAndLogEx(FAILED, "File content error. '" _YELLOW_( % s)"' must include 12 HEX symbols", buf);
+                    PrintAndLogEx(FAILED, "File content error. '" _YELLOW_("%s")"' must include 12 HEX symbols", buf);
                     continue;
                 }
 
@@ -1690,7 +1690,7 @@ int CmdHF14AMfChk_fast(const char *Cmd)
                 memset(buf, 0, sizeof(buf));
             }
             fclose(f);
-            PrintAndLogEx(SUCCESS, "Loaded %2d keys from " _YELLOW_( % s), keycnt, filename);
+            PrintAndLogEx(SUCCESS, "Loaded %2d keys from " _YELLOW_("%s"), keycnt, filename);
         }
     }
 
@@ -1794,12 +1794,12 @@ out:
 
             FILE *fkeys = fopen(fptr, "wb");
             if (fkeys == NULL) {
-                PrintAndLogEx(WARNING, "Could not create file " _YELLOW_( % s), fptr);
+                PrintAndLogEx(WARNING, "Could not create file " _YELLOW_("%s"), fptr);
                 free(keyBlock);
                 free(e_sector);
                 return 1;
             }
-            PrintAndLogEx(SUCCESS, "Printing keys to binary file " _YELLOW_( % s)"...", fptr);
+            PrintAndLogEx(SUCCESS, "Printing keys to binary file " _YELLOW_("%s")"...", fptr);
 
             for (i = 0; i < sectorsCnt; i++) {
                 num_to_bytes(e_sector[i].Key[0], 6, tempkey);
@@ -1812,7 +1812,7 @@ out:
             }
 
             fclose(fkeys);
-            PrintAndLogEx(SUCCESS, "Found keys have been dumped to " _YELLOW_( % s)" --> 0xffffffffffff has been inserted for unknown keys.", fptr);
+            PrintAndLogEx(SUCCESS, "Found keys have been dumped to " _YELLOW_("%s")" --> 0xffffffffffff has been inserted for unknown keys.", fptr);
         }
     }
 
@@ -1914,7 +1914,7 @@ int CmdHF14AMfChk(const char *Cmd)
 
             f = fopen(filename, "r");
             if (!f) {
-                PrintAndLogEx(FAILED, "File: " _YELLOW_( % s) ": not found or locked.", filename);
+                PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
                 continue;
             }
 
@@ -1929,7 +1929,7 @@ int CmdHF14AMfChk(const char *Cmd)
 
                 // codesmell, only checks first char?
                 if (!isxdigit(buf[0])) {
-                    PrintAndLogEx(FAILED, "File content error. '" _YELLOW_( % s)"' must include 12 HEX symbols", buf);
+                    PrintAndLogEx(FAILED, "File content error. '" _YELLOW_("%s")"' must include 12 HEX symbols", buf);
                     continue;
                 }
 
@@ -1952,7 +1952,7 @@ int CmdHF14AMfChk(const char *Cmd)
                 memset(buf, 0, sizeof(buf));
             }
             fclose(f);
-            PrintAndLogEx(SUCCESS, "Loaded %2d keys from " _YELLOW_( % s), keycnt, filename);
+            PrintAndLogEx(SUCCESS, "Loaded %2d keys from " _YELLOW_("%s"), keycnt, filename);
         }
     }
 
@@ -2086,12 +2086,12 @@ out:
 
         FILE *fkeys = fopen(fptr, "wb");
         if (fkeys == NULL) {
-            PrintAndLogEx(WARNING, "Could not create file " _YELLOW_( % s), fptr);
+            PrintAndLogEx(WARNING, "Could not create file " _YELLOW_("%s"), fptr);
             free(keyBlock);
             free(e_sector);
             return 1;
         }
-        PrintAndLogEx(INFO, "Printing keys to binary file " _YELLOW_( % s)"...", fptr);
+        PrintAndLogEx(INFO, "Printing keys to binary file " _YELLOW_("%s")"...", fptr);
 
         for (i = 0; i < SectorsCnt; i++) {
             num_to_bytes(e_sector[i].Key[0], 6, tempkey);
@@ -2102,7 +2102,7 @@ out:
             fwrite(tempkey, 1, 6, fkeys);
         }
         fclose(fkeys);
-        PrintAndLogEx(SUCCESS, "Found keys have been dumped to file " _YELLOW_( % s)". 0xffffffffffff has been inserted for unknown keys.", fptr);
+        PrintAndLogEx(SUCCESS, "Found keys have been dumped to file " _YELLOW_("%s")". 0xffffffffffff has been inserted for unknown keys.", fptr);
     }
 
     free(keyBlock);
@@ -2645,7 +2645,7 @@ int CmdHF14AMfELoad(const char *Cmd)
             return 4;
         }
     }
-    PrintAndLogEx(SUCCESS, "Loaded %d blocks from file: " _YELLOW_( % s), blockNum, filename);
+    PrintAndLogEx(SUCCESS, "Loaded %d blocks from file: " _YELLOW_("%s"), blockNum, filename);
     free(data);
     return 0;
 }
@@ -3272,7 +3272,7 @@ int CmdHF14AMfice(const char *Cmd)
     PrintAndLogEx(NORMAL, "Collecting %u nonces \n", limit);
 
     if ((fnonces = fopen(filename, "wb")) == NULL) {
-        PrintAndLogEx(WARNING, "Could not create file " _YELLOW_( % s), filename);
+        PrintAndLogEx(WARNING, "Could not create file " _YELLOW_("%s"), filename);
         return 3;
     }
 

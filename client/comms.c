@@ -313,7 +313,7 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode)
     if (!wait_for_port) {
         sp = uart_open(portname);
     } else {
-        PrintAndLogEx(SUCCESS, "Waiting for Proxmark to appear on " _YELLOW_( % s), portname);
+        PrintAndLogEx(SUCCESS, "Waiting for Proxmark to appear on " _YELLOW_("%s"), portname);
         fflush(stdout);
         int openCount = 0;
         do {
@@ -327,12 +327,12 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode)
 
     // check result of uart opening
     if (sp == INVALID_SERIAL_PORT) {
-        PrintAndLogEx(WARNING, _RED_(ERROR:) "invalid serial port");
+        PrintAndLogEx(WARNING, _RED_("ERROR:") "invalid serial port");
         sp = NULL;
         serial_port_name = NULL;
         return false;
     } else if (sp == CLAIMED_SERIAL_PORT) {
-        PrintAndLogEx(WARNING, _RED_(ERROR:) "serial port is claimed by another process");
+        PrintAndLogEx(WARNING, _RED_("ERROR:") "serial port is claimed by another process");
         sp = NULL;
         serial_port_name = NULL;
         return false;

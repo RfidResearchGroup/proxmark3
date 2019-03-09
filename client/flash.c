@@ -190,12 +190,12 @@ int flash_load(flash_file_t *ctx, const char *name, int can_write_bl)
 
     fd = fopen(name, "rb");
     if (!fd) {
-        fprintf(stderr, _RED_(Could not open file) "%s  >>> ", name);
+        fprintf(stderr, _RED_("Could not open file") "%s  >>> ", name);
         perror(NULL);
         goto fail;
     }
 
-    fprintf(stdout, _BLUE_(Loading ELF file) "%s\n", name);
+    fprintf(stdout, _BLUE_("Loading ELF file") "%s\n", name);
 
     if (fread(&ehdr, sizeof(ehdr), 1, fd) != 1) {
         fprintf(stderr, "Error while reading ELF file header\n");
@@ -284,7 +284,7 @@ static int get_proxmark_state(uint32_t *state)
             *state = resp.arg[0];
             break;
         default:
-            fprintf(stderr, _RED_(Error:) "Couldn't get proxmark state, bad response type: 0x%04" PRIx64 "\n", resp.cmd);
+            fprintf(stderr, _RED_("Error:") "Couldn't get proxmark state, bad response type: 0x%04" PRIx64 "\n", resp.cmd);
             return -1;
             break;
     }
@@ -304,7 +304,7 @@ static int enter_bootloader(char *serial_port_name)
         return 0;
 
     if (state & DEVICE_INFO_FLAG_CURRENT_MODE_OS) {
-        fprintf(stdout, _BLUE_(Entering bootloader...) "\n");
+        fprintf(stdout, _BLUE_("Entering bootloader...") "\n");
         UsbCommand c;
         memset(&c, 0, sizeof(c));
 
@@ -326,15 +326,15 @@ static int enter_bootloader(char *serial_port_name)
 
         bool opened = OpenProxmark(serial_port_name, true, 60, true);
         if (opened) {
-            fprintf(stdout, " " _GREEN_(Found) "\n");
+            fprintf(stdout, " " _GREEN_("Found") "\n");
             return 0;
         } else {
-            fprintf(stdout, _RED_(Error:) "Proxmark not found.\n");
+            fprintf(stdout, _RED_("Error:") "Proxmark not found.\n");
             return -1;
         }
     }
 
-    fprintf(stderr, _RED_(Error:) "Unknown Proxmark mode\n");
+    fprintf(stderr, _RED_("Error:") "Unknown Proxmark mode\n");
     return -1;
 }
 
@@ -380,8 +380,8 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name)
         SendCommand(&c);
         return wait_for_ack(&c);
     } else {
-        fprintf(stderr, _RED_(Note: Your bootloader does not understand the new START_FLASH command) "\n");
-        fprintf(stderr, _RED_(It is recommended that you update your bootloader) "\n\n");
+        fprintf(stderr, _RED_("Note: Your bootloader does not understand the new START_FLASH command") "\n");
+        fprintf(stderr, _RED_("It is recommended that you update your bootloader") "\n\n");
     }
     return 0;
 }
@@ -443,7 +443,7 @@ int flash_write(flash_file_t *ctx)
             fprintf(stdout, ".");
             fflush(stdout);
         }
-        fprintf(stdout, _GREEN_(OK) "\n");
+        fprintf(stdout, _GREEN_("OK") "\n");
         fflush(stdout);
     }
     return 0;

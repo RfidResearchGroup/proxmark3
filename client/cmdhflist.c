@@ -1079,7 +1079,7 @@ bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isRes
             PrintAndLogEx(NORMAL, "            |            |  *  |%49s %012"PRIx64" prng %s |     |",
                           "key",
                           mfLastKey,
-                          validate_prng_nonce(AuthData.nt) ? _GREEN_(WEAK) : _YELLOW_(HARD));
+                          validate_prng_nonce(AuthData.nt) ? _GREEN_("WEAK") : _YELLOW_("HARD"));
 
             AuthData.first_auth = false;
 

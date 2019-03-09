@@ -788,7 +788,7 @@ uint32_t OutputEM4x50_Block(uint8_t *BitStream, size_t size, bool verbose, bool 
                          );
         }
 
-        PrintAndLogEx(SUCCESS, "Parity checks | %s", (pTest) ? _GREEN_(Passed) : _RED_(Failed));
+        PrintAndLogEx(SUCCESS, "Parity checks | %s", (pTest) ? _GREEN_("Passed") : _RED_("Failed"));
     }
     return code;
 }
@@ -978,7 +978,7 @@ int EM4x50Read(const char *Cmd, bool verbose)
     //print full code:
     if (verbose || g_debugMode || AllPTest) {
         if (!complete) {
-            PrintAndLogEx(NORMAL, _RED_(* **Warning!));
+            PrintAndLogEx(NORMAL, _RED_("* **Warning!"));
             PrintAndLogEx(NORMAL, "Partial data - no end found!");
             PrintAndLogEx(NORMAL, "Try again with more samples.");
         }
@@ -988,10 +988,10 @@ int EM4x50Read(const char *Cmd, bool verbose)
             PrintAndLogEx(NORMAL, "Block %d: %08x", block, Code[block]);
         }
 
-        PrintAndLogEx(NORMAL, "Parities checks | %s", (AllPTest) ? _GREEN_(Passed) : _RED_(Failed));
+        PrintAndLogEx(NORMAL, "Parities checks | %s", (AllPTest) ? _GREEN_("Passed") : _RED_("Failed"));
 
         if (AllPTest == 0) {
-            PrintAndLogEx(NORMAL, "Try cleaning the read samples with " _YELLOW_('data askedge'));
+            PrintAndLogEx(NORMAL, "Try cleaning the read samples with " _YELLOW_("'data askedge'"));
         }
     }
 
@@ -1223,7 +1223,7 @@ int CmdEM4x05Dump(const char *Cmd)
             if (usePwd) {
                 PrintAndLogEx(NORMAL, " %02u | %08X", addr, pwd, word);
             } else {
-                PrintAndLogEx(NORMAL, " 02 | " _RED_(cannot read));
+                PrintAndLogEx(NORMAL, " 02 | " _RED_("cannot read"));
             }
         } else {
             success &= EM4x05ReadWord_ext(addr, pwd, usePwd, &word);
@@ -1260,7 +1260,7 @@ int CmdEM4x05Read(const char *Cmd)
     if (isOk)
         PrintAndLogEx(NORMAL, "Address %02d | %08X - %s", addr, word, (addr > 13) ? "Lock" : "");
     else
-        PrintAndLogEx(NORMAL, "Read Address %02d | " _RED_(failed), addr);
+        PrintAndLogEx(NORMAL, "Read Address %02d | " _RED_("failed"), addr);
     return isOk;
 }
 
@@ -1307,9 +1307,9 @@ int CmdEM4x05Write(const char *Cmd)
     uint32_t dummy = 0;
     int isOk = demodEM4x05resp(&dummy);
     if (isOk)
-        PrintAndLogEx(NORMAL, "Write " _GREEN_(Verified));
+        PrintAndLogEx(NORMAL, "Write " _GREEN_("Verified"));
     else
-        PrintAndLogEx(NORMAL, "Write could " _RED_(not) "be verified");
+        PrintAndLogEx(NORMAL, "Write could " _RED_("not") "be verified");
     return isOk;
 }
 

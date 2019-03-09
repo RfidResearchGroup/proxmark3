@@ -555,10 +555,10 @@ int CmdAnalyseA(const char *Cmd)
     PrintAndLogEx(NORMAL, "got ack.  Status %d", resp.arg[0]);
     return 0;
 
-    PrintAndLogEx(NORMAL, "-- " _BLUE_(its my message) "\n");
-    PrintAndLogEx(NORMAL, "-- " _RED_(its my message) "\n");
-    PrintAndLogEx(NORMAL, "-- " _YELLOW_(its my message) "\n");
-    PrintAndLogEx(NORMAL, "-- " _GREEN_(its my message) "\n");
+    PrintAndLogEx(NORMAL, "-- " _BLUE_("its my message") "\n");
+    PrintAndLogEx(NORMAL, "-- " _RED_("its my message") "\n");
+    PrintAndLogEx(NORMAL, "-- " _YELLOW_("its my message") "\n");
+    PrintAndLogEx(NORMAL, "-- " _GREEN_("its my message") "\n");
 
     //uint8_t syncBit = 99;
     // The start bit is one ore more Sequence Y followed by a Sequence Z (... 11111111 00x11111). We need to distinguish from
@@ -911,12 +911,12 @@ int CmdAnalyseNuid(const char *Cmd)
         generate4bNUID(uid, nuid);
 
         bool test1 = (0 == memcmp(nuid, "\x8f\x43\x0f\xef", 4));
-        PrintAndLogEx(SUCCESS, "Selftest1 %s\n",  test1 ? _GREEN_(OK) : _RED_(Fail));
+        PrintAndLogEx(SUCCESS, "Selftest1 %s\n",  test1 ? _GREEN_("OK") : _RED_("Fail"));
 
         memcpy(uid, "\x04\x18\x3f\x09\x32\x1b\x85", 7);
         generate4bNUID(uid, nuid);
         bool test2 = (0 == memcmp(nuid, "\x4f\x50\x5d\x7d", 4));
-        PrintAndLogEx(SUCCESS, "Selftest2 %s\n", test2 ? _GREEN_(OK) : _RED_(Fail));
+        PrintAndLogEx(SUCCESS, "Selftest2 %s\n", test2 ? _GREEN_("OK") : _RED_("Fail"));
         return 0;
     }
 

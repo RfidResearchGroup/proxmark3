@@ -2119,7 +2119,7 @@ int CmdHF14AMfURestore(const char *Cmd)
     if (errors || cmdp == 0) return usage_hf_mfu_restore();
 
     if ((f = fopen(filename, "rb")) == NULL) {
-        PrintAndLogEx(WARNING, "Could not find file " _YELLOW_( % s), filename);
+        PrintAndLogEx(WARNING, "Could not find file " _YELLOW_("%s"), filename);
         return 1;
     }
 
@@ -2149,7 +2149,7 @@ int CmdHF14AMfURestore(const char *Cmd)
         return 1;
     }
 
-    PrintAndLogEx(INFO, "Restoring " _YELLOW_( % s)" to card", filename);
+    PrintAndLogEx(INFO, "Restoring " _YELLOW_("%s")" to card", filename);
 
     mfu_dump_t *mem = (mfu_dump_t *)dump;
     uint8_t pages = (bytes_read - 48) / 4;

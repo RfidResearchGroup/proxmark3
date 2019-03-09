@@ -988,9 +988,9 @@ int printConfiguration(t55xx_conf_block_t b)
     PrintAndLogEx(NORMAL, "Chip Type  : %s", (b.Q5) ? "T5555(Q5)" : "T55x7");
     PrintAndLogEx(NORMAL, "Modulation : %s", GetSelectedModulationStr(b.modulation));
     PrintAndLogEx(NORMAL, "Bit Rate   : %s", GetBitRateStr(b.bitrate, (b.block0 & T55x7_X_MODE && (b.block0 >> 28 == 6 || b.block0 >> 28 == 9))));
-    PrintAndLogEx(NORMAL, "Inverted   : %s", (b.inverted) ? _GREEN_(Yes) : "No");
+    PrintAndLogEx(NORMAL, "Inverted   : %s", (b.inverted) ? _GREEN_("Yes") : "No");
     PrintAndLogEx(NORMAL, "Offset     : %d", b.offset);
-    PrintAndLogEx(NORMAL, "Seq. Term. : %s", (b.ST) ? _GREEN_(Yes) : "No");
+    PrintAndLogEx(NORMAL, "Seq. Term. : %s", (b.ST) ? _GREEN_("Yes") : "No");
     PrintAndLogEx(NORMAL, "Block0     : 0x%08X", b.block0);
     PrintAndLogEx(NORMAL, "");
     return 0;
@@ -1347,7 +1347,7 @@ int CmdT55xxInfo(const char *Cmd)
     si += 1;
 
     if (config.Q5)
-        PrintAndLogEx(NORMAL, _RED_(* **Warning ***) " Config Info read off a Q5 will not display as expected");
+        PrintAndLogEx(NORMAL, _RED_("* **Warning ***") " Config Info read off a Q5 will not display as expected");
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "-- T55x7 Configuration & Tag Information --------------------");
@@ -1355,17 +1355,17 @@ int CmdT55xxInfo(const char *Cmd)
     PrintAndLogEx(NORMAL, " Safer key                 : %s", GetSaferStr(safer));
     PrintAndLogEx(NORMAL, " reserved                  : %d", resv);
     PrintAndLogEx(NORMAL, " Data bit rate             : %s", GetBitRateStr(dbr, extend));
-    PrintAndLogEx(NORMAL, " eXtended mode             : %s", (extend) ? _YELLOW_(Yes - Warning) : "No");
+    PrintAndLogEx(NORMAL, " eXtended mode             : %s", (extend) ? _YELLOW_("Yes - Warning") : "No");
     PrintAndLogEx(NORMAL, " Modulation                : %s", GetModulationStr(datamod));
     PrintAndLogEx(NORMAL, " PSK clock frequency       : %d", pskcf);
-    PrintAndLogEx(NORMAL, " AOR - Answer on Request   : %s", (aor) ? _GREEN_(Yes) : "No");
-    PrintAndLogEx(NORMAL, " OTP - One Time Pad        : %s", (otp) ? _YELLOW_(Yes - Warning) : "No");
+    PrintAndLogEx(NORMAL, " AOR - Answer on Request   : %s", (aor) ? _GREEN_("Yes") : "No");
+    PrintAndLogEx(NORMAL, " OTP - One Time Pad        : %s", (otp) ? _YELLOW_("Yes - Warning") : "No");
     PrintAndLogEx(NORMAL, " Max block                 : %d", maxblk);
-    PrintAndLogEx(NORMAL, " Password mode             : %s", (pwd) ? _GREEN_(Yes) : "No");
-    PrintAndLogEx(NORMAL, " Sequence Start Terminator : %s", (sst) ? _GREEN_(Yes) : "No");
-    PrintAndLogEx(NORMAL, " Fast Write                : %s", (fw)  ? _GREEN_(Yes) : "No");
-    PrintAndLogEx(NORMAL, " Inverse data              : %s", (inv) ? _GREEN_(Yes) : "No");
-    PrintAndLogEx(NORMAL, " POR-Delay                 : %s", (por) ? _GREEN_(Yes) : "No");
+    PrintAndLogEx(NORMAL, " Password mode             : %s", (pwd) ? _GREEN_("Yes") : "No");
+    PrintAndLogEx(NORMAL, " Sequence Start Terminator : %s", (sst) ? _GREEN_("Yes") : "No");
+    PrintAndLogEx(NORMAL, " Fast Write                : %s", (fw)  ? _GREEN_("Yes") : "No");
+    PrintAndLogEx(NORMAL, " Inverse data              : %s", (inv) ? _GREEN_("Yes") : "No");
+    PrintAndLogEx(NORMAL, " POR-Delay                 : %s", (por) ? _GREEN_("Yes") : "No");
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
     PrintAndLogEx(NORMAL, " Raw Data - Page 0");
     PrintAndLogEx(NORMAL, "     Block 0  : 0x%08X  %s", block0, sprint_bin(DemodBuffer + config.offset, 32));
@@ -1751,7 +1751,7 @@ int CmdT55xxChkPwds(const char *Cmd)
 
         FILE *f = fopen(filename, "r");
         if (!f) {
-            PrintAndLogEx(FAILED, "File: " _YELLOW_( % s) ": not found or locked.", filename);
+            PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
             free(keyBlock);
             return 1;
         }

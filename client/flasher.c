@@ -85,17 +85,17 @@ int main(int argc, char **argv)
     char *serial_port_name = argv[1];
 
     if (!OpenProxmark(serial_port_name, true, 60, true)) {
-        fprintf(stderr, "Could not find Proxmark on " _RED_( % s) ".\n\n", serial_port_name);
+        fprintf(stderr, "Could not find Proxmark on " _RED_("%s") ".\n\n", serial_port_name);
         return -1;
     } else {
-        fprintf(stderr, _GREEN_(Found) "\n");
+        fprintf(stderr, _GREEN_("Found") "\n");
     }
 
     res = flash_start_flashing(can_write_bl, serial_port_name);
     if (res < 0)
         return -1;
 
-    fprintf(stdout, "\n" _BLUE_(Flashing...)"\n");
+    fprintf(stdout, "\n" _BLUE_("Flashing...")"\n");
 
     for (int i = 0; i < num_files; i++) {
         res = flash_write(&files[i]);
@@ -105,7 +105,7 @@ int main(int argc, char **argv)
         fprintf(stdout, "\n");
     }
 
-    fprintf(stdout, _BLUE_(Resetting hardware...) "\n");
+    fprintf(stdout, _BLUE_("Resetting hardware...") "\n");
 
     res = flash_stop_flashing();
     if (res < 0)
@@ -113,6 +113,6 @@ int main(int argc, char **argv)
 
     CloseProxmark();
 
-    fprintf(stdout, _BLUE_(All done.) "\n\nHave a nice day!\n");
+    fprintf(stdout, _BLUE_("All done.") "\n\nHave a nice day!\n");
     return 0;
 }
