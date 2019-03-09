@@ -200,7 +200,7 @@ typedef struct {
 #define CMD_MIFARE_SNIFFER                                                0x0630
 //ultralightC
 #define CMD_MIFAREUC_AUTH                                                 0x0724
-//0x0725 and 0x0726 no longer used 
+//0x0725 and 0x0726 no longer used
 #define CMD_MIFAREUC_SETPWD                                               0x0727
 
 
@@ -214,7 +214,7 @@ typedef struct {
 #define CMD_MIFARE_DESFIRE                                                0x072e
 
 #define CMD_MIFARE_COLLECT_NONCES										  0x072f
-				 
+
 #define CMD_HF_SNIFFER                                                    0x0800
 
 #define CMD_UNKNOWN                                                       0xFFFF

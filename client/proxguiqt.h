@@ -115,7 +115,7 @@ class ProxGuiQT : public QObject
 		char **argv;
 		//void (*main_func)(void);
 		WorkerThread *proxmarkThread;
-		
+
 	public:
 		ProxGuiQT(int argc, char **argv, WorkerThread *wthread);
 		~ProxGuiQT(void);
@@ -124,7 +124,7 @@ class ProxGuiQT : public QObject
 		void HideGraphWindow(void);
 		void MainLoop(void);
 		void Exit(void);
-		
+
 	private slots:
 		void _ShowGraphWindow(void);
 		void _RepaintGraphWindow(void);

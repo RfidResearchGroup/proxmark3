@@ -30,7 +30,7 @@ static int CmdHelp(const char *Cmd);
 //verify n'r=nr
 
 int CmdHF14AMfDESAuth(const char *Cmd){
-        
+
     uint8_t blockNo = 0;
     //keyNo=0;
     uint32_t cuid = 0;
@@ -39,8 +39,8 @@ int CmdHF14AMfDESAuth(const char *Cmd){
     uint8_t b1[8]={ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
     uint8_t b2[8]={ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
     DES_cblock nr,  b0, r1, r0;
-    
-    
+
+
     uint8_t key[8]={ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
     //DES_cblock iv={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
     DES_key_schedule ks1;
@@ -51,15 +51,15 @@ int CmdHF14AMfDESAuth(const char *Cmd){
         PrintAndLogEx(NORMAL, "Examples:");
         PrintAndLogEx(NORMAL, "        hf desfire des-auth k 0");
         return 0;
-    } 
-    
+    }
+
     //Change key to user defined one
-    
+
     memcpy(key1,key,8);
     //memcpy(key2,key+8,8);
     DES_set_key((DES_cblock *)key1,&ks1);
     //DES_set_key((DES_cblock *)key2,&ks2);
-        
+
     //Auth1
     UsbCommand c = {CMD_MIFARE_DES_AUTH1, {blockNo}};
     SendCommand(&c);
@@ -76,7 +76,7 @@ int CmdHF14AMfDESAuth(const char *Cmd){
     } else {
         PrintAndLogEx(WARNING, "Command execute timeout");
     }
-       
+
     //Do crypto magic
     DES_random_key(&nr);
     //b1=dec(nr)
@@ -89,7 +89,7 @@ int CmdHF14AMfDESAuth(const char *Cmd){
     memcpy(r1,r0,8);
     rol(r1,8);
     PrintAndLogEx(NORMAL, "r1:%s",sprint_hex(r1, 8));
-    for(int i=0;i<8;i++){   
+    for(int i=0;i<8;i++){
       b2[i]=(r1[i] ^ b1[i]);
     }
     DES_ecb_encrypt(&b2,&b2,&ks1,0);
@@ -110,10 +110,10 @@ int CmdHF14AMfDESAuth(const char *Cmd){
 
         if (isOK)
             PrintAndLogEx(NORMAL, "b3:%s", sprint_hex(data2+2, 8));
-	
+
     } else {
         PrintAndLogEx(WARNING, "Command execute timeout");
-    } 
+    }
     return 1;
 }
 
@@ -123,14 +123,14 @@ int CmdHF14AMfDESAuth(const char *Cmd){
 // Reader 2 Card : 03AF, 16 Bytes(b1),16Bytes(b2) CRC1 CRC2
 // Card 2 Reader : 0300, 16 bytes(b3), CRC1 CRC2 ; success
 int CmdHF14AMfAESAuth(const char *Cmd){
-        
+
     uint8_t blockNo = 0;
     //keyNo=0;
     uint32_t cuid = 0;
     uint8_t reply[32] = {0x00};
     //DES_cblock r1_b1;
     //unsigned char * b1, b2, nr, b0, r0, r1;
-    
+
     uint8_t b1[16]={ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
     uint8_t b2[16]={ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
     uint8_t nr[16]={ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
@@ -148,8 +148,8 @@ int CmdHF14AMfAESAuth(const char *Cmd){
         PrintAndLogEx(NORMAL, "Examples:");
         PrintAndLogEx(NORMAL, "        hf desfire aes-auth k 0");
         return 0;
-    } 
-    
+    }
+
     //Change key to user defined one
     //
     // int private_AES_set_encrypt_key(const unsigned char *userKey, const int bits,AES_KEY *key);
@@ -159,7 +159,7 @@ int CmdHF14AMfAESAuth(const char *Cmd){
     //memcpy(key2,key+8,8);
     AES_set_encrypt_key(key,128,&key_e);
     AES_set_decrypt_key(key,128,&key_d);
-        
+
     //Auth1
     UsbCommand c = {CMD_MIFARE_DES_AUTH1, {blockNo}};
     SendCommand(&c);
@@ -180,7 +180,7 @@ int CmdHF14AMfAESAuth(const char *Cmd){
     // void AES_cbc_encrypt(const unsigned char *in, unsigned char *out,
 	//size_t length, const AES_KEY *key,
 	//unsigned char *ivec, const int enc);
-    
+
    //Do crypto magic
     //DES_random_key(&nr);
     //b1=dec(nr)
@@ -217,10 +217,10 @@ int CmdHF14AMfAESAuth(const char *Cmd){
 
         if (isOK)
             PrintAndLogEx(NORMAL, "b3:%s", sprint_hex(data2+2, 16));
-		
+
     } else {
         PrintAndLogEx(WARNING, "Command execute timeout");
-    } 
+    }
     return 1;
 }
 

@@ -7,8 +7,8 @@
 // Low frequency demod related commands
 // marshmellow
 // note that many of these demods are not the slickest code and they often rely
-//   on peaks and clock instead of converting to clean signal. 
-//   
+//   on peaks and clock instead of converting to clean signal.
+//
 //-----------------------------------------------------------------------------
 
 #ifndef LFDEMOD_H__

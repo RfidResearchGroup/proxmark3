@@ -33,7 +33,7 @@
 /* @(#) $Id$ */
 
 //-----------------------------------------------------------------------------
-// This version of zlib is modified for use within the Proxmark3 project. 
+// This version of zlib is modified for use within the Proxmark3 project.
 // Files from the original distribution which are not required for this
 // purpose are not included. All modifications can easily be found
 // by searching for #ifdef ZLIB_PM3_TUNED and #ifndef ZLIB_PM3_TUNED.
@@ -997,9 +997,9 @@ void ZLIB_INTERNAL _tr_flush_block(s, buf, stored_len, last)
 #ifdef DEBUG
         s->compressed_len += 3 + s->opt_len;
 #endif
-#ifndef ZLIB_PM3_TUNED	
+#ifndef ZLIB_PM3_TUNED
     }
-#endif	
+#endif
     Assert (s->compressed_len == s->bits_sent, "bad compressed size");
     /* The above check is made mod 2^32, for files larger than 512 MB
      * and uLong implemented on 32 bits.

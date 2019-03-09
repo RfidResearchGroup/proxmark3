@@ -24,7 +24,7 @@ void burtle_init_mod(prng_ctx *x, uint32_t seed ) {
 }
 
 void burtle_init(prng_ctx *x, uint32_t seed ) {
-    uint32_t i;	
+    uint32_t i;
     x->a = 0xf1ea5eed, x->b = x->c = x->d = seed;
     for (i=0; i < 20; ++i) {
         (void)burtle_get_mod(x);

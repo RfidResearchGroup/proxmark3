@@ -48,7 +48,7 @@ typedef struct{
 	uint16_t write_gap;
 	uint16_t write_0;
 	uint16_t write_1;
-	uint16_t read_gap; 
+	uint16_t read_gap;
 } t55xx_config;
 
 // For the bootloader
@@ -161,7 +161,7 @@ typedef struct{
 #define CMD_SIMULATE_HITAG                                                0x0371
 #define CMD_READER_HITAG                                                  0x0372
 
-// For HitagS 
+// For HitagS
 #define CMD_TEST_HITAGS_TRACES											  0x0367
 #define CMD_SIMULATE_HITAG_S											  0x0368
 #define CMD_READ_HITAG_S												  0x0373
@@ -202,7 +202,7 @@ typedef struct{
 #define CMD_ICLASS_AUTHENTICATION                                         0x0399
 #define CMD_ICLASS_CHECK_KEYS                                             0x039A
 
-// For ISO1092 / FeliCa 
+// For ISO1092 / FeliCa
 #define CMD_FELICA_SIMULATE_TAG                                           0x03A0
 #define CMD_FELICA_SNOOP                                                  0x03A1
 #define CMD_FELICA_COMMAND                                                0x03A2
@@ -253,7 +253,7 @@ typedef struct{
 #define CMD_MIFARE_SNIFFER                                                0x0630
 //ultralightC
 #define CMD_MIFAREUC_AUTH                                                 0x0724
-//0x0725 and 0x0726 no longer used 
+//0x0725 and 0x0726 no longer used
 #define CMD_MIFAREUC_SETPWD                                               0x0727
 
 // mifare desfire

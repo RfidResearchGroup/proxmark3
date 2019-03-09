@@ -17,7 +17,7 @@
 #include <string.h>
 #include <limits.h>
 #include "proxmark3.h"
-#include "lfdemod.h"		// device/client demods of LF signals		
+#include "lfdemod.h"		// device/client demods of LF signals
 #include "util.h"			// for parsing cli command utils
 #include "ui.h"				// for show graph controls
 #include "graph.h"			// for graph data

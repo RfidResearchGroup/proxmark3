@@ -174,7 +174,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype );
 
 //desfire
 void Mifare_DES_Auth1(uint8_t arg0,uint8_t *datain);
-void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain);					   
+void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain);
 
 // mifaredesfire.h
 bool InitDesfireCard();
@@ -205,7 +205,7 @@ void AcquireRawAdcSamplesIso15693(void);
 void ReaderIso15693(uint32_t parameter);	// Simulate an ISO15693 reader - greg
 void SimTagIso15693(uint32_t parameter, uint8_t *uid);	// simulate an ISO15693 tag - greg
 void BruteforceIso15693Afi(uint32_t speed); // find an AFI of a tag - atrox
-void DirectTag15693Command(uint32_t datalen,uint32_t speed, uint32_t recv, uint8_t *data); // send arbitrary commands from CLI - atrox 
+void DirectTag15693Command(uint32_t datalen,uint32_t speed, uint32_t recv, uint8_t *data); // send arbitrary commands from CLI - atrox
 void Iso15693InitReader(void);
 
 // iclass.h

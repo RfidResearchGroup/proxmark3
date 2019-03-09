@@ -85,11 +85,11 @@ void setT55xxConfig(uint8_t arg0, t55xx_config *c) {
 	if (arg0 == 0) {
 		return;
 	}
-	
+
     if (!FlashInit()) {
         return;
 	}
-	
+
 	uint8_t *buf = BigBuf_malloc(T55XX_CONFIG_LEN);
 	Flash_CheckBusy(BUSY_TIMEOUT);
 	uint16_t res = Flash_ReadDataCont(T55XX_CONFIG_OFFSET, buf, T55XX_CONFIG_LEN);
@@ -98,9 +98,9 @@ void setT55xxConfig(uint8_t arg0, t55xx_config *c) {
 		BigBuf_free();
 		return;
 	}
-	
+
 	memcpy(buf, &t_config, T55XX_CONFIG_LEN);
-	
+
 	Flash_CheckBusy(BUSY_TIMEOUT);
     Flash_WriteEnable();
 	Flash_Erase4k(3, 0xD);
@@ -109,8 +109,8 @@ void setT55xxConfig(uint8_t arg0, t55xx_config *c) {
 	if ( res == T55XX_CONFIG_LEN && MF_DBGLEVEL > 1) {
 		DbpString("T55XX Config save success");
 	}
-	
-	BigBuf_free();	
+
+	BigBuf_free();
 #endif
 }
 
@@ -125,11 +125,11 @@ void loadT55xxConfig(void) {
 	}
 
 	uint8_t *buf = BigBuf_malloc(T55XX_CONFIG_LEN);
-	
+
 	Flash_CheckBusy(BUSY_TIMEOUT);
 	uint16_t isok = Flash_ReadDataCont(T55XX_CONFIG_OFFSET, buf, T55XX_CONFIG_LEN);
 	FlashStop();
-	
+
 	// verify read mem is actual data.
 	uint8_t cntA = T55XX_CONFIG_LEN, cntB = T55XX_CONFIG_LEN;
 	for (int i=0; i< T55XX_CONFIG_LEN; i++) {
@@ -140,9 +140,9 @@ void loadT55xxConfig(void) {
 		BigBuf_free();
 		return;
 	}
-	
+
 	memcpy((uint8_t *)&t_config, buf, T55XX_CONFIG_LEN);
-	
+
 	if ( isok == T55XX_CONFIG_LEN) {
 		if (MF_DBGLEVEL > 1) DbpString("T55XX Config load success");
 	}
@@ -581,7 +581,7 @@ void SimulateTagLowFrequencyEx(int period, int gap, int ledcontrol, int numcycle
 	//FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_TOGGLE_MODE );
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
 	WaitMS(20);
-	
+
 	int i = 0, x = 0;
 	uint8_t *buf = BigBuf_get_addr();
 
@@ -598,11 +598,11 @@ void SimulateTagLowFrequencyEx(int period, int gap, int ledcontrol, int numcycle
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;
 	AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
 	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
-	
+
 	uint8_t check = 1;
 
 	for(;;) {
-	
+
 		if ( numcycles > -1 ) {
 			if ( x != numcycles ) {
 				++x;
@@ -744,7 +744,7 @@ static void fcAll(uint8_t fc, int *n, uint8_t clock, uint16_t *modCnt)
 		*n += fc;
 	}
 	if (mod > 0) (*modCnt)++;
-	
+
 	if ((mod > 0) && modAdjOk){  //fsk2
 		if ((*modCnt % modAdj) == 0){ //if 4th 8 length wave in a rf/50 add extra 8 length wave
 			memset(dest + (*n), 0, fc - halfFC);
@@ -1500,9 +1500,9 @@ void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 	bool brute_mem =  arg0 & 0x4;
 
 	uint32_t i = 0;
-	
+
 	// regular read mode
-	bool RegReadMode = (Block == 0xFF); 
+	bool RegReadMode = (Block == 0xFF);
 
 	uint8_t start_wait = 4;
 	size_t samples = 12000;
@@ -1510,7 +1510,7 @@ void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 		start_wait = 0;
 		samples = 1024;
 	}
-	
+
 	//clear buffer now so it does not interfere with timing later
 	BigBuf_Clear_keep_EM();
 
@@ -1523,7 +1523,7 @@ void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 	LFSetupFPGAForADC(95, true);
 	// make sure tag is fully powered up...
 	WaitMS(start_wait);
-	
+
 	// Trigger T55x7 Direct Access Mode with start gap
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	WaitUS(t_config.start_gap);
@@ -1570,9 +1570,9 @@ void T55xx_ChkPwds() {
 	// First get baseline and setup LF mode.
 	// tends to mess up BigBuf
 	uint8_t *buf = BigBuf_get_addr();
-	
+
 	uint32_t b1, baseline = 0;
-	
+
 	// collect baseline for failed attempt
 	uint8_t x = 32;
 	while (x--) {
@@ -1580,16 +1580,16 @@ void T55xx_ChkPwds() {
 		T55xxReadBlock(4, 1, 0);
 		for (uint16_t j=0; j < 1024; ++j)
 			b1 += buf[j];
-		
+
 		b1 *= b1;
-		b1 >>= 8; 		
+		b1 >>= 8;
 		baseline += b1;
 	}
 
 	baseline >>= 5;
-	Dbprintf("[=] Baseline determined [%u]", baseline);	
+	Dbprintf("[=] Baseline determined [%u]", baseline);
 
-	
+
 	uint8_t *pwds = BigBuf_get_EM_addr();
 	uint16_t pwdCount = 0;
 	uint32_t candidate = 0;
@@ -1599,20 +1599,20 @@ void T55xx_ChkPwds() {
 	if ( use_flashmem ) {
 		BigBuf_Clear_EM();
 		uint16_t isok = 0;
-		uint8_t counter[2] = {0x00, 0x00};		
+		uint8_t counter[2] = {0x00, 0x00};
 		isok = Flash_ReadData(DEFAULT_T55XX_KEYS_OFFSET, counter, sizeof(counter) );
 		if ( isok != sizeof(counter) )
 			goto OUT;
-		
+
 		pwdCount = counter[1] << 8 | counter[0];
-		
-		if ( pwdCount == 0 && pwdCount == 0xFFFF) 
+
+		if ( pwdCount == 0 && pwdCount == 0xFFFF)
 			goto OUT;
 
 		isok = Flash_ReadData(DEFAULT_T55XX_KEYS_OFFSET+2, pwds, pwdCount * 4);
 		if ( isok != pwdCount * 4 )
 			goto OUT;
-		
+
 		Dbprintf("[=] Password dictionary count %d ", pwdCount);
 	}
 #endif
@@ -1623,38 +1623,38 @@ void T55xx_ChkPwds() {
 		if (BUTTON_PRESS() && !usb_poll_validate_length()) {
 			goto OUT;
 		}
-		
+
 		pwd = bytes_to_num(pwds + i * 4, 4);
-	
+
 
 		T55xxReadBlock(5, 0, pwd);
-		
+
 		// calc mean of BigBuf 1024 samples.
 		uint32_t sum = 0;
 		for (uint16_t j=0; j<1024; ++j) {
 			sum += buf[j];
 		}
-		
+
 		sum *= sum;
 		sum >>= 8;
-		
+
 		int32_t tmp = (sum - baseline);
 		curr = ABS(tmp);
-		
+
 		Dbprintf("[=] Pwd %08X  | ABS %u", pwd, curr );
-			
+
 		if ( curr > prev ) {
-			
-					
+
+
 			Dbprintf("[=]  --> ABS %u  Candidate %08X <--", curr, pwd );
 			candidate = pwd;
 			prev = curr;
 		}
 	}
-	
+
 	if ( candidate )
 		ret = 1;
-		
+
 OUT:
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	cmd_send(CMD_ACK,ret,candidate,0,0,0);
@@ -2122,7 +2122,7 @@ void Cotag(uint32_t arg0) {
 	LED_A_ON();
 
 	LFSetupFPGAForADC(89, true);
-		
+
 	//clear buffer now so it does not interfere with timing later
 	BigBuf_Clear_ext(false);
 

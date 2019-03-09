@@ -86,9 +86,9 @@
 #define LED_D_OFF()		LOW(GPIO_LED_D)
 #define LED_D_INV()		INVBIT(GPIO_LED_D)
 
-// SPI 
-#define SCK_LOW         LOW(GPIO_SPCK) 
-#define SCK_HIGH        HIGH(GPIO_SPCK) 
+// SPI
+#define SCK_LOW         LOW(GPIO_SPCK)
+#define SCK_HIGH        HIGH(GPIO_SPCK)
 #define MOSI_HIGH       HIGH(GPIO_MOSI)
 #define MOSI_LOW        LOW(GPIO_MOSI)
 #define MISO_VALUE      (AT91C_BASE_PIOA->PIO_PDSR & GPIO_MISO)
@@ -106,7 +106,7 @@
 #define BUTTON_PRESS()	!((AT91C_BASE_PIOA->PIO_PDSR & GPIO_BUTTON) == GPIO_BUTTON)
 
 //NVDD goes LOW when USB is attached.
-#define USB_ATTACHED()	!((AT91C_BASE_PIOA->PIO_PDSR & GPIO_NVDD_ON) == GPIO_NVDD_ON)   
+#define USB_ATTACHED()	!((AT91C_BASE_PIOA->PIO_PDSR & GPIO_NVDD_ON) == GPIO_NVDD_ON)
 
 #define VERSION_INFORMATION_MAGIC 0x56334d50
 struct version_information {

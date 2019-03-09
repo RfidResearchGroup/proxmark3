@@ -29,7 +29,7 @@ void RunMod() {
 	card_clone_t uids[OPTS];
 	iso14a_card_select_t card[OPTS];
 	uint8_t params = (MAGIC_SINGLE | MAGIC_DATAIN);
-					
+
 	LED(selected + 1, 0);
 
 	for (;;) {
@@ -54,7 +54,7 @@ void RunMod() {
 			for (;;) {
 				// exit from Standalone Mode,   send a usbcommand.
 				if (usb_poll_validate_length()) return;
-				
+
 				if (BUTTON_PRESS()) {
 					if (cardRead[selected]) {
 						Dbprintf("Button press detected -- replaying card in bank[%d]", selected);
@@ -68,21 +68,21 @@ void RunMod() {
 						SpinDelay(300);
 					}
 				}
-				
+
 				if (!iso14443a_select_card(NULL, &card[selected], NULL, true, 0, true)) {
 					continue;
 				} else {
-					Dbprintf("Read UID:"); 
+					Dbprintf("Read UID:");
 					Dbhexdump(card[selected].uidlen, card[selected].uid, 0);
-					
+
 					if (memcmp(uids[(selected+1)%OPTS].uid, card[selected].uid, card[selected].uidlen ) == 0 ) {
 						Dbprintf("Card selected has same UID as what is stored in the other bank. Skipping.");
-					} else {						
+					} else {
 						uids[selected].sak = card[selected].sak;
-						uids[selected].uidlen = card[selected].uidlen;						
-						memcpy(uids[selected].uid , card[selected].uid, uids[selected].uidlen);						
+						uids[selected].uidlen = card[selected].uidlen;
+						memcpy(uids[selected].uid , card[selected].uid, uids[selected].uidlen);
 						memcpy(uids[selected].atqa, card[selected].atqa, 2);
-												
+
 						if (uids[selected].uidlen > 4)
 							Dbprintf("Bank[%d] received a 7-byte UID", selected);
 						else
@@ -91,7 +91,7 @@ void RunMod() {
 					}
 				}
 			}
-			
+
 			Dbprintf("ATQA = %02X%02X", uids[selected].atqa[0], uids[selected].atqa[1]);
 			Dbprintf("SAK = %02X", uids[selected].sak);
 			LEDsoff();
@@ -108,7 +108,7 @@ void RunMod() {
 
 			cardRead[selected] = 1;
 		}
-		
+
 		/* MF Classic UID clone */
 		else if (iGotoClone==1) {
 			iGotoClone=0;
@@ -118,7 +118,7 @@ void RunMod() {
 
 			// magiccards holds 4bytes uid.  *usually*
 			uint32_t tmpuid = bytes_to_num(uids[selected].uid, 4);
-			
+
 			// record
 			Dbprintf("Preparing to Clone card [Bank: %d]; uid: %08x", selected, tmpuid);
 
@@ -175,7 +175,7 @@ void RunMod() {
 				// arg0 = workFlags, arg1 = blockNo, datain
 				MifareCSetBlock(params, 0, newBlock0);
 				MifareCGetBlock(params, 0, testBlock0);
-				
+
 				if (memcmp(testBlock0, newBlock0, 16)==0) {
 					DbpString("Cloned successfull!");
 					cardRead[selected] = 0; // Only if the card was cloned successfully should we clear it
@@ -190,9 +190,9 @@ void RunMod() {
 			LEDsoff();
 			LED(selected + 1, 0);
 		}
-		
+
 		// Change where to record (or begin playing)
-		// button_pressed == BUTTON_SINGLE_CLICK && cardRead[selected])		
+		// button_pressed == BUTTON_SINGLE_CLICK && cardRead[selected])
 		else if (playing==1) {
 			LEDsoff();
 			LED(selected + 1, 0);
@@ -203,7 +203,7 @@ void RunMod() {
 			for ( ; ; ) {
 				// exit from Standalone Mode,   send a usbcommand.
 				if (usb_poll_validate_length()) return;
-				
+
 				int button_action = BUTTON_HELD(1000);
 				if ( button_action == 0) { // No button action, proceed with sim
 
@@ -211,16 +211,16 @@ void RunMod() {
 					uint8_t data[USB_CMD_DATA_SIZE] = {0}; // in case there is a read command received we shouldn't break
 
 					memcpy(data, uids[selected].uid, uids[selected].uidlen);
-					
+
 					uint64_t tmpuid = bytes_to_num(uids[selected].uid, uids[selected].uidlen);
-								
+
 					if (  uids[selected].uidlen == 7 ) {
 						flags = FLAG_7B_UID_IN_DATA;
 						Dbprintf("Simulating ISO14443a tag with uid: %014" PRIx64 " [Bank: %d]", tmpuid, selected);
 					} else {
 						Dbprintf("Simulating ISO14443a tag with uid: %08" PRIx64 " [Bank: %d]", tmpuid, selected);
 					}
-					
+
 					if (uids[selected].sak == 0x08 && uids[selected].atqa[0] == 0x04 && uids[selected].atqa[1] == 0) {
 						DbpString("Mifare Classic 1k");
 						SimulateIso14443aTag(1, flags, data);
@@ -240,7 +240,7 @@ void RunMod() {
 						Dbprintf("Unrecognized tag type -- defaulting to Mifare Classic emulation");
 						SimulateIso14443aTag(1, flags, data);
 					}
-					
+
 				} else if (button_action == BUTTON_SINGLE_CLICK) {
 					selected = (selected + 1) % OPTS;
 					Dbprintf("Done playing. Switching to record mode on bank %d", selected);

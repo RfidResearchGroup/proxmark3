@@ -75,7 +75,7 @@ static unsigned char *emv_pki_decode_message(const struct emv_pk *enc_pk,
 		printf("Recovered data:\n");
 		dump_buffer(data, data_len, stdout, 0);
 	}*/
-	
+
 	if (data[data_len-1] != 0xbc || data[0] != 0x6a || data[1] != msgtype) {
 		printf("ERROR: Certificate format\n");
 		free(data);
@@ -117,7 +117,7 @@ static unsigned char *emv_pki_decode_message(const struct emv_pk *enc_pk,
 		printf("ERROR: Calculated wrong hash\n");
 		printf("decoded:    %s\n",sprint_hex(data + data_len - 1 - hash_len, hash_len));
 		printf("calculated: %s\n",sprint_hex(hash, hash_len));
-		
+
 		if (strictExecution) {
 			crypto_hash_close(ch);
 			free(data);
@@ -206,7 +206,7 @@ static struct emv_pk *emv_pki_decode_key_ex(const struct emv_pk *enc_pk,
 		return NULL;
 	}
 
-	if (showData){ 
+	if (showData){
 		printf("Recovered data:\n");
 		dump_buffer(data, data_len, stdout, 0);
 	}
@@ -308,7 +308,7 @@ struct emv_pk *emv_pki_recover_icc_cert(const struct emv_pk *pk, struct tlvdb *d
 		.len = sdatl_len,
 		.value = sdatl
 	};
-	
+
 	struct emv_pk *res = emv_pki_decode_key(pk, 4,
 			tlvdb_get(db, 0x5a, NULL),
 			tlvdb_get(db, 0x9f46, NULL),
@@ -316,7 +316,7 @@ struct emv_pk *emv_pki_recover_icc_cert(const struct emv_pk *pk, struct tlvdb *d
 			tlvdb_get(db, 0x9f48, NULL),
 			sda_tlv,
 			&sda_tdata);
-			
+
 	free(sdatl); // malloc here: emv_pki_sdatl_fill
 	return res;
 }
@@ -335,9 +335,9 @@ struct emv_pk *emv_pki_recover_icc_pe_cert(const struct emv_pk *pk, struct tlvdb
 unsigned char *emv_pki_sdatl_fill(const struct tlvdb *db, size_t *sdatl_len) {
 	uint8_t buf[2048] = {0};
 	size_t len = 0;
-	
+
 	*sdatl_len = 0;
-	
+
 	const struct tlv *sda_tl = tlvdb_get(db, 0x9f4a, NULL);
 	if (!sda_tl || sda_tl->len <= 0)
 		return NULL;
@@ -348,16 +348,16 @@ unsigned char *emv_pki_sdatl_fill(const struct tlvdb *db, size_t *sdatl_len) {
 		if (elm) {
 			memcpy(&buf[len], elm->value, elm->len);
 			len += elm->len;
-		}		
+		}
 	}
-	
+
 	if (len) {
 		*sdatl_len = len;
 		unsigned char *value = malloc(len);
 		memcpy(value, buf, len);
 		return value;
 	}
-	
+
 	return NULL;
 }
 
@@ -365,7 +365,7 @@ unsigned char *emv_pki_sdatl_fill(const struct tlvdb *db, size_t *sdatl_len) {
 struct tlvdb *emv_pki_recover_dac_ex(const struct emv_pk *enc_pk, const struct tlvdb *db, const struct tlv *sda_tlv, bool showData)
 {
 	size_t data_len;
-	
+
 	// Static Data Authentication Tag List
 	size_t sdatl_len;
 	unsigned char *sdatl = emv_pki_sdatl_fill(db, &sdatl_len);
@@ -383,7 +383,7 @@ struct tlvdb *emv_pki_recover_dac_ex(const struct emv_pk *enc_pk, const struct t
 			NULL);
 
 	free(sdatl); // malloc here: emv_pki_sdatl_fill
-	
+
 	if (!data || data_len < 5)
 		return NULL;
 
@@ -436,7 +436,7 @@ struct tlvdb *emv_pki_recover_idn_ex(const struct emv_pk *enc_pk, const struct t
 
 	// 9f4c ICC Dynamic Number
 	struct tlvdb *idn_db = tlvdb_fixed(0x9f4c, idn_len, data + 5);
-	
+
 	free(data);
 
 	return idn_db;
@@ -475,7 +475,7 @@ struct tlvdb *emv_pki_recover_atc_ex(const struct emv_pk *enc_pk, const struct t
 
 	// 9f36 Application Transaction Counter (ATC)
 	struct tlvdb *atc_db = tlvdb_fixed(0x9f36, idn_len, data + 5);
-	
+
 	free(data);
 
 	return atc_db;

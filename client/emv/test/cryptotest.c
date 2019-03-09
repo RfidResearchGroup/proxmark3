@@ -36,25 +36,25 @@
 int ExecuteCryptoTests(bool verbose) {
 	int res;
 	bool TestFail = false;
-	
+
 	res = mbedtls_mpi_self_test(verbose);
 	if (res) TestFail = true;
-	
+
 	res = mbedtls_aes_self_test(verbose);
 	if (res) TestFail = true;
 
 	res = mbedtls_des_self_test(verbose);
 	if (res) TestFail = true;
-	
+
 	res = mbedtls_sha1_self_test(verbose);
 	if (res) TestFail = true;
 
 	res = mbedtls_md5_self_test(verbose);
 	if (res) TestFail = true;
-	
+
 	res = mbedtls_rsa_self_test(verbose);
 	if (res) TestFail = true;
-	
+
 	res = mbedtls_entropy_self_test(verbose);
 	if (res) TestFail = true;
 
@@ -63,7 +63,7 @@ int ExecuteCryptoTests(bool verbose) {
 
 	res = mbedtls_ctr_drbg_self_test(verbose);
 	if (res) TestFail = true;
-	
+
 	res = mbedtls_base64_self_test(verbose);
 	if (res) TestFail = true;
 
@@ -78,13 +78,13 @@ int ExecuteCryptoTests(bool verbose) {
 
 	res = mbedtls_x509_self_test(verbose);
 	if (res) TestFail = true;
-	
+
 	res = exec_sda_test(verbose);
 	if (res) TestFail = true;
 
 	res = exec_dda_test(verbose);
 	if (res) TestFail = true;
-	
+
 	res = exec_cda_test(verbose);
 	if (res) TestFail = true;
 
@@ -95,12 +95,12 @@ int ExecuteCryptoTests(bool verbose) {
 	if (res) TestFail = true;
 
 	PrintAndLog("\n--------------------------");
-	
+
 	if (TestFail)
 		PrintAndLogEx(FAILED, "\tTest(s) [ %s ]", _RED_(FAIL) );
 	else
 		PrintAndLogEx(SUCCESS, "\tTest(s) [ %s ]", _GREEN_(OK) );
-	
+
 	return TestFail;
 }
 

@@ -10,7 +10,7 @@
 // attacks this doesn't rely on implementation errors but only on the
 // inherent weaknesses of the crypto1 cypher. Described in
 //   Carlo Meijer, Roel Verdult, "Ciphertext-only Cryptanalysis on Hardened
-//   Mifare Classic Cards" in Proceedings of the 22nd ACM SIGSAC Conference on 
+//   Mifare Classic Cards" in Proceedings of the 22nd ACM SIGSAC Conference on
 //   Computer and Communications Security, 2015
 //-----------------------------------------------------------------------------
 //
@@ -19,7 +19,7 @@
 // - don't rollback. Start with 2nd byte of nonce instead
 // - reuse results of filter subfunctions
 // - reuse results of previous nonces if some first bits are identical
-// 
+//
 //-----------------------------------------------------------------------------
 // aczid's Copyright notice:
 //
@@ -100,7 +100,7 @@ typedef union {
 // size of nonce to be decrypted
 #define KEYSTREAM_SIZE 24
 
-// this needs to be compiled several times for each instruction set. 
+// this needs to be compiled several times for each instruction set.
 // For each instruction set, define a dedicated function name:
 #if defined (__AVX512F__)
 #define BITSLICE_TEST_NONCES bitslice_test_nonces_AVX512
@@ -114,7 +114,7 @@ typedef union {
 #elif defined (__SSE2__)
 #define BITSLICE_TEST_NONCES bitslice_test_nonces_SSE2
 #define CRACK_STATES_BITSLICED crack_states_bitsliced_SSE2
-#elif defined (__MMX__) 
+#elif defined (__MMX__)
 #define BITSLICE_TEST_NONCES bitslice_test_nonces_MMX
 #define CRACK_STATES_BITSLICED crack_states_bitsliced_MMX
 #else
@@ -208,7 +208,7 @@ void BITSLICE_TEST_NONCES(uint32_t nonces_to_bruteforce, uint32_t *bf_test_nonce
 const uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, statelist_t *p, uint32_t *keys_found, uint64_t *num_keys_tested, uint32_t nonces_to_bruteforce, uint8_t *bf_test_nonce_2nd_byte, noncelist_t *nonces){
 
     // Unlike aczid's implementation this doesn't roll back at all when performing bitsliced bruteforce.
-	// We know that the best first byte is already shifted in. Testing with the remaining three bytes of 
+	// We know that the best first byte is already shifted in. Testing with the remaining three bytes of
 	// the nonces is sufficient to eliminate most of them. The small rest is tested with a simple unsliced
 	// brute forcing (including roll back).
 
@@ -223,7 +223,7 @@ const uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, 
 	uint32_t elimination_step = 0;
 	#define MAX_ELIMINATION_STEP	32
 	uint64_t keys_eliminated[MAX_ELIMINATION_STEP] = {0};
-#endif	
+#endif
 #ifdef DEBUG_KEY_ELIMINATION
 	bool bucket_contains_test_key[(p->len[EVEN_STATE] - 1)/MAX_BITSLICES + 1];
 #endif
@@ -233,7 +233,7 @@ const uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, 
     memset(bs_ones.bytes, 0xff, VECTOR_SIZE);
 	bitslice_t bs_zeroes;
     memset(bs_zeroes.bytes, 0x00, VECTOR_SIZE);
-	
+
     // bitslice all the even states
     bitslice_t **restrict bitsliced_even_states = (bitslice_t **)malloc(((p->len[EVEN_STATE] - 1)/MAX_BITSLICES + 1) * sizeof(bitslice_t *));
 	if (bitsliced_even_states == NULL) {
@@ -284,10 +284,10 @@ const uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, 
                     lstate_p[bit_idx].bytes64[slice_idx>>6] |= 1ull << (slice_idx & 0x3f);
                 }
             }
-		}			
+		}
         bitsliced_even_states[bitsliced_blocks] = lstate_p;
 		// bitsliced_even_feedback[bitsliced_blocks] = bs_ones;
-		bitsliced_even_feedback[bitsliced_blocks] = lstate_p[(47- 0)/2].value ^ 
+		bitsliced_even_feedback[bitsliced_blocks] = lstate_p[(47- 0)/2].value ^
                                                     lstate_p[(47-10)/2].value ^ lstate_p[(47-12)/2].value ^ lstate_p[(47-14)/2].value ^
                                                     lstate_p[(47-24)/2].value ^ lstate_p[(47-42)/2].value;
 		bitsliced_blocks++;
@@ -298,9 +298,9 @@ const uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, 
         if(*keys_found){
             goto out;
         }
-		
+
 		// set odd state bits and pre-compute first keystream bit vector. This is the same for all blocks of even states
-		
+
 		state_p = &states[KEYSTREAM_SIZE];
 		uint32_t o = *p_odd;
 
@@ -316,13 +316,13 @@ const uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, 
 				state_p[state_idx] = bs_zeroes;
 			}
 		}
-		
+
 		bitslice_value_t crypto1_bs_f20b_2[16];
 		bitslice_value_t crypto1_bs_f20b_3[8];
 
 		crypto1_bs_f20b_2[0] = f20b(state_p[47-25].value, state_p[47-27].value, state_p[47-29].value, state_p[47-31].value);
 		crypto1_bs_f20b_3[0] = f20b(state_p[47-41].value, state_p[47-43].value, state_p[47-45].value, state_p[47-47].value);
-		
+
 		bitslice_value_t ksb[8];
 		ksb[0] = f20c(f20a(state_p[47- 9].value, state_p[47-11].value, state_p[47-13].value, state_p[47-15].value),
 		              f20b(state_p[47-17].value, state_p[47-19].value, state_p[47-21].value, state_p[47-23].value),
@@ -347,11 +347,11 @@ const uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, 
 
 			// pre-compute first feedback bit vector. This is the same for all nonces
 			bitslice_value_t fbb[8];
-            fbb[0] = odd_feedback ^ bitsliced_even_feedback[block_idx]; 
+            fbb[0] = odd_feedback ^ bitsliced_even_feedback[block_idx];
 
             // vector to contain test results (1 = passed, 0 = failed)
             bitslice_t results = bs_ones;
-			
+
 			// parity_bits
 			bitslice_value_t par[8];
 			par[0] = bs_zeroes.value;
@@ -398,7 +398,7 @@ const uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, 
 						f20a_1 = f20a(state_p[47- 9].value, state_p[47-11].value, state_p[47-13].value, state_p[47-15].value);
 						f20b_1 = crypto1_bs_f20b_2[KEYSTREAM_SIZE - ks_idx - 8];
 						f20b_2 = f20b(state_p[47-25].value, state_p[47-27].value, state_p[47-29].value, state_p[47-31].value);
-						crypto1_bs_f20b_2[KEYSTREAM_SIZE - ks_idx] = f20b_2; 
+						crypto1_bs_f20b_2[KEYSTREAM_SIZE - ks_idx] = f20b_2;
 					} else if (ks_idx > KEYSTREAM_SIZE - 24){
 						f20a_1 = f20a(state_p[47- 9].value, state_p[47-11].value, state_p[47-13].value, state_p[47-15].value);
 						f20b_1 = crypto1_bs_f20b_2[KEYSTREAM_SIZE - ks_idx - 8];
@@ -407,7 +407,7 @@ const uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, 
 						f20a_1 = f20a(state_p[47- 9].value, state_p[47-11].value, state_p[47-13].value, state_p[47-15].value);
 						f20b_1 = f20b(state_p[47-17].value, state_p[47-19].value, state_p[47-21].value, state_p[47-23].value);
 						f20b_2 = f20b(state_p[47-25].value, state_p[47-27].value, state_p[47-29].value, state_p[47-31].value);
-					}						
+					}
 					// update keystream bit
 					ks_bits = f20c(f20a_1, f20b_1, f20b_2, f20a_2, f20b_3);
 
@@ -436,7 +436,7 @@ const uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, 
                            && results.bytes64[3] == 0
 #endif
                           ) {
-#if defined (DEBUG_BRUTE_FORCE)						  
+#if defined (DEBUG_BRUTE_FORCE)
 							if (elimination_step < MAX_ELIMINATION_STEP) {
 								keys_eliminated[elimination_step] += MAX_BITSLICES;
 							}
@@ -450,14 +450,14 @@ const uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, 
 							goto stop_tests;
 						}
 						// prepare for next nonce byte
-#if defined (DEBUG_BRUTE_FORCE)							  
+#if defined (DEBUG_BRUTE_FORCE)
 						elimination_step++;
 #endif
 						parity_bit_vector = bs_zeroes.value;
-					}						
+					}
 					// update feedback bit vector
 					if (ks_idx != 0) {
-						fb_bits = 
+						fb_bits =
 								  (state_p[47- 0].value ^ state_p[47- 5].value ^ state_p[47- 9].value ^
 								   state_p[47-10].value ^ state_p[47-12].value ^ state_p[47-14].value ^
 								   state_p[47-15].value ^ state_p[47-17].value ^ state_p[47-19].value ^
@@ -513,9 +513,9 @@ const uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, 
 				}
             }
 stop_tests:
-#if defined (DEBUG_BRUTE_FORCE)							  
+#if defined (DEBUG_BRUTE_FORCE)
 			elimination_step = 0;
-#endif			
+#endif
             bucket_states_tested += bucket_size[block_idx];
             // prepare to set new states
 			state_p = &states[KEYSTREAM_SIZE];
@@ -529,12 +529,12 @@ out:
 	free(bitsliced_even_states);
 	free_bitslice(bitsliced_even_feedback);
     __sync_fetch_and_add(num_keys_tested, bucket_states_tested);
-	
-#if defined (DEBUG_BRUTE_FORCE)	
+
+#if defined (DEBUG_BRUTE_FORCE)
 	for (uint32_t i = 0; i < MAX_ELIMINATION_STEP; i++) {
 		printf("Eliminated after %2u test_bytes: %5.2f%%\n", i+1, (float)keys_eliminated[i] / bucket_states_tested * 100);
 	}
-#endif	
+#endif
     return key;
 }
 
@@ -550,17 +550,17 @@ static SIMDExecInstr intSIMDInstr = SIMD_AUTO;
 
 void SetSIMDInstr(SIMDExecInstr instr) {
 	intSIMDInstr = instr;
-	
+
 	crack_states_bitsliced_function_p = &crack_states_bitsliced_dispatch;
 	bitslice_test_nonces_function_p = &bitslice_test_nonces_dispatch;
 }
 
 SIMDExecInstr GetSIMDInstr() {
 	SIMDExecInstr instr = SIMD_NONE;
-	
+
 #if defined (__i386__) || defined (__x86_64__)
 	#if !defined(__APPLE__) || (defined(__APPLE__) && (__clang_major__ > 8 || __clang_major__ == 8 && __clang_minor__ >= 1))
-		#if (__GNUC__ >= 5) && (__GNUC__ > 5 || __GNUC_MINOR__ > 2) 
+		#if (__GNUC__ >= 5) && (__GNUC__ > 5 || __GNUC_MINOR__ > 2)
 		if (__builtin_cpu_supports("avx512f")) instr = SIMD_AVX512;
 		else if (__builtin_cpu_supports("avx2")) instr = SIMD_AVX2;
 		#else
@@ -573,7 +573,7 @@ SIMDExecInstr GetSIMDInstr() {
 	#endif
 #endif
 		instr = SIMD_NONE;
-		
+
 	return instr;
 }
 
@@ -581,7 +581,7 @@ SIMDExecInstr GetSIMDInstrAuto() {
 	SIMDExecInstr instr = intSIMDInstr;
 	if (instr == SIMD_AUTO)
 		return GetSIMDInstr();
-	
+
 	return instr;
 }
 
@@ -589,8 +589,8 @@ SIMDExecInstr GetSIMDInstrAuto() {
 const uint64_t crack_states_bitsliced_dispatch(uint32_t cuid, uint8_t *best_first_bytes, statelist_t *p, uint32_t *keys_found, uint64_t *num_keys_tested, uint32_t nonces_to_bruteforce, uint8_t *bf_test_nonce_2nd_byte, noncelist_t *nonces) {
 	switch(GetSIMDInstrAuto()) {
 #if defined (__i386__) || defined (__x86_64__)
-	#if !defined(__APPLE__) || (defined(__APPLE__) && (__clang_major__ > 8 || __clang_major__ == 8 && __clang_minor__ >= 1))	
-		#if (__GNUC__ >= 5) && (__GNUC__ > 5 || __GNUC_MINOR__ > 2) 
+	#if !defined(__APPLE__) || (defined(__APPLE__) && (__clang_major__ > 8 || __clang_major__ == 8 && __clang_minor__ >= 1))
+		#if (__GNUC__ >= 5) && (__GNUC__ > 5 || __GNUC_MINOR__ > 2)
 		case SIMD_AVX512:
 			crack_states_bitsliced_function_p = &crack_states_bitsliced_AVX512;
 			break;
@@ -612,7 +612,7 @@ const uint64_t crack_states_bitsliced_dispatch(uint32_t cuid, uint8_t *best_firs
 		default:
 		crack_states_bitsliced_function_p = &crack_states_bitsliced_NOSIMD;
 			break;
-	}	
+	}
 
     // call the most optimized function for this CPU
     return (*crack_states_bitsliced_function_p)(cuid, best_first_bytes, p, keys_found, num_keys_tested, nonces_to_bruteforce, bf_test_nonce_2nd_byte, nonces);
@@ -620,7 +620,7 @@ const uint64_t crack_states_bitsliced_dispatch(uint32_t cuid, uint8_t *best_firs
 
 void bitslice_test_nonces_dispatch(uint32_t nonces_to_bruteforce, uint32_t *bf_test_nonce, uint8_t *bf_test_nonce_par) {
 	switch(GetSIMDInstrAuto()) {
-#if defined (__i386__) || defined (__x86_64__)	
+#if defined (__i386__) || defined (__x86_64__)
 	#if !defined(__APPLE__) || (defined(__APPLE__) && (__clang_major__ > 8 || __clang_major__ == 8 && __clang_minor__ >= 1))
 		#if (__GNUC__ >= 5) && (__GNUC__ > 5 || __GNUC_MINOR__ > 2)
 		case SIMD_AVX512:
@@ -644,7 +644,7 @@ void bitslice_test_nonces_dispatch(uint32_t nonces_to_bruteforce, uint32_t *bf_t
 		default:
 		bitslice_test_nonces_function_p = &bitslice_test_nonces_NOSIMD;
 			break;
-	}	
+	}
 
     // call the most optimized function for this CPU
     (*bitslice_test_nonces_function_p)(nonces_to_bruteforce, bf_test_nonce, bf_test_nonce_par);

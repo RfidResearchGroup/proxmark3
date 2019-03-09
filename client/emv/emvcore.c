@@ -14,7 +14,7 @@
 
 // Got from here. Thanks)
 // https://eftlab.co.uk/index.php/site-map/knowledge-base/211-emv-aid-rid-pix
-static const char *PSElist [] = { 
+static const char *PSElist [] = {
 	"325041592E5359532E4444463031", // 2PAY.SYS.DDF01 - Visa Proximity Payment System Environment - PPSE
 	"315041592E5359532E4444463031"  // 1PAY.SYS.DDF01 - Visa Payment System Environment - PSE
 };
@@ -32,28 +32,28 @@ typedef struct {
 	const char* aid;
 } TAIDList;
 
-static const TAIDList AIDlist [] = { 
+static const TAIDList AIDlist [] = {
 	// Visa International
-	{ CV_VISA, 	"A00000000305076010"},			// VISA ELO Credit	
-	{ CV_VISA, 	"A0000000031010" },				// VISA Debit/Credit (Classic)	
-	{ CV_VISA, 	"A000000003101001" },			// VISA Credit	
-	{ CV_VISA, 	"A000000003101002" },			// VISA Debit	
+	{ CV_VISA, 	"A00000000305076010"},			// VISA ELO Credit
+	{ CV_VISA, 	"A0000000031010" },				// VISA Debit/Credit (Classic)
+	{ CV_VISA, 	"A000000003101001" },			// VISA Credit
+	{ CV_VISA, 	"A000000003101002" },			// VISA Debit
 	{ CV_VISA, 	"A0000000032010" },				// VISA Electron
-	{ CV_VISA, 	"A0000000032020" },				// VISA	
-	{ CV_VISA, 	"A0000000033010" },				// VISA Interlink	
-	{ CV_VISA, 	"A0000000034010" },				// VISA Specific	
-	{ CV_VISA, 	"A0000000035010" },				// VISA Specific	
-	{ CV_VISA, 	"A0000000036010" },				// Domestic Visa Cash Stored Value	
-	{ CV_VISA, 	"A0000000036020" },				// International Visa Cash Stored Value	
-	{ CV_VISA, 	"A0000000038002" },				// VISA Auth, VisaRemAuthen EMV-CAP (DPA)	
-	{ CV_VISA, 	"A0000000038010" },				// VISA Plus	
-	{ CV_VISA, 	"A0000000039010" },				// VISA Loyalty	
-	{ CV_VISA, 	"A000000003999910" },			// VISA Proprietary ATM	
+	{ CV_VISA, 	"A0000000032020" },				// VISA
+	{ CV_VISA, 	"A0000000033010" },				// VISA Interlink
+	{ CV_VISA, 	"A0000000034010" },				// VISA Specific
+	{ CV_VISA, 	"A0000000035010" },				// VISA Specific
+	{ CV_VISA, 	"A0000000036010" },				// Domestic Visa Cash Stored Value
+	{ CV_VISA, 	"A0000000036020" },				// International Visa Cash Stored Value
+	{ CV_VISA, 	"A0000000038002" },				// VISA Auth, VisaRemAuthen EMV-CAP (DPA)
+	{ CV_VISA, 	"A0000000038010" },				// VISA Plus
+	{ CV_VISA, 	"A0000000039010" },				// VISA Loyalty
+	{ CV_VISA, 	"A000000003999910" },			// VISA Proprietary ATM
 	// Visa USA
 	{ CV_VISA, 	"A000000098" },					// Debit Card
 	{ CV_VISA, 	"A0000000980848" },				// Debit Card
 	// Mastercard International
-	{ CV_MASTERCARD, "A00000000401" },			// MasterCard PayPass	
+	{ CV_MASTERCARD, "A00000000401" },			// MasterCard PayPass
 	{ CV_MASTERCARD, "A0000000041010" },		// MasterCard Credit
 	{ CV_MASTERCARD, "A00000000410101213" },	// MasterCard Credit
 	{ CV_MASTERCARD, "A00000000410101215" },	// MasterCard Credit
@@ -65,7 +65,7 @@ static const TAIDList AIDlist [] = {
 	{ CV_MASTERCARD, "A0000000045010" },		// MasterCard Specific
 	{ CV_MASTERCARD, "A0000000046000" },		// Cirrus
 	{ CV_MASTERCARD, "A0000000048002" },		// SecureCode Auth EMV-CAP
-	{ CV_MASTERCARD, "A0000000049999" },		// MasterCard PayPass	
+	{ CV_MASTERCARD, "A0000000049999" },		// MasterCard PayPass
 	// American Express
 	{ CV_AMERICANEXPRESS, "A000000025" },
 	{ CV_AMERICANEXPRESS, "A0000000250000" },
@@ -74,14 +74,14 @@ static const TAIDList AIDlist [] = {
 	{ CV_AMERICANEXPRESS, "A000000025010701" },
 	{ CV_AMERICANEXPRESS, "A000000025010801" },
 	// Groupement des Cartes Bancaires "CB"
-	{ CV_CB, "A0000000421010" },				// Cartes Bancaire EMV Card	
-	{ CV_CB, "A0000000422010" },		
-	{ CV_CB, "A0000000423010" },		
-	{ CV_CB, "A0000000424010" },		
-	{ CV_CB, "A0000000425010" },		
+	{ CV_CB, "A0000000421010" },				// Cartes Bancaire EMV Card
+	{ CV_CB, "A0000000422010" },
+	{ CV_CB, "A0000000423010" },
+	{ CV_CB, "A0000000424010" },
+	{ CV_CB, "A0000000425010" },
 	// JCB CO., LTD.
-	{ CV_JCB, "A00000006510" },					// JCB	
-	{ CV_JCB, "A0000000651010" },				// JCB J Smart Credit	
+	{ CV_JCB, "A00000006510" },					// JCB
+	{ CV_JCB, "A0000000651010" },				// JCB J Smart Credit
 	// Other
 	{ CV_OTHER, "A0000001544442" },				// Banricompras Debito - Banrisul - Banco do Estado do Rio Grande do SUL - S.A.
 	{ CV_OTHER, "F0000000030001" },				// BRADESCO
@@ -106,8 +106,8 @@ enum CardPSVendor GetCardPSVendor(uint8_t * AID, size_t AIDlen) {
 		if (strncmp(AIDlist[i].aid, buf, strlen(AIDlist[i].aid)) == 0){
 			return AIDlist[i].vendor;
 		}
-	}	
-	
+	}
+
 	return CV_NA;
 }
 
@@ -125,7 +125,7 @@ bool TLVPrintFromBuffer(uint8_t *data, int datalen) {
 	t = tlvdb_parse_multi(data, datalen);
 	if (t) {
 		PrintAndLogEx(NORMAL, "-------------------- TLV decoded --------------------");
-		
+
 		tlvdb_visit(t, print_cb, NULL, 0);
 		tlvdb_free(t);
 		return true;
@@ -136,9 +136,9 @@ bool TLVPrintFromBuffer(uint8_t *data, int datalen) {
 }
 
 void TLVPrintFromTLVLev(struct tlvdb *tlv, int level) {
-	if (!tlv) 
+	if (!tlv)
 		return;
-	
+
 	tlvdb_visit(tlv, print_cb, NULL, level);
 }
 
@@ -154,18 +154,18 @@ void TLVPrintAIDlistFromSelectTLV(struct tlvdb *tlv) {
 	struct tlvdb *ttmp = tlvdb_find(tlv, 0x6f);
 	if (!ttmp)
 		PrintAndLogEx(NORMAL, "|                         none                        |");
-		
+
 	while (ttmp) {
 		const struct tlv *tgAID = tlvdb_get_inchild(ttmp, 0x84, NULL);
 		const struct tlv *tgName = tlvdb_get_inchild(ttmp, 0x50, NULL);
 		const struct tlv *tgPrio = tlvdb_get_inchild(ttmp, 0x87, NULL);
 		if (!tgAID)
 			break;
-		PrintAndLogEx(NORMAL, "|%s|   %s  |%s|", 
-			sprint_hex_inrow_ex(tgAID->value, tgAID->len, 18), 
-			(tgPrio) ? sprint_hex(tgPrio->value, 1) : "   ", 
+		PrintAndLogEx(NORMAL, "|%s|   %s  |%s|",
+			sprint_hex_inrow_ex(tgAID->value, tgAID->len, 18),
+			(tgPrio) ? sprint_hex(tgPrio->value, 1) : "   ",
 			(tgName) ? sprint_ascii_ex(tgName->value, tgName->len, 25) : "                         ");
-		
+
 		ttmp = tlvdb_find_next(ttmp, 0x6f);
 	}
 
@@ -183,19 +183,19 @@ struct tlvdb *GetPANFromTrack2(const struct tlv *track2) {
 
 	for (int i = 0; i < track2->len; ++i, tmp += 2)
 		sprintf(tmp, "%02x", (unsigned int)track2->value[i]);
-	
+
 	int posD = strchr(track2Hex, 'd') - track2Hex;
 	if (posD < 1)
 		return NULL;
-	
+
 	track2Hex[posD] = 0;
 	if (strlen(track2Hex) % 2) {
 		track2Hex[posD] = 'F';
 		track2Hex[posD + 1] = '\0';
 	}
-	
+
 	param_gethex_to_eol(track2Hex, 0, PAN, sizeof(PAN), &PANlen);
-	
+
   return tlvdb_fixed(0x5a, PANlen, PAN);
 }
 
@@ -206,13 +206,13 @@ struct tlvdb *GetdCVVRawFromTrack2(const struct tlv *track2) {
 	int dCVVlen = 0;
 	const int PINlen = 5; // must calculated from 9F67 MSD Offset but i have not seen this tag)
 	char *tmp = track2Hex;
-	
+
 	if (!track2)
 		return NULL;
-	
+
 	for (int i = 0; i < track2->len; ++i, tmp += 2)
 		sprintf(tmp, "%02x", (unsigned int)track2->value[i]);
-	
+
 	int posD = strchr(track2Hex, 'd') - track2Hex;
 	if (posD < 1)
 		return NULL;
@@ -226,9 +226,9 @@ struct tlvdb *GetdCVVRawFromTrack2(const struct tlv *track2) {
 	memcpy(dCVVHex + 9, track2Hex + posD + 1, 4);
 	// service code
 	memcpy(dCVVHex + 13, track2Hex + posD + 5, 3);
-	
+
 	param_gethex_to_eol(dCVVHex, 0, dCVV, sizeof(dCVV), &dCVVlen);
-	
+
   return tlvdb_fixed(0x02, dCVVlen, dCVV);
 }
 
@@ -239,17 +239,17 @@ int EMVExchangeEx(EMVCommandChannel channel, bool ActivateField, bool LeaveField
 	if (sw)	*sw = 0;
 	uint16_t isw = 0;
 	int res = 0;
-	
+
 	if (ActivateField) {
 		DropFieldEx( channel );
 		msleep(50);
 	}
-	
+
 	// COMPUTE APDU
 	memcpy(data, &apdu, 5);
 	if (apdu.data)
 		memcpy(&data[5], apdu.data, apdu.Lc);
-	
+
 	if (APDULogging)
 		PrintAndLogEx(SUCCESS, ">>>> %s", sprint_hex(data, (IncludeLe?6:5) + apdu.Lc));
 
@@ -262,24 +262,24 @@ int EMVExchangeEx(EMVCommandChannel channel, bool ActivateField, bool LeaveField
 		}
 		break;
 	case ECC_CONTACT:
-#ifdef WITH_SMARTCARD		
+#ifdef WITH_SMARTCARD
 		res = ExchangeAPDUSC(data, (IncludeLe?6:5) + apdu.Lc, ActivateField, LeaveFieldON, Result, (int)MaxResultLen, (int *)ResultLen);
 #else
 		res = 1;
-#endif	
+#endif
 		if (res) {
 			return res;
 		}
 		break;
 	}
-	
+
 	if (APDULogging)
 		PrintAndLogEx(SUCCESS, "<<<< %s", sprint_hex(Result, *ResultLen));
 
 	if (*ResultLen < 2) {
 		return 200;
 	}
-	
+
 	*ResultLen -= 2;
 	isw = Result[*ResultLen] * 0x0100 + Result[*ResultLen + 1];
 	if (sw)
@@ -301,7 +301,7 @@ int EMVExchangeEx(EMVCommandChannel channel, bool ActivateField, bool LeaveField
 		struct tlvdb *t = tlvdb_parse_multi(Result, *ResultLen);
 		tlvdb_add(tlv, t);
 	}
-	
+
 	return 0;
 }
 
@@ -328,7 +328,7 @@ int EMVSelectPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
 		default:
 			return -1;
 	}
-	
+
 	// select
 	res = EMVSelect(channel, ActivateField, LeaveFieldON, buf, len, Result, MaxResultLen, ResultLen, sw, NULL);
 
@@ -351,11 +351,11 @@ int EMVSelectWithRetry(EMVCommandChannel channel, bool ActivateField, bool Leave
 					PrintAndLogEx(WARNING, "Exit...");
 					return 1;
 				}
-				
+
 				retrycnt = 0;
 				PrintAndLogEx(NORMAL, "Retry failed [%s]. Skiped...", sprint_hex_inrow(AID, AIDLen));
 				return res;
-			}	
+			}
 		}
 	} while (res && res != 5);
 
@@ -379,7 +379,7 @@ int EMVCheckAID(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlvdbel
 				tlvdbelm = tlvdb_find_next(tlvdbelm, 0x61);
 				continue;
 			}
-			
+
 			if (res)
 				break;
 
@@ -411,7 +411,7 @@ int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
 			PrintAndLogEx(FAILED, "Select PSE error. APDU error: %04x.", sw);
 			return 1;
 		}
-		
+
 		struct tlvdb *t = NULL;
 		t = tlvdb_parse_multi(data, datalen);
 		if (t) {
@@ -421,18 +421,18 @@ int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
 				uint8_t sfin = 0;
 				tlv_get_uint8(tlvdb_get_tlv(tsfi), &sfin);
 				PrintAndLogEx(INFO, "* PPSE get SFI: 0x%02x.", sfin);
-				
+
 				for (uint8_t ui = 0x01; ui <= 0x10; ui++) {
 					PrintAndLogEx(INFO, "* * Get SFI: 0x%02x. num: 0x%02x", sfin, ui);
 					res = EMVReadRecord(channel, true, sfin, ui, sfidata[ui], APDU_RES_LEN, &sfidatalen[ui], &sw, NULL);
-					
+
 					// end of records
 					if (sw == 0x6a83) {
 						sfidatalen[ui] = 0;
 						PrintAndLogEx(INFO, "* * PPSE get SFI. End of records.");
 						break;
 					}
-					
+
 					// error catch!
 					if (sw != 0x9000) {
 						sfidatalen[ui] = 0;
@@ -455,7 +455,7 @@ int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
 								PrintAndLogEx(FAILED, "SFI 0x%02d don't have records.", sfidatalen[ui]);
 								continue;
 							}
-							res = EMVCheckAID(channel, decodeTLV, tsfitmp, tlv);							
+							res = EMVCheckAID(channel, decodeTLV, tsfitmp, tlv);
 							fileFound = true;
 						}
 						tlvdb_free(tsfi);
@@ -470,21 +470,21 @@ int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
 				res = EMVCheckAID(channel, decodeTLV, ttmp, tlv);
 				fileFound = true;
 			}
-			
+
 			if (!fileFound)
 				PrintAndLogEx(FAILED, "PPSE don't have records.");
 
 			tlvdb_free(t);
 		} else {
 			PrintAndLogEx(WARNING, "PPSE ERROR: Can't get TLV from response.");
-		}		
+		}
 	} else {
 		PrintAndLogEx(WARNING, "PPSE ERROR: Can't select PPSE AID. Error: %d", res);
 	}
-	
+
 	if(!LeaveFieldON)
 		DropFieldEx( channel );
-	
+
 	return res;
 }
 
@@ -494,7 +494,7 @@ int EMVSearch(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, 
 	uint8_t data[APDU_RES_LEN] = {0};
 	size_t datalen = 0;
 	uint16_t sw = 0;
-	
+
 	int res = 0;
 	int retrycnt = 0;
 	for(int i = 0; i < AIDlistLen; i ++) {
@@ -510,20 +510,20 @@ int EMVSearch(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, 
 					PrintAndLogEx(WARNING, "Exit...");
 					return 1;
 				}
-				
+
 				retrycnt = 0;
 				PrintAndLogEx(FAILED, "Retry failed [%s]. Skipped...", AIDlist[i].aid);
 			}
 			continue;
 		}
 		retrycnt = 0;
-		
+
 		if (res)
 			continue;
-		
+
 		if (!datalen)
 			continue;
-		
+
 		if (decodeTLV) {
 			PrintAndLogEx(SUCCESS, "%s", AIDlist[i].aid);
 			TLVPrintFromBuffer(data, datalen);
@@ -536,25 +536,25 @@ int EMVSearch(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, 
 int EMVSelectApplication(struct tlvdb *tlv, uint8_t *AID, size_t *AIDlen) {
 	// check priority. 0x00 - highest
 	int prio = 0xffff;
-	
+
 	*AIDlen = 0;
 
 	struct tlvdb *ttmp = tlvdb_find(tlv, 0x6f);
 	if (!ttmp)
 		return 1;
-		
+
 	while (ttmp) {
 		const struct tlv *tgAID = tlvdb_get_inchild(ttmp, 0x84, NULL);
 		const struct tlv *tgPrio = tlvdb_get_inchild(ttmp, 0x87, NULL);
-		
+
 		if (!tgAID)
 			break;
 
 		if (tgPrio) {
-			int pt = bytes_to_num((uint8_t*)tgPrio->value, (tgPrio->len < 2) ? tgPrio->len : 2); 
+			int pt = bytes_to_num((uint8_t*)tgPrio->value, (tgPrio->len < 2) ? tgPrio->len : 2);
 			if (pt < prio) {
 				prio = pt;
-				
+
 				memcpy(AID, tgAID->value, tgAID->len);
 				*AIDlen = tgAID->len;
 			}
@@ -562,13 +562,13 @@ int EMVSelectApplication(struct tlvdb *tlv, uint8_t *AID, size_t *AIDlen) {
 			// takes the first application from list wo priority
 			if (!*AIDlen) {
 			memcpy(AID, tgAID->value, tgAID->len);
-			*AIDlen = tgAID->len;				
+			*AIDlen = tgAID->len;
 			}
 		}
-		
+
 		ttmp = tlvdb_find_next(ttmp, 0x6f);
 	}
-	
+
 	return 0;
 }
 
@@ -606,7 +606,7 @@ int MSCComputeCryptoChecksum(EMVCommandChannel channel, bool LeaveFieldON, uint8
 	return EMVExchange(channel, LeaveFieldON, (sAPDU){0x80, 0x2a, 0x8e, 0x80, UDOLlen, UDOL}, Result, MaxResultLen, ResultLen, sw, tlv);
 }
 
-// Authentication 
+// Authentication
 struct emv_pk *get_ca_pk(struct tlvdb *db) {
 	const struct tlv *df_tlv = tlvdb_get(db, 0x84, NULL);
 	const struct tlv *caidx_tlv = tlvdb_get(db, 0x8f, NULL);
@@ -625,7 +625,7 @@ int trSDA(struct tlvdb *tlv) {
 		PrintAndLogEx(WARNING, "Error: Key not found. Exit.");
 		return 2;
 	}
-	
+
 	struct emv_pk *issuer_pk = emv_pki_recover_issuer_cert(pk, tlv);
 	if (!issuer_pk) {
 		emv_pk_free(pk);
@@ -652,7 +652,7 @@ int trSDA(struct tlvdb *tlv) {
 		PrintAndLogEx(WARNING, "Can't find input list for Offline Data Authentication. Exit.");
 		return 3;
 	}
-	
+
 	struct tlvdb *dac_db = emv_pki_recover_dac(issuer_pk, tlv, sda_tlv);
 	if (dac_db) {
 		const struct tlv *dac_tlv = tlvdb_get(dac_db, 0x9f45, NULL);
@@ -664,7 +664,7 @@ int trSDA(struct tlvdb *tlv) {
 		PrintAndLogEx(WARNING, "SSAD verify error");
 		return 4;
 	}
-	
+
 	emv_pk_free(issuer_pk);
 	emv_pk_free(pk);
 	return 0;
@@ -708,7 +708,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
 			issuer_pk->serial[1],
 			issuer_pk->serial[2]
 			);
-				
+
 	struct emv_pk *icc_pk = emv_pki_recover_icc_cert(issuer_pk, tlv, sda_tlv);
 	if (!icc_pk) {
 		emv_pk_free(pk);
@@ -769,7 +769,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
 		const struct tlv *atc_tlv = tlvdb_get(atc_db, 0x9f36, NULL);
 		if(atc_tlv) {
 			PrintAndLogEx(NORMAL, "\nATC (Application Transaction Counter) [%zu] %s", atc_tlv->len, sprint_hex_inrow(atc_tlv->value, atc_tlv->len));
-			
+
 			const struct tlv *core_atc_tlv = tlvdb_get(tlv, 0x9f36, NULL);
 			if(tlv_equal(core_atc_tlv, atc_tlv)) {
 				PrintAndLogEx(SUCCESS, "ATC check OK.");
@@ -797,7 +797,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
 			emv_pk_free(icc_pk);
 			return 4;
 		}
-		
+
 		PrintAndLogEx(NORMAL, "\n* * Calc DDOL");
 		const struct tlv *ddol_tlv = tlvdb_get(tlv, 0x9f49, NULL);
 		if (!ddol_tlv) {
@@ -818,7 +818,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
 
 		PrintAndLogEx(NORMAL, "\n* * Internal Authenticate");
 		int res = EMVInternalAuthenticate(channel, true, (uint8_t *)ddol_data_tlv->value, ddol_data_tlv->len, buf, sizeof(buf), &len, &sw, NULL);
-		if (res) {	
+		if (res) {
 			PrintAndLogEx(WARNING, "Internal Authenticate error(%d): %4x. Exit...", res, sw);
 			free(ddol_data_tlv);
 			emv_pk_free(pk);
@@ -835,13 +835,13 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
 				// parse response 0x80
 				struct tlvdb *t80 = tlvdb_parse_multi(buf, len);
 				const struct tlv * t80tlv = tlvdb_get_tlv(t80);
-				
+
 				// 9f4b Signed Dynamic Application Data
 				dda_db = tlvdb_fixed(0x9f4b, t80tlv->len, t80tlv->value);
 				tlvdb_add(tlv, dda_db);
-				
+
 				tlvdb_free(t80);
-				
+
 				if (decodeTLV){
 					PrintAndLogEx(NORMAL, "* * * Decode response format 1:");
 					TLVPrintFromTLV(dda_db);
@@ -858,7 +858,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
 				return 7;
 			}
 			tlvdb_add(tlv, dda_db);
-			
+
 			if (decodeTLV)
 				TLVPrintFromTLV(dda_db);
 		}
@@ -892,7 +892,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
 			return 9;
 		}
 	}
-	
+
 	emv_pk_free(pk);
 	emv_pk_free(issuer_pk);
 	emv_pk_free(icc_pk);
@@ -931,7 +931,7 @@ int trCDA(struct tlvdb *tlv, struct tlvdb *ac_tlv, struct tlv *pdol_data_tlv, st
 			issuer_pk->serial[1],
 			issuer_pk->serial[2]
 			);
-				
+
 	struct emv_pk *icc_pk = emv_pki_recover_icc_cert(issuer_pk, tlv, sda_tlv);
 	if (!icc_pk) {
 		PrintAndLogEx(WARNING, "Error: ICC setrificate not found. Exit.");
@@ -963,12 +963,12 @@ int trCDA(struct tlvdb *tlv, struct tlvdb *ac_tlv, struct tlv *pdol_data_tlv, st
 		emv_pk_free(icc_pk);
 		return 4;
 	}
-	
+
 	PrintAndLogEx(NORMAL, "\n* * Check Signed Dynamic Application Data (SDAD)");
 	struct tlvdb *idn_db = emv_pki_perform_cda_ex(icc_pk, tlv, ac_tlv,
 			pdol_data_tlv, // pdol
 			ac_data_tlv,   // cdol1
-			NULL,          // cdol2 
+			NULL,          // cdol2
 			true);
 	if (idn_db) {
 		const struct tlv *idn_tlv = tlvdb_get(idn_db, 0x9f4c, NULL);
@@ -986,7 +986,7 @@ int trCDA(struct tlvdb *tlv, struct tlvdb *ac_tlv, struct tlv *pdol_data_tlv, st
 }
 
 int RecoveryCertificates(struct tlvdb *tlvRoot, json_t *root) {
-	
+
 	struct emv_pk *pk = get_ca_pk(tlvRoot);
 	if (!pk) {
 		PrintAndLog("ERROR: Key not found. Exit.");
@@ -1036,11 +1036,11 @@ int RecoveryCertificates(struct tlvdb *tlvRoot, json_t *root) {
 			icc_pk->serial[1],
 			icc_pk->serial[2]
 			);
-	
+
 	char *icc_pk_c = emv_pk_dump_pk(icc_pk);
 	JsonSaveStr(root, "$.ApplicationData.ICCPublicKeyDec", icc_pk_c);
 	JsonSaveBufAsHex(root, "$.ApplicationData.ICCPublicKeyModulus", icc_pk->modulus, icc_pk->mlen);
 	free(issuer_pk_c);
-	
+
 	return 0;
 }

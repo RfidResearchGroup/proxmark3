@@ -1,13 +1,13 @@
 /*****************************************************************************
  * WARNING
  *
- * THIS CODE IS CREATED FOR EXPERIMENTATION AND EDUCATIONAL USE ONLY. 
- * 
- * USAGE OF THIS CODE IN OTHER WAYS MAY INFRINGE UPON THE INTELLECTUAL 
- * PROPERTY OF OTHER PARTIES, SUCH AS INSIDE SECURE AND HID GLOBAL, 
- * AND MAY EXPOSE YOU TO AN INFRINGEMENT ACTION FROM THOSE PARTIES. 
- * 
- * THIS CODE SHOULD NEVER BE USED TO INFRINGE PATENTS OR INTELLECTUAL PROPERTY RIGHTS. 
+ * THIS CODE IS CREATED FOR EXPERIMENTATION AND EDUCATIONAL USE ONLY.
+ *
+ * USAGE OF THIS CODE IN OTHER WAYS MAY INFRINGE UPON THE INTELLECTUAL
+ * PROPERTY OF OTHER PARTIES, SUCH AS INSIDE SECURE AND HID GLOBAL,
+ * AND MAY EXPOSE YOU TO AN INFRINGEMENT ACTION FROM THOSE PARTIES.
+ *
+ * THIS CODE SHOULD NEVER BE USED TO INFRINGE PATENTS OR INTELLECTUAL PROPERTY RIGHTS.
  *
  *****************************************************************************
  *
@@ -22,7 +22,7 @@
  *
  * This is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as published
- * by the Free Software Foundation, or, at your option, any later version. 
+ * by the Free Software Foundation, or, at your option, any later version.
  *
  * This file is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -31,9 +31,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with loclass.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * 
- * 
+ *
+ *
+ *
  ****************************************************************************/
 #include <stdint.h>
 #include <stdbool.h>
@@ -147,7 +147,7 @@ void hash1(uint8_t csn[] , uint8_t k[]) {
 	k[5] = ~rl( csn[5] + k[3] ) + 1;
 	k[6] = rr( csn[6] + (k[4] ^ 0x3c) );
 	k[7] = rl( csn[7] + (k[5] ^ 0xc3) );
-	
+
 	k[7] &= 0x7F;
 	k[6] &= 0x7F;
 	k[5] &= 0x7F;
@@ -217,7 +217,7 @@ void hash2(uint8_t *key64, uint8_t *outp_keytable) {
     int i;
     for (i=0; i<8; i++)
         key64_negated[i]= ~key64[i];
-	
+
     // Once again, key is on iclass-format
     desencrypt_iclass(key64, key64_negated, z[0]);
 
@@ -319,7 +319,7 @@ int bruteforceItem(dumpdata item, uint16_t keytable[]) {
 	int i;
 	for (i=0; i<8; i++)	{
 		if (keytable[key_index[i]] & (CRACKED | BEING_CRACKED)) continue;
-		
+
 		bytes_to_recover[numbytes_to_recover++] = key_index[i];
 		keytable[key_index[i]] |= BEING_CRACKED;
 
@@ -355,7 +355,7 @@ int bruteforceItem(dumpdata item, uint16_t keytable[]) {
 		PrintAndLogDevice(INFO, "Bruteforcing byte %d", bytes_to_recover[i]);
 
 	while (!found && !(brute & endmask)) {
-		
+
 		//Update the keytable with the brute-values
 		for (i=0; i < numbytes_to_recover; i++) {
 			keytable[bytes_to_recover[i]] &= 0xFF00;
@@ -383,7 +383,7 @@ int bruteforceItem(dumpdata item, uint16_t keytable[]) {
 		if (memcmp(calculated_MAC, item.mac, 4) == 0) {
 			printf("\r\n");
 			for (i =0 ; i < numbytes_to_recover; i++) {
-				PrintAndLogDevice(INFO, "%d: 0x%02x", bytes_to_recover[i], 0xFF & keytable[bytes_to_recover[i]]);	
+				PrintAndLogDevice(INFO, "%d: 0x%02x", bytes_to_recover[i], 0xFF & keytable[bytes_to_recover[i]]);
 			}
 			found = true;
 			break;
@@ -397,7 +397,7 @@ int bruteforceItem(dumpdata item, uint16_t keytable[]) {
 			fflush(stdout);
 		}
 	}
-	
+
 	if (!found) {
 		PrintAndLogDevice(NORMAL, "\n"); PrintAndLogDevice(WARNING, "Failed to recover %d bytes using the following CSN", numbytes_to_recover);
 		printvar("[!] CSN", item.csn, 8);
@@ -501,7 +501,7 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[]) {
 	}
 	free(attack);
 
-	PrintAndLogDevice(SUCCESS, "time: %" PRIu64 " seconds", (msclock()-t1)/1000);	
+	PrintAndLogDevice(SUCCESS, "time: %" PRIu64 " seconds", (msclock()-t1)/1000);
 
 	// Pick out the first 16 bytes of the keytable.
 	// The keytable is now in 16-bit ints, where the upper 8 bits
@@ -511,7 +511,7 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[]) {
 
 	for (i = 0 ; i < 16 ; i++) {
 		first16bytes[i] = keytable[i] & 0xFF;
-		
+
 		if (!(keytable[i] & CRACKED))
 			PrintAndLogDevice(WARNING, "error, we are missing byte %d, custom key calculation will fail...", i);
 	}
@@ -551,7 +551,7 @@ int bruteforceFile(const char *filename, uint16_t keytable[]) {
 	size_t bytes_read = fread(dump, 1, fsize, f);
 
 	fclose(f);
-	
+
     if (bytes_read < fsize) {
         PrintAndLogDevice(WARNING, "Error, could only read %d bytes (should be %d)", bytes_read, fsize );
 	}

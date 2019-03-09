@@ -10,7 +10,7 @@
 // attacks this doesn't rely on implementation errors but only on the
 // inherent weaknesses of the crypto1 cypher. Described in
 //   Carlo Meijer, Roel Verdult, "Ciphertext-only Cryptanalysis on Hardened
-//   Mifare Classic Cards" in Proceedings of the 22nd ACM SIGSAC Conference on 
+//   Mifare Classic Cards" in Proceedings of the 22nd ACM SIGSAC Conference on
 //   Computer and Communications Security, 2015
 //-----------------------------------------------------------------------------
 //
@@ -39,7 +39,7 @@ typedef enum {
 
 
 static uint16_t PartialSumProperty(uint32_t state, odd_even_t odd_even)
-{ 
+{
 	uint16_t sum = 0;
 	for (uint16_t j = 0; j < 16; j++) {
 		uint32_t st = state;
@@ -203,7 +203,7 @@ static void init_part_sum_bitarrays(void)
 		}
 	}
 	for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
-		//printf("(%d, %" PRIu16 ")...", odd_even, part_sum_a0);			
+		//printf("(%d, %" PRIu16 ")...", odd_even, part_sum_a0);
 		for (uint32_t state = 0; state < (1<<20); state++) {
 			uint16_t part_sum_a0 = PartialSumProperty(state, odd_even) / 2;
 			for (uint16_t low_bits = 0; low_bits < 1<<4; low_bits++) {
@@ -215,7 +215,7 @@ static void init_part_sum_bitarrays(void)
 }
 
 
-static void free_part_sum_bitarrays(void) 
+static void free_part_sum_bitarrays(void)
 {
 	printf("free_part_sum_bitarrays()...");
 	for (int16_t part_sum_a0 = (NUM_PART_SUMS-1); part_sum_a0 >= 0; part_sum_a0--) {
@@ -257,7 +257,7 @@ void init_sum_bitarray(uint16_t sum_a0)
 	printf("done.\n");
 }
 
-	
+
 static void free_sum_bitarray(void)
 {
 	printf("free_sum_bitarray()...");
@@ -275,10 +275,10 @@ static void precalculate_bit0_bitflip_bitarrays(uint8_t const bitflip, uint16_t 
 	#else
 	#define NUM_TEST_STATES (1<<23)
 	#endif
-	
+
 	time_t start_time = time(NULL);
 	time_t last_check_time = start_time;
-	
+
 	uint32_t *restrict test_bitarray[2];
 	uint32_t *restrict test_not_bitarray[2];
 
@@ -291,7 +291,7 @@ static void precalculate_bit0_bitflip_bitarrays(uint8_t const bitflip, uint16_t 
 	clear_bitarray24(test_not_bitarray[EVEN_STATE]);
 	test_not_bitarray[ODD_STATE] = malloc_bitarray(sizeof(uint32_t) * (1<<19));
 	clear_bitarray24(test_not_bitarray[ODD_STATE]);
-	
+
 	uint32_t count[2];
 	bool all_odd_states_are_possible_for_notbitflip = false;
 
@@ -302,7 +302,7 @@ static void precalculate_bit0_bitflip_bitarrays(uint8_t const bitflip, uint16_t 
 		if (difftime(time_now, last_check_time) > 5*60) {	// print status every 5 minutes
 			float runtime = difftime(time_now, start_time);
 			float remaining_time = runtime * ((1<<23) - even_state) / even_state;
-			printf("\n%1.1f hours elapsed, expected completion in %1.1f hours (%1.1f days)", runtime/3600, remaining_time/3600, remaining_time/3600/24); 
+			printf("\n%1.1f hours elapsed, expected completion in %1.1f hours (%1.1f days)", runtime/3600, remaining_time/3600, remaining_time/3600/24);
 			last_check_time = time_now;
 		}
 		for (uint32_t odd_state = next_state(sum_a0_bitarray[ODD_STATE], -1); odd_state < (1<<24); odd_state = next_state(test_bitarray[ODD_STATE], odd_state)) {
@@ -319,15 +319,15 @@ static void precalculate_bit0_bitflip_bitarrays(uint8_t const bitflip, uint16_t 
 			} cs_delta;
 			cs_delta.odd = 0;
 			cs_delta.even = 0;
-			
+
 			uint_fast16_t keystream = 0;
-			
+
 			// decrypt 9 bits
 			for (int i = 0; i < 9; i++) {
-				uint_fast8_t keystream_bit = filter(cs.odd & 0x000fffff) ^ filter((cs.odd & 0x000fffff) ^ cs_delta.odd); 
+				uint_fast8_t keystream_bit = filter(cs.odd & 0x000fffff) ^ filter((cs.odd & 0x000fffff) ^ cs_delta.odd);
 				keystream = keystream << 1 | keystream_bit;
 				uint_fast8_t nt_bit = BIT(bitflip, i) ^ keystream_bit;
-				uint_fast8_t LSFR_feedback = BIT(cs_delta.odd, 2) ^ BIT(cs_delta.even, 2) ^ BIT(cs_delta.odd, 3); 
+				uint_fast8_t LSFR_feedback = BIT(cs_delta.odd, 2) ^ BIT(cs_delta.even, 2) ^ BIT(cs_delta.odd, 3);
 
 				cs_delta.even = cs_delta.even << 1 | (LSFR_feedback ^ nt_bit);
 				uint_fast8_t tmp = cs_delta.odd;
@@ -341,7 +341,7 @@ static void precalculate_bit0_bitflip_bitarrays(uint8_t const bitflip, uint16_t 
 					cs.odd = even_state >> (7 - i) / 2;
 				}
 			}
-			
+
 			if (evenparity32(keystream) == evenparity32(bitflip)) {
 				// found valid bitflip state
 				even_state_is_possible = true;
@@ -353,7 +353,7 @@ static void precalculate_bit0_bitflip_bitarrays(uint8_t const bitflip, uint16_t 
 				set_bit24(test_not_bitarray[EVEN_STATE], even_state);
 				set_bit24(test_not_bitarray[EVEN_STATE], 1 << 23 | even_state);
 				set_bit24(test_not_bitarray[ODD_STATE], odd_state);
-			}				
+			}
 		}
 		if (!even_state_is_possible) {
 			all_odd_states_are_possible_for_notbitflip = true;
@@ -364,9 +364,9 @@ static void precalculate_bit0_bitflip_bitarrays(uint8_t const bitflip, uint16_t 
 	for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
 		count[odd_even] = count_states(test_bitarray[odd_even]);
 		if (count[odd_even] != 1<<24) {
-			printf("Writing %d possible %s states for bitflip property %03x (%d (%1.2f%%) states eliminated)\n", 
-				count[odd_even], 
-				odd_even==EVEN_STATE?"even":"odd", 
+			printf("Writing %d possible %s states for bitflip property %03x (%d (%1.2f%%) states eliminated)\n",
+				count[odd_even],
+				odd_even==EVEN_STATE?"even":"odd",
 				bitflip, (1<<24) - count[odd_even],
 				(float)((1<<24) - count[odd_even]) / (1<<24) * 100.0);
 			#ifndef TEST_RUN
@@ -391,9 +391,9 @@ static void precalculate_bit0_bitflip_bitarrays(uint8_t const bitflip, uint16_t 
 			}
 			count[odd_even] = count_states(test_bitarray_2nd);
 			if (count[odd_even] != 1<<24) {
-				printf("Writing %d possible %s states for bitflip property %03x (%d (%1.2f%%) states eliminated)\n", 
-					count[odd_even], 
-					odd_even==EVEN_STATE?"even":"odd", 
+				printf("Writing %d possible %s states for bitflip property %03x (%d (%1.2f%%) states eliminated)\n",
+					count[odd_even],
+					odd_even==EVEN_STATE?"even":"odd",
 					bitflip | BITFLIP_2ND_BYTE, (1<<24) - count[odd_even],
 					(float)((1<<24) - count[odd_even]) / (1<<24) * 100.0);
 				#ifndef TEST_RUN
@@ -418,7 +418,7 @@ static void precalculate_bit0_bitflip_bitarrays(uint8_t const bitflip, uint16_t 
 		if (difftime(time_now, last_check_time) > 5*60) {	// print status every 5 minutes
 			float runtime = difftime(time_now, start_time);
 			float remaining_time = runtime * ((1<<23) - even_state) / even_state;
-			printf("\n%1.1f hours elapsed, expected completion in %1.1f hours (%1.1f days)", runtime/3600, remaining_time/3600, remaining_time/3600/24); 
+			printf("\n%1.1f hours elapsed, expected completion in %1.1f hours (%1.1f days)", runtime/3600, remaining_time/3600, remaining_time/3600/24);
 			last_check_time = time_now;
 		}
 		for (uint32_t odd_state = next_state(sum_a0_bitarray[ODD_STATE], -1); odd_state < (1<<24); odd_state = next_state(sum_a0_bitarray[ODD_STATE], odd_state)) {
@@ -438,16 +438,16 @@ static void precalculate_bit0_bitflip_bitarrays(uint8_t const bitflip, uint16_t 
 			} cs_delta;
 			cs_delta.odd = 0;
 			cs_delta.even = 0;
-			
+
 			uint_fast16_t keystream = 0;
 			// uint_fast16_t nt = 0;
-			
+
 			// decrypt 9 bits
 			for (int i = 0; i < 9; i++) {
-				uint_fast8_t keystream_bit = filter(cs.odd & 0x000fffff) ^ filter((cs.odd & 0x000fffff) ^ cs_delta.odd); 
+				uint_fast8_t keystream_bit = filter(cs.odd & 0x000fffff) ^ filter((cs.odd & 0x000fffff) ^ cs_delta.odd);
 				keystream = keystream << 1 | keystream_bit;
 				uint_fast8_t nt_bit = BIT(bitflip|0x100, i) ^ keystream_bit;
-				uint_fast8_t LSFR_feedback = BIT(cs_delta.odd, 2) ^ BIT(cs_delta.even, 2) ^ BIT(cs_delta.odd, 3); 
+				uint_fast8_t LSFR_feedback = BIT(cs_delta.odd, 2) ^ BIT(cs_delta.even, 2) ^ BIT(cs_delta.odd, 3);
 
 				cs_delta.even = cs_delta.even << 1 | (LSFR_feedback ^ nt_bit);
 				uint_fast8_t tmp = cs_delta.odd;
@@ -461,7 +461,7 @@ static void precalculate_bit0_bitflip_bitarrays(uint8_t const bitflip, uint16_t 
 					cs.odd = even_state >> (7 - i) / 2;
 				}
 			}
-			
+
 			if (evenparity32(keystream) != evenparity32(bitflip)) {
 				// found valid !bitflip state
 				even_state_is_possible = true;
@@ -471,14 +471,14 @@ static void precalculate_bit0_bitflip_bitarrays(uint8_t const bitflip, uint16_t 
 			}
 		}
 	}
-	
+
 	printf("\nAnalysis completed. Checking for effective !bitflip properties...\n");
 	for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
 		count[odd_even] = count_states(test_not_bitarray[odd_even]);
 		if (count[odd_even] != 1<<24) {
-			printf("Writing %d possible %s states for bitflip property %03x (%d (%1.2f%%) states eliminated)\n", 
-				count[odd_even], 
-				odd_even==EVEN_STATE?"even":"odd", 
+			printf("Writing %d possible %s states for bitflip property %03x (%d (%1.2f%%) states eliminated)\n",
+				count[odd_even],
+				odd_even==EVEN_STATE?"even":"odd",
 				bitflip|0x100, (1<<24) - count[odd_even],
 				(float)((1<<24) - count[odd_even]) / (1<<24) * 100.0);
 			#ifndef TEST_RUN
@@ -503,9 +503,9 @@ static void precalculate_bit0_bitflip_bitarrays(uint8_t const bitflip, uint16_t 
 			}
 			count[odd_even] = count_states(test_bitarray_2nd);
 			if (count[odd_even] != 1<<24) {
-				printf("Writing %d possible %s states for bitflip property %03x (%d (%1.2f%%) states eliminated)\n", 
-					count[odd_even], 
-					odd_even==EVEN_STATE?"even":"odd", 
+				printf("Writing %d possible %s states for bitflip property %03x (%d (%1.2f%%) states eliminated)\n",
+					count[odd_even],
+					odd_even==EVEN_STATE?"even":"odd",
 					bitflip | 0x100| BITFLIP_2ND_BYTE, (1<<24) - count[odd_even],
 					(float)((1<<24) - count[odd_even]) / (1<<24) * 100.0);
 				#ifndef TEST_RUN
@@ -524,7 +524,7 @@ static void precalculate_bit0_bitflip_bitarrays(uint8_t const bitflip, uint16_t 
 	free_bitarray(test_not_bitarray[EVEN_STATE]);
 	free_bitarray(test_bitarray[ODD_STATE]);
 	free_bitarray(test_bitarray[EVEN_STATE]);
-	
+
 	exit(0);
 }
 
@@ -533,7 +533,7 @@ int main (int argc, char *argv[]) {
 
 	unsigned int bitflip_in;
 	int sum_a0;
-	
+
 	printf("Create tables required by hardnested attack.\n");
 	printf("Expect a runtime in the range of days or weeks.\n");
 	printf("Single thread only. If you want to use several threads, start it multiple times :-)\n\n");
@@ -550,7 +550,7 @@ int main (int argc, char *argv[]) {
 		printf("Bitflip property must be less than or equal to 0xff\n\n");
 		return 1;
 	}
-	
+
 	if(argc == 3) {
 		sscanf(argv[2], "%d", &sum_a0);
 	}
@@ -577,16 +577,16 @@ int main (int argc, char *argv[]) {
 		case  256: break;
 		default: sum_a0 = -1;
 	}
-	
+
 	printf("Calculating for bitflip = %02x, sum_a0 = %d\n", bitflip_in, sum_a0);
-	
+
 	init_part_sum_bitarrays();
 	init_sum_bitarray(sum_a0);
-	
+
 	precalculate_bit0_bitflip_bitarrays(bitflip_in, sum_a0);
 
 	free_sum_bitarray();
 	free_part_sum_bitarrays();
-	
+
 	return 0;
 }

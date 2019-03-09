@@ -1,11 +1,11 @@
 /*-
  * Copyright (C) 2010, Romain Tartiere.
- * 
+ *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or (at your
  * option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
- * 
+ *
  * $Id$
  */
 
@@ -447,10 +447,10 @@ void* mifare_cryto_postprocess_data (desfiretag_t tag, void *data, size_t *nbyte
             switch (DESFIRE (tag)->authentication_scheme) {
             case AS_LEGACY:
                 AddCrc14A( (uint8_t*)res, end_crc_pos);
-                end_crc_pos = crc_pos + 2;				
-				// 
-				
-				
+                end_crc_pos = crc_pos + 2;
+				//
+
+
                 crc = crc16;
                 break;
             case AS_NEW:
@@ -539,7 +539,7 @@ void mifare_cypher_single_block (desfirekey_t key, uint8_t *data, uint8_t *ivect
         break;
     case T_3DES:
         switch (operation) {
-        case MCO_ENCYPHER:			
+        case MCO_ENCYPHER:
             // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_ENCRYPT);
             // DES_ecb_encrypt ((DES_cblock *) edata, (DES_cblock *) data,  &(key->ks2), DES_DECRYPT);
             // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_ENCRYPT);
@@ -562,7 +562,7 @@ void mifare_cypher_single_block (desfirekey_t key, uint8_t *data, uint8_t *ivect
             // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks3), DES_ENCRYPT);
             break;
         case MCO_DECYPHER:
-			tdes_dec(data, edata, key->data);        
+			tdes_dec(data, edata, key->data);
 			// DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks3), DES_DECRYPT);
             // DES_ecb_encrypt ((DES_cblock *) edata, (DES_cblock *) data,  &(key->ks2), DES_ENCRYPT);
             // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_DECRYPT);
@@ -570,19 +570,19 @@ void mifare_cypher_single_block (desfirekey_t key, uint8_t *data, uint8_t *ivect
         }
         break;
     case T_AES:
-        switch (operation) 
+        switch (operation)
 		{
 			case MCO_ENCYPHER:
 			{
 				AesCtx ctx;
-				AesCtxIni(&ctx, ivect, key->data, KEY128,CBC); 
+				AesCtxIni(&ctx, ivect, key->data, KEY128,CBC);
 				AesEncrypt(&ctx, data, edata, sizeof(edata) );
 				break;
 			}
 			case MCO_DECYPHER:
 			{
 				AesCtx ctx;
-				AesCtxIni(&ctx, ivect, key->data, KEY128,CBC); 
+				AesCtxIni(&ctx, ivect, key->data, KEY128,CBC);
 				AesDecrypt(&ctx, edata, data, sizeof(edata));
 				break;
 			}

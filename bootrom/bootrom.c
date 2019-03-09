@@ -19,7 +19,7 @@ void DbpString(char *str) {
 	byte_t len = 0;
 	while (str[len] != 0x00)
 		len++;
-	
+
 	cmd_send(CMD_DEBUG_PRINT_STRING, len, 0, 0, (byte_t*)str, len);
 }
 
@@ -90,9 +90,9 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 	volatile uint32_t *p;
 
 	//if ( len != sizeof(UsbCommand)) Fatal();
-  
+
 	uint32_t arg0 = (uint32_t)c->arg[0];
-  
+
 	switch(c->cmd) {
 		case CMD_DEVICE_INFO: {
 			dont_ack = 1;
@@ -100,10 +100,10 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH;
 			if(common_area.flags.osimage_present)
 				arg0 |= DEVICE_INFO_FLAG_OSIMAGE_PRESENT;
-		
+
 			cmd_send(CMD_DEVICE_INFO,arg0,1,2,0,0);
 		} break;
-      
+
 		case CMD_SETUP_WRITE: {
 			/* The temporary write buffer of the embedded flash controller is mapped to the
 			* whole memory region, only the last 8 bits are decoded.
@@ -112,16 +112,16 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			for(i = 0; i < 12; i++)
 				p[i+arg0] = c->d.asDwords[i];
 		} break;
-      
+
 		case CMD_FINISH_WRITE: {
 			uint32_t* flash_mem = (uint32_t*)(&_flash_start);
 			for ( int j=0; j<2; j++) {
 				for(i = 0+(64*j); i < 64+(64*j); i++) {
 					flash_mem[i] = c->d.asDwords[i];
 				}
-        
+
 				uint32_t flash_address = arg0 + (0x100*j);
-        
+
 				/* Check that the address that we are supposed to write to is within our allowed region */
 				if( ((flash_address + AT91C_IFLASH_PAGE_SIZE - 1) >= end_addr) || (flash_address < start_addr) ) {
 					/* Disallow write */
@@ -134,7 +134,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 					MC_FLASH_COMMAND_PAGEN(page_n) |
 					AT91C_MC_FCMD_START_PROG;
 				}
-        
+
 				// Wait until flashing of page finishes
 				uint32_t sr;
 				while(!((sr = AT91C_BASE_EFC0->EFC_FSR) & AT91C_MC_FRDY));
@@ -144,18 +144,18 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 				}
 			}
 		} break;
-      
+
 		case CMD_HARDWARE_RESET: {
 			usb_disable();
 			AT91C_BASE_RSTC->RSTC_RCR = RST_CONTROL_KEY | AT91C_RSTC_PROCRST;
 		} break;
-      
+
 		case CMD_START_FLASH: {
-			if (c->arg[2] == START_FLASH_MAGIC) 
+			if (c->arg[2] == START_FLASH_MAGIC)
 				bootrom_unlocked = 1;
-			else 
+			else
 				bootrom_unlocked = 0;
-		
+
 			int prot_start = (int)&_bootrom_start;
 			int prot_end = (int)&_bootrom_end;
 			int allow_start = (int)&_flash_start;
@@ -167,7 +167,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 			* bootrom area. In any case they must be within the flash area.
 			*/
 			if( (bootrom_unlocked || ((cmd_start >= prot_end) || (cmd_end < prot_start))) &&
-				(cmd_start >= allow_start) && 
+				(cmd_start >= allow_start) &&
 				(cmd_end <= allow_end) ) {
 				start_addr = cmd_start;
 				end_addr = cmd_end;
@@ -177,12 +177,12 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 				cmd_send(CMD_NACK,0,0,0,0,0);
 			}
 		} break;
-      
+
 		default: {
 			Fatal();
 		} break;
 	}
-  
+
 	if (!dont_ack)
 		cmd_send(CMD_ACK,arg0,0,0,0,0);
 }
@@ -194,19 +194,19 @@ static void flash_mode(int externally_entered) {
 	uint8_t rx[sizeof(UsbCommand)];
 
 	usb_enable();
-	
+
 	// wait for reset to be complete?
 	for (volatile size_t i=0; i<0x100000; i++) {};
 
 	for(;;) {
 		WDT_HIT();
-				
+
 		// Check if there is a usb packet available
 		if (usb_poll_validate_length()) {
 			if (usb_read(rx, sizeof(rx)) )
 				UsbPacketReceived(rx, sizeof(rx));
 		}
-		
+
 		if (!externally_entered && !BUTTON_PRESS()) {
 			/* Perform a reset to leave flash mode */
 			usb_disable();
@@ -274,7 +274,7 @@ void BootROM(void) {
 	AT91C_BASE_EFC0->EFC_FMR = AT91C_MC_FWS_1FWS | MC_FLASH_MODE_MASTER_CLK_IN_MHZ(48);
 
 	// 9 = 256, 10+ is 512kb
-	uint8_t id = ( *(AT91C_DBGU_CIDR) & 0xF00) >> 8;	
+	uint8_t id = ( *(AT91C_DBGU_CIDR) & 0xF00) >> 8;
 	if ( id > 9 )
 		AT91C_BASE_EFC1->EFC_FMR = AT91C_MC_FWS_1FWS | MC_FLASH_MODE_MASTER_CLK_IN_MHZ(48);
 
@@ -298,11 +298,11 @@ void BootROM(void) {
 
     if (!common_area_present){
 	    /* Common area not ok, initialize it */
-	    int i; 
+	    int i;
 		/* Makeshift memset, no need to drag util.c into this */
-		for(i=0; i<sizeof(common_area); i++) 
+		for(i=0; i<sizeof(common_area); i++)
 		    ((char*)&common_area)[i] = 0;
-	    
+
 	    common_area.magic = COMMON_AREA_MAGIC;
 	    common_area.version = 1;
 	    common_area.flags.bootrom_present = 1;

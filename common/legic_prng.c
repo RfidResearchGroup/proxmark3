@@ -11,7 +11,7 @@
 // a is 7bit lsfr
 // b is 8bit lsfr
 // c keeps track on which step the prng is.
-// legic_prng_get_bit() = gets a bit muxed from a and b. 
+// legic_prng_get_bit() = gets a bit muxed from a and b.
 struct lfsr {
 	uint8_t  a;
 	uint8_t  b;
@@ -26,10 +26,10 @@ struct lfsr {
 // Now we have a special case with iv == 0
 // it sets b to 0 aswell to make sure we get a all zero keystream out
 // which is used in the initialisation phase sending the IV
-// 
+//
 void legic_prng_init(uint8_t iv) {
 	lfsr.a = iv;
-	lfsr.b = 0;  // hack to get a always 0 keystream 
+	lfsr.b = 0;  // hack to get a always 0 keystream
 	lfsr.c = 0;
 	if(iv)
 		lfsr.b = (iv << 1) | 1;
@@ -37,7 +37,7 @@ void legic_prng_init(uint8_t iv) {
 
 void legic_prng_forward(int count) {
 	if (count == 0) return;
-	
+
 	lfsr.c += count;
 	while(count--) {
 		// According: http://www.proxmark.org/forum/viewtopic.php?pid=5437#p5437

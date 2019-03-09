@@ -173,7 +173,7 @@ modpol(const poly_t init, int rflags, int args, const poly_t *argpolys) {
 	unsigned long alen, blen;
 
 	if(args < 2) return(NULL);
-	
+
 	result = calloc(((((args - 1) * args) >> 1) + 1) * sizeof(poly_t), sizeof(char));
 	if(!result)
 		uerror("cannot allocate memory for codeword table");
@@ -482,7 +482,7 @@ chkres(int *resc, model_t **result, const poly_t divisor, const poly_t init, int
 		uerror("cannot reallocate result array");
 		return;
 	}
-	
+
 	rptr = *result + *resc - 1;
 	rptr->spoly  = pclone(divisor);
 	rptr->init   = pclone(init);

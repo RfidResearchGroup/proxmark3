@@ -1,13 +1,13 @@
 /*****************************************************************************
  * WARNING
  *
- * THIS CODE IS CREATED FOR EXPERIMENTATION AND EDUCATIONAL USE ONLY. 
- * 
- * USAGE OF THIS CODE IN OTHER WAYS MAY INFRINGE UPON THE INTELLECTUAL 
- * PROPERTY OF OTHER PARTIES, SUCH AS INSIDE SECURE AND HID GLOBAL, 
- * AND MAY EXPOSE YOU TO AN INFRINGEMENT ACTION FROM THOSE PARTIES. 
- * 
- * THIS CODE SHOULD NEVER BE USED TO INFRINGE PATENTS OR INTELLECTUAL PROPERTY RIGHTS. 
+ * THIS CODE IS CREATED FOR EXPERIMENTATION AND EDUCATIONAL USE ONLY.
+ *
+ * USAGE OF THIS CODE IN OTHER WAYS MAY INFRINGE UPON THE INTELLECTUAL
+ * PROPERTY OF OTHER PARTIES, SUCH AS INSIDE SECURE AND HID GLOBAL,
+ * AND MAY EXPOSE YOU TO AN INFRINGEMENT ACTION FROM THOSE PARTIES.
+ *
+ * THIS CODE SHOULD NEVER BE USED TO INFRINGE PATENTS OR INTELLECTUAL PROPERTY RIGHTS.
  *
  *****************************************************************************
  *
@@ -22,7 +22,7 @@
  *
  * This is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as published
- * by the Free Software Foundation, or, at your option, any later version. 
+ * by the Free Software Foundation, or, at your option, any later version.
  *
  * This file is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -31,8 +31,8 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with loclass.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * 
+ *
+ *
  ****************************************************************************/
 
 #include <stdint.h>
@@ -212,7 +212,7 @@ int testBitStream()
 		//printf("Bits left: %d\n", bitsLeft(&in));
 		//printf("Bits out: %d\n", numBits(&out));
 	}
-	
+
 	if(memcmp(input, output, sizeof(input)) == 0) {
 		PrintAndLogDevice(SUCCESS, "    Bitstream test 1 ok");
 	} else {
@@ -240,11 +240,11 @@ int testReversedBitstream()
 	while (bitsLeft(&in) > 0) {
 		pushBit(&reversed_out, tailBit(&in));
 	}
-	
+
 	while (bitsLeft(&reversed_in) > 0) {
 		pushBit(&out, tailBit(&reversed_in));
 	}
-	
+
 	if (memcmp(input, output, sizeof(input)) == 0) {
 		PrintAndLogDevice(SUCCESS, "    Bitstream test 2 ok");
 	} else {

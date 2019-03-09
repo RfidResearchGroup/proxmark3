@@ -63,7 +63,7 @@ bool endsWith(char* base, char* str) {
 }
 
 /**
-* Generate a sorted list of available commands, what it does is 
+* Generate a sorted list of available commands, what it does is
 * generate a file listing of the script-directory for files
 * ending with .lua
 */
@@ -129,7 +129,7 @@ int CmdScriptRun(const char *Cmd) {
     if (!endsWith(script_name, ".lua")) {
         suffix = ".lua";
 	}
-	
+
 	char script_path[strlen(get_my_executable_directory()) + strlen(LUA_SCRIPTS_DIRECTORY) + strlen(script_name) + strlen(suffix) + 1];
 	strcpy(script_path, get_my_executable_directory());
 	strcat(script_path, LUA_SCRIPTS_DIRECTORY);

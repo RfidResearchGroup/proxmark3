@@ -19,8 +19,8 @@ static uint8_t sniffBuf[17];
 static uint32_t timerData = 0;
 
 //-----------------------------------------------------------------------------
-// MIFARE sniffer. 
-// 
+// MIFARE sniffer.
+//
 // if no activity for 2sec, it sends the collected data to the client.
 //-----------------------------------------------------------------------------
 // "hf mf sniff"
@@ -32,7 +32,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
 	// C(red) A(yellow) B(green)
 	LEDsoff();
 	iso14443a_setup(FPGA_HF_ISO14443A_SNIFFER);
-	
+
 	// Allocate memory from BigBuf for some buffers
 	// free all previous allocations first
 	BigBuf_free(); BigBuf_Clear_ext(false);
@@ -40,7 +40,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
 	set_tracing(true);
 
 	// The command (reader -> tag) that we're receiving.
-	uint8_t receivedCmd[MAX_MIFARE_FRAME_SIZE] = {0x00};	
+	uint8_t receivedCmd[MAX_MIFARE_FRAME_SIZE] = {0x00};
 	uint8_t receivedCmdPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
 
 	// The response (tag -> reader) that we're receiving.
@@ -60,9 +60,9 @@ void RAMFUNC SniffMifare(uint8_t param) {
 	// a good trigger condition to get started is probably when we see a
 	// response from the tag.
 	// triggered == false -- to wait first for card
-	//bool triggered = !(param & 0x03); 
-	
-	
+	//bool triggered = !(param & 0x03);
+
+
 	// Set up the demodulator for tag -> reader responses.
 	DemodInit(receivedResp, receivedRespPar);
 
@@ -72,15 +72,15 @@ void RAMFUNC SniffMifare(uint8_t param) {
 	// Setup and start DMA.
 	// set transfer address and number of bytes. Start transfer.
 	if ( !FpgaSetupSscDma(dmaBuf, DMA_BUFFER_SIZE) ){
-		if (MF_DBGLEVEL > 1) Dbprintf("[!] FpgaSetupSscDma failed. Exiting"); 
+		if (MF_DBGLEVEL > 1) Dbprintf("[!] FpgaSetupSscDma failed. Exiting");
 		return;
 	}
 
 	tUart* uart = GetUart();
 	tDemod* demod = GetDemod();
-	
+
 	MfSniffInit();
-	
+
 	uint32_t sniffCounter = 0;
     // loop and listen
 	while (!BUTTON_PRESS()) {
@@ -93,7 +93,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
 			if (BigBuf_get_traceLen()) {
 				MfSniffSend();
 				// Reset everything - we missed some sniffed data anyway while the DMA was stopped
-				sniffCounter = 0;				
+				sniffCounter = 0;
 				dmaBuf = BigBuf_malloc(DMA_BUFFER_SIZE);
 				data = dmaBuf;
 				maxDataLen = 0;
@@ -103,10 +103,10 @@ void RAMFUNC SniffMifare(uint8_t param) {
 			}
 		}
 		*/
-		
-		// number of bytes we have processed so far		
-		int register readBufDataP = data - dmaBuf;	
-		// number of bytes already transferred		
+
+		// number of bytes we have processed so far
+		int register readBufDataP = data - dmaBuf;
+		// number of bytes already transferred
 		int register dmaBufDataP = DMA_BUFFER_SIZE - AT91C_BASE_PDC_SSC->PDC_RCR;
 		if (readBufDataP <= dmaBufDataP)			// we are processing the same block of data which is currently being transferred
 			dataLen = dmaBufDataP - readBufDataP;	// number of bytes still to be processed
@@ -115,9 +115,9 @@ void RAMFUNC SniffMifare(uint8_t param) {
 
 		// test for length of buffer
 		if (dataLen > maxDataLen) {					// we are more behind than ever...
-			maxDataLen = dataLen;					
+			maxDataLen = dataLen;
 			if (dataLen > (9 * DMA_BUFFER_SIZE / 10)) {
-				Dbprintf("[!] blew circular buffer! | datalen %u", dataLen);		
+				Dbprintf("[!] blew circular buffer! | datalen %u", dataLen);
 				break;
 			}
 		}
@@ -141,7 +141,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
 		if (sniffCounter & 0x01) {
 
 			// no need to try decoding tag data if the reader is sending
-			if (!TagIsActive) {		
+			if (!TagIsActive) {
 				uint8_t readerbyte = (previous_data & 0xF0) | (*data >> 4);
 				if (MillerDecoding(readerbyte, (sniffCounter-1)*4)) {
 					LogTrace(receivedCmd, uart->len, 0, 0, NULL, true);
@@ -150,9 +150,9 @@ void RAMFUNC SniffMifare(uint8_t param) {
 				}
 				ReaderIsActive = (uart->state != STATE_UNSYNCD);
 			}
-			
+
 			// no need to try decoding tag data if the reader is sending
-			if (!ReaderIsActive) {		
+			if (!ReaderIsActive) {
 				uint8_t tagbyte = (previous_data << 4) | (*data & 0x0F);
 				if (ManchesterDecoding(tagbyte, 0, (sniffCounter-1)*4)) {
 					LogTrace(receivedResp,  demod->len, 0, 0, NULL, false);
@@ -170,9 +170,9 @@ void RAMFUNC SniffMifare(uint8_t param) {
 			data = dmaBuf;
 
 	} // main cycle
-	
+
 	MfSniffEnd();
-	switch_off(); 
+	switch_off();
 }
 
 void MfSniffInit(void){
@@ -194,15 +194,15 @@ void MfSniffEnd(void){
 bool RAMFUNC MfSniffLogic(const uint8_t *data, uint16_t len, uint8_t *parity, uint16_t bitCnt, bool reader) {
 
 	// reset on 7-Bit commands from reader
-	if (reader && (len == 1) && (bitCnt == 7)) { 		
+	if (reader && (len == 1) && (bitCnt == 7)) {
 		sniffState = SNF_INIT;
 	}
 
-	
-	
+
+
 	switch (sniffState) {
 		case SNF_INIT:{
-			// REQA,WUPA or MAGICWUP from reader			
+			// REQA,WUPA or MAGICWUP from reader
 			if ((len == 1) && (reader) && (bitCnt == 7) ) {
 				MfSniffInit();
 				sniffState = (data[0] == MIFARE_MAGICWUPC1) ? SNF_MAGIC_WUPC2 : SNF_ATQA;
@@ -210,7 +210,7 @@ bool RAMFUNC MfSniffLogic(const uint8_t *data, uint16_t len, uint8_t *parity, ui
 			break;
 		}
 		case SNF_MAGIC_WUPC2: {
-			if ((len == 1) && (reader) && (data[0] == MIFARE_MAGICWUPC2) ) {  
+			if ((len == 1) && (reader) && (data[0] == MIFARE_MAGICWUPC2) ) {
 				sniffState = SNF_CARD_IDLE;
 			}
 			break;
@@ -225,14 +225,14 @@ bool RAMFUNC MfSniffLogic(const uint8_t *data, uint16_t len, uint8_t *parity, ui
 			break;
 		}
 		case SNF_UID: {
-			
+
 			if ( !reader ) break;
 			if ( len != 9 ) break;
 			if ( !CheckCrc14443(CRC_14443_A, data, 9)) break;
 			if ( data[1] != 0x70 ) break;
-			
+
 			Dbprintf("[!] UID | %x", data[0]);
-			
+
 			if ((data[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT)) {
 				// UID_4 - select 4 Byte UID from reader
 				memcpy(sniffUID, data+2, 4);
@@ -248,7 +248,7 @@ bool RAMFUNC MfSniffLogic(const uint8_t *data, uint16_t len, uint8_t *parity, ui
 				//new uid bytes
 				memcpy(sniffUID+3, data+2, 4);
 				sniffUIDType = SNF_UID_7;
-				sniffState = SNF_SAK;				
+				sniffState = SNF_SAK;
 			} else if ((data[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_3)) {
 				// UID_10 - Select 3nd part of 10 Byte UID
 				// 3+3+4 = 10.
@@ -279,7 +279,7 @@ bool RAMFUNC MfSniffLogic(const uint8_t *data, uint16_t len, uint8_t *parity, ui
 				}
 			}
 			break;
-		}		
+		}
 		case SNF_CARD_IDLE:{	// trace the card select sequence
 			sniffBuf[0] = 0xFF;
 			sniffBuf[1] = 0xFF;
@@ -291,11 +291,11 @@ bool RAMFUNC MfSniffLogic(const uint8_t *data, uint16_t len, uint8_t *parity, ui
 			LogTrace(sniffBuf, sizeof(sniffBuf), 0, 0, NULL, true);
 			sniffState = SNF_CARD_CMD;
 		}	// intentionally no break;
-		case SNF_CARD_CMD:{	
-			LogTrace(data, len, 0, 0, NULL, reader);	
+		case SNF_CARD_CMD:{
+			LogTrace(data, len, 0, 0, NULL, reader);
 			timerData = GetTickCount();
 			break;
-		}	
+		}
 		default:
 			sniffState = SNF_INIT;
 		break;
@@ -308,12 +308,12 @@ void RAMFUNC MfSniffSend() {
 	uint16_t tracelen = BigBuf_get_traceLen();
 	uint16_t chunksize = 0;
 	int packlen = tracelen;	// total number of bytes to send
-	uint8_t *data = BigBuf_get_addr();	
-	
+	uint8_t *data = BigBuf_get_addr();
+
 	while (packlen > 0) {
 		LED_B_ON();
 		chunksize = MIN(USB_CMD_DATA_SIZE, packlen); // chunk size 512
-		cmd_send(CMD_ACK, 1, tracelen, chunksize, data + tracelen - packlen, chunksize);		
+		cmd_send(CMD_ACK, 1, tracelen, chunksize, data + tracelen - packlen, chunksize);
 		packlen -= chunksize;
 		LED_B_OFF();
 	}

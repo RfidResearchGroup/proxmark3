@@ -15,7 +15,7 @@
 char* Iso15693sprintUID(char *target, uint8_t *uid) {
 
 	static char tempbuf[2*8+1] = {0};
-	if (target == NULL) 
+	if (target == NULL)
 		target = tempbuf;
 	sprintf(target, "%02X %02X %02X %02X %02X %02X %02X %02X",
 				uid[7], uid[6], uid[5], uid[4],

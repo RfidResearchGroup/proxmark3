@@ -14,7 +14,7 @@ static int CmdHelp(const char *Cmd);
 // trace pointer
 static uint8_t *trace;
 long traceLen = 0;
-	
+
 int usage_trace_list(){
 	PrintAndLogEx(NORMAL, "List protocol data in trace buffer.");
 	PrintAndLogEx(NORMAL, "Usage:  trace list <protocol> [f][c| <0|1>");
@@ -30,7 +30,7 @@ int usage_trace_list(){
 	PrintAndLogEx(NORMAL, "    des    - interpret data as DESFire communications");
 #ifdef WITH_EMV
 	PrintAndLogEx(NORMAL, "    emv    - interpret data as EMV / communications");
-#endif	
+#endif
 	PrintAndLogEx(NORMAL, "    iclass - interpret data as iclass communications");
 	PrintAndLogEx(NORMAL, "    topaz  - interpret data as topaz communications");
 	PrintAndLogEx(NORMAL, "    7816   - interpret data as iso7816-4 communications");
@@ -62,7 +62,7 @@ bool is_last_record(uint16_t tracepos, uint8_t *trace, uint16_t traceLen) {
 }
 
 bool next_record_is_response(uint16_t tracepos, uint8_t *trace) {
-	uint16_t next_records_datalen = *((uint16_t *)(trace + tracepos + sizeof(uint32_t) + sizeof(uint16_t)));	
+	uint16_t next_records_datalen = *((uint16_t *)(trace + tracepos + sizeof(uint32_t) + sizeof(uint16_t)));
 	return(next_records_datalen & 0x8000);
 }
 
@@ -100,7 +100,7 @@ bool merge_topaz_reader_frames(uint32_t timestamp, uint32_t *duration, uint16_t 
 	}
 
 	*duration = last_timestamp - timestamp;
-	
+
 	return true;
 }
 
@@ -116,7 +116,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 	uint8_t mfData[32] = {0};
 	size_t mfDataLen = 0;
 
-		
+
 	first_timestamp = *((uint32_t *)(trace));
 	timestamp = *((uint32_t *)(trace + tracepos));
 	tracepos += 4;
@@ -150,7 +150,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 			frame = topaz_reader_command;
 		}
 	}
-	
+
 	//Check the CRC status
 	uint8_t crcStatus = 2;
 
@@ -165,8 +165,8 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 				crcStatus = iso14443B_CRC_check(frame, data_len);
 				break;
 			case PROTO_MIFARE:
-				crcStatus = mifare_CRC_check(isResponse, frame, data_len);	
-				break;				
+				crcStatus = mifare_CRC_check(isResponse, frame, data_len);
+				break;
 			case ISO_14443A:
 			case MFDES:
 				crcStatus = iso14443A_CRC_check(isResponse, frame, data_len);
@@ -175,7 +175,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 				crcStatus = iso15693_CRC_check(frame, data_len);
 				break;
 			case ISO_7816_4:
-			default: 
+			default:
 				break;
 		}
 	}
@@ -190,11 +190,11 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 
 		uint8_t parityBits = parityBytes[j >> 3];
 		if (protocol != LEGIC &&
-			protocol != ISO_14443B && 
+			protocol != ISO_14443B &&
 			protocol != ISO_7816_4 &&
 			(isResponse || protocol == ISO_14443A) &&
 			(oddparity8(frame[j]) != ((parityBits >> (7-(j&0x0007))) & 0x01))) {
-				
+
 			snprintf(line[j/18]+(( j % 18) * 4),110, "%02x! ", frame[j]);
 		} else {
 			snprintf(line[j/18]+(( j % 18) * 4),110, "%02x  ", frame[j]);
@@ -228,7 +228,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 
 	if ( protocol == PROTO_MIFARE )
 		annotateMifare(explanation, sizeof(explanation), frame, data_len, parityBytes, parity_len, isResponse);
-		
+
 	if (!isResponse)	{
 		switch(protocol) {
 			case ICLASS:		annotateIclass(explanation,sizeof(explanation),frame,data_len); break;
@@ -274,7 +274,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 	};
 
 	if (is_last_record(tracepos, trace, traceLen)) return traceLen;
-	
+
 	if (showWaitCycles && !isResponse && next_record_is_response(tracepos, trace)) {
 		uint32_t next_timestamp = *((uint32_t *)(trace + tracepos));
 			PrintAndLogEx(NORMAL, " %10u | %10u | %s |fdt (Frame Delay Time): %d",
@@ -298,7 +298,7 @@ void printFelica(uint16_t traceLen, uint8_t *trace) {
 
 		if (tracepos + 3 >= traceLen) break;
 
-		
+
 		uint16_t gap = *((uint16_t *)(trace + tracepos));
 		uint8_t crc_ok = trace[tracepos+2];
 		tracepos += 3;
@@ -377,7 +377,7 @@ void printFelica(uint16_t traceLen, uint8_t *trace) {
 			case FELICA_UPDATE_RNDID_ACK: snprintf(expbuf,49,"Update IDr Resp");break;
 			default: snprintf(expbuf,49,"Unknown");break;
 		}
-		
+
 		int num_lines = MIN((len )/16 + 1, 16);
 		for (int j = 0; j < num_lines ; j++) {
 			if (j == 0) {
@@ -412,7 +412,7 @@ static int SanityOfflineCheck( bool useTraceBuffer ){
 int CmdTraceList(const char *Cmd) {
 
 	clearCommandBuffer();
-		
+
 	bool showWaitCycles = false;
 	bool markCRCBytes = false;
 	bool isOnline = true;
@@ -426,10 +426,10 @@ int CmdTraceList(const char *Cmd) {
 
 	char cmdp = 0;
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		
+
 		int slen = param_getstr(Cmd, cmdp, type, sizeof(type) );
 		if ( slen == 1) {
-			
+
 			switch ( tolower(param_getchar(Cmd, cmdp))) {
 			case 'h':
 				return usage_trace_list();
@@ -447,24 +447,24 @@ int CmdTraceList(const char *Cmd) {
 				break;
 			case '1':
 				isOnline = false;
-				cmdp++;				
+				cmdp++;
 				break;
 			default:
 				PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
 				errors = true;
 				break;
 			}
-			
-		} else {			
-			
+
+		} else {
+
 			str_lower(type);
-			
+
 			// validate type of output
 			if (strcmp(type,     "iclass") == 0)	protocol = ICLASS;
 			else if(strcmp(type, "14a") == 0)		protocol = ISO_14443A;
 			else if(strcmp(type, "14b") == 0)		protocol = ISO_14443B;
 			else if(strcmp(type, "topaz") == 0)		protocol = TOPAZ;
-			else if(strcmp(type, "7816") == 0)		protocol = ISO_7816_4;	
+			else if(strcmp(type, "7816") == 0)		protocol = ISO_7816_4;
 			else if(strcmp(type, "des") == 0)		protocol = MFDES;
 			else if(strcmp(type, "legic") == 0)		protocol = LEGIC;
 			else if(strcmp(type, "15") == 0)		protocol = ISO_15693;
@@ -472,22 +472,22 @@ int CmdTraceList(const char *Cmd) {
 			else if(strcmp(type, "mf") == 0)		protocol = PROTO_MIFARE;
 			else if(strcmp(type, "raw") == 0)		protocol = -1;//No crc, no annotations
 			else errors = true;
-			
+
 			cmdp++;
-		}		
+		}
 	}
-	
+
 	//if (!SanityOfflineCheck(isOnline)) return 1;
-	
+
 	//Validations
 	if (errors) return usage_trace_list();
-	
+
 	uint16_t tracepos = 0;
 
 	// reserv some space.
 	if (!trace)
 		trace = calloc(USB_CMD_DATA_SIZE, sizeof(uint8_t));
-	
+
 	if ( isOnline ) {
 		// Query for the size of the trace,  downloading USB_CMD_DATA_SIZE
 		UsbCommand response;
@@ -495,7 +495,7 @@ int CmdTraceList(const char *Cmd) {
 			PrintAndLogEx(WARNING, "timeout while waiting for reply.");
 			return 1;
 		}
-		
+
 		traceLen = response.arg[2];
 		if (traceLen > USB_CMD_DATA_SIZE) {
 			uint8_t *p = realloc(trace, traceLen);
@@ -510,14 +510,14 @@ int CmdTraceList(const char *Cmd) {
 				free(trace);
 				return 3;
 			}
-		}		
+		}
 	}
 
 	PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = %d bytes)", traceLen);
 	PrintAndLogEx(INFO, "");
 	if (protocol == FELICA) {
 		printFelica(traceLen, trace);
-	} else { 
+	} else {
 		PrintAndLogEx(NORMAL, "Start = Start of Start Bit, End = End of last modulation. Src = Source of Transfer");
 		if ( protocol == ISO_14443A || protocol == PROTO_MIFARE)
 			PrintAndLogEx(NORMAL, "iso14443a - All times are in carrier periods (1/13.56Mhz)");
@@ -530,7 +530,7 @@ int CmdTraceList(const char *Cmd) {
 			PrintAndLogEx(NORMAL, "ISO15693 - Timings are not as accurate");
 		if ( protocol == ISO_7816_4 )
 			PrintAndLogEx(NORMAL, "ISO7816-4 / Smartcard - Timings N/A yet");
-		
+
 		PrintAndLogEx(NORMAL, "");
 		PrintAndLogEx(NORMAL, "      Start |        End | Src | Data (! denotes parity error)                                           | CRC | Annotation");
 		PrintAndLogEx(NORMAL, "------------+------------+-----+-------------------------------------------------------------------------+-----+--------------------");
@@ -544,24 +544,24 @@ int CmdTraceList(const char *Cmd) {
 }
 
 int CmdTraceLoad(const char *Cmd) {
-	
+
 	FILE *f = NULL;
 	char filename[FILE_PATH_SIZE];
 	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) < 1 || cmdp == 'h' || cmdp == 'H') return usage_trace_load();	
-	
-	param_getstr(Cmd, 0, filename, sizeof(filename));	
-	
-	if ((f = fopen(filename, "rb")) == NULL) { 
+	if (strlen(Cmd) < 1 || cmdp == 'h' || cmdp == 'H') return usage_trace_load();
+
+	param_getstr(Cmd, 0, filename, sizeof(filename));
+
+	if ((f = fopen(filename, "rb")) == NULL) {
 		PrintAndLogEx(FAILED, "Could not open file %s", filename);
 		return 0;
 	}
-	
+
 	// get filesize in order to malloc memory
 	fseek(f, 0, SEEK_END);
 	long fsize = ftell(f);
-	fseek(f, 0, SEEK_SET);	
-	
+	fseek(f, 0, SEEK_SET);
+
 	if (fsize < 0) 	{
 		PrintAndLogEx(FAILED, "error, when getting filesize");
 		fclose(f);
@@ -571,7 +571,7 @@ int CmdTraceLoad(const char *Cmd) {
 		PrintAndLogEx(FAILED, "error, file is too small");
 		fclose(f);
 		return 4;
-	}	
+	}
 
 	if ( trace )
 		free(trace);
@@ -579,36 +579,36 @@ int CmdTraceLoad(const char *Cmd) {
 	trace = calloc(fsize, sizeof(uint8_t));
 	if (!trace) {
 		PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
-		fclose(f);		
+		fclose(f);
 		return 2;
 	}
-	
+
 	size_t bytes_read = fread(trace, 1, fsize, f);
 	traceLen = bytes_read;
 	fclose(f);
-	PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = %d bytes) loaded from file %s", traceLen, filename);	
+	PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = %d bytes) loaded from file %s", traceLen, filename);
 	return 0;
 }
 
 int CmdTraceSave(const char *Cmd) {
-	
+
 	if (traceLen == 0 ) {
 		PrintAndLogEx(WARNING, "trace is empty, exiting...");
 		return 0;
 	}
-	
+
 	char filename[FILE_PATH_SIZE];
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) < 1 || cmdp == 'h' || cmdp == 'H') return usage_trace_save();
-	
-	param_getstr(Cmd, 0, filename, sizeof(filename));		
+
+	param_getstr(Cmd, 0, filename, sizeof(filename));
 	saveFile(filename, "bin", trace, traceLen);
 	return 0;
 }
 
 static command_t CommandTable[] = {
 	{"help",	CmdHelp,          1, "This help"},
-	{"list",    CmdTraceList,     1, "List protocol data in trace buffer"},	
+	{"list",    CmdTraceList,     1, "List protocol data in trace buffer"},
 	{"load",	CmdTraceLoad,     1, "Load trace from file"},
 	{"save",	CmdTraceSave,     1, "Save trace buffer to file"},
 	{NULL, NULL, 0, NULL}
@@ -617,7 +617,7 @@ static command_t CommandTable[] = {
 int CmdTrace(const char *Cmd) {
 	clearCommandBuffer();
 	CmdsParse(CommandTable, Cmd);
-	return 0; 
+	return 0;
 }
 
 int CmdHelp(const char *Cmd) {

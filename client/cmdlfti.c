@@ -207,7 +207,7 @@ int CmdTIDemod(const char *Cmd)
 	}
 
 	RepaintGraphWindow();
-	
+
 	PrintAndLogEx(INFO, "INFO: raw tag bits = %s", bits);
 
 	TagType = (shift3>>8)&0xff;
@@ -249,16 +249,16 @@ int CmdTIDemod(const char *Cmd)
 		crc = update_crc16(crc, (shift1>>8)&0xff);
 		crc = update_crc16(crc, (shift1>>16)&0xff);
 		crc = update_crc16(crc, (shift1>>24)&0xff);
-		
+
 		//crc =  crc16_ccitt(message, sizeof(message);
 
 		char *crcStr = (crc == (shift2&0xffff) ) ? "Passed" : "Failed";
-	
+
 		PrintAndLogEx(NORMAL, "Tag data = %08X%08X  [Crc %04X %s]", shift1, shift0, crc, crcStr );
 
 		if (crc != (shift2&0xffff))
 			PrintAndLogEx(WARNING, "Error: CRC mismatch, calculated %04X, got %04X", crc, shift2&0xffff);
-   
+
 	}
 	else {
 		PrintAndLogEx(WARNING, "Unknown tag type.");

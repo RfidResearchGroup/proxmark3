@@ -39,7 +39,7 @@
 
 //RESPONSE FLAGS
 #define ISO15_RES_ERROR				0x01
-#define ISO15_RES_EXT				0x08	// Protocol Extention	
+#define ISO15_RES_EXT				0x08	// Protocol Extention
 
 // RESPONSE ERROR CODES
 #define ISO15_NOERROR				0x00
@@ -47,7 +47,7 @@
 #define ISO15_ERROR_CMD_NOT_REC		0x02	// Command not recognized (eg. parameter error)
 #define ISO15_ERROR_CMD_OPTION		0x03	// Command option not supported
 #define ISO15_ERROR_GENERIC			0x0F	// No additional Info about this error
-#define ISO15_ERROR_BLOCK_UNAVAILABLE		0x10	
+#define ISO15_ERROR_BLOCK_UNAVAILABLE		0x10
 #define ISO15_ERROR_BLOCK_LOCKED_ALREADY	0x11	// cannot lock again
 #define ISO15_ERROR_BLOCK_LOCKED			0x12	// cannot be changed
 #define ISO15_ERROR_BLOCK_WRITE		0x13	// Writing was unsuccessful

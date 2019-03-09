@@ -47,7 +47,7 @@ static void showBanner(void){
 void
 #ifdef __has_attribute
 #if __has_attribute(force_align_arg_pointer)
-__attribute__((force_align_arg_pointer)) 
+__attribute__((force_align_arg_pointer))
 #endif
 #endif
 main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
@@ -57,39 +57,39 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 	bool stdinOnPipe = !isatty(STDIN_FILENO);
 	FILE *sf = NULL;
 	char script_cmd_buf[256] = {0x00};  // iceman, needs lua script the same file_path_buffer as the rest
-	
+
 	PrintAndLogEx(DEBUG, "ISATTY/STDIN_FILENO == %s\n", (stdinOnPipe) ? "true" : "false");
-	
+
 	if (usb_present) {
 		SetOffline(false);
 		// cache Version information now:
 		if ( execCommand || script_cmds_file || stdinOnPipe)
 			CmdVersion("s");
-		else 
+		else
 			CmdVersion("");
 	} else {
 		SetOffline(true);
 	}
 
 	if (script_cmds_file) {
-		
-		sf = fopen(script_cmds_file, "r");		
+
+		sf = fopen(script_cmds_file, "r");
 		if (sf)
 			PrintAndLogEx(SUCCESS, "executing commands from file: %s\n", script_cmds_file);
 	}
 
 	read_history(".history");
-	
+
 	// loops every time enter is pressed...
 	while (1) {
-		
+
 		// this should hook up the PM3 again.
 		/*
 		if ( IsOffline() ) {
-			
+
 			// sets the global variable, SP and offline)
 			usb_present = hookUpPM3();
-		
+
 			// usb and the reader_thread is NULL,  create a new reader thread.
 			if (usb_present && !IsOffline() ) {
 				rarg.run = 1;
@@ -97,7 +97,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 				// cache Version information now:
 				if ( execCommand || script_cmds_file || stdinOnPipe)
 					CmdVersion("s");
-				else 
+				else
 					CmdVersion("");
 			}
 		}
@@ -105,16 +105,16 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 
 		// If there is a script file
 		if (sf) {
-			
+
 			// clear array
 			memset(script_cmd_buf, 0, sizeof(script_cmd_buf));
-			
+
 			// read script file
 			if (!fgets(script_cmd_buf, sizeof(script_cmd_buf), sf)) {
 				fclose(sf);
 				sf = NULL;
 			} else {
-				
+
 				// remove linebreaks
 				strcleanrn(script_cmd_buf, sizeof(script_cmd_buf));
 
@@ -124,7 +124,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 		} else {
 			// If there is a script command
 			if (execCommand){
-				
+
 				if ((cmd = strmcopy(script_cmd)) != NULL)
 					PrintAndLogEx(NORMAL, PROXPROMPT"%s", cmd);
 
@@ -136,10 +136,10 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 
 				// if there is a pipe from stdin
 				if (stdinOnPipe) {
-					
+
 					// clear array
 					memset(script_cmd_buf, 0, sizeof(script_cmd_buf));
-					// get 
+					// get
 					if (!fgets(script_cmd_buf, sizeof(script_cmd_buf), stdin)) {
 						PrintAndLogEx(ERR, "STDIN unexpected end, exit...");
 						break;
@@ -149,17 +149,17 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 
 					if ((cmd = strmcopy(script_cmd_buf)) != NULL)
 						PrintAndLogEx(NORMAL, PROXPROMPT"%s", cmd);
-				
-				} else {		
+
+				} else {
 					cmd = readline(PROXPROMPT);
 					fflush(NULL);
 				}
 			}
 		}
-		
+
 		// execute command
 		if (cmd) {
-			
+
 			// rtrim
 			size_t l = strlen(cmd);
 			if ( l > 0 && isspace(cmd[l - 1]))
@@ -170,9 +170,9 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 				HIST_ENTRY * entry = history_get(history_length);
 				if ((!entry) || (strcmp(entry->line, cmd) != 0))
 					add_history(cmd);
-				
+
 				// exit or quit
-				if (ret == 99) 
+				if (ret == 99)
 					break;
 			}
 			free(cmd);
@@ -181,17 +181,17 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 			PrintAndLogEx(NORMAL, "\n");
 			break;
 		}
-	} // end while 
-	
+	} // end while
+
 	if (sf)
 		fclose(sf);
-	
+
 	write_history(".history");
 
 	if (cmd) {
 		free(cmd);
 		cmd = NULL;
-	}		
+	}
 }
 
 static void dumpAllHelp(int markdown) {
@@ -231,7 +231,7 @@ static void set_my_executable_path(void) {
 static void show_help(bool showFullHelp, char *command_line){
 	PrintAndLogEx(NORMAL, "syntax: %s <port> [-h | -help | -m | -f | -flush | -w | -wait | -c | -command | -l | -lua] [cmd_script_file_name] [command][lua_script_name]\n", command_line);
 	PrintAndLogEx(NORMAL, "\texample:'%s "SERIAL_PORT_H"'\n\n", command_line);
-	
+
 	if (showFullHelp){
 		PrintAndLogEx(NORMAL, "help: <-h|-help> Dump all interactive command's help at once.\n");
 		PrintAndLogEx(NORMAL, "\t%s  -h\n\n", command_line);
@@ -252,7 +252,7 @@ static void show_help(bool showFullHelp, char *command_line){
 
 int main(int argc, char* argv[]) {
 	srand(time(0));
-  
+
 	bool usb_present = false;
 	bool waitCOMPort = false;
 	bool executeCommand = false;
@@ -264,35 +264,35 @@ int main(int argc, char* argv[]) {
 	using_history();
 
 #ifdef RL_STATE_READCMD
-  	rl_extend_line_buffer(1024);		
+  	rl_extend_line_buffer(1024);
 #endif
-  
+
 	if (argc < 2) {
 		show_help(true, argv[0]);
 		return 1;
 	}
 
 	for (int i = 1; i < argc; i++) {
-	
+
 		// helptext
 		if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "-help") == 0) {
 			show_help(false, argv[0]);
 			dumpAllHelp(0);
 			return 0;
 		}
-		
+
 		// dump markup
 		if (strcmp(argv[i], "-m") == 0) {
 			dumpAllHelp(1);
 			return 0;
-		}	   
+		}
 
 		// flush output
 		if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "-flush") == 0){
 			SetFlushAfterWrite(true);
 			PrintAndLogEx(INFO, "Output will be flushed after every print.\n");
 		}
-		
+
 		// wait for comport
 		if (strcmp(argv[i], "-w") == 0 || strcmp(argv[i], "-wait") == 0){
 			waitCOMPort = true;
@@ -314,10 +314,10 @@ int main(int argc, char* argv[]) {
 	if (argc > 2 && argv[argc - 1] && argv[argc - 1][0] != '-') {
 		if (executeCommand){
 			script_cmd = argv[argc - 1];
-			
+
 			while (script_cmd[strlen(script_cmd) - 1] == ' ')
 				script_cmd[strlen(script_cmd) - 1] = 0x00;
-			
+
 			if (strlen(script_cmd) == 0) {
 				script_cmd = NULL;
 			} else {
@@ -332,7 +332,7 @@ int main(int argc, char* argv[]) {
 						script_cmd = ctmp;
 					}
 				}
-				
+
 				PrintAndLogEx(SUCCESS, "execute command from commandline: %s\n", script_cmd);
 			}
 		} else {
@@ -347,16 +347,16 @@ int main(int argc, char* argv[]) {
 	}
 
 #if defined(__linux__) || (__APPLE__)
-// ascii art doesn't work well on mingw :( 
+// ascii art doesn't work well on mingw :(
 
 	bool stdinOnPipe = !isatty(STDIN_FILENO);
 	if ( !executeCommand && !script_cmds_file && !stdinOnPipe )
-		showBanner();  
+		showBanner();
 #endif
-	
+
 	// set global variables
 	set_my_executable_path();
-	
+
 	// try to open USB connection to Proxmark
 	usb_present = OpenProxmark(argv[1], waitCOMPort, 20, false);
 
@@ -375,15 +375,15 @@ int main(int argc, char* argv[]) {
 		main_loop(script_cmds_file, script_cmd, usb_present);
 	}
 #  endif
-	
+
 #else
 	main_loop(script_cmds_file, script_cmd, usb_present);
-#endif	
- 
+#endif
+
  	// Clean up the port
 	if (usb_present) {
 		CloseProxmark();
 	}
-	
+
 	exit(0);
 }

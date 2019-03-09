@@ -127,8 +127,8 @@ int CmdHFEPAPACEReplay(const char *Cmd)
 			memcpy(usb_cmd.d.asBytes, // + (j * sizeof(usb_cmd.d.asBytes)),
 			       apdus[i] + (j * sizeof(usb_cmd.d.asBytes)),
 			       packet_length);
-				   
-			clearCommandBuffer();				   
+
+			clearCommandBuffer();
 			SendCommand(&usb_cmd);
 			WaitForResponse(CMD_ACK, &resp);
 			if (resp.arg[0] != 0) {

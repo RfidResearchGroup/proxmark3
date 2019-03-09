@@ -20,7 +20,7 @@ int main(const int argc, const char* argv[]) {
 	sscanf(argv[2],"%08x", &nt);
 	sscanf(argv[3],"%016" SCNx64 ,&par_info);
 	sscanf(argv[4],"%016" SCNx64 ,&ks_info);
-  
+
 	// Reset the last three significant bits of the reader nonce
 	nr &= 0xffffff1f;
 
@@ -47,7 +47,7 @@ int main(const int argc, const char* argv[]) {
 		printf("%01x|\n", par[i][7]);
 	}
 	printf("+----+--------+---+-----+---------------+\n");
- 
+
 	state = lfsr_common_prefix(nr,rr,ks3x,par);
 	lfsr_rollback_word(state,uid^nt,0);
 	crypto1_get_lfsr(state,&key_recovered);

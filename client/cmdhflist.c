@@ -103,7 +103,7 @@ uint8_t iclass_CRC_check(bool isResponse, uint8_t* d, uint8_t n) {
 			return check_crc( CRC_ICLASS, d+1, n-1);
 		}
 		return 2;
-	} 
+	}
 	/**
 	These tag responses should have CRC. Total length leftmost
 
@@ -154,12 +154,12 @@ int applyIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize) {
 		case ISO14443A_CMD_REQA:		snprintf(exp,size,"REQA"); break;
 		case ISO14443A_CMD_READBLOCK:	snprintf(exp,size,"READBLOCK(%d)",cmd[1]); break;
 		case ISO14443A_CMD_WRITEBLOCK:	snprintf(exp,size,"WRITEBLOCK(%d)",cmd[1]); break;
-		case ISO14443A_CMD_HALT:		
-			snprintf(exp,size,"HALT"); 
+		case ISO14443A_CMD_HALT:
+			snprintf(exp,size,"HALT");
 			MifareAuthState = masNone;
 			break;
 		case ISO14443A_CMD_RATS:		snprintf(exp,size,"RATS"); break;
-		case ISO14443A_CMD_OPTS:        snprintf(exp,size,"OPTIONAL TIMESLOT"); break;		
+		case ISO14443A_CMD_OPTS:        snprintf(exp,size,"OPTIONAL TIMESLOT"); break;
 		case MIFARE_CMD_INC:			snprintf(exp,size,"INC(%d)",cmd[1]); break;
 		case MIFARE_CMD_DEC:			snprintf(exp,size,"DEC(%d)",cmd[1]); break;
 		case MIFARE_CMD_RESTORE:		snprintf(exp,size,"RESTORE(%d)",cmd[1]); break;
@@ -176,7 +176,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize) {
 		}
 		case MIFARE_AUTH_KEYB: {
 			MifareAuthState = masNt;
-			snprintf(exp,size,"AUTH-B(%d)",cmd[1]); 
+			snprintf(exp,size,"AUTH-B(%d)",cmd[1]);
 			break;
 		}
 		case MIFARE_MAGICWUPC1:			snprintf(exp,size,"MAGIC WUPC1"); break;
@@ -184,7 +184,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize) {
 		case MIFARE_MAGICWIPEC:			snprintf(exp,size,"MAGIC WIPEC"); break;
 		case MIFARE_ULC_AUTH_1 :		snprintf(exp,size,"AUTH "); break;
 		case MIFARE_ULC_AUTH_2 : 		snprintf(exp,size,"AUTH_ANSW"); break;
-		case MIFARE_ULEV1_AUTH :	
+		case MIFARE_ULEV1_AUTH :
 			if ( cmdsize == 7 )
 				snprintf(exp,size,"PWD-AUTH KEY: 0x%02x%02x%02x%02x", cmd[1], cmd[2], cmd[3], cmd[4] );
 			else
@@ -192,18 +192,18 @@ int applyIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize) {
 			break;
 		case MIFARE_ULEV1_FASTREAD : {
 			if ( cmdsize >=3 && cmd[2] <= 0xE6)
-				snprintf(exp,size,"READ RANGE (%d-%d)",cmd[1],cmd[2]); 
+				snprintf(exp,size,"READ RANGE (%d-%d)",cmd[1],cmd[2]);
 			else
 				// outside limits, useful for some tags...
-				snprintf(exp,size,"READ RANGE (%d-%d) (?)",cmd[1], cmd[2]); 
+				snprintf(exp,size,"READ RANGE (%d-%d) (?)",cmd[1], cmd[2]);
 			break;
 		}
 		case MIFARE_ULC_WRITE : {
 			if ( cmd[1] < 0x21 )
-				snprintf(exp,size,"WRITEBLOCK(%d)",cmd[1]); 
+				snprintf(exp,size,"WRITEBLOCK(%d)",cmd[1]);
 			else
-				// outside limits, useful for some tags...				
-				snprintf(exp, size, "WRITEBLOCK(%d) (?)", cmd[1]); 
+				// outside limits, useful for some tags...
+				snprintf(exp, size, "WRITEBLOCK(%d) (?)", cmd[1]);
 			break;
 		}
 		case MIFARE_ULEV1_READ_CNT :{
@@ -278,9 +278,9 @@ void annotateIso15693(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize) {
 		default: break;
 	}
 
-	if ( cmd[1] >= 0x2D && cmd[1] <= 0x9F ) snprintf(exp, size, "Optional RFU"); 
-	else if ( cmd[1] >= 0xA0 && cmd[1] <= 0xDF ) snprintf(exp, size, "Cust IC MFG dependent"); 
-	else if ( cmd[1] >= 0xE0 && cmd[1] <= 0xFF ) snprintf(exp, size, "Proprietary IC MFG dependent"); 
+	if ( cmd[1] >= 0x2D && cmd[1] <= 0x9F ) snprintf(exp, size, "Optional RFU");
+	else if ( cmd[1] >= 0xA0 && cmd[1] <= 0xDF ) snprintf(exp, size, "Cust IC MFG dependent");
+	else if ( cmd[1] >= 0xE0 && cmd[1] <= 0xFF ) snprintf(exp, size, "Proprietary IC MFG dependent");
 	else
 		snprintf(exp, size, "?");
 }
@@ -302,10 +302,10 @@ void annotateTopaz(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 	}
 }
 
-// iso 7816-3 
+// iso 7816-3
 void annotateIso7816(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 	// S-block
-	if ( (cmd[0] & 0xC0) && (cmdsize == 3) ) {		
+	if ( (cmd[0] & 0xC0) && (cmdsize == 3) ) {
 		switch ( (cmd[0] & 0x3f)  ) {
 			case 0x00 	: snprintf(exp, size, "S-block RESYNCH req"); break;
 			case 0x20 	: snprintf(exp, size, "S-block RESYNCH resp"); break;
@@ -316,11 +316,11 @@ void annotateIso7816(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 			case 0x03	: snprintf(exp, size, "S-block WTX reqt"); break;
 			case 0x23	: snprintf(exp, size, "S-block WTX resp"); break;
 			default		: snprintf(exp, size, "S-block"); break;
-		}		
+		}
 	}
 	// R-block (ack)
 	else if ( ((cmd[0] & 0xD0) == 0x80) && ( cmdsize > 2) ) {
-		if ( (cmd[0] & 0x10) == 0 ) 
+		if ( (cmd[0] & 0x10) == 0 )
 			snprintf(exp, size, "R-block ACK");
 		else
 			snprintf(exp, size, "R-block NACK");
@@ -365,20 +365,20 @@ void annotateIso7816(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 
 // MIFARE DESFire
 void annotateMfDesfire(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
-	
+
 	// it's basically a ISO14443a tag, so try annotation from there
 	if (!applyIso14443a(exp, size, cmd, cmdsize)){
 		// S-block 11xxx010
-		if ( (cmd[0] & 0xC0) && (cmdsize == 3) ) {		
+		if ( (cmd[0] & 0xC0) && (cmdsize == 3) ) {
 			switch ( (cmd[0] & 0x30)  ) {
 				case 0x30	: snprintf(exp, size, "S-block DESELECT"); break;
 				case 0x00	: snprintf(exp, size, "S-block WTX"); break;
 				default		: snprintf(exp, size, "S-block"); break;
-			}		
+			}
 		}
 		// R-block (ack) 101xx01x
 		else if ( ((cmd[0] & 0xB0) == 0xA0) && ( cmdsize > 2) ) {
-			if ( (cmd[0] & 0x10) == 0 ) 
+			if ( (cmd[0] & 0x10) == 0 )
 				snprintf(exp, size, "R-block ACK(%d)", (cmd[0] & 0x01));
 			else
 				snprintf(exp, size, "R-block NACK(%d)", (cmd[0] & 0x01));
@@ -450,14 +450,14 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 void annotateIso14443b(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize) {
 	switch(cmd[0]){
 		case ISO14443B_REQB   		: {
-			
+
 			switch ( cmd[2] & 0x07 ) {
 				case 0: snprintf(exp, size,"1 slot ");break;
-				case 1: snprintf(exp, size,"2 slots ");break; 
+				case 1: snprintf(exp, size,"2 slots ");break;
 				case 2: snprintf(exp, size,"4 slots ");break;
 				case 3: snprintf(exp, size,"8 slots ");break;
 				default: snprintf(exp, size,"16 slots ");break;
-			}			
+			}
 			if ( (cmd[2] & 0x8) )
 				snprintf(exp, size,"WUPB");
 			else
@@ -480,12 +480,12 @@ void annotateIso14443b(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize) {
 	}
 }
 
-// LEGIC 
+// LEGIC
 // 1 = read
 // 0 = write
 // Quite simpel tag
-void annotateLegic(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){	
-	uint8_t bitsend = cmd[0];	
+void annotateLegic(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
+	uint8_t bitsend = cmd[0];
 	uint8_t cmdBit = (cmd[1] & 1);
 	switch (bitsend){
 		case 7:
@@ -505,11 +505,11 @@ void annotateLegic(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 		case 11: {
 
 			uint16_t address = (cmd[2] << 7) | cmd[1] >> 1;
-			
-			if (cmdBit == LEGIC_READ) 
+
+			if (cmdBit == LEGIC_READ)
 				snprintf(exp, size, "READ Byte(%d)", address);
-			
-			if (cmdBit == LEGIC_WRITE ) 
+
+			if (cmdBit == LEGIC_WRITE )
 				snprintf(exp, size, "WRITE Byte(%d)", address);
 			break;
 		}
@@ -535,7 +535,7 @@ void annotateLegic(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 	}
 }
 
-void annotateFelica(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){	
+void annotateFelica(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 
 	switch(cmd[0]){
 		case FELICA_POLL_REQ: snprintf(exp,size ,"POLLING");break;
@@ -547,7 +547,7 @@ void annotateFelica(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 		case FELICA_RDBLK_REQ: snprintf(exp,size ,"READ BLK");break;
 		case FELICA_RDBLK_ACK: snprintf(exp,size ,"READ BLK ACK");break;
 		case FELICA_WRTBLK_REQ:	snprintf(exp,size ,"WRITE BLK");break;
-		case FELICA_WRTBLK_ACK: snprintf(exp,size ,"WRITE BLK ACK");break;		
+		case FELICA_WRTBLK_ACK: snprintf(exp,size ,"WRITE BLK ACK");break;
 		case FELICA_SRCHSYSCODE_REQ: snprintf(exp,size ,"SEARCH SERVICE CODE");break;
 		case FELICA_SRCHSYSCODE_ACK: snprintf(exp,size ,"SSC ACK");break;
 		case FELICA_REQSYSCODE_REQ: snprintf(exp,size ,"REQUEST SYSTEM CODE");break;
@@ -555,11 +555,11 @@ void annotateFelica(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 		case FELICA_AUTH1_REQ: snprintf(exp,size ,"AUTH 1");break;
 		case FELICA_AUTH1_ACK: snprintf(exp,size ,"AUTH 1 ACK");break;
 		case FELICA_AUTH2_REQ: snprintf(exp,size ,"AUTH 2");break;
-		case FELICA_AUTH2_ACK: snprintf(exp,size ,"AUTH 2 ACK");break;		
+		case FELICA_AUTH2_ACK: snprintf(exp,size ,"AUTH 2 ACK");break;
 		case FELICA_RDSEC_REQ: snprintf(exp,size ,"READ");break;
 		case FELICA_RDSEC_ACK: snprintf(exp,size ,"READ ACK");break;
 		case FELICA_WRTSEC_REQ: snprintf(exp,size ,"WRITE");break;
-		case FELICA_WRTSEC_ACK: snprintf(exp,size ,"WRITE ACK");break;	
+		case FELICA_WRTSEC_ACK: snprintf(exp,size ,"WRITE ACK");break;
 		case FELICA_REQSRV2_REQ: snprintf(exp,size ,"REQUEST SERVICE v2");break;
 		case FELICA_REQSRV2_ACK: snprintf(exp,size ,"REQ SERV v2 ACK");break;
 		case FELICA_GETSTATUS_REQ: snprintf(exp,size ,"GET STATUS");break;
@@ -567,17 +567,17 @@ void annotateFelica(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 		case FELICA_OSVER_REQ: snprintf(exp,size ,"REQUEST SPECIFIC VERSION");break;
 		case FELICA_OSVER_ACK: snprintf(exp,size ,"RSV ACK");break;
 		case FELICA_RESET_MODE_REQ: snprintf(exp,size ,"RESET MODE");break;
-		case FELICA_RESET_MODE_ACK: snprintf(exp,size ,"RESET MODE ACK");break;		
+		case FELICA_RESET_MODE_ACK: snprintf(exp,size ,"RESET MODE ACK");break;
 		case FELICA_AUTH1V2_REQ: snprintf(exp,size ,"AUTH 1 v2");break;
 		case FELICA_AUTH1V2_ACK: snprintf(exp,size ,"AUTH 1 v2 ACK");break;
 		case FELICA_AUTH2V2_REQ: snprintf(exp,size ,"AUTH 2 v2");break;
-		case FELICA_AUTH2V2_ACK: snprintf(exp,size ,"AUTH 2 v2 ACK");break;		
+		case FELICA_AUTH2V2_ACK: snprintf(exp,size ,"AUTH 2 v2 ACK");break;
 		case FELICA_RDSECV2_REQ: snprintf(exp,size ,"READ v2");break;
 		case FELICA_RDSECV2_ACK: snprintf(exp,size ,"READ v2 ACK");break;
 		case FELICA_WRTSECV2_REQ: snprintf(exp,size ,"WRITE v2");break;
-		case FELICA_WRTSECV2_ACK: snprintf(exp,size ,"WRITE v2 ACK");break;		
+		case FELICA_WRTSECV2_ACK: snprintf(exp,size ,"WRITE v2 ACK");break;
 		case FELICA_UPDATE_RNDID_REQ: snprintf(exp,size ,"UPDATE RANDOM ID");break;
-		case FELICA_UPDATE_RNDID_ACK: snprintf(exp,size ,"URI ACK");break;		
+		case FELICA_UPDATE_RNDID_ACK: snprintf(exp,size ,"URI ACK");break;
 		default                     : snprintf(exp,size ,"?");break;
 	}
 }
@@ -585,15 +585,15 @@ void annotateFelica(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 void annotateMifare(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize, uint8_t* parity, uint8_t paritysize, bool isResponse) {
 	if (!isResponse && cmdsize == 1) {
 		switch(cmd[0]) {
-			case ISO14443A_CMD_WUPA:        
-			case ISO14443A_CMD_REQA:		
+			case ISO14443A_CMD_WUPA:
+			case ISO14443A_CMD_REQA:
 				MifareAuthState = masNone;
 				break;
 			default:
 				break;
 		}
 	}
-	
+
 	// get UID
 	if (MifareAuthState == masNone) {
 		if (cmdsize == 9 && cmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && cmd[1] == 0x70) {
@@ -609,7 +609,7 @@ void annotateMifare(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize, uint8
 			AuthData.uid = bytes_to_num(&cmd[2], 4);
 		}
 	}
-	
+
 	switch(MifareAuthState) {
 		case masNt:
 			if (cmdsize == 4 && isResponse) {
@@ -652,18 +652,18 @@ void annotateMifare(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize, uint8
 		default:
 			break;
 	}
-	
+
 	if (!isResponse && ((MifareAuthState == masNone) || (MifareAuthState == masError)))
 		annotateIso14443a(exp, size, cmd, cmdsize);
-	
+
 }
 
 bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isResponse, uint8_t *mfData, size_t *mfDataLen) {
-	static struct Crypto1State *traceCrypto1;	
+	static struct Crypto1State *traceCrypto1;
 	static uint64_t mfLastKey;
-	
+
 	*mfDataLen = 0;
-	
+
 	if (MifareAuthState == masAuthComplete) {
 		if (traceCrypto1) {
 			crypto1_destroy(traceCrypto1);
@@ -673,21 +673,21 @@ bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isRes
 		MifareAuthState = masFirstData;
 		return false;
 	}
-	
+
 	if (cmdsize > 32)
 		return false;
-	
+
 	if (MifareAuthState == masFirstData) {
 		if (AuthData.first_auth) {
 			AuthData.ks2 = AuthData.ar_enc ^ prng_successor(AuthData.nt, 64);
 			AuthData.ks3 = AuthData.at_enc ^ prng_successor(AuthData.nt, 96);
 
 			mfLastKey = GetCrypto1ProbableKey(&AuthData);
-			PrintAndLogEx(NORMAL, "            |            |  *  |%49s %012"PRIx64" prng %s |     |", 
-				"key", 
+			PrintAndLogEx(NORMAL, "            |            |  *  |%49s %012"PRIx64" prng %s |     |",
+				"key",
 				mfLastKey,
 				validate_prng_nonce(AuthData.nt) ? _GREEN_(WEAK): _YELLOW_(HARD));
-			
+
 			AuthData.first_auth = false;
 
 			traceCrypto1 = lfsr_recovery64(AuthData.ks2, AuthData.ks3);
@@ -704,7 +704,7 @@ bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isRes
 					traceCrypto1 = lfsr_recovery64(AuthData.ks2, AuthData.ks3);
 				};
 			}
-			
+
 			// check default keys
 			if (!traceCrypto1) {
 				for (int i = 0; i < MIFARE_DEFAULTKEYS_SIZE; i++){
@@ -717,10 +717,10 @@ bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isRes
 					};
 				}
 			}
-			
+
 			// nested
 			if (!traceCrypto1 && validate_prng_nonce(AuthData.nt)) {
-				uint32_t ntx = prng_successor(AuthData.nt, 90); 
+				uint32_t ntx = prng_successor(AuthData.nt, 90);
 				for (int i = 0; i < 16383; i++) {
 					ntx = prng_successor(ntx, 1);
 					if (NTParityChk(&AuthData, ntx)){
@@ -729,15 +729,15 @@ bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isRes
 						uint32_t ks3 = AuthData.at_enc ^ prng_successor(ntx, 96);
 						struct Crypto1State *pcs = lfsr_recovery64(ks2, ks3);
 						memcpy(mfData, cmd, cmdsize);
-						mf_crypto1_decrypt(pcs, mfData, cmdsize, 0);				
+						mf_crypto1_decrypt(pcs, mfData, cmdsize, 0);
 						crypto1_destroy(pcs);
-						
+
 						if (CheckCrypto1Parity(cmd, cmdsize, mfData, parity) && check_crc(CRC_14443_A, mfData, cmdsize)) {
 							AuthData.ks2 = ks2;
 							AuthData.ks3 = ks3;
 							AuthData.nt = ntx;
 							mfLastKey = GetCrypto1ProbableKey(&AuthData);
-							PrintAndLogEx(NORMAL, "            |            |  *  | nested probable key:%012"PRIx64"      ks2:%08x ks3:%08x |     |", 
+							PrintAndLogEx(NORMAL, "            |            |  *  | nested probable key:%012"PRIx64"      ks2:%08x ks3:%08x |     |",
 								mfLastKey,
 								AuthData.ks2,
 								AuthData.ks3);
@@ -745,10 +745,10 @@ bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isRes
 							traceCrypto1 = lfsr_recovery64(AuthData.ks2, AuthData.ks3);
 							break;
 						}
-					}						
+					}
 				}
 			}
-			
+
 			//hardnested
 			if (!traceCrypto1) {
 				PrintAndLogEx(NORMAL, "hardnested not implemented. uid:%x nt:%x ar_enc:%x at_enc:%x\n", AuthData.uid, AuthData.nt, AuthData.ar_enc, AuthData.at_enc);
@@ -780,13 +780,13 @@ bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isRes
 		}
 		MifareAuthState = masData;
 	}
-	
+
 	if (MifareAuthState == masData && traceCrypto1) {
 		memcpy(mfData, cmd, cmdsize);
 		mf_crypto1_decrypt(traceCrypto1, mfData, cmdsize, 0);
 		*mfDataLen = cmdsize;
 	}
-	
+
 	return *mfDataLen > 0;
 }
 
@@ -797,7 +797,7 @@ bool NTParityChk(TAuthData *ad, uint32_t ntx) {
 		(oddparity8(ntx >> 24 & 0xff) ^ (ntx >> 16 & 0x01) ^ ((ad->nt_enc_par >> 7) & 0x01) ^ (ad->nt_enc >> 16 & 0x01))
 		)
 		return false;
-	
+
 	uint32_t ar = prng_successor(ntx, 64);
 	if (
 		(oddparity8(ar >> 8 & 0xff) ^ (ar & 0x01) ^ ((ad->ar_enc_par >> 5) & 0x01) ^ (ad->ar_enc & 0x01)) ||
@@ -814,14 +814,14 @@ bool NTParityChk(TAuthData *ad, uint32_t ntx) {
 		(oddparity8(at >> 24 & 0xff) ^ (at >> 16 & 0x01) ^ ((ad->at_enc_par >> 7) & 0x01) ^ (ad->at_enc >> 16 & 0x01))
 		)
 		return false;
-		
+
 	return true;
 }
 
 bool NestedCheckKey(uint64_t key, TAuthData *ad, uint8_t *cmd, uint8_t cmdsize, uint8_t *parity) {
 	uint8_t buf[32] = {0};
 	struct Crypto1State *pcs;
-	
+
 	AuthData.ks2 = 0;
 	AuthData.ks3 = 0;
 
@@ -843,13 +843,13 @@ bool NestedCheckKey(uint64_t key, TAuthData *ad, uint8_t *cmd, uint8_t cmdsize, 
 	memcpy(buf, cmd, cmdsize);
 	mf_crypto1_decrypt(pcs, buf, cmdsize, 0);
 	crypto1_destroy(pcs);
-	
+
 	if (!CheckCrypto1Parity(cmd, cmdsize, buf, parity))
 		return false;
 
-	if (!check_crc(CRC_14443_A, buf, cmdsize)) 
+	if (!check_crc(CRC_14443_A, buf, cmdsize))
 		return false;
-	
+
 	AuthData.nt = nt1;
 	AuthData.ks2 = AuthData.ar_enc ^ ar;
 	AuthData.ks3 = AuthData.at_enc ^ at;
@@ -865,7 +865,7 @@ bool CheckCrypto1Parity(uint8_t *cmd_enc, uint8_t cmdsize, uint8_t *cmd, uint8_t
 }
 
 // Another implementation of mfkey64 attack,  more "valid" than "probable"
-// 
+//
 uint64_t GetCrypto1ProbableKey(TAuthData *ad) {
 	struct Crypto1State *revstate = lfsr_recovery64(ad->ks2, ad->ks3);
 	lfsr_rollback_word(revstate, 0, 0);

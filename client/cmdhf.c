@@ -38,14 +38,14 @@ int usage_hf_snoop(){
 
 int CmdHFSearch(const char *Cmd){
 
-	char cmdp = param_getchar(Cmd, 0);	
+	char cmdp = param_getchar(Cmd, 0);
 	if (cmdp == 'h' || cmdp == 'H') return usage_hf_search();
-	
+
 	int ans = CmdHF14AInfo("s");
 	if (ans > 0) {
 		PrintAndLogEx(SUCCESS, "\nValid ISO14443-A Tag Found\n");
 		return ans;
-	} 
+	}
 	ans = HF15Reader("", false);
 	if (ans) {
 		PrintAndLogEx(SUCCESS, "\nValid ISO15693 Tag Found\n");
@@ -80,7 +80,7 @@ int CmdHFSearch(const char *Cmd){
 		return ans;
 	}
 	*/
-	
+
 	PrintAndLogEx(FAILED, "\nno known/supported 13.56 MHz tags found\n");
 	return 0;
 }
@@ -94,12 +94,12 @@ int CmdHFTune(const char *Cmd) {
 }
 
 int CmdHFSnoop(const char *Cmd) {
-	char cmdp = param_getchar(Cmd, 0);	
+	char cmdp = param_getchar(Cmd, 0);
 	if (cmdp == 'h' || cmdp == 'H') return usage_hf_snoop();
-	
+
 	int skippairs =  param_get32ex(Cmd, 0, 0, 10);
 	int skiptriggers =  param_get32ex(Cmd, 1, 0, 10);
-	
+
 	UsbCommand c = {CMD_HF_SNIFFER, {skippairs, skiptriggers, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
@@ -121,7 +121,7 @@ static command_t CommandTable[] = {
 	{"mfdes",		CmdHFMFDes,		  1, "{ MIFARE Desfire RFIDs...          }"},
 	{"topaz",		CmdHFTopaz,		  1, "{ TOPAZ (NFC Type 1) RFIDs...      }"},
 	{"fido",		CmdHFFido,		  1, "{ FIDO and FIDO2 authenticators... }"},
-	{"list", 		CmdTraceList,	  0, "List protocol data in trace buffer"},	
+	{"list", 		CmdTraceList,	  0, "List protocol data in trace buffer"},
 	{"tune",		CmdHFTune,	      0, "Continuously measure HF antenna tuning"},
 	{"search",      CmdHFSearch,      1, "Search for known HF tags [preliminary]"},
 	{"snoop",       CmdHFSnoop,       0, "<samples to skip (10000)> <triggers to skip (1)> Generic HF Snoop"},
@@ -131,7 +131,7 @@ static command_t CommandTable[] = {
 int CmdHF(const char *Cmd) {
 	clearCommandBuffer();
 	CmdsParse(CommandTable, Cmd);
-	return 0; 
+	return 0;
 }
 
 int CmdHelp(const char *Cmd) {

@@ -56,7 +56,7 @@ static uint8_t visa_parity( uint32_t id) {
 		,1,0,0,1
 		,1,0,0,1
 		,0,1,1,0
-	};	
+	};
 	uint8_t par = 0;
 	par |= par_lut[ (id >> 28) & 0xF ] << 7;
 	par |= par_lut[ (id >> 24) & 0xF ] << 6;
@@ -66,7 +66,7 @@ static uint8_t visa_parity( uint32_t id) {
 	par |= par_lut[ (id >>  8) & 0xF ] << 2;
 	par |= par_lut[ (id >>  4) & 0xF ] << 1;
 	par |= par_lut[ (id & 0xF) ];
-	return par;	
+	return par;
 }
 
 // by iceman
@@ -91,15 +91,15 @@ int detectVisa2k(uint8_t *dest, size_t *size) {
 * i = card id
 * p = even parity bit for each nibble in card id.
 * c = checksum  (xor of card id)
-* 
+*
 **/
 //see ASKDemod for what args are accepted
 int CmdVisa2kDemod(const char *Cmd) {
-	
+
 	save_restoreGB(GRAPH_SAVE);
-	
+
 	//sCmdAskEdgeDetect("");
-	
+
 	//ASK / Manchester
 	bool st = true;
 	if (!ASKDemod_ext("64 0 0", false, false, 1, &st)) {
@@ -124,18 +124,18 @@ int CmdVisa2kDemod(const char *Cmd) {
 	}
 	setDemodBuf(DemodBuffer, 96, ans);
 	setClockGrid(g_DemodClock, g_DemodStartIdx + (ans*g_DemodClock));
-		
+
 	//got a good demod
 	uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
 	uint32_t raw2 = bytebits_to_byte(DemodBuffer+32, 32);
 	uint32_t raw3 = bytebits_to_byte(DemodBuffer+64, 32);
-	
+
 	// chksum
 	uint8_t calc = visa_chksum(raw2);
-	uint8_t chk = raw3 & 0xF;	
-		
+	uint8_t chk = raw3 & 0xF;
+
 	// test checksums
-	if ( chk != calc ) { 
+	if ( chk != calc ) {
 		PrintAndLogEx(DEBUG, "DEBUG: error: Visa2000 checksum failed %x - %x\n", chk, calc);
 		save_restoreGB(GRAPH_RESTORE);
 		return 0;
@@ -146,7 +146,7 @@ int CmdVisa2kDemod(const char *Cmd) {
 	if ( calc_par != chk_par) {
 		PrintAndLogEx(DEBUG, "DEBUG: error: Visa2000 parity failed %x - %x\n", chk_par, calc_par);
 		save_restoreGB(GRAPH_RESTORE);
-		return 0;		
+		return 0;
 	}
 	PrintAndLogEx(SUCCESS, "Visa2000 Tag Found: Card ID %u,  Raw: %08X%08X%08X", raw2,  raw1 ,raw2, raw3);
 	return 1;
@@ -167,17 +167,17 @@ int CmdVisa2kClone(const char *Cmd) {
 	if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_visa2k_clone();
 
 	id = param_get32ex(Cmd, 0, 0, 10);
-	
+
 	//Q5
 	if (param_getchar(Cmd, 1) == 'Q' || param_getchar(Cmd, 1) == 'q')
 		blocks[0] = T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(64) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
-	
+
 	blocks[2] = id;
-	blocks[3] =  (visa_parity(id) << 4) | visa_chksum(id);	
+	blocks[3] =  (visa_parity(id) << 4) | visa_chksum(id);
 
 	PrintAndLogEx(INFO, "Preparing to clone Visa2000 to T55x7 with CardId: %u", id);
 	print_blocks(blocks, 4);
-	
+
 	UsbCommand resp;
 	UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}};
 
@@ -224,7 +224,7 @@ int CmdVisa2kSim(const char *Cmd) {
 
 static command_t CommandTable[] = {
 	{"help",	CmdHelp,		1, "This help"},
-	{"demod",	CmdVisa2kDemod,	1, "demodulate an VISA2000 tag from the GraphBuffer"},	
+	{"demod",	CmdVisa2kDemod,	1, "demodulate an VISA2000 tag from the GraphBuffer"},
 	{"read",	CmdVisa2kRead,	0, "attempt to read and extract tag data from the antenna"},
 	{"clone",	CmdVisa2kClone,	0, "clone Visa2000 to t55x7"},
 	{"sim",		CmdVisa2kSim,	0, "simulate Visa2000 tag"},

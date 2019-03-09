@@ -55,10 +55,10 @@ int CmdPacDemod(const char *Cmd) {
 	uint32_t raw3 = bytebits_to_byte(DemodBuffer+64, 32);
 	uint32_t raw4 = bytebits_to_byte(DemodBuffer+96, 32);
 
-	// preamble     then appears to have marker bits of "10"                                                                                                                                       CS?    
+	// preamble     then appears to have marker bits of "10"                                                                                                                                       CS?
 	// 11111111001000000 10 01001100 10 00001101 10 00001101 10 00001101 10 00001101 10 00001101 10 00001101 10 00001101 10 00001101 10 10001100 10 100000001
 	// unknown checksum 9 bits at the end
-	
+
 	PrintAndLogEx(NORMAL, "PAC/Stanley Tag Found -- Raw: %08X%08X%08X%08X", raw1 ,raw2, raw3, raw4);
 	PrintAndLogEx(NORMAL, "\nHow the Raw ID is translated by the reader is unknown");
 	return 1;

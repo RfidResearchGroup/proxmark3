@@ -24,7 +24,7 @@ typedef unsigned char byte_t;
 
 // debug
 // 0 - no debug messages 1 - error messages 2 - all messages 4 - extended debug mode
-#define MF_DBG_NONE          0		
+#define MF_DBG_NONE          0
 #define MF_DBG_ERROR         1
 #define MF_DBG_ALL           2
 #define MF_DBG_EXTENDED      4
@@ -51,7 +51,7 @@ extern uint32_t FLASHMEM_SPIBAUDRATE;
 
 // RDV40 Section
 // 256kb divided into 4k sectors.
-// 
+//
 // last 4k sector = signature
 // second last 4k sector = settings
 // third last 4k sector = default MF keys dictionary
@@ -94,11 +94,11 @@ extern uint32_t FLASHMEM_SPIBAUDRATE;
 	#ifndef DEFAULT_T55XX_KEYS_OFFSET
 	# define DEFAULT_T55XX_KEYS_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x3000)
 	#endif
-	
+
 	#ifndef DEFAULT_MF_KEYS_OFFSET
 	# define DEFAULT_MF_KEYS_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x4000)
 	#endif
-	
+
 	#ifndef DEFAULT_ICLASS_KEYS_OFFSET
 	# define DEFAULT_ICLASS_KEYS_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x5000)
 	#endif
@@ -114,5 +114,5 @@ typedef struct {
 
 #ifdef __cplusplus
 }
-#endif				
+#endif
 #endif

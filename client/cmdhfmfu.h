@@ -12,7 +12,7 @@
 #include "comms.h"
 #include "loclass/fileutils.h"
 
-#define DUMP_PREFIX_LENGTH 48 
+#define DUMP_PREFIX_LENGTH 48
 
 typedef struct {
 	uint8_t version[8];
@@ -20,7 +20,7 @@ typedef struct {
 	uint8_t	tearing[3];
 	uint8_t	pack[2];
 	uint8_t tbo1[1];
-	uint8_t	signature[32];	
+	uint8_t	signature[32];
 	//uint8_t	counter[3];
 	uint8_t data[1024];
 } mfu_dump_t;

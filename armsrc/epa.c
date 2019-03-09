@@ -289,7 +289,7 @@ void EPA_PACE_Collect_Nonce(UsbCommand *c)
 
 	// set up communication
 	func_return = EPA_Setup();
-	if (func_return != 0) {	
+	if (func_return != 0) {
 		EPA_PACE_Collect_Nonce_Abort(1, func_return);
 		return;
 	}

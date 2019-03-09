@@ -34,7 +34,7 @@ typedef enum TAG_STATE {
 	HT_WRITING_PAGE_DATA,
 	HT_WRITING_BLOCK_DATA} TSATE;
 
-//number of start-of-frame bits	
+//number of start-of-frame bits
 typedef enum SOF_TYPE {
 	HT_STANDARD=0,
 	HT_ADVANCED,

@@ -23,7 +23,7 @@ int usage_lf_cmdread(void) {
 	PrintAndLogEx(NORMAL, "       c <cmd>       Command bytes  (in ones and zeros)");
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "       ************* All periods in microseconds (ms)");
-	PrintAndLogEx(NORMAL, "       ************* Use lf config to configure options.");	
+	PrintAndLogEx(NORMAL, "       ************* Use lf config to configure options.");
 	PrintAndLogEx(NORMAL, "Examples:");
 	PrintAndLogEx(NORMAL, "      lf cmdread d 80 z 100 o 200 c 11000");
 	return 0;
@@ -33,7 +33,7 @@ int usage_lf_read(void){
 	PrintAndLogEx(NORMAL, "Options:");
 	PrintAndLogEx(NORMAL, "       h            This help");
 	PrintAndLogEx(NORMAL, "       s            silent run no printout");
-	PrintAndLogEx(NORMAL, "       d #samples   # samples to collect (optional)");	
+	PrintAndLogEx(NORMAL, "       d #samples   # samples to collect (optional)");
 	PrintAndLogEx(NORMAL, "Use 'lf config' to set parameters.");
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Examples:");
@@ -79,7 +79,7 @@ int usage_lf_simfsk(void) {
 	PrintAndLogEx(NORMAL, "FSK1  -  where fc/8 = high  and fc/5 = low");
 	PrintAndLogEx(NORMAL, "FSK1a -  is inverted FSK1,  ie:   fc/5 = high and fc/8 = low");
 	PrintAndLogEx(NORMAL, "FSK2  -  where fc/10 = high  and fc/8 = low");
-	PrintAndLogEx(NORMAL, "FSK2a -  is inverted FSK2,  ie:   fc/10 = high and fc/8 = low");	
+	PrintAndLogEx(NORMAL, "FSK2a -  is inverted FSK2,  ie:   fc/10 = high and fc/8 = low");
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Options:");
 	PrintAndLogEx(NORMAL, "       h              This help");
@@ -176,10 +176,10 @@ int CmdLFCommandRead(const char *Cmd) {
 
 	//Validations
 	if (errors || cmdp == 0)  return usage_lf_cmdread();
-	
+
 	clearCommandBuffer();
 	SendCommand(&c);
-	
+
 	WaitForResponse(CMD_ACK, NULL);
 	getSamples(0, true);
 	return 0;
@@ -197,9 +197,9 @@ int CmdFlexdemod(const char *Cmd) {
 
 	int data[GraphTraceLen];
 	memcpy(data, GraphBuffer, GraphTraceLen);
-	
+
 	size_t size = GraphTraceLen;
-	
+
 	for (i = 0; i < GraphTraceLen; ++i)
 		data[i] = (data[i] < 0) ? -1 : 1;
 
@@ -213,7 +213,7 @@ int CmdFlexdemod(const char *Cmd) {
 		if (i == (start + LONG_WAIT))
 			break;
 	}
-	
+
 	if (start == size - LONG_WAIT) {
 		PrintAndLogEx(NORMAL, "nothing to wait for");
 		return 0;
@@ -221,7 +221,7 @@ int CmdFlexdemod(const char *Cmd) {
 
 	data[start] = 4;
 	data[start+1] = 0;
-	
+
 	uint8_t bits[64] = {0x00};
 
 	i = start;
@@ -250,9 +250,9 @@ int CmdFlexdemod(const char *Cmd) {
 	GraphTraceLen = 32 * 64;
 	i = 0;
 	for (bit = 0; bit < 64; bit++) {
-		
+
 		phase = (bits[bit] == 0) ? 0 : 1;
-		
+
 		for (j = 0; j < 32; j++) {
 			GraphBuffer[i++] = phase;
 			phase = !phase;
@@ -317,7 +317,7 @@ int CmdLFSetConfig(const char *Cmd) {
 
 	//Validations
 	if (errors || cmdp == 0) return usage_lf_config();
-	
+
 	//Bps is limited to 8
 	if (bps >> 4) bps = 8;
 
@@ -352,9 +352,9 @@ bool lf_read(bool silent, uint32_t samples) {
 }
 
 int CmdLFRead(const char *Cmd) {
-	
+
 	if ( IsOffline() ) return 0;
-	
+
 	bool errors = false;
 	bool silent = false;
 	uint32_t samples = 0;
@@ -387,9 +387,9 @@ int CmdLFRead(const char *Cmd) {
 int CmdLFSnoop(const char *Cmd) {
 	uint8_t cmdp = tolower(param_getchar(Cmd, 0));
 	if (cmdp == 'h') return usage_lf_snoop();
-	
+
 	UsbCommand c = {CMD_LF_SNOOP_RAW_ADC_SAMPLES,{0,0,0}};
-	clearCommandBuffer();	
+	clearCommandBuffer();
 	SendCommand(&c);
 	WaitForResponse(CMD_ACK, NULL);
 	getSamples(0, false);
@@ -414,11 +414,11 @@ int CmdLFSim(const char *Cmd) {
 	int gap = 0;
 	sscanf(Cmd, "%i", &gap);
 
-	// convert to bitstream if necessary 
+	// convert to bitstream if necessary
 	ChkBitstream(Cmd);
 
 	PrintAndLogEx(DEBUG, "DEBUG: Sending [%d bytes]\n", GraphTraceLen);
-	
+
 	//can send only 512 bits at a time (1 byte sent per bit...)
 	for (uint16_t i = 0; i < GraphTraceLen; i += USB_CMD_DATA_SIZE) {
 		UsbCommand c = {CMD_UPLOAD_SIM_SAMPLES_125K, {i, FPGA_LF, 0}};
@@ -440,7 +440,7 @@ int CmdLFSim(const char *Cmd) {
 	return 0;
 }
 
-// by marshmellow - sim fsk data given clock, fcHigh, fcLow, invert 
+// by marshmellow - sim fsk data given clock, fcHigh, fcLow, invert
 // - allow pull data from DemodBuffer
 int CmdLFfskSim(const char *Cmd) {
 	//might be able to autodetect FCs and clock from Graphbuffer if using demod buffer
@@ -448,10 +448,10 @@ int CmdLFfskSim(const char *Cmd) {
 	uint8_t fcHigh = 0, fcLow = 0, clk = 0;
 	bool errors = false, separator = false;
 	char hexData[64] = {0x00}; // store entered hex data
-	uint8_t data[255] = {0x00}; 
+	uint8_t data[255] = {0x00};
 	int dataLen = 0;
-	uint8_t cmdp = 0;	
-	
+	uint8_t cmdp = 0;
+
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch (param_getchar(Cmd, cmdp)){
 			case 'h':
@@ -475,11 +475,11 @@ int CmdLFfskSim(const char *Cmd) {
 			case 'd':
 				dataLen = param_getstr(Cmd, cmdp+1, hexData, sizeof(hexData));
 				if (dataLen == 0)
-					errors = true; 
+					errors = true;
 				else
 					dataLen = hextobinarray((char *)data, hexData);
-				   
-				if (dataLen == 0) errors = true; 
+
+				if (dataLen == 0) errors = true;
 				if (errors) PrintAndLogEx(WARNING, "Error getting hex data");
 				cmdp += 2;
 				break;
@@ -489,7 +489,7 @@ int CmdLFfskSim(const char *Cmd) {
 				break;
 		}
 	}
-	
+
 	// No args
 	if (cmdp == 0 && DemodBufferLen == 0) return usage_lf_simfsk();
 
@@ -497,7 +497,7 @@ int CmdLFfskSim(const char *Cmd) {
 	if (errors) return usage_lf_simfsk();
 
 	int firstClockEdge = 0;
-	if (dataLen == 0){ //using DemodBuffer 
+	if (dataLen == 0){ //using DemodBuffer
 		if (clk == 0 || fcHigh == 0 || fcLow == 0){ //manual settings must set them all
 			uint8_t ans = fskClocks(&fcHigh, &fcLow, &clk, &firstClockEdge);
 			if (ans==0){
@@ -522,29 +522,29 @@ int CmdLFfskSim(const char *Cmd) {
 	if (size > USB_CMD_DATA_SIZE) {
 		PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %d - max: %d", size, USB_CMD_DATA_SIZE);
 		size = USB_CMD_DATA_SIZE;
-	} 
+	}
 	UsbCommand c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}};
 
 	memcpy(c.d.asBytes, DemodBuffer, size);
 	clearCommandBuffer();
 	SendCommand(&c);
-	
+
 	setClockGrid(clk, 0);
 	return 0;
 }
 
-// by marshmellow - sim ask data given clock, invert, manchester or raw, separator 
+// by marshmellow - sim ask data given clock, invert, manchester or raw, separator
 // - allow pull data from DemodBuffer
 int CmdLFaskSim(const char *Cmd) {
 	// autodetect clock from Graphbuffer if using demod buffer
 	// needs clock, invert, manchester/raw as m or r, separator as s, and bitstream
 	uint8_t encoding = 1, separator = 0, clk = 0, invert = 0;
 	bool errors = false;
-	char hexData[64] = {0x00}; 
+	char hexData[64] = {0x00};
 	uint8_t data[255] = {0x00}; // store entered hex data
 	int dataLen = 0;
 	uint8_t cmdp = 0;
-	
+
 	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch (tolower(param_getchar(Cmd, cmdp))) {
 			case 'h': return usage_lf_simask();
@@ -575,11 +575,11 @@ int CmdLFaskSim(const char *Cmd) {
 			case 'd':
 				dataLen = param_getstr(Cmd, cmdp+1, hexData, sizeof(hexData));
 				if (dataLen == 0)
-					errors = true; 
+					errors = true;
 				else
 					dataLen = hextobinarray((char *)data, hexData);
-				
-				if (dataLen == 0) errors = true; 
+
+				if (dataLen == 0) errors = true;
 				if (errors) PrintAndLogEx(WARNING, "Error getting hex data, datalen: %d", dataLen);
 				cmdp += 2;
 				break;
@@ -595,26 +595,26 @@ int CmdLFaskSim(const char *Cmd) {
 
 	//Validations
 	if (errors) return usage_lf_simask();
-	
+
 	if (dataLen == 0){ //using DemodBuffer
-		if (clk == 0) 
+		if (clk == 0)
 			clk = GetAskClock("0", false);
 	} else {
 		setDemodBuf(data, dataLen, 0);
 	}
 	if (clk == 0) clk = 64;
 	if (encoding == 0) clk /= 2; //askraw needs to double the clock speed
-	
+
 	size_t size = DemodBufferLen;
 
 	if (size > USB_CMD_DATA_SIZE) {
 		PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %d - max: %d", size, USB_CMD_DATA_SIZE);
 		size = USB_CMD_DATA_SIZE;
 	}
-	
-	PrintAndLogEx(NORMAL, "preparing to sim ask data: %d bits", size);	
 
-	uint16_t arg1, arg2;	
+	PrintAndLogEx(NORMAL, "preparing to sim ask data: %d bits", size);
+
+	uint16_t arg1, arg2;
 	arg1 = clk << 8 | encoding;
 	arg2 = invert << 8 | separator;
 
@@ -625,7 +625,7 @@ int CmdLFaskSim(const char *Cmd) {
 	return 0;
 }
 
-// by marshmellow - sim psk data given carrier, clock, invert 
+// by marshmellow - sim psk data given carrier, clock, invert
 // - allow pull data from DemodBuffer or parameters
 int CmdLFpskSim(const char *Cmd) {
 	//might be able to autodetect FC and clock from Graphbuffer if using demod buffer
@@ -634,11 +634,11 @@ int CmdLFpskSim(const char *Cmd) {
 	uint8_t invert=0;
 	bool errors = false;
 	char hexData[64] = {0x00}; // store entered hex data
-	uint8_t data[255] = {0x00}; 
+	uint8_t data[255] = {0x00};
 	int dataLen = 0;
 	uint8_t cmdp = 0;
 	uint8_t pskType = 1;
-	
+
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch (tolower(param_getchar(Cmd, cmdp))) {
 			case 'h':
@@ -670,11 +670,11 @@ int CmdLFpskSim(const char *Cmd) {
 			case 'd':
 				dataLen = param_getstr(Cmd, cmdp+1, hexData, sizeof(hexData));
 				if (dataLen == 0)
-					errors = true; 
+					errors = true;
 				else
 					dataLen = hextobinarray((char *)data, hexData);
-				    
-				if (dataLen == 0) errors = true; 
+
+				if (dataLen == 0) errors = true;
 				if (errors) PrintAndLogEx(WARNING, "Error getting hex data");
 				cmdp+=2;
 				break;
@@ -693,13 +693,13 @@ int CmdLFpskSim(const char *Cmd) {
 
 	if (dataLen == 0){ //using DemodBuffer
 		PrintAndLogEx(NORMAL, "Getting Clocks");
-		
+
 		if (clk==0) clk = GetPskClock("", false);
 		PrintAndLogEx(NORMAL, "clk: %d",clk);
-		
-		if (!carrier) carrier = GetPskCarrier("", false); 
+
+		if (!carrier) carrier = GetPskCarrier("", false);
 		PrintAndLogEx(NORMAL, "carrier: %d", carrier);
-		
+
 	} else {
 		setDemodBuf(data, dataLen, 0);
 	}
@@ -708,7 +708,7 @@ int CmdLFpskSim(const char *Cmd) {
 
 	if (carrier != 2 && carrier != 4 && carrier != 8 )
 		carrier = 2;
-  
+
 	if (pskType != 1){
 		if (pskType == 2){
 			//need to convert psk2 to psk1 data before sim
@@ -784,14 +784,14 @@ int CmdVchDemod(const char *Cmd) {
 
 	for (i = 0; i < 2048; i += 8) {
 		sum = 0;
-		for (j = 0; j < 8; j++) 
+		for (j = 0; j < 8; j++)
 			sum += GraphBuffer[bestPos+i+j];
-		
+
 		if (sum < 0)
 			bits[i/8] = '.';
 		else
 			bits[i/8] = '1';
-		
+
 		if(abs(sum) < worst) {
 			worst = abs(sum);
 			worstPos = i;
@@ -819,7 +819,7 @@ int CmdVchDemod(const char *Cmd) {
 int CheckChipType(bool getDeviceData) {
 
 	if (!getDeviceData) return 0;
-	
+
 	save_restoreDB(GRAPH_SAVE);
 
 	//check for em4x05/em4x69 chips first
@@ -836,7 +836,7 @@ int CheckChipType(bool getDeviceData) {
 		PrintAndLogEx(SUCCESS, "\nValid T55xx Chip Found");
 		PrintAndLogEx(SUCCESS, "Try " _YELLOW_(`lf t55xx`)" commands");
 		save_restoreGB(GRAPH_RESTORE);
-		return 1;		
+		return 1;
 	}
 
 	save_restoreDB(GRAPH_RESTORE);
@@ -849,16 +849,16 @@ int CmdLFfind(const char *Cmd) {
 	size_t minLength = 2000;
 	char cmdp = tolower(param_getchar(Cmd, 0));
 	char testRaw = param_getchar(Cmd, 1);
-	
+
 	if (strlen(Cmd) > 3 || cmdp == 'h') return usage_lf_find();
-	
+
 	if (cmdp == 'u') testRaw = 'u';
-	
+
 	bool isOnline = (!IsOffline() && (cmdp != '1') );
-	
+
 	if (isOnline)
 		lf_read(true, 30000);
-	
+
 	if (GraphTraceLen < minLength) {
 		PrintAndLogEx(FAILED, "Data in Graphbuffer was too small.");
 		return 0;
@@ -866,9 +866,9 @@ int CmdLFfind(const char *Cmd) {
 
 	PrintAndLogEx(INFO, "NOTE: some demods output possible binary");
 	PrintAndLogEx(INFO, "if it finds something that looks like a tag");
-	PrintAndLogEx(INFO, "False Positives " _YELLOW_(ARE) "possible\n");  
+	PrintAndLogEx(INFO, "False Positives " _YELLOW_(ARE) "possible\n");
 	PrintAndLogEx(INFO, "\nChecking for known tags:\n");
-	
+
 	// only run these tests if device is online
 	if (isOnline) {
 		// only run if graphbuffer is just noise as it should be for hitag
@@ -876,21 +876,21 @@ int CmdLFfind(const char *Cmd) {
 		signal_t *sp = getSignalProperties();
 		if (sp->isnoise) {
 
-			PrintAndLogEx(INFO, "Signal looks just like noise. Looking for Hitag signal now.");	
+			PrintAndLogEx(INFO, "Signal looks just like noise. Looking for Hitag signal now.");
 
 			// 26 === RHT2F_UID_ONLY
 			if (CmdLFHitagReader("26") == 0) { PrintAndLogEx(SUCCESS, "\nValid Hitag Found!"); return 1;}
 			if (CmdCOTAGRead("") > 0) 	{ PrintAndLogEx(SUCCESS, "\nValid COTAG ID Found!"); return 1;}
-			
+
 			PrintAndLogEx(FAILED, "\nNo Data Found! - maybe not an LF tag?");
 		    return 0;
 		}
 	}
-	
+
 	if (EM4x50Read("", false))	{ PrintAndLogEx(SUCCESS, "\nValid EM4x50 ID Found!"); return 1;}
 	if (CmdAWIDDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid AWID ID Found!"); goto out;}
 	if (CmdEM410xDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid EM410x ID Found!"); goto out;}
-	if (CmdFdxDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid FDX-B ID Found!"); goto out;}	
+	if (CmdFdxDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid FDX-B ID Found!"); goto out;}
 	if (CmdGuardDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid Guardall G-Prox II ID Found!"); goto out; }
 	if (CmdHIDDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid HID Prox ID Found!"); goto out;}
 	if (CmdPSKIdteck(""))		{ PrintAndLogEx(SUCCESS, "\nValid Idteck ID Found!"); goto out;}
@@ -901,19 +901,19 @@ int CmdLFfind(const char *Cmd) {
 	if (CmdNexWatchDemod("")) 	{ PrintAndLogEx(SUCCESS, "\nValid NexWatch ID Found!"); goto out;}
 	if (CmdNoralsyDemod(""))	{ PrintAndLogEx(SUCCESS, "\nValid Noralsy ID Found!"); goto out;}
 	if (CmdKeriDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid KERI ID Found!"); goto out;}
-	if (CmdPacDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid PAC/Stanley ID Found!"); goto out;}	
+	if (CmdPacDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid PAC/Stanley ID Found!"); goto out;}
 	if (CmdParadoxDemod(""))	{ PrintAndLogEx(SUCCESS, "\nValid Paradox ID Found!"); goto out;}
-	if (CmdPrescoDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid Presco ID Found!"); goto out;}				 
+	if (CmdPrescoDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid Presco ID Found!"); goto out;}
 	if (CmdPyramidDemod(""))	{ PrintAndLogEx(SUCCESS, "\nValid Pyramid ID Found!"); goto out;}
 	if (CmdSecurakeyDemod(""))	{ PrintAndLogEx(SUCCESS, "\nValid Securakey ID Found!"); goto out;}
-	if (CmdVikingDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid Viking ID Found!"); goto out;}	
+	if (CmdVikingDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid Viking ID Found!"); goto out;}
 	if (CmdVisa2kDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid Visa2000 ID Found!"); goto out;}
 
 	//if (CmdFermaxDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid Fermax ID Found!"); goto out;}
 	// TIdemod?  flexdemod?
-	
+
 	PrintAndLogEx(FAILED, "\nNo known 125/134 KHz tags Found!\n");
-	
+
 	if (testRaw == 'u'){
 		//test unknown tag formats (raw mode)
 		PrintAndLogEx(INFO, "\nChecking for Unknown tags:\n");
@@ -922,31 +922,31 @@ int CmdLFfind(const char *Cmd) {
 
 			PrintAndLogEx(INFO, "Possible Auto Correlation of %d repeating samples",ans);
 
-			if ( ans % 8 == 0) 
+			if ( ans % 8 == 0)
 				PrintAndLogEx(INFO, "Possible %d bytes", (ans / 8));
 		}
 
 		 //fsk
 		if ( GetFskClock("", false) ) {
-			if ( FSKrawDemod("", true) ) { 
+			if ( FSKrawDemod("", true) ) {
 				PrintAndLogEx(NORMAL, "\nUnknown FSK Modulated Tag Found!"); goto out;
 			}
 		}
-		
+
 		bool st = true;
 		if ( ASKDemod_ext("0 0 0", true, false, 1, &st) ) {
 		  PrintAndLogEx(NORMAL, "\nUnknown ASK Modulated and Manchester encoded Tag Found!");
 		  PrintAndLogEx(NORMAL, "\nif it does not look right it could instead be ASK/Biphase - try 'data rawdemod ab'");
 		  goto out;
 		}
-		
+
 		if ( CmdPSK1rawDemod("") ) {
 			PrintAndLogEx(NORMAL, "Possible unknown PSK1 Modulated Tag Found above!\n\nCould also be PSK2 - try 'data rawdemod p2'");
 			PrintAndLogEx(NORMAL, "\nCould also be PSK3 - [currently not supported]");
 			PrintAndLogEx(NORMAL, "\nCould also be NRZ - try 'data nrzrawdemod");
 			goto out;
 		}
-		
+
 		PrintAndLogEx(FAILED, "\nNo Data Found!\n");
 	}
 out:
@@ -970,12 +970,12 @@ static command_t CommandTable[] = {
 	{"keri",		CmdLFKeri,			1, "{ KERI RFIDs...              }"},
 	{"nedap",		CmdLFNedap,			1, "{ Nedap RFIDs...             }"},
 	{"nexwatch",    CmdLFNEXWATCH,      1, "{ NexWatch RFIDs...          }"},
-	{"noralsy",		CmdLFNoralsy,		1, "{ Noralsy RFIDs...           }"},	
+	{"noralsy",		CmdLFNoralsy,		1, "{ Noralsy RFIDs...           }"},
 	{"pac",         CmdLFPac,           1, "{ PAC/Stanley RFIDs...       }"},
 	{"paradox",     CmdLFParadox,       1, "{ Paradox RFIDs...           }"},
 	{"pcf7931",     CmdLFPCF7931,       1, "{ PCF7931 CHIPs...           }"},
 	{"presco",      CmdLFPresco,        1, "{ Presco RFIDs...            }"},
-	{"pyramid",		CmdLFPyramid,       1, "{ Farpointe/Pyramid RFIDs... }"},	
+	{"pyramid",		CmdLFPyramid,       1, "{ Farpointe/Pyramid RFIDs... }"},
 	{"securakey",   CmdLFSecurakey,     1, "{ Securakey RFIDs...         }"},
 	{"ti",          CmdLFTI,            1, "{ TI CHIPs...                }"},
 	{"t55xx",       CmdLFT55XX,         1, "{ T55xx CHIPs...             }"},
@@ -999,7 +999,7 @@ static command_t CommandTable[] = {
 int CmdLF(const char *Cmd) {
 	clearCommandBuffer();
 	CmdsParse(CommandTable, Cmd);
-	return 0; 
+	return 0;
 }
 
 int CmdHelp(const char *Cmd) {

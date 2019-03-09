@@ -18,8 +18,8 @@
 	COUNTRY CODE (ISO3166) or http://cms.abvma.ca/uploads/ManufacturersISOsandCountryCodes.pdf
 	FLAG (animal/non-animal)
 
-	38 IDbits   
-	10 country code 
+	38 IDbits
+	10 country code
 	1 extra app bit
 	14 reserved bits
 	1 animal bit
@@ -78,12 +78,12 @@ int detectFDXB(uint8_t *dest, size_t *size) {
 	return (int)startIdx;
 }
 
-// clearing the topbit needed for the preambl detection. 
+// clearing the topbit needed for the preambl detection.
 static void verify_values(uint32_t countryid, uint64_t animalid){
 	if ((animalid & 0x3FFFFFFFFF) != animalid) {
 		animalid &= 0x3FFFFFFFFF;
 		PrintAndLogEx(INFO, "Animal ID Truncated to 38bits: %"PRIx64, animalid);
-	}	
+	}
 	if ( (countryid & 0x3ff) != countryid ) {
 		countryid &= 0x3ff;
 		PrintAndLogEx(INFO, "Country ID Truncated to 10bits: %03d", countryid);
@@ -95,31 +95,31 @@ int getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t
     // add preamble ten 0x00 and one 0x01
     memset(bits, 0x00, 10);
 	bits[10] = 1;
-	
+
 	// 128bits
     // every 9th bit is 0x01, but we can just fill the rest with 0x01 and overwrite
 	memset(bits, 0x01, 128);
-	
+
     // add preamble ten 0x00 and one 0x01
     memset(bits, 0x00, 10);
 
-	// add reserved 
+	// add reserved
 	num_to_bytebitsLSBF(0x00, 7, bits + 66);
 	num_to_bytebitsLSBF(0x00 >> 7, 7, bits + 74);
 
 	// add animal flag - OK
 	bits[65] = isanimal;
-	
+
 	// add extended flag - OK
 	bits[81] = isextended;
-	
+
 	// add national code 40bits - OK
 	num_to_bytebitsLSBF(national_id >> 0, 8, bits+11);
 	num_to_bytebitsLSBF(national_id >> 8, 8, bits+20);
 	num_to_bytebitsLSBF(national_id >> 16, 8, bits+29);
 	num_to_bytebitsLSBF(national_id >> 24, 8, bits+38);
 	num_to_bytebitsLSBF(national_id >> 32, 6, bits+47);
-	
+
 	// add country code - OK
 	num_to_bytebitsLSBF(country >> 0, 2, bits+53);
 	num_to_bytebitsLSBF(country >> 2, 8, bits+56);
@@ -128,11 +128,11 @@ int getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t
 	uint8_t raw[8];
 	for (uint8_t i=0; i<8; ++i)
 		raw[i] = bytebits_to_byte(bits + 11 + i * 9, 8);
-		
+
 	uint16_t crc = crc16_kermit(raw, 8);
 	num_to_bytebitsLSBF(crc >> 0, 8, bits+83);
 	num_to_bytebitsLSBF(crc >> 8, 8, bits+92);
-	
+
 	// extended data - OK
 	num_to_bytebitsLSBF( extended >> 0 , 8, bits+101);
 	num_to_bytebitsLSBF( extended >> 8 , 8, bits+110);
@@ -147,8 +147,8 @@ int getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t
 // COUNTRY CODE (ISO3166) or http://cms.abvma.ca/uploads/ManufacturersISOsandCountryCodes.pdf
 // FLAG (animal/non-animal)
 /*
-38 IDbits   
-10 country code 
+38 IDbits
+10 country code
 1 extra app bit
 14 reserved bits
 1 animal bit
@@ -161,11 +161,11 @@ int CmdFDXBdemodBI(const char *Cmd){
 
 	int clk = 32;
 	int invert = 1, errCnt = 0, offset = 0, maxErr = 0;
-	uint8_t bs[MAX_DEMOD_BUF_LEN];	
-	size_t size = getFromGraphBuf(bs);	
-	
+	uint8_t bs[MAX_DEMOD_BUF_LEN];
+	size_t size = getFromGraphBuf(bs);
+
 	errCnt = askdemod(bs, &size, &clk, &invert, maxErr, 0, 0);
-	if ( errCnt < 0 || errCnt > maxErr ) { 
+	if ( errCnt < 0 || errCnt > maxErr ) {
 		PrintAndLogEx(DEBUG, "DEBUG: Error - FDXB no data or error found %d, clock: %d", errCnt, clk);
 		return 0;
 	}
@@ -174,8 +174,8 @@ int CmdFDXBdemodBI(const char *Cmd){
 	if (errCnt < 0 || errCnt > maxErr ) {
 		PrintAndLogEx(DEBUG, "DEBUG: Error - FDXB BiphaseRawDecode: %d", errCnt);
 		return 0;
-	} 
-	
+	}
+
 	int preambleIndex = detectFDXB(bs, &size);
 	if (preambleIndex < 0){
 		PrintAndLogEx(DEBUG, "DEBUG: Error - FDXB preamble not found :: %d",preambleIndex);
@@ -185,7 +185,7 @@ int CmdFDXBdemodBI(const char *Cmd){
 		PrintAndLogEx(DEBUG, "DEBUG: Error - FDXB incorrect data length found");
 		return 0;
 	}
-	
+
 	setDemodBuf(bs, 128, preambleIndex);
 
 	// remove marker bits (1's every 9th digit after preamble) (pType = 2)
@@ -231,7 +231,7 @@ int CmdFDXBdemodBI(const char *Cmd){
 
 
 //see ASKDemod for what args are accepted
-//almost the same demod as cmddata.c/CmdFDXBdemodBI 
+//almost the same demod as cmddata.c/CmdFDXBdemodBI
 int CmdFdxDemod(const char *Cmd) {
 
 	//Differential Biphase / di-phase (inverted biphase)
@@ -279,25 +279,25 @@ int CmdFdxDemod(const char *Cmd) {
 
 
 	uint16_t calcCrc = crc16_kermit(raw, 8);
-	
+
 	PrintAndLogEx(SUCCESS, "\nFDX-B / ISO 11784/5 Animal Tag ID Found:  Raw : %s", sprint_hex(raw, 8));
 	PrintAndLogEx(SUCCESS, "Animal ID          %04u-%012" PRIu64, countryCode, NationalCode);
 	PrintAndLogEx(SUCCESS, "National Code      %012" PRIu64 " (0x%" PRIx64 ")", NationalCode, NationalCode);
 	PrintAndLogEx(SUCCESS, "Country Code       %04u", countryCode);
 	PrintAndLogEx(SUCCESS, "Reserved/RFU       %u (0x04%X)", reservedCode,  reservedCode);
-	PrintAndLogEx(SUCCESS, "Animal Tag         %s", animalBit ? _YELLOW_(True) : "False");	
-	PrintAndLogEx(SUCCESS, "Has extended data  %s [0x%X]", dataBlockBit ? _YELLOW_(True) : "False", extended);	
+	PrintAndLogEx(SUCCESS, "Animal Tag         %s", animalBit ? _YELLOW_(True) : "False");
+	PrintAndLogEx(SUCCESS, "Has extended data  %s [0x%X]", dataBlockBit ? _YELLOW_(True) : "False", extended);
 	PrintAndLogEx(SUCCESS, "CRC-16             0x%04X - 0x%04X [%s]", crc16, calcCrc, (calcCrc == crc16) ? _GREEN_(Ok) : "Failed");
 
 	if (g_debugMode) {
-		PrintAndLogEx(DEBUG, "Start marker %d;   Size %d", preambleIndex, size);	
+		PrintAndLogEx(DEBUG, "Start marker %d;   Size %d", preambleIndex, size);
 		char *bin = sprint_bin_break(DemodBuffer, size, 16);
 		PrintAndLogEx(DEBUG, "DEBUG bin stream:\n%s", bin);
 	}
 
 	// set block 0 for later
 	//g_DemodConfig = T55x7_MODULATION_DIPHASE | T55x7_BITRATE_RF_32 | 4 << T55x7_MAXBLOCK_SHIFT;
-	
+
 	return 1;
 }
 
@@ -314,20 +314,20 @@ int CmdFdxClone(const char *Cmd) {
 	uint8_t bits[128];
 	uint8_t *bs = bits;
 	memset(bs, 0, sizeof(bits));
-	
+
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_fdx_clone();
 
 	countryid = param_get32ex(Cmd, 0, 0, 10);
 	animalid = param_get64ex(Cmd, 1, 0, 10);
-	
+
 	verify_values(countryid, animalid);
-	
-	// getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t isextended, uint32_t extended, uint8_t *bits) 
+
+	// getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t isextended, uint32_t extended, uint8_t *bits)
 	if ( !getFDXBits(animalid, countryid, 1, 0, 0, bs)) {
 		PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
 		return 1;
-	}	
+	}
 
 	//Q5
 	if (param_getchar(Cmd, 2) == 'Q' || param_getchar(Cmd, 2) == 'q')
@@ -341,7 +341,7 @@ int CmdFdxClone(const char *Cmd) {
 
 	PrintAndLogEx(INFO, "Preparing to clone FDX-B to T55x7 with animal ID: %04u-%"PRIu64, countryid, animalid);
 	print_blocks(blocks, 5);
-	
+
 	UsbCommand resp;
 	UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}};
 
@@ -367,9 +367,9 @@ int CmdFdxSim(const char *Cmd) {
 
 	countryid = param_get32ex(Cmd, 0, 0, 10);
 	animalid = param_get64ex(Cmd, 1, 0, 10);
-	
+
 	verify_values(countryid, animalid);
-	
+
 	// 32, no STT, BIPHASE INVERTED == diphase
 	uint8_t clk = 32, encoding = 2, separator = 0, invert = 1;
 	uint16_t arg1, arg2;
@@ -381,7 +381,7 @@ int CmdFdxSim(const char *Cmd) {
 
 	UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};
 
-	 //getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t isextended, uint32_t extended, uint8_t *bits) 
+	 //getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t isextended, uint32_t extended, uint8_t *bits)
 	getFDXBits(animalid, countryid, 1, 0, 0, c.d.asBytes);
 	clearCommandBuffer();
 	SendCommand(&c);

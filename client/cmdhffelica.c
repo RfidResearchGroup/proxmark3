@@ -82,20 +82,20 @@ int CmdHFFelicaReader(const char *Cmd) {
 		//SendCommand(&cDisconnect);
 		return 0;
 	}
-	
+
 	felica_card_select_t card;
 	memcpy(&card, (felica_card_select_t *)resp.d.asBytes, sizeof(felica_card_select_t));
 	uint64_t status = resp.arg[0];
-	
+
 	switch(status) {
 		case 1: {
-			if (!silent) 
-				PrintAndLogEx(WARNING, "card timeout"); 
+			if (!silent)
+				PrintAndLogEx(WARNING, "card timeout");
 			break;
 		}
 		case 2: {
 			if (!silent)
-				PrintAndLogEx(WARNING, "card answered wrong"); 
+				PrintAndLogEx(WARNING, "card answered wrong");
 			break;
 		}
 		case 3: {
@@ -105,15 +105,15 @@ int CmdHFFelicaReader(const char *Cmd) {
 		}
 		case 0: {
 			PrintAndLogEx(SUCCESS, "FeliCa tag info");
-			
+
 			PrintAndLogEx(NORMAL, "IDm  %s", sprint_hex(card.IDm, sizeof(card.IDm)));
 			PrintAndLogEx(NORMAL, "  - CODE    %s", sprint_hex(card.code, sizeof(card.code)));
 			PrintAndLogEx(NORMAL, "  - NFCID2  %s", sprint_hex(card.uid, sizeof(card.uid)));
-			
+
 			PrintAndLogEx(NORMAL, "Parameter (PAD) | %s", sprint_hex(card.PMm, sizeof(card.PMm)));
 			PrintAndLogEx(NORMAL, "  - IC CODE %s", sprint_hex(card.iccode, sizeof(card.iccode)));
 			PrintAndLogEx(NORMAL, "  - MRT     %s", sprint_hex(card.mrt, sizeof(card.mrt)));
-			
+
 			PrintAndLogEx(NORMAL, "SERVICE CODE %s", sprint_hex(card.servicecode, sizeof(card.servicecode)));
 			break;
 		}
@@ -125,12 +125,12 @@ int CmdHFFelicaReader(const char *Cmd) {
 int CmdHFFelicaSim(const char *Cmd) {
 	bool errors = false;
 	uint8_t flags = 0;
-	uint8_t tagtype = 1;	
+	uint8_t tagtype = 1;
 	uint8_t cmdp = 0;
 	uint8_t uid[10] = {0,0,0,0,0,0,0,0,0,0};
 	int uidlen = 0;
 	bool verbose =  false;
-	
+
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch (param_getchar(Cmd, cmdp)) {
 			case 'h':
@@ -141,12 +141,12 @@ int CmdHFFelicaSim(const char *Cmd) {
 				// Retrieve the tag type
 				tagtype = param_get8ex(Cmd, cmdp+1, 0, 10);
 				if (tagtype == 0)
-					errors = true; 
+					errors = true;
 				cmdp += 2;
 				break;
 			case 'u':
 			case 'U':
-				// Retrieve the full 4,7,10 byte long uid 
+				// Retrieve the full 4,7,10 byte long uid
 				param_gethex_ex(Cmd, cmdp+1, uid, &uidlen);
 				if (!errors) {
 					PrintAndLogEx(NORMAL, "Emulating ISO18092/FeliCa tag with %d byte UID (%s)", uidlen>>1, sprint_hex(uid, uidlen>>1));
@@ -161,7 +161,7 @@ int CmdHFFelicaSim(const char *Cmd) {
 			case 'e':
 			case 'E':
 				cmdp++;
-				break;				
+				break;
 			default:
 				PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
 				errors = true;
@@ -171,29 +171,29 @@ int CmdHFFelicaSim(const char *Cmd) {
 
 	//Validations
 	if (errors || cmdp == 0) return usage_hf_felica_sim();
-	
-	UsbCommand c = {CMD_FELICA_SIMULATE_TAG,{ tagtype, flags, 0 }};	
+
+	UsbCommand c = {CMD_FELICA_SIMULATE_TAG,{ tagtype, flags, 0 }};
 	memcpy(c.d.asBytes, uid, uidlen>>1);
 	clearCommandBuffer();
-	SendCommand(&c);	
+	SendCommand(&c);
 	UsbCommand resp;
-	
+
 	if ( verbose )
 		PrintAndLogEx(NORMAL, "Press pm3-button to abort simulation");
-	
+
 	while( !ukbhit() ){
-		if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500) ) continue;		
+		if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500) ) continue;
 	}
 	return 0;
 }
 
-int CmdHFFelicaSniff(const char *Cmd) {	
+int CmdHFFelicaSniff(const char *Cmd) {
 
 	uint8_t cmdp = 0;
 	uint64_t samples2skip = 0;
 	uint64_t triggers2skip = 0;
 	bool errors = false;
-			
+
 	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch(param_getchar(Cmd, cmdp)) {
 		case 'h':
@@ -204,7 +204,7 @@ int CmdHFFelicaSniff(const char *Cmd) {
 			samples2skip = param_get32ex(Cmd, cmdp+1, 0, 10);
 			cmdp += 2;
 			break;
-		case 't': 
+		case 't':
 		case 'T':
 			triggers2skip = param_get32ex(Cmd, cmdp+1, 0, 10);
 			cmdp += 2;
@@ -217,7 +217,7 @@ int CmdHFFelicaSniff(const char *Cmd) {
 	}
 	//Validations
 	if (errors || cmdp == 0) return usage_hf_felica_sniff();
-	
+
 	UsbCommand c = {CMD_FELICA_SNOOP, {samples2skip, triggers2skip, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
@@ -231,21 +231,21 @@ int CmdHFFelicaSimLite(const char *Cmd) {
 
     if (!uid)
 		return usage_hf_felica_simlite();
-	
+
 	UsbCommand c = {CMD_FELICA_LITE_SIM, {uid, 0, 0} };
 	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;
 }
- 
+
 static void printSep() {
 	PrintAndLogEx(NORMAL, "------------------------------------------------------------------------------------");
 }
 
 uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace, uint16_t tracelen) {
-	if (tracepos+19 >= tracelen) 
+	if (tracepos+19 >= tracelen)
 		return tracelen;
-	
+
 	trace += tracepos;
 	uint8_t blocknum = trace[0];
 	uint8_t status1 = trace[1];
@@ -276,23 +276,23 @@ uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace, uint16_t tracelen) {
 			uint32_t regA = trace[3] | trace[4] << 8 | trace[5] << 16 | trace[ 6] << 24;
 			uint32_t regB = trace[7] | trace[8] << 8 | trace[9] << 16 | trace[10] << 24;
 			line[0] = 0;
-			for (int j = 0; j < 8; j++) 
+			for (int j = 0; j < 8; j++)
 				snprintf(line + (j*2), sizeof(line)-1-(j*2), "%02x", trace[j+11]);
-			
+
 			PrintAndLogEx(NORMAL,  "REG: regA: %d regB: %d regC: %s ", regA, regB, line);
 			}
 		break;
-		case 0x80: PrintAndLogEx(NORMAL,  "Random Challenge, WO:  %s ", line); break;  
-		case 0x81: PrintAndLogEx(NORMAL,  "MAC, only set on dual read:  %s ", line); break;            
+		case 0x80: PrintAndLogEx(NORMAL,  "Random Challenge, WO:  %s ", line); break;
+		case 0x81: PrintAndLogEx(NORMAL,  "MAC, only set on dual read:  %s ", line); break;
 		case 0x82: {
 			char idd[20];
 			char idm[20];
-			for (int j = 0; j < 8; j++) 
+			for (int j = 0; j < 8; j++)
 				snprintf(idd + (j*2), sizeof(idd)-1-(j*2), "%02x", trace[j+3]);
-			
-			for (int j = 0; j < 6; j++) 
+
+			for (int j = 0; j < 6; j++)
 				snprintf(idm + (j*2), sizeof(idm)-1-(j*2), "%02x", trace[j+13]);
-				
+
 			PrintAndLogEx(NORMAL,  "ID Block, IDd: 0x%s DFC: 0x%02x%02x Arb: %s ", idd, trace[11], trace [12], idm);
 			}
 		break;
@@ -301,16 +301,16 @@ uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace, uint16_t tracelen) {
 			char pmm[20];
 			for (int j = 0; j < 8; j++)
 				snprintf(idm + (j*2), sizeof(idm)-1-(j*2), "%02x", trace[j+3]);
-			
+
 			for (int j = 0; j < 8; j++)
 				snprintf(pmm + (j*2), sizeof(pmm)-1-(j*2), "%02x", trace[j+11]);
-			
+
 			PrintAndLogEx(NORMAL,  "DeviceId:  IDm: 0x%s PMm: 0x%s ", idm, pmm);
 			}
-		break;    
+		break;
 		case 0x84: PrintAndLogEx(NORMAL,  "SER_C: 0x%02x%02x ", trace[3], trace[4]); break;
-		case 0x85: PrintAndLogEx(NORMAL,  "SYS_Cl 0x%02x%02x ", trace[3], trace[4]); break;   
-		case 0x86: PrintAndLogEx(NORMAL,  "CKV (key version): 0x%02x%02x ", trace[3], trace[4]); break;  
+		case 0x85: PrintAndLogEx(NORMAL,  "SYS_Cl 0x%02x%02x ", trace[3], trace[4]); break;
+		case 0x86: PrintAndLogEx(NORMAL,  "CKV (key version): 0x%02x%02x ", trace[3], trace[4]); break;
 		case 0x87: PrintAndLogEx(NORMAL,  "CK (card key), WO:   %s ", line); break;
 		case 0x88: {
 			PrintAndLogEx(NORMAL,  "Memory Configuration (MC):");
@@ -325,15 +325,15 @@ uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace, uint16_t tracelen) {
 			PrintAndLogEx(NORMAL,  "Memory config writable : %s", (trace[3+2] == 0xff) ? "yes" : "no");
 			PrintAndLogEx(NORMAL,  "RW access for S_PAD : %s ", sprint_bin(trace+3, 2) );
 			}
-		break;         
+		break;
 		case 0x90: {
             PrintAndLogEx(NORMAL,  "Write count, RO:   %02x %02x %02x ", trace[3], trace[4], trace[5]);
 			}
-		break; 
+		break;
 		case 0x91: {
             PrintAndLogEx(NORMAL,  "MAC_A, RW (auth):   %s ", line);
            }
-		break; 
+		break;
 		case 0x92:
             PrintAndLogEx(NORMAL,  "State:");
             PrintAndLogEx(NORMAL,  "Polling disabled: %s", trace[3+8] ? "yes" : "no");
@@ -342,7 +342,7 @@ uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace, uint16_t tracelen) {
 		case 0xa0:
             PrintAndLogEx(NORMAL,  "CRC of all bloacks match : %s", (trace[3+2]==0xff) ? "no" : "yes");
 			break;
-		default: 
+		default:
 			PrintAndLogEx(WARNING,  "INVALID %d: %s", blocknum, line);
 		break;
 	}
@@ -360,7 +360,7 @@ int CmdHFFelicaDumpLite(const char *Cmd) {
 	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
-	
+
 	uint8_t timeout = 0;
 	while ( !WaitForResponseTimeout(CMD_ACK, &resp, 2000) ) {
 		timeout++;
@@ -381,32 +381,32 @@ int CmdHFFelicaDumpLite(const char *Cmd) {
 		PrintAndLogEx(WARNING, "\nButton pressed. Aborted.");
 		return 1;
 	}
-	
-	uint64_t tracelen = resp.arg[1];	
+
+	uint64_t tracelen = resp.arg[1];
 	uint8_t *trace = calloc(tracelen, sizeof(uint8_t));
 	if ( trace == NULL ) {
-		PrintAndLogEx(WARNING, "Cannot allocate memory for trace");		
+		PrintAndLogEx(WARNING, "Cannot allocate memory for trace");
 		return 1;
 	}
 
 	// only download data if there is any.
-	if ( tracelen > 0 ) {		
-	
+	if ( tracelen > 0 ) {
+
 		if ( !GetFromDevice(BIG_BUF, trace, tracelen, 0, NULL, 2500, false) ){
 			PrintAndLogEx(WARNING, "command execution time out");
 			free(trace);
 			return 0;
 		}
-		
+
 		PrintAndLogEx(SUCCESS, "Recorded Activity (trace len = %d bytes)", tracelen);
-		
+
 		print_hex_break(trace, tracelen, 32);
-		
+
 		printSep();
 		uint16_t tracepos = 0;
 		while (tracepos < tracelen)
 			tracepos = PrintFliteBlock(tracepos, trace, tracelen);
-		
+
 		printSep();
 	}
 
@@ -440,7 +440,7 @@ int CmdHFFelicaCmdRaw(const char *cmd) {
 				case 'H':
 				case 'h':
 					return usage_hf_felica_raw();
-                case 'r': 
+                case 'r':
                     reply = false;
                     break;
                 case 'c':
@@ -455,7 +455,7 @@ int CmdHFFelicaCmdRaw(const char *cmd) {
                 case 's':
                     active_select = true;
                     break;
-                case 'b': 
+                case 'b':
                     sscanf(cmd+i+2, "%d", &temp);
                     numbits = temp & 0xFFFF;
                     i+=3;
@@ -507,14 +507,14 @@ int CmdHFFelicaCmdRaw(const char *cmd) {
     if (power) {
         c.arg[0] |= FELICA_NO_DISCONNECT;
 	}
-	
+
     if (datalen > 0) {
         c.arg[0] |= FELICA_RAW;
 	}
-			
+
 	// Max buffer is USB_CMD_DATA_SIZE
 	datalen = (datalen > USB_CMD_DATA_SIZE) ? USB_CMD_DATA_SIZE : datalen;
-		
+
     c.arg[1] = (datalen & 0xFFFF) | (uint32_t)(numbits << 16);
     memcpy(c.d.asBytes, data, datalen);
 
@@ -534,7 +534,7 @@ void waitCmdFelica(uint8_t iSelect) {
     UsbCommand resp;
     uint16_t len = 0;
 
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {        
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
         len = iSelect ? (resp.arg[1] & 0xffff) : (resp.arg[0]  & 0xffff);
         PrintAndLogEx(NORMAL, "received %i octets", len);
         if(!len)

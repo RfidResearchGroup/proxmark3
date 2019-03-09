@@ -16,7 +16,7 @@ void SpinDelayUs(int us) {
 
 	// Borrow a PWM unit for my real-time clock
 	AT91C_BASE_PWMC->PWMC_ENA = PWM_CHANNEL(0);
-	
+
 	// 48 MHz / 1024 gives 46.875 kHz
 	AT91C_BASE_PWMC_CH0->PWMC_CMR = PWM_CH_MODE_PRESCALER(10);		// Channel Mode Register
 	AT91C_BASE_PWMC_CH0->PWMC_CDTYR = 0;							// Channel Duty Cycle Register
@@ -63,7 +63,7 @@ uint32_t RAMFUNC GetTickCount(void){
 }
 
 //  -------------------------------------------------------------------------
-//  microseconds timer 
+//  microseconds timer
 //  -------------------------------------------------------------------------
 void StartCountUS(void) {
 	AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1);
@@ -72,19 +72,19 @@ void StartCountUS(void) {
 	// fast clock
 	// tick=1.5mks
 	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS; // timer disable
-	AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK | // MCK(48MHz) / 32 
+	AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK | // MCK(48MHz) / 32
 								AT91C_TC_WAVE | AT91C_TC_WAVESEL_UP_AUTO | AT91C_TC_ACPA_CLEAR |
 								AT91C_TC_ACPC_SET | AT91C_TC_ASWTRG_SET;
 	AT91C_BASE_TC0->TC_RA = 1;
 	AT91C_BASE_TC0->TC_RC = 0xBFFF + 1; // 0xC000
-	
-	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS; // timer disable  
+
+	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS; // timer disable
 	AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_XC1; // from timer 0
-	
+
 	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 	AT91C_BASE_TCB->TCB_BCR = 1;
-	
+
 	while (AT91C_BASE_TC1->TC_CV > 0);
 }
 
@@ -95,7 +95,7 @@ uint32_t RAMFUNC GetCountUS(void){
 }
 
 //  -------------------------------------------------------------------------
-//  Timer for iso14443 commands. Uses ssp_clk from FPGA 
+//  Timer for iso14443 commands. Uses ssp_clk from FPGA
 //  -------------------------------------------------------------------------
 void StartCountSspClk(void) {
 	AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1) | (1 << AT91C_ID_TC2);  // Enable Clock to all timers
@@ -127,7 +127,7 @@ void StartCountSspClk(void) {
 	AT91C_BASE_TC0->TC_RC = 0; 								// RC Compare value = 0; increment TC2 on overflow
 
 	// use TC2 to count TIOA0 pulses (giving us a 32bit counter (TC0/TC2) clocked by ssp_clk)
-	AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKDIS; 				// disable TC2  
+	AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKDIS; 				// disable TC2
 	AT91C_BASE_TC2->TC_CMR = AT91C_TC_CLKS_XC2	 			// TC2 clock = XC2 clock = TIOA0
 							| AT91C_TC_WAVE 				// Waveform Mode
 							| AT91C_TC_WAVESEL_UP;	 		// just count
@@ -136,8 +136,8 @@ void StartCountSspClk(void) {
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;				// enable and reset TC1
 	AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;				// enable and reset TC2
 
-	// synchronize the counter with the ssp_frame signal. 
-	// Note: FPGA must be in any iso14443 mode, otherwise the frame signal would not be present 
+	// synchronize the counter with the ssp_frame signal.
+	// Note: FPGA must be in any iso14443 mode, otherwise the frame signal would not be present
 	while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_FRAME)); 	// wait for ssp_frame to go high (start of frame)
 	while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_FRAME); 		// wait for ssp_frame to be low
 	while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)); 	// wait for ssp_clk to go high
@@ -150,16 +150,16 @@ void StartCountSspClk(void) {
 	// whenever the last three bits of our counter go 0, we can be sure to be in the middle of a frame transfer.
 	// (just started with the transfer of the 4th Bit).
 
-	// The high word of the counter (TC2) will not reset until the low word (TC0) overflows. 
+	// The high word of the counter (TC2) will not reset until the low word (TC0) overflows.
 	// Therefore need to wait quite some time before we can use the counter.
 	while (AT91C_BASE_TC2->TC_CV > 0);
 }
-void ResetSspClk(void) {	
+void ResetSspClk(void) {
 	//enable clock of timer and software trigger
 	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 	AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-	while (AT91C_BASE_TC2->TC_CV > 0);	
+	while (AT91C_BASE_TC2->TC_CV > 0);
 }
 uint32_t RAMFUNC GetCountSspClk(void) {
 	uint32_t tmp_count = (AT91C_BASE_TC2->TC_CV << 16) | AT91C_BASE_TC0->TC_CV;
@@ -186,7 +186,7 @@ void StartTicks(void){
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG; // re-enable timer and wait for TC0
 
 	// second configure TC0 (lower, 0x0000FFFF) 16 bit counter
-	AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK | // MCK(48MHz) / 32 
+	AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK | // MCK(48MHz) / 32
 	                         AT91C_TC_WAVE | AT91C_TC_WAVESEL_UP_AUTO |
 	                         AT91C_TC_ACPA_CLEAR | // RA comperator clears TIOA (carry bit)
 	                         AT91C_TC_ACPC_SET |   // RC comperator sets TIOA (carry bit)
@@ -224,7 +224,7 @@ void WaitTicks(uint32_t ticks){
 	while (GetTicks() < ticks);
 }
 
-// Wait / Spindelay in us (microseconds) 
+// Wait / Spindelay in us (microseconds)
 // 1us = 1.5ticks.
 void WaitUS(uint16_t us){
 	WaitTicks( (uint32_t)us * 3/2 );
@@ -236,5 +236,5 @@ void WaitMS(uint16_t ms){
 // stop clock
 void StopTicks(void){
 	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
-	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;	
+	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 }

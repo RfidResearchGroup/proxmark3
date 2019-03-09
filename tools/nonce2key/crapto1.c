@@ -221,7 +221,7 @@ struct Crypto1State* lfsr_recovery32(uint32_t ks2, uint32_t in)
 
 	// allocate memory for out of place bucket_sort
 	bucket_array_t bucket;
-	
+
 	for (uint32_t i = 0; i < 2; i++) {
 		for (uint32_t j = 0; j <= 0xff; j++) {
 			bucket[i][j].head = malloc(sizeof(uint32_t)<<14);
@@ -423,7 +423,7 @@ uint32_t lfsr_rollback_word(struct Crypto1State *s, uint32_t in, int fb)
 	ret |= lfsr_rollback_bit(s, BEBIT(in, 18), fb) << (18 ^ 24);
 	ret |= lfsr_rollback_bit(s, BEBIT(in, 17), fb) << (17 ^ 24);
 	ret |= lfsr_rollback_bit(s, BEBIT(in, 16), fb) << (16 ^ 24);
-	
+
 	ret |= lfsr_rollback_bit(s, BEBIT(in, 15), fb) << (15 ^ 24);
 	ret |= lfsr_rollback_bit(s, BEBIT(in, 14), fb) << (14 ^ 24);
 	ret |= lfsr_rollback_bit(s, BEBIT(in, 13), fb) << (13 ^ 24);
@@ -432,7 +432,7 @@ uint32_t lfsr_rollback_word(struct Crypto1State *s, uint32_t in, int fb)
 	ret |= lfsr_rollback_bit(s, BEBIT(in, 10), fb) << (10 ^ 24);
 	ret |= lfsr_rollback_bit(s, BEBIT(in, 9), fb) << (9 ^ 24);
 	ret |= lfsr_rollback_bit(s, BEBIT(in, 8), fb) << (8 ^ 24);
-	
+
 	ret |= lfsr_rollback_bit(s, BEBIT(in, 7), fb) << (7 ^ 24);
 	ret |= lfsr_rollback_bit(s, BEBIT(in, 6), fb) << (6 ^ 24);
 	ret |= lfsr_rollback_bit(s, BEBIT(in, 5), fb) << (5 ^ 24);
@@ -482,7 +482,7 @@ uint32_t *lfsr_prefix_ks(uint8_t ks[8], int isodd)
 {
 	uint32_t *candidates = malloc(4 << 10);
 	if(!candidates) return 0;
-	
+
 	uint32_t c,  entry;
 	int size = 0, i, good;
 
@@ -530,7 +530,7 @@ static struct Crypto1State* check_pfx_parity(uint32_t prefix, uint32_t rresp, ui
 	}
 
 	return sl + good;
-} 
+}
 
 /** lfsr_common_prefix
  * Implentation of the common prefix attack.

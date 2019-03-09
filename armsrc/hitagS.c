@@ -63,7 +63,7 @@ static const u32 ht2_f5c = 0x7907287B;			// 0111 1001 0000 0111 0010 1000 0111 1
 #define ht2bs_4a(a,b,c,d)	(~(((a|b)&c)^(a|d)^b))
 #define ht2bs_4b(a,b,c,d)	(~(((d|c)&(a^b))^(d|a|b)))
 #define ht2bs_5c(a,b,c,d,e)	(~((((((c^e)|d)&a)^b)&(c^b))^(((d^e)|a)&((d^b)|c))))
-#define uf20bs				u32		
+#define uf20bs				u32
 
 static u32 f20(const u64 x) {
 	u32 i5;
@@ -127,12 +127,12 @@ static u32 hitag2_byte(u64 *x) {
 
 #define HITAG_T_TAG_ONE_HALF_PERIOD				10
 #define HITAG_T_TAG_TWO_HALF_PERIOD				25
-#define HITAG_T_TAG_THREE_HALF_PERIOD			41 
+#define HITAG_T_TAG_THREE_HALF_PERIOD			41
 #define HITAG_T_TAG_FOUR_HALF_PERIOD    		57
-	
+
 #define HITAG_T_TAG_HALF_PERIOD					16
 #define HITAG_T_TAG_FULL_PERIOD					32
-	
+
 #define HITAG_T_TAG_CAPTURE_ONE_HALF			13
 #define HITAG_T_TAG_CAPTURE_TWO_HALF			25
 #define HITAG_T_TAG_CAPTURE_THREE_HALF			41
@@ -168,24 +168,24 @@ static void hitag_send_bit(int bit) {
 			// AC Coding --__
 			HIGH(GPIO_SSC_DOUT);
 			while (AT91C_BASE_TC0->TC_CV < T0 * 32) {};
-				
+
 			LOW(GPIO_SSC_DOUT);
 			while (AT91C_BASE_TC0->TC_CV < T0 * 64)	{};
-				
+
 		} else {
 			// AC coding -_-_
 			HIGH(GPIO_SSC_DOUT);
 			while (AT91C_BASE_TC0->TC_CV < T0 * 16) {};
-				
+
 			LOW(GPIO_SSC_DOUT);
 			while (AT91C_BASE_TC0->TC_CV < T0 * 32) {};
-				
+
 			HIGH(GPIO_SSC_DOUT);
 			while (AT91C_BASE_TC0->TC_CV < T0 * 48) {};
-				
+
 			LOW(GPIO_SSC_DOUT);
 			while (AT91C_BASE_TC0->TC_CV < T0 * 64) {};
-				
+
 		}
 		LED_A_OFF();
 		break;
@@ -194,21 +194,21 @@ static void hitag_send_bit(int bit) {
 			// AC Coding --__
 			HIGH(GPIO_SSC_DOUT);
 			while (AT91C_BASE_TC0->TC_CV < T0 * HITAG_T_TAG_HALF_PERIOD) {};
-				
+
 			LOW(GPIO_SSC_DOUT);
 			while (AT91C_BASE_TC0->TC_CV < T0 * HITAG_T_TAG_FULL_PERIOD) {};
-				
+
 		} else {
 			// AC coding -_-_
 			HIGH(GPIO_SSC_DOUT);
 			while (AT91C_BASE_TC0->TC_CV < T0 * 8) {};
-				
+
 			LOW(GPIO_SSC_DOUT);
 			while (AT91C_BASE_TC0->TC_CV < T0 * 16) {};
-				
+
 			HIGH(GPIO_SSC_DOUT);
 			while (AT91C_BASE_TC0->TC_CV < T0 * 24) {};
-				
+
 			LOW(GPIO_SSC_DOUT);
 			while (AT91C_BASE_TC0->TC_CV < T0 * 32) {};
 		}
@@ -219,18 +219,18 @@ static void hitag_send_bit(int bit) {
 			// Manchester: Unloaded, then loaded |__--|
 			LOW(GPIO_SSC_DOUT);
 			while (AT91C_BASE_TC0->TC_CV < T0 * 16) {};
-				
+
 			HIGH(GPIO_SSC_DOUT);
 			while (AT91C_BASE_TC0->TC_CV < T0 * 32) {};
-				
+
 		} else {
 			// Manchester: Loaded, then unloaded |--__|
 			HIGH(GPIO_SSC_DOUT);
 			while (AT91C_BASE_TC0->TC_CV < T0 * 16) {};
-				
+
 			LOW(GPIO_SSC_DOUT);
 			while (AT91C_BASE_TC0->TC_CV < T0 * 32) {};
-				
+
 		}
 		LED_A_OFF();
 		break;
@@ -239,18 +239,18 @@ static void hitag_send_bit(int bit) {
 			// Manchester: Unloaded, then loaded |__--|
 			LOW(GPIO_SSC_DOUT);
 			while (AT91C_BASE_TC0->TC_CV < T0 * 8) {};
-				
+
 			HIGH(GPIO_SSC_DOUT);
 			while (AT91C_BASE_TC0->TC_CV < T0 * 16) {};
-				
+
 		} else {
 			// Manchester: Loaded, then unloaded |--__|
 			HIGH(GPIO_SSC_DOUT);
 			while (AT91C_BASE_TC0->TC_CV < T0 * 8) {};
-				
+
 			LOW(GPIO_SSC_DOUT);
 			while (AT91C_BASE_TC0->TC_CV < T0 * 16) {};
-				
+
 		}
 		LED_A_OFF();
 		break;
@@ -288,7 +288,7 @@ static void hitag_reader_send_bit(int bit) {
 	if (test == 1) {
 		// Wait for 4-10 times the carrier period
 		while (AT91C_BASE_TC0->TC_CV < T0 * 6) {};
-			
+
 		//	SpinDelayUs(8*8);
 
 		// Disable modulation, just activates the field again
@@ -297,18 +297,18 @@ static void hitag_reader_send_bit(int bit) {
 		if (bit == 0) {
 			// Zero bit: |_-|
 			while (AT91C_BASE_TC0->TC_CV < T0 * 11) {};
-				
+
 			//		SpinDelayUs(16*8);
 		} else {
 			// One bit: |_--|
 			while (AT91C_BASE_TC0->TC_CV < T0 * 14) {};
-				
+
 			//		SpinDelayUs(22*8);
 		}
 	} else {
 		// Wait for 4-10 times the carrier period
 		while (AT91C_BASE_TC0->TC_CV < T0 * 6) {};
-			
+
 		//	SpinDelayUs(8*8);
 
 		// Disable modulation, just activates the field again
@@ -317,12 +317,12 @@ static void hitag_reader_send_bit(int bit) {
 		if (bit == 0) {
 			// Zero bit: |_-|
 			while (AT91C_BASE_TC0->TC_CV < T0 * 22) {};
-				
+
 			//		SpinDelayUs(16*8);
 		} else {
 			// One bit: |_--|
 			while (AT91C_BASE_TC0->TC_CV < T0 * 28) {};
-				
+
 			//		SpinDelayUs(22*8);
 		}
 	}
@@ -344,7 +344,7 @@ static void hitag_reader_send_frame(const byte_t* frame, size_t frame_len) {
 	HIGH(GPIO_SSC_DOUT);
 // Wait for 4-10 times the carrier period
 	while (AT91C_BASE_TC0->TC_CV < T0 * 6) {};
-		
+
 // Disable modulation, just activates the field again
 	LOW(GPIO_SSC_DOUT);
 }
@@ -891,7 +891,7 @@ static int hitagS_handle_tag_auth(hitag_function htf,uint64_t key, uint64_t NrAr
 		} else if (tag.auth == 0) {
 			tag.pstate = HT_SELECTED;
 		}
-		
+
 	} else if (tag.pstate == HT_AUTHENTICATE && rxlen == 44) {
 		//encrypted con2,password received.
 		crc = CRC_PRESET;
@@ -924,7 +924,7 @@ static int hitagS_handle_tag_auth(hitag_function htf,uint64_t key, uint64_t NrAr
 
 		if (DEBUG)
 			Dbprintf("pwdh0 %02X pwdl0 %02X pwdl1 %02X", pwdh0, pwdl0, pwdl1);
-		
+
 
 		//Dbprintf("%X %02X", rnd, ((rx[4] & 0x0f) * 16) + ((rx[5] & 0xf0) / 16));
 		//rnd += 1;
@@ -932,7 +932,7 @@ static int hitagS_handle_tag_auth(hitag_function htf,uint64_t key, uint64_t NrAr
 		tag.pstate = HT_SELECTED; //tag is now ready for read/write commands
 	}
 	return 0;
-	
+
 }
 
 /*
@@ -1185,7 +1185,7 @@ void ReadHitagS(hitag_function htf, hitag_data* htd) {
 	unsigned char crc;
 	unsigned char pageData[32];
 	page_to_be_written = 0;
-	
+
 	//read given key/challenge
 	byte_t NrAr_[8];
 	uint64_t key = 0;
@@ -1255,10 +1255,10 @@ void ReadHitagS(hitag_function htf, hitag_data* htd) {
 
 	// Capture mode, defaul timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
 	// external trigger rising edge, load RA on falling edge of TIOA.
-	AT91C_BASE_TC1->TC_CMR = 
+	AT91C_BASE_TC1->TC_CMR =
 		AT91C_TC_CLKS_TIMER_DIV1_CLOCK 	|
-		AT91C_TC_ETRGEDG_FALLING 		| 
-		AT91C_TC_ABETRG 				| 
+		AT91C_TC_ETRGEDG_FALLING 		|
+		AT91C_TC_ABETRG 				|
 		AT91C_TC_LDRA_FALLING;
 
 	// Enable and reset counters
@@ -1497,7 +1497,7 @@ void ReadHitagS(hitag_function htf, hitag_data* htd) {
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	
+
 	cmd_send(CMD_ACK, bSuccessful, 0, 0, 0, 0);
 }
 
@@ -1523,7 +1523,7 @@ void WritePageHitagS(hitag_function htf, hitag_data* htd,int page_) {
 	int page = page_;
 	unsigned char crc;
 	byte_t data[4]= {0,0,0,0};
-	
+
 	//read given key/challenge, the page and the data
 	byte_t NrAr_[8];
 	uint64_t key=0;
@@ -1541,7 +1541,7 @@ void WritePageHitagS(hitag_function htf, hitag_data* htd,int page_) {
 		case 04: { //WHTS_KEY
 			memcpy(data,htd->crypto.data,4);
 			DbpString("Authenticating using key:");
-			memcpy(key_,htd->crypto.key,6);	 
+			memcpy(key_,htd->crypto.key,6);
 			Dbhexdump(6,key_,false);
 			key=key_[5] | ((uint64_t)key_[4]) << 8 | ((uint64_t)key_[3]) << 16 | ((uint64_t)key_[2]) << 24 | ((uint64_t)key_[1]) << 32 | ((uint64_t)key_[0]) << 40;
 		} break;
@@ -1639,7 +1639,7 @@ void WritePageHitagS(hitag_function htf, hitag_data* htd,int page_) {
 		//check for valid input
 		if (page == 0) {
 			Dbprintf(
-					"usage: lf hitag writer [03 | 04] [CHALLENGE | KEY] [page] [byte0] [byte1] [byte2] [byte3]");		
+					"usage: lf hitag writer [03 | 04] [CHALLENGE | KEY] [page] [byte0] [byte1] [byte2] [byte3]");
 			bStop = !false;
 		}
 
@@ -1863,7 +1863,7 @@ void check_challenges(bool file_given, byte_t* data) {
 // Set fpga in edge detect with reader field, we can modulate as reader now
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD);
 	SpinDelay(50);
-	
+
 // Set Frequency divisor which will drive the FPGA and analog mux selection
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95);					//125Khz
 	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);

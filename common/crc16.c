@@ -12,17 +12,17 @@ static bool crc_table_init = false;
 static CrcType_t crc_type = CRC_NONE;
 
 void init_table(CrcType_t ct) {
-	
+
 	// same crc algo, and initialised already
-	if ( ct == crc_type && crc_table_init) 
+	if ( ct == crc_type && crc_table_init)
 		return;
-	
+
 	// not the same crc algo. reset table.
 	if ( ct != crc_type)
 		reset_table();
-	
+
 	crc_type = ct;
-	
+
 	switch (ct) {
 		case CRC_14443_A:
 		case CRC_14443_B:
@@ -59,9 +59,9 @@ void generate_table( uint16_t polynomial, bool refin) {
 
             c = c << 1;
         }
-		if (refin) 
+		if (refin)
 			crc = reflect16(crc);
-		
+
 		crc_table[i] = crc;
 	}
     crc_table_init = true;
@@ -80,20 +80,20 @@ uint16_t crc16_fast(uint8_t const *d, size_t n, uint16_t initval, bool refin, bo
 	// only usable with polynom orders of 8, 16, 24 or 32.
 	if (n == 0)
         return (~initval);
-	
+
 	uint16_t crc = initval;
 
-	if (refin) 
+	if (refin)
 		crc = reflect16(crc);
 
-	if (!refin) 
+	if (!refin)
 		while (n--) crc = (crc << 8) ^ crc_table[ ((crc >> 8) ^ *d++) & 0xFF ];
-	else 
+	else
 		while (n--) crc = (crc >> 8) ^ crc_table[ (crc & 0xFF) ^ *d++];
 
-	if (refout^refin) 
+	if (refout^refin)
 		crc = reflect16(crc);
-	
+
 	return crc;
 }
 
@@ -102,14 +102,14 @@ uint16_t update_crc16_ex( uint16_t crc, uint8_t c, uint16_t polynomial ) {
 	uint16_t i, v, tmp = 0;
 
 	v = (crc ^ c) & 0xff;
-	
+
 	for (i = 0; i < 8; i++) {
-		
+
 		if ( (tmp ^ v) & 1 )
 			tmp = ( tmp >> 1 ) ^ polynomial;
 		else
 			tmp >>= 1;
-		
+
 		v >>= 1;
 	}
 	return ((crc >> 8) ^ tmp) & 0xffff;
@@ -130,19 +130,19 @@ uint16_t crc16(uint8_t const *d, size_t length, uint16_t remainder, uint16_t pol
 
 		// xor in at msb
         remainder ^= (c << 8);
-		
-		// 8 iteration loop		
+
+		// 8 iteration loop
         for (uint8_t j = 8; j; --j) {
             if (remainder & 0x8000) {
                 remainder = (remainder << 1) ^ polynomial;
             } else {
                 remainder <<=  1;
             }
-        }		
+        }
     }
-	if (refout) 
+	if (refout)
 		remainder = reflect16(remainder);
-	
+
     return remainder;
 }
 
@@ -150,9 +150,9 @@ void compute_crc(CrcType_t ct, const uint8_t *d, size_t n, uint8_t *first, uint8
 
 	// can't calc a crc on less than 1 byte
 	if ( n == 0 ) return;
-	
+
 	init_table(ct);
-	
+
 	uint16_t crc = 0;
 	switch (ct) {
 		case CRC_14443_A: crc = crc16_a(d, n); break;
@@ -172,7 +172,7 @@ uint16_t crc(CrcType_t ct, const uint8_t *d, size_t n) {
 
 	// can't calc a crc on less than 3 byte. (1byte + 2 crc bytes)
 	if ( n < 3 ) return 0;
-	
+
 	init_table(ct);
 	switch (ct) {
 		case CRC_14443_A: return crc16_a(d, n);
@@ -192,7 +192,7 @@ uint16_t crc(CrcType_t ct, const uint8_t *d, size_t n) {
 // ct   crc type
 // 	d	buffer with data
 //	n	length (including crc)
-// 
+//
 //  This function uses the message + crc bytes in order to compare the "residue" afterwards.
 // crc16 algos like CRC-A become 0x000
 // while CRC-15693 become 0x0F47
@@ -201,14 +201,14 @@ bool check_crc(CrcType_t ct, const uint8_t *d, size_t n) {
 
 	// can't calc a crc on less than 3 byte. (1byte + 2 crc bytes)
 	if ( n < 3 ) return false;
-	
+
 	init_table(ct);
-			
+
 	switch (ct) {
 		case CRC_14443_A:	return (crc16_a(d, n) == 0);
 		case CRC_14443_B:	return (crc16_x25(d, n) == X25_CRC_CHECK);
 		case CRC_15693:		return (crc16_x25(d, n) == X25_CRC_CHECK);
-		case CRC_ICLASS:	return (crc16_iclass(d, n) == 0); 
+		case CRC_ICLASS:	return (crc16_iclass(d, n) == 0);
 		case CRC_FELICA:	return (crc16_xmodem(d, n) == 0);
 		//case CRC_LEGIC:
 		case CRC_CCITT: return (crc16_ccitt(d, n) == 0);
@@ -222,7 +222,7 @@ uint16_t crc16_ccitt(uint8_t const *d, size_t n) {
 	return crc16_fast(d, n, 0xffff, false, false);
 }
 
-// FDX-B ISO11784/85) uses KERMIT 
+// FDX-B ISO11784/85) uses KERMIT
 // poly=0x1021  init=0x0000  refin=true  refout=true  xorout=0x0000 name="KERMIT"
 uint16_t crc16_kermit(uint8_t const *d, size_t n) {
 	return crc16_fast(d, n, 0x0000, true, true);
@@ -231,7 +231,7 @@ uint16_t crc16_kermit(uint8_t const *d, size_t n) {
 // FeliCa uses XMODEM
 // poly=0x1021  init=0x0000  refin=false  refout=false  xorout=0x0000 name="XMODEM"
 uint16_t crc16_xmodem(uint8_t const *d, size_t n) {
-	return crc16_fast(d, n, 0x0000, false, false); 
+	return crc16_fast(d, n, 0x0000, false, false);
 }
 
 // Following standards uses X-25
@@ -239,14 +239,14 @@ uint16_t crc16_xmodem(uint8_t const *d, size_t n) {
 //   ISO 14443 CRC-B
 //   ISO/IEC 13239 (formerly ISO/IEC 3309)
 // poly=0x1021  init=0xffff  refin=true  refout=true  xorout=0xffff name="X-25"
-uint16_t crc16_x25(uint8_t const *d, size_t n) {	
+uint16_t crc16_x25(uint8_t const *d, size_t n) {
 	uint16_t crc = crc16_fast(d, n, 0xffff, true, true);
 	crc = ~crc;
 	return crc;
 }
 // CRC-A (14443-3)
 // poly=0x1021 init=0xc6c6 refin=true refout=true xorout=0x0000 name="CRC-A"
-uint16_t crc16_a(uint8_t const *d, size_t n) {	
+uint16_t crc16_a(uint8_t const *d, size_t n) {
 	return crc16_fast(d, n, 0xC6C6, true, true);
 }
 
@@ -258,7 +258,7 @@ uint16_t crc16_iclass(uint8_t const *d, size_t n) {
 	return crc16_fast(d, n, 0x4807, true, true);
 }
 
-// This CRC-16 is used in Legic Advant systems. 
+// This CRC-16 is used in Legic Advant systems.
 // poly=0xB400,  init=depends  refin=true  refout=true  xorout=0x0000  check=  name="CRC-16/LEGIC"
 uint16_t crc16_legic(uint8_t const *d, size_t n, uint8_t uidcrc) {
 	uint16_t initial = uidcrc << 8 | uidcrc;

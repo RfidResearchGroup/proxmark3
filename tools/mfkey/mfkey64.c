@@ -26,7 +26,7 @@ int main (int argc, char *argv[]) {
 
 	int encc = argc - 6;
 	int enclen[encc];
-	uint8_t enc[encc][120]; 
+	uint8_t enc[encc][120];
 
 	sscanf(argv[1],"%x",&uid);
 	sscanf(argv[2],"%x",&nt);
@@ -39,7 +39,7 @@ int main (int argc, char *argv[]) {
 			sscanf(argv[i+6] + i2*2, "%2x", (unsigned int *)&enc[i][i2]);
 		}
 	}
-	
+
 	printf("Recovering key for:\n");
 
 	printf("  uid: %08x\n",uid);
@@ -60,7 +60,7 @@ int main (int argc, char *argv[]) {
 	printf("\nLFSR succesors of the tag challenge:\n");
 	printf("  nt': %08x\n",prng_successor(nt, 64));
 	printf(" nt'': %08x\n",prng_successor(nt, 96));
-	
+
 	// Extract the keystream from the messages
 	printf("\nKeystream used to generate {ar} and {at}:\n");
 	ks2 = ar_enc ^ prng_successor(nt, 64);
@@ -73,11 +73,11 @@ int main (int argc, char *argv[]) {
 	// Decrypting communication using keystream if presented
 	if (argc > 6 ) {
 		printf("\nDecrypted communication:\n");
-		uint8_t ks4; 
+		uint8_t ks4;
 		int rollb = 0;
 		for (int i = 0; i < encc; i++) {
 			printf("{dec%d}: ", i);
-			for (int i2 = 0; i2 < enclen[i]; i2++) {  
+			for (int i2 = 0; i2 < enclen[i]; i2++) {
 				ks4 = crypto1_byte(revstate, 0, 0);
 				printf("%02x", ks4 ^ enc[i][i2]);
 				rollb += 1;
@@ -87,7 +87,7 @@ int main (int argc, char *argv[]) {
 		for (int i = 0; i < rollb; i++)
 			lfsr_rollback_byte(revstate, 0, 0);
 	}
-  
+
 	lfsr_rollback_word(revstate, 0, 0);
 	lfsr_rollback_word(revstate, 0, 0);
 	lfsr_rollback_word(revstate, nr_enc, 1);

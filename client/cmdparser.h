@@ -9,7 +9,7 @@
 //-----------------------------------------------------------------------------
 
 #ifndef CMDPARSER_H__
-#define CMDPARSER_H__ 
+#define CMDPARSER_H__
 
 typedef struct command_s
 {

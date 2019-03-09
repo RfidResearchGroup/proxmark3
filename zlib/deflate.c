@@ -61,14 +61,14 @@ const char deflate_copyright[] =
  */
 
 //-----------------------------------------------------------------------------
-// This version of zlib is modified for use within the Proxmark3 project. 
+// This version of zlib is modified for use within the Proxmark3 project.
 // Files from the original distribution which are not required for this
 // purpose are not included. All modifications can easily be found
 // by searching for #ifdef ZLIB_PM3_TUNED and #ifndef ZLIB_PM3_TUNED.
 //-----------------------------------------------------------------------------
 
 
- 
+
 /* ===========================================================================
  *  Function prototypes.
  */
@@ -1776,7 +1776,7 @@ local uInt try_harder(s, strstart, lookahead, hash_head)
 		} else {
 			combined_gain = s->strstart - strstart + 1 - MIN_MATCH;  // (possibly truncated) previous_length - 3 literals
 		}
-		if (match_length < MIN_MATCH) { 
+		if (match_length < MIN_MATCH) {
 			combined_gain += 0;							// no gain
 		} else {
 			combined_gain += match_length - MIN_MATCH; 	// match_length bytes are coded as three literals
@@ -1791,7 +1791,7 @@ local uInt try_harder(s, strstart, lookahead, hash_head)
 		hash_head = s->head[s->ins_h];
 	} while (s->strstart <= strstart-1 + prev_length 			// try to truncate the previous match to 1, 3, ... prev_length
 			&& s->strstart <= s->window_size - MIN_LOOKAHEAD);	// watch out for the end of the input
-	
+
 	s->strstart = strstart_save;
 	s->lookahead = lookahead_save;
 	s->ins_h = ins_h_save;

@@ -125,7 +125,7 @@ void LCDInit(void)
 	LCDSend(PRAMWR);			// Write to display
 	i=LCD_XRES*LCD_YRES;
 	while(i--) LCDSend(WHITE);
-  
+
   // test text on different colored backgrounds
 	LCDString(" The quick brown fox  ",	(char *)&FONT6x8,1,1+8*0,WHITE  ,BLACK );
 	LCDString("  jumped over the     ",	(char *)&FONT6x8,1,1+8*1,BLACK  ,WHITE );
@@ -135,7 +135,7 @@ void LCDInit(void)
 	LCDString("UuVvWwXxYyZz0123456789",	(char *)&FONT6x8,1,1+8*5,BLUE   ,YELLOW);
 	LCDString("`-=[]_;',./~!@#$%^&*()",	(char *)&FONT6x8,1,1+8*6,BLACK  ,CYAN  );
 	LCDString("     _+{}|:\\\"<>?     ",(char *)&FONT6x8,1,1+8*7,BLUE  ,MAGENTA);
-  
+
 	// color bands
 	LCDFill(0, 1+8* 8, 132, 8, BLACK);
 	LCDFill(0, 1+8* 9, 132, 8, WHITE);

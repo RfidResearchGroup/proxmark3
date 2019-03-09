@@ -21,14 +21,14 @@ static const manufactureName manufactureMapping[] = {
 	// ID,  "Vendor Country"
 	{ 0x01, "Motorola UK" },
 	{ 0x02, "ST Microelectronics SA France" },
-	{ 0x03, "Hitachi, Ltd Japan" }, 
-	{ 0x04, "NXP Semiconductors Germany" }, 
-	{ 0x05, "Infineon Technologies AG Germany" }, 
-	{ 0x06, "Cylink USA" }, 
+	{ 0x03, "Hitachi, Ltd Japan" },
+	{ 0x04, "NXP Semiconductors Germany" },
+	{ 0x05, "Infineon Technologies AG Germany" },
+	{ 0x06, "Cylink USA" },
 	{ 0x07, "Texas Instrument France" },
-	{ 0x08, "Fujitsu Limited Japan" }, 
-	{ 0x09, "Matsushita Electronics Corporation, Semiconductor Company Japan" }, 
-	{ 0x0A, "NEC Japan" }, 
+	{ 0x08, "Fujitsu Limited Japan" },
+	{ 0x09, "Matsushita Electronics Corporation, Semiconductor Company Japan" },
+	{ 0x0A, "NEC Japan" },
 	{ 0x0B, "Oki Electric Industry Co. Ltd Japan" },
 	{ 0x0C, "Toshiba Corp. Japan" },
 	{ 0x0D, "Mitsubishi Electric Corp. Japan" },
@@ -69,7 +69,7 @@ static const manufactureName manufactureMapping[] = {
 	{ 0x30, "BeeDar Technology Inc. USA" },
 	{ 0x31, "RFIDsec Denmark" },
 	{ 0x32, "Schweizer Electronic AG Germany" },
-	{ 0x33, "AMIC Technology Corp Taiwan" }, 
+	{ 0x33, "AMIC Technology Corp Taiwan" },
 	{ 0x34, "Mikron JSC Russia" },
 	{ 0x35, "Fraunhofer Institute for Photonic Microsystems Germany" },
 	{ 0x36, "IDS Microchip AG Switzerland" },
@@ -81,7 +81,7 @@ static const manufactureName manufactureMapping[] = {
 	{ 0x3C, "Verayo Inc. USA" },
 	{ 0x3D, "HID Global USA" },
 	{ 0x3E, "Productivity Engineering Gmbh Germany" },
-	{ 0x3F, "Austriamicrosystems AG (reserved) Austria" }, 
+	{ 0x3F, "Austriamicrosystems AG (reserved) Austria" },
 	{ 0x40, "Gemalto SA France" },
 	{ 0x41, "Renesas Electronics Corporation Japan" },
 	{ 0x42, "3Alogics Inc Korea" },
@@ -129,24 +129,24 @@ static const manufactureName manufactureMapping[] = {
 	{ 0x6C, "Wisesec Ltd Israel" },
 	{ 0x7C, "DB HiTek Co Ltd Korea" },
 	{ 0x7D, "SATO Vicinity Australia" },
-	{ 0x7E, "Holtek Taiwan" },	
+	{ 0x7E, "Holtek Taiwan" },
 	{ 0x00, "no tag-info available" } // must be the last entry
 };
 
 // get a product description based on the UID
 //		uid[8] 	tag uid
-// returns description of the best match	
+// returns description of the best match
 char* getTagInfo(uint8_t uid) {
 
 	int i;
 	int len = sizeof(manufactureMapping) / sizeof(manufactureName);
-	
-	for ( i = 0; i < len; ++i ) 
-		if ( uid == manufactureMapping[i].uid) 
+
+	for ( i = 0; i < len; ++i )
+		if ( uid == manufactureMapping[i].uid)
 			return manufactureMapping[i].desc;
 
 	//No match, return default
-	return manufactureMapping[len-1].desc; 
+	return manufactureMapping[len-1].desc;
 }
 
 // iso14a apdu input frame length
@@ -171,7 +171,7 @@ int usage_hf_14a_sim(void) {
 //	PrintAndLogEx(NORMAL, "    u     : 4, 7 or 10 byte UID");
 	PrintAndLogEx(NORMAL, "    u     : 4, 7 byte UID");
 	PrintAndLogEx(NORMAL, "    x     : (Optional) Performs the 'reader attack', nr/ar attack against a reader");
-	PrintAndLogEx(NORMAL, "    e     : (Optional) Fill simulator keys from found keys");	
+	PrintAndLogEx(NORMAL, "    e     : (Optional) Fill simulator keys from found keys");
 	PrintAndLogEx(NORMAL, "    v     : (Optional) Verbose");
 	PrintAndLogEx(NORMAL, "Examples:");
 	PrintAndLogEx(NORMAL, "          hf 14a sim t 1 u 11223344 x");
@@ -232,11 +232,11 @@ int Hf14443_4aGetCardData(iso14a_card_select_t * card) {
 
 	UsbCommand resp;
 	WaitForResponse(CMD_ACK,&resp);
-	
+
 	memcpy(card, (iso14a_card_select_t *)resp.d.asBytes, sizeof(iso14a_card_select_t));
 
 	uint64_t select_status = resp.arg[0];		// 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
-	
+
 	if(select_status == 0) {
 		PrintAndLog("E->iso14443a card select failed");
 		return 1;
@@ -261,22 +261,22 @@ int Hf14443_4aGetCardData(iso14a_card_select_t * card) {
 		return 1;
 	}
 	PrintAndLog(" ATS: %s", sprint_hex(card->ats, card->ats_len));
-	
+
 	return 0;
 }
 
 int CmdHF14AReader(const char *Cmd) {
 
 	uint32_t cm = ISO14A_CONNECT;
-	bool disconnectAfter = true, silent = false;	
+	bool disconnectAfter = true, silent = false;
 	int cmdp = 0;
-	
+
 	while (param_getchar(Cmd, cmdp) != 0x00) {
 		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'h':
 			return usage_hf_14a_reader();
 		case '3':
-			cm |= ISO14A_NO_RATS; 
+			cm |= ISO14A_NO_RATS;
 			break;
 		case 'k':
 			disconnectAfter = false;
@@ -290,13 +290,13 @@ int CmdHF14AReader(const char *Cmd) {
 		default:
 			PrintAndLogEx(WARNING, "Unknown command.");
 			return 1;
-		}			
+		}
 		cmdp++;
 	}
 
 	if (!disconnectAfter)
-		cm |= ISO14A_NO_DISCONNECT; 
-	
+		cm |= ISO14A_NO_DISCONNECT;
+
 	UsbCommand c = {CMD_READER_ISO_14443a, {cm, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
@@ -308,18 +308,18 @@ int CmdHF14AReader(const char *Cmd) {
 			DropField();
 			return 1;
 		}
-	
+
 		iso14a_card_select_t card;
 		memcpy(&card, (iso14a_card_select_t *)resp.d.asBytes, sizeof(iso14a_card_select_t));
 
-		/* 
+		/*
 			0: couldn't read
 			1: OK, with ATS
 			2: OK, no ATS
-			3: proprietary Anticollision	
+			3: proprietary Anticollision
 		*/
 		uint64_t select_status = resp.arg[0];
-		
+
 		if (select_status == 0) {
 			if (!silent) PrintAndLogEx(WARNING, "iso14443a card select failed");
 			DropField();
@@ -340,7 +340,7 @@ int CmdHF14AReader(const char *Cmd) {
 		if(card.ats_len >= 3) {			// a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
 			PrintAndLogEx(NORMAL, " ATS : %s", sprint_hex(card.ats, card.ats_len));
 		}
-		
+
 		if (!disconnectAfter) {
 			if (!silent) PrintAndLogEx(SUCCESS, "Card is selected. You can now start sending commands");
 		}
@@ -354,12 +354,12 @@ int CmdHF14AReader(const char *Cmd) {
 }
 
 int CmdHF14AInfo(const char *Cmd) {
-	
+
 	if (Cmd[0] == 'h' || Cmd[0] ==  'H') return usage_hf_14a_info();
-	
+
 	bool silent = (Cmd[0] == 's' || Cmd[0] ==  'S');
 	bool do_nack_test = (Cmd[0] == 'n' || Cmd[0] ==  'N');
-	
+
 	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
@@ -369,18 +369,18 @@ int CmdHF14AInfo(const char *Cmd) {
 		DropField();
 		return 0;
 	}
-	
+
 	iso14a_card_select_t card;
 	memcpy(&card, (iso14a_card_select_t *)resp.d.asBytes, sizeof(iso14a_card_select_t));
 
-	/* 
+	/*
 		0: couldn't read
 		1: OK, with ATS
 		2: OK, no ATS
-		3: proprietary Anticollision	
+		3: proprietary Anticollision
 	*/
 	uint64_t select_status = resp.arg[0];
-	
+
 	if (select_status == 0) {
 		if (!silent) PrintAndLogEx(WARNING, "iso14443a card select failed");
 		DropField();
@@ -400,16 +400,16 @@ int CmdHF14AInfo(const char *Cmd) {
 
 	bool isMifareClassic = true;
 	switch (card.sak) {
-		case 0x00: 
+		case 0x00:
 			isMifareClassic = false;
-			
+
 			// ******** is card of the MFU type (UL/ULC/NTAG/ etc etc)
 			DropField();
-			
+
 			uint32_t tagT = GetHF14AMfU_Type();
 			if (tagT != UL_ERROR)
 				ul_print_type(tagT, 0);
-			else 
+			else
 				PrintAndLogEx(NORMAL, "TYPE: Possible AZTEK (iso14443a compliant)");
 
 			// reconnect for further tests
@@ -420,11 +420,11 @@ int CmdHF14AInfo(const char *Cmd) {
 			SendCommand(&c);
 			UsbCommand resp;
 			WaitForResponse(CMD_ACK, &resp);
-			
+
 			memcpy(&card, (iso14a_card_select_t *)resp.d.asBytes, sizeof(iso14a_card_select_t));
 
 			select_status = resp.arg[0];		// 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS
-			
+
 			if(select_status == 0) {
 				DropField();
 				return 0;
@@ -451,7 +451,7 @@ int CmdHF14AInfo(const char *Cmd) {
 	if ( card.uidlen > 4 ) {
 		PrintAndLogEx(NORMAL, "MANUFACTURER : %s", getTagInfo(card.uid[0]));
 	}
-	
+
 	// try to request ATS even if tag claims not to support it
 	if (select_status == 2) {
 		uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
@@ -462,10 +462,10 @@ int CmdHF14AInfo(const char *Cmd) {
 		clearCommandBuffer();
 		SendCommand(&c);
 		WaitForResponse(CMD_ACK,&resp);
-		
+
 	    memcpy(card.ats, resp.d.asBytes, resp.arg[0]);
 		card.ats_len = resp.arg[0];				// note: ats_len includes CRC Bytes
-	} 
+	}
 
 	if(card.ats_len >= 3) {			// a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
 		bool ta1 = 0, tb1 = 0, tc1 = 0;
@@ -479,13 +479,13 @@ int CmdHF14AInfo(const char *Cmd) {
 		if (card.ats[0] != card.ats_len - 2) {
 			PrintAndLogEx(NORMAL, "ATS may be corrupted. Length of ATS (%d bytes incl. 2 Bytes CRC) doesn't match TL", card.ats_len);
 		}
-		
+
 		if (card.ats[0] > 1) {		// there is a format byte (T0)
 			ta1 = (card.ats[1] & 0x10) == 0x10;
 			tb1 = (card.ats[1] & 0x20) == 0x20;
 			tc1 = (card.ats[1] & 0x40) == 0x40;
 			int16_t fsci = card.ats[1] & 0x0f;
-			
+
 			PrintAndLogEx(NORMAL, "       -  T0 : TA1 is%s present, TB1 is%s present, "
 					"TC1 is%s present, FSCI is %d (FSC = %ld)",
 				(ta1 ? "" : " NOT"),
@@ -538,7 +538,7 @@ int CmdHF14AInfo(const char *Cmd) {
 				} else if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x00\x35\xC7", 7) == 0) {
 					tip = "-> MIFARE Plus S 2K or 4K";
 				}
-			} 
+			}
 			PrintAndLogEx(NORMAL, "       -  HB : %s%s", sprint_hex(card.ats + pos, card.ats[0] - pos), tip);
 			if (card.ats[pos] == 0xC1) {
 				PrintAndLogEx(NORMAL, "               c1 -> Mifare or (multiple) virtual cards of various type");
@@ -573,9 +573,9 @@ int CmdHF14AInfo(const char *Cmd) {
 	} else {
 		PrintAndLogEx(INFO, "proprietary non iso14443-4 card found, RATS not supported");
 	}
-	
+
 	detect_classic_magic();
-	
+
 	if (isMifareClassic) {
 		int res = detect_classic_prng();
 		if ( res == 1 )
@@ -584,11 +584,11 @@ int CmdHF14AInfo(const char *Cmd) {
 			PrintAndLogEx(SUCCESS, "Prng detection: " _YELLOW_(HARD));
 		else
 			PrintAndLogEx(FAILED, "prng detection:  " _RED_(failed));
-		
+
 		if ( do_nack_test )
 			detect_classic_nackbug(silent);
 	}
-	
+
 	return select_status;
 }
 
@@ -610,11 +610,11 @@ int CmdHF14ACUIDs(const char *Cmd) {
 			PrintAndLogEx(NORMAL, "\n[!] aborted via keyboard!\n");
 			break;
 		}
-		
+
 		// execute anticollision procedure
 		UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0}};
 		SendCommand(&c);
-    
+
 		UsbCommand resp;
 		WaitForResponse(CMD_ACK,&resp);
 
@@ -639,7 +639,7 @@ int CmdHF14ACUIDs(const char *Cmd) {
 int CmdHF14ASim(const char *Cmd) {
 	bool errors = false;
 	uint8_t flags = 0;
-	uint8_t tagtype = 1;	
+	uint8_t tagtype = 1;
 	uint8_t cmdp = 0;
 	uint8_t uid[10] = {0,0,0,0,0,0,0,0,0,0};
 	int uidlen = 0;
@@ -647,7 +647,7 @@ int CmdHF14ASim(const char *Cmd) {
 	bool setEmulatorMem = false;
 	bool verbose = false;
 	nonces_t data[1];
-	
+
 	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch(param_getchar(Cmd, cmdp)) {
 			case 'h':
@@ -658,19 +658,19 @@ int CmdHF14ASim(const char *Cmd) {
 				// Retrieve the tag type
 				tagtype = param_get8ex(Cmd, cmdp+1, 0, 10);
 				if (tagtype == 0)
-					errors = true; 
+					errors = true;
 				cmdp += 2;
 				break;
 			case 'u':
 			case 'U':
-				// Retrieve the full 4,7,10 byte long uid 
+				// Retrieve the full 4,7,10 byte long uid
 				param_gethex_ex(Cmd, cmdp+1, uid, &uidlen);
 				switch(uidlen) {
 					//case 20: flags |= FLAG_10B_UID_IN_DATA; break;
 					case 14: flags |= FLAG_7B_UID_IN_DATA; break;
 					case  8: flags |= FLAG_4B_UID_IN_DATA; break;
 					default: errors = true;	break;
-				}				
+				}
 				if (!errors) {
 					PrintAndLogEx(SUCCESS, "Emulating ISO/IEC 14443 type A tag with %d byte UID (%s)", uidlen>>1, sprint_hex(uid, uidlen>>1));
 					useUIDfromEML = false;
@@ -691,7 +691,7 @@ int CmdHF14ASim(const char *Cmd) {
 			case 'E':
 				setEmulatorMem = true;
 				cmdp++;
-				break;				
+				break;
 			default:
 				PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
 				errors = true;
@@ -702,22 +702,22 @@ int CmdHF14ASim(const char *Cmd) {
 	//Validations
 	if (errors || cmdp == 0) return usage_hf_14a_sim();
 
-	if ( useUIDfromEML ) 
+	if ( useUIDfromEML )
 		flags |= FLAG_UID_IN_EMUL;
-	
-	UsbCommand c = {CMD_SIMULATE_TAG_ISO_14443a,{ tagtype, flags, 0 }};	
+
+	UsbCommand c = {CMD_SIMULATE_TAG_ISO_14443a,{ tagtype, flags, 0 }};
 	memcpy(c.d.asBytes, uid, uidlen>>1);
 	clearCommandBuffer();
-	SendCommand(&c);	
+	SendCommand(&c);
 	UsbCommand resp;
-	
+
 	PrintAndLogEx(SUCCESS, "press pm3-button to abort simulation");
-	
+
 	while( !ukbhit() ){
 		if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500) ) continue;
 		if ( !(flags & FLAG_NR_AR_ATTACK) ) break;
 		if ( (resp.arg[0] & 0xffff) != CMD_SIMULATE_MIFARE_CARD ) break;
-			
+
 		memcpy(data, resp.d.asBytes, sizeof(data) );
 		readerAttack(data[0], setEmulatorMem, verbose);
 	}
@@ -726,7 +726,7 @@ int CmdHF14ASim(const char *Cmd) {
 }
 
 int CmdHF14ASniff(const char *Cmd) {
-	int param = 0;	
+	int param = 0;
 	uint8_t ctmp;
 	for (int i = 0; i < 2; i++) {
 		ctmp = tolower(param_getchar(Cmd, i));
@@ -744,7 +744,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
 	static bool responseNum = false;
 	uint16_t cmdc = 0;
 	*dataoutlen = 0;
-	
+
 	if (activateField) {
 		responseNum = false;
 		UsbCommand resp;
@@ -769,8 +769,8 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
 		}
 
 		if (resp.arg[0] == 2) {		// 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
-			// get ATS 
-			UsbCommand cr = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0}}; 
+			// get ATS
+			UsbCommand cr = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0}};
 			uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
 			memcpy(cr.d.asBytes, rats, 2);
 			SendCommand(&cr);
@@ -778,52 +778,52 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
 				PrintAndLogEx(ERR, "Proxmark connection timeout.");
 				return 1;
 			}
-			
+
 			if (resp.arg[0] <= 0) { // ats_len
 				PrintAndLogEx(ERR, "Can't get ATS.");
 				return 1;
 			}
 		}
 	}
-	
+
 	if (leaveSignalON)
 		cmdc |= ISO14A_NO_DISCONNECT;
 
-	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_APPEND_CRC | cmdc, (datainlen & 0xFFFF) + 2, 0}}; 
+	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_APPEND_CRC | cmdc, (datainlen & 0xFFFF) + 2, 0}};
 	uint8_t header[] = {0x0a | responseNum, 0x00};
 	responseNum ^= 1;
 	memcpy(c.d.asBytes, header, 2);
 	memcpy(&c.d.asBytes[2], datain, datainlen);
 	SendCommand(&c);
-	
+
     uint8_t *recv;
     UsbCommand resp;
 
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         recv = resp.d.asBytes;
         int iLen = resp.arg[0];
-		
+
         if(!iLen) {
 			PrintAndLogEx(ERR, "No card response.");
             return 1;
 		}
-		
+
 		*dataoutlen = iLen - 2;
 		if (*dataoutlen < 0)
 			*dataoutlen = 0;
-		
+
 		if (maxdataoutlen && *dataoutlen > maxdataoutlen) {
 			PrintAndLogEx(ERR, "Buffer too small(%d). Needs %d bytes", *dataoutlen, maxdataoutlen);
 			return 2;
 		}
-		
+
 		if (recv[0] != header[0]) {
 			PrintAndLogEx(ERR, "iso14443-4 framing error. Card send %2x must be %2x", dataout[0], header[0]);
 			return 2;
 		}
-		
+
 		memcpy(dataout, &recv[2], *dataoutlen);
-		
+
 		// CRC Check
 		if (iLen == -1) {
 			PrintAndLogEx(ERR, "ISO 14443A CRC error.");
@@ -835,7 +835,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
         PrintAndLogEx(ERR, "Reply timeout.");
 		return 4;
     }
-	
+
 	return 0;
 }
 
@@ -846,8 +846,8 @@ int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
 
 	if (card)
 		memset(card, 0, sizeof(iso14a_card_select_t));
-	
-	DropField();	
+
+	DropField();
 
 	// Anticollision + SELECT card
 	UsbCommand ca = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}};
@@ -869,8 +869,8 @@ int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
 	}
 
 	if (resp.arg[0] == 2) {		// 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
-		// get ATS 
-		UsbCommand cr = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0}}; 
+		// get ATS
+		UsbCommand cr = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0}};
 		uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
 		memcpy(cr.d.asBytes, rats, 2);
 		SendCommand(&cr);
@@ -878,7 +878,7 @@ int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
 			PrintAndLogEx(ERR, "Proxmark connection timeout.");
 			return 1;
 		}
-		
+
 		if (resp.arg[0] <= 0) { // ats_len
 			PrintAndLogEx(ERR, "Can't get ATS.");
 			return 1;
@@ -898,39 +898,39 @@ int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
 			if (fsci < sizeof(atsFSC))
 				frameLength = atsFSC[fsci];
 		}
-		
+
 		if (card)
 			memcpy(card, vcard, sizeof(iso14a_card_select_t));
 	}
-	
+
 	if (disconnect)
-		DropField();	
+		DropField();
 
 	return 0;
 }
 
 int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool activateField, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, bool *chainingout) {
 	*chainingout = false;
-	
+
 	if (activateField) {
 		// select with no disconnect and set frameLength
 		int selres = SelectCard14443_4(false, NULL);
 		if (selres)
 			return selres;
 	}
-	
+
 	uint16_t cmdc = 0;
 	if (chainingin)
 		cmdc = ISO14A_SEND_CHAINING;
-	
+
 	// "Command APDU" length should be 5+255+1, but javacard's APDU buffer might be smaller - 133 bytes
 	// https://stackoverflow.com/questions/32994936/safe-max-java-card-apdu-data-command-and-respond-size
 	// here length USB_CMD_DATA_SIZE=512
 	// timeout must be authomatically set by "get ATS"
-	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_APDU | ISO14A_NO_DISCONNECT | cmdc, (datainlen & 0xFFFF), 0}}; 
+	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_APDU | ISO14A_NO_DISCONNECT | cmdc, (datainlen & 0xFFFF), 0}};
 	memcpy(c.d.asBytes, datain, datainlen);
 	SendCommand(&c);
-	
+
     uint8_t *recv;
     UsbCommand resp;
 
@@ -938,24 +938,24 @@ int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool activa
         recv = resp.d.asBytes;
         int iLen = resp.arg[0];
 		uint8_t res = resp.arg[1];
-		
+
 		int dlen = iLen - 2;
 		if (dlen < 0)
 			dlen = 0;
 		*dataoutlen += dlen;
-		
+
 		if (maxdataoutlen && *dataoutlen > maxdataoutlen) {
 			PrintAndLogEx(ERR, "APDU: Buffer too small(%d). Needs %d bytes", *dataoutlen, maxdataoutlen);
 			return 2;
 		}
-		
+
 		// I-block ACK
 		if ((res & 0xf2) == 0xa2) {
 			*dataoutlen = 0;
 			*chainingout = true;
 			return 0;
 		}
-		
+
         if(!iLen) {
 			PrintAndLogEx(ERR, "APDU: No APDU response.");
             return 1;
@@ -966,7 +966,7 @@ int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool activa
 			PrintAndLogEx(ERR, "APDU: Small APDU response. Len=%d", iLen);
 			return 2;
 		}
-		
+
 		// check block TODO
 		if (iLen == -2) {
 			PrintAndLogEx(ERR, "APDU: Block type mismatch.");
@@ -974,12 +974,12 @@ int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool activa
 		}
 
 		memcpy(dataout, recv, dlen);
-		
+
 		// chaining
 		if ((res & 0x10) != 0) {
 			*chainingout = true;
 		}
-		
+
 		// CRC Check
 		if (iLen == -1) {
 			PrintAndLogEx(ERR, "APDU: ISO 14443A CRC error.");
@@ -999,12 +999,12 @@ int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool lea
 	int res;
 
 	// 3 byte here - 1b framing header, 2b crc16
-	if (APDUInFramingEnable && 
+	if (APDUInFramingEnable &&
 		( (frameLength && (datainlen > frameLength - 3)) || (datainlen > USB_CMD_DATA_SIZE - 3)) ) {
 		int clen = 0;
-		
+
 		bool vActivateField = activateField;
-		
+
 		do {
 			int vlen = MIN(frameLength - 3, datainlen - clen);
 			bool chainBlockNotLast = ((clen + vlen) < datainlen);
@@ -1022,10 +1022,10 @@ int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool lea
 			if ((*dataoutlen == 0) && (*dataoutlen != 0 || chaining != chainBlockNotLast)) {
 				if (!leaveSignalON)
 					DropField();
-				
+
 				return 201;
 			}
-			
+
 			clen += vlen;
 			vActivateField = false;
 			if (*dataoutlen) {
@@ -1033,32 +1033,32 @@ int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool lea
 					PrintAndLogEx(WARNING, "APDU: I-block/R-block sequence error. Data len=%d, Sent=%d, Last packet len=%d", datainlen, clen, *dataoutlen);
 				break;
 			}
-		} while (clen < datainlen);		
+		} while (clen < datainlen);
 	} else {
 		res = CmdExchangeAPDU(false, datain, datainlen, activateField, dataout, maxdataoutlen, dataoutlen, &chaining);
 		if (res) {
 			if (!leaveSignalON)
 				DropField();
-			
+
 			return res;
 		}
 	}
-	
+
 	while (chaining) {
 		// I-block with chaining
 		res = CmdExchangeAPDU(false, NULL, 0, false, &dataout[*dataoutlen], maxdataoutlen, dataoutlen, &chaining);
-		
+
 		if (res) {
 			if (!leaveSignalON)
 				DropField();
-			
+
 			return 100;
 		}
-	}	
-	
+	}
+
 	if (!leaveSignalON)
 		DropField();
-	
+
 	return 0;
 }
 
@@ -1070,8 +1070,8 @@ int CmdHF14AAPDU(const char *cmd) {
 	bool leaveSignalON = false;
 	bool decodeTLV = false;
 
-	CLIParserInit("hf 14a apdu", 
-		"Sends an ISO 7816-4 APDU via ISO 14443-4 block transmission protocol (T=CL)", 
+	CLIParserInit("hf 14a apdu",
+		"Sends an ISO 7816-4 APDU via ISO 14443-4 block transmission protocol (T=CL)",
 		"Sample:\n\thf 14a apdu -st 00A404000E325041592E5359532E444446303100\n");
 
 	void* argtable[] = {
@@ -1083,7 +1083,7 @@ int CmdHF14AAPDU(const char *cmd) {
 		arg_param_end
 	};
 	CLIExecWithReturn(cmd, argtable, false);
-			
+
 	activateField = arg_get_lit(1);
 	leaveSignalON = arg_get_lit(2);
 	decodeTLV = arg_get_lit(3);
@@ -1092,21 +1092,21 @@ int CmdHF14AAPDU(const char *cmd) {
 
 CLIParserFree();
 	PrintAndLogEx(NORMAL, ">>>>[%s%s%s] %s", activateField ? "sel ": "", leaveSignalON ? "keep ": "", decodeTLV ? "TLV": "", sprint_hex(data, datalen));
-	
+
 	int res = ExchangeAPDU14a(data, datalen, activateField, leaveSignalON, data, USB_CMD_DATA_SIZE, &datalen);
 
 	if (res)
 		return res;
 
 	PrintAndLogEx(NORMAL, "<<<< %s", sprint_hex(data, datalen));
-	
-	PrintAndLogEx(SUCCESS, "APDU response: %02x %02x - %s", data[datalen - 2], data[datalen - 1], GetAPDUCodeDescription(data[datalen - 2], data[datalen - 1])); 
+
+	PrintAndLogEx(SUCCESS, "APDU response: %02x %02x - %s", data[datalen - 2], data[datalen - 1], GetAPDUCodeDescription(data[datalen - 2], data[datalen - 1]));
 
 	// TLV decoder
 	if (decodeTLV && datalen > 4) {
 		TLVPrintFromBuffer(data, datalen - 2);
 	}
-	
+
 	return 0;
 }
 
@@ -1140,7 +1140,7 @@ int CmdHF14ACmdRaw(const char *cmd) {
 				case 'H':
 				case 'h':
 					return usage_hf_14a_raw();
-                case 'r': 
+                case 'r':
                     reply = false;
                     break;
                 case 'c':
@@ -1155,7 +1155,7 @@ int CmdHF14ACmdRaw(const char *cmd) {
                 case 's':
                     active_select = true;
                     break;
-                case 'b': 
+                case 'b':
                     sscanf(cmd+i+2, "%d", &temp);
                     numbits = temp & 0xFFFF;
                     i+=3;
@@ -1235,21 +1235,21 @@ int CmdHF14ACmdRaw(const char *cmd) {
     if (power) {
         c.arg[0] |= ISO14A_NO_DISCONNECT;
 	}
-	
+
     if (datalen > 0) {
         c.arg[0] |= ISO14A_RAW;
 	}
-	
+
 	if (topazmode) {
 		c.arg[0] |= ISO14A_TOPAZMODE;
 	}
 	if (no_rats) {
 		c.arg[0] |= ISO14A_NO_RATS;
 	}
-			
+
 	// Max buffer is USB_CMD_DATA_SIZE
 	datalen = (datalen > USB_CMD_DATA_SIZE) ? USB_CMD_DATA_SIZE : datalen;
-		
+
     c.arg[1] = (datalen & 0xFFFF) | ((uint32_t)(numbits << 16));
     memcpy(c.d.asBytes, data, datalen);
 
@@ -1270,7 +1270,7 @@ static int waitCmd(uint8_t iSelect) {
     UsbCommand resp;
     uint16_t len = 0;
 
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {        
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
 		len = (resp.arg[0] & 0xFFFF);
 		if (iSelect){
 			len = (resp.arg[1] & 0xFFFF);
@@ -1282,10 +1282,10 @@ static int waitCmd(uint8_t iSelect) {
 		} else {
 			PrintAndLogEx(NORMAL, "received %i bytes", len);
 		}
-		
+
         if (!len)
             return 1;
-		
+
 		PrintAndLogEx(NORMAL, "%s", sprint_hex(resp.d.asBytes, len) );
     } else {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
@@ -1295,9 +1295,9 @@ static int waitCmd(uint8_t iSelect) {
 }
 
 int CmdHF14AAntiFuzz(const char *cmd) {
-	
-	CLIParserInit("hf 14a antifuzz", 
-		"Tries to fuzz the ISO14443a anticollision phase", 
+
+	CLIParserInit("hf 14a antifuzz",
+		"Tries to fuzz the ISO14443a anticollision phase",
 		"Usage:\n"
 		"\thf 14a antifuzz -4\n");
 
@@ -1312,21 +1312,21 @@ int CmdHF14AAntiFuzz(const char *cmd) {
 
 	uint8_t arg0 = FLAG_4B_UID_IN_DATA;
 	if (arg_get_lit(2))
-		arg0 = FLAG_7B_UID_IN_DATA;		
+		arg0 = FLAG_7B_UID_IN_DATA;
 	if (arg_get_lit(3))
 		arg0 = FLAG_10B_UID_IN_DATA;
 
 	CLIParserFree();
-	UsbCommand c = {CMD_ANTIFUZZ_ISO_14443a, {arg0, 0, 0}};	
+	UsbCommand c = {CMD_ANTIFUZZ_ISO_14443a, {arg0, 0, 0}};
 	clearCommandBuffer();
-    SendCommand(&c);	
+    SendCommand(&c);
 	return 0;
 }
 
 int CmdHF14AChaining(const char *cmd) {
-	
-	CLIParserInit("hf 14a chaining", 
-		"Enable/Disable ISO14443a input chaining. Maximum input length goes from ATS.", 
+
+	CLIParserInit("hf 14a chaining",
+		"Enable/Disable ISO14443a input chaining. Maximum input length goes from ATS.",
 		"Usage:\n"
 		"\thf 14a chaining disable -> disable chaining\n"
 		"\thf 14a chaining         -> show chaining enable/disable state\n");
@@ -1340,17 +1340,17 @@ int CmdHF14AChaining(const char *cmd) {
 
 	struct arg_str *str = arg_get_str(1);
 	int len = arg_get_str_len(1);
-	
+
 	if (len && (!strcmp(str->sval[0], "enable") || !strcmp(str->sval[0], "1")))
 		APDUInFramingEnable = true;
-	
+
 	if (len && (!strcmp(str->sval[0], "disable") || !strcmp(str->sval[0], "0")))
 		APDUInFramingEnable = false;
 
 	CLIParserFree();
 
 	PrintAndLogEx(INFO, "\nISO 14443-4 input chaining %s.\n", APDUInFramingEnable ? "enabled" : "disabled");
-	
+
 	return 0;
 }
 

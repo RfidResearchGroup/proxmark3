@@ -43,14 +43,14 @@ int main (int argc, char *argv[]) {
 	uint32_t p64 = prng_successor(nt, 64);
 	printf("  nt': %08x\n", p64);
 	printf(" nt'': %08x\n", prng_successor(p64, 32));
-	
+
 	// Extract the keystream from the messages
 	printf("\nKeystream used to generate {ar} and {at}:\n");
 	ks2 = ar0_enc ^ p64;
 	printf("  ks2: %08x\n", ks2);
 
 	s = lfsr_recovery32(ar0_enc ^ p64, 0);
-  
+
 	for(t = s; t->odd | t->even; ++t) {
 		lfsr_rollback_word(t, 0, 0);
 		lfsr_rollback_word(t, nr0_enc, 1);

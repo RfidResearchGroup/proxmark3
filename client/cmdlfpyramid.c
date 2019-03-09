@@ -80,8 +80,8 @@ int GetPyramidBits(uint32_t fc, uint32_t cn, uint8_t *pyramidBits) {
 
 	// format start bit
 	pre[79] = 1;
-	
-	// Get 26 wiegand from FacilityCode, CardNumber	
+
+	// Get 26 wiegand from FacilityCode, CardNumber
 	uint8_t wiegand[24];
 	memset(wiegand, 0x00, sizeof(wiegand));
 	num_to_bytebits(fc, 8, wiegand);
@@ -89,11 +89,11 @@ int GetPyramidBits(uint32_t fc, uint32_t cn, uint8_t *pyramidBits) {
 
 	// add wiegand parity bits (dest, source, len)
 	wiegand_add_parity(pre+80, wiegand, 24);
-	
+
 	// add paritybits	(bitsource, dest, sourcelen, paritylen, parityType (odd, even,)
 	addParity(pre+8, pyramidBits+8, 102, 8, 1);
 
-	// add checksum		
+	// add checksum
 	uint8_t csBuff[13];
 	for (uint8_t i = 0; i < 13; i++)
 		csBuff[i] = bytebits_to_byte(pyramidBits + 16 + (i*8), 8);
@@ -125,7 +125,7 @@ int CmdPyramidDemod(const char *Cmd) {
 		else if (idx == -3)
 			PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: problem during FSK demod");
 		else if (idx == -4)
-			PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: preamble not found");				
+			PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: preamble not found");
 		else if (idx == -5)
 			PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: size not correct: %d", size);
 		else
@@ -134,7 +134,7 @@ int CmdPyramidDemod(const char *Cmd) {
 	}
 	setDemodBuf(bits, size, idx);
 	setClockGrid(50, waveIdx + (idx*50));
-	
+
 	// Index map
 	// 0           10          20          30            40          50          60
 	// |           |           |           |             |           |           |
@@ -209,12 +209,12 @@ int CmdPyramidDemod(const char *Cmd) {
 	for (j=0; j < size; ++j){
 		if(bits[j]) break;
 	}
-	
+
 	uint8_t fmtLen = size-j-8;
 	uint32_t fc = 0;
 	uint32_t cardnum = 0;
 	uint32_t code1 = 0;
-	
+
 	if ( fmtLen == 26 ){
 		fc = bytebits_to_byte(bits+73, 8);
 		cardnum = bytebits_to_byte(bits+81, 16);
@@ -267,11 +267,11 @@ int CmdPyramidClone(const char *Cmd) {
 
 	facilitycode = (fc & 0x000000FF);
 	cardnumber = (cn & 0x0000FFFF);
-	
+
 	if ( !GetPyramidBits(facilitycode, cardnumber, bs)) {
 		PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
 		return 1;
-	}	
+	}
 
 	//Pyramid - compat mode, FSK2a, data rate 50, 4 data blocks
 	blocks[0] = T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_50 | 4 << T55x7_MAXBLOCK_SHIFT;
@@ -310,29 +310,29 @@ int CmdPyramidSim(const char *Cmd) {
 	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_pyramid_sim();
 
 	uint32_t facilitycode = 0, cardnumber = 0, fc = 0, cn = 0;
-	
+
 	uint8_t bs[128];
 	size_t size = sizeof(bs);
 	memset(bs, 0x00, size);
-	
+
 	// Pyramid uses:  fcHigh: 10, fcLow: 8, clk: 50, invert: 0
 	uint8_t clk = 50, invert = 0, high = 10, low = 8;
-	uint16_t arg1, arg2;	
+	uint16_t arg1, arg2;
 	arg1 = high << 8 | low;
 	arg2 = invert << 8 | clk;
-	
+
 	if (sscanf(Cmd, "%u %u", &fc, &cn ) != 2) return usage_lf_pyramid_sim();
 
 	facilitycode = (fc & 0x000000FF);
 	cardnumber = (cn & 0x0000FFFF);
-	
+
 	if ( !GetPyramidBits(facilitycode, cardnumber, bs)) {
 		PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
 		return 1;
-	}	
+	}
 
 	PrintAndLogEx(SUCCESS, "Simulating Farpointe/Pyramid - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber );
-	
+
 	UsbCommand c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}};
 	memcpy(c.d.asBytes, bs, size);
 	clearCommandBuffer();

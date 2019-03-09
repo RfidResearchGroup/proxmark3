@@ -16,7 +16,7 @@ int s_Buff[MAX_GRAPH_TRACE_LEN];
 /* write a manchester bit to the graph */
 void AppendGraph(int redraw, int clock, int bit) {
 	int i;
-	//set first half the clock bit (all 1's or 0's for a 0 or 1 bit) 
+	//set first half the clock bit (all 1's or 0's for a 0 or 1 bit)
 	for (i = 0; i < (int)(clock / 2); ++i)
 		GraphBuffer[GraphTraceLen++] = bit ;
 	//set second half of the clock bit (all 0's or 1's for a 0 or 1 bit)
@@ -59,12 +59,12 @@ void save_restoreGB(uint8_t saveOpt) {
 
 void setGraphBuf(uint8_t *buf, size_t size) {
 	if ( buf == NULL ) return;
-	
+
 	ClearGraph(0);
-	
+
 	if ( size > MAX_GRAPH_TRACE_LEN )
 		size = MAX_GRAPH_TRACE_LEN;
-	
+
 	for (uint16_t i = 0; i < size; ++i)
 		GraphBuffer[i] = buf[i] - 128;
 
@@ -85,22 +85,22 @@ size_t getFromGraphBuf(uint8_t *buf) {
 	return i;
 }
 
-// A simple test to see if there is any data inside Graphbuffer. 
+// A simple test to see if there is any data inside Graphbuffer.
 bool HasGraphData(){
 	if ( GraphTraceLen <= 0) {
 		PrintAndLogEx(NORMAL, "No data available, try reading something first");
 		return false;
 	}
-	return true;	
+	return true;
 }
 
 // Get or auto-detect ask clock rate
 int GetAskClock(const char *str, bool printAns) {
 
 	int clock = param_get32ex(str, 0, 0, 10);
-	if (clock > 0) 
+	if (clock > 0)
 		return clock;
-	
+
 	// Auto-detect clock
 	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t size = getFromGraphBuf(bits);
@@ -115,7 +115,7 @@ int GetAskClock(const char *str, bool printAns) {
 	if (st == false) {
 		idx = DetectASKClock(bits, size, &clock, 20);
 	}
-	
+
 	if ( clock > 0 ) {
 		setClockGrid(clock, idx);
 	}
@@ -146,9 +146,9 @@ uint8_t GetPskCarrier(const char *str, bool printAns) {
 
 int GetPskClock(const char* str, bool printAns) {
 	int clock = param_get32ex(str, 0, 0, 10);
-	if (clock != 0) 
+	if (clock != 0)
 		return clock;
-	
+
 	// Auto-detect clock
 	uint8_t grph[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t size = getFromGraphBuf(grph);
@@ -169,9 +169,9 @@ int GetPskClock(const char* str, bool printAns) {
 int GetNrzClock(const char* str, bool printAns) {
 
 	int clock = param_get32ex(str, 0, 0, 10);
-	if (clock != 0) 
+	if (clock != 0)
 		return clock;
-	
+
 	// Auto-detect clock
 	uint8_t grph[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t size = getFromGraphBuf(grph);
@@ -192,17 +192,17 @@ int GetNrzClock(const char* str, bool printAns) {
 int GetFskClock(const char* str, bool printAns) {
 
 	int clock = param_get32ex(str, 0, 0, 10);
-	if (clock != 0) 
+	if (clock != 0)
 		return clock;
 
 	uint8_t fc1 = 0, fc2 = 0, rf1 = 0;
 	int firstClockEdge = 0;
-	
+
 	if ( !fskClocks(&fc1, &fc2, &rf1, &firstClockEdge))
 		return 0;
-	
+
 	if ((fc1==10 && fc2==8) || (fc1==8 && fc2==5)){
-		if (printAns) 
+		if (printAns)
 			PrintAndLogEx(SUCCESS, "Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d", fc1, fc2, rf1);
 		setClockGrid(rf1, firstClockEdge);
 		return rf1;
@@ -215,15 +215,15 @@ int GetFskClock(const char* str, bool printAns) {
 bool fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, int *firstClockEdge) {
 	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t size = getFromGraphBuf(bits);
-	if (size == 0) 
+	if (size == 0)
 		return false;
-	
+
 	uint16_t ans = countFC(bits, size, true);
 	if (ans == 0) {
 		PrintAndLogEx(DEBUG, "DEBUG: No data found");
 		return false;
 	}
-	
+
 	*fc1 = (ans >> 8) & 0xFF;
 	*fc2 = ans & 0xFF;
 	*rf1 = detectFSKClk(bits, size, *fc1, *fc2, firstClockEdge);

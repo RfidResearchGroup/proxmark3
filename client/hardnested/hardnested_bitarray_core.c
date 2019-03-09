@@ -10,7 +10,7 @@
 // attacks this doesn't rely on implementation errors but only on the
 // inherent weaknesses of the crypto1 cypher. Described in
 //   Carlo Meijer, Roel Verdult, "Ciphertext-only Cryptanalysis on Hardened
-//   Mifare Classic Cards" in Proceedings of the 22nd ACM SIGSAC Conference on 
+//   Mifare Classic Cards" in Proceedings of the 22nd ACM SIGSAC Conference on
 //   Computer and Communications Security, 2015
 //-----------------------------------------------------------------------------
 // some helper functions which can benefit from SIMD instructions or other special instructions
@@ -25,7 +25,7 @@
 #include <malloc.h>
 #endif
 
-// this needs to be compiled several times for each instruction set. 
+// this needs to be compiled several times for each instruction set.
 // For each instruction set, define a dedicated function name:
 #if defined (__AVX512F__)
 #define MALLOC_BITARRAY malloc_bitarray_AVX512
@@ -83,7 +83,7 @@
 #define COUNT_BITARRAY_AND2 count_bitarray_AND2_SSE2
 #define COUNT_BITARRAY_AND3 count_bitarray_AND3_SSE2
 #define COUNT_BITARRAY_AND4 count_bitarray_AND4_SSE2
-#elif defined (__MMX__) 
+#elif defined (__MMX__)
 #define MALLOC_BITARRAY malloc_bitarray_MMX
 #define FREE_BITARRAY free_bitarray_MMX
 #define BITCOUNT bitcount_MMX
@@ -169,7 +169,7 @@ inline void FREE_BITARRAY(uint32_t *x)
 #endif
 }
 
-	
+
 inline uint32_t BITCOUNT(uint32_t a)
 {
 	return __builtin_popcountl(a);
@@ -200,12 +200,12 @@ inline void BITARRAY_LOW20_AND(uint32_t *restrict A, uint32_t *restrict B)
 {
 	uint16_t *a = (uint16_t *)__builtin_assume_aligned(A, __BIGGEST_ALIGNMENT__);
 	uint16_t *b = (uint16_t *)__builtin_assume_aligned(B, __BIGGEST_ALIGNMENT__);
-	
+
 	for (uint32_t i = 0; i < (1<<20); i++) {
 		if (!b[i]) {
 			a[i] = 0;
 		}
-	}	
+	}
 }
 
 
@@ -227,14 +227,14 @@ inline uint32_t COUNT_BITARRAY_LOW20_AND(uint32_t *restrict A, uint32_t *restric
 	uint16_t *a = (uint16_t *)__builtin_assume_aligned(A, __BIGGEST_ALIGNMENT__);
 	uint16_t *b = (uint16_t *)__builtin_assume_aligned(B, __BIGGEST_ALIGNMENT__);
 	uint32_t count = 0;
-	
+
 	for (uint32_t i = 0; i < (1<<20); i++) {
 		if (!b[i]) {
 			a[i] = 0;
 		}
 		count += BITCOUNT(a[i]);
 	}
-	return count;	
+	return count;
 }
 
 
@@ -318,7 +318,7 @@ count_bitarray_AND4_t *count_bitarray_AND4_function_p = &count_bitarray_AND4_dis
 
 // determine the available instruction set at runtime and call the correct function
 uint32_t *malloc_bitarray_dispatch(uint32_t x) {
-#if defined (__i386__) || defined (__x86_64__)	
+#if defined (__i386__) || defined (__x86_64__)
 	#if !defined(__APPLE__) || (defined(__APPLE__) && (__clang_major__ > 8 || __clang_major__ == 8 && __clang_minor__ >= 1))
 		#if (__GNUC__ >= 5) && (__GNUC__ > 5 || __GNUC_MINOR__ > 2)
 	if (__builtin_cpu_supports("avx512f")) malloc_bitarray_function_p = &malloc_bitarray_AVX512;
@@ -331,7 +331,7 @@ uint32_t *malloc_bitarray_dispatch(uint32_t x) {
 	else if (__builtin_cpu_supports("mmx")) malloc_bitarray_function_p = &malloc_bitarray_MMX;
 	else
 	#endif
-#endif		
+#endif
 		malloc_bitarray_function_p = &malloc_bitarray_NOSIMD;
 
     // call the most optimized function for this CPU
@@ -360,7 +360,7 @@ void free_bitarray_dispatch(uint32_t *x) {
 }
 
 uint32_t bitcount_dispatch(uint32_t a) {
-#if defined (__i386__) || defined (__x86_64__)	
+#if defined (__i386__) || defined (__x86_64__)
 	#if !defined(__APPLE__) || (defined(__APPLE__) && (__clang_major__ > 8 || __clang_major__ == 8 && __clang_minor__ >= 1))
 		#if (__GNUC__ >= 5) && (__GNUC__ > 5 || __GNUC_MINOR__ > 2)
 	if (__builtin_cpu_supports("avx512f")) bitcount_function_p = &bitcount_AVX512;
@@ -381,7 +381,7 @@ uint32_t bitcount_dispatch(uint32_t a) {
 }
 
 uint32_t count_states_dispatch(uint32_t *bitarray) {
-#if defined (__i386__) || defined (__x86_64__)	
+#if defined (__i386__) || defined (__x86_64__)
 	#if !defined(__APPLE__) || (defined(__APPLE__) && (__clang_major__ > 8 || __clang_major__ == 8 && __clang_minor__ >= 1))
 		#if (__GNUC__ >= 5) && (__GNUC__ > 5 || __GNUC_MINOR__ > 2)
 	if (__builtin_cpu_supports("avx512f")) count_states_function_p = &count_states_AVX512;
@@ -393,7 +393,7 @@ uint32_t count_states_dispatch(uint32_t *bitarray) {
 	else if (__builtin_cpu_supports("sse2")) count_states_function_p = &count_states_SSE2;
 	else if (__builtin_cpu_supports("mmx")) count_states_function_p = &count_states_MMX;
 	else
-	#endif 
+	#endif
 #endif
 		count_states_function_p = &count_states_NOSIMD;
 
@@ -402,7 +402,7 @@ uint32_t count_states_dispatch(uint32_t *bitarray) {
 }
 
 void bitarray_AND_dispatch(uint32_t *A, uint32_t *B) {
-#if defined (__i386__) || defined (__x86_64__)	
+#if defined (__i386__) || defined (__x86_64__)
 	#if !defined(__APPLE__) || (defined(__APPLE__) && (__clang_major__ > 8 || __clang_major__ == 8 && __clang_minor__ >= 1))
 		#if (__GNUC__ >= 5) && (__GNUC__ > 5 || __GNUC_MINOR__ > 2)
 	if (__builtin_cpu_supports("avx512f")) bitarray_AND_function_p = &bitarray_AND_AVX512;
@@ -444,7 +444,7 @@ void bitarray_low20_AND_dispatch(uint32_t *A, uint32_t *B) {
 }
 
 uint32_t count_bitarray_AND_dispatch(uint32_t *A, uint32_t *B) {
-#if defined (__i386__) || defined (__x86_64__)	
+#if defined (__i386__) || defined (__x86_64__)
 	#if !defined(__APPLE__) || (defined(__APPLE__) && (__clang_major__ > 8 || __clang_major__ == 8 && __clang_minor__ >= 1))
 		#if (__GNUC__ >= 5) && (__GNUC__ > 5 || __GNUC_MINOR__ > 2)
 	if (__builtin_cpu_supports("avx512f")) count_bitarray_AND_function_p = &count_bitarray_AND_AVX512;
@@ -465,7 +465,7 @@ uint32_t count_bitarray_AND_dispatch(uint32_t *A, uint32_t *B) {
 }
 
 uint32_t count_bitarray_low20_AND_dispatch(uint32_t *A, uint32_t *B) {
-#if defined (__i386__) || defined (__x86_64__)	
+#if defined (__i386__) || defined (__x86_64__)
 	#if !defined(__APPLE__) || (defined(__APPLE__) && (__clang_major__ > 8 || __clang_major__ == 8 && __clang_minor__ >= 1))
 		#if (__GNUC__ >= 5) && (__GNUC__ > 5 || __GNUC_MINOR__ > 2)
 	if (__builtin_cpu_supports("avx512f")) count_bitarray_low20_AND_function_p = &count_bitarray_low20_AND_AVX512;
@@ -486,7 +486,7 @@ uint32_t count_bitarray_low20_AND_dispatch(uint32_t *A, uint32_t *B) {
 }
 
 void bitarray_AND4_dispatch(uint32_t *A, uint32_t *B, uint32_t *C, uint32_t *D) {
-#if defined (__i386__) || defined (__x86_64__)	
+#if defined (__i386__) || defined (__x86_64__)
 	#if !defined(__APPLE__) || (defined(__APPLE__) && (__clang_major__ > 8 || __clang_major__ == 8 && __clang_minor__ >= 1))
 		#if (__GNUC__ >= 5) && (__GNUC__ > 5 || __GNUC_MINOR__ > 2)
 	if (__builtin_cpu_supports("avx512f")) bitarray_AND4_function_p = &bitarray_AND4_AVX512;
@@ -507,7 +507,7 @@ void bitarray_AND4_dispatch(uint32_t *A, uint32_t *B, uint32_t *C, uint32_t *D) 
 }
 
 void bitarray_OR_dispatch(uint32_t *A, uint32_t *B) {
-#if defined (__i386__) || defined (__x86_64__)	
+#if defined (__i386__) || defined (__x86_64__)
 	#if !defined(__APPLE__) || (defined(__APPLE__) && (__clang_major__ > 8 || __clang_major__ == 8 && __clang_minor__ >= 1))
 		#if (__GNUC__ >= 5) && (__GNUC__ > 5 || __GNUC_MINOR__ > 2)
 	if (__builtin_cpu_supports("avx512f")) bitarray_OR_function_p = &bitarray_OR_AVX512;
@@ -528,7 +528,7 @@ void bitarray_OR_dispatch(uint32_t *A, uint32_t *B) {
 }
 
 uint32_t count_bitarray_AND2_dispatch(uint32_t *A, uint32_t *B) {
-#if defined (__i386__) || defined (__x86_64__)	
+#if defined (__i386__) || defined (__x86_64__)
 	#if !defined(__APPLE__) || (defined(__APPLE__) && (__clang_major__ > 8 || __clang_major__ == 8 && __clang_minor__ >= 1))
 		#if (__GNUC__ >= 5) && (__GNUC__ > 5 || __GNUC_MINOR__ > 2)
 	if (__builtin_cpu_supports("avx512f")) count_bitarray_AND2_function_p = &count_bitarray_AND2_AVX512;
@@ -549,7 +549,7 @@ uint32_t count_bitarray_AND2_dispatch(uint32_t *A, uint32_t *B) {
 }
 
 uint32_t count_bitarray_AND3_dispatch(uint32_t *A, uint32_t *B, uint32_t *C) {
-#if defined (__i386__) || defined (__x86_64__)	
+#if defined (__i386__) || defined (__x86_64__)
 	#if !defined(__APPLE__) || (defined(__APPLE__) && (__clang_major__ > 8 || __clang_major__ == 8 && __clang_minor__ >= 1))
 		#if (__GNUC__ >= 5) && (__GNUC__ > 5 || __GNUC_MINOR__ > 2)
 	if (__builtin_cpu_supports("avx512f")) count_bitarray_AND3_function_p = &count_bitarray_AND3_AVX512;
@@ -570,7 +570,7 @@ uint32_t count_bitarray_AND3_dispatch(uint32_t *A, uint32_t *B, uint32_t *C) {
 }
 
 uint32_t count_bitarray_AND4_dispatch(uint32_t *A, uint32_t *B, uint32_t *C, uint32_t *D) {
-#if defined (__i386__) || defined (__x86_64__)	
+#if defined (__i386__) || defined (__x86_64__)
 	#if !defined(__APPLE__) || (defined(__APPLE__) && (__clang_major__ > 8 || __clang_major__ == 8 && __clang_minor__ >= 1))
 		#if (__GNUC__ >= 5) && (__GNUC__ > 5 || __GNUC_MINOR__ > 2)
 	if (__builtin_cpu_supports("avx512f")) count_bitarray_AND4_function_p = &count_bitarray_AND4_AVX512;

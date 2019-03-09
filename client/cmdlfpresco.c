@@ -14,7 +14,7 @@ int usage_lf_presco_clone(void){
 	PrintAndLogEx(NORMAL, "clone a Presco tag to a T55x7 tag.");
 	PrintAndLogEx(NORMAL, "Usage: lf presco clone [h] d <Card-ID> c <hex-ID> <Q5>");
 	PrintAndLogEx(NORMAL, "Options:");
-	PrintAndLogEx(NORMAL, "  h             : this help");	
+	PrintAndLogEx(NORMAL, "  h             : this help");
 	PrintAndLogEx(NORMAL, "  d <Card-ID>   : 9 digit presco card ID");
 	PrintAndLogEx(NORMAL, "  c <hex-ID>    : 8 digit hex card number");
 	PrintAndLogEx(NORMAL, "  <Q5>          : specify write to Q5 (t5555 instead of t55x7)");
@@ -31,7 +31,7 @@ int usage_lf_presco_sim(void) {
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Usage:  lf presco sim [h] d <Card-ID> or c <hex-ID>");
 	PrintAndLogEx(NORMAL, "Options:");
-	PrintAndLogEx(NORMAL, "  h             : this help");	
+	PrintAndLogEx(NORMAL, "  h             : this help");
 	PrintAndLogEx(NORMAL, "  d <Card-ID>   : 9 digit presco card number");
 	PrintAndLogEx(NORMAL, "  c <hex-ID>    : 8 digit hex card number");
 	PrintAndLogEx(NORMAL, "");
@@ -54,14 +54,14 @@ int detectPresco(uint8_t *dest, size_t *size) {
 
 // convert base 12 ID to sitecode & usercode & 8 bit other unknown code
 int GetWiegandFromPresco(const char *Cmd, uint32_t *sitecode, uint32_t *usercode, uint32_t *fullcode, bool *Q5) {
-	
+
 	uint8_t val = 0;
 	bool hex = false, errors = false;
 	uint8_t cmdp = 0;
 	char id[11];
 	int stringlen = 0;
 	memset(id, 0x00, sizeof(id));
-	
+
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch (tolower(param_getchar(Cmd, cmdp))) {
 			case 'h':
@@ -93,7 +93,7 @@ int GetWiegandFromPresco(const char *Cmd, uint32_t *sitecode, uint32_t *usercode
 
 	if (!hex) {
 		for (int index =0; index < strlen(id); ++index) {
-		
+
 			// Get value from number string.
 			if ( id[index] == '*' )
 				val = 10;
@@ -101,11 +101,11 @@ int GetWiegandFromPresco(const char *Cmd, uint32_t *sitecode, uint32_t *usercode
 				val = 11;
 			if ( id[index] >= 0x30 && id[index] <= 0x39 )
 				val = id[index] - 0x30;
-			
+
 			*fullcode += val;
-			
+
 			// last digit is only added, not multipled.
-			if ( index < strlen(id)-1 ) 
+			if ( index < strlen(id)-1 )
 					*fullcode *= 12;
 		}
 	}
@@ -146,7 +146,7 @@ int CmdPrescoDemod(const char *Cmd) {
 	}
 	setDemodBuf(DemodBuffer, 128, ans);
 	setClockGrid(g_DemodClock, g_DemodStartIdx + (ans*g_DemodClock));
-	
+
 	//got a good demod
 	uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
 	uint32_t raw2 = bytebits_to_byte(DemodBuffer+32, 32);
@@ -178,7 +178,7 @@ int CmdPrescoClone(const char *Cmd) {
 	bool Q5 = false;
 	uint32_t sitecode=0, usercode=0, fullcode=0;
 	uint32_t blocks[5] = {T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_32 | 4 << T55x7_MAXBLOCK_SHIFT | T55x7_ST_TERMINATOR, 0, 0, 0, 0};
-	
+
 	// get wiegand from printed number.
 	if (GetWiegandFromPresco(Cmd, &sitecode, &usercode, &fullcode, &Q5) == -1) return usage_lf_presco_clone();
 
@@ -194,7 +194,7 @@ int CmdPrescoClone(const char *Cmd) {
 		usercode &= 0xFFFF;
 		PrintAndLogEx(INFO, "Card Number Truncated to 16-bits (Presco): %u", usercode);
 	}
-	
+
 	blocks[1] = 0x10D00000; //preamble
 	blocks[2] = 0x00000000;
 	blocks[3] = 0x00000000;
@@ -202,7 +202,7 @@ int CmdPrescoClone(const char *Cmd) {
 
 	PrintAndLogEx(INFO, "Preparing to clone Presco to T55x7 with SiteCode: %u, UserCode: %u, FullCode: %08x", sitecode, usercode, fullcode);
 	print_blocks(blocks, 5);
-	
+
 	UsbCommand resp;
 	UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}};
 

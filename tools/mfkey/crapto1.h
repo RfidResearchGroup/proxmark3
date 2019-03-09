@@ -44,7 +44,7 @@ uint32_t lfsr_rollback_word(struct Crypto1State* s, uint32_t in, int fb);
 int nonce_distance(uint32_t from, uint32_t to);
 #define SWAPENDIAN(x)\
 	(x = (x >> 8 & 0xff00ff) | (x & 0xff00ff) << 8, x = x >> 16 | x << 16)
-	
+
 #define FOREACH_VALID_NONCE(N, FILTER, FSIZE)\
 	uint32_t __n = 0,__M = 0, N = 0;\
 	int __i;\
@@ -54,7 +54,7 @@ int nonce_distance(uint32_t from, uint32_t to);
 				break;\
 			else if(__i)\
 				__M = prng_successor(__M, (__i == 7) ? 48 : 8);\
-			else 
+			else
 
 #define LF_POLY_ODD (0x29CE5C)
 #define LF_POLY_EVEN (0x870804)

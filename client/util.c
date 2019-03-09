@@ -21,7 +21,7 @@ uint8_t g_debugMode = 0;
 
 #ifndef _WIN32
 #include <termios.h>
-#include <sys/ioctl.h> 
+#include <sys/ioctl.h>
 #include <unistd.h>
 #include <stdarg.h>
 
@@ -64,10 +64,10 @@ void AddLogLine(char *fn, char *data, char *c) {
     int len = 0;
 
     len = strlen(fn);
-    if (len > FILE_PATH_SIZE) 
+    if (len > FILE_PATH_SIZE)
 		len = FILE_PATH_SIZE;
     memcpy(filename, fn, len);
-   
+
 	f = fopen(filename, "a");
 	if (!f) {
 		printf("Could not append log file %s", filename);
@@ -111,14 +111,14 @@ void FillFileNameByUID(char *filenamePrefix, uint8_t *uid, const char *ext, int 
 		printf("[!] error parameter is NULL\n");
 		return;
 	}
-	
+
 	int len = 0;
 	len = strlen(filenamePrefix);
 	//memset(fn, 0x00, FILE_PATH_SIZE);
-	
+
 	for (int j = 0; j < uidlen; j++)
-		sprintf(filenamePrefix + len + j * 2, "%02X", uid[j]); 
-	strcat(filenamePrefix, ext); 
+		sprintf(filenamePrefix + len + j * 2, "%02X", uid[j]);
+	strcat(filenamePrefix, ext);
 }
 
 // fill buffer from structure [{uint8_t data, size_t length},...]
@@ -126,25 +126,25 @@ int FillBuffer(uint8_t *data, size_t maxDataLength, size_t *dataLength, ...) {
 	*dataLength = 0;
 	va_list valist;
 	va_start(valist, dataLength);
-	
+
 	uint8_t *vdata = NULL;
 	size_t vlength = 0;
 	do{
 		vdata = va_arg(valist, uint8_t *);
 		if (!vdata)
 			break;
-		
+
 		vlength = va_arg(valist, size_t);
 		if (*dataLength + vlength >  maxDataLength) {
 			va_end(valist);
 			return 1;
 		}
-		
+
 		memcpy(&data[*dataLength], vdata, vlength);
 		*dataLength += vlength;
-		
+
 	} while (vdata);
-	
+
 	va_end(valist);
 
 	return 0;
@@ -157,13 +157,13 @@ bool CheckStringIsHEXValue(const char *value) {
 
 	if (strlen(value) % 2)
 		return false;
-	
+
 	return true;
 }
 
-void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex_len, const size_t hex_max_len, 
+void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex_len, const size_t hex_max_len,
 	const size_t min_str_len, const size_t spaces_between, bool uppercase) {
-		
+
 	char *tmp = (char *)buf;
 	size_t i;
 	memset(tmp, 0x00, hex_max_len);
@@ -171,17 +171,17 @@ void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex
 	int maxLen = ( hex_len > hex_max_len) ? hex_max_len : hex_len;
 
 	for (i = 0; i < maxLen; ++i, tmp += 2 + spaces_between) {
-		sprintf(tmp, (uppercase) ? "%02X" : "%02x", (unsigned int) hex_data[i]); 
-		
+		sprintf(tmp, (uppercase) ? "%02X" : "%02x", (unsigned int) hex_data[i]);
+
 		for (int j = 0; j < spaces_between; j++)
 			sprintf(tmp + 2 + j, " ");
 	}
-	
+
 	i *= (2 + spaces_between);
 	int minStrLen = min_str_len > i ? min_str_len : 0;
 	if (minStrLen > hex_max_len)
 		minStrLen = hex_max_len;
-	for(; i < minStrLen; i++, tmp += 1) 
+	for(; i < minStrLen; i++, tmp += 1)
 		sprintf(tmp, " ");
 
 	return;
@@ -201,7 +201,7 @@ void print_hex_break(const uint8_t *data, const size_t len, uint8_t breaks) {
 	for (int i = 0; i < len; ++i) {
 
 		printf("%02X ", data[i]);
-		
+
 		// check if a line break is needed
 		if ( breaks > 0 && !((i+1) % breaks) && (i+1 < len) ) {
 			++rownum;
@@ -233,17 +233,17 @@ char *sprint_hex_inrow_spaces(const uint8_t *data, const size_t len, size_t spac
 }
 
 char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t breaks) {
-	
+
 	// make sure we don't go beyond our char array memory
 	size_t in_index = 0, out_index = 0;
-	
+
 	int rowlen = (len > MAX_BIN_BREAK_LENGTH ) ? MAX_BIN_BREAK_LENGTH : len;
-		
-	if ( breaks > 0 && len % breaks != 0) 
+
+	if ( breaks > 0 && len % breaks != 0)
 		rowlen = ( len+(len/breaks) > MAX_BIN_BREAK_LENGTH ) ? MAX_BIN_BREAK_LENGTH : len+(len/breaks);
-	
+
 	//printf("(sprint_bin_break) rowlen %d\n", rowlen);
-	
+
 	static char buf[MAX_BIN_BREAK_LENGTH]; // 3072 + end of line characters if broken at 8 bits
 	//clear memory
 	memset(buf, 0x00, sizeof(buf));
@@ -268,21 +268,21 @@ char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t brea
 void sprint_bin_break_ex(uint8_t *src, size_t srclen, char *dest , uint8_t breaks) {
 	if ( src == NULL ) return;
 	if ( srclen < 1 ) return;
-	
+
 	// make sure we don't go beyond our char array memory
 	size_t in_index = 0, out_index = 0;
-	int rowlen;	
+	int rowlen;
 	if (breaks==0)
 		rowlen = ( len > MAX_BIN_BREAK_LENGTH ) ? MAX_BIN_BREAK_LENGTH : len;
 	else
 		rowlen = ( len+(len/breaks) > MAX_BIN_BREAK_LENGTH ) ? MAX_BIN_BREAK_LENGTH : len+(len/breaks);
 
 	printf("(sprint_bin_break) rowlen %d\n", rowlen);
-	
+
 	// 3072 + end of line characters if broken at 8 bits
-	dest = (char *)calloc(MAX_BIN_BREAK_LENGTH, sizeof(uint8_t)); 
+	dest = (char *)calloc(MAX_BIN_BREAK_LENGTH, sizeof(uint8_t));
 	if (dest == NULL) return;
-	
+
 	//clear memory
 	memset(dest, 0x00, sizeof(dest));
 
@@ -314,7 +314,7 @@ char *sprint_hex_ascii(const uint8_t *data, const size_t len) {
 	size_t max_len = (len > 1010) ? 1010 : len;
 
 	snprintf(tmp, UTIL_BUFFER_SIZE_SPRINT, "%s| ", sprint_hex(data, max_len) );
-	
+
 	size_t i = 0;
 	size_t pos = (max_len * 3) + 2;
 	while (i < max_len){
@@ -338,11 +338,11 @@ char *sprint_ascii_ex(const uint8_t *data, const size_t len, const size_t min_st
 		tmp[i] = ((c < 32) || (c == 127)) ? '.' : c;
 		++i;
 	}
-	
+
 	int m = min_str_len > i ? min_str_len : 0;
-	for(; i < m; ++i) 
+	for(; i < m; ++i)
 		tmp[i] = ' ';
-	
+
 	return buf;
 }
 char *sprint_ascii(const uint8_t *data, const size_t len) {
@@ -409,7 +409,7 @@ uint8_t *SwapEndian64(const uint8_t *src, const size_t len, const uint8_t blockS
 	return buf;
 }
 
-// takes a uint8_t src array, for len items and reverses the byte order in blocksizes (8,16,32,64), 
+// takes a uint8_t src array, for len items and reverses the byte order in blocksizes (8,16,32,64),
 // returns: the dest array contains the reordered src array.
 void SwapEndian64ex(const uint8_t *src, const size_t len, const uint8_t blockSize, uint8_t *dest){
 	for (uint8_t block=0; block < (uint8_t)(len/blockSize); block++){
@@ -432,10 +432,10 @@ int param_getptr(const char *line, int *bg, int *en, int paramnum)
 {
 	int i;
 	int len = strlen(line);
-	
+
 	*bg = 0;
 	*en = 0;
-	
+
   // skip spaces
 	while (line[*bg] ==' ' || line[*bg]=='\t') (*bg)++;
 	if (*bg >= len) {
@@ -445,13 +445,13 @@ int param_getptr(const char *line, int *bg, int *en, int paramnum)
 	for (i = 0; i < paramnum; i++) {
 		while (line[*bg]!=' ' && line[*bg]!='\t' && line[*bg] != '\0') (*bg)++;
 		while (line[*bg]==' ' || line[*bg]=='\t') (*bg)++;
-		
+
 		if (line[*bg] == '\0') return 1;
 	}
-	
+
 	*en = *bg;
 	while (line[*en] != ' ' && line[*en] != '\t' && line[*en] != '\0') (*en)++;
-	
+
 	(*en)--;
 
 	return 0;
@@ -460,7 +460,7 @@ int param_getptr(const char *line, int *bg, int *en, int paramnum)
 int param_getlength(const char *line, int paramnum)
 {
 	int bg, en;
-	
+
 	if (param_getptr(line, &bg, &en, paramnum)) return 0;
 
 	return en - bg + 1;
@@ -472,12 +472,12 @@ char param_getchar(const char *line, int paramnum) {
 
 char param_getchar_indx(const char *line, int indx, int paramnum) {
 	int bg, en;
-	
+
 	if (param_getptr(line, &bg, &en, paramnum)) return 0x00;
 
 	if (bg + indx > en)
 		return '\0';
-	
+
 	return line[bg + indx];
 }
 
@@ -518,7 +518,7 @@ uint8_t param_isdec(const char *line, int paramnum)
 uint8_t param_get8ex(const char *line, int paramnum, int deflt, int base)
 {
 	int bg, en;
-	if (!param_getptr(line, &bg, &en, paramnum)) 
+	if (!param_getptr(line, &bg, &en, paramnum))
 		return strtoul(&line[bg], NULL, base) & 0xff;
 	else
 		return deflt;
@@ -527,7 +527,7 @@ uint8_t param_get8ex(const char *line, int paramnum, int deflt, int base)
 uint32_t param_get32ex(const char *line, int paramnum, int deflt, int base)
 {
 	int bg, en;
-	if (!param_getptr(line, &bg, &en, paramnum)) 
+	if (!param_getptr(line, &bg, &en, paramnum))
 		return strtoul(&line[bg], NULL, base);
 	else
 		return deflt;
@@ -536,7 +536,7 @@ uint32_t param_get32ex(const char *line, int paramnum, int deflt, int base)
 uint64_t param_get64ex(const char *line, int paramnum, int deflt, int base)
 {
 	int bg, en;
-	if (!param_getptr(line, &bg, &en, paramnum)) 
+	if (!param_getptr(line, &bg, &en, paramnum))
 		return strtoull(&line[bg], NULL, base);
 	else
 		return deflt;
@@ -547,17 +547,17 @@ int param_gethex(const char *line, int paramnum, uint8_t * data, int hexcnt) {
 	uint32_t temp;
 
 	if (hexcnt & 1) return 1;
-	
+
 	if (param_getptr(line, &bg, &en, paramnum)) return 1;
 
 	if (en - bg + 1 != hexcnt) return 1;
 
 	for(i = 0; i < hexcnt; i += 2) {
 		if (!(isxdigit(line[bg + i]) && isxdigit(line[bg + i + 1])) ) return 1;
-		
+
 		sscanf((char[]){line[bg + i], line[bg + i + 1], 0}, "%X", &temp);
 		data[i / 2] = temp & 0xff;
-	}	
+	}
 
 	return 0;
 }
@@ -573,10 +573,10 @@ int param_gethex_ex(const char *line, int paramnum, uint8_t * data, int *hexcnt)
 
 	for(i = 0; i < *hexcnt; i += 2) {
 		if (!(isxdigit(line[bg + i]) && isxdigit(line[bg + i + 1])) ) return 1;
-		
+
 		sscanf((char[]){line[bg + i], line[bg + i + 1], 0}, "%X", &temp);
 		data[i / 2] = temp & 0xff;
-	}	
+	}
 
 	return 0;
 }
@@ -589,21 +589,21 @@ int param_gethex_to_eol(const char *line, int paramnum, uint8_t * data, int maxd
 	if (param_getptr(line, &bg, &en, paramnum)) return 1;
 
 	*datalen = 0;
-	
+
 	int indx = bg;
 	while (line[indx]) {
 		if (line[indx] == '\t' || line[indx] == ' ') {
 			indx++;
 			continue;
 		}
-		
+
 		if (isxdigit(line[indx])) {
 			buf[strlen(buf) + 1] = 0x00;
 			buf[strlen(buf)] = line[indx];
 		} else {
 			// if we have symbols other than spaces and hex
 			return 1;
-		}				
+		}
 
 		if (*datalen >= maxdatalen) {
 			// if we dont have space in buffer and have symbols to translate
@@ -616,14 +616,14 @@ int param_gethex_to_eol(const char *line, int paramnum, uint8_t * data, int maxd
 			*buf = 0;
 			(*datalen)++;
 		}
-		
+
 		indx++;
 	}
 
-	if (strlen(buf) > 0) 
+	if (strlen(buf) > 0)
 		//error when not completed hex bytes
 		return 3;
-		
+
 	return 0;
 }
 
@@ -631,7 +631,7 @@ int param_getstr(const char *line, int paramnum, char * str, size_t buffersize)
 {
 	int bg, en;
 
-	if (param_getptr(line, &bg, &en, paramnum)) {	
+	if (param_getptr(line, &bg, &en, paramnum)) {
 		return 0;
 	}
 
@@ -640,10 +640,10 @@ int param_getstr(const char *line, int paramnum, char * str, size_t buffersize)
 		printf("out of bounds error: want %d bytes have %zu bytes\n", en - bg + 1 + 1, buffersize);
 		return 0;
 	}
-	
+
 	memcpy(str, line + bg, en - bg + 1);
 	str[en - bg + 1] = 0;
-	
+
 	return en - bg + 1;
 }
 
@@ -680,7 +680,7 @@ int hextobinarray(char *target, char *source)
         for(i= 0 ; i < 4 ; ++i, ++count)
             *(target++)= (x >> (3 - i)) & 1;
     }
-    
+
     return count;
 }
 
@@ -755,11 +755,11 @@ void xor(unsigned char * dst, unsigned char * src, size_t len) {
 int32_t le24toh (uint8_t data[3]) {
     return (data[2] << 16) | (data[1] << 8) | data[0];
 }
-// Pack a bitarray into a uint32_t.  
+// Pack a bitarray into a uint32_t.
 uint32_t PackBits(uint8_t start, uint8_t len, uint8_t* bits) {
 
 	if (len > 32) return 0;
-	
+
 	int i = start;
 	int j = len-1;
 	uint32_t tmp = 0;
@@ -772,7 +772,7 @@ uint32_t PackBits(uint8_t start, uint8_t len, uint8_t* bits) {
 
 // RotateLeft - Ultralight, Desfire, works on byte level
 // 00-01-02  >> 01-02-00
-void rol(uint8_t *data, const size_t len){	
+void rol(uint8_t *data, const size_t len){
     uint8_t first = data[0];
     for (size_t i = 0; i < len-1; i++) {
         data[i] = data[i+1];
@@ -793,7 +793,7 @@ uint8_t reflect8(uint8_t b) {
 }
 uint16_t reflect16(uint16_t b) {
     uint16_t v = 0;
-    v |= (b & 0x8000) >> 15; 
+    v |= (b & 0x8000) >> 15;
     v |= (b & 0x4000) >> 13;
     v |= (b & 0x2000) >> 11;
     v |= (b & 0x1000) >> 9;
@@ -814,7 +814,7 @@ uint16_t reflect16(uint16_t b) {
 }
 /*
  ref  http://www.csm.ornl.gov/~dunigan/crc.html
- Returns the value v with the bottom b [0,32] bits reflected. 
+ Returns the value v with the bottom b [0,32] bits reflected.
  Example: reflect(0x3e23L,3) == 0x3e26
 */
 uint32_t reflect(uint32_t v, int b) {
@@ -857,7 +857,7 @@ extern void str_lower(char *s ){
 	for(int i=0; i < strlen(s); i++)
 		s[i] = tolower( s[i] );
 }
-extern bool str_startswith(const char *s,  const char *pre) {	
+extern bool str_startswith(const char *s,  const char *pre) {
     return strncmp(pre, s, strlen(pre)) == 0;
 }
 
@@ -888,6 +888,6 @@ extern char *strmcopy(char *buf) {
 	if (str != NULL) {
 		memset(str, 0, strlen(buf) + 1);
 		strcpy(str, buf);
-	}	
+	}
 	return str;
 }

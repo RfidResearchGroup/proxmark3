@@ -4,9 +4,9 @@
 #define SPI_CSR_NUM      2
 #define SPI_PCS(npcs)       ((~(1 << (npcs)) & 0xF) << 16)
 /// Calculates the value of the CSR SCBR field given the baudrate and MCK.
-#define SPI_SCBR(baudrate, masterClock) ((uint32_t) ((masterClock) / (baudrate)) << 8) 
+#define SPI_SCBR(baudrate, masterClock) ((uint32_t) ((masterClock) / (baudrate)) << 8)
 /// Calculates the value of the CSR DLYBS field given the desired delay (in ns)
-#define SPI_DLYBS(delay, masterClock) ((uint32_t) ((((masterClock) / 1000000) * (delay)) / 1000) << 16) 
+#define SPI_DLYBS(delay, masterClock) ((uint32_t) ((((masterClock) / 1000000) * (delay)) / 1000) << 16)
 /// Calculates the value of the CSR DLYBCT field given the desired delay (in ns)
 #define SPI_DLYBCT(delay, masterClock) ((uint32_t) ((((masterClock) / 1000000) * (delay)) / 32000) << 24)
 
@@ -67,7 +67,7 @@ void FlashSetup(uint32_t baudrate){
 
 	//	NPCS2 Mode 0
 	AT91C_BASE_SPI->SPI_MR =
-		(0 << 24)	|		// Delay between chip selects = DYLBCS/MCK BUT: 
+		(0 << 24)	|		// Delay between chip selects = DYLBCS/MCK BUT:
 		                    // If DLYBCS is less than or equal to six, six MCK periods
 		            	    // will be inserted by default.
 		SPI_PCS(SPI_CSR_NUM) | 		// Peripheral Chip Select (selects SPI_NCS2 or PA10)
@@ -88,10 +88,10 @@ void FlashSetup(uint32_t baudrate){
 
 	AT91C_BASE_SPI->SPI_CSR[2] =
         SPI_DLYBCT(dlybct,MCK)		| // Delay between Consecutive Transfers (32 MCK periods)
-		SPI_DLYBS(0,MCK)		| // Delay Beforce SPCK CLock		
+		SPI_DLYBS(0,MCK)		| // Delay Beforce SPCK CLock
 		SPI_SCBR(baudrate,MCK)	| // SPI Baudrate Selection
 		AT91C_SPI_BITS_8		|	  // Bits per Transfer (8 bits)
-		//AT91C_SPI_CSAAT	|	// Chip Select inactive after transfer 
+		//AT91C_SPI_CSAAT	|	// Chip Select inactive after transfer
 							// 40.4.6.2 SPI: Bad tx_ready Behavior when CSAAT = 1 and SCBR = 1
 							// If the SPI is programmed with CSAAT = 1, SCBR(baudrate) = 1 and two transfers are performed consecutively on
 							// the same slave with an IDLE state between them, the tx_ready signal does not rise after the second data has been
@@ -140,17 +140,17 @@ void FlashStop(void) {
 
     // Disable all interrupts
     AT91C_BASE_SPI->SPI_IDR = 0xFFFFFFFF;
-	
+
 	// SPI disable
 	AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SPIDIS;
 
 	if ( MF_DBGLEVEL > 3 ) Dbprintf("FlashStop");
-	
+
 	StopTicks();
 }
 
 //	send one byte over SPI
-uint16_t FlashSendByte(uint32_t data) {	
+uint16_t FlashSendByte(uint32_t data) {
 
 	// wait until SPI is ready for transfer
 	//if you are checking for incoming data returned then the TXEMPTY flag is redundant
@@ -176,7 +176,7 @@ uint16_t FlashSendLastByte(uint32_t data) {
 //	read state register 1
 uint8_t Flash_ReadStat1(void) {
 	FlashSendByte(READSTAT1);
-	return FlashSendLastByte(0xFF);	
+	return FlashSendLastByte(0xFF);
 }
 
 bool Flash_CheckBusy(uint32_t timeout)
@@ -215,10 +215,10 @@ uint8_t Flash_ReadID(void) {
 	FlashSendByte(0x00);
 
     uint8_t man_id = FlashSendByte(0xFF);
-	uint8_t dev_id = FlashSendLastByte(0xFF);	
+	uint8_t dev_id = FlashSendLastByte(0xFF);
 
 	if ( MF_DBGLEVEL > 3 ) Dbprintf("Flash ReadID  |  Man ID %02x | Device ID %02x", man_id, dev_id);
-	
+
 	if ( (man_id == WINBOND_MANID ) && (dev_id == WINBOND_DEVID) )
 		return dev_id;
 
@@ -248,9 +248,9 @@ void Flash_UniqueID(uint8_t *uid) {
 }
 
 uint16_t Flash_ReadData(uint32_t address, uint8_t *out, uint16_t len) {
-	
+
 	if (!FlashInit()) return 0;
-		
+
 	// length should never be zero
 	if (!len || Flash_CheckBusy(BUSY_TIMEOUT)) return 0;
 
@@ -268,8 +268,8 @@ uint16_t Flash_ReadData(uint32_t address, uint8_t *out, uint16_t len) {
 		out[i] = FlashSendByte(0xFF);
 
 	out[i] = FlashSendLastByte(0xFF);
-	FlashStop();	
-	return len;	
+	FlashStop();
+	return len;
 }
 
 void Flash_TransferAdresse(uint32_t address){
@@ -280,10 +280,10 @@ void Flash_TransferAdresse(uint32_t address){
 
 /* This ensure we can ReadData without having to cycle through initialization everytime */
 uint16_t Flash_ReadDataCont(uint32_t address, uint8_t *out, uint16_t len) {
-	
+
 	// length should never be zero
 	if (!len) return 0;
-	
+
     uint8_t cmd = (FASTFLASH) ? FASTREAD : READDATA;
 
 	FlashSendByte(cmd);
@@ -292,31 +292,31 @@ uint16_t Flash_ReadDataCont(uint32_t address, uint8_t *out, uint16_t len) {
     if (FASTFLASH){
 		FlashSendByte(DUMMYBYTE);
 	}
- 
+
 	uint16_t i = 0;
 	for (; i < (len - 1); i++)
 		out[i] = FlashSendByte(0xFF);
 
 	out[i] = FlashSendLastByte(0xFF);
-	return len;	
+	return len;
 }
 
 
 ////////////////////////////////////////
-// Write data can only program one page. A page has 256 bytes. 
+// Write data can only program one page. A page has 256 bytes.
 // if len > 256, it might wrap around and overwrite pos 0.
 uint16_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len) {
 
 	// length should never be zero
 	if (!len)
 		return 0;
-	
+
 	//	Max 256 bytes write
 	if (((address & 0xFF) + len) > 256) {
 		Dbprintf("Flash_WriteData 256 fail [ 0x%02x ] [ %u ]", (address & 0xFF)+len, len );
 		return 0;
 	}
-	
+
 	// out-of-range
 	if ( (( address >> 16 ) & 0xFF ) > MAX_BLOCKS) {
 		Dbprintf("Flash_WriteData,  block out-of-range");
@@ -327,11 +327,11 @@ uint16_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len) {
 		if ( MF_DBGLEVEL > 3 ) Dbprintf("Flash_WriteData init fail");
 		return 0;
 	}
-	
+
 	Flash_CheckBusy(BUSY_TIMEOUT);
 
 	Flash_WriteEnable();
-	
+
 	FlashSendByte(PAGEPROG);
 	FlashSendByte((address >> 16) & 0xFF);
 	FlashSendByte((address >> 8) & 0xFF);
@@ -344,7 +344,7 @@ uint16_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len) {
 	FlashSendLastByte(in[i]);
 
 	FlashStop();
-	return len;	
+	return len;
 }
 
 
@@ -355,12 +355,12 @@ uint16_t Flash_WriteDataCont(uint32_t address, uint8_t *in, uint16_t len) {
 
 	if (!len)
 		return 0;
-	
+
 	if (((address & 0xFF) + len) > 256) {
 		Dbprintf("Flash_WriteDataCont 256 fail [ 0x%02x ] [ %u ]", (address & 0xFF)+len, len );
 		return 0;
 	}
-	
+
 	if ( (( address >> 16 ) & 0xFF ) > MAX_BLOCKS) {
 		Dbprintf("Flash_WriteDataCont,  block out-of-range");
 		return 0;
@@ -376,7 +376,7 @@ uint16_t Flash_WriteDataCont(uint32_t address, uint8_t *in, uint16_t len) {
 		FlashSendByte(in[i]);
 
 	FlashSendLastByte(in[i]);
-	return len;	
+	return len;
 }
 
 // assumes valid start 256 based 00 address
@@ -418,12 +418,12 @@ bool Flash_WipeMemoryPage(uint8_t page) {
 		return false;
 	}
 	Flash_ReadStat1();
-	
+
 	// Each block is 64Kb. One block erase takes 1s ( 1000ms )
-	Flash_WriteEnable(); Flash_Erase64k(page); Flash_CheckBusy(BUSY_TIMEOUT);	
+	Flash_WriteEnable(); Flash_Erase64k(page); Flash_CheckBusy(BUSY_TIMEOUT);
 
 	FlashStop();
-	return true;	
+	return true;
 }
 // Wipes flash memory completely, fills with 0xFF
 bool Flash_WipeMemory() {
@@ -432,22 +432,22 @@ bool Flash_WipeMemory() {
 		return false;
 	}
 	Flash_ReadStat1();
-	
+
 	// Each block is 64Kb.  Four blocks
 	// one block erase takes 1s ( 1000ms )
-	Flash_WriteEnable(); Flash_Erase64k(0); Flash_CheckBusy(BUSY_TIMEOUT);	
+	Flash_WriteEnable(); Flash_Erase64k(0); Flash_CheckBusy(BUSY_TIMEOUT);
 	Flash_WriteEnable(); Flash_Erase64k(1); Flash_CheckBusy(BUSY_TIMEOUT);
 	Flash_WriteEnable(); Flash_Erase64k(2); Flash_CheckBusy(BUSY_TIMEOUT);
 	Flash_WriteEnable(); Flash_Erase64k(3); Flash_CheckBusy(BUSY_TIMEOUT);
-	
+
 	FlashStop();
 	return true;
 }
 
 //	enable the flash write
 void Flash_WriteEnable() {
-	FlashSendLastByte(WRITEENABLE);	
-	if ( MF_DBGLEVEL > 3 ) Dbprintf("Flash Write enabled");	
+	FlashSendLastByte(WRITEENABLE);
+	if ( MF_DBGLEVEL > 3 ) Dbprintf("Flash Write enabled");
 }
 
 //	erase 4K at one time
@@ -488,9 +488,9 @@ bool Flash_Erase32k(uint32_t address) {
 // 0x02 00 00  -- 0x 02 FF FF  == block 2
 // 0x03 00 00  -- 0x 03 FF FF  == block 3
 bool Flash_Erase64k(uint8_t block) {
-	
+
 	if (block > MAX_BLOCKS) return false;
-	
+
 	FlashSendByte(BLOCK64ERASE);
 	FlashSendByte(block);
 	FlashSendByte(0x00);
@@ -512,7 +512,7 @@ void Flashmem_print_status(void) {
 		return;
 	}
 	DbpString("  Init....................OK");
-	
+
 	uint8_t dev_id = Flash_ReadID();
 	switch (dev_id) {
 		case 0x11 :
@@ -528,13 +528,13 @@ void Flashmem_print_status(void) {
 			DbpString("  Device ID............... -->  Unknown  <--");
 			break;
 	}
-	
+
 	uint8_t uid[8] = {0,0,0,0,0,0,0,0};
-	Flash_UniqueID(uid);	
+	Flash_UniqueID(uid);
 	Dbprintf("  Unique ID...............0x%02x%02x%02x%02x%02x%02x%02x%02x",
-			uid[7], uid[6], uid[5], uid[4], 
+			uid[7], uid[6], uid[5], uid[4],
 			uid[3], uid[2], uid[1], uid[0]
 	);
-	
+
 	FlashStop();
 }

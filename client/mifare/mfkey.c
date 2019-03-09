@@ -22,7 +22,7 @@ int compare_uint64(const void *a, const void *b) {
 uint32_t intersection(uint64_t *listA, uint64_t *listB) {
 	if (listA == NULL || listB == NULL)
 		return 0;
-		
+
 	uint64_t *p1, *p2, *p3;
 	p1 = p3 = listA;
 	p2 = listB;
@@ -56,7 +56,7 @@ uint32_t nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint32_t ar, uint64_t
 	for ( pos = 0; pos < 8; pos++ ) {
 		ks3x[7-pos] = (ks_info >> (pos*8)) & 0x0F;
 		bt = (par_info >> (pos*8)) & 0xFF;
-		
+
 		par[7-pos][0] = (bt >> 0) & 1;
 		par[7-pos][1] = (bt >> 1) & 1;
 		par[7-pos][2] = (bt >> 2) & 1;
@@ -128,15 +128,15 @@ bool mfkey32_moebius(nonces_t data, uint64_t *outputkey) {
 	int counter = 0;
 	uint32_t p640 = prng_successor(data.nonce, 64);
 	uint32_t p641 = prng_successor(data.nonce2, 64);
-		
+
 	s = lfsr_recovery32(data.ar ^ p640, 0);
-  
+
 	for(t = s; t->odd | t->even; ++t) {
 		lfsr_rollback_word(t, 0, 0);
 		lfsr_rollback_word(t, data.nr, 1);
 		lfsr_rollback_word(t, data.cuid ^ data.nonce, 0);
 		crypto1_get_lfsr(t, &key);
-		
+
 		crypto1_word(t, data.cuid ^ data.nonce2, 0);
 		crypto1_word(t, data.nr2, 1);
 		if (data.ar2 == (crypto1_word(t, 0, 0) ^ p641)) {
@@ -157,7 +157,7 @@ int mfkey64(nonces_t data, uint64_t *outputkey){
 	uint32_t ks2;    				// keystream used to encrypt reader response
 	uint32_t ks3;    				// keystream used to encrypt tag response
 	struct Crypto1State *revstate;
-	
+
 	// Extract the keystream from the messages
 	ks2 = data.ar ^ prng_successor(data.nonce, 64);
 	ks3 = data.at ^ prng_successor(data.nonce, 96);
@@ -168,6 +168,6 @@ int mfkey64(nonces_t data, uint64_t *outputkey){
 	lfsr_rollback_word(revstate, data.cuid ^ data.nonce, 0);
 	crypto1_get_lfsr(revstate, &key);
 	crypto1_destroy(revstate);
-	*outputkey = key;	
+	*outputkey = key;
 	return 0;
 }

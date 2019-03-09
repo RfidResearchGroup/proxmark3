@@ -50,7 +50,7 @@ extern void printEM410x(uint32_t hi, uint64_t id);
 extern int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo );
 extern int AskEm410xDemod(const char *Cmd, uint32_t *hi, uint64_t *lo, bool verbose);
 
-extern int usage_lf_em410x_sim(void);  
+extern int usage_lf_em410x_sim(void);
 extern int usage_lf_em410x_ws(void);
 extern int usage_lf_em410x_clone(void);
 extern int usage_lf_em410x_sim(void);

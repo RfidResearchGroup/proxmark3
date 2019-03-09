@@ -20,7 +20,7 @@
 #include "util.h"		// wiegand_add_parity etc
 #include "cmddata.h"  //for g_debugMode, demodbuff cmds
 #include "cmdlf.h"	  // lf_read
-#include "cmdmain.h"			   
+#include "cmdmain.h"
 #include "util_posix.h"
 #include "lfdemod.h"
 

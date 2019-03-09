@@ -29,7 +29,7 @@ static bool crypto_init(void)
 	if (crypto_backend)
 		return true;
 
-	crypto_backend = crypto_polarssl_init(); 
+	crypto_backend = crypto_polarssl_init();
 
 	if (!crypto_backend)
 		return false;

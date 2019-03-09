@@ -155,7 +155,7 @@ usb_dev_handle* findProxmark(int verbose, unsigned int *iface)
 		else {
 			iSelection = 1;
 		}
-	
+
 		iSelection --;
 
 		for (int i = 0; i < iUnit; i++) {

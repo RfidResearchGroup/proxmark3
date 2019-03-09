@@ -17,7 +17,7 @@
 */
 uint8_t getParity( uint8_t *bits, uint8_t len, uint8_t type ) {
     uint8_t x = 0;
-    for(; len > 0; --len) 
+    for(; len > 0; --len)
         x += bits[len - 1];
 
     return (x & 1 ) ^ type;
@@ -35,7 +35,7 @@ uint8_t checkParity(uint32_t bits, uint8_t len, uint8_t type);
 
 // by marshmellow
 // takes a array of binary values, start position, length of bits per parity (includes parity bit),
-// Parity Type (1 for odd; 0 for even; 2 for Always 1's; 3 for Always 0's), and binary Length (length to run) 
+// Parity Type (1 for odd; 0 for even; 2 for Always 1's; 3 for Always 0's), and binary Length (length to run)
 size_t removeParity(uint8_t *bitstream, size_t startIdx, uint8_t pLen, uint8_t pType, size_t bLen) {
 	uint32_t parityWd = 0;
 	size_t j = 0, bitcount = 0;
@@ -69,10 +69,10 @@ size_t removeParity(uint8_t *bitstream, size_t startIdx, uint8_t pLen, uint8_t p
 * @brief addParity
 * @param bits       pointer to the source bitstream of binary values
 * @param dest       pointer to the destination where parities together with bits are added.
-* @param sourceLen  number of 
+* @param sourceLen  number of
 * @param pLen       length bits to be checked
 * @param pType      EVEN|ODD|2 (always 1's)|3 (always 0's)
-* @return 
+* @return
 */
 size_t addParity(uint8_t *bits, uint8_t *dest, uint8_t sourceLen, uint8_t pLen, uint8_t pType)
 {
@@ -83,12 +83,12 @@ size_t addParity(uint8_t *bits, uint8_t *dest, uint8_t sourceLen, uint8_t pLen, 
 			parityWd = (parityWd << 1) | bits[word+bit];
 			dest[j++] = (bits[word+bit]);
 		}
-		
+
 		// if parity fails then return 0
 		switch (pType) {
 			case 3: dest[j++] = 0; break; // marker bit which should be a 0
 			case 2: dest[j++] = 1; break; // marker bit which should be a 1
-			default: 
+			default:
 				dest[j++] = parityTest(parityWd, pLen-1, pType) ^ 1;
 				break;
 		}
@@ -115,34 +115,34 @@ void wiegand_add_parity(uint8_t *source, uint8_t *dest, uint8_t len) {
 
 	// half length, Even and Odd is calculated to the middle.
 	uint8_t len_h2 = length >> 1;
-	
+
 	// add EVEN parity at the beginning
     *(dest) = GetParity(source, EVEN, len_h2);
-	
+
     dest += length + 1;
-	
+
 	// add ODD parity at the very end
     *(dest) = GetParity(source + len_h2, ODD, len_h2);
 }
 
 //uint32_t bytebits_to_byte(uint8_t* src, size_t numbits);
 #define MAX_BITS_TXX55 6*4*8
-#define MAX_BYTES_TXX55 6*4	
+#define MAX_BYTES_TXX55 6*4
 /*
 * @brief num_to_wiegand_bytes
 * @param oem       Sometimes call FF Fixfield, SiteCode. Used in a few formats
-* @param fc        Facility code 
+* @param fc        Facility code
 * @param cn        Card number
 * @param dest      pointer to the destination where wiegand bytes will be stored
-* @param formatlen 
+* @param formatlen
 */
 void num_to_wiegand_bytes(uint64_t oem, uint64_t fc, uint64_t cn, uint8_t *dest, uint8_t formatlen){
 
 	uint8_t data[MAX_BITS_TXX55] = {0};
 	memset(data, 0, sizeof(data));
-	
+
 	num_to_wiegand_bits(oem, fc, cn, data, formatlen);
-		
+
 	// loop
 	// (formatlen / 32 ) + 1
 	// (formatlen >> 5) + 1
@@ -150,15 +150,15 @@ void num_to_wiegand_bytes(uint64_t oem, uint64_t fc, uint64_t cn, uint8_t *dest,
 		uint32_t value  = bytebits_to_byte( data + (i * 32), 32);
 		num_to_bytes(value, 32, dest + (i*4) );
 	}
-	
+
 }
 /*
 * @brief num_to_wiegand_bits
 * @param oem       Sometimes call FF Fixfield, SiteCode. Used in a few formats
-* @param fc        Facility code 
+* @param fc        Facility code
 * @param cn        Card number
 * @param dest      pointer to the destination where wiegand bits will be stored
-* @param formatlen 
+* @param formatlen
 */
 void num_to_wiegand_bits(uint64_t oem, uint64_t fc, uint64_t cn, uint8_t *dest, uint8_t formatlen){
 
@@ -166,8 +166,8 @@ void num_to_wiegand_bits(uint64_t oem, uint64_t fc, uint64_t cn, uint8_t *dest, 
 	memset(bits, 0, sizeof(bits));
 	uint8_t *temp = bits;
 	uint64_t value = 0;
-	
-	switch ( formatlen ){		
+
+	switch ( formatlen ){
 		case 26 :				// 26bit HID H10301
 			fc &= 0xFF;			// 8bits
 			cn &= 0xFFFF;		// 16bits
@@ -175,26 +175,26 @@ void num_to_wiegand_bits(uint64_t oem, uint64_t fc, uint64_t cn, uint8_t *dest, 
 			num_to_bytebits(value, 24, temp);
 			wiegand_add_parity(temp, dest, 24);
 			break;
-		case 261:				// 26bit Indala 
+		case 261:				// 26bit Indala
 			fc &= 0xFFF;		// 12bits
 			cn &= 0xFFF;		// 12bits
 			value = fc << 12 | cn;
 			num_to_bytebits(value, 24, temp);
-			wiegand_add_parity(temp, dest, 24);	
+			wiegand_add_parity(temp, dest, 24);
 			break;
 		case 34 :				// 34bits HID
 			fc &= 0xFFFF;		// 16bits
 			cn &= 0xFFFF;		// 16bits
 			value = fc << 16 | cn;
 			num_to_bytebits(value, 32, temp);
-			wiegand_add_parity(temp, dest, 32);	
+			wiegand_add_parity(temp, dest, 32);
 			break;
 		case 35 :				// 35bits HID
 			fc &= 0xFFF;		// 12bits
 			cn &= 0xFFFFFF;		// 20bits
 			value = fc << 20 | cn;
 			num_to_bytebits(value, 32, temp);
-			wiegand_add_parity(temp, dest, 32);	
+			wiegand_add_parity(temp, dest, 32);
 			break;
 		case 37 : 				// H10304
 			fc &= 0xFFFF;   	// 16bits

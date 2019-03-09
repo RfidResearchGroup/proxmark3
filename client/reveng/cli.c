@@ -377,7 +377,7 @@ ipqx:
 
 			/* allocate argument array */
 			args = argc - optind;
-			
+
 			apolys = calloc(args * sizeof(poly_t), sizeof(char));
 			if ( !apolys ){
 				uerror("cannot allocate memory for argument list");

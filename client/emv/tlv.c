@@ -11,7 +11,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * https://github.com/lumag/emv-tools/blob/master/lib/tlv.c
  */
 
@@ -37,8 +37,8 @@
 #define TLV_LEN_INVALID		(~0)
 
 // http://radek.io/2012/11/10/magical-container_of-macro/
-//#define container_of(ptr, type, member) ({			       
-//	const typeof( ((type *)0)->member ) *__mptr = (ptr);	
+//#define container_of(ptr, type, member) ({
+//	const typeof( ((type *)0)->member ) *__mptr = (ptr);
 //        (type *)( (char *)__mptr - offsetof(type,member) );})
 
 struct tlvdb {
@@ -301,14 +301,14 @@ void tlvdb_free(struct tlvdb *tlvdb)
 struct tlvdb *tlvdb_find_next(struct tlvdb *tlvdb, tlv_tag_t tag) {
 	if (!tlvdb)
 		return NULL;
-	
+
 	return tlvdb_find(tlvdb->next, tag);
 }
 
 struct tlvdb *tlvdb_find(struct tlvdb *tlvdb, tlv_tag_t tag) {
 	if (!tlvdb)
 		return NULL;
-	
+
 	for (; tlvdb; tlvdb = tlvdb->next) {
 		if (tlvdb->tag.tag == tag)
 			return tlvdb;
@@ -320,16 +320,16 @@ struct tlvdb *tlvdb_find(struct tlvdb *tlvdb, tlv_tag_t tag) {
 struct tlvdb *tlvdb_find_full(struct tlvdb *tlvdb, tlv_tag_t tag) {
 	if (!tlvdb)
 		return NULL;
-	
+
 	for (; tlvdb; tlvdb = tlvdb->next) {
 		if (tlvdb->tag.tag == tag)
 			return tlvdb;
-		
+
 		if (tlvdb->children) {
 			struct tlvdb * ch = tlvdb_find_full(tlvdb->children, tag);
 			if (ch)
 				return ch;
-		}			
+		}
 	}
 
 	return NULL;
@@ -338,7 +338,7 @@ struct tlvdb *tlvdb_find_full(struct tlvdb *tlvdb, tlv_tag_t tag) {
 struct tlvdb *tlvdb_find_path(struct tlvdb *tlvdb, tlv_tag_t tag[]) {
 	int i = 0;
 	struct tlvdb *tnext = tlvdb;
-	
+
 	while (tnext && tag[i]) {
 		tnext = tlvdb_find(tnext, tag[i]);
 		i++;
@@ -346,7 +346,7 @@ struct tlvdb *tlvdb_find_path(struct tlvdb *tlvdb, tlv_tag_t tag[]) {
 			tnext = tnext->children;
 		}
 	}
-	
+
 	return tnext;
 }
 
@@ -354,11 +354,11 @@ void tlvdb_add(struct tlvdb *tlvdb, struct tlvdb *other)
 {
 	if (tlvdb == other)
 		return;
-	
+
 	while (tlvdb->next) {
 		if (tlvdb->next == other)
 			return;
-		
+
 		tlvdb = tlvdb->next;
 	}
 
@@ -383,20 +383,20 @@ void tlvdb_change_or_add_node_ex(struct tlvdb *tlvdb, tlv_tag_t tag, size_t len,
 		struct tlvdb *tnewelm = tlvdb_fixed(tag, len, value);
 		tnewelm->next = telm->next;
 		tnewelm->parent = telm->parent;
-		
+
 		// if telm stayed first in children chain
 		if (telm->parent && telm->parent->children == telm) {
 			telm->parent->children = tnewelm;
 		}
-		
+
 		// if telm have previous element
 		if (telm != tlvdb) {
 			// elm in root
 			struct tlvdb *celm = tlvdb;
 			// elm in child list of node
 			if (telm->parent && telm->parent->children)
-				celm = telm->parent->children;		
-			
+				celm = telm->parent->children;
+
 			// find previous element
 			for (; celm; celm = celm->next) {
 				if (celm->next == telm) {
@@ -405,15 +405,15 @@ void tlvdb_change_or_add_node_ex(struct tlvdb *tlvdb, tlv_tag_t tag, size_t len,
 				}
 			}
 		}
-		
+
 		// free old element with childrens
 		telm->next = NULL;
 		tlvdb_free(telm);
-		
+
 		if (tlvdb_elm)
 			*tlvdb_elm = tnewelm;
 	}
-	
+
 	return;
 }
 
@@ -557,18 +557,18 @@ struct tlvdb *tlvdb_elm_get_parent(struct tlvdb *tlvdb)
 
 bool tlvdb_get_uint8(struct tlvdb *tlvRoot, tlv_tag_t tag, uint8_t *value)
 {
-	const struct tlv *tlvelm = tlvdb_get(tlvRoot, tag, NULL); 	
+	const struct tlv *tlvelm = tlvdb_get(tlvRoot, tag, NULL);
 	return tlv_get_uint8(tlvelm, value);
 }
 
-bool tlv_get_uint8(const struct tlv *etlv, uint8_t *value) 
+bool tlv_get_uint8(const struct tlv *etlv, uint8_t *value)
 {
 	*value = 0;
 	if (etlv)
 	{
 		if (etlv->len == 0)
 			return true;
-		
+
 		if (etlv->len == 1)
 		{
 			*value = etlv->value[0];
@@ -585,7 +585,7 @@ bool tlv_get_int(const struct tlv *etlv, int *value)
 	{
 		if (etlv->len == 0)
 			return true;
-		
+
 		if (etlv->len <= 4)
 		{
 			for (int i = 0; i < etlv->len; i++)

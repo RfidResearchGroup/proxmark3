@@ -13,7 +13,7 @@
 I've personally recoded the image of the ARM in order to automate
 the attack and simulation on Mifare cards. I've moved some of the
 implementation on the client side to the ARM such as *chk*, *ecfill*, *sim*
-and *clone* commands. 
+and *clone* commands.
 
 ### What it does now:
 It will check if the keys from the attacked tag are a subset from
@@ -218,7 +218,7 @@ void RunMod() {
 	StandAloneMode();
 	Dbprintf(">>  Matty mifare chk/dump/sim  a.k.a MattyRun Started  <<");
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-	
+
 	/*
 		It will check if the keys from the attacked tag are a subset from
 		the hardcoded set of keys inside of the ARM. If this is the case
@@ -232,9 +232,9 @@ void RunMod() {
 		If you're using the proxmark connected to a device that has an OS, and you're not using the proxmark3 client to see the debug
 		messages, you MUST uncomment usb_disable().
 	*/
-	
+
 	// Comment this line below if you want to see debug messages.
-    // usb_disable(); 
+    // usb_disable();
 
     /*
 		Pseudo-configuration block.
@@ -323,7 +323,7 @@ void RunMod() {
 	bool err = 0;
 	bool allKeysFound = true;
 	uint32_t size = mfKeysCnt;
-	
+
 	for (int type = !keyType; type < 2 && !err; keyType == 2 ? (type++) : (type = 2)) {
 		block = blockNo;
 		for (int sec = 0; sec < sectorsCnt && !err; ++sec) {
@@ -341,18 +341,18 @@ void RunMod() {
 				num_to_bytes(key64, 6, foundKey[type][sec]);
 				validKey[type][sec] = true;
 				keyFound = true;
-				Dbprintf("\t✓ Found valid key: [%02x%02x%02x%02x%02x%02x]\n", 
+				Dbprintf("\t✓ Found valid key: [%02x%02x%02x%02x%02x%02x]\n",
 					(keyBlock + 6*key)[0], (keyBlock + 6*key)[1], (keyBlock + 6*key)[2],
 					(keyBlock + 6*key)[3], (keyBlock + 6*key)[4], (keyBlock + 6*key)[5]
 				);
 			}
-			
+
 			block < 127 ? (block += 4) : (block += 16);
 		}
 	}
 
 	/*
-		TODO: 
+		TODO:
 		- Get UID from tag and set accordingly in emulator memory and call mifare1ksim with right flags (iceman)
 	*/
 	if (!allKeysFound && keyFound) {
@@ -371,9 +371,9 @@ void RunMod() {
 		If enabled, transfers found keys to memory and loads target content in emulator memory. Then it simulates to be the tag it has basically cloned.
 	*/
 	if ((transferToEml) && (allKeysFound)) {
-		
+
 		emlClearMem();
-		
+
 		uint8_t mblock[16];
 		for (uint16_t sectorNo = 0; sectorNo < sectorsCnt; sectorNo++) {
 			if (validKey[0][sectorNo] || validKey[1][sectorNo]) {
@@ -388,25 +388,25 @@ void RunMod() {
 			}
 		Dbprintf("\t✓ Found keys have been transferred to the emulator memory.");
 		if (ecfill) {
-			
+
 			Dbprintf("\tFilling in with key A.");
-			MifareECardLoad(sectorsCnt, 0, 0, &filled);			
+			MifareECardLoad(sectorsCnt, 0, 0, &filled);
 			if (filled != 1) {
 				Dbprintf("\t✕ Failed filling with A.");
 			}
-			
+
 			Dbprintf("\tFilling in with key B.");
 			MifareECardLoad(sectorsCnt, 1, 0, &filled);
 			if (filled != 1) {
 				Dbprintf("\t✕ Failed filling with B.");
 			}
-			
+
 			if ((filled == 1) && simulation) {
 				Dbprintf("\t✓ Filled, simulation started.");
-				
+
 				// This will tell the fpga to emulate using previous keys and current target tag content.
 				Dbprintf("\t Press button to abort simulation at anytime.");
-				
+
 				LED_B_ON(); // green
 				// assuming arg0==0,  use hardcoded uid 0xdeadbeaf
 				Mifare1ksim( FLAG_4B_UID_IN_DATA | FLAG_UID_IN_EMUL, 0, 0, uid);
@@ -454,5 +454,5 @@ void RunMod() {
 				LED_C_ON();
 			}
 		}
-	}	
+	}
 }

@@ -82,7 +82,7 @@ void dumpCommandsRecursive(const command_t cmds[], int markdown) {
 	int i = 0;
 	int w_cmd = 25;
 	int w_off = 8;
-	// First, dump all single commands, which are not a container for 
+	// First, dump all single commands, which are not a container for
 	// other commands
 	if (markdown) {
 		PrintAndLogEx(NORMAL, "|%-*s|%-*s|%s\n",w_cmd,"command",w_off,"offline","description");
@@ -96,7 +96,7 @@ void dumpCommandsRecursive(const command_t cmds[], int markdown) {
 		char* cmd_offline = "N";
 		if (cmds[i].Help[0] == '{' && ++i) continue;
 
-		if ( cmds[i].Offline) 
+		if ( cmds[i].Offline)
 			cmd_offline = "Y";
 		if (markdown)
 		  PrintAndLogEx(NORMAL, "|`%s%-*s`|%-*s|`%s`\n", parent, w_cmd-(int)strlen(parent)-2, cmds[i].Name, w_off, cmd_offline, cmds[i].Help);
@@ -106,7 +106,7 @@ void dumpCommandsRecursive(const command_t cmds[], int markdown) {
 	}
 	PrintAndLogEx(NORMAL, "\n\n");
 	i = 0;
-	
+
 	// Then, print the categories. These will go into subsections with their own tables
 	while (cmds[i].Name) {
 		if(cmds[i].Help[0] != '{' && ++i)  continue;
@@ -118,7 +118,7 @@ void dumpCommandsRecursive(const command_t cmds[], int markdown) {
 		char *old_parent = parent;
 		parent = currentparent;
 		// This is what causes the recursion, since commands Parse-implementation
-		// in turn calls the CmdsParse above. 
+		// in turn calls the CmdsParse above.
 		if (markdown)
 		  cmds[i].Parse("XX_internal_command_dump_markdown_XX");
 		else

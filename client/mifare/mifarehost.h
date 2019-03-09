@@ -55,7 +55,7 @@ typedef struct {
 		uint32_t nt;
 		uint32_t ks1;
 } StateList_t;
-	
+
 typedef struct {
 	uint64_t Key[2];
 	uint8_t foundKey[2];

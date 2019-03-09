@@ -13,6 +13,6 @@
  * Lesser General Public License for more details.
  */
 
-#include <stdbool.h> 
- 
+#include <stdbool.h>
+
 extern int exec_dda_test(bool verbose);

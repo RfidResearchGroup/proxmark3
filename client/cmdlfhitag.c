@@ -43,7 +43,7 @@ int CmdLFHitagList(const char *Cmd) {
 		free(got);
 		return 2;
 	}
-	
+
 	uint16_t traceLen = response.arg[2];
 	if (traceLen > USB_CMD_DATA_SIZE) {
 		uint8_t *p = realloc(got, traceLen);
@@ -59,7 +59,7 @@ int CmdLFHitagList(const char *Cmd) {
 			return 2;
 		}
 	}
-	
+
 	PrintAndLogEx(NORMAL, "recorded activity (TraceLen = %d bytes):");
 	PrintAndLogEx(NORMAL, " ETU     :nbits: who bytes");
 	PrintAndLogEx(NORMAL, "---------+-----+----+-----------");
@@ -70,11 +70,11 @@ int CmdLFHitagList(const char *Cmd) {
 
 	char filename[FILE_PATH_SIZE]  = { 0x00 };
 	FILE* f = NULL;
-  	
+
 	if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
-	
+
 	memcpy(filename, Cmd, len);
-   
+
 	if (strlen(filename) > 0) {
 		f = fopen(filename,"wb");
 		if (!f) {
@@ -84,7 +84,7 @@ int CmdLFHitagList(const char *Cmd) {
 	}
 
 	for (;;) {
-  
+
 		if(i >= traceLen) { break; }
 
 		bool isResponse;
@@ -143,11 +143,11 @@ int CmdLFHitagList(const char *Cmd) {
 				(isResponse ? "TAG" : "   "),
 				line);
 		}
-		
+
 		prev = timestamp;
 		i += (len + 9);
 	}
-  
+
 	if (f) {
 		fclose(f);
 		PrintAndLogEx(NORMAL, "Recorded activity succesfully written to file: %s", filename);
@@ -165,12 +165,12 @@ int CmdLFHitagSnoop(const char *Cmd) {
 }
 
 int CmdLFHitagSim(const char *Cmd) {
-    
+
 	UsbCommand c = {CMD_SIMULATE_HITAG};
 	char filename[FILE_PATH_SIZE] = { 0x00 };
 	FILE* f;
 	bool tag_mem_supplied;
-	
+
 	int len = strlen(Cmd);
 	if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
 	memcpy(filename, Cmd, len);
@@ -201,11 +201,11 @@ int CmdLFHitagSim(const char *Cmd) {
 }
 
 int CmdLFHitagReader(const char *Cmd) {
-	
+
 	UsbCommand c = {CMD_READER_HITAG, {0,0,0} };//, {param_get32ex(Cmd,0,0,10),param_get32ex(Cmd,1,0,16),param_get32ex(Cmd,2,0,16),param_get32ex(Cmd,3,0,16)}};
 	hitag_data* htd = (hitag_data*)c.d.asBytes;
 	hitag_function htf = param_get32ex(Cmd, 0, 0, 10);
-	
+
 	switch (htf) {
 		case 01: { //RHTSF_CHALLENGE
 			c.cmd = CMD_READ_HITAG_S;
@@ -255,7 +255,7 @@ int CmdLFHitagReader(const char *Cmd) {
 	c.arg[0] = htf;
 	clearCommandBuffer();
 	SendCommand(&c);
-	UsbCommand resp;	
+	UsbCommand resp;
 	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 4000) ) {
 		PrintAndLogEx(WARNING, "timeout while waiting for reply.");
 		return 1;
@@ -333,7 +333,7 @@ int CmdLFHitagCheckChallenges(const char *Cmd) {
 	if (len > FILE_PATH_SIZE)
 		len = FILE_PATH_SIZE;
 	memcpy(filename, Cmd, len);
-	
+
 	if (strlen(filename) > 0) {
 		f = fopen(filename,"rb+");
 		if ( !f ) {
@@ -351,7 +351,7 @@ int CmdLFHitagCheckChallenges(const char *Cmd) {
 	} else {
 		file_given = false;
 	}
-	
+
 	//file with all the challenges to try
 	c.arg[0] = (uint32_t)file_given;
 	clearCommandBuffer();
@@ -406,7 +406,7 @@ static command_t CommandTable[] = {
 	{"list",	CmdLFHitagList,    1, "<outfile> List Hitag trace history"},
 	{"reader",	CmdLFHitagReader,  1, "Act like a Hitag Reader"},
 	{"sim",		CmdLFHitagSim,     1, "<infile> Simulate Hitag transponder"},
-	{"simS",	CmdLFHitagSimS,    1, "<hitagS.hts> Simulate HitagS transponder" }, 
+	{"simS",	CmdLFHitagSimS,    1, "<hitagS.hts> Simulate HitagS transponder" },
 	{"snoop",	CmdLFHitagSnoop,   1, "Eavesdrop Hitag communication"},
 	{"writer",	CmdLFHitagWP,      1, "Act like a Hitag Writer" },
 	{"check_challenges",	CmdLFHitagCheckChallenges,   1, "<challenges.cc> test all challenges" },

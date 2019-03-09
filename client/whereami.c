@@ -140,7 +140,7 @@ int WAI_PREFIX(getExecutablePath)(char* out, int capacity, int* dirname_length)
   return WAI_PREFIX(getModulePath_)(NULL, out, capacity, dirname_length);
 }
 
-// GetModuleHandleEx() is not available on old mingw environments. We don't need getModulePath() yet. 
+// GetModuleHandleEx() is not available on old mingw environments. We don't need getModulePath() yet.
 // Sacrifice it for the time being to improve backwards compatibility
 /* WAI_NOINLINE
 WAI_FUNCSPEC

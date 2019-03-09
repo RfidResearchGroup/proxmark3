@@ -7,14 +7,14 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// main code for LF aka Proxbrute by Brad antoniewicz 
+// main code for LF aka Proxbrute by Brad antoniewicz
 //-----------------------------------------------------------------------------
 #include "lf_proxbrute.h"
 
 // samy's sniff and repeat routine for LF
 void RunMod() {
 	StandAloneMode();
-	Dbprintf(">>  LF HID proxII bruteforce a.k.a ProxBrute Started (Brad Antoniewicz) <<");		
+	Dbprintf(">>  LF HID proxII bruteforce a.k.a ProxBrute Started (Brad Antoniewicz) <<");
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
 	uint32_t high[OPTS], low[OPTS];
@@ -25,9 +25,9 @@ void RunMod() {
 	// Turn on selected LED
 	LED(selected + 1, 0);
 
-	for (;;) {		
+	for (;;) {
 		WDT_HIT();
-		
+
 		// exit from SamyRun,   send a usbcommand.
 		if (usb_poll_validate_length()) break;
 
@@ -59,8 +59,8 @@ void RunMod() {
 			// Finished recording
 			// If we were previously playing, set playing off
 			// so next button push begins playing what we recorded
-			playing = 0;			
-			cardRead = 1;	
+			playing = 0;
+			cardRead = 1;
 		}
 		else if (button_pressed > 0 && cardRead == 1) {
 			LEDsoff();
@@ -86,8 +86,8 @@ void RunMod() {
 
 			// If we were previously playing, set playing off
 			// so next button push begins playing what we recorded
-			playing = 0;			
-			cardRead = 0;			
+			playing = 0;
+			cardRead = 0;
 		}
 
 		// Change where to record (or begin playing)
@@ -107,7 +107,7 @@ void RunMod() {
 				// wait for button to be released
 				while (BUTTON_PRESS())
 					WDT_HIT();
-				
+
 				/* START PROXBRUTE */
 
 				/*
@@ -144,7 +144,7 @@ void RunMod() {
 
 				/*   END PROXBRUTE */
 
-				
+
 				if (BUTTON_HELD(1000) > 0)
 					goto out;
 
@@ -163,7 +163,7 @@ void RunMod() {
 			}
 		}
 	}
-out:	
+out:
 	DbpString("[=] exiting");
-	LEDsoff();	
+	LEDsoff();
 }

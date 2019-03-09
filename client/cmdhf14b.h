@@ -51,7 +51,7 @@ extern bool HF14BInfo(bool verbose);
 extern bool HF14BReader(bool verbose);
 extern int CmdHF14BCmdRaw (const char *Cmd);
 
-// SRi  ST Microelectronics read/write 
+// SRi  ST Microelectronics read/write
 extern int CmdHF14BReadSri(const char *Cmd);
 extern int CmdHF14BWriteSri(const char *Cmd);
 

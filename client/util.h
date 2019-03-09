@@ -199,7 +199,7 @@ extern void FillFileNameByUID(char *filenamePrefix, uint8_t * uid, const char *e
 extern int FillBuffer(uint8_t *data, size_t maxDataLength, size_t *dataLength, ...);
 
 extern bool CheckStringIsHEXValue(const char *value);
-extern void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex_len, 
+extern void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex_len,
 						  const size_t hex_max_len, const size_t min_str_len, const size_t spaces_between,
 						  bool uppercase);
 
@@ -263,4 +263,4 @@ extern bool str_startswith(const char *s,  const char *pre);  // check for prefi
 extern void strcleanrn(char *buf, size_t len);
 extern void strcreplace(char *buf, size_t len, char from, char to);
 extern char *strmcopy(char *buf);
-#endif 
+#endif

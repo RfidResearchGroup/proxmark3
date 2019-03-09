@@ -25,7 +25,7 @@ typedef enum {
 	fido2CmdClientPIN			= 0x06,
 	fido2CmdReset				= 0x07,
 	fido2CmdGetNextAssertion	= 0x08,
-	
+
 	// another data
 	fido2COSEKey                = 0xF0
 } fido2Commands;

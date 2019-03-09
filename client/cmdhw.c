@@ -26,9 +26,9 @@ static int CmdHelp(const char *Cmd);
 static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
 	char asBuff[120];
 	memset(asBuff, 0, sizeof(asBuff));
-	uint32_t mem_avail = 0;	
+	uint32_t mem_avail = 0;
 	PrintAndLogEx(NORMAL, "\n [ Hardware ] ");
-	
+
 	switch(iChipID) {
 		case 0x270B0A40: sprintf(asBuff,"AT91SAM7S512 Rev A"); break;
 		case 0x270B0A4F: sprintf(asBuff,"AT91SAM7S512 Rev B"); break;
@@ -69,19 +69,19 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
 		case 12: mem_avail = 1024; break;
 		case 14: mem_avail = 2048; break;
 	}
-	
+
 	uint32_t mem_left = 0;
-	if ( mem_avail > 0 ) 
+	if ( mem_avail > 0 )
 		mem_left = (mem_avail * 1024) - mem_used;
-	
-	PrintAndLogEx(NORMAL, "  --= Nonvolatile Program Memory Size: %uK bytes, Used: %u bytes (%2.0f%%) Free: %u bytes (%2.0f%%)", 
-				mem_avail, 
-				mem_used, 
+
+	PrintAndLogEx(NORMAL, "  --= Nonvolatile Program Memory Size: %uK bytes, Used: %u bytes (%2.0f%%) Free: %u bytes (%2.0f%%)",
+				mem_avail,
+				mem_used,
 				mem_avail == 0 ? 0.0f : (float)mem_used/(mem_avail*1024)*100,
 				mem_left,
 				mem_avail == 0 ? 0.0f : (float)mem_left/(mem_avail*1024)*100
 			);
-				
+
 	switch( (iChipID & 0xF000) >> 12 ) {
 		case 0:	 sprintf(asBuff,"None"); break;
 		case 1:	 sprintf(asBuff,"8K bytes"); break;
@@ -140,7 +140,7 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
 		case 1: sprintf(asBuff,"ROMless or on-chip Flash");	break;
 		case 2:	sprintf(asBuff,"Embedded Flash Memory"); break;
 		case 3:	sprintf(asBuff,"ROM and Embedded Flash Memory\nNVPSIZ is ROM size\nNVPSIZ2 is Flash size");	break;
-		case 4:	sprintf(asBuff,"SRAM emulating ROM"); break;		
+		case 4:	sprintf(asBuff,"SRAM emulating ROM"); break;
 	}
 	PrintAndLogEx(NORMAL, "  --= Nonvolatile Program Memory Type: %s",asBuff);
 }
@@ -156,7 +156,7 @@ int CmdDetectReader(const char *Cmd) {
 		PrintAndLogEx(NORMAL, "use 'detectreader' or 'detectreader l' or 'detectreader h'");
 		return 0;
 	}
-	clearCommandBuffer();	
+	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;
 }
@@ -211,11 +211,11 @@ int CmdReset(const char *Cmd) {
  */
 int CmdSetDivisor(const char *Cmd) {
 	UsbCommand c = {CMD_SET_LF_DIVISOR, {strtol(Cmd, NULL, 0), 0, 0}};
-	
+
 	if (c.arg[0] < 19 || c.arg[0] > 255) {
 		PrintAndLogEx(NORMAL, "divisor must be between 19 and 255");
 		return 1;
-	} 
+	}
 	// 12 000 000 (12Mhz)
 	clearCommandBuffer();
 	SendCommand(&c);
@@ -224,12 +224,12 @@ int CmdSetDivisor(const char *Cmd) {
 }
 
 int CmdSetMux(const char *Cmd) {
-	
+
 	if (strlen(Cmd) < 5) {
 		PrintAndLogEx(NORMAL, "expected:  lopkd | loraw | hipkd | hiraw");
 		return 1;
 	}
-	
+
 	UsbCommand c = {CMD_SET_ADC_MUX};
 
 	if (strcmp(Cmd, "lopkd") == 0) 		c.arg[0] = 0;
@@ -246,9 +246,9 @@ int CmdTune(const char *Cmd) {
 }
 
 int CmdVersion(const char *Cmd) {
-	
+
 	bool silent = (Cmd[0] == 's' || Cmd[0] ==  'S');
-	if ( silent ) 
+	if ( silent )
 		return 0;
 
 	UsbCommand c = {CMD_VERSION, {0, 0, 0}};
@@ -259,15 +259,15 @@ int CmdVersion(const char *Cmd) {
 #ifdef __WIN32
 		PrintAndLogEx(NORMAL, "\n [ Proxmark3 RFID instrument ]\n");
 #else
-		PrintAndLogEx(NORMAL, "\n\e[34m [ Proxmark3 RFID instrument ]\e[0m\n");	
-#endif	
+		PrintAndLogEx(NORMAL, "\n\e[34m [ Proxmark3 RFID instrument ]\e[0m\n");
+#endif
 		char s[50] = {0};
 #if defined(WITH_FLASH) || defined(WITH_SMARTCARD) || defined(WITH_FPC)
 		strncat(s, "build for RDV40 with ", sizeof(s) - strlen(s) - 1);
 #endif
 #ifdef WITH_FLASH
 		strncat(s, "flashmem; ", sizeof(s) - strlen(s) - 1);
-#endif	
+#endif
 #ifdef WITH_SMARTCARD
 		strncat(s, "smartcard; ", sizeof(s) - strlen(s) - 1);
 #endif
@@ -276,10 +276,10 @@ int CmdVersion(const char *Cmd) {
 #endif
 		PrintAndLogEx(NORMAL, "\n [ CLIENT ]");
 		PrintAndLogEx(NORMAL, "  client: iceman %s \n", s);
-		
+
 		PrintAndLogEx(NORMAL, (char*)resp.d.asBytes);
-		lookupChipID(resp.arg[0], resp.arg[1]);			
-	} 
+		lookupChipID(resp.arg[0], resp.arg[1]);
+	}
 	PrintAndLogEx(NORMAL, "\n");
 	return 0;
 }
@@ -301,7 +301,7 @@ int CmdPing(const char *Cmd) {
 	if (WaitForResponseTimeout(CMD_ACK, &resp, 1000))
 		PrintAndLogEx(NORMAL, "Ping successful");
 	else
-		PrintAndLogEx(NORMAL, "Ping failed");	
+		PrintAndLogEx(NORMAL, "Ping failed");
 	return 0;
 }
 
@@ -312,7 +312,7 @@ static command_t CommandTable[] = {
 #ifdef WITH_LCD
 	{"lcd",           CmdLCD,         0, "<HEX command> <count> -- Send command/data to LCD"},
 	{"lcdreset",      CmdLCDReset,    0, "Hardware reset LCD"},
-#endif	
+#endif
 	{"readmem",       CmdReadmem,     0, "[address] -- Read memory at decimal address from flash"},
 	{"reset",         CmdReset,       0, "Reset the Proxmark3"},
 	{"setlfdivisor",  CmdSetDivisor,  0, "<19 - 255> -- Drive LF antenna at 12Mhz/(divisor+1)"},

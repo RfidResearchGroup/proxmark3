@@ -1,13 +1,13 @@
 /*****************************************************************************
  * WARNING
  *
- * THIS CODE IS CREATED FOR EXPERIMENTATION AND EDUCATIONAL USE ONLY. 
- * 
- * USAGE OF THIS CODE IN OTHER WAYS MAY INFRINGE UPON THE INTELLECTUAL 
- * PROPERTY OF OTHER PARTIES, SUCH AS INSIDE SECURE AND HID GLOBAL, 
- * AND MAY EXPOSE YOU TO AN INFRINGEMENT ACTION FROM THOSE PARTIES. 
- * 
- * THIS CODE SHOULD NEVER BE USED TO INFRINGE PATENTS OR INTELLECTUAL PROPERTY RIGHTS. 
+ * THIS CODE IS CREATED FOR EXPERIMENTATION AND EDUCATIONAL USE ONLY.
+ *
+ * USAGE OF THIS CODE IN OTHER WAYS MAY INFRINGE UPON THE INTELLECTUAL
+ * PROPERTY OF OTHER PARTIES, SUCH AS INSIDE SECURE AND HID GLOBAL,
+ * AND MAY EXPOSE YOU TO AN INFRINGEMENT ACTION FROM THOSE PARTIES.
+ *
+ * THIS CODE SHOULD NEVER BE USED TO INFRINGE PATENTS OR INTELLECTUAL PROPERTY RIGHTS.
  *
  *****************************************************************************
  *
@@ -22,7 +22,7 @@
  *
  * This is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as published
- * by the Free Software Foundation, or, at your option, any later version. 
+ * by the Free Software Foundation, or, at your option, any later version.
  *
  * This file is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -31,8 +31,8 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with loclass.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * 
+ *
+ *
  ****************************************************************************/
 
 #ifndef FILEUTILS_H
@@ -153,7 +153,7 @@ extern int loadFileJSON(const char *preferredName, const char *suffix, void* dat
 extern int loadFileDICTIONARY(const char *preferredName, const char *suffix, void* data, size_t* datalen, uint8_t keylen, uint16_t* keycnt );
 
 #define PrintAndLogDevice(level, format, args...)  PrintAndLogEx(level, format , ## args)
-#else 
+#else
 
 	/**
  * Utility function to print to console. This is used consistently within the library instead
@@ -164,7 +164,7 @@ extern int loadFileDICTIONARY(const char *preferredName, const char *suffix, voi
  */
 #define PrintAndLogDevice(level, format, args...) { }
 
-	
+
 #endif //ON_DEVICE
 
 #endif // FILEUTILS_H

@@ -40,7 +40,7 @@ void msleep(uint32_t n) {
 #ifndef CLOCK_MONOTONIC
 	#define CLOCK_MONOTONIC (1)
 #endif
-#ifndef CLOCK_REALTIME	
+#ifndef CLOCK_REALTIME
 	#define CLOCK_REALTIME (2)
 #endif
 
@@ -72,7 +72,7 @@ void msleep(uint32_t n) {
 			uint64_t now = mach_absolute_time();
 
 			if (clock_start_time == 0) {
-				
+
 				mach_timebase_info(&timebase_info);
 				clock_start_time = now;
 			}

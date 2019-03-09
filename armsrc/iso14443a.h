@@ -16,7 +16,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-													   
+
 #include "usb_cmd.h"
 #include "cmd.h"
 #include "apps.h"
@@ -138,6 +138,6 @@ void DetectNACKbug();
 
 #ifdef __cplusplus
 }
-#endif				
+#endif
 
 #endif /* __ISO14443A_H */

@@ -36,7 +36,7 @@ ISO14443B
 	05 = REQB
 	1D = ATTRIB
 	50 = HALT
-	
+
 	BA = PING (reader -> tag)
 	AB = PONG (tag -> reader)
 SRIX4K (tag does not respond to 05)
@@ -132,7 +132,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ICLASS_CMD_READ4            0x06
 #define ICLASS_CMD_READ_OR_IDENTIFY 0x0C
 
-#define ICLASS_CMD_SELECT           0x81   
+#define ICLASS_CMD_SELECT           0x81
 #define ICLASS_CMD_PAGESEL          0x84
 #define ICLASS_CMD_UPDATE			0x87
 #define ICLASS_CMD_READCHECK_KC     0x18
@@ -309,7 +309,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 // ISO7816-4	For response APDU's
 #define ISO7816_OK						0x9000
 //	6x xx = ERROR
-	
+
 // MIFARE DESFire command set:
 #define MFDES_CREATE_APPLICATION 		0xca
 #define MFDES_DELETE_APPLICATION 		0xda
@@ -417,7 +417,7 @@ void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *max_blk, uint8_t *
 #define T55XX_WRITE_TIMEOUT 1500
 
 uint32_t GetT55xxClockBit(uint32_t clock);
-										  
+
 
 // em4x05 & em4x69 chip configuration register definitions
 #define EM4x05_GET_BITRATE(x)         (((x & 0x3F)*2)+2)
@@ -515,7 +515,7 @@ uint32_t GetT55xxClockBit(uint32_t clock);
 #define SYSTEMCODE_CYBERNE		0x0003 // Cyberne
 #define SYSTEMCODE_SUICA		0x0003 // Suica
 #define SYSTEMCODE_PASMO		0x0003 // Pasmo
-    
+
 //FeliCa Service list Suica/pasmo (little endian)
 #define SERVICE_SUICA_INOUT				0x108f // SUICA/PASMO
 #define SERVICE_SUICA_HISTORY			0x090f // SUICA/PASMO
@@ -569,5 +569,5 @@ typedef struct {
 } picopass_hdr;
 
 
-#endif 
+#endif
 // PROTOCOLS_H

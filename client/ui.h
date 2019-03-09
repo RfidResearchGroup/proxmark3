@@ -19,7 +19,7 @@
 #include <stdint.h>
 #include <readline/readline.h>
 #include <pthread.h>
-#include <math.h>	
+#include <math.h>
 #include <complex.h>
 #include "util.h"
 

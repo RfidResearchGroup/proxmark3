@@ -22,13 +22,13 @@ typedef struct {
 	char *Name;
 	char *Description;
 } COSEValueNameDesc_t;
- 
+
 typedef struct {
 	int Value;
 	char *Type;
 	char *Name;
 	char *Description;
-} COSEValueTypeNameDesc_t; 
+} COSEValueTypeNameDesc_t;
 
 // kty - Key Type Values
 COSEValueNameDesc_t COSEKeyTypeValueDesc[] = {
@@ -141,7 +141,7 @@ COSEValueNameDesc_t *GetCOSEAlgElm(int id) {
 			return &COSEAlg[i];
 	return NULL;
 }
-	
+
 const char *GetCOSEAlgName(int id) {
 	COSEValueNameDesc_t *elm = GetCOSEAlgElm(id);
 	if (elm)
@@ -164,11 +164,11 @@ int COSEGetECDSAKey(uint8_t *data, size_t datalen, bool verbose, uint8_t *public
 
 	if(verbose)
 		PrintAndLog("----------- CBOR decode ----------------");
-	
+
 	// kty
 	int res = CborMapGetKeyById(&parser, &map, data, datalen, 1);
 	if(!res) {
-		cbor_value_get_int64(&map, &i64);    
+		cbor_value_get_int64(&map, &i64);
 		if(verbose)
 			PrintAndLog("kty [%lld] %s", (long long)i64, GetCOSEktyDescription(i64));
 		if (i64 != 2)
@@ -178,26 +178,26 @@ int COSEGetECDSAKey(uint8_t *data, size_t datalen, bool verbose, uint8_t *public
 	// algorithm
 	res = CborMapGetKeyById(&parser, &map, data, datalen, 3);
 	if(!res) {
-		cbor_value_get_int64(&map, &i64);    
+		cbor_value_get_int64(&map, &i64);
 		if(verbose)
 			PrintAndLog("algorithm [%lld] %s", (long long)i64, GetCOSEAlgDescription(i64));
 		if (i64 != -7)
 			PrintAndLog("ERROR: algorithm must be -7.");
 	}
-	
+
 	// curve
 	res = CborMapGetKeyById(&parser, &map, data, datalen, -1);
 	if(!res) {
-		cbor_value_get_int64(&map, &i64);    
+		cbor_value_get_int64(&map, &i64);
 		if(verbose)
 			PrintAndLog("curve [%lld] %s", (long long)i64, GetCOSECurveDescription(i64));
 		if (i64 != 1)
 			PrintAndLog("ERROR: curve must be 1.");
 	}
-	
+
 	// plain key
 	public_key[0] = 0x04;
-	
+
 	// x - coordinate
 	res = CborMapGetKeyById(&parser, &map, data, datalen, -2);
 	if(!res) {
@@ -229,10 +229,10 @@ int COSEGetECDSAKey(uint8_t *data, size_t datalen, bool verbose, uint8_t *public
 		if(verbose)
 			PrintAndLog("d - private key [%d]: %s", len, sprint_hex(private_key, len));
 	}
-	
+
 	if(verbose)
 		PrintAndLog("----------- CBOR decode ----------------");
-	
+
 	return 0;
 }
 

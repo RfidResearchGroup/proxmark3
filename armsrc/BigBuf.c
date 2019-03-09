@@ -19,7 +19,7 @@ static uint32_t BigBuf[BIGBUF_SIZE/sizeof(uint32_t)];
 Pointer to highest available memory: BigBuf_hi
 
     high BIGBUF_SIZE
-    reserved = BigBuf_malloc()  subtracts amount from BigBuf_hi,   
+    reserved = BigBuf_malloc()  subtracts amount from BigBuf_hi,
 	low  0x00
 */
 
@@ -43,7 +43,7 @@ uint8_t *BigBuf_get_EM_addr(void) {
 	// not yet allocated
 	if (emulator_memory == NULL)
 		emulator_memory = BigBuf_malloc(CARD_MEMORY_SIZE);
-	
+
 	return emulator_memory;
 }
 
@@ -55,7 +55,7 @@ void BigBuf_Clear(void) {
 // clear ALL of BigBuf
 void BigBuf_Clear_ext(bool verbose) {
 	memset(BigBuf, 0, BIGBUF_SIZE);
-	if (verbose) 
+	if (verbose)
 		Dbprintf("Buffer cleared (%i bytes)", BIGBUF_SIZE);
 }
 
@@ -74,7 +74,7 @@ uint8_t *BigBuf_malloc(uint16_t chunksize) {
 		return NULL;							// no memory left
 
 	chunksize = (chunksize + 3) & 0xfffc;	// round to next multiple of 4
-	BigBuf_hi -= chunksize; 		  		// aligned to 4 Byte boundary 
+	BigBuf_hi -= chunksize; 		  		// aligned to 4 Byte boundary
 	return (uint8_t *)BigBuf + BigBuf_hi;
 }
 
@@ -91,7 +91,7 @@ void BigBuf_free_keep_EM(void) {
 		BigBuf_hi = emulator_memory - (uint8_t *)BigBuf;
 	else
 		BigBuf_hi = BIGBUF_SIZE;
-	
+
 	// shouldn't this empty BigBuf also?
 }
 
@@ -242,7 +242,7 @@ uint8_t emlSet(uint8_t *data, uint32_t offset, uint32_t length){
 	if (offset + length < CARD_MEMORY_SIZE) {
 		memcpy(mem+offset, data, length);
 		return 0;
-	} 
+	}
 	Dbprintf("Error, trying to set memory outside of bounds! %d  > %d", (offset + length), CARD_MEMORY_SIZE);
 	return 1;
 }

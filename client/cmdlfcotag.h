@@ -17,7 +17,7 @@
 #include "cmdparser.h"  // CmdsParse, CmdsHelp
 #include "comms.h"
 #include "ui.h"			// PrintAndLog
-#include "cmdlf.h"		// Setconfig 
+#include "cmdlf.h"		// Setconfig
 
 #ifndef COTAG_BITS
 #define COTAG_BITS 264

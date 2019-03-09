@@ -1,13 +1,13 @@
 /*****************************************************************************
  * WARNING
  *
- * THIS CODE IS CREATED FOR EXPERIMENTATION AND EDUCATIONAL USE ONLY. 
- * 
- * USAGE OF THIS CODE IN OTHER WAYS MAY INFRINGE UPON THE INTELLECTUAL 
- * PROPERTY OF OTHER PARTIES, SUCH AS INSIDE SECURE AND HID GLOBAL, 
- * AND MAY EXPOSE YOU TO AN INFRINGEMENT ACTION FROM THOSE PARTIES. 
- * 
- * THIS CODE SHOULD NEVER BE USED TO INFRINGE PATENTS OR INTELLECTUAL PROPERTY RIGHTS. 
+ * THIS CODE IS CREATED FOR EXPERIMENTATION AND EDUCATIONAL USE ONLY.
+ *
+ * USAGE OF THIS CODE IN OTHER WAYS MAY INFRINGE UPON THE INTELLECTUAL
+ * PROPERTY OF OTHER PARTIES, SUCH AS INSIDE SECURE AND HID GLOBAL,
+ * AND MAY EXPOSE YOU TO AN INFRINGEMENT ACTION FROM THOSE PARTIES.
+ *
+ * THIS CODE SHOULD NEVER BE USED TO INFRINGE PATENTS OR INTELLECTUAL PROPERTY RIGHTS.
  *
  *****************************************************************************
  *
@@ -22,7 +22,7 @@
  *
  * This is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as published
- * by the Free Software Foundation, or, at your option, any later version. 
+ * by the Free Software Foundation, or, at your option, any later version.
  *
  * This file is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -31,9 +31,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with loclass.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * 
- * 
+ *
+ *
+ *
  ****************************************************************************/
 
 /**
@@ -138,7 +138,7 @@ void opt_suc(const uint8_t* k,State* s, uint8_t *in, uint8_t length, bool add32Z
 		head = 1 & in[i];
 		opt_successor(k, &x2, head, s);
 	}
-	
+
 	//For tag MAC, an additional 32 zeroes
 	if (add32Zeroes) {
 		for (i = 0; i < 16; i++) {

@@ -38,13 +38,13 @@ void calc_score(uint8_t* csn, uint8_t* k) {
             score +=1;
         }
     }
-	
+
     if (score >=2 && badscore < 2) {
         printf("CSN\t%02x%02x%02x%02x%02x%02x%02x%02x\t%02x %02x %02x %02x %02x %02x %02x %02x\t"
                ,csn[0],csn[1],csn[2],csn[3],csn[4],csn[5],csn[6],csn[7]
                 ,k[0],k[1],k[2],k[3],k[4],k[5],k[6],k[7]
                 );
-				
+
         for (i=0 ; i < score; i++) {
             printf("%d,", uniq_vals[i]);
         }
@@ -62,7 +62,7 @@ void brute_hash1(void){
     calc_score(testcsn,testkey);
     printf("Brute forcing hashones\n");
     //exit(1);
-	
+
     for (a=0; a < 256; a++) {
         //if(a > 0)printf("%d/256 done...\n", a);
         for (b=0; b < 256; b++)

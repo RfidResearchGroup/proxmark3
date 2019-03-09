@@ -44,13 +44,13 @@ uint64_t * radixSort(uint64_t * array, uint32_t size) {
         counts.c3[x] = o3;
         counts.c2[x] = o2;
         counts.c1[x] = o1;
-        o8 = t8; 
-        o7 = t7; 
-        o6 = t6; 
-        o5 = t5; 
-        o4 = t4; 
-        o3 = t3; 
-        o2 = t2; 
+        o8 = t8;
+        o7 = t7;
+        o6 = t6;
+        o5 = t5;
+        o4 = t4;
+        o3 = t3;
+        o2 = t2;
         o1 = t1;
     }
     // radix

@@ -43,7 +43,7 @@ int usage_hf_14b_raw(void){
 	PrintAndLogEx(NORMAL, "       -ss   active signal field ON with select for SRx ST Microelectronics tags");
 	PrintAndLogEx(NORMAL, "Example:");
 	PrintAndLogEx(NORMAL, "       hf 14b raw -s -c -p 0200a40400");
-	return 0;    
+	return 0;
 }
 int usage_hf_14b_sniff(void){
 	PrintAndLogEx(NORMAL, "It get data from the field and saves it into command buffer.");
@@ -53,7 +53,7 @@ int usage_hf_14b_sniff(void){
 	PrintAndLogEx(NORMAL, "       h    this help");
 	PrintAndLogEx(NORMAL, "Example:");
 	PrintAndLogEx(NORMAL, "       hf 14b sniff");
-	return 0;    
+	return 0;
 }
 int usage_hf_14b_sim(void){
 	PrintAndLogEx(NORMAL, "Emulating ISO/IEC 14443 type B tag with 4 UID / PUPI");
@@ -64,7 +64,7 @@ int usage_hf_14b_sim(void){
 	PrintAndLogEx(NORMAL, "Example:");
 	PrintAndLogEx(NORMAL, "       hf 14b sim");
 	PrintAndLogEx(NORMAL, "       hf 14b sim u 11223344");
-	return 0;    
+	return 0;
 }
 int usage_hf_14b_read_srx(void){
 	PrintAndLogEx(NORMAL, "Usage:  hf 14b sriread [h] <1|2>");
@@ -94,7 +94,7 @@ int usage_hf_14b_dump(void){
 	PrintAndLogEx(NORMAL, "This command dumps the contents of a ISO-14443-B tag and save it to file\n"
 	                      "\n"
 	                      "Usage: hf 14b dump [h] [card memory] <f filname> \n"
-	                      "Options:\n"						  
+	                      "Options:\n"
 	                      "\th             this help\n"
 						  "\t[card memory] 1 = SRIX4K (default), 2 = SRI512"
 	                      "\tf <name>      filename,  if no <name> UID will be used as filename\n"
@@ -128,12 +128,12 @@ int CmdHF14BList(const char *Cmd) {
 int CmdHF14BSim(const char *Cmd) {
 	char cmdp = tolower(param_getchar(Cmd, 0));
 	if (cmdp == 'h') return usage_hf_14b_sim();
-	
+
 	uint32_t pupi = 0;
 	if (cmdp == 'u') {
 		pupi = param_get32ex(Cmd, 1, 0, 16);
 	}
-	
+
 	UsbCommand c = {CMD_SIMULATE_TAG_ISO_14443B, {pupi, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
@@ -141,10 +141,10 @@ int CmdHF14BSim(const char *Cmd) {
 }
 
 int CmdHF14BSniff(const char *Cmd) {
-	
+
 	char cmdp = tolower(param_getchar(Cmd, 0));
 	if (cmdp == 'h') return usage_hf_14b_sniff();
-	
+
 	UsbCommand c = {CMD_SNOOP_ISO_14443B, {0, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
@@ -159,25 +159,25 @@ int CmdHF14BCmdRaw (const char *Cmd) {
 	uint16_t datalen = 0;
 	uint32_t flags = ISO14B_CONNECT;
 	uint32_t temp = 0;
-	
+
 	if ( strlen(Cmd) < 3 ) return usage_hf_14b_raw();
 
     // strip
     while (*Cmd==' ' || *Cmd=='\t') ++Cmd;
-    
+
     while (Cmd[i]!='\0') {
         if (Cmd[i]==' ' || Cmd[i]=='\t') { ++i; continue; }
         if (Cmd[i]=='-') {
             switch (tolower(Cmd[i+1])) {
 				case 'h':
 					return usage_hf_14b_raw();
-                case 'r': 
+                case 'r':
                     reply = false;
                     break;
                 case 'c':
                     flags |= ISO14B_APPEND_CRC;
                     break;
-                case 'p': 
+                case 'p':
 					power = true;
                     break;
 				case 's':
@@ -201,7 +201,7 @@ int CmdHF14BCmdRaw (const char *Cmd) {
             buf[strlen(buf)+1]=0;
             buf[strlen(buf)]=Cmd[i];
             i++;
-            
+
             if (strlen(buf)>=2) {
                 sscanf(buf,"%x",&temp);
                 data[datalen++] = (uint8_t)(temp & 0xff);
@@ -213,7 +213,7 @@ int CmdHF14BCmdRaw (const char *Cmd) {
         PrintAndLogEx(WARNING, "unknown parameter '%c'\n", param_getchar(Cmd, i));
 		return 0;
     }
-	
+
 	if (!power)
         flags |= ISO14B_DISCONNECT;
 
@@ -223,16 +223,16 @@ int CmdHF14BCmdRaw (const char *Cmd) {
 	// Max buffer is USB_CMD_DATA_SIZE
 	datalen = (datalen > USB_CMD_DATA_SIZE) ? USB_CMD_DATA_SIZE : datalen;
 
-	UsbCommand c = {CMD_ISO_14443B_COMMAND, {flags, datalen, 0}}; 
+	UsbCommand c = {CMD_ISO_14443B_COMMAND, {flags, datalen, 0}};
 	memcpy(c.d.asBytes, data, datalen);
 	clearCommandBuffer();
 	SendCommand(&c);
 
-	if (!reply) return 1; 
+	if (!reply) return 1;
 
 	bool success = true;
 	// get back iso14b_card_select_t, don't print it.
-	if (select) 
+	if (select)
 		success = waitCmd14b(false);
 
 	// get back response from the raw bytes you sent.
@@ -245,47 +245,47 @@ static bool get_14b_UID(iso14b_card_select_t *card) {
 
 	if (!card)
 		return false;
-	
+
 	int8_t retry = 3;
 	UsbCommand resp;
 	UsbCommand c = {CMD_ISO_14443B_COMMAND, {ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0}};
-		
-	// test for 14b SR		
+
+	// test for 14b SR
 	while (retry--) {
 
 		clearCommandBuffer();
-		SendCommand(&c);		
+		SendCommand(&c);
 		if (WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
-			
+
 			uint8_t status = resp.arg[0];
 			if ( status == 0) {
 				memcpy(card, (iso14b_card_select_t *)resp.d.asBytes, sizeof(iso14b_card_select_t));
 				return true;
 			}
-		} 
+		}
 	} // retry
 
 	// test 14b standard
-	c.arg[0] = ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT;	
+	c.arg[0] = ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT;
 	retry = 3;
 	while (retry--) {
 
 
 		clearCommandBuffer();
-		SendCommand(&c);		
+		SendCommand(&c);
 		if (WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
-			
+
 			uint8_t status = resp.arg[0];
 			if ( status == 0) {
 				memcpy(card, (iso14b_card_select_t *)resp.d.asBytes, sizeof(iso14b_card_select_t));
 				return true;
 			}
-		} 
-	} // retry	
-	
+		}
+	} // retry
+
 	if ( retry <= 0 )
 		PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-	
+
 	return false;
 }
 
@@ -302,11 +302,11 @@ static void print_atqb_resp(uint8_t *data, uint8_t cid){
 	uint8_t BitRate = data[4];
 	if (!BitRate) PrintAndLogEx(NORMAL, "      Bit Rate: 106 kbit/s only PICC <-> PCD");
 	if (BitRate & 0x10)	PrintAndLogEx(NORMAL, "      Bit Rate: 212 kbit/s PICC -> PCD supported");
-	if (BitRate & 0x20)	PrintAndLogEx(NORMAL, "      Bit Rate: 424 kbit/s PICC -> PCD supported"); 
-	if (BitRate & 0x40)	PrintAndLogEx(NORMAL, "      Bit Rate: 847 kbit/s PICC -> PCD supported"); 
+	if (BitRate & 0x20)	PrintAndLogEx(NORMAL, "      Bit Rate: 424 kbit/s PICC -> PCD supported");
+	if (BitRate & 0x40)	PrintAndLogEx(NORMAL, "      Bit Rate: 847 kbit/s PICC -> PCD supported");
 	if (BitRate & 0x01)	PrintAndLogEx(NORMAL, "      Bit Rate: 212 kbit/s PICC <- PCD supported");
-	if (BitRate & 0x02)	PrintAndLogEx(NORMAL, "      Bit Rate: 424 kbit/s PICC <- PCD supported"); 
-	if (BitRate & 0x04)	PrintAndLogEx(NORMAL, "      Bit Rate: 847 kbit/s PICC <- PCD supported"); 
+	if (BitRate & 0x02)	PrintAndLogEx(NORMAL, "      Bit Rate: 424 kbit/s PICC <- PCD supported");
+	if (BitRate & 0x04)	PrintAndLogEx(NORMAL, "      Bit Rate: 847 kbit/s PICC <- PCD supported");
 	if (BitRate & 0x80)	PrintAndLogEx(NORMAL, "                Same bit rate <-> required");
 
 	uint16_t maxFrame = data[5] >> 4;
@@ -316,12 +316,12 @@ static void print_atqb_resp(uint8_t *data, uint8_t cid){
 	else if (maxFrame == 7)	maxFrame = 128;
 	else if (maxFrame == 8)	maxFrame = 256;
 	else maxFrame = 257;
-	
+
 	PrintAndLogEx(NORMAL, "Max Frame Size: %u%s bytes", maxFrame, (maxFrame == 257) ? "+ RFU" : "");
 
 	uint8_t protocolT = data[5] & 0xF;
 	PrintAndLogEx(NORMAL, " Protocol Type: Protocol is %scompliant with ISO/IEC 14443-4",(protocolT) ? "" : "not " );
-	
+
 	uint8_t fwt = data[6]>>4;
 	if ( fwt < 16 ){
 		uint32_t etus = (32 << fwt);
@@ -330,7 +330,7 @@ static void print_atqb_resp(uint8_t *data, uint8_t cid){
 	} else {
 		PrintAndLogEx(NORMAL, "Frame Wait Integer: %u - RFU", fwt);
 	}
-	
+
 	PrintAndLogEx(NORMAL, " App Data Code: Application is %s",(data[6]&4) ? "Standard" : "Proprietary");
 	PrintAndLogEx(NORMAL, " Frame Options: NAD is %ssupported",(data[6]&2) ? "" : "not ");
 	PrintAndLogEx(NORMAL, " Frame Options: CID is %ssupported",(data[6]&1) ? "" : "not ");
@@ -429,33 +429,33 @@ static void print_st_general_info(uint8_t *data, uint8_t len){
 // 0200a4040010a000000018300301000000000000000000 (resp 02 6a 82 [4b 4c])
 //03 = ?  (resp 03 [e3 c2])
 //c2 = ?  (resp c2 [66 15])
-//b2 = ?  (resp a3 [e9 67])		
+//b2 = ?  (resp a3 [e9 67])
 //a2 = ?  (resp 02 [6a d3])
 
 // 14b get and print Full Info (as much as we know)
 bool HF14B_Std_Info(bool verbose){
 
 	bool isSuccess = false;
-	
-	// 14b get and print UID only (general info) 
+
+	// 14b get and print UID only (general info)
 	UsbCommand c = {CMD_ISO_14443B_COMMAND, {ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
-	
+
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
 		if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
-		switch_off_field_14b();		
+		switch_off_field_14b();
 	return false;
     }
-	
+
 	iso14b_card_select_t card;
 	memcpy(&card, (iso14b_card_select_t *)resp.d.asBytes, sizeof(iso14b_card_select_t));
-	
-	uint64_t status = resp.arg[0];	
-	
+
+	uint64_t status = resp.arg[0];
+
 	switch( status ){
-		case 0: 
+		case 0:
 			PrintAndLogEx(NORMAL, " UID    : %s", sprint_hex(card.uid, card.uidlen));
 			PrintAndLogEx(NORMAL, " ATQB   : %s", sprint_hex(card.atqb, sizeof(card.atqb)));
 			PrintAndLogEx(NORMAL, " CHIPID : %02X", card.chipid);
@@ -465,20 +465,20 @@ bool HF14B_Std_Info(bool verbose){
 		case 2:
 			if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 ATTRIB fail");
 			break;
-		case 3: 
+		case 3:
 			if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 CRC fail");
 			break;
 		default:
 			if (verbose) PrintAndLogEx(FAILED, "ISO 14443-b card select failed");
 			break;
 	}
-	
+
 	return isSuccess;
 }
 
 // SRx get and print full info (needs more info...)
 bool HF14B_ST_Info(bool verbose){
-	
+
 	UsbCommand c = {CMD_ISO_14443B_COMMAND, {ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
@@ -491,9 +491,9 @@ bool HF14B_ST_Info(bool verbose){
 
 	iso14b_card_select_t card;
 	memcpy(&card, (iso14b_card_select_t *)resp.d.asBytes, sizeof(iso14b_card_select_t));
-	
-	uint64_t status = resp.arg[0];	
-	if ( status > 0 ) 
+
+	uint64_t status = resp.arg[0];
+	if ( status > 0 )
 		return false;
 
 	print_st_general_info(card.uid, card.uidlen);
@@ -507,16 +507,16 @@ bool HF14B_ST_Info(bool verbose){
 	//
 	// if (model == 0x2) { //SR176 has special command:
 		// data[1] = 0xf;
-		// resplen = 4;			
+		// resplen = 4;
 	// } else {
 		// data[1] = 0xff;
 		// resplen = 6;
 	// }
 
 	// //std read cmd
-	// if (HF14BCmdRaw(true, true, data, &datalen, false)==0) 
+	// if (HF14BCmdRaw(true, true, data, &datalen, false)==0)
 		// return rawClose();
-	
+
 	// if (datalen != resplen || !crc) return rawClose();
 	//print_ST_Lock_info(data[5]>>2);
 	return true;
@@ -541,7 +541,7 @@ bool HF14BInfo(bool verbose){
 int CmdHF14Binfo(const char *Cmd){
 	char cmdp = tolower(param_getchar(Cmd, 0));
 	if (cmdp == 'h') return usage_hf_14b_info();
-	
+
 	bool verbose = !(cmdp == 's');
 	return HF14BInfo(verbose);
 }
@@ -559,14 +559,14 @@ bool HF14B_ST_Reader(bool verbose){
 		if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
 		return false;
     }
-	
+
 	iso14b_card_select_t card;
 	memcpy(&card, (iso14b_card_select_t *)resp.d.asBytes, sizeof(iso14b_card_select_t));
 
 	uint64_t status = resp.arg[0];
 
 	switch( status ){
-		case 0: 
+		case 0:
 			print_st_general_info(card.uid, card.uidlen);
 			isSuccess = true;
 			break;
@@ -576,38 +576,38 @@ bool HF14B_ST_Reader(bool verbose){
 		case 2:
 			if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 ATTRIB fail");
 			break;
-		case 3: 
+		case 3:
 			if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 CRC fail");
 			break;
 		default:
 			if (verbose) PrintAndLogEx(FAILED, "ISO 14443-b card select SRx failed");
 			break;
 	}
-	return isSuccess;		
+	return isSuccess;
 }
 
 bool HF14B_Std_Reader(bool verbose){
 
 	bool isSuccess = false;
 
-	// 14b get and print UID only (general info) 
+	// 14b get and print UID only (general info)
 	UsbCommand c = {CMD_ISO_14443B_COMMAND, {ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
-	
+
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
 		if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
 		return false;
     }
-	
+
 	iso14b_card_select_t card;
 	memcpy(&card, (iso14b_card_select_t *)resp.d.asBytes, sizeof(iso14b_card_select_t));
-	
-	uint64_t status = resp.arg[0];	
-	
+
+	uint64_t status = resp.arg[0];
+
 	switch( status ){
-		case 0: 
+		case 0:
 			PrintAndLogEx(NORMAL, " UID    : %s", sprint_hex(card.uid, card.uidlen));
 			PrintAndLogEx(NORMAL, " ATQB   : %s", sprint_hex(card.atqb, sizeof(card.atqb)));
 			PrintAndLogEx(NORMAL, " CHIPID : %02X", card.chipid);
@@ -617,14 +617,14 @@ bool HF14B_Std_Reader(bool verbose){
 		case 2:
 			if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 ATTRIB fail");
 			break;
-		case 3: 
+		case 3:
 			if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 CRC fail");
 			break;
 		default:
 			if (verbose) PrintAndLogEx(FAILED, "ISO 14443-b card select failed");
 			break;
 	}
-	return isSuccess;	
+	return isSuccess;
 }
 
 // test for other 14b type tags (mimic another reader - don't have tags to identify)
@@ -633,17 +633,17 @@ bool HF14B_Other_Reader(){
 	// uint8_t data[] = {0x00, 0x0b, 0x3f, 0x80};
 	// uint8_t datalen = 4;
 
-	// // 14b get and print UID only (general info) 
+	// // 14b get and print UID only (general info)
 	// uint32_t flags = ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_RAW | ISO14B_APPEND_CRC;
-	
-	// UsbCommand c = {CMD_ISO_14443B_COMMAND, {flags, datalen, 0}}; 
+
+	// UsbCommand c = {CMD_ISO_14443B_COMMAND, {flags, datalen, 0}};
 	// memcpy(c.d.asBytes, data, datalen);
 
 	// clearCommandBuffer();
 	// SendCommand(&c);
 	// UsbCommand resp;
 	// WaitForResponse(CMD_ACK,&resp);
-	
+
 	// if (datalen > 2 ) {
 		// PrintAndLogEx(NORMAL, "\n14443-3b tag found:");
 		// PrintAndLogEx(NORMAL, "unknown tag type answered to a 0x000b3f80 command ans:");
@@ -658,7 +658,7 @@ bool HF14B_Other_Reader(){
 	// SendCommand(&c);
 	// UsbCommand resp;
 	// WaitForResponse(CMD_ACK, &resp);
-	
+
 	// if (datalen > 0) {
 		// PrintAndLogEx(NORMAL, "\n14443-3b tag found:");
 		// PrintAndLogEx(NORMAL, "Unknown tag type answered to a 0x0A command ans:");
@@ -681,14 +681,14 @@ bool HF14B_Other_Reader(){
 		// rawClose();
 		// return true;
 	// }
-	
+
 	// rawClose();
 	return false;
 }
 
 // get and print general info about all known 14b chips
 bool HF14BReader(bool verbose){
-	
+
 	// try std 14b (atqb)
 	if (HF14B_Std_Reader(verbose)) return true;
 
@@ -707,7 +707,7 @@ bool HF14BReader(bool verbose){
 int CmdHF14BReader(const char *Cmd){
 	char cmdp = tolower(param_getchar(Cmd, 0));
 	if (cmdp == 'h') return usage_hf_14b_reader();
-	
+
 	bool verbose = !(cmdp == 's');
 	return HF14BReader(verbose);
 }
@@ -722,7 +722,7 @@ int CmdHF14BReadSri(const char *Cmd){
 
 	uint8_t tagtype = param_get8(Cmd, 0);
 	uint8_t blocks = (tagtype == 1) ? 0x7F : 0x0F;
-	
+
 	UsbCommand c = {CMD_READ_SRI_TAG, {blocks, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
@@ -736,7 +736,7 @@ int CmdHF14BWriteSri(const char *Cmd){
  *
  * For SR512  blocks 00 - 0F
  * hf 14b raw -c -p 09 $sr512wblock $sr512wdata
- * 
+ *
  * Special block FF =  otp_lock_reg block.
  * Data len 4 bytes-
  */
@@ -744,38 +744,38 @@ int CmdHF14BWriteSri(const char *Cmd){
 	uint8_t blockno = -1;
 	uint8_t data[4] = {0x00};
 	bool isSrix4k = true;
-	char str[30];	
+	char str[30];
 	memset(str, 0x00, sizeof(str));
 
 	if (strlen(Cmd) < 1 || cmdp == 'h') return usage_hf_14b_write_srx();
 
 	if ( cmdp == '2' )
 		isSrix4k = false;
-	
+
 	//blockno = param_get8(Cmd, 1);
-	
+
 	if ( param_gethex(Cmd, 1, &blockno, 2) ) {
 		PrintAndLogEx(WARNING, "block number must include 2 HEX symbols");
 		return 0;
 	}
-	
+
 	if ( isSrix4k ){
 		if ( blockno > 0x7f && blockno != 0xff ){
 			PrintAndLogEx(FAILED, "block number out of range");
 			return 0;
-		}		
+		}
 	} else {
 		if ( blockno > 0x0f && blockno != 0xff ){
 			PrintAndLogEx(FAILED, "block number out of range");
 			return 0;
-		}		
+		}
 	}
-	
+
 	if (param_gethex(Cmd, 2, data, 8)) {
 		PrintAndLogEx(WARNING, "data must include 8 HEX symbols");
 		return 0;
 	}
- 
+
 	if ( blockno == 0xff) {
 		PrintAndLogEx(SUCCESS, "[%s] Write special block %02X [ %s ]",
 			(isSrix4k) ? "SRIX4K":"SRI512",
@@ -785,11 +785,11 @@ int CmdHF14BWriteSri(const char *Cmd){
 	} else {
 		PrintAndLogEx(SUCCESS, "[%s] Write block %02X [ %s ]",
 			(isSrix4k) ? "SRIX4K":"SRI512",
-			blockno, 
+			blockno,
 			sprint_hex(data,4)
 		);
 	}
-	
+
 	sprintf(str, "-ss -c %02x %02x %02x %02x %02x %02x", ISO14443B_WRITE_BLK, blockno, data[0], data[1], data[2], data[3]);
 	CmdHF14BCmdRaw(str);
 	return 0;
@@ -797,7 +797,7 @@ int CmdHF14BWriteSri(const char *Cmd){
 
 // need to write to file
 int CmdHF14BDump(const char*Cmd) {
-	
+
 	uint8_t fileNameLen = 0;
 	char filename[FILE_PATH_SIZE] = {0};
 	char * fptr = filename;
@@ -806,13 +806,13 @@ int CmdHF14BDump(const char*Cmd) {
 	uint16_t cardsize = 0;
 	uint8_t blocks = 0;
 	iso14b_card_select_t card;
-	
+
 	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch (tolower(param_getchar(Cmd, cmdp))) {
 		case 'h':
 			return usage_hf_14b_dump();
 		case 'f':
-			fileNameLen = param_getstr(Cmd, cmdp+1, filename, FILE_PATH_SIZE); 
+			fileNameLen = param_getstr(Cmd, cmdp+1, filename, FILE_PATH_SIZE);
 			cmdp += 2;
 			break;
 		default:
@@ -839,26 +839,26 @@ int CmdHF14BDump(const char*Cmd) {
 		default:
 			cardsize = (4096/8) + 4;
 			blocks = 0x7F;
-			break;			
+			break;
 	}
-	
+
 	if (!get_14b_UID(&card)) {
 		PrintAndLogEx(WARNING, "No tag found.");
 		return 1;
 	}
-		
+
 	if (fileNameLen < 1) {
 		PrintAndLogEx(INFO, "Using UID as filename");
-		fptr += sprintf(fptr, "hf-14b-"); 
+		fptr += sprintf(fptr, "hf-14b-");
 		FillFileNameByUID(fptr, card.uid, "-dump", card.uidlen);
-	}		
+	}
 
-	// detect blocksize from card :)	
+	// detect blocksize from card :)
 	PrintAndLogEx(NORMAL, "Reading memory from tag UID %s", sprint_hex(card.uid, card.uidlen));
-	
+
 	uint8_t data[cardsize];
 	memset(data, 0, sizeof(data));
-	
+
 	int blocknum = 0;
 	uint8_t *recv = NULL;
 
@@ -874,30 +874,30 @@ int CmdHF14BDump(const char*Cmd) {
 			goto out;
 		}
 	}
-	
+
 	c.arg[0] = ISO14B_APPEND_CRC | ISO14B_RAW;
 	c.arg[1] = 2;
-	
+
 	uint8_t *req = c.d.asBytes;
-	req[0] = ISO14443B_READ_BLK;	
-	
+	req[0] = ISO14443B_READ_BLK;
+
 	for (int retry = 0; retry < 5; retry++) {
-	
+
 		req[1] = blocknum;
-	
+
 		clearCommandBuffer();
 		SendCommand(&c);
-				
+
 		if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
 
 			uint8_t status = resp.arg[0] & 0xFF;
 			if ( status > 0 ) {
-				continue;		
+				continue;
 			}
-			
+
 			uint16_t len = (resp.arg[1] & 0xFFFF);
 			recv = resp.d.asBytes;
-			
+
 			if ( !check_crc(CRC_14443_B, recv, len) ) {
 				PrintAndLogEx(FAILED, "crc fail, retrying one more time");
 				continue;
@@ -909,43 +909,43 @@ int CmdHF14BDump(const char*Cmd) {
 				//last read.
 				break;
 			}
-			
-						
+
+
 			retry = 0;
 			blocknum++;
 			if ( blocknum > blocks ) {
 				// read config block
 				blocknum = 0xFF;
 			}
-			
+
 			printf("."); fflush(stdout);
-		} 
+		}
 	}
-	
+
 	if ( blocknum != 0xFF) {
 		PrintAndLogEx(NORMAL, "\n Dump failed");
 		goto out;
 	}
-	
+
 	PrintAndLogEx(NORMAL, "\n");
 	PrintAndLogEx(NORMAL, "block#   | data         | ascii");
-	PrintAndLogEx(NORMAL, "---------+--------------+----------");	
+	PrintAndLogEx(NORMAL, "---------+--------------+----------");
 
 	for (int i = 0; i <= blocks; i++) {
 		PrintAndLogEx(NORMAL,
-			"%3d/0x%02X | %s | %s", 
+			"%3d/0x%02X | %s | %s",
 			i,
 			i,
 			sprint_hex(data + (i*4), 4 ),
 			sprint_ascii(data + (i*4), 4)
 		);
 	}
-	
+
 	PrintAndLogEx(NORMAL, "\n");
 
-	
+
 	size_t datalen = (blocks+1) * 4;
-	saveFileEML(filename, "eml", data, datalen, 4);	
+	saveFileEML(filename, "eml", data, datalen, 4);
 	saveFile(filename, "bin", data, datalen);
 out:
 	return switch_off_field_14b();
@@ -955,16 +955,16 @@ uint32_t srix4kEncode(uint32_t value) {
 /*
 // vv = value
 // pp = position
-//                vv vv vv pp 
+//                vv vv vv pp
 4 bytes			: 00 1A 20 01
 */
 	// only the lower crumbs.
 	uint8_t block = (value & 0xFF);
 	uint8_t i = 0;
 	uint8_t valuebytes[] = {0,0,0};
-		
+
 	num_to_bytes(value, 3, valuebytes);
-	
+
 	// Scrambled part
 	// Crumb swapping of value.
 	uint8_t temp[] = {0,0};
@@ -975,7 +975,7 @@ uint32_t srix4kEncode(uint32_t value) {
 
 	// chksum part
 	uint32_t chksum = 0xFF - block;
-	
+
 	// chksum is reduced by each nibbles of value.
 	for (i = 0; i < 3; ++i){
 		chksum -= NIBBLE_HIGH(valuebytes[i]);
@@ -984,23 +984,23 @@ uint32_t srix4kEncode(uint32_t value) {
 
 	// base4 conversion and left shift twice
 	i = 3;
-	uint8_t base4[] = {0,0,0,0};	
+	uint8_t base4[] = {0,0,0,0};
 	while( chksum !=0 ){
         base4[i--] = (chksum % 4 << 2);
 		chksum /= 4;
     }
-	
+
 	// merge scambled and chksum parts
-	uint32_t encvalue = 
+	uint32_t encvalue =
 		( NIBBLE_LOW ( base4[0]) << 28 ) |
 		( NIBBLE_HIGH( temp[0])  << 24 ) |
-		
+
 		( NIBBLE_LOW ( base4[1]) << 20 ) |
 		( NIBBLE_LOW ( temp[0])  << 16 ) |
-		
+
 		( NIBBLE_LOW ( base4[2]) << 12 ) |
 		( NIBBLE_HIGH( temp[1])  << 8 ) |
-		
+
 		( NIBBLE_LOW ( base4[3]) << 4 ) |
 		  NIBBLE_LOW ( temp[1] );
 
@@ -1040,12 +1040,12 @@ int srix4kValid(const char *Cmd){
 	uint32_t block18 = 0xC04F42C5;
 	uint32_t block19 = 0xC1484807;
 	uint32_t block21 = 0xD1BCABA4;
-  
+
 	uint32_t test_b18 = 0x00313918;
 	uint32_t test_b18_enc = srix4kEncode(test_b18);
 	//uint32_t test_b18_dec = srix4kDecode(test_b18_enc);
 	PrintAndLogEx(SUCCESS, "ENCODE & CHECKSUM |  %08X -> %08X (%s)", test_b18, test_b18_enc , "");
-	
+
 	uint32_t magic = srix4kGetMagicbytes(uid, block6, block18, block19);
 	PrintAndLogEx(SUCCESS, "BLOCK 21 |  %08X -> %08X (no XOR)", block21, magic ^ block21);
 	return 0;
@@ -1056,22 +1056,22 @@ bool waitCmd14b(bool verbose) {
 	bool crc = false;
 	uint8_t data[USB_CMD_DATA_SIZE] = {0x00};
 	uint8_t status = 0;
-	uint16_t len = 0;	
+	uint16_t len = 0;
     UsbCommand resp;
 
     if (WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
 
 		status = (resp.arg[0] & 0xFF);
 		if ( status > 0 ) return false;
-			
+
 		len = (resp.arg[1] & 0xFFFF);
-		
+
 		memcpy(data, resp.d.asBytes, len);
-		
+
 		if (verbose) {
 			if ( len >= 3 ) {
 				crc = check_crc(CRC_14443_B, data, len);
-		
+
 				PrintAndLogEx(NORMAL, "[LEN %u] %s[%02X %02X] %s",
 					len,
 					sprint_hex(data, len-2),
@@ -1082,7 +1082,7 @@ bool waitCmd14b(bool verbose) {
 			} else {
 				PrintAndLogEx(NORMAL, "[LEN %u] %s", len,	sprint_hex(data, len) );
 			}
-		}	
+		}
 		return true;
     } else {
         PrintAndLogEx(WARNING, "command execution timeout");
@@ -1092,7 +1092,7 @@ bool waitCmd14b(bool verbose) {
 
 static command_t CommandTable[] = {
 	{"help",        CmdHelp,        1, "This help"},
-	{"dump",		CmdHF14BDump,	0, "Read all memory pages of an ISO14443-B tag, save to file"},	
+	{"dump",		CmdHF14BDump,	0, "Read all memory pages of an ISO14443-B tag, save to file"},
 	{"info",        CmdHF14Binfo,   0, "Tag information"},
 	{"list",        CmdHF14BList,   0, "[Deprecated] List ISO 14443B history"},
 	{"raw",         CmdHF14BCmdRaw, 0, "Send raw hex data to tag"},

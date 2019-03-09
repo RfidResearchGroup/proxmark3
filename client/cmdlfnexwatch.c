@@ -16,7 +16,7 @@ int detectNexWatch(uint8_t *dest, size_t *size, bool *invert) {
 
 	uint8_t preamble[28]   = {0,0,0,0,0,1,0,1,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 	uint8_t preamble_i[28] = {1,1,1,1,1,0,1,0,1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
-	// sanity check. 
+	// sanity check.
 	if ( *size < sizeof(preamble) + 100) return -1;
 
 	size_t startIdx = 0;
@@ -26,7 +26,7 @@ int detectNexWatch(uint8_t *dest, size_t *size, bool *invert) {
 		if (!preambleSearch(DemodBuffer, preamble_i, sizeof(preamble_i), size, &startIdx)) return -4;
 		*invert ^= 1;
 	}
-	
+
 	// size tests?
 	return (int) startIdx;
 }
@@ -56,18 +56,18 @@ int CmdNexWatchDemod(const char *Cmd) {
 
 		return 0;
 	}
-	
+
 	setDemodBuf(DemodBuffer, size, idx+4);
 	setClockGrid(g_DemodClock, g_DemodStartIdx + ((idx+4)*g_DemodClock));
-	
+
 	idx = 8+32; // 8 = preamble, 32 = reserved bits (always 0)
-	
+
 	//get ID
 	uint32_t ID = 0;
 	for (uint8_t k = 0; k < 4; k++){
 		for (uint8_t m = 0; m < 8; m++){
 			ID = (ID << 1) | DemodBuffer[m + k + (m*4)];
-		}	
+		}
 	}
 	//parity check (TBD)
 
@@ -79,7 +79,7 @@ int CmdNexWatchDemod(const char *Cmd) {
 		PrintAndLogEx(NORMAL, "Had to Invert - probably NexKey");
 		for (size_t i = 0; i < size; i++)
 			DemodBuffer[i] ^= 1;
-	} 
+	}
 
 	CmdPrintDemodBuff("x");
 	return 1;
@@ -100,7 +100,7 @@ static command_t CommandTable[] = {
 };
 
 int CmdLFNEXWATCH(const char *Cmd) {
-	clearCommandBuffer();	
+	clearCommandBuffer();
 	CmdsParse(CommandTable, Cmd);
 	return 0;
 }

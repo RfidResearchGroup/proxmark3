@@ -27,18 +27,18 @@
 #define COMPRESS_LEVEL			9		// use best possible compression
 #define COMPRESS_WINDOW_BITS	15		// default = max = 15 for a window of 2^15 = 32KBytes
 #define COMPRESS_MEM_LEVEL		9		// determines the amount of memory allocated during compression. Default = 8.
-/* COMPRESS_STRATEGY can be 
-	Z_DEFAULT_STRATEGY (the default), 
+/* COMPRESS_STRATEGY can be
+	Z_DEFAULT_STRATEGY (the default),
 	Z_FILTERED (more huffmann, less string matching),
 	Z_HUFFMAN_ONLY (huffman only, no string matching)
 	Z_RLE (distances limited to one)
 	Z_FIXED (prevents the use of dynamic Huffman codes)
-*/	
+*/
 
 #define	COMPRESS_STRATEGY		Z_DEFAULT_STRATEGY
 // zlib tuning parameters:
 #define COMPRESS_GOOD_LENGTH		258
-#define	COMPRESS_MAX_LAZY			258	
+#define	COMPRESS_MAX_LAZY			258
 #define	COMPRESS_MAX_NICE_LENGTH	258
 #define	COMPRESS_MAX_CHAIN			8192
 
@@ -75,7 +75,7 @@ static bool all_feof(FILE *infile[], uint8_t num_infiles)
 		if (!feof(infile[i])) {
 			return false;
 		}
-	}	
+	}
 	return true;
 }
 
@@ -92,21 +92,21 @@ int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, bool hardn
 		fpga_config = calloc(num_infiles * HARDNESTED_TABLE_SIZE, sizeof(uint8_t));
 	} else {
 		fpga_config = calloc(num_infiles * FPGA_CONFIG_SIZE, sizeof(uint8_t));
-	}		
+	}
 	// read the input files. Interleave them into fpga_config[]
 	i = 0;
 	do {
 
 		if (i >= num_infiles * (hardnested_mode ? HARDNESTED_TABLE_SIZE : FPGA_CONFIG_SIZE)) {
 			if (hardnested_mode) {
-				fprintf(stderr, 
-#if __WORDSIZE == 64		
+				fprintf(stderr,
+#if __WORDSIZE == 64
 				"Input file too big (> %" PRIu64 " bytes). This is probably not a hardnested bitflip state table.\n"
 #else
-				"Input file too big (> %lu bytes). This is probably not a hardnested bitflip state table.\n"	
-#endif				
+				"Input file too big (> %lu bytes). This is probably not a hardnested bitflip state table.\n"
+#endif
 				, HARDNESTED_TABLE_SIZE);
-				
+
 			} else {
 				fprintf(stderr, "Input files too big (total > %lu bytes). These are probably not PM3 FPGA config files.\n", num_infiles * FPGA_CONFIG_SIZE);
 			}
@@ -136,8 +136,8 @@ int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, bool hardn
 	compressed_fpga_stream.zalloc = fpga_deflate_malloc;
 	compressed_fpga_stream.zfree = fpga_deflate_free;
 	compressed_fpga_stream.opaque = Z_NULL;
-	
-	ret = deflateInit2(&compressed_fpga_stream, 
+
+	ret = deflateInit2(&compressed_fpga_stream,
 						COMPRESS_LEVEL,
 						Z_DEFLATED,
 						COMPRESS_WINDOW_BITS,
@@ -149,7 +149,7 @@ int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, bool hardn
 	uint8_t *outbuf = calloc(outsize_max, sizeof(uint8_t));
 	compressed_fpga_stream.next_out = outbuf;
 	compressed_fpga_stream.avail_out = outsize_max;
-					
+
 	if (ret == Z_OK) {
 		ret = deflateTune(&compressed_fpga_stream,
 							COMPRESS_GOOD_LENGTH,
@@ -157,11 +157,11 @@ int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, bool hardn
 							COMPRESS_MAX_NICE_LENGTH,
 							COMPRESS_MAX_CHAIN);
 	}
-	
+
 	if (ret == Z_OK) {
 		ret = deflate(&compressed_fpga_stream, Z_FINISH);
 	}
-	
+
 	fprintf(stdout, "compressed %u input bytes to %lu output bytes\n", i, compressed_fpga_stream.total_out);
 
 	if (ret != Z_STREAM_END) {
@@ -176,10 +176,10 @@ int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, bool hardn
 		free(fpga_config);
 		return(EXIT_FAILURE);
 		}
-		
+
 	for (i = 0; i < compressed_fpga_stream.total_out; i++) {
 		fputc(outbuf[i], outfile);
-	}	
+	}
 
 	free(outbuf);
 	deflateEnd(&compressed_fpga_stream);
@@ -189,9 +189,9 @@ int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, bool hardn
 	fclose(outfile);
 	free(infile);
 	free(fpga_config);
-	
+
 	return(EXIT_SUCCESS);
-	
+
 }
 
 
@@ -201,7 +201,7 @@ int zlib_decompress(FILE *infile, FILE *outfile)
 	uint8_t outbuf[DECOMPRESS_BUF_SIZE];
 	uint8_t inbuf[DECOMPRESS_BUF_SIZE];
 	int32_t ret;
-	
+
 	z_stream compressed_fpga_stream;
 
 	// initialize zlib structures
@@ -212,9 +212,9 @@ int zlib_decompress(FILE *infile, FILE *outfile)
 	compressed_fpga_stream.zalloc = fpga_deflate_malloc;
 	compressed_fpga_stream.zfree = fpga_deflate_free;
 	compressed_fpga_stream.opaque = Z_NULL;
-	
+
 	ret = inflateInit2(&compressed_fpga_stream, 0);
-	
+
 	do {
 		if (compressed_fpga_stream.avail_in == 0) {
 			compressed_fpga_stream.next_in = inbuf;
@@ -260,7 +260,7 @@ int zlib_decompress(FILE *infile, FILE *outfile)
 		fclose(infile);
 		return(EXIT_FAILURE);
 	}
-	
+
 }
 
 
@@ -319,7 +319,7 @@ static int FpgaGatherVersion(FILE *infile, char* infile_name, char *dst, int len
 {
 	unsigned int fpga_info_len;
 	char tempstr[40] = {0x00};
-	
+
 	dst[0] = '\0';
 
 	for (uint16_t i = 0; i < FPGA_BITSTREAM_FIXED_HEADER_SIZE; i++) {
@@ -345,7 +345,7 @@ static int FpgaGatherVersion(FILE *infile, char* infile_name, char *dst, int len
 		}
 		strncat(dst, tempstr, len-1);
 	}
-	
+
 	if (bitparse_find_section(infile, 'c', &fpga_info_len)) {
 		strncat(dst, " on ", len-1);
 		for (uint16_t i = 0; i < fpga_info_len; i++) {
@@ -356,7 +356,7 @@ static int FpgaGatherVersion(FILE *infile, char* infile_name, char *dst, int len
 		}
 		strncat(dst, tempstr, len-1);
 	}
-	
+
 	if (bitparse_find_section(infile, 'd', &fpga_info_len)) {
 		strncat(dst, " at ", len-1);
 		for (uint16_t i = 0; i < fpga_info_len; i++) {
@@ -389,11 +389,11 @@ static void print_version_info_preamble(FILE *outfile, int num_infiles) {
 }
 
 static int generate_fpga_version_info(FILE *infile[], char *infile_names[], int num_infiles, FILE *outfile) {
-	
+
 	char version_string[80] = "";
-	
+
 	print_version_info_preamble(outfile, num_infiles);
-	
+
 	for (int i = 0; i < num_infiles; i++) {
 		FpgaGatherVersion(infile[i], infile_names[i], version_string, sizeof(version_string));
 		fprintf(outfile, "\t\" %s\"", version_string);
@@ -401,7 +401,7 @@ static int generate_fpga_version_info(FILE *infile[], char *infile_names[], int 
 			fprintf(outfile, ",");
 		}
 		fprintf(outfile,"\n");
-	}	
+	}
 	fprintf(outfile, "};\n");
 	return 0;
 }
@@ -411,19 +411,19 @@ int main(int argc, char **argv)
 	FILE **infiles;
 	char **infile_names;
 	FILE *outfile;
-	
+
 	if (argc == 1 || argc == 2) {
 		usage();
 		return(EXIT_FAILURE);
 	}
-	
+
 	if (!strcmp(argv[1], "-d")) {			// Decompress
 
 		infiles = calloc(1, sizeof(FILE*));
 		if (argc != 4) {
 			usage();
 			return(EXIT_FAILURE);
-		} 
+		}
 		infiles[0] = fopen(argv[2], "rb");
 		if (infiles[0] == NULL) {
 			fprintf(stderr, "Error. Cannot open input file %s\n\n", argv[2]);
@@ -454,10 +454,10 @@ int main(int argc, char **argv)
 		} else { 								// compress 1..n fpga files
 			num_input_files = argc-2;
 		}
-		
+
 		infiles = calloc(num_input_files, sizeof(FILE*));
 		infile_names = calloc(num_input_files, sizeof(char*));
-		for (uint16_t i = 0; i < num_input_files; i++) { 
+		for (uint16_t i = 0; i < num_input_files; i++) {
 			infile_names[i] = argv[i+((hardnested_mode || generate_version_file)?2:1)];
 			infiles[i] = fopen(infile_names[i], "rb");
 			if (infiles[i] == NULL) {

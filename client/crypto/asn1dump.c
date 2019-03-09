@@ -12,7 +12,7 @@
 #include "asn1dump.h"
 #include <ctype.h>
 #include <stdlib.h>
-#include <unistd.h> 
+#include <unistd.h>
 #include <stdio.h>
 #include <string.h>
 #include <jansson.h>
@@ -110,7 +110,7 @@ static void asn1_tag_dump_str_time(const struct tlv *tlv, const struct asn1_tag 
 	*needdump = false;
 
 	int startindx = longyear ? 4 : 2;
-	
+
 	if (len > 4) {
 		fprintf(f, "\tvalue: '");
 		while (true) {
@@ -119,42 +119,42 @@ static void asn1_tag_dump_str_time(const struct tlv *tlv, const struct asn1_tag 
 				fprintf(f, "20");
 			fwrite(tlv->value, 1, longyear ? 4 : 2, f);
 			fprintf(f, "-");
-			if (len < startindx + 2) 
+			if (len < startindx + 2)
 				break;
 			// month
 			fwrite(&tlv->value[startindx], 1, 2, f);
 			fprintf(f, "-");
-			if (len < startindx + 4) 
+			if (len < startindx + 4)
 				break;
 			// day
 			fwrite(&tlv->value[startindx + 2], 1, 2, f);
 			fprintf(f, " ");
-			if (len < startindx + 6) 
+			if (len < startindx + 6)
 				break;
 			// hour
 			fwrite(&tlv->value[startindx + 4], 1, 2, f);
 			fprintf(f, ":");
-			if (len < startindx + 8) 
+			if (len < startindx + 8)
 				break;
 			// min
 			fwrite(&tlv->value[startindx + 6], 1, 2, f);
 			fprintf(f, ":");
-			if (len < startindx + 10) 
+			if (len < startindx + 10)
 				break;
 			// sec
 			fwrite(&tlv->value[startindx + 8], 1, 2, f);
-			if (len < startindx + 11) 
+			if (len < startindx + 11)
 				break;
 			// time zone
 			fprintf(f, " zone: %.*s", len - 10 - (longyear ? 4 : 2), &tlv->value[startindx + 10]);
-	
+
 			break;
 		}
 		fprintf(f, "'\n");
 	} else {
 		fprintf(f, "\n");
 		*needdump = true;
-	}	
+	}
 }
 
 static void asn1_tag_dump_string(const struct tlv *tlv, const struct asn1_tag *tag, FILE *f, int level){
@@ -170,7 +170,7 @@ static void asn1_tag_dump_octet_string(const struct tlv *tlv, const struct asn1_
 			*needdump = true;
 			break;
 		}
-		
+
 	if (*needdump) {
 		fprintf(f, "'\n");
 	} else {
@@ -239,7 +239,7 @@ static char *asn1_oid_description(const char *oid, bool with_group_desc) {
 
 	size_t len = strlen(get_my_executable_directory());
 	if ( len > 300 ) len = 299;
-	
+
 	strncpy(fname, get_my_executable_directory(), len);
 	strcat(fname, "crypto/oids.json");
 	if (access(fname, F_OK) < 0) {
@@ -249,19 +249,19 @@ static char *asn1_oid_description(const char *oid, bool with_group_desc) {
 			goto error; // file not found
 		}
 	}
-	
+
 	// load `oids.json`
 	root = json_load_file(fname, 0, &error);
-	
+
 	if (!root || !json_is_object(root)) {
 		goto error;
 	}
-	
+
 	json_t *elm = json_object_get(root, oid);
 	if (!elm) {
 		goto error;
 	}
-	
+
 	if (JsonLoadStr(elm, "$.d", res))
 		goto error;
 
@@ -271,10 +271,10 @@ static char *asn1_oid_description(const char *oid, bool with_group_desc) {
 		strcat(res, strext);
 		strcat(res, ")");
 	}
-	
+
 	json_decref(root);
 	return res;
-	
+
 error:
 	if (root)
 		json_decref(root);
@@ -287,15 +287,15 @@ static void asn1_tag_dump_object_id(const struct tlv *tlv, const struct asn1_tag
 	asn1_buf.len = tlv->len;
 	asn1_buf.p = (uint8_t *)tlv->value;
 	char pstr[300];
-	mbedtls_oid_get_numeric_string(pstr, sizeof(pstr), &asn1_buf); 
+	mbedtls_oid_get_numeric_string(pstr, sizeof(pstr), &asn1_buf);
 	fprintf(f, " %s", pstr);
-	
+
 	char *jsondesc = asn1_oid_description(pstr, true);
 	if (jsondesc) {
 		fprintf(f, " -  %s", jsondesc);
-	} else {	
+	} else {
 		const char *ppstr;
-		mbedtls_oid_get_attr_short_name(&asn1_buf, &ppstr); 
+		mbedtls_oid_get_attr_short_name(&asn1_buf, &ppstr);
 		if (ppstr && strnlen(ppstr, 1)) {
 			fprintf(f, " (%s)\n", ppstr);
 			return;
@@ -355,6 +355,6 @@ bool asn1_tag_dump(const struct tlv *tlv, FILE *f, int level, bool *candump) {
 		*candump = false;
 		break;
 	};
-	
+
 	return true;
 }

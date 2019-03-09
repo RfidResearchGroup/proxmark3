@@ -35,7 +35,7 @@ int getopt(int argc, char *argv[], const char *optstring)
 {
     //static int pos = 0;
     char *str;
-    
+
     if (pos == 0) {
 	if ((optind >= argc) || (*argv[optind] != '-'))
 	    return EOF;
@@ -43,7 +43,7 @@ int getopt(int argc, char *argv[], const char *optstring)
 	if (argv[optind][pos] == '\0')
 	    return EOF;
     }
-    
+
     str = strchr(optstring, argv[optind][pos]);
     if (str == NULL) {
 	optopt = argv[optind][pos];
@@ -52,7 +52,7 @@ int getopt(int argc, char *argv[], const char *optstring)
 		    optopt);
 	return '?';
     }
-    
+
     if (str[1] == ':') {
 	if (argv[optind][pos+1] != '\0') {
 	    optarg = &argv[optind][pos+1];

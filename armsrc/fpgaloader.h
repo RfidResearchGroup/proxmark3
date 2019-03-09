@@ -83,7 +83,7 @@ extern void switch_off(void);
 #define FPGA_HF_SIMULATOR_MODULATE_212K				0x2 // 0010
 #define FPGA_HF_SIMULATOR_MODULATE_424K				0x4 // 0100
 #define FPGA_HF_SIMULATOR_MODULATE_424K_8BIT		0x5 // 0101
-//  no 848K 
+//  no 848K
 
 // Options for ISO14443A
 #define FPGA_HF_ISO14443A_SNIFFER					(0<<0)
@@ -92,10 +92,10 @@ extern void switch_off(void);
 #define FPGA_HF_ISO14443A_READER_LISTEN				(3<<0)
 #define FPGA_HF_ISO14443A_READER_MOD				(4<<0)
 
-//options for Felica. 
+//options for Felica.
 #define FPGA_MAJOR_MODE_ISO18092          			(5<<5) // 01010 0000
 #define FPGA_HF_ISO18092_FLAG_NOMOD                 (1<<0) // 0001 disable modulation module
 #define FPGA_HF_ISO18092_FLAG_424K                  (2<<0) // 0010 should enable 414k mode (untested). No autodetect
 #define FPGA_HF_ISO18092_FLAG_READER	            (4<<0) // 0100 enables antenna power, to act as a reader instead of tag
- 
+
 #endif

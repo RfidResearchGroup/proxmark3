@@ -18,7 +18,7 @@ int usage_lf_guard_clone(void){
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Usage: lf gprox clone [h] <format> <Facility-Code> <Card-Number>");
 	PrintAndLogEx(NORMAL, "Options:");
-	PrintAndLogEx(NORMAL, "         <format> :  format length 26|32|36|40");	
+	PrintAndLogEx(NORMAL, "         <format> :  format length 26|32|36|40");
 	PrintAndLogEx(NORMAL, "  <Facility-Code> :  8-bit value facility code");
 	PrintAndLogEx(NORMAL, "  <Card Number>   : 16-bit value card number");
 	PrintAndLogEx(NORMAL, "");
@@ -35,7 +35,7 @@ int usage_lf_guard_sim(void) {
 	PrintAndLogEx(NORMAL, "");
 	PrintAndLogEx(NORMAL, "Usage:  lf gprox sim [h] <format> <Facility-Code> <Card-Number>");
 	PrintAndLogEx(NORMAL, "Options:");
-	PrintAndLogEx(NORMAL, "         <format> :  format length 26|32|36|40");	
+	PrintAndLogEx(NORMAL, "         <format> :  format length 26|32|36|40");
 	PrintAndLogEx(NORMAL, "  <Facility-Code> :  8-bit value facility code");
 	PrintAndLogEx(NORMAL, "  <Card Number>   : 16-bit value card number");
 	PrintAndLogEx(NORMAL, "");
@@ -46,33 +46,33 @@ int usage_lf_guard_sim(void) {
 
 // Works for 26bits.
 int GetGuardBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *guardBits) {
-  
+
 	uint8_t xorKey = 0x66;
 	uint8_t i;
 	uint8_t pre[96];
 	uint8_t rawbytes[12];
 	memset(pre, 0x00, sizeof(pre));
-	memset(rawbytes, 0x00, sizeof(rawbytes));	
+	memset(rawbytes, 0x00, sizeof(rawbytes));
 
 	// add format length (decimal)
 	switch (fmtlen) {
 		case 32: {
 			rawbytes[1] = (32 << 2);
-			
+
 			break;
 		}
 		case 36: {
 			// FC = ((ByteStream[3] & 0x7F)<<7) | (ByteStream[4]>>1);
 			// Card = ((ByteStream[4]&1)<<19) | (ByteStream[5]<<11) | (ByteStream[6]<<3) | (ByteStream[7]>>5);
 			rawbytes[1] = (36 << 2);
-			// Get 26 wiegand from FacilityCode, CardNumber	
+			// Get 26 wiegand from FacilityCode, CardNumber
 			uint8_t wiegand[34];
 			memset(wiegand, 0x00, sizeof(wiegand));
 			num_to_bytebits(fc, 8, wiegand);
 			num_to_bytebits(cn, 26, wiegand+8);
 
 			// add wiegand parity bits (dest, source, len)
-			wiegand_add_parity(pre, wiegand, 34);			
+			wiegand_add_parity(pre, wiegand, 34);
 			break;
 		}
 		case 40: {
@@ -82,7 +82,7 @@ int GetGuardBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *guardBits) {
 		case 26:
 		default: {
 			rawbytes[1] = (26 << 2);
-			// Get 26 wiegand from FacilityCode, CardNumber	
+			// Get 26 wiegand from FacilityCode, CardNumber
 			uint8_t wiegand[24];
 			memset(wiegand, 0x00, sizeof(wiegand));
 			num_to_bytebits(fc, 8, wiegand);
@@ -93,27 +93,27 @@ int GetGuardBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *guardBits) {
 			break;
 		}
 	}
-	// 2bit checksum, unknown today, 
+	// 2bit checksum, unknown today,
 	// these two bits are the last ones of rawbyte[1], hence the LSHIFT above.
 
-	
+
 	// xor key
 	rawbytes[0] = xorKey;
-	
+
 	rawbytes[2] = 1;
 	rawbytes[3] = 0;
-	
+
 	// add wiegand to rawbytes
 	for (i = 0; i < 4; ++i)
 		rawbytes[i+4] = bytebits_to_byte( pre + (i*8), 8);
-	
-	PrintAndLogEx(DEBUG, " WIE | %s\n", sprint_hex(rawbytes, sizeof(rawbytes)));	
-	
-	
+
+	PrintAndLogEx(DEBUG, " WIE | %s\n", sprint_hex(rawbytes, sizeof(rawbytes)));
+
+
 	// XOR (only works on wiegand stuff)
 	for (i = 1; i < 12; ++i)
 		rawbytes[i] ^= xorKey ;
-	
+
 	PrintAndLogEx(DEBUG, " XOR | %s \n", sprint_hex(rawbytes, sizeof(rawbytes)));
 
 	// convert rawbytes to bits in pre
@@ -122,7 +122,7 @@ int GetGuardBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *guardBits) {
 
 	PrintAndLogEx(DEBUG, "\n Raw | %s \n", sprint_hex(rawbytes, sizeof(rawbytes)));
 	PrintAndLogEx(DEBUG, " Raw | %s\n", sprint_bin(pre, 64) );
-	
+
 	// add spacer bit 0 every 4 bits, starting with index 0,
 	// 12 bytes, 24 nibbles.  24+1 extra bites. 3bytes.  ie 9bytes | 1byte xorkey, 8bytes rawdata (64bits, should be enough for a 40bit wiegand)
 	addParity(pre, guardBits+6, 64, 5, 3);
@@ -134,30 +134,30 @@ int GetGuardBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *guardBits) {
 	guardBits[3] = 1;
 	guardBits[4] = 1;
 	guardBits[5] = 0;
-	
+
 	PrintAndLogEx(DEBUG, " FIN | %s\n", sprint_bin(guardBits, 96) );
 	return 1;
 }
 
 // by marshmellow
-// demod gProxIIDemod 
-// error returns as -x 
+// demod gProxIIDemod
+// error returns as -x
 // success returns start position in bitstream
 // Bitstream must contain previously askrawdemod and biphasedemoded data
 int detectGProxII(uint8_t *bits, size_t *size) {
-	
+
 	size_t startIdx = 0;
 	uint8_t preamble[] = {1,1,1,1,1,0};
 
 	// sanity check
 	if ( *size < sizeof(preamble) ) return -1;
-	
-	if (!preambleSearch(bits, preamble, sizeof(preamble), size, &startIdx)) 
+
+	if (!preambleSearch(bits, preamble, sizeof(preamble), size, &startIdx))
 		return -2; //preamble not found
 
 	 //gProxII should be 96 bits
-	if (*size != 96) return -3;	
-	
+	if (*size != 96) return -3;
+
 	//check first 6 spacer bits to verify format
 	if (!bits[startIdx+5] && !bits[startIdx+10] && !bits[startIdx+15] && !bits[startIdx+20] && !bits[startIdx+25] && !bits[startIdx+30]){
 		//confirmed proper separator bits found
@@ -180,7 +180,7 @@ int CmdGuardDemod(const char *Cmd) {
 		PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII ASKbiphaseDemod failed");
 		return 0;
 	}
-	
+
 	size_t size = DemodBufferLen;
 
 	int preambleIndex = detectGProxII(DemodBuffer, &size);
@@ -194,11 +194,11 @@ int CmdGuardDemod(const char *Cmd) {
 			PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII size not correct: %d", size);
 		else if (preambleIndex == -5)
 			PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII wrong spacerbits");
-		else				
+		else
 			PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII ans: %d", preambleIndex);
 		return 0;
 	}
-	
+
 	//got a good demod of 96 bits
 	uint8_t ByteStream[8] = {0x00};
 	uint8_t xorKey = 0;
@@ -221,8 +221,8 @@ int CmdGuardDemod(const char *Cmd) {
 	}
 
 	setDemodBuf(DemodBuffer, 96, preambleIndex);
-	setClockGrid(g_DemodClock, g_DemodStartIdx + (preambleIndex*g_DemodClock));	
-	
+	setClockGrid(g_DemodClock, g_DemodStartIdx + (preambleIndex*g_DemodClock));
+
 	//ByteStream contains 8 Bytes (64 bits) of decrypted raw tag data
 	uint8_t fmtLen = ByteStream[0] >> 2;
 	uint32_t FC = 0;
@@ -237,7 +237,7 @@ int CmdGuardDemod(const char *Cmd) {
 			FC = ((ByteStream[3] & 0x7F)<<7) | (ByteStream[4]>>1);
 			Card = ((ByteStream[4]&1)<<19) | (ByteStream[5]<<11) | (ByteStream[6]<<3) | (ByteStream[7]>>5);
 			break;
-		case 26: 
+		case 26:
 			FC = ((ByteStream[3] & 0x7F)<<1) | (ByteStream[4]>>7);
 			Card = ((ByteStream[4]&0x7F)<<9) | (ByteStream[5]<<1) | (ByteStream[6]>>7);
 			break;
@@ -267,20 +267,20 @@ int CmdGuardClone(const char *Cmd) {
 	uint8_t i;
 	uint8_t bs[96];
 	memset(bs, 0x00, sizeof(bs));
-	
+
 	//GuardProxII - compat mode, ASK/Biphase,  data rate 64, 3 data blocks
 	uint32_t blocks[4] = {T55x7_MODULATION_BIPHASE | T55x7_BITRATE_RF_64 | 3 << T55x7_MAXBLOCK_SHIFT, 0, 0, 0};
-	
+
 	if (sscanf(Cmd, "%u %u %u", &fmtlen, &fc, &cn ) != 3) return usage_lf_guard_clone();
 
 	fmtlen &= 0x7f;
 	facilitycode = (fc & 0x000000FF);
 	cardnumber = (cn & 0x0000FFFF);
-	
+
 	if ( !GetGuardBits(fmtlen, facilitycode, cardnumber, bs)) {
 		PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
 		return 1;
-	}	
+	}
 
 	// Q5
 	if (param_getchar(Cmd, 3) == 'Q' || param_getchar(Cmd, 3) == 'q')
@@ -321,17 +321,17 @@ int CmdGuardSim(const char *Cmd) {
 	if (sscanf(Cmd, "%u %u %u", &fmtlen, &fc, &cn ) != 3) return usage_lf_guard_sim();
 
 	uint8_t bs[96];
-	size_t size = sizeof(bs);	
+	size_t size = sizeof(bs);
 	memset(bs, 0x00, size);
 
 	fmtlen &= 0x7F;
 	facilitycode = (fc & 0x000000FF);
 	cardnumber = (cn & 0x0000FFFF);
-	
+
 	if ( !GetGuardBits(fmtlen, facilitycode, cardnumber, bs)) {
 		PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
 		return 1;
-	}	
+	}
 
 	PrintAndLogEx(SUCCESS, "Simulating Guardall - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber );
 

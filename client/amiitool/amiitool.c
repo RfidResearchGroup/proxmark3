@@ -33,7 +33,7 @@ void amiitool_usage() {
 }
 
 static bool LoadAmiikey(nfc3d_amiibo_keys keys, char* keyfile) {
-	
+
 	if (!nfc3d_amiibo_load_keys(&keys, keyfile)) {
 		PrintAndLogEx(ERR, "Could not load keys from '%s'", keyfile);
 		return false;
@@ -84,7 +84,7 @@ int main(int argc, char ** argv) {
 
 	nfc3d_amiibo_keys amiiboKeys;
 
-	
+
 	uint8_t original[NTAG215_SIZE];
 	uint8_t modified[NFC3D_AMIIBO_SIZE];
 

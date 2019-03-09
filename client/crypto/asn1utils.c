@@ -34,10 +34,10 @@ int ecdsa_asn1_get_signature(uint8_t *signature, size_t signaturelen, uint8_t *r
 			mbedtls_mpi_free(&xmpi);
 			goto exit;
 		}
-		
+
 		res = mbedtls_mpi_write_binary(&xmpi, rval, 32);
 		mbedtls_mpi_free(&xmpi);
-		if (res) 
+		if (res)
 			goto exit;
 
 		mbedtls_mpi_init(&xmpi);
@@ -46,10 +46,10 @@ int ecdsa_asn1_get_signature(uint8_t *signature, size_t signaturelen, uint8_t *r
 			mbedtls_mpi_free(&xmpi);
 			goto exit;
 		}
-		
+
 		res = mbedtls_mpi_write_binary(&xmpi, sval, 32);
 		mbedtls_mpi_free(&xmpi);
-		if (res) 
+		if (res)
 			goto exit;
 
 		// check size
@@ -72,7 +72,7 @@ static bool print_cb(void *data, const struct tlv *tlv, int level, bool is_leaf)
 }
 
 int asn1_print(uint8_t *asn1buf, size_t asn1buflen, char *indent) {
-	
+
 	struct tlvdb *t = NULL;
 	t = tlvdb_parse_multi(asn1buf, asn1buflen);
 	if (t) {
@@ -82,7 +82,7 @@ int asn1_print(uint8_t *asn1buf, size_t asn1buflen, char *indent) {
 		PrintAndLogEx(ERR, "Can't parse data as TLV tree.");
 		return 1;
 	}
-	
+
 	return 0;
 }
 

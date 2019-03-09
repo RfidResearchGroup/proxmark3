@@ -16,17 +16,17 @@ void tea_encrypt(uint8_t *v, uint8_t *key) {
 	uint32_t a=0,b=0,c=0,d=0,y=0,z=0;
 	uint32_t sum = 0;
 	uint8_t n = ROUNDS;
-		
+
 	//key
 	a = bytes_to_num(key, 4);
 	b = bytes_to_num(key+4, 4);
 	c = bytes_to_num(key+8, 4);
 	d = bytes_to_num(key+12, 4);
-	
+
 	//input
 	y = bytes_to_num(v, 4);
 	z = bytes_to_num(v+4, 4);
-		
+
 	while ( n-- > 0 ) {
 		sum += DELTA;
 		y += ((z << 4) + a) ^ (z + sum) ^ ((z >> 5) + b);
@@ -48,7 +48,7 @@ void tea_decrypt(uint8_t *v, uint8_t *key) {
 	b = bytes_to_num(key+4, 4);
 	c = bytes_to_num(key+8, 4);
 	d = bytes_to_num(key+12, 4);
-	
+
 	//input
 	y = bytes_to_num(v, 4);
 	z = bytes_to_num(v+4, 4);

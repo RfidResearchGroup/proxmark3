@@ -47,7 +47,7 @@ uint16_t crc16_kermit(uint8_t const *d, size_t n);
 // Calculate CRC-16/XMODEM (FeliCa)
 uint16_t crc16_xmodem(uint8_t const *d, size_t n);
 
-// Calculate CRC-16/X25 (ISO15693, ISO14443 CRC-B,ISO/IEC 13239) 
+// Calculate CRC-16/X25 (ISO15693, ISO14443 CRC-B,ISO/IEC 13239)
 uint16_t crc16_x25(uint8_t const *d, size_t n);
 
 // Calculate CRC-16/CRC-A (ISO14443 CRC-A)

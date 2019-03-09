@@ -44,11 +44,11 @@ static uint8_t jablontron_chksum(uint8_t *bits){
 	for (int i=16; i < 56; i += 8) {
 		chksum += bytebits_to_byte(bits+i,8);
 	}
-	chksum ^= 0x3A;	
+	chksum ^= 0x3A;
 	return chksum;
 }
 
-int getJablotronBits(uint64_t fullcode, uint8_t *bits) {	
+int getJablotronBits(uint64_t fullcode, uint8_t *bits) {
 	//preamp
 	num_to_bytebits(0xFFFF, 16, bits);
 
@@ -72,7 +72,7 @@ int detectJablotron(uint8_t *bits, size_t *size) {
 	if (preambleSearch(bits, preamble, sizeof(preamble), size, &startIdx) == 0)
 		return -2; //preamble not found
 	if (*size != 64) return -3; // wrong demoded size
-	
+
 	uint8_t checkchksum = jablontron_chksum(bits+startIdx);
 	uint8_t crc = bytebits_to_byte(bits+startIdx+56, 8);
 	if ( checkchksum != crc ) return -5;
@@ -119,7 +119,7 @@ int CmdJablotronDemod(const char *Cmd) {
 
 	setDemodBuf(DemodBuffer, 64, ans);
 	setClockGrid(g_DemodClock, g_DemodStartIdx + (ans*g_DemodClock));
-	
+
 	//got a good demod
 	uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
 	uint32_t raw2 = bytebits_to_byte(DemodBuffer+32, 32);
@@ -136,7 +136,7 @@ int CmdJablotronDemod(const char *Cmd) {
 	);
 
 	id = DEC2BCD(id);
-	// Printed format: 1410-nn-nnnn-nnnn	
+	// Printed format: 1410-nn-nnnn-nnnn
 	PrintAndLogEx(SUCCESS, "Printed: 1410-%02X-%04X-%04X",
 		(uint8_t)(id >> 32) & 0xFF,
 		(uint16_t)(id >> 16) & 0xFFFF,
@@ -157,33 +157,33 @@ int CmdJablotronClone(const char *Cmd) {
 
 	uint8_t bits[64];
 	memset(bits, 0, sizeof(bits));
-	
+
 	char cmdp = tolower(param_getchar(Cmd, 0));
 	if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_jablotron_clone();
 
 	fullcode = param_get64ex(Cmd, 0, 0, 16);
-	
+
 	//Q5
 	if (param_getchar(Cmd, 1) == 'Q' || param_getchar(Cmd, 1) == 'q')
 		blocks[0] = T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(64) | 2 << T5555_MAXBLOCK_SHIFT;
-	
-	// clearing the topbit needed for the preambl detection. 
+
+	// clearing the topbit needed for the preambl detection.
 	if ((fullcode & 0x7FFFFFFFFF) != fullcode) {
 		fullcode &= 0x7FFFFFFFFF;
 		PrintAndLogEx(INFO, "Card Number Truncated to 39bits: %"PRIx64, fullcode);
 	}
-	
+
 	if ( !getJablotronBits(fullcode, bits)) {
 		PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
 		return 1;
-	}	
-	
+	}
+
 	blocks[1] = bytebits_to_byte(bits, 32);
 	blocks[2] = bytebits_to_byte(bits + 32, 32);
 
 	PrintAndLogEx(INFO, "Preparing to clone Jablotron to T55x7 with FullCode: %"PRIx64, fullcode);
 	print_blocks(blocks, 3);
-	
+
 	UsbCommand resp;
 	UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}};
 
@@ -208,12 +208,12 @@ int CmdJablotronSim(const char *Cmd) {
 
 	fullcode = param_get64ex(Cmd, 0, 0, 16);
 
-	// clearing the topbit needed for the preambl detection. 
+	// clearing the topbit needed for the preambl detection.
 	if ((fullcode & 0x7FFFFFFFFF) != fullcode) {
 		fullcode &= 0x7FFFFFFFFF;
 		PrintAndLogEx(INFO, "Card Number Truncated to 39bits: %"PRIx64, fullcode);
 	}
-	
+
 	uint8_t clk = 64, encoding = 2, separator = 0, invert = 1;
 	uint16_t arg1, arg2;
 	size_t size = 64;

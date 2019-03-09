@@ -34,7 +34,7 @@
  */
 
 // Test if we are dealing with posix operating systems
-#ifndef _WIN32	 
+#ifndef _WIN32
 #define _DEFAULT_SOURCE
 
 #include "uart.h"
@@ -88,7 +88,7 @@ serial_port uart_open(const char* pcPortName) {
 		}
 
 		timeout.tv_usec = 300000;  // 300 000 micro seconds
-		
+
 		char *colon = strrchr(addrstr, ':');
 		char *portstr;
 		if (colon) {
@@ -142,7 +142,7 @@ serial_port uart_open(const char* pcPortName) {
 		return sp;
 	}
 
-  
+
 	sp->fd = open(pcPortName, O_RDWR | O_NOCTTY | O_NDELAY | O_NONBLOCK);
 	if (sp->fd == -1) {
 		uart_close(sp);
@@ -196,12 +196,12 @@ serial_port uart_open(const char* pcPortName) {
 
 #ifdef WITH_FPC
 	if ( uart_set_speed(sp, 115200) ) {
-		printf("[=] UART Setting serial baudrate 115200 [FPC enabled]\n");  
+		printf("[=] UART Setting serial baudrate 115200 [FPC enabled]\n");
 	} else {
 		uart_set_speed(sp, 9600);
-		printf("[=] UART Setting serial baudrate 9600 [FPC enabled]\n");		
+		printf("[=] UART Setting serial baudrate 9600 [FPC enabled]\n");
 	}
-#else	
+#else
 	// set speed, works for UBUNTU 14.04
 	bool success = uart_set_speed(sp, 460800);
 	if (success) {
@@ -210,7 +210,7 @@ serial_port uart_open(const char* pcPortName) {
 		uart_set_speed(sp, 115200);
 		printf("[=] UART Setting serial baudrate 115200\n");
 	}
-#endif  
+#endif
 	return sp;
 }
 
@@ -229,7 +229,7 @@ void uart_close(const serial_port sp) {
 	int err = fcntl(spu->fd, F_SETLK, &fl);
 	if ( err == -1) {
 		//perror("fcntl");
-	}  
+	}
 	close(spu->fd);
 	free(sp);
 }
@@ -242,7 +242,7 @@ bool uart_receive(const serial_port sp, uint8_t* pbtRx, size_t pszMaxRxLen, size
 
 	// Reset the output count
 	*pszRxLen = 0;
-  
+
 	do {
 		// Reset file descriptor
 		FD_ZERO(&rfds);
@@ -365,11 +365,11 @@ bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed) {
 #  endif
 		default: return false;
 	};
-	
+
 	struct termios ti;
-	if (tcgetattr(spu->fd,&ti) == -1) 
+	if (tcgetattr(spu->fd,&ti) == -1)
 		return false;
-	
+
 	// Set port speed (Input and Output)
 	cfsetispeed(&ti, stPortSpeed);
 	cfsetospeed(&ti, stPortSpeed);
@@ -380,10 +380,10 @@ uint32_t uart_get_speed(const serial_port sp) {
 	struct termios ti;
 	uint32_t uiPortSpeed;
 	const serial_port_unix* spu = (serial_port_unix*)sp;
-	
-	if (tcgetattr(spu->fd, &ti) == -1) 
+
+	if (tcgetattr(spu->fd, &ti) == -1)
 		return 0;
-	
+
 	// Set port speed (Input)
 	speed_t stPortSpeed = cfgetispeed(&ti);
 	switch (stPortSpeed) {

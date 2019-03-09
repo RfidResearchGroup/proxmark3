@@ -30,17 +30,17 @@ uint8_t notset(uint8_t val, uint8_t mask){
 void fuse_config(const picopass_hdr *hdr) {
 	uint8_t fuses = hdr->conf.fuses;
 
-	if (isset(fuses,FUSE_FPERS)) 
+	if (isset(fuses,FUSE_FPERS))
 		PrintAndLogDevice(SUCCESS, "\tMode: Personalization [Programmable]");
-	else 
+	else
 		PrintAndLogDevice(NORMAL, "\tMode: Application [Locked]");
 
 	if (isset(fuses, FUSE_CODING1)) {
 		PrintAndLogDevice(NORMAL, "\tCoding: RFU");
 	} else {
-		if( isset( fuses , FUSE_CODING0)) 
+		if( isset( fuses , FUSE_CODING0))
 			PrintAndLogDevice(NORMAL, "\tCoding: ISO 14443-2 B/ISO 15693");
-		else 
+		else
 			PrintAndLogDevice(NORMAL, "\tCoding: ISO 14443B only");
 	}
 	// 1 1
@@ -54,7 +54,7 @@ void fuse_config(const picopass_hdr *hdr) {
 
 	if( isset( fuses, FUSE_RA))
 		PrintAndLogDevice(NORMAL, "\tRA: Read access enabled");
-	else 
+	else
 		PrintAndLogDevice(WARNING, "\tRA: Read access not enabled");
 }
 
@@ -63,7 +63,7 @@ void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *max_blk, uint8_t *
 	uint8_t k16		= isset(mem_cfg, 0x80);
 	//uint8_t k2 		= isset(mem_cfg, 0x08);
 	uint8_t book	= isset(mem_cfg, 0x20);
-	
+
 	if(isset(chip_cfg, 0x10) && !k16 && !book) {
 		*kb = 2;
 		*app_areas = 2;
@@ -100,10 +100,10 @@ void mem_app_config(const picopass_hdr *hdr) {
 	uint8_t max_blk = 31;
 
 	getMemConfig(mem, chip, &max_blk, &app_areas, &kb);
-	
+
 	if (applimit < 6) applimit = 26;
 	if (kb == 2 && (applimit > 0x1f) ) applimit = 26;
-	
+
 	PrintAndLogDevice(NORMAL, " Mem: %u KBits/%u App Areas (%u * 8 bytes) [%02X]", kb, app_areas, max_blk, mem);
 	PrintAndLogDevice(NORMAL, "\tAA1: blocks 06-%02X", applimit);
 	PrintAndLogDevice(NORMAL, "\tAA2: blocks %02X-%02X", applimit+1, max_blk);

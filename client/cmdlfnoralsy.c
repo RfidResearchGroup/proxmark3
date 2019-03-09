@@ -46,7 +46,7 @@ static uint8_t noralsy_chksum( uint8_t* bits, uint8_t len) {
         sum ^= bytebits_to_byte(bits+i, 4);
     return sum & 0x0F ;
 }
-int getnoralsyBits(uint32_t id, uint16_t year, uint8_t *bits) {	
+int getnoralsyBits(uint32_t id, uint16_t year, uint8_t *bits) {
 	//preamp
 	num_to_bytebits(0xBB0214FF, 32, bits);  // --> Have seen 0xBB0214FF / 0xBB0314FF  UNKNOWN
 
@@ -54,15 +54,15 @@ int getnoralsyBits(uint32_t id, uint16_t year, uint8_t *bits) {
 	id = DEC2BCD(id);
 	year = DEC2BCD(year);
 	year &= 0xFF;
-	
+
 	uint16_t sub1 = (id & 0xFFF0000) >> 16;
 	uint8_t sub2 = (id & 0x000FF00) >> 8;
 	uint8_t sub3 = (id & 0x00000FF);
-	
+
 	num_to_bytebits(sub1, 12, bits+32);
 	num_to_bytebits(year, 8, bits+44);
 	num_to_bytebits(0, 4, bits+52);   // --> UNKNOWN. Flag?
-	
+
 	num_to_bytebits(sub2, 8, bits+56);
 	num_to_bytebits(sub3, 8, bits+64);
 
@@ -91,12 +91,12 @@ int detectNoralsy(uint8_t *dest, size_t *size) {
 * 2520116 | BB0214FF2529900116360000 | 10111011 00000011 00010100 11111111 00100101 00101001 10010000 00000001 00010110 00110110 00000000 00000000
 *           aaa*aaaaiiiYY*iiiicc----                ****                   iiiiiiii iiiiYYYY YYYY**** iiiiiiii iiiiiiii cccccccc
 *
-* a = fixed value BB0*14FF 
+* a = fixed value BB0*14FF
 * i = printed id, BCD-format
 * Y = year
 * c = checksum
 * * = unknown
-* 
+*
 **/
 
 //see ASKDemod for what args are accepted
@@ -130,7 +130,7 @@ int CmdNoralsyDemod(const char *Cmd) {
 	}
 	setDemodBuf(DemodBuffer, 96, ans);
 	setClockGrid(g_DemodClock, g_DemodStartIdx + (ans*g_DemodClock));
-	
+
 	//got a good demod
 	uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
 	uint32_t raw2 = bytebits_to_byte(DemodBuffer+32, 32);
@@ -144,7 +144,7 @@ int CmdNoralsyDemod(const char *Cmd) {
 	uint16_t year = (raw2 & 0x000ff000) >> 12;
 	year = BCD2DEC(year);
 	year += ( year > 60 ) ? 1900: 2000;
-	
+
 	// calc checksums
 	uint8_t calc1 = noralsy_chksum(DemodBuffer+32, 40);
 	uint8_t calc2 = noralsy_chksum(DemodBuffer, 76);
@@ -152,7 +152,7 @@ int CmdNoralsyDemod(const char *Cmd) {
 	chk1 = bytebits_to_byte(DemodBuffer+72, 4);
 	chk2 = bytebits_to_byte(DemodBuffer+76, 4);
 	// test checksums
-	if ( chk1 != calc1 ) { 
+	if ( chk1 != calc1 ) {
 		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Noralsy: checksum 1 failed %x - %x\n", chk1, calc1);
 		return 0;
 	}
@@ -160,7 +160,7 @@ int CmdNoralsyDemod(const char *Cmd) {
 		if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Noralsy: checksum 2 failed %x - %x\n", chk2, calc2);
 		return 0;
 	}
-	
+
 	PrintAndLogEx(SUCCESS, "Noralsy Tag Found: Card ID %u, Year: %u Raw: %08X%08X%08X", cardid, year, raw1 ,raw2, raw3);
 	if (raw1 != 0xBB0214FF) {
 		PrintAndLogEx(WARNING, "Unknown bits set in first block! Expected 0xBB0214FF, Found: 0x%08X", raw1);
@@ -175,36 +175,36 @@ int CmdNoralsyRead(const char *Cmd) {
 }
 
 int CmdNoralsyClone(const char *Cmd) {
-	
+
 	uint16_t year = 0;
 	uint32_t id = 0;
 	uint32_t blocks[4] = {T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_32 | T55x7_ST_TERMINATOR | 3 << T55x7_MAXBLOCK_SHIFT, 0, 0};
 	uint8_t bits[96];
 	memset(bits, 0, sizeof(bits));
-	
+
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_noralsy_clone();
 
 	id = param_get32ex(Cmd, 0, 0, 10);
 	year = param_get32ex(Cmd, 1, 2000, 10);
-	
+
 	//Q5
 	if (param_getchar(Cmd, 2) == 'Q' || param_getchar(Cmd, 2) == 'q')
 		blocks[0] = T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(32) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
-	
+
 	 if ( !getnoralsyBits(id, year, bits)) {
 		PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
 		return 1;
-	}	
-	
-	// 
+	}
+
+	//
 	blocks[1] = bytebits_to_byte(bits, 32);
 	blocks[2] = bytebits_to_byte(bits + 32, 32);
 	blocks[3] = bytebits_to_byte(bits + 64, 32);
 
 	PrintAndLogEx(INFO, "Preparing to clone Noralsy to T55x7 with CardId: %u", id);
 	print_blocks(blocks, 4);
-	
+
 	UsbCommand resp;
 	UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}};
 
@@ -241,12 +241,12 @@ int CmdNoralsySim(const char *Cmd) {
 	size_t size = 96;
 	arg1 = clk << 8 | encoding;
 	arg2 = invert << 8 | separator;
-	
+
 	 if ( !getnoralsyBits(id, year, bs)) {
 		PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
 		return 1;
-	}	
-	
+	}
+
 	PrintAndLogEx(SUCCESS, "Simulating Noralsy - CardId: %u", id);
 
 	UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};

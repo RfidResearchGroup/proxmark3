@@ -6,14 +6,14 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// main code for LF aka SamyRun by Samy Kamkar 
+// main code for LF aka SamyRun by Samy Kamkar
 //-----------------------------------------------------------------------------
 #include "lf_samyrun.h"
 
 // samy's sniff and repeat routine for LF
 void RunMod() {
 	StandAloneMode();
-	Dbprintf(">>  LF HID Read/Clone/Sim a.k.a SamyRun Started  <<");		
+	Dbprintf(">>  LF HID Read/Clone/Sim a.k.a SamyRun Started  <<");
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
 	uint32_t high[OPTS], low[OPTS];
@@ -24,15 +24,15 @@ void RunMod() {
 	// Turn on selected LED
 	LED(selected + 1, 0);
 
-	for (;;) {		
+	for (;;) {
 		WDT_HIT();
-		
+
 		// exit from SamyRun,   send a usbcommand.
 		if (usb_poll_validate_length()) break;
 
 		// Was our button held down or pressed?
 		int button_pressed = BUTTON_HELD(1000);
-		
+
 		Dbprintf("button %d", button_pressed);
 		SpinDelay(300);
 
@@ -60,7 +60,7 @@ void RunMod() {
 			// Finished recording
 			// If we were previously playing, set playing off
 			// so next button push begins playing what we recorded
-			playing = 0;			
+			playing = 0;
 			cardRead = 1;
 
 			gotCard	= true;
@@ -89,8 +89,8 @@ void RunMod() {
 
 			// If we were previously playing, set playing off
 			// so next button push begins playing what we recorded
-			playing = 0;			
-			cardRead = 0;			
+			playing = 0;
+			cardRead = 0;
 		}
 
 		// Change where to record (or begin playing)
@@ -98,7 +98,7 @@ void RunMod() {
 			// Next option if we were previously playing
 			if (playing)
 				selected = (selected + 1) % OPTS;
-			
+
 			playing = !playing;
 
 			LEDsoff();
@@ -106,18 +106,18 @@ void RunMod() {
 
 			// Begin transmitting
 			if (playing) {
-				
+
 				LED(LED_GREEN, 0);
 				DbpString("[=] playing");
-				
+
 				// wait for button to be released
 				while (BUTTON_PRESS())
 					WDT_HIT();
-				
+
 				Dbprintf("[=] %x %x %08x", selected, high[selected], low[selected]);
-				CmdHIDsimTAG(high[selected], low[selected], false);		
+				CmdHIDsimTAG(high[selected], low[selected], false);
 				DbpString("[=] done playing");
-				
+
 				if (BUTTON_HELD(1000) > 0)
 					goto out;
 
@@ -137,7 +137,7 @@ void RunMod() {
 		}
 	}
 
-out:	
+out:
 	DbpString("[=] exiting");
 	LEDsoff();
 }

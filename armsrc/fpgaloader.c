@@ -28,7 +28,7 @@ static uint32_t uncompressed_bytes_cnt;
 // Used to write the FPGA config word
 // May also be used to write to other SPI attached devices like an LCD
 //-----------------------------------------------------------------------------
-static void DisableSpi(void) {		
+static void DisableSpi(void) {
 	//* Reset all the Chip Select register
     AT91C_BASE_SPI->SPI_CSR[0] = 0;
     AT91C_BASE_SPI->SPI_CSR[1] = 0;
@@ -40,7 +40,7 @@ static void DisableSpi(void) {
 
     // Disable all interrupts
     AT91C_BASE_SPI->SPI_IDR = 0xFFFFFFFF;
-	
+
 	// SPI disable
 	AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SPIDIS;
 }
@@ -77,7 +77,7 @@ void SetupSpi(int mode) {
 				( 0 << 2)			|	// Chip selects connected directly to peripheral
 				AT91C_SPI_PS_FIXED	|	// Fixed Peripheral Select
 				AT91C_SPI_MSTR;		// Master Mode
-				
+
 			AT91C_BASE_SPI->SPI_CSR[0] =
 				( 1 << 24)	|	// Delay between Consecutive Transfers (32 MCK periods)
 				( 1 << 16)	|	// Delay Before SPCK (1 MCK period)
@@ -97,7 +97,7 @@ void SetupSpi(int mode) {
 				( 0 << 2)	|	// Chip selects connected directly to peripheral
 				( 0 << 1) 	|	// Fixed Peripheral Select
 				( 1 << 0);		// Master Mode
-				
+
 			AT91C_BASE_SPI->SPI_CSR[2] =
 				( 1 << 24)	|	// Delay between Consecutive Transfers (32 MCK periods)
 				( 1 << 16)	|	// Delay Before SPCK (1 MCK period)
@@ -107,9 +107,9 @@ void SetupSpi(int mode) {
 				( 1 << 1)	|	// Clock Phase data captured on leading edge, changes on following edge
 				( 0 << 0);		// Clock Polarity inactive state is logic 0
 			break;
-*/			
+*/
 		default:
-			DisableSpi();		
+			DisableSpi();
 			break;
 	}
 }
@@ -134,7 +134,7 @@ void FpgaSetupSscExt(uint8_t clearPCER) {
 
 	// Now set up the SSC proper, starting from a known state.
 	AT91C_BASE_SSC->SSC_CR = AT91C_SSC_SWRST;
-	
+
 	// RX clock comes from TX clock, RX starts when TX starts, data changes
 	// on RX clock rising edge, sampled on falling edge
 	AT91C_BASE_SSC->SSC_RCMR = SSC_CLOCK_MODE_SELECT(1) | SSC_CLOCK_MODE_START(1);
@@ -396,12 +396,12 @@ void FpgaDownloadAndGo(int bitstream_version) {
 	// check whether or not the bitstream is already loaded
 	if (downloaded_bitstream == bitstream_version)
 		return;
-	
+
 	z_stream compressed_fpga_stream;
 	uint8_t output_buffer[OUTPUT_BUFFER_LEN] = {0x00};
 
 	bool verbose = (MF_DBGLEVEL > 3);
-	
+
 	// make sure that we have enough memory to decompress
 	BigBuf_free(); BigBuf_Clear_ext(verbose);
 
@@ -418,7 +418,7 @@ void FpgaDownloadAndGo(int bitstream_version) {
 
 	// turn off antenna
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	
+
 	// free eventually allocated BigBuf memory
 	BigBuf_free(); BigBuf_Clear_ext(false);
 }
@@ -466,7 +466,7 @@ void SetAdcMuxFor(uint32_t whichGpio) {
 #ifndef WITH_FPC
 	LOW(GPIO_MUXSEL_HIRAW);
 	LOW(GPIO_MUXSEL_LORAW);
-#endif	
+#endif
 
 	HIGH(whichGpio);
 }
@@ -480,15 +480,15 @@ int FpgaGetCurrent(void) {
 	return downloaded_bitstream;
 }
 
-// Turns off the antenna, 
+// Turns off the antenna,
 // log message
 // if HF,  Disable SSC DMA
 // turn off trace and leds off.
-void switch_off(void) {	
+void switch_off(void) {
 	if (MF_DBGLEVEL > 3) Dbprintf("switch_off");
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	if (downloaded_bitstream == FPGA_BITSTREAM_HF )
 		FpgaDisableSscDma();
 	set_tracing(false);
-	LEDsoff();	
+	LEDsoff();
 }

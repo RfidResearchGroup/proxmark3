@@ -91,7 +91,7 @@ struct desfire_tag {
     desfirekey_t session_key;
 	enum DESFIRE_AUTH_SCHEME authentication_scheme;
     uint8_t authenticated_key_no;
-    
+
 	uint8_t ivect[MAX_CRYPTO_BLOCK_SIZE];
     uint8_t cmac[16];
     uint8_t *crypto_buffer;

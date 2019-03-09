@@ -86,7 +86,7 @@ void uart_close(const serial_port sp);
  *
  * Returns FALSE if there was an error reading from the device. Note that a
  * partial read may have completed into the buffer by the corresponding
- * implementation, so pszRxLen should be checked to see if any data was written. 
+ * implementation, so pszRxLen should be checked to see if any data was written.
  */
 bool uart_receive(const serial_port sp, uint8_t* pbtRx, size_t pszMaxRxLen, size_t* pszRxLen);
 

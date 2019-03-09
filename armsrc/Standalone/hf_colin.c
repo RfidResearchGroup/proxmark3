@@ -161,7 +161,7 @@ void WriteTagToFlash(uint8_t index, size_t size)
     if (!FlashInit()){
         return;
     }
-    
+
     Flash_CheckBusy(BUSY_TIMEOUT);
     Flash_WriteEnable();
     Flash_Erase4k(0,0);
@@ -212,7 +212,7 @@ void RunMod()
 {
 	StandAloneMode();
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-	
+
     currline = 20;
     curlline = 20;
     currfline = 24;
@@ -328,7 +328,7 @@ ACCBITS : 796788[00]+VALUE
 			foundKey[t][sectorNo][2] = 0xFF;
 			foundKey[t][sectorNo][3] = 0xFF;
 			foundKey[t][sectorNo][4] = 0xFF;
-			foundKey[t][sectorNo][5] = 0xFF;			
+			foundKey[t][sectorNo][5] = 0xFF;
         }
     }
 

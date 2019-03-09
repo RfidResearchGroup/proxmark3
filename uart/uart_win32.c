@@ -67,8 +67,8 @@ serial_port uart_open(const char* pcPortName) {
 		uart_close(sp);
 		return INVALID_SERIAL_PORT;
 	}
-  
-	// Prepare the device control 
+
+	// Prepare the device control
 	// doesn't matter since PM3 device ignors this CDC command:  set_line_coding in usb_cdc.c
 	memset(&sp->dcb, 0, sizeof(DCB));
 	sp->dcb.DCBlength = sizeof(DCB);
@@ -77,7 +77,7 @@ serial_port uart_open(const char* pcPortName) {
 		printf("[!] UART error cdc setup\n");
 		return INVALID_SERIAL_PORT;
 	}
-  
+
 	// Update the active serial port
 	if (!SetCommState(sp->hPort, &sp->dcb)) {
 		uart_close(sp);
@@ -92,20 +92,20 @@ serial_port uart_open(const char* pcPortName) {
 	sp->ct.ReadTotalTimeoutConstant    = 1500;
 	sp->ct.WriteTotalTimeoutMultiplier = 1000;
 	sp->ct.WriteTotalTimeoutConstant   = 0;
-#else	
+#else
 	sp->ct.ReadIntervalTimeout         = 30;
 	sp->ct.ReadTotalTimeoutMultiplier  = 0;
 	sp->ct.ReadTotalTimeoutConstant    = 30;
 	sp->ct.WriteTotalTimeoutMultiplier = 30;
 	sp->ct.WriteTotalTimeoutConstant   = 0;
-#endif 
- 
+#endif
+
 	if (!SetCommTimeouts(sp->hPort, &sp->ct)) {
 		uart_close(sp);
 		printf("[!] UART error while setting comm time outs\n");
 		return INVALID_SERIAL_PORT;
 	}
-  
+
 	PurgeComm(sp->hPort, PURGE_RXABORT | PURGE_RXCLEAR);
 
 #ifdef WITH_FPC
@@ -113,7 +113,7 @@ serial_port uart_open(const char* pcPortName) {
 		printf("[=] UART Setting serial baudrate 115200 [FPC enabled]\n");
 	} else {
 		uart_set_speed(sp, 9600);
-		printf("[=] UART Setting serial baudrate 9600 [FPC enabled]\n");		
+		printf("[=] UART Setting serial baudrate 9600 [FPC enabled]\n");
 	}
 #else
 	bool success = uart_set_speed(sp, 460800);
@@ -123,7 +123,7 @@ serial_port uart_open(const char* pcPortName) {
 		uart_set_speed(sp, 115200);
 		printf("[=] UART Setting serial baudrate 115200\n");
 	}
-#endif  
+#endif
 	return sp;
 }
 
@@ -149,7 +149,7 @@ bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed) {
 		default:
 			return false;
 	};
-	
+
 	spw = (serial_port_windows*)sp;
 	spw->dcb.BaudRate = uiPortSpeed;
 	bool result = SetCommState(spw->hPort, &spw->dcb);
@@ -170,7 +170,7 @@ bool uart_receive(const serial_port sp, uint8_t* p_rx, size_t pszMaxRxLen, size_
 }
 
 bool uart_send(const serial_port sp, const uint8_t* p_tx, const size_t len) {
-	DWORD txlen = 0;		
+	DWORD txlen = 0;
 	return WriteFile(((serial_port_windows*)sp)->hPort, p_tx, len, &txlen, NULL);
 }
 

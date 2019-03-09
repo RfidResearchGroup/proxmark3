@@ -40,7 +40,7 @@ uint8_t cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void
 	// Compose the outgoing command frame
 	txcmd.cmd = cmd;
 	txcmd.arg[0] = arg0;
-	txcmd.arg[1] = arg1;	
+	txcmd.arg[1] = arg1;
 	txcmd.arg[2] = arg2;
 
 	// Add the (optional) content to the frame, with a maximum size of USB_CMD_DATA_SIZE
@@ -50,7 +50,7 @@ uint8_t cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void
 			txcmd.d.asBytes[i] = ((uint8_t*)data)[i];
 		}
 	}
-	
+
 	uint32_t sendlen = 0;
 	// Send frame and make sure all bytes are transmitted
 	sendlen = usb_write( (uint8_t*)&txcmd, sizeof(UsbCommand) );
@@ -59,6 +59,6 @@ uint8_t cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void
 //	usart_init();
 //	usart_writebuffer( (uint8_t*)&txcmd, sizeof(UsbCommand) );
 #endif
-	
+
 	return sendlen;
 }

@@ -82,7 +82,7 @@ enum  {
 #define NO_CHANGES				0x0C		//  No changes done to backup files
 											//  ,CommitTransaction/
 											//  AbortTransaction not necessary
-#define OUT_OF_EEPROM_ERROR		0x0E		// Insufficient NV-Memory to 
+#define OUT_OF_EEPROM_ERROR		0x0E		// Insufficient NV-Memory to
 											//  complete command
 #define ILLEGAL_COMMAND_CODE	0x1C		// Command code not supported
 #define INTEGRITY_ERROR			0x1E		// CRC or MAC does not match data
@@ -119,7 +119,7 @@ enum  {
 											//  with same number already exists
 #define EEPROM_ERROR			0xEE // [1]	// Could not complete NV-write
 											//  operation due to loss of power,
-											//  internal backup/rollback 
+											//  internal backup/rollback
 											//  mechanism activated
 #define FILE_NOT_FOUND_ERROR	0xF0		// Specified file number does not
 											//  exist

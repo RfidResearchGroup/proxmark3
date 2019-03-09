@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------------
 // Generic CRC calculation code.
 //-----------------------------------------------------------------------------
-// the Check value below in the comments is CRC of the string '123456789' 
+// the Check value below in the comments is CRC of the string '123456789'
 //
 #include "crc.h"
 
@@ -29,21 +29,21 @@ void crc_init(crc_t *crc, int order, uint32_t polynom, uint32_t initial_value, u
 }
 
 void crc_clear(crc_t *crc) {
-	
+
 	crc->state = crc->initial_value & crc->mask;
-	if (crc->refin) 
+	if (crc->refin)
 		crc->state = reflect(crc->state, crc->order);
 }
 
 void crc_update2(crc_t *crc, uint32_t data, int data_width){
-	
-	if (crc->refin) 
+
+	if (crc->refin)
 		data = reflect(data, data_width);
-	
+
 	// Bring the next byte into the remainder.
 	crc->state ^= data << (crc->order - data_width);
-	
-	for( uint8_t bit = data_width; bit > 0; --bit) {		
+
+	for( uint8_t bit = data_width; bit > 0; --bit) {
 
 		if (crc->state & crc->topbit)
 			crc->state = (crc->state << 1) ^ crc->polynom;
@@ -54,9 +54,9 @@ void crc_update2(crc_t *crc, uint32_t data, int data_width){
 
 void crc_update(crc_t *crc, uint32_t data, int data_width)
 {
-	if (crc->refin) 
+	if (crc->refin)
 		data = reflect(data, data_width);
-	
+
 	int i;
 	for(i=0; i<data_width; i++) {
 		int oldstate = crc->state;
@@ -70,7 +70,7 @@ void crc_update(crc_t *crc, uint32_t data, int data_width)
 
 uint32_t crc_finish(crc_t *crc) {
 	uint32_t val = crc->state;
-	if (crc->refout) 
+	if (crc->refout)
 		val = reflect(val, crc->order);
 	return ( val ^ crc->final_xor ) & crc->mask;
 }
@@ -94,7 +94,7 @@ static void print_crc(crc_t *crc) {
 // width=8  poly=0x31  init=0x00  refin=true  refout=true  xorout=0x00  check=0xA1  name="CRC-8/MAXIM"
 uint32_t CRC8Maxim(uint8_t *buff, size_t size) {
 	crc_t crc;
-	crc_init_ref(&crc, 8, 0x31, 0, 0, true, true);	
+	crc_init_ref(&crc, 8, 0x31, 0, 0, true, true);
 	for ( int i=0; i < size; ++i)
 		crc_update2(&crc, buff[i], 8);
 	return crc_finish(&crc);
@@ -114,7 +114,7 @@ uint32_t CRC4Legic(uint8_t *cmd, size_t size) {
 	crc_update2(&crc, 1, 1); /* CMD_READ */
 	crc_update2(&crc, cmd[0], 8);
 	crc_update2(&crc, cmd[1], 8);
-	return reflect(crc_finish(&crc), 4);	
+	return reflect(crc_finish(&crc), 4);
 }
 // width=8  poly=0x63, reversed poly=0x8D  init=0x55  refin=true  refout=true  xorout=0x0000  check=0xC6  name="CRC-8/LEGIC"
 // the CRC needs to be reversed before returned.

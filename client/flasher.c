@@ -39,13 +39,13 @@ static void usage(char *argv0) {
 	fprintf(stdout, "Usage:   %s <port> [-b] image.elf [image.elf...]\n\n", argv0);
 	fprintf(stdout, "\t-b\tEnable flashing of bootloader area (DANGEROUS)\n\n");
 	fprintf(stdout, "\nExample:\n\n\t %s "SERIAL_PORT_H" armsrc/obj/fullimage.elf\n", argv0);
-#ifdef __linux__	
+#ifdef __linux__
 	fprintf(stdout, "\nNote (Linux): if the flasher gets stuck in 'Waiting for Proxmark to reappear on <DEVICE>',\n");
 	fprintf(stdout, "              you need to blacklist proxmark for modem-manager - see wiki for more details:\n\n");
 	fprintf(stdout, "              https://github.com/Proxmark/proxmark3/wiki/Gentoo Linux\n\n");
 	fprintf(stdout, "              https://github.com/Proxmark/proxmark3/wiki/Ubuntu Linux\n\n");
 	fprintf(stdout, "              https://github.com/Proxmark/proxmark3/wiki/OSX\n\n");
-#endif	
+#endif
 }
 
 int main(int argc, char **argv) {
@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
 			num_files++;
 		}
 	}
-	
+
 	char* serial_port_name = argv[1];
 
 	if (!OpenProxmark(serial_port_name, true, 60, true)) {

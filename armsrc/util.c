@@ -15,7 +15,7 @@ size_t nbytes(size_t nbits) {
 
 /*
  ref  http://www.csm.ornl.gov/~dunigan/crc.html
- Returns the value v with the bottom b [0,32] bits reflected. 
+ Returns the value v with the bottom b [0,32] bits reflected.
  Example: reflect(0x3e23L,3) == 0x3e26
 */
 uint32_t reflect(uint32_t v, int b) {
@@ -35,7 +35,7 @@ uint8_t reflect8(uint8_t b) {
 }
 uint16_t reflect16(uint16_t b) {
     uint16_t v = 0;
-    v |= (b & 0x8000) >> 15; 
+    v |= (b & 0x8000) >> 15;
     v |= (b & 0x4000) >> 13;
     v |= (b & 0x2000) >> 11;
     v |= (b & 0x1000) >> 9;
@@ -165,7 +165,7 @@ void SpinOff(uint32_t pause) {
 // 0=A, 1=B, 2=C, 3=D
 void SpinErr(uint8_t led, uint32_t speed, uint8_t times) {
     SpinOff(speed);
-    NTIME(times) 
+    NTIME(times)
 	{
         switch (led) {
         case 0:

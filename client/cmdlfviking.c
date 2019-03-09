@@ -52,18 +52,18 @@ int detectViking(uint8_t *dest, size_t *size) {
 	if (*size < 64*2) return -2;
 	size_t startIdx = 0;
 	uint8_t preamble[] = {1,1,1,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-	if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx)) 
+	if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
 		return -4; //preamble not found
-	
-	uint32_t checkCalc = bytebits_to_byte(dest+startIdx,8) ^ 
-						 bytebits_to_byte(dest+startIdx+8,8) ^ 
-						 bytebits_to_byte(dest+startIdx+16,8) ^ 
-						 bytebits_to_byte(dest+startIdx+24,8) ^ 
-						 bytebits_to_byte(dest+startIdx+32,8) ^ 
-						 bytebits_to_byte(dest+startIdx+40,8) ^ 
-						 bytebits_to_byte(dest+startIdx+48,8) ^ 
+
+	uint32_t checkCalc = bytebits_to_byte(dest+startIdx,8) ^
+						 bytebits_to_byte(dest+startIdx+8,8) ^
+						 bytebits_to_byte(dest+startIdx+16,8) ^
+						 bytebits_to_byte(dest+startIdx+24,8) ^
+						 bytebits_to_byte(dest+startIdx+32,8) ^
+						 bytebits_to_byte(dest+startIdx+40,8) ^
+						 bytebits_to_byte(dest+startIdx+48,8) ^
 						 bytebits_to_byte(dest+startIdx+56,8);
-	if ( checkCalc != 0xA8 ) return -5;	
+	if ( checkCalc != 0xA8 ) return -5;
 	if (*size != 64) return -6;
 	//return start position
 	return (int)startIdx;
@@ -108,18 +108,18 @@ int CmdVikingClone(const char *Cmd) {
 	bool Q5 = false;
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_viking_clone();
-	
+
 	id = param_get32ex(Cmd, 0, 0, 16);
 	if (id == 0) return usage_lf_viking_clone();
-	
+
 	cmdp = param_getchar(Cmd, 1);
 	if ( cmdp == 'Q' || cmdp == 'q')
 		Q5 = true;
 
 	rawID = getVikingBits(id);
-	
+
 	PrintAndLogEx(INFO, "Preparing to clone Viking tag - ID: %08X, Raw: %08X%08X",id,(uint32_t)(rawID >> 32),(uint32_t) (rawID & 0xFFFFFFFF));
-	
+
 	UsbCommand c = {CMD_VIKING_CLONE_TAG, {rawID >> 32, rawID & 0xFFFFFFFF, Q5}};
 	clearCommandBuffer();
     SendCommand(&c);
@@ -150,7 +150,7 @@ int CmdVikingSim(const char *Cmd) {
 	arg2 = invert << 8 | separator;
 
 	PrintAndLogEx(SUCCESS, "Simulating Viking - ID: %08X, Raw: %08X%08X",id,(uint32_t)(rawID >> 32),(uint32_t) (rawID & 0xFFFFFFFF));
-	
+
 	UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};
 	num_to_bytebits(rawID, size, c.d.asBytes);
 	clearCommandBuffer();

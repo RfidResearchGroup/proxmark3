@@ -30,7 +30,7 @@ static int CmdHelp(const char *Cmd);
 struct pcf7931_config configPcf = {
 	{0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF},
 	PCF7931_DEFAULT_INITDELAY,
-	PCF7931_DEFAULT_OFFSET_WIDTH, 
+	PCF7931_DEFAULT_OFFSET_WIDTH,
 	PCF7931_DEFAULT_OFFSET_POSITION
 	};
 
@@ -38,8 +38,8 @@ struct pcf7931_config configPcf = {
 int pcf7931_resetConfig(){
 	memset(configPcf.Pwd, 0xFF, sizeof(configPcf.Pwd) );
 	configPcf.InitDelay = PCF7931_DEFAULT_INITDELAY;
-	configPcf.OffsetWidth = PCF7931_DEFAULT_OFFSET_WIDTH; 
-	configPcf.OffsetPosition = PCF7931_DEFAULT_OFFSET_POSITION; 
+	configPcf.OffsetWidth = PCF7931_DEFAULT_OFFSET_WIDTH;
+	configPcf.OffsetPosition = PCF7931_DEFAULT_OFFSET_POSITION;
 	return 0;
 }
 
@@ -85,7 +85,7 @@ int usage_pcf7931_config(){
 	PrintAndLogEx(NORMAL, "       pwd     Password, hex, 7bytes, LSB-order");
 	PrintAndLogEx(NORMAL, "       delay   Tag initialization delay (in us) decimal");
 	PrintAndLogEx(NORMAL, "       offset  Low pulses width (in us) decimal");
-	PrintAndLogEx(NORMAL, "       offset  Low pulses position (in us) decimal");	
+	PrintAndLogEx(NORMAL, "       offset  Low pulses position (in us) decimal");
 	PrintAndLogEx(NORMAL, "Examples:");
 	PrintAndLogEx(NORMAL, "      lf pcf7931 config");
 	PrintAndLogEx(NORMAL, "      lf pcf7931 config r");
@@ -94,7 +94,7 @@ int usage_pcf7931_config(){
 	return 0;
 }
 
-int CmdLFPCF7931Read(const char *Cmd){	
+int CmdLFPCF7931Read(const char *Cmd){
 
 	uint8_t ctmp = param_getchar(Cmd, 0);
 	if ( ctmp == 'H' || ctmp == 'h' ) return usage_pcf7931_read();
@@ -110,37 +110,37 @@ int CmdLFPCF7931Read(const char *Cmd){
 	return 0;
 }
 
-int CmdLFPCF7931Config(const char *Cmd){ 
+int CmdLFPCF7931Config(const char *Cmd){
 
 	uint8_t ctmp = param_getchar(Cmd, 0);
 	if ( ctmp == 0) return pcf7931_printConfig();
 	if ( ctmp == 'H' || ctmp == 'h' ) return usage_pcf7931_config();
-	if ( ctmp == 'R' || ctmp == 'r' ) return pcf7931_resetConfig();	
-		
+	if ( ctmp == 'R' || ctmp == 'r' ) return pcf7931_resetConfig();
+
 	if ( param_gethex(Cmd, 0, configPcf.Pwd, 14) ) return usage_pcf7931_config();
-	
+
 	configPcf.InitDelay = (param_get32ex(Cmd,1,0,10) & 0xFFFF);
 	configPcf.OffsetWidth = (int)(param_get32ex(Cmd,2,0,10) & 0xFFFF);
 	configPcf.OffsetPosition = (int)(param_get32ex(Cmd,3,0,10) & 0xFFFF);
-	
+
 	pcf7931_printConfig();
 	return 0;
 }
 
 int CmdLFPCF7931Write(const char *Cmd){
-	
+
 	uint8_t ctmp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) < 1 || ctmp == 'h' || ctmp == 'H') return usage_pcf7931_write();	
+	if (strlen(Cmd) < 1 || ctmp == 'h' || ctmp == 'H') return usage_pcf7931_write();
 
 	uint8_t block = 0, bytepos = 0, data = 0;
-	
+
 	if ( param_getdec(Cmd, 0, &block) ) return usage_pcf7931_write();
 	if ( param_getdec(Cmd, 1, &bytepos) ) return usage_pcf7931_write();
-	
+
 	if ( (block > 7) || (bytepos > 15) ) return usage_pcf7931_write();
 
 	data 	= param_get8ex(Cmd, 2, 0, 16);
-	
+
 	PrintAndLogEx(NORMAL, "Writing block: %d", block);
 	PrintAndLogEx(NORMAL, "          pos: %d", bytepos);
 	PrintAndLogEx(NORMAL, "         data: 0x%02X", data);

@@ -15,7 +15,7 @@
 
 // https://www.nxp.com/docs/en/application-note/AN10787.pdf
 static madAIDDescr madKnownAIDs[] = {
-	{0x0000, "free"}, 
+	{0x0000, "free"},
 	{0x0001, "defect, e.g. access keys are destroyed or unknown"},
 	{0x0002, "reserved"},
 	{0x0003, "contains additional directory info"},
@@ -103,7 +103,7 @@ static const char *GetAIDDescription(uint16_t AID) {
 	for(int i = 0; i < ARRAYLEN(madKnownClusterCodes); i++)
 		if (madKnownClusterCodes[i].AID == (AID >> 8)) // high byte - cluster code
 			return madKnownClusterCodes[i].Description;
-		
+
 	return unknownAID;
 }
 
@@ -121,33 +121,33 @@ int madCRCCheck(uint8_t *sector, bool verbose, int MADver) {
 			return 3;
 		};
 	}
-	
+
 	return 0;
 }
 
 uint16_t madGetAID(uint8_t *sector, int MADver, int sectorNo) {
 	if (MADver == 1)
-		return (sector[16 + 2 + (sectorNo - 1) * 2] << 8) + (sector[16 + 2 + (sectorNo - 1) * 2 + 1]);	
+		return (sector[16 + 2 + (sectorNo - 1) * 2] << 8) + (sector[16 + 2 + (sectorNo - 1) * 2 + 1]);
 	else
-		return (sector[2 + (sectorNo - 1) * 2] << 8) + (sector[2 + (sectorNo - 1) * 2 + 1]);	
+		return (sector[2 + (sectorNo - 1) * 2] << 8) + (sector[2 + (sectorNo - 1) * 2 + 1]);
 }
 
 int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) {
 	int res = 0;
-	
+
 	if (!sector0)
 		return 1;
-	
+
 	uint8_t GPB = sector0[3 * 16 + 9];
 	if (verbose)
 		PrintAndLogEx(NORMAL, "GPB: 0x%02x", GPB);
-	
+
 	// DA (MAD available)
 	if (!(GPB & 0x80)) {
 		PrintAndLogEx(ERR, "DA=0! MAD not available.");
 		return 1;
 	}
-	
+
 	// MA (multi-application card)
 	if (verbose) {
 		if (GPB & 0x40)
@@ -155,34 +155,34 @@ int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) 
 		else
 			PrintAndLogEx(NORMAL, "Single application card.");
 	}
-	
+
 	uint8_t MADVer = GPB & 0x03;
 	if (verbose)
 		PrintAndLogEx(NORMAL, "MAD version: %d", MADVer);
-	
+
 	//  MAD version
 	if ((MADVer != 0x01) && (MADVer != 0x02)) {
 		PrintAndLogEx(ERR, "Wrong MAD version: 0x%02x", MADVer);
 		return 2;
 	};
-	
+
 	if (haveMAD2)
 		*haveMAD2 = (MADVer == 2);
 
 	res = madCRCCheck(sector0, true, 1);
-	
+
 	if (verbose && !res)
 		PrintAndLogEx(NORMAL, "CRC8-MAD1 OK.");
-	
+
 	if (MADVer == 2 && sector10) {
 		int res2 = madCRCCheck(sector10, true, 2);
 		if (!res)
-			res = res2;	
+			res = res2;
 
 		if (verbose & !res2)
 			PrintAndLogEx(NORMAL, "CRC8-MAD2 OK.");
 	}
-	
+
 	return res;
 }
 
@@ -190,12 +190,12 @@ int MADDecode(uint8_t *sector0, uint8_t *sector10, uint16_t *mad, size_t *madlen
 	*madlen = 0;
 	bool haveMAD2 = false;
 	MADCheck(sector0, sector10, false, &haveMAD2);
-	
+
 	for (int i = 1; i < 16; i++) {
 		mad[*madlen] = madGetAID(sector0, 1, i);
 		(*madlen)++;
 	}
-	
+
 	if (haveMAD2) {
 		// mad2 sector (0x10 == 16dec) here
 		mad[*madlen] = 0x0005;
@@ -206,7 +206,7 @@ int MADDecode(uint8_t *sector0, uint8_t *sector10, uint16_t *mad, size_t *madlen
 			(*madlen)++;
 		}
 	}
-	
+
 	return 0;
 }
 
@@ -215,7 +215,7 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2) {
 
 	// check MAD1 only
 	MADCheck(sector, NULL, verbose, haveMAD2);
-		
+
 	// info byte
 	uint8_t InfoByte = sector[16 + 1] & 0x3f;
 	if (InfoByte) {
@@ -226,13 +226,13 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2) {
 	}
 	if (InfoByte == 0x10 || InfoByte >= 0x28)
 		PrintAndLogEx(WARNING, "Info byte error");
-	
+
 	PrintAndLogEx(NORMAL, "00 MAD1");
 	for(int i = 1; i < 16; i++) {
 		uint16_t AID = madGetAID(sector, 1, i);
 		PrintAndLogEx(NORMAL, "%02d [%04X] %s", i, AID, GetAIDDescription(AID));
 	};
-		
+
 	return 0;
 };
 
@@ -250,7 +250,7 @@ int MAD2DecodeAndPrint(uint8_t *sector, bool verbose) {
 	for(int i = 1; i < 8 + 8 + 7 + 1; i++) {
 		uint16_t AID = madGetAID(sector, 2, i);
 		PrintAndLogEx(NORMAL, "%02d [%04X] %s", i + 16, AID, GetAIDDescription(AID));
-	};	
-	
+	};
+
 	return 0;
 };

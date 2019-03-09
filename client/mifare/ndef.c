@@ -89,7 +89,7 @@ uint16_t ndefTLVGetLength(uint8_t *data, size_t *indx) {
 		len = data[0];
 		*indx += 1;
 	}
-	
+
 	return len;
 }
 
@@ -107,12 +107,12 @@ int ndefDecodeHeader(uint8_t *data, size_t datalen, NDEFHeader_t *header) {
 	header->len				= 1 + 1 + (header->ShortRecordBit ? 1 : 4) + (header->IDLenPresent ? 1 : 0); // header + typelen + payloadlen + idlen
 	if (header->len > datalen)
 		return 1;
-	
+
 	header->TypeLen = data[1];
 	header->Type = data + header->len;
-	
+
 	header->PayloadLen = (header->ShortRecordBit ? (data[2]) : ((data[2] << 24) + (data[3] << 16) + (data[4] << 8) + data[5]));
-	
+
 	if (header->IDLenPresent) {
 		header->IDLen = (header->ShortRecordBit ? (data[3]) : (data[6]));
 		header->Payload = header->Type + header->TypeLen;
@@ -121,9 +121,9 @@ int ndefDecodeHeader(uint8_t *data, size_t datalen, NDEFHeader_t *header) {
 	}
 
 	header->Payload = header->Type + header->TypeLen + header->IDLen;
-	
+
 	header->RecLen = header->len + header->TypeLen + header->PayloadLen + header->IDLen;
-	
+
 	if (header->RecLen > datalen)
 		return 3;
 
@@ -132,7 +132,7 @@ int ndefDecodeHeader(uint8_t *data, size_t datalen, NDEFHeader_t *header) {
 
 int ndefPrintHeader(NDEFHeader_t *header) {
 	PrintAndLogEx(INFO, "Header:");
-	
+
 	PrintAndLogEx(NORMAL, "\tMessage Begin:    %s", STRBOOL(header->MessageBegin));
 	PrintAndLogEx(NORMAL, "\tMessage End:      %s", STRBOOL(header->MessageEnd));
 	PrintAndLogEx(NORMAL, "\tChunk Flag:       %s", STRBOOL(header->ChunkFlag));
@@ -157,21 +157,21 @@ int ndefDecodeSig(uint8_t *sig, size_t siglen) {
 		return 1;
 	}
 	indx++;
-	
+
 	uint8_t sigType = sig[indx] & 0x7f;
 	bool sigURI = sig[indx] & 0x80;
 
 	PrintAndLogEx(NORMAL, "\tsignature type: %s", ((sigType < stNA) ? ndefSigType_s[sigType] : ndefSigType_s[stNA]));
 	PrintAndLogEx(NORMAL, "\tsignature uri: %s", (sigURI ? "present" : "not present"));
-	
+
 	size_t intsiglen = (sig[indx + 1] << 8) + sig[indx + 2];
 	// ecdsa 0x04
 	if (sigType == stECDSA) {
 		indx += 3;
 		PrintAndLogEx(NORMAL, "\tsignature [%d]: %s", intsiglen, sprint_hex_inrow(&sig[indx], intsiglen));
-		
-		uint8_t rval[300] = {0}; 
-		uint8_t sval[300] = {0}; 
+
+		uint8_t rval[300] = {0};
+		uint8_t sval[300] = {0};
 		int res = ecdsa_asn1_get_signature(&sig[indx], intsiglen, rval, sval);
 		if (!res) {
 			PrintAndLogEx(NORMAL ,"\t\tr: %s", sprint_hex(rval, 32));
@@ -179,28 +179,28 @@ int ndefDecodeSig(uint8_t *sig, size_t siglen) {
 		}
 	}
 	indx += intsiglen;
-	
+
 	if (sigURI) {
 		size_t intsigurilen = (sig[indx] << 8) + sig[indx + 1];
 		indx += 2;
-		PrintAndLogEx(NORMAL, "\tsignature uri [%d]: %.*s", intsigurilen, intsigurilen, &sig[indx]);			
+		PrintAndLogEx(NORMAL, "\tsignature uri [%d]: %.*s", intsigurilen, intsigurilen, &sig[indx]);
 		indx += intsigurilen;
 	}
-		
+
 	uint8_t certFormat = (sig[indx] >> 4) & 0x07;
 	uint8_t certCount = sig[indx] & 0x0f;
 	bool certURI = sig[indx] & 0x80;
-	
+
 	PrintAndLogEx(NORMAL, "\tcertificate format: %s", ((certFormat < sfNA) ? ndefCertificateFormat_s[certFormat] : ndefCertificateFormat_s[sfNA]));
 	PrintAndLogEx(NORMAL, "\tcertificates count: %d", certCount);
-	
+
 	// print certificates
 	indx++;
 	for (int i = 0; i < certCount; i++) {
 		size_t intcertlen = (sig[indx + 1] << 8) + sig[indx + 2];
 		indx += 2;
-		
-		PrintAndLogEx(NORMAL, "\tcertificate %d [%d]: %s", i + 1, intcertlen, sprint_hex_inrow(&sig[indx], intcertlen));			
+
+		PrintAndLogEx(NORMAL, "\tcertificate %d [%d]: %s", i + 1, intcertlen, sprint_hex_inrow(&sig[indx], intcertlen));
 		indx += intcertlen;
 	}
 
@@ -208,32 +208,32 @@ int ndefDecodeSig(uint8_t *sig, size_t siglen) {
 	if ((indx <= siglen) && certURI) {
 		size_t inturilen = (sig[indx] << 8) + sig[indx + 1];
 		indx += 2;
-		PrintAndLogEx(NORMAL, "\tcertificate uri [%d]: %.*s", inturilen, inturilen, &sig[indx]);			
+		PrintAndLogEx(NORMAL, "\tcertificate uri [%d]: %.*s", inturilen, inturilen, &sig[indx]);
 		indx += inturilen;
 	}
-	
+
 	return 0;
 };
 
 int ndefDecodePayload(NDEFHeader_t *ndef) {
-	
+
 	switch(ndef->TypeNameFormat) {
 	case tnfWellKnownRecord:
 		PrintAndLogEx(INFO, "Well Known Record");
 		PrintAndLogEx(NORMAL, "\ttype:    %.*s", ndef->TypeLen, ndef->Type);
-		
+
 		if (!strncmp((char *)ndef->Type, "T", ndef->TypeLen)) {
 			PrintAndLogEx(NORMAL, "\ttext   : %.*s", ndef->PayloadLen, ndef->Payload);
 		}
-		
+
 		if (!strncmp((char *)ndef->Type, "U", ndef->TypeLen)) {
 			PrintAndLogEx(NORMAL, "\turi    : %s%.*s", (ndef->Payload[0] <= 0x23 ? URI_s[ndef->Payload[0]] : "[err]"), ndef->PayloadLen, &ndef->Payload[1]);
 		}
-		
+
 		if (!strncmp((char *)ndef->Type, "Sig", ndef->TypeLen)) {
 			ndefDecodeSig(ndef->Payload, ndef->PayloadLen);
 		}
-		
+
 		break;
 	case tnfAbsoluteURIRecord:
 		PrintAndLogEx(INFO, "Absolute URI Record");
@@ -242,7 +242,7 @@ int ndefDecodePayload(NDEFHeader_t *ndef) {
 		break;
 	default:
 		break;
-	}	
+	}
 	return 0;
 }
 
@@ -251,9 +251,9 @@ int ndefRecordDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
 	int res = ndefDecodeHeader(ndefRecord, ndefRecordLen, &NDEFHeader);
 	if (res)
 		return res;
-	
+
 	ndefPrintHeader(&NDEFHeader);
-	
+
 	if (NDEFHeader.TypeLen) {
 		PrintAndLogEx(INFO, "Type data:");
 		dump_buffer(NDEFHeader.Type, NDEFHeader.TypeLen, stdout, 1);
@@ -275,13 +275,13 @@ int ndefRecordDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
 int ndefRecordsDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
 	bool firstRec = true;
 	size_t len = 0;
-	
+
 	while (len < ndefRecordLen) {
 		NDEFHeader_t NDEFHeader = {0};
 		int res = ndefDecodeHeader(&ndefRecord[len], ndefRecordLen - len, &NDEFHeader);
 		if (res)
 			return res;
-		
+
 		if (firstRec) {
 			if (!NDEFHeader.MessageBegin) {
 				PrintAndLogEx(ERR, "NDEF first record have MessageBegin=false!");
@@ -289,27 +289,27 @@ int ndefRecordsDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
 			}
 			firstRec = false;
 		}
-		
+
 		if (NDEFHeader.MessageEnd && len + NDEFHeader.RecLen != ndefRecordLen) {
 			PrintAndLogEx(ERR, "NDEF records have wrong length. Must be %d, calculated %d", ndefRecordLen, len + NDEFHeader.RecLen);
 			return 1;
 		}
-		
-		ndefRecordDecodeAndPrint(&ndefRecord[len], NDEFHeader.RecLen);		
-		
+
+		ndefRecordDecodeAndPrint(&ndefRecord[len], NDEFHeader.RecLen);
+
 		len += NDEFHeader.RecLen;
-		
+
 		if (NDEFHeader.MessageEnd)
 			break;
-	}	
-	
+	}
+
 	return 0;
 }
 
 int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
-	
+
 	size_t indx = 0;
-	
+
 	PrintAndLogEx(INFO, "NDEF decoding:");
 	while (indx < ndefLen) {
 		switch (ndef[indx]) {
@@ -326,11 +326,11 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
 				indx++;
 				uint16_t len = ndefTLVGetLength(&ndef[indx], &indx);
 				PrintAndLogEx(INFO, "-- NDEF message. len: %d", len);
-				
+
 				int res = ndefRecordsDecodeAndPrint(&ndef[indx], len);
 				if (res)
 					return res;
-				
+
 				indx += len;
 				break;
 			}
@@ -350,8 +350,8 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
 				PrintAndLogEx(ERR, "unknown tag 0x%02x", ndef[indx]);
 				return 1;
 			}
-		}		
+		}
 	}
-	
+
 	return 0;
 }

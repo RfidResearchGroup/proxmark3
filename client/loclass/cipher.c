@@ -1,13 +1,13 @@
 /*****************************************************************************
  * WARNING
  *
- * THIS CODE IS CREATED FOR EXPERIMENTATION AND EDUCATIONAL USE ONLY. 
- * 
- * USAGE OF THIS CODE IN OTHER WAYS MAY INFRINGE UPON THE INTELLECTUAL 
- * PROPERTY OF OTHER PARTIES, SUCH AS INSIDE SECURE AND HID GLOBAL, 
- * AND MAY EXPOSE YOU TO AN INFRINGEMENT ACTION FROM THOSE PARTIES. 
- * 
- * THIS CODE SHOULD NEVER BE USED TO INFRINGE PATENTS OR INTELLECTUAL PROPERTY RIGHTS. 
+ * THIS CODE IS CREATED FOR EXPERIMENTATION AND EDUCATIONAL USE ONLY.
+ *
+ * USAGE OF THIS CODE IN OTHER WAYS MAY INFRINGE UPON THE INTELLECTUAL
+ * PROPERTY OF OTHER PARTIES, SUCH AS INSIDE SECURE AND HID GLOBAL,
+ * AND MAY EXPOSE YOU TO AN INFRINGEMENT ACTION FROM THOSE PARTIES.
+ *
+ * THIS CODE SHOULD NEVER BE USED TO INFRINGE PATENTS OR INTELLECTUAL PROPERTY RIGHTS.
  *
  *****************************************************************************
  *
@@ -22,7 +22,7 @@
  *
  * This is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as published
- * by the Free Software Foundation, or, at your option, any later version. 
+ * by the Free Software Foundation, or, at your option, any later version.
  *
  * This file is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -31,8 +31,8 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with loclass.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * 
+ *
+ *
  ****************************************************************************/
 
 
@@ -218,7 +218,7 @@ void MAC(uint8_t* k, BitstreamIn input, BitstreamOut out)
 	BitstreamIn input_32_zeroes = {zeroes_32,sizeof(zeroes_32)*8,0};
 	State initState = suc(k,init(k),&input);
 	output(k,initState,&input_32_zeroes,&out);
-}	 
+}
 
 void doMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t mac[4])
 {
@@ -228,7 +228,7 @@ void doMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t mac[4])
 
 	memcpy(cc_nr, cc_nr_p, 12);
     memcpy(div_key, div_key_p, 8);
-    
+
 	reverse_arraybytes(cc_nr, 12);
 	BitstreamIn bitstream = {cc_nr, 12 * 8, 0};
 	uint8_t dest []= {0,0,0,0,0,0,0,0};

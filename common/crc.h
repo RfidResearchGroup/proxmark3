@@ -26,12 +26,12 @@ typedef struct crc {
 
 /* Initialize a crc structure. order is the order of the polynom, e.g. 32 for a CRC-32
  * polynom is the CRC polynom. initial_value is the initial value of a clean state.
- * final_xor is XORed onto the state before returning it from crc_result(). 
+ * final_xor is XORed onto the state before returning it from crc_result().
  * refin is the setting for reversing (bitwise) the bytes during crc
  * refot is the setting for reversing (bitwise) the crc byte before returning it.
  */
 extern void crc_init_ref(crc_t *crc, int order, uint32_t polynom, uint32_t initial_value, uint32_t final_xor, bool refin, bool refout);
-	
+
 /* Initialize a crc structure. order is the order of the polynom, e.g. 32 for a CRC-32
  * polynom is the CRC polynom. initial_value is the initial value of a clean state.
  * final_xor is XORed onto the state before returning it from crc_result(). */

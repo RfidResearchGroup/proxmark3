@@ -199,13 +199,13 @@ static const struct emv_tag emv_tags[] = {
 	{ 0x5f2d, "Language Preference", EMV_TAG_STRING },
 	{ 0x5f30, "Service Code", EMV_TAG_NUMERIC },
 	{ 0x5f34, "Application Primary Account Number (PAN) Sequence Number", EMV_TAG_NUMERIC },
-	{ 0x5f36, "Transaction Currency Exponent",  EMV_TAG_NUMERIC },	
+	{ 0x5f36, "Transaction Currency Exponent",  EMV_TAG_NUMERIC },
 	{ 0x5f50, "Issuer URL", EMV_TAG_STRING },
 	{ 0x5f53, "International Bank Account Number (IBAN)" },
 	{ 0x5f54, "Bank Identifier Code (BIC)" },
 	{ 0x5f55, "Issuer Country Code (alpha2 format)", EMV_TAG_STRING },
 	{ 0x5f56, "Issuer Country Code (alpha3 format)", EMV_TAG_STRING },
-		
+
 	{ 0x61  , "Application Template" },
 	{ 0x6f  , "File Control Information (FCI) Template" },
 	{ 0x70  , "READ RECORD Response Message Template" },
@@ -240,7 +240,7 @@ static const struct emv_tag emv_tags[] = {
 	{ 0x9b  , "Transaction Status Information" },
 	{ 0x9c  , "Transaction Type", EMV_TAG_NUMERIC },
 	{ 0x9d  , "Directory Definition File (DDF) Name" },
-	
+
 	{ 0x9f01, "Acquirer Identifier", EMV_TAG_NUMERIC },
 	{ 0x9f02, "Amount, Authorised (Numeric)", EMV_TAG_NUMERIC },
 	{ 0x9f03, "Amount, Other (Numeric)", EMV_TAG_NUMERIC },
@@ -268,10 +268,10 @@ static const struct emv_tag emv_tags[] = {
 	{ 0x9f1b, "Terminal Floor Limit" },
 	{ 0x9f1c, "Terminal Identification", EMV_TAG_STRING },
 	{ 0x9f1d, "Terminal Risk Management Data" },
-	{ 0x9f1e, "Interface Device (IFD) Serial Number", EMV_TAG_STRING },	
+	{ 0x9f1e, "Interface Device (IFD) Serial Number", EMV_TAG_STRING },
 	{ 0x9f1f, "Track 1 Discretionary Data", EMV_TAG_STRING },
 	{ 0x9f20, "Track 2 Discretionary Data", EMV_TAG_STRING },
-	{ 0x9f21, "Transaction Time" },	
+	{ 0x9f21, "Transaction Time" },
 	{ 0x9f22, "Certification Authority Public Key Index - Terminal" },
 	{ 0x9f23, "Upper Consecutive Offline Limit" },
 	{ 0x9f26, "Application Cryptogram" },
@@ -308,20 +308,20 @@ static const struct emv_tag emv_tags[] = {
 	{ 0x9f4d, "Log Entry" },
 	{ 0x9f4e, "Merchant Name and Location", EMV_TAG_STRING },
 	{ 0x9f4f, "Log Format", EMV_TAG_DOL },
-	
+
 	{ 0x9f50, "Offline Accumulator Balance" },
 	{ 0x9f51, "Application Currency Code" },
 	{ 0x9f51, "DRDOL" },
 
 	{ 0x9f52, "Application Default Action (ADA)" },
 	{ 0x9f52, "Terminal Compatibility Indicator" },
-	
+
 	{ 0x9f53, "Transaction Category Code" },
 	{ 0x9f54, "DS ODS Card" },
-	
-	{ 0x9f55, "Mobile Support Indicator" },	
+
+	{ 0x9f55, "Mobile Support Indicator" },
 	{ 0x9f55, "Issuer Authentication Flags" },
-	
+
 	{ 0x9f56, "Issuer Authentication Indicator" },
 	{ 0x9f57, "Issuer Country Code" },
 	{ 0x9f58, "Consecutive Transaction Counter Limit (CTCL)" },
@@ -332,7 +332,7 @@ static const struct emv_tag emv_tags[] = {
 	{ 0x9f5d, "Application Capabilities Information" },
 	{ 0x9f5e, "Data Storage Identifier" },
 	{ 0x9f5f, "DS Slot Availability" },
-	
+
 	{ 0x9f60, "CVC3 (Track1)" },
 	{ 0x9f61, "CVC3 (Track2)" },
 	{ 0x9f62, "PCVC3 (Track1)" },
@@ -421,7 +421,7 @@ static const struct emv_tag emv_tags[] = {
 	{ 0xff8103, "Tags To Write After Gen AC" },
 	{ 0xff8104, "Data To Send" },
 	{ 0xff8105, "Data Record" },
-	{ 0xff8106, "Discretionary Data" },	
+	{ 0xff8106, "Discretionary Data" },
 };
 
 static int emv_sort_tag(tlv_tag_t tag) {
@@ -554,13 +554,13 @@ static void emv_tag_dump_cvr(const struct tlv *tlv, const struct emv_tag *tag, F
 		fprintf(f, "\tINVALID!\n");
 		return;
 	}
-	
+
 	if (tlv->len != tlv->value[0] + 1) {
 		PRINT_INDENT(level);
 		fprintf(f, "\tINVALID length!\n");
 		return;
 	}
-	
+
 	if (tlv->len >= 2) {
 		// AC1
 		PRINT_INDENT(level);
@@ -587,7 +587,7 @@ static void emv_tag_dump_cvr(const struct tlv *tlv, const struct emv_tag *tag, F
 		PRINT_INDENT(level);
 		fprintf(f, "\tSuccessfully processed issuer script commands: %x\n", tlv->value[4] >> 4);
 	}
-	
+
 	// mask 0F 0F F0 0F
 	uint8_t data[20] = {0};
 	memcpy(data, &tlv->value[1], tlv->len - 1);
@@ -606,7 +606,7 @@ static void emv_tag_dump_cvr(const struct tlv *tlv, const struct emv_tag *tag, F
 		.type = EMV_TAG_BITMASK,
 		.data = EMV_CVR,
 	};
-	
+
 	if (data[0] || data[1] || data[2] || data[3])
 		emv_tag_dump_bitmask(&bit_tlv, &bit_tag, f, level);
 }
@@ -618,7 +618,7 @@ static void emv_tag_dump_cid(const struct tlv *tlv, const struct emv_tag *tag, F
 		fprintf(f, "\tINVALID!\n");
 		return;
 	}
-	
+
 	PRINT_INDENT(level);
 	if ((tlv->value[0] & EMVAC_AC_MASK) == EMVAC_AAC)		fprintf(f, "\tAC1: AAC (Transaction declined)\n");
 	if ((tlv->value[0] & EMVAC_AC_MASK) == EMVAC_TC)		fprintf(f, "\tAC1: TC (Transaction approved)\n");
@@ -757,7 +757,7 @@ static void emv_tag_dump_afl(const struct tlv *tlv, const struct emv_tag *tag, F
 		fprintf(f, "\tINVALID!\n");
 		return;
 	}
-	
+
 	for (int i = 0; i < tlv->len / 4; i++) {
 		PRINT_INDENT(level);
 		fprintf(f, "SFI[%02x] start:%02x end:%02x offline:%02x\n", tlv->value[i * 4 + 0] >> 3, tlv->value[i * 4 + 1], tlv->value[i * 4 + 2], tlv->value[i * 4 + 3]);
@@ -819,13 +819,13 @@ bool emv_tag_dump(const struct tlv *tlv, FILE *f, int level) {
 
 char *emv_get_tag_name(const struct tlv *tlv) {
 	static char *defstr = "";
-	
-	if (!tlv) 
+
+	if (!tlv)
 		return defstr;
 
 	const struct emv_tag *tag = emv_get_tag(tlv);
 	if (tag)
 		return tag->name;
-	
+
 	return defstr;
 }

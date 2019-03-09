@@ -423,7 +423,7 @@ int exec_cda_test(bool verbose)
 {
 	int ret;
 	fprintf(stdout, "\n");
-	
+
 	ret = cda_test_raw(verbose);
 	if (ret) {
 		fprintf(stderr, "CDA raw test: failed\n");

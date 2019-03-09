@@ -17,7 +17,7 @@
 #include "cmdlf.h"		// lf read
 #include "crc16.h"		// for checksum crc-16_ccitt
 #include "protocols.h"  // for T55xx config register definitions
-#include "lfdemod.h"    // parityTest	 
+#include "lfdemod.h"    // parityTest
 
 extern int CmdLFFdx(const char *Cmd);
 extern int CmdFdxClone(const char *Cmd);

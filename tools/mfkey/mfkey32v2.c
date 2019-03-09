@@ -3,7 +3,7 @@
 #include "crapto1.h"
 #include <stdio.h>
 #include <stdlib.h>
- 
+
 int main (int argc, char *argv[]) {
 	struct Crypto1State *s,*t;
 	uint64_t key;     // recovered key
@@ -46,7 +46,7 @@ int main (int argc, char *argv[]) {
 	printf("\nLFSR succesors of the tag challenge:\n");
 	uint32_t p64 = prng_successor(nt0, 64);
 	uint32_t p64b = prng_successor(nt1, 64);
-	
+
 	printf("  nt': %08x\n", p64);
 	printf(" nt'': %08x\n", prng_successor(p64, 32));
 
@@ -56,13 +56,13 @@ int main (int argc, char *argv[]) {
 	printf("  ks2: %08x\n",ks2);
 
 	s = lfsr_recovery32(ar0_enc ^ p64, 0);
-  
+
 	for(t = s; t->odd | t->even; ++t) {
 		lfsr_rollback_word(t, 0, 0);
 		lfsr_rollback_word(t, nr0_enc, 1);
 		lfsr_rollback_word(t, uid ^ nt0, 0);
 		crypto1_get_lfsr(t, &key);
-		
+
 		crypto1_word(t, uid ^ nt1, 0);
 		crypto1_word(t, nr1_enc, 1);
 		if (ar1_enc == (crypto1_word(t, 0, 0) ^ p64b)) {

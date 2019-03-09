@@ -39,7 +39,7 @@ bool CheckCrc14443(uint16_t CrcType, const uint8_t *data, int length) {
 	if (length < 3) return false;
 	uint8_t b1, b2;
 	ComputeCrc14443(CrcType, data, length - 2, &b1, &b2);
-	if ((b1 == data[length - 2]) && (b2 == data[length - 1])) 
+	if ((b1 == data[length - 2]) && (b2 == data[length - 1]))
 		return true;
 	return false;
 }

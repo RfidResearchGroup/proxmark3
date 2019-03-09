@@ -24,7 +24,7 @@ extern char __data_src_start__, __data_start__, __data_end__, __bss_start__, __b
 static voidpf inflate_malloc(voidpf opaque, uInt items, uInt size)
 {
 	uint8_t *allocated_memory;
-	
+
 	allocated_memory = next_free_memory;
 	next_free_memory += items*size;
 	return allocated_memory;
@@ -40,7 +40,7 @@ static void uncompress_data_section(void)
 	z_stream data_section;
 
 	next_free_memory = BigBuf_get_addr();
-	
+
 	// initialize zstream structure
 	data_section.next_in = (uint8_t *) &__data_src_start__;
 	data_section.avail_in = &__data_end__ - &__data_start__;  // uncompressed size. Wrong but doesn't matter.
@@ -55,7 +55,7 @@ static void uncompress_data_section(void)
 
 	// uncompress data segment to RAM
 	inflate(&data_section, Z_FINISH);
-	
+
 	// save the size of the compressed data section
 	common_area.arg1 = data_section.total_in;
 }
@@ -65,7 +65,7 @@ void __attribute__((section(".startos"))) Vector(void)
 	/* Stack should have been set up by the bootloader */
 	// char *src;
 	char *dst, *end;
-	
+
 	uncompress_data_section();
 
 	/* Set up (that is: clear) BSS. */

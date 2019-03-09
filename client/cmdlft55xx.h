@@ -75,15 +75,15 @@ enum {
 
 typedef struct {
 	uint32_t bl1;
-	uint32_t bl2; 
-	uint32_t acl; 
-	uint32_t mfc; 
-	uint32_t cid; 
-	uint32_t year; 
-	uint32_t quarter; 
+	uint32_t bl2;
+	uint32_t acl;
+	uint32_t mfc;
+	uint32_t cid;
+	uint32_t year;
+	uint32_t quarter;
 	uint32_t icr;
-	uint32_t lotid; 
-	uint32_t wafer; 
+	uint32_t lotid;
+	uint32_t wafer;
 	uint32_t dw;
 } t55x7_tracedata_t;
 
@@ -99,18 +99,18 @@ typedef struct {
 
 typedef struct {
 	enum {
-		DEMOD_NRZ  = 0x00,    
+		DEMOD_NRZ  = 0x00,
 		DEMOD_PSK1 = 0x01,
 		DEMOD_PSK2 = 0x02,
 		DEMOD_PSK3 = 0x03,
-		DEMOD_FSK1  = 0x04,     
-		DEMOD_FSK1a = 0x05,     
-		DEMOD_FSK2  = 0x06,     
-		DEMOD_FSK2a = 0x07, 
-		DEMOD_FSK   = 0xF0, //generic FSK (auto detect FCs)    
+		DEMOD_FSK1  = 0x04,
+		DEMOD_FSK1a = 0x05,
+		DEMOD_FSK2  = 0x06,
+		DEMOD_FSK2a = 0x07,
+		DEMOD_FSK   = 0xF0, //generic FSK (auto detect FCs)
 		DEMOD_ASK  = 0x08,
 		DEMOD_BI   = 0x10,
-		DEMOD_BIa  = 0x18,		
+		DEMOD_BIa  = 0x18,
 	}  modulation;
 	bool inverted;
 	uint8_t offset;

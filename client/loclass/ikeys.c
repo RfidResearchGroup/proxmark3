@@ -1,13 +1,13 @@
 /*****************************************************************************
  * WARNING
  *
- * THIS CODE IS CREATED FOR EXPERIMENTATION AND EDUCATIONAL USE ONLY. 
- * 
- * USAGE OF THIS CODE IN OTHER WAYS MAY INFRINGE UPON THE INTELLECTUAL 
- * PROPERTY OF OTHER PARTIES, SUCH AS INSIDE SECURE AND HID GLOBAL, 
- * AND MAY EXPOSE YOU TO AN INFRINGEMENT ACTION FROM THOSE PARTIES. 
- * 
- * THIS CODE SHOULD NEVER BE USED TO INFRINGE PATENTS OR INTELLECTUAL PROPERTY RIGHTS. 
+ * THIS CODE IS CREATED FOR EXPERIMENTATION AND EDUCATIONAL USE ONLY.
+ *
+ * USAGE OF THIS CODE IN OTHER WAYS MAY INFRINGE UPON THE INTELLECTUAL
+ * PROPERTY OF OTHER PARTIES, SUCH AS INSIDE SECURE AND HID GLOBAL,
+ * AND MAY EXPOSE YOU TO AN INFRINGEMENT ACTION FROM THOSE PARTIES.
+ *
+ * THIS CODE SHOULD NEVER BE USED TO INFRINGE PATENTS OR INTELLECTUAL PROPERTY RIGHTS.
  *
  *****************************************************************************
  *
@@ -22,7 +22,7 @@
  *
  * This is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as published
- * by the Free Software Foundation, or, at your option, any later version. 
+ * by the Free Software Foundation, or, at your option, any later version.
  *
  * This file is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -31,8 +31,8 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with loclass.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * 
+ *
+ *
  ****************************************************************************/
 
 /**
@@ -207,7 +207,7 @@ void permute(BitstreamIn *p_in, uint64_t z,int l,int r, BitstreamOut* out)
 {
 	if(bitsLeft(p_in) == 0)
 		return;
-	
+
 	bool pn = tailBit(p_in);
 	if( pn ) // pn = 1
 	{
@@ -674,10 +674,10 @@ int doTestsWithKnownInputs() {
 
 static bool readKeyFile(uint8_t key[8]) {
 	bool retval = false;
-	
+
 	//Test a few variants
 	char filename[30] = {0};
-	
+
 	if (fileExists("iclass_key.bin")){
 		sprintf(filename, "%s.bin", "iclass_key");
 	} else if (fileExists("loclass/iclass_key.bin")){
@@ -685,17 +685,17 @@ static bool readKeyFile(uint8_t key[8]) {
 	} else if (fileExists("client/loclass/iclass_key.bin")){
 		sprintf(filename, "%s.bin", "client/loclass/iclass_key");
 	}
-	
+
 	if ( strlen(filename) == 0 )
 		return retval;
-	
+
 	FILE *f = fopen(filename, "rb");
 	if (!f)
 		return retval;
-		
+
 	size_t bytes_read = fread(key, sizeof(uint8_t), 8, f);
 	if ( bytes_read == 8)
-		retval = true;	
+		retval = true;
 
 	if (f)
 		fclose(f);
@@ -716,7 +716,7 @@ int doKeyTests(uint8_t debuglevel) {
 		uint8_t j = 0;
 		for (i = 0; i < sizeof(key); i++)
 			j += key[i];
-		
+
 		if (j != 185) {
 			PrintAndLogDevice(INFO, "A key was loaded, but it does not seem to be the correct one. Aborting these tests");
 		} else {

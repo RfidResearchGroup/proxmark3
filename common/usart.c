@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------------
 // Iceman, July 2018
 // edits by - Anticat, August 2018
-// 
+//
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
@@ -24,7 +24,7 @@ void usart_close(void) {
 
     // Reset the baud rate divisor register
 	pUS1->US_BRGR = 0;
-	
+
     // Reset the Timeguard Register
     pUS1->US_TTGR = 0;
 
@@ -96,20 +96,20 @@ void usart_init(void) {
 
 	// disable & reset receiver / transmitter for configuration
 	pUS1->US_CR = (AT91C_US_RSTRX | AT91C_US_RSTTX | AT91C_US_RXDIS | AT91C_US_TXDIS);
-	
+
 	//enable the USART1 Peripheral clock
 	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_US1);
 
 	// disable PIO control of receive / transmit pins
-	pPIO->PIO_PDR |= (AT91C_PA21_RXD1 | AT91C_PA22_TXD1); 
-	
+	pPIO->PIO_PDR |= (AT91C_PA21_RXD1 | AT91C_PA22_TXD1);
+
 	// enable peripheral mode A on receive / transmit pins
 	pPIO->PIO_ASR |= (AT91C_PA21_RXD1 | AT91C_PA22_TXD1);
 	pPIO->PIO_BSR = 0;
 
 	// enable pull-up on receive / transmit pins (see 31.5.1 I/O Lines)
 	pPIO->PIO_PPUER |= (AT91C_PA21_RXD1 | AT91C_PA22_TXD1);
-	
+
     // set mode
     pUS1->US_MR = AT91C_US_USMODE_NORMAL |      // normal mode
                AT91C_US_CLKS_CLOCK |            // MCK (48MHz)
@@ -126,18 +126,18 @@ void usart_init(void) {
 	// For a nice detailed sample, interrupt driven but still relevant.
 	// See https://www.sparkfun.com/datasheets/DevTools/SAM7/at91sam7%20serial%20communications.pdf
 
-	// set baudrate to 115200 
+	// set baudrate to 115200
 	// 115200 * 16 == 1843200
 	//
 	//pUS1->US_BRGR = (48UL*1000*1000) / (9600*16);
 	pUS1->US_BRGR =  48054841 / (9600 << 4);
-	
+
 	// Write the Timeguard Register
 	pUS1->US_TTGR = 0;
 	pUS1->US_RTOR = 0;
 	pUS1->US_FIDI = 0;
 	pUS1->US_IF = 0;
-	
+
 	// re-enable receiver / transmitter
 	pUS1->US_CR = (AT91C_US_RXEN | AT91C_US_TXEN);
 }

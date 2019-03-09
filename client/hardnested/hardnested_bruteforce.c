@@ -10,7 +10,7 @@
 // attacks this doesn't rely on implementation errors but only on the
 // inherent weaknesses of the crypto1 cypher. Described in
 //   Carlo Meijer, Roel Verdult, "Ciphertext-only Cryptanalysis on Hardened
-//   Mifare Classic Cards" in Proceedings of the 22nd ACM SIGSAC Conference on 
+//   Mifare Classic Cards" in Proceedings of the 22nd ACM SIGSAC Conference on
 //   Computer and Communications Security, 2015
 //-----------------------------------------------------------------------------
 //
@@ -19,7 +19,7 @@
 // - don't rollback. Start with 2nd byte of nonce instead
 // - reuse results of filter subfunctions
 // - reuse results of previous nonces if some first bits are identical
-// 
+//
 //-----------------------------------------------------------------------------
 // aczid's Copyright notice:
 //
@@ -89,7 +89,7 @@ static uint32_t keys_found = 0;
 static uint64_t num_keys_tested;
 static uint64_t found_bs_key = 0;
 
-inline uint8_t trailing_zeros(uint8_t byte) 
+inline uint8_t trailing_zeros(uint8_t byte)
 {
 	static const uint8_t trailing_zeros_LUT[256] = {
 		8, 0, 1, 0, 2, 0, 1, 0,	3, 0, 1, 0, 2, 0, 1, 0,
@@ -126,7 +126,7 @@ bool verify_key(uint32_t cuid, noncelist_t *nonces, uint8_t *best_first_bytes, u
 			for (int8_t byte_pos = 3; byte_pos >= 0; byte_pos--) {
 				uint8_t test_par_enc_bit = (test_nonce->par_enc >> byte_pos) & 0x01;			// the encoded parity bit
 				uint8_t test_byte_enc = (test_nonce->nonce_enc >> (8*byte_pos)) & 0xff; 		// the encoded nonce byte
-				uint8_t test_byte_dec = crypto1_byte(&pcs, test_byte_enc /* ^ (cuid >> (8*byte_pos)) */, true) ^ test_byte_enc; 	// decode the nonce byte	
+				uint8_t test_byte_dec = crypto1_byte(&pcs, test_byte_enc /* ^ (cuid >> (8*byte_pos)) */, true) ^ test_byte_enc; 	// decode the nonce byte
 				uint8_t ks_par = filter(pcs.odd);												// the keystream bit to encode/decode the parity bit
 				uint8_t test_par_enc2 = ks_par ^ evenparity8(test_byte_dec);					// determine the decoded byte's parity and encode it
 				if (test_par_enc_bit != test_par_enc2) {
@@ -138,10 +138,10 @@ bool verify_key(uint32_t cuid, noncelist_t *nonces, uint8_t *best_first_bytes, u
 	}
 	return true;
 }
-static void* 
+static void*
 #ifdef __has_attribute
 	#if __has_attribute(force_align_arg_pointer)
-	__attribute__((force_align_arg_pointer)) 
+	__attribute__((force_align_arg_pointer))
 	#endif
 #endif
 crack_states_thread(void* x){
@@ -161,9 +161,9 @@ crack_states_thread(void* x){
     while(current_bucket < bucket_count){
         statelist_t *bucket = buckets[current_bucket];
         if(bucket){
-#if defined (DEBUG_BRUTE_FORCE)	
+#if defined (DEBUG_BRUTE_FORCE)
 			printf("Thread %u starts working on bucket %u\n", thread_id, current_bucket);
-#endif			
+#endif
             const uint64_t key = crack_states_bitsliced(thread_arg->cuid, thread_arg->best_first_bytes, bucket, &keys_found, &num_keys_tested, nonces_to_bruteforce, bf_test_nonce_2nd_byte, thread_arg->nonces);
             if(key != -1){
                 __atomic_fetch_add(&keys_found, 1, __ATOMIC_SEQ_CST);
@@ -173,7 +173,7 @@ crack_states_thread(void* x){
 				char keystr[18];
 				sprintf(keystr, "%012" PRIx64 "  ", key);
 				sprintf(progress_text, "Brute force phase completed. Key found: " _YELLOW_(%s), keystr);
-				hardnested_print_progress(thread_arg->num_acquired_nonces, progress_text, 0.0, 0);				
+				hardnested_print_progress(thread_arg->num_acquired_nonces, progress_text, 0.0, 0);
                 break;
             } else if(keys_found){
                 break;
@@ -212,20 +212,20 @@ void prepare_bf_test_nonces(noncelist_t *nonces, uint8_t best_first_byte)
 			// trailing_zeros(bf_test_nonce_2nd_byte[1] ^ bf_test_nonce_2nd_byte[0]),
 			// trailing_zeros(bf_test_nonce_2nd_byte[2] ^ bf_test_nonce_2nd_byte[1]),
 			// trailing_zeros(bf_test_nonce_2nd_byte[3] ^ bf_test_nonce_2nd_byte[2]));
-	
+
 	uint8_t best_4[4] = {0};
 	int sum_best = -1;
 	for (uint16_t n1 = 0; n1 < nonces_to_bruteforce; n1++) {
 		for (uint16_t n2 = 0; n2 < nonces_to_bruteforce; n2++) {
 			if (n2 != n1) {
 				for (uint16_t n3 = 0; n3 < nonces_to_bruteforce; n3++) {
-					if ((n3 != n2 && n3 != n1) || nonces_to_bruteforce < 3 
-					    // && trailing_zeros(bf_test_nonce_2nd_byte[n1] ^ bf_test_nonce_2nd_byte[n2]) 
+					if ((n3 != n2 && n3 != n1) || nonces_to_bruteforce < 3
+					    // && trailing_zeros(bf_test_nonce_2nd_byte[n1] ^ bf_test_nonce_2nd_byte[n2])
 						    // > trailing_zeros(bf_test_nonce_2nd_byte[n2] ^ bf_test_nonce_2nd_byte[n3])
 							) {
 						for (uint16_t n4 = 0; n4 < nonces_to_bruteforce; n4++) {
 							if ((n4 != n3 && n4 != n2 && n4 != n1) || nonces_to_bruteforce < 4
-								// && trailing_zeros(bf_test_nonce_2nd_byte[n2] ^ bf_test_nonce_2nd_byte[n3]) 
+								// && trailing_zeros(bf_test_nonce_2nd_byte[n2] ^ bf_test_nonce_2nd_byte[n3])
 								// > trailing_zeros(bf_test_nonce_2nd_byte[n3] ^ bf_test_nonce_2nd_byte[n4])
 								) {
 								int sum = nonces_to_bruteforce > 1 ? trailing_zeros(bf_test_nonce_2nd_byte[n1] ^ bf_test_nonce_2nd_byte[n2]) : 0.0
@@ -245,13 +245,13 @@ void prepare_bf_test_nonces(noncelist_t *nonces, uint8_t best_first_byte)
 			}
 		}
 	}
-	
+
 	uint32_t bf_test_nonce_temp[4];
 	uint8_t bf_test_nonce_par_temp[4];
 	uint8_t bf_test_nonce_2nd_byte_temp[4];
 	for (uint8_t i = 0; i < 4 && i < nonces_to_bruteforce; i++) {
-		bf_test_nonce_temp[i] = bf_test_nonce[best_4[i]]; 
-		
+		bf_test_nonce_temp[i] = bf_test_nonce[best_4[i]];
+
 		bf_test_nonce_par_temp[i] = bf_test_nonce_par[best_4[i]];
 		bf_test_nonce_2nd_byte_temp[i] = bf_test_nonce_2nd_byte[best_4[i]];
 	}
@@ -295,13 +295,13 @@ bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint
 	write_benchfile(candidates);
 #endif
 	bool silent = (bf_rate != NULL);
-	
+
 	keys_found = 0;
 	num_keys_tested = 0;
 	found_bs_key = 0;
-	
+
 	bitslice_test_nonces(nonces_to_bruteforce, bf_test_nonce, bf_test_nonce_par);
-	
+
 	// count number of states to go
 	bucket_count = 0;
 	for (statelist_t *p = candidates; p != NULL; p = p->next) {
@@ -313,7 +313,7 @@ bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint
 
 	uint64_t start_time = msclock();
 
-#if defined(__linux__) ||  defined(__APPLE__)	
+#if defined(__linux__) ||  defined(__APPLE__)
 	if ( NUM_BRUTE_FORCE_THREADS < 0 )
 		return false;
 #endif
@@ -328,7 +328,7 @@ bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint
 		noncelist_t *nonces;
 		uint8_t *best_first_bytes;
 	} thread_args[NUM_BRUTE_FORCE_THREADS];
-	
+
 	for (uint32_t i = 0; i < NUM_BRUTE_FORCE_THREADS; i++){
 		thread_args[i].thread_ID = i;
 		thread_args[i].silent = silent;
@@ -347,10 +347,10 @@ bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint
 
 	if (bf_rate != NULL)
 		*bf_rate = (float)num_keys_tested / ((float)elapsed_time / 1000.0);
-	
+
 	if ( keys_found > 0)
 		*foundkey = found_bs_key;
-	
+
 	return (keys_found != 0);
 }
 
@@ -361,7 +361,7 @@ static bool read_bench_data(statelist_t *test_candidates) {
 	uint32_t temp = 0;
 	uint32_t num_states = 0;
 	uint32_t states_read = 0;
-	
+
 	char bench_file_path[strlen(get_my_executable_directory()) + strlen(TEST_BENCH_FILENAME) + 1];
 	strcpy(bench_file_path, get_my_executable_directory());
 	strcat(bench_file_path, TEST_BENCH_FILENAME);
@@ -371,7 +371,7 @@ static bool read_bench_data(statelist_t *test_candidates) {
 		return false;
 	}
 	bytes_read = fread(&nonces_to_bruteforce, 1, sizeof(nonces_to_bruteforce), benchfile);
-	if (bytes_read != sizeof(nonces_to_bruteforce)) { 
+	if (bytes_read != sizeof(nonces_to_bruteforce)) {
 		fclose(benchfile);
 		return false;
 	}
@@ -388,7 +388,7 @@ static bool read_bench_data(statelist_t *test_candidates) {
 			return false;
 		}
 	}
-	bytes_read = fread(&num_states, 1, sizeof(uint32_t), benchfile); 
+	bytes_read = fread(&num_states, 1, sizeof(uint32_t), benchfile);
 	if (bytes_read != sizeof(uint32_t)) {
 		fclose(benchfile);
 		return false;
@@ -420,9 +420,9 @@ static bool read_bench_data(statelist_t *test_candidates) {
 	for (uint32_t i = states_read; i < TEST_BENCH_SIZE; i++) {
 		test_candidates->states[ODD_STATE][i] = test_candidates->states[ODD_STATE][i-states_read];
 	}
-		
+
 	fclose(benchfile);
-	return true;	
+	return true;
 }
 
 
@@ -435,7 +435,7 @@ float brute_force_benchmark() {
 		test_candidates[i].next = test_candidates + i + 1;
 		test_candidates[i+1].states[ODD_STATE] = test_candidates[0].states[ODD_STATE];
 		test_candidates[i+1].states[EVEN_STATE] = test_candidates[0].states[EVEN_STATE];
-	} 
+	}
 	test_candidates[NUM_BRUTE_FORCE_THREADS-1].next = NULL;
 
 	if (!read_bench_data(test_candidates)) {
@@ -449,13 +449,13 @@ float brute_force_benchmark() {
 		test_candidates[i].states[ODD_STATE][TEST_BENCH_SIZE] = -1;
 		test_candidates[i].states[EVEN_STATE][TEST_BENCH_SIZE] = -1;
 	}
-	
+
 	uint64_t maximum_states = TEST_BENCH_SIZE*TEST_BENCH_SIZE*(uint64_t)NUM_BRUTE_FORCE_THREADS;
 
 	float bf_rate;
 	uint64_t found_key = 0;
 	brute_force_bs(&bf_rate, test_candidates, 0, 0, maximum_states, NULL, 0, &found_key);
-	
+
 	free(test_candidates[0].states[ODD_STATE]);
 	free(test_candidates[0].states[EVEN_STATE]);
 

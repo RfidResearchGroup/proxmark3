@@ -61,10 +61,10 @@ int GetNedapBits(uint32_t cn, uint8_t *nedapBits) {
 
 	// fixed tagtype code?  0010 1101 = 0x2D
 	num_to_bytebits(0x2D, 8, pre+10);
-	
+
 	// 46 encrypted bits - UNKNOWN ALGO
 	//    -- 16 bits checksum. Should be 4x4 checksum,  based on UID and 2 constant values.
-	//    -- 30 bits undocumented?  
+	//    -- 30 bits undocumented?
 	//num_to_bytebits(cn, 46, pre+18);
 
 	//----from this part, the UID in clear text, with a 1bit ZERO as separator between bytes.
@@ -75,7 +75,7 @@ int GetNedapBits(uint32_t cn, uint8_t *nedapBits) {
 	pre[100] = 0;
 	pre[109] = 0;
 	pre[118] = 0;
-	
+
 	// cardnumber (uid)
 	num_to_bytebits( (cn >>  0) & 0xFF, 8, pre+65);
 	num_to_bytebits( (cn >>  8) & 0xFF, 8, pre+74);
@@ -84,19 +84,19 @@ int GetNedapBits(uint32_t cn, uint8_t *nedapBits) {
 	// two ?
 	num_to_bytebits( 0, 8, pre+92);
 	num_to_bytebits( 0, 8, pre+101);
-	
-	// chksum 
-	num_to_bytebits( (0 >> 0) & 0xFF, 8, pre+110);
-	num_to_bytebits( (0 >> 8) & 0xFF, 8, pre+119);	
 
-	
+	// chksum
+	num_to_bytebits( (0 >> 0) & 0xFF, 8, pre+110);
+	num_to_bytebits( (0 >> 8) & 0xFF, 8, pre+119);
+
+
 	// add paritybits	(bitsource, dest, sourcelen, paritylen, parityType (odd, even,)
 	addParity(pre, pre+64, 64, 8, 1);
 	addParity(pre+64, pre+64, 64, 8, 1);
 
 	pre[63] = GetParity( DemodBuffer, EVEN, 63);
 	pre[127] = GetParity( DemodBuffer+64, EVEN, 63);
-	
+
 	memcpy(nedapBits, pre, 128);
 
 	// 1111111110001011010000010110100011001001000010110101001101011001000110011010010000000000100001110001001000000001000101011100111
@@ -110,7 +110,7 @@ int GetNedapBits(uint32_t cn, uint8_t *nedapBits) {
 //GetParity( uint8_t *bits, uint8_t type, int length)
 
 //NEDAP demod - ASK/Biphase (or Diphase),  RF/64 with preamble of 1111111110  (always a 128 bit data stream)
-//print NEDAP Prox ID, encoding, encrypted ID, 
+//print NEDAP Prox ID, encoding, encrypted ID,
 
 int CmdLFNedapDemod(const char *Cmd) {
 	//raw ask demod no start bit finding just get binary from wave
@@ -141,19 +141,19 @@ int CmdLFNedapDemod(const char *Cmd) {
 /* Index map                                                      E                                                                              E
  preamble    enc tag type         encrypted uid                   P d    33    d    90    d    04    d    71    d    40    d    45    d    E7    P
  1111111110 00101101000001011010001100100100001011010100110101100 1 0 00110011 0 10010000 0 00000100 0 01110001 0 01000000 0 01000101 0 11100111 1
-                                                                         uid2       uid1       uid0         I          I          R           R    
- 1111111110 00101101000001011010001100100100001011010100110101100 1 
- 
- 0 00110011 
- 0 10010000 
+                                                                         uid2       uid1       uid0         I          I          R           R
+ 1111111110 00101101000001011010001100100100001011010100110101100 1
+
+ 0 00110011
+ 0 10010000
  0 00000100
  0 01110001
  0 01000000
  0 01000101
  0 11100111
  1
- 
-	 Tag ID is 049033 
+
+	 Tag ID is 049033
 	 I = Identical on all tags
 	 R = Random ?
 	 UID2, UID1, UID0 == card number
@@ -167,7 +167,7 @@ int CmdLFNedapDemod(const char *Cmd) {
 	raw[3] = bytebits_to_byte(DemodBuffer+idx,32);
 	setDemodBuf(DemodBuffer, 128, idx);
 	setClockGrid(g_DemodClock, g_DemodStartIdx + (idx*g_DemodClock));
-	
+
 	uint8_t firstParity = GetParity( DemodBuffer, EVEN, 63);
 	if ( firstParity != DemodBuffer[63]  ) {
 		PrintAndLogEx(DEBUG, "DEBUG: Error - Nedap 1st 64bit parity check failed:  %d|%d ", DemodBuffer[63], firstParity);
@@ -187,9 +187,9 @@ int CmdLFNedapDemod(const char *Cmd) {
 	uid |= bytebits_to_byte(DemodBuffer+83, 8) << 16;
 
 	uint16_t two = 0;
-	two =  bytebits_to_byte(DemodBuffer+92, 8); 
+	two =  bytebits_to_byte(DemodBuffer+92, 8);
 	two |= bytebits_to_byte(DemodBuffer+101, 8) << 8;
-	
+
 	uint16_t chksum2 = 0;
 	chksum2 =  bytebits_to_byte(DemodBuffer+110, 8);
 	chksum2 |= bytebits_to_byte(DemodBuffer+119, 8) << 8;
@@ -249,11 +249,11 @@ int CmdLFNedapClone(const char *Cmd) {
 	if (sscanf(Cmd, "%u", &cn ) != 1) return usage_lf_nedap_clone();
 
 	cardnumber = (cn & 0x00FFFFFF);
-	
+
 	if ( !GetNedapBits(cardnumber, bits)) {
 		PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
 		return 1;
-	}	
+	}
 
 	((ASK/DIphase   data rawdemod ab 0 64 1 0
 	//NEDAP - compat mode, ASK/DIphase, data rate 64, 4 data blocks
@@ -291,32 +291,32 @@ int CmdLFNedapClone(const char *Cmd) {
 int CmdLFNedapSim(const char *Cmd) {
 
 	uint32_t cardnumber = 0, cn = 0;
-	
+
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_nedap_sim();
 
 	if (sscanf(Cmd, "%u", &cn ) != 1) return usage_lf_nedap_sim();
-	
+
 	cardnumber = (cn & 0x00FFFFFF);
-	
+
 	uint8_t bs[128];
 	size_t size = sizeof(bs);
 	memset(bs, 0x00, size);
-	
+
 	// NEDAP,  Biphase = 2, clock 64, inverted,  (DIPhase == inverted BIphase
 	uint8_t  clk = 64, encoding = 2, separator = 0, invert = 1;
 	uint16_t arg1, arg2;
 	arg1 = clk << 8 | encoding;
 	arg2 = invert << 8 | separator;
-	
+
 	if ( !GetNedapBits(cardnumber, bs)) {
 		PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
 		return 1;
-	}	
+	}
 
 	PrintAndLogEx(SUCCESS, "bin  %s", sprint_bin_break(bs, 128, 32));
 	PrintAndLogEx(SUCCESS, "Simulating Nedap - CardNumber: %u", cardnumber );
-	
+
 	UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};
 	memcpy(c.d.asBytes, bs, size);
 	clearCommandBuffer();
@@ -329,51 +329,51 @@ int CmdLFNedapChk(const char *Cmd){
 	uint8_t data[256] = { 0x30, 0x16, 0x00, 0x71, 0x40, 0x21, 0xBE};
 	int len = 0;
 	param_gethex_ex(Cmd, 0, data, &len);
-	
+
 	len = ( len == 0 ) ? 5 : len>>1;
-	
+
 	PrintAndLogEx(SUCCESS, "Input: [%d] %s", len, sprint_hex(data, len));
-	
+
 	//uint8_t last = GetParity(data, EVEN, 62);
 	//PrintAndLogEx(NORMAL, "TEST PARITY::  %d | %d ", DemodBuffer[62], last);
 
     uint8_t cl = 0x1D, ch = 0x1D, carry = 0;
     uint8_t al, bl, temp;
-    
+
 	for (int i =len; i >= 0; --i){
 		al = data[i];
         for (int j = 8; j > 0; --j) {
-			
+
             bl = al ^ ch;
 			//PrintAndLogEx(NORMAL, "BL %02x | CH %02x \n", al, ch);
-			
+
             carry = (cl & 0x80) ? 1 : 0;
             cl <<= 1;
-            
+
             temp = (ch & 0x80) ? 1 : 0;
             ch = (ch << 1) | carry;
             carry = temp;
-            
+
             carry = (al & 0x80) ? 1 : 0;
             al <<= 1;
-            
+
             carry = (bl & 0x80) ? 1 : 0;
             bl <<= 1;
-            
+
             if (carry) {
                 cl ^= 0x21;
                 ch ^= 0x10;
             }
         }
     }
-	
+
 	PrintAndLogEx(SUCCESS, "Nedap checksum: 0x%X", ((ch << 8) | cl) );
 	return 0;
 }
 
 static command_t CommandTable[] = {
     {"help",	CmdHelp,		1, "this help"},
-	{"demod",	CmdLFNedapDemod,0, "demodulate an Nedap tag from the GraphBuffer"},	
+	{"demod",	CmdLFNedapDemod,0, "demodulate an Nedap tag from the GraphBuffer"},
 	{"read",	CmdLFNedapRead, 0, "attempt to read and extract tag data"},
 //	{"clone",	CmdLFNedapClone,0, "<Card Number>  clone nedap tag"},
 	{"sim",		CmdLFNedapSim,  0, "simulate nedap tag"},

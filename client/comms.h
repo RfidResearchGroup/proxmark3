@@ -20,7 +20,7 @@
 #include "ui.h"
 #include "common.h"
 #include "util_posix.h"
-#include "util.h" 
+#include "util.h"
 #include "util_darwin.h"
 
 #if defined(__linux__) && !defined(NO_UNLINK)
@@ -43,7 +43,7 @@ typedef struct {
 	bool run; // If TRUE, continue running the uart_communication thread
 	bool block_after_ACK; // if true, block after receiving an ACK package
 } communication_arg_t;
-	
+
 
 bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd);
 
@@ -56,7 +56,7 @@ void clearCommandBuffer();
 
 bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode);
 void CloseProxmark(void);
-	
+
 bool WaitForResponseTimeoutW(uint32_t cmd, UsbCommand* response, size_t ms_timeout, bool show_warning);
 bool WaitForResponseTimeout(uint32_t cmd, UsbCommand* response, size_t ms_timeout);
 bool WaitForResponse(uint32_t cmd, UsbCommand* response);

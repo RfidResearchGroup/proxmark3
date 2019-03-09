@@ -25,8 +25,8 @@ struct Crypto1State * crypto1_create(uint64_t key)
 	struct Crypto1State *s = malloc(sizeof(*s));
 	if ( !s ) return NULL;
 
-	s->odd = s->even = 0;	
-	
+	s->odd = s->even = 0;
+
 	int i;
 	//for(i = 47;s && i > 0; i -= 2) {
 	for(i = 47; i > 0; i -= 2) {
@@ -103,7 +103,7 @@ uint32_t crypto1_word(struct Crypto1State *s, uint32_t in, int is_encrypted)
 	ret |= crypto1_bit(s, BEBIT(in, 5), is_encrypted) << (5 ^ 24);
 	ret |= crypto1_bit(s, BEBIT(in, 6), is_encrypted) << (6 ^ 24);
 	ret |= crypto1_bit(s, BEBIT(in, 7), is_encrypted) << (7 ^ 24);
-	
+
 	ret |= crypto1_bit(s, BEBIT(in, 8), is_encrypted) << (8 ^ 24);
 	ret |= crypto1_bit(s, BEBIT(in, 9), is_encrypted) << (9 ^ 24);
 	ret |= crypto1_bit(s, BEBIT(in, 10), is_encrypted) << (10 ^ 24);

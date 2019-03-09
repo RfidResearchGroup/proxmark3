@@ -1,13 +1,13 @@
 /*****************************************************************************
  * WARNING
  *
- * THIS CODE IS CREATED FOR EXPERIMENTATION AND EDUCATIONAL USE ONLY. 
- * 
- * USAGE OF THIS CODE IN OTHER WAYS MAY INFRINGE UPON THE INTELLECTUAL 
- * PROPERTY OF OTHER PARTIES, SUCH AS INSIDE SECURE AND HID GLOBAL, 
- * AND MAY EXPOSE YOU TO AN INFRINGEMENT ACTION FROM THOSE PARTIES. 
- * 
- * THIS CODE SHOULD NEVER BE USED TO INFRINGE PATENTS OR INTELLECTUAL PROPERTY RIGHTS. 
+ * THIS CODE IS CREATED FOR EXPERIMENTATION AND EDUCATIONAL USE ONLY.
+ *
+ * USAGE OF THIS CODE IN OTHER WAYS MAY INFRINGE UPON THE INTELLECTUAL
+ * PROPERTY OF OTHER PARTIES, SUCH AS INSIDE SECURE AND HID GLOBAL,
+ * AND MAY EXPOSE YOU TO AN INFRINGEMENT ACTION FROM THOSE PARTIES.
+ *
+ * THIS CODE SHOULD NEVER BE USED TO INFRINGE PATENTS OR INTELLECTUAL PROPERTY RIGHTS.
  *
  *****************************************************************************
  *
@@ -22,7 +22,7 @@
  *
  * This is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as published
- * by the Free Software Foundation, or, at your option, any later version. 
+ * by the Free Software Foundation, or, at your option, any later version.
  *
  * This file is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -31,8 +31,8 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with loclass.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * 
+ *
+ *
  ****************************************************************************/
 #include "fileutils.h"
 
@@ -101,12 +101,12 @@ int saveFileEML(const char *preferredName, const char *suffix, uint8_t* data, si
 		sprintf(fileName,"%s-%d.%s", preferredName, num, suffix);
 		num++;
 	}
-	
+
 	/* We should have a valid filename now, e.g. dumpdata-3.bin */
 
 	/*Opening file for writing in text mode*/
 	FILE *f = fopen(fileName, "w+");
-	if (!f) {		
+	if (!f) {
 		PrintAndLogDevice(WARNING, "file not found or locked. '" _YELLOW_(%s)"'", fileName);
 		retval =  1;
 		goto out;
@@ -114,7 +114,7 @@ int saveFileEML(const char *preferredName, const char *suffix, uint8_t* data, si
 
 	for (i = 0; i < datalen; i++) {
 		fprintf(f, "%02X", data[i] );
-		
+
 		// no extra line in the end
 		if ( (i+1) % blocksize == 0 && currblock != blocks ) {
 			fprintf(f, "\n");
@@ -131,8 +131,8 @@ int saveFileEML(const char *preferredName, const char *suffix, uint8_t* data, si
 	fflush(f);
 	fclose(f);
 	PrintAndLogDevice(SUCCESS, "saved %d blocks to text file " _YELLOW_(%s), blocks, fileName);
-	
-out:	
+
+out:
 	free(fileName);
 	return retval;
 }
@@ -165,13 +165,13 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
 				char path[PATH_MAX_LENGTH] = {0};
 				sprintf(path, "$.blocks.%d", i);
 				JsonSaveBufAsHexCompact(root, path, &data[i * 16], 16);
-				
+
 				if (i == 0) {
 					JsonSaveBufAsHexCompact(root, "$.Card.UID", &data[0], 4);
 					JsonSaveBufAsHexCompact(root, "$.Card.SAK", &data[5], 1);
 					JsonSaveBufAsHexCompact(root, "$.Card.ATQA", &data[6], 2);
 				}
-				
+
 				if (mfIsSectorTrailer(i)) {
 					memset(path, 0x00, sizeof(path));
 					sprintf(path, "$.SectorKeys.%d.KeyA", mfSectorNum(i));
@@ -216,7 +216,7 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
 			uint8_t uid[7] = {0};
 			memcpy(uid, tmp->data, 3);
 			memcpy(uid+3, tmp->data+4, 4);
-			
+
 			JsonSaveBufAsHexCompact(root, "$.Card.UID", uid, sizeof(uid));
 			JsonSaveBufAsHexCompact(root, "$.Card.Version", tmp->version, sizeof(tmp->version));
 			JsonSaveBufAsHexCompact(root, "$.Card.TBO_0", tmp->tbo, sizeof(tmp->tbo));
@@ -233,7 +233,7 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
 
 				char path[PATH_MAX_LENGTH] = {0};
 				sprintf(path, "$.blocks.%d", i);
-				JsonSaveBufAsHexCompact(root, path, tmp->data + (i * 4), 4);				
+				JsonSaveBufAsHexCompact(root, path, tmp->data + (i * 4), 4);
 			}
 		break;
 	}
@@ -248,7 +248,7 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
 	PrintAndLogDevice(SUCCESS, "saved to json file " _YELLOW_(%s), fileName);
 	json_decref(root);
 
-out:	
+out:
 	free(fileName);
 	return retval;
 }
@@ -270,7 +270,7 @@ int loadFile(const char *preferredName, const char *suffix, void* data, size_t* 
 		free(fileName);
 		return 1;
 	}
-	
+
 	// get filesize in order to malloc memory
 	fseek(f, 0, SEEK_END);
 	long fsize = ftell(f);
@@ -281,14 +281,14 @@ int loadFile(const char *preferredName, const char *suffix, void* data, size_t* 
 		retval = 1;
 		goto out;
 	}
-	
+
 	uint8_t *dump = calloc(fsize, sizeof(uint8_t));
 	if ( !dump ) {
 		PrintAndLogDevice(FAILED, "error, cannot allocate memory");
 		retval = 2;
 		goto out;
 	}
-	
+
 	size_t bytes_read = fread(dump, 1, fsize, f);
 
 	if ( bytes_read != fsize ) {
@@ -297,18 +297,18 @@ int loadFile(const char *preferredName, const char *suffix, void* data, size_t* 
 		retval = 3;
 		goto out;
 	}
-	
+
 	memcpy( (data), dump, bytes_read);
 	free(dump);
-	
+
 	PrintAndLogDevice(SUCCESS, "loaded %d bytes from binary file " _YELLOW_(%s), bytes_read, fileName);
-	
+
 	*datalen = bytes_read;
 
-out:	
+out:
 	fclose(f);
 	free(fileName);
-	
+
 	return retval;
 }
 
@@ -330,12 +330,12 @@ int loadFileEML(const char *preferredName, const char *suffix, void* data, size_
 		retval = 1;
 		goto out;
 	}
-	
-	// 128 + 2 newline chars + 1 null terminator	
+
+	// 128 + 2 newline chars + 1 null terminator
 	char line[131];
 	memset(line, 0, sizeof(line));
 	uint8_t buf[64] = {0x00};
-	
+
 	while ( !feof(f) ) {
 
 		memset(line, 0, sizeof(line));
@@ -346,10 +346,10 @@ int loadFileEML(const char *preferredName, const char *suffix, void* data, size_
 			retval = 2;
 			goto out;
 		}
-	
+
 		if ( line[0] == '#' )
 			continue;
-		
+
 		int res = param_gethex_to_eol(line, 0, buf, sizeof(buf), &hexlen);
 		if (res == 0 || res == 1) {
 			memcpy(data + counter, buf, hexlen);
@@ -358,11 +358,11 @@ int loadFileEML(const char *preferredName, const char *suffix, void* data, size_
 	}
 	fclose(f);
 	PrintAndLogDevice(SUCCESS, "loaded %d bytes from text file " _YELLOW_(%s), counter, fileName);
-	
+
 	if ( datalen )
 		*datalen = counter;
-		
-out:	
+
+out:
 	free(fileName);
 	return retval;
 }
@@ -372,7 +372,7 @@ int loadFileJSON(const char *preferredName, const char *suffix, void* data, size
 	if ( preferredName == NULL ) return 1;
 	if ( suffix == NULL ) return 1;
 	if ( data == NULL ) return 1;
-	
+
 	*datalen = 0;
 	json_t *root;
 	json_error_t error;
@@ -385,20 +385,20 @@ int loadFileJSON(const char *preferredName, const char *suffix, void* data, size
 	root = json_load_file(fileName, 0, &error);
 	if (!root) {
 		PrintAndLog("ERROR: json " _YELLOW_(%s) " error on line %d: %s", fileName, error.line, error.text);
-		retval = 2; 
+		retval = 2;
 		goto out;
 	}
-	
+
 	if (!json_is_object(root)) {
 		PrintAndLog("ERROR: Invalid json " _YELLOW_(%s) " format. root must be an object.", fileName);
-		retval = 3; 
+		retval = 3;
 		goto out;
 	}
-	
+
 	uint8_t *udata = (uint8_t *)data;
 	char ctype[100] = {0};
 	JsonLoadStr(root, "$.FileType", ctype);
-	
+
 	if (!strcmp(ctype, "raw")) {
 		JsonLoadBufAsHex(root, "$.raw", udata, maxdatalen, datalen);
 	}
@@ -413,15 +413,15 @@ int loadFileJSON(const char *preferredName, const char *suffix, void* data, size
 
 			char path[30] = {0};
 			sprintf(path, "$.blocks.%d", i);
-			
+
 			size_t len = 0;
 			JsonLoadBufAsHex(root, path, &udata[sptr], 16, &len);
 			if (!len)
 				break;
-			
+
 			sptr += len;
 		}
-		
+
 		*datalen = sptr;
 	}
 
@@ -435,21 +435,21 @@ int loadFileJSON(const char *preferredName, const char *suffix, void* data, size
 
 			char path[30] = {0};
 			sprintf(path, "$.blocks.%d", i);
-			
+
 			size_t len = 0;
 			JsonLoadBufAsHex(root, path, &udata[sptr], 4, &len);
 			if (!len)
 				break;
-			
+
 			sptr += len;
 		}
-		
+
 		*datalen = sptr;
 	}
 
-	
+
 	PrintAndLog("loaded from JSON file " _YELLOW_(%s), fileName);
-out:	
+out:
 	json_decref(root);
 	free(fileName);
 	return retval;
@@ -468,12 +468,12 @@ int loadFileDICTIONARY(const char *preferredName, const char *suffix, void* data
 	if (keylen != 4 && keylen != 6 && keylen != 8) {
 		keylen = 6;
 	}
-	
+
 	// double up since its chars
-	keylen <<= 1;	
-	
+	keylen <<= 1;
+
 	char line[255];
-	
+
     size_t counter = 0;
 	int retval = 0;
 	int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
@@ -486,10 +486,10 @@ int loadFileDICTIONARY(const char *preferredName, const char *suffix, void* data
 		retval = 1;
 		goto out;
 	}
-	
+
 	// read file
 	while ( fgets(line, sizeof(line), f) ) {
-		
+
 		// add null terminator
 		line[keylen] = 0;
 
@@ -497,18 +497,18 @@ int loadFileDICTIONARY(const char *preferredName, const char *suffix, void* data
 		if (strlen(line) < keylen)
 			continue;
 
-	
+
 		// The line start with # is comment, skip
 		if( line[0] == '#' )
 			continue;
-	
+
 		if (!isxdigit(line[0])){
 			PrintAndLogEx(FAILED, "file content error. '%s' must include " _BLUE_(%2d) "HEX symbols", line, keylen);
 			continue;
-		}	
+		}
 
 		uint64_t key = strtoull(line, NULL, 16);
-		
+
 		num_to_bytes(key, keylen >> 1, data + counter);
 		(*keycnt)++;
 		memset(line, 0, sizeof(line));
@@ -516,12 +516,12 @@ int loadFileDICTIONARY(const char *preferredName, const char *suffix, void* data
 	}
 	fclose(f);
 	PrintAndLogDevice(SUCCESS, "loaded " _GREEN_(%2d) "keys from dictionary file " _YELLOW_(%s), *keycnt, fileName);
-	
-	if ( datalen ) 
-		*datalen = counter;	
-out:	
+
+	if ( datalen )
+		*datalen = counter;
+out:
 	free(fileName);
-	return retval;	
+	return retval;
 }
 
 #else //if we're on ARM

@@ -101,7 +101,7 @@ fido2Desc_t fido2CmdGetInfoRespDesc[] = {
 	{fido2CmdMakeCredential, 	ptQuery,    0x07, "options"},
 	{fido2CmdMakeCredential, 	ptQuery,    0x08, "pinAuth"},
 	{fido2CmdMakeCredential, 	ptQuery,    0x09, "pinProtocol"},
-	
+
 	{fido2CmdGetAssertion, 		ptResponse, 0x01, "credential"},
 	{fido2CmdGetAssertion, 		ptResponse, 0x02, "authData"},
 	{fido2CmdGetAssertion, 		ptResponse, 0x03, "signature"},
@@ -115,12 +115,12 @@ fido2Desc_t fido2CmdGetInfoRespDesc[] = {
 	{fido2CmdGetAssertion, 		ptQuery,    0x05, "options"},
 	{fido2CmdGetAssertion, 		ptQuery,    0x06, "pinAuth"},
 	{fido2CmdGetAssertion, 		ptQuery,    0x07, "pinProtocol"},
-	
+
 	{fido2CmdGetNextAssertion, 	ptResponse, 0x01, "credential"},
 	{fido2CmdGetNextAssertion, 	ptResponse, 0x02, "authData"},
 	{fido2CmdGetNextAssertion, 	ptResponse, 0x03, "signature"},
 	{fido2CmdGetNextAssertion, 	ptResponse, 0x04, "publicKeyCredentialUserEntity"},
-	
+
 	{fido2CmdGetInfo, 			ptResponse, 0x01, "versions"},
 	{fido2CmdGetInfo, 			ptResponse, 0x02, "extensions"},
 	{fido2CmdGetInfo, 			ptResponse, 0x03, "aaguid"},
@@ -140,7 +140,7 @@ fido2Desc_t fido2CmdGetInfoRespDesc[] = {
 	{fido2CmdClientPIN, 		ptQuery,    0x06, "pinHashEnc"},
 	{fido2CmdClientPIN, 		ptQuery,    0x07, "getKeyAgreement"},
 	{fido2CmdClientPIN, 		ptQuery,    0x08, "getRetries"},
-	
+
 	{fido2COSEKey,		 		ptResponse, 0x01, "kty"},
 	{fido2COSEKey,		 		ptResponse, 0x03, "alg"},
 	{fido2COSEKey,		 		ptResponse,   -1, "crv"},
@@ -153,7 +153,7 @@ char *fido2GetCmdErrorDescription(uint8_t errorCode) {
 	for (int i = 0; i < sizeof(fido2Errors) / sizeof(fido2Error_t); i++)
 		if (fido2Errors[i].ErrorCode == errorCode)
 			return fido2Errors[i].Description;
-		
+
 	return fido2Errors[0].Description;
 }
 
@@ -169,7 +169,7 @@ char *fido2GetCmdMemberDescription(uint8_t cmdCode, bool isResponse, int memberN
 
 int FIDOSelect(bool ActivateField, bool LeaveFieldON, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
 	uint8_t data[] = {0xA0, 0x00, 0x00, 0x06, 0x47, 0x2F, 0x00, 0x01};
-	
+
 	return EMVSelect(ECC_CONTACTLESS, ActivateField, LeaveFieldON, data, sizeof(data), Result, MaxResultLen, ResultLen, sw, NULL);
 }
 
@@ -183,9 +183,9 @@ int FIDOExchange(sAPDU apdu, uint8_t *Result, size_t MaxResultLen, size_t *Resul
 		res = EMVExchange(ECC_CONTACTLESS, true, (sAPDU){0x00, 0xC0, 0x00, 0x00, 0x00, NULL}, &Result[oldlen], MaxResultLen - oldlen, ResultLen, sw, NULL);
 		if (res == 5) // apdu result (sw) not a 0x9000
 			res = 0;
-		
+
 		*ResultLen += oldlen;
-		if (*ResultLen > MaxResultLen) 
+		if (*ResultLen > MaxResultLen)
 			return 100;
 	}
 	return res;
@@ -220,7 +220,7 @@ int FIDO2GetAssertion(uint8_t *params, uint8_t paramslen, uint8_t *Result, size_
 
 int FIDOCheckDERAndGetKey(uint8_t *der, size_t derLen, bool verbose, uint8_t *publicKey, size_t publicKeyMaxLen) {
 	int res;
-	
+
 	// load CA's
 	mbedtls_x509_crt cacert;
 	mbedtls_x509_crt_init(&cacert);
@@ -228,9 +228,9 @@ int FIDOCheckDERAndGetKey(uint8_t *der, size_t derLen, bool verbose, uint8_t *pu
 	if (res < 0) {
 		PrintAndLog("ERROR: CA parse certificate returned -0x%x - %s", -res, ecdsa_get_error(res));
 	}
-	if (verbose) 
+	if (verbose)
 		PrintAndLog("CA load OK. %d skipped", res);
-	
+
 	// load DER certificate from authenticator's data
 	mbedtls_x509_crt cert;
 	mbedtls_x509_crt_init(&cert);
@@ -238,14 +238,14 @@ int FIDOCheckDERAndGetKey(uint8_t *der, size_t derLen, bool verbose, uint8_t *pu
 	if (res) {
 		PrintAndLog("ERROR: DER parse returned 0x%x - %s", (res<0)?-res:res, ecdsa_get_error(res));
 	}
-	
+
 	// get certificate info
 	char linfo[300] = {0};
 	if (verbose) {
 		mbedtls_x509_crt_info(linfo, sizeof(linfo), "  ", &cert);
 		PrintAndLog("DER certificate info:\n%s", linfo);
 	}
-	
+
 	// verify certificate
 	uint32_t verifyflags = 0;
 	res = mbedtls_x509_crt_verify(&cert, &cacert, NULL, NULL, &verifyflags, NULL, NULL);
@@ -254,13 +254,13 @@ int FIDOCheckDERAndGetKey(uint8_t *der, size_t derLen, bool verbose, uint8_t *pu
 	} else {
 		PrintAndLog("Certificate OK.\n");
 	}
-	
+
 	if (verbose) {
 		memset(linfo, 0x00, sizeof(linfo));
 		mbedtls_x509_crt_verify_info(linfo, sizeof(linfo), "  ", verifyflags);
 		PrintAndLog("Verification info:\n%s", linfo);
 	}
-	
+
 	// get public key
 	res = ecdsa_public_key_from_pk(&cert.pk, publicKey, publicKeyMaxLen);
 	if (res) {
@@ -275,7 +275,7 @@ int FIDOCheckDERAndGetKey(uint8_t *der, size_t derLen, bool verbose, uint8_t *pu
 
 	mbedtls_x509_crt_free(&cert);
 	mbedtls_x509_crt_free(&cacert);
-	
+
 	return 0;
 }
 
@@ -291,7 +291,7 @@ int FIDO2CreateMakeCredentionalReq(json_t *root, uint8_t *data, size_t maxdatale
 	int res;
 	CborEncoder encoder;
 	CborEncoder map;
-	
+
 	cbor_encoder_init(&encoder, data, maxdatalen, 0);
 
 	// create main map
@@ -334,31 +334,31 @@ int FIDO2CreateMakeCredentionalReq(json_t *root, uint8_t *data, size_t maxdatale
 	}
 	res = cbor_encoder_close_container(&encoder, &map);
 	fido_check(res);
-	
+
 	size_t len = cbor_encoder_get_buffer_size(&encoder, data);
 	if (datalen)
 		*datalen = len;
-	
+
 	return 0;
 }
 
 bool CheckrpIdHash(json_t *json, uint8_t *hash) {
 	char hashval[300] = {0};
 	uint8_t hash2[32] = {0};
-	
+
 	JsonLoadStr(json, "$.RelyingPartyEntity.id", hashval);
 	int res = sha256hash((uint8_t *)hashval, strlen(hashval), hash2);
 	if (res)
 		return false;
-	
+
 	return !memcmp(hash, hash2, 32);
 }
 
 // check ANSI X9.62 format ECDSA signature (on P-256)
 int FIDO2CheckSignature(json_t *root, uint8_t *publickey, uint8_t *sign, size_t signLen, uint8_t *authData, size_t authDataLen, bool verbose) {
 	int res;
-	uint8_t rval[300] = {0}; 
-	uint8_t sval[300] = {0}; 
+	uint8_t rval[300] = {0};
+	uint8_t sval[300] = {0};
 	res = ecdsa_asn1_get_signature(sign, signLen, rval, sval);
 	if (!res) {
 		if (verbose) {
@@ -372,12 +372,12 @@ int FIDO2CheckSignature(json_t *root, uint8_t *publickey, uint8_t *sign, size_t 
 		if (res || clientDataHashLen != 32) {
 			PrintAndLog("ERROR: Can't get clientDataHash from json!");
 			return 2;
-		}			
-		
+		}
+
 		uint8_t xbuf[4096] = {0};
 		size_t xbuflen = 0;
 		res = FillBuffer(xbuf, sizeof(xbuf), &xbuflen,
-			authData, authDataLen,  // rpIdHash[32] + flags[1] + signCount[4] 
+			authData, authDataLen,  // rpIdHash[32] + flags[1] + signCount[4]
 			clientDataHash, 32,     // Hash of the serialized client data. "$.ClientDataHash" from json
 			NULL, 0);
 		//PrintAndLog("--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
@@ -391,12 +391,12 @@ int FIDO2CheckSignature(json_t *root, uint8_t *publickey, uint8_t *sign, size_t 
 			return res;
 		} else {
 			PrintAndLog("Signature is OK.");
-		}	
+		}
 	} else {
 		PrintAndLog("Invalid signature. res=%d.", res);
 		return res;
 	}
-	
+
 	return 0;
 }
 
@@ -407,37 +407,37 @@ int FIDO2MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, b
 	char *buf;
 	uint8_t *ubuf;
 	size_t n;
-	
+
 	// fmt
 	res = CborMapGetKeyById(&parser, &map, data, dataLen, 1);
 	if (res)
 		return res;
-	
+
 	res = cbor_value_dup_text_string(&map, &buf, &n, &map);
 	cbor_check(res);
 	PrintAndLog("format: %s", buf);
 	free(buf);
 
 	// authData
-	uint8_t authData[400] = {0}; 
+	uint8_t authData[400] = {0};
 	size_t authDataLen = 0;
 	res = CborMapGetKeyById(&parser, &map, data, dataLen, 2);
 	if (res)
 		return res;
 	res = cbor_value_dup_byte_string(&map, &ubuf, &n, &map);
 	cbor_check(res);
-	
+
 	authDataLen = n;
-	memcpy(authData, ubuf, authDataLen); 
-	
+	memcpy(authData, ubuf, authDataLen);
+
 	if (verbose2) {
 		PrintAndLog("authData[%d]: %s", n, sprint_hex_inrow(authData, authDataLen));
 	} else {
 		PrintAndLog("authData[%d]: %s...", n, sprint_hex(authData, MIN(authDataLen, 16)));
 	}
-	
+
 	PrintAndLog("RP ID Hash: %s", sprint_hex(ubuf, 32));
-	
+
 	// check RP ID Hash
 	if (CheckrpIdHash(root, ubuf)) {
 		PrintAndLog("rpIdHash OK.");
@@ -460,17 +460,17 @@ int FIDO2MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, b
 	uint32_t cntr =  (uint32_t)bytes_to_num(&ubuf[33], 4);
 	PrintAndLog("Counter: %d", cntr);
 	JsonSaveInt(root, "$.AppData.Counter", cntr);
-	
+
 	// attestation data
 	PrintAndLog("AAGUID: %s", sprint_hex(&ubuf[37], 16));
 	JsonSaveBufAsHexCompact(root, "$.AppData.AAGUID", &ubuf[37], 16);
-	
+
 	// Credential ID
 	uint8_t cridlen = (uint16_t)bytes_to_num(&ubuf[53], 2);
 	PrintAndLog("Credential id[%d]: %s", cridlen, sprint_hex_inrow(&ubuf[55], cridlen));
 	JsonSaveInt(root, "$.AppData.CredentialIdLen", cridlen);
 	JsonSaveBufAsHexCompact(root, "$.AppData.CredentialId", &ubuf[55], cridlen);
-	
+
 	//Credentional public key (COSE_KEY)
 	uint8_t coseKey[65] = {0};
 	uint16_t cplen = n - 55 - cridlen;
@@ -480,14 +480,14 @@ int FIDO2MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, b
 		PrintAndLog("Credentional public key (COSE_KEY)[%d]: %s...", cplen, sprint_hex(&ubuf[55 + cridlen], MIN(cplen, 16)));
 	}
 	JsonSaveBufAsHexCompact(root, "$.AppData.COSE_KEY", &ubuf[55 + cridlen], cplen);
-	
+
 	if (showCBOR) {
 		PrintAndLog("COSE structure:");
 		PrintAndLog("---------------- CBOR ------------------");
-		TinyCborPrintFIDOPackage(fido2COSEKey, true, &ubuf[55 + cridlen], cplen);		
+		TinyCborPrintFIDOPackage(fido2COSEKey, true, &ubuf[55 + cridlen], cplen);
 		PrintAndLog("---------------- CBOR ------------------");
 	}
-	
+
 	res = COSEGetECDSAKey(&ubuf[55 + cridlen], cplen, verbose, coseKey);
 	if (res) {
 		PrintAndLog("ERROR: Can't get COSE_KEY.");
@@ -497,27 +497,27 @@ int FIDO2MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, b
 	}
 
 	free(ubuf);
-	
+
 	// attStmt - we are check only as DER certificate
 	int64_t alg = 0;
 	uint8_t sign[128] = {0};
 	size_t signLen = 0;
 	uint8_t der[4097] = {0};
 	size_t derLen = 0;
-	
+
 	res = CborMapGetKeyById(&parser, &map, data, dataLen, 3);
 	if (res)
 		return res;
 
 	res = cbor_value_enter_container(&map, &mapsmt);
 	cbor_check(res);
-	
+
 	while (!cbor_value_at_end(&mapsmt)) {
 		char key[100] = {0};
 		res = CborGetStringValue(&mapsmt, key, sizeof(key), &n);
 		cbor_check(res);
 		if (!strcmp(key, "alg")) {
-			cbor_value_get_int64(&mapsmt, &alg);    
+			cbor_value_get_int64(&mapsmt, &alg);
 			PrintAndLog("Alg [%lld] %s", (long long)alg, GetCOSEAlgDescription(alg));
 			res = cbor_value_advance_fixed(&mapsmt);
 			cbor_check(res);
@@ -544,11 +544,11 @@ int FIDO2MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, b
 				PrintAndLog("DER [%d]: %s...", derLen, sprint_hex(der, MIN(derLen, 16)));
 			}
 				JsonSaveBufAsHexCompact(root, "$.AppData.DER", der, derLen);
-		}		
+		}
 	}
 	res = cbor_value_leave_container(&map, &mapsmt);
 	cbor_check(res);
-	
+
 	uint8_t public_key[65] = {0};
 
 	// print DER certificate in TLV view
@@ -562,7 +562,7 @@ int FIDO2MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, b
 
 	// check ANSI X9.62 format ECDSA signature (on P-256)
 	FIDO2CheckSignature(root, public_key, sign, signLen, authData, authDataLen, verbose);
-	
+
 	return 0;
 }
 
@@ -575,7 +575,7 @@ int FIDO2CreateGetAssertionReq(json_t *root, uint8_t *data, size_t maxdatalen, s
 	int res;
 	CborEncoder encoder;
 	CborEncoder map, array, mapint;
-	
+
 	cbor_encoder_init(&encoder, data, maxdatalen, 0);
 
 	// create main map
@@ -605,15 +605,15 @@ int FIDO2CreateGetAssertionReq(json_t *root, uint8_t *data, size_t maxdatalen, s
 					fido_check_if(res) {
 						res = cbor_encode_text_stringz(&mapint, "type");
 						fido_check(res);
-						
+
 						res = cbor_encode_text_stringz(&mapint, "public-key");
-						fido_check(res);					
-						
+						fido_check(res);
+
 						res = cbor_encode_text_stringz(&mapint, "id");
-						fido_check(res);					
-						
+						fido_check(res);
+
 						res = CBOREncodeElm(root, "$.AppData.CredentialId", &mapint);
-						fido_check(res);					
+						fido_check(res);
 					}
 					res = cbor_encoder_close_container(&array, &mapint);
 					fido_check(res);
@@ -632,11 +632,11 @@ int FIDO2CreateGetAssertionReq(json_t *root, uint8_t *data, size_t maxdatalen, s
 	}
 	res = cbor_encoder_close_container(&encoder, &map);
 	fido_check(res);
-	
+
 	size_t len = cbor_encoder_get_buffer_size(&encoder, data);
 	if (datalen)
 		*datalen = len;
-	
+
 	return 0;
 }
 
@@ -646,7 +646,7 @@ int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool 
 	int res;
 	uint8_t *ubuf;
 	size_t n;
-	
+
 	// credential
 	res = CborMapGetKeyById(&parser, &map, data, dataLen, 1);
 	if (res)
@@ -654,7 +654,7 @@ int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool 
 
 	res = cbor_value_enter_container(&map, &mapint);
 	cbor_check(res);
-	
+
 	while (!cbor_value_at_end(&mapint)) {
 		char key[100] = {0};
 		res = CborGetStringValue(&mapint, key, sizeof(key), &n);
@@ -676,27 +676,27 @@ int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool 
 	}
 	res = cbor_value_leave_container(&map, &mapint);
 	cbor_check(res);
-	
+
 	// authData
-	uint8_t authData[400] = {0}; 
+	uint8_t authData[400] = {0};
 	size_t authDataLen = 0;
 	res = CborMapGetKeyById(&parser, &map, data, dataLen, 2);
 	if (res)
 		return res;
 	res = cbor_value_dup_byte_string(&map, &ubuf, &n, &map);
 	cbor_check(res);
-	
+
 	authDataLen = n;
-	memcpy(authData, ubuf, authDataLen); 
-	
+	memcpy(authData, ubuf, authDataLen);
+
 	if (verbose2) {
 		PrintAndLog("authData[%d]: %s", n, sprint_hex_inrow(authData, authDataLen));
 	} else {
 		PrintAndLog("authData[%d]: %s...", n, sprint_hex(authData, MIN(authDataLen, 16)));
 	}
-	
+
 	PrintAndLog("RP ID Hash: %s", sprint_hex(ubuf, 32));
-	
+
 	// check RP ID Hash
 	if (CheckrpIdHash(root, ubuf)) {
 		PrintAndLog("rpIdHash OK.");
@@ -719,17 +719,17 @@ int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool 
 	uint32_t cntr =  (uint32_t)bytes_to_num(&ubuf[33], 4);
 	PrintAndLog("Counter: %d", cntr);
 	JsonSaveInt(root, "$.AppData.Counter", cntr);
-	
+
 	free(ubuf);
 
 	// publicKeyCredentialUserEntity
 	res = CborMapGetKeyById(&parser, &map, data, dataLen, 4);
-	if (res) {	
+	if (res) {
 		PrintAndLog("UserEntity n/a");
 	} else {
 		res = cbor_value_enter_container(&map, &mapint);
 		cbor_check(res);
-		
+
 		while (!cbor_value_at_end(&mapint)) {
 			char key[100] = {0};
 			res = CborGetStringValue(&mapint, key, sizeof(key), &n);
@@ -747,7 +747,7 @@ int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool 
 				res = CborGetBinStringValue(&mapint, cid, sizeof(cid), &n);
 				cbor_check(res);
 				PrintAndLog("UserEntity id [%d]: %s", n, sprint_hex(cid, n));
-				
+
 				// check
 				uint8_t idbuf[100] = {0};
 				size_t idbuflen;
@@ -764,15 +764,15 @@ int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool 
 		res = cbor_value_leave_container(&map, &mapint);
 		cbor_check(res);
 	}
-	
-	
+
+
 	// signature
 	res = CborMapGetKeyById(&parser, &map, data, dataLen, 3);
 	if (res)
 		return res;
 	res = cbor_value_dup_byte_string(&map, &ubuf, &n, &map);
 	cbor_check(res);
-	
+
 	uint8_t *sign = ubuf;
 	size_t signLen = n;
 
@@ -787,7 +787,7 @@ int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool 
 	uint8_t PublicKey[65] = {0};
 	size_t PublicKeyLen = 0;
 	JsonLoadBufAsHex(root, "$.AppData.COSEPublicKey", PublicKey, 65, &PublicKeyLen);
-	
+
 	// check ANSI X9.62 format ECDSA signature (on P-256)
 	FIDO2CheckSignature(root, PublicKey, sign, signLen, authData, authDataLen, verbose);
 
@@ -799,9 +799,9 @@ int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool 
 		PrintAndLog("numberOfCredentials: 1 by default");
 	} else {
 		int64_t numberOfCredentials = 0;
-		cbor_value_get_int64(&map, &numberOfCredentials);    
+		cbor_value_get_int64(&map, &numberOfCredentials);
 		PrintAndLog("numberOfCredentials: %lld", (long long)numberOfCredentials);
 	}
-	
+
 	return 0;
 }

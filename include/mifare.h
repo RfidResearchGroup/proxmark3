@@ -91,7 +91,7 @@ typedef struct {
 	uint32_t nonce;
 	uint32_t ar;
 	uint32_t nr;
-	uint32_t at;  
+	uint32_t at;
 	uint32_t nonce2;
 	uint32_t ar2;
 	uint32_t nr2;
@@ -105,7 +105,7 @@ typedef struct {
 } nonces_t;
 
 //-----------------------------------------------------------------------------
-// ISO 7618  Smart Card 
+// ISO 7618  Smart Card
 //-----------------------------------------------------------------------------
 typedef struct {
 	uint8_t atr_len;
@@ -127,7 +127,7 @@ typedef enum SMARTCARD_COMMAND {
 // mc = manufactureCode
 // mc1 mc2 u1 u2 u3 u4 u5 u6
 // PMm  = Product manufacturer
-// icCode = 
+// icCode =
 //		ic1 = ROM
 //		ic2 = IC
 // maximum response time =
@@ -136,7 +136,7 @@ typedef enum SMARTCARD_COMMAND {
 //		B5(authenticate)
 //		B6(read)
 //		B7(write)
-//		B8()	
+//		B8()
 
 // ServiceCode  2bytes  (access-rights)
 // FileSystem = 1 Block = 16 bytes
@@ -147,7 +147,7 @@ typedef struct {
 	uint8_t PMm[8];
 	uint8_t iccode[2];
 	uint8_t mrt[6];
-	uint8_t servicecode[2];	
+	uint8_t servicecode[2];
 } __attribute__((__packed__)) felica_card_select_t;
 
 typedef enum FELICA_COMMAND {

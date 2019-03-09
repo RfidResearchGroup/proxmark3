@@ -23,7 +23,7 @@
 #include "tea.h"
 #include "legic_prng.h"
 #include "loclass/elite_crack.h"
-#include "mifare/mfkey.h"	//nonce2key 
+#include "mifare/mfkey.h"	//nonce2key
 #include "util_posix.h" 	// msclock
 
 

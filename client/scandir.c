@@ -28,7 +28,7 @@ int scandir (const char *dir,
 	int count = 0;
 	int allocated = 0;
 	int err_no = 0;
-	
+
 	if (!(dirp = opendir (dir)))
 		return -1;
 

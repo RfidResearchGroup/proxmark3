@@ -26,16 +26,16 @@ int CLIParserInit(char *vprogramName, char *vprogramHint, char *vprogramHelp) {
 	programHint = vprogramHint;
 	programHelp = vprogramHelp;
 	memset(buf, 0x00, 500);
-	
+
 	return 0;
 }
 
-int CLIParserParseArg(int argc, char **argv, void* vargtable[], size_t vargtableLen, bool allowEmptyExec) { 
+int CLIParserParseArg(int argc, char **argv, void* vargtable[], size_t vargtableLen, bool allowEmptyExec) {
 	int nerrors;
-	
+
 	argtable = vargtable;
 	argtableLen = vargtableLen;
-	
+
 	/* verify the argtable[] entries were allocated sucessfully */
 	if (arg_nullcheck(argtable) != 0) {
 		/* NULL entries were detected, some allocations must have failed */
@@ -44,9 +44,9 @@ int CLIParserParseArg(int argc, char **argv, void* vargtable[], size_t vargtable
 	}
 	/* Parse the command line as defined by argtable[] */
 	nerrors = arg_parse(argc, argv, argtable);
-	
+
 	/* special case: '--help' takes precedence over error reporting */
-	if ((argc < 2 && !allowEmptyExec) ||((struct arg_lit *)argtable[0])->count > 0) { // help must be the first record  
+	if ((argc < 2 && !allowEmptyExec) ||((struct arg_lit *)argtable[0])->count > 0) { // help must be the first record
 		printf("Usage: %s", programName);
 		arg_print_syntaxv(stdout, argtable, "\n");
 		if (programHint)
@@ -55,7 +55,7 @@ int CLIParserParseArg(int argc, char **argv, void* vargtable[], size_t vargtable
 		printf("\n");
 		if (programHelp)
 			printf("%s \n", programHelp);
-		
+
 		return 1;
 	}
 
@@ -64,10 +64,10 @@ int CLIParserParseArg(int argc, char **argv, void* vargtable[], size_t vargtable
 		/* Display the error details contained in the arg_end struct.*/
 		arg_print_errors(stdout, ((struct arg_end *)argtable[vargtableLen - 1]), programName);
 		printf("Try '%s --help' for more information.\n", programName);
-		
+
 		return 3;
-	}	
-	
+	}
+
 	return 0;
 }
 
@@ -86,19 +86,19 @@ int CLIParserParseString(const char* str, void* vargtable[], size_t vargtableLen
 int CLIParserParseStringEx(const char* str, void* vargtable[], size_t vargtableLen, bool allowEmptyExec, bool clueData) {
 	int argc = 0;
 	char *argv[200] = {NULL};
-	
+
 	int len = strlen(str);
 	char *bufptr = buf;
 	char *spaceptr = NULL;
 	enum ParserState state = PS_FIRST;
-	
-	argv[argc++] = bufptr;	
+
+	argv[argc++] = bufptr;
 	// param0 = program name
 	memcpy(buf, programName, strlen(programName) + 1); // with 0x00
 	bufptr += strlen(programName) + 1;
 	if (len)
-		argv[argc++] = bufptr;	
-	
+		argv[argc++] = bufptr;
+
 	// parse params
 	for (int i = 0; i < len; i++) {
 		switch(state){
@@ -110,7 +110,7 @@ int CLIParserParseStringEx(const char* str, void* vargtable[], size_t vargtableL
 						bufptr = spaceptr;
 						*bufptr = 0x00;
 						bufptr++;
-						argv[argc++] = bufptr;	
+						argv[argc++] = bufptr;
 					}
 				}
 				spaceptr = NULL;
@@ -130,10 +130,10 @@ int CLIParserParseStringEx(const char* str, void* vargtable[], size_t vargtableL
 
 					*bufptr = 0x00;
 					bufptr++;
-					argv[argc++] = bufptr;	
+					argv[argc++] = bufptr;
 					break;
 				}
-				
+
 				*bufptr = str[i];
 				bufptr++;
 				break;
@@ -146,20 +146,20 @@ int CLIParserParseStringEx(const char* str, void* vargtable[], size_t vargtableL
 void CLIParserFree() {
 	arg_freetable(argtable, argtableLen);
 	argtable = NULL;
-	
+
 	return;
 }
 
 // convertors
 int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen) {
 	*datalen = 0;
-	
+
 	int ibuf = 0;
 	uint8_t buf[256] = {0};
 	int res = CLIParamStrToBuf(argstr, buf, maxdatalen * 2, &ibuf); // *2 because here HEX
 	if (res || !ibuf)
 		return res;
-	
+
 	switch(param_gethex_to_eol((char *)buf, 0, data, maxdatalen, datalen)) {
 	case 1:
 		printf("Parameter error: Invalid HEX value.\n");
@@ -171,7 +171,7 @@ int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
 		printf("Parameter error: Hex string must have even number of digits.\n");
 		return 3;
 	}
-	
+
 	return 0;
 }
 
@@ -179,26 +179,26 @@ int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
 	*datalen = 0;
 	if (!argstr->count)
 		return 0;
-	
+
 	uint8_t buf[256] = {0};
 	int ibuf = 0;
-	
+
 	for (int i = 0; i < argstr->count; i++) {
 		int len = strlen(argstr->sval[i]);
 		memcpy(&buf[ibuf], argstr->sval[i], len);
 		ibuf += len;
 	}
 	buf[ibuf] = 0;
-  
+
 	if (!ibuf)
 		return 0;
 
 	if (ibuf > maxdatalen)
 		return 2;
-	
+
 	memcpy(data, buf, ibuf);
 	*datalen = ibuf;
-	
+
 	return 0;
 }
 

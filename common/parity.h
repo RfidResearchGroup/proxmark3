@@ -6,7 +6,7 @@
 // Parity functions
 //-----------------------------------------------------------------------------
 
-// all functions defined in header file by purpose. Allows compiler optimizations. 
+// all functions defined in header file by purpose. Allows compiler optimizations.
 
 #ifndef __PARITY_H
 #define __PARITY_H
@@ -31,7 +31,7 @@ static inline bool evenparity8(const uint8_t x) {
 }
 
 
-static inline bool evenparity32(uint32_t x) 
+static inline bool evenparity32(uint32_t x)
 {
 #if !defined __GNUC__
 	x ^= x >> 16;
@@ -43,7 +43,7 @@ static inline bool evenparity32(uint32_t x)
 }
 
 
-static inline bool oddparity32(uint32_t x) 
+static inline bool oddparity32(uint32_t x)
 {
 #if !defined __GNUC__
 	x ^= x >> 16;
