@@ -171,8 +171,8 @@ void WriteTagToFlash(uint8_t index, size_t size)
 
     while (bytes_remaining > 0)
     {
-		Flash_CheckBusy(BUSY_TIMEOUT);
-		Flash_WriteEnable();
+        Flash_CheckBusy(BUSY_TIMEOUT);
+        Flash_WriteEnable();
 
         uint32_t bytes_in_packet = MIN(FLASH_MEM_BLOCK_SIZE, bytes_remaining);
 
@@ -210,7 +210,7 @@ void WriteTagToFlash(uint8_t index, size_t size)
 
 void RunMod()
 {
-	StandAloneMode();
+    StandAloneMode();
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
     currline = 20;
@@ -323,12 +323,12 @@ ACCBITS : 796788[00]+VALUE
     {
         for (uint16_t sectorNo = 0; sectorNo < sectorsCnt; sectorNo++)
         {
-			foundKey[t][sectorNo][0] = 0xFF;
-			foundKey[t][sectorNo][1] = 0xFF;
-			foundKey[t][sectorNo][2] = 0xFF;
-			foundKey[t][sectorNo][3] = 0xFF;
-			foundKey[t][sectorNo][4] = 0xFF;
-			foundKey[t][sectorNo][5] = 0xFF;
+            foundKey[t][sectorNo][0] = 0xFF;
+            foundKey[t][sectorNo][1] = 0xFF;
+            foundKey[t][sectorNo][2] = 0xFF;
+            foundKey[t][sectorNo][3] = 0xFF;
+            foundKey[t][sectorNo][4] = 0xFF;
+            foundKey[t][sectorNo][5] = 0xFF;
         }
     }
 
