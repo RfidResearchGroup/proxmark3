@@ -53,7 +53,7 @@ int detectParadox(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint
 	// 00001111 bit pattern represent start of frame, 01 pattern represents a 0 and 10 represents a 1
 	size_t startIdx = 0;
 	uint8_t preamble[] = {0,0,0,0,1,1,1,1};
-	if (preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
+	if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
 		return -4; //preamble not found
 
 	size_t numStart = startIdx + sizeof(preamble);
