@@ -195,15 +195,14 @@ typedef enum CborError {
     CborErrorJsonObjectKeyNotString,
     CborErrorJsonNotImplemented,
 
-    CborErrorOutOfMemory = (int) (~0U / 2 + 1),
-    CborErrorInternalError = (int) (~0U / 2)    /* INT_MAX on two's complement machines */
+    CborErrorOutOfMemory = (int)(~0U / 2 + 1),
+    CborErrorInternalError = (int)(~0U / 2)     /* INT_MAX on two's complement machines */
 } CborError;
 
 CBOR_API const char *cbor_error_string(CborError error);
 
 /* Encoder API */
-struct CborEncoder
-{
+struct CborEncoder {
     union {
         uint8_t *ptr;
         ptrdiff_t bytes_needed;
@@ -264,8 +263,7 @@ CBOR_INLINE_API size_t cbor_encoder_get_extra_bytes_needed(const CborEncoder *en
 
 /* Parser API */
 
-enum CborParserIteratorFlags
-{
+enum CborParserIteratorFlags {
     CborIteratorFlag_IntegerValueTooLarge   = 0x01,
     CborIteratorFlag_NegativeInteger        = 0x02,
     CborIteratorFlag_IteratingStringChunks  = 0x02,
@@ -273,15 +271,13 @@ enum CborParserIteratorFlags
     CborIteratorFlag_ContainerIsMap         = 0x20
 };
 
-struct CborParser
-{
+struct CborParser {
     const uint8_t *end;
     uint32_t flags;
 };
 typedef struct CborParser CborParser;
 
-struct CborValue
-{
+struct CborValue {
     const CborParser *parser;
     const uint8_t *ptr;
     uint32_t remaining;
@@ -310,7 +306,7 @@ CBOR_PRIVATE_API uint64_t _cbor_value_decode_int64_internal(const CborValue *val
 CBOR_INLINE_API uint64_t _cbor_value_extract_int64_helper(const CborValue *value)
 {
     return value->flags & CborIteratorFlag_IntegerValueTooLarge ?
-                _cbor_value_decode_int64_internal(value) : value->extra;
+           _cbor_value_decode_int64_internal(value) : value->extra;
 }
 
 CBOR_INLINE_API bool cbor_value_is_valid(const CborValue *value)
@@ -579,9 +575,9 @@ enum CborPrettyFlags {
     CborPrettyDefaultFlags          = CborPrettyIndicateIndeterminateLength
 };
 
-typedef CborError (*CborStreamFunction)(void *token, const char *fmt, ...)
+typedef CborError(*CborStreamFunction)(void *token, const char *fmt, ...)
 #ifdef __GNUC__
-    __attribute__((__format__(printf, 2, 3)))
+__attribute__((__format__(printf, 2, 3)))
 #endif
 ;
 

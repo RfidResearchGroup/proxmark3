@@ -23,7 +23,7 @@ extern int aes_cmac8(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *mac, in
 
 extern int sha256hash(uint8_t *input, int length, uint8_t *hash);
 
-extern int ecdsa_key_create(uint8_t * key_d, uint8_t *key_xy);
+extern int ecdsa_key_create(uint8_t *key_d, uint8_t *key_xy);
 extern int ecdsa_public_key_from_pk(mbedtls_pk_context *pk, uint8_t *key, size_t keylen);
 extern int ecdsa_signature_create(uint8_t *key_d, uint8_t *key_xy, uint8_t *input, int length, uint8_t *signature, size_t *signaturelen);
 extern int ecdsa_signature_verify(uint8_t *key_xy, uint8_t *input, int length, uint8_t *signature, size_t signaturelen);

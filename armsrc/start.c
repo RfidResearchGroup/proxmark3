@@ -26,7 +26,7 @@ static voidpf inflate_malloc(voidpf opaque, uInt items, uInt size)
     uint8_t *allocated_memory;
 
     allocated_memory = next_free_memory;
-    next_free_memory += items*size;
+    next_free_memory += items * size;
     return allocated_memory;
 }
 
@@ -71,7 +71,7 @@ void __attribute__((section(".startos"))) Vector(void)
     /* Set up (that is: clear) BSS. */
     dst = &__bss_start__;
     end = &__bss_end__;
-    while(dst < end) *dst++ = 0;
+    while (dst < end) *dst++ = 0;
 
     // Set up data segment: Copy from flash to ram
     // src = &__data_src_start__;

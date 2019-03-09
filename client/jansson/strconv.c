@@ -37,13 +37,13 @@ static void to_locale(strbuffer_t *strbuffer)
     char *pos;
 
     point = localeconv()->decimal_point;
-    if(*point == '.') {
+    if (*point == '.') {
         /* No conversion needed */
         return;
     }
 
     pos = strchr(strbuffer->value, '.');
-    if(pos)
+    if (pos)
         *pos = *point;
 }
 
@@ -53,13 +53,13 @@ static void from_locale(char *buffer)
     char *pos;
 
     point = localeconv()->decimal_point;
-    if(*point == '.') {
+    if (*point == '.') {
         /* No conversion needed */
         return;
     }
 
     pos = strchr(buffer, *point);
-    if(pos)
+    if (pos)
         *pos = '.';
 }
 #endif
@@ -77,7 +77,7 @@ int jsonp_strtod(strbuffer_t *strbuffer, double *out)
     value = strtod(strbuffer->value, &end);
     assert(end == strbuffer->value + strbuffer->length);
 
-    if((value == HUGE_VAL || value == -HUGE_VAL) && errno == ERANGE) {
+    if ((value == HUGE_VAL || value == -HUGE_VAL) && errno == ERANGE) {
         /* Overflow */
         return -1;
     }
@@ -96,11 +96,11 @@ int jsonp_dtostr(char *buffer, size_t size, double value, int precision)
         precision = 17;
 
     ret = snprintf(buffer, size, "%.*g", precision, value);
-    if(ret < 0)
+    if (ret < 0)
         return -1;
 
     length = (size_t)ret;
-    if(length >= size)
+    if (length >= size)
         return -1;
 
 #if JSON_HAVE_LOCALECONV
@@ -109,10 +109,9 @@ int jsonp_dtostr(char *buffer, size_t size, double value, int precision)
 
     /* Make sure there's a dot or 'e' in the output. Otherwise
        a real is converted to an integer when decoding */
-    if(strchr(buffer, '.') == NULL &&
-       strchr(buffer, 'e') == NULL)
-    {
-        if(length + 3 >= size) {
+    if (strchr(buffer, '.') == NULL &&
+        strchr(buffer, 'e') == NULL) {
+        if (length + 3 >= size) {
             /* No space to append ".0" */
             return -1;
         }
@@ -125,17 +124,17 @@ int jsonp_dtostr(char *buffer, size_t size, double value, int precision)
     /* Remove leading '+' from positive exponent. Also remove leading
        zeros from exponents (added by some printf() implementations) */
     start = strchr(buffer, 'e');
-    if(start) {
+    if (start) {
         start++;
         end = start + 1;
 
-        if(*start == '-')
+        if (*start == '-')
             start++;
 
-        while(*end == '0')
+        while (*end == '0')
             end++;
 
-        if(end != start) {
+        if (end != start) {
             memmove(start, end, length - (size_t)(end - buffer));
             length -= (size_t)(end - start);
         }

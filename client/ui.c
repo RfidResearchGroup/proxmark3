@@ -12,7 +12,7 @@
 #include "ui.h"
 
 double CursorScaleFactor = 1;
-int PlotGridX=0, PlotGridY=0, PlotGridXdefault= 64, PlotGridYdefault= 64, CursorCPos= 0, CursorDPos= 0;
+int PlotGridX = 0, PlotGridY = 0, PlotGridXdefault = 64, PlotGridYdefault = 64, CursorCPos = 0, CursorDPos = 0;
 bool flushAfterWrite = 0;
 int GridOffset = 0;
 bool GridLocked = false;
@@ -21,7 +21,8 @@ bool showDemod = true;
 pthread_mutex_t print_lock = PTHREAD_MUTEX_INITIALIZER;
 static char *logfilename = "proxmark3.log";
 
-void PrintAndLogOptions(char *str[][2], size_t size, size_t space) {
+void PrintAndLogOptions(char *str[][2], size_t size, size_t space)
+{
     char buff[2000] = "Options:\n";
     char format[2000] = "";
     size_t counts[2] = {0, 0};
@@ -38,12 +39,13 @@ void PrintAndLogOptions(char *str[][2], size_t size, size_t space) {
                 snprintf(format, sizeof(format), "%%%zus%%-%zus", space, counts[j]);
             snprintf(buff + strlen(buff), sizeof(buff) - strlen(buff), format, " ", str[i][j]);
         }
-        if (i < size-1)
-            strncat(buff, "\n", sizeof(buff)-strlen(buff) -1);
+        if (i < size - 1)
+            strncat(buff, "\n", sizeof(buff) - strlen(buff) - 1);
     }
     PrintAndLogEx(NORMAL, "%s", buff);
 }
-void PrintAndLogEx(logLevel_t level, char *fmt, ...) {
+void PrintAndLogEx(logLevel_t level, char *fmt, ...)
+{
 
     // skip debug messages if client debugging is turned off i.e. 'DATA SETDEBUG 0'
     if (g_debugMode == 0 && level == DEBUG)
@@ -51,30 +53,30 @@ void PrintAndLogEx(logLevel_t level, char *fmt, ...) {
 
     char prefix[20] = {0};
     char buffer[MAX_PRINT_BUFFER] = {0};
-    char buffer2[MAX_PRINT_BUFFER+20] = {0};
+    char buffer2[MAX_PRINT_BUFFER + 20] = {0};
     char *token = NULL;
     int size = 0;
-                        //   {NORMAL, SUCCESS, INFO, FAILED, WARNING, ERR, DEBUG}
+    //   {NORMAL, SUCCESS, INFO, FAILED, WARNING, ERR, DEBUG}
     static char *prefixes[7] = { "", "[+] ", "[=] ", "[-] ", "[!] ", "[!!] ", "[#] "};
 
-    switch( level ) {
+    switch (level) {
         case ERR:
-            strncpy(prefix,_RED_([!!] ), sizeof(prefix)-1);
+            strncpy(prefix, _RED_([!!]), sizeof(prefix) - 1);
             break;
         case FAILED:
-            strncpy(prefix,_RED_([-] ), sizeof(prefix)-1);
+            strncpy(prefix, _RED_([-]), sizeof(prefix) - 1);
             break;
         case DEBUG:
-            strncpy(prefix,_BLUE_([#] ), sizeof(prefix)-1);
+            strncpy(prefix, _BLUE_([#]), sizeof(prefix) - 1);
             break;
         case SUCCESS:
-            strncpy(prefix,_GREEN_([+] ), sizeof(prefix)-1);
+            strncpy(prefix, _GREEN_([+]), sizeof(prefix) - 1);
             break;
         case WARNING:
-            strncpy(prefix,_CYAN_([!] ), sizeof(prefix)-1);
+            strncpy(prefix, _CYAN_([!]), sizeof(prefix) - 1);
             break;
         default:
-            strncpy(prefix, prefixes[level], sizeof(prefix)-1);
+            strncpy(prefix, prefixes[level], sizeof(prefix) - 1);
             break;
     }
 
@@ -84,7 +86,7 @@ void PrintAndLogEx(logLevel_t level, char *fmt, ...) {
     va_end(args);
 
     // no prefixes for normal
-    if ( level == NORMAL ) {
+    if (level == NORMAL) {
         PrintAndLog("%s", buffer);
         return;
     }
@@ -104,9 +106,9 @@ void PrintAndLogEx(logLevel_t level, char *fmt, ...) {
             size = strlen(buffer2);
 
             if (strlen(token))
-                snprintf(buffer2+size, sizeof(buffer2)-size, "%s%s\n", prefix, token);
+                snprintf(buffer2 + size, sizeof(buffer2) - size, "%s%s\n", prefix, token);
             else
-                snprintf(buffer2+size, sizeof(buffer2)-size, "\n");
+                snprintf(buffer2 + size, sizeof(buffer2) - size, "\n");
 
             token = strtok(NULL, delim);
         }
@@ -117,7 +119,8 @@ void PrintAndLogEx(logLevel_t level, char *fmt, ...) {
     }
 }
 
-void PrintAndLog(char *fmt, ...) {
+void PrintAndLog(char *fmt, ...)
+{
     char *saved_line;
     int saved_point;
     va_list argptr, argptr2;
@@ -184,20 +187,23 @@ void PrintAndLog(char *fmt, ...) {
     pthread_mutex_unlock(&print_lock);
 }
 
-void SetLogFilename(char *fn) {
+void SetLogFilename(char *fn)
+{
     logfilename = fn;
 }
 
-void SetFlushAfterWrite(bool value) {
+void SetFlushAfterWrite(bool value)
+{
     flushAfterWrite = value;
 }
 
- void iceIIR_Butterworth(int *data, const size_t len){
+void iceIIR_Butterworth(int *data, const size_t len)
+{
 
-    int i,j;
+    int i, j;
 
-    int * output =  (int* ) calloc(sizeof(int) * len, sizeof(uint8_t));
-    if ( !output ) return;
+    int *output = (int *) calloc(sizeof(int) * len, sizeof(uint8_t));
+    if (!output) return;
 
     // clear mem
     memset(output, 0x00, len);
@@ -206,7 +212,7 @@ void SetFlushAfterWrite(bool value) {
     float fc = 0.1125f;          // center frequency
 
     // create very simple low-pass filter to remove images (2nd-order Butterworth)
-    float complex iir_buf[3] = {0,0,0};
+    float complex iir_buf[3] = {0, 0, 0};
     float b[3] = {0.003621681514929,  0.007243363029857, 0.003621681514929};
     float a[3] = {1.000000000000000, -1.822694925196308, 0.837181651256023};
 
@@ -219,42 +225,43 @@ void SetFlushAfterWrite(bool value) {
         sample = data[i];
 
         // remove DC offset and mix to complex baseband
-        x = (sample - 127.5f) * cexpf( _Complex_I * 2 * M_PI * fc * i );
+        x = (sample - 127.5f) * cexpf(_Complex_I * 2 * M_PI * fc * i);
 
         // apply low-pass filter, removing spectral image (IIR using direct-form II)
         iir_buf[2] = iir_buf[1];
         iir_buf[1] = iir_buf[0];
-        iir_buf[0] = x - a[1]*iir_buf[1] - a[2]*iir_buf[2];
-        x          = b[0]*iir_buf[0] +
-                     b[1]*iir_buf[1] +
-                     b[2]*iir_buf[2];
+        iir_buf[0] = x - a[1] * iir_buf[1] - a[2] * iir_buf[2];
+        x          = b[0] * iir_buf[0] +
+                     b[1] * iir_buf[1] +
+                     b[2] * iir_buf[2];
 
         // compute instantaneous frequency by looking at phase difference
         // between adjacent samples
         float freq = cargf(x * conjf(x_prime));
         x_prime = x;    // retain this sample for next iteration
 
-        output[i] =(freq > 0) ? 127 : -127;
+        output[i] = (freq > 0) ? 127 : -127;
     }
 
     // show data
     //memcpy(data, output, adjustedLen);
-    for (j=0; j<adjustedLen; ++j)
+    for (j = 0; j < adjustedLen; ++j)
         data[j] = output[j];
 
     free(output);
 }
 
-void iceSimple_Filter(int *data, const size_t len, uint8_t k){
+void iceSimple_Filter(int *data, const size_t len, uint8_t k)
+{
 // ref: http://www.edn.com/design/systems-design/4320010/A-simple-software-lowpass-filter-suits-embedded-system-applications
 // parameter K
 #define FILTER_SHIFT 4
 
     int32_t filter_reg = 0;
     int16_t input, output;
-    int8_t shift = (k <=8 ) ? k : FILTER_SHIFT;
+    int8_t shift = (k <= 8) ? k : FILTER_SHIFT;
 
-    for (int i = 0; i < len; ++i){
+    for (int i = 0; i < len; ++i) {
 
         input = data[i];
         // Update filter with current sample
@@ -266,10 +273,11 @@ void iceSimple_Filter(int *data, const size_t len, uint8_t k){
     }
 }
 
-float complex cexpf (float complex Z) {
-  float complex  Res;
-  double rho = exp (__real__ Z);
-  __real__ Res = rho * cosf(__imag__ Z);
-  __imag__ Res = rho * sinf(__imag__ Z);
-  return Res;
+float complex cexpf(float complex Z)
+{
+    float complex  Res;
+    double rho = exp(__real__ Z);
+    __real__ Res = rho * cosf(__imag__ Z);
+    __imag__ Res = rho * sinf(__imag__ Z);
+    return Res;
 }

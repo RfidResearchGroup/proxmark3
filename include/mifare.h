@@ -32,23 +32,23 @@ typedef struct {
 } __attribute__((__packed__)) iso14a_card_select_t;
 
 typedef enum ISO14A_COMMAND {
-    ISO14A_CONNECT =         (1 << 0),
-    ISO14A_NO_DISCONNECT =   (1 << 1),
-    ISO14A_APDU =            (1 << 2),
-    ISO14A_RAW =             (1 << 3),
+    ISO14A_CONNECT = (1 << 0),
+    ISO14A_NO_DISCONNECT = (1 << 1),
+    ISO14A_APDU = (1 << 2),
+    ISO14A_RAW = (1 << 3),
     ISO14A_REQUEST_TRIGGER = (1 << 4),
-    ISO14A_APPEND_CRC =      (1 << 5),
-    ISO14A_SET_TIMEOUT =     (1 << 6),
-    ISO14A_NO_SELECT =       (1 << 7),
-    ISO14A_TOPAZMODE =       (1 << 8),
-    ISO14A_NO_RATS =         (1 << 9),
-    ISO14A_SEND_CHAINING =   (1 << 10)
+    ISO14A_APPEND_CRC = (1 << 5),
+    ISO14A_SET_TIMEOUT = (1 << 6),
+    ISO14A_NO_SELECT = (1 << 7),
+    ISO14A_TOPAZMODE = (1 << 8),
+    ISO14A_NO_RATS = (1 << 9),
+    ISO14A_SEND_CHAINING = (1 << 10)
 } iso14a_command_t;
 
 typedef struct {
-    uint8_t* response;
+    uint8_t *response;
     size_t   response_n;
-    uint8_t* modulation;
+    uint8_t *modulation;
     size_t   modulation_n;
     uint32_t ProxToAirDuration;
 } tag_response_info_t;
@@ -64,23 +64,23 @@ typedef struct {
 } __attribute__((__packed__)) iso14b_card_select_t;
 
 typedef enum ISO14B_COMMAND {
-    ISO14B_CONNECT =         (1 << 0),
-    ISO14B_DISCONNECT =      (1 << 1),
-    ISO14B_APDU =            (1 << 2),
-    ISO14B_RAW =             (1 << 3),
+    ISO14B_CONNECT = (1 << 0),
+    ISO14B_DISCONNECT = (1 << 1),
+    ISO14B_APDU = (1 << 2),
+    ISO14B_RAW = (1 << 3),
     ISO14B_REQUEST_TRIGGER = (1 << 4),
-    ISO14B_APPEND_CRC =      (1 << 5),
-    ISO14B_SELECT_STD =      (1 << 6),
-    ISO14B_SELECT_SR =       (1 << 7)
+    ISO14B_APPEND_CRC = (1 << 5),
+    ISO14B_SELECT_STD = (1 << 6),
+    ISO14B_SELECT_SR = (1 << 7)
 } iso14b_command_t;
 
 typedef enum ISO15_COMMAND {
-    ISO15_CONNECT =          (1 << 0),
-    ISO15_NO_DISCONNECT =    (1 << 1),
-    ISO15_RAW =              (1 << 2),
-    ISO15_APPEND_CRC =       (1 << 3),
-    ISO15_HIGH_SPEED =       (1 << 4),
-    ISO15_READ_RESPONSE =    (1 << 5)
+    ISO15_CONNECT = (1 << 0),
+    ISO15_NO_DISCONNECT = (1 << 1),
+    ISO15_RAW = (1 << 2),
+    ISO15_APPEND_CRC = (1 << 3),
+    ISO15_HIGH_SPEED = (1 << 4),
+    ISO15_READ_RESPONSE = (1 << 5)
 } iso15_command_t;
 
 //-----------------------------------------------------------------------------
@@ -113,11 +113,11 @@ typedef struct {
 } __attribute__((__packed__)) smart_card_atr_t;
 
 typedef enum SMARTCARD_COMMAND {
-    SC_CONNECT =             (1 << 0),
-    SC_NO_DISCONNECT =       (1 << 1),
-    SC_RAW =                 (1 << 2),
-    SC_SELECT =              (1 << 3),
-    SC_RAW_T0 =              (1 << 4),
+    SC_CONNECT = (1 << 0),
+    SC_NO_DISCONNECT = (1 << 1),
+    SC_RAW = (1 << 2),
+    SC_SELECT = (1 << 3),
+    SC_RAW_T0 = (1 << 4),
 } smartcard_command_t;
 
 //-----------------------------------------------------------------------------
@@ -151,11 +151,11 @@ typedef struct {
 } __attribute__((__packed__)) felica_card_select_t;
 
 typedef enum FELICA_COMMAND {
-    FELICA_CONNECT =         (1 << 0),
-    FELICA_NO_DISCONNECT =   (1 << 1),
-    FELICA_RAW =             (1 << 3),
-    FELICA_APPEND_CRC =      (1 << 5),
-    FELICA_NO_SELECT =       (1 << 6),
+    FELICA_CONNECT = (1 << 0),
+    FELICA_NO_DISCONNECT = (1 << 1),
+    FELICA_RAW = (1 << 3),
+    FELICA_APPEND_CRC = (1 << 5),
+    FELICA_NO_SELECT = (1 << 6),
 } felica_command_t;
 
 #endif // _MIFARE_H_

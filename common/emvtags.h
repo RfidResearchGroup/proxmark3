@@ -32,10 +32,10 @@ typedef struct {
     uint8_t TA1;
     uint8_t TB1;
     uint8_t TC1;
-    uint8_t* historicalbytes;
+    uint8_t *historicalbytes;
     //PPS response
     uint8_t PPSS;
-        //SFI 2 record 1
+    //SFI 2 record 1
     uint8_t tag_4F_len; //length of AID
     uint8_t tag_4F[16]; //Application Identifier (AID)
     uint8_t tag_50_len; //length of application label
@@ -244,6 +244,6 @@ typedef struct {
     uint8_t tag_BF0C[222]; //File Control Information (FCI) Issuer Discretionary Data
     uint8_t tag_DFName[16];
     uint8_t tag_DFName_len;
-}emvtags;
+} emvtags;
 
 #endif //__EMVCARD_H

@@ -25,22 +25,22 @@ extern "C" {
 #endif
 
 struct Crypto1State {uint32_t odd, even;};
-struct Crypto1State* crypto1_create(uint64_t);
-void crypto1_destroy(struct Crypto1State*);
-void crypto1_get_lfsr(struct Crypto1State*, uint64_t*);
-uint8_t crypto1_bit(struct Crypto1State*, uint8_t, int);
-uint8_t crypto1_byte(struct Crypto1State*, uint8_t, int);
-uint32_t crypto1_word(struct Crypto1State*, uint32_t, int);
+struct Crypto1State *crypto1_create(uint64_t);
+void crypto1_destroy(struct Crypto1State *);
+void crypto1_get_lfsr(struct Crypto1State *, uint64_t *);
+uint8_t crypto1_bit(struct Crypto1State *, uint8_t, int);
+uint8_t crypto1_byte(struct Crypto1State *, uint8_t, int);
+uint32_t crypto1_word(struct Crypto1State *, uint32_t, int);
 uint32_t prng_successor(uint32_t x, uint32_t n);
 
-struct Crypto1State* lfsr_recovery32(uint32_t ks2, uint32_t in);
-struct Crypto1State* lfsr_recovery64(uint32_t ks2, uint32_t ks3);
+struct Crypto1State *lfsr_recovery32(uint32_t ks2, uint32_t in);
+struct Crypto1State *lfsr_recovery64(uint32_t ks2, uint32_t ks3);
 uint32_t *lfsr_prefix_ks(uint8_t ks[8], int isodd);
-struct Crypto1State* lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8]);
+struct Crypto1State *lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8]);
 
-uint8_t lfsr_rollback_bit(struct Crypto1State* s, uint32_t in, int fb);
-uint8_t lfsr_rollback_byte(struct Crypto1State* s, uint32_t in, int fb);
-uint32_t lfsr_rollback_word(struct Crypto1State* s, uint32_t in, int fb);
+uint8_t lfsr_rollback_bit(struct Crypto1State *s, uint32_t in, int fb);
+uint8_t lfsr_rollback_byte(struct Crypto1State *s, uint32_t in, int fb);
+uint32_t lfsr_rollback_word(struct Crypto1State *s, uint32_t in, int fb);
 int nonce_distance(uint32_t from, uint32_t to);
 #define SWAPENDIAN(x)\
     (x = (x >> 8 & 0xff00ff) | (x & 0xff00ff) << 8, x = x >> 16 | x << 16)
@@ -68,13 +68,13 @@ static inline int parity(uint32_t x)
     x ^= x >> 4;
     return BIT(0x6996, x & 0xf);
 #else
-        __asm__(    "movl %1, %%eax\n"
-        "mov %%ax, %%cx\n"
-        "shrl $0x10, %%eax\n"
-        "xor %%ax, %%cx\n"
-                "xor %%ch, %%cl\n"
-                "setpo %%al\n"
-                "movzx %%al, %0\n": "=r"(x) : "r"(x): "eax","ecx");
+    __asm__("movl %1, %%eax\n"
+            "mov %%ax, %%cx\n"
+            "shrl $0x10, %%eax\n"
+            "xor %%ax, %%cx\n"
+            "xor %%ch, %%cl\n"
+            "setpo %%al\n"
+            "movzx %%al, %0\n": "=r"(x) : "r"(x): "eax", "ecx");
     return x;
 #endif
 }

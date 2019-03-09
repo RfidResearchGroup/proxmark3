@@ -36,7 +36,7 @@
 // structure and database for uid -> tagtype lookups
 typedef struct {
     uint8_t uid;
-    char* desc;
+    char *desc;
 } manufactureName;
 
 extern int CmdHF14A(const char *Cmd);
@@ -49,8 +49,8 @@ extern int CmdHF14ACmdRaw(const char *Cmd);
 extern int CmdHF14ACUIDs(const char *Cmd);
 extern int CmdHF14AAntiFuzz(const char *cmd);
 
-extern char* getTagInfo(uint8_t uid);
-extern int Hf14443_4aGetCardData(iso14a_card_select_t * card);
+extern char *getTagInfo(uint8_t uid);
+extern int Hf14443_4aGetCardData(iso14a_card_select_t *card);
 extern int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);
 extern int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);
 

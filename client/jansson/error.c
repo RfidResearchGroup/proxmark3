@@ -8,7 +8,7 @@ void jsonp_error_init(json_error_t *error, const char *source)
         error->line = -1;
         error->column = -1;
         error->position = 0;
-        if(source)
+        if (source)
             jsonp_error_set_source(error, source);
         else
             error->source[0] = '\0';

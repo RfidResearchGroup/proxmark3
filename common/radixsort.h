@@ -19,5 +19,5 @@ typedef union {
     uint32_t counts[256 * 8];
 } rscounts_t;
 
-uint64_t * radixSort(uint64_t * array, uint32_t size);
+uint64_t *radixSort(uint64_t *array, uint32_t size);
 #endif // RADIXSORT_H__

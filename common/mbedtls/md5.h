@@ -57,8 +57,7 @@ extern "C" {
  *                 stronger message digests instead.
  *
  */
-typedef struct mbedtls_md5_context
-{
+typedef struct mbedtls_md5_context {
     uint32_t total[2];          /*!< number of bytes processed  */
     uint32_t state[4];          /*!< intermediate digest state  */
     unsigned char buffer[64];   /*!< data block being processed */
@@ -79,7 +78,7 @@ mbedtls_md5_context;
  *                 stronger message digests instead.
  *
  */
-void mbedtls_md5_init( mbedtls_md5_context *ctx );
+void mbedtls_md5_init(mbedtls_md5_context *ctx);
 
 /**
  * \brief          Clear MD5 context
@@ -91,7 +90,7 @@ void mbedtls_md5_init( mbedtls_md5_context *ctx );
  *                 stronger message digests instead.
  *
  */
-void mbedtls_md5_free( mbedtls_md5_context *ctx );
+void mbedtls_md5_free(mbedtls_md5_context *ctx);
 
 /**
  * \brief          Clone (the state of) an MD5 context
@@ -104,8 +103,8 @@ void mbedtls_md5_free( mbedtls_md5_context *ctx );
  *                 stronger message digests instead.
  *
  */
-void mbedtls_md5_clone( mbedtls_md5_context *dst,
-                        const mbedtls_md5_context *src );
+void mbedtls_md5_clone(mbedtls_md5_context *dst,
+                       const mbedtls_md5_context *src);
 
 /**
  * \brief          MD5 context setup
@@ -119,7 +118,7 @@ void mbedtls_md5_clone( mbedtls_md5_context *dst,
  *                 stronger message digests instead.
  *
  */
-int mbedtls_md5_starts_ret( mbedtls_md5_context *ctx );
+int mbedtls_md5_starts_ret(mbedtls_md5_context *ctx);
 
 /**
  * \brief          MD5 process buffer
@@ -135,9 +134,9 @@ int mbedtls_md5_starts_ret( mbedtls_md5_context *ctx );
  *                 stronger message digests instead.
  *
  */
-int mbedtls_md5_update_ret( mbedtls_md5_context *ctx,
-                            const unsigned char *input,
-                            size_t ilen );
+int mbedtls_md5_update_ret(mbedtls_md5_context *ctx,
+                           const unsigned char *input,
+                           size_t ilen);
 
 /**
  * \brief          MD5 final digest
@@ -152,8 +151,8 @@ int mbedtls_md5_update_ret( mbedtls_md5_context *ctx,
  *                 stronger message digests instead.
  *
  */
-int mbedtls_md5_finish_ret( mbedtls_md5_context *ctx,
-                            unsigned char output[16] );
+int mbedtls_md5_finish_ret(mbedtls_md5_context *ctx,
+                           unsigned char output[16]);
 
 /**
  * \brief          MD5 process data block (internal use only)
@@ -168,8 +167,8 @@ int mbedtls_md5_finish_ret( mbedtls_md5_context *ctx,
  *                 stronger message digests instead.
  *
  */
-int mbedtls_internal_md5_process( mbedtls_md5_context *ctx,
-                                  const unsigned char data[64] );
+int mbedtls_internal_md5_process(mbedtls_md5_context *ctx,
+                                 const unsigned char data[64]);
 
 #if !defined(MBEDTLS_DEPRECATED_REMOVED)
 #if defined(MBEDTLS_DEPRECATED_WARNING)
@@ -189,7 +188,7 @@ int mbedtls_internal_md5_process( mbedtls_md5_context *ctx,
  *                 stronger message digests instead.
  *
  */
-MBEDTLS_DEPRECATED void mbedtls_md5_starts( mbedtls_md5_context *ctx );
+MBEDTLS_DEPRECATED void mbedtls_md5_starts(mbedtls_md5_context *ctx);
 
 /**
  * \brief          MD5 process buffer
@@ -205,9 +204,9 @@ MBEDTLS_DEPRECATED void mbedtls_md5_starts( mbedtls_md5_context *ctx );
  *                 stronger message digests instead.
  *
  */
-MBEDTLS_DEPRECATED void mbedtls_md5_update( mbedtls_md5_context *ctx,
-                                            const unsigned char *input,
-                                            size_t ilen );
+MBEDTLS_DEPRECATED void mbedtls_md5_update(mbedtls_md5_context *ctx,
+                                           const unsigned char *input,
+                                           size_t ilen);
 
 /**
  * \brief          MD5 final digest
@@ -222,8 +221,8 @@ MBEDTLS_DEPRECATED void mbedtls_md5_update( mbedtls_md5_context *ctx,
  *                 stronger message digests instead.
  *
  */
-MBEDTLS_DEPRECATED void mbedtls_md5_finish( mbedtls_md5_context *ctx,
-                                            unsigned char output[16] );
+MBEDTLS_DEPRECATED void mbedtls_md5_finish(mbedtls_md5_context *ctx,
+                                           unsigned char output[16]);
 
 /**
  * \brief          MD5 process data block (internal use only)
@@ -238,8 +237,8 @@ MBEDTLS_DEPRECATED void mbedtls_md5_finish( mbedtls_md5_context *ctx,
  *                 stronger message digests instead.
  *
  */
-MBEDTLS_DEPRECATED void mbedtls_md5_process( mbedtls_md5_context *ctx,
-                                             const unsigned char data[64] );
+MBEDTLS_DEPRECATED void mbedtls_md5_process(mbedtls_md5_context *ctx,
+                                            const unsigned char data[64]);
 
 #undef MBEDTLS_DEPRECATED
 #endif /* !MBEDTLS_DEPRECATED_REMOVED */
@@ -258,9 +257,9 @@ MBEDTLS_DEPRECATED void mbedtls_md5_process( mbedtls_md5_context *ctx,
  *                 stronger message digests instead.
  *
  */
-int mbedtls_md5_ret( const unsigned char *input,
-                     size_t ilen,
-                     unsigned char output[16] );
+int mbedtls_md5_ret(const unsigned char *input,
+                    size_t ilen,
+                    unsigned char output[16]);
 
 #if !defined(MBEDTLS_DEPRECATED_REMOVED)
 #if defined(MBEDTLS_DEPRECATED_WARNING)
@@ -282,9 +281,9 @@ int mbedtls_md5_ret( const unsigned char *input,
  *                 stronger message digests instead.
  *
  */
-MBEDTLS_DEPRECATED void mbedtls_md5( const unsigned char *input,
-                                     size_t ilen,
-                                     unsigned char output[16] );
+MBEDTLS_DEPRECATED void mbedtls_md5(const unsigned char *input,
+                                    size_t ilen,
+                                    unsigned char output[16]);
 
 #undef MBEDTLS_DEPRECATED
 #endif /* !MBEDTLS_DEPRECATED_REMOVED */
@@ -299,7 +298,7 @@ MBEDTLS_DEPRECATED void mbedtls_md5( const unsigned char *input,
  *                 stronger message digests instead.
  *
  */
-int mbedtls_md5_self_test( int verbose );
+int mbedtls_md5_self_test(int verbose);
 
 #ifdef __cplusplus
 }

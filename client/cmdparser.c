@@ -17,7 +17,8 @@
 #include "proxmark3.h"
 #include "comms.h"
 
-void CmdsHelp(const command_t Commands[]) {
+void CmdsHelp(const command_t Commands[])
+{
     if (Commands[0].Name == NULL) return;
     int i = 0;
     while (Commands[i].Name) {
@@ -27,14 +28,15 @@ void CmdsHelp(const command_t Commands[]) {
     }
 }
 
-int CmdsParse(const command_t Commands[], const char *Cmd) {
+int CmdsParse(const command_t Commands[], const char *Cmd)
+{
     // Help dump children
-    if (strcmp( Cmd, "XX_internal_command_dump_XX") == 0) {
+    if (strcmp(Cmd, "XX_internal_command_dump_XX") == 0) {
         dumpCommandsRecursive(Commands, 0);
         return 0;
     }
     // Markdown help dump children
-    if(strcmp( Cmd, "XX_internal_command_dump_markdown_XX") == 0) {
+    if (strcmp(Cmd, "XX_internal_command_dump_markdown_XX") == 0) {
         dumpCommandsRecursive(Commands, 1);
         return 0;
     }
@@ -52,8 +54,8 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
         int last_match = 0;
         int matches = 0;
 
-        for (i=0; Commands[i].Name; i++) {
-            if( !strncmp(Commands[i].Name, cmd_name, strlen(cmd_name)) ) {
+        for (i = 0; Commands[i].Name; i++) {
+            if (!strncmp(Commands[i].Name, cmd_name, strlen(cmd_name))) {
                 last_match = i;
                 matches++;
             }
@@ -63,7 +65,7 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
 
     if (Commands[i].Name) {
         while (Cmd[len] == ' ')
-        ++len;
+            ++len;
         return Commands[i].Parse(Cmd + len);
     } else {
         // show help for selected hierarchy or if command not recognised
@@ -76,7 +78,8 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
 char pparent[512] = {0};
 char *parent = pparent;
 
-void dumpCommandsRecursive(const command_t cmds[], int markdown) {
+void dumpCommandsRecursive(const command_t cmds[], int markdown)
+{
     if (cmds[0].Name == NULL) return;
 
     int i = 0;
@@ -85,23 +88,23 @@ void dumpCommandsRecursive(const command_t cmds[], int markdown) {
     // First, dump all single commands, which are not a container for
     // other commands
     if (markdown) {
-        PrintAndLogEx(NORMAL, "|%-*s|%-*s|%s\n",w_cmd,"command",w_off,"offline","description");
-        PrintAndLogEx(NORMAL, "|%-*s|%-*s|%s\n",w_cmd,"-------",w_off,"-------","-----------");
+        PrintAndLogEx(NORMAL, "|%-*s|%-*s|%s\n", w_cmd, "command", w_off, "offline", "description");
+        PrintAndLogEx(NORMAL, "|%-*s|%-*s|%s\n", w_cmd, "-------", w_off, "-------", "-----------");
     } else {
-        PrintAndLogEx(NORMAL, "%-*s|%-*s|%s\n",w_cmd,"command",w_off,"offline","description");
-        PrintAndLogEx(NORMAL, "%-*s|%-*s|%s\n",w_cmd,"-------",w_off,"-------","-----------");
+        PrintAndLogEx(NORMAL, "%-*s|%-*s|%s\n", w_cmd, "command", w_off, "offline", "description");
+        PrintAndLogEx(NORMAL, "%-*s|%-*s|%s\n", w_cmd, "-------", w_off, "-------", "-----------");
     }
 
     while (cmds[i].Name) {
-        char* cmd_offline = "N";
+        char *cmd_offline = "N";
         if (cmds[i].Help[0] == '{' && ++i) continue;
 
-        if ( cmds[i].Offline)
+        if (cmds[i].Offline)
             cmd_offline = "Y";
         if (markdown)
-          PrintAndLogEx(NORMAL, "|`%s%-*s`|%-*s|`%s`\n", parent, w_cmd-(int)strlen(parent)-2, cmds[i].Name, w_off, cmd_offline, cmds[i].Help);
+            PrintAndLogEx(NORMAL, "|`%s%-*s`|%-*s|`%s`\n", parent, w_cmd - (int)strlen(parent) - 2, cmds[i].Name, w_off, cmd_offline, cmds[i].Help);
         else
-          PrintAndLogEx(NORMAL, "%s%-*s|%-*s|%s\n", parent, w_cmd-(int)strlen(parent), cmds[i].Name, w_off, cmd_offline, cmds[i].Help);
+            PrintAndLogEx(NORMAL, "%s%-*s|%-*s|%s\n", parent, w_cmd - (int)strlen(parent), cmds[i].Name, w_off, cmd_offline, cmds[i].Help);
         ++i;
     }
     PrintAndLogEx(NORMAL, "\n\n");
@@ -109,7 +112,7 @@ void dumpCommandsRecursive(const command_t cmds[], int markdown) {
 
     // Then, print the categories. These will go into subsections with their own tables
     while (cmds[i].Name) {
-        if(cmds[i].Help[0] != '{' && ++i)  continue;
+        if (cmds[i].Help[0] != '{' && ++i)  continue;
 
         PrintAndLogEx(NORMAL, "### %s%s\n\n %s\n\n", parent, cmds[i].Name, cmds[i].Help);
 
@@ -120,9 +123,9 @@ void dumpCommandsRecursive(const command_t cmds[], int markdown) {
         // This is what causes the recursion, since commands Parse-implementation
         // in turn calls the CmdsParse above.
         if (markdown)
-          cmds[i].Parse("XX_internal_command_dump_markdown_XX");
+            cmds[i].Parse("XX_internal_command_dump_markdown_XX");
         else
-          cmds[i].Parse("XX_internal_command_dump_XX");
+            cmds[i].Parse("XX_internal_command_dump_XX");
 
         parent = old_parent;
         ++i;

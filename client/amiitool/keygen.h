@@ -29,6 +29,6 @@ typedef struct {
 } nfc3d_keygen_derivedkeys;
 #pragma pack()
 
-void nfc3d_keygen(const nfc3d_keygen_masterkeys * baseKeys, const uint8_t * baseSeed, nfc3d_keygen_derivedkeys * derivedKeys);
+void nfc3d_keygen(const nfc3d_keygen_masterkeys *baseKeys, const uint8_t *baseSeed, nfc3d_keygen_derivedkeys *derivedKeys);
 
 #endif

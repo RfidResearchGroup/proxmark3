@@ -10,7 +10,8 @@
 #include "cmdlfpresco.h"
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_presco_clone(void){
+int usage_lf_presco_clone(void)
+{
     PrintAndLogEx(NORMAL, "clone a Presco tag to a T55x7 tag.");
     PrintAndLogEx(NORMAL, "Usage: lf presco clone [h] d <Card-ID> c <hex-ID> <Q5>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -24,7 +25,8 @@ int usage_lf_presco_clone(void){
     return 0;
 }
 
-int usage_lf_presco_sim(void) {
+int usage_lf_presco_sim(void)
+{
     PrintAndLogEx(NORMAL, "Enables simulation of presco card with specified card number.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "Per presco format, the card number is 9 digit number and can contain *# chars. Larger values are truncated.");
@@ -41,10 +43,11 @@ int usage_lf_presco_sim(void) {
 }
 
 // find presco preamble 0x10D in already demoded data
-int detectPresco(uint8_t *dest, size_t *size) {
-    if (*size < 128*2) return -1; //make sure buffer has data
+int detectPresco(uint8_t *dest, size_t *size)
+{
+    if (*size < 128 * 2) return -1; //make sure buffer has data
     size_t startIdx = 0;
-    uint8_t preamble[] = {0,0,0,1,0,0,0,0,1,1,0,1,0,0,0,0,0,0,0,0,0,0,0};
+    uint8_t preamble[] = {0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
         return -2; //preamble not found
     if (*size != 128) return -3; //wrong demoded size
@@ -53,7 +56,8 @@ int detectPresco(uint8_t *dest, size_t *size) {
 }
 
 // convert base 12 ID to sitecode & usercode & 8 bit other unknown code
-int GetWiegandFromPresco(const char *Cmd, uint32_t *sitecode, uint32_t *usercode, uint32_t *fullcode, bool *Q5) {
+int GetWiegandFromPresco(const char *Cmd, uint32_t *sitecode, uint32_t *usercode, uint32_t *fullcode, bool *Q5)
+{
 
     uint8_t val = 0;
     bool hex = false, errors = false;
@@ -69,12 +73,12 @@ int GetWiegandFromPresco(const char *Cmd, uint32_t *sitecode, uint32_t *usercode
             case 'c':
                 hex = true;
                 //get hex
-                *fullcode = param_get32ex(Cmd, cmdp+1, 0, 16);
-                cmdp+=2;
+                *fullcode = param_get32ex(Cmd, cmdp + 1, 0, 16);
+                cmdp += 2;
                 break;
             case 'd':
                 //param get string int param_getstr(const char *line, int paramnum, char * str)
-                stringlen = param_getstr(Cmd, cmdp+1, id, sizeof(id));
+                stringlen = param_getstr(Cmd, cmdp + 1, id, sizeof(id));
                 if (stringlen < 2) return -1;
                 cmdp += 2;
                 break;
@@ -92,21 +96,21 @@ int GetWiegandFromPresco(const char *Cmd, uint32_t *sitecode, uint32_t *usercode
     if (errors || cmdp == 0) return -1;
 
     if (!hex) {
-        for (int index =0; index < strlen(id); ++index) {
+        for (int index = 0; index < strlen(id); ++index) {
 
             // Get value from number string.
-            if ( id[index] == '*' )
+            if (id[index] == '*')
                 val = 10;
-            if ( id[index] == '#')
+            if (id[index] == '#')
                 val = 11;
-            if ( id[index] >= 0x30 && id[index] <= 0x39 )
+            if (id[index] >= 0x30 && id[index] <= 0x39)
                 val = id[index] - 0x30;
 
             *fullcode += val;
 
             // last digit is only added, not multipled.
-            if ( index < strlen(id)-1 )
-                    *fullcode *= 12;
+            if (index < strlen(id) - 1)
+                *fullcode *= 12;
         }
     }
 
@@ -116,16 +120,18 @@ int GetWiegandFromPresco(const char *Cmd, uint32_t *sitecode, uint32_t *usercode
 }
 
 // calc not certain - intended to get bitstream for programming / sim
-int GetPrescoBits(uint32_t fullcode, uint8_t *prescoBits) {
+int GetPrescoBits(uint32_t fullcode, uint8_t *prescoBits)
+{
     num_to_bytebits(0x10D00000, 32, prescoBits);
-    num_to_bytebits(0x00000000, 32, prescoBits+32);
-    num_to_bytebits(0x00000000, 32, prescoBits+64);
-    num_to_bytebits(fullcode  , 32, prescoBits+96);
+    num_to_bytebits(0x00000000, 32, prescoBits + 32);
+    num_to_bytebits(0x00000000, 32, prescoBits + 64);
+    num_to_bytebits(fullcode, 32, prescoBits + 96);
     return 1;
 }
 
 //see ASKDemod for what args are accepted
-int CmdPrescoDemod(const char *Cmd) {
+int CmdPrescoDemod(const char *Cmd)
+{
     bool st = true;
     if (!ASKDemod_ext("32 0 0 0 0 a", false, false, 1, &st)) {
         PrintAndLogEx(DEBUG, "DEBUG: Error Presco ASKDemod failed");
@@ -145,13 +151,13 @@ int CmdPrescoDemod(const char *Cmd) {
         return 0;
     }
     setDemodBuf(DemodBuffer, 128, ans);
-    setClockGrid(g_DemodClock, g_DemodStartIdx + (ans*g_DemodClock));
+    setClockGrid(g_DemodClock, g_DemodStartIdx + (ans * g_DemodClock));
 
     //got a good demod
     uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
-    uint32_t raw2 = bytebits_to_byte(DemodBuffer+32, 32);
-    uint32_t raw3 = bytebits_to_byte(DemodBuffer+64, 32);
-    uint32_t raw4 = bytebits_to_byte(DemodBuffer+96, 32);
+    uint32_t raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
+    uint32_t raw3 = bytebits_to_byte(DemodBuffer + 64, 32);
+    uint32_t raw4 = bytebits_to_byte(DemodBuffer + 96, 32);
     uint32_t cardid = raw4;
     PrintAndLogEx(SUCCESS, "Presco Tag Found: Card ID %08X, Raw: %08X%08X%08X%08X", cardid, raw1, raw2, raw3, raw4);
 
@@ -165,7 +171,8 @@ int CmdPrescoDemod(const char *Cmd) {
 }
 
 //see ASKDemod for what args are accepted
-int CmdPrescoRead(const char *Cmd) {
+int CmdPrescoRead(const char *Cmd)
+{
     // Presco Number: 123456789 --> Sitecode 30 | usercode 8665
     lf_read(true, 12000);
     return CmdPrescoDemod(Cmd);
@@ -173,10 +180,11 @@ int CmdPrescoRead(const char *Cmd) {
 
 // takes base 12 ID converts to hex
 // Or takes 8 digit hex ID
-int CmdPrescoClone(const char *Cmd) {
+int CmdPrescoClone(const char *Cmd)
+{
 
     bool Q5 = false;
-    uint32_t sitecode=0, usercode=0, fullcode=0;
+    uint32_t sitecode = 0, usercode = 0, fullcode = 0;
     uint32_t blocks[5] = {T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_32 | 4 << T55x7_MAXBLOCK_SHIFT | T55x7_ST_TERMINATOR, 0, 0, 0, 0};
 
     // get wiegand from printed number.
@@ -204,14 +212,14 @@ int CmdPrescoClone(const char *Cmd) {
     print_blocks(blocks, 5);
 
     UsbCommand resp;
-    UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}};
+    UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}};
 
-    for (uint8_t i=0; i<5; i++) {
+    for (uint8_t i = 0; i < 5; i++) {
         c.arg[0] = blocks[i];
         c.arg[1] = i;
         clearCommandBuffer();
         SendCommand(&c);
-        if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)){
+        if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)) {
             PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
             return -1;
         }
@@ -221,9 +229,10 @@ int CmdPrescoClone(const char *Cmd) {
 
 // takes base 12 ID converts to hex
 // Or takes 8 digit hex ID
-int CmdPrescoSim(const char *Cmd) {
-    uint32_t sitecode=0, usercode=0, fullcode=0;
-    bool Q5=false;
+int CmdPrescoSim(const char *Cmd)
+{
+    uint32_t sitecode = 0, usercode = 0, fullcode = 0;
+    bool Q5 = false;
     // get wiegand from printed number.
     if (GetWiegandFromPresco(Cmd, &sitecode, &usercode, &fullcode, &Q5) == -1) return usage_lf_presco_sim();
 
@@ -233,7 +242,7 @@ int CmdPrescoSim(const char *Cmd) {
     arg1 = clk << 8 | encoding;
     arg2 = invert << 8 | separator;
 
-    PrintAndLogEx(SUCCESS, "Simulating Presco - SiteCode: %u, UserCode: %u, FullCode: %08X",sitecode, usercode, fullcode);
+    PrintAndLogEx(SUCCESS, "Simulating Presco - SiteCode: %u, UserCode: %u, FullCode: %08X", sitecode, usercode, fullcode);
 
     UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};
     GetPrescoBits(fullcode, c.d.asBytes);
@@ -250,13 +259,15 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFPresco(const char *Cmd) {
+int CmdLFPresco(const char *Cmd)
+{
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
+int CmdHelp(const char *Cmd)
+{
     CmdsHelp(CommandTable);
     return 0;
 }

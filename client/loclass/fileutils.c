@@ -45,7 +45,8 @@
  * @param filename
  * @return
  */
-int fileExists(const char *filename) {
+int fileExists(const char *filename)
+{
 
 #ifdef _WIN32
     struct _stat st;
@@ -57,13 +58,14 @@ int fileExists(const char *filename) {
     return result == 0;
 }
 
-int saveFile(const char *preferredName, const char *suffix, const void* data, size_t datalen) {
+int saveFile(const char *preferredName, const char *suffix, const void *data, size_t datalen)
+{
     int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
-    char * fileName = calloc(size, sizeof(char));
+    char *fileName = calloc(size, sizeof(char));
     int num = 1;
-    sprintf(fileName,"%s.%s", preferredName, suffix);
+    sprintf(fileName, "%s.%s", preferredName, suffix);
     while (fileExists(fileName)) {
-        sprintf(fileName,"%s-%d.%s", preferredName, num, suffix);
+        sprintf(fileName, "%s-%d.%s", preferredName, num, suffix);
         num++;
     }
     /* We should have a valid filename now, e.g. dumpdata-3.bin */
@@ -71,34 +73,35 @@ int saveFile(const char *preferredName, const char *suffix, const void* data, si
     /*Opening file for writing in binary mode*/
     FILE *f = fopen(fileName, "wb");
     if (!f) {
-        PrintAndLogDevice(WARNING, "file not found or locked. '" _YELLOW_(%s)"'", fileName);
+        PrintAndLogDevice(WARNING, "file not found or locked. '" _YELLOW_( % s)"'", fileName);
         free(fileName);
         return 1;
     }
     fwrite(data, 1, datalen, f);
     fflush(f);
     fclose(f);
-    PrintAndLogDevice(SUCCESS, "saved %u bytes to binary file " _YELLOW_(%s), datalen, fileName);
+    PrintAndLogDevice(SUCCESS, "saved %u bytes to binary file " _YELLOW_( % s), datalen, fileName);
     free(fileName);
     return 0;
 }
 
-int saveFileEML(const char *preferredName, const char *suffix, uint8_t* data, size_t datalen, size_t blocksize) {
+int saveFileEML(const char *preferredName, const char *suffix, uint8_t *data, size_t datalen, size_t blocksize)
+{
 
-    if ( preferredName == NULL ) return 1;
-    if ( suffix == NULL ) return 1;
-    if ( data == NULL ) return 1;
+    if (preferredName == NULL) return 1;
+    if (suffix == NULL) return 1;
+    if (data == NULL) return 1;
 
     int retval = 0;
-    int blocks = datalen/blocksize;
+    int blocks = datalen / blocksize;
     uint16_t currblock = 1;
-    int i,j;
+    int i, j;
     int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
-    char * fileName = calloc(size, sizeof(char));
+    char *fileName = calloc(size, sizeof(char));
     int num = 1;
-    sprintf(fileName,"%s.%s", preferredName, suffix);
+    sprintf(fileName, "%s.%s", preferredName, suffix);
     while (fileExists(fileName)) {
-        sprintf(fileName,"%s-%d.%s", preferredName, num, suffix);
+        sprintf(fileName, "%s-%d.%s", preferredName, num, suffix);
         num++;
     }
 
@@ -107,54 +110,55 @@ int saveFileEML(const char *preferredName, const char *suffix, uint8_t* data, si
     /*Opening file for writing in text mode*/
     FILE *f = fopen(fileName, "w+");
     if (!f) {
-        PrintAndLogDevice(WARNING, "file not found or locked. '" _YELLOW_(%s)"'", fileName);
+        PrintAndLogDevice(WARNING, "file not found or locked. '" _YELLOW_( % s)"'", fileName);
         retval =  1;
         goto out;
     }
 
     for (i = 0; i < datalen; i++) {
-        fprintf(f, "%02X", data[i] );
+        fprintf(f, "%02X", data[i]);
 
         // no extra line in the end
-        if ( (i+1) % blocksize == 0 && currblock != blocks ) {
+        if ((i + 1) % blocksize == 0 && currblock != blocks) {
             fprintf(f, "\n");
             currblock++;
         }
     }
     // left overs
-    if ( datalen % blocksize != 0) {
+    if (datalen % blocksize != 0) {
         int index = blocks * blocksize;
         for (j = 0; j < datalen % blocksize; j++) {
-            fprintf(f, "%02X", data[index + j] );
+            fprintf(f, "%02X", data[index + j]);
         }
     }
     fflush(f);
     fclose(f);
-    PrintAndLogDevice(SUCCESS, "saved %d blocks to text file " _YELLOW_(%s), blocks, fileName);
+    PrintAndLogDevice(SUCCESS, "saved %d blocks to text file " _YELLOW_( % s), blocks, fileName);
 
 out:
     free(fileName);
     return retval;
 }
 
-int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType ftype, uint8_t* data, size_t datalen) {
-    if ( preferredName == NULL ) return 1;
-    if ( suffix == NULL ) return 1;
-    if ( data == NULL ) return 1;
+int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType ftype, uint8_t *data, size_t datalen)
+{
+    if (preferredName == NULL) return 1;
+    if (suffix == NULL) return 1;
+    if (data == NULL) return 1;
 
     int retval = 0;
     int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
-    char * fileName = calloc(size, sizeof(char));
+    char *fileName = calloc(size, sizeof(char));
     int num = 1;
-    sprintf(fileName,"%s.%s", preferredName, suffix);
+    sprintf(fileName, "%s.%s", preferredName, suffix);
     while (fileExists(fileName)) {
-        sprintf(fileName,"%s-%d.%s", preferredName, num, suffix);
+        sprintf(fileName, "%s-%d.%s", preferredName, num, suffix);
         num++;
     }
 
     json_t *root = json_object();
     JsonSaveStr(root, "Created", "proxmark3");
-    switch(ftype) {
+    switch (ftype) {
         case jsfRaw:
             JsonSaveStr(root, "FileType", "raw");
             JsonSaveBufAsHexCompact(root, "raw", data, datalen);
@@ -211,11 +215,11 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
         case jsfMfuMemory:
             JsonSaveStr(root, "FileType", "mfu");
 
-            mfu_dump_t* tmp = (mfu_dump_t*)data;
+            mfu_dump_t *tmp = (mfu_dump_t *)data;
 
             uint8_t uid[7] = {0};
             memcpy(uid, tmp->data, 3);
-            memcpy(uid+3, tmp->data+4, 4);
+            memcpy(uid + 3, tmp->data + 4, 4);
 
             JsonSaveBufAsHexCompact(root, "$.Card.UID", uid, sizeof(uid));
             JsonSaveBufAsHexCompact(root, "$.Card.Version", tmp->version, sizeof(tmp->version));
@@ -235,17 +239,17 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
                 sprintf(path, "$.blocks.%d", i);
                 JsonSaveBufAsHexCompact(root, path, tmp->data + (i * 4), 4);
             }
-        break;
+            break;
     }
 
     int res = json_dump_file(root, fileName, JSON_INDENT(2));
     if (res) {
-        PrintAndLogDevice(FAILED, "error: can't save the file: " _YELLOW_(%s), fileName);
+        PrintAndLogDevice(FAILED, "error: can't save the file: " _YELLOW_( % s), fileName);
         json_decref(root);
         retval = 200;
         goto out;
     }
-    PrintAndLogDevice(SUCCESS, "saved to json file " _YELLOW_(%s), fileName);
+    PrintAndLogDevice(SUCCESS, "saved to json file " _YELLOW_( % s), fileName);
     json_decref(root);
 
 out:
@@ -253,20 +257,21 @@ out:
     return retval;
 }
 
-int loadFile(const char *preferredName, const char *suffix, void* data, size_t* datalen) {
+int loadFile(const char *preferredName, const char *suffix, void *data, size_t *datalen)
+{
 
-    if ( preferredName == NULL ) return 1;
-    if ( suffix == NULL ) return 1;
-    if ( data == NULL ) return 1;
+    if (preferredName == NULL) return 1;
+    if (suffix == NULL) return 1;
+    if (data == NULL) return 1;
 
     int retval = 0;
     int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
-    char * fileName = calloc(size, sizeof(char));
-    sprintf(fileName,"%s.%s", preferredName, suffix);
+    char *fileName = calloc(size, sizeof(char));
+    sprintf(fileName, "%s.%s", preferredName, suffix);
 
     FILE *f = fopen(fileName, "rb");
-    if ( !f ) {
-        PrintAndLogDevice(WARNING, "file not found or locked. '" _YELLOW_(%s)"'", fileName);
+    if (!f) {
+        PrintAndLogDevice(WARNING, "file not found or locked. '" _YELLOW_( % s)"'", fileName);
         free(fileName);
         return 1;
     }
@@ -276,14 +281,14 @@ int loadFile(const char *preferredName, const char *suffix, void* data, size_t* 
     long fsize = ftell(f);
     fseek(f, 0, SEEK_SET);
 
-    if ( fsize < 0 ) {
+    if (fsize < 0) {
         PrintAndLogDevice(FAILED, "error, when getting filesize");
         retval = 1;
         goto out;
     }
 
     uint8_t *dump = calloc(fsize, sizeof(uint8_t));
-    if ( !dump ) {
+    if (!dump) {
         PrintAndLogDevice(FAILED, "error, cannot allocate memory");
         retval = 2;
         goto out;
@@ -291,17 +296,17 @@ int loadFile(const char *preferredName, const char *suffix, void* data, size_t* 
 
     size_t bytes_read = fread(dump, 1, fsize, f);
 
-    if ( bytes_read != fsize ) {
+    if (bytes_read != fsize) {
         PrintAndLogDevice(FAILED, "error, bytes read mismatch file size");
         free(dump);
         retval = 3;
         goto out;
     }
 
-    memcpy( (data), dump, bytes_read);
+    memcpy((data), dump, bytes_read);
     free(dump);
 
-    PrintAndLogDevice(SUCCESS, "loaded %d bytes from binary file " _YELLOW_(%s), bytes_read, fileName);
+    PrintAndLogDevice(SUCCESS, "loaded %d bytes from binary file " _YELLOW_( % s), bytes_read, fileName);
 
     *datalen = bytes_read;
 
@@ -312,21 +317,22 @@ out:
     return retval;
 }
 
-int loadFileEML(const char *preferredName, const char *suffix, void* data, size_t* datalen) {
+int loadFileEML(const char *preferredName, const char *suffix, void *data, size_t *datalen)
+{
 
-    if ( preferredName == NULL ) return 1;
-    if ( suffix == NULL ) return 1;
-    if ( data == NULL ) return 1;
+    if (preferredName == NULL) return 1;
+    if (suffix == NULL) return 1;
+    if (data == NULL) return 1;
 
     size_t counter = 0;
     int retval = 0, hexlen = 0;
     int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
-    char * fileName = calloc(size, sizeof(char));
-    sprintf(fileName,"%s.%s", preferredName, suffix);
+    char *fileName = calloc(size, sizeof(char));
+    sprintf(fileName, "%s.%s", preferredName, suffix);
 
     FILE *f = fopen(fileName, "r");
-    if ( !f ) {
-        PrintAndLogDevice(WARNING, "file not found or locked. '" _YELLOW_(%s)"'", fileName);
+    if (!f) {
+        PrintAndLogDevice(WARNING, "file not found or locked. '" _YELLOW_( % s)"'", fileName);
         retval = 1;
         goto out;
     }
@@ -336,18 +342,18 @@ int loadFileEML(const char *preferredName, const char *suffix, void* data, size_
     memset(line, 0, sizeof(line));
     uint8_t buf[64] = {0x00};
 
-    while ( !feof(f) ) {
+    while (!feof(f)) {
 
         memset(line, 0, sizeof(line));
 
-        if (fgets(line, sizeof(line), f) == NULL){
+        if (fgets(line, sizeof(line), f) == NULL) {
             fclose(f);
             PrintAndLogEx(FAILED, "File reading error.");
             retval = 2;
             goto out;
         }
 
-        if ( line[0] == '#' )
+        if (line[0] == '#')
             continue;
 
         int res = param_gethex_to_eol(line, 0, buf, sizeof(buf), &hexlen);
@@ -357,9 +363,9 @@ int loadFileEML(const char *preferredName, const char *suffix, void* data, size_
         }
     }
     fclose(f);
-    PrintAndLogDevice(SUCCESS, "loaded %d bytes from text file " _YELLOW_(%s), counter, fileName);
+    PrintAndLogDevice(SUCCESS, "loaded %d bytes from text file " _YELLOW_( % s), counter, fileName);
 
-    if ( datalen )
+    if (datalen)
         *datalen = counter;
 
 out:
@@ -367,11 +373,12 @@ out:
     return retval;
 }
 
-int loadFileJSON(const char *preferredName, const char *suffix, void* data, size_t maxdatalen, size_t* datalen) {
+int loadFileJSON(const char *preferredName, const char *suffix, void *data, size_t maxdatalen, size_t *datalen)
+{
 
-    if ( preferredName == NULL ) return 1;
-    if ( suffix == NULL ) return 1;
-    if ( data == NULL ) return 1;
+    if (preferredName == NULL) return 1;
+    if (suffix == NULL) return 1;
+    if (data == NULL) return 1;
 
     *datalen = 0;
     json_t *root;
@@ -379,18 +386,18 @@ int loadFileJSON(const char *preferredName, const char *suffix, void* data, size
 
     int retval = 0;
     int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
-    char * fileName = calloc(size, sizeof(char));
-    sprintf(fileName,"%s.%s", preferredName, suffix);
+    char *fileName = calloc(size, sizeof(char));
+    sprintf(fileName, "%s.%s", preferredName, suffix);
 
     root = json_load_file(fileName, 0, &error);
     if (!root) {
-        PrintAndLog("ERROR: json " _YELLOW_(%s) " error on line %d: %s", fileName, error.line, error.text);
+        PrintAndLog("ERROR: json " _YELLOW_( % s) " error on line %d: %s", fileName, error.line, error.text);
         retval = 2;
         goto out;
     }
 
     if (!json_is_object(root)) {
-        PrintAndLog("ERROR: Invalid json " _YELLOW_(%s) " format. root must be an object.", fileName);
+        PrintAndLog("ERROR: Invalid json " _YELLOW_( % s) " format. root must be an object.", fileName);
         retval = 3;
         goto out;
     }
@@ -448,18 +455,19 @@ int loadFileJSON(const char *preferredName, const char *suffix, void* data, size
     }
 
 
-    PrintAndLog("loaded from JSON file " _YELLOW_(%s), fileName);
+    PrintAndLog("loaded from JSON file " _YELLOW_( % s), fileName);
 out:
     json_decref(root);
     free(fileName);
     return retval;
 }
 
-int loadFileDICTIONARY(const char *preferredName, const char *suffix, void* data, size_t* datalen, uint8_t keylen, uint16_t* keycnt ) {
+int loadFileDICTIONARY(const char *preferredName, const char *suffix, void *data, size_t *datalen, uint8_t keylen, uint16_t *keycnt)
+{
 
-    if ( preferredName == NULL ) return 1;
-    if ( suffix == NULL ) return 1;
-    if ( data == NULL ) return 1;
+    if (preferredName == NULL) return 1;
+    if (suffix == NULL) return 1;
+    if (data == NULL) return 1;
 
     // t5577 == 4bytes
     // mifare == 6 bytes
@@ -477,18 +485,18 @@ int loadFileDICTIONARY(const char *preferredName, const char *suffix, void* data
     size_t counter = 0;
     int retval = 0;
     int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
-    char * fileName = calloc(size, sizeof(char));
-    sprintf(fileName,"%s.%s", preferredName, suffix);
+    char *fileName = calloc(size, sizeof(char));
+    sprintf(fileName, "%s.%s", preferredName, suffix);
 
     FILE *f = fopen(fileName, "r");
-    if ( !f ) {
-        PrintAndLogDevice(WARNING, "file not found or locked. '" _YELLOW_(%s)"'", fileName);
+    if (!f) {
+        PrintAndLogDevice(WARNING, "file not found or locked. '" _YELLOW_( % s)"'", fileName);
         retval = 1;
         goto out;
     }
 
     // read file
-    while ( fgets(line, sizeof(line), f) ) {
+    while (fgets(line, sizeof(line), f)) {
 
         // add null terminator
         line[keylen] = 0;
@@ -499,11 +507,11 @@ int loadFileDICTIONARY(const char *preferredName, const char *suffix, void* data
 
 
         // The line start with # is comment, skip
-        if( line[0] == '#' )
+        if (line[0] == '#')
             continue;
 
-        if (!isxdigit(line[0])){
-            PrintAndLogEx(FAILED, "file content error. '%s' must include " _BLUE_(%2d) "HEX symbols", line, keylen);
+        if (!isxdigit(line[0])) {
+            PrintAndLogEx(FAILED, "file content error. '%s' must include " _BLUE_( % 2d) "HEX symbols", line, keylen);
             continue;
         }
 
@@ -515,9 +523,9 @@ int loadFileDICTIONARY(const char *preferredName, const char *suffix, void* data
         counter += (keylen >> 1);
     }
     fclose(f);
-    PrintAndLogDevice(SUCCESS, "loaded " _GREEN_(%2d) "keys from dictionary file " _YELLOW_(%s), *keycnt, fileName);
+    PrintAndLogDevice(SUCCESS, "loaded " _GREEN_( % 2d) "keys from dictionary file " _YELLOW_( % s), *keycnt, fileName);
 
-    if ( datalen )
+    if (datalen)
         *datalen = counter;
 out:
     free(fileName);

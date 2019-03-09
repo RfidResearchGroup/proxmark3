@@ -17,7 +17,8 @@ int g_DemodClock = 0;
 
 static int CmdHelp(const char *Cmd);
 
-int usage_data_printdemodbuf(void){
+int usage_data_printdemodbuf(void)
+{
     PrintAndLogEx(NORMAL, "Usage: data printdemodbuffer x o <offset> l <length>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h          This help");
@@ -26,7 +27,8 @@ int usage_data_printdemodbuf(void){
     PrintAndLogEx(NORMAL, "       l <length> enter length to print in # of bits or hex characters respectively");
     return 0;
 }
-int usage_data_manrawdecode(void){
+int usage_data_manrawdecode(void)
+{
     PrintAndLogEx(NORMAL, "Usage:  data manrawdecode [invert] [maxErr]");
     PrintAndLogEx(NORMAL, "     Takes 10 and 01 and converts to 0 and 1 respectively");
     PrintAndLogEx(NORMAL, "     --must have binary sequence in demodbuffer (run data askrawdemod first)");
@@ -36,7 +38,8 @@ int usage_data_manrawdecode(void){
     PrintAndLogEx(NORMAL, "   Example: data manrawdecode   = decode manchester bitstream from the demodbuffer");
     return 0;
 }
-int usage_data_biphaserawdecode(void){
+int usage_data_biphaserawdecode(void)
+{
     PrintAndLogEx(NORMAL, "Usage:  data biphaserawdecode [offset] [invert] [maxErr]");
     PrintAndLogEx(NORMAL, "     Converts 10 or 01 to 1 and 11 or 00 to 0");
     PrintAndLogEx(NORMAL, "     --must have binary sequence in demodbuffer (run data askrawdemod first)");
@@ -50,7 +53,8 @@ int usage_data_biphaserawdecode(void){
     PrintAndLogEx(NORMAL, "   Example: data biphaserawdecode 1 1 = decode biphase bitstream from the demodbuffer, set offset, and invert output");
     return 0;
 }
-int usage_data_rawdemod(void){
+int usage_data_rawdemod(void)
+{
     PrintAndLogEx(NORMAL, "Usage:  data rawdemod [modulation] <help>|<options>");
     PrintAndLogEx(NORMAL, "   [modulation] as 2 char, 'ab' for ask/biphase, 'am' for ask/manchester, 'ar' for ask/raw, 'fs' for fsk, ...");
     PrintAndLogEx(NORMAL, "         'nr' for nrz/direct, 'p1' for psk1, 'p2' for psk2");
@@ -67,7 +71,8 @@ int usage_data_rawdemod(void){
     PrintAndLogEx(NORMAL, "          : data rawdemod p2           = demod GraphBuffer using: psk2 - autodetect");
     return 0;
 }
-int usage_data_rawdemod_am(void){
+int usage_data_rawdemod_am(void)
+{
     PrintAndLogEx(NORMAL, "Usage:  data rawdemod am <s> [clock] <invert> [maxError] [maxLen] [amplify]");
     PrintAndLogEx(NORMAL, "     ['s'] optional, check for Sequence Terminator");
     PrintAndLogEx(NORMAL, "     [set clock as integer] optional, if not set, autodetect");
@@ -83,7 +88,8 @@ int usage_data_rawdemod_am(void){
     PrintAndLogEx(NORMAL, "          : data rawdemod am 64 1 0 = demod an ask/manchester tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
     return 0;
 }
-int usage_data_rawdemod_ab(void){
+int usage_data_rawdemod_ab(void)
+{
     PrintAndLogEx(NORMAL, "Usage:  data rawdemod ab [offset] [clock] <invert> [maxError] [maxLen] <amplify>");
     PrintAndLogEx(NORMAL, "     [offset], offset to begin biphase, default=0");
     PrintAndLogEx(NORMAL, "     [set clock as integer] optional, if not set, autodetect");
@@ -106,7 +112,8 @@ int usage_data_rawdemod_ab(void){
     PrintAndLogEx(NORMAL, "          : data rawdemod ab 0 64 1 0 0 a = demod an ask/biph tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors, and amp");
     return 0;
 }
-int usage_data_rawdemod_ar(void){
+int usage_data_rawdemod_ar(void)
+{
     PrintAndLogEx(NORMAL, "Usage:  data rawdemod ar [clock] <invert> [maxError] [maxLen] [amplify]");
     PrintAndLogEx(NORMAL, "     [set clock as integer] optional, if not set, autodetect");
     PrintAndLogEx(NORMAL, "     <invert>, 1 to invert output");
@@ -123,7 +130,8 @@ int usage_data_rawdemod_ar(void){
     PrintAndLogEx(NORMAL, "          : data rawdemod ar 64 1 0 0 a = demod an ask tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors, and amp");
     return 0;
 }
-int usage_data_rawdemod_fs(void){
+int usage_data_rawdemod_fs(void)
+{
     PrintAndLogEx(NORMAL, "Usage:  data rawdemod fs [clock] <invert> [fchigh] [fclow]");
     PrintAndLogEx(NORMAL, "     [set clock as integer] optional, omit for autodetect.");
     PrintAndLogEx(NORMAL, "     <invert>, 1 for invert output, can be used even if the clock is omitted");
@@ -139,7 +147,8 @@ int usage_data_rawdemod_fs(void){
     PrintAndLogEx(NORMAL, "          : data rawdemod fs 50 1 10 8 = demod an fsk2a RF/50 tag from GraphBuffer");
     return 0;
 }
-int usage_data_rawdemod_nr(void){
+int usage_data_rawdemod_nr(void)
+{
     PrintAndLogEx(NORMAL, "Usage:  data rawdemod nr [clock] <0|1> [maxError]");
     PrintAndLogEx(NORMAL, "     [set clock as integer] optional, if not set, autodetect.");
     PrintAndLogEx(NORMAL, "     <invert>, 1 for invert output");
@@ -152,7 +161,8 @@ int usage_data_rawdemod_nr(void){
     PrintAndLogEx(NORMAL, "          : data rawdemod nr 64 1 0 = demod a nrz/direct tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
     return 0;
 }
-int usage_data_rawdemod_p1(void){
+int usage_data_rawdemod_p1(void)
+{
     PrintAndLogEx(NORMAL, "Usage:  data rawdemod p1 [clock] <0|1> [maxError]");
     PrintAndLogEx(NORMAL, "     [set clock as integer] optional, if not set, autodetect.");
     PrintAndLogEx(NORMAL, "     <invert>, 1 for invert output");
@@ -165,7 +175,8 @@ int usage_data_rawdemod_p1(void){
     PrintAndLogEx(NORMAL, "          : data rawdemod p1 64 1 0 = demod a psk1 tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
     return 0;
 }
-int usage_data_rawdemod_p2(void){
+int usage_data_rawdemod_p2(void)
+{
     PrintAndLogEx(NORMAL, "Usage:  data rawdemod p2 [clock] <0|1> [maxError]");
     PrintAndLogEx(NORMAL, "     [set clock as integer] optional, if not set, autodetect.");
     PrintAndLogEx(NORMAL, "     <invert>, 1 for invert output");
@@ -178,7 +189,8 @@ int usage_data_rawdemod_p2(void){
     PrintAndLogEx(NORMAL, "          : data rawdemod p2 64 1 0  = demod a psk2 tag from GraphBuffer using a clock of RF/64, inverting output and allowing 0 demod errors");
     return 0;
 }
-int usage_data_autocorr(void) {
+int usage_data_autocorr(void)
+{
     PrintAndLogEx(NORMAL, "Autocorrelate is used to detect repeating sequences. We use it as detection of length in bits a message inside the signal is");
     PrintAndLogEx(NORMAL, "Usage: data autocorr w <window> [g]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -187,7 +199,8 @@ int usage_data_autocorr(void) {
     PrintAndLogEx(NORMAL, "       g              save back to GraphBuffer (overwrite)");
     return 0;
 }
-int usage_data_undecimate(void){
+int usage_data_undecimate(void)
+{
     PrintAndLogEx(NORMAL, "Usage: data undec [factor]");
     PrintAndLogEx(NORMAL, "This function performs un-decimation, by repeating each sample N times");
     PrintAndLogEx(NORMAL, "Options:");
@@ -196,7 +209,8 @@ int usage_data_undecimate(void){
     PrintAndLogEx(NORMAL, "Example: 'data undec 3'");
     return 0;
 }
-int usage_data_detectclock(void){
+int usage_data_detectclock(void)
+{
     PrintAndLogEx(NORMAL, "Usage:  data detectclock [modulation] <clock>");
     PrintAndLogEx(NORMAL, "     [modulation as char], specify the modulation type you want to detect the clock of");
     PrintAndLogEx(NORMAL, "     <clock>             , specify the clock (optional - to get best start position only)");
@@ -208,39 +222,44 @@ int usage_data_detectclock(void){
     PrintAndLogEx(NORMAL, "            data detectclock n    = detect the clock of an nrz/direct modulated wave in the GraphBuffer");
     return 0;
 }
-int usage_data_hex2bin(void){
+int usage_data_hex2bin(void)
+{
     PrintAndLogEx(NORMAL, "Usage: data hex2bin <hex_digits>");
     PrintAndLogEx(NORMAL, "       This function will ignore all non-hexadecimal characters (but stop reading on whitespace)");
     return 0;
 }
-int usage_data_bin2hex(void){
+int usage_data_bin2hex(void)
+{
     PrintAndLogEx(NORMAL, "Usage: data bin2hex <binary_digits>");
     PrintAndLogEx(NORMAL, "       This function will ignore all characters not 1 or 0 (but stop reading on whitespace)");
     return 0;
 }
-int usage_data_buffclear(void){
+int usage_data_buffclear(void)
+{
     PrintAndLogEx(NORMAL, "This function clears the bigbuff on deviceside");
     PrintAndLogEx(NORMAL, "Usage: data buffclear [h]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h              This help");
     return 0;
 }
-int usage_data_fsktonrz() {
-        PrintAndLogEx(NORMAL, "Usage: data fsktonrz c <clock> l <fc_low> f <fc_high>");
-        PrintAndLogEx(NORMAL, "Options:");
-        PrintAndLogEx(NORMAL, "       h            This help");
-        PrintAndLogEx(NORMAL, "       c <clock>    enter the a clock (omit to autodetect)");
-        PrintAndLogEx(NORMAL, "       l <fc_low>   enter a field clock (omit to autodetect)");
-        PrintAndLogEx(NORMAL, "       f <fc_high>  enter a field clock (omit to autodetect)");
-        return 0;
+int usage_data_fsktonrz()
+{
+    PrintAndLogEx(NORMAL, "Usage: data fsktonrz c <clock> l <fc_low> f <fc_high>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h            This help");
+    PrintAndLogEx(NORMAL, "       c <clock>    enter the a clock (omit to autodetect)");
+    PrintAndLogEx(NORMAL, "       l <fc_low>   enter a field clock (omit to autodetect)");
+    PrintAndLogEx(NORMAL, "       f <fc_high>  enter a field clock (omit to autodetect)");
+    return 0;
 }
 
 //set the demod buffer with given array of binary (one bit per byte)
 //by marshmellow
-void setDemodBuf(uint8_t *buf, size_t size, size_t start_idx) {
+void setDemodBuf(uint8_t *buf, size_t size, size_t start_idx)
+{
     if (buf == NULL) return;
 
-    if ( size > MAX_DEMOD_BUF_LEN - start_idx)
+    if (size > MAX_DEMOD_BUF_LEN - start_idx)
         size = MAX_DEMOD_BUF_LEN - start_idx;
 
     for (size_t i = 0; i < size; i++)
@@ -249,7 +268,8 @@ void setDemodBuf(uint8_t *buf, size_t size, size_t start_idx) {
     DemodBufferLen = size;
 }
 
-bool getDemodBuf(uint8_t *buf, size_t *size) {
+bool getDemodBuf(uint8_t *buf, size_t *size)
+{
     if (buf == NULL) return false;
     if (size == NULL) return false;
     if (*size == 0) return false;
@@ -262,49 +282,56 @@ bool getDemodBuf(uint8_t *buf, size_t *size) {
 
 // include <math.h>
 // Root mean square
-double rms(double *v, size_t n) {
+double rms(double *v, size_t n)
+{
     double sum = 0.0;
-    for(size_t i = 0; i < n; i++)
+    for (size_t i = 0; i < n; i++)
         sum += v[i] * v[i];
     return sqrt(sum / n);
 }
-int cmp_int( const void *a, const void *b) {
-    if (*(const int *)a < *(const int *)b)
+int cmp_int(const void *a, const void *b)
+{
+    if (*(const int *)a < * (const int *)b)
         return -1;
     else
         return *(const int *)a > *(const int *)b;
 }
-int cmp_uint8( const void *a, const void *b) {
-    if (*(const uint8_t *)a < *(const uint8_t *)b)
+int cmp_uint8(const void *a, const void *b)
+{
+    if (*(const uint8_t *)a < * (const uint8_t *)b)
         return -1;
     else
         return *(const uint8_t *)a > *(const uint8_t *)b;
 }
 // Median of a array of values
-double median_int( int *src, size_t size ) {
-    qsort( src, size, sizeof(int), cmp_int);
-    return 0.5 * ( src[size/2] + src[(size-1)/2]);
+double median_int(int *src, size_t size)
+{
+    qsort(src, size, sizeof(int), cmp_int);
+    return 0.5 * (src[size / 2] + src[(size - 1) / 2]);
 }
-double median_uint8( uint8_t *src, size_t size ) {
-    qsort( src, size, sizeof(uint8_t), cmp_uint8);
-    return 0.5 * ( src[size/2] + src[(size-1)/2]);
+double median_uint8(uint8_t *src, size_t size)
+{
+    qsort(src, size, sizeof(uint8_t), cmp_uint8);
+    return 0.5 * (src[size / 2] + src[(size - 1) / 2]);
 }
 // function to compute mean for a series
-static double compute_mean(const int *data, size_t n) {
+static double compute_mean(const int *data, size_t n)
+{
     double mean = 0.0;
-    for (size_t i=0; i < n; i++)
+    for (size_t i = 0; i < n; i++)
         mean += data[i];
     mean /= n;
     return mean;
 }
 
 //  function to compute variance for a series
-static double compute_variance(const int *data, size_t n) {
+static double compute_variance(const int *data, size_t n)
+{
     double variance = 0.0;
     double mean = compute_mean(data, n);
 
-    for (size_t i=0; i < n; i++)
-        variance += pow(( data[i] - mean), 2.0);
+    for (size_t i = 0; i < n; i++)
+        variance += pow((data[i] - mean), 2.0);
 
     variance /= n;
     return variance;
@@ -335,7 +362,8 @@ static double compute_autoc(const int *data, size_t n, int lag) {
 */
 
 // option '1' to save DemodBuffer any other to restore
-void save_restoreDB(uint8_t saveOpt) {
+void save_restoreDB(uint8_t saveOpt)
+{
     static uint8_t SavedDB[MAX_DEMOD_BUF_LEN];
     static size_t SavedDBlen;
     static bool DB_Saved = false;
@@ -358,7 +386,8 @@ void save_restoreDB(uint8_t saveOpt) {
     }
 }
 
-int CmdSetDebugMode(const char *Cmd) {
+int CmdSetDebugMode(const char *Cmd)
+{
     int demod = 0;
     sscanf(Cmd, "%i", &demod);
     g_debugMode = (uint8_t)demod;
@@ -367,7 +396,8 @@ int CmdSetDebugMode(const char *Cmd) {
 
 //by marshmellow
 // max output to 512 bits if we have more - should be plenty
-void printDemodBuff(void) {
+void printDemodBuff(void)
+{
     int len = DemodBufferLen;
     if (len < 1) {
         PrintAndLogEx(NORMAL, "(printDemodBuff) no bits found in demod buffer");
@@ -375,10 +405,11 @@ void printDemodBuff(void) {
     }
     if (len > 512) len = 512;
 
-    PrintAndLogEx(NORMAL, "%s", sprint_bin_break(DemodBuffer, len, 16) );
+    PrintAndLogEx(NORMAL, "%s", sprint_bin_break(DemodBuffer, len, 16));
 }
 
-int CmdPrintDemodBuff(const char *Cmd) {
+int CmdPrintDemodBuff(const char *Cmd)
+{
     char hex[512] = {0x00};
     bool hexMode = false;
     bool errors = false;
@@ -387,26 +418,26 @@ int CmdPrintDemodBuff(const char *Cmd) {
     char cmdp = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
-        case 'h':
-            return usage_data_printdemodbuf();
-        case 'x':
-            hexMode = true;
-            cmdp++;
-            break;
-        case 'o':
-            offset = param_get32ex(Cmd, cmdp+1, 0, 10);
-            if (!offset) errors = true;
-            cmdp += 2;
-            break;
-        case 'l':
-            length = param_get32ex(Cmd, cmdp+1, 512, 10);
-            if (!length) errors = true;
-            cmdp += 2;
-            break;
-        default:
-            PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-            errors = true;
-            break;
+            case 'h':
+                return usage_data_printdemodbuf();
+            case 'x':
+                hexMode = true;
+                cmdp++;
+                break;
+            case 'o':
+                offset = param_get32ex(Cmd, cmdp + 1, 0, 10);
+                if (!offset) errors = true;
+                cmdp += 2;
+                break;
+            case 'l':
+                length = param_get32ex(Cmd, cmdp + 1, 512, 10);
+                if (!length) errors = true;
+                cmdp += 2;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
         }
     }
     //Validations
@@ -416,11 +447,11 @@ int CmdPrintDemodBuff(const char *Cmd) {
         PrintAndLogEx(NORMAL, "Demodbuffer is empty");
         return 0;
     }
-    length = (length > (DemodBufferLen-offset)) ? DemodBufferLen-offset : length;
+    length = (length > (DemodBufferLen - offset)) ? DemodBufferLen - offset : length;
     int numBits = (length) & 0x00FFC; //make sure we don't exceed our string
 
-    if (hexMode){
-        char *buf = (char *) (DemodBuffer + offset);
+    if (hexMode) {
+        char *buf = (char *)(DemodBuffer + offset);
         numBits = (numBits > sizeof(hex)) ? sizeof(hex) : numBits;
         numBits = binarraytohex(hex, buf, numBits);
         if (numBits == 0) {
@@ -428,14 +459,15 @@ int CmdPrintDemodBuff(const char *Cmd) {
         }
         PrintAndLogEx(NORMAL, "DemodBuffer: %s", hex);
     } else {
-        PrintAndLogEx(NORMAL, "DemodBuffer:\n%s", sprint_bin_break(DemodBuffer+offset, numBits, 16));
+        PrintAndLogEx(NORMAL, "DemodBuffer:\n%s", sprint_bin_break(DemodBuffer + offset, numBits, 16));
     }
     return 1;
 }
 
 //by marshmellow
 //this function strictly converts >1 to 1 and <1 to 0 for each sample in the graphbuffer
-int CmdGetBitStream(const char *Cmd) {
+int CmdGetBitStream(const char *Cmd)
+{
     CmdHpf(Cmd);
     for (uint32_t i = 0; i < GraphTraceLen; i++)
         GraphBuffer[i] = (GraphBuffer[i] >= 1) ? 1 : 0;
@@ -450,7 +482,8 @@ int CmdGetBitStream(const char *Cmd) {
 //verbose will print results and demoding messages
 //emSearch will auto search for EM410x format in bitstream
 //askType switches decode: ask/raw = 0, ask/manchester = 1
-int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, bool *stCheck) {
+int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, bool *stCheck)
+{
     int invert = 0;
     int clk = 0;
     int maxErr = 100;
@@ -503,12 +536,12 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
     int startIdx = 0;
     int errCnt = askdemod_ext(bits, &BitLen, &clk, &invert, maxErr, askamp, askType, &startIdx);
 
-    if (errCnt < 0 || BitLen < 16){  //if fatal error (or -1)
-        PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) No data found errors:%d, invert:%c, bitlen:%d, clock:%d", errCnt, (invert)?'Y':'N', BitLen, clk);
+    if (errCnt < 0 || BitLen < 16) { //if fatal error (or -1)
+        PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) No data found errors:%d, invert:%c, bitlen:%d, clock:%d", errCnt, (invert) ? 'Y' : 'N', BitLen, clk);
         return 0;
     }
 
-    if (errCnt > maxErr){
+    if (errCnt > maxErr) {
         PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) Too many errors found, errors:%d, bits:%d, clock:%d", errCnt, BitLen, clk);
         return 0;
     }
@@ -519,13 +552,13 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
     setDemodBuf(bits, BitLen, 0);
     setClockGrid(clk, startIdx);
 
-    if (verbose || g_debugMode){
+    if (verbose || g_debugMode) {
         if (errCnt > 0)
-            PrintAndLogEx(NORMAL, "# Errors during Demoding (shown as 7 in bit stream): %d",errCnt);
+            PrintAndLogEx(NORMAL, "# Errors during Demoding (shown as 7 in bit stream): %d", errCnt);
         if (askType)
-            PrintAndLogEx(NORMAL, "ASK/Manchester - Clock: %d - Decoded bitstream:",clk);
+            PrintAndLogEx(NORMAL, "ASK/Manchester - Clock: %d - Decoded bitstream:", clk);
         else
-            PrintAndLogEx(NORMAL, "ASK/Raw - Clock: %d - Decoded bitstream:",clk);
+            PrintAndLogEx(NORMAL, "ASK/Raw - Clock: %d - Decoded bitstream:", clk);
         // Now output the bitstream to the scrollback by line of 16 bits
         printDemodBuff();
     }
@@ -536,7 +569,8 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
 
     return 1;
 }
-int ASKDemod(const char *Cmd, bool verbose, bool emSearch, uint8_t askType) {
+int ASKDemod(const char *Cmd, bool verbose, bool emSearch, uint8_t askType)
+{
     bool st = false;
     return ASKDemod_ext(Cmd, verbose, emSearch, askType, &st);
 }
@@ -562,7 +596,8 @@ int Cmdaskmandemod(const char *Cmd)
 //by marshmellow
 //manchester decode
 //stricktly take 10 and 01 and convert to 0 and 1
-int Cmdmandecoderaw(const char *Cmd) {
+int Cmdmandecoderaw(const char *Cmd)
+{
     size_t size = 0;
     int high = 0, low = 0;
     int i = 0, errCnt = 0, invert = 0, maxErr = 20;
@@ -573,15 +608,15 @@ int Cmdmandecoderaw(const char *Cmd) {
 
     uint8_t bits[MAX_DEMOD_BUF_LEN] = {0};
 
-    for (; i < DemodBufferLen; ++i){
+    for (; i < DemodBufferLen; ++i) {
         if (DemodBuffer[i] > high)
             high = DemodBuffer[i];
-        else if(DemodBuffer[i] < low)
+        else if (DemodBuffer[i] < low)
             low = DemodBuffer[i];
         bits[i] = DemodBuffer[i];
     }
 
-    if (high > 7 || low < 0 ){
+    if (high > 7 || low < 0) {
         PrintAndLogEx(WARNING, "Error: please raw demod the wave first then manchester raw decode");
         return 0;
     }
@@ -590,19 +625,19 @@ int Cmdmandecoderaw(const char *Cmd) {
     size = i;
     uint8_t alignPos = 0;
     errCnt = manrawdecode(bits, &size, invert, &alignPos);
-    if (errCnt >= maxErr){
-        PrintAndLogEx(WARNING, "Too many errors: %d",errCnt);
+    if (errCnt >= maxErr) {
+        PrintAndLogEx(WARNING, "Too many errors: %d", errCnt);
         return 0;
     }
 
-    PrintAndLogEx(NORMAL, "Manchester Decoded - # errors:%d - data:",errCnt);
+    PrintAndLogEx(NORMAL, "Manchester Decoded - # errors:%d - data:", errCnt);
     PrintAndLogEx(NORMAL, "%s", sprint_bin_break(bits, size, 16));
 
-    if (errCnt == 0){
+    if (errCnt == 0) {
         uint64_t id = 0;
         uint32_t hi = 0;
         size_t idx = 0;
-        if (Em410xDecode(bits, &size, &idx, &hi, &id) == 1){
+        if (Em410xDecode(bits, &size, &idx, &hi, &id) == 1) {
             //need to adjust to set bitstream back to manchester encoded data
             //setDemodBuf(bits, size, idx);
             printEM410x(hi, id);
@@ -617,43 +652,44 @@ int Cmdmandecoderaw(const char *Cmd) {
 //takes 2 arguments "offset" default = 0 if 1 it will shift the decode by one bit
 // and "invert" default = 0 if 1 it will invert output
 //  the argument offset allows us to manually shift if the output is incorrect - [EDIT: now auto detects]
-int CmdBiphaseDecodeRaw(const char *Cmd) {
+int CmdBiphaseDecodeRaw(const char *Cmd)
+{
     size_t size = 0;
     int offset = 0, invert = 0, maxErr = 20, errCnt = 0;
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) > 3 || cmdp == 'h') return usage_data_biphaserawdecode();
 
     sscanf(Cmd, "%i %i %i", &offset, &invert, &maxErr);
-    if (DemodBufferLen == 0){
+    if (DemodBufferLen == 0) {
         PrintAndLogEx(NORMAL, "DemodBuffer Empty - run 'data rawdemod ar' first");
         return 0;
     }
 
     uint8_t bits[MAX_DEMOD_BUF_LEN] = {0};
     size = sizeof(bits);
-    if ( !getDemodBuf(bits, &size) ) return 0;
+    if (!getDemodBuf(bits, &size)) return 0;
 
     errCnt = BiphaseRawDecode(bits, &size, &offset, invert);
-    if (errCnt < 0){
+    if (errCnt < 0) {
         PrintAndLogEx(WARNING, "Error during decode:%d", errCnt);
         return 0;
     }
-    if (errCnt > maxErr){
-        PrintAndLogEx(WARNING, "Too many errors attempting to decode: %d",errCnt);
+    if (errCnt > maxErr) {
+        PrintAndLogEx(WARNING, "Too many errors attempting to decode: %d", errCnt);
         return 0;
     }
 
     if (errCnt > 0)
-        PrintAndLogEx(WARNING, "# Errors found during Demod (shown as 7 in bit stream): %d",errCnt);
+        PrintAndLogEx(WARNING, "# Errors found during Demod (shown as 7 in bit stream): %d", errCnt);
 
-    PrintAndLogEx(NORMAL, "Biphase Decoded using offset: %d - # invert:%d - data:",offset,invert);
+    PrintAndLogEx(NORMAL, "Biphase Decoded using offset: %d - # invert:%d - data:", offset, invert);
     PrintAndLogEx(NORMAL, "%s", sprint_bin_break(bits, size, 16));
 
     //remove first bit from raw demod
     if (offset)
-        setDemodBuf(DemodBuffer,DemodBufferLen-offset, offset);
+        setDemodBuf(DemodBuffer, DemodBufferLen - offset, offset);
 
-    setClockGrid(g_DemodClock, g_DemodStartIdx + g_DemodClock*offset/2);
+    setClockGrid(g_DemodClock, g_DemodStartIdx + g_DemodClock * offset / 2);
     return 1;
 }
 
@@ -662,26 +698,26 @@ int CmdBiphaseDecodeRaw(const char *Cmd) {
 int ASKbiphaseDemod(const char *Cmd, bool verbose)
 {
     //ask raw demod GraphBuffer first
-    int offset=0, clk=0, invert=0, maxErr=0;
+    int offset = 0, clk = 0, invert = 0, maxErr = 0;
     sscanf(Cmd, "%i %i %i %i", &offset, &clk, &invert, &maxErr);
 
     uint8_t BitStream[MAX_DEMOD_BUF_LEN];
     size_t size = getFromGraphBuf(BitStream);
-    if (size == 0 ) {
+    if (size == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: no data in graphbuf");
         return 0;
     }
     int startIdx = 0;
     //invert here inverts the ask raw demoded bits which has no effect on the demod, but we need the pointer
     int errCnt = askdemod_ext(BitStream, &size, &clk, &invert, maxErr, 0, 0, &startIdx);
-    if ( errCnt < 0 || errCnt > maxErr ) {
+    if (errCnt < 0 || errCnt > maxErr) {
         PrintAndLogEx(DEBUG, "DEBUG: no data or error found %d, clock: %d", errCnt, clk);
         return 0;
     }
 
     //attempt to Biphase decode BitStream
     errCnt = BiphaseRawDecode(BitStream, &size, &offset, invert);
-    if (errCnt < 0){
+    if (errCnt < 0) {
         if (g_debugMode || verbose) PrintAndLogEx(DEBUG, "DEBUG: Error BiphaseRawDecode: %d", errCnt);
         return 0;
     }
@@ -691,9 +727,9 @@ int ASKbiphaseDemod(const char *Cmd, bool verbose)
     }
     //success set DemodBuffer and return
     setDemodBuf(BitStream, size, 0);
-    setClockGrid(clk, startIdx + clk*offset/2);
-    if (g_debugMode || verbose){
-        PrintAndLogEx(NORMAL, "Biphase Decoded using offset: %d - clock: %d - # errors:%d - data:",offset,clk,errCnt);
+    setClockGrid(clk, startIdx + clk * offset / 2);
+    if (g_debugMode || verbose) {
+        PrintAndLogEx(NORMAL, "Biphase Decoded using offset: %d - clock: %d - # errors:%d - data:", offset, clk, errCnt);
         printDemodBuff();
     }
     return 1;
@@ -716,9 +752,10 @@ int Cmdaskrawdemod(const char *Cmd)
     return ASKDemod(Cmd, true, false, 0);
 }
 
-int AutoCorrelate(const int *in, int *out, size_t len, int window, bool SaveGrph, bool verbose) {
+int AutoCorrelate(const int *in, int *out, size_t len, int window, bool SaveGrph, bool verbose)
+{
     // sanity check
-    if ( window > len ) window = len;
+    if (window > len) window = len;
 
     if (verbose) PrintAndLogEx(INFO, "performing %d correlations", GraphTraceLen - window);
 
@@ -738,8 +775,8 @@ int AutoCorrelate(const int *in, int *out, size_t len, int window, bool SaveGrph
 
     for (int i = 0; i < len - window; ++i) {
 
-        for (size_t j=0; j < (len - i); j++) {
-            autocv += (in[j] - mean) * (in[j+i] - mean);
+        for (size_t j = 0; j < (len - i); j++) {
+            autocv += (in[j] - mean) * (in[j + i] - mean);
         }
         autocv = (1.0 / (len - i)) * autocv;
 
@@ -749,8 +786,8 @@ int AutoCorrelate(const int *in, int *out, size_t len, int window, bool SaveGrph
         ac_value = autocv / variance;
 
         // keep track of which distance is repeating.
-        if ( ac_value > 1) {
-            correlation = i-lastmax;
+        if (ac_value > 1) {
+            correlation = i - lastmax;
             lastmax = i;
         }
     }
@@ -758,26 +795,26 @@ int AutoCorrelate(const int *in, int *out, size_t len, int window, bool SaveGrph
     //
     int hi = 0, idx = 0;
     int distance = 0, hi_1 = 0, idx_1 = 0;
-    for (int i = 0; i <= len; ++i){
-        if ( CorrelBuffer[i] > hi) {
+    for (int i = 0; i <= len; ++i) {
+        if (CorrelBuffer[i] > hi) {
             hi = CorrelBuffer[i];
             idx = i;
         }
     }
 
-    for (int i = idx+1; i <= window; ++i){
-        if ( CorrelBuffer[i] > hi_1 ) {
+    for (int i = idx + 1; i <= window; ++i) {
+        if (CorrelBuffer[i] > hi_1) {
             hi_1 = CorrelBuffer[i];
             idx_1 = i;
         }
     }
 
-    int foo = ABS(hi-hi_1);
-    int bar = (int)((int)((hi+hi_1) / 2) * 0.03);
-    if ( verbose && foo < bar ) {
+    int foo = ABS(hi - hi_1);
+    int bar = (int)((int)((hi + hi_1) / 2) * 0.03);
+    if (verbose && foo < bar) {
         distance = idx_1 - idx;
         PrintAndLogEx(SUCCESS, "possible 3% visible correlation %4d samples", distance);
-    } else if (verbose && ( correlation > 1 ) ) {
+    } else if (verbose && (correlation > 1)) {
         PrintAndLogEx(SUCCESS, "possible correlation %4d samples", correlation);
     } else {
         PrintAndLogEx(FAILED, "no repeating pattern found, try increasing window size");
@@ -787,15 +824,14 @@ int AutoCorrelate(const int *in, int *out, size_t len, int window, bool SaveGrph
     if (SaveGrph) {
         //GraphTraceLen = GraphTraceLen - window;
         memcpy(out, CorrelBuffer, len * sizeof(int));
-        if ( distance > 0) {
+        if (distance > 0) {
             setClockGrid(distance, idx);
             retval = distance;
-        }
-        else
+        } else
             setClockGrid(correlation, idx);
 
         CursorCPos = idx_1;
-        CursorDPos = idx_1+retval;
+        CursorDPos = idx_1 + retval;
         DemodBufferLen = 0;
         RepaintGraphWindow();
     }
@@ -803,7 +839,8 @@ int AutoCorrelate(const int *in, int *out, size_t len, int window, bool SaveGrph
     return retval;
 }
 
-int CmdAutoCorr(const char *Cmd) {
+int CmdAutoCorr(const char *Cmd)
+{
 
     uint32_t window = 4000;
     uint8_t cmdp = 0;
@@ -819,7 +856,7 @@ int CmdAutoCorr(const char *Cmd) {
                 cmdp++;
                 break;
             case 'w':
-                window = param_get32ex(Cmd, cmdp+1, 4000, 10);
+                window = param_get32ex(Cmd, cmdp + 1, 4000, 10);
                 if (window >= GraphTraceLen) {
                     PrintAndLogEx(WARNING, "window must be smaller than trace (%d samples)", GraphTraceLen);
                     errors = true;
@@ -833,7 +870,7 @@ int CmdAutoCorr(const char *Cmd) {
         }
     }
     //Validations
-    if (errors || cmdp == 0 ) return usage_data_autocorr();
+    if (errors || cmdp == 0) return usage_data_autocorr();
 
     return AutoCorrelate(GraphBuffer, GraphBuffer, GraphTraceLen, window, updateGrph, true);
 }
@@ -843,14 +880,14 @@ int CmdBitsamples(const char *Cmd)
     int cnt = 0;
     uint8_t got[12288];
 
-    if (!GetFromDevice(BIG_BUF, got, sizeof(got), 0, NULL, 2500 , false)) {
+    if (!GetFromDevice(BIG_BUF, got, sizeof(got), 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return false;
     }
 
     for (int j = 0; j < sizeof(got); j++) {
         for (int k = 0; k < 8; k++) {
-            if(got[j] & (1 << (7 - k)))
+            if (got[j] & (1 << (7 - k)))
                 GraphBuffer[cnt++] = 1;
             else
                 GraphBuffer[cnt++] = 0;
@@ -866,7 +903,7 @@ int CmdBuffClear(const char *Cmd)
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_data_buffclear();
 
-    UsbCommand c = {CMD_BUFF_CLEAR, {0,0,0}};
+    UsbCommand c = {CMD_BUFF_CLEAR, {0, 0, 0}};
     clearCommandBuffer();
     SendCommand(&c);
     ClearGraph(true);
@@ -899,11 +936,10 @@ int CmdUndec(const char *Cmd)
     //We have memory, don't we?
     int swap[MAX_GRAPH_TRACE_LEN] = {0};
     uint32_t g_index = 0, s_index = 0;
-    while(g_index < GraphTraceLen && s_index + factor < MAX_GRAPH_TRACE_LEN)
-    {
+    while (g_index < GraphTraceLen && s_index + factor < MAX_GRAPH_TRACE_LEN) {
         int count = 0;
         for (count = 0; count < factor && s_index + count < MAX_GRAPH_TRACE_LEN; count++)
-            swap[s_index+count] = GraphBuffer[g_index];
+            swap[s_index + count] = GraphBuffer[g_index];
         s_index += count;
         g_index++;
     }
@@ -916,13 +952,14 @@ int CmdUndec(const char *Cmd)
 
 //by marshmellow
 //shift graph zero up or down based on input + or -
-int CmdGraphShiftZero(const char *Cmd) {
+int CmdGraphShiftZero(const char *Cmd)
+{
     int shift = 0, shiftedVal = 0;
     //set options from parameters entered with the command
     sscanf(Cmd, "%i", &shift);
 
-    for(int i = 0; i < GraphTraceLen; i++){
-        if ( i+shift >= GraphTraceLen)
+    for (int i = 0; i < GraphTraceLen; i++) {
+        if (i + shift >= GraphTraceLen)
             shiftedVal = GraphBuffer[i];
         else
             shiftedVal = GraphBuffer[i] + shift;
@@ -937,14 +974,15 @@ int CmdGraphShiftZero(const char *Cmd) {
     return 0;
 }
 
-int AskEdgeDetect(const int *in, int *out, int len, int threshold) {
+int AskEdgeDetect(const int *in, int *out, int len, int threshold)
+{
     int last = 0;
-    for(int i = 1; i<len; i++) {
-        if (in[i] - in[i-1] >= threshold) //large jump up
+    for (int i = 1; i < len; i++) {
+        if (in[i] - in[i - 1] >= threshold) //large jump up
             last = 127;
-        else if (in[i] - in[i-1] <= -1 * threshold) //large jump down
+        else if (in[i] - in[i - 1] <= -1 * threshold) //large jump down
             last = -127;
-        out[i-1] = last;
+        out[i - 1] = last;
     }
     return 0;
 }
@@ -953,7 +991,8 @@ int AskEdgeDetect(const int *in, int *out, int len, int threshold) {
 //use large jumps in read samples to identify edges of waves and then amplify that wave to max
 //similar to dirtheshold, threshold commands
 //takes a threshold length which is the measured length between two samples then determines an edge
-int CmdAskEdgeDetect(const char *Cmd) {
+int CmdAskEdgeDetect(const char *Cmd)
+{
     int thresLen = 25;
     int ans = 0;
     sscanf(Cmd, "%i", &thresLen);
@@ -966,15 +1005,16 @@ int CmdAskEdgeDetect(const char *Cmd) {
 /* Print our clock rate */
 // uses data from graphbuffer
 // adjusted to take char parameter for type of modulation to find the clock - by marshmellow.
-int CmdDetectClockRate(const char *Cmd) {
+int CmdDetectClockRate(const char *Cmd)
+{
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) > 6 || strlen(Cmd) == 0 || cmdp == 'h')
         return usage_data_detectclock();
 
     int clock = 0;
-    switch ( cmdp ) {
+    switch (cmdp) {
         case 'a' :
-            clock = GetAskClock(Cmd+1, true);
+            clock = GetAskClock(Cmd + 1, true);
             break;
         case 'f' :
             clock = GetFskClock("", true);
@@ -999,7 +1039,7 @@ char *GetFSKType(uint8_t fchigh, uint8_t fclow, uint8_t invert)
     memset(fType, 0x00, 8);
     char *fskType = fType;
 
-    if (fchigh == 10 && fclow == 8){
+    if (fchigh == 10 && fclow == 8) {
 
         if (invert)
             memcpy(fskType, "FSK2a", 5);
@@ -1023,7 +1063,8 @@ char *GetFSKType(uint8_t fchigh, uint8_t fclow, uint8_t invert)
 //fsk raw demod and print binary
 //takes 4 arguments - Clock, invert, fchigh, fclow
 //defaults: clock = 50, invert=1, fchigh=10, fclow=8 (RF/10 RF/8 (fsk2a))
-int FSKrawDemod(const char *Cmd, bool verbose) {
+int FSKrawDemod(const char *Cmd, bool verbose)
+{
     //raw fsk demod  no manchester decoding no start bit finding just get binary from wave
     uint8_t rfLen, invert, fchigh, fclow;
 
@@ -1089,7 +1130,8 @@ int FSKrawDemod(const char *Cmd, bool verbose) {
 //fsk raw demod and print binary
 //takes 4 arguments - Clock, invert, fchigh, fclow
 //defaults: clock = 50, invert=1, fchigh=10, fclow=8 (RF/10 RF/8 (fsk2a))
-int CmdFSKrawdemod(const char *Cmd) {
+int CmdFSKrawdemod(const char *Cmd)
+{
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) > 20 || cmdp == 'h') return usage_data_rawdemod_fs();
 
@@ -1098,7 +1140,8 @@ int CmdFSKrawdemod(const char *Cmd) {
 
 //by marshmellow
 //attempt to psk1 demod graph buffer
-int PSKDemod(const char *Cmd, bool verbose) {
+int PSKDemod(const char *Cmd, bool verbose)
+{
     int invert = 0, clk = 0, maxErr = 100;
     sscanf(Cmd, "%i %i %i", &clk, &invert, &maxErr);
     if (clk == 1) {
@@ -1119,17 +1162,17 @@ int PSKDemod(const char *Cmd, bool verbose) {
     int errCnt = 0;
     int startIdx = 0;
     errCnt = pskRawDemod_ext(BitStream, &BitLen, &clk, &invert, &startIdx);
-    if (errCnt > maxErr){
+    if (errCnt > maxErr) {
         if (g_debugMode || verbose) PrintAndLogEx(DEBUG, "DEBUG: (PSKdemod) Too many errors found, clk: %d, invert: %d, numbits: %d, errCnt: %d", clk, invert, BitLen, errCnt);
         return 0;
     }
-    if (errCnt < 0|| BitLen < 16){  //throw away static - allow 1 and -1 (in case of threshold command first)
+    if (errCnt < 0 || BitLen < 16) { //throw away static - allow 1 and -1 (in case of threshold command first)
         if (g_debugMode || verbose) PrintAndLogEx(DEBUG, "DEBUG: (PSKdemod) no data found, clk: %d, invert: %d, numbits: %d, errCnt: %d", clk, invert, BitLen, errCnt);
         return 0;
     }
-    if (verbose || g_debugMode){
-        PrintAndLogEx(DEBUG, "DEBUG: (PSKdemod) Using Clock:%d, invert:%d, Bits Found:%d",clk, invert, BitLen);
-        if (errCnt > 0){
+    if (verbose || g_debugMode) {
+        PrintAndLogEx(DEBUG, "DEBUG: (PSKdemod) Using Clock:%d, invert:%d, Bits Found:%d", clk, invert, BitLen);
+        if (errCnt > 0) {
             PrintAndLogEx(DEBUG, "DEBUG: (PSKdemod) errors during Demoding (shown as 7 in bit stream): %d", errCnt);
         }
     }
@@ -1139,7 +1182,8 @@ int PSKDemod(const char *Cmd, bool verbose) {
     return 1;
 }
 
-int CmdPSKIdteck(const char *Cmd) {
+int CmdPSKIdteck(const char *Cmd)
+{
 
     if (!PSKDemod("", false)) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck PSKDemod failed");
@@ -1149,7 +1193,7 @@ int CmdPSKIdteck(const char *Cmd) {
 
     //get binary from PSK1 wave
     int idx = detectIdteck(DemodBuffer, &size);
-    if (idx < 0){
+    if (idx < 0) {
 
         if (idx == -1)
             PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: not enough samples");
@@ -1160,7 +1204,7 @@ int CmdPSKIdteck(const char *Cmd) {
         else if (idx == -4)
             PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: size not correct: %d", size);
         else
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: idx: %d",idx);
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: idx: %d", idx);
 
         // if didn't find preamble try again inverting
         if (!PSKDemod("1", false)) {
@@ -1168,7 +1212,7 @@ int CmdPSKIdteck(const char *Cmd) {
             return 0;
         }
         idx = detectIdteck(DemodBuffer, &size);
-        if (idx < 0){
+        if (idx < 0) {
 
             if (idx == -1)
                 PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: not enough samples");
@@ -1179,7 +1223,7 @@ int CmdPSKIdteck(const char *Cmd) {
             else if (idx == -4)
                 PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: size not correct: %d", size);
             else
-                PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: idx: %d",idx);
+                PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: idx: %d", idx);
 
             return 0;
         }
@@ -1189,7 +1233,7 @@ int CmdPSKIdteck(const char *Cmd) {
     //got a good demod
     uint32_t id = 0;
     uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
-    uint32_t raw2 = bytebits_to_byte(DemodBuffer+32, 32);
+    uint32_t raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
 
     //parity check (TBD)
     //checksum check (TBD)
@@ -1203,12 +1247,13 @@ int CmdPSKIdteck(const char *Cmd) {
 // takes 3 arguments - clock, invert, maxErr as integers
 // attempts to demodulate nrz only
 // prints binary found and saves in demodbuffer for further commands
-int NRZrawDemod(const char *Cmd, bool verbose) {
+int NRZrawDemod(const char *Cmd, bool verbose)
+{
 
     int errCnt = 0, clkStartIdx = 0;
     int invert = 0, clk = 0, maxErr = 100;
     sscanf(Cmd, "%i %i %i", &clk, &invert, &maxErr);
-    if (clk == 1){
+    if (clk == 1) {
         invert = 1;
         clk = 0;
     }
@@ -1227,11 +1272,11 @@ int NRZrawDemod(const char *Cmd, bool verbose) {
     if (BitLen == 0) return 0;
 
     errCnt = nrzRawDemod(bits, &BitLen, &clk, &invert, &clkStartIdx);
-    if (errCnt > maxErr){
-        PrintAndLogEx(DEBUG, "DEBUG: (NRZrawDemod) Too many errors found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
+    if (errCnt > maxErr) {
+        PrintAndLogEx(DEBUG, "DEBUG: (NRZrawDemod) Too many errors found, clk: %d, invert: %d, numbits: %d, errCnt: %d", clk, invert, BitLen, errCnt);
         return 0;
     }
-    if (errCnt < 0 || BitLen < 16){  //throw away static - allow 1 and -1 (in case of threshold command first)
+    if (errCnt < 0 || BitLen < 16) { //throw away static - allow 1 and -1 (in case of threshold command first)
         PrintAndLogEx(DEBUG, "DEBUG: (NRZrawDemod) no data found, clk: %d, invert: %d, numbits: %d, errCnt: %d", clk, invert, BitLen, errCnt);
         return 0;
     }
@@ -1250,7 +1295,8 @@ int NRZrawDemod(const char *Cmd, bool verbose) {
     return 1;
 }
 
-int CmdNRZrawDemod(const char *Cmd) {
+int CmdNRZrawDemod(const char *Cmd)
+{
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) > 16 || cmdp == 'h') return usage_data_rawdemod_nr();
 
@@ -1261,14 +1307,15 @@ int CmdNRZrawDemod(const char *Cmd) {
 // takes 3 arguments - clock, invert, maxErr as integers
 // attempts to demodulate psk only
 // prints binary found and saves in demodbuffer for further commands
-int CmdPSK1rawDemod(const char *Cmd) {
+int CmdPSK1rawDemod(const char *Cmd)
+{
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) > 16 || cmdp == 'h') return usage_data_rawdemod_p1();
 
     int ans = PSKDemod(Cmd, true);
     //output
-    if (!ans){
-        if (g_debugMode) PrintAndLogEx(WARNING, "Error demoding: %d",ans);
+    if (!ans) {
+        if (g_debugMode) PrintAndLogEx(WARNING, "Error demoding: %d", ans);
         return 0;
     }
     PrintAndLogEx(NORMAL, "PSK1 demoded bitstream:");
@@ -1279,13 +1326,14 @@ int CmdPSK1rawDemod(const char *Cmd) {
 
 // by marshmellow
 // takes same args as cmdpsk1rawdemod
-int CmdPSK2rawDemod(const char *Cmd) {
+int CmdPSK2rawDemod(const char *Cmd)
+{
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) > 16 || cmdp == 'h') return usage_data_rawdemod_p2();
 
     int ans = PSKDemod(Cmd, true);
-    if (!ans){
-        if (g_debugMode) PrintAndLogEx(WARNING, "Error demoding: %d",ans);
+    if (!ans) {
+        if (g_debugMode) PrintAndLogEx(WARNING, "Error demoding: %d", ans);
         return 0;
     }
     psk1TOpsk2(DemodBuffer, DemodBufferLen);
@@ -1296,27 +1344,29 @@ int CmdPSK2rawDemod(const char *Cmd) {
 }
 
 // by marshmellow - combines all raw demod functions into one menu command
-int CmdRawDemod(const char *Cmd) {
+int CmdRawDemod(const char *Cmd)
+{
     int ans = 0;
 
     if (strlen(Cmd) > 35 || strlen(Cmd) < 2)
         return usage_data_rawdemod();
 
-    str_lower( (char *)Cmd);
+    str_lower((char *)Cmd);
 
-    if (str_startswith(Cmd, "fs"))     ans = CmdFSKrawdemod(Cmd+2);
-    else if(str_startswith(Cmd, "ab")) ans = Cmdaskbiphdemod(Cmd+2);
-    else if(str_startswith(Cmd, "am")) ans = Cmdaskmandemod(Cmd+2);
-    else if(str_startswith(Cmd, "ar")) ans = Cmdaskrawdemod(Cmd+2);
-    else if(str_startswith(Cmd, "nr")) ans = CmdNRZrawDemod(Cmd+2);
-    else if(str_startswith(Cmd, "p1")) ans = CmdPSK1rawDemod(Cmd+2);
-    else if(str_startswith(Cmd, "p2")) ans = CmdPSK2rawDemod(Cmd+2);
+    if (str_startswith(Cmd, "fs"))     ans = CmdFSKrawdemod(Cmd + 2);
+    else if (str_startswith(Cmd, "ab")) ans = Cmdaskbiphdemod(Cmd + 2);
+    else if (str_startswith(Cmd, "am")) ans = Cmdaskmandemod(Cmd + 2);
+    else if (str_startswith(Cmd, "ar")) ans = Cmdaskrawdemod(Cmd + 2);
+    else if (str_startswith(Cmd, "nr")) ans = CmdNRZrawDemod(Cmd + 2);
+    else if (str_startswith(Cmd, "p1")) ans = CmdPSK1rawDemod(Cmd + 2);
+    else if (str_startswith(Cmd, "p2")) ans = CmdPSK2rawDemod(Cmd + 2);
     else PrintAndLogEx(WARNING, "Unknown modulation entered - see help ('h') for parameter structure");
 
     return ans;
 }
 
-void setClockGrid(int clk, int offset) {
+void setClockGrid(int clk, int offset)
+{
     g_DemodStartIdx = offset;
     g_DemodClock = clk;
     PrintAndLogEx(DEBUG, "DEBUG: (setClockGrid) demodoffset %d, clk %d", offset, clk);
@@ -1340,7 +1390,8 @@ void setClockGrid(int clk, int offset) {
     }
 }
 
-int CmdGrid(const char *Cmd) {
+int CmdGrid(const char *Cmd)
+{
     sscanf(Cmd, "%i %i", &PlotGridX, &PlotGridY);
     PlotGridXdefault = PlotGridX;
     PlotGridYdefault = PlotGridY;
@@ -1348,16 +1399,18 @@ int CmdGrid(const char *Cmd) {
     return 0;
 }
 
-int CmdSetGraphMarkers(const char *Cmd) {
+int CmdSetGraphMarkers(const char *Cmd)
+{
     sscanf(Cmd, "%i %i", &CursorCPos, &CursorDPos);
     RepaintGraphWindow();
     return 0;
 }
 
-int CmdHexsamples(const char *Cmd) {
+int CmdHexsamples(const char *Cmd)
+{
     int i, j, requested = 0, offset = 0;
     char string_buf[25];
-    char* string_ptr = string_buf;
+    char *string_ptr = string_buf;
     uint8_t got[BIGBUF_SIZE];
 
     sscanf(Cmd, "%i %i", &requested, &offset);
@@ -1371,7 +1424,7 @@ int CmdHexsamples(const char *Cmd) {
         return 0;
     }
 
-    if ( !GetFromDevice(BIG_BUF, got, requested, offset, NULL, 2500, false)) {
+    if (!GetFromDevice(BIG_BUF, got, requested, offset, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return false;
     }
@@ -1396,13 +1449,15 @@ int CmdHexsamples(const char *Cmd) {
     return 0;
 }
 
-int CmdHide(const char *Cmd) {
+int CmdHide(const char *Cmd)
+{
     HideGraphWindow();
     return 0;
 }
 
 //zero mean GraphBuffer
-int CmdHpf(const char *Cmd) {
+int CmdHpf(const char *Cmd)
+{
     uint8_t bits[GraphTraceLen];
     size_t size = getFromGraphBuf(bits);
     removeSignalOffset(bits, size);
@@ -1415,34 +1470,37 @@ int CmdHpf(const char *Cmd) {
     return 0;
 }
 
-bool _headBit( BitstreamOut *stream) {
+bool _headBit(BitstreamOut *stream)
+{
     int bytepos = stream->position >> 3; // divide by 8
     int bitpos = (stream->position++) & 7; // mask out 00000111
-    return (*(stream->buffer + bytepos) >> (7-bitpos)) & 1;
+    return (*(stream->buffer + bytepos) >> (7 - bitpos)) & 1;
 }
 
-uint8_t getByte(uint8_t bits_per_sample, BitstreamOut* b) {
+uint8_t getByte(uint8_t bits_per_sample, BitstreamOut *b)
+{
     uint8_t val = 0;
-    for(int i = 0 ; i < bits_per_sample; i++)
-        val |= (_headBit(b) << (7-i));
+    for (int i = 0 ; i < bits_per_sample; i++)
+        val |= (_headBit(b) << (7 - i));
 
     return val;
 }
 
-int getSamples(int n, bool silent) {
+int getSamples(int n, bool silent)
+{
     //If we get all but the last byte in bigbuf,
     // we don't have to worry about remaining trash
     // in the last byte in case the bits-per-sample
     // does not line up on byte boundaries
-    uint8_t got[BIGBUF_SIZE-1] = { 0 };
+    uint8_t got[BIGBUF_SIZE - 1] = { 0 };
 
-    if ( n == 0 || n > sizeof(got))
+    if (n == 0 || n > sizeof(got))
         n = sizeof(got);
 
     if (!silent) PrintAndLogEx(NORMAL, "Reading %d bytes from device memory\n", n);
 
     UsbCommand response;
-    if ( !GetFromDevice(BIG_BUF, got, n, 0, &response, 10000, true) ) {
+    if (!GetFromDevice(BIG_BUF, got, n, 0, &response, 10000, true)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return 1;
     }
@@ -1463,14 +1521,14 @@ int getSamples(int n, bool silent) {
         if (!silent) PrintAndLogEx(NORMAL, "Unpacking...");
 
         BitstreamOut bout = { got, bits_per_sample * n,  0};
-        int j =0;
+        int j = 0;
         for (j = 0; j * bits_per_sample < n * 8 && j < n; j++) {
             uint8_t sample = getByte(bits_per_sample, &bout);
-            GraphBuffer[j] = ((int) sample )- 128;
+            GraphBuffer[j] = ((int) sample) - 128;
         }
         GraphTraceLen = j;
 
-        if (!silent) PrintAndLogEx(NORMAL, "Unpacked %d samples" , j );
+        if (!silent) PrintAndLogEx(NORMAL, "Unpacked %d samples", j);
 
     } else {
         for (int j = 0; j < n; j++) {
@@ -1490,12 +1548,14 @@ int getSamples(int n, bool silent) {
     return 0;
 }
 
-int CmdSamples(const char *Cmd) {
+int CmdSamples(const char *Cmd)
+{
     int n = strtol(Cmd, NULL, 0);
     return getSamples(n, false);
 }
 
-int CmdTuneSamples(const char *Cmd) {
+int CmdTuneSamples(const char *Cmd)
+{
 #define NON_VOLTAGE     1000
 #define LF_UNUSABLE_V   2000
 #define LF_MARGINAL_V   10000
@@ -1512,13 +1572,14 @@ int CmdTuneSamples(const char *Cmd) {
     int timeout = 0;
     PrintAndLogEx(INFO, "\nmeasuring antenna characteristics, please wait...");
 
-    UsbCommand c = {CMD_MEASURE_ANTENNA_TUNING, {0,0,0}};
+    UsbCommand c = {CMD_MEASURE_ANTENNA_TUNING, {0, 0, 0}};
     clearCommandBuffer();
     SendCommand(&c);
     UsbCommand resp;
     while (!WaitForResponseTimeout(CMD_MEASURED_ANTENNA_TUNING, &resp, 2000)) {
         timeout++;
-        printf("."); fflush(stdout);
+        printf(".");
+        fflush(stdout);
         if (timeout > 7) {
             PrintAndLogEx(WARNING, "\nno response from Proxmark. Aborting...");
             return 1;
@@ -1533,45 +1594,45 @@ int CmdTuneSamples(const char *Cmd) {
     uint32_t peakf = resp.arg[2];
     uint32_t peakv = resp.arg[2] >> 32;
 
-    if ( v_lf125 > NON_VOLTAGE )
-        PrintAndLogEx(SUCCESS, "LF antenna: %5.2f V - 125.00 kHz", (v_lf125 * ANTENNA_ERROR)/1000.0);
-    if ( v_lf134 > NON_VOLTAGE )
-        PrintAndLogEx(SUCCESS, "LF antenna: %5.2f V - 134.00 kHz", (v_lf134 * ANTENNA_ERROR)/1000.0);
-    if ( peakv > NON_VOLTAGE && peakf > 0 )
-        PrintAndLogEx(SUCCESS, "LF optimal: %5.2f V - %6.2f kHz", (peakv * ANTENNA_ERROR)/1000.0, 12000.0/(peakf+1));
+    if (v_lf125 > NON_VOLTAGE)
+        PrintAndLogEx(SUCCESS, "LF antenna: %5.2f V - 125.00 kHz", (v_lf125 * ANTENNA_ERROR) / 1000.0);
+    if (v_lf134 > NON_VOLTAGE)
+        PrintAndLogEx(SUCCESS, "LF antenna: %5.2f V - 134.00 kHz", (v_lf134 * ANTENNA_ERROR) / 1000.0);
+    if (peakv > NON_VOLTAGE && peakf > 0)
+        PrintAndLogEx(SUCCESS, "LF optimal: %5.2f V - %6.2f kHz", (peakv * ANTENNA_ERROR) / 1000.0, 12000.0 / (peakf + 1));
 
     char judgement[20];
     memset(judgement, 0, sizeof(judgement));
     // LF evaluation
     if (peakv < LF_UNUSABLE_V)
-        sprintf(judgement, _RED_(UNUSABLE) );
+        sprintf(judgement, _RED_(UNUSABLE));
     else if (peakv < LF_MARGINAL_V)
-        sprintf(judgement, _YELLOW_(MARGINAL) );
+        sprintf(judgement, _YELLOW_(MARGINAL));
     else
-        sprintf(judgement, _GREEN_(OK) );
+        sprintf(judgement, _GREEN_(OK));
 
     PrintAndLogEx(NORMAL, "%sLF antenna is %s \n"
-            , (peakv < LF_UNUSABLE_V) ? _CYAN_([!]) : _GREEN_([+])
-            , judgement
-            );
+                  , (peakv < LF_UNUSABLE_V) ? _CYAN_([!]) : _GREEN_([+])
+                  , judgement
+                 );
 
     // HF evaluation
-    if ( v_hf > NON_VOLTAGE )
-        PrintAndLogEx(SUCCESS, "HF antenna: %5.2f V - 13.56 MHz", (v_hf * ANTENNA_ERROR)/1000.0);
+    if (v_hf > NON_VOLTAGE)
+        PrintAndLogEx(SUCCESS, "HF antenna: %5.2f V - 13.56 MHz", (v_hf * ANTENNA_ERROR) / 1000.0);
 
     memset(judgement, 0, sizeof(judgement));
 
     if (v_hf < HF_UNUSABLE_V)
-        sprintf(judgement, _RED_(UNUSABLE) );
+        sprintf(judgement, _RED_(UNUSABLE));
     else if (v_hf < HF_MARGINAL_V)
-        sprintf(judgement, _YELLOW_(MARGINAL) );
+        sprintf(judgement, _YELLOW_(MARGINAL));
     else
-        sprintf(judgement, _GREEN_(OK) );
+        sprintf(judgement, _GREEN_(OK));
 
     PrintAndLogEx(NORMAL, "%sHF antenna is %s"
-            , (v_hf < HF_UNUSABLE_V) ? _CYAN_([!]) : _GREEN_([+])
-            , judgement
-            );
+                  , (v_hf < HF_UNUSABLE_V) ? _CYAN_([!]) : _GREEN_([+])
+                  , judgement
+                 );
 
     // graph LF measurements
     // even here, these values has 3% error.
@@ -1580,7 +1641,7 @@ int CmdTuneSamples(const char *Cmd) {
         GraphBuffer[i] = resp.d.asBytes[i] - 128;
         test += resp.d.asBytes[i];
     }
-    if ( test > 0 ) {
+    if (test > 0) {
         PrintAndLogEx(SUCCESS, "\nDisplaying LF tuning graph. Divisor 89 is 134khz, 95 is 125khz.\n\n");
         GraphTraceLen = 256;
         ShowGraphWindow();
@@ -1593,7 +1654,8 @@ int CmdTuneSamples(const char *Cmd) {
     return 0;
 }
 
-int CmdLoad(const char *Cmd) {
+int CmdLoad(const char *Cmd)
+{
     char filename[FILE_PATH_SIZE] = {0x00};
     int len = 0;
 
@@ -1609,11 +1671,11 @@ int CmdLoad(const char *Cmd) {
 
     GraphTraceLen = 0;
     char line[80];
-    while (fgets(line, sizeof (line), f)) {
+    while (fgets(line, sizeof(line), f)) {
         GraphBuffer[GraphTraceLen] = atoi(line);
         GraphTraceLen++;
 
-        if ( GraphTraceLen >= MAX_GRAPH_TRACE_LEN )
+        if (GraphTraceLen >= MAX_GRAPH_TRACE_LEN)
             break;
     }
 
@@ -1629,20 +1691,21 @@ int CmdLoad(const char *Cmd) {
     setGraphBuf(bits, size);
     computeSignalProperties(bits, size);
 
-    setClockGrid(0,0);
+    setClockGrid(0, 0);
     DemodBufferLen = 0;
     RepaintGraphWindow();
     return 0;
 }
 
 // trim graph from the end
-int CmdLtrim(const char *Cmd) {
+int CmdLtrim(const char *Cmd)
+{
     // sanitycheck
     if (GraphTraceLen <= 0) return 1;
 
     int ds = atoi(Cmd);
     for (int i = ds; i < GraphTraceLen; ++i)
-        GraphBuffer[i-ds] = GraphBuffer[i];
+        GraphBuffer[i - ds] = GraphBuffer[i];
 
     GraphTraceLen -= ds;
     RepaintGraphWindow();
@@ -1650,7 +1713,8 @@ int CmdLtrim(const char *Cmd) {
 }
 
 // trim graph from the beginning
-int CmdRtrim(const char *Cmd) {
+int CmdRtrim(const char *Cmd)
+{
 
     int ds = atoi(Cmd);
 
@@ -1663,7 +1727,8 @@ int CmdRtrim(const char *Cmd) {
 }
 
 // trim graph (middle) piece
-int CmdMtrim(const char *Cmd) {
+int CmdMtrim(const char *Cmd)
+{
     int start = 0, stop = 0;
     sscanf(Cmd, "%i %i", &start, &stop);
 
@@ -1674,12 +1739,13 @@ int CmdMtrim(const char *Cmd) {
 
     GraphTraceLen = stop - start;
     for (int i = 0; i < GraphTraceLen; i++)
-        GraphBuffer[i] = GraphBuffer[start+i];
+        GraphBuffer[i] = GraphBuffer[start + i];
 
     return 0;
 }
 
-int CmdNorm(const char *Cmd) {
+int CmdNorm(const char *Cmd)
+{
     int i;
     int max = INT_MIN, min = INT_MAX;
 
@@ -1705,12 +1771,14 @@ int CmdNorm(const char *Cmd) {
     return 0;
 }
 
-int CmdPlot(const char *Cmd) {
+int CmdPlot(const char *Cmd)
+{
     ShowGraphWindow();
     return 0;
 }
 
-int CmdSave(const char *Cmd) {
+int CmdSave(const char *Cmd)
+{
 
     int len = 0;
     char filename[FILE_PATH_SIZE] = {0x00};
@@ -1720,7 +1788,7 @@ int CmdSave(const char *Cmd) {
     memcpy(filename, Cmd, len);
 
     FILE *f = fopen(filename, "w");
-    if(!f) {
+    if (!f) {
         PrintAndLogEx(WARNING, "couldn't open '%s'", filename);
         return 0;
     }
@@ -1735,7 +1803,8 @@ int CmdSave(const char *Cmd) {
     return 0;
 }
 
-int CmdScale(const char *Cmd) {
+int CmdScale(const char *Cmd)
+{
     CursorScaleFactor = atoi(Cmd);
     if (CursorScaleFactor == 0) {
         PrintAndLogEx(FAILED, "bad, can't have zero scale");
@@ -1745,7 +1814,8 @@ int CmdScale(const char *Cmd) {
     return 0;
 }
 
-int directionalThreshold(const int* in, int *out, size_t len, int8_t up, int8_t down) {
+int directionalThreshold(const int *in, int *out, size_t len, int8_t up, int8_t down)
+{
 
     int lastValue = in[0];
 
@@ -1755,21 +1825,17 @@ int directionalThreshold(const int* in, int *out, size_t len, int8_t up, int8_t 
 
     for (size_t i = 1; i < len; ++i) {
         // Apply first threshold to samples heading up
-        if (in[i] >= up && in[i] > lastValue)
-        {
+        if (in[i] >= up && in[i] > lastValue) {
             lastValue = out[i]; // Buffer last value as we overwrite it.
             out[i] = 1;
         }
         // Apply second threshold to samples heading down
-        else if (in[i] <= down && in[i] < lastValue)
-        {
+        else if (in[i] <= down && in[i] < lastValue) {
             lastValue = out[i]; // Buffer last value as we overwrite it.
             out[i] = -1;
-        }
-        else
-        {
+        } else {
             lastValue = out[i]; // Buffer last value as we overwrite it.
-            out[i] = out[i-1];
+            out[i] = out[i - 1];
         }
     }
 
@@ -1778,7 +1844,8 @@ int directionalThreshold(const int* in, int *out, size_t len, int8_t up, int8_t 
     return 0;
 }
 
-int CmdDirectionalThreshold(const char *Cmd) {
+int CmdDirectionalThreshold(const char *Cmd)
+{
     int8_t up = param_get8(Cmd, 0);
     int8_t down = param_get8(Cmd, 1);
 
@@ -1796,7 +1863,8 @@ int CmdDirectionalThreshold(const char *Cmd) {
     return 0;
 }
 
-int CmdZerocrossings(const char *Cmd) {
+int CmdZerocrossings(const char *Cmd)
+{
     // Zero-crossings aren't meaningful unless the signal is zero-mean.
     CmdHpf("");
 
@@ -1832,23 +1900,24 @@ int CmdZerocrossings(const char *Cmd) {
  * @param Cmd
  * @return
  */
-int Cmdbin2hex(const char *Cmd) {
+int Cmdbin2hex(const char *Cmd)
+{
     int bg = 0, en = 0;
     if (param_getptr(Cmd, &bg, &en, 0))
         return usage_data_bin2hex();
 
     //Number of digits supplied as argument
     size_t length = en - bg + 1;
-    size_t bytelen = (length+7) / 8;
-    uint8_t* arr = (uint8_t *) calloc(bytelen, sizeof(uint8_t));
+    size_t bytelen = (length + 7) / 8;
+    uint8_t *arr = (uint8_t *) calloc(bytelen, sizeof(uint8_t));
     memset(arr, 0, bytelen);
     BitstreamOut bout = { arr, 0, 0 };
 
     for (; bg <= en; bg++) {
         char c = Cmd[bg];
-        if( c == '1')
+        if (c == '1')
             pushBit(&bout, 1);
-        else if( c == '0')
+        else if (c == '0')
             pushBit(&bout, 0);
         else
             PrintAndLogEx(NORMAL, "Ignoring '%c'", c);
@@ -1862,11 +1931,12 @@ int Cmdbin2hex(const char *Cmd) {
     return 0;
 }
 
-int Cmdhex2bin(const char *Cmd) {
+int Cmdhex2bin(const char *Cmd)
+{
     int bg = 0, en = 0;
     if (param_getptr(Cmd, &bg, &en, 0)) return usage_data_hex2bin();
 
-    while (bg <= en ) {
+    while (bg <= en) {
         char x = Cmd[bg++];
         // capitalize
         if (x >= 'a' && x <= 'f')
@@ -1882,36 +1952,37 @@ int Cmdhex2bin(const char *Cmd) {
         //Uses printf instead of PrintAndLog since the latter
         // adds linebreaks to each printout - this way was more convenient since we don't have to
         // allocate a string and write to that first...
-        for(int i = 0 ; i < 4 ; ++i)
-            PrintAndLogEx(NORMAL, "%d",(x >> (3 - i)) & 1);
+        for (int i = 0 ; i < 4 ; ++i)
+            PrintAndLogEx(NORMAL, "%d", (x >> (3 - i)) & 1);
     }
     PrintAndLogEx(NORMAL, "\n");
     return 0;
 }
 
-    /* // example of FSK2 RF/50 Tones
-    static const int LowTone[]  = {
-    1,  1,  1,  1,  1, -1, -1, -1, -1, -1,
-    1,  1,  1,  1,  1, -1, -1, -1, -1, -1,
-    1,  1,  1,  1,  1, -1, -1, -1, -1, -1,
-    1,  1,  1,  1,  1, -1, -1, -1, -1, -1,
-    1,  1,  1,  1,  1, -1, -1, -1, -1, -1
-    };
-    static const int HighTone[] = {
-    1,  1,  1,  1,  1,     -1, -1, -1, -1, // note one extra 1 to padd due to 50/8 remainder (1/2 the remainder)
-    1,  1,  1,  1,         -1, -1, -1, -1,
-    1,  1,  1,  1,         -1, -1, -1, -1,
-    1,  1,  1,  1,         -1, -1, -1, -1,
-    1,  1,  1,  1,         -1, -1, -1, -1,
-    1,  1,  1,  1,     -1, -1, -1, -1, -1, // note one extra -1 to padd due to 50/8 remainder
-    };
-    */
-void GetHiLoTone(int *LowTone, int *HighTone, int clk, int LowToneFC, int HighToneFC) {
-    int i,j=0;
-    int Left_Modifier = ((clk % LowToneFC) % 2) + ((clk % LowToneFC)/2);
+/* // example of FSK2 RF/50 Tones
+static const int LowTone[]  = {
+1,  1,  1,  1,  1, -1, -1, -1, -1, -1,
+1,  1,  1,  1,  1, -1, -1, -1, -1, -1,
+1,  1,  1,  1,  1, -1, -1, -1, -1, -1,
+1,  1,  1,  1,  1, -1, -1, -1, -1, -1,
+1,  1,  1,  1,  1, -1, -1, -1, -1, -1
+};
+static const int HighTone[] = {
+1,  1,  1,  1,  1,     -1, -1, -1, -1, // note one extra 1 to padd due to 50/8 remainder (1/2 the remainder)
+1,  1,  1,  1,         -1, -1, -1, -1,
+1,  1,  1,  1,         -1, -1, -1, -1,
+1,  1,  1,  1,         -1, -1, -1, -1,
+1,  1,  1,  1,         -1, -1, -1, -1,
+1,  1,  1,  1,     -1, -1, -1, -1, -1, // note one extra -1 to padd due to 50/8 remainder
+};
+*/
+void GetHiLoTone(int *LowTone, int *HighTone, int clk, int LowToneFC, int HighToneFC)
+{
+    int i, j = 0;
+    int Left_Modifier = ((clk % LowToneFC) % 2) + ((clk % LowToneFC) / 2);
     int Right_Modifier = (clk % LowToneFC) / 2;
     //int HighToneMod = clk mod HighToneFC;
-    int LeftHalfFCCnt = (LowToneFC % 2) + (LowToneFC/2); //truncate
+    int LeftHalfFCCnt = (LowToneFC % 2) + (LowToneFC / 2); //truncate
     int FCs_per_clk = clk / LowToneFC;
 
     // need to correctly split up the clock to field clocks.
@@ -1927,21 +1998,21 @@ void GetHiLoTone(int *LowTone, int *HighTone, int clk, int LowToneFC, int HighTo
     for (i = 0; i < (FCs_per_clk); i++) {
         // loop # of samples per field clock
         for (j = 0; j < LowToneFC; j++) {
-            LowTone[ (i * LowToneFC) + Left_Modifier + j] = ( j < LeftHalfFCCnt ) ? 1 : -1;
+            LowTone[(i * LowToneFC) + Left_Modifier + j] = (j < LeftHalfFCCnt) ? 1 : -1;
         }
     }
 
     int k;
     // add last -1 modifiers
     for (k = 0; k < Right_Modifier; k++) {
-        LowTone[ ( (i-1) * LowToneFC) + Left_Modifier + j + k] = -1;
+        LowTone[((i - 1) * LowToneFC) + Left_Modifier + j + k] = -1;
     }
 
     // now do hightone
-    Left_Modifier = ((clk % HighToneFC) % 2) + ((clk % HighToneFC)/2);
+    Left_Modifier = ((clk % HighToneFC) % 2) + ((clk % HighToneFC) / 2);
     Right_Modifier = (clk % HighToneFC) / 2;
-    LeftHalfFCCnt = (HighToneFC % 2) + (HighToneFC/2); //truncate
-    FCs_per_clk = clk/HighToneFC;
+    LeftHalfFCCnt = (HighToneFC % 2) + (HighToneFC / 2); //truncate
+    FCs_per_clk = clk / HighToneFC;
 
     for (i = 0; i < Left_Modifier; i++) {
         HighTone[i] = 1;
@@ -1951,17 +2022,17 @@ void GetHiLoTone(int *LowTone, int *HighTone, int clk, int LowToneFC, int HighTo
     for (i = 0; i < (FCs_per_clk); i++) {
         // loop # of samples per field clock
         for (j = 0; j < HighToneFC; j++) {
-            HighTone[(i * HighToneFC) + Left_Modifier + j] = ( j < LeftHalfFCCnt ) ? 1 : -1;
+            HighTone[(i * HighToneFC) + Left_Modifier + j] = (j < LeftHalfFCCnt) ? 1 : -1;
         }
     }
 
     // add last -1 modifiers
     for (k = 0; k < Right_Modifier; k++) {
-        PrintAndLogEx(NORMAL, "(i-1)*HighToneFC+lm+j+k %i", ((i-1) * HighToneFC) + Left_Modifier + j + k);
-        HighTone[ ( (i-1) * HighToneFC) + Left_Modifier + j + k] = -1;
+        PrintAndLogEx(NORMAL, "(i-1)*HighToneFC+lm+j+k %i", ((i - 1) * HighToneFC) + Left_Modifier + j + k);
+        HighTone[((i - 1) * HighToneFC) + Left_Modifier + j + k] = -1;
     }
     if (g_debugMode == 2) {
-        for ( i = 0; i < clk; i++) {
+        for (i = 0; i < clk; i++) {
             PrintAndLogEx(NORMAL, "Low: %i,  High: %i", LowTone[i], HighTone[i]);
         }
     }
@@ -1969,19 +2040,20 @@ void GetHiLoTone(int *LowTone, int *HighTone, int clk, int LowToneFC, int HighTo
 
 //old CmdFSKdemod adapted by marshmellow
 //converts FSK to clear NRZ style wave.  (or demodulates)
-int FSKToNRZ(int *data, int *dataLen, int clk, int LowToneFC, int HighToneFC) {
+int FSKToNRZ(int *data, int *dataLen, int clk, int LowToneFC, int HighToneFC)
+{
     uint8_t ans = 0;
     if (clk == 0 || LowToneFC == 0 || HighToneFC == 0) {
-        int firstClockEdge=0;
+        int firstClockEdge = 0;
         ans = fskClocks((uint8_t *) &LowToneFC, (uint8_t *) &HighToneFC, (uint8_t *) &clk, &firstClockEdge);
         if (g_debugMode > 1) {
-            PrintAndLog ("DEBUG FSKtoNRZ: detected clocks: fc_low %i, fc_high %i, clk %i, firstClockEdge %i, ans %u", LowToneFC, HighToneFC, clk, firstClockEdge, ans);
+            PrintAndLog("DEBUG FSKtoNRZ: detected clocks: fc_low %i, fc_high %i, clk %i, firstClockEdge %i, ans %u", LowToneFC, HighToneFC, clk, firstClockEdge, ans);
         }
     }
     // currently only know fsk modulations with field clocks < 10 samples and > 4 samples. filter out to remove false positives (and possibly destroying ask/psk modulated waves...)
     if (ans == 0 || clk == 0 || LowToneFC == 0 || HighToneFC == 0 || LowToneFC > 10 || HighToneFC < 4) {
         if (g_debugMode > 1) {
-            PrintAndLog ("DEBUG FSKtoNRZ: no fsk clocks found");
+            PrintAndLog("DEBUG FSKtoNRZ: no fsk clocks found");
         }
         return 0;
     }
@@ -2010,15 +2082,15 @@ int FSKToNRZ(int *data, int *dataLen, int clk, int LowToneFC, int HighToneFC) {
     // now we have the abs( [average sample value per clk] * 100 ) for each tone
     //   loop through again [all samples] - clk - 16
     //                  note why 16???  is 16 the largest FC? changed to LowToneFC as that should be the > fc
-    for(i = 0; i < *dataLen - clk - LowToneFC; ++i) {
+    for (i = 0; i < *dataLen - clk - LowToneFC; ++i) {
         int lowTot = 0, highTot = 0;
 
         // sum a field clock width of abs( [average sample values per clk] * 100) for each tone
         for (j = 0; j < LowToneFC; ++j) {  //10 for fsk2
-          lowTot += (data[i + j] & 0xffff);
+            lowTot += (data[i + j] & 0xffff);
         }
         for (j = 0; j < HighToneFC; j++) {  //8 for fsk2
-          highTot += (data[i + j] >> 16);
+            highTot += (data[i + j] >> 16);
         }
 
         // subtract the sum of lowTone averages by the sum of highTone averages as it
@@ -2030,7 +2102,8 @@ int FSKToNRZ(int *data, int *dataLen, int clk, int LowToneFC, int HighToneFC) {
     return 0;
 }
 
-int CmdFSKToNRZ(const char *Cmd) {
+int CmdFSKToNRZ(const char *Cmd)
+{
     // take clk, fc_low, fc_high
     //   blank = auto;
     bool errors = false;
@@ -2038,26 +2111,26 @@ int CmdFSKToNRZ(const char *Cmd) {
     int  clk = 0, fc_low = 10, fc_high = 8;
     while (param_getchar(Cmd, cmdp) != 0x00) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
-        case 'h':
-            return usage_data_fsktonrz();
-        case 'c':
-            clk = param_get32ex(Cmd, cmdp+1, 0, 10);
-            cmdp += 2;
-            break;
-        case 'f':
-            fc_high = param_get32ex(Cmd, cmdp+1, 0, 10);
-            cmdp += 2;
-            break;
-        case 'l':
-            fc_low = param_get32ex(Cmd, cmdp+1, 0, 10);
-            cmdp += 2;
-            break;
-        default:
-            PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-            errors = true;
-            break;
+            case 'h':
+                return usage_data_fsktonrz();
+            case 'c':
+                clk = param_get32ex(Cmd, cmdp + 1, 0, 10);
+                cmdp += 2;
+                break;
+            case 'f':
+                fc_high = param_get32ex(Cmd, cmdp + 1, 0, 10);
+                cmdp += 2;
+                break;
+            case 'l':
+                fc_low = param_get32ex(Cmd, cmdp + 1, 0, 10);
+                cmdp += 2;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
         }
-        if(errors) break;
+        if (errors) break;
     }
     //Validations
     if (errors) return usage_data_fsktonrz();
@@ -2070,7 +2143,8 @@ int CmdFSKToNRZ(const char *Cmd) {
     return ans;
 }
 
-int CmdDataIIR(const char *Cmd){
+int CmdDataIIR(const char *Cmd)
+{
     uint8_t k = param_get8(Cmd, 0);
     //iceIIR_Butterworth(GraphBuffer, GraphTraceLen);
     iceSimple_Filter(GraphBuffer, GraphTraceLen, k);
@@ -2087,7 +2161,7 @@ static command_t CommandTable[] = {
     {"help",            CmdHelp,            1, "This help"},
     {"askedgedetect",   CmdAskEdgeDetect,   1, "[threshold] Adjust Graph for manual ASK demod using the length of sample differences to detect the edge of a wave (use 20-45, def:25)"},
     {"autocorr",        CmdAutoCorr,        1, "[window length] [g] -- Autocorrelation over window - g to save back to GraphBuffer (overwrite)"},
-    {"biphaserawdecode",CmdBiphaseDecodeRaw,1, "[offset] [invert<0|1>] [maxErr] -- Biphase decode bin stream in DemodBuffer (offset = 0|1 bits to shift the decode start)"},
+    {"biphaserawdecode", CmdBiphaseDecodeRaw, 1, "[offset] [invert<0|1>] [maxErr] -- Biphase decode bin stream in DemodBuffer (offset = 0|1 bits to shift the decode start)"},
     {"bin2hex",         Cmdbin2hex,         1, "<digits> -- Converts binary to hexadecimal"},
     {"bitsamples",      CmdBitsamples,      0, "Get raw samples as bitstring"},
     {"buffclear",       CmdBuffClear,       1, "Clears bigbuff on deviceside and graph window"},
@@ -2108,7 +2182,7 @@ static command_t CommandTable[] = {
     {"manrawdecode",    Cmdmandecoderaw,    1, "[invert] [maxErr] -- Manchester decode binary stream in DemodBuffer"},
     {"norm",            CmdNorm,            1, "Normalize max/min to +/-128"},
     {"plot",            CmdPlot,            1, "Show graph window (hit 'h' in window for keystroke help)"},
-    {"printdemodbuffer",CmdPrintDemodBuff,  1, "[x] [o] <offset> [l] <length> -- print the data in the DemodBuffer - 'x' for hex output"},
+    {"printdemodbuffer", CmdPrintDemodBuff,  1, "[x] [o] <offset> [l] <length> -- print the data in the DemodBuffer - 'x' for hex output"},
     {"rawdemod",        CmdRawDemod,        1, "[modulation] ... <options> -see help (h option) -- Demodulate the data in the GraphBuffer and output binary"},
     {"samples",         CmdSamples,         0, "[512 - 40000] -- Get raw samples for graph window (GraphBuffer)"},
     {"save",            CmdSave,            1, "<filename> -- Save trace (from graph window)"},
@@ -2124,13 +2198,15 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdData(const char *Cmd) {
+int CmdData(const char *Cmd)
+{
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
+int CmdHelp(const char *Cmd)
+{
     CmdsHelp(CommandTable);
     return 0;
 }

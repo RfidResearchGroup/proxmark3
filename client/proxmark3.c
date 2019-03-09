@@ -29,7 +29,8 @@
 #include "comms.h"
 
 #if defined(__linux__) || (__APPLE__)
-static void showBanner(void){
+static void showBanner(void)
+{
     printf("\n\n");
     printf("\e[34m██████╗ ███╗   ███╗ ████╗\e[0m     ...iceman fork\n");
     printf("\e[34m██╔══██╗████╗ ████║   ══█║\e[0m      ...dedicated to \e[34mRDV40\e[0m\n");
@@ -50,7 +51,8 @@ void
 __attribute__((force_align_arg_pointer))
 #endif
 #endif
-main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
+main_loop(char *script_cmds_file, char *script_cmd, bool usb_present)
+{
 
     char *cmd = NULL;
     bool execCommand = (script_cmd != NULL);
@@ -63,7 +65,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
     if (usb_present) {
         SetOffline(false);
         // cache Version information now:
-        if ( execCommand || script_cmds_file || stdinOnPipe)
+        if (execCommand || script_cmds_file || stdinOnPipe)
             CmdVersion("s");
         else
             CmdVersion("");
@@ -123,7 +125,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
             }
         } else {
             // If there is a script command
-            if (execCommand){
+            if (execCommand) {
 
                 if ((cmd = strmcopy(script_cmd)) != NULL)
                     PrintAndLogEx(NORMAL, PROXPROMPT"%s", cmd);
@@ -162,12 +164,12 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 
             // rtrim
             size_t l = strlen(cmd);
-            if ( l > 0 && isspace(cmd[l - 1]))
-                cmd[l-1] = 0x00;
+            if (l > 0 && isspace(cmd[l - 1]))
+                cmd[l - 1] = 0x00;
 
             if (cmd[0] != 0x00) {
                 int ret = CommandReceived(cmd);
-                HIST_ENTRY * entry = history_get(history_length);
+                HIST_ENTRY *entry = history_get(history_length);
                 if ((!entry) || (strcmp(entry->line, cmd) != 0))
                     add_history(cmd);
 
@@ -194,7 +196,8 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
     }
 }
 
-static void dumpAllHelp(int markdown) {
+static void dumpAllHelp(int markdown)
+{
     PrintAndLogEx(NORMAL, "\n%sProxmark3 command dump%s\n\n", markdown ? "# " : "", markdown ? "" : "\n======================");
     PrintAndLogEx(NORMAL, "Some commands are available only if a Proxmark is actually connected.%s\n", markdown ? "  " : "");
     PrintAndLogEx(NORMAL, "Check column \"offline\" for their availability.\n");
@@ -206,33 +209,37 @@ static void dumpAllHelp(int markdown) {
 static char *my_executable_path = NULL;
 static char *my_executable_directory = NULL;
 
-const char *get_my_executable_path(void) {
+const char *get_my_executable_path(void)
+{
     return my_executable_path;
 }
 
-const char *get_my_executable_directory(void) {
+const char *get_my_executable_directory(void)
+{
     return my_executable_directory;
 }
 
-static void set_my_executable_path(void) {
+static void set_my_executable_path(void)
+{
     int path_length = wai_getExecutablePath(NULL, 0, NULL);
     if (path_length != -1) {
-        my_executable_path = (char*)calloc(path_length + 1, sizeof(uint8_t));
+        my_executable_path = (char *)calloc(path_length + 1, sizeof(uint8_t));
         int dirname_length = 0;
         if (wai_getExecutablePath(my_executable_path, path_length, &dirname_length) != -1) {
             my_executable_path[path_length] = '\0';
             my_executable_directory = (char *)calloc(dirname_length + 2, sizeof(uint8_t));
-            strncpy(my_executable_directory, my_executable_path, dirname_length+1);
-            my_executable_directory[dirname_length+1] = '\0';
+            strncpy(my_executable_directory, my_executable_path, dirname_length + 1);
+            my_executable_directory[dirname_length + 1] = '\0';
         }
     }
 }
 
-static void show_help(bool showFullHelp, char *command_line){
+static void show_help(bool showFullHelp, char *command_line)
+{
     PrintAndLogEx(NORMAL, "syntax: %s <port> [-h | -help | -m | -f | -flush | -w | -wait | -c | -command | -l | -lua] [cmd_script_file_name] [command][lua_script_name]\n", command_line);
     PrintAndLogEx(NORMAL, "\texample:'%s "SERIAL_PORT_H"'\n\n", command_line);
 
-    if (showFullHelp){
+    if (showFullHelp) {
         PrintAndLogEx(NORMAL, "help: <-h|-help> Dump all interactive command's help at once.\n");
         PrintAndLogEx(NORMAL, "\t%s  -h\n\n", command_line);
         PrintAndLogEx(NORMAL, "markdown: <-m> Dump all interactive help at once in markdown syntax\n");
@@ -250,7 +257,8 @@ static void show_help(bool showFullHelp, char *command_line){
     }
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[])
+{
     srand(time(0));
 
     bool usb_present = false;
@@ -260,7 +268,7 @@ int main(int argc, char* argv[]) {
     char *script_cmds_file = NULL;
     char *script_cmd = NULL;
 
-     /* initialize history */
+    /* initialize history */
     using_history();
 
 #ifdef RL_STATE_READCMD
@@ -288,23 +296,23 @@ int main(int argc, char* argv[]) {
         }
 
         // flush output
-        if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "-flush") == 0){
+        if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "-flush") == 0) {
             SetFlushAfterWrite(true);
             PrintAndLogEx(INFO, "Output will be flushed after every print.\n");
         }
 
         // wait for comport
-        if (strcmp(argv[i], "-w") == 0 || strcmp(argv[i], "-wait") == 0){
+        if (strcmp(argv[i], "-w") == 0 || strcmp(argv[i], "-wait") == 0) {
             waitCOMPort = true;
         }
 
         // execute pm3 command
-        if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "-command") == 0){
+        if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "-command") == 0) {
             executeCommand = true;
         }
 
         // execute lua script
-        if (strcmp(argv[i], "-l") == 0 || strcmp(argv[i], "-lua") == 0){
+        if (strcmp(argv[i], "-l") == 0 || strcmp(argv[i], "-lua") == 0) {
             executeCommand = true;
             addLuaExec = true;
         }
@@ -312,7 +320,7 @@ int main(int argc, char* argv[]) {
 
     // If the user passed the filename of the 'script' to execute, get it from last parameter
     if (argc > 2 && argv[argc - 1] && argv[argc - 1][0] != '-') {
-        if (executeCommand){
+        if (executeCommand) {
             script_cmd = argv[argc - 1];
 
             while (script_cmd[strlen(script_cmd) - 1] == ' ')
@@ -321,10 +329,10 @@ int main(int argc, char* argv[]) {
             if (strlen(script_cmd) == 0) {
                 script_cmd = NULL;
             } else {
-                if (addLuaExec){
+                if (addLuaExec) {
                     // add "script run " to command
                     int len = strlen(script_cmd) + 11 + 1;
-                    char *ctmp = (char*) calloc(len, sizeof(uint8_t));
+                    char *ctmp = (char *) calloc(len, sizeof(uint8_t));
                     if (ctmp != NULL) {
                         memset(ctmp, 0, len);
                         strcpy(ctmp, "script run ");
@@ -341,7 +349,7 @@ int main(int argc, char* argv[]) {
     }
 
     // check command
-    if (executeCommand && (!script_cmd || strlen(script_cmd) == 0)){
+    if (executeCommand && (!script_cmd || strlen(script_cmd) == 0)) {
         PrintAndLogEx(WARNING, "ERROR: execute command: command not found.\n");
         return 2;
     }
@@ -350,7 +358,7 @@ int main(int argc, char* argv[]) {
 // ascii art doesn't work well on mingw :(
 
     bool stdinOnPipe = !isatty(STDIN_FILENO);
-    if ( !executeCommand && !script_cmds_file && !stdinOnPipe )
+    if (!executeCommand && !script_cmds_file && !stdinOnPipe)
         showBanner();
 #endif
 
@@ -367,7 +375,7 @@ int main(int argc, char* argv[]) {
     MainGraphics();
 #  else
     // for *nix distro's,  check enviroment variable to verify a display
-    char* display = getenv("DISPLAY");
+    char *display = getenv("DISPLAY");
     if (display && strlen(display) > 1) {
         InitGraphics(argc, argv, script_cmds_file, script_cmd, usb_present);
         MainGraphics();

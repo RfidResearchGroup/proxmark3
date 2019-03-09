@@ -56,7 +56,7 @@
  * \param in  pointer to the block (64 bit = 8 byte) where the plaintext is read from
  * \param key pointer to the key (64 bit = 8 byte)
  */
-void des_enc(void* out, const void* in, const void* key);
+void des_enc(void *out, const void *in, const void *key);
 
 /** \fn void des_dec(void* out, const void* in, const void* key)
  * \brief decrypt a block with DES
@@ -71,7 +71,7 @@ void des_enc(void* out, const void* in, const void* key);
  * \param key pointer to the key (64 bit = 8 byte)
  */
 //void des_dec(void* out, const void* in, const void* key);
-void des_dec(void* out, const void* in, const uint8_t* key);
+void des_dec(void *out, const void *in, const uint8_t *key);
 
 /** \fn void tdes_enc(void* out, const void* in, const void* key)
  * \brief encrypt a block with Tripple-DES
@@ -86,7 +86,7 @@ void des_dec(void* out, const void* in, const uint8_t* key);
  * \param key pointer to the key (192 bit = 24 byte)
  */
 //void tdes_enc(void* out, const void* in, const void* key);
-void tdes_enc(void* out, void* in, const void* key);
+void tdes_enc(void *out, void *in, const void *key);
 
 /** \fn void tdes_dec(void* out, const void* in, const void* key)
  * \brief decrypt a block with Tripple-DES
@@ -100,11 +100,11 @@ void tdes_enc(void* out, void* in, const void* key);
  * \param in  pointer to the block (64 bit = 8 byte) where the ciphertext is read from
  * \param key pointer to the key (192 bit = 24 byte)
  */
- //void tdes_dec(void* out, const void* in, const void* key);
- void tdes_dec(void* out, void* in, const uint8_t* key);
+//void tdes_dec(void* out, const void* in, const void* key);
+void tdes_dec(void *out, void *in, const uint8_t *key);
 
- void tdes_2key_enc(void* out, const void* in, size_t length, const void* key, unsigned char iv[8]);
- void tdes_2key_dec(void* out, const void* in, size_t length, const void* key, unsigned char iv[8]);
+void tdes_2key_enc(void *out, const void *in, size_t length, const void *key, unsigned char iv[8]);
+void tdes_2key_dec(void *out, const void *in, size_t length, const void *key, unsigned char iv[8]);
 
 // Copied from des.h in desfire imp.
 typedef unsigned long DES_KS[16][2];   /* Single-key DES key schedule */

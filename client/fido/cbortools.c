@@ -16,113 +16,116 @@
 #include "util.h"
 #include "fidocore.h"
 
-static void indent(int nestingLevel) {
+static void indent(int nestingLevel)
+{
     while (nestingLevel--)
         printf("  ");
 }
 
-static CborError dumpelm(CborValue *it, bool *got_next, int nestingLevel) {
+static CborError dumpelm(CborValue *it, bool *got_next, int nestingLevel)
+{
     CborError err;
     *got_next = false;
 
     CborType type = cbor_value_get_type(it);
     indent(nestingLevel);
     switch (type) {
-    case CborMapType:
-    case CborArrayType: {
-        printf(type == CborArrayType ? "Array[" : "Map[");
-        break;
-    }
-
-    case CborIntegerType: {
-        int64_t val;
-        cbor_value_get_int64(it, &val);     // can't fail
-        printf("%lld", (long long)val);
-        break;
-    }
-
-    case CborByteStringType: {
-        uint8_t *buf;
-        size_t n;
-        err = cbor_value_dup_byte_string(it, &buf, &n, it);
-        *got_next = true;
-        if (err)
-            return err;     // parse error
-        printf("%s", sprint_hex(buf, n));
-        free(buf);
-        break;
-    }
-
-    case CborTextStringType: {
-        char *buf;
-        size_t n;
-        err = cbor_value_dup_text_string(it, &buf, &n, it);
-        *got_next = true;
-        if (err)
-            return err;     // parse error
-        printf("%s", buf);
-        free(buf);
-        break;
-    }
-
-    case CborTagType: {
-        CborTag tag;
-        cbor_value_get_tag(it, &tag);
-        printf("Tag(%lld)", (long long)tag);
-        break;
-    }
-
-    case CborSimpleType: {
-        uint8_t type;
-        cbor_value_get_simple_type(it, &type);
-        printf("simple(%u)", type);
-        break;
-    }
-
-    case CborNullType:
-        printf("null");
-        break;
-
-    case CborUndefinedType:
-        printf("undefined");
-        break;
-
-    case CborBooleanType: {
-        bool val;
-        cbor_value_get_boolean(it, &val);       // can't fail
-        printf("%s", val ? "true" : "false");
-        break;
-    }
-
-    case CborDoubleType: {
-        double val;
-        if (false) {
-            float f;
-    case CborFloatType:
-            cbor_value_get_float(it, &f);
-            val = f;
-        } else {
-            cbor_value_get_double(it, &val);
+        case CborMapType:
+        case CborArrayType: {
+            printf(type == CborArrayType ? "Array[" : "Map[");
+            break;
         }
-        printf("%g", val);
-        break;
-    }
-    case CborHalfFloatType: {
-        uint16_t val;
-        cbor_value_get_half_float(it, &val);
-        printf("__f16(%04x)", val);
-        break;
-    }
 
-    case CborInvalidType:
-        printf("CborInvalidType!!!");
-        break;
+        case CborIntegerType: {
+            int64_t val;
+            cbor_value_get_int64(it, &val);     // can't fail
+            printf("%lld", (long long)val);
+            break;
+        }
+
+        case CborByteStringType: {
+            uint8_t *buf;
+            size_t n;
+            err = cbor_value_dup_byte_string(it, &buf, &n, it);
+            *got_next = true;
+            if (err)
+                return err;     // parse error
+            printf("%s", sprint_hex(buf, n));
+            free(buf);
+            break;
+        }
+
+        case CborTextStringType: {
+            char *buf;
+            size_t n;
+            err = cbor_value_dup_text_string(it, &buf, &n, it);
+            *got_next = true;
+            if (err)
+                return err;     // parse error
+            printf("%s", buf);
+            free(buf);
+            break;
+        }
+
+        case CborTagType: {
+            CborTag tag;
+            cbor_value_get_tag(it, &tag);
+            printf("Tag(%lld)", (long long)tag);
+            break;
+        }
+
+        case CborSimpleType: {
+            uint8_t type;
+            cbor_value_get_simple_type(it, &type);
+            printf("simple(%u)", type);
+            break;
+        }
+
+        case CborNullType:
+            printf("null");
+            break;
+
+        case CborUndefinedType:
+            printf("undefined");
+            break;
+
+        case CborBooleanType: {
+            bool val;
+            cbor_value_get_boolean(it, &val);       // can't fail
+            printf("%s", val ? "true" : "false");
+            break;
+        }
+
+        case CborDoubleType: {
+            double val;
+            if (false) {
+                float f;
+                case CborFloatType:
+                    cbor_value_get_float(it, &f);
+                    val = f;
+                } else {
+                    cbor_value_get_double(it, &val);
+                }
+                printf("%g", val);
+                break;
+            }
+        case CborHalfFloatType: {
+            uint16_t val;
+            cbor_value_get_half_float(it, &val);
+            printf("__f16(%04x)", val);
+            break;
+        }
+
+        case CborInvalidType:
+            printf("CborInvalidType!!!");
+            break;
     }
 
     return CborNoError;
 }
 
-static CborError dumprecursive(uint8_t cmdCode, bool isResponse, CborValue *it, bool isMapType, int nestingLevel) {
+static CborError dumprecursive(uint8_t cmdCode, bool isResponse, CborValue *it, bool isMapType, int nestingLevel)
+{
     int elmCount = 0;
     while (!cbor_value_at_end(it)) {
         CborError err;
@@ -131,42 +134,42 @@ static CborError dumprecursive(uint8_t cmdCode, bool isResponse, CborValue *it, 
         bool got_next;
 
         switch (type) {
-        case CborMapType:
-        case CborArrayType: {
-            // recursive type
-            CborValue recursed;
-            assert(cbor_value_is_container(it));
-            if (!(isMapType && (elmCount % 2)))
+            case CborMapType:
+            case CborArrayType: {
+                // recursive type
+                CborValue recursed;
+                assert(cbor_value_is_container(it));
+                if (!(isMapType && (elmCount % 2)))
+                    indent(nestingLevel);
+                printf(type == CborArrayType ? "Array[\n" : "Map[\n");
+                err = cbor_value_enter_container(it, &recursed);
+                if (err)
+                    return err;       // parse error
+                err = dumprecursive(cmdCode, isResponse, &recursed, (type == CborMapType), nestingLevel + 1);
+                if (err)
+                    return err;       // parse error
+                err = cbor_value_leave_container(it, &recursed);
+                if (err)
+                    return err;       // parse error
                 indent(nestingLevel);
-            printf(type == CborArrayType ? "Array[\n" : "Map[\n");
-            err = cbor_value_enter_container(it, &recursed);
-            if (err)
-                return err;       // parse error
-            err = dumprecursive(cmdCode, isResponse, &recursed, (type == CborMapType), nestingLevel + 1);
-            if (err)
-                return err;       // parse error
-            err = cbor_value_leave_container(it, &recursed);
-            if (err)
-                return err;       // parse error
-            indent(nestingLevel);
-            printf("]");
-            got_next = true;
-            break;
-        }
-
-        default: {
-            err = dumpelm(it, &got_next, (isMapType && (elmCount % 2)) ? 0 : nestingLevel);
-            if (err)
-                return err;
-            if (cmdCode > 0 && nestingLevel == 1 && isMapType && !(elmCount % 2)) {
-                int64_t val;
-                cbor_value_get_int64(it, &val);
-                char *desc = fido2GetCmdMemberDescription(cmdCode, isResponse, val);
-                if (desc)
-                    printf(" (%s)", desc);
+                printf("]");
+                got_next = true;
+                break;
             }
-            break;
-        }
+
+            default: {
+                err = dumpelm(it, &got_next, (isMapType && (elmCount % 2)) ? 0 : nestingLevel);
+                if (err)
+                    return err;
+                if (cmdCode > 0 && nestingLevel == 1 && isMapType && !(elmCount % 2)) {
+                    int64_t val;
+                    cbor_value_get_int64(it, &val);
+                    char *desc = fido2GetCmdMemberDescription(cmdCode, isResponse, val);
+                    if (desc)
+                        printf(" (%s)", desc);
+                }
+                break;
+            }
         }
 
         if (!got_next) {
@@ -184,7 +187,8 @@ static CborError dumprecursive(uint8_t cmdCode, bool isResponse, CborValue *it, 
     return CborNoError;
 }
 
-int TinyCborInit(uint8_t *data, size_t length, CborValue *cb) {
+int TinyCborInit(uint8_t *data, size_t length, CborValue *cb)
+{
     CborParser parser;
     CborError err = cbor_parser_init(data, length, 0, &parser, cb);
     if (err)
@@ -193,7 +197,8 @@ int TinyCborInit(uint8_t *data, size_t length, CborValue *cb) {
     return 0;
 }
 
-int TinyCborPrintFIDOPackage(uint8_t cmdCode, bool isResponse, uint8_t *data, size_t length) {
+int TinyCborPrintFIDOPackage(uint8_t cmdCode, bool isResponse, uint8_t *data, size_t length)
+{
     CborValue cb;
     int res;
     res = TinyCborInit(data, length, &cb);
@@ -205,18 +210,19 @@ int TinyCborPrintFIDOPackage(uint8_t cmdCode, bool isResponse, uint8_t *data, si
     if (err) {
         fprintf(stderr,
 #if __WORDSIZE == 64
-        "CBOR parsing failure at offset %" PRId64 " : %s\n",
+                "CBOR parsing failure at offset %" PRId64 " : %s\n",
 #else
-        "CBOR parsing failure at offset %" PRId32 " : %s\n",
+                "CBOR parsing failure at offset %" PRId32 " : %s\n",
 #endif
-        cb.ptr - data, cbor_error_string(err));
+                cb.ptr - data, cbor_error_string(err));
         return 1;
     }
 
     return 0;
 }
 
-int JsonObjElmCount(json_t *elm) {
+int JsonObjElmCount(json_t *elm)
+{
     int res = 0;
     const char *key;
     json_t *value;
@@ -232,7 +238,8 @@ int JsonObjElmCount(json_t *elm) {
     return res;
 }
 
-int JsonToCbor(json_t *elm, CborEncoder *encoder) {
+int JsonToCbor(json_t *elm, CborEncoder *encoder)
+{
     if (!elm || !encoder)
         return 1;
 
@@ -295,7 +302,7 @@ int JsonToCbor(json_t *elm, CborEncoder *encoder) {
     }
 
     if (json_is_string(elm)) {
-        const char * val = json_string_value(elm);
+        const char *val = json_string_value(elm);
         if (CheckStringIsHEXValue(val)) {
             size_t datalen = 0;
             uint8_t data[4096] = {0};
@@ -316,7 +323,8 @@ int JsonToCbor(json_t *elm, CborEncoder *encoder) {
     return 0;
 }
 
-int CborMapGetKeyById(CborParser *parser, CborValue *map, uint8_t *data, size_t dataLen, int key) {
+int CborMapGetKeyById(CborParser *parser, CborValue *map, uint8_t *data, size_t dataLen, int key)
+{
     CborValue cb;
 
     CborError err = cbor_parser_init(data, dataLen, 0, parser, &cb);
@@ -353,11 +361,13 @@ int CborMapGetKeyById(CborParser *parser, CborValue *map, uint8_t *data, size_t 
     return 2;
 }
 
-CborError CborGetArrayBinStringValue(CborValue *elm, uint8_t *data, size_t maxdatalen, size_t *datalen) {
+CborError CborGetArrayBinStringValue(CborValue *elm, uint8_t *data, size_t maxdatalen, size_t *datalen)
+{
     return CborGetArrayBinStringValueEx(elm, data, maxdatalen, datalen, NULL, 0);
 }
 
-CborError CborGetArrayBinStringValueEx(CborValue *elm, uint8_t *data, size_t maxdatalen, size_t *datalen, uint8_t *delimeter, size_t delimeterlen) {
+CborError CborGetArrayBinStringValueEx(CborValue *elm, uint8_t *data, size_t maxdatalen, size_t *datalen, uint8_t *delimeter, size_t delimeterlen)
+{
     CborValue array;
     if (datalen)
         *datalen = 0;
@@ -389,7 +399,8 @@ CborError CborGetArrayBinStringValueEx(CborValue *elm, uint8_t *data, size_t max
     return CborNoError;
 };
 
-CborError CborGetBinStringValue(CborValue *elm, uint8_t *data, size_t maxdatalen, size_t *datalen) {
+CborError CborGetBinStringValue(CborValue *elm, uint8_t *data, size_t maxdatalen, size_t *datalen)
+{
     if (datalen)
         *datalen = 0;
 
@@ -404,7 +415,8 @@ CborError CborGetBinStringValue(CborValue *elm, uint8_t *data, size_t maxdatalen
     return CborNoError;
 };
 
-CborError CborGetArrayStringValue(CborValue *elm, char *data, size_t maxdatalen, size_t *datalen, char *delimeter) {
+CborError CborGetArrayStringValue(CborValue *elm, char *data, size_t maxdatalen, size_t *datalen, char *delimeter)
+{
     CborValue array;
     if (datalen)
         *datalen = 0;
@@ -437,7 +449,8 @@ CborError CborGetArrayStringValue(CborValue *elm, char *data, size_t maxdatalen,
     return CborNoError;
 };
 
-CborError CborGetStringValue(CborValue *elm, char *data, size_t maxdatalen, size_t *datalen) {
+CborError CborGetStringValue(CborValue *elm, char *data, size_t maxdatalen, size_t *datalen)
+{
     if (datalen)
         *datalen = 0;
 
@@ -452,14 +465,16 @@ CborError CborGetStringValue(CborValue *elm, char *data, size_t maxdatalen, size
     return CborNoError;
 };
 
-CborError CborGetStringValueBuf(CborValue *elm) {
+CborError CborGetStringValueBuf(CborValue *elm)
+{
     static char stringBuf[2048];
     memset(stringBuf, 0x00, sizeof(stringBuf));
 
     return CborGetStringValue(elm, stringBuf, sizeof(stringBuf), NULL);
 };
 
-int CBOREncodeElm(json_t *root, char *rootElmId, CborEncoder *encoder) {
+int CBOREncodeElm(json_t *root, char *rootElmId, CborEncoder *encoder)
+{
     json_t *elm = NULL;
     if (rootElmId && strlen(rootElmId) && rootElmId[0] == '$')
         elm = json_path_get(root, rootElmId);
@@ -474,7 +489,8 @@ int CBOREncodeElm(json_t *root, char *rootElmId, CborEncoder *encoder) {
     return res;
 }
 
-CborError CBOREncodeClientDataHash(json_t *root, CborEncoder *encoder) {
+CborError CBOREncodeClientDataHash(json_t *root, CborEncoder *encoder)
+{
     uint8_t buf[100] = {0};
     size_t jlen;
 

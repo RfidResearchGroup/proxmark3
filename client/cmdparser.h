@@ -11,12 +11,11 @@
 #ifndef CMDPARSER_H__
 #define CMDPARSER_H__
 
-typedef struct command_s
-{
-  const char * Name;
-  int (*Parse)(const char *Cmd);
-  int Offline;
-  const char * Help;
+typedef struct command_s {
+    const char *Name;
+    int (*Parse)(const char *Cmd);
+    int Offline;
+    const char *Help;
 } command_t;
 
 // command_t array are expected to be NULL terminated

@@ -144,15 +144,15 @@ extern int CmdT55xxDetect(const char *Cmd);
 extern int CmdResetRead(const char *Cmd);
 extern int CmdT55xxWipe(const char *Cmd);
 
-char * GetBitRateStr(uint32_t id, bool xmode);
-char * GetSaferStr(uint32_t id);
-char * GetModulationStr( uint32_t id);
-char * GetModelStrFromCID(uint32_t cid);
-char * GetSelectedModulationStr( uint8_t id);
+char *GetBitRateStr(uint32_t id, bool xmode);
+char *GetSaferStr(uint32_t id);
+char *GetModulationStr(uint32_t id);
+char *GetModelStrFromCID(uint32_t cid);
+char *GetSelectedModulationStr(uint8_t id);
 uint32_t PackBits(uint8_t start, uint8_t len, uint8_t *bitstream);
 void printT5xxHeader(uint8_t page);
 void printT55xxBlock(const char *demodStr);
-int printConfiguration( t55xx_conf_block_t b);
+int printConfiguration(t55xx_conf_block_t b);
 
 bool DecodeT55xxBlock(void);
 bool tryDetectModulation(void);
@@ -160,12 +160,12 @@ bool testKnownConfigBlock(uint32_t block0);
 extern bool tryDetectP1(bool getData);
 bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5);
 int special(const char *Cmd);
-bool AquireData( uint8_t page, uint8_t block, bool pwdmode, uint32_t password );
-bool AquireDataEx( uint8_t page, uint8_t block, bool pwdmode, uint32_t password, uint32_t timing ) ;
+bool AquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password);
+bool AquireDataEx(uint8_t page, uint8_t block, bool pwdmode, uint32_t password, uint32_t timing) ;
 
 bool detectPassword(int password);
 
-void printT55x7Trace( t55x7_tracedata_t data, uint8_t repeat );
-void printT5555Trace( t5555_tracedata_t data, uint8_t repeat );
+void printT55x7Trace(t55x7_tracedata_t data, uint8_t repeat);
+void printT5555Trace(t5555_tracedata_t data, uint8_t repeat);
 
 #endif

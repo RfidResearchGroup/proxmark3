@@ -20,16 +20,16 @@
 #include "crapto1.h"
 #include <stdlib.h>
 
-struct Crypto1State * crypto1_create(uint64_t key)
+struct Crypto1State *crypto1_create(uint64_t key)
 {
     struct Crypto1State *s = malloc(sizeof(*s));
-    if ( !s ) return NULL;
+    if (!s) return NULL;
 
     s->odd = s->even = 0;
 
     int i;
     //for(i = 47;s && i > 0; i -= 2) {
-    for(i = 47; i > 0; i -= 2) {
+    for (i = 47; i > 0; i -= 2) {
         s->odd  = s->odd  << 1 | BIT(key, (i - 1) ^ 7);
         s->even = s->even << 1 | BIT(key, i ^ 7);
     }
@@ -42,7 +42,7 @@ void crypto1_destroy(struct Crypto1State *state)
 void crypto1_get_lfsr(struct Crypto1State *state, uint64_t *lfsr)
 {
     int i;
-    for(*lfsr = 0, i = 23; i >= 0; --i) {
+    for (*lfsr = 0, i = 23; i >= 0; --i) {
         *lfsr = *lfsr << 1 | BIT(state->odd, i ^ 3);
         *lfsr = *lfsr << 1 | BIT(state->even, i ^ 3);
     }
@@ -92,7 +92,7 @@ uint32_t crypto1_word(struct Crypto1State *s, uint32_t in, int is_encrypted)
 
     for (i = 0; i < 32; ++i)
         ret |= crypto1_bit(s, BEBIT(in, i), is_encrypted) << (i ^ 24);
-*/
+    */
 //unfold loop 2016012
     uint32_t ret = 0;
     ret |= crypto1_bit(s, BEBIT(in, 0), is_encrypted) << (0 ^ 24);
@@ -139,7 +139,7 @@ uint32_t crypto1_word(struct Crypto1State *s, uint32_t in, int is_encrypted)
 uint32_t prng_successor(uint32_t x, uint32_t n)
 {
     SWAPENDIAN(x);
-    while(n--)
+    while (n--)
         x = x >> 1 | (x >> 16 ^ x >> 18 ^ x >> 19 ^ x >> 21) << 31;
 
     return SWAPENDIAN(x);

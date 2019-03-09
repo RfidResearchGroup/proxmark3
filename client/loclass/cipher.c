@@ -114,8 +114,8 @@ uint8_t _select(bool x, bool y, uint8_t r)
     bool r7 = r & 0x1;
 
     bool z0 = (r0 & r2) ^ (r1 & !r3) ^ (r2 | r4);
-    bool z1 = (r0 | r2) ^ ( r5 | r7) ^ r1 ^ r6 ^ x ^ y;
-    bool z2 = (r3 & !r5) ^ (r4 & r6 ) ^ r7 ^ x;
+    bool z1 = (r0 | r2) ^ (r5 | r7) ^ r1 ^ r6 ^ x ^ y;
+    bool z2 = (r3 & !r5) ^ (r4 & r6) ^ r7 ^ x;
 
     // The three bitz z0.. z1 are packed into a uint8_t:
     // 00000ZZZ
@@ -139,13 +139,13 @@ uint8_t _select(bool x, bool y, uint8_t r)
 * @param s - state
 * @param k - array containing 8 bytes
 **/
-State successor(uint8_t* k, State s, bool y)
+State successor(uint8_t *k, State s, bool y)
 {
     bool r0 = s.r >> 7 & 0x1;
     bool r4 = s.r >> 3 & 0x1;
     bool r7 = s.r & 0x1;
 
-    State successor = {0,0,0,0};
+    State successor = {0, 0, 0, 0};
 
     successor.t = s.t >> 1;
     successor.t |= (T(s) ^ r0 ^ r4) << 15;
@@ -155,8 +155,8 @@ State successor(uint8_t* k, State s, bool y)
 
     bool Tt = T(s);
 
-    successor.l = ((k[_select(Tt,y,s.r)] ^ successor.b) + s.l+s.r ) & 0xFF;
-    successor.r = ((k[_select(Tt,y,s.r)] ^ successor.b) + s.l ) & 0xFF;
+    successor.l = ((k[_select(Tt, y, s.r)] ^ successor.b) + s.l + s.r) & 0xFF;
+    successor.r = ((k[_select(Tt, y, s.r)] ^ successor.b) + s.l) & 0xFF;
 
     return successor;
 }
@@ -166,14 +166,13 @@ State successor(uint8_t* k, State s, bool y)
 *  to multiple bit input x ∈ F n 2 which we define as
 * @param k - array containing 8 bytes
 **/
-State suc(uint8_t* k,State s, BitstreamIn *bitstream)
+State suc(uint8_t *k, State s, BitstreamIn *bitstream)
 {
-    if(bitsLeft(bitstream) == 0)
-    {
+    if (bitsLeft(bitstream) == 0) {
         return s;
     }
     bool lastbit = tailBit(bitstream);
-    return successor(k,suc(k,s,bitstream), lastbit);
+    return successor(k, suc(k, s, bitstream), lastbit);
 }
 
 /**
@@ -184,17 +183,16 @@ State suc(uint8_t* k,State s, BitstreamIn *bitstream)
 *  output(k, s, x 0 . . . x n ) = output(s) · output(k, s ′ , x 1 . . . x n )
 *  where s ′ = suc(k, s, x 0 ).
 **/
-void output(uint8_t* k,State s, BitstreamIn* in,  BitstreamOut* out)
+void output(uint8_t *k, State s, BitstreamIn *in,  BitstreamOut *out)
 {
-    if(bitsLeft(in) == 0)
-    {
+    if (bitsLeft(in) == 0) {
         return;
     }
-    pushBit(out,(s.r >> 2) & 1);
+    pushBit(out, (s.r >> 2) & 1);
     //Remove first bit
     uint8_t x0 = headBit(in);
-    State ss = successor(k,s,x0);
-    output(k,ss,in, out);
+    State ss = successor(k, s, x0);
+    output(k, ss, in, out);
 }
 
 /**
@@ -202,22 +200,22 @@ void output(uint8_t* k,State s, BitstreamIn* in,  BitstreamOut* out)
 * key k ∈ (F 82 ) 8 and outputs the initial cipher state s =< l, r, t, b >
 **/
 
-State init(uint8_t* k)
+State init(uint8_t *k)
 {
     State s = {
-    ((k[0] ^ 0x4c) + 0xEC) & 0xFF,// l
-    ((k[0] ^ 0x4c) + 0x21) & 0xFF,// r
-    0x4c, // b
-    0xE012 // t
+        ((k[0] ^ 0x4c) + 0xEC) & 0xFF,// l
+        ((k[0] ^ 0x4c) + 0x21) & 0xFF,// r
+        0x4c, // b
+        0xE012 // t
     };
     return s;
 }
-void MAC(uint8_t* k, BitstreamIn input, BitstreamOut out)
+void MAC(uint8_t *k, BitstreamIn input, BitstreamOut out)
 {
-    uint8_t zeroes_32[] = {0,0,0,0};
-    BitstreamIn input_32_zeroes = {zeroes_32,sizeof(zeroes_32)*8,0};
-    State initState = suc(k,init(k),&input);
-    output(k,initState,&input_32_zeroes,&out);
+    uint8_t zeroes_32[] = {0, 0, 0, 0};
+    BitstreamIn input_32_zeroes = {zeroes_32, sizeof(zeroes_32) * 8, 0};
+    State initState = suc(k, init(k), &input);
+    output(k, initState, &input_32_zeroes, &out);
 }
 
 void doMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t mac[4])
@@ -231,9 +229,9 @@ void doMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t mac[4])
 
     reverse_arraybytes(cc_nr, 12);
     BitstreamIn bitstream = {cc_nr, 12 * 8, 0};
-    uint8_t dest []= {0,0,0,0,0,0,0,0};
-    BitstreamOut out = { dest, sizeof(dest)*8, 0 };
-    MAC(div_key,bitstream, out);
+    uint8_t dest [] = {0, 0, 0, 0, 0, 0, 0, 0};
+    BitstreamOut out = { dest, sizeof(dest) * 8, 0 };
+    MAC(div_key, bitstream, out);
     //The output MAC must also be reversed
     reverse_arraybytes(dest, sizeof(dest));
     memcpy(mac, dest, 4);
@@ -244,15 +242,15 @@ void doMAC_N(uint8_t *address_data_p, uint8_t address_data_size, uint8_t *div_ke
 {
     uint8_t *address_data;
     uint8_t div_key[8];
-    address_data = (uint8_t*) calloc(address_data_size, sizeof(uint8_t));
+    address_data = (uint8_t *) calloc(address_data_size, sizeof(uint8_t));
 
     memcpy(address_data, address_data_p, address_data_size);
     memcpy(div_key, div_key_p, 8);
 
     reverse_arraybytes(address_data, address_data_size);
     BitstreamIn bitstream = {address_data, address_data_size * 8, 0};
-    uint8_t dest []= {0,0,0,0,0,0,0,0};
-    BitstreamOut out = { dest, sizeof(dest)*8, 0 };
+    uint8_t dest [] = {0, 0, 0, 0, 0, 0, 0, 0};
+    BitstreamOut out = { dest, sizeof(dest) * 8, 0 };
     MAC(div_key, bitstream, out);
     //The output MAC must also be reversed
     reverse_arraybytes(dest, sizeof(dest));
@@ -267,15 +265,15 @@ int testMAC()
     PrintAndLogDevice(SUCCESS, "Testing MAC calculation...");
 
     //From the "dismantling.IClass" paper:
-    uint8_t cc_nr[] = {0xFE,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0,0,0,0};
+    uint8_t cc_nr[] = {0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0, 0, 0, 0};
     //From the paper
-    uint8_t div_key[8] = {0xE0,0x33,0xCA,0x41,0x9A,0xEE,0x43,0xF9};
-    uint8_t correct_MAC[4] = {0x1d,0x49,0xC9,0xDA};
+    uint8_t div_key[8] = {0xE0, 0x33, 0xCA, 0x41, 0x9A, 0xEE, 0x43, 0xF9};
+    uint8_t correct_MAC[4] = {0x1d, 0x49, 0xC9, 0xDA};
 
     uint8_t calculated_mac[4] = {0};
-    doMAC(cc_nr,div_key, calculated_mac);
+    doMAC(cc_nr, div_key, calculated_mac);
 
-    if (memcmp(calculated_mac, correct_MAC,4) == 0) {
+    if (memcmp(calculated_mac, correct_MAC, 4) == 0) {
         PrintAndLogDevice(SUCCESS, "MAC calculation OK!");
     } else {
         PrintAndLogDevice(FAILED, "FAILED: MAC calculation failed:");

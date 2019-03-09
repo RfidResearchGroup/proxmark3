@@ -29,21 +29,21 @@ typedef enum {
     HCRC,       /* i: waiting for header crc (gzip) */
     DICTID,     /* i: waiting for dictionary check value */
     DICT,       /* waiting for inflateSetDictionary() call */
-        TYPE,       /* i: waiting for type bits, including last-flag bit */
-        TYPEDO,     /* i: same, but skip check to exit inflate on new block */
-        STORED,     /* i: waiting for stored size (length and complement) */
-        COPY_,      /* i/o: same as COPY below, but only first time in */
-        COPY,       /* i/o: waiting for input or output to copy stored block */
-        TABLE,      /* i: waiting for dynamic block table lengths */
-        LENLENS,    /* i: waiting for code length code lengths */
-        CODELENS,   /* i: waiting for length/lit and distance code lengths */
-            LEN_,       /* i: same as LEN below, but only first time in */
-            LEN,        /* i: waiting for length/lit/eob code */
-            LENEXT,     /* i: waiting for length extra bits */
-            DIST,       /* i: waiting for distance code */
-            DISTEXT,    /* i: waiting for distance extra bits */
-            MATCH,      /* o: waiting for output space to copy string */
-            LIT,        /* o: waiting for output space to write literal */
+    TYPE,       /* i: waiting for type bits, including last-flag bit */
+    TYPEDO,     /* i: same, but skip check to exit inflate on new block */
+    STORED,     /* i: waiting for stored size (length and complement) */
+    COPY_,      /* i/o: same as COPY below, but only first time in */
+    COPY,       /* i/o: waiting for input or output to copy stored block */
+    TABLE,      /* i: waiting for dynamic block table lengths */
+    LENLENS,    /* i: waiting for code length code lengths */
+    CODELENS,   /* i: waiting for length/lit and distance code lengths */
+    LEN_,       /* i: same as LEN below, but only first time in */
+    LEN,        /* i: waiting for length/lit/eob code */
+    LENEXT,     /* i: waiting for length extra bits */
+    DIST,       /* i: waiting for distance code */
+    DISTEXT,    /* i: waiting for distance extra bits */
+    MATCH,      /* o: waiting for output space to copy string */
+    LIT,        /* o: waiting for output space to write literal */
     CHECK,      /* i: waiting for 32-bit check value */
     LENGTH,     /* i: waiting for 32-bit length (gzip) */
     DONE,       /* finished check, done -- remain here until reset */
@@ -88,26 +88,26 @@ struct inflate_state {
     unsigned long check;        /* protected copy of check value */
     unsigned long total;        /* protected copy of output count */
     gz_headerp head;            /* where to save gzip header information */
-        /* sliding window */
+    /* sliding window */
     unsigned wbits;             /* log base 2 of requested window size */
     unsigned wsize;             /* window size or zero if not using window */
     unsigned whave;             /* valid bytes in the window */
     unsigned wnext;             /* window write index */
     unsigned char FAR *window;  /* allocated sliding window, if needed */
-        /* bit accumulator */
+    /* bit accumulator */
     unsigned long hold;         /* input bit accumulator */
     unsigned bits;              /* number of bits in "in" */
-        /* for string and stored block copying */
+    /* for string and stored block copying */
     unsigned length;            /* literal or length of data to copy */
     unsigned offset;            /* distance back to copy string from */
-        /* for table and code decoding */
+    /* for table and code decoding */
     unsigned extra;             /* extra bits needed */
-        /* fixed and dynamic code tables */
+    /* fixed and dynamic code tables */
     code const FAR *lencode;    /* starting table for length/literal codes */
     code const FAR *distcode;   /* starting table for distance codes */
     unsigned lenbits;           /* index bits for lencode */
     unsigned distbits;          /* index bits for distcode */
-        /* dynamic table building */
+    /* dynamic table building */
     unsigned ncode;             /* number of code length code lengths */
     unsigned nlen;              /* number of length code lengths */
     unsigned ndist;             /* number of distance code lengths */

@@ -37,13 +37,15 @@
 //#define UART_WRITE(P, BUF, SIZ)   (P)->uart_write(BUF, SIZ, (P)->extobj)
 #define UART_WRITE(BUF) DbprintfEx(FLAG_RAWPRINT, "%s", BUF)
 
-int vtsend_init(vtsend_t *p, VTSEND_SERIAL_WRITE uart_write, void *extobj) {
+int vtsend_init(vtsend_t *p, VTSEND_SERIAL_WRITE uart_write, void *extobj)
+{
     p->uart_write = uart_write;
     p->extobj = extobj;
     return 0;
 }
 
-int vtsend_cursor_position(vtsend_t *p, const int column, const int line) {
+int vtsend_cursor_position(vtsend_t *p, const int column, const int line)
+{
     char buf[1 + 8];
     buf[0] = ESC;
     buf[1] = '[';
@@ -58,7 +60,8 @@ int vtsend_cursor_position(vtsend_t *p, const int column, const int line) {
     return 0;
 }
 
-int vtsend_cursor_up(vtsend_t *p, const int n) {
+int vtsend_cursor_up(vtsend_t *p, const int n)
+{
     char buf[1 + 5];
     buf[0] = ESC;
     buf[1] = '[';
@@ -71,7 +74,8 @@ int vtsend_cursor_up(vtsend_t *p, const int n) {
     return 0;
 }
 
-int vtsend_cursor_down(vtsend_t *p, const int n) {
+int vtsend_cursor_down(vtsend_t *p, const int n)
+{
     char buf[1 + 5];
     buf[0] = ESC;
     buf[1] = '[';
@@ -84,7 +88,8 @@ int vtsend_cursor_down(vtsend_t *p, const int n) {
     return 0;
 }
 
-int vtsend_cursor_forward(vtsend_t *p, const int n) {
+int vtsend_cursor_forward(vtsend_t *p, const int n)
+{
     char buf[1 + 5];
     buf[0] = ESC;
     buf[1] = '[';
@@ -97,7 +102,8 @@ int vtsend_cursor_forward(vtsend_t *p, const int n) {
     return 0;
 }
 
-int vtsend_cursor_backward(vtsend_t *p, const int n) {
+int vtsend_cursor_backward(vtsend_t *p, const int n)
+{
     char buf[1 + 5];
     buf[0] = ESC;
     buf[1] = '[';
@@ -110,7 +116,8 @@ int vtsend_cursor_backward(vtsend_t *p, const int n) {
     return 0;
 }
 
-int vtsend_cursor_position_save(vtsend_t *p) {
+int vtsend_cursor_position_save(vtsend_t *p)
+{
     char buf[1 + 3];
     buf[0] = ESC;
     buf[1] = '[';
@@ -121,7 +128,8 @@ int vtsend_cursor_position_save(vtsend_t *p) {
     return 0;
 }
 
-int vtsend_cursor_position_restore(vtsend_t *p) {
+int vtsend_cursor_position_restore(vtsend_t *p)
+{
     char buf[1 + 3];
     buf[0] = ESC;
     buf[1] = '[';
@@ -132,7 +140,8 @@ int vtsend_cursor_position_restore(vtsend_t *p) {
     return 0;
 }
 
-int vtsend_erase_display(vtsend_t *p) {
+int vtsend_erase_display(vtsend_t *p)
+{
     char buf[1 + 4];
     buf[0] = ESC;
     buf[1] = '[';
@@ -144,7 +153,8 @@ int vtsend_erase_display(vtsend_t *p) {
     return 0;
 }
 
-int vtsend_erase_line(vtsend_t *p) {
+int vtsend_erase_line(vtsend_t *p)
+{
     char buf[1 + 4];
     buf[0] = ESC;
     buf[1] = '[';
@@ -156,7 +166,8 @@ int vtsend_erase_line(vtsend_t *p) {
     return 0;
 }
 
-int vtsend_set_color_foreground(vtsend_t *p, const int color) {
+int vtsend_set_color_foreground(vtsend_t *p, const int color)
+{
     char buf[1 + 5];
     buf[0] = ESC;
     buf[1] = '[';
@@ -169,7 +180,8 @@ int vtsend_set_color_foreground(vtsend_t *p, const int color) {
     return 0;
 }
 
-int vtsend_set_color_background(vtsend_t *p, const int color) {
+int vtsend_set_color_background(vtsend_t *p, const int color)
+{
     char buf[1 + 5];
     buf[0] = ESC;
     buf[1] = '[';
@@ -182,7 +194,8 @@ int vtsend_set_color_background(vtsend_t *p, const int color) {
     return 0;
 }
 
-int vtsend_set_attribute(vtsend_t *p, const int attr) {
+int vtsend_set_attribute(vtsend_t *p, const int attr)
+{
     char buf[1 + 5];
     buf[0] = ESC;
     buf[1] = '[';
@@ -195,7 +208,8 @@ int vtsend_set_attribute(vtsend_t *p, const int attr) {
     return 0;
 }
 
-int vtsend_set_scroll_region(vtsend_t *p, const int top, const int bottom) {
+int vtsend_set_scroll_region(vtsend_t *p, const int top, const int bottom)
+{
     char buf[1 + 8];
     buf[0] = ESC;
     buf[1] = '[';
@@ -211,7 +225,8 @@ int vtsend_set_scroll_region(vtsend_t *p, const int top, const int bottom) {
     return 0;
 }
 
-int vtsend_set_cursor(vtsend_t *p, const int visible) {
+int vtsend_set_cursor(vtsend_t *p, const int visible)
+{
     if (visible) {
         char buf[1 + 6];
         buf[0] = ESC;
@@ -238,7 +253,8 @@ int vtsend_set_cursor(vtsend_t *p, const int visible) {
     return 0;
 }
 
-int vtsend_reset(vtsend_t *p) {
+int vtsend_reset(vtsend_t *p)
+{
     char buf[1 + 2];
     buf[0] = ESC;
     buf[1] = 'c';
@@ -248,7 +264,8 @@ int vtsend_reset(vtsend_t *p) {
     return 0;
 }
 
-int vtsend_draw_box(vtsend_t *p, const int x1, const int y1, const int x2, const int y2) {
+int vtsend_draw_box(vtsend_t *p, const int x1, const int y1, const int x2, const int y2)
+{
     int i;
 
     vtsend_cursor_position(p, x1, y1);
@@ -268,7 +285,8 @@ int vtsend_draw_box(vtsend_t *p, const int x1, const int y1, const int x2, const
     return 0;
 }
 
-int vtsend_fill_box(vtsend_t *p, const int x1, const int y1, const int x2, const int y2) {
+int vtsend_fill_box(vtsend_t *p, const int x1, const int y1, const int x2, const int y2)
+{
     int i, j;
     for (i = y1; i <= y2; i++) {
         vtsend_cursor_position(p, x1, i);

@@ -110,7 +110,7 @@ void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd);
 void EM4xWriteWord(uint32_t flag, uint32_t data, uint32_t pwd);
 void Cotag(uint32_t arg0);
 void setT55xxConfig(uint8_t arg0, t55xx_config *c);
-t55xx_config * getT55xxConfig(void);
+t55xx_config *getT55xxConfig(void);
 void printT55xxConfig(void);
 void loadT55xxConfig(void);
 
@@ -133,11 +133,11 @@ void ReaderIso14443a(UsbCommand *c);
 void GetParity(const uint8_t *pbtCmd, uint16_t len, uint8_t *parity);
 void iso14a_set_trigger(bool enable);
 // also used in emv
-bool prepare_allocated_tag_modulation(tag_response_info_t * response_info);
+bool prepare_allocated_tag_modulation(tag_response_info_t *response_info);
 int GetIso14443aCommandFromReader(uint8_t *received, uint8_t *parity, int *len);
 
 // epa.h
-void EPA_PACE_Collect_Nonce(UsbCommand * c);
+void EPA_PACE_Collect_Nonce(UsbCommand *c);
 void EPA_PACE_Replay(UsbCommand *c);
 
 // mifarecmd.h
@@ -169,35 +169,35 @@ void OnSuccessMagic();
 void OnErrorMagic(uint8_t reason);
 
 int32_t dist_nt(uint32_t nt1, uint32_t nt2);
-void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype );
+void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype);
 //void RAMFUNC SniffMifare(uint8_t param);
 
 //desfire
-void Mifare_DES_Auth1(uint8_t arg0,uint8_t *datain);
+void Mifare_DES_Auth1(uint8_t arg0, uint8_t *datain);
 void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain);
 
 // mifaredesfire.h
 bool InitDesfireCard();
-void MifareSendCommand(uint8_t arg0,uint8_t arg1, uint8_t *datain);
+void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain);
 void MifareDesfireGetInformation();
-void MifareDES_Auth1(uint8_t arg0,uint8_t arg1,uint8_t arg2, uint8_t *datain);
-void ReaderMifareDES(uint32_t param, uint32_t param2, uint8_t * datain);
+void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
+void ReaderMifareDES(uint32_t param, uint32_t param2, uint8_t *datain);
 int DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout);
-size_t CreateAPDU( uint8_t *datain, size_t len, uint8_t *dataout);
+size_t CreateAPDU(uint8_t *datain, size_t len, uint8_t *dataout);
 void OnSuccess();
 void OnError(uint8_t reason);
 
 // desfire_crypto.h
-void *mifare_cryto_preprocess_data (desfiretag_t tag, void *data, size_t *nbytes, size_t offset, int communication_settings);
-void *mifare_cryto_postprocess_data (desfiretag_t tag, void *data, size_t *nbytes, int communication_settings);
-void mifare_cypher_single_block (desfirekey_t  key, uint8_t *data, uint8_t *ivect, MifareCryptoDirection direction, MifareCryptoOperation operation, size_t block_size);
-void mifare_cypher_blocks_chained (desfiretag_t tag, desfirekey_t key, uint8_t *ivect, uint8_t *data, size_t data_size, MifareCryptoDirection direction, MifareCryptoOperation operation);
-size_t key_block_size (const desfirekey_t  key);
-size_t padded_data_length (const size_t nbytes, const size_t block_size);
-size_t maced_data_length (const desfirekey_t  key, const size_t nbytes);
-size_t enciphered_data_length (const desfiretag_t tag, const size_t nbytes, int communication_settings);
-void cmac_generate_subkeys (desfirekey_t key);
-void cmac (const desfirekey_t  key, uint8_t *ivect, const uint8_t *data, size_t len, uint8_t *cmac);
+void *mifare_cryto_preprocess_data(desfiretag_t tag, void *data, size_t *nbytes, size_t offset, int communication_settings);
+void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes, int communication_settings);
+void mifare_cypher_single_block(desfirekey_t  key, uint8_t *data, uint8_t *ivect, MifareCryptoDirection direction, MifareCryptoOperation operation, size_t block_size);
+void mifare_cypher_blocks_chained(desfiretag_t tag, desfirekey_t key, uint8_t *ivect, uint8_t *data, size_t data_size, MifareCryptoDirection direction, MifareCryptoOperation operation);
+size_t key_block_size(const desfirekey_t  key);
+size_t padded_data_length(const size_t nbytes, const size_t block_size);
+size_t maced_data_length(const desfirekey_t  key, const size_t nbytes);
+size_t enciphered_data_length(const desfiretag_t tag, const size_t nbytes, int communication_settings);
+void cmac_generate_subkeys(desfirekey_t key);
+void cmac(const desfirekey_t  key, uint8_t *ivect, const uint8_t *data, size_t len, uint8_t *cmac);
 
 // iso15693.h
 void RecordRawAdcSamplesIso15693(void);
@@ -205,14 +205,14 @@ void AcquireRawAdcSamplesIso15693(void);
 void ReaderIso15693(uint32_t parameter); // Simulate an ISO15693 reader - greg
 void SimTagIso15693(uint32_t parameter, uint8_t *uid); // simulate an ISO15693 tag - greg
 void BruteforceIso15693Afi(uint32_t speed); // find an AFI of a tag - atrox
-void DirectTag15693Command(uint32_t datalen,uint32_t speed, uint32_t recv, uint8_t *data); // send arbitrary commands from CLI - atrox
+void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint8_t *data); // send arbitrary commands from CLI - atrox
 void Iso15693InitReader(void);
 
 // iclass.h
 void RAMFUNC SniffIClass(void);
 void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 void ReaderIClass(uint8_t arg0);
-void ReaderIClass_Replay(uint8_t arg0,uint8_t *MAC);
+void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC);
 void iClass_Authentication(uint8_t *MAC);
 void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain);
 void iClass_WriteBlock(uint8_t blockNo, uint8_t *data);
@@ -224,22 +224,22 @@ void iClass_ReadCheck(uint8_t blockNo, uint8_t keyType);
 
 // hitag2.h
 void SnoopHitag(uint32_t type);
-void SimulateHitagTag(bool tag_mem_supplied, byte_t* data);
-void ReaderHitag(hitag_function htf, hitag_data* htd);
-void WriterHitag(hitag_function htf, hitag_data* htd, int page);
+void SimulateHitagTag(bool tag_mem_supplied, byte_t *data);
+void ReaderHitag(hitag_function htf, hitag_data *htd);
+void WriterHitag(hitag_function htf, hitag_data *htd, int page);
 
 //hitagS.h
-void SimulateHitagSTag(bool tag_mem_supplied, byte_t* data);
-void ReadHitagS(hitag_function htf, hitag_data* htd);
-void WritePageHitagS(hitag_function htf, hitag_data* htd,int page);
-void check_challenges(bool file_given, byte_t* data);
+void SimulateHitagSTag(bool tag_mem_supplied, byte_t *data);
+void ReadHitagS(hitag_function htf, hitag_data *htd);
+void WritePageHitagS(hitag_function htf, hitag_data *htd, int page);
+void check_challenges(bool file_given, byte_t *data);
 
 // cmd.h
-uint8_t cmd_receive(UsbCommand* cmd);
-uint8_t cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void* data, size_t len);
+uint8_t cmd_receive(UsbCommand *cmd);
+uint8_t cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
 
 // util.h
-void HfSnoop(int , int);
+void HfSnoop(int, int);
 
 //felica.c
 extern void felica_sendraw(UsbCommand *c);

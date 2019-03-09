@@ -34,9 +34,9 @@
 // so you have to use _istspace instead of space
 #ifdef UNICODE
 #include <tchar.h>
-    #define ISSPACE _istspace
+#define ISSPACE _istspace
 #else
-    #define ISSPACE isspace
+#define ISSPACE isspace
 #endif
 
 /*******************************************************************************
@@ -79,8 +79,7 @@
 extern "C" {
 #endif
 
-enum
-{
+enum {
     EMINCOUNT = 1,
     EMAXCOUNT,
     EBADINT,
@@ -101,13 +100,13 @@ enum
     __pragma(warning(push)) \
     __pragma(warning(disable:4127)) \
     do { if (ARG_ENABLE_TRACE) dbg_printf x; } while (0) \
-    __pragma(warning(pop))
+        __pragma(warning(pop))
 
 #define ARG_LOG(x) \
     __pragma(warning(push)) \
     __pragma(warning(disable:4127)) \
     do { if (ARG_ENABLE_LOG) dbg_printf x; } while (0) \
-    __pragma(warning(pop))
+        __pragma(warning(pop))
 #else
 #define ARG_TRACE(x) \
     do { if (ARG_ENABLE_TRACE) dbg_printf x; } while (0)
@@ -254,12 +253,12 @@ char *optarg;           /* argument associated with option */
 
 #define EMSG            ""
 
-static int getopt_internal(int, char * const *, const char *,
-               const struct option *, int *, int);
-static int parse_long_options(char * const *, const char *,
-                  const struct option *, int *, int);
+static int getopt_internal(int, char *const *, const char *,
+                           const struct option *, int *, int);
+static int parse_long_options(char *const *, const char *,
+                              const struct option *, int *, int);
 static int gcd(int, int);
-static void permute_args(int, int, int, char * const *);
+static void permute_args(int, int, int, char *const *);
 
 static char *place = EMSG; /* option letter processing */
 
@@ -344,7 +343,7 @@ gcd(int a, int b)
  */
 static void
 permute_args(int panonopt_start, int panonopt_end, int opt_end,
-    char * const *nargv)
+             char *const *nargv)
 {
     int cstart, cyclelen, i, j, ncycle, nnonopts, nopts, pos;
     char *swap;
@@ -358,7 +357,7 @@ permute_args(int panonopt_start, int panonopt_end, int opt_end,
     cyclelen = (opt_end - panonopt_start) / ncycle;
 
     for (i = 0; i < ncycle; i++) {
-        cstart = panonopt_end+i;
+        cstart = panonopt_end + i;
         pos = cstart;
         for (j = 0; j < cyclelen; j++) {
             if (pos >= panonopt_end)
@@ -380,8 +379,8 @@ permute_args(int panonopt_start, int panonopt_end, int opt_end,
  * Returns -1 if short_too is set and the option does not match long_options.
  */
 static int
-parse_long_options(char * const *nargv, const char *options,
-    const struct option *long_options, int *idx, int short_too)
+parse_long_options(char *const *nargv, const char *options,
+                   const struct option *long_options, int *idx, int short_too)
 {
     char *current_argv, *has_equal;
     size_t current_argv_len;
@@ -402,7 +401,7 @@ parse_long_options(char * const *nargv, const char *options,
     for (i = 0; long_options[i].name; i++) {
         /* find matching long option */
         if (strncmp(current_argv, long_options[i].name,
-            current_argv_len))
+                    current_argv_len))
             continue;
 
         if (strlen(long_options[i].name) == current_argv_len) {
@@ -423,7 +422,7 @@ parse_long_options(char * const *nargv, const char *options,
             /* ambiguous abbreviation */
             if (PRINT_ERROR)
                 warnx(ambig, (int)current_argv_len,
-                     current_argv);
+                      current_argv);
             optopt = 0;
             return (BADCH);
         }
@@ -433,7 +432,7 @@ parse_long_options(char * const *nargv, const char *options,
             && has_equal) {
             if (PRINT_ERROR)
                 warnx(noarg, (int)current_argv_len,
-                     current_argv);
+                      current_argv);
             /*
              * XXX: GNU sets optopt to val regardless of flag
              */
@@ -448,7 +447,7 @@ parse_long_options(char * const *nargv, const char *options,
             if (has_equal)
                 optarg = has_equal;
             else if (long_options[match].has_arg ==
-                required_argument) {
+                     required_argument) {
                 /*
                  * optional argument doesn't use next nargv
                  */
@@ -463,7 +462,7 @@ parse_long_options(char * const *nargv, const char *options,
              */
             if (PRINT_ERROR)
                 warnx(recargstring,
-                    current_argv);
+                      current_argv);
             /*
              * XXX: GNU sets optopt to val regardless of flag
              */
@@ -498,14 +497,14 @@ parse_long_options(char * const *nargv, const char *options,
  * Parse argc/argv argument vector.  Called by user level routines.
  */
 static int
-getopt_internal(int nargc, char * const *nargv, const char *options,
-    const struct option *long_options, int *idx, int flags)
+getopt_internal(int nargc, char *const *nargv, const char *options,
+                const struct option *long_options, int *idx, int flags)
 {
     char *oli; /* option letter list index */
     int optchar, short_too;
     static int posixly_correct = -1;
 #ifdef __STDC_WANT_SECURE_LIB__
-    char* buffer = NULL;
+    char *buffer = NULL;
     size_t buffer_size = 0;
     errno_t err = 0;
 #endif
@@ -522,7 +521,7 @@ getopt_internal(int nargc, char * const *nargv, const char *options,
     if (posixly_correct == -1) {
         err = _dupenv_s(&buffer, &buffer_size, "POSIXLY_CORRECT") == 0;
         posixly_correct = buffer != NULL;
-        if(buffer != NULL && err == 0) {
+        if (buffer != NULL && err == 0) {
             free(buffer);
         }
     }
@@ -555,10 +554,9 @@ start:
             if (nonopt_end != -1) {
                 /* do permutation, if we have to */
                 permute_args(nonopt_start, nonopt_end,
-                    optind, nargv);
+                             optind, nargv);
                 optind -= nonopt_end - nonopt_start;
-            }
-            else if (nonopt_start != -1) {
+            } else if (nonopt_start != -1) {
                 /*
                  * If we skipped non-options, set optind
                  * to the first of them.
@@ -591,9 +589,9 @@ start:
                 nonopt_start = optind;
             else if (nonopt_end != -1) {
                 permute_args(nonopt_start, nonopt_end,
-                    optind, nargv);
+                             optind, nargv);
                 nonopt_start = optind -
-                    (nonopt_end - nonopt_start);
+                               (nonopt_end - nonopt_start);
                 nonopt_end = -1;
             }
             optind++;
@@ -615,7 +613,7 @@ start:
              */
             if (nonopt_end != -1) {
                 permute_args(nonopt_start, nonopt_end,
-                    optind, nargv);
+                             optind, nargv);
                 optind -= nonopt_end - nonopt_start;
             }
             nonopt_start = nonopt_end = -1;
@@ -638,14 +636,14 @@ start:
             short_too = 1; /* could be short option too */
 
         optchar = parse_long_options(nargv, options, long_options,
-            idx, short_too);
+                                     idx, short_too);
         if (optchar != -1) {
             place = EMSG;
             return (optchar);
         }
     }
 
-    if ((optchar = (int)*place++) == (int)':' ||
+    if ((optchar = (int) * place++) == (int)':' ||
         (optchar == (int)'-' && *place != '\0') ||
         (oli = strchr(options, optchar)) == NULL) {
         /*
@@ -675,7 +673,7 @@ start:
         } else                        /* white space */
             place = nargv[optind];
         optchar = parse_long_options(nargv, options, long_options,
-            idx, 0);
+                                     idx, 0);
         place = EMSG;
         return (optchar);
     }
@@ -711,7 +709,7 @@ start:
  * [eventually this will replace the BSD getopt]
  */
 int
-getopt(int nargc, char * const *nargv, const char *options)
+getopt(int nargc, char *const *nargv, const char *options)
 {
 
     /*
@@ -731,12 +729,12 @@ getopt(int nargc, char * const *nargv, const char *options)
  * Parse argc/argv argument vector.
  */
 int
-getopt_long(int nargc, char * const *nargv, const char *options,
-    const struct option *long_options, int *idx)
+getopt_long(int nargc, char *const *nargv, const char *options,
+            const struct option *long_options, int *idx)
 {
 
     return (getopt_internal(nargc, nargv, options, long_options, idx,
-        FLAG_PERMUTE));
+                            FLAG_PERMUTE));
 }
 
 /*
@@ -744,12 +742,12 @@ getopt_long(int nargc, char * const *nargv, const char *options,
  * Parse argc/argv argument vector.
  */
 int
-getopt_long_only(int nargc, char * const *nargv, const char *options,
-    const struct option *long_options, int *idx)
+getopt_long_only(int nargc, char *const *nargv, const char *options,
+                 const struct option *long_options, int *idx)
 {
 
     return (getopt_internal(nargc, nargv, options, long_options, idx,
-        FLAG_PERMUTE|FLAG_LONGONLY));
+                            FLAG_PERMUTE | FLAG_LONGONLY));
 }
 /*******************************************************************************
  * This file is part of the argtable3 library.
@@ -787,7 +785,7 @@ getopt_long_only(int nargc, char * const *nargv, const char *options,
 #include "argtable3.h"
 
 
-char * arg_strptime(const char *buf, const char *fmt, struct tm *tm);
+char *arg_strptime(const char *buf, const char *fmt, struct tm *tm);
 
 
 static void arg_date_resetfn(struct arg_date *parent)
@@ -801,17 +799,12 @@ static int arg_date_scanfn(struct arg_date *parent, const char *argval)
 {
     int errorcode = 0;
 
-    if (parent->count == parent->hdr.maxcount)
-    {
+    if (parent->count == parent->hdr.maxcount) {
         errorcode = EMAXCOUNT;
-    }
-    else if (!argval)
-    {
+    } else if (!argval) {
         /* no argument value was given, leave parent->tmval[] unaltered but still count it */
         parent->count++;
-    }
-    else
-    {
+    } else {
         const char *pend;
         struct tm tm = parent->tmval[parent->count];
 
@@ -852,38 +845,36 @@ static void arg_date_errorfn(
     argval = argval ? argval : "";
 
     fprintf(fp, "%s: ", progname);
-    switch(errorcode)
-    {
-    case EMINCOUNT:
-        fputs("missing option ", fp);
-        arg_print_option(fp, shortopts, longopts, datatype, "\n");
-        break;
+    switch (errorcode) {
+        case EMINCOUNT:
+            fputs("missing option ", fp);
+            arg_print_option(fp, shortopts, longopts, datatype, "\n");
+            break;
 
-    case EMAXCOUNT:
-        fputs("excess option ", fp);
-        arg_print_option(fp, shortopts, longopts, argval, "\n");
-        break;
+        case EMAXCOUNT:
+            fputs("excess option ", fp);
+            arg_print_option(fp, shortopts, longopts, argval, "\n");
+            break;
 
-    case EBADDATE:
-    {
-        struct tm tm;
-        char buff[200];
+        case EBADDATE: {
+            struct tm tm;
+            char buff[200];
 
-        fprintf(fp, "illegal timestamp format \"%s\"\n", argval);
-        memset(&tm, 0, sizeof(tm));
-        arg_strptime("1999-12-31 23:59:59", "%F %H:%M:%S", &tm);
-        strftime(buff, sizeof(buff), parent->format, &tm);
-        printf("correct format is \"%s\"\n", buff);
-        break;
-    }
+            fprintf(fp, "illegal timestamp format \"%s\"\n", argval);
+            memset(&tm, 0, sizeof(tm));
+            arg_strptime("1999-12-31 23:59:59", "%F %H:%M:%S", &tm);
+            strftime(buff, sizeof(buff), parent->format, &tm);
+            printf("correct format is \"%s\"\n", buff);
+            break;
+        }
     }
 }
 
 
-struct arg_date * arg_date0(
-    const char * shortopts,
-    const char * longopts,
-    const char * format,
+struct arg_date *arg_date0(
+    const char *shortopts,
+    const char *longopts,
+    const char *format,
     const char *datatype,
     const char *glossary)
 {
@@ -891,10 +882,10 @@ struct arg_date * arg_date0(
 }
 
 
-struct arg_date * arg_date1(
-    const char * shortopts,
-    const char * longopts,
-    const char * format,
+struct arg_date *arg_date1(
+    const char *shortopts,
+    const char *longopts,
+    const char *format,
     const char *datatype,
     const char *glossary)
 {
@@ -902,10 +893,10 @@ struct arg_date * arg_date1(
 }
 
 
-struct arg_date * arg_daten(
-    const char * shortopts,
-    const char * longopts,
-    const char * format,
+struct arg_date *arg_daten(
+    const char *shortopts,
+    const char *longopts,
+    const char *format,
     const char *datatype,
     int mincount,
     int maxcount,
@@ -922,13 +913,12 @@ struct arg_date * arg_daten(
         format = "%x";
 
     nbytes = sizeof(struct arg_date)         /* storage for struct arg_date */
-        + maxcount * sizeof(struct tm);    /* storage for tmval[maxcount] array */
+             + maxcount * sizeof(struct tm);    /* storage for tmval[maxcount] array */
 
     /* allocate storage for the arg_date struct + tmval[] array.    */
     /* we use calloc because we want the tmval[] array zero filled. */
     result = (struct arg_date *)calloc(1, nbytes);
-    if (result)
-    {
+    if (result) {
         /* init the arg_hdr struct */
         result->hdr.flag      = ARG_HASVALUE;
         result->hdr.shortopts = shortopts;
@@ -1038,12 +1028,10 @@ static int arg_strcasecmp(const char *s1, const char *s2)
 
 static int arg_strncasecmp(const char *s1, const char *s2, size_t n)
 {
-    if (n != 0)
-    {
+    if (n != 0) {
         const unsigned char *us1 = (const unsigned char *)s1;
         const unsigned char *us2 = (const unsigned char *)s2;
-        do
-        {
+        do {
             if (tolower(*us1) != tolower(*us2++))
                 return tolower(*us1) - tolower(*--us2);
 
@@ -1056,7 +1044,7 @@ static int arg_strncasecmp(const char *s1, const char *s2, size_t n)
 }
 
 
-char * arg_strptime(const char *buf, const char *fmt, struct tm *tm)
+char *arg_strptime(const char *buf, const char *fmt, struct tm *tm)
 {
     char c;
     const char *bp;
@@ -1083,275 +1071,274 @@ char * arg_strptime(const char *buf, const char *fmt, struct tm *tm)
 
 
 again:
-        switch (c = *fmt++)
-        {
-        case '%': /* "%%" is converted to "%". */
+        switch (c = *fmt++) {
+            case '%': /* "%%" is converted to "%". */
 literal:
-            if (c != *bp++)
-                return (0);
-            break;
-
-        /*
-         * "Alternative" modifiers. Just set the appropriate flag
-         * and start over again.
-         */
-        case 'E': /* "%E?" alternative conversion modifier. */
-            LEGAL_ALT(0);
-            alt_format |= ALT_E;
-            goto again;
-
-        case 'O': /* "%O?" alternative conversion modifier. */
-            LEGAL_ALT(0);
-            alt_format |= ALT_O;
-            goto again;
-
-        /*
-         * "Complex" conversion rules, implemented through recursion.
-         */
-        case 'c': /* Date and time, using the locale's format. */
-            LEGAL_ALT(ALT_E);
-            bp = arg_strptime(bp, "%x %X", tm);
-            if (!bp)
-                return (0);
-            break;
-
-        case 'D': /* The date as "%m/%d/%y". */
-            LEGAL_ALT(0);
-            bp = arg_strptime(bp, "%m/%d/%y", tm);
-            if (!bp)
-                return (0);
-            break;
-
-        case 'R': /* The time as "%H:%M". */
-            LEGAL_ALT(0);
-            bp = arg_strptime(bp, "%H:%M", tm);
-            if (!bp)
-                return (0);
-            break;
-
-        case 'r': /* The time in 12-hour clock representation. */
-            LEGAL_ALT(0);
-            bp = arg_strptime(bp, "%I:%M:%S %p", tm);
-            if (!bp)
-                return (0);
-            break;
-
-        case 'T': /* The time as "%H:%M:%S". */
-            LEGAL_ALT(0);
-            bp = arg_strptime(bp, "%H:%M:%S", tm);
-            if (!bp)
-                return (0);
-            break;
-
-        case 'X': /* The time, using the locale's format. */
-            LEGAL_ALT(ALT_E);
-            bp = arg_strptime(bp, "%H:%M:%S", tm);
-            if (!bp)
-                return (0);
-            break;
-
-        case 'x': /* The date, using the locale's format. */
-            LEGAL_ALT(ALT_E);
-            bp = arg_strptime(bp, "%m/%d/%y", tm);
-            if (!bp)
-                return (0);
-            break;
-
-        /*
-         * "Elementary" conversion rules.
-         */
-        case 'A': /* The day of week, using the locale's form. */
-        case 'a':
-            LEGAL_ALT(0);
-            for (i = 0; i < 7; i++) {
-                /* Full name. */
-                len = strlen(day[i]);
-                if (arg_strncasecmp(day[i], bp, len) == 0)
-                    break;
-
-                /* Abbreviated name. */
-                len = strlen(abday[i]);
-                if (arg_strncasecmp(abday[i], bp, len) == 0)
-                    break;
-            }
-
-            /* Nothing matched. */
-            if (i == 7)
-                return (0);
-
-            tm->tm_wday = i;
-            bp += len;
-            break;
-
-        case 'B': /* The month, using the locale's form. */
-        case 'b':
-        case 'h':
-            LEGAL_ALT(0);
-            for (i = 0; i < 12; i++) {
-                /* Full name. */
-                len = strlen(mon[i]);
-                if (arg_strncasecmp(mon[i], bp, len) == 0)
-                    break;
-
-                /* Abbreviated name. */
-                len = strlen(abmon[i]);
-                if (arg_strncasecmp(abmon[i], bp, len) == 0)
-                    break;
-            }
-
-            /* Nothing matched. */
-            if (i == 12)
-                return (0);
-
-            tm->tm_mon = i;
-            bp += len;
-            break;
-
-        case 'C': /* The century number. */
-            LEGAL_ALT(ALT_E);
-            if (!(conv_num(&bp, &i, 0, 99)))
-                return (0);
-
-            if (split_year) {
-                tm->tm_year = (tm->tm_year % 100) + (i * 100);
-            } else {
-                tm->tm_year = i * 100;
-                split_year = 1;
-            }
-            break;
-
-        case 'd': /* The day of month. */
-        case 'e':
-            LEGAL_ALT(ALT_O);
-            if (!(conv_num(&bp, &tm->tm_mday, 1, 31)))
-                return (0);
-            break;
-
-        case 'k': /* The hour (24-hour clock representation). */
-            LEGAL_ALT(0);
-        /* FALLTHROUGH */
-        case 'H':
-            LEGAL_ALT(ALT_O);
-            if (!(conv_num(&bp, &tm->tm_hour, 0, 23)))
-                return (0);
-            break;
-
-        case 'l': /* The hour (12-hour clock representation). */
-            LEGAL_ALT(0);
-        /* FALLTHROUGH */
-        case 'I':
-            LEGAL_ALT(ALT_O);
-            if (!(conv_num(&bp, &tm->tm_hour, 1, 12)))
-                return (0);
-            if (tm->tm_hour == 12)
-                tm->tm_hour = 0;
-            break;
-
-        case 'j': /* The day of year. */
-            LEGAL_ALT(0);
-            if (!(conv_num(&bp, &i, 1, 366)))
-                return (0);
-            tm->tm_yday = i - 1;
-            break;
-
-        case 'M': /* The minute. */
-            LEGAL_ALT(ALT_O);
-            if (!(conv_num(&bp, &tm->tm_min, 0, 59)))
-                return (0);
-            break;
-
-        case 'm': /* The month. */
-            LEGAL_ALT(ALT_O);
-            if (!(conv_num(&bp, &i, 1, 12)))
-                return (0);
-            tm->tm_mon = i - 1;
-            break;
-
-        case 'p': /* The locale's equivalent of AM/PM. */
-            LEGAL_ALT(0);
-            /* AM? */
-            if (arg_strcasecmp(am_pm[0], bp) == 0) {
-                if (tm->tm_hour > 11)
+                if (c != *bp++)
                     return (0);
-
-                bp += strlen(am_pm[0]);
                 break;
-            }
-            /* PM? */
-            else if (arg_strcasecmp(am_pm[1], bp) == 0) {
-                if (tm->tm_hour > 11)
-                    return (0);
 
-                tm->tm_hour += 12;
-                bp += strlen(am_pm[1]);
-                break;
-            }
-
-            /* Nothing matched. */
-            return (0);
-
-        case 'S': /* The seconds. */
-            LEGAL_ALT(ALT_O);
-            if (!(conv_num(&bp, &tm->tm_sec, 0, 61)))
-                return (0);
-            break;
-
-        case 'U': /* The week of year, beginning on sunday. */
-        case 'W': /* The week of year, beginning on monday. */
-            LEGAL_ALT(ALT_O);
             /*
-             * XXX This is bogus, as we can not assume any valid
-             * information present in the tm structure at this
-             * point to calculate a real value, so just check the
-             * range for now.
+             * "Alternative" modifiers. Just set the appropriate flag
+             * and start over again.
              */
-            if (!(conv_num(&bp, &i, 0, 53)))
-                return (0);
-            break;
+            case 'E': /* "%E?" alternative conversion modifier. */
+                LEGAL_ALT(0);
+                alt_format |= ALT_E;
+                goto again;
 
-        case 'w': /* The day of week, beginning on sunday. */
-            LEGAL_ALT(ALT_O);
-            if (!(conv_num(&bp, &tm->tm_wday, 0, 6)))
-                return (0);
-            break;
+            case 'O': /* "%O?" alternative conversion modifier. */
+                LEGAL_ALT(0);
+                alt_format |= ALT_O;
+                goto again;
 
-        case 'Y': /* The year. */
-            LEGAL_ALT(ALT_E);
-            if (!(conv_num(&bp, &i, 0, 9999)))
-                return (0);
-
-            tm->tm_year = i - TM_YEAR_BASE;
-            break;
-
-        case 'y': /* The year within 100 years of the epoch. */
-            LEGAL_ALT(ALT_E | ALT_O);
-            if (!(conv_num(&bp, &i, 0, 99)))
-                return (0);
-
-            if (split_year) {
-                tm->tm_year = ((tm->tm_year / 100) * 100) + i;
+            /*
+             * "Complex" conversion rules, implemented through recursion.
+             */
+            case 'c': /* Date and time, using the locale's format. */
+                LEGAL_ALT(ALT_E);
+                bp = arg_strptime(bp, "%x %X", tm);
+                if (!bp)
+                    return (0);
                 break;
-            }
-            split_year = 1;
-            if (i <= 68)
-                tm->tm_year = i + 2000 - TM_YEAR_BASE;
-            else
-                tm->tm_year = i + 1900 - TM_YEAR_BASE;
-            break;
 
-        /*
-         * Miscellaneous conversions.
-         */
-        case 'n': /* Any kind of white-space. */
-        case 't':
-            LEGAL_ALT(0);
-            while (ISSPACE(*bp))
-                bp++;
-            break;
+            case 'D': /* The date as "%m/%d/%y". */
+                LEGAL_ALT(0);
+                bp = arg_strptime(bp, "%m/%d/%y", tm);
+                if (!bp)
+                    return (0);
+                break;
+
+            case 'R': /* The time as "%H:%M". */
+                LEGAL_ALT(0);
+                bp = arg_strptime(bp, "%H:%M", tm);
+                if (!bp)
+                    return (0);
+                break;
+
+            case 'r': /* The time in 12-hour clock representation. */
+                LEGAL_ALT(0);
+                bp = arg_strptime(bp, "%I:%M:%S %p", tm);
+                if (!bp)
+                    return (0);
+                break;
+
+            case 'T': /* The time as "%H:%M:%S". */
+                LEGAL_ALT(0);
+                bp = arg_strptime(bp, "%H:%M:%S", tm);
+                if (!bp)
+                    return (0);
+                break;
+
+            case 'X': /* The time, using the locale's format. */
+                LEGAL_ALT(ALT_E);
+                bp = arg_strptime(bp, "%H:%M:%S", tm);
+                if (!bp)
+                    return (0);
+                break;
+
+            case 'x': /* The date, using the locale's format. */
+                LEGAL_ALT(ALT_E);
+                bp = arg_strptime(bp, "%m/%d/%y", tm);
+                if (!bp)
+                    return (0);
+                break;
+
+            /*
+             * "Elementary" conversion rules.
+             */
+            case 'A': /* The day of week, using the locale's form. */
+            case 'a':
+                LEGAL_ALT(0);
+                for (i = 0; i < 7; i++) {
+                    /* Full name. */
+                    len = strlen(day[i]);
+                    if (arg_strncasecmp(day[i], bp, len) == 0)
+                        break;
+
+                    /* Abbreviated name. */
+                    len = strlen(abday[i]);
+                    if (arg_strncasecmp(abday[i], bp, len) == 0)
+                        break;
+                }
+
+                /* Nothing matched. */
+                if (i == 7)
+                    return (0);
+
+                tm->tm_wday = i;
+                bp += len;
+                break;
+
+            case 'B': /* The month, using the locale's form. */
+            case 'b':
+            case 'h':
+                LEGAL_ALT(0);
+                for (i = 0; i < 12; i++) {
+                    /* Full name. */
+                    len = strlen(mon[i]);
+                    if (arg_strncasecmp(mon[i], bp, len) == 0)
+                        break;
+
+                    /* Abbreviated name. */
+                    len = strlen(abmon[i]);
+                    if (arg_strncasecmp(abmon[i], bp, len) == 0)
+                        break;
+                }
+
+                /* Nothing matched. */
+                if (i == 12)
+                    return (0);
+
+                tm->tm_mon = i;
+                bp += len;
+                break;
+
+            case 'C': /* The century number. */
+                LEGAL_ALT(ALT_E);
+                if (!(conv_num(&bp, &i, 0, 99)))
+                    return (0);
+
+                if (split_year) {
+                    tm->tm_year = (tm->tm_year % 100) + (i * 100);
+                } else {
+                    tm->tm_year = i * 100;
+                    split_year = 1;
+                }
+                break;
+
+            case 'd': /* The day of month. */
+            case 'e':
+                LEGAL_ALT(ALT_O);
+                if (!(conv_num(&bp, &tm->tm_mday, 1, 31)))
+                    return (0);
+                break;
+
+            case 'k': /* The hour (24-hour clock representation). */
+                LEGAL_ALT(0);
+            /* FALLTHROUGH */
+            case 'H':
+                LEGAL_ALT(ALT_O);
+                if (!(conv_num(&bp, &tm->tm_hour, 0, 23)))
+                    return (0);
+                break;
+
+            case 'l': /* The hour (12-hour clock representation). */
+                LEGAL_ALT(0);
+            /* FALLTHROUGH */
+            case 'I':
+                LEGAL_ALT(ALT_O);
+                if (!(conv_num(&bp, &tm->tm_hour, 1, 12)))
+                    return (0);
+                if (tm->tm_hour == 12)
+                    tm->tm_hour = 0;
+                break;
+
+            case 'j': /* The day of year. */
+                LEGAL_ALT(0);
+                if (!(conv_num(&bp, &i, 1, 366)))
+                    return (0);
+                tm->tm_yday = i - 1;
+                break;
+
+            case 'M': /* The minute. */
+                LEGAL_ALT(ALT_O);
+                if (!(conv_num(&bp, &tm->tm_min, 0, 59)))
+                    return (0);
+                break;
+
+            case 'm': /* The month. */
+                LEGAL_ALT(ALT_O);
+                if (!(conv_num(&bp, &i, 1, 12)))
+                    return (0);
+                tm->tm_mon = i - 1;
+                break;
+
+            case 'p': /* The locale's equivalent of AM/PM. */
+                LEGAL_ALT(0);
+                /* AM? */
+                if (arg_strcasecmp(am_pm[0], bp) == 0) {
+                    if (tm->tm_hour > 11)
+                        return (0);
+
+                    bp += strlen(am_pm[0]);
+                    break;
+                }
+                /* PM? */
+                else if (arg_strcasecmp(am_pm[1], bp) == 0) {
+                    if (tm->tm_hour > 11)
+                        return (0);
+
+                    tm->tm_hour += 12;
+                    bp += strlen(am_pm[1]);
+                    break;
+                }
+
+                /* Nothing matched. */
+                return (0);
+
+            case 'S': /* The seconds. */
+                LEGAL_ALT(ALT_O);
+                if (!(conv_num(&bp, &tm->tm_sec, 0, 61)))
+                    return (0);
+                break;
+
+            case 'U': /* The week of year, beginning on sunday. */
+            case 'W': /* The week of year, beginning on monday. */
+                LEGAL_ALT(ALT_O);
+                /*
+                 * XXX This is bogus, as we can not assume any valid
+                 * information present in the tm structure at this
+                 * point to calculate a real value, so just check the
+                 * range for now.
+                 */
+                if (!(conv_num(&bp, &i, 0, 53)))
+                    return (0);
+                break;
+
+            case 'w': /* The day of week, beginning on sunday. */
+                LEGAL_ALT(ALT_O);
+                if (!(conv_num(&bp, &tm->tm_wday, 0, 6)))
+                    return (0);
+                break;
+
+            case 'Y': /* The year. */
+                LEGAL_ALT(ALT_E);
+                if (!(conv_num(&bp, &i, 0, 9999)))
+                    return (0);
+
+                tm->tm_year = i - TM_YEAR_BASE;
+                break;
+
+            case 'y': /* The year within 100 years of the epoch. */
+                LEGAL_ALT(ALT_E | ALT_O);
+                if (!(conv_num(&bp, &i, 0, 99)))
+                    return (0);
+
+                if (split_year) {
+                    tm->tm_year = ((tm->tm_year / 100) * 100) + i;
+                    break;
+                }
+                split_year = 1;
+                if (i <= 68)
+                    tm->tm_year = i + 2000 - TM_YEAR_BASE;
+                else
+                    tm->tm_year = i + 1900 - TM_YEAR_BASE;
+                break;
+
+            /*
+             * Miscellaneous conversions.
+             */
+            case 'n': /* Any kind of white-space. */
+            case 't':
+                LEGAL_ALT(0);
+                while (ISSPACE(*bp))
+                    bp++;
+                break;
 
 
-        default: /* Unknown/unsupported conversion. */
-            return (0);
+            default: /* Unknown/unsupported conversion. */
+                return (0);
         }
 
 
@@ -1430,20 +1417,15 @@ static int arg_dbl_scanfn(struct arg_dbl *parent, const char *argval)
 {
     int errorcode = 0;
 
-    if (parent->count == parent->hdr.maxcount)
-    {
+    if (parent->count == parent->hdr.maxcount) {
         /* maximum number of arguments exceeded */
         errorcode = EMAXCOUNT;
-    }
-    else if (!argval)
-    {
+    } else if (!argval) {
         /* a valid argument with no argument value was given. */
         /* This happens when an optional argument value was invoked. */
         /* leave parent argument value unaltered but still count the argument. */
         parent->count++;
-    }
-    else
-    {
+    } else {
         double val;
         char *end;
 
@@ -1486,29 +1468,28 @@ static void arg_dbl_errorfn(
     argval = argval ? argval : "";
 
     fprintf(fp, "%s: ", progname);
-    switch(errorcode)
-    {
-    case EMINCOUNT:
-        fputs("missing option ", fp);
-        arg_print_option(fp, shortopts, longopts, datatype, "\n");
-        break;
+    switch (errorcode) {
+        case EMINCOUNT:
+            fputs("missing option ", fp);
+            arg_print_option(fp, shortopts, longopts, datatype, "\n");
+            break;
 
-    case EMAXCOUNT:
-        fputs("excess option ", fp);
-        arg_print_option(fp, shortopts, longopts, argval, "\n");
-        break;
+        case EMAXCOUNT:
+            fputs("excess option ", fp);
+            arg_print_option(fp, shortopts, longopts, argval, "\n");
+            break;
 
-    case EBADDOUBLE:
-        fprintf(fp, "invalid argument \"%s\" to option ", argval);
-        arg_print_option(fp, shortopts, longopts, datatype, "\n");
-        break;
+        case EBADDOUBLE:
+            fprintf(fp, "invalid argument \"%s\" to option ", argval);
+            arg_print_option(fp, shortopts, longopts, datatype, "\n");
+            break;
     }
 }
 
 
-struct arg_dbl * arg_dbl0(
-    const char * shortopts,
-    const char * longopts,
+struct arg_dbl *arg_dbl0(
+    const char *shortopts,
+    const char *longopts,
     const char *datatype,
     const char *glossary)
 {
@@ -1516,9 +1497,9 @@ struct arg_dbl * arg_dbl0(
 }
 
 
-struct arg_dbl * arg_dbl1(
-    const char * shortopts,
-    const char * longopts,
+struct arg_dbl *arg_dbl1(
+    const char *shortopts,
+    const char *longopts,
     const char *datatype,
     const char *glossary)
 {
@@ -1526,9 +1507,9 @@ struct arg_dbl * arg_dbl1(
 }
 
 
-struct arg_dbl * arg_dbln(
-    const char * shortopts,
-    const char * longopts,
+struct arg_dbl *arg_dbln(
+    const char *shortopts,
+    const char *longopts,
     const char *datatype,
     int mincount,
     int maxcount,
@@ -1544,8 +1525,7 @@ struct arg_dbl * arg_dbln(
              + (maxcount + 1) * sizeof(double); /* storage for dval[maxcount] array plus one extra for padding to memory boundary */
 
     result = (struct arg_dbl *)malloc(nbytes);
-    if (result)
-    {
+    if (result) {
         size_t addr;
         size_t rem;
 
@@ -1634,33 +1614,32 @@ static void arg_end_errorfn(
     argval = argval ? argval : "";
 
     fprintf(fp, "%s: ", progname);
-    switch(error)
-    {
-    case ARG_ELIMIT:
-        fputs("too many errors to display", fp);
-        break;
-    case ARG_EMALLOC:
-        fputs("insufficent memory", fp);
-        break;
-    case ARG_ENOMATCH:
-        fprintf(fp, "unexpected argument \"%s\"", argval);
-        break;
-    case ARG_EMISSARG:
-        fprintf(fp, "option \"%s\" requires an argument", argval);
-        break;
-    case ARG_ELONGOPT:
-        fprintf(fp, "invalid option \"%s\"", argval);
-        break;
-    default:
-        fprintf(fp, "invalid option \"-%c\"", error);
-        break;
+    switch (error) {
+        case ARG_ELIMIT:
+            fputs("too many errors to display", fp);
+            break;
+        case ARG_EMALLOC:
+            fputs("insufficent memory", fp);
+            break;
+        case ARG_ENOMATCH:
+            fprintf(fp, "unexpected argument \"%s\"", argval);
+            break;
+        case ARG_EMISSARG:
+            fprintf(fp, "option \"%s\" requires an argument", argval);
+            break;
+        case ARG_ELONGOPT:
+            fprintf(fp, "invalid option \"%s\"", argval);
+            break;
+        default:
+            fprintf(fp, "invalid option \"-%c\"", error);
+            break;
     }
 
     fputc('\n', fp);
 }
 
 
-struct arg_end * arg_end(int maxcount)
+struct arg_end *arg_end(int maxcount)
 {
     size_t nbytes;
     struct arg_end *result;
@@ -1671,8 +1650,7 @@ struct arg_end * arg_end(int maxcount)
              + maxcount * sizeof(char *); /* storage for char* argval[maxcount] array */
 
     result = (struct arg_end *)malloc(nbytes);
-    if (result)
-    {
+    if (result) {
         /* init the arg_hdr struct */
         result->hdr.flag      = ARG_TERMINATOR;
         result->hdr.shortopts = NULL;
@@ -1691,10 +1669,10 @@ struct arg_end * arg_end(int maxcount)
         result->error = (int *)(result + 1);
 
         /* store parent[maxcount] array immediately after error[] array */
-        result->parent = (void * *)(result->error + maxcount );
+        result->parent = (void * *)(result->error + maxcount);
 
         /* store argval[maxcount] array immediately after parent[] array */
-        result->argval = (const char * *)(result->parent + maxcount );
+        result->argval = (const char * *)(result->parent + maxcount);
     }
 
     ARG_TRACE(("arg_end(%d) returns %p\n", maxcount, result));
@@ -1702,12 +1680,11 @@ struct arg_end * arg_end(int maxcount)
 }
 
 
-void arg_print_errors(FILE * fp, struct arg_end * end, const char * progname)
+void arg_print_errors(FILE *fp, struct arg_end *end, const char *progname)
 {
     int i;
     ARG_TRACE(("arg_errors()\n"));
-    for (i = 0; i < end->count; i++)
-    {
+    for (i = 0; i < end->count; i++) {
         struct arg_hdr *errorparent = (struct arg_hdr *)(end->parent[i]);
         if (errorparent->errorfn)
             errorparent->errorfn(end->parent[i],
@@ -1769,7 +1746,7 @@ static void arg_file_resetfn(struct arg_file *parent)
 
 
 /* Returns ptr to the base filename within *filename */
-static const char * arg_basename(const char *filename)
+static const char *arg_basename(const char *filename)
 {
     const char *result = NULL, *result1, *result2;
 
@@ -1789,7 +1766,7 @@ static const char * arg_basename(const char *filename)
         result = filename;  /* neither file separator was found so basename is the whole filename */
 
     /* special cases of "." and ".." are not considered basenames */
-    if (result && ( strcmp(".", result) == 0 || strcmp("..", result) == 0 ))
+    if (result && (strcmp(".", result) == 0 || strcmp("..", result) == 0))
         result = filename + strlen(filename);
 
     return result;
@@ -1797,7 +1774,7 @@ static const char * arg_basename(const char *filename)
 
 
 /* Returns ptr to the file extension within *basename */
-static const char * arg_extension(const char *basename)
+static const char *arg_extension(const char *basename)
 {
     /* find the last occurrence of '.' in basename */
     const char *result = (basename ? strrchr(basename, '.') : NULL);
@@ -1822,20 +1799,15 @@ static int arg_file_scanfn(struct arg_file *parent, const char *argval)
 {
     int errorcode = 0;
 
-    if (parent->count == parent->hdr.maxcount)
-    {
+    if (parent->count == parent->hdr.maxcount) {
         /* maximum number of arguments exceeded */
         errorcode = EMAXCOUNT;
-    }
-    else if (!argval)
-    {
+    } else if (!argval) {
         /* a valid argument with no argument value was given. */
         /* This happens when an optional argument value was invoked. */
         /* leave parent arguiment value unaltered but still count the argument. */
         parent->count++;
-    }
-    else
-    {
+    } else {
         parent->filename[parent->count]  = argval;
         parent->basename[parent->count]  = arg_basename(argval);
         parent->extension[parent->count] =
@@ -1872,27 +1844,26 @@ static void arg_file_errorfn(
     argval = argval ? argval : "";
 
     fprintf(fp, "%s: ", progname);
-    switch(errorcode)
-    {
-    case EMINCOUNT:
-        fputs("missing option ", fp);
-        arg_print_option(fp, shortopts, longopts, datatype, "\n");
-        break;
+    switch (errorcode) {
+        case EMINCOUNT:
+            fputs("missing option ", fp);
+            arg_print_option(fp, shortopts, longopts, datatype, "\n");
+            break;
 
-    case EMAXCOUNT:
-        fputs("excess option ", fp);
-        arg_print_option(fp, shortopts, longopts, argval, "\n");
-        break;
+        case EMAXCOUNT:
+            fputs("excess option ", fp);
+            arg_print_option(fp, shortopts, longopts, argval, "\n");
+            break;
 
-    default:
-        fprintf(fp, "unknown error at \"%s\"\n", argval);
+        default:
+            fprintf(fp, "unknown error at \"%s\"\n", argval);
     }
 }
 
 
-struct arg_file * arg_file0(
-    const char * shortopts,
-    const char * longopts,
+struct arg_file *arg_file0(
+    const char *shortopts,
+    const char *longopts,
     const char *datatype,
     const char *glossary)
 {
@@ -1900,9 +1871,9 @@ struct arg_file * arg_file0(
 }
 
 
-struct arg_file * arg_file1(
-    const char * shortopts,
-    const char * longopts,
+struct arg_file *arg_file1(
+    const char *shortopts,
+    const char *longopts,
     const char *datatype,
     const char *glossary)
 {
@@ -1910,9 +1881,9 @@ struct arg_file * arg_file1(
 }
 
 
-struct arg_file * arg_filen(
-    const char * shortopts,
-    const char * longopts,
+struct arg_file *arg_filen(
+    const char *shortopts,
+    const char *longopts,
     const char *datatype,
     int mincount,
     int maxcount,
@@ -1930,8 +1901,7 @@ struct arg_file * arg_filen(
              + sizeof(char *) * maxcount; /* storage for extension[maxcount] array */
 
     result = (struct arg_file *)malloc(nbytes);
-    if (result)
-    {
+    if (result) {
         int i;
 
         /* init the arg_hdr struct */
@@ -1955,8 +1925,7 @@ struct arg_file * arg_filen(
         result->count = 0;
 
         /* foolproof the string pointers by initialising them with empty strings */
-        for (i = 0; i < maxcount; i++)
-        {
+        for (i = 0; i < maxcount; i++) {
             result->filename[i] = "";
             result->basename[i] = "";
             result->extension[i] = "";
@@ -2020,7 +1989,7 @@ static void arg_int_resetfn(struct arg_int *parent)
 /* eg: to parse oct str="+0o12324", specify X='O' and base=8.       */
 /* eg: to parse bin str="-0B01010", specify X='B' and base=2.       */
 /* Failure of conversion is indicated by result where *endptr==str. */
-static long int strtol0X(const char * str,
+static long int strtol0X(const char *str,
                          const char * *endptr,
                          char X,
                          int base)
@@ -2035,32 +2004,29 @@ static long int strtol0X(const char * str,
     /* printf("1) %s\n",ptr); */
 
     /* scan optional sign character */
-    switch (*ptr)
-    {
-    case '+':
-        ptr++;
-        s = 1;
-        break;
-    case '-':
-        ptr++;
-        s = -1;
-        break;
-    default:
-        s = 1;
-        break;
+    switch (*ptr) {
+        case '+':
+            ptr++;
+            s = 1;
+            break;
+        case '-':
+            ptr++;
+            s = -1;
+            break;
+        default:
+            s = 1;
+            break;
     }
     /* printf("2) %s\n",ptr); */
 
     /* '0X' prefix */
-    if ((*ptr++) != '0')
-    {
+    if ((*ptr++) != '0') {
         /* printf("failed to detect '0'\n"); */
         *endptr = str;
         return 0;
     }
     /* printf("3) %s\n",ptr); */
-    if (toupper(*ptr++) != toupper(X))
-    {
+    if (toupper(*ptr++) != toupper(X)) {
         /* printf("failed to detect '%c'\n",X); */
         *endptr = str;
         return 0;
@@ -2069,8 +2035,7 @@ static long int strtol0X(const char * str,
 
     /* attempt conversion on remainder of string using strtol() */
     val = strtol(ptr, (char * *)endptr, base);
-    if (*endptr == ptr)
-    {
+    if (*endptr == ptr) {
         /* conversion failed */
         *endptr = str;
         return 0;
@@ -2086,8 +2051,7 @@ static long int strtol0X(const char * str,
 static int detectsuffix(const char *str, const char *suffix)
 {
     /* scan pairwise through strings until mismatch detected */
-    while( toupper(*str) == toupper(*suffix) )
-    {
+    while (toupper(*str) == toupper(*suffix)) {
         /* printf("'%c' '%c'\n", *str, *suffix); */
 
         /* return 1 (success) if match persists until the string terminator */
@@ -2117,39 +2081,30 @@ static int arg_int_scanfn(struct arg_int *parent, const char *argval)
 {
     int errorcode = 0;
 
-    if (parent->count == parent->hdr.maxcount)
-    {
+    if (parent->count == parent->hdr.maxcount) {
         /* maximum number of arguments exceeded */
         errorcode = EMAXCOUNT;
-    }
-    else if (!argval)
-    {
+    } else if (!argval) {
         /* a valid argument with no argument value was given. */
         /* This happens when an optional argument value was invoked. */
         /* leave parent arguiment value unaltered but still count the argument. */
         parent->count++;
-    }
-    else
-    {
+    } else {
         long int val;
         const char *end;
 
         /* attempt to extract hex integer (eg: +0x123) from argval into val conversion */
         val = strtol0X(argval, &end, 'X', 16);
-        if (end == argval)
-        {
+        if (end == argval) {
             /* hex failed, attempt octal conversion (eg +0o123) */
             val = strtol0X(argval, &end, 'O', 8);
-            if (end == argval)
-            {
+            if (end == argval) {
                 /* octal failed, attempt binary conversion (eg +0B101) */
                 val = strtol0X(argval, &end, 'B', 2);
-                if (end == argval)
-                {
+                if (end == argval) {
                     /* binary failed, attempt decimal conversion with no prefix (eg 1234) */
                     val = strtol(argval, (char * *)&end, 10);
-                    if (end == argval)
-                    {
+                    if (end == argval) {
                         /* all supported number formats failed */
                         return EBADINT;
                     }
@@ -2159,7 +2114,7 @@ static int arg_int_scanfn(struct arg_int *parent, const char *argval)
 
         /* Safety check for integer overflow. WARNING: this check    */
         /* achieves nothing on machines where size(int)==size(long). */
-        if ( val > INT_MAX || val < INT_MIN )
+        if (val > INT_MAX || val < INT_MIN)
 #ifdef __STDC_WANT_SECURE_LIB__
             errorcode = EOVERFLOW_;
 #else
@@ -2168,9 +2123,8 @@ static int arg_int_scanfn(struct arg_int *parent, const char *argval)
 
         /* Detect any suffixes (KB,MB,GB) and multiply argument value appropriately. */
         /* We need to be mindful of integer overflows when using such big numbers.   */
-        if (detectsuffix(end, "KB"))             /* kilobytes */
-        {
-            if ( val > (INT_MAX / 1024) || val < (INT_MIN / 1024) )
+        if (detectsuffix(end, "KB")) {           /* kilobytes */
+            if (val > (INT_MAX / 1024) || val < (INT_MIN / 1024))
 #ifdef __STDC_WANT_SECURE_LIB__
                 errorcode = EOVERFLOW_;          /* Overflow would occur if we proceed */
 #else
@@ -2178,10 +2132,8 @@ static int arg_int_scanfn(struct arg_int *parent, const char *argval)
 #endif
             else
                 val *= 1024;                    /* 1KB = 1024 */
-        }
-        else if (detectsuffix(end, "MB"))        /* megabytes */
-        {
-            if ( val > (INT_MAX / 1048576) || val < (INT_MIN / 1048576) )
+        } else if (detectsuffix(end, "MB")) {    /* megabytes */
+            if (val > (INT_MAX / 1048576) || val < (INT_MIN / 1048576))
 #ifdef __STDC_WANT_SECURE_LIB__
                 errorcode = EOVERFLOW_;          /* Overflow would occur if we proceed */
 #else
@@ -2189,10 +2141,8 @@ static int arg_int_scanfn(struct arg_int *parent, const char *argval)
 #endif
             else
                 val *= 1048576;                 /* 1MB = 1024*1024 */
-        }
-        else if (detectsuffix(end, "GB"))        /* gigabytes */
-        {
-            if ( val > (INT_MAX / 1073741824) || val < (INT_MIN / 1073741824) )
+        } else if (detectsuffix(end, "GB")) {    /* gigabytes */
+            if (val > (INT_MAX / 1073741824) || val < (INT_MIN / 1073741824))
 #ifdef __STDC_WANT_SECURE_LIB__
                 errorcode = EOVERFLOW_;          /* Overflow would occur if we proceed */
 #else
@@ -2200,8 +2150,7 @@ static int arg_int_scanfn(struct arg_int *parent, const char *argval)
 #endif
             else
                 val *= 1073741824;              /* 1GB = 1024*1024*1024 */
-        }
-        else if (!detectsuffix(end, ""))
+        } else if (!detectsuffix(end, ""))
             errorcode = EBADINT;                /* invalid suffix detected */
 
         /* if success then store result in parent->ival[] array */
@@ -2237,37 +2186,36 @@ static void arg_int_errorfn(
     argval = argval ? argval : "";
 
     fprintf(fp, "%s: ", progname);
-    switch(errorcode)
-    {
-    case EMINCOUNT:
-        fputs("missing option ", fp);
-        arg_print_option(fp, shortopts, longopts, datatype, "\n");
-        break;
+    switch (errorcode) {
+        case EMINCOUNT:
+            fputs("missing option ", fp);
+            arg_print_option(fp, shortopts, longopts, datatype, "\n");
+            break;
 
-    case EMAXCOUNT:
-        fputs("excess option ", fp);
-        arg_print_option(fp, shortopts, longopts, argval, "\n");
-        break;
+        case EMAXCOUNT:
+            fputs("excess option ", fp);
+            arg_print_option(fp, shortopts, longopts, argval, "\n");
+            break;
 
-    case EBADINT:
-        fprintf(fp, "invalid argument \"%s\" to option ", argval);
-        arg_print_option(fp, shortopts, longopts, datatype, "\n");
-        break;
+        case EBADINT:
+            fprintf(fp, "invalid argument \"%s\" to option ", argval);
+            arg_print_option(fp, shortopts, longopts, datatype, "\n");
+            break;
 
 #ifdef __STDC_WANT_SECURE_LIB__
-    case EOVERFLOW_:
+        case EOVERFLOW_:
 #else
-    case EOVERFLOW:
+        case EOVERFLOW:
 #endif
-        fputs("integer overflow at option ", fp);
-        arg_print_option(fp, shortopts, longopts, datatype, " ");
-        fprintf(fp, "(%s is too large)\n", argval);
-        break;
+            fputs("integer overflow at option ", fp);
+            arg_print_option(fp, shortopts, longopts, datatype, " ");
+            fprintf(fp, "(%s is too large)\n", argval);
+            break;
     }
 }
 
 
-struct arg_int * arg_int0(
+struct arg_int *arg_int0(
     const char *shortopts,
     const char *longopts,
     const char *datatype,
@@ -2277,7 +2225,7 @@ struct arg_int * arg_int0(
 }
 
 
-struct arg_int * arg_int1(
+struct arg_int *arg_int1(
     const char *shortopts,
     const char *longopts,
     const char *datatype,
@@ -2287,7 +2235,7 @@ struct arg_int * arg_int1(
 }
 
 
-struct arg_int * arg_intn(
+struct arg_int *arg_intn(
     const char *shortopts,
     const char *longopts,
     const char *datatype,
@@ -2305,8 +2253,7 @@ struct arg_int * arg_intn(
              + maxcount * sizeof(int); /* storage for ival[maxcount] array */
 
     result = (struct arg_int *)malloc(nbytes);
-    if (result)
-    {
+    if (result) {
         /* init the arg_hdr struct */
         result->hdr.flag      = ARG_HASVALUE;
         result->hdr.shortopts = shortopts;
@@ -2374,7 +2321,7 @@ static void arg_lit_resetfn(struct arg_lit *parent)
 static int arg_lit_scanfn(struct arg_lit *parent, const char *argval)
 {
     int errorcode = 0;
-    if (parent->count < parent->hdr.maxcount )
+    if (parent->count < parent->hdr.maxcount)
         parent->count++;
     else
         errorcode = EMAXCOUNT;
@@ -2404,18 +2351,17 @@ static void arg_lit_errorfn(
     const char *longopts  = parent->hdr.longopts;
     const char *datatype  = parent->hdr.datatype;
 
-    switch(errorcode)
-    {
-    case EMINCOUNT:
-        fprintf(fp, "%s: missing option ", progname);
-        arg_print_option(fp, shortopts, longopts, datatype, "\n");
-        fprintf(fp, "\n");
-        break;
+    switch (errorcode) {
+        case EMINCOUNT:
+            fprintf(fp, "%s: missing option ", progname);
+            arg_print_option(fp, shortopts, longopts, datatype, "\n");
+            fprintf(fp, "\n");
+            break;
 
-    case EMAXCOUNT:
-        fprintf(fp, "%s: extraneous option ", progname);
-        arg_print_option(fp, shortopts, longopts, datatype, "\n");
-        break;
+        case EMAXCOUNT:
+            fprintf(fp, "%s: extraneous option ", progname);
+            arg_print_option(fp, shortopts, longopts, datatype, "\n");
+            break;
     }
 
     ARG_TRACE(("%s:errorfn(%p, %p, %d, %s, %s)\n", __FILE__, parent, fp,
@@ -2423,16 +2369,16 @@ static void arg_lit_errorfn(
 }
 
 
-struct arg_lit * arg_lit0(
-    const char * shortopts,
-    const char * longopts,
-    const char * glossary)
+struct arg_lit *arg_lit0(
+    const char *shortopts,
+    const char *longopts,
+    const char *glossary)
 {
     return arg_litn(shortopts, longopts, 0, 1, glossary);
 }
 
 
-struct arg_lit * arg_lit1(
+struct arg_lit *arg_lit1(
     const char *shortopts,
     const char *longopts,
     const char *glossary)
@@ -2441,7 +2387,7 @@ struct arg_lit * arg_lit1(
 }
 
 
-struct arg_lit * arg_litn(
+struct arg_lit *arg_litn(
     const char *shortopts,
     const char *longopts,
     int mincount,
@@ -2454,8 +2400,7 @@ struct arg_lit * arg_litn(
     maxcount = (maxcount < mincount) ? mincount : maxcount;
 
     result = (struct arg_lit *)malloc(sizeof(struct arg_lit));
-    if (result)
-    {
+    if (result) {
         /* init the arg_hdr struct */
         result->hdr.flag      = 0;
         result->hdr.shortopts = shortopts;
@@ -2514,8 +2459,7 @@ struct arg_lit * arg_litn(
 struct arg_rem *arg_rem(const char *datatype, const char *glossary)
 {
     struct arg_rem *result = (struct arg_rem *)malloc(sizeof(struct arg_rem));
-    if (result)
-    {
+    if (result) {
         result->hdr.flag = 0;
         result->hdr.shortopts = NULL;
         result->hdr.longopts = NULL;
@@ -2636,11 +2580,11 @@ typedef struct {
 
 TREX_API TRex *trex_compile(const TRexChar *pattern, const TRexChar **error, int flags);
 TREX_API void trex_free(TRex *exp);
-TREX_API TRexBool trex_match(TRex* exp, const TRexChar* text);
-TREX_API TRexBool trex_search(TRex* exp, const TRexChar* text, const TRexChar** out_begin, const TRexChar** out_end);
-TREX_API TRexBool trex_searchrange(TRex* exp, const TRexChar* text_begin, const TRexChar* text_end, const TRexChar** out_begin, const TRexChar** out_end);
-TREX_API int trex_getsubexpcount(TRex* exp);
-TREX_API TRexBool trex_getsubexp(TRex* exp, int n, TRexMatch *subexp);
+TREX_API TRexBool trex_match(TRex *exp, const TRexChar *text);
+TREX_API TRexBool trex_search(TRex *exp, const TRexChar *text, const TRexChar **out_begin, const TRexChar **out_end);
+TREX_API TRexBool trex_searchrange(TRex *exp, const TRexChar *text_begin, const TRexChar *text_end, const TRexChar **out_begin, const TRexChar **out_end);
+TREX_API int trex_getsubexpcount(TRex *exp);
+TREX_API TRexBool trex_getsubexp(TRex *exp, int n, TRexMatch *subexp);
 
 #ifdef __cplusplus
 }
@@ -2650,8 +2594,7 @@ TREX_API TRexBool trex_getsubexp(TRex* exp, int n, TRexMatch *subexp);
 
 
 
-struct privhdr
-{
+struct privhdr {
     const char *pattern;
     int flags;
 };
@@ -2670,20 +2613,15 @@ static int arg_rex_scanfn(struct arg_rex *parent, const char *argval)
     TRex *rex = NULL;
     TRexBool is_match = TRex_False;
 
-    if (parent->count == parent->hdr.maxcount )
-    {
+    if (parent->count == parent->hdr.maxcount) {
         /* maximum number of arguments exceeded */
         errorcode = EMAXCOUNT;
-    }
-    else if (!argval)
-    {
+    } else if (!argval) {
         /* a valid argument with no argument value was given. */
         /* This happens when an optional argument value was invoked. */
         /* leave parent argument value unaltered but still count the argument. */
         parent->count++;
-    }
-    else
-    {
+    } else {
         struct privhdr *priv = (struct privhdr *)parent->hdr.priv;
 
         /* test the current argument value for a match with the regular expression */
@@ -2699,7 +2637,7 @@ static int arg_rex_scanfn(struct arg_rex *parent, const char *argval)
         trex_free(rex);
     }
 
-    ARG_TRACE(("%s:scanfn(%p) returns %d\n",__FILE__,parent,errorcode));
+    ARG_TRACE(("%s:scanfn(%p) returns %d\n", __FILE__, parent, errorcode));
     return errorcode;
 }
 
@@ -2716,10 +2654,10 @@ static int arg_rex_checkfn(struct arg_rex *parent)
 }
 
 static void arg_rex_errorfn(struct arg_rex *parent,
-                    FILE *fp,
-                    int errorcode,
-                    const char *argval,
-                    const char *progname)
+                            FILE *fp,
+                            int errorcode,
+                            const char *argval,
+                            const char *progname)
 {
     const char *shortopts = parent->hdr.shortopts;
     const char *longopts  = parent->hdr.longopts;
@@ -2729,40 +2667,38 @@ static void arg_rex_errorfn(struct arg_rex *parent,
     argval = argval ? argval : "";
 
     fprintf(fp, "%s: ", progname);
-    switch(errorcode)
-    {
-    case EMINCOUNT:
-        fputs("missing option ", fp);
-        arg_print_option(fp, shortopts, longopts, datatype, "\n");
-        break;
+    switch (errorcode) {
+        case EMINCOUNT:
+            fputs("missing option ", fp);
+            arg_print_option(fp, shortopts, longopts, datatype, "\n");
+            break;
 
-    case EMAXCOUNT:
-        fputs("excess option ", fp);
-        arg_print_option(fp, shortopts, longopts, argval, "\n");
-        break;
+        case EMAXCOUNT:
+            fputs("excess option ", fp);
+            arg_print_option(fp, shortopts, longopts, argval, "\n");
+            break;
 
-    case EREGNOMATCH:
-        fputs("illegal value  ", fp);
-        arg_print_option(fp, shortopts, longopts, argval, "\n");
-        break;
+        case EREGNOMATCH:
+            fputs("illegal value  ", fp);
+            arg_print_option(fp, shortopts, longopts, argval, "\n");
+            break;
 
-    default:
-    {
-        //char errbuff[256];
-        //regerror(errorcode, NULL, errbuff, sizeof(errbuff));
-        //printf("%s\n", errbuff);
-    }
-    break;
+        default: {
+            //char errbuff[256];
+            //regerror(errorcode, NULL, errbuff, sizeof(errbuff));
+            //printf("%s\n", errbuff);
+        }
+        break;
     }
 }
 
 
-struct arg_rex * arg_rex0(const char * shortopts,
-                          const char * longopts,
-                          const char * pattern,
-                          const char *datatype,
-                          int flags,
-                          const char *glossary)
+struct arg_rex *arg_rex0(const char *shortopts,
+                         const char *longopts,
+                         const char *pattern,
+                         const char *datatype,
+                         int flags,
+                         const char *glossary)
 {
     return arg_rexn(shortopts,
                     longopts,
@@ -2774,12 +2710,12 @@ struct arg_rex * arg_rex0(const char * shortopts,
                     glossary);
 }
 
-struct arg_rex * arg_rex1(const char * shortopts,
-                          const char * longopts,
-                          const char * pattern,
-                          const char *datatype,
-                          int flags,
-                          const char *glossary)
+struct arg_rex *arg_rex1(const char *shortopts,
+                         const char *longopts,
+                         const char *pattern,
+                         const char *datatype,
+                         int flags,
+                         const char *glossary)
 {
     return arg_rexn(shortopts,
                     longopts,
@@ -2792,14 +2728,14 @@ struct arg_rex * arg_rex1(const char * shortopts,
 }
 
 
-struct arg_rex * arg_rexn(const char * shortopts,
-                          const char * longopts,
-                          const char * pattern,
-                          const char *datatype,
-                          int mincount,
-                          int maxcount,
-                          int flags,
-                          const char *glossary)
+struct arg_rex *arg_rexn(const char *shortopts,
+                         const char *longopts,
+                         const char *pattern,
+                         const char *datatype,
+                         int mincount,
+                         int maxcount,
+                         int flags,
+                         const char *glossary)
 {
     size_t nbytes;
     struct arg_rex *result;
@@ -2808,8 +2744,7 @@ struct arg_rex * arg_rexn(const char * shortopts,
     const TRexChar *error = NULL;
     TRex *rex = NULL;
 
-    if (!pattern)
-    {
+    if (!pattern) {
         printf(
             "argtable: ERROR - illegal regular expression pattern \"(NULL)\"\n");
         printf("argtable: Bad argument table.\n");
@@ -2862,8 +2797,7 @@ struct arg_rex * arg_rexn(const char * shortopts,
      */
 
     rex = trex_compile(priv->pattern, &error, priv->flags);
-    if (rex == NULL)
-    {
+    if (rex == NULL) {
         ARG_LOG(("argtable: %s \"%s\"\n", error ? error : _TREXC("undefined"), priv->pattern));
         ARG_LOG(("argtable: Bad argument table.\n"));
     }
@@ -2897,12 +2831,11 @@ struct arg_rex * arg_rexn(const char * shortopts,
 #ifdef _DEBUG
 #include <stdio.h>
 
-static const TRexChar *g_nnames[] =
-{
-    _SC("NONE"),_SC("OP_GREEDY"), _SC("OP_OR"),
-    _SC("OP_EXPR"),_SC("OP_NOCAPEXPR"),_SC("OP_DOT"), _SC("OP_CLASS"),
-    _SC("OP_CCLASS"),_SC("OP_NCLASS"),_SC("OP_RANGE"),_SC("OP_CHAR"),
-    _SC("OP_EOL"),_SC("OP_BOL"),_SC("OP_WB")
+static const TRexChar *g_nnames[] = {
+    _SC("NONE"), _SC("OP_GREEDY"), _SC("OP_OR"),
+    _SC("OP_EXPR"), _SC("OP_NOCAPEXPR"), _SC("OP_DOT"), _SC("OP_CLASS"),
+    _SC("OP_CCLASS"), _SC("OP_NCLASS"), _SC("OP_RANGE"), _SC("OP_CHAR"),
+    _SC("OP_EOL"), _SC("OP_BOL"), _SC("OP_WB")
 };
 
 #endif
@@ -2932,14 +2865,14 @@ static const TRexChar *g_nnames[] =
 
 typedef int TRexNodeType;
 
-typedef struct tagTRexNode{
+typedef struct tagTRexNode {
     TRexNodeType type;
     int left;
     int right;
     int next;
-}TRexNode;
+} TRexNode;
 
-struct TRex{
+struct TRex {
     const TRexChar *_eol;
     const TRexChar *_bol;
     const TRexChar *_p;
@@ -2964,9 +2897,9 @@ static int trex_newnode(TRex *exp, TRexNodeType type)
     int newid;
     n.type = type;
     n.next = n.right = n.left = -1;
-    if(type == OP_EXPR)
+    if (type == OP_EXPR)
         n.right = exp->_nsubexpr++;
-    if(exp->_nallocated < (exp->_nsize + 1)) {
+    if (exp->_nallocated < (exp->_nsize + 1)) {
         exp->_nallocated *= 2;
         exp->_nodes = (TRexNode *)realloc(exp->_nodes, exp->_nallocated * sizeof(TRexNode));
     }
@@ -2975,117 +2908,151 @@ static int trex_newnode(TRex *exp, TRexNodeType type)
     return (int)newid;
 }
 
-static void trex_error(TRex *exp,const TRexChar *error)
+static void trex_error(TRex *exp, const TRexChar *error)
 {
-    if(exp->_error) *exp->_error = error;
-    longjmp(*((jmp_buf*)exp->_jmpbuf),-1);
+    if (exp->_error) *exp->_error = error;
+    longjmp(*((jmp_buf *)exp->_jmpbuf), -1);
 }
 
-static void trex_expect(TRex *exp, int n){
-    if((*exp->_p) != n)
+static void trex_expect(TRex *exp, int n)
+{
+    if ((*exp->_p) != n)
         trex_error(exp, _SC("expected paren"));
     exp->_p++;
 }
 
 static TRexChar trex_escapechar(TRex *exp)
 {
-    if(*exp->_p == TREX_SYMBOL_ESCAPE_CHAR){
+    if (*exp->_p == TREX_SYMBOL_ESCAPE_CHAR) {
         exp->_p++;
-        switch(*exp->_p) {
-        case 'v': exp->_p++; return '\v';
-        case 'n': exp->_p++; return '\n';
-        case 't': exp->_p++; return '\t';
-        case 'r': exp->_p++; return '\r';
-        case 'f': exp->_p++; return '\f';
-        default: return (*exp->_p++);
+        switch (*exp->_p) {
+            case 'v':
+                exp->_p++;
+                return '\v';
+            case 'n':
+                exp->_p++;
+                return '\n';
+            case 't':
+                exp->_p++;
+                return '\t';
+            case 'r':
+                exp->_p++;
+                return '\r';
+            case 'f':
+                exp->_p++;
+                return '\f';
+            default:
+                return (*exp->_p++);
         }
-    } else if(!scisprint(*exp->_p)) trex_error(exp,_SC("letter expected"));
+    } else if (!scisprint(*exp->_p)) trex_error(exp, _SC("letter expected"));
     return (*exp->_p++);
 }
 
-static int trex_charclass(TRex *exp,int classid)
+static int trex_charclass(TRex *exp, int classid)
 {
-    int n = trex_newnode(exp,OP_CCLASS);
+    int n = trex_newnode(exp, OP_CCLASS);
     exp->_nodes[n].left = classid;
     return n;
 }
 
-static int trex_charnode(TRex *exp,TRexBool isclass)
+static int trex_charnode(TRex *exp, TRexBool isclass)
 {
     TRexChar t;
-    if(*exp->_p == TREX_SYMBOL_ESCAPE_CHAR) {
+    if (*exp->_p == TREX_SYMBOL_ESCAPE_CHAR) {
         exp->_p++;
-        switch(*exp->_p) {
-            case 'n': exp->_p++; return trex_newnode(exp,'\n');
-            case 't': exp->_p++; return trex_newnode(exp,'\t');
-            case 'r': exp->_p++; return trex_newnode(exp,'\r');
-            case 'f': exp->_p++; return trex_newnode(exp,'\f');
-            case 'v': exp->_p++; return trex_newnode(exp,'\v');
-            case 'a': case 'A': case 'w': case 'W': case 's': case 'S':
-            case 'd': case 'D': case 'x': case 'X': case 'c': case 'C':
-            case 'p': case 'P': case 'l': case 'u':
-                {
-                t = *exp->_p; exp->_p++;
-                return trex_charclass(exp,t);
-                }
+        switch (*exp->_p) {
+            case 'n':
+                exp->_p++;
+                return trex_newnode(exp, '\n');
+            case 't':
+                exp->_p++;
+                return trex_newnode(exp, '\t');
+            case 'r':
+                exp->_p++;
+                return trex_newnode(exp, '\r');
+            case 'f':
+                exp->_p++;
+                return trex_newnode(exp, '\f');
+            case 'v':
+                exp->_p++;
+                return trex_newnode(exp, '\v');
+            case 'a':
+            case 'A':
+            case 'w':
+            case 'W':
+            case 's':
+            case 'S':
+            case 'd':
+            case 'D':
+            case 'x':
+            case 'X':
+            case 'c':
+            case 'C':
+            case 'p':
+            case 'P':
+            case 'l':
+            case 'u': {
+                t = *exp->_p;
+                exp->_p++;
+                return trex_charclass(exp, t);
+            }
             case 'b':
             case 'B':
-                if(!isclass) {
-                    int node = trex_newnode(exp,OP_WB);
+                if (!isclass) {
+                    int node = trex_newnode(exp, OP_WB);
                     exp->_nodes[node].left = *exp->_p;
                     exp->_p++;
                     return node;
                 } //else default
             default:
-                t = *exp->_p; exp->_p++;
-                return trex_newnode(exp,t);
+                t = *exp->_p;
+                exp->_p++;
+                return trex_newnode(exp, t);
         }
-    }
-    else if(!scisprint(*exp->_p)) {
+    } else if (!scisprint(*exp->_p)) {
 
-        trex_error(exp,_SC("letter expected"));
+        trex_error(exp, _SC("letter expected"));
     }
-    t = *exp->_p; exp->_p++;
-    return trex_newnode(exp,t);
+    t = *exp->_p;
+    exp->_p++;
+    return trex_newnode(exp, t);
 }
 static int trex_class(TRex *exp)
 {
     int ret = -1;
-    int first = -1,chain;
-    if(*exp->_p == TREX_SYMBOL_BEGINNING_OF_STRING){
-        ret = trex_newnode(exp,OP_NCLASS);
+    int first = -1, chain;
+    if (*exp->_p == TREX_SYMBOL_BEGINNING_OF_STRING) {
+        ret = trex_newnode(exp, OP_NCLASS);
         exp->_p++;
-    }else ret = trex_newnode(exp,OP_CLASS);
+    } else ret = trex_newnode(exp, OP_CLASS);
 
-    if(*exp->_p == ']') trex_error(exp,_SC("empty class"));
+    if (*exp->_p == ']') trex_error(exp, _SC("empty class"));
     chain = ret;
-    while(*exp->_p != ']' && exp->_p != exp->_eol) {
-        if(*exp->_p == '-' && first != -1){
-            int r,t;
-            if(*exp->_p++ == ']') trex_error(exp,_SC("unfinished range"));
-            r = trex_newnode(exp,OP_RANGE);
-            if(first>*exp->_p) trex_error(exp,_SC("invalid range"));
-            if(exp->_nodes[first].type == OP_CCLASS) trex_error(exp,_SC("cannot use character classes in ranges"));
+    while (*exp->_p != ']' && exp->_p != exp->_eol) {
+        if (*exp->_p == '-' && first != -1) {
+            int r, t;
+            if (*exp->_p++ == ']') trex_error(exp, _SC("unfinished range"));
+            r = trex_newnode(exp, OP_RANGE);
+            if (first > *exp->_p) trex_error(exp, _SC("invalid range"));
+            if (exp->_nodes[first].type == OP_CCLASS) trex_error(exp, _SC("cannot use character classes in ranges"));
             exp->_nodes[r].left = exp->_nodes[first].type;
             t = trex_escapechar(exp);
             exp->_nodes[r].right = t;
             exp->_nodes[chain].next = r;
             chain = r;
             first = -1;
-        }
-        else{
-            if(first!=-1){
+        } else {
+            if (first != -1) {
                 int c = first;
                 exp->_nodes[chain].next = c;
                 chain = c;
-                first = trex_charnode(exp,TRex_True);
-            }
-            else{
-                first = trex_charnode(exp,TRex_True);
+                first = trex_charnode(exp, TRex_True);
+            } else {
+                first = trex_charnode(exp, TRex_True);
             }
         }
     }
-    if(first!=-1){
+    if (first != -1) {
         int c = first;
         exp->_nodes[chain].next = c;
         chain = c;
@@ -3099,12 +3066,12 @@ static int trex_class(TRex *exp)
 
 static int trex_parsenumber(TRex *exp)
 {
-    int ret = *exp->_p-'0';
+    int ret = *exp->_p - '0';
     int positions = 10;
     exp->_p++;
-    while(isdigit(*exp->_p)) {
-        ret = ret*10+(*exp->_p++-'0');
-        if(positions==1000000000) trex_error(exp,_SC("overflow in numeric constant"));
+    while (isdigit(*exp->_p)) {
+        ret = ret * 10 + (*exp->_p++ -'0');
+        if (positions == 1000000000) trex_error(exp, _SC("overflow in numeric constant"));
         positions *= 10;
     };
     return ret;
@@ -3113,78 +3080,98 @@ static int trex_parsenumber(TRex *exp)
 static int trex_element(TRex *exp)
 {
     int ret = -1;
-    switch(*exp->_p)
-    {
-    case '(': {
-        int expr,newn;
-        exp->_p++;
-
-
-        if(*exp->_p =='?') {
+    switch (*exp->_p) {
+        case '(': {
+            int expr, newn;
             exp->_p++;
-            trex_expect(exp,':');
-            expr = trex_newnode(exp,OP_NOCAPEXPR);
+
+
+            if (*exp->_p == '?') {
+                exp->_p++;
+                trex_expect(exp, ':');
+                expr = trex_newnode(exp, OP_NOCAPEXPR);
+            } else
+                expr = trex_newnode(exp, OP_EXPR);
+            newn = trex_list(exp);
+            exp->_nodes[expr].left = newn;
+            ret = expr;
+            trex_expect(exp, ')');
         }
-        else
-            expr = trex_newnode(exp,OP_EXPR);
-        newn = trex_list(exp);
-        exp->_nodes[expr].left = newn;
-        ret = expr;
-        trex_expect(exp,')');
-              }
-              break;
-    case '[':
-        exp->_p++;
-        ret = trex_class(exp);
-        trex_expect(exp,']');
         break;
-    case TREX_SYMBOL_END_OF_STRING: exp->_p++; ret = trex_newnode(exp,OP_EOL);break;
-    case TREX_SYMBOL_ANY_CHAR: exp->_p++; ret = trex_newnode(exp,OP_DOT);break;
-    default:
-        ret = trex_charnode(exp,TRex_False);
-        break;
+        case '[':
+            exp->_p++;
+            ret = trex_class(exp);
+            trex_expect(exp, ']');
+            break;
+        case TREX_SYMBOL_END_OF_STRING:
+            exp->_p++;
+            ret = trex_newnode(exp, OP_EOL);
+            break;
+        case TREX_SYMBOL_ANY_CHAR:
+            exp->_p++;
+            ret = trex_newnode(exp, OP_DOT);
+            break;
+        default:
+            ret = trex_charnode(exp, TRex_False);
+            break;
     }
 
     {
         TRexBool isgreedy = TRex_False;
         unsigned short p0 = 0, p1 = 0;
-        switch(*exp->_p){
-            case TREX_SYMBOL_GREEDY_ZERO_OR_MORE: p0 = 0; p1 = 0xFFFF; exp->_p++; isgreedy = TRex_True; break;
-            case TREX_SYMBOL_GREEDY_ONE_OR_MORE: p0 = 1; p1 = 0xFFFF; exp->_p++; isgreedy = TRex_True; break;
-            case TREX_SYMBOL_GREEDY_ZERO_OR_ONE: p0 = 0; p1 = 1; exp->_p++; isgreedy = TRex_True; break;
+        switch (*exp->_p) {
+            case TREX_SYMBOL_GREEDY_ZERO_OR_MORE:
+                p0 = 0;
+                p1 = 0xFFFF;
+                exp->_p++;
+                isgreedy = TRex_True;
+                break;
+            case TREX_SYMBOL_GREEDY_ONE_OR_MORE:
+                p0 = 1;
+                p1 = 0xFFFF;
+                exp->_p++;
+                isgreedy = TRex_True;
+                break;
+            case TREX_SYMBOL_GREEDY_ZERO_OR_ONE:
+                p0 = 0;
+                p1 = 1;
+                exp->_p++;
+                isgreedy = TRex_True;
+                break;
             case '{':
                 exp->_p++;
-                if(!isdigit(*exp->_p)) trex_error(exp,_SC("number expected"));
+                if (!isdigit(*exp->_p)) trex_error(exp, _SC("number expected"));
                 p0 = (unsigned short)trex_parsenumber(exp);
                 /*******************************/
-                switch(*exp->_p) {
-            case '}':
-                p1 = p0; exp->_p++;
-                break;
-            case ',':
-                exp->_p++;
-                p1 = 0xFFFF;
-                if(isdigit(*exp->_p)){
-                    p1 = (unsigned short)trex_parsenumber(exp);
+                switch (*exp->_p) {
+                    case '}':
+                        p1 = p0;
+                        exp->_p++;
+                        break;
+                    case ',':
+                        exp->_p++;
+                        p1 = 0xFFFF;
+                        if (isdigit(*exp->_p)) {
+                            p1 = (unsigned short)trex_parsenumber(exp);
+                        }
+                        trex_expect(exp, '}');
+                        break;
+                    default:
+                        trex_error(exp, _SC(", or } expected"));
                 }
-                trex_expect(exp,'}');
+                /*******************************/
+                isgreedy = TRex_True;
                 break;
-            default:
-                trex_error(exp,_SC(", or } expected"));
-        }
-        /*******************************/
-        isgreedy = TRex_True;
-        break;
 
         }
-        if(isgreedy) {
-            int nnode = trex_newnode(exp,OP_GREEDY);
+        if (isgreedy) {
+            int nnode = trex_newnode(exp, OP_GREEDY);
             exp->_nodes[nnode].left = ret;
-            exp->_nodes[nnode].right = ((p0)<<16)|p1;
+            exp->_nodes[nnode].right = ((p0) << 16) | p1;
             ret = nnode;
         }
     }
-    if((*exp->_p != TREX_SYMBOL_BRANCH) && (*exp->_p != ')') && (*exp->_p != TREX_SYMBOL_GREEDY_ZERO_OR_MORE) && (*exp->_p != TREX_SYMBOL_GREEDY_ONE_OR_MORE) && (*exp->_p != '\0')) {
+    if ((*exp->_p != TREX_SYMBOL_BRANCH) && (*exp->_p != ')') && (*exp->_p != TREX_SYMBOL_GREEDY_ZERO_OR_MORE) && (*exp->_p != TREX_SYMBOL_GREEDY_ONE_OR_MORE) && (*exp->_p != '\0')) {
         int nnode = trex_element(exp);
         exp->_nodes[ret].next = nnode;
     }
@@ -3194,21 +3181,20 @@ static int trex_element(TRex *exp)
 
 static int trex_list(TRex *exp)
 {
-    int ret=-1,e;
-    if(*exp->_p == TREX_SYMBOL_BEGINNING_OF_STRING) {
+    int ret = -1, e;
+    if (*exp->_p == TREX_SYMBOL_BEGINNING_OF_STRING) {
         exp->_p++;
-        ret = trex_newnode(exp,OP_BOL);
+        ret = trex_newnode(exp, OP_BOL);
     }
     e = trex_element(exp);
-    if(ret != -1) {
+    if (ret != -1) {
         exp->_nodes[ret].next = e;
-    }
-    else ret = e;
+    } else ret = e;
 
-    if(*exp->_p == TREX_SYMBOL_BRANCH) {
-        int temp,tright;
+    if (*exp->_p == TREX_SYMBOL_BRANCH) {
+        int temp, tright;
         exp->_p++;
-        temp = trex_newnode(exp,OP_OR);
+        temp = trex_newnode(exp, OP_OR);
         exp->_nodes[temp].left = ret;
         tright = trex_list(exp);
         exp->_nodes[temp].right = tright;
@@ -3217,143 +3203,151 @@ static int trex_list(TRex *exp)
     return ret;
 }
 
-static TRexBool trex_matchcclass(int cclass,TRexChar c)
+static TRexBool trex_matchcclass(int cclass, TRexChar c)
 {
-    switch(cclass) {
-    case 'a': return isalpha(c)?TRex_True:TRex_False;
-    case 'A': return !isalpha(c)?TRex_True:TRex_False;
-    case 'w': return (isalnum(c) || c == '_')?TRex_True:TRex_False;
-    case 'W': return (!isalnum(c) && c != '_')?TRex_True:TRex_False;
-    case 's': return ISSPACE(c)?TRex_True:TRex_False;
-    case 'S': return !ISSPACE(c)?TRex_True:TRex_False;
-    case 'd': return isdigit(c)?TRex_True:TRex_False;
-    case 'D': return !isdigit(c)?TRex_True:TRex_False;
-    case 'x': return isxdigit(c)?TRex_True:TRex_False;
-    case 'X': return !isxdigit(c)?TRex_True:TRex_False;
-    case 'c': return iscntrl(c)?TRex_True:TRex_False;
-    case 'C': return !iscntrl(c)?TRex_True:TRex_False;
-    case 'p': return ispunct(c)?TRex_True:TRex_False;
-    case 'P': return !ispunct(c)?TRex_True:TRex_False;
-    case 'l': return islower(c)?TRex_True:TRex_False;
-    case 'u': return isupper(c)?TRex_True:TRex_False;
+    switch (cclass) {
+        case 'a':
+            return isalpha(c) ? TRex_True : TRex_False;
+        case 'A':
+            return !isalpha(c) ? TRex_True : TRex_False;
+        case 'w':
+            return (isalnum(c) || c == '_') ? TRex_True : TRex_False;
+        case 'W':
+            return (!isalnum(c) && c != '_') ? TRex_True : TRex_False;
+        case 's':
+            return ISSPACE(c) ? TRex_True : TRex_False;
+        case 'S':
+            return !ISSPACE(c) ? TRex_True : TRex_False;
+        case 'd':
+            return isdigit(c) ? TRex_True : TRex_False;
+        case 'D':
+            return !isdigit(c) ? TRex_True : TRex_False;
+        case 'x':
+            return isxdigit(c) ? TRex_True : TRex_False;
+        case 'X':
+            return !isxdigit(c) ? TRex_True : TRex_False;
+        case 'c':
+            return iscntrl(c) ? TRex_True : TRex_False;
+        case 'C':
+            return !iscntrl(c) ? TRex_True : TRex_False;
+        case 'p':
+            return ispunct(c) ? TRex_True : TRex_False;
+        case 'P':
+            return !ispunct(c) ? TRex_True : TRex_False;
+        case 'l':
+            return islower(c) ? TRex_True : TRex_False;
+        case 'u':
+            return isupper(c) ? TRex_True : TRex_False;
     }
     return TRex_False; /*cannot happen*/
 }
 
-static TRexBool trex_matchclass(TRex* exp,TRexNode *node,TRexChar c)
+static TRexBool trex_matchclass(TRex *exp, TRexNode *node, TRexChar c)
 {
     do {
-        switch(node->type) {
+        switch (node->type) {
             case OP_RANGE:
-                if (exp->_flags & TREX_ICASE)
-                {
-                    if(c >= toupper(node->left) && c <= toupper(node->right)) return TRex_True;
-                    if(c >= tolower(node->left) && c <= tolower(node->right)) return TRex_True;
-                }
-                else
-                {
-                    if(c >= node->left && c <= node->right) return TRex_True;
+                if (exp->_flags & TREX_ICASE) {
+                    if (c >= toupper(node->left) && c <= toupper(node->right)) return TRex_True;
+                    if (c >= tolower(node->left) && c <= tolower(node->right)) return TRex_True;
+                } else {
+                    if (c >= node->left && c <= node->right) return TRex_True;
                 }
                 break;
             case OP_CCLASS:
-                if(trex_matchcclass(node->left,c)) return TRex_True;
+                if (trex_matchcclass(node->left, c)) return TRex_True;
                 break;
             default:
-                if (exp->_flags & TREX_ICASE)
-                {
+                if (exp->_flags & TREX_ICASE) {
                     if (c == tolower(node->type) || c == toupper(node->type)) return TRex_True;
-                }
-                else
-                {
-                    if(c == node->type)return TRex_True;
+                } else {
+                    if (c == node->type)return TRex_True;
                 }
 
         }
-    } while((node->next != -1) && (node = &exp->_nodes[node->next]));
+    } while ((node->next != -1) && (node = &exp->_nodes[node->next]));
     return TRex_False;
 }
 
-static const TRexChar *trex_matchnode(TRex* exp,TRexNode *node,const TRexChar *str,TRexNode *next)
+static const TRexChar *trex_matchnode(TRex *exp, TRexNode *node, const TRexChar *str, TRexNode *next)
 {
 
     TRexNodeType type = node->type;
-    switch(type) {
-    case OP_GREEDY: {
-        //TRexNode *greedystop = (node->next != -1) ? &exp->_nodes[node->next] : NULL;
-        TRexNode *greedystop = NULL;
-        int p0 = (node->right >> 16)&0x0000FFFF, p1 = node->right&0x0000FFFF, nmaches = 0;
-        const TRexChar *s=str, *good = str;
+    switch (type) {
+        case OP_GREEDY: {
+            //TRexNode *greedystop = (node->next != -1) ? &exp->_nodes[node->next] : NULL;
+            TRexNode *greedystop = NULL;
+            int p0 = (node->right >> 16) & 0x0000FFFF, p1 = node->right & 0x0000FFFF, nmaches = 0;
+            const TRexChar *s = str, *good = str;
 
-        if(node->next != -1) {
-            greedystop = &exp->_nodes[node->next];
-        }
-        else {
-            greedystop = next;
-        }
-
-        while((nmaches == 0xFFFF || nmaches < p1)) {
-
-            const TRexChar *stop;
-            if(!(s = trex_matchnode(exp,&exp->_nodes[node->left],s,greedystop)))
-                break;
-            nmaches++;
-            good=s;
-            if(greedystop) {
-                //checks that 0 matches satisfy the expression(if so skips)
-                //if not would always stop(for instance if is a '?')
-                if(greedystop->type != OP_GREEDY ||
-                (greedystop->type == OP_GREEDY && ((greedystop->right >> 16)&0x0000FFFF) != 0))
-                {
-                    TRexNode *gnext = NULL;
-                    if(greedystop->next != -1) {
-                        gnext = &exp->_nodes[greedystop->next];
-                    }else if(next && next->next != -1){
-                        gnext = &exp->_nodes[next->next];
-                    }
-                    stop = trex_matchnode(exp,greedystop,s,gnext);
-                    if(stop) {
-                        //if satisfied stop it
-                        if(p0 == p1 && p0 == nmaches) break;
-                        else if(nmaches >= p0 && p1 == 0xFFFF) break;
-                        else if(nmaches >= p0 && nmaches <= p1) break;
-                    }
-                }
+            if (node->next != -1) {
+                greedystop = &exp->_nodes[node->next];
+            } else {
+                greedystop = next;
             }
 
-            if(s >= exp->_eol)
-                break;
+            while ((nmaches == 0xFFFF || nmaches < p1)) {
+
+                const TRexChar *stop;
+                if (!(s = trex_matchnode(exp, &exp->_nodes[node->left], s, greedystop)))
+                    break;
+                nmaches++;
+                good = s;
+                if (greedystop) {
+                    //checks that 0 matches satisfy the expression(if so skips)
+                    //if not would always stop(for instance if is a '?')
+                    if (greedystop->type != OP_GREEDY ||
+                        (greedystop->type == OP_GREEDY && ((greedystop->right >> 16) & 0x0000FFFF) != 0)) {
+                        TRexNode *gnext = NULL;
+                        if (greedystop->next != -1) {
+                            gnext = &exp->_nodes[greedystop->next];
+                        } else if (next && next->next != -1) {
+                            gnext = &exp->_nodes[next->next];
+                        }
+                        stop = trex_matchnode(exp, greedystop, s, gnext);
+                        if (stop) {
+                            //if satisfied stop it
+                            if (p0 == p1 && p0 == nmaches) break;
+                            else if (nmaches >= p0 && p1 == 0xFFFF) break;
+                            else if (nmaches >= p0 && nmaches <= p1) break;
+                        }
+                    }
+                }
+
+                if (s >= exp->_eol)
+                    break;
+            }
+            if (p0 == p1 && p0 == nmaches) return good;
+            else if (nmaches >= p0 && p1 == 0xFFFF) return good;
+            else if (nmaches >= p0 && nmaches <= p1) return good;
+            return NULL;
         }
-        if(p0 == p1 && p0 == nmaches) return good;
-        else if(nmaches >= p0 && p1 == 0xFFFF) return good;
-        else if(nmaches >= p0 && nmaches <= p1) return good;
-        return NULL;
-    }
-    case OP_OR: {
+        case OP_OR: {
             const TRexChar *asd = str;
-            TRexNode *temp=&exp->_nodes[node->left];
-            while( (asd = trex_matchnode(exp,temp,asd,NULL)) ) {
-                if(temp->next != -1)
+            TRexNode *temp = &exp->_nodes[node->left];
+            while ((asd = trex_matchnode(exp, temp, asd, NULL))) {
+                if (temp->next != -1)
                     temp = &exp->_nodes[temp->next];
                 else
                     return asd;
             }
             asd = str;
             temp = &exp->_nodes[node->right];
-            while( (asd = trex_matchnode(exp,temp,asd,NULL)) ) {
-                if(temp->next != -1)
+            while ((asd = trex_matchnode(exp, temp, asd, NULL))) {
+                if (temp->next != -1)
                     temp = &exp->_nodes[temp->next];
                 else
                     return asd;
             }
             return NULL;
             break;
-    }
-    case OP_EXPR:
-    case OP_NOCAPEXPR:{
+        }
+        case OP_EXPR:
+        case OP_NOCAPEXPR: {
             TRexNode *n = &exp->_nodes[node->left];
             const TRexChar *cur = str;
             int capture = -1;
-            if(node->type != OP_NOCAPEXPR && node->right == exp->_currsubexp) {
+            if (node->type != OP_NOCAPEXPR && node->right == exp->_currsubexp) {
                 capture = exp->_currsubexp;
                 exp->_matches[capture].begin = cur;
                 exp->_currsubexp++;
@@ -3361,71 +3355,68 @@ static const TRexChar *trex_matchnode(TRex* exp,TRexNode *node,const TRexChar *s
 
             do {
                 TRexNode *subnext = NULL;
-                if(n->next != -1) {
+                if (n->next != -1) {
                     subnext = &exp->_nodes[n->next];
-                }else {
+                } else {
                     subnext = next;
                 }
-                if(!(cur = trex_matchnode(exp,n,cur,subnext))) {
-                    if(capture != -1){
+                if (!(cur = trex_matchnode(exp, n, cur, subnext))) {
+                    if (capture != -1) {
                         exp->_matches[capture].begin = 0;
                         exp->_matches[capture].len = 0;
                     }
                     return NULL;
                 }
-            } while((n->next != -1) && (n = &exp->_nodes[n->next]));
+            } while ((n->next != -1) && (n = &exp->_nodes[n->next]));
 
-            if(capture != -1)
+            if (capture != -1)
                 exp->_matches[capture].len = (int)(cur - exp->_matches[capture].begin);
             return cur;
-    }
-    case OP_WB:
-        if((str == exp->_bol && !ISSPACE(*str))
-         || ((str == exp->_eol && !ISSPACE(*(str-1))))
-         || ((!ISSPACE(*str) && ISSPACE(*(str+1))))
-         || ((ISSPACE(*str) && !ISSPACE(*(str+1)))) ) {
-            return (node->left == 'b')?str:NULL;
         }
-        return (node->left == 'b')?NULL:str;
-    case OP_BOL:
-        if(str == exp->_bol) return str;
-        return NULL;
-    case OP_EOL:
-        if(str == exp->_eol) return str;
-        return NULL;
-    case OP_DOT:
-        str++;
-        return str;
-    case OP_NCLASS:
-    case OP_CLASS:
-        if(trex_matchclass(exp,&exp->_nodes[node->left],*str)?(type == OP_CLASS?TRex_True:TRex_False):(type == OP_NCLASS?TRex_True:TRex_False)) {
-                        str++;
+        case OP_WB:
+            if ((str == exp->_bol && !ISSPACE(*str))
+                || ((str == exp->_eol && !ISSPACE(*(str - 1))))
+                || ((!ISSPACE(*str) && ISSPACE(*(str + 1))))
+                || ((ISSPACE(*str) && !ISSPACE(*(str + 1))))) {
+                return (node->left == 'b') ? str : NULL;
+            }
+            return (node->left == 'b') ? NULL : str;
+        case OP_BOL:
+            if (str == exp->_bol) return str;
+            return NULL;
+        case OP_EOL:
+            if (str == exp->_eol) return str;
+            return NULL;
+        case OP_DOT:
+            str++;
             return str;
-        }
-        return NULL;
-    case OP_CCLASS:
-        if(trex_matchcclass(node->left,*str)) {
-                        str++;
+        case OP_NCLASS:
+        case OP_CLASS:
+            if (trex_matchclass(exp, &exp->_nodes[node->left], *str) ? (type == OP_CLASS ? TRex_True : TRex_False) : (type == OP_NCLASS ? TRex_True : TRex_False)) {
+                str++;
+                return str;
+            }
+            return NULL;
+        case OP_CCLASS:
+            if (trex_matchcclass(node->left, *str)) {
+                str++;
+                return str;
+            }
+            return NULL;
+        default: /* char */
+            if (exp->_flags & TREX_ICASE) {
+                if (*str != tolower(node->type) && *str != toupper(node->type)) return NULL;
+            } else {
+                if (*str != node->type) return NULL;
+            }
+            str++;
             return str;
-        }
-        return NULL;
-    default: /* char */
-        if (exp->_flags & TREX_ICASE)
-        {
-            if(*str != tolower(node->type) && *str != toupper(node->type)) return NULL;
-        }
-        else
-        {
-            if (*str != node->type) return NULL;
-        }
-        str++;
-        return str;
     }
     return NULL;
 }
 
 /* public api */
-TRex *trex_compile(const TRexChar *pattern,const TRexChar **error,int flags)
+TRex *trex_compile(const TRexChar *pattern, const TRexChar **error, int flags)
 {
     TRex *exp = (TRex *)malloc(sizeof(TRex));
     exp->_eol = exp->_bol = NULL;
@@ -3435,36 +3426,35 @@ TRex *trex_compile(const TRexChar *pattern,const TRexChar **error,int flags)
     exp->_nsize = 0;
     exp->_matches = 0;
     exp->_nsubexpr = 0;
-    exp->_first = trex_newnode(exp,OP_EXPR);
+    exp->_first = trex_newnode(exp, OP_EXPR);
     exp->_error = error;
     exp->_jmpbuf = malloc(sizeof(jmp_buf));
     exp->_flags = flags;
-    if(setjmp(*((jmp_buf*)exp->_jmpbuf)) == 0) {
+    if (setjmp(*((jmp_buf *)exp->_jmpbuf)) == 0) {
         int res = trex_list(exp);
         exp->_nodes[exp->_first].left = res;
-        if(*exp->_p!='\0')
-            trex_error(exp,_SC("unexpected character"));
+        if (*exp->_p != '\0')
+            trex_error(exp, _SC("unexpected character"));
 #ifdef _DEBUG
         {
-            int nsize,i;
+            int nsize, i;
             TRexNode *t;
             nsize = exp->_nsize;
             t = &exp->_nodes[0];
             scprintf(_SC("\n"));
-            for(i = 0;i < nsize; i++) {
-                if(exp->_nodes[i].type>MAX_CHAR)
-                    scprintf(_SC("[%02d] %10s "),i,g_nnames[exp->_nodes[i].type-MAX_CHAR]);
+            for (i = 0; i < nsize; i++) {
+                if (exp->_nodes[i].type > MAX_CHAR)
+                    scprintf(_SC("[%02d] %10s "), i, g_nnames[exp->_nodes[i].type - MAX_CHAR]);
                 else
-                    scprintf(_SC("[%02d] %10c "),i,exp->_nodes[i].type);
-                scprintf(_SC("left %02d right %02d next %02d\n"),exp->_nodes[i].left,exp->_nodes[i].right,exp->_nodes[i].next);
+                    scprintf(_SC("[%02d] %10c "), i, exp->_nodes[i].type);
+                scprintf(_SC("left %02d right %02d next %02d\n"), exp->_nodes[i].left, exp->_nodes[i].right, exp->_nodes[i].next);
             }
             scprintf(_SC("\n"));
         }
 #endif
         exp->_matches = (TRexMatch *) malloc(exp->_nsubexpr * sizeof(TRexMatch));
-        memset(exp->_matches,0,exp->_nsubexpr * sizeof(TRexMatch));
-    }
-    else{
+        memset(exp->_matches, 0, exp->_nsubexpr * sizeof(TRexMatch));
+    } else {
         trex_free(exp);
         return NULL;
     }
@@ -3473,68 +3463,68 @@ TRex *trex_compile(const TRexChar *pattern,const TRexChar **error,int flags)
 
 void trex_free(TRex *exp)
 {
-    if(exp) {
-        if(exp->_nodes) free(exp->_nodes);
-        if(exp->_jmpbuf) free(exp->_jmpbuf);
-        if(exp->_matches) free(exp->_matches);
+    if (exp) {
+        if (exp->_nodes) free(exp->_nodes);
+        if (exp->_jmpbuf) free(exp->_jmpbuf);
+        if (exp->_matches) free(exp->_matches);
         free(exp);
     }
 }
 
-TRexBool trex_match(TRex* exp,const TRexChar* text)
+TRexBool trex_match(TRex *exp, const TRexChar *text)
 {
-    const TRexChar* res = NULL;
+    const TRexChar *res = NULL;
     exp->_bol = text;
     exp->_eol = text + scstrlen(text);
     exp->_currsubexp = 0;
-    res = trex_matchnode(exp,exp->_nodes,text,NULL);
-    if(res == NULL || res != exp->_eol)
+    res = trex_matchnode(exp, exp->_nodes, text, NULL);
+    if (res == NULL || res != exp->_eol)
         return TRex_False;
     return TRex_True;
 }
 
-TRexBool trex_searchrange(TRex* exp,const TRexChar* text_begin,const TRexChar* text_end,const TRexChar** out_begin, const TRexChar** out_end)
+TRexBool trex_searchrange(TRex *exp, const TRexChar *text_begin, const TRexChar *text_end, const TRexChar **out_begin, const TRexChar **out_end)
 {
     const TRexChar *cur = NULL;
     int node = exp->_first;
-    if(text_begin >= text_end) return TRex_False;
+    if (text_begin >= text_end) return TRex_False;
     exp->_bol = text_begin;
     exp->_eol = text_end;
     do {
         cur = text_begin;
-        while(node != -1) {
+        while (node != -1) {
             exp->_currsubexp = 0;
-            cur = trex_matchnode(exp,&exp->_nodes[node],cur,NULL);
-            if(!cur)
+            cur = trex_matchnode(exp, &exp->_nodes[node], cur, NULL);
+            if (!cur)
                 break;
             node = exp->_nodes[node].next;
         }
         text_begin++;
-    } while(cur == NULL && text_begin != text_end);
+    } while (cur == NULL && text_begin != text_end);
 
-    if(cur == NULL)
+    if (cur == NULL)
         return TRex_False;
 
     --text_begin;
 
-    if(out_begin) *out_begin = text_begin;
-    if(out_end) *out_end = cur;
+    if (out_begin) *out_begin = text_begin;
+    if (out_end) *out_end = cur;
     return TRex_True;
 }
 
-TRexBool trex_search(TRex* exp,const TRexChar* text, const TRexChar** out_begin, const TRexChar** out_end)
+TRexBool trex_search(TRex *exp, const TRexChar *text, const TRexChar **out_begin, const TRexChar **out_end)
 {
-    return trex_searchrange(exp,text,text + scstrlen(text),out_begin,out_end);
+    return trex_searchrange(exp, text, text + scstrlen(text), out_begin, out_end);
 }
 
-int trex_getsubexpcount(TRex* exp)
+int trex_getsubexpcount(TRex *exp)
 {
     return exp->_nsubexpr;
 }
 
-TRexBool trex_getsubexp(TRex* exp, int n, TRexMatch *subexp)
+TRexBool trex_getsubexp(TRex *exp, int n, TRexMatch *subexp)
 {
-    if( n<0 || n >= exp->_nsubexpr) return TRex_False;
+    if (n < 0 || n >= exp->_nsubexpr) return TRex_False;
     *subexp = exp->_matches[n];
     return TRex_True;
 }
@@ -3584,20 +3574,15 @@ static int arg_str_scanfn(struct arg_str *parent, const char *argval)
 {
     int errorcode = 0;
 
-    if (parent->count == parent->hdr.maxcount)
-    {
+    if (parent->count == parent->hdr.maxcount) {
         /* maximum number of arguments exceeded */
         errorcode = EMAXCOUNT;
-    }
-    else if (!argval)
-    {
+    } else if (!argval) {
         /* a valid argument with no argument value was given. */
         /* This happens when an optional argument value was invoked. */
         /* leave parent arguiment value unaltered but still count the argument. */
         parent->count++;
-    }
-    else
-    {
+    } else {
         parent->sval[parent->count++] = argval;
     }
 
@@ -3630,22 +3615,21 @@ static void arg_str_errorfn(
     argval = argval ? argval : "";
 
     fprintf(fp, "%s: ", progname);
-    switch(errorcode)
-    {
-    case EMINCOUNT:
-        fputs("missing option ", fp);
-        arg_print_option(fp, shortopts, longopts, datatype, "\n");
-        break;
+    switch (errorcode) {
+        case EMINCOUNT:
+            fputs("missing option ", fp);
+            arg_print_option(fp, shortopts, longopts, datatype, "\n");
+            break;
 
-    case EMAXCOUNT:
-        fputs("excess option ", fp);
-        arg_print_option(fp, shortopts, longopts, argval, "\n");
-        break;
+        case EMAXCOUNT:
+            fputs("excess option ", fp);
+            arg_print_option(fp, shortopts, longopts, argval, "\n");
+            break;
     }
 }
 
 
-struct arg_str * arg_str0(
+struct arg_str *arg_str0(
     const char *shortopts,
     const char *longopts,
     const char *datatype,
@@ -3655,7 +3639,7 @@ struct arg_str * arg_str0(
 }
 
 
-struct arg_str * arg_str1(
+struct arg_str *arg_str1(
     const char *shortopts,
     const char *longopts,
     const char *datatype,
@@ -3665,7 +3649,7 @@ struct arg_str * arg_str1(
 }
 
 
-struct arg_str * arg_strn(
+struct arg_str *arg_strn(
     const char *shortopts,
     const char *longopts,
     const char *datatype,
@@ -3685,8 +3669,7 @@ struct arg_str * arg_strn(
              + maxcount * sizeof(char *); /* storage for sval[maxcount] array */
 
     result = (struct arg_str *)malloc(nbytes);
-    if (result)
-    {
+    if (result) {
         int i;
 
         /* init the arg_hdr struct */
@@ -3759,15 +3742,12 @@ void arg_register_error(struct arg_end *end,
                         const char *argval)
 {
     /* printf("arg_register_error(%p,%p,%d,%s)\n",end,parent,error,argval); */
-    if (end->count < end->hdr.maxcount)
-    {
+    if (end->count < end->hdr.maxcount) {
         end->error[end->count] = error;
         end->parent[end->count] = parent;
         end->argval[end->count] = argval;
         end->count++;
-    }
-    else
-    {
+    } else {
         end->error[end->hdr.maxcount - 1]  = ARG_ELIMIT;
         end->parent[end->hdr.maxcount - 1] = end;
         end->argval[end->hdr.maxcount - 1] = NULL;
@@ -3783,8 +3763,7 @@ static
 int find_shortoption(struct arg_hdr * *table, char shortopt)
 {
     int tabindex;
-    for(tabindex = 0; !(table[tabindex]->flag & ARG_TERMINATOR); tabindex++)
-    {
+    for (tabindex = 0; !(table[tabindex]->flag & ARG_TERMINATOR); tabindex++) {
         if (table[tabindex]->shortopts &&
             strchr(table[tabindex]->shortopts, shortopt))
             return tabindex;
@@ -3793,8 +3772,7 @@ int find_shortoption(struct arg_hdr * *table, char shortopt)
 }
 
 
-struct longoptions
-{
+struct longoptions {
     int getoptval;
     int noptions;
     struct option *options;
@@ -3802,13 +3780,12 @@ struct longoptions
 
 #if 0
 static
-void dump_longoptions(struct longoptions * longoptions)
+void dump_longoptions(struct longoptions *longoptions)
 {
     int i;
     printf("getoptval = %d\n", longoptions->getoptval);
     printf("noptions  = %d\n", longoptions->noptions);
-    for (i = 0; i < longoptions->noptions; i++)
-    {
+    for (i = 0; i < longoptions->noptions; i++) {
         printf("options[%d].name    = \"%s\"\n",
                i,
                longoptions->options[i].name);
@@ -3820,7 +3797,7 @@ void dump_longoptions(struct longoptions * longoptions)
 #endif
 
 static
-struct longoptions * alloc_longoptions(struct arg_hdr * *table)
+struct longoptions *alloc_longoptions(struct arg_hdr * *table)
 {
     struct longoptions *result;
     size_t nbytes;
@@ -3839,16 +3816,14 @@ struct longoptions * alloc_longoptions(struct arg_hdr * *table)
      * and return that count in logoptlen.
      */
     tabindex = 0;
-    do
-    {
+    do {
         const char *longopts = table[tabindex]->longopts;
         longoptlen += (longopts ? strlen(longopts) : 0) + 1;
-        while (longopts)
-        {
+        while (longopts) {
             noptions++;
             longopts = strchr(longopts + 1, ',');
         }
-    } while(!(table[tabindex++]->flag & ARG_TERMINATOR));
+    } while (!(table[tabindex++]->flag & ARG_TERMINATOR));
     /*printf("%d long options consuming %d chars in total\n",noptions,longoptlen);*/
 
 
@@ -3858,8 +3833,7 @@ struct longoptions * alloc_longoptions(struct arg_hdr * *table)
              + sizeof(struct option) * noptions
              + longoptlen;
     result = (struct longoptions *)malloc(nbytes);
-    if (result)
-    {
+    if (result) {
         int option_index = 0;
         char *store;
 
@@ -3868,12 +3842,10 @@ struct longoptions * alloc_longoptions(struct arg_hdr * *table)
         result->options = (struct option *)(result + 1);
         store = (char *)(result->options + noptions);
 
-        for(tabindex = 0; !(table[tabindex]->flag & ARG_TERMINATOR); tabindex++)
-        {
+        for (tabindex = 0; !(table[tabindex]->flag & ARG_TERMINATOR); tabindex++) {
             const char *longopts = table[tabindex]->longopts;
 
-            while(longopts && *longopts)
-            {
+            while (longopts && *longopts) {
                 char *storestart = store;
 
                 /* copy progressive longopt strings into the store */
@@ -3909,34 +3881,30 @@ struct longoptions * alloc_longoptions(struct arg_hdr * *table)
 }
 
 static
-char * alloc_shortoptions(struct arg_hdr * *table)
+char *alloc_shortoptions(struct arg_hdr * *table)
 {
     char *result;
     size_t len = 2;
     int tabindex;
 
     /* determine the total number of option chars required */
-    for(tabindex = 0; !(table[tabindex]->flag & ARG_TERMINATOR); tabindex++)
-    {
+    for (tabindex = 0; !(table[tabindex]->flag & ARG_TERMINATOR); tabindex++) {
         struct arg_hdr *hdr = table[tabindex];
         len += 3 * (hdr->shortopts ? strlen(hdr->shortopts) : 0);
     }
 
     result = malloc(len);
-    if (result)
-    {
+    if (result) {
         char *res = result;
 
         /* add a leading ':' so getopt return codes distinguish    */
         /* unrecognised option and options missing argument values */
         *res++ = ':';
 
-        for(tabindex = 0; !(table[tabindex]->flag & ARG_TERMINATOR); tabindex++)
-        {
+        for (tabindex = 0; !(table[tabindex]->flag & ARG_TERMINATOR); tabindex++) {
             struct arg_hdr *hdr = table[tabindex];
             const char *shortopts = hdr->shortopts;
-            while(shortopts && *shortopts)
-            {
+            while (shortopts && *shortopts) {
                 *res++ = *shortopts++;
                 if (hdr->flag & ARG_HASVALUE)
                     *res++ = ':';
@@ -3980,8 +3948,7 @@ void arg_parse_tagged(int argc,
     /* if the allocs fail then put an error msg in the last table entry. */
     longoptions  = alloc_longoptions(table);
     shortoptions = alloc_shortoptions(table);
-    if (!longoptions || !shortoptions)
-    {
+    if (!longoptions || !shortoptions) {
         /* one or both memory allocs failed */
         arg_register_error(endtable, endtable, ARG_EMALLOC, NULL);
         /* free anything that was allocated (this is null safe) */
@@ -3997,92 +3964,81 @@ void arg_parse_tagged(int argc,
     opterr = 0;
 
     /* fetch and process args using getopt_long */
-    while( (copt =
+    while ((copt =
                 getopt_long(argc, argv, shortoptions, longoptions->options,
-                            NULL)) != -1)
-    {
+                            NULL)) != -1) {
         /*
            printf("optarg='%s'\n",optarg);
            printf("optind=%d\n",optind);
            printf("copt=%c\n",(char)copt);
            printf("optopt=%c (%d)\n",optopt, (int)(optopt));
          */
-        switch(copt)
-        {
-        case 0:
-        {
-            int tabindex = longoptions->getoptval;
-            void *parent  = table[tabindex]->parent;
-            /*printf("long option detected from argtable[%d]\n", tabindex);*/
-            if (optarg && optarg[0] == 0 &&
-                (table[tabindex]->flag & ARG_HASVALUE))
-            {
-                /* printf(": long option %s requires an argument\n",argv[optind-1]); */
-                arg_register_error(endtable, endtable, ARG_EMISSARG,
-                                   argv[optind - 1]);
-                /* continue to scan the (empty) argument value to enforce argument count checking */
-            }
-            if (table[tabindex]->scanfn)
-            {
-                int errorcode = table[tabindex]->scanfn(parent, optarg);
-                if (errorcode != 0)
-                    arg_register_error(endtable, parent, errorcode, optarg);
-            }
-        }
-        break;
-
-        case '?':
-            /*
-             * getopt_long() found an unrecognised short option.
-             * if it was a short option its value is in optopt
-             * if it was a long option then optopt=0
-             */
-            switch (optopt)
-            {
-            case 0:
-                /*printf("?0 unrecognised long option %s\n",argv[optind-1]);*/
-                arg_register_error(endtable, endtable, ARG_ELONGOPT,
-                                   argv[optind - 1]);
-                break;
-            default:
-                /*printf("?* unrecognised short option '%c'\n",optopt);*/
-                arg_register_error(endtable, endtable, optopt, NULL);
-                break;
-            }
-            break;
-
-        case ':':
-            /*
-             * getopt_long() found an option with its argument missing.
-             */
-            /*printf(": option %s requires an argument\n",argv[optind-1]); */
-            arg_register_error(endtable, endtable, ARG_EMISSARG,
-                               argv[optind - 1]);
-            break;
-
-        default:
-        {
-            /* getopt_long() found a valid short option */
-            int tabindex = find_shortoption(table, (char)copt);
-            /*printf("short option detected from argtable[%d]\n", tabindex);*/
-            if (tabindex == -1)
-            {
-                /* should never get here - but handle it just in case */
-                /*printf("unrecognised short option %d\n",copt);*/
-                arg_register_error(endtable, endtable, copt, NULL);
-            }
-            else
-            {
-                if (table[tabindex]->scanfn)
-                {
-                    void *parent  = table[tabindex]->parent;
+        switch (copt) {
+            case 0: {
+                int tabindex = longoptions->getoptval;
+                void *parent  = table[tabindex]->parent;
+                /*printf("long option detected from argtable[%d]\n", tabindex);*/
+                if (optarg && optarg[0] == 0 &&
+                    (table[tabindex]->flag & ARG_HASVALUE)) {
+                    /* printf(": long option %s requires an argument\n",argv[optind-1]); */
+                    arg_register_error(endtable, endtable, ARG_EMISSARG,
+                                       argv[optind - 1]);
+                    /* continue to scan the (empty) argument value to enforce argument count checking */
+                }
+                if (table[tabindex]->scanfn) {
                     int errorcode = table[tabindex]->scanfn(parent, optarg);
                     if (errorcode != 0)
                         arg_register_error(endtable, parent, errorcode, optarg);
                 }
             }
             break;
-        }
+
+            case '?':
+                /*
+                 * getopt_long() found an unrecognised short option.
+                 * if it was a short option its value is in optopt
+                 * if it was a long option then optopt=0
+                 */
+                switch (optopt) {
+                    case 0:
+                        /*printf("?0 unrecognised long option %s\n",argv[optind-1]);*/
+                        arg_register_error(endtable, endtable, ARG_ELONGOPT,
+                                           argv[optind - 1]);
+                        break;
+                    default:
+                        /*printf("?* unrecognised short option '%c'\n",optopt);*/
+                        arg_register_error(endtable, endtable, optopt, NULL);
+                        break;
+                }
+                break;
+
+            case ':':
+                /*
+                 * getopt_long() found an option with its argument missing.
+                 */
+                /*printf(": option %s requires an argument\n",argv[optind-1]); */
+                arg_register_error(endtable, endtable, ARG_EMISSARG,
+                                   argv[optind - 1]);
+                break;
+
+            default: {
+                /* getopt_long() found a valid short option */
+                int tabindex = find_shortoption(table, (char)copt);
+                /*printf("short option detected from argtable[%d]\n", tabindex);*/
+                if (tabindex == -1) {
+                    /* should never get here - but handle it just in case */
+                    /*printf("unrecognised short option %d\n",copt);*/
+                    arg_register_error(endtable, endtable, copt, NULL);
+                } else {
+                    if (table[tabindex]->scanfn) {
+                        void *parent  = table[tabindex]->parent;
+                        int errorcode = table[tabindex]->scanfn(parent, optarg);
+                        if (errorcode != 0)
+                            arg_register_error(endtable, parent, errorcode, optarg);
+                    }
+                }
+                break;
+            }
         }
     }
 
@@ -4103,29 +4059,25 @@ void arg_parse_untagged(int argc,
     void *parentlast = NULL;
 
     /*printf("arg_parse_untagged(%d,%p,%p,%p)\n",argc,argv,table,endtable);*/
-    while (!(table[tabindex]->flag & ARG_TERMINATOR))
-    {
+    while (!(table[tabindex]->flag & ARG_TERMINATOR)) {
         void *parent;
         int errorcode;
 
         /* if we have exhausted our argv[optind] entries then we have finished */
-        if (optind >= argc)
-        {
+        if (optind >= argc) {
             /*printf("arg_parse_untagged(): argv[] exhausted\n");*/
             return;
         }
 
         /* skip table entries with non-null long or short options (they are not untagged entries) */
-        if (table[tabindex]->longopts || table[tabindex]->shortopts)
-        {
+        if (table[tabindex]->longopts || table[tabindex]->shortopts) {
             /*printf("arg_parse_untagged(): skipping argtable[%d] (tagged argument)\n",tabindex);*/
             tabindex++;
             continue;
         }
 
         /* skip table entries with NULL scanfn */
-        if (!(table[tabindex]->scanfn))
-        {
+        if (!(table[tabindex]->scanfn)) {
             /*printf("arg_parse_untagged(): skipping argtable[%d] (NULL scanfn)\n",tabindex);*/
             tabindex++;
             continue;
@@ -4136,17 +4088,14 @@ void arg_parse_untagged(int argc,
         /* try again with the next table[] entry.                        */
         parent = table[tabindex]->parent;
         errorcode = table[tabindex]->scanfn(parent, argv[optind]);
-        if (errorcode == 0)
-        {
+        if (errorcode == 0) {
             /* success, move onto next argv[optind] but stay with same table[tabindex] */
             /*printf("arg_parse_untagged(): argtable[%d] successfully matched\n",tabindex);*/
             optind++;
 
             /* clear the last tentative error */
             errorlast = 0;
-        }
-        else
-        {
+        } else {
             /* failure, try same argv[optind] with next table[tabindex] entry */
             /*printf("arg_parse_untagged(): argtable[%d] failed match\n",tabindex);*/
             tabindex++;
@@ -4160,16 +4109,14 @@ void arg_parse_untagged(int argc,
     }
 
     /* if a tenative error still remains at this point then register it as a proper error */
-    if (errorlast)
-    {
+    if (errorlast) {
         arg_register_error(endtable, parentlast, errorlast, optarglast);
         optind++;
     }
 
     /* only get here when not all argv[] entries were consumed */
     /* register an error for each unused argv[] entry */
-    while (optind < argc)
-    {
+    while (optind < argc) {
         /*printf("arg_parse_untagged(): argv[%d]=\"%s\" not consumed\n",optind,argv[optind]);*/
         arg_register_error(endtable, endtable, ARG_ENOMATCH, argv[optind++]);
     }
@@ -4183,16 +4130,14 @@ void arg_parse_check(struct arg_hdr * *table, struct arg_end *endtable)
 {
     int tabindex = 0;
     /* printf("arg_parse_check()\n"); */
-    do
-    {
-        if (table[tabindex]->checkfn)
-        {
+    do {
+        if (table[tabindex]->checkfn) {
             void *parent  = table[tabindex]->parent;
             int errorcode = table[tabindex]->checkfn(parent);
             if (errorcode != 0)
                 arg_register_error(endtable, parent, errorcode, NULL);
         }
-    } while(!(table[tabindex++]->flag & ARG_TERMINATOR));
+    } while (!(table[tabindex++]->flag & ARG_TERMINATOR));
 }
 
 
@@ -4202,11 +4147,10 @@ void arg_reset(void * *argtable)
     struct arg_hdr * *table = (struct arg_hdr * *)argtable;
     int tabindex = 0;
     /*printf("arg_reset(%p)\n",argtable);*/
-    do
-    {
+    do {
         if (table[tabindex]->resetfn)
             table[tabindex]->resetfn(table[tabindex]->parent);
-    } while(!(table[tabindex++]->flag & ARG_TERMINATOR));
+    } while (!(table[tabindex++]->flag & ARG_TERMINATOR));
 }
 
 
@@ -4229,8 +4173,7 @@ int arg_parse(int argc, char * *argv, void * *argtable)
     /* Special case of argc==0.  This can occur on Texas Instruments DSP. */
     /* Failure to trap this case results in an unwanted NULL result from  */
     /* the malloc for argvcopy (next code block).                         */
-    if (argc == 0)
-    {
+    if (argc == 0) {
         /* We must still perform post-parse checks despite the absence of command line arguments */
         arg_parse_check(table, endtable);
 
@@ -4239,8 +4182,7 @@ int arg_parse(int argc, char * *argv, void * *argtable)
     }
 
     argvcopy = (char **)malloc(sizeof(char *) * (argc + 1));
-    if (argvcopy)
-    {
+    if (argvcopy) {
         int i;
 
         /*
@@ -4265,9 +4207,7 @@ int arg_parse(int argc, char * *argv, void * *argtable)
 
         /* release the local copt of argv[] */
         free(argvcopy);
-    }
-    else
-    {
+    } else {
         /* memory alloc failed */
         arg_register_error(endtable, endtable, ARG_EMALLOC, NULL);
     }
@@ -4303,11 +4243,11 @@ void arg_cat(char * *pdest, const char *src, size_t *pndest)
     char *end  = dest + *pndest;
 
     /*locate null terminator of dest string */
-    while(dest < end && *dest != 0)
+    while (dest < end && *dest != 0)
         dest++;
 
     /* concat src string to dest string */
-    while(dest < end && *src != 0)
+    while (dest < end && *src != 0)
         *dest++ = *src++;
 
     /* null terminate dest string */
@@ -4327,8 +4267,7 @@ void arg_cat_option(char *dest,
                     const char *datatype,
                     int optvalue)
 {
-    if (shortopts)
-    {
+    if (shortopts) {
         char option[3];
 
         /* note: option array[] is initialiazed dynamically here to satisfy   */
@@ -4338,21 +4277,16 @@ void arg_cat_option(char *dest,
         option[2] = 0;
 
         arg_cat(&dest, option, &ndest);
-        if (datatype)
-        {
+        if (datatype) {
             arg_cat(&dest, " ", &ndest);
-            if (optvalue)
-            {
+            if (optvalue) {
                 arg_cat(&dest, "[", &ndest);
                 arg_cat(&dest, datatype, &ndest);
                 arg_cat(&dest, "]", &ndest);
-            }
-            else
+            } else
                 arg_cat(&dest, datatype, &ndest);
         }
-    }
-    else if (longopts)
-    {
+    } else if (longopts) {
         size_t ncspn;
 
         /* add "--" tag prefix */
@@ -4366,28 +4300,21 @@ void arg_cat_option(char *dest,
         strncat(dest, longopts, (ncspn < ndest) ? ncspn : ndest);
 #endif
 
-        if (datatype)
-        {
+        if (datatype) {
             arg_cat(&dest, "=", &ndest);
-            if (optvalue)
-            {
+            if (optvalue) {
                 arg_cat(&dest, "[", &ndest);
                 arg_cat(&dest, datatype, &ndest);
                 arg_cat(&dest, "]", &ndest);
-            }
-            else
+            } else
                 arg_cat(&dest, datatype, &ndest);
         }
-    }
-    else if (datatype)
-    {
-        if (optvalue)
-        {
+    } else if (datatype) {
+        if (optvalue) {
             arg_cat(&dest, "[", &ndest);
             arg_cat(&dest, datatype, &ndest);
             arg_cat(&dest, "]", &ndest);
-        }
-        else
+        } else
             arg_cat(&dest, datatype, &ndest);
     }
 }
@@ -4403,11 +4330,9 @@ void arg_cat_optionv(char *dest,
 {
     separator = separator ? separator : "";
 
-    if (shortopts)
-    {
+    if (shortopts) {
         const char *c = shortopts;
-        while(*c)
-        {
+        while (*c) {
             /* "-a|-b|-c" */
             char shortopt[3];
 
@@ -4427,11 +4352,9 @@ void arg_cat_optionv(char *dest,
     if (shortopts && longopts)
         arg_cat(&dest, separator, &ndest);
 
-    if (longopts)
-    {
+    if (longopts) {
         const char *c = longopts;
-        while(*c)
-        {
+        while (*c) {
             size_t ncspn;
 
             /* add "--" tag prefix */
@@ -4447,28 +4370,24 @@ void arg_cat_optionv(char *dest,
             c += ncspn;
 
             /* add given separator in place of comma */
-            if (*c == ',')
-            {
+            if (*c == ',') {
                 arg_cat(&dest, separator, &ndest);
                 c++;
             }
         }
     }
 
-    if (datatype)
-    {
+    if (datatype) {
         if (longopts)
             arg_cat(&dest, "=", &ndest);
         else if (shortopts)
             arg_cat(&dest, " ", &ndest);
 
-        if (optvalue)
-        {
+        if (optvalue) {
             arg_cat(&dest, "[", &ndest);
             arg_cat(&dest, datatype, &ndest);
             arg_cat(&dest, "]", &ndest);
-        }
-        else
+        } else
             arg_cat(&dest, datatype, &ndest);
     }
 }
@@ -4512,10 +4431,9 @@ void arg_print_gnuswitch(FILE *fp, struct arg_hdr * *table)
     char *suffix = "";
 
     /* print all mandatory switches that are without argument values */
-    for(tabindex = 0;
-        table[tabindex] && !(table[tabindex]->flag & ARG_TERMINATOR);
-        tabindex++)
-    {
+    for (tabindex = 0;
+         table[tabindex] && !(table[tabindex]->flag & ARG_TERMINATOR);
+         tabindex++) {
         /* skip optional options */
         if (table[tabindex]->mincount < 1)
             continue;
@@ -4535,10 +4453,9 @@ void arg_print_gnuswitch(FILE *fp, struct arg_hdr * *table)
     }
 
     /* print all optional switches that are without argument values */
-    for(tabindex = 0;
-        table[tabindex] && !(table[tabindex]->flag & ARG_TERMINATOR);
-        tabindex++)
-    {
+    for (tabindex = 0;
+         table[tabindex] && !(table[tabindex]->flag & ARG_TERMINATOR);
+         tabindex++) {
         /* skip mandatory args */
         if (table[tabindex]->mincount > 0)
             continue;
@@ -4570,10 +4487,9 @@ void arg_print_syntax(FILE *fp, void * *argtable, const char *suffix)
     arg_print_gnuswitch(fp, table);
 
     /* print remaining options in abbreviated style */
-    for(tabindex = 0;
-        table[tabindex] && !(table[tabindex]->flag & ARG_TERMINATOR);
-        tabindex++)
-    {
+    for (tabindex = 0;
+         table[tabindex] && !(table[tabindex]->flag & ARG_TERMINATOR);
+         tabindex++) {
         char syntax[200] = "";
         const char *shortopts, *longopts, *datatype;
 
@@ -4592,26 +4508,24 @@ void arg_print_syntax(FILE *fp, void * *argtable, const char *suffix)
                        datatype,
                        table[tabindex]->flag & ARG_HASOPTVALUE);
 
-        if (strlen(syntax) > 0)
-        {
+        if (strlen(syntax) > 0) {
             /* print mandatory instances of this option */
             for (i = 0; i < table[tabindex]->mincount; i++)
                 fprintf(fp, " %s", syntax);
 
             /* print optional instances enclosed in "[..]" */
-            switch ( table[tabindex]->maxcount - table[tabindex]->mincount )
-            {
-            case 0:
-                break;
-            case 1:
-                fprintf(fp, " [%s]", syntax);
-                break;
-            case 2:
-                fprintf(fp, " [%s] [%s]", syntax, syntax);
-                break;
-            default:
-                fprintf(fp, " [%s]...", syntax);
-                break;
+            switch (table[tabindex]->maxcount - table[tabindex]->mincount) {
+                case 0:
+                    break;
+                case 1:
+                    fprintf(fp, " [%s]", syntax);
+                    break;
+                case 2:
+                    fprintf(fp, " [%s] [%s]", syntax, syntax);
+                    break;
+                default:
+                    fprintf(fp, " [%s]...", syntax);
+                    break;
             }
         }
     }
@@ -4627,10 +4541,9 @@ void arg_print_syntaxv(FILE *fp, void * *argtable, const char *suffix)
     int i, tabindex;
 
     /* print remaining options in abbreviated style */
-    for(tabindex = 0;
-        table[tabindex] && !(table[tabindex]->flag & ARG_TERMINATOR);
-        tabindex++)
-    {
+    for (tabindex = 0;
+         table[tabindex] && !(table[tabindex]->flag & ARG_TERMINATOR);
+         tabindex++) {
         char syntax[200] = "";
         const char *shortopts, *longopts, *datatype;
 
@@ -4650,19 +4563,18 @@ void arg_print_syntaxv(FILE *fp, void * *argtable, const char *suffix)
             fprintf(fp, " %s", syntax);
 
         /* print optional args enclosed in "[..]" */
-        switch ( table[tabindex]->maxcount - table[tabindex]->mincount )
-        {
-        case 0:
-            break;
-        case 1:
-            fprintf(fp, " [%s]", syntax);
-            break;
-        case 2:
-            fprintf(fp, " [%s] [%s]", syntax, syntax);
-            break;
-        default:
-            fprintf(fp, " [%s]...", syntax);
-            break;
+        switch (table[tabindex]->maxcount - table[tabindex]->mincount) {
+            case 0:
+                break;
+            case 1:
+                fprintf(fp, " [%s]", syntax);
+                break;
+            case 2:
+                fprintf(fp, " [%s] [%s]", syntax, syntax);
+                break;
+            default:
+                fprintf(fp, " [%s]...", syntax);
+                break;
         }
     }
 
@@ -4677,10 +4589,8 @@ void arg_print_glossary(FILE *fp, void * *argtable, const char *format)
     int tabindex;
 
     format = format ? format : "  %-20s %s\n";
-    for (tabindex = 0; !(table[tabindex]->flag & ARG_TERMINATOR); tabindex++)
-    {
-        if (table[tabindex]->glossary)
-        {
+    for (tabindex = 0; !(table[tabindex]->flag & ARG_TERMINATOR); tabindex++) {
+        if (table[tabindex]->glossary) {
             char syntax[200] = "";
             const char *shortopts = table[tabindex]->shortopts;
             const char *longopts  = table[tabindex]->longopts;
@@ -4732,35 +4642,34 @@ void arg_print_glossary(FILE *fp, void * *argtable, const char *format)
  * Author: Uli Fouquet
  */
 static
-void arg_print_formatted( FILE *fp,
-                          const unsigned lmargin,
-                          const unsigned rmargin,
-                          const char *text )
+void arg_print_formatted(FILE *fp,
+                         const unsigned lmargin,
+                         const unsigned rmargin,
+                         const char *text)
 {
-    const unsigned textlen = (unsigned)strlen( text );
+    const unsigned textlen = (unsigned)strlen(text);
     unsigned line_start = 0;
     unsigned line_end = textlen + 1;
     const unsigned colwidth = (rmargin - lmargin) + 1;
 
     /* Someone doesn't like us... */
-    if ( line_end < line_start )
-    { fprintf( fp, "%s\n", text ); }
+    if (line_end < line_start)
+    { fprintf(fp, "%s\n", text); }
 
-    while (line_end - 1 > line_start )
-    {
+    while (line_end - 1 > line_start) {
         /* Eat leading whitespaces. This is essential because while
            wrapping lines, there will often be a whitespace at beginning
            of line */
-        while ( ISSPACE(*(text + line_start)) )
+        while (ISSPACE(*(text + line_start)))
         { line_start++; }
 
-        if ((line_end - line_start) > colwidth )
+        if ((line_end - line_start) > colwidth)
         { line_end = line_start + colwidth; }
 
         /* Find last whitespace, that fits into line */
-        while ( ( line_end > line_start )
-                && ( line_end - line_start > colwidth )
-                && !ISSPACE(*(text + line_end)))
+        while ((line_end > line_start)
+               && (line_end - line_start > colwidth)
+               && !ISSPACE(*(text + line_end)))
         { line_end--; }
 
         /* Do not print trailing whitespace. If this text
@@ -4769,20 +4678,18 @@ void arg_print_formatted( FILE *fp,
         line_end--;
 
         /* Output line of text */
-        while ( line_start < line_end )
-        {
-            fputc(*(text + line_start), fp );
+        while (line_start < line_end) {
+            fputc(*(text + line_start), fp);
             line_start++;
         }
-        fputc( '\n', fp );
+        fputc('\n', fp);
 
         /* Initialize another line */
-        if ( line_end + 1 < textlen )
-        {
+        if (line_end + 1 < textlen) {
             unsigned i;
 
-            for (i = 0; i < lmargin; i++ )
-            { fputc( ' ', fp ); }
+            for (i = 0; i < lmargin; i++)
+            { fputc(' ', fp); }
 
             line_end = textlen;
         }
@@ -4802,25 +4709,22 @@ void arg_print_formatted( FILE *fp,
  *
  * Contributed by Uli Fouquet
  */
-void arg_print_glossary_gnu(FILE *fp, void * *argtable )
+void arg_print_glossary_gnu(FILE *fp, void * *argtable)
 {
     struct arg_hdr * *table = (struct arg_hdr * *)argtable;
     int tabindex;
 
-    for(tabindex = 0; !(table[tabindex]->flag & ARG_TERMINATOR); tabindex++)
-    {
-        if (table[tabindex]->glossary)
-        {
+    for (tabindex = 0; !(table[tabindex]->flag & ARG_TERMINATOR); tabindex++) {
+        if (table[tabindex]->glossary) {
             char syntax[200] = "";
             const char *shortopts = table[tabindex]->shortopts;
             const char *longopts  = table[tabindex]->longopts;
             const char *datatype  = table[tabindex]->datatype;
             const char *glossary  = table[tabindex]->glossary;
 
-            if ( !shortopts && longopts )
-            {
+            if (!shortopts && longopts) {
                 /* Indent trailing line by 4 spaces... */
-                memset( syntax, ' ', 4 );
+                memset(syntax, ' ', 4);
                 *(syntax + 4) = '\0';
             }
 
@@ -4833,18 +4737,17 @@ void arg_print_glossary_gnu(FILE *fp, void * *argtable )
                             ", ");
 
             /* If syntax fits not into column, print glossary in new line... */
-            if ( strlen(syntax) > 25 )
-            {
-                fprintf( fp, "  %-25s %s\n", syntax, "" );
+            if (strlen(syntax) > 25) {
+                fprintf(fp, "  %-25s %s\n", syntax, "");
                 *syntax = '\0';
             }
 
-            fprintf( fp, "  %-25s ", syntax );
-            arg_print_formatted( fp, 28, 79, glossary );
+            fprintf(fp, "  %-25s ", syntax);
+            arg_print_formatted(fp, 28, 79, glossary);
         }
     } /* for each table entry */
 
-    fputc( '\n', fp );
+    fputc('\n', fp);
 }
 
 
@@ -4862,12 +4765,11 @@ int arg_nullcheck(void * *argtable)
         return 1;
 
     tabindex = 0;
-    do
-    {
+    do {
         /*printf("argtable[%d]=%p\n",tabindex,argtable[tabindex]);*/
         if (!table[tabindex])
             return 1;
-    } while(!(table[tabindex++]->flag & ARG_TERMINATOR));
+    } while (!(table[tabindex++]->flag & ARG_TERMINATOR));
 
     return 0;
 }
@@ -4890,8 +4792,7 @@ void arg_free(void * *argtable)
     int tabindex = 0;
     int flag;
     /*printf("arg_free(%p)\n",argtable);*/
-    do
-    {
+    do {
         /*
            if we encounter a NULL entry then somewhat incorrectly we presume
            we have come to the end of the array. It isnt strictly true because
@@ -4905,7 +4806,7 @@ void arg_free(void * *argtable)
         free(table[tabindex]);
         table[tabindex++] = NULL;
 
-    } while(!(flag & ARG_TERMINATOR));
+    } while (!(flag & ARG_TERMINATOR));
 }
 
 /* frees each non-NULL element of argtable[], where n is the size of the number of entries in the array */
@@ -4914,8 +4815,7 @@ void arg_freetable(void * *argtable, size_t n)
     struct arg_hdr * *table = (struct arg_hdr * *)argtable;
     size_t tabindex = 0;
     /*printf("arg_freetable(%p)\n",argtable);*/
-    for (tabindex = 0; tabindex < n; tabindex++)
-    {
+    for (tabindex = 0; tabindex < n; tabindex++) {
         if (table[tabindex] == NULL)
             continue;
 

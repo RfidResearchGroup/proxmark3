@@ -63,7 +63,7 @@
  */
 
 #ifdef _WIN32
- #define PRESETS  1 //
+#define PRESETS  1 //
 #endif
 
 

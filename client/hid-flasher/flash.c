@@ -72,14 +72,14 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
                 offset);
         if (filesz != memsz) {
             fprintf(stderr, "Error: PHDR file size does not equal memory size\n"
-                            "(DATA+BSS PHDRs do not make sense on ROM platforms!)\n");
+                    "(DATA+BSS PHDRs do not make sense on ROM platforms!)\n");
             return -1;
         }
         if (paddr < last_end) {
             fprintf(stderr, "Error: PHDRs not sorted or overlap\n");
             return -1;
         }
-        if (paddr < FLASH_START || (paddr+filesz) > FLASH_END) {
+        if (paddr < FLASH_START || (paddr + filesz) > FLASH_END) {
             fprintf(stderr, "Error: PHDR is not contained in Flash\n");
             return -1;
         }
@@ -101,13 +101,13 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
             return -1;
         }
 
-        uint32_t block_offset = paddr & (BLOCK_SIZE-1);
+        uint32_t block_offset = paddr & (BLOCK_SIZE - 1);
         if (block_offset) {
             if (ctx->num_segs) {
                 flash_seg_t *prev_seg = seg - 1;
                 uint32_t this_end = paddr + filesz;
-                uint32_t this_firstblock = paddr & ~(BLOCK_SIZE-1);
-                uint32_t prev_lastblock = (last_end - 1) & ~(BLOCK_SIZE-1);
+                uint32_t this_firstblock = paddr & ~(BLOCK_SIZE - 1);
+                uint32_t prev_lastblock = (last_end - 1) & ~(BLOCK_SIZE - 1);
 
                 if (this_firstblock == prev_lastblock) {
                     uint32_t new_length = this_end - prev_seg->start;
@@ -155,11 +155,12 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
 }
 
 // Sanity check segments and check for bootloader writes
-static int check_segs(flash_file_t *ctx, int can_write_bl) {
+static int check_segs(flash_file_t *ctx, int can_write_bl)
+{
     for (int i = 0; i < ctx->num_segs; i++) {
         flash_seg_t *seg = &ctx->segments[i];
 
-        if (seg->start & (BLOCK_SIZE-1)) {
+        if (seg->start & (BLOCK_SIZE - 1)) {
             fprintf(stderr, "Error: Segment is not aligned\n");
             return -1;
         }
@@ -202,8 +203,7 @@ int flash_load(flash_file_t *ctx, const char *name, int can_write_bl)
         goto fail;
     }
     if (memcmp(ehdr.e_ident, elf_ident, sizeof(elf_ident))
-        || le32(ehdr.e_version) != 1)
-    {
+        || le32(ehdr.e_version) != 1) {
         fprintf(stderr, "Not an ELF file or wrong ELF type\n");
         goto fail;
     }
@@ -307,33 +307,33 @@ static int enter_bootloader(void)
     }
 
     if (state & DEVICE_INFO_FLAG_CURRENT_MODE_OS) {
-        fprintf(stderr,"Entering bootloader...\n");
+        fprintf(stderr, "Entering bootloader...\n");
         UsbCommand c;
-        memset(&c, 0, sizeof (c));
+        memset(&c, 0, sizeof(c));
 
         if ((state & DEVICE_INFO_FLAG_BOOTROM_PRESENT)
-            && (state & DEVICE_INFO_FLAG_OSIMAGE_PRESENT))
-        {
+            && (state & DEVICE_INFO_FLAG_OSIMAGE_PRESENT)) {
             // New style handover: Send CMD_START_FLASH, which will reset the board
             // and enter the bootrom on the next boot.
             c.cmd = CMD_START_FLASH;
             SendCommand(&c);
-            fprintf(stderr,"(Press and release the button only to abort)\n");
+            fprintf(stderr, "(Press and release the button only to abort)\n");
         } else {
             // Old style handover: Ask the user to press the button, then reset the board
             c.cmd = CMD_HARDWARE_RESET;
             SendCommand(&c);
-            fprintf(stderr,"Press and hold down button NOW if your bootloader requires it.\n");
+            fprintf(stderr, "Press and hold down button NOW if your bootloader requires it.\n");
         }
-        fprintf(stderr,"Waiting for Proxmark to reappear on USB...");
+        fprintf(stderr, "Waiting for Proxmark to reappear on USB...");
 
         CloseProxmark();
         msleep(1000);
         while (!OpenProxmark(0)) {
             msleep(1000);
-            fprintf(stderr, "."); fflush(stdout);
+            fprintf(stderr, ".");
+            fflush(stdout);
         }
-        fprintf(stderr," Found.\n");
+        fprintf(stderr, " Found.\n");
 
         return 0;
     }
@@ -406,7 +406,7 @@ static int write_block(uint32_t address, uint8_t *data, uint32_t length)
 
     c.cmd = CMD_FINISH_WRITE;
     c.arg[0] = address;
-    memcpy(c.d.asBytes, block_buf+240, 16);
+    memcpy(c.d.asBytes, block_buf + 240, 16);
     SendCommand(&c);
     return wait_for_ack();
 }
@@ -444,7 +444,8 @@ int flash_write(flash_file_t *ctx)
             baddr += block_size;
             length -= block_size;
             block++;
-            fprintf(stderr, "."); fflush(stdout);
+            fprintf(stderr, ".");
+            fflush(stdout);
         }
         fprintf(stderr, " OK\n");
     }
@@ -466,7 +467,8 @@ void flash_free(flash_file_t *ctx)
 }
 
 // just reset the unit
-int flash_stop_flashing(void) {
+int flash_stop_flashing(void)
+{
     UsbCommand c = {CMD_HARDWARE_RESET};
     SendCommand(&c);
     return 0;

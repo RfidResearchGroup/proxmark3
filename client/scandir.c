@@ -18,10 +18,10 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-int scandir (const char *dir,
-     struct dirent ***namelist,
-     int (*select) (const struct dirent *),
-     int (*compar) (const struct dirent **, const struct dirent **))
+int scandir(const char *dir,
+            struct dirent ***namelist,
+            int (*select)(const struct dirent *),
+            int (*compar)(const struct dirent **, const struct dirent **))
 {
     DIR *dirp;
     struct dirent *ent, *etmp, **nl = NULL, **ntmp;
@@ -29,13 +29,13 @@ int scandir (const char *dir,
     int allocated = 0;
     int err_no = 0;
 
-    if (!(dirp = opendir (dir)))
+    if (!(dirp = opendir(dir)))
         return -1;
 
-    while ((ent = readdir (dirp))) {
-        if (!select || select (ent)) {
+    while ((ent = readdir(dirp))) {
+        if (!select || select(ent)) {
 
-            err_no =0;
+            err_no = 0;
 
             if (count == allocated) {
                 if (allocated == 0)
@@ -43,7 +43,7 @@ int scandir (const char *dir,
                 else
                     allocated *= 2;
 
-                ntmp = (struct dirent **) realloc (nl, allocated * sizeof *nl);
+                ntmp = (struct dirent **) realloc(nl, allocated * sizeof * nl);
                 if (!ntmp) {
                     err_no = 1;
                     break;
@@ -51,7 +51,7 @@ int scandir (const char *dir,
                 nl = ntmp;
             }
 
-            etmp = (struct dirent *) calloc (sizeof *ent, sizeof(char));
+            etmp = (struct dirent *) calloc(sizeof * ent, sizeof(char));
             if (!etmp) {
                 err_no = 1;
                 break;
@@ -62,19 +62,19 @@ int scandir (const char *dir,
     }
 
     if (err_no != 0) {
-        closedir (dirp);
+        closedir(dirp);
         if (nl) {
             while (count > 0) {
-                free (nl[--count]);
+                free(nl[--count]);
             }
-            free (nl);
+            free(nl);
         }
         return -1;
     }
 
-    closedir (dirp);
+    closedir(dirp);
 
-    qsort (nl, count, sizeof *nl, (int (*)(const void *, const void *)) compar);
+    qsort(nl, count, sizeof * nl, (int (*)(const void *, const void *)) compar);
     if (namelist)
         *namelist = nl;
     return count;
@@ -86,9 +86,9 @@ int scandir (const char *dir,
 #ifdef __cplusplus
 extern "C" {
 #endif
-int alphasort (const struct dirent **a, const struct dirent **b)
+int alphasort(const struct dirent **a, const struct dirent **b)
 {
-    return strcoll ((*a)->d_name, (*b)->d_name);
+    return strcoll((*a)->d_name, (*b)->d_name);
 }
 #ifdef __cplusplus
 }

@@ -31,8 +31,8 @@
 
 #define ROCA_PRINTS_LENGTH 17
 
-extern bool emv_rocacheck( const unsigned char *buf, size_t buflen, bool verbose );
-extern int roca_self_test( void );
+extern bool emv_rocacheck(const unsigned char *buf, size_t buflen, bool verbose);
+extern int roca_self_test(void);
 
 #endif
 

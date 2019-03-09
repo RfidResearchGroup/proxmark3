@@ -55,8 +55,7 @@ extern "C" {
  *            security risk. We recommend considering stronger ciphers instead.
  *
  */
-typedef struct mbedtls_arc4_context
-{
+typedef struct mbedtls_arc4_context {
     int x;                      /*!< permutation index */
     int y;                      /*!< permutation index */
     unsigned char m[256];       /*!< permutation table */
@@ -77,7 +76,7 @@ mbedtls_arc4_context;
  *                 instead.
  *
  */
-void mbedtls_arc4_init( mbedtls_arc4_context *ctx );
+void mbedtls_arc4_init(mbedtls_arc4_context *ctx);
 
 /**
  * \brief          Clear ARC4 context
@@ -89,7 +88,7 @@ void mbedtls_arc4_init( mbedtls_arc4_context *ctx );
  *                 instead.
  *
  */
-void mbedtls_arc4_free( mbedtls_arc4_context *ctx );
+void mbedtls_arc4_free(mbedtls_arc4_context *ctx);
 
 /**
  * \brief          ARC4 key schedule
@@ -103,8 +102,8 @@ void mbedtls_arc4_free( mbedtls_arc4_context *ctx );
  *                 instead.
  *
  */
-void mbedtls_arc4_setup( mbedtls_arc4_context *ctx, const unsigned char *key,
-                 unsigned int keylen );
+void mbedtls_arc4_setup(mbedtls_arc4_context *ctx, const unsigned char *key,
+                        unsigned int keylen);
 
 /**
  * \brief          ARC4 cipher function
@@ -121,8 +120,8 @@ void mbedtls_arc4_setup( mbedtls_arc4_context *ctx, const unsigned char *key,
  *                 instead.
  *
  */
-int mbedtls_arc4_crypt( mbedtls_arc4_context *ctx, size_t length, const unsigned char *input,
-                unsigned char *output );
+int mbedtls_arc4_crypt(mbedtls_arc4_context *ctx, size_t length, const unsigned char *input,
+                       unsigned char *output);
 
 /**
  * \brief          Checkup routine
@@ -134,7 +133,7 @@ int mbedtls_arc4_crypt( mbedtls_arc4_context *ctx, size_t length, const unsigned
  *                 instead.
  *
  */
-int mbedtls_arc4_self_test( int verbose );
+int mbedtls_arc4_self_test(int verbose);
 
 #ifdef __cplusplus
 }

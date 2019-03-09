@@ -13,7 +13,8 @@ static int CmdHelp(const char *Cmd);
 
 #define MAX_LENGTH 1024
 
-int usage_legic_calccrc(void){
+int usage_legic_calccrc(void)
+{
     PrintAndLogEx(NORMAL, "Calculates the legic crc8/crc16 on the given data.");
     PrintAndLogEx(NORMAL, "There must be an even number of hexsymbols as input.");
     PrintAndLogEx(NORMAL, "Usage:  hf legic crc [h] d <data> u <uidcrc> c <8|16>");
@@ -28,7 +29,8 @@ int usage_legic_calccrc(void){
     PrintAndLogEx(NORMAL, "      hf legic crc d deadbeef1122 u 9A c 16");
     return 0;
 }
-int usage_legic_rdmem(void){
+int usage_legic_rdmem(void)
+{
     PrintAndLogEx(NORMAL, "Read data from a legic tag.");
     PrintAndLogEx(NORMAL, "Usage:  hf legic rdmem [h] <offset> <length> <IV>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -43,7 +45,8 @@ int usage_legic_rdmem(void){
     PrintAndLogEx(NORMAL, "      hf legic rdmem 0 100 55    - reads 0x100 bytes with IV 0x55");
     return 0;
 }
-int usage_legic_sim(void){
+int usage_legic_sim(void)
+{
     PrintAndLogEx(NORMAL, "Simulates a LEGIC Prime tag. MIM22, MIM256, MIM1024 types can be emulated");
     PrintAndLogEx(NORMAL, "Use ELOAD/ESAVE to upload a dump into emulator memory");
     PrintAndLogEx(NORMAL, "Usage:  hf legic sim [h] <tagtype>");
@@ -57,7 +60,8 @@ int usage_legic_sim(void){
     PrintAndLogEx(NORMAL, "      hf legic sim 2");
     return 0;
 }
-int usage_legic_write(void){
+int usage_legic_write(void)
+{
     PrintAndLogEx(NORMAL, "Write data to a LEGIC Prime tag. It autodetects tagsize to make sure size");
     PrintAndLogEx(NORMAL, "Usage:  hf legic write [h] o <offset> d <data (hex symbols)>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -70,7 +74,8 @@ int usage_legic_write(void){
     PrintAndLogEx(NORMAL, "      hf legic write o 10 d 11223344    - Write 0x11223344 starting from offset 0x10");
     return 0;
 }
-int usage_legic_reader(void){
+int usage_legic_reader(void)
+{
     PrintAndLogEx(NORMAL, "Read UID and type information from a legic tag.");
     PrintAndLogEx(NORMAL, "Usage:  hf legic reader [h]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -80,7 +85,8 @@ int usage_legic_reader(void){
     PrintAndLogEx(NORMAL, "      hf legic reader");
     return 0;
 }
-int usage_legic_info(void){
+int usage_legic_info(void)
+{
     PrintAndLogEx(NORMAL, "Reads information from a legic prime tag.");
     PrintAndLogEx(NORMAL, "Shows systemarea, user areas etc");
     PrintAndLogEx(NORMAL, "Usage:  hf legic info [h]");
@@ -91,7 +97,8 @@ int usage_legic_info(void){
     PrintAndLogEx(NORMAL, "      hf legic info");
     return 0;
 }
-int usage_legic_dump(void){
+int usage_legic_dump(void)
+{
     PrintAndLogEx(NORMAL, "Reads all pages from LEGIC Prime MIM22, MIM256, MIM1024");
     PrintAndLogEx(NORMAL, "and saves binary dump into the file `filename.bin` or `cardUID.bin`");
     PrintAndLogEx(NORMAL, "It autodetects card type.\n");
@@ -105,7 +112,8 @@ int usage_legic_dump(void){
     PrintAndLogEx(NORMAL, "      hf legic dump o myfile");
     return 0;
 }
-int usage_legic_restore(void){
+int usage_legic_restore(void)
+{
     PrintAndLogEx(NORMAL, "Reads binary file and it autodetects card type and verifies that the file has the same size");
     PrintAndLogEx(NORMAL, "Then write the data back to card. All bytes except the first 7bytes [UID(4) MCC(1) DCF(2)]\n");
     PrintAndLogEx(NORMAL, "Usage:   hf legic restore [h] i <filename w/o .bin>");
@@ -117,7 +125,8 @@ int usage_legic_restore(void){
     PrintAndLogEx(NORMAL, "      hf legic restore i myfile");
     return 0;
 }
-int usage_legic_eload(void){
+int usage_legic_eload(void)
+{
     PrintAndLogEx(NORMAL, "It loads binary dump from the file `filename.bin`");
     PrintAndLogEx(NORMAL, "Usage:  hf legic eload [h] [card memory] <file name w/o `.bin`>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -131,7 +140,8 @@ int usage_legic_eload(void){
     PrintAndLogEx(NORMAL, "      hf legic eload 2 myfile");
     return 0;
 }
-int usage_legic_esave(void){
+int usage_legic_esave(void)
+{
     PrintAndLogEx(NORMAL, "It saves binary dump into the file `filename.bin` or `cardID.bin`");
     PrintAndLogEx(NORMAL, " Usage:  hf legic esave [h] [card memory] [file name w/o `.bin`]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -145,7 +155,8 @@ int usage_legic_esave(void){
     PrintAndLogEx(NORMAL, "      hf legic esave 2 myfile");
     return 0;
 }
-int usage_legic_wipe(void){
+int usage_legic_wipe(void)
+{
     PrintAndLogEx(NORMAL, "Fills a legic tag memory with zeros. From byte7 and to the end.");
     PrintAndLogEx(NORMAL, " Usage:  hf legic wipe [h]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -160,16 +171,17 @@ int usage_legic_wipe(void){
  *  This is based on information given in the talk held
  *  by Henryk Ploetz and Karsten Nohl at 26c3
  */
-int CmdLegicInfo(const char *Cmd) {
+int CmdLegicInfo(const char *Cmd)
+{
 
     char cmdp = tolower(param_getchar(Cmd, 0));
-    if ( cmdp == 'h' ) return usage_legic_info();
+    if (cmdp == 'h') return usage_legic_info();
 
     int i = 0, k = 0, segmentNum = 0, segment_len = 0, segment_flag = 0;
     int crc = 0, wrp = 0, wrc = 0;
     uint8_t stamp_len = 0;
     uint16_t datalen = 0;
-    char token_type[5] = {0,0,0,0,0};
+    char token_type[5] = {0, 0, 0, 0, 0};
     int dcf = 0;
     int bIsSegmented = 0;
 
@@ -184,13 +196,13 @@ int CmdLegicInfo(const char *Cmd) {
 
     // allocate receiver buffer
     uint8_t *data = calloc(card.cardsize, sizeof(uint8_t));
-     if (!data) {
+    if (!data) {
         PrintAndLogEx(WARNING, "Cannot allocate memory");
         return 2;
     }
 
     int status = legic_read_mem(0, card.cardsize, 0x55, data, &datalen);
-    if ( status > 0 ) {
+    if (status > 0) {
         PrintAndLogEx(WARNING, "Failed reading memory");
         free(data);
         return 3;
@@ -203,13 +215,13 @@ int CmdLegicInfo(const char *Cmd) {
     PrintAndLogEx(NORMAL, "\nCDF: System Area");
     PrintAndLogEx(NORMAL, "------------------------------------------------------");
     PrintAndLogEx(NORMAL, "MCD: %02x, MSN: %02x %02x %02x, MCC: %02x %s",
-        data[0],
-        data[1],
-        data[2],
-        data[3],
-        data[4],
-        (calc_crc == crc) ? "OK":"Fail"
-    );
+                  data[0],
+                  data[1],
+                  data[2],
+                  data[3],
+                  data[4],
+                  (calc_crc == crc) ? "OK" : "Fail"
+                 );
 
     // MCD = Manufacturer ID (should be list meaning something?)
 
@@ -220,10 +232,10 @@ int CmdLegicInfo(const char *Cmd) {
     if (dcf == 0xFFFF) {
 
         PrintAndLogEx(NORMAL, "DCF: %d (%02x %02x), Token Type=NM (New Media)",
-            dcf,
-            data[5],
-            data[6]
-        );
+                      dcf,
+                      data[5],
+                      data[6]
+                     );
 
     } else if (dcf > 60000) { // Master token?
 
@@ -235,32 +247,32 @@ int CmdLegicInfo(const char *Cmd) {
             stamp_len = 0x0c - (data[5] >> 4);
         } else {
             switch (data[5] & 0x7f) {
-            case 0x00 ... 0x2f:
-                strncpy(token_type, "IAM", sizeof(token_type));
-                fl = (0x2f - (data[5] & 0x7f)) + 1;
-                break;
-            case 0x30 ... 0x6f:
-                strncpy(token_type, "SAM", sizeof(token_type));
-                fl = (0x6f - (data[5] & 0x7f)) + 1;
-                break;
-            case 0x70 ... 0x7f:
-                strncpy(token_type, "GAM", sizeof(token_type));
-                fl = (0x7f - (data[5] & 0x7f)) + 1;
-                break;
+                case 0x00 ... 0x2f:
+                    strncpy(token_type, "IAM", sizeof(token_type));
+                    fl = (0x2f - (data[5] & 0x7f)) + 1;
+                    break;
+                case 0x30 ... 0x6f:
+                    strncpy(token_type, "SAM", sizeof(token_type));
+                    fl = (0x6f - (data[5] & 0x7f)) + 1;
+                    break;
+                case 0x70 ... 0x7f:
+                    strncpy(token_type, "GAM", sizeof(token_type));
+                    fl = (0x7f - (data[5] & 0x7f)) + 1;
+                    break;
             }
 
             stamp_len = 0xfc - data[6];
         }
 
         PrintAndLogEx(NORMAL, "DCF: %d (%02x %02x), Token Type=%s (OLE=%01u), OL=%02u, FL=%02u",
-            dcf,
-            data[5],
-            data[6],
-            token_type,
-            (data[5] & 0x80 )>> 7,
-            stamp_len,
-            fl
-        );
+                      dcf,
+                      data[5],
+                      data[6],
+                      token_type,
+                      (data[5] & 0x80) >> 7,
+                      stamp_len,
+                      fl
+                     );
 
     } else { // Is IM(-S) type of card...
 
@@ -272,12 +284,12 @@ int CmdLegicInfo(const char *Cmd) {
         }
 
         PrintAndLogEx(NORMAL, "DCF: %d (%02x %02x), Token Type=%s (OLE=%01u)",
-            dcf,
-            data[5],
-            data[6],
-            token_type,
-            (data[5]&0x80) >> 7
-        );
+                      dcf,
+                      data[5],
+                      data[6],
+                      token_type,
+                      (data[5] & 0x80) >> 7
+                     );
     }
 
     // Makes no sence to show this on blank media...
@@ -285,26 +297,26 @@ int CmdLegicInfo(const char *Cmd) {
 
         if (bIsSegmented) {
             PrintAndLogEx(NORMAL, "WRP=%02u, WRC=%01u, RD=%01u, SSC=%02x",
-                data[7] & 0x0f,
-                (data[7] & 0x70) >> 4,
-                (data[7] & 0x80) >> 7,
-                data[8]
-            );
+                          data[7] & 0x0f,
+                          (data[7] & 0x70) >> 4,
+                          (data[7] & 0x80) >> 7,
+                          data[8]
+                         );
         }
 
         // Header area is only available on IM-S cards, on master tokens this data is the master token data itself
         if (bIsSegmented || dcf > 60000) {
             if (dcf > 60000) {
                 PrintAndLogEx(NORMAL, "Master token data");
-                PrintAndLogEx(NORMAL, "%s", sprint_hex(data+8, 14));
+                PrintAndLogEx(NORMAL, "%s", sprint_hex(data + 8, 14));
             } else {
                 PrintAndLogEx(NORMAL, "Remaining Header Area");
-                PrintAndLogEx(NORMAL, "%s", sprint_hex(data+9, 13));
+                PrintAndLogEx(NORMAL, "%s", sprint_hex(data + 9, 13));
             }
         }
     }
 
-    uint8_t segCrcBytes[8] = {0,0,0,0,0,0,0,0};
+    uint8_t segCrcBytes[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     uint32_t segCalcCRC = 0;
     uint32_t segCRC = 0;
 
@@ -315,18 +327,17 @@ int CmdLegicInfo(const char *Cmd) {
     PrintAndLogEx(NORMAL, "\nADF: User Area");
     PrintAndLogEx(NORMAL, "------------------------------------------------------");
 
-    if(bIsSegmented) {
+    if (bIsSegmented) {
 
         // Data start point on segmented cards
         i = 22;
 
         // decode segments
-        for (segmentNum=1; segmentNum < 128; segmentNum++ )
-        {
-            segment_len = ((data[i+1] ^ crc) & 0x0f) * 256 + (data[i] ^ crc);
-            segment_flag = ((data[i+1] ^ crc) & 0xf0) >> 4;
-            wrp = (data[i+2] ^ crc);
-            wrc = ((data[i+3] ^ crc) & 0x70) >> 4;
+        for (segmentNum = 1; segmentNum < 128; segmentNum++) {
+            segment_len = ((data[i + 1] ^ crc) & 0x0f) * 256 + (data[i] ^ crc);
+            segment_flag = ((data[i + 1] ^ crc) & 0xf0) >> 4;
+            wrp = (data[i + 2] ^ crc);
+            wrc = ((data[i + 3] ^ crc) & 0x70) >> 4;
 
             bool hasWRC = (wrc > 0);
             bool hasWRP = (wrp > wrc);
@@ -334,75 +345,75 @@ int CmdLegicInfo(const char *Cmd) {
             int remain_seg_payload_len = (segment_len - wrp - 5);
 
             // validate segment-crc
-            segCrcBytes[0]=data[0];           //uid0
-            segCrcBytes[1]=data[1];           //uid1
-            segCrcBytes[2]=data[2];           //uid2
-            segCrcBytes[3]=data[3];           //uid3
-            segCrcBytes[4]=(data[i] ^ crc);   //hdr0
-            segCrcBytes[5]=(data[i+1] ^ crc); //hdr1
-            segCrcBytes[6]=(data[i+2] ^ crc); //hdr2
-            segCrcBytes[7]=(data[i+3] ^ crc); //hdr3
+            segCrcBytes[0] = data[0];         //uid0
+            segCrcBytes[1] = data[1];         //uid1
+            segCrcBytes[2] = data[2];         //uid2
+            segCrcBytes[3] = data[3];         //uid3
+            segCrcBytes[4] = (data[i] ^ crc); //hdr0
+            segCrcBytes[5] = (data[i + 1] ^ crc); //hdr1
+            segCrcBytes[6] = (data[i + 2] ^ crc); //hdr2
+            segCrcBytes[7] = (data[i + 3] ^ crc); //hdr3
 
             segCalcCRC = CRC8Legic(segCrcBytes, 8);
-            segCRC = data[i+4] ^ crc;
+            segCRC = data[i + 4] ^ crc;
 
             PrintAndLogEx(NORMAL, "Segment %02u \nraw header | 0x%02X 0x%02X 0x%02X 0x%02X \nSegment len: %u,  Flag: 0x%X (valid:%01u, last:%01u), WRP: %02u, WRC: %02u, RD: %01u, CRC: 0x%02X (%s)",
-                segmentNum,
-                data[i] ^ crc,
-                data[i+1] ^ crc,
-                data[i+2] ^ crc,
-                data[i+3] ^ crc,
-                segment_len,
-                segment_flag,
-                (segment_flag & 0x4) >> 2,
-                (segment_flag & 0x8) >> 3,
-                wrp,
-                wrc,
-                ((data[i+3]^crc) & 0x80) >> 7,
-                segCRC,
-                ( segCRC == segCalcCRC ) ? "OK" : "fail"
-            );
+                          segmentNum,
+                          data[i] ^ crc,
+                          data[i + 1] ^ crc,
+                          data[i + 2] ^ crc,
+                          data[i + 3] ^ crc,
+                          segment_len,
+                          segment_flag,
+                          (segment_flag & 0x4) >> 2,
+                          (segment_flag & 0x8) >> 3,
+                          wrp,
+                          wrc,
+                          ((data[i + 3]^crc) & 0x80) >> 7,
+                          segCRC,
+                          (segCRC == segCalcCRC) ? "OK" : "fail"
+                         );
 
             i += 5;
 
-            if ( hasWRC ) {
+            if (hasWRC) {
                 PrintAndLogEx(NORMAL, "WRC protected area:   (I %d | K %d| WRC %d)", i, k, wrc);
                 PrintAndLogEx(NORMAL, "\nrow  | data");
                 PrintAndLogEx(NORMAL, "-----+------------------------------------------------");
 
-                for ( k=i; k < (i + wrc); ++k)
+                for (k = i; k < (i + wrc); ++k)
                     data[k] ^= crc;
 
-                print_hex_break( data+i, wrc, 16);
+                print_hex_break(data + i, wrc, 16);
 
                 i += wrc;
             }
 
-            if ( hasWRP ) {
-                PrintAndLogEx(NORMAL, "Remaining write protected area:  (I %d | K %d | WRC %d | WRP %d  WRP_LEN %d)",i, k, wrc, wrp, wrp_len);
+            if (hasWRP) {
+                PrintAndLogEx(NORMAL, "Remaining write protected area:  (I %d | K %d | WRC %d | WRP %d  WRP_LEN %d)", i, k, wrc, wrp, wrp_len);
                 PrintAndLogEx(NORMAL, "\nrow  | data");
                 PrintAndLogEx(NORMAL, "-----+------------------------------------------------");
 
-                for (k=i; k < (i+wrp_len); ++k)
+                for (k = i; k < (i + wrp_len); ++k)
                     data[k] ^= crc;
 
-                print_hex_break( data+i, wrp_len, 16);
+                print_hex_break(data + i, wrp_len, 16);
 
                 i += wrp_len;
 
                 // does this one work? (Answer: Only if KGH/BGH is used with BCD encoded card number! So maybe this will show just garbage...)
-                if( wrp_len == 8 )
-                    PrintAndLogEx(NORMAL, "Card ID: %2X%02X%02X", data[i-4]^crc, data[i-3]^crc, data[i-2]^crc);
+                if (wrp_len == 8)
+                    PrintAndLogEx(NORMAL, "Card ID: %2X%02X%02X", data[i - 4]^crc, data[i - 3]^crc, data[i - 2]^crc);
             }
 
             PrintAndLogEx(NORMAL, "Remaining segment payload:  (I %d | K %d | Remain LEN %d)", i, k, remain_seg_payload_len);
             PrintAndLogEx(NORMAL, "\nrow  | data");
             PrintAndLogEx(NORMAL, "-----+------------------------------------------------");
 
-            for ( k=i; k < (i+remain_seg_payload_len); ++k)
+            for (k = i; k < (i + remain_seg_payload_len); ++k)
                 data[k] ^= crc;
 
-            print_hex_break( data+i, remain_seg_payload_len, 16);
+            print_hex_break(data + i, remain_seg_payload_len, 16);
 
             i += remain_seg_payload_len;
 
@@ -428,35 +439,35 @@ int CmdLegicInfo(const char *Cmd) {
         int remain_seg_payload_len = (1024 - 22 - wrp); // Any chance to get physical card size here!?
 
         PrintAndLogEx(NORMAL, "Unsegmented card - WRP: %02u, WRC: %02u, RD: %01u",
-            wrp,
-            wrc,
-            (data[7] & 0x80) >> 7
-        );
+                      wrp,
+                      wrc,
+                      (data[7] & 0x80) >> 7
+                     );
 
-        if ( hasWRC ) {
+        if (hasWRC) {
             PrintAndLogEx(NORMAL, "WRC protected area:   (I %d | WRC %d)", i, wrc);
             PrintAndLogEx(NORMAL, "\nrow  | data");
             PrintAndLogEx(NORMAL, "-----+------------------------------------------------");
-            print_hex_break( data+i, wrc, 16);
+            print_hex_break(data + i, wrc, 16);
             i += wrc;
         }
 
-        if ( hasWRP ) {
+        if (hasWRP) {
             PrintAndLogEx(NORMAL, "Remaining write protected area:  (I %d | WRC %d | WRP %d | WRP_LEN %d)", i, wrc, wrp, wrp_len);
             PrintAndLogEx(NORMAL, "\nrow  | data");
             PrintAndLogEx(NORMAL, "-----+------------------------------------------------");
-            print_hex_break( data + i, wrp_len, 16);
+            print_hex_break(data + i, wrp_len, 16);
             i += wrp_len;
 
             // does this one work? (Answer: Only if KGH/BGH is used with BCD encoded card number! So maybe this will show just garbage...)
-            if( wrp_len == 8 )
-                PrintAndLogEx(NORMAL, "Card ID: %2X%02X%02X", data[i-4], data[i-3], data[i-2]);
+            if (wrp_len == 8)
+                PrintAndLogEx(NORMAL, "Card ID: %2X%02X%02X", data[i - 4], data[i - 3], data[i - 2]);
         }
 
         PrintAndLogEx(NORMAL, "Remaining segment payload:  (I %d | Remain LEN %d)", i, remain_seg_payload_len);
         PrintAndLogEx(NORMAL, "\nrow  | data");
         PrintAndLogEx(NORMAL, "-----+------------------------------------------------");
-        print_hex_break( data + i, remain_seg_payload_len, 16);
+        print_hex_break(data + i, remain_seg_payload_len, 16);
         i += remain_seg_payload_len;
 
         PrintAndLogEx(NORMAL, "-----+------------------------------------------------\n");
@@ -470,17 +481,18 @@ out:
 // params:
 // offset in data memory
 // number of bytes to read
-int CmdLegicRdmem(const char *Cmd) {
+int CmdLegicRdmem(const char *Cmd)
+{
 
     char cmdp = tolower(param_getchar(Cmd, 0));
-    if ( cmdp == 'h' ) return usage_legic_rdmem();
+    if (cmdp == 'h') return usage_legic_rdmem();
 
     uint32_t offset = 0, len = 0, iv = 1;
     uint16_t datalen = 0;
     sscanf(Cmd, "%x %x %x", &offset, &len, &iv);
 
     // sanity checks
-    if ( len + offset >= MAX_LENGTH ) {
+    if (len + offset >= MAX_LENGTH) {
         PrintAndLogEx(WARNING, "Out-of-bounds, Cardsize = %d, [offset+len = %d ]", MAX_LENGTH, len + offset);
         return -1;
     }
@@ -489,25 +501,26 @@ int CmdLegicRdmem(const char *Cmd) {
 
     // allocate receiver buffer
     uint8_t *data = calloc(len, sizeof(uint8_t));
-    if ( !data ){
+    if (!data) {
         PrintAndLogEx(WARNING, "Cannot allocate memory");
         return -2;
     }
 
     int status = legic_read_mem(offset, len, iv, data, &datalen);
-    if ( status == 0 ) {
-    PrintAndLogEx(NORMAL, "\n ##  |  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F 10 11 12 13 14 15 16 17 18 19 1A 1B 1C 1D 1E 1F");
-    PrintAndLogEx(NORMAL, "-----+------------------------------------------------------------------------------------------------");
+    if (status == 0) {
+        PrintAndLogEx(NORMAL, "\n ##  |  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F 10 11 12 13 14 15 16 17 18 19 1A 1B 1C 1D 1E 1F");
+        PrintAndLogEx(NORMAL, "-----+------------------------------------------------------------------------------------------------");
         print_hex_break(data, datalen, 32);
     }
     free(data);
     return status;
 }
 
-int CmdLegicRfSim(const char *Cmd) {
+int CmdLegicRfSim(const char *Cmd)
+{
 
     char cmdp = tolower(param_getchar(Cmd, 0));
-    if ( strlen(Cmd) == 0 || cmdp == 'h' ) return usage_legic_sim();
+    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_legic_sim();
 
     UsbCommand c = {CMD_SIMULATE_TAG_LEGIC_RF, {1}};
     sscanf(Cmd, " %" SCNi64, &c.arg[0]);
@@ -516,7 +529,8 @@ int CmdLegicRfSim(const char *Cmd) {
     return 0;
 }
 
-int CmdLegicRfWrite(const char *Cmd) {
+int CmdLegicRfWrite(const char *Cmd)
+{
 
     uint8_t *data = NULL;
     uint8_t cmdp = 0;
@@ -526,65 +540,65 @@ int CmdLegicRfWrite(const char *Cmd) {
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
-        case 'd':
-            // peek at length of the input string so we can
-            // figure out how many elements to malloc in "data"
-            bg=en=0;
-            if (param_getptr(Cmd, &bg, &en, cmdp+1)) {
+            case 'd':
+                // peek at length of the input string so we can
+                // figure out how many elements to malloc in "data"
+                bg = en = 0;
+                if (param_getptr(Cmd, &bg, &en, cmdp + 1)) {
+                    errors = true;
+                    break;
+                }
+                len = (en - bg + 1);
+
+                // check that user entered even number of characters
+                // for hex data string
+                if (len & 1) {
+                    errors = true;
+                    break;
+                }
+
+                // limit number of bytes to write. This is not a 'restore' command.
+                if ((len >> 1) > 100) {
+                    PrintAndLogEx(WARNING, "Max bound on 100bytes to write a one time.");
+                    PrintAndLogEx(WARNING, "Use the 'hf legic restore' command if you want to write the whole tag at once");
+                    errors = true;
+                }
+
+                // it's possible for user to accidentally enter "b" parameter
+                // more than once - we have to clean previous malloc
+                if (data)
+                    free(data);
+
+                data = calloc(len >> 1, sizeof(uint8_t));
+                if (data == NULL) {
+                    PrintAndLogEx(WARNING, "Can't allocate memory. exiting");
+                    errors = true;
+                    break;
+                }
+
+                if (param_gethex(Cmd, cmdp + 1, data, len)) {
+                    errors = true;
+                    break;
+                }
+
+                len >>= 1;
+                cmdp += 2;
+                break;
+            case 'o':
+                offset = param_get32ex(Cmd, cmdp + 1, 4, 16);
+                cmdp += 2;
+                break;
+            case 'h':
                 errors = true;
                 break;
-            }
-            len = (en - bg + 1);
-
-            // check that user entered even number of characters
-            // for hex data string
-            if (len & 1) {
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
-            }
-
-            // limit number of bytes to write. This is not a 'restore' command.
-            if ( (len >> 1) > 100 ){
-                PrintAndLogEx(WARNING, "Max bound on 100bytes to write a one time.");
-                PrintAndLogEx(WARNING, "Use the 'hf legic restore' command if you want to write the whole tag at once");
-                errors = true;
-            }
-
-            // it's possible for user to accidentally enter "b" parameter
-            // more than once - we have to clean previous malloc
-            if (data)
-                free(data);
-
-            data = calloc(len >> 1, sizeof(uint8_t));
-            if ( data == NULL ) {
-                PrintAndLogEx(WARNING, "Can't allocate memory. exiting");
-                errors = true;
-                break;
-            }
-
-            if (param_gethex(Cmd, cmdp+1, data, len)) {
-                errors = true;
-                break;
-            }
-
-            len >>= 1;
-            cmdp += 2;
-            break;
-        case 'o':
-            offset = param_get32ex(Cmd, cmdp+1, 4, 16);
-            cmdp += 2;
-            break;
-        case 'h':
-            errors = true;
-            break;
-        default:
-            PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-            errors = true;
-            break;
         }
     }
     //Validations
-    if (errors || cmdp == 0){
+    if (errors || cmdp == 0) {
         if (data)
             free(data);
         return usage_legic_write();
@@ -601,12 +615,12 @@ int CmdLegicRfWrite(const char *Cmd) {
 
     // OUT-OF-BOUNDS checks
     // UID 4+1 bytes can't be written to.
-    if ( offset < 5 ) {
+    if (offset < 5) {
         PrintAndLogEx(WARNING, "Out-of-bounds, bytes 0-1-2-3-4 can't be written to. Offset = %d", offset);
         return -2;
     }
 
-    if ( len + offset >= card.cardsize ) {
+    if (len + offset >= card.cardsize) {
         PrintAndLogEx(WARNING, "Out-of-bounds, Cardsize = %d, [offset+len = %d ]", card.cardsize, len + offset);
         return -2;
     }
@@ -618,7 +632,7 @@ int CmdLegicRfWrite(const char *Cmd) {
         char *answer = NULL;
         answer = readline("do you really want to continue? y(es) n(o) : ");
         bool overwrite = (answer[0] == 'y' || answer[0] == 'Y');
-        if (!overwrite){
+        if (!overwrite) {
             PrintAndLogEx(NORMAL, "command cancelled");
             return 0;
         }
@@ -638,7 +652,8 @@ int CmdLegicRfWrite(const char *Cmd) {
     uint8_t timeout = 0;
     while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
         ++timeout;
-        printf("."); fflush(stdout);
+        printf(".");
+        fflush(stdout);
         if (timeout > 7) {
             PrintAndLogEx(WARNING, "\ncommand execution time out");
             return 1;
@@ -647,7 +662,7 @@ int CmdLegicRfWrite(const char *Cmd) {
     PrintAndLogEx(NORMAL, "\n");
 
     uint8_t isOK = resp.arg[0] & 0xFF;
-    if ( !isOK ) {
+    if (!isOK) {
         PrintAndLogEx(WARNING, "Failed writing tag");
         return 1;
     }
@@ -655,81 +670,82 @@ int CmdLegicRfWrite(const char *Cmd) {
     return 0;
 }
 
-int CmdLegicCalcCrc(const char *Cmd){
+int CmdLegicCalcCrc(const char *Cmd)
+{
 
     uint8_t *data = NULL;
-    uint8_t cmdp = 0, uidcrc = 0, type=0;
+    uint8_t cmdp = 0, uidcrc = 0, type = 0;
     bool errors = false;
     int len = 0;
     int bg, en;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
-        case 'd':
-            // peek at length of the input string so we can
-            // figure out how many elements to malloc in "data"
-            bg=en=0;
-            if (param_getptr(Cmd, &bg, &en, cmdp+1)) {
+            case 'd':
+                // peek at length of the input string so we can
+                // figure out how many elements to malloc in "data"
+                bg = en = 0;
+                if (param_getptr(Cmd, &bg, &en, cmdp + 1)) {
+                    errors = true;
+                    break;
+                }
+                len = (en - bg + 1);
+
+                // check that user entered even number of characters
+                // for hex data string
+                if (len & 1) {
+                    errors = true;
+                    break;
+                }
+
+                // it's possible for user to accidentally enter "b" parameter
+                // more than once - we have to clean previous malloc
+                if (data) free(data);
+                data = calloc(len >> 1,  sizeof(uint8_t));
+                if (data == NULL) {
+                    PrintAndLogEx(WARNING, "Can't allocate memory. exiting");
+                    errors = true;
+                    break;
+                }
+
+                if (param_gethex(Cmd, cmdp + 1, data, len)) {
+                    errors = true;
+                    break;
+                }
+
+                len >>= 1;
+                cmdp += 2;
+                break;
+            case 'u':
+                uidcrc = param_get8ex(Cmd, cmdp + 1, 0, 16);
+                cmdp += 2;
+                break;
+            case 'c':
+                type = param_get8ex(Cmd, cmdp + 1, 0, 10);
+                cmdp += 2;
+                break;
+            case 'h':
                 errors = true;
                 break;
-            }
-            len = (en - bg + 1);
-
-            // check that user entered even number of characters
-            // for hex data string
-            if (len & 1) {
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
-            }
-
-            // it's possible for user to accidentally enter "b" parameter
-            // more than once - we have to clean previous malloc
-            if (data) free(data);
-            data = calloc(len >> 1,  sizeof(uint8_t) );
-            if ( data == NULL ) {
-                PrintAndLogEx(WARNING, "Can't allocate memory. exiting");
-                errors = true;
-                break;
-            }
-
-            if (param_gethex(Cmd, cmdp+1, data, len)) {
-                errors = true;
-                break;
-            }
-
-            len >>= 1;
-            cmdp += 2;
-            break;
-        case 'u':
-            uidcrc = param_get8ex(Cmd, cmdp+1, 0, 16);
-            cmdp += 2;
-            break;
-        case 'c':
-            type = param_get8ex(Cmd, cmdp+1, 0, 10);
-            cmdp += 2;
-            break;
-        case 'h':
-            errors = true;
-            break;
-        default:
-            PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-            errors = true;
-            break;
         }
     }
     //Validations
-    if (errors || cmdp == 0){
+    if (errors || cmdp == 0) {
         if (data) free(data);
         return usage_legic_calccrc();
     }
 
-    switch (type){
+    switch (type) {
         case 16:
             init_table(CRC_LEGIC);
             PrintAndLogEx(SUCCESS, "Legic crc16: %X", crc16_legic(data, len, uidcrc));
             break;
         default:
-            PrintAndLogEx(SUCCESS, "Legic crc8: %X",  CRC8Legic(data, len) );
+            PrintAndLogEx(SUCCESS, "Legic crc8: %X",  CRC8Legic(data, len));
             break;
     }
 
@@ -737,7 +753,8 @@ int CmdLegicCalcCrc(const char *Cmd){
     return 0;
 }
 
-int legic_read_mem(uint32_t offset, uint32_t len, uint32_t iv, uint8_t *out, uint16_t *outlen) {
+int legic_read_mem(uint32_t offset, uint32_t len, uint32_t iv, uint8_t *out, uint16_t *outlen)
+{
 
     legic_chk_iv(&iv);
 
@@ -749,7 +766,8 @@ int legic_read_mem(uint32_t offset, uint32_t len, uint32_t iv, uint8_t *out, uin
     uint8_t timeout = 0;
     while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
         ++timeout;
-        printf("."); fflush(stdout);
+        printf(".");
+        fflush(stdout);
         if (timeout > 7) {
             PrintAndLogEx(WARNING, "\ncommand execution time out");
             return 1;
@@ -759,42 +777,44 @@ int legic_read_mem(uint32_t offset, uint32_t len, uint32_t iv, uint8_t *out, uin
 
     uint8_t isOK = resp.arg[0] & 0xFF;
     *outlen = resp.arg[1];
-    if ( !isOK ) {
+    if (!isOK) {
         PrintAndLogEx(WARNING, "Failed reading tag");
         return 2;
     }
 
-    if ( *outlen != len )
+    if (*outlen != len)
         PrintAndLogEx(WARNING, "Fail, only managed to read %u bytes", *outlen);
 
     // copy data from device
-    if ( !GetFromDevice( BIG_BUF_EML, out, *outlen, 0, NULL, 2500, false) ) {
+    if (!GetFromDevice(BIG_BUF_EML, out, *outlen, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
         return 4;
     }
     return 0;
 }
 
-int legic_print_type(uint32_t tagtype, uint8_t spaces){
+int legic_print_type(uint32_t tagtype, uint8_t spaces)
+{
     char spc[11] = "          ";
-    spc[10]=0x00;
-    char *spacer = spc + (10-spaces);
+    spc[10] = 0x00;
+    char *spacer = spc + (10 - spaces);
 
-    if ( tagtype == 22 )
+    if (tagtype == 22)
         PrintAndLogEx(SUCCESS, "%sTYPE : MIM%d card (outdated)", spacer, tagtype);
-    else if ( tagtype == 256 )
+    else if (tagtype == 256)
         PrintAndLogEx(SUCCESS, "%sTYPE : MIM%d card (234 bytes)", spacer, tagtype);
-    else if ( tagtype == 1024 )
+    else if (tagtype == 1024)
         PrintAndLogEx(SUCCESS, "%sTYPE : MIM%d card (1002 bytes)", spacer, tagtype);
     else
         PrintAndLogEx(INFO, "%sTYPE : Unknown %06x", spacer, tagtype);
     return 0;
 }
-int legic_get_type(legic_card_select_t *card){
+int legic_get_type(legic_card_select_t *card)
+{
 
-    if ( card == NULL ) return 1;
+    if (card == NULL) return 1;
 
-    UsbCommand c = {CMD_LEGIC_INFO, {0,0,0}};
+    UsbCommand c = {CMD_LEGIC_INFO, {0, 0, 0}};
     clearCommandBuffer();
     SendCommand(&c);
     UsbCommand resp;
@@ -802,64 +822,70 @@ int legic_get_type(legic_card_select_t *card){
         return 2;
 
     uint8_t isOK = resp.arg[0] & 0xFF;
-    if ( !isOK )
+    if (!isOK)
         return 3;
 
     memcpy(card, (legic_card_select_t *)resp.d.asBytes, sizeof(legic_card_select_t));
     return 0;
 }
-void legic_chk_iv(uint32_t *iv){
-    if ( (*iv & 0x7F) != *iv ){
+void legic_chk_iv(uint32_t *iv)
+{
+    if ((*iv & 0x7F) != *iv) {
         *iv &= 0x7F;
         PrintAndLogEx(INFO, "Truncating IV to 7bits, %u", *iv);
     }
     // IV must be odd
-    if ( (*iv & 1) == 0 ){
+    if ((*iv & 1) == 0) {
         *iv |= 0x01;
         PrintAndLogEx(INFO, "LSB of IV must be SET %u", *iv);
     }
 }
-void legic_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
+void legic_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes)
+{
     size_t len = 0;
 
     UsbCommand c = {CMD_LEGIC_ESET, {0, 0, 0}};
-    for(size_t i = offset; i < numofbytes; i += USB_CMD_DATA_SIZE) {
+    for (size_t i = offset; i < numofbytes; i += USB_CMD_DATA_SIZE) {
 
         len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
         c.arg[0] = i; // offset
         c.arg[1] = len; // number of bytes
-        memcpy(c.d.asBytes, src+i, len);
+        memcpy(c.d.asBytes, src + i, len);
         clearCommandBuffer();
         SendCommand(&c);
     }
 }
 
-int HFLegicReader(const char *Cmd, bool verbose) {
+int HFLegicReader(const char *Cmd, bool verbose)
+{
 
     char cmdp = tolower(param_getchar(Cmd, 0));
-    if ( cmdp == 'h' ) return usage_legic_reader();
+    if (cmdp == 'h') return usage_legic_reader();
 
     legic_card_select_t card;
-    switch (legic_get_type(&card)){
+    switch (legic_get_type(&card)) {
         case 1:
             return 2;
         case 2:
-            if ( verbose ) PrintAndLogEx(WARNING, "command execution time out");
+            if (verbose) PrintAndLogEx(WARNING, "command execution time out");
             return 1;
         case 3:
-            if ( verbose ) PrintAndLogEx(WARNING, "legic card select failed");
+            if (verbose) PrintAndLogEx(WARNING, "legic card select failed");
             return 2;
-        default: break;
+        default:
+            break;
     }
     PrintAndLogEx(SUCCESS, " UID : %s", sprint_hex(card.uid, sizeof(card.uid)));
     legic_print_type(card.cardsize, 0);
     return 0;
 }
-int CmdLegicReader(const char *Cmd){
+int CmdLegicReader(const char *Cmd)
+{
     return HFLegicReader(Cmd, true);
 }
 
-int CmdLegicDump(const char *Cmd){
+int CmdLegicDump(const char *Cmd)
+{
 
     FILE *f;
     char filename[FILE_PATH_SIZE] = {0x00};
@@ -876,11 +902,11 @@ int CmdLegicDump(const char *Cmd){
             case 'h':
                 return usage_legic_dump();
             case 'o':
-                fileNlen = param_getstr(Cmd, cmdp+1, filename, FILE_PATH_SIZE);
+                fileNlen = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
                 if (!fileNlen)
                     errors = true;
-                if (fileNlen > FILE_PATH_SIZE-5)
-                    fileNlen = FILE_PATH_SIZE-5;
+                if (fileNlen > FILE_PATH_SIZE - 5)
+                    fileNlen = FILE_PATH_SIZE - 5;
                 cmdp += 2;
                 break;
             default:
@@ -911,7 +937,8 @@ int CmdLegicDump(const char *Cmd){
     uint8_t timeout = 0;
     while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
         ++timeout;
-        printf("."); fflush(stdout);
+        printf(".");
+        fflush(stdout);
         if (timeout > 7) {
             PrintAndLogEx(WARNING, "\ncommand execution time out");
             return 1;
@@ -920,7 +947,7 @@ int CmdLegicDump(const char *Cmd){
     PrintAndLogEx(NORMAL, "\n");
 
     uint8_t isOK = resp.arg[0] & 0xFF;
-    if ( !isOK ) {
+    if (!isOK) {
         PrintAndLogEx(WARNING, "Failed dumping tag data");
         return 2;
     }
@@ -932,11 +959,11 @@ int CmdLegicDump(const char *Cmd){
         return 3;
     }
 
-    if ( readlen != dumplen )
+    if (readlen != dumplen)
         PrintAndLogEx(WARNING, "Fail, only managed to read 0x%02X bytes of 0x%02X", readlen, dumplen);
 
     // copy data from device
-    if (!GetFromDevice( BIG_BUF_EML, data, readlen, 0, NULL, 2500, false) ) {
+    if (!GetFromDevice(BIG_BUF_EML, data, readlen, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
         free(data);
         return 4;
@@ -944,9 +971,9 @@ int CmdLegicDump(const char *Cmd){
 
     // user supplied filename?
     if (fileNlen < 1)
-        sprintf(fnameptr,"%02X%02X%02X%02X.bin", data[0], data[1], data[2], data[3]);
+        sprintf(fnameptr, "%02X%02X%02X%02X.bin", data[0], data[1], data[2], data[3]);
     else
-        sprintf(fnameptr + fileNlen,".bin");
+        sprintf(fnameptr + fileNlen, ".bin");
 
     f = fopen(filename, "wb");
     if (!f) {
@@ -963,7 +990,8 @@ int CmdLegicDump(const char *Cmd){
     return 0;
 }
 
-int CmdLegicRestore(const char *Cmd){
+int CmdLegicRestore(const char *Cmd)
+{
 
     FILE *f;
     char filename[FILE_PATH_SIZE] = {0x00};
@@ -981,12 +1009,12 @@ int CmdLegicRestore(const char *Cmd){
                 errors = true;
                 break;
             case 'i':
-                fileNlen = param_getstr(Cmd, cmdp+1, filename, FILE_PATH_SIZE);
+                fileNlen = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
                 if (!fileNlen)
                     errors = true;
 
-                if (fileNlen > FILE_PATH_SIZE-5)
-                    fileNlen = FILE_PATH_SIZE-5;
+                if (fileNlen > FILE_PATH_SIZE - 5)
+                    fileNlen = FILE_PATH_SIZE - 5;
                 cmdp += 2;
                 break;
             default:
@@ -1007,7 +1035,7 @@ int CmdLegicRestore(const char *Cmd){
     numofbytes = card.cardsize;
 
     // set up buffer
-    uint8_t *data = calloc(numofbytes, sizeof(uint8_t) );
+    uint8_t *data = calloc(numofbytes, sizeof(uint8_t));
     if (!data) {
         PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
         return 2;
@@ -1019,7 +1047,7 @@ int CmdLegicRestore(const char *Cmd){
     fnameptr += fileNlen;
     sprintf(fnameptr, ".bin");
 
-    f = fopen(filename,"rb");
+    f = fopen(filename, "rb");
     if (!f) {
         PrintAndLogEx(WARNING, "File %s not found or locked", filename);
         free(data);
@@ -1031,7 +1059,7 @@ int CmdLegicRestore(const char *Cmd){
     size_t filesize = ftell(f); // get current file pointer
     fseek(f, 0, SEEK_SET); // seek back to beginning of file
 
-    if ( filesize != numofbytes) {
+    if (filesize != numofbytes) {
         PrintAndLogEx(WARNING, "Fail, filesize and cardsize is not equal. [%u != %u]", filesize, numofbytes);
         free(data);
         fclose(f);
@@ -1042,7 +1070,7 @@ int CmdLegicRestore(const char *Cmd){
     size_t bytes_read = fread(data, 1, numofbytes, f);
     fclose(f);
 
-    if ( bytes_read == 0){
+    if (bytes_read == 0) {
         PrintAndLogEx(WARNING, "File reading error");
         free(data);
         return 2;
@@ -1054,19 +1082,20 @@ int CmdLegicRestore(const char *Cmd){
     size_t len = 0;
     UsbCommand c = {CMD_WRITER_LEGIC_RF, {0, 0, 0x55}};
     UsbCommand resp;
-    for(size_t i = 7; i < numofbytes; i += USB_CMD_DATA_SIZE) {
+    for (size_t i = 7; i < numofbytes; i += USB_CMD_DATA_SIZE) {
 
         len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
         c.arg[0] = i; // offset
         c.arg[1] = len; // number of bytes
-        memcpy(c.d.asBytes, data+i, len);
+        memcpy(c.d.asBytes, data + i, len);
         clearCommandBuffer();
         SendCommand(&c);
 
         uint8_t timeout = 0;
         while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
             ++timeout;
-            printf("."); fflush(stdout);
+            printf(".");
+            fflush(stdout);
             if (timeout > 7) {
                 PrintAndLogEx(WARNING, "\ncommand execution time out");
                 free(data);
@@ -1076,12 +1105,12 @@ int CmdLegicRestore(const char *Cmd){
         PrintAndLogEx(NORMAL, "\n");
 
         uint8_t isOK = resp.arg[0] & 0xFF;
-        if ( !isOK ) {
+        if (!isOK) {
             PrintAndLogEx(WARNING, "Failed writing tag [msg = %u]", resp.arg[1] & 0xFF);
             free(data);
             return 1;
         }
-        PrintAndLogEx(SUCCESS, "Wrote chunk [offset %d | len %d | total %d", i, len, i+len);
+        PrintAndLogEx(SUCCESS, "Wrote chunk [offset %d | len %d | total %d", i, len, i + len);
     }
 
     free(data);
@@ -1089,23 +1118,33 @@ int CmdLegicRestore(const char *Cmd){
     return 0;
 }
 
-int CmdLegicELoad(const char *Cmd) {
-    FILE * f;
+int CmdLegicELoad(const char *Cmd)
+{
+    FILE *f;
     char filename[FILE_PATH_SIZE];
     char *fnameptr = filename;
     int len, numofbytes;
     int nameParamNo = 1;
 
     char cmdp = tolower(param_getchar(Cmd, 0));
-    if ( cmdp == 'h' || cmdp == 0x00)
+    if (cmdp == 'h' || cmdp == 0x00)
         return usage_legic_eload();
 
     switch (cmdp) {
-        case '0' : numofbytes = 22; break;
+        case '0' :
+            numofbytes = 22;
+            break;
         case '1' :
-        case '\0': numofbytes = 256; break;
-        case '2' : numofbytes = 1024; break;
-        default  : numofbytes = 256;  nameParamNo = 0;break;
+        case '\0':
+            numofbytes = 256;
+            break;
+        case '2' :
+            numofbytes = 1024;
+            break;
+        default  :
+            numofbytes = 256;
+            nameParamNo = 0;
+            break;
     }
 
     // set up buffer
@@ -1123,7 +1162,7 @@ int CmdLegicELoad(const char *Cmd) {
     sprintf(fnameptr, ".bin");
 
     // open file
-    f = fopen(filename,"rb");
+    f = fopen(filename, "rb");
     if (!f) {
         PrintAndLogEx(WARNING, "File %s not found or locked", filename);
         free(data);
@@ -1132,7 +1171,7 @@ int CmdLegicELoad(const char *Cmd) {
 
     // load file
     size_t bytes_read = fread(data, 1, numofbytes, f);
-    if ( bytes_read == 0){
+    if (bytes_read == 0) {
         PrintAndLogEx(WARNING, "File reading error");
         free(data);
         fclose(f);
@@ -1150,7 +1189,8 @@ int CmdLegicELoad(const char *Cmd) {
     return 0;
 }
 
-int CmdLegicESave(const char *Cmd) {
+int CmdLegicESave(const char *Cmd)
+{
 
     char filename[FILE_PATH_SIZE];
     char *fnameptr = filename;
@@ -1160,15 +1200,24 @@ int CmdLegicESave(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
 
-    if ( cmdp == 'h' || cmdp == 0x00)
+    if (cmdp == 'h' || cmdp == 0x00)
         return usage_legic_esave();
 
     switch (cmdp) {
-        case '0' : numofbytes = 22; break;
+        case '0' :
+            numofbytes = 22;
+            break;
         case '1' :
-        case '\0': numofbytes = 256; break;
-        case '2' : numofbytes = 1024; break;
-        default  : numofbytes = 256; nameParamNo = 0; break;
+        case '\0':
+            numofbytes = 256;
+            break;
+        case '2' :
+            numofbytes = 1024;
+            break;
+        default  :
+            numofbytes = 256;
+            nameParamNo = 0;
+            break;
     }
 
     fileNlen = param_getstr(Cmd, nameParamNo, filename, FILE_PATH_SIZE);
@@ -1185,27 +1234,28 @@ int CmdLegicESave(const char *Cmd) {
 
     // download emulator memory
     PrintAndLogEx(SUCCESS, "Reading emulator memory...");
-    if (!GetFromDevice( BIG_BUF_EML, data, numofbytes, 0, NULL, 2500, false)) {
+    if (!GetFromDevice(BIG_BUF_EML, data, numofbytes, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
         free(data);
         return 4;
     }
     // user supplied filename?
     if (fileNlen < 1)
-        sprintf(fnameptr,"%02X%02X%02X%02X.bin", data[0], data[1], data[2], data[3]);
+        sprintf(fnameptr, "%02X%02X%02X%02X.bin", data[0], data[1], data[2], data[3]);
     else
-        sprintf(fnameptr + fileNlen,".bin");
+        sprintf(fnameptr + fileNlen, ".bin");
 
     saveFileEML(filename, "eml", data, numofbytes, 8);
     saveFile(filename, "bin", data, numofbytes);
     return 0;
 }
 
-int CmdLegicWipe(const char *Cmd){
+int CmdLegicWipe(const char *Cmd)
+{
 
     char cmdp = tolower(param_getchar(Cmd, 0));
 
-    if ( cmdp == 'h') return usage_legic_wipe();
+    if (cmdp == 'h') return usage_legic_wipe();
 
     // tagtype
     legic_card_select_t card;
@@ -1229,20 +1279,22 @@ int CmdLegicWipe(const char *Cmd){
     size_t len = 0;
     UsbCommand c = {CMD_WRITER_LEGIC_RF, {0, 0, 0x55}};
     UsbCommand resp;
-    for(size_t i = 7; i < card.cardsize; i += USB_CMD_DATA_SIZE) {
+    for (size_t i = 7; i < card.cardsize; i += USB_CMD_DATA_SIZE) {
 
-        printf("."); fflush(stdout);
+        printf(".");
+        fflush(stdout);
         len = MIN((card.cardsize - i), USB_CMD_DATA_SIZE);
         c.arg[0] = i; // offset
         c.arg[1] = len; // number of bytes
-        memcpy(c.d.asBytes, data+i, len);
+        memcpy(c.d.asBytes, data + i, len);
         clearCommandBuffer();
         SendCommand(&c);
 
         uint8_t timeout = 0;
         while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
             ++timeout;
-            printf("."); fflush(stdout);
+            printf(".");
+            fflush(stdout);
             if (timeout > 7) {
                 PrintAndLogEx(WARNING, "\ncommand execution time out");
                 free(data);
@@ -1252,7 +1304,7 @@ int CmdLegicWipe(const char *Cmd){
         PrintAndLogEx(NORMAL, "\n");
 
         uint8_t isOK = resp.arg[0] & 0xFF;
-        if ( !isOK ) {
+        if (!isOK) {
             PrintAndLogEx(WARNING, "Failed writing tag [msg = %u]", resp.arg[1] & 0xFF);
             free(data);
             return 4;
@@ -1262,7 +1314,8 @@ int CmdLegicWipe(const char *Cmd){
     return 0;
 }
 
-int CmdLegicList(const char *Cmd) {
+int CmdLegicList(const char *Cmd)
+{
     CmdTraceList("legic");
     return 0;
 }
@@ -1284,13 +1337,15 @@ static command_t CommandTable[] =  {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdHFLegic(const char *Cmd) {
+int CmdHFLegic(const char *Cmd)
+{
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
+int CmdHelp(const char *Cmd)
+{
     CmdsHelp(CommandTable);
     return 0;
 }

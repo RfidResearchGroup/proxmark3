@@ -45,8 +45,8 @@ extern int CmdHF14AMfUSim(const char *Cmd);
 extern uint32_t GetHF14AMfU_Type(void);
 extern int ul_print_type(uint32_t tagtype, uint8_t spacer);
 
-void printMFUdump(mfu_dump_t* card);
-void printMFUdumpEx(mfu_dump_t* card, uint16_t pages, uint8_t startpage);
+void printMFUdump(mfu_dump_t *card);
+void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage);
 
 extern int usage_hf_mfu_info(void);
 extern int usage_hf_mfu_dump(void);
@@ -62,18 +62,18 @@ extern int usage_hf_mfu_pwdgen(void);
 
 int CmdHFMFUltra(const char *Cmd);
 
-uint32_t ul_ev1_pwdgenA(uint8_t* uid);
-uint32_t ul_ev1_pwdgenA(uint8_t* uid);
-uint32_t ul_ev1_pwdgenC(uint8_t* uid);
-uint32_t ul_ev1_pwdgenD(uint8_t* uid);
+uint32_t ul_ev1_pwdgenA(uint8_t *uid);
+uint32_t ul_ev1_pwdgenA(uint8_t *uid);
+uint32_t ul_ev1_pwdgenC(uint8_t *uid);
+uint32_t ul_ev1_pwdgenD(uint8_t *uid);
 
-uint16_t ul_ev1_packgenA(uint8_t* uid);
-uint16_t ul_ev1_packgenB(uint8_t* uid);
-uint16_t ul_ev1_packgenC(uint8_t* uid);
-uint16_t ul_ev1_packgenD(uint8_t* uid);
-uint16_t ul_ev1_packgen_VCNEW(uint8_t* uid, uint32_t pwd);
+uint16_t ul_ev1_packgenA(uint8_t *uid);
+uint16_t ul_ev1_packgenB(uint8_t *uid);
+uint16_t ul_ev1_packgenC(uint8_t *uid);
+uint16_t ul_ev1_packgenD(uint8_t *uid);
+uint16_t ul_ev1_packgen_VCNEW(uint8_t *uid, uint32_t pwd);
 
-uint32_t ul_ev1_otpgenA(uint8_t* uid);
+uint32_t ul_ev1_otpgenA(uint8_t *uid);
 
 typedef enum TAGTYPE_UL {
     UNKNOWN          = 0x000000,

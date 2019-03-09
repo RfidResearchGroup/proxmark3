@@ -47,8 +47,7 @@ typedef size_t LenType;
 
 #include "compilersupport_p.h"
 
-struct Buffer
-{
+struct Buffer {
     char **ptr;
     size_t *len;
     size_t alloc;

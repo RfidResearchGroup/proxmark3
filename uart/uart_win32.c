@@ -43,26 +43,27 @@
 #include <windows.h>
 
 typedef struct {
-  HANDLE hPort;     // Serial port handle
-  DCB dcb;          // Device control settings
-  COMMTIMEOUTS ct;  // Serial port time-out configuration
+    HANDLE hPort;     // Serial port handle
+    DCB dcb;          // Device control settings
+    COMMTIMEOUTS ct;  // Serial port time-out configuration
 } serial_port_windows;
 
-serial_port uart_open(const char* pcPortName) {
+serial_port uart_open(const char *pcPortName)
+{
     char acPortName[255];
-    serial_port_windows* sp = calloc(sizeof(serial_port_windows), sizeof(uint8_t));
+    serial_port_windows *sp = calloc(sizeof(serial_port_windows), sizeof(uint8_t));
 
     if (sp == 0) {
         printf("[!] UART failed to allocate memory\n");
         return INVALID_SERIAL_PORT;
     }
     // Copy the input "com?" to "\\.\COM?" format
-    sprintf(acPortName,"\\\\.\\%s", pcPortName);
+    sprintf(acPortName, "\\\\.\\%s", pcPortName);
     _strupr(acPortName);
 
     // Try to open the serial port
     // r/w,  none-share comport, no security, existing, no overlapping, no templates
-    sp->hPort = CreateFileA(acPortName, GENERIC_READ|GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+    sp->hPort = CreateFileA(acPortName, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
     if (sp->hPort == INVALID_HANDLE_VALUE) {
         uart_close(sp);
         return INVALID_SERIAL_PORT;
@@ -109,7 +110,7 @@ serial_port uart_open(const char* pcPortName) {
     PurgeComm(sp->hPort, PURGE_RXABORT | PURGE_RXCLEAR);
 
 #ifdef WITH_FPC
-    if ( uart_set_speed(sp, 115200) ) {
+    if (uart_set_speed(sp, 115200)) {
         printf("[=] UART Setting serial baudrate 115200 [FPC enabled]\n");
     } else {
         uart_set_speed(sp, 9600);
@@ -127,14 +128,16 @@ serial_port uart_open(const char* pcPortName) {
     return sp;
 }
 
-void uart_close(const serial_port sp) {
-    if (((serial_port_windows*)sp)->hPort != INVALID_HANDLE_VALUE )
-        CloseHandle(((serial_port_windows*)sp)->hPort);
+void uart_close(const serial_port sp)
+{
+    if (((serial_port_windows *)sp)->hPort != INVALID_HANDLE_VALUE)
+        CloseHandle(((serial_port_windows *)sp)->hPort);
     free(sp);
 }
 
-bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed) {
-    serial_port_windows* spw;
+bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed)
+{
+    serial_port_windows *spw;
 
     // Set port speed (Input and Output)
     switch (uiPortSpeed) {
@@ -145,33 +148,36 @@ bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed) {
         case 115200:
         case 230400:
         case 460800:
-        break;
+            break;
         default:
             return false;
     };
 
-    spw = (serial_port_windows*)sp;
+    spw = (serial_port_windows *)sp;
     spw->dcb.BaudRate = uiPortSpeed;
     bool result = SetCommState(spw->hPort, &spw->dcb);
     PurgeComm(spw->hPort, PURGE_RXABORT | PURGE_RXCLEAR);
     return result;
 }
 
-uint32_t uart_get_speed(const serial_port sp) {
-    const serial_port_windows* spw = (serial_port_windows*)sp;
+uint32_t uart_get_speed(const serial_port sp)
+{
+    const serial_port_windows *spw = (serial_port_windows *)sp;
     if (!GetCommState(spw->hPort, (serial_port) & spw->dcb))
         return spw->dcb.BaudRate;
 
     return 0;
 }
 
-bool uart_receive(const serial_port sp, uint8_t* p_rx, size_t pszMaxRxLen, size_t* len) {
-    return ReadFile(((serial_port_windows*)sp)->hPort, p_rx, pszMaxRxLen, (LPDWORD)len, NULL);
+bool uart_receive(const serial_port sp, uint8_t *p_rx, size_t pszMaxRxLen, size_t *len)
+{
+    return ReadFile(((serial_port_windows *)sp)->hPort, p_rx, pszMaxRxLen, (LPDWORD)len, NULL);
 }
 
-bool uart_send(const serial_port sp, const uint8_t* p_tx, const size_t len) {
+bool uart_send(const serial_port sp, const uint8_t *p_tx, const size_t len)
+{
     DWORD txlen = 0;
-    return WriteFile(((serial_port_windows*)sp)->hPort, p_tx, len, &txlen, NULL);
+    return WriteFile(((serial_port_windows *)sp)->hPort, p_tx, len, &txlen, NULL);
 }
 
 #endif

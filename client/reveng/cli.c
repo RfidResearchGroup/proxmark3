@@ -70,7 +70,8 @@ static void usage(void);
 
 static const char *myname = "reveng"; /* name of our program */
 
-int reveng_main(int argc, char *argv[]) {
+int reveng_main(int argc, char *argv[])
+{
     /* Command-line interface for CRC RevEng.
      * Process options and switches in the argument list and
      * run the required function.
@@ -97,28 +98,28 @@ int reveng_main(int argc, char *argv[]) {
     SETBMP();
 
 //  pos=0; --- not in this ver of getopt
-    optind=1;
+    optind = 1;
     do {
-        c=getopt(argc, argv, "?A:BDFGLMP:SVXa:bcdefhi:k:lm:p:q:rstuvw:x:yz");
-        switch(c) {
+        c = getopt(argc, argv, "?A:BDFGLMP:SVXa:bcdefhi:k:lm:p:q:rstuvw:x:yz");
+        switch (c) {
             case 'A': /* A: bits per output character */
             case 'a': /* a: bits per character */
-                if((obperhx = atoi(optarg)) > BMP_BIT) {
-                    fprintf(stderr,"%s: argument to -%c must be between 1 and %d\n", myname, c, BMP_BIT);
+                if ((obperhx = atoi(optarg)) > BMP_BIT) {
+                    fprintf(stderr, "%s: argument to -%c must be between 1 and %d\n", myname, c, BMP_BIT);
                     return 0;
                     //exit(EXIT_FAILURE);
                 }
-                if(c == 'a') ibperhx = obperhx;
+                if (c == 'a') ibperhx = obperhx;
                 break;
             case 'b': /* b  big-endian (RefIn = false, RefOut = false ) */
                 model.flags &= ~P_REFIN;
                 rflags |= R_HAVERI;
-                /* fall through: */
+            /* fall through: */
             case 'B': /* B  big-endian output (RefOut = false) */
                 model.flags &= ~P_REFOUT;
                 rflags |= R_HAVERO;
                 mnovel(&model);
-                /* fall through: */
+            /* fall through: */
             case 'r': /* r  right-justified */
                 model.flags |= P_RTJUST;
                 break;
@@ -128,8 +129,8 @@ int reveng_main(int argc, char *argv[]) {
             case 'e': /* e  echo arguments */
             case 's': /* s  search for algorithm */
             case 'v': /* v  calculate reversed CRC */
-                if(mode) {
-                    fprintf(stderr,"%s: more than one mode switch specified.  Use %s -h for help.\n", myname, myname);
+                if (mode) {
+                    fprintf(stderr, "%s: more than one mode switch specified.  Use %s -h for help.\n", myname, myname);
                     return 0;
                     //exit(EXIT_FAILURE);
                 }
@@ -165,29 +166,29 @@ int reveng_main(int argc, char *argv[]) {
                 pkchop(&model.spoly);
                 width = plen(model.spoly);
                 rflags |= R_HAVEP;
-                if(c == 'P')
+                if (c == 'P')
                     prcp(&model.spoly);
                 mnovel(&model);
                 break;
             case 'l': /* l  little-endian input and output */
                 model.flags |= P_REFIN;
                 rflags |= R_HAVERI;
-                /* fall through: */
+            /* fall through: */
             case 'L': /* L  little-endian output */
                 model.flags |= P_REFOUT;
                 rflags |= R_HAVERO;
                 mnovel(&model);
-                /* fall through: */
+            /* fall through: */
             case 't': /* t  left-justified */
                 model.flags &= ~P_RTJUST;
                 break;
             case 'm': /* m: select preset CRC model */
-                if(!(c = mbynam(&model, optarg))) {
-                    fprintf(stderr,"%s: preset model '%s' not found.  Use %s -D to list presets.\n", myname, optarg, myname);
+                if (!(c = mbynam(&model, optarg))) {
+                    fprintf(stderr, "%s: preset model '%s' not found.  Use %s -D to list presets.\n", myname, optarg, myname);
                     return 0;
                     //exit(EXIT_FAILURE);
                 }
-                if(c < 0){
+                if (c < 0) {
                     uerror("no preset models available");
                     return 0;
                 }
@@ -244,16 +245,16 @@ ipqx:
             case -1: /* no more options, continue */
                 ;
         }
-    } while(c != -1);
+    } while (c != -1);
 
     /* canonicalise the model, so the one we dump is the one we
      * calculate with (not with -s, spoly may be blank which will
      * normalise to zero and clear init and xorout.)
      */
-    if(mode != 's')
+    if (mode != 's')
         mcanon(&model);
 
-    switch(mode) {
+    switch (mode) {
         case 'v': /* v  calculate reversed CRC */
             /* Distinct from the -V switch as this causes
              * the arguments and output to be reversed as well.
@@ -269,7 +270,7 @@ ipqx:
              * Consequently Init is the mirror image of the
              * one resulting from -V, and so we have:
              */
-            if(~model.flags & P_REFOUT) {
+            if (~model.flags & P_REFOUT) {
                 prev(&model.init);
                 prev(&model.xorout);
             }
@@ -279,7 +280,7 @@ ipqx:
             model.init = model.xorout;
             model.xorout = apoly;
 
-            /* fall through: */
+        /* fall through: */
         case 'c': /* c  calculate CRC */
 
             /* validate inputs */
@@ -292,21 +293,21 @@ ipqx:
             /* in the Williams model, xorout is applied after the refout stage.
              * as refout is part of ptostr(), we reverse xorout here.
              */
-            if(model.flags & P_REFOUT)
+            if (model.flags & P_REFOUT)
                 prev(&model.xorout);
 
-            for(; optind < argc; ++optind) {
-                if(uflags & C_INFILE)
+            for (; optind < argc; ++optind) {
+                if (uflags & C_INFILE)
                     apoly = rdpoly(argv[optind], model.flags, ibperhx);
                 else
                     apoly = strtop(argv[optind], model.flags, ibperhx);
 
-                if(mode == 'v')
+                if (mode == 'v')
                     prev(&apoly);
 
                 crc = pcrc(apoly, model.spoly, model.init, model.xorout, model.flags);
 
-                if(mode == 'v')
+                if (mode == 'v')
                     prev(&crc);
 
                 string = ptostr(crc, model.flags, obperhx);
@@ -318,21 +319,21 @@ ipqx:
             break;
         case 'D': /* D  dump all models */
             args = mcount();
-            if(!args){
+            if (!args) {
                 uerror("no preset models available");
                 return 0;
             }
             do {
                 mbynum(&model, --args);
                 ufound(&model);
-            } while(args);
+            } while (args);
             break;
         case 'd': /* d  dump CRC model */
             /* maybe we don't want to do this:
              * either attaching names to arbitrary models or forcing to a preset
              * mmatch(&model, M_OVERWR);
              */
-            if(~model.flags & P_MULXN){
+            if (~model.flags & P_MULXN) {
                 uerror("not a Williams model compliant algorithm");
                 return 0;
             }
@@ -341,8 +342,8 @@ ipqx:
             free(string);
             break;
         case 'e': /* e  echo arguments */
-            for(; optind < argc; ++optind) {
-                if(uflags & C_INFILE)
+            for (; optind < argc; ++optind) {
+                if (uflags & C_INFILE)
                     apoly = rdpoly(argv[optind], model.flags, ibperhx);
                 else
                     apoly = strtop(argv[optind], model.flags, ibperhx);
@@ -355,37 +356,37 @@ ipqx:
             }
             break;
         case 's': /* s  search for algorithm */
-            if(!width){
+            if (!width) {
                 uerror("must specify positive -k or -w before -s");
                 return 0;
             }
-            if(~model.flags & P_MULXN){
+            if (~model.flags & P_MULXN) {
                 uerror("cannot search for non-Williams compliant models");
                 return 0;
             }
             praloc(&model.spoly, width);
             praloc(&model.init, width);
             praloc(&model.xorout, width);
-            if(!plen(model.spoly))
+            if (!plen(model.spoly))
                 palloc(&model.spoly, width);
             else
                 width = plen(model.spoly);
 
             /* special case if qpoly is zero, search to end of range */
-            if(!ptst(qpoly))
+            if (!ptst(qpoly))
                 rflags &= ~R_HAVEQ;
 
             /* allocate argument array */
             args = argc - optind;
 
             apolys = calloc(args * sizeof(poly_t), sizeof(char));
-            if ( !apolys ){
+            if (!apolys) {
                 uerror("cannot allocate memory for argument list");
                 return 0;
             }
 
-            for(pptr = apolys; optind < argc; ++optind) {
-                if(uflags & C_INFILE)
+            for (pptr = apolys; optind < argc; ++optind) {
+                if (uflags & C_INFILE)
                     *pptr++ = rdpoly(argv[optind], model.flags, ibperhx);
                 else
                     *pptr++ = strtop(argv[optind], model.flags, ibperhx);
@@ -399,35 +400,35 @@ ipqx:
              */
 
             /* scan against preset models */
-            if(~uflags & C_NOPCK) {
+            if (~uflags & C_NOPCK) {
                 pass = 0;
                 do {
                     psets = mcount();
-                    while(psets) {
+                    while (psets) {
                         mbynum(&pset, --psets);
                         /* skip if different width, or refin or refout don't match */
-                        if(plen(pset.spoly) != width || (model.flags ^ pset.flags) & (P_REFIN | P_REFOUT))
+                        if (plen(pset.spoly) != width || (model.flags ^ pset.flags) & (P_REFIN | P_REFOUT))
                             continue;
                         /* skip if the preset doesn't match specified parameters */
-                        if(rflags & R_HAVEP && pcmp(&model.spoly, &pset.spoly))
+                        if (rflags & R_HAVEP && pcmp(&model.spoly, &pset.spoly))
                             continue;
-                        if(rflags & R_HAVEI && psncmp(&model.init, &pset.init))
+                        if (rflags & R_HAVEI && psncmp(&model.init, &pset.init))
                             continue;
-                        if(rflags & R_HAVEX && psncmp(&model.xorout, &pset.xorout))
+                        if (rflags & R_HAVEX && psncmp(&model.xorout, &pset.xorout))
                             continue;
                         apoly = pclone(pset.xorout);
-                        if(pset.flags & P_REFOUT)
+                        if (pset.flags & P_REFOUT)
                             prev(&apoly);
-                        for(qptr = apolys; qptr < pptr; ++qptr) {
+                        for (qptr = apolys; qptr < pptr; ++qptr) {
                             crc = pcrc(*qptr, pset.spoly, pset.init, apoly, 0);
-                            if(ptst(crc)) {
+                            if (ptst(crc)) {
                                 pfree(&crc);
                                 break;
                             } else
                                 pfree(&crc);
                         }
                         pfree(&apoly);
-                        if(qptr == pptr) {
+                        if (qptr == pptr) {
                             /* the selected model solved all arguments */
                             ufound(&pset);
                             uflags |= C_RESULT;
@@ -436,34 +437,34 @@ ipqx:
                     mfree(&pset);
 
                     /* toggle refIn/refOut and reflect arguments */
-                    if(~rflags & R_HAVERI) {
+                    if (~rflags & R_HAVERI) {
                         model.flags ^= P_REFIN | P_REFOUT;
-                        for(qptr = apolys; qptr < pptr; ++qptr)
+                        for (qptr = apolys; qptr < pptr; ++qptr)
                             prevch(qptr, ibperhx);
                     }
-                } while(~rflags & R_HAVERI && ++pass < 2);
+                } while (~rflags & R_HAVERI && ++pass < 2);
             }
-            if(uflags & C_RESULT) {
-                for(qptr = apolys; qptr < pptr; ++qptr)
+            if (uflags & C_RESULT) {
+                for (qptr = apolys; qptr < pptr; ++qptr)
                     pfree(qptr);
                 return 1;
                 //exit(EXIT_SUCCESS);
             }
-            if(uflags & C_NOBFS && ~rflags & R_HAVEP) {
+            if (uflags & C_NOBFS && ~rflags & R_HAVEP) {
                 uerror("no models found");
                 return 0;
                 //break;
             }
-            if(!(model.flags & P_REFIN) != !(model.flags & P_REFOUT)){
+            if (!(model.flags & P_REFIN) != !(model.flags & P_REFOUT)) {
                 uerror("cannot search for crossed-endian models");
                 return 0;
             }
             pass = 0;
             do {
                 mptr = candmods = reveng(&model, qpoly, rflags, args, apolys);
-                if(mptr && plen(mptr->spoly))
+                if (mptr && plen(mptr->spoly))
                     uflags |= C_RESULT;
-                while(mptr && plen(mptr->spoly)) {
+                while (mptr && plen(mptr->spoly)) {
                     /* results were printed by the callback
                      * string = mtostr(mptr);
                      * puts(string);
@@ -472,16 +473,16 @@ ipqx:
                     mfree(mptr++);
                 }
                 free(candmods);
-                if(~rflags & R_HAVERI) {
+                if (~rflags & R_HAVERI) {
                     model.flags ^= P_REFIN | P_REFOUT;
-                    for(qptr = apolys; qptr < pptr; ++qptr)
+                    for (qptr = apolys; qptr < pptr; ++qptr)
                         prevch(qptr, ibperhx);
                 }
-            } while(~rflags & R_HAVERI && ++pass < 2);
-            for(qptr = apolys; qptr < pptr; ++qptr)
+            } while (~rflags & R_HAVERI && ++pass < 2);
+            for (qptr = apolys; qptr < pptr; ++qptr)
                 pfree(qptr);
             free(apolys);
-            if(~uflags & C_RESULT)
+            if (~uflags & C_RESULT)
                 uerror("no models found");
             break;
         default:  /* no mode specified */
@@ -495,11 +496,12 @@ ipqx:
 }
 
 void
-ufound(const model_t *model) {
+ufound(const model_t *model)
+{
     /* Callback function to report each model found */
     char *string;
 
-    if(!model) return;
+    if (!model) return;
     /* generated models will be canonical */
     string = mtostr(model);
     puts(string);
@@ -507,75 +509,80 @@ ufound(const model_t *model) {
 }
 
 void
-uerror(const char *msg) {
+uerror(const char *msg)
+{
     /* Callback function to report fatal errors */
     fprintf(stderr, "%s: %s\n", myname, msg);
     //exit(EXIT_FAILURE);
 }
 
 void
-uprog(const poly_t gpoly, int flags, unsigned long seq) {
+uprog(const poly_t gpoly, int flags, unsigned long seq)
+{
     /* Callback function to report search progress */
     char *string;
 
     /* Suppress first report in CLI */
-    if(!seq)
+    if (!seq)
         return;
     string = ptostr(gpoly, P_RTJUST, 4);
     fprintf(stderr, "%s: searching: width=%ld  poly=0x%s  refin=%s  refout=%s\n",
             myname, plen(gpoly), string,
             (flags & P_REFIN ? "true" : "false"),
             (flags & P_REFOUT ? "true" : "false")
-            );
+           );
     free(string);
 }
 
 static poly_t
-rdpoly(const char *name, int flags, int bperhx) {
+rdpoly(const char *name, int flags, int bperhx)
+{
     /* read poly from file in chunks and report errors */
 
     poly_t apoly = PZERO, chunk = PZERO;
     FILE *input;
 
     input = oread(name);
-    while(!feof(input) && !ferror(input)) {
+    while (!feof(input) && !ferror(input)) {
         chunk = filtop(input, BUFFER, flags, bperhx);
         psum(&apoly, chunk, plen(apoly));
         pfree(&chunk);
     }
-    if(ferror(input)) {
-        fprintf(stderr,"%s: error condition on file '%s'\n", myname, name);
+    if (ferror(input)) {
+        fprintf(stderr, "%s: error condition on file '%s'\n", myname, name);
         exit(EXIT_FAILURE);
     }
     /* close file unless stdin */
-    if(input == stdin)
+    if (input == stdin)
         /* reset EOF condition */
         clearerr(input);
-    else if(fclose(input)) {
-        fprintf(stderr,"%s: error closing file '%s'\n", myname, name);
+    else if (fclose(input)) {
+        fprintf(stderr, "%s: error closing file '%s'\n", myname, name);
         exit(EXIT_FAILURE);
     }
-    return(apoly);
+    return (apoly);
 }
 
 static FILE *
-oread(const char *name) {
+oread(const char *name)
+{
     /* open file for reading and report errors */
     FILE *handle;
 
     /* recognise special name '-' as standard input */
-    if(*name == '-' && name[1] == '\0')
-        return(stdin);
-    if(!(handle = fopen(name, "rb"))) {
+    if (*name == '-' && name[1] == '\0')
+        return (stdin);
+    if (!(handle = fopen(name, "rb"))) {
         fprintf(stderr, "%s: cannot open '%s' for reading\n", myname, name);
         return 0;
         //exit(EXIT_FAILURE);
     }
-    return(handle);
+    return (handle);
 }
 
 static void
-usage(void) {
+usage(void)
+{
     /* print usage if asked, or if syntax incorrect */
     fprintf(stderr,
             "CRC RevEng: arbitrary-precision CRC calculator and algorithm finder\n"

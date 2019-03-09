@@ -30,13 +30,13 @@ extern unsigned char error_occured;
 void SendCommand(UsbCommand *c);
 bool ReceiveCommandPoll(UsbCommand *c);
 void ReceiveCommand(UsbCommand *c);
-struct usb_dev_handle* FindProxmark(int verbose, unsigned int *iface);
-struct usb_dev_handle* OpenProxmark(int verbose);
+struct usb_dev_handle *FindProxmark(int verbose, unsigned int *iface);
+struct usb_dev_handle *OpenProxmark(int verbose);
 void CloseProxmark(void);
 
 struct prox_unit {
-  usb_dev_handle *handle;
-  char serial_number[256];
+    usb_dev_handle *handle;
+    char serial_number[256];
 };
 
 #endif

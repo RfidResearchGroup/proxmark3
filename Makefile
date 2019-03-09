@@ -90,6 +90,11 @@ print-%: ; @echo $* = $($*)
 
 style:
 	find . \( -name "*.[ch]" -or -name "*.cpp" -or -name "*.lua" \) -exec perl -pi -e 's/[ \t\r]+$$//' {} \;
+	find . \( -name "*.[ch]" -or -name "*.cpp" \) -exec astyle --formatted --mode=c --suffix=none \
+	    --indent=spaces=4 --indent-switches --indent-preprocessor \
+	    --keep-one-line-blocks --max-instatement-indent=60 \
+	    --style=linux --pad-oper --unpad-paren --pad-header \
+	    --align-pointer=name {} \;
 
 # Dummy target to test for GNU make availability
 _test:

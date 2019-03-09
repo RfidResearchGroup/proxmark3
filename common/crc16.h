@@ -30,7 +30,7 @@ typedef enum {
     CRC_KERMIT,
 } CrcType_t;
 
-uint16_t update_crc16_ex( uint16_t crc, uint8_t c, uint16_t polynomial );
+uint16_t update_crc16_ex(uint16_t crc, uint8_t c, uint16_t polynomial);
 uint16_t update_crc16(uint16_t crc, uint8_t c);
 uint16_t crc16(uint8_t const *message, size_t length, uint16_t remainder, uint16_t polynomial, bool refin, bool refout);
 

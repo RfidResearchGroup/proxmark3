@@ -60,13 +60,13 @@ struct option {
 };
 
 __BEGIN_DECLS
-int getopt_long(int, char * const *, const char *,
-    const struct option *, int *);
-int getopt_long_only(int, char * const *, const char *,
-    const struct option *, int *);
+int getopt_long(int, char *const *, const char *,
+                const struct option *, int *);
+int getopt_long_only(int, char *const *, const char *,
+                     const struct option *, int *);
 #ifndef _GETOPT_DECLARED
 #define _GETOPT_DECLARED
-int getopt(int, char * const [], const char *);
+int getopt(int, char *const [], const char *);
 
 extern char *optarg; /* getopt(3) external variables */
 extern int optind, opterr, optopt;

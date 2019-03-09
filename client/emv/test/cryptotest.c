@@ -33,7 +33,8 @@
 #include "crypto/libpcrypto.h"
 #include "emv/emv_roca.h"
 
-int ExecuteCryptoTests(bool verbose) {
+int ExecuteCryptoTests(bool verbose)
+{
     int res;
     bool TestFail = false;
 
@@ -97,9 +98,9 @@ int ExecuteCryptoTests(bool verbose) {
     PrintAndLog("\n--------------------------");
 
     if (TestFail)
-        PrintAndLogEx(FAILED, "\tTest(s) [ %s ]", _RED_(FAIL) );
+        PrintAndLogEx(FAILED, "\tTest(s) [ %s ]", _RED_(FAIL));
     else
-        PrintAndLogEx(SUCCESS, "\tTest(s) [ %s ]", _GREEN_(OK) );
+        PrintAndLogEx(SUCCESS, "\tTest(s) [ %s ]", _GREEN_(OK));
 
     return TestFail;
 }

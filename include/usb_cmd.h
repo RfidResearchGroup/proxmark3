@@ -14,28 +14,28 @@
 #define __USB_CMD_H
 
 #ifdef _MSC_VER
-   typedef DWORD uint32_t;
-   typedef BYTE uint8_t;
-   #define PACKED
-   // stuff
+typedef DWORD uint32_t;
+typedef BYTE uint8_t;
+#define PACKED
+// stuff
 #else
-  #include <stdint.h>
-  #include <stdbool.h>
-  #define PACKED __attribute__((packed))
+#include <stdint.h>
+#include <stdbool.h>
+#define PACKED __attribute__((packed))
 #endif
 
 #define USB_CMD_DATA_SIZE 512
 
 typedef struct {
-  uint64_t cmd;
-  uint64_t arg[3];
-  union {
-    uint8_t  asBytes[USB_CMD_DATA_SIZE];
-    uint32_t asDwords[USB_CMD_DATA_SIZE/4];
-  } d;
+    uint64_t cmd;
+    uint64_t arg[3];
+    union {
+        uint8_t  asBytes[USB_CMD_DATA_SIZE];
+        uint32_t asDwords[USB_CMD_DATA_SIZE / 4];
+    } d;
 } PACKED UsbCommand;
 // A struct used to send sample-configs over USB
-typedef struct{
+typedef struct {
     uint8_t decimation;
     uint8_t bits_per_sample;
     bool averaging;
@@ -43,7 +43,7 @@ typedef struct{
     int trigger_threshold;
 } sample_config;
 
-typedef struct{
+typedef struct {
     uint16_t start_gap;
     uint16_t write_gap;
     uint16_t write_0;

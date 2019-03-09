@@ -11,7 +11,8 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_keri_clone(void){
+int usage_lf_keri_clone(void)
+{
     PrintAndLogEx(NORMAL, "clone a KERI tag to a T55x7 tag.");
     PrintAndLogEx(NORMAL, "Usage: lf keri clone [h] <id> <Q5>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -24,7 +25,8 @@ int usage_lf_keri_clone(void){
     return 0;
 }
 
-int usage_lf_keri_sim(void) {
+int usage_lf_keri_sim(void)
+{
     PrintAndLogEx(NORMAL, "Enables simulation of KERI card with specified card number.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "");
@@ -39,13 +41,14 @@ int usage_lf_keri_sim(void) {
 }
 
 // find KERI preamble in already demoded data
-int detectKeri(uint8_t *dest, size_t *size, bool *invert) {
+int detectKeri(uint8_t *dest, size_t *size, bool *invert)
+{
 
-    uint8_t preamble[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1};
-    uint8_t preamble_i[] = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0};
+    uint8_t preamble[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
+    uint8_t preamble_i[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0};
 
     // sanity check.
-    if ( *size < sizeof(preamble) + 100) return -1;
+    if (*size < sizeof(preamble) + 100) return -1;
 
     size_t startIdx = 0;
 
@@ -63,7 +66,8 @@ int detectKeri(uint8_t *dest, size_t *size, bool *invert) {
     return (int)startIdx;
 }
 
-int CmdKeriDemod(const char *Cmd) {
+int CmdKeriDemod(const char *Cmd)
+{
 
     if (!PSKDemod("", false)) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - KERI: PSK1 Demod failed");
@@ -88,11 +92,11 @@ int CmdKeriDemod(const char *Cmd) {
     setClockGrid(g_DemodClock, g_DemodStartIdx + (idx * g_DemodClock));
 
     //got a good demod
-    uint32_t raw1 = bytebits_to_byte(DemodBuffer   , 32);
-    uint32_t raw2 = bytebits_to_byte(DemodBuffer+32, 32);
+    uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
+    uint32_t raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
 
     //get internal id
-    uint32_t ID = bytebits_to_byte(DemodBuffer+29, 32);
+    uint32_t ID = bytebits_to_byte(DemodBuffer + 29, 32);
     ID &= 0x7FFFFFFF;
 
     /*
@@ -110,9 +114,9 @@ int CmdKeriDemod(const char *Cmd) {
     */
 
     PrintAndLogEx(SUCCESS, "KERI Tag Found -- Internal ID: %u", ID);
-    PrintAndLogEx(SUCCESS, "Raw: %08X%08X", raw1 ,raw2);
+    PrintAndLogEx(SUCCESS, "Raw: %08X%08X", raw1, raw2);
 
-    if (invert){
+    if (invert) {
         PrintAndLogEx(INFO, "Had to Invert - probably KERI");
         for (size_t i = 0; i < size; i++)
             DemodBuffer[i] ^= 1;
@@ -122,22 +126,25 @@ int CmdKeriDemod(const char *Cmd) {
     return 1;
 }
 
-int CmdKeriRead(const char *Cmd) {
+int CmdKeriRead(const char *Cmd)
+{
     lf_read(true, 10000);
     return CmdKeriDemod(Cmd);
 }
 
-int CmdKeriClone(const char *Cmd) {
+int CmdKeriClone(const char *Cmd)
+{
 
     uint32_t internalid = 0;
     uint32_t blocks[3] = {
-            T55x7_TESTMODE_DISABLED |
-            T55x7_X_MODE |
-            T55x7_MODULATION_PSK1 |
-            T55x7_PSKCF_RF_2 |
-            2 << T55x7_MAXBLOCK_SHIFT,
-            0,
-            0};
+        T55x7_TESTMODE_DISABLED |
+        T55x7_X_MODE |
+        T55x7_MODULATION_PSK1 |
+        T55x7_PSKCF_RF_2 |
+        2 << T55x7_MAXBLOCK_SHIFT,
+          0,
+          0
+    };
 
     // dynamic bitrate used
     blocks[0] |= 0xF << 18;
@@ -161,7 +168,7 @@ int CmdKeriClone(const char *Cmd) {
     internalid |= 0x80000000;
 
     // 3 LSB is ONE
-    uint64_t data =  ((uint64_t)internalid << 3 ) + 7;
+    uint64_t data = ((uint64_t)internalid << 3) + 7;
 
     //
     blocks[1] = data >> 32;
@@ -172,7 +179,7 @@ int CmdKeriClone(const char *Cmd) {
 
 
     UsbCommand resp;
-    UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}};
+    UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}};
 
 
     for (uint8_t i = 0; i < 3; i++) {
@@ -180,7 +187,7 @@ int CmdKeriClone(const char *Cmd) {
         c.arg[1] = i;
         clearCommandBuffer();
         SendCommand(&c);
-        if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)){
+        if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)) {
             PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
             return -1;
         }
@@ -189,7 +196,8 @@ int CmdKeriClone(const char *Cmd) {
     return 0;
 }
 
-int CmdKeriSim(const char *Cmd) {
+int CmdKeriSim(const char *Cmd)
+{
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_keri_sim();
@@ -202,8 +210,8 @@ int CmdKeriSim(const char *Cmd) {
     uint8_t bits[64] = {0x00};
     // loop to bits
     uint8_t j = 0;
-    for ( int8_t i = 63; i >= 0; --i) {
-        bits[j++] = ((internalid >> i) & 1 );
+    for (int8_t i = 63; i >= 0; --i) {
+        bits[j++] = ((internalid >> i) & 1);
     }
 
     uint8_t clk = 32, carrier = 2, invert = 0;
@@ -231,13 +239,15 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFKeri(const char *Cmd) {
+int CmdLFKeri(const char *Cmd)
+{
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
+int CmdHelp(const char *Cmd)
+{
     CmdsHelp(CommandTable);
     return 0;
 }

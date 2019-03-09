@@ -18,9 +18,10 @@ Default LF config is set to:
     */
 sample_config config = { 1, 8, 1, 95, 0 } ;
 
-void printConfig() {
+void printConfig()
+{
     Dbprintf("LF Sampling config");
-    Dbprintf("  [q] divisor.............%d (%d KHz)", config.divisor, 12000 / (config.divisor+1));
+    Dbprintf("  [q] divisor.............%d (%d KHz)", config.divisor, 12000 / (config.divisor + 1));
     Dbprintf("  [b] bps.................%d", config.bits_per_sample);
     Dbprintf("  [d] decimation..........%d", config.decimation);
     Dbprintf("  [a] averaging...........%s", (config.averaging) ? "Yes" : "No");
@@ -38,24 +39,26 @@ void printConfig() {
  * @brief setSamplingConfig
  * @param sc
  */
-void setSamplingConfig(sample_config *sc) {
-    if(sc->divisor != 0) config.divisor = sc->divisor;
-    if(sc->bits_per_sample != 0) config.bits_per_sample = sc->bits_per_sample;
-    if(sc->trigger_threshold != -1) config.trigger_threshold = sc->trigger_threshold;
+void setSamplingConfig(sample_config *sc)
+{
+    if (sc->divisor != 0) config.divisor = sc->divisor;
+    if (sc->bits_per_sample != 0) config.bits_per_sample = sc->bits_per_sample;
+    if (sc->trigger_threshold != -1) config.trigger_threshold = sc->trigger_threshold;
 
     config.decimation = (sc->decimation != 0) ? sc->decimation : 1;
     config.averaging = sc->averaging;
-    if(config.bits_per_sample > 8) config.bits_per_sample = 8;
+    if (config.bits_per_sample > 8) config.bits_per_sample = 8;
 
     printConfig();
 }
 
-sample_config* getSamplingConfig() {
+sample_config *getSamplingConfig()
+{
     return &config;
 }
 
 struct BitstreamOut {
-    uint8_t * buffer;
+    uint8_t *buffer;
     uint32_t numbits;
     uint32_t position;
 };
@@ -65,10 +68,11 @@ struct BitstreamOut {
  * @param stream
  * @param bit
  */
-void pushBit( BitstreamOut* stream, uint8_t bit) {
+void pushBit(BitstreamOut *stream, uint8_t bit)
+{
     int bytepos = stream->position >> 3; // divide by 8
     int bitpos = stream->position & 7;
-    *(stream->buffer+bytepos) |= (bit > 0) <<  (7 - bitpos);
+    *(stream->buffer + bytepos) |= (bit > 0) << (7 - bitpos);
     stream->position++;
     stream->numbits++;
 }
@@ -80,9 +84,10 @@ void pushBit( BitstreamOut* stream, uint8_t bit) {
 *                  0 or 95 ==> 125 KHz
 *
 **/
-void LFSetupFPGAForADC(int divisor, bool lf_field) {
+void LFSetupFPGAForADC(int divisor, bool lf_field)
+{
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-    if ( (divisor == 1) || (divisor < 0) || (divisor > 255) )
+    if ((divisor == 1) || (divisor < 0) || (divisor > 255))
         FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
     else if (divisor == 0)
         FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
@@ -116,7 +121,8 @@ void LFSetupFPGAForADC(int divisor, bool lf_field) {
  * @param silent - is true, now outputs are made. If false, dbprints the status
  * @return the number of bits occupied by the samples.
  */
-uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averaging, int trigger_threshold, bool silent, int bufsize, uint32_t cancel_after) {
+uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averaging, int trigger_threshold, bool silent, int bufsize, uint32_t cancel_after)
+{
 
     uint8_t *dest = BigBuf_get_addr();
     bufsize = (bufsize > 0 && bufsize < BigBuf_max_traceLen()) ? bufsize : BigBuf_max_traceLen();
@@ -127,17 +133,17 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
     if (decimation < 1) decimation = 1;
 
     // use a bit stream to handle the output
-    BitstreamOut data = { dest , 0, 0};
+    BitstreamOut data = { dest, 0, 0};
     int sample_counter = 0;
     uint8_t sample = 0;
 
     // if we want to do averaging
-    uint32_t sample_sum =0 ;
+    uint32_t sample_sum = 0 ;
     uint32_t sample_total_numbers = 0;
     uint32_t sample_total_saved = 0;
     uint32_t cancel_counter = 0;
 
-    while (!BUTTON_PRESS() && !usb_poll_validate_length() ) {
+    while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
         WDT_HIT();
 
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
@@ -172,13 +178,13 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
             // averaging
             if (averaging && decimation > 1) {
                 sample = sample_sum / decimation;
-                sample_sum =0;
+                sample_sum = 0;
             }
 
             // store the sample
             sample_total_saved ++;
             if (bits_per_sample == 8) {
-                dest[sample_total_saved-1] = sample;
+                dest[sample_total_saved - 1] = sample;
 
                 // Get the return value correct
                 data.numbits = sample_total_saved << 3;
@@ -201,7 +207,7 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
     if (!silent) {
         Dbprintf("Done, saved %d out of %d seen samples at %d bits/sample", sample_total_saved, sample_total_numbers, bits_per_sample);
         Dbprintf("buffer samples: %02x %02x %02x %02x %02x %02x %02x %02x ...",
-                    dest[0], dest[1], dest[2], dest[3], dest[4], dest[5], dest[6], dest[7]);
+                 dest[0], dest[1], dest[2], dest[3], dest[4], dest[5], dest[6], dest[7]);
     }
 
     // Ensure that DC offset removal and noise check is performed for any device-side processing
@@ -218,24 +224,28 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
  * @param silent
  * @return number of bits sampled
  */
-uint32_t DoAcquisition_default(int trigger_threshold, bool silent) {
-    return DoAcquisition(1, 8, 0,trigger_threshold, silent, 0, 0);
+uint32_t DoAcquisition_default(int trigger_threshold, bool silent)
+{
+    return DoAcquisition(1, 8, 0, trigger_threshold, silent, 0, 0);
 }
-uint32_t DoAcquisition_config( bool silent, int sample_size) {
+uint32_t DoAcquisition_config(bool silent, int sample_size)
+{
     return DoAcquisition(config.decimation
-                  ,config.bits_per_sample
-                  ,config.averaging
-                  ,config.trigger_threshold
-                  ,silent
-                  ,sample_size
-                  ,0);
+                         , config.bits_per_sample
+                         , config.averaging
+                         , config.trigger_threshold
+                         , silent
+                         , sample_size
+                         , 0);
 }
 
-uint32_t DoPartialAcquisition(int trigger_threshold, bool silent, int sample_size, uint32_t cancel_after) {
+uint32_t DoPartialAcquisition(int trigger_threshold, bool silent, int sample_size, uint32_t cancel_after)
+{
     return DoAcquisition(1, 8, 0, trigger_threshold, silent, sample_size, cancel_after);
 }
 
-uint32_t ReadLF(bool activeField, bool silent, int sample_size) {
+uint32_t ReadLF(bool activeField, bool silent, int sample_size)
+{
     if (!silent)
         printConfig();
     LFSetupFPGAForADC(config.divisor, activeField);
@@ -246,7 +256,8 @@ uint32_t ReadLF(bool activeField, bool silent, int sample_size) {
 * Initializes the FPGA for reader-mode (field on), and acquires the samples.
 * @return number of bits sampled
 **/
-uint32_t SampleLF(bool printCfg, int sample_size) {
+uint32_t SampleLF(bool printCfg, int sample_size)
+{
     BigBuf_Clear_ext(false);
     uint32_t ret = ReadLF(true, printCfg, sample_size);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -256,7 +267,8 @@ uint32_t SampleLF(bool printCfg, int sample_size) {
 * Initializes the FPGA for snoop-mode (field off), and acquires the samples.
 * @return number of bits sampled
 **/
-uint32_t SnoopLF() {
+uint32_t SnoopLF()
+{
     BigBuf_Clear_ext(false);
     uint32_t ret = ReadLF(false, true, 0);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -267,16 +279,17 @@ uint32_t SnoopLF() {
 * acquisition of T55x7 LF signal. Similar to other LF, but adjusted with @marshmellows thresholds
 * the data is collected in BigBuf.
 **/
-void doT55x7Acquisition(size_t sample_size) {
+void doT55x7Acquisition(size_t sample_size)
+{
 
-    #define T55xx_READ_UPPER_THRESHOLD 128+60  // 60 grph
-    #define T55xx_READ_LOWER_THRESHOLD 128-60  // -60 grph
-    #define T55xx_READ_TOL   5
+#define T55xx_READ_UPPER_THRESHOLD 128+60  // 60 grph
+#define T55xx_READ_LOWER_THRESHOLD 128-60  // -60 grph
+#define T55xx_READ_TOL   5
 
     uint8_t *dest = BigBuf_get_addr();
     uint16_t bufsize = BigBuf_max_traceLen();
 
-    if ( bufsize > sample_size )
+    if (bufsize > sample_size)
         bufsize = sample_size;
 
     uint8_t curSample = 0, lastSample = 0;
@@ -285,7 +298,7 @@ void doT55x7Acquisition(size_t sample_size) {
     bool highFound = false;
     bool lowFound = false;
 
-    while(!BUTTON_PRESS() && !usb_poll_validate_length() && skipCnt < 1000 && (i < bufsize) ) {
+    while (!BUTTON_PRESS() && !usb_poll_validate_length() && skipCnt < 1000 && (i < bufsize)) {
         WDT_HIT();
 
 
@@ -313,7 +326,7 @@ void doT55x7Acquisition(size_t sample_size) {
             }
 
             // skip until first high samples begin to change
-            if (startFound || curSample > T55xx_READ_LOWER_THRESHOLD + T55xx_READ_TOL){
+            if (startFound || curSample > T55xx_READ_LOWER_THRESHOLD + T55xx_READ_TOL) {
                 // if just found start - recover last sample
                 if (!startFound) {
                     dest[i++] = lastSample;
@@ -337,12 +350,13 @@ void doT55x7Acquisition(size_t sample_size) {
 #ifndef COTAG_BITS
 #define COTAG_BITS 264
 #endif
-void doCotagAcquisition(size_t sample_size) {
+void doCotagAcquisition(size_t sample_size)
+{
 
     uint8_t *dest = BigBuf_get_addr();
     uint16_t bufsize = BigBuf_max_traceLen();
 
-    if ( bufsize > sample_size )
+    if (bufsize > sample_size)
         bufsize = sample_size;
 
     dest[0] = 0;
@@ -350,7 +364,7 @@ void doCotagAcquisition(size_t sample_size) {
     uint16_t i = 0;
     uint16_t noise_counter = 0;
 
-    while (!BUTTON_PRESS() && !usb_poll_validate_length() && (i < bufsize) && (noise_counter < (COTAG_T1 << 1)) ) {
+    while (!BUTTON_PRESS() && !usb_poll_validate_length() && (i < bufsize) && (noise_counter < (COTAG_T1 << 1))) {
         WDT_HIT();
 
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
@@ -358,7 +372,7 @@ void doCotagAcquisition(size_t sample_size) {
             LED_D_OFF();
 
             // find first peak
-            if ( !firsthigh ) {
+            if (!firsthigh) {
                 if (sample < COTAG_ONE_THRESHOLD) {
                     noise_counter++;
                     continue;
@@ -366,8 +380,8 @@ void doCotagAcquisition(size_t sample_size) {
                 noise_counter = 0;
                 firsthigh = 1;
             }
-            if ( !firstlow ){
-                if (sample > COTAG_ZERO_THRESHOLD ) {
+            if (!firstlow) {
+                if (sample > COTAG_ZERO_THRESHOLD) {
                     noise_counter++;
                     continue;
                 }
@@ -377,22 +391,23 @@ void doCotagAcquisition(size_t sample_size) {
 
             ++i;
 
-            if ( sample > COTAG_ONE_THRESHOLD)
+            if (sample > COTAG_ONE_THRESHOLD)
                 dest[i] = 255;
-            else if ( sample < COTAG_ZERO_THRESHOLD)
+            else if (sample < COTAG_ZERO_THRESHOLD)
                 dest[i] = 0;
             else
-                dest[i] = dest[i-1];
+                dest[i] = dest[i - 1];
         }
     }
 }
 
-uint32_t doCotagAcquisitionManchester() {
+uint32_t doCotagAcquisitionManchester()
+{
 
     uint8_t *dest = BigBuf_get_addr();
     uint16_t bufsize = BigBuf_max_traceLen();
 
-    if ( bufsize > COTAG_BITS )
+    if (bufsize > COTAG_BITS)
         bufsize = COTAG_BITS;
 
     dest[0] = 0;
@@ -401,7 +416,7 @@ uint32_t doCotagAcquisitionManchester() {
     uint8_t curr = 0, prev = 0;
     uint16_t noise_counter = 0;
 
-    while (!BUTTON_PRESS() && !usb_poll_validate_length() && (sample_counter < bufsize)  && (noise_counter < (COTAG_T1 << 1)) ) {
+    while (!BUTTON_PRESS() && !usb_poll_validate_length() && (sample_counter < bufsize)  && (noise_counter < (COTAG_T1 << 1))) {
         WDT_HIT();
 
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
@@ -409,7 +424,7 @@ uint32_t doCotagAcquisitionManchester() {
             LED_D_OFF();
 
             // find first peak
-            if ( !firsthigh ) {
+            if (!firsthigh) {
                 if (sample < COTAG_ONE_THRESHOLD) {
                     noise_counter++;
                     continue;
@@ -418,8 +433,8 @@ uint32_t doCotagAcquisitionManchester() {
                 firsthigh = 1;
             }
 
-            if ( !firstlow ){
-                if (sample > COTAG_ZERO_THRESHOLD ) {
+            if (!firstlow) {
+                if (sample > COTAG_ZERO_THRESHOLD) {
                     noise_counter++;
                     continue;
                 }
@@ -428,20 +443,18 @@ uint32_t doCotagAcquisitionManchester() {
             }
 
             // set sample 255, 0,  or previous
-            if ( sample > COTAG_ONE_THRESHOLD){
+            if (sample > COTAG_ONE_THRESHOLD) {
                 prev = curr;
                 curr = 1;
-            }
-            else if ( sample < COTAG_ZERO_THRESHOLD) {
+            } else if (sample < COTAG_ZERO_THRESHOLD) {
                 prev = curr;
                 curr = 0;
-            }
-            else {
+            } else {
                 curr = prev;
             }
 
             // full T1 periods,
-            if ( period > 0 ) {
+            if (period > 0) {
                 --period;
                 continue;
             }

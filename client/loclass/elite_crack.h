@@ -104,7 +104,7 @@ int bruteforceItem(dumpdata item, uint16_t keytable[]);
  * @param csn the CSN used
  * @param k output
  */
-void hash1(uint8_t csn[] , uint8_t k[]);
+void hash1(uint8_t csn[], uint8_t k[]);
 void hash2(uint8_t *key64, uint8_t *outp_keytable);
 /**
  * From dismantling iclass-paper:
@@ -118,7 +118,7 @@ void hash2(uint8_t *key64, uint8_t *outp_keytable);
  * @param master_key where to put the master key
  * @return 0 for ok, 1 for failz
  */
-int calculateMasterKey(uint8_t first16bytes[], uint64_t master_key[] );
+int calculateMasterKey(uint8_t first16bytes[], uint64_t master_key[]);
 
 /**
  * @brief Test function

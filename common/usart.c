@@ -44,7 +44,8 @@ static uint8_t us_outbuf[sizeof(UsbCommand)];
 /// Reads data from an USART peripheral
 /// \param data  Pointer to the buffer where the received data will be stored.
 /// \param len  Size of the data buffer (in bytes).
-inline int16_t usart_readbuffer(uint8_t *data, size_t len) {
+inline int16_t usart_readbuffer(uint8_t *data, size_t len)
+{
 
     // Check if the first PDC bank is free
     if (!(pUS1->US_RCR)) {
@@ -68,7 +69,8 @@ inline int16_t usart_readbuffer(uint8_t *data, size_t len) {
 
 
 // transfer from device to client
-inline int16_t usart_writebuffer(uint8_t *data, size_t len) {
+inline int16_t usart_writebuffer(uint8_t *data, size_t len)
+{
 
     // Check if the first PDC bank is free
     if (!(pUS1->US_TCR)) {
@@ -92,7 +94,8 @@ inline int16_t usart_writebuffer(uint8_t *data, size_t len) {
     }
 }
 
-void usart_init(void) {
+void usart_init(void)
+{
 
     // disable & reset receiver / transmitter for configuration
     pUS1->US_CR = (AT91C_US_RSTRX | AT91C_US_RSTTX | AT91C_US_RXDIS | AT91C_US_TXDIS);
@@ -112,11 +115,11 @@ void usart_init(void) {
 
     // set mode
     pUS1->US_MR = AT91C_US_USMODE_NORMAL |      // normal mode
-               AT91C_US_CLKS_CLOCK |            // MCK (48MHz)
-               AT91C_US_CHRL_8_BITS |           // 8 bits
-               AT91C_US_PAR_NONE |              // parity: none
-               AT91C_US_NBSTOP_1_BIT |          // 1 stop bit
-               AT91C_US_CHMODE_NORMAL;          // channel mode: normal
+                  AT91C_US_CLKS_CLOCK |            // MCK (48MHz)
+                  AT91C_US_CHRL_8_BITS |           // 8 bits
+                  AT91C_US_PAR_NONE |              // parity: none
+                  AT91C_US_NBSTOP_1_BIT |          // 1 stop bit
+                  AT91C_US_CHMODE_NORMAL;          // channel mode: normal
 
     // all interrupts disabled
     pUS1->US_IDR = 0xFFFF;

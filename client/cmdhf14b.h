@@ -42,14 +42,14 @@ extern int CmdHF14BList(const char *Cmd);
 extern int CmdHF14BInfo(const char *Cmd);
 extern int CmdHF14BSim(const char *Cmd);
 extern int CmdHF14BSniff(const char *Cmd);
-extern int CmdHF14BWrite( const char *cmd);
+extern int CmdHF14BWrite(const char *cmd);
 extern int CmdHF14BReader(const char *Cmd);
 
 extern int CmdHF14BDump(const char *Cmd);
 
 extern bool HF14BInfo(bool verbose);
 extern bool HF14BReader(bool verbose);
-extern int CmdHF14BCmdRaw (const char *Cmd);
+extern int CmdHF14BCmdRaw(const char *Cmd);
 
 // SRi  ST Microelectronics read/write
 extern int CmdHF14BReadSri(const char *Cmd);

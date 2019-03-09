@@ -12,7 +12,8 @@
 #include "lf_proxbrute.h"
 
 // samy's sniff and repeat routine for LF
-void RunMod() {
+void RunMod()
+{
     StandAloneMode();
     Dbprintf(">>  LF HID proxII bruteforce a.k.a ProxBrute Started (Brad Antoniewicz) <<");
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
@@ -61,8 +62,7 @@ void RunMod() {
             // so next button push begins playing what we recorded
             playing = 0;
             cardRead = 1;
-        }
-        else if (button_pressed > 0 && cardRead == 1) {
+        } else if (button_pressed > 0 && cardRead == 1) {
             LEDsoff();
             LED(selected + 1, 0);
             LED(LED_ORANGE, 0);
@@ -119,12 +119,12 @@ void RunMod() {
                 worked or not, so its a crap shoot. One option is to time how long
                 it takes to get a valid ID then start from scratch every time.
                 */
-                if ( selected == 1 ) {
+                if (selected == 1) {
                     DbpString("[=] entering ProxBrute Mode");
                     Dbprintf("[=] current Tag: Selected = %x Facility = %08x ID = %08x", selected, high[selected], low[selected]);
                     LED(LED_ORANGE, 0);
                     LED(LED_RED, 0);
-                    for (uint16_t i = low[selected]-1; i > 0; i--) {
+                    for (uint16_t i = low[selected] - 1; i > 0; i--) {
                         if (BUTTON_PRESS()) {
                             DbpString("[-] told to stop");
                             break;
@@ -156,8 +156,7 @@ void RunMod() {
                 playing = !playing;
                 LEDsoff();
                 LED(selected + 1, 0);
-            }
-            else {
+            } else {
                 while (BUTTON_PRESS())
                     WDT_HIT();
             }

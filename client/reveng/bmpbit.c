@@ -41,44 +41,47 @@ int bmpbit;
 int bmpsub;
 
 void
-setbmp(void) {
+setbmp(void)
+{
     /* Initialise BMP_BIT and BMP_SUB for the local architecture. */
     bmp_t bmpmax = ~(bmp_t) 0;
 
-    bmpbit = 0; bmpsub = 1;
+    bmpbit = 0;
+    bmpsub = 1;
 
-    while(bmpmax) {
+    while (bmpmax) {
         bmpmax <<= 1;
         ++bmpbit;
     }
 
-    while((bmpsub | (bmpsub - 1)) < bmpbit - 1)
+    while ((bmpsub | (bmpsub - 1)) < bmpbit - 1)
         bmpsub <<= 1;
 }
 #endif
 
 #ifdef BMPTST
 int
-main(int argc, char *argv[]) {
+main(int argc, char *argv[])
+{
     /* check the compile-time bitmap width is correct, otherwise
      * searches run forever. */
 #  if BMP_BIT > 0
     setbmp();
-    if(BMP_BIT != bmpbit || BMP_SUB != bmpsub) {
-        fprintf(stderr,"reveng: configuration fault.  Update "
-            "config.h with these definitions and "
-            "recompile:\n"
-            "\t#define BMP_BIT   %d\n"
-            "\t#define BMP_SUB   %d\n",
-            bmpbit, bmpsub);
+    if (BMP_BIT != bmpbit || BMP_SUB != bmpsub) {
+        fprintf(stderr, "reveng: configuration fault.  Update "
+                "config.h with these definitions and "
+                "recompile:\n"
+                "\t#define BMP_BIT   %d\n"
+                "\t#define BMP_SUB   %d\n",
+                bmpbit, bmpsub);
         exit(EXIT_FAILURE);
     }
 #  endif /* BMP_BIT > 0 */
     /* check the bitmap constant macro */
-    if(~(bmp_t) 0 != ~BMP_C(0)) {
+    if (~(bmp_t) 0 != ~BMP_C(0)) {
         fprintf(stderr, "reveng: configuration fault.  Edit "
-            "the definition of BMP_C() in config.h to "
-            "match BMP_T and recompile.\n");
+                "the definition of BMP_C() in config.h to "
+                "match BMP_T and recompile.\n");
         exit(EXIT_FAILURE);
     }
     exit(EXIT_SUCCESS);

@@ -36,7 +36,7 @@ typedef struct {
     int amplitude;
     bool isnoise;
 } signal_t;
-signal_t* getSignalProperties(void);
+signal_t *getSignalProperties(void);
 
 void computeSignalProperties(uint8_t *bits, uint32_t size);
 void removeSignalOffset(uint8_t *samples, uint32_t size);

@@ -16,9 +16,9 @@ typedef struct prng_ctx {
 } prng_ctx;
 
 //uint32_t burtle_get( prng_ctx *x );
-uint32_t burtle_get_mod( prng_ctx *x );
-void burtle_init_mod(prng_ctx *x, uint32_t seed );
-void burtle_init(prng_ctx *x, uint32_t seed );
+uint32_t burtle_get_mod(prng_ctx *x);
+void burtle_init_mod(prng_ctx *x, uint32_t seed);
+void burtle_init(prng_ctx *x, uint32_t seed);
 
-uint32_t GetSimplePrng( uint32_t seed );
+uint32_t GetSimplePrng(uint32_t seed);
 #endif /* __PRNG_H */

@@ -21,7 +21,8 @@
 #include "lfdemod.h"
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_paradox_sim(void) {
+int usage_lf_paradox_sim(void)
+{
     PrintAndLogEx(NORMAL, "Enables simulation of Paradox card with specified card number.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.");
@@ -38,9 +39,10 @@ int usage_lf_paradox_sim(void) {
 }
 
 // loop to get raw paradox waveform then FSK demodulate the TAG ID from it
-int detectParadox(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo, int *waveStartIdx) {
+int detectParadox(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo, int *waveStartIdx)
+{
     //make sure buffer has data
-    if (*size < 96*50) return -1;
+    if (*size < 96 * 50) return -1;
 
     if (getSignalProperties()->isnoise) return -2;
 
@@ -52,21 +54,21 @@ int detectParadox(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint
 
     // 00001111 bit pattern represent start of frame, 01 pattern represents a 0 and 10 represents a 1
     size_t startIdx = 0;
-    uint8_t preamble[] = {0,0,0,0,1,1,1,1};
+    uint8_t preamble[] = {0, 0, 0, 0, 1, 1, 1, 1};
     if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
         return -4; //preamble not found
 
     size_t numStart = startIdx + sizeof(preamble);
     // final loop, go over previously decoded FSK data and manchester decode into usable tag ID
-    for (size_t idx = numStart; (idx-numStart) < *size - sizeof(preamble); idx+=2){
-        if (dest[idx] == dest[idx+1])
+    for (size_t idx = numStart; (idx - numStart) < *size - sizeof(preamble); idx += 2) {
+        if (dest[idx] == dest[idx + 1])
             return -5; //not manchester data
 
         *hi2 = (*hi2 << 1) | (*hi >> 31);
         *hi = (*hi << 1) | (*lo >> 31);
         //Then, shift in a 0 or one into low
         *lo <<= 1;
-        if (dest[idx] && !dest[idx+1]) // 1 0
+        if (dest[idx] && !dest[idx + 1]) // 1 0
             *lo |= 1;
         else // 0 1
             *lo |= 0;
@@ -77,7 +79,8 @@ int detectParadox(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint
 //by marshmellow
 //Paradox Prox demod - FSK2a RF/50 with preamble of 00001111 (then manchester encoded)
 //print full Paradox Prox ID and some bit format details if found
-int CmdParadoxDemod(const char *Cmd) {
+int CmdParadoxDemod(const char *Cmd)
+{
     //raw fsk demod no manchester decoding no start bit finding just get binary from wave
     uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
     size_t size = getFromGraphBuf(bits);
@@ -90,7 +93,7 @@ int CmdParadoxDemod(const char *Cmd) {
     int waveIdx = 0;
     //get binary from fsk wave
     int idx = detectParadox(bits, &size, &hi2, &hi, &lo, &waveIdx);
-    if (idx < 0){
+    if (idx < 0) {
 
         if (idx == -1)
             PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox not enough samples");
@@ -111,7 +114,7 @@ int CmdParadoxDemod(const char *Cmd) {
     setDemodBuf(bits, size, idx);
     setClockGrid(50, waveIdx + (idx * 50));
 
-    if (hi2 == 0 && hi == 0 && lo == 0){
+    if (hi2 == 0 && hi == 0 && lo == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox no value found");
         return 0;
     }
@@ -123,14 +126,14 @@ int CmdParadoxDemod(const char *Cmd) {
     uint32_t rawHi2 = bytebits_to_byte(bits + idx, 32);
 
     PrintAndLogEx(NORMAL, "Paradox TAG ID: %x%08x - FC: %d - Card: %d - Checksum: %02x - RAW: %08x%08x%08x",
-        hi >> 10,
-        (hi & 0x3) << 26 | (lo >> 10),
-        fc, cardnum,
-        (lo >> 2) & 0xFF,
-        rawHi2,
-        rawHi,
-        rawLo
-    );
+                  hi >> 10,
+                  (hi & 0x3) << 26 | (lo >> 10),
+                  fc, cardnum,
+                  (lo >> 2) & 0xFF,
+                  rawHi2,
+                  rawHi,
+                  rawLo
+                 );
 
     PrintAndLogEx(DEBUG, "DEBUG: Paradox idx: %d, len: %d, Printing Demod Buffer:", idx, size);
     if (g_debugMode)
@@ -140,12 +143,14 @@ int CmdParadoxDemod(const char *Cmd) {
 }
 //by marshmellow
 //see ASKDemod for what args are accepted
-int CmdParadoxRead(const char *Cmd) {
+int CmdParadoxRead(const char *Cmd)
+{
     lf_read(true, 10000);
     return CmdParadoxDemod(Cmd);
 }
 
-int CmdParadoxSim(const char *Cmd) {
+int CmdParadoxSim(const char *Cmd)
+{
 
     char cmdp = param_getchar(Cmd, 0);
     if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_paradox_sim();
@@ -162,17 +167,17 @@ int CmdParadoxSim(const char *Cmd) {
     arg1 = high << 8 | low;
     arg2 = invert << 8 | clk;
 
-    if (sscanf(Cmd, "%u %u", &fc, &cn ) != 2) return usage_lf_paradox_sim();
+    if (sscanf(Cmd, "%u %u", &fc, &cn) != 2) return usage_lf_paradox_sim();
 
     facilitycode = (fc & 0x000000FF);
     cardnumber = (cn & 0x0000FFFF);
 
     // if ( !GetParadoxBits(facilitycode, cardnumber, bs)) {
-        // PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
-        // return 1;
+    // PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
+    // return 1;
     // }
 
-    PrintAndLogEx(NORMAL, "Simulating Paradox - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber );
+    PrintAndLogEx(NORMAL, "Simulating Paradox - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber);
 
     UsbCommand c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}};
     memcpy(c.d.asBytes, bs, size);
@@ -192,13 +197,15 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFParadox(const char *Cmd) {
+int CmdLFParadox(const char *Cmd)
+{
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
+int CmdHelp(const char *Cmd)
+{
     CmdsHelp(CommandTable);
     return 0;
 }

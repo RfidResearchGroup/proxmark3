@@ -27,7 +27,8 @@
 #include "lf_hidbrute.h"
 
 // samy's sniff and repeat routine for LF
-void RunMod() {
+void RunMod()
+{
     StandAloneMode();
     Dbprintf(">>  LF HID corporate bruteforce a.k.a CorporateBrute Started  <<");
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
@@ -60,7 +61,7 @@ void RunMod() {
             DbpString("[=] starting recording");
 
             // wait for button to be released
-            while(BUTTON_PRESS())
+            while (BUTTON_PRESS())
                 WDT_HIT();
 
             /* need this delay to prevent catching some weird data */
@@ -76,8 +77,7 @@ void RunMod() {
             // so next button push begins playing what we recorded
             playing = 0;
             cardRead = 1;
-        }
-        else if (button_pressed > 0 && cardRead == 1) {
+        } else if (button_pressed > 0 && cardRead == 1) {
             LEDsoff();
             LED(selected + 1, 0);
             LED(LED_ORANGE, 0);
@@ -86,7 +86,7 @@ void RunMod() {
             Dbprintf("[=] cloning %x %x %08x", selected, high[selected], low[selected]);
 
             // wait for button to be released
-            while(BUTTON_PRESS())
+            while (BUTTON_PRESS())
                 WDT_HIT();
 
             /* need this delay to prevent catching some weird data */
@@ -141,15 +141,13 @@ void RunMod() {
                 playing = !playing;
                 LEDsoff();
                 LED(selected + 1, 0);
-            }
-            else if (playing && selected == 2)
-            {
+            } else if (playing && selected == 2) {
                 // Now it work only with HID Corporate 1000 (35bit), but is easily extensible to others RFID.
                 // It is necessary only to calculate the correct parity.
 
                 // Brute force code
                 // Check if the badge is an HID Corporate 1000
-                if( (high[selected] & 0xFFFFFFF8) != 0x28 ) {
+                if ((high[selected] & 0xFFFFFFF8) != 0x28) {
                     DbpString("[-] Card is not a HID Corporate 1000. Skipping bruteforce.");
                     continue;
                 }
@@ -162,7 +160,7 @@ void RunMod() {
 
                 // Calculate Facility Code and Card Number from high and low
                 uint32_t cardnum = (low[selected] >> 1) & 0xFFFFF;
-                uint32_t fc = ((high[selected] & 1 ) << 11 ) | (low[selected] >> 21);
+                uint32_t fc = ((high[selected] & 1) << 11) | (low[selected] >> 21);
                 uint32_t original_cardnum = cardnum;
 
                 Dbprintf("[=] Proxbrute - starting decrementing card number");
@@ -235,7 +233,7 @@ void RunMod() {
                 LED(selected + 1, 0);
 
             } else {
-                while(BUTTON_PRESS())
+                while (BUTTON_PRESS())
                     WDT_HIT();
             }
         }
@@ -247,7 +245,8 @@ out:
 }
 
 // Function that calculate next value for the brutforce of HID corporate 1000
-void hid_corporate_1000_calculate_checksum_and_set( uint32_t *high, uint32_t *low, uint32_t cardnum, uint32_t fc) {
+void hid_corporate_1000_calculate_checksum_and_set(uint32_t *high, uint32_t *low, uint32_t cardnum, uint32_t fc)
+{
 
     uint32_t new_high = 0;
     uint32_t new_low = 0;
@@ -264,8 +263,8 @@ void hid_corporate_1000_calculate_checksum_and_set( uint32_t *high, uint32_t *lo
     uint32_t parity_bit_34_low = new_low & 0xB6DB6DB6;
     n_ones = 0;
     // Calculate number of ones in low number
-    for ( i = 1; i != 0; i <<= 1) {
-        if( parity_bit_34_low & i )
+    for (i = 1; i != 0; i <<= 1) {
+        if (parity_bit_34_low & i)
             n_ones++;
     }
     // Calculate number of ones in high number
@@ -282,15 +281,15 @@ void hid_corporate_1000_calculate_checksum_and_set( uint32_t *high, uint32_t *lo
     n_ones = 0;
 
     // Calculate number of ones in low number
-    for ( i=1; i != 0; i <<= 1) {
-        if( parity_bit_1_low & i )
+    for (i = 1; i != 0; i <<= 1) {
+        if (parity_bit_1_low & i)
             n_ones++;
     }
     // Calculate number of ones in high number
-    if ( new_high & 0x1)
+    if (new_high & 0x1)
         n_ones++;
 
-    if ( new_high & 0x2)
+    if (new_high & 0x2)
         n_ones++;
 
     // Set parity bit (Odd parity)
@@ -301,14 +300,14 @@ void hid_corporate_1000_calculate_checksum_and_set( uint32_t *high, uint32_t *lo
     n_ones = 0;
     // Calculate number of ones in low number (all bit of low, bitmask unnecessary)
     for (i = 1; i != 0; i <<= 1) {
-        if ( new_low & i )
+        if (new_low & i)
             n_ones++;
     }
     // Calculate number of ones in high number
-    if ( new_high & 0x1)
+    if (new_high & 0x1)
         n_ones++;
 
-    if ( new_high & 0x2)
+    if (new_high & 0x2)
         n_ones++;
 
     // Set parity bit (Odd parity)

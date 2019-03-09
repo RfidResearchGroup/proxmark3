@@ -37,13 +37,13 @@ extern int CmdHF15Record(const char *Cmd);
 extern int CmdHF15Reader(const char *Cmd);
 extern int CmdHF15Sim(const char *Cmd);
 extern int CmdHF15Afi(const char *Cmd);
-extern int CmdHF15Dump(const char*Cmd);
+extern int CmdHF15Dump(const char *Cmd);
 extern int CmdHF15Raw(const char *cmd);
 extern int CmdHF15Readmulti(const char *Cmd);
 extern int CmdHF15Read(const char *Cmd);
 extern int CmdHF15Write(const char *Cmd);
 
-extern int CmdHF15Help(const char*Cmd);
+extern int CmdHF15Help(const char *Cmd);
 
 // usages
 extern int usage_15_demod(void);

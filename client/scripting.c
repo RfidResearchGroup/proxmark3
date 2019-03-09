@@ -17,7 +17,8 @@
  * @param L
  * @return
  */
-static int l_SendCommand(lua_State *L){
+static int l_SendCommand(lua_State *L)
+{
 
     /*
      The SendCommand (native) expects the following structure:
@@ -36,12 +37,12 @@ static int l_SendCommand(lua_State *L){
     size_t size;
     const char *data = luaL_checklstring(L, 1, &size);
     if (size != sizeof(UsbCommand)) {
-        printf("Got data size %d, expected %d" , (int) size,(int) sizeof(UsbCommand));
-        lua_pushstring(L,"Wrong data size");
+        printf("Got data size %d, expected %d", (int) size, (int) sizeof(UsbCommand));
+        lua_pushstring(L, "Wrong data size");
         return 1;
     }
 
-    SendCommand((UsbCommand* )data);
+    SendCommand((UsbCommand *)data);
     return 0; // no return values
 }
 
@@ -53,7 +54,8 @@ static int l_SendCommand(lua_State *L){
  * @param L
  * @return
  */
-static int l_GetFromBigBuf(lua_State *L){
+static int l_GetFromBigBuf(lua_State *L)
+{
 
     int len = 0, startindex = 0;
 
@@ -71,14 +73,14 @@ static int l_GetFromBigBuf(lua_State *L){
     }
 
     uint8_t *data = calloc(len, sizeof(uint8_t));
-    if ( !data ) {
+    if (!data) {
         //signal error by returning Nil, errorstring
         lua_pushnil(L);
-        lua_pushstring(L,"Allocating memory failed");
+        lua_pushstring(L, "Allocating memory failed");
         return 2; // two return values
     }
 
-    if ( !GetFromDevice(BIG_BUF, data, len, startindex, NULL, 2500, false)) {
+    if (!GetFromDevice(BIG_BUF, data, len, startindex, NULL, 2500, false)) {
         free(data);
         lua_pushnil(L);
         lua_pushstring(L, "command execution time out");
@@ -86,7 +88,7 @@ static int l_GetFromBigBuf(lua_State *L){
     }
 
     //Push it as a string
-    lua_pushlstring(L,(const char *)data, len);
+    lua_pushlstring(L, (const char *)data, len);
     free(data);
     return 1;// return 1 to signal one return value
 }
@@ -99,7 +101,8 @@ static int l_GetFromBigBuf(lua_State *L){
  * @param L
  * @return
  */
-static int l_GetFromFlashMem(lua_State *L){
+static int l_GetFromFlashMem(lua_State *L)
+{
 
 #ifndef WITH_FLASH
     lua_pushnil(L);
@@ -120,20 +123,20 @@ static int l_GetFromFlashMem(lua_State *L){
     }
 
     uint8_t *data = calloc(len, sizeof(uint8_t));
-    if ( !data ) {
+    if (!data) {
         lua_pushnil(L);
         lua_pushstring(L, "Allocating memory failed");
         return 2;
     }
 
-    if ( !GetFromDevice(FLASH_MEM, data, len, startindex, NULL, -1, false)) {
+    if (!GetFromDevice(FLASH_MEM, data, len, startindex, NULL, -1, false)) {
         free(data);
         lua_pushnil(L);
         lua_pushstring(L, "command execution time out");
         return 2;
     }
 
-    lua_pushlstring(L,(const char *)data, len);
+    lua_pushlstring(L, (const char *)data, len);
     free(data);
     return 1;
 #endif
@@ -147,7 +150,8 @@ static int l_GetFromFlashMem(lua_State *L){
  * @param L
  * @return
  */
-static int l_WaitForResponseTimeout(lua_State *L){
+static int l_WaitForResponseTimeout(lua_State *L)
+{
 
     uint32_t cmd = 0;
     size_t ms_timeout = -1;
@@ -166,14 +170,14 @@ static int l_WaitForResponseTimeout(lua_State *L){
         cmd = luaL_checkunsigned(L, 1);
     }
     // extract second param. timeout value
-    if(n >= 2){
+    if (n >= 2) {
         ms_timeout = luaL_checkunsigned(L, 2);
     }
 
     UsbCommand response;
     if (WaitForResponseTimeout(cmd, &response, ms_timeout)) {
         //Push it as a string
-        lua_pushlstring(L,(const char *)&response, sizeof(UsbCommand));
+        lua_pushlstring(L, (const char *)&response, sizeof(UsbCommand));
         return 1;
     } else {
         //signal error by returning Nil, errorstring
@@ -183,19 +187,21 @@ static int l_WaitForResponseTimeout(lua_State *L){
     }
 }
 
-static int returnToLuaWithError(lua_State *L, const char* fmt, ...) {
+static int returnToLuaWithError(lua_State *L, const char *fmt, ...)
+{
     char buffer[200];
     va_list args;
-    va_start(args,fmt);
-    vsnprintf(buffer, sizeof(buffer), fmt,args);
+    va_start(args, fmt);
+    vsnprintf(buffer, sizeof(buffer), fmt, args);
     va_end(args);
 
     lua_pushnil(L);
-    lua_pushstring(L,buffer);
+    lua_pushstring(L, buffer);
     return 2;
 }
 
-static int l_mfDarkside(lua_State *L){
+static int l_mfDarkside(lua_State *L)
+{
 
     uint32_t blockno = 0;
     uint32_t keytype = MIFARE_AUTH_KEYA;
@@ -205,18 +211,19 @@ static int l_mfDarkside(lua_State *L){
     //Check number of arguments
     int n = lua_gettop(L);
     switch (n) {
-        case 2:{
+        case 2: {
             const char *p_keytype = luaL_checklstring(L, 2, &size);
-            if (size != 2)  return returnToLuaWithError(L,"Wrong size of keytype, got %d bytes, expected 1", (int) size);
+            if (size != 2)  return returnToLuaWithError(L, "Wrong size of keytype, got %d bytes, expected 1", (int) size);
             sscanf(p_keytype, "%x", &keytype);
         }
         case 1: {
             const char *p_blockno = luaL_checklstring(L, 1, &size);
-            if (size != 2)  return returnToLuaWithError(L,"Wrong size of blockno, got %d bytes, expected 2", (int) size);
+            if (size != 2)  return returnToLuaWithError(L, "Wrong size of blockno, got %d bytes, expected 2", (int) size);
             sscanf(p_blockno, "%02x", &blockno);
             break;
         }
-        default : break;
+        default :
+            break;
     }
 
     int retval = mfDarkside(blockno & 0xFF, keytype & 0xFF, &key);
@@ -230,7 +237,8 @@ static int l_mfDarkside(lua_State *L){
     return 2;
 }
 
-static int l_clearCommandBuffer(lua_State *L){
+static int l_clearCommandBuffer(lua_State *L)
+{
     clearCommandBuffer();
     return 0;
 }
@@ -239,10 +247,11 @@ static int l_clearCommandBuffer(lua_State *L){
  * @param L
  * @return
  */
-static int l_foobar(lua_State *L) {
+static int l_foobar(lua_State *L)
+{
     //Check number of arguments
     int n = lua_gettop(L);
-    printf("foobar called with %d arguments" , n);
+    printf("foobar called with %d arguments", n);
     lua_settop(L, 0);
     printf("Arguments discarded, stack now contains %d elements", lua_gettop(L));
 
@@ -252,9 +261,9 @@ static int l_foobar(lua_State *L) {
     printf("Now returning a uint64_t as a string");
     uint64_t x = 0xDEADC0DE;
     uint8_t destination[8];
-    num_to_bytes(x,sizeof(x),destination);
-    lua_pushlstring(L,(const char *)&x,sizeof(x));
-    lua_pushlstring(L,(const char *)destination,sizeof(destination));
+    num_to_bytes(x, sizeof(x), destination);
+    lua_pushlstring(L, (const char *)&x, sizeof(x));
+    lua_pushlstring(L, (const char *)destination, sizeof(destination));
     return 2;
 }
 
@@ -264,7 +273,8 @@ static int l_foobar(lua_State *L) {
  * @param L
  * @return boolean, true if kbhit, false otherwise.
  */
-static int l_ukbhit(lua_State *L) {
+static int l_ukbhit(lua_State *L)
+{
     lua_pushboolean(L, ukbhit() ? true : false);
     return 1;
 }
@@ -274,12 +284,14 @@ static int l_ukbhit(lua_State *L) {
  * @param L
  * @return
  */
-static int l_CmdConsole(lua_State *L) {
+static int l_CmdConsole(lua_State *L)
+{
     CommandReceived((char *)luaL_checkstring(L, 1));
     return 0;
 }
 
-static int l_iso15693_crc(lua_State *L) {
+static int l_iso15693_crc(lua_State *L)
+{
     uint32_t tmp;
     unsigned char buf[USB_CMD_DATA_SIZE] = {0x00};
     size_t size = 0;
@@ -291,12 +303,13 @@ static int l_iso15693_crc(lua_State *L) {
     }
 
     size /= 2;
-    compute_crc(CRC_15693, buf, size, &buf[size], &buf[size+1]);
-    lua_pushlstring(L, (const char *)&buf, size+2);
+    compute_crc(CRC_15693, buf, size, &buf[size], &buf[size + 1]);
+    lua_pushlstring(L, (const char *)&buf, size + 2);
     return 1;
 }
 
-static int l_iso14443b_crc(lua_State *L) {
+static int l_iso14443b_crc(lua_State *L)
+{
     uint32_t tmp;
     unsigned char buf[USB_CMD_DATA_SIZE] = {0x00};
     size_t size = 0;
@@ -308,8 +321,8 @@ static int l_iso14443b_crc(lua_State *L) {
     }
 
     size /= 2;
-    compute_crc(CRC_14443_B, buf, size, &buf[size], &buf[size+1]);
-    lua_pushlstring(L, (const char *)&buf, size+2);
+    compute_crc(CRC_14443_B, buf, size, &buf[size], &buf[size + 1]);
+    lua_pushlstring(L, (const char *)&buf, size + 2);
     return 1;
 }
 
@@ -317,13 +330,14 @@ static int l_iso14443b_crc(lua_State *L) {
  Simple AES 128 cbc hook up to OpenSSL.
  params:  key, input
 */
-static int l_aes128decrypt_cbc(lua_State *L) {
+static int l_aes128decrypt_cbc(lua_State *L)
+{
     //Check number of arguments
     int i;
     uint32_t tmp;
     size_t size;
     const char *p_key = luaL_checklstring(L, 1, &size);
-    if (size != 32)  return returnToLuaWithError(L,"Wrong size of key, got %d bytes, expected 32", (int) size);
+    if (size != 32)  return returnToLuaWithError(L, "Wrong size of key, got %d bytes, expected 32", (int) size);
 
     const char *p_encTxt = luaL_checklstring(L, 2, &size);
 
@@ -343,18 +357,19 @@ static int l_aes128decrypt_cbc(lua_State *L) {
     mbedtls_aes_context ctx;
     mbedtls_aes_init(&ctx);
     mbedtls_aes_setkey_dec(&ctx, aes_key, 128);
-    mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, sizeof(indata), iv, indata, outdata );
+    mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, sizeof(indata), iv, indata, outdata);
     //Push decrypted array as a string
-    lua_pushlstring(L,(const char *)&outdata, sizeof(outdata));
+    lua_pushlstring(L, (const char *)&outdata, sizeof(outdata));
     return 1;// return 1 to signal one return value
 }
-static int l_aes128decrypt_ecb(lua_State *L) {
+static int l_aes128decrypt_ecb(lua_State *L)
+{
     //Check number of arguments
     int i;
     uint32_t tmp;
     size_t size;
     const char *p_key = luaL_checklstring(L, 1, &size);
-    if (size != 32)  return returnToLuaWithError(L,"Wrong size of key, got %d bytes, expected 32", (int) size);
+    if (size != 32)  return returnToLuaWithError(L, "Wrong size of key, got %d bytes, expected 32", (int) size);
 
     const char *p_encTxt = luaL_checklstring(L, 2, &size);
 
@@ -372,20 +387,21 @@ static int l_aes128decrypt_ecb(lua_State *L) {
     mbedtls_aes_context ctx;
     mbedtls_aes_init(&ctx);
     mbedtls_aes_setkey_dec(&ctx, aes_key, 128);
-    mbedtls_aes_crypt_ecb(&ctx, MBEDTLS_AES_DECRYPT, indata, outdata );
+    mbedtls_aes_crypt_ecb(&ctx, MBEDTLS_AES_DECRYPT, indata, outdata);
 
     //Push decrypted array as a string
-    lua_pushlstring(L,(const char *)&outdata, sizeof(outdata));
+    lua_pushlstring(L, (const char *)&outdata, sizeof(outdata));
     return 1;// return 1 to signal one return value
 }
 
-static int l_aes128encrypt_cbc(lua_State *L) {
+static int l_aes128encrypt_cbc(lua_State *L)
+{
     //Check number of arguments
     int i;
     uint32_t tmp;
     size_t size;
     const char *p_key = luaL_checklstring(L, 1, &size);
-    if (size != 32)  return returnToLuaWithError(L,"Wrong size of key, got %d bytes, expected 32", (int) size);
+    if (size != 32)  return returnToLuaWithError(L, "Wrong size of key, got %d bytes, expected 32", (int) size);
 
     const char *p_txt = luaL_checklstring(L, 2, &size);
 
@@ -404,19 +420,20 @@ static int l_aes128encrypt_cbc(lua_State *L) {
     mbedtls_aes_context ctx;
     mbedtls_aes_init(&ctx);
     mbedtls_aes_setkey_enc(&ctx, aes_key, 128);
-    mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_ENCRYPT, sizeof(indata), iv, indata, outdata );
+    mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_ENCRYPT, sizeof(indata), iv, indata, outdata);
     //Push encrypted array as a string
-    lua_pushlstring(L,(const char *)&outdata, sizeof(outdata));
+    lua_pushlstring(L, (const char *)&outdata, sizeof(outdata));
     return 1;// return 1 to signal one return value
 }
 
-static int l_aes128encrypt_ecb(lua_State *L) {
+static int l_aes128encrypt_ecb(lua_State *L)
+{
     //Check number of arguments
     int i;
     uint32_t tmp;
     size_t size;
     const char *p_key = luaL_checklstring(L, 1, &size);
-    if (size != 32) return returnToLuaWithError(L,"Wrong size of key, got %d bytes, expected 32", (int) size);
+    if (size != 32) return returnToLuaWithError(L, "Wrong size of key, got %d bytes, expected 32", (int) size);
 
     const char *p_txt = luaL_checklstring(L, 2, &size);
 
@@ -433,38 +450,41 @@ static int l_aes128encrypt_ecb(lua_State *L) {
     mbedtls_aes_context ctx;
     mbedtls_aes_init(&ctx);
     mbedtls_aes_setkey_enc(&ctx, aes_key, 128);
-    mbedtls_aes_crypt_ecb(&ctx, MBEDTLS_AES_ENCRYPT, indata, outdata );
+    mbedtls_aes_crypt_ecb(&ctx, MBEDTLS_AES_ENCRYPT, indata, outdata);
     //Push encrypted array as a string
-    lua_pushlstring(L,(const char *)&outdata, sizeof(outdata));
+    lua_pushlstring(L, (const char *)&outdata, sizeof(outdata));
     return 1;// return 1 to signal one return value
 }
 
-static int l_crc8legic(lua_State *L) {
+static int l_crc8legic(lua_State *L)
+{
     size_t size;
     const char *p_str = luaL_checklstring(L, 1, &size);
 
-    uint16_t retval = CRC8Legic( (uint8_t*) p_str, size);
+    uint16_t retval = CRC8Legic((uint8_t *) p_str, size);
     lua_pushunsigned(L, retval);
     return 1;
 }
 
-static int l_crc16(lua_State *L) {
+static int l_crc16(lua_State *L)
+{
     size_t size;
     const char *p_str = luaL_checklstring(L, 1, &size);
 
-    uint16_t checksum = crc(CRC_CCITT,  (uint8_t*) p_str, size);
+    uint16_t checksum = crc(CRC_CCITT, (uint8_t *) p_str, size);
     lua_pushunsigned(L, checksum);
     return 1;
 }
 
-static int l_crc64(lua_State *L) {
+static int l_crc64(lua_State *L)
+{
     size_t size;
     uint64_t crc = 0;
     unsigned char outdata[8] = {0x00};
 
     const char *p_str = luaL_checklstring(L, 1, &size);
 
-    crc64( (uint8_t*) p_str, size, &crc);
+    crc64((uint8_t *) p_str, size, &crc);
 
     outdata[0] = (uint8_t)(crc >> 56) & 0xff;
     outdata[1] = (uint8_t)(crc >> 48) & 0xff;
@@ -474,11 +494,12 @@ static int l_crc64(lua_State *L) {
     outdata[5] = (uint8_t)(crc >> 16) & 0xff;
     outdata[6] = (uint8_t)(crc >> 8) & 0xff;
     outdata[7] = crc & 0xff;
-    lua_pushlstring(L,(const char *)&outdata, sizeof(outdata));
+    lua_pushlstring(L, (const char *)&outdata, sizeof(outdata));
     return 1;
 }
 
-static int l_crc64_ecma182(lua_State *L) {
+static int l_crc64_ecma182(lua_State *L)
+{
     //size_t size;
     uint64_t crc = 0;
     unsigned char outdata[8] = {0x00};
@@ -503,23 +524,25 @@ static int l_crc64_ecma182(lua_State *L) {
     return 1;
 }
 
-static int l_sha1(lua_State *L) {
+static int l_sha1(lua_State *L)
+{
     size_t size;
     const char *p_str = luaL_checklstring(L, 1, &size);
     unsigned char outdata[20] = {0x00};
-    mbedtls_sha1( (uint8_t*) p_str, size, outdata);
+    mbedtls_sha1((uint8_t *) p_str, size, outdata);
     lua_pushlstring(L, (const char *)&outdata, sizeof(outdata));
     return 1;
 }
 
-static int l_reveng_models(lua_State *L){
+static int l_reveng_models(lua_State *L)
+{
 
 // This array needs to be adjusted if RevEng adds more crc-models.
 #define NMODELS 105
 
     int count = 0;
     uint8_t in_width = luaL_checkunsigned(L, 1);
-    if ( in_width > 89 ) return returnToLuaWithError(L,"Width cannot exceed 89, got %d", in_width);
+    if (in_width > 89) return returnToLuaWithError(L, "Width cannot exceed 89, got %d", in_width);
 
     uint8_t width[NMODELS];
     memset(width, 0, sizeof(width));
@@ -531,9 +554,9 @@ static int l_reveng_models(lua_State *L){
         return returnToLuaWithError(L, "didn't find any models");
 
     lua_newtable(L);
-    for (int i = 0; i < count; i++){
-        lua_pushstring(L,  (const char*)models[i]);
-        lua_rawseti(L,-2,i+1);
+    for (int i = 0; i < count; i++) {
+        lua_pushstring(L, (const char *)models[i]);
+        lua_rawseti(L, -2, i + 1);
         free(models[i]);
     }
     return 1;
@@ -546,7 +569,8 @@ static int l_reveng_models(lua_State *L){
 // endian    ,char,  'B','b','L','l','t','r' describing if Big-Endian or Little-Endian should be used in different combinations.
 //
 // outputs:  string with hex representation of the CRC result
-static int l_reveng_RunModel(lua_State *L){
+static int l_reveng_RunModel(lua_State *L)
+{
     //-c || -v
     //inModel = valid model name string - CRC-8
     //inHexStr = input hex string to calculate crc on
@@ -561,54 +585,55 @@ static int l_reveng_RunModel(lua_State *L){
     bool reverse =  lua_toboolean(L, 3);
     const char endian = luaL_checkstring(L, 4)[0];
 
-    int ans = RunModel( (char *)inModel, (char *)inHexStr, reverse, endian, result);
+    int ans = RunModel((char *)inModel, (char *)inHexStr, reverse, endian, result);
     if (!ans)
-        return returnToLuaWithError(L,"Reveng failed");
+        return returnToLuaWithError(L, "Reveng failed");
 
-    lua_pushstring(L, (const char*)result);
+    lua_pushstring(L, (const char *)result);
     return 1;
 }
 
-static int l_hardnested(lua_State *L){
+static int l_hardnested(lua_State *L)
+{
 
     bool haveTarget = true;
     size_t size;
     uint32_t tmp;
     const char *p_blockno = luaL_checklstring(L, 1, &size);
-    if(size != 2)  return returnToLuaWithError(L,"Wrong size of blockNo, got %d bytes, expected 2", (int) size);
+    if (size != 2)  return returnToLuaWithError(L, "Wrong size of blockNo, got %d bytes, expected 2", (int) size);
 
     const char *p_keytype = luaL_checklstring(L, 2, &size);
-    if(size != 1)  return returnToLuaWithError(L,"Wrong size of keyType, got %d bytes, expected 1", (int) size);
+    if (size != 1)  return returnToLuaWithError(L, "Wrong size of keyType, got %d bytes, expected 1", (int) size);
 
     const char *p_key = luaL_checklstring(L, 3, &size);
-    if(size != 12)  return returnToLuaWithError(L,"Wrong size of key, got %d bytes, expected 12", (int) size);
+    if (size != 12)  return returnToLuaWithError(L, "Wrong size of key, got %d bytes, expected 12", (int) size);
 
     const char *p_trg_blockno = luaL_checklstring(L, 4, &size);
-    if(size != 2)  return returnToLuaWithError(L,"Wrong size of trgBlockNo, got %d bytes, expected 2", (int) size);
+    if (size != 2)  return returnToLuaWithError(L, "Wrong size of trgBlockNo, got %d bytes, expected 2", (int) size);
 
     const char *p_trg_keytype = luaL_checklstring(L, 5, &size);
-    if(size != 1)  return returnToLuaWithError(L,"Wrong size of trgKeyType, got %d bytes, expected 1", (int) size);
+    if (size != 1)  return returnToLuaWithError(L, "Wrong size of trgKeyType, got %d bytes, expected 1", (int) size);
 
     const char *p_trgkey = luaL_checklstring(L, 6, &size);
-    if(size != 12)
+    if (size != 12)
         haveTarget = false;
 
     const char *p_nonce_file_read = luaL_checklstring(L, 7, &size);
-    if(size != 1)  return returnToLuaWithError(L,"Wrong size of nonce_file_read, got %d bytes, expected 1", (int) size);
+    if (size != 1)  return returnToLuaWithError(L, "Wrong size of nonce_file_read, got %d bytes, expected 1", (int) size);
 
     const char *p_nonce_file_write = luaL_checklstring(L, 8, &size);
-    if(size != 1)  return returnToLuaWithError(L,"Wrong size of nonce_file_write, got %d bytes, expected 1", (int) size);
+    if (size != 1)  return returnToLuaWithError(L, "Wrong size of nonce_file_write, got %d bytes, expected 1", (int) size);
 
     const char *p_slow = luaL_checklstring(L, 9, &size);
-    if(size != 1)  return returnToLuaWithError(L,"Wrong size of slow, got %d bytes, expected 1", (int) size);
+    if (size != 1)  return returnToLuaWithError(L, "Wrong size of slow, got %d bytes, expected 1", (int) size);
 
     const char *p_tests = luaL_checklstring(L, 10, &size);
-    if(size != 1)  return returnToLuaWithError(L,"Wrong size of tests, got %d bytes, expected 1", (int) size);
+    if (size != 1)  return returnToLuaWithError(L, "Wrong size of tests, got %d bytes, expected 1", (int) size);
 
-    char filename[FILE_PATH_SIZE]="nonces.bin";
+    char filename[FILE_PATH_SIZE] = "nonces.bin";
     const char *p_filename = luaL_checklstring(L, 11, &size);
-    if(size != 0)
-        memcpy(filename, p_filename, FILE_PATH_SIZE-1);
+    if (size != 0)
+        memcpy(filename, p_filename, FILE_PATH_SIZE - 1);
 
     uint32_t blockNo = 0, keyType = 0;
     uint32_t trgBlockNo = 0, trgKeyType = 0;
@@ -624,8 +649,8 @@ static int l_hardnested(lua_State *L){
     sscanf(p_slow, "%x", &slow);
     sscanf(p_tests, "%x", &tests);
 
-    uint8_t key[6] = {0,0,0,0,0,0};
-    uint8_t trgkey[6] = {0,0,0,0,0,0};
+    uint8_t key[6] = {0, 0, 0, 0, 0, 0};
+    uint8_t trgkey[6] = {0, 0, 0, 0, 0, 0};
     for (int i = 0; i < 32; i += 2) {
         sscanf(&p_key[i], "%02x", &tmp);
         key[i / 2] = tmp & 0xFF;
@@ -644,7 +669,7 @@ static int l_hardnested(lua_State *L){
     num_to_bytes(foundkey, sizeof(dest_key), dest_key);
 
     //Push the retval on the stack
-    lua_pushinteger(L,retval);
+    lua_pushinteger(L, retval);
     lua_pushlstring(L, (const char *) dest_key, sizeof(dest_key));
     return 2; //Two return values
 }
@@ -655,7 +680,8 @@ static int l_hardnested(lua_State *L){
  * @param L
  * @return
  */
-static int l_detect_prng(lua_State *L) {
+static int l_detect_prng(lua_State *L)
+{
     int res = detect_classic_prng();
     lua_pushinteger(L, res);
     return 1;
@@ -665,13 +691,14 @@ static int l_detect_prng(lua_State *L) {
  * @param L
  * @return
  */
-static int l_keygen_algoD(lua_State *L) {
+static int l_keygen_algoD(lua_State *L)
+{
     size_t size;
     uint32_t tmp;
     const char *p_uid = luaL_checklstring(L, 1, &size);
-    if (size != 14) return returnToLuaWithError(L,"Wrong size of UID, got %d bytes, expected 14", (int) size);
+    if (size != 14) return returnToLuaWithError(L, "Wrong size of UID, got %d bytes, expected 14", (int) size);
 
-    uint8_t uid[7] = {0,0,0,0,0,0,0};
+    uint8_t uid[7] = {0, 0, 0, 0, 0, 0, 0};
 
     for (int i = 0; i < 14; i += 2) {
         sscanf(&p_uid[i], "%02x", &tmp);
@@ -694,22 +721,24 @@ static int l_keygen_algoD(lua_State *L) {
  * @param path
  * @return
  */
-int setLuaPath( lua_State* L, const char* path ) {
-    lua_getglobal( L, "package" );
-    lua_getfield( L, -1, "path" ); // get field "path" from table at top of stack (-1)
-    const char* cur_path = lua_tostring( L, -1 ); // grab path string from top of stack
-    int requiredLength = strlen(cur_path)+ strlen(path)+10; //A few bytes too many, whatever we can afford it
-    char * buf = calloc(requiredLength, sizeof(char));
+int setLuaPath(lua_State *L, const char *path)
+{
+    lua_getglobal(L, "package");
+    lua_getfield(L, -1, "path");   // get field "path" from table at top of stack (-1)
+    const char *cur_path = lua_tostring(L, -1);   // grab path string from top of stack
+    int requiredLength = strlen(cur_path) + strlen(path) + 10; //A few bytes too many, whatever we can afford it
+    char *buf = calloc(requiredLength, sizeof(char));
     snprintf(buf, requiredLength, "%s;%s", cur_path, path);
-    lua_pop( L, 1 ); // get rid of the string on the stack we just pushed on line 5
-    lua_pushstring( L, buf ); // push the new one
-    lua_setfield( L, -2, "path" ); // set the field "path" in table at -2 with value at top of stack
-    lua_pop( L, 1 ); // get rid of package table from top of stack
+    lua_pop(L, 1);   // get rid of the string on the stack we just pushed on line 5
+    lua_pushstring(L, buf);   // push the new one
+    lua_setfield(L, -2, "path");   // set the field "path" in table at -2 with value at top of stack
+    lua_pop(L, 1);   // get rid of package table from top of stack
     free(buf);
     return 0; // all done!
 }
 
-int set_pm3_libraries(lua_State *L) {
+int set_pm3_libraries(lua_State *L)
+{
     static const luaL_Reg libs[] = {
         {"SendCommand",                 l_SendCommand},
         {"GetFromBigBuf",               l_GetFromBigBuf},

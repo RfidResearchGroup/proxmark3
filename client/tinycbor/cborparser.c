@@ -249,38 +249,38 @@ static CborError preparse_value(CborValue *it)
         it->type = CborIntegerType;
     } else if (majortype == SimpleTypesType) {
         switch (descriptor) {
-        case FalseValue:
-            it->extra = false;
-            it->type = CborBooleanType;
-            break;
+            case FalseValue:
+                it->extra = false;
+                it->type = CborBooleanType;
+                break;
 
-        case SinglePrecisionFloat:
-        case DoublePrecisionFloat:
-            it->flags |= CborIteratorFlag_IntegerValueTooLarge;
+            case SinglePrecisionFloat:
+            case DoublePrecisionFloat:
+                it->flags |= CborIteratorFlag_IntegerValueTooLarge;
             /* fall through */
-        case TrueValue:
-        case NullValue:
-        case UndefinedValue:
-        case HalfPrecisionFloat:
-            it->type = *it->ptr;
-            break;
+            case TrueValue:
+            case NullValue:
+            case UndefinedValue:
+            case HalfPrecisionFloat:
+                it->type = *it->ptr;
+                break;
 
-        case SimpleTypeInNextByte:
-            it->extra = (uint8_t)it->ptr[1];
+            case SimpleTypeInNextByte:
+                it->extra = (uint8_t)it->ptr[1];
 #ifndef CBOR_PARSER_NO_STRICT_CHECKS
-            if (unlikely(it->extra < 32)) {
-                it->type = CborInvalidType;
-                return CborErrorIllegalSimpleType;
-            }
+                if (unlikely(it->extra < 32)) {
+                    it->type = CborInvalidType;
+                    return CborErrorIllegalSimpleType;
+                }
 #endif
-            break;
+                break;
 
-        case 28:
-        case 29:
-        case 30:
-        case Break:
-            cbor_assert(false);  /* these conditions can't be reached */
-            return CborErrorUnexpectedBreak;
+            case 28:
+            case 29:
+            case 30:
+            case Break:
+                cbor_assert(false);  /* these conditions can't be reached */
+                return CborErrorUnexpectedBreak;
         }
         return CborNoError;
     }
@@ -872,7 +872,7 @@ CborError cbor_value_get_int_checked(const CborValue *value, int *result)
      */
 
     if (value->flags & CborIteratorFlag_NegativeInteger) {
-        if (unlikely(v > (unsigned) -(INT_MIN + 1)))
+        if (unlikely(v > (unsigned) - (INT_MIN + 1)))
             return CborErrorDataTooLarge;
 
         *result = (int)v;
@@ -1189,13 +1189,13 @@ static CborError iterate_string_chunks(const CborValue *value, char *buffer, siz
  */
 
 CborError _cbor_value_copy_string(const CborValue *value, void *buffer,
-                                 size_t *buflen, CborValue *next)
+                                  size_t *buflen, CborValue *next)
 {
     bool copied_all;
-    CborError err = iterate_string_chunks(value, (char*)buffer, buflen, &copied_all, next,
+    CborError err = iterate_string_chunks(value, (char *)buffer, buflen, &copied_all, next,
                                           buffer ? iterate_memcpy : iterate_noop);
     return err ? err :
-                 copied_all ? CborNoError : CborErrorOutOfMemory;
+           copied_all ? CborNoError : CborErrorOutOfMemory;
 }
 
 /**

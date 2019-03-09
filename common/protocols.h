@@ -357,7 +357,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define LEGIC_READ                      0x01
 #define LEGIC_WRITE                     0x00
 
-void printIclassDumpInfo(uint8_t* iclass_dump);
+void printIclassDumpInfo(uint8_t *iclass_dump);
 void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *max_blk, uint8_t *app_areas, uint8_t *kb);
 
 /* T55x7 configuration register definitions */

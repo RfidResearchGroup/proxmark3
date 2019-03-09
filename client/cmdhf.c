@@ -12,7 +12,8 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_hf_search(){
+int usage_hf_search()
+{
     PrintAndLogEx(NORMAL, "Usage: hf search");
     PrintAndLogEx(NORMAL, "Will try to find a HF read out of the unknown tag. Stops when found.");
     PrintAndLogEx(NORMAL, "Options:");
@@ -20,7 +21,8 @@ int usage_hf_search(){
     PrintAndLogEx(NORMAL, "");
     return 0;
 }
-int usage_hf_snoop(){
+int usage_hf_snoop()
+{
     PrintAndLogEx(NORMAL, "Usage: hf snoop <skip pairs> <skip triggers>");
     PrintAndLogEx(NORMAL, "The high frequence snoop will assign all available memory on device for snooped data");
     PrintAndLogEx(NORMAL, "User the 'data samples' command to download from device,  and 'data plot' to look at it");
@@ -36,7 +38,8 @@ int usage_hf_snoop(){
     return 0;
 }
 
-int CmdHFSearch(const char *Cmd){
+int CmdHFSearch(const char *Cmd)
+{
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_search();
@@ -52,7 +55,7 @@ int CmdHFSearch(const char *Cmd){
         return ans;
     }
     ans = HFLegicReader("", false);
-    if ( ans == 0) {
+    if (ans == 0) {
         PrintAndLogEx(SUCCESS, "\nValid LEGIC Tag Found\n");
         return 1;
     }
@@ -85,7 +88,8 @@ int CmdHFSearch(const char *Cmd){
     return 0;
 }
 
-int CmdHFTune(const char *Cmd) {
+int CmdHFTune(const char *Cmd)
+{
     PrintAndLogEx(SUCCESS, "Measuring HF antenna, press button to exit");
     UsbCommand c = {CMD_MEASURE_ANTENNA_TUNING_HF};
     clearCommandBuffer();
@@ -93,7 +97,8 @@ int CmdHFTune(const char *Cmd) {
     return 0;
 }
 
-int CmdHFSnoop(const char *Cmd) {
+int CmdHFSnoop(const char *Cmd)
+{
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_snoop();
 
@@ -128,13 +133,15 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdHF(const char *Cmd) {
+int CmdHF(const char *Cmd)
+{
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
+int CmdHelp(const char *Cmd)
+{
     CmdsHelp(CommandTable);
     return 0;
 }

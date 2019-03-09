@@ -89,7 +89,7 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
     unsigned dmask;             /* mask for first level of distance codes */
     code here;                  /* retrieved table entry */
     unsigned op;                /* code bits, operation, extra bits, or */
-                                /*  window position, window bytes to copy */
+    /*  window position, window bytes to copy */
     unsigned len;               /* match length, unused bytes */
     unsigned dist;              /* match distance */
     unsigned char FAR *from;    /* where to copy match from */
@@ -125,18 +125,17 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
             bits += 8;
         }
         here = lcode[hold & lmask];
-      dolen:
+dolen:
         op = (unsigned)(here.bits);
         hold >>= op;
         bits -= op;
         op = (unsigned)(here.op);
         if (op == 0) {                          /* literal */
             Tracevv((stderr, here.val >= 0x20 && here.val < 0x7f ?
-                    "inflate:         literal '%c'\n" :
-                    "inflate:         literal 0x%02x\n", here.val));
+                     "inflate:         literal '%c'\n" :
+                     "inflate:         literal 0x%02x\n", here.val));
             PUP(out) = (unsigned char)(here.val);
-        }
-        else if (op & 16) {                     /* length base */
+        } else if (op & 16) {                   /* length base */
             len = (unsigned)(here.val);
             op &= 15;                           /* number of extra bits */
             if (op) {
@@ -156,7 +155,7 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
                 bits += 8;
             }
             here = dcode[hold & dmask];
-          dodist:
+dodist:
             op = (unsigned)(here.bits);
             hold >>= op;
             bits -= op;
@@ -223,8 +222,7 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
                             } while (--op);
                             from = out - dist;  /* rest from output */
                         }
-                    }
-                    else if (wnext < op) {      /* wrap around window */
+                    } else if (wnext < op) {    /* wrap around window */
                         from += wsize + wnext - op;
                         op -= wnext;
                         if (op < len) {         /* some from end of window */
@@ -242,8 +240,7 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
                                 from = out - dist;      /* rest from output */
                             }
                         }
-                    }
-                    else {                      /* contiguous in window */
+                    } else {                    /* contiguous in window */
                         from += wnext - op;
                         if (op < len) {         /* some from window */
                             len -= op;
@@ -264,8 +261,7 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
                         if (len > 1)
                             PUP(out) = PUP(from);
                     }
-                }
-                else {
+                } else {
                     from = out - dist;          /* copy direct from output */
                     do {                        /* minimum length is three */
                         PUP(out) = PUP(from);
@@ -279,27 +275,22 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
                             PUP(out) = PUP(from);
                     }
                 }
-            }
-            else if ((op & 64) == 0) {          /* 2nd level distance code */
+            } else if ((op & 64) == 0) {        /* 2nd level distance code */
                 here = dcode[here.val + (hold & ((1U << op) - 1))];
                 goto dodist;
-            }
-            else {
+            } else {
                 strm->msg = (char *)"invalid distance code";
                 state->mode = BAD;
                 break;
             }
-        }
-        else if ((op & 64) == 0) {              /* 2nd level length code */
+        } else if ((op & 64) == 0) {            /* 2nd level length code */
             here = lcode[here.val + (hold & ((1U << op) - 1))];
             goto dolen;
-        }
-        else if (op & 32) {                     /* end-of-block */
+        } else if (op & 32) {                   /* end-of-block */
             Tracevv((stderr, "inflate:         end of block\n"));
             state->mode = TYPE;
             break;
-        }
-        else {
+        } else {
             strm->msg = (char *)"invalid literal/length code";
             state->mode = BAD;
             break;

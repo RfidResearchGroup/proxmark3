@@ -48,7 +48,7 @@ struct asn1_tag {
 
 static const struct asn1_tag asn1_tags[] = {
     // internal
-    { 0x00  , "Unknown ???" },
+    { 0x00, "Unknown ???" },
 
     // ASN.1
     { 0x01, "BOOLEAN", ASN1_TAG_BOOLEAN },
@@ -87,25 +87,29 @@ static const struct asn1_tag asn1_tags[] = {
     { 0xa5, "[5]" },
 };
 
-static int asn1_sort_tag(tlv_tag_t tag) {
+static int asn1_sort_tag(tlv_tag_t tag)
+{
     return (int)(tag >= 0x100 ? tag : tag << 8);
 }
 
-static int asn1_tlv_compare(const void *a, const void *b) {
+static int asn1_tlv_compare(const void *a, const void *b)
+{
     const struct tlv *tlv = a;
     const struct asn1_tag *tag = b;
 
     return asn1_sort_tag(tlv->tag) - (asn1_sort_tag(tag->tag));
 }
 
-static const struct asn1_tag *asn1_get_tag(const struct tlv *tlv) {
+static const struct asn1_tag *asn1_get_tag(const struct tlv *tlv)
+{
     struct asn1_tag *tag = bsearch(tlv, asn1_tags, sizeof(asn1_tags) / sizeof(asn1_tags[0]),
-            sizeof(asn1_tags[0]), asn1_tlv_compare);
+                                   sizeof(asn1_tags[0]), asn1_tlv_compare);
 
     return tag ? tag : &asn1_tags[0];
 }
 
-static void asn1_tag_dump_str_time(const struct tlv *tlv, const struct asn1_tag *tag, FILE *f, int level, bool longyear, bool *needdump){
+static void asn1_tag_dump_str_time(const struct tlv *tlv, const struct asn1_tag *tag, FILE *f, int level, bool longyear, bool *needdump)
+{
     int len = tlv->len;
     *needdump = false;
 
@@ -157,16 +161,18 @@ static void asn1_tag_dump_str_time(const struct tlv *tlv, const struct asn1_tag 
     }
 }
 
-static void asn1_tag_dump_string(const struct tlv *tlv, const struct asn1_tag *tag, FILE *f, int level){
+static void asn1_tag_dump_string(const struct tlv *tlv, const struct asn1_tag *tag, FILE *f, int level)
+{
     fprintf(f, "\tvalue: '");
     fwrite(tlv->value, 1, tlv->len, f);
     fprintf(f, "'\n");
 }
 
-static void asn1_tag_dump_octet_string(const struct tlv *tlv, const struct asn1_tag *tag, FILE *f, int level, bool *needdump){
+static void asn1_tag_dump_octet_string(const struct tlv *tlv, const struct asn1_tag *tag, FILE *f, int level, bool *needdump)
+{
     *needdump = false;
     for (int i = 0; i < tlv->len; i++)
-        if (!isspace(tlv->value[i]) && !isprint(tlv->value[i])){
+        if (!isspace(tlv->value[i]) && !isprint(tlv->value[i])) {
             *needdump = true;
             break;
         }
@@ -179,7 +185,8 @@ static void asn1_tag_dump_octet_string(const struct tlv *tlv, const struct asn1_
     }
 }
 
-static unsigned long asn1_value_integer(const struct tlv *tlv, unsigned start, unsigned end) {
+static unsigned long asn1_value_integer(const struct tlv *tlv, unsigned start, unsigned end)
+{
     unsigned long ret = 0;
     int i;
 
@@ -189,36 +196,38 @@ static unsigned long asn1_value_integer(const struct tlv *tlv, unsigned start, u
         return ret;
 
     if (start & 1) {
-        ret += tlv->value[start/2] & 0xf;
+        ret += tlv->value[start / 2] & 0xf;
         i = start + 1;
     } else
         i = start;
 
     for (; i < end - 1; i += 2) {
         ret *= 10;
-        ret += tlv->value[i/2] >> 4;
+        ret += tlv->value[i / 2] >> 4;
         ret *= 10;
-        ret += tlv->value[i/2] & 0xf;
+        ret += tlv->value[i / 2] & 0xf;
     }
 
     if (end & 1) {
         ret *= 10;
-        ret += tlv->value[end/2] >> 4;
+        ret += tlv->value[end / 2] >> 4;
     }
 
     return ret;
 }
 
-static void asn1_tag_dump_boolean(const struct tlv *tlv, const struct asn1_tag *tag, FILE *f, int level) {
+static void asn1_tag_dump_boolean(const struct tlv *tlv, const struct asn1_tag *tag, FILE *f, int level)
+{
     PRINT_INDENT(level);
     if (tlv->len > 0) {
-        fprintf(f, "\tvalue: %s\n", tlv->value[0]?"true":"false");
+        fprintf(f, "\tvalue: %s\n", tlv->value[0] ? "true" : "false");
     } else {
         fprintf(f, "n/a\n");
     }
 }
 
-static void asn1_tag_dump_integer(const struct tlv *tlv, const struct asn1_tag *tag, FILE *f, int level) {
+static void asn1_tag_dump_integer(const struct tlv *tlv, const struct asn1_tag *tag, FILE *f, int level)
+{
     PRINT_INDENT(level);
     if (tlv->len == 4) {
         int32_t val = 0;
@@ -230,7 +239,8 @@ static void asn1_tag_dump_integer(const struct tlv *tlv, const struct asn1_tag *
     fprintf(f, "\tvalue: %lu\n", asn1_value_integer(tlv, 0, tlv->len * 2));
 }
 
-static char *asn1_oid_description(const char *oid, bool with_group_desc) {
+static char *asn1_oid_description(const char *oid, bool with_group_desc)
+{
     json_error_t error;
     json_t *root = NULL;
     char fname[300] = {0};
@@ -238,7 +248,7 @@ static char *asn1_oid_description(const char *oid, bool with_group_desc) {
     memset(res, 0x00, sizeof(res));
 
     size_t len = strlen(get_my_executable_directory());
-    if ( len > 300 ) len = 299;
+    if (len > 300) len = 299;
 
     strncpy(fname, get_my_executable_directory(), len);
     strcat(fname, "crypto/oids.json");
@@ -281,7 +291,8 @@ error:
     return NULL;
 }
 
-static void asn1_tag_dump_object_id(const struct tlv *tlv, const struct asn1_tag *tag, FILE *f, int level) {
+static void asn1_tag_dump_object_id(const struct tlv *tlv, const struct asn1_tag *tag, FILE *f, int level)
+{
     PRINT_INDENT(level);
     mbedtls_asn1_buf asn1_buf;
     asn1_buf.len = tlv->len;
@@ -314,7 +325,8 @@ static void asn1_tag_dump_object_id(const struct tlv *tlv, const struct asn1_tag
     fprintf(f, "\n");
 }
 
-bool asn1_tag_dump(const struct tlv *tlv, FILE *f, int level, bool *candump) {
+bool asn1_tag_dump(const struct tlv *tlv, FILE *f, int level, bool *candump)
+{
     if (!tlv) {
         fprintf(f, "NULL\n");
         return false;
@@ -326,34 +338,34 @@ bool asn1_tag_dump(const struct tlv *tlv, FILE *f, int level, bool *candump) {
     fprintf(f, "--%2hx[%02zx] '%s':", tlv->tag, tlv->len, tag->name);
 
     switch (tag->type) {
-    case ASN1_TAG_GENERIC:
-        fprintf(f, "\n");
-        break;
-    case ASN1_TAG_STRING:
-        asn1_tag_dump_string(tlv, tag, f, level);
-        *candump = false;
-        break;
-    case ASN1_TAG_OCTET_STRING:
-        asn1_tag_dump_octet_string(tlv, tag, f, level, candump);
-        break;
-    case ASN1_TAG_BOOLEAN:
-        asn1_tag_dump_boolean(tlv, tag, f, level);
-        *candump = false;
-        break;
-    case ASN1_TAG_INTEGER:
-        asn1_tag_dump_integer(tlv, tag, f, level);
-        *candump = false;
-        break;
-    case ASN1_TAG_UTC_TIME:
-        asn1_tag_dump_str_time(tlv, tag, f, level, false, candump);
-        break;
-    case ASN1_TAG_STR_TIME:
-        asn1_tag_dump_str_time(tlv, tag, f, level, true, candump);
-        break;
-    case ASN1_TAG_OBJECT_ID:
-        asn1_tag_dump_object_id(tlv, tag, f, level);
-        *candump = false;
-        break;
+        case ASN1_TAG_GENERIC:
+            fprintf(f, "\n");
+            break;
+        case ASN1_TAG_STRING:
+            asn1_tag_dump_string(tlv, tag, f, level);
+            *candump = false;
+            break;
+        case ASN1_TAG_OCTET_STRING:
+            asn1_tag_dump_octet_string(tlv, tag, f, level, candump);
+            break;
+        case ASN1_TAG_BOOLEAN:
+            asn1_tag_dump_boolean(tlv, tag, f, level);
+            *candump = false;
+            break;
+        case ASN1_TAG_INTEGER:
+            asn1_tag_dump_integer(tlv, tag, f, level);
+            *candump = false;
+            break;
+        case ASN1_TAG_UTC_TIME:
+            asn1_tag_dump_str_time(tlv, tag, f, level, false, candump);
+            break;
+        case ASN1_TAG_STR_TIME:
+            asn1_tag_dump_str_time(tlv, tag, f, level, true, candump);
+            break;
+        case ASN1_TAG_OBJECT_ID:
+            asn1_tag_dump_object_id(tlv, tag, f, level);
+            *candump = false;
+            break;
     };
 
     return true;

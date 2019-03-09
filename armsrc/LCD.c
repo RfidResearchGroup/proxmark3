@@ -13,7 +13,7 @@ void LCDSend(unsigned int data)
     while ((AT91C_BASE_SPI->SPI_SR & AT91C_SPI_TXEMPTY) == 0);    // wait for the transfer to complete
     // For clarity's sake we pass data with 9th bit clear and commands with 9th
     // bit set since they're implemented as defines, se we need to invert bit
-    AT91C_BASE_SPI->SPI_TDR = data^0x100;                         // Send the data/command
+    AT91C_BASE_SPI->SPI_TDR = data ^ 0x100;                       // Send the data/command
 }
 
 void LCDSetXY(unsigned char x, unsigned char y)
@@ -29,29 +29,28 @@ void LCDSetXY(unsigned char x, unsigned char y)
 
 void LCDSetPixel(unsigned char x, unsigned char y, unsigned char color)
 {
-    LCDSetXY(x,y);              // Set position
+    LCDSetXY(x, y);             // Set position
     LCDSend(PRAMWR);            // Now write the pixel to the display
     LCDSend(color);             // Write the data in the specified Color
 }
 
-void LCDFill (unsigned char xs,unsigned char ys,unsigned char width,unsigned char height, unsigned char color)
+void LCDFill(unsigned char xs, unsigned char ys, unsigned char width, unsigned char height, unsigned char color)
 {
-    unsigned char i,j;
+    unsigned char i, j;
 
-    for (i=0;i < height;i++)    // Number of horizontal lines
-    {
-        LCDSetXY(xs,ys+i);      // Goto start of fill area (Top Left)
+    for (i = 0; i < height; i++) { // Number of horizontal lines
+        LCDSetXY(xs, ys + i);   // Goto start of fill area (Top Left)
         LCDSend(PRAMWR);        // Write to display
 
-        for (j=0;j < width;j++) // pixels per line
+        for (j = 0; j < width; j++) // pixels per line
             LCDSend(color);
     }
 }
 
-void LCDString (char *lcd_string, const char *font_style,unsigned char x, unsigned char y, unsigned char fcolor, unsigned char bcolor)
+void LCDString(char *lcd_string, const char *font_style, unsigned char x, unsigned char y, unsigned char fcolor, unsigned char bcolor)
 {
     unsigned int  i;
-    unsigned char mask=0, px, py, xme, yme, offset;
+    unsigned char mask = 0, px, py, xme, yme, offset;
     const char *data;
 
     data = font_style;          // point to the start of the font table
@@ -62,29 +61,28 @@ void LCDString (char *lcd_string, const char *font_style,unsigned char x, unsign
     data++;
     offset = *data;             // get data bytes per font
 
-    do
-    {
+    do {
         // point to data in table to be loaded
-        data =  (font_style + offset) + (offset * (int)(*lcd_string - 32));
+        data = (font_style + offset) + (offset * (int)(*lcd_string - 32));
 
-        for (i=0;i < yme;i++) {
-            mask |=0x80;
+        for (i = 0; i < yme; i++) {
+            mask |= 0x80;
 
-            for (px=x; px < (x + xme); px++) {
-                py= y + i;
+            for (px = x; px < (x + xme); px++) {
+                py = y + i;
 
-                if (*data & mask)    LCDSetPixel (px,py,fcolor);
-                else                 LCDSetPixel (px,py,bcolor);
+                if (*data & mask)    LCDSetPixel(px, py, fcolor);
+                else                 LCDSetPixel(px, py, bcolor);
 
-                mask>>=1;
+                mask >>= 1;
             }
             data++;
         }
-        x+=xme;
+        x += xme;
 
         lcd_string++;                       // next character in string
 
-    } while(*lcd_string !='\0');            // keep spitting chars out until end of string
+    } while (*lcd_string != '\0');          // keep spitting chars out until end of string
 }
 
 void LCDReset(void)
@@ -121,29 +119,29 @@ void LCDInit(void)
     LCDSend(0xDC);
 
     // clear display
-    LCDSetXY(0,0);
+    LCDSetXY(0, 0);
     LCDSend(PRAMWR);            // Write to display
-    i=LCD_XRES*LCD_YRES;
-    while(i--) LCDSend(WHITE);
+    i = LCD_XRES * LCD_YRES;
+    while (i--) LCDSend(WHITE);
 
-  // test text on different colored backgrounds
-    LCDString(" The quick brown fox  ",    (char *)&FONT6x8,1,1+8*0,WHITE  ,BLACK );
-    LCDString("  jumped over the     ",    (char *)&FONT6x8,1,1+8*1,BLACK  ,WHITE );
-    LCDString("     lazy dog.        ",    (char *)&FONT6x8,1,1+8*2,YELLOW ,RED   );
-    LCDString(" AaBbCcDdEeFfGgHhIiJj ",    (char *)&FONT6x8,1,1+8*3,RED    ,GREEN );
-    LCDString(" KkLlMmNnOoPpQqRrSsTt ",    (char *)&FONT6x8,1,1+8*4,MAGENTA,BLUE  );
-    LCDString("UuVvWwXxYyZz0123456789",    (char *)&FONT6x8,1,1+8*5,BLUE   ,YELLOW);
-    LCDString("`-=[]_;',./~!@#$%^&*()",    (char *)&FONT6x8,1,1+8*6,BLACK  ,CYAN  );
-    LCDString("     _+{}|:\\\"<>?     ",   (char *)&FONT6x8,1,1+8*7,BLUE  ,MAGENTA);
+    // test text on different colored backgrounds
+    LCDString(" The quick brown fox  ", (char *)&FONT6x8, 1, 1 + 8 * 0, WHITE, BLACK);
+    LCDString("  jumped over the     ", (char *)&FONT6x8, 1, 1 + 8 * 1, BLACK, WHITE);
+    LCDString("     lazy dog.        ", (char *)&FONT6x8, 1, 1 + 8 * 2, YELLOW, RED);
+    LCDString(" AaBbCcDdEeFfGgHhIiJj ", (char *)&FONT6x8, 1, 1 + 8 * 3, RED, GREEN);
+    LCDString(" KkLlMmNnOoPpQqRrSsTt ", (char *)&FONT6x8, 1, 1 + 8 * 4, MAGENTA, BLUE);
+    LCDString("UuVvWwXxYyZz0123456789", (char *)&FONT6x8, 1, 1 + 8 * 5, BLUE, YELLOW);
+    LCDString("`-=[]_;',./~!@#$%^&*()", (char *)&FONT6x8, 1, 1 + 8 * 6, BLACK, CYAN);
+    LCDString("     _+{}|:\\\"<>?     ", (char *)&FONT6x8, 1, 1 + 8 * 7, BLUE, MAGENTA);
 
     // color bands
-    LCDFill(0, 1+8* 8, 132, 8, BLACK);
-    LCDFill(0, 1+8* 9, 132, 8, WHITE);
-    LCDFill(0, 1+8*10, 132, 8, RED);
-    LCDFill(0, 1+8*11, 132, 8, GREEN);
-    LCDFill(0, 1+8*12, 132, 8, BLUE);
-    LCDFill(0, 1+8*13, 132, 8, YELLOW);
-    LCDFill(0, 1+8*14, 132, 8, CYAN);
-    LCDFill(0, 1+8*15, 132, 8, MAGENTA);
+    LCDFill(0, 1 + 8 * 8, 132, 8, BLACK);
+    LCDFill(0, 1 + 8 * 9, 132, 8, WHITE);
+    LCDFill(0, 1 + 8 * 10, 132, 8, RED);
+    LCDFill(0, 1 + 8 * 11, 132, 8, GREEN);
+    LCDFill(0, 1 + 8 * 12, 132, 8, BLUE);
+    LCDFill(0, 1 + 8 * 13, 132, 8, YELLOW);
+    LCDFill(0, 1 + 8 * 14, 132, 8, CYAN);
+    LCDFill(0, 1 + 8 * 15, 132, 8, MAGENTA);
 
 }

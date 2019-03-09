@@ -204,8 +204,8 @@ static int test_pk(bool verbose)
     printf("Testing public keys interfaces\n");
 
     pubk = crypto_pk_open(PK_RSA,
-            pk_N, sizeof(pk_N),
-            pk_E, sizeof(pk_E));
+                          pk_N, sizeof(pk_N),
+                          pk_E, sizeof(pk_E));
     if (!pubk) {
         fprintf(stderr, "ERROR: open public key.\n");
         return 1;
@@ -234,14 +234,14 @@ static int test_pk(bool verbose)
     free(tmp);
 
     privk = crypto_pk_open_priv(PK_RSA,
-            pk_N, sizeof(pk_N),
-            pk_E, sizeof(pk_E),
-            pk_D, sizeof(pk_D),
-            pk_P, sizeof(pk_P),
-            pk_Q, sizeof(pk_Q),
-            pk_dP, sizeof(pk_dP),
-            pk_dQ, sizeof(pk_dQ),
-            pk_I, sizeof(pk_I));
+                                pk_N, sizeof(pk_N),
+                                pk_E, sizeof(pk_E),
+                                pk_D, sizeof(pk_D),
+                                pk_P, sizeof(pk_P),
+                                pk_Q, sizeof(pk_Q),
+                                pk_dP, sizeof(pk_dP),
+                                pk_dQ, sizeof(pk_dQ),
+                                pk_I, sizeof(pk_I));
     if (!privk) {
         fprintf(stderr, "ERROR: open private key.\n");
         goto close_pub;

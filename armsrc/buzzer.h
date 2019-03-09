@@ -21,7 +21,7 @@
 #define note_8          0
 
 extern void Ring_BEE_ONCE(uint16_t music_note);
-extern void Ring_BEE_TIME(uint16_t music_note,uint16_t count);
+extern void Ring_BEE_TIME(uint16_t music_note, uint16_t count);
 extern void ring_2_7khz(uint16_t count);
 extern void Ring_ALL(uint16_t count);
 extern void Ring_Little_Star(uint16_t count);

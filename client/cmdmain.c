@@ -38,32 +38,37 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-command_t* getTopLevelCommandTable() {
+command_t *getTopLevelCommandTable()
+{
     return CommandTable;
 }
 
-int CmdRem(const char *Cmd) {
+int CmdRem(const char *Cmd)
+{
     char buf[22];
 
     memset(buf, 0x00, sizeof(buf));
     struct tm *curTime;
     time_t now = time(0);
     curTime = gmtime(&now);
-    strftime (buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", curTime); // ISO8601
+    strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", curTime);  // ISO8601
     PrintAndLogEx(NORMAL, "%s remark: %s", buf, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
+int CmdHelp(const char *Cmd)
+{
     CmdsHelp(CommandTable);
     return 0;
 }
 
-int CmdQuit(const char *Cmd) {
+int CmdQuit(const char *Cmd)
+{
     return 99;
 }
 
-int CmdRev(const char *Cmd) {
+int CmdRev(const char *Cmd)
+{
     CmdCrc(Cmd);
     return 0;
 }
@@ -72,6 +77,7 @@ int CmdRev(const char *Cmd) {
 // Entry point into our code: called whenever the user types a command and
 // then presses Enter, which the full command line that they typed.
 //-----------------------------------------------------------------------------
-int CommandReceived(char *Cmd) {
+int CommandReceived(char *Cmd)
+{
     return CmdsParse(CommandTable, Cmd);
 }

@@ -13,46 +13,45 @@
 #include "cmdmain.h"
 
 #define HANDLE_ERROR if (error_occured) { \
-  error_occured = 0;\
-  break;\
-}
+        error_occured = 0;\
+        break;\
+    }
 
 int main(int argc, char **argv)
 {
-  if (argc != 3 && argc != 4)
-  {
-    printf("\n\tusage: cli <command 1> <command 2> [logfile (default cli.log)]\n");
-    printf("\n");
-    printf("\texample: cli hi14asnoop hi14alist h14a.log\n");
-    printf("\n");
-    return -1;
-  }
-
-  usb_init();
-  if (argc == 4)
-    SetLogFilename(argv[3]);
-  else
-    SetLogFilename("cli.log");
-
-  return_on_error = 1;
-
-  while (1) {
-    while (!OpenProxmark()) { sleep(1); }
-    while (1) {
-      UsbCommand cmdbuf;
-      CommandReceived(argv[1]);
-      HANDLE_ERROR;
-      ReceiveCommand(&cmdbuf);
-      HANDLE_ERROR;
-      for (int i = 0; i < 5; ++i) {
-        ReceiveCommandPoll(&cmdbuf);
-      }
-      HANDLE_ERROR;
-      CommandReceived(argv[2]);
-      HANDLE_ERROR;
+    if (argc != 3 && argc != 4) {
+        printf("\n\tusage: cli <command 1> <command 2> [logfile (default cli.log)]\n");
+        printf("\n");
+        printf("\texample: cli hi14asnoop hi14alist h14a.log\n");
+        printf("\n");
+        return -1;
     }
-  }
 
-  CloseProxmark();
-  return 0;
+    usb_init();
+    if (argc == 4)
+        SetLogFilename(argv[3]);
+    else
+        SetLogFilename("cli.log");
+
+    return_on_error = 1;
+
+    while (1) {
+        while (!OpenProxmark()) { sleep(1); }
+        while (1) {
+            UsbCommand cmdbuf;
+            CommandReceived(argv[1]);
+            HANDLE_ERROR;
+            ReceiveCommand(&cmdbuf);
+            HANDLE_ERROR;
+            for (int i = 0; i < 5; ++i) {
+                ReceiveCommandPoll(&cmdbuf);
+            }
+            HANDLE_ERROR;
+            CommandReceived(argv[2]);
+            HANDLE_ERROR;
+        }
+    }
+
+    CloseProxmark();
+    return 0;
 }

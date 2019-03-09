@@ -51,7 +51,7 @@ void dump_buffer(const unsigned char *ptr, size_t len, FILE *f, int level)
         }
         fprintf(f, " |");
         for (j = 0; j < 16 && i + j < len; j++) {
-            fprintf(f, "%c", (ptr[i+j] >= 0x20 && ptr[i+j] < 0x7f) ? ptr[i+j] : '.' );
+            fprintf(f, "%c", (ptr[i + j] >= 0x20 && ptr[i + j] < 0x7f) ? ptr[i + j] : '.');
         }
         fprintf(f, "\n");
     }

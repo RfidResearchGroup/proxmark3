@@ -12,7 +12,7 @@
 #ifndef CMDLFPCF7931_H__
 #define CMDLFPCF7931_H__
 
-struct pcf7931_config{
+struct pcf7931_config {
     uint8_t Pwd[7];
     uint16_t InitDelay;
     int16_t OffsetWidth;

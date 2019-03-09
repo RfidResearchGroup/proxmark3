@@ -59,10 +59,10 @@ extern "C" {
  *
  * \returns        0 on success, or a MBEDTLS_ERR_XXX code if verification fails.
  */
-int mbedtls_pkcs5_pbes2( const mbedtls_asn1_buf *pbe_params, int mode,
-                 const unsigned char *pwd,  size_t pwdlen,
-                 const unsigned char *data, size_t datalen,
-                 unsigned char *output );
+int mbedtls_pkcs5_pbes2(const mbedtls_asn1_buf *pbe_params, int mode,
+                        const unsigned char *pwd,  size_t pwdlen,
+                        const unsigned char *data, size_t datalen,
+                        unsigned char *output);
 
 /**
  * \brief          PKCS#5 PBKDF2 using HMAC
@@ -78,17 +78,17 @@ int mbedtls_pkcs5_pbes2( const mbedtls_asn1_buf *pbe_params, int mode,
  *
  * \returns        0 on success, or a MBEDTLS_ERR_XXX code if verification fails.
  */
-int mbedtls_pkcs5_pbkdf2_hmac( mbedtls_md_context_t *ctx, const unsigned char *password,
-                       size_t plen, const unsigned char *salt, size_t slen,
-                       unsigned int iteration_count,
-                       uint32_t key_length, unsigned char *output );
+int mbedtls_pkcs5_pbkdf2_hmac(mbedtls_md_context_t *ctx, const unsigned char *password,
+                              size_t plen, const unsigned char *salt, size_t slen,
+                              unsigned int iteration_count,
+                              uint32_t key_length, unsigned char *output);
 
 /**
  * \brief          Checkup routine
  *
  * \return         0 if successful, or 1 if the test failed
  */
-int mbedtls_pkcs5_self_test( int verbose );
+int mbedtls_pkcs5_self_test(int verbose);
 
 #ifdef __cplusplus
 }

@@ -78,7 +78,7 @@ void LFSetupFPGAForADC(int divisor, bool lf_field);
  */
 void setSamplingConfig(sample_config *sc);
 
-sample_config * getSamplingConfig();
+sample_config *getSamplingConfig();
 
 void printConfig();
 

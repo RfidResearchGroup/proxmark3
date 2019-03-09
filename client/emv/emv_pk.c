@@ -31,12 +31,12 @@
 #include <sys/types.h>
 
 #define BCD(c) (((c) >= '0' && (c) <= '9') ? ((c) - '0') : \
-        -1)
+                -1)
 
 #define HEX(c) (((c) >= '0' && (c) <= '9') ? ((c) - '0') : \
-        ((c) >= 'A' && (c) <= 'F') ? ((c) - 'A' + 10) : \
-        ((c) >= 'a' && (c) <= 'f') ? ((c) - 'a' + 10) : \
-        -1)
+                ((c) >= 'A' && (c) <= 'F') ? ((c) - 'A' + 10) : \
+                ((c) >= 'a' && (c) <= 'f') ? ((c) - 'a' + 10) : \
+                -1)
 
 #define TOHEX(v) ((v) < 10 ? (v) + '0' : (v) - 10 + 'a')
 
@@ -180,8 +180,8 @@ struct emv_pk *emv_pk_parse_pk(char *buf)
         goto out;
     buf += l;
 
-    r->modulus = malloc(2048/8);
-    l = emv_pk_read_bin(buf, r->modulus, 2048/8, &r->mlen);
+    r->modulus = malloc(2048 / 8);
+    l = emv_pk_read_bin(buf, r->modulus, 2048 / 8, &r->mlen);
     if (l <= 0)
         goto out2;
     buf += l;
@@ -270,9 +270,9 @@ char *emv_pk_dump_pk(const struct emv_pk *pk)
     out[outpos++] = TOHEX((pk->expire >> 20) & 0xf);
     out[outpos++] = TOHEX((pk->expire >> 16) & 0xf);
     out[outpos++] = TOHEX((pk->expire >> 12) & 0xf);
-    out[outpos++] = TOHEX((pk->expire >> 8 ) & 0xf);
-    out[outpos++] = TOHEX((pk->expire >> 4 ) & 0xf);
-    out[outpos++] = TOHEX((pk->expire >> 0 ) & 0xf);
+    out[outpos++] = TOHEX((pk->expire >> 8) & 0xf);
+    out[outpos++] = TOHEX((pk->expire >> 4) & 0xf);
+    out[outpos++] = TOHEX((pk->expire >> 0) & 0xf);
     out[outpos++] = ' ';
 
     if (pk->pk_algo == PK_RSA) {
@@ -321,7 +321,7 @@ char *emv_pk_dump_pk(const struct emv_pk *pk)
         goto err;
     outpos += rc;
 
-    out[outpos-1] = '\0';
+    out[outpos - 1] = '\0';
 
     return out;
 
@@ -389,10 +389,10 @@ void emv_pk_free(struct emv_pk *pk)
 }
 
 static struct emv_pk *emv_pk_get_ca_pk_from_file(const char *fname,
-        const unsigned char *rid,
-        unsigned char idx)
+                                                 const unsigned char *rid,
+                                                 unsigned char idx)
 {
-    if  (!fname)
+    if (!fname)
         return NULL;
 
     FILE *f = fopen(fname, "r");
@@ -431,13 +431,13 @@ char *emv_pk_get_ca_pk_file(const char *dirname, const unsigned char *rid, unsig
 
     char *filename;
     int ret = asprintf(&filename, "%s/%02hhx%02hhx%02hhx%02hhx%02hhx_%02hhx.0",
-            dirname,
-            rid[0],
-            rid[1],
-            rid[2],
-            rid[3],
-            rid[4],
-            idx);
+                       dirname,
+                       rid[0],
+                       rid[1],
+                       rid[2],
+                       rid[3],
+                       rid[4],
+                       idx);
 
     if (ret <= 0)
         return NULL;
@@ -452,12 +452,12 @@ char *emv_pk_get_ca_pk_rid_file(const char *dirname, const unsigned char *rid)
 
     char *filename;
     int ret = asprintf(&filename, "%s/%02hhx%02hhx%02hhx%02hhx%02hhx.pks",
-            dirname,
-            rid[0],
-            rid[1],
-            rid[2],
-            rid[3],
-            rid[4]);
+                       dirname,
+                       rid[0],
+                       rid[1],
+                       rid[2],
+                       rid[3],
+                       rid[4]);
 
     if (ret <= 0)
         return NULL;
@@ -469,22 +469,22 @@ struct emv_pk *emv_pk_get_ca_pk(const unsigned char *rid, unsigned char idx)
 {
     struct emv_pk *pk = NULL;
 
-/*  if (!pk) {
-        char *fname = emv_pk_get_ca_pk_file(NULL, rid, idx);
-        if (fname) {
-            pk = emv_pk_get_ca_pk_from_file(fname, rid, idx);
-            free(fname);
+    /*  if (!pk) {
+            char *fname = emv_pk_get_ca_pk_file(NULL, rid, idx);
+            if (fname) {
+                pk = emv_pk_get_ca_pk_from_file(fname, rid, idx);
+                free(fname);
+            }
         }
-    }
 
-    if (!pk) {
-        char *fname = emv_pk_get_ca_pk_rid_file(NULL, rid);
-        if (fname) {
-            pk = emv_pk_get_ca_pk_from_file(fname, rid, idx);
-            free(fname);
+        if (!pk) {
+            char *fname = emv_pk_get_ca_pk_rid_file(NULL, rid);
+            if (fname) {
+                pk = emv_pk_get_ca_pk_from_file(fname, rid, idx);
+                free(fname);
+            }
         }
-    }
-*/
+    */
     if (!pk) {
         const char *relfname = "emv/capk.txt";
 
@@ -498,13 +498,13 @@ struct emv_pk *emv_pk_get_ca_pk(const unsigned char *rid, unsigned char idx)
         return NULL;
 
     printf("Verifying CA PK for %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx %zd bits...",
-                pk->rid[0],
-                pk->rid[1],
-                pk->rid[2],
-                pk->rid[3],
-                pk->rid[4],
-                pk->index,
-                pk->mlen * 8);
+           pk->rid[0],
+           pk->rid[1],
+           pk->rid[2],
+           pk->rid[3],
+           pk->rid[4],
+           pk->index,
+           pk->mlen * 8);
     if (emv_pk_verify(pk)) {
         printf("OK\n");
 

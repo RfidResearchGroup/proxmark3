@@ -107,7 +107,7 @@ typedef struct internal_state {
     Byte  method;        /* can only be DEFLATED */
     int   last_flush;    /* value of flush param for previous deflate call */
 
-                /* used by deflate.c: */
+    /* used by deflate.c: */
 
     uInt  w_size;        /* LZ77 window size (32K by default) */
     uInt  w_bits;        /* log2(w_size)  (8..16) */
@@ -190,27 +190,27 @@ typedef struct internal_state {
 
     int nice_match; /* Stop searching when current match exceeds this */
 
-                /* used by trees.c: */
+    /* used by trees.c: */
     /* Didn't use ct_data typedef below to suppress compiler warning */
     struct ct_data_s dyn_ltree[HEAP_SIZE];   /* literal and length tree */
-    struct ct_data_s dyn_dtree[2*D_CODES+1]; /* distance tree */
-    struct ct_data_s bl_tree[2*BL_CODES+1];  /* Huffman tree for bit lengths */
+    struct ct_data_s dyn_dtree[2 * D_CODES + 1]; /* distance tree */
+    struct ct_data_s bl_tree[2 * BL_CODES + 1]; /* Huffman tree for bit lengths */
 
     struct tree_desc_s l_desc;               /* desc. for literal tree */
     struct tree_desc_s d_desc;               /* desc. for distance tree */
     struct tree_desc_s bl_desc;              /* desc. for bit length tree */
 
-    ush bl_count[MAX_BITS+1];
+    ush bl_count[MAX_BITS + 1];
     /* number of codes at each bit length for an optimal tree */
 
-    int heap[2*L_CODES+1];      /* heap used to build the Huffman trees */
+    int heap[2 * L_CODES + 1];  /* heap used to build the Huffman trees */
     int heap_len;               /* number of elements in the heap */
     int heap_max;               /* element of largest frequency */
     /* The sons of heap[n] are heap[2*n] and heap[2*n+1]. heap[0] is not used.
      * The same heap array is used to build all trees.
      */
 
-    uch depth[2*L_CODES+1];
+    uch depth[2 * L_CODES + 1];
     /* Depth of each subtree used as tie breaker for trees of equal frequency
      */
 
@@ -292,18 +292,18 @@ typedef struct internal_state {
 /* Number of bytes after end of data in window to initialize in order to avoid
    memory checker errors from longest match routines */
 
-        /* in trees.c */
+/* in trees.c */
 void ZLIB_INTERNAL _tr_init OF((deflate_state *s));
 int ZLIB_INTERNAL _tr_tally OF((deflate_state *s, unsigned dist, unsigned lc));
 void ZLIB_INTERNAL _tr_flush_block OF((deflate_state *s, charf *buf,
-                        ulg stored_len, int last));
+                                       ulg stored_len, int last));
 void ZLIB_INTERNAL _tr_flush_bits OF((deflate_state *s));
 void ZLIB_INTERNAL _tr_align OF((deflate_state *s));
 void ZLIB_INTERNAL _tr_stored_block OF((deflate_state *s, charf *buf,
-                        ulg stored_len, int last));
+                                        ulg stored_len, int last));
 
 #define d_code(dist) \
-   ((dist) < 256 ? _dist_code[dist] : _dist_code[256+((dist)>>7)])
+    ((dist) < 256 ? _dist_code[dist] : _dist_code[256+((dist)>>7)])
 /* Mapping from a distance to a distance code. dist is the distance - 1 and
  * must not have side effects. _dist_code[256] and _dist_code[257] are never
  * used.
@@ -313,34 +313,34 @@ void ZLIB_INTERNAL _tr_stored_block OF((deflate_state *s, charf *buf,
 /* Inline versions of _tr_tally for speed: */
 
 #if defined(GEN_TREES_H) || !defined(STDC)
-  extern uch ZLIB_INTERNAL _length_code[];
-  extern uch ZLIB_INTERNAL _dist_code[];
+extern uch ZLIB_INTERNAL _length_code[];
+extern uch ZLIB_INTERNAL _dist_code[];
 #else
-  extern const uch ZLIB_INTERNAL _length_code[];
-  extern const uch ZLIB_INTERNAL _dist_code[];
+extern const uch ZLIB_INTERNAL _length_code[];
+extern const uch ZLIB_INTERNAL _dist_code[];
 #endif
 
 # define _tr_tally_lit(s, c, flush) \
-  { uch cc = (c); \
-    s->d_buf[s->last_lit] = 0; \
-    s->l_buf[s->last_lit++] = cc; \
-    s->dyn_ltree[cc].Freq++; \
-    flush = (s->last_lit == s->lit_bufsize-1); \
-   }
+    { uch cc = (c); \
+        s->d_buf[s->last_lit] = 0; \
+        s->l_buf[s->last_lit++] = cc; \
+        s->dyn_ltree[cc].Freq++; \
+        flush = (s->last_lit == s->lit_bufsize-1); \
+    }
 # define _tr_tally_dist(s, distance, length, flush) \
-  { uch len = (length); \
-    ush dist = (distance); \
-    s->d_buf[s->last_lit] = dist; \
-    s->l_buf[s->last_lit++] = len; \
-    dist--; \
-    s->dyn_ltree[_length_code[len]+LITERALS+1].Freq++; \
-    s->dyn_dtree[d_code(dist)].Freq++; \
-    flush = (s->last_lit == s->lit_bufsize-1); \
-  }
+    { uch len = (length); \
+        ush dist = (distance); \
+        s->d_buf[s->last_lit] = dist; \
+        s->l_buf[s->last_lit++] = len; \
+        dist--; \
+        s->dyn_ltree[_length_code[len]+LITERALS+1].Freq++; \
+        s->dyn_dtree[d_code(dist)].Freq++; \
+        flush = (s->last_lit == s->lit_bufsize-1); \
+    }
 #else
 # define _tr_tally_lit(s, c, flush) flush = _tr_tally(s, 0, c)
 # define _tr_tally_dist(s, distance, length, flush) \
-              flush = _tr_tally(s, distance, length)
+    flush = _tr_tally(s, distance, length)
 #endif
 
 #endif /* DEFLATE_H */

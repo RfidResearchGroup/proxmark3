@@ -47,7 +47,7 @@ extern int EM4x50Read(const char *Cmd, bool verbose);
 bool EM4x05IsBlock0(uint32_t *word);
 
 extern void printEM410x(uint32_t hi, uint64_t id);
-extern int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo );
+extern int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo);
 extern int AskEm410xDemod(const char *Cmd, uint32_t *hi, uint64_t *lo, bool verbose);
 
 extern int usage_lf_em410x_sim(void);

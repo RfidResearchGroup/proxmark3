@@ -257,9 +257,10 @@ const APDUCode APDUCodeTable[] = {
     {"9FXX",     APDUCODE_TYPE_NONE,         "Command successfully executed; 'xx' bytes of data are available and can be requested using GET RESPONSE."},
     {"9XXX",     APDUCODE_TYPE_NONE,         "Application related status, (ISO 7816-3)"}
 };
-const size_t APDUCodeTableLen = sizeof(APDUCodeTable)/sizeof(APDUCode);
+const size_t APDUCodeTableLen = sizeof(APDUCodeTable) / sizeof(APDUCode);
 
-int CodeCmp(const char *code1, const char *code2) {
+int CodeCmp(const char *code1, const char *code2)
+{
     int xsymb = 0;
     int cmp = 0;
     for (int i = 0; i < 4; i++) {
@@ -277,7 +278,8 @@ int CodeCmp(const char *code1, const char *code2) {
     return -1;
 }
 
-const APDUCode* const GetAPDUCode(uint8_t sw1, uint8_t sw2) {
+const APDUCode *const GetAPDUCode(uint8_t sw1, uint8_t sw2)
+{
     char buf[6] = {0};
     int res;
     int mineq = APDUCodeTableLen;
@@ -308,7 +310,8 @@ const APDUCode* const GetAPDUCode(uint8_t sw1, uint8_t sw2) {
     return NULL;
 }
 
-const char* GetAPDUCodeDescription(uint8_t sw1, uint8_t sw2) {
+const char *GetAPDUCodeDescription(uint8_t sw1, uint8_t sw2)
+{
     const APDUCode *cd = GetAPDUCode(sw1, sw2);
     if (cd)
         return cd->Description;

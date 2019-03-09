@@ -54,8 +54,7 @@ int unitTests()
     errors += testMAC();
     errors += doKeyTests(0);
     errors += testElite();
-    if(errors)
-    {
+    if (errors) {
         PrintAndLogDevice(NORMAL, "OBS! There were errors!!!");
     }
     return errors;
@@ -78,7 +77,7 @@ int showHelp()
     return 0;
 }
 
-int main (int argc, char **argv)
+int main(int argc, char **argv)
 {
     PrintAndLogDevice(NORMAL, "IClass Cipher version 1.2, Copyright (C) 2014 Martin Holst Swende\n");
     PrintAndLogDevice(NORMAL, "Comes with ABSOLUTELY NO WARRANTY");
@@ -96,28 +95,27 @@ int main (int argc, char **argv)
 
     char *fileName = NULL;
     int c;
-    while ((c = getopt (argc, argv, "thf:")) != -1)
-      switch (c)
-        {
-        case 't':
-          return unitTests();
-        case 'h':
-          return showHelp();
-        case 'f':
-          fileName = optarg;
-          return bruteforceFileNoKeys(fileName);
-        case '?':
-          if (optopt == 'f')
-            fprintf (stderr, "Option -%c requires an argument.\n", optopt);
-          else if (isprint (optopt))
-            fprintf (stderr, "Unknown option `-%c'.\n", optopt);
-          else
-            fprintf (stderr,
-                     "Unknown option character `\\x%x'.\n",
-                     optopt);
-          return 1;
-        //default:
-          //showHelp();
+    while ((c = getopt(argc, argv, "thf:")) != -1)
+        switch (c) {
+            case 't':
+                return unitTests();
+            case 'h':
+                return showHelp();
+            case 'f':
+                fileName = optarg;
+                return bruteforceFileNoKeys(fileName);
+            case '?':
+                if (optopt == 'f')
+                    fprintf(stderr, "Option -%c requires an argument.\n", optopt);
+                else if (isprint(optopt))
+                    fprintf(stderr, "Unknown option `-%c'.\n", optopt);
+                else
+                    fprintf(stderr,
+                            "Unknown option character `\\x%x'.\n",
+                            optopt);
+                return 1;
+                //default:
+                //showHelp();
         }
     showHelp();
     return 0;

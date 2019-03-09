@@ -136,7 +136,7 @@ extern void setbmp(void);
 typedef struct {
     unsigned long length; /* number of significant bits */
     bmp_t *bitmap;        /* bitmap, MSB first, */
-                          /* left-justified in each word */
+    /* left-justified in each word */
 } poly_t;
 
 extern poly_t filtop(FILE *input, unsigned long length, int flags, int bperhx);

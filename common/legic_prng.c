@@ -27,37 +27,42 @@ struct lfsr {
 // it sets b to 0 aswell to make sure we get a all zero keystream out
 // which is used in the initialisation phase sending the IV
 //
-void legic_prng_init(uint8_t iv) {
+void legic_prng_init(uint8_t iv)
+{
     lfsr.a = iv;
     lfsr.b = 0;  // hack to get a always 0 keystream
     lfsr.c = 0;
-    if(iv)
+    if (iv)
         lfsr.b = (iv << 1) | 1;
 }
 
-void legic_prng_forward(int count) {
+void legic_prng_forward(int count)
+{
     if (count == 0) return;
 
     lfsr.c += count;
-    while(count--) {
+    while (count--) {
         // According: http://www.proxmark.org/forum/viewtopic.php?pid=5437#p5437
         lfsr.a = (lfsr.a >> 1 | (lfsr.a ^ lfsr.a >> 6) << 6) & 0x7F;
         lfsr.b = lfsr.b >> 1 | (lfsr.b ^ lfsr.b >> 2 ^ lfsr.b >> 3 ^ lfsr.b >> 7) << 7;
     }
 }
 
-uint32_t legic_prng_count() {
+uint32_t legic_prng_count()
+{
     return lfsr.c;
 }
 
-uint8_t legic_prng_get_bit() {
-    uint8_t idx = 7 - ( (lfsr.a & 4) | (lfsr.a >> 2 & 2) | (lfsr.a >> 4 & 1) );
+uint8_t legic_prng_get_bit()
+{
+    uint8_t idx = 7 - ((lfsr.a & 4) | (lfsr.a >> 2 & 2) | (lfsr.a >> 4 & 1));
     return lfsr.b >> idx & 1;
 }
 
-uint32_t legic_prng_get_bits(uint8_t len){
+uint32_t legic_prng_get_bits(uint8_t len)
+{
     uint32_t a = 0;
-    for(uint8_t i = 0; i < len; ++i) {
+    for (uint8_t i = 0; i < len; ++i) {
         a |= legic_prng_get_bit() << i;
         legic_prng_forward(1);
     }

@@ -21,61 +21,62 @@
 
 static int CmdHelp(const char *Cmd);
 
-int CmdTIDemod(const char *Cmd) {
-  /* MATLAB as follows:
-    f_s = 2000000;  % sampling frequency
-    f_l = 123200;   % low FSK tone
-    f_h = 134200;   % high FSK tone
+int CmdTIDemod(const char *Cmd)
+{
+    /* MATLAB as follows:
+      f_s = 2000000;  % sampling frequency
+      f_l = 123200;   % low FSK tone
+      f_h = 134200;   % high FSK tone
 
-    T_l = 119e-6;   % low bit duration
-    T_h = 130e-6;   % high bit duration
+      T_l = 119e-6;   % low bit duration
+      T_h = 130e-6;   % high bit duration
 
-    l = 2*pi*ones(1, floor(f_s*T_l))*(f_l/f_s);
-    h = 2*pi*ones(1, floor(f_s*T_h))*(f_h/f_s);
+      l = 2*pi*ones(1, floor(f_s*T_l))*(f_l/f_s);
+      h = 2*pi*ones(1, floor(f_s*T_h))*(f_h/f_s);
 
-    l = sign(sin(cumsum(l)));
-    h = sign(sin(cumsum(h)));
-  */
+      l = sign(sin(cumsum(l)));
+      h = sign(sin(cumsum(h)));
+    */
 
-  // 2M*16/134.2k = 238
-  static const int LowTone[] = {
-    1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1, 1,    -1, -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1, 1,    -1, -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1, 1,    -1, -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1, 1,    -1, -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1, 1,    -1, -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1, 1,    -1, -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1, 1,    -1, -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1, 1,    -1, -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1, 1,    -1, -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1, 1,    -1, -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1, 1,    -1, -1
-  };
-  // 2M*16/123.2k = 260
-  static const int HighTone[] = {
-    1, 1, 1, 1, 1, 1, 1, 1,   -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1, 1,   -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1,      -1, -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1,      -1, -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1,      -1, -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1,      -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1, 1,   -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1, 1,   -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1,      -1, -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1,      -1, -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1,      -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1, 1,   -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1, 1,   -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1, 1,   -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1,      -1, -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1,      -1, -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1,      -1, -1, -1, -1, -1, -1, -1,
-    1, 1, 1, 1, 1, 1, 1, 1
-  };
+    // 2M*16/134.2k = 238
+    static const int LowTone[] = {
+        1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1, 1,    -1, -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1, 1,    -1, -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1, 1,    -1, -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1, 1,    -1, -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1, 1,    -1, -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1, 1,    -1, -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1, 1,    -1, -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1, 1,    -1, -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1, 1,    -1, -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1, 1,    -1, -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1, 1,    -1, -1
+    };
+    // 2M*16/123.2k = 260
+    static const int HighTone[] = {
+        1, 1, 1, 1, 1, 1, 1, 1,   -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1, 1,   -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1,      -1, -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1,      -1, -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1,      -1, -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1,      -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1, 1,   -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1, 1,   -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1,      -1, -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1,      -1, -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1,      -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1, 1,   -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1, 1,   -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1, 1,   -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1,      -1, -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1,      -1, -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1,      -1, -1, -1, -1, -1, -1, -1,
+        1, 1, 1, 1, 1, 1, 1, 1
+    };
 
     save_restoreGB(GRAPH_SAVE);
 
@@ -93,10 +94,10 @@ int CmdTIDemod(const char *Cmd) {
         highSum = 0;;
 
         for (j = 0; j < lowLen; j++) {
-            lowSum += LowTone[j] * GraphBuffer[i+j];
+            lowSum += LowTone[j] * GraphBuffer[i + j];
         }
         for (j = 0; j < highLen; j++) {
-            highSum += HighTone[j] * GraphBuffer[i+j];
+            highSum += HighTone[j] * GraphBuffer[i + j];
         }
         lowSum = abs((100 * lowSum) / lowLen);
         highSum = abs((100 * highSum) / highLen);
@@ -111,10 +112,10 @@ int CmdTIDemod(const char *Cmd) {
         highTot = 0;
         // 16 and 15 are f_s divided by f_l and f_h, rounded
         for (j = 0; j < 16; j++) {
-            lowTot += (GraphBuffer[i+j] & 0xffff);
+            lowTot += (GraphBuffer[i + j] & 0xffff);
         }
         for (j = 0; j < 15; j++) {
-            highTot += (GraphBuffer[i+j] >> 16);
+            highTot += (GraphBuffer[i + j] >> 16);
         }
         GraphBuffer[i] = lowTot - highTot;
     }
@@ -141,12 +142,12 @@ int CmdTIDemod(const char *Cmd) {
         int j;
         int dec = 0;
         // searching 17 consecutive lows
-        for (j = 0; j < 17*lowLen; j++) {
-            dec -= GraphBuffer[i+j];
+        for (j = 0; j < 17 * lowLen; j++) {
+            dec -= GraphBuffer[i + j];
         }
         // searching 7 consecutive highs
-        for (; j < 17*lowLen + 6*highLen; j++) {
-            dec += GraphBuffer[i+j];
+        for (; j < 17 * lowLen + 6 * highLen; j++) {
+            dec += GraphBuffer[i + j];
         }
         if (dec > max) {
             max = dec;
@@ -157,7 +158,7 @@ int CmdTIDemod(const char *Cmd) {
     // place a marker in the buffer to visually aid location
     // of the start of sync
     GraphBuffer[maxPos] = 800;
-    GraphBuffer[maxPos+1] = -800;
+    GraphBuffer[maxPos + 1] = -800;
 
     // advance pointer to start of actual data stream (after 16 pre and 8 start bits)
     maxPos += 17 * lowLen;
@@ -166,46 +167,46 @@ int CmdTIDemod(const char *Cmd) {
     // place a marker in the buffer to visually aid location
     // of the end of sync
     GraphBuffer[maxPos] = 800;
-    GraphBuffer[maxPos+1] = -800;
+    GraphBuffer[maxPos + 1] = -800;
 
     PrintAndLogEx(DEBUG, "actual data bits start at sample %d", maxPos);
     PrintAndLogEx(DEBUG, "length %d/%d", highLen, lowLen);
 
-    uint8_t bits[1+64+16+8+16];
-    bits[sizeof(bits)-1] = '\0';
+    uint8_t bits[1 + 64 + 16 + 8 + 16];
+    bits[sizeof(bits) - 1] = '\0';
 
     uint32_t shift3 = 0x7e000000, shift2 = 0, shift1 = 0, shift0 = 0;
 
-    for (i = 0; i < ARRAYLEN(bits)-1; i++) {
+    for (i = 0; i < ARRAYLEN(bits) - 1; i++) {
         int high = 0;
         int low = 0;
         int j;
         for (j = 0; j < lowLen; j++) {
-            low -= GraphBuffer[maxPos+j];
+            low -= GraphBuffer[maxPos + j];
         }
         for (j = 0; j < highLen; j++) {
-            high += GraphBuffer[maxPos+j];
+            high += GraphBuffer[maxPos + j];
         }
 
         if (high > low) {
             bits[i] = '1';
             maxPos += highLen;
             // bitstream arrives lsb first so shift right
-            shift3 |= (1<<31);
+            shift3 |= (1 << 31);
         } else {
             bits[i] = '.';
             maxPos += lowLen;
         }
 
         // 128 bit right shift register
-        shift0 = (shift0>>1) | (shift1 << 31);
-        shift1 = (shift1>>1) | (shift2 << 31);
-        shift2 = (shift2>>1) | (shift3 << 31);
+        shift0 = (shift0 >> 1) | (shift1 << 31);
+        shift1 = (shift1 >> 1) | (shift2 << 31);
+        shift2 = (shift2 >> 1) | (shift3 << 31);
         shift3 >>= 1;
 
         // place a marker in the buffer between bits to visually aid location
         GraphBuffer[maxPos] = 800;
-        GraphBuffer[maxPos+1] = -800;
+        GraphBuffer[maxPos + 1] = -800;
     }
 
     RepaintGraphWindow();
@@ -213,16 +214,14 @@ int CmdTIDemod(const char *Cmd) {
     PrintAndLogEx(INFO, "raw tag bits = %s", bits);
 
     TagType = (shift3 >> 8) & 0xFF;
-    if ( TagType != ((shift0 >> 16) & 0xFF) ) {
+    if (TagType != ((shift0 >> 16) & 0xFF)) {
         PrintAndLogEx(WARNING, "Error: start and stop bits do not match!");
         goto out;
-    }
-    else if (TagType == 0x7E) {
+    } else if (TagType == 0x7E) {
         PrintAndLogEx(INFO, "Readonly TI tag detected.");
         retval = 1;
         goto out;
-    }
-    else if (TagType == 0xFE) {
+    } else if (TagType == 0xFE) {
         PrintAndLogEx(INFO, "Rewriteable TI tag detected.");
 
         // put 64 bit data into shift1 and shift0
@@ -236,8 +235,8 @@ int CmdTIDemod(const char *Cmd) {
         shift3 >>= 16;
 
         // only 15 bits compare, last bit of ident is not valid
-        if ( (shift3 ^ shift0) & 0x7FFF ) {
-          PrintAndLogEx(WARNING, "Error: Ident mismatch!");
+        if ((shift3 ^ shift0) & 0x7FFF) {
+            PrintAndLogEx(WARNING, "Error: Ident mismatch!");
         }
         // WARNING the order of the bytes in which we calc crc below needs checking
         // i'm 99% sure the crc algorithm is correct, but it may need to eat the
@@ -256,29 +255,29 @@ int CmdTIDemod(const char *Cmd) {
 
         //crc =  crc16_ccitt(message, sizeof(message);
 
-        char *crcStr = (crc == (shift2 & 0xFFFF) ) ? "Passed" : "Failed";
+        char *crcStr = (crc == (shift2 & 0xFFFF)) ? "Passed" : "Failed";
 
-        PrintAndLogEx(INFO, "Tag data = %08X%08X  [Crc %04X %s]", shift1, shift0, crc, crcStr );
+        PrintAndLogEx(INFO, "Tag data = %08X%08X  [Crc %04X %s]", shift1, shift0, crc, crcStr);
 
         if (crc != (shift2 & 0xFFFF))
             PrintAndLogEx(WARNING, "Error: CRC mismatch, calculated %04X, got %04X", crc, shift2 & 0xFFFF);
 
         retval = 1;
         goto out;
-    }
-    else {
+    } else {
         PrintAndLogEx(WARNING, "Unknown tag type.");
     }
 
 out:
-    if ( retval == 0)
+    if (retval == 0)
         save_restoreGB(GRAPH_RESTORE);
 
     return retval;
 }
 
 // read a TI tag and return its ID
-int CmdTIRead(const char *Cmd) {
+int CmdTIRead(const char *Cmd)
+{
     UsbCommand c = {CMD_READ_TI_TYPE};
     clearCommandBuffer();
     SendCommand(&c);
@@ -286,7 +285,8 @@ int CmdTIRead(const char *Cmd) {
 }
 
 // write new data to a r/w TI tag
-int CmdTIWrite(const char *Cmd) {
+int CmdTIWrite(const char *Cmd)
+{
     int res = 0;
     UsbCommand c = {CMD_WRITE_TI_TYPE};
     res = sscanf(Cmd, "%012" SCNx64 " %012" SCNx64 " %012" SCNx64 "", &c.arg[0], &c.arg[1], &c.arg[2]);
@@ -311,13 +311,15 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFTI(const char *Cmd){
+int CmdLFTI(const char *Cmd)
+{
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd){
+int CmdHelp(const char *Cmd)
+{
     CmdsHelp(CommandTable);
     return 0;
 }

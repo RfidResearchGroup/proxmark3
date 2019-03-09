@@ -95,19 +95,21 @@ static madAIDDescr madKnownClusterCodes[] = {
 
 static const char unknownAID[] = "";
 
-static const char *GetAIDDescription(uint16_t AID) {
-    for(int i = 0; i < ARRAYLEN(madKnownAIDs); i++)
+static const char *GetAIDDescription(uint16_t AID)
+{
+    for (int i = 0; i < ARRAYLEN(madKnownAIDs); i++)
         if (madKnownAIDs[i].AID == AID)
             return madKnownAIDs[i].Description;
 
-    for(int i = 0; i < ARRAYLEN(madKnownClusterCodes); i++)
+    for (int i = 0; i < ARRAYLEN(madKnownClusterCodes); i++)
         if (madKnownClusterCodes[i].AID == (AID >> 8)) // high byte - cluster code
             return madKnownClusterCodes[i].Description;
 
     return unknownAID;
 }
 
-int madCRCCheck(uint8_t *sector, bool verbose, int MADver) {
+int madCRCCheck(uint8_t *sector, bool verbose, int MADver)
+{
     if (MADver == 1) {
         uint8_t crc = CRC8Mad(&sector[16 + 1], 15 + 16);
         if (crc != sector[16]) {
@@ -125,14 +127,16 @@ int madCRCCheck(uint8_t *sector, bool verbose, int MADver) {
     return 0;
 }
 
-uint16_t madGetAID(uint8_t *sector, int MADver, int sectorNo) {
+uint16_t madGetAID(uint8_t *sector, int MADver, int sectorNo)
+{
     if (MADver == 1)
         return (sector[16 + 2 + (sectorNo - 1) * 2] << 8) + (sector[16 + 2 + (sectorNo - 1) * 2 + 1]);
     else
         return (sector[2 + (sectorNo - 1) * 2] << 8) + (sector[2 + (sectorNo - 1) * 2 + 1]);
 }
 
-int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) {
+int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2)
+{
     int res = 0;
 
     if (!sector0)
@@ -186,7 +190,8 @@ int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) 
     return res;
 }
 
-int MADDecode(uint8_t *sector0, uint8_t *sector10, uint16_t *mad, size_t *madlen) {
+int MADDecode(uint8_t *sector0, uint8_t *sector10, uint16_t *mad, size_t *madlen)
+{
     *madlen = 0;
     bool haveMAD2 = false;
     MADCheck(sector0, sector10, false, &haveMAD2);
@@ -211,7 +216,8 @@ int MADDecode(uint8_t *sector0, uint8_t *sector10, uint16_t *mad, size_t *madlen
 }
 
 
-int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2) {
+int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2)
+{
 
     // check MAD1 only
     MADCheck(sector, NULL, verbose, haveMAD2);
@@ -228,7 +234,7 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2) {
         PrintAndLogEx(WARNING, "Info byte error");
 
     PrintAndLogEx(NORMAL, "00 MAD1");
-    for(int i = 1; i < 16; i++) {
+    for (int i = 1; i < 16; i++) {
         uint16_t AID = madGetAID(sector, 1, i);
         PrintAndLogEx(NORMAL, "%02d [%04X] %s", i, AID, GetAIDDescription(AID));
     };
@@ -236,7 +242,8 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2) {
     return 0;
 };
 
-int MAD2DecodeAndPrint(uint8_t *sector, bool verbose) {
+int MAD2DecodeAndPrint(uint8_t *sector, bool verbose)
+{
     PrintAndLogEx(NORMAL, "16 MAD2");
 
     int res = madCRCCheck(sector, true, 2);
@@ -247,7 +254,7 @@ int MAD2DecodeAndPrint(uint8_t *sector, bool verbose) {
     uint8_t InfoByte = sector[1] & 0x3f;
     PrintAndLogEx(NORMAL, "MAD2 Card publisher sector: 0x%02x", InfoByte);
 
-    for(int i = 1; i < 8 + 8 + 7 + 1; i++) {
+    for (int i = 1; i < 8 + 8 + 7 + 1; i++) {
         uint16_t AID = madGetAID(sector, 2, i);
         PrintAndLogEx(NORMAL, "%02d [%04X] %s", i + 16, AID, GetAIDDescription(AID));
     };

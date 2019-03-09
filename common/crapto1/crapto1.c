@@ -26,9 +26,9 @@
 static uint8_t filterlut[1 << 20];
 static void __attribute__((constructor)) fill_lut()
 {
-        uint32_t i;
-        for(i = 0; i < 1 << 20; ++i)
-                filterlut[i] = filter(i);
+    uint32_t i;
+    for (i = 0; i < 1 << 20; ++i)
+        filterlut[i] = filter(i);
 }
 #define filter(x) (filterlut[(x) & 0xfffff])
 #endif
@@ -51,12 +51,12 @@ static inline void update_contribution(uint32_t *item, const uint32_t mask1, con
 static inline void extend_table(uint32_t *tbl, uint32_t **end, int bit, int m1, int m2, uint32_t in)
 {
     in <<= 24;
-    for(*tbl <<= 1; tbl <= *end; *++tbl <<= 1)
-        if(filter(*tbl) ^ filter(*tbl | 1)) {
+    for (*tbl <<= 1; tbl <= *end; *++tbl <<= 1)
+        if (filter(*tbl) ^ filter(*tbl | 1)) {
             *tbl |= filter(*tbl) ^ bit;
             update_contribution(tbl, m1, m2);
             *tbl ^= in;
-        } else if(filter(*tbl) == bit) {
+        } else if (filter(*tbl) == bit) {
             *++*end = tbl[1];
             tbl[1] = tbl[0] | 1;
             update_contribution(tbl, m1, m2);
@@ -71,32 +71,32 @@ static inline void extend_table(uint32_t *tbl, uint32_t **end, int bit, int m1, 
  */
 static inline void extend_table_simple(uint32_t *tbl, uint32_t **end, int bit)
 {
-    for(*tbl <<= 1; tbl <= *end; *++tbl <<= 1) {
-        if(filter(*tbl) ^ filter(*tbl | 1)) { // replace
+    for (*tbl <<= 1; tbl <= *end; *++tbl <<= 1) {
+        if (filter(*tbl) ^ filter(*tbl | 1)) { // replace
             *tbl |= filter(*tbl) ^ bit;
-        } else if(filter(*tbl) == bit) {      // insert
+        } else if (filter(*tbl) == bit) {     // insert
             *++*end = *++tbl;
             *tbl = tbl[-1] | 1;
         } else {                              // drop
             *tbl-- = *(*end)--;
-}
+        }
     }
 }
 /** recover
  * recursively narrow down the search space, 4 bits of keystream at a time
  */
-static struct Crypto1State*
+static struct Crypto1State *
 recover(uint32_t *o_head, uint32_t *o_tail, uint32_t oks,
-    uint32_t *e_head, uint32_t *e_tail, uint32_t eks, int rem,
-    struct Crypto1State *sl, uint32_t in, bucket_array_t bucket)
+        uint32_t *e_head, uint32_t *e_tail, uint32_t eks, int rem,
+        struct Crypto1State *sl, uint32_t in, bucket_array_t bucket)
 {
     uint32_t *o, *e;
     bucket_info_t bucket_info;
 
-    if(rem == -1) {
-        for(e = e_head; e <= e_tail; ++e) {
+    if (rem == -1) {
+        for (e = e_head; e <= e_tail; ++e) {
             *e = *e << 1 ^ evenparity32(*e & LF_POLY_EVEN) ^ !!(in & 4);
-            for(o = o_head; o <= o_tail; ++o, ++sl) {
+            for (o = o_head; o <= o_tail; ++o, ++sl) {
                 sl->even = *o;
                 sl->odd = *e ^ evenparity32(*o & LF_POLY_ODD);
                 sl[1].odd = sl[1].even = 0;
@@ -105,16 +105,16 @@ recover(uint32_t *o_head, uint32_t *o_tail, uint32_t oks,
         return sl;
     }
 
-    for(uint32_t i = 0; i < 4 && rem--; i++) {
+    for (uint32_t i = 0; i < 4 && rem--; i++) {
         oks >>= 1;
         eks >>= 1;
         in >>= 2;
         extend_table(o_head, &o_tail, oks & 1, LF_POLY_EVEN << 1 | 1, LF_POLY_ODD << 1, 0);
-        if(o_head > o_tail)
+        if (o_head > o_tail)
             return sl;
 
         extend_table(e_head, &e_tail, eks & 1, LF_POLY_ODD, LF_POLY_EVEN << 1 | 1, in & 3);
-        if(e_head > e_tail)
+        if (e_head > e_tail)
             return sl;
     }
 
@@ -133,7 +133,7 @@ recover(uint32_t *o_head, uint32_t *o_tail, uint32_t oks,
  * additionally you can use the in parameter to specify the value
  * that was fed into the lfsr at the time the keystream was generated
  */
-struct Crypto1State* lfsr_recovery32(uint32_t ks2, uint32_t in)
+struct Crypto1State *lfsr_recovery32(uint32_t ks2, uint32_t in)
 {
     struct Crypto1State *statelist;
     uint32_t *odd_head = 0, *odd_tail = 0, oks = 0;
@@ -170,15 +170,15 @@ struct Crypto1State* lfsr_recovery32(uint32_t ks2, uint32_t in)
     }
 
     // initialize statelists: add all possible states which would result into the rightmost 2 bits of the keystream
-    for(i = 1 << 20; i >= 0; --i) {
-        if(filter(i) == (oks & 1))
+    for (i = 1 << 20; i >= 0; --i) {
+        if (filter(i) == (oks & 1))
             *++odd_tail = i;
-        if(filter(i) == (eks & 1))
+        if (filter(i) == (eks & 1))
             *++even_tail = i;
     }
 
     // extend the statelists. Look at the next 8 Bits of the keystream (4 Bit each odd and even):
-    for(i = 0; i < 4; i++) {
+    for (i = 0; i < 4; i++) {
         extend_table_simple(odd_head,  &odd_tail, (oks >>= 1) & 1);
         extend_table_simple(even_head, &even_tail, (eks >>= 1) & 1);
     }
@@ -199,29 +199,33 @@ out:
 }
 
 static const uint32_t S1[] = {     0x62141, 0x310A0, 0x18850, 0x0C428, 0x06214,
-    0x0310A, 0x85E30, 0xC69AD, 0x634D6, 0xB5CDE, 0xDE8DA, 0x6F46D, 0xB3C83,
-    0x59E41, 0xA8995, 0xD027F, 0x6813F, 0x3409F, 0x9E6FA};
+                                   0x0310A, 0x85E30, 0xC69AD, 0x634D6, 0xB5CDE, 0xDE8DA, 0x6F46D, 0xB3C83,
+                                   0x59E41, 0xA8995, 0xD027F, 0x6813F, 0x3409F, 0x9E6FA
+                             };
 static const uint32_t S2[] = {  0x3A557B00, 0x5D2ABD80, 0x2E955EC0, 0x174AAF60,
-    0x0BA557B0, 0x05D2ABD8, 0x0449DE68, 0x048464B0, 0x42423258, 0x278192A8,
-    0x156042D0, 0x0AB02168, 0x43F89B30, 0x61FC4D98, 0x765EAD48, 0x7D8FDD20,
-    0x7EC7EE90, 0x7F63F748, 0x79117020};
+                                0x0BA557B0, 0x05D2ABD8, 0x0449DE68, 0x048464B0, 0x42423258, 0x278192A8,
+                                0x156042D0, 0x0AB02168, 0x43F89B30, 0x61FC4D98, 0x765EAD48, 0x7D8FDD20,
+                                0x7EC7EE90, 0x7F63F748, 0x79117020
+                             };
 static const uint32_t T1[] = {
     0x4F37D, 0x279BE, 0x97A6A, 0x4BD35, 0x25E9A, 0x12F4D, 0x097A6, 0x80D66,
     0xC4006, 0x62003, 0xB56B4, 0x5AB5A, 0xA9318, 0xD0F39, 0x6879C, 0xB057B,
     0x582BD, 0x2C15E, 0x160AF, 0x8F6E2, 0xC3DC4, 0xE5857, 0x72C2B, 0x39615,
-    0x98DBF, 0xC806A, 0xE0680, 0x70340, 0x381A0, 0x98665, 0x4C332, 0xA272C};
+    0x98DBF, 0xC806A, 0xE0680, 0x70340, 0x381A0, 0x98665, 0x4C332, 0xA272C
+};
 static const uint32_t T2[] = {  0x3C88B810, 0x5E445C08, 0x2982A580, 0x14C152C0,
-    0x4A60A960, 0x253054B0, 0x52982A58, 0x2FEC9EA8, 0x1156C4D0, 0x08AB6268,
-    0x42F53AB0, 0x217A9D58, 0x161DC528, 0x0DAE6910, 0x46D73488, 0x25CB11C0,
-    0x52E588E0, 0x6972C470, 0x34B96238, 0x5CFC3A98, 0x28DE96C8, 0x12CFC0E0,
-    0x4967E070, 0x64B3F038, 0x74F97398, 0x7CDC3248, 0x38CE92A0, 0x1C674950,
-    0x0E33A4A8, 0x01B959D0, 0x40DCACE8, 0x26CEDDF0};
+                                0x4A60A960, 0x253054B0, 0x52982A58, 0x2FEC9EA8, 0x1156C4D0, 0x08AB6268,
+                                0x42F53AB0, 0x217A9D58, 0x161DC528, 0x0DAE6910, 0x46D73488, 0x25CB11C0,
+                                0x52E588E0, 0x6972C470, 0x34B96238, 0x5CFC3A98, 0x28DE96C8, 0x12CFC0E0,
+                                0x4967E070, 0x64B3F038, 0x74F97398, 0x7CDC3248, 0x38CE92A0, 0x1C674950,
+                                0x0E33A4A8, 0x01B959D0, 0x40DCACE8, 0x26CEDDF0
+                             };
 static const uint32_t C1[] = { 0x846B5, 0x4235A, 0x211AD};
 static const uint32_t C2[] = { 0x1A822E0, 0x21A822E0, 0x21A822E0};
 /** Reverse 64 bits of keystream into possible cipher states
  * Variation mentioned in the paper. Somewhat optimized version
  */
-struct Crypto1State* lfsr_recovery64(uint32_t ks2, uint32_t ks3)
+struct Crypto1State *lfsr_recovery64(uint32_t ks2, uint32_t ks3)
 {
     struct Crypto1State *statelist, *sl;
     uint8_t oks[32], eks[32], hi[32];
@@ -230,50 +234,50 @@ struct Crypto1State* lfsr_recovery64(uint32_t ks2, uint32_t ks3)
     int i, j;
 
     sl = statelist = malloc(sizeof(struct Crypto1State) << 4);
-    if(!sl)
+    if (!sl)
         return 0;
     sl->odd = sl->even = 0;
 
-    for(i = 30; i >= 0; i -= 2) {
+    for (i = 30; i >= 0; i -= 2) {
         oks[i >> 1] = BEBIT(ks2, i);
         oks[16 + (i >> 1)] = BEBIT(ks3, i);
     }
-    for(i = 31; i >= 0; i -= 2) {
+    for (i = 31; i >= 0; i -= 2) {
         eks[i >> 1] = BEBIT(ks2, i);
         eks[16 + (i >> 1)] = BEBIT(ks3, i);
     }
 
-    for(i = 0xfffff; i >= 0; --i) {
+    for (i = 0xfffff; i >= 0; --i) {
         if (filter(i) != oks[0])
             continue;
 
         *(tail = table) = i;
-        for(j = 1; tail >= table && j < 29; ++j)
+        for (j = 1; tail >= table && j < 29; ++j)
             extend_table_simple(table, &tail, oks[j]);
 
-        if(tail < table)
+        if (tail < table)
             continue;
 
-        for(j = 0; j < 19; ++j)
+        for (j = 0; j < 19; ++j)
             low = low << 1 | evenparity32(i & S1[j]);
-        for(j = 0; j < 32; ++j)
+        for (j = 0; j < 32; ++j)
             hi[j] = evenparity32(i & T1[j]);
 
-        for(; tail >= table; --tail) {
-            for(j = 0; j < 3; ++j) {
+        for (; tail >= table; --tail) {
+            for (j = 0; j < 3; ++j) {
                 *tail = *tail << 1;
                 *tail |= evenparity32((i & C1[j]) ^ (*tail & C2[j]));
-                if(filter(*tail) != oks[29 + j])
+                if (filter(*tail) != oks[29 + j])
                     goto continue2;
             }
 
-            for(j = 0; j < 19; ++j)
+            for (j = 0; j < 19; ++j)
                 win = win << 1 | evenparity32(*tail & S2[j]);
 
             win ^= low;
-            for(j = 0; j < 32; ++j) {
+            for (j = 0; j < 32; ++j) {
                 win = win << 1 ^ hi[j] ^ evenparity32(*tail & T2[j]);
-                if(filter(win) != eks[j])
+                if (filter(win) != eks[j])
                     goto continue2;
             }
 
@@ -282,7 +286,8 @@ struct Crypto1State* lfsr_recovery64(uint32_t ks2, uint32_t ks3)
             sl->even = win;
             ++sl;
             sl->odd = sl->even = 0;
-            continue2:;
+continue2:
+            ;
         }
     }
     return statelist;
@@ -377,9 +382,9 @@ static uint16_t *dist = 0;
 int nonce_distance(uint32_t from, uint32_t to)
 {
     uint16_t x, i;
-    if(!dist) {
+    if (!dist) {
         dist = calloc(2 << 16,  sizeof(uint8_t));
-        if(!dist)
+        if (!dist)
             return -1;
         for (x = i = 1; i; ++i) {
             dist[(x & 0xff) << 8 | x >> 8] = i;
@@ -395,7 +400,8 @@ int nonce_distance(uint32_t from, uint32_t to)
  *   true = weak prng
  *   false = hardend prng
  */
-bool validate_prng_nonce(uint32_t nonce) {
+bool validate_prng_nonce(uint32_t nonce)
+{
     // init prng table:
     nonce_distance(nonce, nonce);
     return ((65535 - dist[nonce >> 16] + dist[nonce & 0xffff]) % 65535) == 16;
@@ -403,7 +409,8 @@ bool validate_prng_nonce(uint32_t nonce) {
 
 static uint32_t fastfwd[2][8] = {
     { 0, 0x4BC53, 0xECB1, 0x450E2, 0x25E29, 0x6E27A, 0x2B298, 0x60ECB},
-    { 0, 0x1D962, 0x4BC53, 0x56531, 0xECB1, 0x135D3, 0x450E2, 0x58980}};
+    { 0, 0x1D962, 0x4BC53, 0x56531, 0xECB1, 0x135D3, 0x450E2, 0x58980}
+};
 
 /** lfsr_prefix_ks
  *
@@ -440,11 +447,11 @@ uint32_t *lfsr_prefix_ks(uint8_t ks[8], int isodd)
 /** check_pfx_parity
  * helper function which eliminates possible secret states using parity bits
  */
-static struct Crypto1State* check_pfx_parity(uint32_t prefix, uint32_t rresp, uint8_t parities[8][8], uint32_t odd, uint32_t even, struct Crypto1State* sl, uint32_t no_par)
+static struct Crypto1State *check_pfx_parity(uint32_t prefix, uint32_t rresp, uint8_t parities[8][8], uint32_t odd, uint32_t even, struct Crypto1State *sl, uint32_t no_par)
 {
     uint32_t ks1, nr, ks2, rr, ks3, c, good = 1;
 
-    for(c = 0; good && c < 8; ++c) {
+    for (c = 0; good && c < 8; ++c) {
         sl->odd = odd ^ fastfwd[1][c];
         sl->even = even ^ fastfwd[0][c];
 
@@ -482,7 +489,7 @@ static struct Crypto1State* check_pfx_parity(uint32_t prefix, uint32_t rresp, ui
  * tag nonce was fed in
  */
 
-struct Crypto1State* lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8], uint32_t no_par)
+struct Crypto1State *lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8], uint32_t no_par)
 {
     struct Crypto1State *statelist, *s;
     uint32_t *odd, *even, *o, *e, top;
@@ -490,7 +497,7 @@ struct Crypto1State* lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8]
     odd = lfsr_prefix_ks(ks, 1);
     even = lfsr_prefix_ks(ks, 0);
 
-    s = statelist = malloc((sizeof *statelist) << 24); // was << 20. Need more for no_par special attack. Enough???
+    s = statelist = malloc((sizeof * statelist) << 24); // was << 20. Need more for no_par special attack. Enough???
     if (!s || !odd || !even) {
         free(statelist);
         statelist = 0;

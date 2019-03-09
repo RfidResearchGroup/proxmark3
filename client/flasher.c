@@ -20,7 +20,8 @@
 
 #define MAX_FILES 4
 
-void cmd_debug(UsbCommand* c) {
+void cmd_debug(UsbCommand *c)
+{
     //  Debug
     printf("UsbCommand length[len=%zd]\n", sizeof(UsbCommand));
     printf("  cmd[len=%zd]: %016" PRIx64"\n", sizeof(c->cmd), c->cmd);
@@ -29,13 +30,14 @@ void cmd_debug(UsbCommand* c) {
     printf(" arg2[len=%zd]: %016" PRIx64"\n", sizeof(c->arg[2]), c->arg[2]);
     printf(" data[len=%zd]: ", sizeof(c->d.asBytes));
 
-    for (size_t i=0; i<16; i++)
+    for (size_t i = 0; i < 16; i++)
         printf("%02x", c->d.asBytes[i]);
 
     printf("...\n");
 }
 
-static void usage(char *argv0) {
+static void usage(char *argv0)
+{
     fprintf(stdout, "Usage:   %s <port> [-b] image.elf [image.elf...]\n\n", argv0);
     fprintf(stdout, "\t-b\tEnable flashing of bootloader area (DANGEROUS)\n\n");
     fprintf(stdout, "\nExample:\n\n\t %s "SERIAL_PORT_H" armsrc/obj/fullimage.elf\n", argv0);
@@ -48,7 +50,8 @@ static void usage(char *argv0) {
 #endif
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
     int can_write_bl = 0;
     int num_files = 0;
     int res;
@@ -79,10 +82,10 @@ int main(int argc, char **argv) {
         }
     }
 
-    char* serial_port_name = argv[1];
+    char *serial_port_name = argv[1];
 
     if (!OpenProxmark(serial_port_name, true, 60, true)) {
-        fprintf(stderr, "Could not find Proxmark on " _RED_(%s) ".\n\n", serial_port_name);
+        fprintf(stderr, "Could not find Proxmark on " _RED_( % s) ".\n\n", serial_port_name);
         return -1;
     } else {
         fprintf(stderr, _GREEN_(Found) "\n");

@@ -32,8 +32,7 @@ extern "C" {
 #endif
 
 /* Conversion to JSON */
-enum CborToJsonFlags
-{
+enum CborToJsonFlags {
     CborConvertAddMetadata = 1,
     CborConvertTagsToObjects = 2,
     CborConvertIgnoreTags = 0,

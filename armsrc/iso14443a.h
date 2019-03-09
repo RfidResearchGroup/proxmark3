@@ -70,7 +70,7 @@ typedef struct {
         STATE_MILLER_Z,
         // DROP_NONE,
         // DROP_FIRST_HALF,
-        } state;
+    } state;
     uint16_t shiftReg;
     int16_t bitCount;
     uint16_t len;
@@ -95,10 +95,10 @@ typedef struct {
 
 extern void GetParity(const uint8_t *pbtCmd, uint16_t len, uint8_t *par);
 
-extern tDemod* GetDemod(void);
+extern tDemod *GetDemod(void);
 extern void DemodReset(void);
 extern void DemodInit(uint8_t *data, uint8_t *parity);
-extern tUart* GetUart(void);
+extern tUart *GetUart(void);
 extern void UartReset(void);
 extern void UartInit(uint8_t *data, uint8_t *parity);
 extern RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time);
@@ -133,7 +133,7 @@ bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_Start
 
 //extern bool prepare_allocated_tag_modulation(tag_response_info_t *response_info, uint8_t **buffer, size_t *buffer_size);
 
-void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype );
+void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype);
 void DetectNACKbug();
 
 #ifdef __cplusplus

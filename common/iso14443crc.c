@@ -9,7 +9,8 @@
 #include "iso14443crc.h"
 
 
-uint16_t UpdateCrc14443(uint8_t b, uint16_t *crc) {
+uint16_t UpdateCrc14443(uint8_t b, uint16_t *crc)
+{
     b = (b ^ (uint8_t)((*crc) & 0x00FF));
     b = (b ^ (b << 4));
     *crc = (*crc >> 8) ^ ((uint16_t) b << 8) ^ ((uint16_t) b << 3) ^ ((uint16_t) b >> 4);
@@ -30,12 +31,13 @@ void ComputeCrc14443(uint16_t CrcType, const uint8_t *data, int length,
     if (CrcType == CRC_14443_B)
         crc = ~crc;                /* ISO/IEC 13239 (formerly ISO/IEC 3309) */
 
-    *TransmitFirst = (uint8_t) (crc & 0xFF);
+    *TransmitFirst = (uint8_t)(crc & 0xFF);
     *TransmitSecond = (uint8_t)((crc >> 8) & 0xFF);
     return;
 }
 
-bool CheckCrc14443(uint16_t CrcType, const uint8_t *data, int length) {
+bool CheckCrc14443(uint16_t CrcType, const uint8_t *data, int length)
+{
     if (length < 3) return false;
     uint8_t b1, b2;
     ComputeCrc14443(CrcType, data, length - 2, &b1, &b2);

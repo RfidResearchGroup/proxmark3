@@ -62,19 +62,20 @@ static void chkres(int *resc, model_t **result, const poly_t divisor, const poly
 static const poly_t pzero = PZERO;
 
 model_t *
-reveng(const model_t *guess, const poly_t qpoly, int rflags, int args, const poly_t *argpolys) {
+reveng(const model_t *guess, const poly_t qpoly, int rflags, int args, const poly_t *argpolys)
+{
     /* Complete the parameters of a model by calculation or brute search. */
     poly_t *pworks, *wptr, rem, gpoly;
     model_t *result = NULL, *rptr;
     int resc = 0;
     unsigned long spin = 0, seq = 0;
 
-    if(~rflags & R_HAVEP) {
+    if (~rflags & R_HAVEP) {
         /* The poly is not known.
          * Produce a list of differences between the arguments.
          */
         pworks = modpol(guess->init, rflags, args, argpolys);
-        if(!pworks || !plen(*pworks)) {
+        if (!pworks || !plen(*pworks)) {
             free(pworks);
             goto requit;
         }
@@ -84,20 +85,20 @@ reveng(const model_t *guess, const poly_t qpoly, int rflags, int args, const pol
          * loop. qpoly does not need fixing as it is only
          * compared with odd polys.
          */
-        if(plen(gpoly))
+        if (plen(gpoly))
             pshift(&gpoly, gpoly, 0UL, 0UL, plen(gpoly) - 1UL, 1UL);
 
-        while(piter(&gpoly) && (~rflags & R_HAVEQ || pcmp(&gpoly, &qpoly) < 0)) {
+        while (piter(&gpoly) && (~rflags & R_HAVEQ || pcmp(&gpoly, &qpoly) < 0)) {
             /* For each possible poly of this size, try
              * dividing all the differences in the list.
              */
-            if(!(spin++ & R_SPMASK)) {
+            if (!(spin++ & R_SPMASK)) {
                 uprog(gpoly, guess->flags, seq++);
             }
-            for(wptr = pworks; plen(*wptr); ++wptr) {
+            for (wptr = pworks; plen(*wptr); ++wptr) {
                 /* straight divide message by poly, don't multiply by x^n */
                 rem = pcrc(*wptr, gpoly, pzero, pzero, 0);
-                if(ptst(rem)) {
+                if (ptst(rem)) {
                     pfree(&rem);
                     break;
                 } else
@@ -107,34 +108,33 @@ reveng(const model_t *guess, const poly_t qpoly, int rflags, int args, const pol
              * candidate.  Search for an Init value for this
              * poly or if Init is known, log the result.
              */
-            if(!plen(*wptr)) {
+            if (!plen(*wptr)) {
                 /* gpoly is a candidate poly */
-                if(rflags & R_HAVEI && rflags & R_HAVEX)
+                if (rflags & R_HAVEI && rflags & R_HAVEX)
                     chkres(&resc, &result, gpoly, guess->init, guess->flags, guess->xorout, args, argpolys);
-                else if(rflags & R_HAVEI)
+                else if (rflags & R_HAVEI)
                     calout(&resc, &result, gpoly, guess->init, guess->flags, args, argpolys);
-                else if(rflags & R_HAVEX)
+                else if (rflags & R_HAVEX)
                     calini(&resc, &result, gpoly, guess->flags, guess->xorout, args, argpolys);
                 else
                     engini(&resc, &result, gpoly, guess->flags, args, argpolys);
             }
-            if(!piter(&gpoly))
+            if (!piter(&gpoly))
                 break;
         }
         /* Finished with gpoly and the differences list, free them.
          */
         pfree(&gpoly);
-        for(wptr = pworks; plen(*wptr); ++wptr)
+        for (wptr = pworks; plen(*wptr); ++wptr)
             pfree(wptr);
         free(pworks);
-    }
-    else if(rflags & R_HAVEI && rflags & R_HAVEX)
+    } else if (rflags & R_HAVEI && rflags & R_HAVEX)
         /* All parameters are known!  Submit the result if we get here */
         chkres(&resc, &result, guess->spoly, guess->init, guess->flags, guess->xorout, args, argpolys);
-    else if(rflags & R_HAVEI)
+    else if (rflags & R_HAVEI)
         /* Poly and Init are known, calculate XorOut */
         calout(&resc, &result, guess->spoly, guess->init, guess->flags, args, argpolys);
-    else if(rflags & R_HAVEX)
+    else if (rflags & R_HAVEX)
         /* Poly and XorOut are known, calculate Init */
         calini(&resc, &result, guess->spoly, guess->flags, guess->xorout, args, argpolys);
     else
@@ -142,7 +142,7 @@ reveng(const model_t *guess, const poly_t qpoly, int rflags, int args, const pol
         engini(&resc, &result, guess->spoly, guess->flags, args, argpolys);
 
 requit:
-    if(!(result = realloc(result, ++resc * sizeof(model_t)))) {
+    if (!(result = realloc(result, ++resc * sizeof(model_t)))) {
         uerror("cannot reallocate result array");
         return NULL;
     }
@@ -155,11 +155,12 @@ requit:
     rptr->magic  = pzero;
     rptr->name   = NULL;
 
-    return(result);
+    return (result);
 }
 
 static poly_t *
-modpol(const poly_t init, int rflags, int args, const poly_t *argpolys) {
+modpol(const poly_t init, int rflags, int args, const poly_t *argpolys)
+{
     /* Produce, in ascending length order, a list of differences
      * between the arguments in the list by summing pairs of arguments.
      * If R_HAVEI is not set in rflags, only pairs of equal length are
@@ -172,27 +173,27 @@ modpol(const poly_t init, int rflags, int args, const poly_t *argpolys) {
     const poly_t *aptr, *bptr, *eptr = argpolys + args;
     unsigned long alen, blen;
 
-    if(args < 2) return(NULL);
+    if (args < 2) return (NULL);
 
     result = calloc(((((args - 1) * args) >> 1) + 1) * sizeof(poly_t), sizeof(char));
-    if(!result)
+    if (!result)
         uerror("cannot allocate memory for codeword table");
 
     rptr = result;
 
-    for(aptr = argpolys; aptr < eptr; ++aptr) {
+    for (aptr = argpolys; aptr < eptr; ++aptr) {
         alen = plen(*aptr);
-        for(bptr = aptr + 1; bptr < eptr; ++bptr) {
+        for (bptr = aptr + 1; bptr < eptr; ++bptr) {
             blen = plen(*bptr);
-            if(alen == blen) {
+            if (alen == blen) {
                 work = pclone(*aptr);
                 psum(&work, *bptr, 0UL);
-            } else if(rflags & R_HAVEI && alen < blen) {
+            } else if (rflags & R_HAVEI && alen < blen) {
                 work = pclone(*bptr);
                 psum(&work, *aptr, blen - alen);
                 psum(&work, init, 0UL);
                 psum(&work, init, blen - alen);
-            } else if(rflags & R_HAVEI /* && alen > blen */) {
+            } else if (rflags & R_HAVEI /* && alen > blen */) {
                 work = pclone(*aptr);
                 psum(&work, *bptr, alen - blen);
                 psum(&work, init, 0UL);
@@ -200,17 +201,16 @@ modpol(const poly_t init, int rflags, int args, const poly_t *argpolys) {
             } else
                 work = pzero;
 
-            if(plen(work))
+            if (plen(work))
                 pnorm(&work);
-            if((blen = plen(work))) {
+            if ((blen = plen(work))) {
                 /* insert work into result[] in ascending order of length */
-                for(iptr = result; iptr < rptr; ++iptr) {
-                    if(plen(work) < plen(*iptr)) {
+                for (iptr = result; iptr < rptr; ++iptr) {
+                    if (plen(work) < plen(*iptr)) {
                         swap = *iptr;
                         *iptr = work;
                         work = swap;
-                    }
-                    else if(plen(*iptr) == blen && !pcmp(&work, iptr)) {
+                    } else if (plen(*iptr) == blen && !pcmp(&work, iptr)) {
                         pfree(&work);
                         work = *--rptr;
                         break;
@@ -221,11 +221,12 @@ modpol(const poly_t init, int rflags, int args, const poly_t *argpolys) {
         }
     }
     *rptr = pzero;
-    return(result);
+    return (result);
 }
 
 static void
-engini(int *resc, model_t **result, const poly_t divisor, int flags, int args, const poly_t *argpolys) {
+engini(int *resc, model_t **result, const poly_t divisor, int flags, int args, const poly_t *argpolys)
+{
     /* Search for init values implied by the arguments.
      * Method from: Ewing, Gregory C. (March 2010).
      * "Reverse-Engineering a CRC Algorithm". Christchurch:
@@ -242,21 +243,24 @@ engini(int *resc, model_t **result, const poly_t divisor, int flags, int args, c
 
     /* Allocate the CRC matrix */
     mat = (poly_t *) calloc((dlen << 1) * sizeof(poly_t), sizeof(char));
-    if(!mat)
+    if (!mat)
         uerror("cannot allocate memory for CRC matrix");
 
     /* Find arguments of the two shortest lengths */
     alen = blen = plen(*(aptr = bptr = iptr = argpolys));
-    for(++iptr; iptr < argpolys + args; ++iptr) {
+    for (++iptr; iptr < argpolys + args; ++iptr) {
         ilen = plen(*iptr);
-        if(ilen < alen) {
-            bptr = aptr; blen = alen;
-            aptr = iptr; alen = ilen;
-        } else if(ilen > alen && (aptr == bptr || ilen < blen)) {
-            bptr = iptr; blen = ilen;
+        if (ilen < alen) {
+            bptr = aptr;
+            blen = alen;
+            aptr = iptr;
+            alen = ilen;
+        } else if (ilen > alen && (aptr == bptr || ilen < blen)) {
+            bptr = iptr;
+            blen = ilen;
         }
     }
-    if(aptr == bptr) {
+    if (aptr == bptr) {
         /* if no arguments are suitable, calculate Init with an
          * assumed XorOut of 0.  Create a padded XorOut
          */
@@ -270,7 +274,7 @@ engini(int *resc, model_t **result, const poly_t divisor, int flags, int args, c
     /* Find the potential contribution of the bottom bit of Init */
     palloc(&pone, 1UL);
     piter(&pone);
-    if(blen < (dlen << 1)) {
+    if (blen < (dlen << 1)) {
         palloc(&apoly, dlen); /* >= 1 */
         psum(&apoly, pone, (dlen << 1) - 1UL - blen); /* >= 0 */
         psum(&apoly, pone, (dlen << 1) - 1UL - alen); /* >= 1 */
@@ -279,7 +283,7 @@ engini(int *resc, model_t **result, const poly_t divisor, int flags, int args, c
         psum(&apoly, pone, 0UL);
         psum(&apoly, pone, blen - alen); /* >= 1 */
     }
-    if(plen(apoly) > dlen) {
+    if (plen(apoly) > dlen) {
         mat[dlen] = pcrc(apoly, divisor, pzero, pzero, 0);
         pfree(&apoly);
     } else {
@@ -292,28 +296,28 @@ engini(int *resc, model_t **result, const poly_t divisor, int flags, int args, c
 
     /* Populate the matrix */
     palloc(&apoly, 1UL);
-    for(jptr=mat; jptr<mat+dlen; ++jptr)
+    for (jptr = mat; jptr < mat + dlen; ++jptr)
         *jptr = pzero;
-    for(iptr = jptr++; jptr < mat + (dlen << 1); iptr = jptr++)
-        *jptr = pcrc(apoly, divisor, *iptr, pzero, P_MULXN);
+    for (iptr = jptr++; jptr < mat + (dlen << 1); iptr = jptr++)
+        * jptr = pcrc(apoly, divisor, *iptr, pzero, P_MULXN);
     pfree(&apoly);
 
     /* Transpose the matrix, augment with the Init contribution
      * and convert to row echelon form
      */
-    for(i=0UL; i<dlen; ++i) {
+    for (i = 0UL; i < dlen; ++i) {
         apoly = pzero;
         iptr = mat + (dlen << 1);
-        for(j=0UL; j<dlen; ++j)
+        for (j = 0UL; j < dlen; ++j)
             ppaste(&apoly, *--iptr, i, j, j + 1UL, dlen + 1UL);
-        if(ptst(apoly))
+        if (ptst(apoly))
             ppaste(&apoly, bpoly, i, dlen, dlen + 1UL, dlen + 1UL);
         j = pfirst(apoly);
-        while(j < dlen && !pident(mat[j], pzero)) {
+        while (j < dlen && !pident(mat[j], pzero)) {
             psum(&apoly, mat[j], 0UL); /* pfirst(apoly) > j */
             j = pfirst(apoly);
         }
-        if(j < dlen)
+        if (j < dlen)
             mat[j] = apoly; /* pident(mat[j], pzero) || pfirst(mat[j]) == j */
         else
             pfree(&apoly);
@@ -329,20 +333,20 @@ engini(int *resc, model_t **result, const poly_t divisor, int flags, int args, c
         cy = 1;
         apoly = pclone(bpoly);
         jptr = mat + dlen;
-        for(i=0UL; i<dlen; ++i) {
+        for (i = 0UL; i < dlen; ++i) {
             /* Compute next bit of Init */
-            if(pmpar(apoly, *--jptr))
+            if (pmpar(apoly, *--jptr))
                 psum(&apoly, pone, dlen - 1UL - i);
             /* Toggle each zero row with carry, for next iteration */
-            if(cy) {
-                   if(pident(*jptr, pzero)) {
-                       /* 0 to 1, no carry */
-                       *jptr = bpoly;
-                       cy = 0;
-                   } else if(pident(*jptr, bpoly)) {
-                       /* 1 to 0, carry forward */
-                       *jptr = pzero;
-                   }
+            if (cy) {
+                if (pident(*jptr, pzero)) {
+                    /* 0 to 1, no carry */
+                    *jptr = bpoly;
+                    cy = 0;
+                } else if (pident(*jptr, bpoly)) {
+                    /* 1 to 0, carry forward */
+                    *jptr = pzero;
+                }
             }
         }
 
@@ -352,18 +356,19 @@ engini(int *resc, model_t **result, const poly_t divisor, int flags, int args, c
         /* Test the Init value and add to results if correct */
         calout(resc, result, divisor, apoly, flags, args, argpolys);
         pfree(&apoly);
-    } while(!cy);
+    } while (!cy);
     pfree(&pone);
     pfree(&bpoly);
 
     /* Free the matrix. */
-    for(jptr=mat; jptr < mat + (dlen << 1); ++jptr)
+    for (jptr = mat; jptr < mat + (dlen << 1); ++jptr)
         pfree(jptr);
     free(mat);
 }
 
 static void
-calout(int *resc, model_t **result, const poly_t divisor, const poly_t init, int flags, int args, const poly_t *argpolys) {
+calout(int *resc, model_t **result, const poly_t divisor, const poly_t init, int flags, int args, const poly_t *argpolys)
+{
     /* Calculate Xorout, check it against all the arguments and
      * add to results if consistent.
      */
@@ -371,14 +376,15 @@ calout(int *resc, model_t **result, const poly_t divisor, const poly_t init, int
     const poly_t *aptr, *iptr;
     unsigned long alen, ilen;
 
-    if(args < 1) return;
+    if (args < 1) return;
 
     /* find argument of the shortest length */
     alen = plen(*(aptr = iptr = argpolys));
-    for(++iptr; iptr < argpolys + args; ++iptr) {
+    for (++iptr; iptr < argpolys + args; ++iptr) {
         ilen = plen(*iptr);
-        if(ilen < alen) {
-            aptr = iptr; alen = ilen;
+        if (ilen < alen) {
+            aptr = iptr;
+            alen = ilen;
         }
     }
 
@@ -388,7 +394,7 @@ calout(int *resc, model_t **result, const poly_t divisor, const poly_t init, int
      * model, the refout stage intervenes between init and
      * xorout.
      */
-    if(flags & P_REFOUT)
+    if (flags & P_REFOUT)
         prev(&xorout);
 
     /* Submit the model to the results table.
@@ -400,7 +406,8 @@ calout(int *resc, model_t **result, const poly_t divisor, const poly_t init, int
 }
 
 static void
-calini(int *resc, model_t **result, const poly_t divisor, int flags, const poly_t xorout, int args, const poly_t *argpolys) {
+calini(int *resc, model_t **result, const poly_t divisor, int flags, const poly_t xorout, int args, const poly_t *argpolys)
+{
     /* Calculate Init, check it against all the arguments and add to
      * results if consistent.
      */
@@ -408,14 +415,15 @@ calini(int *resc, model_t **result, const poly_t divisor, int flags, const poly_
     const poly_t *aptr, *iptr;
     unsigned long alen, ilen;
 
-    if(args < 1) return;
+    if (args < 1) return;
 
     /* find argument of the shortest length */
     alen = plen(*(aptr = iptr = argpolys));
-    for(++iptr; iptr < argpolys + args; ++iptr) {
+    for (++iptr; iptr < argpolys + args; ++iptr) {
         ilen = plen(*iptr);
-        if(ilen < alen) {
-            aptr = iptr; alen = ilen;
+        if (ilen < alen) {
+            aptr = iptr;
+            alen = ilen;
         }
     }
 
@@ -427,7 +435,7 @@ calini(int *resc, model_t **result, const poly_t divisor, int flags, const poly_
      * mirror image of the forward XorOut.
      */
     rxor = pclone(xorout);
-    if(~flags & P_REFOUT)
+    if (~flags & P_REFOUT)
         prev(&rxor);
     arg = pclone(*aptr);
     prev(&arg);
@@ -447,7 +455,8 @@ calini(int *resc, model_t **result, const poly_t divisor, int flags, const poly_
 }
 
 static void
-chkres(int *resc, model_t **result, const poly_t divisor, const poly_t init, int flags, const poly_t xorout, int args, const poly_t *argpolys) {
+chkres(int *resc, model_t **result, const poly_t divisor, const poly_t init, int flags, const poly_t xorout, int args, const poly_t *argpolys)
+{
     /* Checks a model against the argument list, and adds to the
      * external results table if consistent.
      * Extends the result array and updates the external pointer if
@@ -462,12 +471,12 @@ chkres(int *resc, model_t **result, const poly_t divisor, const poly_t init, int
      * stage.
      */
     xor = pclone(xorout);
-    if(flags & P_REFOUT)
+    if (flags & P_REFOUT)
         prev(&xor);
 
-    for(; aptr < eptr; ++aptr) {
+    for (; aptr < eptr; ++aptr) {
         crc = pcrc(*aptr, divisor, init, xor, 0);
-        if(ptst(crc)) {
+        if (ptst(crc)) {
             pfree(&crc);
             break;
         } else {
@@ -475,7 +484,7 @@ chkres(int *resc, model_t **result, const poly_t divisor, const poly_t init, int
         }
     }
     pfree(&xor);
-    if(aptr != eptr) return;
+    if (aptr != eptr) return;
 
     *result = realloc(*result, ++*resc * sizeof(model_t));
     if (!*result) {

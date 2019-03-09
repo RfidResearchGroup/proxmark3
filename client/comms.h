@@ -37,7 +37,7 @@ typedef enum {
     BIG_BUF_EML,
     FLASH_MEM,
     SIM_MEM,
-    } DeviceMemType_t;
+} DeviceMemType_t;
 
 typedef struct {
     bool run; // If TRUE, continue running the uart_communication thread
@@ -57,9 +57,9 @@ void clearCommandBuffer();
 bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode);
 void CloseProxmark(void);
 
-bool WaitForResponseTimeoutW(uint32_t cmd, UsbCommand* response, size_t ms_timeout, bool show_warning);
-bool WaitForResponseTimeout(uint32_t cmd, UsbCommand* response, size_t ms_timeout);
-bool WaitForResponse(uint32_t cmd, UsbCommand* response);
+bool WaitForResponseTimeoutW(uint32_t cmd, UsbCommand *response, size_t ms_timeout, bool show_warning);
+bool WaitForResponseTimeout(uint32_t cmd, UsbCommand *response, size_t ms_timeout);
+bool WaitForResponse(uint32_t cmd, UsbCommand *response);
 
 extern bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning);
 

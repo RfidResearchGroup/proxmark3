@@ -13,7 +13,8 @@ bool g_lf_threshold_set = false;
 
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_cmdread(void) {
+int usage_lf_cmdread(void)
+{
     PrintAndLogEx(NORMAL, "Usage: lf cmdread d <delay period> z <zero period> o <one period> c <cmdbytes>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h             This help");
@@ -28,7 +29,8 @@ int usage_lf_cmdread(void) {
     PrintAndLogEx(NORMAL, "      lf cmdread d 80 z 100 o 200 c 11000");
     return 0;
 }
-int usage_lf_read(void){
+int usage_lf_read(void)
+{
     PrintAndLogEx(NORMAL, "Usage: lf read [h] [s] [d numofsamples]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h            This help");
@@ -41,7 +43,8 @@ int usage_lf_read(void){
     PrintAndLogEx(NORMAL, "         lf read s");
     return 0;
 }
-int usage_lf_snoop(void) {
+int usage_lf_snoop(void)
+{
     PrintAndLogEx(NORMAL, "Snoop low frequence signal. Use 'lf config' to set parameters.");
     PrintAndLogEx(NORMAL, "Usage: lf snoop [h]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -50,7 +53,8 @@ int usage_lf_snoop(void) {
     PrintAndLogEx(NORMAL, "Use 'lf config' to set parameters.");
     return 0;
 }
-int usage_lf_config(void) {
+int usage_lf_config(void)
+{
     PrintAndLogEx(NORMAL, "Usage: lf config [h] [H|<divisor>] [b <bps>] [d <decim>] [a 0|1]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h             This help");
@@ -73,7 +77,8 @@ int usage_lf_config(void) {
     PrintAndLogEx(NORMAL, "                    Performs a snoop (no active field)");
     return 0;
 }
-int usage_lf_simfsk(void) {
+int usage_lf_simfsk(void)
+{
     PrintAndLogEx(NORMAL, "Usage: lf simfsk [h] [c <clock>] [H <fcHigh>] [L <fcLow>] [d <hexdata>]");
     PrintAndLogEx(NORMAL, "there are about four FSK modulations to know of.");
     PrintAndLogEx(NORMAL, "FSK1  -  where fc/8 = high  and fc/5 = low");
@@ -98,7 +103,8 @@ int usage_lf_simfsk(void) {
     PrintAndLogEx(NORMAL, "");
     return 0;
 }
-int usage_lf_simask(void) {
+int usage_lf_simask(void)
+{
     PrintAndLogEx(NORMAL, "Usage: lf simask [c <clock>] [i] [b|m|r] [s] [d <raw hex to sim>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h              This help");
@@ -111,7 +117,8 @@ int usage_lf_simask(void) {
     PrintAndLogEx(NORMAL, "       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
     return 0;
 }
-int usage_lf_simpsk(void) {
+int usage_lf_simpsk(void)
+{
     PrintAndLogEx(NORMAL, "Usage: lf simpsk [1|2|3] [c <clock>] [i] [r <carrier>] [d <raw hex to sim>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h              This help");
@@ -124,7 +131,8 @@ int usage_lf_simpsk(void) {
     PrintAndLogEx(NORMAL, "       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
     return 0;
 }
-int usage_lf_find(void){
+int usage_lf_find(void)
+{
     PrintAndLogEx(NORMAL, "Usage:  lf search [h] <0|1> [u]");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Options:");
@@ -141,36 +149,37 @@ int usage_lf_find(void){
 
 
 /* send a LF command before reading */
-int CmdLFCommandRead(const char *Cmd) {
+int CmdLFCommandRead(const char *Cmd)
+{
 
-    UsbCommand c = {CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K, {0,0,0}};
+    UsbCommand c = {CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K, {0, 0, 0}};
     bool errors = false;
 
     uint8_t cmdp = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
-        case 'h':
-            return usage_lf_cmdread();
-        case 'c':
-            param_getstr(Cmd, cmdp+1, (char *)&c.d.asBytes, sizeof(c.d.asBytes));
-            cmdp += 2;
-            break;
-        case 'd':
-            c.arg[0] = param_get32ex(Cmd, cmdp+1, 0, 10);
-            cmdp += 2;
-            break;
-        case 'z':
-            c.arg[1] = param_get32ex(Cmd, cmdp+1, 0, 10) & 0xFFFF;
-            cmdp += 2;
-            break;
-        case 'o':
-            c.arg[2] = param_get32ex(Cmd, cmdp+1, 0, 10) & 0xFFFF;
-            cmdp += 2;
-            break;
-        default:
-            PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-            errors = true;
-            break;
+            case 'h':
+                return usage_lf_cmdread();
+            case 'c':
+                param_getstr(Cmd, cmdp + 1, (char *)&c.d.asBytes, sizeof(c.d.asBytes));
+                cmdp += 2;
+                break;
+            case 'd':
+                c.arg[0] = param_get32ex(Cmd, cmdp + 1, 0, 10);
+                cmdp += 2;
+                break;
+            case 'z':
+                c.arg[1] = param_get32ex(Cmd, cmdp + 1, 0, 10) & 0xFFFF;
+                cmdp += 2;
+                break;
+            case 'o':
+                c.arg[2] = param_get32ex(Cmd, cmdp + 1, 0, 10) & 0xFFFF;
+                cmdp += 2;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
         }
     }
 
@@ -185,9 +194,10 @@ int CmdLFCommandRead(const char *Cmd) {
     return 0;
 }
 
-int CmdFlexdemod(const char *Cmd) {
+int CmdFlexdemod(const char *Cmd)
+{
 
-    if ( GraphTraceLen < 0 )
+    if (GraphTraceLen < 0)
         return 0;
 
 #ifndef LONG_WAIT
@@ -220,7 +230,7 @@ int CmdFlexdemod(const char *Cmd) {
     }
 
     data[start] = 4;
-    data[start+1] = 0;
+    data[start + 1] = 0;
 
     uint8_t bits[64] = {0x00};
 
@@ -262,7 +272,8 @@ int CmdFlexdemod(const char *Cmd) {
     return 0;
 }
 
-int CmdLFSetConfig(const char *Cmd) {
+int CmdLFSetConfig(const char *Cmd)
+{
     uint8_t divisor =  0;//Frequency divisor
     uint8_t bps = 0; // Bits per sample
     uint8_t decimation = 0; //How many to keep
@@ -274,44 +285,44 @@ int CmdLFSetConfig(const char *Cmd) {
     uint8_t cmdp = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (param_getchar(Cmd, cmdp)) {
-        case 'h':
-            return usage_lf_config();
-        case 'H':
-            divisor = 88;
-            cmdp++;
-            break;
-        case 'L':
-            divisor = 95;
-            cmdp++;
-            break;
-        case 'q':
-            errors |= param_getdec(Cmd, cmdp+1, &divisor);
-            cmdp+=2;
-            break;
-        case 't':
-            errors |= param_getdec(Cmd, cmdp+1, &unsigned_trigg);
-            cmdp+=2;
-            if(!errors) {
-                trigger_threshold = unsigned_trigg;
-                g_lf_threshold_set = (trigger_threshold > 0);
-            }
-            break;
-        case 'b':
-            errors |= param_getdec(Cmd, cmdp+1, &bps);
-            cmdp+=2;
-            break;
-        case 'd':
-            errors |= param_getdec(Cmd, cmdp+1, &decimation);
-            cmdp+=2;
-            break;
-        case 'a':
-            averaging = param_getchar(Cmd, cmdp+1) == '1';
-            cmdp+=2;
-            break;
-        default:
-            PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-            errors = 1;
-            break;
+            case 'h':
+                return usage_lf_config();
+            case 'H':
+                divisor = 88;
+                cmdp++;
+                break;
+            case 'L':
+                divisor = 95;
+                cmdp++;
+                break;
+            case 'q':
+                errors |= param_getdec(Cmd, cmdp + 1, &divisor);
+                cmdp += 2;
+                break;
+            case 't':
+                errors |= param_getdec(Cmd, cmdp + 1, &unsigned_trigg);
+                cmdp += 2;
+                if (!errors) {
+                    trigger_threshold = unsigned_trigg;
+                    g_lf_threshold_set = (trigger_threshold > 0);
+                }
+                break;
+            case 'b':
+                errors |= param_getdec(Cmd, cmdp + 1, &bps);
+                cmdp += 2;
+                break;
+            case 'd':
+                errors |= param_getdec(Cmd, cmdp + 1, &decimation);
+                cmdp += 2;
+                break;
+            case 'a':
+                averaging = param_getchar(Cmd, cmdp + 1) == '1';
+                cmdp += 2;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = 1;
+                break;
         }
     }
 
@@ -323,15 +334,16 @@ int CmdLFSetConfig(const char *Cmd) {
 
     sample_config config = { decimation, bps, averaging, divisor, trigger_threshold };
 
-    UsbCommand c = {CMD_SET_LF_SAMPLING_CONFIG, {0,0,0} };
+    UsbCommand c = {CMD_SET_LF_SAMPLING_CONFIG, {0, 0, 0} };
     memcpy(c.d.asBytes, &config, sizeof(sample_config));
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
 }
 
-bool lf_read(bool silent, uint32_t samples) {
-    if ( IsOffline() ) return false;
+bool lf_read(bool silent, uint32_t samples)
+{
+    if (IsOffline()) return false;
     UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_125K, {silent, samples, 0}};
     clearCommandBuffer();
     SendCommand(&c);
@@ -340,20 +352,21 @@ bool lf_read(bool silent, uint32_t samples) {
     if (g_lf_threshold_set) {
         WaitForResponse(CMD_ACK, &resp);
     } else {
-        if ( !WaitForResponseTimeout(CMD_ACK, &resp, 2500) ) {
+        if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
             PrintAndLogEx(WARNING, "command execution time out");
             return false;
         }
     }
     // resp.arg[0] is bits read not bytes read.
-    getSamples(resp.arg[0]/8, silent);
+    getSamples(resp.arg[0] / 8, silent);
 
     return true;
 }
 
-int CmdLFRead(const char *Cmd) {
+int CmdLFRead(const char *Cmd)
+{
 
-    if ( IsOffline() ) return 0;
+    if (IsOffline()) return 0;
 
     bool errors = false;
     bool silent = false;
@@ -361,20 +374,20 @@ int CmdLFRead(const char *Cmd) {
     uint8_t cmdp = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
-        case 'h':
-            return usage_lf_read();
-        case 's':
-            silent = true;
-            cmdp++;
-            break;
-        case 'd':
-            samples = param_get32ex(Cmd, cmdp, 0, 10);
-            cmdp +=2;
-            break;
-        default:
-            PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-            errors = true;
-            break;
+            case 'h':
+                return usage_lf_read();
+            case 's':
+                silent = true;
+                cmdp++;
+                break;
+            case 'd':
+                samples = param_get32ex(Cmd, cmdp, 0, 10);
+                cmdp += 2;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
         }
     }
 
@@ -384,11 +397,12 @@ int CmdLFRead(const char *Cmd) {
     return lf_read(silent, samples);
 }
 
-int CmdLFSnoop(const char *Cmd) {
+int CmdLFSnoop(const char *Cmd)
+{
     uint8_t cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_lf_snoop();
 
-    UsbCommand c = {CMD_LF_SNOOP_RAW_ADC_SAMPLES,{0,0,0}};
+    UsbCommand c = {CMD_LF_SNOOP_RAW_ADC_SAMPLES, {0, 0, 0}};
     clearCommandBuffer();
     SendCommand(&c);
     WaitForResponse(CMD_ACK, NULL);
@@ -396,9 +410,10 @@ int CmdLFSnoop(const char *Cmd) {
     return 0;
 }
 
-static void ChkBitstream(const char *str) {
+static void ChkBitstream(const char *str)
+{
     // convert to bitstream if necessary
-    for (int i = 0; i < (int)(GraphTraceLen / 2); i++){
+    for (int i = 0; i < (int)(GraphTraceLen / 2); i++) {
         if (GraphBuffer[i] > 1 || GraphBuffer[i] < 0) {
             CmdGetBitStream("");
             break;
@@ -407,7 +422,8 @@ static void ChkBitstream(const char *str) {
 }
 //Attempt to simulate any wave in buffer (one bit per output sample)
 // converts GraphBuffer to bitstream (based on zero crossings) if needed.
-int CmdLFSim(const char *Cmd) {
+int CmdLFSim(const char *Cmd)
+{
 #define FPGA_LF 1
 #define FPGA_HF 2
 
@@ -424,12 +440,13 @@ int CmdLFSim(const char *Cmd) {
         UsbCommand c = {CMD_UPLOAD_SIM_SAMPLES_125K, {i, FPGA_LF, 0}};
 
         for (uint16_t j = 0; j < USB_CMD_DATA_SIZE; j++)
-            c.d.asBytes[j] = GraphBuffer[i+j];
+            c.d.asBytes[j] = GraphBuffer[i + j];
 
         clearCommandBuffer();
         SendCommand(&c);
         WaitForResponse(CMD_ACK, NULL);
-        printf("."); fflush(stdout);
+        printf(".");
+        fflush(stdout);
     }
 
     PrintAndLogEx(NORMAL, "Simulating");
@@ -442,7 +459,8 @@ int CmdLFSim(const char *Cmd) {
 
 // by marshmellow - sim fsk data given clock, fcHigh, fcLow, invert
 // - allow pull data from DemodBuffer
-int CmdLFfskSim(const char *Cmd) {
+int CmdLFfskSim(const char *Cmd)
+{
     //might be able to autodetect FCs and clock from Graphbuffer if using demod buffer
     // otherwise will need FChigh, FClow, Clock, and bitstream
     uint8_t fcHigh = 0, fcLow = 0, clk = 0;
@@ -453,19 +471,19 @@ int CmdLFfskSim(const char *Cmd) {
     uint8_t cmdp = 0;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (param_getchar(Cmd, cmdp)){
+        switch (param_getchar(Cmd, cmdp)) {
             case 'h':
                 return usage_lf_simfsk();
             case 'c':
-                errors |= param_getdec(Cmd, cmdp+1, &clk);
+                errors |= param_getdec(Cmd, cmdp + 1, &clk);
                 cmdp += 2;
                 break;
             case 'H':
-                errors |= param_getdec(Cmd, cmdp+1, &fcHigh);
+                errors |= param_getdec(Cmd, cmdp + 1, &fcHigh);
                 cmdp += 2;
                 break;
             case 'L':
-                errors |= param_getdec(Cmd, cmdp+1, &fcLow);
+                errors |= param_getdec(Cmd, cmdp + 1, &fcLow);
                 cmdp += 2;
                 break;
             case 's':
@@ -473,7 +491,7 @@ int CmdLFfskSim(const char *Cmd) {
                 cmdp++;
                 break;
             case 'd':
-                dataLen = param_getstr(Cmd, cmdp+1, hexData, sizeof(hexData));
+                dataLen = param_getstr(Cmd, cmdp + 1, hexData, sizeof(hexData));
                 if (dataLen == 0)
                     errors = true;
                 else
@@ -497,10 +515,10 @@ int CmdLFfskSim(const char *Cmd) {
     if (errors) return usage_lf_simfsk();
 
     int firstClockEdge = 0;
-    if (dataLen == 0){ //using DemodBuffer
-        if (clk == 0 || fcHigh == 0 || fcLow == 0){ //manual settings must set them all
+    if (dataLen == 0) { //using DemodBuffer
+        if (clk == 0 || fcHigh == 0 || fcLow == 0) { //manual settings must set them all
             uint8_t ans = fskClocks(&fcHigh, &fcLow, &clk, &firstClockEdge);
-            if (ans==0){
+            if (ans == 0) {
                 if (!fcHigh) fcHigh = 10;
                 if (!fcLow) fcLow = 8;
                 if (!clk) clk = 50;
@@ -535,7 +553,8 @@ int CmdLFfskSim(const char *Cmd) {
 
 // by marshmellow - sim ask data given clock, invert, manchester or raw, separator
 // - allow pull data from DemodBuffer
-int CmdLFaskSim(const char *Cmd) {
+int CmdLFaskSim(const char *Cmd)
+{
     // autodetect clock from Graphbuffer if using demod buffer
     // needs clock, invert, manchester/raw as m or r, separator as s, and bitstream
     uint8_t encoding = 1, separator = 0, clk = 0, invert = 0;
@@ -545,15 +564,16 @@ int CmdLFaskSim(const char *Cmd) {
     int dataLen = 0;
     uint8_t cmdp = 0;
 
-    while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h': return usage_lf_simask();
+            case 'h':
+                return usage_lf_simask();
             case 'i':
                 invert = 1;
                 cmdp++;
                 break;
             case 'c':
-                errors |= param_getdec(Cmd, cmdp+1, &clk);
+                errors |= param_getdec(Cmd, cmdp + 1, &clk);
                 cmdp += 2;
                 break;
             case 'b':
@@ -573,7 +593,7 @@ int CmdLFaskSim(const char *Cmd) {
                 cmdp++;
                 break;
             case 'd':
-                dataLen = param_getstr(Cmd, cmdp+1, hexData, sizeof(hexData));
+                dataLen = param_getstr(Cmd, cmdp + 1, hexData, sizeof(hexData));
                 if (dataLen == 0)
                     errors = true;
                 else
@@ -596,7 +616,7 @@ int CmdLFaskSim(const char *Cmd) {
     //Validations
     if (errors) return usage_lf_simask();
 
-    if (dataLen == 0){ //using DemodBuffer
+    if (dataLen == 0) { //using DemodBuffer
         if (clk == 0)
             clk = GetAskClock("0", false);
     } else {
@@ -627,11 +647,12 @@ int CmdLFaskSim(const char *Cmd) {
 
 // by marshmellow - sim psk data given carrier, clock, invert
 // - allow pull data from DemodBuffer or parameters
-int CmdLFpskSim(const char *Cmd) {
+int CmdLFpskSim(const char *Cmd)
+{
     //might be able to autodetect FC and clock from Graphbuffer if using demod buffer
     //will need carrier, Clock, and bitstream
-    uint8_t carrier=0, clk=0;
-    uint8_t invert=0;
+    uint8_t carrier = 0, clk = 0;
+    uint8_t invert = 0;
     bool errors = false;
     char hexData[64] = {0x00}; // store entered hex data
     uint8_t data[255] = {0x00};
@@ -648,11 +669,11 @@ int CmdLFpskSim(const char *Cmd) {
                 cmdp++;
                 break;
             case 'c':
-                errors |= param_getdec(Cmd,cmdp+1,&clk);
-                cmdp +=2;
+                errors |= param_getdec(Cmd, cmdp + 1, &clk);
+                cmdp += 2;
                 break;
             case 'r':
-                errors |= param_getdec(Cmd,cmdp+1,&carrier);
+                errors |= param_getdec(Cmd, cmdp + 1, &carrier);
                 cmdp += 2;
                 break;
             case '1':
@@ -668,7 +689,7 @@ int CmdLFpskSim(const char *Cmd) {
                 cmdp++;
                 break;
             case 'd':
-                dataLen = param_getstr(Cmd, cmdp+1, hexData, sizeof(hexData));
+                dataLen = param_getstr(Cmd, cmdp + 1, hexData, sizeof(hexData));
                 if (dataLen == 0)
                     errors = true;
                 else
@@ -676,13 +697,13 @@ int CmdLFpskSim(const char *Cmd) {
 
                 if (dataLen == 0) errors = true;
                 if (errors) PrintAndLogEx(WARNING, "Error getting hex data");
-                cmdp+=2;
+                cmdp += 2;
                 break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
-            }
+        }
     }
     // No args
     if (cmdp == 0 && DemodBufferLen == 0)
@@ -691,11 +712,11 @@ int CmdLFpskSim(const char *Cmd) {
     //Validations
     if (errors) return usage_lf_simpsk();
 
-    if (dataLen == 0){ //using DemodBuffer
+    if (dataLen == 0) { //using DemodBuffer
         PrintAndLogEx(NORMAL, "Getting Clocks");
 
-        if (clk==0) clk = GetPskClock("", false);
-        PrintAndLogEx(NORMAL, "clk: %d",clk);
+        if (clk == 0) clk = GetPskClock("", false);
+        PrintAndLogEx(NORMAL, "clk: %d", clk);
 
         if (!carrier) carrier = GetPskCarrier("", false);
         PrintAndLogEx(NORMAL, "carrier: %d", carrier);
@@ -706,11 +727,11 @@ int CmdLFpskSim(const char *Cmd) {
 
     if (clk <= 0) clk = 32;
 
-    if (carrier != 2 && carrier != 4 && carrier != 8 )
+    if (carrier != 2 && carrier != 4 && carrier != 8)
         carrier = 2;
 
-    if (pskType != 1){
-        if (pskType == 2){
+    if (pskType != 1) {
+        if (pskType == 2) {
             //need to convert psk2 to psk1 data before sim
             psk2TOpsk1(DemodBuffer, DemodBufferLen);
         } else {
@@ -733,7 +754,8 @@ int CmdLFpskSim(const char *Cmd) {
     return 0;
 }
 
-int CmdLFSimBidir(const char *Cmd) {
+int CmdLFSimBidir(const char *Cmd)
+{
     // Set ADC to twice the carrier for a slight supersampling
     // HACK: not implemented in ARMSRC.
     PrintAndLogEx(INFO, "Not implemented yet.");
@@ -743,7 +765,8 @@ int CmdLFSimBidir(const char *Cmd) {
 }
 
 // ICEMAN,  todo,   swap from Graphbuffer.
-int CmdVchDemod(const char *Cmd) {
+int CmdVchDemod(const char *Cmd)
+{
     // Is this the entire sync pattern, or does this also include some
     // data bits that happen to be the same everywhere? That would be
     // lovely to know.
@@ -768,7 +791,7 @@ int CmdVchDemod(const char *Cmd) {
 
     for (i = 0; i < (GraphTraceLen - 2048); i++) {
         for (j = 0; j < ARRAYLEN(SyncPattern); j++) {
-            sum += GraphBuffer[i+j] * SyncPattern[j];
+            sum += GraphBuffer[i + j] * SyncPattern[j];
         }
         if (sum > bestCorrel) {
             bestCorrel = sum;
@@ -785,14 +808,14 @@ int CmdVchDemod(const char *Cmd) {
     for (i = 0; i < 2048; i += 8) {
         sum = 0;
         for (j = 0; j < 8; j++)
-            sum += GraphBuffer[bestPos+i+j];
+            sum += GraphBuffer[bestPos + i + j];
 
         if (sum < 0)
-            bits[i/8] = '.';
+            bits[i / 8] = '.';
         else
-            bits[i/8] = '1';
+            bits[i / 8] = '1';
 
-        if(abs(sum) < worst) {
+        if (abs(sum) < worst) {
             worst = abs(sum);
             worstPos = i;
         }
@@ -802,21 +825,22 @@ int CmdVchDemod(const char *Cmd) {
     PrintAndLogEx(NORMAL, "worst metric: %d at pos %d", worst, worstPos);
 
     // clone
-    if (strcmp(Cmd, "clone")==0) {
+    if (strcmp(Cmd, "clone") == 0) {
         GraphTraceLen = 0;
         char *s;
-            for(s = bits; *s; s++) {
-                for(j = 0; j < 16; j++) {
-                    GraphBuffer[GraphTraceLen++] = (*s == '1') ? 1 : 0;
-                }
+        for (s = bits; *s; s++) {
+            for (j = 0; j < 16; j++) {
+                GraphBuffer[GraphTraceLen++] = (*s == '1') ? 1 : 0;
             }
+        }
         RepaintGraphWindow();
     }
     return 0;
 }
 
 //by marshmellow
-bool CheckChipType(bool getDeviceData) {
+bool CheckChipType(bool getDeviceData)
+{
 
     bool retval = false;
 
@@ -849,7 +873,8 @@ out:
 }
 
 //by marshmellow
-int CmdLFfind(const char *Cmd) {
+int CmdLFfind(const char *Cmd)
+{
     int ans = 0;
     size_t minLength = 2000;
     char cmdp = tolower(param_getchar(Cmd, 0));
@@ -859,7 +884,7 @@ int CmdLFfind(const char *Cmd) {
 
     if (cmdp == 'u') testRaw = 'u';
 
-    bool isOnline = (!IsOffline() && (cmdp != '1') );
+    bool isOnline = (!IsOffline() && (cmdp != '1'));
 
     if (isOnline)
         lf_read(true, 30000);
@@ -918,33 +943,34 @@ int CmdLFfind(const char *Cmd) {
 
     PrintAndLogEx(FAILED, "\nNo known 125/134 KHz tags Found!\n");
 
-    if (testRaw == 'u'){
+    if (testRaw == 'u') {
         //test unknown tag formats (raw mode)
         PrintAndLogEx(INFO, "\nChecking for Unknown tags:\n");
         ans = AutoCorrelate(GraphBuffer, GraphBuffer, GraphTraceLen, 4000, false, false);
         if (ans > 0) {
 
-            PrintAndLogEx(INFO, "Possible Auto Correlation of %d repeating samples",ans);
+            PrintAndLogEx(INFO, "Possible Auto Correlation of %d repeating samples", ans);
 
-            if ( ans % 8 == 0)
+            if (ans % 8 == 0)
                 PrintAndLogEx(INFO, "Possible %d bytes", (ans / 8));
         }
 
-         //fsk
-        if ( GetFskClock("", false) ) {
-            if ( FSKrawDemod("", true) ) {
-                PrintAndLogEx(NORMAL, "\nUnknown FSK Modulated Tag Found!"); goto out;
+        //fsk
+        if (GetFskClock("", false)) {
+            if (FSKrawDemod("", true)) {
+                PrintAndLogEx(NORMAL, "\nUnknown FSK Modulated Tag Found!");
+                goto out;
             }
         }
 
         bool st = true;
-        if ( ASKDemod_ext("0 0 0", true, false, 1, &st) ) {
-          PrintAndLogEx(NORMAL, "\nUnknown ASK Modulated and Manchester encoded Tag Found!");
-          PrintAndLogEx(NORMAL, "\nif it does not look right it could instead be ASK/Biphase - try 'data rawdemod ab'");
-          goto out;
+        if (ASKDemod_ext("0 0 0", true, false, 1, &st)) {
+            PrintAndLogEx(NORMAL, "\nUnknown ASK Modulated and Manchester encoded Tag Found!");
+            PrintAndLogEx(NORMAL, "\nif it does not look right it could instead be ASK/Biphase - try 'data rawdemod ab'");
+            goto out;
         }
 
-        if ( CmdPSK1rawDemod("") ) {
+        if (CmdPSK1rawDemod("")) {
             PrintAndLogEx(NORMAL, "Possible unknown PSK1 Modulated Tag Found above!\n\nCould also be PSK2 - try 'data rawdemod p2'");
             PrintAndLogEx(NORMAL, "\nCould also be PSK3 - [currently not supported]");
             PrintAndLogEx(NORMAL, "\nCould also be NRZ - try 'data nrzrawdemod");
@@ -1000,13 +1026,15 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLF(const char *Cmd) {
+int CmdLF(const char *Cmd)
+{
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
+int CmdHelp(const char *Cmd)
+{
     CmdsHelp(CommandTable);
     return 0;
 }

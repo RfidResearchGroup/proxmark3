@@ -28,7 +28,7 @@ int CmdHFEPACollectPACENonces(const char *Cmd)
     n = n > 0 ? n : 1;
 
     PrintAndLogEx(NORMAL, "Collecting %u %u byte nonces", n, m);
-    PrintAndLogEx(NORMAL, "Start: %" PRIu64, msclock()/1000);
+    PrintAndLogEx(NORMAL, "Start: %" PRIu64, msclock() / 1000);
     // repeat n times
     for (uint32_t i = 0; i < n; i++) {
         // execute PACE
@@ -36,15 +36,15 @@ int CmdHFEPACollectPACENonces(const char *Cmd)
         clearCommandBuffer();
         SendCommand(&c);
         UsbCommand resp;
-        WaitForResponse(CMD_ACK,&resp);
+        WaitForResponse(CMD_ACK, &resp);
 
         // check if command failed
         if (resp.arg[0] != 0) {
-            PrintAndLogEx(FAILED, "Error in step %d, Return code: %d",resp.arg[0],(int)resp.arg[1]);
+            PrintAndLogEx(FAILED, "Error in step %d, Return code: %d", resp.arg[0], (int)resp.arg[1]);
         } else {
             size_t nonce_length = resp.arg[1];
             char *nonce = (char *) calloc(2 * nonce_length + 1, sizeof(uint8_t));
-            for(int j = 0; j < nonce_length; j++) {
+            for (int j = 0; j < nonce_length; j++) {
                 sprintf(nonce + (2 * j), "%02X", resp.d.asBytes[j]);
             }
             // print nonce
@@ -55,7 +55,7 @@ int CmdHFEPACollectPACENonces(const char *Cmd)
             sleep(d);
         }
     }
-    PrintAndLogEx(NORMAL, "End: %" PRIu64, msclock()/1000);
+    PrintAndLogEx(NORMAL, "End: %" PRIu64, msclock() / 1000);
     return 1;
 }
 
@@ -83,7 +83,7 @@ int CmdHFEPAPACEReplay(const char *Cmd)
         while (Cmd[skip] != ' ' && Cmd[skip] != '\0') {
             // convert
             scan_return = sscanf(Cmd + skip, "%2X%n",
-                                 (unsigned int *) (apdus[i] + apdu_lengths[i]),
+                                 (unsigned int *)(apdus[i] + apdu_lengths[i]),
                                  &skip_add);
             if (scan_return < 1) {
                 PrintAndLogEx(NORMAL, (char *)usage_msg);
@@ -169,12 +169,14 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdHelp(const char *Cmd) {
+int CmdHelp(const char *Cmd)
+{
     CmdsHelp(CommandTable);
     return 0;
 }
 
-int CmdHFEPA(const char *Cmd) {
+int CmdHFEPA(const char *Cmd)
+{
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;

@@ -37,11 +37,11 @@ extern "C" {
 extern void SendRawCommand14443B_Ex(UsbCommand *c);
 extern void iso14443b_setup();
 extern uint8_t iso14443b_apdu(uint8_t const *message, size_t message_length, uint8_t *response);
-extern uint8_t iso14443b_select_card(iso14b_card_select_t* card);
-extern uint8_t iso14443b_select_card_srx(iso14b_card_select_t* card);
+extern uint8_t iso14443b_select_card(iso14b_card_select_t *card);
+extern uint8_t iso14443b_select_card_srx(iso14b_card_select_t *card);
 
 // testfunctions
-extern void WaitForFpgaDelayQueueIsEmpty( uint16_t delay );
+extern void WaitForFpgaDelayQueueIsEmpty(uint16_t delay);
 extern void ClearFpgaShiftingRegisters(void);
 
 // States for 14B SIM command

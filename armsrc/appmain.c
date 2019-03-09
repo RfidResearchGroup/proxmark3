@@ -27,7 +27,7 @@
 #define DEBUG 1
 
 #ifdef WITH_LCD
- #include "LCD.h"
+#include "LCD.h"
 #endif
 
 #ifdef WITH_SMARTCARD
@@ -54,55 +54,59 @@ int ToSendMax = -1;
 static int ToSendBit;
 struct common_area common_area __attribute__((section(".commonarea")));
 
-void ToSendReset(void) {
+void ToSendReset(void)
+{
     ToSendMax = -1;
     ToSendBit = 8;
 }
 
-void ToSendStuffBit(int b) {
-    if(ToSendBit >= 8) {
+void ToSendStuffBit(int b)
+{
+    if (ToSendBit >= 8) {
         ToSendMax++;
         ToSend[ToSendMax] = 0;
         ToSendBit = 0;
     }
 
-    if(b)
+    if (b)
         ToSend[ToSendMax] |= (1 << (7 - ToSendBit));
 
     ToSendBit++;
 
-    if(ToSendMax >= sizeof(ToSend)) {
+    if (ToSendMax >= sizeof(ToSend)) {
         ToSendBit = 0;
         DbpString("ToSendStuffBit overflowed!");
     }
 }
 
-void PrintToSendBuffer(void) {
+void PrintToSendBuffer(void)
+{
     DbpString("Printing ToSendBuffer:");
     Dbhexdump(ToSendMax, ToSend, 0);
 }
 
-void print_result(char *name, uint8_t *buf, size_t len) {
+void print_result(char *name, uint8_t *buf, size_t len)
+{
 
     uint8_t *p = buf;
     uint16_t tmp = len & 0xFFF0;
 
-    for(; p-buf < tmp; p += 16) {
+    for (; p - buf < tmp; p += 16) {
         Dbprintf("[%s: %02d/%02d] %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
-                name,
-                p-buf,
-                len,
-                p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7],p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15]
-            );
+                 name,
+                 p - buf,
+                 len,
+                 p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15]
+                );
     }
     if (len % 16 != 0) {
         char s[46] = {0};
         char *sp = s;
-        for (; p-buf < len; p++ ) {
-            sprintf(sp, "%02x ", p[0] );
+        for (; p - buf < len; p++) {
+            sprintf(sp, "%02x ", p[0]);
             sp += 3;
         }
-        Dbprintf("[%s: %02d/%02d] %s", name, p-buf, len, s);
+        Dbprintf("[%s: %02d/%02d] %s", name, p - buf, len, s);
     }
 }
 
@@ -110,25 +114,29 @@ void print_result(char *name, uint8_t *buf, size_t len) {
 // Debug print functions, to go out over USB, to the usual PC-side client.
 //=============================================================================
 
-void DbpStringEx(char *str, uint32_t cmd) {
+void DbpStringEx(char *str, uint32_t cmd)
+{
 #if DEBUG
     uint8_t len = strlen(str);
-    cmd_send(CMD_DEBUG_PRINT_STRING, len, cmd, 0, (uint8_t*)str, len);
+    cmd_send(CMD_DEBUG_PRINT_STRING, len, cmd, 0, (uint8_t *)str, len);
 #endif
 }
 
-void DbpString(char *str) {
+void DbpString(char *str)
+{
 #if DEBUG
     DbpStringEx(str, 0);
 #endif
 }
 
 #if 0
-void DbpIntegers(int x1, int x2, int x3) {
-    cmd_send(CMD_DEBUG_PRINT_INTEGERS,x1,x2,x3,0,0);
+void DbpIntegers(int x1, int x2, int x3)
+{
+    cmd_send(CMD_DEBUG_PRINT_INTEGERS, x1, x2, x3, 0, 0);
 }
 #endif
-void DbprintfEx(uint32_t cmd, const char *fmt, ...) {
+void DbprintfEx(uint32_t cmd, const char *fmt, ...)
+{
 #if DEBUG
     // should probably limit size here; oh well, let's just use a big buffer
     char output_string[128] = {0x00};
@@ -141,7 +149,8 @@ void DbprintfEx(uint32_t cmd, const char *fmt, ...) {
 #endif
 }
 
-void Dbprintf(const char *fmt, ...) {
+void Dbprintf(const char *fmt, ...)
+{
 #if DEBUG
     // should probably limit size here; oh well, let's just use a big buffer
     char output_string[128] = {0x00};
@@ -156,9 +165,10 @@ void Dbprintf(const char *fmt, ...) {
 }
 
 // prints HEX & ASCII
-void Dbhexdump(int len, uint8_t *d, bool bAsci) {
+void Dbhexdump(int len, uint8_t *d, bool bAsci)
+{
 #if DEBUG
-    int l=0, i;
+    int l = 0, i;
     char ascii[9];
 
     while (len > 0) {
@@ -169,7 +179,7 @@ void Dbhexdump(int len, uint8_t *d, bool bAsci) {
         ascii[l] = 0;
 
         // filter safe ascii
-        for (i=0; i<l; i++) {
+        for (i = 0; i < l; i++) {
             if (ascii[i] < 32 || ascii[i] > 126) {
                 ascii[i] = '.';
             }
@@ -191,7 +201,8 @@ void Dbhexdump(int len, uint8_t *d, bool bAsci) {
 // in ADC units (0 to 1023). Also a routine to average 32 samples and
 // return that.
 //-----------------------------------------------------------------------------
-static uint16_t ReadAdc(int ch) {
+static uint16_t ReadAdc(int ch)
+{
 
     // Note: ADC_MODE_PRESCALE and ADC_MODE_SAMPLE_HOLD_TIME are set to the maximum allowed value.
     // AMPL_HI is are high impedance (10MOhm || 1MOhm) output, the input capacitance of the ADC is 12pF (typical). This results in a time constant
@@ -204,9 +215,9 @@ static uint16_t ReadAdc(int ch) {
 
     AT91C_BASE_ADC->ADC_CR = AT91C_ADC_SWRST;
     AT91C_BASE_ADC->ADC_MR =
-                  ADC_MODE_PRESCALE(63)          // ADC_CLK = MCK / ((63+1) * 2) = 48MHz / 128 = 375kHz
-                | ADC_MODE_STARTUP_TIME(1)       // Startup Time = (1+1) * 8 / ADC_CLK = 16 / 375kHz = 42,7us   Note: must be > 20us
-                | ADC_MODE_SAMPLE_HOLD_TIME(15); // Sample & Hold Time SHTIM = 15 / ADC_CLK = 15 / 375kHz = 40us
+        ADC_MODE_PRESCALE(63)          // ADC_CLK = MCK / ((63+1) * 2) = 48MHz / 128 = 375kHz
+        | ADC_MODE_STARTUP_TIME(1)       // Startup Time = (1+1) * 8 / ADC_CLK = 16 / 375kHz = 42,7us   Note: must be > 20us
+        | ADC_MODE_SAMPLE_HOLD_TIME(15); // Sample & Hold Time SHTIM = 15 / ADC_CLK = 15 / 375kHz = 40us
 
     AT91C_BASE_ADC->ADC_CHER = ADC_CHANNEL(ch);
     AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
@@ -217,16 +228,18 @@ static uint16_t ReadAdc(int ch) {
 }
 
 // was static - merlok
-uint16_t AvgAdc(int ch) {
+uint16_t AvgAdc(int ch)
+{
     uint16_t a = 0;
-    for(uint8_t i = 0; i < 32; i++)
+    for (uint8_t i = 0; i < 32; i++)
         a += ReadAdc(ch);
 
     //division by 32
     return (a + 15) >> 5;
 }
 
-void MeasureAntennaTuning(void) {
+void MeasureAntennaTuning(void)
+{
 
     uint8_t LF_Results[256];
     uint32_t i, adcval = 0, peak = 0, peakv = 0, peakf = 0;
@@ -235,20 +248,20 @@ void MeasureAntennaTuning(void) {
     memset(LF_Results, 0, sizeof(LF_Results));
     LED_B_ON();
 
-/*
- * Sweeps the useful LF range of the proxmark from
- * 46.8kHz (divisor=255) to 600kHz (divisor=19) and
- * read the voltage in the antenna, the result left
- * in the buffer is a graph which should clearly show
- * the resonating frequency of your LF antenna
- * ( hopefully around 95 if it is tuned to 125kHz!)
- */
+    /*
+     * Sweeps the useful LF range of the proxmark from
+     * 46.8kHz (divisor=255) to 600kHz (divisor=19) and
+     * read the voltage in the antenna, the result left
+     * in the buffer is a graph which should clearly show
+     * the resonating frequency of your LF antenna
+     * ( hopefully around 95 if it is tuned to 125kHz!)
+     */
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
     SpinDelay(50);
 
-    for  (i = 255; i >= 19; i--) {
+    for (i = 255; i >= 19; i--) {
         WDT_HIT();
         FpgaSendCommand(FPGA_CMD_SET_DIVISOR, i);
         SpinDelay(20);
@@ -259,7 +272,7 @@ void MeasureAntennaTuning(void) {
             v_lf134 = adcval; // voltage at 134Khz
 
         LF_Results[i] = adcval >> 9; // scale int to fit in byte for graphing purposes
-        if(LF_Results[i] > peak) {
+        if (LF_Results[i] > peak) {
             peakv = adcval;
             peakf = i;
             peak = LF_Results[i];
@@ -274,7 +287,7 @@ void MeasureAntennaTuning(void) {
     v_hf = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
 
     // RDV40 will hit the roof, try other ADC channel used in that hardware revision.
-    if ( v_hf > MAX_ADC_HF_VOLTAGE-300 ) {
+    if (v_hf > MAX_ADC_HF_VOLTAGE - 300) {
         v_hf = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
     }
 
@@ -291,29 +304,31 @@ void MeasureAntennaTuning(void) {
     LEDsoff();
 }
 
-void MeasureAntennaTuningHf(void) {
+void MeasureAntennaTuningHf(void)
+{
     uint16_t volt = 0; // in mV
     // Let the FPGA drive the high-frequency antenna around 13.56 MHz.
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
     SpinDelay(50);
     volt = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
-    bool use_high = ( volt > MAX_ADC_HF_VOLTAGE-300 );
+    bool use_high = (volt > MAX_ADC_HF_VOLTAGE - 300);
 
-    while( !BUTTON_PRESS() ){
+    while (!BUTTON_PRESS()) {
         SpinDelay(20);
-        if ( !use_high ) {
+        if (!use_high) {
             volt = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
         } else {
             volt = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
         }
-        DbprintfEx(FLAG_NONEWLINE, "%u mV / %5u V", volt, (uint16_t)(volt/1000));
+        DbprintfEx(FLAG_NONEWLINE, "%u mV / %5u V", volt, (uint16_t)(volt / 1000));
     }
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     DbprintfEx(FLAG_NOOPT, "\n[+] cancelled", 1);
 }
 
-void ReadMem(int addr) {
+void ReadMem(int addr)
+{
     const uint8_t *data = ((uint8_t *)addr);
 
     Dbprintf("%x: %02x %02x %02x %02x %02x %02x %02x %02x", addr, data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
@@ -323,7 +338,8 @@ void ReadMem(int addr) {
 extern struct version_information version_information;
 /* bootrom version information is pointed to from _bootphase1_version_pointer */
 extern char *_bootphase1_version_pointer, _flash_start, _flash_end, _bootrom_start, _bootrom_end, __data_src_start__;
-void SendVersion(void) {
+void SendVersion(void)
+{
     char temp[USB_CMD_DATA_SIZE]; /* Limited data payload in USB packets */
     char VersionString[USB_CMD_DATA_SIZE] = { '\0' };
 
@@ -331,11 +347,11 @@ void SendVersion(void) {
      * symbol _bootphase1_version_pointer, perform slight sanity checks on the
      * pointer, then use it.
      */
-    char *bootrom_version = *(char**)&_bootphase1_version_pointer;
+    char *bootrom_version = *(char **)&_bootphase1_version_pointer;
 
     strncat(VersionString, " [ ARM ]\n", sizeof(VersionString) - strlen(VersionString) - 1);
 
-    if( bootrom_version < &_flash_start || bootrom_version >= &_flash_end ) {
+    if (bootrom_version < &_flash_start || bootrom_version >= &_flash_end) {
         strcat(VersionString, "bootrom version information appears invalid\n");
     } else {
         FormatVersionInformation(temp, sizeof(temp), " bootrom: ", bootrom_version);
@@ -361,11 +377,12 @@ void SendVersion(void) {
 
 // measure the USB Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
 // Note: this mimics GetFromBigbuf(), i.e. we have the overhead of the UsbCommand structure included.
-void printUSBSpeed(void) {
+void printUSBSpeed(void)
+{
     Dbprintf("USB Speed");
     Dbprintf("  Sending USB packets to client...");
 
-    #define USB_SPEED_TEST_MIN_TIME 1500 // in milliseconds
+#define USB_SPEED_TEST_MIN_TIME 1500 // in milliseconds
     uint8_t *test_data = BigBuf_get_addr();
     uint32_t end_time;
 
@@ -388,7 +405,8 @@ void printUSBSpeed(void) {
 /**
   * Prints runtime information about the PM3.
 **/
-void SendStatus(void) {
+void SendStatus(void)
+{
     BigBuf_print_status();
     Fpga_print_status();
 #ifdef WITH_FLASH
@@ -412,7 +430,8 @@ void SendStatus(void) {
 }
 
 // Show some leds in a pattern to identify StandAlone mod is running
-void StandAloneMode(void) {
+void StandAloneMode(void)
+{
 
     DbpString("Stand-alone mode! No PC necessary.");
 
@@ -425,7 +444,8 @@ void StandAloneMode(void) {
 }
 // detection of which Standalone Modes is installed
 // (iceman)
-void printStandAloneModes(void) {
+void printStandAloneModes(void)
+{
 
     DbpString("Installed StandAlone Mode");
 
@@ -492,18 +512,19 @@ at the same place! :-)
 LIGHT SCHEME USED:
 */
 static const char LIGHT_SCHEME[] = {
-        0x0, /* ----     | No field detected */
-        0x1, /* X---     | 14% of maximum current detected */
-        0x2, /* -X--     | 29% of maximum current detected */
-        0x4, /* --X-     | 43% of maximum current detected */
-        0x8, /* ---X     | 57% of maximum current detected */
-        0xC, /* --XX     | 71% of maximum current detected */
-        0xE, /* -XXX     | 86% of maximum current detected */
-        0xF, /* XXXX     | 100% of maximum current detected */
+    0x0, /* ----     | No field detected */
+    0x1, /* X---     | 14% of maximum current detected */
+    0x2, /* -X--     | 29% of maximum current detected */
+    0x4, /* --X-     | 43% of maximum current detected */
+    0x8, /* ---X     | 57% of maximum current detected */
+    0xC, /* --XX     | 71% of maximum current detected */
+    0xE, /* -XXX     | 86% of maximum current detected */
+    0xF, /* XXXX     | 100% of maximum current detected */
 };
-static const int LIGHT_LEN = sizeof(LIGHT_SCHEME)/sizeof(LIGHT_SCHEME[0]);
+static const int LIGHT_LEN = sizeof(LIGHT_SCHEME) / sizeof(LIGHT_SCHEME[0]);
 
-void ListenReaderField(int limit) {
+void ListenReaderField(int limit)
+{
 #define LF_ONLY 1
 #define HF_ONLY 2
 #define REPORT_CHANGE 10    // report new values only if they have changed at least by REPORT_CHANGE
@@ -530,8 +551,8 @@ void ListenReaderField(int limit) {
 
     // iceman,  useless,  since we are measuring readerfield,  not our field.  My tests shows a max of 20v from a reader.
     // RDV40 will hit the roof, try other ADC channel used in that hardware revision.
-    bool use_high = ( ((MAX_ADC_HF_VOLTAGE * hf_max) >> 10) > MAX_ADC_HF_VOLTAGE-300 );
-    if ( use_high ) {
+    bool use_high = (((MAX_ADC_HF_VOLTAGE * hf_max) >> 10) > MAX_ADC_HF_VOLTAGE - 300);
+    if (use_high) {
         hf_av = hf_max = AvgAdc(ADC_CHAN_HF_RDV40);
     }
 
@@ -540,7 +561,7 @@ void ListenReaderField(int limit) {
         hf_baseline = hf_av;
     }
 
-    for(;;) {
+    for (;;) {
         // Switch modes with button
         if (BUTTON_PRESS()) {
             SpinDelay(500);
@@ -560,7 +581,7 @@ void ListenReaderField(int limit) {
         WDT_HIT();
 
         if (limit != HF_ONLY) {
-            if(mode == 1) {
+            if (mode == 1) {
                 if (ABS(lf_av - lf_baseline) > REPORT_CHANGE)
                     LED_D_ON();
                 else
@@ -578,7 +599,7 @@ void ListenReaderField(int limit) {
         }
 
         if (limit != LF_ONLY) {
-            if (mode == 1){
+            if (mode == 1) {
                 if (ABS(hf_av - hf_baseline) > REPORT_CHANGE)
                     LED_B_ON();
                 else
@@ -588,7 +609,7 @@ void ListenReaderField(int limit) {
             hf_av_new = (use_high) ? AvgAdc(ADC_CHAN_HF_RDV40) :  AvgAdc(ADC_CHAN_HF);
 
             // see if there's a significant change
-            if(ABS(hf_av - hf_av_new) > REPORT_CHANGE) {
+            if (ABS(hf_av - hf_av_new) > REPORT_CHANGE) {
                 Dbprintf("HF 13.56MHz Field Change: %5dmV", (MAX_ADC_HF_VOLTAGE * hf_av_new) >> 10);
                 hf_av = hf_av_new;
                 if (hf_av > hf_max)
@@ -604,7 +625,7 @@ void ListenReaderField(int limit) {
                 display_val = hf_av;
                 display_max = hf_max;
             } else { /* Pick one at random */
-                if( (hf_max - hf_baseline) > (lf_max - lf_baseline) ) {
+                if ((hf_max - hf_baseline) > (lf_max - lf_baseline)) {
                     display_val = hf_av;
                     display_max = hf_max;
                 } else {
@@ -612,12 +633,16 @@ void ListenReaderField(int limit) {
                     display_max = lf_max;
                 }
             }
-            for (i=0; i<LIGHT_LEN; i++) {
-                if (display_val >= ((display_max/LIGHT_LEN)*i) && display_val <= ((display_max/LIGHT_LEN)*(i+1))) {
-                    if (LIGHT_SCHEME[i] & 0x1) LED_C_ON(); else LED_C_OFF();
-                    if (LIGHT_SCHEME[i] & 0x2) LED_A_ON(); else LED_A_OFF();
-                    if (LIGHT_SCHEME[i] & 0x4) LED_B_ON(); else LED_B_OFF();
-                    if (LIGHT_SCHEME[i] & 0x8) LED_D_ON(); else LED_D_OFF();
+            for (i = 0; i < LIGHT_LEN; i++) {
+                if (display_val >= ((display_max / LIGHT_LEN)*i) && display_val <= ((display_max / LIGHT_LEN) * (i + 1))) {
+                    if (LIGHT_SCHEME[i] & 0x1) LED_C_ON();
+                    else LED_C_OFF();
+                    if (LIGHT_SCHEME[i] & 0x2) LED_A_ON();
+                    else LED_A_OFF();
+                    if (LIGHT_SCHEME[i] & 0x4) LED_B_ON();
+                    else LED_B_OFF();
+                    if (LIGHT_SCHEME[i] & 0x8) LED_D_ON();
+                    else LED_D_OFF();
                     break;
                 }
             }
@@ -625,15 +650,16 @@ void ListenReaderField(int limit) {
     }
 }
 
-void UsbPacketReceived(uint8_t *packet, int len) {
+void UsbPacketReceived(uint8_t *packet, int len)
+{
     UsbCommand *c = (UsbCommand *)packet;
 
     //Dbprintf("received %d bytes, with command: 0x%04x and args: %d %d %d", len, c->cmd, c->arg[0], c->arg[1], c->arg[2]);
 
-    switch(c->cmd) {
+    switch (c->cmd) {
 #ifdef WITH_LF
         case CMD_SET_LF_T55XX_CONFIG:
-            setT55xxConfig( c->arg[0], (t55xx_config *) c->d.asBytes);
+            setT55xxConfig(c->arg[0], (t55xx_config *) c->d.asBytes);
             break;
         case CMD_SET_LF_SAMPLING_CONFIG:
             setSamplingConfig((sample_config *) c->d.asBytes);
@@ -692,7 +718,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             ReadTItag();
             break;
         case CMD_WRITE_TI_TYPE:
-            WriteTItag(c->arg[0],c->arg[1],c->arg[2]);
+            WriteTItag(c->arg[0], c->arg[1], c->arg[2]);
             break;
         case CMD_SIMULATE_TAG_125K:
             LED_A_ON();
@@ -709,7 +735,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             CopyIndala224toT55x7(
                 c->d.asDwords[0], c->d.asDwords[1], c->d.asDwords[2], c->d.asDwords[3],
                 c->d.asDwords[4], c->d.asDwords[5], c->d.asDwords[6]
-                );
+            );
             break;
         case CMD_T55XX_READ_BLOCK: {
             T55xxReadBlock(c->arg[0], c->arg[1], c->arg[2]);
@@ -738,7 +764,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
                 c->arg[0],
                 c->arg[1],
                 c->arg[2]
-                );
+            );
             break;
         case CMD_EM4X_READ_WORD:
             EM4xReadWord(c->arg[0], c->arg[1], c->arg[2]);
@@ -765,25 +791,25 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             SnoopHitag(c->arg[0]);
             break;
         case CMD_SIMULATE_HITAG: // Simulate Hitag tag, args = memory content
-            SimulateHitagTag((bool)c->arg[0],(byte_t*)c->d.asBytes);
+            SimulateHitagTag((bool)c->arg[0], (byte_t *)c->d.asBytes);
             break;
         case CMD_READER_HITAG: // Reader for Hitag tags, args = type and function
-            ReaderHitag((hitag_function)c->arg[0],(hitag_data*)c->d.asBytes);
+            ReaderHitag((hitag_function)c->arg[0], (hitag_data *)c->d.asBytes);
             break;
         case CMD_SIMULATE_HITAG_S:// Simulate Hitag s tag, args = memory content
-            SimulateHitagSTag((bool)c->arg[0],(byte_t*)c->d.asBytes);
+            SimulateHitagSTag((bool)c->arg[0], (byte_t *)c->d.asBytes);
             break;
         case CMD_TEST_HITAGS_TRACES:// Tests every challenge within the given file
-            check_challenges((bool)c->arg[0],(byte_t*)c->d.asBytes);
+            check_challenges((bool)c->arg[0], (byte_t *)c->d.asBytes);
             break;
         case CMD_READ_HITAG_S: //Reader for only Hitag S tags, args = key or challenge
-            ReadHitagS((hitag_function)c->arg[0],(hitag_data*)c->d.asBytes);
+            ReadHitagS((hitag_function)c->arg[0], (hitag_data *)c->d.asBytes);
             break;
         case CMD_WR_HITAG_S: //writer for Hitag tags args=data to write,page and key or challenge
             if ((hitag_function)c->arg[0] < 10) {
-                WritePageHitagS((hitag_function)c->arg[0],(hitag_data*)c->d.asBytes,c->arg[2]);
+                WritePageHitagS((hitag_function)c->arg[0], (hitag_data *)c->d.asBytes, c->arg[2]);
             } else if ((hitag_function)c->arg[0] >= 10) {
-              WriterHitag((hitag_function)c->arg[0],(hitag_data*)c->d.asBytes, c->arg[2]);
+                WriterHitag((hitag_function)c->arg[0], (hitag_data *)c->d.asBytes, c->arg[2]);
             }
             break;
 #endif
@@ -892,10 +918,10 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             MifareReadBlock(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
             break;
         case CMD_MIFAREU_READBL:
-            MifareUReadBlock(c->arg[0],c->arg[1], c->d.asBytes);
+            MifareUReadBlock(c->arg[0], c->arg[1], c->d.asBytes);
             break;
         case CMD_MIFAREUC_AUTH:
-            MifareUC_Auth(c->arg[0],c->d.asBytes);
+            MifareUC_Auth(c->arg[0], c->d.asBytes);
             break;
         case CMD_MIFAREU_READCARD:
             MifareUReadCard(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
@@ -910,8 +936,8 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             MifareWriteBlock(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
             break;
         //case CMD_MIFAREU_WRITEBL_COMPAT:
-            //MifareUWriteBlockCompat(c->arg[0], c->d.asBytes);
-            //break;
+        //MifareUWriteBlockCompat(c->arg[0], c->d.asBytes);
+        //break;
         case CMD_MIFAREU_WRITEBL:
             MifareUWriteBlock(c->arg[0], c->arg[1], c->d.asBytes);
             break;
@@ -1050,11 +1076,11 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             SmartCardAtr();
             break;
         }
-        case CMD_SMART_SETBAUD:{
+        case CMD_SMART_SETBAUD: {
             SmartCardSetBaud(c->arg[0]);
             break;
         }
-        case CMD_SMART_SETCLOCK:{
+        case CMD_SMART_SETCLOCK: {
             SmartCardSetClock(c->arg[0]);
             break;
         }
@@ -1065,8 +1091,8 @@ void UsbPacketReceived(uint8_t *packet, int len) {
         case CMD_SMART_UPLOAD: {
             // upload file from client
             uint8_t *mem = BigBuf_get_addr();
-            memcpy( mem + c->arg[0], c->d.asBytes, USB_CMD_DATA_SIZE);
-            cmd_send(CMD_ACK,1,0,0,0,0);
+            memcpy(mem + c->arg[0], c->d.asBytes, USB_CMD_DATA_SIZE);
+            cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
             break;
         }
         case CMD_SMART_UPGRADE: {
@@ -1101,14 +1127,14 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 
 
             char dest[USB_CMD_DATA_SIZE] = { '\0' };
-            static const char* welcome = "Proxmark3 Serial interface via FPC ready\n";
+            static const char *welcome = "Proxmark3 Serial interface via FPC ready\n";
             strncat(dest, welcome, sizeof(dest) - strlen(dest) - 1);
             sprintf(dest + strlen(dest) - 1, "| bytes 0x%02x 0x%02x 0x%02x 0x%02x \n"
-                        , c->d.asBytes[0]
-                        , c->d.asBytes[1]
-                        , c->d.asBytes[2]
-                        , c->d.asBytes[3]
-                        );
+                    , c->d.asBytes[0]
+                    , c->d.asBytes[1]
+                    , c->d.asBytes[2]
+                    , c->d.asBytes[3]
+                   );
 
             UsbCommand txcmd = { CMD_DEBUG_PRINT_STRING, { strlen(dest), 0, 0 } };
             memcpy(txcmd.d.asBytes, dest, sizeof(dest));
@@ -1116,7 +1142,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             LED_A_ON();
 
             usart_init();
-            usart_writebuffer((uint8_t*)&txcmd, sizeof(UsbCommand));
+            usart_writebuffer((uint8_t *)&txcmd, sizeof(UsbCommand));
 
             //usb
             cmd_send(CMD_DEBUG_PRINT_STRING, strlen(dest), 0, 0, dest, strlen(dest));
@@ -1140,7 +1166,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 
             //cmd_send(CMD_DEBUG_PRINT_STRING, strlen(dest), 0, 0, dest, strlen(dest));
 
-            cmd_send(CMD_ACK,0,0,0,0,0);
+            cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
             StopTicks();
             break;
         }
@@ -1180,11 +1206,11 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             // arg2 = BigBuf tracelen
             //Dbprintf("transfer to client parameters: %" PRIu32 " | %" PRIu32 " | %" PRIu32, startidx, numofbytes, c->arg[2]);
 
-            for(size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
-                len = MIN( (numofbytes - i), USB_CMD_DATA_SIZE);
+            for (size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
+                len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
                 isok = cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, i, len, BigBuf_get_traceLen(), mem + startidx + i, len);
                 if (isok != 0)
-                    Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d)", i, i+len, len);
+                    Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d)", i, i + len, len);
             }
             // Trigger a finish downloading signal with an ACK frame
             // iceman,  when did sending samplingconfig array got attached here?!?
@@ -1202,15 +1228,15 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             // to be able to use this one for uploading data to device
             // arg1 = 0 upload for LF usage
             //        1 upload for HF usage
-            #define FPGA_LF 1
-            if ( c->arg[1] == FPGA_LF )
+#define FPGA_LF 1
+            if (c->arg[1] == FPGA_LF)
                 FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
             else
                 FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
             uint8_t *mem = BigBuf_get_addr();
-            memcpy( mem + c->arg[0], c->d.asBytes, USB_CMD_DATA_SIZE);
-            cmd_send(CMD_ACK,1,0,0,0,0);
+            memcpy(mem + c->arg[0], c->d.asBytes, USB_CMD_DATA_SIZE);
+            cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
             break;
         }
         case CMD_DOWNLOAD_EML_BIGBUF: {
@@ -1229,7 +1255,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
                 len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
                 isok = cmd_send(CMD_DOWNLOADED_EML_BIGBUF, i, len, 0, mem + startidx + i, len);
                 if (isok != 0)
-                    Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d)", i, i+len, len);
+                    Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d)", i, i + len, len);
             }
             // Trigger a finish downloading signal with an ACK frame
             cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
@@ -1259,12 +1285,12 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 
             uint8_t *mem = BigBuf_malloc(size);
 
-            for(size_t i = 0; i < len; i += size) {
+            for (size_t i = 0; i < len; i += size) {
                 len = MIN((len - i), size);
 
                 Dbprintf("FlashMem reading  | %d | %d | %d |", startidx + i, i, len);
                 isok = Flash_ReadDataCont(startidx + i, mem, len);
-                if ( isok == len ) {
+                if (isok == len) {
                     print_result("Chunk: ", mem, len);
                 } else {
                     Dbprintf("FlashMem reading failed | %d | %d", len, isok);
@@ -1282,7 +1308,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             uint16_t res = 0;
             uint32_t startidx = c->arg[0];
             uint16_t len = c->arg[1];
-            uint8_t* data = c->d.asBytes;
+            uint8_t *data = c->d.asBytes;
 
             uint32_t tmp = startidx + len;
 
@@ -1293,9 +1319,9 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             Flash_CheckBusy(BUSY_TIMEOUT);
             Flash_WriteEnable();
 
-            if ( startidx == DEFAULT_T55XX_KEYS_OFFSET  )
+            if (startidx == DEFAULT_T55XX_KEYS_OFFSET)
                 Flash_Erase4k(3, 0xC);
-            else if (startidx ==  DEFAULT_MF_KEYS_OFFSET )
+            else if (startidx ==  DEFAULT_MF_KEYS_OFFSET)
                 Flash_Erase4k(3, 0xB);
             else if (startidx == DEFAULT_ICLASS_KEYS_OFFSET)
                 Flash_Erase4k(3, 0xA);
@@ -1304,29 +1330,29 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             Flash_WriteEnable();
 
             // inside 256b page?
-            if ( (tmp & 0xFF) != 0) {
+            if ((tmp & 0xFF) != 0) {
 
-                    // is offset+len larger than a page
-                    tmp =  (startidx & 0xFF ) + len;
-                    if (tmp > 0xFF ) {
+                // is offset+len larger than a page
+                tmp = (startidx & 0xFF) + len;
+                if (tmp > 0xFF) {
 
-                        // data spread over two pages.
+                    // data spread over two pages.
 
-                        // offset xxxx10,
-                        uint8_t first_len =  (~startidx & 0xFF)+1;
+                    // offset xxxx10,
+                    uint8_t first_len = (~startidx & 0xFF) + 1;
 
-                        // first mem page
-                        res = Flash_WriteDataCont(startidx, data, first_len);
+                    // first mem page
+                    res = Flash_WriteDataCont(startidx, data, first_len);
 
-                        // second mem page
-                        res = Flash_WriteDataCont(startidx + first_len, data + first_len, len - first_len);
+                    // second mem page
+                    res = Flash_WriteDataCont(startidx + first_len, data + first_len, len - first_len);
 
-                        isok = (res == (len - first_len)) ? 1 : 0;
+                    isok = (res == (len - first_len)) ? 1 : 0;
 
-                    } else {
-                        res = Flash_WriteDataCont(startidx, data, len);
-                        isok = (res == len) ? 1 : 0;
-                    }
+                } else {
+                    res = Flash_WriteDataCont(startidx, data, len);
+                    isok = (res == len) ? 1 : 0;
+                }
             } else {
                 res = Flash_WriteDataCont(startidx, data, len);
                 isok = (res == len) ? 1 : 0;
@@ -1342,13 +1368,13 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             uint8_t page = c->arg[0];
             uint8_t initalwipe = c->arg[1];
             bool isok = false;
-            if ( initalwipe ) {
+            if (initalwipe) {
                 isok = Flash_WipeMemory();
                 cmd_send(CMD_ACK, isok, 0, 0, 0, 0);
                 LED_B_OFF();
                 break;
             }
-            if ( page < 3)
+            if (page < 3)
                 isok = Flash_WipeMemoryPage(page);
 
             cmd_send(CMD_ACK, isok, 0, 0, 0, 0);
@@ -1375,14 +1401,14 @@ void UsbPacketReceived(uint8_t *packet, int len) {
                 len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
 
                 isok = Flash_ReadDataCont(startidx + i, mem, len);
-                if (!isok )
+                if (!isok)
                     Dbprintf("reading flash memory failed ::  | bytes between %d - %d", i, len);
 
                 isok = cmd_send(CMD_FLASHMEM_DOWNLOADED, i, len, 0, mem, len);
                 if (isok != 0)
                     Dbprintf("transfer to client failed ::  | bytes between %d - %d", i, len);
             }
-                FlashStop();
+            FlashStop();
 
             cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
             LED_B_OFF();
@@ -1391,12 +1417,12 @@ void UsbPacketReceived(uint8_t *packet, int len) {
         case CMD_FLASHMEM_INFO: {
 
             LED_B_ON();
-            rdv40_validation_t *info = (rdv40_validation_t*)BigBuf_malloc( sizeof(rdv40_validation_t) );
+            rdv40_validation_t *info = (rdv40_validation_t *)BigBuf_malloc(sizeof(rdv40_validation_t));
 
             bool isok = Flash_ReadData(FLASH_MEM_SIGNATURE_OFFSET, info->signature, FLASH_MEM_SIGNATURE_LEN);
 
             if (FlashInit()) {
-                Flash_UniqueID( info->flashid);
+                Flash_UniqueID(info->flashid);
                 FlashStop();
             }
             cmd_send(CMD_ACK, isok, 0, 0, info, sizeof(rdv40_validation_t));
@@ -1412,14 +1438,22 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             break;
 
         case CMD_SET_ADC_MUX:
-            switch(c->arg[0]) {
-                case 0: SetAdcMuxFor(GPIO_MUXSEL_LOPKD); break;
-                case 2: SetAdcMuxFor(GPIO_MUXSEL_HIPKD); break;
+            switch (c->arg[0]) {
+                case 0:
+                    SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
+                    break;
+                case 2:
+                    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+                    break;
 #ifndef WITH_FPC
-                case 1: SetAdcMuxFor(GPIO_MUXSEL_LORAW); break;
-                case 3: SetAdcMuxFor(GPIO_MUXSEL_HIRAW); break;
+                case 1:
+                    SetAdcMuxFor(GPIO_MUXSEL_LORAW);
+                    break;
+                case 3:
+                    SetAdcMuxFor(GPIO_MUXSEL_HIRAW);
+                    break;
 #endif
-                }
+            }
             break;
 
         case CMD_VERSION:
@@ -1429,7 +1463,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             SendStatus();
             break;
         case CMD_PING:
-            cmd_send(CMD_ACK,0,0,0,0,0);
+            cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
             break;
 #ifdef WITH_LCD
         case CMD_LCD_RESET:
@@ -1448,17 +1482,17 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             SpinDelay(1000);
             AT91C_BASE_RSTC->RSTC_RCR = RST_CONTROL_KEY | AT91C_RSTC_PROCRST;
             // We're going to reset, and the bootrom will take control.
-            for(;;) {}
+            for (;;) {}
             break;
 
         case CMD_START_FLASH:
-            if(common_area.flags.bootrom_present) {
+            if (common_area.flags.bootrom_present) {
                 common_area.command = COMMON_AREA_COMMAND_ENTER_FLASH_MODE;
             }
             usb_disable();
             AT91C_BASE_RSTC->RSTC_RCR = RST_CONTROL_KEY | AT91C_RSTC_PROCRST;
             // We're going to flash, and the bootrom will take control.
-            for(;;) {}
+            for (;;) {}
             break;
 
         case CMD_DEVICE_INFO: {
@@ -1466,21 +1500,22 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             if (common_area.flags.bootrom_present) {
                 dev_info |= DEVICE_INFO_FLAG_BOOTROM_PRESENT;
             }
-            cmd_send(CMD_DEVICE_INFO,dev_info,0,0,0,0);
+            cmd_send(CMD_DEVICE_INFO, dev_info, 0, 0, 0, 0);
             break;
-            }
+        }
         default:
-            Dbprintf("%s: 0x%04x","unknown command:", c->cmd);
+            Dbprintf("%s: 0x%04x", "unknown command:", c->cmd);
             break;
     }
 }
 
-void  __attribute__((noreturn)) AppMain(void) {
+void  __attribute__((noreturn)) AppMain(void)
+{
 
     SpinDelay(100);
     clear_trace();
 
-    if(common_area.magic != COMMON_AREA_MAGIC || common_area.version != 1) {
+    if (common_area.magic != COMMON_AREA_MAGIC || common_area.version != 1) {
         /* Initialize common area */
         memset(&common_area, 0, sizeof(common_area));
         common_area.magic = COMMON_AREA_MAGIC;
@@ -1537,12 +1572,12 @@ void  __attribute__((noreturn)) AppMain(void) {
 
     uint8_t rx[sizeof(UsbCommand)];
 
-    for(;;) {
+    for (;;) {
         WDT_HIT();
 
         // Check if there is a usb packet available
         if (usb_poll_validate_length()) {
-            if (usb_read(rx, sizeof(rx)) )
+            if (usb_read(rx, sizeof(rx)))
                 UsbPacketReceived(rx, sizeof(rx));
         }
 #ifdef WITH_FPC
@@ -1558,11 +1593,11 @@ void  __attribute__((noreturn)) AppMain(void) {
         // Press button for one second to enter a possible standalone mode
         if (BUTTON_HELD(1000) > 0) {
 
-/*
-* So this is the trigger to execute a standalone mod.  Generic entrypoint by following the standalone/standalone.h headerfile
-* All standalone mod "main loop" should be the RunMod() function.
-* Since the standalone is either LF or HF, the somewhat bisarr defines below exists.
-*/
+            /*
+            * So this is the trigger to execute a standalone mod.  Generic entrypoint by following the standalone/standalone.h headerfile
+            * All standalone mod "main loop" should be the RunMod() function.
+            * Since the standalone is either LF or HF, the somewhat bisarr defines below exists.
+            */
 #if defined (WITH_LF) && ( defined (WITH_LF_SAMYRUN) || defined (WITH_LF_HIDBRUTE) || defined (WITH_LF_PROXBRUTE) )
             RunMod();
 #endif

@@ -20,47 +20,48 @@
 #include "emv_tags.h"
 
 static const ApplicationDataElm ApplicationData[] = {
-{0x82,    "AIP"},
-{0x94,    "AFL"},
+    {0x82,    "AIP"},
+    {0x94,    "AFL"},
 
-{0x5A,    "PAN"},
-{0x5F34,  "PANSeqNo"},
-{0x5F24,  "ExpirationDate"},
-{0x5F25,  "EffectiveDate"},
-{0x5F28,  "IssuerCountryCode"},
+    {0x5A,    "PAN"},
+    {0x5F34,  "PANSeqNo"},
+    {0x5F24,  "ExpirationDate"},
+    {0x5F25,  "EffectiveDate"},
+    {0x5F28,  "IssuerCountryCode"},
 
-{0x50,    "ApplicationLabel"},
-{0x9F08,  "VersionNumber"},
-{0x9F42,  "CurrencyCode"},
-{0x5F2D,  "LanguagePreference"},
-{0x87,    "PriorityIndicator"},
-{0x9F36,  "ATC"}, //Application Transaction Counter
+    {0x50,    "ApplicationLabel"},
+    {0x9F08,  "VersionNumber"},
+    {0x9F42,  "CurrencyCode"},
+    {0x5F2D,  "LanguagePreference"},
+    {0x87,    "PriorityIndicator"},
+    {0x9F36,  "ATC"}, //Application Transaction Counter
 
-{0x5F20,  "CardholderName"},
+    {0x5F20,  "CardholderName"},
 
-{0x9F38,  "PDOL"},
-{0x8C,    "CDOL1"},
-{0x8D,    "CDOL2"},
+    {0x9F38,  "PDOL"},
+    {0x8C,    "CDOL1"},
+    {0x8D,    "CDOL2"},
 
-{0x9F07,  "AUC"},   // Application Usage Control
-{0x9F6C,  "CTQ"},
-{0x8E,    "CVMList"},
-{0x9F0D,  "IACDefault"},
-{0x9F0E,  "IACDeny"},
-{0x9F0F,  "IACOnline"},
+    {0x9F07,  "AUC"},   // Application Usage Control
+    {0x9F6C,  "CTQ"},
+    {0x8E,    "CVMList"},
+    {0x9F0D,  "IACDefault"},
+    {0x9F0E,  "IACDeny"},
+    {0x9F0F,  "IACOnline"},
 
-{0x8F,    "CertificationAuthorityPublicKeyIndex"},
-{0x9F32,  "IssuerPublicKeyExponent"},
-{0x92,    "IssuerPublicKeyRemainder"},
-{0x90,    "IssuerPublicKeyCertificate"},
-{0x9F47,  "ICCPublicKeyExponent"},
-{0x9F46,  "ICCPublicKeyCertificate"},
+    {0x8F,    "CertificationAuthorityPublicKeyIndex"},
+    {0x9F32,  "IssuerPublicKeyExponent"},
+    {0x92,    "IssuerPublicKeyRemainder"},
+    {0x90,    "IssuerPublicKeyCertificate"},
+    {0x9F47,  "ICCPublicKeyExponent"},
+    {0x9F46,  "ICCPublicKeyCertificate"},
 
-{0x00,    "end..."}
+    {0x00,    "end..."}
 };
 int ApplicationDataLen = sizeof(ApplicationData) / sizeof(ApplicationDataElm);
 
-char* GetApplicationDataName(tlv_tag_t tag) {
+char *GetApplicationDataName(tlv_tag_t tag)
+{
     for (int i = 0; i < ApplicationDataLen; i++)
         if (ApplicationData[i].Tag == tag)
             return ApplicationData[i].Name;
@@ -68,7 +69,8 @@ char* GetApplicationDataName(tlv_tag_t tag) {
     return NULL;
 }
 
-int JsonSaveJsonObject(json_t *root, char *path, json_t *value) {
+int JsonSaveJsonObject(json_t *root, char *path, json_t *value)
+{
     json_error_t error;
 
     if (strlen(path) < 1)
@@ -86,31 +88,36 @@ int JsonSaveJsonObject(json_t *root, char *path, json_t *value) {
     }
 }
 
-int JsonSaveInt(json_t *root, char *path, int value) {
+int JsonSaveInt(json_t *root, char *path, int value)
+{
     return JsonSaveJsonObject(root, path, json_integer(value));
 }
 
-int JsonSaveStr(json_t *root, char *path, char *value) {
+int JsonSaveStr(json_t *root, char *path, char *value)
+{
     return JsonSaveJsonObject(root, path, json_string(value));
 };
 
-int JsonSaveBufAsHexCompact(json_t *elm, char *path, uint8_t *data, size_t datalen) {
-    char * msg = sprint_hex_inrow(data, datalen);
+int JsonSaveBufAsHexCompact(json_t *elm, char *path, uint8_t *data, size_t datalen)
+{
+    char *msg = sprint_hex_inrow(data, datalen);
     if (msg && strlen(msg) && msg[strlen(msg) - 1] == ' ')
         msg[strlen(msg) - 1] = '\0';
 
     return JsonSaveStr(elm, path, msg);
 }
 
-int JsonSaveBufAsHex(json_t *elm, char *path, uint8_t *data, size_t datalen) {
-    char * msg = sprint_hex(data, datalen);
+int JsonSaveBufAsHex(json_t *elm, char *path, uint8_t *data, size_t datalen)
+{
+    char *msg = sprint_hex(data, datalen);
     if (msg && strlen(msg) && msg[strlen(msg) - 1] == ' ')
         msg[strlen(msg) - 1] = '\0';
 
     return JsonSaveStr(elm, path, msg);
 }
 
-int JsonSaveHex(json_t *elm, char *path, uint64_t data, int datalen) {
+int JsonSaveHex(json_t *elm, char *path, uint64_t data, int datalen)
+{
     uint8_t bdata[8] = {0};
     int len = 0;
     if (!datalen) {
@@ -130,7 +137,8 @@ int JsonSaveHex(json_t *elm, char *path, uint64_t data, int datalen) {
     return JsonSaveBufAsHex(elm, path, bdata, len);
 }
 
-int JsonSaveTLVValue(json_t *root, char *path, struct tlvdb *tlvdbelm) {
+int JsonSaveTLVValue(json_t *root, char *path, struct tlvdb *tlvdbelm)
+{
     const struct tlv *tlvelm = tlvdb_get_tlv(tlvdbelm);
     if (tlvelm)
         return JsonSaveBufAsHex(root, path, (uint8_t *)tlvelm->value, tlvelm->len);
@@ -138,7 +146,8 @@ int JsonSaveTLVValue(json_t *root, char *path, struct tlvdb *tlvdbelm) {
         return 1;
 }
 
-int JsonSaveTLVElm(json_t *elm, char *path, struct tlv *tlvelm, bool saveName, bool saveValue, bool saveAppDataLink) {
+int JsonSaveTLVElm(json_t *elm, char *path, struct tlv *tlvelm, bool saveName, bool saveValue, bool saveAppDataLink)
+{
     json_error_t error;
 
     if (strlen(path) < 1 || !tlvelm)
@@ -164,11 +173,11 @@ int JsonSaveTLVElm(json_t *elm, char *path, struct tlv *tlvelm, bool saveName, b
         }
 
         if (saveAppDataLink) {
-            char * AppDataName = GetApplicationDataName(tlvelm->tag);
+            char *AppDataName = GetApplicationDataName(tlvelm->tag);
             if (AppDataName)
                 JsonSaveStr(obj, "appdata", AppDataName);
         } else {
-            char * name = emv_get_tag_name(tlvelm);
+            char *name = emv_get_tag_name(tlvelm);
             if (saveName && name && strlen(name) > 0 && strncmp(name, "Unknown", 7))
                 JsonSaveStr(obj, "name", emv_get_tag_name(tlvelm));
             JsonSaveHex(obj, "tag", tlvelm->tag, 0);
@@ -182,15 +191,17 @@ int JsonSaveTLVElm(json_t *elm, char *path, struct tlv *tlvelm, bool saveName, b
     return 0;
 }
 
-int JsonSaveTLVTreeElm(json_t *elm, char *path, struct tlvdb *tlvdbelm, bool saveName, bool saveValue, bool saveAppDataLink) {
+int JsonSaveTLVTreeElm(json_t *elm, char *path, struct tlvdb *tlvdbelm, bool saveName, bool saveValue, bool saveAppDataLink)
+{
     return JsonSaveTLVElm(elm, path, (struct tlv *)tlvdb_get_tlv(tlvdbelm), saveName, saveValue, saveAppDataLink);
 }
 
-int JsonSaveTLVTree(json_t *root, json_t *elm, char *path, struct tlvdb *tlvdbelm) {
+int JsonSaveTLVTree(json_t *root, json_t *elm, char *path, struct tlvdb *tlvdbelm)
+{
     struct tlvdb *tlvp = tlvdbelm;
     while (tlvp) {
-        const struct tlv * tlvpelm = tlvdb_get_tlv(tlvp);
-        char * AppDataName = NULL;
+        const struct tlv *tlvpelm = tlvdb_get_tlv(tlvp);
+        char *AppDataName = NULL;
         if (tlvpelm)
             AppDataName = GetApplicationDataName(tlvpelm->tag);
 
@@ -213,7 +224,7 @@ int JsonSaveTLVTree(json_t *root, json_t *elm, char *path, struct tlvdb *tlvdbel
 
         if (tlvdb_elm_get_children(tlvp)) {
             // get path element
-            if(!pelm)
+            if (!pelm)
                 return 1;
 
             // check childs element and add it if not found
@@ -239,7 +250,8 @@ int JsonSaveTLVTree(json_t *root, json_t *elm, char *path, struct tlvdb *tlvdbel
     return 0;
 }
 
-bool HexToBuffer(const char *errormsg, const char *hexvalue, uint8_t * buffer, size_t maxbufferlen, size_t *bufferlen) {
+bool HexToBuffer(const char *errormsg, const char *hexvalue, uint8_t *buffer, size_t maxbufferlen, size_t *bufferlen)
+{
     int buflen = 0;
 
     switch (param_gethex_to_eol(hexvalue, 0, buffer, maxbufferlen, &buflen)) {
@@ -259,13 +271,14 @@ bool HexToBuffer(const char *errormsg, const char *hexvalue, uint8_t * buffer, s
         return false;
     }
 
-    if ( bufferlen )
+    if (bufferlen)
         *bufferlen = buflen;
 
     return true;
 }
 
-int JsonLoadStr(json_t *root, char *path, char *value) {
+int JsonLoadStr(json_t *root, char *path, char *value)
+{
     if (!value)
         return 1;
 
@@ -273,7 +286,7 @@ int JsonLoadStr(json_t *root, char *path, char *value) {
     if (!jelm || !json_is_string(jelm))
         return 2;
 
-    const char * strval = json_string_value(jelm);
+    const char *strval = json_string_value(jelm);
     if (!strval)
         return 1;
 
@@ -282,7 +295,8 @@ int JsonLoadStr(json_t *root, char *path, char *value) {
     return 0;
 }
 
-int JsonLoadBufAsHex(json_t *elm, char *path, uint8_t *data, size_t maxbufferlen, size_t *datalen) {
+int JsonLoadBufAsHex(json_t *elm, char *path, uint8_t *data, size_t maxbufferlen, size_t *datalen)
+{
     if (datalen)
         *datalen = 0;
 
@@ -296,7 +310,8 @@ int JsonLoadBufAsHex(json_t *elm, char *path, uint8_t *data, size_t maxbufferlen
     return 0;
 };
 
-bool ParamLoadFromJson(struct tlvdb *tlv) {
+bool ParamLoadFromJson(struct tlvdb *tlv)
+{
     json_t *root;
     json_error_t error;
 
@@ -324,20 +339,18 @@ bool ParamLoadFromJson(struct tlvdb *tlv) {
 
     PrintAndLog("Load params: json(%d) OK", json_array_size(root));
 
-    for(int i = 0; i < json_array_size(root); i++) {
+    for (int i = 0; i < json_array_size(root); i++) {
         json_t *data, *jtag, *jlength, *jvalue;
 
         data = json_array_get(root, i);
-        if(!json_is_object(data))
-        {
+        if (!json_is_object(data)) {
             PrintAndLog("Load params: data [%d] is not an object", i + 1);
             json_decref(root);
             return false;
         }
 
         jtag = json_object_get(data, "tag");
-        if(!json_is_string(jtag))
-        {
+        if (!json_is_string(jtag)) {
             PrintAndLog("Load params: data [%d] tag is not a string", i + 1);
             json_decref(root);
             return false;
@@ -345,8 +358,7 @@ bool ParamLoadFromJson(struct tlvdb *tlv) {
         const char *tlvTag = json_string_value(jtag);
 
         jvalue = json_object_get(data, "value");
-        if(!json_is_string(jvalue))
-        {
+        if (!json_is_string(jvalue)) {
             PrintAndLog("Load params: data [%d] value is not a string", i + 1);
             json_decref(root);
             return false;
@@ -354,8 +366,7 @@ bool ParamLoadFromJson(struct tlvdb *tlv) {
         const char *tlvValue = json_string_value(jvalue);
 
         jlength = json_object_get(data, "length");
-        if(!json_is_number(jlength))
-        {
+        if (!json_is_number(jlength)) {
             PrintAndLog("Load params: data [%d] length is not a number", i + 1);
             json_decref(root);
             return false;

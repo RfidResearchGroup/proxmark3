@@ -242,7 +242,7 @@
 struct KnownTagData { uint32_t tag; uint32_t types; };
 static const struct KnownTagData knownTagData[] = {
     { 0, (uint32_t)CborTextStringType },
-    { 1, (uint32_t)(CborIntegerType+1) },
+    { 1, (uint32_t)(CborIntegerType + 1) },
     { 2, (uint32_t)CborByteStringType },
     { 3, (uint32_t)CborByteStringType },
     { 4, (uint32_t)CborArrayType },
@@ -270,7 +270,7 @@ static CborError validate_value(CborValue *it, uint32_t flags, int recursionLeft
 static inline CborError validate_utf8_string(const void *ptr, size_t n)
 {
     const uint8_t *buffer = (const uint8_t *)ptr;
-    const uint8_t * const end = buffer + n;
+    const uint8_t *const end = buffer + n;
     while (buffer < end) {
         uint32_t uc = get_utf8(&buffer, end);
         if (uc == ~0U)
@@ -287,7 +287,7 @@ static inline CborError validate_simple_type(uint8_t simple_type, uint32_t flags
     if (simple_type < 32)
         return (flags & CborValidateNoUnknownSimpleTypesSA) ? CborErrorUnknownSimpleType : CborNoError;
     return (flags & CborValidateNoUnknownSimpleTypes) == CborValidateNoUnknownSimpleTypes ?
-                CborErrorUnknownSimpleType : CborNoError;
+           CborErrorUnknownSimpleType : CborNoError;
 }
 
 static inline CborError validate_number(const CborValue *it, CborType type, uint32_t flags)
@@ -326,7 +326,7 @@ static inline CborError validate_tag(CborValue *it, CborTag tag, uint32_t flags,
     CborType type = cbor_value_get_type(it);
     const size_t knownTagCount = sizeof(knownTagData) / sizeof(knownTagData[0]);
     const struct KnownTagData *tagData = knownTagData;
-    const struct KnownTagData * const knownTagDataEnd = knownTagData + knownTagCount;
+    const struct KnownTagData *const knownTagDataEnd = knownTagData + knownTagCount;
 
     if (!recursionLeft)
         return CborErrorNestingTooDeep;
@@ -334,7 +334,7 @@ static inline CborError validate_tag(CborValue *it, CborTag tag, uint32_t flags,
         return CborErrorExcludedType;
 
     /* find the tag data, if any */
-    for ( ; tagData != knownTagDataEnd; ++tagData) {
+    for (; tagData != knownTagDataEnd; ++tagData) {
         if (tagData->tag < tag)
             continue;
         if (tagData->tag > tag)
@@ -526,110 +526,110 @@ static CborError validate_value(CborValue *it, uint32_t flags, int recursionLeft
     }
 
     switch (type) {
-    case CborArrayType:
-    case CborMapType: {
-        /* recursive type */
-        CborValue recursed;
-        err = cbor_value_enter_container(it, &recursed);
-        if (!err)
-            err = validate_container(&recursed, type, flags, recursionLeft - 1);
-        if (err) {
-            it->ptr = recursed.ptr;
-            return err;
+        case CborArrayType:
+        case CborMapType: {
+            /* recursive type */
+            CborValue recursed;
+            err = cbor_value_enter_container(it, &recursed);
+            if (!err)
+                err = validate_container(&recursed, type, flags, recursionLeft - 1);
+            if (err) {
+                it->ptr = recursed.ptr;
+                return err;
+            }
+            err = cbor_value_leave_container(it, &recursed);
+            if (err)
+                return err;
+            return CborNoError;
         }
-        err = cbor_value_leave_container(it, &recursed);
-        if (err)
-            return err;
-        return CborNoError;
-    }
 
-    case CborIntegerType: {
-        uint64_t val;
-        err = cbor_value_get_raw_integer(it, &val);
-        cbor_assert(err == CborNoError);         /* can't fail */
+        case CborIntegerType: {
+            uint64_t val;
+            err = cbor_value_get_raw_integer(it, &val);
+            cbor_assert(err == CborNoError);         /* can't fail */
 
-        break;
-    }
+            break;
+        }
 
-    case CborByteStringType:
-    case CborTextStringType: {
-        size_t n = 0;
-        const void *ptr;
+        case CborByteStringType:
+        case CborTextStringType: {
+            size_t n = 0;
+            const void *ptr;
 
-        err = _cbor_value_prepare_string_iteration(it);
-        if (err)
-            return err;
-
-        while (1) {
-            err = validate_number(it, type, flags);
+            err = _cbor_value_prepare_string_iteration(it);
             if (err)
                 return err;
 
-            err = _cbor_value_get_string_chunk(it, &ptr, &n, it);
-            if (err)
-                return err;
-            if (!ptr)
-                break;
-
-            if (type == CborTextStringType && flags & CborValidateUtf8) {
-                err = validate_utf8_string(ptr, n);
+            while (1) {
+                err = validate_number(it, type, flags);
                 if (err)
                     return err;
+
+                err = _cbor_value_get_string_chunk(it, &ptr, &n, it);
+                if (err)
+                    return err;
+                if (!ptr)
+                    break;
+
+                if (type == CborTextStringType && flags & CborValidateUtf8) {
+                    err = validate_utf8_string(ptr, n);
+                    if (err)
+                        return err;
+                }
             }
+
+            return CborNoError;
         }
 
-        return CborNoError;
-    }
+        case CborTagType: {
+            CborTag tag;
+            err = cbor_value_get_tag(it, &tag);
+            cbor_assert(err == CborNoError);     /* can't fail */
 
-    case CborTagType: {
-        CborTag tag;
-        err = cbor_value_get_tag(it, &tag);
-        cbor_assert(err == CborNoError);     /* can't fail */
+            err = cbor_value_advance_fixed(it);
+            if (err)
+                return err;
+            err = validate_tag(it, tag, flags, recursionLeft - 1);
+            if (err)
+                return err;
 
-        err = cbor_value_advance_fixed(it);
-        if (err)
-            return err;
-        err = validate_tag(it, tag, flags, recursionLeft - 1);
-        if (err)
-            return err;
+            return CborNoError;
+        }
 
-        return CborNoError;
-    }
+        case CborSimpleType: {
+            uint8_t simple_type;
+            err = cbor_value_get_simple_type(it, &simple_type);
+            cbor_assert(err == CborNoError);     /* can't fail */
+            err = validate_simple_type(simple_type, flags);
+            if (err)
+                return err;
+            break;
+        }
 
-    case CborSimpleType: {
-        uint8_t simple_type;
-        err = cbor_value_get_simple_type(it, &simple_type);
-        cbor_assert(err == CborNoError);     /* can't fail */
-        err = validate_simple_type(simple_type, flags);
-        if (err)
-            return err;
-        break;
-    }
+        case CborNullType:
+        case CborBooleanType:
+            break;
 
-    case CborNullType:
-    case CborBooleanType:
-        break;
+        case CborUndefinedType:
+            if (flags & CborValidateNoUndefined)
+                return CborErrorExcludedType;
+            break;
 
-    case CborUndefinedType:
-        if (flags & CborValidateNoUndefined)
-            return CborErrorExcludedType;
-        break;
-
-    case CborHalfFloatType:
-    case CborFloatType:
-    case CborDoubleType: {
+        case CborHalfFloatType:
+        case CborFloatType:
+        case CborDoubleType: {
 #ifdef CBOR_NO_FLOATING_POINT
-        return CborErrorUnsupportedType;
+            return CborErrorUnsupportedType;
 #else
-        err = validate_floating_point(it, type, flags);
-        if (err)
-            return err;
-        break;
+            err = validate_floating_point(it, type, flags);
+            if (err)
+                return err;
+            break;
 #endif /* !CBOR_NO_FLOATING_POINT */
-    }
+        }
 
-    case CborInvalidType:
-        return CborErrorUnknownType;
+        case CborInvalidType:
+            return CborErrorUnknownType;
     }
 
     err = cbor_value_advance_fixed(it);

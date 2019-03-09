@@ -26,7 +26,8 @@
 #include <util.h>
 
 // NIST Special Publication 800-38A — Recommendation for block cipher modes of operation: methods and techniques, 2001.
-int aes_encode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length){
+int aes_encode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length)
+{
     uint8_t iiv[16] = {0};
     if (iv)
         memcpy(iiv, iv, 16);
@@ -42,7 +43,8 @@ int aes_encode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int l
     return 0;
 }
 
-int aes_decode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length){
+int aes_decode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length)
+{
     uint8_t iiv[16] = {0};
     if (iv)
         memcpy(iiv, iv, 16);
@@ -60,14 +62,16 @@ int aes_decode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int l
 
 // NIST Special Publication 800-38B — Recommendation for block cipher modes of operation: The CMAC mode for authentication.
 // https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/AES_CMAC.pdf
-int aes_cmac(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *mac, int length) {
+int aes_cmac(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *mac, int length)
+{
     memset(mac, 0x00, 16);
 
     //  NIST 800-38B
     return mbedtls_aes_cmac_prf_128(key, MBEDTLS_AES_BLOCK_SIZE, input, length, mac);
 }
 
-int aes_cmac8(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *mac, int length) {
+int aes_cmac8(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *mac, int length)
+{
     uint8_t cmac[16] = {0};
     memset(mac, 0x00, 8);
 
@@ -75,14 +79,15 @@ int aes_cmac8(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *mac, int lengt
     if (res)
         return res;
 
-    for(int i = 0; i < 8; i++)
+    for (int i = 0; i < 8; i++)
         mac[i] = cmac[i * 2 + 1];
 
     return 0;
 }
 
 static uint8_t fixed_rand_value[250] = {0};
-static int fixed_rand(void *rng_state, unsigned char *output, size_t len) {
+static int fixed_rand(void *rng_state, unsigned char *output, size_t len)
+{
     if (len <= 250) {
         memcpy(output, fixed_rand_value, len);
     } else {
@@ -92,7 +97,8 @@ static int fixed_rand(void *rng_state, unsigned char *output, size_t len) {
     return 0;
 }
 
-int sha256hash(uint8_t *input, int length, uint8_t *hash) {
+int sha256hash(uint8_t *input, int length, uint8_t *hash)
+{
     if (!hash || !input)
         return 1;
 
@@ -106,7 +112,8 @@ int sha256hash(uint8_t *input, int length, uint8_t *hash) {
     return 0;
 }
 
-int ecdsa_init_str(mbedtls_ecdsa_context *ctx, char * key_d, char *key_x, char *key_y) {
+int ecdsa_init_str(mbedtls_ecdsa_context *ctx, char *key_d, char *key_x, char *key_y)
+{
     if (!ctx)
         return 1;
 
@@ -132,7 +139,8 @@ int ecdsa_init_str(mbedtls_ecdsa_context *ctx, char * key_d, char *key_x, char *
     return 0;
 }
 
-int ecdsa_init(mbedtls_ecdsa_context *ctx, uint8_t * key_d, uint8_t *key_xy) {
+int ecdsa_init(mbedtls_ecdsa_context *ctx, uint8_t *key_d, uint8_t *key_xy)
+{
     if (!ctx)
         return 1;
 
@@ -158,7 +166,8 @@ int ecdsa_init(mbedtls_ecdsa_context *ctx, uint8_t * key_d, uint8_t *key_xy) {
     return 0;
 }
 
-int ecdsa_key_create(uint8_t * key_d, uint8_t *key_xy) {
+int ecdsa_key_create(uint8_t *key_d, uint8_t *key_xy)
+{
     int res;
     mbedtls_ecdsa_context ctx;
     ecdsa_init(&ctx, NULL, NULL);
@@ -202,14 +211,16 @@ exit:
     return res;
 }
 
-char *ecdsa_get_error(int ret) {
+char *ecdsa_get_error(int ret)
+{
     static char retstr[300];
     memset(retstr, 0x00, sizeof(retstr));
     mbedtls_strerror(ret, retstr, sizeof(retstr));
     return retstr;
 }
 
-int ecdsa_public_key_from_pk(mbedtls_pk_context *pk, uint8_t *key, size_t keylen) {
+int ecdsa_public_key_from_pk(mbedtls_pk_context *pk, uint8_t *key, size_t keylen)
+{
     int res = 0;
     size_t realkeylen = 0;
     if (keylen < 65)
@@ -222,7 +233,7 @@ int ecdsa_public_key_from_pk(mbedtls_pk_context *pk, uint8_t *key, size_t keylen
     if (res)
         goto exit;
 
-    res = mbedtls_ecdsa_from_keypair(&ctx, mbedtls_pk_ec(*pk) );
+    res = mbedtls_ecdsa_from_keypair(&ctx, mbedtls_pk_ec(*pk));
     if (res)
         goto exit;
 
@@ -234,7 +245,8 @@ exit:
     return res;
 }
 
-int ecdsa_signature_create(uint8_t *key_d, uint8_t *key_xy, uint8_t *input, int length, uint8_t *signature, size_t *signaturelen) {
+int ecdsa_signature_create(uint8_t *key_d, uint8_t *key_xy, uint8_t *input, int length, uint8_t *signature, size_t *signaturelen)
+{
     int res;
     *signaturelen = 0;
 
@@ -264,7 +276,8 @@ exit:
     return res;
 }
 
-int ecdsa_signature_create_test(char * key_d, char *key_x, char *key_y, char *random, uint8_t *input, int length, uint8_t *signature, size_t *signaturelen) {
+int ecdsa_signature_create_test(char *key_d, char *key_x, char *key_y, char *random, uint8_t *input, int length, uint8_t *signature, size_t *signaturelen)
+{
     int res;
     *signaturelen = 0;
 
@@ -284,7 +297,8 @@ int ecdsa_signature_create_test(char * key_d, char *key_x, char *key_y, char *ra
     return res;
 }
 
-int ecdsa_signature_verify_keystr(char *key_x, char *key_y, uint8_t *input, int length, uint8_t *signature, size_t signaturelen) {
+int ecdsa_signature_verify_keystr(char *key_x, char *key_y, uint8_t *input, int length, uint8_t *signature, size_t signaturelen)
+{
     int res;
     uint8_t shahash[32] = {0};
     res = sha256hash(input, length, shahash);
@@ -299,7 +313,8 @@ int ecdsa_signature_verify_keystr(char *key_x, char *key_y, uint8_t *input, int 
     return res;
 }
 
-int ecdsa_signature_verify(uint8_t *key_xy, uint8_t *input, int length, uint8_t *signature, size_t signaturelen) {
+int ecdsa_signature_verify(uint8_t *key_xy, uint8_t *input, int length, uint8_t *signature, size_t signaturelen)
+{
     int res;
     uint8_t shahash[32] = {0};
     res = sha256hash(input, length, shahash);
@@ -321,7 +336,8 @@ int ecdsa_signature_verify(uint8_t *key_xy, uint8_t *input, int length, uint8_t 
 #define T_R           "2B42F576D07F4165FF65D1F3B1500F81E44C316F1F0B3EF57325B69ACA46104F"
 #define T_S           "DC42C2122D6392CD3E3A993A89502A8198C1886FE69D262C4B329BDB6B63FAF1"
 
-int ecdsa_nist_test(bool verbose) {
+int ecdsa_nist_test(bool verbose)
+{
     int res;
     uint8_t input[] = "Example of ECDSA with P-256";
     int length = strlen((char *)input);

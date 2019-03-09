@@ -120,7 +120,7 @@ json_t *json_null(void);
 static JSON_INLINE
 json_t *json_incref(json_t *json)
 {
-    if(json && json->refcount != (size_t)-1)
+    if (json && json->refcount != (size_t) -1)
         JSON_INTERNAL_INCREF(json);
     return json;
 }
@@ -131,7 +131,7 @@ void json_delete(json_t *json);
 static JSON_INLINE
 void json_decref(json_t *json)
 {
-    if(json && json->refcount != (size_t)-1 && JSON_INTERNAL_DECREF(json) == 0)
+    if (json && json->refcount != (size_t) -1 && JSON_INTERNAL_DECREF(json) == 0)
         json_delete(json);
 }
 
@@ -139,9 +139,9 @@ void json_decref(json_t *json)
 static JSON_INLINE
 void json_decrefp(json_t **json)
 {
-    if(json) {
+    if (json) {
         json_decref(*json);
-    *json = NULL;
+        *json = NULL;
     }
 }
 
@@ -183,7 +183,8 @@ enum json_error_code {
     json_error_index_out_of_range
 };
 
-static JSON_INLINE enum json_error_code json_error_code(const json_error_t *e) {
+static JSON_INLINE enum json_error_code json_error_code(const json_error_t *e)
+{
     return (enum json_error_code)e->text[JSON_ERROR_TEXT_LENGTH - 1];
 }
 
@@ -214,10 +215,10 @@ int json_object_iter_set_new(json_t *object, void *iter, json_t *value);
 
 #define json_object_foreach_safe(object, n, key, value)     \
     for(key = json_object_iter_key(json_object_iter(object)), \
-            n = json_object_iter_next(object, json_object_key_to_iter(key)); \
+        n = json_object_iter_next(object, json_object_key_to_iter(key)); \
         key && (value = json_object_iter_value(json_object_key_to_iter(key))); \
         key = json_object_iter_key(n), \
-            n = json_object_iter_next(object, json_object_key_to_iter(key)))
+        n = json_object_iter_next(object, json_object_key_to_iter(key)))
 
 #define json_array_foreach(array, index, value) \
     for(index = 0; \

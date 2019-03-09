@@ -27,13 +27,13 @@ from the client to view the stored quadlets.
 // Maximum number of auth attempts per standalone session
 #define MAX_PWDS_PER_SESSION 64
 
-uint8_t FindOffsetInFlash() {
+uint8_t FindOffsetInFlash()
+{
     uint8_t mem[4] = { 0x00, 0x00, 0x00, 0x00 };
     uint8_t eom[4] = { 0xFF, 0xFF, 0xFF, 0xFF };
     uint8_t memcnt = 0;
 
-    while (memcnt < 0xFF)
-    {
+    while (memcnt < 0xFF) {
         Flash_ReadData(memcnt, mem, 4);
         if (memcmp(mem, eom, 4) == 0) {
             return memcnt;
@@ -44,14 +44,15 @@ uint8_t FindOffsetInFlash() {
     return 0; // wrap-around
 }
 
-void EraseMemory() {
-    if (!FlashInit()){
+void EraseMemory()
+{
+    if (!FlashInit()) {
         return;
     }
 
     Flash_CheckBusy(BUSY_TIMEOUT);
     Flash_WriteEnable();
-    Flash_Erase4k(0,0);
+    Flash_Erase4k(0, 0);
 
     if (MF_DBGLEVEL > 1) Dbprintf("[!] Erased flash!");
     FlashStop();
@@ -59,13 +60,15 @@ void EraseMemory() {
 }
 
 // This is actually copied from SniffIso14443a
-void RAMFUNC SniffAndStore(uint8_t param) {
+void RAMFUNC SniffAndStore(uint8_t param)
+{
 
     iso14443a_setup(FPGA_HF_ISO14443A_SNIFFER);
 
     // Allocate memory from BigBuf for some buffers
     // free all previous allocations first
-    BigBuf_free(); BigBuf_Clear_ext(false);
+    BigBuf_free();
+    BigBuf_Clear_ext(false);
     clear_trace();
     set_tracing(true);
 
@@ -96,13 +99,13 @@ void RAMFUNC SniffAndStore(uint8_t param) {
     UartInit(receivedCmd, receivedCmdPar);
 
     // Setup and start DMA.
-    if ( !FpgaSetupSscDma((uint8_t*) dmaBuf, DMA_BUFFER_SIZE) ){
+    if (!FpgaSetupSscDma((uint8_t *) dmaBuf, DMA_BUFFER_SIZE)) {
         if (MF_DBGLEVEL > 1) Dbprintf("FpgaSetupSscDma failed. Exiting");
         return;
     }
 
-    tUart* uart = GetUart();
-    tDemod* demod = GetDemod();
+    tUart *uart = GetUart();
+    tDemod *demod = GetDemod();
 
     // We won't start recording the frames that we acquire until we trigger;
     // a good trigger condition to get started is probably when we see a
@@ -155,7 +158,7 @@ void RAMFUNC SniffAndStore(uint8_t param) {
 
             if (!TagIsActive) { // no need to try decoding reader data if the tag is sending
                 uint8_t readerdata = (previous_data & 0xF0) | (*data >> 4);
-                if (MillerDecoding(readerdata, (rsamples-1)*4)) {
+                if (MillerDecoding(readerdata, (rsamples - 1) * 4)) {
                     LED_C_ON();
 
                     // check - if there is a short 7bit request from reader
@@ -166,14 +169,14 @@ void RAMFUNC SniffAndStore(uint8_t param) {
                             if (MF_DBGLEVEL > 1) Dbprintf("PWD-AUTH KEY: 0x%02x%02x%02x%02x", receivedCmd[1], receivedCmd[2], receivedCmd[3], receivedCmd[4]);
 
                             // temporarily save the captured pwd in our array
-                            memcpy(&capturedPwds[4 * auth_attempts], receivedCmd+1, 4);
+                            memcpy(&capturedPwds[4 * auth_attempts], receivedCmd + 1, 4);
                             auth_attempts++;
                         }
 
                         if (!LogTrace(receivedCmd,
                                       uart->len,
-                                      uart->startTime*16 - DELAY_READER_AIR2ARM_AS_SNIFFER,
-                                      uart->endTime*16 - DELAY_READER_AIR2ARM_AS_SNIFFER,
+                                      uart->startTime * 16 - DELAY_READER_AIR2ARM_AS_SNIFFER,
+                                      uart->endTime * 16 - DELAY_READER_AIR2ARM_AS_SNIFFER,
                                       uart->parity,
                                       true)) break;
                     }
@@ -190,13 +193,13 @@ void RAMFUNC SniffAndStore(uint8_t param) {
             // no need to try decoding tag data if the reader is sending - and we cannot afford the time
             if (!ReaderIsActive) {
                 uint8_t tagdata = (previous_data << 4) | (*data & 0x0F);
-                if (ManchesterDecoding(tagdata, 0, (rsamples-1)*4)) {
+                if (ManchesterDecoding(tagdata, 0, (rsamples - 1) * 4)) {
                     LED_B_ON();
 
                     if (!LogTrace(receivedResp,
                                   demod->len,
-                                  demod->startTime*16 - DELAY_TAG_AIR2ARM_AS_SNIFFER,
-                                  demod->endTime*16 - DELAY_TAG_AIR2ARM_AS_SNIFFER,
+                                  demod->startTime * 16 - DELAY_TAG_AIR2ARM_AS_SNIFFER,
+                                  demod->endTime * 16 - DELAY_TAG_AIR2ARM_AS_SNIFFER,
                                   demod->parity,
                                   false)) break;
 
@@ -239,8 +242,7 @@ void RAMFUNC SniffAndStore(uint8_t param) {
         uint8_t memoffset = FindOffsetInFlash();
         if (MF_DBGLEVEL > 1) Dbprintf("[!] Memory offset = %u", memoffset);
 
-        if ((memoffset + 4 * auth_attempts) > 0xFF)
-        {
+        if ((memoffset + 4 * auth_attempts) > 0xFF) {
             // We opt to keep the new data only
             memoffset = 0;
             if (MF_DBGLEVEL > 1) Dbprintf("[!] Size of total data > 256 bytes. Discarding the old data.");
@@ -248,8 +250,7 @@ void RAMFUNC SniffAndStore(uint8_t param) {
 
         // Get previous data from flash mem
         uint8_t *previousdata = BigBuf_malloc(memoffset);
-        if (memoffset > 0)
-        {
+        if (memoffset > 0) {
             uint16_t readlen = Flash_ReadData(0, previousdata, memoffset);
             if (MF_DBGLEVEL > 1) Dbprintf("[!] Read %u bytes from flash mem", readlen);
         }
@@ -271,7 +272,7 @@ void RAMFUNC SniffAndStore(uint8_t param) {
         uint16_t writelen = Flash_WriteData(0, total_data, memoffset + 4 * auth_attempts);
         if (MF_DBGLEVEL > 1) Dbprintf("[!] Wrote %u bytes into flash mem", writelen);
 
-                // If pwd saved successfully, blink led A three times
+        // If pwd saved successfully, blink led A three times
         if (writelen > 0) {
             SpinErr(0, 200, 5); // blink led A
         }
@@ -283,7 +284,8 @@ void RAMFUNC SniffAndStore(uint8_t param) {
     }
 }
 
-void RunMod() {
+void RunMod()
+{
 
     StandAloneMode();
 

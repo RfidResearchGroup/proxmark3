@@ -173,24 +173,24 @@ static const struct emv_tag_bit EMV_CVR[] = {
 // http://dexterous-programmer.blogspot.in/2012/05/emv-tags.html
 static const struct emv_tag emv_tags[] = {
     // internal
-    { 0x00  , "Unknown ???" },
-    { 0x01  , "", EMV_TAG_STRING }, // string for headers
-    { 0x02  , "Raw data" }, // data
-    { 0x06  , "Object Identifier (OID)" },
-    { 0x20  , "Cardholder Verification Results (CVR)", EMV_TAG_CVR }, // not standard!
-    { 0x21  , "Input list for Offline Data Authentication" }, // not standard! data for "Offline Data Authentication" come from "read records" command. (EMV book3 10.3)
+    { 0x00, "Unknown ???" },
+    { 0x01, "", EMV_TAG_STRING },   // string for headers
+    { 0x02, "Raw data" },   // data
+    { 0x06, "Object Identifier (OID)" },
+    { 0x20, "Cardholder Verification Results (CVR)", EMV_TAG_CVR },   // not standard!
+    { 0x21, "Input list for Offline Data Authentication" },   // not standard! data for "Offline Data Authentication" come from "read records" command. (EMV book3 10.3)
 
     // EMV
-    { 0x41  , "Country code and national data" },
-    { 0x42  , "Issuer Identification Number (IIN)" },
-    { 0x4f  , "Application Dedicated File (ADF) Name" },
-    { 0x50  , "Application Label", EMV_TAG_STRING },
-    { 0x51  , "File reference data element" },
-    { 0x52  , "Command APDU" },
-    { 0x53  , "Discretionary data (or template)" },
-    { 0x56  , "Track 1 Data" },
-    { 0x57  , "Track 2 Equivalent Data" },
-    { 0x5a  , "Application Primary Account Number (PAN)" },
+    { 0x41, "Country code and national data" },
+    { 0x42, "Issuer Identification Number (IIN)" },
+    { 0x4f, "Application Dedicated File (ADF) Name" },
+    { 0x50, "Application Label", EMV_TAG_STRING },
+    { 0x51, "File reference data element" },
+    { 0x52, "Command APDU" },
+    { 0x53, "Discretionary data (or template)" },
+    { 0x56, "Track 1 Data" },
+    { 0x57, "Track 2 Equivalent Data" },
+    { 0x5a, "Application Primary Account Number (PAN)" },
     { 0x5f20, "Cardholder Name", EMV_TAG_STRING },
     { 0x5f24, "Application Expiration Date", EMV_TAG_YYMMDD },
     { 0x5f25, "Application Effective Date", EMV_TAG_YYMMDD },
@@ -206,40 +206,40 @@ static const struct emv_tag emv_tags[] = {
     { 0x5f55, "Issuer Country Code (alpha2 format)", EMV_TAG_STRING },
     { 0x5f56, "Issuer Country Code (alpha3 format)", EMV_TAG_STRING },
 
-    { 0x61  , "Application Template" },
-    { 0x6f  , "File Control Information (FCI) Template" },
-    { 0x70  , "READ RECORD Response Message Template" },
-    { 0x71  , "Issues Script Template 1" },
-    { 0x72  , "Issues Script Template 2" },
-    { 0x73  , "Directory Discretionary Template" },
-    { 0x77  , "Response Message Template Format 2" },
-    { 0x80  , "Response Message Template Format 1" },
-    { 0x81  , "Amount, Authorised (Binary)" },
-    { 0x82  , "Application Interchange Profile", EMV_TAG_BITMASK, &EMV_AIP },
-    { 0x83  , "Command Template" },
-    { 0x84  , "Dedicated File (DF) Name" },
-    { 0x86  , "Issuer Script Command" },
-    { 0x87  , "Application Priority Indicator" },
-    { 0x88  , "Short File Identifier (SFI)" },
-    { 0x89  , "Authorisation Code" },
-    { 0x8a  , "Authorisation Response Code" },
-    { 0x8c  , "Card Risk Management Data Object List 1 (CDOL1)", EMV_TAG_DOL },
-    { 0x8d  , "Card Risk Management Data Object List 2 (CDOL2)", EMV_TAG_DOL },
-    { 0x8e  , "Cardholder Verification Method (CVM) List", EMV_TAG_CVM_LIST },
-    { 0x8f  , "Certification Authority Public Key Index" },
-    { 0x90  , "Issuer Public Key Certificate" },
-    { 0x91  , "Issuer Authentication Data" },
-    { 0x92  , "Issuer Public Key Remainder" },
-    { 0x93  , "Signed Static Application Data" },
-    { 0x94  , "Application File Locator (AFL)", EMV_TAG_AFL },
-    { 0x95  , "Terminal Verification Results" },
-    { 0x97  , "Transaction Certificate Data Object List (TDOL)" },
-    { 0x98  , "Transaction Certificate (TC) Hash Value" },
-    { 0x99  , "Transaction Personal Identification Number (PIN) Data" },
-    { 0x9a  , "Transaction Date", EMV_TAG_YYMMDD },
-    { 0x9b  , "Transaction Status Information" },
-    { 0x9c  , "Transaction Type", EMV_TAG_NUMERIC },
-    { 0x9d  , "Directory Definition File (DDF) Name" },
+    { 0x61, "Application Template" },
+    { 0x6f, "File Control Information (FCI) Template" },
+    { 0x70, "READ RECORD Response Message Template" },
+    { 0x71, "Issues Script Template 1" },
+    { 0x72, "Issues Script Template 2" },
+    { 0x73, "Directory Discretionary Template" },
+    { 0x77, "Response Message Template Format 2" },
+    { 0x80, "Response Message Template Format 1" },
+    { 0x81, "Amount, Authorised (Binary)" },
+    { 0x82, "Application Interchange Profile", EMV_TAG_BITMASK, &EMV_AIP },
+    { 0x83, "Command Template" },
+    { 0x84, "Dedicated File (DF) Name" },
+    { 0x86, "Issuer Script Command" },
+    { 0x87, "Application Priority Indicator" },
+    { 0x88, "Short File Identifier (SFI)" },
+    { 0x89, "Authorisation Code" },
+    { 0x8a, "Authorisation Response Code" },
+    { 0x8c, "Card Risk Management Data Object List 1 (CDOL1)", EMV_TAG_DOL },
+    { 0x8d, "Card Risk Management Data Object List 2 (CDOL2)", EMV_TAG_DOL },
+    { 0x8e, "Cardholder Verification Method (CVM) List", EMV_TAG_CVM_LIST },
+    { 0x8f, "Certification Authority Public Key Index" },
+    { 0x90, "Issuer Public Key Certificate" },
+    { 0x91, "Issuer Authentication Data" },
+    { 0x92, "Issuer Public Key Remainder" },
+    { 0x93, "Signed Static Application Data" },
+    { 0x94, "Application File Locator (AFL)", EMV_TAG_AFL },
+    { 0x95, "Terminal Verification Results" },
+    { 0x97, "Transaction Certificate Data Object List (TDOL)" },
+    { 0x98, "Transaction Certificate (TC) Hash Value" },
+    { 0x99, "Transaction Personal Identification Number (PIN) Data" },
+    { 0x9a, "Transaction Date", EMV_TAG_YYMMDD },
+    { 0x9b, "Transaction Status Information" },
+    { 0x9c, "Transaction Type", EMV_TAG_NUMERIC },
+    { 0x9d, "Directory Definition File (DDF) Name" },
 
     { 0x9f01, "Acquirer Identifier", EMV_TAG_NUMERIC },
     { 0x9f02, "Amount, Authorised (Numeric)", EMV_TAG_NUMERIC },
@@ -364,7 +364,7 @@ static const struct emv_tag emv_tags[] = {
     { 0x9f7d, "DS Summary 1" },
     { 0x9f7f, "DS Unpredictable Number" },
 
-    { 0xa5  , "File Control Information (FCI) Proprietary Template" },
+    { 0xa5, "File Control Information (FCI) Proprietary Template" },
     { 0xbf0c, "File Control Information (FCI) Issuer Discretionary Data" },
     { 0xdf20, "Issuer Proprietary Bitmap (IPB)" },
     { 0xdf4b, "POS Cardholder Interaction Information" },
@@ -424,20 +424,23 @@ static const struct emv_tag emv_tags[] = {
     { 0xff8106, "Discretionary Data" },
 };
 
-static int emv_sort_tag(tlv_tag_t tag) {
+static int emv_sort_tag(tlv_tag_t tag)
+{
     return (int)(tag >= 0x100 ? tag : tag << 8);
 }
 
-static int emv_tlv_compare(const void *a, const void *b) {
+static int emv_tlv_compare(const void *a, const void *b)
+{
     const struct tlv *tlv = a;
     const struct emv_tag *tag = b;
 
     return emv_sort_tag(tlv->tag) - (emv_sort_tag(tag->tag));
 }
 
-static const struct emv_tag *emv_get_tag(const struct tlv *tlv) {
-    struct emv_tag *tag = bsearch(tlv, emv_tags, sizeof(emv_tags)/sizeof(emv_tags[0]),
-            sizeof(emv_tags[0]), emv_tlv_compare);
+static const struct emv_tag *emv_get_tag(const struct tlv *tlv)
+{
+    struct emv_tag *tag = bsearch(tlv, emv_tags, sizeof(emv_tags) / sizeof(emv_tags[0]),
+                                  sizeof(emv_tags[0]), emv_tlv_compare);
 
     return tag ? tag : &emv_tags[0];
 }
@@ -453,7 +456,8 @@ static const char *bitstrings[] = {
     "1.......",
 };
 
-static void emv_tag_dump_bitmask(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
+static void emv_tag_dump_bitmask(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level)
+{
     const struct emv_tag_bit *bits = tag->data;
     unsigned bit, byte;
 
@@ -462,7 +466,7 @@ static void emv_tag_dump_bitmask(const struct tlv *tlv, const struct emv_tag *ta
         PRINT_INDENT(level);
         fprintf(f, "\tByte %u (%02x)\n", byte, val);
         for (bit = 8; bit > 0; bit--, val <<= 1) {
-            if (val & 0x80){
+            if (val & 0x80) {
                 PRINT_INDENT(level);
                 fprintf(f, "\t\t%s - '%s'\n", bitstrings[bit - 1],
                         bits->bit == EMV_BIT(byte, bit) ? bits->name : "Unknown");
@@ -473,7 +477,8 @@ static void emv_tag_dump_bitmask(const struct tlv *tlv, const struct emv_tag *ta
     }
 }
 
-static void emv_tag_dump_dol(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
+static void emv_tag_dump_dol(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level)
+{
     const unsigned char *buf = tlv->value;
     size_t left = tlv->len;
 
@@ -494,13 +499,15 @@ static void emv_tag_dump_dol(const struct tlv *tlv, const struct emv_tag *tag, F
     }
 }
 
-static void emv_tag_dump_string(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
+static void emv_tag_dump_string(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level)
+{
     fprintf(f, "\tString value '");
     fwrite(tlv->value, 1, tlv->len, f);
     fprintf(f, "'\n");
 }
 
-static unsigned long emv_value_numeric(const struct tlv *tlv, unsigned start, unsigned end) {
+static unsigned long emv_value_numeric(const struct tlv *tlv, unsigned start, unsigned end)
+{
     unsigned long ret = 0;
     int i;
 
@@ -510,32 +517,34 @@ static unsigned long emv_value_numeric(const struct tlv *tlv, unsigned start, un
         return ret;
 
     if (start & 1) {
-        ret += tlv->value[start/2] & 0xf;
+        ret += tlv->value[start / 2] & 0xf;
         i = start + 1;
     } else
         i = start;
 
     for (; i < end - 1; i += 2) {
         ret *= 10;
-        ret += tlv->value[i/2] >> 4;
+        ret += tlv->value[i / 2] >> 4;
         ret *= 10;
-        ret += tlv->value[i/2] & 0xf;
+        ret += tlv->value[i / 2] & 0xf;
     }
 
     if (end & 1) {
         ret *= 10;
-        ret += tlv->value[end/2] >> 4;
+        ret += tlv->value[end / 2] >> 4;
     }
 
     return ret;
 }
 
-static void emv_tag_dump_numeric(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
+static void emv_tag_dump_numeric(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level)
+{
     PRINT_INDENT(level);
     fprintf(f, "\tNumeric value %lu\n", emv_value_numeric(tlv, 0, tlv->len * 2));
 }
 
-static void emv_tag_dump_yymmdd(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
+static void emv_tag_dump_yymmdd(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level)
+{
     PRINT_INDENT(level);
     fprintf(f, "\tDate: 20%02ld.%ld.%ld\n",
             emv_value_numeric(tlv, 0, 2),
@@ -543,12 +552,14 @@ static void emv_tag_dump_yymmdd(const struct tlv *tlv, const struct emv_tag *tag
             emv_value_numeric(tlv, 4, 6));
 }
 
-static uint32_t emv_get_binary(const unsigned char *S) {
+static uint32_t emv_get_binary(const unsigned char *S)
+{
     return (S[0] << 24) | (S[1] << 16) | (S[2] << 8) | (S[3] << 0);
 }
 
 // https://github.com/binaryfoo/emv-bertlv/blob/master/src/main/resources/fields/visa-cvr.txt
-static void emv_tag_dump_cvr(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
+static void emv_tag_dump_cvr(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level)
+{
     if (!tlv || tlv->len < 1) {
         PRINT_INDENT(level);
         fprintf(f, "\tINVALID!\n");
@@ -612,7 +623,8 @@ static void emv_tag_dump_cvr(const struct tlv *tlv, const struct emv_tag *tag, F
 }
 
 // EMV Book 3
-static void emv_tag_dump_cid(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
+static void emv_tag_dump_cid(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level)
+{
     if (!tlv || tlv->len < 1) {
         PRINT_INDENT(level);
         fprintf(f, "\tINVALID!\n");
@@ -633,7 +645,7 @@ static void emv_tag_dump_cid(const struct tlv *tlv, const struct emv_tag *tag, F
     if (tlv->value[0] & EMVCID_REASON_MASK) {
         PRINT_INDENT(level);
         fprintf(f, "\tReason/advice/referral code: ");
-        switch((tlv->value[0] & EMVCID_REASON_MASK)) {
+        switch ((tlv->value[0] & EMVCID_REASON_MASK)) {
             case 0:
                 fprintf(f, "No information given\n");
                 break;
@@ -653,7 +665,8 @@ static void emv_tag_dump_cid(const struct tlv *tlv, const struct emv_tag *tag, F
     }
 }
 
-static void emv_tag_dump_cvm_list(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
+static void emv_tag_dump_cvm_list(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level)
+{
     uint32_t X, Y;
     int i;
 
@@ -671,87 +684,88 @@ static void emv_tag_dump_cvm_list(const struct tlv *tlv, const struct emv_tag *t
     PRINT_INDENT(level);
     fprintf(f, "\tY: %d\n", Y);
 
-    for (i = 8; i < tlv->len; i+= 2) {
+    for (i = 8; i < tlv->len; i += 2) {
         const char *method;
         const char *condition;
 
         switch (tlv->value[i] & 0x3f) {
-        case 0x0:
-            method = "Fail CVM processing";
-            break;
-        case 0x1:
-            method = "Plaintext PIN verification performed by ICC";
-            break;
-        case 0x2:
-            method = "Enciphered PIN verified online";
-            break;
-        case 0x3:
-            method = "Plaintext PIN verification performed by ICC and signature (paper)";
-            break;
-        case 0x4:
-            method = "Enciphered PIN verification performed by ICC";
-            break;
-        case 0x5:
-            method = "Enciphered PIN verification performed by ICC and signature (paper)";
-            break;
-        case 0x1e:
-            method = "Signature (paper)";
-            break;
-        case 0x1f:
-            method = "No CVM required";
-            break;
-        case 0x3f:
-            method = "NOT AVAILABLE!";
-            break;
-        default:
-            method = "Unknown";
-            break;
+            case 0x0:
+                method = "Fail CVM processing";
+                break;
+            case 0x1:
+                method = "Plaintext PIN verification performed by ICC";
+                break;
+            case 0x2:
+                method = "Enciphered PIN verified online";
+                break;
+            case 0x3:
+                method = "Plaintext PIN verification performed by ICC and signature (paper)";
+                break;
+            case 0x4:
+                method = "Enciphered PIN verification performed by ICC";
+                break;
+            case 0x5:
+                method = "Enciphered PIN verification performed by ICC and signature (paper)";
+                break;
+            case 0x1e:
+                method = "Signature (paper)";
+                break;
+            case 0x1f:
+                method = "No CVM required";
+                break;
+            case 0x3f:
+                method = "NOT AVAILABLE!";
+                break;
+            default:
+                method = "Unknown";
+                break;
         }
 
-        switch (tlv->value[i+1]) {
-        case 0x00:
-            condition = "Always";
-            break;
-        case 0x01:
-            condition = "If unattended cash";
-            break;
-        case 0x02:
-            condition = "If not unattended cash and not manual cash and not purchase with cashback";
-            break;
-        case 0x03:
-            condition = "If terminal supports the CVM";
-            break;
-        case 0x04:
-            condition = "If manual cash";
-            break;
-        case 0x05:
-            condition = "If purchase with cashback";
-            break;
-        case 0x06:
-            condition = "If transaction is in the application currency and is under X value";
-            break;
-        case 0x07:
-            condition = "If transaction is in the application currency and is over X value";
-            break;
-        case 0x08:
-            condition = "If transaction is in the application currency and is under Y value";
-            break;
-        case 0x09:
-            condition = "If transaction is in the application currency and is over Y value";
-            break;
-        default:
-            condition = "Unknown";
-            break;
+        switch (tlv->value[i + 1]) {
+            case 0x00:
+                condition = "Always";
+                break;
+            case 0x01:
+                condition = "If unattended cash";
+                break;
+            case 0x02:
+                condition = "If not unattended cash and not manual cash and not purchase with cashback";
+                break;
+            case 0x03:
+                condition = "If terminal supports the CVM";
+                break;
+            case 0x04:
+                condition = "If manual cash";
+                break;
+            case 0x05:
+                condition = "If purchase with cashback";
+                break;
+            case 0x06:
+                condition = "If transaction is in the application currency and is under X value";
+                break;
+            case 0x07:
+                condition = "If transaction is in the application currency and is over X value";
+                break;
+            case 0x08:
+                condition = "If transaction is in the application currency and is under Y value";
+                break;
+            case 0x09:
+                condition = "If transaction is in the application currency and is over Y value";
+                break;
+            default:
+                condition = "Unknown";
+                break;
         }
 
         PRINT_INDENT(level);
         fprintf(f, "\t%02x %02x: '%s' '%s' and '%s' if this CVM is unsuccessful\n",
-                tlv->value[i], tlv->value[i+1],
+                tlv->value[i], tlv->value[i + 1],
                 method, condition, (tlv->value[i] & 0x40) ? "continue" : "fail");
     }
 }
 
-static void emv_tag_dump_afl(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
+static void emv_tag_dump_afl(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level)
+{
     if (tlv->len < 4 || tlv->len % 4) {
         PRINT_INDENT(level);
         fprintf(f, "\tINVALID!\n");
@@ -764,7 +778,8 @@ static void emv_tag_dump_afl(const struct tlv *tlv, const struct emv_tag *tag, F
     }
 }
 
-bool emv_tag_dump(const struct tlv *tlv, FILE *f, int level) {
+bool emv_tag_dump(const struct tlv *tlv, FILE *f, int level)
+{
     if (!tlv) {
         fprintf(f, "NULL\n");
         return false;
@@ -776,48 +791,49 @@ bool emv_tag_dump(const struct tlv *tlv, FILE *f, int level) {
     fprintf(f, "--%2hx[%02zx] '%s':", tlv->tag, tlv->len, tag->name);
 
     switch (tag->type) {
-    case EMV_TAG_GENERIC:
-        fprintf(f, "\n");
-        break;
-    case EMV_TAG_BITMASK:
-        fprintf(f, "\n");
-        emv_tag_dump_bitmask(tlv, tag, f, level);
-        break;
-    case EMV_TAG_DOL:
-        fprintf(f, "\n");
-        emv_tag_dump_dol(tlv, tag, f, level);
-        break;
-    case EMV_TAG_CVM_LIST:
-        fprintf(f, "\n");
-        emv_tag_dump_cvm_list(tlv, tag, f, level);
-        break;
-    case EMV_TAG_AFL:
-        fprintf(f, "\n");
-        emv_tag_dump_afl(tlv, tag, f, level);
-        break;
-    case EMV_TAG_STRING:
-        emv_tag_dump_string(tlv, tag, f, level);
-        break;
-    case EMV_TAG_NUMERIC:
-        emv_tag_dump_numeric(tlv, tag, f, level);
-        break;
-    case EMV_TAG_YYMMDD:
-        emv_tag_dump_yymmdd(tlv, tag, f, level);
-        break;
-    case EMV_TAG_CVR:
-        fprintf(f, "\n");
-        emv_tag_dump_cvr(tlv, tag, f, level);
-        break;
-    case EMV_TAG_CID:
-        fprintf(f, "\n");
-        emv_tag_dump_cid(tlv, tag, f, level);
-        break;
+        case EMV_TAG_GENERIC:
+            fprintf(f, "\n");
+            break;
+        case EMV_TAG_BITMASK:
+            fprintf(f, "\n");
+            emv_tag_dump_bitmask(tlv, tag, f, level);
+            break;
+        case EMV_TAG_DOL:
+            fprintf(f, "\n");
+            emv_tag_dump_dol(tlv, tag, f, level);
+            break;
+        case EMV_TAG_CVM_LIST:
+            fprintf(f, "\n");
+            emv_tag_dump_cvm_list(tlv, tag, f, level);
+            break;
+        case EMV_TAG_AFL:
+            fprintf(f, "\n");
+            emv_tag_dump_afl(tlv, tag, f, level);
+            break;
+        case EMV_TAG_STRING:
+            emv_tag_dump_string(tlv, tag, f, level);
+            break;
+        case EMV_TAG_NUMERIC:
+            emv_tag_dump_numeric(tlv, tag, f, level);
+            break;
+        case EMV_TAG_YYMMDD:
+            emv_tag_dump_yymmdd(tlv, tag, f, level);
+            break;
+        case EMV_TAG_CVR:
+            fprintf(f, "\n");
+            emv_tag_dump_cvr(tlv, tag, f, level);
+            break;
+        case EMV_TAG_CID:
+            fprintf(f, "\n");
+            emv_tag_dump_cid(tlv, tag, f, level);
+            break;
     };
 
     return true;
 }
 
-char *emv_get_tag_name(const struct tlv *tlv) {
+char *emv_get_tag_name(const struct tlv *tlv)
+{
     static char *defstr = "";
 
     if (!tlv)

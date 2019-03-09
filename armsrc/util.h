@@ -49,11 +49,11 @@ extern uint32_t reflect(uint32_t v, int b); // used in crc.c ...
 extern uint8_t reflect8(uint8_t b);         // dedicated 8bit reversal
 extern uint16_t reflect16(uint16_t b);      // dedicated 16bit reversal
 
-void num_to_bytes(uint64_t n, size_t len, uint8_t* dest);
-uint64_t bytes_to_num(uint8_t* src, size_t len);
+void num_to_bytes(uint64_t n, size_t len, uint8_t *dest);
+uint64_t bytes_to_num(uint8_t *src, size_t len);
 void rol(uint8_t *data, const size_t len);
-void lsl (uint8_t *data, size_t len);
-int32_t le24toh (uint8_t data[3]);
+void lsl(uint8_t *data, size_t len);
+int32_t le24toh(uint8_t data[3]);
 uint8_t hex2int(char hexchar);
 
 void LED(int led, int ms);

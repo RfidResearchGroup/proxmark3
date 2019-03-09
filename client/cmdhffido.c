@@ -49,7 +49,8 @@
 
 static int CmdHelp(const char *Cmd);
 
-int CmdHFFidoInfo(const char *cmd) {
+int CmdHFFidoInfo(const char *cmd)
+{
 
     if (cmd && strlen(cmd) > 0)
         PrintAndLog("WARNING: command don't have any parameters.\n");
@@ -104,7 +105,7 @@ int CmdHFFidoInfo(const char *cmd) {
         return 0;
     }
 
-    if(buf[0]) {
+    if (buf[0]) {
         PrintAndLog("FIDO2 ger version error: %d - %s", buf[0], fido2GetCmdErrorDescription(buf[0]));
         return 0;
     }
@@ -124,12 +125,13 @@ int CmdHFFidoInfo(const char *cmd) {
     return 0;
 }
 
-json_t *OpenJson(int paramnum, char *fname, void* argtable[], bool *err) {
+json_t *OpenJson(int paramnum, char *fname, void *argtable[], bool *err)
+{
     json_t *root = NULL;
     json_error_t error;
     *err = false;
 
-    uint8_t jsonname[250] ={0};
+    uint8_t jsonname[250] = {0};
     char *cjsonname = (char *)jsonname;
     int jsonnamelen = 0;
 
@@ -168,7 +170,8 @@ json_t *OpenJson(int paramnum, char *fname, void* argtable[], bool *err) {
     return root;
 }
 
-int CmdHFFidoRegister(const char *cmd) {
+int CmdHFFidoRegister(const char *cmd)
+{
     uint8_t data[64] = {0};
     int chlen = 0;
     uint8_t cdata[250] = {0};
@@ -177,12 +180,12 @@ int CmdHFFidoRegister(const char *cmd) {
     json_t *root = NULL;
 
     CLIParserInit("hf fido reg",
-        "Initiate a U2F token registration. Needs two 32-byte hash number. \nchallenge parameter (32b) and application parameter (32b).",
-        "Usage:\n\thf fido reg -> execute command with 2 parameters, filled 0x00\n"
-            "\thf fido reg 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f -> execute command with parameters"
-            "\thf fido reg -p s0 s1 -> execute command with plain parameters");
+                  "Initiate a U2F token registration. Needs two 32-byte hash number. \nchallenge parameter (32b) and application parameter (32b).",
+                  "Usage:\n\thf fido reg -> execute command with 2 parameters, filled 0x00\n"
+                  "\thf fido reg 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f -> execute command with parameters"
+                  "\thf fido reg -p s0 s1 -> execute command with plain parameters");
 
-    void* argtable[] = {
+    void *argtable[] = {
         arg_param_begin,
         arg_lit0("aA",  "apdu",     "show APDU reqests and responses"),
         arg_litn("vV",  "verbose",  0, 2, "show technical data. vv - show full certificates data"),
@@ -204,7 +207,7 @@ int CmdHFFidoRegister(const char *cmd) {
     char fname[250] = {0};
     bool err;
     root = OpenJson(5, fname, argtable, &err);
-    if(err)
+    if (err)
         return 1;
     if (root) {
         size_t jlen;
@@ -345,19 +348,19 @@ int CmdHFFidoRegister(const char *cmd) {
         uint8_t xbuf[4096] = {0};
         size_t xbuflen = 0;
         res = FillBuffer(xbuf, sizeof(xbuf), &xbuflen,
-            "\x00", 1,
-            &data[32], 32,           // application parameter
-            &data[0], 32,            // challenge parameter
-            &buf[67], keyHandleLen,  // keyHandle
-            &buf[1], 65,             // user public key
-            NULL, 0);
+                         "\x00", 1,
+                         &data[32], 32,           // application parameter
+                         &data[0], 32,            // challenge parameter
+                         &buf[67], keyHandleLen,  // keyHandle
+                         &buf[1], 65,             // user public key
+                         NULL, 0);
         //PrintAndLog("--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
         res = ecdsa_signature_verify(public_key, xbuf, xbuflen, &buf[hashp], len - hashp);
         if (res) {
             if (res == -0x4e00) {
                 PrintAndLog("Signature is NOT VALID.");
             } else {
-                PrintAndLog("Other signature check error: %x %s", (res<0)?-res:res, ecdsa_get_error(res));
+                PrintAndLog("Other signature check error: %x %s", (res < 0) ? -res : res, ecdsa_get_error(res));
             }
         } else {
             PrintAndLog("Signature is OK.");
@@ -368,11 +371,11 @@ int CmdHFFidoRegister(const char *cmd) {
     }
 
     PrintAndLog("\nauth command: ");
-    printf("hf fido auth %s%s", paramsPlain?"-p ":"", sprint_hex_inrow(&buf[67], keyHandleLen));
-    if(chlen || applen)
-        printf(" %s", paramsPlain?(char *)cdata:sprint_hex_inrow(cdata, 32));
-    if(applen)
-        printf(" %s", paramsPlain?(char *)adata:sprint_hex_inrow(adata, 32));
+    printf("hf fido auth %s%s", paramsPlain ? "-p " : "", sprint_hex_inrow(&buf[67], keyHandleLen));
+    if (chlen || applen)
+        printf(" %s", paramsPlain ? (char *)cdata : sprint_hex_inrow(cdata, 32));
+    if (applen)
+        printf(" %s", paramsPlain ? (char *)adata : sprint_hex_inrow(adata, 32));
     printf("\n");
 
     if (root) {
@@ -397,7 +400,8 @@ int CmdHFFidoRegister(const char *cmd) {
     return 0;
 };
 
-int CmdHFFidoAuthenticate(const char *cmd) {
+int CmdHFFidoAuthenticate(const char *cmd)
+{
     uint8_t data[512] = {0};
     uint8_t hdata[250] = {0};
     bool public_key_loaded = false;
@@ -407,12 +411,12 @@ int CmdHFFidoAuthenticate(const char *cmd) {
     json_t *root = NULL;
 
     CLIParserInit("hf fido auth",
-        "Initiate a U2F token authentication. Needs key handle and two 32-byte hash number. \nkey handle(var 0..255), challenge parameter (32b) and application parameter (32b).",
-        "Usage:\n\thf fido auth 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f -> execute command with 2 parameters, filled 0x00 and key handle\n"
-            "\thf fido auth 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f "
-                "000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f -> execute command with parameters");
+                  "Initiate a U2F token authentication. Needs key handle and two 32-byte hash number. \nkey handle(var 0..255), challenge parameter (32b) and application parameter (32b).",
+                  "Usage:\n\thf fido auth 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f -> execute command with 2 parameters, filled 0x00 and key handle\n"
+                  "\thf fido auth 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f "
+                  "000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f -> execute command with parameters");
 
-    void* argtable[] = {
+    void *argtable[] = {
         arg_param_begin,
         arg_lit0("aA",  "apdu",     "show APDU reqests and responses"),
         arg_lit0("vV",  "verbose",  "show technical data"),
@@ -441,7 +445,7 @@ int CmdHFFidoAuthenticate(const char *cmd) {
     char fname[250] = {0};
     bool err;
     root = OpenJson(7, fname, argtable, &err);
-    if(err)
+    if (err)
         return 1;
     if (root) {
         size_t jlen;
@@ -554,8 +558,8 @@ int CmdHFFidoAuthenticate(const char *cmd) {
     }
 
     PrintAndLog("---------------------------------------------------------------");
-    PrintAndLog("User presence: %s", (buf[0]?"verified":"not verified"));
-    uint32_t cntr =  (uint32_t)bytes_to_num(&buf[1], 4);
+    PrintAndLog("User presence: %s", (buf[0] ? "verified" : "not verified"));
+    uint32_t cntr = (uint32_t)bytes_to_num(&buf[1], 4);
     PrintAndLog("Counter: %d", cntr);
     PrintAndLog("Hash[%d]: %s", len - 5, sprint_hex(&buf[5], len - 5));
 
@@ -572,18 +576,18 @@ int CmdHFFidoAuthenticate(const char *cmd) {
             uint8_t xbuf[4096] = {0};
             size_t xbuflen = 0;
             res = FillBuffer(xbuf, sizeof(xbuf), &xbuflen,
-                &data[32], 32, // application parameter
-                &buf[0], 1,    // user presence
-                &buf[1], 4,    // counter
-                data, 32,      // challenge parameter
-                NULL, 0);
+                             &data[32], 32, // application parameter
+                             &buf[0], 1,    // user presence
+                             &buf[1], 4,    // counter
+                             data, 32,      // challenge parameter
+                             NULL, 0);
             //PrintAndLog("--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
             res = ecdsa_signature_verify(public_key, xbuf, xbuflen, &buf[5], len - 5);
             if (res) {
                 if (res == -0x4e00) {
                     PrintAndLog("Signature is NOT VALID.");
                 } else {
-                    PrintAndLog("Other signature check error: %x %s", (res<0)?-res:res, ecdsa_get_error(res));
+                    PrintAndLog("Other signature check error: %x %s", (res < 0) ? -res : res, ecdsa_get_error(res));
                 }
             } else {
                 PrintAndLog("Signature is OK.");
@@ -615,13 +619,15 @@ int CmdHFFidoAuthenticate(const char *cmd) {
     return 0;
 };
 
-void CheckSlash(char *fileName) {
+void CheckSlash(char *fileName)
+{
     if ((fileName[strlen(fileName) - 1] != '/') &&
         (fileName[strlen(fileName) - 1] != '\\'))
         strcat(fileName, "/");
 }
 
-int GetExistsFileNameJson(char *prefixDir, char *reqestedFileName, char *fileName) {
+int GetExistsFileNameJson(char *prefixDir, char *reqestedFileName, char *fileName)
+{
     fileName[0] = 0x00;
     strcpy(fileName, get_my_executable_directory());
     CheckSlash(fileName);
@@ -648,17 +654,18 @@ int GetExistsFileNameJson(char *prefixDir, char *reqestedFileName, char *fileNam
     return 0;
 }
 
-int CmdHFFido2MakeCredential(const char *cmd) {
+int CmdHFFido2MakeCredential(const char *cmd)
+{
     json_error_t error;
     json_t *root = NULL;
     char fname[300] = {0};
 
     CLIParserInit("hf fido make",
-        "Execute a FIDO2 Make Credentional command. Needs json file with parameters. Sample file `fido2.json`. File can be placed in proxmark directory or in `proxmark/fido` directory.",
-        "Usage:\n\thf fido make -> execute command default parameters file `fido2.json`\n"
-            "\thf fido make test.json -> execute command with parameters file `text.json`");
+                  "Execute a FIDO2 Make Credentional command. Needs json file with parameters. Sample file `fido2.json`. File can be placed in proxmark directory or in `proxmark/fido` directory.",
+                  "Usage:\n\thf fido make -> execute command default parameters file `fido2.json`\n"
+                  "\thf fido make test.json -> execute command with parameters file `text.json`");
 
-    void* argtable[] = {
+    void *argtable[] = {
         arg_param_begin,
         arg_lit0("aA",  "apdu",     "show APDU reqests and responses"),
         arg_litn("vV",  "verbose",  0, 2, "show technical data. vv - show full certificates data"),
@@ -675,7 +682,7 @@ int CmdHFFido2MakeCredential(const char *cmd) {
     bool showDERTLV = arg_get_lit(3);
     bool showCBOR = arg_get_lit(4);
 
-    uint8_t jsonname[250] ={0};
+    uint8_t jsonname[250] = {0};
     char *cjsonname = (char *)jsonname;
     int jsonnamelen = 0;
     CLIGetStrWithReturn(5, jsonname, &jsonnamelen);
@@ -690,7 +697,7 @@ int CmdHFFido2MakeCredential(const char *cmd) {
     SetAPDULogging(APDULogging);
 
     int res = GetExistsFileNameJson("fido", cjsonname, fname);
-    if(res) {
+    if (res) {
         PrintAndLog("ERROR: Can't found the json file.");
         return res;
     }
@@ -745,7 +752,7 @@ int CmdHFFido2MakeCredential(const char *cmd) {
         return 3;
     }
 
-    if(buf[0]) {
+    if (buf[0]) {
         PrintAndLog("FIDO2 make credential error: %d - %s", buf[0], fido2GetCmdErrorDescription(buf[0]));
         return 0;
     }
@@ -775,17 +782,18 @@ int CmdHFFido2MakeCredential(const char *cmd) {
     return 0;
 };
 
-int CmdHFFido2GetAssertion(const char *cmd) {
+int CmdHFFido2GetAssertion(const char *cmd)
+{
     json_error_t error;
     json_t *root = NULL;
     char fname[300] = {0};
 
     CLIParserInit("hf fido assert",
-        "Execute a FIDO2 Get Assertion command. Needs json file with parameters. Sample file `fido2.json`. File can be placed in proxmark directory or in `proxmark/fido` directory.",
-        "Usage:\n\thf fido assert -> execute command default parameters file `fido2.json`\n"
-            "\thf fido assert test.json -l -> execute command with parameters file `text.json` and add to request CredentialId");
+                  "Execute a FIDO2 Get Assertion command. Needs json file with parameters. Sample file `fido2.json`. File can be placed in proxmark directory or in `proxmark/fido` directory.",
+                  "Usage:\n\thf fido assert -> execute command default parameters file `fido2.json`\n"
+                  "\thf fido assert test.json -l -> execute command with parameters file `text.json` and add to request CredentialId");
 
-    void* argtable[] = {
+    void *argtable[] = {
         arg_param_begin,
         arg_lit0("aA",  "apdu",     "show APDU reqests and responses"),
         arg_litn("vV",  "verbose",  0, 2, "show technical data. vv - show full certificates data"),
@@ -802,7 +810,7 @@ int CmdHFFido2GetAssertion(const char *cmd) {
     bool showCBOR = arg_get_lit(3);
     bool createAllowList = arg_get_lit(4);
 
-    uint8_t jsonname[250] ={0};
+    uint8_t jsonname[250] = {0};
     char *cjsonname = (char *)jsonname;
     int jsonnamelen = 0;
     CLIGetStrWithReturn(5, jsonname, &jsonnamelen);
@@ -817,7 +825,7 @@ int CmdHFFido2GetAssertion(const char *cmd) {
     SetAPDULogging(APDULogging);
 
     int res = GetExistsFileNameJson("fido", "fido2", fname);
-    if(res) {
+    if (res) {
         PrintAndLog("ERROR: Can't found the json file.");
         return res;
     }
@@ -872,7 +880,7 @@ int CmdHFFido2GetAssertion(const char *cmd) {
         return 3;
     }
 
-    if(buf[0]) {
+    if (buf[0]) {
         PrintAndLog("FIDO2 get assertion error: %d - %s", buf[0], fido2GetCmdErrorDescription(buf[0]));
         return 0;
     }
@@ -902,24 +910,25 @@ int CmdHFFido2GetAssertion(const char *cmd) {
     return 0;
 };
 
-static command_t CommandTable[] =
-{
-  {"help",             CmdHelp,                    1, "This help."},
-  {"info",             CmdHFFidoInfo,              0, "Info about FIDO tag."},
-  {"reg",              CmdHFFidoRegister,          0, "FIDO U2F Registration Message."},
-  {"auth",             CmdHFFidoAuthenticate,      0, "FIDO U2F Authentication Message."},
-  {"make",             CmdHFFido2MakeCredential,   0, "FIDO2 MakeCredential command."},
-  {"assert",           CmdHFFido2GetAssertion,     0, "FIDO2 GetAssertion command."},
-  {NULL,               NULL,                       0, NULL}
+static command_t CommandTable[] = {
+    {"help",             CmdHelp,                    1, "This help."},
+    {"info",             CmdHFFidoInfo,              0, "Info about FIDO tag."},
+    {"reg",              CmdHFFidoRegister,          0, "FIDO U2F Registration Message."},
+    {"auth",             CmdHFFidoAuthenticate,      0, "FIDO U2F Authentication Message."},
+    {"make",             CmdHFFido2MakeCredential,   0, "FIDO2 MakeCredential command."},
+    {"assert",           CmdHFFido2GetAssertion,     0, "FIDO2 GetAssertion command."},
+    {NULL,               NULL,                       0, NULL}
 };
 
-int CmdHFFido(const char *Cmd) {
+int CmdHFFido(const char *Cmd)
+{
     (void)WaitForResponseTimeout(CMD_ACK, NULL, 100);
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
-  CmdsHelp(CommandTable);
-  return 0;
+int CmdHelp(const char *Cmd)
+{
+    CmdsHelp(CommandTable);
+    return 0;
 }

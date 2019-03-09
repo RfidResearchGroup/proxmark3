@@ -70,7 +70,7 @@
 #define ISO15_CMD_SYSINFO                0x2B
 #define ISO15_CMD_SECSTATUS              0x2C
 
-char* Iso15693sprintUID(char *target, uint8_t *uid);
+char *Iso15693sprintUID(char *target, uint8_t *uid);
 
 //-----------------------------------------------------------------------------
 // Map a sequence of octets (~layer 2 command) into the set of bits to feed
@@ -78,49 +78,49 @@ char* Iso15693sprintUID(char *target, uint8_t *uid);
 // Mode: highspeed && one subcarrier (ASK)
 //-----------------------------------------------------------------------------
 
-    // The sampling rate is 106.353 ksps/s, for T = 18.8 us
+// The sampling rate is 106.353 ksps/s, for T = 18.8 us
 
-    // SOF defined as
-    // 1) Unmodulated time of 56.64us
-    // 2) 24 pulses of 423.75khz
-    // 3) logic '1' (unmodulated for 18.88us followed by 8 pulses of 423.75khz)
+// SOF defined as
+// 1) Unmodulated time of 56.64us
+// 2) 24 pulses of 423.75khz
+// 3) logic '1' (unmodulated for 18.88us followed by 8 pulses of 423.75khz)
 
-    static const int Iso15693FrameSOF[] = {
+static const int Iso15693FrameSOF[] = {
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
         -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-         1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-         1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+        1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+        1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
         -1, -1, -1, -1,
         -1, -1, -1, -1,
-         1,  1,  1,  1,
-         1,  1,  1,  1
+        1,  1,  1,  1,
+        1,  1,  1,  1
     };
-    static const int Iso15693Logic0[] = {
-         1,  1,  1,  1,
-         1,  1,  1,  1,
+static const int Iso15693Logic0[] = {
+    1,  1,  1,  1,
+    1,  1,  1,  1,
+    -1, -1, -1, -1,
+    -1, -1, -1, -1
+};
+static const int Iso15693Logic1[] = {
+    -1, -1, -1, -1,
         -1, -1, -1, -1,
-        -1, -1, -1, -1
-    };
-    static const int Iso15693Logic1[] = {
-        -1, -1, -1, -1,
-        -1, -1, -1, -1,
-         1,  1,  1,  1,
-         1,  1,  1,  1
+        1,  1,  1,  1,
+        1,  1,  1,  1
     };
 
-    // EOF defined as
-    // 1) logic '0' (8 pulses of 423.75khz followed by unmodulated for 18.88us)
-    // 2) 24 pulses of 423.75khz
-    // 3) Unmodulated time of 56.64us
-    static const int Iso15693FrameEOF[] = {
-         1,  1,  1,  1,
-         1,  1,  1,  1,
-        -1, -1, -1, -1,
-        -1, -1, -1, -1,
-         1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-         1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
-    };
+// EOF defined as
+// 1) logic '0' (8 pulses of 423.75khz followed by unmodulated for 18.88us)
+// 2) 24 pulses of 423.75khz
+// 3) Unmodulated time of 56.64us
+static const int Iso15693FrameEOF[] = {
+    1,  1,  1,  1,
+    1,  1,  1,  1,
+    -1, -1, -1, -1,
+    -1, -1, -1, -1,
+    1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+    1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
+};
 
 #endif

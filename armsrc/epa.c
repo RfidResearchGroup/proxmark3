@@ -105,8 +105,7 @@ static char iso_type = 0;
 //-----------------------------------------------------------------------------
 int EPA_APDU(uint8_t *apdu, size_t length, uint8_t *response)
 {
-    switch(iso_type)
-    {
+    switch (iso_type) {
         case 'a':
             return iso14_apdu(apdu, (uint16_t) length, false, response, NULL);
             break;
@@ -156,7 +155,7 @@ size_t EPA_Parse_CardAccess(uint8_t *data,
             index += 2;
             // check for extended length
             if ((data[index - 1] & 0x80) != 0) {
-                index += (data[index-1] & 0x7F);
+                index += (data[index - 1] & 0x7F);
             }
         }
         // OID
@@ -166,8 +165,7 @@ size_t EPA_Parse_CardAccess(uint8_t *data,
                 && memcmp(data + index + 2,
                           oid_pace_start,
                           sizeof(oid_pace_start)) == 0 // content matches
-                && pace_info != NULL)
-            {
+                && pace_info != NULL) {
                 // first, clear the pace_info struct
                 memset(pace_info, 0, sizeof(pace_version_info_t));
                 memcpy(pace_info->oid, data + index + 2, sizeof(pace_info->oid));
@@ -176,8 +174,7 @@ size_t EPA_Parse_CardAccess(uint8_t *data,
                 if (data[index] == 02 && data[index + 1] == 01) {
                     pace_info->version = data[index + 2];
                     index += 3;
-                }
-                else {
+                } else {
                     return index;
                 }
                 // after that there might(!) be the parameter ID
@@ -185,8 +182,7 @@ size_t EPA_Parse_CardAccess(uint8_t *data,
                     pace_info->parameter_id = data[index + 2];
                     index += 3;
                 }
-            }
-            else {
+            } else {
                 // skip this OID
                 index += 2 + data[index + 1];
             }
@@ -195,8 +191,7 @@ size_t EPA_Parse_CardAccess(uint8_t *data,
         // TODO: This needs to be extended to support long tags
         else if (data[index + 1] == 0) {
             return index;
-        }
-        else {
+        } else {
             // skip this part
             // TODO: This needs to be extended to support long tags
             // TODO: This needs to be extended to support unknown elements with
@@ -225,24 +220,22 @@ int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length)
 
     // select the file EF.CardAccess
     rapdu_length = EPA_APDU((uint8_t *)apdu_select_binary_cardaccess,
-                              sizeof(apdu_select_binary_cardaccess),
-                              response_apdu);
+                            sizeof(apdu_select_binary_cardaccess),
+                            response_apdu);
     if (rapdu_length < 6
         || response_apdu[rapdu_length - 4] != 0x90
-        || response_apdu[rapdu_length - 3] != 0x00)
-    {
+        || response_apdu[rapdu_length - 3] != 0x00) {
         DbpString("Failed to select EF.CardAccess!");
         return -1;
     }
 
     // read the file
     rapdu_length = EPA_APDU((uint8_t *)apdu_read_binary,
-                              sizeof(apdu_read_binary),
-                              response_apdu);
+                            sizeof(apdu_read_binary),
+                            response_apdu);
     if (rapdu_length <= 6
         || response_apdu[rapdu_length - 4] != 0x90
-        || response_apdu[rapdu_length - 3] != 0x00)
-    {
+        || response_apdu[rapdu_length - 3] != 0x00) {
         Dbprintf("Failed to read EF.CardAccess!");
         return -1;
     }
@@ -251,7 +244,7 @@ int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length)
     // length of data available: apdu_length - 4 (ISO frame) - 2 (SW)
     size_t to_copy = rapdu_length - 6;
     to_copy = to_copy < max_length ? to_copy : max_length;
-    memcpy(buffer, response_apdu+2, to_copy);
+    memcpy(buffer, response_apdu + 2, to_copy);
     return to_copy;
 }
 
@@ -265,7 +258,7 @@ static void EPA_PACE_Collect_Nonce_Abort(uint8_t step, int func_return)
     EPA_Finish();
 
     // send the USB packet
-    cmd_send(CMD_ACK,step,func_return,0,0,0);
+    cmd_send(CMD_ACK, step, func_return, 0, 0, 0);
 }
 
 //-----------------------------------------------------------------------------
@@ -324,8 +317,7 @@ void EPA_PACE_Collect_Nonce(UsbCommand *c)
     uint8_t requested_size = (uint8_t)c->arg[0];
     func_return = EPA_PACE_Get_Nonce(requested_size, nonce);
     // check if the command succeeded
-    if (func_return < 0)
-    {
+    if (func_return < 0) {
         EPA_PACE_Collect_Nonce_Abort(4, func_return);
         return;
     }
@@ -334,7 +326,7 @@ void EPA_PACE_Collect_Nonce(UsbCommand *c)
     EPA_Finish();
 
     // save received information
-    cmd_send(CMD_ACK,0,func_return,0,nonce,func_return);
+    cmd_send(CMD_ACK, 0, func_return, 0, nonce, func_return);
 }
 
 //-----------------------------------------------------------------------------
@@ -359,26 +351,23 @@ int EPA_PACE_Get_Nonce(uint8_t requested_length, uint8_t *nonce)
     // send it
     uint8_t response_apdu[262];
     int send_return = EPA_APDU(apdu,
-                                 sizeof(apdu),
-                                 response_apdu);
+                               sizeof(apdu),
+                               response_apdu);
     // check if the command succeeded
     if (send_return < 6
         || response_apdu[send_return - 4] != 0x90
-        || response_apdu[send_return - 3] != 0x00)
-    {
+        || response_apdu[send_return - 3] != 0x00) {
         return -1;
     }
 
     // if there is no nonce in the RAPDU, return here
-    if (send_return < 10)
-    {
+    if (send_return < 10) {
         // no error
         return 0;
     }
     // get the actual length of the nonce
     uint8_t nonce_length = response_apdu[5];
-    if (nonce_length > send_return - 10)
-    {
+    if (nonce_length > send_return - 10) {
         nonce_length = send_return - 10;
     }
     // copy the nonce
@@ -430,13 +419,12 @@ int EPA_PACE_MSE_Set_AT(pace_version_info_t pace_version_info, uint8_t password)
     // send it
     uint8_t response_apdu[6];
     int send_return = EPA_APDU(apdu,
-                                 apdu_length,
-                                 response_apdu);
+                               apdu_length,
+                               response_apdu);
     // check if the command succeeded
     if (send_return != 6
         || response_apdu[send_return - 4] != 0x90
-        || response_apdu[send_return - 3] != 0x00)
-    {
+        || response_apdu[send_return - 3] != 0x00) {
         return 1;
     }
     return 0;
@@ -452,8 +440,7 @@ void EPA_PACE_Replay(UsbCommand *c)
     // if an APDU has been passed, save it
     if (c->arg[0] != 0) {
         // make sure it's not too big
-        if(c->arg[2] > apdus_replay[c->arg[0] - 1].len)
-        {
+        if (c->arg[2] > apdus_replay[c->arg[0] - 1].len) {
             cmd_send(CMD_ACK, 1, 0, 0, NULL, 0);
         }
         memcpy(apdus_replay[c->arg[0] - 1].data + c->arg[1],
@@ -490,22 +477,21 @@ void EPA_PACE_Replay(UsbCommand *c)
     for (int i = 0; i < sizeof(apdu_lengths_replay); i++) {
         StartCountUS();
         func_return = EPA_APDU(apdus_replay[i].data,
-                                 apdu_lengths_replay[i],
-                                 response_apdu);
+                               apdu_lengths_replay[i],
+                               response_apdu);
         timings[i] = GetCountUS();
         // every step but the last one should succeed
         if (i < sizeof(apdu_lengths_replay) - 1
             && (func_return < 6
                 || response_apdu[func_return - 4] != 0x90
-                || response_apdu[func_return - 3] != 0x00))
-        {
+                || response_apdu[func_return - 3] != 0x00)) {
             EPA_Finish();
             cmd_send(CMD_ACK, 3 + i, func_return, 0, timings, 20);
             return;
         }
     }
     EPA_Finish();
-    cmd_send(CMD_ACK,0,0,0,timings,20);
+    cmd_send(CMD_ACK, 0, 0, 0, timings, 20);
     return;
 }
 
@@ -543,7 +529,7 @@ int EPA_Setup()
     // power up the field
     iso14443b_setup();
     // select the card
-    return_code = iso14443b_select_card( &card_b_info );
+    return_code = iso14443b_select_card(&card_b_info);
     if (return_code == 0) {
         Dbprintf("ISO 14443 Type B");
         iso_type = 'b';

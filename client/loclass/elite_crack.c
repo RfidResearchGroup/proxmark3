@@ -69,17 +69,18 @@
  * @param key
  * @param dest
  */
-void permutekey(uint8_t key[8], uint8_t dest[8]) {
+void permutekey(uint8_t key[8], uint8_t dest[8])
+{
     int i;
-    for(i = 0 ; i < 8 ; i++) {
-        dest[i] =   (((key[7] & (0x80 >> i)) >> (7-i)) << 7) |
-                    (((key[6] & (0x80 >> i)) >> (7-i)) << 6) |
-                    (((key[5] & (0x80 >> i)) >> (7-i)) << 5) |
-                    (((key[4] & (0x80 >> i)) >> (7-i)) << 4) |
-                    (((key[3] & (0x80 >> i)) >> (7-i)) << 3) |
-                    (((key[2] & (0x80 >> i)) >> (7-i)) << 2) |
-                    (((key[1] & (0x80 >> i)) >> (7-i)) << 1) |
-                    (((key[0] & (0x80 >> i)) >> (7-i)) << 0);
+    for (i = 0 ; i < 8 ; i++) {
+        dest[i] = (((key[7] & (0x80 >> i)) >> (7 - i)) << 7) |
+                  (((key[6] & (0x80 >> i)) >> (7 - i)) << 6) |
+                  (((key[5] & (0x80 >> i)) >> (7 - i)) << 5) |
+                  (((key[4] & (0x80 >> i)) >> (7 - i)) << 4) |
+                  (((key[3] & (0x80 >> i)) >> (7 - i)) << 3) |
+                  (((key[2] & (0x80 >> i)) >> (7 - i)) << 2) |
+                  (((key[1] & (0x80 >> i)) >> (7 - i)) << 1) |
+                  (((key[0] & (0x80 >> i)) >> (7 - i)) << 0);
     }
 }
 /**
@@ -88,17 +89,18 @@ void permutekey(uint8_t key[8], uint8_t dest[8]) {
  * @param key
  * @param dest
  */
-void permutekey_rev(uint8_t key[8], uint8_t dest[8]) {
+void permutekey_rev(uint8_t key[8], uint8_t dest[8])
+{
     int i;
-    for(i = 0 ; i < 8 ; i++) {
-        dest[7-i] = (((key[0] & (0x80 >> i)) >> (7-i)) << 7) |
-                    (((key[1] & (0x80 >> i)) >> (7-i)) << 6) |
-                    (((key[2] & (0x80 >> i)) >> (7-i)) << 5) |
-                    (((key[3] & (0x80 >> i)) >> (7-i)) << 4) |
-                    (((key[4] & (0x80 >> i)) >> (7-i)) << 3) |
-                    (((key[5] & (0x80 >> i)) >> (7-i)) << 2) |
-                    (((key[6] & (0x80 >> i)) >> (7-i)) << 1) |
-                    (((key[7] & (0x80 >> i)) >> (7-i)) << 0);
+    for (i = 0 ; i < 8 ; i++) {
+        dest[7 - i] = (((key[0] & (0x80 >> i)) >> (7 - i)) << 7) |
+                      (((key[1] & (0x80 >> i)) >> (7 - i)) << 6) |
+                      (((key[2] & (0x80 >> i)) >> (7 - i)) << 5) |
+                      (((key[3] & (0x80 >> i)) >> (7 - i)) << 4) |
+                      (((key[4] & (0x80 >> i)) >> (7 - i)) << 3) |
+                      (((key[5] & (0x80 >> i)) >> (7 - i)) << 2) |
+                      (((key[6] & (0x80 >> i)) >> (7 - i)) << 1) |
+                      (((key[7] & (0x80 >> i)) >> (7 - i)) << 0);
     }
 }
 
@@ -108,8 +110,9 @@ void permutekey_rev(uint8_t key[8], uint8_t dest[8]) {
  * @param val
  * @return
  */
-inline uint8_t rr(uint8_t val) {
-    return val >> 1 | (( val & 1) << 7);
+inline uint8_t rr(uint8_t val)
+{
+    return val >> 1 | ((val & 1) << 7);
 }
 
 /**
@@ -118,8 +121,9 @@ inline uint8_t rr(uint8_t val) {
  * @param val
  * @return
  */
-inline uint8_t rl(uint8_t val) {
-  return val << 1 | (( val & 0x80) >> 7);
+inline uint8_t rl(uint8_t val)
+{
+    return val << 1 | ((val & 0x80) >> 7);
 }
 
 /**
@@ -128,8 +132,9 @@ inline uint8_t rl(uint8_t val) {
  * @param val
  * @return
  */
-inline uint8_t swap(uint8_t val) {
-    return ((val >> 4) & 0xFF) | ((val &0xFF) << 4);
+inline uint8_t swap(uint8_t val)
+{
+    return ((val >> 4) & 0xFF) | ((val & 0xFF) << 4);
 }
 
 /**
@@ -138,15 +143,16 @@ inline uint8_t swap(uint8_t val) {
  * @param csn the CSN used
  * @param k output
  */
-void hash1(uint8_t csn[] , uint8_t k[]) {
+void hash1(uint8_t csn[], uint8_t k[])
+{
     k[0] = csn[0] ^ csn[1] ^ csn[2] ^ csn[3] ^ csn[4] ^ csn[5] ^ csn[6] ^ csn[7];
     k[1] = csn[0] + csn[1] + csn[2] + csn[3] + csn[4] + csn[5] + csn[6] + csn[7];
-    k[2] = rr(swap( csn[2] + k[1] ));
-    k[3] = rl(swap( csn[3] + k[0] ));
-    k[4] = ~rr( csn[4] + k[2] ) + 1;
-    k[5] = ~rl( csn[5] + k[3] ) + 1;
-    k[6] = rr( csn[6] + (k[4] ^ 0x3c) );
-    k[7] = rl( csn[7] + (k[5] ^ 0xc3) );
+    k[2] = rr(swap(csn[2] + k[1]));
+    k[3] = rl(swap(csn[3] + k[0]));
+    k[4] = ~rr(csn[4] + k[2]) + 1;
+    k[5] = ~rl(csn[5] + k[3]) + 1;
+    k[6] = rr(csn[6] + (k[4] ^ 0x3c));
+    k[7] = rl(csn[7] + (k[5] ^ 0xc3));
 
     k[7] &= 0x7F;
     k[6] &= 0x7F;
@@ -162,11 +168,12 @@ Definition 14. Define the rotate key function rk : (F 82 ) 8 × N → (F 82 ) 8 
 rk(x [0] . . . x [7] , 0) = x [0] . . . x [7]
 rk(x [0] . . . x [7] , n + 1) = rk(rl(x [0] ) . . . rl(x [7] ), n)
 **/
-void rk(uint8_t *key, uint8_t n, uint8_t *outp_key) {
+void rk(uint8_t *key, uint8_t n, uint8_t *outp_key)
+{
     memcpy(outp_key, key, 8);
     uint8_t j;
     while (n-- > 0) {
-        for (j=0; j < 8 ; j++)
+        for (j = 0; j < 8 ; j++)
             outp_key[j] = rl(outp_key[j]);
     }
     return;
@@ -175,18 +182,20 @@ void rk(uint8_t *key, uint8_t n, uint8_t *outp_key) {
 static mbedtls_des_context ctx_enc;
 static mbedtls_des_context ctx_dec;
 
-void desdecrypt_iclass(uint8_t *iclass_key, uint8_t *input, uint8_t *output) {
+void desdecrypt_iclass(uint8_t *iclass_key, uint8_t *input, uint8_t *output)
+{
     uint8_t key_std_format[8] = {0};
     permutekey_rev(iclass_key, key_std_format);
-    mbedtls_des_setkey_dec( &ctx_dec, key_std_format);
-    mbedtls_des_crypt_ecb(&ctx_dec,input,output);
+    mbedtls_des_setkey_dec(&ctx_dec, key_std_format);
+    mbedtls_des_crypt_ecb(&ctx_dec, input, output);
 }
 
-void desencrypt_iclass(uint8_t *iclass_key, uint8_t *input, uint8_t *output) {
+void desencrypt_iclass(uint8_t *iclass_key, uint8_t *input, uint8_t *output)
+{
     uint8_t key_std_format[8] = {0};
     permutekey_rev(iclass_key, key_std_format);
-    mbedtls_des_setkey_enc( &ctx_enc, key_std_format);
-    mbedtls_des_crypt_ecb(&ctx_enc,input,output);
+    mbedtls_des_setkey_enc(&ctx_enc, key_std_format);
+    mbedtls_des_crypt_ecb(&ctx_enc, input, output);
 }
 
 /**
@@ -195,28 +204,29 @@ void desencrypt_iclass(uint8_t *iclass_key, uint8_t *input, uint8_t *output) {
  * @param hash1 hash1
  * @param key_sel output key_sel=h[hash1[i]]
  */
-void hash2(uint8_t *key64, uint8_t *outp_keytable) {
+void hash2(uint8_t *key64, uint8_t *outp_keytable)
+{
     /**
      *Expected:
      * High Security Key Table
 
-00  F1 35 59 A1 0D 5A 26 7F 18 60 0B 96 8A C0 25 C1
-10  BF A1 3B B0 FF 85 28 75 F2 1F C6 8F 0E 74 8F 21
-20  14 7A 55 16 C8 A9 7D B3 13 0C 5D C9 31 8D A9 B2
-30  A3 56 83 0F 55 7E DE 45 71 21 D2 6D C1 57 1C 9C
-40  78 2F 64 51 42 7B 64 30 FA 26 51 76 D3 E0 FB B6
-50  31 9F BF 2F 7E 4F 94 B4 BD 4F 75 91 E3 1B EB 42
-60  3F 88 6F B8 6C 2C 93 0D 69 2C D5 20 3C C1 61 95
-70  43 08 A0 2F FE B3 26 D7 98 0B 34 7B 47 70 A0 AB
+    00  F1 35 59 A1 0D 5A 26 7F 18 60 0B 96 8A C0 25 C1
+    10  BF A1 3B B0 FF 85 28 75 F2 1F C6 8F 0E 74 8F 21
+    20  14 7A 55 16 C8 A9 7D B3 13 0C 5D C9 31 8D A9 B2
+    30  A3 56 83 0F 55 7E DE 45 71 21 D2 6D C1 57 1C 9C
+    40  78 2F 64 51 42 7B 64 30 FA 26 51 76 D3 E0 FB B6
+    50  31 9F BF 2F 7E 4F 94 B4 BD 4F 75 91 E3 1B EB 42
+    60  3F 88 6F B8 6C 2C 93 0D 69 2C D5 20 3C C1 61 95
+    70  43 08 A0 2F FE B3 26 D7 98 0B 34 7B 47 70 A0 AB
 
-**** The 64-bit HS Custom Key Value = 5B7C62C491C11B39 ******/
+    **** The 64-bit HS Custom Key Value = 5B7C62C491C11B39 ******/
     uint8_t key64_negated[8] = {0};
-    uint8_t z[8][8]={{0},{0}};
-    uint8_t temp_output[8]={0};
+    uint8_t z[8][8] = {{0}, {0}};
+    uint8_t temp_output[8] = {0};
     //calculate complement of key
     int i;
-    for (i=0; i<8; i++)
-        key64_negated[i]= ~key64[i];
+    for (i = 0; i < 8; i++)
+        key64_negated[i] = ~key64[i];
 
     // Once again, key is on iclass-format
     desencrypt_iclass(key64, key64_negated, z[0]);
@@ -224,29 +234,29 @@ void hash2(uint8_t *key64, uint8_t *outp_keytable) {
 //    PrintAndLogDevice(NORMAL, "\n"); PrintAndLogDevice(NORMAL, "High security custom key (Kcus):");
 //    printvar("z0  ",  z[0],8);
 
-    uint8_t y[8][8]={{0},{0}};
+    uint8_t y[8][8] = {{0}, {0}};
 
     // y[0]=DES_dec(z[0],~key)
     // Once again, key is on iclass-format
     desdecrypt_iclass(z[0], key64_negated, y[0]);
 //    printvar("y0  ",  y[0],8);
 
-    for (i=1; i<8; i++) {
+    for (i = 1; i < 8; i++) {
         // z [i] = DES dec (rk(K cus , i), z [i−1] )
         rk(key64, i, temp_output);
         //y [i] = DES enc (rk(K cus , i), y [i−1] )
 
-        desdecrypt_iclass(temp_output,z[i-1], z[i]);
-        desencrypt_iclass(temp_output,y[i-1], y[i]);
+        desdecrypt_iclass(temp_output, z[i - 1], z[i]);
+        desencrypt_iclass(temp_output, y[i - 1], y[i]);
     }
 
     if (outp_keytable != NULL) {
         for (i = 0 ; i < 8 ; i++) {
-            memcpy(outp_keytable+i*16,y[i],8);
-            memcpy(outp_keytable+8+i*16,z[i],8);
+            memcpy(outp_keytable + i * 16, y[i], 8);
+            memcpy(outp_keytable + 8 + i * 16, z[i], 8);
         }
     } else {
-        printarr_human_readable("hash2", outp_keytable,128);
+        printarr_human_readable("hash2", outp_keytable, 128);
     }
 }
 
@@ -266,9 +276,10 @@ void hash2(uint8_t *key64, uint8_t *outp_keytable) {
  * @param i the number to read. Should be less than 127, or something is wrong...
  * @return
  */
-int _readFromDump(uint8_t dump[], dumpdata* item, uint8_t i) {
+int _readFromDump(uint8_t dump[], dumpdata *item, uint8_t i)
+{
     size_t itemsize = sizeof(dumpdata);
-    memcpy(item, dump+i*itemsize, itemsize);
+    memcpy(item, dump + i * itemsize, itemsize);
 
     if (true) {
         printvar("csn", item->csn, sizeof(item->csn));
@@ -290,7 +301,8 @@ int _readFromDump(uint8_t dump[], dumpdata* item, uint8_t i) {
  * @param keytable where to write found values.
  * @return
  */
-int bruteforceItem(dumpdata item, uint16_t keytable[]) {
+int bruteforceItem(dumpdata item, uint16_t keytable[])
+{
     int errors = 0;
     int found = false;
     uint8_t key_sel_p[8] = {0};
@@ -317,7 +329,7 @@ int bruteforceItem(dumpdata item, uint16_t keytable[]) {
     uint8_t bytes_to_recover[3] = {0};
     uint8_t numbytes_to_recover = 0 ;
     int i;
-    for (i=0; i<8; i++) {
+    for (i = 0; i < 8; i++) {
         if (keytable[key_index[i]] & (CRACKED | BEING_CRACKED)) continue;
 
         bytes_to_recover[numbytes_to_recover++] = key_index[i];
@@ -349,17 +361,17 @@ int bruteforceItem(dumpdata item, uint16_t keytable[]) {
        bytes_to_recover = 3 --> endmask = 0x001000000
     */
 
-    uint32_t endmask =  1 << 8*numbytes_to_recover;
+    uint32_t endmask =  1 << 8 * numbytes_to_recover;
     PrintAndLogDevice(NORMAL, "----------------------------");
-    for (i =0 ; i < numbytes_to_recover && numbytes_to_recover > 1; i++)
+    for (i = 0 ; i < numbytes_to_recover && numbytes_to_recover > 1; i++)
         PrintAndLogDevice(INFO, "Bruteforcing byte %d", bytes_to_recover[i]);
 
     while (!found && !(brute & endmask)) {
 
         //Update the keytable with the brute-values
-        for (i=0; i < numbytes_to_recover; i++) {
+        for (i = 0; i < numbytes_to_recover; i++) {
             keytable[bytes_to_recover[i]] &= 0xFF00;
-            keytable[bytes_to_recover[i]] |= (brute >> (i*8) & 0xFF);
+            keytable[bytes_to_recover[i]] |= (brute >> (i * 8) & 0xFF);
         }
 
         // Piece together the key
@@ -382,7 +394,7 @@ int bruteforceItem(dumpdata item, uint16_t keytable[]) {
         // success
         if (memcmp(calculated_MAC, item.mac, 4) == 0) {
             printf("\r\n");
-            for (i =0 ; i < numbytes_to_recover; i++) {
+            for (i = 0 ; i < numbytes_to_recover; i++) {
                 PrintAndLogDevice(INFO, "%d: 0x%02x", bytes_to_recover[i], 0xFF & keytable[bytes_to_recover[i]]);
             }
             found = true;
@@ -391,26 +403,27 @@ int bruteforceItem(dumpdata item, uint16_t keytable[]) {
 
         brute++;
         if ((brute & 0xFFFF) == 0) {
-            printf("%3d,",(brute >> 16) & 0xFF);
-            if ( ((brute >> 16) % 0x10) == 0)
+            printf("%3d,", (brute >> 16) & 0xFF);
+            if (((brute >> 16) % 0x10) == 0)
                 printf("\n");
             fflush(stdout);
         }
     }
 
     if (!found) {
-        PrintAndLogDevice(NORMAL, "\n"); PrintAndLogDevice(WARNING, "Failed to recover %d bytes using the following CSN", numbytes_to_recover);
+        PrintAndLogDevice(NORMAL, "\n");
+        PrintAndLogDevice(WARNING, "Failed to recover %d bytes using the following CSN", numbytes_to_recover);
         printvar("[!] CSN", item.csn, 8);
         errors++;
 
         //Before we exit, reset the 'BEING_CRACKED' to zero
-        for (i=0; i < numbytes_to_recover; i++){
+        for (i = 0; i < numbytes_to_recover; i++) {
             keytable[bytes_to_recover[i]]  &= 0xFF;
             keytable[bytes_to_recover[i]]  |= CRACK_FAILED;
         }
     } else {
         //PrintAndLogDevice(SUCCESS, "DES calcs: %u", brute);
-        for (i=0; i < numbytes_to_recover; i++){
+        for (i = 0; i < numbytes_to_recover; i++) {
             keytable[bytes_to_recover[i]]  &= 0xFF;
             keytable[bytes_to_recover[i]]  |= CRACKED;
         }
@@ -430,7 +443,8 @@ int bruteforceItem(dumpdata item, uint16_t keytable[]) {
  * @param master_key where to put the master key
  * @return 0 for ok, 1 for failz
  */
-int calculateMasterKey(uint8_t first16bytes[], uint64_t master_key[] ){
+int calculateMasterKey(uint8_t first16bytes[], uint64_t master_key[])
+{
     mbedtls_des_context ctx_e;
 
     uint8_t z_0[8] = {0};
@@ -441,8 +455,8 @@ int calculateMasterKey(uint8_t first16bytes[], uint64_t master_key[] ){
     uint8_t result[8] = {0};
 
     // y_0 and z_0 are the first 16 bytes of the keytable
-    memcpy(y_0, first16bytes,8);
-    memcpy(z_0, first16bytes+8,8);
+    memcpy(y_0, first16bytes, 8);
+    memcpy(z_0, first16bytes + 8, 8);
 
     // Our DES-implementation uses the standard NIST
     // format for keys, thus must translate from iclass
@@ -450,7 +464,7 @@ int calculateMasterKey(uint8_t first16bytes[], uint64_t master_key[] ){
     permutekey_rev(z_0, z_0_rev);
 
     // ~K_cus = DESenc(z[0], y[0])
-    mbedtls_des_setkey_enc( &ctx_e, z_0_rev );
+    mbedtls_des_setkey_enc(&ctx_e, z_0_rev);
     mbedtls_des_crypt_ecb(&ctx_e, y_0, key64_negated);
 
     int i;
@@ -462,20 +476,22 @@ int calculateMasterKey(uint8_t first16bytes[], uint64_t master_key[] ){
     uint8_t key64_stdformat[8] = {0};
     permutekey_rev(key64, key64_stdformat);
 
-    mbedtls_des_setkey_enc( &ctx_e, key64_stdformat );
+    mbedtls_des_setkey_enc(&ctx_e, key64_stdformat);
     mbedtls_des_crypt_ecb(&ctx_e, key64_negated, result);
-    PrintAndLogDevice(NORMAL, "\n"); PrintAndLogDevice(SUCCESS, "-- High security custom key (Kcus) --");
+    PrintAndLogDevice(NORMAL, "\n");
+    PrintAndLogDevice(SUCCESS, "-- High security custom key (Kcus) --");
     printvar("[+] Standard format   ", key64_stdformat, 8);
     printvar("[+] iClass format     ", key64, 8);
 
     if (master_key != NULL)
         memcpy(master_key, key64, 8);
 
-    if (memcmp(z_0,result,4) != 0) {
+    if (memcmp(z_0, result, 4) != 0) {
         PrintAndLogDevice(WARNING, "Failed to verify calculated master key (k_cus)! Something is wrong.");
         return 1;
     } else {
-        PrintAndLogDevice(NORMAL, "\n"); PrintAndLogDevice(SUCCESS, "Key verified ok!\n");
+        PrintAndLogDevice(NORMAL, "\n");
+        PrintAndLogDevice(SUCCESS, "Key verified ok!\n");
     }
     return 0;
 }
@@ -486,22 +502,23 @@ int calculateMasterKey(uint8_t first16bytes[], uint64_t master_key[] ){
  * @param keytable
  * @return
  */
-int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[]) {
+int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[])
+{
     uint8_t i;
     int errors = 0;
     size_t itemsize = sizeof(dumpdata);
 
     uint64_t t1 = msclock();
 
-    dumpdata* attack = (dumpdata* ) calloc(itemsize, sizeof(uint8_t));
+    dumpdata *attack = (dumpdata *) calloc(itemsize, sizeof(uint8_t));
 
-    for (i = 0 ; i * itemsize < dumpsize ; i++ ) {
+    for (i = 0 ; i * itemsize < dumpsize ; i++) {
         memcpy(attack, dump + i * itemsize, itemsize);
         errors += bruteforceItem(*attack, keytable);
     }
     free(attack);
 
-    PrintAndLogDevice(SUCCESS, "time: %" PRIu64 " seconds", (msclock()-t1)/1000);
+    PrintAndLogDevice(SUCCESS, "time: %" PRIu64 " seconds", (msclock() - t1) / 1000);
 
     // Pick out the first 16 bytes of the keytable.
     // The keytable is now in 16-bit ints, where the upper 8 bits
@@ -525,7 +542,8 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[]) {
  * @param filename
  * @return
  */
-int bruteforceFile(const char *filename, uint16_t keytable[]) {
+int bruteforceFile(const char *filename, uint16_t keytable[])
+{
     FILE *f = fopen(filename, "rb");
     if (!f) {
         PrintAndLogDevice(WARNING, "Failed to read from file '%s'", filename);
@@ -543,7 +561,7 @@ int bruteforceFile(const char *filename, uint16_t keytable[]) {
     }
 
     uint8_t *dump = calloc(fsize, sizeof(uint8_t));
-    if ( !dump ) {
+    if (!dump) {
         PrintAndLogDevice(WARNING, "Failed to allocate memory");
         fclose(f);
         return 2;
@@ -553,7 +571,7 @@ int bruteforceFile(const char *filename, uint16_t keytable[]) {
     fclose(f);
 
     if (bytes_read < fsize) {
-        PrintAndLogDevice(WARNING, "Error, could only read %d bytes (should be %d)", bytes_read, fsize );
+        PrintAndLogDevice(WARNING, "Error, could only read %d bytes (should be %d)", bytes_read, fsize);
     }
 
     uint8_t res = bruteforceDump(dump, fsize, keytable);
@@ -566,7 +584,8 @@ int bruteforceFile(const char *filename, uint16_t keytable[]) {
  * @param filename
  * @return
  */
-int bruteforceFileNoKeys(const char *filename) {
+int bruteforceFileNoKeys(const char *filename)
+{
     uint16_t keytable[128] = {0};
     return bruteforceFile(filename, keytable);
 }
@@ -577,7 +596,8 @@ int bruteforceFileNoKeys(const char *filename) {
 // ----------------------------------------------------------------------------
 // TEST CODE BELOW
 // ----------------------------------------------------------------------------
-int _testBruteforce() {
+int _testBruteforce()
+{
     int errors = 0;
     if (true) {
         // First test
@@ -601,11 +621,11 @@ int _testBruteforce() {
         uint16_t keytable[128] = {0};
 
         //Test a few variants
-        if (fileExists("iclass_dump.bin")){
+        if (fileExists("iclass_dump.bin")) {
             errors |= bruteforceFile("iclass_dump.bin", keytable);
-        } else if (fileExists("loclass/iclass_dump.bin")){
+        } else if (fileExists("loclass/iclass_dump.bin")) {
             errors |= bruteforceFile("loclass/iclass_dump.bin", keytable);
-        } else if (fileExists("client/loclass/iclass_dump.bin")){
+        } else if (fileExists("client/loclass/iclass_dump.bin")) {
             errors |= bruteforceFile("client/loclass/iclass_dump.bin", keytable);
         } else {
             PrintAndLogDevice(WARNING, "Error: The file iclass_dump.bin was not found!");
@@ -614,15 +634,16 @@ int _testBruteforce() {
     return errors;
 }
 
-int _test_iclass_key_permutation() {
-    uint8_t testcase[8] = {0x6c,0x8d,0x44,0xf9,0x2a,0x2d,0x01,0xbf};
+int _test_iclass_key_permutation()
+{
+    uint8_t testcase[8] = {0x6c, 0x8d, 0x44, 0xf9, 0x2a, 0x2d, 0x01, 0xbf};
     uint8_t testcase_output[8] = {0};
-    uint8_t testcase_output_correct[8] = {0x8a,0x0d,0xb9,0x88,0xbb,0xa7,0x90,0xea};
+    uint8_t testcase_output_correct[8] = {0x8a, 0x0d, 0xb9, 0x88, 0xbb, 0xa7, 0x90, 0xea};
     uint8_t testcase_output_rev[8] = {0};
     permutekey(testcase, testcase_output);
     permutekey_rev(testcase_output, testcase_output_rev);
 
-    if (memcmp(testcase_output, testcase_output_correct,8) != 0) {
+    if (memcmp(testcase_output, testcase_output_correct, 8) != 0) {
         PrintAndLogDevice(WARNING, "Error with iclass key permute!");
         printarr("testcase_output", testcase_output, 8);
         printarr("testcase_output_correct", testcase_output_correct, 8);
@@ -640,13 +661,14 @@ int _test_iclass_key_permutation() {
     return 0;
 }
 
-int _testHash1() {
-    uint8_t expected[8] = {0x7E,0x72,0x2F,0x40,0x2D,0x02,0x51,0x42};
-    uint8_t csn[8] = {0x01,0x02,0x03,0x04,0xF7,0xFF,0x12,0xE0};
+int _testHash1()
+{
+    uint8_t expected[8] = {0x7E, 0x72, 0x2F, 0x40, 0x2D, 0x02, 0x51, 0x42};
+    uint8_t csn[8] = {0x01, 0x02, 0x03, 0x04, 0xF7, 0xFF, 0x12, 0xE0};
     uint8_t k[8] = {0};
     hash1(csn, k);
 
-    if (memcmp(k,expected,8) != 0) {
+    if (memcmp(k, expected, 8) != 0) {
         PrintAndLogDevice(WARNING, "Error with hash1!");
         printarr("calculated", k, 8);
         printarr("expected", expected, 8);
@@ -655,25 +677,26 @@ int _testHash1() {
     return 0;
 }
 
-int testElite() {
+int testElite()
+{
     PrintAndLogDevice(INFO, "Testing iClass Elite functinality...");
     PrintAndLogDevice(INFO, "Testing hash2");
-    uint8_t k_cus[8] = {0x5B,0x7C,0x62,0xC4,0x91,0xC1,0x1B,0x39};
+    uint8_t k_cus[8] = {0x5B, 0x7C, 0x62, 0xC4, 0x91, 0xC1, 0x1B, 0x39};
 
     /**
      *Expected:
      * High Security Key Table
 
-00  F1 35 59 A1 0D 5A 26 7F 18 60 0B 96 8A C0 25 C1
-10  BF A1 3B B0 FF 85 28 75 F2 1F C6 8F 0E 74 8F 21
-20  14 7A 55 16 C8 A9 7D B3 13 0C 5D C9 31 8D A9 B2
-30  A3 56 83 0F 55 7E DE 45 71 21 D2 6D C1 57 1C 9C
-40  78 2F 64 51 42 7B 64 30 FA 26 51 76 D3 E0 FB B6
-50  31 9F BF 2F 7E 4F 94 B4 BD 4F 75 91 E3 1B EB 42
-60  3F 88 6F B8 6C 2C 93 0D 69 2C D5 20 3C C1 61 95
-70  43 08 A0 2F FE B3 26 D7 98 0B 34 7B 47 70 A0 AB
+    00  F1 35 59 A1 0D 5A 26 7F 18 60 0B 96 8A C0 25 C1
+    10  BF A1 3B B0 FF 85 28 75 F2 1F C6 8F 0E 74 8F 21
+    20  14 7A 55 16 C8 A9 7D B3 13 0C 5D C9 31 8D A9 B2
+    30  A3 56 83 0F 55 7E DE 45 71 21 D2 6D C1 57 1C 9C
+    40  78 2F 64 51 42 7B 64 30 FA 26 51 76 D3 E0 FB B6
+    50  31 9F BF 2F 7E 4F 94 B4 BD 4F 75 91 E3 1B EB 42
+    60  3F 88 6F B8 6C 2C 93 0D 69 2C D5 20 3C C1 61 95
+    70  43 08 A0 2F FE B3 26 D7 98 0B 34 7B 47 70 A0 AB
 
-**** The 64-bit HS Custom Key Value = 5B7C62C491C11B39 ****
+    **** The 64-bit HS Custom Key Value = 5B7C62C491C11B39 ****
      */
     uint8_t keytable[128] = {0};
     hash2(k_cus, keytable);
@@ -686,7 +709,7 @@ int testElite() {
     PrintAndLogDevice(INFO, "Testing hash1...");
     errors += _testHash1();
     PrintAndLogDevice(INFO, "Testing key diversification ...");
-    errors +=_test_iclass_key_permutation();
+    errors += _test_iclass_key_permutation();
     errors += _testBruteforce();
     return errors;
 }

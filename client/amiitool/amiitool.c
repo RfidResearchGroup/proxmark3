@@ -12,27 +12,29 @@
 
 #define NTAG215_SIZE 540
 
-static char * self;
+static char *self;
 
-void amiitool_usage() {
+void amiitool_usage()
+{
     fprintf(stderr,
-        "amiitool build %i (commit %s-%08x)\n"
-        "by Marcos Del Sol Vives <marcos@dracon.es>\n"
-        "\n"
-        "Usage: %s (-e|-d|-c) -k keyfile [-i input] [-s input2] [-o output]\n"
-        "   -e encrypt and sign amiibo\n"
-        "   -d decrypt and test amiibo\n"
-        "   -c decrypt, copy AppData and encrypt amiibo\n"
-        "   -k key set file. For retail amiibo, use \"retail unfixed\" key set\n"
-        "   -i input file. If not specified, stdin will be used.\n"
-        "   -s input save file, save from this file will replace input file ones.\n"
-        "   -o output file. If not specified, stdout will be used.\n"
-        "   -l decrypt files with invalid signatures.\n",
-        , self
-    );
+            "amiitool build %i (commit %s-%08x)\n"
+            "by Marcos Del Sol Vives <marcos@dracon.es>\n"
+            "\n"
+            "Usage: %s (-e|-d|-c) -k keyfile [-i input] [-s input2] [-o output]\n"
+            "   -e encrypt and sign amiibo\n"
+            "   -d decrypt and test amiibo\n"
+            "   -c decrypt, copy AppData and encrypt amiibo\n"
+            "   -k key set file. For retail amiibo, use \"retail unfixed\" key set\n"
+            "   -i input file. If not specified, stdin will be used.\n"
+            "   -s input save file, save from this file will replace input file ones.\n"
+            "   -o output file. If not specified, stdout will be used.\n"
+            "   -l decrypt files with invalid signatures.\n",
+            , self
+           );
 }
 
-static bool LoadAmiikey(nfc3d_amiibo_keys keys, char* keyfile) {
+static bool LoadAmiikey(nfc3d_amiibo_keys keys, char *keyfile)
+{
 
     if (!nfc3d_amiibo_load_keys(&keys, keyfile)) {
         PrintAndLogEx(ERR, "Could not load keys from '%s'", keyfile);
@@ -41,13 +43,14 @@ static bool LoadAmiikey(nfc3d_amiibo_keys keys, char* keyfile) {
     return true;
 }
 
-int main(int argc, char ** argv) {
+int main(int argc, char **argv)
+{
     self = argv[0];
 
-    char * infile = NULL;
-    char * savefile = NULL;
-    char * outfile = NULL;
-    char * keyfile = NULL;
+    char *infile = NULL;
+    char *savefile = NULL;
+    char *outfile = NULL;
+    char *keyfile = NULL;
     char op = '\0';
     bool lenient = false;
 
@@ -88,7 +91,7 @@ int main(int argc, char ** argv) {
     uint8_t original[NTAG215_SIZE];
     uint8_t modified[NFC3D_AMIIBO_SIZE];
 
-    FILE * f = stdin;
+    FILE *f = stdin;
     if (infile) {
         f = fopen(infile, "rb");
         if (!f) {

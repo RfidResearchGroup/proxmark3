@@ -28,9 +28,9 @@
 
 extern int CmdSmartcard(const char *Cmd);
 
-extern int CmdSmartRaw(const char* cmd);
-extern int CmdSmartUpgrade(const char* cmd);
-extern int CmdSmartInfo(const char* cmd);
+extern int CmdSmartRaw(const char *cmd);
+extern int CmdSmartUpgrade(const char *cmd);
+extern int CmdSmartInfo(const char *cmd);
 extern int CmdSmartReader(const char *Cmd);
 
 extern bool smart_select(bool silent, smart_card_atr_t *atr);

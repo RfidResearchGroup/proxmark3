@@ -47,7 +47,8 @@ static const poly_t pzero = PZERO;
 
 /* Definitions */
 
-void mcpy(model_t *dest, const model_t *src) {
+void mcpy(model_t *dest, const model_t *src)
+{
     /* Copies the parameters of src to dest.
      * dest must be an initialised model.
      */
@@ -62,7 +63,8 @@ void mcpy(model_t *dest, const model_t *src) {
     dest->name = src->name;
 }
 
-void mfree(model_t *model) {
+void mfree(model_t *model)
+{
     /* Frees the parameters of model. */
     if (!model) return;
     pfree(&model->spoly);
@@ -74,7 +76,8 @@ void mfree(model_t *model) {
     /* not model either, it might point to an array! */
 }
 
-int mcmp(const model_t *a, const model_t *b) {
+int mcmp(const model_t *a, const model_t *b)
+{
     /* Compares a and b for identical effect, i.e. disregarding
      * trailing zeroes in parameter polys.
      * Intended for bsearch().
@@ -90,16 +93,17 @@ int mcmp(const model_t *a, const model_t *b) {
     return (psncmp(&a->xorout, &b->xorout));
 }
 
-char * mtostr(const model_t *model) {
+char *mtostr(const model_t *model)
+{
     /* Returns a malloc()-ed string containing a Williams model
      * record representing the input model.
      * mcanon() should be called on the argument before printing.
      */
     size_t size;
     char *polystr, *initstr, *xorotstr, *checkstr, *magicstr,
-        strbuf[512], *string = NULL;
+         strbuf[512], *string = NULL;
 
-    if (!model) return(NULL);
+    if (!model) return (NULL);
     polystr = ptostr(model->spoly, P_RTJUST, 4);
     initstr = ptostr(model->init, P_RTJUST, 4);
     xorotstr = ptostr(model->xorout, P_RTJUST, 4);
@@ -145,12 +149,13 @@ char * mtostr(const model_t *model) {
     free(xorotstr);
     free(checkstr);
     free(magicstr);
-    if(!string)
+    if (!string)
         uerror("cannot allocate memory for model description");
-    return(string);
+    return (string);
 }
 
-void mcanon(model_t *model) {
+void mcanon(model_t *model)
+{
     /* canonicalise a model */
     unsigned long dlen;
 
@@ -176,7 +181,8 @@ void mcanon(model_t *model) {
         mcheck(model);
 }
 
-void mcheck(model_t *model) {
+void mcheck(model_t *model)
+{
     /* calculate a check for the model */
     poly_t checkstr, check, xorout, magic;
 
@@ -199,7 +205,7 @@ void mcheck(model_t *model) {
      * that the characters of the received CRC are specially
      * reflected before submitting the codeword.
      */
-    xorout=pclone(model->xorout);
+    xorout = pclone(model->xorout);
     if (model->flags & P_REFOUT)
         prev(&xorout);
     magic = pcrc(xorout, model->spoly, pzero, pzero, model->flags);
@@ -209,7 +215,8 @@ void mcheck(model_t *model) {
     model->magic = magic;
 }
 
-void mrev(model_t *model) {
+void mrev(model_t *model)
+{
     /* reverse the model to calculate reversed CRCs */
     /* Here we invert RefIn and RefOut so that the user need only
      * reverse the order of characters in the arguments, not the
@@ -239,7 +246,8 @@ void mrev(model_t *model) {
     mnovel(model);
 }
 
-void mnovel(model_t *model) {
+void mnovel(model_t *model)
+{
     /* remove name and check string from modified model */
     model->name = NULL;
     pfree(&model->check);

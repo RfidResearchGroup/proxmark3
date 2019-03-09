@@ -32,7 +32,7 @@
 #include "loclass/cipherutils.h" // for decimating samples in getsamples
 #include "cmdlfem4x.h" // askem410xdecode
 
-command_t * CmdDataCommands();
+command_t *CmdDataCommands();
 
 int CmdData(const char *Cmd);
 void printDemodBuff(void);
@@ -83,7 +83,7 @@ int PSKDemod(const char *Cmd, bool verbose);
 int NRZrawDemod(const char *Cmd, bool verbose);
 int getSamples(int n, bool silent);
 void setClockGrid(int clk, int offset);
-int directionalThreshold(const int* in, int *out, size_t len, int8_t up, int8_t down);
+int directionalThreshold(const int *in, int *out, size_t len, int8_t up, int8_t down);
 extern int AskEdgeDetect(const int *in, int *out, int len, int threshold);
 
 int CmdDataIIR(const char *Cmd);

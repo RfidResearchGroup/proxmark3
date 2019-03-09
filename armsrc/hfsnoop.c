@@ -11,22 +11,23 @@ static void RAMFUNC optimizedSnoop(void)
     int n = BigBuf_max_traceLen() / sizeof(uint16_t); // take all memory
 
     uint16_t *dest = (uint16_t *)BigBuf_get_addr();
-    uint16_t *destend = dest + n-1;
+    uint16_t *destend = dest + n - 1;
 
     // Reading data loop
-    while(dest <= destend) {
-        if(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
+    while (dest <= destend) {
+        if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
             *dest = (uint16_t)(AT91C_BASE_SSC->SSC_RHR);
             dest++;
         }
     }
     //setting tracelen - important!  it was set by buffer overflow before
-    set_tracelen( BigBuf_max_traceLen());
+    set_tracelen(BigBuf_max_traceLen());
 }
 
 void HfSnoop(int samplesToSkip, int triggersToSkip)
 {
-    BigBuf_free(); BigBuf_Clear();
+    BigBuf_free();
+    BigBuf_Clear();
 
     Dbprintf("Skipping first %d sample pairs, Skipping %d triggers.\n", samplesToSkip, triggersToSkip);
     int trigger_cnt = 0;
@@ -47,7 +48,7 @@ void HfSnoop(int samplesToSkip, int triggersToSkip)
     SpinDelay(100);
 
     uint16_t r = 0;
-    while (!BUTTON_PRESS() && !usb_poll_validate_length() ) {
+    while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
         WDT_HIT();
 
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
@@ -55,16 +56,16 @@ void HfSnoop(int samplesToSkip, int triggersToSkip)
             r = MAX(r & 0xff, r >> 8);
             if (r >= 180) {  // 0xB4 ??
                 if (++trigger_cnt > triggersToSkip)
-                break;
+                    break;
             }
         }
     }
 
     if (!BUTTON_PRESS()) {
         int waitcount = samplesToSkip; // lets wait 40000 ticks of pck0
-        while(waitcount != 0) {
+        while (waitcount != 0) {
 
-            if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY))
+            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY))
                 waitcount--;
         }
         optimizedSnoop();

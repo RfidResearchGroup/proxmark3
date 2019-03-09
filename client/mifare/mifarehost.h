@@ -40,20 +40,20 @@
 #define TRACE_ERROR             0xFF
 
 typedef struct {
-        union {
-            struct Crypto1State *slhead;
-            uint64_t *keyhead;
-        } head;
-        union {
-            struct Crypto1State *sltail;
-            uint64_t *keytail;
-        } tail;
-        uint32_t len;
-        uint32_t uid;
-        uint32_t blockNo;
-        uint32_t keyType;
-        uint32_t nt;
-        uint32_t ks1;
+    union {
+        struct Crypto1State *slhead;
+        uint64_t *keyhead;
+    } head;
+    union {
+        struct Crypto1State *sltail;
+        uint64_t *keytail;
+    } tail;
+    uint32_t len;
+    uint32_t uid;
+    uint32_t blockNo;
+    uint32_t keyType;
+    uint32_t nt;
+    uint32_t ks1;
 } StateList_t;
 
 typedef struct {
@@ -70,10 +70,10 @@ typedef struct {
 extern char logHexFileName[FILE_PATH_SIZE];
 
 extern int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key);
-extern int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t * ResultKeys, bool calibrate);
-extern int mfCheckKeys (uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keycnt, uint8_t * keyBlock, uint64_t * key);
-extern int mfCheckKeys_fast( uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk,
-                        uint8_t strategy, uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory);
+extern int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *ResultKeys, bool calibrate);
+extern int mfCheckKeys(uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keycnt, uint8_t *keyBlock, uint64_t *key);
+extern int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk,
+                            uint8_t strategy, uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory);
 extern int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultkey);
 
 extern int mfReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data);

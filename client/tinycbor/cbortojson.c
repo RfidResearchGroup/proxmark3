@@ -188,8 +188,8 @@ static CborError dump_bytestring_base16(char **result, CborValue *it)
 
     for (i = 0; i < n; ++i) {
         uint8_t byte = buffer[n + i];
-        buffer[2*i]     = characters[byte >> 4];
-        buffer[2*i + 1] = characters[byte & 0xf];
+        buffer[2 * i]     = characters[byte >> 4];
+        buffer[2 * i + 1] = characters[byte & 0xf];
     }
     return CborNoError;
 }
@@ -352,8 +352,8 @@ static CborError tagged_value_to_json(FILE *out, CborValue *it, int flags, Conve
             return err;
         if (flags & CborConvertAddMetadata && status->flags) {
             if (fprintf(out, ",\"tag%" PRIu64 "$cbor\":{", tag) < 0 ||
-                    add_value_metadata(out, type, status) != CborNoError ||
-                    fputc('}', out) < 0)
+                add_value_metadata(out, type, status) != CborNoError ||
+                fputc('}', out) < 0)
                 return CborErrorIO;
         }
         if (fputc('}', out) < 0)
@@ -370,7 +370,7 @@ static CborError tagged_value_to_json(FILE *out, CborValue *it, int flags, Conve
 
     /* special handling of byte strings? */
     if (type == CborByteStringType && (flags & CborConvertByteStringsToBase64Url) == 0 &&
-            (tag == CborNegativeBignumTag || tag == CborExpectedBase16Tag || tag == CborExpectedBase64Tag)) {
+        (tag == CborNegativeBignumTag || tag == CborExpectedBase16Tag || tag == CborExpectedBase64Tag)) {
         char *str;
         char *pre = "";
 
@@ -473,8 +473,8 @@ static CborError map_to_json(FILE *out, CborValue *it, int flags, ConversionStat
             }
             if (!err && status->flags) {
                 if (fprintf(out, ",\"%s$cbor\":{", key) < 0 ||
-                        add_value_metadata(out, valueType, status) != CborNoError ||
-                        fputc('}', out) < 0)
+                    add_value_metadata(out, valueType, status) != CborNoError ||
+                    fputc('}', out) < 0)
                     err = CborErrorIO;
             }
         }
@@ -492,164 +492,164 @@ static CborError value_to_json(FILE *out, CborValue *it, int flags, CborType typ
     status->flags = 0;
 
     switch (type) {
-    case CborArrayType:
-    case CborMapType: {
-        /* recursive type */
-        CborValue recursed;
-        err = cbor_value_enter_container(it, &recursed);
-        if (err) {
-            it->ptr = recursed.ptr;
-            return err;       /* parse error */
-        }
-        if (fputc(type == CborArrayType ? '[' : '{', out) < 0)
-            return CborErrorIO;
+        case CborArrayType:
+        case CborMapType: {
+            /* recursive type */
+            CborValue recursed;
+            err = cbor_value_enter_container(it, &recursed);
+            if (err) {
+                it->ptr = recursed.ptr;
+                return err;       /* parse error */
+            }
+            if (fputc(type == CborArrayType ? '[' : '{', out) < 0)
+                return CborErrorIO;
 
-        err = (type == CborArrayType) ?
+            err = (type == CborArrayType) ?
                   array_to_json(out, &recursed, flags, status) :
                   map_to_json(out, &recursed, flags, status);
-        if (err) {
-            it->ptr = recursed.ptr;
-            return err;       /* parse error */
-        }
-
-        if (fputc(type == CborArrayType ? ']' : '}', out) < 0)
-            return CborErrorIO;
-        err = cbor_value_leave_container(it, &recursed);
-        if (err)
-            return err;       /* parse error */
-
-        status->flags = 0;    /* reset, there are never conversion errors for us */
-        return CborNoError;
-    }
-
-    case CborIntegerType: {
-        double num;     /* JS numbers are IEEE double precision */
-        uint64_t val;
-        cbor_value_get_raw_integer(it, &val);    /* can't fail */
-        num = (double)val;
-
-        if (cbor_value_is_negative_integer(it)) {
-            num = -num - 1;                     /* convert to negative */
-            if ((uint64_t)(-num - 1) != val) {
-                status->flags = NumberPrecisionWasLost | NumberWasNegative;
-                status->originalNumber = val;
+            if (err) {
+                it->ptr = recursed.ptr;
+                return err;       /* parse error */
             }
-        } else {
-            if ((uint64_t)num != val) {
-                status->flags = NumberPrecisionWasLost;
-                status->originalNumber = val;
+
+            if (fputc(type == CborArrayType ? ']' : '}', out) < 0)
+                return CborErrorIO;
+            err = cbor_value_leave_container(it, &recursed);
+            if (err)
+                return err;       /* parse error */
+
+            status->flags = 0;    /* reset, there are never conversion errors for us */
+            return CborNoError;
+        }
+
+        case CborIntegerType: {
+            double num;     /* JS numbers are IEEE double precision */
+            uint64_t val;
+            cbor_value_get_raw_integer(it, &val);    /* can't fail */
+            num = (double)val;
+
+            if (cbor_value_is_negative_integer(it)) {
+                num = -num - 1;                     /* convert to negative */
+                if ((uint64_t)(-num - 1) != val) {
+                    status->flags = NumberPrecisionWasLost | NumberWasNegative;
+                    status->originalNumber = val;
+                }
+            } else {
+                if ((uint64_t)num != val) {
+                    status->flags = NumberPrecisionWasLost;
+                    status->originalNumber = val;
+                }
             }
-        }
-        if (fprintf(out, "%.0f", num) < 0)  /* this number has no fraction, so no decimal points please */
-            return CborErrorIO;
-        break;
-    }
-
-    case CborByteStringType:
-    case CborTextStringType: {
-        char *str;
-        if (type == CborByteStringType) {
-            err = dump_bytestring_base64url(&str, it);
-            status->flags = TypeWasNotNative;
-        } else {
-            size_t n = 0;
-            err = cbor_value_dup_text_string(it, &str, &n, it);
-        }
-        if (err)
-            return err;
-        err = (fprintf(out, "\"%s\"", str) < 0) ? CborErrorIO : CborNoError;
-        free(str);
-        return err;
-    }
-
-    case CborTagType:
-        return tagged_value_to_json(out, it, flags, status);
-
-    case CborSimpleType: {
-        uint8_t simple_type;
-        cbor_value_get_simple_type(it, &simple_type);  /* can't fail */
-        status->flags = TypeWasNotNative;
-        status->originalNumber = simple_type;
-        if (fprintf(out, "\"simple(%" PRIu8 ")\"", simple_type) < 0)
-            return CborErrorIO;
-        break;
-    }
-
-    case CborNullType:
-        if (fprintf(out, "null") < 0)
-            return CborErrorIO;
-        break;
-
-    case CborUndefinedType:
-        status->flags = TypeWasNotNative;
-        if (fprintf(out, "\"undefined\"") < 0)
-            return CborErrorIO;
-        break;
-
-    case CborBooleanType: {
-        bool val;
-        cbor_value_get_boolean(it, &val);       /* can't fail */
-        if (fprintf(out, val ? "true" : "false") < 0)
-            return CborErrorIO;
-        break;
-    }
-
-#ifndef CBOR_NO_FLOATING_POINT
-    case CborDoubleType: {
-        double val;
-        if (false) {
-            float f;
-    case CborFloatType:
-            status->flags = TypeWasNotNative;
-            cbor_value_get_float(it, &f);
-            val = f;
-        } else if (false) {
-            uint16_t f16;
-    case CborHalfFloatType:
-#  ifndef CBOR_NO_HALF_FLOAT_TYPE
-            status->flags = TypeWasNotNative;
-            cbor_value_get_half_float(it, &f16);
-            val = decode_half(f16);
-#  else
-            (void)f16;
-            err = CborErrorUnsupportedType;
+            if (fprintf(out, "%.0f", num) < 0)  /* this number has no fraction, so no decimal points please */
+                return CborErrorIO;
             break;
-#  endif
-        } else {
-            cbor_value_get_double(it, &val);
         }
 
-        int r = fpclassify(val);
-        if (r == FP_NAN || r == FP_INFINITE) {
+        case CborByteStringType:
+        case CborTextStringType: {
+            char *str;
+            if (type == CborByteStringType) {
+                err = dump_bytestring_base64url(&str, it);
+                status->flags = TypeWasNotNative;
+            } else {
+                size_t n = 0;
+                err = cbor_value_dup_text_string(it, &str, &n, it);
+            }
+            if (err)
+                return err;
+            err = (fprintf(out, "\"%s\"", str) < 0) ? CborErrorIO : CborNoError;
+            free(str);
+            return err;
+        }
+
+        case CborTagType:
+            return tagged_value_to_json(out, it, flags, status);
+
+        case CborSimpleType: {
+            uint8_t simple_type;
+            cbor_value_get_simple_type(it, &simple_type);  /* can't fail */
+            status->flags = TypeWasNotNative;
+            status->originalNumber = simple_type;
+            if (fprintf(out, "\"simple(%" PRIu8 ")\"", simple_type) < 0)
+                return CborErrorIO;
+            break;
+        }
+
+        case CborNullType:
             if (fprintf(out, "null") < 0)
                 return CborErrorIO;
-            status->flags |= r == FP_NAN ? NumberWasNaN :
-                                           NumberWasInfinite | (val < 0 ? NumberWasNegative : 0);
-        } else {
-            uint64_t ival = (uint64_t)fabs(val);
-            if ((double)ival == fabs(val)) {
-                /* print as integer so we get the full precision */
-                r = fprintf(out, "%s%" PRIu64, val < 0 ? "-" : "", ival);
-                status->flags |= TypeWasNotNative;   /* mark this integer number as a double */
-            } else {
-                /* this number is definitely not a 64-bit integer */
-                r = fprintf(out, "%." DBL_DECIMAL_DIG_STR "g", val);
-            }
-            if (r < 0)
+            break;
+
+        case CborUndefinedType:
+            status->flags = TypeWasNotNative;
+            if (fprintf(out, "\"undefined\"") < 0)
                 return CborErrorIO;
+            break;
+
+        case CborBooleanType: {
+            bool val;
+            cbor_value_get_boolean(it, &val);       /* can't fail */
+            if (fprintf(out, val ? "true" : "false") < 0)
+                return CborErrorIO;
+            break;
         }
-        break;
-    }
+
+#ifndef CBOR_NO_FLOATING_POINT
+        case CborDoubleType: {
+            double val;
+            if (false) {
+                float f;
+                case CborFloatType:
+                    status->flags = TypeWasNotNative;
+                    cbor_value_get_float(it, &f);
+                    val = f;
+                } else if (false) {
+                    uint16_t f16;
+                case CborHalfFloatType:
+#  ifndef CBOR_NO_HALF_FLOAT_TYPE
+                    status->flags = TypeWasNotNative;
+                    cbor_value_get_half_float(it, &f16);
+                    val = decode_half(f16);
+#  else
+                    (void)f16;
+                    err = CborErrorUnsupportedType;
+                    break;
+#  endif
+                } else {
+                    cbor_value_get_double(it, &val);
+                }
+
+                int r = fpclassify(val);
+                if (r == FP_NAN || r == FP_INFINITE) {
+                    if (fprintf(out, "null") < 0)
+                        return CborErrorIO;
+                    status->flags |= r == FP_NAN ? NumberWasNaN :
+                                     NumberWasInfinite | (val < 0 ? NumberWasNegative : 0);
+                } else {
+                    uint64_t ival = (uint64_t)fabs(val);
+                    if ((double)ival == fabs(val)) {
+                        /* print as integer so we get the full precision */
+                        r = fprintf(out, "%s%" PRIu64, val < 0 ? "-" : "", ival);
+                        status->flags |= TypeWasNotNative;   /* mark this integer number as a double */
+                    } else {
+                        /* this number is definitely not a 64-bit integer */
+                        r = fprintf(out, "%." DBL_DECIMAL_DIG_STR "g", val);
+                    }
+                    if (r < 0)
+                        return CborErrorIO;
+                }
+                break;
+            }
 #else
-    case CborDoubleType:
-    case CborFloatType:
-    case CborHalfFloatType:
-        err = CborErrorUnsupportedType;
-        break;
+        case CborDoubleType:
+        case CborFloatType:
+        case CborHalfFloatType:
+            err = CborErrorUnsupportedType;
+            break;
 #endif /* !CBOR_NO_FLOATING_POINT */
 
-    case CborInvalidType:
-        return CborErrorUnknownType;
+        case CborInvalidType:
+            return CborErrorUnknownType;
     }
 
     return cbor_value_advance_fixed(it);

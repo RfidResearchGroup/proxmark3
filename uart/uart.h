@@ -55,7 +55,7 @@
  * makes sense to your connection method. Both the posix and win32
  * implementations define their own structs in place.
  */
-typedef void* serial_port;
+typedef void *serial_port;
 
 /* Returned by uart_open if the serial port specified was invalid.
  */
@@ -71,7 +71,7 @@ typedef void* serial_port;
  *
  * On errors, this method returns INVALID_SERIAL_PORT or CLAIMED_SERIAL_PORT.
  */
-serial_port uart_open(const char* pcPortName);
+serial_port uart_open(const char *pcPortName);
 
 /* Closes the given port.
  */
@@ -88,13 +88,13 @@ void uart_close(const serial_port sp);
  * partial read may have completed into the buffer by the corresponding
  * implementation, so pszRxLen should be checked to see if any data was written.
  */
-bool uart_receive(const serial_port sp, uint8_t* pbtRx, size_t pszMaxRxLen, size_t* pszRxLen);
+bool uart_receive(const serial_port sp, uint8_t *pbtRx, size_t pszMaxRxLen, size_t *pszRxLen);
 
 /* Sends a buffer to a given serial port.
  *   pbtTx: A pointer to a buffer containing the data to send.
  *   len: The amount of data to be sent.
  */
-bool uart_send(const serial_port sp, const uint8_t* pbtTx, const size_t len);
+bool uart_send(const serial_port sp, const uint8_t *pbtTx, const size_t len);
 
 /* Sets the current speed of the serial port, in baud.
  */

@@ -39,24 +39,26 @@
 
 static int CmdHelp(const char *Cmd);
 
-int str_ends_with(const char * str, const char * suffix) {
+int str_ends_with(const char *str, const char *suffix)
+{
 
-  if( str == NULL || suffix == NULL )
-    return 0;
+    if (str == NULL || suffix == NULL)
+        return 0;
 
-  size_t str_len = strlen(str);
-  size_t suffix_len = strlen(suffix);
+    size_t str_len = strlen(str);
+    size_t suffix_len = strlen(suffix);
 
-  if(suffix_len > str_len)
-    return 0;
+    if (suffix_len > str_len)
+        return 0;
 
-  return 0 == strncmp( str + str_len - suffix_len, suffix, suffix_len );
+    return 0 == strncmp(str + str_len - suffix_len, suffix, suffix_len);
 }
 
 /**
  * Utility to check the ending of a string (used to check file suffix)
  */
-bool endsWith(char* base, char* str) {
+bool endsWith(char *base, char *str)
+{
     int blen = strlen(base);
     int slen = strlen(str);
     return (blen >= slen) && (0 == strcmp(base + blen - slen, str));
@@ -67,9 +69,10 @@ bool endsWith(char* base, char* str) {
 * generate a file listing of the script-directory for files
 * ending with .lua
 */
-int CmdScriptList(const char *Cmd) {
+int CmdScriptList(const char *Cmd)
+{
 
-    char const * exedir = get_my_executable_directory();
+    char const *exedir = get_my_executable_directory();
     if (exedir == NULL)
         return 0;
     char script_directory_path[strlen(exedir) + strlen(LUA_SCRIPTS_DIRECTORY) + 1];
@@ -101,7 +104,8 @@ int CmdScriptList(const char *Cmd) {
  * @param argv
  * @return
  */
-int CmdScriptRun(const char *Cmd) {
+int CmdScriptRun(const char *Cmd)
+{
     // create new Lua state
     lua_State *lua_state;
     lua_state = luaL_newstate();
@@ -145,16 +149,15 @@ int CmdScriptRun(const char *Cmd) {
         lua_setglobal(lua_state, "args");
 
         //Call it with 0 arguments
-         error = lua_pcall(lua_state, 0, LUA_MULTRET, 0); // once again, returns non-0 on error,
+        error = lua_pcall(lua_state, 0, LUA_MULTRET, 0); // once again, returns non-0 on error,
     }
-    if (error) // if non-0, then an error
-    {
+    if (error) { // if non-0, then an error
         // the top of the stack should be the error string
         if (!lua_isstring(lua_state, lua_gettop(lua_state)))
             PrintAndLogEx(FAILED, "Error - but no error (?!)");
 
         // get the top of the stack as the error and pop it off
-        const char * str = lua_tostring(lua_state, lua_gettop(lua_state));
+        const char *str = lua_tostring(lua_state, lua_gettop(lua_state));
         lua_pop(lua_state, 1);
         puts(str);
     }
@@ -179,7 +182,8 @@ static command_t CommandTable[] = {
  * @param Cmd
  * @return
  */
-int CmdScript(const char *Cmd) {
+int CmdScript(const char *Cmd)
+{
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
@@ -191,7 +195,8 @@ int CmdScript(const char *Cmd) {
  * @param Cmd
  * @return
  */
-int CmdHelp(const char * Cmd) {
+int CmdHelp(const char *Cmd)
+{
     PrintAndLogEx(NORMAL, "This is a feature to run Lua-scripts. You can place lua-scripts within the scripts/-folder. ");
     return 0;
 }

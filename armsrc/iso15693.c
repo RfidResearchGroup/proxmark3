@@ -99,13 +99,14 @@ static void BuildInventoryResponse(uint8_t *cmdout, uint8_t *uid);
 // resulting data rate is 26,48 kbit/s (fc/512)
 // cmd ... data
 // n ... length of data
-static void CodeIso15693AsReader(uint8_t *cmd, int n) {
+static void CodeIso15693AsReader(uint8_t *cmd, int n)
+{
     int i, j;
 
     ToSendReset();
 
     // Give it a bit of slack at the beginning
-    for(i = 0; i < 24; i++)
+    for (i = 0; i < 24; i++)
         ToSendStuffBit(1);
 
     // SOF for 1of4
@@ -117,10 +118,10 @@ static void CodeIso15693AsReader(uint8_t *cmd, int n) {
     ToSendStuffBit(0);
     ToSendStuffBit(1);
     ToSendStuffBit(1);
-    for(i = 0; i < n; i++) {
-        for(j = 0; j < 8; j += 2) {
+    for (i = 0; i < n; i++) {
+        for (j = 0; j < 8; j += 2) {
             int these = (cmd[i] >> j) & 3;
-            switch(these) {
+            switch (these) {
                 case 0:
                     ToSendStuffBit(1);
                     ToSendStuffBit(0);
@@ -171,20 +172,21 @@ static void CodeIso15693AsReader(uint8_t *cmd, int n) {
     ToSendStuffBit(1);
 
     // And slack at the end, too.
-    for(i = 0; i < 24; i++)
+    for (i = 0; i < 24; i++)
         ToSendStuffBit(1);
 }
 
 // encode data using "1 out of 256" sheme
 // data rate is 1,66 kbit/s (fc/8192)
 // is designed for more robust communication over longer distances
-static void CodeIso15693AsReader256(uint8_t *cmd, int n) {
+static void CodeIso15693AsReader256(uint8_t *cmd, int n)
+{
     int i, j;
 
     ToSendReset();
 
     // Give it a bit of slack at the beginning
-    for(i = 0; i < 24; i++)
+    for (i = 0; i < 24; i++)
         ToSendStuffBit(1);
 
     // SOF for 1of256
@@ -197,7 +199,7 @@ static void CodeIso15693AsReader256(uint8_t *cmd, int n) {
     ToSendStuffBit(1);
     ToSendStuffBit(0);
 
-    for(i = 0; i < n; i++) {
+    for (i = 0; i < n; i++) {
         for (j = 0; j <= 255; j++) {
             if (cmd[i] == j) {
                 ToSendStuffBit(1);
@@ -215,12 +217,13 @@ static void CodeIso15693AsReader256(uint8_t *cmd, int n) {
     ToSendStuffBit(1);
 
     // And slack at the end, too.
-    for(i = 0; i < 24; i++)
+    for (i = 0; i < 24; i++)
         ToSendStuffBit(1);
 }
 
 // Transmit the command (to the tag) that was placed in ToSend[].
-static void TransmitTo15693Tag(const uint8_t *cmd, int len, int *samples, int *wait) {
+static void TransmitTo15693Tag(const uint8_t *cmd, int len, int *samples, int *wait)
+{
 
     int c;
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_TX);
@@ -236,10 +239,10 @@ static void TransmitTo15693Tag(const uint8_t *cmd, int len, int *samples, int *w
     }
 
     c = 0;
-    for(;;) {
+    for (;;) {
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
             AT91C_BASE_SSC->SSC_THR = cmd[c];
-            if( ++c >= len) break;
+            if (++c >= len) break;
         }
         WDT_HIT();
     }
@@ -255,7 +258,8 @@ static void TransmitTo15693Tag(const uint8_t *cmd, int len, int *samples, int *w
 //-----------------------------------------------------------------------------
 // Transmit the command (to the reader) that was placed in ToSend[].
 //-----------------------------------------------------------------------------
-static void TransmitTo15693Reader(const uint8_t *cmd, int len, int *samples, int *wait) {
+static void TransmitTo15693Reader(const uint8_t *cmd, int len, int *samples, int *wait)
+{
     int c = 0;
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_424K);
 
@@ -270,10 +274,10 @@ static void TransmitTo15693Reader(const uint8_t *cmd, int len, int *samples, int
     }
 
     c = 0;
-    for(;;) {
-        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+    for (;;) {
+        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
             AT91C_BASE_SSC->SSC_THR = cmd[c];
-            if( ++c >= len) break;
+            if (++c >= len) break;
         }
         WDT_HIT();
     }
@@ -288,7 +292,8 @@ static void TransmitTo15693Reader(const uint8_t *cmd, int len, int *samples, int
 //-----------------------------------------------------------------------------
 // DEMODULATE tag answer
 //-----------------------------------------------------------------------------
-static int DemodAnswer(uint8_t *received, uint8_t *dest, uint16_t samplecount) {
+static int DemodAnswer(uint8_t *received, uint8_t *dest, uint16_t samplecount)
+{
 
     int i, j;
     int max = 0, maxPos = 0, skip = 4;
@@ -297,8 +302,8 @@ static int DemodAnswer(uint8_t *received, uint8_t *dest, uint16_t samplecount) {
     // First, correlate for SOF
     for (i = 0; i < samplecount; i++) {
         int corr = 0;
-        for ( j = 0; j < ARRAYLEN(FrameSOF); j += skip) {
-            corr += FrameSOF[j] * dest[i+(j/skip)];
+        for (j = 0; j < ARRAYLEN(FrameSOF); j += skip) {
+            corr += FrameSOF[j] * dest[i + (j / skip)];
         }
         if (corr > max) {
             max = corr;
@@ -308,7 +313,7 @@ static int DemodAnswer(uint8_t *received, uint8_t *dest, uint16_t samplecount) {
     // DbpString("SOF at %d, correlation %d", maxPos,max/(ARRAYLEN(FrameSOF)/skip));
 
     // greg - If correlation is less than 1 then there's little point in continuing
-    if ((max / (ARRAYLEN(FrameSOF)/skip) ) < 1)
+    if ((max / (ARRAYLEN(FrameSOF) / skip)) < 1)
         return k;
 
     i = maxPos + ARRAYLEN(FrameSOF) / skip;
@@ -316,22 +321,22 @@ static int DemodAnswer(uint8_t *received, uint8_t *dest, uint16_t samplecount) {
     uint8_t outBuf[ISO15_MAX_FRAME];
     memset(outBuf, 0, sizeof(outBuf));
     uint8_t mask = 0x01;
-    for(;;) {
+    for (;;) {
         int corr0 = 0, corr1 = 0, corrEOF = 0;
         for (j = 0; j < ARRAYLEN(Logic0); j += skip) {
-            corr0 += Logic0[j] * dest[i+(j/skip)];
+            corr0 += Logic0[j] * dest[i + (j / skip)];
         }
         for (j = 0; j < ARRAYLEN(Logic1); j += skip) {
-            corr1 += Logic1[j] * dest[i+(j/skip)];
+            corr1 += Logic1[j] * dest[i + (j / skip)];
         }
         for (j = 0; j < ARRAYLEN(FrameEOF); j += skip) {
-            corrEOF += FrameEOF[j] * dest[i+(j/skip)];
+            corrEOF += FrameEOF[j] * dest[i + (j / skip)];
         }
         // Even things out by the length of the target waveform.
         corr0 *= 4;
         corr1 *= 4;
         // if (MF_DBGLEVEL >= MF_DBG_EXTENDED)
-            // Dbprintf("Corr1 %d, Corr0 %d, CorrEOF %d", corr1, corr0, corrEOF);
+        // Dbprintf("Corr1 %d, Corr0 %d, CorrEOF %d", corr1, corr0, corrEOF);
 
         if (corrEOF > corr1 && corrEOF > corr0)
             break;
@@ -350,7 +355,7 @@ static int DemodAnswer(uint8_t *received, uint8_t *dest, uint16_t samplecount) {
             mask = 0x01;
         }
 
-        if ( ( i + (int)ARRAYLEN(FrameEOF)) >= samplecount-1) {
+        if ((i + (int)ARRAYLEN(FrameEOF)) >= samplecount - 1) {
             //Dbprintf("[!] ran off end!  %d | %d",( i + (int)ARRAYLEN(FrameEOF)), samplecount-1);
             break;
         }
@@ -366,7 +371,7 @@ static int DemodAnswer(uint8_t *received, uint8_t *dest, uint16_t samplecount) {
         // 0x08 is an assumption - but works quite often
     }
 
-    for(i = 0; i < k; i++)
+    for (i = 0; i < k; i++)
         received[i] = outBuf[i];
 
     // return the number of bytes demodulated
@@ -381,7 +386,8 @@ static int DemodAnswer(uint8_t *received, uint8_t *dest, uint16_t samplecount) {
 // returns:
 //  number of decoded bytes
 // logging enabled
-static int GetIso15693AnswerFromTag(uint8_t *received, int *elapsed) {
+static int GetIso15693AnswerFromTag(uint8_t *received, int *elapsed)
+{
 
 #define SIGNAL_BUFF_SIZE 15000
     // get current clock
@@ -395,13 +401,13 @@ static int GetIso15693AnswerFromTag(uint8_t *received, int *elapsed) {
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
 
-    for(;;) {
+    for (;;) {
         WDT_HIT();
 
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
             AT91C_BASE_SSC->SSC_THR = 0x00; //0x43;
             // To make use of exact timing of next command from reader!!
-            if (elapsed) (*elapsed)++;
+            if (elapsed)(*elapsed)++;
         }
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 
@@ -415,7 +421,7 @@ static int GetIso15693AnswerFromTag(uint8_t *received, int *elapsed) {
             // iceman 2016, amplitude sqrt(abs(i) + abs(q))
             if (getNext) {
 
-                buf[counter++] = (uint8_t)(MAX(ci,cq) + (MIN(ci, cq) >> 1));
+                buf[counter++] = (uint8_t)(MAX(ci, cq) + (MIN(ci, cq) >> 1));
 
                 if (counter >= SIGNAL_BUFF_SIZE)
                     break;
@@ -435,7 +441,8 @@ static int GetIso15693AnswerFromTag(uint8_t *received, int *elapsed) {
 
 // Now the GetISO15693 message from sniffing command
 // logging enable,
-static int GetIso15693AnswerFromSniff(uint8_t *received, int *samples, int *elapsed) {
+static int GetIso15693AnswerFromSniff(uint8_t *received, int *samples, int *elapsed)
+{
 
     bool getNext = false;
     int counter = 0, ci = 0, cq = 0;
@@ -447,7 +454,7 @@ static int GetIso15693AnswerFromSniff(uint8_t *received, int *samples, int *elap
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
 
-    for(;;) {
+    for (;;) {
         WDT_HIT();
 
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
@@ -461,12 +468,12 @@ static int GetIso15693AnswerFromSniff(uint8_t *received, int *samples, int *elap
             // close to what we want.
             if (getNext) {
 
-                buf[counter++] = (uint8_t)(MAX(ci,cq) + (MIN(ci, cq) >> 1));
+                buf[counter++] = (uint8_t)(MAX(ci, cq) + (MIN(ci, cq) >> 1));
 
-                if(counter >= 20000)
+                if (counter >= 20000)
                     break;
             } else {
-                 cq = ci;
+                cq = ci;
             }
             getNext = !getNext;
         }
@@ -483,7 +490,8 @@ static int GetIso15693AnswerFromSniff(uint8_t *received, int *samples, int *elap
 // for the response. The response is not demodulated, just left in the buffer
 // so that it can be downloaded to a PC and processed there.
 //-----------------------------------------------------------------------------
-void AcquireRawAdcSamplesIso15693(void) {
+void AcquireRawAdcSamplesIso15693(void)
+{
     int c = 0, getNext = false;
     int ci = 0, cq = 0;
 
@@ -503,13 +511,13 @@ void AcquireRawAdcSamplesIso15693(void) {
 
     // sending command
     c = 0;
-    for(;;) {
+    for (;;) {
         WDT_HIT();
 
-        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
             AT91C_BASE_SSC->SSC_THR = ToSend[c];
             c++;
-            if(c == ToSendMax + 3) {
+            if (c == ToSendMax + 3) {
                 break;
             }
         }
@@ -521,7 +529,7 @@ void AcquireRawAdcSamplesIso15693(void) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
 
     c = 0;
-    for(;;) {
+    for (;;) {
         WDT_HIT();
 
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
@@ -536,7 +544,7 @@ void AcquireRawAdcSamplesIso15693(void) {
             // iceman 2016, amplitude sqrt(abs(i) + abs(q))
             if (getNext) {
 
-                buf[c++] = (uint8_t)(MAX(ci,cq) + (MIN(ci, cq) >> 1));
+                buf[c++] = (uint8_t)(MAX(ci, cq) + (MIN(ci, cq) >> 1));
 
                 if (c >= 7000) break;
 
@@ -549,7 +557,8 @@ void AcquireRawAdcSamplesIso15693(void) {
 }
 
 // switch_off,  initreader, no logging
-void RecordRawAdcSamplesIso15693(void) {
+void RecordRawAdcSamplesIso15693(void)
+{
 
     int c = 0, getNext = false;
     int ci = 0, cq = 0;
@@ -558,7 +567,7 @@ void RecordRawAdcSamplesIso15693(void) {
 
     uint8_t *buf = BigBuf_get_addr();
 
-    for(;;) {
+    for (;;) {
         WDT_HIT();
 
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
@@ -571,9 +580,9 @@ void RecordRawAdcSamplesIso15693(void) {
             // close to what we want.
             if (getNext) {
 
-                buf[c++] = (uint8_t)(MAX(ci,cq) + (MIN(ci, cq) >> 1));
+                buf[c++] = (uint8_t)(MAX(ci, cq) + (MIN(ci, cq) >> 1));
 
-                if(c >= 7000)
+                if (c >= 7000)
                     break;
             } else {
                 cq = ci;
@@ -589,7 +598,8 @@ void RecordRawAdcSamplesIso15693(void) {
 
 // Initialize the proxmark as iso15k reader
 // (this might produces glitches that confuse some tags
-void Iso15693InitReader(void) {
+void Iso15693InitReader(void)
+{
     LEDsoff();
     clear_trace();
     set_tracing(true);
@@ -621,7 +631,8 @@ void Iso15693InitReader(void) {
 
 // Encode (into the ToSend buffers) an identify request, which is the first
 // thing that you must send to a tag to get a response.
-static void BuildIdentifyRequest(uint8_t *out) {
+static void BuildIdentifyRequest(uint8_t *out)
+{
 
     uint8_t cmd[CMD_ID_RESP] = {0, ISO15_CMD_INVENTORY, 0, 0, 0};
     // flags
@@ -665,9 +676,10 @@ static void BuildReadBlockRequest(uint8_t **out, uint8_t *uid, uint8_t blockNumb
 */
 
 // Now the VICC>VCD responses when we are simulating a tag
-static void BuildInventoryResponse(uint8_t *out, uint8_t *uid) {
+static void BuildInventoryResponse(uint8_t *out, uint8_t *uid)
+{
 
-    uint8_t cmd[CMD_INV_RESP] = {0,0,0,0,0,0,0,0,0,0,0,0};
+    uint8_t cmd[CMD_INV_RESP] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
     // one sub-carrier, inventory, 1 slot, fast rate
     // AFI is at bit 5 (1<<4) when doing an INVENTORY
@@ -696,7 +708,8 @@ static void BuildInventoryResponse(uint8_t *out, uint8_t *uid) {
 //  If you do not need the answer use NULL for *recv[]
 //  return: lenght of received data
 // logging enabled
-int SendDataTag(uint8_t *send, int sendlen, bool init, int speed, uint8_t *outdata) {
+int SendDataTag(uint8_t *send, int sendlen, bool init, int speed, uint8_t *outdata)
+{
 
     int t_samples = 0, wait = 0, elapsed = 0, answer_len = 0;
 
@@ -734,11 +747,12 @@ int SendDataTag(uint8_t *send, int sendlen, bool init, int speed, uint8_t *outda
 
 // Decodes a message from a tag and displays its metadata and content
 #define DBD15STATLEN 48
-void DbdecodeIso15693Answer(int len, uint8_t *d) {
-    char status[DBD15STATLEN+1] = {0};
+void DbdecodeIso15693Answer(int len, uint8_t *d)
+{
+    char status[DBD15STATLEN + 1] = {0};
 
     if (len > 3) {
-        if (d[0] & ( 1 << 3 ))
+        if (d[0] & (1 << 3))
             strncat(status, "ProtExt ", DBD15STATLEN);
         if (d[0] & 1) {
             // error
@@ -774,9 +788,9 @@ void DbdecodeIso15693Answer(int len, uint8_t *d) {
                 default:
                     strncat(status, "unknown error", DBD15STATLEN);
             }
-            strncat(status ," " ,DBD15STATLEN);
+            strncat(status, " ", DBD15STATLEN);
         } else {
-            strncat(status ,"No error ", DBD15STATLEN);
+            strncat(status, "No error ", DBD15STATLEN);
         }
 
         if (CheckCrc(d, len))
@@ -784,7 +798,7 @@ void DbdecodeIso15693Answer(int len, uint8_t *d) {
         else
             strncat(status, "[!] crc fail", DBD15STATLEN);
 
-        if ( MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("%s", status);
+        if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("%s", status);
     }
 }
 
@@ -798,11 +812,12 @@ void DbdecodeIso15693Answer(int len, uint8_t *d) {
 //-----------------------------------------------------------------------------
 // ok
 // parameter is unused !?!
-void ReaderIso15693(uint32_t parameter) {
+void ReaderIso15693(uint32_t parameter)
+{
     int answerLen1 = 0;
     int tsamples = 0, wait = 0, elapsed = 0;
 
-    uint8_t uid[8] = {0,0,0,0,0,0,0,0};
+    uint8_t uid[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
     // set up device/fpga
     Iso15693InitReader();
@@ -819,7 +834,7 @@ void ReaderIso15693(uint32_t parameter) {
     // THIS MEANS WE CAN PRE-BUILD REQUESTS TO SAVE CPU TIME
     uint32_t time_start = GetCountSspClk();
     uint8_t cmd[CMD_ID_RESP] = {0};
-    BuildIdentifyRequest( cmd );
+    BuildIdentifyRequest(cmd);
     TransmitTo15693Tag(ToSend, ToSendMax, &tsamples, &wait);
     LogTrace(cmd, CMD_ID_RESP, time_start << 4, (GetCountSspClk() - time_start) << 4, NULL, true);
 
@@ -837,11 +852,11 @@ void ReaderIso15693(uint32_t parameter) {
         uid[6] = answer1[3];
         uid[7] = answer1[2];
 
-        if ( MF_DBGLEVEL >= MF_DBG_EXTENDED) {
+        if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
             Dbprintf("[+] UID = %02X%02X%02X%02X%02X%02X%02X%02X",
-                uid[0], uid[1], uid[2], uid[3],
-                uid[4], uid[5], uid[5], uid[6]
-            );
+                     uid[0], uid[1], uid[2], uid[3],
+                     uid[4], uid[5], uid[5], uid[6]
+                    );
         }
         // send UID back to client.
         // arg0 = 1 = OK
@@ -851,7 +866,7 @@ void ReaderIso15693(uint32_t parameter) {
         cmd_send(CMD_ACK, 1, sizeof(uid), 0, uid, sizeof(uid));
     }
 
-    if ( MF_DBGLEVEL >= MF_DBG_EXTENDED) {
+    if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
         Dbprintf("[+] %d octets read from IDENTIFY request:", answerLen1);
         DbdecodeIso15693Answer(answerLen1, answer1);
         Dbhexdump(answerLen1, answer1, true);
@@ -862,7 +877,8 @@ void ReaderIso15693(uint32_t parameter) {
 
 // Simulate an ISO15693 TAG, perform anti-collision and then print any reader commands
 // all demodulation performed in arm rather than host. - greg
-void SimTagIso15693(uint32_t parameter, uint8_t *uid) {
+void SimTagIso15693(uint32_t parameter, uint8_t *uid)
+{
 
     LEDsoff();
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
@@ -890,14 +906,14 @@ void SimTagIso15693(uint32_t parameter, uint8_t *uid) {
     uint8_t cmd[CMD_INV_RESP] = {0};
     BuildInventoryResponse(cmd, uid);
 
-    while (!BUTTON_PRESS() && !usb_poll_validate_length() ) {
+    while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
         WDT_HIT();
 
         // Listen to reader
         ans = GetIso15693AnswerFromSniff(buf, &samples, &elapsed) ;
 
         // we should do a better check than this
-        if (ans >= 1 ) {
+        if (ans >= 1) {
 
             time_start = GetCountSspClk();
             TransmitTo15693Reader(ToSend, ToSendMax, &tsamples, &wait);
@@ -905,9 +921,9 @@ void SimTagIso15693(uint32_t parameter, uint8_t *uid) {
 
             if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
                 Dbprintf("[+] %d octets read from reader command: %x %x %x %x %x %x %x %x", ans,
-                    buf[0], buf[1], buf[2], buf[3],
-                    buf[4], buf[5], buf[6], buf[7]
-                );
+                         buf[0], buf[1], buf[2], buf[3],
+                         buf[4], buf[5], buf[6], buf[7]
+                        );
             }
         }
     }
@@ -916,9 +932,10 @@ void SimTagIso15693(uint32_t parameter, uint8_t *uid) {
 
 // Since there is no standardized way of reading the AFI out of a tag, we will brute force it
 // (some manufactures offer a way to read the AFI, though)
-void BruteforceIso15693Afi(uint32_t speed) {
+void BruteforceIso15693Afi(uint32_t speed)
+{
 
-    uint8_t data[7] = {0,0,0,0,0,0,0};
+    uint8_t data[7] = {0, 0, 0, 0, 0, 0, 0};
     uint8_t buf[ISO15_MAX_FRAME];
     memset(buf, 0x00, sizeof(buf));
     int datalen = 0, recvlen = 0;
@@ -939,7 +956,7 @@ void BruteforceIso15693Afi(uint32_t speed) {
     WDT_HIT();
 
     if (recvlen >= 12) {
-        Dbprintf("NoAFI UID = %s", sprintUID(NULL, buf + 2) );
+        Dbprintf("NoAFI UID = %s", sprintUID(NULL, buf + 2));
     }
 
     // now with AFI
@@ -955,7 +972,7 @@ void BruteforceIso15693Afi(uint32_t speed) {
         recvlen = SendDataTag(data, datalen, false, speed, buf);
         WDT_HIT();
         if (recvlen >= 12) {
-            Dbprintf("AFI = %i  UID = %s", i, sprintUID(NULL, buf + 2) );
+            Dbprintf("AFI = %i  UID = %s", i, sprintUID(NULL, buf + 2));
         }
 
         if (BUTTON_PRESS()) {
@@ -970,7 +987,8 @@ void BruteforceIso15693Afi(uint32_t speed) {
 
 // Allows to directly send commands to the tag via the client
 // Has to increase dialog between device and client.
-void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint8_t *data) {
+void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint8_t *data)
+{
 
     bool init = true;
     int buflen = 0;
@@ -997,6 +1015,6 @@ void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint
             Dbhexdump(buflen, buf, true);
         }
     } else {
-        cmd_send(CMD_ACK,1,0,0,0,0);
+        cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
     }
 }

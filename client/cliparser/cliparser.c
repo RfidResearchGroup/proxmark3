@@ -19,7 +19,8 @@ char *programHint = NULL;
 char *programHelp = NULL;
 char buf[500] = {0};
 
-int CLIParserInit(char *vprogramName, char *vprogramHint, char *vprogramHelp) {
+int CLIParserInit(char *vprogramName, char *vprogramHint, char *vprogramHelp)
+{
     argtable = NULL;
     argtableLen = 0;
     programName = vprogramName;
@@ -30,7 +31,8 @@ int CLIParserInit(char *vprogramName, char *vprogramHint, char *vprogramHelp) {
     return 0;
 }
 
-int CLIParserParseArg(int argc, char **argv, void* vargtable[], size_t vargtableLen, bool allowEmptyExec) {
+int CLIParserParseArg(int argc, char **argv, void *vargtable[], size_t vargtableLen, bool allowEmptyExec)
+{
     int nerrors;
 
     argtable = vargtable;
@@ -46,7 +48,7 @@ int CLIParserParseArg(int argc, char **argv, void* vargtable[], size_t vargtable
     nerrors = arg_parse(argc, argv, argtable);
 
     /* special case: '--help' takes precedence over error reporting */
-    if ((argc < 2 && !allowEmptyExec) ||((struct arg_lit *)argtable[0])->count > 0) { // help must be the first record
+    if ((argc < 2 && !allowEmptyExec) || ((struct arg_lit *)argtable[0])->count > 0) { // help must be the first record
         printf("Usage: %s", programName);
         arg_print_syntaxv(stdout, argtable, "\n");
         if (programHint)
@@ -79,11 +81,13 @@ enum ParserState {
 
 #define isSpace(c)(c == ' ' || c == '\t')
 
-int CLIParserParseString(const char* str, void* vargtable[], size_t vargtableLen, bool allowEmptyExec) {
+int CLIParserParseString(const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec)
+{
     return CLIParserParseStringEx(str, vargtable, vargtableLen, allowEmptyExec, false);
 }
 
-int CLIParserParseStringEx(const char* str, void* vargtable[], size_t vargtableLen, bool allowEmptyExec, bool clueData) {
+int CLIParserParseStringEx(const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec, bool clueData)
+{
     int argc = 0;
     char *argv[200] = {NULL};
 
@@ -101,9 +105,9 @@ int CLIParserParseStringEx(const char* str, void* vargtable[], size_t vargtableL
 
     // parse params
     for (int i = 0; i < len; i++) {
-        switch(state){
+        switch (state) {
             case PS_FIRST: // first char
-                if (!clueData || str[i] == '-'){ // first char before space is '-' - next element - option OR not "clueData" for not-option fields
+                if (!clueData || str[i] == '-') { // first char before space is '-' - next element - option OR not "clueData" for not-option fields
                     state = PS_OPTION;
 
                     if (spaceptr) {
@@ -125,7 +129,7 @@ int CLIParserParseStringEx(const char* str, void* vargtable[], size_t vargtableL
                 bufptr++;
                 break;
             case PS_OPTION:
-                if (isSpace(str[i])){
+                if (isSpace(str[i])) {
                     state = PS_FIRST;
 
                     *bufptr = 0x00;
@@ -143,7 +147,8 @@ int CLIParserParseStringEx(const char* str, void* vargtable[], size_t vargtableL
     return CLIParserParseArg(argc, argv, vargtable, vargtableLen, allowEmptyExec);
 }
 
-void CLIParserFree() {
+void CLIParserFree()
+{
     arg_freetable(argtable, argtableLen);
     argtable = NULL;
 
@@ -151,7 +156,8 @@ void CLIParserFree() {
 }
 
 // convertors
-int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen) {
+int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen)
+{
     *datalen = 0;
 
     int ibuf = 0;
@@ -160,22 +166,23 @@ int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
     if (res || !ibuf)
         return res;
 
-    switch(param_gethex_to_eol((char *)buf, 0, data, maxdatalen, datalen)) {
-    case 1:
-        printf("Parameter error: Invalid HEX value.\n");
-        return 1;
-    case 2:
-        printf("Parameter error: parameter too large.\n");
-        return 2;
-    case 3:
-        printf("Parameter error: Hex string must have even number of digits.\n");
-        return 3;
+    switch (param_gethex_to_eol((char *)buf, 0, data, maxdatalen, datalen)) {
+        case 1:
+            printf("Parameter error: Invalid HEX value.\n");
+            return 1;
+        case 2:
+            printf("Parameter error: parameter too large.\n");
+            return 2;
+        case 3:
+            printf("Parameter error: Hex string must have even number of digits.\n");
+            return 3;
     }
 
     return 0;
 }
 
-int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen) {
+int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen)
+{
     *datalen = 0;
     if (!argstr->count)
         return 0;

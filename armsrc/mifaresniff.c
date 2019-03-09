@@ -12,8 +12,8 @@
 
 //static int sniffState = SNF_INIT;
 static uint8_t sniffUIDType = 0;
-static uint8_t sniffUID[10] = {0,0,0,0,0,0,0,0,0,0};
-static uint8_t sniffATQA[2] = {0,0};
+static uint8_t sniffUID[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+static uint8_t sniffATQA[2] = {0, 0};
 static uint8_t sniffSAK = 0;
 static uint8_t sniffBuf[17];
 static uint32_t timerData = 0;
@@ -24,7 +24,8 @@ static uint32_t timerData = 0;
 // if no activity for 2sec, it sends the collected data to the client.
 //-----------------------------------------------------------------------------
 // "hf mf sniff"
-void RAMFUNC SniffMifare(uint8_t param) {
+void RAMFUNC SniffMifare(uint8_t param)
+{
     // param:
     // bit 0 - trigger from first card answer
     // bit 1 - trigger from first reader 7-bit request
@@ -35,7 +36,8 @@ void RAMFUNC SniffMifare(uint8_t param) {
 
     // Allocate memory from BigBuf for some buffers
     // free all previous allocations first
-    BigBuf_free(); BigBuf_Clear_ext(false);
+    BigBuf_free();
+    BigBuf_Clear_ext(false);
     clear_trace();
     set_tracing(true);
 
@@ -71,13 +73,13 @@ void RAMFUNC SniffMifare(uint8_t param) {
 
     // Setup and start DMA.
     // set transfer address and number of bytes. Start transfer.
-    if ( !FpgaSetupSscDma(dmaBuf, DMA_BUFFER_SIZE) ){
+    if (!FpgaSetupSscDma(dmaBuf, DMA_BUFFER_SIZE)) {
         if (MF_DBGLEVEL > 1) Dbprintf("[!] FpgaSetupSscDma failed. Exiting");
         return;
     }
 
-    tUart* uart = GetUart();
-    tDemod* demod = GetDemod();
+    tUart *uart = GetUart();
+    tDemod *demod = GetDemod();
 
     MfSniffInit();
 
@@ -86,23 +88,23 @@ void RAMFUNC SniffMifare(uint8_t param) {
     while (!BUTTON_PRESS()) {
         WDT_HIT();
         LED_A_ON();
-/*
-        if ((sniffCounter & 0x0000FFFF) == 0) { // from time to time
-            // check if a transaction is completed (timeout after 2000ms).
-            // if yes, stop the DMA transfer and send what we have so far to the client
-            if (BigBuf_get_traceLen()) {
-                MfSniffSend();
-                // Reset everything - we missed some sniffed data anyway while the DMA was stopped
-                sniffCounter = 0;
-                dmaBuf = BigBuf_malloc(DMA_BUFFER_SIZE);
-                data = dmaBuf;
-                maxDataLen = 0;
-                ReaderIsActive = false;
-                TagIsActive = false;
-                FpgaSetupSscDma((uint8_t *)dmaBuf, DMA_BUFFER_SIZE); // set transfer address and number of bytes. Start transfer.
-            }
-        }
-        */
+        /*
+                if ((sniffCounter & 0x0000FFFF) == 0) { // from time to time
+                    // check if a transaction is completed (timeout after 2000ms).
+                    // if yes, stop the DMA transfer and send what we have so far to the client
+                    if (BigBuf_get_traceLen()) {
+                        MfSniffSend();
+                        // Reset everything - we missed some sniffed data anyway while the DMA was stopped
+                        sniffCounter = 0;
+                        dmaBuf = BigBuf_malloc(DMA_BUFFER_SIZE);
+                        data = dmaBuf;
+                        maxDataLen = 0;
+                        ReaderIsActive = false;
+                        TagIsActive = false;
+                        FpgaSetupSscDma((uint8_t *)dmaBuf, DMA_BUFFER_SIZE); // set transfer address and number of bytes. Start transfer.
+                    }
+                }
+                */
 
         // number of bytes we have processed so far
         int register readBufDataP = data - dmaBuf;
@@ -143,7 +145,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
             // no need to try decoding tag data if the reader is sending
             if (!TagIsActive) {
                 uint8_t readerbyte = (previous_data & 0xF0) | (*data >> 4);
-                if (MillerDecoding(readerbyte, (sniffCounter-1)*4)) {
+                if (MillerDecoding(readerbyte, (sniffCounter - 1) * 4)) {
                     LogTrace(receivedCmd, uart->len, 0, 0, NULL, true);
                     DemodReset();
                     UartReset();
@@ -154,7 +156,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
             // no need to try decoding tag data if the reader is sending
             if (!ReaderIsActive) {
                 uint8_t tagbyte = (previous_data << 4) | (*data & 0x0F);
-                if (ManchesterDecoding(tagbyte, 0, (sniffCounter-1)*4)) {
+                if (ManchesterDecoding(tagbyte, 0, (sniffCounter - 1) * 4)) {
                     LogTrace(receivedResp,  demod->len, 0, 0, NULL, false);
                     DemodReset();
                     UartReset();
@@ -175,7 +177,8 @@ void RAMFUNC SniffMifare(uint8_t param) {
     switch_off();
 }
 
-void MfSniffInit(void){
+void MfSniffInit(void)
+{
     memset(sniffUID, 0x00, sizeof(sniffUID));
     memset(sniffATQA, 0x00, sizeof(sniffATQA));
     memset(sniffBuf, 0x00, sizeof(sniffBuf));
@@ -184,9 +187,10 @@ void MfSniffInit(void){
     timerData = 0;
 }
 
-void MfSniffEnd(void){
+void MfSniffEnd(void)
+{
     LED_B_ON();
-    cmd_send(CMD_ACK,0,0,0,0,0);
+    cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
     LED_B_OFF();
 }
 
@@ -304,7 +308,8 @@ bool RAMFUNC MfSniffLogic(const uint8_t *data, uint16_t len, uint8_t *parity, ui
 }
 */
 
-void RAMFUNC MfSniffSend() {
+void RAMFUNC MfSniffSend()
+{
     uint16_t tracelen = BigBuf_get_traceLen();
     uint16_t chunksize = 0;
     int packlen = tracelen; // total number of bytes to send

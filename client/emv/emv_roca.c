@@ -29,7 +29,8 @@ static uint8_t g_primes[ROCA_PRINTS_LENGTH] = {
 
 mbedtls_mpi g_prints[ROCA_PRINTS_LENGTH];
 
-void rocacheck_init(void) {
+void rocacheck_init(void)
+{
 
     for (int i = 0; i < ROCA_PRINTS_LENGTH; i++)
         mbedtls_mpi_init(&g_prints[i]);
@@ -53,12 +54,14 @@ void rocacheck_init(void) {
     mbedtls_mpi_read_string(&g_prints[16], 10, "126304807362733370595828809000324029340048915994");
 }
 
-void rocacheck_cleanup(void) {
+void rocacheck_cleanup(void)
+{
     for (int i = 0; i < ROCA_PRINTS_LENGTH; i++)
         mbedtls_mpi_free(&g_prints[i]);
 }
 
-int bitand_is_zero( mbedtls_mpi* a, mbedtls_mpi* b ) {
+int bitand_is_zero(mbedtls_mpi *a, mbedtls_mpi *b)
+{
 
     for (int i = 0; i < mbedtls_mpi_bitlen(a); i++) {
 
@@ -69,7 +72,8 @@ int bitand_is_zero( mbedtls_mpi* a, mbedtls_mpi* b ) {
 }
 
 
-mbedtls_mpi_uint mpi_get_uint(const mbedtls_mpi *X) {
+mbedtls_mpi_uint mpi_get_uint(const mbedtls_mpi *X)
+{
 
     if (X->n == 1 && X->s > 0) {
         return X->p[0];
@@ -78,7 +82,8 @@ mbedtls_mpi_uint mpi_get_uint(const mbedtls_mpi *X) {
     return 0;
 }
 
-void print_mpi(const char *msg, int radix, const mbedtls_mpi *X) {
+void print_mpi(const char *msg, int radix, const mbedtls_mpi *X)
+{
 
     char Xchar[400] = {0};
     size_t len = 0;
@@ -87,7 +92,8 @@ void print_mpi(const char *msg, int radix, const mbedtls_mpi *X) {
     printf("%s[%d] %s\n", msg, len, Xchar);
 }
 
-bool emv_rocacheck(const unsigned char *buf, size_t buflen, bool verbose) {
+bool emv_rocacheck(const unsigned char *buf, size_t buflen, bool verbose)
+{
 
     mbedtls_mpi t_modulus;
     mbedtls_mpi_init(&t_modulus);
@@ -96,7 +102,7 @@ bool emv_rocacheck(const unsigned char *buf, size_t buflen, bool verbose) {
 
     rocacheck_init();
 
-    MBEDTLS_MPI_CHK( mbedtls_mpi_read_binary(&t_modulus, buf, buflen) );
+    MBEDTLS_MPI_CHK(mbedtls_mpi_read_binary(&t_modulus, buf, buflen));
 
     for (int i = 0; i < ROCA_PRINTS_LENGTH; i++) {
 
@@ -108,13 +114,13 @@ bool emv_rocacheck(const unsigned char *buf, size_t buflen, bool verbose) {
         mbedtls_mpi_init(&t_prime);
         mbedtls_mpi_init(&g_one);
 
-        MBEDTLS_MPI_CHK( mbedtls_mpi_read_string(&g_one, 10, "1") );
+        MBEDTLS_MPI_CHK(mbedtls_mpi_read_string(&g_one, 10, "1"));
 
-        MBEDTLS_MPI_CHK( mbedtls_mpi_add_int(&t_prime, &t_prime, g_primes[i]) );
+        MBEDTLS_MPI_CHK(mbedtls_mpi_add_int(&t_prime, &t_prime, g_primes[i]));
 
-        MBEDTLS_MPI_CHK( mbedtls_mpi_mod_mpi(&t_temp, &t_modulus, &t_prime) );
+        MBEDTLS_MPI_CHK(mbedtls_mpi_mod_mpi(&t_temp, &t_modulus, &t_prime));
 
-        MBEDTLS_MPI_CHK( mbedtls_mpi_shift_l(&g_one, mpi_get_uint(&t_temp)) );
+        MBEDTLS_MPI_CHK(mbedtls_mpi_shift_l(&g_one, mpi_get_uint(&t_temp)));
 
         if (bitand_is_zero(&g_one, &g_prints[i])) {
             if (verbose)
@@ -138,37 +144,37 @@ cleanup:
     return ret;
 }
 
-int roca_self_test(void) {
+int roca_self_test(void)
+{
     int ret = 0;
 
-    PrintAndLogEx(INFO, "ROCA check vulnerability tests" );
+    PrintAndLogEx(INFO, "ROCA check vulnerability tests");
 
     // positive
     uint8_t keyp[] = "\x94\x4e\x13\x20\x8a\x28\x0c\x37\xef\xc3\x1c\x31\x14\x48\x5e\x59"\
-                    "\x01\x92\xad\xbb\x8e\x11\xc8\x7c\xad\x60\xcd\xef\x00\x37\xce\x99"\
-                    "\x27\x83\x30\xd3\xf4\x71\xa2\x53\x8f\xa6\x67\x80\x2e\xd2\xa3\xc4"\
-                    "\x4a\x8b\x7d\xea\x82\x6e\x88\x8d\x0a\xa3\x41\xfd\x66\x4f\x7f\xa7";
+                     "\x01\x92\xad\xbb\x8e\x11\xc8\x7c\xad\x60\xcd\xef\x00\x37\xce\x99"\
+                     "\x27\x83\x30\xd3\xf4\x71\xa2\x53\x8f\xa6\x67\x80\x2e\xd2\xa3\xc4"\
+                     "\x4a\x8b\x7d\xea\x82\x6e\x88\x8d\x0a\xa3\x41\xfd\x66\x4f\x7f\xa7";
 
 
     if (emv_rocacheck(keyp, 64, false)) {
-        PrintAndLogEx(SUCCESS, "Weak modulus [ %s]", _GREEN_(PASS) );
-    }
-    else {
+        PrintAndLogEx(SUCCESS, "Weak modulus [ %s]", _GREEN_(PASS));
+    } else {
         ret++;
-        PrintAndLogEx(FAILED, "Weak modulus [ %s]", _RED_(FAIL) );
+        PrintAndLogEx(FAILED, "Weak modulus [ %s]", _RED_(FAIL));
     }
 
     // negative
     uint8_t keyn[] = "\x84\x4e\x13\x20\x8a\x28\x0c\x37\xef\xc3\x1c\x31\x14\x48\x5e\x59"\
-                    "\x01\x92\xad\xbb\x8e\x11\xc8\x7c\xad\x60\xcd\xef\x00\x37\xce\x99"\
-                    "\x27\x83\x30\xd3\xf4\x71\xa2\x53\x8f\xa6\x67\x80\x2e\xd2\xa3\xc4"\
-                    "\x4a\x8b\x7d\xea\x82\x6e\x88\x8d\x0a\xa3\x41\xfd\x66\x4f\x7f\xa7";
+                     "\x01\x92\xad\xbb\x8e\x11\xc8\x7c\xad\x60\xcd\xef\x00\x37\xce\x99"\
+                     "\x27\x83\x30\xd3\xf4\x71\xa2\x53\x8f\xa6\x67\x80\x2e\xd2\xa3\xc4"\
+                     "\x4a\x8b\x7d\xea\x82\x6e\x88\x8d\x0a\xa3\x41\xfd\x66\x4f\x7f\xa7";
 
     if (emv_rocacheck(keyn, 64, false)) {
         ret++;
-        PrintAndLogEx(FAILED, "Strong modulus [ %s]", _RED_(FAIL) );
+        PrintAndLogEx(FAILED, "Strong modulus [ %s]", _RED_(FAIL));
     } else {
-        PrintAndLogEx(SUCCESS, "Strong modulus [ %s]", _GREEN_(PASS) );
+        PrintAndLogEx(SUCCESS, "Strong modulus [ %s]", _GREEN_(PASS));
     }
 
     return ret;

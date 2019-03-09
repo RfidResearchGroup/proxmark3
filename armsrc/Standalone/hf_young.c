@@ -18,7 +18,8 @@ typedef struct {
 } __attribute__((__packed__)) card_clone_t;
 
 
-void RunMod() {
+void RunMod()
+{
     StandAloneMode();
     Dbprintf(">>  Craig Young Mifare sniff UID/clone uid 2 magic/sim  a.k.a YoungRun Started  <<");
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
@@ -59,9 +60,9 @@ void RunMod() {
                     if (cardRead[selected]) {
                         Dbprintf("Button press detected -- replaying card in bank[%d]", selected);
                         break;
-                    } else if (cardRead[(selected+1) % OPTS]) {
-                        Dbprintf("Button press detected but no card in bank[%d] so playing from bank[%d]", selected, (selected+1)%OPTS);
-                        selected = (selected+1) % OPTS;
+                    } else if (cardRead[(selected + 1) % OPTS]) {
+                        Dbprintf("Button press detected but no card in bank[%d] so playing from bank[%d]", selected, (selected + 1) % OPTS);
+                        selected = (selected + 1) % OPTS;
                         break; // playing = 1;
                     } else {
                         Dbprintf("Button press detected but no stored tag to play. (Ignoring button)");
@@ -75,12 +76,12 @@ void RunMod() {
                     Dbprintf("Read UID:");
                     Dbhexdump(card[selected].uidlen, card[selected].uid, 0);
 
-                    if (memcmp(uids[(selected+1)%OPTS].uid, card[selected].uid, card[selected].uidlen ) == 0 ) {
+                    if (memcmp(uids[(selected + 1) % OPTS].uid, card[selected].uid, card[selected].uidlen) == 0) {
                         Dbprintf("Card selected has same UID as what is stored in the other bank. Skipping.");
                     } else {
                         uids[selected].sak = card[selected].sak;
                         uids[selected].uidlen = card[selected].uidlen;
-                        memcpy(uids[selected].uid , card[selected].uid, uids[selected].uidlen);
+                        memcpy(uids[selected].uid, card[selected].uid, uids[selected].uidlen);
                         memcpy(uids[selected].atqa, card[selected].atqa, 2);
 
                         if (uids[selected].uidlen > 4)
@@ -110,8 +111,8 @@ void RunMod() {
         }
 
         /* MF Classic UID clone */
-        else if (iGotoClone==1) {
-            iGotoClone=0;
+        else if (iGotoClone == 1) {
+            iGotoClone = 0;
             LEDsoff();
             LED(selected + 1, 0);
             LED(LED_ORANGE, 250);
@@ -176,7 +177,7 @@ void RunMod() {
                 MifareCSetBlock(params, 0, newBlock0);
                 MifareCGetBlock(params, 0, testBlock0);
 
-                if (memcmp(testBlock0, newBlock0, 16)==0) {
+                if (memcmp(testBlock0, newBlock0, 16) == 0) {
                     DbpString("Cloned successfull!");
                     cardRead[selected] = 0; // Only if the card was cloned successfully should we clear it
                     playing = 0;
@@ -193,19 +194,19 @@ void RunMod() {
 
         // Change where to record (or begin playing)
         // button_pressed == BUTTON_SINGLE_CLICK && cardRead[selected])
-        else if (playing==1) {
+        else if (playing == 1) {
             LEDsoff();
             LED(selected + 1, 0);
 
             // Begin transmitting
             LED(LED_GREEN, 0);
             DbpString("Playing");
-            for ( ; ; ) {
+            for (; ;) {
                 // exit from Standalone Mode,   send a usbcommand.
                 if (usb_poll_validate_length()) return;
 
                 int button_action = BUTTON_HELD(1000);
-                if ( button_action == 0) { // No button action, proceed with sim
+                if (button_action == 0) {  // No button action, proceed with sim
 
                     uint8_t flags = FLAG_4B_UID_IN_DATA;
                     uint8_t data[USB_CMD_DATA_SIZE] = {0}; // in case there is a read command received we shouldn't break
@@ -214,7 +215,7 @@ void RunMod() {
 
                     uint64_t tmpuid = bytes_to_num(uids[selected].uid, uids[selected].uidlen);
 
-                    if (  uids[selected].uidlen == 7 ) {
+                    if (uids[selected].uidlen == 7) {
                         flags = FLAG_7B_UID_IN_DATA;
                         Dbprintf("Simulating ISO14443a tag with uid: %014" PRIx64 " [Bank: %d]", tmpuid, selected);
                     } else {

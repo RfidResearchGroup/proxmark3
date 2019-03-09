@@ -11,7 +11,8 @@
 #include "lf_samyrun.h"
 
 // samy's sniff and repeat routine for LF
-void RunMod() {
+void RunMod()
+{
     StandAloneMode();
     Dbprintf(">>  LF HID Read/Clone/Sim a.k.a SamyRun Started  <<");
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
@@ -64,8 +65,7 @@ void RunMod() {
             cardRead = 1;
 
             gotCard = true;
-        }
-        else if (button_pressed > 0 && cardRead == 1) {
+        } else if (button_pressed > 0 && cardRead == 1) {
             LEDsoff();
             LED(selected + 1, 0);
             LED(LED_ORANGE, 0);
@@ -129,8 +129,7 @@ void RunMod() {
                 playing = !playing;
                 LEDsoff();
                 LED(selected + 1, 0);
-            }
-            else {
+            } else {
                 while (BUTTON_PRESS())
                     WDT_HIT();
             }

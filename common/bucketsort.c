@@ -1,7 +1,7 @@
 #include "bucketsort.h"
 
-extern void bucket_sort_intersect(uint32_t* const estart, uint32_t* const estop,
-                                  uint32_t* const ostart, uint32_t* const ostop,
+extern void bucket_sort_intersect(uint32_t *const estart, uint32_t *const estop,
+                                  uint32_t *const ostart, uint32_t *const ostop,
                                   bucket_info_t *bucket_info, bucket_array_t bucket)
 {
     uint32_t *p1, *p2;

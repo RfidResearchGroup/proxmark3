@@ -67,49 +67,40 @@ static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_
     uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE];
 
     // reset FPGA and LED
-    if (workFlags & 0x08)
-    {
+    if (workFlags & 0x08) {
         iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
         set_tracing(false);
     }
 
-    while (true)
-    {
+    while (true) {
         // get UID from chip
-        if (workFlags & 0x01)
-        {
-            if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true))
-            {
+        if (workFlags & 0x01) {
+            if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
                 DbprintfEx(FLAG_NOLOG, "Can't select card");
                 break;
             };
 
-            if (mifare_classic_halt(NULL, cuid))
-            {
+            if (mifare_classic_halt(NULL, cuid)) {
                 DbprintfEx(FLAG_NOLOG, "Halt error");
                 break;
             };
         };
 
         // reset chip
-        if (needWipe)
-        {
+        if (needWipe) {
             ReaderTransmitBitsPar(wupC1, 7, 0, NULL);
-            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a))
-            {
+            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
                 DbprintfEx(FLAG_NOLOG, "wupC1 error");
                 break;
             };
 
             ReaderTransmit(wipeC, sizeof(wipeC), NULL);
-            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a))
-            {
+            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
                 DbprintfEx(FLAG_NOLOG, "wipeC error");
                 break;
             };
 
-            if (mifare_classic_halt(NULL, cuid))
-            {
+            if (mifare_classic_halt(NULL, cuid)) {
                 DbprintfEx(FLAG_NOLOG, "Halt error");
                 break;
             };
@@ -117,25 +108,21 @@ static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_
 
         // chaud
         // write block
-        if (workFlags & 0x02)
-        {
+        if (workFlags & 0x02) {
             ReaderTransmitBitsPar(wupC1, 7, 0, NULL);
-            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a))
-            {
+            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
                 DbprintfEx(FLAG_NOLOG, "wupC1 error");
                 break;
             };
 
             ReaderTransmit(wupC2, sizeof(wupC2), NULL);
-            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a))
-            {
+            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
                 DbprintfEx(FLAG_NOLOG, "wupC2 errorv");
                 break;
             };
         }
 
-        if ((mifare_sendcmd_short(NULL, 0, 0xA0, blockNo, receivedAnswer, receivedAnswerPar, NULL) != 1) || (receivedAnswer[0] != 0x0a))
-        {
+        if ((mifare_sendcmd_short(NULL, 0, 0xA0, blockNo, receivedAnswer, receivedAnswerPar, NULL) != 1) || (receivedAnswer[0] != 0x0a)) {
             DbprintfEx(FLAG_NOLOG, "write block send command error");
             break;
         };
@@ -143,16 +130,13 @@ static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_
         memcpy(d_block, datain, 16);
         AddCrc14A(d_block, 16);
         ReaderTransmit(d_block, sizeof(d_block), NULL);
-        if ((ReaderReceive(receivedAnswer, receivedAnswerPar) != 1) || (receivedAnswer[0] != 0x0a))
-        {
+        if ((ReaderReceive(receivedAnswer, receivedAnswerPar) != 1) || (receivedAnswer[0] != 0x0a)) {
             DbprintfEx(FLAG_NOLOG, "write block send data error");
             break;
         };
 
-        if (workFlags & 0x04)
-        {
-            if (mifare_classic_halt(NULL, cuid))
-            {
+        if (workFlags & 0x04) {
+            if (mifare_classic_halt(NULL, cuid)) {
                 DbprintfEx(FLAG_NOLOG, "Halt error");
                 break;
             };
@@ -162,8 +146,7 @@ static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_
         break;
     }
 
-    if ((workFlags & 0x10) || (!isOK))
-    {
+    if ((workFlags & 0x10) || (!isOK)) {
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     }
 
@@ -182,20 +165,17 @@ static int saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, ui
     struct Crypto1State *pcs;
     pcs = &mpcs;
 
-    for (int i = 0; i < keyCount; ++i)
-    {
+    for (int i = 0; i < keyCount; ++i) {
 
         /* no need for anticollision. just verify tag is still here */
         // if (!iso14443a_fast_select_card(cjuid, 0)) {
-        if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true))
-        {
+        if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
             DbprintfEx(FLAG_NOLOG, "FATAL : E_MF_LOSTTAG");
             return -1;
         }
 
         uint64_t ui64Key = bytes_to_num(datain + i * 6, 6);
-        if (mifare_classic_auth(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST))
-        {
+        if (mifare_classic_auth(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST)) {
             uint8_t dummy_answer = 0;
             ReaderTransmit(&dummy_answer, 1, NULL);
             // wait for the card to become ready again
@@ -214,7 +194,8 @@ static int saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, ui
 }
 
 
-void RunMod() {
+void RunMod()
+{
     StandAloneMode();
     Dbprintf(">>  Matty mifare chk/dump/sim  a.k.a MattyRun Started  <<");
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
@@ -249,7 +230,7 @@ void RunMod() {
     uint16_t mifare_size = 1024;    // Mifare 1k (only 1k supported for now)
     uint8_t sectorSize = 64;        // 1k's sector size is 64 bytes.
     uint8_t blockNo = 3;            // Security block is number 3 for each sector.
-    uint8_t sectorsCnt = (mifare_size/sectorSize);
+    uint8_t sectorsCnt = (mifare_size / sectorSize);
     uint8_t keyType = 2;            // Keytype buffer
     uint64_t key64;                 // Defines current key
     uint8_t *keyBlock = NULL;       // Where the keys will be held in memory.
@@ -284,7 +265,7 @@ void RunMod() {
     int mfKeysCnt = sizeof(mfKeys) / sizeof(uint64_t);
 
     for (int mfKeyCounter = 0; mfKeyCounter < mfKeysCnt; mfKeyCounter++) {
-        num_to_bytes(mfKeys[mfKeyCounter], 6, (uint8_t*)(keyBlock + mfKeyCounter * 6));
+        num_to_bytes(mfKeys[mfKeyCounter], 6, (uint8_t *)(keyBlock + mfKeyCounter * 6));
     }
 
     /*
@@ -294,8 +275,8 @@ void RunMod() {
         Dbprintf("[+] Printing mf keys");
         for (uint8_t keycnt = 0; keycnt < mfKeysCnt; keycnt++)
             Dbprintf("[-] chk mf key[%2d] %02x%02x%02x%02x%02x%02x", keycnt,
-                (keyBlock + 6*keycnt)[0], (keyBlock + 6*keycnt)[1], (keyBlock + 6*keycnt)[2],
-                (keyBlock + 6*keycnt)[3], (keyBlock + 6*keycnt)[4], (keyBlock + 6*keycnt)[5], 6);
+                     (keyBlock + 6 * keycnt)[0], (keyBlock + 6 * keycnt)[1], (keyBlock + 6 * keycnt)[2],
+                     (keyBlock + 6 * keycnt)[3], (keyBlock + 6 * keycnt)[4], (keyBlock + 6 * keycnt)[5], 6);
         DbpString("--------------------------------------------------------");
     }
 
@@ -327,7 +308,7 @@ void RunMod() {
     for (int type = !keyType; type < 2 && !err; keyType == 2 ? (type++) : (type = 2)) {
         block = blockNo;
         for (int sec = 0; sec < sectorsCnt && !err; ++sec) {
-            Dbprintf("\tCurrent sector:%3d, block:%3d, key type: %c, key count: %i ", sec, block, type ? 'B':'A', mfKeysCnt);
+            Dbprintf("\tCurrent sector:%3d, block:%3d, key type: %c, key count: %i ", sec, block, type ? 'B' : 'A', mfKeysCnt);
             key = saMifareChkKeys(block, type, true, size, &keyBlock[0], &key64);
             if (key == -1) {
                 LED(LED_RED, 50); //red
@@ -342,9 +323,9 @@ void RunMod() {
                 validKey[type][sec] = true;
                 keyFound = true;
                 Dbprintf("\t✓ Found valid key: [%02x%02x%02x%02x%02x%02x]\n",
-                    (keyBlock + 6*key)[0], (keyBlock + 6*key)[1], (keyBlock + 6*key)[2],
-                    (keyBlock + 6*key)[3], (keyBlock + 6*key)[4], (keyBlock + 6*key)[5]
-                );
+                         (keyBlock + 6 * key)[0], (keyBlock + 6 * key)[1], (keyBlock + 6 * key)[2],
+                         (keyBlock + 6 * key)[3], (keyBlock + 6 * key)[4], (keyBlock + 6 * key)[5]
+                        );
             }
 
             block < 127 ? (block += 4) : (block += 16);
@@ -378,14 +359,14 @@ void RunMod() {
         for (uint16_t sectorNo = 0; sectorNo < sectorsCnt; sectorNo++) {
             if (validKey[0][sectorNo] || validKey[1][sectorNo]) {
                 emlGetMem(mblock, FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 1); // data, block num, blocks count (max 4)
-                    for (uint16_t t = 0; t < 2; t++) {
-                        if (validKey[t][sectorNo]) {
-                            memcpy(mblock + t*10, foundKey[t][sectorNo], 6);
-                        }
+                for (uint16_t t = 0; t < 2; t++) {
+                    if (validKey[t][sectorNo]) {
+                        memcpy(mblock + t * 10, foundKey[t][sectorNo], 6);
                     }
-                    emlSetMem(mblock, FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 1);
                 }
+                emlSetMem(mblock, FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 1);
             }
+        }
         Dbprintf("\t✓ Found keys have been transferred to the emulator memory.");
         if (ecfill) {
 
@@ -409,7 +390,7 @@ void RunMod() {
 
                 LED_B_ON(); // green
                 // assuming arg0==0,  use hardcoded uid 0xdeadbeaf
-                Mifare1ksim( FLAG_4B_UID_IN_DATA | FLAG_UID_IN_EMUL, 0, 0, uid);
+                Mifare1ksim(FLAG_4B_UID_IN_DATA | FLAG_UID_IN_EMUL, 0, 0, uid);
                 LED_B_OFF();
 
                 /*

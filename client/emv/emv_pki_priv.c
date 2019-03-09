@@ -25,8 +25,8 @@
 #include <stdarg.h>
 
 struct emv_pk *emv_pki_make_ca(const struct crypto_pk *cp,
-        const unsigned char *rid, unsigned char index,
-        unsigned int expire, enum crypto_algo_hash hash_algo)
+                               const unsigned char *rid, unsigned char index,
+                               unsigned int expire, enum crypto_algo_hash hash_algo)
 {
     size_t modlen, explen;
     unsigned char *mod, *exp;
@@ -82,10 +82,10 @@ struct emv_pk *emv_pki_make_ca(const struct crypto_pk *cp,
 }
 
 static struct tlvdb *emv_pki_sign_message(const struct crypto_pk *cp,
-        tlv_tag_t cert_tag, tlv_tag_t rem_tag,
-        const unsigned char *msg, size_t msg_len,
-        ... /* A list of tlv pointers, end with NULL */
-        )
+                                          tlv_tag_t cert_tag, tlv_tag_t rem_tag,
+                                          const unsigned char *msg, size_t msg_len,
+                                          ... /* A list of tlv pointers, end with NULL */
+                                         )
 {
     size_t tmp_len = (crypto_pk_get_nbits(cp) + 7) / 8;
     unsigned char *tmp = malloc(tmp_len);
@@ -168,14 +168,14 @@ static struct tlvdb *emv_pki_sign_message(const struct crypto_pk *cp,
 }
 
 static struct tlvdb *emv_pki_sign_key(const struct crypto_pk *cp,
-        struct emv_pk *ipk,
-        unsigned char msgtype,
-        size_t pan_len,
-        tlv_tag_t cert_tag,
-        tlv_tag_t exp_tag,
-        tlv_tag_t rem_tag,
-        const struct tlv *add_tlv
-        )
+                                      struct emv_pk *ipk,
+                                      unsigned char msgtype,
+                                      size_t pan_len,
+                                      tlv_tag_t cert_tag,
+                                      tlv_tag_t exp_tag,
+                                      tlv_tag_t rem_tag,
+                                      const struct tlv *add_tlv
+                                     )
 {
     unsigned pos = 0;
     unsigned char *msg = malloc(1 + pan_len + 2 + 3 + 1 + 1 + 1 + 1 + ipk->mlen);
@@ -184,10 +184,12 @@ static struct tlvdb *emv_pki_sign_key(const struct crypto_pk *cp,
         return NULL;
 
     msg[pos++] = msgtype;
-    memcpy(msg + pos, ipk->pan, pan_len); pos += pan_len;
+    memcpy(msg + pos, ipk->pan, pan_len);
+    pos += pan_len;
     msg[pos++] = (ipk->expire >> 8) & 0xff;
     msg[pos++] = (ipk->expire >> 16) & 0xff;
-    memcpy(msg + pos, ipk->serial, 3); pos += 3;
+    memcpy(msg + pos, ipk->serial, 3);
+    pos += 3;
     msg[pos++] = ipk->hash_algo;
     msg[pos++] = ipk->pk_algo;
     msg[pos++] = ipk->mlen;
@@ -203,11 +205,11 @@ static struct tlvdb *emv_pki_sign_key(const struct crypto_pk *cp,
     }
 
     struct tlvdb *db = emv_pki_sign_message(cp,
-            cert_tag, rem_tag,
-            msg, pos,
-            tlvdb_get(exp_db, exp_tag, NULL),
-            add_tlv,
-            NULL);
+                                            cert_tag, rem_tag,
+                                            msg, pos,
+                                            tlvdb_get(exp_db, exp_tag, NULL),
+                                            add_tlv,
+                                            NULL);
     free(msg);
     if (!db)
         return NULL;
@@ -235,21 +237,21 @@ struct tlvdb *emv_pki_sign_icc_pe_cert(const struct crypto_pk *cp, struct emv_pk
 struct tlvdb *emv_pki_sign_dac(const struct crypto_pk *cp, const struct tlv *dac_tlv, const struct tlv *sda_tlv)
 {
     unsigned pos = 0;
-    unsigned char *msg = malloc(1+1+dac_tlv->len);
+    unsigned char *msg = malloc(1 + 1 + dac_tlv->len);
 
     if (!msg)
         return NULL;
 
     msg[pos++] = 3;
     msg[pos++] = HASH_SHA_1;
-    memcpy(msg+pos, dac_tlv->value, dac_tlv->len);
+    memcpy(msg + pos, dac_tlv->value, dac_tlv->len);
     pos += dac_tlv->len;
 
     struct tlvdb *db = emv_pki_sign_message(cp,
-            0x93, 0,
-            msg, pos,
-            sda_tlv,
-            NULL);
+                                            0x93, 0,
+                                            msg, pos,
+                                            sda_tlv,
+                                            NULL);
 
     free(msg);
 
@@ -259,7 +261,7 @@ struct tlvdb *emv_pki_sign_dac(const struct crypto_pk *cp, const struct tlv *dac
 struct tlvdb *emv_pki_sign_idn(const struct crypto_pk *cp, const struct tlv *idn_tlv, const struct tlv *dyn_tlv)
 {
     unsigned pos = 0;
-    unsigned char *msg = malloc(1+1+1+1+idn_tlv->len);
+    unsigned char *msg = malloc(1 + 1 + 1 + 1 + idn_tlv->len);
 
     if (!msg)
         return NULL;
@@ -268,14 +270,14 @@ struct tlvdb *emv_pki_sign_idn(const struct crypto_pk *cp, const struct tlv *idn
     msg[pos++] = HASH_SHA_1;
     msg[pos++] = idn_tlv->len + 1;
     msg[pos++] = idn_tlv->len;
-    memcpy(msg+pos, idn_tlv->value, idn_tlv->len);
+    memcpy(msg + pos, idn_tlv->value, idn_tlv->len);
     pos += idn_tlv->len;
 
     struct tlvdb *db = emv_pki_sign_message(cp,
-            0x9f4b, 0,
-            msg, pos,
-            dyn_tlv,
-            NULL);
+                                            0x9f4b, 0,
+                                            msg, pos,
+                                            dyn_tlv,
+                                            NULL);
 
     free(msg);
 

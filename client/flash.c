@@ -33,7 +33,8 @@ static const uint8_t elf_ident[] = {
 
 // Turn PHDRs into flasher segments, checking for PHDR sanity and merging adjacent
 // unaligned segments if needed
-static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs, uint16_t num_phdrs) {
+static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs, uint16_t num_phdrs)
+{
     Elf32_Phdr *phdr = phdrs;
     flash_seg_t *seg;
     uint32_t last_end = 0;
@@ -70,14 +71,14 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
                 offset);
         if (filesz != memsz) {
             fprintf(stderr, "Error: PHDR file size does not equal memory size\n"
-                            "(DATA+BSS PHDRs do not make sense on ROM platforms!)\n");
+                    "(DATA+BSS PHDRs do not make sense on ROM platforms!)\n");
             return -1;
         }
         if (paddr < last_end) {
             fprintf(stderr, "Error: PHDRs not sorted or overlap\n");
             return -1;
         }
-        if (paddr < FLASH_START || (paddr+filesz) > FLASH_END) {
+        if (paddr < FLASH_START || (paddr + filesz) > FLASH_END) {
             fprintf(stderr, "Error: PHDR is not contained in Flash\n");
             return -1;
         }
@@ -99,13 +100,13 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
             return -1;
         }
 
-        uint32_t block_offset = paddr & (BLOCK_SIZE-1);
+        uint32_t block_offset = paddr & (BLOCK_SIZE - 1);
         if (block_offset) {
             if (ctx->num_segs) {
                 flash_seg_t *prev_seg = seg - 1;
                 uint32_t this_end = paddr + filesz;
-                uint32_t this_firstblock = paddr & ~(BLOCK_SIZE-1);
-                uint32_t prev_lastblock = (last_end - 1) & ~(BLOCK_SIZE-1);
+                uint32_t this_firstblock = paddr & ~(BLOCK_SIZE - 1);
+                uint32_t prev_lastblock = (last_end - 1) & ~(BLOCK_SIZE - 1);
 
                 if (this_firstblock == prev_lastblock) {
                     uint32_t new_length = this_end - prev_seg->start;
@@ -153,11 +154,12 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
 }
 
 // Sanity check segments and check for bootloader writes
-static int check_segs(flash_file_t *ctx, int can_write_bl) {
+static int check_segs(flash_file_t *ctx, int can_write_bl)
+{
     for (int i = 0; i < ctx->num_segs; i++) {
         flash_seg_t *seg = &ctx->segments[i];
 
-        if (seg->start & (BLOCK_SIZE-1)) {
+        if (seg->start & (BLOCK_SIZE - 1)) {
             fprintf(stderr, "Error: Segment is not aligned\n");
             return -1;
         }
@@ -178,7 +180,8 @@ static int check_segs(flash_file_t *ctx, int can_write_bl) {
 }
 
 // Load an ELF file and prepare it for flashing
-int flash_load(flash_file_t *ctx, const char *name, int can_write_bl) {
+int flash_load(flash_file_t *ctx, const char *name, int can_write_bl)
+{
     FILE *fd = NULL;
     Elf32_Ehdr ehdr;
     Elf32_Phdr *phdrs = NULL;
@@ -199,8 +202,7 @@ int flash_load(flash_file_t *ctx, const char *name, int can_write_bl) {
         goto fail;
     }
     if (memcmp(ehdr.e_ident, elf_ident, sizeof(elf_ident))
-        || le32(ehdr.e_version) != 1)
-    {
+        || le32(ehdr.e_version) != 1) {
         fprintf(stderr, "Not an ELF file or wrong ELF type\n");
         goto fail;
     }
@@ -259,7 +261,8 @@ fail:
 }
 
 // Get the state of the proxmark, backwards compatible
-static int get_proxmark_state(uint32_t *state) {
+static int get_proxmark_state(uint32_t *state)
+{
     UsbCommand c = {CMD_DEVICE_INFO};
     SendCommand(&c);
     UsbCommand resp;
@@ -289,7 +292,8 @@ static int get_proxmark_state(uint32_t *state) {
 }
 
 // Enter the bootloader to be able to start flashing
-static int enter_bootloader(char *serial_port_name) {
+static int enter_bootloader(char *serial_port_name)
+{
     uint32_t state;
 
     if (get_proxmark_state(&state) < 0)
@@ -302,7 +306,7 @@ static int enter_bootloader(char *serial_port_name) {
     if (state & DEVICE_INFO_FLAG_CURRENT_MODE_OS) {
         fprintf(stdout, _BLUE_(Entering bootloader...) "\n");
         UsbCommand c;
-        memset(&c, 0, sizeof (c));
+        memset(&c, 0, sizeof(c));
 
         if ((state & DEVICE_INFO_FLAG_BOOTROM_PRESENT)
             && (state & DEVICE_INFO_FLAG_OSIMAGE_PRESENT)) {
@@ -334,21 +338,23 @@ static int enter_bootloader(char *serial_port_name) {
     return -1;
 }
 
-static int wait_for_ack(UsbCommand *ack) {
+static int wait_for_ack(UsbCommand *ack)
+{
     WaitForResponse(CMD_UNKNOWN, ack);
 
     if (ack->cmd != CMD_ACK) {
         printf("Error: Unexpected reply 0x%04" PRIx64 " %s (expected ACK)\n",
-            ack->cmd,
-            (ack->cmd == CMD_NACK) ? "NACK" : ""
-            );
+               ack->cmd,
+               (ack->cmd == CMD_NACK) ? "NACK" : ""
+              );
         return -1;
     }
     return 0;
 }
 
 // Go into flashing mode
-int flash_start_flashing(int enable_bl_writes, char *serial_port_name) {
+int flash_start_flashing(int enable_bl_writes, char *serial_port_name)
+{
     uint32_t state;
 
     if (enter_bootloader(serial_port_name) < 0)
@@ -375,12 +381,13 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name) {
         return wait_for_ack(&c);
     } else {
         fprintf(stderr, _RED_(Note: Your bootloader does not understand the new START_FLASH command) "\n");
-        fprintf(stderr, _RED_(      It is recommended that you update your bootloader) "\n\n");
+        fprintf(stderr, _RED_(It is recommended that you update your bootloader) "\n\n");
     }
     return 0;
 }
 
-static int write_block(uint32_t address, uint8_t *data, uint32_t length) {
+static int write_block(uint32_t address, uint8_t *data, uint32_t length)
+{
     uint8_t block_buf[BLOCK_SIZE];
     memset(block_buf, 0xFF, BLOCK_SIZE);
     memcpy(block_buf, data, length);
@@ -402,7 +409,8 @@ static int write_block(uint32_t address, uint8_t *data, uint32_t length) {
 }
 
 // Write a file's segments to Flash
-int flash_write(flash_file_t *ctx) {
+int flash_write(flash_file_t *ctx)
+{
     fprintf(stdout, "Writing segments for file: %s\n", ctx->filename);
     for (int i = 0; i < ctx->num_segs; i++) {
         flash_seg_t *seg = &ctx->segments[i];
@@ -432,7 +440,8 @@ int flash_write(flash_file_t *ctx) {
             baddr += block_size;
             length -= block_size;
             block++;
-            fprintf(stdout, "."); fflush(stdout);
+            fprintf(stdout, ".");
+            fflush(stdout);
         }
         fprintf(stdout, _GREEN_(OK) "\n");
         fflush(stdout);
@@ -441,7 +450,8 @@ int flash_write(flash_file_t *ctx) {
 }
 
 // free a file context
-void flash_free(flash_file_t *ctx) {
+void flash_free(flash_file_t *ctx)
+{
     if (!ctx)
         return;
     if (ctx->segments) {
@@ -454,7 +464,8 @@ void flash_free(flash_file_t *ctx) {
 }
 
 // just reset the unit
-int flash_stop_flashing(void) {
+int flash_stop_flashing(void)
+{
     UsbCommand c = {CMD_HARDWARE_RESET};
     SendCommand(&c);
     msleep(100);

@@ -22,7 +22,7 @@ static json_free_t do_free = free;
 
 void *jsonp_malloc(size_t size)
 {
-    if(!size)
+    if (!size)
         return NULL;
 
     return (*do_malloc)(size);
@@ -30,7 +30,7 @@ void *jsonp_malloc(size_t size)
 
 void jsonp_free(void *ptr)
 {
-    if(!ptr)
+    if (!ptr)
         return;
 
     (*do_free)(ptr);
@@ -46,7 +46,7 @@ char *jsonp_strndup(const char *str, size_t len)
     char *new_str;
 
     new_str = jsonp_malloc(len + 1);
-    if(!new_str)
+    if (!new_str)
         return NULL;
 
     memcpy(new_str, str, len);

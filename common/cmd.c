@@ -31,11 +31,12 @@
  */
 #include "cmd.h"
 
-uint8_t cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void* data, size_t len) {
+uint8_t cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len)
+{
     UsbCommand txcmd;
 
-    for (size_t i=0; i < sizeof(UsbCommand); i++)
-        ((uint8_t*)&txcmd)[i] = 0x00;
+    for (size_t i = 0; i < sizeof(UsbCommand); i++)
+        ((uint8_t *)&txcmd)[i] = 0x00;
 
     // Compose the outgoing command frame
     txcmd.cmd = cmd;
@@ -46,14 +47,14 @@ uint8_t cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void
     // Add the (optional) content to the frame, with a maximum size of USB_CMD_DATA_SIZE
     if (data && len) {
         len = MIN(len, USB_CMD_DATA_SIZE);
-        for (size_t i=0; i<len; i++) {
-            txcmd.d.asBytes[i] = ((uint8_t*)data)[i];
+        for (size_t i = 0; i < len; i++) {
+            txcmd.d.asBytes[i] = ((uint8_t *)data)[i];
         }
     }
 
     uint32_t sendlen = 0;
     // Send frame and make sure all bytes are transmitted
-    sendlen = usb_write( (uint8_t*)&txcmd, sizeof(UsbCommand) );
+    sendlen = usb_write((uint8_t *)&txcmd, sizeof(UsbCommand));
 
 #ifdef WITH_FPC
 // usart_init();

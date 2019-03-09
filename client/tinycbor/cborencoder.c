@@ -393,11 +393,11 @@ CborError cbor_encode_floating_point(CborEncoder *encoder, CborType fpType, cons
 
     size = 2U << (fpType - CborHalfFloatType);
     if (size == 8)
-        put64(buf + 1, *(const uint64_t*)value);
+        put64(buf + 1, *(const uint64_t *)value);
     else if (size == 4)
-        put32(buf + 1, *(const uint32_t*)value);
+        put32(buf + 1, *(const uint32_t *)value);
     else
-        put16(buf + 1, *(const uint16_t*)value);
+        put16(buf + 1, *(const uint16_t *)value);
     saturated_decrement(encoder);
     return append_to_buffer(encoder, buf, size + 1);
 }

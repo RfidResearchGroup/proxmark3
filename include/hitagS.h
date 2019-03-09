@@ -18,29 +18,32 @@
 
 //protocol-state
 typedef enum PROTO_STATE {
-    HT_READY=0,
+    HT_READY = 0,
     HT_INIT,
     HT_AUTHENTICATE,
     HT_SELECTED,
     HT_QUIET,
     HT_TTF,
-    HT_FAIL} PSTATE;
+    HT_FAIL
+} PSTATE;
 
 //tag-state
 typedef enum TAG_STATE {
-    HT_NO_OP=0,
+    HT_NO_OP = 0,
     HT_READING_PAGE,
     HT_WRITING_PAGE_ACK,
     HT_WRITING_PAGE_DATA,
-    HT_WRITING_BLOCK_DATA} TSATE;
+    HT_WRITING_BLOCK_DATA
+} TSATE;
 
 //number of start-of-frame bits
 typedef enum SOF_TYPE {
-    HT_STANDARD=0,
+    HT_STANDARD = 0,
     HT_ADVANCED,
     HT_FAST_ADVANCED,
     HT_ONE,
-    HT_NO_BITS} stype;
+    HT_NO_BITS
+} stype;
 
 struct hitagS_tag {
     PSTATE pstate; //protocol-state

@@ -24,7 +24,7 @@
 typedef struct {
     uint32_t *states[2];
     uint32_t len[2];
-    void* next;
+    void *next;
 } statelist_t;
 
 extern void prepare_bf_test_nonces(noncelist_t *nonces, uint8_t best_first_byte);

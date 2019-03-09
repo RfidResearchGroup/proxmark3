@@ -149,7 +149,8 @@ fido2Desc_t fido2CmdGetInfoRespDesc[] = {
     {fido2COSEKey,              ptResponse,   -4, "d - private key"},
 };
 
-char *fido2GetCmdErrorDescription(uint8_t errorCode) {
+char *fido2GetCmdErrorDescription(uint8_t errorCode)
+{
     for (int i = 0; i < sizeof(fido2Errors) / sizeof(fido2Error_t); i++)
         if (fido2Errors[i].ErrorCode == errorCode)
             return fido2Errors[i].Description;
@@ -157,30 +158,33 @@ char *fido2GetCmdErrorDescription(uint8_t errorCode) {
     return fido2Errors[0].Description;
 }
 
-char *fido2GetCmdMemberDescription(uint8_t cmdCode, bool isResponse, int memberNum) {
+char *fido2GetCmdMemberDescription(uint8_t cmdCode, bool isResponse, int memberNum)
+{
     for (int i = 0; i < sizeof(fido2CmdGetInfoRespDesc) / sizeof(fido2Desc_t); i++)
         if (fido2CmdGetInfoRespDesc[i].Command == cmdCode &&
             fido2CmdGetInfoRespDesc[i].PckType == (isResponse ? ptResponse : ptQuery) &&
-            fido2CmdGetInfoRespDesc[i].MemberNumber == memberNum )
+            fido2CmdGetInfoRespDesc[i].MemberNumber == memberNum)
             return fido2CmdGetInfoRespDesc[i].Description;
 
     return NULL;
 }
 
-int FIDOSelect(bool ActivateField, bool LeaveFieldON, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
+int FIDOSelect(bool ActivateField, bool LeaveFieldON, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw)
+{
     uint8_t data[] = {0xA0, 0x00, 0x00, 0x06, 0x47, 0x2F, 0x00, 0x01};
 
     return EMVSelect(ECC_CONTACTLESS, ActivateField, LeaveFieldON, data, sizeof(data), Result, MaxResultLen, ResultLen, sw, NULL);
 }
 
-int FIDOExchange(sAPDU apdu, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
+int FIDOExchange(sAPDU apdu, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw)
+{
     int res = EMVExchange(ECC_CONTACTLESS, true, apdu, Result, MaxResultLen, ResultLen, sw, NULL);
     if (res == 5) // apdu result (sw) not a 0x9000
         res = 0;
     // software chaining
     while (!res && (*sw >> 8) == 0x61) {
         size_t oldlen = *ResultLen;
-        res = EMVExchange(ECC_CONTACTLESS, true, (sAPDU){0x00, 0xC0, 0x00, 0x00, 0x00, NULL}, &Result[oldlen], MaxResultLen - oldlen, ResultLen, sw, NULL);
+        res = EMVExchange(ECC_CONTACTLESS, true, (sAPDU) {0x00, 0xC0, 0x00, 0x00, 0x00, NULL}, &Result[oldlen], MaxResultLen - oldlen, ResultLen, sw, NULL);
         if (res == 5) // apdu result (sw) not a 0x9000
             res = 0;
 
@@ -191,34 +195,40 @@ int FIDOExchange(sAPDU apdu, uint8_t *Result, size_t MaxResultLen, size_t *Resul
     return res;
 }
 
-int FIDORegister(uint8_t *params, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
-    return FIDOExchange((sAPDU){0x00, 0x01, 0x03, 0x00, 64, params}, Result, MaxResultLen, ResultLen, sw);
+int FIDORegister(uint8_t *params, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw)
+{
+    return FIDOExchange((sAPDU) {0x00, 0x01, 0x03, 0x00, 64, params}, Result, MaxResultLen, ResultLen, sw);
 }
 
-int FIDOAuthentication(uint8_t *params, uint8_t paramslen, uint8_t controlb, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
-    return FIDOExchange((sAPDU){0x00, 0x02, controlb, 0x00, paramslen, params}, Result, MaxResultLen, ResultLen, sw);
+int FIDOAuthentication(uint8_t *params, uint8_t paramslen, uint8_t controlb, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw)
+{
+    return FIDOExchange((sAPDU) {0x00, 0x02, controlb, 0x00, paramslen, params}, Result, MaxResultLen, ResultLen, sw);
 }
 
-int FIDO2GetInfo(uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
+int FIDO2GetInfo(uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw)
+{
     uint8_t data[] = {fido2CmdGetInfo};
-    return FIDOExchange((sAPDU){0x80, 0x10, 0x00, 0x00, sizeof(data), data}, Result, MaxResultLen, ResultLen, sw);
+    return FIDOExchange((sAPDU) {0x80, 0x10, 0x00, 0x00, sizeof(data), data}, Result, MaxResultLen, ResultLen, sw);
 }
 
-int FIDO2MakeCredential(uint8_t *params, uint8_t paramslen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
+int FIDO2MakeCredential(uint8_t *params, uint8_t paramslen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw)
+{
     uint8_t data[paramslen + 1];
     data[0] = fido2CmdMakeCredential;
     memcpy(&data[1], params, paramslen);
-    return FIDOExchange((sAPDU){0x80, 0x10, 0x00, 0x00, sizeof(data), data}, Result, MaxResultLen, ResultLen, sw);
+    return FIDOExchange((sAPDU) {0x80, 0x10, 0x00, 0x00, sizeof(data), data}, Result, MaxResultLen, ResultLen, sw);
 }
 
-int FIDO2GetAssertion(uint8_t *params, uint8_t paramslen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
+int FIDO2GetAssertion(uint8_t *params, uint8_t paramslen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw)
+{
     uint8_t data[paramslen + 1];
     data[0] = fido2CmdGetAssertion;
     memcpy(&data[1], params, paramslen);
-    return FIDOExchange((sAPDU){0x80, 0x10, 0x00, 0x00, sizeof(data), data}, Result, MaxResultLen, ResultLen, sw);
+    return FIDOExchange((sAPDU) {0x80, 0x10, 0x00, 0x00, sizeof(data), data}, Result, MaxResultLen, ResultLen, sw);
 }
 
-int FIDOCheckDERAndGetKey(uint8_t *der, size_t derLen, bool verbose, uint8_t *publicKey, size_t publicKeyMaxLen) {
+int FIDOCheckDERAndGetKey(uint8_t *der, size_t derLen, bool verbose, uint8_t *publicKey, size_t publicKeyMaxLen)
+{
     int res;
 
     // load CA's
@@ -236,7 +246,7 @@ int FIDOCheckDERAndGetKey(uint8_t *der, size_t derLen, bool verbose, uint8_t *pu
     mbedtls_x509_crt_init(&cert);
     res = mbedtls_x509_crt_parse_der(&cert, der, derLen);
     if (res) {
-        PrintAndLog("ERROR: DER parse returned 0x%x - %s", (res<0)?-res:res, ecdsa_get_error(res));
+        PrintAndLog("ERROR: DER parse returned 0x%x - %s", (res < 0) ? -res : res, ecdsa_get_error(res));
     }
 
     // get certificate info
@@ -250,7 +260,7 @@ int FIDOCheckDERAndGetKey(uint8_t *der, size_t derLen, bool verbose, uint8_t *pu
     uint32_t verifyflags = 0;
     res = mbedtls_x509_crt_verify(&cert, &cacert, NULL, NULL, &verifyflags, NULL, NULL);
     if (res) {
-        PrintAndLog("ERROR: DER verify returned 0x%x - %s\n", (res<0)?-res:res, ecdsa_get_error(res));
+        PrintAndLog("ERROR: DER verify returned 0x%x - %s\n", (res < 0) ? -res : res, ecdsa_get_error(res));
     } else {
         PrintAndLog("Certificate OK.\n");
     }
@@ -264,7 +274,7 @@ int FIDOCheckDERAndGetKey(uint8_t *der, size_t derLen, bool verbose, uint8_t *pu
     // get public key
     res = ecdsa_public_key_from_pk(&cert.pk, publicKey, publicKeyMaxLen);
     if (res) {
-        PrintAndLog("ERROR: getting public key from certificate 0x%x - %s", (res<0)?-res:res, ecdsa_get_error(res));
+        PrintAndLog("ERROR: getting public key from certificate 0x%x - %s", (res < 0) ? -res : res, ecdsa_get_error(res));
     } else {
         if (verbose)
             PrintAndLog("Got a public key from certificate:\n%s", sprint_hex_inrow(publicKey, 65));
@@ -282,7 +292,8 @@ int FIDOCheckDERAndGetKey(uint8_t *der, size_t derLen, bool verbose, uint8_t *pu
 #define fido_check_if(r) if ((r) != CborNoError) {return r;} else
 #define fido_check(r) if ((r) != CborNoError) return r;
 
-int FIDO2CreateMakeCredentionalReq(json_t *root, uint8_t *data, size_t maxdatalen, size_t *datalen) {
+int FIDO2CreateMakeCredentionalReq(json_t *root, uint8_t *data, size_t maxdatalen, size_t *datalen)
+{
     if (datalen)
         *datalen = 0;
     if (!root || !data || !maxdatalen)
@@ -342,7 +353,8 @@ int FIDO2CreateMakeCredentionalReq(json_t *root, uint8_t *data, size_t maxdatale
     return 0;
 }
 
-bool CheckrpIdHash(json_t *json, uint8_t *hash) {
+bool CheckrpIdHash(json_t *json, uint8_t *hash)
+{
     char hashval[300] = {0};
     uint8_t hash2[32] = {0};
 
@@ -355,7 +367,8 @@ bool CheckrpIdHash(json_t *json, uint8_t *hash) {
 }
 
 // check ANSI X9.62 format ECDSA signature (on P-256)
-int FIDO2CheckSignature(json_t *root, uint8_t *publickey, uint8_t *sign, size_t signLen, uint8_t *authData, size_t authDataLen, bool verbose) {
+int FIDO2CheckSignature(json_t *root, uint8_t *publickey, uint8_t *sign, size_t signLen, uint8_t *authData, size_t authDataLen, bool verbose)
+{
     int res;
     uint8_t rval[300] = {0};
     uint8_t sval[300] = {0};
@@ -377,16 +390,16 @@ int FIDO2CheckSignature(json_t *root, uint8_t *publickey, uint8_t *sign, size_t 
         uint8_t xbuf[4096] = {0};
         size_t xbuflen = 0;
         res = FillBuffer(xbuf, sizeof(xbuf), &xbuflen,
-            authData, authDataLen,  // rpIdHash[32] + flags[1] + signCount[4]
-            clientDataHash, 32,     // Hash of the serialized client data. "$.ClientDataHash" from json
-            NULL, 0);
+                         authData, authDataLen,  // rpIdHash[32] + flags[1] + signCount[4]
+                         clientDataHash, 32,     // Hash of the serialized client data. "$.ClientDataHash" from json
+                         NULL, 0);
         //PrintAndLog("--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
         res = ecdsa_signature_verify(publickey, xbuf, xbuflen, sign, signLen);
         if (res) {
             if (res == -0x4e00) {
                 PrintAndLog("Signature is NOT VALID.");
             } else {
-                PrintAndLog("Other signature check error: %x %s", (res<0)?-res:res, ecdsa_get_error(res));
+                PrintAndLog("Other signature check error: %x %s", (res < 0) ? -res : res, ecdsa_get_error(res));
             }
             return res;
         } else {
@@ -400,7 +413,8 @@ int FIDO2CheckSignature(json_t *root, uint8_t *publickey, uint8_t *sign, size_t 
     return 0;
 }
 
-int FIDO2MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, bool verbose, bool verbose2, bool showCBOR, bool showDERTLV) {
+int FIDO2MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, bool verbose, bool verbose2, bool showCBOR, bool showDERTLV)
+{
     CborParser parser;
     CborValue map, mapsmt;
     int res;
@@ -457,7 +471,7 @@ int FIDO2MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, b
     if (ubuf[32] & 0x80)
         PrintAndLog("ed - extension data included");
 
-    uint32_t cntr =  (uint32_t)bytes_to_num(&ubuf[33], 4);
+    uint32_t cntr = (uint32_t)bytes_to_num(&ubuf[33], 4);
     PrintAndLog("Counter: %d", cntr);
     JsonSaveInt(root, "$.AppData.Counter", cntr);
 
@@ -543,7 +557,7 @@ int FIDO2MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, b
             } else {
                 PrintAndLog("DER [%d]: %s...", derLen, sprint_hex(der, MIN(derLen, 16)));
             }
-                JsonSaveBufAsHexCompact(root, "$.AppData.DER", der, derLen);
+            JsonSaveBufAsHexCompact(root, "$.AppData.DER", der, derLen);
         }
     }
     res = cbor_value_leave_container(&map, &mapsmt);
@@ -566,7 +580,8 @@ int FIDO2MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, b
     return 0;
 }
 
-int FIDO2CreateGetAssertionReq(json_t *root, uint8_t *data, size_t maxdatalen, size_t *datalen, bool createAllowList) {
+int FIDO2CreateGetAssertionReq(json_t *root, uint8_t *data, size_t maxdatalen, size_t *datalen, bool createAllowList)
+{
     if (datalen)
         *datalen = 0;
     if (!root || !data || !maxdatalen)
@@ -640,7 +655,8 @@ int FIDO2CreateGetAssertionReq(json_t *root, uint8_t *data, size_t maxdatalen, s
     return 0;
 }
 
-int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool verbose, bool verbose2, bool showCBOR) {
+int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool verbose, bool verbose2, bool showCBOR)
+{
     CborParser parser;
     CborValue map, mapint;
     int res;
@@ -716,7 +732,7 @@ int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool 
     if (ubuf[32] & 0x80)
         PrintAndLog("ed - extension data included");
 
-    uint32_t cntr =  (uint32_t)bytes_to_num(&ubuf[33], 4);
+    uint32_t cntr = (uint32_t)bytes_to_num(&ubuf[33], 4);
     PrintAndLog("Counter: %d", cntr);
     JsonSaveInt(root, "$.AppData.Counter", cntr);
 

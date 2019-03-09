@@ -42,6 +42,6 @@
 #endif
 
 extern int CommandReceived(char *Cmd);
-extern command_t* getTopLevelCommandTable();
+extern command_t *getTopLevelCommandTable();
 
 #endif

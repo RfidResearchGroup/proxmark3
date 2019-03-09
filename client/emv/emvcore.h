@@ -63,7 +63,7 @@ enum CardPSVendor {
     CV_CB,
     CV_OTHER,
 };
-extern enum CardPSVendor GetCardPSVendor(uint8_t * AID, size_t AIDlen);
+extern enum CardPSVendor GetCardPSVendor(uint8_t *AID, size_t AIDlen);
 
 extern bool TLVPrintFromBuffer(uint8_t *data, int datalen);
 extern void TLVPrintFromTLV(struct tlvdb *tlv);

@@ -53,24 +53,24 @@ typedef struct {
 } TAuthData;
 extern void ClearAuthData();
 
-extern uint8_t iso14443A_CRC_check(bool isResponse, uint8_t* data, uint8_t len);
-extern uint8_t iso14443B_CRC_check(uint8_t* d, uint8_t n);
-extern uint8_t mifare_CRC_check(bool isResponse, uint8_t* data, uint8_t len);
-extern uint8_t iso15693_CRC_check(uint8_t* d, uint8_t n);
-extern uint8_t iclass_CRC_check(bool isResponse, uint8_t* d, uint8_t n);
+extern uint8_t iso14443A_CRC_check(bool isResponse, uint8_t *data, uint8_t len);
+extern uint8_t iso14443B_CRC_check(uint8_t *d, uint8_t n);
+extern uint8_t mifare_CRC_check(bool isResponse, uint8_t *data, uint8_t len);
+extern uint8_t iso15693_CRC_check(uint8_t *d, uint8_t n);
+extern uint8_t iclass_CRC_check(bool isResponse, uint8_t *d, uint8_t n);
 
-int applyIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize);
+int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 
-extern void annotateIclass(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize);
-extern void annotateIso15693(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize);
-extern void annotateTopaz(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize);
-extern void annotateLegic(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize);
-extern void annotateFelica(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize);
-extern void annotateIso7816(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize);
-extern void annotateIso14443b(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize);
-extern void annotateIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize);
-extern void annotateMfDesfire(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize);
-extern void annotateMifare(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize, uint8_t* parity, uint8_t paritysize, bool isResponse);
+extern void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
+extern void annotateIso15693(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
+extern void annotateTopaz(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
+extern void annotateLegic(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
+extern void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
+extern void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
+extern void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
+extern void annotateIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
+extern void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
+extern void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, uint8_t paritysize, bool isResponse);
 
 extern bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isResponse, uint8_t *mfData, size_t *mfDataLen);
 extern bool NTParityChk(TAuthData *ad, uint32_t ntx);

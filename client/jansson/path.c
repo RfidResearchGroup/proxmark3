@@ -31,8 +31,7 @@ json_t *json_path_get(const json_t *json, const char *path)
     token = NULL;
     expect = path_delims;
 
-    while (peek && *peek && cursor)
-    {
+    while (peek && *peek && cursor) {
         char *last_peek = peek;
         peek = strpbrk(peek, expect);
         if (peek) {
@@ -72,7 +71,7 @@ fail:
 int json_path_set_new(json_t *json, const char *path, json_t *value, size_t flags, json_error_t *error)
 {
     static const char root_chr = '$', array_open = '[', object_delim = '.';
-    static const char * const path_delims = ".[", *array_close = "]";
+    static const char *const path_delims = ".[", *array_close = "]";
 
     json_t *cursor, *parent = NULL;
     char *token, *buf = NULL, *peek, delim = '\0';
@@ -98,8 +97,7 @@ int json_path_set_new(json_t *json, const char *path, json_t *value, size_t flag
     token = NULL;
     expect = path_delims;
 
-    while (peek && *peek && cursor)
-    {
+    while (peek && *peek && cursor) {
         char *last_peek = peek;
         peek = strpbrk(last_peek, expect);
 

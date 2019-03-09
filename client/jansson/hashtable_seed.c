@@ -45,7 +45,8 @@
 #include "jansson.h"
 
 
-static uint32_t buf_to_uint32(char *data) {
+static uint32_t buf_to_uint32(char *data)
+{
     size_t i;
     uint32_t result = 0;
 
@@ -59,7 +60,8 @@ static uint32_t buf_to_uint32(char *data) {
 
 /* /dev/urandom */
 #if !defined(_WIN32) && defined(USE_URANDOM)
-static int seed_from_urandom(uint32_t *seed) {
+static int seed_from_urandom(uint32_t *seed)
+{
     /* Use unbuffered I/O if we have open(), close() and read(). Otherwise
        fall back to fopen() */
 
@@ -112,7 +114,7 @@ static int seed_from_windows_cryptoapi(uint32_t *seed)
     int ok;
 
     hAdvAPI32 = GetModuleHandle(TEXT("advapi32.dll"));
-    if(hAdvAPI32 == NULL)
+    if (hAdvAPI32 == NULL)
         return 1;
 
     pCryptAcquireContext = (CRYPTACQUIRECONTEXTA)GetProcAddress(hAdvAPI32, "CryptAcquireContextA");
@@ -142,7 +144,8 @@ static int seed_from_windows_cryptoapi(uint32_t *seed)
 #endif
 
 /* gettimeofday() and getpid() */
-static int seed_from_timestamp_and_pid(uint32_t *seed) {
+static int seed_from_timestamp_and_pid(uint32_t *seed)
+{
 #ifdef HAVE_GETTIMEOFDAY
     /* XOR of seconds and microseconds */
     struct timeval tv;
@@ -163,7 +166,8 @@ static int seed_from_timestamp_and_pid(uint32_t *seed) {
     return 0;
 }
 
-static uint32_t generate_seed() {
+static uint32_t generate_seed()
+{
     uint32_t seed = 0;
     int done = 0;
 
@@ -196,7 +200,8 @@ volatile uint32_t hashtable_seed = 0;
 #if defined(HAVE_ATOMIC_BUILTINS) && (defined(HAVE_SCHED_YIELD) || !defined(_WIN32))
 static volatile char seed_initialized = 0;
 
-void json_object_seed(size_t seed) {
+void json_object_seed(size_t seed)
+{
     uint32_t new_seed = (uint32_t)seed;
 
     if (hashtable_seed == 0) {
@@ -212,12 +217,13 @@ void json_object_seed(size_t seed) {
 #ifdef HAVE_SCHED_YIELD
                 sched_yield();
 #endif
-            } while(__atomic_load_n(&hashtable_seed, __ATOMIC_ACQUIRE) == 0);
+            } while (__atomic_load_n(&hashtable_seed, __ATOMIC_ACQUIRE) == 0);
         }
     }
 }
 #elif defined(HAVE_SYNC_BUILTINS) && (defined(HAVE_SCHED_YIELD) || !defined(_WIN32))
-void json_object_seed(size_t seed) {
+void json_object_seed(size_t seed)
+{
     uint32_t new_seed = (uint32_t)seed;
 
     if (hashtable_seed == 0) {
@@ -239,12 +245,13 @@ void json_object_seed(size_t seed) {
                 sched_yield();
 #endif
             }
-        } while(hashtable_seed == 0);
+        } while (hashtable_seed == 0);
     }
 }
 #elif defined(_WIN32)
 static long seed_initialized = 0;
-void json_object_seed(size_t seed) {
+void json_object_seed(size_t seed)
+{
     uint32_t new_seed = (uint32_t)seed;
 
     if (hashtable_seed == 0) {
@@ -264,7 +271,8 @@ void json_object_seed(size_t seed) {
 }
 #else
 /* Fall back to a thread-unsafe version */
-void json_object_seed(size_t seed) {
+void json_object_seed(size_t seed)
+{
     uint32_t new_seed = (uint32_t)seed;
 
     if (hashtable_seed == 0) {

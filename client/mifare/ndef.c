@@ -80,7 +80,8 @@ static const char *URI_s[] = {
     "urn:nfc:"                    // 0x23
 };
 
-uint16_t ndefTLVGetLength(uint8_t *data, size_t *indx) {
+uint16_t ndefTLVGetLength(uint8_t *data, size_t *indx)
+{
     uint16_t len = 0;
     if (data[0] == 0xff) {
         len = (data[1] << 8) + data[2];
@@ -93,7 +94,8 @@ uint16_t ndefTLVGetLength(uint8_t *data, size_t *indx) {
     return len;
 }
 
-int ndefDecodeHeader(uint8_t *data, size_t datalen, NDEFHeader_t *header) {
+int ndefDecodeHeader(uint8_t *data, size_t datalen, NDEFHeader_t *header)
+{
     header->Type = NULL;
     header->Payload = NULL;
     header->ID = NULL;
@@ -130,7 +132,8 @@ int ndefDecodeHeader(uint8_t *data, size_t datalen, NDEFHeader_t *header) {
     return 0;
 }
 
-int ndefPrintHeader(NDEFHeader_t *header) {
+int ndefPrintHeader(NDEFHeader_t *header)
+{
     PrintAndLogEx(INFO, "Header:");
 
     PrintAndLogEx(NORMAL, "\tMessage Begin:    %s", STRBOOL(header->MessageBegin));
@@ -149,7 +152,8 @@ int ndefPrintHeader(NDEFHeader_t *header) {
     return 0;
 }
 
-int ndefDecodeSig(uint8_t *sig, size_t siglen) {
+int ndefDecodeSig(uint8_t *sig, size_t siglen)
+{
     size_t indx = 0;
     PrintAndLogEx(NORMAL, "\tsignature version: 0x%02x", sig[0]);
     if (sig[0] != 0x01) {
@@ -174,8 +178,8 @@ int ndefDecodeSig(uint8_t *sig, size_t siglen) {
         uint8_t sval[300] = {0};
         int res = ecdsa_asn1_get_signature(&sig[indx], intsiglen, rval, sval);
         if (!res) {
-            PrintAndLogEx(NORMAL ,"\t\tr: %s", sprint_hex(rval, 32));
-            PrintAndLogEx(NORMAL ,"\t\ts: %s", sprint_hex(sval, 32));
+            PrintAndLogEx(NORMAL, "\t\tr: %s", sprint_hex(rval, 32));
+            PrintAndLogEx(NORMAL, "\t\ts: %s", sprint_hex(sval, 32));
         }
     }
     indx += intsiglen;
@@ -215,38 +219,40 @@ int ndefDecodeSig(uint8_t *sig, size_t siglen) {
     return 0;
 };
 
-int ndefDecodePayload(NDEFHeader_t *ndef) {
+int ndefDecodePayload(NDEFHeader_t *ndef)
+{
 
-    switch(ndef->TypeNameFormat) {
-    case tnfWellKnownRecord:
-        PrintAndLogEx(INFO, "Well Known Record");
-        PrintAndLogEx(NORMAL, "\ttype:    %.*s", ndef->TypeLen, ndef->Type);
+    switch (ndef->TypeNameFormat) {
+        case tnfWellKnownRecord:
+            PrintAndLogEx(INFO, "Well Known Record");
+            PrintAndLogEx(NORMAL, "\ttype:    %.*s", ndef->TypeLen, ndef->Type);
 
-        if (!strncmp((char *)ndef->Type, "T", ndef->TypeLen)) {
-            PrintAndLogEx(NORMAL, "\ttext   : %.*s", ndef->PayloadLen, ndef->Payload);
-        }
+            if (!strncmp((char *)ndef->Type, "T", ndef->TypeLen)) {
+                PrintAndLogEx(NORMAL, "\ttext   : %.*s", ndef->PayloadLen, ndef->Payload);
+            }
 
-        if (!strncmp((char *)ndef->Type, "U", ndef->TypeLen)) {
-            PrintAndLogEx(NORMAL, "\turi    : %s%.*s", (ndef->Payload[0] <= 0x23 ? URI_s[ndef->Payload[0]] : "[err]"), ndef->PayloadLen, &ndef->Payload[1]);
-        }
+            if (!strncmp((char *)ndef->Type, "U", ndef->TypeLen)) {
+                PrintAndLogEx(NORMAL, "\turi    : %s%.*s", (ndef->Payload[0] <= 0x23 ? URI_s[ndef->Payload[0]] : "[err]"), ndef->PayloadLen, &ndef->Payload[1]);
+            }
 
-        if (!strncmp((char *)ndef->Type, "Sig", ndef->TypeLen)) {
-            ndefDecodeSig(ndef->Payload, ndef->PayloadLen);
-        }
+            if (!strncmp((char *)ndef->Type, "Sig", ndef->TypeLen)) {
+                ndefDecodeSig(ndef->Payload, ndef->PayloadLen);
+            }
 
-        break;
-    case tnfAbsoluteURIRecord:
-        PrintAndLogEx(INFO, "Absolute URI Record");
-        PrintAndLogEx(NORMAL, "\ttype:    %.*s", ndef->TypeLen, ndef->Type);
-        PrintAndLogEx(NORMAL, "\tpayload: %.*s", ndef->PayloadLen, ndef->Payload);
-        break;
-    default:
-        break;
+            break;
+        case tnfAbsoluteURIRecord:
+            PrintAndLogEx(INFO, "Absolute URI Record");
+            PrintAndLogEx(NORMAL, "\ttype:    %.*s", ndef->TypeLen, ndef->Type);
+            PrintAndLogEx(NORMAL, "\tpayload: %.*s", ndef->PayloadLen, ndef->Payload);
+            break;
+        default:
+            break;
     }
     return 0;
 }
 
-int ndefRecordDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
+int ndefRecordDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen)
+{
     NDEFHeader_t NDEFHeader = {0};
     int res = ndefDecodeHeader(ndefRecord, ndefRecordLen, &NDEFHeader);
     if (res)
@@ -272,7 +278,8 @@ int ndefRecordDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
     return 0;
 }
 
-int ndefRecordsDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
+int ndefRecordsDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen)
+{
     bool firstRec = true;
     size_t len = 0;
 
@@ -306,7 +313,8 @@ int ndefRecordsDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
     return 0;
 }
 
-int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
+int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose)
+{
 
     size_t indx = 0;
 

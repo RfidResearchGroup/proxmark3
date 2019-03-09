@@ -33,7 +33,8 @@ static const uint8_t DefaultKey[16] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
 static int CmdHelp(const char *Cmd);
 
-int CmdHFMFPInfo(const char *cmd) {
+int CmdHFMFPInfo(const char *cmd)
+{
 
     if (cmd && strlen(cmd) > 0)
         PrintAndLogEx(WARNING, "command don't have any parameters.\n");
@@ -46,7 +47,7 @@ int CmdHFMFPInfo(const char *cmd) {
     SendCommand(&c);
 
     UsbCommand resp;
-    WaitForResponse(CMD_ACK,&resp);
+    WaitForResponse(CMD_ACK, &resp);
 
     iso14a_card_select_t card;
     memcpy(&card, (iso14a_card_select_t *)resp.d.asBytes, sizeof(iso14a_card_select_t));
@@ -112,18 +113,19 @@ int CmdHFMFPInfo(const char *cmd) {
     return 0;
 }
 
-int CmdHFMFPWritePerso(const char *cmd) {
+int CmdHFMFPWritePerso(const char *cmd)
+{
     uint8_t keyNum[64] = {0};
     int keyNumLen = 0;
     uint8_t key[64] = {0};
     int keyLen = 0;
 
     CLIParserInit("hf mfp wrp",
-        "Executes Write Perso command. Can be used in SL0 mode only.",
-        "Usage:\n\thf mfp wrp 4000 000102030405060708090a0b0c0d0e0f -> write key (00..0f) to key number 4000 \n"
-            "\thf mfp wrp 4000 -> write default key(0xff..0xff) to key number 4000");
+                  "Executes Write Perso command. Can be used in SL0 mode only.",
+                  "Usage:\n\thf mfp wrp 4000 000102030405060708090a0b0c0d0e0f -> write key (00..0f) to key number 4000 \n"
+                  "\thf mfp wrp 4000 -> write default key(0xff..0xff) to key number 4000");
 
-    void* argtable[] = {
+    void *argtable[] = {
         arg_param_begin,
         arg_lit0("vV",  "verbose", "show internal data."),
         arg_str1(NULL,  NULL,      "<HEX key number (2b)>", NULL),
@@ -178,7 +180,8 @@ int CmdHFMFPWritePerso(const char *cmd) {
 
 uint16_t CardAddresses[] = {0x9000, 0x9001, 0x9002, 0x9003, 0x9004, 0xA000, 0xA001, 0xA080, 0xA081, 0xC000, 0xC001};
 
-int CmdHFMFPInitPerso(const char *cmd) {
+int CmdHFMFPInitPerso(const char *cmd)
+{
     int res;
     uint8_t key[256] = {0};
     int keyLen = 0;
@@ -187,11 +190,11 @@ int CmdHFMFPInitPerso(const char *cmd) {
     int datalen = 0;
 
     CLIParserInit("hf mfp initp",
-        "Executes Write Perso command for all card's keys. Can be used in SL0 mode only.",
-        "Usage:\n\thf mfp initp 000102030405060708090a0b0c0d0e0f -> fill all the keys with key (00..0f)\n"
-            "\thf mfp initp -vv -> fill all the keys with default key(0xff..0xff) and show all the data exchange");
+                  "Executes Write Perso command for all card's keys. Can be used in SL0 mode only.",
+                  "Usage:\n\thf mfp initp 000102030405060708090a0b0c0d0e0f -> fill all the keys with key (00..0f)\n"
+                  "\thf mfp initp -vv -> fill all the keys with default key(0xff..0xff) and show all the data exchange");
 
-    void* argtable[] = {
+    void *argtable[] = {
         arg_param_begin,
         arg_litn("vV",  "verbose", 0, 2, "show internal data."),
         arg_strx0(NULL,  NULL,      "<HEX key (16b)>", NULL),
@@ -252,12 +255,13 @@ int CmdHFMFPInitPerso(const char *cmd) {
     return 0;
 }
 
-int CmdHFMFPCommitPerso(const char *cmd) {
+int CmdHFMFPCommitPerso(const char *cmd)
+{
     CLIParserInit("hf mfp commitp",
-        "Executes Commit Perso command. Can be used in SL0 mode only.",
-        "Usage:\n\thf mfp commitp ->  \n");
+                  "Executes Commit Perso command. Can be used in SL0 mode only.",
+                  "Usage:\n\thf mfp commitp ->  \n");
 
-    void* argtable[] = {
+    void *argtable[] = {
         arg_param_begin,
         arg_lit0("vV",  "verbose", "show internal data."),
         arg_int0(NULL,  NULL,      "SL mode", NULL),
@@ -293,18 +297,19 @@ int CmdHFMFPCommitPerso(const char *cmd) {
     return 0;
 }
 
-int CmdHFMFPAuth(const char *cmd) {
+int CmdHFMFPAuth(const char *cmd)
+{
     uint8_t keyn[250] = {0};
     int keynlen = 0;
     uint8_t key[250] = {0};
     int keylen = 0;
 
     CLIParserInit("hf mfp auth",
-        "Executes AES authentication command for Mifare Plus card",
-        "Usage:\n\thf mfp auth 4000 000102030405060708090a0b0c0d0e0f -> executes authentication\n"
-            "\thf mfp auth 9003 FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF -v -> executes authentication and shows all the system data\n");
+                  "Executes AES authentication command for Mifare Plus card",
+                  "Usage:\n\thf mfp auth 4000 000102030405060708090a0b0c0d0e0f -> executes authentication\n"
+                  "\thf mfp auth 9003 FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF -v -> executes authentication and shows all the system data\n");
 
-    void* argtable[] = {
+    void *argtable[] = {
         arg_param_begin,
         arg_lit0("vV",  "verbose", "show internal data."),
         arg_str1(NULL,  NULL,     "<Key Num (HEX 2 bytes)>", NULL),
@@ -331,17 +336,18 @@ int CmdHFMFPAuth(const char *cmd) {
     return MifareAuth4(NULL, keyn, key, true, false, verbose);
 }
 
-int CmdHFMFPRdbl(const char *cmd) {
+int CmdHFMFPRdbl(const char *cmd)
+{
     uint8_t keyn[2] = {0};
     uint8_t key[250] = {0};
     int keylen = 0;
 
     CLIParserInit("hf mfp rdbl",
-        "Reads several blocks from Mifare Plus card.",
-        "Usage:\n\thf mfp rdbl 0 000102030405060708090a0b0c0d0e0f -> executes authentication and read block 0 data\n"
-            "\thf mfp rdbl 1 -v -> executes authentication and shows sector 1 data with default key 0xFF..0xFF and some additional data\n");
+                  "Reads several blocks from Mifare Plus card.",
+                  "Usage:\n\thf mfp rdbl 0 000102030405060708090a0b0c0d0e0f -> executes authentication and read block 0 data\n"
+                  "\thf mfp rdbl 1 -v -> executes authentication and shows sector 1 data with default key 0xFF..0xFF and some additional data\n");
 
-    void* argtable[] = {
+    void *argtable[] = {
         arg_param_begin,
         arg_lit0("vV",  "verbose", "show internal data."),
         arg_int0("nN",  "count",   "blocks count (by default 1).", NULL),
@@ -422,10 +428,10 @@ int CmdHFMFPRdbl(const char *cmd) {
     }
 
     int indx = blockn;
-    for(int i = 0; i < blocksCount; i++)  {
+    for (int i = 0; i < blocksCount; i++)  {
         PrintAndLogEx(INFO, "data[%03d]: %s", indx, sprint_hex(&data[1 + i * 16], 16));
         indx++;
-        if (mfIsSectorTrailer(indx) && i != blocksCount - 1){
+        if (mfIsSectorTrailer(indx) && i != blocksCount - 1) {
             PrintAndLogEx(INFO, "data[%03d]: ------------------- trailer -------------------", indx);
             indx++;
         }
@@ -436,24 +442,25 @@ int CmdHFMFPRdbl(const char *cmd) {
         PrintAndLogEx(WARNING, "MAC   card: %s", sprint_hex(&data[blocksCount * 16 + 1], 8));
         PrintAndLogEx(WARNING, "MAC reader: %s", sprint_hex(mac, 8));
     } else {
-    if(verbose)
+        if (verbose)
             PrintAndLogEx(INFO, "MAC: %s", sprint_hex(&data[blocksCount * 16 + 1], 8));
     }
 
     return 0;
 }
 
-int CmdHFMFPRdsc(const char *cmd) {
+int CmdHFMFPRdsc(const char *cmd)
+{
     uint8_t keyn[2] = {0};
     uint8_t key[250] = {0};
     int keylen = 0;
 
     CLIParserInit("hf mfp rdsc",
-        "Reads one sector from Mifare Plus card.",
-        "Usage:\n\thf mfp rdsc 0 000102030405060708090a0b0c0d0e0f -> executes authentication and read sector 0 data\n"
-            "\thf mfp rdsc 1 -v -> executes authentication and shows sector 1 data with default key 0xFF..0xFF and some additional data\n");
+                  "Reads one sector from Mifare Plus card.",
+                  "Usage:\n\thf mfp rdsc 0 000102030405060708090a0b0c0d0e0f -> executes authentication and read sector 0 data\n"
+                  "\thf mfp rdsc 1 -v -> executes authentication and shows sector 1 data with default key 0xFF..0xFF and some additional data\n");
 
-    void* argtable[] = {
+    void *argtable[] = {
         arg_param_begin,
         arg_lit0("vV",  "verbose", "show internal data."),
         arg_lit0("bB",  "keyb",    "use key B (by default keyA)."),
@@ -504,7 +511,7 @@ int CmdHFMFPRdsc(const char *cmd) {
     uint8_t data[250] = {0};
     int datalen = 0;
     uint8_t mac[8] = {0};
-    for(int n = mfFirstBlockOfSector(sectorNum); n < mfFirstBlockOfSector(sectorNum) + mfNumBlocksPerSector(sectorNum); n++) {
+    for (int n = mfFirstBlockOfSector(sectorNum); n < mfFirstBlockOfSector(sectorNum) + mfNumBlocksPerSector(sectorNum); n++) {
         res = MFPReadBlock(&session, plain, n & 0xff, 1, false, true, data, sizeof(data), &datalen, mac);
         if (res) {
             PrintAndLogEx(ERR, "Read error: %d", res);
@@ -530,7 +537,7 @@ int CmdHFMFPRdsc(const char *cmd) {
             PrintAndLogEx(WARNING, "MAC   card: %s", sprint_hex(&data[1 + 16], 8));
             PrintAndLogEx(WARNING, "MAC reader: %s", sprint_hex(mac, 8));
         } else {
-            if(verbose)
+            if (verbose)
                 PrintAndLogEx(INFO, "MAC: %s", sprint_hex(&data[1 + 16], 8));
         }
     }
@@ -539,7 +546,8 @@ int CmdHFMFPRdsc(const char *cmd) {
     return 0;
 }
 
-int CmdHFMFPWrbl(const char *cmd) {
+int CmdHFMFPWrbl(const char *cmd)
+{
     uint8_t keyn[2] = {0};
     uint8_t key[250] = {0};
     int keylen = 0;
@@ -547,11 +555,11 @@ int CmdHFMFPWrbl(const char *cmd) {
     int datainlen = 0;
 
     CLIParserInit("hf mfp wrbl",
-        "Writes one block to Mifare Plus card.",
-        "Usage:\n\thf mfp wrbl 1 ff0000000000000000000000000000ff 000102030405060708090a0b0c0d0e0f -> writes block 1 data\n"
-            "\thf mfp wrbl 2 ff0000000000000000000000000000ff -v -> writes block 2 data with default key 0xFF..0xFF and some additional data\n");
+                  "Writes one block to Mifare Plus card.",
+                  "Usage:\n\thf mfp wrbl 1 ff0000000000000000000000000000ff 000102030405060708090a0b0c0d0e0f -> writes block 1 data\n"
+                  "\thf mfp wrbl 2 ff0000000000000000000000000000ff -v -> writes block 2 data with default key 0xFF..0xFF and some additional data\n");
 
-    void* argtable[] = {
+    void *argtable[] = {
         arg_param_begin,
         arg_lit0("vV",  "verbose", "show internal data."),
         arg_lit0("bB",  "keyb",    "use key B (by default keyA)."),
@@ -632,7 +640,7 @@ int CmdHFMFPWrbl(const char *cmd) {
         PrintAndLogEx(WARNING, "MAC   card: %s", sprint_hex(&data[1], 8));
         PrintAndLogEx(WARNING, "MAC reader: %s", sprint_hex(mac, 8));
     } else {
-        if(verbose)
+        if (verbose)
             PrintAndLogEx(INFO, "MAC: %s", sprint_hex(&data[1], 8));
     }
 
@@ -641,14 +649,15 @@ int CmdHFMFPWrbl(const char *cmd) {
     return 0;
 }
 
-int CmdHFMFPMAD(const char *cmd) {
+int CmdHFMFPMAD(const char *cmd)
+{
 
     CLIParserInit("hf mfp mad",
-        "Checks and prints Mifare Application Directory (MAD)",
-        "Usage:\n\thf mfp mad -> shows MAD if exists\n"
-            "\thf mfp mad -a 03e1 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data if exists\n");
+                  "Checks and prints Mifare Application Directory (MAD)",
+                  "Usage:\n\thf mfp mad -> shows MAD if exists\n"
+                  "\thf mfp mad -a 03e1 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data if exists\n");
 
-    void* argtable[] = {
+    void *argtable[] = {
         arg_param_begin,
         arg_lit0("vV",  "verbose",  "show technical data"),
         arg_str0("aA",  "aid",      "print all sectors with aid", NULL),
@@ -683,7 +692,7 @@ int CmdHFMFPMAD(const char *cmd) {
     }
 
     if (verbose) {
-        for(int i = 0; i < 4; i ++)
+        for (int i = 0; i < 4; i ++)
             PrintAndLogEx(NORMAL, "[%d] %s", i, sprint_hex(&sector0[i * 16], 16));
     }
 
@@ -726,7 +735,7 @@ int CmdHFMFPMAD(const char *cmd) {
                     return 2;
                 }
 
-                for(int j = 0; j < (verbose ? 4 : 3); j ++)
+                for (int j = 0; j < (verbose ? 4 : 3); j ++)
                     PrintAndLogEx(NORMAL, " [%03d] %s", (i + 1) * 4 + j, sprint_hex(&vsector[j * 16], 16));
             }
         }
@@ -735,14 +744,15 @@ int CmdHFMFPMAD(const char *cmd) {
     return 0;
 }
 
-int CmdHFMFPNDEF(const char *cmd) {
+int CmdHFMFPNDEF(const char *cmd)
+{
 
     CLIParserInit("hf mfp ndef",
-        "Prints NFC Data Exchange Format (NDEF)",
-        "Usage:\n\thf mfp ndef -> shows NDEF data\n"
-            "\thf mfp ndef -a 03e1 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data with custom AID and key\n");
+                  "Prints NFC Data Exchange Format (NDEF)",
+                  "Usage:\n\thf mfp ndef -> shows NDEF data\n"
+                  "\thf mfp ndef -a 03e1 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data with custom AID and key\n");
 
-    void* argtable[] = {
+    void *argtable[] = {
         arg_param_begin,
         arg_litn("vV",  "verbose",  0, 2, "show technical data"),
         arg_str0("aA",  "aid",      "replace default aid for NDEF", NULL),
@@ -839,29 +849,30 @@ int CmdHFMFPNDEF(const char *cmd) {
     return 0;
 }
 
-static command_t CommandTable[] =
-{
-  {"help",             CmdHelp,                 1, "This help"},
-  {"info",             CmdHFMFPInfo,            0, "Info about Mifare Plus tag"},
-  {"wrp",              CmdHFMFPWritePerso,      0, "Write Perso command"},
-  {"initp",            CmdHFMFPInitPerso,       0, "Fills all the card's keys"},
-  {"commitp",          CmdHFMFPCommitPerso,     0, "Move card to SL1 or SL3 mode"},
-  {"auth",             CmdHFMFPAuth,            0, "Authentication"},
-  {"rdbl",             CmdHFMFPRdbl,            0, "Read blocks"},
-  {"rdsc",             CmdHFMFPRdsc,            0, "Read sectors"},
-  {"wrbl",             CmdHFMFPWrbl,            0, "Write blocks"},
-  {"mad",              CmdHFMFPMAD,             0, "Checks and prints MAD"},
-  {"ndef",             CmdHFMFPNDEF,            0, "Prints NDEF records from card"},
-  {NULL,               NULL,                    0, NULL}
+static command_t CommandTable[] = {
+    {"help",             CmdHelp,                 1, "This help"},
+    {"info",             CmdHFMFPInfo,            0, "Info about Mifare Plus tag"},
+    {"wrp",              CmdHFMFPWritePerso,      0, "Write Perso command"},
+    {"initp",            CmdHFMFPInitPerso,       0, "Fills all the card's keys"},
+    {"commitp",          CmdHFMFPCommitPerso,     0, "Move card to SL1 or SL3 mode"},
+    {"auth",             CmdHFMFPAuth,            0, "Authentication"},
+    {"rdbl",             CmdHFMFPRdbl,            0, "Read blocks"},
+    {"rdsc",             CmdHFMFPRdsc,            0, "Read sectors"},
+    {"wrbl",             CmdHFMFPWrbl,            0, "Write blocks"},
+    {"mad",              CmdHFMFPMAD,             0, "Checks and prints MAD"},
+    {"ndef",             CmdHFMFPNDEF,            0, "Prints NDEF records from card"},
+    {NULL,               NULL,                    0, NULL}
 };
 
-int CmdHFMFP(const char *Cmd) {
-    (void)WaitForResponseTimeout(CMD_ACK,NULL,100);
+int CmdHFMFP(const char *Cmd)
+{
+    (void)WaitForResponseTimeout(CMD_ACK, NULL, 100);
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
-  CmdsHelp(CommandTable);
-  return 0;
+int CmdHelp(const char *Cmd)
+{
+    CmdsHelp(CommandTable);
+    return 0;
 }

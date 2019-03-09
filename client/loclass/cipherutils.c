@@ -46,35 +46,35 @@
  * @param stream
  * @return
  */
-bool headBit( BitstreamIn *stream)
+bool headBit(BitstreamIn *stream)
 {
     int bytepos = stream->position >> 3; // divide by 8
     int bitpos = (stream->position++) & 7; // mask out 00000111
-    return (*(stream->buffer + bytepos) >> (7-bitpos)) & 1;
+    return (*(stream->buffer + bytepos) >> (7 - bitpos)) & 1;
 }
 /**
  * @brief Return and remove the last bit (xn) in the stream: <x0 x1 x2 ... xn>
  * @param stream
  * @return
  */
-bool tailBit( BitstreamIn *stream)
+bool tailBit(BitstreamIn *stream)
 {
-    int bitpos = stream->numbits -1 - (stream->position++);
+    int bitpos = stream->numbits - 1 - (stream->position++);
 
-    int bytepos= bitpos >> 3;
+    int bytepos = bitpos >> 3;
     bitpos &= 7;
-    return (*(stream->buffer + bytepos) >> (7-bitpos)) & 1;
+    return (*(stream->buffer + bytepos) >> (7 - bitpos)) & 1;
 }
 /**
  * @brief Pushes bit onto the stream
  * @param stream
  * @param bit
  */
-void pushBit( BitstreamOut* stream, bool bit)
+void pushBit(BitstreamOut *stream, bool bit)
 {
     int bytepos = stream->position >> 3; // divide by 8
     int bitpos = stream->position & 7;
-    *(stream->buffer+bytepos) |= (bit & 1) <<  (7 - bitpos);
+    *(stream->buffer + bytepos) |= (bit & 1) << (7 - bitpos);
     stream->position++;
     stream->numbits++;
 }
@@ -85,7 +85,7 @@ void pushBit( BitstreamOut* stream, bool bit)
  * @param stream
  * @param bits
  */
-void push6bits( BitstreamOut* stream, uint8_t bits)
+void push6bits(BitstreamOut *stream, uint8_t bits)
 {
     pushBit(stream, bits & 0x20);
     pushBit(stream, bits & 0x10);
@@ -100,7 +100,7 @@ void push6bits( BitstreamOut* stream, uint8_t bits)
  * @param stream
  * @return number of bits left in stream
  */
-int bitsLeft( BitstreamIn *stream)
+int bitsLeft(BitstreamIn *stream)
 {
     return stream->numbits - stream->position;
 }
@@ -114,7 +114,7 @@ int numBits(BitstreamOut *stream)
     return stream->numbits;
 }
 
-void x_num_to_bytes(uint64_t n, size_t len, uint8_t* dest)
+void x_num_to_bytes(uint64_t n, size_t len, uint8_t *dest)
 {
     while (len--) {
         dest[len] = (uint8_t) n;
@@ -122,74 +122,75 @@ void x_num_to_bytes(uint64_t n, size_t len, uint8_t* dest)
     }
 }
 
-uint64_t x_bytes_to_num(uint8_t* src, size_t len)
+uint64_t x_bytes_to_num(uint8_t *src, size_t len)
 {
     uint64_t num = 0;
-    while (len--)
-    {
+    while (len--) {
         num = (num << 8) | (*src);
         src++;
     }
     return num;
 }
-uint8_t reversebytes(uint8_t b) {
+uint8_t reversebytes(uint8_t b)
+{
     b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
     b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
     b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
-   return b;
+    return b;
 }
-void reverse_arraybytes(uint8_t* arr, size_t len)
+void reverse_arraybytes(uint8_t *arr, size_t len)
 {
     uint8_t i;
-    for( i =0; i< len ; i++)
-    {
+    for (i = 0; i < len ; i++) {
         arr[i] = reversebytes(arr[i]);
     }
 }
-void reverse_arraycopy(uint8_t* arr, uint8_t* dest, size_t len)
+void reverse_arraycopy(uint8_t *arr, uint8_t *dest, size_t len)
 {
     uint8_t i;
-    for( i =0; i< len ; i++)
-    {
+    for (i = 0; i < len ; i++) {
         dest[i] = reversebytes(arr[i]);
     }
 }
 
-void printarr(char * name, uint8_t* arr, int len) {
+void printarr(char *name, uint8_t *arr, int len)
+{
     int cx, i;
-    size_t outsize = 40 + strlen(name) + len*5;
-    char* output = calloc(outsize, sizeof(char));
-    cx = snprintf(output,outsize, "uint8_t %s[] = {", name);
-    for (i=0; i < len; i++) {
-        cx += snprintf(output+cx,outsize-cx,"0x%02x,",*(arr+i));//5 bytes per byte
+    size_t outsize = 40 + strlen(name) + len * 5;
+    char *output = calloc(outsize, sizeof(char));
+    cx = snprintf(output, outsize, "uint8_t %s[] = {", name);
+    for (i = 0; i < len; i++) {
+        cx += snprintf(output + cx, outsize - cx, "0x%02x,", *(arr + i)); //5 bytes per byte
     }
-    cx += snprintf(output+cx,outsize-cx,"};");
+    cx += snprintf(output + cx, outsize - cx, "};");
     PrintAndLogDevice(NORMAL, output);
     free(output);
 }
 
-void printvar(char * name, uint8_t* arr, int len) {
+void printvar(char *name, uint8_t *arr, int len)
+{
     int cx, i;
-    size_t outsize = 40 + strlen(name) + len*2;
-    char* output = calloc(outsize, sizeof(char));
-    cx = snprintf(output,outsize,"%s = ", name);
-    for (i=0; i < len; i++) {
-        cx += snprintf(output+cx,outsize-cx,"%02x",*(arr+i));//2 bytes per byte
+    size_t outsize = 40 + strlen(name) + len * 2;
+    char *output = calloc(outsize, sizeof(char));
+    cx = snprintf(output, outsize, "%s = ", name);
+    for (i = 0; i < len; i++) {
+        cx += snprintf(output + cx, outsize - cx, "%02x", *(arr + i)); //2 bytes per byte
     }
 
     PrintAndLogDevice(NORMAL, output);
     free(output);
 }
 
-void printarr_human_readable(char * title, uint8_t* arr, int len) {
+void printarr_human_readable(char *title, uint8_t *arr, int len)
+{
     int cx, i;
-    size_t outsize = 100 + strlen(title) + len*4;
-    char* output = calloc(outsize, sizeof(char));
-    cx = snprintf(output,outsize,  "\n\t%s\n", title);
-    for (i=0;  i < len; i++) {
+    size_t outsize = 100 + strlen(title) + len * 4;
+    char *output = calloc(outsize, sizeof(char));
+    cx = snprintf(output, outsize,  "\n\t%s\n", title);
+    for (i = 0;  i < len; i++) {
         if (i % 16 == 0)
-            cx += snprintf(output+cx,outsize-cx,"\n%02x| ", i );
-        cx += snprintf(output+cx,outsize-cx, "%02x ",*(arr+i));
+            cx += snprintf(output + cx, outsize - cx, "\n%02x| ", i);
+        cx += snprintf(output + cx, outsize - cx, "%02x ", *(arr + i));
     }
     PrintAndLogDevice(NORMAL, output);
     free(output);
@@ -202,24 +203,23 @@ void printarr_human_readable(char * title, uint8_t* arr, int len) {
 #ifndef ON_DEVICE
 int testBitStream()
 {
-    uint8_t input [] = {0xDE,0xAD,0xBE,0xEF,0xDE,0xAD,0xBE,0xEF};
-    uint8_t output [] = {0,0,0,0,0,0,0,0};
-    BitstreamIn in = { input, sizeof(input) * 8,0};
-    BitstreamOut out = { output, 0,0}
-                      ;
+    uint8_t input [] = {0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF};
+    uint8_t output [] = {0, 0, 0, 0, 0, 0, 0, 0};
+    BitstreamIn in = { input, sizeof(input) * 8, 0};
+    BitstreamOut out = { output, 0, 0}
+                       ;
     while (bitsLeft(&in) > 0) {
         pushBit(&out, headBit(&in));
         //printf("Bits left: %d\n", bitsLeft(&in));
         //printf("Bits out: %d\n", numBits(&out));
     }
 
-    if(memcmp(input, output, sizeof(input)) == 0) {
+    if (memcmp(input, output, sizeof(input)) == 0) {
         PrintAndLogDevice(SUCCESS, "    Bitstream test 1 ok");
     } else {
         PrintAndLogDevice(FAILED, "    Bitstream test 1 failed");
         uint8_t i;
-        for(i = 0 ; i < sizeof(input) ; i++)
-        {
+        for (i = 0 ; i < sizeof(input) ; i++) {
             PrintAndLogDevice(NORMAL, "    IN %02x, OUT %02x", input[i], output[i]);
         }
         return 1;
@@ -229,13 +229,13 @@ int testBitStream()
 
 int testReversedBitstream()
 {
-    uint8_t input [] = {0xDE,0xAD,0xBE,0xEF,0xDE,0xAD,0xBE,0xEF};
-    uint8_t reverse [] = {0,0,0,0,0,0,0,0};
-    uint8_t output [] = {0,0,0,0,0,0,0,0};
-    BitstreamIn in = { input, sizeof(input) * 8,0};
-    BitstreamOut out = { output, 0,0};
-    BitstreamIn reversed_in = { reverse, sizeof(input)*8,0};
-    BitstreamOut reversed_out = { reverse,0 ,0};
+    uint8_t input [] = {0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF};
+    uint8_t reverse [] = {0, 0, 0, 0, 0, 0, 0, 0};
+    uint8_t output [] = {0, 0, 0, 0, 0, 0, 0, 0};
+    BitstreamIn in = { input, sizeof(input) * 8, 0};
+    BitstreamOut out = { output, 0, 0};
+    BitstreamIn reversed_in = { reverse, sizeof(input) * 8, 0};
+    BitstreamOut reversed_out = { reverse, 0, 0};
 
     while (bitsLeft(&in) > 0) {
         pushBit(&reversed_out, tailBit(&in));
@@ -251,7 +251,7 @@ int testReversedBitstream()
         PrintAndLogDevice(FAILED, "    Bitstream test 2 failed");
         uint8_t i;
         for (i = 0 ; i < sizeof(input) ; i++) {
-            PrintAndLogDevice(NORMAL, "    IN %02x, MIDDLE: %02x, OUT %02x", input[i],reverse[i], output[i]);
+            PrintAndLogDevice(NORMAL, "    IN %02x, MIDDLE: %02x, OUT %02x", input[i], reverse[i], output[i]);
         }
         return 1;
     }

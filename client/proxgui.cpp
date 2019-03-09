@@ -23,7 +23,8 @@ WorkerThread::~WorkerThread()
 {
 }
 
-void WorkerThread::run() {
+void WorkerThread::run()
+{
     main_loop(script_cmds_file, script_cmd, usb_present);
 }
 

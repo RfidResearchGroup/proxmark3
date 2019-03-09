@@ -34,15 +34,15 @@ struct tlvdb *emv_pki_recover_idn(const struct emv_pk *pk, const struct tlvdb *d
 struct tlvdb *emv_pki_recover_idn_ex(const struct emv_pk *pk, const struct tlvdb *db, const struct tlv *dyn_tlv, bool showData);
 struct tlvdb *emv_pki_recover_atc_ex(const struct emv_pk *enc_pk, const struct tlvdb *db, bool showData);
 struct tlvdb *emv_pki_perform_cda(const struct emv_pk *enc_pk, const struct tlvdb *db,
-        const struct tlvdb *this_db,
-        const struct tlv *pdol_data_tlv,
-        const struct tlv *crm1_tlv,
-        const struct tlv *crm2_tlv);
+                                  const struct tlvdb *this_db,
+                                  const struct tlv *pdol_data_tlv,
+                                  const struct tlv *crm1_tlv,
+                                  const struct tlv *crm2_tlv);
 struct tlvdb *emv_pki_perform_cda_ex(const struct emv_pk *enc_pk, const struct tlvdb *db,
-        const struct tlvdb *this_db,
-        const struct tlv *pdol_data_tlv,
-        const struct tlv *crm1_tlv,
-        const struct tlv *crm2_tlv,
-        bool showData);
+                                     const struct tlvdb *this_db,
+                                     const struct tlv *pdol_data_tlv,
+                                     const struct tlv *crm1_tlv,
+                                     const struct tlv *crm2_tlv,
+                                     bool showData);
 
 #endif
