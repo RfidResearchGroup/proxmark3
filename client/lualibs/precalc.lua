@@ -1,5 +1,5 @@
 --[[
-	This is an experimental lib. 
+    This is an experimental lib.
 --]]
 local utils = require('utils')
 
@@ -35,60 +35,60 @@ shifts[9]= { 0xD, 0xB, 0x0, 0x6, 0x6, 0x0, 0xB, 0xD, 0xA, 0xC, 0x7, 0x1, 0x1, 0x
 shifts[10]= { 0xe, 0x1, 0x1, 0xe, 0x1, 0xe, 0xe, 0x1, 0x1, 0xe, 0xe, 0x1, 0xe, 0x1, 0x1, 0xe }
 
 local function ApplyPermutationAndShifts( pos, value, nibble)
-	local shiftbytes = shifts[pos]
-	local shiftElem = shiftbytes[nibble+1] --one indexed
-	local shiftOne = shiftbytes[1]
-	local rs = bit32.bxor(value, shiftOne, shiftElem)
-	return rs
+    local shiftbytes = shifts[pos]
+    local shiftElem = shiftbytes[nibble+1] --one indexed
+    local shiftOne = shiftbytes[1]
+    local rs = bit32.bxor(value, shiftOne, shiftElem)
+    return rs
 end
 
 local function GetOne( uid, block )
 
-	if uid == nil then return nil, 'empty uid string' end
-	if #uid == 0 then return nil, 'empty uid string' end
-	if #uid ~= 8 then return nil, 'uid wrong length. Should be 4 hex bytes' end
-	if type(block) ~= 'number' then return nil, 'block is not number' end
-	if  block > 16 or block < 0 then return nil, 'block is out-of-range' end
-	
-	local s = ('%s%02X'):format(uid,block)
-	local nibble1 = tonumber(s:sub(1,1),16) + 1
+    if uid == nil then return nil, 'empty uid string' end
+    if #uid == 0 then return nil, 'empty uid string' end
+    if #uid ~= 8 then return nil, 'uid wrong length. Should be 4 hex bytes' end
+    if type(block) ~= 'number' then return nil, 'block is not number' end
+    if  block > 16 or block < 0 then return nil, 'block is out-of-range' end
 
-	local permuted = ''
-	for i = 1, #s do		
-		local el_row = shifts[i]
-		local el_value = el_row[nibble1] 
-		j = 1
-		while j <= i do
-			if  i-j > 0 then 
-				local nibble = tonumber(s:sub(j+1,j+1),16) 
-				el_value = ApplyPermutationAndShifts(i-j, el_value, nibble)
-			end
-			j = j+1
-		end 
-		permuted =('%s%X'):format(permuted,el_value)
-	end	
+    local s = ('%s%02X'):format(uid,block)
+    local nibble1 = tonumber(s:sub(1,1),16) + 1
 
-	permuted = 'C2'..permuted
-	local crc64numStr = utils.Crc64(permuted)
-	local keybytes = utils.ConvertAsciiToBytes(crc64numStr, true)
-	local key = utils.ConvertBytesToHex(keybytes) 
-	return key:sub(1,12)
+    local permuted = ''
+    for i = 1, #s do
+        local el_row = shifts[i]
+        local el_value = el_row[nibble1]
+        j = 1
+        while j <= i do
+            if  i-j > 0 then
+                local nibble = tonumber(s:sub(j+1,j+1),16)
+                el_value = ApplyPermutationAndShifts(i-j, el_value, nibble)
+            end
+            j = j+1
+        end
+        permuted =('%s%X'):format(permuted,el_value)
+    end
+
+    permuted = 'C2'..permuted
+    local crc64numStr = utils.Crc64(permuted)
+    local keybytes = utils.ConvertAsciiToBytes(crc64numStr, true)
+    local key = utils.ConvertBytesToHex(keybytes)
+    return key:sub(1,12)
 end
 
-local PreCalc = 
+local PreCalc =
 {
-	GetAll = function(id)
-		if id == nil then return nil, 'empty string' end
-		if #id == 0 then return nil, 'empty string' end
-		if #id ~= 8 then return nil, 'wrong length. Should be 4 hex bytes' end
-		
-		local list = '4b0b20107ccb'
-		for i = 1,15 do
-			local key, err  = GetOne(id,i)
-			if not key then return oops(err) end
-			list = list..key
-		end
-		return list
-	end,
+    GetAll = function(id)
+        if id == nil then return nil, 'empty string' end
+        if #id == 0 then return nil, 'empty string' end
+        if #id ~= 8 then return nil, 'wrong length. Should be 4 hex bytes' end
+
+        local list = '4b0b20107ccb'
+        for i = 1,15 do
+            local key, err  = GetOne(id,i)
+            if not key then return oops(err) end
+            list = list..key
+        end
+        return list
+    end,
 }
 return PreCalc

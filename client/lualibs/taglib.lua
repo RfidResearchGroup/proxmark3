@@ -109,16 +109,16 @@ m[0x6B]='ISSM France'
 m[0x6C]='Wisesec Ltd Israel'
 m[0x7C]='DB HiTek Co Ltd Korea'
 m[0x7D]='SATO Vicinity Australia'
-m[0x7E]='Holtek Taiwan'	
+m[0x7E]='Holtek Taiwan'
 
 return {
-	lookupManufacturer = function (value)
-		if type(value) == 'string' then
-			local v = tonumber(value, 16)
-			print(string.format("WARNING: lookupManufacturer expects numeric value, converted %s into %x", value,v))
-			value = v
-		end
+    lookupManufacturer = function (value)
+        if type(value) == 'string' then
+            local v = tonumber(value, 16)
+            print(string.format("WARNING: lookupManufacturer expects numeric value, converted %s into %x", value,v))
+            value = v
+        end
 
-		return m[value] or "no tag-info available"
-	end,
+        return m[value] or "no tag-info available"
+    end,
 }

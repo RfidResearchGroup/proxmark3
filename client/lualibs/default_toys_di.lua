@@ -1,5 +1,5 @@
-    --[[ 
-		decimal, di edition, model name
+    --[[
+        decimal, di edition, model name
     --]]
 local _names = {
 {"1000001","1","Mr. Incredible"},
@@ -319,8 +319,8 @@ local _names = {
 {"4000226","3","?? unknown ??"},
 {"4000227","3","?? unknown ??"},
 {"4000229","3","Quad Jumper"},
---[[ 
-	these below are Portals. Not to be used for tags.
+--[[
+    these below are Portals. Not to be used for tags.
 --]]
 {"8032384","0","Infinity Base - 3DS"},
 {"8032385","0","Infinity Base - Xbox"},
@@ -332,21 +332,21 @@ local _names = {
 local function find( main )
     main = main:lower()
     for k, v in pairs(_names) do
-		if ( v[1]:lower() == main ) then
-			return v
-		end
-	end
-	return nil
+        if ( v[1]:lower() == main ) then
+            return v
+        end
+    end
+    return nil
 end
 local function list()
-	print ("Type\tEdition\t Model name")
-	print (string.rep('=', 54))
+    print ("Type\tEdition\t Model name")
+    print (string.rep('=', 54))
     for k, v in pairs(_names) do
-		print(("%s\t%s\t%s"):format(v[1],v[2],v[3] ))
-	end 
+        print(("%s\t%s\t%s"):format(v[1],v[2],v[3] ))
+    end
 end
 
 return {
-	Find = find,
-	List = list,
+    Find = find,
+    List = list,
 }
