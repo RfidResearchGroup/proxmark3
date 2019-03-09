@@ -82,7 +82,7 @@ extern uint32_t FLASHMEM_SPIBAUDRATE;
 # define FLASH_MEM_SIGNATURE_OFFSET	(FLASH_MEM_MAX_SIZE - FLASH_MEM_SIGNATURE_LEN)
 #endif
 
-#if WITH_FLASH
+#ifdef WITH_FLASH
 	#ifndef T55XX_CONFIG_LEN
 	# define T55XX_CONFIG_LEN	sizeof( t55xx_config )
 	#endif
