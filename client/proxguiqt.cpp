@@ -58,11 +58,11 @@ void ProxGuiQT::_ShowGraphWindow(void) {
 		return;
 
 	if (!plotwidget) {
-		
+
 #if defined(__MACH__) && defined(__APPLE__)
 		makeFocusable();
-#endif	
-	
+#endif
+
 		plotwidget = new ProxWidget();
 	}
 	plotwidget->show();
@@ -114,7 +114,7 @@ void ProxGuiQT::MainLoop()
 	makeUnfocusable();
 #endif
 
-	
+
 	plotapp->exec();
 }
 
@@ -248,7 +248,7 @@ int Plot::xCoordOf(int i, QRect r ) {
 }
 
 int Plot::yCoordOf(int v, QRect r, int maxVal) {
-	int z = (r.bottom() - r.top()) / 2;	
+	int z = (r.bottom() - r.top()) / 2;
 	if ( maxVal == 0 ) ++maxVal;
 	return -(z * v) / maxVal + z;
 }
@@ -427,10 +427,10 @@ void Plot::PlotGraph(int *buffer, int len, QRect plotRect, QRect annotationRect,
 }
 
 void Plot::plotGridLines(QPainter* painter, QRect r) {
-		
+
 	// set GridOffset
 	if (PlotGridX <= 0) return;
-	
+
 	int offset = GridOffset;
 	if (GridLocked && PlotGridX) {
 		offset = GridOffset + PlotGridX - (GraphStart % PlotGridX);
@@ -447,9 +447,9 @@ void Plot::plotGridLines(QPainter* painter, QRect r) {
 	if ((PlotGridX > 0) && ((PlotGridX * GraphPixelsPerPoint) > 1)) {
 		for (i = (offset * GraphPixelsPerPoint); i < r.right(); i += grid_delta_x) {
 			painter->drawLine(r.left()+i, r.top(), r.left()+i, r.bottom());
-		} 
+		}
 	}
-	
+
 	if (PlotGridY > 0) {
 		for (i = 0; yCoordOf(i, r, g_absVMax) > r.top(); i += grid_delta_y) {
 			// line above mid
@@ -565,7 +565,7 @@ Plot::Plot(QWidget *parent) : QWidget(parent), GraphStart(0), GraphPixelsPerPoin
 	CursorBPos = 0;
 
 	setWindowTitle(tr("Sliders"));
-	
+
 	master = parent;
 }
 
@@ -605,7 +605,7 @@ void Plot::keyPressEvent(QKeyEvent *event)
 		else
 			offset = (int)(20 / GraphPixelsPerPoint);
 	}
-	
+
 	switch(event->key()) {
 		case Qt::Key_Down:
 			if (GraphPixelsPerPoint <= 50) {
@@ -635,7 +635,7 @@ void Plot::keyPressEvent(QKeyEvent *event)
 			}
 			break;
 
-		case Qt::Key_G:		
+		case Qt::Key_G:
 			if (PlotGridX || PlotGridY) {
 				PlotGridX = 0;
 				PlotGridY = 0;
@@ -644,7 +644,7 @@ void Plot::keyPressEvent(QKeyEvent *event)
 					PlotGridXdefault = 64;
 				if ( PlotGridYdefault < 0 )
 					PlotGridYdefault = 0;
-				
+
 				PlotGridX = PlotGridXdefault;
 				PlotGridY = PlotGridYdefault;
 			}
@@ -663,7 +663,7 @@ void Plot::keyPressEvent(QKeyEvent *event)
 			puts("\tL                        Toggle lock grid relative to samples");
 			puts("\tQ                        Hide window");
 			puts("\tLEFT                     Move left");
-			puts("\t<CTLR> LEFT              Move left 1 sample");	
+			puts("\t<CTLR> LEFT              Move left 1 sample");
 			puts("\t<SHIFT> LEFT             Page left");
 			puts("\tLEFT MOUSE CLICK         Set yellow cursor");
 			puts("\tRIGHT                    Move right");

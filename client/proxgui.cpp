@@ -19,7 +19,7 @@ WorkerThread::WorkerThread(char *script_cmds_file, char *script_cmd, bool usb_pr
 {
 }
 
-WorkerThread::~WorkerThread() 
+WorkerThread::~WorkerThread()
 {
 }
 
