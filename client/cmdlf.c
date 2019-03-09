@@ -912,9 +912,9 @@ int CmdLFfind(const char *Cmd) {
 	if (CmdSecurakeyDemod(""))	{ PrintAndLogEx(SUCCESS, "\nValid Securakey ID Found!"); goto out;}
 	if (CmdVikingDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid Viking ID Found!"); goto out;}
 	if (CmdVisa2kDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid Visa2000 ID Found!"); goto out;}
-
+    if (CmdTIDemod(""))     	{ PrintAndLogEx(SUCCESS, "\nValid Texas Instrument ID Found!"); goto out;}
 	//if (CmdFermaxDemod(""))		{ PrintAndLogEx(SUCCESS, "\nValid Fermax ID Found!"); goto out;}
-	// TIdemod?  flexdemod?
+	// flexdemod?
 
 	PrintAndLogEx(FAILED, "\nNo known 125/134 KHz tags Found!\n");
 

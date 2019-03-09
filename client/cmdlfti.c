@@ -21,8 +21,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int CmdTIDemod(const char *Cmd)
-{
+int CmdTIDemod(const char *Cmd) {
   /* MATLAB as follows:
     f_s = 2000000;  % sampling frequency
     f_l = 123200;   % low FSK tone
@@ -77,14 +76,18 @@ int CmdTIDemod(const char *Cmd)
     1, 1, 1, 1, 1, 1, 1,      -1, -1, -1, -1, -1, -1, -1,
     1, 1, 1, 1, 1, 1, 1, 1
   };
-	int lowLen = sizeof(LowTone) / sizeof(int);
-	int highLen = sizeof(HighTone) / sizeof(int);
-	int convLen = (highLen > lowLen) ? highLen : lowLen;
-	uint16_t crc;
-	int i, j, TagType;
-	int lowSum = 0, highSum = 0;;
-	int lowTot = 0, highTot = 0;
 
+    save_restoreGB(GRAPH_SAVE);
+
+    int lowLen = sizeof(LowTone) / sizeof(int);
+    int highLen = sizeof(HighTone) / sizeof(int);
+    int convLen = (highLen > lowLen) ? highLen : lowLen;
+    uint16_t crc;
+    int i, j, TagType;
+    int lowSum = 0, highSum = 0;;
+    int lowTot = 0, highTot = 0;
+    int retval = 0;     
+    
 	for (i = 0; i < GraphTraceLen - convLen; i++) {
 		lowSum = 0;
 		highSum = 0;;
@@ -95,10 +98,10 @@ int CmdTIDemod(const char *Cmd)
 		for (j = 0; j < highLen; j++) {
 			highSum += HighTone[j] * GraphBuffer[i+j];
 		}
-		lowSum = abs((100*lowSum) / lowLen);
-		highSum = abs((100*highSum) / highLen);
-		lowSum = (lowSum<0) ? -lowSum : lowSum;
-		highSum = (highSum<0) ? -highSum : highSum;
+		lowSum = abs((100 * lowSum) / lowLen);
+		highSum = abs((100 * highSum) / highLen);
+		lowSum = (lowSum < 0) ? -lowSum : lowSum;
+		highSum = (highSum < 0) ? -highSum : highSum;
 
 		GraphBuffer[i] = (highSum << 16) | lowSum;
 	}
@@ -157,17 +160,16 @@ int CmdTIDemod(const char *Cmd)
 	GraphBuffer[maxPos+1] = -800;
 
 	// advance pointer to start of actual data stream (after 16 pre and 8 start bits)
-	maxPos += 17*lowLen;
-	maxPos += 6*highLen;
+	maxPos += 17 * lowLen;
+	maxPos +=  6 * highLen;
 
 	// place a marker in the buffer to visually aid location
 	// of the end of sync
 	GraphBuffer[maxPos] = 800;
 	GraphBuffer[maxPos+1] = -800;
 
-	PrintAndLogEx(NORMAL, "actual data bits start at sample %d", maxPos);
-
-	PrintAndLogEx(NORMAL, "length %d/%d", highLen, lowLen);
+	PrintAndLogEx(DEBUG, "actual data bits start at sample %d", maxPos);
+	PrintAndLogEx(DEBUG, "length %d/%d", highLen, lowLen);
 
 	uint8_t bits[1+64+16+8+16];
 	bits[sizeof(bits)-1] = '\0';
@@ -208,67 +210,75 @@ int CmdTIDemod(const char *Cmd)
 
 	RepaintGraphWindow();
 
-	PrintAndLogEx(INFO, "INFO: raw tag bits = %s", bits);
+	PrintAndLogEx(INFO, "raw tag bits = %s", bits);
 
-	TagType = (shift3>>8)&0xff;
-	if ( TagType != ((shift0>>16)&0xff) ) {
+	TagType = (shift3 >> 8) & 0xFF;
+	if ( TagType != ((shift0 >> 16) & 0xFF) ) {
 		PrintAndLogEx(WARNING, "Error: start and stop bits do not match!");
-		return 0;
+        goto out;
 	}
-	else if (TagType == 0x7e) {
-		PrintAndLogEx(INFO, "INFO: Readonly TI tag detected.");
-		return 0;
+	else if (TagType == 0x7E) {
+		PrintAndLogEx(INFO, "Readonly TI tag detected.");
+		retval = 1;
+        goto out;
 	}
-	else if (TagType == 0xfe) {
-		PrintAndLogEx(INFO, "INFO: Rewriteable TI tag detected.");
+	else if (TagType == 0xFE) {
+		PrintAndLogEx(INFO, "Rewriteable TI tag detected.");
 
 		// put 64 bit data into shift1 and shift0
-		shift0 = (shift0>>24) | (shift1 << 8);
-		shift1 = (shift1>>24) | (shift2 << 8);
+		shift0 = (shift0 >> 24) | (shift1 << 8);
+		shift1 = (shift1 >> 24) | (shift2 << 8);
 
 		// align 16 bit crc into lower half of shift2
-		shift2 = ((shift2>>24) | (shift3 << 8)) & 0x0ffff;
+		shift2 = ((shift2 >> 24) | (shift3 << 8)) & 0x0FFFF;
 
 		// align 16 bit "end bits" or "ident" into lower half of shift3
 		shift3 >>= 16;
 
 		// only 15 bits compare, last bit of ident is not valid
-		if ( (shift3^shift0)&0x7fff ) {
+		if ( (shift3 ^ shift0) & 0x7FFF ) {
 		  PrintAndLogEx(WARNING, "Error: Ident mismatch!");
 		}
 		// WARNING the order of the bytes in which we calc crc below needs checking
 		// i'm 99% sure the crc algorithm is correct, but it may need to eat the
 		// bytes in reverse or something
 		// calculate CRC
-		crc=0;
-		crc = update_crc16(crc, (shift0)&0xff);
-		crc = update_crc16(crc, (shift0>>8)&0xff);
-		crc = update_crc16(crc, (shift0>>16)&0xff);
-		crc = update_crc16(crc, (shift0>>24)&0xff);
-		crc = update_crc16(crc, (shift1)&0xff);
-		crc = update_crc16(crc, (shift1>>8)&0xff);
-		crc = update_crc16(crc, (shift1>>16)&0xff);
-		crc = update_crc16(crc, (shift1>>24)&0xff);
+		crc = 0;
+		crc = update_crc16(crc, (shift0 >>  0) & 0xFF);
+		crc = update_crc16(crc, (shift0 >>  8) & 0xFF);
+		crc = update_crc16(crc, (shift0 >> 16) & 0xFF);
+		crc = update_crc16(crc, (shift0 >> 24) & 0xFF);
+        
+		crc = update_crc16(crc, (shift1 >>  0) & 0xFF);
+		crc = update_crc16(crc, (shift1 >>  8) & 0xFF);
+		crc = update_crc16(crc, (shift1 >> 16) & 0xFF);
+		crc = update_crc16(crc, (shift1 >> 24) & 0xFF);
 
 		//crc =  crc16_ccitt(message, sizeof(message);
 
-		char *crcStr = (crc == (shift2&0xffff) ) ? "Passed" : "Failed";
+		char *crcStr = (crc == (shift2 & 0xFFFF) ) ? "Passed" : "Failed";
 
-		PrintAndLogEx(NORMAL, "Tag data = %08X%08X  [Crc %04X %s]", shift1, shift0, crc, crcStr );
+		PrintAndLogEx(INFO, "Tag data = %08X%08X  [Crc %04X %s]", shift1, shift0, crc, crcStr );
 
-		if (crc != (shift2&0xffff))
-			PrintAndLogEx(WARNING, "Error: CRC mismatch, calculated %04X, got %04X", crc, shift2&0xffff);
-
+		if (crc != (shift2 & 0xFFFF))
+			PrintAndLogEx(WARNING, "Error: CRC mismatch, calculated %04X, got %04X", crc, shift2 & 0xFFFF);
+        
+        retval = 1;
+        goto out;
 	}
 	else {
 		PrintAndLogEx(WARNING, "Unknown tag type.");
 	}
-	return 0;
+    
+out:
+    if ( retval == 0)
+        save_restoreGB(GRAPH_RESTORE);
+    
+	return retval;
 }
 
 // read a TI tag and return its ID
-int CmdTIRead(const char *Cmd)
-{
+int CmdTIRead(const char *Cmd) {
 	UsbCommand c = {CMD_READ_TI_TYPE};
 	clearCommandBuffer();
 	SendCommand(&c);
@@ -276,15 +286,16 @@ int CmdTIRead(const char *Cmd)
 }
 
 // write new data to a r/w TI tag
-int CmdTIWrite(const char *Cmd)
-{
+int CmdTIWrite(const char *Cmd) {
 	int res = 0;
 	UsbCommand c = {CMD_WRITE_TI_TYPE};
 	res = sscanf(Cmd, "%012" SCNx64 " %012" SCNx64 " %012" SCNx64 "", &c.arg[0], &c.arg[1], &c.arg[2]);
 
-	if (res == 2) c.arg[2]=0;
+	if (res == 2) 
+        c.arg[2] = 0;
+    
 	if (res < 2) {
-		PrintAndLogEx(NORMAL, "Please specify the data as two hex strings, optionally the CRC as a third");
+		PrintAndLogEx(WARNING, "Please specify the data as two hex strings, optionally the CRC as a third");
 		return 1;
 	}
 	clearCommandBuffer();
@@ -293,20 +304,20 @@ int CmdTIWrite(const char *Cmd)
 }
 
 static command_t CommandTable[] = {
-  {"help",      CmdHelp,        1, "This help"},
-  {"demod",     CmdTIDemod,     1, "Demodulate raw bits for TI-type LF tag from the GraphBuffer"},
-  {"read",      CmdTIRead,      0, "Read and decode a TI 134 kHz tag"},
-  {"write",     CmdTIWrite,     0, "Write new data to a r/w TI 134 kHz tag"},
-  {NULL, NULL, 0, NULL}
+    {"help",      CmdHelp,        1, "This help"},
+    {"demod",     CmdTIDemod,     1, "Demodulate raw bits for TI-type LF tag from the GraphBuffer"},
+    {"read",      CmdTIRead,      0, "Read and decode a TI 134 kHz tag"},
+    {"write",     CmdTIWrite,     0, "Write new data to a r/w TI 134 kHz tag"},
+    {NULL, NULL, 0, NULL}
 };
 
 int CmdLFTI(const char *Cmd){
-	clearCommandBuffer();
-	CmdsParse(CommandTable, Cmd);
-	return 0;
+    clearCommandBuffer();
+    CmdsParse(CommandTable, Cmd);
+    return 0;
 }
 
 int CmdHelp(const char *Cmd){
-	CmdsHelp(CommandTable);
-	return 0;
+    CmdsHelp(CommandTable);
+    return 0;
 }
