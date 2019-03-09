@@ -154,7 +154,7 @@ int CmdVisa2kDemod(const char *Cmd) {
 
 // 64*96*2=12288 samples just in case we just missed the first preamble we can still catch 2 of them
 int CmdVisa2kRead(const char *Cmd) {
-	lf_read(true, 14000);
+	lf_read(true, 20000);
 	return CmdVisa2kDemod(Cmd);
 }
 
