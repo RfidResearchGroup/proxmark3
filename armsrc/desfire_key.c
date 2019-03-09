@@ -38,12 +38,12 @@ void Desfire_des_key_new (const uint8_t value[8], desfirekey_t key) {
 }
 
 void Desfire_des_key_new_with_version (const uint8_t value[8], desfirekey_t key) {
-	if ( key != NULL) {
-		key->type = T_DES;
-		memcpy (key->data, value, 8);
-		memcpy (key->data+8, value, 8);
-		update_key_schedules (key);
-	}
+    if ( key != NULL) {
+        key->type = T_DES;
+        memcpy (key->data, value, 8);
+        memcpy (key->data+8, value, 8);
+        update_key_schedules (key);
+    }
 }
 
 void Desfire_3des_key_new (const uint8_t value[16], desfirekey_t key) {
@@ -58,11 +58,11 @@ void Desfire_3des_key_new (const uint8_t value[16], desfirekey_t key) {
 
 void Desfire_3des_key_new_with_version (const uint8_t value[16], desfirekey_t key) {
     if ( key != NULL ){
-		key->type = T_3DES;
-		memcpy (key->data, value, 16);
-		memcpy (key->data + 16, value, 8);
-		update_key_schedules (key);
-	}
+        key->type = T_3DES;
+        memcpy (key->data, value, 16);
+        memcpy (key->data + 16, value, 8);
+        update_key_schedules (key);
+    }
 }
 
 void Desfire_3k3des_key_new (const uint8_t value[24], desfirekey_t key) {
@@ -74,11 +74,11 @@ void Desfire_3k3des_key_new (const uint8_t value[24], desfirekey_t key) {
 }
 
 void Desfire_3k3des_key_new_with_version (const uint8_t value[24], desfirekey_t key) {
-	if ( key != NULL){
-		key->type = T_3K3DES;
-		memcpy (key->data, value, 24);
-		update_key_schedules (key);
-	}
+    if ( key != NULL){
+        key->type = T_3K3DES;
+        memcpy (key->data, value, 24);
+        update_key_schedules (key);
+    }
 }
 
  void Desfire_aes_key_new (const uint8_t value[16], desfirekey_t key) {
@@ -87,11 +87,11 @@ void Desfire_3k3des_key_new_with_version (const uint8_t value[24], desfirekey_t 
 
  void Desfire_aes_key_new_with_version (const uint8_t value[16], uint8_t version, desfirekey_t key) {
 
-	if (key != NULL) {
-		memcpy (key->data, value, 16);
-		key->type = T_AES;
-		key->aes_version = version;
-	}
+    if (key != NULL) {
+        memcpy (key->data, value, 16);
+        key->type = T_AES;
+        key->aes_version = version;
+    }
 }
 
 uint8_t Desfire_key_get_version (desfirekey_t key) {

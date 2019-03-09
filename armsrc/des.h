@@ -17,11 +17,11 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 /**
- * \file	des.h
- * \author	Daniel Otte
- * \date	2007-06-16
- * \brief 	des and tdes declarations
- * \license	GPLv3 or later
+ * \file    des.h
+ * \author  Daniel Otte
+ * \date    2007-06-16
+ * \brief   des and tdes declarations
+ * \license GPLv3 or later
  *
  */
 #ifndef __DES_H_

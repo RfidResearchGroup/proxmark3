@@ -31,66 +31,66 @@ extern "C" {
 #include "mifare.h"  // structs
 
 typedef struct {
-	enum {
-		DEMOD_UNSYNCD,
-		// DEMOD_HALF_SYNCD,
-		// DEMOD_MOD_FIRST_HALF,
-		// DEMOD_NOMOD_FIRST_HALF,
-		DEMOD_MANCHESTER_DATA
-	} state;
-	uint16_t twoBits;
-	uint16_t highCnt;
-	uint16_t bitCount;
-	uint16_t collisionPos;
-	uint16_t syncBit;
-	uint8_t  parityBits;
-	uint8_t  parityLen;
-	uint16_t shiftReg;
-	uint16_t samples;
-	uint16_t len;
-	uint32_t startTime, endTime;
-	uint8_t  *output;
-	uint8_t  *parity;
+    enum {
+        DEMOD_UNSYNCD,
+        // DEMOD_HALF_SYNCD,
+        // DEMOD_MOD_FIRST_HALF,
+        // DEMOD_NOMOD_FIRST_HALF,
+        DEMOD_MANCHESTER_DATA
+    } state;
+    uint16_t twoBits;
+    uint16_t highCnt;
+    uint16_t bitCount;
+    uint16_t collisionPos;
+    uint16_t syncBit;
+    uint8_t  parityBits;
+    uint8_t  parityLen;
+    uint16_t shiftReg;
+    uint16_t samples;
+    uint16_t len;
+    uint32_t startTime, endTime;
+    uint8_t  *output;
+    uint8_t  *parity;
 } tDemod;
 /*
 typedef enum {
-	MOD_NOMOD = 0,
-	MOD_SECOND_HALF,
-	MOD_FIRST_HALF,
-	MOD_BOTH_HALVES
-	} Modulation_t;
+    MOD_NOMOD = 0,
+    MOD_SECOND_HALF,
+    MOD_FIRST_HALF,
+    MOD_BOTH_HALVES
+    } Modulation_t;
 */
 
 typedef struct {
-	enum {
-		STATE_UNSYNCD,
-		STATE_START_OF_COMMUNICATION,
-		STATE_MILLER_X,
-		STATE_MILLER_Y,
-		STATE_MILLER_Z,
-		// DROP_NONE,
-		// DROP_FIRST_HALF,
-		} state;
-	uint16_t shiftReg;
-	int16_t	 bitCount;
-	uint16_t len;
-	//uint16_t byteCntMax;
-	uint16_t posCnt;
-	uint16_t syncBit;
-	uint8_t  parityBits;
-	uint8_t  parityLen;
-	uint32_t fourBits;
-	uint32_t startTime, endTime;
+    enum {
+        STATE_UNSYNCD,
+        STATE_START_OF_COMMUNICATION,
+        STATE_MILLER_X,
+        STATE_MILLER_Y,
+        STATE_MILLER_Z,
+        // DROP_NONE,
+        // DROP_FIRST_HALF,
+        } state;
+    uint16_t shiftReg;
+    int16_t bitCount;
+    uint16_t len;
+    //uint16_t byteCntMax;
+    uint16_t posCnt;
+    uint16_t syncBit;
+    uint8_t  parityBits;
+    uint8_t  parityLen;
+    uint32_t fourBits;
+    uint32_t startTime, endTime;
     uint8_t *output;
-	uint8_t *parity;
+    uint8_t *parity;
 } tUart;
 
 #ifndef AddCrc14A
-# define	AddCrc14A(data, len)	compute_crc(CRC_14443_A, (data), (len), (data)+(len), (data)+(len)+1)
+# define AddCrc14A(data, len) compute_crc(CRC_14443_A, (data), (len), (data)+(len), (data)+(len)+1)
 #endif
 
 #ifndef AddCrc14B
-# define	AddCrc14B(data, len)	compute_crc(CRC_14443_B, (data), (len), (data)+(len), (data)+(len)+1)
+# define AddCrc14B(data, len) compute_crc(CRC_14443_B, (data), (len), (data)+(len), (data)+(len)+1)
 #endif
 
 extern void GetParity(const uint8_t *pbtCmd, uint16_t len, uint8_t *par);
@@ -129,7 +129,7 @@ extern int EmSendCmdParEx(uint8_t *resp, uint16_t respLen, uint8_t *par, bool co
 extern int EmSendPrecompiledCmd(tag_response_info_t *response_info);
 
 bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_StartTime, uint32_t reader_EndTime, uint8_t *reader_Parity,
-				uint8_t *tag_data, uint16_t tag_len, uint32_t tag_StartTime, uint32_t tag_EndTime, uint8_t *tag_Parity);
+                uint8_t *tag_data, uint16_t tag_len, uint32_t tag_StartTime, uint32_t tag_EndTime, uint8_t *tag_Parity);
 
 //extern bool prepare_allocated_tag_modulation(tag_response_info_t *response_info, uint8_t **buffer, size_t *buffer_size);
 

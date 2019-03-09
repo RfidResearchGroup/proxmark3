@@ -22,7 +22,7 @@
  * \email    daniel.otte@rub.de
  * \date     2007-06-16
  * \brief    DES and EDE-DES implementation
- * \license	 GPLv3 or later
+ * \license   GPLv3 or later
  *
  */
 
@@ -72,111 +72,111 @@ const uint8_t sbox[256]  = {
 };
 
 const uint8_t e_permtab[] ={
-	 4,  6, 					/* 4 bytes in 6 bytes out*/
-	32,  1,  2,  3,  4,  5,
-	 4,  5,  6,  7,  8,  9,
-	 8,  9, 10, 11, 12, 13,
-	12, 13, 14, 15, 16, 17,
-	16, 17, 18, 19, 20, 21,
-	20, 21, 22, 23, 24, 25,
-	24, 25, 26, 27, 28, 29,
-	28, 29, 30, 31, 32,  1
+     4,  6,                     /* 4 bytes in 6 bytes out*/
+    32,  1,  2,  3,  4,  5,
+     4,  5,  6,  7,  8,  9,
+     8,  9, 10, 11, 12, 13,
+    12, 13, 14, 15, 16, 17,
+    16, 17, 18, 19, 20, 21,
+    20, 21, 22, 23, 24, 25,
+    24, 25, 26, 27, 28, 29,
+    28, 29, 30, 31, 32,  1
 };
 
 const uint8_t p_permtab[] ={
-	 4,  4,						/* 32 bit -> 32 bit */
-	16,  7, 20, 21,
-	29, 12, 28, 17,
-	 1, 15, 23, 26,
-	 5, 18, 31, 10,
-	 2,  8, 24, 14,
-	32, 27,  3,  9,
-	19, 13, 30,  6,
-	22, 11,  4, 25
+     4,  4,                     /* 32 bit -> 32 bit */
+    16,  7, 20, 21,
+    29, 12, 28, 17,
+     1, 15, 23, 26,
+     5, 18, 31, 10,
+     2,  8, 24, 14,
+    32, 27,  3,  9,
+    19, 13, 30,  6,
+    22, 11,  4, 25
 };
 
 const uint8_t ip_permtab[] ={
-	 8,  8,						/* 64 bit -> 64 bit */
-	58, 50, 42, 34, 26, 18, 10, 2,
-	60, 52, 44, 36, 28, 20, 12, 4,
-	62, 54, 46, 38, 30, 22, 14, 6,
-	64, 56, 48, 40, 32, 24, 16, 8,
-	57, 49, 41, 33, 25, 17,  9, 1,
-	59, 51, 43, 35, 27, 19, 11, 3,
-	61, 53, 45, 37, 29, 21, 13, 5,
-	63, 55, 47, 39, 31, 23, 15, 7
+     8,  8,                     /* 64 bit -> 64 bit */
+    58, 50, 42, 34, 26, 18, 10, 2,
+    60, 52, 44, 36, 28, 20, 12, 4,
+    62, 54, 46, 38, 30, 22, 14, 6,
+    64, 56, 48, 40, 32, 24, 16, 8,
+    57, 49, 41, 33, 25, 17,  9, 1,
+    59, 51, 43, 35, 27, 19, 11, 3,
+    61, 53, 45, 37, 29, 21, 13, 5,
+    63, 55, 47, 39, 31, 23, 15, 7
 };
 
 const uint8_t inv_ip_permtab[] ={
-	 8, 8,						/* 64 bit -> 64 bit */
-	40, 8, 48, 16, 56, 24, 64, 32,
-	39, 7, 47, 15, 55, 23, 63, 31,
-	38, 6, 46, 14, 54, 22, 62, 30,
-	37, 5, 45, 13, 53, 21, 61, 29,
-	36, 4, 44, 12, 52, 20, 60, 28,
-	35, 3, 43, 11, 51, 19, 59, 27,
-	34, 2, 42, 10, 50, 18, 58, 26,
-	33, 1, 41,  9, 49, 17, 57, 25
+     8, 8,                      /* 64 bit -> 64 bit */
+    40, 8, 48, 16, 56, 24, 64, 32,
+    39, 7, 47, 15, 55, 23, 63, 31,
+    38, 6, 46, 14, 54, 22, 62, 30,
+    37, 5, 45, 13, 53, 21, 61, 29,
+    36, 4, 44, 12, 52, 20, 60, 28,
+    35, 3, 43, 11, 51, 19, 59, 27,
+    34, 2, 42, 10, 50, 18, 58, 26,
+    33, 1, 41,  9, 49, 17, 57, 25
 };
 
 const uint8_t pc1_permtab[] ={
-	 8,  7, 					/* 64 bit -> 56 bit*/
-	57, 49, 41, 33, 25, 17,  9,
-	 1, 58, 50, 42, 34, 26, 18,
-	10,  2, 59, 51, 43, 35, 27,
-	19, 11,  3, 60, 52, 44, 36,
-	63, 55, 47, 39, 31, 23, 15,
-	 7, 62, 54, 46, 38, 30, 22,
-	14,  6, 61, 53, 45, 37, 29,
-	21, 13,  5, 28, 20, 12,  4
+     8,  7,                     /* 64 bit -> 56 bit*/
+    57, 49, 41, 33, 25, 17,  9,
+     1, 58, 50, 42, 34, 26, 18,
+    10,  2, 59, 51, 43, 35, 27,
+    19, 11,  3, 60, 52, 44, 36,
+    63, 55, 47, 39, 31, 23, 15,
+     7, 62, 54, 46, 38, 30, 22,
+    14,  6, 61, 53, 45, 37, 29,
+    21, 13,  5, 28, 20, 12,  4
 };
 
 const uint8_t pc2_permtab[] ={
-	 7,	 6, 					/* 56 bit -> 48 bit */
-	14, 17, 11, 24,  1,  5,
-	 3, 28, 15,  6, 21, 10,
-	23, 19, 12,  4, 26,  8,
-	16,  7, 27, 20, 13,  2,
-	41, 52, 31, 37, 47, 55,
-	30, 40, 51, 45, 33, 48,
-	44, 49, 39, 56, 34, 53,
-	46, 42, 50, 36, 29, 32
+     7,  6,                     /* 56 bit -> 48 bit */
+    14, 17, 11, 24,  1,  5,
+     3, 28, 15,  6, 21, 10,
+    23, 19, 12,  4, 26,  8,
+    16,  7, 27, 20, 13,  2,
+    41, 52, 31, 37, 47, 55,
+    30, 40, 51, 45, 33, 48,
+    44, 49, 39, 56, 34, 53,
+    46, 42, 50, 36, 29, 32
 };
 
 const uint8_t splitin6bitword_permtab[] = {
-	 8,  8, 					/* 64 bit -> 64 bit */
-	64, 64,  1,  6,  2,  3,  4,  5,
-	64, 64,  7, 12,  8,  9, 10, 11,
-	64, 64, 13, 18, 14, 15, 16, 17,
-	64, 64, 19, 24, 20, 21, 22, 23,
-	64, 64, 25, 30, 26, 27, 28, 29,
-	64, 64, 31, 36, 32, 33, 34, 35,
-	64, 64, 37, 42, 38, 39, 40, 41,
-	64, 64, 43, 48, 44, 45, 46, 47
+     8,  8,                     /* 64 bit -> 64 bit */
+    64, 64,  1,  6,  2,  3,  4,  5,
+    64, 64,  7, 12,  8,  9, 10, 11,
+    64, 64, 13, 18, 14, 15, 16, 17,
+    64, 64, 19, 24, 20, 21, 22, 23,
+    64, 64, 25, 30, 26, 27, 28, 29,
+    64, 64, 31, 36, 32, 33, 34, 35,
+    64, 64, 37, 42, 38, 39, 40, 41,
+    64, 64, 43, 48, 44, 45, 46, 47
 };
 
 const uint8_t shiftkey_permtab[] = {
-	 7,  7, 					/* 56 bit -> 56 bit */
-	 2,  3,  4,  5,  6,  7,  8,  9,
-	10, 11, 12, 13, 14, 15, 16, 17,
-	18, 19, 20, 21, 22, 23, 24, 25,
-	26, 27, 28,  1,
-	30, 31, 32, 33, 34, 35, 36, 37,
-	38, 39, 40, 41, 42, 43, 44, 45,
-	46, 47, 48, 49, 50, 51, 52, 53,
-	54, 55, 56, 29
+     7,  7,                     /* 56 bit -> 56 bit */
+     2,  3,  4,  5,  6,  7,  8,  9,
+    10, 11, 12, 13, 14, 15, 16, 17,
+    18, 19, 20, 21, 22, 23, 24, 25,
+    26, 27, 28,  1,
+    30, 31, 32, 33, 34, 35, 36, 37,
+    38, 39, 40, 41, 42, 43, 44, 45,
+    46, 47, 48, 49, 50, 51, 52, 53,
+    54, 55, 56, 29
 };
 
 const uint8_t shiftkeyinv_permtab[] = {
-	 7,  7,
-	28,  1,  2,  3,  4,  5,  6,  7,
-	 8,  9, 10, 11, 12, 13, 14, 15,
-	16, 17, 18, 19, 20, 21, 22, 23,
-	24, 25, 26, 27,
-	56, 29, 30, 31, 32, 33, 34, 35,
-	36, 37, 38, 39, 40, 41, 42, 43,
-	44, 45, 46, 47, 48, 49, 50, 51,
-	52, 53, 54, 55
+     7,  7,
+    28,  1,  2,  3,  4,  5,  6,  7,
+     8,  9, 10, 11, 12, 13, 14, 15,
+    16, 17, 18, 19, 20, 21, 22, 23,
+    24, 25, 26, 27,
+    56, 29, 30, 31, 32, 33, 34, 35,
+    36, 37, 38, 39, 40, 41, 42, 43,
+    44, 45, 46, 47, 48, 49, 50, 51,
+    52, 53, 54, 55
 };
 
 /*
@@ -203,241 +203,241 @@ const uint8_t shiftkeyinv_permtab[] = {
 /******************************************************************************/
 
 void permute(const uint8_t *ptable, const uint8_t *in, uint8_t *out){
-	uint8_t ob; /* in-bytes and out-bytes */
-	uint8_t byte, bit; /* counter for bit and byte */
-	ob = ptable[1];
-	ptable = &(ptable[2]);
-	for(byte=0; byte<ob; ++byte){
-		uint8_t x,t=0;
-		for(bit=0; bit<8; ++bit){
-			x = *ptable++ - 1;
-				t<<=1;
-			if((in[x/8]) & (0x80>>(x%8)) ){
-				t|=0x01;
-			}
-		}
-		out[byte]=t;
-	}
+    uint8_t ob; /* in-bytes and out-bytes */
+    uint8_t byte, bit; /* counter for bit and byte */
+    ob = ptable[1];
+    ptable = &(ptable[2]);
+    for(byte=0; byte<ob; ++byte){
+        uint8_t x,t=0;
+        for(bit=0; bit<8; ++bit){
+            x = *ptable++ - 1;
+                t<<=1;
+            if((in[x/8]) & (0x80>>(x%8)) ){
+                t|=0x01;
+            }
+        }
+        out[byte]=t;
+    }
 }
 
 /******************************************************************************/
 
 void changeendian32(uint32_t * a){
-	*a = (*a & 0x000000FF) << 24 |
-		 (*a & 0x0000FF00) <<  8 |
-		 (*a & 0x00FF0000) >>  8 |
-		 (*a & 0xFF000000) >> 24;
+    *a = (*a & 0x000000FF) << 24 |
+         (*a & 0x0000FF00) <<  8 |
+         (*a & 0x00FF0000) >>  8 |
+         (*a & 0xFF000000) >> 24;
 }
 
 /******************************************************************************/
 static inline
 void shiftkey(uint8_t *key){
-	uint8_t k[7];
-	memcpy(k, key, 7);
-	permute((uint8_t*)shiftkey_permtab, k, key);
+    uint8_t k[7];
+    memcpy(k, key, 7);
+    permute((uint8_t*)shiftkey_permtab, k, key);
 }
 
 /******************************************************************************/
 static inline
 void shiftkey_inv(uint8_t *key){
-	uint8_t k[7];
-	memcpy(k, key, 7);
-	permute((uint8_t*)shiftkeyinv_permtab, k, key);
+    uint8_t k[7];
+    memcpy(k, key, 7);
+    permute((uint8_t*)shiftkeyinv_permtab, k, key);
 
 }
 
 /******************************************************************************/
 static inline
 uint64_t splitin6bitwords(uint64_t a){
-	uint64_t ret=0;
-	a &= 0x0000ffffffffffffLL;
-	permute((uint8_t*)splitin6bitword_permtab, (uint8_t*)&a, (uint8_t*)&ret);
-	return ret;
+    uint64_t ret=0;
+    a &= 0x0000ffffffffffffLL;
+    permute((uint8_t*)splitin6bitword_permtab, (uint8_t*)&a, (uint8_t*)&ret);
+    return ret;
 }
 
 /******************************************************************************/
 
 static inline
 uint8_t substitute(uint8_t a, uint8_t * sbp){
-	uint8_t x;
-	x = sbp[a>>1];
-	x = (a&1)?x&0x0F:x>>4;
-	return x;
+    uint8_t x;
+    x = sbp[a>>1];
+    x = (a&1)?x&0x0F:x>>4;
+    return x;
 
 }
 
 /******************************************************************************/
 
 uint32_t des_f(uint32_t r, uint8_t* kr){
-	uint8_t i;
-	uint32_t t=0,ret;
-	uint64_t data;
-	uint8_t *sbp; /* sboxpointer */
-	permute((uint8_t*)e_permtab, (uint8_t*)&r, (uint8_t*)&data);
-	for(i=0; i<6; ++i)
-		((uint8_t*)&data)[i] ^= kr[i];
+    uint8_t i;
+    uint32_t t=0,ret;
+    uint64_t data;
+    uint8_t *sbp; /* sboxpointer */
+    permute((uint8_t*)e_permtab, (uint8_t*)&r, (uint8_t*)&data);
+    for(i=0; i<6; ++i)
+        ((uint8_t*)&data)[i] ^= kr[i];
 
-	/* Sbox substitution */
-	data = splitin6bitwords(data);
-	sbp=(uint8_t*)sbox;
-	for(i=0; i<8; ++i){
-		uint8_t x;
-		x = substitute(((uint8_t*)&data)[i], sbp);
-		t<<=4;
-		t |= x;
-		sbp += 32;
-	}
-	changeendian32(&t);
+    /* Sbox substitution */
+    data = splitin6bitwords(data);
+    sbp=(uint8_t*)sbox;
+    for(i=0; i<8; ++i){
+        uint8_t x;
+        x = substitute(((uint8_t*)&data)[i], sbp);
+        t<<=4;
+        t |= x;
+        sbp += 32;
+    }
+    changeendian32(&t);
 
-	permute((uint8_t*)p_permtab,(uint8_t*)&t, (uint8_t*)&ret);
+    permute((uint8_t*)p_permtab,(uint8_t*)&t, (uint8_t*)&ret);
 
-	return ret;
+    return ret;
 }
 
 /******************************************************************************/
 
 typedef struct {
-	union {
-		uint8_t  v8[8];
-		uint32_t v32[2];
-	} d;
+    union {
+        uint8_t  v8[8];
+        uint32_t v32[2];
+    } d;
 } data_t;
 #define R (data.d.v32[1])
 #define L (data.d.v32[0])
 
 void des_enc(void* out, const void* in, const void* key){
 
-	uint8_t kr[6], k[7];
-	uint8_t i;
-	data_t data;
+    uint8_t kr[6], k[7];
+    uint8_t i;
+    data_t data;
 
-	permute((uint8_t*)ip_permtab, (uint8_t*)in, data.d.v8);
-	permute((uint8_t*)pc1_permtab, (const uint8_t*)key, k);
+    permute((uint8_t*)ip_permtab, (uint8_t*)in, data.d.v8);
+    permute((uint8_t*)pc1_permtab, (const uint8_t*)key, k);
 
-	for(i=0; i<8; ++i){
-		shiftkey(k);
-		if(ROTTABLE&((1<<((i<<1)+0))) )
-			shiftkey(k);
-		permute((uint8_t*)pc2_permtab, k, kr);
-		L ^= des_f(R, kr);
+    for(i=0; i<8; ++i){
+        shiftkey(k);
+        if(ROTTABLE&((1<<((i<<1)+0))) )
+            shiftkey(k);
+        permute((uint8_t*)pc2_permtab, k, kr);
+        L ^= des_f(R, kr);
 
-		shiftkey(k);
-		if(ROTTABLE&((1<<((i<<1)+1))) )
-			shiftkey(k);
-		permute((uint8_t*)pc2_permtab, k, kr);
-		R ^= des_f(L, kr);
+        shiftkey(k);
+        if(ROTTABLE&((1<<((i<<1)+1))) )
+            shiftkey(k);
+        permute((uint8_t*)pc2_permtab, k, kr);
+        R ^= des_f(L, kr);
 
-	}
-	/* L <-> R*/
-	R ^= L;
-	L ^= R;
-	R ^= L;
+    }
+    /* L <-> R*/
+    R ^= L;
+    L ^= R;
+    R ^= L;
 
-	permute((uint8_t*)inv_ip_permtab, data.d.v8, (uint8_t*)out);
+    permute((uint8_t*)inv_ip_permtab, data.d.v8, (uint8_t*)out);
 }
 
 /******************************************************************************/
 
 void des_dec(void* out, const void* in, const uint8_t* key){
 
-	uint8_t kr[6],k[7];
-	int8_t i;
-	data_t data;
+    uint8_t kr[6],k[7];
+    int8_t i;
+    data_t data;
 
-	permute((uint8_t*)ip_permtab, (uint8_t*)in, data.d.v8);
-	permute((uint8_t*)pc1_permtab, (const uint8_t*)key, k);
-	for(i=7; i>=0; --i){
+    permute((uint8_t*)ip_permtab, (uint8_t*)in, data.d.v8);
+    permute((uint8_t*)pc1_permtab, (const uint8_t*)key, k);
+    for(i=7; i>=0; --i){
 
-		permute((uint8_t*)pc2_permtab, k, kr);
-		L ^= des_f(R, kr);
-		shiftkey_inv(k);
-		if(ROTTABLE&((1<<((i<<1)+1))) ){
-			shiftkey_inv(k);
-		}
+        permute((uint8_t*)pc2_permtab, k, kr);
+        L ^= des_f(R, kr);
+        shiftkey_inv(k);
+        if(ROTTABLE&((1<<((i<<1)+1))) ){
+            shiftkey_inv(k);
+        }
 
-		permute((uint8_t*)pc2_permtab, k, kr);
-		R ^= des_f(L, kr);
-		shiftkey_inv(k);
-		if(ROTTABLE&((1<<((i<<1)+0))) ){
-			shiftkey_inv(k);
-		}
+        permute((uint8_t*)pc2_permtab, k, kr);
+        R ^= des_f(L, kr);
+        shiftkey_inv(k);
+        if(ROTTABLE&((1<<((i<<1)+0))) ){
+            shiftkey_inv(k);
+        }
 
-	}
-	/* L <-> R*/
-	R ^= L;
-	L ^= R;
-	R ^= L;
+    }
+    /* L <-> R*/
+    R ^= L;
+    L ^= R;
+    R ^= L;
 
-	permute((uint8_t*)inv_ip_permtab, data.d.v8, (uint8_t*)out);
+    permute((uint8_t*)inv_ip_permtab, data.d.v8, (uint8_t*)out);
 }
 
 /******************************************************************************/
 
 void tdes_enc(void* out, void* in, const void* key){
-	des_enc(out,  in, (uint8_t*)key + 0);
-	des_dec(out, out, (uint8_t*)key + 8);
-	des_enc(out, out, (uint8_t*)key +16);
+    des_enc(out,  in, (uint8_t*)key + 0);
+    des_dec(out, out, (uint8_t*)key + 8);
+    des_enc(out, out, (uint8_t*)key +16);
 }
 
 /******************************************************************************/
 
 void tdes_dec(void* out, void* in, const uint8_t* key){
-	des_dec(out,  in, (uint8_t*)key +16);
-	des_enc(out, out, (uint8_t*)key + 8);
-	des_dec(out, out, (uint8_t*)key + 0);
+    des_dec(out,  in, (uint8_t*)key +16);
+    des_enc(out, out, (uint8_t*)key + 8);
+    des_dec(out, out, (uint8_t*)key + 0);
 }
 
  void tdes_2key_enc(void* out, const void* in, size_t length, const void* key, unsigned char iv[8]){
 
-	if( length % 8 ) return;
+    if( length % 8 ) return;
 
-	uint8_t i;
-	uint8_t* tin = (uint8_t*) in;
-	uint8_t* tout = (uint8_t*) out;
+    uint8_t i;
+    uint8_t* tin = (uint8_t*) in;
+    uint8_t* tout = (uint8_t*) out;
 
-	while( length > 0 )
-	{
-		for( i = 0; i < 8; i++ )
-				tout[i] = (unsigned char)( tin[i] ^ iv[i] );
+    while( length > 0 )
+    {
+        for( i = 0; i < 8; i++ )
+                tout[i] = (unsigned char)( tin[i] ^ iv[i] );
 
-		des_enc(tout,  tin, (uint8_t*)key + 0);
-		des_dec(tout, tout, (uint8_t*)key + 8);
-		des_enc(tout, tout, (uint8_t*)key + 0);
+        des_enc(tout,  tin, (uint8_t*)key + 0);
+        des_dec(tout, tout, (uint8_t*)key + 8);
+        des_enc(tout, tout, (uint8_t*)key + 0);
 
-		memcpy( iv, tout, 8 );
+        memcpy( iv, tout, 8 );
 
-		tin  += 8;
-		tout += 8;
-		length -= 8;
-	}
+        tin  += 8;
+        tout += 8;
+        length -= 8;
+    }
  }
 
  void tdes_2key_dec(void* out, const void* in, size_t length, const void* key, unsigned char iv[8]){
 
-	if( length % 8 ) return;
+    if( length % 8 ) return;
 
-	uint8_t i;
-	unsigned char temp[8];
-	uint8_t* tin = (uint8_t*) in;
-	uint8_t* tout = (uint8_t*) out;
+    uint8_t i;
+    unsigned char temp[8];
+    uint8_t* tin = (uint8_t*) in;
+    uint8_t* tout = (uint8_t*) out;
 
-	while( length > 0 )
-	{
-		memcpy( temp, tin, 8 );
+    while( length > 0 )
+    {
+        memcpy( temp, tin, 8 );
 
-		des_dec(tout,  tin, (uint8_t*)key + 0);
-		des_enc(tout, tout, (uint8_t*)key + 8);
-		des_dec(tout, tout, (uint8_t*)key + 0);
+        des_dec(tout,  tin, (uint8_t*)key + 0);
+        des_enc(tout, tout, (uint8_t*)key + 8);
+        des_dec(tout, tout, (uint8_t*)key + 0);
 
-		for( i = 0; i < 8; i++ )
-			tout[i] = (unsigned char)( tout[i] ^ iv[i] );
+        for( i = 0; i < 8; i++ )
+            tout[i] = (unsigned char)( tout[i] ^ iv[i] );
 
-		memcpy( iv, temp, 8 );
+        memcpy( iv, temp, 8 );
 
-		tin  += 8;
-		tout += 8;
-		length -= 8;
-	}
+        tin  += 8;
+        tout += 8;
+        length -= 8;
+    }
  }
 
 

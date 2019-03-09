@@ -21,18 +21,18 @@
 #include "mifareutil.h"
 #include "common.h"
 
-#define SNF_INIT			0
-#define SNF_NO_FIELD		1
-#define SNF_ATQA			2
-#define SNF_UID				3
-#define SNF_SAK				4
-#define SNF_CARD_IDLE		5
-#define SNF_CARD_CMD		6
-#define SNF_MAGIC_WUPC2		7
+#define SNF_INIT        0
+#define SNF_NO_FIELD    1
+#define SNF_ATQA        2
+#define SNF_UID         3
+#define SNF_SAK         4
+#define SNF_CARD_IDLE   5
+#define SNF_CARD_CMD    6
+#define SNF_MAGIC_WUPC2 7
 
-#define SNF_UID_4			0
-#define SNF_UID_7			0
-#define SNF_UID_10			0
+#define SNF_UID_4       0
+#define SNF_UID_7       0
+#define SNF_UID_10      0
 
 void MfSniffInit(void);
 bool RAMFUNC MfSniffLogic(const uint8_t *data, uint16_t len, uint8_t *parity, uint16_t bitCnt, bool reader);
