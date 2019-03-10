@@ -31,9 +31,11 @@ SYSLIBS=
 MYLIBS=
 MYOBJS=
 
-all: $(CMDOBJS)
+$(LIB_A): $(CMDOBJS)
 	$(AR) $(LIB_A) $(CMDOBJS)
 	$(RANLIB) $(LIB_A)
+
+all: $(LIB_A)
 
 clean:
 	$(RM) $(CLEAN)
