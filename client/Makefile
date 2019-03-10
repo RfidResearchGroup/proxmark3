@@ -331,23 +331,29 @@ cbor_build:
 # easy printing of MAKE VARIABLES
 print-%: ; @echo $* = $($*)
 
-$(OBJDIR)/%_NOSIMD.o : %.c $(OBJDIR)/%.d
+$(OBJDIR)/%_NOSIMD.o : %.c $(OBJDIR)/%_NOSIMD.d
 	$(CC) $(DEPFLAGS) $(CFLAGS) $(HARD_SWITCH_NOSIMD) -c -o $@ $<
+	$(POSTCOMPILE:%.d=%_NOSIMD.d)
 
-$(OBJDIR)/%_MMX.o : %.c $(OBJDIR)/%.d
+$(OBJDIR)/%_MMX.o : %.c $(OBJDIR)/%_MMX.d
 	$(CC) $(DEPFLAGS) $(CFLAGS) $(HARD_SWITCH_MMX) -c -o $@ $<
+	$(POSTCOMPILE:%.d=%_MMX.d)
 
-$(OBJDIR)/%_SSE2.o : %.c $(OBJDIR)/%.d
+$(OBJDIR)/%_SSE2.o : %.c $(OBJDIR)/%_SSE2.d
 	$(CC) $(DEPFLAGS) $(CFLAGS) $(HARD_SWITCH_SSE2) -c -o $@ $<
+	$(POSTCOMPILE:%.d=%_SSE2.d)
 
-$(OBJDIR)/%_AVX.o : %.c $(OBJDIR)/%.d
+$(OBJDIR)/%_AVX.o : %.c $(OBJDIR)/%_AVX.d
 	$(CC) $(DEPFLAGS) $(CFLAGS) $(HARD_SWITCH_AVX) -c -o $@ $<
+	$(POSTCOMPILE:%.d=%_AVX.d)
 
-$(OBJDIR)/%_AVX2.o : %.c $(OBJDIR)/%.d
+$(OBJDIR)/%_AVX2.o : %.c $(OBJDIR)/%_AVX2.d
 	$(CC) $(DEPFLAGS) $(CFLAGS) $(HARD_SWITCH_AVX2) -c -o $@ $<
+	$(POSTCOMPILE:%.d=%_AVX2.d)
 
-$(OBJDIR)/%_AVX512.o : %.c $(OBJDIR)/%.d
+$(OBJDIR)/%_AVX512.o : %.c $(OBJDIR)/%_AVX512.d
 	$(CC) $(DEPFLAGS) $(CFLAGS) $(HARD_SWITCH_AVX512) -c -o $@ $<
+	$(POSTCOMPILE:%.d=%_AVX512.d)
 
 %.o: %.c
 $(OBJDIR)/%.o : %.c $(OBJDIR)/%.d
@@ -376,7 +382,8 @@ $(OBJDIR)/%.o : %.m $(OBJDIR)/%.d
 #	$(CXX) $(DEPFLAGS) $(CXXFLAGS) -c -o $@ $<
 #	$(POSTCOMPILE)
 
-DEPENDENCY_FILES = $(patsubst %.c, $(OBJDIR)/%.d, $(CORESRCS) $(CMDSRCS) $(ZLIBSRCS) $(MULTIARCHSRCS)) \
+DEPENDENCY_FILES = $(patsubst %.c, $(OBJDIR)/%.d, $(CORESRCS) $(CMDSRCS) $(ZLIBSRCS)) \
+	$(patsubst %.o, %.d, $(MULTIARCHOBJS)) \
 	$(patsubst %.cpp, $(OBJDIR)/%.d, $(QTGUISRCS)) \
 	$(patsubst %.m, $(OBJDIR)/%.d, $(OBJCSRCS)) \
 	$(OBJDIR)/proxmark3.d $(OBJDIR)/flash.d $(OBJDIR)/flasher.d $(OBJDIR)/fpga_compress.d
