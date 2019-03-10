@@ -176,9 +176,8 @@ all: $(OBJS)
 
 .DELETE_ON_ERROR:
 
-# version.c should be remade on every compilation
-.PHONY: version.c
-version.c: default_version.c
+# version.c should be remade on every time fullimage.stage1.elf should be remade
+version.c: default_version.c $(OBJDIR)/fpga_version_info.o $(OBJDIR)/fpga_all.o $(THUMBOBJ) $(ARMOBJ)
 	perl ../tools/mkversion.pl .. > $@ || $(COPY) $^ $@
 
 fpga_version_info.c: $(FPGA_BITSTREAMS) $(FPGA_COMPRESSOR)
