@@ -1227,15 +1227,12 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
     bool bStop = false;
     bool bQuitTraceFull = false;
 
-    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-    // Reset the return status
     bSuccessful = false;
 
-    // Clean up trace and prepare it for storing frames
+    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+
     clear_trace();
     set_tracing(true);
-
-    //DbpString("Starting Hitag reader family");
 
     // Check configuration
     switch (htf) {
@@ -1360,8 +1357,9 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
         return;
     }
     uint8_t attempt_count = 0;
-    while (!bStop && !BUTTON_PRESS()) {
-        // Watchdog hit
+    
+    while (!bStop && !BUTTON_PRESS() && !usb_poll_validate_length() ) {
+
         WDT_HIT();
 
         // Check if frame was captured and store it
@@ -1499,7 +1497,6 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
                         rxlen++;
                     }
                 } else {
-                    //Dbprintf("DEBUG: Wierd2");
                     errorCount++;
                     // Ignore wierd value, is to small to mean anything
                 }
