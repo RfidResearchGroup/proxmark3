@@ -14,8 +14,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_awid_read(void)
-{
+int usage_lf_awid_read(void) {
     PrintAndLogEx(NORMAL, "Enables AWID compatible reader mode printing details of scanned AWID26 or AWID50 tags.");
     PrintAndLogEx(NORMAL, "By default, values are printed and logged until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "If the [1] option is provided, reader mode is exited after reading a single AWID card.");
@@ -31,8 +30,7 @@ int usage_lf_awid_read(void)
     return 0;
 }
 
-int usage_lf_awid_sim(void)
-{
+int usage_lf_awid_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of AWID card with specified facility-code and card number.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "");
@@ -49,8 +47,7 @@ int usage_lf_awid_sim(void)
     return 0;
 }
 
-int usage_lf_awid_clone(void)
-{
+int usage_lf_awid_clone(void) {
     PrintAndLogEx(NORMAL, "Enables cloning of AWID card with specified facility-code and card number onto T55x7.");
     PrintAndLogEx(NORMAL, "The T55x7 must be on the antenna when issuing this command.  T55x7 blocks are calculated and printed in the process.");
     PrintAndLogEx(NORMAL, "");
@@ -68,8 +65,7 @@ int usage_lf_awid_clone(void)
     return 0;
 }
 
-int usage_lf_awid_brute(void)
-{
+int usage_lf_awid_brute(void) {
     PrintAndLogEx(NORMAL, "Enables bruteforce of AWID reader with specified facility-code.");
     PrintAndLogEx(NORMAL, "This is a attack against reader. if cardnumber is given, it starts with it and goes up / down one step");
     PrintAndLogEx(NORMAL, "if cardnumber is not given, it starts with 1 and goes up to 65535");
@@ -90,8 +86,7 @@ int usage_lf_awid_brute(void)
     return 0;
 }
 
-static bool sendPing(void)
-{
+static bool sendPing(void) {
     UsbCommand ping = {CMD_PING, {1, 2, 3}};
     SendCommand(&ping);
     SendCommand(&ping);
@@ -103,8 +98,7 @@ static bool sendPing(void)
     return true;
 }
 
-static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, uint8_t *bits, size_t bs_len, bool verbose)
-{
+static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, uint8_t *bits, size_t bs_len, bool verbose) {
 
     if (verbose)
         PrintAndLogEx(INFO, "Trying FC: %u; CN: %u", fc, cn);
@@ -129,8 +123,7 @@ static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, ui
 }
 
 //refactored by marshmellow
-int getAWIDBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *bits)
-{
+int getAWIDBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *bits) {
 
     // the return bits, preamble 0000 0001
     bits[7] = 1;
@@ -183,8 +176,7 @@ int getAWIDBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *bits)
     return 1;
 }
 
-static void verify_values(uint8_t *fmtlen, uint32_t *fc, uint32_t *cn)
-{
+static void verify_values(uint8_t *fmtlen, uint32_t *fc, uint32_t *cn) {
     switch (*fmtlen) {
         case 50:
             if ((*fc & 0xFFFF) != *fc) {
@@ -228,15 +220,13 @@ static void verify_values(uint8_t *fmtlen, uint32_t *fc, uint32_t *cn)
 }
 
 // this read is the "normal" read,  which download lf signal and tries to demod here.
-int CmdAWIDRead(const char *Cmd)
-{
+int CmdAWIDRead(const char *Cmd) {
     lf_read(true, 12000);
     return CmdAWIDDemod(Cmd);
 }
 // this read loops on device side.
 // uses the demod in lfops.c
-int CmdAWIDRead_device(const char *Cmd)
-{
+int CmdAWIDRead_device(const char *Cmd) {
 
     if (Cmd[0] == 'h' || Cmd[0] == 'H') return usage_lf_awid_read();
     uint8_t findone = (Cmd[0] == '1') ? 1 : 0;
@@ -249,8 +239,7 @@ int CmdAWIDRead_device(const char *Cmd)
 //by marshmellow
 //AWID Prox demod - FSK2a RF/50 with preamble of 00000001  (always a 96 bit data stream)
 //print full AWID Prox ID and some bit format details if found
-int CmdAWIDDemod(const char *Cmd)
-{
+int CmdAWIDDemod(const char *Cmd) {
     uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
     size_t size = getFromGraphBuf(bits);
     if (size == 0) {
@@ -380,8 +369,7 @@ int CmdAWIDDemod(const char *Cmd)
     return 1;
 }
 
-int CmdAWIDSim(const char *Cmd)
-{
+int CmdAWIDSim(const char *Cmd) {
     uint32_t fc = 0, cn = 0;
     uint8_t fmtlen = 0;
     uint8_t bits[96];
@@ -421,8 +409,7 @@ int CmdAWIDSim(const char *Cmd)
     return 0;
 }
 
-int CmdAWIDClone(const char *Cmd)
-{
+int CmdAWIDClone(const char *Cmd) {
     uint32_t blocks[4] = {T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_50 | 3 << T55x7_MAXBLOCK_SHIFT, 0, 0, 0};
     uint32_t fc = 0, cn = 0;
     uint8_t fmtlen = 0;
@@ -473,8 +460,7 @@ int CmdAWIDClone(const char *Cmd)
     return 0;
 }
 
-int CmdAWIDBrute(const char *Cmd)
-{
+int CmdAWIDBrute(const char *Cmd) {
 
     bool errors = false, verbose = false;
     uint32_t fc = 0, cn = 0, delay = 1000;
@@ -580,15 +566,13 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFAWID(const char *Cmd)
-{
+int CmdLFAWID(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }

@@ -31,15 +31,13 @@ static void xor(const uint8_t *ivect, uint8_t *data, const size_t len);
 static size_t key_macing_length(desfirekey_t key);
 
 // iceman,  see memxor inside string.c, dest/src swapped..
-static void xor(const uint8_t *ivect, uint8_t *data, const size_t len)
-{
+static void xor(const uint8_t *ivect, uint8_t *data, const size_t len) {
     for (size_t i = 0; i < len; i++) {
         data[i] ^= ivect[i];
     }
 }
 
-void cmac_generate_subkeys(desfirekey_t key)
-{
+void cmac_generate_subkeys(desfirekey_t key) {
     int kbs = key_block_size(key);
     const uint8_t R = (kbs == 8) ? 0x1B : 0x87;
 
@@ -68,8 +66,7 @@ void cmac_generate_subkeys(desfirekey_t key)
         key->cmac_sk2[kbs - 1] ^= R;
 }
 
-void cmac(const desfirekey_t key, uint8_t *ivect, const uint8_t *data, size_t len, uint8_t *cmac)
-{
+void cmac(const desfirekey_t key, uint8_t *ivect, const uint8_t *data, size_t len, uint8_t *cmac) {
     int kbs = key_block_size(key);
     uint8_t *buffer = malloc(padded_data_length(len, kbs));
 
@@ -91,8 +88,7 @@ void cmac(const desfirekey_t key, uint8_t *ivect, const uint8_t *data, size_t le
     free(buffer);
 }
 
-size_t key_block_size(const desfirekey_t key)
-{
+size_t key_block_size(const desfirekey_t key) {
     size_t block_size = 8;
     switch (key->type) {
         case T_DES:
@@ -110,8 +106,7 @@ size_t key_block_size(const desfirekey_t key)
 /*
  * Size of MACing produced with the key.
  */
-static size_t key_macing_length(const desfirekey_t key)
-{
+static size_t key_macing_length(const desfirekey_t key) {
     size_t mac_length = MAC_LENGTH;
     switch (key->type) {
         case T_DES:
@@ -129,8 +124,7 @@ static size_t key_macing_length(const desfirekey_t key)
 /*
  * Size required to store nbytes of data in a buffer of size n*block_size.
  */
-size_t padded_data_length(const size_t nbytes, const size_t block_size)
-{
+size_t padded_data_length(const size_t nbytes, const size_t block_size) {
     if ((!nbytes) || (nbytes % block_size))
         return ((nbytes / block_size) + 1) * block_size;
     else
@@ -140,15 +134,13 @@ size_t padded_data_length(const size_t nbytes, const size_t block_size)
 /*
  * Buffer size required to MAC nbytes of data
  */
-size_t maced_data_length(const desfirekey_t key, const size_t nbytes)
-{
+size_t maced_data_length(const desfirekey_t key, const size_t nbytes) {
     return nbytes + key_macing_length(key);
 }
 /*
  * Buffer size required to encipher nbytes of data and a two bytes CRC.
  */
-size_t enciphered_data_length(const desfiretag_t tag, const size_t nbytes, int communication_settings)
-{
+size_t enciphered_data_length(const desfiretag_t tag, const size_t nbytes, int communication_settings) {
     size_t crc_length = 0;
     if (!(communication_settings & NO_CRC)) {
         switch (DESFIRE(tag)->authentication_scheme) {
@@ -166,8 +158,7 @@ size_t enciphered_data_length(const desfiretag_t tag, const size_t nbytes, int c
     return padded_data_length(nbytes + crc_length, block_size);
 }
 
-void *mifare_cryto_preprocess_data(desfiretag_t tag, void *data, size_t *nbytes, size_t offset, int communication_settings)
-{
+void *mifare_cryto_preprocess_data(desfiretag_t tag, void *data, size_t *nbytes, size_t offset, int communication_settings) {
     uint8_t *res = data;
     uint8_t mac[4];
     size_t edl;
@@ -295,8 +286,7 @@ void *mifare_cryto_preprocess_data(desfiretag_t tag, void *data, size_t *nbytes,
 
 }
 
-void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes, int communication_settings)
-{
+void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes, int communication_settings) {
     void *res = data;
     size_t edl;
     void *edata = NULL;
@@ -521,8 +511,7 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
 }
 
 
-void mifare_cypher_single_block(desfirekey_t key, uint8_t *data, uint8_t *ivect, MifareCryptoDirection direction, MifareCryptoOperation operation, size_t block_size)
-{
+void mifare_cypher_single_block(desfirekey_t key, uint8_t *data, uint8_t *ivect, MifareCryptoDirection direction, MifareCryptoOperation operation, size_t block_size) {
     uint8_t ovect[MAX_CRYPTO_BLOCK_SIZE];
 
     if (direction == MCD_SEND) {
@@ -616,8 +605,7 @@ void mifare_cypher_single_block(desfirekey_t key, uint8_t *data, uint8_t *ivect,
  * Because the tag may contain additional data, one may need to call this
  * function with tag, key and ivect defined.
  */
-void mifare_cypher_blocks_chained(desfiretag_t tag, desfirekey_t key, uint8_t *ivect, uint8_t *data, size_t data_size, MifareCryptoDirection direction, MifareCryptoOperation operation)
-{
+void mifare_cypher_blocks_chained(desfiretag_t tag, desfirekey_t key, uint8_t *ivect, uint8_t *data, size_t data_size, MifareCryptoDirection direction, MifareCryptoOperation operation) {
     size_t block_size;
 
     if (tag) {

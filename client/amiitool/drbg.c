@@ -10,8 +10,7 @@
 #include <string.h>
 #include <mbedtls/md.h>
 
-void nfc3d_drbg_init(nfc3d_drbg_ctx *ctx, const uint8_t *hmacKey, size_t hmacKeySize, const uint8_t *seed, size_t seedSize)
-{
+void nfc3d_drbg_init(nfc3d_drbg_ctx *ctx, const uint8_t *hmacKey, size_t hmacKeySize, const uint8_t *seed, size_t seedSize) {
     assert(ctx != NULL);
     assert(hmacKey != NULL);
     assert(seed != NULL);
@@ -31,8 +30,7 @@ void nfc3d_drbg_init(nfc3d_drbg_ctx *ctx, const uint8_t *hmacKey, size_t hmacKey
     mbedtls_md_hmac_starts(&ctx->hmacCtx, hmacKey, hmacKeySize);
 }
 
-void nfc3d_drbg_step(nfc3d_drbg_ctx *ctx, uint8_t *output)
-{
+void nfc3d_drbg_step(nfc3d_drbg_ctx *ctx, uint8_t *output) {
     assert(ctx != NULL);
     assert(output != NULL);
 
@@ -53,14 +51,12 @@ void nfc3d_drbg_step(nfc3d_drbg_ctx *ctx, uint8_t *output)
     mbedtls_md_hmac_finish(&ctx->hmacCtx, output);
 }
 
-void nfc3d_drbg_cleanup(nfc3d_drbg_ctx *ctx)
-{
+void nfc3d_drbg_cleanup(nfc3d_drbg_ctx *ctx) {
     assert(ctx != NULL);
     mbedtls_md_free(&ctx->hmacCtx);
 }
 
-void nfc3d_drbg_generate_bytes(const uint8_t *hmacKey, size_t hmacKeySize, const uint8_t *seed, size_t seedSize, uint8_t *output, size_t outputSize)
-{
+void nfc3d_drbg_generate_bytes(const uint8_t *hmacKey, size_t hmacKeySize, const uint8_t *seed, size_t seedSize, uint8_t *output, size_t outputSize) {
     uint8_t temp[NFC3D_DRBG_OUTPUT_SIZE];
 
     nfc3d_drbg_ctx rngCtx;

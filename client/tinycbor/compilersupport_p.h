@@ -190,8 +190,7 @@
 #  define unreachable() do {} while (0)
 #endif
 
-static inline bool add_check_overflow(size_t v1, size_t v2, size_t *r)
-{
+static inline bool add_check_overflow(size_t v1, size_t v2, size_t *r) {
 #if ((defined(__GNUC__) && (__GNUC__ >= 5)) && !defined(__INTEL_COMPILER)) || __has_builtin(__builtin_add_overflow)
     return __builtin_add_overflow(v1, v2, r);
 #else

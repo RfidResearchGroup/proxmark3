@@ -45,8 +45,7 @@
  * @param filename
  * @return
  */
-int fileExists(const char *filename)
-{
+int fileExists(const char *filename) {
 
 #ifdef _WIN32
     struct _stat st;
@@ -58,8 +57,7 @@ int fileExists(const char *filename)
     return result == 0;
 }
 
-int saveFile(const char *preferredName, const char *suffix, const void *data, size_t datalen)
-{
+int saveFile(const char *preferredName, const char *suffix, const void *data, size_t datalen) {
     int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
     char *fileName = calloc(size, sizeof(char));
     int num = 1;
@@ -85,8 +83,7 @@ int saveFile(const char *preferredName, const char *suffix, const void *data, si
     return 0;
 }
 
-int saveFileEML(const char *preferredName, const char *suffix, uint8_t *data, size_t datalen, size_t blocksize)
-{
+int saveFileEML(const char *preferredName, const char *suffix, uint8_t *data, size_t datalen, size_t blocksize) {
 
     if (preferredName == NULL) return 1;
     if (suffix == NULL) return 1;
@@ -140,8 +137,7 @@ out:
     return retval;
 }
 
-int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType ftype, uint8_t *data, size_t datalen)
-{
+int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType ftype, uint8_t *data, size_t datalen) {
     if (preferredName == NULL) return 1;
     if (suffix == NULL) return 1;
     if (data == NULL) return 1;
@@ -257,8 +253,7 @@ out:
     return retval;
 }
 
-int loadFile(const char *preferredName, const char *suffix, void *data, size_t *datalen)
-{
+int loadFile(const char *preferredName, const char *suffix, void *data, size_t *datalen) {
 
     if (preferredName == NULL) return 1;
     if (suffix == NULL) return 1;
@@ -317,8 +312,7 @@ out:
     return retval;
 }
 
-int loadFileEML(const char *preferredName, const char *suffix, void *data, size_t *datalen)
-{
+int loadFileEML(const char *preferredName, const char *suffix, void *data, size_t *datalen) {
 
     if (preferredName == NULL) return 1;
     if (suffix == NULL) return 1;
@@ -373,8 +367,7 @@ out:
     return retval;
 }
 
-int loadFileJSON(const char *preferredName, const char *suffix, void *data, size_t maxdatalen, size_t *datalen)
-{
+int loadFileJSON(const char *preferredName, const char *suffix, void *data, size_t maxdatalen, size_t *datalen) {
 
     if (preferredName == NULL) return 1;
     if (suffix == NULL) return 1;
@@ -462,8 +455,7 @@ out:
     return retval;
 }
 
-int loadFileDICTIONARY(const char *preferredName, const char *suffix, void *data, size_t *datalen, uint8_t keylen, uint16_t *keycnt)
-{
+int loadFileDICTIONARY(const char *preferredName, const char *suffix, void *data, size_t *datalen, uint8_t keylen, uint16_t *keycnt) {
 
     if (preferredName == NULL) return 1;
     if (suffix == NULL) return 1;

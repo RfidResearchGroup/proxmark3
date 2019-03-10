@@ -31,8 +31,7 @@
 char *optarg;
 int optind = 1, opterr, optopt;
 int pos = 0;
-int getopt(int argc, char *argv[], const char *optstring)
-{
+int getopt(int argc, char *argv[], const char *optstring) {
     //static int pos = 0;
     char *str;
 

@@ -189,8 +189,7 @@ const productName uidmapping[] = {
 // fast method to just read the UID of a tag (collission detection not supported)
 //  *buf should be large enough to fit the 64bit uid
 // returns 1 if suceeded
-int getUID(uint8_t *buf)
-{
+int getUID(uint8_t *buf) {
 
     UsbCommand resp;
     UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
@@ -229,8 +228,7 @@ int getUID(uint8_t *buf)
 // get a product description based on the UID
 // uid[8] tag uid
 // returns description of the best match
-static char *getTagInfo_15(uint8_t *uid)
-{
+static char *getTagInfo_15(uint8_t *uid) {
     uint64_t myuid, mask;
     int i = 0, best = -1;
     memcpy(&myuid, uid, sizeof(uint64_t));
@@ -254,8 +252,7 @@ static char *getTagInfo_15(uint8_t *uid)
 }
 
 // return a clear-text message to an errorcode
-static char *TagErrorStr(uint8_t error)
-{
+static char *TagErrorStr(uint8_t error) {
     switch (error) {
         case 0x01:
             return "The command is not supported";
@@ -280,20 +277,17 @@ static char *TagErrorStr(uint8_t error)
     }
 }
 
-int usage_15_demod(void)
-{
+int usage_15_demod(void) {
     PrintAndLogEx(NORMAL, "Tries to demodulate / decode ISO15693, from downloaded samples.\n"
                   "Gather samples with 'hf 15 read' / 'hf 15 record'");
     return 0;
 }
-int usage_15_samples(void)
-{
+int usage_15_samples(void) {
     PrintAndLogEx(NORMAL, "Acquire samples as Reader (enables carrier, send inquiry\n"
                   "and download it to graphbuffer.  Try 'hf 15 demod'  to try to demodulate/decode signal");
     return 0;
 }
-int usage_15_info(void)
-{
+int usage_15_info(void) {
     PrintAndLogEx(NORMAL, "Uses the optional command 'get_systeminfo' 0x2B to try and extract information\n"
                   "command may fail, depending on tag.\n"
                   "defaults to '1 out of 4' mode\n"
@@ -309,13 +303,11 @@ int usage_15_info(void)
                   "\thf 15 info u");
     return 0;
 }
-int usage_15_record(void)
-{
+int usage_15_record(void) {
     PrintAndLogEx(NORMAL, "Record activity without enableing carrier");
     return 0;
 }
-int usage_15_reader(void)
-{
+int usage_15_reader(void) {
     PrintAndLogEx(NORMAL, "This command identifies a ISO 15693 tag\n"
                   "\n"
                   "Usage: hf 15 reader [h]\n"
@@ -326,21 +318,18 @@ int usage_15_reader(void)
                   "\thf 15 reader");
     return 0;
 }
-int usage_15_sim(void)
-{
+int usage_15_sim(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf 15 sim <UID>\n"
                   "\n"
                   "Example:\n"
                   "\thf 15 sim E016240000000000");
     return 0;
 }
-int usage_15_findafi(void)
-{
+int usage_15_findafi(void) {
     PrintAndLogEx(NORMAL, "'hf 15 finafi' This command needs a helptext. Feel free to add one!");
     return 0;
 }
-int usage_15_dump(void)
-{
+int usage_15_dump(void) {
     PrintAndLogEx(NORMAL, "This command dumps the contents of a ISO-15693 tag and save it to file\n"
                   "\n"
                   "Usage: hf 15 dump [h] <f filname> \n"
@@ -353,8 +342,7 @@ int usage_15_dump(void)
                   "\thf 15 dump f mydump");
     return 0;
 }
-int usage_15_restore(void)
-{
+int usage_15_restore(void) {
     char *options[][2] = {
         {"h", "this help"},
         {"-2", "use slower '1 out of 256' mode"},
@@ -368,8 +356,7 @@ int usage_15_restore(void)
     PrintAndLogOptions(options, 7, 3);
     return 0;
 }
-int usage_15_raw(void)
-{
+int usage_15_raw(void) {
     char *options[][2] = {
         {"-r", "do not read response" },
         {"-2", "use slower '1 out of 256' mode" },
@@ -380,8 +367,7 @@ int usage_15_raw(void)
     PrintAndLogOptions(options, 4, 3);
     return 0;
 }
-int usage_15_read(void)
-{
+int usage_15_read(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf 15 read    [options] <uid|s|u|*> <page#>\n"
                   "Options:\n"
                   "\t-2        use slower '1 out of 256' mode\n"
@@ -392,8 +378,7 @@ int usage_15_read(void)
                   "\tpage#:        page number 0-255");
     return 0;
 }
-int usage_15_write(void)
-{
+int usage_15_write(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf 15 write    [options] <uid|s|u|*> <page#> <hexdata>\n"
                   "Options:\n"
                   "\t-2        use slower '1 out of 256' mode\n"
@@ -406,8 +391,7 @@ int usage_15_write(void)
                   "\thexdata:      data to be written eg AA BB CC DD");
     return 0;
 }
-int usage_15_readmulti(void)
-{
+int usage_15_readmulti(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf 15 readmulti  [options] <uid|s|u|*> <start#> <count#>\n"
                   "Options:\n"
                   "\t-2        use slower '1 out of 256' mode\n"
@@ -421,8 +405,7 @@ int usage_15_readmulti(void)
 }
 // Mode 3
 //helptext
-int CmdHF15Demod(const char *Cmd)
-{
+int CmdHF15Demod(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_15_demod();
 
@@ -502,8 +485,7 @@ int CmdHF15Demod(const char *Cmd)
 
 // * Acquire Samples as Reader (enables carrier, sends inquiry)
 //helptext
-int CmdHF15Samples(const char *Cmd)
-{
+int CmdHF15Samples(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_15_samples();
 
@@ -519,8 +501,7 @@ int CmdHF15Samples(const char *Cmd)
  * Commandline handling: HF15 CMD SYSINFO
  * get system information from tag/VICC
  */
-int CmdHF15Info(const char *Cmd)
-{
+int CmdHF15Info(const char *Cmd) {
 
     char cmdp = param_getchar(Cmd, 0);
     if (strlen(Cmd) < 1 || cmdp == 'h' || cmdp == 'H') return usage_15_info();
@@ -602,8 +583,7 @@ int CmdHF15Info(const char *Cmd)
 
 // Record Activity without enabeling carrier
 //helptext
-int CmdHF15Record(const char *Cmd)
-{
+int CmdHF15Record(const char *Cmd) {
     char cmdp =  tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_15_record();
 
@@ -614,8 +594,7 @@ int CmdHF15Record(const char *Cmd)
 }
 
 // used with 'hf search'
-int HF15Reader(const char *Cmd, bool verbose)
-{
+int HF15Reader(const char *Cmd, bool verbose) {
     uint8_t uid[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     if (!getUID(uid)) {
         if (verbose) PrintAndLogEx(WARNING, "No tag found.");
@@ -627,8 +606,7 @@ int HF15Reader(const char *Cmd, bool verbose)
     return 1;
 }
 
-int CmdHF15Reader(const char *Cmd)
-{
+int CmdHF15Reader(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_15_reader();
 
@@ -638,8 +616,7 @@ int CmdHF15Reader(const char *Cmd)
 
 // Simulation is still not working very good
 // helptext
-int CmdHF15Sim(const char *Cmd)
-{
+int CmdHF15Sim(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) < 1 || cmdp == 'h') return usage_15_sim();
 
@@ -661,8 +638,7 @@ int CmdHF15Sim(const char *Cmd)
 // finds the AFI (Application Family Idendifier) of a card, by trying all values
 // (There is no standard way of reading the AFI, allthough some tags support this)
 // helptext
-int CmdHF15Afi(const char *Cmd)
-{
+int CmdHF15Afi(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_15_findafi();
 
@@ -681,8 +657,7 @@ typedef struct {
 
 // Reads all memory pages
 // need to write to file
-int CmdHF15Dump(const char *Cmd)
-{
+int CmdHF15Dump(const char *Cmd) {
 
     uint8_t fileNameLen = 0;
     char filename[FILE_PATH_SIZE] = {0};
@@ -798,8 +773,7 @@ int CmdHF15Dump(const char *Cmd)
     return 0;
 }
 
-int CmdHF15Restore(const char *Cmd)
-{
+int CmdHF15Restore(const char *Cmd) {
     FILE *f;
 
     uint8_t uid[8] = {0x00};
@@ -911,15 +885,13 @@ int CmdHF15Restore(const char *Cmd)
     fclose(f);
 }
 
-int CmdHF15List(const char *Cmd)
-{
+int CmdHF15List(const char *Cmd) {
     //PrintAndLogEx(WARNING, "Deprecated command, use 'hf list 15' instead");
     CmdTraceList("15");
     return 0;
 }
 
-int CmdHF15Raw(const char *Cmd)
-{
+int CmdHF15Raw(const char *Cmd) {
 
     char cmdp = param_getchar(Cmd, 0);
     if (strlen(Cmd) < 3 || cmdp == 'h' || cmdp == 'H') return usage_15_raw();
@@ -958,8 +930,8 @@ int CmdHF15Raw(const char *Cmd)
             continue;
         }
         if ((Cmd[i] >= '0' && Cmd[i] <= '9') ||
-            (Cmd[i] >= 'a' && Cmd[i] <= 'f') ||
-            (Cmd[i] >= 'A' && Cmd[i] <= 'F')) {
+                (Cmd[i] >= 'a' && Cmd[i] <= 'f') ||
+                (Cmd[i] >= 'A' && Cmd[i] <= 'F')) {
             buf[strlen(buf) + 1] = 0;
             buf[strlen(buf)] = Cmd[i];
             i++;
@@ -1006,8 +978,7 @@ int CmdHF15Raw(const char *Cmd)
  * Parameters:
  *  **cmd   command line
  */
-int prepareHF15Cmd(char **cmd, UsbCommand *c, uint8_t iso15cmd)
-{
+int prepareHF15Cmd(char **cmd, UsbCommand *c, uint8_t iso15cmd) {
     int temp;
     uint8_t *req = c->d.asBytes;
     uint8_t uid[8] = {0x00};
@@ -1084,8 +1055,7 @@ int prepareHF15Cmd(char **cmd, UsbCommand *c, uint8_t iso15cmd)
  * Commandline handling: HF15 CMD READMULTI
  * Read multiple blocks at once (not all tags support this)
  */
-int CmdHF15Readmulti(const char *Cmd)
-{
+int CmdHF15Readmulti(const char *Cmd) {
 
     char cmdp = param_getchar(Cmd, 0);
     if (strlen(Cmd) < 3 || cmdp == 'h' || cmdp == 'H') return usage_15_readmulti();
@@ -1168,8 +1138,7 @@ int CmdHF15Readmulti(const char *Cmd)
  * Commandline handling: HF15 CMD READ
  * Reads a single Block
  */
-int CmdHF15Read(const char *Cmd)
-{
+int CmdHF15Read(const char *Cmd) {
 
     char cmdp = param_getchar(Cmd, 0);
     if (strlen(Cmd) < 3 || cmdp == 'h' || cmdp == 'H')  return usage_15_read();
@@ -1243,8 +1212,7 @@ int CmdHF15Read(const char *Cmd)
  * Commandline handling: HF15 CMD WRITE
  * Writes a single Block - might run into timeout, even when successful
  */
-int CmdHF15Write(const char *Cmd)
-{
+int CmdHF15Write(const char *Cmd) {
 
     char cmdp = param_getchar(Cmd, 0);
     if (strlen(Cmd) < 3 || cmdp == 'h' || cmdp == 'H') return usage_15_write();
@@ -1338,15 +1306,13 @@ static command_t CommandTable15[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdHF15(const char *Cmd)
-{
+int CmdHF15(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable15, Cmd);
     return 0;
 }
 
-int CmdHF15Help(const char *Cmd)
-{
+int CmdHF15Help(const char *Cmd) {
     CmdsHelp(CommandTable15);
     return 0;
 }

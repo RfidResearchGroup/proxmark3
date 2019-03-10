@@ -10,8 +10,7 @@
 #include "cmdlfnedap.h"
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_nedap_clone(void)
-{
+int usage_lf_nedap_clone(void) {
     PrintAndLogEx(NORMAL, "clone a NEDAP tag to a T55x7 tag.");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage: lf nedap clone [h] <Card-Number>");
@@ -25,8 +24,7 @@ int usage_lf_nedap_clone(void)
     return 0;
 }
 
-int usage_lf_nedap_sim(void)
-{
+int usage_lf_nedap_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of NEDAP card with specified card number.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "");
@@ -41,8 +39,7 @@ int usage_lf_nedap_sim(void)
 }
 
 // find nedap preamble in already demoded data
-int detectNedap(uint8_t *dest, size_t *size)
-{
+int detectNedap(uint8_t *dest, size_t *size) {
     //make sure buffer has data
     if (*size < 128) return -3;
 
@@ -54,8 +51,7 @@ int detectNedap(uint8_t *dest, size_t *size)
     return (int) startIdx;
 }
 
-int GetNedapBits(uint32_t cn, uint8_t *nedapBits)
-{
+int GetNedapBits(uint32_t cn, uint8_t *nedapBits) {
 
     uint8_t pre[128];
     memset(pre, 0x00, sizeof(pre));
@@ -116,8 +112,7 @@ int GetNedapBits(uint32_t cn, uint8_t *nedapBits)
 //NEDAP demod - ASK/Biphase (or Diphase),  RF/64 with preamble of 1111111110  (always a 128 bit data stream)
 //print NEDAP Prox ID, encoding, encrypted ID,
 
-int CmdLFNedapDemod(const char *Cmd)
-{
+int CmdLFNedapDemod(const char *Cmd) {
     //raw ask demod no start bit finding just get binary from wave
     if (!ASKbiphaseDemod("0 64 1 0", false)) {
         if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Nedap ASKbiphaseDemod failed");
@@ -236,8 +231,7 @@ lf t55xx wr b 4 d 4c0003ff
 
 */
 
-int CmdLFNedapRead(const char *Cmd)
-{
+int CmdLFNedapRead(const char *Cmd) {
     lf_read(true, 12000);
     return CmdLFNedapDemod(Cmd);
 }
@@ -294,8 +288,7 @@ int CmdLFNedapClone(const char *Cmd) {
 }
 */
 
-int CmdLFNedapSim(const char *Cmd)
-{
+int CmdLFNedapSim(const char *Cmd) {
 
     uint32_t cardnumber = 0, cn = 0;
 
@@ -331,8 +324,7 @@ int CmdLFNedapSim(const char *Cmd)
     return 0;
 }
 
-int CmdLFNedapChk(const char *Cmd)
-{
+int CmdLFNedapChk(const char *Cmd) {
     //301600714021BE
     uint8_t data[256] = { 0x30, 0x16, 0x00, 0x71, 0x40, 0x21, 0xBE};
     int len = 0;
@@ -389,15 +381,13 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFNedap(const char *Cmd)
-{
+int CmdLFNedap(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }

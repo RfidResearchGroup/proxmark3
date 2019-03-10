@@ -19,8 +19,7 @@ char *programHint = NULL;
 char *programHelp = NULL;
 char buf[500] = {0};
 
-int CLIParserInit(char *vprogramName, char *vprogramHint, char *vprogramHelp)
-{
+int CLIParserInit(char *vprogramName, char *vprogramHint, char *vprogramHelp) {
     argtable = NULL;
     argtableLen = 0;
     programName = vprogramName;
@@ -31,8 +30,7 @@ int CLIParserInit(char *vprogramName, char *vprogramHint, char *vprogramHelp)
     return 0;
 }
 
-int CLIParserParseArg(int argc, char **argv, void *vargtable[], size_t vargtableLen, bool allowEmptyExec)
-{
+int CLIParserParseArg(int argc, char **argv, void *vargtable[], size_t vargtableLen, bool allowEmptyExec) {
     int nerrors;
 
     argtable = vargtable;
@@ -81,13 +79,11 @@ enum ParserState {
 
 #define isSpace(c)(c == ' ' || c == '\t')
 
-int CLIParserParseString(const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec)
-{
+int CLIParserParseString(const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec) {
     return CLIParserParseStringEx(str, vargtable, vargtableLen, allowEmptyExec, false);
 }
 
-int CLIParserParseStringEx(const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec, bool clueData)
-{
+int CLIParserParseStringEx(const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec, bool clueData) {
     int argc = 0;
     char *argv[200] = {NULL};
 
@@ -147,8 +143,7 @@ int CLIParserParseStringEx(const char *str, void *vargtable[], size_t vargtableL
     return CLIParserParseArg(argc, argv, vargtable, vargtableLen, allowEmptyExec);
 }
 
-void CLIParserFree()
-{
+void CLIParserFree() {
     arg_freetable(argtable, argtableLen);
     argtable = NULL;
 
@@ -156,8 +151,7 @@ void CLIParserFree()
 }
 
 // convertors
-int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen)
-{
+int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen) {
     *datalen = 0;
 
     int ibuf = 0;
@@ -181,8 +175,7 @@ int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
     return 0;
 }
 
-int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen)
-{
+int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen) {
     *datalen = 0;
     if (!argstr->count)
         return 0;

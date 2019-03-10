@@ -60,8 +60,7 @@ int nonce_distance(uint32_t from, uint32_t to);
 #define LF_POLY_EVEN (0x870804)
 #define BIT(x, n) ((x) >> (n) & 1)
 #define BEBIT(x, n) BIT(x, (n) ^ 24)
-static inline int parity(uint32_t x)
-{
+static inline int parity(uint32_t x) {
 #if !defined __i386__ || !defined __GNUC__
     x ^= x >> 16;
     x ^= x >> 8;
@@ -78,8 +77,7 @@ static inline int parity(uint32_t x)
     return x;
 #endif
 }
-static inline int filter(uint32_t const x)
-{
+static inline int filter(uint32_t const x) {
     uint32_t f;
 
     f  = 0xf22c0 >> (x       & 0xf) & 16;

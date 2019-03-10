@@ -25,13 +25,11 @@
 
 static int CmdHelp(const char *Cmd);
 
-size_t nbytes(size_t nbits)
-{
+size_t nbytes(size_t nbits) {
     return (nbits / 8) + ((nbits % 8) > 0);
 }
 
-int CmdLFHitagList(const char *Cmd)
-{
+int CmdLFHitagList(const char *Cmd) {
     uint8_t *got = calloc(USB_CMD_DATA_SIZE, sizeof(uint8_t));
     if (!got) {
         PrintAndLogEx(WARNING, "Cannot allocate memory for trace");
@@ -158,16 +156,14 @@ int CmdLFHitagList(const char *Cmd)
     return 0;
 }
 
-int CmdLFHitagSnoop(const char *Cmd)
-{
+int CmdLFHitagSnoop(const char *Cmd) {
     UsbCommand c = {CMD_SNOOP_HITAG};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
 }
 
-int CmdLFHitagSim(const char *Cmd)
-{
+int CmdLFHitagSim(const char *Cmd) {
 
     UsbCommand c = {CMD_SIMULATE_HITAG};
     char filename[FILE_PATH_SIZE] = { 0x00 };
@@ -203,8 +199,7 @@ int CmdLFHitagSim(const char *Cmd)
     return 0;
 }
 
-int CmdLFHitagReader(const char *Cmd)
-{
+int CmdLFHitagReader(const char *Cmd) {
 
     UsbCommand c = {CMD_READER_HITAG, {0, 0, 0} }; //, {param_get32ex(Cmd,0,0,10),param_get32ex(Cmd,1,0,16),param_get32ex(Cmd,2,0,16),param_get32ex(Cmd,3,0,16)}};
     hitag_data *htd = (hitag_data *)c.d.asBytes;
@@ -299,8 +294,7 @@ int CmdLFHitagReader(const char *Cmd)
     return 0;
 }
 
-int CmdLFHitagSimS(const char *Cmd)
-{
+int CmdLFHitagSimS(const char *Cmd) {
     UsbCommand c = { CMD_SIMULATE_HITAG_S };
     char filename[FILE_PATH_SIZE] = { 0x00 };
     FILE *f;
@@ -335,8 +329,7 @@ int CmdLFHitagSimS(const char *Cmd)
     return 0;
 }
 
-int CmdLFHitagCheckChallenges(const char *Cmd)
-{
+int CmdLFHitagCheckChallenges(const char *Cmd) {
     UsbCommand c = { CMD_TEST_HITAGS_TRACES };
     char filename[FILE_PATH_SIZE] = { 0x00 };
     FILE *f;
@@ -371,8 +364,7 @@ int CmdLFHitagCheckChallenges(const char *Cmd)
     return 0;
 }
 
-int CmdLFHitagWP(const char *Cmd)
-{
+int CmdLFHitagWP(const char *Cmd) {
     UsbCommand c = { CMD_WR_HITAG_S };
     hitag_data *htd = (hitag_data *)c.d.asBytes;
     hitag_function htf = param_get32ex(Cmd, 0, 0, 10);
@@ -429,15 +421,13 @@ static command_t CommandTable[] = {
     { NULL, NULL, 0, NULL }
 };
 
-int CmdLFHitag(const char *Cmd)
-{
+int CmdLFHitag(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }

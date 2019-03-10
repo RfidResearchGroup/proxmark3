@@ -7,8 +7,7 @@
 #include <ctype.h>
 #include "elite_crack.h"
 
-void calc_score(uint8_t *csn, uint8_t *k)
-{
+void calc_score(uint8_t *csn, uint8_t *k) {
     uint8_t score = 0 ;
     uint8_t i;
     uint8_t goodvals[16] = {0};
@@ -54,8 +53,7 @@ void calc_score(uint8_t *csn, uint8_t *k)
     }
 }
 
-void brute_hash1(void)
-{
+void brute_hash1(void) {
     uint16_t a, b, c, d;
     uint8_t csn[8] = {0, 0, 0, 0, 0xf7, 0xff, 0x12, 0xe0};
     uint8_t k[8] = {0, 0, 0, 0, 0, 0, 0, 0};

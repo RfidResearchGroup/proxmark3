@@ -294,26 +294,22 @@ static const uint32_t RHs[16] = {
 
 #define SWAP(a,b) { uint32_t t = a; a = b; b = t; t = 0; }
 
-void mbedtls_des_init(mbedtls_des_context *ctx)
-{
+void mbedtls_des_init(mbedtls_des_context *ctx) {
     memset(ctx, 0, sizeof(mbedtls_des_context));
 }
 
-void mbedtls_des_free(mbedtls_des_context *ctx)
-{
+void mbedtls_des_free(mbedtls_des_context *ctx) {
     if (ctx == NULL)
         return;
 
     mbedtls_platform_zeroize(ctx, sizeof(mbedtls_des_context));
 }
 
-void mbedtls_des3_init(mbedtls_des3_context *ctx)
-{
+void mbedtls_des3_init(mbedtls_des3_context *ctx) {
     memset(ctx, 0, sizeof(mbedtls_des3_context));
 }
 
-void mbedtls_des3_free(mbedtls_des3_context *ctx)
-{
+void mbedtls_des3_free(mbedtls_des3_context *ctx) {
     if (ctx == NULL)
         return;
 
@@ -332,8 +328,7 @@ static const unsigned char odd_parity_table[128] = { 1,  2,  4,  7,  8,
                                                      254
                                                    };
 
-void mbedtls_des_key_set_parity(unsigned char key[MBEDTLS_DES_KEY_SIZE])
-{
+void mbedtls_des_key_set_parity(unsigned char key[MBEDTLS_DES_KEY_SIZE]) {
     int i;
 
     for (i = 0; i < MBEDTLS_DES_KEY_SIZE; i++)
@@ -343,8 +338,7 @@ void mbedtls_des_key_set_parity(unsigned char key[MBEDTLS_DES_KEY_SIZE])
 /*
  * Check the given key's parity, returns 1 on failure, 0 on SUCCESS
  */
-int mbedtls_des_key_check_key_parity(const unsigned char key[MBEDTLS_DES_KEY_SIZE])
-{
+int mbedtls_des_key_check_key_parity(const unsigned char key[MBEDTLS_DES_KEY_SIZE]) {
     int i;
 
     for (i = 0; i < MBEDTLS_DES_KEY_SIZE; i++)
@@ -397,8 +391,7 @@ static const unsigned char weak_key_table[WEAK_KEY_COUNT][MBEDTLS_DES_KEY_SIZE] 
     { 0xFE, 0xE0, 0xFE, 0xE0, 0xFE, 0xF1, 0xFE, 0xF1 }
 };
 
-int mbedtls_des_key_check_weak(const unsigned char key[MBEDTLS_DES_KEY_SIZE])
-{
+int mbedtls_des_key_check_weak(const unsigned char key[MBEDTLS_DES_KEY_SIZE]) {
     int i;
 
     for (i = 0; i < WEAK_KEY_COUNT; i++)
@@ -409,8 +402,7 @@ int mbedtls_des_key_check_weak(const unsigned char key[MBEDTLS_DES_KEY_SIZE])
 }
 
 #if !defined(MBEDTLS_DES_SETKEY_ALT)
-void mbedtls_des_setkey(uint32_t SK[32], const unsigned char key[MBEDTLS_DES_KEY_SIZE])
-{
+void mbedtls_des_setkey(uint32_t SK[32], const unsigned char key[MBEDTLS_DES_KEY_SIZE]) {
     int i;
     uint32_t X, Y, T;
 
@@ -482,8 +474,7 @@ void mbedtls_des_setkey(uint32_t SK[32], const unsigned char key[MBEDTLS_DES_KEY
 /*
  * DES key schedule (56-bit, encryption)
  */
-int mbedtls_des_setkey_enc(mbedtls_des_context *ctx, const unsigned char key[MBEDTLS_DES_KEY_SIZE])
-{
+int mbedtls_des_setkey_enc(mbedtls_des_context *ctx, const unsigned char key[MBEDTLS_DES_KEY_SIZE]) {
     mbedtls_des_setkey(ctx->sk, key);
 
     return (0);
@@ -492,8 +483,7 @@ int mbedtls_des_setkey_enc(mbedtls_des_context *ctx, const unsigned char key[MBE
 /*
  * DES key schedule (56-bit, decryption)
  */
-int mbedtls_des_setkey_dec(mbedtls_des_context *ctx, const unsigned char key[MBEDTLS_DES_KEY_SIZE])
-{
+int mbedtls_des_setkey_dec(mbedtls_des_context *ctx, const unsigned char key[MBEDTLS_DES_KEY_SIZE]) {
     int i;
 
     mbedtls_des_setkey(ctx->sk, key);
@@ -508,8 +498,7 @@ int mbedtls_des_setkey_dec(mbedtls_des_context *ctx, const unsigned char key[MBE
 
 static void des3_set2key(uint32_t esk[96],
                          uint32_t dsk[96],
-                         const unsigned char key[MBEDTLS_DES_KEY_SIZE * 2])
-{
+                         const unsigned char key[MBEDTLS_DES_KEY_SIZE * 2]) {
     int i;
 
     mbedtls_des_setkey(esk, key);
@@ -534,8 +523,7 @@ static void des3_set2key(uint32_t esk[96],
  * Triple-DES key schedule (112-bit, encryption)
  */
 int mbedtls_des3_set2key_enc(mbedtls_des3_context *ctx,
-                             const unsigned char key[MBEDTLS_DES_KEY_SIZE * 2])
-{
+                             const unsigned char key[MBEDTLS_DES_KEY_SIZE * 2]) {
     uint32_t sk[96];
 
     des3_set2key(ctx->sk, sk, key);
@@ -548,8 +536,7 @@ int mbedtls_des3_set2key_enc(mbedtls_des3_context *ctx,
  * Triple-DES key schedule (112-bit, decryption)
  */
 int mbedtls_des3_set2key_dec(mbedtls_des3_context *ctx,
-                             const unsigned char key[MBEDTLS_DES_KEY_SIZE * 2])
-{
+                             const unsigned char key[MBEDTLS_DES_KEY_SIZE * 2]) {
     uint32_t sk[96];
 
     des3_set2key(sk, ctx->sk, key);
@@ -560,8 +547,7 @@ int mbedtls_des3_set2key_dec(mbedtls_des3_context *ctx,
 
 static void des3_set3key(uint32_t esk[96],
                          uint32_t dsk[96],
-                         const unsigned char key[24])
-{
+                         const unsigned char key[24]) {
     int i;
 
     mbedtls_des_setkey(esk, key);
@@ -584,8 +570,7 @@ static void des3_set3key(uint32_t esk[96],
  * Triple-DES key schedule (168-bit, encryption)
  */
 int mbedtls_des3_set3key_enc(mbedtls_des3_context *ctx,
-                             const unsigned char key[MBEDTLS_DES_KEY_SIZE * 3])
-{
+                             const unsigned char key[MBEDTLS_DES_KEY_SIZE * 3]) {
     uint32_t sk[96];
 
     des3_set3key(ctx->sk, sk, key);
@@ -598,8 +583,7 @@ int mbedtls_des3_set3key_enc(mbedtls_des3_context *ctx,
  * Triple-DES key schedule (168-bit, decryption)
  */
 int mbedtls_des3_set3key_dec(mbedtls_des3_context *ctx,
-                             const unsigned char key[MBEDTLS_DES_KEY_SIZE * 3])
-{
+                             const unsigned char key[MBEDTLS_DES_KEY_SIZE * 3]) {
     uint32_t sk[96];
 
     des3_set3key(sk, ctx->sk, key);
@@ -614,8 +598,7 @@ int mbedtls_des3_set3key_dec(mbedtls_des3_context *ctx,
 #if !defined(MBEDTLS_DES_CRYPT_ECB_ALT)
 int mbedtls_des_crypt_ecb(mbedtls_des_context *ctx,
                           const unsigned char input[8],
-                          unsigned char output[8])
-{
+                          unsigned char output[8]) {
     int i;
     uint32_t X, Y, T, *SK;
 
@@ -649,8 +632,7 @@ int mbedtls_des_crypt_cbc(mbedtls_des_context *ctx,
                           size_t length,
                           unsigned char iv[8],
                           const unsigned char *input,
-                          unsigned char *output)
-{
+                          unsigned char *output) {
     int i;
     unsigned char temp[8];
 
@@ -695,8 +677,7 @@ int mbedtls_des_crypt_cbc(mbedtls_des_context *ctx,
 #if !defined(MBEDTLS_DES3_CRYPT_ECB_ALT)
 int mbedtls_des3_crypt_ecb(mbedtls_des3_context *ctx,
                            const unsigned char input[8],
-                           unsigned char output[8])
-{
+                           unsigned char output[8]) {
     int i;
     uint32_t X, Y, T, *SK;
 
@@ -740,8 +721,7 @@ int mbedtls_des3_crypt_cbc(mbedtls_des3_context *ctx,
                            size_t length,
                            unsigned char iv[8],
                            const unsigned char *input,
-                           unsigned char *output)
-{
+                           unsigned char *output) {
     int i;
     unsigned char temp[8];
 
@@ -831,8 +811,7 @@ static const unsigned char des3_test_cbc_enc[3][8] = {
 /*
  * Checkup routine
  */
-int mbedtls_des_self_test(int verbose)
-{
+int mbedtls_des_self_test(int verbose) {
     int i, j, u, v, ret = 0;
     mbedtls_des_context ctx;
     mbedtls_des3_context ctx3;
@@ -895,9 +874,9 @@ int mbedtls_des_self_test(int verbose)
         }
 
         if ((v == MBEDTLS_DES_DECRYPT &&
-             memcmp(buf, des3_test_ecb_dec[u], 8) != 0) ||
-            (v != MBEDTLS_DES_DECRYPT &&
-             memcmp(buf, des3_test_ecb_enc[u], 8) != 0)) {
+                memcmp(buf, des3_test_ecb_dec[u], 8) != 0) ||
+                (v != MBEDTLS_DES_DECRYPT &&
+                 memcmp(buf, des3_test_ecb_enc[u], 8) != 0)) {
             if (verbose != 0)
                 mbedtls_printf("failed\n");
 
@@ -983,9 +962,9 @@ int mbedtls_des_self_test(int verbose)
         }
 
         if ((v == MBEDTLS_DES_DECRYPT &&
-             memcmp(buf, des3_test_cbc_dec[u], 8) != 0) ||
-            (v != MBEDTLS_DES_DECRYPT &&
-             memcmp(buf, des3_test_cbc_enc[u], 8) != 0)) {
+                memcmp(buf, des3_test_cbc_dec[u], 8) != 0) ||
+                (v != MBEDTLS_DES_DECRYPT &&
+                 memcmp(buf, des3_test_cbc_enc[u], 8) != 0)) {
             if (verbose != 0)
                 mbedtls_printf("failed\n");
 

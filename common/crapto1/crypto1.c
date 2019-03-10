@@ -26,8 +26,7 @@
     (x = (x >> 8 & 0xff00ff) | (x & 0xff00ff) << 8, x = x >> 16 | x << 16)
 
 #if defined(__arm__) && !defined(__linux__) && !defined(_WIN32) && !defined(__APPLE__) // bare metal ARM Proxmark lacks malloc()/free()
-void crypto1_create(struct Crypto1State *s, uint64_t key)
-{
+void crypto1_create(struct Crypto1State *s, uint64_t key) {
     int i;
 
     for (i = 47; s && i > 0; i -= 2) {
@@ -36,14 +35,12 @@ void crypto1_create(struct Crypto1State *s, uint64_t key)
     }
     return;
 }
-void crypto1_destroy(struct Crypto1State *state)
-{
+void crypto1_destroy(struct Crypto1State *state) {
     state->odd = 0;
     state->even = 0;
 }
 #else
-struct Crypto1State *crypto1_create(uint64_t key)
-{
+struct Crypto1State *crypto1_create(uint64_t key) {
     struct Crypto1State *s = malloc(sizeof(*s));
     if (!s) return NULL;
 
@@ -56,21 +53,18 @@ struct Crypto1State *crypto1_create(uint64_t key)
     }
     return s;
 }
-void crypto1_destroy(struct Crypto1State *state)
-{
+void crypto1_destroy(struct Crypto1State *state) {
     free(state);
 }
 #endif
-void crypto1_get_lfsr(struct Crypto1State *state, uint64_t *lfsr)
-{
+void crypto1_get_lfsr(struct Crypto1State *state, uint64_t *lfsr) {
     int i;
     for (*lfsr = 0, i = 23; i >= 0; --i) {
         *lfsr = *lfsr << 1 | BIT(state->odd, i ^ 3);
         *lfsr = *lfsr << 1 | BIT(state->even, i ^ 3);
     }
 }
-uint8_t crypto1_bit(struct Crypto1State *s, uint8_t in, int is_encrypted)
-{
+uint8_t crypto1_bit(struct Crypto1State *s, uint8_t in, int is_encrypted) {
     uint32_t feedin, t;
     uint8_t ret = filter(s->odd);
 
@@ -86,8 +80,7 @@ uint8_t crypto1_bit(struct Crypto1State *s, uint8_t in, int is_encrypted)
 
     return ret;
 }
-uint8_t crypto1_byte(struct Crypto1State *s, uint8_t in, int is_encrypted)
-{
+uint8_t crypto1_byte(struct Crypto1State *s, uint8_t in, int is_encrypted) {
     uint8_t ret = 0;
     ret |= crypto1_bit(s, BIT(in, 0), is_encrypted) << 0;
     ret |= crypto1_bit(s, BIT(in, 1), is_encrypted) << 1;
@@ -99,8 +92,7 @@ uint8_t crypto1_byte(struct Crypto1State *s, uint8_t in, int is_encrypted)
     ret |= crypto1_bit(s, BIT(in, 7), is_encrypted) << 7;
     return ret;
 }
-uint32_t crypto1_word(struct Crypto1State *s, uint32_t in, int is_encrypted)
-{
+uint32_t crypto1_word(struct Crypto1State *s, uint32_t in, int is_encrypted) {
     uint32_t ret = 0;
     ret |= crypto1_bit(s, BEBIT(in, 0), is_encrypted) << (0 ^ 24);
     ret |= crypto1_bit(s, BEBIT(in, 1), is_encrypted) << (1 ^ 24);
@@ -143,8 +135,7 @@ uint32_t crypto1_word(struct Crypto1State *s, uint32_t in, int is_encrypted)
 /* prng_successor
  * helper used to obscure the keystream during authentication
  */
-uint32_t prng_successor(uint32_t x, uint32_t n)
-{
+uint32_t prng_successor(uint32_t x, uint32_t n) {
     SWAPENDIAN(x);
     while (n--)
         x = x >> 1 | (x >> 16 ^ x >> 18 ^ x >> 19 ^ x >> 21) << 31;

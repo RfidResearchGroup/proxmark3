@@ -58,8 +58,7 @@ static uint32_t last_frame_end; /* ts of last bit of previews rx or tx frame */
 //-----------------------------------------------------------------------------
 
 // Returns true if a pulse/pause is received within timeout
-static inline bool wait_for(bool value, const uint32_t timeout)
-{
+static inline bool wait_for(bool value, const uint32_t timeout) {
     while ((bool)(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_DIN) != value) {
         if (GetCountSspClk() > timeout) {
             return false;
@@ -77,8 +76,7 @@ static inline bool wait_for(bool value, const uint32_t timeout)
 //  - A bit length >80.2us is a 1
 //  - A bit length <80.2us is a 0
 //  - A bit length >148.6us is a code violation
-static inline int8_t rx_bit()
-{
+static inline int8_t rx_bit() {
     // backup ts for threshold calculation
     uint32_t bit_start = last_frame_end;
 
@@ -121,8 +119,7 @@ static inline int8_t rx_bit()
 // Note: The Subcarrier is not disabled during bits to prevent glitches. This is
 //       not mandatory but results in a cleaner signal. tx_frame will disable
 //       the subcarrier when the frame is done.
-static inline void tx_bit(bool bit)
-{
+static inline void tx_bit(bool bit) {
     LED_C_ON();
 
     if (bit) {
@@ -149,8 +146,7 @@ static inline void tx_bit(bool bit)
 // and depends only the command received (IV, ACK, READ or WRITE).
 //-----------------------------------------------------------------------------
 
-static void tx_frame(uint32_t frame, uint8_t len)
-{
+static void tx_frame(uint32_t frame, uint8_t len) {
     // wait for next tx timeslot
     last_frame_end += TAG_FRAME_WAIT;
     legic_prng_forward(TAG_FRAME_WAIT / TAG_BIT_PERIOD - 1);
@@ -174,8 +170,7 @@ static void tx_frame(uint32_t frame, uint8_t len)
     LogTrace(cmdbytes, sizeof(cmdbytes), last_frame_start, last_frame_end, NULL, false);
 }
 
-static void tx_ack()
-{
+static void tx_ack() {
     // wait for ack timeslot
     last_frame_end += TAG_ACK_WAIT;
     legic_prng_forward(TAG_ACK_WAIT / TAG_BIT_PERIOD - 1);
@@ -203,8 +198,7 @@ static void tx_ack()
 //  - forward prng based on ts/TAG_BIT_PERIOD
 //  - receive the frame
 //  - detect end of frame (last pause)
-static int32_t rx_frame(uint8_t *len)
-{
+static int32_t rx_frame(uint8_t *len) {
     int32_t frame = 0;
 
     // add 2 SSP clock cycles (1 for tx and 1 for rx pipeline delay)
@@ -269,8 +263,7 @@ static int32_t rx_frame(uint8_t *len)
 // Legic Simulator
 //-----------------------------------------------------------------------------
 
-static int32_t init_card(uint8_t cardtype, legic_card_select_t *p_card)
-{
+static int32_t init_card(uint8_t cardtype, legic_card_select_t *p_card) {
     p_card->tagtype = cardtype;
 
     switch (p_card->tagtype) {
@@ -298,8 +291,7 @@ static int32_t init_card(uint8_t cardtype, legic_card_select_t *p_card)
     return 0;
 }
 
-static void init_tag()
-{
+static void init_tag() {
     // configure FPGA
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR
@@ -334,8 +326,7 @@ static void init_tag()
 //  - Receive initialisation vector 7 bits
 //  - Transmit card type 6 bits
 //  - Receive Acknowledge 6 bits
-static int32_t setup_phase(legic_card_select_t *p_card)
-{
+static int32_t setup_phase(legic_card_select_t *p_card) {
     uint8_t len = 0;
 
     // init coordination timestamp
@@ -396,15 +387,13 @@ static int32_t setup_phase(legic_card_select_t *p_card)
     return 0;
 }
 
-static uint8_t calc_crc4(uint16_t cmd, uint8_t cmd_sz, uint8_t value)
-{
+static uint8_t calc_crc4(uint16_t cmd, uint8_t cmd_sz, uint8_t value) {
     crc_clear(&legic_crc);
     crc_update(&legic_crc, (value << cmd_sz) | cmd, 8 + cmd_sz);
     return crc_finish(&legic_crc);
 }
 
-static int32_t connected_phase(legic_card_select_t *p_card)
-{
+static int32_t connected_phase(legic_card_select_t *p_card) {
     uint8_t len = 0;
 
     // wait for command
@@ -458,8 +447,7 @@ static int32_t connected_phase(legic_card_select_t *p_card)
 // Only this function is public / called from appmain.c
 //-----------------------------------------------------------------------------
 
-void LegicRfSimulate(uint8_t cardtype)
-{
+void LegicRfSimulate(uint8_t cardtype) {
     // configure ARM and FPGA
     init_tag();
 

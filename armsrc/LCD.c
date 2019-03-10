@@ -7,8 +7,7 @@
 //-----------------------------------------------------------------------------
 #include "LCD.h"
 
-void LCDSend(unsigned int data)
-{
+void LCDSend(unsigned int data) {
     // 9th bit set for data, clear for command
     while ((AT91C_BASE_SPI->SPI_SR & AT91C_SPI_TXEMPTY) == 0);    // wait for the transfer to complete
     // For clarity's sake we pass data with 9th bit clear and commands with 9th
@@ -16,8 +15,7 @@ void LCDSend(unsigned int data)
     AT91C_BASE_SPI->SPI_TDR = data ^ 0x100;                       // Send the data/command
 }
 
-void LCDSetXY(unsigned char x, unsigned char y)
-{
+void LCDSetXY(unsigned char x, unsigned char y) {
     LCDSend(PPASET);            // page start/end ram
     LCDSend(y);                 // Start Page to display to
     LCDSend(131);               // End Page to display to
@@ -27,15 +25,13 @@ void LCDSetXY(unsigned char x, unsigned char y)
     LCDSend(131);               // End Column to display to
 }
 
-void LCDSetPixel(unsigned char x, unsigned char y, unsigned char color)
-{
+void LCDSetPixel(unsigned char x, unsigned char y, unsigned char color) {
     LCDSetXY(x, y);             // Set position
     LCDSend(PRAMWR);            // Now write the pixel to the display
     LCDSend(color);             // Write the data in the specified Color
 }
 
-void LCDFill(unsigned char xs, unsigned char ys, unsigned char width, unsigned char height, unsigned char color)
-{
+void LCDFill(unsigned char xs, unsigned char ys, unsigned char width, unsigned char height, unsigned char color) {
     unsigned char i, j;
 
     for (i = 0; i < height; i++) { // Number of horizontal lines
@@ -47,8 +43,7 @@ void LCDFill(unsigned char xs, unsigned char ys, unsigned char width, unsigned c
     }
 }
 
-void LCDString(char *lcd_string, const char *font_style, unsigned char x, unsigned char y, unsigned char fcolor, unsigned char bcolor)
-{
+void LCDString(char *lcd_string, const char *font_style, unsigned char x, unsigned char y, unsigned char fcolor, unsigned char bcolor) {
     unsigned int  i;
     unsigned char mask = 0, px, py, xme, yme, offset;
     const char *data;
@@ -85,8 +80,7 @@ void LCDString(char *lcd_string, const char *font_style, unsigned char x, unsign
     } while (*lcd_string != '\0');          // keep spitting chars out until end of string
 }
 
-void LCDReset(void)
-{
+void LCDReset(void) {
     LED_A_ON();
     SetupSpi(SPI_LCD_MODE);
     LOW(GPIO_LRST);
@@ -97,8 +91,7 @@ void LCDReset(void)
     LED_A_OFF();
 }
 
-void LCDInit(void)
-{
+void LCDInit(void) {
     int i;
 
     LCDReset();

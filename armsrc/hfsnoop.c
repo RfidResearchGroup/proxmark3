@@ -6,8 +6,7 @@
 
 static void RAMFUNC optimizedSnoop(void);
 
-static void RAMFUNC optimizedSnoop(void)
-{
+static void RAMFUNC optimizedSnoop(void) {
     int n = BigBuf_max_traceLen() / sizeof(uint16_t); // take all memory
 
     uint16_t *dest = (uint16_t *)BigBuf_get_addr();
@@ -24,8 +23,7 @@ static void RAMFUNC optimizedSnoop(void)
     set_tracelen(BigBuf_max_traceLen());
 }
 
-void HfSnoop(int samplesToSkip, int triggersToSkip)
-{
+void HfSnoop(int samplesToSkip, int triggersToSkip) {
     BigBuf_free();
     BigBuf_Clear();
 

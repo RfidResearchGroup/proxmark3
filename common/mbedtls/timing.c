@@ -78,8 +78,7 @@ struct _hr_time {
 
 #define HAVE_HARDCLOCK
 
-unsigned long mbedtls_timing_hardclock(void)
-{
+unsigned long mbedtls_timing_hardclock(void) {
     unsigned long tsc;
     __asm   rdtsc
     __asm   mov  [tsc], eax
@@ -95,8 +94,7 @@ unsigned long mbedtls_timing_hardclock(void)
 
 #define HAVE_HARDCLOCK
 
-unsigned long mbedtls_timing_hardclock(void)
-{
+unsigned long mbedtls_timing_hardclock(void) {
     unsigned long lo, hi;
     asm volatile("rdtsc" : "=a"(lo), "=d"(hi));
     return (lo);
@@ -109,8 +107,7 @@ unsigned long mbedtls_timing_hardclock(void)
 
 #define HAVE_HARDCLOCK
 
-unsigned long mbedtls_timing_hardclock(void)
-{
+unsigned long mbedtls_timing_hardclock(void) {
     unsigned long lo, hi;
     asm volatile("rdtsc" : "=a"(lo), "=d"(hi));
     return (lo | (hi << 32));
@@ -123,8 +120,7 @@ unsigned long mbedtls_timing_hardclock(void)
 
 #define HAVE_HARDCLOCK
 
-unsigned long mbedtls_timing_hardclock(void)
-{
+unsigned long mbedtls_timing_hardclock(void) {
     unsigned long tbl, tbu0, tbu1;
 
     do {
@@ -146,8 +142,7 @@ unsigned long mbedtls_timing_hardclock(void)
 #else
 #define HAVE_HARDCLOCK
 
-unsigned long mbedtls_timing_hardclock(void)
-{
+unsigned long mbedtls_timing_hardclock(void) {
     unsigned long tick;
     asm volatile("rdpr %%tick, %0;" : "=&r"(tick));
     return (tick);
@@ -161,8 +156,7 @@ unsigned long mbedtls_timing_hardclock(void)
 
 #define HAVE_HARDCLOCK
 
-unsigned long mbedtls_timing_hardclock(void)
-{
+unsigned long mbedtls_timing_hardclock(void) {
     unsigned long tick;
     asm volatile(".byte 0x83, 0x41, 0x00, 0x00");
     asm volatile("mov   %%g1, %0" : "=r"(tick));
@@ -176,8 +170,7 @@ unsigned long mbedtls_timing_hardclock(void)
 
 #define HAVE_HARDCLOCK
 
-unsigned long mbedtls_timing_hardclock(void)
-{
+unsigned long mbedtls_timing_hardclock(void) {
     unsigned long cc;
     asm volatile("rpcc %0" : "=r"(cc));
     return (cc & 0xFFFFFFFF);
@@ -190,8 +183,7 @@ unsigned long mbedtls_timing_hardclock(void)
 
 #define HAVE_HARDCLOCK
 
-unsigned long mbedtls_timing_hardclock(void)
-{
+unsigned long mbedtls_timing_hardclock(void) {
     unsigned long itc;
     asm volatile("mov %0 = ar.itc" : "=r"(itc));
     return (itc);
@@ -204,8 +196,7 @@ unsigned long mbedtls_timing_hardclock(void)
 
 #define HAVE_HARDCLOCK
 
-unsigned long mbedtls_timing_hardclock(void)
-{
+unsigned long mbedtls_timing_hardclock(void) {
     LARGE_INTEGER offset;
 
     QueryPerformanceCounter(&offset);
@@ -221,8 +212,7 @@ unsigned long mbedtls_timing_hardclock(void)
 static int hardclock_init = 0;
 static struct timeval tv_init;
 
-unsigned long mbedtls_timing_hardclock(void)
-{
+unsigned long mbedtls_timing_hardclock(void) {
     struct timeval tv_cur;
 
     if (hardclock_init == 0) {
@@ -248,8 +238,7 @@ volatile int mbedtls_timing_alarmed = 0;
 
 #if defined(_WIN32) && !defined(EFIX64) && !defined(EFI32)
 
-unsigned long mbedtls_timing_get_timer(struct mbedtls_timing_hr_time *val, int reset)
-{
+unsigned long mbedtls_timing_get_timer(struct mbedtls_timing_hr_time *val, int reset) {
     struct _hr_time *t = (struct _hr_time *) val;
 
     if (reset) {
@@ -269,16 +258,14 @@ unsigned long mbedtls_timing_get_timer(struct mbedtls_timing_hr_time *val, int r
 /* It's OK to use a global because alarm() is supposed to be global anyway */
 static DWORD alarmMs;
 
-static DWORD WINAPI TimerProc(LPVOID TimerContext)
-{
+static DWORD WINAPI TimerProc(LPVOID TimerContext) {
     ((void) TimerContext);
     Sleep(alarmMs);
     mbedtls_timing_alarmed = 1;
     return (TRUE);
 }
 
-void mbedtls_set_alarm(int seconds)
-{
+void mbedtls_set_alarm(int seconds) {
     DWORD ThreadId;
 
     if (seconds == 0) {
@@ -295,8 +282,7 @@ void mbedtls_set_alarm(int seconds)
 
 #else /* _WIN32 && !EFIX64 && !EFI32 */
 
-unsigned long mbedtls_timing_get_timer(struct mbedtls_timing_hr_time *val, int reset)
-{
+unsigned long mbedtls_timing_get_timer(struct mbedtls_timing_hr_time *val, int reset) {
     struct _hr_time *t = (struct _hr_time *) val;
 
     if (reset) {
@@ -312,14 +298,12 @@ unsigned long mbedtls_timing_get_timer(struct mbedtls_timing_hr_time *val, int r
     }
 }
 
-static void sighandler(int signum)
-{
+static void sighandler(int signum) {
     mbedtls_timing_alarmed = 1;
     signal(signum, sighandler);
 }
 
-void mbedtls_set_alarm(int seconds)
-{
+void mbedtls_set_alarm(int seconds) {
     mbedtls_timing_alarmed = 0;
     signal(SIGALRM, sighandler);
     alarm(seconds);
@@ -335,8 +319,7 @@ void mbedtls_set_alarm(int seconds)
 /*
  * Set delays to watch
  */
-void mbedtls_timing_set_delay(void *data, uint32_t int_ms, uint32_t fin_ms)
-{
+void mbedtls_timing_set_delay(void *data, uint32_t int_ms, uint32_t fin_ms) {
     mbedtls_timing_delay_context *ctx = (mbedtls_timing_delay_context *) data;
 
     ctx->int_ms = int_ms;
@@ -349,8 +332,7 @@ void mbedtls_timing_set_delay(void *data, uint32_t int_ms, uint32_t fin_ms)
 /*
  * Get number of delays expired
  */
-int mbedtls_timing_get_delay(void *data)
-{
+int mbedtls_timing_get_delay(void *data) {
     mbedtls_timing_delay_context *ctx = (mbedtls_timing_delay_context *) data;
     unsigned long elapsed_ms;
 
@@ -376,8 +358,7 @@ int mbedtls_timing_get_delay(void *data)
  * Busy-waits for the given number of milliseconds.
  * Used for testing mbedtls_timing_hardclock.
  */
-static void busy_msleep(unsigned long msec)
-{
+static void busy_msleep(unsigned long msec) {
     struct mbedtls_timing_hr_time hires;
     unsigned long i = 0; /* for busy-waiting */
     volatile unsigned long j; /* to prevent optimisation */
@@ -413,8 +394,7 @@ static void busy_msleep(unsigned long msec)
  * Warning: this is work in progress, some tests may not be reliable enough
  * yet! False positives may happen.
  */
-int mbedtls_timing_self_test(int verbose)
-{
+int mbedtls_timing_self_test(int verbose) {
     unsigned long cycles = 0, ratio = 0;
     unsigned long millisecs = 0, secs = 0;
     int hardfail = 0;
@@ -509,7 +489,7 @@ hard_test:
 
         /* Allow variation up to 20% */
         if (cycles / millisecs < ratio - ratio / 5 ||
-            cycles / millisecs > ratio + ratio / 5) {
+                cycles / millisecs > ratio + ratio / 5) {
             hardfail++;
             goto hard_test;
         }

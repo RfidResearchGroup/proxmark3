@@ -69,8 +69,7 @@
  * @param key
  * @param dest
  */
-void permutekey(uint8_t key[8], uint8_t dest[8])
-{
+void permutekey(uint8_t key[8], uint8_t dest[8]) {
     int i;
     for (i = 0 ; i < 8 ; i++) {
         dest[i] = (((key[7] & (0x80 >> i)) >> (7 - i)) << 7) |
@@ -89,8 +88,7 @@ void permutekey(uint8_t key[8], uint8_t dest[8])
  * @param key
  * @param dest
  */
-void permutekey_rev(uint8_t key[8], uint8_t dest[8])
-{
+void permutekey_rev(uint8_t key[8], uint8_t dest[8]) {
     int i;
     for (i = 0 ; i < 8 ; i++) {
         dest[7 - i] = (((key[0] & (0x80 >> i)) >> (7 - i)) << 7) |
@@ -110,8 +108,7 @@ void permutekey_rev(uint8_t key[8], uint8_t dest[8])
  * @param val
  * @return
  */
-inline uint8_t rr(uint8_t val)
-{
+inline uint8_t rr(uint8_t val) {
     return val >> 1 | ((val & 1) << 7);
 }
 
@@ -121,8 +118,7 @@ inline uint8_t rr(uint8_t val)
  * @param val
  * @return
  */
-inline uint8_t rl(uint8_t val)
-{
+inline uint8_t rl(uint8_t val) {
     return val << 1 | ((val & 0x80) >> 7);
 }
 
@@ -132,8 +128,7 @@ inline uint8_t rl(uint8_t val)
  * @param val
  * @return
  */
-inline uint8_t swap(uint8_t val)
-{
+inline uint8_t swap(uint8_t val) {
     return ((val >> 4) & 0xFF) | ((val & 0xFF) << 4);
 }
 
@@ -143,8 +138,7 @@ inline uint8_t swap(uint8_t val)
  * @param csn the CSN used
  * @param k output
  */
-void hash1(uint8_t csn[], uint8_t k[])
-{
+void hash1(uint8_t csn[], uint8_t k[]) {
     k[0] = csn[0] ^ csn[1] ^ csn[2] ^ csn[3] ^ csn[4] ^ csn[5] ^ csn[6] ^ csn[7];
     k[1] = csn[0] + csn[1] + csn[2] + csn[3] + csn[4] + csn[5] + csn[6] + csn[7];
     k[2] = rr(swap(csn[2] + k[1]));
@@ -168,8 +162,7 @@ Definition 14. Define the rotate key function rk : (F 82 ) 8 × N → (F 82 ) 8 
 rk(x [0] . . . x [7] , 0) = x [0] . . . x [7]
 rk(x [0] . . . x [7] , n + 1) = rk(rl(x [0] ) . . . rl(x [7] ), n)
 **/
-void rk(uint8_t *key, uint8_t n, uint8_t *outp_key)
-{
+void rk(uint8_t *key, uint8_t n, uint8_t *outp_key) {
     memcpy(outp_key, key, 8);
     uint8_t j;
     while (n-- > 0) {
@@ -182,16 +175,14 @@ void rk(uint8_t *key, uint8_t n, uint8_t *outp_key)
 static mbedtls_des_context ctx_enc;
 static mbedtls_des_context ctx_dec;
 
-void desdecrypt_iclass(uint8_t *iclass_key, uint8_t *input, uint8_t *output)
-{
+void desdecrypt_iclass(uint8_t *iclass_key, uint8_t *input, uint8_t *output) {
     uint8_t key_std_format[8] = {0};
     permutekey_rev(iclass_key, key_std_format);
     mbedtls_des_setkey_dec(&ctx_dec, key_std_format);
     mbedtls_des_crypt_ecb(&ctx_dec, input, output);
 }
 
-void desencrypt_iclass(uint8_t *iclass_key, uint8_t *input, uint8_t *output)
-{
+void desencrypt_iclass(uint8_t *iclass_key, uint8_t *input, uint8_t *output) {
     uint8_t key_std_format[8] = {0};
     permutekey_rev(iclass_key, key_std_format);
     mbedtls_des_setkey_enc(&ctx_enc, key_std_format);
@@ -204,8 +195,7 @@ void desencrypt_iclass(uint8_t *iclass_key, uint8_t *input, uint8_t *output)
  * @param hash1 hash1
  * @param key_sel output key_sel=h[hash1[i]]
  */
-void hash2(uint8_t *key64, uint8_t *outp_keytable)
-{
+void hash2(uint8_t *key64, uint8_t *outp_keytable) {
     /**
      *Expected:
      * High Security Key Table
@@ -276,8 +266,7 @@ void hash2(uint8_t *key64, uint8_t *outp_keytable)
  * @param i the number to read. Should be less than 127, or something is wrong...
  * @return
  */
-int _readFromDump(uint8_t dump[], dumpdata *item, uint8_t i)
-{
+int _readFromDump(uint8_t dump[], dumpdata *item, uint8_t i) {
     size_t itemsize = sizeof(dumpdata);
     memcpy(item, dump + i * itemsize, itemsize);
 
@@ -301,8 +290,7 @@ int _readFromDump(uint8_t dump[], dumpdata *item, uint8_t i)
  * @param keytable where to write found values.
  * @return
  */
-int bruteforceItem(dumpdata item, uint16_t keytable[])
-{
+int bruteforceItem(dumpdata item, uint16_t keytable[]) {
     int errors = 0;
     int found = false;
     uint8_t key_sel_p[8] = {0};
@@ -443,8 +431,7 @@ int bruteforceItem(dumpdata item, uint16_t keytable[])
  * @param master_key where to put the master key
  * @return 0 for ok, 1 for failz
  */
-int calculateMasterKey(uint8_t first16bytes[], uint64_t master_key[])
-{
+int calculateMasterKey(uint8_t first16bytes[], uint64_t master_key[]) {
     mbedtls_des_context ctx_e;
 
     uint8_t z_0[8] = {0};
@@ -502,8 +489,7 @@ int calculateMasterKey(uint8_t first16bytes[], uint64_t master_key[])
  * @param keytable
  * @return
  */
-int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[])
-{
+int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[]) {
     uint8_t i;
     int errors = 0;
     size_t itemsize = sizeof(dumpdata);
@@ -542,8 +528,7 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[])
  * @param filename
  * @return
  */
-int bruteforceFile(const char *filename, uint16_t keytable[])
-{
+int bruteforceFile(const char *filename, uint16_t keytable[]) {
     FILE *f = fopen(filename, "rb");
     if (!f) {
         PrintAndLogDevice(WARNING, "Failed to read from file '%s'", filename);
@@ -584,8 +569,7 @@ int bruteforceFile(const char *filename, uint16_t keytable[])
  * @param filename
  * @return
  */
-int bruteforceFileNoKeys(const char *filename)
-{
+int bruteforceFileNoKeys(const char *filename) {
     uint16_t keytable[128] = {0};
     return bruteforceFile(filename, keytable);
 }
@@ -596,8 +580,7 @@ int bruteforceFileNoKeys(const char *filename)
 // ----------------------------------------------------------------------------
 // TEST CODE BELOW
 // ----------------------------------------------------------------------------
-int _testBruteforce()
-{
+int _testBruteforce() {
     int errors = 0;
     if (true) {
         // First test
@@ -634,8 +617,7 @@ int _testBruteforce()
     return errors;
 }
 
-int _test_iclass_key_permutation()
-{
+int _test_iclass_key_permutation() {
     uint8_t testcase[8] = {0x6c, 0x8d, 0x44, 0xf9, 0x2a, 0x2d, 0x01, 0xbf};
     uint8_t testcase_output[8] = {0};
     uint8_t testcase_output_correct[8] = {0x8a, 0x0d, 0xb9, 0x88, 0xbb, 0xa7, 0x90, 0xea};
@@ -661,8 +643,7 @@ int _test_iclass_key_permutation()
     return 0;
 }
 
-int _testHash1()
-{
+int _testHash1() {
     uint8_t expected[8] = {0x7E, 0x72, 0x2F, 0x40, 0x2D, 0x02, 0x51, 0x42};
     uint8_t csn[8] = {0x01, 0x02, 0x03, 0x04, 0xF7, 0xFF, 0x12, 0xE0};
     uint8_t k[8] = {0};
@@ -677,8 +658,7 @@ int _testHash1()
     return 0;
 }
 
-int testElite()
-{
+int testElite() {
     PrintAndLogDevice(INFO, "Testing iClass Elite functinality...");
     PrintAndLogDevice(INFO, "Testing hash2");
     uint8_t k_cus[8] = {0x5B, 0x7C, 0x62, 0xC4, 0x91, 0xC1, 0x1B, 0x39};

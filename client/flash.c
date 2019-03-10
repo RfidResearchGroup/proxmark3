@@ -33,8 +33,7 @@ static const uint8_t elf_ident[] = {
 
 // Turn PHDRs into flasher segments, checking for PHDR sanity and merging adjacent
 // unaligned segments if needed
-static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs, uint16_t num_phdrs)
-{
+static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs, uint16_t num_phdrs) {
     Elf32_Phdr *phdr = phdrs;
     flash_seg_t *seg;
     uint32_t last_end = 0;
@@ -154,8 +153,7 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
 }
 
 // Sanity check segments and check for bootloader writes
-static int check_segs(flash_file_t *ctx, int can_write_bl)
-{
+static int check_segs(flash_file_t *ctx, int can_write_bl) {
     for (int i = 0; i < ctx->num_segs; i++) {
         flash_seg_t *seg = &ctx->segments[i];
 
@@ -180,8 +178,7 @@ static int check_segs(flash_file_t *ctx, int can_write_bl)
 }
 
 // Load an ELF file and prepare it for flashing
-int flash_load(flash_file_t *ctx, const char *name, int can_write_bl)
-{
+int flash_load(flash_file_t *ctx, const char *name, int can_write_bl) {
     FILE *fd = NULL;
     Elf32_Ehdr ehdr;
     Elf32_Phdr *phdrs = NULL;
@@ -202,7 +199,7 @@ int flash_load(flash_file_t *ctx, const char *name, int can_write_bl)
         goto fail;
     }
     if (memcmp(ehdr.e_ident, elf_ident, sizeof(elf_ident))
-        || le32(ehdr.e_version) != 1) {
+            || le32(ehdr.e_version) != 1) {
         fprintf(stderr, "Not an ELF file or wrong ELF type\n");
         goto fail;
     }
@@ -261,8 +258,7 @@ fail:
 }
 
 // Get the state of the proxmark, backwards compatible
-static int get_proxmark_state(uint32_t *state)
-{
+static int get_proxmark_state(uint32_t *state) {
     UsbCommand c = {CMD_DEVICE_INFO};
     SendCommand(&c);
     UsbCommand resp;
@@ -292,8 +288,7 @@ static int get_proxmark_state(uint32_t *state)
 }
 
 // Enter the bootloader to be able to start flashing
-static int enter_bootloader(char *serial_port_name)
-{
+static int enter_bootloader(char *serial_port_name) {
     uint32_t state;
 
     if (get_proxmark_state(&state) < 0)
@@ -309,7 +304,7 @@ static int enter_bootloader(char *serial_port_name)
         memset(&c, 0, sizeof(c));
 
         if ((state & DEVICE_INFO_FLAG_BOOTROM_PRESENT)
-            && (state & DEVICE_INFO_FLAG_OSIMAGE_PRESENT)) {
+                && (state & DEVICE_INFO_FLAG_OSIMAGE_PRESENT)) {
             // New style handover: Send CMD_START_FLASH, which will reset the board
             // and enter the bootrom on the next boot.
             c.cmd = CMD_START_FLASH;
@@ -338,8 +333,7 @@ static int enter_bootloader(char *serial_port_name)
     return -1;
 }
 
-static int wait_for_ack(UsbCommand *ack)
-{
+static int wait_for_ack(UsbCommand *ack) {
     WaitForResponse(CMD_UNKNOWN, ack);
 
     if (ack->cmd != CMD_ACK) {
@@ -353,8 +347,7 @@ static int wait_for_ack(UsbCommand *ack)
 }
 
 // Go into flashing mode
-int flash_start_flashing(int enable_bl_writes, char *serial_port_name)
-{
+int flash_start_flashing(int enable_bl_writes, char *serial_port_name) {
     uint32_t state;
 
     if (enter_bootloader(serial_port_name) < 0)
@@ -386,8 +379,7 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name)
     return 0;
 }
 
-static int write_block(uint32_t address, uint8_t *data, uint32_t length)
-{
+static int write_block(uint32_t address, uint8_t *data, uint32_t length) {
     uint8_t block_buf[BLOCK_SIZE];
     memset(block_buf, 0xFF, BLOCK_SIZE);
     memcpy(block_buf, data, length);
@@ -409,8 +401,7 @@ static int write_block(uint32_t address, uint8_t *data, uint32_t length)
 }
 
 // Write a file's segments to Flash
-int flash_write(flash_file_t *ctx)
-{
+int flash_write(flash_file_t *ctx) {
     fprintf(stdout, "Writing segments for file: %s\n", ctx->filename);
     for (int i = 0; i < ctx->num_segs; i++) {
         flash_seg_t *seg = &ctx->segments[i];
@@ -450,8 +441,7 @@ int flash_write(flash_file_t *ctx)
 }
 
 // free a file context
-void flash_free(flash_file_t *ctx)
-{
+void flash_free(flash_file_t *ctx) {
     if (!ctx)
         return;
     if (ctx->segments) {
@@ -464,8 +454,7 @@ void flash_free(flash_file_t *ctx)
 }
 
 // just reset the unit
-int flash_stop_flashing(void)
-{
+int flash_stop_flashing(void) {
     UsbCommand c = {CMD_HARDWARE_RESET};
     SendCommand(&c);
     msleep(100);

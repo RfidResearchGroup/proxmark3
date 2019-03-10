@@ -33,8 +33,7 @@ LUAI_DDEF const TValue luaO_nilobject_ = {NILCONSTANT};
 ** (eeeeexxx), where the real value is (1xxx) * 2^(eeeee - 1) if
 ** eeeee != 0 and (xxx) otherwise.
 */
-int luaO_int2fb(unsigned int x)
-{
+int luaO_int2fb(unsigned int x) {
     int e = 0;  /* exponent */
     if (x < 8) return x;
     while (x >= 0x10) {
@@ -46,16 +45,14 @@ int luaO_int2fb(unsigned int x)
 
 
 /* converts back */
-int luaO_fb2int(int x)
-{
+int luaO_fb2int(int x) {
     int e = (x >> 3) & 0x1f;
     if (e == 0) return x;
     else return ((x & 7) + 8) << (e - 1);
 }
 
 
-int luaO_ceillog2(unsigned int x)
-{
+int luaO_ceillog2(unsigned int x) {
     static const lu_byte log_2[256] = {
         0, 1, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
         6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
@@ -73,8 +70,7 @@ int luaO_ceillog2(unsigned int x)
 }
 
 
-lua_Number luaO_arith(int op, lua_Number v1, lua_Number v2)
-{
+lua_Number luaO_arith(int op, lua_Number v1, lua_Number v2) {
     switch (op) {
         case LUA_OPADD:
             return luai_numadd(NULL, v1, v2);
@@ -97,8 +93,7 @@ lua_Number luaO_arith(int op, lua_Number v1, lua_Number v2)
 }
 
 
-int luaO_hexavalue(int c)
-{
+int luaO_hexavalue(int c) {
     if (lisdigit(c)) return c - '0';
     else return ltolower(c) - 'a' + 10;
 }
@@ -109,16 +104,14 @@ int luaO_hexavalue(int c)
 #include <math.h>
 
 
-static int isneg(const char **s)
-{
+static int isneg(const char **s) {
     if (**s == '-') { (*s)++; return 1; }
     else if (**s == '+')(*s)++;
     return 0;
 }
 
 
-static lua_Number readhexa(const char **s, lua_Number r, int *count)
-{
+static lua_Number readhexa(const char **s, lua_Number r, int *count) {
     for (; lisxdigit(cast_uchar(**s)); (*s)++) {  /* read integer part */
         r = (r * cast_num(16.0)) + cast_num(luaO_hexavalue(cast_uchar(**s)));
         (*count)++;
@@ -131,8 +124,7 @@ static lua_Number readhexa(const char **s, lua_Number r, int *count)
 ** convert an hexadecimal numeric string to a number, following
 ** C99 specification for 'strtod'
 */
-static lua_Number lua_strx2number(const char *s, char **endptr)
-{
+static lua_Number lua_strx2number(const char *s, char **endptr) {
     lua_Number r = 0.0;
     int e = 0, i = 0;
     int neg = 0;  /* 1 if number is negative */
@@ -172,8 +164,7 @@ ret:
 #endif
 
 
-int luaO_str2d(const char *s, size_t len, lua_Number *result)
-{
+int luaO_str2d(const char *s, size_t len, lua_Number *result) {
     char *endptr;
     if (strpbrk(s, "nN"))  /* reject 'inf' and 'nan' */
         return 0;
@@ -188,15 +179,13 @@ int luaO_str2d(const char *s, size_t len, lua_Number *result)
 
 
 
-static void pushstr(lua_State *L, const char *str, size_t l)
-{
+static void pushstr(lua_State *L, const char *str, size_t l) {
     setsvalue2s(L, L->top++, luaS_newlstr(L, str, l));
 }
 
 
 /* this function handles only `%d', `%c', %f, %p, and `%s' formats */
-const char *luaO_pushvfstring(lua_State *L, const char *fmt, va_list argp)
-{
+const char *luaO_pushvfstring(lua_State *L, const char *fmt, va_list argp) {
     int n = 0;
     for (;;) {
         const char *e = strchr(fmt, '%');
@@ -250,8 +239,7 @@ const char *luaO_pushvfstring(lua_State *L, const char *fmt, va_list argp)
 }
 
 
-const char *luaO_pushfstring(lua_State *L, const char *fmt, ...)
-{
+const char *luaO_pushfstring(lua_State *L, const char *fmt, ...) {
     const char *msg;
     va_list argp;
     va_start(argp, fmt);
@@ -270,8 +258,7 @@ const char *luaO_pushfstring(lua_State *L, const char *fmt, ...)
 
 #define addstr(a,b,l) ( memcpy(a,b,(l) * sizeof(char)), a += (l) )
 
-void luaO_chunkid(char *out, const char *source, size_t bufflen)
-{
+void luaO_chunkid(char *out, const char *source, size_t bufflen) {
     size_t l = strlen(source);
     if (*source == '=') {  /* 'literal' source */
         if (l <= bufflen)  /* small enough? */

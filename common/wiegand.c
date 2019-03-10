@@ -15,8 +15,7 @@
 * @param type     use the defined values  EVEN|ODD
 * @return parity bit required to match type
 */
-uint8_t getParity(uint8_t *bits, uint8_t len, uint8_t type)
-{
+uint8_t getParity(uint8_t *bits, uint8_t len, uint8_t type) {
     uint8_t x = 0;
     for (; len > 0; --len)
         x += bits[len - 1];
@@ -37,8 +36,7 @@ uint8_t checkParity(uint32_t bits, uint8_t len, uint8_t type);
 // by marshmellow
 // takes a array of binary values, start position, length of bits per parity (includes parity bit),
 // Parity Type (1 for odd; 0 for even; 2 for Always 1's; 3 for Always 0's), and binary Length (length to run)
-size_t removeParity(uint8_t *bitstream, size_t startIdx, uint8_t pLen, uint8_t pType, size_t bLen)
-{
+size_t removeParity(uint8_t *bitstream, size_t startIdx, uint8_t pLen, uint8_t pType, size_t bLen) {
     uint32_t parityWd = 0;
     size_t j = 0, bitcount = 0;
     for (int word = 0; word < (bLen); word += pLen) {
@@ -81,8 +79,7 @@ size_t removeParity(uint8_t *bitstream, size_t startIdx, uint8_t pLen, uint8_t p
 * @param pType      EVEN|ODD|2 (always 1's)|3 (always 0's)
 * @return
 */
-size_t addParity(uint8_t *bits, uint8_t *dest, uint8_t sourceLen, uint8_t pLen, uint8_t pType)
-{
+size_t addParity(uint8_t *bits, uint8_t *dest, uint8_t sourceLen, uint8_t pLen, uint8_t pType) {
     uint32_t parityWd = 0;
     size_t j = 0, bitCnt = 0;
     for (int word = 0; word < sourceLen; word += pLen - 1) {
@@ -119,8 +116,7 @@ size_t addParity(uint8_t *bits, uint8_t *dest, uint8_t sourceLen, uint8_t pLen, 
 * @param dest    pointer to the destination where wiegandparity has been appended
 * @param len     number of bits which wiegand parity shall be calculated over. This number is without parities, so a wiegand 26 has 24 bits of data
 */
-void wiegand_add_parity(uint8_t *source, uint8_t *dest, uint8_t len)
-{
+void wiegand_add_parity(uint8_t *source, uint8_t *dest, uint8_t len) {
 
     // Copy to destination, shifted one step to make room for EVEN parity
     memcpy(dest + 1, source, length);
@@ -148,8 +144,7 @@ void wiegand_add_parity(uint8_t *source, uint8_t *dest, uint8_t len)
 * @param dest      pointer to the destination where wiegand bytes will be stored
 * @param formatlen
 */
-void num_to_wiegand_bytes(uint64_t oem, uint64_t fc, uint64_t cn, uint8_t *dest, uint8_t formatlen)
-{
+void num_to_wiegand_bytes(uint64_t oem, uint64_t fc, uint64_t cn, uint8_t *dest, uint8_t formatlen) {
 
     uint8_t data[MAX_BITS_TXX55] = {0};
     memset(data, 0, sizeof(data));
@@ -173,8 +168,7 @@ void num_to_wiegand_bytes(uint64_t oem, uint64_t fc, uint64_t cn, uint8_t *dest,
 * @param dest      pointer to the destination where wiegand bits will be stored
 * @param formatlen
 */
-void num_to_wiegand_bits(uint64_t oem, uint64_t fc, uint64_t cn, uint8_t *dest, uint8_t formatlen)
-{
+void num_to_wiegand_bits(uint64_t oem, uint64_t fc, uint64_t cn, uint8_t *dest, uint8_t formatlen) {
 
     uint8_t bits[MAX_BITS_TXX55] = {0};
     memset(bits, 0, sizeof(bits));

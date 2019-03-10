@@ -13,8 +13,7 @@
 int MF_DBGLEVEL = MF_DBG_ERROR;
 
 // crypto1 helpers
-void mf_crypto1_decryptEx(struct Crypto1State *pcs, uint8_t *data_in, int len, uint8_t *data_out)
-{
+void mf_crypto1_decryptEx(struct Crypto1State *pcs, uint8_t *data_in, int len, uint8_t *data_out) {
     uint8_t bt = 0;
     int i;
 
@@ -31,13 +30,11 @@ void mf_crypto1_decryptEx(struct Crypto1State *pcs, uint8_t *data_in, int len, u
     return;
 }
 
-void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len)
-{
+void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len) {
     mf_crypto1_decryptEx(pcs, data, len, data);
 }
 
-void mf_crypto1_encrypt(struct Crypto1State *pcs, uint8_t *data, uint16_t len, uint8_t *par)
-{
+void mf_crypto1_encrypt(struct Crypto1State *pcs, uint8_t *data, uint16_t len, uint8_t *par) {
     uint8_t bt = 0;
     int i;
     par[0] = 0;
@@ -51,8 +48,7 @@ void mf_crypto1_encrypt(struct Crypto1State *pcs, uint8_t *data, uint16_t len, u
     }
 }
 
-uint8_t mf_crypto1_encrypt4bit(struct Crypto1State *pcs, uint8_t data)
-{
+uint8_t mf_crypto1_encrypt4bit(struct Crypto1State *pcs, uint8_t data) {
     uint8_t bt = 0;
     bt |= (crypto1_bit(pcs, 0, 0) ^ BIT(data, 0)) << 0;
     bt |= (crypto1_bit(pcs, 0, 0) ^ BIT(data, 1)) << 1;
@@ -62,8 +58,7 @@ uint8_t mf_crypto1_encrypt4bit(struct Crypto1State *pcs, uint8_t data)
 }
 
 // send X byte basic commands
-int mifare_sendcmd(uint8_t cmd, uint8_t *data, uint8_t data_size, uint8_t *answer, uint8_t *answer_parity, uint32_t *timing)
-{
+int mifare_sendcmd(uint8_t cmd, uint8_t *data, uint8_t data_size, uint8_t *answer, uint8_t *answer_parity, uint32_t *timing) {
     uint8_t dcmd[data_size + 3];
     dcmd[0] = cmd;
     memcpy(dcmd + 1, data, data_size);
@@ -78,8 +73,7 @@ int mifare_sendcmd(uint8_t cmd, uint8_t *data, uint8_t data_size, uint8_t *answe
 }
 
 // send 2 byte commands
-int mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t *answer, uint8_t *answer_parity, uint32_t *timing)
-{
+int mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t *answer, uint8_t *answer_parity, uint32_t *timing) {
     uint16_t pos, res;
     uint8_t dcmd[4] = {cmd, data, 0x00, 0x00};
     uint8_t ecmd[4] = {0x00, 0x00, 0x00, 0x00};
@@ -119,13 +113,11 @@ int mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd,
 }
 
 // mifare classic commands
-int mifare_classic_auth(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint8_t isNested)
-{
+int mifare_classic_auth(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint8_t isNested) {
     return mifare_classic_authex(pcs, uid, blockNo, keyType, ui64Key, isNested, NULL, NULL);
 }
 
-int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint8_t isNested, uint32_t *ntptr, uint32_t *timing)
-{
+int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint8_t isNested, uint32_t *ntptr, uint32_t *timing) {
     int len;
     uint32_t pos, nt, ntpp; // Supplied tag nonce
     uint8_t par[1] = {0x00};
@@ -203,8 +195,7 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
     return 0;
 }
 
-int mifare_classic_readblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData)
-{
+int mifare_classic_readblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData) {
 
     int len;
     uint8_t bt[2] = {0x00, 0x00};
@@ -233,8 +224,7 @@ int mifare_classic_readblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blo
 }
 
 // mifare ultralight commands
-int mifare_ul_ev1_auth(uint8_t *keybytes, uint8_t *pack)
-{
+int mifare_ul_ev1_auth(uint8_t *keybytes, uint8_t *pack) {
 
     uint16_t len = 0;
     uint8_t resp[4] = {0x00, 0x00, 0x00, 0x00};
@@ -259,8 +249,7 @@ int mifare_ul_ev1_auth(uint8_t *keybytes, uint8_t *pack)
     return 1;
 }
 
-int mifare_ultra_auth(uint8_t *keybytes)
-{
+int mifare_ultra_auth(uint8_t *keybytes) {
 
     /// 3des2k
     uint8_t random_a[8] = {1, 1, 1, 1, 1, 1, 1, 1};
@@ -345,8 +334,7 @@ int mifare_ultra_auth(uint8_t *keybytes)
     return 1;
 }
 
-int mifare_ultra_readblockEx(uint8_t blockNo, uint8_t *blockData)
-{
+int mifare_ultra_readblockEx(uint8_t blockNo, uint8_t *blockData) {
     uint16_t len = 0;
     uint8_t bt[2] = {0x00, 0x00};
     uint8_t receivedAnswer[MAX_FRAME_SIZE] = {0x00};
@@ -372,8 +360,7 @@ int mifare_ultra_readblockEx(uint8_t blockNo, uint8_t *blockData)
     memcpy(blockData, receivedAnswer, 14);
     return 0;
 }
-int mifare_ultra_readblock(uint8_t blockNo, uint8_t *blockData)
-{
+int mifare_ultra_readblock(uint8_t blockNo, uint8_t *blockData) {
 #define MFU_MAX_RETRIES 5
     uint8_t res;
 
@@ -392,8 +379,7 @@ int mifare_ultra_readblock(uint8_t blockNo, uint8_t *blockData)
     return res;
 }
 
-int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData)
-{
+int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData) {
     // variables
     uint16_t len = 0;
     uint32_t pos = 0;
@@ -471,8 +457,7 @@ int mifare_ultra_writeblock_compat(uint8_t blockNo, uint8_t *blockData) {
 }
 */
 
-int mifare_ultra_writeblock(uint8_t blockNo, uint8_t *blockData)
-{
+int mifare_ultra_writeblock(uint8_t blockNo, uint8_t *blockData) {
     uint16_t len = 0;
     uint8_t block[5] = {blockNo, 0x00, 0x00, 0x00, 0x00 };
     uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
@@ -490,8 +475,7 @@ int mifare_ultra_writeblock(uint8_t blockNo, uint8_t *blockData)
     }
     return 0;
 }
-int mifare_classic_halt_ex(struct Crypto1State *pcs)
-{
+int mifare_classic_halt_ex(struct Crypto1State *pcs) {
     uint8_t receivedAnswer[4] = {0x00, 0x00, 0x00, 0x00};
     uint16_t len = mifare_sendcmd_short(pcs, (pcs == NULL) ? CRYPT_NONE : CRYPT_ALL, ISO14443A_CMD_HALT, 0x00, receivedAnswer, NULL, NULL);
     if (len != 0) {
@@ -500,13 +484,11 @@ int mifare_classic_halt_ex(struct Crypto1State *pcs)
     }
     return 0;
 }
-int mifare_classic_halt(struct Crypto1State *pcs, uint32_t uid)
-{
+int mifare_classic_halt(struct Crypto1State *pcs, uint32_t uid) {
     return mifare_classic_halt_ex(pcs);
 }
 
-int mifare_ultra_halt()
-{
+int mifare_ultra_halt() {
     uint16_t len = 0;
     uint8_t receivedAnswer[4] = {0x00, 0x00, 0x00, 0x00};
     len = mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_HALT, 0x00, receivedAnswer, NULL, NULL);
@@ -520,13 +502,11 @@ int mifare_ultra_halt()
 
 // Mifare Memory Structure: up to 32 Sectors with 4 blocks each (1k and 2k cards),
 // plus evtl. 8 sectors with 16 blocks each (4k cards)
-uint8_t NumBlocksPerSector(uint8_t sectorNo)
-{
+uint8_t NumBlocksPerSector(uint8_t sectorNo) {
     return (sectorNo < 32) ? 4 : 16;
 }
 
-uint8_t FirstBlockOfSector(uint8_t sectorNo)
-{
+uint8_t FirstBlockOfSector(uint8_t sectorNo) {
     if (sectorNo < 32)
         return sectorNo * 4;
     else
@@ -535,47 +515,41 @@ uint8_t FirstBlockOfSector(uint8_t sectorNo)
 }
 
 // work with emulator memory
-void emlSetMem(uint8_t *data, int blockNum, int blocksCount)
-{
+void emlSetMem(uint8_t *data, int blockNum, int blocksCount) {
     emlSetMem_xt(data, blockNum, blocksCount, 16);
 }
 
-void emlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth)
-{
+void emlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth) {
     uint8_t *emCARD = BigBuf_get_EM_addr();
     memcpy(emCARD + blockNum * blockBtWidth, data, blocksCount * blockBtWidth);
 }
 
-void emlGetMem(uint8_t *data, int blockNum, int blocksCount)
-{
+void emlGetMem(uint8_t *data, int blockNum, int blocksCount) {
     uint8_t *emCARD = BigBuf_get_EM_addr();
     memcpy(data, emCARD + blockNum * 16, blocksCount * 16);
 }
 
-void emlGetMemBt(uint8_t *data, int bytePtr, int byteCount)
-{
+void emlGetMemBt(uint8_t *data, int bytePtr, int byteCount) {
     uint8_t *emCARD = BigBuf_get_EM_addr();
     memcpy(data, emCARD + bytePtr, byteCount);
 }
 
-int emlCheckValBl(int blockNum)
-{
+int emlCheckValBl(int blockNum) {
     uint8_t *emCARD = BigBuf_get_EM_addr();
     uint8_t *data = emCARD + blockNum * 16;
 
     if ((data[0] != (data[4] ^ 0xff)) || (data[0] != data[8]) ||
-        (data[1] != (data[5] ^ 0xff)) || (data[1] != data[9]) ||
-        (data[2] != (data[6] ^ 0xff)) || (data[2] != data[10]) ||
-        (data[3] != (data[7] ^ 0xff)) || (data[3] != data[11]) ||
-        (data[12] != (data[13] ^ 0xff)) || (data[12] != data[14]) ||
-        (data[12] != (data[15] ^ 0xff))
+            (data[1] != (data[5] ^ 0xff)) || (data[1] != data[9]) ||
+            (data[2] != (data[6] ^ 0xff)) || (data[2] != data[10]) ||
+            (data[3] != (data[7] ^ 0xff)) || (data[3] != data[11]) ||
+            (data[12] != (data[13] ^ 0xff)) || (data[12] != data[14]) ||
+            (data[12] != (data[15] ^ 0xff))
        )
         return 1;
     return 0;
 }
 
-int emlGetValBl(uint32_t *blReg, uint8_t *blBlock, int blockNum)
-{
+int emlGetValBl(uint32_t *blReg, uint8_t *blBlock, int blockNum) {
     uint8_t *emCARD = BigBuf_get_EM_addr();
     uint8_t *data = emCARD + blockNum * 16;
 
@@ -587,8 +561,7 @@ int emlGetValBl(uint32_t *blReg, uint8_t *blBlock, int blockNum)
     return 0;
 }
 
-int emlSetValBl(uint32_t blReg, uint8_t blBlock, int blockNum)
-{
+int emlSetValBl(uint32_t blReg, uint8_t blBlock, int blockNum) {
     uint8_t *emCARD = BigBuf_get_EM_addr();
     uint8_t *data = emCARD + blockNum * 16;
 
@@ -605,16 +578,14 @@ int emlSetValBl(uint32_t blReg, uint8_t blBlock, int blockNum)
     return 0;
 }
 
-uint64_t emlGetKey(int sectorNum, int keyType)
-{
+uint64_t emlGetKey(int sectorNum, int keyType) {
     uint8_t key[6] = {0x00};
     uint8_t *emCARD = BigBuf_get_EM_addr();
     memcpy(key, emCARD + 16 * (FirstBlockOfSector(sectorNum) + NumBlocksPerSector(sectorNum) - 1) + keyType * 10, 6);
     return bytes_to_num(key, 6);
 }
 
-void emlClearMem(void)
-{
+void emlClearMem(void) {
     const uint8_t trailer[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x07, 0x80, 0x69, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
     const uint8_t uid[]   =   {0xe6, 0x84, 0x87, 0xf3, 0x16, 0x88, 0x04, 0x00, 0x46, 0x8e, 0x45, 0x55, 0x4d, 0x70, 0x41, 0x04};
     uint8_t *emCARD = BigBuf_get_EM_addr();
@@ -631,8 +602,7 @@ void emlClearMem(void)
 
 
 // Mifare desfire commands
-int mifare_sendcmd_special(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t *data, uint8_t *answer, uint8_t *answer_parity, uint32_t *timing)
-{
+int mifare_sendcmd_special(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t *data, uint8_t *answer, uint8_t *answer_parity, uint32_t *timing) {
     uint8_t dcmd[5] = {cmd, data[0], data[1], 0x00, 0x00};
     AddCrc14A(dcmd, 3);
 
@@ -645,8 +615,7 @@ int mifare_sendcmd_special(struct Crypto1State *pcs, uint8_t crypted, uint8_t cm
     return len;
 }
 
-int mifare_sendcmd_special2(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t *data, uint8_t *answer, uint8_t *answer_parity, uint32_t *timing)
-{
+int mifare_sendcmd_special2(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t *data, uint8_t *answer, uint8_t *answer_parity, uint32_t *timing) {
     uint8_t dcmd[20] = {0x00};
     dcmd[0] = cmd;
     memcpy(dcmd + 1, data, 17);
@@ -661,8 +630,7 @@ int mifare_sendcmd_special2(struct Crypto1State *pcs, uint8_t crypted, uint8_t c
     return len;
 }
 
-int mifare_desfire_des_auth1(uint32_t uid, uint8_t *blockData)
-{
+int mifare_desfire_des_auth1(uint32_t uid, uint8_t *blockData) {
 
     int len;
     // load key, keynumber
@@ -690,8 +658,7 @@ int mifare_desfire_des_auth1(uint32_t uid, uint8_t *blockData)
     return 1;
 }
 
-int mifare_desfire_des_auth2(uint32_t uid, uint8_t *key, uint8_t *blockData)
-{
+int mifare_desfire_des_auth2(uint32_t uid, uint8_t *key, uint8_t *blockData) {
 
     int len;
     uint8_t data[17] = {MFDES_AUTHENTICATION_FRAME};

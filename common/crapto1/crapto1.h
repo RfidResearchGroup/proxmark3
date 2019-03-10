@@ -67,8 +67,7 @@ extern bool validate_prng_nonce(uint32_t nonce);
 #define LF_POLY_EVEN (0x870804)
 #define BIT(x, n) ((x) >> (n) & 1)
 #define BEBIT(x, n) BIT(x, (n) ^ 24)
-static inline int filter(uint32_t const x)
-{
+static inline int filter(uint32_t const x) {
     uint32_t f;
 
     f  = 0xf22c0 >> (x       & 0xf) & 16;

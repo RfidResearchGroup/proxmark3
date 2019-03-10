@@ -55,8 +55,7 @@
 /*
  * CTR_DRBG context initialization
  */
-void mbedtls_ctr_drbg_init(mbedtls_ctr_drbg_context *ctx)
-{
+void mbedtls_ctr_drbg_init(mbedtls_ctr_drbg_context *ctx) {
     memset(ctx, 0, sizeof(mbedtls_ctr_drbg_context));
 
 #if defined(MBEDTLS_THREADING_C)
@@ -74,8 +73,7 @@ int mbedtls_ctr_drbg_seed_entropy_len(
     void *p_entropy,
     const unsigned char *custom,
     size_t len,
-    size_t entropy_len)
-{
+    size_t entropy_len) {
     int ret;
     unsigned char key[MBEDTLS_CTR_DRBG_KEYSIZE];
 
@@ -106,14 +104,12 @@ int mbedtls_ctr_drbg_seed(mbedtls_ctr_drbg_context *ctx,
                           int (*f_entropy)(void *, unsigned char *, size_t),
                           void *p_entropy,
                           const unsigned char *custom,
-                          size_t len)
-{
+                          size_t len) {
     return (mbedtls_ctr_drbg_seed_entropy_len(ctx, f_entropy, p_entropy, custom, len,
                                               MBEDTLS_CTR_DRBG_ENTROPY_LEN));
 }
 
-void mbedtls_ctr_drbg_free(mbedtls_ctr_drbg_context *ctx)
-{
+void mbedtls_ctr_drbg_free(mbedtls_ctr_drbg_context *ctx) {
     if (ctx == NULL)
         return;
 
@@ -124,24 +120,20 @@ void mbedtls_ctr_drbg_free(mbedtls_ctr_drbg_context *ctx)
     mbedtls_platform_zeroize(ctx, sizeof(mbedtls_ctr_drbg_context));
 }
 
-void mbedtls_ctr_drbg_set_prediction_resistance(mbedtls_ctr_drbg_context *ctx, int resistance)
-{
+void mbedtls_ctr_drbg_set_prediction_resistance(mbedtls_ctr_drbg_context *ctx, int resistance) {
     ctx->prediction_resistance = resistance;
 }
 
-void mbedtls_ctr_drbg_set_entropy_len(mbedtls_ctr_drbg_context *ctx, size_t len)
-{
+void mbedtls_ctr_drbg_set_entropy_len(mbedtls_ctr_drbg_context *ctx, size_t len) {
     ctx->entropy_len = len;
 }
 
-void mbedtls_ctr_drbg_set_reseed_interval(mbedtls_ctr_drbg_context *ctx, int interval)
-{
+void mbedtls_ctr_drbg_set_reseed_interval(mbedtls_ctr_drbg_context *ctx, int interval) {
     ctx->reseed_interval = interval;
 }
 
 static int block_cipher_df(unsigned char *output,
-                           const unsigned char *data, size_t data_len)
-{
+                           const unsigned char *data, size_t data_len) {
     unsigned char buf[MBEDTLS_CTR_DRBG_MAX_SEED_INPUT + MBEDTLS_CTR_DRBG_BLOCKSIZE + 16];
     unsigned char tmp[MBEDTLS_CTR_DRBG_SEEDLEN];
     unsigned char key[MBEDTLS_CTR_DRBG_KEYSIZE];
@@ -249,8 +241,7 @@ exit:
 }
 
 static int ctr_drbg_update_internal(mbedtls_ctr_drbg_context *ctx,
-                                    const unsigned char data[MBEDTLS_CTR_DRBG_SEEDLEN])
-{
+                                    const unsigned char data[MBEDTLS_CTR_DRBG_SEEDLEN]) {
     unsigned char tmp[MBEDTLS_CTR_DRBG_SEEDLEN];
     unsigned char *p = tmp;
     int i, j;
@@ -291,8 +282,7 @@ static int ctr_drbg_update_internal(mbedtls_ctr_drbg_context *ctx,
 }
 
 void mbedtls_ctr_drbg_update(mbedtls_ctr_drbg_context *ctx,
-                             const unsigned char *additional, size_t add_len)
-{
+                             const unsigned char *additional, size_t add_len) {
     unsigned char add_input[MBEDTLS_CTR_DRBG_SEEDLEN];
 
     if (add_len > 0) {
@@ -307,14 +297,13 @@ void mbedtls_ctr_drbg_update(mbedtls_ctr_drbg_context *ctx,
 }
 
 int mbedtls_ctr_drbg_reseed(mbedtls_ctr_drbg_context *ctx,
-                            const unsigned char *additional, size_t len)
-{
+                            const unsigned char *additional, size_t len) {
     unsigned char seed[MBEDTLS_CTR_DRBG_MAX_SEED_INPUT];
     size_t seedlen = 0;
     int ret;
 
     if (ctx->entropy_len > MBEDTLS_CTR_DRBG_MAX_SEED_INPUT ||
-        len > MBEDTLS_CTR_DRBG_MAX_SEED_INPUT - ctx->entropy_len)
+            len > MBEDTLS_CTR_DRBG_MAX_SEED_INPUT - ctx->entropy_len)
         return (MBEDTLS_ERR_CTR_DRBG_INPUT_TOO_BIG);
 
     memset(seed, 0, MBEDTLS_CTR_DRBG_MAX_SEED_INPUT);
@@ -357,8 +346,7 @@ int mbedtls_ctr_drbg_reseed(mbedtls_ctr_drbg_context *ctx,
 
 int mbedtls_ctr_drbg_random_with_add(void *p_rng,
                                      unsigned char *output, size_t output_len,
-                                     const unsigned char *additional, size_t add_len)
-{
+                                     const unsigned char *additional, size_t add_len) {
     int ret = 0;
     mbedtls_ctr_drbg_context *ctx = (mbedtls_ctr_drbg_context *) p_rng;
     unsigned char add_input[MBEDTLS_CTR_DRBG_SEEDLEN];
@@ -376,7 +364,7 @@ int mbedtls_ctr_drbg_random_with_add(void *p_rng,
     memset(add_input, 0, MBEDTLS_CTR_DRBG_SEEDLEN);
 
     if (ctx->reseed_counter > ctx->reseed_interval ||
-        ctx->prediction_resistance) {
+            ctx->prediction_resistance) {
         if ((ret = mbedtls_ctr_drbg_reseed(ctx, additional, add_len)) != 0) {
             return (ret);
         }
@@ -426,8 +414,7 @@ int mbedtls_ctr_drbg_random_with_add(void *p_rng,
     return (0);
 }
 
-int mbedtls_ctr_drbg_random(void *p_rng, unsigned char *output, size_t output_len)
-{
+int mbedtls_ctr_drbg_random(void *p_rng, unsigned char *output, size_t output_len) {
     int ret;
     mbedtls_ctr_drbg_context *ctx = (mbedtls_ctr_drbg_context *) p_rng;
 
@@ -447,8 +434,7 @@ int mbedtls_ctr_drbg_random(void *p_rng, unsigned char *output, size_t output_le
 }
 
 #if defined(MBEDTLS_FS_IO)
-int mbedtls_ctr_drbg_write_seed_file(mbedtls_ctr_drbg_context *ctx, const char *path)
-{
+int mbedtls_ctr_drbg_write_seed_file(mbedtls_ctr_drbg_context *ctx, const char *path) {
     int ret = MBEDTLS_ERR_CTR_DRBG_FILE_IO_ERROR;
     FILE *f;
     unsigned char buf[ MBEDTLS_CTR_DRBG_MAX_INPUT ];
@@ -471,8 +457,7 @@ exit:
     return (ret);
 }
 
-int mbedtls_ctr_drbg_update_seed_file(mbedtls_ctr_drbg_context *ctx, const char *path)
-{
+int mbedtls_ctr_drbg_update_seed_file(mbedtls_ctr_drbg_context *ctx, const char *path) {
     int ret = 0;
     FILE *f;
     size_t n;
@@ -556,8 +541,7 @@ static const unsigned char result_nopr[16] = {
 
 static size_t test_offset;
 static int ctr_drbg_self_test_entropy(void *data, unsigned char *buf,
-                                      size_t len)
-{
+                                      size_t len) {
     const unsigned char *p = data;
     memcpy(buf, p + test_offset, len);
     test_offset += len;
@@ -574,8 +558,7 @@ static int ctr_drbg_self_test_entropy(void *data, unsigned char *buf,
 /*
  * Checkup routine
  */
-int mbedtls_ctr_drbg_self_test(int verbose)
-{
+int mbedtls_ctr_drbg_self_test(int verbose) {
     mbedtls_ctr_drbg_context ctx;
     unsigned char buf[16];
 

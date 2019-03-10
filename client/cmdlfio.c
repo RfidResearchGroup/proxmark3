@@ -12,8 +12,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_io_read(void)
-{
+int usage_lf_io_read(void) {
     PrintAndLogEx(NORMAL, "Enables IOProx compatible reader mode printing details of scanned tags.");
     PrintAndLogEx(NORMAL, "By default, values are printed and logged until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "If the [1] option is provided, reader mode is exited after reading a single card.");
@@ -29,8 +28,7 @@ int usage_lf_io_read(void)
     return 0;
 }
 
-int usage_lf_io_sim(void)
-{
+int usage_lf_io_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of IOProx card with specified facility-code and card number.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "");
@@ -46,8 +44,7 @@ int usage_lf_io_sim(void)
     return 0;
 }
 
-int usage_lf_io_clone(void)
-{
+int usage_lf_io_clone(void) {
     PrintAndLogEx(NORMAL, "Enables cloning of IOProx card with specified facility-code and card number onto T55x7.");
     PrintAndLogEx(NORMAL, "The T55x7 must be on the antenna when issuing this command.  T55x7 blocks are calculated and printed in the process.");
     PrintAndLogEx(NORMAL, "");
@@ -65,15 +62,13 @@ int usage_lf_io_clone(void)
 }
 
 // this read is the "normal" read,  which download lf signal and tries to demod here.
-int CmdIOProxRead(const char *Cmd)
-{
+int CmdIOProxRead(const char *Cmd) {
     lf_read(true, 12000);
     return CmdIOProxDemod(Cmd);
 }
 // this read loops on device side.
 // uses the demod in lfops.c
-int CmdIOProxRead_device(const char *Cmd)
-{
+int CmdIOProxRead_device(const char *Cmd) {
     if (Cmd[0] == 'h' || Cmd[0] == 'H') return usage_lf_io_read();
     int findone = (Cmd[0] == '1') ? 1 : 0;
     UsbCommand c = {CMD_IO_DEMOD_FSK, {findone, 0, 0}};
@@ -85,8 +80,7 @@ int CmdIOProxRead_device(const char *Cmd)
 //by marshmellow
 //IO-Prox demod - FSK RF/64 with preamble of 000000001
 //print ioprox ID and some format details
-int CmdIOProxDemod(const char *Cmd)
-{
+int CmdIOProxDemod(const char *Cmd) {
     int retval = 0;
     int idx = 0;
     uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
@@ -189,8 +183,7 @@ int CmdIOProxDemod(const char *Cmd)
 //-----------------------------------------------------------------------------
 //00000000 0 11110000 1 facility 1 version* 1 code*one 1 code*two 1 ???????? 11
 //XSF(version)facility:codeone+codetwo (raw)
-int getIOProxBits(uint8_t version, uint8_t fc, uint16_t cn, uint8_t *bits)
-{
+int getIOProxBits(uint8_t version, uint8_t fc, uint16_t cn, uint8_t *bits) {
 #define SEPARATOR 1
     uint8_t pos = 0;
     // the return bits, preamble 0000 0000 0
@@ -250,8 +243,7 @@ int getIOProxBits(uint8_t version, uint8_t fc, uint16_t cn, uint8_t *bits)
     return 1;
 }
 
-int CmdIOProxSim(const char *Cmd)
-{
+int CmdIOProxSim(const char *Cmd) {
     uint16_t cn = 0;
     uint8_t version = 0, fc = 0;
     uint8_t bits[64];
@@ -296,8 +288,7 @@ int CmdIOProxSim(const char *Cmd)
     return 0;
 }
 
-int CmdIOProxClone(const char *Cmd)
-{
+int CmdIOProxClone(const char *Cmd) {
 
     uint32_t blocks[3] = {T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_64 | 2 << T55x7_MAXBLOCK_SHIFT, 0, 0};
     uint16_t cn = 0;
@@ -349,15 +340,13 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFIO(const char *Cmd)
-{
+int CmdLFIO(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }

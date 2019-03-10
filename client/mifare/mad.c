@@ -95,8 +95,7 @@ static madAIDDescr madKnownClusterCodes[] = {
 
 static const char unknownAID[] = "";
 
-static const char *GetAIDDescription(uint16_t AID)
-{
+static const char *GetAIDDescription(uint16_t AID) {
     for (int i = 0; i < ARRAYLEN(madKnownAIDs); i++)
         if (madKnownAIDs[i].AID == AID)
             return madKnownAIDs[i].Description;
@@ -108,8 +107,7 @@ static const char *GetAIDDescription(uint16_t AID)
     return unknownAID;
 }
 
-int madCRCCheck(uint8_t *sector, bool verbose, int MADver)
-{
+int madCRCCheck(uint8_t *sector, bool verbose, int MADver) {
     if (MADver == 1) {
         uint8_t crc = CRC8Mad(&sector[16 + 1], 15 + 16);
         if (crc != sector[16]) {
@@ -127,16 +125,14 @@ int madCRCCheck(uint8_t *sector, bool verbose, int MADver)
     return 0;
 }
 
-uint16_t madGetAID(uint8_t *sector, int MADver, int sectorNo)
-{
+uint16_t madGetAID(uint8_t *sector, int MADver, int sectorNo) {
     if (MADver == 1)
         return (sector[16 + 2 + (sectorNo - 1) * 2] << 8) + (sector[16 + 2 + (sectorNo - 1) * 2 + 1]);
     else
         return (sector[2 + (sectorNo - 1) * 2] << 8) + (sector[2 + (sectorNo - 1) * 2 + 1]);
 }
 
-int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2)
-{
+int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) {
     int res = 0;
 
     if (!sector0)
@@ -190,8 +186,7 @@ int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2)
     return res;
 }
 
-int MADDecode(uint8_t *sector0, uint8_t *sector10, uint16_t *mad, size_t *madlen)
-{
+int MADDecode(uint8_t *sector0, uint8_t *sector10, uint16_t *mad, size_t *madlen) {
     *madlen = 0;
     bool haveMAD2 = false;
     MADCheck(sector0, sector10, false, &haveMAD2);
@@ -216,8 +211,7 @@ int MADDecode(uint8_t *sector0, uint8_t *sector10, uint16_t *mad, size_t *madlen
 }
 
 
-int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2)
-{
+int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2) {
 
     // check MAD1 only
     MADCheck(sector, NULL, verbose, haveMAD2);
@@ -242,8 +236,7 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2)
     return 0;
 };
 
-int MAD2DecodeAndPrint(uint8_t *sector, bool verbose)
-{
+int MAD2DecodeAndPrint(uint8_t *sector, bool verbose) {
     PrintAndLogEx(NORMAL, "16 MAD2");
 
     int res = madCRCCheck(sector, true, 2);

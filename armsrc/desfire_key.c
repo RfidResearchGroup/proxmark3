@@ -21,8 +21,7 @@
 
 static inline void update_key_schedules(desfirekey_t key);
 
-static inline void update_key_schedules(desfirekey_t key)
-{
+static inline void update_key_schedules(desfirekey_t key) {
     // DES_set_key ((DES_cblock *)key->data, &(key->ks1));
     // DES_set_key ((DES_cblock *)(key->data + 8), &(key->ks2));
     // if (T_3K3DES == key->type) {
@@ -30,8 +29,7 @@ static inline void update_key_schedules(desfirekey_t key)
     // }
 }
 
-void Desfire_des_key_new(const uint8_t value[8], desfirekey_t key)
-{
+void Desfire_des_key_new(const uint8_t value[8], desfirekey_t key) {
     uint8_t data[8];
     memcpy(data, value, 8);
     for (int n = 0; n < 8; n++)
@@ -39,8 +37,7 @@ void Desfire_des_key_new(const uint8_t value[8], desfirekey_t key)
     Desfire_des_key_new_with_version(data, key);
 }
 
-void Desfire_des_key_new_with_version(const uint8_t value[8], desfirekey_t key)
-{
+void Desfire_des_key_new_with_version(const uint8_t value[8], desfirekey_t key) {
     if (key != NULL) {
         key->type = T_DES;
         memcpy(key->data, value, 8);
@@ -49,8 +46,7 @@ void Desfire_des_key_new_with_version(const uint8_t value[8], desfirekey_t key)
     }
 }
 
-void Desfire_3des_key_new(const uint8_t value[16], desfirekey_t key)
-{
+void Desfire_3des_key_new(const uint8_t value[16], desfirekey_t key) {
     uint8_t data[16];
     memcpy(data, value, 16);
     for (int n = 0; n < 8; n++)
@@ -60,8 +56,7 @@ void Desfire_3des_key_new(const uint8_t value[16], desfirekey_t key)
     Desfire_3des_key_new_with_version(data, key);
 }
 
-void Desfire_3des_key_new_with_version(const uint8_t value[16], desfirekey_t key)
-{
+void Desfire_3des_key_new_with_version(const uint8_t value[16], desfirekey_t key) {
     if (key != NULL) {
         key->type = T_3DES;
         memcpy(key->data, value, 16);
@@ -70,8 +65,7 @@ void Desfire_3des_key_new_with_version(const uint8_t value[16], desfirekey_t key
     }
 }
 
-void Desfire_3k3des_key_new(const uint8_t value[24], desfirekey_t key)
-{
+void Desfire_3k3des_key_new(const uint8_t value[24], desfirekey_t key) {
     uint8_t data[24];
     memcpy(data, value, 24);
     for (int n = 0; n < 8; n++)
@@ -79,8 +73,7 @@ void Desfire_3k3des_key_new(const uint8_t value[24], desfirekey_t key)
     Desfire_3k3des_key_new_with_version(data, key);
 }
 
-void Desfire_3k3des_key_new_with_version(const uint8_t value[24], desfirekey_t key)
-{
+void Desfire_3k3des_key_new_with_version(const uint8_t value[24], desfirekey_t key) {
     if (key != NULL) {
         key->type = T_3K3DES;
         memcpy(key->data, value, 24);
@@ -88,13 +81,11 @@ void Desfire_3k3des_key_new_with_version(const uint8_t value[24], desfirekey_t k
     }
 }
 
-void Desfire_aes_key_new(const uint8_t value[16], desfirekey_t key)
-{
+void Desfire_aes_key_new(const uint8_t value[16], desfirekey_t key) {
     Desfire_aes_key_new_with_version(value, 0, key);
 }
 
-void Desfire_aes_key_new_with_version(const uint8_t value[16], uint8_t version, desfirekey_t key)
-{
+void Desfire_aes_key_new_with_version(const uint8_t value[16], uint8_t version, desfirekey_t key) {
 
     if (key != NULL) {
         memcpy(key->data, value, 16);
@@ -103,8 +94,7 @@ void Desfire_aes_key_new_with_version(const uint8_t value[16], uint8_t version, 
     }
 }
 
-uint8_t Desfire_key_get_version(desfirekey_t key)
-{
+uint8_t Desfire_key_get_version(desfirekey_t key) {
     uint8_t version = 0;
 
     for (int n = 0; n < 8; n++) {
@@ -113,8 +103,7 @@ uint8_t Desfire_key_get_version(desfirekey_t key)
     return version;
 }
 
-void Desfire_key_set_version(desfirekey_t key, uint8_t version)
-{
+void Desfire_key_set_version(desfirekey_t key, uint8_t version) {
     for (int n = 0; n < 8; n++) {
         uint8_t version_bit = ((version & (1 << (7 - n))) >> (7 - n));
         key->data[n] &= 0xfe;
@@ -129,8 +118,7 @@ void Desfire_key_set_version(desfirekey_t key, uint8_t version)
     }
 }
 
-void Desfire_session_key_new(const uint8_t rnda[], const uint8_t rndb[], desfirekey_t authkey, desfirekey_t key)
-{
+void Desfire_session_key_new(const uint8_t rnda[], const uint8_t rndb[], desfirekey_t authkey, desfirekey_t key) {
 
     uint8_t buffer[24];
 

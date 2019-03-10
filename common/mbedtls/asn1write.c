@@ -41,8 +41,7 @@
 #define mbedtls_free       free
 #endif
 
-int mbedtls_asn1_write_len(unsigned char **p, unsigned char *start, size_t len)
-{
+int mbedtls_asn1_write_len(unsigned char **p, unsigned char *start, size_t len) {
     if (len < 0x80) {
         if (*p - start < 1)
             return (MBEDTLS_ERR_ASN1_BUF_TOO_SMALL);
@@ -101,8 +100,7 @@ int mbedtls_asn1_write_len(unsigned char **p, unsigned char *start, size_t len)
 #endif
 }
 
-int mbedtls_asn1_write_tag(unsigned char **p, unsigned char *start, unsigned char tag)
-{
+int mbedtls_asn1_write_tag(unsigned char **p, unsigned char *start, unsigned char tag) {
     if (*p - start < 1)
         return (MBEDTLS_ERR_ASN1_BUF_TOO_SMALL);
 
@@ -112,8 +110,7 @@ int mbedtls_asn1_write_tag(unsigned char **p, unsigned char *start, unsigned cha
 }
 
 int mbedtls_asn1_write_raw_buffer(unsigned char **p, unsigned char *start,
-                                  const unsigned char *buf, size_t size)
-{
+                                  const unsigned char *buf, size_t size) {
     size_t len = 0;
 
     if (*p < start || (size_t)(*p - start) < size)
@@ -127,8 +124,7 @@ int mbedtls_asn1_write_raw_buffer(unsigned char **p, unsigned char *start,
 }
 
 #if defined(MBEDTLS_BIGNUM_C)
-int mbedtls_asn1_write_mpi(unsigned char **p, unsigned char *start, const mbedtls_mpi *X)
-{
+int mbedtls_asn1_write_mpi(unsigned char **p, unsigned char *start, const mbedtls_mpi *X) {
     int ret;
     size_t len = 0;
 
@@ -163,8 +159,7 @@ cleanup:
 }
 #endif /* MBEDTLS_BIGNUM_C */
 
-int mbedtls_asn1_write_null(unsigned char **p, unsigned char *start)
-{
+int mbedtls_asn1_write_null(unsigned char **p, unsigned char *start) {
     int ret;
     size_t len = 0;
 
@@ -177,8 +172,7 @@ int mbedtls_asn1_write_null(unsigned char **p, unsigned char *start)
 }
 
 int mbedtls_asn1_write_oid(unsigned char **p, unsigned char *start,
-                           const char *oid, size_t oid_len)
-{
+                           const char *oid, size_t oid_len) {
     int ret;
     size_t len = 0;
 
@@ -192,8 +186,7 @@ int mbedtls_asn1_write_oid(unsigned char **p, unsigned char *start,
 
 int mbedtls_asn1_write_algorithm_identifier(unsigned char **p, unsigned char *start,
                                             const char *oid, size_t oid_len,
-                                            size_t par_len)
-{
+                                            size_t par_len) {
     int ret;
     size_t len = 0;
 
@@ -211,8 +204,7 @@ int mbedtls_asn1_write_algorithm_identifier(unsigned char **p, unsigned char *st
     return ((int) len);
 }
 
-int mbedtls_asn1_write_bool(unsigned char **p, unsigned char *start, int boolean)
-{
+int mbedtls_asn1_write_bool(unsigned char **p, unsigned char *start, int boolean) {
     int ret;
     size_t len = 0;
 
@@ -228,8 +220,7 @@ int mbedtls_asn1_write_bool(unsigned char **p, unsigned char *start, int boolean
     return ((int) len);
 }
 
-int mbedtls_asn1_write_int(unsigned char **p, unsigned char *start, int val)
-{
+int mbedtls_asn1_write_int(unsigned char **p, unsigned char *start, int val) {
     int ret;
     size_t len = 0;
 
@@ -254,8 +245,7 @@ int mbedtls_asn1_write_int(unsigned char **p, unsigned char *start, int val)
 }
 
 int mbedtls_asn1_write_printable_string(unsigned char **p, unsigned char *start,
-                                        const char *text, size_t text_len)
-{
+                                        const char *text, size_t text_len) {
     int ret;
     size_t len = 0;
 
@@ -269,8 +259,7 @@ int mbedtls_asn1_write_printable_string(unsigned char **p, unsigned char *start,
 }
 
 int mbedtls_asn1_write_ia5_string(unsigned char **p, unsigned char *start,
-                                  const char *text, size_t text_len)
-{
+                                  const char *text, size_t text_len) {
     int ret;
     size_t len = 0;
 
@@ -284,8 +273,7 @@ int mbedtls_asn1_write_ia5_string(unsigned char **p, unsigned char *start,
 }
 
 int mbedtls_asn1_write_bitstring(unsigned char **p, unsigned char *start,
-                                 const unsigned char *buf, size_t bits)
-{
+                                 const unsigned char *buf, size_t bits) {
     int ret;
     size_t len = 0, size;
 
@@ -311,8 +299,7 @@ int mbedtls_asn1_write_bitstring(unsigned char **p, unsigned char *start,
 }
 
 int mbedtls_asn1_write_octet_string(unsigned char **p, unsigned char *start,
-                                    const unsigned char *buf, size_t size)
-{
+                                    const unsigned char *buf, size_t size) {
     int ret;
     size_t len = 0;
 
@@ -327,8 +314,7 @@ int mbedtls_asn1_write_octet_string(unsigned char **p, unsigned char *start,
 mbedtls_asn1_named_data *mbedtls_asn1_store_named_data(mbedtls_asn1_named_data **head,
                                                        const char *oid, size_t oid_len,
                                                        const unsigned char *val,
-                                                       size_t val_len)
-{
+                                                       size_t val_len) {
     mbedtls_asn1_named_data *cur;
 
     if ((cur = mbedtls_asn1_find_named_data(*head, oid, oid_len)) == NULL) {

@@ -96,8 +96,7 @@ uint8_t xopt__select(bool x, bool y, uint8_t r)
 }
 */
 
-void opt_successor(const uint8_t *k, State *s, bool y, State *successor)
-{
+void opt_successor(const uint8_t *k, State *s, bool y, State *successor) {
     uint8_t Tt = 1 & opt_T(s);
 
     successor->t = (s->t >> 1);
@@ -110,8 +109,7 @@ void opt_successor(const uint8_t *k, State *s, bool y, State *successor)
     successor->l = successor->r + s->r;
 }
 
-void opt_suc(const uint8_t *k, State *s, uint8_t *in, uint8_t length, bool add32Zeroes)
-{
+void opt_suc(const uint8_t *k, State *s, uint8_t *in, uint8_t length, bool add32Zeroes) {
     State x2;
     int i;
     uint8_t head = 0;
@@ -150,8 +148,7 @@ void opt_suc(const uint8_t *k, State *s, uint8_t *in, uint8_t length, bool add32
     }
 }
 
-void opt_output(const uint8_t *k, State *s,  uint8_t *buffer)
-{
+void opt_output(const uint8_t *k, State *s,  uint8_t *buffer) {
     uint8_t times = 0;
     uint8_t bout = 0;
     State temp = {0, 0, 0, 0};
@@ -177,8 +174,7 @@ void opt_output(const uint8_t *k, State *s,  uint8_t *buffer)
     }
 }
 
-void opt_MAC(uint8_t *k, uint8_t *input, uint8_t *out)
-{
+void opt_MAC(uint8_t *k, uint8_t *input, uint8_t *out) {
     State _init  =  {
         ((k[0] ^ 0x4c) + 0xEC) & 0xFF,// l
         ((k[0] ^ 0x4c) + 0x21) & 0xFF,// r
@@ -190,23 +186,20 @@ void opt_MAC(uint8_t *k, uint8_t *input, uint8_t *out)
     opt_output(k, &_init, out);
 }
 
-uint8_t rev_byte(uint8_t b)
-{
+uint8_t rev_byte(uint8_t b) {
     b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
     b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
     b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
     return b;
 }
 
-void opt_reverse_arraybytecpy(uint8_t *dest, uint8_t *src, size_t len)
-{
+void opt_reverse_arraybytecpy(uint8_t *dest, uint8_t *src, size_t len) {
     uint8_t i;
     for (i = 0; i < len ; i++)
         dest[i] = rev_byte(src[i]);
 }
 
-void opt_doReaderMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t mac[4])
-{
+void opt_doReaderMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t mac[4]) {
     static uint8_t cc_nr[12];
     opt_reverse_arraybytecpy(cc_nr, cc_nr_p, 12);
     uint8_t dest [] = {0, 0, 0, 0, 0, 0, 0, 0};
@@ -215,8 +208,7 @@ void opt_doReaderMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t mac[4])
     opt_reverse_arraybytecpy(mac, dest, 4);
     return;
 }
-void opt_doTagMAC(uint8_t *cc_p, const uint8_t *div_key_p, uint8_t mac[4])
-{
+void opt_doTagMAC(uint8_t *cc_p, const uint8_t *div_key_p, uint8_t mac[4]) {
     static uint8_t cc_nr[8 + 4 + 4];
     opt_reverse_arraybytecpy(cc_nr, cc_p, 12);
     State _init  =  {
@@ -241,8 +233,7 @@ void opt_doTagMAC(uint8_t *cc_p, const uint8_t *div_key_p, uint8_t mac[4])
  * @param div_key_p
  * @return the cipher state
  */
-State opt_doTagMAC_1(uint8_t *cc_p, const uint8_t *div_key_p)
-{
+State opt_doTagMAC_1(uint8_t *cc_p, const uint8_t *div_key_p) {
     static uint8_t cc_nr[8];
     opt_reverse_arraybytecpy(cc_nr, cc_p, 8);
     State _init  =  {
@@ -263,8 +254,7 @@ State opt_doTagMAC_1(uint8_t *cc_p, const uint8_t *div_key_p)
  * @param mac - where to store the MAC
  * @param div_key_p - the key to use
  */
-void opt_doTagMAC_2(State _init,  uint8_t *nr, uint8_t mac[4], const uint8_t *div_key_p)
-{
+void opt_doTagMAC_2(State _init,  uint8_t *nr, uint8_t mac[4], const uint8_t *div_key_p) {
     static uint8_t _nr[4];
     opt_reverse_arraybytecpy(_nr, nr, 4);
     opt_suc(div_key_p, &_init, _nr, 4, true);

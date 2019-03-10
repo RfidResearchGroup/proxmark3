@@ -21,8 +21,7 @@ bool showDemod = true;
 pthread_mutex_t print_lock = PTHREAD_MUTEX_INITIALIZER;
 static char *logfilename = "proxmark3.log";
 
-void PrintAndLogOptions(char *str[][2], size_t size, size_t space)
-{
+void PrintAndLogOptions(char *str[][2], size_t size, size_t space) {
     char buff[2000] = "Options:\n";
     char format[2000] = "";
     size_t counts[2] = {0, 0};
@@ -44,8 +43,7 @@ void PrintAndLogOptions(char *str[][2], size_t size, size_t space)
     }
     PrintAndLogEx(NORMAL, "%s", buff);
 }
-void PrintAndLogEx(logLevel_t level, char *fmt, ...)
-{
+void PrintAndLogEx(logLevel_t level, char *fmt, ...) {
 
     // skip debug messages if client debugging is turned off i.e. 'DATA SETDEBUG 0'
     if (g_debugMode == 0 && level == DEBUG)
@@ -119,8 +117,7 @@ void PrintAndLogEx(logLevel_t level, char *fmt, ...)
     }
 }
 
-void PrintAndLog(char *fmt, ...)
-{
+void PrintAndLog(char *fmt, ...) {
     char *saved_line;
     int saved_point;
     va_list argptr, argptr2;
@@ -187,18 +184,15 @@ void PrintAndLog(char *fmt, ...)
     pthread_mutex_unlock(&print_lock);
 }
 
-void SetLogFilename(char *fn)
-{
+void SetLogFilename(char *fn) {
     logfilename = fn;
 }
 
-void SetFlushAfterWrite(bool value)
-{
+void SetFlushAfterWrite(bool value) {
     flushAfterWrite = value;
 }
 
-void iceIIR_Butterworth(int *data, const size_t len)
-{
+void iceIIR_Butterworth(int *data, const size_t len) {
 
     int i, j;
 
@@ -251,8 +245,7 @@ void iceIIR_Butterworth(int *data, const size_t len)
     free(output);
 }
 
-void iceSimple_Filter(int *data, const size_t len, uint8_t k)
-{
+void iceSimple_Filter(int *data, const size_t len, uint8_t k) {
 // ref: http://www.edn.com/design/systems-design/4320010/A-simple-software-lowpass-filter-suits-embedded-system-applications
 // parameter K
 #define FILTER_SHIFT 4
@@ -273,8 +266,7 @@ void iceSimple_Filter(int *data, const size_t len, uint8_t k)
     }
 }
 
-float complex cexpf(float complex Z)
-{
+float complex cexpf(float complex Z) {
     float complex  Res;
     double rho = exp(__real__ Z);
     __real__ Res = rho * cosf(__imag__ Z);

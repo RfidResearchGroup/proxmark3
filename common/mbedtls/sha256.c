@@ -76,13 +76,11 @@
     } while( 0 )
 #endif
 
-void mbedtls_sha256_init(mbedtls_sha256_context *ctx)
-{
+void mbedtls_sha256_init(mbedtls_sha256_context *ctx) {
     memset(ctx, 0, sizeof(mbedtls_sha256_context));
 }
 
-void mbedtls_sha256_free(mbedtls_sha256_context *ctx)
-{
+void mbedtls_sha256_free(mbedtls_sha256_context *ctx) {
     if (ctx == NULL)
         return;
 
@@ -90,16 +88,14 @@ void mbedtls_sha256_free(mbedtls_sha256_context *ctx)
 }
 
 void mbedtls_sha256_clone(mbedtls_sha256_context *dst,
-                          const mbedtls_sha256_context *src)
-{
+                          const mbedtls_sha256_context *src) {
     *dst = *src;
 }
 
 /*
  * SHA-256 context setup
  */
-int mbedtls_sha256_starts_ret(mbedtls_sha256_context *ctx, int is224)
-{
+int mbedtls_sha256_starts_ret(mbedtls_sha256_context *ctx, int is224) {
     ctx->total[0] = 0;
     ctx->total[1] = 0;
 
@@ -132,8 +128,7 @@ int mbedtls_sha256_starts_ret(mbedtls_sha256_context *ctx, int is224)
 
 #if !defined(MBEDTLS_DEPRECATED_REMOVED)
 void mbedtls_sha256_starts(mbedtls_sha256_context *ctx,
-                           int is224)
-{
+                           int is224) {
     mbedtls_sha256_starts_ret(ctx, is224);
 }
 #endif
@@ -184,8 +179,7 @@ static const uint32_t K[] = {
     }
 
 int mbedtls_internal_sha256_process(mbedtls_sha256_context *ctx,
-                                    const unsigned char data[64])
-{
+                                    const unsigned char data[64]) {
     uint32_t temp1, temp2, W[64];
     uint32_t A[8];
     unsigned int i;
@@ -247,8 +241,7 @@ int mbedtls_internal_sha256_process(mbedtls_sha256_context *ctx,
 
 #if !defined(MBEDTLS_DEPRECATED_REMOVED)
 void mbedtls_sha256_process(mbedtls_sha256_context *ctx,
-                            const unsigned char data[64])
-{
+                            const unsigned char data[64]) {
     mbedtls_internal_sha256_process(ctx, data);
 }
 #endif
@@ -259,8 +252,7 @@ void mbedtls_sha256_process(mbedtls_sha256_context *ctx,
  */
 int mbedtls_sha256_update_ret(mbedtls_sha256_context *ctx,
                               const unsigned char *input,
-                              size_t ilen)
-{
+                              size_t ilen) {
     int ret;
     size_t fill;
     uint32_t left;
@@ -305,8 +297,7 @@ int mbedtls_sha256_update_ret(mbedtls_sha256_context *ctx,
 #if !defined(MBEDTLS_DEPRECATED_REMOVED)
 void mbedtls_sha256_update(mbedtls_sha256_context *ctx,
                            const unsigned char *input,
-                           size_t ilen)
-{
+                           size_t ilen) {
     mbedtls_sha256_update_ret(ctx, input, ilen);
 }
 #endif
@@ -315,8 +306,7 @@ void mbedtls_sha256_update(mbedtls_sha256_context *ctx,
  * SHA-256 final digest
  */
 int mbedtls_sha256_finish_ret(mbedtls_sha256_context *ctx,
-                              unsigned char output[32])
-{
+                              unsigned char output[32]) {
     int ret;
     uint32_t used;
     uint32_t high, low;
@@ -373,8 +363,7 @@ int mbedtls_sha256_finish_ret(mbedtls_sha256_context *ctx,
 
 #if !defined(MBEDTLS_DEPRECATED_REMOVED)
 void mbedtls_sha256_finish(mbedtls_sha256_context *ctx,
-                           unsigned char output[32])
-{
+                           unsigned char output[32]) {
     mbedtls_sha256_finish_ret(ctx, output);
 }
 #endif
@@ -387,8 +376,7 @@ void mbedtls_sha256_finish(mbedtls_sha256_context *ctx,
 int mbedtls_sha256_ret(const unsigned char *input,
                        size_t ilen,
                        unsigned char output[32],
-                       int is224)
-{
+                       int is224) {
     int ret;
     mbedtls_sha256_context ctx;
 
@@ -413,8 +401,7 @@ exit:
 void mbedtls_sha256(const unsigned char *input,
                     size_t ilen,
                     unsigned char output[32],
-                    int is224)
-{
+                    int is224) {
     mbedtls_sha256_ret(input, ilen, output, is224);
 }
 #endif
@@ -482,8 +469,7 @@ static const unsigned char sha256_test_sum[6][32] = {
 /*
  * Checkup routine
  */
-int mbedtls_sha256_self_test(int verbose)
-{
+int mbedtls_sha256_self_test(int verbose) {
     int i, j, k, buflen, ret = 0;
     unsigned char *buf;
     unsigned char sha256sum[32];

@@ -20,16 +20,14 @@
 
 
 
-Closure *luaF_newCclosure(lua_State *L, int n)
-{
+Closure *luaF_newCclosure(lua_State *L, int n) {
     Closure *c = &luaC_newobj(L, LUA_TCCL, sizeCclosure(n), NULL, 0)->cl;
     c->c.nupvalues = cast_byte(n);
     return c;
 }
 
 
-Closure *luaF_newLclosure(lua_State *L, int n)
-{
+Closure *luaF_newLclosure(lua_State *L, int n) {
     Closure *c = &luaC_newobj(L, LUA_TLCL, sizeLclosure(n), NULL, 0)->cl;
     c->l.p = NULL;
     c->l.nupvalues = cast_byte(n);
@@ -38,8 +36,7 @@ Closure *luaF_newLclosure(lua_State *L, int n)
 }
 
 
-UpVal *luaF_newupval(lua_State *L)
-{
+UpVal *luaF_newupval(lua_State *L) {
     UpVal *uv = &luaC_newobj(L, LUA_TUPVAL, sizeof(UpVal), NULL, 0)->uv;
     uv->v = &uv->u.value;
     setnilvalue(uv->v);
@@ -47,8 +44,7 @@ UpVal *luaF_newupval(lua_State *L)
 }
 
 
-UpVal *luaF_findupval(lua_State *L, StkId level)
-{
+UpVal *luaF_findupval(lua_State *L, StkId level) {
     global_State *g = G(L);
     GCObject **pp = &L->openupval;
     UpVal *p;
@@ -76,24 +72,21 @@ UpVal *luaF_findupval(lua_State *L, StkId level)
 }
 
 
-static void unlinkupval(UpVal *uv)
-{
+static void unlinkupval(UpVal *uv) {
     lua_assert(uv->u.l.next->u.l.prev == uv && uv->u.l.prev->u.l.next == uv);
     uv->u.l.next->u.l.prev = uv->u.l.prev;  /* remove from `uvhead' list */
     uv->u.l.prev->u.l.next = uv->u.l.next;
 }
 
 
-void luaF_freeupval(lua_State *L, UpVal *uv)
-{
+void luaF_freeupval(lua_State *L, UpVal *uv) {
     if (uv->v != &uv->u.value)  /* is it open? */
         unlinkupval(uv);  /* remove from open list */
     luaM_free(L, uv);  /* free upvalue */
 }
 
 
-void luaF_close(lua_State *L, StkId level)
-{
+void luaF_close(lua_State *L, StkId level) {
     UpVal *uv;
     global_State *g = G(L);
     while (L->openupval != NULL && (uv = gco2uv(L->openupval))->v >= level) {
@@ -114,8 +107,7 @@ void luaF_close(lua_State *L, StkId level)
 }
 
 
-Proto *luaF_newproto(lua_State *L)
-{
+Proto *luaF_newproto(lua_State *L) {
     Proto *f = &luaC_newobj(L, LUA_TPROTO, sizeof(Proto), NULL, 0)->p;
     f->k = NULL;
     f->sizek = 0;
@@ -140,8 +132,7 @@ Proto *luaF_newproto(lua_State *L)
 }
 
 
-void luaF_freeproto(lua_State *L, Proto *f)
-{
+void luaF_freeproto(lua_State *L, Proto *f) {
     luaM_freearray(L, f->code, f->sizecode);
     luaM_freearray(L, f->p, f->sizep);
     luaM_freearray(L, f->k, f->sizek);
@@ -156,8 +147,7 @@ void luaF_freeproto(lua_State *L, Proto *f)
 ** Look for n-th local variable at line `line' in function `func'.
 ** Returns NULL if not found.
 */
-const char *luaF_getlocalname(const Proto *f, int local_number, int pc)
-{
+const char *luaF_getlocalname(const Proto *f, int local_number, int pc) {
     int i;
     for (i = 0; i < f->sizelocvars && f->locvars[i].startpc <= pc; i++) {
         if (pc < f->locvars[i].endpc) {  /* is variable active? */

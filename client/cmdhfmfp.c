@@ -33,8 +33,7 @@ static const uint8_t DefaultKey[16] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
 static int CmdHelp(const char *Cmd);
 
-int CmdHFMFPInfo(const char *cmd)
-{
+int CmdHFMFPInfo(const char *cmd) {
 
     if (cmd && strlen(cmd) > 0)
         PrintAndLogEx(WARNING, "command don't have any parameters.\n");
@@ -113,8 +112,7 @@ int CmdHFMFPInfo(const char *cmd)
     return 0;
 }
 
-int CmdHFMFPWritePerso(const char *cmd)
-{
+int CmdHFMFPWritePerso(const char *cmd) {
     uint8_t keyNum[64] = {0};
     int keyNumLen = 0;
     uint8_t key[64] = {0};
@@ -180,8 +178,7 @@ int CmdHFMFPWritePerso(const char *cmd)
 
 uint16_t CardAddresses[] = {0x9000, 0x9001, 0x9002, 0x9003, 0x9004, 0xA000, 0xA001, 0xA080, 0xA081, 0xC000, 0xC001};
 
-int CmdHFMFPInitPerso(const char *cmd)
-{
+int CmdHFMFPInitPerso(const char *cmd) {
     int res;
     uint8_t key[256] = {0};
     int keyLen = 0;
@@ -255,8 +252,7 @@ int CmdHFMFPInitPerso(const char *cmd)
     return 0;
 }
 
-int CmdHFMFPCommitPerso(const char *cmd)
-{
+int CmdHFMFPCommitPerso(const char *cmd) {
     CLIParserInit("hf mfp commitp",
                   "Executes Commit Perso command. Can be used in SL0 mode only.",
                   "Usage:\n\thf mfp commitp ->  \n");
@@ -297,8 +293,7 @@ int CmdHFMFPCommitPerso(const char *cmd)
     return 0;
 }
 
-int CmdHFMFPAuth(const char *cmd)
-{
+int CmdHFMFPAuth(const char *cmd) {
     uint8_t keyn[250] = {0};
     int keynlen = 0;
     uint8_t key[250] = {0};
@@ -336,8 +331,7 @@ int CmdHFMFPAuth(const char *cmd)
     return MifareAuth4(NULL, keyn, key, true, false, verbose);
 }
 
-int CmdHFMFPRdbl(const char *cmd)
-{
+int CmdHFMFPRdbl(const char *cmd) {
     uint8_t keyn[2] = {0};
     uint8_t key[250] = {0};
     int keylen = 0;
@@ -449,8 +443,7 @@ int CmdHFMFPRdbl(const char *cmd)
     return 0;
 }
 
-int CmdHFMFPRdsc(const char *cmd)
-{
+int CmdHFMFPRdsc(const char *cmd) {
     uint8_t keyn[2] = {0};
     uint8_t key[250] = {0};
     int keylen = 0;
@@ -546,8 +539,7 @@ int CmdHFMFPRdsc(const char *cmd)
     return 0;
 }
 
-int CmdHFMFPWrbl(const char *cmd)
-{
+int CmdHFMFPWrbl(const char *cmd) {
     uint8_t keyn[2] = {0};
     uint8_t key[250] = {0};
     int keylen = 0;
@@ -649,8 +641,7 @@ int CmdHFMFPWrbl(const char *cmd)
     return 0;
 }
 
-int CmdHFMFPMAD(const char *cmd)
-{
+int CmdHFMFPMAD(const char *cmd) {
 
     CLIParserInit("hf mfp mad",
                   "Checks and prints Mifare Application Directory (MAD)",
@@ -744,8 +735,7 @@ int CmdHFMFPMAD(const char *cmd)
     return 0;
 }
 
-int CmdHFMFPNDEF(const char *cmd)
-{
+int CmdHFMFPNDEF(const char *cmd) {
 
     CLIParserInit("hf mfp ndef",
                   "Prints NFC Data Exchange Format (NDEF)",
@@ -864,15 +854,13 @@ static command_t CommandTable[] = {
     {NULL,               NULL,                    0, NULL}
 };
 
-int CmdHFMFP(const char *Cmd)
-{
+int CmdHFMFP(const char *Cmd) {
     (void)WaitForResponseTimeout(CMD_ACK, NULL, 100);
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }

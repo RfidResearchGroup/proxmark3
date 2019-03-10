@@ -9,8 +9,7 @@
 //-----------------------------------------------------------------------------
 #include "string.h"
 
-void *memcpy(void *dest, const void *src, int len)
-{
+void *memcpy(void *dest, const void *src, int len) {
     uint8_t *d = dest;
     const uint8_t *s = src;
     while ((len--) > 0) {
@@ -21,8 +20,7 @@ void *memcpy(void *dest, const void *src, int len)
     return dest;
 }
 
-void *memset(void *dest, int c, int len)
-{
+void *memset(void *dest, int c, int len) {
     uint8_t *d = dest;
     while ((len--) > 0) {
         *d = c;
@@ -31,8 +29,7 @@ void *memset(void *dest, int c, int len)
     return dest;
 }
 
-int memcmp(const void *av, const void *bv, int len)
-{
+int memcmp(const void *av, const void *bv, int len) {
     const uint8_t *a = av;
     const uint8_t *b = bv;
 
@@ -46,14 +43,12 @@ int memcmp(const void *av, const void *bv, int len)
     return 0;
 }
 
-void memxor(uint8_t *dest, uint8_t *src, size_t len)
-{
+void memxor(uint8_t *dest, uint8_t *src, size_t len) {
     for (; len > 0; len--, dest++, src++)
         *dest ^= *src;
 }
 
-int strlen(const char *str)
-{
+int strlen(const char *str) {
     int l = 0;
     while (*str) {
         l++;
@@ -62,8 +57,7 @@ int strlen(const char *str)
     return l;
 }
 
-char *strncat(char *dest, const char *src, unsigned int n)
-{
+char *strncat(char *dest, const char *src, unsigned int n) {
     unsigned int dest_len = strlen(dest);
     unsigned int i;
 
@@ -74,8 +68,7 @@ char *strncat(char *dest, const char *src, unsigned int n)
     return dest;
 }
 
-char *strcat(char *dest, const char *src)
-{
+char *strcat(char *dest, const char *src) {
     unsigned int dest_len = strlen(dest);
     unsigned int i;
 
@@ -88,8 +81,7 @@ char *strcat(char *dest, const char *src)
 ////////////////////////////////////////// code to do 'itoa'
 
 /* reverse:  reverse string s in place */
-void strreverse(char s[])
-{
+void strreverse(char s[]) {
     int c, i, j;
 
     for (i = 0, j = strlen(s) - 1; i < j; i++, j--) {
@@ -100,8 +92,7 @@ void strreverse(char s[])
 }
 
 /* itoa:  convert n to characters in s */
-void itoa(int n, char s[])
-{
+void itoa(int n, char s[]) {
     int i, sign;
 
     if ((sign = n) < 0)  /* record sign */

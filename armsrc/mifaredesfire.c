@@ -16,8 +16,7 @@ static  uint8_t deselect_cmd[] = {0xc2, 0xe0, 0xb4};
 /*                                       PCB   CID   CMD    PAYLOAD    */
 //static uint8_t __res[MAX_FRAME_SIZE];
 
-bool InitDesfireCard()
-{
+bool InitDesfireCard() {
 
     iso14a_card_select_t card;
 
@@ -41,8 +40,7 @@ enum  {
     BAR        = 0x08,
 } CmdOptions ;
 
-void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain)
-{
+void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
 
     /* ARG0 contains flags.
         0x01 = init card.
@@ -86,8 +84,7 @@ void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain)
     cmd_send(CMD_ACK, 1, len, 0, resp, len);
 }
 
-void MifareDesfireGetInformation()
-{
+void MifareDesfireGetInformation() {
 
     int len = 0;
     iso14a_card_select_t card;
@@ -170,8 +167,7 @@ void MifareDesfireGetInformation()
     OnSuccess();
 }
 
-void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain)
-{
+void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain) {
 
     int len = 0;
     //uint8_t PICC_MASTER_KEY8[8] = { 0x40,0x41,0x42,0x43,0x44,0x45,0x46,0x47};
@@ -503,8 +499,7 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
 // cmd  =  cmd bytes to send
 // cmd_len = length of cmd
 // dataout = pointer to response data array
-int DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout)
-{
+int DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout) {
 
     size_t len = 0;
     size_t wrappedLen = 0;
@@ -538,8 +533,7 @@ int DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout)
 }
 
 // CreateAPDU
-size_t CreateAPDU(uint8_t *datain, size_t len, uint8_t *dataout)
-{
+size_t CreateAPDU(uint8_t *datain, size_t len, uint8_t *dataout) {
 
     size_t cmdlen = MIN(len + 4, USB_CMD_DATA_SIZE - 1);
 
@@ -563,16 +557,14 @@ size_t CreateAPDU(uint8_t *datain, size_t len, uint8_t *dataout)
 // crc_update(&desfire_crc32, byte, 8);
 // uint32_t crc = crc_finish(&desfire_crc32);
 
-void OnSuccess()
-{
+void OnSuccess() {
     pcb_blocknum = 0;
     ReaderTransmit(deselect_cmd, 3, NULL);
     mifare_ultra_halt();
     switch_off();
 }
 
-void OnError(uint8_t reason)
-{
+void OnError(uint8_t reason) {
     cmd_send(CMD_ACK, 0, reason, 0, 0, 0);
     OnSuccess();
 }

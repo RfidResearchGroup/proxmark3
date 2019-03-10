@@ -15,8 +15,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_visa2k_clone(void)
-{
+int usage_lf_visa2k_clone(void) {
     PrintAndLogEx(NORMAL, "clone a Visa2000 tag to a T55x7 tag.");
     PrintAndLogEx(NORMAL, "Usage: lf visa2000 clone [h] <card ID> <Q5>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -29,8 +28,7 @@ int usage_lf_visa2k_clone(void)
     return 0;
 }
 
-int usage_lf_visa2k_sim(void)
-{
+int usage_lf_visa2k_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of visa2k card with specified card number.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "");
@@ -44,16 +42,14 @@ int usage_lf_visa2k_sim(void)
     return 0;
 }
 
-static uint8_t visa_chksum(uint32_t id)
-{
+static uint8_t visa_chksum(uint32_t id) {
     uint8_t sum = 0;
     for (uint8_t i = 0; i < 32; i += 4)
         sum ^= (id >> i) & 0xF;
     return sum & 0xF;
 }
 
-static uint8_t visa_parity(uint32_t id)
-{
+static uint8_t visa_parity(uint32_t id) {
     // 4bit parity LUT
     uint8_t par_lut[] = {
         0, 1, 1, 0
@@ -75,8 +71,7 @@ static uint8_t visa_parity(uint32_t id)
 
 // by iceman
 // find Visa2000 preamble in already demoded data
-int detectVisa2k(uint8_t *dest, size_t *size)
-{
+int detectVisa2k(uint8_t *dest, size_t *size) {
     if (*size < 96) return -1; //make sure buffer has data
     size_t startIdx = 0;
     uint8_t preamble[] = {0, 1, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 0};
@@ -99,8 +94,7 @@ int detectVisa2k(uint8_t *dest, size_t *size)
 *
 **/
 //see ASKDemod for what args are accepted
-int CmdVisa2kDemod(const char *Cmd)
-{
+int CmdVisa2kDemod(const char *Cmd) {
 
     save_restoreGB(GRAPH_SAVE);
 
@@ -159,14 +153,12 @@ int CmdVisa2kDemod(const char *Cmd)
 }
 
 // 64*96*2=12288 samples just in case we just missed the first preamble we can still catch 2 of them
-int CmdVisa2kRead(const char *Cmd)
-{
+int CmdVisa2kRead(const char *Cmd) {
     lf_read(true, 20000);
     return CmdVisa2kDemod(Cmd);
 }
 
-int CmdVisa2kClone(const char *Cmd)
-{
+int CmdVisa2kClone(const char *Cmd) {
 
     uint64_t id = 0;
     uint32_t blocks[4] = {T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_64 | T55x7_ST_TERMINATOR | 3 << T55x7_MAXBLOCK_SHIFT, BL0CK1, 0};
@@ -202,8 +194,7 @@ int CmdVisa2kClone(const char *Cmd)
     return 0;
 }
 
-int CmdVisa2kSim(const char *Cmd)
-{
+int CmdVisa2kSim(const char *Cmd) {
 
     uint32_t id = 0;
     char cmdp = param_getchar(Cmd, 0);
@@ -240,15 +231,13 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFVisa2k(const char *Cmd)
-{
+int CmdLFVisa2k(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }

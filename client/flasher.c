@@ -20,8 +20,7 @@
 
 #define MAX_FILES 4
 
-void cmd_debug(UsbCommand *c)
-{
+void cmd_debug(UsbCommand *c) {
     //  Debug
     printf("UsbCommand length[len=%zd]\n", sizeof(UsbCommand));
     printf("  cmd[len=%zd]: %016" PRIx64"\n", sizeof(c->cmd), c->cmd);
@@ -36,8 +35,7 @@ void cmd_debug(UsbCommand *c)
     printf("...\n");
 }
 
-static void usage(char *argv0)
-{
+static void usage(char *argv0) {
     fprintf(stdout, "Usage:   %s <port> [-b] image.elf [image.elf...]\n\n", argv0);
     fprintf(stdout, "\t-b\tEnable flashing of bootloader area (DANGEROUS)\n\n");
     fprintf(stdout, "\nExample:\n\n\t %s "SERIAL_PORT_H" armsrc/obj/fullimage.elf\n", argv0);
@@ -50,8 +48,7 @@ static void usage(char *argv0)
 #endif
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     int can_write_bl = 0;
     int num_files = 0;
     int res;

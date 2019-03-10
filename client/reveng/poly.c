@@ -127,8 +127,7 @@ static const poly_t pzero = PZERO;
 #endif
 
 poly_t
-filtop(FILE *input, unsigned long length, int flags, int bperhx)
-{
+filtop(FILE *input, unsigned long length, int flags, int bperhx) {
     /* reads binary data from input into a poly_t until EOF or until
      * length bits are read.  Characters are read until
      * ceil(bperhx / CHAR_BIT) bits are collected; if P_LTLBYT is
@@ -181,8 +180,7 @@ filtop(FILE *input, unsigned long length, int flags, int bperhx)
 }
 
 poly_t
-strtop(const char *string, int flags, int bperhx)
-{
+strtop(const char *string, int flags, int bperhx) {
     /* Converts a hex or character string to a poly_t.
      * Each character is converted to a hex nibble yielding 4 bits
      * unless P_DIRECT, when each character yields CHAR_BIT bits.
@@ -311,8 +309,7 @@ strtop(const char *string, int flags, int bperhx)
 }
 
 char *
-ptostr(const poly_t poly, int flags, int bperhx)
-{
+ptostr(const poly_t poly, int flags, int bperhx) {
     /* Returns a malloc()-ed string containing a hexadecimal
      * representation of poly. See phxsubs().
      */
@@ -320,8 +317,7 @@ ptostr(const poly_t poly, int flags, int bperhx)
 }
 
 char *
-pxsubs(const poly_t poly, int flags, int bperhx, unsigned long start, unsigned long end)
-{
+pxsubs(const poly_t poly, int flags, int bperhx, unsigned long start, unsigned long end) {
     /* Returns a malloc()-ed string containing a hexadecimal
      * representation of a portion of poly, from bit offset start to
      * (end - 1) inclusive.  The output is grouped into words of
@@ -393,8 +389,7 @@ pxsubs(const poly_t poly, int flags, int bperhx, unsigned long start, unsigned l
 }
 
 poly_t
-pclone(const poly_t poly)
-{
+pclone(const poly_t poly) {
     /* Returns a freestanding copy of poly.  Does not clean poly or
      * the result.
      */
@@ -405,8 +400,7 @@ pclone(const poly_t poly)
 }
 
 void
-pcpy(poly_t *dest, const poly_t src)
-{
+pcpy(poly_t *dest, const poly_t src) {
     /* Assigns (copies) src into dest.  Does not clean src or dest.
      */
     unsigned long iter, idx;
@@ -417,8 +411,7 @@ pcpy(poly_t *dest, const poly_t src)
 }
 
 void
-pcanon(poly_t *poly)
-{
+pcanon(poly_t *poly) {
     /* Converts poly into a CLEAN object by freeing unused bitmap words
      * and clearing any bits in the last word beyond the last bit.
      * The length field has absolute priority over the contents of the bitmap.
@@ -430,8 +423,7 @@ pcanon(poly_t *poly)
 }
 
 void
-pnorm(poly_t *poly)
-{
+pnorm(poly_t *poly) {
     /* Converts poly into a NORMALISED object by removing leading
      * and trailing zeroes, so that the polynomial starts and ends
      * with significant terms.
@@ -451,8 +443,7 @@ pnorm(poly_t *poly)
 }
 
 void
-psnorm(poly_t *poly)
-{
+psnorm(poly_t *poly) {
     /* Converts poly into a SEMI-NORMALISED object by removing
      * trailing zeroes, so that the polynomial ends with a
      * significant term.
@@ -465,8 +456,7 @@ psnorm(poly_t *poly)
 }
 
 void
-pchop(poly_t *poly)
-{
+pchop(poly_t *poly) {
     /* Normalise poly, then chop off the highest significant term
      * (produces a SEMI-NORMALISED object).  poly becomes a suitable
      * divisor for pcrc().
@@ -481,8 +471,7 @@ pchop(poly_t *poly)
 }
 
 void
-pkchop(poly_t *poly)
-{
+pkchop(poly_t *poly) {
     /* Convert poly from Koopman notation to chopped form (produces
      * a SEMI-NORMALISED object).  poly becomes a suitable divisor
      * for pcrc().
@@ -502,8 +491,7 @@ pkchop(poly_t *poly)
 }
 
 unsigned long
-plen(const poly_t poly)
-{
+plen(const poly_t poly) {
     /* Return length of polynomial.
      * poly may or may not be WELL-FORMED.
      */
@@ -511,8 +499,7 @@ plen(const poly_t poly)
 }
 
 int
-pcmp(const poly_t *a, const poly_t *b)
-{
+pcmp(const poly_t *a, const poly_t *b) {
     /* Compares poly_t objects for identical sizes and contents.
      * a and b must be CLEAN.
      * Defines a total order relation for sorting, etc. although
@@ -539,8 +526,7 @@ pcmp(const poly_t *a, const poly_t *b)
 }
 
 int
-psncmp(const poly_t *a, const poly_t *b)
-{
+psncmp(const poly_t *a, const poly_t *b) {
     /* Compares polys for identical effect, i.e. as though the
      * shorter poly were padded with zeroes to the length of the
      * longer.
@@ -565,8 +551,7 @@ psncmp(const poly_t *a, const poly_t *b)
 
 
 int
-ptst(const poly_t poly)
-{
+ptst(const poly_t poly) {
     /* Tests whether a polynomial equals zero.  Returns 0 if equal,
      * a nonzero value otherwise.
      * poly must be CLEAN.
@@ -580,8 +565,7 @@ ptst(const poly_t poly)
 }
 
 unsigned long
-pfirst(const poly_t poly)
-{
+pfirst(const poly_t poly) {
     /* Returns the index of the first nonzero term in poly.  If none
      * is found, returns the length of poly.
      * poly must be CLEAN.
@@ -604,8 +588,7 @@ pfirst(const poly_t poly)
 }
 
 unsigned long
-plast(const poly_t poly)
-{
+plast(const poly_t poly) {
     /* Returns 1 plus the index of the last nonzero term in poly.
      * If none is found, returns zero.
      * poly must be CLEAN.
@@ -631,16 +614,14 @@ plast(const poly_t poly)
 }
 
 poly_t
-psubs(const poly_t src, unsigned long head, unsigned long start, unsigned long end, unsigned long tail)
-{
+psubs(const poly_t src, unsigned long head, unsigned long start, unsigned long end, unsigned long tail) {
     poly_t dest = PZERO;
     pshift(&dest, src, head, start, end, tail);
     return (dest);
 }
 
 void
-pright(poly_t *poly, unsigned long length)
-{
+pright(poly_t *poly, unsigned long length) {
     /* Trims or extends poly to length at the left edge, prepending
      * zeroes if necessary.  Analogous to praloc() except the
      * rightmost terms of poly are preserved.
@@ -657,8 +638,7 @@ pright(poly_t *poly, unsigned long length)
 }
 
 void
-pshift(poly_t *dest, const poly_t src, unsigned long head, unsigned long start, unsigned long end, unsigned long tail)
-{
+pshift(poly_t *dest, const poly_t src, unsigned long head, unsigned long start, unsigned long end, unsigned long tail) {
     /* copies bits start to end-1 of src to dest, plus the number of leading and trailing zeroes given by head and tail.
      * end may exceed the length of src in which case more zeroes are appended.
      * dest may point to src, in which case the poly is edited in place.
@@ -724,8 +704,7 @@ pshift(poly_t *dest, const poly_t src, unsigned long head, unsigned long start, 
 }
 
 void
-ppaste(poly_t *dest, const poly_t src, unsigned long skip, unsigned long seek, unsigned long end, unsigned long fulllength)
-{
+ppaste(poly_t *dest, const poly_t src, unsigned long skip, unsigned long seek, unsigned long end, unsigned long fulllength) {
     /* pastes terms of src, starting from skip, to positions seek to end-1 of dest
      * then sets length of dest to fulllength (>= end)
      * to paste n terms of src, give end = seek + n
@@ -783,8 +762,7 @@ ppaste(poly_t *dest, const poly_t src, unsigned long skip, unsigned long seek, u
 }
 
 void
-pdiff(poly_t *dest, const poly_t src, unsigned long ofs)
-{
+pdiff(poly_t *dest, const poly_t src, unsigned long ofs) {
     /* Subtract src from dest (modulo 2) at offset ofs.
      * In modulo 2 arithmetic, subtraction is equivalent to addition
      * We include an alias for those who wish to retain the distinction
@@ -794,8 +772,7 @@ pdiff(poly_t *dest, const poly_t src, unsigned long ofs)
 }
 
 void
-psum(poly_t *dest, const poly_t src, unsigned long ofs)
-{
+psum(poly_t *dest, const poly_t src, unsigned long ofs) {
     /* Adds src to dest (modulo 2) at offset ofs.
      * When ofs == dest->length, catenates src on to dest.
      * src and dest must be CLEAN.
@@ -816,8 +793,7 @@ psum(poly_t *dest, const poly_t src, unsigned long ofs)
 }
 
 void
-prev(poly_t *poly)
-{
+prev(poly_t *poly) {
     /* Reverse or reciprocate a polynomial.
      * On exit, poly is CLEAN.
      */
@@ -850,8 +826,7 @@ prev(poly_t *poly)
 }
 
 void
-prevch(poly_t *poly, int bperhx)
-{
+prevch(poly_t *poly, int bperhx) {
     /* Reverse each group of bperhx bits in a polynomial.
      * Does not clean poly.
      */
@@ -883,8 +858,7 @@ prevch(poly_t *poly, int bperhx)
 }
 
 void
-prcp(poly_t *poly)
-{
+prcp(poly_t *poly) {
     /* Reciprocate a chopped polynomial.  Use prev() on whole
      * polynomials.
      * On exit, poly is SEMI-NORMALISED.
@@ -903,8 +877,7 @@ prcp(poly_t *poly)
 }
 
 void
-pinv(poly_t *poly)
-{
+pinv(poly_t *poly) {
     /* Invert a polynomial, i.e. add 1 (modulo 2) to the coefficient of each term
      * on exit, poly is CLEAN.
      */
@@ -917,8 +890,7 @@ pinv(poly_t *poly)
 }
 
 poly_t
-pmod(const poly_t dividend, const poly_t divisor)
-{
+pmod(const poly_t dividend, const poly_t divisor) {
     /* Divide dividend by normalised divisor and return the remainder
      * This function generates a temporary 'chopped' divisor for pcrc()
      * If calling repeatedly with a constant divisor, produce a chopped copy
@@ -934,8 +906,7 @@ pmod(const poly_t dividend, const poly_t divisor)
 }
 
 poly_t
-pcrc(const poly_t message, const poly_t divisor, const poly_t init, const poly_t xorout, int flags)
-{
+pcrc(const poly_t message, const poly_t divisor, const poly_t init, const poly_t xorout, int flags) {
     /* Divide message by divisor and return the remainder.
      * init is added to divisor, highest terms aligned, before
      * division.
@@ -960,7 +931,7 @@ pcrc(const poly_t message, const poly_t divisor, const poly_t init, const poly_t
     eptr = message.bitmap + SIZE(message.length);
     probe = ~(~BMP_C(0) >> 1);
     if (divisor.length <= (unsigned long) BMP_BIT
-        && init.length <= (unsigned long) BMP_BIT) {
+            && init.length <= (unsigned long) BMP_BIT) {
         rem = init.length ? *init.bitmap : BMP_C(0);
         dvsr = divisor.length ? *divisor.bitmap : BMP_C(0);
         for (iter = 0UL, ofs = 0UL; iter < max; ++iter, --ofs) {
@@ -1022,8 +993,7 @@ pcrc(const poly_t message, const poly_t divisor, const poly_t init, const poly_t
 }
 
 int
-piter(poly_t *poly)
-{
+piter(poly_t *poly) {
     /* Replace poly with the 'next' polynomial of equal length.
      * Returns zero if the next polynomial is all zeroes, a nonzero
      * value otherwise.
@@ -1040,8 +1010,7 @@ piter(poly_t *poly)
 }
 
 void
-palloc(poly_t *poly, unsigned long length)
-{
+palloc(poly_t *poly, unsigned long length) {
     /* Replaces poly with a CLEAN object of the specified length,
      * consisting of all zeroes.
      * It is safe to call with length = 0, in which case the object
@@ -1065,8 +1034,7 @@ palloc(poly_t *poly, unsigned long length)
 }
 
 void
-pfree(poly_t *poly)
-{
+pfree(poly_t *poly) {
     /* Frees poly's bitmap storage and sets poly equal to the empty
      * polynomial (PZERO).
      * poly may or may not be WELL-FORMED.
@@ -1081,8 +1049,7 @@ pfree(poly_t *poly)
 }
 
 void
-praloc(poly_t *poly, unsigned long length)
-{
+praloc(poly_t *poly, unsigned long length) {
     /* Trims or extends poly to length at the right edge, appending
      * zeroes if necessary.
      * On entry, poly may or may not be WELL-FORMED.
@@ -1124,8 +1091,7 @@ praloc(poly_t *poly, unsigned long length)
 }
 
 int
-pmpar(const poly_t poly, const poly_t mask)
-{
+pmpar(const poly_t poly, const poly_t mask) {
     /* Return even parity of poly masked with mask.
      * Poly and mask must be CLEAN.
      */
@@ -1145,8 +1111,7 @@ pmpar(const poly_t poly, const poly_t mask)
 }
 
 int
-pident(const poly_t a, const poly_t b)
-{
+pident(const poly_t a, const poly_t b) {
     /* Return nonzero if a and b have the same length
      * and point to the same bitmap.
      * a and b need not be CLEAN.
@@ -1157,8 +1122,7 @@ pident(const poly_t a, const poly_t b)
 /* Private functions */
 
 static bmp_t
-getwrd(const poly_t poly, unsigned long iter)
-{
+getwrd(const poly_t poly, unsigned long iter) {
     /* Fetch unaligned word from poly where LSB of result is
      * bit iter of the bitmap (counting from zero).  If iter exceeds
      * the length of poly then zeroes are appended as necessary.
@@ -1181,8 +1145,7 @@ getwrd(const poly_t poly, unsigned long iter)
 }
 
 static bmp_t
-rev(bmp_t accu, int bits)
-{
+rev(bmp_t accu, int bits) {
     /* Returns the bitmap word argument with the given number of
      * least significant bits reversed and the rest cleared.
      */
@@ -1231,8 +1194,7 @@ rev(bmp_t accu, int bits)
 }
 
 static void
-prhex(char **spp, bmp_t bits, int flags, int bperhx)
-{
+prhex(char **spp, bmp_t bits, int flags, int bperhx) {
     /* Appends a hexadecimal string representing the bperhx least
      * significant bits of bits to an external string.
      * spp points to a character pointer that in turn points to the

@@ -792,8 +792,8 @@ static void munpack(model_t *, const struct mpreset *);
         palloc((poly), (preset)->width); \
         if((preset)->field) \
             for(iter=0UL, idx=0UL; \
-                iter < (poly)->length; \
-                iter += BMP_BIT, ++idx) \
+                    iter < (poly)->length; \
+                    iter += BMP_BIT, ++idx) \
                 (poly)->bitmap[idx] = (preset)->field[idx]; \
     }
 
@@ -802,8 +802,7 @@ static void munpack(model_t *, const struct mpreset *);
 
 /* Definitions */
 
-int mbynam(model_t *dest, const char *key)
-{
+int mbynam(model_t *dest, const char *key) {
     /* Sets parameters in dest according to the model named by key.
      */
     size_t left = 0, right = NALIASES, middle = 0;
@@ -837,22 +836,19 @@ int mbynam(model_t *dest, const char *key)
     return (1);
 }
 
-void mbynum(model_t *dest, int num)
-{
+void mbynum(model_t *dest, int num) {
     /* Sets parameters in dest according to the model indexed by num. */
     if (num > NPRESETS)
         num = NPRESETS;
     munpack(dest, num + models);
 }
 
-int mcount(void)
-{
+int mcount(void) {
     /* Returns the number of preset models. */
     return (NPRESETS);
 }
 
-char *mnames(void)
-{
+char *mnames(void) {
     /* Returns a malloc()-ed string of the names of all preset
      * models, separated by newlines and terminated by NULL.
      * Aliases are not listed.
@@ -887,8 +883,7 @@ char *mnames(void)
     return (string);
 }
 
-void mmatch(model_t *model, int flags)
-{
+void mmatch(model_t *model, int flags) {
     /* searches models[] for a model matching the argument, and links a name if found
      * if flags & M_OVERWR, copies the found model onto the argument. */
     size_t left = 0, right = NPRESETS, middle = 0;
@@ -931,8 +926,7 @@ void mmatch(model_t *model, int flags)
 }
 
 /* Private functions */
-static void munpack(model_t *dest, const struct mpreset *src)
-{
+static void munpack(model_t *dest, const struct mpreset *src) {
     /* Copies the parameters of src to dest.
      * dest must be an initialised model.
      */

@@ -39,18 +39,15 @@
 #ifndef CBOR_NO_HALF_FLOAT_TYPE
 #  ifdef __F16C__
 #    include <immintrin.h>
-static inline unsigned short encode_half(double val)
-{
+static inline unsigned short encode_half(double val) {
     return _cvtss_sh((float)val, 3);
 }
-static inline double decode_half(unsigned short half)
-{
+static inline double decode_half(unsigned short half) {
     return _cvtsh_ss(half);
 }
 #  else
 /* software implementation of float-to-fp16 conversions */
-static inline unsigned short encode_half(double val)
-{
+static inline unsigned short encode_half(double val) {
     uint64_t v;
     int sign, exp, mant;
     memcpy(&v, &val, sizeof(v));
@@ -83,8 +80,7 @@ static inline unsigned short encode_half(double val)
 }
 
 /* this function was copied & adapted from RFC 7049 Appendix D */
-static inline double decode_half(unsigned short half)
-{
+static inline double decode_half(unsigned short half) {
     int exp = (half >> 10) & 0x1f;
     int mant = half & 0x3ff;
     double val;

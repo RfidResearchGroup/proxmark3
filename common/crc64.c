@@ -72,8 +72,7 @@ const uint64_t crc64_table[] = {
     0x5DEDC41A34BBEEB2, 0x1F1D25F19D51D821, 0xD80C07CD676F8394, 0x9AFCE626CE85B507
 };
 
-void crc64(const uint8_t *data, const size_t len, uint64_t *crc)
-{
+void crc64(const uint8_t *data, const size_t len, uint64_t *crc) {
 
     for (size_t i = 0; i < len; i++) {
         uint8_t tableIndex = (((uint8_t)(*crc >> 56)) ^ data[i]) & 0xff;

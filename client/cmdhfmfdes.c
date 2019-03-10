@@ -35,8 +35,7 @@ uint8_t key_picc_data[16] = { 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x
 
 static int CmdHelp(const char *Cmd);
 
-int CmdHF14ADesWb(const char *Cmd)
-{
+int CmdHF14ADesWb(const char *Cmd) {
     /*  uint8_t blockNo = 0;
         uint8_t keyType = 0;
         uint8_t key[6] = {0, 0, 0, 0, 0, 0};
@@ -84,8 +83,7 @@ int CmdHF14ADesWb(const char *Cmd)
     return 0;
 }
 
-int CmdHF14ADesRb(const char *Cmd)
-{
+int CmdHF14ADesRb(const char *Cmd) {
     // uint8_t blockNo = 0;
     // uint8_t keyType = 0;
     // uint8_t key[6] = {0, 0, 0, 0, 0, 0};
@@ -132,8 +130,7 @@ int CmdHF14ADesRb(const char *Cmd)
     return 0;
 }
 
-int CmdHF14ADesInfo(const char *Cmd)
-{
+int CmdHF14ADesInfo(const char *Cmd) {
 
     UsbCommand c = {CMD_MIFARE_DESFIRE_INFO};
     SendCommand(&c);
@@ -225,8 +222,7 @@ int CmdHF14ADesInfo(const char *Cmd)
     and set to '1' if the storage size is between 2^n and 2^(n+1).
     For this version of DESFire the 7 MSBits are set to 0x0C (2^12 = 4096) and the LSBit is '0'.
 */
-char *GetCardSizeStr(uint8_t fsize)
-{
+char *GetCardSizeStr(uint8_t fsize) {
 
     static char buf[30] = {0x00};
     char *retStr = buf;
@@ -242,8 +238,7 @@ char *GetCardSizeStr(uint8_t fsize)
     return buf;
 }
 
-char *GetProtocolStr(uint8_t id)
-{
+char *GetProtocolStr(uint8_t id) {
 
     static char buf[30] = {0x00};
     char *retStr = buf;
@@ -255,8 +250,7 @@ char *GetProtocolStr(uint8_t id)
     return buf;
 }
 
-char *GetVersionStr(uint8_t major, uint8_t minor)
-{
+char *GetVersionStr(uint8_t major, uint8_t minor) {
 
     static char buf[30] = {0x00};
     char *retStr = buf;
@@ -272,8 +266,7 @@ char *GetVersionStr(uint8_t major, uint8_t minor)
     return buf;
 }
 
-void GetKeySettings(uint8_t *aid)
-{
+void GetKeySettings(uint8_t *aid) {
 
     char messStr[512] = {0x00};
     char *str = messStr;
@@ -442,8 +435,7 @@ void GetKeySettings(uint8_t *aid)
     }
 }
 
-int CmdHF14ADesEnumApplications(const char *Cmd)
-{
+int CmdHF14ADesEnumApplications(const char *Cmd) {
 
     uint8_t isOK = 0x00;
     uint8_t aid[3];
@@ -554,8 +546,7 @@ int CmdHF14ADesEnumApplications(const char *Cmd)
 // MIAFRE DesFire Authentication
 //
 #define BUFSIZE 256
-int CmdHF14ADesAuth(const char *Cmd)
-{
+int CmdHF14ADesAuth(const char *Cmd) {
 
     // NR  DESC     KEYLENGHT
     // ------------------------
@@ -673,16 +664,14 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdHFMFDes(const char *Cmd)
-{
+int CmdHFMFDes(const char *Cmd) {
     // flush
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }

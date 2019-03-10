@@ -21,8 +21,7 @@ static uint8_t *next_free_memory;
 extern struct common_area common_area;
 extern char __data_src_start__, __data_start__, __data_end__, __bss_start__, __bss_end__;
 
-static voidpf inflate_malloc(voidpf opaque, uInt items, uInt size)
-{
+static voidpf inflate_malloc(voidpf opaque, uInt items, uInt size) {
     uint8_t *allocated_memory;
 
     allocated_memory = next_free_memory;
@@ -30,13 +29,11 @@ static voidpf inflate_malloc(voidpf opaque, uInt items, uInt size)
     return allocated_memory;
 }
 
-static void inflate_free(voidpf opaque, voidpf address)
-{
+static void inflate_free(voidpf opaque, voidpf address) {
     // nothing to do
 }
 
-static void uncompress_data_section(void)
-{
+static void uncompress_data_section(void) {
     z_stream data_section;
 
     next_free_memory = BigBuf_get_addr();
@@ -60,8 +57,7 @@ static void uncompress_data_section(void)
     common_area.arg1 = data_section.total_in;
 }
 
-void __attribute__((section(".startos"))) Vector(void)
-{
+void __attribute__((section(".startos"))) Vector(void) {
     /* Stack should have been set up by the bootloader */
     // char *src;
     char *dst, *end;

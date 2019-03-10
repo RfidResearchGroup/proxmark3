@@ -555,8 +555,7 @@ static const mbedtls_mpi_uint brainpoolP512r1_n[] = {
  * Create an MPI from embedded constants
  * (assumes len is an exact multiple of sizeof mbedtls_mpi_uint)
  */
-static inline void ecp_mpi_load(mbedtls_mpi *X, const mbedtls_mpi_uint *p, size_t len)
-{
+static inline void ecp_mpi_load(mbedtls_mpi *X, const mbedtls_mpi_uint *p, size_t len) {
     X->s = 1;
     X->n = len / sizeof(mbedtls_mpi_uint);
     X->p = (mbedtls_mpi_uint *) p;
@@ -565,8 +564,7 @@ static inline void ecp_mpi_load(mbedtls_mpi *X, const mbedtls_mpi_uint *p, size_
 /*
  * Set an MPI to static value 1
  */
-static inline void ecp_mpi_set1(mbedtls_mpi *X)
-{
+static inline void ecp_mpi_set1(mbedtls_mpi *X) {
     static mbedtls_mpi_uint one[] = { 1 };
     X->s = 1;
     X->n = 1;
@@ -582,8 +580,7 @@ static int ecp_group_load(mbedtls_ecp_group *grp,
                           const mbedtls_mpi_uint *b,  size_t blen,
                           const mbedtls_mpi_uint *gx, size_t gxlen,
                           const mbedtls_mpi_uint *gy, size_t gylen,
-                          const mbedtls_mpi_uint *n,  size_t nlen)
-{
+                          const mbedtls_mpi_uint *n,  size_t nlen) {
     ecp_mpi_load(&grp->P, p, plen);
     if (a != NULL)
         ecp_mpi_load(&grp->A, a, alen);
@@ -662,8 +659,7 @@ static int ecp_mod_p256k1(mbedtls_mpi *);
 /*
  * Specialized function for creating the Curve25519 group
  */
-static int ecp_use_curve25519(mbedtls_ecp_group *grp)
-{
+static int ecp_use_curve25519(mbedtls_ecp_group *grp) {
     int ret;
 
     /* Actually ( A + 2 ) / 4 */
@@ -701,8 +697,7 @@ cleanup:
 /*
  * Specialized function for creating the Curve448 group
  */
-static int ecp_use_curve448(mbedtls_ecp_group *grp)
-{
+static int ecp_use_curve448(mbedtls_ecp_group *grp) {
     mbedtls_mpi Ns;
     int ret;
 
@@ -746,8 +741,7 @@ cleanup:
 /*
  * Set a group using well-known domain parameters
  */
-int mbedtls_ecp_group_load(mbedtls_ecp_group *grp, mbedtls_ecp_group_id id)
-{
+int mbedtls_ecp_group_load(mbedtls_ecp_group *grp, mbedtls_ecp_group_id id) {
     mbedtls_ecp_group_free(grp);
 
     grp->id = id;
@@ -859,8 +853,7 @@ int mbedtls_ecp_group_load(mbedtls_ecp_group *grp, mbedtls_ecp_group_id id)
  */
 
 /* Add 64-bit chunks (dst += src) and update carry */
-static inline void add64(mbedtls_mpi_uint *dst, mbedtls_mpi_uint *src, mbedtls_mpi_uint *carry)
-{
+static inline void add64(mbedtls_mpi_uint *dst, mbedtls_mpi_uint *src, mbedtls_mpi_uint *carry) {
     unsigned char i;
     mbedtls_mpi_uint c = 0;
     for (i = 0; i < 8 / sizeof(mbedtls_mpi_uint); i++, dst++, src++) {
@@ -873,8 +866,7 @@ static inline void add64(mbedtls_mpi_uint *dst, mbedtls_mpi_uint *src, mbedtls_m
 }
 
 /* Add carry to a 64-bit chunk and update carry */
-static inline void carry64(mbedtls_mpi_uint *dst, mbedtls_mpi_uint *carry)
-{
+static inline void carry64(mbedtls_mpi_uint *dst, mbedtls_mpi_uint *carry) {
     unsigned char i;
     for (i = 0; i < 8 / sizeof(mbedtls_mpi_uint); i++, dst++) {
         *dst += *carry;
@@ -891,8 +883,7 @@ static inline void carry64(mbedtls_mpi_uint *dst, mbedtls_mpi_uint *carry)
 /*
  * Fast quasi-reduction modulo p192 (FIPS 186-3 D.2.1)
  */
-static int ecp_mod_p192(mbedtls_mpi *N)
-{
+static int ecp_mod_p192(mbedtls_mpi *N) {
     int ret;
     mbedtls_mpi_uint c = 0;
     mbedtls_mpi_uint *p, *end;
@@ -970,14 +961,12 @@ cleanup:
 /*
  * Helpers for addition and subtraction of chunks, with signed carry.
  */
-static inline void add32(uint32_t *dst, uint32_t src, signed char *carry)
-{
+static inline void add32(uint32_t *dst, uint32_t src, signed char *carry) {
     *dst += src;
     *carry += (*dst < src);
 }
 
-static inline void sub32(uint32_t *dst, uint32_t src, signed char *carry)
-{
+static inline void sub32(uint32_t *dst, uint32_t src, signed char *carry) {
     *carry -= (*dst < src);
     *dst -= src;
 }
@@ -1023,8 +1012,7 @@ static inline void sub32(uint32_t *dst, uint32_t src, signed char *carry)
  * If the result is negative, we get it in the form
  * c * 2^(bits + 32) + N, with c negative and N positive shorter than 'bits'
  */
-static inline int fix_negative(mbedtls_mpi *N, signed char c, mbedtls_mpi *C, size_t bits)
-{
+static inline int fix_negative(mbedtls_mpi *N, signed char c, mbedtls_mpi *C, size_t bits) {
     int ret;
 
     /* C = - c * 2^(bits + 32) */
@@ -1050,8 +1038,7 @@ cleanup:
 /*
  * Fast quasi-reduction modulo p224 (FIPS 186-3 D.2.2)
  */
-static int ecp_mod_p224(mbedtls_mpi *N)
-{
+static int ecp_mod_p224(mbedtls_mpi *N) {
     INIT(224);
 
     SUB(7);
@@ -1088,8 +1075,7 @@ cleanup:
 /*
  * Fast quasi-reduction modulo p256 (FIPS 186-3 D.2.3)
  */
-static int ecp_mod_p256(mbedtls_mpi *N)
-{
+static int ecp_mod_p256(mbedtls_mpi *N) {
     INIT(256);
 
     ADD(8);
@@ -1172,8 +1158,7 @@ cleanup:
 /*
  * Fast quasi-reduction modulo p384 (FIPS 186-3 D.2.4)
  */
-static int ecp_mod_p384(mbedtls_mpi *N)
-{
+static int ecp_mod_p384(mbedtls_mpi *N) {
     INIT(384);
 
     ADD(12);
@@ -1299,8 +1284,7 @@ cleanup:
  * Fast quasi-reduction modulo p521 (FIPS 186-3 D.2.5)
  * Write N as A1 + 2^521 A0, return A0 + A1
  */
-static int ecp_mod_p521(mbedtls_mpi *N)
-{
+static int ecp_mod_p521(mbedtls_mpi *N) {
     int ret;
     size_t i;
     mbedtls_mpi M;
@@ -1348,8 +1332,7 @@ cleanup:
  * Fast quasi-reduction modulo p255 = 2^255 - 19
  * Write N as A0 + 2^255 A1, return A0 + 19 * A1
  */
-static int ecp_mod_p255(mbedtls_mpi *N)
-{
+static int ecp_mod_p255(mbedtls_mpi *N) {
     int ret;
     size_t i;
     mbedtls_mpi M;
@@ -1405,8 +1388,7 @@ cleanup:
  * but for 64-bit targets it should use half the number of operations if we do
  * the reduction with 224-bit limbs, since mpi_add_mpi will then use 64-bit adds.
  */
-static int ecp_mod_p448(mbedtls_mpi *N)
-{
+static int ecp_mod_p448(mbedtls_mpi *N) {
     int ret;
     size_t i;
     mbedtls_mpi M, Q;
@@ -1467,8 +1449,7 @@ cleanup:
 #define P_KOBLITZ_MAX   ( 256 / 8 / sizeof( mbedtls_mpi_uint ) )  // Max limbs in P
 #define P_KOBLITZ_R     ( 8 / sizeof( mbedtls_mpi_uint ) )        // Limbs in R
 static inline int ecp_mod_koblitz(mbedtls_mpi *N, mbedtls_mpi_uint *Rp, size_t p_limbs,
-                                  size_t adjust, size_t shift, mbedtls_mpi_uint mask)
-{
+                                  size_t adjust, size_t shift, mbedtls_mpi_uint mask) {
     int ret;
     size_t i;
     mbedtls_mpi M, R;
@@ -1540,8 +1521,7 @@ cleanup:
  * Fast quasi-reduction modulo p192k1 = 2^192 - R,
  * with R = 2^32 + 2^12 + 2^8 + 2^7 + 2^6 + 2^3 + 1 = 0x0100001119
  */
-static int ecp_mod_p192k1(mbedtls_mpi *N)
-{
+static int ecp_mod_p192k1(mbedtls_mpi *N) {
     static mbedtls_mpi_uint Rp[] = {
         BYTES_TO_T_UINT_8(0xC9, 0x11, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00)
     };
@@ -1555,8 +1535,7 @@ static int ecp_mod_p192k1(mbedtls_mpi *N)
  * Fast quasi-reduction modulo p224k1 = 2^224 - R,
  * with R = 2^32 + 2^12 + 2^11 + 2^9 + 2^7 + 2^4 + 2 + 1 = 0x0100001A93
  */
-static int ecp_mod_p224k1(mbedtls_mpi *N)
-{
+static int ecp_mod_p224k1(mbedtls_mpi *N) {
     static mbedtls_mpi_uint Rp[] = {
         BYTES_TO_T_UINT_8(0x93, 0x1A, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00)
     };
@@ -1575,8 +1554,7 @@ static int ecp_mod_p224k1(mbedtls_mpi *N)
  * Fast quasi-reduction modulo p256k1 = 2^256 - R,
  * with R = 2^32 + 2^9 + 2^8 + 2^7 + 2^6 + 2^4 + 1 = 0x01000003D1
  */
-static int ecp_mod_p256k1(mbedtls_mpi *N)
-{
+static int ecp_mod_p256k1(mbedtls_mpi *N) {
     static mbedtls_mpi_uint Rp[] = {
         BYTES_TO_T_UINT_8(0xD1, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00)
     };

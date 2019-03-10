@@ -145,8 +145,7 @@ bitslice_test_nonces_t bitslice_test_nonces_dispatch;
 #define malloc_bitslice(x) __builtin_assume_aligned(_aligned_malloc((x), MAX_BITSLICES/8), MAX_BITSLICES/8)
 #define free_bitslice(x) _aligned_free(x)
 #elif defined (__APPLE__)
-static void *malloc_bitslice(size_t x)
-{
+static void *malloc_bitslice(size_t x) {
     char *allocated_memory;
     if (posix_memalign((void **)&allocated_memory, MAX_BITSLICES / 8, x)) {
         return NULL;
@@ -174,8 +173,7 @@ static bitslice_t bs_ones;
 static bitslice_t bs_zeroes;
 
 
-void BITSLICE_TEST_NONCES(uint32_t nonces_to_bruteforce, uint32_t *bf_test_nonce, uint8_t *bf_test_nonce_par)
-{
+void BITSLICE_TEST_NONCES(uint32_t nonces_to_bruteforce, uint32_t *bf_test_nonce, uint8_t *bf_test_nonce_par) {
 
     // initialize 1 and 0 vectors
     memset(bs_ones.bytes, 0xff, VECTOR_SIZE);
@@ -207,8 +205,7 @@ void BITSLICE_TEST_NONCES(uint32_t nonces_to_bruteforce, uint32_t *bf_test_nonce
 }
 
 
-const uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, statelist_t *p, uint32_t *keys_found, uint64_t *num_keys_tested, uint32_t nonces_to_bruteforce, uint8_t *bf_test_nonce_2nd_byte, noncelist_t *nonces)
-{
+const uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, statelist_t *p, uint32_t *keys_found, uint64_t *num_keys_tested, uint32_t nonces_to_bruteforce, uint8_t *bf_test_nonce_2nd_byte, noncelist_t *nonces) {
 
     // Unlike aczid's implementation this doesn't roll back at all when performing bitsliced bruteforce.
     // We know that the best first byte is already shifted in. Testing with the remaining three bytes of
@@ -432,11 +429,11 @@ const uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, 
                         // the short-circuiting also helps
                         if (results.bytes64[0] == 0
 #if MAX_BITSLICES > 64
-                            && results.bytes64[1] == 0
+                                && results.bytes64[1] == 0
 #endif
 #if MAX_BITSLICES > 128
-                            && results.bytes64[2] == 0
-                            && results.bytes64[3] == 0
+                                && results.bytes64[2] == 0
+                                && results.bytes64[3] == 0
 #endif
                            ) {
 #if defined (DEBUG_BRUTE_FORCE)
@@ -551,16 +548,14 @@ bitslice_test_nonces_t *bitslice_test_nonces_function_p = &bitslice_test_nonces_
 
 static SIMDExecInstr intSIMDInstr = SIMD_AUTO;
 
-void SetSIMDInstr(SIMDExecInstr instr)
-{
+void SetSIMDInstr(SIMDExecInstr instr) {
     intSIMDInstr = instr;
 
     crack_states_bitsliced_function_p = &crack_states_bitsliced_dispatch;
     bitslice_test_nonces_function_p = &bitslice_test_nonces_dispatch;
 }
 
-SIMDExecInstr GetSIMDInstr()
-{
+SIMDExecInstr GetSIMDInstr() {
     SIMDExecInstr instr = SIMD_NONE;
 
 #if defined (__i386__) || defined (__x86_64__)
@@ -582,8 +577,7 @@ SIMDExecInstr GetSIMDInstr()
     return instr;
 }
 
-SIMDExecInstr GetSIMDInstrAuto()
-{
+SIMDExecInstr GetSIMDInstrAuto() {
     SIMDExecInstr instr = intSIMDInstr;
     if (instr == SIMD_AUTO)
         return GetSIMDInstr();
@@ -592,8 +586,7 @@ SIMDExecInstr GetSIMDInstrAuto()
 }
 
 // determine the available instruction set at runtime and call the correct function
-const uint64_t crack_states_bitsliced_dispatch(uint32_t cuid, uint8_t *best_first_bytes, statelist_t *p, uint32_t *keys_found, uint64_t *num_keys_tested, uint32_t nonces_to_bruteforce, uint8_t *bf_test_nonce_2nd_byte, noncelist_t *nonces)
-{
+const uint64_t crack_states_bitsliced_dispatch(uint32_t cuid, uint8_t *best_first_bytes, statelist_t *p, uint32_t *keys_found, uint64_t *num_keys_tested, uint32_t nonces_to_bruteforce, uint8_t *bf_test_nonce_2nd_byte, noncelist_t *nonces) {
     switch (GetSIMDInstrAuto()) {
 #if defined (__i386__) || defined (__x86_64__)
 #if !defined(__APPLE__) || (defined(__APPLE__) && (__clang_major__ > 8 || __clang_major__ == 8 && __clang_minor__ >= 1))
@@ -625,8 +618,7 @@ const uint64_t crack_states_bitsliced_dispatch(uint32_t cuid, uint8_t *best_firs
     return (*crack_states_bitsliced_function_p)(cuid, best_first_bytes, p, keys_found, num_keys_tested, nonces_to_bruteforce, bf_test_nonce_2nd_byte, nonces);
 }
 
-void bitslice_test_nonces_dispatch(uint32_t nonces_to_bruteforce, uint32_t *bf_test_nonce, uint8_t *bf_test_nonce_par)
-{
+void bitslice_test_nonces_dispatch(uint32_t nonces_to_bruteforce, uint32_t *bf_test_nonce, uint8_t *bf_test_nonce_par) {
     switch (GetSIMDInstrAuto()) {
 #if defined (__i386__) || defined (__x86_64__)
 #if !defined(__APPLE__) || (defined(__APPLE__) && (__clang_major__ > 8 || __clang_major__ == 8 && __clang_minor__ >= 1))
@@ -659,13 +651,11 @@ void bitslice_test_nonces_dispatch(uint32_t nonces_to_bruteforce, uint32_t *bf_t
 }
 
 // Entries to dispatched function calls
-const uint64_t crack_states_bitsliced(uint32_t cuid, uint8_t *best_first_bytes, statelist_t *p, uint32_t *keys_found, uint64_t *num_keys_tested, uint32_t nonces_to_bruteforce, uint8_t *bf_test_nonce_2nd_byte, noncelist_t *nonces)
-{
+const uint64_t crack_states_bitsliced(uint32_t cuid, uint8_t *best_first_bytes, statelist_t *p, uint32_t *keys_found, uint64_t *num_keys_tested, uint32_t nonces_to_bruteforce, uint8_t *bf_test_nonce_2nd_byte, noncelist_t *nonces) {
     return (*crack_states_bitsliced_function_p)(cuid, best_first_bytes, p, keys_found, num_keys_tested, nonces_to_bruteforce, bf_test_nonce_2nd_byte, nonces);
 }
 
-void bitslice_test_nonces(uint32_t nonces_to_bruteforce, uint32_t *bf_test_nonce, uint8_t *bf_test_nonce_par)
-{
+void bitslice_test_nonces(uint32_t nonces_to_bruteforce, uint32_t *bf_test_nonce, uint8_t *bf_test_nonce_par) {
     (*bitslice_test_nonces_function_p)(nonces_to_bruteforce, bf_test_nonce, bf_test_nonce_par);
 }
 

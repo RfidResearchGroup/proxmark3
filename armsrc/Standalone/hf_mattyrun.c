@@ -42,8 +42,7 @@ uint32_t cuid;
 // Matt's StandAlone mod.
 // Work with "magic Chinese" card (email him: ouyangweidaxian@live.cn)
 //-----------------------------------------------------------------------------
-static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
-{
+static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
     // params
     uint8_t needWipe = arg0;
     // bit 0 - need get UID
@@ -155,8 +154,7 @@ static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_
 
 /* the chk function is a piwi’ed(tm) check that will try all keys for
 a particular sector. also no tracing no dbg */
-static int saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, uint8_t keyCount, uint8_t *datain, uint64_t *key)
-{
+static int saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, uint8_t keyCount, uint8_t *datain, uint64_t *key) {
     MF_DBGLEVEL = MF_DBG_NONE;
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
     set_tracing(false);
@@ -194,8 +192,7 @@ static int saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, ui
 }
 
 
-void RunMod()
-{
+void RunMod() {
     StandAloneMode();
     Dbprintf(">>  Matty mifare chk/dump/sim  a.k.a MattyRun Started  <<");
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);

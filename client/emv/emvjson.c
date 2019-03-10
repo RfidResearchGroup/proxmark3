@@ -60,8 +60,7 @@ static const ApplicationDataElm ApplicationData[] = {
 };
 int ApplicationDataLen = sizeof(ApplicationData) / sizeof(ApplicationDataElm);
 
-char *GetApplicationDataName(tlv_tag_t tag)
-{
+char *GetApplicationDataName(tlv_tag_t tag) {
     for (int i = 0; i < ApplicationDataLen; i++)
         if (ApplicationData[i].Tag == tag)
             return ApplicationData[i].Name;
@@ -69,8 +68,7 @@ char *GetApplicationDataName(tlv_tag_t tag)
     return NULL;
 }
 
-int JsonSaveJsonObject(json_t *root, char *path, json_t *value)
-{
+int JsonSaveJsonObject(json_t *root, char *path, json_t *value) {
     json_error_t error;
 
     if (strlen(path) < 1)
@@ -88,18 +86,15 @@ int JsonSaveJsonObject(json_t *root, char *path, json_t *value)
     }
 }
 
-int JsonSaveInt(json_t *root, char *path, int value)
-{
+int JsonSaveInt(json_t *root, char *path, int value) {
     return JsonSaveJsonObject(root, path, json_integer(value));
 }
 
-int JsonSaveStr(json_t *root, char *path, char *value)
-{
+int JsonSaveStr(json_t *root, char *path, char *value) {
     return JsonSaveJsonObject(root, path, json_string(value));
 };
 
-int JsonSaveBufAsHexCompact(json_t *elm, char *path, uint8_t *data, size_t datalen)
-{
+int JsonSaveBufAsHexCompact(json_t *elm, char *path, uint8_t *data, size_t datalen) {
     char *msg = sprint_hex_inrow(data, datalen);
     if (msg && strlen(msg) && msg[strlen(msg) - 1] == ' ')
         msg[strlen(msg) - 1] = '\0';
@@ -107,8 +102,7 @@ int JsonSaveBufAsHexCompact(json_t *elm, char *path, uint8_t *data, size_t datal
     return JsonSaveStr(elm, path, msg);
 }
 
-int JsonSaveBufAsHex(json_t *elm, char *path, uint8_t *data, size_t datalen)
-{
+int JsonSaveBufAsHex(json_t *elm, char *path, uint8_t *data, size_t datalen) {
     char *msg = sprint_hex(data, datalen);
     if (msg && strlen(msg) && msg[strlen(msg) - 1] == ' ')
         msg[strlen(msg) - 1] = '\0';
@@ -116,8 +110,7 @@ int JsonSaveBufAsHex(json_t *elm, char *path, uint8_t *data, size_t datalen)
     return JsonSaveStr(elm, path, msg);
 }
 
-int JsonSaveHex(json_t *elm, char *path, uint64_t data, int datalen)
-{
+int JsonSaveHex(json_t *elm, char *path, uint64_t data, int datalen) {
     uint8_t bdata[8] = {0};
     int len = 0;
     if (!datalen) {
@@ -137,8 +130,7 @@ int JsonSaveHex(json_t *elm, char *path, uint64_t data, int datalen)
     return JsonSaveBufAsHex(elm, path, bdata, len);
 }
 
-int JsonSaveTLVValue(json_t *root, char *path, struct tlvdb *tlvdbelm)
-{
+int JsonSaveTLVValue(json_t *root, char *path, struct tlvdb *tlvdbelm) {
     const struct tlv *tlvelm = tlvdb_get_tlv(tlvdbelm);
     if (tlvelm)
         return JsonSaveBufAsHex(root, path, (uint8_t *)tlvelm->value, tlvelm->len);
@@ -146,8 +138,7 @@ int JsonSaveTLVValue(json_t *root, char *path, struct tlvdb *tlvdbelm)
         return 1;
 }
 
-int JsonSaveTLVElm(json_t *elm, char *path, struct tlv *tlvelm, bool saveName, bool saveValue, bool saveAppDataLink)
-{
+int JsonSaveTLVElm(json_t *elm, char *path, struct tlv *tlvelm, bool saveName, bool saveValue, bool saveAppDataLink) {
     json_error_t error;
 
     if (strlen(path) < 1 || !tlvelm)
@@ -191,13 +182,11 @@ int JsonSaveTLVElm(json_t *elm, char *path, struct tlv *tlvelm, bool saveName, b
     return 0;
 }
 
-int JsonSaveTLVTreeElm(json_t *elm, char *path, struct tlvdb *tlvdbelm, bool saveName, bool saveValue, bool saveAppDataLink)
-{
+int JsonSaveTLVTreeElm(json_t *elm, char *path, struct tlvdb *tlvdbelm, bool saveName, bool saveValue, bool saveAppDataLink) {
     return JsonSaveTLVElm(elm, path, (struct tlv *)tlvdb_get_tlv(tlvdbelm), saveName, saveValue, saveAppDataLink);
 }
 
-int JsonSaveTLVTree(json_t *root, json_t *elm, char *path, struct tlvdb *tlvdbelm)
-{
+int JsonSaveTLVTree(json_t *root, json_t *elm, char *path, struct tlvdb *tlvdbelm) {
     struct tlvdb *tlvp = tlvdbelm;
     while (tlvp) {
         const struct tlv *tlvpelm = tlvdb_get_tlv(tlvp);
@@ -250,8 +239,7 @@ int JsonSaveTLVTree(json_t *root, json_t *elm, char *path, struct tlvdb *tlvdbel
     return 0;
 }
 
-bool HexToBuffer(const char *errormsg, const char *hexvalue, uint8_t *buffer, size_t maxbufferlen, size_t *bufferlen)
-{
+bool HexToBuffer(const char *errormsg, const char *hexvalue, uint8_t *buffer, size_t maxbufferlen, size_t *bufferlen) {
     int buflen = 0;
 
     switch (param_gethex_to_eol(hexvalue, 0, buffer, maxbufferlen, &buflen)) {
@@ -277,8 +265,7 @@ bool HexToBuffer(const char *errormsg, const char *hexvalue, uint8_t *buffer, si
     return true;
 }
 
-int JsonLoadStr(json_t *root, char *path, char *value)
-{
+int JsonLoadStr(json_t *root, char *path, char *value) {
     if (!value)
         return 1;
 
@@ -295,8 +282,7 @@ int JsonLoadStr(json_t *root, char *path, char *value)
     return 0;
 }
 
-int JsonLoadBufAsHex(json_t *elm, char *path, uint8_t *data, size_t maxbufferlen, size_t *datalen)
-{
+int JsonLoadBufAsHex(json_t *elm, char *path, uint8_t *data, size_t maxbufferlen, size_t *datalen) {
     if (datalen)
         *datalen = 0;
 
@@ -310,8 +296,7 @@ int JsonLoadBufAsHex(json_t *elm, char *path, uint8_t *data, size_t maxbufferlen
     return 0;
 };
 
-bool ParamLoadFromJson(struct tlvdb *tlv)
-{
+bool ParamLoadFromJson(struct tlvdb *tlv) {
     json_t *root;
     json_error_t error;
 

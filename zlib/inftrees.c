@@ -31,8 +31,7 @@ const char inflate_copyright[] =
  */
 int ZLIB_INTERNAL inflate_table(codetype type, unsigned short FAR *lens,
                                 unsigned codes, code FAR *FAR *table,
-                                unsigned FAR *bits, unsigned short FAR *work)
-{
+                                unsigned FAR *bits, unsigned short FAR *work) {
     unsigned len;               /* a code's length in bits */
     unsigned sym;               /* index of code symbols */
     unsigned min, max;          /* minimum and maximum code lengths */
@@ -209,7 +208,7 @@ int ZLIB_INTERNAL inflate_table(codetype type, unsigned short FAR *lens,
 
     /* check available table space */
     if ((type == LENS && used > ENOUGH_LENS) ||
-        (type == DISTS && used > ENOUGH_DISTS))
+            (type == DISTS && used > ENOUGH_DISTS))
         return 1;
 
     /* process all codes and make table entries */
@@ -275,7 +274,7 @@ int ZLIB_INTERNAL inflate_table(codetype type, unsigned short FAR *lens,
             /* check for enough space */
             used += 1U << curr;
             if ((type == LENS && used > ENOUGH_LENS) ||
-                (type == DISTS && used > ENOUGH_DISTS))
+                    (type == DISTS && used > ENOUGH_DISTS))
                 return 1;
 
             /* point entry in root table to sub-table */

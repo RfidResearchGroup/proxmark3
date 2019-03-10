@@ -11,8 +11,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_hf_felica_sim(void)
-{
+int usage_hf_felica_sim(void) {
     PrintAndLogEx(NORMAL, "\n Emulating ISO/18092 FeliCa tag \n");
     PrintAndLogEx(NORMAL, "Usage: hf felica sim [h] t <type> [v]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -24,8 +23,7 @@ int usage_hf_felica_sim(void)
     PrintAndLogEx(NORMAL, "          hf felica sim t 1 ");
     return 0;
 }
-int usage_hf_felica_sniff(void)
-{
+int usage_hf_felica_sniff(void) {
     PrintAndLogEx(NORMAL, "It get data from the field and saves it into command buffer.");
     PrintAndLogEx(NORMAL, "Buffer accessible from command 'hf list felica'");
     PrintAndLogEx(NORMAL, "Usage:  hf felica sniff <s > <t>");
@@ -35,8 +33,7 @@ int usage_hf_felica_sniff(void)
     PrintAndLogEx(NORMAL, "          hf felica sniff s 1000");
     return 0;
 }
-int usage_hf_felica_simlite(void)
-{
+int usage_hf_felica_simlite(void) {
     PrintAndLogEx(NORMAL, "\n Emulating ISO/18092 FeliCa Lite tag \n");
     PrintAndLogEx(NORMAL, "Usage: hf felica litesim [h] u <uid>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -46,8 +43,7 @@ int usage_hf_felica_simlite(void)
     PrintAndLogEx(NORMAL, "          hf felica litesim 11223344556677");
     return 0;
 }
-int usage_hf_felica_dumplite(void)
-{
+int usage_hf_felica_dumplite(void) {
     PrintAndLogEx(NORMAL, "\n Dump ISO/18092 FeliCa Lite tag \n");
     PrintAndLogEx(NORMAL, "press button to abort run, otherwise it will loop for 200sec.");
     PrintAndLogEx(NORMAL, "Usage: hf felica litedump [h]");
@@ -57,8 +53,7 @@ int usage_hf_felica_dumplite(void)
     PrintAndLogEx(NORMAL, "          hf felica litedump");
     return 0;
 }
-int usage_hf_felica_raw(void)
-{
+int usage_hf_felica_raw(void) {
     PrintAndLogEx(NORMAL, "Usage: hf felica raw [-h] [-r] [-c] [-p] [-a] <0A 0B 0C ... hex>");
     PrintAndLogEx(NORMAL, "       -h    this help");
     PrintAndLogEx(NORMAL, "       -r    do not read response");
@@ -69,15 +64,13 @@ int usage_hf_felica_raw(void)
     return 0;
 }
 
-int CmdHFFelicaList(const char *Cmd)
-{
+int CmdHFFelicaList(const char *Cmd) {
     //PrintAndLogEx(NORMAL, "Deprecated command, use 'hf list felica' instead");
     CmdTraceList("felica");
     return 0;
 }
 
-int CmdHFFelicaReader(const char *Cmd)
-{
+int CmdHFFelicaReader(const char *Cmd) {
     bool silent = (Cmd[0] == 's' || Cmd[0] ==  'S');
     //UsbCommand cDisconnect = {CMD_FELICA_COMMAND, {0,0,0}};
     UsbCommand c = {CMD_FELICA_COMMAND, {FELICA_CONNECT, 0, 0}};
@@ -129,8 +122,7 @@ int CmdHFFelicaReader(const char *Cmd)
 }
 
 // simulate iso18092 / FeliCa tag
-int CmdHFFelicaSim(const char *Cmd)
-{
+int CmdHFFelicaSim(const char *Cmd) {
     bool errors = false;
     uint8_t flags = 0;
     uint8_t tagtype = 1;
@@ -195,8 +187,7 @@ int CmdHFFelicaSim(const char *Cmd)
     return 0;
 }
 
-int CmdHFFelicaSniff(const char *Cmd)
-{
+int CmdHFFelicaSniff(const char *Cmd) {
 
     uint8_t cmdp = 0;
     uint64_t samples2skip = 0;
@@ -234,8 +225,7 @@ int CmdHFFelicaSniff(const char *Cmd)
 }
 
 // uid  hex
-int CmdHFFelicaSimLite(const char *Cmd)
-{
+int CmdHFFelicaSimLite(const char *Cmd) {
 
     uint64_t uid = param_get64ex(Cmd, 0, 0, 16);
 
@@ -248,13 +238,11 @@ int CmdHFFelicaSimLite(const char *Cmd)
     return 0;
 }
 
-static void printSep()
-{
+static void printSep() {
     PrintAndLogEx(NORMAL, "------------------------------------------------------------------------------------");
 }
 
-uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace, uint16_t tracelen)
-{
+uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace, uint16_t tracelen) {
     if (tracepos + 19 >= tracelen)
         return tracelen;
 
@@ -401,8 +389,7 @@ uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace, uint16_t tracelen)
     return tracepos + 19;
 }
 
-int CmdHFFelicaDumpLite(const char *Cmd)
-{
+int CmdHFFelicaDumpLite(const char *Cmd) {
 
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_hf_felica_dumplite();
@@ -469,8 +456,7 @@ int CmdHFFelicaDumpLite(const char *Cmd)
     return 0;
 }
 
-int CmdHFFelicaCmdRaw(const char *cmd)
-{
+int CmdHFFelicaCmdRaw(const char *cmd) {
     UsbCommand c = {CMD_FELICA_COMMAND, {0, 0, 0}};
     bool reply = 1;
     bool crc = false;
@@ -525,8 +511,8 @@ int CmdHFFelicaCmdRaw(const char *cmd)
             continue;
         }
         if ((cmd[i] >= '0' && cmd[i] <= '9') ||
-            (cmd[i] >= 'a' && cmd[i] <= 'f') ||
-            (cmd[i] >= 'A' && cmd[i] <= 'F')) {
+                (cmd[i] >= 'a' && cmd[i] <= 'f') ||
+                (cmd[i] >= 'A' && cmd[i] <= 'F')) {
             buf[strlen(buf) + 1] = 0;
             buf[strlen(buf)] = cmd[i];
             i++;
@@ -586,8 +572,7 @@ int CmdHFFelicaCmdRaw(const char *cmd)
     return 0;
 }
 
-void waitCmdFelica(uint8_t iSelect)
-{
+void waitCmdFelica(uint8_t iSelect) {
     UsbCommand resp;
     uint16_t len = 0;
 
@@ -615,15 +600,13 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdHFFelica(const char *Cmd)
-{
+int CmdHFFelica(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }

@@ -11,8 +11,7 @@
 #define DELTA  0x9E3779B9
 #define SUM    0xC6EF3720
 
-void tea_encrypt(uint8_t *v, uint8_t *key)
-{
+void tea_encrypt(uint8_t *v, uint8_t *key) {
 
     uint32_t a = 0, b = 0, c = 0, d = 0, y = 0, z = 0;
     uint32_t sum = 0;
@@ -38,8 +37,7 @@ void tea_encrypt(uint8_t *v, uint8_t *key)
     num_to_bytes(z, 4, v + 4);
 }
 
-void tea_decrypt(uint8_t *v, uint8_t *key)
-{
+void tea_decrypt(uint8_t *v, uint8_t *key) {
 
     uint32_t a = 0, b = 0, c = 0, d = 0, y = 0, z = 0;
     uint32_t sum = SUM;

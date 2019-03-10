@@ -10,8 +10,7 @@
 #include "mifarehost.h"
 #include "cmdmain.h"
 
-int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key)
-{
+int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
     uint32_t uid = 0;
     uint32_t nt = 0, nr = 0, ar = 0;
     uint64_t par_list = 0, ks_list = 0;
@@ -124,8 +123,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key)
     free(keylist);
     return 0;
 }
-int mfCheckKeys(uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keycnt, uint8_t *keyBlock, uint64_t *key)
-{
+int mfCheckKeys(uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keycnt, uint8_t *keyBlock, uint64_t *key) {
     *key = -1;
     UsbCommand c = {CMD_MIFARE_CHKKEYS, { (blockNo | (keyType << 8)), clear_trace, keycnt}};
     memcpy(c.d.asBytes, keyBlock, 6 * keycnt);
@@ -143,8 +141,7 @@ int mfCheckKeys(uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keyc
 // 1 ==
 // 2 == Time-out, aborting
 int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, uint8_t strategy,
-                     uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory)
-{
+                     uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory) {
 
     uint64_t t2 = msclock();
     uint32_t timeout = 0;
@@ -221,8 +218,7 @@ int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, 
 
 // PM3 imp of J-Run mf_key_brute (part 2)
 // ref: https://github.com/J-Run/mf_key_brute
-int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultkey)
-{
+int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultkey) {
 
 #define KEYS_IN_BLOCK 85
 #define KEYBLOCK_SIZE 510
@@ -268,8 +264,7 @@ int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultk
 }
 
 // Compare 16 Bits out of cryptostate
-int Compare16Bits(const void *a, const void *b)
-{
+int Compare16Bits(const void *a, const void *b) {
     if ((*(uint64_t *)b & 0x00ff000000ff0000) == (*(uint64_t *)a & 0x00ff000000ff0000)) return 0;
     if ((*(uint64_t *)b & 0x00ff000000ff0000) > (*(uint64_t *)a & 0x00ff000000ff0000)) return 1;
     return -1;
@@ -282,8 +277,7 @@ void
 __attribute__((force_align_arg_pointer))
 #endif
 #endif
-*nested_worker_thread(void *arg)
-{
+*nested_worker_thread(void *arg) {
     struct Crypto1State *p1;
     StateList_t *statelist = arg;
     statelist->head.slhead = lfsr_recovery32(statelist->ks1, statelist->nt ^ statelist->uid);
@@ -297,8 +291,7 @@ __attribute__((force_align_arg_pointer))
     return statelist->head.slhead;
 }
 
-int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *resultKey, bool calibrate)
-{
+int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *resultKey, bool calibrate) {
     uint16_t i;
     uint32_t uid;
     UsbCommand resp;
@@ -425,8 +418,7 @@ out:
 }
 
 // MIFARE
-int mfReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data)
-{
+int mfReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data) {
 
     UsbCommand c = {CMD_MIFARE_READSC, {sectorNo, keyType, 0}};
     memcpy(c.d.asBytes, key, 6);
@@ -452,8 +444,7 @@ int mfReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data)
 }
 
 // EMULATOR
-int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount)
-{
+int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount) {
     UsbCommand c = {CMD_MIFARE_EML_MEMGET, {blockNum, blocksCount, 0}};
     clearCommandBuffer();
     SendCommand(&c);
@@ -463,13 +454,11 @@ int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount)
     return 0;
 }
 
-int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount)
-{
+int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount) {
     return mfEmlSetMem_xt(data, blockNum, blocksCount, 16);
 }
 
-int mfEmlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth)
-{
+int mfEmlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth) {
     UsbCommand c = {CMD_MIFARE_EML_MEMSET, {blockNum, blocksCount, blockBtWidth}};
     memcpy(c.d.asBytes, data, blocksCount * blockBtWidth);
     clearCommandBuffer();
@@ -478,8 +467,7 @@ int mfEmlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidt
 }
 
 // "MAGIC" CARD
-int mfCSetUID(uint8_t *uid, uint8_t *atqa, uint8_t *sak, uint8_t *oldUID, uint8_t wipecard)
-{
+int mfCSetUID(uint8_t *uid, uint8_t *atqa, uint8_t *sak, uint8_t *oldUID, uint8_t wipecard) {
 
     uint8_t params = MAGIC_SINGLE;
     uint8_t block0[16];
@@ -512,8 +500,7 @@ int mfCSetUID(uint8_t *uid, uint8_t *atqa, uint8_t *sak, uint8_t *oldUID, uint8_
     return mfCSetBlock(0, block0, oldUID, params);
 }
 
-int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t params)
-{
+int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t params) {
 
     uint8_t isOK = 0;
     UsbCommand c = {CMD_MIFARE_CSETBLOCK, {params, blockNo, 0}};
@@ -534,8 +521,7 @@ int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t params)
     return 0;
 }
 
-int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params)
-{
+int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params) {
     uint8_t isOK = 0;
     UsbCommand c = {CMD_MIFARE_CGETBLOCK, {params, blockNo, 0}};
     clearCommandBuffer();
@@ -579,26 +565,22 @@ uint32_t nr_enc = 0;  // encrypted reader challenge
 uint32_t ar_enc = 0;  // encrypted reader response
 uint32_t at_enc = 0;  // encrypted tag response
 
-int isTraceCardEmpty(void)
-{
+int isTraceCardEmpty(void) {
     return ((traceCard[0] == 0) && (traceCard[1] == 0) && (traceCard[2] == 0) && (traceCard[3] == 0));
 }
 
-int isBlockEmpty(int blockN)
-{
+int isBlockEmpty(int blockN) {
     for (int i = 0; i < 16; i++)
         if (traceCard[blockN * 16 + i] != 0) return 0;
 
     return 1;
 }
 
-int isBlockTrailer(int blockN)
-{
+int isBlockTrailer(int blockN) {
     return ((blockN & 0x03) == 0x03);
 }
 
-int loadTraceCard(uint8_t *tuid, uint8_t uidlen)
-{
+int loadTraceCard(uint8_t *tuid, uint8_t uidlen) {
     FILE *f;
     char buf[64] = {0x00};
     uint8_t buf8[64] = {0x00};
@@ -652,8 +634,7 @@ int loadTraceCard(uint8_t *tuid, uint8_t uidlen)
     return 0;
 }
 
-int saveTraceCard(void)
-{
+int saveTraceCard(void) {
 
     if ((!strlen(traceFileName)) || (isTraceCardEmpty())) return 0;
 
@@ -676,8 +657,7 @@ int saveTraceCard(void)
     return 0;
 }
 //
-int mfTraceInit(uint8_t *tuid, uint8_t uidlen, uint8_t *atqa, uint8_t sak, bool wantSaveToEmlFile)
-{
+int mfTraceInit(uint8_t *tuid, uint8_t uidlen, uint8_t *atqa, uint8_t sak, bool wantSaveToEmlFile) {
 
     if (traceCrypto1)
         crypto1_destroy(traceCrypto1);
@@ -696,8 +676,7 @@ int mfTraceInit(uint8_t *tuid, uint8_t uidlen, uint8_t *atqa, uint8_t sak, bool 
     return 0;
 }
 
-void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len, bool isEncrypted)
-{
+void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len, bool isEncrypted) {
     uint8_t bt = 0;
     int i;
 
@@ -714,8 +693,7 @@ void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len, bool i
     }
 }
 
-int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile)
-{
+int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 
     if (traceState == TRACE_ERROR)
         return 1;
@@ -884,8 +862,7 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile)
     return 0;
 }
 
-int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data, int len)
-{
+int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data, int len) {
     PrintAndLogEx(SUCCESS, "\nencrypted data: [%s]", sprint_hex(data, len));
     struct Crypto1State *s;
     ks2 = ar_enc ^ prng_successor(nt, 64);
@@ -904,8 +881,7 @@ int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data,
 *   TRUE if tag uses WEAK prng (ie Now the NACK bug also needs to be present for Darkside attack)
 *   FALSE is tag uses HARDEND prng (ie hardnested attack possible, with known key)
 */
-int detect_classic_prng(void)
-{
+int detect_classic_prng(void) {
 
     UsbCommand resp, respA;
     uint8_t cmd[] = {MIFARE_AUTH_KEYA, 0x00};
@@ -949,8 +925,7 @@ returns:
 2 = has not nack bug
 3 = always leak nacks  (clones)
 */
-int detect_classic_nackbug(bool verbose)
-{
+int detect_classic_nackbug(bool verbose) {
 
     UsbCommand c = {CMD_MIFARE_NACK_DETECT, {0, 0, 0}};
     clearCommandBuffer();
@@ -1035,8 +1010,7 @@ int detect_classic_nackbug(bool verbose)
     return 0;
 }
 /* try to see if card responses to "chinese magic backdoor" commands. */
-void detect_classic_magic(void)
-{
+void detect_classic_magic(void) {
 
     uint8_t isGeneration = 0;
     UsbCommand resp;

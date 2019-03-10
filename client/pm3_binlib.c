@@ -39,15 +39,13 @@
 #include "pm3_binlib.h"
 
 
-static void badcode(lua_State *L, int c)
-{
+static void badcode(lua_State *L, int c) {
     char s[] = "bad code `?'";
     s[sizeof(s) - 3] = c;
     luaL_argerror(L, 1, s);
 }
 
-static int doendian(int c)
-{
+static int doendian(int c) {
     int x = 1;
     int e = *(char *)&x;
     if (c == OP_LITTLEENDIAN) return !e;
@@ -56,8 +54,7 @@ static int doendian(int c)
     return 0;
 }
 
-static void doswap(int swap, void *p, size_t n)
-{
+static void doswap(int swap, void *p, size_t n) {
     if (swap) {
         char *a = (char *)p;
         int i, j;
@@ -102,8 +99,7 @@ static void doswap(int swap, void *p, size_t n)
 #define HEXDIGITS(DIG) \
     "0123456789ABCDEF"[DIG]
 
-static int l_unpack(lua_State *L)         /** unpack(f,s, [init]) */
-{
+static int l_unpack(lua_State *L) {       /** unpack(f,s, [init]) */
     size_t len;
     const char *s = luaL_checklstring(L, 2, &len); /* switched s and f */
     const char *f = luaL_checkstring(L, 1);
@@ -226,8 +222,7 @@ static int l_unpack(lua_State *L)         /** unpack(f,s, [init]) */
         break;                                      \
     }
 
-static int l_pack(lua_State *L)         /** pack(f,...) */
-{
+static int l_pack(lua_State *L) {       /** pack(f,...) */
     int i = 2;
     const char *f = luaL_checkstring(L, 1);
     int swap = 0;
@@ -324,16 +319,14 @@ static const luaL_Reg binlib[] = {
     {NULL,     NULL}
 };
 
-LUALIB_API int luaopen_binlib(lua_State *L)
-{
+LUALIB_API int luaopen_binlib(lua_State *L) {
     luaL_newlib(L, binlib);
     return 1;
 }
 /*
 ** Open bin library
 */
-int set_bin_library(lua_State *L)
-{
+int set_bin_library(lua_State *L) {
 
     luaL_requiref(L, "bin", luaopen_binlib, 1);
     lua_pop(L, 1);

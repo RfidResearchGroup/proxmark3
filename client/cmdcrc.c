@@ -11,8 +11,7 @@
 
 #define MAX_ARGS 20
 
-int split(char *str, char *arr[MAX_ARGS])
-{
+int split(char *str, char *arr[MAX_ARGS]) {
     int beginIndex = 0;
     int endIndex;
     int maxWords = MAX_ARGS;
@@ -40,8 +39,7 @@ int split(char *str, char *arr[MAX_ARGS])
     return wordCnt;
 }
 
-int CmdCrc(const char *Cmd)
-{
+int CmdCrc(const char *Cmd) {
     char name[] = {"reveng "};
     char Cmd2[100 + 7];
     memcpy(Cmd2, name, 7);
@@ -62,8 +60,7 @@ int CmdCrc(const char *Cmd)
 
 //returns array of model names and the count of models returning
 //  as well as a width array for the width of each model
-int GetModels(char *Models[], int *count, uint8_t *width)
-{
+int GetModels(char *Models[], int *count, uint8_t *width) {
     /* default values */
     static model_t model = MZERO;
 
@@ -248,8 +245,7 @@ int GetModels(char *Models[], int *count, uint8_t *width)
 //endian = {0 = calc default endian input and output, b = big endian input and output, B = big endian output, r = right justified
 //          l = little endian input and output, L = little endian output only, t = left justified}
 //result = calculated crc hex string
-int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *result)
-{
+int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *result) {
     /* default values */
     static model_t model = MZERO;
 
@@ -368,8 +364,7 @@ int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *res
 }
 
 //test call to RunModel
-int CmdrevengTestC(const char *Cmd)
-{
+int CmdrevengTestC(const char *Cmd) {
     int cmdp = 0;
     char inModel[30] = {0x00};
     char inHexStr[30] = {0x00};
@@ -392,8 +387,7 @@ int CmdrevengTestC(const char *Cmd)
 }
 
 //returns a calloced string (needs to be freed)
-char *SwapEndianStr(const char *inStr, const size_t len, const uint8_t blockSize)
-{
+char *SwapEndianStr(const char *inStr, const size_t len, const uint8_t blockSize) {
     char *tmp = calloc(len + 1, sizeof(char));
     for (uint8_t block = 0; block < (uint8_t)(len / blockSize); block++) {
         for (size_t i = 0; i < blockSize; i += 2) {
@@ -405,8 +399,7 @@ char *SwapEndianStr(const char *inStr, const size_t len, const uint8_t blockSize
 }
 
 // takes hex string in and searches for a matching result (hex string must include checksum)
-int CmdrevengSearch(const char *Cmd)
-{
+int CmdrevengSearch(const char *Cmd) {
 
 #define NMODELS 105
 

@@ -32,20 +32,17 @@ static char Output[] = { OUTPUT };      /* default output file name */
 static const char *output = Output;     /* actual output file name */
 static const char *progname = PROGNAME; /* actual program name */
 
-static void fatal(const char *message)
-{
+static void fatal(const char *message) {
     fprintf(stderr, "%s: %s\n", progname, message);
     exit(EXIT_FAILURE);
 }
 
-static void cannot(const char *what)
-{
+static void cannot(const char *what) {
     fprintf(stderr, "%s: cannot %s %s: %s\n", progname, what, output, strerror(errno));
     exit(EXIT_FAILURE);
 }
 
-static void usage(const char *message)
-{
+static void usage(const char *message) {
     if (*message == '-')
         fprintf(stderr, "%s: unrecognized option " LUA_QS "\n", progname, message);
     else
@@ -66,8 +63,7 @@ static void usage(const char *message)
 
 #define IS(s) (strcmp(argv[i],s)==0)
 
-static int doargs(int argc, char *argv[])
-{
+static int doargs(int argc, char *argv[]) {
     int i;
     int version = 0;
     if (argv[0] != NULL && *argv[0] != 0) progname = argv[0];
@@ -109,8 +105,7 @@ static int doargs(int argc, char *argv[])
 
 #define FUNCTION "(function()end)();"
 
-static const char *reader(lua_State *L, void *ud, size_t *size)
-{
+static const char *reader(lua_State *L, void *ud, size_t *size) {
     UNUSED(L);
     if ((*(int *)ud)--) {
         *size = sizeof(FUNCTION) - 1;
@@ -123,8 +118,7 @@ static const char *reader(lua_State *L, void *ud, size_t *size)
 
 #define toproto(L,i) getproto(L->top+(i))
 
-static const Proto *combine(lua_State *L, int n)
-{
+static const Proto *combine(lua_State *L, int n) {
     if (n == 1)
         return toproto(L, -1);
     else {
@@ -141,14 +135,12 @@ static const Proto *combine(lua_State *L, int n)
     }
 }
 
-static int writer(lua_State *L, const void *p, size_t size, void *u)
-{
+static int writer(lua_State *L, const void *p, size_t size, void *u) {
     UNUSED(L);
     return (fwrite(p, size, 1, (FILE *)u) != 1) && (size != 0);
 }
 
-static int pmain(lua_State *L)
-{
+static int pmain(lua_State *L) {
     int argc = (int)lua_tointeger(L, 1);
     char **argv = (char **)lua_touserdata(L, 2);
     const Proto *f;
@@ -172,8 +164,7 @@ static int pmain(lua_State *L)
     return 0;
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     lua_State *L;
     int i = doargs(argc, argv);
     argc -= i;
@@ -207,8 +198,7 @@ int main(int argc, char *argv[])
 
 #define VOID(p) ((const void*)(p))
 
-static void PrintString(const TString *ts)
-{
+static void PrintString(const TString *ts) {
     const char *s = getstr(ts);
     size_t i, n = ts->tsv.len;
     printf("%c", '"');
@@ -252,8 +242,7 @@ static void PrintString(const TString *ts)
     printf("%c", '"');
 }
 
-static void PrintConstant(const Proto *f, int i)
-{
+static void PrintConstant(const Proto *f, int i) {
     const TValue *o = &f->k[i];
     switch (ttype(o)) {
         case LUA_TNIL:
@@ -277,8 +266,7 @@ static void PrintConstant(const Proto *f, int i)
 #define UPVALNAME(x) ((f->upvalues[x].name) ? getstr(f->upvalues[x].name) : "-")
 #define MYK(x) (-1-(x))
 
-static void PrintCode(const Proto *f)
-{
+static void PrintCode(const Proto *f) {
     const Instruction *code = f->code;
     int pc, n = f->sizecode;
     for (pc = 0; pc < n; pc++) {
@@ -380,8 +368,7 @@ static void PrintCode(const Proto *f)
 #define SS(x) ((x==1)?"":"s")
 #define S(x)  (int)(x),SS(x)
 
-static void PrintHeader(const Proto *f)
-{
+static void PrintHeader(const Proto *f) {
     const char *s = f->source ? getstr(f->source) : "=?";
     if (*s == '@' || *s == '=')
         s++;
@@ -400,8 +387,7 @@ static void PrintHeader(const Proto *f)
            S(f->sizelocvars), S(f->sizek), S(f->sizep));
 }
 
-static void PrintDebug(const Proto *f)
-{
+static void PrintDebug(const Proto *f) {
     int i, n;
     n = f->sizek;
     printf("constants (%d) for %p:\n", n, VOID(f));
@@ -424,8 +410,7 @@ static void PrintDebug(const Proto *f)
     }
 }
 
-static void PrintFunction(const Proto *f, int full)
-{
+static void PrintFunction(const Proto *f, int full) {
     int i, n = f->sizep;
     PrintHeader(f);
     PrintCode(f);

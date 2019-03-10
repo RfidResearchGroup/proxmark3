@@ -38,8 +38,7 @@ static uint8_t dummy_answer = 0;
 // Select, Authenticate, Read a MIFARE tag.
 // read block
 //-----------------------------------------------------------------------------
-void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
-{
+void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
     // params
     uint8_t blockNo = arg0;
     uint8_t keyType = arg1;
@@ -101,8 +100,7 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
     LEDsoff();
 }
 
-void MifareUC_Auth(uint8_t arg0, uint8_t *keybytes)
-{
+void MifareUC_Auth(uint8_t arg0, uint8_t *keybytes) {
 
     bool turnOffField = (arg0 == 1);
 
@@ -137,8 +135,7 @@ void MifareUC_Auth(uint8_t arg0, uint8_t *keybytes)
 // Arg0 = BlockNo,
 // Arg1 = UsePwd bool
 // datain = PWD bytes,
-void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain)
-{
+void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     uint8_t blockNo = arg0;
     byte_t dataout[16] = {0x00};
     bool useKey = (arg1 == 1); //UL_C
@@ -201,8 +198,7 @@ void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain)
 // Select, Authenticate, Read a MIFARE tag.
 // read sector (data = 4 x 16 bytes = 64 bytes, or 16 x 16 bytes = 256 bytes)
 //-----------------------------------------------------------------------------
-void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
-{
+void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
     // params
     uint8_t sectorNo = arg0;
     uint8_t keyType = arg1;
@@ -268,8 +264,7 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 // arg1 = Pages (number of blocks)
 // arg2 = useKey
 // datain = KEY bytes
-void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
-{
+void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain) {
     LEDsoff();
     LED_A_ON();
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
@@ -368,8 +363,7 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
 // Select, Authenticate, Write a MIFARE tag.
 // read block
 //-----------------------------------------------------------------------------
-void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
-{
+void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
     // params
     uint8_t blockNo = arg0;
     uint8_t keyType = arg1;
@@ -479,8 +473,7 @@ void MifareUWriteBlockCompat(uint8_t arg0, uint8_t *datain)
 //          2 = use 0x1B authentication.
 // datain : 4 first bytes is data to be written.
 //        : 4/16 next bytes is authentication key.
-void MifareUWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain)
-{
+void MifareUWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     uint8_t blockNo = arg0;
     bool useKey = (arg1 == 1); //UL_C
     bool usePwd = (arg1 == 2); //UL_EV1/NTAG
@@ -543,8 +536,7 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain)
     set_tracing(false);
 }
 
-void MifareUSetPwd(uint8_t arg0, uint8_t *datain)
-{
+void MifareUSetPwd(uint8_t arg0, uint8_t *datain) {
 
     uint8_t pwd[16] = {0x00};
     byte_t blockdata[4] = {0x00};
@@ -618,15 +610,13 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain)
 }
 
 // Return 1 if the nonce is invalid else return 0
-int valid_nonce(uint32_t Nt, uint32_t NtEnc, uint32_t Ks1, uint8_t *parity)
-{
+int valid_nonce(uint32_t Nt, uint32_t NtEnc, uint32_t Ks1, uint8_t *parity) {
     return ((oddparity8((Nt >> 24) & 0xFF) == ((parity[0]) ^ oddparity8((NtEnc >> 24) & 0xFF) ^ BIT(Ks1, 16))) & \
             (oddparity8((Nt >> 16) & 0xFF) == ((parity[1]) ^ oddparity8((NtEnc >> 16) & 0xFF) ^ BIT(Ks1, 8))) & \
             (oddparity8((Nt >> 8) & 0xFF) == ((parity[2]) ^ oddparity8((NtEnc >> 8) & 0xFF) ^ BIT(Ks1, 0)))) ? 1 : 0;
 }
 
-void MifareAcquireNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *datain)
-{
+void MifareAcquireNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *datain) {
 
     uint8_t uid[10] = {0x00};
     uint8_t answer[MAX_MIFARE_FRAME_SIZE] = {0x00};
@@ -734,8 +724,7 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *
 // Mifare Classic Cards" in Proceedings of the 22nd ACM SIGSAC Conference on
 // Computer and Communications Security, 2015
 //-----------------------------------------------------------------------------
-void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *datain)
-{
+void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *datain) {
 
     struct Crypto1State mpcs = {0, 0};
     struct Crypto1State *pcs;
@@ -862,8 +851,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 // MIFARE nested authentication.
 //
 //-----------------------------------------------------------------------------
-void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *datain)
-{
+void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *datain) {
     // params
     uint8_t blockNo = arg0 & 0xff;
     uint8_t keyType = (arg0 >> 8) & 0xff;
@@ -1101,8 +1089,7 @@ typedef struct chk_t {
 //  2 = failed to select.
 //  1 = wrong key
 //  0 = correct key
-uint8_t chkKey(struct chk_t *c)
-{
+uint8_t chkKey(struct chk_t *c) {
     uint8_t i = 0, res = 2;
     while (i < 5) {
         // this part is from Piwi's faster nonce collecting part in Hardnested.
@@ -1123,8 +1110,7 @@ uint8_t chkKey(struct chk_t *c)
     return res;
 }
 
-uint8_t chkKey_readb(struct chk_t *c, uint8_t *keyb)
-{
+uint8_t chkKey_readb(struct chk_t *c, uint8_t *keyb) {
 
     if (!iso14443a_fast_select_card(c->uid, c->cl))
         return 2;
@@ -1149,8 +1135,7 @@ uint8_t chkKey_readb(struct chk_t *c, uint8_t *keyb)
     return res;
 }
 
-void chkKey_scanA(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, uint8_t *sectorcnt, uint8_t *foundkeys)
-{
+void chkKey_scanA(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, uint8_t *sectorcnt, uint8_t *foundkeys) {
     for (uint8_t s = 0; s < *sectorcnt; s++) {
 
         // skip already found A keys
@@ -1168,8 +1153,7 @@ void chkKey_scanA(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, ui
     }
 }
 
-void chkKey_scanB(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, uint8_t *sectorcnt, uint8_t *foundkeys)
-{
+void chkKey_scanB(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, uint8_t *sectorcnt, uint8_t *foundkeys) {
     for (uint8_t s = 0; s < *sectorcnt; s++) {
 
         // skip already found B keys
@@ -1189,8 +1173,7 @@ void chkKey_scanB(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, ui
 
 // loop all A keys,
 // when A is found but not B,  try to read B.
-void chkKey_loopBonly(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, uint8_t *sectorcnt, uint8_t *foundkeys)
-{
+void chkKey_loopBonly(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, uint8_t *sectorcnt, uint8_t *foundkeys) {
 
     // read Block B, if A is found.
     for (uint8_t s = 0; s < *sectorcnt; ++s) {
@@ -1228,8 +1211,7 @@ void chkKey_loopBonly(struct chk_t *c, struct sector_t *k_sector, uint8_t *found
 // arg1 = clear trace
 // arg2 = antal nycklar i keychunk
 // datain = keys as array
-void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
-{
+void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
 
     // first call or
     uint8_t sectorcnt = arg0 & 0xFF; // 16;
@@ -1533,8 +1515,7 @@ OUT:
     }
 }
 
-void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
-{
+void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
@@ -1623,8 +1604,7 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 // MIFARE commands set debug level
 //
 //-----------------------------------------------------------------------------
-void MifareSetDbgLvl(uint16_t arg0)
-{
+void MifareSetDbgLvl(uint16_t arg0) {
     MF_DBGLEVEL = arg0;
     Dbprintf("Debug level: %d", MF_DBGLEVEL);
 }
@@ -1637,21 +1617,18 @@ void MifareSetDbgLvl(uint16_t arg0)
 // destroy the Emulator Memory.
 //-----------------------------------------------------------------------------
 
-void MifareEMemClr(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
-{
+void MifareEMemClr(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     emlClearMem();
 }
 
-void MifareEMemSet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
-{
+void MifareEMemSet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     if (arg2 == 0) arg2 = 16; // backwards compat... default bytewidth
     emlSetMem_xt(datain, arg0, arg1, arg2); // data, block num, blocks count, block byte width
 }
 
-void MifareEMemGet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
-{
+void MifareEMemGet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     byte_t buf[USB_CMD_DATA_SIZE] = {0x00};
     emlGetMem(buf, arg0, arg1); // data, block num, blocks count (max 4)
@@ -1665,8 +1642,7 @@ void MifareEMemGet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
 // Load a card into the emulator memory
 //
 //-----------------------------------------------------------------------------
-void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
-{
+void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
     uint8_t numSectors = arg0;
     uint8_t keyType = arg1;
     uint64_t ui64Key = 0;
@@ -1763,8 +1739,7 @@ uint8_t wupC1[] = { MIFARE_MAGICWUPC1 };
 uint8_t wupC2[] = { MIFARE_MAGICWUPC2 };
 uint8_t wipeC[] = { MIFARE_MAGICWIPEC };
 
-void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain)
-{
+void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
 
     // params
     uint8_t workFlags = arg0;
@@ -1874,8 +1849,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain)
         OnSuccessMagic();
 }
 
-void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain)
-{
+void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
 
     uint8_t workFlags = arg0;
     uint8_t blockNo = arg1;
@@ -1951,8 +1925,7 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain)
         OnSuccessMagic();
 }
 
-void MifareCIdent()
-{
+void MifareCIdent() {
 #define GEN_1A 1
 #define GEN_1B 2
 #define GEN_2  4
@@ -2006,21 +1979,18 @@ OUT:
     OnSuccessMagic();
 }
 
-void OnSuccessMagic()
-{
+void OnSuccessMagic() {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
     set_tracing(false);
 }
-void OnErrorMagic(uint8_t reason)
-{
+void OnErrorMagic(uint8_t reason) {
     //          ACK, ISOK, reason,0,0,0
     cmd_send(CMD_ACK, 0, reason, 0, 0, 0);
     OnSuccessMagic();
 }
 
-void MifareSetMod(uint8_t mod, uint8_t *key)
-{
+void MifareSetMod(uint8_t mod, uint8_t *key) {
     uint64_t ui64Key = bytes_to_num(key, 6);
 
     // variables
@@ -2080,8 +2050,7 @@ void MifareSetMod(uint8_t mod, uint8_t *key)
 //
 // DESFIRE
 //
-void Mifare_DES_Auth1(uint8_t arg0, uint8_t *datain)
-{
+void Mifare_DES_Auth1(uint8_t arg0, uint8_t *datain) {
     byte_t dataout[12] = {0x00};
     uint8_t uid[10] = {0x00};
     uint32_t cuid = 0;
@@ -2107,8 +2076,7 @@ void Mifare_DES_Auth1(uint8_t arg0, uint8_t *datain)
     cmd_send(CMD_ACK, 1, cuid, 0, dataout, sizeof(dataout));
 }
 
-void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain)
-{
+void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain) {
     uint32_t cuid = arg0;
     uint8_t key[16] = {0x00};
     byte_t dataout[12] = {0x00};

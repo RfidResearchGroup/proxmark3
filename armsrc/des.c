@@ -202,8 +202,7 @@ const uint8_t shiftkeyinv_permtab[] = {
 #define ROTTABLE_INV  0x3F7E
 /******************************************************************************/
 
-void permute(const uint8_t *ptable, const uint8_t *in, uint8_t *out)
-{
+void permute(const uint8_t *ptable, const uint8_t *in, uint8_t *out) {
     uint8_t ob; /* in-bytes and out-bytes */
     uint8_t byte, bit; /* counter for bit and byte */
     ob = ptable[1];
@@ -223,8 +222,7 @@ void permute(const uint8_t *ptable, const uint8_t *in, uint8_t *out)
 
 /******************************************************************************/
 
-void changeendian32(uint32_t *a)
-{
+void changeendian32(uint32_t *a) {
     *a = (*a & 0x000000FF) << 24 |
          (*a & 0x0000FF00) <<  8 |
          (*a & 0x00FF0000) >>  8 |
@@ -233,8 +231,7 @@ void changeendian32(uint32_t *a)
 
 /******************************************************************************/
 static inline
-void shiftkey(uint8_t *key)
-{
+void shiftkey(uint8_t *key) {
     uint8_t k[7];
     memcpy(k, key, 7);
     permute((uint8_t *)shiftkey_permtab, k, key);
@@ -242,8 +239,7 @@ void shiftkey(uint8_t *key)
 
 /******************************************************************************/
 static inline
-void shiftkey_inv(uint8_t *key)
-{
+void shiftkey_inv(uint8_t *key) {
     uint8_t k[7];
     memcpy(k, key, 7);
     permute((uint8_t *)shiftkeyinv_permtab, k, key);
@@ -252,8 +248,7 @@ void shiftkey_inv(uint8_t *key)
 
 /******************************************************************************/
 static inline
-uint64_t splitin6bitwords(uint64_t a)
-{
+uint64_t splitin6bitwords(uint64_t a) {
     uint64_t ret = 0;
     a &= 0x0000ffffffffffffLL;
     permute((uint8_t *)splitin6bitword_permtab, (uint8_t *)&a, (uint8_t *)&ret);
@@ -263,8 +258,7 @@ uint64_t splitin6bitwords(uint64_t a)
 /******************************************************************************/
 
 static inline
-uint8_t substitute(uint8_t a, uint8_t *sbp)
-{
+uint8_t substitute(uint8_t a, uint8_t *sbp) {
     uint8_t x;
     x = sbp[a >> 1];
     x = (a & 1) ? x & 0x0F : x >> 4;
@@ -274,8 +268,7 @@ uint8_t substitute(uint8_t a, uint8_t *sbp)
 
 /******************************************************************************/
 
-uint32_t des_f(uint32_t r, uint8_t *kr)
-{
+uint32_t des_f(uint32_t r, uint8_t *kr) {
     uint8_t i;
     uint32_t t = 0, ret;
     uint64_t data;
@@ -312,8 +305,7 @@ typedef struct {
 #define R (data.d.v32[1])
 #define L (data.d.v32[0])
 
-void des_enc(void *out, const void *in, const void *key)
-{
+void des_enc(void *out, const void *in, const void *key) {
 
     uint8_t kr[6], k[7];
     uint8_t i;
@@ -346,8 +338,7 @@ void des_enc(void *out, const void *in, const void *key)
 
 /******************************************************************************/
 
-void des_dec(void *out, const void *in, const uint8_t *key)
-{
+void des_dec(void *out, const void *in, const uint8_t *key) {
 
     uint8_t kr[6], k[7];
     int8_t i;
@@ -382,8 +373,7 @@ void des_dec(void *out, const void *in, const uint8_t *key)
 
 /******************************************************************************/
 
-void tdes_enc(void *out, void *in, const void *key)
-{
+void tdes_enc(void *out, void *in, const void *key) {
     des_enc(out,  in, (uint8_t *)key + 0);
     des_dec(out, out, (uint8_t *)key + 8);
     des_enc(out, out, (uint8_t *)key + 16);
@@ -391,15 +381,13 @@ void tdes_enc(void *out, void *in, const void *key)
 
 /******************************************************************************/
 
-void tdes_dec(void *out, void *in, const uint8_t *key)
-{
+void tdes_dec(void *out, void *in, const uint8_t *key) {
     des_dec(out,  in, (uint8_t *)key + 16);
     des_enc(out, out, (uint8_t *)key + 8);
     des_dec(out, out, (uint8_t *)key + 0);
 }
 
-void tdes_2key_enc(void *out, const void *in, size_t length, const void *key, unsigned char iv[8])
-{
+void tdes_2key_enc(void *out, const void *in, size_t length, const void *key, unsigned char iv[8]) {
 
     if (length % 8) return;
 
@@ -423,8 +411,7 @@ void tdes_2key_enc(void *out, const void *in, size_t length, const void *key, un
     }
 }
 
-void tdes_2key_dec(void *out, const void *in, size_t length, const void *key, unsigned char iv[8])
-{
+void tdes_2key_dec(void *out, const void *in, size_t length, const void *key, unsigned char iv[8]) {
 
     if (length % 8) return;
 

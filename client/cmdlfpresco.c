@@ -10,8 +10,7 @@
 #include "cmdlfpresco.h"
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_presco_clone(void)
-{
+int usage_lf_presco_clone(void) {
     PrintAndLogEx(NORMAL, "clone a Presco tag to a T55x7 tag.");
     PrintAndLogEx(NORMAL, "Usage: lf presco clone [h] d <Card-ID> c <hex-ID> <Q5>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -25,8 +24,7 @@ int usage_lf_presco_clone(void)
     return 0;
 }
 
-int usage_lf_presco_sim(void)
-{
+int usage_lf_presco_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of presco card with specified card number.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "Per presco format, the card number is 9 digit number and can contain *# chars. Larger values are truncated.");
@@ -43,8 +41,7 @@ int usage_lf_presco_sim(void)
 }
 
 // find presco preamble 0x10D in already demoded data
-int detectPresco(uint8_t *dest, size_t *size)
-{
+int detectPresco(uint8_t *dest, size_t *size) {
     if (*size < 128 * 2) return -1; //make sure buffer has data
     size_t startIdx = 0;
     uint8_t preamble[] = {0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -56,8 +53,7 @@ int detectPresco(uint8_t *dest, size_t *size)
 }
 
 // convert base 12 ID to sitecode & usercode & 8 bit other unknown code
-int GetWiegandFromPresco(const char *Cmd, uint32_t *sitecode, uint32_t *usercode, uint32_t *fullcode, bool *Q5)
-{
+int GetWiegandFromPresco(const char *Cmd, uint32_t *sitecode, uint32_t *usercode, uint32_t *fullcode, bool *Q5) {
 
     uint8_t val = 0;
     bool hex = false, errors = false;
@@ -120,8 +116,7 @@ int GetWiegandFromPresco(const char *Cmd, uint32_t *sitecode, uint32_t *usercode
 }
 
 // calc not certain - intended to get bitstream for programming / sim
-int GetPrescoBits(uint32_t fullcode, uint8_t *prescoBits)
-{
+int GetPrescoBits(uint32_t fullcode, uint8_t *prescoBits) {
     num_to_bytebits(0x10D00000, 32, prescoBits);
     num_to_bytebits(0x00000000, 32, prescoBits + 32);
     num_to_bytebits(0x00000000, 32, prescoBits + 64);
@@ -130,8 +125,7 @@ int GetPrescoBits(uint32_t fullcode, uint8_t *prescoBits)
 }
 
 //see ASKDemod for what args are accepted
-int CmdPrescoDemod(const char *Cmd)
-{
+int CmdPrescoDemod(const char *Cmd) {
     bool st = true;
     if (!ASKDemod_ext("32 0 0 0 0 a", false, false, 1, &st)) {
         PrintAndLogEx(DEBUG, "DEBUG: Error Presco ASKDemod failed");
@@ -171,8 +165,7 @@ int CmdPrescoDemod(const char *Cmd)
 }
 
 //see ASKDemod for what args are accepted
-int CmdPrescoRead(const char *Cmd)
-{
+int CmdPrescoRead(const char *Cmd) {
     // Presco Number: 123456789 --> Sitecode 30 | usercode 8665
     lf_read(true, 12000);
     return CmdPrescoDemod(Cmd);
@@ -180,8 +173,7 @@ int CmdPrescoRead(const char *Cmd)
 
 // takes base 12 ID converts to hex
 // Or takes 8 digit hex ID
-int CmdPrescoClone(const char *Cmd)
-{
+int CmdPrescoClone(const char *Cmd) {
 
     bool Q5 = false;
     uint32_t sitecode = 0, usercode = 0, fullcode = 0;
@@ -229,8 +221,7 @@ int CmdPrescoClone(const char *Cmd)
 
 // takes base 12 ID converts to hex
 // Or takes 8 digit hex ID
-int CmdPrescoSim(const char *Cmd)
-{
+int CmdPrescoSim(const char *Cmd) {
     uint32_t sitecode = 0, usercode = 0, fullcode = 0;
     bool Q5 = false;
     // get wiegand from printed number.
@@ -259,15 +250,13 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFPresco(const char *Cmd)
-{
+int CmdLFPresco(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }

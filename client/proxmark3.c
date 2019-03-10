@@ -29,8 +29,7 @@
 #include "comms.h"
 
 #if defined(__linux__) || (__APPLE__)
-static void showBanner(void)
-{
+static void showBanner(void) {
     printf("\n\n");
     printf("\e[34m██████╗ ███╗   ███╗ ████╗\e[0m     ...iceman fork\n");
     printf("\e[34m██╔══██╗████╗ ████║   ══█║\e[0m      ...dedicated to \e[34mRDV40\e[0m\n");
@@ -51,8 +50,7 @@ void
 __attribute__((force_align_arg_pointer))
 #endif
 #endif
-main_loop(char *script_cmds_file, char *script_cmd, bool usb_present)
-{
+main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 
     char *cmd = NULL;
     bool execCommand = (script_cmd != NULL);
@@ -196,8 +194,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present)
     }
 }
 
-static void dumpAllHelp(int markdown)
-{
+static void dumpAllHelp(int markdown) {
     PrintAndLogEx(NORMAL, "\n%sProxmark3 command dump%s\n\n", markdown ? "# " : "", markdown ? "" : "\n======================");
     PrintAndLogEx(NORMAL, "Some commands are available only if a Proxmark is actually connected.%s\n", markdown ? "  " : "");
     PrintAndLogEx(NORMAL, "Check column \"offline\" for their availability.\n");
@@ -209,18 +206,15 @@ static void dumpAllHelp(int markdown)
 static char *my_executable_path = NULL;
 static char *my_executable_directory = NULL;
 
-const char *get_my_executable_path(void)
-{
+const char *get_my_executable_path(void) {
     return my_executable_path;
 }
 
-const char *get_my_executable_directory(void)
-{
+const char *get_my_executable_directory(void) {
     return my_executable_directory;
 }
 
-static void set_my_executable_path(void)
-{
+static void set_my_executable_path(void) {
     int path_length = wai_getExecutablePath(NULL, 0, NULL);
     if (path_length != -1) {
         my_executable_path = (char *)calloc(path_length + 1, sizeof(uint8_t));
@@ -234,8 +228,7 @@ static void set_my_executable_path(void)
     }
 }
 
-static void show_help(bool showFullHelp, char *command_line)
-{
+static void show_help(bool showFullHelp, char *command_line) {
     PrintAndLogEx(NORMAL, "syntax: %s <port> [-h | -help | -m | -f | -flush | -w | -wait | -c | -command | -l | -lua] [cmd_script_file_name] [command][lua_script_name]\n", command_line);
     PrintAndLogEx(NORMAL, "\texample:'%s "SERIAL_PORT_H"'\n\n", command_line);
 
@@ -257,8 +250,7 @@ static void show_help(bool showFullHelp, char *command_line)
     }
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     srand(time(0));
 
     bool usb_present = false;

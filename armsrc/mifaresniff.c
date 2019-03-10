@@ -24,8 +24,7 @@ static uint32_t timerData = 0;
 // if no activity for 2sec, it sends the collected data to the client.
 //-----------------------------------------------------------------------------
 // "hf mf sniff"
-void RAMFUNC SniffMifare(uint8_t param)
-{
+void RAMFUNC SniffMifare(uint8_t param) {
     // param:
     // bit 0 - trigger from first card answer
     // bit 1 - trigger from first reader 7-bit request
@@ -177,8 +176,7 @@ void RAMFUNC SniffMifare(uint8_t param)
     switch_off();
 }
 
-void MfSniffInit(void)
-{
+void MfSniffInit(void) {
     memset(sniffUID, 0x00, sizeof(sniffUID));
     memset(sniffATQA, 0x00, sizeof(sniffATQA));
     memset(sniffBuf, 0x00, sizeof(sniffBuf));
@@ -187,8 +185,7 @@ void MfSniffInit(void)
     timerData = 0;
 }
 
-void MfSniffEnd(void)
-{
+void MfSniffEnd(void) {
     LED_B_ON();
     cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
     LED_B_OFF();
@@ -308,8 +305,7 @@ bool RAMFUNC MfSniffLogic(const uint8_t *data, uint16_t len, uint8_t *parity, ui
 }
 */
 
-void RAMFUNC MfSniffSend()
-{
+void RAMFUNC MfSniffSend() {
     uint16_t tracelen = BigBuf_get_traceLen();
     uint16_t chunksize = 0;
     int packlen = tracelen; // total number of bytes to send

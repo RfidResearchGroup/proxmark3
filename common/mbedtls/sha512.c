@@ -90,13 +90,11 @@
     }
 #endif /* PUT_UINT64_BE */
 
-void mbedtls_sha512_init(mbedtls_sha512_context *ctx)
-{
+void mbedtls_sha512_init(mbedtls_sha512_context *ctx) {
     memset(ctx, 0, sizeof(mbedtls_sha512_context));
 }
 
-void mbedtls_sha512_free(mbedtls_sha512_context *ctx)
-{
+void mbedtls_sha512_free(mbedtls_sha512_context *ctx) {
     if (ctx == NULL)
         return;
 
@@ -104,16 +102,14 @@ void mbedtls_sha512_free(mbedtls_sha512_context *ctx)
 }
 
 void mbedtls_sha512_clone(mbedtls_sha512_context *dst,
-                          const mbedtls_sha512_context *src)
-{
+                          const mbedtls_sha512_context *src) {
     *dst = *src;
 }
 
 /*
  * SHA-512 context setup
  */
-int mbedtls_sha512_starts_ret(mbedtls_sha512_context *ctx, int is384)
-{
+int mbedtls_sha512_starts_ret(mbedtls_sha512_context *ctx, int is384) {
     ctx->total[0] = 0;
     ctx->total[1] = 0;
 
@@ -146,8 +142,7 @@ int mbedtls_sha512_starts_ret(mbedtls_sha512_context *ctx, int is384)
 
 #if !defined(MBEDTLS_DEPRECATED_REMOVED)
 void mbedtls_sha512_starts(mbedtls_sha512_context *ctx,
-                           int is384)
-{
+                           int is384) {
     mbedtls_sha512_starts_ret(ctx, is384);
 }
 #endif
@@ -201,8 +196,7 @@ static const uint64_t K[80] = {
 };
 
 int mbedtls_internal_sha512_process(mbedtls_sha512_context *ctx,
-                                    const unsigned char data[128])
-{
+                                    const unsigned char data[128]) {
     int i;
     uint64_t temp1, temp2, W[80];
     uint64_t A, B, C, D, E, F, G, H;
@@ -278,8 +272,7 @@ int mbedtls_internal_sha512_process(mbedtls_sha512_context *ctx,
 
 #if !defined(MBEDTLS_DEPRECATED_REMOVED)
 void mbedtls_sha512_process(mbedtls_sha512_context *ctx,
-                            const unsigned char data[128])
-{
+                            const unsigned char data[128]) {
     mbedtls_internal_sha512_process(ctx, data);
 }
 #endif
@@ -290,8 +283,7 @@ void mbedtls_sha512_process(mbedtls_sha512_context *ctx,
  */
 int mbedtls_sha512_update_ret(mbedtls_sha512_context *ctx,
                               const unsigned char *input,
-                              size_t ilen)
-{
+                              size_t ilen) {
     int ret;
     size_t fill;
     unsigned int left;
@@ -335,8 +327,7 @@ int mbedtls_sha512_update_ret(mbedtls_sha512_context *ctx,
 #if !defined(MBEDTLS_DEPRECATED_REMOVED)
 void mbedtls_sha512_update(mbedtls_sha512_context *ctx,
                            const unsigned char *input,
-                           size_t ilen)
-{
+                           size_t ilen) {
     mbedtls_sha512_update_ret(ctx, input, ilen);
 }
 #endif
@@ -345,8 +336,7 @@ void mbedtls_sha512_update(mbedtls_sha512_context *ctx,
  * SHA-512 final digest
  */
 int mbedtls_sha512_finish_ret(mbedtls_sha512_context *ctx,
-                              unsigned char output[64])
-{
+                              unsigned char output[64]) {
     int ret;
     unsigned used;
     uint64_t high, low;
@@ -404,8 +394,7 @@ int mbedtls_sha512_finish_ret(mbedtls_sha512_context *ctx,
 
 #if !defined(MBEDTLS_DEPRECATED_REMOVED)
 void mbedtls_sha512_finish(mbedtls_sha512_context *ctx,
-                           unsigned char output[64])
-{
+                           unsigned char output[64]) {
     mbedtls_sha512_finish_ret(ctx, output);
 }
 #endif
@@ -418,8 +407,7 @@ void mbedtls_sha512_finish(mbedtls_sha512_context *ctx,
 int mbedtls_sha512_ret(const unsigned char *input,
                        size_t ilen,
                        unsigned char output[64],
-                       int is384)
-{
+                       int is384) {
     int ret;
     mbedtls_sha512_context ctx;
 
@@ -444,8 +432,7 @@ exit:
 void mbedtls_sha512(const unsigned char *input,
                     size_t ilen,
                     unsigned char output[64],
-                    int is384)
-{
+                    int is384) {
     mbedtls_sha512_ret(input, ilen, output, is384);
 }
 #endif
@@ -535,8 +522,7 @@ static const unsigned char sha512_test_sum[6][64] = {
 /*
  * Checkup routine
  */
-int mbedtls_sha512_self_test(int verbose)
-{
+int mbedtls_sha512_self_test(int verbose) {
     int i, j, k, buflen, ret = 0;
     unsigned char *buf;
     unsigned char sha512sum[64];

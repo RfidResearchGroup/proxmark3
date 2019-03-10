@@ -77,8 +77,7 @@
  * \ingroup CborGlobals
  * Returns the error string corresponding to the CBOR error condition \a error.
  */
-const char *cbor_error_string(CborError error)
-{
+const char *cbor_error_string(CborError error) {
     switch (error) {
         case CborNoError:
             return "";

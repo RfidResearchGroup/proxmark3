@@ -54,14 +54,12 @@ int ToSendMax = -1;
 static int ToSendBit;
 struct common_area common_area __attribute__((section(".commonarea")));
 
-void ToSendReset(void)
-{
+void ToSendReset(void) {
     ToSendMax = -1;
     ToSendBit = 8;
 }
 
-void ToSendStuffBit(int b)
-{
+void ToSendStuffBit(int b) {
     if (ToSendBit >= 8) {
         ToSendMax++;
         ToSend[ToSendMax] = 0;
@@ -79,14 +77,12 @@ void ToSendStuffBit(int b)
     }
 }
 
-void PrintToSendBuffer(void)
-{
+void PrintToSendBuffer(void) {
     DbpString("Printing ToSendBuffer:");
     Dbhexdump(ToSendMax, ToSend, 0);
 }
 
-void print_result(char *name, uint8_t *buf, size_t len)
-{
+void print_result(char *name, uint8_t *buf, size_t len) {
 
     uint8_t *p = buf;
     uint16_t tmp = len & 0xFFF0;
@@ -114,29 +110,25 @@ void print_result(char *name, uint8_t *buf, size_t len)
 // Debug print functions, to go out over USB, to the usual PC-side client.
 //=============================================================================
 
-void DbpStringEx(char *str, uint32_t cmd)
-{
+void DbpStringEx(char *str, uint32_t cmd) {
 #if DEBUG
     uint8_t len = strlen(str);
     cmd_send(CMD_DEBUG_PRINT_STRING, len, cmd, 0, (uint8_t *)str, len);
 #endif
 }
 
-void DbpString(char *str)
-{
+void DbpString(char *str) {
 #if DEBUG
     DbpStringEx(str, 0);
 #endif
 }
 
 #if 0
-void DbpIntegers(int x1, int x2, int x3)
-{
+void DbpIntegers(int x1, int x2, int x3) {
     cmd_send(CMD_DEBUG_PRINT_INTEGERS, x1, x2, x3, 0, 0);
 }
 #endif
-void DbprintfEx(uint32_t cmd, const char *fmt, ...)
-{
+void DbprintfEx(uint32_t cmd, const char *fmt, ...) {
 #if DEBUG
     // should probably limit size here; oh well, let's just use a big buffer
     char output_string[128] = {0x00};
@@ -149,8 +141,7 @@ void DbprintfEx(uint32_t cmd, const char *fmt, ...)
 #endif
 }
 
-void Dbprintf(const char *fmt, ...)
-{
+void Dbprintf(const char *fmt, ...) {
 #if DEBUG
     // should probably limit size here; oh well, let's just use a big buffer
     char output_string[128] = {0x00};
@@ -165,8 +156,7 @@ void Dbprintf(const char *fmt, ...)
 }
 
 // prints HEX & ASCII
-void Dbhexdump(int len, uint8_t *d, bool bAsci)
-{
+void Dbhexdump(int len, uint8_t *d, bool bAsci) {
 #if DEBUG
     int l = 0, i;
     char ascii[9];
@@ -201,8 +191,7 @@ void Dbhexdump(int len, uint8_t *d, bool bAsci)
 // in ADC units (0 to 1023). Also a routine to average 32 samples and
 // return that.
 //-----------------------------------------------------------------------------
-static uint16_t ReadAdc(int ch)
-{
+static uint16_t ReadAdc(int ch) {
 
     // Note: ADC_MODE_PRESCALE and ADC_MODE_SAMPLE_HOLD_TIME are set to the maximum allowed value.
     // AMPL_HI is are high impedance (10MOhm || 1MOhm) output, the input capacitance of the ADC is 12pF (typical). This results in a time constant
@@ -228,8 +217,7 @@ static uint16_t ReadAdc(int ch)
 }
 
 // was static - merlok
-uint16_t AvgAdc(int ch)
-{
+uint16_t AvgAdc(int ch) {
     uint16_t a = 0;
     for (uint8_t i = 0; i < 32; i++)
         a += ReadAdc(ch);
@@ -238,8 +226,7 @@ uint16_t AvgAdc(int ch)
     return (a + 15) >> 5;
 }
 
-void MeasureAntennaTuning(void)
-{
+void MeasureAntennaTuning(void) {
 
     uint8_t LF_Results[256];
     uint32_t i, adcval = 0, peak = 0, peakv = 0, peakf = 0;
@@ -304,8 +291,7 @@ void MeasureAntennaTuning(void)
     LEDsoff();
 }
 
-void MeasureAntennaTuningHf(void)
-{
+void MeasureAntennaTuningHf(void) {
     uint16_t volt = 0; // in mV
     // Let the FPGA drive the high-frequency antenna around 13.56 MHz.
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
@@ -327,8 +313,7 @@ void MeasureAntennaTuningHf(void)
     DbprintfEx(FLAG_NOOPT, "\n[+] cancelled", 1);
 }
 
-void ReadMem(int addr)
-{
+void ReadMem(int addr) {
     const uint8_t *data = ((uint8_t *)addr);
 
     Dbprintf("%x: %02x %02x %02x %02x %02x %02x %02x %02x", addr, data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
@@ -338,8 +323,7 @@ void ReadMem(int addr)
 extern struct version_information version_information;
 /* bootrom version information is pointed to from _bootphase1_version_pointer */
 extern char *_bootphase1_version_pointer, _flash_start, _flash_end, _bootrom_start, _bootrom_end, __data_src_start__;
-void SendVersion(void)
-{
+void SendVersion(void) {
     char temp[USB_CMD_DATA_SIZE]; /* Limited data payload in USB packets */
     char VersionString[USB_CMD_DATA_SIZE] = { '\0' };
 
@@ -377,8 +361,7 @@ void SendVersion(void)
 
 // measure the USB Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
 // Note: this mimics GetFromBigbuf(), i.e. we have the overhead of the UsbCommand structure included.
-void printUSBSpeed(void)
-{
+void printUSBSpeed(void) {
     Dbprintf("USB Speed");
     Dbprintf("  Sending USB packets to client...");
 
@@ -405,8 +388,7 @@ void printUSBSpeed(void)
 /**
   * Prints runtime information about the PM3.
 **/
-void SendStatus(void)
-{
+void SendStatus(void) {
     BigBuf_print_status();
     Fpga_print_status();
 #ifdef WITH_FLASH
@@ -430,8 +412,7 @@ void SendStatus(void)
 }
 
 // Show some leds in a pattern to identify StandAlone mod is running
-void StandAloneMode(void)
-{
+void StandAloneMode(void) {
 
     DbpString("Stand-alone mode! No PC necessary.");
 
@@ -444,8 +425,7 @@ void StandAloneMode(void)
 }
 // detection of which Standalone Modes is installed
 // (iceman)
-void printStandAloneModes(void)
-{
+void printStandAloneModes(void) {
 
     DbpString("Installed StandAlone Mode");
 
@@ -523,8 +503,7 @@ static const char LIGHT_SCHEME[] = {
 };
 static const int LIGHT_LEN = sizeof(LIGHT_SCHEME) / sizeof(LIGHT_SCHEME[0]);
 
-void ListenReaderField(int limit)
-{
+void ListenReaderField(int limit) {
 #define LF_ONLY 1
 #define HF_ONLY 2
 #define REPORT_CHANGE 10    // report new values only if they have changed at least by REPORT_CHANGE
@@ -650,8 +629,7 @@ void ListenReaderField(int limit)
     }
 }
 
-void UsbPacketReceived(uint8_t *packet, int len)
-{
+void UsbPacketReceived(uint8_t *packet, int len) {
     UsbCommand *c = (UsbCommand *)packet;
 
     //Dbprintf("received %d bytes, with command: 0x%04x and args: %d %d %d", len, c->cmd, c->arg[0], c->arg[1], c->arg[2]);
@@ -1509,8 +1487,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
     }
 }
 
-void  __attribute__((noreturn)) AppMain(void)
-{
+void  __attribute__((noreturn)) AppMain(void) {
 
     SpinDelay(100);
     clear_trace();

@@ -1,8 +1,7 @@
 #include "protocols.h"
 
 // ATA55xx shared presets & routines
-uint32_t GetT55xxClockBit(uint32_t clock)
-{
+uint32_t GetT55xxClockBit(uint32_t clock) {
     switch (clock) {
         case 128:
             return T55x7_BITRATE_RF_128;
@@ -29,18 +28,15 @@ uint32_t GetT55xxClockBit(uint32_t clock)
 #include "ui.h"
 #define PrintAndLogDevice(level, format, args...)  PrintAndLogEx(level, format , ## args)
 
-uint8_t isset(uint8_t val, uint8_t mask)
-{
+uint8_t isset(uint8_t val, uint8_t mask) {
     return (val & mask);
 }
 
-uint8_t notset(uint8_t val, uint8_t mask)
-{
+uint8_t notset(uint8_t val, uint8_t mask) {
     return !(val & mask);
 }
 
-void fuse_config(const picopass_hdr *hdr)
-{
+void fuse_config(const picopass_hdr *hdr) {
     uint8_t fuses = hdr->conf.fuses;
 
     if (isset(fuses, FUSE_FPERS))
@@ -71,8 +67,7 @@ void fuse_config(const picopass_hdr *hdr)
         PrintAndLogDevice(WARNING, "\tRA: Read access not enabled");
 }
 
-void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *max_blk, uint8_t *app_areas, uint8_t *kb)
-{
+void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *max_blk, uint8_t *app_areas, uint8_t *kb) {
     // mem-bit 5, mem-bit 7, chip-bit 4: defines chip type
     uint8_t k16 = isset(mem_cfg, 0x80);
     //uint8_t k2 = isset(mem_cfg, 0x08);
@@ -105,8 +100,7 @@ void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *max_blk, uint8_t *
     }
 }
 
-void mem_app_config(const picopass_hdr *hdr)
-{
+void mem_app_config(const picopass_hdr *hdr) {
     uint8_t mem = hdr->conf.mem_config;
     uint8_t chip = hdr->conf.chip_config;
     uint8_t applimit = hdr->conf.app_limit;
@@ -142,13 +136,11 @@ void mem_app_config(const picopass_hdr *hdr)
         PrintAndLogDevice(NORMAL, "\tCredit - Kc");
     }
 }
-void print_picopass_info(const picopass_hdr *hdr)
-{
+void print_picopass_info(const picopass_hdr *hdr) {
     fuse_config(hdr);
     mem_app_config(hdr);
 }
-void printIclassDumpInfo(uint8_t *iclass_dump)
-{
+void printIclassDumpInfo(uint8_t *iclass_dump) {
     print_picopass_info((picopass_hdr *) iclass_dump);
 }
 

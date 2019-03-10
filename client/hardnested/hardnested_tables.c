@@ -38,8 +38,7 @@ typedef enum {
 } odd_even_t;
 
 
-static uint16_t PartialSumProperty(uint32_t state, odd_even_t odd_even)
-{
+static uint16_t PartialSumProperty(uint32_t state, odd_even_t odd_even) {
     uint16_t sum = 0;
     for (uint16_t j = 0; j < 16; j++) {
         uint32_t st = state;
@@ -68,26 +67,22 @@ static uint16_t PartialSumProperty(uint32_t state, odd_even_t odd_even)
 #define malloc_bitarray(x) __builtin_assume_aligned(_aligned_malloc(x, __BIGGEST_ALIGNMENT__), __BIGGEST_ALIGNMENT__)
 #define free_bitarray(x) _aligned_free(x)
 
-static inline void clear_bitarray24(uint32_t *bitarray)
-{
+static inline void clear_bitarray24(uint32_t *bitarray) {
     memset(bitarray, 0x00, sizeof(uint32_t) * (1 << 19));
 }
 
 
-static inline uint32_t test_bit24(uint32_t *bitarray, uint32_t index)
-{
+static inline uint32_t test_bit24(uint32_t *bitarray, uint32_t index) {
     return bitarray[index >> 5] & (0x80000000 >> (index & 0x0000001f));
 }
 
 
-static inline void set_bit24(uint32_t *bitarray, uint32_t index)
-{
+static inline void set_bit24(uint32_t *bitarray, uint32_t index) {
     bitarray[index >> 5] |= 0x80000000 >> (index & 0x0000001f);
 }
 
 
-static inline uint32_t next_state(uint32_t *bitset, uint32_t state)
-{
+static inline uint32_t next_state(uint32_t *bitset, uint32_t state) {
     if (++state == 1 << 24) return 1 << 24;
     uint32_t index = state >> 5;
     uint_fast8_t bit = state & 0x1f;
@@ -120,8 +115,7 @@ static inline uint32_t next_state(uint32_t *bitset, uint32_t state)
 }
 
 
-static inline uint32_t next_not_state(uint32_t *bitset, uint32_t state)
-{
+static inline uint32_t next_not_state(uint32_t *bitset, uint32_t state) {
     if (++state == 1 << 24) return 1 << 24;
     uint32_t index = state >> 5;
     uint_fast8_t bit = state & 0x1f;
@@ -154,8 +148,7 @@ static inline uint32_t next_not_state(uint32_t *bitset, uint32_t state)
 }
 
 
-static inline uint32_t bitcount(uint32_t a)
-{
+static inline uint32_t bitcount(uint32_t a) {
 #if defined __GNUC__
     return __builtin_popcountl(a);
 #else
@@ -166,8 +159,7 @@ static inline uint32_t bitcount(uint32_t a)
 }
 
 
-static inline uint32_t count_states(uint32_t *bitset)
-{
+static inline uint32_t count_states(uint32_t *bitset) {
     uint32_t count = 0;
     for (uint32_t i = 0; i < (1 << 19); i++) {
         count += bitcount(bitset[i]);
@@ -176,8 +168,7 @@ static inline uint32_t count_states(uint32_t *bitset)
 }
 
 
-static void write_bitflips_file(odd_even_t odd_even, uint16_t bitflip, int sum_a0, uint32_t *bitset, uint32_t count)
-{
+static void write_bitflips_file(odd_even_t odd_even, uint16_t bitflip, int sum_a0, uint32_t *bitset, uint32_t count) {
     char filename[80];
     sprintf(filename, "bitflip_%d_%03" PRIx16 "_sum%d_states.bin", odd_even, bitflip, sum_a0);
     FILE *outfile = fopen(filename, "wb");
@@ -189,8 +180,7 @@ static void write_bitflips_file(odd_even_t odd_even, uint16_t bitflip, int sum_a
 
 uint32_t *restrict part_sum_a0_bitarrays[2][NUM_PART_SUMS];
 
-static void init_part_sum_bitarrays(void)
-{
+static void init_part_sum_bitarrays(void) {
     printf("init_part_sum_bitarrays()...");
     for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
         for (uint16_t part_sum_a0 = 0; part_sum_a0 < NUM_PART_SUMS; part_sum_a0++) {
@@ -215,8 +205,7 @@ static void init_part_sum_bitarrays(void)
 }
 
 
-static void free_part_sum_bitarrays(void)
-{
+static void free_part_sum_bitarrays(void) {
     printf("free_part_sum_bitarrays()...");
     for (int16_t part_sum_a0 = (NUM_PART_SUMS - 1); part_sum_a0 >= 0; part_sum_a0--) {
         free_bitarray(part_sum_a0_bitarrays[ODD_STATE][part_sum_a0]);
@@ -229,8 +218,7 @@ static void free_part_sum_bitarrays(void)
 
 uint32_t *restrict sum_a0_bitarray[2];
 
-void init_sum_bitarray(uint16_t sum_a0)
-{
+void init_sum_bitarray(uint16_t sum_a0) {
     printf("init_sum_bitarray()...\n");
     for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
         sum_a0_bitarray[odd_even] = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * (1 << 19));
@@ -258,8 +246,7 @@ void init_sum_bitarray(uint16_t sum_a0)
 }
 
 
-static void free_sum_bitarray(void)
-{
+static void free_sum_bitarray(void) {
     printf("free_sum_bitarray()...");
     free_bitarray(sum_a0_bitarray[ODD_STATE]);
     free_bitarray(sum_a0_bitarray[EVEN_STATE]);
@@ -267,8 +254,7 @@ static void free_sum_bitarray(void)
 }
 
 
-static void precalculate_bit0_bitflip_bitarrays(uint8_t const bitflip, uint16_t const sum_a0)
-{
+static void precalculate_bit0_bitflip_bitarrays(uint8_t const bitflip, uint16_t const sum_a0) {
     // #define TEST_RUN
 #ifdef TEST_RUN
 #define NUM_TEST_STATES (1<<10)
@@ -529,8 +515,7 @@ static void precalculate_bit0_bitflip_bitarrays(uint8_t const bitflip, uint16_t 
 }
 
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 
     unsigned int bitflip_in;
     int sum_a0;

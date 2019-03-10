@@ -11,8 +11,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_noralsy_clone(void)
-{
+int usage_lf_noralsy_clone(void) {
     PrintAndLogEx(NORMAL, "clone a Noralsy tag to a T55x7 tag.");
     PrintAndLogEx(NORMAL, "Usage: lf noralsy clone [h] <card id> <year> <Q5>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -26,8 +25,7 @@ int usage_lf_noralsy_clone(void)
     return 0;
 }
 
-int usage_lf_noralsy_sim(void)
-{
+int usage_lf_noralsy_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of Noralsy card with specified card number.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "");
@@ -42,15 +40,13 @@ int usage_lf_noralsy_sim(void)
     return 0;
 }
 
-static uint8_t noralsy_chksum(uint8_t *bits, uint8_t len)
-{
+static uint8_t noralsy_chksum(uint8_t *bits, uint8_t len) {
     uint8_t sum = 0;
     for (uint8_t i = 0; i < len; i += 4)
         sum ^= bytebits_to_byte(bits + i, 4);
     return sum & 0x0F ;
 }
-int getnoralsyBits(uint32_t id, uint16_t year, uint8_t *bits)
-{
+int getnoralsyBits(uint32_t id, uint16_t year, uint8_t *bits) {
     //preamp
     num_to_bytebits(0xBB0214FF, 32, bits);  // --> Have seen 0xBB0214FF / 0xBB0314FF  UNKNOWN
 
@@ -80,8 +76,7 @@ int getnoralsyBits(uint32_t id, uint16_t year, uint8_t *bits)
 
 // by iceman
 // find Noralsy preamble in already demoded data
-int detectNoralsy(uint8_t *dest, size_t *size)
-{
+int detectNoralsy(uint8_t *dest, size_t *size) {
     if (*size < 96) return -1; //make sure buffer has data
     size_t startIdx = 0;
     uint8_t preamble[] = {1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0};
@@ -105,8 +100,7 @@ int detectNoralsy(uint8_t *dest, size_t *size)
 **/
 
 //see ASKDemod for what args are accepted
-int CmdNoralsyDemod(const char *Cmd)
-{
+int CmdNoralsyDemod(const char *Cmd) {
 
     //ASK / Manchester
     bool st = true;
@@ -175,14 +169,12 @@ int CmdNoralsyDemod(const char *Cmd)
     return 1;
 }
 
-int CmdNoralsyRead(const char *Cmd)
-{
+int CmdNoralsyRead(const char *Cmd) {
     lf_read(true, 8000);
     return CmdNoralsyDemod(Cmd);
 }
 
-int CmdNoralsyClone(const char *Cmd)
-{
+int CmdNoralsyClone(const char *Cmd) {
 
     uint16_t year = 0;
     uint32_t id = 0;
@@ -229,8 +221,7 @@ int CmdNoralsyClone(const char *Cmd)
     return 0;
 }
 
-int CmdNoralsySim(const char *Cmd)
-{
+int CmdNoralsySim(const char *Cmd) {
 
     uint8_t bits[96];
     uint8_t *bs = bits;
@@ -274,15 +265,13 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFNoralsy(const char *Cmd)
-{
+int CmdLFNoralsy(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }

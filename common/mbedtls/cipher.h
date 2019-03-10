@@ -413,8 +413,7 @@ int mbedtls_cipher_setup(mbedtls_cipher_context_t *ctx, const mbedtls_cipher_inf
  * \return       The size of the blocks of the cipher.
  * \return       0 if \p ctx has not been initialized.
  */
-static inline unsigned int mbedtls_cipher_get_block_size(const mbedtls_cipher_context_t *ctx)
-{
+static inline unsigned int mbedtls_cipher_get_block_size(const mbedtls_cipher_context_t *ctx) {
     if (NULL == ctx || NULL == ctx->cipher_info)
         return 0;
 
@@ -430,8 +429,7 @@ static inline unsigned int mbedtls_cipher_get_block_size(const mbedtls_cipher_co
  * \return       The mode of operation.
  * \return       #MBEDTLS_MODE_NONE if \p ctx has not been initialized.
  */
-static inline mbedtls_cipher_mode_t mbedtls_cipher_get_cipher_mode(const mbedtls_cipher_context_t *ctx)
-{
+static inline mbedtls_cipher_mode_t mbedtls_cipher_get_cipher_mode(const mbedtls_cipher_context_t *ctx) {
     if (NULL == ctx || NULL == ctx->cipher_info)
         return MBEDTLS_MODE_NONE;
 
@@ -448,8 +446,7 @@ static inline mbedtls_cipher_mode_t mbedtls_cipher_get_cipher_mode(const mbedtls
  * \return      \c 0 for ciphers not using an IV or a nonce.
  * \return      The actual size if an IV has been set.
  */
-static inline int mbedtls_cipher_get_iv_size(const mbedtls_cipher_context_t *ctx)
-{
+static inline int mbedtls_cipher_get_iv_size(const mbedtls_cipher_context_t *ctx) {
     if (NULL == ctx || NULL == ctx->cipher_info)
         return 0;
 
@@ -467,8 +464,7 @@ static inline int mbedtls_cipher_get_iv_size(const mbedtls_cipher_context_t *ctx
  * \return              The type of the cipher.
  * \return              #MBEDTLS_CIPHER_NONE if \p ctx has not been initialized.
  */
-static inline mbedtls_cipher_type_t mbedtls_cipher_get_type(const mbedtls_cipher_context_t *ctx)
-{
+static inline mbedtls_cipher_type_t mbedtls_cipher_get_type(const mbedtls_cipher_context_t *ctx) {
     if (NULL == ctx || NULL == ctx->cipher_info)
         return MBEDTLS_CIPHER_NONE;
 
@@ -484,8 +480,7 @@ static inline mbedtls_cipher_type_t mbedtls_cipher_get_type(const mbedtls_cipher
  * \return              The name of the cipher.
  * \return              NULL if \p ctx has not been not initialized.
  */
-static inline const char *mbedtls_cipher_get_name(const mbedtls_cipher_context_t *ctx)
-{
+static inline const char *mbedtls_cipher_get_name(const mbedtls_cipher_context_t *ctx) {
     if (NULL == ctx || NULL == ctx->cipher_info)
         return 0;
 
@@ -501,8 +496,7 @@ static inline const char *mbedtls_cipher_get_name(const mbedtls_cipher_context_t
  * \return              #MBEDTLS_KEY_LENGTH_NONE if ctx \p has not been
  *                      initialized.
  */
-static inline int mbedtls_cipher_get_key_bitlen(const mbedtls_cipher_context_t *ctx)
-{
+static inline int mbedtls_cipher_get_key_bitlen(const mbedtls_cipher_context_t *ctx) {
     if (NULL == ctx || NULL == ctx->cipher_info)
         return MBEDTLS_KEY_LENGTH_NONE;
 
@@ -517,8 +511,7 @@ static inline int mbedtls_cipher_get_key_bitlen(const mbedtls_cipher_context_t *
  * \return         The type of operation: #MBEDTLS_ENCRYPT or #MBEDTLS_DECRYPT.
  * \return         #MBEDTLS_OPERATION_NONE if \p ctx has not been initialized.
  */
-static inline mbedtls_operation_t mbedtls_cipher_get_operation(const mbedtls_cipher_context_t *ctx)
-{
+static inline mbedtls_operation_t mbedtls_cipher_get_operation(const mbedtls_cipher_context_t *ctx) {
     if (NULL == ctx || NULL == ctx->cipher_info)
         return MBEDTLS_OPERATION_NONE;
 

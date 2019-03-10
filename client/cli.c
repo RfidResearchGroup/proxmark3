@@ -17,8 +17,7 @@
         break;\
     }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     if (argc != 3 && argc != 4) {
         printf("\n\tusage: cli <command 1> <command 2> [logfile (default cli.log)]\n");
         printf("\n");

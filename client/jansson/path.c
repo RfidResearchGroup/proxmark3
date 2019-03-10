@@ -13,8 +13,7 @@
 #include <jansson.h>
 #include "jansson_private.h"
 
-json_t *json_path_get(const json_t *json, const char *path)
-{
+json_t *json_path_get(const json_t *json, const char *path) {
     static const char root_chr = '$', array_open = '[';
     static const char *path_delims = ".[", *array_close = "]";
     const json_t *cursor;
@@ -68,8 +67,7 @@ fail:
     return NULL;
 }
 
-int json_path_set_new(json_t *json, const char *path, json_t *value, size_t flags, json_error_t *error)
-{
+int json_path_set_new(json_t *json, const char *path, json_t *value, size_t flags, json_error_t *error) {
     static const char root_chr = '$', array_open = '[', object_delim = '.';
     static const char *const path_delims = ".[", *array_close = "]";
 

@@ -141,19 +141,16 @@ typedef struct {
 } tUart;
 static tUart Uart;
 
-static void uart_reset(void)
-{
+static void uart_reset(void) {
     Uart.frame_done = false;
     Uart.synced = false;
     Uart.frame = false;
 }
-static void uart_init(uint8_t *data)
-{
+static void uart_init(uint8_t *data) {
     Uart.buf = data;
     uart_reset();
 }
-static void uart_bit(uint8_t bit)
-{
+static void uart_bit(uint8_t bit) {
     static uint8_t buf = 0xff;
     static uint8_t n_buf;
     static uint8_t msg_byte;
@@ -208,8 +205,7 @@ static void uart_bit(uint8_t bit)
     }
 }
 
-static void uart_samples(uint8_t byte)
-{
+static void uart_samples(uint8_t byte) {
     static uint32_t buf;
     static int window;
     static int drop_next = 0;
@@ -504,8 +500,7 @@ static RAMFUNC int OutOfNDecoding(int bit) {
 // Manchester
 //=============================================================================
 static tDemod Demod;
-static void DemodReset()
-{
+static void DemodReset() {
     Demod.bitCount = 0;
     Demod.posCount = 0;
     Demod.syncBit = 0;
@@ -519,8 +514,7 @@ static void DemodReset()
     Demod.sub = SUB_NONE;
     Demod.state = DEMOD_UNSYNCD;
 }
-static void DemodInit(uint8_t *data)
-{
+static void DemodInit(uint8_t *data) {
     Demod.output = data;
     DemodReset();
 }
@@ -546,8 +540,7 @@ Recorded Activity (TraceLen = 162 bytes)
        2720 |       2720 | Rdr |0c                                                               |     | IDENTIFY
        3232 |       3232 | Tag |bb! d4! bb! 02  02  08  04  bb!                                  |  ok |
 */
-static void uart_debug(int error, int bit)
-{
+static void uart_debug(int error, int bit) {
     Demod.output[Demod.len] = 0xBB;
     Demod.len++;
     Demod.output[Demod.len] = error & 0xFF;
@@ -583,8 +576,7 @@ static void uart_debug(int error, int bit)
 *
 *  So for current implementation in ISO15693, its 330 µs from end of reader, to start of card.
 */
-static RAMFUNC int ManchesterDecoding_iclass(uint32_t v)
-{
+static RAMFUNC int ManchesterDecoding_iclass(uint32_t v) {
     int bit;
     int modulation;
     int error = 0;
@@ -806,8 +798,7 @@ static RAMFUNC int ManchesterDecoding_iclass(uint32_t v)
 // Finally, a `sniffer' for iClass communication
 // Both sides of communication!
 //=============================================================================
-static void iclass_setup_sniff(void)
-{
+static void iclass_setup_sniff(void) {
     if (MF_DBGLEVEL > 3) Dbprintf("iclass_setup_sniff Enter");
 
     LEDsoff();
@@ -860,8 +851,7 @@ static void iclass_setup_sniff(void)
 // near the reader.
 //-----------------------------------------------------------------------------
 // turn off afterwards
-void RAMFUNC SniffIClass(void)
-{
+void RAMFUNC SniffIClass(void) {
 
     //int datalen = 0;
     uint32_t previous_data = 0;
@@ -983,8 +973,7 @@ void RAMFUNC SniffIClass(void)
     switch_off();
 }
 
-void rotateCSN(uint8_t *originalCSN, uint8_t *rotatedCSN)
-{
+void rotateCSN(uint8_t *originalCSN, uint8_t *rotatedCSN) {
     int i;
     for (i = 0; i < 8; i++)
         rotatedCSN[i] = (originalCSN[i] >> 3) | (originalCSN[(i + 1) % 8] << 5);
@@ -996,8 +985,7 @@ void rotateCSN(uint8_t *originalCSN, uint8_t *rotatedCSN)
 // Stop when button is pressed
 // Or return TRUE when command is captured
 //-----------------------------------------------------------------------------
-static bool GetIClassCommandFromReader(uint8_t *received, int *len, int maxLen)
-{
+static bool GetIClassCommandFromReader(uint8_t *received, int *len, int maxLen) {
     // Set FPGA mode to "simulated ISO 14443 tag", no modulation (listen
     // only, since we are receiving, not transmitting).
     // Signal field is off with the appropriate LED
@@ -1029,8 +1017,7 @@ static bool GetIClassCommandFromReader(uint8_t *received, int *len, int maxLen)
     return false;
 }
 
-static uint8_t encode4Bits(const uint8_t b)
-{
+static uint8_t encode4Bits(const uint8_t b) {
     // OTA, the least significant bits first
     // Manchester encoding added
     //         The columns are
@@ -1080,8 +1067,7 @@ static uint8_t encode4Bits(const uint8_t b)
 //-----------------------------------------------------------------------------
 // Prepare tag messages
 //-----------------------------------------------------------------------------
-static void CodeIClassTagAnswer(const uint8_t *cmd, int len)
-{
+static void CodeIClassTagAnswer(const uint8_t *cmd, int len) {
     /*
      * SOF comprises 3 parts;
      * * An unmodulated time of 56.64 us
@@ -1135,8 +1121,7 @@ static void CodeIClassTagAnswer(const uint8_t *cmd, int len)
 }
 
 // Only SOF
-static void CodeIClassTagSOF()
-{
+static void CodeIClassTagSOF() {
     //So far a dummy implementation, not used
     //int lastProxToAirDuration =0;
 
@@ -1162,8 +1147,7 @@ static void CodeIClassTagSOF()
  * @param datain
  */
 // turn off afterwards
-void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
-{
+void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
 
     if (MF_DBGLEVEL > 3) Dbprintf("[+] iClass_simulate Enter");
 
@@ -1273,8 +1257,7 @@ out:
  * @param csn - csn to use
  * @param breakAfterMacReceived if true, returns after reader MAC has been received.
  */
-int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf)
-{
+int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
 
     // free eventually allocated BigBuf memory
     BigBuf_free_keep_EM();
@@ -1641,8 +1624,7 @@ send:
  * @param respLen
  * @param delay
  */
-static int SendIClassAnswer(uint8_t *resp, int respLen, uint16_t delay)
-{
+static int SendIClassAnswer(uint8_t *resp, int respLen, uint16_t delay) {
     int i = 0;
     volatile uint8_t b = 0;
 
@@ -1680,8 +1662,7 @@ static int SendIClassAnswer(uint8_t *resp, int respLen, uint16_t delay)
 //-----------------------------------------------------------------------------
 // Transmit the command (to the tag) that was placed in ToSend[].
 //-----------------------------------------------------------------------------
-static void TransmitIClassCommand(const uint8_t *cmd, int len, int *samples, int *wait)
-{
+static void TransmitIClassCommand(const uint8_t *cmd, int len, int *samples, int *wait) {
 
     int c = 0;
     volatile uint32_t b;
@@ -1737,8 +1718,7 @@ static void TransmitIClassCommand(const uint8_t *cmd, int len, int *samples, int
 //-----------------------------------------------------------------------------
 // Prepare iClass reader command to send to FPGA
 //-----------------------------------------------------------------------------
-void CodeIClassCommand(const uint8_t *cmd, int len)
-{
+void CodeIClassCommand(const uint8_t *cmd, int len) {
     int i, j, k;
     uint8_t b;
 
@@ -1775,8 +1755,7 @@ void CodeIClassCommand(const uint8_t *cmd, int len)
     ToSendMax++;
 }
 
-void ReaderTransmitIClass_ext(uint8_t *frame, int len, int wait)
-{
+void ReaderTransmitIClass_ext(uint8_t *frame, int len, int wait) {
 
     int samples = 0;
 
@@ -1792,8 +1771,7 @@ void ReaderTransmitIClass_ext(uint8_t *frame, int len, int wait)
 
     LogTrace(frame, len, rsamples, rsamples, NULL, true);
 }
-void ReaderTransmitIClass(uint8_t *frame, int len)
-{
+void ReaderTransmitIClass(uint8_t *frame, int len) {
     ReaderTransmitIClass_ext(frame, len, 330);
 }
 
@@ -1802,8 +1780,7 @@ void ReaderTransmitIClass(uint8_t *frame, int len)
 //  If a response is captured return TRUE
 //  If it takes too long return FALSE
 //-----------------------------------------------------------------------------
-static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *samples, int *elapsed)
-{
+static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *samples, int *elapsed) {
     // buffer needs to be 512 bytes
     // maxLen is not used...
 
@@ -1854,8 +1831,7 @@ static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *samples, 
     return false;
 }
 
-int ReaderReceiveIClass(uint8_t *receivedAnswer)
-{
+int ReaderReceiveIClass(uint8_t *receivedAnswer) {
     int samples = 0;
 
     if (!GetIClassAnswer(receivedAnswer, 0, &samples, NULL))
@@ -1871,8 +1847,7 @@ int ReaderReceiveIClass(uint8_t *receivedAnswer)
     return Demod.len;
 }
 
-void setupIclassReader()
-{
+void setupIclassReader() {
 
     LEDsoff();
 
@@ -1899,8 +1874,7 @@ void setupIclassReader()
     LED_A_ON();
 }
 
-bool sendCmdGetResponseWithRetries(uint8_t *command, size_t cmdsize, uint8_t *resp, uint8_t expected_size, uint8_t retries)
-{
+bool sendCmdGetResponseWithRetries(uint8_t *command, size_t cmdsize, uint8_t *resp, uint8_t expected_size, uint8_t retries) {
     uint8_t got_n = 0;
     while (retries-- > 0) {
 
@@ -1929,8 +1903,7 @@ bool sendCmdGetResponseWithRetries(uint8_t *command, size_t cmdsize, uint8_t *re
  *         1 = Got CSN
  *         2 = Got CSN and CC
  */
-uint8_t handshakeIclassTag_ext(uint8_t *card_data, bool use_credit_key)
-{
+uint8_t handshakeIclassTag_ext(uint8_t *card_data, bool use_credit_key) {
 
     // act_all...
     static uint8_t act_all[]      = { ICLASS_CMD_ACTALL };
@@ -1989,15 +1962,13 @@ uint8_t handshakeIclassTag_ext(uint8_t *card_data, bool use_credit_key)
     read_status++;
     return read_status;
 }
-uint8_t handshakeIclassTag(uint8_t *card_data)
-{
+uint8_t handshakeIclassTag(uint8_t *card_data) {
     return handshakeIclassTag_ext(card_data, false);
 }
 
 // Reader iClass Anticollission
 // turn off afterwards
-void ReaderIClass(uint8_t arg0)
-{
+void ReaderIClass(uint8_t arg0) {
 
     uint8_t card_data[6 * 8] = {0};
     uint8_t last_csn[8] = {0, 0, 0, 0, 0, 0, 0, 0};
@@ -2136,8 +2107,7 @@ void ReaderIClass(uint8_t arg0)
 }
 
 // turn off afterwards
-void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC)
-{
+void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 
     uint8_t cardsize = 0;
     uint8_t mem = 0;
@@ -2257,8 +2227,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC)
 
 // not used. ?!? ( CMD_ICLASS_READCHECK)
 // turn off afterwards
-void iClass_ReadCheck(uint8_t blockNo, uint8_t keyType)
-{
+void iClass_ReadCheck(uint8_t blockNo, uint8_t keyType) {
     uint8_t readcheck[] = { keyType, blockNo };
     uint8_t resp[] = {0, 0, 0, 0, 0, 0, 0, 0};
     size_t isOK = 0;
@@ -2269,8 +2238,7 @@ void iClass_ReadCheck(uint8_t blockNo, uint8_t keyType)
 
 // used with function select_and_auth (cmdhficlass.c)
 // which needs to authenticate before doing more things like read/write
-void iClass_Authentication(uint8_t *mac)
-{
+void iClass_Authentication(uint8_t *mac) {
     uint8_t check[] = { ICLASS_CMD_CHECK, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     uint8_t resp[ICLASS_BUFFER_SIZE];
 
@@ -2297,8 +2265,7 @@ typedef struct iclass_premac {
 * - key loop only test one type of authtication key. Ie two calls needed
 *   to cover debit and credit key. (AA1/AA2)
 */
-void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain)
-{
+void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
     uint8_t i = 0, isOK = 0;
     uint8_t lastChunk = ((arg0 >> 8) & 0xFF);
     bool use_credit_key = ((arg0 >> 16) & 0xFF);
@@ -2381,8 +2348,7 @@ out:
 
 // Tries to read block.
 // retries 10times.
-bool iClass_ReadBlock(uint8_t blockNo, uint8_t *data, uint8_t len)
-{
+bool iClass_ReadBlock(uint8_t blockNo, uint8_t *data, uint8_t len) {
     uint8_t resp[10];
     uint8_t cmd[] = {ICLASS_CMD_READ_OR_IDENTIFY, blockNo, 0x00, 0x00};
     AddCrc(cmd + 1, 1);
@@ -2394,8 +2360,7 @@ bool iClass_ReadBlock(uint8_t blockNo, uint8_t *data, uint8_t len)
 
 // turn off afterwards
 // readblock 8 + 2.  only want 8.
-void iClass_ReadBlk(uint8_t blockno)
-{
+void iClass_ReadBlk(uint8_t blockno) {
     uint8_t data[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     bool isOK = iClass_ReadBlock(blockno, data, sizeof(data));
     cmd_send(CMD_ACK, isOK, 0, 0, data, sizeof(data));
@@ -2403,8 +2368,7 @@ void iClass_ReadBlk(uint8_t blockno)
 }
 
 // turn off afterwards
-void iClass_Dump(uint8_t blockno, uint8_t numblks)
-{
+void iClass_Dump(uint8_t blockno, uint8_t numblks) {
     uint8_t blockdata[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     bool isOK = false;
     uint8_t blkCnt = 0;
@@ -2438,8 +2402,7 @@ void iClass_Dump(uint8_t blockno, uint8_t numblks)
     BigBuf_free();
 }
 
-bool iClass_WriteBlock_ext(uint8_t blockNo, uint8_t *data)
-{
+bool iClass_WriteBlock_ext(uint8_t blockNo, uint8_t *data) {
 
     uint8_t resp[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     uint8_t write[] = { ICLASS_CMD_UPDATE, blockNo, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
@@ -2462,16 +2425,14 @@ bool iClass_WriteBlock_ext(uint8_t blockNo, uint8_t *data)
 }
 
 // turn off afterwards
-void iClass_WriteBlock(uint8_t blockNo, uint8_t *data)
-{
+void iClass_WriteBlock(uint8_t blockNo, uint8_t *data) {
     bool isOK = iClass_WriteBlock_ext(blockNo, data);
     cmd_send(CMD_ACK, isOK, 0, 0, 0, 0);
     switch_off();
 }
 
 // turn off afterwards
-void iClass_Clone(uint8_t startblock, uint8_t endblock, uint8_t *data)
-{
+void iClass_Clone(uint8_t startblock, uint8_t endblock, uint8_t *data) {
     int i, written = 0;
     int total_block = (endblock - startblock) + 1;
     for (i = 0; i < total_block; i++) {

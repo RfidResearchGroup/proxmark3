@@ -51,8 +51,7 @@
 #endif
 
 static int pkcs12_parse_pbe_params(mbedtls_asn1_buf *params,
-                                   mbedtls_asn1_buf *salt, int *iterations)
-{
+                                   mbedtls_asn1_buf *salt, int *iterations) {
     int ret;
     unsigned char **p = &params->p;
     const unsigned char *end = params->p + params->len;
@@ -89,8 +88,7 @@ static int pkcs12_parse_pbe_params(mbedtls_asn1_buf *params,
 static int pkcs12_pbe_derive_key_iv(mbedtls_asn1_buf *pbe_params, mbedtls_md_type_t md_type,
                                     const unsigned char *pwd,  size_t pwdlen,
                                     unsigned char *key, size_t keylen,
-                                    unsigned char *iv,  size_t ivlen)
-{
+                                    unsigned char *iv,  size_t ivlen) {
     int ret, iterations = 0;
     mbedtls_asn1_buf salt;
     size_t i;
@@ -131,8 +129,7 @@ static int pkcs12_pbe_derive_key_iv(mbedtls_asn1_buf *pbe_params, mbedtls_md_typ
 int mbedtls_pkcs12_pbe_sha1_rc4_128(mbedtls_asn1_buf *pbe_params, int mode,
                                     const unsigned char *pwd,  size_t pwdlen,
                                     const unsigned char *data, size_t len,
-                                    unsigned char *output)
-{
+                                    unsigned char *output) {
 #if !defined(MBEDTLS_ARC4_C)
     ((void) pbe_params);
     ((void) mode);
@@ -172,8 +169,7 @@ int mbedtls_pkcs12_pbe(mbedtls_asn1_buf *pbe_params, int mode,
                        mbedtls_cipher_type_t cipher_type, mbedtls_md_type_t md_type,
                        const unsigned char *pwd,  size_t pwdlen,
                        const unsigned char *data, size_t len,
-                       unsigned char *output)
-{
+                       unsigned char *output) {
     int ret, keylen = 0;
     unsigned char key[32];
     unsigned char iv[16];
@@ -224,8 +220,7 @@ exit:
 }
 
 static void pkcs12_fill_buffer(unsigned char *data, size_t data_len,
-                               const unsigned char *filler, size_t fill_len)
-{
+                               const unsigned char *filler, size_t fill_len) {
     unsigned char *p = data;
     size_t use_len;
 
@@ -240,8 +235,7 @@ static void pkcs12_fill_buffer(unsigned char *data, size_t data_len,
 int mbedtls_pkcs12_derivation(unsigned char *data, size_t datalen,
                               const unsigned char *pwd, size_t pwdlen,
                               const unsigned char *salt, size_t saltlen,
-                              mbedtls_md_type_t md_type, int id, int iterations)
-{
+                              mbedtls_md_type_t md_type, int id, int iterations) {
     int ret;
     unsigned int j;
 

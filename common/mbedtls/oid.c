@@ -64,7 +64,7 @@
         if( p == NULL || oid == NULL ) return( NULL );                          \
         while( cur->asn1 != NULL ) {                                            \
             if( cur->asn1_len == oid->len &&                                    \
-                memcmp( cur->asn1, oid->p, oid->len ) == 0 ) {                  \
+                    memcmp( cur->asn1, oid->p, oid->len ) == 0 ) {                  \
                 return( p );                                                    \
             }                                                                   \
             p++;                                                                \
@@ -705,8 +705,7 @@ FN_OID_GET_ATTR2(mbedtls_oid_get_pkcs12_pbe_alg, oid_pkcs12_pbe_alg_t, pkcs12_pb
 
 /* Return the x.y.z.... style numeric string for the given OID */
 int mbedtls_oid_get_numeric_string(char *buf, size_t size,
-                                   const mbedtls_asn1_buf *oid)
-{
+                                   const mbedtls_asn1_buf *oid) {
     int ret;
     size_t i, n;
     unsigned int value;

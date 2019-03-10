@@ -36,15 +36,13 @@
 static const char *getfuncname(lua_State *L, CallInfo *ci, const char **name);
 
 
-static int currentpc(CallInfo *ci)
-{
+static int currentpc(CallInfo *ci) {
     lua_assert(isLua(ci));
     return pcRel(ci->u.l.savedpc, ci_func(ci)->p);
 }
 
 
-static int currentline(CallInfo *ci)
-{
+static int currentline(CallInfo *ci) {
     return getfuncline(ci_func(ci)->p, currentpc(ci));
 }
 
@@ -52,8 +50,7 @@ static int currentline(CallInfo *ci)
 /*
 ** this function can be called asynchronous (e.g. during a signal)
 */
-LUA_API int lua_sethook(lua_State *L, lua_Hook func, int mask, int count)
-{
+LUA_API int lua_sethook(lua_State *L, lua_Hook func, int mask, int count) {
     if (func == NULL || mask == 0) {  /* turn off hooks? */
         mask = 0;
         func = NULL;
@@ -68,26 +65,22 @@ LUA_API int lua_sethook(lua_State *L, lua_Hook func, int mask, int count)
 }
 
 
-LUA_API lua_Hook lua_gethook(lua_State *L)
-{
+LUA_API lua_Hook lua_gethook(lua_State *L) {
     return L->hook;
 }
 
 
-LUA_API int lua_gethookmask(lua_State *L)
-{
+LUA_API int lua_gethookmask(lua_State *L) {
     return L->hookmask;
 }
 
 
-LUA_API int lua_gethookcount(lua_State *L)
-{
+LUA_API int lua_gethookcount(lua_State *L) {
     return L->basehookcount;
 }
 
 
-LUA_API int lua_getstack(lua_State *L, int level, lua_Debug *ar)
-{
+LUA_API int lua_getstack(lua_State *L, int level, lua_Debug *ar) {
     int status;
     CallInfo *ci;
     if (level < 0) return 0;  /* invalid (negative) level */
@@ -103,16 +96,14 @@ LUA_API int lua_getstack(lua_State *L, int level, lua_Debug *ar)
 }
 
 
-static const char *upvalname(Proto *p, int uv)
-{
+static const char *upvalname(Proto *p, int uv) {
     TString *s = check_exp(uv < p->sizeupvalues, p->upvalues[uv].name);
     if (s == NULL) return "?";
     else return getstr(s);
 }
 
 
-static const char *findvararg(CallInfo *ci, int n, StkId *pos)
-{
+static const char *findvararg(CallInfo *ci, int n, StkId *pos) {
     int nparams = clLvalue(ci->func)->p->numparams;
     if (n >= ci->u.l.base - ci->func - nparams)
         return NULL;  /* no such vararg */
@@ -124,8 +115,7 @@ static const char *findvararg(CallInfo *ci, int n, StkId *pos)
 
 
 static const char *findlocal(lua_State *L, CallInfo *ci, int n,
-                             StkId *pos)
-{
+                             StkId *pos) {
     const char *name = NULL;
     StkId base;
     if (isLua(ci)) {
@@ -149,8 +139,7 @@ static const char *findlocal(lua_State *L, CallInfo *ci, int n,
 }
 
 
-LUA_API const char *lua_getlocal(lua_State *L, const lua_Debug *ar, int n)
-{
+LUA_API const char *lua_getlocal(lua_State *L, const lua_Debug *ar, int n) {
     const char *name;
     lua_lock(L);
     if (ar == NULL) {  /* information about non-active function? */
@@ -171,8 +160,7 @@ LUA_API const char *lua_getlocal(lua_State *L, const lua_Debug *ar, int n)
 }
 
 
-LUA_API const char *lua_setlocal(lua_State *L, const lua_Debug *ar, int n)
-{
+LUA_API const char *lua_setlocal(lua_State *L, const lua_Debug *ar, int n) {
     StkId pos = 0;  /* to avoid warnings */
     const char *name = findlocal(L, ar->i_ci, n, &pos);
     lua_lock(L);
@@ -184,8 +172,7 @@ LUA_API const char *lua_setlocal(lua_State *L, const lua_Debug *ar, int n)
 }
 
 
-static void funcinfo(lua_Debug *ar, Closure *cl)
-{
+static void funcinfo(lua_Debug *ar, Closure *cl) {
     if (noLuaClosure(cl)) {
         ar->source = "=[C]";
         ar->linedefined = -1;
@@ -202,8 +189,7 @@ static void funcinfo(lua_Debug *ar, Closure *cl)
 }
 
 
-static void collectvalidlines(lua_State *L, Closure *f)
-{
+static void collectvalidlines(lua_State *L, Closure *f) {
     if (noLuaClosure(f)) {
         setnilvalue(L->top);
         api_incr_top(L);
@@ -222,8 +208,7 @@ static void collectvalidlines(lua_State *L, Closure *f)
 
 
 static int auxgetinfo(lua_State *L, const char *what, lua_Debug *ar,
-                      Closure *f, CallInfo *ci)
-{
+                      Closure *f, CallInfo *ci) {
     int status = 1;
     for (; *what; what++) {
         switch (*what) {
@@ -273,8 +258,7 @@ static int auxgetinfo(lua_State *L, const char *what, lua_Debug *ar,
 }
 
 
-LUA_API int lua_getinfo(lua_State *L, const char *what, lua_Debug *ar)
-{
+LUA_API int lua_getinfo(lua_State *L, const char *what, lua_Debug *ar) {
     int status;
     Closure *cl;
     CallInfo *ci;
@@ -317,8 +301,7 @@ static const char *getobjname(Proto *p, int lastpc, int reg,
 /*
 ** find a "name" for the RK value 'c'
 */
-static void kname(Proto *p, int pc, int c, const char **name)
-{
+static void kname(Proto *p, int pc, int c, const char **name) {
     if (ISK(c)) {  /* is 'c' a constant? */
         TValue *kvalue = &p->k[INDEXK(c)];
         if (ttisstring(kvalue)) {  /* literal constant? */
@@ -340,8 +323,7 @@ static void kname(Proto *p, int pc, int c, const char **name)
 /*
 ** try to find last instruction before 'lastpc' that modified register 'reg'
 */
-static int findsetreg(Proto *p, int lastpc, int reg)
-{
+static int findsetreg(Proto *p, int lastpc, int reg) {
     int pc;
     int setreg = -1;  /* keep last instruction that changed 'reg' */
     for (pc = 0; pc < lastpc; pc++) {
@@ -387,8 +369,7 @@ static int findsetreg(Proto *p, int lastpc, int reg)
 
 
 static const char *getobjname(Proto *p, int lastpc, int reg,
-                              const char **name)
-{
+                              const char **name) {
     int pc;
     *name = luaF_getlocalname(p, reg + 1, lastpc);
     if (*name)  /* is a local? */
@@ -442,8 +423,7 @@ static const char *getobjname(Proto *p, int lastpc, int reg,
 }
 
 
-static const char *getfuncname(lua_State *L, CallInfo *ci, const char **name)
-{
+static const char *getfuncname(lua_State *L, CallInfo *ci, const char **name) {
     TMS tm;
     Proto *p = ci_func(ci)->p;  /* calling function */
     int pc = currentpc(ci);  /* calling instruction index */
@@ -517,8 +497,7 @@ static const char *getfuncname(lua_State *L, CallInfo *ci, const char **name)
 ** only ANSI way to check whether a pointer points to an array
 ** (used only for error messages, so efficiency is not a big concern)
 */
-static int isinstack(CallInfo *ci, const TValue *o)
-{
+static int isinstack(CallInfo *ci, const TValue *o) {
     StkId p;
     for (p = ci->u.l.base; p < ci->top; p++)
         if (o == p) return 1;
@@ -527,8 +506,7 @@ static int isinstack(CallInfo *ci, const TValue *o)
 
 
 static const char *getupvalname(CallInfo *ci, const TValue *o,
-                                const char **name)
-{
+                                const char **name) {
     LClosure *c = ci_func(ci);
     int i;
     for (i = 0; i < c->nupvalues; i++) {
@@ -541,8 +519,7 @@ static const char *getupvalname(CallInfo *ci, const TValue *o,
 }
 
 
-l_noret luaG_typeerror(lua_State *L, const TValue *o, const char *op)
-{
+l_noret luaG_typeerror(lua_State *L, const TValue *o, const char *op) {
     CallInfo *ci = L->ci;
     const char *name = NULL;
     const char *t = objtypename(o);
@@ -561,16 +538,14 @@ l_noret luaG_typeerror(lua_State *L, const TValue *o, const char *op)
 }
 
 
-l_noret luaG_concaterror(lua_State *L, StkId p1, StkId p2)
-{
+l_noret luaG_concaterror(lua_State *L, StkId p1, StkId p2) {
     if (ttisstring(p1) || ttisnumber(p1)) p1 = p2;
     lua_assert(!ttisstring(p1) && !ttisnumber(p2));
     luaG_typeerror(L, p1, "concatenate");
 }
 
 
-l_noret luaG_aritherror(lua_State *L, const TValue *p1, const TValue *p2)
-{
+l_noret luaG_aritherror(lua_State *L, const TValue *p1, const TValue *p2) {
     TValue temp;
     if (luaV_tonumber(p1, &temp) == NULL)
         p2 = p1;  /* first operand is wrong */
@@ -578,8 +553,7 @@ l_noret luaG_aritherror(lua_State *L, const TValue *p1, const TValue *p2)
 }
 
 
-l_noret luaG_ordererror(lua_State *L, const TValue *p1, const TValue *p2)
-{
+l_noret luaG_ordererror(lua_State *L, const TValue *p1, const TValue *p2) {
     const char *t1 = objtypename(p1);
     const char *t2 = objtypename(p2);
     if (t1 == t2)
@@ -589,8 +563,7 @@ l_noret luaG_ordererror(lua_State *L, const TValue *p1, const TValue *p2)
 }
 
 
-static void addinfo(lua_State *L, const char *msg)
-{
+static void addinfo(lua_State *L, const char *msg) {
     CallInfo *ci = L->ci;
     if (isLua(ci)) {  /* is Lua code? */
         char buff[LUA_IDSIZE];  /* add file:line information */
@@ -607,8 +580,7 @@ static void addinfo(lua_State *L, const char *msg)
 }
 
 
-l_noret luaG_errormsg(lua_State *L)
-{
+l_noret luaG_errormsg(lua_State *L) {
     if (L->errfunc != 0) {  /* is there an error handling function? */
         StkId errfunc = restorestack(L, L->errfunc);
         if (!ttisfunction(errfunc)) luaD_throw(L, LUA_ERRERR);
@@ -621,8 +593,7 @@ l_noret luaG_errormsg(lua_State *L)
 }
 
 
-l_noret luaG_runerror(lua_State *L, const char *fmt, ...)
-{
+l_noret luaG_runerror(lua_State *L, const char *fmt, ...) {
     va_list argp;
     va_start(argp, fmt);
     addinfo(L, luaO_pushvfstring(L, fmt, argp));

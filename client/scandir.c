@@ -21,8 +21,7 @@ extern "C" {
 int scandir(const char *dir,
             struct dirent ***namelist,
             int (*select)(const struct dirent *),
-            int (*compar)(const struct dirent **, const struct dirent **))
-{
+            int (*compar)(const struct dirent **, const struct dirent **)) {
     DIR *dirp;
     struct dirent *ent, *etmp, **nl = NULL, **ntmp;
     int count = 0;
@@ -86,8 +85,7 @@ int scandir(const char *dir,
 #ifdef __cplusplus
 extern "C" {
 #endif
-int alphasort(const struct dirent **a, const struct dirent **b)
-{
+int alphasort(const struct dirent **a, const struct dirent **b) {
     return strcoll((*a)->d_name, (*b)->d_name);
 }
 #ifdef __cplusplus

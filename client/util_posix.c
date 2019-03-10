@@ -23,16 +23,14 @@
 #if !defined (_WIN32)
 #include <errno.h>
 
-static void nsleep(uint64_t n)
-{
+static void nsleep(uint64_t n) {
     struct timespec timeout;
     timeout.tv_sec = n / 1000000000;
     timeout.tv_nsec = n % 1000000000;
     while (nanosleep(&timeout, &timeout) && errno == EINTR);
 }
 
-void msleep(uint32_t n)
-{
+void msleep(uint32_t n) {
     nsleep(1000000 * (uint64_t)n);
 }
 #endif // _WIN32
@@ -54,8 +52,7 @@ void msleep(uint32_t n)
 /* clock_gettime is not implemented on OSX prior to 10.12 */
 int _civet_clock_gettime(int clk_id, struct timespec *t);
 
-int _civet_clock_gettime(int clk_id, struct timespec *t)
-{
+int _civet_clock_gettime(int clk_id, struct timespec *t) {
     memset(t, 0, sizeof(*t));
     if (clk_id == CLOCK_REALTIME) {
         struct timeval now;
@@ -96,8 +93,7 @@ int _civet_clock_gettime(int clk_id, struct timespec *t)
  * but it may be NULL at runtime. So we need to check before using it. */
 int _civet_safe_clock_gettime(int clk_id, struct timespec *t);
 
-int _civet_safe_clock_gettime(int clk_id, struct timespec *t)
-{
+int _civet_safe_clock_gettime(int clk_id, struct timespec *t) {
     if (clock_gettime) {
         return clock_gettime(clk_id, t);
     }
@@ -112,8 +108,7 @@ int _civet_safe_clock_gettime(int clk_id, struct timespec *t)
 
 
 // a milliseconds timer for performance measurement
-uint64_t msclock(void)
-{
+uint64_t msclock(void) {
 #if defined(_WIN32)
 #include <sys/types.h>
 

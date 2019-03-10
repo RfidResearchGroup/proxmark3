@@ -33,8 +33,7 @@
 #include "crypto/libpcrypto.h"
 #include "emv/emv_roca.h"
 
-int ExecuteCryptoTests(bool verbose)
-{
+int ExecuteCryptoTests(bool verbose) {
     int res;
     bool TestFail = false;
 

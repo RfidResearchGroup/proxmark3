@@ -145,8 +145,7 @@
  */
 
 #ifndef CBOR_NO_FLOATING_POINT
-static inline bool convertToUint64(double v, uint64_t *absolute)
-{
+static inline bool convertToUint64(double v, uint64_t *absolute) {
     double supremum;
     v = fabs(v);
 
@@ -177,13 +176,11 @@ static inline bool convertToUint64(double v, uint64_t *absolute)
 }
 #endif
 
-static void printRecursionLimit(CborStreamFunction stream, void *out)
-{
+static void printRecursionLimit(CborStreamFunction stream, void *out) {
     stream(out, "<nesting too deep, recursion stopped>");
 }
 
-static CborError hexDump(CborStreamFunction stream, void *out, const void *ptr, size_t n)
-{
+static CborError hexDump(CborStreamFunction stream, void *out, const void *ptr, size_t n) {
     const uint8_t *buffer = (const uint8_t *)ptr;
     CborError err = CborNoError;
     while (n-- && !err)
@@ -194,8 +191,7 @@ static CborError hexDump(CborStreamFunction stream, void *out, const void *ptr, 
 
 /* This function decodes buffer as UTF-8 and prints as escaped UTF-16.
  * On UTF-8 decoding error, it returns CborErrorInvalidUtf8TextString */
-static CborError utf8EscapedDump(CborStreamFunction stream, void *out, const void *ptr, size_t n)
-{
+static CborError utf8EscapedDump(CborStreamFunction stream, void *out, const void *ptr, size_t n) {
     const uint8_t *buffer = (const uint8_t *)ptr;
     const uint8_t *const end = buffer + n;
     CborError err = CborNoError;
@@ -255,8 +251,7 @@ print_utf16:
     return err;
 }
 
-static const char *resolve_indicator(const uint8_t *ptr, const uint8_t *end, int flags)
-{
+static const char *resolve_indicator(const uint8_t *ptr, const uint8_t *end, int flags) {
     static const char indicators[8][3] = {
         "_0", "_1", "_2", "_3",
         "", "", "",             /* these are not possible */
@@ -277,7 +272,7 @@ static const char *resolve_indicator(const uint8_t *ptr, const uint8_t *end, int
 
     /* determine whether to show anything */
     if ((flags & CborPrettyIndicateIndeterminateLength) &&
-        additional_information == IndefiniteLength)
+            additional_information == IndefiniteLength)
         return indicators[IndefiniteLength - Value8Bit];
     if ((flags & CborPrettyIndicateOverlongNumbers) == 0)
         return no_indicator;
@@ -300,15 +295,13 @@ static const char *resolve_indicator(const uint8_t *ptr, const uint8_t *end, int
            indicators[additional_information - Value8Bit];
 }
 
-static const char *get_indicator(const CborValue *it, int flags)
-{
+static const char *get_indicator(const CborValue *it, int flags) {
     return resolve_indicator(it->ptr, it->parser->end, flags);
 }
 
 static CborError value_to_pretty(CborStreamFunction stream, void *out, CborValue *it, int flags, int recursionsLeft);
 static CborError container_to_pretty(CborStreamFunction stream, void *out, CborValue *it, CborType containerType,
-                                     int flags, int recursionsLeft)
-{
+                                     int flags, int recursionsLeft) {
     const char *comma = "";
     CborError err = CborNoError;
 
@@ -336,8 +329,7 @@ static CborError container_to_pretty(CborStreamFunction stream, void *out, CborV
     return err;
 }
 
-static CborError value_to_pretty(CborStreamFunction stream, void *out, CborValue *it, int flags, int recursionsLeft)
-{
+static CborError value_to_pretty(CborStreamFunction stream, void *out, CborValue *it, int flags, int recursionsLeft) {
     CborError err = CborNoError;
     CborType type = cbor_value_get_type(it);
     switch (type) {
@@ -570,8 +562,7 @@ static CborError value_to_pretty(CborStreamFunction stream, void *out, CborValue
  *
  * \sa cbor_value_to_pretty(), cbor_value_to_json_advance()
  */
-CborError cbor_value_to_pretty_stream(CborStreamFunction streamFunction, void *token, CborValue *value, int flags)
-{
+CborError cbor_value_to_pretty_stream(CborStreamFunction streamFunction, void *token, CborValue *value, int flags) {
     return value_to_pretty(streamFunction, token, value, flags, CBOR_PARSER_MAX_RECURSIONS);
 }
 

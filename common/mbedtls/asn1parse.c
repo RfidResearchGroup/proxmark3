@@ -51,8 +51,7 @@
  */
 int mbedtls_asn1_get_len(unsigned char **p,
                          const unsigned char *end,
-                         size_t *len)
-{
+                         size_t *len) {
     if ((end - *p) < 1)
         return (MBEDTLS_ERR_ASN1_OUT_OF_DATA);
 
@@ -107,8 +106,7 @@ int mbedtls_asn1_get_len(unsigned char **p,
 
 int mbedtls_asn1_get_tag(unsigned char **p,
                          const unsigned char *end,
-                         size_t *len, int tag)
-{
+                         size_t *len, int tag) {
     if ((end - *p) < 1)
         return (MBEDTLS_ERR_ASN1_OUT_OF_DATA);
 
@@ -122,8 +120,7 @@ int mbedtls_asn1_get_tag(unsigned char **p,
 
 int mbedtls_asn1_get_bool(unsigned char **p,
                           const unsigned char *end,
-                          int *val)
-{
+                          int *val) {
     int ret;
     size_t len;
 
@@ -141,8 +138,7 @@ int mbedtls_asn1_get_bool(unsigned char **p,
 
 int mbedtls_asn1_get_int(unsigned char **p,
                          const unsigned char *end,
-                         int *val)
-{
+                         int *val) {
     int ret;
     size_t len;
 
@@ -165,8 +161,7 @@ int mbedtls_asn1_get_int(unsigned char **p,
 #if defined(MBEDTLS_BIGNUM_C)
 int mbedtls_asn1_get_mpi(unsigned char **p,
                          const unsigned char *end,
-                         mbedtls_mpi *X)
-{
+                         mbedtls_mpi *X) {
     int ret;
     size_t len;
 
@@ -182,8 +177,7 @@ int mbedtls_asn1_get_mpi(unsigned char **p,
 #endif /* MBEDTLS_BIGNUM_C */
 
 int mbedtls_asn1_get_bitstring(unsigned char **p, const unsigned char *end,
-                               mbedtls_asn1_bitstring *bs)
-{
+                               mbedtls_asn1_bitstring *bs) {
     int ret;
 
     /* Certificate type is a single byte bitstring */
@@ -215,8 +209,7 @@ int mbedtls_asn1_get_bitstring(unsigned char **p, const unsigned char *end,
  * Get a bit string without unused bits
  */
 int mbedtls_asn1_get_bitstring_null(unsigned char **p, const unsigned char *end,
-                                    size_t *len)
-{
+                                    size_t *len) {
     int ret;
 
     if ((ret = mbedtls_asn1_get_tag(p, end, len, MBEDTLS_ASN1_BIT_STRING)) != 0)
@@ -236,8 +229,7 @@ int mbedtls_asn1_get_bitstring_null(unsigned char **p, const unsigned char *end,
 int mbedtls_asn1_get_sequence_of(unsigned char **p,
                                  const unsigned char *end,
                                  mbedtls_asn1_sequence *cur,
-                                 int tag)
-{
+                                 int tag) {
     int ret;
     size_t len;
     mbedtls_asn1_buf *buf;
@@ -283,8 +275,7 @@ int mbedtls_asn1_get_sequence_of(unsigned char **p,
 
 int mbedtls_asn1_get_alg(unsigned char **p,
                          const unsigned char *end,
-                         mbedtls_asn1_buf *alg, mbedtls_asn1_buf *params)
-{
+                         mbedtls_asn1_buf *alg, mbedtls_asn1_buf *params) {
     int ret;
     size_t len;
 
@@ -326,8 +317,7 @@ int mbedtls_asn1_get_alg(unsigned char **p,
 
 int mbedtls_asn1_get_alg_null(unsigned char **p,
                               const unsigned char *end,
-                              mbedtls_asn1_buf *alg)
-{
+                              mbedtls_asn1_buf *alg) {
     int ret;
     mbedtls_asn1_buf params;
 
@@ -342,8 +332,7 @@ int mbedtls_asn1_get_alg_null(unsigned char **p,
     return (0);
 }
 
-void mbedtls_asn1_free_named_data(mbedtls_asn1_named_data *cur)
-{
+void mbedtls_asn1_free_named_data(mbedtls_asn1_named_data *cur) {
     if (cur == NULL)
         return;
 
@@ -353,8 +342,7 @@ void mbedtls_asn1_free_named_data(mbedtls_asn1_named_data *cur)
     mbedtls_platform_zeroize(cur, sizeof(mbedtls_asn1_named_data));
 }
 
-void mbedtls_asn1_free_named_data_list(mbedtls_asn1_named_data **head)
-{
+void mbedtls_asn1_free_named_data_list(mbedtls_asn1_named_data **head) {
     mbedtls_asn1_named_data *cur;
 
     while ((cur = *head) != NULL) {
@@ -365,11 +353,10 @@ void mbedtls_asn1_free_named_data_list(mbedtls_asn1_named_data **head)
 }
 
 mbedtls_asn1_named_data *mbedtls_asn1_find_named_data(mbedtls_asn1_named_data *list,
-                                                      const char *oid, size_t len)
-{
+                                                      const char *oid, size_t len) {
     while (list != NULL) {
         if (list->oid.len == len &&
-            memcmp(list->oid.p, oid, len) == 0) {
+                memcmp(list->oid.p, oid, len) == 0) {
             break;
         }
 

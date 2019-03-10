@@ -11,8 +11,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_guard_clone(void)
-{
+int usage_lf_guard_clone(void) {
     PrintAndLogEx(NORMAL, "clone a Guardall tag to a T55x7 tag.");
     PrintAndLogEx(NORMAL, "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated. ");
     PrintAndLogEx(NORMAL, "Currently work only on 26bit");
@@ -28,8 +27,7 @@ int usage_lf_guard_clone(void)
     return 0;
 }
 
-int usage_lf_guard_sim(void)
-{
+int usage_lf_guard_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of Guardall card with specified card number.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.");
@@ -47,8 +45,7 @@ int usage_lf_guard_sim(void)
 }
 
 // Works for 26bits.
-int GetGuardBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *guardBits)
-{
+int GetGuardBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *guardBits) {
 
     uint8_t xorKey = 0x66;
     uint8_t i;
@@ -147,8 +144,7 @@ int GetGuardBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *guardBits)
 // error returns as -x
 // success returns start position in bitstream
 // Bitstream must contain previously askrawdemod and biphasedemoded data
-int detectGProxII(uint8_t *bits, size_t *size)
-{
+int detectGProxII(uint8_t *bits, size_t *size) {
 
     size_t startIdx = 0;
     uint8_t preamble[] = {1, 1, 1, 1, 1, 0};
@@ -176,8 +172,7 @@ int detectGProxII(uint8_t *bits, size_t *size)
 //WARNING: if it fails during some points it will destroy the DemodBuffer data
 // but will leave the GraphBuffer intact.
 //if successful it will push askraw data back to demod buffer ready for emulation
-int CmdGuardDemod(const char *Cmd)
-{
+int CmdGuardDemod(const char *Cmd) {
 
     //Differential Biphase
     //get binary from ask wave
@@ -258,14 +253,12 @@ int CmdGuardDemod(const char *Cmd)
     return 1;
 }
 
-int CmdGuardRead(const char *Cmd)
-{
+int CmdGuardRead(const char *Cmd) {
     lf_read(true, 10000);
     return CmdGuardDemod(Cmd);
 }
 
-int CmdGuardClone(const char *Cmd)
-{
+int CmdGuardClone(const char *Cmd) {
 
     char cmdp = param_getchar(Cmd, 0);
     if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_guard_clone();
@@ -316,8 +309,7 @@ int CmdGuardClone(const char *Cmd)
     return 0;
 }
 
-int CmdGuardSim(const char *Cmd)
-{
+int CmdGuardSim(const char *Cmd) {
 
     // Guard uses:  clk: 64, invert: 0, encoding: 2 (ASK Biphase)
     uint8_t clock = 64, encoding = 2, separator = 0, invert = 0;
@@ -363,15 +355,13 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFGuard(const char *Cmd)
-{
+int CmdLFGuard(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }

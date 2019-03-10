@@ -239,8 +239,7 @@ int length; /* number of bits */
 /* ===========================================================================
  * Initialize the various 'constant' tables.
  */
-local void tr_static_init()
-{
+local void tr_static_init() {
 #if defined(GEN_TREES_H) || !defined(STDC)
     static int static_init_done = 0;
     int n;        /* iterates over tree elements */
@@ -333,8 +332,7 @@ local void tr_static_init()
     ((i) == (last)? "\n};\n\n" :    \
      ((i) % (width) == (width)-1 ? ",\n" : ", "))
 
-void gen_trees_header()
-{
+void gen_trees_header() {
     FILE *header = fopen("trees.h", "w");
     int i;
 
@@ -468,7 +466,7 @@ int k;               /* node to move down */
     while (j <= s->heap_len) {
         /* Set j to the smallest of the two sons: */
         if (j < s->heap_len &&
-            smaller(tree, s->heap[j + 1], s->heap[j], s->depth)) {
+                smaller(tree, s->heap[j + 1], s->heap[j], s->depth)) {
             j++;
         }
         /* Exit if v is smaller than both sons */
@@ -1157,7 +1155,7 @@ deflate_state *s;
 
     /* Check for textual ("white-listed") bytes. */
     if (s->dyn_ltree[9].Freq != 0 || s->dyn_ltree[10].Freq != 0
-        || s->dyn_ltree[13].Freq != 0)
+            || s->dyn_ltree[13].Freq != 0)
         return Z_TEXT;
     for (n = 32; n < LITERALS; n++)
         if (s->dyn_ltree[n].Freq != 0)

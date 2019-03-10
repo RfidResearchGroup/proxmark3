@@ -59,8 +59,7 @@ char const hex2ascii_data[] = "0123456789abcdefghijklmnopqrstuvwxyz";
  * The buffer pointed to by `nbuf' must have length >= MAXNBUF.
  */
 static char *
-ksprintn(char *nbuf, uintmax_t num, int base, int *lenp, int upper)
-{
+ksprintn(char *nbuf, uintmax_t num, int base, int *lenp, int upper) {
     char *p, c;
 
     p = nbuf;
@@ -101,8 +100,7 @@ ksprintn(char *nbuf, uintmax_t num, int base, int *lenp, int upper)
  *  ("%*D", len, ptr, " " -> XX XX XX XX ...
  */
 int
-kvsprintf(char const *fmt, void *arg, int radix, va_list ap)
-{
+kvsprintf(char const *fmt, void *arg, int radix, va_list ap) {
 #define PCHAR(c) {int cc=(c); *d++ = cc; retval++; }
     char nbuf[MAXNBUF];
     char *d;
@@ -387,7 +385,7 @@ number:
                     tmp++;
 
                 if (!ladjust && padc != '0' && width
-                    && (width -= tmp) > 0)
+                        && (width -= tmp) > 0)
                     while (width--)
                         PCHAR(padc);
                 if (neg)
@@ -430,14 +428,12 @@ number:
 #undef PCHAR
 }
 
-int vsprintf(char *dest, const char *fmt, va_list ap)
-{
+int vsprintf(char *dest, const char *fmt, va_list ap) {
     return kvsprintf(fmt, dest, 10, ap);
 }
 
 int
-sprintf(char *dest, const char *fmt, ...)
-{
+sprintf(char *dest, const char *fmt, ...) {
     /* http://www.pagetable.com/?p=298 */
     int retval;
     va_list ap;

@@ -85,8 +85,7 @@ typedef struct {
 
 static void error_set(json_error_t *error, const lex_t *lex,
                       enum json_error_code code,
-                      const char *msg, ...)
-{
+                      const char *msg, ...) {
     va_list ap;
     char msg_text[JSON_ERROR_TEXT_LENGTH];
     char msg_with_context[JSON_ERROR_TEXT_LENGTH];
@@ -139,8 +138,7 @@ static void error_set(json_error_t *error, const lex_t *lex,
 /*** lexical analyzer ***/
 
 static void
-stream_init(stream_t *stream, get_func get, void *data)
-{
+stream_init(stream_t *stream, get_func get, void *data) {
     stream->get = get;
     stream->data = data;
     stream->buffer[0] = '\0';
@@ -152,8 +150,7 @@ stream_init(stream_t *stream, get_func get, void *data)
     stream->position = 0;
 }
 
-static int stream_get(stream_t *stream, json_error_t *error)
-{
+static int stream_get(stream_t *stream, json_error_t *error) {
     int c;
 
     if (stream->state != STREAM_STATE_OK)
@@ -211,8 +208,7 @@ out:
     return STREAM_STATE_ERROR;
 }
 
-static void stream_unget(stream_t *stream, int c)
-{
+static void stream_unget(stream_t *stream, int c) {
     if (c == STREAM_STATE_EOF || c == STREAM_STATE_ERROR)
         return;
 
@@ -229,31 +225,26 @@ static void stream_unget(stream_t *stream, int c)
 }
 
 
-static int lex_get(lex_t *lex, json_error_t *error)
-{
+static int lex_get(lex_t *lex, json_error_t *error) {
     return stream_get(&lex->stream, error);
 }
 
-static void lex_save(lex_t *lex, int c)
-{
+static void lex_save(lex_t *lex, int c) {
     strbuffer_append_byte(&lex->saved_text, c);
 }
 
-static int lex_get_save(lex_t *lex, json_error_t *error)
-{
+static int lex_get_save(lex_t *lex, json_error_t *error) {
     int c = stream_get(&lex->stream, error);
     if (c != STREAM_STATE_EOF && c != STREAM_STATE_ERROR)
         lex_save(lex, c);
     return c;
 }
 
-static void lex_unget(lex_t *lex, int c)
-{
+static void lex_unget(lex_t *lex, int c) {
     stream_unget(&lex->stream, c);
 }
 
-static void lex_unget_unsave(lex_t *lex, int c)
-{
+static void lex_unget_unsave(lex_t *lex, int c) {
     if (c != STREAM_STATE_EOF && c != STREAM_STATE_ERROR) {
         /* Since we treat warnings as errors, when assertions are turned
          * off the "d" variable would be set but never used. Which is
@@ -271,8 +262,7 @@ static void lex_unget_unsave(lex_t *lex, int c)
     }
 }
 
-static void lex_save_cached(lex_t *lex)
-{
+static void lex_save_cached(lex_t *lex) {
     while (lex->stream.buffer[lex->stream.buffer_pos] != '\0') {
         lex_save(lex, lex->stream.buffer[lex->stream.buffer_pos]);
         lex->stream.buffer_pos++;
@@ -280,16 +270,14 @@ static void lex_save_cached(lex_t *lex)
     }
 }
 
-static void lex_free_string(lex_t *lex)
-{
+static void lex_free_string(lex_t *lex) {
     jsonp_free(lex->value.string.val);
     lex->value.string.val = NULL;
     lex->value.string.len = 0;
 }
 
 /* assumes that str points to 'u' plus at least 4 valid hex digits */
-static int32_t decode_unicode_escape(const char *str)
-{
+static int32_t decode_unicode_escape(const char *str) {
     int i;
     int32_t value = 0;
 
@@ -311,8 +299,7 @@ static int32_t decode_unicode_escape(const char *str)
     return value;
 }
 
-static void lex_scan_string(lex_t *lex, json_error_t *error)
-{
+static void lex_scan_string(lex_t *lex, json_error_t *error) {
     int c;
     const char *p;
     char *t;
@@ -485,8 +472,7 @@ out:
 #endif
 #endif
 
-static int lex_scan_number(lex_t *lex, int c, json_error_t *error)
-{
+static int lex_scan_number(lex_t *lex, int c, json_error_t *error) {
     const char *saved_text;
     char *end;
     double doubleval;
@@ -512,7 +498,7 @@ static int lex_scan_number(lex_t *lex, int c, json_error_t *error)
     }
 
     if (!(lex->flags & JSON_DECODE_INT_AS_REAL) &&
-        c != '.' && c != 'E' && c != 'e') {
+            c != '.' && c != 'E' && c != 'e') {
         json_int_t intval;
 
         lex_unget_unsave(lex, c);
@@ -579,8 +565,7 @@ out:
     return -1;
 }
 
-static int lex_scan(lex_t *lex, json_error_t *error)
-{
+static int lex_scan(lex_t *lex, json_error_t *error) {
     int c;
 
     strbuffer_clear(&lex->saved_text);
@@ -647,8 +632,7 @@ out:
     return lex->token;
 }
 
-static char *lex_steal_string(lex_t *lex, size_t *out_len)
-{
+static char *lex_steal_string(lex_t *lex, size_t *out_len) {
     char *result = NULL;
     if (lex->token == TOKEN_STRING) {
         result = lex->value.string.val;
@@ -659,8 +643,7 @@ static char *lex_steal_string(lex_t *lex, size_t *out_len)
     return result;
 }
 
-static int lex_init(lex_t *lex, get_func get, size_t flags, void *data)
-{
+static int lex_init(lex_t *lex, get_func get, size_t flags, void *data) {
     stream_init(&lex->stream, get, data);
     if (strbuffer_init(&lex->saved_text))
         return -1;
@@ -670,8 +653,7 @@ static int lex_init(lex_t *lex, get_func get, size_t flags, void *data)
     return 0;
 }
 
-static void lex_close(lex_t *lex)
-{
+static void lex_close(lex_t *lex) {
     if (lex->token == TOKEN_STRING)
         lex_free_string(lex);
     strbuffer_close(&lex->saved_text);
@@ -682,8 +664,7 @@ static void lex_close(lex_t *lex)
 
 static json_t *parse_value(lex_t *lex, size_t flags, json_error_t *error);
 
-static json_t *parse_object(lex_t *lex, size_t flags, json_error_t *error)
-{
+static json_t *parse_object(lex_t *lex, size_t flags, json_error_t *error) {
     json_t *object = json_object();
     if (!object)
         return NULL;
@@ -759,8 +740,7 @@ error:
     return NULL;
 }
 
-static json_t *parse_array(lex_t *lex, size_t flags, json_error_t *error)
-{
+static json_t *parse_array(lex_t *lex, size_t flags, json_error_t *error) {
     json_t *array = json_array();
     if (!array)
         return NULL;
@@ -797,8 +777,7 @@ error:
     return NULL;
 }
 
-static json_t *parse_value(lex_t *lex, size_t flags, json_error_t *error)
-{
+static json_t *parse_value(lex_t *lex, size_t flags, json_error_t *error) {
     json_t *json;
 
     lex->depth++;
@@ -871,8 +850,7 @@ static json_t *parse_value(lex_t *lex, size_t flags, json_error_t *error)
     return json;
 }
 
-static json_t *parse_json(lex_t *lex, size_t flags, json_error_t *error)
-{
+static json_t *parse_json(lex_t *lex, size_t flags, json_error_t *error) {
     json_t *result;
 
     lex->depth = 0;
@@ -911,8 +889,7 @@ typedef struct {
     size_t pos;
 } string_data_t;
 
-static int string_get(void *data)
-{
+static int string_get(void *data) {
     char c;
     string_data_t *stream = (string_data_t *)data;
     c = stream->data[stream->pos];
@@ -924,8 +901,7 @@ static int string_get(void *data)
     }
 }
 
-json_t *json_loads(const char *string, size_t flags, json_error_t *error)
-{
+json_t *json_loads(const char *string, size_t flags, json_error_t *error) {
     lex_t lex;
     json_t *result;
     string_data_t stream_data;
@@ -955,8 +931,7 @@ typedef struct {
     size_t pos;
 } buffer_data_t;
 
-static int buffer_get(void *data)
-{
+static int buffer_get(void *data) {
     char c;
     buffer_data_t *stream = data;
     if (stream->pos >= stream->len)
@@ -967,8 +942,7 @@ static int buffer_get(void *data)
     return (unsigned char)c;
 }
 
-json_t *json_loadb(const char *buffer, size_t buflen, size_t flags, json_error_t *error)
-{
+json_t *json_loadb(const char *buffer, size_t buflen, size_t flags, json_error_t *error) {
     lex_t lex;
     json_t *result;
     buffer_data_t stream_data;
@@ -993,8 +967,7 @@ json_t *json_loadb(const char *buffer, size_t buflen, size_t flags, json_error_t
     return result;
 }
 
-json_t *json_loadf(FILE *input, size_t flags, json_error_t *error)
-{
+json_t *json_loadf(FILE *input, size_t flags, json_error_t *error) {
     lex_t lex;
     const char *source;
     json_t *result;
@@ -1020,8 +993,7 @@ json_t *json_loadf(FILE *input, size_t flags, json_error_t *error)
     return result;
 }
 
-static int fd_get_func(int *fd)
-{
+static int fd_get_func(int *fd) {
 #ifdef HAVE_UNISTD_H
     uint8_t c;
     if (read(*fd, &c, 1) == 1)
@@ -1030,8 +1002,7 @@ static int fd_get_func(int *fd)
     return EOF;
 }
 
-json_t *json_loadfd(int input, size_t flags, json_error_t *error)
-{
+json_t *json_loadfd(int input, size_t flags, json_error_t *error) {
     lex_t lex;
     const char *source;
     json_t *result;
@@ -1059,8 +1030,7 @@ json_t *json_loadfd(int input, size_t flags, json_error_t *error)
     return result;
 }
 
-json_t *json_load_file(const char *path, size_t flags, json_error_t *error)
-{
+json_t *json_load_file(const char *path, size_t flags, json_error_t *error) {
     json_t *result;
     FILE *fp;
 
@@ -1094,8 +1064,7 @@ typedef struct {
     void *arg;
 } callback_data_t;
 
-static int callback_get(void *data)
-{
+static int callback_get(void *data) {
     char c;
     callback_data_t *stream = data;
 
@@ -1111,8 +1080,7 @@ static int callback_get(void *data)
     return (unsigned char)c;
 }
 
-json_t *json_load_callback(json_load_callback_t callback, void *arg, size_t flags, json_error_t *error)
-{
+json_t *json_load_callback(json_load_callback_t callback, void *arg, size_t flags, json_error_t *error) {
     lex_t lex;
     json_t *result;
 

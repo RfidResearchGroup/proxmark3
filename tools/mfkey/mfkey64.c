@@ -5,8 +5,7 @@
 #include <inttypes.h>
 #include "crapto1.h"
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     struct Crypto1State *revstate;
     uint64_t key;     // recovered key
     uint32_t uid;     // serial number

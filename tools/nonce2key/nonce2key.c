@@ -3,8 +3,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 
-int main(const int argc, const char *argv[])
-{
+int main(const int argc, const char *argv[]) {
     struct Crypto1State *state;
     uint32_t pos, uid, nt, nr, rr, nr_diff;
     uint8_t bt, i, ks3x[8], par[8][8];

@@ -74,8 +74,7 @@
  */
 static int x509_crl_get_version(unsigned char **p,
                                 const unsigned char *end,
-                                int *ver)
-{
+                                int *ver) {
     int ret;
 
     if ((ret = mbedtls_asn1_get_int(p, end, ver)) != 0) {
@@ -99,8 +98,7 @@ static int x509_crl_get_version(unsigned char **p,
  */
 static int x509_get_crl_ext(unsigned char **p,
                             const unsigned char *end,
-                            mbedtls_x509_buf *ext)
-{
+                            mbedtls_x509_buf *ext) {
     int ret;
 
     /*
@@ -142,7 +140,7 @@ static int x509_get_crl_ext(unsigned char **p,
         /* Get optional critical */
         if ((ret = mbedtls_asn1_get_bool(p, end_ext_data,
                                          &is_critical)) != 0 &&
-            (ret != MBEDTLS_ERR_ASN1_UNEXPECTED_TAG)) {
+                (ret != MBEDTLS_ERR_ASN1_UNEXPECTED_TAG)) {
             return (MBEDTLS_ERR_X509_INVALID_EXTENSIONS + ret);
         }
 
@@ -175,8 +173,7 @@ static int x509_get_crl_ext(unsigned char **p,
  */
 static int x509_get_crl_entry_ext(unsigned char **p,
                                   const unsigned char *end,
-                                  mbedtls_x509_buf *ext)
-{
+                                  mbedtls_x509_buf *ext) {
     int ret;
     size_t len = 0;
 
@@ -226,8 +223,7 @@ static int x509_get_crl_entry_ext(unsigned char **p,
  */
 static int x509_get_entries(unsigned char **p,
                             const unsigned char *end,
-                            mbedtls_x509_crl_entry *entry)
-{
+                            mbedtls_x509_crl_entry *entry) {
     int ret;
     size_t entry_len;
     mbedtls_x509_crl_entry *cur_entry = entry;
@@ -287,8 +283,7 @@ static int x509_get_entries(unsigned char **p,
  * Parse one  CRLs in DER format and append it to the chained list
  */
 int mbedtls_x509_crl_parse_der(mbedtls_x509_crl *chain,
-                               const unsigned char *buf, size_t buflen)
-{
+                               const unsigned char *buf, size_t buflen) {
     int ret;
     size_t len;
     unsigned char *p = NULL, *end = NULL;
@@ -379,7 +374,7 @@ int mbedtls_x509_crl_parse_der(mbedtls_x509_crl *chain,
      * signature            AlgorithmIdentifier
      */
     if ((ret = x509_crl_get_version(&p, end, &crl->version)) != 0 ||
-        (ret = mbedtls_x509_get_alg(&p, end, &crl->sig_oid, &sig_params1)) != 0) {
+            (ret = mbedtls_x509_get_alg(&p, end, &crl->sig_oid, &sig_params1)) != 0) {
         mbedtls_x509_crl_free(crl);
         return (ret);
     }
@@ -428,8 +423,8 @@ int mbedtls_x509_crl_parse_der(mbedtls_x509_crl *chain,
     if ((ret = mbedtls_x509_get_time(&p, end, &crl->next_update)) != 0) {
         if (ret != (MBEDTLS_ERR_X509_INVALID_DATE +
                     MBEDTLS_ERR_ASN1_UNEXPECTED_TAG) &&
-            ret != (MBEDTLS_ERR_X509_INVALID_DATE +
-                    MBEDTLS_ERR_ASN1_OUT_OF_DATA)) {
+                ret != (MBEDTLS_ERR_X509_INVALID_DATE +
+                        MBEDTLS_ERR_ASN1_OUT_OF_DATA)) {
             mbedtls_x509_crl_free(crl);
             return (ret);
         }
@@ -479,10 +474,10 @@ int mbedtls_x509_crl_parse_der(mbedtls_x509_crl *chain,
     }
 
     if (crl->sig_oid.len != sig_oid2.len ||
-        memcmp(crl->sig_oid.p, sig_oid2.p, crl->sig_oid.len) != 0 ||
-        sig_params1.len != sig_params2.len ||
-        (sig_params1.len != 0 &&
-         memcmp(sig_params1.p, sig_params2.p, sig_params1.len) != 0)) {
+            memcmp(crl->sig_oid.p, sig_oid2.p, crl->sig_oid.len) != 0 ||
+            sig_params1.len != sig_params2.len ||
+            (sig_params1.len != 0 &&
+             memcmp(sig_params1.p, sig_params2.p, sig_params1.len) != 0)) {
         mbedtls_x509_crl_free(crl);
         return (MBEDTLS_ERR_X509_SIG_MISMATCH);
     }
@@ -504,8 +499,7 @@ int mbedtls_x509_crl_parse_der(mbedtls_x509_crl *chain,
 /*
  * Parse one or more CRLs and add them to the chained list
  */
-int mbedtls_x509_crl_parse(mbedtls_x509_crl *chain, const unsigned char *buf, size_t buflen)
-{
+int mbedtls_x509_crl_parse(mbedtls_x509_crl *chain, const unsigned char *buf, size_t buflen) {
 #if defined(MBEDTLS_PEM_PARSE_C)
     int ret;
     size_t use_len;
@@ -564,8 +558,7 @@ int mbedtls_x509_crl_parse(mbedtls_x509_crl *chain, const unsigned char *buf, si
 /*
  * Load one or more CRLs and add them to the chained list
  */
-int mbedtls_x509_crl_parse_file(mbedtls_x509_crl *chain, const char *path)
-{
+int mbedtls_x509_crl_parse_file(mbedtls_x509_crl *chain, const char *path) {
     int ret;
     size_t n;
     unsigned char *buf;
@@ -591,8 +584,7 @@ int mbedtls_x509_crl_parse_file(mbedtls_x509_crl *chain, const char *path)
  * Return an informational string about the CRL.
  */
 int mbedtls_x509_crl_info(char *buf, size_t size, const char *prefix,
-                          const mbedtls_x509_crl *crl)
-{
+                          const mbedtls_x509_crl *crl) {
     int ret;
     size_t n;
     char *p;
@@ -664,16 +656,14 @@ int mbedtls_x509_crl_info(char *buf, size_t size, const char *prefix,
 /*
  * Initialize a CRL chain
  */
-void mbedtls_x509_crl_init(mbedtls_x509_crl *crl)
-{
+void mbedtls_x509_crl_init(mbedtls_x509_crl *crl) {
     memset(crl, 0, sizeof(mbedtls_x509_crl));
 }
 
 /*
  * Unallocate all CRL data
  */
-void mbedtls_x509_crl_free(mbedtls_x509_crl *crl)
-{
+void mbedtls_x509_crl_free(mbedtls_x509_crl *crl) {
     mbedtls_x509_crl *crl_cur = crl;
     mbedtls_x509_crl *crl_prv;
     mbedtls_x509_name *name_cur;

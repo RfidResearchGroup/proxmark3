@@ -48,8 +48,7 @@
 #include "fileutils.h"
 #include "elite_crack.h"
 
-int unitTests()
-{
+int unitTests() {
     int errors = testCipherUtils();
     errors += testMAC();
     errors += doKeyTests(0);
@@ -59,8 +58,7 @@ int unitTests()
     }
     return errors;
 }
-int showHelp()
-{
+int showHelp() {
     PrintAndLogDevice(NORMAL, "Usage: loclass [options]");
     PrintAndLogDevice(NORMAL, "Options:");
     PrintAndLogDevice(NORMAL, "-t                 Perform self-test");
@@ -77,8 +75,7 @@ int showHelp()
     return 0;
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     PrintAndLogDevice(NORMAL, "IClass Cipher version 1.2, Copyright (C) 2014 Martin Holst Swende\n");
     PrintAndLogDevice(NORMAL, "Comes with ABSOLUTELY NO WARRANTY");
     PrintAndLogDevice(NORMAL, "Released as GPLv2\n");

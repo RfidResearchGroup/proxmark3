@@ -62,8 +62,7 @@ static void chkres(int *resc, model_t **result, const poly_t divisor, const poly
 static const poly_t pzero = PZERO;
 
 model_t *
-reveng(const model_t *guess, const poly_t qpoly, int rflags, int args, const poly_t *argpolys)
-{
+reveng(const model_t *guess, const poly_t qpoly, int rflags, int args, const poly_t *argpolys) {
     /* Complete the parameters of a model by calculation or brute search. */
     poly_t *pworks, *wptr, rem, gpoly;
     model_t *result = NULL, *rptr;
@@ -159,8 +158,7 @@ requit:
 }
 
 static poly_t *
-modpol(const poly_t init, int rflags, int args, const poly_t *argpolys)
-{
+modpol(const poly_t init, int rflags, int args, const poly_t *argpolys) {
     /* Produce, in ascending length order, a list of differences
      * between the arguments in the list by summing pairs of arguments.
      * If R_HAVEI is not set in rflags, only pairs of equal length are
@@ -225,8 +223,7 @@ modpol(const poly_t init, int rflags, int args, const poly_t *argpolys)
 }
 
 static void
-engini(int *resc, model_t **result, const poly_t divisor, int flags, int args, const poly_t *argpolys)
-{
+engini(int *resc, model_t **result, const poly_t divisor, int flags, int args, const poly_t *argpolys) {
     /* Search for init values implied by the arguments.
      * Method from: Ewing, Gregory C. (March 2010).
      * "Reverse-Engineering a CRC Algorithm". Christchurch:
@@ -367,8 +364,7 @@ engini(int *resc, model_t **result, const poly_t divisor, int flags, int args, c
 }
 
 static void
-calout(int *resc, model_t **result, const poly_t divisor, const poly_t init, int flags, int args, const poly_t *argpolys)
-{
+calout(int *resc, model_t **result, const poly_t divisor, const poly_t init, int flags, int args, const poly_t *argpolys) {
     /* Calculate Xorout, check it against all the arguments and
      * add to results if consistent.
      */
@@ -406,8 +402,7 @@ calout(int *resc, model_t **result, const poly_t divisor, const poly_t init, int
 }
 
 static void
-calini(int *resc, model_t **result, const poly_t divisor, int flags, const poly_t xorout, int args, const poly_t *argpolys)
-{
+calini(int *resc, model_t **result, const poly_t divisor, int flags, const poly_t xorout, int args, const poly_t *argpolys) {
     /* Calculate Init, check it against all the arguments and add to
      * results if consistent.
      */
@@ -455,8 +450,7 @@ calini(int *resc, model_t **result, const poly_t divisor, int flags, const poly_
 }
 
 static void
-chkres(int *resc, model_t **result, const poly_t divisor, const poly_t init, int flags, const poly_t xorout, int args, const poly_t *argpolys)
-{
+chkres(int *resc, model_t **result, const poly_t divisor, const poly_t init, int flags, const poly_t xorout, int args, const poly_t *argpolys) {
     /* Checks a model against the argument list, and adds to the
      * external results table if consistent.
      * Extends the result array and updates the external pointer if

@@ -3,8 +3,7 @@
 #define T0_PCF 8 //period for the pcf7931 in us
 #define ALLOC 16
 
-size_t DemodPCF7931(uint8_t **outBlocks)
-{
+size_t DemodPCF7931(uint8_t **outBlocks) {
     uint8_t bits[256] = {0x00};
     uint8_t blocks[8][16];
     uint8_t *dest = BigBuf_get_addr();
@@ -128,8 +127,7 @@ size_t DemodPCF7931(uint8_t **outBlocks)
     return num_blocks;
 }
 
-bool IsBlock0PCF7931(uint8_t *block)
-{
+bool IsBlock0PCF7931(uint8_t *block) {
     // assuming all RFU bits are set to 0
     // if PAC is enabled password is set to 0
     if (block[7] == 0x01) {
@@ -142,8 +140,7 @@ bool IsBlock0PCF7931(uint8_t *block)
     return false;
 }
 
-bool IsBlock1PCF7931(uint8_t *block)
-{
+bool IsBlock1PCF7931(uint8_t *block) {
     // assuming all RFU bits are set to 0
     if (block[10] == 0 && block[11] == 0 && block[12] == 0 && block[13] == 0)
         if ((block[14] & 0x7f) <= 9 && block[15] <= 9)
@@ -152,8 +149,7 @@ bool IsBlock1PCF7931(uint8_t *block)
     return false;
 }
 
-void ReadPCF7931()
-{
+void ReadPCF7931() {
     int found_blocks = 0; // successfully read blocks
     int max_blocks = 8;   // readable blocks
     uint8_t memory_blocks[8][17]; // PCF content
@@ -303,8 +299,7 @@ end:
     cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
 }
 
-static void RealWritePCF7931(uint8_t *pass, uint16_t init_delay, int32_t l, int32_t p, uint8_t address, uint8_t byte, uint8_t data)
-{
+static void RealWritePCF7931(uint8_t *pass, uint16_t init_delay, int32_t l, int32_t p, uint8_t address, uint8_t byte, uint8_t data) {
     uint32_t tab[1024] = {0}; // data times frame
     uint32_t u = 0;
     uint8_t parity = 0;
@@ -386,8 +381,7 @@ static void RealWritePCF7931(uint8_t *pass, uint16_t init_delay, int32_t l, int3
    @param byte : address of the byte to write
     @param data : data to write
  */
-void WritePCF7931(uint8_t pass1, uint8_t pass2, uint8_t pass3, uint8_t pass4, uint8_t pass5, uint8_t pass6, uint8_t pass7, uint16_t init_delay, int32_t l, int32_t p, uint8_t address, uint8_t byte, uint8_t data)
-{
+void WritePCF7931(uint8_t pass1, uint8_t pass2, uint8_t pass3, uint8_t pass4, uint8_t pass5, uint8_t pass6, uint8_t pass7, uint16_t init_delay, int32_t l, int32_t p, uint8_t address, uint8_t byte, uint8_t data) {
     Dbprintf("Initialization delay : %d us", init_delay);
     Dbprintf("Offsets : %d us on the low pulses width, %d us on the low pulses positions", l, p);
     Dbprintf("Password (LSB first on each byte): %02x %02x %02x %02x %02x %02x %02x", pass1, pass2, pass3, pass4, pass5, pass6, pass7);
@@ -405,8 +399,7 @@ void WritePCF7931(uint8_t pass1, uint8_t pass2, uint8_t pass3, uint8_t pass4, ui
  * @param tab : array of the data frame
  */
 
-void SendCmdPCF7931(uint32_t *tab)
-{
+void SendCmdPCF7931(uint32_t *tab) {
     uint16_t u = 0, tempo = 0;
 
     Dbprintf("Sending data frame...");
@@ -462,8 +455,7 @@ void SendCmdPCF7931(uint32_t *tab)
  * @param l : offset on low pulse width
  * @param p : offset on low pulse positioning
  */
-bool AddBytePCF7931(uint8_t byte, uint32_t *tab, int32_t l, int32_t p)
-{
+bool AddBytePCF7931(uint8_t byte, uint32_t *tab, int32_t l, int32_t p) {
     uint32_t u;
     for (u = 0; u < 8; ++u) {
         if (byte & (1 << u)) { //bit is 1
@@ -482,8 +474,7 @@ bool AddBytePCF7931(uint8_t byte, uint32_t *tab, int32_t l, int32_t p)
  * @param l : offset on low pulse width
  * @param p : offset on low pulse positioning
  */
-bool AddBitPCF7931(bool b, uint32_t *tab, int32_t l, int32_t p)
-{
+bool AddBitPCF7931(bool b, uint32_t *tab, int32_t l, int32_t p) {
     uint8_t u = 0;
 
     //we put the cursor at the last value of the array
@@ -518,8 +509,7 @@ bool AddBitPCF7931(bool b, uint32_t *tab, int32_t l, int32_t p)
  * @param c : delay of the last high pulse
  * @param tab : array of the data frame
  */
-bool AddPatternPCF7931(uint32_t a, uint32_t b, uint32_t c, uint32_t *tab)
-{
+bool AddPatternPCF7931(uint32_t a, uint32_t b, uint32_t c, uint32_t *tab) {
     uint32_t u = 0;
     for (u = 0; tab[u] != 0; u += 3) {} //we put the cursor at the last value of the array
 

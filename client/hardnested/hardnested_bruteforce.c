@@ -89,8 +89,7 @@ static uint32_t keys_found = 0;
 static uint64_t num_keys_tested;
 static uint64_t found_bs_key = 0;
 
-inline uint8_t trailing_zeros(uint8_t byte)
-{
+inline uint8_t trailing_zeros(uint8_t byte) {
     static const uint8_t trailing_zeros_LUT[256] = {
         8, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0,
         4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0,
@@ -114,8 +113,7 @@ inline uint8_t trailing_zeros(uint8_t byte)
 }
 
 
-bool verify_key(uint32_t cuid, noncelist_t *nonces, uint8_t *best_first_bytes, uint32_t odd, uint32_t even)
-{
+bool verify_key(uint32_t cuid, noncelist_t *nonces, uint8_t *best_first_bytes, uint32_t odd, uint32_t even) {
     struct Crypto1State pcs;
     for (uint16_t test_first_byte = 1; test_first_byte < 256; test_first_byte++) {
         noncelistentry_t *test_nonce = nonces[best_first_bytes[test_first_byte]].first;
@@ -144,8 +142,7 @@ static void *
 __attribute__((force_align_arg_pointer))
 #endif
 #endif
-crack_states_thread(void *x)
-{
+crack_states_thread(void *x) {
     struct arg {
         bool silent;
         int thread_ID;
@@ -193,8 +190,7 @@ crack_states_thread(void *x)
 }
 
 
-void prepare_bf_test_nonces(noncelist_t *nonces, uint8_t best_first_byte)
-{
+void prepare_bf_test_nonces(noncelist_t *nonces, uint8_t best_first_byte) {
     // we do bitsliced brute forcing with best_first_bytes[0] only.
     // Extract the corresponding 2nd bytes
     noncelistentry_t *test_nonce = nonces[best_first_byte].first;
@@ -221,13 +217,13 @@ void prepare_bf_test_nonces(noncelist_t *nonces, uint8_t best_first_byte)
             if (n2 != n1) {
                 for (uint16_t n3 = 0; n3 < nonces_to_bruteforce; n3++) {
                     if ((n3 != n2 && n3 != n1) || nonces_to_bruteforce < 3
-                        // && trailing_zeros(bf_test_nonce_2nd_byte[n1] ^ bf_test_nonce_2nd_byte[n2])
-                        // > trailing_zeros(bf_test_nonce_2nd_byte[n2] ^ bf_test_nonce_2nd_byte[n3])
+                            // && trailing_zeros(bf_test_nonce_2nd_byte[n1] ^ bf_test_nonce_2nd_byte[n2])
+                            // > trailing_zeros(bf_test_nonce_2nd_byte[n2] ^ bf_test_nonce_2nd_byte[n3])
                        ) {
                         for (uint16_t n4 = 0; n4 < nonces_to_bruteforce; n4++) {
                             if ((n4 != n3 && n4 != n2 && n4 != n1) || nonces_to_bruteforce < 4
-                                // && trailing_zeros(bf_test_nonce_2nd_byte[n2] ^ bf_test_nonce_2nd_byte[n3])
-                                // > trailing_zeros(bf_test_nonce_2nd_byte[n3] ^ bf_test_nonce_2nd_byte[n4])
+                                    // && trailing_zeros(bf_test_nonce_2nd_byte[n2] ^ bf_test_nonce_2nd_byte[n3])
+                                    // > trailing_zeros(bf_test_nonce_2nd_byte[n3] ^ bf_test_nonce_2nd_byte[n4])
                                ) {
                                 int sum = nonces_to_bruteforce > 1 ? trailing_zeros(bf_test_nonce_2nd_byte[n1] ^ bf_test_nonce_2nd_byte[n2]) : 0.0
                                           + nonces_to_bruteforce > 2 ? trailing_zeros(bf_test_nonce_2nd_byte[n2] ^ bf_test_nonce_2nd_byte[n3]) : 0.0
@@ -265,8 +261,7 @@ void prepare_bf_test_nonces(noncelist_t *nonces, uint8_t best_first_byte)
 
 
 #if defined (WRITE_BENCH_FILE)
-static void write_benchfile(statelist_t *candidates)
-{
+static void write_benchfile(statelist_t *candidates) {
 
     printf("Writing brute force benchmark data...");
     FILE *benchfile = fopen(TEST_BENCH_FILENAME, "wb");
@@ -291,8 +286,7 @@ static void write_benchfile(statelist_t *candidates)
 #endif
 
 
-bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint32_t num_acquired_nonces, uint64_t maximum_states, noncelist_t *nonces, uint8_t *best_first_bytes, uint64_t *foundkey)
-{
+bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint32_t num_acquired_nonces, uint64_t maximum_states, noncelist_t *nonces, uint8_t *best_first_bytes, uint64_t *foundkey) {
 #if defined (WRITE_BENCH_FILE)
     write_benchfile(candidates);
 #endif
@@ -357,8 +351,7 @@ bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint
 }
 
 
-static bool read_bench_data(statelist_t *test_candidates)
-{
+static bool read_bench_data(statelist_t *test_candidates) {
 
     size_t bytes_read = 0;
     uint32_t temp = 0;
@@ -429,8 +422,7 @@ static bool read_bench_data(statelist_t *test_candidates)
 }
 
 
-float brute_force_benchmark()
-{
+float brute_force_benchmark() {
     statelist_t test_candidates[NUM_BRUTE_FORCE_THREADS];
 
     test_candidates[0].states[ODD_STATE] = malloc((TEST_BENCH_SIZE + 1) * sizeof(uint32_t));

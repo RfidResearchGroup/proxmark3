@@ -26,8 +26,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_flashmem_spibaud(void)
-{
+int usage_flashmem_spibaud(void) {
     PrintAndLogEx(NORMAL, "Usage:  mem spibaud [h] <baudrate>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "           h    this help");
@@ -41,8 +40,7 @@ int usage_flashmem_spibaud(void)
     return 0;
 }
 
-int usage_flashmem_read(void)
-{
+int usage_flashmem_read(void) {
     PrintAndLogEx(NORMAL, "Read flash memory on device");
     PrintAndLogEx(NORMAL, "Usage:  mem read o <offset> l <len>");
     PrintAndLogEx(NORMAL, "  o <offset>    :      offset in memory");
@@ -53,8 +51,7 @@ int usage_flashmem_read(void)
     PrintAndLogEx(NORMAL, "        mem read o 1024 l 10"); // read 10 bytes starting at offset 1024
     return 0;
 }
-int usage_flashmem_load(void)
-{
+int usage_flashmem_load(void) {
     PrintAndLogEx(NORMAL, "Loads binary file into flash memory on device");
     PrintAndLogEx(NORMAL, "Usage:  mem load o <offset> f <file name> m t i");
     PrintAndLogEx(NORMAL, "  o <offset>    :      offset in memory");
@@ -71,8 +68,7 @@ int usage_flashmem_load(void)
     PrintAndLogEx(NORMAL, "        mem load f default_iclass_keys i");
     return 0;
 }
-int usage_flashmem_save(void)
-{
+int usage_flashmem_save(void) {
     PrintAndLogEx(NORMAL, "Saves flash memory on device into the file");
     PrintAndLogEx(NORMAL, " Usage:  mem save o <offset> l <length> f <file name>");
     PrintAndLogEx(NORMAL, "  o <offset>    :      offset in memory");
@@ -85,8 +81,7 @@ int usage_flashmem_save(void)
     PrintAndLogEx(NORMAL, "        mem save f myfile o 1024 l 4096");   // downlowd 4096 bytes from offset 1024 to file myfile
     return 0;
 }
-int usage_flashmem_wipe(void)
-{
+int usage_flashmem_wipe(void) {
 
     PrintAndLogEx(WARNING, "[OBS] use with caution.");
     PrintAndLogEx(NORMAL, "Wipe flash memory on device, which fills memory with 0xFF\n");
@@ -100,8 +95,7 @@ int usage_flashmem_wipe(void)
     PrintAndLogEx(NORMAL, "        mem wipe p 0");  // wipes first page.
     return 0;
 }
-int usage_flashmem_info(void)
-{
+int usage_flashmem_info(void) {
     PrintAndLogEx(NORMAL, "Collect signature and verify it from flash memory\n");
     PrintAndLogEx(NORMAL, " Usage:  mem info [h|s|w]");
     PrintAndLogEx(NORMAL, "  s    :      create a signature");
@@ -113,8 +107,7 @@ int usage_flashmem_info(void)
     return 0;
 }
 
-int CmdFlashMemRead(const char *Cmd)
-{
+int CmdFlashMemRead(const char *Cmd) {
 
     uint8_t cmdp = 0;
     bool errors = false;
@@ -153,8 +146,7 @@ int CmdFlashMemRead(const char *Cmd)
     return 0;
 }
 
-int CmdFlashmemSpiBaudrate(const char *Cmd)
-{
+int CmdFlashmemSpiBaudrate(const char *Cmd) {
 
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) < 1 || ctmp == 'h') return usage_flashmem_spibaud();
@@ -166,8 +158,7 @@ int CmdFlashmemSpiBaudrate(const char *Cmd)
     return 0;
 }
 
-int CmdFlashMemLoad(const char *Cmd)
-{
+int CmdFlashMemLoad(const char *Cmd) {
 
     uint32_t start_index = 0;
     char filename[FILE_PATH_SIZE] = {0};
@@ -304,8 +295,7 @@ int CmdFlashMemLoad(const char *Cmd)
     PrintAndLogEx(SUCCESS, "Wrote %u bytes to offset %u", datalen, start_index);
     return 0;
 }
-int CmdFlashMemSave(const char *Cmd)
-{
+int CmdFlashMemSave(const char *Cmd) {
 
     char filename[FILE_PATH_SIZE] = {0};
     uint8_t cmdp = 0;
@@ -361,8 +351,7 @@ int CmdFlashMemSave(const char *Cmd)
     free(dump);
     return 0;
 }
-int CmdFlashMemWipe(const char *Cmd)
-{
+int CmdFlashMemWipe(const char *Cmd) {
 
     uint8_t cmdp = 0;
     bool errors = false;
@@ -411,8 +400,7 @@ int CmdFlashMemWipe(const char *Cmd)
 
     return 0;
 }
-int CmdFlashMemInfo(const char *Cmd)
-{
+int CmdFlashMemInfo(const char *Cmd) {
 
     uint8_t sha_hash[20] = {0};
     mbedtls_rsa_context rsa;
@@ -612,15 +600,13 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdFlashMem(const char *Cmd)
-{
+int CmdFlashMem(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }

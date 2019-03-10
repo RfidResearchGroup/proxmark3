@@ -27,8 +27,7 @@ from the client to view the stored quadlets.
 // Maximum number of auth attempts per standalone session
 #define MAX_PWDS_PER_SESSION 64
 
-uint8_t FindOffsetInFlash()
-{
+uint8_t FindOffsetInFlash() {
     uint8_t mem[4] = { 0x00, 0x00, 0x00, 0x00 };
     uint8_t eom[4] = { 0xFF, 0xFF, 0xFF, 0xFF };
     uint8_t memcnt = 0;
@@ -44,8 +43,7 @@ uint8_t FindOffsetInFlash()
     return 0; // wrap-around
 }
 
-void EraseMemory()
-{
+void EraseMemory() {
     if (!FlashInit()) {
         return;
     }
@@ -60,8 +58,7 @@ void EraseMemory()
 }
 
 // This is actually copied from SniffIso14443a
-void RAMFUNC SniffAndStore(uint8_t param)
-{
+void RAMFUNC SniffAndStore(uint8_t param) {
 
     iso14443a_setup(FPGA_HF_ISO14443A_SNIFFER);
 
@@ -284,8 +281,7 @@ void RAMFUNC SniffAndStore(uint8_t param)
     }
 }
 
-void RunMod()
-{
+void RunMod() {
 
     StandAloneMode();
 

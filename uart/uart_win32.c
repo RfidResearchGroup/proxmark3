@@ -48,8 +48,7 @@ typedef struct {
     COMMTIMEOUTS ct;  // Serial port time-out configuration
 } serial_port_windows;
 
-serial_port uart_open(const char *pcPortName)
-{
+serial_port uart_open(const char *pcPortName) {
     char acPortName[255];
     serial_port_windows *sp = calloc(sizeof(serial_port_windows), sizeof(uint8_t));
 
@@ -128,15 +127,13 @@ serial_port uart_open(const char *pcPortName)
     return sp;
 }
 
-void uart_close(const serial_port sp)
-{
+void uart_close(const serial_port sp) {
     if (((serial_port_windows *)sp)->hPort != INVALID_HANDLE_VALUE)
         CloseHandle(((serial_port_windows *)sp)->hPort);
     free(sp);
 }
 
-bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed)
-{
+bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed) {
     serial_port_windows *spw;
 
     // Set port speed (Input and Output)
@@ -160,8 +157,7 @@ bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed)
     return result;
 }
 
-uint32_t uart_get_speed(const serial_port sp)
-{
+uint32_t uart_get_speed(const serial_port sp) {
     const serial_port_windows *spw = (serial_port_windows *)sp;
     if (!GetCommState(spw->hPort, (serial_port) & spw->dcb))
         return spw->dcb.BaudRate;
@@ -169,13 +165,11 @@ uint32_t uart_get_speed(const serial_port sp)
     return 0;
 }
 
-bool uart_receive(const serial_port sp, uint8_t *p_rx, size_t pszMaxRxLen, size_t *len)
-{
+bool uart_receive(const serial_port sp, uint8_t *p_rx, size_t pszMaxRxLen, size_t *len) {
     return ReadFile(((serial_port_windows *)sp)->hPort, p_rx, pszMaxRxLen, (LPDWORD)len, NULL);
 }
 
-bool uart_send(const serial_port sp, const uint8_t *p_tx, const size_t len)
-{
+bool uart_send(const serial_port sp, const uint8_t *p_tx, const size_t len) {
     DWORD txlen = 0;
     return WriteFile(((serial_port_windows *)sp)->hPort, p_tx, len, &txlen, NULL);
 }

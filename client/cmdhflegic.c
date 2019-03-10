@@ -13,8 +13,7 @@ static int CmdHelp(const char *Cmd);
 
 #define MAX_LENGTH 1024
 
-int usage_legic_calccrc(void)
-{
+int usage_legic_calccrc(void) {
     PrintAndLogEx(NORMAL, "Calculates the legic crc8/crc16 on the given data.");
     PrintAndLogEx(NORMAL, "There must be an even number of hexsymbols as input.");
     PrintAndLogEx(NORMAL, "Usage:  hf legic crc [h] d <data> u <uidcrc> c <8|16>");
@@ -29,8 +28,7 @@ int usage_legic_calccrc(void)
     PrintAndLogEx(NORMAL, "      hf legic crc d deadbeef1122 u 9A c 16");
     return 0;
 }
-int usage_legic_rdmem(void)
-{
+int usage_legic_rdmem(void) {
     PrintAndLogEx(NORMAL, "Read data from a legic tag.");
     PrintAndLogEx(NORMAL, "Usage:  hf legic rdmem [h] <offset> <length> <IV>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -45,8 +43,7 @@ int usage_legic_rdmem(void)
     PrintAndLogEx(NORMAL, "      hf legic rdmem 0 100 55    - reads 0x100 bytes with IV 0x55");
     return 0;
 }
-int usage_legic_sim(void)
-{
+int usage_legic_sim(void) {
     PrintAndLogEx(NORMAL, "Simulates a LEGIC Prime tag. MIM22, MIM256, MIM1024 types can be emulated");
     PrintAndLogEx(NORMAL, "Use ELOAD/ESAVE to upload a dump into emulator memory");
     PrintAndLogEx(NORMAL, "Usage:  hf legic sim [h] <tagtype>");
@@ -60,8 +57,7 @@ int usage_legic_sim(void)
     PrintAndLogEx(NORMAL, "      hf legic sim 2");
     return 0;
 }
-int usage_legic_write(void)
-{
+int usage_legic_write(void) {
     PrintAndLogEx(NORMAL, "Write data to a LEGIC Prime tag. It autodetects tagsize to make sure size");
     PrintAndLogEx(NORMAL, "Usage:  hf legic write [h] o <offset> d <data (hex symbols)>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -74,8 +70,7 @@ int usage_legic_write(void)
     PrintAndLogEx(NORMAL, "      hf legic write o 10 d 11223344    - Write 0x11223344 starting from offset 0x10");
     return 0;
 }
-int usage_legic_reader(void)
-{
+int usage_legic_reader(void) {
     PrintAndLogEx(NORMAL, "Read UID and type information from a legic tag.");
     PrintAndLogEx(NORMAL, "Usage:  hf legic reader [h]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -85,8 +80,7 @@ int usage_legic_reader(void)
     PrintAndLogEx(NORMAL, "      hf legic reader");
     return 0;
 }
-int usage_legic_info(void)
-{
+int usage_legic_info(void) {
     PrintAndLogEx(NORMAL, "Reads information from a legic prime tag.");
     PrintAndLogEx(NORMAL, "Shows systemarea, user areas etc");
     PrintAndLogEx(NORMAL, "Usage:  hf legic info [h]");
@@ -97,8 +91,7 @@ int usage_legic_info(void)
     PrintAndLogEx(NORMAL, "      hf legic info");
     return 0;
 }
-int usage_legic_dump(void)
-{
+int usage_legic_dump(void) {
     PrintAndLogEx(NORMAL, "Reads all pages from LEGIC Prime MIM22, MIM256, MIM1024");
     PrintAndLogEx(NORMAL, "and saves binary dump into the file `filename.bin` or `cardUID.bin`");
     PrintAndLogEx(NORMAL, "It autodetects card type.\n");
@@ -112,8 +105,7 @@ int usage_legic_dump(void)
     PrintAndLogEx(NORMAL, "      hf legic dump o myfile");
     return 0;
 }
-int usage_legic_restore(void)
-{
+int usage_legic_restore(void) {
     PrintAndLogEx(NORMAL, "Reads binary file and it autodetects card type and verifies that the file has the same size");
     PrintAndLogEx(NORMAL, "Then write the data back to card. All bytes except the first 7bytes [UID(4) MCC(1) DCF(2)]\n");
     PrintAndLogEx(NORMAL, "Usage:   hf legic restore [h] i <filename w/o .bin>");
@@ -125,8 +117,7 @@ int usage_legic_restore(void)
     PrintAndLogEx(NORMAL, "      hf legic restore i myfile");
     return 0;
 }
-int usage_legic_eload(void)
-{
+int usage_legic_eload(void) {
     PrintAndLogEx(NORMAL, "It loads binary dump from the file `filename.bin`");
     PrintAndLogEx(NORMAL, "Usage:  hf legic eload [h] [card memory] <file name w/o `.bin`>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -140,8 +131,7 @@ int usage_legic_eload(void)
     PrintAndLogEx(NORMAL, "      hf legic eload 2 myfile");
     return 0;
 }
-int usage_legic_esave(void)
-{
+int usage_legic_esave(void) {
     PrintAndLogEx(NORMAL, "It saves binary dump into the file `filename.bin` or `cardID.bin`");
     PrintAndLogEx(NORMAL, " Usage:  hf legic esave [h] [card memory] [file name w/o `.bin`]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -155,8 +145,7 @@ int usage_legic_esave(void)
     PrintAndLogEx(NORMAL, "      hf legic esave 2 myfile");
     return 0;
 }
-int usage_legic_wipe(void)
-{
+int usage_legic_wipe(void) {
     PrintAndLogEx(NORMAL, "Fills a legic tag memory with zeros. From byte7 and to the end.");
     PrintAndLogEx(NORMAL, " Usage:  hf legic wipe [h]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -171,8 +160,7 @@ int usage_legic_wipe(void)
  *  This is based on information given in the talk held
  *  by Henryk Ploetz and Karsten Nohl at 26c3
  */
-int CmdLegicInfo(const char *Cmd)
-{
+int CmdLegicInfo(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_legic_info();
@@ -481,8 +469,7 @@ out:
 // params:
 // offset in data memory
 // number of bytes to read
-int CmdLegicRdmem(const char *Cmd)
-{
+int CmdLegicRdmem(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_legic_rdmem();
@@ -516,8 +503,7 @@ int CmdLegicRdmem(const char *Cmd)
     return status;
 }
 
-int CmdLegicRfSim(const char *Cmd)
-{
+int CmdLegicRfSim(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_legic_sim();
@@ -529,8 +515,7 @@ int CmdLegicRfSim(const char *Cmd)
     return 0;
 }
 
-int CmdLegicRfWrite(const char *Cmd)
-{
+int CmdLegicRfWrite(const char *Cmd) {
 
     uint8_t *data = NULL;
     uint8_t cmdp = 0;
@@ -670,8 +655,7 @@ int CmdLegicRfWrite(const char *Cmd)
     return 0;
 }
 
-int CmdLegicCalcCrc(const char *Cmd)
-{
+int CmdLegicCalcCrc(const char *Cmd) {
 
     uint8_t *data = NULL;
     uint8_t cmdp = 0, uidcrc = 0, type = 0;
@@ -753,8 +737,7 @@ int CmdLegicCalcCrc(const char *Cmd)
     return 0;
 }
 
-int legic_read_mem(uint32_t offset, uint32_t len, uint32_t iv, uint8_t *out, uint16_t *outlen)
-{
+int legic_read_mem(uint32_t offset, uint32_t len, uint32_t iv, uint8_t *out, uint16_t *outlen) {
 
     legic_chk_iv(&iv);
 
@@ -793,8 +776,7 @@ int legic_read_mem(uint32_t offset, uint32_t len, uint32_t iv, uint8_t *out, uin
     return 0;
 }
 
-int legic_print_type(uint32_t tagtype, uint8_t spaces)
-{
+int legic_print_type(uint32_t tagtype, uint8_t spaces) {
     char spc[11] = "          ";
     spc[10] = 0x00;
     char *spacer = spc + (10 - spaces);
@@ -809,8 +791,7 @@ int legic_print_type(uint32_t tagtype, uint8_t spaces)
         PrintAndLogEx(INFO, "%sTYPE : Unknown %06x", spacer, tagtype);
     return 0;
 }
-int legic_get_type(legic_card_select_t *card)
-{
+int legic_get_type(legic_card_select_t *card) {
 
     if (card == NULL) return 1;
 
@@ -828,8 +809,7 @@ int legic_get_type(legic_card_select_t *card)
     memcpy(card, (legic_card_select_t *)resp.d.asBytes, sizeof(legic_card_select_t));
     return 0;
 }
-void legic_chk_iv(uint32_t *iv)
-{
+void legic_chk_iv(uint32_t *iv) {
     if ((*iv & 0x7F) != *iv) {
         *iv &= 0x7F;
         PrintAndLogEx(INFO, "Truncating IV to 7bits, %u", *iv);
@@ -840,8 +820,7 @@ void legic_chk_iv(uint32_t *iv)
         PrintAndLogEx(INFO, "LSB of IV must be SET %u", *iv);
     }
 }
-void legic_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes)
-{
+void legic_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
     size_t len = 0;
 
     UsbCommand c = {CMD_LEGIC_ESET, {0, 0, 0}};
@@ -856,8 +835,7 @@ void legic_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes)
     }
 }
 
-int HFLegicReader(const char *Cmd, bool verbose)
-{
+int HFLegicReader(const char *Cmd, bool verbose) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_legic_reader();
@@ -879,13 +857,11 @@ int HFLegicReader(const char *Cmd, bool verbose)
     legic_print_type(card.cardsize, 0);
     return 0;
 }
-int CmdLegicReader(const char *Cmd)
-{
+int CmdLegicReader(const char *Cmd) {
     return HFLegicReader(Cmd, true);
 }
 
-int CmdLegicDump(const char *Cmd)
-{
+int CmdLegicDump(const char *Cmd) {
 
     FILE *f;
     char filename[FILE_PATH_SIZE] = {0x00};
@@ -990,8 +966,7 @@ int CmdLegicDump(const char *Cmd)
     return 0;
 }
 
-int CmdLegicRestore(const char *Cmd)
-{
+int CmdLegicRestore(const char *Cmd) {
 
     FILE *f;
     char filename[FILE_PATH_SIZE] = {0x00};
@@ -1118,8 +1093,7 @@ int CmdLegicRestore(const char *Cmd)
     return 0;
 }
 
-int CmdLegicELoad(const char *Cmd)
-{
+int CmdLegicELoad(const char *Cmd) {
     FILE *f;
     char filename[FILE_PATH_SIZE];
     char *fnameptr = filename;
@@ -1189,8 +1163,7 @@ int CmdLegicELoad(const char *Cmd)
     return 0;
 }
 
-int CmdLegicESave(const char *Cmd)
-{
+int CmdLegicESave(const char *Cmd) {
 
     char filename[FILE_PATH_SIZE];
     char *fnameptr = filename;
@@ -1250,8 +1223,7 @@ int CmdLegicESave(const char *Cmd)
     return 0;
 }
 
-int CmdLegicWipe(const char *Cmd)
-{
+int CmdLegicWipe(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
 
@@ -1314,8 +1286,7 @@ int CmdLegicWipe(const char *Cmd)
     return 0;
 }
 
-int CmdLegicList(const char *Cmd)
-{
+int CmdLegicList(const char *Cmd) {
     CmdTraceList("legic");
     return 0;
 }
@@ -1337,15 +1308,13 @@ static command_t CommandTable[] =  {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdHFLegic(const char *Cmd)
-{
+int CmdHFLegic(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }

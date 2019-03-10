@@ -35,13 +35,11 @@ struct buffer {
     char *data;
 };
 
-static int dump_to_strbuffer(const char *buffer, size_t size, void *data)
-{
+static int dump_to_strbuffer(const char *buffer, size_t size, void *data) {
     return strbuffer_append_bytes((strbuffer_t *)data, buffer, size);
 }
 
-static int dump_to_buffer(const char *buffer, size_t size, void *data)
-{
+static int dump_to_buffer(const char *buffer, size_t size, void *data) {
     struct buffer *buf = (struct buffer *)data;
 
     if (buf->used + size <= buf->size)
@@ -51,16 +49,14 @@ static int dump_to_buffer(const char *buffer, size_t size, void *data)
     return 0;
 }
 
-static int dump_to_file(const char *buffer, size_t size, void *data)
-{
+static int dump_to_file(const char *buffer, size_t size, void *data) {
     FILE *dest = (FILE *)data;
     if (fwrite(buffer, size, 1, dest) != 1)
         return -1;
     return 0;
 }
 
-static int dump_to_fd(const char *buffer, size_t size, void *data)
-{
+static int dump_to_fd(const char *buffer, size_t size, void *data) {
 #ifdef HAVE_UNISTD_H
     int *dest = (int *)data;
     if (write(*dest, buffer, size) == (ssize_t)size)
@@ -72,8 +68,7 @@ static int dump_to_fd(const char *buffer, size_t size, void *data)
 /* 32 spaces (the maximum indentation size) */
 static const char whitespace[] = "                                ";
 
-static int dump_indent(size_t flags, int depth, int space, json_dump_callback_t dump, void *data)
-{
+static int dump_indent(size_t flags, int depth, int space, json_dump_callback_t dump, void *data) {
     if (FLAGS_TO_INDENT(flags) > 0) {
         unsigned int ws_count = FLAGS_TO_INDENT(flags), n_spaces = depth * ws_count;
 
@@ -94,8 +89,7 @@ static int dump_indent(size_t flags, int depth, int space, json_dump_callback_t 
     return 0;
 }
 
-static int dump_string(const char *str, size_t len, json_dump_callback_t dump, void *data, size_t flags)
-{
+static int dump_string(const char *str, size_t len, json_dump_callback_t dump, void *data, size_t flags) {
     const char *pos, *end, *lim;
     int32_t codepoint = 0;
 
@@ -197,13 +191,11 @@ static int dump_string(const char *str, size_t len, json_dump_callback_t dump, v
     return dump("\"", 1, data);
 }
 
-static int compare_keys(const void *key1, const void *key2)
-{
+static int compare_keys(const void *key1, const void *key2) {
     return strcmp(*(const char **)key1, *(const char **)key2);
 }
 
-static int loop_check(hashtable_t *parents, const json_t *json, char *key, size_t key_size)
-{
+static int loop_check(hashtable_t *parents, const json_t *json, char *key, size_t key_size) {
     snprintf(key, key_size, "%p", json);
     if (hashtable_get(parents, key))
         return -1;
@@ -212,8 +204,7 @@ static int loop_check(hashtable_t *parents, const json_t *json, char *key, size_
 }
 
 static int do_dump(const json_t *json, size_t flags, int depth,
-                   hashtable_t *parents, json_dump_callback_t dump, void *data)
-{
+                   hashtable_t *parents, json_dump_callback_t dump, void *data) {
     int embed = flags & JSON_EMBED;
 
     flags &= ~JSON_EMBED;
@@ -288,7 +279,7 @@ static int do_dump(const json_t *json, size_t flags, int depth,
 
                 if (i < n - 1) {
                     if (dump(",", 1, data) ||
-                        dump_indent(flags, depth + 1, 1, dump, data))
+                            dump_indent(flags, depth + 1, 1, dump, data))
                         return -1;
                 } else {
                     if (dump_indent(flags, depth, 0, dump, data))
@@ -359,14 +350,14 @@ static int do_dump(const json_t *json, size_t flags, int depth,
 
                     dump_string(key, strlen(key), dump, data, flags);
                     if (dump(separator, separator_length, data) ||
-                        do_dump(value, flags, depth + 1, parents, dump, data)) {
+                            do_dump(value, flags, depth + 1, parents, dump, data)) {
                         jsonp_free(keys);
                         return -1;
                     }
 
                     if (i < size - 1) {
                         if (dump(",", 1, data) ||
-                            dump_indent(flags, depth + 1, 1, dump, data)) {
+                                dump_indent(flags, depth + 1, 1, dump, data)) {
                             jsonp_free(keys);
                             return -1;
                         }
@@ -388,13 +379,13 @@ static int do_dump(const json_t *json, size_t flags, int depth,
 
                     dump_string(key, strlen(key), dump, data, flags);
                     if (dump(separator, separator_length, data) ||
-                        do_dump(json_object_iter_value(iter), flags, depth + 1,
-                                parents, dump, data))
+                            do_dump(json_object_iter_value(iter), flags, depth + 1,
+                                    parents, dump, data))
                         return -1;
 
                     if (next) {
                         if (dump(",", 1, data) ||
-                            dump_indent(flags, depth + 1, 1, dump, data))
+                                dump_indent(flags, depth + 1, 1, dump, data))
                             return -1;
                     } else {
                         if (dump_indent(flags, depth, 0, dump, data))
@@ -415,8 +406,7 @@ static int do_dump(const json_t *json, size_t flags, int depth,
     }
 }
 
-char *json_dumps(const json_t *json, size_t flags)
-{
+char *json_dumps(const json_t *json, size_t flags) {
     strbuffer_t strbuff;
     char *result;
 
@@ -432,8 +422,7 @@ char *json_dumps(const json_t *json, size_t flags)
     return result;
 }
 
-size_t json_dumpb(const json_t *json, char *buffer, size_t size, size_t flags)
-{
+size_t json_dumpb(const json_t *json, char *buffer, size_t size, size_t flags) {
     struct buffer buf = { size, 0, buffer };
 
     if (json_dump_callback(json, dump_to_buffer, (void *)&buf, flags))
@@ -442,18 +431,15 @@ size_t json_dumpb(const json_t *json, char *buffer, size_t size, size_t flags)
     return buf.used;
 }
 
-int json_dumpf(const json_t *json, FILE *output, size_t flags)
-{
+int json_dumpf(const json_t *json, FILE *output, size_t flags) {
     return json_dump_callback(json, dump_to_file, (void *)output, flags);
 }
 
-int json_dumpfd(const json_t *json, int output, size_t flags)
-{
+int json_dumpfd(const json_t *json, int output, size_t flags) {
     return json_dump_callback(json, dump_to_fd, (void *)&output, flags);
 }
 
-int json_dump_file(const json_t *json, const char *path, size_t flags)
-{
+int json_dump_file(const json_t *json, const char *path, size_t flags) {
     int result;
 
     FILE *output = fopen(path, "w");
@@ -468,8 +454,7 @@ int json_dump_file(const json_t *json, const char *path, size_t flags)
     return result;
 }
 
-int json_dump_callback(const json_t *json, json_dump_callback_t callback, void *data, size_t flags)
-{
+int json_dump_callback(const json_t *json, json_dump_callback_t callback, void *data, size_t flags) {
     int res;
     hashtable_t parents_set;
 

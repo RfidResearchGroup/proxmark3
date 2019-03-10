@@ -75,8 +75,7 @@ static const unsigned char base64_dec_map[128] = {
  * Encode a buffer into base64 format
  */
 int mbedtls_base64_encode(unsigned char *dst, size_t dlen, size_t *olen,
-                          const unsigned char *src, size_t slen)
-{
+                          const unsigned char *src, size_t slen) {
     size_t i, n;
     int C1, C2, C3;
     unsigned char *p;
@@ -137,8 +136,7 @@ int mbedtls_base64_encode(unsigned char *dst, size_t dlen, size_t *olen,
  * Decode a base64-formatted buffer
  */
 int mbedtls_base64_decode(unsigned char *dst, size_t dlen, size_t *olen,
-                          const unsigned char *src, size_t slen)
-{
+                          const unsigned char *src, size_t slen) {
     size_t i, n;
     uint32_t j, x;
     unsigned char *p;
@@ -157,7 +155,7 @@ int mbedtls_base64_decode(unsigned char *dst, size_t dlen, size_t *olen,
             break;
 
         if ((slen - i) >= 2 &&
-            src[i] == '\r' && src[i + 1] == '\n')
+                src[i] == '\r' && src[i + 1] == '\n')
             continue;
 
         if (src[i] == '\n')
@@ -236,8 +234,7 @@ static const unsigned char base64_test_enc[] =
 /*
  * Checkup routine
  */
-int mbedtls_base64_self_test(int verbose)
-{
+int mbedtls_base64_self_test(int verbose) {
     size_t len;
     const unsigned char *src;
     unsigned char buffer[128];
@@ -248,7 +245,7 @@ int mbedtls_base64_self_test(int verbose)
     src = base64_test_dec;
 
     if (mbedtls_base64_encode(buffer, sizeof(buffer), &len, src, 64) != 0 ||
-        memcmp(base64_test_enc, buffer, 88) != 0) {
+            memcmp(base64_test_enc, buffer, 88) != 0) {
         if (verbose != 0)
             mbedtls_printf("failed\n");
 
@@ -261,7 +258,7 @@ int mbedtls_base64_self_test(int verbose)
     src = base64_test_enc;
 
     if (mbedtls_base64_decode(buffer, sizeof(buffer), &len, src, 88) != 0 ||
-        memcmp(base64_test_dec, buffer, 64) != 0) {
+            memcmp(base64_test_dec, buffer, 64) != 0) {
         if (verbose != 0)
             mbedtls_printf("failed\n");
 

@@ -76,8 +76,7 @@ static const uint32_t P[MBEDTLS_BLOWFISH_ROUNDS + 2] = {
 /* declarations of data at the end of this file */
 static const uint32_t S[4][256];
 
-static uint32_t F(mbedtls_blowfish_context *ctx, uint32_t x)
-{
+static uint32_t F(mbedtls_blowfish_context *ctx, uint32_t x) {
     unsigned short a, b, c, d;
     uint32_t  y;
 
@@ -95,8 +94,7 @@ static uint32_t F(mbedtls_blowfish_context *ctx, uint32_t x)
     return (y);
 }
 
-static void blowfish_enc(mbedtls_blowfish_context *ctx, uint32_t *xl, uint32_t *xr)
-{
+static void blowfish_enc(mbedtls_blowfish_context *ctx, uint32_t *xl, uint32_t *xr) {
     uint32_t  Xl, Xr, temp;
     short i;
 
@@ -123,8 +121,7 @@ static void blowfish_enc(mbedtls_blowfish_context *ctx, uint32_t *xl, uint32_t *
     *xr = Xr;
 }
 
-static void blowfish_dec(mbedtls_blowfish_context *ctx, uint32_t *xl, uint32_t *xr)
-{
+static void blowfish_dec(mbedtls_blowfish_context *ctx, uint32_t *xl, uint32_t *xr) {
     uint32_t  Xl, Xr, temp;
     short i;
 
@@ -151,13 +148,11 @@ static void blowfish_dec(mbedtls_blowfish_context *ctx, uint32_t *xl, uint32_t *
     *xr = Xr;
 }
 
-void mbedtls_blowfish_init(mbedtls_blowfish_context *ctx)
-{
+void mbedtls_blowfish_init(mbedtls_blowfish_context *ctx) {
     memset(ctx, 0, sizeof(mbedtls_blowfish_context));
 }
 
-void mbedtls_blowfish_free(mbedtls_blowfish_context *ctx)
-{
+void mbedtls_blowfish_free(mbedtls_blowfish_context *ctx) {
     if (ctx == NULL)
         return;
 
@@ -168,13 +163,12 @@ void mbedtls_blowfish_free(mbedtls_blowfish_context *ctx)
  * Blowfish key schedule
  */
 int mbedtls_blowfish_setkey(mbedtls_blowfish_context *ctx, const unsigned char *key,
-                            unsigned int keybits)
-{
+                            unsigned int keybits) {
     unsigned int i, j, k;
     uint32_t data, datal, datar;
 
     if (keybits < MBEDTLS_BLOWFISH_MIN_KEY_BITS || keybits > MBEDTLS_BLOWFISH_MAX_KEY_BITS ||
-        (keybits % 8)) {
+            (keybits % 8)) {
         return (MBEDTLS_ERR_BLOWFISH_INVALID_KEY_LENGTH);
     }
 
@@ -221,8 +215,7 @@ int mbedtls_blowfish_setkey(mbedtls_blowfish_context *ctx, const unsigned char *
 int mbedtls_blowfish_crypt_ecb(mbedtls_blowfish_context *ctx,
                                int mode,
                                const unsigned char input[MBEDTLS_BLOWFISH_BLOCKSIZE],
-                               unsigned char output[MBEDTLS_BLOWFISH_BLOCKSIZE])
-{
+                               unsigned char output[MBEDTLS_BLOWFISH_BLOCKSIZE]) {
     uint32_t X0, X1;
 
     GET_UINT32_BE(X0, input,  0);
@@ -249,8 +242,7 @@ int mbedtls_blowfish_crypt_cbc(mbedtls_blowfish_context *ctx,
                                size_t length,
                                unsigned char iv[MBEDTLS_BLOWFISH_BLOCKSIZE],
                                const unsigned char *input,
-                               unsigned char *output)
-{
+                               unsigned char *output) {
     int i;
     unsigned char temp[MBEDTLS_BLOWFISH_BLOCKSIZE];
 
@@ -299,8 +291,7 @@ int mbedtls_blowfish_crypt_cfb64(mbedtls_blowfish_context *ctx,
                                  size_t *iv_off,
                                  unsigned char iv[MBEDTLS_BLOWFISH_BLOCKSIZE],
                                  const unsigned char *input,
-                                 unsigned char *output)
-{
+                                 unsigned char *output) {
     int c;
     size_t n = *iv_off;
 
@@ -342,8 +333,7 @@ int mbedtls_blowfish_crypt_ctr(mbedtls_blowfish_context *ctx,
                                unsigned char nonce_counter[MBEDTLS_BLOWFISH_BLOCKSIZE],
                                unsigned char stream_block[MBEDTLS_BLOWFISH_BLOCKSIZE],
                                const unsigned char *input,
-                               unsigned char *output)
-{
+                               unsigned char *output) {
     int c, i;
     size_t n = *nc_off;
 

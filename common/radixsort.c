@@ -1,7 +1,6 @@
 #include "radixsort.h"
 
-uint64_t *radixSort(uint64_t *array, uint32_t size)
-{
+uint64_t *radixSort(uint64_t *array, uint32_t size) {
     rscounts_t counts;
     memset(&counts, 0, 256 * 8 * sizeof(uint32_t));
     uint64_t *cpy = (uint64_t *)calloc(size * sizeof(uint64_t), sizeof(uint8_t));

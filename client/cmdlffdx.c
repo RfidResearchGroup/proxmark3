@@ -31,8 +31,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_fdx_clone(void)
-{
+int usage_lf_fdx_clone(void) {
     PrintAndLogEx(NORMAL, "Clone a FDX-B animal tag to a T55x7 tag.");
     PrintAndLogEx(NORMAL, "Usage: lf fdx clone [h] <country id> <animal id> <Q5>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -50,8 +49,7 @@ int usage_lf_fdx_clone(void)
     return 0;
 }
 
-int usage_lf_fdx_sim(void)
-{
+int usage_lf_fdx_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of FDX-B animal tag");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "");
@@ -68,8 +66,7 @@ int usage_lf_fdx_sim(void)
 
 // Ask/Biphase Demod then try to locate an ISO 11784/85 ID
 // BitStream must contain previously askrawdemod and biphasedemoded data
-int detectFDXB(uint8_t *dest, size_t *size)
-{
+int detectFDXB(uint8_t *dest, size_t *size) {
     //make sure buffer has enough data
     if (*size < 128 * 2) return -1;
     size_t startIdx = 0;
@@ -82,8 +79,7 @@ int detectFDXB(uint8_t *dest, size_t *size)
 }
 
 // clearing the topbit needed for the preambl detection.
-static void verify_values(uint32_t countryid, uint64_t animalid)
-{
+static void verify_values(uint32_t countryid, uint64_t animalid) {
     if ((animalid & 0x3FFFFFFFFF) != animalid) {
         animalid &= 0x3FFFFFFFFF;
         PrintAndLogEx(INFO, "Animal ID Truncated to 38bits: %"PRIx64, animalid);
@@ -94,8 +90,7 @@ static void verify_values(uint32_t countryid, uint64_t animalid)
     }
 }
 
-int getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t isextended, uint32_t extended, uint8_t *bits)
-{
+int getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t isextended, uint32_t extended, uint8_t *bits) {
 
     // add preamble ten 0x00 and one 0x01
     memset(bits, 0x00, 10);
@@ -162,8 +157,7 @@ int getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t
 
 -- sample: 985121004515220  [ 37FF65B88EF94 ]
 */
-int CmdFDXBdemodBI(const char *Cmd)
-{
+int CmdFDXBdemodBI(const char *Cmd) {
 
     int clk = 32;
     int invert = 1, errCnt = 0, offset = 0, maxErr = 0;
@@ -238,8 +232,7 @@ int CmdFDXBdemodBI(const char *Cmd)
 
 //see ASKDemod for what args are accepted
 //almost the same demod as cmddata.c/CmdFDXBdemodBI
-int CmdFdxDemod(const char *Cmd)
-{
+int CmdFdxDemod(const char *Cmd) {
 
     //Differential Biphase / di-phase (inverted biphase)
     //get binary from ask wave
@@ -308,14 +301,12 @@ int CmdFdxDemod(const char *Cmd)
     return 1;
 }
 
-int CmdFdxRead(const char *Cmd)
-{
+int CmdFdxRead(const char *Cmd) {
     lf_read(true, 10000);
     return CmdFdxDemod(Cmd);
 }
 
-int CmdFdxClone(const char *Cmd)
-{
+int CmdFdxClone(const char *Cmd) {
 
     uint32_t countryid = 0;
     uint64_t animalid = 0;
@@ -367,8 +358,7 @@ int CmdFdxClone(const char *Cmd)
     return 0;
 }
 
-int CmdFdxSim(const char *Cmd)
-{
+int CmdFdxSim(const char *Cmd) {
     uint32_t countryid = 0;
     uint64_t animalid = 0;
 
@@ -407,15 +397,13 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFFdx(const char *Cmd)
-{
+int CmdLFFdx(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }

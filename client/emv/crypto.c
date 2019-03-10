@@ -24,8 +24,7 @@
 
 static struct crypto_backend *crypto_backend;
 
-static bool crypto_init(void)
-{
+static bool crypto_init(void) {
     if (crypto_backend)
         return true;
 
@@ -37,8 +36,7 @@ static bool crypto_init(void)
     return true;
 }
 
-struct crypto_hash *crypto_hash_open(enum crypto_algo_hash hash)
-{
+struct crypto_hash *crypto_hash_open(enum crypto_algo_hash hash) {
     struct crypto_hash *ch;
 
     if (!crypto_init())
@@ -51,28 +49,23 @@ struct crypto_hash *crypto_hash_open(enum crypto_algo_hash hash)
     return ch;
 }
 
-void crypto_hash_close(struct crypto_hash *ch)
-{
+void crypto_hash_close(struct crypto_hash *ch) {
     ch->close(ch);
 }
 
-void crypto_hash_write(struct crypto_hash *ch, const unsigned char *buf, size_t len)
-{
+void crypto_hash_write(struct crypto_hash *ch, const unsigned char *buf, size_t len) {
     ch->write(ch, buf, len);
 }
 
-unsigned char *crypto_hash_read(struct crypto_hash *ch)
-{
+unsigned char *crypto_hash_read(struct crypto_hash *ch) {
     return ch->read(ch);
 }
 
-size_t crypto_hash_get_size(const struct crypto_hash *ch)
-{
+size_t crypto_hash_get_size(const struct crypto_hash *ch) {
     return ch->get_size(ch);
 }
 
-struct crypto_pk *crypto_pk_open(enum crypto_algo_pk pk, ...)
-{
+struct crypto_pk *crypto_pk_open(enum crypto_algo_pk pk, ...) {
     struct crypto_pk *cp;
     va_list vl;
 
@@ -89,8 +82,7 @@ struct crypto_pk *crypto_pk_open(enum crypto_algo_pk pk, ...)
     return cp;
 }
 
-struct crypto_pk *crypto_pk_open_priv(enum crypto_algo_pk pk, ...)
-{
+struct crypto_pk *crypto_pk_open_priv(enum crypto_algo_pk pk, ...) {
     struct crypto_pk *cp;
     va_list vl;
 
@@ -110,8 +102,7 @@ struct crypto_pk *crypto_pk_open_priv(enum crypto_algo_pk pk, ...)
     return cp;
 }
 
-struct crypto_pk *crypto_pk_genkey(enum crypto_algo_pk pk, ...)
-{
+struct crypto_pk *crypto_pk_genkey(enum crypto_algo_pk pk, ...) {
     struct crypto_pk *cp;
     va_list vl;
 
@@ -131,18 +122,15 @@ struct crypto_pk *crypto_pk_genkey(enum crypto_algo_pk pk, ...)
     return cp;
 }
 
-void crypto_pk_close(struct crypto_pk *cp)
-{
+void crypto_pk_close(struct crypto_pk *cp) {
     cp->close(cp);
 }
 
-unsigned char *crypto_pk_encrypt(const struct crypto_pk *cp, const unsigned char *buf, size_t len, size_t *clen)
-{
+unsigned char *crypto_pk_encrypt(const struct crypto_pk *cp, const unsigned char *buf, size_t len, size_t *clen) {
     return cp->encrypt(cp, buf, len, clen);
 }
 
-unsigned char *crypto_pk_decrypt(const struct crypto_pk *cp, const unsigned char *buf, size_t len, size_t *clen)
-{
+unsigned char *crypto_pk_decrypt(const struct crypto_pk *cp, const unsigned char *buf, size_t len, size_t *clen) {
     if (!cp->decrypt) {
         *clen = 0;
 
@@ -152,24 +140,21 @@ unsigned char *crypto_pk_decrypt(const struct crypto_pk *cp, const unsigned char
     return cp->decrypt(cp, buf, len, clen);
 }
 
-enum crypto_algo_pk crypto_pk_get_algo(const struct crypto_pk *cp)
-{
+enum crypto_algo_pk crypto_pk_get_algo(const struct crypto_pk *cp) {
     if (!cp)
         return PK_INVALID;
 
     return cp->algo;
 }
 
-size_t crypto_pk_get_nbits(const struct crypto_pk *cp)
-{
+size_t crypto_pk_get_nbits(const struct crypto_pk *cp) {
     if (!cp->get_nbits)
         return 0;
 
     return cp->get_nbits(cp);
 }
 
-unsigned char *crypto_pk_get_parameter(const struct crypto_pk *cp, unsigned param, size_t *plen)
-{
+unsigned char *crypto_pk_get_parameter(const struct crypto_pk *cp, unsigned param, size_t *plen) {
     *plen = 0;
 
     if (!cp->get_parameter)

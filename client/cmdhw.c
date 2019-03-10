@@ -23,8 +23,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-static void lookupChipID(uint32_t iChipID, uint32_t mem_used)
-{
+static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
     char asBuff[120];
     memset(asBuff, 0, sizeof(asBuff));
     uint32_t mem_avail = 0;
@@ -308,8 +307,7 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used)
     PrintAndLogEx(NORMAL, "  --= Nonvolatile Program Memory Type: %s", asBuff);
 }
 
-int CmdDetectReader(const char *Cmd)
-{
+int CmdDetectReader(const char *Cmd) {
     UsbCommand c = {CMD_LISTEN_READER_FIELD};
     // 'l' means LF - 125/134 kHz
     if (*Cmd == 'l') {
@@ -326,8 +324,7 @@ int CmdDetectReader(const char *Cmd)
 }
 
 // ## FPGA Control
-int CmdFPGAOff(const char *Cmd)
-{
+int CmdFPGAOff(const char *Cmd) {
     UsbCommand c = {CMD_FPGA_MAJOR_MODE_OFF};
     clearCommandBuffer();
     SendCommand(&c);
@@ -335,8 +332,7 @@ int CmdFPGAOff(const char *Cmd)
 }
 
 #ifdef WITH_LCD
-int CmdLCD(const char *Cmd)
-{
+int CmdLCD(const char *Cmd) {
     int i, j;
 
     UsbCommand c = {CMD_LCD};
@@ -349,8 +345,7 @@ int CmdLCD(const char *Cmd)
     return 0;
 }
 
-int CmdLCDReset(const char *Cmd)
-{
+int CmdLCDReset(const char *Cmd) {
     UsbCommand c = {CMD_LCD_RESET, {strtol(Cmd, NULL, 0), 0, 0}};
     clearCommandBuffer();
     SendCommand(&c);
@@ -358,16 +353,14 @@ int CmdLCDReset(const char *Cmd)
 }
 #endif
 
-int CmdReadmem(const char *Cmd)
-{
+int CmdReadmem(const char *Cmd) {
     UsbCommand c = {CMD_READ_MEM, {strtol(Cmd, NULL, 0), 0, 0}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
 }
 
-int CmdReset(const char *Cmd)
-{
+int CmdReset(const char *Cmd) {
     UsbCommand c = {CMD_HARDWARE_RESET};
     clearCommandBuffer();
     SendCommand(&c);
@@ -378,8 +371,7 @@ int CmdReset(const char *Cmd)
  * Sets the divisor for LF frequency clock: lets the user choose any LF frequency below
  * 600kHz.
  */
-int CmdSetDivisor(const char *Cmd)
-{
+int CmdSetDivisor(const char *Cmd) {
     UsbCommand c = {CMD_SET_LF_DIVISOR, {strtol(Cmd, NULL, 0), 0, 0}};
 
     if (c.arg[0] < 19 || c.arg[0] > 255) {
@@ -393,8 +385,7 @@ int CmdSetDivisor(const char *Cmd)
     return 0;
 }
 
-int CmdSetMux(const char *Cmd)
-{
+int CmdSetMux(const char *Cmd) {
 
     if (strlen(Cmd) < 5) {
         PrintAndLogEx(NORMAL, "expected:  lopkd | loraw | hipkd | hiraw");
@@ -412,13 +403,11 @@ int CmdSetMux(const char *Cmd)
     return 0;
 }
 
-int CmdTune(const char *Cmd)
-{
+int CmdTune(const char *Cmd) {
     return CmdTuneSamples(Cmd);
 }
 
-int CmdVersion(const char *Cmd)
-{
+int CmdVersion(const char *Cmd) {
 
     bool silent = (Cmd[0] == 's' || Cmd[0] ==  'S');
     if (silent)
@@ -457,8 +446,7 @@ int CmdVersion(const char *Cmd)
     return 0;
 }
 
-int CmdStatus(const char *Cmd)
-{
+int CmdStatus(const char *Cmd) {
     clearCommandBuffer();
     UsbCommand c = {CMD_STATUS};
     SendCommand(&c);
@@ -467,8 +455,7 @@ int CmdStatus(const char *Cmd)
     return 0;
 }
 
-int CmdPing(const char *Cmd)
-{
+int CmdPing(const char *Cmd) {
     clearCommandBuffer();
     UsbCommand resp;
     UsbCommand c = {CMD_PING};
@@ -499,15 +486,13 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdHW(const char *Cmd)
-{
+int CmdHW(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }

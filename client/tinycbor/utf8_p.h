@@ -29,8 +29,7 @@
 
 #include <stdint.h>
 
-static inline uint32_t get_utf8(const uint8_t **buffer, const uint8_t *end)
-{
+static inline uint32_t get_utf8(const uint8_t **buffer, const uint8_t *end) {
     int charsNeeded;
     uint32_t uc, min_uc;
     uint8_t b;

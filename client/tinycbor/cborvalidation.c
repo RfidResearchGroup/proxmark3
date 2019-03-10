@@ -267,8 +267,7 @@ static const struct KnownTagData knownTagData[] = {
 
 static CborError validate_value(CborValue *it, uint32_t flags, int recursionLeft);
 
-static inline CborError validate_utf8_string(const void *ptr, size_t n)
-{
+static inline CborError validate_utf8_string(const void *ptr, size_t n) {
     const uint8_t *buffer = (const uint8_t *)ptr;
     const uint8_t *const end = buffer + n;
     while (buffer < end) {
@@ -279,8 +278,7 @@ static inline CborError validate_utf8_string(const void *ptr, size_t n)
     return CborNoError;
 }
 
-static inline CborError validate_simple_type(uint8_t simple_type, uint32_t flags)
-{
+static inline CborError validate_simple_type(uint8_t simple_type, uint32_t flags) {
     /* At current time, all known simple types are those from RFC 7049,
      * which are parsed by the parser into different CBOR types.
      * That means that if we've got here, the type is unknown */
@@ -290,8 +288,7 @@ static inline CborError validate_simple_type(uint8_t simple_type, uint32_t flags
            CborErrorUnknownSimpleType : CborNoError;
 }
 
-static inline CborError validate_number(const CborValue *it, CborType type, uint32_t flags)
-{
+static inline CborError validate_number(const CborValue *it, CborType type, uint32_t flags) {
     CborError err = CborNoError;
     const uint8_t *ptr = it->ptr;
     size_t bytesUsed, bytesNeeded;
@@ -321,8 +318,7 @@ static inline CborError validate_number(const CborValue *it, CborType type, uint
     return CborNoError;
 }
 
-static inline CborError validate_tag(CborValue *it, CborTag tag, uint32_t flags, int recursionLeft)
-{
+static inline CborError validate_tag(CborValue *it, CborTag tag, uint32_t flags, int recursionLeft) {
     CborType type = cbor_value_get_type(it);
     const size_t knownTagCount = sizeof(knownTagData) / sizeof(knownTagData[0]);
     const struct KnownTagData *tagData = knownTagData;
@@ -374,8 +370,7 @@ static inline CborError validate_tag(CborValue *it, CborTag tag, uint32_t flags,
 }
 
 #ifndef CBOR_NO_FLOATING_POINT
-static inline CborError validate_floating_point(CborValue *it, CborType type, uint32_t flags)
-{
+static inline CborError validate_floating_point(CborValue *it, CborType type, uint32_t flags) {
     CborError err;
     int r;
     double val;
@@ -437,8 +432,7 @@ static inline CborError validate_floating_point(CborValue *it, CborType type, ui
 }
 #endif
 
-static CborError validate_container(CborValue *it, int containerType, uint32_t flags, int recursionLeft)
-{
+static CborError validate_container(CborValue *it, int containerType, uint32_t flags, int recursionLeft) {
     CborError err;
     const uint8_t *previous = NULL;
     const uint8_t *previous_end = NULL;
@@ -511,8 +505,7 @@ static CborError validate_container(CborValue *it, int containerType, uint32_t f
     return CborNoError;
 }
 
-static CborError validate_value(CborValue *it, uint32_t flags, int recursionLeft)
-{
+static CborError validate_value(CborValue *it, uint32_t flags, int recursionLeft) {
     CborError err;
     CborType type = cbor_value_get_type(it);
 
@@ -650,8 +643,7 @@ static CborError validate_value(CborValue *it, uint32_t flags, int recursionLeft
  *
  * \sa CborValidationFlags, cbor_value_validate_basic(), cbor_value_advance()
  */
-CborError cbor_value_validate(const CborValue *it, uint32_t flags)
-{
+CborError cbor_value_validate(const CborValue *it, uint32_t flags) {
     CborValue value = *it;
     CborError err = validate_value(&value, flags, CBOR_PARSER_MAX_RECURSIONS);
     if (err)

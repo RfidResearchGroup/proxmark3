@@ -46,8 +46,7 @@
  * @param stream
  * @return
  */
-bool headBit(BitstreamIn *stream)
-{
+bool headBit(BitstreamIn *stream) {
     int bytepos = stream->position >> 3; // divide by 8
     int bitpos = (stream->position++) & 7; // mask out 00000111
     return (*(stream->buffer + bytepos) >> (7 - bitpos)) & 1;
@@ -57,8 +56,7 @@ bool headBit(BitstreamIn *stream)
  * @param stream
  * @return
  */
-bool tailBit(BitstreamIn *stream)
-{
+bool tailBit(BitstreamIn *stream) {
     int bitpos = stream->numbits - 1 - (stream->position++);
 
     int bytepos = bitpos >> 3;
@@ -70,8 +68,7 @@ bool tailBit(BitstreamIn *stream)
  * @param stream
  * @param bit
  */
-void pushBit(BitstreamOut *stream, bool bit)
-{
+void pushBit(BitstreamOut *stream, bool bit) {
     int bytepos = stream->position >> 3; // divide by 8
     int bitpos = stream->position & 7;
     *(stream->buffer + bytepos) |= (bit & 1) << (7 - bitpos);
@@ -85,8 +82,7 @@ void pushBit(BitstreamOut *stream, bool bit)
  * @param stream
  * @param bits
  */
-void push6bits(BitstreamOut *stream, uint8_t bits)
-{
+void push6bits(BitstreamOut *stream, uint8_t bits) {
     pushBit(stream, bits & 0x20);
     pushBit(stream, bits & 0x10);
     pushBit(stream, bits & 0x08);
@@ -100,8 +96,7 @@ void push6bits(BitstreamOut *stream, uint8_t bits)
  * @param stream
  * @return number of bits left in stream
  */
-int bitsLeft(BitstreamIn *stream)
-{
+int bitsLeft(BitstreamIn *stream) {
     return stream->numbits - stream->position;
 }
 /**
@@ -109,21 +104,18 @@ int bitsLeft(BitstreamIn *stream)
  * @param stream
  * @return Number of bits stored in stream
  */
-int numBits(BitstreamOut *stream)
-{
+int numBits(BitstreamOut *stream) {
     return stream->numbits;
 }
 
-void x_num_to_bytes(uint64_t n, size_t len, uint8_t *dest)
-{
+void x_num_to_bytes(uint64_t n, size_t len, uint8_t *dest) {
     while (len--) {
         dest[len] = (uint8_t) n;
         n >>= 8;
     }
 }
 
-uint64_t x_bytes_to_num(uint8_t *src, size_t len)
-{
+uint64_t x_bytes_to_num(uint8_t *src, size_t len) {
     uint64_t num = 0;
     while (len--) {
         num = (num << 8) | (*src);
@@ -131,30 +123,26 @@ uint64_t x_bytes_to_num(uint8_t *src, size_t len)
     }
     return num;
 }
-uint8_t reversebytes(uint8_t b)
-{
+uint8_t reversebytes(uint8_t b) {
     b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
     b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
     b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
     return b;
 }
-void reverse_arraybytes(uint8_t *arr, size_t len)
-{
+void reverse_arraybytes(uint8_t *arr, size_t len) {
     uint8_t i;
     for (i = 0; i < len ; i++) {
         arr[i] = reversebytes(arr[i]);
     }
 }
-void reverse_arraycopy(uint8_t *arr, uint8_t *dest, size_t len)
-{
+void reverse_arraycopy(uint8_t *arr, uint8_t *dest, size_t len) {
     uint8_t i;
     for (i = 0; i < len ; i++) {
         dest[i] = reversebytes(arr[i]);
     }
 }
 
-void printarr(char *name, uint8_t *arr, int len)
-{
+void printarr(char *name, uint8_t *arr, int len) {
     int cx, i;
     size_t outsize = 40 + strlen(name) + len * 5;
     char *output = calloc(outsize, sizeof(char));
@@ -167,8 +155,7 @@ void printarr(char *name, uint8_t *arr, int len)
     free(output);
 }
 
-void printvar(char *name, uint8_t *arr, int len)
-{
+void printvar(char *name, uint8_t *arr, int len) {
     int cx, i;
     size_t outsize = 40 + strlen(name) + len * 2;
     char *output = calloc(outsize, sizeof(char));
@@ -181,8 +168,7 @@ void printvar(char *name, uint8_t *arr, int len)
     free(output);
 }
 
-void printarr_human_readable(char *title, uint8_t *arr, int len)
-{
+void printarr_human_readable(char *title, uint8_t *arr, int len) {
     int cx, i;
     size_t outsize = 100 + strlen(title) + len * 4;
     char *output = calloc(outsize, sizeof(char));
@@ -201,8 +187,7 @@ void printarr_human_readable(char *title, uint8_t *arr, int len)
 //-----------------------------
 
 #ifndef ON_DEVICE
-int testBitStream()
-{
+int testBitStream() {
     uint8_t input [] = {0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF};
     uint8_t output [] = {0, 0, 0, 0, 0, 0, 0, 0};
     BitstreamIn in = { input, sizeof(input) * 8, 0};
@@ -227,8 +212,7 @@ int testBitStream()
     return 0;
 }
 
-int testReversedBitstream()
-{
+int testReversedBitstream() {
     uint8_t input [] = {0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF};
     uint8_t reverse [] = {0, 0, 0, 0, 0, 0, 0, 0};
     uint8_t output [] = {0, 0, 0, 0, 0, 0, 0, 0};
@@ -259,8 +243,7 @@ int testReversedBitstream()
 }
 
 
-int testCipherUtils(void)
-{
+int testCipherUtils(void) {
     PrintAndLogDevice(INFO, "Testing some internals...");
     int retval = 0;
     retval |= testBitStream();

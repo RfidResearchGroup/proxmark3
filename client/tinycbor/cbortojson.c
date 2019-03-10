@@ -167,8 +167,7 @@ typedef struct ConversionStatus {
 
 static CborError value_to_json(FILE *out, CborValue *it, int flags, CborType type, ConversionStatus *status);
 
-static CborError dump_bytestring_base16(char **result, CborValue *it)
-{
+static CborError dump_bytestring_base16(char **result, CborValue *it) {
     static const char characters[] = "0123456789abcdef";
     size_t i;
     size_t n = 0;
@@ -194,8 +193,7 @@ static CborError dump_bytestring_base16(char **result, CborValue *it)
     return CborNoError;
 }
 
-static CborError generic_dump_base64(char **result, CborValue *it, const char alphabet[65])
-{
+static CborError generic_dump_base64(char **result, CborValue *it, const char alphabet[65]) {
     size_t n = 0, i;
     uint8_t *buffer, *out, *in;
     CborError err = cbor_value_calculate_string_length(it, &n);
@@ -267,22 +265,19 @@ static CborError generic_dump_base64(char **result, CborValue *it, const char al
     return CborNoError;
 }
 
-static CborError dump_bytestring_base64(char **result, CborValue *it)
-{
+static CborError dump_bytestring_base64(char **result, CborValue *it) {
     static const char alphabet[] = "ABCDEFGH" "IJKLMNOP" "QRSTUVWX" "YZabcdef"
                                    "ghijklmn" "opqrstuv" "wxyz0123" "456789+/" "=";
     return generic_dump_base64(result, it, alphabet);
 }
 
-static CborError dump_bytestring_base64url(char **result, CborValue *it)
-{
+static CborError dump_bytestring_base64url(char **result, CborValue *it) {
     static const char alphabet[] = "ABCDEFGH" "IJKLMNOP" "QRSTUVWX" "YZabcdef"
                                    "ghijklmn" "opqrstuv" "wxyz0123" "456789-_";
     return generic_dump_base64(result, it, alphabet);
 }
 
-static CborError add_value_metadata(FILE *out, CborType type, const ConversionStatus *status)
-{
+static CborError add_value_metadata(FILE *out, CborType type, const ConversionStatus *status) {
     int flags = status->flags;
     if (flags & TypeWasTagged) {
         /* extract the tagged type, which may be JSON native */
@@ -317,8 +312,7 @@ static CborError add_value_metadata(FILE *out, CborType type, const ConversionSt
     return CborNoError;
 }
 
-static CborError find_tagged_type(CborValue *it, CborTag *tag, CborType *type)
-{
+static CborError find_tagged_type(CborValue *it, CborTag *tag, CborType *type) {
     CborError err = CborNoError;
     *type = cbor_value_get_type(it);
     while (*type == CborTagType) {
@@ -332,8 +326,7 @@ static CborError find_tagged_type(CborValue *it, CborTag *tag, CborType *type)
     return err;
 }
 
-static CborError tagged_value_to_json(FILE *out, CborValue *it, int flags, ConversionStatus *status)
-{
+static CborError tagged_value_to_json(FILE *out, CborValue *it, int flags, ConversionStatus *status) {
     CborTag tag;
     CborError err;
 
@@ -352,8 +345,8 @@ static CborError tagged_value_to_json(FILE *out, CborValue *it, int flags, Conve
             return err;
         if (flags & CborConvertAddMetadata && status->flags) {
             if (fprintf(out, ",\"tag%" PRIu64 "$cbor\":{", tag) < 0 ||
-                add_value_metadata(out, type, status) != CborNoError ||
-                fputc('}', out) < 0)
+                    add_value_metadata(out, type, status) != CborNoError ||
+                    fputc('}', out) < 0)
                 return CborErrorIO;
         }
         if (fputc('}', out) < 0)
@@ -370,7 +363,7 @@ static CborError tagged_value_to_json(FILE *out, CborValue *it, int flags, Conve
 
     /* special handling of byte strings? */
     if (type == CborByteStringType && (flags & CborConvertByteStringsToBase64Url) == 0 &&
-        (tag == CborNegativeBignumTag || tag == CborExpectedBase16Tag || tag == CborExpectedBase64Tag)) {
+            (tag == CborNegativeBignumTag || tag == CborExpectedBase16Tag || tag == CborExpectedBase64Tag)) {
         char *str;
         char *pre = "";
 
@@ -396,8 +389,7 @@ static CborError tagged_value_to_json(FILE *out, CborValue *it, int flags, Conve
     return err;
 }
 
-static CborError stringify_map_key(char **key, CborValue *it, int flags, CborType type)
-{
+static CborError stringify_map_key(char **key, CborValue *it, int flags, CborType type) {
     (void)flags;    /* unused */
     (void)type;     /* unused */
 #ifdef WITHOUT_OPEN_MEMSTREAM
@@ -418,8 +410,7 @@ static CborError stringify_map_key(char **key, CborValue *it, int flags, CborTyp
 #endif
 }
 
-static CborError array_to_json(FILE *out, CborValue *it, int flags, ConversionStatus *status)
-{
+static CborError array_to_json(FILE *out, CborValue *it, int flags, ConversionStatus *status) {
     const char *comma = "";
     while (!cbor_value_at_end(it)) {
         if (fprintf(out, "%s", comma) < 0)
@@ -433,8 +424,7 @@ static CborError array_to_json(FILE *out, CborValue *it, int flags, ConversionSt
     return CborNoError;
 }
 
-static CborError map_to_json(FILE *out, CborValue *it, int flags, ConversionStatus *status)
-{
+static CborError map_to_json(FILE *out, CborValue *it, int flags, ConversionStatus *status) {
     const char *comma = "";
     CborError err;
     while (!cbor_value_at_end(it)) {
@@ -473,8 +463,8 @@ static CborError map_to_json(FILE *out, CborValue *it, int flags, ConversionStat
             }
             if (!err && status->flags) {
                 if (fprintf(out, ",\"%s$cbor\":{", key) < 0 ||
-                    add_value_metadata(out, valueType, status) != CborNoError ||
-                    fputc('}', out) < 0)
+                        add_value_metadata(out, valueType, status) != CborNoError ||
+                        fputc('}', out) < 0)
                     err = CborErrorIO;
             }
         }
@@ -486,8 +476,7 @@ static CborError map_to_json(FILE *out, CborValue *it, int flags, ConversionStat
     return CborNoError;
 }
 
-static CborError value_to_json(FILE *out, CborValue *it, int flags, CborType type, ConversionStatus *status)
-{
+static CborError value_to_json(FILE *out, CborValue *it, int flags, CborType type, ConversionStatus *status) {
     CborError err;
     status->flags = 0;
 
@@ -690,8 +679,7 @@ static CborError value_to_json(FILE *out, CborValue *it, int flags, CborType typ
  *
  * \sa cbor_value_to_json(), cbor_value_to_pretty_advance()
  */
-CborError cbor_value_to_json_advance(FILE *out, CborValue *value, int flags)
-{
+CborError cbor_value_to_json_advance(FILE *out, CborValue *value, int flags) {
     ConversionStatus status;
     return value_to_json(out, value, flags, cbor_value_get_type(value), &status);
 }

@@ -12,8 +12,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_sm_raw(void)
-{
+int usage_sm_raw(void) {
     PrintAndLogEx(NORMAL, "Usage: sc raw [h|r|c] d <0A 0B 0C ... hex>");
     PrintAndLogEx(NORMAL, "       h          :  this help");
     PrintAndLogEx(NORMAL, "       r          :  do not read response");
@@ -31,8 +30,7 @@ int usage_sm_raw(void)
 
     return 0;
 }
-int usage_sm_reader(void)
-{
+int usage_sm_reader(void) {
     PrintAndLogEx(NORMAL, "Usage: sc reader [h|s]");
     PrintAndLogEx(NORMAL, "       h          :  this help");
     PrintAndLogEx(NORMAL, "       s          :  silent (no messages)");
@@ -41,8 +39,7 @@ int usage_sm_reader(void)
     PrintAndLogEx(NORMAL, "        sc reader");
     return 0;
 }
-int usage_sm_info(void)
-{
+int usage_sm_info(void) {
     PrintAndLogEx(NORMAL, "Usage: s info [h|s]");
     PrintAndLogEx(NORMAL, "       h          :  this help");
     PrintAndLogEx(NORMAL, "       s          :  silent (no messages)");
@@ -51,8 +48,7 @@ int usage_sm_info(void)
     PrintAndLogEx(NORMAL, "        sc info");
     return 0;
 }
-int usage_sm_upgrade(void)
-{
+int usage_sm_upgrade(void) {
     PrintAndLogEx(NORMAL, "Upgrade firmware");
     PrintAndLogEx(NORMAL, "Usage:  sc upgrade f <file name>");
     PrintAndLogEx(NORMAL, "       h               :  this help");
@@ -62,8 +58,7 @@ int usage_sm_upgrade(void)
     PrintAndLogEx(NORMAL, "        sc upgrade f myfile");
     return 0;
 }
-int usage_sm_setclock(void)
-{
+int usage_sm_setclock(void) {
     PrintAndLogEx(NORMAL, "Usage: sc setclock [h] c <clockspeed>");
     PrintAndLogEx(NORMAL, "       h          :  this help");
     PrintAndLogEx(NORMAL, "       c <>       :  clockspeed (0 = 16mhz, 1=8mhz, 2=4mhz) ");
@@ -72,8 +67,7 @@ int usage_sm_setclock(void)
     PrintAndLogEx(NORMAL, "        sc setclock c 2");
     return 0;
 }
-int usage_sm_brute(void)
-{
+int usage_sm_brute(void) {
     PrintAndLogEx(NORMAL, "Tries to bruteforce SFI, using a known list of AID's ");
     PrintAndLogEx(NORMAL, "Usage: sc brute [h]");
     PrintAndLogEx(NORMAL, "       h          :  this help");
@@ -85,8 +79,7 @@ int usage_sm_brute(void)
     return 0;
 }
 
-static int smart_loadjson(const char *preferredName, const char *suffix, json_t **root)
-{
+static int smart_loadjson(const char *preferredName, const char *suffix, json_t **root) {
 
     json_error_t error;
 
@@ -116,8 +109,7 @@ out:
     return retval;
 }
 
-uint8_t GetATRTA1(uint8_t *atr, size_t atrlen)
-{
+uint8_t GetATRTA1(uint8_t *atr, size_t atrlen) {
     if (atrlen > 2) {
         uint8_t T0 = atr[1];
         if (T0 & 0x10)
@@ -184,26 +176,22 @@ float FArray[] = {
     0     // b1111 RFU
 };
 
-int GetATRDi(uint8_t *atr, size_t atrlen)
-{
+int GetATRDi(uint8_t *atr, size_t atrlen) {
     uint8_t TA1 = GetATRTA1(atr, atrlen);
     return DiArray[TA1 & 0x0F];  // The 4 low-order bits of TA1 (4th MSbit to 1st LSbit) encode Di
 }
 
-int GetATRFi(uint8_t *atr, size_t atrlen)
-{
+int GetATRFi(uint8_t *atr, size_t atrlen) {
     uint8_t TA1 = GetATRTA1(atr, atrlen);
     return FiArray[TA1 >> 4];  // The 4 high-order bits of TA1 (8th MSbit to 5th LSbit) encode fmax and Fi
 }
 
-float GetATRF(uint8_t *atr, size_t atrlen)
-{
+float GetATRF(uint8_t *atr, size_t atrlen) {
     uint8_t TA1 = GetATRTA1(atr, atrlen);
     return FArray[TA1 >> 4];  // The 4 high-order bits of TA1 (8th MSbit to 5th LSbit) encode fmax and Fi
 }
 
-static int PrintATR(uint8_t *atr, size_t atrlen)
-{
+static int PrintATR(uint8_t *atr, size_t atrlen) {
 
     uint8_t T0 = atr[1];
     uint8_t K = T0 & 0x0F;
@@ -303,8 +291,7 @@ static int PrintATR(uint8_t *atr, size_t atrlen)
     return 0;
 }
 
-bool smart_select(bool silent, smart_card_atr_t *atr)
-{
+bool smart_select(bool silent, smart_card_atr_t *atr) {
     if (atr)
         memset(atr, 0, sizeof(smart_card_atr_t));
 
@@ -335,8 +322,7 @@ bool smart_select(bool silent, smart_card_atr_t *atr)
     return true;
 }
 
-static int smart_wait(uint8_t *data, bool silent)
-{
+static int smart_wait(uint8_t *data, bool silent) {
     UsbCommand resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         if (!silent) PrintAndLogEx(WARNING, "smart card response timeout");
@@ -358,8 +344,7 @@ static int smart_wait(uint8_t *data, bool silent)
     return len;
 }
 
-static int smart_responseEx(uint8_t *data, bool silent)
-{
+static int smart_responseEx(uint8_t *data, bool silent) {
 
     int datalen = smart_wait(data, silent);
     bool needGetData = false;
@@ -414,13 +399,11 @@ out:
     return datalen;
 }
 
-static int smart_response(uint8_t *data)
-{
+static int smart_response(uint8_t *data) {
     return smart_responseEx(data, false);
 }
 
-int CmdSmartRaw(const char *Cmd)
-{
+int CmdSmartRaw(const char *Cmd) {
 
     int hexlen = 0;
     bool active = false;
@@ -536,8 +519,7 @@ int CmdSmartRaw(const char *Cmd)
     return 0;
 }
 
-int ExchangeAPDUSC(uint8_t *datain, int datainlen, bool activateCard, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen)
-{
+int ExchangeAPDUSC(uint8_t *datain, int datainlen, bool activateCard, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
     *dataoutlen = 0;
 
     if (activateCard)
@@ -577,8 +559,7 @@ int ExchangeAPDUSC(uint8_t *datain, int datainlen, bool activateCard, bool leave
     return 0;
 }
 
-int CmdSmartUpgrade(const char *Cmd)
-{
+int CmdSmartUpgrade(const char *Cmd) {
 
     PrintAndLogEx(WARNING, "WARNING - Smartcard socket firmware upgrade.");
     PrintAndLogEx(WARNING, "A dangerous command, do wrong and you will brick the smart card socket");
@@ -686,8 +667,7 @@ int CmdSmartUpgrade(const char *Cmd)
     return 0;
 }
 
-int CmdSmartInfo(const char *Cmd)
-{
+int CmdSmartInfo(const char *Cmd) {
     uint8_t cmdp = 0;
     bool errors = false, silent = false;
 
@@ -762,8 +742,7 @@ int CmdSmartInfo(const char *Cmd)
     return 0;
 }
 
-int CmdSmartReader(const char *Cmd)
-{
+int CmdSmartReader(const char *Cmd) {
     uint8_t cmdp = 0;
     bool errors = false, silent = false;
 
@@ -806,8 +785,7 @@ int CmdSmartReader(const char *Cmd)
     return 0;
 }
 
-int CmdSmartSetClock(const char *Cmd)
-{
+int CmdSmartSetClock(const char *Cmd) {
     uint8_t cmdp = 0;
     bool errors = false;
     uint8_t clock = 0;
@@ -863,14 +841,12 @@ int CmdSmartSetClock(const char *Cmd)
     return 0;
 }
 
-int CmdSmartList(const char *Cmd)
-{
+int CmdSmartList(const char *Cmd) {
     CmdTraceList("7816");
     return 0;
 }
 
-static void smart_brute_prim()
-{
+static void smart_brute_prim() {
 
     uint8_t *buf = calloc(USB_CMD_DATA_SIZE, sizeof(uint8_t));
     if (!buf)
@@ -909,8 +885,7 @@ static void smart_brute_prim()
     free(buf);
 }
 
-static int smart_brute_sfi(bool decodeTLV)
-{
+static int smart_brute_sfi(bool decodeTLV) {
 
     uint8_t *buf = calloc(USB_CMD_DATA_SIZE, sizeof(uint8_t));
     if (!buf)
@@ -977,8 +952,7 @@ static int smart_brute_sfi(bool decodeTLV)
     return 0;
 }
 
-static void smart_brute_options(bool decodeTLV)
-{
+static void smart_brute_options(bool decodeTLV) {
 
     uint8_t *buf = calloc(USB_CMD_DATA_SIZE, sizeof(uint8_t));
     if (!buf)
@@ -1005,8 +979,7 @@ static void smart_brute_options(bool decodeTLV)
     free(buf);
 }
 
-int CmdSmartBruteforceSFI(const char *Cmd)
-{
+int CmdSmartBruteforceSFI(const char *Cmd) {
 
     uint8_t cmdp = 0;
     bool errors = false, decodeTLV = false; //, useT0 = false;
@@ -1162,15 +1135,13 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdSmartcard(const char *Cmd)
-{
+int CmdSmartcard(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }

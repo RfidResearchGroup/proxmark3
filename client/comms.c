@@ -44,18 +44,15 @@ static pthread_mutex_t rxBufferMutex = PTHREAD_MUTEX_INITIALIZER;
 
 // These wrappers are required because it is not possible to access a static
 // global variable outside of the context of a single file.
-void SetOffline(bool value)
-{
+void SetOffline(bool value) {
     offline = value;
 }
 
-bool IsOffline()
-{
+bool IsOffline() {
     return offline;
 }
 
-void SendCommand(UsbCommand *c)
-{
+void SendCommand(UsbCommand *c) {
 
 #ifdef COMMS_DEBUG
     PrintAndLogEx(NORMAL, "Sending %d bytes | cmd %04x\n", sizeof(UsbCommand), c->cmd);
@@ -93,8 +90,7 @@ void SendCommand(UsbCommand *c)
  *  A better method could have been to have explicit command-ACKS, so we can know which ACK goes to which
  *  operation. Right now we'll just have to live with this.
  */
-void clearCommandBuffer()
-{
+void clearCommandBuffer() {
     //This is a very simple operation
     pthread_mutex_lock(&rxBufferMutex);
     cmd_tail = cmd_head;
@@ -104,8 +100,7 @@ void clearCommandBuffer()
  * @brief storeCommand stores a USB command in a circular buffer
  * @param UC
  */
-static void storeCommand(UsbCommand *command)
-{
+static void storeCommand(UsbCommand *command) {
 
     pthread_mutex_lock(&rxBufferMutex);
     if ((cmd_head + 1) % CMD_BUFFER_SIZE == cmd_tail) {
@@ -127,8 +122,7 @@ static void storeCommand(UsbCommand *command)
  * @param response location to write command
  * @return 1 if response was returned, 0 if nothing has been received
  */
-static int getCommand(UsbCommand *response)
-{
+static int getCommand(UsbCommand *response) {
     pthread_mutex_lock(&rxBufferMutex);
     //If head == tail, there's nothing to read, or if we just got initialized
     if (cmd_head == cmd_tail)  {
@@ -151,8 +145,7 @@ static int getCommand(UsbCommand *response)
 // Entry point into our code: called whenever we received a packet over USB
 // that we weren't necessarily expecting, for example a debug print.
 //-----------------------------------------------------------------------------
-static void UsbCommandReceived(UsbCommand *c)
-{
+static void UsbCommandReceived(UsbCommand *c) {
 
     switch (c->cmd) {
         // First check if we are handling a debug message
@@ -231,8 +224,7 @@ void
 __attribute__((force_align_arg_pointer))
 #endif
 #endif
-*uart_communication(void *targ)
-{
+*uart_communication(void *targ) {
     communication_arg_t *conn = (communication_arg_t *)targ;
     size_t rxlen, totallen = 0;
     UsbCommand rx;
@@ -306,8 +298,7 @@ __attribute__((force_align_arg_pointer))
     return NULL;
 }
 
-bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode)
-{
+bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode) {
 
     char *portname = (char *)port;
     if (!wait_for_port) {
@@ -351,8 +342,7 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode)
     }
 }
 
-void CloseProxmark(void)
-{
+void CloseProxmark(void) {
     conn.run = false;
 
 
@@ -394,8 +384,7 @@ void CloseProxmark(void)
  * @param show_warning display message after 3 seconds
  * @return true if command was returned, otherwise false
  */
-bool WaitForResponseTimeoutW(uint32_t cmd, UsbCommand *response, size_t ms_timeout, bool show_warning)
-{
+bool WaitForResponseTimeoutW(uint32_t cmd, UsbCommand *response, size_t ms_timeout, bool show_warning) {
 
     UsbCommand resp;
 
@@ -425,13 +414,11 @@ bool WaitForResponseTimeoutW(uint32_t cmd, UsbCommand *response, size_t ms_timeo
     return false;
 }
 
-bool WaitForResponseTimeout(uint32_t cmd, UsbCommand *response, size_t ms_timeout)
-{
+bool WaitForResponseTimeout(uint32_t cmd, UsbCommand *response, size_t ms_timeout) {
     return WaitForResponseTimeoutW(cmd, response, ms_timeout, true);
 }
 
-bool WaitForResponse(uint32_t cmd, UsbCommand *response)
-{
+bool WaitForResponse(uint32_t cmd, UsbCommand *response) {
     return WaitForResponseTimeoutW(cmd, response, -1, true);
 }
 
@@ -448,8 +435,7 @@ bool WaitForResponse(uint32_t cmd, UsbCommand *response)
 * @param show_warning display message after 2 seconds
 * @return true if command was returned, otherwise false
 */
-bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning)
-{
+bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning) {
 
     if (dest == NULL) return false;
     if (bytes == 0) return true;
@@ -487,8 +473,7 @@ bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint3
     return false;
 }
 
-bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd)
-{
+bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd) {
 
     uint32_t bytes_completed = 0;
     uint64_t start_time = msclock();

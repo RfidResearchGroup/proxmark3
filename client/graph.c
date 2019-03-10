@@ -16,8 +16,7 @@ int s_Buff[MAX_GRAPH_TRACE_LEN];
 /* write a manchester bit to the graph
 TODO,  verfy that this doesn't overflow buffer  (iceman)
 */
-void AppendGraph(bool redraw, int clock, int bit)
-{
+void AppendGraph(bool redraw, int clock, int bit) {
     int i;
     //set first half the clock bit (all 1's or 0's for a 0 or 1 bit)
     for (i = 0; i < (int)(clock / 2); ++i)
@@ -31,8 +30,7 @@ void AppendGraph(bool redraw, int clock, int bit)
 }
 
 // clear out our graph window
-int ClearGraph(bool redraw)
-{
+int ClearGraph(bool redraw) {
     int gtl = GraphTraceLen;
     memset(GraphBuffer, 0x00, GraphTraceLen);
     GraphTraceLen = 0;
@@ -41,8 +39,7 @@ int ClearGraph(bool redraw)
     return gtl;
 }
 // option '1' to save GraphBuffer any other to restore
-void save_restoreGB(uint8_t saveOpt)
-{
+void save_restoreGB(uint8_t saveOpt) {
     static int SavedGB[MAX_GRAPH_TRACE_LEN];
     static int SavedGBlen = 0;
     static bool GB_Saved = false;
@@ -62,8 +59,7 @@ void save_restoreGB(uint8_t saveOpt)
     return;
 }
 
-void setGraphBuf(uint8_t *buf, size_t size)
-{
+void setGraphBuf(uint8_t *buf, size_t size) {
     if (buf == NULL) return;
 
     ClearGraph(false);
@@ -79,8 +75,7 @@ void setGraphBuf(uint8_t *buf, size_t size)
     return;
 }
 
-size_t getFromGraphBuf(uint8_t *buf)
-{
+size_t getFromGraphBuf(uint8_t *buf) {
     if (buf == NULL) return 0;
     uint32_t i;
     for (i = 0; i < GraphTraceLen; ++i) {
@@ -93,8 +88,7 @@ size_t getFromGraphBuf(uint8_t *buf)
 }
 
 // A simple test to see if there is any data inside Graphbuffer.
-bool HasGraphData()
-{
+bool HasGraphData() {
     if (GraphTraceLen <= 0) {
         PrintAndLogEx(NORMAL, "No data available, try reading something first");
         return false;
@@ -103,8 +97,7 @@ bool HasGraphData()
 }
 
 // Get or auto-detect ask clock rate
-int GetAskClock(const char *str, bool printAns)
-{
+int GetAskClock(const char *str, bool printAns) {
     if (getSignalProperties()->isnoise)
         return false;
 
@@ -137,8 +130,7 @@ int GetAskClock(const char *str, bool printAns)
     return clock;
 }
 
-uint8_t GetPskCarrier(const char *str, bool printAns)
-{
+uint8_t GetPskCarrier(const char *str, bool printAns) {
     if (getSignalProperties()->isnoise)
         return false;
 
@@ -159,8 +151,7 @@ uint8_t GetPskCarrier(const char *str, bool printAns)
     return carrier;
 }
 
-int GetPskClock(const char *str, bool printAns)
-{
+int GetPskClock(const char *str, bool printAns) {
 
     if (getSignalProperties()->isnoise)
         return -1;
@@ -186,8 +177,7 @@ int GetPskClock(const char *str, bool printAns)
     return clock;
 }
 
-int GetNrzClock(const char *str, bool printAns)
-{
+int GetNrzClock(const char *str, bool printAns) {
 
     if (getSignalProperties()->isnoise)
         return -1;
@@ -213,8 +203,7 @@ int GetNrzClock(const char *str, bool printAns)
 }
 //by marshmellow
 //attempt to detect the field clock and bit clock for FSK
-int GetFskClock(const char *str, bool printAns)
-{
+int GetFskClock(const char *str, bool printAns) {
 
     int clock = param_get32ex(str, 0, 0, 10);
     if (clock != 0)
@@ -237,8 +226,7 @@ int GetFskClock(const char *str, bool printAns)
     PrintAndLogEx(DEBUG, "Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d", fc1, fc2, rf1);
     return 0;
 }
-bool fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, int *firstClockEdge)
-{
+bool fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, int *firstClockEdge) {
 
     if (getSignalProperties()->isnoise)
         return false;

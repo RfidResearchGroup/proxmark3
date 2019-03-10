@@ -28,13 +28,11 @@ z_const char *const z_errmsg[10] = {
 };
 
 
-const char *ZEXPORT zlibVersion()
-{
+const char *ZEXPORT zlibVersion() {
     return ZLIB_VERSION;
 }
 
-uLong ZEXPORT zlibCompileFlags()
-{
+uLong ZEXPORT zlibCompileFlags() {
     uLong flags;
 
     flags = 0;
@@ -242,8 +240,7 @@ local ptr_table table[MAX_PTR];
  * a protected system like OS/2. Use Microsoft C instead.
  */
 
-voidpf ZLIB_INTERNAL zcalloc(voidpf opaque, unsigned items, unsigned size)
-{
+voidpf ZLIB_INTERNAL zcalloc(voidpf opaque, unsigned items, unsigned size) {
     voidpf buf = opaque; /* just to make some compilers happy */
     ulg bsize = (ulg)items * size;
 
@@ -266,8 +263,7 @@ voidpf ZLIB_INTERNAL zcalloc(voidpf opaque, unsigned items, unsigned size)
     return buf;
 }
 
-void ZLIB_INTERNAL zcfree(voidpf opaque, voidpf ptr)
-{
+void ZLIB_INTERNAL zcfree(voidpf opaque, voidpf ptr) {
     int n;
     if (*(ush *)&ptr != 0) { /* object < 64K */
         farfree(ptr);
@@ -301,14 +297,12 @@ void ZLIB_INTERNAL zcfree(voidpf opaque, voidpf ptr)
 #  define _hfree   hfree
 #endif
 
-voidpf ZLIB_INTERNAL zcalloc(voidpf opaque, uInt items, uInt size)
-{
+voidpf ZLIB_INTERNAL zcalloc(voidpf opaque, uInt items, uInt size) {
     if (opaque) opaque = 0; /* to make compiler happy */
     return _halloc((long)items, size);
 }
 
-void ZLIB_INTERNAL zcfree(voidpf opaque, voidpf ptr)
-{
+void ZLIB_INTERNAL zcfree(voidpf opaque, voidpf ptr) {
     if (opaque) opaque = 0; /* to make compiler happy */
     _hfree(ptr);
 }

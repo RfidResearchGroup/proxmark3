@@ -73,8 +73,7 @@ struct timeval timeout = {
     .tv_usec = 30000  // 30 000 micro seconds
 };
 
-serial_port uart_open(const char *pcPortName)
-{
+serial_port uart_open(const char *pcPortName) {
     serial_port_unix *sp = calloc(sizeof(serial_port_unix), sizeof(uint8_t));
     if (sp == 0) return INVALID_SERIAL_PORT;
 
@@ -215,8 +214,7 @@ serial_port uart_open(const char *pcPortName)
     return sp;
 }
 
-void uart_close(const serial_port sp)
-{
+void uart_close(const serial_port sp) {
     serial_port_unix *spu = (serial_port_unix *)sp;
     tcflush(spu->fd, TCIOFLUSH);
     tcsetattr(spu->fd, TCSANOW, &(spu->tiOld));
@@ -236,8 +234,7 @@ void uart_close(const serial_port sp)
     free(sp);
 }
 
-bool uart_receive(const serial_port sp, uint8_t *pbtRx, size_t pszMaxRxLen, size_t *pszRxLen)
-{
+bool uart_receive(const serial_port sp, uint8_t *pbtRx, size_t pszMaxRxLen, size_t *pszRxLen) {
     int res;
     int byteCount;
     fd_set rfds;
@@ -296,8 +293,7 @@ bool uart_receive(const serial_port sp, uint8_t *pbtRx, size_t pszMaxRxLen, size
     return true;
 }
 
-bool uart_send(const serial_port sp, const uint8_t *pbtTx, const size_t len)
-{
+bool uart_send(const serial_port sp, const uint8_t *pbtTx, const size_t len) {
     int32_t res;
     size_t pos = 0;
     fd_set rfds;
@@ -333,8 +329,7 @@ bool uart_send(const serial_port sp, const uint8_t *pbtTx, const size_t len)
     return true;
 }
 
-bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed)
-{
+bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed) {
     const serial_port_unix *spu = (serial_port_unix *)sp;
     speed_t stPortSpeed;
     switch (uiPortSpeed) {
@@ -422,8 +417,7 @@ bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed)
     return (tcsetattr(spu->fd, TCSANOW, &ti) != -1);
 }
 
-uint32_t uart_get_speed(const serial_port sp)
-{
+uint32_t uart_get_speed(const serial_port sp) {
     struct termios ti;
     uint32_t uiPortSpeed;
     const serial_port_unix *spu = (serial_port_unix *)sp;

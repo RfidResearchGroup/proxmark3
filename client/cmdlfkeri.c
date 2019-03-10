@@ -11,8 +11,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_keri_clone(void)
-{
+int usage_lf_keri_clone(void) {
     PrintAndLogEx(NORMAL, "clone a KERI tag to a T55x7 tag.");
     PrintAndLogEx(NORMAL, "Usage: lf keri clone [h] <id> <Q5>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -25,8 +24,7 @@ int usage_lf_keri_clone(void)
     return 0;
 }
 
-int usage_lf_keri_sim(void)
-{
+int usage_lf_keri_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of KERI card with specified card number.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "");
@@ -41,8 +39,7 @@ int usage_lf_keri_sim(void)
 }
 
 // find KERI preamble in already demoded data
-int detectKeri(uint8_t *dest, size_t *size, bool *invert)
-{
+int detectKeri(uint8_t *dest, size_t *size, bool *invert) {
 
     uint8_t preamble[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
     uint8_t preamble_i[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0};
@@ -66,8 +63,7 @@ int detectKeri(uint8_t *dest, size_t *size, bool *invert)
     return (int)startIdx;
 }
 
-int CmdKeriDemod(const char *Cmd)
-{
+int CmdKeriDemod(const char *Cmd) {
 
     if (!PSKDemod("", false)) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - KERI: PSK1 Demod failed");
@@ -126,14 +122,12 @@ int CmdKeriDemod(const char *Cmd)
     return 1;
 }
 
-int CmdKeriRead(const char *Cmd)
-{
+int CmdKeriRead(const char *Cmd) {
     lf_read(true, 10000);
     return CmdKeriDemod(Cmd);
 }
 
-int CmdKeriClone(const char *Cmd)
-{
+int CmdKeriClone(const char *Cmd) {
 
     uint32_t internalid = 0;
     uint32_t blocks[3] = {
@@ -196,8 +190,7 @@ int CmdKeriClone(const char *Cmd)
     return 0;
 }
 
-int CmdKeriSim(const char *Cmd)
-{
+int CmdKeriSim(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_keri_sim();
@@ -239,15 +232,13 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFKeri(const char *Cmd)
-{
+int CmdLFKeri(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }

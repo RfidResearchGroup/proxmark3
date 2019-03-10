@@ -11,8 +11,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_viking_clone(void)
-{
+int usage_lf_viking_clone(void) {
     PrintAndLogEx(NORMAL, "clone a Viking AM tag to a T55x7 tag.");
     PrintAndLogEx(NORMAL, "Usage: lf viking clone <Card ID - 8 hex digits> <Q5>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -24,8 +23,7 @@ int usage_lf_viking_clone(void)
     return 0;
 }
 
-int usage_lf_viking_sim(void)
-{
+int usage_lf_viking_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of viking card with specified card number.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "Per viking format, the card number is 8 digit hex number.  Larger values are truncated.");
@@ -40,8 +38,7 @@ int usage_lf_viking_sim(void)
 }
 
 // calc checksum
-uint64_t getVikingBits(uint32_t id)
-{
+uint64_t getVikingBits(uint32_t id) {
     uint8_t checksum = ((id >> 24) & 0xFF) ^ ((id >> 16) & 0xFF) ^ ((id >> 8) & 0xFF) ^ (id & 0xFF) ^ 0xF2 ^ 0xA8;
     uint64_t ret = (uint64_t)0xF2 << 56;
     ret |= (uint64_t)id << 8;
@@ -50,8 +47,7 @@ uint64_t getVikingBits(uint32_t id)
 }
 // by marshmellow
 // find viking preamble 0xF200 in already demoded data
-int detectViking(uint8_t *dest, size_t *size)
-{
+int detectViking(uint8_t *dest, size_t *size) {
     //make sure buffer has data
     if (*size < 64 * 2) return -2;
     size_t startIdx = 0;
@@ -75,8 +71,7 @@ int detectViking(uint8_t *dest, size_t *size)
 
 //by marshmellow
 //see ASKDemod for what args are accepted
-int CmdVikingDemod(const char *Cmd)
-{
+int CmdVikingDemod(const char *Cmd) {
     if (!ASKDemod(Cmd, false, false, 1)) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Viking ASKDemod failed");
         return 0;
@@ -102,14 +97,12 @@ int CmdVikingDemod(const char *Cmd)
 
 //by marshmellow
 //see ASKDemod for what args are accepted
-int CmdVikingRead(const char *Cmd)
-{
+int CmdVikingRead(const char *Cmd) {
     lf_read(true, 10000);
     return CmdVikingDemod(Cmd);
 }
 
-int CmdVikingClone(const char *Cmd)
-{
+int CmdVikingClone(const char *Cmd) {
     uint32_t id = 0;
     uint64_t rawID = 0;
     bool Q5 = false;
@@ -138,8 +131,7 @@ int CmdVikingClone(const char *Cmd)
     return 0;
 }
 
-int CmdVikingSim(const char *Cmd)
-{
+int CmdVikingSim(const char *Cmd) {
     uint32_t id = 0;
     uint64_t rawID = 0;
     uint8_t clk = 32, encoding = 1, separator = 0, invert = 0;
@@ -175,15 +167,13 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFViking(const char *Cmd)
-{
+int CmdLFViking(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }

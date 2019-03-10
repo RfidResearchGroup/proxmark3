@@ -13,8 +13,7 @@ bool g_lf_threshold_set = false;
 
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_cmdread(void)
-{
+int usage_lf_cmdread(void) {
     PrintAndLogEx(NORMAL, "Usage: lf cmdread d <delay period> z <zero period> o <one period> c <cmdbytes>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h             This help");
@@ -29,8 +28,7 @@ int usage_lf_cmdread(void)
     PrintAndLogEx(NORMAL, "      lf cmdread d 80 z 100 o 200 c 11000");
     return 0;
 }
-int usage_lf_read(void)
-{
+int usage_lf_read(void) {
     PrintAndLogEx(NORMAL, "Usage: lf read [h] [s] [d numofsamples]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h            This help");
@@ -43,8 +41,7 @@ int usage_lf_read(void)
     PrintAndLogEx(NORMAL, "         lf read s");
     return 0;
 }
-int usage_lf_snoop(void)
-{
+int usage_lf_snoop(void) {
     PrintAndLogEx(NORMAL, "Snoop low frequence signal. Use 'lf config' to set parameters.");
     PrintAndLogEx(NORMAL, "Usage: lf snoop [h]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -53,8 +50,7 @@ int usage_lf_snoop(void)
     PrintAndLogEx(NORMAL, "Use 'lf config' to set parameters.");
     return 0;
 }
-int usage_lf_config(void)
-{
+int usage_lf_config(void) {
     PrintAndLogEx(NORMAL, "Usage: lf config [h] [H|<divisor>] [b <bps>] [d <decim>] [a 0|1]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h             This help");
@@ -77,8 +73,7 @@ int usage_lf_config(void)
     PrintAndLogEx(NORMAL, "                    Performs a snoop (no active field)");
     return 0;
 }
-int usage_lf_simfsk(void)
-{
+int usage_lf_simfsk(void) {
     PrintAndLogEx(NORMAL, "Usage: lf simfsk [h] [c <clock>] [H <fcHigh>] [L <fcLow>] [d <hexdata>]");
     PrintAndLogEx(NORMAL, "there are about four FSK modulations to know of.");
     PrintAndLogEx(NORMAL, "FSK1  -  where fc/8 = high  and fc/5 = low");
@@ -103,8 +98,7 @@ int usage_lf_simfsk(void)
     PrintAndLogEx(NORMAL, "");
     return 0;
 }
-int usage_lf_simask(void)
-{
+int usage_lf_simask(void) {
     PrintAndLogEx(NORMAL, "Usage: lf simask [c <clock>] [i] [b|m|r] [s] [d <raw hex to sim>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h              This help");
@@ -117,8 +111,7 @@ int usage_lf_simask(void)
     PrintAndLogEx(NORMAL, "       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
     return 0;
 }
-int usage_lf_simpsk(void)
-{
+int usage_lf_simpsk(void) {
     PrintAndLogEx(NORMAL, "Usage: lf simpsk [1|2|3] [c <clock>] [i] [r <carrier>] [d <raw hex to sim>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h              This help");
@@ -131,8 +124,7 @@ int usage_lf_simpsk(void)
     PrintAndLogEx(NORMAL, "       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
     return 0;
 }
-int usage_lf_find(void)
-{
+int usage_lf_find(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf search [h] <0|1> [u]");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Options:");
@@ -149,8 +141,7 @@ int usage_lf_find(void)
 
 
 /* send a LF command before reading */
-int CmdLFCommandRead(const char *Cmd)
-{
+int CmdLFCommandRead(const char *Cmd) {
 
     UsbCommand c = {CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K, {0, 0, 0}};
     bool errors = false;
@@ -194,8 +185,7 @@ int CmdLFCommandRead(const char *Cmd)
     return 0;
 }
 
-int CmdFlexdemod(const char *Cmd)
-{
+int CmdFlexdemod(const char *Cmd) {
 
     if (GraphTraceLen < 0)
         return 0;
@@ -272,8 +262,7 @@ int CmdFlexdemod(const char *Cmd)
     return 0;
 }
 
-int CmdLFSetConfig(const char *Cmd)
-{
+int CmdLFSetConfig(const char *Cmd) {
     uint8_t divisor =  0;//Frequency divisor
     uint8_t bps = 0; // Bits per sample
     uint8_t decimation = 0; //How many to keep
@@ -341,8 +330,7 @@ int CmdLFSetConfig(const char *Cmd)
     return 0;
 }
 
-bool lf_read(bool silent, uint32_t samples)
-{
+bool lf_read(bool silent, uint32_t samples) {
     if (IsOffline()) return false;
     UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_125K, {silent, samples, 0}};
     clearCommandBuffer();
@@ -363,8 +351,7 @@ bool lf_read(bool silent, uint32_t samples)
     return true;
 }
 
-int CmdLFRead(const char *Cmd)
-{
+int CmdLFRead(const char *Cmd) {
 
     if (IsOffline()) return 0;
 
@@ -397,8 +384,7 @@ int CmdLFRead(const char *Cmd)
     return lf_read(silent, samples);
 }
 
-int CmdLFSnoop(const char *Cmd)
-{
+int CmdLFSnoop(const char *Cmd) {
     uint8_t cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_lf_snoop();
 
@@ -410,8 +396,7 @@ int CmdLFSnoop(const char *Cmd)
     return 0;
 }
 
-static void ChkBitstream(const char *str)
-{
+static void ChkBitstream(const char *str) {
     // convert to bitstream if necessary
     for (int i = 0; i < (int)(GraphTraceLen / 2); i++) {
         if (GraphBuffer[i] > 1 || GraphBuffer[i] < 0) {
@@ -422,8 +407,7 @@ static void ChkBitstream(const char *str)
 }
 //Attempt to simulate any wave in buffer (one bit per output sample)
 // converts GraphBuffer to bitstream (based on zero crossings) if needed.
-int CmdLFSim(const char *Cmd)
-{
+int CmdLFSim(const char *Cmd) {
 #define FPGA_LF 1
 #define FPGA_HF 2
 
@@ -459,8 +443,7 @@ int CmdLFSim(const char *Cmd)
 
 // by marshmellow - sim fsk data given clock, fcHigh, fcLow, invert
 // - allow pull data from DemodBuffer
-int CmdLFfskSim(const char *Cmd)
-{
+int CmdLFfskSim(const char *Cmd) {
     //might be able to autodetect FCs and clock from Graphbuffer if using demod buffer
     // otherwise will need FChigh, FClow, Clock, and bitstream
     uint8_t fcHigh = 0, fcLow = 0, clk = 0;
@@ -553,8 +536,7 @@ int CmdLFfskSim(const char *Cmd)
 
 // by marshmellow - sim ask data given clock, invert, manchester or raw, separator
 // - allow pull data from DemodBuffer
-int CmdLFaskSim(const char *Cmd)
-{
+int CmdLFaskSim(const char *Cmd) {
     // autodetect clock from Graphbuffer if using demod buffer
     // needs clock, invert, manchester/raw as m or r, separator as s, and bitstream
     uint8_t encoding = 1, separator = 0, clk = 0, invert = 0;
@@ -647,8 +629,7 @@ int CmdLFaskSim(const char *Cmd)
 
 // by marshmellow - sim psk data given carrier, clock, invert
 // - allow pull data from DemodBuffer or parameters
-int CmdLFpskSim(const char *Cmd)
-{
+int CmdLFpskSim(const char *Cmd) {
     //might be able to autodetect FC and clock from Graphbuffer if using demod buffer
     //will need carrier, Clock, and bitstream
     uint8_t carrier = 0, clk = 0;
@@ -754,8 +735,7 @@ int CmdLFpskSim(const char *Cmd)
     return 0;
 }
 
-int CmdLFSimBidir(const char *Cmd)
-{
+int CmdLFSimBidir(const char *Cmd) {
     // Set ADC to twice the carrier for a slight supersampling
     // HACK: not implemented in ARMSRC.
     PrintAndLogEx(INFO, "Not implemented yet.");
@@ -765,8 +745,7 @@ int CmdLFSimBidir(const char *Cmd)
 }
 
 // ICEMAN,  todo,   swap from Graphbuffer.
-int CmdVchDemod(const char *Cmd)
-{
+int CmdVchDemod(const char *Cmd) {
     // Is this the entire sync pattern, or does this also include some
     // data bits that happen to be the same everywhere? That would be
     // lovely to know.
@@ -839,8 +818,7 @@ int CmdVchDemod(const char *Cmd)
 }
 
 //by marshmellow
-bool CheckChipType(bool getDeviceData)
-{
+bool CheckChipType(bool getDeviceData) {
 
     bool retval = false;
 
@@ -873,8 +851,7 @@ out:
 }
 
 //by marshmellow
-int CmdLFfind(const char *Cmd)
-{
+int CmdLFfind(const char *Cmd) {
     int ans = 0;
     size_t minLength = 2000;
     char cmdp = tolower(param_getchar(Cmd, 0));
@@ -1026,15 +1003,13 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLF(const char *Cmd)
-{
+int CmdLF(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }

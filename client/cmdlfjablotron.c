@@ -12,8 +12,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_jablotron_clone(void)
-{
+int usage_lf_jablotron_clone(void) {
     PrintAndLogEx(NORMAL, "clone a Jablotron tag to a T55x7 tag.");
     PrintAndLogEx(NORMAL, "Usage: lf jablotron clone [h] <card ID> <Q5>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -26,8 +25,7 @@ int usage_lf_jablotron_clone(void)
     return 0;
 }
 
-int usage_lf_jablotron_sim(void)
-{
+int usage_lf_jablotron_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of jablotron card with specified card number.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "");
@@ -41,8 +39,7 @@ int usage_lf_jablotron_sim(void)
     return 0;
 }
 
-static uint8_t jablontron_chksum(uint8_t *bits)
-{
+static uint8_t jablontron_chksum(uint8_t *bits) {
     uint8_t chksum = 0;
     for (int i = 16; i < 56; i += 8) {
         chksum += bytebits_to_byte(bits + i, 8);
@@ -51,8 +48,7 @@ static uint8_t jablontron_chksum(uint8_t *bits)
     return chksum;
 }
 
-int getJablotronBits(uint64_t fullcode, uint8_t *bits)
-{
+int getJablotronBits(uint64_t fullcode, uint8_t *bits) {
     //preamp
     num_to_bytebits(0xFFFF, 16, bits);
 
@@ -69,8 +65,7 @@ int getJablotronBits(uint64_t fullcode, uint8_t *bits)
 // Note: this is not a demod, this is only a detection
 // the parameter *bits needs to be demoded before call
 // 0xFFFF preamble, 64bits
-int detectJablotron(uint8_t *bits, size_t *size)
-{
+int detectJablotron(uint8_t *bits, size_t *size) {
     if (*size < 64 * 2) return -1; //make sure buffer has enough data
     size_t startIdx = 0;
     uint8_t preamble[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0};
@@ -84,8 +79,7 @@ int detectJablotron(uint8_t *bits, size_t *size)
     return (int)startIdx;
 }
 
-static uint64_t getJablontronCardId(uint64_t rawcode)
-{
+static uint64_t getJablontronCardId(uint64_t rawcode) {
     uint64_t id = 0;
     uint8_t bytes[] = {0, 0, 0, 0, 0};
     num_to_bytes(rawcode, 5, bytes);
@@ -97,8 +91,7 @@ static uint64_t getJablontronCardId(uint64_t rawcode)
 }
 
 //see ASKDemod for what args are accepted
-int CmdJablotronDemod(const char *Cmd)
-{
+int CmdJablotronDemod(const char *Cmd) {
 
     //Differential Biphase / di-phase (inverted biphase)
     //get binary from ask wave
@@ -152,14 +145,12 @@ int CmdJablotronDemod(const char *Cmd)
     return 1;
 }
 
-int CmdJablotronRead(const char *Cmd)
-{
+int CmdJablotronRead(const char *Cmd) {
     lf_read(true, 10000);
     return CmdJablotronDemod(Cmd);
 }
 
-int CmdJablotronClone(const char *Cmd)
-{
+int CmdJablotronClone(const char *Cmd) {
 
     uint64_t fullcode = 0;
     uint32_t blocks[3] = {T55x7_MODULATION_DIPHASE | T55x7_BITRATE_RF_64 | 2 << T55x7_MAXBLOCK_SHIFT, 0, 0};
@@ -209,8 +200,7 @@ int CmdJablotronClone(const char *Cmd)
     return 0;
 }
 
-int CmdJablotronSim(const char *Cmd)
-{
+int CmdJablotronSim(const char *Cmd) {
     uint64_t fullcode = 0;
 
     char cmdp = tolower(param_getchar(Cmd, 0));
@@ -248,15 +238,13 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFJablotron(const char *Cmd)
-{
+int CmdLFJablotron(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }

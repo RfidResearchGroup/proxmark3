@@ -118,8 +118,7 @@ json_t *json_null(void);
 #endif
 
 static JSON_INLINE
-json_t *json_incref(json_t *json)
-{
+json_t *json_incref(json_t *json) {
     if (json && json->refcount != (size_t) -1)
         JSON_INTERNAL_INCREF(json);
     return json;
@@ -129,16 +128,14 @@ json_t *json_incref(json_t *json)
 void json_delete(json_t *json);
 
 static JSON_INLINE
-void json_decref(json_t *json)
-{
+void json_decref(json_t *json) {
     if (json && json->refcount != (size_t) -1 && JSON_INTERNAL_DECREF(json) == 0)
         json_delete(json);
 }
 
 #if defined(__GNUC__) || defined(__clang__)
 static JSON_INLINE
-void json_decrefp(json_t **json)
-{
+void json_decrefp(json_t **json) {
     if (json) {
         json_decref(*json);
         *json = NULL;
@@ -183,8 +180,7 @@ enum json_error_code {
     json_error_index_out_of_range
 };
 
-static JSON_INLINE enum json_error_code json_error_code(const json_error_t *e)
-{
+static JSON_INLINE enum json_error_code json_error_code(const json_error_t *e) {
     return (enum json_error_code)e->text[JSON_ERROR_TEXT_LENGTH - 1];
 }
 
@@ -210,36 +206,33 @@ int json_object_iter_set_new(json_t *object, void *iter, json_t *value);
 
 #define json_object_foreach(object, key, value) \
     for(key = json_object_iter_key(json_object_iter(object)); \
-        key && (value = json_object_iter_value(json_object_key_to_iter(key))); \
-        key = json_object_iter_key(json_object_iter_next(object, json_object_key_to_iter(key))))
+            key && (value = json_object_iter_value(json_object_key_to_iter(key))); \
+            key = json_object_iter_key(json_object_iter_next(object, json_object_key_to_iter(key))))
 
 #define json_object_foreach_safe(object, n, key, value)     \
     for(key = json_object_iter_key(json_object_iter(object)), \
-        n = json_object_iter_next(object, json_object_key_to_iter(key)); \
-        key && (value = json_object_iter_value(json_object_key_to_iter(key))); \
-        key = json_object_iter_key(n), \
-        n = json_object_iter_next(object, json_object_key_to_iter(key)))
+            n = json_object_iter_next(object, json_object_key_to_iter(key)); \
+            key && (value = json_object_iter_value(json_object_key_to_iter(key))); \
+            key = json_object_iter_key(n), \
+            n = json_object_iter_next(object, json_object_key_to_iter(key)))
 
 #define json_array_foreach(array, index, value) \
     for(index = 0; \
-        index < json_array_size(array) && (value = json_array_get(array, index)); \
-        index++)
+            index < json_array_size(array) && (value = json_array_get(array, index)); \
+            index++)
 
 static JSON_INLINE
-int json_object_set(json_t *object, const char *key, json_t *value)
-{
+int json_object_set(json_t *object, const char *key, json_t *value) {
     return json_object_set_new(object, key, json_incref(value));
 }
 
 static JSON_INLINE
-int json_object_set_nocheck(json_t *object, const char *key, json_t *value)
-{
+int json_object_set_nocheck(json_t *object, const char *key, json_t *value) {
     return json_object_set_new_nocheck(object, key, json_incref(value));
 }
 
 static JSON_INLINE
-int json_object_iter_set(json_t *object, void *iter, json_t *value)
-{
+int json_object_iter_set(json_t *object, void *iter, json_t *value) {
     return json_object_iter_set_new(object, iter, json_incref(value));
 }
 
@@ -253,20 +246,17 @@ int json_array_clear(json_t *array);
 int json_array_extend(json_t *array, json_t *other);
 
 static JSON_INLINE
-int json_array_set(json_t *array, size_t ind, json_t *value)
-{
+int json_array_set(json_t *array, size_t ind, json_t *value) {
     return json_array_set_new(array, ind, json_incref(value));
 }
 
 static JSON_INLINE
-int json_array_append(json_t *array, json_t *value)
-{
+int json_array_append(json_t *array, json_t *value) {
     return json_array_append_new(array, json_incref(value));
 }
 
 static JSON_INLINE
-int json_array_insert(json_t *array, size_t ind, json_t *value)
-{
+int json_array_insert(json_t *array, size_t ind, json_t *value) {
     return json_array_insert_new(array, ind, json_incref(value));
 }
 
@@ -316,8 +306,7 @@ json_t *json_path_get(const json_t *json, const char *path);
 int json_path_set_new(json_t *json, const char *path, json_t *value, size_t flags, json_error_t *error);
 
 static JSON_INLINE
-int json_path_set(json_t *json, const char *path, json_t *value, size_t flags, json_error_t *error)
-{
+int json_path_set(json_t *json, const char *path, json_t *value, size_t flags, json_error_t *error) {
     return json_path_set_new(json, path, json_incref(value), flags, error);
 }
 

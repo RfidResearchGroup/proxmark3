@@ -136,8 +136,7 @@ static const manufactureName manufactureMapping[] = {
 // get a product description based on the UID
 //  uid[8] tag uid
 // returns description of the best match
-char *getTagInfo(uint8_t uid)
-{
+char *getTagInfo(uint8_t uid) {
 
     int i;
     int len = sizeof(manufactureMapping) / sizeof(manufactureName);
@@ -154,8 +153,7 @@ char *getTagInfo(uint8_t uid)
 static uint16_t frameLength = 0;
 uint16_t atsFSC[] = {16, 24, 32, 40, 48, 64, 96, 128, 256};
 
-int usage_hf_14a_sim(void)
-{
+int usage_hf_14a_sim(void) {
 //  PrintAndLogEx(NORMAL, "\n Emulating ISO/IEC 14443 type A tag with 4,7 or 10 byte UID\n");
     PrintAndLogEx(NORMAL, "\n Emulating ISO/IEC 14443 type A tag with 4,7 byte UID\n");
     PrintAndLogEx(NORMAL, "Usage: hf 14a sim [h] t <type> u <uid> [x] [e] [v]");
@@ -182,8 +180,7 @@ int usage_hf_14a_sim(void)
 //  PrintAndLogEx(NORMAL, "          hf 14a sim t 1 u 11223445566778899AA\n");
     return 0;
 }
-int usage_hf_14a_sniff(void)
-{
+int usage_hf_14a_sniff(void) {
     PrintAndLogEx(NORMAL, "It get data from the field and saves it into command buffer.");
     PrintAndLogEx(NORMAL, "Buffer accessible from command 'hf list 14a'");
     PrintAndLogEx(NORMAL, "Usage:  hf 14a sniff [c][r]");
@@ -193,8 +190,7 @@ int usage_hf_14a_sniff(void)
     PrintAndLogEx(NORMAL, "        hf 14a sniff c r");
     return 0;
 }
-int usage_hf_14a_raw(void)
-{
+int usage_hf_14a_raw(void) {
     PrintAndLogEx(NORMAL, "Usage: hf 14a raw [-h] [-r] [-c] [-p] [-a] [-T] [-t] <milliseconds> [-b] <number of bits>  <0A 0B 0C ... hex>");
     PrintAndLogEx(NORMAL, "       -h    this help");
     PrintAndLogEx(NORMAL, "       -r    do not read response");
@@ -208,8 +204,7 @@ int usage_hf_14a_raw(void)
     PrintAndLogEx(NORMAL, "       -3    ISO14443-3 select only (skip RATS)");
     return 0;
 }
-int usage_hf_14a_reader(void)
-{
+int usage_hf_14a_reader(void) {
     PrintAndLogEx(NORMAL, "Usage: hf 14a reader [k|s|x] [3]");
     PrintAndLogEx(NORMAL, "       k    keep the field active after command executed");
     PrintAndLogEx(NORMAL, "       s    silent (no messages)");
@@ -217,8 +212,7 @@ int usage_hf_14a_reader(void)
     PrintAndLogEx(NORMAL, "       3    ISO14443-3 select only (skip RATS)");
     return 0;
 }
-int usage_hf_14a_info(void)
-{
+int usage_hf_14a_info(void) {
     PrintAndLogEx(NORMAL, "This command makes more extensive tests against a ISO14443a tag in order to collect information");
     PrintAndLogEx(NORMAL, "Usage: hf 14a info [h|s]");
     PrintAndLogEx(NORMAL, "       s    silent (no messages)");
@@ -226,15 +220,13 @@ int usage_hf_14a_info(void)
     return 0;
 }
 
-int CmdHF14AList(const char *Cmd)
-{
+int CmdHF14AList(const char *Cmd) {
     //PrintAndLogEx(NORMAL, "Deprecated command, use 'hf list 14a' instead");
     CmdTraceList("14a");
     return 0;
 }
 
-int Hf14443_4aGetCardData(iso14a_card_select_t *card)
-{
+int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
     UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT, 0, 0}};
     SendCommand(&c);
 
@@ -273,8 +265,7 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card)
     return 0;
 }
 
-int CmdHF14AReader(const char *Cmd)
-{
+int CmdHF14AReader(const char *Cmd) {
 
     uint32_t cm = ISO14A_CONNECT;
     bool disconnectAfter = true, silent = false;
@@ -362,8 +353,7 @@ int CmdHF14AReader(const char *Cmd)
     return 0;
 }
 
-int CmdHF14AInfo(const char *Cmd)
-{
+int CmdHF14AInfo(const char *Cmd) {
 
     if (Cmd[0] == 'h' || Cmd[0] ==  'H') return usage_hf_14a_info();
 
@@ -665,8 +655,7 @@ int CmdHF14AInfo(const char *Cmd)
 }
 
 // Collect ISO14443 Type A UIDs
-int CmdHF14ACUIDs(const char *Cmd)
-{
+int CmdHF14ACUIDs(const char *Cmd) {
     // requested number of UIDs
     int n = atoi(Cmd);
     // collect at least 1 (e.g. if no parameter was given)
@@ -710,8 +699,7 @@ int CmdHF14ACUIDs(const char *Cmd)
 }
 
 // ## simulate iso14443a tag
-int CmdHF14ASim(const char *Cmd)
-{
+int CmdHF14ASim(const char *Cmd) {
     bool errors = false;
     uint8_t flags = 0;
     uint8_t tagtype = 1;
@@ -806,8 +794,7 @@ int CmdHF14ASim(const char *Cmd)
     return 0;
 }
 
-int CmdHF14ASniff(const char *Cmd)
-{
+int CmdHF14ASniff(const char *Cmd) {
     int param = 0;
     uint8_t ctmp;
     for (int i = 0; i < 2; i++) {
@@ -822,8 +809,7 @@ int CmdHF14ASniff(const char *Cmd)
     return 0;
 }
 
-int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen)
-{
+int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
     static bool responseNum = false;
     uint16_t cmdc = 0;
     *dataoutlen = 0;
@@ -922,8 +908,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
     return 0;
 }
 
-int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card)
-{
+int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
     UsbCommand resp;
 
     frameLength = 0;
@@ -993,8 +978,7 @@ int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card)
     return 0;
 }
 
-int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool activateField, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, bool *chainingout)
-{
+int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool activateField, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, bool *chainingout) {
     *chainingout = false;
 
     if (activateField) {
@@ -1078,15 +1062,14 @@ int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool activa
     return 0;
 }
 
-int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen)
-{
+int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
     *dataoutlen = 0;
     bool chaining = false;
     int res;
 
     // 3 byte here - 1b framing header, 2b crc16
     if (APDUInFramingEnable &&
-        ((frameLength && (datainlen > frameLength - 3)) || (datainlen > USB_CMD_DATA_SIZE - 3))) {
+            ((frameLength && (datainlen > frameLength - 3)) || (datainlen > USB_CMD_DATA_SIZE - 3))) {
         int clen = 0;
 
         bool vActivateField = activateField;
@@ -1149,8 +1132,7 @@ int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool lea
 }
 
 // ISO14443-4. 7. Half-duplex block transmission protocol
-int CmdHF14AAPDU(const char *cmd)
-{
+int CmdHF14AAPDU(const char *cmd) {
     uint8_t data[USB_CMD_DATA_SIZE];
     int datalen = 0;
     bool activateField = false;
@@ -1197,8 +1179,7 @@ int CmdHF14AAPDU(const char *cmd)
     return 0;
 }
 
-int CmdHF14ACmdRaw(const char *cmd)
-{
+int CmdHF14ACmdRaw(const char *cmd) {
     UsbCommand c = {CMD_READER_ISO_14443a, {0, 0, 0}};
     bool reply = 1;
     bool crc = false;
@@ -1271,8 +1252,8 @@ int CmdHF14ACmdRaw(const char *cmd)
             continue;
         }
         if ((cmd[i] >= '0' && cmd[i] <= '9') ||
-            (cmd[i] >= 'a' && cmd[i] <= 'f') ||
-            (cmd[i] >= 'A' && cmd[i] <= 'F')) {
+                (cmd[i] >= 'a' && cmd[i] <= 'f') ||
+                (cmd[i] >= 'A' && cmd[i] <= 'F')) {
             buf[strlen(buf) + 1] = 0;
             buf[strlen(buf)] = cmd[i];
             i++;
@@ -1354,8 +1335,7 @@ int CmdHF14ACmdRaw(const char *cmd)
     return 0;
 }
 
-static int waitCmd(uint8_t iSelect)
-{
+static int waitCmd(uint8_t iSelect) {
     UsbCommand resp;
     uint16_t len = 0;
 
@@ -1383,8 +1363,7 @@ static int waitCmd(uint8_t iSelect)
     return 0;
 }
 
-int CmdHF14AAntiFuzz(const char *cmd)
-{
+int CmdHF14AAntiFuzz(const char *cmd) {
 
     CLIParserInit("hf 14a antifuzz",
                   "Tries to fuzz the ISO14443a anticollision phase",
@@ -1413,8 +1392,7 @@ int CmdHF14AAntiFuzz(const char *cmd)
     return 0;
 }
 
-int CmdHF14AChaining(const char *cmd)
-{
+int CmdHF14AChaining(const char *cmd) {
 
     CLIParserInit("hf 14a chaining",
                   "Enable/Disable ISO14443a input chaining. Maximum input length goes from ATS.",
@@ -1460,15 +1438,13 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdHF14A(const char *Cmd)
-{
+int CmdHF14A(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }

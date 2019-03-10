@@ -20,8 +20,7 @@ static unsigned int claimed_iface = 0;
 unsigned char return_on_error = 0;
 unsigned char error_occured = 0;
 
-void SendCommand(UsbCommand *c)
-{
+void SendCommand(UsbCommand *c) {
     int ret;
 
 #if 0
@@ -49,8 +48,7 @@ void SendCommand(UsbCommand *c)
     }
 }
 
-bool ReceiveCommandPoll(UsbCommand *c)
-{
+bool ReceiveCommandPoll(UsbCommand *c) {
     int ret;
 
     memset(c, 0, sizeof(UsbCommand));
@@ -84,8 +82,7 @@ bool ReceiveCommandPoll(UsbCommand *c)
     return ret > 0;
 }
 
-void ReceiveCommand(UsbCommand *c)
-{
+void ReceiveCommand(UsbCommand *c) {
 //  printf("%s()\n", __FUNCTION__);
     int retval = 0;
     do {
@@ -95,8 +92,7 @@ void ReceiveCommand(UsbCommand *c)
 //  printf("recv %x\n", c->cmd);
 }
 
-usb_dev_handle *findProxmark(int verbose, unsigned int *iface)
-{
+usb_dev_handle *findProxmark(int verbose, unsigned int *iface) {
     struct usb_bus *busses, *bus;
     usb_dev_handle *handle = NULL;
     struct prox_unit units[50];
@@ -168,8 +164,7 @@ usb_dev_handle *findProxmark(int verbose, unsigned int *iface)
     return NULL;
 }
 
-usb_dev_handle *OpenProxmark(int verbose)
-{
+usb_dev_handle *OpenProxmark(int verbose) {
     int ret;
     usb_dev_handle *handle = NULL;
     unsigned int iface;
@@ -205,8 +200,7 @@ usb_dev_handle *OpenProxmark(int verbose)
     return handle;
 }
 
-void CloseProxmark(void)
-{
+void CloseProxmark(void) {
     usb_release_interface(devh, claimed_iface);
     usb_close(devh);
     devh = NULL;

@@ -11,8 +11,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_pyramid_clone(void)
-{
+int usage_lf_pyramid_clone(void) {
     PrintAndLogEx(NORMAL, "clone a Farpointe/Pyramid tag to a T55x7 tag.");
     PrintAndLogEx(NORMAL, "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated. ");
     PrintAndLogEx(NORMAL, "Currently only works on 26bit");
@@ -29,8 +28,7 @@ int usage_lf_pyramid_clone(void)
     return 0;
 }
 
-int usage_lf_pyramid_sim(void)
-{
+int usage_lf_pyramid_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of Farpointe/Pyramid card with specified card number.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.");
@@ -49,8 +47,7 @@ int usage_lf_pyramid_sim(void)
 
 // by marshmellow
 // FSK Demod then try to locate a Farpointe Data (pyramid) ID
-int detectPyramid(uint8_t *dest, size_t *size, int *waveStartIdx)
-{
+int detectPyramid(uint8_t *dest, size_t *size, int *waveStartIdx) {
     //make sure buffer has data
     if (*size < 128 * 50) return -1;
 
@@ -75,8 +72,7 @@ int detectPyramid(uint8_t *dest, size_t *size, int *waveStartIdx)
 }
 
 // Works for 26bits.
-int GetPyramidBits(uint32_t fc, uint32_t cn, uint8_t *pyramidBits)
-{
+int GetPyramidBits(uint32_t fc, uint32_t cn, uint8_t *pyramidBits) {
 
     uint8_t pre[128];
     memset(pre, 0x00, sizeof(pre));
@@ -109,8 +105,7 @@ int GetPyramidBits(uint32_t fc, uint32_t cn, uint8_t *pyramidBits)
 //by marshmellow
 //Pyramid Prox demod - FSK RF/50 with preamble of 0000000000000001  (always a 128 bit data stream)
 //print full Farpointe Data/Pyramid Prox ID and some bit format details if found
-int CmdPyramidDemod(const char *Cmd)
-{
+int CmdPyramidDemod(const char *Cmd) {
     //raw fsk demod no manchester decoding no start bit finding just get binary from wave
     uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
     size_t size = getFromGraphBuf(bits);
@@ -252,14 +247,12 @@ int CmdPyramidDemod(const char *Cmd)
     return 1;
 }
 
-int CmdPyramidRead(const char *Cmd)
-{
+int CmdPyramidRead(const char *Cmd) {
     lf_read(true, 15000);
     return CmdPyramidDemod(Cmd);
 }
 
-int CmdPyramidClone(const char *Cmd)
-{
+int CmdPyramidClone(const char *Cmd) {
 
     char cmdp = param_getchar(Cmd, 0);
     if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_pyramid_clone();
@@ -310,8 +303,7 @@ int CmdPyramidClone(const char *Cmd)
     return 0;
 }
 
-int CmdPyramidSim(const char *Cmd)
-{
+int CmdPyramidSim(const char *Cmd) {
 
     char cmdp = param_getchar(Cmd, 0);
     if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_pyramid_sim();
@@ -356,15 +348,13 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFPyramid(const char *Cmd)
-{
+int CmdLFPyramid(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }

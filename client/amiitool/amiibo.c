@@ -12,8 +12,7 @@
 #define HMAC_POS_DATA 0x008
 #define HMAC_POS_TAG 0x1B4
 
-void nfc3d_amiibo_calc_seed(const uint8_t *dump, uint8_t *key)
-{
+void nfc3d_amiibo_calc_seed(const uint8_t *dump, uint8_t *key) {
     memcpy(key + 0x00, dump + 0x029, 0x02);
     memset(key + 0x02, 0x00, 0x0E);
     memcpy(key + 0x10, dump + 0x1D4, 0x08);
@@ -21,16 +20,14 @@ void nfc3d_amiibo_calc_seed(const uint8_t *dump, uint8_t *key)
     memcpy(key + 0x20, dump + 0x1E8, 0x20);
 }
 
-void nfc3d_amiibo_keygen(const nfc3d_keygen_masterkeys *masterKeys, const uint8_t *dump, nfc3d_keygen_derivedkeys *derivedKeys)
-{
+void nfc3d_amiibo_keygen(const nfc3d_keygen_masterkeys *masterKeys, const uint8_t *dump, nfc3d_keygen_derivedkeys *derivedKeys) {
     uint8_t seed[NFC3D_KEYGEN_SEED_SIZE];
 
     nfc3d_amiibo_calc_seed(dump, seed);
     nfc3d_keygen(masterKeys, seed, derivedKeys);
 }
 
-void nfc3d_amiibo_cipher(const nfc3d_keygen_derivedkeys *keys, const uint8_t *in, uint8_t *out)
-{
+void nfc3d_amiibo_cipher(const nfc3d_keygen_derivedkeys *keys, const uint8_t *in, uint8_t *out) {
     mbedtls_aes_context aes;
     size_t nc_off = 0;
     unsigned char nonce_counter[16];
@@ -49,8 +46,7 @@ void nfc3d_amiibo_cipher(const nfc3d_keygen_derivedkeys *keys, const uint8_t *in
     memcpy(out + 0x1D4, in + 0x1D4, 0x034);
 }
 
-void nfc3d_amiibo_tag_to_internal(const uint8_t *tag, uint8_t *intl)
-{
+void nfc3d_amiibo_tag_to_internal(const uint8_t *tag, uint8_t *intl) {
     memcpy(intl + 0x000, tag + 0x008, 0x008);
     memcpy(intl + 0x008, tag + 0x080, 0x020);
     memcpy(intl + 0x028, tag + 0x010, 0x024);
@@ -60,8 +56,7 @@ void nfc3d_amiibo_tag_to_internal(const uint8_t *tag, uint8_t *intl)
     memcpy(intl + 0x1DC, tag + 0x054, 0x02C);
 }
 
-void nfc3d_amiibo_internal_to_tag(const uint8_t *intl, uint8_t *tag)
-{
+void nfc3d_amiibo_internal_to_tag(const uint8_t *intl, uint8_t *tag) {
     memcpy(tag + 0x008, intl + 0x000, 0x008);
     memcpy(tag + 0x080, intl + 0x008, 0x020);
     memcpy(tag + 0x010, intl + 0x028, 0x024);
@@ -71,8 +66,7 @@ void nfc3d_amiibo_internal_to_tag(const uint8_t *intl, uint8_t *tag)
     memcpy(tag + 0x054, intl + 0x1DC, 0x02C);
 }
 
-bool nfc3d_amiibo_unpack(const nfc3d_amiibo_keys *amiiboKeys, const uint8_t *tag, uint8_t *plain)
-{
+bool nfc3d_amiibo_unpack(const nfc3d_amiibo_keys *amiiboKeys, const uint8_t *tag, uint8_t *plain) {
     uint8_t internal[NFC3D_AMIIBO_SIZE];
     nfc3d_keygen_derivedkeys dataKeys;
     nfc3d_keygen_derivedkeys tagKeys;
@@ -100,8 +94,7 @@ bool nfc3d_amiibo_unpack(const nfc3d_amiibo_keys *amiiboKeys, const uint8_t *tag
         memcmp(plain + HMAC_POS_TAG, internal + HMAC_POS_TAG, 32) == 0;
 }
 
-void nfc3d_amiibo_pack(const nfc3d_amiibo_keys *amiiboKeys, const uint8_t *plain, uint8_t *tag)
-{
+void nfc3d_amiibo_pack(const nfc3d_amiibo_keys *amiiboKeys, const uint8_t *plain, uint8_t *tag) {
     uint8_t cipher[NFC3D_AMIIBO_SIZE];
     nfc3d_keygen_derivedkeys tagKeys;
     nfc3d_keygen_derivedkeys dataKeys;
@@ -137,8 +130,7 @@ void nfc3d_amiibo_pack(const nfc3d_amiibo_keys *amiiboKeys, const uint8_t *plain
     nfc3d_amiibo_internal_to_tag(cipher, tag);
 }
 
-bool nfc3d_amiibo_load_keys(nfc3d_amiibo_keys *amiiboKeys, const char *path)
-{
+bool nfc3d_amiibo_load_keys(nfc3d_amiibo_keys *amiiboKeys, const char *path) {
     FILE *f = fopen(path, "rb");
     if (!f) {
         return false;
@@ -160,8 +152,7 @@ bool nfc3d_amiibo_load_keys(nfc3d_amiibo_keys *amiiboKeys, const char *path)
     return true;
 }
 
-void nfc3d_amiibo_copy_app_data(const uint8_t *src, uint8_t *dst)
-{
+void nfc3d_amiibo_copy_app_data(const uint8_t *src, uint8_t *dst) {
 
 
     //uint16_t *ami_nb_wr = (uint16_t*)(dst + 0x29);

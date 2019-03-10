@@ -56,8 +56,7 @@ static uint32_t last_frame_end; /* ts of last bit of previews rx or tx frame */
 // I/O interface abstraction (FPGA -> ARM)
 //-----------------------------------------------------------------------------
 
-static inline uint8_t rx_byte_from_fpga()
-{
+static inline uint8_t rx_byte_from_fpga() {
     for (;;) {
         WDT_HIT();
 
@@ -84,8 +83,7 @@ static inline uint8_t rx_byte_from_fpga()
 //
 // Note: The SSC receiver is never synchronized the calculation may be performed
 // on a i/q pair from two subsequent correlations, but does not matter.
-static inline int32_t sample_power()
-{
+static inline int32_t sample_power() {
     int32_t q = (int8_t)rx_byte_from_fpga();
     q = ABS(q);
     int32_t i = (int8_t)rx_byte_from_fpga();
@@ -101,8 +99,7 @@ static inline int32_t sample_power()
 //
 // Note: The demodulator would be drifting (18.9us * 5 != 100us), rx_frame
 // has a delay loop that aligns rx_bit calls to the TAG tx timeslots.
-static inline bool rx_bit()
-{
+static inline bool rx_bit() {
     int32_t power;
 
     for (size_t i = 0; i < 5; ++i) {
@@ -121,8 +118,7 @@ static inline bool rx_bit()
 // be circumvented, but the adventage over bitbang would be little.
 //-----------------------------------------------------------------------------
 
-static inline void tx_bit(bool bit)
-{
+static inline void tx_bit(bool bit) {
     // insert pause
     LOW(GPIO_SSC_DOUT);
     last_frame_end += RWD_TIME_PAUSE;
@@ -144,8 +140,7 @@ static inline void tx_bit(bool bit)
 // present.
 //-----------------------------------------------------------------------------
 
-static void tx_frame(uint32_t frame, uint8_t len)
-{
+static void tx_frame(uint32_t frame, uint8_t len) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_TX);
 
     // wait for next tx timeslot
@@ -173,8 +168,7 @@ static void tx_frame(uint32_t frame, uint8_t len)
     LogTrace(cmdbytes, sizeof(cmdbytes), last_frame_start, last_frame_end, NULL, true);
 }
 
-static uint32_t rx_frame(uint8_t len)
-{
+static uint32_t rx_frame(uint8_t len) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR
                       | FPGA_HF_READER_RX_XCORR_848_KHZ
                       | FPGA_HF_READER_RX_XCORR_QUARTER);
@@ -203,8 +197,7 @@ static uint32_t rx_frame(uint8_t len)
     return frame;
 }
 
-static bool rx_ack()
-{
+static bool rx_ack() {
     // change fpga into rx mode
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR
                       | FPGA_HF_READER_RX_XCORR_848_KHZ
@@ -244,8 +237,7 @@ static bool rx_ack()
 // Legic Reader
 //-----------------------------------------------------------------------------
 
-static int init_card(uint8_t cardtype, legic_card_select_t *p_card)
-{
+static int init_card(uint8_t cardtype, legic_card_select_t *p_card) {
     p_card->tagtype = cardtype;
 
     switch (p_card->tagtype) {
@@ -273,8 +265,7 @@ static int init_card(uint8_t cardtype, legic_card_select_t *p_card)
     return 0;
 }
 
-static void init_reader(bool clear_mem)
-{
+static void init_reader(bool clear_mem) {
     // configure FPGA
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR
@@ -314,8 +305,7 @@ static void init_reader(bool clear_mem)
 //  - Transmit initialisation vector 7 bits
 //  - Receive card type 6 bits
 //  - Transmit Acknowledge 6 bits
-static uint32_t setup_phase(uint8_t iv)
-{
+static uint32_t setup_phase(uint8_t iv) {
     // init coordination timestamp
     last_frame_end = GET_TICKS;
 
@@ -348,15 +338,13 @@ static uint32_t setup_phase(uint8_t iv)
     return card_type;
 }
 
-static uint8_t calc_crc4(uint16_t cmd, uint8_t cmd_sz, uint8_t value)
-{
+static uint8_t calc_crc4(uint16_t cmd, uint8_t cmd_sz, uint8_t value) {
     crc_clear(&legic_crc);
     crc_update(&legic_crc, (value << cmd_sz) | cmd, 8 + cmd_sz);
     return crc_finish(&legic_crc);
 }
 
-static int16_t read_byte(uint16_t index, uint8_t cmd_sz)
-{
+static int16_t read_byte(uint16_t index, uint8_t cmd_sz) {
     uint16_t cmd = (index << 1) | LEGIC_READ;
 
     // read one byte
@@ -385,8 +373,7 @@ static int16_t read_byte(uint16_t index, uint8_t cmd_sz)
 
 // Transmit write command, wait until (3.6ms) the tag sends back an unencrypted
 // ACK ('1' bit) and forward the prng time based.
-bool write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz)
-{
+bool write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz) {
     uint32_t cmd = index << 1 | LEGIC_WRITE;          // prepare command
     uint8_t  crc = calc_crc4(cmd, addr_sz + 1, byte); // calculate crc
     cmd |= byte << (addr_sz + 1);                     // append value
@@ -408,8 +395,7 @@ bool write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz)
 //
 // Only this functions are public / called from appmain.c
 //-----------------------------------------------------------------------------
-void LegicRfInfo(void)
-{
+void LegicRfInfo(void) {
     // configure ARM and FPGA
     init_reader(false);
 
@@ -446,8 +432,7 @@ OUT:
     StopTicks();
 }
 
-void LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv)
-{
+void LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
     // configure ARM and FPGA
     init_reader(false);
 
@@ -480,8 +465,7 @@ OUT:
     StopTicks();
 }
 
-void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data)
-{
+void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
     // configure ARM and FPGA
     init_reader(false);
 

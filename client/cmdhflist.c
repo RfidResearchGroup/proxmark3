@@ -24,8 +24,7 @@ enum MifareAuthSeq {
 static enum MifareAuthSeq MifareAuthState;
 static TAuthData AuthData;
 
-void ClearAuthData()
-{
+void ClearAuthData() {
     AuthData.uid = 0;
     AuthData.nt = 0;
     AuthData.first_auth = true;
@@ -43,15 +42,13 @@ void ClearAuthData()
  *          2 : Not crc-command
  */
 
-uint8_t iso14443A_CRC_check(bool isResponse, uint8_t *d, uint8_t n)
-{
+uint8_t iso14443A_CRC_check(bool isResponse, uint8_t *d, uint8_t n) {
     if (n < 3) return 2;
     if (isResponse & (n < 6)) return 2;
     return check_crc(CRC_14443_A, d, n);
 }
 
-uint8_t mifare_CRC_check(bool isResponse, uint8_t *data, uint8_t len)
-{
+uint8_t mifare_CRC_check(bool isResponse, uint8_t *data, uint8_t len) {
     switch (MifareAuthState) {
         case masNone:
         case masError:
@@ -69,13 +66,11 @@ uint8_t mifare_CRC_check(bool isResponse, uint8_t *data, uint8_t len)
  *          1 : CRC-command, CRC ok
  *          2 : Not crc-command
  */
-uint8_t iso14443B_CRC_check(uint8_t *d, uint8_t n)
-{
+uint8_t iso14443B_CRC_check(uint8_t *d, uint8_t n) {
     return check_crc(CRC_14443_B, d, n);
 }
 
-uint8_t iso15693_CRC_check(uint8_t *d, uint8_t n)
-{
+uint8_t iso15693_CRC_check(uint8_t *d, uint8_t n) {
     return check_crc(CRC_15693, d, n);
 }
 
@@ -88,8 +83,7 @@ uint8_t iso15693_CRC_check(uint8_t *d, uint8_t n)
  *          1 : CRC-command, CRC ok
  *          2 : Not crc-command
  */
-uint8_t iclass_CRC_check(bool isResponse, uint8_t *d, uint8_t n)
-{
+uint8_t iclass_CRC_check(bool isResponse, uint8_t *d, uint8_t n) {
     //CRC commands (and responses) are all at least 4 bytes
     if (n < 4) return 2;
 
@@ -136,8 +130,7 @@ uint8_t iclass_CRC_check(bool isResponse, uint8_t *d, uint8_t n)
     return check_crc(CRC_ICLASS, d, n);
 }
 
-int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize)
-{
+int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     switch (cmd[0]) {
         case ISO14443A_CMD_WUPA:
             snprintf(exp, size, "WUPA");
@@ -272,13 +265,11 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize)
     return 1;
 }
 
-void annotateIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize)
-{
+void annotateIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     applyIso14443a(exp, size, cmd, cmdsize);
 }
 
-void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize)
-{
+void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     switch (cmd[0]) {
         case ICLASS_CMD_ACTALL:
             snprintf(exp, size, "ACTALL");
@@ -328,8 +319,7 @@ void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize)
     return;
 }
 
-void annotateIso15693(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize)
-{
+void annotateIso15693(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 
     switch (cmd[1]) {
         case ISO15693_INVENTORY:
@@ -385,8 +375,7 @@ void annotateIso15693(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize)
         snprintf(exp, size, "?");
 }
 
-void annotateTopaz(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize)
-{
+void annotateTopaz(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     switch (cmd[0]) {
         case TOPAZ_REQA:
             snprintf(exp, size, "REQA");
@@ -428,8 +417,7 @@ void annotateTopaz(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize)
 }
 
 // iso 7816-3
-void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize)
-{
+void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     // S-block
     if ((cmd[0] & 0xC0) && (cmdsize == 3)) {
         switch ((cmd[0] & 0x3f)) {
@@ -544,8 +532,7 @@ void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize)
 }
 
 // MIFARE DESFire
-void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize)
-{
+void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 
     // it's basically a ISO14443a tag, so try annotation from there
     if (!applyIso14443a(exp, size, cmd, cmdsize)) {
@@ -707,8 +694,7 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize)
 0F = Completion
 0A 11 22 33 44 55 66 = Authenticate (11 22 33 44 55 66 = data to authenticate)
 **/
-void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize)
-{
+void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     switch (cmd[0]) {
         case ISO14443B_REQB           : {
 
@@ -781,8 +767,7 @@ void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize)
 // 1 = read
 // 0 = write
 // Quite simpel tag
-void annotateLegic(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize)
-{
+void annotateLegic(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     uint8_t bitsend = cmd[0];
     uint8_t cmdBit = (cmd[1] & 1);
     switch (bitsend) {
@@ -843,8 +828,7 @@ void annotateLegic(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize)
     }
 }
 
-void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize)
-{
+void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 
     switch (cmd[0]) {
         case FELICA_POLL_REQ:
@@ -973,8 +957,7 @@ void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize)
     }
 }
 
-void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, uint8_t paritysize, bool isResponse)
-{
+void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, uint8_t paritysize, bool isResponse) {
     if (!isResponse && cmdsize == 1) {
         switch (cmd[0]) {
             case ISO14443A_CMD_WUPA:
@@ -1050,8 +1033,7 @@ void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, uint8
 
 }
 
-bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isResponse, uint8_t *mfData, size_t *mfDataLen)
-{
+bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isResponse, uint8_t *mfData, size_t *mfDataLen) {
     static struct Crypto1State *traceCrypto1;
     static uint64_t mfLastKey;
 
@@ -1183,8 +1165,7 @@ bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isRes
     return *mfDataLen > 0;
 }
 
-bool NTParityChk(TAuthData *ad, uint32_t ntx)
-{
+bool NTParityChk(TAuthData *ad, uint32_t ntx) {
     if (
         (oddparity8(ntx >> 8 & 0xff) ^ (ntx & 0x01) ^ ((ad->nt_enc_par >> 5) & 0x01) ^ (ad->nt_enc & 0x01)) ||
         (oddparity8(ntx >> 16 & 0xff) ^ (ntx >> 8 & 0x01) ^ ((ad->nt_enc_par >> 6) & 0x01) ^ (ad->nt_enc >> 8 & 0x01)) ||
@@ -1212,8 +1193,7 @@ bool NTParityChk(TAuthData *ad, uint32_t ntx)
     return true;
 }
 
-bool NestedCheckKey(uint64_t key, TAuthData *ad, uint8_t *cmd, uint8_t cmdsize, uint8_t *parity)
-{
+bool NestedCheckKey(uint64_t key, TAuthData *ad, uint8_t *cmd, uint8_t cmdsize, uint8_t *parity) {
     uint8_t buf[32] = {0};
     struct Crypto1State *pcs;
 
@@ -1251,8 +1231,7 @@ bool NestedCheckKey(uint64_t key, TAuthData *ad, uint8_t *cmd, uint8_t cmdsize, 
     return true;
 }
 
-bool CheckCrypto1Parity(uint8_t *cmd_enc, uint8_t cmdsize, uint8_t *cmd, uint8_t *parity_enc)
-{
+bool CheckCrypto1Parity(uint8_t *cmd_enc, uint8_t cmdsize, uint8_t *cmd, uint8_t *parity_enc) {
     for (int i = 0; i < cmdsize - 1; i++) {
         if (oddparity8(cmd[i]) ^ (cmd[i + 1] & 0x01) ^ ((parity_enc[i / 8] >> (7 - i % 8)) & 0x01) ^ (cmd_enc[i + 1] & 0x01))
             return false;
@@ -1262,8 +1241,7 @@ bool CheckCrypto1Parity(uint8_t *cmd_enc, uint8_t cmdsize, uint8_t *cmd, uint8_t
 
 // Another implementation of mfkey64 attack,  more "valid" than "probable"
 //
-uint64_t GetCrypto1ProbableKey(TAuthData *ad)
-{
+uint64_t GetCrypto1ProbableKey(TAuthData *ad) {
     struct Crypto1State *revstate = lfsr_recovery64(ad->ks2, ad->ks3);
     lfsr_rollback_word(revstate, 0, 0);
     lfsr_rollback_word(revstate, 0, 0);

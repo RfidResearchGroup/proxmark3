@@ -15,8 +15,7 @@ unsigned int start_addr, end_addr, bootrom_unlocked;
 extern char _bootrom_start, _bootrom_end, _flash_start, _flash_end;
 extern uint32_t _osimage_entry;
 
-void DbpString(char *str)
-{
+void DbpString(char *str) {
     byte_t len = 0;
     while (str[len] != 0x00)
         len++;
@@ -24,8 +23,7 @@ void DbpString(char *str)
     cmd_send(CMD_DEBUG_PRINT_STRING, len, 0, 0, (byte_t *)str, len);
 }
 
-static void ConfigClocks(void)
-{
+static void ConfigClocks(void) {
     // we are using a 16 MHz crystal as the basis for everything
     // slow clock runs at 32Khz typical regardless of crystal
 
@@ -82,13 +80,11 @@ static void ConfigClocks(void)
     while (!(AT91C_BASE_PMC->PMC_SR & AT91C_PMC_MCKRDY)) {};
 }
 
-static void Fatal(void)
-{
+static void Fatal(void) {
     for (;;) {};
 }
 
-void UsbPacketReceived(uint8_t *packet, int len)
-{
+void UsbPacketReceived(uint8_t *packet, int len) {
     int i, dont_ack = 0;
     UsbCommand *c = (UsbCommand *)packet;
     volatile uint32_t *p;
@@ -175,8 +171,8 @@ void UsbPacketReceived(uint8_t *packet, int len)
             * bootrom area. In any case they must be within the flash area.
             */
             if ((bootrom_unlocked || ((cmd_start >= prot_end) || (cmd_end < prot_start))) &&
-                (cmd_start >= allow_start) &&
-                (cmd_end <= allow_end)) {
+                    (cmd_start >= allow_start) &&
+                    (cmd_end <= allow_end)) {
                 start_addr = cmd_start;
                 end_addr = cmd_end;
             } else {
@@ -197,8 +193,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
         cmd_send(CMD_ACK, arg0, 0, 0, 0, 0);
 }
 
-static void flash_mode(int externally_entered)
-{
+static void flash_mode(int externally_entered) {
     start_addr = 0;
     end_addr = 0;
     bootrom_unlocked = 0;
@@ -232,8 +227,7 @@ static void flash_mode(int externally_entered)
     }
 }
 
-void BootROM(void)
-{
+void BootROM(void) {
     //------------
     // First set up all the I/O pins; GPIOs configured directly, other ones
     // just need to be assigned to the appropriate peripheral.

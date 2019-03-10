@@ -25,8 +25,7 @@
 #include <string.h>
 #include <inttypes.h>
 
-static int test_genkey(unsigned int keylength, unsigned char *msg, size_t msg_len, bool verbose)
-{
+static int test_genkey(unsigned int keylength, unsigned char *msg, size_t msg_len, bool verbose) {
     int ret = 1;
     size_t tmp_len, tmp2_len;
     unsigned char *tmp, *tmp2;
@@ -192,8 +191,7 @@ static unsigned char pk_I[] = {
     0xd4, 0x42, 0xc9, 0x17, 0xb2, 0x2c, 0x92, 0x12, 0x37, 0x1b, 0xd3, 0xc5, 0x79, 0xd2, 0x65, 0x61,
 };
 
-static int test_pk(bool verbose)
-{
+static int test_pk(bool verbose) {
     int ret = 1;
     size_t tmp_len, tmp2_len;
     unsigned char *tmp, *tmp2;
@@ -300,8 +298,7 @@ close_pub:
     return ret;
 }
 
-int exec_crypto_test(bool verbose)
-{
+int exec_crypto_test(bool verbose) {
     unsigned int keylengths[] = {1024, 1152, 1408, 1984, 2048, 3072, 4096};
     int i;
     int ret;

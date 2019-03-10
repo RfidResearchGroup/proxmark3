@@ -424,21 +424,18 @@ static const struct emv_tag emv_tags[] = {
     { 0xff8106, "Discretionary Data" },
 };
 
-static int emv_sort_tag(tlv_tag_t tag)
-{
+static int emv_sort_tag(tlv_tag_t tag) {
     return (int)(tag >= 0x100 ? tag : tag << 8);
 }
 
-static int emv_tlv_compare(const void *a, const void *b)
-{
+static int emv_tlv_compare(const void *a, const void *b) {
     const struct tlv *tlv = a;
     const struct emv_tag *tag = b;
 
     return emv_sort_tag(tlv->tag) - (emv_sort_tag(tag->tag));
 }
 
-static const struct emv_tag *emv_get_tag(const struct tlv *tlv)
-{
+static const struct emv_tag *emv_get_tag(const struct tlv *tlv) {
     struct emv_tag *tag = bsearch(tlv, emv_tags, sizeof(emv_tags) / sizeof(emv_tags[0]),
                                   sizeof(emv_tags[0]), emv_tlv_compare);
 
@@ -456,8 +453,7 @@ static const char *bitstrings[] = {
     "1.......",
 };
 
-static void emv_tag_dump_bitmask(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level)
-{
+static void emv_tag_dump_bitmask(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
     const struct emv_tag_bit *bits = tag->data;
     unsigned bit, byte;
 
@@ -477,8 +473,7 @@ static void emv_tag_dump_bitmask(const struct tlv *tlv, const struct emv_tag *ta
     }
 }
 
-static void emv_tag_dump_dol(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level)
-{
+static void emv_tag_dump_dol(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
     const unsigned char *buf = tlv->value;
     size_t left = tlv->len;
 
@@ -499,15 +494,13 @@ static void emv_tag_dump_dol(const struct tlv *tlv, const struct emv_tag *tag, F
     }
 }
 
-static void emv_tag_dump_string(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level)
-{
+static void emv_tag_dump_string(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
     fprintf(f, "\tString value '");
     fwrite(tlv->value, 1, tlv->len, f);
     fprintf(f, "'\n");
 }
 
-static unsigned long emv_value_numeric(const struct tlv *tlv, unsigned start, unsigned end)
-{
+static unsigned long emv_value_numeric(const struct tlv *tlv, unsigned start, unsigned end) {
     unsigned long ret = 0;
     int i;
 
@@ -537,14 +530,12 @@ static unsigned long emv_value_numeric(const struct tlv *tlv, unsigned start, un
     return ret;
 }
 
-static void emv_tag_dump_numeric(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level)
-{
+static void emv_tag_dump_numeric(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
     PRINT_INDENT(level);
     fprintf(f, "\tNumeric value %lu\n", emv_value_numeric(tlv, 0, tlv->len * 2));
 }
 
-static void emv_tag_dump_yymmdd(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level)
-{
+static void emv_tag_dump_yymmdd(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
     PRINT_INDENT(level);
     fprintf(f, "\tDate: 20%02ld.%ld.%ld\n",
             emv_value_numeric(tlv, 0, 2),
@@ -552,14 +543,12 @@ static void emv_tag_dump_yymmdd(const struct tlv *tlv, const struct emv_tag *tag
             emv_value_numeric(tlv, 4, 6));
 }
 
-static uint32_t emv_get_binary(const unsigned char *S)
-{
+static uint32_t emv_get_binary(const unsigned char *S) {
     return (S[0] << 24) | (S[1] << 16) | (S[2] << 8) | (S[3] << 0);
 }
 
 // https://github.com/binaryfoo/emv-bertlv/blob/master/src/main/resources/fields/visa-cvr.txt
-static void emv_tag_dump_cvr(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level)
-{
+static void emv_tag_dump_cvr(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
     if (!tlv || tlv->len < 1) {
         PRINT_INDENT(level);
         fprintf(f, "\tINVALID!\n");
@@ -623,8 +612,7 @@ static void emv_tag_dump_cvr(const struct tlv *tlv, const struct emv_tag *tag, F
 }
 
 // EMV Book 3
-static void emv_tag_dump_cid(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level)
-{
+static void emv_tag_dump_cid(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
     if (!tlv || tlv->len < 1) {
         PRINT_INDENT(level);
         fprintf(f, "\tINVALID!\n");
@@ -665,8 +653,7 @@ static void emv_tag_dump_cid(const struct tlv *tlv, const struct emv_tag *tag, F
     }
 }
 
-static void emv_tag_dump_cvm_list(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level)
-{
+static void emv_tag_dump_cvm_list(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
     uint32_t X, Y;
     int i;
 
@@ -764,8 +751,7 @@ static void emv_tag_dump_cvm_list(const struct tlv *tlv, const struct emv_tag *t
     }
 }
 
-static void emv_tag_dump_afl(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level)
-{
+static void emv_tag_dump_afl(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
     if (tlv->len < 4 || tlv->len % 4) {
         PRINT_INDENT(level);
         fprintf(f, "\tINVALID!\n");
@@ -778,8 +764,7 @@ static void emv_tag_dump_afl(const struct tlv *tlv, const struct emv_tag *tag, F
     }
 }
 
-bool emv_tag_dump(const struct tlv *tlv, FILE *f, int level)
-{
+bool emv_tag_dump(const struct tlv *tlv, FILE *f, int level) {
     if (!tlv) {
         fprintf(f, "NULL\n");
         return false;
@@ -832,8 +817,7 @@ bool emv_tag_dump(const struct tlv *tlv, FILE *f, int level)
     return true;
 }
 
-char *emv_get_tag_name(const struct tlv *tlv)
-{
+char *emv_get_tag_name(const struct tlv *tlv) {
     static char *defstr = "";
 
     if (!tlv)

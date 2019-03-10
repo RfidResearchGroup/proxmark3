@@ -27,8 +27,7 @@ typedef struct {
     const char *name;
 } LoadState;
 
-static l_noret error(LoadState *S, const char *why)
-{
+static l_noret error(LoadState *S, const char *why) {
     luaO_pushfstring(S->L, "%s: %s precompiled chunk", S->name, why);
     luaD_throw(S->L, LUA_ERRSYNTAX);
 }
@@ -42,35 +41,30 @@ static l_noret error(LoadState *S, const char *why)
 #define luai_verifycode(L,b,f) /* empty */
 #endif
 
-static void LoadBlock(LoadState *S, void *b, size_t size)
-{
+static void LoadBlock(LoadState *S, void *b, size_t size) {
     if (luaZ_read(S->Z, b, size) != 0) error(S, "truncated");
 }
 
-static int LoadChar(LoadState *S)
-{
+static int LoadChar(LoadState *S) {
     char x;
     LoadVar(S, x);
     return x;
 }
 
-static int LoadInt(LoadState *S)
-{
+static int LoadInt(LoadState *S) {
     int x;
     LoadVar(S, x);
     if (x < 0) error(S, "corrupted");
     return x;
 }
 
-static lua_Number LoadNumber(LoadState *S)
-{
+static lua_Number LoadNumber(LoadState *S) {
     lua_Number x;
     LoadVar(S, x);
     return x;
 }
 
-static TString *LoadString(LoadState *S)
-{
+static TString *LoadString(LoadState *S) {
     size_t size;
     LoadVar(S, size);
     if (size == 0)
@@ -82,8 +76,7 @@ static TString *LoadString(LoadState *S)
     }
 }
 
-static void LoadCode(LoadState *S, Proto *f)
-{
+static void LoadCode(LoadState *S, Proto *f) {
     int n = LoadInt(S);
     f->code = luaM_newvector(S->L, n, Instruction);
     f->sizecode = n;
@@ -92,8 +85,7 @@ static void LoadCode(LoadState *S, Proto *f)
 
 static void LoadFunction(LoadState *S, Proto *f);
 
-static void LoadConstants(LoadState *S, Proto *f)
-{
+static void LoadConstants(LoadState *S, Proto *f) {
     int i, n;
     n = LoadInt(S);
     f->k = luaM_newvector(S->L, n, TValue);
@@ -129,8 +121,7 @@ static void LoadConstants(LoadState *S, Proto *f)
     }
 }
 
-static void LoadUpvalues(LoadState *S, Proto *f)
-{
+static void LoadUpvalues(LoadState *S, Proto *f) {
     int i, n;
     n = LoadInt(S);
     f->upvalues = luaM_newvector(S->L, n, Upvaldesc);
@@ -142,8 +133,7 @@ static void LoadUpvalues(LoadState *S, Proto *f)
     }
 }
 
-static void LoadDebug(LoadState *S, Proto *f)
-{
+static void LoadDebug(LoadState *S, Proto *f) {
     int i, n;
     f->source = LoadString(S);
     n = LoadInt(S);
@@ -163,8 +153,7 @@ static void LoadDebug(LoadState *S, Proto *f)
     for (i = 0; i < n; i++) f->upvalues[i].name = LoadString(S);
 }
 
-static void LoadFunction(LoadState *S, Proto *f)
-{
+static void LoadFunction(LoadState *S, Proto *f) {
     f->linedefined = LoadInt(S);
     f->lastlinedefined = LoadInt(S);
     f->numparams = LoadByte(S);
@@ -182,8 +171,7 @@ static void LoadFunction(LoadState *S, Proto *f)
 #define N2 N1+2
 #define N3 N2+6
 
-static void LoadHeader(LoadState *S)
-{
+static void LoadHeader(LoadState *S) {
     lu_byte h[LUAC_HEADERSIZE];
     lu_byte s[LUAC_HEADERSIZE];
     luaU_header(h);
@@ -199,8 +187,7 @@ static void LoadHeader(LoadState *S)
 /*
 ** load precompiled chunk
 */
-Closure *luaU_undump(lua_State *L, ZIO *Z, Mbuffer *buff, const char *name)
-{
+Closure *luaU_undump(lua_State *L, ZIO *Z, Mbuffer *buff, const char *name) {
     LoadState S;
     Closure *cl;
     if (*name == '@' || *name == '=')
@@ -237,8 +224,7 @@ Closure *luaU_undump(lua_State *L, ZIO *Z, Mbuffer *buff, const char *name)
 * if you change the code below be sure to update LoadHeader and FORMAT above
 * and LUAC_HEADERSIZE in lundump.h
 */
-void luaU_header(lu_byte *h)
-{
+void luaU_header(lu_byte *h) {
     int x = 1;
     memcpy(h, LUA_SIGNATURE, sizeof(LUA_SIGNATURE) - sizeof(char));
     h += sizeof(LUA_SIGNATURE) - sizeof(char);

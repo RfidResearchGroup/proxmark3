@@ -18,8 +18,7 @@ typedef struct {
 } __attribute__((__packed__)) card_clone_t;
 
 
-void RunMod()
-{
+void RunMod() {
     StandAloneMode();
     Dbprintf(">>  Craig Young Mifare sniff UID/clone uid 2 magic/sim  a.k.a YoungRun Started  <<");
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);

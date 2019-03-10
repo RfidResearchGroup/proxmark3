@@ -199,7 +199,7 @@ int stream_size;
     struct inflate_state FAR *state;
 
     if (version == Z_NULL || version[0] != ZLIB_VERSION[0] ||
-        stream_size != (int)(sizeof(z_stream)))
+            stream_size != (int)(sizeof(z_stream)))
         return Z_VERSION_ERROR;
     if (strm == Z_NULL) return Z_STREAM_ERROR;
     strm->msg = Z_NULL;                 /* in case we return an error */
@@ -335,8 +335,7 @@ struct inflate_state FAR *state;
 
     a.out > inffixed.h
  */
-void makefixed()
-{
+void makefixed() {
     unsigned low, size;
     struct inflate_state state;
 
@@ -637,7 +636,7 @@ int flush;
     {16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15};
 
     if (strm == Z_NULL || strm->state == Z_NULL || strm->next_out == Z_NULL ||
-        (strm->next_in == Z_NULL && strm->avail_in != 0))
+            (strm->next_in == Z_NULL && strm->avail_in != 0))
         return Z_STREAM_ERROR;
 
     state = (struct inflate_state FAR *)strm->state;
@@ -669,7 +668,7 @@ int flush;
 #else
                 if (
 #endif
-                    ((BITS(8) << 8) + (hold >> 8)) % 31) {
+                        ((BITS(8) << 8) + (hold >> 8)) % 31) {
                     strm->msg = (char *)"incorrect header check";
                     state->mode = BAD;
                     break;
@@ -746,7 +745,7 @@ int flush;
                     if (copy > have) copy = have;
                     if (copy) {
                         if (state->head != Z_NULL &&
-                            state->head->extra != Z_NULL) {
+                                state->head->extra != Z_NULL) {
                             len = state->head->extra_len - state->length;
                             zmemcpy(state->head->extra + len, next,
                                     len + copy > state->head->extra_max ?
@@ -769,8 +768,8 @@ int flush;
                     do {
                         len = (unsigned)(next[copy++]);
                         if (state->head != Z_NULL &&
-                            state->head->name != Z_NULL &&
-                            state->length < state->head->name_max)
+                                state->head->name != Z_NULL &&
+                                state->length < state->head->name_max)
                             state->head->name[state->length++] = len;
                     } while (len && copy < have);
                     if (state->flags & 0x0200)
@@ -789,8 +788,8 @@ int flush;
                     do {
                         len = (unsigned)(next[copy++]);
                         if (state->head != Z_NULL &&
-                            state->head->comment != Z_NULL &&
-                            state->length < state->head->comm_max)
+                                state->head->comment != Z_NULL &&
+                                state->length < state->head->comm_max)
                             state->head->comment[state->length++] = len;
                     } while (len && copy < have);
                     if (state->flags & 0x0200)
@@ -1191,9 +1190,9 @@ int flush;
                     out = left;
                     if ((
 #ifdef GUNZIP
-                            state->flags ? hold :
+                                state->flags ? hold :
 #endif
-                            ZSWAP32(hold)) != state->check) {
+                                ZSWAP32(hold)) != state->check) {
                         strm->msg = (char *)"incorrect data check";
                         state->mode = BAD;
                         break;
@@ -1456,7 +1455,7 @@ z_streamp source;
 
     /* check input */
     if (dest == Z_NULL || source == Z_NULL || source->state == Z_NULL ||
-        source->zalloc == (alloc_func)0 || source->zfree == (free_func)0)
+            source->zalloc == (alloc_func)0 || source->zfree == (free_func)0)
         return Z_STREAM_ERROR;
     state = (struct inflate_state FAR *)source->state;
 
@@ -1478,7 +1477,7 @@ z_streamp source;
     zmemcpy((voidpf)dest, (voidpf)source, sizeof(z_stream));
     zmemcpy((voidpf)copy, (voidpf)state, sizeof(struct inflate_state));
     if (state->lencode >= state->codes &&
-        state->lencode <= state->codes + ENOUGH - 1) {
+            state->lencode <= state->codes + ENOUGH - 1) {
         copy->lencode = copy->codes + (state->lencode - state->codes);
         copy->distcode = copy->codes + (state->distcode - state->codes);
     }

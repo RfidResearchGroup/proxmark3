@@ -13,8 +13,7 @@
 #include "proxusb.h"
 #include "flash.h"
 
-static void usage(char *argv0)
-{
+static void usage(char *argv0) {
     fprintf(stderr, "Usage:   %s [-b] image.elf [image.elf...]\n\n", argv0);
     fprintf(stderr, "\t-b\tEnable flashing of bootloader area (DANGEROUS)\n\n");
     fprintf(stderr, "Example: %s path/to/osimage.elf path/to/fpgaimage.elf\n", argv0);
@@ -22,8 +21,7 @@ static void usage(char *argv0)
 
 #define MAX_FILES 4
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     int can_write_bl = 0;
     int num_files = 0;
     int res;

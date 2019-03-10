@@ -17,8 +17,7 @@
         break;\
     }
 
-int main()
-{
+int main() {
     usb_init();
     SetLogFilename("snooper.log");
 

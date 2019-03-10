@@ -99,8 +99,7 @@ static void BuildInventoryResponse(uint8_t *cmdout, uint8_t *uid);
 // resulting data rate is 26,48 kbit/s (fc/512)
 // cmd ... data
 // n ... length of data
-static void CodeIso15693AsReader(uint8_t *cmd, int n)
-{
+static void CodeIso15693AsReader(uint8_t *cmd, int n) {
     int i, j;
 
     ToSendReset();
@@ -179,8 +178,7 @@ static void CodeIso15693AsReader(uint8_t *cmd, int n)
 // encode data using "1 out of 256" sheme
 // data rate is 1,66 kbit/s (fc/8192)
 // is designed for more robust communication over longer distances
-static void CodeIso15693AsReader256(uint8_t *cmd, int n)
-{
+static void CodeIso15693AsReader256(uint8_t *cmd, int n) {
     int i, j;
 
     ToSendReset();
@@ -222,8 +220,7 @@ static void CodeIso15693AsReader256(uint8_t *cmd, int n)
 }
 
 // Transmit the command (to the tag) that was placed in ToSend[].
-static void TransmitTo15693Tag(const uint8_t *cmd, int len, int *samples, int *wait)
-{
+static void TransmitTo15693Tag(const uint8_t *cmd, int len, int *samples, int *wait) {
 
     int c;
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_TX);
@@ -258,8 +255,7 @@ static void TransmitTo15693Tag(const uint8_t *cmd, int len, int *samples, int *w
 //-----------------------------------------------------------------------------
 // Transmit the command (to the reader) that was placed in ToSend[].
 //-----------------------------------------------------------------------------
-static void TransmitTo15693Reader(const uint8_t *cmd, int len, int *samples, int *wait)
-{
+static void TransmitTo15693Reader(const uint8_t *cmd, int len, int *samples, int *wait) {
     int c = 0;
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_424K);
 
@@ -292,8 +288,7 @@ static void TransmitTo15693Reader(const uint8_t *cmd, int len, int *samples, int
 //-----------------------------------------------------------------------------
 // DEMODULATE tag answer
 //-----------------------------------------------------------------------------
-static int DemodAnswer(uint8_t *received, uint8_t *dest, uint16_t samplecount)
-{
+static int DemodAnswer(uint8_t *received, uint8_t *dest, uint16_t samplecount) {
 
     int i, j;
     int max = 0, maxPos = 0, skip = 4;
@@ -386,8 +381,7 @@ static int DemodAnswer(uint8_t *received, uint8_t *dest, uint16_t samplecount)
 // returns:
 //  number of decoded bytes
 // logging enabled
-static int GetIso15693AnswerFromTag(uint8_t *received, int *elapsed)
-{
+static int GetIso15693AnswerFromTag(uint8_t *received, int *elapsed) {
 
 #define SIGNAL_BUFF_SIZE 15000
     // get current clock
@@ -441,8 +435,7 @@ static int GetIso15693AnswerFromTag(uint8_t *received, int *elapsed)
 
 // Now the GetISO15693 message from sniffing command
 // logging enable,
-static int GetIso15693AnswerFromSniff(uint8_t *received, int *samples, int *elapsed)
-{
+static int GetIso15693AnswerFromSniff(uint8_t *received, int *samples, int *elapsed) {
 
     bool getNext = false;
     int counter = 0, ci = 0, cq = 0;
@@ -490,8 +483,7 @@ static int GetIso15693AnswerFromSniff(uint8_t *received, int *samples, int *elap
 // for the response. The response is not demodulated, just left in the buffer
 // so that it can be downloaded to a PC and processed there.
 //-----------------------------------------------------------------------------
-void AcquireRawAdcSamplesIso15693(void)
-{
+void AcquireRawAdcSamplesIso15693(void) {
     int c = 0, getNext = false;
     int ci = 0, cq = 0;
 
@@ -557,8 +549,7 @@ void AcquireRawAdcSamplesIso15693(void)
 }
 
 // switch_off,  initreader, no logging
-void RecordRawAdcSamplesIso15693(void)
-{
+void RecordRawAdcSamplesIso15693(void) {
 
     int c = 0, getNext = false;
     int ci = 0, cq = 0;
@@ -598,8 +589,7 @@ void RecordRawAdcSamplesIso15693(void)
 
 // Initialize the proxmark as iso15k reader
 // (this might produces glitches that confuse some tags
-void Iso15693InitReader(void)
-{
+void Iso15693InitReader(void) {
     LEDsoff();
     clear_trace();
     set_tracing(true);
@@ -631,8 +621,7 @@ void Iso15693InitReader(void)
 
 // Encode (into the ToSend buffers) an identify request, which is the first
 // thing that you must send to a tag to get a response.
-static void BuildIdentifyRequest(uint8_t *out)
-{
+static void BuildIdentifyRequest(uint8_t *out) {
 
     uint8_t cmd[CMD_ID_RESP] = {0, ISO15_CMD_INVENTORY, 0, 0, 0};
     // flags
@@ -676,8 +665,7 @@ static void BuildReadBlockRequest(uint8_t **out, uint8_t *uid, uint8_t blockNumb
 */
 
 // Now the VICC>VCD responses when we are simulating a tag
-static void BuildInventoryResponse(uint8_t *out, uint8_t *uid)
-{
+static void BuildInventoryResponse(uint8_t *out, uint8_t *uid) {
 
     uint8_t cmd[CMD_INV_RESP] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
@@ -708,8 +696,7 @@ static void BuildInventoryResponse(uint8_t *out, uint8_t *uid)
 //  If you do not need the answer use NULL for *recv[]
 //  return: lenght of received data
 // logging enabled
-int SendDataTag(uint8_t *send, int sendlen, bool init, int speed, uint8_t *outdata)
-{
+int SendDataTag(uint8_t *send, int sendlen, bool init, int speed, uint8_t *outdata) {
 
     int t_samples = 0, wait = 0, elapsed = 0, answer_len = 0;
 
@@ -747,8 +734,7 @@ int SendDataTag(uint8_t *send, int sendlen, bool init, int speed, uint8_t *outda
 
 // Decodes a message from a tag and displays its metadata and content
 #define DBD15STATLEN 48
-void DbdecodeIso15693Answer(int len, uint8_t *d)
-{
+void DbdecodeIso15693Answer(int len, uint8_t *d) {
     char status[DBD15STATLEN + 1] = {0};
 
     if (len > 3) {
@@ -812,8 +798,7 @@ void DbdecodeIso15693Answer(int len, uint8_t *d)
 //-----------------------------------------------------------------------------
 // ok
 // parameter is unused !?!
-void ReaderIso15693(uint32_t parameter)
-{
+void ReaderIso15693(uint32_t parameter) {
     int answerLen1 = 0;
     int tsamples = 0, wait = 0, elapsed = 0;
 
@@ -877,8 +862,7 @@ void ReaderIso15693(uint32_t parameter)
 
 // Simulate an ISO15693 TAG, perform anti-collision and then print any reader commands
 // all demodulation performed in arm rather than host. - greg
-void SimTagIso15693(uint32_t parameter, uint8_t *uid)
-{
+void SimTagIso15693(uint32_t parameter, uint8_t *uid) {
 
     LEDsoff();
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
@@ -932,8 +916,7 @@ void SimTagIso15693(uint32_t parameter, uint8_t *uid)
 
 // Since there is no standardized way of reading the AFI out of a tag, we will brute force it
 // (some manufactures offer a way to read the AFI, though)
-void BruteforceIso15693Afi(uint32_t speed)
-{
+void BruteforceIso15693Afi(uint32_t speed) {
 
     uint8_t data[7] = {0, 0, 0, 0, 0, 0, 0};
     uint8_t buf[ISO15_MAX_FRAME];
@@ -987,8 +970,7 @@ void BruteforceIso15693Afi(uint32_t speed)
 
 // Allows to directly send commands to the tag via the client
 // Has to increase dialog between device and client.
-void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint8_t *data)
-{
+void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint8_t *data) {
 
     bool init = true;
     int buflen = 0;

@@ -34,13 +34,11 @@ static uint8_t felica_select_card(felica_card_select_t *card);
 static void TransmitFor18092_AsReader(uint8_t *frame, int len, uint32_t *timing, uint8_t power, uint8_t highspeed);
 bool WaitForFelicaReply(uint16_t maxbytes);
 
-void iso18092_set_timeout(uint32_t timeout)
-{
+void iso18092_set_timeout(uint32_t timeout) {
     felica_timeout = timeout + (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / (16 * 8) + 2;
 }
 
-uint32_t iso18092_get_timeout(void)
-{
+uint32_t iso18092_get_timeout(void) {
     return felica_timeout - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / (16 * 8) - 2;
 }
 
@@ -79,22 +77,19 @@ static struct {
 # define SYNC_16BIT 0xB24D
 #endif
 
-static void FelicaFrameReset()
-{
+static void FelicaFrameReset() {
     FelicaFrame.state = STATE_UNSYNCD;
     FelicaFrame.posCnt = 0;
     FelicaFrame.crc_ok = false;
     FelicaFrame.byte_offset = 0;
 }
-static void FelicaFrameinit(uint8_t *data)
-{
+static void FelicaFrameinit(uint8_t *data) {
     FelicaFrame.framebytes = data;
     FelicaFrameReset();
 }
 
 //shift byte into frame, reversing it at the same time
-static void shiftInByte(uint8_t bt)
-{
+static void shiftInByte(uint8_t bt) {
     uint8_t j;
     for (j = 0; j < FelicaFrame.byte_offset; j++) {
         FelicaFrame.framebytes[FelicaFrame.posCnt] = (FelicaFrame.framebytes[FelicaFrame.posCnt] << 1) + (bt & 1);
@@ -108,8 +103,7 @@ static void shiftInByte(uint8_t bt)
     }
 }
 
-static void Process18092Byte(uint8_t bt)
-{
+static void Process18092Byte(uint8_t bt) {
     switch (FelicaFrame.state) {
         case STATE_UNSYNCD: {
             //almost any nonzero byte can be start of SYNC. SYNC should be preceded by zeros, but that is not alsways the case
@@ -196,8 +190,7 @@ static void Process18092Byte(uint8_t bt)
  * Currently does NOT do any collision handling.
  * It expects 0-1 cards in the device's range.
  */
-static uint8_t felica_select_card(felica_card_select_t *card)
-{
+static uint8_t felica_select_card(felica_card_select_t *card) {
 
     // POLL command
     // 0xB2 0x4B = sync code
@@ -271,8 +264,7 @@ static uint8_t felica_select_card(felica_card_select_t *card)
 // Felica standard has a different file system, AFAIK,
 // 8-byte IDm, number of blocks, blocks numbers
 // number of blocks limited to 4 for FelicaLite(S)
-static void BuildFliteRdblk(uint8_t *idm, int blocknum, uint16_t *blocks)
-{
+static void BuildFliteRdblk(uint8_t *idm, int blocknum, uint16_t *blocks) {
 
     if (blocknum > 4 || blocknum <= 0)
         Dbprintf("Invalid number of blocks, %d != 4", blocknum);
@@ -324,8 +316,7 @@ static void BuildFliteRdblk(uint8_t *idm, int blocknum, uint16_t *blocks)
     AddCrc(frameSpace, c - 2);
 }
 
-static void TransmitFor18092_AsReader(uint8_t *frame, int len, uint32_t *timing, uint8_t power, uint8_t highspeed)
-{
+static void TransmitFor18092_AsReader(uint8_t *frame, int len, uint32_t *timing, uint8_t power, uint8_t highspeed) {
 
     uint8_t flags = FPGA_MAJOR_MODE_ISO18092;
 
@@ -389,8 +380,7 @@ static void TransmitFor18092_AsReader(uint8_t *frame, int len, uint32_t *timing,
 // Wait for tag reply
 // stop when button is pressed
 // or return TRUE when command is captured
-bool WaitForFelicaReply(uint16_t maxbytes)
-{
+bool WaitForFelicaReply(uint16_t maxbytes) {
 
     uint32_t c = 0;
 
@@ -440,8 +430,7 @@ bool WaitForFelicaReply(uint16_t maxbytes)
 
 // Set up FeliCa communication (similar to iso14443a_setup)
 // field is setup for "Sending as Reader"
-static void iso18092_setup(uint8_t fpga_minor_mode)
-{
+static void iso18092_setup(uint8_t fpga_minor_mode) {
 
     LEDsoff();
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
@@ -485,8 +474,7 @@ static void iso18092_setup(uint8_t fpga_minor_mode)
 // arg0 FeliCa flags
 // arg1 len of commandbytes
 // d.asBytes command bytes to send
-void felica_sendraw(UsbCommand *c)
-{
+void felica_sendraw(UsbCommand *c) {
 
     if (MF_DBGLEVEL > 3) Dbprintf("FeliCa_sendraw Enter");
 
@@ -552,8 +540,7 @@ OUT:
     if (MF_DBGLEVEL > 3) Dbprintf("FeliCa_sendraw Exit");
 }
 
-void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip)
-{
+void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
 
     int remFrames = (samplesToSkip) ? samplesToSkip : 0;
 
@@ -624,8 +611,7 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip)
 #define R_READBLK_LEN  0x21
 //simulate NFC Tag3 card - for now only poll response works
 // second half (4 bytes)  of NDEF2 goes into nfcid2_0, first into nfcid2_1
-void felica_sim_lite(uint64_t nfcid)
-{
+void felica_sim_lite(uint64_t nfcid) {
 
     int i, curlen = 0;
     uint8_t *curresp = 0;
@@ -731,8 +717,7 @@ void felica_sim_lite(uint64_t nfcid)
     DbpString("Felica Lite-S sim end");
 }
 
-void felica_dump_lite_s()
-{
+void felica_dump_lite_s() {
 
     uint8_t ndef[8];
     uint8_t poll[10] = { 0xb2, 0x4d, 0x06, FELICA_POLL_REQ, 0xff, 0xff, 0x00, 0x00, 0x09, 0x21};

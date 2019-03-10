@@ -15,8 +15,7 @@ uint64_t g_em410xid = 0;
 static int CmdHelp(const char *Cmd);
 
 //////////////// 410x commands
-int usage_lf_em410x_demod(void)
-{
+int usage_lf_em410x_demod(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf em 410x_demod [h] [clock] <0|1> [maxError]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     h                   - this help");
@@ -32,8 +31,7 @@ int usage_lf_em410x_demod(void)
     PrintAndLogEx(NORMAL, "           lf em 410x_demod 64 1 0 = demod an EM410x Tag ID from GraphBuffer using a clock of RF/64 and inverting data and allowing 0 demod errors");
     return 0;
 }
-int usage_lf_em410x_write(void)
-{
+int usage_lf_em410x_write(void) {
     PrintAndLogEx(NORMAL, "Writes EM410x ID to a T55x7 / T5555 (Q5) tag");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf em 410x_write [h] <id> <card> [clock]");
@@ -46,8 +44,7 @@ int usage_lf_em410x_write(void)
     PrintAndLogEx(NORMAL, "      lf em 410x_write 0F0368568B 1       = write ID to t55x7 card");
     return 0;
 }
-int usage_lf_em410x_ws(void)
-{
+int usage_lf_em410x_ws(void) {
     PrintAndLogEx(NORMAL, "Watch 'nd Spoof, activates reader, waits until a EM410x tag gets presented then it starts simulating the found UID");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf em 410x_spoof [h]");
@@ -57,8 +54,7 @@ int usage_lf_em410x_ws(void)
     PrintAndLogEx(NORMAL, "      lf em 410x_spoof");
     return 0;
 }
-int usage_lf_em410x_clone(void)
-{
+int usage_lf_em410x_clone(void) {
     PrintAndLogEx(NORMAL, "Simulating EM410x tag");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf em 410x_clone [h] <uid> <clock>");
@@ -71,8 +67,7 @@ int usage_lf_em410x_clone(void)
     PrintAndLogEx(NORMAL, "      lf em 410x_clone 0F0368568B 32");
     return 0;
 }
-int usage_lf_em410x_sim(void)
-{
+int usage_lf_em410x_sim(void) {
     PrintAndLogEx(NORMAL, "Simulating EM410x tag");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf em 410x_sim [h] <uid> <clock>");
@@ -85,8 +80,7 @@ int usage_lf_em410x_sim(void)
     PrintAndLogEx(NORMAL, "      lf em 410x_sim 0F0368568B 32");
     return 0;
 }
-int usage_lf_em410x_brute(void)
-{
+int usage_lf_em410x_brute(void) {
     PrintAndLogEx(NORMAL, "Bruteforcing by emulating EM410x tag");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf em 410x_brute [h] ids.txt [d 2000] [c clock]");
@@ -104,8 +98,7 @@ int usage_lf_em410x_brute(void)
 }
 
 //////////////// 4050 / 4450 commands
-int usage_lf_em4x50_dump(void)
-{
+int usage_lf_em4x50_dump(void) {
     PrintAndLogEx(NORMAL, "Dump EM4x50/EM4x69.  Tag must be on antenna. ");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_dump [h] <pwd>");
@@ -117,8 +110,7 @@ int usage_lf_em4x50_dump(void)
     PrintAndLogEx(NORMAL, "      lf em 4x50_dump 11223344");
     return 0;
 }
-int usage_lf_em4x50_read(void)
-{
+int usage_lf_em4x50_read(void) {
     PrintAndLogEx(NORMAL, "Read EM 4x50/EM4x69.  Tag must be on antenna. ");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_read [h] <address> <pwd>");
@@ -131,8 +123,7 @@ int usage_lf_em4x50_read(void)
     PrintAndLogEx(NORMAL, "      lf em 4x50_read 1 11223344");
     return 0;
 }
-int usage_lf_em4x50_write(void)
-{
+int usage_lf_em4x50_write(void) {
     PrintAndLogEx(NORMAL, "Write EM 4x50/4x69.  Tag must be on antenna. ");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_write [h] <address> <data> <pwd>");
@@ -148,8 +139,7 @@ int usage_lf_em4x50_write(void)
 }
 
 //////////////// 4205 / 4305 commands
-int usage_lf_em4x05_dump(void)
-{
+int usage_lf_em4x05_dump(void) {
     PrintAndLogEx(NORMAL, "Dump EM4x05/EM4x69.  Tag must be on antenna. ");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x05_dump [h] <pwd>");
@@ -161,8 +151,7 @@ int usage_lf_em4x05_dump(void)
     PrintAndLogEx(NORMAL, "      lf em 4x05_dump 11223344");
     return 0;
 }
-int usage_lf_em4x05_read(void)
-{
+int usage_lf_em4x05_read(void) {
     PrintAndLogEx(NORMAL, "Read EM4x05/EM4x69.  Tag must be on antenna. ");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x05_read [h] <address> <pwd>");
@@ -175,8 +164,7 @@ int usage_lf_em4x05_read(void)
     PrintAndLogEx(NORMAL, "      lf em 4x05_read 1 11223344");
     return 0;
 }
-int usage_lf_em4x05_write(void)
-{
+int usage_lf_em4x05_write(void) {
     PrintAndLogEx(NORMAL, "Write EM4x05/4x69.  Tag must be on antenna. ");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x05_write [h] <address> <data> <pwd>");
@@ -190,8 +178,7 @@ int usage_lf_em4x05_write(void)
     PrintAndLogEx(NORMAL, "      lf em 4x05_write 1 deadc0de 11223344");
     return 0;
 }
-int usage_lf_em4x05_info(void)
-{
+int usage_lf_em4x05_info(void) {
     PrintAndLogEx(NORMAL, "Tag information EM4205/4305/4469//4569 tags.  Tag must be on antenna.");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x05_info [h] <pwd>");
@@ -214,8 +201,7 @@ int usage_lf_em4x05_info(void)
  */
 
 // Construct the graph for emulating an EM410X tag
-void ConstructEM410xEmulGraph(const char *uid, const  uint8_t clock)
-{
+void ConstructEM410xEmulGraph(const char *uid, const  uint8_t clock) {
 
     int i, j, binary[4], parity[4];
     uint32_t n;
@@ -262,8 +248,7 @@ void ConstructEM410xEmulGraph(const char *uid, const  uint8_t clock)
 
 //by marshmellow
 //print 64 bit EM410x ID in multiple formats
-void printEM410x(uint32_t hi, uint64_t id)
-{
+void printEM410x(uint32_t hi, uint64_t id) {
 
     if (!id && !hi) return;
 
@@ -367,8 +352,7 @@ void printEM410x(uint32_t hi, uint64_t id)
  *   CCCC                  <-- each bit here is parity for the 10 bits above in corresponding column
  *   0                     <-- stop bit, end of tag
  */
-int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo)
-{
+int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo) {
     size_t idx = 0;
     uint8_t bits[512] = {0};
     size_t size = sizeof(bits);
@@ -409,24 +393,21 @@ int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo)
 
     return 1;
 }
-int AskEm410xDemod(const char *Cmd, uint32_t *hi, uint64_t *lo, bool verbose)
-{
+int AskEm410xDemod(const char *Cmd, uint32_t *hi, uint64_t *lo, bool verbose) {
     bool st = true;
     if (!ASKDemod_ext(Cmd, false, false, 1, &st)) return 0;
     return AskEm410xDecode(verbose, hi, lo);
 }
 
 // this read is the "normal" read,  which download lf signal and tries to demod here.
-int CmdEM410xRead(const char *Cmd)
-{
+int CmdEM410xRead(const char *Cmd) {
     lf_read(true, 8192);
     return CmdEM410xDemod(Cmd);
 }
 
 // this read loops on device side.
 // uses the demod in lfops.c
-int CmdEM410xRead_device(const char *Cmd)
-{
+int CmdEM410xRead_device(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     uint8_t findone = (cmdp == '1') ? 1 : 0;
     UsbCommand c = {CMD_EM410X_DEMOD, {findone, 0, 0}};
@@ -438,8 +419,7 @@ int CmdEM410xRead_device(const char *Cmd)
 //takes 3 arguments - clock, invert and maxErr as integers
 //attempts to demodulate ask while decoding manchester
 //prints binary found and saves in graphbuffer for further commands
-int CmdEM410xDemod(const char *Cmd)
-{
+int CmdEM410xDemod(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) > 10 || cmdp == 'h') return usage_lf_em410x_demod();
 
@@ -453,8 +433,7 @@ int CmdEM410xDemod(const char *Cmd)
 }
 
 // emulate an EM410X tag
-int CmdEM410xSim(const char *Cmd)
-{
+int CmdEM410xSim(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_lf_em410x_sim();
 
@@ -479,8 +458,7 @@ int CmdEM410xSim(const char *Cmd)
     return 0;
 }
 
-int CmdEM410xBrute(const char *Cmd)
-{
+int CmdEM410xBrute(const char *Cmd) {
     char filename[FILE_PATH_SIZE] = {0};
     FILE *f = NULL;
     char buf[11];
@@ -602,8 +580,7 @@ int CmdEM410xBrute(const char *Cmd)
  *
  *  EDIT -- capture enough to get 2 complete preambles at the slowest data rate known to be used (rf/64) (64*64*2+9 = 8201) marshmellow
 */
-int CmdEM410xWatch(const char *Cmd)
-{
+int CmdEM410xWatch(const char *Cmd) {
     do {
         if (ukbhit()) {
             int gc = getchar();
@@ -618,8 +595,7 @@ int CmdEM410xWatch(const char *Cmd)
 }
 
 //currently only supports manchester modulations
-int CmdEM410xWatchnSpoof(const char *Cmd)
-{
+int CmdEM410xWatchnSpoof(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_lf_em410x_ws();
@@ -631,8 +607,7 @@ int CmdEM410xWatchnSpoof(const char *Cmd)
     return 0;
 }
 
-int CmdEM410xWrite(const char *Cmd)
-{
+int CmdEM410xWrite(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 0x00 || cmdp == 'h') return usage_lf_em410x_write();
 
@@ -693,8 +668,7 @@ int CmdEM410xWrite(const char *Cmd)
 }
 
 //**************** Start of EM4x50 Code ************************
-bool EM_EndParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t cols, uint8_t pType)
-{
+bool EM_EndParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t cols, uint8_t pType) {
     if (rows * cols > size) return false;
     uint8_t colP = 0;
     //assume last col is a parity and do not test
@@ -707,8 +681,7 @@ bool EM_EndParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t cols, uint
     return true;
 }
 
-bool EM_ByteParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t cols, uint8_t pType)
-{
+bool EM_ByteParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t cols, uint8_t pType) {
     if (rows * cols > size) return false;
 
     uint8_t rowP = 0;
@@ -732,8 +705,7 @@ bool EM_ByteParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t cols, uin
 //c012345678| 0
 //            |- must be zero
 
-bool EMwordparitytest(uint8_t *bits)
-{
+bool EMwordparitytest(uint8_t *bits) {
 
     // last row/col parity must be 0
     if (bits[44] != 0) return false;
@@ -762,8 +734,7 @@ bool EMwordparitytest(uint8_t *bits)
 
 //////////////// 4050 / 4450 commands
 
-uint32_t OutputEM4x50_Block(uint8_t *BitStream, size_t size, bool verbose, bool pTest)
-{
+uint32_t OutputEM4x50_Block(uint8_t *BitStream, size_t size, bool verbose, bool pTest) {
     if (size < 45) return 0;
 
     uint32_t code = bytebits_to_byte(BitStream, 8);
@@ -813,8 +784,7 @@ uint32_t OutputEM4x50_Block(uint8_t *BitStream, size_t size, bool verbose, bool 
  * Word Read values. UID is stored in block 32.
  */
 //completed by Marshmellow
-int EM4x50Read(const char *Cmd, bool verbose)
-{
+int EM4x50Read(const char *Cmd, bool verbose) {
     uint8_t fndClk[] = {8, 16, 32, 40, 50, 64, 128};
     int clk = 0, invert = 0, tol = 0, phaseoff;
     int i = 0, j = 0, startblock, skip, block, start, end, low = 0, high = 0, minClk = 255;
@@ -1000,21 +970,18 @@ int EM4x50Read(const char *Cmd, bool verbose)
     return (int)AllPTest;
 }
 
-int CmdEM4x50Read(const char *Cmd)
-{
+int CmdEM4x50Read(const char *Cmd) {
     uint8_t ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_lf_em4x50_read();
     return EM4x50Read(Cmd, true);
 }
-int CmdEM4x50Write(const char *Cmd)
-{
+int CmdEM4x50Write(const char *Cmd) {
     uint8_t ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_lf_em4x50_write();
     PrintAndLogEx(NORMAL, "no implemented yet");
     return 0;
 }
-int CmdEM4x50Dump(const char *Cmd)
-{
+int CmdEM4x50Dump(const char *Cmd) {
     uint8_t ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_lf_em4x50_dump();
     PrintAndLogEx(NORMAL, "no implemented yet");
@@ -1023,8 +990,7 @@ int CmdEM4x50Dump(const char *Cmd)
 
 #define EM_PREAMBLE_LEN 6
 // download samples from device and copy to Graphbuffer
-bool downloadSamplesEM()
-{
+bool downloadSamplesEM() {
 
     // 8 bit preamble + 32 bit word response (max clock (128) * 40bits = 5120 samples)
     uint8_t got[6000];
@@ -1045,8 +1011,7 @@ bool downloadSamplesEM()
 }
 
 // em_demod
-bool doPreambleSearch(size_t *startIdx)
-{
+bool doPreambleSearch(size_t *startIdx) {
 
     // sanity check
     if (DemodBufferLen < EM_PREAMBLE_LEN) {
@@ -1067,8 +1032,7 @@ bool doPreambleSearch(size_t *startIdx)
     return true;
 }
 
-bool detectFSK()
-{
+bool detectFSK() {
     // detect fsk clock
     if (!GetFskClock("", false)) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM: FSK clock failed");
@@ -1083,8 +1047,7 @@ bool detectFSK()
     return true;
 }
 // PSK clocks should be easy to detect ( but difficult to demod a non-repeating pattern... )
-bool detectPSK()
-{
+bool detectPSK() {
     int ans = GetPskClock("", false);
     if (ans <= 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM: PSK clock failed");
@@ -1108,8 +1071,7 @@ bool detectPSK()
     return true;
 }
 // try manchester - NOTE: ST only applies to T55x7 tags.
-bool detectASK_MAN()
-{
+bool detectASK_MAN() {
     bool stcheck = false;
     if (!ASKDemod_ext("0 0 0", false, false, 1, &stcheck)) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM: ASK/Manchester Demod failed");
@@ -1117,8 +1079,7 @@ bool detectASK_MAN()
     }
     return true;
 }
-bool detectASK_BI()
-{
+bool detectASK_BI() {
     int ans = ASKbiphaseDemod("0 0 1", false);
     if (!ans) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM: ASK/biphase normal demod failed");
@@ -1133,8 +1094,7 @@ bool detectASK_BI()
 }
 
 // param: idx - start index in demoded data.
-bool setDemodBufferEM(uint32_t *word, size_t idx)
-{
+bool setDemodBufferEM(uint32_t *word, size_t idx) {
 
     //test for even parity bits.
     uint8_t parity[45] = {0};
@@ -1157,8 +1117,7 @@ bool setDemodBufferEM(uint32_t *word, size_t idx)
 // FSK, PSK, ASK/MANCHESTER, ASK/BIPHASE, ASK/DIPHASE
 // should cover 90% of known used configs
 // the rest will need to be manually demoded for now...
-bool demodEM4x05resp(uint32_t *word)
-{
+bool demodEM4x05resp(uint32_t *word) {
     size_t idx = 0;
     *word = 0;
     if (detectASK_MAN() && doPreambleSearch(&idx))
@@ -1182,8 +1141,7 @@ bool demodEM4x05resp(uint32_t *word)
 }
 
 //////////////// 4205 / 4305 commands
-int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word)
-{
+int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word) {
     UsbCommand c = {CMD_EM4X_READ_WORD, {addr, pwd, usePwd}};
     clearCommandBuffer();
     SendCommand(&c);
@@ -1199,8 +1157,7 @@ int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word)
     return demodEM4x05resp(word);
 }
 
-int CmdEM4x05Dump(const char *Cmd)
-{
+int CmdEM4x05Dump(const char *Cmd) {
     uint8_t addr = 0;
     uint32_t pwd = 0;
     bool usePwd = false;
@@ -1233,8 +1190,7 @@ int CmdEM4x05Dump(const char *Cmd)
     return success;
 }
 
-int CmdEM4x05Read(const char *Cmd)
-{
+int CmdEM4x05Read(const char *Cmd) {
     uint8_t addr;
     uint32_t pwd;
     bool usePwd = false;
@@ -1264,8 +1220,7 @@ int CmdEM4x05Read(const char *Cmd)
     return isOk;
 }
 
-int CmdEM4x05Write(const char *Cmd)
-{
+int CmdEM4x05Write(const char *Cmd) {
     uint8_t ctmp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || ctmp == 'h') return usage_lf_em4x05_write();
 
@@ -1313,8 +1268,7 @@ int CmdEM4x05Write(const char *Cmd)
     return isOk;
 }
 
-void printEM4x05config(uint32_t wordData)
-{
+void printEM4x05config(uint32_t wordData) {
     uint16_t datarate = (((wordData & 0x3F) + 1) * 2);
     uint8_t encoder = ((wordData >> 6) & 0xF);
     char enc[14];
@@ -1418,8 +1372,7 @@ void printEM4x05config(uint32_t wordData)
     PrintAndLogEx(NORMAL, "    Pigeon:   %u | Pigeon Mode is %s\n", pigeon, pigeon ? "Enabled" : "Disabled");
 }
 
-void printEM4x05info(uint32_t block0, uint32_t serial)
-{
+void printEM4x05info(uint32_t block0, uint32_t serial) {
 
     uint8_t chipType = (block0 >> 1) & 0xF;
     uint8_t cap = (block0 >> 5) & 3;
@@ -1467,8 +1420,7 @@ void printEM4x05info(uint32_t block0, uint32_t serial)
         PrintAndLogEx(NORMAL, "\n  Serial #: %08X\n", serial);
 }
 
-void printEM4x05ProtectionBits(uint32_t word)
-{
+void printEM4x05ProtectionBits(uint32_t word) {
     for (uint8_t i = 0; i < 15; i++) {
         PrintAndLogEx(NORMAL, "      Word:  %02u | %s", i, (((1 << i) & word) || i < 2) ? "Is Write Locked" : "Is Not Write Locked");
         if (i == 14)
@@ -1477,14 +1429,12 @@ void printEM4x05ProtectionBits(uint32_t word)
 }
 
 //quick test for EM4x05/EM4x69 tag
-bool EM4x05IsBlock0(uint32_t *word)
-{
+bool EM4x05IsBlock0(uint32_t *word) {
     int res = EM4x05ReadWord_ext(0, 0, false, word);
     return (res > 0) ? true : false;
 }
 
-int CmdEM4x05Info(const char *Cmd)
-{
+int CmdEM4x05Info(const char *Cmd) {
 #define EM_SERIAL_BLOCK 1
 #define EM_CONFIG_BLOCK 4
 #define EM_PROT1_BLOCK 14
@@ -1553,15 +1503,13 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFEM4X(const char *Cmd)
-{
+int CmdLFEM4X(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }

@@ -11,8 +11,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_analyse_lcr(void)
-{
+int usage_analyse_lcr(void) {
     PrintAndLogEx(NORMAL, "Specifying the bytes of a UID with a known LRC will find the last byte value");
     PrintAndLogEx(NORMAL, "needed to generate that LRC with a rolling XOR. All bytes should be specified in HEX.");
     PrintAndLogEx(NORMAL, "");
@@ -26,8 +25,7 @@ int usage_analyse_lcr(void)
     PrintAndLogEx(NORMAL, "expected output: Target (BA) requires final LRC XOR byte value: 5A");
     return 0;
 }
-int usage_analyse_checksum(void)
-{
+int usage_analyse_checksum(void) {
     PrintAndLogEx(NORMAL, "The bytes will be added with eachother and than limited with the applied mask");
     PrintAndLogEx(NORMAL, "Finally compute ones' complement of the least significant bytes");
     PrintAndLogEx(NORMAL, "");
@@ -43,8 +41,7 @@ int usage_analyse_checksum(void)
     PrintAndLogEx(NORMAL, "expected output: 0x61");
     return 0;
 }
-int usage_analyse_crc(void)
-{
+int usage_analyse_crc(void) {
     PrintAndLogEx(NORMAL, "A stub method to test different crc implementations inside the PM3 sourcecode. Just because you figured out the poly, doesn't mean you get the desired output");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  analyse crc [h] <bytes>");
@@ -56,8 +53,7 @@ int usage_analyse_crc(void)
     PrintAndLogEx(NORMAL, "      analyse crc 137AF00A0A0D");
     return 0;
 }
-int usage_analyse_nuid(void)
-{
+int usage_analyse_nuid(void) {
     PrintAndLogEx(NORMAL, "Generate 4byte NUID from 7byte UID");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  analyse hid [h] <bytes>");
@@ -69,8 +65,7 @@ int usage_analyse_nuid(void)
     PrintAndLogEx(NORMAL, "      analyse nuid 11223344556677");
     return 0;
 }
-int usage_analyse_a(void)
-{
+int usage_analyse_a(void) {
     PrintAndLogEx(NORMAL, "Iceman's personal garbage test command");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  analyse a [h] d <bytes>");
@@ -83,8 +78,7 @@ int usage_analyse_a(void)
     return 0;
 }
 
-static uint8_t calculateLRC(uint8_t *bytes, uint8_t len)
-{
+static uint8_t calculateLRC(uint8_t *bytes, uint8_t len) {
     uint8_t LRC = 0;
     for (uint8_t i = 0; i < len; i++)
         LRC ^= bytes[i];
@@ -108,8 +102,7 @@ static uint16_t shiftadd ( uint8_t* bytes, uint8_t len){
     return 0;
 }
 */
-static uint16_t calcSumCrumbAdd(uint8_t *bytes, uint8_t len, uint32_t mask)
-{
+static uint16_t calcSumCrumbAdd(uint8_t *bytes, uint8_t len, uint32_t mask) {
     uint16_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum += CRUMB(bytes[i], 0);
@@ -120,12 +113,10 @@ static uint16_t calcSumCrumbAdd(uint8_t *bytes, uint8_t len, uint32_t mask)
     sum &= mask;
     return sum;
 }
-static uint16_t calcSumCrumbAddOnes(uint8_t *bytes, uint8_t len, uint32_t mask)
-{
+static uint16_t calcSumCrumbAddOnes(uint8_t *bytes, uint8_t len, uint32_t mask) {
     return (~calcSumCrumbAdd(bytes, len, mask) & mask);
 }
-static uint16_t calcSumNibbleAdd(uint8_t *bytes, uint8_t len, uint32_t mask)
-{
+static uint16_t calcSumNibbleAdd(uint8_t *bytes, uint8_t len, uint32_t mask) {
     uint16_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum += NIBBLE_LOW(bytes[i]);
@@ -134,12 +125,10 @@ static uint16_t calcSumNibbleAdd(uint8_t *bytes, uint8_t len, uint32_t mask)
     sum &= mask;
     return sum;
 }
-static uint16_t calcSumNibbleAddOnes(uint8_t *bytes, uint8_t len, uint32_t mask)
-{
+static uint16_t calcSumNibbleAddOnes(uint8_t *bytes, uint8_t len, uint32_t mask) {
     return (~calcSumNibbleAdd(bytes, len, mask) & mask);
 }
-static uint16_t calcSumCrumbXor(uint8_t *bytes, uint8_t len, uint32_t mask)
-{
+static uint16_t calcSumCrumbXor(uint8_t *bytes, uint8_t len, uint32_t mask) {
     uint16_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum ^= CRUMB(bytes[i], 0);
@@ -150,8 +139,7 @@ static uint16_t calcSumCrumbXor(uint8_t *bytes, uint8_t len, uint32_t mask)
     sum &= mask;
     return sum;
 }
-static uint16_t calcSumNibbleXor(uint8_t *bytes, uint8_t len, uint32_t mask)
-{
+static uint16_t calcSumNibbleXor(uint8_t *bytes, uint8_t len, uint32_t mask) {
     uint16_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum ^= NIBBLE_LOW(bytes[i]);
@@ -160,8 +148,7 @@ static uint16_t calcSumNibbleXor(uint8_t *bytes, uint8_t len, uint32_t mask)
     sum &= mask;
     return sum;
 }
-static uint16_t calcSumByteXor(uint8_t *bytes, uint8_t len, uint32_t mask)
-{
+static uint16_t calcSumByteXor(uint8_t *bytes, uint8_t len, uint32_t mask) {
     uint16_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum ^= bytes[i];
@@ -169,8 +156,7 @@ static uint16_t calcSumByteXor(uint8_t *bytes, uint8_t len, uint32_t mask)
     sum &= mask;
     return sum;
 }
-static uint16_t calcSumByteAdd(uint8_t *bytes, uint8_t len, uint32_t mask)
-{
+static uint16_t calcSumByteAdd(uint8_t *bytes, uint8_t len, uint32_t mask) {
     uint16_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum += bytes[i];
@@ -179,13 +165,11 @@ static uint16_t calcSumByteAdd(uint8_t *bytes, uint8_t len, uint32_t mask)
     return sum;
 }
 // Ones complement
-static uint16_t calcSumByteAddOnes(uint8_t *bytes, uint8_t len, uint32_t mask)
-{
+static uint16_t calcSumByteAddOnes(uint8_t *bytes, uint8_t len, uint32_t mask) {
     return (~calcSumByteAdd(bytes, len, mask) & mask);
 }
 
-static uint16_t calcSumByteSub(uint8_t *bytes, uint8_t len, uint32_t mask)
-{
+static uint16_t calcSumByteSub(uint8_t *bytes, uint8_t len, uint32_t mask) {
     uint8_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum -= bytes[i];
@@ -193,12 +177,10 @@ static uint16_t calcSumByteSub(uint8_t *bytes, uint8_t len, uint32_t mask)
     sum &= mask;
     return sum;
 }
-static uint16_t calcSumByteSubOnes(uint8_t *bytes, uint8_t len, uint32_t mask)
-{
+static uint16_t calcSumByteSubOnes(uint8_t *bytes, uint8_t len, uint32_t mask) {
     return (~calcSumByteSub(bytes, len, mask) & mask);
 }
-static uint16_t calcSumNibbleSub(uint8_t *bytes, uint8_t len, uint32_t mask)
-{
+static uint16_t calcSumNibbleSub(uint8_t *bytes, uint8_t len, uint32_t mask) {
     uint8_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum -= NIBBLE_LOW(bytes[i]);
@@ -207,14 +189,12 @@ static uint16_t calcSumNibbleSub(uint8_t *bytes, uint8_t len, uint32_t mask)
     sum &= mask;
     return sum;
 }
-static uint16_t calcSumNibbleSubOnes(uint8_t *bytes, uint8_t len, uint32_t mask)
-{
+static uint16_t calcSumNibbleSubOnes(uint8_t *bytes, uint8_t len, uint32_t mask) {
     return (~calcSumNibbleSub(bytes, len, mask) & mask);
 }
 
 // BSD shift checksum 8bit version
-static uint16_t calcBSDchecksum8(uint8_t *bytes, uint8_t len, uint32_t mask)
-{
+static uint16_t calcBSDchecksum8(uint8_t *bytes, uint8_t len, uint32_t mask) {
     uint16_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum = ((sum & 0xFF) >> 1) | ((sum & 0x1) << 7);   // rotate accumulator
@@ -225,8 +205,7 @@ static uint16_t calcBSDchecksum8(uint8_t *bytes, uint8_t len, uint32_t mask)
     return sum;
 }
 // BSD shift checksum 4bit version
-static uint16_t calcBSDchecksum4(uint8_t *bytes, uint8_t len, uint32_t mask)
-{
+static uint16_t calcBSDchecksum4(uint8_t *bytes, uint8_t len, uint32_t mask) {
     uint16_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum = ((sum & 0xF) >> 1) | ((sum & 0x1) << 3);   // rotate accumulator
@@ -241,8 +220,7 @@ static uint16_t calcBSDchecksum4(uint8_t *bytes, uint8_t len, uint32_t mask)
 }
 
 // measuring LFSR maximum length
-int CmdAnalyseLfsr(const char *Cmd)
-{
+int CmdAnalyseLfsr(const char *Cmd) {
 
     uint16_t start_state = 0;  /* Any nonzero start state will work. */
     uint16_t lfsr = start_state;
@@ -264,8 +242,7 @@ int CmdAnalyseLfsr(const char *Cmd)
     }
     return 0;
 }
-int CmdAnalyseLCR(const char *Cmd)
-{
+int CmdAnalyseLCR(const char *Cmd) {
     uint8_t data[50];
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_analyse_lcr();
@@ -286,8 +263,7 @@ int CmdAnalyseLCR(const char *Cmd)
     PrintAndLogEx(NORMAL, "Target [%02X] requires final LRC XOR byte value: 0x%02X", data[len - 1], finalXor);
     return 0;
 }
-int CmdAnalyseCRC(const char *Cmd)
-{
+int CmdAnalyseCRC(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_analyse_crc();
@@ -383,8 +359,7 @@ int CmdAnalyseCRC(const char *Cmd)
     free(data);
     return 0;
 }
-int CmdAnalyseCHKSUM(const char *Cmd)
-{
+int CmdAnalyseCHKSUM(const char *Cmd) {
 
     uint8_t data[50];
     uint8_t cmdp = 0;
@@ -450,14 +425,12 @@ int CmdAnalyseCHKSUM(const char *Cmd)
     return 0;
 }
 
-int CmdAnalyseDates(const char *Cmd)
-{
+int CmdAnalyseDates(const char *Cmd) {
     // look for datestamps in a given array of bytes
     PrintAndLogEx(NORMAL, "To be implemented. Feel free to contribute!");
     return 0;
 }
-int CmdAnalyseTEASelfTest(const char *Cmd)
-{
+int CmdAnalyseTEASelfTest(const char *Cmd) {
 
     uint8_t v[8], v_le[8];
     memset(v, 0x00, sizeof(v));
@@ -492,8 +465,7 @@ int CmdAnalyseTEASelfTest(const char *Cmd)
     return 0;
 }
 
-char *pb(uint32_t b)
-{
+char *pb(uint32_t b) {
     static char buf1[33] = {0};
     static char buf2[33] = {0};
     static char *s;
@@ -513,8 +485,7 @@ char *pb(uint32_t b)
     return s;
 }
 
-int CmdAnalyseA(const char *Cmd)
-{
+int CmdAnalyseA(const char *Cmd) {
 
     int hexlen = 0;
     uint8_t cmdp = 0;
@@ -880,8 +851,7 @@ int CmdAnalyseA(const char *Cmd)
     return 0;
 }
 
-void generate4bNUID(uint8_t *uid, uint8_t *nuid)
-{
+void generate4bNUID(uint8_t *uid, uint8_t *nuid) {
     uint16_t crc;
     uint8_t b1, b2;
 
@@ -895,8 +865,7 @@ void generate4bNUID(uint8_t *uid, uint8_t *nuid)
     nuid[3] = crc & 0xFF;
 }
 
-int CmdAnalyseNuid(const char *Cmd)
-{
+int CmdAnalyseNuid(const char *Cmd) {
     uint8_t nuid[4] = {0};
     uint8_t uid[7] = {0};
     int len = 0;
@@ -942,15 +911,13 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdAnalyse(const char *Cmd)
-{
+int CmdAnalyse(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }

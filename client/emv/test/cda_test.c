@@ -42,8 +42,7 @@ struct emv_pk c_mchip_05 = {
     .exp = { 0x03, },
     .elen = 1,
     .mlen = 1408 / 8,
-    .modulus = (unsigned char[])
-    {
+    .modulus = (unsigned char[]) {
         0xb8, 0x04, 0x8a, 0xbc, 0x30, 0xc9, 0x0d, 0x97, 0x63, 0x36, 0x54, 0x3e, 0x3f, 0xd7, 0x09, 0x1c,
         0x8f, 0xe4, 0x80, 0x0d, 0xf8, 0x20, 0xed, 0x55, 0xe7, 0xe9, 0x48, 0x13, 0xed, 0x00, 0x55, 0x5b,
         0x57, 0x3f, 0xec, 0xa3, 0xd8, 0x4a, 0xf6, 0x13, 0x1a, 0x65, 0x1d, 0x66, 0xcf, 0xf4, 0x28, 0x4f,
@@ -150,8 +149,7 @@ static const struct tlv crm1_tlv = {
     .value = c_crm1,
 };
 
-static int cda_test_raw(bool verbose)
-{
+static int cda_test_raw(bool verbose) {
     const struct emv_pk *pk = &c_mchip_05;
 
     struct crypto_pk *kcp = crypto_pk_open(PK_RSA,
@@ -345,8 +343,7 @@ static int cda_test_raw(bool verbose)
     return 0;
 }
 
-static int cda_test_pk(bool verbose)
-{
+static int cda_test_pk(bool verbose) {
     const struct emv_pk *pk = &c_mchip_05;
     struct tlvdb *db;
 
@@ -421,8 +418,7 @@ static int cda_test_pk(bool verbose)
     return 0;
 }
 
-int exec_cda_test(bool verbose)
-{
+int exec_cda_test(bool verbose) {
     int ret;
     fprintf(stdout, "\n");
 

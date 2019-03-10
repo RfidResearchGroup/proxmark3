@@ -40,8 +40,7 @@
 
 #define TOHEX(v) ((v) < 10 ? (v) + '0' : (v) - 10 + 'a')
 
-static ssize_t emv_pk_read_bin(char *buf, unsigned char *bin, size_t size, size_t *read)
-{
+static ssize_t emv_pk_read_bin(char *buf, unsigned char *bin, size_t size, size_t *read) {
     size_t left = size;
     char *p = buf;
     while (*p && *p == ' ')
@@ -79,8 +78,7 @@ static ssize_t emv_pk_read_bin(char *buf, unsigned char *bin, size_t size, size_
     return (p - buf);
 }
 
-static ssize_t emv_pk_read_ymv(char *buf, unsigned *ymv)
-{
+static ssize_t emv_pk_read_ymv(char *buf, unsigned *ymv) {
     int i;
     unsigned char temp[3];
     char *p = buf;
@@ -116,8 +114,7 @@ static ssize_t emv_pk_read_ymv(char *buf, unsigned *ymv)
     return (p - buf);
 }
 
-static ssize_t emv_pk_read_string(char *buf, char *str, size_t size)
-{
+static ssize_t emv_pk_read_string(char *buf, char *str, size_t size) {
     char *p = buf;
     while (*p && *p == ' ')
         p++;
@@ -144,8 +141,7 @@ static ssize_t emv_pk_read_string(char *buf, char *str, size_t size)
 }
 
 
-struct emv_pk *emv_pk_parse_pk(char *buf)
-{
+struct emv_pk *emv_pk_parse_pk(char *buf) {
     struct emv_pk *r = calloc(1, sizeof(*r));
     ssize_t l;
     char temp[10];
@@ -209,8 +205,7 @@ out:
     return NULL;
 }
 
-static size_t emv_pk_write_bin(char *out, size_t outlen, const unsigned char *buf, size_t len)
-{
+static size_t emv_pk_write_bin(char *out, size_t outlen, const unsigned char *buf, size_t len) {
     int i;
     size_t pos = 0;
 
@@ -231,8 +226,7 @@ static size_t emv_pk_write_bin(char *out, size_t outlen, const unsigned char *bu
     return pos;
 }
 
-static size_t emv_pk_write_str(char *out, size_t outlen, const char *str)
-{
+static size_t emv_pk_write_str(char *out, size_t outlen, const char *str) {
     size_t len = strlen(str);
 
     if (len == 0)
@@ -245,8 +239,7 @@ static size_t emv_pk_write_str(char *out, size_t outlen, const char *str)
     return len;
 }
 
-char *emv_pk_dump_pk(const struct emv_pk *pk)
-{
+char *emv_pk_dump_pk(const struct emv_pk *pk) {
     size_t outsize = 1024; /* should be enough */
     char *out = malloc(outsize); /* should be enough */
     size_t outpos = 0;
@@ -330,8 +323,7 @@ err:
     return NULL;
 }
 
-bool emv_pk_verify(const struct emv_pk *pk)
-{
+bool emv_pk_verify(const struct emv_pk *pk) {
     struct crypto_hash *ch = crypto_hash_open(pk->hash_algo);
     if (!ch)
         return false;
@@ -355,8 +347,7 @@ bool emv_pk_verify(const struct emv_pk *pk)
     return r;
 }
 
-struct emv_pk *emv_pk_new(size_t modlen, size_t explen)
-{
+struct emv_pk *emv_pk_new(size_t modlen, size_t explen) {
     struct emv_pk *pk;
 
     /* Not supported ATM */
@@ -379,8 +370,7 @@ struct emv_pk *emv_pk_new(size_t modlen, size_t explen)
     return pk;
 }
 
-void emv_pk_free(struct emv_pk *pk)
-{
+void emv_pk_free(struct emv_pk *pk) {
     if (!pk)
         return;
 
@@ -390,8 +380,7 @@ void emv_pk_free(struct emv_pk *pk)
 
 static struct emv_pk *emv_pk_get_ca_pk_from_file(const char *fname,
                                                  const unsigned char *rid,
-                                                 unsigned char idx)
-{
+                                                 unsigned char idx) {
     if (!fname)
         return NULL;
 
@@ -424,8 +413,7 @@ static struct emv_pk *emv_pk_get_ca_pk_from_file(const char *fname,
     return NULL;
 }
 
-char *emv_pk_get_ca_pk_file(const char *dirname, const unsigned char *rid, unsigned char idx)
-{
+char *emv_pk_get_ca_pk_file(const char *dirname, const unsigned char *rid, unsigned char idx) {
     if (!dirname)
         dirname = ".";//openemv_config_get_str("capk.dir", NULL);
 
@@ -445,8 +433,7 @@ char *emv_pk_get_ca_pk_file(const char *dirname, const unsigned char *rid, unsig
     return filename;
 }
 
-char *emv_pk_get_ca_pk_rid_file(const char *dirname, const unsigned char *rid)
-{
+char *emv_pk_get_ca_pk_rid_file(const char *dirname, const unsigned char *rid) {
     if (!dirname)
         dirname = "."; //openemv_config_get_str("capk.dir", NULL);
 
@@ -465,8 +452,7 @@ char *emv_pk_get_ca_pk_rid_file(const char *dirname, const unsigned char *rid)
     return filename;
 }
 
-struct emv_pk *emv_pk_get_ca_pk(const unsigned char *rid, unsigned char idx)
-{
+struct emv_pk *emv_pk_get_ca_pk(const unsigned char *rid, unsigned char idx) {
     struct emv_pk *pk = NULL;
 
     /*  if (!pk) {

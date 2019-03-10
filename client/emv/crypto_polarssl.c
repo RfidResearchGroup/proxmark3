@@ -34,22 +34,19 @@ struct crypto_hash_polarssl {
     mbedtls_sha1_context ctx;
 };
 
-static void crypto_hash_polarssl_close(struct crypto_hash *_ch)
-{
+static void crypto_hash_polarssl_close(struct crypto_hash *_ch) {
     struct crypto_hash_polarssl *ch = (struct crypto_hash_polarssl *)_ch;
 
     free(ch);
 }
 
-static void crypto_hash_polarssl_write(struct crypto_hash *_ch, const unsigned char *buf, size_t len)
-{
+static void crypto_hash_polarssl_write(struct crypto_hash *_ch, const unsigned char *buf, size_t len) {
     struct crypto_hash_polarssl *ch = (struct crypto_hash_polarssl *)_ch;
 
     mbedtls_sha1_update(&(ch->ctx), buf, len);
 }
 
-static unsigned char *crypto_hash_polarssl_read(struct crypto_hash *_ch)
-{
+static unsigned char *crypto_hash_polarssl_read(struct crypto_hash *_ch) {
     struct crypto_hash_polarssl *ch = (struct crypto_hash_polarssl *)_ch;
 
     static unsigned char sha1sum[20];
@@ -57,16 +54,14 @@ static unsigned char *crypto_hash_polarssl_read(struct crypto_hash *_ch)
     return sha1sum;
 }
 
-static size_t crypto_hash_polarssl_get_size(const struct crypto_hash *ch)
-{
+static size_t crypto_hash_polarssl_get_size(const struct crypto_hash *ch) {
     if (ch->algo == HASH_SHA_1)
         return 20;
     else
         return 0;
 }
 
-static struct crypto_hash *crypto_hash_polarssl_open(enum crypto_algo_hash hash)
-{
+static struct crypto_hash *crypto_hash_polarssl_open(enum crypto_algo_hash hash) {
     if (hash != HASH_SHA_1)
         return NULL;
 
@@ -87,8 +82,7 @@ struct crypto_pk_polarssl {
     mbedtls_rsa_context ctx;
 };
 
-static struct crypto_pk *crypto_pk_polarssl_open_rsa(va_list vl)
-{
+static struct crypto_pk *crypto_pk_polarssl_open_rsa(va_list vl) {
     struct crypto_pk_polarssl *cp = malloc(sizeof(*cp));
     memset(cp, 0x00, sizeof(*cp));
 
@@ -113,8 +107,7 @@ static struct crypto_pk *crypto_pk_polarssl_open_rsa(va_list vl)
     return &cp->cp;
 }
 
-static struct crypto_pk *crypto_pk_polarssl_open_priv_rsa(va_list vl)
-{
+static struct crypto_pk *crypto_pk_polarssl_open_priv_rsa(va_list vl) {
     struct crypto_pk_polarssl *cp = malloc(sizeof(*cp));
     memset(cp, 0x00, sizeof(*cp));
     char *mod = va_arg(vl, char *);
@@ -158,8 +151,7 @@ static struct crypto_pk *crypto_pk_polarssl_open_priv_rsa(va_list vl)
     return &cp->cp;
 }
 
-static int myrand(void *rng_state, unsigned char *output, size_t len)
-{
+static int myrand(void *rng_state, unsigned char *output, size_t len) {
     size_t i;
 
     if (rng_state != NULL)
@@ -172,8 +164,7 @@ static int myrand(void *rng_state, unsigned char *output, size_t len)
 }
 
 
-static struct crypto_pk *crypto_pk_polarssl_genkey_rsa(va_list vl)
-{
+static struct crypto_pk *crypto_pk_polarssl_genkey_rsa(va_list vl) {
     struct crypto_pk_polarssl *cp = malloc(sizeof(*cp));
     memset(cp, 0x00, sizeof(*cp));
 
@@ -194,16 +185,14 @@ static struct crypto_pk *crypto_pk_polarssl_genkey_rsa(va_list vl)
     return &cp->cp;
 }
 
-static void crypto_pk_polarssl_close(struct crypto_pk *_cp)
-{
+static void crypto_pk_polarssl_close(struct crypto_pk *_cp) {
     struct crypto_pk_polarssl *cp = (struct crypto_pk_polarssl *)_cp;
 
     mbedtls_rsa_free(&cp->ctx);
     free(cp);
 }
 
-static unsigned char *crypto_pk_polarssl_encrypt(const struct crypto_pk *_cp, const unsigned char *buf, size_t len, size_t *clen)
-{
+static unsigned char *crypto_pk_polarssl_encrypt(const struct crypto_pk *_cp, const unsigned char *buf, size_t len, size_t *clen) {
     struct crypto_pk_polarssl *cp = (struct crypto_pk_polarssl *)_cp;
     int res;
     unsigned char *result;
@@ -229,8 +218,7 @@ static unsigned char *crypto_pk_polarssl_encrypt(const struct crypto_pk *_cp, co
     return result;
 }
 
-static unsigned char *crypto_pk_polarssl_decrypt(const struct crypto_pk *_cp, const unsigned char *buf, size_t len, size_t *clen)
-{
+static unsigned char *crypto_pk_polarssl_decrypt(const struct crypto_pk *_cp, const unsigned char *buf, size_t len, size_t *clen) {
     struct crypto_pk_polarssl *cp = (struct crypto_pk_polarssl *)_cp;
     int res;
     unsigned char *result;
@@ -256,16 +244,14 @@ static unsigned char *crypto_pk_polarssl_decrypt(const struct crypto_pk *_cp, co
     return result;
 }
 
-static size_t crypto_pk_polarssl_get_nbits(const struct crypto_pk *_cp)
-{
+static size_t crypto_pk_polarssl_get_nbits(const struct crypto_pk *_cp) {
     struct crypto_pk_polarssl *cp = (struct crypto_pk_polarssl *)_cp;
 
     return cp->ctx.len * 8;
     return 0;
 }
 
-static unsigned char *crypto_pk_polarssl_get_parameter(const struct crypto_pk *_cp, unsigned param, size_t *plen)
-{
+static unsigned char *crypto_pk_polarssl_get_parameter(const struct crypto_pk *_cp, unsigned param, size_t *plen) {
     struct crypto_pk_polarssl *cp = (struct crypto_pk_polarssl *)_cp;
     unsigned char *result = NULL;
     switch (param) {
@@ -291,8 +277,7 @@ static unsigned char *crypto_pk_polarssl_get_parameter(const struct crypto_pk *_
     return result;
 }
 
-static struct crypto_pk *crypto_pk_polarssl_open(enum crypto_algo_pk pk, va_list vl)
-{
+static struct crypto_pk *crypto_pk_polarssl_open(enum crypto_algo_pk pk, va_list vl) {
     struct crypto_pk *cp;
 
     if (pk == PK_RSA)
@@ -308,8 +293,7 @@ static struct crypto_pk *crypto_pk_polarssl_open(enum crypto_algo_pk pk, va_list
     return cp;
 }
 
-static struct crypto_pk *crypto_pk_polarssl_open_priv(enum crypto_algo_pk pk, va_list vl)
-{
+static struct crypto_pk *crypto_pk_polarssl_open_priv(enum crypto_algo_pk pk, va_list vl) {
     struct crypto_pk *cp;
 
     if (pk == PK_RSA)
@@ -326,8 +310,7 @@ static struct crypto_pk *crypto_pk_polarssl_open_priv(enum crypto_algo_pk pk, va
     return cp;
 }
 
-static struct crypto_pk *crypto_pk_polarssl_genkey(enum crypto_algo_pk pk, va_list vl)
-{
+static struct crypto_pk *crypto_pk_polarssl_genkey(enum crypto_algo_pk pk, va_list vl) {
     struct crypto_pk *cp;
 
     if (pk == PK_RSA)
@@ -351,7 +334,6 @@ static struct crypto_backend crypto_polarssl_backend = {
     .pk_genkey = crypto_pk_polarssl_genkey,
 };
 
-struct crypto_backend *crypto_polarssl_init(void)
-{
+struct crypto_backend *crypto_polarssl_init(void) {
     return &crypto_polarssl_backend;
 }

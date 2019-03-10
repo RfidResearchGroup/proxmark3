@@ -17,8 +17,7 @@
 #include "proxmark3.h"
 #include "comms.h"
 
-void CmdsHelp(const command_t Commands[])
-{
+void CmdsHelp(const command_t Commands[]) {
     if (Commands[0].Name == NULL) return;
     int i = 0;
     while (Commands[i].Name) {
@@ -28,8 +27,7 @@ void CmdsHelp(const command_t Commands[])
     }
 }
 
-int CmdsParse(const command_t Commands[], const char *Cmd)
-{
+int CmdsParse(const command_t Commands[], const char *Cmd) {
     // Help dump children
     if (strcmp(Cmd, "XX_internal_command_dump_XX") == 0) {
         dumpCommandsRecursive(Commands, 0);
@@ -78,8 +76,7 @@ int CmdsParse(const command_t Commands[], const char *Cmd)
 char pparent[512] = {0};
 char *parent = pparent;
 
-void dumpCommandsRecursive(const command_t cmds[], int markdown)
-{
+void dumpCommandsRecursive(const command_t cmds[], int markdown) {
     if (cmds[0].Name == NULL) return;
 
     int i = 0;

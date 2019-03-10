@@ -70,8 +70,7 @@ static void usage(void);
 
 static const char *myname = "reveng"; /* name of our program */
 
-int reveng_main(int argc, char *argv[])
-{
+int reveng_main(int argc, char *argv[]) {
     /* Command-line interface for CRC RevEng.
      * Process options and switches in the argument list and
      * run the required function.
@@ -496,8 +495,7 @@ ipqx:
 }
 
 void
-ufound(const model_t *model)
-{
+ufound(const model_t *model) {
     /* Callback function to report each model found */
     char *string;
 
@@ -509,16 +507,14 @@ ufound(const model_t *model)
 }
 
 void
-uerror(const char *msg)
-{
+uerror(const char *msg) {
     /* Callback function to report fatal errors */
     fprintf(stderr, "%s: %s\n", myname, msg);
     //exit(EXIT_FAILURE);
 }
 
 void
-uprog(const poly_t gpoly, int flags, unsigned long seq)
-{
+uprog(const poly_t gpoly, int flags, unsigned long seq) {
     /* Callback function to report search progress */
     char *string;
 
@@ -535,8 +531,7 @@ uprog(const poly_t gpoly, int flags, unsigned long seq)
 }
 
 static poly_t
-rdpoly(const char *name, int flags, int bperhx)
-{
+rdpoly(const char *name, int flags, int bperhx) {
     /* read poly from file in chunks and report errors */
 
     poly_t apoly = PZERO, chunk = PZERO;
@@ -564,8 +559,7 @@ rdpoly(const char *name, int flags, int bperhx)
 }
 
 static FILE *
-oread(const char *name)
-{
+oread(const char *name) {
     /* open file for reading and report errors */
     FILE *handle;
 
@@ -581,8 +575,7 @@ oread(const char *name)
 }
 
 static void
-usage(void)
-{
+usage(void) {
     /* print usage if asked, or if syntax incorrect */
     fprintf(stderr,
             "CRC RevEng: arbitrary-precision CRC calculator and algorithm finder\n"

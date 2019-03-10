@@ -91,13 +91,11 @@ static const TAIDList AIDlist [] = {
 static const size_t AIDlistLen = sizeof(AIDlist) / sizeof(TAIDList);
 
 static bool APDULogging = false;
-void SetAPDULogging(bool logging)
-{
+void SetAPDULogging(bool logging) {
     APDULogging = logging;
 }
 
-enum CardPSVendor GetCardPSVendor(uint8_t *AID, size_t AIDlen)
-{
+enum CardPSVendor GetCardPSVendor(uint8_t *AID, size_t AIDlen) {
     char buf[100] = {0};
     if (AIDlen < 1)
         return CV_NA;
@@ -113,8 +111,7 @@ enum CardPSVendor GetCardPSVendor(uint8_t *AID, size_t AIDlen)
     return CV_NA;
 }
 
-static bool print_cb(void *data, const struct tlv *tlv, int level, bool is_leaf)
-{
+static bool print_cb(void *data, const struct tlv *tlv, int level, bool is_leaf) {
     emv_tag_dump(tlv, stdout, level);
     if (is_leaf) {
         dump_buffer(tlv->value, tlv->len, stdout, level);
@@ -123,8 +120,7 @@ static bool print_cb(void *data, const struct tlv *tlv, int level, bool is_leaf)
     return true;
 }
 
-bool TLVPrintFromBuffer(uint8_t *data, int datalen)
-{
+bool TLVPrintFromBuffer(uint8_t *data, int datalen) {
     struct tlvdb *t = NULL;
     t = tlvdb_parse_multi(data, datalen);
     if (t) {
@@ -139,21 +135,18 @@ bool TLVPrintFromBuffer(uint8_t *data, int datalen)
     return false;
 }
 
-void TLVPrintFromTLVLev(struct tlvdb *tlv, int level)
-{
+void TLVPrintFromTLVLev(struct tlvdb *tlv, int level) {
     if (!tlv)
         return;
 
     tlvdb_visit(tlv, print_cb, NULL, level);
 }
 
-void TLVPrintFromTLV(struct tlvdb *tlv)
-{
+void TLVPrintFromTLV(struct tlvdb *tlv) {
     TLVPrintFromTLVLev(tlv, 0);
 }
 
-void TLVPrintAIDlistFromSelectTLV(struct tlvdb *tlv)
-{
+void TLVPrintAIDlistFromSelectTLV(struct tlvdb *tlv) {
     PrintAndLogEx(NORMAL, "|------------------|--------|-------------------------|");
     PrintAndLogEx(NORMAL, "|    AID           |Priority| Name                    |");
     PrintAndLogEx(NORMAL, "|------------------|--------|-------------------------|");
@@ -179,8 +172,7 @@ void TLVPrintAIDlistFromSelectTLV(struct tlvdb *tlv)
     PrintAndLogEx(NORMAL, "|------------------|--------|-------------------------|");
 }
 
-struct tlvdb *GetPANFromTrack2(const struct tlv *track2)
-{
+struct tlvdb *GetPANFromTrack2(const struct tlv *track2) {
     char track2Hex[200] = {0};
     uint8_t PAN[100] = {0};
     int PANlen = 0;
@@ -207,8 +199,7 @@ struct tlvdb *GetPANFromTrack2(const struct tlv *track2)
     return tlvdb_fixed(0x5a, PANlen, PAN);
 }
 
-struct tlvdb *GetdCVVRawFromTrack2(const struct tlv *track2)
-{
+struct tlvdb *GetdCVVRawFromTrack2(const struct tlv *track2) {
     char track2Hex[200] = {0};
     char dCVVHex[100] = {0};
     uint8_t dCVV[100] = {0};
@@ -241,8 +232,7 @@ struct tlvdb *GetdCVVRawFromTrack2(const struct tlv *track2)
     return tlvdb_fixed(0x02, dCVVlen, dCVV);
 }
 
-int EMVExchangeEx(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, sAPDU apdu, bool IncludeLe, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv)
-{
+int EMVExchangeEx(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, sAPDU apdu, bool IncludeLe, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
     uint8_t data[APDU_RES_LEN] = {0};
 
     *ResultLen = 0;
@@ -315,18 +305,15 @@ int EMVExchangeEx(EMVCommandChannel channel, bool ActivateField, bool LeaveField
     return 0;
 }
 
-int EMVExchange(EMVCommandChannel channel, bool LeaveFieldON, sAPDU apdu, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv)
-{
+int EMVExchange(EMVCommandChannel channel, bool LeaveFieldON, sAPDU apdu, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
     return EMVExchangeEx(channel, false, LeaveFieldON, apdu, (channel == ECC_CONTACTLESS), Result, MaxResultLen, ResultLen, sw, tlv);
 }
 
-int EMVSelect(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t *AID, size_t AIDLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv)
-{
+int EMVSelect(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t *AID, size_t AIDLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
     return EMVExchangeEx(channel, ActivateField, LeaveFieldON, (sAPDU) {0x00, 0xa4, 0x04, 0x00, AIDLen, AID}, (channel == ECC_CONTACTLESS), Result, MaxResultLen, ResultLen, sw, tlv);
 }
 
-int EMVSelectPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t PSENum, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw)
-{
+int EMVSelectPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t PSENum, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
     uint8_t buf[APDU_AID_LEN] = {0};
     *ResultLen = 0;
     int len = 0;
@@ -348,8 +335,7 @@ int EMVSelectPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
     return res;
 }
 
-int EMVSelectWithRetry(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t *AID, size_t AIDLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv)
-{
+int EMVSelectWithRetry(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t *AID, size_t AIDLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
     int retrycnt = 0;
     int res = 0;
     do {
@@ -376,8 +362,7 @@ int EMVSelectWithRetry(EMVCommandChannel channel, bool ActivateField, bool Leave
     return res;
 }
 
-int EMVCheckAID(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlvdbelm, struct tlvdb *tlv)
-{
+int EMVCheckAID(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlvdbelm, struct tlvdb *tlv) {
     uint8_t data[APDU_RES_LEN] = {0};
     size_t datalen = 0;
     int res = 0;
@@ -409,8 +394,7 @@ int EMVCheckAID(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlvdbel
     return res;
 }
 
-int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t PSENum, bool decodeTLV, struct tlvdb *tlv)
-{
+int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t PSENum, bool decodeTLV, struct tlvdb *tlv) {
     uint8_t data[APDU_RES_LEN] = {0};
     size_t datalen = 0;
     uint8_t sfidata[0x11][APDU_RES_LEN];
@@ -504,8 +488,7 @@ int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
     return res;
 }
 
-int EMVSearch(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, bool decodeTLV, struct tlvdb *tlv)
-{
+int EMVSearch(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, bool decodeTLV, struct tlvdb *tlv) {
     uint8_t aidbuf[APDU_AID_LEN] = {0};
     int aidlen = 0;
     uint8_t data[APDU_RES_LEN] = {0};
@@ -550,8 +533,7 @@ int EMVSearch(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, 
     return 0;
 }
 
-int EMVSelectApplication(struct tlvdb *tlv, uint8_t *AID, size_t *AIDlen)
-{
+int EMVSelectApplication(struct tlvdb *tlv, uint8_t *AID, size_t *AIDlen) {
     // check priority. 0x00 - highest
     int prio = 0xffff;
 
@@ -590,13 +572,11 @@ int EMVSelectApplication(struct tlvdb *tlv, uint8_t *AID, size_t *AIDlen)
     return 0;
 }
 
-int EMVGPO(EMVCommandChannel channel, bool LeaveFieldON, uint8_t *PDOL, size_t PDOLLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv)
-{
+int EMVGPO(EMVCommandChannel channel, bool LeaveFieldON, uint8_t *PDOL, size_t PDOLLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
     return EMVExchange(channel, LeaveFieldON, (sAPDU) {0x80, 0xa8, 0x00, 0x00, PDOLLen, PDOL}, Result, MaxResultLen, ResultLen, sw, tlv);
 }
 
-int EMVReadRecord(EMVCommandChannel channel, bool LeaveFieldON, uint8_t SFI, uint8_t SFIrec, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv)
-{
+int EMVReadRecord(EMVCommandChannel channel, bool LeaveFieldON, uint8_t SFI, uint8_t SFIrec, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
     int res = EMVExchange(channel, LeaveFieldON, (sAPDU) {0x00, 0xb2, SFIrec, (SFI << 3) | 0x04, 0, NULL}, Result, MaxResultLen, ResultLen, sw, tlv);
     if (*sw == 0x6700) {
         PrintAndLogEx(INFO, ">>> trying to reissue command withouth Le...");
@@ -605,13 +585,11 @@ int EMVReadRecord(EMVCommandChannel channel, bool LeaveFieldON, uint8_t SFI, uin
     return res;
 }
 
-int EMVAC(EMVCommandChannel channel, bool LeaveFieldON, uint8_t RefControl, uint8_t *CDOL, size_t CDOLLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv)
-{
+int EMVAC(EMVCommandChannel channel, bool LeaveFieldON, uint8_t RefControl, uint8_t *CDOL, size_t CDOLLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
     return EMVExchange(channel, LeaveFieldON, (sAPDU) {0x80, 0xae, RefControl, 0x00, CDOLLen, CDOL}, Result, MaxResultLen, ResultLen, sw, tlv);
 }
 
-int EMVGenerateChallenge(EMVCommandChannel channel, bool LeaveFieldON, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv)
-{
+int EMVGenerateChallenge(EMVCommandChannel channel, bool LeaveFieldON, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
     int res = EMVExchange(channel, LeaveFieldON, (sAPDU) {0x00, 0x84, 0x00, 0x00, 0x00, NULL}, Result, MaxResultLen, ResultLen, sw, tlv);
     if (*sw == 0x6700) {
         PrintAndLogEx(INFO, ">>> trying to reissue command withouth Le...");
@@ -620,19 +598,16 @@ int EMVGenerateChallenge(EMVCommandChannel channel, bool LeaveFieldON, uint8_t *
     return res;
 }
 
-int EMVInternalAuthenticate(EMVCommandChannel channel, bool LeaveFieldON, uint8_t *DDOL, size_t DDOLLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv)
-{
+int EMVInternalAuthenticate(EMVCommandChannel channel, bool LeaveFieldON, uint8_t *DDOL, size_t DDOLLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
     return EMVExchangeEx(channel, false, LeaveFieldON, (sAPDU) {0x00, 0x88, 0x00, 0x00, DDOLLen, DDOL}, true, Result, MaxResultLen, ResultLen, sw, tlv);
 }
 
-int MSCComputeCryptoChecksum(EMVCommandChannel channel, bool LeaveFieldON, uint8_t *UDOL, uint8_t UDOLlen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv)
-{
+int MSCComputeCryptoChecksum(EMVCommandChannel channel, bool LeaveFieldON, uint8_t *UDOL, uint8_t UDOLlen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
     return EMVExchange(channel, LeaveFieldON, (sAPDU) {0x80, 0x2a, 0x8e, 0x80, UDOLlen, UDOL}, Result, MaxResultLen, ResultLen, sw, tlv);
 }
 
 // Authentication
-struct emv_pk *get_ca_pk(struct tlvdb *db)
-{
+struct emv_pk *get_ca_pk(struct tlvdb *db) {
     const struct tlv *df_tlv = tlvdb_get(db, 0x84, NULL);
     const struct tlv *caidx_tlv = tlvdb_get(db, 0x8f, NULL);
 
@@ -643,8 +618,7 @@ struct emv_pk *get_ca_pk(struct tlvdb *db)
     return emv_pk_get_ca_pk(df_tlv->value, caidx_tlv->value[0]);
 }
 
-int trSDA(struct tlvdb *tlv)
-{
+int trSDA(struct tlvdb *tlv) {
 
     struct emv_pk *pk = get_ca_pk(tlv);
     if (!pk) {
@@ -699,8 +673,7 @@ int trSDA(struct tlvdb *tlv)
 static const unsigned char default_ddol_value[] = {0x9f, 0x37, 0x04};
 static struct tlv default_ddol_tlv = {.tag = 0x9f49, .len = 3, .value = default_ddol_value };
 
-int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv)
-{
+int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t len = 0;
     uint16_t sw = 0;
@@ -926,8 +899,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv)
     return 0;
 }
 
-int trCDA(struct tlvdb *tlv, struct tlvdb *ac_tlv, struct tlv *pdol_data_tlv, struct tlv *ac_data_tlv)
-{
+int trCDA(struct tlvdb *tlv, struct tlvdb *ac_tlv, struct tlv *pdol_data_tlv, struct tlv *ac_data_tlv) {
 
     struct emv_pk *pk = get_ca_pk(tlv);
     if (!pk) {
@@ -1013,8 +985,7 @@ int trCDA(struct tlvdb *tlv, struct tlvdb *ac_tlv, struct tlv *pdol_data_tlv, st
     return 0;
 }
 
-int RecoveryCertificates(struct tlvdb *tlvRoot, json_t *root)
-{
+int RecoveryCertificates(struct tlvdb *tlvRoot, json_t *root) {
 
     struct emv_pk *pk = get_ca_pk(tlvRoot);
     if (!pk) {

@@ -48,8 +48,7 @@
 #endif
 
 #if defined(MBEDTLS_PEM_PARSE_C)
-void mbedtls_pem_init(mbedtls_pem_context *ctx)
-{
+void mbedtls_pem_init(mbedtls_pem_context *ctx) {
     memset(ctx, 0, sizeof(mbedtls_pem_context));
 }
 
@@ -59,8 +58,7 @@ void mbedtls_pem_init(mbedtls_pem_context *ctx)
  * Read a 16-byte hex string and convert it to binary
  */
 static int pem_get_iv(const unsigned char *s, unsigned char *iv,
-                      size_t iv_len)
-{
+                      size_t iv_len) {
     size_t i, j, k;
 
     memset(iv, 0, iv_len);
@@ -82,8 +80,7 @@ static int pem_get_iv(const unsigned char *s, unsigned char *iv,
 
 static int pem_pbkdf1(unsigned char *key, size_t keylen,
                       unsigned char *iv,
-                      const unsigned char *pwd, size_t pwdlen)
-{
+                      const unsigned char *pwd, size_t pwdlen) {
     mbedtls_md5_context md5_ctx;
     unsigned char md5sum[16];
     size_t use_len;
@@ -143,8 +140,7 @@ exit:
  */
 static int pem_des_decrypt(unsigned char des_iv[8],
                            unsigned char *buf, size_t buflen,
-                           const unsigned char *pwd, size_t pwdlen)
-{
+                           const unsigned char *pwd, size_t pwdlen) {
     mbedtls_des_context des_ctx;
     unsigned char des_key[8];
     int ret;
@@ -171,8 +167,7 @@ exit:
  */
 static int pem_des3_decrypt(unsigned char des3_iv[8],
                             unsigned char *buf, size_t buflen,
-                            const unsigned char *pwd, size_t pwdlen)
-{
+                            const unsigned char *pwd, size_t pwdlen) {
     mbedtls_des3_context des3_ctx;
     unsigned char des3_key[24];
     int ret;
@@ -201,8 +196,7 @@ exit:
  */
 static int pem_aes_decrypt(unsigned char aes_iv[16], unsigned int keylen,
                            unsigned char *buf, size_t buflen,
-                           const unsigned char *pwd, size_t pwdlen)
-{
+                           const unsigned char *pwd, size_t pwdlen) {
     mbedtls_aes_context aes_ctx;
     unsigned char aes_key[32];
     int ret;
@@ -230,8 +224,7 @@ exit:
 
 int mbedtls_pem_read_buffer(mbedtls_pem_context *ctx, const char *header, const char *footer,
                             const unsigned char *data, const unsigned char *pwd,
-                            size_t pwdlen, size_t *use_len)
-{
+                            size_t pwdlen, size_t *use_len) {
     int ret, enc;
     size_t len;
     unsigned char *buf;
@@ -412,8 +405,7 @@ int mbedtls_pem_read_buffer(mbedtls_pem_context *ctx, const char *header, const 
     return (0);
 }
 
-void mbedtls_pem_free(mbedtls_pem_context *ctx)
-{
+void mbedtls_pem_free(mbedtls_pem_context *ctx) {
     if (ctx->buf != NULL)
         mbedtls_platform_zeroize(ctx->buf, ctx->buflen);
     mbedtls_free(ctx->buf);
@@ -426,8 +418,7 @@ void mbedtls_pem_free(mbedtls_pem_context *ctx)
 #if defined(MBEDTLS_PEM_WRITE_C)
 int mbedtls_pem_write_buffer(const char *header, const char *footer,
                              const unsigned char *der_data, size_t der_len,
-                             unsigned char *buf, size_t buf_len, size_t *olen)
-{
+                             unsigned char *buf, size_t buf_len, size_t *olen) {
     int ret;
     unsigned char *encode_buf = NULL, *c, *p = buf;
     size_t len = 0, use_len, add_len = 0;
@@ -441,7 +432,7 @@ int mbedtls_pem_write_buffer(const char *header, const char *footer,
     }
 
     if (use_len != 0 &&
-        ((encode_buf = mbedtls_calloc(1, use_len)) == NULL))
+            ((encode_buf = mbedtls_calloc(1, use_len)) == NULL))
         return (MBEDTLS_ERR_PEM_ALLOC_FAILED);
 
     if ((ret = mbedtls_base64_encode(encode_buf, use_len, &use_len, der_data,

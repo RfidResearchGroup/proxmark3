@@ -11,8 +11,7 @@
 #include "ticks.h"
 // attempt at high resolution microsecond timer
 // beware: timer counts in 21.3uS increments (1024/48Mhz)
-void SpinDelayUs(int us)
-{
+void SpinDelayUs(int us) {
     int ticks = (48 * us) >> 10;
 
     // Borrow a PWM unit for my real-time clock
@@ -34,8 +33,7 @@ void SpinDelayUs(int us)
     }
 }
 
-void SpinDelay(int ms)
-{
+void SpinDelay(int ms) {
     // convert to uS and call microsecond delay function
     SpinDelayUs(ms * 1000);
 }
@@ -48,8 +46,7 @@ void SpinDelay(int ms)
 //    SpinDelay(1000);
 //    ti = GetTickCount() - ti;
 //    Dbprintf("timer(1s): %d t=%d", ti, GetTickCount());
-void StartTickCount(void)
-{
+void StartTickCount(void) {
     // This timer is based on the slow clock. The slow clock frequency is between 22kHz and 40kHz.
     // We can determine the actual slow clock frequency by looking at the Main Clock Frequency Register.
     uint16_t mainf = AT91C_BASE_PMC->PMC_MCFR & 0xffff;        // = 16 * main clock frequency (16MHz) / slow clock frequency
@@ -61,16 +58,14 @@ void StartTickCount(void)
 /*
 * Get the current count.
 */
-uint32_t RAMFUNC GetTickCount(void)
-{
+uint32_t RAMFUNC GetTickCount(void) {
     return AT91C_BASE_RTTC->RTTC_RTVR;// was * 2;
 }
 
 //  -------------------------------------------------------------------------
 //  microseconds timer
 //  -------------------------------------------------------------------------
-void StartCountUS(void)
-{
+void StartCountUS(void) {
     AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1);
     AT91C_BASE_TCB->TCB_BMR = AT91C_TCB_TC0XC0S_NONE | AT91C_TCB_TC1XC1S_TIOA0 | AT91C_TCB_TC2XC2S_NONE;
 
@@ -93,8 +88,7 @@ void StartCountUS(void)
     while (AT91C_BASE_TC1->TC_CV > 0);
 }
 
-uint32_t RAMFUNC GetCountUS(void)
-{
+uint32_t RAMFUNC GetCountUS(void) {
     //return (AT91C_BASE_TC1->TC_CV * 0x8000) + ((AT91C_BASE_TC0->TC_CV / 15) * 10);
     //  By suggestion from PwPiwi, http://www.proxmark.org/forum/viewtopic.php?pid=17548#p17548
     return ((uint32_t)AT91C_BASE_TC1->TC_CV) * 0x8000 + (((uint32_t)AT91C_BASE_TC0->TC_CV) * 2) / 3;
@@ -103,8 +97,7 @@ uint32_t RAMFUNC GetCountUS(void)
 //  -------------------------------------------------------------------------
 //  Timer for iso14443 commands. Uses ssp_clk from FPGA
 //  -------------------------------------------------------------------------
-void StartCountSspClk(void)
-{
+void StartCountSspClk(void) {
     AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1) | (1 << AT91C_ID_TC2);  // Enable Clock to all timers
     AT91C_BASE_TCB->TCB_BMR = AT91C_TCB_TC0XC0S_TIOA1       // XC0 Clock = TIOA1
                               | AT91C_TCB_TC1XC1S_NONE        // XC1 Clock = none
@@ -161,16 +154,14 @@ void StartCountSspClk(void)
     // Therefore need to wait quite some time before we can use the counter.
     while (AT91C_BASE_TC2->TC_CV > 0);
 }
-void ResetSspClk(void)
-{
+void ResetSspClk(void) {
     //enable clock of timer and software trigger
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
     AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
     while (AT91C_BASE_TC2->TC_CV > 0);
 }
-uint32_t RAMFUNC GetCountSspClk(void)
-{
+uint32_t RAMFUNC GetCountSspClk(void) {
     uint32_t tmp_count = (AT91C_BASE_TC2->TC_CV << 16) | AT91C_BASE_TC0->TC_CV;
     if ((tmp_count & 0x0000ffff) == 0)  //small chance that we may have missed an increment in TC2
         return (AT91C_BASE_TC2->TC_CV << 16);
@@ -181,8 +172,7 @@ uint32_t RAMFUNC GetCountSspClk(void)
 //  Timer for bitbanging, or LF stuff when you need a very precis timer
 //  1us = 1.5ticks
 //  -------------------------------------------------------------------------
-void StartTicks(void)
-{
+void StartTicks(void) {
     // initialization of the timer
     AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1);
     AT91C_BASE_TCB->TCB_BMR   = AT91C_TCB_TC0XC0S_NONE | AT91C_TCB_TC1XC1S_TIOA0 | AT91C_TCB_TC2XC2S_NONE;
@@ -215,8 +205,7 @@ void StartTicks(void)
     while (AT91C_BASE_TC0->TC_CV > 0);
 }
 
-uint32_t GetTicks(void)
-{
+uint32_t GetTicks(void) {
     uint32_t hi, lo;
 
     do {
@@ -229,8 +218,7 @@ uint32_t GetTicks(void)
 
 // Wait - Spindelay in ticks.
 // if called with a high number, this will trigger the WDT...
-void WaitTicks(uint32_t ticks)
-{
+void WaitTicks(uint32_t ticks) {
     if (ticks == 0) return;
     ticks += GetTicks();
     while (GetTicks() < ticks);
@@ -238,18 +226,15 @@ void WaitTicks(uint32_t ticks)
 
 // Wait / Spindelay in us (microseconds)
 // 1us = 1.5ticks.
-void WaitUS(uint16_t us)
-{
+void WaitUS(uint16_t us) {
     WaitTicks((uint32_t)us * 3 / 2);
 }
-void WaitMS(uint16_t ms)
-{
+void WaitMS(uint16_t ms) {
     WaitTicks((uint32_t)ms * 1500);
 }
 
 // stop clock
-void StopTicks(void)
-{
+void StopTicks(void) {
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 }

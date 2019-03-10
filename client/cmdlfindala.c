@@ -12,8 +12,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_indala_demod(void)
-{
+int usage_lf_indala_demod(void) {
     PrintAndLogEx(NORMAL, "Enables Indala compatible reader mode printing details of scanned tags.");
     PrintAndLogEx(NORMAL, "By default, values are printed and logged until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "");
@@ -26,8 +25,7 @@ int usage_lf_indala_demod(void)
     return 0;
 }
 
-int usage_lf_indala_sim(void)
-{
+int usage_lf_indala_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of Indala card with specified uid.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "");
@@ -41,8 +39,7 @@ int usage_lf_indala_sim(void)
     return 0;
 }
 
-int usage_lf_indala_clone(void)
-{
+int usage_lf_indala_clone(void) {
     PrintAndLogEx(NORMAL, "Enables cloning of Indala card with specified uid onto T55x7.");
     PrintAndLogEx(NORMAL, "The T55x7 must be on the antenna when issuing this command.  T55x7 blocks are calculated and printed in the process.");
     PrintAndLogEx(NORMAL, "");
@@ -59,8 +56,7 @@ int usage_lf_indala_clone(void)
 
 // redesigned by marshmellow adjusted from existing decode functions
 // indala id decoding
-int indala64decode(uint8_t *dest, size_t *size, uint8_t *invert)
-{
+int indala64decode(uint8_t *dest, size_t *size, uint8_t *invert) {
     //standard 64 bit indala formats including 26 bit 40134 format
     uint8_t   preamble64[] = {1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
     uint8_t preamble64_i[] = {0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0};
@@ -82,8 +78,7 @@ int indala64decode(uint8_t *dest, size_t *size, uint8_t *invert)
     return (int) idx;
 }
 
-int indala224decode(uint8_t *dest, size_t *size, uint8_t *invert)
-{
+int indala224decode(uint8_t *dest, size_t *size, uint8_t *invert) {
     //large 224 bit indala formats (different preamble too...)
     uint8_t   preamble224[] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
     uint8_t preamble224_i[] = {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0};
@@ -111,8 +106,7 @@ int indala224decode(uint8_t *dest, size_t *size, uint8_t *invert)
 }
 
 // this read is the "normal" read,  which download lf signal and tries to demod here.
-int CmdIndalaRead(const char *Cmd)
-{
+int CmdIndalaRead(const char *Cmd) {
     lf_read(true, 30000);
     return CmdIndalaDemod(Cmd);
 }
@@ -120,8 +114,7 @@ int CmdIndalaRead(const char *Cmd)
 // Indala 26 bit decode
 // by marshmellow
 // optional arguments - same as PSKDemod (clock & invert & maxerr)
-int CmdIndalaDemod(const char *Cmd)
-{
+int CmdIndalaDemod(const char *Cmd) {
     int ans;
     if (strlen(Cmd) > 0)
         ans = PSKDemod(Cmd, 0);
@@ -185,8 +178,7 @@ int CmdIndalaDemod(const char *Cmd)
 // returns false positives more often - but runs against more sets of samples
 // poor psk signal can be difficult to demod this approach might succeed when the other fails
 // but the other appears to currently be more accurate than this approach most of the time.
-int CmdIndalaDemodAlt(const char *Cmd)
-{
+int CmdIndalaDemodAlt(const char *Cmd) {
     // Usage: recover 64bit UID by default, specify "224" as arg to recover a 224bit UID
     int state = -1;
     int count = 0;
@@ -382,8 +374,7 @@ int CmdIndalaDemodAlt(const char *Cmd)
     return 1;
 }
 
-int CmdIndalaSim(const char *Cmd)
-{
+int CmdIndalaSim(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_indala_sim();
@@ -428,8 +419,7 @@ int CmdIndalaSim(const char *Cmd)
 }
 
 // iceman - needs refactoring
-int CmdIndalaClone(const char *Cmd)
-{
+int CmdIndalaClone(const char *Cmd) {
     UsbCommand c = {0};
     uint32_t uid1, uid2, uid3, uid4, uid5, uid6, uid7;
     uid1 =  uid2 = uid3 = uid4 = uid5 = uid6 = uid7 = 0;
@@ -482,15 +472,13 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFINDALA(const char *Cmd)
-{
+int CmdLFINDALA(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }

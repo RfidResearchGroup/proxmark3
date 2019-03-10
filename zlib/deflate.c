@@ -242,7 +242,7 @@ int stream_size;
      */
 
     if (version == Z_NULL || version[0] != my_version[0] ||
-        stream_size != sizeof(z_stream)) {
+            stream_size != sizeof(z_stream)) {
         return Z_VERSION_ERROR;
     }
     if (strm == Z_NULL) return Z_STREAM_ERROR;
@@ -280,8 +280,8 @@ int stream_size;
     }
 #endif
     if (memLevel < 1 || memLevel > MAX_MEM_LEVEL || method != Z_DEFLATED ||
-        windowBits < 8 || windowBits > 15 || level < 0 || level > 9 ||
-        strategy < 0 || strategy > Z_FIXED) {
+            windowBits < 8 || windowBits > 15 || level < 0 || level > 9 ||
+            strategy < 0 || strategy > Z_FIXED) {
         return Z_STREAM_ERROR;
     }
     if (windowBits == 8) windowBits = 9;  /* until 256-byte window bug fixed */
@@ -314,7 +314,7 @@ int stream_size;
     s->pending_buf_size = (ulg)s->lit_bufsize * (sizeof(ush) + 2L);
 
     if (s->window == Z_NULL || s->prev == Z_NULL || s->head == Z_NULL ||
-        s->pending_buf == Z_NULL) {
+            s->pending_buf == Z_NULL) {
         s->status = FINISH_STATE;
         strm->msg = ERR_MSG(Z_MEM_ERROR);
         deflateEnd(strm);
@@ -406,7 +406,7 @@ z_streamp strm;
     deflate_state *s;
 
     if (strm == Z_NULL || strm->state == Z_NULL ||
-        strm->zalloc == (alloc_func)0 || strm->zfree == (free_func)0) {
+            strm->zalloc == (alloc_func)0 || strm->zfree == (free_func)0) {
         return Z_STREAM_ERROR;
     }
 
@@ -521,7 +521,7 @@ int strategy;
     func = configuration_table[s->level].func;
 
     if ((strategy != s->strategy || func != configuration_table[level].func) &&
-        strm->total_in != 0) {
+            strm->total_in != 0) {
         /* Flush the last buffer: */
         err = deflate(strm, Z_BLOCK);
         if (err == Z_BUF_ERROR && s->pending == 0)
@@ -681,14 +681,14 @@ int flush;
     deflate_state *s;
 
     if (strm == Z_NULL || strm->state == Z_NULL ||
-        flush > Z_BLOCK || flush < 0) {
+            flush > Z_BLOCK || flush < 0) {
         return Z_STREAM_ERROR;
     }
     s = strm->state;
 
     if (strm->next_out == Z_NULL ||
-        (strm->next_in == Z_NULL && strm->avail_in != 0) ||
-        (s->status == FINISH_STATE && flush != Z_FINISH)) {
+            (strm->next_in == Z_NULL && strm->avail_in != 0) ||
+            (s->status == FINISH_STATE && flush != Z_FINISH)) {
         ERR_RETURN(strm, Z_STREAM_ERROR);
     }
     if (strm->avail_out == 0) ERR_RETURN(strm, Z_BUF_ERROR);
@@ -902,7 +902,7 @@ int flush;
     /* Start a new block or continue the current one.
      */
     if (strm->avail_in != 0 || s->lookahead != 0 ||
-        (flush != Z_NO_FLUSH && s->status != FINISH_STATE)) {
+            (flush != Z_NO_FLUSH && s->status != FINISH_STATE)) {
         block_state bstate;
 
         bstate = s->strategy == Z_HUFFMAN_ONLY ? deflate_huff(s, flush) :
@@ -989,12 +989,12 @@ z_streamp strm;
 
     status = strm->state->status;
     if (status != INIT_STATE &&
-        status != EXTRA_STATE &&
-        status != NAME_STATE &&
-        status != COMMENT_STATE &&
-        status != HCRC_STATE &&
-        status != BUSY_STATE &&
-        status != FINISH_STATE) {
+            status != EXTRA_STATE &&
+            status != NAME_STATE &&
+            status != COMMENT_STATE &&
+            status != HCRC_STATE &&
+            status != BUSY_STATE &&
+            status != FINISH_STATE) {
         return Z_STREAM_ERROR;
     }
 
@@ -1048,7 +1048,7 @@ z_streamp source;
     ds->pending_buf = (uchf *) overlay;
 
     if (ds->window == Z_NULL || ds->prev == Z_NULL || ds->head == Z_NULL ||
-        ds->pending_buf == Z_NULL) {
+            ds->pending_buf == Z_NULL) {
         deflateEnd(dest);
         return Z_MEM_ERROR;
     }
@@ -1217,7 +1217,7 @@ IPos cur_match;                             /* current match */
          * UNALIGNED_OK if your compiler uses a different size.
          */
         if (*(ushf *)(match + best_len - 1) != scan_end ||
-            *(ushf *)match != scan_start) continue;
+                *(ushf *)match != scan_start) continue;
 
         /* It is not necessary to compare scan[2] and match[2] since they are
          * always equal when the other bytes match, given that the hash keys
@@ -1248,9 +1248,9 @@ IPos cur_match;                             /* current match */
 #else /* UNALIGNED_OK */
 
         if (match[best_len]   != scan_end  ||
-            match[best_len - 1] != scan_end1 ||
-            *match            != *scan     ||
-            *++match          != scan[1])      continue;
+                match[best_len - 1] != scan_end1 ||
+                *match            != *scan     ||
+                *++match          != scan[1])      continue;
 
         /* The check at best_len-1 can be removed because it will be made
          * again later. (This heuristic is not always a win.)
@@ -1686,7 +1686,7 @@ int flush;
              */
 #ifndef FASTEST
             if (s->match_length <= s->max_insert_length &&
-                s->lookahead >= MIN_MATCH) {
+                    s->lookahead >= MIN_MATCH) {
                 s->match_length--; /* string at strstart already in table */
                 do {
                     s->strstart++;
@@ -1851,7 +1851,7 @@ int flush;
 
 #else
         if (hash_head != NIL && s->prev_length < s->max_lazy_match &&
-            s->strstart - hash_head <= MAX_DIST(s)) {
+                s->strstart - hash_head <= MAX_DIST(s)) {
             /* To simplify the code, we prevent matches with the string
              * of window index 0 (in particular we have to avoid a match
              * of the string with itself at the start of the input file).

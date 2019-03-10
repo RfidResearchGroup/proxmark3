@@ -64,8 +64,7 @@
  *  }
  */
 static int pk_write_rsa_pubkey(unsigned char **p, unsigned char *start,
-                               mbedtls_rsa_context *rsa)
-{
+                               mbedtls_rsa_context *rsa) {
     int ret;
     size_t len = 0;
     mbedtls_mpi T;
@@ -74,13 +73,13 @@ static int pk_write_rsa_pubkey(unsigned char **p, unsigned char *start,
 
     /* Export E */
     if ((ret = mbedtls_rsa_export(rsa, NULL, NULL, NULL, NULL, &T)) != 0 ||
-        (ret = mbedtls_asn1_write_mpi(p, start, &T)) < 0)
+            (ret = mbedtls_asn1_write_mpi(p, start, &T)) < 0)
         goto end_of_export;
     len += ret;
 
     /* Export N */
     if ((ret = mbedtls_rsa_export(rsa, &T, NULL, NULL, NULL, NULL)) != 0 ||
-        (ret = mbedtls_asn1_write_mpi(p, start, &T)) < 0)
+            (ret = mbedtls_asn1_write_mpi(p, start, &T)) < 0)
         goto end_of_export;
     len += ret;
 
@@ -103,8 +102,7 @@ end_of_export:
  * EC public key is an EC point
  */
 static int pk_write_ec_pubkey(unsigned char **p, unsigned char *start,
-                              mbedtls_ecp_keypair *ec)
-{
+                              mbedtls_ecp_keypair *ec) {
     int ret;
     size_t len = 0;
     unsigned char buf[MBEDTLS_ECP_MAX_PT_LEN];
@@ -130,8 +128,7 @@ static int pk_write_ec_pubkey(unsigned char **p, unsigned char *start,
  * }
  */
 static int pk_write_ec_param(unsigned char **p, unsigned char *start,
-                             mbedtls_ecp_keypair *ec)
-{
+                             mbedtls_ecp_keypair *ec) {
     int ret;
     size_t len = 0;
     const char *oid;
@@ -147,8 +144,7 @@ static int pk_write_ec_param(unsigned char **p, unsigned char *start,
 #endif /* MBEDTLS_ECP_C */
 
 int mbedtls_pk_write_pubkey(unsigned char **p, unsigned char *start,
-                            const mbedtls_pk_context *key)
-{
+                            const mbedtls_pk_context *key) {
     int ret;
     size_t len = 0;
 
@@ -167,8 +163,7 @@ int mbedtls_pk_write_pubkey(unsigned char **p, unsigned char *start,
     return ((int) len);
 }
 
-int mbedtls_pk_write_pubkey_der(mbedtls_pk_context *key, unsigned char *buf, size_t size)
-{
+int mbedtls_pk_write_pubkey_der(mbedtls_pk_context *key, unsigned char *buf, size_t size) {
     int ret;
     unsigned char *c;
     size_t len = 0, par_len = 0, oid_len;
@@ -213,8 +208,7 @@ int mbedtls_pk_write_pubkey_der(mbedtls_pk_context *key, unsigned char *buf, siz
     return ((int) len);
 }
 
-int mbedtls_pk_write_key_der(mbedtls_pk_context *key, unsigned char *buf, size_t size)
-{
+int mbedtls_pk_write_key_der(mbedtls_pk_context *key, unsigned char *buf, size_t size) {
     int ret;
     unsigned char *c = buf + size;
     size_t len = 0;
@@ -232,54 +226,54 @@ int mbedtls_pk_write_key_der(mbedtls_pk_context *key, unsigned char *buf, size_t
 
         /* Export QP */
         if ((ret = mbedtls_rsa_export_crt(rsa, NULL, NULL, &T)) != 0 ||
-            (ret = mbedtls_asn1_write_mpi(&c, buf, &T)) < 0)
+                (ret = mbedtls_asn1_write_mpi(&c, buf, &T)) < 0)
             goto end_of_export;
         len += ret;
 
         /* Export DQ */
         if ((ret = mbedtls_rsa_export_crt(rsa, NULL, &T, NULL)) != 0 ||
-            (ret = mbedtls_asn1_write_mpi(&c, buf, &T)) < 0)
+                (ret = mbedtls_asn1_write_mpi(&c, buf, &T)) < 0)
             goto end_of_export;
         len += ret;
 
         /* Export DP */
         if ((ret = mbedtls_rsa_export_crt(rsa, &T, NULL, NULL)) != 0 ||
-            (ret = mbedtls_asn1_write_mpi(&c, buf, &T)) < 0)
+                (ret = mbedtls_asn1_write_mpi(&c, buf, &T)) < 0)
             goto end_of_export;
         len += ret;
 
         /* Export Q */
         if ((ret = mbedtls_rsa_export(rsa, NULL, NULL,
                                       &T, NULL, NULL)) != 0 ||
-            (ret = mbedtls_asn1_write_mpi(&c, buf, &T)) < 0)
+                (ret = mbedtls_asn1_write_mpi(&c, buf, &T)) < 0)
             goto end_of_export;
         len += ret;
 
         /* Export P */
         if ((ret = mbedtls_rsa_export(rsa, NULL, &T,
                                       NULL, NULL, NULL)) != 0 ||
-            (ret = mbedtls_asn1_write_mpi(&c, buf, &T)) < 0)
+                (ret = mbedtls_asn1_write_mpi(&c, buf, &T)) < 0)
             goto end_of_export;
         len += ret;
 
         /* Export D */
         if ((ret = mbedtls_rsa_export(rsa, NULL, NULL,
                                       NULL, &T, NULL)) != 0 ||
-            (ret = mbedtls_asn1_write_mpi(&c, buf, &T)) < 0)
+                (ret = mbedtls_asn1_write_mpi(&c, buf, &T)) < 0)
             goto end_of_export;
         len += ret;
 
         /* Export E */
         if ((ret = mbedtls_rsa_export(rsa, NULL, NULL,
                                       NULL, NULL, &T)) != 0 ||
-            (ret = mbedtls_asn1_write_mpi(&c, buf, &T)) < 0)
+                (ret = mbedtls_asn1_write_mpi(&c, buf, &T)) < 0)
             goto end_of_export;
         len += ret;
 
         /* Export N */
         if ((ret = mbedtls_rsa_export(rsa, &T, NULL,
                                       NULL, NULL, NULL)) != 0 ||
-            (ret = mbedtls_asn1_write_mpi(&c, buf, &T)) < 0)
+                (ret = mbedtls_asn1_write_mpi(&c, buf, &T)) < 0)
             goto end_of_export;
         len += ret;
 
@@ -446,8 +440,7 @@ end_of_export:
 #define PRV_DER_MAX_BYTES   RSA_PRV_DER_MAX_BYTES > ECP_PRV_DER_MAX_BYTES ? \
     RSA_PRV_DER_MAX_BYTES : ECP_PRV_DER_MAX_BYTES
 
-int mbedtls_pk_write_pubkey_pem(mbedtls_pk_context *key, unsigned char *buf, size_t size)
-{
+int mbedtls_pk_write_pubkey_pem(mbedtls_pk_context *key, unsigned char *buf, size_t size) {
     int ret;
     unsigned char output_buf[PUB_DER_MAX_BYTES];
     size_t olen = 0;
@@ -466,8 +459,7 @@ int mbedtls_pk_write_pubkey_pem(mbedtls_pk_context *key, unsigned char *buf, siz
     return (0);
 }
 
-int mbedtls_pk_write_key_pem(mbedtls_pk_context *key, unsigned char *buf, size_t size)
-{
+int mbedtls_pk_write_key_pem(mbedtls_pk_context *key, unsigned char *buf, size_t size) {
     int ret;
     unsigned char output_buf[PRV_DER_MAX_BYTES];
     const char *begin, *end;

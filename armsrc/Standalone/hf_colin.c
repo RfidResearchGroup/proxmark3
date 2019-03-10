@@ -59,36 +59,31 @@ void cjPrintBigArray(const char *bigar, int len, uint8_t newlines, uint8_t debug
 }
 */
 
-void cjSetCursFRight()
-{
+void cjSetCursFRight() {
     vtsend_cursor_position(NULL, 98, (currfline));
     currfline++;
 }
 
-void cjSetCursRight()
-{
+void cjSetCursRight() {
     vtsend_cursor_position(NULL, 59, (currline));
     currline++;
 }
 
-void cjSetCursLeft()
-{
+void cjSetCursLeft() {
     vtsend_cursor_position(NULL, 0, (curlline));
     curlline++;
 }
 
 void cjTabulize() { DbprintfEx(FLAG_RAWPRINT, "\t\t\t"); }
 
-void cjPrintKey(uint64_t key, uint8_t *foundKey, uint16_t sectorNo, uint8_t type)
-{
+void cjPrintKey(uint64_t key, uint8_t *foundKey, uint16_t sectorNo, uint8_t type) {
     char tosendkey[13];
     sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[0], foundKey[1], foundKey[2], foundKey[3], foundKey[4], foundKey[5]);
     cjSetCursRight();
     DbprintfEx(FLAG_NOLOG, "SEC: %02x | KEY : %s | TYP: %d", sectorNo, tosendkey, type);
 }
 
-void ReadLastTagFromFlash()
-{
+void ReadLastTagFromFlash() {
     SpinOff(0);
     LED_A_ON();
     LED_B_ON();
@@ -135,8 +130,7 @@ void ReadLastTagFromFlash()
     return;
 }
 
-void WriteTagToFlash(uint8_t index, size_t size)
-{
+void WriteTagToFlash(uint8_t index, size_t size) {
     SpinOff(0);
     LED_A_ON();
     LED_B_ON();
@@ -202,8 +196,7 @@ void WriteTagToFlash(uint8_t index, size_t size)
     return;
 }
 
-void RunMod()
-{
+void RunMod() {
     StandAloneMode();
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
@@ -803,8 +796,7 @@ readysim:
  * - *datain used as error return
  * - tracing is falsed
  */
-void e_MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
-{
+void e_MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
     MF_DBGLEVEL = MF_DBG_NONE;
 
     uint8_t numSectors = arg0;
@@ -888,8 +880,7 @@ void e_MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *dat
 
 /* the chk function is a piwi’ed(tm) check that will try all keys for
 a particular sector. also no tracing no dbg */
-int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, uint8_t keyCount, uint8_t *datain, uint64_t *key)
-{
+int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, uint8_t keyCount, uint8_t *datain, uint64_t *key) {
     MF_DBGLEVEL = MF_DBG_NONE;
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
     set_tracing(false);
@@ -927,8 +918,7 @@ int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, ui
     return -1;
 }
 
-void saMifareMakeTag(void)
-{
+void saMifareMakeTag(void) {
     uint8_t cfail = 0;
     cjSetCursLeft();
     cjTabulize();
@@ -999,8 +989,7 @@ void saMifareMakeTag(void)
 // Matt's StandAlone mod.
 // Work with "magic Chinese" card (email him: ouyangweidaxian@live.cn)
 //-----------------------------------------------------------------------------
-int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
-{
+int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
     // params
     uint8_t needWipe = arg0;
     // bit 0 - need get UID

@@ -103,8 +103,7 @@ static char iso_type = 0;
 //-----------------------------------------------------------------------------
 // Wrapper for sending APDUs to type A and B cards
 //-----------------------------------------------------------------------------
-int EPA_APDU(uint8_t *apdu, size_t length, uint8_t *response)
-{
+int EPA_APDU(uint8_t *apdu, size_t length, uint8_t *response) {
     switch (iso_type) {
         case 'a':
             return iso14_apdu(apdu, (uint16_t) length, false, response, NULL);
@@ -121,8 +120,7 @@ int EPA_APDU(uint8_t *apdu, size_t length, uint8_t *response)
 //-----------------------------------------------------------------------------
 // Closes the communication channel and turns off the field
 //-----------------------------------------------------------------------------
-void EPA_Finish()
-{
+void EPA_Finish() {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
     iso_type = 0;
@@ -143,8 +141,7 @@ void EPA_Finish()
 //-----------------------------------------------------------------------------
 size_t EPA_Parse_CardAccess(uint8_t *data,
                             size_t length,
-                            pace_version_info_t *pace_info)
-{
+                            pace_version_info_t *pace_info) {
     size_t index = 0;
 
     while (index <= length - 2) {
@@ -162,10 +159,10 @@ size_t EPA_Parse_CardAccess(uint8_t *data,
         else if (data[index] == 0x06) {
             // is this a PACE OID?
             if (data[index + 1] == 0x0A // length matches
-                && memcmp(data + index + 2,
-                          oid_pace_start,
-                          sizeof(oid_pace_start)) == 0 // content matches
-                && pace_info != NULL) {
+                    && memcmp(data + index + 2,
+                              oid_pace_start,
+                              sizeof(oid_pace_start)) == 0 // content matches
+                    && pace_info != NULL) {
                 // first, clear the pace_info struct
                 memset(pace_info, 0, sizeof(pace_version_info_t));
                 memcpy(pace_info->oid, data + index + 2, sizeof(pace_info->oid));
@@ -210,8 +207,7 @@ size_t EPA_Parse_CardAccess(uint8_t *data,
 // Returns -1 on failure or the length of the data on success
 // TODO: for the moment this sends only 1 APDU regardless of the requested length
 //-----------------------------------------------------------------------------
-int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length)
-{
+int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length) {
     // the response APDU of the card
     // since the card doesn't always care for the expected length we send it,
     // we reserve 262 bytes here just to be safe (256-byte APDU + SW + ISO frame)
@@ -223,8 +219,8 @@ int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length)
                             sizeof(apdu_select_binary_cardaccess),
                             response_apdu);
     if (rapdu_length < 6
-        || response_apdu[rapdu_length - 4] != 0x90
-        || response_apdu[rapdu_length - 3] != 0x00) {
+            || response_apdu[rapdu_length - 4] != 0x90
+            || response_apdu[rapdu_length - 3] != 0x00) {
         DbpString("Failed to select EF.CardAccess!");
         return -1;
     }
@@ -234,8 +230,8 @@ int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length)
                             sizeof(apdu_read_binary),
                             response_apdu);
     if (rapdu_length <= 6
-        || response_apdu[rapdu_length - 4] != 0x90
-        || response_apdu[rapdu_length - 3] != 0x00) {
+            || response_apdu[rapdu_length - 4] != 0x90
+            || response_apdu[rapdu_length - 3] != 0x00) {
         Dbprintf("Failed to read EF.CardAccess!");
         return -1;
     }
@@ -252,8 +248,7 @@ int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length)
 // Abort helper function for EPA_PACE_Collect_Nonce
 // sets relevant data in ack, sends the response
 //-----------------------------------------------------------------------------
-static void EPA_PACE_Collect_Nonce_Abort(uint8_t step, int func_return)
-{
+static void EPA_PACE_Collect_Nonce_Abort(uint8_t step, int func_return) {
     // power down the field
     EPA_Finish();
 
@@ -264,8 +259,7 @@ static void EPA_PACE_Collect_Nonce_Abort(uint8_t step, int func_return)
 //-----------------------------------------------------------------------------
 // Acquire one encrypted PACE nonce
 //-----------------------------------------------------------------------------
-void EPA_PACE_Collect_Nonce(UsbCommand *c)
-{
+void EPA_PACE_Collect_Nonce(UsbCommand *c) {
     /*
      * ack layout:
      *   arg:
@@ -337,8 +331,7 @@ void EPA_PACE_Collect_Nonce(UsbCommand *c)
 // Returns the actual size of the nonce on success or a less-than-zero error
 // code on failure.
 //-----------------------------------------------------------------------------
-int EPA_PACE_Get_Nonce(uint8_t requested_length, uint8_t *nonce)
-{
+int EPA_PACE_Get_Nonce(uint8_t requested_length, uint8_t *nonce) {
     // build the APDU
     uint8_t apdu[sizeof(apdu_general_authenticate_pace_get_nonce) + 1];
     // copy the constant part
@@ -355,8 +348,8 @@ int EPA_PACE_Get_Nonce(uint8_t requested_length, uint8_t *nonce)
                                response_apdu);
     // check if the command succeeded
     if (send_return < 6
-        || response_apdu[send_return - 4] != 0x90
-        || response_apdu[send_return - 3] != 0x00) {
+            || response_apdu[send_return - 4] != 0x90
+            || response_apdu[send_return - 3] != 0x00) {
         return -1;
     }
 
@@ -380,8 +373,7 @@ int EPA_PACE_Get_Nonce(uint8_t requested_length, uint8_t *nonce)
 // Initializes the PACE protocol by performing the "MSE: Set AT" step
 // Returns 0 on success or a non-zero error code on failure
 //-----------------------------------------------------------------------------
-int EPA_PACE_MSE_Set_AT(pace_version_info_t pace_version_info, uint8_t password)
-{
+int EPA_PACE_MSE_Set_AT(pace_version_info_t pace_version_info, uint8_t password) {
     // create the MSE: Set AT APDU
     uint8_t apdu[23];
     // the minimum length (will be increased as more data is added)
@@ -423,8 +415,8 @@ int EPA_PACE_MSE_Set_AT(pace_version_info_t pace_version_info, uint8_t password)
                                response_apdu);
     // check if the command succeeded
     if (send_return != 6
-        || response_apdu[send_return - 4] != 0x90
-        || response_apdu[send_return - 3] != 0x00) {
+            || response_apdu[send_return - 4] != 0x90
+            || response_apdu[send_return - 3] != 0x00) {
         return 1;
     }
     return 0;
@@ -433,8 +425,7 @@ int EPA_PACE_MSE_Set_AT(pace_version_info_t pace_version_info, uint8_t password)
 //-----------------------------------------------------------------------------
 // Perform the PACE protocol by replaying given APDUs
 //-----------------------------------------------------------------------------
-void EPA_PACE_Replay(UsbCommand *c)
-{
+void EPA_PACE_Replay(UsbCommand *c) {
     uint32_t timings[sizeof(apdu_lengths_replay) / sizeof(apdu_lengths_replay[0])] = {0};
 
     // if an APDU has been passed, save it
@@ -482,9 +473,9 @@ void EPA_PACE_Replay(UsbCommand *c)
         timings[i] = GetCountUS();
         // every step but the last one should succeed
         if (i < sizeof(apdu_lengths_replay) - 1
-            && (func_return < 6
-                || response_apdu[func_return - 4] != 0x90
-                || response_apdu[func_return - 3] != 0x00)) {
+                && (func_return < 6
+                    || response_apdu[func_return - 4] != 0x90
+                    || response_apdu[func_return - 3] != 0x00)) {
             EPA_Finish();
             cmd_send(CMD_ACK, 3 + i, func_return, 0, timings, 20);
             return;
@@ -499,8 +490,7 @@ void EPA_PACE_Replay(UsbCommand *c)
 // Set up a communication channel (Card Select, PPS)
 // Returns 0 on success or a non-zero error code on failure
 //-----------------------------------------------------------------------------
-int EPA_Setup()
-{
+int EPA_Setup() {
     int return_code = 0;
     uint8_t uid[10];
     uint8_t pps_response[3];

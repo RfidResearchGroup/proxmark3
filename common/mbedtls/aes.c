@@ -393,8 +393,7 @@ static uint32_t RCON[10];
 
 static int aes_init_done = 0;
 
-static void aes_gen_tables(void)
-{
+static void aes_gen_tables(void) {
     int i, x, y, z;
     int pow[256];
     int log[256];
@@ -507,13 +506,11 @@ static void aes_gen_tables(void)
 
 #endif /* MBEDTLS_AES_FEWER_TABLES */
 
-void mbedtls_aes_init(mbedtls_aes_context *ctx)
-{
+void mbedtls_aes_init(mbedtls_aes_context *ctx) {
     memset(ctx, 0, sizeof(mbedtls_aes_context));
 }
 
-void mbedtls_aes_free(mbedtls_aes_context *ctx)
-{
+void mbedtls_aes_free(mbedtls_aes_context *ctx) {
     if (ctx == NULL)
         return;
 
@@ -521,14 +518,12 @@ void mbedtls_aes_free(mbedtls_aes_context *ctx)
 }
 
 #if defined(MBEDTLS_CIPHER_MODE_XTS)
-void mbedtls_aes_xts_init(mbedtls_aes_xts_context *ctx)
-{
+void mbedtls_aes_xts_init(mbedtls_aes_xts_context *ctx) {
     mbedtls_aes_init(&ctx->crypt);
     mbedtls_aes_init(&ctx->tweak);
 }
 
-void mbedtls_aes_xts_free(mbedtls_aes_xts_context *ctx)
-{
+void mbedtls_aes_xts_free(mbedtls_aes_xts_context *ctx) {
     mbedtls_aes_free(&ctx->crypt);
     mbedtls_aes_free(&ctx->tweak);
 }
@@ -539,8 +534,7 @@ void mbedtls_aes_xts_free(mbedtls_aes_xts_context *ctx)
  */
 #if !defined(MBEDTLS_AES_SETKEY_ENC_ALT)
 int mbedtls_aes_setkey_enc(mbedtls_aes_context *ctx, const unsigned char *key,
-                           unsigned int keybits)
-{
+                           unsigned int keybits) {
     unsigned int i;
     uint32_t *RK;
 
@@ -653,8 +647,7 @@ int mbedtls_aes_setkey_enc(mbedtls_aes_context *ctx, const unsigned char *key,
  */
 #if !defined(MBEDTLS_AES_SETKEY_DEC_ALT)
 int mbedtls_aes_setkey_dec(mbedtls_aes_context *ctx, const unsigned char *key,
-                           unsigned int keybits)
-{
+                           unsigned int keybits) {
     int i, j, ret;
     mbedtls_aes_context cty;
     uint32_t *RK;
@@ -719,8 +712,7 @@ static int mbedtls_aes_xts_decode_keys(const unsigned char *key,
                                        const unsigned char **key1,
                                        unsigned int *key1bits,
                                        const unsigned char **key2,
-                                       unsigned int *key2bits)
-{
+                                       unsigned int *key2bits) {
     const unsigned int half_keybits = keybits / 2;
     const unsigned int half_keybytes = half_keybits / 8;
 
@@ -743,8 +735,7 @@ static int mbedtls_aes_xts_decode_keys(const unsigned char *key,
 
 int mbedtls_aes_xts_setkey_enc(mbedtls_aes_xts_context *ctx,
                                const unsigned char *key,
-                               unsigned int keybits)
-{
+                               unsigned int keybits) {
     int ret;
     const unsigned char *key1, *key2;
     unsigned int key1bits, key2bits;
@@ -765,8 +756,7 @@ int mbedtls_aes_xts_setkey_enc(mbedtls_aes_xts_context *ctx,
 
 int mbedtls_aes_xts_setkey_dec(mbedtls_aes_xts_context *ctx,
                                const unsigned char *key,
-                               unsigned int keybits)
-{
+                               unsigned int keybits) {
     int ret;
     const unsigned char *key1, *key2;
     unsigned int key1bits, key2bits;
@@ -840,8 +830,7 @@ int mbedtls_aes_xts_setkey_dec(mbedtls_aes_xts_context *ctx,
 #if !defined(MBEDTLS_AES_ENCRYPT_ALT)
 int mbedtls_internal_aes_encrypt(mbedtls_aes_context *ctx,
                                  const unsigned char input[16],
-                                 unsigned char output[16])
-{
+                                 unsigned char output[16]) {
     int i;
     uint32_t *RK, X0, X1, X2, X3, Y0, Y1, Y2, Y3;
 
@@ -899,8 +888,7 @@ int mbedtls_internal_aes_encrypt(mbedtls_aes_context *ctx,
 #if !defined(MBEDTLS_DEPRECATED_REMOVED)
 void mbedtls_aes_encrypt(mbedtls_aes_context *ctx,
                          const unsigned char input[16],
-                         unsigned char output[16])
-{
+                         unsigned char output[16]) {
     mbedtls_internal_aes_encrypt(ctx, input, output);
 }
 #endif /* !MBEDTLS_DEPRECATED_REMOVED */
@@ -911,8 +899,7 @@ void mbedtls_aes_encrypt(mbedtls_aes_context *ctx,
 #if !defined(MBEDTLS_AES_DECRYPT_ALT)
 int mbedtls_internal_aes_decrypt(mbedtls_aes_context *ctx,
                                  const unsigned char input[16],
-                                 unsigned char output[16])
-{
+                                 unsigned char output[16]) {
     int i;
     uint32_t *RK, X0, X1, X2, X3, Y0, Y1, Y2, Y3;
 
@@ -970,8 +957,7 @@ int mbedtls_internal_aes_decrypt(mbedtls_aes_context *ctx,
 #if !defined(MBEDTLS_DEPRECATED_REMOVED)
 void mbedtls_aes_decrypt(mbedtls_aes_context *ctx,
                          const unsigned char input[16],
-                         unsigned char output[16])
-{
+                         unsigned char output[16]) {
     mbedtls_internal_aes_decrypt(ctx, input, output);
 }
 #endif /* !MBEDTLS_DEPRECATED_REMOVED */
@@ -982,8 +968,7 @@ void mbedtls_aes_decrypt(mbedtls_aes_context *ctx,
 int mbedtls_aes_crypt_ecb(mbedtls_aes_context *ctx,
                           int mode,
                           const unsigned char input[16],
-                          unsigned char output[16])
-{
+                          unsigned char output[16]) {
 #if defined(MBEDTLS_AESNI_C) && defined(MBEDTLS_HAVE_X86_64)
     if (mbedtls_aesni_has_support(MBEDTLS_AESNI_AES))
         return (mbedtls_aesni_crypt_ecb(ctx, mode, input, output));
@@ -1015,8 +1000,7 @@ int mbedtls_aes_crypt_cbc(mbedtls_aes_context *ctx,
                           size_t length,
                           unsigned char iv[16],
                           const unsigned char *input,
-                          unsigned char *output)
-{
+                          unsigned char *output) {
     int i;
     unsigned char temp[16];
 
@@ -1108,8 +1092,7 @@ typedef unsigned char mbedtls_be128[16];
  * endian machines.
  */
 static void mbedtls_gf128mul_x_ble(unsigned char r[16],
-                                   const unsigned char x[16])
-{
+                                   const unsigned char x[16]) {
     uint64_t a, b, ra, rb;
 
     GET_UINT64_LE(a, x, 0);
@@ -1130,8 +1113,7 @@ int mbedtls_aes_crypt_xts(mbedtls_aes_xts_context *ctx,
                           size_t length,
                           const unsigned char data_unit[16],
                           const unsigned char *input,
-                          unsigned char *output)
-{
+                          unsigned char *output) {
     int ret;
     size_t blocks = length / 16;
     size_t leftover = length % 16;
@@ -1231,8 +1213,7 @@ int mbedtls_aes_crypt_cfb128(mbedtls_aes_context *ctx,
                              size_t *iv_off,
                              unsigned char iv[16],
                              const unsigned char *input,
-                             unsigned char *output)
-{
+                             unsigned char *output) {
     int c;
     size_t n = *iv_off;
 
@@ -1271,8 +1252,7 @@ int mbedtls_aes_crypt_cfb8(mbedtls_aes_context *ctx,
                            size_t length,
                            unsigned char iv[16],
                            const unsigned char *input,
-                           unsigned char *output)
-{
+                           unsigned char *output) {
     unsigned char c;
     unsigned char ov[17];
 
@@ -1304,8 +1284,7 @@ int mbedtls_aes_crypt_ofb(mbedtls_aes_context *ctx,
                           size_t *iv_off,
                           unsigned char iv[16],
                           const unsigned char *input,
-                          unsigned char *output)
-{
+                          unsigned char *output) {
     int ret = 0;
     size_t n = *iv_off;
 
@@ -1337,8 +1316,7 @@ int mbedtls_aes_crypt_ctr(mbedtls_aes_context *ctx,
                           unsigned char nonce_counter[16],
                           unsigned char stream_block[16],
                           const unsigned char *input,
-                          unsigned char *output)
-{
+                          unsigned char *output) {
     int c, i;
     size_t n = *nc_off;
 
@@ -1757,8 +1735,7 @@ static const unsigned char aes_test_xts_data_unit[][16] = {
 /*
  * Checkup routine
  */
-int mbedtls_aes_self_test(int verbose)
-{
+int mbedtls_aes_self_test(int verbose) {
     int ret = 0, i, j, u, mode;
     unsigned int keybits;
     unsigned char key[32];

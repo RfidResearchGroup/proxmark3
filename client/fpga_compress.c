@@ -44,8 +44,7 @@
 
 #define HARDNESTED_TABLE_SIZE (sizeof(uint32_t) * ((1L<<19)+1))
 
-static void usage(void)
-{
+static void usage(void) {
     fprintf(stdout, "Usage: fpga_compress <infile1> <infile2> ... <infile_n> <outfile>\n");
     fprintf(stdout, "          Combine n FPGA bitstream files and compress them into one.\n\n");
     fprintf(stdout, "       fpga_compress -v <infile1> <infile2> ... <infile_n> <outfile>\n");
@@ -57,20 +56,17 @@ static void usage(void)
 }
 
 
-static voidpf fpga_deflate_malloc(voidpf opaque, uInt items, uInt size)
-{
+static voidpf fpga_deflate_malloc(voidpf opaque, uInt items, uInt size) {
     return calloc(items * size, sizeof(uint8_t));
 }
 
 
-static void fpga_deflate_free(voidpf opaque, voidpf address)
-{
+static void fpga_deflate_free(voidpf opaque, voidpf address) {
     free(address);
 }
 
 
-static bool all_feof(FILE *infile[], uint8_t num_infiles)
-{
+static bool all_feof(FILE *infile[], uint8_t num_infiles) {
     for (uint16_t i = 0; i < num_infiles; i++) {
         if (!feof(infile[i])) {
             return false;
@@ -80,8 +76,7 @@ static bool all_feof(FILE *infile[], uint8_t num_infiles)
 }
 
 
-int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, bool hardnested_mode)
-{
+int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, bool hardnested_mode) {
     uint8_t *fpga_config;
     uint32_t i;
     int32_t ret;
@@ -195,8 +190,7 @@ int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, bool hardn
 }
 
 
-int zlib_decompress(FILE *infile, FILE *outfile)
-{
+int zlib_decompress(FILE *infile, FILE *outfile) {
 #define DECOMPRESS_BUF_SIZE 1024
     uint8_t outbuf[DECOMPRESS_BUF_SIZE];
     uint8_t inbuf[DECOMPRESS_BUF_SIZE];
@@ -270,8 +264,7 @@ int zlib_decompress(FILE *infile, FILE *outfile)
  * (big endian), <length> bytes content. Except for section 'e' which has 4 bytes
  * length.
  */
-static int bitparse_find_section(FILE *infile, char section_name, unsigned int *section_length)
-{
+static int bitparse_find_section(FILE *infile, char section_name, unsigned int *section_length) {
     int result = 0;
 #define MAX_FPGA_BIT_STREAM_HEADER_SEARCH 100  // maximum number of bytes to search for the requested section
     uint16_t numbytes = 0;
@@ -315,8 +308,7 @@ static int bitparse_find_section(FILE *infile, char section_name, unsigned int *
     return result;
 }
 
-static int FpgaGatherVersion(FILE *infile, char *infile_name, char *dst, int len)
-{
+static int FpgaGatherVersion(FILE *infile, char *infile_name, char *dst, int len) {
     unsigned int fpga_info_len;
     char tempstr[40] = {0x00};
 
@@ -370,8 +362,7 @@ static int FpgaGatherVersion(FILE *infile, char *infile_name, char *dst, int len
     return 0;
 }
 
-static void print_version_info_preamble(FILE *outfile, int num_infiles)
-{
+static void print_version_info_preamble(FILE *outfile, int num_infiles) {
     fprintf(outfile, "//-----------------------------------------------------------------------------\n");
     fprintf(outfile, "// piwi, 2018\n");
     fprintf(outfile, "//\n");
@@ -389,8 +380,7 @@ static void print_version_info_preamble(FILE *outfile, int num_infiles)
     fprintf(outfile, "const char* const fpga_version_information[%d] = {\n", num_infiles);
 }
 
-static int generate_fpga_version_info(FILE *infile[], char *infile_names[], int num_infiles, FILE *outfile)
-{
+static int generate_fpga_version_info(FILE *infile[], char *infile_names[], int num_infiles, FILE *outfile) {
 
     char version_string[80] = "";
 
@@ -408,8 +398,7 @@ static int generate_fpga_version_info(FILE *infile[], char *infile_names[], int 
     return 0;
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     FILE **infiles;
     char **infile_names;
     FILE *outfile;

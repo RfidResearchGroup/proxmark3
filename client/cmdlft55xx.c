@@ -11,17 +11,14 @@
 // Default configuration
 t55xx_conf_block_t config = { .modulation = DEMOD_ASK, .inverted = false, .offset = 0x00, .block0 = 0x00, .Q5 = false };
 
-t55xx_conf_block_t Get_t55xx_Config()
-{
+t55xx_conf_block_t Get_t55xx_Config() {
     return config;
 }
-void Set_t55xx_Config(t55xx_conf_block_t conf)
-{
+void Set_t55xx_Config(t55xx_conf_block_t conf) {
     config = conf;
 }
 
-int usage_t55xx_config()
-{
+int usage_t55xx_config() {
     PrintAndLogEx(NORMAL, "Usage: lf t55xx config [d <demodulation>] [i 1] [o <offset>] [Q5]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h                                - This help");
@@ -39,8 +36,7 @@ int usage_t55xx_config()
     PrintAndLogEx(NORMAL, "");
     return 0;
 }
-int usage_t55xx_read()
-{
+int usage_t55xx_read() {
     PrintAndLogEx(NORMAL, "Usage:  lf t55xx read [b <block>] [p <password>] <override_safety> <page1>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     b <block>    - block number to read. Between 0-7");
@@ -58,8 +54,7 @@ int usage_t55xx_read()
     PrintAndLogEx(NORMAL, "");
     return 0;
 }
-int usage_t55xx_write()
-{
+int usage_t55xx_write() {
     PrintAndLogEx(NORMAL, "Usage:  lf t55xx write [b <block>] [d <data>] [p <password>] [1] [t]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     b <block>    - block number to write. Between 0-7");
@@ -74,8 +69,7 @@ int usage_t55xx_write()
     PrintAndLogEx(NORMAL, "");
     return 0;
 }
-int usage_t55xx_trace()
-{
+int usage_t55xx_trace() {
     PrintAndLogEx(NORMAL, "Usage:  lf t55xx trace [1]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     1            - if set, use Graphbuffer otherwise read data from tag.");
@@ -86,8 +80,7 @@ int usage_t55xx_trace()
     PrintAndLogEx(NORMAL, "");
     return 0;
 }
-int usage_t55xx_info()
-{
+int usage_t55xx_info() {
     PrintAndLogEx(NORMAL, "Usage:  lf t55xx info [1]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     1            - if set, use Graphbuffer otherwise read data from tag.");
@@ -98,8 +91,7 @@ int usage_t55xx_info()
     PrintAndLogEx(NORMAL, "");
     return 0;
 }
-int usage_t55xx_dump()
-{
+int usage_t55xx_dump() {
     PrintAndLogEx(NORMAL, "Usage:  lf t55xx dump <password> [o]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     <password>   - OPTIONAL password 4bytes (8 hex symbols)");
@@ -111,8 +103,7 @@ int usage_t55xx_dump()
     PrintAndLogEx(NORMAL, "");
     return 0;
 }
-int usage_t55xx_detect()
-{
+int usage_t55xx_detect() {
     PrintAndLogEx(NORMAL, "Usage:  lf t55xx detect [1] [p <password>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     1            - if set, use Graphbuffer otherwise read data from tag.");
@@ -125,8 +116,7 @@ int usage_t55xx_detect()
     PrintAndLogEx(NORMAL, "");
     return 0;
 }
-int usage_t55xx_detectP1()
-{
+int usage_t55xx_detectP1() {
     PrintAndLogEx(NORMAL, "Command: Detect Page 1 of a t55xx chip");
     PrintAndLogEx(NORMAL, "Usage:  lf t55xx p1detect [1] [p <password>]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -140,8 +130,7 @@ int usage_t55xx_detectP1()
     PrintAndLogEx(NORMAL, "");
     return 0;
 }
-int usage_t55xx_wakup()
-{
+int usage_t55xx_wakup() {
     PrintAndLogEx(NORMAL, "Usage:  lf t55xx wakeup [h] p <password>");
     PrintAndLogEx(NORMAL, "This commands send the Answer-On-Request command and leaves the readerfield ON afterwards.");
     PrintAndLogEx(NORMAL, "Options:");
@@ -152,8 +141,7 @@ int usage_t55xx_wakup()
     PrintAndLogEx(NORMAL, "      lf t55xx wakeup p 11223344  - send wakeup password");
     return 0;
 }
-int usage_t55xx_chk()
-{
+int usage_t55xx_chk() {
     PrintAndLogEx(NORMAL, "This command uses a dictionary attack");
     PrintAndLogEx(NORMAL, "press 'enter' to cancel the command");
     PrintAndLogEx(NORMAL, "Usage: lf t55xx bruteforce [h] <m> [i <*.dic>]");
@@ -168,8 +156,7 @@ int usage_t55xx_chk()
     PrintAndLogEx(NORMAL, "");
     return 0;
 }
-int usage_t55xx_bruteforce()
-{
+int usage_t55xx_bruteforce() {
     PrintAndLogEx(NORMAL, "This command uses bruteforce to scan a number range");
     PrintAndLogEx(NORMAL, "press 'enter' to cancel the command");
     PrintAndLogEx(NORMAL, "Usage: lf t55xx bruteforce [h] <start password> <end password>");
@@ -184,8 +171,7 @@ int usage_t55xx_bruteforce()
     PrintAndLogEx(NORMAL, "");
     return 0;
 }
-int usage_t55xx_recoverpw()
-{
+int usage_t55xx_recoverpw() {
     PrintAndLogEx(NORMAL, "This command uses a few tricks to try to recover mangled password");
     PrintAndLogEx(NORMAL, "press 'enter' to cancel the command");
     PrintAndLogEx(NORMAL, "WARNING: this may brick non-password protected chips!");
@@ -202,8 +188,7 @@ int usage_t55xx_recoverpw()
     PrintAndLogEx(NORMAL, "");
     return 0;
 }
-int usage_t55xx_wipe()
-{
+int usage_t55xx_wipe() {
     PrintAndLogEx(NORMAL, "Usage:  lf t55xx wipe [h] [Q5]");
     PrintAndLogEx(NORMAL, "This commands wipes a tag, fills blocks 1-7 with zeros and a default configuration block");
     PrintAndLogEx(NORMAL, "Options:");
@@ -215,8 +200,7 @@ int usage_t55xx_wipe()
     PrintAndLogEx(NORMAL, "      lf t55xx wipe Q5 -  wipes a t5555 Q5 tag, config block 0x6001F004");
     return 0;
 }
-int usage_lf_deviceconfig()
-{
+int usage_lf_deviceconfig() {
     PrintAndLogEx(NORMAL, "Sets t55x7 timings for direkt commands. The timings are set here in Field Clocks (FC), \nwhich is converted to (US) on device");
     PrintAndLogEx(NORMAL, "Usage: lf t55xx deviceconfig a <gap> b <gap> c <gap> d <gap> e <gap> p");
     PrintAndLogEx(NORMAL, "Options:");
@@ -237,15 +221,13 @@ int usage_lf_deviceconfig()
 
 int CmdHelp(const char *Cmd);
 
-void printT5xxHeader(uint8_t page)
-{
+void printT5xxHeader(uint8_t page) {
     PrintAndLogEx(NORMAL, "Reading Page %d:", page);
     PrintAndLogEx(NORMAL, "blk | hex data | binary                           | ascii");
     PrintAndLogEx(NORMAL, "----+----------+----------------------------------+-------");
 }
 
-int CmdT55xxSetConfig(const char *Cmd)
-{
+int CmdT55xxSetConfig(const char *Cmd) {
 
     uint8_t offset = 0;
     char modulation[6] = {0x00};
@@ -347,8 +329,7 @@ int CmdT55xxSetConfig(const char *Cmd)
     return printConfiguration(config);
 }
 
-int T55xxReadBlock(uint8_t block, bool page1, bool usepwd, bool override, uint32_t password)
-{
+int T55xxReadBlock(uint8_t block, bool page1, bool usepwd, bool override, uint32_t password) {
     //Password mode
     if (usepwd) {
         // try reading the config block and verify that PWD bit is set before doing this!
@@ -378,8 +359,7 @@ int T55xxReadBlock(uint8_t block, bool page1, bool usepwd, bool override, uint32
     return 1;
 }
 
-int CmdT55xxReadBlock(const char *Cmd)
-{
+int CmdT55xxReadBlock(const char *Cmd) {
     uint8_t block = REGULAR_READ_MODE_BLOCK;
     uint32_t password = 0; //default to blank Block 7
     bool usepwd = false;
@@ -425,8 +405,7 @@ int CmdT55xxReadBlock(const char *Cmd)
     return T55xxReadBlock(block, page1, usepwd, override, password);
 }
 
-bool DecodeT55xxBlock()
-{
+bool DecodeT55xxBlock() {
 
     char buf[30] = {0x00};
     char *cmdStr = buf;
@@ -489,8 +468,7 @@ bool DecodeT55xxBlock()
     return (bool) ans;
 }
 
-bool DecodeT5555TraceBlock()
-{
+bool DecodeT5555TraceBlock() {
     DemodBufferLen = 0x00;
 
     // According to datasheet. Always: RF/64, not inverted, Manchester
@@ -498,8 +476,7 @@ bool DecodeT5555TraceBlock()
 }
 
 // sanity check. Don't use proxmark if it is offline and you didn't specify useGraphbuf
-static int SanityOfflineCheck(bool useGraphBuffer)
-{
+static int SanityOfflineCheck(bool useGraphBuffer) {
     if (!useGraphBuffer && IsOffline()) {
         PrintAndLogEx(NORMAL, "Your proxmark3 device is offline. Specify [1] to use graphbuffer data instead");
         return 0;
@@ -507,8 +484,7 @@ static int SanityOfflineCheck(bool useGraphBuffer)
     return 1;
 }
 
-int CmdT55xxDetect(const char *Cmd)
-{
+int CmdT55xxDetect(const char *Cmd) {
     bool errors = false;
     bool useGB = false, usepwd = false;
     uint32_t password = 0;
@@ -551,8 +527,7 @@ int CmdT55xxDetect(const char *Cmd)
 }
 
 // detect configuration?
-bool tryDetectModulation()
-{
+bool tryDetectModulation() {
 
     t55xx_conf_block_t tests[15];
     int bitRate = 0, clk = 0, firstClockEdge = 0;
@@ -738,8 +713,7 @@ bool tryDetectModulation()
     return retval;
 }
 
-bool testKnownConfigBlock(uint32_t block0)
-{
+bool testKnownConfigBlock(uint32_t block0) {
     switch (block0) {
         case T55X7_DEFAULT_CONFIG_BLOCK:
         case T55X7_RAW_CONFIG_BLOCK:
@@ -759,8 +733,7 @@ bool testKnownConfigBlock(uint32_t block0)
     return false;
 }
 
-bool testModulation(uint8_t mode, uint8_t modread)
-{
+bool testModulation(uint8_t mode, uint8_t modread) {
     switch (mode) {
         case DEMOD_FSK:
             if (modread >= DEMOD_FSK1 && modread <= DEMOD_FSK2a) return true;
@@ -792,8 +765,7 @@ bool testModulation(uint8_t mode, uint8_t modread)
     return false;
 }
 
-bool testQ5Modulation(uint8_t mode, uint8_t modread)
-{
+bool testQ5Modulation(uint8_t mode, uint8_t modread) {
     switch (mode) {
         case DEMOD_FSK:
             if (modread >= 4 && modread <= 5) return true;
@@ -822,8 +794,7 @@ bool testQ5Modulation(uint8_t mode, uint8_t modread)
     return false;
 }
 
-int convertQ5bitRate(uint8_t bitRateRead)
-{
+int convertQ5bitRate(uint8_t bitRateRead) {
     uint8_t expected[] = {8, 16, 32, 40, 50, 64, 100, 128};
     for (int i = 0; i < 8; i++)
         if (expected[i] == bitRateRead)
@@ -832,8 +803,7 @@ int convertQ5bitRate(uint8_t bitRateRead)
     return -1;
 }
 
-bool testQ5(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk)
-{
+bool testQ5(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk) {
 
     if (DemodBufferLen < 64) return false;
     uint8_t si = 0;
@@ -878,8 +848,7 @@ bool testQ5(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk)
     return false;
 }
 
-bool testBitRate(uint8_t readRate, uint8_t clk)
-{
+bool testBitRate(uint8_t readRate, uint8_t clk) {
     uint8_t expected[] = {8, 16, 32, 40, 50, 64, 100, 128};
     if (expected[readRate] == clk)
         return true;
@@ -887,8 +856,7 @@ bool testBitRate(uint8_t readRate, uint8_t clk)
     return false;
 }
 
-bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5)
-{
+bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5) {
 
     if (DemodBufferLen < 64) return false;
     uint8_t si = 0;
@@ -938,8 +906,7 @@ bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5)
     return false;
 }
 
-void printT55xxBlock(const char *blockNum)
-{
+void printT55xxBlock(const char *blockNum) {
 
     uint8_t i = config.offset;
     uint8_t endpos = 32 + i;
@@ -963,8 +930,7 @@ void printT55xxBlock(const char *blockNum)
     PrintAndLogEx(NORMAL, " %s | %08X | %s | %s", blockNum, blockData, sprint_bin(bits, 32), sprint_ascii(bytes, 4));
 }
 
-int special(const char *Cmd)
-{
+int special(const char *Cmd) {
     uint32_t blockData = 0;
     uint8_t bits[32] = {0x00};
 
@@ -983,8 +949,7 @@ int special(const char *Cmd)
     return 0;
 }
 
-int printConfiguration(t55xx_conf_block_t b)
-{
+int printConfiguration(t55xx_conf_block_t b) {
     PrintAndLogEx(NORMAL, "Chip Type  : %s", (b.Q5) ? "T5555(Q5)" : "T55x7");
     PrintAndLogEx(NORMAL, "Modulation : %s", GetSelectedModulationStr(b.modulation));
     PrintAndLogEx(NORMAL, "Bit Rate   : %s", GetBitRateStr(b.bitrate, (b.block0 & T55x7_X_MODE && (b.block0 >> 28 == 6 || b.block0 >> 28 == 9))));
@@ -996,8 +961,7 @@ int printConfiguration(t55xx_conf_block_t b)
     return 0;
 }
 
-int CmdT55xxWakeUp(const char *Cmd)
-{
+int CmdT55xxWakeUp(const char *Cmd) {
     uint32_t password = 0;
     uint8_t cmdp = 0;
     bool errors = false;
@@ -1025,8 +989,7 @@ int CmdT55xxWakeUp(const char *Cmd)
     return 0;
 }
 
-int CmdT55xxWriteBlock(const char *Cmd)
-{
+int CmdT55xxWriteBlock(const char *Cmd) {
     uint8_t block = 0xFF; //default to invalid block
     uint32_t data = 0; //default to blank Block
     uint32_t password = 0; //default to blank Block 7
@@ -1099,8 +1062,7 @@ int CmdT55xxWriteBlock(const char *Cmd)
     return 1;
 }
 
-int CmdT55xxReadTrace(const char *Cmd)
-{
+int CmdT55xxReadTrace(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) > 1 || cmdp == 'h') return usage_t55xx_trace();
 
@@ -1220,8 +1182,7 @@ int CmdT55xxReadTrace(const char *Cmd)
     return 0;
 }
 
-void printT55x7Trace(t55x7_tracedata_t data, uint8_t repeat)
-{
+void printT55x7Trace(t55x7_tracedata_t data, uint8_t repeat) {
     PrintAndLogEx(NORMAL, "-- T55x7 Trace Information ----------------------------------");
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
     PrintAndLogEx(NORMAL, " ACL Allocation class (ISO/IEC 15963-1)  : 0x%02X (%d)", data.acl, data.acl);
@@ -1257,8 +1218,7 @@ void printT55x7Trace(t55x7_tracedata_t data, uint8_t repeat)
     */
 }
 
-void printT5555Trace(t5555_tracedata_t data, uint8_t repeat)
-{
+void printT5555Trace(t5555_tracedata_t data, uint8_t repeat) {
     PrintAndLogEx(NORMAL, "-- T5555 (Q5) Trace Information -----------------------------");
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
     PrintAndLogEx(NORMAL, " ICR IC Revision  : %d", data.icr);
@@ -1286,8 +1246,7 @@ void printT5555Trace(t5555_tracedata_t data, uint8_t repeat)
 }
 
 //need to add Q5 info...
-int CmdT55xxInfo(const char *Cmd)
-{
+int CmdT55xxInfo(const char *Cmd) {
     /*
         Page 0 Block 0 Configuration data.
         Normal mode
@@ -1373,8 +1332,7 @@ int CmdT55xxInfo(const char *Cmd)
     return 0;
 }
 
-int CmdT55xxDump(const char *Cmd)
-{
+int CmdT55xxDump(const char *Cmd) {
 
     uint32_t password = 0;
     bool override = false;
@@ -1399,8 +1357,7 @@ int CmdT55xxDump(const char *Cmd)
     return 1;
 }
 
-bool AquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password)
-{
+bool AquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password) {
     // arg0 bitmodes:
     //  bit0 = pwdmode
     //  bit1 = page to read from
@@ -1420,8 +1377,7 @@ bool AquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password)
     return !getSignalProperties()->isnoise;
 }
 
-char *GetBitRateStr(uint32_t id, bool xmode)
-{
+char *GetBitRateStr(uint32_t id, bool xmode) {
     static char buf[25];
 
     char *retStr = buf;
@@ -1461,8 +1417,7 @@ char *GetBitRateStr(uint32_t id, bool xmode)
     return buf;
 }
 
-char *GetSaferStr(uint32_t id)
-{
+char *GetSaferStr(uint32_t id) {
     static char buf[40];
     char *retStr = buf;
 
@@ -1477,8 +1432,7 @@ char *GetSaferStr(uint32_t id)
     return buf;
 }
 
-char *GetModulationStr(uint32_t id)
-{
+char *GetModulationStr(uint32_t id) {
     static char buf[60];
     char *retStr = buf;
 
@@ -1526,8 +1480,7 @@ char *GetModulationStr(uint32_t id)
     return buf;
 }
 
-char *GetModelStrFromCID(uint32_t cid)
-{
+char *GetModelStrFromCID(uint32_t cid) {
 
     static char buf[10];
     char *retStr = buf;
@@ -1537,8 +1490,7 @@ char *GetModelStrFromCID(uint32_t cid)
     return buf;
 }
 
-char *GetSelectedModulationStr(uint8_t id)
-{
+char *GetSelectedModulationStr(uint8_t id) {
 
     static char buf[20];
     char *retStr = buf;
@@ -1587,8 +1539,7 @@ char *GetSelectedModulationStr(uint8_t id)
     return buf;
 }
 
-void t55x7_create_config_block(int tagtype)
-{
+void t55x7_create_config_block(int tagtype) {
 
     /*
      T55X7_DEFAULT_CONFIG_BLOCK, T55X7_RAW_CONFIG_BLOCK
@@ -1615,8 +1566,7 @@ void t55x7_create_config_block(int tagtype)
     PrintAndLogEx(NORMAL, buf);
 }
 
-int CmdResetRead(const char *Cmd)
-{
+int CmdResetRead(const char *Cmd) {
     UsbCommand c = {CMD_T55XX_RESET_READ, {0, 0, 0}};
     clearCommandBuffer();
     SendCommand(&c);
@@ -1634,8 +1584,7 @@ int CmdResetRead(const char *Cmd)
     return 1;
 }
 
-int CmdT55xxWipe(const char *Cmd)
-{
+int CmdT55xxWipe(const char *Cmd) {
     char writeData[20] = {0};
     char *ptrData = writeData;
     char cmdp = tolower(param_getchar(Cmd, 0));
@@ -1665,8 +1614,7 @@ int CmdT55xxWipe(const char *Cmd)
     return 0;
 }
 
-bool IsCancelled(void)
-{
+bool IsCancelled(void) {
     if (ukbhit()) {
         int gc = getchar();
         (void)gc;
@@ -1676,8 +1624,7 @@ bool IsCancelled(void)
     return false;
 }
 
-int CmdT55xxChkPwds(const char *Cmd)
-{
+int CmdT55xxChkPwds(const char *Cmd) {
     // load a default pwd file.
     char line[9];
     char filename[FILE_PATH_SIZE] = {0};
@@ -1848,8 +1795,7 @@ out:
     return 0;
 }
 
-int CmdT55xxBruteForce(const char *Cmd)
-{
+int CmdT55xxBruteForce(const char *Cmd) {
 
     uint32_t start_password = 0x00000000; //start password
     uint32_t end_password   = 0xFFFFFFFF; //end   password
@@ -1909,8 +1855,7 @@ int CmdT55xxBruteForce(const char *Cmd)
     return 0;
 }
 
-int tryOnePassword(uint32_t password)
-{
+int tryOnePassword(uint32_t password) {
     PrintAndLogEx(INFO, "Trying password %08x", password);
     if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, password)) {
         PrintAndLogEx(NORMAL, "Acquire data from device failed. Quitting");
@@ -1923,8 +1868,7 @@ int tryOnePassword(uint32_t password)
         return 0;
 }
 
-int CmdT55xxRecoverPW(const char *Cmd)
-{
+int CmdT55xxRecoverPW(const char *Cmd) {
     int bit = 0;
     uint32_t orig_password = 0x0;
     uint32_t curr_password = 0x0;
@@ -2001,8 +1945,7 @@ int CmdT55xxRecoverPW(const char *Cmd)
 // note length of data returned is different for different chips.
 // some return all page 1 (64 bits) and others return just that block (32 bits)
 // unfortunately the 64 bits makes this more likely to get a false positive...
-bool tryDetectP1(bool getData)
-{
+bool tryDetectP1(bool getData) {
     uint8_t preamble[] = {1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1};
     size_t startIdx = 0;
     uint8_t fc1 = 0, fc2 = 0, ans = 0;
@@ -2018,13 +1961,13 @@ bool tryDetectP1(bool getData)
     ans = fskClocks(&fc1, &fc2, (uint8_t *)&clk, &firstClockEdge);
     if (ans && ((fc1 == 10 && fc2 == 8) || (fc1 == 8 && fc2 == 5))) {
         if (FSKrawDemod("0 0", false) &&
-            preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
-            (DemodBufferLen == 32 || DemodBufferLen == 64)) {
+                preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
+                (DemodBufferLen == 32 || DemodBufferLen == 64)) {
             return true;
         }
         if (FSKrawDemod("0 1", false) &&
-            preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
-            (DemodBufferLen == 32 || DemodBufferLen == 64)) {
+                preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
+                (DemodBufferLen == 32 || DemodBufferLen == 64)) {
             return true;
         }
         return false;
@@ -2034,24 +1977,24 @@ bool tryDetectP1(bool getData)
     clk = GetAskClock("", false);
     if (clk > 0) {
         if (ASKDemod_ext("0 0 1", false, false, 1, &st) &&
-            preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
-            (DemodBufferLen == 32 || DemodBufferLen == 64)) {
+                preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
+                (DemodBufferLen == 32 || DemodBufferLen == 64)) {
             return true;
         }
         st = true;
         if (ASKDemod_ext("0 1 1", false, false, 1, &st)  &&
-            preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
-            (DemodBufferLen == 32 || DemodBufferLen == 64)) {
+                preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
+                (DemodBufferLen == 32 || DemodBufferLen == 64)) {
             return true;
         }
         if (ASKbiphaseDemod("0 0 0 2", false) &&
-            preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
-            (DemodBufferLen == 32 || DemodBufferLen == 64)) {
+                preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
+                (DemodBufferLen == 32 || DemodBufferLen == 64)) {
             return true;
         }
         if (ASKbiphaseDemod("0 0 1 2", false) &&
-            preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
-            (DemodBufferLen == 32 || DemodBufferLen == 64)) {
+                preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
+                (DemodBufferLen == 32 || DemodBufferLen == 64)) {
             return true;
         }
     }
@@ -2060,13 +2003,13 @@ bool tryDetectP1(bool getData)
     clk = GetNrzClock("", false); //has the most false positives :(
     if (clk > 0) {
         if (NRZrawDemod("0 0 1", false)  &&
-            preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
-            (DemodBufferLen == 32 || DemodBufferLen == 64)) {
+                preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
+                (DemodBufferLen == 32 || DemodBufferLen == 64)) {
             return true;
         }
         if (NRZrawDemod("0 1 1", false)  &&
-            preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
-            (DemodBufferLen == 32 || DemodBufferLen == 64)) {
+                preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
+                (DemodBufferLen == 32 || DemodBufferLen == 64)) {
             return true;
         }
     }
@@ -2080,14 +2023,14 @@ bool tryDetectP1(bool getData)
         // skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
         //CmdLtrim("160");
         if (PSKDemod("0 0 6", false) &&
-            preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
-            (DemodBufferLen == 32 || DemodBufferLen == 64)) {
+                preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
+                (DemodBufferLen == 32 || DemodBufferLen == 64)) {
             //save_restoreGB(GRAPH_RESTORE);
             return true;
         }
         if (PSKDemod("0 1 6", false) &&
-            preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
-            (DemodBufferLen == 32 || DemodBufferLen == 64)) {
+                preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
+                (DemodBufferLen == 32 || DemodBufferLen == 64)) {
             //save_restoreGB(GRAPH_RESTORE);
             return true;
         }
@@ -2095,7 +2038,7 @@ bool tryDetectP1(bool getData)
         if (PSKDemod("0 0 6", false)) {
             psk1TOpsk2(DemodBuffer, DemodBufferLen);
             if (preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
-                (DemodBufferLen == 32 || DemodBufferLen == 64)) {
+                    (DemodBufferLen == 32 || DemodBufferLen == 64)) {
                 //save_restoreGB(GRAPH_RESTORE);
                 return true;
             }
@@ -2109,8 +2052,7 @@ bool tryDetectP1(bool getData)
     return false;
 }
 //  does this need to be a callable command?
-int CmdT55xxDetectPage1(const char *Cmd)
-{
+int CmdT55xxDetectPage1(const char *Cmd) {
     bool errors = false;
     bool useGB = false;
     bool usepwd = false;
@@ -2148,8 +2090,7 @@ int CmdT55xxDetectPage1(const char *Cmd)
     return success;
 }
 
-int CmdT55xxSetDeviceConfig(const char *Cmd)
-{
+int CmdT55xxSetDeviceConfig(const char *Cmd) {
     uint8_t startgap = 0, writegap = 0;
     uint8_t write0 = 0, write1 = 0, readgap = 0;
     bool errors = false, shall_persist = false;
@@ -2222,15 +2163,13 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFT55XX(const char *Cmd)
-{
+int CmdLFT55XX(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }

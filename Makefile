@@ -93,7 +93,7 @@ style:
 	find . \( -name "*.[ch]" -or -name "*.cpp" \) -exec astyle --formatted --mode=c --suffix=none \
 	    --indent=spaces=4 --indent-switches --indent-preprocessor \
 	    --keep-one-line-blocks --max-instatement-indent=60 \
-	    --style=linux --pad-oper --unpad-paren --pad-header \
+	    --style=google --pad-oper --unpad-paren --pad-header \
 	    --align-pointer=name {} \;
 
 # Dummy target to test for GNU make availability

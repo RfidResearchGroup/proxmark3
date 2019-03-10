@@ -17,8 +17,7 @@
  * @param L
  * @return
  */
-static int l_SendCommand(lua_State *L)
-{
+static int l_SendCommand(lua_State *L) {
 
     /*
      The SendCommand (native) expects the following structure:
@@ -54,8 +53,7 @@ static int l_SendCommand(lua_State *L)
  * @param L
  * @return
  */
-static int l_GetFromBigBuf(lua_State *L)
-{
+static int l_GetFromBigBuf(lua_State *L) {
 
     int len = 0, startindex = 0;
 
@@ -101,8 +99,7 @@ static int l_GetFromBigBuf(lua_State *L)
  * @param L
  * @return
  */
-static int l_GetFromFlashMem(lua_State *L)
-{
+static int l_GetFromFlashMem(lua_State *L) {
 
 #ifndef WITH_FLASH
     lua_pushnil(L);
@@ -150,8 +147,7 @@ static int l_GetFromFlashMem(lua_State *L)
  * @param L
  * @return
  */
-static int l_WaitForResponseTimeout(lua_State *L)
-{
+static int l_WaitForResponseTimeout(lua_State *L) {
 
     uint32_t cmd = 0;
     size_t ms_timeout = -1;
@@ -187,8 +183,7 @@ static int l_WaitForResponseTimeout(lua_State *L)
     }
 }
 
-static int returnToLuaWithError(lua_State *L, const char *fmt, ...)
-{
+static int returnToLuaWithError(lua_State *L, const char *fmt, ...) {
     char buffer[200];
     va_list args;
     va_start(args, fmt);
@@ -200,8 +195,7 @@ static int returnToLuaWithError(lua_State *L, const char *fmt, ...)
     return 2;
 }
 
-static int l_mfDarkside(lua_State *L)
-{
+static int l_mfDarkside(lua_State *L) {
 
     uint32_t blockno = 0;
     uint32_t keytype = MIFARE_AUTH_KEYA;
@@ -237,8 +231,7 @@ static int l_mfDarkside(lua_State *L)
     return 2;
 }
 
-static int l_clearCommandBuffer(lua_State *L)
-{
+static int l_clearCommandBuffer(lua_State *L) {
     clearCommandBuffer();
     return 0;
 }
@@ -247,8 +240,7 @@ static int l_clearCommandBuffer(lua_State *L)
  * @param L
  * @return
  */
-static int l_foobar(lua_State *L)
-{
+static int l_foobar(lua_State *L) {
     //Check number of arguments
     int n = lua_gettop(L);
     printf("foobar called with %d arguments", n);
@@ -273,8 +265,7 @@ static int l_foobar(lua_State *L)
  * @param L
  * @return boolean, true if kbhit, false otherwise.
  */
-static int l_ukbhit(lua_State *L)
-{
+static int l_ukbhit(lua_State *L) {
     lua_pushboolean(L, ukbhit() ? true : false);
     return 1;
 }
@@ -284,14 +275,12 @@ static int l_ukbhit(lua_State *L)
  * @param L
  * @return
  */
-static int l_CmdConsole(lua_State *L)
-{
+static int l_CmdConsole(lua_State *L) {
     CommandReceived((char *)luaL_checkstring(L, 1));
     return 0;
 }
 
-static int l_iso15693_crc(lua_State *L)
-{
+static int l_iso15693_crc(lua_State *L) {
     uint32_t tmp;
     unsigned char buf[USB_CMD_DATA_SIZE] = {0x00};
     size_t size = 0;
@@ -308,8 +297,7 @@ static int l_iso15693_crc(lua_State *L)
     return 1;
 }
 
-static int l_iso14443b_crc(lua_State *L)
-{
+static int l_iso14443b_crc(lua_State *L) {
     uint32_t tmp;
     unsigned char buf[USB_CMD_DATA_SIZE] = {0x00};
     size_t size = 0;
@@ -330,8 +318,7 @@ static int l_iso14443b_crc(lua_State *L)
  Simple AES 128 cbc hook up to OpenSSL.
  params:  key, input
 */
-static int l_aes128decrypt_cbc(lua_State *L)
-{
+static int l_aes128decrypt_cbc(lua_State *L) {
     //Check number of arguments
     int i;
     uint32_t tmp;
@@ -362,8 +349,7 @@ static int l_aes128decrypt_cbc(lua_State *L)
     lua_pushlstring(L, (const char *)&outdata, sizeof(outdata));
     return 1;// return 1 to signal one return value
 }
-static int l_aes128decrypt_ecb(lua_State *L)
-{
+static int l_aes128decrypt_ecb(lua_State *L) {
     //Check number of arguments
     int i;
     uint32_t tmp;
@@ -394,8 +380,7 @@ static int l_aes128decrypt_ecb(lua_State *L)
     return 1;// return 1 to signal one return value
 }
 
-static int l_aes128encrypt_cbc(lua_State *L)
-{
+static int l_aes128encrypt_cbc(lua_State *L) {
     //Check number of arguments
     int i;
     uint32_t tmp;
@@ -426,8 +411,7 @@ static int l_aes128encrypt_cbc(lua_State *L)
     return 1;// return 1 to signal one return value
 }
 
-static int l_aes128encrypt_ecb(lua_State *L)
-{
+static int l_aes128encrypt_ecb(lua_State *L) {
     //Check number of arguments
     int i;
     uint32_t tmp;
@@ -456,8 +440,7 @@ static int l_aes128encrypt_ecb(lua_State *L)
     return 1;// return 1 to signal one return value
 }
 
-static int l_crc8legic(lua_State *L)
-{
+static int l_crc8legic(lua_State *L) {
     size_t size;
     const char *p_str = luaL_checklstring(L, 1, &size);
 
@@ -466,8 +449,7 @@ static int l_crc8legic(lua_State *L)
     return 1;
 }
 
-static int l_crc16(lua_State *L)
-{
+static int l_crc16(lua_State *L) {
     size_t size;
     const char *p_str = luaL_checklstring(L, 1, &size);
 
@@ -476,8 +458,7 @@ static int l_crc16(lua_State *L)
     return 1;
 }
 
-static int l_crc64(lua_State *L)
-{
+static int l_crc64(lua_State *L) {
     size_t size;
     uint64_t crc = 0;
     unsigned char outdata[8] = {0x00};
@@ -498,8 +479,7 @@ static int l_crc64(lua_State *L)
     return 1;
 }
 
-static int l_crc64_ecma182(lua_State *L)
-{
+static int l_crc64_ecma182(lua_State *L) {
     //size_t size;
     uint64_t crc = 0;
     unsigned char outdata[8] = {0x00};
@@ -524,8 +504,7 @@ static int l_crc64_ecma182(lua_State *L)
     return 1;
 }
 
-static int l_sha1(lua_State *L)
-{
+static int l_sha1(lua_State *L) {
     size_t size;
     const char *p_str = luaL_checklstring(L, 1, &size);
     unsigned char outdata[20] = {0x00};
@@ -534,8 +513,7 @@ static int l_sha1(lua_State *L)
     return 1;
 }
 
-static int l_reveng_models(lua_State *L)
-{
+static int l_reveng_models(lua_State *L) {
 
 // This array needs to be adjusted if RevEng adds more crc-models.
 #define NMODELS 105
@@ -569,8 +547,7 @@ static int l_reveng_models(lua_State *L)
 // endian    ,char,  'B','b','L','l','t','r' describing if Big-Endian or Little-Endian should be used in different combinations.
 //
 // outputs:  string with hex representation of the CRC result
-static int l_reveng_RunModel(lua_State *L)
-{
+static int l_reveng_RunModel(lua_State *L) {
     //-c || -v
     //inModel = valid model name string - CRC-8
     //inHexStr = input hex string to calculate crc on
@@ -593,8 +570,7 @@ static int l_reveng_RunModel(lua_State *L)
     return 1;
 }
 
-static int l_hardnested(lua_State *L)
-{
+static int l_hardnested(lua_State *L) {
 
     bool haveTarget = true;
     size_t size;
@@ -680,8 +656,7 @@ static int l_hardnested(lua_State *L)
  * @param L
  * @return
  */
-static int l_detect_prng(lua_State *L)
-{
+static int l_detect_prng(lua_State *L) {
     int res = detect_classic_prng();
     lua_pushinteger(L, res);
     return 1;
@@ -691,8 +666,7 @@ static int l_detect_prng(lua_State *L)
  * @param L
  * @return
  */
-static int l_keygen_algoD(lua_State *L)
-{
+static int l_keygen_algoD(lua_State *L) {
     size_t size;
     uint32_t tmp;
     const char *p_uid = luaL_checklstring(L, 1, &size);
@@ -721,8 +695,7 @@ static int l_keygen_algoD(lua_State *L)
  * @param path
  * @return
  */
-int setLuaPath(lua_State *L, const char *path)
-{
+int setLuaPath(lua_State *L, const char *path) {
     lua_getglobal(L, "package");
     lua_getfield(L, -1, "path");   // get field "path" from table at top of stack (-1)
     const char *cur_path = lua_tostring(L, -1);   // grab path string from top of stack
@@ -737,8 +710,7 @@ int setLuaPath(lua_State *L, const char *path)
     return 0; // all done!
 }
 
-int set_pm3_libraries(lua_State *L)
-{
+int set_pm3_libraries(lua_State *L) {
     static const luaL_Reg libs[] = {
         {"SendCommand",                 l_SendCommand},
         {"GetFromBigBuf",               l_GetFromBigBuf},

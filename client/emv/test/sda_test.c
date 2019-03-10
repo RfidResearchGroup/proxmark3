@@ -42,8 +42,7 @@ struct emv_pk vsdc_01 = {
     .exp = { 0x03, },
     .elen = 1,
     .mlen = 1024 / 8,
-    .modulus = (unsigned char[])
-    {
+    .modulus = (unsigned char[]) {
         0xc6, 0x96, 0x03, 0x42, 0x13, 0xd7, 0xd8, 0x54, 0x69, 0x84, 0x57, 0x9d, 0x1d, 0x0f, 0x0e, 0xa5,
         0x19, 0xcf, 0xf8, 0xde, 0xff, 0xc4, 0x29, 0x35, 0x4c, 0xf3, 0xa8, 0x71, 0xa6, 0xf7, 0x18, 0x3f,
         0x12, 0x28, 0xda, 0x5c, 0x74, 0x70, 0xc0, 0x55, 0x38, 0x71, 0x00, 0xcb, 0x93, 0x5a, 0x71, 0x2c,
@@ -100,8 +99,7 @@ const unsigned char pan[] = {
     0x42, 0x76, 0x55, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
-static int sda_test_raw(bool verbose)
-{
+static int sda_test_raw(bool verbose) {
     const struct emv_pk *pk = &vsdc_01;
 
     struct crypto_pk *kcp = crypto_pk_open(PK_RSA,
@@ -208,8 +206,7 @@ static int sda_test_raw(bool verbose)
     return 0;
 }
 
-static int sda_test_pk(bool verbose)
-{
+static int sda_test_pk(bool verbose) {
     const struct emv_pk *pk = &vsdc_01;
     struct tlvdb *db;
 
@@ -256,8 +253,7 @@ static int sda_test_pk(bool verbose)
     return 0;
 }
 
-int exec_sda_test(bool verbose)
-{
+int exec_sda_test(bool verbose) {
     int ret;
     fprintf(stdout, "\n");
 

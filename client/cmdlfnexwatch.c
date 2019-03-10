@@ -12,8 +12,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int detectNexWatch(uint8_t *dest, size_t *size, bool *invert)
-{
+int detectNexWatch(uint8_t *dest, size_t *size, bool *invert) {
 
     uint8_t preamble[28]   = {0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     uint8_t preamble_i[28] = {1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
@@ -32,8 +31,7 @@ int detectNexWatch(uint8_t *dest, size_t *size, bool *invert)
     return (int) startIdx;
 }
 
-int CmdNexWatchDemod(const char *Cmd)
-{
+int CmdNexWatchDemod(const char *Cmd) {
 
     if (!PSKDemod("", false)) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch can't demod signal");
@@ -89,8 +87,7 @@ int CmdNexWatchDemod(const char *Cmd)
 
 //by marshmellow
 //see ASKDemod for what args are accepted
-int CmdNexWatchRead(const char *Cmd)
-{
+int CmdNexWatchRead(const char *Cmd) {
     lf_read(true, 10000);
     return CmdNexWatchDemod(Cmd);
 }
@@ -102,15 +99,13 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFNEXWATCH(const char *Cmd)
-{
+int CmdLFNEXWATCH(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }

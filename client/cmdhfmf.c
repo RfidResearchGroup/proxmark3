@@ -28,8 +28,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_hf14_ice(void)
-{
+int usage_hf14_ice(void) {
     PrintAndLogEx(NORMAL, "Usage:   hf mf ice [l] <limit> [f] <name>");
     PrintAndLogEx(NORMAL, "  h            this help");
     PrintAndLogEx(NORMAL, "  l <limit>    nonces to be collected");
@@ -41,8 +40,7 @@ int usage_hf14_ice(void)
     return 0;
 }
 
-int usage_hf14_dump(void)
-{
+int usage_hf14_dump(void) {
     PrintAndLogEx(NORMAL, "Usage:   hf mf dump [card memory] k <name> f <name>");
     PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
     PrintAndLogEx(NORMAL, "  k <name>     : key filename, if no <name> given, UID will be used as filename");
@@ -54,8 +52,7 @@ int usage_hf14_dump(void)
     return 0;
 }
 
-int usage_hf14_mifare(void)
-{
+int usage_hf14_mifare(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf mf darkside [h] <block number> <A|B>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h               this help");
@@ -67,8 +64,7 @@ int usage_hf14_mifare(void)
     PrintAndLogEx(NORMAL, "           hf mf darkside 16 B");
     return 0;
 }
-int usage_hf14_mf1ksim(void)
-{
+int usage_hf14_mf1ksim(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf mf sim [h] u <uid> n <numreads> [i] [x] [e] [v]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h    this help");
@@ -85,8 +81,7 @@ int usage_hf14_mf1ksim(void)
     PrintAndLogEx(NORMAL, "           hf mf sim u 11223344 i x");
     return 0;
 }
-int usage_hf14_dbg(void)
-{
+int usage_hf14_dbg(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf mf dbg [h] <debug level>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "           h    this help");
@@ -101,8 +96,7 @@ int usage_hf14_dbg(void)
     PrintAndLogEx(NORMAL, "           hf mf dbg 3");
     return 0;
 }
-int usage_hf14_sniff(void)
-{
+int usage_hf14_sniff(void) {
     PrintAndLogEx(NORMAL, "It continuously gets data from the field and saves it to: log, emulator, emulator file.");
     PrintAndLogEx(NORMAL, "Usage:  hf mf sniff [h] [l] [d] [f]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -115,8 +109,7 @@ int usage_hf14_sniff(void)
     PrintAndLogEx(NORMAL, "           hf mf sniff l d f");
     return 0;
 }
-int usage_hf14_nested(void)
-{
+int usage_hf14_nested(void) {
     PrintAndLogEx(NORMAL, "Usage:");
     PrintAndLogEx(NORMAL, " all sectors:  hf mf nested  <card memory> <block number> <key A/B> <key (12 hex symbols)> [t,d]");
     PrintAndLogEx(NORMAL, " one sector:   hf mf nested  o <block number> <key A/B> <key (12 hex symbols)>");
@@ -134,8 +127,7 @@ int usage_hf14_nested(void)
     PrintAndLogEx(NORMAL, "      hf mf nested o 0 A FFFFFFFFFFFF 4 A");
     return 0;
 }
-int usage_hf14_hardnested(void)
-{
+int usage_hf14_hardnested(void) {
     PrintAndLogEx(NORMAL, "Usage:");
     PrintAndLogEx(NORMAL, "      hf mf hardnested <block number> <key A|B> <key (12 hex symbols)>");
     PrintAndLogEx(NORMAL, "                       <target block number> <target key A|B> [known target key (12 hex symbols)] [w] [s]");
@@ -168,8 +160,7 @@ int usage_hf14_hardnested(void)
     PrintAndLogEx(NORMAL, "      hf mf hardnested 0 A A0A1A2A3A4A5 4 A FFFFFFFFFFFF");
     return 0;
 }
-int usage_hf14_chk(void)
-{
+int usage_hf14_chk(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf mf chk [h] <block number>|<*card memory> <key type (A/B/?)> [t|d] [<key (12 hex symbols)>] [<dic (*.dic)>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h    this help");
@@ -187,8 +178,7 @@ int usage_hf14_chk(void)
     PrintAndLogEx(NORMAL, "      hf mf chk *1 ? d                        -- target all blocks, all keys, 1K, write to file");
     return 0;
 }
-int usage_hf14_chk_fast(void)
-{
+int usage_hf14_chk_fast(void) {
     PrintAndLogEx(NORMAL, "This is a improved checkkeys method speedwise. It checks Mifare Classic tags sector keys against a dictionary file with keys");
     PrintAndLogEx(NORMAL, "Usage:  hf mf fchk [h] <card memory> [t|d|f] [<key (12 hex symbols)>] [<dic (*.dic)>]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -211,8 +201,7 @@ int usage_hf14_chk_fast(void)
 #endif
     return 0;
 }
-int usage_hf14_keybrute(void)
-{
+int usage_hf14_keybrute(void) {
     PrintAndLogEx(NORMAL, "J_Run's 2nd phase of multiple sector nested authentication key recovery");
     PrintAndLogEx(NORMAL, "You have a known 4 last bytes of a key recovered with mf_nonce_brute tool.");
     PrintAndLogEx(NORMAL, "First 2 bytes of key will be bruteforced");
@@ -229,8 +218,7 @@ int usage_hf14_keybrute(void)
     PrintAndLogEx(NORMAL, "           hf mf keybrute 1 A 000011223344");
     return 0;
 }
-int usage_hf14_restore(void)
-{
+int usage_hf14_restore(void) {
     PrintAndLogEx(NORMAL, "Usage:   hf mf restore [card memory] u <UID> k <name> f <name>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
@@ -245,8 +233,7 @@ int usage_hf14_restore(void)
     PrintAndLogEx(NORMAL, "         hf mf restore 4                          -- read the UID from tag with 4K memory first, then restore from hf-mf-<UID>-key.bin and and hf-mf-<UID>-data.bin");
     return 0;
 }
-int usage_hf14_decryptbytes(void)
-{
+int usage_hf14_decryptbytes(void) {
     PrintAndLogEx(NORMAL, "Decrypt Crypto-1 encrypted bytes given some known state of crypto. See tracelog to gather needed values\n");
     PrintAndLogEx(NORMAL, "Usage:   hf mf decrypt [h] <nt> <ar_enc> <at_enc> <data>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -261,28 +248,24 @@ int usage_hf14_decryptbytes(void)
     return 0;
 }
 
-int usage_hf14_eget(void)
-{
+int usage_hf14_eget(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf mf eget <block number>");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        hf mf eget 0 ");
     return 0;
 }
-int usage_hf14_eclr(void)
-{
+int usage_hf14_eclr(void) {
     PrintAndLogEx(NORMAL, "It set card emulator memory to empty data blocks and key A/B FFFFFFFFFFFF \n");
     PrintAndLogEx(NORMAL, "Usage:  hf mf eclr");
     return 0;
 }
-int usage_hf14_eset(void)
-{
+int usage_hf14_eset(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf mf eset <block number> <block data (32 hex symbols)>");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        hf mf eset 1 000102030405060708090a0b0c0d0e0f ");
     return 0;
 }
-int usage_hf14_eload(void)
-{
+int usage_hf14_eload(void) {
     PrintAndLogEx(NORMAL, "It loads emul dump from the file `filename.eml`");
     PrintAndLogEx(NORMAL, "Usage:  hf mf eload [card memory] <file name w/o `.eml`> [numblocks]");
     PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K, u = UL");
@@ -292,8 +275,7 @@ int usage_hf14_eload(void)
     PrintAndLogEx(NORMAL, "        hf mf eload 4 filename");
     return 0;
 }
-int usage_hf14_esave(void)
-{
+int usage_hf14_esave(void) {
     PrintAndLogEx(NORMAL, "It saves emul dump into the file `filename.eml` or `cardID.eml`");
     PrintAndLogEx(NORMAL, " Usage:  hf mf esave [card memory] [file name w/o `.eml`]");
     PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
@@ -304,8 +286,7 @@ int usage_hf14_esave(void)
     PrintAndLogEx(NORMAL, "        hf mf esave 4 filename");
     return 0;
 }
-int usage_hf14_ecfill(void)
-{
+int usage_hf14_ecfill(void) {
     PrintAndLogEx(NORMAL, "Read card and transfer its data to emulator memory.");
     PrintAndLogEx(NORMAL, "Keys must be laid in the emulator memory. \n");
     PrintAndLogEx(NORMAL, "Usage:  hf mf ecfill <key A/B> [card memory]");
@@ -316,8 +297,7 @@ int usage_hf14_ecfill(void)
     PrintAndLogEx(NORMAL, "        hf mf ecfill A 4");
     return 0;
 }
-int usage_hf14_ekeyprn(void)
-{
+int usage_hf14_ekeyprn(void) {
     PrintAndLogEx(NORMAL, "It prints the keys loaded in the emulator memory");
     PrintAndLogEx(NORMAL, "Usage:  hf mf ekeyprn [card memory]");
     PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
@@ -327,8 +307,7 @@ int usage_hf14_ekeyprn(void)
     return 0;
 }
 
-int usage_hf14_csetuid(void)
-{
+int usage_hf14_csetuid(void) {
     PrintAndLogEx(NORMAL, "Set UID, ATQA, and SAK for magic Chinese card. Only works with magic cards");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  hf mf csetuid [h] <UID 8 hex symbols> [ATQA 4 hex symbols] [SAK 2 hex symbols] [w]");
@@ -343,8 +322,7 @@ int usage_hf14_csetuid(void)
     PrintAndLogEx(NORMAL, "      hf mf csetuid 01020304 0004 08 w");
     return 0;
 }
-int usage_hf14_csetblk(void)
-{
+int usage_hf14_csetblk(void) {
     PrintAndLogEx(NORMAL, "Set block data for magic Chinese card. Only works with magic cards");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  hf mf csetblk [h] <block number> <block data (32 hex symbols)> [w]");
@@ -358,8 +336,7 @@ int usage_hf14_csetblk(void)
     PrintAndLogEx(NORMAL, "       hf mf csetblk 1 01020304050607080910111213141516 w");
     return 0;
 }
-int usage_hf14_cload(void)
-{
+int usage_hf14_cload(void) {
     PrintAndLogEx(NORMAL, "It loads magic Chinese card from the file `filename.eml`");
     PrintAndLogEx(NORMAL, "or from emulator memory");
     PrintAndLogEx(NORMAL, "");
@@ -375,8 +352,7 @@ int usage_hf14_cload(void)
     PrintAndLogEx(NORMAL, "       hf mf cload e");
     return 0;
 }
-int usage_hf14_cgetblk(void)
-{
+int usage_hf14_cgetblk(void) {
     PrintAndLogEx(NORMAL, "Get block data from magic Chinese card. Only works with magic cards\n");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  hf mf cgetblk [h] <block number>");
@@ -387,8 +363,7 @@ int usage_hf14_cgetblk(void)
     PrintAndLogEx(NORMAL, "      hf mf cgetblk 1");
     return 0;
 }
-int usage_hf14_cgetsc(void)
-{
+int usage_hf14_cgetsc(void) {
     PrintAndLogEx(NORMAL, "Get sector data from magic Chinese card. Only works with magic cards\n");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  hf mf cgetsc [h] <sector number>");
@@ -399,8 +374,7 @@ int usage_hf14_cgetsc(void)
     PrintAndLogEx(NORMAL, "      hf mf cgetsc 0");
     return 0;
 }
-int usage_hf14_csave(void)
-{
+int usage_hf14_csave(void) {
     PrintAndLogEx(NORMAL, "It saves `magic Chinese` card dump into the file `filename.eml` or `cardID.eml`");
     PrintAndLogEx(NORMAL, "or into emulator memory");
     PrintAndLogEx(NORMAL, "");
@@ -418,8 +392,7 @@ int usage_hf14_csave(void)
     PrintAndLogEx(NORMAL, "       hf mf csave 4 o filename");
     return 0;
 }
-int usage_hf14_nack(void)
-{
+int usage_hf14_nack(void) {
     PrintAndLogEx(NORMAL, "Test a mifare classic based card for the NACK bug.");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  hf mf nack [h] [v]");
@@ -431,8 +404,7 @@ int usage_hf14_nack(void)
     return 0;
 }
 
-int GetHFMF14AUID(uint8_t *uid, int *uidlen)
-{
+int GetHFMF14AUID(uint8_t *uid, int *uidlen) {
     UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT, 0, 0}};
     clearCommandBuffer();
     SendCommand(&c);
@@ -450,8 +422,7 @@ int GetHFMF14AUID(uint8_t *uid, int *uidlen)
     return 1;
 }
 
-char *GenerateFilename(const char *prefix, const char *suffix)
-{
+char *GenerateFilename(const char *prefix, const char *suffix) {
     uint8_t uid[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     int uidlen = 0;
     char *fptr = calloc(sizeof(char) * (strlen(prefix) + strlen(suffix)) + sizeof(uid) * 2 + 1,  sizeof(uint8_t));
@@ -468,8 +439,7 @@ char *GenerateFilename(const char *prefix, const char *suffix)
     return fptr;
 }
 
-int CmdHF14AMfDarkside(const char *Cmd)
-{
+int CmdHF14AMfDarkside(const char *Cmd) {
     uint8_t blockno = 0, key_type = MIFARE_AUTH_KEYA;
     uint64_t key = 0;
 
@@ -509,8 +479,7 @@ int CmdHF14AMfDarkside(const char *Cmd)
     return 0;
 }
 
-int CmdHF14AMfWrBl(const char *Cmd)
-{
+int CmdHF14AMfWrBl(const char *Cmd) {
     uint8_t blockNo = 0;
     uint8_t keyType = 0;
     uint8_t key[6] = {0, 0, 0, 0, 0, 0};
@@ -564,8 +533,7 @@ int CmdHF14AMfWrBl(const char *Cmd)
     return 0;
 }
 
-int CmdHF14AMfRdBl(const char *Cmd)
-{
+int CmdHF14AMfRdBl(const char *Cmd) {
     uint8_t blockNo = 0;
     uint8_t keyType = 0;
     uint8_t key[6] = {0, 0, 0, 0, 0, 0};
@@ -629,8 +597,7 @@ int CmdHF14AMfRdBl(const char *Cmd)
     return 0;
 }
 
-int CmdHF14AMfRdSc(const char *Cmd)
-{
+int CmdHF14AMfRdSc(const char *Cmd) {
     int i;
     uint8_t sectorNo = 0;
     uint8_t keyType = 0;
@@ -701,8 +668,7 @@ int CmdHF14AMfRdSc(const char *Cmd)
     return 0;
 }
 
-uint16_t NumOfBlocks(char card)
-{
+uint16_t NumOfBlocks(char card) {
     switch (card) {
         case '0' :
             return MIFARE_MINI_MAXBLOCK;
@@ -716,8 +682,7 @@ uint16_t NumOfBlocks(char card)
             return MIFARE_1K_MAXBLOCK;
     }
 }
-uint8_t NumOfSectors(char card)
-{
+uint8_t NumOfSectors(char card) {
     switch (card) {
         case '0' :
             return MIFARE_MINI_MAXSECTOR;
@@ -732,8 +697,7 @@ uint8_t NumOfSectors(char card)
     }
 }
 
-uint8_t FirstBlockOfSector(uint8_t sectorNo)
-{
+uint8_t FirstBlockOfSector(uint8_t sectorNo) {
     if (sectorNo < 32) {
         return sectorNo * 4;
     } else {
@@ -741,8 +705,7 @@ uint8_t FirstBlockOfSector(uint8_t sectorNo)
     }
 }
 
-uint8_t NumBlocksPerSector(uint8_t sectorNo)
-{
+uint8_t NumBlocksPerSector(uint8_t sectorNo) {
     if (sectorNo < 32) {
         return 4;
     } else {
@@ -750,8 +713,7 @@ uint8_t NumBlocksPerSector(uint8_t sectorNo)
     }
 }
 
-int CmdHF14AMfDump(const char *Cmd)
-{
+int CmdHF14AMfDump(const char *Cmd) {
 
     uint8_t sectorNo, blockNo;
     uint8_t keyA[40][6];
@@ -957,8 +919,7 @@ int CmdHF14AMfDump(const char *Cmd)
     return 0;
 }
 
-int CmdHF14AMfRestore(const char *Cmd)
-{
+int CmdHF14AMfRestore(const char *Cmd) {
     uint8_t sectorNo, blockNo;
     uint8_t keyType = 0;
     uint8_t key[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
@@ -1099,8 +1060,7 @@ int CmdHF14AMfRestore(const char *Cmd)
     return 0;
 }
 
-int CmdHF14AMfNested(const char *Cmd)
-{
+int CmdHF14AMfNested(const char *Cmd) {
     int i, res, iterations;
     sector_t *e_sector = NULL;
     uint8_t blockNo = 0;
@@ -1366,8 +1326,7 @@ int CmdHF14AMfNested(const char *Cmd)
     return 0;
 }
 
-int CmdHF14AMfNestedHard(const char *Cmd)
-{
+int CmdHF14AMfNestedHard(const char *Cmd) {
     uint8_t blockNo = 0;
     uint8_t keyType = 0;
     uint8_t trgBlockNo = 0;
@@ -1549,14 +1508,12 @@ int CmdHF14AMfNestedHard(const char *Cmd)
     return 0;
 }
 
-int randInRange(int min, int max)
-{
+int randInRange(int min, int max) {
     return min + (int)(rand() / (double)(RAND_MAX) * (max - min + 1));
 }
 
 //Fisher–Yates shuffle
-void shuffle(uint8_t *array, uint16_t len)
-{
+void shuffle(uint8_t *array, uint16_t len) {
     uint8_t tmp[6];
     uint16_t x;
     time_t t;
@@ -1570,8 +1527,7 @@ void shuffle(uint8_t *array, uint16_t len)
     }
 }
 
-int CmdHF14AMfChk_fast(const char *Cmd)
-{
+int CmdHF14AMfChk_fast(const char *Cmd) {
 
     char ctmp = 0x00;
     ctmp = tolower(param_getchar(Cmd, 0));
@@ -1822,8 +1778,7 @@ out:
     return 0;
 }
 
-int CmdHF14AMfChk(const char *Cmd)
-{
+int CmdHF14AMfChk(const char *Cmd) {
 
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) < 3 || ctmp == 'h') return usage_hf14_chk();
@@ -2113,8 +2068,7 @@ out:
 
 sector_t *k_sector = NULL;
 uint8_t k_sectorsCount = 16;
-static void emptySectorTable()
-{
+static void emptySectorTable() {
 
     // initialize storage for found keys
     if (k_sector == NULL)
@@ -2131,8 +2085,7 @@ static void emptySectorTable()
     }
 }
 
-void showSectorTable()
-{
+void showSectorTable() {
     if (k_sector != NULL) {
         printKeyTable(k_sectorsCount, k_sector);
         free(k_sector);
@@ -2140,8 +2093,7 @@ void showSectorTable()
     }
 }
 
-void readerAttack(nonces_t data, bool setEmulatorMem, bool verbose)
-{
+void readerAttack(nonces_t data, bool setEmulatorMem, bool verbose) {
 
     uint64_t key = 0;
     bool success = false;
@@ -2178,8 +2130,7 @@ void readerAttack(nonces_t data, bool setEmulatorMem, bool verbose)
     }
 }
 
-int CmdHF14AMf1kSim(const char *Cmd)
-{
+int CmdHF14AMf1kSim(const char *Cmd) {
 
     uint8_t uid[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     uint8_t exitAfterNReads = 0;
@@ -2267,8 +2218,7 @@ int CmdHF14AMf1kSim(const char *Cmd)
     return 0;
 }
 
-int CmdHF14AMfSniff(const char *Cmd)
-{
+int CmdHF14AMfSniff(const char *Cmd) {
     bool wantLogToFile = false;
     bool wantDecrypt = false;
     //bool wantSaveToEml = false; TODO
@@ -2429,8 +2379,7 @@ int CmdHF14AMfSniff(const char *Cmd)
     return 0;
 }
 
-int CmdHF14AMfDbg(const char *Cmd)
-{
+int CmdHF14AMfDbg(const char *Cmd) {
 
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) < 1 || ctmp == 'h') return usage_hf14_dbg();
@@ -2443,8 +2392,7 @@ int CmdHF14AMfDbg(const char *Cmd)
     return 0;
 }
 
-int CmdHF14AMfKeyBrute(const char *Cmd)
-{
+int CmdHF14AMfKeyBrute(const char *Cmd) {
 
     uint8_t blockNo = 0, keytype = 0;
     uint8_t key[6] = {0, 0, 0, 0, 0, 0};
@@ -2475,8 +2423,7 @@ int CmdHF14AMfKeyBrute(const char *Cmd)
     return 0;
 }
 
-void printKeyTable(uint8_t sectorscnt, sector_t *e_sector)
-{
+void printKeyTable(uint8_t sectorscnt, sector_t *e_sector) {
     char strA[12 + 1] = {0};
     char strB[12 + 1] = {0};
     PrintAndLogEx(NORMAL, "|---|----------------|---|----------------|---|");
@@ -2504,8 +2451,7 @@ void printKeyTable(uint8_t sectorscnt, sector_t *e_sector)
 }
 
 // EMULATOR COMMANDS
-int CmdHF14AMfEGet(const char *Cmd)
-{
+int CmdHF14AMfEGet(const char *Cmd) {
     uint8_t blockNo = 0;
     uint8_t data[16] = {0x00};
     char c = tolower(param_getchar(Cmd, 0));
@@ -2523,8 +2469,7 @@ int CmdHF14AMfEGet(const char *Cmd)
     return 0;
 }
 
-int CmdHF14AMfEClear(const char *Cmd)
-{
+int CmdHF14AMfEClear(const char *Cmd) {
     char c = tolower(param_getchar(Cmd, 0));
     if (c == 'h') return usage_hf14_eclr();
 
@@ -2534,8 +2479,7 @@ int CmdHF14AMfEClear(const char *Cmd)
     return 0;
 }
 
-int CmdHF14AMfESet(const char *Cmd)
-{
+int CmdHF14AMfESet(const char *Cmd) {
     char c = tolower(param_getchar(Cmd, 0));
     uint8_t memBlock[16];
     uint8_t blockNo = 0;
@@ -2555,8 +2499,7 @@ int CmdHF14AMfESet(const char *Cmd)
     return mfEmlSetMem(memBlock, blockNo, 1);
 }
 
-int CmdHF14AMfELoad(const char *Cmd)
-{
+int CmdHF14AMfELoad(const char *Cmd) {
 
     size_t counter = 0;
     char filename[FILE_PATH_SIZE];
@@ -2650,8 +2593,7 @@ int CmdHF14AMfELoad(const char *Cmd)
     return 0;
 }
 
-int CmdHF14AMfESave(const char *Cmd)
-{
+int CmdHF14AMfESave(const char *Cmd) {
 
     char filename[FILE_PATH_SIZE];
     char *fnameptr = filename;
@@ -2697,8 +2639,7 @@ int CmdHF14AMfESave(const char *Cmd)
     return 0;
 }
 
-int CmdHF14AMfECFill(const char *Cmd)
-{
+int CmdHF14AMfECFill(const char *Cmd) {
     uint8_t keyType = 0;
     uint8_t numSectors = 16;
     char c = tolower(param_getchar(Cmd, 0));
@@ -2723,8 +2664,7 @@ int CmdHF14AMfECFill(const char *Cmd)
     return 0;
 }
 
-int CmdHF14AMfEKeyPrn(const char *Cmd)
-{
+int CmdHF14AMfEKeyPrn(const char *Cmd) {
     int i;
     uint8_t numSectors;
     uint8_t data[16];
@@ -2753,8 +2693,7 @@ int CmdHF14AMfEKeyPrn(const char *Cmd)
 }
 
 // CHINESE MAGIC COMMANDS
-int CmdHF14AMfCSetUID(const char *Cmd)
-{
+int CmdHF14AMfCSetUID(const char *Cmd) {
     uint8_t wipeCard = 0;
     uint8_t uid[8] = {0x00};
     uint8_t oldUid[8] = {0x00};
@@ -2814,8 +2753,7 @@ int CmdHF14AMfCSetUID(const char *Cmd)
     return 0;
 }
 
-int CmdHF14AMfCSetBlk(const char *Cmd)
-{
+int CmdHF14AMfCSetBlk(const char *Cmd) {
     uint8_t block[16] = {0x00};
     uint8_t blockNo = 0;
     uint8_t params = MAGIC_SINGLE;
@@ -2842,8 +2780,7 @@ int CmdHF14AMfCSetBlk(const char *Cmd)
     return 0;
 }
 
-int CmdHF14AMfCLoad(const char *Cmd)
-{
+int CmdHF14AMfCLoad(const char *Cmd) {
 
     uint8_t buf8[16] = {0x00};
     uint8_t fillFromEmulator = 0;
@@ -2958,8 +2895,7 @@ int CmdHF14AMfCLoad(const char *Cmd)
     return 0;
 }
 
-int CmdHF14AMfCGetBlk(const char *Cmd)
-{
+int CmdHF14AMfCGetBlk(const char *Cmd) {
     uint8_t data[16] = {0};
     uint8_t blockNo = 0;
     int res;
@@ -2996,8 +2932,7 @@ int CmdHF14AMfCGetBlk(const char *Cmd)
     return 0;
 }
 
-int CmdHF14AMfCGetSc(const char *Cmd)
-{
+int CmdHF14AMfCGetSc(const char *Cmd) {
     uint8_t data[16] = {0};
     uint8_t sector = 0;
     int i, res, flags;
@@ -3036,8 +2971,7 @@ int CmdHF14AMfCGetSc(const char *Cmd)
     return 0;
 }
 
-int CmdHF14AMfCSave(const char *Cmd)
-{
+int CmdHF14AMfCSave(const char *Cmd) {
 
     char filename[FILE_PATH_SIZE];
     char *fnameptr = filename;
@@ -3140,8 +3074,7 @@ int CmdHF14AMfCSave(const char *Cmd)
 }
 
 //needs nt, ar, at, Data to decrypt
-int CmdHf14AMfDecryptBytes(const char *Cmd)
-{
+int CmdHf14AMfDecryptBytes(const char *Cmd) {
 
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) < 1 || ctmp == 'h') return usage_hf14_decryptbytes();
@@ -3168,8 +3101,7 @@ int CmdHf14AMfDecryptBytes(const char *Cmd)
     return 0;
 }
 
-int CmdHf14AMfSetMod(const char *Cmd)
-{
+int CmdHf14AMfSetMod(const char *Cmd) {
     uint8_t key[6] = {0, 0, 0, 0, 0, 0};
     uint8_t mod = 2;
 
@@ -3206,8 +3138,7 @@ int CmdHf14AMfSetMod(const char *Cmd)
 }
 
 // Mifare NACK bug detection
-int CmdHf14AMfNack(const char *Cmd)
-{
+int CmdHf14AMfNack(const char *Cmd) {
 
     bool verbose = false;
     char ctmp = tolower(param_getchar(Cmd, 0));
@@ -3221,8 +3152,7 @@ int CmdHf14AMfNack(const char *Cmd)
     return 0;
 }
 
-int CmdHF14AMfice(const char *Cmd)
-{
+int CmdHF14AMfice(const char *Cmd) {
 
     uint8_t blockNo = 0;
     uint8_t keyType = 0;
@@ -3330,8 +3260,7 @@ out:
     return 0;
 }
 
-int CmdHF14AMfAuth4(const char *Cmd)
-{
+int CmdHF14AMfAuth4(const char *Cmd) {
     uint8_t keyn[20] = {0};
     int keynlen = 0;
     uint8_t key[16] = {0};
@@ -3368,8 +3297,7 @@ int CmdHF14AMfAuth4(const char *Cmd)
 }
 
 // https://www.nxp.com/docs/en/application-note/AN10787.pdf
-int CmdHF14AMfMAD(const char *cmd)
-{
+int CmdHF14AMfMAD(const char *cmd) {
 
     CLIParserInit("hf mf mad",
                   "Checks and prints Mifare Application Directory (MAD)",
@@ -3459,8 +3387,7 @@ int CmdHF14AMfMAD(const char *cmd)
     return 0;
 }
 
-int CmdHFMFNDEF(const char *cmd)
-{
+int CmdHFMFNDEF(const char *cmd) {
 
     CLIParserInit("hf mf ndef",
                   "Prints NFC Data Exchange Format (NDEF)",
@@ -3564,8 +3491,7 @@ int CmdHFMFNDEF(const char *cmd)
     return 0;
 }
 
-int CmdHF14AMfList(const char *Cmd)
-{
+int CmdHF14AMfList(const char *Cmd) {
     CmdTraceList("mf");
     return 0;
 }
@@ -3615,15 +3541,13 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdHFMF(const char *Cmd)
-{
+int CmdHFMF(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }

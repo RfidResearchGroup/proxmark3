@@ -13,17 +13,14 @@ static uint32_t g_nextrandom;
  * https://software.intel.com/en-us/articles/fast-random-number-generator-on-the-intel-pentiumr-4-processor/
  */
 
-inline void fast_prand()
-{
+inline void fast_prand() {
     fast_prandEx(GetTickCount());
 }
-inline void fast_prandEx(uint32_t seed)
-{
+inline void fast_prandEx(uint32_t seed) {
     g_nextrandom = seed;
 }
 
-uint32_t prand()
-{
+uint32_t prand() {
 // g_nextrandom *= 6364136223846793005;
 // g_nextrandom += 1;
 //return (uint32_t)(g_nextrandom >> 32) % 0xffffffff;

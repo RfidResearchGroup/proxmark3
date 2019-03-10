@@ -53,8 +53,7 @@ struct Buffer {
     size_t alloc;
 };
 
-static RetType write_to_buffer(void *cookie, const char *data, LenType len)
-{
+static RetType write_to_buffer(void *cookie, const char *data, LenType len) {
     struct Buffer *b = (struct Buffer *)cookie;
     char *ptr = *b->ptr;
     size_t newsize;
@@ -78,8 +77,7 @@ static RetType write_to_buffer(void *cookie, const char *data, LenType len)
     return len;
 }
 
-static int close_buffer(void *cookie)
-{
+static int close_buffer(void *cookie) {
     struct Buffer *b = (struct Buffer *)cookie;
     if (*b->ptr)
         (*b->ptr)[*b->len] = '\0';
@@ -87,8 +85,7 @@ static int close_buffer(void *cookie)
     return 0;
 }
 
-FILE *open_memstream(char **bufptr, size_t *lenptr)
-{
+FILE *open_memstream(char **bufptr, size_t *lenptr) {
     struct Buffer *b = (struct Buffer *)calloc(sizeof(struct Buffer), sizeof(uint8_t));
     if (b == NULL)
         return NULL;

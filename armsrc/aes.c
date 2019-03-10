@@ -680,8 +680,7 @@ static const unsigned int rcon[] = {
 * Expand the cipher key into the encryption key schedule and return the
 * number of rounds for the given cipher key size.
 */
-int aes_setkey_enc(unsigned int rk[], const unsigned char cipherKey[], int keyBytes)
-{
+int aes_setkey_enc(unsigned int rk[], const unsigned char cipherKey[], int keyBytes) {
     int i = 0;
     unsigned int temp;
 
@@ -766,8 +765,7 @@ int aes_setkey_enc(unsigned int rk[], const unsigned char cipherKey[], int keyBy
 * Expand the cipher key into encryption and decryption key schedule and
 * return the number of rounds for the given cipher key size.
 */
-int AesGenKeySched(unsigned int rk[], unsigned int rrk[], const unsigned char cipherKey[], int keyBytes)
-{
+int AesGenKeySched(unsigned int rk[], unsigned int rrk[], const unsigned char cipherKey[], int keyBytes) {
     int Nr, i;
 
     // expand the cipher key
@@ -821,8 +819,7 @@ int AesGenKeySched(unsigned int rk[], unsigned int rrk[], const unsigned char ci
 /*
 * Encrypt the plain text into cipher
 */
-void AesEncBlk(AesCtx *pCtx, const unsigned char pt[], unsigned char ct[])
-{
+void AesEncBlk(AesCtx *pCtx, const unsigned char pt[], unsigned char ct[]) {
     unsigned int s0, s1, s2, s3, t0, t1, t2, t3, *iv;
     const unsigned int *rk;
     int r;
@@ -947,8 +944,7 @@ void AesEncBlk(AesCtx *pCtx, const unsigned char pt[], unsigned char ct[])
 /*
 * Decrypt the cipher into plain text
 */
-void AesDecBlk(AesCtx *pCtx, const unsigned char ct[], unsigned char pt[])
-{
+void AesDecBlk(AesCtx *pCtx, const unsigned char ct[], unsigned char pt[]) {
     unsigned int s0, s1, s2, s3, t0, t1, t2, t3, v0, v1, v2, v3, *iv;
     const unsigned int *rk;
     int r;
@@ -1080,8 +1076,7 @@ void AesDecBlk(AesCtx *pCtx, const unsigned char ct[], unsigned char pt[])
 /*
 * initialize AES context
 */
-int AesCtxIni(AesCtx *pCtx, unsigned char *pIV, unsigned char *pKey, unsigned int KeyLen, unsigned char Mode)
-{
+int AesCtxIni(AesCtx *pCtx, unsigned char *pIV, unsigned char *pKey, unsigned int KeyLen, unsigned char Mode) {
     if (pKey == 0 || pCtx == 0 || (KeyLen != KEY128 && KeyLen != KEY192 && KeyLen != KEY256))
         return -1;
 
@@ -1105,8 +1100,7 @@ int AesCtxIni(AesCtx *pCtx, unsigned char *pIV, unsigned char *pKey, unsigned in
 /*
 * Encrypt plain text
 */
-int AesEncrypt(AesCtx *pCtx, unsigned char *pData, unsigned char *pCipher, unsigned int DataLen)
-{
+int AesEncrypt(AesCtx *pCtx, unsigned char *pData, unsigned char *pCipher, unsigned int DataLen) {
     int i;
 
     if (pData == 0 || pCipher == 0 || pCtx == 0 || (DataLen & 0xf) != 0)
@@ -1124,8 +1118,7 @@ int AesEncrypt(AesCtx *pCtx, unsigned char *pData, unsigned char *pCipher, unsig
 /*
 * Decrypt cipher
 */
-int AesDecrypt(AesCtx *pCtx, unsigned char *pCipher, unsigned char *pData, unsigned int CipherLen)
-{
+int AesDecrypt(AesCtx *pCtx, unsigned char *pCipher, unsigned char *pData, unsigned int CipherLen) {
     int i;
 
     if (pData == 0 || pCipher == 0 || pCtx == 0 || (CipherLen & 0xf) != 0)
@@ -1148,8 +1141,7 @@ int AesDecrypt(AesCtx *pCtx, unsigned char *pCipher, unsigned char *pData, unsig
 
 #include <stdio.h>
 
-int main()
-{
+int main() {
     AesCtx ctx;
     unsigned char iv[] = "INI VECTINI VECT";
     unsigned char key[] = "This is a sample AESKey";

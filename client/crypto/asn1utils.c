@@ -17,8 +17,7 @@
 #include "asn1dump.h"
 #include "util.h"
 
-int ecdsa_asn1_get_signature(uint8_t *signature, size_t signaturelen, uint8_t *rval, uint8_t *sval)
-{
+int ecdsa_asn1_get_signature(uint8_t *signature, size_t signaturelen, uint8_t *rval, uint8_t *sval) {
     if (!signature || !signaturelen || !rval || !sval)
         return 1;
 
@@ -62,8 +61,7 @@ exit:
     return res;
 }
 
-static bool print_cb(void *data, const struct tlv *tlv, int level, bool is_leaf)
-{
+static bool print_cb(void *data, const struct tlv *tlv, int level, bool is_leaf) {
     bool candump = true;
     asn1_tag_dump(tlv, stdout, level, &candump);
     if (is_leaf && candump) {
@@ -73,8 +71,7 @@ static bool print_cb(void *data, const struct tlv *tlv, int level, bool is_leaf)
     return true;
 }
 
-int asn1_print(uint8_t *asn1buf, size_t asn1buflen, char *indent)
-{
+int asn1_print(uint8_t *asn1buf, size_t asn1buflen, char *indent) {
 
     struct tlvdb *t = NULL;
     t = tlvdb_parse_multi(asn1buf, asn1buflen);

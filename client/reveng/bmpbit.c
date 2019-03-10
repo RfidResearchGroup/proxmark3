@@ -41,8 +41,7 @@ int bmpbit;
 int bmpsub;
 
 void
-setbmp(void)
-{
+setbmp(void) {
     /* Initialise BMP_BIT and BMP_SUB for the local architecture. */
     bmp_t bmpmax = ~(bmp_t) 0;
 
@@ -61,8 +60,7 @@ setbmp(void)
 
 #ifdef BMPTST
 int
-main(int argc, char *argv[])
-{
+main(int argc, char *argv[]) {
     /* check the compile-time bitmap width is correct, otherwise
      * searches run forever. */
 #  if BMP_BIT > 0

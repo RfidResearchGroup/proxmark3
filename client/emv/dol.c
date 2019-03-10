@@ -23,8 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static size_t dol_calculate_len(const struct tlv *tlv, size_t data_len)
-{
+static size_t dol_calculate_len(const struct tlv *tlv, size_t data_len) {
     if (!tlv)
         return 0;
 
@@ -47,8 +46,7 @@ static size_t dol_calculate_len(const struct tlv *tlv, size_t data_len)
     return count;
 }
 
-struct tlv *dol_process(const struct tlv *tlv, const struct tlvdb *tlvdb, tlv_tag_t tag)
-{
+struct tlv *dol_process(const struct tlv *tlv, const struct tlvdb *tlvdb, tlv_tag_t tag) {
     size_t res_len;
     if (!tlv || !(res_len = dol_calculate_len(tlv, 0))) {
         struct tlv *res_tlv = malloc(sizeof(*res_tlv));
@@ -97,8 +95,7 @@ struct tlv *dol_process(const struct tlv *tlv, const struct tlvdb *tlvdb, tlv_ta
     return res_tlv;
 }
 
-struct tlvdb *dol_parse(const struct tlv *tlv, const unsigned char *data, size_t data_len)
-{
+struct tlvdb *dol_parse(const struct tlv *tlv, const unsigned char *data, size_t data_len) {
     if (!tlv)
         return NULL;
 

@@ -24,8 +24,7 @@
 
 #if !defined LOWMEM && defined __GNUC__
 static uint8_t filterlut[1 << 20];
-static void __attribute__((constructor)) fill_lut()
-{
+static void __attribute__((constructor)) fill_lut() {
     uint32_t i;
     for (i = 0; i < 1 << 20; ++i)
         filterlut[i] = filter(i);
@@ -36,8 +35,7 @@ static void __attribute__((constructor)) fill_lut()
 /** update_contribution
  * helper, calculates the partial linear feedback contributions and puts in MSB
  */
-static inline void update_contribution(uint32_t *item, const uint32_t mask1, const uint32_t mask2)
-{
+static inline void update_contribution(uint32_t *item, const uint32_t mask1, const uint32_t mask2) {
     uint32_t p = *item >> 25;
 
     p = p << 1 | evenparity32(*item & mask1);
@@ -48,8 +46,7 @@ static inline void update_contribution(uint32_t *item, const uint32_t mask1, con
 /** extend_table
  * using a bit of the keystream extend the table of possible lfsr states
  */
-static inline void extend_table(uint32_t *tbl, uint32_t **end, int bit, int m1, int m2, uint32_t in)
-{
+static inline void extend_table(uint32_t *tbl, uint32_t **end, int bit, int m1, int m2, uint32_t in) {
     in <<= 24;
     for (*tbl <<= 1; tbl <= *end; *++tbl <<= 1)
         if (filter(*tbl) ^ filter(*tbl | 1)) {
@@ -69,8 +66,7 @@ static inline void extend_table(uint32_t *tbl, uint32_t **end, int bit, int m1, 
 /** extend_table_simple
  * using a bit of the keystream extend the table of possible lfsr states
  */
-static inline void extend_table_simple(uint32_t *tbl, uint32_t **end, int bit)
-{
+static inline void extend_table_simple(uint32_t *tbl, uint32_t **end, int bit) {
     for (*tbl <<= 1; tbl <= *end; *++tbl <<= 1) {
         if (filter(*tbl) ^ filter(*tbl | 1)) { // replace
             *tbl |= filter(*tbl) ^ bit;
@@ -88,8 +84,7 @@ static inline void extend_table_simple(uint32_t *tbl, uint32_t **end, int bit)
 static struct Crypto1State *
 recover(uint32_t *o_head, uint32_t *o_tail, uint32_t oks,
         uint32_t *e_head, uint32_t *e_tail, uint32_t eks, int rem,
-        struct Crypto1State *sl, uint32_t in, bucket_array_t bucket)
-{
+        struct Crypto1State *sl, uint32_t in, bucket_array_t bucket) {
     uint32_t *o, *e;
     bucket_info_t bucket_info;
 
@@ -133,8 +128,7 @@ recover(uint32_t *o_head, uint32_t *o_tail, uint32_t oks,
  * additionally you can use the in parameter to specify the value
  * that was fed into the lfsr at the time the keystream was generated
  */
-struct Crypto1State *lfsr_recovery32(uint32_t ks2, uint32_t in)
-{
+struct Crypto1State *lfsr_recovery32(uint32_t ks2, uint32_t in) {
     struct Crypto1State *statelist;
     uint32_t *odd_head = 0, *odd_tail = 0, oks = 0;
     uint32_t *even_head = 0, *even_tail = 0, eks = 0;
@@ -225,8 +219,7 @@ static const uint32_t C2[] = { 0x1A822E0, 0x21A822E0, 0x21A822E0};
 /** Reverse 64 bits of keystream into possible cipher states
  * Variation mentioned in the paper. Somewhat optimized version
  */
-struct Crypto1State *lfsr_recovery64(uint32_t ks2, uint32_t ks3)
-{
+struct Crypto1State *lfsr_recovery64(uint32_t ks2, uint32_t ks3) {
     struct Crypto1State *statelist, *sl;
     uint8_t oks[32], eks[32], hi[32];
     uint32_t low = 0,  win = 0;
@@ -296,8 +289,7 @@ continue2:
 /** lfsr_rollback_bit
  * Rollback the shift register in order to get previous states
  */
-uint8_t lfsr_rollback_bit(struct Crypto1State *s, uint32_t in, int fb)
-{
+uint8_t lfsr_rollback_bit(struct Crypto1State *s, uint32_t in, int fb) {
     int out;
     uint8_t ret;
     uint32_t t;
@@ -317,8 +309,7 @@ uint8_t lfsr_rollback_bit(struct Crypto1State *s, uint32_t in, int fb)
 /** lfsr_rollback_byte
  * Rollback the shift register in order to get previous states
  */
-uint8_t lfsr_rollback_byte(struct Crypto1State *s, uint32_t in, int fb)
-{
+uint8_t lfsr_rollback_byte(struct Crypto1State *s, uint32_t in, int fb) {
     uint8_t ret = 0;
     ret |= lfsr_rollback_bit(s, BIT(in, 7), fb) << 7;
     ret |= lfsr_rollback_bit(s, BIT(in, 6), fb) << 6;
@@ -333,8 +324,7 @@ uint8_t lfsr_rollback_byte(struct Crypto1State *s, uint32_t in, int fb)
 /** lfsr_rollback_word
  * Rollback the shift register in order to get previous states
  */
-uint32_t lfsr_rollback_word(struct Crypto1State *s, uint32_t in, int fb)
-{
+uint32_t lfsr_rollback_word(struct Crypto1State *s, uint32_t in, int fb) {
 
     uint32_t ret = 0;
     ret |= lfsr_rollback_bit(s, BEBIT(in, 31), fb) << (31 ^ 24);
@@ -379,8 +369,7 @@ uint32_t lfsr_rollback_word(struct Crypto1State *s, uint32_t in, int fb)
  * x,y valid tag nonces, then prng_successor(x, nonce_distance(x, y)) = y
  */
 static uint16_t *dist = 0;
-int nonce_distance(uint32_t from, uint32_t to)
-{
+int nonce_distance(uint32_t from, uint32_t to) {
     uint16_t x, i;
     if (!dist) {
         dist = calloc(2 << 16,  sizeof(uint8_t));
@@ -400,8 +389,7 @@ int nonce_distance(uint32_t from, uint32_t to)
  *   true = weak prng
  *   false = hardend prng
  */
-bool validate_prng_nonce(uint32_t nonce)
-{
+bool validate_prng_nonce(uint32_t nonce) {
     // init prng table:
     nonce_distance(nonce, nonce);
     return ((65535 - dist[nonce >> 16] + dist[nonce & 0xffff]) % 65535) == 16;
@@ -421,8 +409,7 @@ static uint32_t fastfwd[2][8] = {
  * encrypt the NACK which is observed when varying only the 3 last bits of Nr
  * only correct iff [NR_3] ^ NR_3 does not depend on Nr_3
  */
-uint32_t *lfsr_prefix_ks(uint8_t ks[8], int isodd)
-{
+uint32_t *lfsr_prefix_ks(uint8_t ks[8], int isodd) {
     uint32_t *candidates = calloc(4 << 10, sizeof(uint8_t));
     if (!candidates) return 0;
 
@@ -447,8 +434,7 @@ uint32_t *lfsr_prefix_ks(uint8_t ks[8], int isodd)
 /** check_pfx_parity
  * helper function which eliminates possible secret states using parity bits
  */
-static struct Crypto1State *check_pfx_parity(uint32_t prefix, uint32_t rresp, uint8_t parities[8][8], uint32_t odd, uint32_t even, struct Crypto1State *sl, uint32_t no_par)
-{
+static struct Crypto1State *check_pfx_parity(uint32_t prefix, uint32_t rresp, uint8_t parities[8][8], uint32_t odd, uint32_t even, struct Crypto1State *sl, uint32_t no_par) {
     uint32_t ks1, nr, ks2, rr, ks3, c, good = 1;
 
     for (c = 0; good && c < 8; ++c) {
@@ -489,8 +475,7 @@ static struct Crypto1State *check_pfx_parity(uint32_t prefix, uint32_t rresp, ui
  * tag nonce was fed in
  */
 
-struct Crypto1State *lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8], uint32_t no_par)
-{
+struct Crypto1State *lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8], uint32_t no_par) {
     struct Crypto1State *statelist, *s;
     uint32_t *odd, *even, *o, *e, top;
 

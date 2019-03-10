@@ -14,8 +14,7 @@
 #define TIMEOUT 2000
 static int CmdHelp(const char *Cmd);
 
-int usage_hf_14b_info(void)
-{
+int usage_hf_14b_info(void) {
     PrintAndLogEx(NORMAL, "Usage: hf 14b info [h] [s]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h    this help");
@@ -24,8 +23,7 @@ int usage_hf_14b_info(void)
     PrintAndLogEx(NORMAL, "       hf 14b info");
     return 0;
 }
-int usage_hf_14b_reader(void)
-{
+int usage_hf_14b_reader(void) {
     PrintAndLogEx(NORMAL, "Usage: hf 14b reader [h] [s]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h    this help");
@@ -34,8 +32,7 @@ int usage_hf_14b_reader(void)
     PrintAndLogEx(NORMAL, "       hf 14b reader");
     return 0;
 }
-int usage_hf_14b_raw(void)
-{
+int usage_hf_14b_raw(void) {
     PrintAndLogEx(NORMAL, "Usage: hf 14b raw [-h] [-r] [-c] [-p] [-s || -ss] <0A 0B 0C ... hex>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       -h    this help");
@@ -48,8 +45,7 @@ int usage_hf_14b_raw(void)
     PrintAndLogEx(NORMAL, "       hf 14b raw -s -c -p 0200a40400");
     return 0;
 }
-int usage_hf_14b_sniff(void)
-{
+int usage_hf_14b_sniff(void) {
     PrintAndLogEx(NORMAL, "It get data from the field and saves it into command buffer.");
     PrintAndLogEx(NORMAL, "Buffer accessible from command 'hf list 14b'");
     PrintAndLogEx(NORMAL, "Usage: hf 14b sniff [h]");
@@ -59,8 +55,7 @@ int usage_hf_14b_sniff(void)
     PrintAndLogEx(NORMAL, "       hf 14b sniff");
     return 0;
 }
-int usage_hf_14b_sim(void)
-{
+int usage_hf_14b_sim(void) {
     PrintAndLogEx(NORMAL, "Emulating ISO/IEC 14443 type B tag with 4 UID / PUPI");
     PrintAndLogEx(NORMAL, "Usage: hf 14b sim [h] u <uid>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -71,8 +66,7 @@ int usage_hf_14b_sim(void)
     PrintAndLogEx(NORMAL, "       hf 14b sim u 11223344");
     return 0;
 }
-int usage_hf_14b_read_srx(void)
-{
+int usage_hf_14b_read_srx(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf 14b sriread [h] <1|2>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h        this help");
@@ -82,8 +76,7 @@ int usage_hf_14b_read_srx(void)
     PrintAndLogEx(NORMAL, "       hf 14b sriread 2");
     return 0;
 }
-int usage_hf_14b_write_srx(void)
-{
+int usage_hf_14b_write_srx(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf 14b [h] sriwrite <1|2> <BLOCK> <DATA>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h        this help");
@@ -97,8 +90,7 @@ int usage_hf_14b_write_srx(void)
     PrintAndLogEx(NORMAL, "       hf 14b sriwrite 2 FF 11223344");
     return 0;
 }
-int usage_hf_14b_dump(void)
-{
+int usage_hf_14b_dump(void) {
     PrintAndLogEx(NORMAL, "This command dumps the contents of a ISO-14443-B tag and save it to file\n"
                   "\n"
                   "Usage: hf 14b dump [h] [card memory] <f filname> \n"
@@ -121,22 +113,19 @@ static void switch_on_field_14b(void) {
 }
 */
 
-static int switch_off_field_14b(void)
-{
+static int switch_off_field_14b(void) {
     UsbCommand c = {CMD_ISO_14443B_COMMAND, {ISO14B_DISCONNECT, 0, 0}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
 }
 
-int CmdHF14BList(const char *Cmd)
-{
+int CmdHF14BList(const char *Cmd) {
     CmdTraceList("14b");
     return 0;
 }
 
-int CmdHF14BSim(const char *Cmd)
-{
+int CmdHF14BSim(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_14b_sim();
 
@@ -151,8 +140,7 @@ int CmdHF14BSim(const char *Cmd)
     return 0;
 }
 
-int CmdHF14BSniff(const char *Cmd)
-{
+int CmdHF14BSniff(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_14b_sniff();
@@ -163,8 +151,7 @@ int CmdHF14BSniff(const char *Cmd)
     return 0;
 }
 
-int CmdHF14BCmdRaw(const char *Cmd)
-{
+int CmdHF14BCmdRaw(const char *Cmd) {
     bool reply = true, power = false, select = false;
     char buf[5] = "";
     int i = 0;
@@ -209,8 +196,8 @@ int CmdHF14BCmdRaw(const char *Cmd)
             continue;
         }
         if ((Cmd[i] >= '0' && Cmd[i] <= '9') ||
-            (Cmd[i] >= 'a' && Cmd[i] <= 'f') ||
-            (Cmd[i] >= 'A' && Cmd[i] <= 'F')) {
+                (Cmd[i] >= 'a' && Cmd[i] <= 'f') ||
+                (Cmd[i] >= 'A' && Cmd[i] <= 'F')) {
             buf[strlen(buf) + 1] = 0;
             buf[strlen(buf)] = Cmd[i];
             i++;
@@ -254,8 +241,7 @@ int CmdHF14BCmdRaw(const char *Cmd)
     return 1;
 }
 
-static bool get_14b_UID(iso14b_card_select_t *card)
-{
+static bool get_14b_UID(iso14b_card_select_t *card) {
 
     if (!card)
         return false;
@@ -309,8 +295,7 @@ static bool get_14b_UID(iso14b_card_select_t *card)
 // 4       = bit rate capacity
 // 5       = max frame size / -4 info
 // 6       = FWI / Coding options
-static void print_atqb_resp(uint8_t *data, uint8_t cid)
-{
+static void print_atqb_resp(uint8_t *data, uint8_t cid) {
     //PrintAndLogEx(NORMAL, "           UID: %s", sprint_hex(data+1,4));
     PrintAndLogEx(NORMAL, "      App Data: %s", sprint_hex(data, 4));
     PrintAndLogEx(NORMAL, "      Protocol: %s", sprint_hex(data + 4, 3));
@@ -356,8 +341,7 @@ static void print_atqb_resp(uint8_t *data, uint8_t cid)
 }
 
 // get SRx chip model (from UID) // from ST Microelectronics
-char *get_ST_Chip_Model(uint8_t data)
-{
+char *get_ST_Chip_Model(uint8_t data) {
     static char model[20];
     char *retStr = model;
     memset(model, 0, sizeof(model));
@@ -392,8 +376,7 @@ char *get_ST_Chip_Model(uint8_t data)
 }
 
 // REMAKE:
-int print_ST_Lock_info(uint8_t model)
-{
+int print_ST_Lock_info(uint8_t model) {
 
     // PrintAndLogEx(NORMAL, "Chip Write Protection Bits:");
     // // now interpret the data
@@ -439,8 +422,7 @@ int print_ST_Lock_info(uint8_t model)
 }
 
 // print UID info from SRx chips (ST Microelectronics)
-static void print_st_general_info(uint8_t *data, uint8_t len)
-{
+static void print_st_general_info(uint8_t *data, uint8_t len) {
     //uid = first 8 bytes in data
     PrintAndLogEx(NORMAL, " UID: %s", sprint_hex(SwapEndian64(data, 8, 8), len));
     PrintAndLogEx(NORMAL, " MFG: %02X, %s", data[6], getTagInfo(data[6]));
@@ -467,8 +449,7 @@ static void print_st_general_info(uint8_t *data, uint8_t len)
 //a2 = ?  (resp 02 [6a d3])
 
 // 14b get and print Full Info (as much as we know)
-bool HF14B_Std_Info(bool verbose)
-{
+bool HF14B_Std_Info(bool verbose) {
 
     bool isSuccess = false;
 
@@ -512,8 +493,7 @@ bool HF14B_Std_Info(bool verbose)
 }
 
 // SRx get and print full info (needs more info...)
-bool HF14B_ST_Info(bool verbose)
-{
+bool HF14B_ST_Info(bool verbose) {
 
     UsbCommand c = {CMD_ISO_14443B_COMMAND, {ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0}};
     clearCommandBuffer();
@@ -559,8 +539,7 @@ bool HF14B_ST_Info(bool verbose)
 }
 
 // get and print all info known about any known 14b tag
-bool HF14BInfo(bool verbose)
-{
+bool HF14BInfo(bool verbose) {
 
     // try std 14b (atqb)
     if (HF14B_Std_Info(verbose)) return true;
@@ -575,8 +554,7 @@ bool HF14BInfo(bool verbose)
 }
 
 // menu command to get and print all info known about any known 14b tag
-int CmdHF14Binfo(const char *Cmd)
-{
+int CmdHF14Binfo(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_14b_info();
 
@@ -584,8 +562,7 @@ int CmdHF14Binfo(const char *Cmd)
     return HF14BInfo(verbose);
 }
 
-bool HF14B_ST_Reader(bool verbose)
-{
+bool HF14B_ST_Reader(bool verbose) {
 
     bool isSuccess = false;
 
@@ -625,8 +602,7 @@ bool HF14B_ST_Reader(bool verbose)
     return isSuccess;
 }
 
-bool HF14B_Std_Reader(bool verbose)
-{
+bool HF14B_Std_Reader(bool verbose) {
 
     bool isSuccess = false;
 
@@ -668,8 +644,7 @@ bool HF14B_Std_Reader(bool verbose)
 }
 
 // test for other 14b type tags (mimic another reader - don't have tags to identify)
-bool HF14B_Other_Reader()
-{
+bool HF14B_Other_Reader() {
 
     // uint8_t data[] = {0x00, 0x0b, 0x3f, 0x80};
     // uint8_t datalen = 4;
@@ -728,8 +703,7 @@ bool HF14B_Other_Reader()
 }
 
 // get and print general info about all known 14b chips
-bool HF14BReader(bool verbose)
-{
+bool HF14BReader(bool verbose) {
 
     // try std 14b (atqb)
     if (HF14B_Std_Reader(verbose)) return true;
@@ -746,8 +720,7 @@ bool HF14BReader(bool verbose)
 }
 
 // menu command to get and print general info about all known 14b chips
-int CmdHF14BReader(const char *Cmd)
-{
+int CmdHF14BReader(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_14b_reader();
 
@@ -759,8 +732,7 @@ int CmdHF14BReader(const char *Cmd)
  * SRI* tags are ISO14443-B modulated memory tags,
  * this command just dumps the contents of the memory/
  */
-int CmdHF14BReadSri(const char *Cmd)
-{
+int CmdHF14BReadSri(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) < 1 || cmdp == 'h') return usage_hf_14b_read_srx();
 
@@ -773,8 +745,7 @@ int CmdHF14BReadSri(const char *Cmd)
     return 0;
 }
 // New command to write a SRI512/SRIX4K tag.
-int CmdHF14BWriteSri(const char *Cmd)
-{
+int CmdHF14BWriteSri(const char *Cmd) {
     /*
      * For SRIX4K  blocks 00 - 7F
      * hf 14b raw -c -p 09 $srix4kwblock $srix4kwdata
@@ -841,8 +812,7 @@ int CmdHF14BWriteSri(const char *Cmd)
 }
 
 // need to write to file
-int CmdHF14BDump(const char *Cmd)
-{
+int CmdHF14BDump(const char *Cmd) {
 
     uint8_t fileNameLen = 0;
     char filename[FILE_PATH_SIZE] = {0};
@@ -998,8 +968,7 @@ out:
     return switch_off_field_14b();
 }
 
-uint32_t srix4kEncode(uint32_t value)
-{
+uint32_t srix4kEncode(uint32_t value) {
     /*
     // vv = value
     // pp = position
@@ -1055,8 +1024,7 @@ uint32_t srix4kEncode(uint32_t value)
     PrintAndLogEx(NORMAL, "ICE encoded | %08X -> %08X", value, encvalue);
     return encvalue;
 }
-uint32_t srix4kDecode(uint32_t value)
-{
+uint32_t srix4kDecode(uint32_t value) {
     switch (value) {
         case 0xC04F42C5:
             return 0x003139;
@@ -1067,15 +1035,13 @@ uint32_t srix4kDecode(uint32_t value)
     }
     return 0;
 }
-uint32_t srix4kDecodeCounter(uint32_t num)
-{
+uint32_t srix4kDecodeCounter(uint32_t num) {
     uint32_t value = ~num;
     ++value;
     return value;
 }
 
-uint32_t srix4kGetMagicbytes(uint64_t uid, uint32_t block6, uint32_t block18, uint32_t block19)
-{
+uint32_t srix4kGetMagicbytes(uint64_t uid, uint32_t block6, uint32_t block18, uint32_t block19) {
 #define MASK 0xFFFFFFFF;
     uint32_t uid32 = uid & MASK;
     uint32_t counter = srix4kDecodeCounter(block6);
@@ -1087,8 +1053,7 @@ uint32_t srix4kGetMagicbytes(uint64_t uid, uint32_t block6, uint32_t block18, ui
     PrintAndLogEx(SUCCESS, "Magic bytes | %08X", result);
     return result;
 }
-int srix4kValid(const char *Cmd)
-{
+int srix4kValid(const char *Cmd) {
 
     uint64_t uid = 0xD00202501A4532F9;
     uint32_t block6 = 0xFFFFFFFF;
@@ -1106,8 +1071,7 @@ int srix4kValid(const char *Cmd)
     return 0;
 }
 
-bool waitCmd14b(bool verbose)
-{
+bool waitCmd14b(bool verbose) {
 
     bool crc = false;
     uint8_t data[USB_CMD_DATA_SIZE] = {0x00};
@@ -1161,15 +1125,13 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdHF14B(const char *Cmd)
-{
+int CmdHF14B(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }

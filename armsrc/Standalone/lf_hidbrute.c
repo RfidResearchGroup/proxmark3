@@ -27,8 +27,7 @@
 #include "lf_hidbrute.h"
 
 // samy's sniff and repeat routine for LF
-void RunMod()
-{
+void RunMod() {
     StandAloneMode();
     Dbprintf(">>  LF HID corporate bruteforce a.k.a CorporateBrute Started  <<");
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
@@ -245,8 +244,7 @@ out:
 }
 
 // Function that calculate next value for the brutforce of HID corporate 1000
-void hid_corporate_1000_calculate_checksum_and_set(uint32_t *high, uint32_t *low, uint32_t cardnum, uint32_t fc)
-{
+void hid_corporate_1000_calculate_checksum_and_set(uint32_t *high, uint32_t *low, uint32_t cardnum, uint32_t fc) {
 
     uint32_t new_high = 0;
     uint32_t new_low = 0;

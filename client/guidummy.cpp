@@ -10,8 +10,7 @@
 
 #include <stdio.h>
 
-extern "C" void ShowGraphWindow(void)
-{
+extern "C" void ShowGraphWindow(void) {
     static int warned = 0;
 
     if (!warned) {

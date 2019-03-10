@@ -21,8 +21,7 @@
 #include "lfdemod.h"
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_paradox_sim(void)
-{
+int usage_lf_paradox_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of Paradox card with specified card number.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.");
@@ -39,8 +38,7 @@ int usage_lf_paradox_sim(void)
 }
 
 // loop to get raw paradox waveform then FSK demodulate the TAG ID from it
-int detectParadox(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo, int *waveStartIdx)
-{
+int detectParadox(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo, int *waveStartIdx) {
     //make sure buffer has data
     if (*size < 96 * 50) return -1;
 
@@ -79,8 +77,7 @@ int detectParadox(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint
 //by marshmellow
 //Paradox Prox demod - FSK2a RF/50 with preamble of 00001111 (then manchester encoded)
 //print full Paradox Prox ID and some bit format details if found
-int CmdParadoxDemod(const char *Cmd)
-{
+int CmdParadoxDemod(const char *Cmd) {
     //raw fsk demod no manchester decoding no start bit finding just get binary from wave
     uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
     size_t size = getFromGraphBuf(bits);
@@ -143,14 +140,12 @@ int CmdParadoxDemod(const char *Cmd)
 }
 //by marshmellow
 //see ASKDemod for what args are accepted
-int CmdParadoxRead(const char *Cmd)
-{
+int CmdParadoxRead(const char *Cmd) {
     lf_read(true, 10000);
     return CmdParadoxDemod(Cmd);
 }
 
-int CmdParadoxSim(const char *Cmd)
-{
+int CmdParadoxSim(const char *Cmd) {
 
     char cmdp = param_getchar(Cmd, 0);
     if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_paradox_sim();
@@ -197,15 +192,13 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFParadox(const char *Cmd)
-{
+int CmdLFParadox(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }

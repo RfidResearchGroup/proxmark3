@@ -12,16 +12,14 @@
 #include "mfkey.h"
 
 // MIFARE
-int compare_uint64(const void *a, const void *b)
-{
+int compare_uint64(const void *a, const void *b) {
     if (*(uint64_t *)b == *(uint64_t *)a) return 0;
     if (*(uint64_t *)b < * (uint64_t *)a) return 1;
     return -1;
 }
 
 // create the intersection (common members) of two sorted lists. Lists are terminated by -1. Result will be in list1. Number of elements is returned.
-uint32_t intersection(uint64_t *listA, uint64_t *listB)
-{
+uint32_t intersection(uint64_t *listA, uint64_t *listB) {
     if (listA == NULL || listB == NULL)
         return 0;
 
@@ -44,8 +42,7 @@ uint32_t intersection(uint64_t *listA, uint64_t *listB)
 
 // Darkside attack (hf mf mifare)
 // if successful it will return a list of keys, not just one.
-uint32_t nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint32_t ar, uint64_t par_info, uint64_t ks_info, uint64_t **keys)
-{
+uint32_t nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint32_t ar, uint64_t par_info, uint64_t ks_info, uint64_t **keys) {
     struct Crypto1State *states;
     uint32_t i, pos;
     uint8_t bt, ks3x[8], par[8][8];
@@ -90,8 +87,7 @@ uint32_t nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint32_t ar, uint64_t
 }
 
 // recover key from 2 different reader responses on same tag challenge
-bool mfkey32(nonces_t data, uint64_t *outputkey)
-{
+bool mfkey32(nonces_t data, uint64_t *outputkey) {
     struct Crypto1State *s, *t;
     uint64_t outkey = 0;
     uint64_t key = 0;     // recovered key
@@ -123,8 +119,7 @@ bool mfkey32(nonces_t data, uint64_t *outputkey)
 
 // recover key from 2 reader responses on 2 different tag challenges
 // skip "several found keys".  Only return true if ONE key is found
-bool mfkey32_moebius(nonces_t data, uint64_t *outputkey)
-{
+bool mfkey32_moebius(nonces_t data, uint64_t *outputkey) {
     struct Crypto1State *s, *t;
     uint64_t outkey  = 0;
     uint64_t key     = 0; // recovered key
@@ -156,8 +151,7 @@ bool mfkey32_moebius(nonces_t data, uint64_t *outputkey)
 }
 
 // recover key from reader response and tag response of one authentication sequence
-int mfkey64(nonces_t data, uint64_t *outputkey)
-{
+int mfkey64(nonces_t data, uint64_t *outputkey) {
     uint64_t key = 0;  // recovered key
     uint32_t ks2;      // keystream used to encrypt reader response
     uint32_t ks3;      // keystream used to encrypt tag response

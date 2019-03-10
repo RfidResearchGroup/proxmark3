@@ -65,8 +65,7 @@ static const u32 ht2_f5c = 0x7907287B;        // 0111 1001 0000 0111 0010 1000 0
 #define ht2bs_5c(a,b,c,d,e) (~((((((c^e)|d)&a)^b)&(c^b))^(((d^e)|a)&((d^b)|c))))
 #define uf20bs              u32
 
-static u32 f20(const u64 x)
-{
+static u32 f20(const u64 x) {
     u32 i5;
 
     i5 = ((ht2_f4a >> i4(x, 1, 2, 4, 5)) & 1) * 1
@@ -77,8 +76,7 @@ static u32 f20(const u64 x)
 
     return (ht2_f5c >> i5) & 1;
 }
-static u64 hitag2_round(u64 *state)
-{
+static u64 hitag2_round(u64 *state) {
     u64 x = *state;
 
     x = (x >> 1)
@@ -90,8 +88,7 @@ static u64 hitag2_round(u64 *state)
     *state = x;
     return f20(x);
 }
-static u64 hitag2_init(const u64 key, const u32 serial, const u32 IV)
-{
+static u64 hitag2_init(const u64 key, const u32 serial, const u32 IV) {
     u32 i;
     u64 x = ((key & 0xFFFF) << 32) + serial;
     for (i = 0; i < 32; i++) {
@@ -100,8 +97,7 @@ static u64 hitag2_init(const u64 key, const u32 serial, const u32 IV)
     }
     return x;
 }
-static u32 hitag2_byte(u64 *x)
-{
+static u32 hitag2_byte(u64 *x) {
     u32 i, c;
 
     for (i = 0, c = 0; i < 8; i++)
@@ -148,8 +144,7 @@ static u32 hitag2_byte(u64 *x)
  * Implementation of the crc8 calculation from Hitag S
  * from http://www.proxmark.org/files/Documents/125%20kHz%20-%20Hitag/HitagS.V11.pdf
  */
-void calc_crc(unsigned char *crc, unsigned char data, unsigned char Bitcount)
-{
+void calc_crc(unsigned char *crc, unsigned char data, unsigned char Bitcount) {
     *crc ^= data; // crc = crc (exor) data
     do {
         if (*crc & 0x80) { // if (MSB-CRC == 1)
@@ -161,8 +156,7 @@ void calc_crc(unsigned char *crc, unsigned char data, unsigned char Bitcount)
     } while (--Bitcount);
 }
 
-static void hitag_send_bit(int bit)
-{
+static void hitag_send_bit(int bit) {
     LED_A_ON();
     // Reset clock for the next bit
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
@@ -264,8 +258,7 @@ static void hitag_send_bit(int bit)
     }
 }
 
-static void hitag_send_frame(const byte_t *frame, size_t frame_len)
-{
+static void hitag_send_frame(const byte_t *frame, size_t frame_len) {
 // Send start of frame
 
     for (size_t i = 0; i < sof_bits; i++) {
@@ -280,8 +273,7 @@ static void hitag_send_frame(const byte_t *frame, size_t frame_len)
     LOW(GPIO_SSC_DOUT);
 }
 
-static void hitag_reader_send_bit(int bit)
-{
+static void hitag_reader_send_bit(int bit) {
 //Dbprintf("BIT: %d",bit);
     LED_A_ON();
 // Reset clock for the next bit
@@ -337,8 +329,7 @@ static void hitag_reader_send_bit(int bit)
     LED_A_OFF();
 }
 
-static void hitag_reader_send_frame(const byte_t *frame, size_t frame_len)
-{
+static void hitag_reader_send_frame(const byte_t *frame, size_t frame_len) {
 // Send the content of the frame
     for (size_t i = 0; i < frame_len; i++) {
         if (frame[0] == 0xf8) {
@@ -360,8 +351,7 @@ static void hitag_reader_send_frame(const byte_t *frame, size_t frame_len)
 /*
  * to check if the right uid was selected
  */
-static int check_select(byte_t *rx, uint32_t uid)
-{
+static int check_select(byte_t *rx, uint32_t uid) {
     unsigned char resp[48];
     int i;
     uint32_t ans = 0x0;
@@ -382,8 +372,7 @@ static int check_select(byte_t *rx, uint32_t uid)
  * handles all commands from a reader
  */
 static void hitagS_handle_reader_command(byte_t *rx, const size_t rxlen,
-                                         byte_t *tx, size_t *txlen)
-{
+                                         byte_t *tx, size_t *txlen) {
     byte_t rx_air[HITAG_FRAME_LEN];
     byte_t page;
     int i;
@@ -679,7 +668,7 @@ static void hitagS_handle_reader_command(byte_t *rx, const size_t rxlen,
                         break;
                 }
                 if ((tag.LCON && page == 1)
-                    || (tag.LKP && (page == 2 || page == 3))) {
+                        || (tag.LKP && (page == 2 || page == 3))) {
                     //deny
                     *txlen = 0;
                 } else {
@@ -732,8 +721,7 @@ static void hitagS_handle_reader_command(byte_t *rx, const size_t rxlen,
  * to autenticate to a tag with the given key or challenge
  */
 static int hitagS_handle_tag_auth(hitag_function htf, uint64_t key, uint64_t NrAr, byte_t *rx, const size_t rxlen, byte_t *tx,
-                                  size_t *txlen)
-{
+                                  size_t *txlen) {
     byte_t rx_air[HITAG_FRAME_LEN];
     int response_bit[200];
     int i, j, z, k;
@@ -945,8 +933,7 @@ static int hitagS_handle_tag_auth(hitag_function htf, uint64_t key, uint64_t NrA
 /*
  * Emulates a Hitag S Tag with the given data from the .hts file
  */
-void SimulateHitagSTag(bool tag_mem_supplied, byte_t *data)
-{
+void SimulateHitagSTag(bool tag_mem_supplied, byte_t *data) {
     int frame_count;
     int response;
     int overflow;
@@ -1172,8 +1159,7 @@ void SimulateHitagSTag(bool tag_mem_supplied, byte_t *data)
  * If the key was given the password will be decrypted.
  * Reads every page of a hitag S transpoder.
  */
-void ReadHitagS(hitag_function htf, hitag_data *htd)
-{
+void ReadHitagS(hitag_function htf, hitag_data *htd) {
     int i, j, z, k;
     int frame_count;
     int response_bit[200];
@@ -1518,8 +1504,7 @@ void ReadHitagS(hitag_function htf, hitag_data *htd)
  * Authenticates to the Tag with the given Key or Challenge.
  * Writes the given 32Bit data into page_
  */
-void WritePageHitagS(hitag_function htf, hitag_data *htd, int page_)
-{
+void WritePageHitagS(hitag_function htf, hitag_data *htd, int page_) {
     int frame_count;
     int response;
     byte_t rx[HITAG_FRAME_LEN];
@@ -1727,7 +1712,7 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page_)
         // All timer values are in terms of T0 units
 
         while (AT91C_BASE_TC0->TC_CV
-               < T0 * (t_wait + (HITAG_T_TAG_HALF_PERIOD * lastbit)))
+                < T0 * (t_wait + (HITAG_T_TAG_HALF_PERIOD * lastbit)))
             ;
 
         // Transmit the reader frame
@@ -1835,8 +1820,7 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page_)
  * is not received correctly due to Antenna problems. This function
  * detects these challenges.
  */
-void check_challenges(bool file_given, byte_t *data)
-{
+void check_challenges(bool file_given, byte_t *data) {
     int i, j, z, k;
     byte_t uid_byte[4];
     int frame_count;
@@ -2060,7 +2044,7 @@ void check_challenges(bool file_given, byte_t *data)
         // All timer values are in terms of T0 units
 
         while (AT91C_BASE_TC0->TC_CV
-               < T0 * (t_wait + (HITAG_T_TAG_HALF_PERIOD * lastbit)))
+                < T0 * (t_wait + (HITAG_T_TAG_HALF_PERIOD * lastbit)))
             ;
 
         // Transmit the reader frame

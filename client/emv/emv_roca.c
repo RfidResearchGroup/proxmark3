@@ -29,8 +29,7 @@ static uint8_t g_primes[ROCA_PRINTS_LENGTH] = {
 
 mbedtls_mpi g_prints[ROCA_PRINTS_LENGTH];
 
-void rocacheck_init(void)
-{
+void rocacheck_init(void) {
 
     for (int i = 0; i < ROCA_PRINTS_LENGTH; i++)
         mbedtls_mpi_init(&g_prints[i]);
@@ -54,14 +53,12 @@ void rocacheck_init(void)
     mbedtls_mpi_read_string(&g_prints[16], 10, "126304807362733370595828809000324029340048915994");
 }
 
-void rocacheck_cleanup(void)
-{
+void rocacheck_cleanup(void) {
     for (int i = 0; i < ROCA_PRINTS_LENGTH; i++)
         mbedtls_mpi_free(&g_prints[i]);
 }
 
-int bitand_is_zero(mbedtls_mpi *a, mbedtls_mpi *b)
-{
+int bitand_is_zero(mbedtls_mpi *a, mbedtls_mpi *b) {
 
     for (int i = 0; i < mbedtls_mpi_bitlen(a); i++) {
 
@@ -72,8 +69,7 @@ int bitand_is_zero(mbedtls_mpi *a, mbedtls_mpi *b)
 }
 
 
-mbedtls_mpi_uint mpi_get_uint(const mbedtls_mpi *X)
-{
+mbedtls_mpi_uint mpi_get_uint(const mbedtls_mpi *X) {
 
     if (X->n == 1 && X->s > 0) {
         return X->p[0];
@@ -82,8 +78,7 @@ mbedtls_mpi_uint mpi_get_uint(const mbedtls_mpi *X)
     return 0;
 }
 
-void print_mpi(const char *msg, int radix, const mbedtls_mpi *X)
-{
+void print_mpi(const char *msg, int radix, const mbedtls_mpi *X) {
 
     char Xchar[400] = {0};
     size_t len = 0;
@@ -92,8 +87,7 @@ void print_mpi(const char *msg, int radix, const mbedtls_mpi *X)
     printf("%s[%ld] %s\n", msg, len, Xchar);
 }
 
-bool emv_rocacheck(const unsigned char *buf, size_t buflen, bool verbose)
-{
+bool emv_rocacheck(const unsigned char *buf, size_t buflen, bool verbose) {
 
     mbedtls_mpi t_modulus;
     mbedtls_mpi_init(&t_modulus);
@@ -144,8 +138,7 @@ cleanup:
     return ret;
 }
 
-int roca_self_test(void)
-{
+int roca_self_test(void) {
     int ret = 0;
 
     PrintAndLogEx(INFO, "ROCA check vulnerability tests");

@@ -28,9 +28,8 @@ class ProxWidget;
 /**
  * @brief The actual plot, black area were we paint the graph
  */
-class Plot: public QWidget
-{
-private:
+class Plot: public QWidget {
+  private:
     QWidget *master;
     int GraphStart;
     double GraphPixelsPerPoint;
@@ -45,10 +44,10 @@ private:
     void setMaxAndStart(int *buffer, int len, QRect plotRect);
     QColor getColor(int graphNum);
 
-public:
+  public:
     Plot(QWidget *parent = 0);
 
-protected:
+  protected:
     void paintEvent(QPaintEvent *event);
     void closeEvent(QCloseEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
@@ -60,22 +59,21 @@ class ProxGuiQT;
 /**
  * The window with plot and controls
  */
-class ProxWidget : public QWidget
-{
+class ProxWidget : public QWidget {
     Q_OBJECT; //needed for slot/signal classes
 
-private:
+  private:
     ProxGuiQT *master;
     Plot *plot;
     Ui::Form *opsController;
     QWidget *controlWidget;
 
-public:
+  public:
     ProxWidget(QWidget *parent = 0, ProxGuiQT *master = NULL);
     ~ProxWidget(void);
     //OpsShow(void);
 
-protected:
+  protected:
     //  void paintEvent(QPaintEvent *event);
     void closeEvent(QCloseEvent *event);
     void showEvent(QShowEvent *event);
@@ -83,7 +81,7 @@ protected:
     //  void mouseMoveEvent(QMouseEvent *event);
     //  void mousePressEvent(QMouseEvent *event) { mouseMoveEvent(event); }
     //  void keyPressEvent(QKeyEvent *event);
-public slots:
+  public slots:
     void applyOperation();
     void stickOperation();
     void vchange_autocorr(int v);
@@ -92,24 +90,22 @@ public slots:
     void vchange_dthr_down(int v);
 };
 
-class WorkerThread : public QThread
-{
+class WorkerThread : public QThread {
     Q_OBJECT;
-public:
+  public:
     WorkerThread(char *, char *, bool);
     ~WorkerThread();
     void run();
-private:
+  private:
     char *script_cmds_file = NULL;
     char *script_cmd = NULL;
     bool usb_present;
 };
 
-class ProxGuiQT : public QObject
-{
+class ProxGuiQT : public QObject {
     Q_OBJECT;
 
-private:
+  private:
     QApplication *plotapp;
     ProxWidget *plotwidget;
     int argc;
@@ -117,7 +113,7 @@ private:
     //void (*main_func)(void);
     WorkerThread *proxmarkThread;
 
-public:
+  public:
     ProxGuiQT(int argc, char **argv, WorkerThread *wthread);
     ~ProxGuiQT(void);
     void ShowGraphWindow(void);
@@ -126,14 +122,14 @@ public:
     void MainLoop(void);
     void Exit(void);
 
-private slots:
+  private slots:
     void _ShowGraphWindow(void);
     void _RepaintGraphWindow(void);
     void _HideGraphWindow(void);
     void _Exit(void);
     void _StartProxmarkThread(void);
 
-signals:
+  signals:
     void ShowGraphWindowSignal(void);
     void RepaintGraphWindowSignal(void);
     void HideGraphWindowSignal(void);

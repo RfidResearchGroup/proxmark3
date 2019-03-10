@@ -4,8 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     struct Crypto1State *s, *t;
     uint64_t key;     // recovered key
     uint32_t uid;     // serial number

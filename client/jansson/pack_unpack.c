@@ -50,8 +50,7 @@ static const char *const type_names[] = {
 static const char unpack_value_starters[] = "{[siIbfFOon";
 
 static void scanner_init(scanner_t *s, json_error_t *error,
-                         size_t flags, const char *fmt)
-{
+                         size_t flags, const char *fmt) {
     s->error = error;
     s->flags = flags;
     s->fmt = s->start = fmt;
@@ -64,8 +63,7 @@ static void scanner_init(scanner_t *s, json_error_t *error,
     s->has_error = 0;
 }
 
-static void next_token(scanner_t *s)
-{
+static void next_token(scanner_t *s) {
     const char *t;
     s->prev_token = s->token;
 
@@ -103,15 +101,13 @@ static void next_token(scanner_t *s)
     s->fmt = t;
 }
 
-static void prev_token(scanner_t *s)
-{
+static void prev_token(scanner_t *s) {
     s->next_token = s->token;
     s->token = s->prev_token;
 }
 
 static void set_error(scanner_t *s, const char *source, enum json_error_code code,
-                      const char *fmt, ...)
-{
+                      const char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
 
@@ -129,8 +125,7 @@ static json_t *pack(scanner_t *s, va_list *ap);
 /* ours will be set to 1 if jsonp_free() must be called for the result
    afterwards */
 static char *read_string(scanner_t *s, va_list *ap,
-                         const char *purpose, size_t *out_len, int *ours, int optional)
-{
+                         const char *purpose, size_t *out_len, int *ours, int optional) {
     char t;
     strbuffer_t strbuff;
     const char *str;
@@ -222,8 +217,7 @@ static char *read_string(scanner_t *s, va_list *ap,
     return strbuffer_steal_value(&strbuff);
 }
 
-static json_t *pack_object(scanner_t *s, va_list *ap)
-{
+static json_t *pack_object(scanner_t *s, va_list *ap) {
     json_t *object = json_object();
     next_token(s);
 
@@ -288,8 +282,7 @@ error:
     return NULL;
 }
 
-static json_t *pack_array(scanner_t *s, va_list *ap)
-{
+static json_t *pack_array(scanner_t *s, va_list *ap) {
     json_t *array = json_array();
     next_token(s);
 
@@ -336,8 +329,7 @@ error:
     return NULL;
 }
 
-static json_t *pack_string(scanner_t *s, va_list *ap)
-{
+static json_t *pack_string(scanner_t *s, va_list *ap) {
     char *str;
     char t;
     size_t len;
@@ -366,8 +358,7 @@ static json_t *pack_string(scanner_t *s, va_list *ap)
     return json_stringn_nocheck(str, len);
 }
 
-static json_t *pack_object_inter(scanner_t *s, va_list *ap, int need_incref)
-{
+static json_t *pack_object_inter(scanner_t *s, va_list *ap, int need_incref) {
     json_t *json;
     char ntoken;
 
@@ -396,8 +387,7 @@ static json_t *pack_object_inter(scanner_t *s, va_list *ap, int need_incref)
     return NULL;
 }
 
-static json_t *pack_integer(scanner_t *s, json_int_t value)
-{
+static json_t *pack_integer(scanner_t *s, json_int_t value) {
     json_t *json = json_integer(value);
 
     if (!json) {
@@ -408,8 +398,7 @@ static json_t *pack_integer(scanner_t *s, json_int_t value)
     return json;
 }
 
-static json_t *pack_real(scanner_t *s, double value)
-{
+static json_t *pack_real(scanner_t *s, double value) {
     /* Allocate without setting value so we can identify OOM error. */
     json_t *json = json_real(0.0);
 
@@ -432,8 +421,7 @@ static json_t *pack_real(scanner_t *s, double value)
     return json;
 }
 
-static json_t *pack(scanner_t *s, va_list *ap)
-{
+static json_t *pack(scanner_t *s, va_list *ap) {
     switch (token(s)) {
         case '{':
             return pack_object(s, ap);
@@ -475,8 +463,7 @@ static json_t *pack(scanner_t *s, va_list *ap)
 
 static int unpack(scanner_t *s, json_t *root, va_list *ap);
 
-static int unpack_object(scanner_t *s, json_t *root, va_list *ap)
-{
+static int unpack_object(scanner_t *s, json_t *root, va_list *ap) {
     int ret = -1;
     int strict = 0;
     int gotopt = 0;
@@ -604,8 +591,7 @@ out:
     return ret;
 }
 
-static int unpack_array(scanner_t *s, json_t *root, va_list *ap)
-{
+static int unpack_array(scanner_t *s, json_t *root, va_list *ap) {
     size_t i = 0;
     int strict = 0;
 
@@ -673,8 +659,7 @@ static int unpack_array(scanner_t *s, json_t *root, va_list *ap)
     return 0;
 }
 
-static int unpack(scanner_t *s, json_t *root, va_list *ap)
-{
+static int unpack(scanner_t *s, json_t *root, va_list *ap) {
     switch (token(s)) {
         case '{':
             return unpack_object(s, root, ap);
@@ -824,8 +809,7 @@ static int unpack(scanner_t *s, json_t *root, va_list *ap)
 }
 
 json_t *json_vpack_ex(json_error_t *error, size_t flags,
-                      const char *fmt, va_list ap)
-{
+                      const char *fmt, va_list ap) {
     scanner_t s;
     va_list ap_copy;
     json_t *value;
@@ -858,8 +842,7 @@ json_t *json_vpack_ex(json_error_t *error, size_t flags,
     return value;
 }
 
-json_t *json_pack_ex(json_error_t *error, size_t flags, const char *fmt, ...)
-{
+json_t *json_pack_ex(json_error_t *error, size_t flags, const char *fmt, ...) {
     json_t *value;
     va_list ap;
 
@@ -870,8 +853,7 @@ json_t *json_pack_ex(json_error_t *error, size_t flags, const char *fmt, ...)
     return value;
 }
 
-json_t *json_pack(const char *fmt, ...)
-{
+json_t *json_pack(const char *fmt, ...) {
     json_t *value;
     va_list ap;
 
@@ -883,8 +865,7 @@ json_t *json_pack(const char *fmt, ...)
 }
 
 int json_vunpack_ex(json_t *root, json_error_t *error, size_t flags,
-                    const char *fmt, va_list ap)
-{
+                    const char *fmt, va_list ap) {
     scanner_t s;
     va_list ap_copy;
 
@@ -920,8 +901,7 @@ int json_vunpack_ex(json_t *root, json_error_t *error, size_t flags,
     return 0;
 }
 
-int json_unpack_ex(json_t *root, json_error_t *error, size_t flags, const char *fmt, ...)
-{
+int json_unpack_ex(json_t *root, json_error_t *error, size_t flags, const char *fmt, ...) {
     int ret;
     va_list ap;
 
@@ -932,8 +912,7 @@ int json_unpack_ex(json_t *root, json_error_t *error, size_t flags, const char *
     return ret;
 }
 
-int json_unpack(json_t *root, const char *fmt, ...)
-{
+int json_unpack(json_t *root, const char *fmt, ...) {
     int ret;
     va_list ap;
 

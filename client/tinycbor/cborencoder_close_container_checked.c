@@ -49,8 +49,7 @@
  *
  * \sa cbor_encoder_create_array(), cbor_encoder_create_map()
  */
-CborError cbor_encoder_close_container_checked(CborEncoder *encoder, const CborEncoder *containerEncoder)
-{
+CborError cbor_encoder_close_container_checked(CborEncoder *encoder, const CborEncoder *containerEncoder) {
     return cbor_encoder_close_container(encoder, containerEncoder);
 }
 

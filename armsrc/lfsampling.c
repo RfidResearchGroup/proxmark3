@@ -18,8 +18,7 @@ Default LF config is set to:
     */
 sample_config config = { 1, 8, 1, 95, 0 } ;
 
-void printConfig()
-{
+void printConfig() {
     Dbprintf("LF Sampling config");
     Dbprintf("  [q] divisor.............%d (%d KHz)", config.divisor, 12000 / (config.divisor + 1));
     Dbprintf("  [b] bps.................%d", config.bits_per_sample);
@@ -39,8 +38,7 @@ void printConfig()
  * @brief setSamplingConfig
  * @param sc
  */
-void setSamplingConfig(sample_config *sc)
-{
+void setSamplingConfig(sample_config *sc) {
     if (sc->divisor != 0) config.divisor = sc->divisor;
     if (sc->bits_per_sample != 0) config.bits_per_sample = sc->bits_per_sample;
     if (sc->trigger_threshold != -1) config.trigger_threshold = sc->trigger_threshold;
@@ -52,8 +50,7 @@ void setSamplingConfig(sample_config *sc)
     printConfig();
 }
 
-sample_config *getSamplingConfig()
-{
+sample_config *getSamplingConfig() {
     return &config;
 }
 
@@ -68,8 +65,7 @@ struct BitstreamOut {
  * @param stream
  * @param bit
  */
-void pushBit(BitstreamOut *stream, uint8_t bit)
-{
+void pushBit(BitstreamOut *stream, uint8_t bit) {
     int bytepos = stream->position >> 3; // divide by 8
     int bitpos = stream->position & 7;
     *(stream->buffer + bytepos) |= (bit > 0) << (7 - bitpos);
@@ -84,8 +80,7 @@ void pushBit(BitstreamOut *stream, uint8_t bit)
 *                  0 or 95 ==> 125 KHz
 *
 **/
-void LFSetupFPGAForADC(int divisor, bool lf_field)
-{
+void LFSetupFPGAForADC(int divisor, bool lf_field) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     if ((divisor == 1) || (divisor < 0) || (divisor > 255))
         FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
@@ -121,8 +116,7 @@ void LFSetupFPGAForADC(int divisor, bool lf_field)
  * @param silent - is true, now outputs are made. If false, dbprints the status
  * @return the number of bits occupied by the samples.
  */
-uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averaging, int trigger_threshold, bool silent, int bufsize, uint32_t cancel_after)
-{
+uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averaging, int trigger_threshold, bool silent, int bufsize, uint32_t cancel_after) {
 
     uint8_t *dest = BigBuf_get_addr();
     bufsize = (bufsize > 0 && bufsize < BigBuf_max_traceLen()) ? bufsize : BigBuf_max_traceLen();
@@ -224,12 +218,10 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
  * @param silent
  * @return number of bits sampled
  */
-uint32_t DoAcquisition_default(int trigger_threshold, bool silent)
-{
+uint32_t DoAcquisition_default(int trigger_threshold, bool silent) {
     return DoAcquisition(1, 8, 0, trigger_threshold, silent, 0, 0);
 }
-uint32_t DoAcquisition_config(bool silent, int sample_size)
-{
+uint32_t DoAcquisition_config(bool silent, int sample_size) {
     return DoAcquisition(config.decimation
                          , config.bits_per_sample
                          , config.averaging
@@ -239,13 +231,11 @@ uint32_t DoAcquisition_config(bool silent, int sample_size)
                          , 0);
 }
 
-uint32_t DoPartialAcquisition(int trigger_threshold, bool silent, int sample_size, uint32_t cancel_after)
-{
+uint32_t DoPartialAcquisition(int trigger_threshold, bool silent, int sample_size, uint32_t cancel_after) {
     return DoAcquisition(1, 8, 0, trigger_threshold, silent, sample_size, cancel_after);
 }
 
-uint32_t ReadLF(bool activeField, bool silent, int sample_size)
-{
+uint32_t ReadLF(bool activeField, bool silent, int sample_size) {
     if (!silent)
         printConfig();
     LFSetupFPGAForADC(config.divisor, activeField);
@@ -256,8 +246,7 @@ uint32_t ReadLF(bool activeField, bool silent, int sample_size)
 * Initializes the FPGA for reader-mode (field on), and acquires the samples.
 * @return number of bits sampled
 **/
-uint32_t SampleLF(bool printCfg, int sample_size)
-{
+uint32_t SampleLF(bool printCfg, int sample_size) {
     BigBuf_Clear_ext(false);
     uint32_t ret = ReadLF(true, printCfg, sample_size);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -267,8 +256,7 @@ uint32_t SampleLF(bool printCfg, int sample_size)
 * Initializes the FPGA for snoop-mode (field off), and acquires the samples.
 * @return number of bits sampled
 **/
-uint32_t SnoopLF()
-{
+uint32_t SnoopLF() {
     BigBuf_Clear_ext(false);
     uint32_t ret = ReadLF(false, true, 0);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -279,8 +267,7 @@ uint32_t SnoopLF()
 * acquisition of T55x7 LF signal. Similar to other LF, but adjusted with @marshmellows thresholds
 * the data is collected in BigBuf.
 **/
-void doT55x7Acquisition(size_t sample_size)
-{
+void doT55x7Acquisition(size_t sample_size) {
 
 #define T55xx_READ_UPPER_THRESHOLD 128+60  // 60 grph
 #define T55xx_READ_LOWER_THRESHOLD 128-60  // -60 grph
@@ -350,8 +337,7 @@ void doT55x7Acquisition(size_t sample_size)
 #ifndef COTAG_BITS
 #define COTAG_BITS 264
 #endif
-void doCotagAcquisition(size_t sample_size)
-{
+void doCotagAcquisition(size_t sample_size) {
 
     uint8_t *dest = BigBuf_get_addr();
     uint16_t bufsize = BigBuf_max_traceLen();
@@ -401,8 +387,7 @@ void doCotagAcquisition(size_t sample_size)
     }
 }
 
-uint32_t doCotagAcquisitionManchester()
-{
+uint32_t doCotagAcquisitionManchester() {
 
     uint8_t *dest = BigBuf_get_addr();
     uint16_t bufsize = BigBuf_max_traceLen();

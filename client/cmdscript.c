@@ -39,8 +39,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int str_ends_with(const char *str, const char *suffix)
-{
+int str_ends_with(const char *str, const char *suffix) {
 
     if (str == NULL || suffix == NULL)
         return 0;
@@ -57,8 +56,7 @@ int str_ends_with(const char *str, const char *suffix)
 /**
  * Utility to check the ending of a string (used to check file suffix)
  */
-bool endsWith(char *base, char *str)
-{
+bool endsWith(char *base, char *str) {
     int blen = strlen(base);
     int slen = strlen(str);
     return (blen >= slen) && (0 == strcmp(base + blen - slen, str));
@@ -69,8 +67,7 @@ bool endsWith(char *base, char *str)
 * generate a file listing of the script-directory for files
 * ending with .lua
 */
-int CmdScriptList(const char *Cmd)
-{
+int CmdScriptList(const char *Cmd) {
 
     char const *exedir = get_my_executable_directory();
     if (exedir == NULL)
@@ -104,8 +101,7 @@ int CmdScriptList(const char *Cmd)
  * @param argv
  * @return
  */
-int CmdScriptRun(const char *Cmd)
-{
+int CmdScriptRun(const char *Cmd) {
     // create new Lua state
     lua_State *lua_state;
     lua_state = luaL_newstate();
@@ -182,8 +178,7 @@ static command_t CommandTable[] = {
  * @param Cmd
  * @return
  */
-int CmdScript(const char *Cmd)
-{
+int CmdScript(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
@@ -195,8 +190,7 @@ int CmdScript(const char *Cmd)
  * @param Cmd
  * @return
  */
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
     PrintAndLogEx(NORMAL, "This is a feature to run Lua-scripts. You can place lua-scripts within the scripts/-folder. ");
     return 0;
 }

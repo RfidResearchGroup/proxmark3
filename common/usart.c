@@ -44,8 +44,7 @@ static uint8_t us_outbuf[sizeof(UsbCommand)];
 /// Reads data from an USART peripheral
 /// \param data  Pointer to the buffer where the received data will be stored.
 /// \param len  Size of the data buffer (in bytes).
-inline int16_t usart_readbuffer(uint8_t *data, size_t len)
-{
+inline int16_t usart_readbuffer(uint8_t *data, size_t len) {
 
     // Check if the first PDC bank is free
     if (!(pUS1->US_RCR)) {
@@ -69,8 +68,7 @@ inline int16_t usart_readbuffer(uint8_t *data, size_t len)
 
 
 // transfer from device to client
-inline int16_t usart_writebuffer(uint8_t *data, size_t len)
-{
+inline int16_t usart_writebuffer(uint8_t *data, size_t len) {
 
     // Check if the first PDC bank is free
     if (!(pUS1->US_TCR)) {
@@ -94,8 +92,7 @@ inline int16_t usart_writebuffer(uint8_t *data, size_t len)
     }
 }
 
-void usart_init(void)
-{
+void usart_init(void) {
 
     // disable & reset receiver / transmitter for configuration
     pUS1->US_CR = (AT91C_US_RSTRX | AT91C_US_RSTTX | AT91C_US_RXDIS | AT91C_US_TXDIS);

@@ -31,8 +31,7 @@
     this way. Multi-threaded programs should use uselocale() instead.
 */
 
-static void to_locale(strbuffer_t *strbuffer)
-{
+static void to_locale(strbuffer_t *strbuffer) {
     const char *point;
     char *pos;
 
@@ -47,8 +46,7 @@ static void to_locale(strbuffer_t *strbuffer)
         *pos = *point;
 }
 
-static void from_locale(char *buffer)
-{
+static void from_locale(char *buffer) {
     const char *point;
     char *pos;
 
@@ -64,8 +62,7 @@ static void from_locale(char *buffer)
 }
 #endif
 
-int jsonp_strtod(strbuffer_t *strbuffer, double *out)
-{
+int jsonp_strtod(strbuffer_t *strbuffer, double *out) {
     double value;
     char *end;
 
@@ -86,8 +83,7 @@ int jsonp_strtod(strbuffer_t *strbuffer, double *out)
     return 0;
 }
 
-int jsonp_dtostr(char *buffer, size_t size, double value, int precision)
-{
+int jsonp_dtostr(char *buffer, size_t size, double value, int precision) {
     int ret;
     char *start, *end;
     size_t length;
@@ -110,7 +106,7 @@ int jsonp_dtostr(char *buffer, size_t size, double value, int precision)
     /* Make sure there's a dot or 'e' in the output. Otherwise
        a real is converted to an integer when decoding */
     if (strchr(buffer, '.') == NULL &&
-        strchr(buffer, 'e') == NULL) {
+            strchr(buffer, 'e') == NULL) {
         if (length + 3 >= size) {
             /* No space to append ".0" */
             return -1;
