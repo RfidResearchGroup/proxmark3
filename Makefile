@@ -23,6 +23,23 @@ else
   PATHSEP=\\#
 endif
 
+ifeq ($(PLATFORM),)
+  -include Makefile.platform
+  ifeq ($(PLATFORM),)
+    PLATFORM=PM3RDV4
+  else
+    ${info using saved PLATFORM '$(PLATFORM)'}
+  endif
+endif
+
+include common/Makefile.hal
+
+$(info ===================================================================)
+$(info PLATFORM: $(PLATFORM))
+$(info $(PLTNAME))
+$(info Included supports: $(PLATFORM_DEFS))
+$(info ===================================================================)
+
 all clean: %: client/% bootrom/% armsrc/% recovery/% mfkey/% nonce2key/%
 
 mfkey/%: FORCE

@@ -8,10 +8,27 @@
 
 APP_INCLUDES = apps.h
 
+# This Makefile might have been called directly, not via the root Makefile, so:
+ifeq ($(PLTNAME),)
+  -include ../Makefile.platform
+  ifeq ($(PLATFORM),)
+    PLATFORM=PM3RDV4
+  else
+    ${info using saved PLATFORM '$(PLATFORM)'}
+  endif
+  include ../common/Makefile.hal
+  $(info ===================================================================)
+  $(info PLATFORM: $(PLATFORM))
+  $(info $(PLTNAME))
+  $(info Included supports: $(PLATFORM_DEFS))
+  $(info ===================================================================)
+endif
+
 #remove one of the following defines and comment out the relevant line
 #in the next section to remove that particular feature from compilation.
 # NO space,TABs after the "\" sign.
-APP_CFLAGS = -DWITH_CRC \
+APP_CFLAGS = $(PLATFORM_DEFS) \
+			 -DWITH_CRC \
 			 -DON_DEVICE \
 			 -DWITH_LF \
 			 -DWITH_HITAG \
@@ -21,8 +38,6 @@ APP_CFLAGS = -DWITH_CRC \
 			 -DWITH_ISO14443a \
 			 -DWITH_ICLASS \
 			 -DWITH_FELICA \
- 			 -DWITH_FLASH \
-			 -DWITH_SMARTCARD \
 			 -DWITH_HFSNOOP \
 			 -DWITH_LF_SAMYRUN \
 			 -fno-strict-aliasing -ffunction-sections -fdata-sections

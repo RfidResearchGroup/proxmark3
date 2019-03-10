@@ -21,13 +21,13 @@ platform = $(shell uname)
 all:
 
 CROSS  ?= arm-none-eabi-
-CC	= $(CROSS)gcc
-AS	= $(CROSS)as
-LD	= $(CROSS)ld
+CC = $(CROSS)gcc
+AS = $(CROSS)as
+LD = $(CROSS)ld
 OBJCOPY = $(CROSS)objcopy
 GZIP=gzip
 
-OBJDIR	= obj
+OBJDIR = obj
 
 INCLUDE = -I../include -I../common -I.
 

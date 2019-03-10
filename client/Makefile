@@ -4,6 +4,22 @@
 # the license.
 #-----------------------------------------------------------------------------
 
+# This Makefile might have been called directly, not via the root Makefile, so:
+ifeq ($(PLTNAME),)
+  -include ../Makefile.platform
+  ifeq ($(PLATFORM),)
+    PLATFORM=PM3RDV4
+  else
+    ${info using saved PLATFORM '$(PLATFORM)'}
+  endif
+  include ../common/Makefile.hal
+  $(info ===================================================================)
+  $(info PLATFORM: $(PLATFORM))
+  $(info $(PLTNAME))
+  $(info Included supports: $(PLATFORM_DEFS))
+  $(info ===================================================================)
+endif
+
 # reveng will compile without macros, but these may be useful:
 # Add -DBMPMACRO to use bitmap size constant macros (edit config.h)
 # Add -DNOFORCE  to disable the -F switch
@@ -90,8 +106,7 @@ else
     QTGUIOBJS = $(OBJDIR)/guidummy.o
 endif
 
-# RDV40 flag enables flashmemory commands in client.  comment out if you don't have rdv40
-CFLAGS += -DWITH_FLASH -DWITH_SMARTCARD
+CFLAGS += $(PLATFORM_DEFS)
 
 # Flags to generate temporary dependency files
 DEPFLAGS = -MT $@ -MMD -MP -MF $(OBJDIR)/$*.Td

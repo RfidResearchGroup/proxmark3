@@ -1,0 +1,56 @@
+define KNOWN_PLATFORMS
+
++--------------------------------------------------------+
+| PLATFORM      | DESCRIPTION                            |
++--------------------------------------------------------+
+| PM3RDV4 (def) | Proxmark3 rdv4      with AT91SAM7S512  |
++--------------------------------------------------------+
+| PM3EVO        | Proxmark3 EVO       with AT91SAM7S512  |
++--------------------------------------------------------+
+| PM3EASY       | Proxmark3 rdv3 Easy with AT91SAM7S256  |
++--------------------------------------------------------+
+| PM3RDV2       | Proxmark3 rdv2      with AT91SAM7S512  |
++--------------------------------------------------------+
+| PM3OLD256     | Proxmark3 V1        with AT91SAM7S256  |
++--------------------------------------------------------+
+| PM3OLD512     | Proxmark3 V1        with AT91SAM7S512  |
++--------------------------------------------------------+
+
+Options to define platform:
+(1) Run make with PLATFORM specified as follows:
+make PLATFORM=PM3EASY
+
+(2) Save a file called Makefile.platform with contents:
+PLATFORM=PM3EASY
+
+endef
+
+PLTNAME = Unknown Platform
+
+ifeq ($(PLATFORM),PM3RDV4)
+  MCU = AT91SAM7S512
+  PLATFORM_DEFS = -DWITH_SMARTCARD -DWITH_FLASH
+  PLTNAME = Proxmark3 rdv4
+else ifeq ($(PLATFORM),PM3EVO)
+  MCU = AT91SAM7S512
+  PLTNAME = Proxmark3 EVO
+else ifeq ($(PLATFORM),PM3EASY)
+  MCU = AT91SAM7S256
+  PLTNAME = Proxmark3 rdv3 Easy
+else ifeq ($(PLATFORM),PM3RDV2)
+  MCU = AT91SAM7S512
+  PLTNAME = Proxmark3 rdv2
+else ifeq ($(PLATFORM),PM3OLD256)
+  MCU = AT91SAM7S256
+  PLTNAME = Proxmark3 V1 with AT91SAM7S256
+else ifeq ($(PLATFORM),PM3OLD512)
+  MCU = AT91SAM7S512
+  PLTNAME = Proxmark3 V1 with AT91SAM7S512
+else
+  $(error Invalid or empty PLATFORM: $(PLATFORM). Known platforms: $(KNOWN_PLATFORMS))
+endif
+
+export PLATFORM
+export PLTNAME
+export MCU
+export PLATFORM_DEFS
