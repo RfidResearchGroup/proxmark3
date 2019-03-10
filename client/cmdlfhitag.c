@@ -29,6 +29,24 @@ size_t nbytes(size_t nbits) {
     return (nbits / 8) + ((nbits % 8) > 0);
 }
 
+int usage_hitag_reader(void)
+{
+    PrintAndLogEx(NORMAL, "Usage: lf hitag reader [h] <reader function #>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h          This help");
+    PrintAndLogEx(NORMAL, "   HitagS (0*)");
+    PrintAndLogEx(NORMAL, "      01 <nr> <ar>     Challenge, read all pages from a Hitag S tag");
+    PrintAndLogEx(NORMAL, "      02 <key>         Set to 0 if no authentication is needed. Read all pages from a Hitag S tag");
+    PrintAndLogEx(NORMAL, "   Hitag1 (1*)");
+    PrintAndLogEx(NORMAL, "   Hitag2 (2*)");
+    PrintAndLogEx(NORMAL, "      21 <password>    Password mode");
+    PrintAndLogEx(NORMAL, "      22 <nr> <ar>     Authentication");
+    PrintAndLogEx(NORMAL, "      23 <key>         Authentication, key is in format: ISK high + ISK low");
+    PrintAndLogEx(NORMAL, "      25               Test recorded authentications");
+    PrintAndLogEx(NORMAL, "      26               Just read UID");    
+    return 0;
+}
+
 int CmdLFHitagList(const char *Cmd) {
     uint8_t *got = calloc(USB_CMD_DATA_SIZE, sizeof(uint8_t));
     if (!got) {
@@ -201,62 +219,49 @@ int CmdLFHitagSim(const char *Cmd) {
 
 int CmdLFHitagReader(const char *Cmd) {
 
-    UsbCommand c = {CMD_READER_HITAG, {0, 0, 0} }; //, {param_get32ex(Cmd,0,0,10),param_get32ex(Cmd,1,0,16),param_get32ex(Cmd,2,0,16),param_get32ex(Cmd,3,0,16)}};
+    UsbCommand c = {CMD_READER_HITAG, {0, 0, 0} };
     hitag_data *htd = (hitag_data *)c.d.asBytes;
     hitag_function htf = param_get32ex(Cmd, 0, 0, 10);
 
     switch (htf) {
-        case 01: { //RHTSF_CHALLENGE
+        case RHTSF_CHALLENGE: {
             c.cmd = CMD_READ_HITAG_S;
             num_to_bytes(param_get32ex(Cmd, 1, 0, 16), 4, htd->auth.NrAr);
             num_to_bytes(param_get32ex(Cmd, 2, 0, 16), 4, htd->auth.NrAr + 4);
-        }
         break;
-        case 02: { //RHTSF_KEY
+        }
+        case RHTSF_KEY: {
             c.cmd = CMD_READ_HITAG_S;
             num_to_bytes(param_get64ex(Cmd, 1, 0, 16), 6, htd->crypto.key);
-        }
         break;
+        }
         case RHT2F_PASSWORD: {
             num_to_bytes(param_get32ex(Cmd, 1, 0, 16), 4, htd->pwd.password);
-        }
         break;
+        }
         case RHT2F_AUTHENTICATE: {
             num_to_bytes(param_get32ex(Cmd, 1, 0, 16), 4, htd->auth.NrAr);
             num_to_bytes(param_get32ex(Cmd, 2, 0, 16), 4, htd->auth.NrAr + 4);
-        }
         break;
+        }
         case RHT2F_CRYPTO: {
             num_to_bytes(param_get64ex(Cmd, 1, 0, 16), 6, htd->crypto.key);
-        }
         break;
+        }
         case RHT2F_TEST_AUTH_ATTEMPTS: {
             // No additional parameters needed
-        } break;
+            break;
+        }
         case RHT2F_UID_ONLY: {
             // No additional parameters needed
-        } break;
+            break;
+        }
         default: {
             PrintAndLogEx(NORMAL, "\nError: unkown reader function %d", htf);
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(NORMAL, "Usage: hitag reader <Reader Function #>");
-            PrintAndLogEx(NORMAL, "Reader Functions:");
-            PrintAndLogEx(NORMAL, " HitagS (0*)");
-            PrintAndLogEx(NORMAL, "  01 <nr> <ar> (Challenge) read all pages from a Hitag S tag");
-            PrintAndLogEx(NORMAL, "  02 <key> (set to 0 if no authentication is needed) read all pages from a Hitag S tag");
-            PrintAndLogEx(NORMAL, " Hitag1 (1*)");
-            PrintAndLogEx(NORMAL, " Hitag2 (2*)");
-            PrintAndLogEx(NORMAL, "  21 <password> (password mode)");
-            PrintAndLogEx(NORMAL, "  22 <nr> <ar> (authentication)");
-            PrintAndLogEx(NORMAL, "  23 <key> (authentication) key is in format: ISK high + ISK low");
-            PrintAndLogEx(NORMAL, "  25 (test recorded authentications)");
-            PrintAndLogEx(NORMAL, "  26 just read UID");
-            return 1;
+            return usage_hitag_reader();
         }
-        break;
     }
 
-    // Copy the hitag2 function into the first argument
     c.arg[0] = htf;
     clearCommandBuffer();
     SendCommand(&c);
@@ -266,7 +271,6 @@ int CmdLFHitagReader(const char *Cmd) {
         return 1;
     }
 
-    // Check the return status, stored in the first argument
     if (resp.arg[0] == false) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - hitag failed");
         return 1;
