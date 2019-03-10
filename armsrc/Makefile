@@ -23,12 +23,12 @@ APP_CFLAGS = -DWITH_CRC \
 			 -DWITH_FELICA \
  			 -DWITH_FLASH \
 			 -DWITH_SMARTCARD \
-			 -DWITH_FPC \
 			 -DWITH_HFSNOOP \
 			 -DWITH_LF_SAMYRUN \
 			 -fno-strict-aliasing -ffunction-sections -fdata-sections
 
 ### IMPORTANT -  move the commented variable below this line
+#			 -DWITH_FPC \
 #			 -DWITH_LCD \
 #			 -DWITH_EMV \
 #
