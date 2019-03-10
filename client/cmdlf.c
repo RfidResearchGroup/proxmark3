@@ -215,7 +215,7 @@ int CmdFlexdemod(const char *Cmd) {
     }
 
     if (start == size - LONG_WAIT) {
-        PrintAndLogEx(NORMAL, "nothing to wait for");
+		PrintAndLogEx(WARNING, "nothing to wait for");
         return 0;
     }
 
@@ -239,9 +239,9 @@ int CmdFlexdemod(const char *Cmd) {
         for (j = 0; j < 16; j++)
             sum += data[i++];
 
-        if (sum > 0 && bits[bit] != 1) PrintAndLogEx(NORMAL, "oops1 at %d", bit);
+        if (sum > 0 && bits[bit] != 1) PrintAndLogEx(WARNING, "oops1 at %d", bit);
 
-        if (sum < 0 && bits[bit] != 0) PrintAndLogEx(NORMAL, "oops2 at %d", bit);
+        if (sum < 0 && bits[bit] != 0) PrintAndLogEx(WARNING, "oops2 at %d", bit);
 
     }
 
