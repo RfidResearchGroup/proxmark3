@@ -9,11 +9,11 @@ tinycbor_SOURCES = \
     cborpretty.c \
     cbortojson.c \
     cborvalidation.c \
-	
+
 CFILES = $(filter %.c, $(tinycbor_SOURCES))
 CMDOBJS = $(CFILES:%.c=%.o)
 CLEAN = $(CMDOBJS)
-	
+
 CC= gcc
 CFLAGS= -O2 -Wall -Wno-unused-variable -Wno-unused-function
 LIBS=  $(SYSLIBS) $(MYLIBS)
@@ -34,13 +34,13 @@ MYOBJS=
 all: $(CMDOBJS)
 	$(AR) $(LIB_A) $(CMDOBJS)
 	$(RANLIB) $(LIB_A)
-	
+
 clean:
 	$(RM) $(CLEAN)
 	$(RM) $(LIB_A)
-	
+
 %.o: %.c
 	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(CFLAGS) -c -o $@ $< $(LIBS)
-	
+
 .PHONY: all clean
 

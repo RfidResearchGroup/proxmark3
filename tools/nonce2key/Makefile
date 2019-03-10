@@ -16,5 +16,5 @@ all: $(OBJS) $(EXES)
 % : %.c
 	$(LD) $(LDFLAGS) -o $@ $(OBJS) $<
 
-clean: 
+clean:
 	rm -f $(OBJS) $(EXES) $(WINEXES)

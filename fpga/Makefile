@@ -34,6 +34,6 @@ fpga_lf.ngc: fpga_lf.v fpga.ucf xst_lf.scr util.v clk_divider.v lo_edge_detect.v
 help:
 	@echo Multi-OS Makefile, you are running on $(DETECTED_OS)
 	@echo Possible targets:
-	@echo +	all   - Make fpga.bit, the FPGA bitstream 
+	@echo +	all   - Make fpga.bit, the FPGA bitstream
 	@echo +	clean - Clean intermediate files, does not clean fpga.bit
-	
+

@@ -39,13 +39,13 @@ CXXFLAGS = -I../include -Wall -O3
 
 LUAPLATFORM = generic
 platform = $(shell uname)
-ifneq (,$(findstring MINGW,$(platform))) 
+ifneq (,$(findstring MINGW,$(platform)))
     LUAPLATFORM = mingw
 else
 	ifeq ($(platform),Darwin)
     LUAPLATFORM = macosx
 	OBJCSRCS = util_darwin.m
-	LDFLAGS += -framework Foundation -framework AppKit	
+	LDFLAGS += -framework Foundation -framework AppKit
 else
     LUALIB +=  -ldl
     LDLIBS +=  -ltermcap -lncurses
@@ -59,7 +59,7 @@ QTLDLIBS = $(shell pkg-config --libs Qt5Core Qt5Widgets 2>/dev/null)
 MOC = $(shell pkg-config --variable=host_bins Qt5Core)/moc
 UIC = $(shell pkg-config --variable=host_bins Qt5Core)/uic
 ifeq ($(QTINCLUDES), )
-# if Qt5 not found check for correctly configured Qt4	
+# if Qt5 not found check for correctly configured Qt4
 	QTINCLUDES = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null)
 	QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
 	MOC = $(shell pkg-config --variable=moc_location QtCore)
@@ -91,7 +91,7 @@ else
 endif
 
 # RDV40 flag enables flashmemory commands in client.  comment out if you don't have rdv40
-CFLAGS += -DWITH_FLASH -DWITH_SMARTCARD 
+CFLAGS += -DWITH_FLASH -DWITH_SMARTCARD
 
 # Flags to generate temporary dependency files
 DEPFLAGS = -MT $@ -MMD -MP -MF $(OBJDIR)/$*.Td
@@ -232,7 +232,7 @@ endif
 ifeq ($(MULTIARCHSRCS), )
 	CMDSRCS += hardnested/hardnested_bf_core.c hardnested/hardnested_bitarray_core.c
 endif
-		
+
 ZLIBSRCS = deflate.c adler32.c trees.c zutil.c inflate.c inffast.c inftrees.c
 ZLIBFLAGS = -DZ_SOLO -DZ_PREFIX -DNO_GZIP -DZLIB_PM3_TUNED
 #-DDEBUG -Dverbose=1
@@ -271,7 +271,7 @@ WINBINS = $(patsubst %, %.exe, $(BINS))
 CLEAN = $(BINS) $(WINBINS) $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(ZLIBOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(OBJDIR)/*.o *.moc.cpp ui/ui_overlays.h lualibs/usb_cmd.lua lualibs/mf_default_keys.lua
 
 # need to assign dependancies to build these first...
-all: lua_build jansson_build mbedtls_build cbor_build $(BINS) 
+all: lua_build jansson_build mbedtls_build cbor_build $(BINS)
 
 all-static: LDLIBS:=-static $(LDLIBS)
 all-static: proxmark3 flasher fpga_compress
@@ -279,7 +279,7 @@ all-static: proxmark3 flasher fpga_compress
 proxmark3: LDLIBS+=$(LUALIB) $(JANSSONLIB) $(MBEDTLSLIB) $(CBORLIB) $(QTLDLIBS)
 proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(ZLIBOBJS) lualibs/usb_cmd.lua lualibs/mf_default_keys.lua
 	$(LD) $(LDFLAGS) $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(ZLIBOBJS) $(LDLIBS)  -o $@
-	
+
 flasher: $(OBJDIR)/flash.o $(OBJDIR)/flasher.o $(COREOBJS) $(OBJCOBJS)
 	$(LD) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
@@ -299,7 +299,7 @@ lualibs/usb_cmd.lua: ../include/usb_cmd.h
 
 lualibs/mf_default_keys.lua : default_keys.dic
 	awk -f default_keys_dic2lua.awk $^ > $@
-	
+
 clean:
 	$(RM) $(CLEAN)
 	cd ../liblua && $(MAKE) clean
@@ -313,7 +313,7 @@ tarbin: $(BINS)
 lua_build:
 	@echo Compiling liblua, using platform $(LUAPLATFORM)
 	cd ../liblua && $(MAKE) $(LUAPLATFORM)
-	
+
 jansson_build:
 	@echo Compiling jansson
 	cd $(JANSSONLIBPATH) && $(MAKE) all
@@ -321,15 +321,15 @@ jansson_build:
 mbedtls_build:
 	@echo Compiling mbedtls
 	cd $(MBEDTLSLIBPATH) && $(MAKE) all
-	
+
 cbor_build:
 	@echo Compiling tinycbor
 	cd $(CBORLIBPATH) && $(MAKE) all
-	
+
 .PHONY: all clean
 
 # easy printing of MAKE VARIABLES
-print-%: ; @echo $* = $($*) 
+print-%: ; @echo $* = $($*)
 
 $(OBJDIR)/%_NOSIMD.o : %.c $(OBJDIR)/%.d
 	$(CC) $(DEPFLAGS) $(CFLAGS) $(HARD_SWITCH_NOSIMD) -c -o $@ $<
@@ -363,7 +363,7 @@ $(OBJDIR)/%.o : %.cpp $(OBJDIR)/%.d
 $(OBJDIR)/%.o : %.m $(OBJDIR)/%.d
 	$(CC) $(DEPFLAGS) $(CFLAGS) -c -o $@ $<
 	$(POSTCOMPILE)
-	
+
 #$(CMDOBJS) $(COREOBJS): $(notdir $(%.c)) %.d
 #	$(CC) $(DEPFLAGS) $(CFLAGS) -c -o $@ $<
 #	$(POSTCOMPILE)

@@ -10,7 +10,7 @@ APP_INCLUDES = apps.h
 
 #remove one of the following defines and comment out the relevant line
 #in the next section to remove that particular feature from compilation.
-# NO space,TABs after the "\" sign.  
+# NO space,TABs after the "\" sign.
 APP_CFLAGS = -DWITH_CRC \
 			 -DON_DEVICE \
 			 -DWITH_LF \
@@ -48,11 +48,11 @@ SRC_LCD = fonts.c LCD.c
 SRC_LF = lfops.c hitag2.c hitagS.c lfsampling.c pcf7931.c lfdemod.c
 SRC_ISO15693 = iso15693.c iso15693tools.c
 #SRC_ISO14443a = iso14443a.c mifareutil.c mifarecmd.c epa.c mifaresim.c
-SRC_ISO14443a = iso14443a.c mifareutil.c mifarecmd.c epa.c 
+SRC_ISO14443a = iso14443a.c mifareutil.c mifarecmd.c epa.c
 SRC_ISO14443b = iso14443b.c
 SRC_FELICA = felica.c
 SRC_CRAPTO1 = crypto1.c des.c aes.c desfire_key.c desfire_crypto.c mifaredesfire.c
-SRC_CRC = crc.c crc16.c crc32.c 
+SRC_CRC = crc.c crc16.c crc32.c
 SRC_ICLASS = iclass.c optimized_cipher.c
 SRC_LEGIC = legicrf.c legicrfsim.c legic_prng.c
 SRC_BEE = bee.c
@@ -61,19 +61,19 @@ SRC_BEE = bee.c
 ifneq (,$(findstring WITH_FLASH,$(APP_CFLAGS)))
 	SRC_FLASH = flashmem.c
 else
-	SRC_FLASH = 
+	SRC_FLASH =
 endif
 
 ifneq (,$(findstring WITH_SMARTCARD,$(APP_CFLAGS)))
 	SRC_SMARTCARD = i2c.c
 else
-	SRC_SMARTCARD = 
+	SRC_SMARTCARD =
 endif
 
 ifneq (,$(findstring WITH_FPC,$(APP_CFLAGS)))
 	SRC_FPC = usart.c
 else
-	SRC_FPC = 
+	SRC_FPC =
 endif
 
 # Generic standalone Mode injection of source code
@@ -92,7 +92,7 @@ ifneq (,$(findstring WITH_LF_PROXBRUTE,$(APP_CFLAGS)))
 endif
 # WITH_LF_HIDBRUTE
 ifneq (,$(findstring WITH_LF_HIDBRUTE,$(APP_CFLAGS)))
-	SRC_STANDALONE = lf_hidbrute.c 
+	SRC_STANDALONE = lf_hidbrute.c
 endif
 # WITH_HF_YOUNG
 ifneq (,$(findstring WITH_HF_YOUNG,$(APP_CFLAGS)))
@@ -160,16 +160,16 @@ ARMSRC = fpgaloader.c \
 	parity.c \
 	usb_cdc.c \
 	cmd.c
-	
+
 VERSIONSRC = version.c \
 	fpga_version_info.c
-	
+
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
 include ../common/Makefile.common
 
-COMMON_FLAGS =  -Os 
+COMMON_FLAGS =  -Os
 
-OBJS = $(OBJDIR)/fullimage.s19 
+OBJS = $(OBJDIR)/fullimage.s19
 FPGA_COMPRESSOR = ../client/fpga_compress
 
 all: $(OBJS)
@@ -179,7 +179,7 @@ all: $(OBJS)
 # version.c should be remade on every compilation
 .PHONY: version.c
 version.c: default_version.c
-	perl ../tools/mkversion.pl .. > $@ || $(COPY) $^ $@ 
+	perl ../tools/mkversion.pl .. > $@ || $(COPY) $^ $@
 
 fpga_version_info.c: $(FPGA_BITSTREAMS) $(FPGA_COMPRESSOR)
 	$(FPGA_COMPRESSOR) -v $(filter %.bit,$^) $@
@@ -188,17 +188,17 @@ $(OBJDIR)/fpga_all.o: $(OBJDIR)/fpga_all.bit.z
 	$(OBJCOPY) -O elf32-littlearm -I binary -B arm --prefix-sections=fpga_all_bit $^ $@
 
 $(OBJDIR)/fpga_all.bit.z: $(FPGA_BITSTREAMS) $(FPGA_COMPRESSOR)
-	$(FPGA_COMPRESSOR) $(filter %.bit,$^) $@  
+	$(FPGA_COMPRESSOR) $(filter %.bit,$^) $@
 
 $(FPGA_COMPRESSOR):
 		$(MAKE) -C ../client $(notdir $(FPGA_COMPRESSOR))
-		
+
 $(OBJDIR)/fullimage.stage1.elf: $(VERSIONOBJ) $(OBJDIR)/fpga_all.o $(THUMBOBJ) $(ARMOBJ)
 	$(CC) $(LDFLAGS) -Wl,-T,ldscript,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
 
 $(OBJDIR)/fullimage.nodata.bin: $(OBJDIR)/fullimage.stage1.elf
 	$(OBJCOPY) -O binary -I elf32-littlearm --remove-section .data $^ $@
-	
+
 $(OBJDIR)/fullimage.nodata.o: $(OBJDIR)/fullimage.nodata.bin
 	$(OBJCOPY) -O elf32-littlearm -I binary -B arm --rename-section .data=stage1_image $^ $@
 
@@ -206,8 +206,8 @@ $(OBJDIR)/fullimage.data.bin: $(OBJDIR)/fullimage.stage1.elf
 	$(OBJCOPY) -O binary -I elf32-littlearm --only-section .data $^ $@
 
 $(OBJDIR)/fullimage.data.bin.z: $(OBJDIR)/fullimage.data.bin $(FPGA_COMPRESSOR)
-	$(FPGA_COMPRESSOR) $(filter %.bin,$^) $@  
-	
+	$(FPGA_COMPRESSOR) $(filter %.bin,$^) $@
+
 $(OBJDIR)/fullimage.data.o: $(OBJDIR)/fullimage.data.bin.z
 	$(OBJCOPY) -O elf32-littlearm -I binary -B arm --rename-section .data=compressed_data $^ $@
 

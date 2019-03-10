@@ -13,6 +13,6 @@ fullimage.bin: ../armsrc/obj/fullimage.elf
 proxmark3_recovery.bin: bootrom.bin fullimage.bin
 	cat bootrom.bin fullimage.bin > $@
 
-clean: 
+clean:
 	rm -f $(BINS)
 

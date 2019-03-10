@@ -7,7 +7,7 @@ OBJS = crapto1.o crypto1.o
 HEADERS = crapto1.h
 EXES = mfkey64 mfkey32 mfkey32v2
 WINEXE = $(patsubst %, %.exe, $(EXES))
-	
+
 all: $(OBJS) $(EXES)
 
 %.o : %.c
@@ -16,6 +16,6 @@ all: $(OBJS) $(EXES)
 % : %.c
 	$(LD) $(CFLAGS) -o $@ $(OBJS) $<
 
-clean: 
+clean:
 	rm -f $(OBJS) $(EXES) $(WINEXE)
 
