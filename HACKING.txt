@@ -258,9 +258,7 @@ you shouldn't use it (same for _FOOBAR_H).
 
 === WHITESPACE ===
 
-Avoid trailing whitespace (no line should end in tab or space). People forget
-this all the time if their editor doesn't handle it, but don't be surprised if
-you see someone fixing it from time to time.
-"make style" will take care of that.
-
+Avoid trailing whitespace (no line should end in tab or space).
 Keep a newline (blank line) at the end of each file.
+
+"make style" will take care of both.
