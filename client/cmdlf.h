@@ -65,7 +65,7 @@ extern int CmdLFaskSim(const char *Cmd);
 extern int CmdLFfskSim(const char *Cmd);
 extern int CmdLFpskSim(const char *Cmd);
 extern int CmdLFSimBidir(const char *Cmd);
-extern int CmdLFSnoop(const char *Cmd);
+extern int CmdLFSniff(const char *Cmd);
 extern int CmdVchDemod(const char *Cmd);
 extern int CmdLFfind(const char *Cmd);
 
@@ -74,7 +74,7 @@ extern bool lf_read(bool silent, uint32_t samples);
 // usages helptext
 extern int usage_lf_cmdread(void);
 extern int usage_lf_read(void);
-extern int usage_lf_snoop(void);
+extern int usage_lf_sniff(void);
 extern int usage_lf_config(void);
 extern int usage_lf_simfsk(void);
 extern int usage_lf_simask(void);

@@ -20,19 +20,19 @@ int usage_hf_search() {
     PrintAndLogEx(NORMAL, "");
     return 0;
 }
-int usage_hf_snoop() {
-    PrintAndLogEx(NORMAL, "Usage: hf snoop <skip pairs> <skip triggers>");
-    PrintAndLogEx(NORMAL, "The high frequence snoop will assign all available memory on device for snooped data");
-    PrintAndLogEx(NORMAL, "User the 'data samples' command to download from device,  and 'data plot' to look at it");
-    PrintAndLogEx(NORMAL, "Press button to quit the snooping.");
+int usage_hf_sniff() {
+    PrintAndLogEx(NORMAL, "Usage: hf sniff <skip pairs> <skip triggers>");
+    PrintAndLogEx(NORMAL, "The high frequence snoop will assign all available memory on device for sniffed data");
+    PrintAndLogEx(NORMAL, "User the " _YELLOW_("'data samples'") " command to download from device,  and " _YELLOW_("'data plot'") " to look at it");
+    PrintAndLogEx(NORMAL, "Press button to quit the sniffing.");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h               - This help");
     PrintAndLogEx(NORMAL, "       <skip pairs>    - skip sample pairs");
     PrintAndLogEx(NORMAL, "       <skip triggers> - skip number of triggers");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "           hf snoop");
-    PrintAndLogEx(NORMAL, "           hf snoop 1000 0");
+    PrintAndLogEx(NORMAL, "           hf sniff");
+    PrintAndLogEx(NORMAL, "           hf sniff 1000 0");
     return 0;
 }
 
@@ -43,40 +43,40 @@ int CmdHFSearch(const char *Cmd) {
 
     int ans = CmdHF14AInfo("s");
     if (ans > 0) {
-        PrintAndLogEx(SUCCESS, "\nValid ISO14443-A Tag Found\n");
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-A tag") " found\n");
         return ans;
     }
     ans = HF15Reader("", false);
     if (ans) {
-        PrintAndLogEx(SUCCESS, "\nValid ISO15693 Tag Found\n");
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO15693 tag") " found\n");
         return ans;
     }
     ans = HFLegicReader("", false);
     if (ans == 0) {
-        PrintAndLogEx(SUCCESS, "\nValid LEGIC Tag Found\n");
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("LEGIC tag") " found\n");
         return 1;
     }
     ans = CmdHFTopazReader("s");
     if (ans == 0) {
-        PrintAndLogEx(SUCCESS, "\nValid Topaz Tag Found\n");
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Topaz tag") " found\n");
         return 1;
     }
     // 14b and iclass is the longest test (put last)
     ans = HF14BReader(false); //CmdHF14BReader("s");
     if (ans) {
-        PrintAndLogEx(SUCCESS, "\nValid ISO14443-B Tag Found\n");
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-B tag") " found\n");
         return ans;
     }
     ans = HFiClassReader("", false, false);
     if (ans) {
-        PrintAndLogEx(SUCCESS, "\nValid iClass Tag (or PicoPass Tag) Found\n");
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("iClass tag / PicoPass tag") " found\n");
         return ans;
     }
 
     /*
     ans = CmdHFFelicaReader("s");
     if (ans) {
-        PrintAndLogEx(NORMAL, "\nValid ISO18092 / FeliCa Found\n");
+        PrintAndLogEx(NORMAL, "\nValid " _GREEN_("ISO18092 / FeliCa tag") " found\n");
         return ans;
     }
     */
@@ -93,9 +93,9 @@ int CmdHFTune(const char *Cmd) {
     return 0;
 }
 
-int CmdHFSnoop(const char *Cmd) {
+int CmdHFSniff(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_hf_snoop();
+    if (cmdp == 'h') return usage_hf_sniff();
 
     int skippairs =  param_get32ex(Cmd, 0, 0, 10);
     int skiptriggers =  param_get32ex(Cmd, 1, 0, 10);
@@ -124,7 +124,7 @@ static command_t CommandTable[] = {
     {"list",        CmdTraceList,     0, "List protocol data in trace buffer"},
     {"tune",        CmdHFTune,        0, "Continuously measure HF antenna tuning"},
     {"search",      CmdHFSearch,      1, "Search for known HF tags [preliminary]"},
-    {"snoop",       CmdHFSnoop,       0, "<samples to skip (10000)> <triggers to skip (1)> Generic HF Snoop"},
+    {"sniff",       CmdHFSniff,       0, "<samples to skip (10000)> <triggers to skip (1)> Generic HF Sniff"},
     {NULL, NULL, 0, NULL}
 };
 

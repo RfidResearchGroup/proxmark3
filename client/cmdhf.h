@@ -36,8 +36,8 @@
 extern int CmdHF(const char *Cmd);
 extern int CmdHFTune(const char *Cmd);
 extern int CmdHFSearch(const char *Cmd);
-extern int CmdHFSnoop(const char *Cmd);
+extern int CmdHFSniff(const char *Cmd);
 
 extern int usage_hf_search();
-extern int usage_hf_snoop();
+extern int usage_hf_sniff();
 #endif
