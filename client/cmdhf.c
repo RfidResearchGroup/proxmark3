@@ -42,7 +42,7 @@ int CmdHFSearch(const char *Cmd) {
     if (cmdp == 'h') return usage_hf_search();
 
     PrintAndLogEx(INFO, "Checking for known tags...\n");
-        
+
     int ans = CmdHF14AInfo("s");
     if (ans > 0) {
         PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-A tag") " found\n");

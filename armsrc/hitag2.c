@@ -1279,7 +1279,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
     }
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-    BigBuf_free();    
+    BigBuf_free();
     clear_trace();
     set_tracing(true);
 
@@ -1338,11 +1338,11 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
         // DbpString("Configured for hitag2 reader");
     } else {
         Dbprintf("Error, unknown hitag reader type: %d", htf);
-                goto out;
+        goto out;
     }
     uint8_t attempt_count = 0;
-    
-    while (!bStop && !BUTTON_PRESS() && !usb_poll_validate_length() ) {
+
+    while (!bStop && !BUTTON_PRESS() && !usb_poll_validate_length()) {
 
         WDT_HIT();
 
@@ -1376,7 +1376,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
                 attempt_count++; //attempt 3 times to get uid then quit
                 if (!bStop && attempt_count == 3)
                     bStop = true;
-                
+
                 break;
             }
             default: {
@@ -1474,8 +1474,8 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
             }
         }
     }
-    
-out:    
+
+out:
     LEDsoff();
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;

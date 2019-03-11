@@ -216,7 +216,7 @@ int CmdFlexdemod(const char *Cmd) {
     }
 
     if (start == size - LONG_WAIT) {
-		PrintAndLogEx(WARNING, "nothing to wait for");
+        PrintAndLogEx(WARNING, "nothing to wait for");
         return 0;
     }
 
@@ -839,12 +839,12 @@ bool CheckChipType(bool getDeviceData) {
 
     //check for t55xx chip...
     if (tryDetectP1(true)) {
-        PrintAndLogEx(SUCCESS, "\nChipset detection : " _GREEN_("Atmel T55xx") " found");        
+        PrintAndLogEx(SUCCESS, "\nChipset detection : " _GREEN_("Atmel T55xx") " found");
         PrintAndLogEx(SUCCESS, "Try " _YELLOW_("`lf t55xx`")" commands");
         retval = true;
         goto out;
     }
-    
+
 out:
     save_restoreGB(GRAPH_RESTORE);
     save_restoreDB(GRAPH_RESTORE);
@@ -945,19 +945,19 @@ int CmdLFfind(const char *Cmd) {
         bool st = true;
         if (ASKDemod_ext("0 0 0", true, false, 1, &st)) {
             PrintAndLogEx(NORMAL, "\nUnknown ASK Modulated and Manchester encoded Tag found!");
-            PrintAndLogEx(NORMAL, "if it does not look right it could instead be ASK/Biphase - try " _YELLOW_("'data rawdemod ab'") );
+            PrintAndLogEx(NORMAL, "if it does not look right it could instead be ASK/Biphase - try " _YELLOW_("'data rawdemod ab'"));
             goto out;
         }
 
         if (CmdPSK1rawDemod("")) {
             PrintAndLogEx(NORMAL, "Possible unknown PSK1 Modulated Tag found above!");
-            PrintAndLogEx(NORMAL, "    Could also be PSK2 - try " _YELLOW_("'data rawdemod p2'") );
+            PrintAndLogEx(NORMAL, "    Could also be PSK2 - try " _YELLOW_("'data rawdemod p2'"));
             PrintAndLogEx(NORMAL, "    Could also be PSK3 - [currently not supported]");
-            PrintAndLogEx(NORMAL, "    Could also be  NRZ - try " _YELLOW_("'data rawdemod nr") );
+            PrintAndLogEx(NORMAL, "    Could also be  NRZ - try " _YELLOW_("'data rawdemod nr"));
             goto out;
         }
 
-        PrintAndLogEx(FAILED, _RED_("\nNo data found!") );
+        PrintAndLogEx(FAILED, _RED_("\nNo data found!"));
     }
 out:
     // identify chipset

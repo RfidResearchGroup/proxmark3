@@ -29,8 +29,7 @@ size_t nbytes(size_t nbits) {
     return (nbits / 8) + ((nbits % 8) > 0);
 }
 
-int usage_hitag_reader(void)
-{
+int usage_hitag_reader(void) {
     PrintAndLogEx(NORMAL, "Usage: lf hitag reader [h] <reader function #>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h          This help");
@@ -43,7 +42,7 @@ int usage_hitag_reader(void)
     PrintAndLogEx(NORMAL, "      22 <nr> <ar>     Authentication");
     PrintAndLogEx(NORMAL, "      23 <key>         Authentication, key is in format: ISK high + ISK low");
     PrintAndLogEx(NORMAL, "      25               Test recorded authentications");
-    PrintAndLogEx(NORMAL, "      26               Just read UID");    
+    PrintAndLogEx(NORMAL, "      26               Just read UID");
     return 0;
 }
 
@@ -228,25 +227,25 @@ int CmdLFHitagReader(const char *Cmd) {
             c.cmd = CMD_READ_HITAG_S;
             num_to_bytes(param_get32ex(Cmd, 1, 0, 16), 4, htd->auth.NrAr);
             num_to_bytes(param_get32ex(Cmd, 2, 0, 16), 4, htd->auth.NrAr + 4);
-        break;
+            break;
         }
         case RHTSF_KEY: {
             c.cmd = CMD_READ_HITAG_S;
             num_to_bytes(param_get64ex(Cmd, 1, 0, 16), 6, htd->crypto.key);
-        break;
+            break;
         }
         case RHT2F_PASSWORD: {
             num_to_bytes(param_get32ex(Cmd, 1, 0, 16), 4, htd->pwd.password);
-        break;
+            break;
         }
         case RHT2F_AUTHENTICATE: {
             num_to_bytes(param_get32ex(Cmd, 1, 0, 16), 4, htd->auth.NrAr);
             num_to_bytes(param_get32ex(Cmd, 2, 0, 16), 4, htd->auth.NrAr + 4);
-        break;
+            break;
         }
         case RHT2F_CRYPTO: {
             num_to_bytes(param_get64ex(Cmd, 1, 0, 16), 6, htd->crypto.key);
-        break;
+            break;
         }
         case RHT2F_TEST_AUTH_ATTEMPTS: {
             // No additional parameters needed

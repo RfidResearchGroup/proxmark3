@@ -239,9 +239,9 @@ uint32_t ReadLF(bool activeField, bool silent, int sample_size) {
     if (!silent)
         printConfig();
     LFSetupFPGAForADC(config.divisor, activeField);
-	uint32_t ret = DoAcquisition_config(silent, sample_size);
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	return ret;
+    uint32_t ret = DoAcquisition_config(silent, sample_size);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    return ret;
 }
 
 /**
@@ -250,7 +250,7 @@ uint32_t ReadLF(bool activeField, bool silent, int sample_size) {
 **/
 uint32_t SampleLF(bool printCfg, int sample_size) {
     BigBuf_Clear_ext(false);
-	return ReadLF(true, printCfg, sample_size);
+    return ReadLF(true, printCfg, sample_size);
 }
 /**
 * Initializes the FPGA for snoop-mode (field off), and acquires the samples.
@@ -258,7 +258,7 @@ uint32_t SampleLF(bool printCfg, int sample_size) {
 **/
 uint32_t SnoopLF() {
     BigBuf_Clear_ext(false);
-	return ReadLF(false, true, 0);
+    return ReadLF(false, true, 0);
 }
 
 /**
@@ -427,12 +427,10 @@ uint32_t doCotagAcquisitionManchester() {
             if (sample > COTAG_ONE_THRESHOLD) {
                 prev = curr;
                 curr = 1;
-			}
-			else if ( sample < COTAG_ZERO_THRESHOLD) {
+            } else if (sample < COTAG_ZERO_THRESHOLD) {
                 prev = curr;
                 curr = 0;
-			}
-			else {
+            } else {
                 curr = prev;
             }
 
