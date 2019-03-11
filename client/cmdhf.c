@@ -16,15 +16,15 @@ int usage_hf_search() {
     PrintAndLogEx(NORMAL, "Usage: hf search");
     PrintAndLogEx(NORMAL, "Will try to find a HF read out of the unknown tag. Stops when found.");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h - This help");
+    PrintAndLogEx(NORMAL, "       h               - This help");
     PrintAndLogEx(NORMAL, "");
     return 0;
 }
 int usage_hf_sniff() {
-    PrintAndLogEx(NORMAL, "Usage: hf sniff <skip pairs> <skip triggers>");
     PrintAndLogEx(NORMAL, "The high frequence snoop will assign all available memory on device for sniffed data");
-    PrintAndLogEx(NORMAL, "User the " _YELLOW_("'data samples'") " command to download from device,  and " _YELLOW_("'data plot'") " to look at it");
-    PrintAndLogEx(NORMAL, "Press button to quit the sniffing.");
+    PrintAndLogEx(NORMAL, "Use " _YELLOW_("'data samples'")" command to download from device,  and " _YELLOW_("'data plot'")" to look at it");
+    PrintAndLogEx(NORMAL, "Press button to quit the sniffing.\n");
+    PrintAndLogEx(NORMAL, "Usage: hf sniff <skip pairs> <skip triggers>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h               - This help");
     PrintAndLogEx(NORMAL, "       <skip pairs>    - skip sample pairs");
@@ -41,6 +41,8 @@ int CmdHFSearch(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_search();
 
+    PrintAndLogEx(INFO, "Checking for known tags...\n");
+        
     int ans = CmdHF14AInfo("s");
     if (ans > 0) {
         PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-A tag") " found\n");

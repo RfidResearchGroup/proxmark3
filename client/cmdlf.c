@@ -42,12 +42,13 @@ int usage_lf_read(void) {
     return 0;
 }
 int usage_lf_sniff(void) {
-    PrintAndLogEx(NORMAL, "Sniff low frequence signal. Use " _YELLOW_("'lf config'") " to set parameters.");
+    PrintAndLogEx(NORMAL, "Sniff low frequence signal.");
+    PrintAndLogEx(NORMAL, "Use " _YELLOW_("'lf config'")" to set parameters.");
+    PrintAndLogEx(NORMAL, "Use " _YELLOW_("'data samples'")" command to download from device,  and " _YELLOW_("'data plot'")" to look at it");
+
     PrintAndLogEx(NORMAL, "Usage: lf sniff [h]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h         This help");
-    PrintAndLogEx(NORMAL, "This function takes no arguments. ");
-    PrintAndLogEx(NORMAL, "Use " _YELLOW_("'lf config'") " to set parameters.");
     return 0;
 }
 int usage_lf_config(void) {
@@ -875,7 +876,7 @@ int CmdLFfind(const char *Cmd) {
     PrintAndLogEx(INFO, "if it finds something that looks like a tag");
     PrintAndLogEx(INFO, "False Positives " _YELLOW_("ARE") "possible");
     PrintAndLogEx(INFO, "");
-    PrintAndLogEx(INFO, "Checking for known tags:\n");
+    PrintAndLogEx(INFO, "Checking for known tags...\n");
 
     // only run these tests if device is online
     if (isOnline) {
