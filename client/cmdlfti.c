@@ -210,11 +210,11 @@ int CmdTIDemod(const char *Cmd) {
 
     RepaintGraphWindow();
 
-    PrintAndLogEx(INFO, "raw tag bits = %s", bits);
+    PrintAndLogEx(DEBUG, "TI tag : raw tag bits | %s", bits);
 
     TagType = (shift3 >> 8) & 0xFF;
     if (TagType != ((shift0 >> 16) & 0xFF)) {
-        PrintAndLogEx(WARNING, "Error: start and stop bits do not match!");
+        PrintAndLogEx(DEBUG, "TI tag : Error: start and stop bits do not match!");
         goto out;
     } else if (TagType == 0x7E) {
         PrintAndLogEx(INFO, "Readonly TI tag detected.");
