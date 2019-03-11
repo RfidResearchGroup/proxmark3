@@ -239,7 +239,9 @@ uint32_t ReadLF(bool activeField, bool silent, int sample_size) {
     if (!silent)
         printConfig();
     LFSetupFPGAForADC(config.divisor, activeField);
-    return DoAcquisition_config(silent, sample_size);
+	uint32_t ret = DoAcquisition_config(silent, sample_size);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	return ret;
 }
 
 /**
@@ -248,9 +250,7 @@ uint32_t ReadLF(bool activeField, bool silent, int sample_size) {
 **/
 uint32_t SampleLF(bool printCfg, int sample_size) {
     BigBuf_Clear_ext(false);
-    uint32_t ret = ReadLF(true, printCfg, sample_size);
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    return ret;
+	return ReadLF(true, printCfg, sample_size);
 }
 /**
 * Initializes the FPGA for snoop-mode (field off), and acquires the samples.
@@ -258,9 +258,7 @@ uint32_t SampleLF(bool printCfg, int sample_size) {
 **/
 uint32_t SnoopLF() {
     BigBuf_Clear_ext(false);
-    uint32_t ret = ReadLF(false, true, 0);
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    return ret;
+	return ReadLF(false, true, 0);
 }
 
 /**
@@ -355,7 +353,6 @@ void doCotagAcquisition(size_t sample_size) {
 
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
             sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-            LED_D_OFF();
 
             // find first peak
             if (!firsthigh) {
@@ -406,7 +403,6 @@ uint32_t doCotagAcquisitionManchester() {
 
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
             sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-            LED_D_OFF();
 
             // find first peak
             if (!firsthigh) {
@@ -431,10 +427,12 @@ uint32_t doCotagAcquisitionManchester() {
             if (sample > COTAG_ONE_THRESHOLD) {
                 prev = curr;
                 curr = 1;
-            } else if (sample < COTAG_ZERO_THRESHOLD) {
+			}
+			else if ( sample < COTAG_ZERO_THRESHOLD) {
                 prev = curr;
                 curr = 0;
-            } else {
+			}
+			else {
                 curr = prev;
             }
 
