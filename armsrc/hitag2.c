@@ -156,8 +156,9 @@ static u64 _hitag2_round(u64 *state) {
 
 static u32 _hitag2_byte(u64 *x) {
     u32 i, c;
-
-    for (i = 0, c = 0; i < 8; i++) c += (u32) _hitag2_round(x) << (i ^ 7);
+    for (i = 0, c = 0; i < 8; i++) {
+        c += (u32) _hitag2_round(x) << (i ^ 7);
+    }
     return c;
 }
 
@@ -659,7 +660,6 @@ static bool hitag2_crypto(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *
     return true;
 }
 
-
 static bool hitag2_authenticate(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *txlen) {
     // Reset the transmission frame length
     *txlen = 0;
@@ -701,7 +701,6 @@ static bool hitag2_authenticate(uint8_t *rx, const size_t rxlen, uint8_t *tx, si
 
     return true;
 }
-
 
 static bool hitag2_test_auth_attempts(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *txlen) {
 
@@ -1225,14 +1224,8 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
     int tag_sof;
     int t_wait = HITAG_T_WAIT_MAX;
     bool bStop = false;
-    bool bQuitTraceFull = false;
 
     bSuccessful = false;
-
-    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-
-    clear_trace();
-    set_tracing(true);
 
     // Check configuration
     switch (htf) {
@@ -1240,12 +1233,10 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
             Dbprintf("List identifier in password mode");
             memcpy(password, htd->pwd.password, 4);
             blocknr = 0;
-            bQuitTraceFull = false;
             bQuiet = false;
             bPwd = false;
+            break;
         }
-        break;
-
         case RHT2F_AUTHENTICATE: {
             DbpString("Authenticating using nr,ar pair:");
             memcpy(NrAr, htd->auth.NrAr, 8);
@@ -1253,10 +1244,8 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
             bQuiet = false;
             bCrypto = false;
             bAuthenticating = false;
-            bQuitTraceFull = true;
+            break;
         }
-        break;
-
         case RHT2F_CRYPTO: {
             DbpString("Authenticating using key:");
             memcpy(key, htd->crypto.key, 6);  //HACK; 4 or 6??  I read both in the code.
@@ -1265,34 +1254,34 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
             bQuiet = false;
             bCrypto = false;
             bAuthenticating = false;
-            bQuitTraceFull = true;
+            break;
         }
-        break;
-
         case RHT2F_TEST_AUTH_ATTEMPTS: {
             Dbprintf("Testing %d authentication attempts", (auth_table_len / 8));
             auth_table_pos = 0;
             memcpy(NrAr, auth_table, 8);
-            bQuitTraceFull = false;
             bQuiet = false;
             bCrypto = false;
+            break;
         }
-        break;
         case RHT2F_UID_ONLY: {
             blocknr = 0;
             bQuiet = false;
             bCrypto = false;
             bAuthenticating = false;
-            bQuitTraceFull = true;
+            break;
         }
-        break;
         default: {
             Dbprintf("Error, unknown function: %d", htf);
             set_tracing(false);
             return;
         }
-        break;
     }
+
+    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+    BigBuf_free();    
+    clear_trace();
+    set_tracing(true);
 
     LED_D_ON();
     hitag2_init();
@@ -1303,12 +1292,9 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
 
     // Set fpga in edge detect with reader field, we can modulate as reader now
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD);
-    SpinDelay(20);
-
-    // Set Frequency divisor which will drive the FPGA and analog mux selection
     FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
     SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-    RELAY_OFF();
+//    RELAY_OFF();
 
     // Disable modulation at default, which means enable the field
     LOW(GPIO_SSC_DOUT);
@@ -1352,9 +1338,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
         // DbpString("Configured for hitag2 reader");
     } else {
         Dbprintf("Error, unknown hitag reader type: %d", htf);
-        set_tracing(false);
-        LED_D_OFF();
-        return;
+                goto out;
     }
     uint8_t attempt_count = 0;
     
@@ -1365,15 +1349,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
         // Check if frame was captured and store it
         if (rxlen > 0) {
             frame_count++;
-            if (!bQuiet) {
-                if (!LogTraceHitag(rx, rxlen, response, 0, false)) {
-                    DbpString("Trace full");
-                    if (bQuitTraceFull)
-                        break;
-                    else
-                        bQuiet = true;
-                }
-            }
+            LogTraceHitag(rx, rxlen, response, 0, false);
         }
 
         // By default reset the transmission buffer
@@ -1381,34 +1357,32 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
         switch (htf) {
             case RHT2F_PASSWORD: {
                 bStop = !hitag2_password(rx, rxlen, tx, &txlen);
+                break;
             }
-            break;
             case RHT2F_AUTHENTICATE: {
                 bStop = !hitag2_authenticate(rx, rxlen, tx, &txlen);
+                break;
             }
-            break;
             case RHT2F_CRYPTO: {
                 bStop = !hitag2_crypto(rx, rxlen, tx, &txlen, false);
+                break;
             }
-            break;
             case RHT2F_TEST_AUTH_ATTEMPTS: {
                 bStop = !hitag2_test_auth_attempts(rx, rxlen, tx, &txlen);
+                break;
             }
-            break;
             case RHT2F_UID_ONLY: {
                 bStop = !hitag2_read_uid(rx, rxlen, tx, &txlen);
                 attempt_count++; //attempt 3 times to get uid then quit
                 if (!bStop && attempt_count == 3)
                     bStop = true;
+                
+                break;
             }
-            break;
             default: {
                 Dbprintf("Error, unknown function: %d", htf);
-                set_tracing(false);
-                LED_D_OFF();
-                return;
+                goto out;
             }
-            break;
         }
 
         // Send and store the reader command
@@ -1431,16 +1405,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
         // Add transmitted frame to total count
         if (txlen > 0) {
             frame_count++;
-            if (!bQuiet) {
-                // Store the frame in the trace
-                if (!LogTraceHitag(tx, txlen, HITAG_T_WAIT_2, 0, true)) {
-                    if (bQuitTraceFull) {
-                        break;
-                    } else {
-                        bQuiet = true;
-                    }
-                }
-            }
+            LogTraceHitag(tx, txlen, HITAG_T_WAIT_2, 0, true);
         }
 
         // Reset values for receiving frames
@@ -1509,8 +1474,9 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
             }
         }
     }
-    LED_B_OFF();
-    LED_D_OFF();
+    
+out:    
+    LEDsoff();
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
