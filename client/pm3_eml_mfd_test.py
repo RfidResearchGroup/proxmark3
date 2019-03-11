@@ -21,7 +21,7 @@ class TestEmlMfd(unittest.TestCase):
             ]
     def test_eml2mfd(self):
         self.three_argument_test(pm3_eml2mfd.main, self.EML2MFD_TESTCASES)
-    
+
     def test_mfd2eml(self):
         self.three_argument_test(pm3_mfd2eml.main,
                 imap(reversed, self.EML2MFD_TESTCASES), c14n=hex_c14n)
