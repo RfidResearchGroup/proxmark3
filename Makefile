@@ -106,6 +106,7 @@ endif
 print-%: ; @echo $* = $($*)
 
 style:
+	@which astyle >/dev/null || ( echo "Please install 'astyle' package first" ; exit 1 )
 	find . \( -name "*.[ch]" -or -name "*.cpp" -or -name "*.lua" -or -name "Makefile" \) -exec perl -pi -e 's/[ \t\r]+$$//' {} \;
 	find . \( -name "*.[ch]" -or -name "*.cpp" \) -exec astyle --formatted --mode=c --suffix=none \
 	    --indent=spaces=4 --indent-switches --indent-preprocessor \
