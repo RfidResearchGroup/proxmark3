@@ -576,7 +576,7 @@ int CmdHFMFPWrbl(const char *cmd) {
         keylen = 16;
     }
 
-    if (blockNum > 39) {
+    if (blockNum > 255) {
         PrintAndLogEx(ERR, "<Block Num> must be in range [0..255] instead of: %d", blockNum);
         return 1;
     }
