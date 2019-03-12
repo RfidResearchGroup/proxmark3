@@ -740,50 +740,50 @@ void DbdecodeIso15693Answer(int len, uint8_t *d) {
 
     if (len > 3) {
         if (d[0] & (1 << 3))
-            strncat(status, "ProtExt ", DBD15STATLEN);
+            strncat(status, "ProtExt ", DBD15STATLEN - strlen(status));
         if (d[0] & 1) {
             // error
-            strncat(status, "Error ", DBD15STATLEN);
+            strncat(status, "Error ", DBD15STATLEN - strlen(status));
             switch (d[1]) {
                 case 0x01:
-                    strncat(status, "01: not supported", DBD15STATLEN);
+                    strncat(status, "01: not supported", DBD15STATLEN - strlen(status));
                     break;
                 case 0x02:
-                    strncat(status, "02: not recognized", DBD15STATLEN);
+                    strncat(status, "02: not recognized", DBD15STATLEN - strlen(status));
                     break;
                 case 0x03:
-                    strncat(status, "03: opt not supported", DBD15STATLEN);
+                    strncat(status, "03: opt not supported", DBD15STATLEN - strlen(status));
                     break;
                 case 0x0f:
-                    strncat(status, "0F: no info", DBD15STATLEN);
+                    strncat(status, "0F: no info", DBD15STATLEN - strlen(status));
                     break;
                 case 0x10:
-                    strncat(status, "10: dont exist", DBD15STATLEN);
+                    strncat(status, "10: dont exist", DBD15STATLEN - strlen(status));
                     break;
                 case 0x11:
-                    strncat(status, "11: lock again", DBD15STATLEN);
+                    strncat(status, "11: lock again", DBD15STATLEN - strlen(status));
                     break;
                 case 0x12:
-                    strncat(status, "12: locked", DBD15STATLEN);
+                    strncat(status, "12: locked", DBD15STATLEN - strlen(status));
                     break;
                 case 0x13:
-                    strncat(status, "13: program error", DBD15STATLEN);
+                    strncat(status, "13: program error", DBD15STATLEN - strlen(status));
                     break;
                 case 0x14:
-                    strncat(status, "14: lock error", DBD15STATLEN);
+                    strncat(status, "14: lock error", DBD15STATLEN - strlen(status));
                     break;
                 default:
-                    strncat(status, "unknown error", DBD15STATLEN);
+                    strncat(status, "unknown error", DBD15STATLEN - strlen(status));
             }
-            strncat(status, " ", DBD15STATLEN);
+            strncat(status, " ", DBD15STATLEN - strlen(status));
         } else {
-            strncat(status, "No error ", DBD15STATLEN);
+            strncat(status, "No error ", DBD15STATLEN - strlen(status));
         }
 
         if (CheckCrc(d, len))
-            strncat(status, "[+] crc OK", DBD15STATLEN);
+            strncat(status, "[+] crc OK", DBD15STATLEN - strlen(status));
         else
-            strncat(status, "[!] crc fail", DBD15STATLEN);
+            strncat(status, "[!] crc fail", DBD15STATLEN - strlen(status));
 
         if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("%s", status);
     }
