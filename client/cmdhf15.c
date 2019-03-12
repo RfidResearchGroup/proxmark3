@@ -796,7 +796,7 @@ int CmdHF15Restore(const char *Cmd) {
                     case '2':
                     case 'o':
                         strncpy(newCmdPrefix, " ", sizeof(newCmdPrefix) - 1);
-                        strncat(newCmdPrefix, param, sizeof(newCmdPrefix) - 1);
+                        strncat(newCmdPrefix, param, sizeof(newCmdPrefix) - strlen(newCmdPrefix) - 1);
                         break;
                     default:
                         PrintAndLogEx(WARNING, "Unknown parameter '%s'", param);
