@@ -5,7 +5,7 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Snooper binary
+// Sniff binary
 //-----------------------------------------------------------------------------
 
 #include "util_posix.h"
@@ -19,7 +19,7 @@
 
 int main() {
     usb_init();
-    SetLogFilename("snooper.log");
+    SetLogFilename("sniffer.log");
 
     return_on_error = 1;
 
@@ -27,7 +27,7 @@ int main() {
         while (!OpenProxmark()) { sleep(1); }
         while (1) {
             UsbCommand cmdbuf;
-            CommandReceived("hf 14a snoop");
+            CommandReceived("hf 14a sniff");
             HANDLE_ERROR;
             ReceiveCommand(&cmdbuf);
             HANDLE_ERROR;

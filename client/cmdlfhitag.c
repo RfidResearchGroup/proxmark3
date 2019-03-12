@@ -173,7 +173,7 @@ int CmdLFHitagList(const char *Cmd) {
     return 0;
 }
 
-int CmdLFHitagSnoop(const char *Cmd) {
+int CmdLFHitagSniff(const char *Cmd) {
     UsbCommand c = {CMD_SNOOP_HITAG};
     clearCommandBuffer();
     SendCommand(&c);
@@ -418,7 +418,7 @@ static command_t CommandTable[] = {
     {"reader",  CmdLFHitagReader,  1, "Act like a Hitag Reader"},
     {"sim",     CmdLFHitagSim,     1, "<infile> Simulate Hitag transponder"},
     {"simS",    CmdLFHitagSimS,    1, "<hitagS.hts> Simulate HitagS transponder" },
-    {"snoop",   CmdLFHitagSnoop,   1, "Eavesdrop Hitag communication"},
+    {"sniff",   CmdLFHitagSniff,   1, "Eavesdrop Hitag communication"},
     {"writer",  CmdLFHitagWP,      1, "Act like a Hitag Writer" },
     {"check_challenges", CmdLFHitagCheckChallenges,   1, "<challenges.cc> test all challenges" },
     { NULL, NULL, 0, NULL }
