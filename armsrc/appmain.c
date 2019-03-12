@@ -786,7 +786,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
         case CMD_WR_HITAG_S: //writer for Hitag tags args=data to write,page and key or challenge
             if ((hitag_function)c->arg[0] < 10) {
                 WritePageHitagS((hitag_function)c->arg[0], (hitag_data *)c->d.asBytes, c->arg[2]);
-            } else if ((hitag_function)c->arg[0] >= 10) {
+            } else {
                 WriterHitag((hitag_function)c->arg[0], (hitag_data *)c->d.asBytes, c->arg[2]);
             }
             break;
