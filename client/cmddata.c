@@ -770,10 +770,11 @@ int AutoCorrelate(const int *in, int *out, size_t len, int window, bool SaveGrph
     }
 
     int foo = ABS(hi - hi_1);
-    int bar = (int)((int)((hi + hi_1) / 2) * 0.03);
+    int bar = (int)((int)((hi + hi_1) / 2) * 0.04);
+   
     if (verbose && foo < bar) {
         distance = idx_1 - idx;
-        PrintAndLogEx(SUCCESS, "possible 3% visible correlation %4d samples", distance);
+        PrintAndLogEx(SUCCESS, "possible 4% visible correlation %4d samples", distance);
     } else if (verbose && (correlation > 1)) {
         PrintAndLogEx(SUCCESS, "possible correlation %4d samples", correlation);
     } else {
