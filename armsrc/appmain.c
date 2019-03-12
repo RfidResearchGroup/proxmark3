@@ -1322,10 +1322,12 @@ void UsbPacketReceived(uint8_t *packet, int len) {
                     // first mem page
                     res = Flash_WriteDataCont(startidx, data, first_len);
 
+                    isok = (res == first_len) ? 1 : 0;
+
                     // second mem page
                     res = Flash_WriteDataCont(startidx + first_len, data + first_len, len - first_len);
 
-                    isok = (res == (len - first_len)) ? 1 : 0;
+                    isok &= (res == (len - first_len)) ? 1 : 0;
 
                 } else {
                     res = Flash_WriteDataCont(startidx, data, len);
