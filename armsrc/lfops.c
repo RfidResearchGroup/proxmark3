@@ -730,8 +730,6 @@ static void fcAll(uint8_t fc, int *n, uint8_t clock, uint16_t *modCnt) {
     uint8_t halfFC = fc >> 1;
     uint8_t wavesPerClock = clock / fc;
     uint8_t mod = clock % fc;    //modifier
-    uint8_t modAdj = fc / mod;   //how often to apply modifier
-    bool modAdjOk = !(fc % mod); //if (fc % mod==0) modAdjOk = true;
 
     // loop through clock - step field clock
     for (uint8_t idx = 0; idx < wavesPerClock; idx++) {
@@ -740,19 +738,23 @@ static void fcAll(uint8_t fc, int *n, uint8_t clock, uint16_t *modCnt) {
         memset(dest + (*n) + (fc - halfFC), 1, halfFC);
         *n += fc;
     }
-    if (mod > 0)(*modCnt)++;
+    if (mod > 0) {
+        uint8_t modAdj = fc / mod;   //how often to apply modifier
+        bool modAdjOk = !(fc % mod); //if (fc % mod==0) modAdjOk = true;
+        (*modCnt)++;
 
-    if ((mod > 0) && modAdjOk) { //fsk2
-        if ((*modCnt % modAdj) == 0) { //if 4th 8 length wave in a rf/50 add extra 8 length wave
-            memset(dest + (*n), 0, fc - halfFC);
-            memset(dest + (*n) + (fc - halfFC), 1, halfFC);
-            *n += fc;
+        if (modAdjOk) { //fsk2
+            if ((*modCnt % modAdj) == 0) { //if 4th 8 length wave in a rf/50 add extra 8 length wave
+                memset(dest + (*n), 0, fc - halfFC);
+                memset(dest + (*n) + (fc - halfFC), 1, halfFC);
+                *n += fc;
+            }
         }
-    }
-    if (mod > 0 && !modAdjOk) { //fsk1
-        memset(dest + (*n), 0, mod - (mod >> 1));
-        memset(dest + (*n) + (mod - (mod >> 1)), 1, mod >> 1);
-        *n += mod;
+        if (!modAdjOk) { //fsk1
+            memset(dest + (*n), 0, mod - (mod >> 1));
+            memset(dest + (*n) + (mod - (mod >> 1)), 1, mod >> 1);
+            *n += mod;
+        }
     }
 }
 
