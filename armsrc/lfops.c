@@ -1066,12 +1066,8 @@ void CmdHIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) 
                     }
                 } else { //if bit 38 is not set then 37 bit format is used
                     bitlen = 37;
-                    fc = 0;
-                    cardnum = 0;
-                    if (bitlen == 37) {
-                        cardnum = (lo >> 1) & 0x7FFFF;
-                        fc = ((hi & 0xF) << 12) | (lo >> 20);
-                    }
+                    cardnum = (lo >> 1) & 0x7FFFF;
+                    fc = ((hi & 0xF) << 12) | (lo >> 20);
                 }
                 Dbprintf("TAG ID: %x%08x (%d) - Format Len: %dbit - FC: %d - Card: %d",
                          hi,
@@ -1591,26 +1587,23 @@ void T55xx_ChkPwds() {
     uint32_t candidate = 0;
 
 #ifdef WITH_FLASH
-    bool use_flashmem = true;
-    if (use_flashmem) {
-        BigBuf_Clear_EM();
-        uint16_t isok = 0;
-        uint8_t counter[2] = {0x00, 0x00};
-        isok = Flash_ReadData(DEFAULT_T55XX_KEYS_OFFSET, counter, sizeof(counter));
-        if (isok != sizeof(counter))
-            goto OUT;
+    BigBuf_Clear_EM();
+    uint16_t isok = 0;
+    uint8_t counter[2] = {0x00, 0x00};
+    isok = Flash_ReadData(DEFAULT_T55XX_KEYS_OFFSET, counter, sizeof(counter));
+    if (isok != sizeof(counter))
+        goto OUT;
 
-        pwdCount = counter[1] << 8 | counter[0];
+    pwdCount = counter[1] << 8 | counter[0];
 
-        if (pwdCount == 0 && pwdCount == 0xFFFF)
-            goto OUT;
+    if (pwdCount == 0 && pwdCount == 0xFFFF)
+        goto OUT;
 
-        isok = Flash_ReadData(DEFAULT_T55XX_KEYS_OFFSET + 2, pwds, pwdCount * 4);
-        if (isok != pwdCount * 4)
-            goto OUT;
+    isok = Flash_ReadData(DEFAULT_T55XX_KEYS_OFFSET + 2, pwds, pwdCount * 4);
+    if (isok != pwdCount * 4)
+        goto OUT;
 
-        Dbprintf("[=] Password dictionary count %d ", pwdCount);
-    }
+    Dbprintf("[=] Password dictionary count %d ", pwdCount);
 #endif
 
     uint32_t pwd = 0, curr = 0, prev = 0;
