@@ -38,7 +38,7 @@ APP_CFLAGS = $(PLATFORM_DEFS) \
 			 -DWITH_ISO14443a \
 			 -DWITH_ICLASS \
 			 -DWITH_FELICA \
-			 -DWITH_HFSNOOP \
+			 -DWITH_HFSNIFF \
 			 -DWITH_LF_SAMYRUN \
 			 -fno-strict-aliasing -ffunction-sections -fdata-sections
 

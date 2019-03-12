@@ -29,7 +29,7 @@ void printConfig() {
 
 /**
  * Called from the USB-handler to set the sampling configuration
- * The sampling config is used for std reading and snooping.
+ * The sampling config is used for std reading and sniffing.
  *
  * Other functions may read samples and ignore the sampling config,
  * such as functions to read the UID from a prox tag or similar.
@@ -253,10 +253,10 @@ uint32_t SampleLF(bool printCfg, int sample_size) {
     return ReadLF(true, printCfg, sample_size);
 }
 /**
-* Initializes the FPGA for snoop-mode (field off), and acquires the samples.
+* Initializes the FPGA for sniffer-mode (field off), and acquires the samples.
 * @return number of bits sampled
 **/
-uint32_t SnoopLF() {
+uint32_t SniffLF() {
     BigBuf_Clear_ext(false);
     return ReadLF(false, true, 0);
 }

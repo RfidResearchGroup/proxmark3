@@ -1413,7 +1413,7 @@ static void iso1444b_setup_sniff(void) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     BigBuf_free();
     BigBuf_Clear_ext(false);
-    clear_trace();//setup snoop
+    clear_trace();
     set_tracing(true);
 
     // Initialize Demod and Uart structs

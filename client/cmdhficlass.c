@@ -279,7 +279,7 @@ int CmdHFiClassList(const char *Cmd) {
 int CmdHFiClassSniff(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_iclass_sniff();
-    UsbCommand c = {CMD_SNOOP_ICLASS};
+    UsbCommand c = {CMD_SNIFF_ICLASS};
     SendCommand(&c);
     return 0;
 }

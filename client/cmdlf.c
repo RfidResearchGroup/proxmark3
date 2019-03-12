@@ -70,8 +70,8 @@ int usage_lf_config(void) {
     PrintAndLogEx(NORMAL, "                    a resolution of 4 bits per sample.");
     PrintAndLogEx(NORMAL, "      lf read");
     PrintAndLogEx(NORMAL, "                    Performs a read (active field)");
-    PrintAndLogEx(NORMAL, "      lf snoop");
-    PrintAndLogEx(NORMAL, "                    Performs a snoop (no active field)");
+    PrintAndLogEx(NORMAL, "      lf sniff");
+    PrintAndLogEx(NORMAL, "                    Performs a sniff (no active field)");
     return 0;
 }
 int usage_lf_simfsk(void) {
@@ -389,7 +389,7 @@ int CmdLFSniff(const char *Cmd) {
     uint8_t cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_lf_sniff();
 
-    UsbCommand c = {CMD_LF_SNOOP_RAW_ADC_SAMPLES, {0, 0, 0}};
+    UsbCommand c = {CMD_LF_SNIFF_RAW_ADC_SAMPLES, {0, 0, 0}};
     clearCommandBuffer();
     SendCommand(&c);
     WaitForResponse(CMD_ACK, NULL);
@@ -896,12 +896,15 @@ int CmdLFfind(const char *Cmd) {
     }
 
     if (EM4x50Read("", false))  { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("EM4x50 ID") " found!"); return 1;}
+
+    if (CmdHIDDemod(""))        { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("HID Prox ID") " found!"); goto out;}   
     if (CmdAWIDDemod(""))       { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("AWID ID") " found!"); goto out;}
+    if (CmdParadoxDemod(""))    { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Paradox ID") " found!"); goto out;}
+    
     if (CmdEM410xDemod(""))     { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("EM410x ID") " found!"); goto out;}
     if (CmdFdxDemod(""))        { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("FDX-B ID") " found!"); goto out;}
     if (CmdGuardDemod(""))      { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Guardall G-Prox II ID") " found!"); goto out; }
-    if (CmdHIDDemod(""))        { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("HID Prox ID") " found!"); goto out;}
-    if (CmdPSKIdteck(""))       { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Idteck ID") " found!"); goto out;}
+    if (CmdIdteckDemod(""))     { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Idteck ID") " found!"); goto out;}
     if (CmdIndalaDemod(""))     { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Indala ID") " found!");  goto out;}
     if (CmdIOProxDemod(""))     { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("IO Prox ID") " found!"); goto out;}
     if (CmdJablotronDemod(""))  { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Jablotron ID") " found!"); goto out;}
@@ -910,7 +913,7 @@ int CmdLFfind(const char *Cmd) {
     if (CmdNoralsyDemod(""))    { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Noralsy ID") " found!"); goto out;}
     if (CmdKeriDemod(""))       { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("KERI ID") " found!"); goto out;}
     if (CmdPacDemod(""))        { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("PAC/Stanley ID") " found!"); goto out;}
-    if (CmdParadoxDemod(""))    { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Paradox ID") " found!"); goto out;}
+
     if (CmdPrescoDemod(""))     { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Presco ID") " found!"); goto out;}
     if (CmdPyramidDemod(""))    { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Pyramid ID") " found!"); goto out;}
     if (CmdSecurakeyDemod(""))  { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Securakey ID") " found!"); goto out;}

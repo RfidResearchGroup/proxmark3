@@ -223,7 +223,7 @@ void iClass_Clone(uint8_t startblock, uint8_t endblock, uint8_t *data);
 void iClass_ReadCheck(uint8_t blockNo, uint8_t keyType);
 
 // hitag2.h
-void SnoopHitag(uint32_t type);
+void SniffHitag(uint32_t type);
 void SimulateHitagTag(bool tag_mem_supplied, byte_t *data);
 void ReaderHitag(hitag_function htf, hitag_data *htd);
 void WriterHitag(hitag_function htf, hitag_data *htd, int page);
@@ -239,7 +239,7 @@ uint8_t cmd_receive(UsbCommand *cmd);
 uint8_t cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
 
 // util.h
-void HfSnoop(int, int);
+void HfSniff(int, int);
 
 //felica.c
 extern void felica_sendraw(UsbCommand *c);

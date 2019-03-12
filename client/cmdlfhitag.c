@@ -174,7 +174,7 @@ int CmdLFHitagList(const char *Cmd) {
 }
 
 int CmdLFHitagSniff(const char *Cmd) {
-    UsbCommand c = {CMD_SNOOP_HITAG};
+    UsbCommand c = {CMD_SNIFF_HITAG};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;

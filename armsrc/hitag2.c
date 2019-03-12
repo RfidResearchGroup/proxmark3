@@ -10,7 +10,7 @@
 // Hitag2 complete rewrite of the code
 // - Fixed modulation/encoding issues
 // - Rewrote code for transponder emulation
-// - Added snooping of transponder communication
+// - Added sniffing of transponder communication
 // - Added reader functionality
 //
 // (c) 2012 Roel Verdult
@@ -801,7 +801,7 @@ static bool hitag2_read_uid(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t
     return true;
 }
 
-void SnoopHitag(uint32_t type) {
+void SniffHitag(uint32_t type) {
     int frame_count;
     int response;
     int overflow;
@@ -829,7 +829,7 @@ void SnoopHitag(uint32_t type) {
     auth_table = (uint8_t *)BigBuf_malloc(AUTH_TABLE_LENGTH);
     memset(auth_table, 0x00, AUTH_TABLE_LENGTH);
 
-    DbpString("Starting Hitag2 snoop");
+    DbpString("Starting Hitag2 sniff");
     LED_D_ON();
 
     // Set up eavesdropping mode, frequency divisor which will drive the FPGA

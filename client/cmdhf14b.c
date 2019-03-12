@@ -145,7 +145,7 @@ int CmdHF14BSniff(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_14b_sniff();
 
-    UsbCommand c = {CMD_SNOOP_ISO_14443B, {0, 0, 0}};
+    UsbCommand c = {CMD_SNIFF_ISO_14443B, {0, 0, 0}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;

@@ -3506,7 +3506,7 @@ static command_t CommandTable[] = {
     {"nack",        CmdHf14AMfNack,         0, "Test for Mifare NACK bug"},
     {"chk",         CmdHF14AMfChk,          0, "Check keys"},
     {"fchk",        CmdHF14AMfChk_fast,     0, "Check keys fast, targets all keys on card"},
-    {"decrypt",     CmdHf14AMfDecryptBytes, 1, "[nt] [ar_enc] [at_enc] [data] - to decrypt snoop or trace"},
+    {"decrypt",     CmdHf14AMfDecryptBytes, 1, "[nt] [ar_enc] [at_enc] [data] - to decrypt sniff or trace"},
     {"-----------", CmdHelp,                1, ""},
     {"dbg",         CmdHF14AMfDbg,          0, "Set default debug mode"},
     {"rdbl",        CmdHF14AMfRdBl,         0, "Read MIFARE classic block"},
