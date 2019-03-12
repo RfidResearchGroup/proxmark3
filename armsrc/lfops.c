@@ -317,7 +317,7 @@ void ReadTItag(void) {
                 // expected for either the low or high frequency
                 if ((samples > (sampleslo - threshold)) && (samples < (sampleslo + threshold))) {
                     // low frequency represents a 1
-                    shift3 |= (1 << 31);
+                    shift3 |= (1u << 31);
                 } else if ((samples > (sampleshi - threshold)) && (samples < (sampleshi + threshold))) {
                     // high frequency represents a 0
                 } else {
@@ -481,7 +481,7 @@ void AcquireTiType(void) {
     // unpack buffer
     for (i = TIBUFLEN - 1; i >= 0; i--) {
         for (j = 0; j < 32; j++) {
-            if (buf[i] & (1 << j)) {
+            if (buf[i] & (1u << j)) {
                 dest[--n] = 1;
             } else {
                 dest[--n] = -1;

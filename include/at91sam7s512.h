@@ -375,7 +375,7 @@ typedef struct _AT91S_DBGU {
 #define AT91C_US_TXBUFE       (0x1 << 11) // (DBGU) TXBUFE Interrupt
 #define AT91C_US_RXBUFF       (0x1 << 12) // (DBGU) RXBUFF Interrupt
 #define AT91C_US_COMM_TX      (0x1 << 30) // (DBGU) COMM_TX Interrupt
-#define AT91C_US_COMM_RX      (0x1 << 31) // (DBGU) COMM_RX Interrupt
+#define AT91C_US_COMM_RX      (0x1u << 31) // (DBGU) COMM_RX Interrupt
 // -------- DBGU_IDR : (DBGU Offset: 0xc) Debug Unit Interrupt Disable Register --------
 // -------- DBGU_IMR : (DBGU Offset: 0x10) Debug Unit Interrupt Mask Register --------
 // -------- DBGU_CSR : (DBGU Offset: 0x14) Debug Unit Channel Status Register --------
