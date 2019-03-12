@@ -829,7 +829,7 @@ void CmdHIDsimTAG(uint32_t hi, uint32_t lo, int ledcontrol) {
 // prepare a waveform pattern in the buffer based on the ID given then
 // simulate a FSK tag until the button is pressed
 // arg1 contains fcHigh and fcLow, arg2 contains STT marker and clock
-void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *bits) {
+void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *bits, int ledcontrol) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
     // free eventually allocated BigBuf memory
@@ -838,7 +838,7 @@ void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *bits) {
     clear_trace();
     set_tracing(false);
 
-    int ledcontrol = 1, n = 0, i = 0;
+    int n = 0, i = 0;
     uint8_t fcHigh = arg1 >> 8;
     uint8_t fcLow = arg1 & 0xFF;
     uint16_t modCnt = 0;
@@ -906,11 +906,11 @@ static void stAskSimBit(int *n, uint8_t clock) {
 }
 
 // args clock, ask/man or askraw, invert, transmission separator
-void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream) {
+void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream, int ledcontrol) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     set_tracing(false);
 
-    int ledcontrol = 1, n = 0, i = 0;
+    int n = 0, i = 0;
     uint8_t clk = (arg1 >> 8) & 0xFF;
     uint8_t encoding = arg1 & 0xFF;
     uint8_t separator = arg2 & 1;
@@ -973,11 +973,11 @@ static void pskSimBit(uint8_t waveLen, int *n, uint8_t clk, uint8_t *curPhase, b
 }
 
 // args clock, carrier, invert,
-void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream) {
+void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream, int ledcontrol) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     set_tracing(false);
 
-    int ledcontrol = 1, n = 0, i = 0;
+    int n = 0, i = 0;
     uint8_t clk = arg1 >> 8;
     uint8_t carrier = arg1 & 0xFF;
     uint8_t invert = arg2 & 0xFF;

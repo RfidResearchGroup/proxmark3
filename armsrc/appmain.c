@@ -664,13 +664,13 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             CmdHIDsimTAG(c->arg[0], c->arg[1], 1);
             break;
         case CMD_FSK_SIM_TAG:
-            CmdFSKsimTAG(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
+            CmdFSKsimTAG(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes, 1);
             break;
         case CMD_ASK_SIM_TAG:
-            CmdASKsimTag(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
+            CmdASKsimTag(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes, 1);
             break;
         case CMD_PSK_SIM_TAG:
-            CmdPSKsimTag(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
+            CmdPSKsimTag(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes, 1);
             break;
         case CMD_HID_CLONE_TAG:
             CopyHIDtoT55x7(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes[0]);
