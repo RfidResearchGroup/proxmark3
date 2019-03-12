@@ -33,7 +33,7 @@ int usage_hf_14b_reader(void) {
     return 0;
 }
 int usage_hf_14b_raw(void) {
-    PrintAndLogEx(NORMAL, "Usage: hf 14b raw [-h] [-r] [-c] [-p] [-s || -ss] <0A 0B 0C ... hex>");
+    PrintAndLogEx(NORMAL, "Usage: hf 14b raw [-h] [-r] [-c] [-p] [-s / -ss] [-t] <0A 0B 0C ... hex>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       -h    this help");
     PrintAndLogEx(NORMAL, "       -r    do not read response");
@@ -41,6 +41,7 @@ int usage_hf_14b_raw(void) {
     PrintAndLogEx(NORMAL, "       -p    leave the field on after receive");
     PrintAndLogEx(NORMAL, "       -s    active signal field ON with select");
     PrintAndLogEx(NORMAL, "       -ss   active signal field ON with select for SRx ST Microelectronics tags");
+    PrintAndLogEx(NORMAL, "       -t    timeout in ms");
     PrintAndLogEx(NORMAL, "Example:");
     PrintAndLogEx(NORMAL, "       hf 14b raw -s -c -p 0200a40400");
     return 0;
@@ -152,13 +153,14 @@ int CmdHF14BSniff(const char *Cmd) {
 }
 
 int CmdHF14BCmdRaw(const char *Cmd) {
-    bool reply = true, power = false, select = false;
+    bool reply = true, power = false, select = false, timeout = false;
     char buf[5] = "";
     int i = 0;
     uint8_t data[USB_CMD_DATA_SIZE] = {0x00};
     uint16_t datalen = 0;
     uint32_t flags = ISO14B_CONNECT;
     uint32_t temp = 0;
+    uint32_t time_wait = 0;
 
     if (strlen(Cmd) < 3) return usage_hf_14b_raw();
 
@@ -189,6 +191,14 @@ int CmdHF14BCmdRaw(const char *Cmd) {
                         flags |= ISO14B_SELECT_STD;
                     }
                     break;
+                case 't':
+                    timeout = true;
+                    sscanf(Cmd + i + 2, "%d", &temp);
+                    timeout = temp;
+                    i += 3;
+                    while (Cmd[i] != ' ' && Cmd[i] != '\0') { i++; }
+                    i -= 2;
+                    break;                    
                 default:
                     return usage_hf_14b_raw();
             }
@@ -213,8 +223,18 @@ int CmdHF14BCmdRaw(const char *Cmd) {
         PrintAndLogEx(WARNING, "unknown parameter '%c'\n", param_getchar(Cmd, i));
         return 0;
     }
+    
+    if (timeout) {
+#define MAX_TIMEOUT 40542464 // = (2^32-1) * (8*16) / 13560000Hz * 1000ms/s
+        flags |= ISO14B_SET_TIMEOUT;
+        if (timeout > MAX_TIMEOUT) {
+            timeout = MAX_TIMEOUT;
+            PrintAndLogEx(NORMAL, "Set timeout to 40542 seconds (11.26 hours). The max we can wait for response");
+        }
+        time_wait = 13560000 / 1000 / (8 * 16) * timeout; // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
+    }
 
-    if (!power)
+    if (power == 0)
         flags |= ISO14B_DISCONNECT;
 
     if (datalen > 0)
@@ -223,7 +243,7 @@ int CmdHF14BCmdRaw(const char *Cmd) {
     // Max buffer is USB_CMD_DATA_SIZE
     datalen = (datalen > USB_CMD_DATA_SIZE) ? USB_CMD_DATA_SIZE : datalen;
 
-    UsbCommand c = {CMD_ISO_14443B_COMMAND, {flags, datalen, 0}};
+    UsbCommand c = {CMD_ISO_14443B_COMMAND, {flags, datalen, time_wait}};
     memcpy(c.d.asBytes, data, datalen);
     clearCommandBuffer();
     SendCommand(&c);

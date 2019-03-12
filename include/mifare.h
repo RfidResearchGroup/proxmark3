@@ -71,7 +71,8 @@ typedef enum ISO14B_COMMAND {
     ISO14B_REQUEST_TRIGGER = (1 << 4),
     ISO14B_APPEND_CRC = (1 << 5),
     ISO14B_SELECT_STD = (1 << 6),
-    ISO14B_SELECT_SR = (1 << 7)
+    ISO14B_SELECT_SR = (1 << 7),
+    ISO14B_SET_TIMEOUT = (1 << 8),
 } iso14b_command_t;
 
 typedef enum ISO15_COMMAND {
