@@ -1596,7 +1596,7 @@ void T55xx_ChkPwds() {
 
     pwdCount = counter[1] << 8 | counter[0];
 
-    if (pwdCount == 0 && pwdCount == 0xFFFF)
+    if (pwdCount == 0 || pwdCount == 0xFFFF)
         goto OUT;
 
     isok = Flash_ReadData(DEFAULT_T55XX_KEYS_OFFSET + 2, pwds, pwdCount * 4);
