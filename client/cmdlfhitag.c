@@ -30,6 +30,7 @@ size_t nbytes(size_t nbits) {
 }
 
 int usage_hitag_reader(void) {
+    PrintAndLogEx(NORMAL, "Hitag reader functions");
     PrintAndLogEx(NORMAL, "Usage: lf hitag reader [h] <reader function #>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h          This help");
@@ -43,6 +44,19 @@ int usage_hitag_reader(void) {
     PrintAndLogEx(NORMAL, "      23 <key>         Authentication, key is in format: ISK high + ISK low");
     PrintAndLogEx(NORMAL, "      25               Test recorded authentications");
     PrintAndLogEx(NORMAL, "      26               Just read UID");
+    return 0;
+}
+int usage_hitag_writer(void) {
+    PrintAndLogEx(NORMAL, "Hitag writer functions");
+    PrintAndLogEx(NORMAL, "Usage: lf hitag write [h] <reader function #>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h          This help");
+    PrintAndLogEx(NORMAL, "   HitagS (0*)");
+    PrintAndLogEx(NORMAL, "      03 <nr,ar> (Challenge) <page> <byte0...byte3> write page on a Hitag S tag");
+    PrintAndLogEx(NORMAL, "      04 <key> (set to 0 if no authentication is needed) <page> <byte0...byte3> write page on a Hitag S tag");
+    PrintAndLogEx(NORMAL, "   Hitag1 (1*)");
+    PrintAndLogEx(NORMAL, "   Hitag2 (2*)");
+    PrintAndLogEx(NORMAL, "      24  <key> (set to 0 if no authentication is needed) <page> <byte0...byte3> write page on a Hitag2 tag");
     return 0;
 }
 
@@ -256,7 +270,6 @@ int CmdLFHitagReader(const char *Cmd) {
             break;
         }
         default: {
-            PrintAndLogEx(NORMAL, "\nError: unkown reader function %d", htf);
             return usage_hitag_reader();
         }
     }
@@ -368,44 +381,40 @@ int CmdLFHitagWP(const char *Cmd) {
     UsbCommand c = { CMD_WR_HITAG_S };
     hitag_data *htd = (hitag_data *)c.d.asBytes;
     hitag_function htf = param_get32ex(Cmd, 0, 0, 10);
+    
     switch (htf) {
-        case 03: { //WHTSF_CHALLENGE
+        case WHTSF_CHALLENGE: {
             num_to_bytes(param_get64ex(Cmd, 1, 0, 16), 8, htd->auth.NrAr);
             c.arg[2] = param_get32ex(Cmd, 2, 0, 10);
             num_to_bytes(param_get32ex(Cmd, 3, 0, 16), 4, htd->auth.data);
+            break;
         }
-        break;
-        case 04:
-        case 24: {
-            //WHTSF_KEY
+        case WHTSF_KEY:
+        case WHT2F_CRYPTO: {
             num_to_bytes(param_get64ex(Cmd, 1, 0, 16), 6, htd->crypto.key);
             c.arg[2] = param_get32ex(Cmd, 2, 0, 10);
             num_to_bytes(param_get32ex(Cmd, 3, 0, 16), 4, htd->crypto.data);
-
+            break;
         }
-        break;
         default: {
-            PrintAndLogEx(WARNING, "Error: unkown writer function %d", htf);
-            PrintAndLogEx(NORMAL, "Hitag writer functions");
-            PrintAndLogEx(NORMAL, " HitagS (0*)");
-            PrintAndLogEx(NORMAL, "  03 <nr,ar> (Challenge) <page> <byte0...byte3> write page on a Hitag S tag");
-            PrintAndLogEx(NORMAL, "  04 <key> (set to 0 if no authentication is needed) <page> <byte0...byte3> write page on a Hitag S tag");
-            PrintAndLogEx(NORMAL, " Hitag1 (1*)");
-            PrintAndLogEx(NORMAL, " Hitag2 (2*)");
-            return 1;
+            return usage_hitag_writer();
         }
-        break;
     }
-    // Copy the hitag function into the first argument
+
     c.arg[0] = htf;
 
     clearCommandBuffer();
     SendCommand(&c);
     UsbCommand resp;
-    WaitForResponse(CMD_ACK, &resp);
+    if (!WaitForResponseTimeout(CMD_ACK, &resp, 4000)) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        return 1;
+    }    
 
-    // Check the return status, stored in the first argument
-    if (resp.arg[0] == false) return 1;
+    if (resp.arg[0] == false) {
+        PrintAndLogEx(DEBUG, "DEBUG: Error - hitag failed");
+        return 1;
+    }    
     return 0;
 }
 

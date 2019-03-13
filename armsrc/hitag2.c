@@ -705,7 +705,8 @@ void SniffHitag(uint32_t type) {
 
     // Set up eavesdropping mode, frequency divisor which will drive the FPGA
     // and analog mux selection.
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT  | FPGA_LF_EDGE_DETECT_TOGGLE_MODE);
+    //FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT  | FPGA_LF_EDGE_DETECT_TOGGLE_MODE);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
     
     //125Khz
     FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95);
