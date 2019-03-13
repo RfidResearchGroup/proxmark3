@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Change 'lf hitag' - refactoring (@iceman)
+ - Change 'lf hitag' - refactoring (@piwi)
+ - Fix 'lf hitag' - generic fix for missing clock init (@piwi)
  - Fix fsk sim operations on deviceside - avoid division by zero (@doegox)
  - Fix 'hf mf fchk' - condition always false (@doegox)
  - Fix 'lf t55xx recoverpw' - shift as u32 (@doegox)
