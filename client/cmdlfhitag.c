@@ -239,7 +239,9 @@ int CmdLFHitagSim(const char *Cmd) {
     size_t datalen = 0;
     int res = 0;
     char filename[FILE_PATH_SIZE];
-        
+    
+    UsbCommand c = {CMD_SIMULATE_HITAG, {0, 0, 0}};
+    
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
@@ -249,7 +251,7 @@ int CmdLFHitagSim(const char *Cmd) {
                 cmdp++;
                 break;
             case 's':
-                useHitagS = true;
+                c.cmd = CMD_SIMULATE_HITAG_S;
                 maxdatalen = 4 * 64;
                 cmdp++;
                 break;
@@ -294,14 +296,10 @@ int CmdLFHitagSim(const char *Cmd) {
     //Validations
     if (errors || cmdp == 0) return usage_hitag_sim();
     
-    UsbCommand c = {CMD_SIMULATE_HITAG, {0, 0, 0}};
-    
-    if ( useHitagS ) {
-        c.cmd = CMD_SIMULATE_HITAG_S;
-    }
-
     c.arg[0] = (uint32_t)tag_mem_supplied;
-    memcpy(c.d.asBytes, data, datalen);
+    if ( tag_mem_supplied ) {
+        memcpy(c.d.asBytes, data, datalen);
+    }
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
@@ -386,7 +384,7 @@ int CmdLFHitagReader(const char *Cmd) {
 }
 
 int CmdLFHitagCheckChallenges(const char *Cmd) {
-    UsbCommand c = { CMD_TEST_HITAGS_TRACES };
+    UsbCommand c = { CMD_TEST_HITAGS_TRACES, {0, 0, 0}};
     char filename[FILE_PATH_SIZE] = { 0x00 };
     FILE *f;
     bool file_given;
@@ -421,7 +419,7 @@ int CmdLFHitagCheckChallenges(const char *Cmd) {
 }
 
 int CmdLFHitagWriter(const char *Cmd) {
-    UsbCommand c = { CMD_WR_HITAG_S };
+    UsbCommand c = { CMD_WR_HITAG_S, {0, 0, 0}};
     hitag_data *htd = (hitag_data *)c.d.asBytes;
     hitag_function htf = param_get32ex(Cmd, 0, 0, 10);
     
@@ -455,7 +453,7 @@ int CmdLFHitagWriter(const char *Cmd) {
     }    
 
     if (resp.arg[0] == false) {
-        PrintAndLogEx(DEBUG, "DEBUG: Error - hitag failed");
+        PrintAndLogEx(DEBUG, "DEBUG: Error - hitag write failed");
         return 1;
     }    
     return 0;
