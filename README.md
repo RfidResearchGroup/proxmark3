@@ -286,7 +286,7 @@ You will need to run these commands to make sure your rdv4 is prepared
 
 ### Verify sim module firmware version
 To make sure you got the latest sim module firmware.
-_Lastest version is v3.10_
+_Lastest version is v3.11_
 
     pm3 --> hw status
 
