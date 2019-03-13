@@ -17,7 +17,18 @@
 #include "BigBuf.h"
 #include "ticks.h"
 
+// Basic macros
+#ifndef SHORT_COIL
+#define SHORT_COIL()     LOW(GPIO_SSC_DOUT)
+#endif
+
+#ifndef OPEN_COIL
+#define OPEN_COIL()      HIGH(GPIO_SSC_DOUT)
+#endif
+
+#ifndef BYTEx
 #define BYTEx(x, n) (((x) >> (n * 8)) & 0xff )
+#endif
 
 #define LED_RED 1
 #define LED_ORANGE 2
@@ -41,6 +52,34 @@
 
 #ifndef NTIME
 # define NTIME(n) for (int _index = 0; _index < n; _index++)
+#endif
+
+#ifndef REV8
+#define REV8(x) ((((x)>>7)&1)+((((x)>>6)&1)<<1)+((((x)>>5)&1)<<2)+((((x)>>4)&1)<<3)+((((x)>>3)&1)<<4)+((((x)>>2)&1)<<5)+((((x)>>1)&1)<<6)+(((x)&1)<<7))
+#endif
+
+#ifndef REV16
+#define REV16(x)        (REV8(x) + (REV8 (x >> 8) << 8))
+#endif
+
+#ifndef REV32
+#define REV32(x)        (REV16(x) + (REV16(x >> 16) << 16))
+#endif
+
+#ifndef REV64
+#define REV64(x)        (REV32(x) + (REV32(x >> 32) << 32))
+#endif
+
+#ifndef BIT32
+#define BIT32(x,n)      ((((x)[(n)>>5])>>((n)))&1)
+#endif
+
+#ifndef INV32
+#define INV32(x,i,n)    ((x)[(i)>>5]^=((uint32_t)(n))<<((i)&31))
+#endif
+
+#ifndef ROTL64
+#define ROTL64(x, n)    ((((uint64_t)(x))<<((n)&63))+(((uint64_t)(x))>>((0-(n))&63)))
 #endif
 
 size_t nbytes(size_t nbits);
