@@ -155,11 +155,12 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
     json_t *root = json_object();
     JsonSaveStr(root, "Created", "proxmark3");
     switch (ftype) {
-        case jsfRaw:
+        case jsfRaw: {
             JsonSaveStr(root, "FileType", "raw");
             JsonSaveBufAsHexCompact(root, "raw", data, datalen);
             break;
-        case jsfCardMemory:
+        }
+        case jsfCardMemory: {
             JsonSaveStr(root, "FileType", "mfcard");
             for (int i = 0; i < (datalen / 16); i++) {
                 char path[PATH_MAX_LENGTH] = {0};
@@ -208,7 +209,8 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
                 }
             }
             break;
-        case jsfMfuMemory:
+        }
+        case jsfMfuMemory: {
             JsonSaveStr(root, "FileType", "mfu");
 
             mfu_dump_t *tmp = (mfu_dump_t *)data;
@@ -230,12 +232,26 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
             size_t len = (datalen - DUMP_PREFIX_LENGTH) / 4;
 
             for (int i = 0; i < len; i++) {
-
                 char path[PATH_MAX_LENGTH] = {0};
                 sprintf(path, "$.blocks.%d", i);
                 JsonSaveBufAsHexCompact(root, path, tmp->data + (i * 4), 4);
             }
             break;
+        }
+        case jsfHitag: {
+            JsonSaveStr(root, "FileType", "hitag");
+            uint8_t uid[4] = {0};
+            memcpy(uid, data, 4);
+
+            JsonSaveBufAsHexCompact(root, "$.Card.UID", uid, sizeof(uid));
+            
+            for (int i = 0; i < (datalen / 4); i++) {
+                char path[PATH_MAX_LENGTH] = {0};
+                sprintf(path, "$.blocks.%d", i);
+                JsonSaveBufAsHexCompact(root, path, data + (i * 4), 4);
+            }               
+            break;
+        }
     }
 
     int res = json_dump_file(root, fileName, JSON_INDENT(2));

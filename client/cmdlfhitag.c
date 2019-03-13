@@ -303,6 +303,7 @@ int CmdLFHitagReader(const char *Cmd) {
 
         saveFile(filename, "bin", data, 48);        
         saveFileEML(filename, "eml", data, 48, 4);
+        saveFileJSON(filename, "json", jsfHitag, (uint8_t *)data, 48);        
     }
     return 0;
 }
@@ -377,7 +378,7 @@ int CmdLFHitagCheckChallenges(const char *Cmd) {
     return 0;
 }
 
-int CmdLFHitagWP(const char *Cmd) {
+int CmdLFHitagWriter(const char *Cmd) {
     UsbCommand c = { CMD_WR_HITAG_S };
     hitag_data *htd = (hitag_data *)c.d.asBytes;
     hitag_function htf = param_get32ex(Cmd, 0, 0, 10);
@@ -419,14 +420,14 @@ int CmdLFHitagWP(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,           1, "This help"},
-    {"list",    CmdLFHitagList,    1, "<outfile> List Hitag trace history"},
-    {"reader",  CmdLFHitagReader,  1, "Act like a Hitag Reader"},
-    {"sim",     CmdLFHitagSim,     1, "<infile> Simulate Hitag transponder"},
-    {"simS",    CmdLFHitagSimS,    1, "<hitagS.hts> Simulate HitagS transponder" },
-    {"sniff",   CmdLFHitagSniff,   1, "Eavesdrop Hitag communication"},
-    {"writer",  CmdLFHitagWP,      1, "Act like a Hitag Writer" },
-    {"check_challenges", CmdLFHitagCheckChallenges,   1, "<challenges.cc> test all challenges" },
+    {"help",             CmdHelp,                   1, "This help"},
+    {"list",             CmdLFHitagList,            1, "<outfile> List Hitag trace history"},
+    {"reader",           CmdLFHitagReader,          1, "Act like a Hitag Reader"},
+    {"sim",              CmdLFHitagSim,             1, "<infile> Simulate Hitag transponder"},
+    {"simS",             CmdLFHitagSimS,            1, "<hitagS.bin> Simulate HitagS transponder" },
+    {"sniff",            CmdLFHitagSniff,           1, "Eavesdrop Hitag communication"},
+    {"writer",           CmdLFHitagWriter,          1, "Act like a Hitag Writer" },
+    {"check_challenges", CmdLFHitagCheckChallenges, 1, "<challenges.cc> test all challenges" },
     { NULL, NULL, 0, NULL }
 };
 

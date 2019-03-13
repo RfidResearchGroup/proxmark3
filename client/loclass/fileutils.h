@@ -55,6 +55,11 @@ typedef enum {
     jsfRaw,
     jsfCardMemory,
     jsfMfuMemory,
+    jsfHitag,
+//    jsf14b,
+//    jsf15,
+//    jsfLegic,
+//    jsfT55xx,  
 } JSONFileType;
 
 int fileExists(const char *filename);
