@@ -2,6 +2,7 @@
 # don't push these files to the repository
 
 .history
+.bash_history
 *.log
 *.eml
 *.o
