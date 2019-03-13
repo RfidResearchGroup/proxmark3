@@ -18,7 +18,9 @@
 // Piwi, 2019
 // Iceman, 2019
 
+#include "hitag2.h"
 #include "hitag2_crypto.h"
+#include "hitag.h"
 #include "proxmark3.h"
 #include "apps.h"
 #include "util.h"
@@ -1076,7 +1078,7 @@ void SimulateHitagTag(bool tag_mem_supplied, uint8_t *data) {
 
     LEDsoff();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    set_tracing(false);    
+    set_tracing(false);
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
     
@@ -1384,8 +1386,7 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
     
     StopTicks();
     
-    int frame_count;
-    int response;
+    int frame_count = 0, response = 0;
     uint8_t rx[HITAG_FRAME_LEN];
     size_t rxlen = 0;
     uint8_t txbuf[HITAG_FRAME_LEN];
@@ -1440,8 +1441,6 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
 
     // Set fpga in edge detect with reader field, we can modulate as reader now
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD);
-
-    // Set Frequency divisor which will drive the FPGA and analog mux selection
     FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
     SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
 
@@ -1464,17 +1463,18 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
 
     // TC1: Capture mode, defaul timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
     // external trigger rising edge, load RA on falling edge of TIOA.
-    AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK | AT91C_TC_ETRGEDG_FALLING | AT91C_TC_ABETRG | AT91C_TC_LDRA_FALLING;
+    AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK 
+                             | AT91C_TC_ETRGEDG_FALLING
+                             | AT91C_TC_ABETRG
+                             | AT91C_TC_LDRA_FALLING;
 
     // Enable and reset counters
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 
-    while (AT91C_BASE_TC0->TC_CV > 0);
+    while (AT91C_BASE_TC0->TC_CV > 0) {};
     
     // Reset the received frame, frame count and timing info
-    frame_count = 0;
-    response = 0;
     lastbit = 1;
     bStop = false;
 
@@ -1483,23 +1483,24 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
         // hitagS settings
         reset_sof = 1;
         t_wait = 200;
-        // DbpString("Configured for hitagS reader");
+        DbpString("Configured for hitagS reader");
     } else if (htf < 20) {
         // hitag1 settings
         reset_sof = 1;
         t_wait = 200;
-        // DbpString("Configured for hitag1 reader");
+        DbpString("Configured for hitag1 reader");
     } else if (htf < 30) {
         // hitag2 settings
         reset_sof = 4;
         t_wait = HITAG_T_WAIT_2;
-        // DbpString("Configured for hitag2 reader");
+        DbpString("Configured for hitag2 reader");
     } else {
         Dbprintf("Error, unknown hitag reader type: %d", htf);
         return;
     }
-    while (!bStop && !BUTTON_PRESS()) {
-        // Watchdog hit
+    
+    while (!bStop && !BUTTON_PRESS() && !usb_poll_validate_length()) {
+
         WDT_HIT();
 
         // Check if frame was captured and store it
@@ -1531,9 +1532,7 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
         // falling edge occured halfway the period. with respect to this falling edge,
         // we need to wait (T_Wait2 + half_tag_period) when the last was a 'one'.
         // All timer values are in terms of T0 units
-        while (AT91C_BASE_TC0->TC_CV < T0 * (t_wait + (HITAG_T_TAG_HALF_PERIOD * lastbit)));
-
-        // Dbprintf("DEBUG: Sending reader frame");
+        while (AT91C_BASE_TC0->TC_CV < T0 * (t_wait + (HITAG_T_TAG_HALF_PERIOD * lastbit))) {};
 
         // Transmit the reader frame
         hitag_reader_send_frame(tx, txlen);
@@ -1555,7 +1554,6 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
         bSkip = true;
         tag_sof = reset_sof;
         response = 0;
-        // Dbprintf("DEBUG: Waiting to receive frame");
         uint32_t errorCount = 0;
 
         // Receive frame, watch for at most T0*EOF periods
@@ -1628,6 +1626,7 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
             }
             // if we saw over 100 wierd values break it probably isn't hitag...
             if (errorCount > 100) break;
+            
             // We can break this loop if we received the last bit from a frame
             if (AT91C_BASE_TC1->TC_CV > T0 * HITAG_T_EOF) {
                 if (rxlen > 0) break;
