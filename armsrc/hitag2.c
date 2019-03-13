@@ -3,7 +3,7 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Hitag2 emulation (preliminary test version)
+// Hitag2 emulation
 //
 // (c) 2009 Henryk Plötz <henryk@ploetzli.ch>
 //-----------------------------------------------------------------------------
@@ -15,11 +15,13 @@
 //
 // (c) 2012 Roel Verdult
 //-----------------------------------------------------------------------------
+// Piwi, 2019
+// Iceman, 2019
 
+#include "hitag2_crypto.h"
 #include "proxmark3.h"
 #include "apps.h"
 #include "util.h"
-#include "hitag2.h"
 #include "string.h"
 #include "BigBuf.h"
 
@@ -28,20 +30,6 @@ static bool bCrypto;
 static bool bAuthenticating;
 static bool bPwd;
 static bool bSuccessful;
-
-struct hitag2_tag {
-    uint32_t uid;
-    enum {
-        TAG_STATE_RESET      = 0x01,       // Just powered up, awaiting GetSnr
-        TAG_STATE_ACTIVATING = 0x02,       // In activation phase (password mode), sent UID, awaiting reader password
-        TAG_STATE_ACTIVATED  = 0x03,       // Activation complete, awaiting read/write commands
-        TAG_STATE_WRITING    = 0x04,       // In write command, awaiting sector contents to be written
-    } state;
-    unsigned int active_sector;
-    uint8_t crypto_active;
-    uint64_t cs;
-    uint8_t sectors[12][4];
-};
 
 static struct hitag2_tag tag = {
     .state = TAG_STATE_RESET,
@@ -81,87 +69,6 @@ static uint8_t key[8];
 static uint8_t writedata[4];
 static uint64_t cipher_state;
 
-/* Following is a modified version of cryptolib.com/ciphers/hitag2/ */
-// Software optimized 48-bit Philips/NXP Mifare Hitag2 PCF7936/46/47/52 stream cipher algorithm by I.C. Wiener 2006-2007.
-// For educational purposes only.
-// No warranties or guarantees of any kind.
-// This code is released into the public domain by its author.
-
-// Basic macros:
-
-#define u8              uint8_t
-#define u32             uint32_t
-#define u64             uint64_t
-#define rev8(x)         ((((x)>>7)&1)+((((x)>>6)&1)<<1)+((((x)>>5)&1)<<2)+((((x)>>4)&1)<<3)+((((x)>>3)&1)<<4)+((((x)>>2)&1)<<5)+((((x)>>1)&1)<<6)+(((x)&1)<<7))
-#define rev16(x)        (rev8 (x)+(rev8 (x>> 8)<< 8))
-#define rev32(x)        (rev16(x)+(rev16(x>>16)<<16))
-#define rev64(x)        (rev32(x)+(rev32(x>>32)<<32))
-#define bit(x,n)        (((x)>>(n))&1)
-#define bit32(x,n)      ((((x)[(n)>>5])>>((n)))&1)
-#define inv32(x,i,n)    ((x)[(i)>>5]^=((u32)(n))<<((i)&31))
-#define rotl64(x, n)    ((((u64)(x))<<((n)&63))+(((u64)(x))>>((0-(n))&63)))
-
-// Single bit Hitag2 functions:
-#define i4(x,a,b,c,d)    ((u32)((((x)>>(a))&1)+(((x)>>(b))&1)*2+(((x)>>(c))&1)*4+(((x)>>(d))&1)*8))
-
-static const u32 ht2_f4a = 0x2C79;     // 0010 1100 0111 1001
-static const u32 ht2_f4b = 0x6671;     // 0110 0110 0111 0001
-static const u32 ht2_f5c = 0x7907287B; // 0111 1001 0000 0111 0010 1000 0111 1011
-
-static u32 _f20(const u64 x) {
-    u32 i5;
-
-    i5 = ((ht2_f4a >> i4(x, 1, 2, 4, 5)) & 1) * 1
-         + ((ht2_f4b >> i4(x, 7, 11, 13, 14)) & 1) * 2
-         + ((ht2_f4b >> i4(x, 16, 20, 22, 25)) & 1) * 4
-         + ((ht2_f4b >> i4(x, 27, 28, 30, 32)) & 1) * 8
-         + ((ht2_f4a >> i4(x, 33, 42, 43, 45)) & 1) * 16;
-
-    return (ht2_f5c >> i5) & 1;
-}
-
-static u64 _hitag2_init(const u64 key, const u32 serial, const u32 IV) {
-    u32 i;
-    u64 x = ((key & 0xFFFF) << 32) + serial;
-
-    for (i = 0; i < 32; i++) {
-        x >>= 1;
-        x += (u64)(_f20(x) ^ (((IV >> i) ^ (key >> (i + 16))) & 1)) << 47;
-    }
-    return x;
-}
-
-static u64 _hitag2_round(u64 *state) {
-    u64 x = *state;
-
-    x = (x >>  1) +
-        ((((x >>  0) ^ (x >>  2) ^ (x >>  3) ^ (x >>  6)
-           ^ (x >>  7) ^ (x >>  8) ^ (x >> 16) ^ (x >> 22)
-           ^ (x >> 23) ^ (x >> 26) ^ (x >> 30) ^ (x >> 41)
-           ^ (x >> 42) ^ (x >> 43) ^ (x >> 46) ^ (x >> 47)) & 1) << 47);
-
-    *state = x;
-    return _f20(x);
-}
-
-// "MIKRON"             =  O  N  M  I  K  R
-// Key                  = 4F 4E 4D 49 4B 52             - Secret 48-bit key
-// Serial               = 49 43 57 69                   - Serial number of the tag, transmitted in clear
-// Random               = 65 6E 45 72                   - Random IV, transmitted in clear
-//~28~DC~80~31  = D7 23 7F CE                   - Authenticator value = inverted first 4 bytes of the keystream
-
-// The code below must print out "D7 23 7F CE 8C D0 37 A9 57 49 C1 E6 48 00 8A B6".
-// The inverse of the first 4 bytes is sent to the tag to authenticate.
-// The rest is encrypted by XORing it with the subsequent keystream.
-
-static u32 _hitag2_byte(u64 *x) {
-    u32 i, c;
-    for (i = 0, c = 0; i < 8; i++) {
-        c += (u32) _hitag2_round(x) << (i ^ 7);
-    }
-    return c;
-}
-
 static int hitag2_reset(void) {
     tag.state = TAG_STATE_RESET;
     tag.crypto_active = 0;
@@ -173,48 +80,13 @@ static int hitag2_init(void) {
     return 0;
 }
 
-static void hitag2_cipher_reset(struct hitag2_tag *tag, const uint8_t *iv) {
-    uint64_t key = ((uint64_t)tag->sectors[2][2]) |
-                   ((uint64_t)tag->sectors[2][3] << 8) |
-                   ((uint64_t)tag->sectors[1][0] << 16) |
-                   ((uint64_t)tag->sectors[1][1] << 24) |
-                   ((uint64_t)tag->sectors[1][2] << 32) |
-                   ((uint64_t)tag->sectors[1][3] << 40);
-    uint32_t uid = ((uint32_t)tag->sectors[0][0]) |
-                   ((uint32_t)tag->sectors[0][1] << 8) |
-                   ((uint32_t)tag->sectors[0][2] << 16) |
-                   ((uint32_t)tag->sectors[0][3] << 24);
-    uint32_t iv_ = (((uint32_t)(iv[0]))) |
-                   (((uint32_t)(iv[1])) << 8) |
-                   (((uint32_t)(iv[2])) << 16) |
-                   (((uint32_t)(iv[3])) << 24);
-    tag->cs = _hitag2_init(rev64(key), rev32(uid), rev32(iv_));
-}
-
-static int hitag2_cipher_authenticate(uint64_t *cs, const uint8_t *authenticator_is) {
-    uint8_t authenticator_should[4];
-    authenticator_should[0] = ~_hitag2_byte(cs);
-    authenticator_should[1] = ~_hitag2_byte(cs);
-    authenticator_should[2] = ~_hitag2_byte(cs);
-    authenticator_should[3] = ~_hitag2_byte(cs);
-    return (memcmp(authenticator_should, authenticator_is, 4) == 0);
-}
-
-static int hitag2_cipher_transcrypt(uint64_t *cs, uint8_t *data, unsigned int bytes, unsigned int bits) {
-    int i;
-    for (i = 0; i < bytes; i++) data[i] ^= _hitag2_byte(cs);
-    for (i = 0; i < bits; i++) data[bytes] ^= _hitag2_round(cs) << (7 - i);
-    return 0;
-}
-
 // Sam7s has several timers, we will use the source TIMER_CLOCK1 (aka AT91C_TC_CLKS_TIMER_DIV1_CLOCK)
 // TIMER_CLOCK1 = MCK/2, MCK is running at 48 MHz, Timer is running at 48/2 = 24 MHz
 // Hitag units (T0) have duration of 8 microseconds (us), which is 1/125000 per second (carrier)
 // T0 = TIMER_CLOCK1 / 125000 = 192
+#ifndef T0
 #define T0               192
-
-#define SHORT_COIL()     LOW(GPIO_SSC_DOUT)
-#define OPEN_COIL()      HIGH(GPIO_SSC_DOUT)
+#endif
 
 #define HITAG_FRAME_LEN  20
 #define HITAG_T_STOP     36 /* T_EOF should be > 36 */
@@ -240,7 +112,6 @@ static int hitag2_cipher_transcrypt(uint64_t *cs, uint8_t *data, unsigned int by
 #define HITAG_T_TAG_CAPTURE_TWO_HALF    25
 #define HITAG_T_TAG_CAPTURE_THREE_HALF  41
 #define HITAG_T_TAG_CAPTURE_FOUR_HALF   57
-
 
 static void hitag_send_bit(int bit) {
     LED_A_ON();
@@ -278,7 +149,6 @@ static void hitag_send_frame(const uint8_t *frame, size_t frame_len) {
     // Drop the modulation
     LOW(GPIO_SSC_DOUT);
 }
-
 
 static void hitag2_handle_reader_command(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *txlen) {
     uint8_t rx_air[HITAG_FRAME_LEN];
@@ -419,7 +289,6 @@ static void hitag_reader_send_bit(int bit) {
 
     // Wait for 4-10 times the carrier period
     while (AT91C_BASE_TC0->TC_CV < T0 * 6);
-    // SpinDelayUs(8*8);
 
     // Disable modulation, just activates the field again
     LOW(GPIO_SSC_DOUT);
@@ -434,7 +303,6 @@ static void hitag_reader_send_bit(int bit) {
     }
     LED_A_OFF();
 }
-
 
 static void hitag_reader_send_frame(const uint8_t *frame, size_t frame_len) {
     // Send the content of the frame
@@ -605,8 +473,8 @@ static bool hitag2_crypto(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *
                 if (!bCrypto) {
                     uint64_t ui64key = key[0] | ((uint64_t)key[1]) << 8 | ((uint64_t)key[2]) << 16 | ((uint64_t)key[3]) << 24 | ((uint64_t)key[4]) << 32 | ((uint64_t)key[5]) << 40;
                     uint32_t ui32uid = rx[0] | ((uint32_t)rx[1]) << 8 | ((uint32_t)rx[2]) << 16 | ((uint32_t)rx[3]) << 24;
-                    Dbprintf("hitag2_crypto: key=0x%x%x uid=0x%x", (uint32_t)((rev64(ui64key)) >> 32), (uint32_t)((rev64(ui64key)) & 0xffffffff), rev32(ui32uid));
-                    cipher_state = _hitag2_init(rev64(ui64key), rev32(ui32uid), 0);
+                    Dbprintf("hitag2_crypto: key=0x%x%x uid=0x%x", (uint32_t)((REV64(ui64key)) >> 32), (uint32_t)((REV64(ui64key)) & 0xffffffff), REV32(ui32uid));
+                    cipher_state = _hitag2_init(REV64(ui64key), REV32(ui32uid), 0);
                     memset(tx, 0x00, 4);
                     memset(tx + 4, 0xff, 4);
                     hitag2_cipher_transcrypt(&cipher_state, tx + 4, 4, 0);
@@ -802,6 +670,9 @@ static bool hitag2_read_uid(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t
 }
 
 void SniffHitag(uint32_t type) {
+
+    StopTicks();
+    
     int frame_count;
     int response;
     int overflow;
@@ -818,8 +689,6 @@ void SniffHitag(uint32_t type) {
     // free eventually allocated BigBuf memory
     BigBuf_free();
     BigBuf_Clear_ext(false);
-
-    // Clean up trace and prepare it for storing frames
     clear_trace();
     set_tracing(true);
 
@@ -829,19 +698,20 @@ void SniffHitag(uint32_t type) {
     auth_table = (uint8_t *)BigBuf_malloc(AUTH_TABLE_LENGTH);
     memset(auth_table, 0x00, AUTH_TABLE_LENGTH);
 
-    DbpString("Starting Hitag2 sniff");
+    DbpString("Starting Hitag2 sniffing");
     LED_D_ON();
 
     // Set up eavesdropping mode, frequency divisor which will drive the FPGA
     // and analog mux selection.
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT  | FPGA_LF_EDGE_DETECT_TOGGLE_MODE);
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+    
+    //125Khz
+    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95);
     SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-    RELAY_OFF();
 
     // Configure output pin that is connected to the FPGA (for modulating)
-    AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
-    AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
+    AT91C_BASE_PIOA->PIO_OER |= GPIO_SSC_DOUT;
+    AT91C_BASE_PIOA->PIO_PER |= GPIO_SSC_DOUT;
 
     // Disable modulation, we are going to eavesdrop, not modulate ;)
     LOW(GPIO_SSC_DOUT);
@@ -852,14 +722,16 @@ void SniffHitag(uint32_t type) {
 
     // Disable timer during configuration
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
-
-    // Capture mode, defaul timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
+    
+    // TC1: Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
     // external trigger rising edge, load RA on rising edge of TIOA.
-    uint32_t t1_channel_mode = AT91C_TC_CLKS_TIMER_DIV1_CLOCK | AT91C_TC_ETRGEDG_BOTH | AT91C_TC_ABETRG | AT91C_TC_LDRA_BOTH;
-    AT91C_BASE_TC1->TC_CMR = t1_channel_mode;
+    AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK | AT91C_TC_ETRGEDG_BOTH | AT91C_TC_ABETRG | AT91C_TC_LDRA_BOTH;
 
     // Enable and reset counter
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+    
+    // synchronized startup procedure
+    while (AT91C_BASE_TC1->TC_CV > 0); // wait until TC0 returned to zero
 
     // Reset the received frame, frame count and timing info
     memset(rx, 0x00, sizeof(rx));
@@ -1005,24 +877,25 @@ void SniffHitag(uint32_t type) {
         // Reset the timer to restart while-loop that receives frames
         AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
     }
-    LED_A_ON();
-    LED_B_OFF();
-    LED_C_OFF();
-    LED_D_OFF();
+    LEDsoff();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    set_tracing(false);
+    
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    LED_A_OFF();
-    set_tracing(false);
-// Dbprintf("frame received: %d",frame_count);
-// Dbprintf("Authentication Attempts: %d",(auth_table_len/8));
-// DbpString("All done");
+    
+    // release allocated memory from BigBuff.
+    BigBuf_free();
+    StartTicks();   
+    
+    DbpString("Hitag2 sniffing end,  use `lf hitag list` for annotations");
 }
 
 void SimulateHitagTag(bool tag_mem_supplied, uint8_t *data) {
-    int frame_count;
-    int response;
-    int overflow;
+
+    StopTicks();
+    
+    int frame_count = 0, response = 0, overflow = 0;
     uint8_t rx[HITAG_FRAME_LEN];
     size_t rxlen = 0;
     uint8_t tx[HITAG_FRAME_LEN];
@@ -1035,19 +908,19 @@ void SimulateHitagTag(bool tag_mem_supplied, uint8_t *data) {
     // free eventually allocated BigBuf memory
     BigBuf_free();
     BigBuf_Clear_ext(false);
-
-    // Clean up trace and prepare it for storing frames
     clear_trace();
     set_tracing(true);
 
     auth_table_len = 0;
     auth_table_pos = 0;
-    uint8_t *auth_table;
-
-    auth_table = (uint8_t *)BigBuf_malloc(AUTH_TABLE_LENGTH);
+    uint8_t *auth_table = BigBuf_malloc(AUTH_TABLE_LENGTH);
     memset(auth_table, 0x00, AUTH_TABLE_LENGTH);
 
+    // Reset the received frame, frame count and timing info
+    memset(rx, 0x00, sizeof(rx));
+
     DbpString("Starting Hitag2 simulation");
+    
     LED_D_ON();
     hitag2_init();
 
@@ -1064,44 +937,44 @@ void SimulateHitagTag(bool tag_mem_supplied, uint8_t *data) {
         }
         Dbprintf("| %d | %08x |", i, block);
     }
-
+    
     // Set up simulator mode, frequency divisor which will drive the FPGA
     // and analog mux selection.
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
-    SpinDelay(50);
     FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
     SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-    RELAY_OFF();
 
     // Configure output pin that is connected to the FPGA (for modulating)
-    AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
-    AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
+    AT91C_BASE_PIOA->PIO_OER |= GPIO_SSC_DOUT;
+    AT91C_BASE_PIOA->PIO_PER |= GPIO_SSC_DOUT;
 
     // Disable modulation at default, which means release resistance
     LOW(GPIO_SSC_DOUT);
 
-    // Enable Peripheral Clock for TIMER_CLOCK0, used to measure exact timing before answering
-    AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC0);
+    // Enable Peripheral Clock for 
+    //   TIMER_CLOCK0, used to measure exact timing before answering
+    //   TIMER_CLOCK1, used to capture edges of the tag frames    
+    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1);
 
-    // Enable Peripheral Clock for TIMER_CLOCK1, used to capture edges of the reader frames
-    AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC1);
     AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
 
     // Disable timer during configuration
+    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 
-    // Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
+    // TC0: Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), no triggers
+	AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
+    
+    // TC1: Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
     // external trigger rising edge, load RA on rising edge of TIOA.
     AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK | AT91C_TC_ETRGEDG_RISING | AT91C_TC_ABETRG | AT91C_TC_LDRA_RISING;
 
-    // Reset the received frame, frame count and timing info
-    memset(rx, 0x00, sizeof(rx));
-    frame_count = 0;
-    response = 0;
-    overflow = 0;
-
     // Enable and reset counter
+    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+    
+    // synchronized startup procedure
+    while (AT91C_BASE_TC1->TC_CV > 0); // wait until TC0 returned to zero
 
     while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
         // Watchdog hit
@@ -1200,17 +1073,25 @@ void SimulateHitagTag(bool tag_mem_supplied, uint8_t *data) {
         // Reset the timer to restart while-loop that receives frames
         AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
     }
-    LED_B_OFF();
-    LED_D_OFF();
+
+    LEDsoff();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    set_tracing(false);    
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-
+    
+    // release allocated memory from BigBuff.
+    BigBuf_free();
+  
+    StartTicks();
+    
     DbpString("Sim Stopped");
-    set_tracing(false);
 }
 
 void ReaderHitag(hitag_function htf, hitag_data *htd) {
+
+    StopTicks();
+
     int frame_count = 0;
     int response = 0;
     uint8_t rx[HITAG_FRAME_LEN];
@@ -1274,6 +1155,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
         default: {
             Dbprintf("Error, unknown function: %d", htf);
             set_tracing(false);
+            StartTicks();
             return;
         }
     }
@@ -1286,33 +1168,35 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
     LED_D_ON();
     hitag2_init();
 
-    // Configure output and enable pin that is connected to the FPGA (for modulating)
-    AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
-    AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
-
+    
     // Set fpga in edge detect with reader field, we can modulate as reader now
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD);
     FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
     SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-//    RELAY_OFF();
+    
+    // Configure output and enable pin that is connected to the FPGA (for modulating)
+    AT91C_BASE_PIOA->PIO_OER |= GPIO_SSC_DOUT;
+    AT91C_BASE_PIOA->PIO_PER |= GPIO_SSC_DOUT;
 
     // Disable modulation at default, which means enable the field
     LOW(GPIO_SSC_DOUT);
 
-    // Give it a bit of time for the resonant antenna to settle.
-    SpinDelay(30);
-
-    // Enable Peripheral Clock for TIMER_CLOCK0, used to measure exact timing before answering
-    AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC0);
-
-    // Enable Peripheral Clock for TIMER_CLOCK1, used to capture edges of the tag frames
-    AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC1);
+    // Enable Peripheral Clock for 
+    //   TIMER_CLOCK0, used to measure exact timing before answering
+    //   TIMER_CLOCK1, used to capture edges of the tag frames    
+    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1);
+                              
+    // PIO_A - BSR
     AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
 
     // Disable timer during configuration
+    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 
-    // Capture mode, defaul timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
+    // TC0: Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), no triggers
+	AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
+    
+    // TC1: Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
     // external trigger rising edge, load RA on falling edge of TIOA.
     AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK | AT91C_TC_ETRGEDG_FALLING | AT91C_TC_ABETRG | AT91C_TC_LDRA_FALLING;
 
@@ -1320,22 +1204,25 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 
+    // synchronized startup procedure
+    while (AT91C_BASE_TC0->TC_CV > 0); // wait until TC0 returned to zero
+
     // Tag specific configuration settings (sof, timings, etc.)
     if (htf < 10) {
         // hitagS settings
         reset_sof = 1;
         t_wait = 200;
-        // DbpString("Configured for hitagS reader");
+        DbpString("Configured for hitagS reader");
     } else if (htf < 20) {
         // hitag1 settings
         reset_sof = 1;
         t_wait = 200;
-        // DbpString("Configured for hitag1 reader");
+        DbpString("Configured for hitag1 reader");
     } else if (htf < 30) {
         // hitag2 settings
         reset_sof = 4;
         t_wait = HITAG_T_WAIT_2;
-        // DbpString("Configured for hitag2 reader");
+        DbpString("Configured for hitag2 reader");
     } else {
         Dbprintf("Error, unknown hitag reader type: %d", htf);
         goto out;
@@ -1477,11 +1364,16 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
 
 out:
     LEDsoff();
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     set_tracing(false);
-
+ 
+    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
+ 
+    // release allocated memory from BigBuff.
+    BigBuf_free();
+    StartTicks();
+        
     if (bSuccessful)
         cmd_send(CMD_ACK, bSuccessful, 0, 0, (uint8_t *)tag.sectors, 48);
     else
@@ -1489,6 +1381,9 @@ out:
 }
 
 void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
+    
+    StopTicks();
+    
     int frame_count;
     int response;
     uint8_t rx[HITAG_FRAME_LEN];
@@ -1502,9 +1397,9 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
     int tag_sof;
     int t_wait = HITAG_T_WAIT_MAX;
     bool bStop;
-    bool bQuitTraceFull = false;
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+
     // Reset the return status
     bSuccessful = false;
 
@@ -1525,12 +1420,12 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
             bQuiet = false;
             bCrypto = false;
             bAuthenticating = false;
-            bQuitTraceFull = true;
             writestate = WRITE_STATE_START;
         }
         break;
         default: {
             Dbprintf("Error, unknown function: %d", htf);
+            StartTicks();            
             return;
         }
         break;
@@ -1540,8 +1435,8 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
     hitag2_init();
 
     // Configure output and enable pin that is connected to the FPGA (for modulating)
-    AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
-    AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
+    AT91C_BASE_PIOA->PIO_OER |= GPIO_SSC_DOUT;
+    AT91C_BASE_PIOA->PIO_PER |= GPIO_SSC_DOUT;
 
     // Set fpga in edge detect with reader field, we can modulate as reader now
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD);
@@ -1549,25 +1444,25 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
     // Set Frequency divisor which will drive the FPGA and analog mux selection
     FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
     SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-    RELAY_OFF();
 
     // Disable modulation at default, which means enable the field
     LOW(GPIO_SSC_DOUT);
 
-    // Give it a bit of time for the resonant antenna to settle.
-    SpinDelay(30);
+    // Enable Peripheral Clock for 
+    //   TIMER_CLOCK0, used to measure exact timing before answering
+    //   TIMER_CLOCK1, used to capture edges of the tag frames
+    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1);
 
-    // Enable Peripheral Clock for TIMER_CLOCK0, used to measure exact timing before answering
-    AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC0);
-
-    // Enable Peripheral Clock for TIMER_CLOCK1, used to capture edges of the tag frames
-    AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC1);
     AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
 
     // Disable timer during configuration
+    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 
-    // Capture mode, defaul timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
+    // TC0: Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), no triggers
+	AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;    
+
+    // TC1: Capture mode, defaul timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
     // external trigger rising edge, load RA on falling edge of TIOA.
     AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK | AT91C_TC_ETRGEDG_FALLING | AT91C_TC_ABETRG | AT91C_TC_LDRA_FALLING;
 
@@ -1575,6 +1470,8 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 
+    while (AT91C_BASE_TC0->TC_CV > 0);
+    
     // Reset the received frame, frame count and timing info
     frame_count = 0;
     response = 0;
@@ -1608,16 +1505,7 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
         // Check if frame was captured and store it
         if (rxlen > 0) {
             frame_count++;
-            if (!bQuiet) {
-                if (!LogTraceHitag(rx, rxlen, response, 0, false)) {
-                    DbpString("Trace full");
-                    if (bQuitTraceFull) {
-                        break;
-                    } else {
-                        bQuiet = true;
-                    }
-                }
-            }
+            LogTraceHitag(rx, rxlen, response, 0, false);
         }
 
         // By default reset the transmission buffer
@@ -1656,16 +1544,8 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
         // Add transmitted frame to total count
         if (txlen > 0) {
             frame_count++;
-            if (!bQuiet) {
-                // Store the frame in the trace
-                if (!LogTraceHitag(tx, txlen, HITAG_T_WAIT_2, 0, true)) {
-                    if (bQuitTraceFull) {
-                        break;
-                    } else {
-                        bQuiet = true;
-                    }
-                }
-            }
+            // Store the frame in the trace
+            LogTraceHitag(tx, txlen, HITAG_T_WAIT_2, 0, true);
         }
 
         // Reset values for receiving frames
@@ -1760,14 +1640,15 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
             while (AT91C_BASE_TC0->TC_CV < T0 * (HITAG_T_PROG - HITAG_T_WAIT_MAX));
         }
     }
-    // Dbprintf("DEBUG: Done waiting for frame");
 
-    LED_B_OFF();
-    LED_D_OFF();
+    LEDsoff();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    set_tracing(false);
+    
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    // Dbprintf("frame received: %d",frame_count);
-    // DbpString("All done");
+
+    StartTicks();
+    
     cmd_send(CMD_ACK, bSuccessful, 0, 0, (uint8_t *)tag.sectors, 48);
 }
