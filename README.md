@@ -298,7 +298,7 @@ Find version in the long output,  look for these two lines
 This version is obselete. The following command upgrades your device sim module firmware.
 Don't not turn of your device during the execution of this command.
 
-    pm3 --> sc upgrade f ../tools/simmodule/SIM010.BIN 
+    pm3 --> sc upgrade f ../tools/simmodule/SIM011.BIN 
     
 You get the following output,  this is a successful execution.    
     
