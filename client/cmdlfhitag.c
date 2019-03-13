@@ -21,6 +21,7 @@
 #include "util_posix.h"
 #include "comms.h"
 #include "cmddata.h"
+#include "loclass/fileutils.h"  // savefile
 
 static int CmdHelp(const char *Cmd);
 
@@ -277,21 +278,18 @@ int CmdLFHitagReader(const char *Cmd) {
     uint32_t id = bytes_to_num(resp.d.asBytes, 4);
 
     if (htf == RHT2F_UID_ONLY) {
-        PrintAndLogEx(NORMAL, "Valid Hitag2 tag found - UID: %08x", id);
+        PrintAndLogEx(SUCCESS, "Valid Hitag2 tag found - UID: %08x", id);
     } else {
+        
+        uint8_t *data = resp.d.asBytes;
+        
         char filename[FILE_PATH_SIZE];
-        FILE *f = NULL;
-        sprintf(filename, "%08x_%04x.ht2", id, (rand() & 0xffff));
-        f = fopen(filename, "wb");
-        if (!f) {
-            PrintAndLogEx(WARNING, "Error: Could not open file [%s]", filename);
-            return 1;
-        }
+        char *fnameptr = filename;
+        fnameptr += sprintf(fnameptr, "lf-hitag-");
+        FillFileNameByUID(fnameptr, data, "-dump", 4);
 
-        // Write the 48 tag memory bytes to file and finalize
-        fwrite(resp.d.asBytes, 1, 48, f);
-        fclose(f);
-        PrintAndLogEx(NORMAL, "Succesfully saved tag memory to [%s]", filename);
+        saveFile(filename, "bin", data, 48);        
+        saveFileEML(filename, "eml", data, 48, 4);
     }
     return 0;
 }
