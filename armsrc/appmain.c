@@ -1391,6 +1391,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             FlashStop();
 
             cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
+            BigBuf_free();
             LED_B_OFF();
             break;
         }
