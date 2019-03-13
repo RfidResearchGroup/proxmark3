@@ -463,8 +463,29 @@ int loadFileJSON(const char *preferredName, const char *suffix, void *data, size
         *datalen = sptr;
     }
 
+    if (!strcmp(ctype, "hitag")) {
+        size_t sptr = 0;
+        for (int i = 0; i < (maxdatalen/4); i++) {
+            if (sptr + 4 > maxdatalen) {
+                retval = 5;
+                goto out;
+            }
 
-    PrintAndLog("loaded from JSON file " _YELLOW_("%s"), fileName);
+            char path[30] = {0};
+            sprintf(path, "$.blocks.%d", i);
+
+            size_t len = 0;
+            JsonLoadBufAsHex(root, path, &udata[sptr], 4, &len);
+            if (!len)
+                break;
+
+            sptr += len;
+        }
+
+        *datalen = sptr;
+    }
+
+    PrintAndLogEx(SUCCESS, "loaded from JSON file " _YELLOW_("%s"), fileName);
 out:
     json_decref(root);
     free(fileName);

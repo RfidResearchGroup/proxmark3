@@ -14,9 +14,9 @@
 extern int CmdLFHitag(const char *Cmd);
 
 extern int CmdLFHitagList(const char *Cmd);
+extern int CmdLFHitagDump(const char *cmd);
 extern int CmdLFHitagReader(const char *Cmd);
 extern int CmdLFHitagSim(const char *Cmd);
-extern int CmdLFHitagSimS(const char *Cmd);
 extern int CmdLFHitagSniff(const char *Cmd);
 extern int CmdLFHitagWriter(const char *Cmd);
 extern int CmdLFHitagCheckChallenges(const char *Cmd);

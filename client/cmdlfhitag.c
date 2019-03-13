@@ -28,7 +28,37 @@ static int CmdHelp(const char *Cmd);
 size_t nbytes(size_t nbits) {
     return (nbits / 8) + ((nbits % 8) > 0);
 }
-
+int usage_hitag_sniff(void) {
+    PrintAndLogEx(NORMAL, "Usage:   lf hitag sniff");
+    PrintAndLogEx(NORMAL, "  p <pwd>      : password");
+    PrintAndLogEx(NORMAL, "  f <name>     : data filename, if no <name> given, UID will be used as filename");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "         lf hitag sniff");
+    return 0;
+}
+int usage_hitag_sim(void) {
+    PrintAndLogEx(NORMAL, "Simulate Hitag2 transponder");
+    PrintAndLogEx(NORMAL, "Usage:   lf hitag sim [2|s] e|j|b <filename w/o extension>");
+    PrintAndLogEx(NORMAL, " [2|s]             : 2 = hitag2,  s = hitagS");
+    PrintAndLogEx(NORMAL, "  e <filename>     : load data from EML filename");
+    PrintAndLogEx(NORMAL, "  j <filename>     : load data from JSON filename");
+    PrintAndLogEx(NORMAL, "  b <filename>     : load data from BIN filename");    
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "         lf hitag sim 2 b lf-hitag-dump");
+    return 0;
+}
+int usage_hitag_dump(void) {
+    PrintAndLogEx(NORMAL, "Usage:   lf hitag dump p <pwd> f <name>");
+    PrintAndLogEx(NORMAL, "  p <pwd>      : password");
+    PrintAndLogEx(NORMAL, "  f <name>     : data filename, if no <name> given, UID will be used as filename");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "         lf hitag dump f mydump");
+    PrintAndLogEx(NORMAL, "         lf hitag dump p 4D494B52 f mydump");    
+    return 0;
+}
 int usage_hitag_reader(void) {
     PrintAndLogEx(NORMAL, "Hitag reader functions");
     PrintAndLogEx(NORMAL, "Usage: lf hitag reader [h] <reader function #>");
@@ -188,7 +218,11 @@ int CmdLFHitagList(const char *Cmd) {
 }
 
 int CmdLFHitagSniff(const char *Cmd) {
-    UsbCommand c = {CMD_SNIFF_HITAG};
+
+    char ctmp = tolower(param_getchar(Cmd, 0));
+    if (ctmp == 'h') return usage_hitag_sniff();
+    
+    UsbCommand c = {CMD_SNIFF_HITAG, {0, 0, 0}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
@@ -196,35 +230,78 @@ int CmdLFHitagSniff(const char *Cmd) {
 
 int CmdLFHitagSim(const char *Cmd) {
 
-    UsbCommand c = {CMD_SIMULATE_HITAG};
-    char filename[FILE_PATH_SIZE] = { 0x00 };
-    FILE *f;
-    bool tag_mem_supplied;
-
-    int len = strlen(Cmd);
-    if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
-    memcpy(filename, Cmd, len);
-
-    if (strlen(filename) > 0) {
-        f = fopen(filename, "rb+");
-        if (!f) {
-            PrintAndLogEx(WARNING, "Error: Could not open file [%s]", filename);
-            return 1;
+    bool errors = false;
+    bool useHitagS = false;
+    bool tag_mem_supplied = false;
+    uint8_t cmdp = 0;
+    size_t maxdatalen = 48;
+    uint8_t *data = calloc(4 * 64, sizeof(uint8_t));
+    size_t datalen = 0;
+    int res = 0;
+    char filename[FILE_PATH_SIZE];
+        
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_hitag_sim();
+            case '2':
+                maxdatalen = 48;  
+                cmdp++;
+                break;
+            case 's':
+                useHitagS = true;
+                maxdatalen = 4 * 64;
+                cmdp++;
+                break;
+            case 'e':                
+                param_getstr(Cmd, cmdp+1, filename, sizeof(filename));
+                res = loadFileEML(filename, "eml", data, &datalen);
+                if ( res > 0 || datalen != maxdatalen) {
+                    PrintAndLogDevice(FAILED, "error, bytes read mismatch file size");                    
+                    errors = true;
+                    break;
+                }
+                tag_mem_supplied = true;
+                cmdp += 2;
+                break;                
+            case 'j':
+                param_getstr(Cmd, cmdp+1, filename, sizeof(filename));
+                res = loadFileJSON(filename, "json", data, maxdatalen, &datalen);
+                if ( res > 0) {
+                    errors = true;
+                    break;
+                }                
+                tag_mem_supplied = true;
+                cmdp += 2;
+                break;                
+            case 'b':
+                param_getstr(Cmd, cmdp+1, filename, sizeof(filename));
+                res = loadFile(filename, "bin", data, &datalen);
+                if ( res > 0 ) {
+                    errors = true;
+                    break;
+                }                
+                tag_mem_supplied = true;
+                cmdp += 2;                
+                break;
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
         }
-        tag_mem_supplied = true;
-        size_t bytes_read = fread(c.d.asBytes, 1, 48, f);
-        if (bytes_read == 48) {
-            PrintAndLogEx(WARNING, "Error: File reading error");
-            fclose(f);
-            return 1;
-        }
-        fclose(f);
-    } else {
-        tag_mem_supplied = false;
+    }
+    
+    //Validations
+    if (errors || cmdp == 0) return usage_hitag_sim();
+    
+    UsbCommand c = {CMD_SIMULATE_HITAG, {0, 0, 0}};
+    
+    if ( useHitagS ) {
+        c.cmd = CMD_SIMULATE_HITAG_S;
     }
 
-    // Does the tag comes with memory
     c.arg[0] = (uint32_t)tag_mem_supplied;
+    memcpy(c.d.asBytes, data, datalen);
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
@@ -308,41 +385,6 @@ int CmdLFHitagReader(const char *Cmd) {
     return 0;
 }
 
-int CmdLFHitagSimS(const char *Cmd) {
-    UsbCommand c = { CMD_SIMULATE_HITAG_S };
-    char filename[FILE_PATH_SIZE] = { 0x00 };
-    FILE *f;
-    bool tag_mem_supplied;
-    int len = strlen(Cmd);
-    if (len > FILE_PATH_SIZE)
-        len = FILE_PATH_SIZE;
-    memcpy(filename, Cmd, len);
-
-    if (strlen(filename) > 0) {
-        f = fopen(filename, "rb+");
-        if (!f) {
-            PrintAndLogEx(WARNING, "Error: Could not open file [%s]", filename);
-            return 1;
-        }
-        tag_mem_supplied = true;
-        size_t bytes_read = fread(c.d.asBytes, 1, 4 * 64, f);
-        if (bytes_read == 4 * 64) {
-            PrintAndLogEx(WARNING, "Error: File reading error");
-            fclose(f);
-            return 1;
-        }
-        fclose(f);
-    } else {
-        tag_mem_supplied = false;
-    }
-
-    // Does the tag comes with memory
-    c.arg[0] = (uint32_t) tag_mem_supplied;
-    clearCommandBuffer();
-    SendCommand(&c);
-    return 0;
-}
-
 int CmdLFHitagCheckChallenges(const char *Cmd) {
     UsbCommand c = { CMD_TEST_HITAGS_TRACES };
     char filename[FILE_PATH_SIZE] = { 0x00 };
@@ -419,12 +461,15 @@ int CmdLFHitagWriter(const char *Cmd) {
     return 0;
 }
 
+int CmdLFHitagDump(const char *cmd) {
+    return usage_hitag_dump();
+}
+
 static command_t CommandTable[] = {
     {"help",             CmdHelp,                   1, "This help"},
     {"list",             CmdLFHitagList,            1, "<outfile> List Hitag trace history"},
     {"reader",           CmdLFHitagReader,          1, "Act like a Hitag Reader"},
-    {"sim",              CmdLFHitagSim,             1, "<infile> Simulate Hitag transponder"},
-    {"simS",             CmdLFHitagSimS,            1, "<hitagS.bin> Simulate HitagS transponder" },
+    {"sim",              CmdLFHitagSim,             1, "Simulate Hitag transponder"},
     {"sniff",            CmdLFHitagSniff,           1, "Eavesdrop Hitag communication"},
     {"writer",           CmdLFHitagWriter,          1, "Act like a Hitag Writer" },
     {"check_challenges", CmdLFHitagCheckChallenges, 1, "<challenges.cc> test all challenges" },
