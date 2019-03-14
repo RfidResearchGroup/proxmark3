@@ -53,6 +53,15 @@ int usage_hitag_sim(void) {
     PrintAndLogEx(NORMAL, "         lf hitag sim 2 b lf-hitag-dump");
     return 0;
 }
+int usage_hitag_info(void) {
+    PrintAndLogEx(NORMAL, "Usage:   lf hitag info [h] p <pwd>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h          This help");
+    PrintAndLogEx(NORMAL, "       p <pwd>    password");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "         lf hitag info");
+    return 0;
+}
 int usage_hitag_dump(void) {
     PrintAndLogEx(NORMAL, "Usage:   lf hitag dump [h] p <pwd> f <name>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -328,6 +337,15 @@ int CmdLFHitagSim(const char *Cmd) {
     return 0;
 }
 
+int CmdLFHitagInfo(const char *Cmd) {
+    PrintAndLogEx(INFO, "Gather tag information ");
+    PrintAndLogEx(INFO, "To be done!");
+        
+    char ctmp = tolower(param_getchar(Cmd, 0));
+    if (ctmp == 'h') return usage_hitag_info();    
+    return 0;
+}
+
 int CmdLFHitagReader(const char *Cmd) {
 
     UsbCommand c = {CMD_READER_HITAG, {0, 0, 0} };
@@ -496,11 +514,12 @@ int CmdLFHitagDump(const char *cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",     CmdHelp,                   1, "This help"},
-    {"list",     CmdLFHitagList,            0, "List Hitag trace history"},
-    {"reader",   CmdLFHitagReader,          1, "Act like a Hitag Reader"},
-    {"sim",      CmdLFHitagSim,             1, "Simulate Hitag transponder"},
-    {"sniff",    CmdLFHitagSniff,           1, "Eavesdrop Hitag communication"},
+    {"help",     CmdHelp,                   1, "This help" },
+    {"list",     CmdLFHitagList,            0, "List Hitag trace history" },
+    {"info",     CmdLFHitagInfo,            1, "Tag information" },
+    {"reader",   CmdLFHitagReader,          1, "Act like a Hitag Reader" },
+    {"sim",      CmdLFHitagSim,             1, "Simulate Hitag transponder" },
+    {"sniff",    CmdLFHitagSniff,           1, "Eavesdrop Hitag communication" },
     {"writer",   CmdLFHitagWriter,          1, "Act like a Hitag Writer" },
     {"cc",       CmdLFHitagCheckChallenges, 1, "Test all challenges" },
     { NULL, NULL, 0, NULL }
