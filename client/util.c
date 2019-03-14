@@ -694,7 +694,7 @@ int binarraytohex(char *target, const size_t targetlen, char *source, size_t src
     uint32_t r = 0; // consumed bits
     uint8_t w = 0; // wrong bits separator printed
     for (size_t s = 0 ; s < srclen; s++) {
-        if ((source[s]==0) || (source[s]==1)) {
+        if ((source[s] == 0) || (source[s] == 1)) {
             w = 0;
             x += (source[s] << (3 - i));
             i++;
@@ -702,7 +702,7 @@ int binarraytohex(char *target, const size_t targetlen, char *source, size_t src
                 if (t >= targetlen - 2) return r;
                 sprintf(target + t, "%X", x);
                 t++;
-                r+=4;
+                r += 4;
                 x = 0;
                 i = 0;
             }
@@ -711,8 +711,8 @@ int binarraytohex(char *target, const size_t targetlen, char *source, size_t src
                 if (t >= targetlen - 5) return r;
                 w = 0;
                 sprintf(target + t, "%X[%i]", x, i);
-                t+=4;
-                r+=i;
+                t += 4;
+                r += i;
                 x = 0;
                 i = 0;
             }
