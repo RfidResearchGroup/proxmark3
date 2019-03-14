@@ -245,7 +245,7 @@ int CmdFlashMemLoad(const char *Cmd) {
             break;
         default:
 
-            res = loadFile(filename, "bin", data, &datalen);
+            res = loadFile(filename, "bin", data, FLASH_MEM_MAX_SIZE, &datalen);
             //int res = loadFileEML( filename, "eml", data, &datalen);
             if (res) {
                 free(data);

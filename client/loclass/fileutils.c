@@ -269,7 +269,7 @@ out:
     return retval;
 }
 
-int loadFile(const char *preferredName, const char *suffix, void *data, size_t *datalen) {
+int loadFile(const char *preferredName, const char *suffix, void *data, size_t maxdatalen, size_t *datalen) {
 
     if (preferredName == NULL) return 1;
     if (suffix == NULL) return 1;
@@ -312,6 +312,11 @@ int loadFile(const char *preferredName, const char *suffix, void *data, size_t *
         free(dump);
         retval = 3;
         goto out;
+    }
+    
+    if ( bytes_read != maxdatalen ) {
+        PrintAndLogDevice(WARNING, "Warning, bytes read exeed calling array limit. Max bytes is %d bytes", maxdatalen);
+        bytes_read = maxdatalen;        
     }
 
     memcpy((data), dump, bytes_read);

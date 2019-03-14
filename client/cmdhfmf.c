@@ -2541,7 +2541,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
 
     uint8_t *data = calloc(4096, sizeof(uint8_t));
     size_t datalen = 0;
-    //int res = loadFile(filename, "bin", data, &datalen);
+    //int res = loadFile(filename, "bin", data, maxdatalen, &datalen);
     int res = loadFileEML(filename, "eml", data, &datalen);
     if (res) {
         free(data);
@@ -2827,7 +2827,7 @@ int CmdHF14AMfCLoad(const char *Cmd) {
     size_t datalen = 0;
     int res = 0;
     if (fillFromBin) {
-        res = loadFile(fileName, "bin", data, &datalen);
+        res = loadFile(fileName, "bin", data, maxdatalen, &datalen);
     } else {
         if (fillFromJson) {
             res = loadFileJSON(fileName, "json", data, maxdatalen, &datalen);

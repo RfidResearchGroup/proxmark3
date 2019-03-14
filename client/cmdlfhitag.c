@@ -29,30 +29,36 @@ size_t nbytes(size_t nbits) {
     return (nbits / 8) + ((nbits % 8) > 0);
 }
 int usage_hitag_sniff(void) {
-    PrintAndLogEx(NORMAL, "Usage:   lf hitag sniff");
-    PrintAndLogEx(NORMAL, "  p <pwd>      : password");
-    PrintAndLogEx(NORMAL, "  f <name>     : data filename, if no <name> given, UID will be used as filename");
+    PrintAndLogEx(NORMAL, "Sniff traffic between Hitag reader and tag. Use " _YELLOW_("`lf hitag list`")" to view collected data.");
+    PrintAndLogEx(NORMAL, "Usage:   lf hitag sniff [h] ");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h             This help");
+//    PrintAndLogEx(NORMAL, "       p <pwd>       Password");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "         lf hitag sniff");
     return 0;
 }
 int usage_hitag_sim(void) {
-    PrintAndLogEx(NORMAL, "Simulate Hitag2 transponder");
-    PrintAndLogEx(NORMAL, "Usage:   lf hitag sim [2|s] e|j|b <filename w/o extension>");
-    PrintAndLogEx(NORMAL, " [2|s]             : 2 = hitag2,  s = hitagS");
-    PrintAndLogEx(NORMAL, "  e <filename>     : load data from EML filename");
-    PrintAndLogEx(NORMAL, "  j <filename>     : load data from JSON filename");
-    PrintAndLogEx(NORMAL, "  b <filename>     : load data from BIN filename");    
+    PrintAndLogEx(NORMAL, "Simulate " _YELLOW_("Hitag2 / HitagS")" transponder");
+    PrintAndLogEx(NORMAL, "Usage:   lf hitag sim [h] [2|s] e|j|b <filename w/o extension>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h             This help");
+    PrintAndLogEx(NORMAL, "       [2|s]         2 = hitag2,  s = hitagS");
+    PrintAndLogEx(NORMAL, "       e <filename>  Load data from EML file");
+    PrintAndLogEx(NORMAL, "       j <filename>  Load data from JSON file");
+    PrintAndLogEx(NORMAL, "       b <filename>  Load data from BIN file");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "         lf hitag sim 2 b lf-hitag-dump");
     return 0;
 }
 int usage_hitag_dump(void) {
-    PrintAndLogEx(NORMAL, "Usage:   lf hitag dump p <pwd> f <name>");
-    PrintAndLogEx(NORMAL, "  p <pwd>      : password");
-    PrintAndLogEx(NORMAL, "  f <name>     : data filename, if no <name> given, UID will be used as filename");
+    PrintAndLogEx(NORMAL, "Usage:   lf hitag dump [h] p <pwd> f <name>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h          This help");    
+//    PrintAndLogEx(NORMAL, "       p <pwd>    password");
+//    PrintAndLogEx(NORMAL, "       f <name>   data filename, if no <name> given, UID will be used as filename");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "         lf hitag dump f mydump");
@@ -63,7 +69,7 @@ int usage_hitag_reader(void) {
     PrintAndLogEx(NORMAL, "Hitag reader functions");
     PrintAndLogEx(NORMAL, "Usage: lf hitag reader [h] <reader function #>");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h          This help");
+    PrintAndLogEx(NORMAL, "       h               This help");
     PrintAndLogEx(NORMAL, "   HitagS (0*)");
     PrintAndLogEx(NORMAL, "      01 <nr> <ar>     Challenge, read all pages from a Hitag S tag");
     PrintAndLogEx(NORMAL, "      02 <key>         Set to 0 if no authentication is needed. Read all pages from a Hitag S tag");
@@ -89,7 +95,20 @@ int usage_hitag_writer(void) {
     PrintAndLogEx(NORMAL, "      24  <key> (set to 0 if no authentication is needed) <page> <byte0...byte3> write page on a Hitag2 tag");
     return 0;
 }
-
+int usage_hitag_checkchallenges(void) {
+    PrintAndLogEx(NORMAL, "Check challenges, load a file with save hitag crypto challenges and test them all.");
+    PrintAndLogEx(NORMAL, "The file should be 8 * 60 bytes long,  the file extension defaults to " _YELLOW_("`.cc`") );
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:   lf hitag cc [h] f <filename w/o extension>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h              This help");
+    PrintAndLogEx(NORMAL, "       f <filename>   Load data from BIN file");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "         lf hitag cc f lf-hitag-challenges");
+    return 0;
+}
+    
 int CmdLFHitagList(const char *Cmd) {    
     CmdTraceList("hitag");
     return 0;
@@ -242,7 +261,7 @@ int CmdLFHitagSim(const char *Cmd) {
     uint8_t *data = calloc(4 * 64, sizeof(uint8_t));
     size_t datalen = 0;
     int res = 0;
-    char filename[FILE_PATH_SIZE];
+    char filename[FILE_PATH_SIZE] = { 0x00 };
     
     UsbCommand c = {CMD_SIMULATE_HITAG, {0, 0, 0}};
     
@@ -282,7 +301,7 @@ int CmdLFHitagSim(const char *Cmd) {
                 break;                
             case 'b':
                 param_getstr(Cmd, cmdp+1, filename, sizeof(filename));
-                res = loadFile(filename, "bin", data, &datalen);
+                res = loadFile(filename, "bin", data, maxdatalen, &datalen);
                 if ( res > 0 ) {
                     errors = true;
                     break;
@@ -388,33 +407,42 @@ int CmdLFHitagReader(const char *Cmd) {
 }
 
 int CmdLFHitagCheckChallenges(const char *Cmd) {
+  
     UsbCommand c = { CMD_TEST_HITAGS_TRACES, {0, 0, 0}};
     char filename[FILE_PATH_SIZE] = { 0x00 };
-    FILE *f;
-    bool file_given;
-    int len = strlen(Cmd);
-    if (len > FILE_PATH_SIZE)
-        len = FILE_PATH_SIZE;
-    memcpy(filename, Cmd, len);
-
-    if (strlen(filename) > 0) {
-        f = fopen(filename, "rb+");
-        if (!f) {
-            PrintAndLogEx(WARNING, "Error: Could not open file [%s]", filename);
-            return 1;
+    size_t datalen = 0;
+    int res = 0;
+    bool file_given = false;
+    bool errors = false;    
+    uint8_t cmdp = 0;
+    uint8_t *data = calloc(8 * 60, sizeof(uint8_t));
+        
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_hitag_checkchallenges();
+            case 'f':
+                param_getstr(Cmd, cmdp+1, filename, sizeof(filename));
+                res = loadFile(filename, "cc", data, 8 * 60, &datalen);
+                if ( res > 0 ) {
+                    errors = true;
+                    break;
+                }
+                
+                memcpy(c.d.asBytes, data, datalen);
+                file_given = true;
+                cmdp += 2;                
+                break;
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
         }
-        file_given = true;
-        size_t bytes_read = fread(c.d.asBytes, 1, 8 * 60, f);
-        if (bytes_read == 8 * 60) {
-            PrintAndLogEx(WARNING, "Error: File reading error");
-            fclose(f);
-            return 1;
-        }
-        fclose(f);
-    } else {
-        file_given = false;
     }
-
+    
+    //Validations
+    if (errors) return usage_hitag_checkchallenges();
+    
     //file with all the challenges to try
     c.arg[0] = (uint32_t)file_given;
     clearCommandBuffer();
@@ -468,13 +496,13 @@ int CmdLFHitagDump(const char *cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",             CmdHelp,                   1, "This help"},
-    {"list",             CmdLFHitagList,            1, "<outfile> List Hitag trace history"},
-    {"reader",           CmdLFHitagReader,          1, "Act like a Hitag Reader"},
-    {"sim",              CmdLFHitagSim,             1, "Simulate Hitag transponder"},
-    {"sniff",            CmdLFHitagSniff,           1, "Eavesdrop Hitag communication"},
-    {"writer",           CmdLFHitagWriter,          1, "Act like a Hitag Writer" },
-    {"check_challenges", CmdLFHitagCheckChallenges, 1, "<challenges.cc> test all challenges" },
+    {"help",     CmdHelp,                   1, "This help"},
+    {"list",     CmdLFHitagList,            0, "List Hitag trace history"},
+    {"reader",   CmdLFHitagReader,          1, "Act like a Hitag Reader"},
+    {"sim",      CmdLFHitagSim,             1, "Simulate Hitag transponder"},
+    {"sniff",    CmdLFHitagSniff,           1, "Eavesdrop Hitag communication"},
+    {"writer",   CmdLFHitagWriter,          1, "Act like a Hitag Writer" },
+    {"cc",       CmdLFHitagCheckChallenges, 1, "Test all challenges" },
     { NULL, NULL, 0, NULL }
 };
 
