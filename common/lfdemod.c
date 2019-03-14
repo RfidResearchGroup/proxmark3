@@ -1368,7 +1368,7 @@ int manrawdecode(uint8_t *bits, size_t *size, uint8_t invert, uint8_t *alignPos)
 
     //find correct start position [alignment]
     for (k = 0; k < 2; ++k) {
-        for (i = k; i < *size - 3; i += 2) {
+        for (i = k; i < *size - 1; i += 2) {
             if (bits[i] == bits[i + 1])
                 errCnt++;
         }
@@ -1380,7 +1380,7 @@ int manrawdecode(uint8_t *bits, size_t *size, uint8_t invert, uint8_t *alignPos)
     }
     *alignPos = bestRun;
     //decode
-    for (i = bestRun; i < *size - 3; i += 2) {
+    for (i = bestRun; i < *size - 1; i += 2) {
         if (bits[i] == 1 && (bits[i + 1] == 0)) {
             bits[bitnum++] = invert;
         } else if ((bits[i] == 0) && bits[i + 1] == 1) {
