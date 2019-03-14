@@ -424,7 +424,6 @@ int CmdPrintDemodBuff(const char *Cmd) {
         if (numBits == 0) {
             return 0;
         }
-        PrintAndLogEx(NORMAL, "DemodBuffer: %i bits consumed", numBits);
         PrintAndLogEx(NORMAL, "DemodBuffer: %s", hex);
     } else {
         PrintAndLogEx(NORMAL, "DemodBuffer:\n%s", sprint_bin_break(DemodBuffer + offset, length, 16));
