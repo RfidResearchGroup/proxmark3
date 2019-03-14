@@ -1357,6 +1357,7 @@ int BiphaseRawDecode(uint8_t *bits, size_t *size, int *offset, int invert) {
 //by marshmellow
 //take 10 and 01 and manchester decode
 //run through 2 times and take least errCnt
+// "7" indicates 00 or 11 wrong bit
 int manrawdecode(uint8_t *bits, size_t *size, uint8_t invert, uint8_t *alignPos) {
 
     // sanity check

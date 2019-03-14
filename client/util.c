@@ -252,7 +252,10 @@ char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t brea
     // loop through the out_index to make sure we don't go too far
     for (out_index = 0; out_index < rowlen; out_index++) {
         // set character
-        sprintf(tmp++, "%u", data[in_index]);
+        if (data[in_index] == 7) // Manchester wrong bit marker
+            sprintf(tmp++, ".");
+        else
+            sprintf(tmp++, "%u", data[in_index]);
         // check if a line break is needed and we have room to print it in our array
         if ((breaks > 0) && !((in_index + 1) % breaks) && (out_index + 1 != rowlen)) {
             // increment and print line break
@@ -683,24 +686,45 @@ int hextobinstring(char *target, char *source) {
     return length;
 }
 
-// convert binary array of 0x00/0x01 values to hex (safe to do in place as target will always be shorter than source)
+// convert binary array of 0x00/0x01 values to hex
 // return number of bits converted
-int binarraytohex(char *target, char *source, int length) {
-    unsigned char i, x;
-    int j = length;
-
-    if (j % 4)
-        return 0;
-
-    while (j) {
-        for (i = x = 0 ; i < 4 ; ++i)
-            x += (source[i] << (3 - i));
-        sprintf(target, "%X", x);
-        ++target;
-        source += 4;
-        j -= 4;
+int binarraytohex(char *target, const size_t targetlen, char *source, size_t srclen) {
+    uint8_t i = 0, x = 0;
+    uint32_t t = 0; // written target chars
+    uint32_t r = 0; // consumed bits
+    uint8_t w = 0; // wrong bits separator printed
+    for (size_t s = 0 ; s < srclen; s++) {
+        if ((source[s]==0) || (source[s]==1)) {
+            w = 0;
+            x += (source[s] << (3 - i));
+            i++;
+            if (i == 4) {
+                if (t >= targetlen - 2) return r;
+                sprintf(target + t, "%X", x);
+                t++;
+                r+=4;
+                x = 0;
+                i = 0;
+            }
+        } else {
+            if (i > 0) {
+                if (t >= targetlen - 5) return r;
+                w = 0;
+                sprintf(target + t, "%X[%i]", x, i);
+                t+=4;
+                r+=i;
+                x = 0;
+                i = 0;
+            }
+            if (w == 0) {
+                if (t >= targetlen - 2) return r;
+                sprintf(target + t, " ");
+                t++;
+            }
+            r++;
+        }
     }
-    return length;
+    return r;
 }
 
 // convert binary array to human readable binary
