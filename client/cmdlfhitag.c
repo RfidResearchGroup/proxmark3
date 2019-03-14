@@ -90,7 +90,11 @@ int usage_hitag_writer(void) {
     return 0;
 }
 
-int CmdLFHitagList(const char *Cmd) {
+int CmdLFHitagList(const char *Cmd) {    
+    CmdTraceList("hitag");
+    return 0;
+
+    /*
     uint8_t *got = calloc(USB_CMD_DATA_SIZE, sizeof(uint8_t));
     if (!got) {
         PrintAndLogEx(WARNING, "Cannot allocate memory for trace");
@@ -215,6 +219,7 @@ int CmdLFHitagList(const char *Cmd) {
 
     free(got);
     return 0;
+    */
 }
 
 int CmdLFHitagSniff(const char *Cmd) {
@@ -231,7 +236,6 @@ int CmdLFHitagSniff(const char *Cmd) {
 int CmdLFHitagSim(const char *Cmd) {
 
     bool errors = false;
-    bool useHitagS = false;
     bool tag_mem_supplied = false;
     uint8_t cmdp = 0;
     size_t maxdatalen = 48;
