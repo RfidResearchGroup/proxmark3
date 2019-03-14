@@ -343,12 +343,109 @@ int CmdLFHitagSim(const char *Cmd) {
     return 0;
 }
 
-int CmdLFHitagInfo(const char *Cmd) {
-    PrintAndLogEx(INFO, "Gather tag information ");
-    PrintAndLogEx(INFO, "To be done!");
+static void printHitagConfiguration(uint8_t config) {
+    char msg[80];
+    memset(msg, 0, sizeof(msg));
+    // encoding
+    if (config & 0x1) {
+        strcat(msg, "Biphase encoding");        
+    } else {
+        strcat(msg, "Manchester encoding");
+    }
+    PrintAndLogEx(SUCCESS, "%s", msg);
+    memset(msg, 0, sizeof(msg));
+    
+    // version
+    strcat(msg, "Coding in HITAG 2 operation: %s");
+    uint8_t foo = (config & 0x6) >> 1;
+    switch ( foo ) {
+        case 0:
+            PrintAndLogEx(SUCCESS, "Version: public mode B, Coding: biphase");
+            PrintAndLogEx(SUCCESS, msg, (config & 0x1) ? "biphase" : "manchester");
+            break;
+        case 1:
+            PrintAndLogEx(SUCCESS, "Version: public mode A, Coding: manchester");
+            PrintAndLogEx(SUCCESS, msg, (config & 0x1) ? "biphase" : "manchester");
+            break;        
+        case 2:
+            PrintAndLogEx(SUCCESS, "Version: public mode C, Coding: biphase");
+            PrintAndLogEx(SUCCESS, msg, (config & 0x1) ? "biphase" : "manchester");
+            break;        
+        case 3:
+            PrintAndLogEx(SUCCESS, "Version: Hitag2");
+            PrintAndLogEx(SUCCESS, msg, (config & 0x1) ? "biphase" : "manchester");
+            break;
+    }
+    memset(msg, 0, sizeof(msg));
+     
+    // mode
+    if (config & 0x8) {
+        strcat(msg, "Tag is in : " _YELLOW_("Crypto mode") );
+    } else  {
+        strcat(msg, "Tag is in : " _YELLOW_("Password mode") );
+    }
+    PrintAndLogEx(SUCCESS, "%s", msg);    
+    memset(msg, 0, sizeof(msg));
+       
+    // page access
+    if (config & 0x10) {
+        strcat(msg, "Page 6,7  : read only");
+    } else  {
+        strcat(msg, "Page 6,7  : " _GREEN_("read write"));
+    }
+    PrintAndLogEx(SUCCESS, "%s", msg); 
+    memset(msg, 0, sizeof(msg));
+    
+    // page access
+    if (config & 0x20) {
+        strcat(msg, "Page 4,5  : read only");
+    } else  {
+        strcat(msg, "Page 4,5  : " _GREEN_("read write"));
+    }
+    PrintAndLogEx(SUCCESS, "%s", msg); 
+    memset(msg, 0, sizeof(msg));
+    
+    // OTP
+    if (config & 0x40) {
+        strcat(msg, "Page 3    : read only. Configuration byte and password tag " _RED_("FIXED / IRREVERSIBLE") );
+    } else  {
+        strcat(msg, "Page 3    : " _GREEN_("read write"));
+    }    
+    PrintAndLogEx(SUCCESS, "%s", msg); 
+    memset(msg, 0, sizeof(msg));
+    
+    // OTP
+    if (config & 0x80) {
+        strcat(msg, "Page 1 " _RED_("locked") "\n");
+        
+        if (config & 0x8) {
+            strcat(msg + strlen(msg), "Page 2  : " _RED_("locked") );
+        } else {
+            strcat(msg + strlen(msg), "Page 2  : read only");
+        }
+    } else  {
+        strcat(msg, "Page 1,2  : " _GREEN_("read write"));
+    }
+    PrintAndLogEx(SUCCESS, "%s", msg);
+    PrintAndLogEx(INFO, "------------------------------------");
+}
 
+int CmdLFHitagInfo(const char *Cmd) {
+    PrintAndLogEx(INFO, "Hitag2 tag information ");
+    PrintAndLogEx(INFO, "To be done!");
+    PrintAndLogEx(INFO, "------------------------------------");
+    
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_hitag_info();
+    
+    // read block3,  get configuration byte.
+
+    // common configurations.
+    printHitagConfiguration( 0x06 );
+    //printHitagConfiguration( 0x0E );
+    //printHitagConfiguration( 0x02 );
+    //printHitagConfiguration( 0x00 );
+    //printHitagConfiguration( 0x04 );
     return 0;
 }
 
