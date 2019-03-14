@@ -3,6 +3,12 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fix 'data rawdemod am' - last bit was missing (@doegox)
+ - Fix 'hf 15 dump f' - also selects tag first (@iceman)
+ - Fix 'hf iclass clone' - missing fileclose (@iceman)
+ - Add 'trace list hitag' - old hitag annotations now use the new trace (@iceman)
+ - Change 'lf hitag sim' - loads bin/eml/json (@iceman)
+ - Change 'lf hitag reader 21' - saves in bin/eml/json (@iceman)
  - Change 'lf hitag' - refactoring (@iceman)
  - Change 'lf hitag' - refactoring (@piwi)
  - Fix 'lf hitag' - generic fix for missing clock init (@piwi)
