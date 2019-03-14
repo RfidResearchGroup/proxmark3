@@ -344,7 +344,7 @@ int CmdLFHitagSim(const char *Cmd) {
 }
 
 static void printHitagConfiguration(uint8_t config) {
-    char msg[80];
+    char msg[90];
     memset(msg, 0, sizeof(msg));
     // encoding
     if (config & 0x1) {
