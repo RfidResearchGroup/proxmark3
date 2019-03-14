@@ -244,12 +244,12 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
             memcpy(uid, data, 4);
 
             JsonSaveBufAsHexCompact(root, "$.Card.UID", uid, sizeof(uid));
-            
+
             for (int i = 0; i < (datalen / 4); i++) {
                 char path[PATH_MAX_LENGTH] = {0};
                 sprintf(path, "$.blocks.%d", i);
                 JsonSaveBufAsHexCompact(root, path, data + (i * 4), 4);
-            }               
+            }
             break;
         }
     }
@@ -313,10 +313,10 @@ int loadFile(const char *preferredName, const char *suffix, void *data, size_t m
         retval = 3;
         goto out;
     }
-    
-    if ( bytes_read != maxdatalen ) {
+
+    if (bytes_read != maxdatalen) {
         PrintAndLogDevice(WARNING, "Warning, bytes read exeed calling array limit. Max bytes is %d bytes", maxdatalen);
-        bytes_read = maxdatalen;        
+        bytes_read = maxdatalen;
     }
 
     memcpy((data), dump, bytes_read);
@@ -470,7 +470,7 @@ int loadFileJSON(const char *preferredName, const char *suffix, void *data, size
 
     if (!strcmp(ctype, "hitag")) {
         size_t sptr = 0;
-        for (int i = 0; i < (maxdatalen/4); i++) {
+        for (int i = 0; i < (maxdatalen / 4); i++) {
             if (sptr + 4 > maxdatalen) {
                 retval = 5;
                 goto out;

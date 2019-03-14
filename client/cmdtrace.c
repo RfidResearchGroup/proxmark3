@@ -191,12 +191,12 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
     for (int j = 0; j < data_len && j / 18 < 18; j++) {
 
         uint8_t parityBits = parityBytes[j >> 3];
-        if ( protocol != LEGIC
-            && protocol != ISO_14443B
-            && protocol != ISO_7816_4
-            && protocol != PROTO_HITAG
-            && (isResponse || protocol == ISO_14443A)
-            && (oddparity8(frame[j]) != ((parityBits >> (7 - (j & 0x0007))) & 0x01))) {
+        if (protocol != LEGIC
+                && protocol != ISO_14443B
+                && protocol != ISO_7816_4
+                && protocol != PROTO_HITAG
+                && (isResponse || protocol == ISO_14443A)
+                && (oddparity8(frame[j]) != ((parityBits >> (7 - (j & 0x0007))) & 0x01))) {
 
             snprintf(line[j / 18] + ((j % 18) * 4), 110, "%02x! ", frame[j]);
         } else {

@@ -1586,7 +1586,7 @@ void SendRawCommand14443B_Ex(UsbCommand *c) {
         iso14443b_setup();
         clear_trace();
     }
-    
+
     if ((param & ISO14B_SET_TIMEOUT))
         iso14b_set_timeout(timeout);
 

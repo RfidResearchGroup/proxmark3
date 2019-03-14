@@ -688,7 +688,7 @@ int CmdHF15Dump(const char *Cmd) {
         PrintAndLogEx(WARNING, "No tag found.");
         return 1;
     }
-    
+
     if (fileNameLen < 1) {
 
         PrintAndLogEx(INFO, "Using UID as filename");

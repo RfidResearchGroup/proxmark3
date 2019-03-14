@@ -2,7 +2,7 @@
 
 function wait4proxmark_Linux {
     echo >&2 "Waiting for Proxmark to appear..."
-    while [ ! -c /dev/ttyACM? -a ! -L /dev/pm3-? ]; do
+    while [ ! -c /dev/ttyACM? -a ! -c /dev/pm3-? ]; do
         sleep .1
     done
     local PM3=`ls -1 /dev/pm3-? /dev/ttyACM? 2>/dev/null | head -1`

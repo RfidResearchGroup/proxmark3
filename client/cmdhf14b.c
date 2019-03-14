@@ -198,7 +198,7 @@ int CmdHF14BCmdRaw(const char *Cmd) {
                     i += 3;
                     while (Cmd[i] != ' ' && Cmd[i] != '\0') { i++; }
                     i -= 2;
-                    break;                    
+                    break;
                 default:
                     return usage_hf_14b_raw();
             }
@@ -223,7 +223,7 @@ int CmdHF14BCmdRaw(const char *Cmd) {
         PrintAndLogEx(WARNING, "unknown parameter '%c'\n", param_getchar(Cmd, i));
         return 0;
     }
-    
+
     if (timeout) {
 #define MAX_TIMEOUT 40542464 // = (2^32-1) * (8*16) / 13560000Hz * 1000ms/s
         flags |= ISO14B_SET_TIMEOUT;

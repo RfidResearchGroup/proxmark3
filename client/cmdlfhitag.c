@@ -65,13 +65,13 @@ int usage_hitag_info(void) {
 int usage_hitag_dump(void) {
     PrintAndLogEx(NORMAL, "Usage:   lf hitag dump [h] p <pwd> f <name>");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h          This help");    
+    PrintAndLogEx(NORMAL, "       h          This help");
 //    PrintAndLogEx(NORMAL, "       p <pwd>    password");
 //    PrintAndLogEx(NORMAL, "       f <name>   data filename, if no <name> given, UID will be used as filename");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "         lf hitag dump f mydump");
-    PrintAndLogEx(NORMAL, "         lf hitag dump p 4D494B52 f mydump");    
+    PrintAndLogEx(NORMAL, "         lf hitag dump p 4D494B52 f mydump");
     return 0;
 }
 int usage_hitag_reader(void) {
@@ -106,7 +106,7 @@ int usage_hitag_writer(void) {
 }
 int usage_hitag_checkchallenges(void) {
     PrintAndLogEx(NORMAL, "Check challenges, load a file with save hitag crypto challenges and test them all.");
-    PrintAndLogEx(NORMAL, "The file should be 8 * 60 bytes long,  the file extension defaults to " _YELLOW_("`.cc`") );
+    PrintAndLogEx(NORMAL, "The file should be 8 * 60 bytes long,  the file extension defaults to " _YELLOW_("`.cc`"));
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:   lf hitag cc [h] f <filename w/o extension>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -117,8 +117,8 @@ int usage_hitag_checkchallenges(void) {
     PrintAndLogEx(NORMAL, "         lf hitag cc f lf-hitag-challenges");
     return 0;
 }
-    
-int CmdLFHitagList(const char *Cmd) {    
+
+int CmdLFHitagList(const char *Cmd) {
     CmdTraceList("hitag");
     return 0;
 
@@ -254,7 +254,7 @@ int CmdLFHitagSniff(const char *Cmd) {
 
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_hitag_sniff();
-    
+
     UsbCommand c = {CMD_SNIFF_HITAG, {0, 0, 0}};
     clearCommandBuffer();
     SendCommand(&c);
@@ -271,16 +271,16 @@ int CmdLFHitagSim(const char *Cmd) {
     size_t datalen = 0;
     int res = 0;
     char filename[FILE_PATH_SIZE] = { 0x00 };
-    
+
     UsbCommand c = {CMD_SIMULATE_HITAG, {0, 0, 0}};
-    
+
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
                 free(data);
                 return usage_hitag_sim();
             case '2':
-                maxdatalen = 48;  
+                maxdatalen = 48;
                 cmdp++;
                 break;
             case 's':
@@ -288,36 +288,36 @@ int CmdLFHitagSim(const char *Cmd) {
                 maxdatalen = 4 * 64;
                 cmdp++;
                 break;
-            case 'e':                
-                param_getstr(Cmd, cmdp+1, filename, sizeof(filename));
+            case 'e':
+                param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
                 res = loadFileEML(filename, "eml", data, &datalen);
-                if ( res > 0 || datalen != maxdatalen) {
-                    PrintAndLogDevice(FAILED, "error, bytes read mismatch file size");                    
+                if (res > 0 || datalen != maxdatalen) {
+                    PrintAndLogDevice(FAILED, "error, bytes read mismatch file size");
                     errors = true;
                     break;
                 }
                 tag_mem_supplied = true;
                 cmdp += 2;
-                break;                
+                break;
             case 'j':
-                param_getstr(Cmd, cmdp+1, filename, sizeof(filename));
+                param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
                 res = loadFileJSON(filename, "json", data, maxdatalen, &datalen);
-                if ( res > 0) {
+                if (res > 0) {
                     errors = true;
                     break;
-                }                
+                }
                 tag_mem_supplied = true;
                 cmdp += 2;
-                break;                
+                break;
             case 'b':
-                param_getstr(Cmd, cmdp+1, filename, sizeof(filename));
+                param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
                 res = loadFile(filename, "bin", data, maxdatalen, &datalen);
-                if ( res > 0 ) {
+                if (res > 0) {
                     errors = true;
                     break;
-                }                
+                }
                 tag_mem_supplied = true;
-                cmdp += 2;                
+                cmdp += 2;
                 break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
@@ -325,30 +325,30 @@ int CmdLFHitagSim(const char *Cmd) {
                 break;
         }
     }
-    
+
     //Validations
     if (errors || cmdp == 0) {
         free(data);
         return usage_hitag_sim();
     }
-    
+
     c.arg[0] = (uint32_t)tag_mem_supplied;
-    if ( tag_mem_supplied ) {
+    if (tag_mem_supplied) {
         memcpy(c.d.asBytes, data, datalen);
     }
     clearCommandBuffer();
     SendCommand(&c);
 
-    free(data);    
+    free(data);
     return 0;
 }
 
 int CmdLFHitagInfo(const char *Cmd) {
     PrintAndLogEx(INFO, "Gather tag information ");
     PrintAndLogEx(INFO, "To be done!");
-        
+
     char ctmp = tolower(param_getchar(Cmd, 0));
-    if (ctmp == 'h') return usage_hitag_info();    
+    if (ctmp == 'h') return usage_hitag_info();
     return 0;
 }
 
@@ -415,48 +415,48 @@ int CmdLFHitagReader(const char *Cmd) {
     if (htf == RHT2F_UID_ONLY) {
         PrintAndLogEx(SUCCESS, "Valid Hitag2 tag found - UID: %08x", id);
     } else {
-        
+
         uint8_t *data = resp.d.asBytes;
-        
+
         char filename[FILE_PATH_SIZE];
         char *fnameptr = filename;
         fnameptr += sprintf(fnameptr, "lf-hitag-");
         FillFileNameByUID(fnameptr, data, "-dump", 4);
 
-        saveFile(filename, "bin", data, 48);        
+        saveFile(filename, "bin", data, 48);
         saveFileEML(filename, "eml", data, 48, 4);
-        saveFileJSON(filename, "json", jsfHitag, (uint8_t *)data, 48);        
+        saveFileJSON(filename, "json", jsfHitag, (uint8_t *)data, 48);
     }
     return 0;
 }
 
 int CmdLFHitagCheckChallenges(const char *Cmd) {
-  
+
     UsbCommand c = { CMD_TEST_HITAGS_TRACES, {0, 0, 0}};
     char filename[FILE_PATH_SIZE] = { 0x00 };
     size_t datalen = 0;
     int res = 0;
     bool file_given = false;
-    bool errors = false;    
+    bool errors = false;
     uint8_t cmdp = 0;
     uint8_t *data = calloc(8 * 60, sizeof(uint8_t));
-        
+
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
                 free(data);
                 return usage_hitag_checkchallenges();
             case 'f':
-                param_getstr(Cmd, cmdp+1, filename, sizeof(filename));
+                param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
                 res = loadFile(filename, "cc", data, 8 * 60, &datalen);
-                if ( res > 0 ) {
+                if (res > 0) {
                     errors = true;
                     break;
                 }
-                
+
                 memcpy(c.d.asBytes, data, datalen);
                 file_given = true;
-                cmdp += 2;                
+                cmdp += 2;
                 break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
@@ -464,19 +464,19 @@ int CmdLFHitagCheckChallenges(const char *Cmd) {
                 break;
         }
     }
-    
+
     //Validations
     if (errors) {
-        free(data);        
+        free(data);
         return usage_hitag_checkchallenges();
     }
-    
+
     //file with all the challenges to try
     c.arg[0] = (uint32_t)file_given;
     clearCommandBuffer();
     SendCommand(&c);
 
-    free(data);    
+    free(data);
     return 0;
 }
 
@@ -484,7 +484,7 @@ int CmdLFHitagWriter(const char *Cmd) {
     UsbCommand c = { CMD_WR_HITAG_S, {0, 0, 0}};
     hitag_data *htd = (hitag_data *)c.d.asBytes;
     hitag_function htf = param_get32ex(Cmd, 0, 0, 10);
-    
+
     switch (htf) {
         case WHTSF_CHALLENGE: {
             num_to_bytes(param_get64ex(Cmd, 1, 0, 16), 8, htd->auth.NrAr);
@@ -512,20 +512,20 @@ int CmdLFHitagWriter(const char *Cmd) {
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 4000)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return 1;
-    }    
+    }
 
     if (resp.arg[0] == false) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - hitag write failed");
         return 1;
-    }    
+    }
     return 0;
 }
 
 int CmdLFHitagDump(const char *Cmd) {
     PrintAndLogEx(INFO, "Dumping of tag memory");
     PrintAndLogEx(INFO, "To be done!");
-        
-    char ctmp = tolower(param_getchar(Cmd, 0));    
+
+    char ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_hitag_dump();
     return 0;
 }

@@ -1376,7 +1376,7 @@ int CmdHFiClassCloneTag(const char *Cmd) {
     }
 
     fclose(f);
-            
+
     uint8_t MAC[4] = {0x00, 0x00, 0x00, 0x00};
     uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
@@ -1404,12 +1404,12 @@ int CmdHFiClassCloneTag(const char *Cmd) {
         PrintAndLogEx(NORMAL, " %02x%02x%02x%02x%02x%02x%02x%02x |", p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
         PrintAndLogEx(NORMAL, " MAC |%02x%02x%02x%02x|\n", p[8], p[9], p[10], p[11]);
     }
-    
+
     UsbCommand resp;
     clearCommandBuffer();
     SendCommand(&w);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 4500)) {
-        PrintAndLogEx(WARNING, "command execute timeout");        
+        PrintAndLogEx(WARNING, "command execute timeout");
         return 0;
     }
     return 1;
