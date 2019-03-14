@@ -684,14 +684,14 @@ int CmdHF15Dump(const char *Cmd) {
     //Validations
     if (errors) return usage_15_dump();
 
+    if (!getUID(uid)) {
+        PrintAndLogEx(WARNING, "No tag found.");
+        return 1;
+    }
+    
     if (fileNameLen < 1) {
 
         PrintAndLogEx(INFO, "Using UID as filename");
-
-        if (!getUID(uid)) {
-            PrintAndLogEx(WARNING, "No tag found.");
-            return 1;
-        }
 
         fptr += sprintf(fptr, "hf-15-");
         FillFileNameByUID(fptr, uid, "-dump", sizeof(uid));
