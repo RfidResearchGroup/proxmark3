@@ -526,7 +526,8 @@ int CmdLFHitagDump(const char *cmd) {
     PrintAndLogEx(INFO, "To be done!");
         
     char ctmp = tolower(param_getchar(Cmd, 0));    
-    return usage_hitag_dump();
+    if (ctmp == 'h') return usage_hitag_dump();
+    return 0;
 }
 
 static command_t CommandTable[] = {
