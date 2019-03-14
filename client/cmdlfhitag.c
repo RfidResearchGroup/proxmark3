@@ -522,6 +522,10 @@ int CmdLFHitagWriter(const char *Cmd) {
 }
 
 int CmdLFHitagDump(const char *cmd) {
+    PrintAndLogEx(INFO, "Dumping of tag memory");
+    PrintAndLogEx(INFO, "To be done!");
+        
+    char ctmp = tolower(param_getchar(Cmd, 0));    
     return usage_hitag_dump();
 }
 
