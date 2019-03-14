@@ -277,6 +277,7 @@ int CmdLFHitagSim(const char *Cmd) {
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
+                free(data);
                 return usage_hitag_sim();
             case '2':
                 maxdatalen = 48;  
@@ -326,7 +327,10 @@ int CmdLFHitagSim(const char *Cmd) {
     }
     
     //Validations
-    if (errors || cmdp == 0) return usage_hitag_sim();
+    if (errors || cmdp == 0) {
+        free(data);
+        return usage_hitag_sim();
+    }
     
     c.arg[0] = (uint32_t)tag_mem_supplied;
     if ( tag_mem_supplied ) {
@@ -334,6 +338,8 @@ int CmdLFHitagSim(const char *Cmd) {
     }
     clearCommandBuffer();
     SendCommand(&c);
+
+    free(data);    
     return 0;
 }
 
@@ -438,6 +444,7 @@ int CmdLFHitagCheckChallenges(const char *Cmd) {
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
+                free(data);
                 return usage_hitag_checkchallenges();
             case 'f':
                 param_getstr(Cmd, cmdp+1, filename, sizeof(filename));
@@ -459,12 +466,17 @@ int CmdLFHitagCheckChallenges(const char *Cmd) {
     }
     
     //Validations
-    if (errors) return usage_hitag_checkchallenges();
+    if (errors) {
+        free(data);        
+        return usage_hitag_checkchallenges();
+    }
     
     //file with all the challenges to try
     c.arg[0] = (uint32_t)file_given;
     clearCommandBuffer();
     SendCommand(&c);
+
+    free(data);    
     return 0;
 }
 
