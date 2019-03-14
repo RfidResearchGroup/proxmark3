@@ -417,18 +417,16 @@ int CmdPrintDemodBuff(const char *Cmd) {
         return 0;
     }
     length = (length > (DemodBufferLen - offset)) ? DemodBufferLen - offset : length;
-    int numBits = (length) & 0x00FFC; //make sure we don't exceed our string
 
     if (hexMode) {
         char *buf = (char *)(DemodBuffer + offset);
-        numBits = (numBits > sizeof(hex)) ? sizeof(hex) : numBits;
-        numBits = binarraytohex(hex, buf, numBits);
+        int numBits = binarraytohex(hex, sizeof(hex), buf, length);
         if (numBits == 0) {
             return 0;
         }
         PrintAndLogEx(NORMAL, "DemodBuffer: %s", hex);
     } else {
-        PrintAndLogEx(NORMAL, "DemodBuffer:\n%s", sprint_bin_break(DemodBuffer + offset, numBits, 16));
+        PrintAndLogEx(NORMAL, "DemodBuffer:\n%s", sprint_bin_break(DemodBuffer + offset, length, 16));
     }
     return 1;
 }
