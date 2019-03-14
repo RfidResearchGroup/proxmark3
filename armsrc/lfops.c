@@ -1373,8 +1373,6 @@ void T55xxResetRead(void) {
     //clear buffer now so it does not interfere with timing later
     BigBuf_Clear_keep_EM();
 
-    StartTicks();
-
     // Set up FPGA, 125kHz
     LFSetupFPGAForADC(95, true);
     // make sure tag is fully powered up...
@@ -1406,8 +1404,6 @@ void T55xxWriteBlockExt(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t arg)
     uint8_t Page = (arg & 0x2) >> 1;
     bool testMode = arg & 0x4;
     uint32_t i = 0;
-
-    StartTicks();
 
     // Set up FPGA, 125kHz
     LFSetupFPGAForADC(95, true);
@@ -1482,7 +1478,7 @@ void T55xxWriteBlock(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t arg) {
 // Read one card block in page [page]
 void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
     LED_A_ON();
-    bool PwdMode =    arg0 & 0x1;
+    bool PwdMode = arg0 & 0x1;
     uint8_t Page = (arg0 & 0x2) >> 1;
     bool brute_mem =  arg0 & 0x4;
 
@@ -1503,8 +1499,6 @@ void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 
     //make sure block is at max 7
     Block &= 0x7;
-
-    StartTicks();
 
     // Set up FPGA, 125kHz to power up the tag
     LFSetupFPGAForADC(95, true);
@@ -1648,8 +1642,6 @@ OUT:
 void T55xxWakeUp(uint32_t Pwd) {
     LED_B_ON();
     uint32_t i = 0;
-
-    StartTicks();
 
     // Set up FPGA, 125kHz
     LFSetupFPGAForADC(95, true);
