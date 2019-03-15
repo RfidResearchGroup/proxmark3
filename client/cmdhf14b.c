@@ -153,14 +153,13 @@ int CmdHF14BSniff(const char *Cmd) {
 }
 
 int CmdHF14BCmdRaw(const char *Cmd) {
-    bool reply = true, power = false, select = false, timeout = false;
+    bool reply = true, power = false, select = false, hasTimeout = false;
     char buf[5] = "";
     int i = 0;
     uint8_t data[USB_CMD_DATA_SIZE] = {0x00};
     uint16_t datalen = 0;
     uint32_t flags = ISO14B_CONNECT;
-    uint32_t temp = 0;
-    uint32_t time_wait = 0;
+    uint32_t temp = 0, user_timeout = 0, time_wait = 0;
 
     if (strlen(Cmd) < 3) return usage_hf_14b_raw();
 
@@ -192,9 +191,8 @@ int CmdHF14BCmdRaw(const char *Cmd) {
                     }
                     break;
                 case 't':
-                    timeout = true;
-                    sscanf(Cmd + i + 2, "%d", &temp);
-                    timeout = temp;
+                    hasTimeout = true;
+                    sscanf(Cmd + i + 2, "%d", &user_timeout);
                     i += 3;
                     while (Cmd[i] != ' ' && Cmd[i] != '\0') { i++; }
                     i -= 2;
@@ -224,14 +222,14 @@ int CmdHF14BCmdRaw(const char *Cmd) {
         return 0;
     }
 
-    if (timeout) {
+    if (hasTimeout) {
 #define MAX_TIMEOUT 40542464 // = (2^32-1) * (8*16) / 13560000Hz * 1000ms/s
         flags |= ISO14B_SET_TIMEOUT;
-        if (timeout > MAX_TIMEOUT) {
-            timeout = MAX_TIMEOUT;
+        if (user_timeout > MAX_TIMEOUT) {
+            user_timeout = MAX_TIMEOUT;
             PrintAndLogEx(NORMAL, "Set timeout to 40542 seconds (11.26 hours). The max we can wait for response");
         }
-        time_wait = 13560000 / 1000 / (8 * 16) * timeout; // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
+        time_wait = 13560000 / 1000 / (8 * 16) * user_timeout; // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
     }
 
     if (power == 0)
