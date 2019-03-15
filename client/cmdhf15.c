@@ -684,14 +684,14 @@ int CmdHF15Dump(const char *Cmd) {
     //Validations
     if (errors) return usage_15_dump();
 
+    if (!getUID(uid)) {
+        PrintAndLogEx(WARNING, "No tag found.");
+        return 1;
+    }
+
     if (fileNameLen < 1) {
 
         PrintAndLogEx(INFO, "Using UID as filename");
-
-        if (!getUID(uid)) {
-            PrintAndLogEx(WARNING, "No tag found.");
-            return 1;
-        }
 
         fptr += sprintf(fptr, "hf-15-");
         FillFileNameByUID(fptr, uid, "-dump", sizeof(uid));
@@ -796,7 +796,7 @@ int CmdHF15Restore(const char *Cmd) {
                     case '2':
                     case 'o':
                         strncpy(newCmdPrefix, " ", sizeof(newCmdPrefix) - 1);
-                        strncat(newCmdPrefix, param, sizeof(newCmdPrefix) - 1);
+                        strncat(newCmdPrefix, param, sizeof(newCmdPrefix) - strlen(newCmdPrefix) - 1);
                         break;
                     default:
                         PrintAndLogEx(WARNING, "Unknown parameter '%s'", param);

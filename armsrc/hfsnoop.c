@@ -4,9 +4,9 @@
 #include "util.h"
 #include "usb_cdc.h" // for usb_poll_validate_length
 
-static void RAMFUNC optimizedSnoop(void);
+static void RAMFUNC optimizedSniff(void);
 
-static void RAMFUNC optimizedSnoop(void) {
+static void RAMFUNC optimizedSniff(void) {
     int n = BigBuf_max_traceLen() / sizeof(uint16_t); // take all memory
 
     uint16_t *dest = (uint16_t *)BigBuf_get_addr();
@@ -23,7 +23,7 @@ static void RAMFUNC optimizedSnoop(void) {
     set_tracelen(BigBuf_max_traceLen());
 }
 
-void HfSnoop(int samplesToSkip, int triggersToSkip) {
+void HfSniff(int samplesToSkip, int triggersToSkip) {
     BigBuf_free();
     BigBuf_Clear();
 
@@ -66,14 +66,14 @@ void HfSnoop(int samplesToSkip, int triggersToSkip) {
             if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY))
                 waitcount--;
         }
-        optimizedSnoop();
+        optimizedSniff();
         Dbprintf("Trigger kicked! Value: %d, Dumping Samples Hispeed now.", r);
     }
 
     //Resetting Frame mode (First set in fpgaloader.c)
     AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
 
-    DbpString("HF Snoop end");
+    DbpString("HF Sniffing end");
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LED_D_OFF();
 }

@@ -1,38 +1,26 @@
-	"Coding styles are like assholes, everyone has one and no one likes anyone elses."
-	--Eric Warmenhoven
+    "Coding styles are like assholes, everyone has one and no one likes anyone elses."
+    --Eric Warmenhoven
 
 The Proxmark3 codebase is pretty messy and in the process of being cleaned up,
 so we don't have clear guidelines on how to place new code just yet. However,
 please don't make things worse.
 
 However, we have established a set of coding style guidelines in order to
-clean up the code consistently and keep it consistent in the future. Use common
-sense and good taste. If breaking a rule leads to cleaner code, you can do so,
-but laziness is not an excuse.
+clean up the code consistently and keep it consistent in the future.
+Look around and respect the same style.
+Helper script to get some uniformity in the style:
+
+$ make style
+
+It makes use of "astyle" so be sure to install it first.
+
 
 === INDENTATION ===
 
-Use tabs for indentation, but use spaces for alignment:
+Don't use tabs, editors are messing them up too easily.
+Increment unit is four spaces.
 
-	if (foo(this, that, there)
-	    && bar == baz)
-	{
-		dostuff();
-	}
-
-Notice it's like this (T___ for tab, S for space, for a 4-char tab setting):
-
-T___if (foo(this, that, there)
-T___SSSS&& bar == baz)
-
-Another example:
-
-#define THIS            0x10
-#define THAT_THING      0x20
-#define SOMETHING_ELSE  0x80
-
-These should look good no matter what your editor's tab setting is, so go nuts
-and pick whatever you like best.
+If you use "make style", this will be done for you.
 
 === WIDTH ===
 
@@ -65,24 +53,28 @@ use microsoft-style DWORD and the like, we're getting rid of those. Avoid char
 for buffers, uint8_t is more obvious when you're not working with strings. Use
 'const' where things are const. Try to use size_t for sizes.
 
-Pointers are:
-	void *ptr;
+Pointers and reference operators are attached to the variable name:
+    void *ptr;
 not:
-	void* ptr;
+    void* ptr;
 otherwise you're tempted to write:
-	void* in, out;
+    void* in, out;
 and you'll fail.
+
+"make style" will take care of pointers & reference operators.
 
 === EXPRESSIONS ===
 
 In general, use whitespace around binary operators - no unspaced blobs of an
-expression. This rule may be broken if it makes things clearer. For example,
+expression. "make style" will take care of whitespaces around operators.
 
-	if (5*a < b && some_bool_var)
+For example,
+
+    if (5 * a < b && some_bool_var)
 
 but not
 
-	if (5*a<b&&some_bool_var)
+    if (5*a<b&&some_bool_var)
 
 For equality with constants, use i == 0xF00, not 0xF00 == i. The compiler warns
 you about = vs == anyway, and you shouldn't be screwing that one up by now
@@ -90,93 +82,73 @@ anyway.
 
 === IF / FOR / WHILE / etc. ===
 
-Put the opening brace on the same line, with a space before it. Exception: if
-the if/for/while condition/whatever are split over several lines, it might be
-more appealing to put the opening brace on its own line, so use your own
-judgement there:
-
-	if (foo(this, that, there)
-	    && bar == baz)
-	{
-		dostuff();
-	}
-
-If you do split the condition, put the binary operators that join the lines at
-the beginning of the following lines (as above), not at the end of the prior
-lines.
-
+Put the opening brace on the same line, with a space before it.
 There should be a space between the construct name (if/for/whatever) and the
 opening parenthesis, and there should be a space between the closing parenthesis
-and the opening brace.
+and the opening brace, and no space between parenthesis and expression.
+"make style" will take care of all that.
+
+If you do split the condition, put the binary operators that join the lines at
+the beginning of the following lines, not at the end of the prior lines.
 
 For generic for() iterator variables, declare them in-line:
 
-	for (int i = 0; i < 10; i++) {
-		...
-	}
+    for (int i = 0; i < 10; i++) {
+        ...
+    }
 
 Note the spaces after the semicolons.
 
 if/else should be laid out as follows:
 
-	if (foo) {
-		...
-	} else if (bar) {
-		...
-	} else {
-		...
-	}
+    if (foo) {
+        ...
+    } else if (bar) {
+        ...
+    } else {
+        ...
+    }
 
-or
-
-	if (foo)
-		...
-	else if (bar)
-		...
-	else
-		...
-
-Don't mix braces vs. no braces. If any of your bodies are > 1 line, put braces
-around them all.
+You can skip braces around 1 line statements but don't mix braces vs. no braces.
 
 === FUNCTIONS ===
 
-Functions with no arguments are declared as f(void), not f(). Put the return
-type on the same line. Use static for functions that aren't exported, and put
-exported functions in a header file (one header file per source file with
-exported functions usually, no huge headers with all functions). Put a space
-after a comma in argument lists.
+Put the return type on the same line.
+Put a space after a comma in argument lists.
+Open the brace after the declaration (after a space).
+"make style" will take care of all that.
 
-void foo(int a_thing, int something_else)
-{
-	...
+void foo(int a_thing, int something_else) {
+    ...
 }
 
-void baz(void)
-{
-	foo(bluh, blah);
+Functions with no arguments are declared as f(void), not f().
+Use static for functions that aren't exported, and put exported functions
+in a header file (one header file per source file with exported functions
+usually, no huge headers with all functions). 
+
+void baz(void) {
+    foo(bluh, blah);
 }
 
 Function names should be separated_with_underscores(), except for standard
 functions (memcpy, etc.). It may make sense to break this rule for very common,
 generic functions that look like library functions (e.g. dprintf()).
 
-Don't use single-character arguments. Exception: very short functions with one
-argument that's really obvious:
+Don't use single-character arguments.
+Exception: very short functions with one argument that's really obvious:
 
-static int ascii(char c)
-{
-	if (c < 0x20 || c >= 0x7f)
-		return '.';
-	else
-		return c;
+static int ascii(char c) {
+    if (c < 0x20 || c >= 0x7f)
+        return '.';
+    else
+        return c;
 }
 
 vs.
 
-static void hexdump(void *buf, size_t len)
-{
-	...
+static void hexdump(void *buf, size_t len) {
+    ...
 }
 
 As a general guideline, functions shouldn't usually be much more than 30-50
@@ -188,7 +160,7 @@ probably missing some factoring/restructuring opportunity.
 Use typedefs when defining structs. The type should be named something_t.
 
 typedef struct {
-	blah blah;
+    blah blah;
 } prox_cmd_t;
 
 You can use anonymous enums to replace lots of sequential or mostly-sequential
@@ -199,16 +171,18 @@ You can use anonymous enums to replace lots of sequential or mostly-sequential
 Indent once for the case: labels, then again for the body. Like this:
 
 switch(bar) {
-	case OPTION_A:
-		do_stuff();
-		break;
-	case OPTION_B:
-		do_other_stuff();
-		break;
+    case OPTION_A:
+        do_stuff();
+        break;
+    case OPTION_B:
+        do_other_stuff();
+        break;
 }
 
-If you fall through into another case, add an explicit comment; otherwise, it
-can look confusing.
+"make style" will take care of the indentation.
+
+If you fall through into another case, add an explicit comment;
+otherwise, it can look confusing.
 
 If your switch() is too long or has too many cases, it should be cleaned up.
 Split off the cases into functions, break the switch() into parent and children
@@ -218,12 +192,12 @@ the like. In other words, use common sense and your brain.
 If you need local scope variables for a case, you can add braces:
 
 switch(bar) {
-	case OPTION_A: {
-		int baz = 5*bar;
-		do_stuff(baz);
-		break;
-	}
-	...
+    case OPTION_A: {
+        int baz = 5 * bar;
+        do_stuff(baz);
+        break;
+    }
+    ...
 
 But at that point you should probably consider using a separate function.
 
@@ -266,7 +240,7 @@ License/description header first:
 //-----------------------------------------------------------------------------
 
 If you modify a file in any non-trivial way (add code, etc.), add your copyright
-to the top.
+to the top with the current year.
 
 === HEADER FILES ===
 
@@ -284,8 +258,7 @@ you shouldn't use it (same for _FOOBAR_H).
 
 === WHITESPACE ===
 
-Avoid trailing whitespace (no line should end in tab or space). People forget
-this all the time if their editor doesn't handle it, but don't be surprised if
-you see someone fixing it from time to time.
-
+Avoid trailing whitespace (no line should end in tab or space).
 Keep a newline (blank line) at the end of each file.
+
+"make style" will take care of both.

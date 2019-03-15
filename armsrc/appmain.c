@@ -650,8 +650,8 @@ void UsbPacketReceived(uint8_t *packet, int len) {
         case CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K:
             ModThenAcquireRawAdcSamples125k(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
             break;
-        case CMD_LF_SNOOP_RAW_ADC_SAMPLES: {
-            uint32_t bits = SnoopLF();
+        case CMD_LF_SNIFF_RAW_ADC_SAMPLES: {
+            uint32_t bits = SniffLF();
             cmd_send(CMD_ACK, bits, 0, 0, 0, 0);
             break;
         }
@@ -664,13 +664,13 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             CmdHIDsimTAG(c->arg[0], c->arg[1], 1);
             break;
         case CMD_FSK_SIM_TAG:
-            CmdFSKsimTAG(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
+            CmdFSKsimTAG(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes, 1);
             break;
         case CMD_ASK_SIM_TAG:
-            CmdASKsimTag(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
+            CmdASKsimTag(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes, 1);
             break;
         case CMD_PSK_SIM_TAG:
-            CmdPSKsimTag(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
+            CmdPSKsimTag(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes, 1);
             break;
         case CMD_HID_CLONE_TAG:
             CopyHIDtoT55x7(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes[0]);
@@ -765,8 +765,8 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 #endif
 
 #ifdef WITH_HITAG
-        case CMD_SNOOP_HITAG: // Eavesdrop Hitag tag, args = type
-            SnoopHitag(c->arg[0]);
+        case CMD_SNIFF_HITAG: // Eavesdrop Hitag tag, args = type
+            SniffHitag(c->arg[0]);
             break;
         case CMD_SIMULATE_HITAG: // Simulate Hitag tag, args = memory content
             SimulateHitagTag((bool)c->arg[0], (byte_t *)c->d.asBytes);
@@ -786,7 +786,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
         case CMD_WR_HITAG_S: //writer for Hitag tags args=data to write,page and key or challenge
             if ((hitag_function)c->arg[0] < 10) {
                 WritePageHitagS((hitag_function)c->arg[0], (hitag_data *)c->d.asBytes, c->arg[2]);
-            } else if ((hitag_function)c->arg[0] >= 10) {
+            } else {
                 WriterHitag((hitag_function)c->arg[0], (hitag_data *)c->d.asBytes, c->arg[2]);
             }
             break;
@@ -843,7 +843,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
         case CMD_READ_SRI_TAG:
             ReadSTMemoryIso14443b(c->arg[0]);
             break;
-        case CMD_SNOOP_ISO_14443B:
+        case CMD_SNIFF_ISO_14443B:
             SniffIso14443b();
             break;
         case CMD_SIMULATE_TAG_ISO_14443B:
@@ -862,7 +862,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
         case CMD_FELICA_LITE_SIM:
             felica_sim_lite(c->arg[0]);
             break;
-        case CMD_FELICA_SNOOP:
+        case CMD_FELICA_SNIFF:
             felica_sniff(c->arg[0], c->arg[1]);
             break;
         case CMD_FELICA_LITE_DUMP:
@@ -871,7 +871,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 #endif
 
 #ifdef WITH_ISO14443a
-        case CMD_SNOOP_ISO_14443a:
+        case CMD_SNIFF_ISO_14443a:
             SniffIso14443a(c->arg[0]);
             break;
         case CMD_READER_ISO_14443a:
@@ -1003,7 +1003,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 
 #ifdef WITH_ICLASS
         // Makes use of ISO14443a FPGA Firmware
-        case CMD_SNOOP_ICLASS:
+        case CMD_SNIFF_ICLASS:
             SniffIClass();
             break;
         case CMD_SIMULATE_TAG_ICLASS:
@@ -1043,9 +1043,9 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             break;
 #endif
 
-#ifdef WITH_HFSNOOP
+#ifdef WITH_HFSNIFF
         case CMD_HF_SNIFFER:
-            HfSnoop(c->arg[0], c->arg[1]);
+            HfSniff(c->arg[0], c->arg[1]);
             break;
 #endif
 
@@ -1322,10 +1322,12 @@ void UsbPacketReceived(uint8_t *packet, int len) {
                     // first mem page
                     res = Flash_WriteDataCont(startidx, data, first_len);
 
+                    isok = (res == first_len) ? 1 : 0;
+
                     // second mem page
                     res = Flash_WriteDataCont(startidx + first_len, data + first_len, len - first_len);
 
-                    isok = (res == (len - first_len)) ? 1 : 0;
+                    isok &= (res == (len - first_len)) ? 1 : 0;
 
                 } else {
                     res = Flash_WriteDataCont(startidx, data, len);
@@ -1389,6 +1391,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             FlashStop();
 
             cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
+            BigBuf_free();
             LED_B_OFF();
             break;
         }

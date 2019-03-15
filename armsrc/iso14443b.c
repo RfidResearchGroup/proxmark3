@@ -1413,7 +1413,7 @@ static void iso1444b_setup_sniff(void) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     BigBuf_free();
     BigBuf_Clear_ext(false);
-    clear_trace();//setup snoop
+    clear_trace();
     set_tracing(true);
 
     // Initialize Demod and Uart structs
@@ -1570,6 +1570,7 @@ void iso14b_set_trigger(bool enable) {
 void SendRawCommand14443B_Ex(UsbCommand *c) {
     iso14b_command_t param = c->arg[0];
     size_t len = c->arg[1] & 0xffff;
+    uint32_t timeout = c->arg[2];
     uint8_t *cmd = c->d.asBytes;
     uint8_t status = 0;
     uint32_t sendlen = sizeof(iso14b_card_select_t);
@@ -1585,6 +1586,9 @@ void SendRawCommand14443B_Ex(UsbCommand *c) {
         iso14443b_setup();
         clear_trace();
     }
+
+    if ((param & ISO14B_SET_TIMEOUT))
+        iso14b_set_timeout(timeout);
 
     set_tracing(true);
 

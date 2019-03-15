@@ -2747,7 +2747,7 @@ void DetectNACKbug() {
     bool received_nack;
 
     // Mifare Classic's random generator repeats every 2^16 cycles (and so do the nonces).
-    uint32_t sync_cycles = PRNG_SEQUENCE_LENGTH;
+    int32_t sync_cycles = PRNG_SEQUENCE_LENGTH;
 
     BigBuf_free();
     BigBuf_Clear_ext(false);
