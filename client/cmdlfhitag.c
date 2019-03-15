@@ -344,13 +344,29 @@ int CmdLFHitagSim(const char *Cmd) {
 }
 
 static void printHitagConfiguration(uint8_t config) {
+    
     char msg[100];
     memset(msg, 0, sizeof(msg));
+
+    char bits[9];
+    char *bs = bits;
+    for (uint8_t i = 0 ; i < 8 ; i++) {
+        snprintf(bs, sizeof(bits), "%d", (config >> (7 - i)) & 1);
+        bs++;
+    }
+
+    PrintAndLogEx(INFO, "\n\nHitag2 tag information ");
+    PrintAndLogEx(INFO, "------------------------------------");
+    
+    //configuration byte
+    PrintAndLogEx(SUCCESS, "Config byte : %02X - %s", config, bits);    
+    
     // encoding
+    strcat(msg, "Encoding    : ");
     if (config & 0x1) {
-        strcat(msg, "Biphase encoding");
+        strcat(msg + strlen(msg), _YELLOW_("Biphase"));
     } else {
-        strcat(msg, "Manchester encoding");
+        strcat(msg + strlen(msg), _YELLOW_("Manchester"));
     }
     PrintAndLogEx(SUCCESS, "%s", msg);
     memset(msg, 0, sizeof(msg));
@@ -360,74 +376,101 @@ static void printHitagConfiguration(uint8_t config) {
     uint8_t foo = (config & 0x6) >> 1;
     switch (foo) {
         case 0:
-            PrintAndLogEx(SUCCESS, "Version: public mode B, Coding: biphase");
+            PrintAndLogEx(SUCCESS, "Version     : public mode B, Coding: biphase");
             PrintAndLogEx(SUCCESS, msg, (config & 0x1) ? "biphase" : "manchester");
             break;
         case 1:
-            PrintAndLogEx(SUCCESS, "Version: public mode A, Coding: manchester");
+            PrintAndLogEx(SUCCESS, "Version     : public mode A, Coding: manchester");
             PrintAndLogEx(SUCCESS, msg, (config & 0x1) ? "biphase" : "manchester");
             break;
         case 2:
-            PrintAndLogEx(SUCCESS, "Version: public mode C, Coding: biphase");
+            PrintAndLogEx(SUCCESS, "Version     : public mode C, Coding: biphase");
             PrintAndLogEx(SUCCESS, msg, (config & 0x1) ? "biphase" : "manchester");
             break;
         case 3:
-            PrintAndLogEx(SUCCESS, "Version: Hitag2");
+            PrintAndLogEx(SUCCESS, "Version     : Hitag2");
             PrintAndLogEx(SUCCESS, msg, (config & 0x1) ? "biphase" : "manchester");
             break;
     }
     memset(msg, 0, sizeof(msg));
 
     // mode
+    strcat(msg, "Tag is in   : ");
     if (config & 0x8) {
-        strcat(msg, "Tag is in : " _YELLOW_("Crypto mode"));
+        strcat(msg + strlen(msg), _YELLOW_("Crypto mode"));
     } else  {
-        strcat(msg, "Tag is in : " _YELLOW_("Password mode"));
+        strcat(msg + strlen(msg), _YELLOW_("Password mode"));
     }
     PrintAndLogEx(SUCCESS, "%s", msg);
     memset(msg, 0, sizeof(msg));
 
     // page access
+    strcat(msg, "Page 6,7    : ");
     if (config & 0x10) {
-        strcat(msg, "Page 6,7  : read only");
+        strcat(msg + strlen(msg), "read only");
     } else  {
-        strcat(msg, "Page 6,7  : " _GREEN_("read write"));
+        strcat(msg + strlen(msg), _GREEN_("read write"));
     }
     PrintAndLogEx(SUCCESS, "%s", msg);
     memset(msg, 0, sizeof(msg));
 
     // page access
+    strcat(msg, "Page 4,5    : ");    
     if (config & 0x20) {
-        strcat(msg, "Page 4,5  : read only");
+        strcat(msg + strlen(msg), "read only");
     } else  {
-        strcat(msg, "Page 4,5  : " _GREEN_("read write"));
+        strcat(msg + strlen(msg), _GREEN_("read write"));
     }
     PrintAndLogEx(SUCCESS, "%s", msg);
     memset(msg, 0, sizeof(msg));
 
     // OTP
+    strcat(msg, "Page 3      : ");
     if (config & 0x40) {
-        strcat(msg, "Page 3    : read only. Configuration byte and password tag " _RED_("FIXED / IRREVERSIBLE"));
+        strcat(msg + strlen(msg), "read only. Configuration byte and password tag " _RED_("FIXED / IRREVERSIBLE"));
     } else  {
-        strcat(msg, "Page 3    : " _GREEN_("read write"));
+        strcat(msg + strlen(msg), _GREEN_("read write"));
     }
     PrintAndLogEx(SUCCESS, "%s", msg);
     memset(msg, 0, sizeof(msg));
 
     // OTP
     if (config & 0x80) {
-        strcat(msg, "Page 1 " _RED_("locked") "\n");
+        strcat(msg, "Page 1      : " _RED_("locked") "\n");
 
+        strcat(msg + strlen(msg), "Page 2      : ");
         if (config & 0x8) {
-            strcat(msg + strlen(msg), "Page 2  : " _RED_("locked"));
+            strcat(msg + strlen(msg), _RED_("locked"));
         } else {
-            strcat(msg + strlen(msg), "Page 2  : read only");
+            strcat(msg + strlen(msg), "read only");
         }
     } else  {
-        strcat(msg, "Page 1,2  : " _GREEN_("read write"));
+        strcat(msg, "Page 1,2    : " _GREEN_("read write"));
     }
     PrintAndLogEx(SUCCESS, "%s", msg);
     PrintAndLogEx(INFO, "------------------------------------");
+}
+
+static bool getHitagUid(uint32_t *uid) {
+
+    UsbCommand c = {CMD_READER_HITAG, {RHT2F_UID_ONLY, 0, 0} };
+    clearCommandBuffer();
+    SendCommand(&c);
+    UsbCommand resp;
+    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        return false;
+    }
+
+    if (resp.arg[0] == false) {
+        PrintAndLogEx(DEBUG, "DEBUG: Error - failed getting UID");
+        return false;
+    }
+
+    if ( uid )
+        *uid = bytes_to_num(resp.d.asBytes, 4);
+   
+    return true;
 }
 
 int CmdLFHitagInfo(const char *Cmd) {
@@ -437,7 +480,18 @@ int CmdLFHitagInfo(const char *Cmd) {
 
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_hitag_info();
+    
+    // pwd or key
 
+    // read UID
+    uint32_t uid = 0;
+    if ( getHitagUid( &uid ) == false ) 
+        return 1;
+    
+    PrintAndLogEx(SUCCESS, "UID: %08X", uid);
+    
+    // how to detemine Hitag types?
+    
     // read block3,  get configuration byte.
 
     // common configurations.
@@ -449,6 +503,9 @@ int CmdLFHitagInfo(const char *Cmd) {
     return 0;
 }
 
+// TODO: iceman 
+// Hitag2 reader,  problem is that this command mixes up stuff.  So 26 give uid.  21 etc will also give you a memory dump !?
+//
 int CmdLFHitagReader(const char *Cmd) {
 
     UsbCommand c = {CMD_READER_HITAG, {0, 0, 0} };
@@ -509,10 +566,10 @@ int CmdLFHitagReader(const char *Cmd) {
 
     uint32_t id = bytes_to_num(resp.d.asBytes, 4);
 
-    if (htf == RHT2F_UID_ONLY) {
-        PrintAndLogEx(SUCCESS, "Valid Hitag2 tag found - UID: %08x", id);
-    } else {
-
+    PrintAndLogEx(SUCCESS, "Valid Hitag2 tag found - UID: %08x", id);
+    if (htf != RHT2F_UID_ONLY) {
+        
+        PrintAndLogEx(SUCCESS, "Dumping tag memory..." );
         uint8_t *data = resp.d.asBytes;
 
         char filename[FILE_PATH_SIZE];
@@ -522,7 +579,10 @@ int CmdLFHitagReader(const char *Cmd) {
 
         saveFile(filename, "bin", data, 48);
         saveFileEML(filename, "eml", data, 48, 4);
-        saveFileJSON(filename, "json", jsfHitag, (uint8_t *)data, 48);
+        saveFileJSON(filename, "json", jsfHitag, data, 48);
+        
+        // block3, 1 byte
+        printHitagConfiguration(data[4*3] );
     }
     return 0;
 }
