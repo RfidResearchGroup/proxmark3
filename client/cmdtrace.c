@@ -36,7 +36,6 @@ int usage_trace_list() {
     PrintAndLogEx(NORMAL, "    7816   - interpret data as iso7816-4 communications");
     PrintAndLogEx(NORMAL, "    legic  - interpret data as LEGIC communications");
     PrintAndLogEx(NORMAL, "    felica - interpret data as ISO18092 / FeliCa communications");
-    PrintAndLogEx(NORMAL, "    hitag  - interpret data as Hitag2 / HitagS communications");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        trace list 14a f");
@@ -176,7 +175,6 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
                 crcStatus = iso15693_CRC_check(frame, data_len);
                 break;
             case ISO_7816_4:
-            case PROTO_HITAG:
             default:
                 break;
         }
@@ -191,12 +189,11 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
     for (int j = 0; j < data_len && j / 18 < 18; j++) {
 
         uint8_t parityBits = parityBytes[j >> 3];
-        if (protocol != LEGIC
-                && protocol != ISO_14443B
-                && protocol != ISO_7816_4
-                && protocol != PROTO_HITAG
-                && (isResponse || protocol == ISO_14443A)
-                && (oddparity8(frame[j]) != ((parityBits >> (7 - (j & 0x0007))) & 0x01))) {
+        if (protocol != LEGIC &&
+                protocol != ISO_14443B &&
+                protocol != ISO_7816_4 &&
+                (isResponse || protocol == ISO_14443A) &&
+                (oddparity8(frame[j]) != ((parityBits >> (7 - (j & 0x0007))) & 0x01))) {
 
             snprintf(line[j / 18] + ((j % 18) * 4), 110, "%02x! ", frame[j]);
         } else {
@@ -559,17 +556,16 @@ int CmdTraceList(const char *Cmd) {
 
             // validate type of output
             if (strcmp(type,     "iclass") == 0)    protocol = ICLASS;
-            else if (strcmp(type, "14a") == 0)      protocol = ISO_14443A;
-            else if (strcmp(type, "14b") == 0)      protocol = ISO_14443B;
-            else if (strcmp(type, "topaz") == 0)    protocol = TOPAZ;
-            else if (strcmp(type, "7816") == 0)     protocol = ISO_7816_4;
-            else if (strcmp(type, "des") == 0)      protocol = MFDES;
-            else if (strcmp(type, "legic") == 0)    protocol = LEGIC;
-            else if (strcmp(type, "15") == 0)       protocol = ISO_15693;
-            else if (strcmp(type, "felica") == 0)   protocol = FELICA;
-            else if (strcmp(type, "mf") == 0)       protocol = PROTO_MIFARE;
-            else if (strcmp(type, "hitag") == 0)    protocol = PROTO_HITAG;
-            else if (strcmp(type, "raw") == 0)      protocol = -1; //No crc, no annotations
+            else if (strcmp(type, "14a") == 0)       protocol = ISO_14443A;
+            else if (strcmp(type, "14b") == 0)       protocol = ISO_14443B;
+            else if (strcmp(type, "topaz") == 0)     protocol = TOPAZ;
+            else if (strcmp(type, "7816") == 0)      protocol = ISO_7816_4;
+            else if (strcmp(type, "des") == 0)       protocol = MFDES;
+            else if (strcmp(type, "legic") == 0)     protocol = LEGIC;
+            else if (strcmp(type, "15") == 0)        protocol = ISO_15693;
+            else if (strcmp(type, "felica") == 0)    protocol = FELICA;
+            else if (strcmp(type, "mf") == 0)        protocol = PROTO_MIFARE;
+            else if (strcmp(type, "raw") == 0)       protocol = -1; //No crc, no annotations
             else errors = true;
 
             cmdp++;
@@ -629,8 +625,6 @@ int CmdTraceList(const char *Cmd) {
             PrintAndLogEx(NORMAL, "ISO15693 - Timings are not as accurate");
         if (protocol == ISO_7816_4)
             PrintAndLogEx(NORMAL, "ISO7816-4 / Smartcard - Timings N/A yet");
-        if (protocol == PROTO_HITAG)
-            PrintAndLogEx(NORMAL, "Hitag2 / HitagS - Timings in ETU (8us)");
 
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(NORMAL, "      Start |        End | Src | Data (! denotes parity error)                                           | CRC | Annotation");
@@ -648,8 +642,8 @@ int CmdTraceLoad(const char *Cmd) {
 
     FILE *f = NULL;
     char filename[FILE_PATH_SIZE];
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || cmdp == 'h') return usage_trace_load();
+    char cmdp = param_getchar(Cmd, 0);
+    if (strlen(Cmd) < 1 || cmdp == 'h' || cmdp == 'H') return usage_trace_load();
 
     param_getstr(Cmd, 0, filename, sizeof(filename));
 
@@ -694,13 +688,13 @@ int CmdTraceLoad(const char *Cmd) {
 int CmdTraceSave(const char *Cmd) {
 
     if (traceLen == 0) {
-        PrintAndLogEx(WARNING, "trace is empty, nothing to save");
+        PrintAndLogEx(WARNING, "trace is empty, exiting...");
         return 0;
     }
 
     char filename[FILE_PATH_SIZE];
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || cmdp == 'h') return usage_trace_save();
+    char cmdp = param_getchar(Cmd, 0);
+    if (strlen(Cmd) < 1 || cmdp == 'h' || cmdp == 'H') return usage_trace_save();
 
     param_getstr(Cmd, 0, filename, sizeof(filename));
     saveFile(filename, "bin", trace, traceLen);

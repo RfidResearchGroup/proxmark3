@@ -106,14 +106,8 @@ endif
 print-%: ; @echo $* = $($*)
 
 style:
-	# Make sure astyle is installed
 	@which astyle >/dev/null || ( echo "Please install 'astyle' package first" ; exit 1 )
-	# Remove spaces & tabs at EOL, add LF at EOF if needed on *.c, *.h, *.cpp. *.lua, *.py, *.pl, Makefile
-	find . \( -name "*.[ch]" -or -name "*.cpp" -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "Makefile" \) \
-	    -exec perl -pi -e 's/[ \t\r]+$$//' {} \; \
-	    -exec sh -c "tail -c1 {} | xxd -p | tail -1 | grep -q -v 0a$$" \; \
-	    -exec sh -c "echo >> {}" \;
-	# Apply astyle on *.c, *.h, *.cpp
+	find . \( -name "*.[ch]" -or -name "*.cpp" -or -name "*.lua" -or -name "Makefile" \) -exec perl -pi -e 's/[ \t\r]+$$//' {} \;
 	find . \( -name "*.[ch]" -or -name "*.cpp" \) -exec astyle --formatted --mode=c --suffix=none \
 	    --indent=spaces=4 --indent-switches --indent-preprocessor \
 	    --keep-one-line-blocks --max-instatement-indent=60 \

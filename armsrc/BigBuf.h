@@ -42,5 +42,6 @@ extern void set_tracing(bool enable);
 extern void set_tracelen(uint32_t value);
 extern bool get_tracing(void);
 extern bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool readerToTag);
+extern int LogTraceHitag(const uint8_t *btBytes, int iBits, int iSamples, uint32_t dwParity, int bReader);
 extern uint8_t emlSet(uint8_t *data, uint32_t offset, uint32_t length);
 #endif /* __BIGBUF_H */

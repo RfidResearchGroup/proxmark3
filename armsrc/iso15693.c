@@ -621,8 +621,8 @@ void Iso15693InitReader(void) {
 
 // Encode (into the ToSend buffers) an identify request, which is the first
 // thing that you must send to a tag to get a response.
-// It expects "out" to be at least CMD_ID_RESP large
 static void BuildIdentifyRequest(uint8_t *out) {
+
     uint8_t cmd[CMD_ID_RESP] = {0, ISO15_CMD_INVENTORY, 0, 0, 0};
     // flags
     cmd[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1;
@@ -665,7 +665,6 @@ static void BuildReadBlockRequest(uint8_t **out, uint8_t *uid, uint8_t blockNumb
 */
 
 // Now the VICC>VCD responses when we are simulating a tag
-// It expects "out" to be at least CMD_INV_RESP large
 static void BuildInventoryResponse(uint8_t *out, uint8_t *uid) {
 
     uint8_t cmd[CMD_INV_RESP] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -687,7 +686,7 @@ static void BuildInventoryResponse(uint8_t *out, uint8_t *uid) {
     // CRC
     AddCrc(cmd, 10);
     CodeIso15693AsReader(cmd, CMD_INV_RESP);
-    memcpy(out, cmd, CMD_INV_RESP);
+    memcpy(out, cmd, CMD_ID_RESP);
 }
 
 // Universal Method for sending to and recv bytes from a tag
@@ -740,50 +739,50 @@ void DbdecodeIso15693Answer(int len, uint8_t *d) {
 
     if (len > 3) {
         if (d[0] & (1 << 3))
-            strncat(status, "ProtExt ", DBD15STATLEN - strlen(status));
+            strncat(status, "ProtExt ", DBD15STATLEN);
         if (d[0] & 1) {
             // error
-            strncat(status, "Error ", DBD15STATLEN - strlen(status));
+            strncat(status, "Error ", DBD15STATLEN);
             switch (d[1]) {
                 case 0x01:
-                    strncat(status, "01: not supported", DBD15STATLEN - strlen(status));
+                    strncat(status, "01: not supported", DBD15STATLEN);
                     break;
                 case 0x02:
-                    strncat(status, "02: not recognized", DBD15STATLEN - strlen(status));
+                    strncat(status, "02: not recognized", DBD15STATLEN);
                     break;
                 case 0x03:
-                    strncat(status, "03: opt not supported", DBD15STATLEN - strlen(status));
+                    strncat(status, "03: opt not supported", DBD15STATLEN);
                     break;
                 case 0x0f:
-                    strncat(status, "0F: no info", DBD15STATLEN - strlen(status));
+                    strncat(status, "0F: no info", DBD15STATLEN);
                     break;
                 case 0x10:
-                    strncat(status, "10: dont exist", DBD15STATLEN - strlen(status));
+                    strncat(status, "10: dont exist", DBD15STATLEN);
                     break;
                 case 0x11:
-                    strncat(status, "11: lock again", DBD15STATLEN - strlen(status));
+                    strncat(status, "11: lock again", DBD15STATLEN);
                     break;
                 case 0x12:
-                    strncat(status, "12: locked", DBD15STATLEN - strlen(status));
+                    strncat(status, "12: locked", DBD15STATLEN);
                     break;
                 case 0x13:
-                    strncat(status, "13: program error", DBD15STATLEN - strlen(status));
+                    strncat(status, "13: program error", DBD15STATLEN);
                     break;
                 case 0x14:
-                    strncat(status, "14: lock error", DBD15STATLEN - strlen(status));
+                    strncat(status, "14: lock error", DBD15STATLEN);
                     break;
                 default:
-                    strncat(status, "unknown error", DBD15STATLEN - strlen(status));
+                    strncat(status, "unknown error", DBD15STATLEN);
             }
-            strncat(status, " ", DBD15STATLEN - strlen(status));
+            strncat(status, " ", DBD15STATLEN);
         } else {
-            strncat(status, "No error ", DBD15STATLEN - strlen(status));
+            strncat(status, "No error ", DBD15STATLEN);
         }
 
         if (CheckCrc(d, len))
-            strncat(status, "[+] crc OK", DBD15STATLEN - strlen(status));
+            strncat(status, "[+] crc OK", DBD15STATLEN);
         else
-            strncat(status, "[!] crc fail", DBD15STATLEN - strlen(status));
+            strncat(status, "[!] crc fail", DBD15STATLEN);
 
         if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("%s", status);
     }

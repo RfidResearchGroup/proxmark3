@@ -38,7 +38,7 @@ APP_CFLAGS = $(PLATFORM_DEFS) \
 			 -DWITH_ISO14443a \
 			 -DWITH_ICLASS \
 			 -DWITH_FELICA \
-			 -DWITH_HFSNIFF \
+			 -DWITH_HFSNOOP \
 			 -DWITH_LF_SAMYRUN \
 			 -fno-strict-aliasing -ffunction-sections -fdata-sections
 
@@ -60,7 +60,7 @@ APP_CFLAGS = $(PLATFORM_DEFS) \
 
 
 SRC_LCD = fonts.c LCD.c
-SRC_LF = lfops.c hitag2_crypto.c hitag2.c hitagS.c lfsampling.c pcf7931.c lfdemod.c
+SRC_LF = lfops.c hitag2.c hitagS.c lfsampling.c pcf7931.c lfdemod.c
 SRC_ISO15693 = iso15693.c iso15693tools.c
 SRC_ISO14443a = iso14443a.c mifareutil.c mifarecmd.c epa.c mifaresim.c
 SRC_ISO14443b = iso14443b.c

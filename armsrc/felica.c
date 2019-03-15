@@ -544,7 +544,7 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
 
     int remFrames = (samplesToSkip) ? samplesToSkip : 0;
 
-    Dbprintf("Sniff FelicaLiteS: Getting first %d frames, Skipping %d triggers.\n", samplesToSkip, triggersToSkip);
+    Dbprintf("Snoop FelicaLiteS: Getting first %d frames, Skipping %d triggers.\n", samplesToSkip, triggersToSkip);
 
     iso18092_setup(FPGA_HF_ISO18092_FLAG_NOMOD);
 

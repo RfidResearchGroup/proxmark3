@@ -195,6 +195,47 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
     return true;
 }
 
+int LogTraceHitag(const uint8_t *btBytes, int iBits, int iSamples, uint32_t dwParity, int readerToTag) {
+    /**
+      Todo, rewrite the logger to use the generic functionality instead. It should be noted, however,
+      that this logger takes number of bits as argument, not number of bytes.
+      **/
+
+    if (!tracing) return false;
+
+    uint8_t *trace = BigBuf_get_addr();
+    uint32_t iLen = nbytes(iBits);
+    // Return when trace is full
+    if (traceLen + sizeof(rsamples) + sizeof(dwParity) + sizeof(iBits) + iLen > BigBuf_max_traceLen()) return false;
+
+    //Hitag traces appear to use this traceformat:
+    // 32 bits timestamp (little endian,Highest Bit used as readerToTag flag)
+    // 32 bits parity
+    // 8 bits size (number of bits in the trace entry, not number of bytes)
+    // y Bytes data
+
+    rsamples += iSamples;
+    trace[traceLen++] = ((rsamples >> 0) & 0xff);
+    trace[traceLen++] = ((rsamples >> 8) & 0xff);
+    trace[traceLen++] = ((rsamples >> 16) & 0xff);
+    trace[traceLen++] = ((rsamples >> 24) & 0xff);
+
+    if (!readerToTag) {
+        trace[traceLen - 1] |= 0x80;
+    }
+
+    trace[traceLen++] = ((dwParity >> 0) & 0xff);
+    trace[traceLen++] = ((dwParity >> 8) & 0xff);
+    trace[traceLen++] = ((dwParity >> 16) & 0xff);
+    trace[traceLen++] = ((dwParity >> 24) & 0xff);
+    trace[traceLen++] = iBits;
+
+    memcpy(trace + traceLen, btBytes, iLen);
+    traceLen += iLen;
+
+    return true;
+}
+
 // Emulator memory
 uint8_t emlSet(uint8_t *data, uint32_t offset, uint32_t length) {
     uint8_t *mem = BigBuf_get_EM_addr();

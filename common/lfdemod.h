@@ -22,7 +22,7 @@
 #include "util.h"    // for ARRAYLEN
 
 //might not be high enough for noisy environments
-#define NOISE_AMPLITUDE_THRESHOLD 15
+#define NOISE_AMPLITUDE_THRESHOLD 10
 //ignore buffer with less than x samples
 #define SIGNAL_MIN_SAMPLES 100
 //ignore first x samples of the buffer

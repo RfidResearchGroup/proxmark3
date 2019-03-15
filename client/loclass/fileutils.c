@@ -155,12 +155,11 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
     json_t *root = json_object();
     JsonSaveStr(root, "Created", "proxmark3");
     switch (ftype) {
-        case jsfRaw: {
+        case jsfRaw:
             JsonSaveStr(root, "FileType", "raw");
             JsonSaveBufAsHexCompact(root, "raw", data, datalen);
             break;
-        }
-        case jsfCardMemory: {
+        case jsfCardMemory:
             JsonSaveStr(root, "FileType", "mfcard");
             for (int i = 0; i < (datalen / 16); i++) {
                 char path[PATH_MAX_LENGTH] = {0};
@@ -209,8 +208,7 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
                 }
             }
             break;
-        }
-        case jsfMfuMemory: {
+        case jsfMfuMemory:
             JsonSaveStr(root, "FileType", "mfu");
 
             mfu_dump_t *tmp = (mfu_dump_t *)data;
@@ -232,26 +230,12 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
             size_t len = (datalen - DUMP_PREFIX_LENGTH) / 4;
 
             for (int i = 0; i < len; i++) {
+
                 char path[PATH_MAX_LENGTH] = {0};
                 sprintf(path, "$.blocks.%d", i);
                 JsonSaveBufAsHexCompact(root, path, tmp->data + (i * 4), 4);
             }
             break;
-        }
-        case jsfHitag: {
-            JsonSaveStr(root, "FileType", "hitag");
-            uint8_t uid[4] = {0};
-            memcpy(uid, data, 4);
-
-            JsonSaveBufAsHexCompact(root, "$.Card.UID", uid, sizeof(uid));
-
-            for (int i = 0; i < (datalen / 4); i++) {
-                char path[PATH_MAX_LENGTH] = {0};
-                sprintf(path, "$.blocks.%d", i);
-                JsonSaveBufAsHexCompact(root, path, data + (i * 4), 4);
-            }
-            break;
-        }
     }
 
     int res = json_dump_file(root, fileName, JSON_INDENT(2));
@@ -269,7 +253,7 @@ out:
     return retval;
 }
 
-int loadFile(const char *preferredName, const char *suffix, void *data, size_t maxdatalen, size_t *datalen) {
+int loadFile(const char *preferredName, const char *suffix, void *data, size_t *datalen) {
 
     if (preferredName == NULL) return 1;
     if (suffix == NULL) return 1;
@@ -312,11 +296,6 @@ int loadFile(const char *preferredName, const char *suffix, void *data, size_t m
         free(dump);
         retval = 3;
         goto out;
-    }
-
-    if (bytes_read != maxdatalen) {
-        PrintAndLogDevice(WARNING, "Warning, bytes read exeed calling array limit. Max bytes is %d bytes", maxdatalen);
-        bytes_read = maxdatalen;
     }
 
     memcpy((data), dump, bytes_read);
@@ -468,29 +447,8 @@ int loadFileJSON(const char *preferredName, const char *suffix, void *data, size
         *datalen = sptr;
     }
 
-    if (!strcmp(ctype, "hitag")) {
-        size_t sptr = 0;
-        for (int i = 0; i < (maxdatalen / 4); i++) {
-            if (sptr + 4 > maxdatalen) {
-                retval = 5;
-                goto out;
-            }
 
-            char path[30] = {0};
-            sprintf(path, "$.blocks.%d", i);
-
-            size_t len = 0;
-            JsonLoadBufAsHex(root, path, &udata[sptr], 4, &len);
-            if (!len)
-                break;
-
-            sptr += len;
-        }
-
-        *datalen = sptr;
-    }
-
-    PrintAndLogEx(SUCCESS, "loaded from JSON file " _YELLOW_("%s"), fileName);
+    PrintAndLog("loaded from JSON file " _YELLOW_("%s"), fileName);
 out:
     json_decref(root);
     free(fileName);

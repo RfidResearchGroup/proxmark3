@@ -129,7 +129,7 @@ typedef struct {
 #define CMD_IO_DEMOD_FSK                                                  0x021A
 #define CMD_IO_CLONE_TAG                                                  0x021B
 #define CMD_EM410X_DEMOD                                                  0x021c
-// Sampling configuration for LF reader/sniffer
+// Sampling configuration for LF reader/snooper
 #define CMD_SET_LF_SAMPLING_CONFIG                                        0x021d
 #define CMD_FSK_SIM_TAG                                                   0x021E
 #define CMD_ASK_SIM_TAG                                                   0x021F
@@ -154,10 +154,10 @@ typedef struct {
 #define CMD_ISO_15693_COMMAND                                             0x0313
 #define CMD_ISO_15693_COMMAND_DONE                                        0x0314
 #define CMD_ISO_15693_FIND_AFI                                            0x0315
-#define CMD_LF_SNIFF_RAW_ADC_SAMPLES                                      0x0317
+#define CMD_LF_SNOOP_RAW_ADC_SAMPLES                                      0x0317
 
 // For Hitag2 transponders
-#define CMD_SNIFF_HITAG                                                   0x0370
+#define CMD_SNOOP_HITAG                                                   0x0370
 #define CMD_SIMULATE_HITAG                                                0x0371
 #define CMD_READER_HITAG                                                  0x0372
 
@@ -170,9 +170,9 @@ typedef struct {
 
 #define CMD_ANTIFUZZ_ISO_14443a                                           0x0380
 #define CMD_SIMULATE_TAG_ISO_14443B                                       0x0381
-#define CMD_SNIFF_ISO_14443B                                              0x0382
+#define CMD_SNOOP_ISO_14443B                                              0x0382
 
-#define CMD_SNIFF_ISO_14443a                                              0x0383
+#define CMD_SNOOP_ISO_14443a                                              0x0383
 #define CMD_SIMULATE_TAG_ISO_14443a                                       0x0384
 
 #define CMD_READER_ISO_14443a                                             0x0385
@@ -192,7 +192,7 @@ typedef struct {
 #define CMD_ICLASS_READCHECK                                              0x038F
 #define CMD_ICLASS_CLONE                                                  0x0390
 #define CMD_ICLASS_DUMP                                                   0x0391
-#define CMD_SNIFF_ICLASS                                                  0x0392
+#define CMD_SNOOP_ICLASS                                                  0x0392
 #define CMD_SIMULATE_TAG_ICLASS                                           0x0393
 #define CMD_READER_ICLASS                                                 0x0394
 #define CMD_READER_ICLASS_REPLAY                                          0x0395
@@ -204,7 +204,7 @@ typedef struct {
 
 // For ISO1092 / FeliCa
 #define CMD_FELICA_SIMULATE_TAG                                           0x03A0
-#define CMD_FELICA_SNIFF                                                  0x03A1
+#define CMD_FELICA_SNOOP                                                  0x03A1
 #define CMD_FELICA_COMMAND                                                0x03A2
 //temp
 #define CMD_FELICA_LITE_DUMP                                              0x03AA

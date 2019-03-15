@@ -18,7 +18,7 @@
 //
 // FIX:
 // ====
-// We still have sometimes a demodulation error when sniffing iClass communication.
+// We still have sometimes a demodulation error when snooping iClass communication.
 // The resulting trace of a read-block-03 command may look something like this:
 //
 //  +  22279:    :     0c  03  e8  01

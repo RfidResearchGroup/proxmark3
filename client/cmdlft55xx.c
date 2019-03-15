@@ -1882,7 +1882,7 @@ int CmdT55xxRecoverPW(const char *Cmd) {
 
     // first try fliping each bit in the expected password
     while (bit < 32) {
-        curr_password = orig_password ^ (1u << bit);
+        curr_password = orig_password ^ (1 << bit);
         found = tryOnePassword(curr_password);
         if (found == -1) return 0;
         bit++;
@@ -1897,7 +1897,7 @@ int CmdT55xxRecoverPW(const char *Cmd) {
     // from low bit to high bit
     bit = 0;
     while (bit < 32) {
-        mask += (1u << bit);
+        mask += (1 << bit);
         curr_password = orig_password & mask;
         // if updated mask didn't change the password, don't try it again
         if (prev_password == curr_password) {
@@ -1916,7 +1916,7 @@ int CmdT55xxRecoverPW(const char *Cmd) {
     bit = 0;
     mask = 0xffffffff;
     while (bit < 32) {
-        mask -= (1u << bit);
+        mask -= (1 << bit);
         curr_password = orig_password & mask;
         // if updated mask didn't change the password, don't try it again
         if (prev_password == curr_password) {

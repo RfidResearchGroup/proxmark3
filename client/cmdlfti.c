@@ -191,7 +191,7 @@ int CmdTIDemod(const char *Cmd) {
             bits[i] = '1';
             maxPos += highLen;
             // bitstream arrives lsb first so shift right
-            shift3 |= (1u << 31);
+            shift3 |= (1 << 31);
         } else {
             bits[i] = '.';
             maxPos += lowLen;

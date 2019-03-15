@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
     if (argc != 3 && argc != 4) {
         printf("\n\tusage: cli <command 1> <command 2> [logfile (default cli.log)]\n");
         printf("\n");
-        printf("\texample: cli hf 14a sniff hf 14a list h14a.log\n");
+        printf("\texample: cli hi14asnoop hi14alist h14a.log\n");
         printf("\n");
         return -1;
     }

@@ -322,42 +322,42 @@ static int FpgaGatherVersion(FILE *infile, char *infile_name, char *dst, int len
     }
 
     if (!memcmp("fpga_lf", basename(infile_name), 7))
-        strncat(dst, "LF", len - strlen(dst) - 1);
+        strncat(dst, "LF", len - 1);
     else if (!memcmp("fpga_hf", basename(infile_name), 7))
-        strncat(dst, "HF", len - strlen(dst) - 1);
+        strncat(dst, "HF", len - 1);
 
-    strncat(dst, " image built", len - strlen(dst) - 1);
+    strncat(dst, " image built", len - 1);
     if (bitparse_find_section(infile, 'b', &fpga_info_len)) {
-        strncat(dst, " for ", len - strlen(dst) - 1);
+        strncat(dst, " for ", len - 1);
         for (uint16_t i = 0; i < fpga_info_len; i++) {
             char c = (char)fgetc(infile);
             if (i < sizeof(tempstr)) {
                 tempstr[i] = c;
             }
         }
-        strncat(dst, tempstr, len - strlen(dst) - 1);
+        strncat(dst, tempstr, len - 1);
     }
 
     if (bitparse_find_section(infile, 'c', &fpga_info_len)) {
-        strncat(dst, " on ", len - strlen(dst) - 1);
+        strncat(dst, " on ", len - 1);
         for (uint16_t i = 0; i < fpga_info_len; i++) {
             char c = (char)fgetc(infile);
             if (i < sizeof(tempstr)) {
                 tempstr[i] = c;
             }
         }
-        strncat(dst, tempstr, len - strlen(dst) - 1);
+        strncat(dst, tempstr, len - 1);
     }
 
     if (bitparse_find_section(infile, 'd', &fpga_info_len)) {
-        strncat(dst, " at ", len - strlen(dst) - 1);
+        strncat(dst, " at ", len - 1);
         for (uint16_t i = 0; i < fpga_info_len; i++) {
             char c = (char)fgetc(infile);
             if (i < sizeof(tempstr)) {
                 tempstr[i] = c;
             }
         }
-        strncat(dst, tempstr, len - strlen(dst) - 1);
+        strncat(dst, tempstr, len - 1);
     }
     return 0;
 }

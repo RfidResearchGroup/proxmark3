@@ -1247,7 +1247,7 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 
         keyCount = size[1] << 8 | size[0];
 
-        if (keyCount == 0 || keyCount == 0xFFFF)
+        if (keyCount == 0 && keyCount == 0xFFFF)
             goto OUT;
 
         datain = BigBuf_malloc(keyCount * 6);

@@ -55,11 +55,6 @@ typedef enum {
     jsfRaw,
     jsfCardMemory,
     jsfMfuMemory,
-    jsfHitag,
-//    jsf14b,
-//    jsf15,
-//    jsfLegic,
-//    jsfT55xx,
 } JSONFileType;
 
 int fileExists(const char *filename);
@@ -112,11 +107,10 @@ extern int saveFileJSON(const char *preferredName, const char *suffix, JSONFileT
  * @param preferredName
  * @param suffix the file suffix. Leave out the ".".
  * @param data The data array to store the loaded bytes from file
- * @param maxdatalen the number of bytes that your data array has
  * @param datalen the number of bytes loaded from file
  * @return 0 for ok, 1 for failz
 */
-extern int loadFile(const char *preferredName, const char *suffix, void *data, size_t maxdatalen, size_t *datalen);
+extern int loadFile(const char *preferredName, const char *suffix, void *data, size_t *datalen);
 
 /**
  * @brief  Utility function to load data from a textfile (EML). This method takes a preferred name.

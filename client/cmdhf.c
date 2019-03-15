@@ -21,7 +21,7 @@ int usage_hf_search() {
     return 0;
 }
 int usage_hf_sniff() {
-    PrintAndLogEx(NORMAL, "The high frequence sniffer will assign all available memory on device for sniffed data");
+    PrintAndLogEx(NORMAL, "The high frequence snoop will assign all available memory on device for sniffed data");
     PrintAndLogEx(NORMAL, "Use " _YELLOW_("'data samples'")" command to download from device,  and " _YELLOW_("'data plot'")" to look at it");
     PrintAndLogEx(NORMAL, "Press button to quit the sniffing.\n");
     PrintAndLogEx(NORMAL, "Usage: hf sniff <skip pairs> <skip triggers>");
@@ -42,7 +42,7 @@ int CmdHFSearch(const char *Cmd) {
     if (cmdp == 'h') return usage_hf_search();
 
     PrintAndLogEx(INFO, "Checking for known tags...\n");
-
+        
     int ans = CmdHF14AInfo("s");
     if (ans > 0) {
         PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-A tag") " found\n");

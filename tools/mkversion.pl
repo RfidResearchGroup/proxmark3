@@ -4,7 +4,7 @@
 # Normally a couple of lines of bash would be enough (see openpcd project, original firmware by Harald Welte and Milosch Meriac)
 # but this will, at least in theory, also work on Windows with our current compile environment.
 # -- Henryk Plötz <henryk@ploetzli.ch> 2009-09-28
-# Modified april 2014 because of the move to github.
+# Modified april 2014 because of the move to github. 
 # --- Martin Holst Swende <martin@swende.se>
 # Modified january 2016 to work with Travis-CI
 # --- iceman <iceman@iuse.se>
@@ -19,9 +19,9 @@ my $ctime;
 # GIT status  0 = dirty,  1 = clean ,  2 = undecided
 my $clean = 2;
 
-# Do we have acces to git command?
+# Do we have acces to git command? 
 #######
-# solves some bug on macos i.e:
+# solves some bug on macos i.e: 
 ##
 # perl ../tools/mkversion.pl .. > version.c || cp ../common/default_version.c version.c
 # /usr/bin/which: /usr/bin/which: cannot execute binary file

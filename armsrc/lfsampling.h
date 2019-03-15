@@ -30,10 +30,10 @@ void doT55x7Acquisition(size_t sample_size);
 uint32_t SampleLF(bool silent, int sample_size);
 
 /**
-* Initializes the FPGA for sniff-mode (field off), and acquires the samples.
+* Initializes the FPGA for snoop-mode (field off), and acquires the samples.
 * @return number of bits sampled
 **/
-uint32_t SniffLF();
+uint32_t SnoopLF();
 
 // adds sample size to default options
 uint32_t DoPartialAcquisition(int trigger_threshold, bool silent, int sample_size, uint32_t cancel_after);
@@ -67,7 +67,7 @@ void LFSetupFPGAForADC(int divisor, bool lf_field);
 
 /**
  * Called from the USB-handler to set the sampling configuration
- * The sampling config is used for std reading and sniffing.
+ * The sampling config is used for std reading and snooping.
  *
  * Other functions may read samples and ignore the sampling config,
  * such as functions to read the UID from a prox tag or similar.

@@ -305,11 +305,6 @@ void EPA_PACE_Collect_Nonce(UsbCommand *c) {
     // initiate the PACE protocol
     // use the CAN for the password since that doesn't change
     func_return = EPA_PACE_MSE_Set_AT(pace_version_info, 2);
-    // check if the command succeeded
-    if (func_return != 0) {
-        EPA_PACE_Collect_Nonce_Abort(4, func_return);
-        return;
-    }
 
     // now get the nonce
     uint8_t nonce[256] = {0};
@@ -317,7 +312,7 @@ void EPA_PACE_Collect_Nonce(UsbCommand *c) {
     func_return = EPA_PACE_Get_Nonce(requested_size, nonce);
     // check if the command succeeded
     if (func_return < 0) {
-        EPA_PACE_Collect_Nonce_Abort(5, func_return);
+        EPA_PACE_Collect_Nonce_Abort(4, func_return);
         return;
     }
 

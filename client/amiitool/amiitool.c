@@ -8,7 +8,7 @@
 #include <amiibo.h>
 #include <stdio.h>
 #include <string.h>
-#include "../loclass/fileutils.h"
+#include "../loclass/fileutil.h"
 
 #define NTAG215_SIZE 540
 
