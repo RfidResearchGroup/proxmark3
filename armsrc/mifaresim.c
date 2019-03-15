@@ -36,38 +36,32 @@ static bool IsTrailerAccessAllowed(uint8_t blockNo, uint8_t keytype, uint8_t act
                  | ((sector_trailer[8] >> 7) & 0x01);
     switch (action) {
         case AC_KEYA_READ: {
-            return false;
             if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("IsTrailerAccessAllowed: AC_KEYA_READ");
-            break;
+            return false;
         }
         case AC_KEYA_WRITE: {
+            if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("IsTrailerAccessAllowed: AC_KEYA_WRITE");
             return ((keytype == AUTHKEYA && (AC == 0x00 || AC == 0x01))
                     || (keytype == AUTHKEYB && (AC == 0x04 || AC == 0x03)));
-            if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("IsTrailerAccessAllowed: AC_KEYA_WRITE");
-            break;
         }
         case AC_KEYB_READ: {
-            return (keytype == AUTHKEYA && (AC == 0x00 || AC == 0x02 || AC == 0x01));
             if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("IsTrailerAccessAllowed: AC_KEYB_READ");
-            break;
+            return (keytype == AUTHKEYA && (AC == 0x00 || AC == 0x02 || AC == 0x01));
         }
         case AC_KEYB_WRITE: {
+            if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("IsTrailerAccessAllowed: AC_KEYB_WRITE");
             return ((keytype == AUTHKEYA && (AC == 0x00 || AC == 0x04))
                     || (keytype == AUTHKEYB && (AC == 0x04 || AC == 0x03)));
-            if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("IsTrailerAccessAllowed: AC_KEYB_WRITE");
-            break;
         }
         case AC_AC_READ: {
+            if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("IsTrailerAccessAllowed: AC_AC_READ");
             return ((keytype == AUTHKEYA)
                     || (keytype == AUTHKEYB && !(AC == 0x00 || AC == 0x02 || AC == 0x01)));
-            if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("IsTrailerAccessAllowed: AC_AC_READ");
-            break;
         }
         case AC_AC_WRITE: {
+            if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("IsTrailerAccessAllowed: AC_AC_WRITE");
             return ((keytype == AUTHKEYA && (AC == 0x01))
                     || (keytype == AUTHKEYB && (AC == 0x03 || AC == 0x05)));
-            if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("IsTrailerAccessAllowed: AC_AC_WRITE");
-            break;
         }
         default:
             return false;
@@ -93,18 +87,21 @@ static bool IsDataAccessAllowed(uint8_t blockNo, uint8_t keytype, uint8_t action
             AC = ((sector_trailer[7] >> 2) & 0x04)
                  | ((sector_trailer[8] << 1) & 0x02)
                  | ((sector_trailer[8] >> 4) & 0x01);
+            if (MF_DBGLEVEL >= 2)	Dbprintf("IsDataAccessAllowed: case 0x00");
             break;
         }
         case 0x01: {
             AC = ((sector_trailer[7] >> 3) & 0x04)
                  | ((sector_trailer[8] >> 0) & 0x02)
                  | ((sector_trailer[8] >> 5) & 0x01);
+            if (MF_DBGLEVEL >= 2)	Dbprintf("IsDataAccessAllowed: case 0x01");
             break;
         }
         case 0x02: {
             AC = ((sector_trailer[7] >> 4) & 0x04)
                  | ((sector_trailer[8] >> 1) & 0x02)
                  | ((sector_trailer[8] >> 6) & 0x01);
+            if (MF_DBGLEVEL >= 2)	Dbprintf("IsDataAccessAllowed: case 0x02");
             break;
         }
         default:
@@ -113,28 +110,24 @@ static bool IsDataAccessAllowed(uint8_t blockNo, uint8_t keytype, uint8_t action
 
     switch (action) {
         case AC_DATA_READ: {
+            if (MF_DBGLEVEL >= 2)	Dbprintf("AC_DATA_READ: OK");
             return ((keytype == AUTHKEYA && !(AC == 0x03 || AC == 0x05 || AC == 0x07))
                     || (keytype == AUTHKEYB && !(AC == 0x07)));
-            if (MF_DBGLEVEL >= 2)	Dbprintf("AC_DATA_READ: OK");
-            break;
         }
         case AC_DATA_WRITE: {
+            if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("AC_DATA_WRITE: OK");
             return ((keytype == AUTHKEYA && (AC == 0x00))
                     || (keytype == AUTHKEYB && (AC == 0x00 || AC == 0x04 || AC == 0x06 || AC == 0x03)));
-            if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("AC_DATA_WRITE: OK");
-            break;
         }
         case AC_DATA_INC: {
+            if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("AC_DATA_WRITE: OK");
             return ((keytype == AUTHKEYA && (AC == 0x00))
                     || (keytype == AUTHKEYB && (AC == 0x00 || AC == 0x06)));
-            if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("AC_DATA_WRITE: OK");
-            break;
         }
         case AC_DATA_DEC_TRANS_REST: {
+            if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("AC_DATA_DEC_TRANS_REST: OK");
             return ((keytype == AUTHKEYA && (AC == 0x00 || AC == 0x06 || AC == 0x01))
                     || (keytype == AUTHKEYB && (AC == 0x00 || AC == 0x06 || AC == 0x01)));
-            if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("AC_DATA_DEC_TRANS_REST: OK");
-            break;
         }
     }
 
