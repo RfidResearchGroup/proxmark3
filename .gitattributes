@@ -3,4 +3,7 @@
 fpga/fpga.bit -crlf -diff
 *.bin -crlf -diff
 *.z -crlf -diff
- 
+# Force LF
+*.c text=auto eol=lf
+*.h text=auto eol=lf
+*.lua text=auto eol=lf
