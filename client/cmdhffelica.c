@@ -218,7 +218,7 @@ int CmdHFFelicaSniff(const char *Cmd) {
     //Validations
     if (errors || cmdp == 0) return usage_hf_felica_sniff();
 
-    UsbCommand c = {CMD_FELICA_SNOOP, {samples2skip, triggers2skip, 0}};
+    UsbCommand c = {CMD_FELICA_SNIFF, {samples2skip, triggers2skip, 0}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;

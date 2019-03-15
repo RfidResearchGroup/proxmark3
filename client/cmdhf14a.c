@@ -803,7 +803,7 @@ int CmdHF14ASniff(const char *Cmd) {
         if (ctmp == 'c') param |= 0x01;
         if (ctmp == 'r') param |= 0x02;
     }
-    UsbCommand c = {CMD_SNOOP_ISO_14443a, {param, 0, 0}};
+    UsbCommand c = {CMD_SNIFF_ISO_14443a, {param, 0, 0}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
