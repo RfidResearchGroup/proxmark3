@@ -496,7 +496,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
             crypto1_destroy(pcs);
             cardAUTHKEY = AUTHKEYNONE;
             //nonce = prng_successor(selTimer, 32) // RRG Repo, same as prand() ???
-            if (flags & FLAG_RANDOM_NONCE) {
+            if (( flags & FLAG_RANDOM_NONCE) == FLAG_RANDOM_NONCE ) {
                 nonce = prand();
             }
             LED_B_OFF();
@@ -944,7 +944,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                                                 // switch to moebius collection
                                                 gettingMoebius = true;
                                                 mM = ATTACK_KEY_COUNT;
-                                                if (flags & FLAG_RANDOM_NONCE) {
+                                                if ((flags & FLAG_RANDOM_NONCE) == FLAG_RANDOM_NONCE)  {
                                                     nonce = prand();
                                                 } else {
                                                     nonce = nonce * 7;
@@ -1093,7 +1093,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
 
 
     // NR AR ATTACK
-    if (flags & FLAG_NR_AR_ATTACK && MF_DBGLEVEL >= 1) {
+    if (((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) && (MF_DBGLEVEL >= 1)) {
         for (uint8_t	i = 0; i < ATTACK_KEY_COUNT; i++) {
             if (ar_nr_collected[i] == 2) {
                 Dbprintf("Collected two pairs of AR/NR which can be used to extract %s from reader for sector %d:", (i < ATTACK_KEY_COUNT / 2) ? "keyA" : "keyB", ar_nr_resp[i].sector);
