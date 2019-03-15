@@ -19,6 +19,7 @@
 #include <mbedtls/pk.h>
 #include <mbedtls/ecdsa.h>
 #include <mbedtls/sha256.h>
+#include <mbedtls/sha512.h>
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/entropy.h>
 #include <mbedtls/error.h>
@@ -102,6 +103,20 @@ int sha256hash(uint8_t *input, int length, uint8_t *hash) {
     mbedtls_sha256_update(&sctx, input, length);
     mbedtls_sha256_finish(&sctx, hash);
     mbedtls_sha256_free(&sctx);
+	
+	return 0;
+}
+
+int sha512hash(uint8_t *input, int length, uint8_t *hash) {
+	if (!hash || !input)
+		return 1;
+	
+	mbedtls_sha512_context sctx;
+	mbedtls_sha512_init(&sctx);
+	mbedtls_sha512_starts(&sctx, 0); //SHA-512, not 384
+	mbedtls_sha512_update(&sctx, input, length);
+	mbedtls_sha512_finish(&sctx, hash);	
+	mbedtls_sha512_free(&sctx);
 
     return 0;
 }

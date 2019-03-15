@@ -49,13 +49,13 @@ int usage_sm_info(void) {
     return 0;
 }
 int usage_sm_upgrade(void) {
-    PrintAndLogEx(NORMAL, "Upgrade firmware");
+    PrintAndLogEx(NORMAL, "Upgrade RDV4.0 Smartcard module firmware");
     PrintAndLogEx(NORMAL, "Usage:  sc upgrade f <file name>");
     PrintAndLogEx(NORMAL, "       h               :  this help");
     PrintAndLogEx(NORMAL, "       f <filename>    :  firmware file name");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        sc upgrade f myfile");
+    PrintAndLogEx(NORMAL, "        sc upgrade f ../tools/simmodule/SIM011.BIN");
     return 0;
 }
 int usage_sm_setclock(void) {
@@ -116,7 +116,7 @@ uint8_t GetATRTA1(uint8_t *atr, size_t atrlen) {
             return atr[2];
     }
 
-    return 0x11; // default value is ‘0x11’, corresponding to fmax=5 MHz, Fi=372, Di=1.
+    return 0x11; // default value is 0x11, corresponding to fmax=5 MHz, Fi=372, Di=1.
 }
 
 int DiArray[] = {
@@ -196,6 +196,8 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
     uint8_t T0 = atr[1];
     uint8_t K = T0 & 0x0F;
     uint8_t TD1 = 0, T1len = 0, TD1len = 0, TDilen = 0;
+	bool protocol_T0_present = true;
+	bool protocol_T15_present = false;
 
     if (T0 & 0x10) {
         PrintAndLog("\t- TA1 (Maximum clock frequency, proposed bit duration) [ 0x%02x ]", atr[2 + T1len]);
@@ -215,6 +217,14 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
     if (T0 & 0x80) {
         TD1 = atr[2 + T1len];
         PrintAndLog("\t- TD1 (First offered transmission protocol, presence of TA2..TD2) [ 0x%02x ] Protocol T%d", TD1, TD1 & 0x0f);
+		protocol_T0_present = false;
+		if ((TD1 & 0x0f) == 0) {
+			protocol_T0_present = true;
+		}
+		if ((TD1 & 0x0f) == 15) {
+			protocol_T15_present = true;
+		}
+		
         T1len++;
 
         if (TD1 & 0x10) {
@@ -232,6 +242,12 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
         if (TD1 & 0x80) {
             uint8_t TDi = atr[2 + T1len + TD1len];
             PrintAndLog("\t- TD2 (A supported protocol or more global parameters, presence of TA3..TD3) [ 0x%02x ] Protocol T%d", TDi, TDi & 0x0f);
+			if ((TDi & 0x0f) == 0) {
+				protocol_T0_present = true;
+			}
+			if ((TDi & 0x0f) == 15) {
+				protocol_T15_present = true;
+			}
             TD1len++;
 
             bool nextCycle = true;
@@ -262,18 +278,19 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
         }
     }
 
+	if (!protocol_T0_present || protocol_T15_present) { // there is CRC Check Byte TCK
     uint8_t vxor = 0;
     for (int i = 1; i < atrlen; i++)
         vxor ^= atr[i];
 
     if (vxor)
-        PrintAndLogEx(WARNING, "Check summ error. Must be 0 got 0x%02X", vxor);
+			PrintAndLogEx(WARNING, "Check sum error. Must be 0 got 0x%02X", vxor);
     else
-        PrintAndLogEx(INFO, "Check summ OK.");
+			PrintAndLogEx(INFO, "Check sum OK.");
+	}
 
     if (atr[0] != 0x3b)
         PrintAndLogEx(WARNING, "Not a direct convention [ 0x%02x ]", atr[0]);
-
 
     uint8_t calen = 2 + T1len + TD1len + TDilen + K;
 
@@ -561,8 +578,9 @@ int ExchangeAPDUSC(uint8_t *datain, int datainlen, bool activateCard, bool leave
 
 int CmdSmartUpgrade(const char *Cmd) {
 
-    PrintAndLogEx(WARNING, "WARNING - Smartcard socket firmware upgrade.");
-    PrintAndLogEx(WARNING, "A dangerous command, do wrong and you will brick the smart card socket");
+    PrintAndLogEx(WARNING, "WARNING - Sim module firmware upgrade.");
+    PrintAndLogEx(WARNING, "A dangerous command, do wrong and you could brick the sim module");
+	PrintAndLogEx(NORMAL, "");
 
     FILE *f;
     char filename[FILE_PATH_SIZE] = {0};
@@ -592,10 +610,33 @@ int CmdSmartUpgrade(const char *Cmd) {
     //Validations
     if (errors || cmdp == 0) return usage_sm_upgrade();
 
-    // load file
-    f = fopen(filename, "rb");
+
+	char sha512filename[FILE_PATH_SIZE] = {'\0'};
+	char *bin_extension = filename;
+	char *dot_position = NULL;
+	while ((dot_position = strchr(bin_extension, '.')) != NULL) {
+		bin_extension = dot_position + 1;
+	}
+    
+	if (!strcmp(bin_extension, "BIN") 
+#ifdef _WIN32
+	    || !strcmp(bin_extension, "bin")
+#endif
+	    ) {
+		memcpy(sha512filename, filename, strlen(filename) - strlen("bin"));
+		strcat(sha512filename, "sha512.txt");
+	} else {
+		PrintAndLogEx(FAILED, "Filename extension of firmware upgrade file must be .BIN");
+		return 1;
+	}
+	
+    PrintAndLogEx(INFO, "firmware file      : " _YELLOW_("%s"), filename);
+	PrintAndLogEx(INFO, "Checking integrity : " _YELLOW_("%s"), sha512filename);
+		
+	// load firmware file
+	f = fopen(filename, "rb");
     if (!f) {
-        PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
+        PrintAndLogEx(FAILED, "Firmware file " _YELLOW_("%s") " not found or locked.", filename);
         return 1;
     }
 
@@ -605,27 +646,76 @@ int CmdSmartUpgrade(const char *Cmd) {
     fseek(f, 0, SEEK_SET);
 
     if (fsize < 0) {
-        PrintAndLogDevice(WARNING, "error, when getting filesize");
+        PrintAndLogEx(WARNING, "error, when getting filesize");
         fclose(f);
         return 1;
     }
 
     uint8_t *dump = calloc(fsize, sizeof(uint8_t));
     if (!dump) {
-        PrintAndLogDevice(WARNING, "error, cannot allocate memory ");
+        PrintAndLogEx(WARNING, "error, cannot allocate memory ");
         fclose(f);
         return 1;
     }
 
-    size_t bytes_read = fread(dump, 1, fsize, f);
+	size_t firmware_size = fread(dump, 1, fsize, f);
     if (f)
         fclose(f);
 
-    PrintAndLogEx(SUCCESS, "Smartcard socket firmware uploading to PM3");
+	// load sha512 file
+	f = fopen(sha512filename, "rb");
+	if ( !f ){
+		PrintAndLogEx(FAILED, "SHA-512 file not found or locked.");
+		return 1;
+	}
+
+	// get filesize in order to malloc memory
+	fseek(f, 0, SEEK_END);
+	fsize = ftell(f);
+	fseek(f, 0, SEEK_SET);
+
+	if (fsize < 0)  {
+		PrintAndLogEx(FAILED, "Could not determine size of SHA-512 file");
+		fclose(f);
+		return 1;
+	}
+	
+	if (fsize < 128) {
+		PrintAndLogEx(FAILED, "SHA-512 file too short");
+		fclose(f);
+		return 1;
+	}
+
+	char hashstring[129];
+	size_t bytes_read = fread(hashstring, 1, 128, f);
+	hashstring[128] = '\0';
+
+	if (f)
+		fclose(f);
+
+	uint8_t hash1[64];
+	if (bytes_read != 128 || param_gethex(hashstring, 0, hash1, 128)) {
+		PrintAndLogEx(FAILED, "Couldn't read SHA-512 file");
+		return 1;
+	}
+	
+	uint8_t hash2[64];
+	if (sha512hash(dump, firmware_size, hash2)) {
+		PrintAndLogEx(FAILED, "Couldn't calculate SHA-512 of firmware");
+		return 1;
+	}
+
+	if (memcmp(hash1, hash2, 64)) {
+		PrintAndLogEx(FAILED, "Couldn't verify integrity of firmware file " _RED_("(wrong SHA-512 hash)") );
+		return 1;
+	}
+		
+	PrintAndLogEx(SUCCESS, "Sim module firmware uploading to PM3");
+
     //Send to device
     uint32_t index = 0;
     uint32_t bytes_sent = 0;
-    uint32_t bytes_remaining = bytes_read;
+	uint32_t bytes_remaining = firmware_size;
 
     while (bytes_remaining > 0) {
         uint32_t bytes_in_packet = MIN(USB_CMD_DATA_SIZE, bytes_remaining);
@@ -649,10 +739,10 @@ int CmdSmartUpgrade(const char *Cmd) {
     }
     free(dump);
     printf("\n");
-    PrintAndLogEx(SUCCESS, "Smartcard socket firmware updating,  don\'t turn off your PM3!");
+    PrintAndLogEx(SUCCESS, "Sim module firmware updating,  don\'t turn off your PM3!");
 
     // trigger the firmware upgrade
-    UsbCommand c = {CMD_SMART_UPGRADE, {bytes_read, 0, 0}};
+	UsbCommand c = {CMD_SMART_UPGRADE, {firmware_size, 0, 0}};
     clearCommandBuffer();
     SendCommand(&c);
     UsbCommand resp;
@@ -660,10 +750,12 @@ int CmdSmartUpgrade(const char *Cmd) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return 1;
     }
-    if ((resp.arg[0] & 0xFF))
-        PrintAndLogEx(SUCCESS, "Smartcard socket firmware upgraded successful");
-    else
-        PrintAndLogEx(FAILED, "Smartcard socket firmware updating failed");
+    if ((resp.arg[0] & 0xFF)) {
+        PrintAndLogEx(SUCCESS, "Sim module firmware upgrade " _GREEN_("successful") );
+        PrintAndLogEx(SUCCESS, "\n run " _YELLOW_("`hw status`") " to validate the fw version " );
+    } else {
+        PrintAndLogEx(FAILED, "Sim module firmware upgrade " _RED_("failed") );
+    }
     return 0;
 }
 
@@ -874,11 +966,11 @@ static void smart_brute_prim() {
 
         if (len > 2) {
 
-            //if ( decodeTLV ) {
-            //if (!TLVPrintFromBuffer(buf, len-2)) {
+            // if ( decodeTLV ) {
+            // if (!TLVPrintFromBuffer(buf, len-2)) {
             PrintAndLogEx(SUCCESS, "\tHEX  %d |: %s", len, sprint_hex(buf, len));
-            //}
-            //}
+            // }
+            // }
         }
         len = 0;
     }
@@ -1124,14 +1216,14 @@ int CmdSmartBruteforceSFI(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,               1, "This help"},
-    {"list",    CmdSmartList,          0, "List ISO 7816 history"},
-    {"info",    CmdSmartInfo,          1, "Tag information"},
-    {"reader",  CmdSmartReader,        1, "Act like an IS07816 reader"},
-    {"raw",     CmdSmartRaw,           1, "Send raw hex data to tag"},
-    {"upgrade", CmdSmartUpgrade,       1, "Upgrade firmware"},
+    {"help",     CmdHelp,               1, "This help"},
+    {"list",     CmdSmartList,          0, "List ISO 7816 history"},
+    {"info",     CmdSmartInfo,          1, "Tag information"},
+    {"reader",   CmdSmartReader,        1, "Act like an IS07816 reader"},
+    {"raw",      CmdSmartRaw,           1, "Send raw hex data to tag"},
+    {"upgrade",  CmdSmartUpgrade,       1, "Upgrade sim module firmware"},
     {"setclock", CmdSmartSetClock,      1, "Set clock speed"},
-    {"brute",   CmdSmartBruteforceSFI, 1, "Bruteforce SFI"},
+    {"brute",    CmdSmartBruteforceSFI, 1, "Bruteforce SFI"},
     {NULL, NULL, 0, NULL}
 };
 
