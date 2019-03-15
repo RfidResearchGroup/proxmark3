@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Change - printing of fault bit markers (7) using a dot (@doegox)
+ - Change 'sc upgrade' - firmware file integrity check (@piwi)
  - Fix 'data rawdemod am' - last bit was missing (@doegox)
  - Fix 'hf 15 dump f' - also selects tag first (@iceman)
  - Fix 'hf iclass clone' - missing fileclose (@iceman)
