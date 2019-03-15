@@ -49,7 +49,7 @@ int usage_sm_info(void) {
     return 0;
 }
 int usage_sm_upgrade(void) {
-    PrintAndLogEx(NORMAL, "Upgrade RDV4.0 Smartcard module firmware");
+    PrintAndLogEx(NORMAL, "Upgrade RDV4.0 Sim module firmware");
     PrintAndLogEx(NORMAL, "Usage:  sc upgrade f <file name>");
     PrintAndLogEx(NORMAL, "       h               :  this help");
     PrintAndLogEx(NORMAL, "       f <filename>    :  firmware file name");
