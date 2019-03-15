@@ -1865,11 +1865,9 @@ int Cmdhex2bin(const char *Cmd) {
         else
             continue;
 
-        //Uses printf instead of PrintAndLog since the latter
-        // adds linebreaks to each printout - this way was more convenient since we don't have to
-        // allocate a string and write to that first...
+        //Uses printf instead of PrintAndLog since the latter adds linebreaks to each printout
         for (int i = 0 ; i < 4 ; ++i)
-            PrintAndLogEx(NORMAL, "%d", (x >> (3 - i)) & 1);
+            printf("%d", (x >> (3 - i)) & 1);
     }
     PrintAndLogEx(NORMAL, "\n");
     return 0;

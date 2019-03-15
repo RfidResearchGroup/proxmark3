@@ -351,7 +351,7 @@ static void printHitagConfiguration(uint8_t config) {
     char bits[9];
     char *bs = bits;
     for (uint8_t i = 0 ; i < 8 ; i++) {
-        snprintf(bs, sizeof(bits), "%d", (config >> (7 - i)) & 1);
+        snprintf(bs, sizeof(bits) - i, "%1d", (config >> (7 - i)) & 1);
         bs++;
     }
 
@@ -359,7 +359,7 @@ static void printHitagConfiguration(uint8_t config) {
     PrintAndLogEx(INFO, "------------------------------------");
     
     //configuration byte
-    PrintAndLogEx(SUCCESS, "Config byte : %02X - %s", config, bits);    
+    PrintAndLogEx(SUCCESS, "Config byte : 0x%02X [ %s ]", config, bits);    
     
     // encoding
     strcat(msg, "Encoding    : ");
