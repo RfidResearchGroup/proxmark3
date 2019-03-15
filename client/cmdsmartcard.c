@@ -659,8 +659,9 @@ int CmdSmartUpgrade(const char *Cmd) {
     }
 
     size_t firmware_size = fread(dump, 1, fsize, f);
-    if (f)
+    if (f) {
         fclose(f);
+    }
 
     // load sha512 file
     f = fopen(sha512filename, "rb");
