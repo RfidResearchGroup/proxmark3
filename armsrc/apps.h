@@ -133,8 +133,8 @@ void ReaderIso14443a(UsbCommand *c);
 void GetParity(const uint8_t *pbtCmd, uint16_t len, uint8_t *parity);
 void iso14a_set_trigger(bool enable);
 // also used in emv
-bool prepare_allocated_tag_modulation(tag_response_info_t *response_info);
-int GetIso14443aCommandFromReader(uint8_t *received, uint8_t *parity, int *len);
+//bool prepare_allocated_tag_modulation(tag_response_info_t *response_info);
+//int GetIso14443aCommandFromReader(uint8_t *received, uint8_t *parity, int *len);
 
 // epa.h
 void EPA_PACE_Collect_Nonce(UsbCommand *c);
@@ -154,7 +154,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 void MifareAcquireNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *datain);
 void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
 void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
-void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
+void Mifare1ksim(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
 void MifareSetDbgLvl(uint16_t arg0);
 void MifareEMemClr(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 void MifareEMemSet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);

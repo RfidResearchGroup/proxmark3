@@ -47,10 +47,11 @@ typedef enum ISO14A_COMMAND {
 
 typedef struct {
     uint8_t *response;
-    size_t   response_n;
     uint8_t *modulation;
-    size_t   modulation_n;
+    uint16_t response_n;
+    uint16_t modulation_n;
     uint32_t ProxToAirDuration;
+    uint8_t  par; // enough for precalculated parity of 8 Byte responses
 } tag_response_info_t;
 //-----------------------------------------------------------------------------
 // ISO 14443B

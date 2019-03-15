@@ -600,6 +600,17 @@ void emlClearMem(void) {
     return;
 }
 
+uint8_t SectorTrailer(uint8_t blockNo) {
+    if (blockNo < 32 * 4) {
+        return (blockNo | 0x03);
+    } else {
+        return (blockNo | 0x0f);
+    }
+}
+
+bool IsSectorTrailer(uint8_t blockNo) {
+    return (blockNo == SectorTrailer(blockNo));
+}
 
 // Mifare desfire commands
 int mifare_sendcmd_special(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t *data, uint8_t *answer, uint8_t *answer_parity, uint32_t *timing) {
