@@ -884,13 +884,10 @@ int CmdLFfind(const char *Cmd) {
         // The improved noise detection will find Cotag.
         if (getSignalProperties()->isnoise) {
 
-            PrintAndLogEx(INFO, "Signal looks just like noise. Looking for Hitag signal now.");
-
-            // 26 === RHT2F_UID_ONLY
             if (CmdLFHitagReader("26") == 0) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Hitag") " found!"); return 1;}
             if (CmdCOTAGRead("") > 0) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("COTAG ID") " found!"); return 1;}
 
-            PrintAndLogEx(FAILED, "\nNo data found! - maybe not an LF tag?");
+            PrintAndLogEx(FAILED, "\n" _YELLOW_("No data found!") " - Signal looks like noise. Maybe not an LF tag?");
             return 0;
         }
     }
