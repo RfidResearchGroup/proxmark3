@@ -1321,8 +1321,6 @@ int CmdHF14AMfNested(const char *Cmd) {
         }
         free(e_sector);
     }
-
-    free(e_sector);
     return 0;
 }
 
