@@ -105,6 +105,7 @@ static bool IsDataAccessAllowed(uint8_t blockNo, uint8_t keytype, uint8_t action
             break;
         }
         default:
+            if (MF_DBGLEVEL >= 2)	Dbprintf("IsDataAccessAllowed: Error");
             return false;
     }
 
@@ -697,7 +698,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
 
                     cardSTATE = MFEMUL_WORK;
                     LED_B_ON();
-                    if (MF_DBGLEVEL >= 4)	Dbprintf("--> WORK. anticol3 time: %d", GetTickCount() - selTimer);
+                    if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("--> WORK. anticol3 time: %d", GetTickCount() - selTimer);
                     break;
                 }
                 cardSTATE_TO_IDLE();
@@ -784,7 +785,12 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                     blockNo = receivedCmd_dec[1];
                     if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("Reader reading block %d (0x%02x)", blockNo, blockNo);
                     emlGetMem(response, blockNo, 1);
-                    if (MF_DBGLEVEL >= 2) Dbprintf("Data Block: %02x%02x%02x%02x%02x%02x%02x%02x%02x", response);
+                    if (MF_DBGLEVEL >= 2)  {
+                       Dbprintf("Data Block[%d]: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x", blockNo,
+                       response[0], response[1], response[2], response[3],  response[4],  response[5],  response[6],
+                       response[7], response[8], response[9], response[10], response[11], response[12], response[13],
+                       response[14],response[15]);
+                    }
 
 
                     if (IsSectorTrailer(blockNo)) {
@@ -1000,7 +1006,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                             );
                 }
                 LED_C_ON();
-                //cardSTATE = MFEMUL_WORK;
+                cardSTATE = MFEMUL_WORK;
                 if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("cardSTATE = MFEMUL_WORK");
                 break;
             }
