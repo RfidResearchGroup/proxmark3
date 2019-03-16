@@ -20,7 +20,7 @@ example =[[
      script run ntag_3d -u 11223344556677 -c 46 -m 50 -p 5448 -s 4555  -l 200 -1
 ]]
 usage = [[
-script run calc_ntag_3d -h -t -u <uid> -c <color> -m <material> -p <region> -s <region> -l <length>
+script run ntag_3d -h -t -u <uid> -c <color> -m <material> -p <region> -s <region> -l <length>
 
 Arguments:
     -h             : this help
