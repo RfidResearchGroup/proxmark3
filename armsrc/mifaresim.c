@@ -36,7 +36,7 @@ static bool IsTrailerAccessAllowed(uint8_t blockNo, uint8_t keytype, uint8_t act
                  | ((sector_trailer[8] >> 7) & 0x01);
     switch (action) {
         case AC_KEYA_READ: {
-            if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("IsTrailerAccessAllowed: AC_KEYA_READ");
+            if (MF_DBGLEVEL >= 2)	Dbprintf("IsTrailerAccessAllowed: AC_KEYA_READ");
             return false;
         }
         case AC_KEYA_WRITE: {
@@ -45,7 +45,7 @@ static bool IsTrailerAccessAllowed(uint8_t blockNo, uint8_t keytype, uint8_t act
                     || (keytype == AUTHKEYB && (AC == 0x04 || AC == 0x03)));
         }
         case AC_KEYB_READ: {
-            if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("IsTrailerAccessAllowed: AC_KEYB_READ");
+            if (MF_DBGLEVEL >= 2)	Dbprintf("IsTrailerAccessAllowed: AC_KEYB_READ");
             return (keytype == AUTHKEYA && (AC == 0x00 || AC == 0x02 || AC == 0x01));
         }
         case AC_KEYB_WRITE: {
@@ -811,9 +811,10 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                         }
                     }
                     AppendCrc14443a(response, 16);
-                    mf_crypto1_encrypt(pcs, response, 18, response_par);
-                    EmSendCmdPar(response, 18, response_par);
+                    mf_crypto1_encrypt(pcs, response, MAX_MIFARE_FRAME_SIZE, response_par);
+                    EmSendCmdPar(response, MAX_MIFARE_FRAME_SIZE, response_par);
                     numReads++;
+                    if (MF_DBGLEVEL >= 2) Dbprintf("Num Read: %d",numReads);
                     if (exitAfterNReads > 0 && numReads == exitAfterNReads) {
                         Dbprintf("%d reads done, exiting", numReads);
                         finished = true;
@@ -1014,7 +1015,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
 
             // WRITE BL2
             case MFEMUL_WRITEBL2: {
-                if (receivedCmd_len == 18) {
+                if (receivedCmd_len == MAX_MIFARE_FRAME_SIZE) {
                     mf_crypto1_decryptEx(pcs, receivedCmd, receivedCmd_len, receivedCmd_dec);
                     if (HasValidCRC(receivedCmd_dec, receivedCmd_len)) {
                         if (IsSectorTrailer(cardWRBL)) {
