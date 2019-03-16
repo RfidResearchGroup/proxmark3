@@ -11,7 +11,7 @@ example = [[
     -- generate command, replacing key with new key.
     2. script run formatMifare -k aabbccddeeff -n 112233445566 -a FF0780
 
-    -- generate commands and excute them against card.
+    -- generate commands and execute them against card.
     3. script run formatMifare -x
 ]]
 copyright = ''
