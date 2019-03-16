@@ -516,7 +516,7 @@ static int l_sha1(lua_State *L) {
 static int l_reveng_models(lua_State *L) {
 
 // This array needs to be adjusted if RevEng adds more crc-models.
-#define NMODELS 105
+#define NMODELS 106
 
     int count = 0;
     uint8_t in_width = luaL_checkunsigned(L, 1);

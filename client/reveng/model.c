@@ -1,10 +1,10 @@
 /* model.c
- * Greg Cook, 26/Jul/2018
+ * Greg Cook, 23/Feb/2019
  */
 
 /* CRC RevEng: arbitrary-precision CRC calculator and algorithm finder
- * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018
- * Gregory Cook
+ * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018,
+ * 2019  Gregory Cook
  *
  * This file is part of CRC RevEng.
  *
@@ -22,7 +22,8 @@
  * along with CRC RevEng.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/* 2017-02-19: revised residue calculation for crossed-endian models
+/* 2018-12-17: mnovel() clears class flags
+ * 2017-02-19: revised residue calculation for crossed-endian models
  * 2017-02-05: added magic field
  * 2016-02-22: split off preset.c
  * 2012-03-03: single-line Williams model string conversion
@@ -241,7 +242,9 @@ void mrev(model_t *model) {
 
 void mnovel(model_t *model) {
     /* remove name and check string from modified model */
+	/* previous classification no longer applies */
     model->name = NULL;
+	model->flags &= ~P_CLMASK;
     pfree(&model->check);
     pfree(&model->magic);
 }
