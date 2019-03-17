@@ -1163,7 +1163,6 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
                     counters[index] = val;
                     // send ACK
                     EmSend4bit(CARD_ACK);
-                    CARD_ACK
                 }
             }
             p_response = NULL;
