@@ -1,8 +1,10 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
-#include "crapto1.h"
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "crapto1/crapto1.h"
+#include "util_posix.h"		
 
 int main(int argc, char *argv[]) {
     struct Crypto1State *s, *t;

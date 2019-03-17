@@ -1,8 +1,10 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
-#include "crapto1.h"
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "crapto1/crapto1.h"
+#include "util_posix.h"		
 
 int main(int argc, char *argv[]) {
     struct Crypto1State *s, *t;
@@ -15,7 +17,7 @@ int main(int argc, char *argv[]) {
     uint32_t ar1_enc; // second encrypted reader response
     uint32_t ks2;     // keystream used to encrypt reader response
 
-    printf("MIFARE Classic key recovery - based 32 bits of keystream\n");
+    printf("MIFARE Classic key recovery - based on 32 bits of keystream\n");
     printf("Recover key from two 32-bit reader authentication answers only!\n\n");
 
     if (argc < 7) {
