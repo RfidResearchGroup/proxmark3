@@ -215,7 +215,7 @@ int CmdHFFidoRegister(const char *cmd) {
     if (paramsPlain) {
         memset(cdata, 0x00, 32);
         CLIGetStrWithReturn(6, cdata, &chlen);
-        if (chlen && chlen > 16) {
+        if (chlen > 16) {
             PrintAndLog("ERROR: challenge parameter length in ASCII mode must be less than 16 chars instead of: %d", chlen);
             return 1;
         }
@@ -233,7 +233,7 @@ int CmdHFFidoRegister(const char *cmd) {
     if (paramsPlain) {
         memset(adata, 0x00, 32);
         CLIGetStrWithReturn(7, adata, &applen);
-        if (applen && applen > 16) {
+        if (applen > 16) {
             PrintAndLog("ERROR: application parameter length in ASCII mode must be less than 16 chars instead of: %d", applen);
             return 1;
         }
@@ -479,7 +479,7 @@ int CmdHFFidoAuthenticate(const char *cmd) {
     if (paramsPlain) {
         memset(hdata, 0x00, 32);
         CLIGetStrWithReturn(9, hdata, &hdatalen);
-        if (hdatalen && hdatalen > 16) {
+        if (hdatalen > 16) {
             PrintAndLog("ERROR: challenge parameter length in ASCII mode must be less than 16 chars instead of: %d", hdatalen);
             return 1;
         }
@@ -496,7 +496,7 @@ int CmdHFFidoAuthenticate(const char *cmd) {
     if (paramsPlain) {
         memset(hdata, 0x00, 32);
         CLIGetStrWithReturn(11, hdata, &hdatalen);
-        if (hdatalen && hdatalen > 16) {
+        if (hdatalen > 16) {
             PrintAndLog("ERROR: application parameter length in ASCII mode must be less than 16 chars instead of: %d", hdatalen);
             return 1;
         }
