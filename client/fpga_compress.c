@@ -419,7 +419,7 @@ int main(int argc, char **argv) {
         infiles[0] = fopen(argv[2], "rb");
         if (infiles[0] == NULL) {
             fprintf(stderr, "Error. Cannot open input file %s\n\n", argv[2]);
-            free(infiles);            
+            free(infiles);          
             return (EXIT_FAILURE);
         }
         outfile = fopen(argv[3], "wb");
@@ -458,16 +458,21 @@ int main(int argc, char **argv) {
             if (infiles[i] == NULL) {
                 fprintf(stderr, "Error. Cannot open input file %s\n\n", infile_names[i]);
                 free(infile_names);
+                free(infiles);
                 return (EXIT_FAILURE);
             }
         }
         outfile = fopen(argv[argc - 1], "wb");
         if (outfile == NULL) {
             fprintf(stderr, "Error. Cannot open output file %s\n\n", argv[argc - 1]);
+            free(infile_names);
+            free(infiles);          
             return (EXIT_FAILURE);
         }
         if (generate_version_file) {
             if (generate_fpga_version_info(infiles, infile_names, num_input_files, outfile)) {
+                free(infile_names);
+                free(infiles);                
                 return (EXIT_FAILURE);
             }
         } else {
