@@ -137,10 +137,12 @@ static void hitag_send_bit(int bit) {
 }
 
 static void hitag_send_frame(const uint8_t *frame, size_t frame_len) {
-    // Send start of frame
-    for (size_t i = 0; i < 5; i++) {
+    // SOF - send start of frame
         hitag_send_bit(1);
-    }
+    hitag_send_bit(1);
+    hitag_send_bit(1);
+    hitag_send_bit(1);
+    hitag_send_bit(1);
 
     // Send the content of the frame
     for (size_t i = 0; i < frame_len; i++) {
@@ -151,6 +153,7 @@ static void hitag_send_frame(const uint8_t *frame, size_t frame_len) {
     LOW(GPIO_SSC_DOUT);
 }
 
+// sim
 static void hitag2_handle_reader_command(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *txlen) {
     uint8_t rx_air[HITAG_FRAME_LEN];
 
@@ -277,6 +280,7 @@ static void hitag2_handle_reader_command(uint8_t *rx, const size_t rxlen, uint8_
     }
 }
 
+// sim
 static void hitag_reader_send_bit(int bit) {
     LED_A_ON();
     // Reset clock for the next bit
@@ -289,7 +293,7 @@ static void hitag_reader_send_bit(int bit) {
     HIGH(GPIO_SSC_DOUT);
 
     // Wait for 4-10 times the carrier period
-    while (AT91C_BASE_TC0->TC_CV < T0 * 6);
+    while (AT91C_BASE_TC0->TC_CV < T0 * 6) {};
 
     // Disable modulation, just activates the field again
     LOW(GPIO_SSC_DOUT);
@@ -305,6 +309,7 @@ static void hitag_reader_send_bit(int bit) {
     LED_A_OFF();
 }
 
+// sim
 static void hitag_reader_send_frame(const uint8_t *frame, size_t frame_len) {
     // Send the content of the frame
     for (size_t i = 0; i < frame_len; i++) {
@@ -315,12 +320,16 @@ static void hitag_reader_send_frame(const uint8_t *frame, size_t frame_len) {
     // Enable modulation, which means, drop the field
     HIGH(GPIO_SSC_DOUT);
     // Wait for 4-10 times the carrier period
-    while (AT91C_BASE_TC0->TC_CV < T0 * 6);
+    while (AT91C_BASE_TC0->TC_CV < T0 * 6) {};
     // Disable modulation, just activates the field again
     LOW(GPIO_SSC_DOUT);
 }
 
 size_t blocknr;
+
+//-----------------------------------------------------------------------------
+// Hitag2 operations
+//-----------------------------------------------------------------------------
 
 static bool hitag2_password(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *txlen) {
     // Reset the transmission frame length
@@ -336,7 +345,7 @@ static bool hitag2_password(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t
                 return false;
             }
             *txlen = 5;
-            memcpy(tx, "\xc0", nbytes(*txlen));
+            memcpy(tx, "\xC0", nbytes(*txlen));
         }
         break;
 
@@ -364,7 +373,7 @@ static bool hitag2_password(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t
                     return false;
                 }
                 *txlen = 10;
-                tx[0] = 0xc0 | (blocknr << 3) | ((blocknr ^ 7) >> 2);
+                tx[0] = 0xC0 | (blocknr << 3) | ((blocknr ^ 7) >> 2);
                 tx[1] = ((blocknr ^ 7) << 6);
             }
         }
@@ -390,9 +399,10 @@ static bool hitag2_write_page(uint8_t *rx, const size_t rxlen, uint8_t *tx, size
             break;
         case WRITE_STATE_PAGENUM_WRITTEN:
             // Check if page number was received correctly
-            if ((rxlen == 10) &&
-                    (rx[0] == (0x82 | (blocknr << 3) | ((blocknr ^ 7) >> 2))) &&
-                    (rx[1] == (((blocknr & 0x3) ^ 0x3) << 6))) {
+            if (   (rxlen == 10) 
+                && (rx[0] == (0x82 | (blocknr << 3) | ((blocknr ^ 7) >> 2)))
+                && (rx[1] == (((blocknr & 0x3) ^ 0x3) << 6))) {
+                    
                 *txlen = 32;
                 memset(tx, 0, HITAG_FRAME_LEN);
                 memcpy(tx, writedata, 4);
@@ -543,7 +553,7 @@ static bool hitag2_authenticate(uint8_t *rx, const size_t rxlen, uint8_t *tx, si
                 return false;
             }
             *txlen = 5;
-            memcpy(tx, "\xc0", nbytes(*txlen));
+            memcpy(tx, "\xC0", nbytes(*txlen));
         }
         break;
 
@@ -670,6 +680,7 @@ static bool hitag2_read_uid(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t
     return true;
 }
 
+// Hitag2 Sniffing
 void SniffHitag(uint32_t type) {
 
     StopTicks();
@@ -728,7 +739,7 @@ void SniffHitag(uint32_t type) {
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 
     // synchronized startup procedure
-    while (AT91C_BASE_TC1->TC_CV > 0) {}; // wait until TC0 returned to zero
+    while (AT91C_BASE_TC0->TC_CV > 0) {}; // wait until TC0 returned to zero
 
     // Reset the received frame, frame count and timing info
     memset(rx, 0x00, sizeof(rx));
@@ -885,6 +896,7 @@ void SniffHitag(uint32_t type) {
     DbpString("Hitag2 sniffing end,  use `lf hitag list` for annotations");
 }
 
+// Hitag2 simulation
 void SimulateHitagTag(bool tag_mem_supplied, uint8_t *data) {
 
     StopTicks();
@@ -964,7 +976,7 @@ void SimulateHitagTag(bool tag_mem_supplied, uint8_t *data) {
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 
     // synchronized startup procedure
-    while (AT91C_BASE_TC1->TC_CV > 0); // wait until TC0 returned to zero
+    while (AT91C_BASE_TC0->TC_CV > 0) {}; // wait until TC0 returned to zero
 
     while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
         // Watchdog hit
@@ -1268,6 +1280,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
 
         // Receive frame, watch for at most T0*EOF periods
         while (AT91C_BASE_TC1->TC_CV < T0 * HITAG_T_WAIT_MAX) {
+            
             // Check if falling edge in tag modulation is detected
             if (AT91C_BASE_TC1->TC_SR & AT91C_TC_LDRAS) {
                 // Retrieve the new timing values
