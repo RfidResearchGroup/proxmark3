@@ -301,7 +301,7 @@ CBOR_API CborError cbor_value_leave_container(CborValue *it, const CborValue *re
 
 CBOR_PRIVATE_API uint64_t _cbor_value_decode_int64_internal(const CborValue *value);
 CBOR_INLINE_API uint64_t _cbor_value_extract_int64_helper(const CborValue *value) {
-    return value->flags & CborIteratorFlag_IntegerValueTooLarge ?
+    return (value->flags & CborIteratorFlag_IntegerValueTooLarge) ?
            _cbor_value_decode_int64_internal(value) : value->extra;
 }
 
