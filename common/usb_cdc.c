@@ -686,7 +686,7 @@ uint32_t usb_write(const byte_t *data, const size_t len) {
         }
 
         UDP_CLEAR_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXCOMP);
-        while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP);
+        while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP) {};
         UDP_SET_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXPKTRDY);
 
     }
@@ -697,7 +697,7 @@ uint32_t usb_write(const byte_t *data, const size_t len) {
     }
 
     UDP_CLEAR_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXCOMP);
-    while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP);
+    while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP) {};
 
     return length;
 }
@@ -749,9 +749,9 @@ void AT91F_USB_SendData(AT91PS_UDP pUdp, const char *pData, uint32_t length) {
 //*----------------------------------------------------------------------------
 void AT91F_USB_SendZlp(AT91PS_UDP pUdp) {
     UDP_SET_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_TXPKTRDY);
-    while (!(pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP));
+    while (!(pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP)) {};
     UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_TXCOMP);
-    while (pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP);
+    while (pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP) {};
 }
 
 //*----------------------------------------------------------------------------
@@ -760,9 +760,9 @@ void AT91F_USB_SendZlp(AT91PS_UDP pUdp) {
 //*----------------------------------------------------------------------------
 void AT91F_USB_SendStall(AT91PS_UDP pUdp) {
     UDP_SET_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_FORCESTALL);
-    while (!(pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_ISOERROR));
+    while (!(pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_ISOERROR)) {};
     UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, (AT91C_UDP_FORCESTALL | AT91C_UDP_ISOERROR));
-    while (pUdp->UDP_CSR[AT91C_EP_CONTROL] & (AT91C_UDP_FORCESTALL | AT91C_UDP_ISOERROR));
+    while (pUdp->UDP_CSR[AT91C_EP_CONTROL] & (AT91C_UDP_FORCESTALL | AT91C_UDP_ISOERROR)) {};
 }
 
 //*----------------------------------------------------------------------------
@@ -790,10 +790,10 @@ void AT91F_CDC_Enumerate() {
 
     if (bmRequestType & 0x80) {        // Data Phase Transfer Direction Device to Host
         UDP_SET_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_DIR);
-        while (!(pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_DIR));
+        while (!(pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_DIR)) {};
     }
     UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_RXSETUP);
-    while ((pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_RXSETUP));
+    while ((pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_RXSETUP)) {};
 
     /*
     if ( bRequest == MS_VENDOR_CODE) {
@@ -933,7 +933,7 @@ void AT91F_CDC_Enumerate() {
                     ((uint8_t*)&line)[i] =  pUdp->UDP_FDR[AT91C_EP_CONTROL];
                 }  */
             // ignore SET_LINE_CODING...
-            while (!(pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_RX_DATA_BK0));
+            while (!(pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_RX_DATA_BK0)) {};
             UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_RX_DATA_BK0);
             AT91F_USB_SendZlp(pUdp);
             break;
