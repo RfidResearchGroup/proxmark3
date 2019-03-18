@@ -541,7 +541,11 @@ int CmdHF14AInfo(const char *Cmd) {
             if (strlen(dr) != 0) dr[strlen(dr) - 2] = '\0';
             PrintAndLogEx(NORMAL, "       - TA1 : different divisors are%s supported, "
                           "DR: [%s], DS: [%s]",
-                          (card.ats[pos] & 0x80 ? " NOT" : ""), dr, ds);
+                          ((card.ats[pos] & 0x80) ? " NOT" : ""),
+                          dr,
+                          ds
+                  );
+                  
             pos++;
         }
         if (tb1) {
@@ -810,12 +814,12 @@ int CmdHF14ASniff(const char *Cmd) {
 }
 
 int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
-    static bool responseNum = false;
+    static uint8_t responseNum = 0;
     uint16_t cmdc = 0;
     *dataoutlen = 0;
 
     if (activateField) {
-        responseNum = false;
+        responseNum = 1;
         UsbCommand resp;
 
         // Anticollision + SELECT card
@@ -848,7 +852,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
                 return 1;
             }
 
-            if (resp.arg[0] <= 0) { // ats_len
+            if (resp.arg[0] == 0) { // ats_len
                 PrintAndLogEx(ERR, "Can't get ATS.");
                 return 1;
             }
@@ -859,7 +863,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
         cmdc |= ISO14A_NO_DISCONNECT;
 
     UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_APPEND_CRC | cmdc, (datainlen & 0xFFFF) + 2, 0}};
-    uint8_t header[] = {0x0a | responseNum, 0x00};
+    uint8_t header[] = { 0x0a | responseNum, 0x00};
     responseNum ^= 1;
     memcpy(c.d.asBytes, header, 2);
     memcpy(&c.d.asBytes[2], datain, datainlen);
@@ -898,7 +902,6 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
             PrintAndLogEx(ERR, "ISO 14443A CRC error.");
             return 3;
         }
-
 
     } else {
         PrintAndLogEx(ERR, "Reply timeout.");
@@ -948,7 +951,7 @@ int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
             return 1;
         }
 
-        if (resp.arg[0] <= 0) { // ats_len
+        if (resp.arg[0] == 0) { // ats_len
             PrintAndLogEx(ERR, "Can't get ATS.");
             return 1;
         }
@@ -997,7 +1000,10 @@ int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool activa
     // here length USB_CMD_DATA_SIZE=512
     // timeout must be authomatically set by "get ATS"
     UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_APDU | ISO14A_NO_DISCONNECT | cmdc, (datainlen & 0xFFFF), 0}};
-    memcpy(c.d.asBytes, datain, datainlen);
+    
+    if ( datain )
+        memcpy(c.d.asBytes, datain, datainlen);
+    
     SendCommand(&c);
 
     uint8_t *recv;
