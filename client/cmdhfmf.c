@@ -1325,8 +1325,6 @@ int CmdHF14AMfNested(const char *Cmd) {
         }
         free(e_sector);
     }
-
-    free(e_sector);
     return 0;
 }
 
@@ -2570,7 +2568,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
 
     uint8_t *data = calloc(4096, sizeof(uint8_t));
     size_t datalen = 0;
-    //int res = loadFile(filename, "bin", data, &datalen);
+    //int res = loadFile(filename, "bin", data, maxdatalen, &datalen);
     int res = loadFileEML(filename, "eml", data, &datalen);
     if (res) {
         free(data);
@@ -2856,7 +2854,7 @@ int CmdHF14AMfCLoad(const char *Cmd) {
     size_t datalen = 0;
     int res = 0;
     if (fillFromBin) {
-        res = loadFile(fileName, "bin", data, &datalen);
+        res = loadFile(fileName, "bin", data, maxdatalen, &datalen);
     } else {
         if (fillFromJson) {
             res = loadFileJSON(fileName, "json", data, maxdatalen, &datalen);
@@ -3326,7 +3324,7 @@ int CmdHF14AMfAuth4(const char *Cmd) {
 }
 
 // https://www.nxp.com/docs/en/application-note/AN10787.pdf
-int CmdHF14AMfMAD(const char *cmd) {
+int CmdHF14AMfMAD(const char *Cmd) {
 
     CLIParserInit("hf mf mad",
                   "Checks and prints Mifare Application Directory (MAD)",
@@ -3341,7 +3339,7 @@ int CmdHF14AMfMAD(const char *cmd) {
         arg_lit0("bB",  "keyb",     "use key B for access printing sectors (by default: key A)"),
         arg_param_end
     };
-    CLIExecWithReturn(cmd, argtable, true);
+    CLIExecWithReturn(Cmd, argtable, true);
     bool verbose = arg_get_lit(1);
     uint8_t aid[2] = {0};
     int aidlen;
@@ -3416,7 +3414,7 @@ int CmdHF14AMfMAD(const char *cmd) {
     return 0;
 }
 
-int CmdHFMFNDEF(const char *cmd) {
+int CmdHFMFNDEF(const char *Cmd) {
 
     CLIParserInit("hf mf ndef",
                   "Prints NFC Data Exchange Format (NDEF)",
@@ -3431,7 +3429,7 @@ int CmdHFMFNDEF(const char *cmd) {
         arg_lit0("bB",  "keyb",     "use key B for access sectors (by default: key A)"),
         arg_param_end
     };
-    CLIExecWithReturn(cmd, argtable, true);
+    CLIExecWithReturn(Cmd, argtable, true);
 
     bool verbose = arg_get_lit(1);
     bool verbose2 = arg_get_lit(1) > 1;
@@ -3535,7 +3533,7 @@ static command_t CommandTable[] = {
     {"nack",        CmdHf14AMfNack,         0, "Test for Mifare NACK bug"},
     {"chk",         CmdHF14AMfChk,          0, "Check keys"},
     {"fchk",        CmdHF14AMfChk_fast,     0, "Check keys fast, targets all keys on card"},
-    {"decrypt",     CmdHf14AMfDecryptBytes, 1, "[nt] [ar_enc] [at_enc] [data] - to decrypt snoop or trace"},
+    {"decrypt",     CmdHf14AMfDecryptBytes, 1, "[nt] [ar_enc] [at_enc] [data] - to decrypt sniff or trace"},
     {"-----------", CmdHelp,                1, ""},
     {"dbg",         CmdHF14AMfDbg,          0, "Set default debug mode"},
     {"rdbl",        CmdHF14AMfRdBl,         0, "Read MIFARE classic block"},

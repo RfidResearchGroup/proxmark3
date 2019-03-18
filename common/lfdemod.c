@@ -1357,6 +1357,7 @@ int BiphaseRawDecode(uint8_t *bits, size_t *size, int *offset, int invert) {
 //by marshmellow
 //take 10 and 01 and manchester decode
 //run through 2 times and take least errCnt
+// "7" indicates 00 or 11 wrong bit
 int manrawdecode(uint8_t *bits, size_t *size, uint8_t invert, uint8_t *alignPos) {
 
     // sanity check
@@ -1368,7 +1369,7 @@ int manrawdecode(uint8_t *bits, size_t *size, uint8_t invert, uint8_t *alignPos)
 
     //find correct start position [alignment]
     for (k = 0; k < 2; ++k) {
-        for (i = k; i < *size - 3; i += 2) {
+        for (i = k; i < *size - 1; i += 2) {
             if (bits[i] == bits[i + 1])
                 errCnt++;
         }
@@ -1380,7 +1381,7 @@ int manrawdecode(uint8_t *bits, size_t *size, uint8_t invert, uint8_t *alignPos)
     }
     *alignPos = bestRun;
     //decode
-    for (i = bestRun; i < *size - 3; i += 2) {
+    for (i = bestRun; i < *size - 1; i += 2) {
         if (bits[i] == 1 && (bits[i + 1] == 0)) {
             bits[bitnum++] = invert;
         } else if ((bits[i] == 0) && bits[i + 1] == 1) {
@@ -1472,28 +1473,27 @@ int askdemod_ext(uint8_t *bits, size_t *size, int *clk, int *invert, int maxErr,
 
     if (*size == 0) return -1;
 
+    if (signalprop.isnoise) {
+        if (g_debugMode == 2) prnt("DEBUG (askdemod_ext) just noise detected - aborting");
+        return -2;
+    }
+    
     int start = DetectASKClock(bits, *size, clk, maxErr);
     if (*clk == 0 || start < 0) return -3;
-
+   
     if (*invert != 1) *invert = 0;
 
     // amplify signal data.
     // ICEMAN todo,
     if (amp == 1) askAmp(bits, *size);
 
-    if (g_debugMode == 2) prnt("DEBUG ASK: clk %d, beststart %d, amp %d", *clk, start, amp);
+    if (g_debugMode == 2) prnt("DEBUG (askdemod_ext) clk %d, beststart %d, amp %d", *clk, start, amp);
 
     //start pos from detect ask clock is 1/2 clock offset
     // NOTE: can be negative (demod assumes rest of wave was there)
     *startIdx = start - (*clk / 2);
     uint16_t initLoopMax = 1024;
     if (initLoopMax > *size) initLoopMax = *size;
-
-    // just noise - no super good detection. good enough
-    if (signalprop.isnoise) {
-        if (g_debugMode == 2) prnt("DEBUG askdemod_ext: just noise detected - aborting");
-        return -2;
-    }
 
     // Detect high and lows
     //25% clip in case highs and lows aren't clipped [marshmellow]
@@ -1538,7 +1538,7 @@ int askdemod_ext(uint8_t *bits, size_t *size, int *clk, int *invert, int maxErr,
                 bits[bitnum++] = *invert ^ 1;
             } else if (i - lastBit >= *clk + tol) {
                 if (bitnum > 0) {
-                    if (g_debugMode == 2) prnt("DEBUG: (askdemod_ext) Modulation Error at: %u", i);
+//                    if (g_debugMode == 2) prnt("DEBUG: (askdemod_ext) Modulation Error at: %u", i);
                     bits[bitnum++] = 7;
                     errCnt++;
                 }

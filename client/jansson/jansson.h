@@ -187,22 +187,22 @@ static JSON_INLINE enum json_error_code json_error_code(const json_error_t *e) {
 /* getters, setters, manipulation */
 
 void json_object_seed(size_t seed);
-size_t json_object_size(const json_t *object);
-json_t *json_object_get(const json_t *object, const char *key) JANSSON_ATTRS(warn_unused_result);
-int json_object_set_new(json_t *object, const char *key, json_t *value);
-int json_object_set_new_nocheck(json_t *object, const char *key, json_t *value);
-int json_object_del(json_t *object, const char *key);
-int json_object_clear(json_t *object);
+size_t json_object_size(const json_t *json);
+json_t *json_object_get(const json_t *json, const char *key) JANSSON_ATTRS(warn_unused_result);
+int json_object_set_new(json_t *json, const char *key, json_t *value);
+int json_object_set_new_nocheck(json_t *json, const char *key, json_t *value);
+int json_object_del(json_t *json, const char *key);
+int json_object_clear(json_t *json);
 int json_object_update(json_t *object, json_t *other);
 int json_object_update_existing(json_t *object, json_t *other);
 int json_object_update_missing(json_t *object, json_t *other);
-void *json_object_iter(json_t *object);
-void *json_object_iter_at(json_t *object, const char *key);
+void *json_object_iter(json_t *json);
+void *json_object_iter_at(json_t *json, const char *key);
 void *json_object_key_to_iter(const char *key);
-void *json_object_iter_next(json_t *object, void *iter);
+void *json_object_iter_next(json_t *json, void *iter);
 const char *json_object_iter_key(void *iter);
 json_t *json_object_iter_value(void *iter);
-int json_object_iter_set_new(json_t *object, void *iter, json_t *value);
+int json_object_iter_set_new(json_t *json, void *iter, json_t *value);
 
 #define json_object_foreach(object, key, value) \
     for(key = json_object_iter_key(json_object_iter(object)); \
@@ -236,14 +236,14 @@ int json_object_iter_set(json_t *object, void *iter, json_t *value) {
     return json_object_iter_set_new(object, iter, json_incref(value));
 }
 
-size_t json_array_size(const json_t *array);
-json_t *json_array_get(const json_t *array, size_t index) JANSSON_ATTRS(warn_unused_result);
-int json_array_set_new(json_t *array, size_t index, json_t *value);
-int json_array_append_new(json_t *array, json_t *value);
-int json_array_insert_new(json_t *array, size_t index, json_t *value);
-int json_array_remove(json_t *array, size_t index);
-int json_array_clear(json_t *array);
-int json_array_extend(json_t *array, json_t *other);
+size_t json_array_size(const json_t *json);
+json_t *json_array_get(const json_t *json, size_t index) JANSSON_ATTRS(warn_unused_result);
+int json_array_set_new(json_t *json, size_t index, json_t *value);
+int json_array_append_new(json_t *json, json_t *value);
+int json_array_insert_new(json_t *json, size_t index, json_t *value);
+int json_array_remove(json_t *json, size_t index);
+int json_array_clear(json_t *json);
+int json_array_extend(json_t *json, json_t *other);
 
 static JSON_INLINE
 int json_array_set(json_t *array, size_t ind, json_t *value) {
@@ -260,16 +260,16 @@ int json_array_insert(json_t *array, size_t ind, json_t *value) {
     return json_array_insert_new(array, ind, json_incref(value));
 }
 
-const char *json_string_value(const json_t *string);
-size_t json_string_length(const json_t *string);
+const char *json_string_value(const json_t *json);
+size_t json_string_length(const json_t *json);
 json_int_t json_integer_value(const json_t *integer);
 double json_real_value(const json_t *real);
 double json_number_value(const json_t *json);
 
-int json_string_set(json_t *string, const char *value);
-int json_string_setn(json_t *string, const char *value, size_t len);
-int json_string_set_nocheck(json_t *string, const char *value);
-int json_string_setn_nocheck(json_t *string, const char *value, size_t len);
+int json_string_set(json_t *json, const char *value);
+int json_string_setn(json_t *json, const char *value, size_t len);
+int json_string_set_nocheck(json_t *json, const char *value);
+int json_string_setn_nocheck(json_t *json, const char *value, size_t len);
 int json_integer_set(json_t *integer, json_int_t value);
 int json_real_set(json_t *real, double value);
 

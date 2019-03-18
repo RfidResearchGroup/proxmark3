@@ -277,6 +277,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO_15693        7
 #define FELICA           8
 #define PROTO_MIFARE     9
+#define PROTO_HITAG     10
 
 //-- Picopass fuses
 #define FUSE_FPERS   0x80

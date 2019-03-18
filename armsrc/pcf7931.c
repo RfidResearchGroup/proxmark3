@@ -142,10 +142,16 @@ bool IsBlock0PCF7931(uint8_t *block) {
 
 bool IsBlock1PCF7931(uint8_t *block) {
     // assuming all RFU bits are set to 0
-    if (block[10] == 0 && block[11] == 0 && block[12] == 0 && block[13] == 0)
-        if ((block[14] & 0x7f) <= 9 && block[15] <= 9)
-            return true;
-
+    if (block[10] == 0
+        && block[11] == 0 
+        && block[12] == 0 
+        && block[13] == 0) {
+        
+        if ( (block[14] & 0x7f) <= 9 
+              && block[15] <= 9) {
+                return true;
+            }
+        }
     return false;
 }
 
@@ -153,7 +159,6 @@ void ReadPCF7931() {
     int found_blocks = 0; // successfully read blocks
     int max_blocks = 8;   // readable blocks
     uint8_t memory_blocks[8][17]; // PCF content
-
     uint8_t single_blocks[8][17]; // PFC blocks with unknown position
     int single_blocks_cnt = 0;
 

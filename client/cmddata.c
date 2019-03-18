@@ -417,18 +417,16 @@ int CmdPrintDemodBuff(const char *Cmd) {
         return 0;
     }
     length = (length > (DemodBufferLen - offset)) ? DemodBufferLen - offset : length;
-    int numBits = (length) & 0x00FFC; //make sure we don't exceed our string
 
     if (hexMode) {
         char *buf = (char *)(DemodBuffer + offset);
-        numBits = (numBits > sizeof(hex)) ? sizeof(hex) : numBits;
-        numBits = binarraytohex(hex, buf, numBits);
+        int numBits = binarraytohex(hex, sizeof(hex), buf, length);
         if (numBits == 0) {
             return 0;
         }
         PrintAndLogEx(NORMAL, "DemodBuffer: %s", hex);
     } else {
-        PrintAndLogEx(NORMAL, "DemodBuffer:\n%s", sprint_bin_break(DemodBuffer + offset, numBits, 16));
+        PrintAndLogEx(NORMAL, "DemodBuffer:\n%s", sprint_bin_break(DemodBuffer + offset, length, 16));
     }
     return 1;
 }
@@ -475,14 +473,15 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
 
     size_t BitLen = getFromGraphBuf(bits);
 
-    PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) Bitlen from grphbuff: %d", BitLen);
+    PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) #samples from graphbuff: %d", BitLen);
 
     if (BitLen < 255) return 0;
 
     if (maxLen < BitLen && maxLen != 0) BitLen = maxLen;
 
     int foundclk = 0;
-    //amp before ST check
+
+    //amplify signal before ST check
     if (amp == 'a')
         askAmp(bits, BitLen);
 
@@ -496,8 +495,8 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
         clk = (clk == 0) ? foundclk : clk;
         CursorCPos = ststart;
         CursorDPos = stend;
-        if (verbose || g_debugMode)
-            PrintAndLogEx(NORMAL, "Found Sequence Terminator - First one is shown by orange and blue graph markers");
+        if (verbose)
+            PrintAndLogEx(DEBUG, "Found Sequence Terminator - First one is shown by orange / blue graph markers");
     }
 
     int startIdx = 0;
@@ -513,19 +512,19 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
         return 0;
     }
 
-    if (verbose || g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) Using clock:%d, invert:%d, bits found:%d", clk, invert, BitLen);
+    if (verbose) PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) Using clock:%d, invert:%d, bits found:%d", clk, invert, BitLen);
 
     //output
     setDemodBuf(bits, BitLen, 0);
     setClockGrid(clk, startIdx);
 
-    if (verbose || g_debugMode) {
+    if (verbose) {
         if (errCnt > 0)
-            PrintAndLogEx(NORMAL, "# Errors during Demoding (shown as 7 in bit stream): %d", errCnt);
+            PrintAndLogEx(DEBUG, "# Errors during Demoding (shown as 7 in bit stream): %d", errCnt);
         if (askType)
-            PrintAndLogEx(NORMAL, "ASK/Manchester - Clock: %d - Decoded bitstream:", clk);
+            PrintAndLogEx(DEBUG, "ASK/Manchester - Clock: %d - Decoded bitstream:", clk);
         else
-            PrintAndLogEx(NORMAL, "ASK/Raw - Clock: %d - Decoded bitstream:", clk);
+            PrintAndLogEx(DEBUG, "ASK/Raw - Clock: %d - Decoded bitstream:", clk);
         // Now output the bitstream to the scrollback by line of 16 bits
         printDemodBuff();
     }
@@ -624,7 +623,7 @@ int CmdBiphaseDecodeRaw(const char *Cmd) {
 
     sscanf(Cmd, "%i %i %i", &offset, &invert, &maxErr);
     if (DemodBufferLen == 0) {
-        PrintAndLogEx(NORMAL, "DemodBuffer Empty - run 'data rawdemod ar' first");
+        PrintAndLogEx(WARNING, "DemodBuffer Empty - run " _YELLOW_("'data rawdemod ar'")" first");
         return 0;
     }
 
@@ -643,7 +642,7 @@ int CmdBiphaseDecodeRaw(const char *Cmd) {
     }
 
     if (errCnt > 0)
-        PrintAndLogEx(WARNING, "# Errors found during Demod (shown as 7 in bit stream): %d", errCnt);
+        PrintAndLogEx(WARNING, "# Errors found during Demod (shown as " _YELLOW_("7")" in bit stream): %d", errCnt);
 
     PrintAndLogEx(NORMAL, "Biphase Decoded using offset: %d - # invert:%d - data:", offset, invert);
     PrintAndLogEx(NORMAL, "%s", sprint_bin_break(bits, size, 16));
@@ -716,7 +715,7 @@ int AutoCorrelate(const int *in, int *out, size_t len, int window, bool SaveGrph
     // sanity check
     if (window > len) window = len;
 
-    if (verbose) PrintAndLogEx(INFO, "performing %d correlations", GraphTraceLen - window);
+    if (verbose) PrintAndLogEx(INFO, "performing " _YELLOW_("%d")" correlations", GraphTraceLen - window);
 
     //test
     double autocv = 0.0;    // Autocovariance value
@@ -769,10 +768,11 @@ int AutoCorrelate(const int *in, int *out, size_t len, int window, bool SaveGrph
     }
 
     int foo = ABS(hi - hi_1);
-    int bar = (int)((int)((hi + hi_1) / 2) * 0.03);
+    int bar = (int)((int)((hi + hi_1) / 2) * 0.04);
+
     if (verbose && foo < bar) {
         distance = idx_1 - idx;
-        PrintAndLogEx(SUCCESS, "possible 3% visible correlation %4d samples", distance);
+        PrintAndLogEx(SUCCESS, "possible 4% visible correlation %4d samples", distance);
     } else if (verbose && (correlation > 1)) {
         PrintAndLogEx(SUCCESS, "possible correlation %4d samples", correlation);
     } else {
@@ -1069,7 +1069,7 @@ int FSKrawDemod(const char *Cmd, bool verbose) {
         }
         return 1;
     } else {
-        if (g_debugMode) PrintAndLogEx(NORMAL, "no FSK data found");
+        PrintAndLogEx(DEBUG, "no FSK data found");
     }
     return 0;
 }
@@ -1128,7 +1128,7 @@ int PSKDemod(const char *Cmd, bool verbose) {
     return 1;
 }
 
-int CmdPSKIdteck(const char *Cmd) {
+int CmdIdteckDemod(const char *Cmd) {
 
     if (!PSKDemod("", false)) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck PSKDemod failed");
@@ -1865,11 +1865,9 @@ int Cmdhex2bin(const char *Cmd) {
         else
             continue;
 
-        //Uses printf instead of PrintAndLog since the latter
-        // adds linebreaks to each printout - this way was more convenient since we don't have to
-        // allocate a string and write to that first...
+        //Uses printf instead of PrintAndLog since the latter adds linebreaks to each printout
         for (int i = 0 ; i < 4 ; ++i)
-            PrintAndLogEx(NORMAL, "%d", (x >> (3 - i)) & 1);
+            printf("%d", (x >> (3 - i)) & 1);
     }
     PrintAndLogEx(NORMAL, "\n");
     return 0;

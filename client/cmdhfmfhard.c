@@ -367,7 +367,7 @@ static uint16_t PartialSumProperty(uint32_t state, odd_even_t odd_even) {
         uint32_t st = state;
         uint16_t part_sum = 0;
         if (odd_even == ODD_STATE) {
-            for (uint16_t i = 0; i < 5; i++) {
+            for (uint16_t i = 0; i < 4; i++) {
                 part_sum ^= filter(st);
                 st = (st << 1) | ((j >> (3 - i)) & 0x01) ;
             }
@@ -1073,7 +1073,7 @@ static int read_nonce_file(char *filename) {
     fclose(fnonces);
 
     char progress_string[80];
-    sprintf(progress_string, "Read %d nonces from file. cuid=%08x", num_acquired_nonces, cuid);
+    sprintf(progress_string, "Read %u nonces from file. cuid = %08x", num_acquired_nonces, cuid);
     hardnested_print_progress(num_acquired_nonces, progress_string, (float)(1LL << 47), 0);
     sprintf(progress_string, "Target Block=%d, Keytype=%c", trgBlockNo, trgKeyType == 0 ? 'A' : 'B');
     hardnested_print_progress(num_acquired_nonces, progress_string, (float)(1LL << 47), 0);
@@ -1353,7 +1353,7 @@ static void simulate_acquire_nonces() {
     // difftime(end_time, time1)!=0.0?(float)total_num_nonces*60.0/difftime(end_time, time1):INFINITY
     // );
 
-    fprintf(fstats, "%" PRId32 ";%" PRId32 ";%1.0f;", total_num_nonces, num_acquired_nonces, difftime(end_time, time1));
+    fprintf(fstats, "%" PRIu32 ";%" PRIu32 ";%1.0f;", total_num_nonces, num_acquired_nonces, difftime(end_time, time1));
 
 }
 

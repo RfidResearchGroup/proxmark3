@@ -95,7 +95,7 @@ bool mfkey32(nonces_t data, uint64_t *outputkey) {
     uint8_t counter = 0;
 
     uint32_t p640 = prng_successor(data.nonce, 64);
-    uint32_t p641 = prng_successor(data.nonce2, 64);
+
     s = lfsr_recovery32(data.ar ^ p640, 0);
 
     for (t = s; t->odd | t->even; ++t) {
@@ -105,7 +105,7 @@ bool mfkey32(nonces_t data, uint64_t *outputkey) {
         crypto1_get_lfsr(t, &key);
         crypto1_word(t, data.cuid ^ data.nonce, 0);
         crypto1_word(t, data.nr2, 1);
-        if (data.ar2 == (crypto1_word(t, 0, 0) ^ p641)) {
+        if (data.ar2 == (crypto1_word(t, 0, 0) ^ p640)) {
             outkey = key;
             counter++;
             if (counter == 20) break;

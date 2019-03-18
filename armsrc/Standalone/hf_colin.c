@@ -207,7 +207,7 @@ void RunMod() {
     cjcuid = 0;
     uint8_t sectorsCnt = (MF1KSZ / MF1KSZSIZE);
     uint64_t key64;           // Defines current key
-    uint8_t *keyBlock = NULL; // Where the keys will be held in memory.
+    uint8_t *keyBlock; // Where the keys will be held in memory.
 
     /* VIGIK EXPIRED DUMP FOR STUDY
     Sector 0

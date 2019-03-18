@@ -1363,7 +1363,7 @@ bool AquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password) {
     //  bit1 = page to read from
     // arg1: which block to read
     // arg2: password
-    uint8_t arg0 = (page << 1) | pwdmode;
+    uint8_t arg0 = ((page << 1) | pwdmode);
     UsbCommand c = {CMD_T55XX_READ_BLOCK, {arg0, block, password}};
     clearCommandBuffer();
     SendCommand(&c);
@@ -1386,31 +1386,31 @@ char *GetBitRateStr(uint32_t id, bool xmode) {
     } else {
         switch (id) {
             case 0:
-                snprintf(retStr, sizeof(buf), "%d - RF/8", id);
+                snprintf(retStr, sizeof(buf), "%u - RF/8", id);
                 break;
             case 1:
-                snprintf(retStr, sizeof(buf), "%d - RF/16", id);
+                snprintf(retStr, sizeof(buf), "%u - RF/16", id);
                 break;
             case 2:
-                snprintf(retStr, sizeof(buf), "%d - RF/32", id);
+                snprintf(retStr, sizeof(buf), "%u - RF/32", id);
                 break;
             case 3:
-                snprintf(retStr, sizeof(buf), "%d - RF/40", id);
+                snprintf(retStr, sizeof(buf), "%u - RF/40", id);
                 break;
             case 4:
-                snprintf(retStr, sizeof(buf), "%d - RF/50", id);
+                snprintf(retStr, sizeof(buf), "%u - RF/50", id);
                 break;
             case 5:
-                snprintf(retStr, sizeof(buf), "%d - RF/64", id);
+                snprintf(retStr, sizeof(buf), "%u - RF/64", id);
                 break;
             case 6:
-                snprintf(retStr, sizeof(buf), "%d - RF/100", id);
+                snprintf(retStr, sizeof(buf), "%u - RF/100", id);
                 break;
             case 7:
-                snprintf(retStr, sizeof(buf), "%d - RF/128", id);
+                snprintf(retStr, sizeof(buf), "%u - RF/128", id);
                 break;
             default:
-                snprintf(retStr, sizeof(buf), "%d - (Unknown)", id);
+                snprintf(retStr, sizeof(buf), "%u - (Unknown)", id);
                 break;
         }
     }
@@ -1421,12 +1421,12 @@ char *GetSaferStr(uint32_t id) {
     static char buf[40];
     char *retStr = buf;
 
-    snprintf(retStr, sizeof(buf), "%d", id);
+    snprintf(retStr, sizeof(buf), "%u", id);
     if (id == 6) {
-        snprintf(retStr, sizeof(buf), "%d - passwd", id);
+        snprintf(retStr, sizeof(buf), "%u - " _YELLOW_("passwd"), id);
     }
     if (id == 9) {
-        snprintf(retStr, sizeof(buf), "%d - testmode", id);
+        snprintf(retStr, sizeof(buf), "%u - " _YELLOW_("testmode"), id);
     }
 
     return buf;
@@ -1438,40 +1438,40 @@ char *GetModulationStr(uint32_t id) {
 
     switch (id) {
         case 0:
-            snprintf(retStr, sizeof(buf), "%d - DIRECT (ASK/NRZ)", id);
+            snprintf(retStr, sizeof(buf), "%u - DIRECT (ASK/NRZ)", id);
             break;
         case 1:
-            snprintf(retStr, sizeof(buf), "%d - PSK 1 phase change when input changes", id);
+            snprintf(retStr, sizeof(buf), "%u - PSK 1 phase change when input changes", id);
             break;
         case 2:
-            snprintf(retStr, sizeof(buf), "%d - PSK 2 phase change on bitclk if input high", id);
+            snprintf(retStr, sizeof(buf), "%u - PSK 2 phase change on bitclk if input high", id);
             break;
         case 3:
-            snprintf(retStr, sizeof(buf), "%d - PSK 3 phase change on rising edge of input", id);
+            snprintf(retStr, sizeof(buf), "%u - PSK 3 phase change on rising edge of input", id);
             break;
         case 4:
-            snprintf(retStr, sizeof(buf), "%d - FSK 1 RF/8  RF/5", id);
+            snprintf(retStr, sizeof(buf), "%u - FSK 1 RF/8  RF/5", id);
             break;
         case 5:
-            snprintf(retStr, sizeof(buf), "%d - FSK 2 RF/8  RF/10", id);
+            snprintf(retStr, sizeof(buf), "%u - FSK 2 RF/8  RF/10", id);
             break;
         case 6:
-            snprintf(retStr, sizeof(buf), "%d - FSK 1a RF/5  RF/8", id);
+            snprintf(retStr, sizeof(buf), "%u - FSK 1a RF/5  RF/8", id);
             break;
         case 7:
-            snprintf(retStr, sizeof(buf), "%d - FSK 2a RF/10  RF/8", id);
+            snprintf(retStr, sizeof(buf), "%u - FSK 2a RF/10  RF/8", id);
             break;
         case 8:
-            snprintf(retStr, sizeof(buf), "%d - Manchester", id);
+            snprintf(retStr, sizeof(buf), "%u - Manchester", id);
             break;
         case 16:
-            snprintf(retStr, sizeof(buf), "%d - Biphase", id);
+            snprintf(retStr, sizeof(buf), "%u - Biphase", id);
             break;
         case 0x18:
-            snprintf(retStr, sizeof(buf), "%d - Biphase a - AKA Conditional Dephase Encoding(CDP)", id);
+            snprintf(retStr, sizeof(buf), "%u - Biphase a - AKA Conditional Dephase Encoding(CDP)", id);
             break;
         case 17:
-            snprintf(retStr, sizeof(buf), "%d - Reserved", id);
+            snprintf(retStr, sizeof(buf), "%u - Reserved", id);
             break;
         default:
             snprintf(retStr, sizeof(buf), "0x%02X (Unknown)", id);
@@ -1882,7 +1882,7 @@ int CmdT55xxRecoverPW(const char *Cmd) {
 
     // first try fliping each bit in the expected password
     while (bit < 32) {
-        curr_password = orig_password ^ (1 << bit);
+        curr_password = orig_password ^ (1u << bit);
         found = tryOnePassword(curr_password);
         if (found == -1) return 0;
         bit++;
@@ -1897,7 +1897,7 @@ int CmdT55xxRecoverPW(const char *Cmd) {
     // from low bit to high bit
     bit = 0;
     while (bit < 32) {
-        mask += (1 << bit);
+        mask += (1u << bit);
         curr_password = orig_password & mask;
         // if updated mask didn't change the password, don't try it again
         if (prev_password == curr_password) {
@@ -1916,7 +1916,7 @@ int CmdT55xxRecoverPW(const char *Cmd) {
     bit = 0;
     mask = 0xffffffff;
     while (bit < 32) {
-        mask -= (1 << bit);
+        mask -= (1u << bit);
         curr_password = orig_password & mask;
         // if updated mask didn't change the password, don't try it again
         if (prev_password == curr_password) {

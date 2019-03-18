@@ -808,21 +808,21 @@ int EM4x50Read(const char *Cmd, bool verbose) {
     low = sp->low;
 
     // get to first full low to prime loop and skip incomplete first pulse
-    while ((bits[i] < high) && (i < size))
+    while ((i < size) && (bits[i] < high))
         ++i;
-    while ((bits[i] > low) && (i < size))
+    while ((i < size) && (bits[i] > low))
         ++i;
     skip = i;
 
     // populate tmpbuff buffer with pulse lengths
     while (i < size) {
         // measure from low to low
-        while ((bits[i] > low) && (i < size))
+        while ((i < size) && (bits[i] > low))
             ++i;
         start = i;
-        while ((bits[i] < high) && (i < size))
+        while ((i < size) && (bits[i] < high))
             ++i;
-        while ((bits[i] > low) && (i < size))
+        while ((i < size) && (bits[i] > low))
             ++i;
         if (j >= (MAX_GRAPH_TRACE_LEN / 64)) {
             break;

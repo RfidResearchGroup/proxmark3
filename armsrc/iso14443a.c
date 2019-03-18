@@ -1152,8 +1152,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
             uint8_t index = receivedCmd[1];
             if (index > 2) {
                 // send NACK 0x0 == invalid argument
-                uint8_t nack[] = {0x00};
-                EmSendCmd(nack, sizeof(nack));
+                EmSend4bit(0x00);
             } else {
                 uint8_t cmd[] =  {0x00, 0x00, 0x00, 0x14, 0xa5};
                 num_to_bytes(counters[index], 3, cmd);
@@ -1165,8 +1164,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
             uint8_t index = receivedCmd[1];
             if (index > 2) {
                 // send NACK 0x0 == invalid argument
-                uint8_t nack[] = {0x00};
-                EmSendCmd(nack, sizeof(nack));
+                EmSend4bit(0x00);
             } else {
 
                 uint32_t val = bytes_to_num(receivedCmd + 2, 4);
@@ -1174,13 +1172,11 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
                 // if new value + old value is bigger 24bits,  fail
                 if (val + counters[index] > 0xFFFFFF) {
                     // send NACK 0x4 == counter overflow
-                    uint8_t nack[] = {0x04};
-                    EmSendCmd(nack, sizeof(nack));
+                    EmSend4bit(CARD_NACK_NA);
                 } else {
                     counters[index] = val;
                     // send ACK
-                    uint8_t ack[] = {0x0a};
-                    EmSendCmd(ack, sizeof(ack));
+                    EmSend4bit(CARD_ACK);
                 }
             }
             p_response = NULL;
@@ -1190,8 +1186,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
             uint8_t index = receivedCmd[1];
             if (index > 2) {
                 // send NACK 0x0 == invalid argument
-                uint8_t nack[] = {0x00};
-                EmSendCmd(nack, sizeof(nack));
+                EmSend4bit(0x00);
             } else {
                 emlGetMemBt(emdata, 10 + index, 1);
                 AddCrc14A(emdata, sizeof(emdata) - 2);
@@ -2781,7 +2776,7 @@ void DetectNACKbug() {
     bool received_nack;
 
     // Mifare Classic's random generator repeats every 2^16 cycles (and so do the nonces).
-    uint32_t sync_cycles = PRNG_SEQUENCE_LENGTH;
+    int32_t sync_cycles = PRNG_SEQUENCE_LENGTH;
 
     BigBuf_free();
     BigBuf_Clear_ext(false);

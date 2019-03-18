@@ -191,7 +191,6 @@ static int saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, ui
     return -1;
 }
 
-
 void RunMod() {
     StandAloneMode();
     Dbprintf(">>  Matty mifare chk/dump/sim  a.k.a MattyRun Started  <<");
@@ -230,7 +229,7 @@ void RunMod() {
     uint8_t sectorsCnt = (mifare_size / sectorSize);
     uint8_t keyType = 2;            // Keytype buffer
     uint64_t key64;                 // Defines current key
-    uint8_t *keyBlock = NULL;       // Where the keys will be held in memory.
+    uint8_t *keyBlock;              // Where the keys will be held in memory.
     uint8_t stKeyBlock = 20;        // Set the quantity of keys in the block.
     uint8_t filled = 0;             // Used to check if the memory was filled with success.
     bool keyFound = false;

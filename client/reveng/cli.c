@@ -1,10 +1,10 @@
 /* cli.c
- * Greg Cook, 26/Jul/2018
+ * Greg Cook, 23/Feb/2019
  */
 
 /* CRC RevEng: arbitrary-precision CRC calculator and algorithm finder
- * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018
- * Gregory Cook
+ * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018,
+ * 2019  Gregory Cook
  *
  * This file is part of CRC RevEng.
  *
@@ -628,7 +628,7 @@ usage(void) {
             "\t      preset values\n"
             "\n"
             "Copyright (C)\n"
-            "2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018  Gregory Cook\n"
+			"2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019  Gregory Cook\n"
             "This is free software; see the source for copying conditions.  There is NO\n"
             "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
             "Version "

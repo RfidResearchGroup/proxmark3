@@ -1,21 +1,23 @@
 //-----------------------------------------------------------------------------
-// Samy Kamkar, 2011, 2012
-// Brad antoniewicz 2011
-// Christian Herrmann, 2017
+// (c) 2012 Roel Verdult
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// StandAlone Mod
+// Hitag2 type prototyping
 //-----------------------------------------------------------------------------
 
-#ifndef __LF_PROXBRUTE_H
-#define __LF_PROXBRUTE_H
+#ifndef _HITAG2_H_
+#define _HITAG2_H_
 
-#include "standalone.h" // standalone definitions
-#include "apps.h" // debugstatements, lfops?
+#include <stdint.h>
+#include <stdbool.h>
+#include "hitag.h"
 
-#define OPTS 2
+void SniffHitag(uint32_t type);
+void SimulateHitagTag(bool tag_mem_supplied, uint8_t *data);
+void ReaderHitag(hitag_function htf, hitag_data *htd);
+void WriterHitag(hitag_function htf, hitag_data *htd, int page);
 
-#endif /* __LF_PROXBRUTE_H */
+#endif

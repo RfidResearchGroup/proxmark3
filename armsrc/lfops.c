@@ -21,13 +21,6 @@
 #include "common.h"
 #include "flashmem.h" // persistence on mem
 
-#ifndef SHORT_COIL
-# define SHORT_COIL() LOW(GPIO_SSC_DOUT)
-#endif
-#ifndef OPEN_COIL
-# define OPEN_COIL()  HIGH(GPIO_SSC_DOUT)
-#endif
-
 //#define START_GAP 31*8 // was 250 // SPEC:  1*8 to 50*8 - typ 15*8 (15fc)
 //#define WRITE_GAP 8*8 // 17*8 // was 160 // SPEC:  1*8 to 20*8 - typ 10*8 (10fc)
 //#define WRITE_0   15*8 // 18*8 // was 144 // SPEC: 16*8 to 32*8 - typ 24*8 (24fc)
@@ -317,7 +310,7 @@ void ReadTItag(void) {
                 // expected for either the low or high frequency
                 if ((samples > (sampleslo - threshold)) && (samples < (sampleslo + threshold))) {
                     // low frequency represents a 1
-                    shift3 |= (1 << 31);
+                    shift3 |= (1u << 31);
                 } else if ((samples > (sampleshi - threshold)) && (samples < (sampleshi + threshold))) {
                     // high frequency represents a 0
                 } else {
@@ -481,7 +474,7 @@ void AcquireTiType(void) {
     // unpack buffer
     for (i = TIBUFLEN - 1; i >= 0; i--) {
         for (j = 0; j < 32; j++) {
-            if (buf[i] & (1 << j)) {
+            if (buf[i] & (1u << j)) {
                 dest[--n] = 1;
             } else {
                 dest[--n] = -1;
@@ -730,8 +723,6 @@ static void fcAll(uint8_t fc, int *n, uint8_t clock, uint16_t *modCnt) {
     uint8_t halfFC = fc >> 1;
     uint8_t wavesPerClock = clock / fc;
     uint8_t mod = clock % fc;    //modifier
-    uint8_t modAdj = fc / mod;   //how often to apply modifier
-    bool modAdjOk = !(fc % mod); //if (fc % mod==0) modAdjOk = true;
 
     // loop through clock - step field clock
     for (uint8_t idx = 0; idx < wavesPerClock; idx++) {
@@ -740,19 +731,23 @@ static void fcAll(uint8_t fc, int *n, uint8_t clock, uint16_t *modCnt) {
         memset(dest + (*n) + (fc - halfFC), 1, halfFC);
         *n += fc;
     }
-    if (mod > 0)(*modCnt)++;
+    if (mod > 0) {
+        uint8_t modAdj = fc / mod;   //how often to apply modifier
+        bool modAdjOk = !(fc % mod); //if (fc % mod==0) modAdjOk = true;
+        (*modCnt)++;
 
-    if ((mod > 0) && modAdjOk) { //fsk2
-        if ((*modCnt % modAdj) == 0) { //if 4th 8 length wave in a rf/50 add extra 8 length wave
-            memset(dest + (*n), 0, fc - halfFC);
-            memset(dest + (*n) + (fc - halfFC), 1, halfFC);
-            *n += fc;
+        if (modAdjOk) { //fsk2
+            if ((*modCnt % modAdj) == 0) { //if 4th 8 length wave in a rf/50 add extra 8 length wave
+                memset(dest + (*n), 0, fc - halfFC);
+                memset(dest + (*n) + (fc - halfFC), 1, halfFC);
+                *n += fc;
+            }
         }
-    }
-    if (mod > 0 && !modAdjOk) { //fsk1
-        memset(dest + (*n), 0, mod - (mod >> 1));
-        memset(dest + (*n) + (mod - (mod >> 1)), 1, mod >> 1);
-        *n += mod;
+        if (!modAdjOk) { //fsk1
+            memset(dest + (*n), 0, mod - (mod >> 1));
+            memset(dest + (*n) + (mod - (mod >> 1)), 1, mod >> 1);
+            *n += mod;
+        }
     }
 }
 
@@ -829,7 +824,7 @@ void CmdHIDsimTAG(uint32_t hi, uint32_t lo, int ledcontrol) {
 // prepare a waveform pattern in the buffer based on the ID given then
 // simulate a FSK tag until the button is pressed
 // arg1 contains fcHigh and fcLow, arg2 contains STT marker and clock
-void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *bits) {
+void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *bits, int ledcontrol) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
     // free eventually allocated BigBuf memory
@@ -838,7 +833,7 @@ void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *bits) {
     clear_trace();
     set_tracing(false);
 
-    int ledcontrol = 1, n = 0, i = 0;
+    int n = 0, i = 0;
     uint8_t fcHigh = arg1 >> 8;
     uint8_t fcLow = arg1 & 0xFF;
     uint16_t modCnt = 0;
@@ -906,11 +901,11 @@ static void stAskSimBit(int *n, uint8_t clock) {
 }
 
 // args clock, ask/man or askraw, invert, transmission separator
-void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream) {
+void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream, int ledcontrol) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     set_tracing(false);
 
-    int ledcontrol = 1, n = 0, i = 0;
+    int n = 0, i = 0;
     uint8_t clk = (arg1 >> 8) & 0xFF;
     uint8_t encoding = arg1 & 0xFF;
     uint8_t separator = arg2 & 1;
@@ -973,11 +968,11 @@ static void pskSimBit(uint8_t waveLen, int *n, uint8_t clk, uint8_t *curPhase, b
 }
 
 // args clock, carrier, invert,
-void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream) {
+void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream, int ledcontrol) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     set_tracing(false);
 
-    int ledcontrol = 1, n = 0, i = 0;
+    int n = 0, i = 0;
     uint8_t clk = arg1 >> 8;
     uint8_t carrier = arg1 & 0xFF;
     uint8_t invert = arg2 & 0xFF;
@@ -1066,12 +1061,8 @@ void CmdHIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) 
                     }
                 } else { //if bit 38 is not set then 37 bit format is used
                     bitlen = 37;
-                    fc = 0;
-                    cardnum = 0;
-                    if (bitlen == 37) {
-                        cardnum = (lo >> 1) & 0x7FFFF;
-                        fc = ((hi & 0xF) << 12) | (lo >> 20);
-                    }
+                    cardnum = (lo >> 1) & 0x7FFFF;
+                    fc = ((hi & 0xF) << 12) | (lo >> 20);
                 }
                 Dbprintf("TAG ID: %x%08x (%d) - Format Len: %dbit - FC: %d - Card: %d",
                          hi,
@@ -1382,8 +1373,6 @@ void T55xxResetRead(void) {
     //clear buffer now so it does not interfere with timing later
     BigBuf_Clear_keep_EM();
 
-    StartTicks();
-
     // Set up FPGA, 125kHz
     LFSetupFPGAForADC(95, true);
     // make sure tag is fully powered up...
@@ -1415,8 +1404,6 @@ void T55xxWriteBlockExt(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t arg)
     uint8_t Page = (arg & 0x2) >> 1;
     bool testMode = arg & 0x4;
     uint32_t i = 0;
-
-    StartTicks();
 
     // Set up FPGA, 125kHz
     LFSetupFPGAForADC(95, true);
@@ -1491,7 +1478,7 @@ void T55xxWriteBlock(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t arg) {
 // Read one card block in page [page]
 void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
     LED_A_ON();
-    bool PwdMode =    arg0 & 0x1;
+    bool PwdMode = arg0 & 0x1;
     uint8_t Page = (arg0 & 0x2) >> 1;
     bool brute_mem =  arg0 & 0x4;
 
@@ -1512,8 +1499,6 @@ void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 
     //make sure block is at max 7
     Block &= 0x7;
-
-    StartTicks();
 
     // Set up FPGA, 125kHz to power up the tag
     LFSetupFPGAForADC(95, true);
@@ -1591,26 +1576,23 @@ void T55xx_ChkPwds() {
     uint32_t candidate = 0;
 
 #ifdef WITH_FLASH
-    bool use_flashmem = true;
-    if (use_flashmem) {
-        BigBuf_Clear_EM();
-        uint16_t isok = 0;
-        uint8_t counter[2] = {0x00, 0x00};
-        isok = Flash_ReadData(DEFAULT_T55XX_KEYS_OFFSET, counter, sizeof(counter));
-        if (isok != sizeof(counter))
-            goto OUT;
+    BigBuf_Clear_EM();
+    uint16_t isok = 0;
+    uint8_t counter[2] = {0x00, 0x00};
+    isok = Flash_ReadData(DEFAULT_T55XX_KEYS_OFFSET, counter, sizeof(counter));
+    if (isok != sizeof(counter))
+        goto OUT;
 
-        pwdCount = counter[1] << 8 | counter[0];
+    pwdCount = counter[1] << 8 | counter[0];
 
-        if (pwdCount == 0 && pwdCount == 0xFFFF)
-            goto OUT;
+    if (pwdCount == 0 || pwdCount == 0xFFFF)
+        goto OUT;
 
-        isok = Flash_ReadData(DEFAULT_T55XX_KEYS_OFFSET + 2, pwds, pwdCount * 4);
-        if (isok != pwdCount * 4)
-            goto OUT;
+    isok = Flash_ReadData(DEFAULT_T55XX_KEYS_OFFSET + 2, pwds, pwdCount * 4);
+    if (isok != pwdCount * 4)
+        goto OUT;
 
-        Dbprintf("[=] Password dictionary count %d ", pwdCount);
-    }
+    Dbprintf("[=] Password dictionary count %d ", pwdCount);
 #endif
 
     uint32_t pwd = 0, curr = 0, prev = 0;
@@ -1660,8 +1642,6 @@ OUT:
 void T55xxWakeUp(uint32_t Pwd) {
     LED_B_ON();
     uint32_t i = 0;
-
-    StartTicks();
 
     // Set up FPGA, 125kHz
     LFSetupFPGAForADC(95, true);
