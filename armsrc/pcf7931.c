@@ -12,24 +12,18 @@ size_t DemodPCF7931(uint8_t **outBlocks) {
     if (GraphTraceLen > 18000)
         GraphTraceLen = 18000;
 
-    int i, j, lastval, bitidx, half_switch;
+    int i = 2, j, lastval, bitidx, half_switch;
     int clock = 64;
     int tolerance = clock / 8;
     int pmc, block_done;
     int lc, warnings = 0;
     size_t num_blocks = 0;
-    int lmin = 128, lmax = 128;
+    int lmin = 64, lmax = 192;
     uint8_t dir;
-    //clear read buffer
-    BigBuf_Clear_keep_EM();
 
+    BigBuf_Clear_keep_EM();
     LFSetupFPGAForADC(95, true);
     DoAcquisition_default(0, true);
-
-    lmin = 64;
-    lmax = 192;
-
-    i = 2;
 
     /* Find first local max/min */
     if (dest[1] > dest[0]) {
