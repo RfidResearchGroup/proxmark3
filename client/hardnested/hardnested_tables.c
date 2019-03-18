@@ -44,7 +44,7 @@ static uint16_t PartialSumProperty(uint32_t state, odd_even_t odd_even) {
         uint32_t st = state;
         uint16_t part_sum = 0;
         if (odd_even == ODD_STATE) {
-            for (uint16_t i = 0; i < 5; i++) {
+            for (uint16_t i = 0; i < 4; i++) {
                 part_sum ^= filter(st);
                 st = (st << 1) | ((j >> (3 - i)) & 0x01) ;
             }
@@ -368,7 +368,7 @@ static void precalculate_bit0_bitflip_bitarrays(uint8_t const bitflip, uint16_t 
         if (count[odd_even] != 1 << 24) {
             for (uint32_t state = 0; state < (1 << 24); state += 1 << 4) {
                 uint32_t line = test_bitarray[odd_even][state >> 5];
-                uint16_t half_line = state & 0x000000010 ? line & 0x0000ffff : line >> 16;
+                uint16_t half_line = (state & 0x000000010) ? line & 0x0000ffff : line >> 16;
                 if (half_line != 0) {
                     for (uint32_t low_bits = 0; low_bits < (1 << 4); low_bits++) {
                         set_bit24(test_bitarray_2nd, low_bits << 20 | state >> 4);
@@ -480,7 +480,7 @@ static void precalculate_bit0_bitflip_bitarrays(uint8_t const bitflip, uint16_t 
         if (count[odd_even] != 1 << 24) {
             for (uint32_t state = 0; state < (1 << 24); state += 1 << 4) {
                 uint32_t line = test_not_bitarray[odd_even][state >> 5];
-                uint16_t half_line = state & 0x000000010 ? line & 0x0000ffff : line >> 16;
+                uint16_t half_line = (state & 0x000000010) ? line & 0x0000ffff : line >> 16;
                 if (half_line != 0) {
                     for (uint32_t low_bits = 0; low_bits < (1 << 4); low_bits++) {
                         set_bit24(test_bitarray_2nd, low_bits << 20 | state >> 4);
@@ -518,7 +518,7 @@ static void precalculate_bit0_bitflip_bitarrays(uint8_t const bitflip, uint16_t 
 int main(int argc, char *argv[]) {
 
     unsigned int bitflip_in;
-    int sum_a0;
+    int sum_a0 = 0;
 
     printf("Create tables required by hardnested attack.\n");
     printf("Expect a runtime in the range of days or weeks.\n");
