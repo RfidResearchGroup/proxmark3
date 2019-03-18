@@ -471,7 +471,7 @@ int CmdLFfskSim(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 's':
-                separator = 1;
+                separator = true;
                 cmdp++;
                 break;
             case 'd':
@@ -519,7 +519,7 @@ int CmdLFfskSim(const char *Cmd) {
 
     uint16_t arg1, arg2;
     arg1 = fcHigh << 8 | fcLow;
-    arg2 = separator << 8 | clk;
+    arg2 = (separator << 8) | clk;
     size_t size = DemodBufferLen;
     if (size > USB_CMD_DATA_SIZE) {
         PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %d - max: %d", size, USB_CMD_DATA_SIZE);
