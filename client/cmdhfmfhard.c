@@ -367,7 +367,7 @@ static uint16_t PartialSumProperty(uint32_t state, odd_even_t odd_even) {
         uint32_t st = state;
         uint16_t part_sum = 0;
         if (odd_even == ODD_STATE) {
-            for (uint16_t i = 0; i < 4; i++) {
+            for (uint16_t i = 0; i < 5; i++) {
                 part_sum ^= filter(st);
                 st = (st << 1) | ((j >> (3 - i)) & 0x01) ;
             }
@@ -1013,7 +1013,8 @@ static bool shrink_key_space(float *brute_forces) {
 //iceman 2018
     return ((hardnested_stage & CHECK_2ND_BYTES) &&
             reduction_rate >= 0.0 &&
-            (reduction_rate < brute_force_per_second * (float)sample_period / 1000.0  || *brute_forces < 0x1F00000000));
+            (reduction_rate < brute_force_per_second * (float)sample_period / 1000.0  || *brute_forces < 0xF00000));
+
 }
 
 
