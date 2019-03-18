@@ -69,6 +69,13 @@ static int l_GetFromBigBuf(lua_State *L) {
         startindex = luaL_checknumber(L, 1);
         len = luaL_checknumber(L, 2);
     }
+    
+    if ( len == 0 ) {
+        //signal error by returning Nil, errorstring
+        lua_pushnil(L);
+        lua_pushstring(L, "You need to supply number of bytes larger than zero");
+        return 2; // two return values        
+    }
 
     uint8_t *data = calloc(len, sizeof(uint8_t));
     if (!data) {
@@ -118,6 +125,13 @@ static int l_GetFromFlashMem(lua_State *L) {
         startindex = luaL_checknumber(L, 1);
         len = luaL_checknumber(L, 2);
     }
+    
+    if ( len == 0 ) {
+        //signal error by returning Nil, errorstring
+        lua_pushnil(L);
+        lua_pushstring(L, "You need to supply number of bytes larger than zero");
+        return 2; // two return values        
+    }    
 
     uint8_t *data = calloc(len, sizeof(uint8_t));
     if (!data) {
@@ -627,7 +641,7 @@ static int l_hardnested(lua_State *L) {
 
     uint8_t key[6] = {0, 0, 0, 0, 0, 0};
     uint8_t trgkey[6] = {0, 0, 0, 0, 0, 0};
-    for (int i = 0; i < 32; i += 2) {
+    for (int i = 0; i < 12; i += 2) {
         sscanf(&p_key[i], "%02x", &tmp);
         key[i / 2] = tmp & 0xFF;
         if (haveTarget) {
