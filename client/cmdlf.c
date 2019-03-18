@@ -707,7 +707,7 @@ int CmdLFpskSim(const char *Cmd) {
         setDemodBuf(data, dataLen, 0);
     }
 
-    if (clk <= 0) clk = 32;
+    if (clk == 0) clk = 32;
 
     if (carrier != 2 && carrier != 4 && carrier != 8)
         carrier = 2;
