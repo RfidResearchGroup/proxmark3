@@ -313,7 +313,7 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
                 case AS_LEGACY:
                     if (communication_settings & MAC_VERIFY) {
                         *nbytes -= key_macing_length(key);
-                        if (*nbytes <= 0) {
+                        if (*nbytes == 0) {
                             *nbytes = -1;
                             res = NULL;
 #ifdef WITH_DEBUG
