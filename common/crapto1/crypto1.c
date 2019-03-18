@@ -72,7 +72,7 @@ uint8_t crypto1_bit(struct Crypto1State *s, uint8_t in, int is_encrypted) {
     feedin ^= !!in;
     feedin ^= LF_POLY_ODD & s->odd;
     feedin ^= LF_POLY_EVEN & s->even;
-    s->even = s->even << 1 | evenparity32(feedin);
+    s->even = s->even << 1 | (evenparity32(feedin));
 
     t = s->odd;
     s->odd = s->even;
