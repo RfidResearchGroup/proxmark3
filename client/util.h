@@ -189,10 +189,10 @@
 extern uint8_t g_debugMode;
 
 extern int ukbhit(void);
-extern void AddLogLine(char *fileName, char *extData, char *c);
-extern void AddLogHex(char *fileName, char *extData, const uint8_t *data, const size_t len);
-extern void AddLogUint64(char *fileName, char *extData, const uint64_t data);
-extern void AddLogCurrentDT(char *fileName);
+extern void AddLogLine(char *fn, char *data, char *c);
+extern void AddLogHex(char *fn, char *data, const uint8_t *data, const size_t len);
+extern void AddLogUint64(char *fn, char *data, const uint64_t value);
+extern void AddLogCurrentDT(char *fn);
 extern void FillFileNameByUID(char *filenamePrefix, uint8_t *uid, const char *ext, int uidlen);
 
 // fill buffer from structure [{uint8_t data, size_t length},...]
@@ -239,11 +239,11 @@ extern int param_gethex_ex(const char *line, int paramnum, uint8_t *data, int *h
 extern int param_gethex_to_eol(const char *line, int paramnum, uint8_t *data, int maxdatalen, int *datalen);
 extern int param_getstr(const char *line, int paramnum, char *str, size_t buffersize);
 
-extern int hextobinarray(char *target,  char *source);
-extern int hextobinstring(char *target,  char *source);
+extern int hextobinarray(char *target, char *source);
+extern int hextobinstring(char *target, char *source);
 extern int binarraytohex(char *target, const size_t targetlen, char *source, size_t srclen);
-extern void binarraytobinstring(char *target,  char *source,  int length);
-extern uint8_t GetParity(uint8_t *string, uint8_t type,  int length);
+extern void binarraytobinstring(char *target,  char *source, int length);
+extern uint8_t GetParity(uint8_t *bits, uint8_t type, int length);
 extern void wiegand_add_parity(uint8_t *target, uint8_t *source, uint8_t length);
 
 extern void xor(unsigned char *dst, unsigned char *src, size_t len);
