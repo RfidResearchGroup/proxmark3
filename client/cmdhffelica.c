@@ -455,7 +455,7 @@ int CmdHFFelicaDumpLite(const char *Cmd) {
     return 0;
 }
 
-int CmdHFFelicaCmdRaw(const char *cmd) {
+int CmdHFFelicaCmdRaw(const char *Cmd) {
     UsbCommand c = {CMD_FELICA_COMMAND, {0, 0, 0}};
     bool reply = 1;
     bool crc = false;
@@ -469,15 +469,15 @@ int CmdHFFelicaCmdRaw(const char *cmd) {
     uint16_t datalen = 0;
     uint32_t temp;
 
-    if (strlen(cmd) < 2) return usage_hf_felica_raw();
+    if (strlen(Cmd) < 2) return usage_hf_felica_raw();
 
     // strip
-    while (*cmd == ' ' || *cmd == '\t') cmd++;
+    while (*Cmd == ' ' || *Cmd == '\t') Cmd++;
 
-    while (cmd[i] != '\0') {
-        if (cmd[i] == ' ' || cmd[i] == '\t') { i++; continue; }
-        if (cmd[i] == '-') {
-            switch (cmd[i + 1]) {
+    while (Cmd[i] != '\0') {
+        if (Cmd[i] == ' ' || Cmd[i] == '\t') { i++; continue; }
+        if (Cmd[i] == '-') {
+            switch (Cmd[i + 1]) {
                 case 'H':
                 case 'h':
                     return usage_hf_felica_raw();
@@ -497,10 +497,10 @@ int CmdHFFelicaCmdRaw(const char *cmd) {
                     active_select = true;
                     break;
                 case 'b':
-                    sscanf(cmd + i + 2, "%d", &temp);
+                    sscanf(Cmd + i + 2, "%d", &temp);
                     numbits = temp & 0xFFFF;
                     i += 3;
-                    while (cmd[i] != ' ' && cmd[i] != '\0') { i++; }
+                    while (Cmd[i] != ' ' && Cmd[i] != '\0') { i++; }
                     i -= 2;
                     break;
                 default:
@@ -509,11 +509,11 @@ int CmdHFFelicaCmdRaw(const char *cmd) {
             i += 2;
             continue;
         }
-        if ((cmd[i] >= '0' && cmd[i] <= '9') ||
-                (cmd[i] >= 'a' && cmd[i] <= 'f') ||
-                (cmd[i] >= 'A' && cmd[i] <= 'F')) {
+        if ((Cmd[i] >= '0' && Cmd[i] <= '9') ||
+                (Cmd[i] >= 'a' && Cmd[i] <= 'f') ||
+                (Cmd[i] >= 'A' && Cmd[i] <= 'F')) {
             buf[strlen(buf) + 1] = 0;
-            buf[strlen(buf)] = cmd[i];
+            buf[strlen(buf)] = Cmd[i];
             i++;
 
             if (strlen(buf) >= 2) {
