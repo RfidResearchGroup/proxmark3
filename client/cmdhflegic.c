@@ -230,21 +230,21 @@ int CmdLegicInfo(const char *Cmd) {
         int fl = 0;
 
         if (data[6] == 0xec) {
-            strncpy(token_type, "XAM", sizeof(token_type));
+            strncpy(token_type, "XAM", sizeof(token_type) - 1);
             fl = 1;
             stamp_len = 0x0c - (data[5] >> 4);
         } else {
             switch (data[5] & 0x7f) {
                 case 0x00 ... 0x2f:
-                    strncpy(token_type, "IAM", sizeof(token_type));
+                    strncpy(token_type, "IAM", sizeof(token_type) - 1);
                     fl = (0x2f - (data[5] & 0x7f)) + 1;
                     break;
                 case 0x30 ... 0x6f:
-                    strncpy(token_type, "SAM", sizeof(token_type));
+                    strncpy(token_type, "SAM", sizeof(token_type) - 1);
                     fl = (0x6f - (data[5] & 0x7f)) + 1;
                     break;
                 case 0x70 ... 0x7f:
-                    strncpy(token_type, "GAM", sizeof(token_type));
+                    strncpy(token_type, "GAM", sizeof(token_type) - 1);
                     fl = (0x7f - (data[5] & 0x7f)) + 1;
                     break;
             }
@@ -266,9 +266,9 @@ int CmdLegicInfo(const char *Cmd) {
 
         if (data[7] == 0x9F && data[8] == 0xFF) {
             bIsSegmented = 1;
-            strncpy(token_type, "IM-S", sizeof(token_type));
+            strncpy(token_type, "IM-S", sizeof(token_type) - 1);
         } else {
-            strncpy(token_type, "IM", sizeof(token_type));
+            strncpy(token_type, "IM", sizeof(token_type) - 1);
         }
 
         PrintAndLogEx(NORMAL, "DCF: %d (%02x %02x), Token Type=%s (OLE=%01u)",
@@ -614,8 +614,7 @@ int CmdLegicRfWrite(const char *Cmd) {
         PrintAndLogEx(NORMAL, "############# DANGER ################");
         PrintAndLogEx(NORMAL, "# changing the DCF is irreversible  #");
         PrintAndLogEx(NORMAL, "#####################################");
-        char *answer = NULL;
-        answer = readline("do you really want to continue? y(es) n(o) : ");
+        char *answer = readline("do you really want to continue? y(es) n(o) : ");
         bool overwrite = (answer[0] == 'y' || answer[0] == 'Y');
         if (!overwrite) {
             PrintAndLogEx(NORMAL, "command cancelled");
@@ -1283,6 +1282,7 @@ int CmdLegicWipe(const char *Cmd) {
         }
     }
     PrintAndLogEx(SUCCESS, "ok\n");
+    free(data);    
     return 0;
 }
 

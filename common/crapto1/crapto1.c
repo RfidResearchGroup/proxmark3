@@ -38,8 +38,8 @@ static void __attribute__((constructor)) fill_lut() {
 static inline void update_contribution(uint32_t *item, const uint32_t mask1, const uint32_t mask2) {
     uint32_t p = *item >> 25;
 
-    p = p << 1 | evenparity32(*item & mask1);
-    p = p << 1 | evenparity32(*item & mask2);
+    p = p << 1 | (evenparity32(*item & mask1));
+    p = p << 1 | (evenparity32(*item & mask2));
     *item = p << 24 | (*item & 0xffffff);
 }
 
@@ -90,10 +90,10 @@ recover(uint32_t *o_head, uint32_t *o_tail, uint32_t oks,
 
     if (rem == -1) {
         for (e = e_head; e <= e_tail; ++e) {
-            *e = *e << 1 ^ evenparity32(*e & LF_POLY_EVEN) ^ !!(in & 4);
+            *e = *e << 1 ^ (evenparity32(*e & LF_POLY_EVEN)) ^ !!(in & 4);
             for (o = o_head; o <= o_tail; ++o, ++sl) {
                 sl->even = *o;
-                sl->odd = *e ^ evenparity32(*o & LF_POLY_ODD);
+                sl->odd = *e ^ (evenparity32(*o & LF_POLY_ODD));
                 sl[1].odd = sl[1].even = 0;
             }
         }
