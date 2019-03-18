@@ -1207,7 +1207,7 @@ prhex(char **spp, bmp_t bits, int flags, int bperhx) {
      * Set P_UPPER in flags to write A-F in uppercase.
      */
     static const char hex[] = "0123456789abcdef0123456789ABCDEF";
-    const int upper = (flags & P_UPPER ? 0x10 : 0);
+    const int upper = ((flags & P_UPPER) ? 0x10 : 0);
     while (bperhx > 0) {
         bperhx -= ((bperhx + 3) & 3) + 1;
         *(*spp)++ = hex[(bits >> bperhx & BMP_C(0xf)) | upper];
