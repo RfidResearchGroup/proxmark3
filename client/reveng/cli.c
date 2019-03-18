@@ -522,10 +522,12 @@ uprog(const poly_t gpoly, int flags, unsigned long seq) {
     if (!seq)
         return;
     string = ptostr(gpoly, P_RTJUST, 4);
-    fprintf(stderr, "%s: searching: width=%ld  poly=0x%s  refin=%s  refout=%s\n",
-            myname, plen(gpoly), string,
-            (flags & P_REFIN ? "true" : "false"),
-            (flags & P_REFOUT ? "true" : "false")
+    fprintf(stderr, "%s: searching: width=%lu  poly=0x%s  refin=%s  refout=%s\n",
+            myname,
+            plen(gpoly),
+            string,
+            ((flags & P_REFIN) ? "true" : "false"),
+            ((flags & P_REFOUT) ? "true" : "false")
            );
     free(string);
 }
