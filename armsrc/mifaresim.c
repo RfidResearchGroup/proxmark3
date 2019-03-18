@@ -36,32 +36,32 @@ static bool IsTrailerAccessAllowed(uint8_t blockNo, uint8_t keytype, uint8_t act
                  | ((sector_trailer[8] >> 7) & 0x01);
     switch (action) {
         case AC_KEYA_READ: {
-            if (MF_DBGLEVEL >= 2)	Dbprintf("IsTrailerAccessAllowed: AC_KEYA_READ");
+            if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("IsTrailerAccessAllowed: AC_KEYA_READ");
             return false;
         }
         case AC_KEYA_WRITE: {
             if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("IsTrailerAccessAllowed: AC_KEYA_WRITE");
             return ((keytype == AUTHKEYA && (AC == 0x00 || AC == 0x01))
-                    || (keytype == AUTHKEYB && (AC == 0x04 || AC == 0x03)));
+                 || (keytype == AUTHKEYB && (AC == 0x04 || AC == 0x03)));
         }
         case AC_KEYB_READ: {
-            if (MF_DBGLEVEL >= 2)	Dbprintf("IsTrailerAccessAllowed: AC_KEYB_READ");
+            if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("IsTrailerAccessAllowed: AC_KEYB_READ");
             return (keytype == AUTHKEYA && (AC == 0x00 || AC == 0x02 || AC == 0x01));
         }
         case AC_KEYB_WRITE: {
             if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("IsTrailerAccessAllowed: AC_KEYB_WRITE");
             return ((keytype == AUTHKEYA && (AC == 0x00 || AC == 0x04))
-                    || (keytype == AUTHKEYB && (AC == 0x04 || AC == 0x03)));
+                 || (keytype == AUTHKEYB && (AC == 0x04 || AC == 0x03)));
         }
         case AC_AC_READ: {
             if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("IsTrailerAccessAllowed: AC_AC_READ");
             return ((keytype == AUTHKEYA)
-                    || (keytype == AUTHKEYB && !(AC == 0x00 || AC == 0x02 || AC == 0x01)));
+                || (keytype == AUTHKEYB && !(AC == 0x00 || AC == 0x02 || AC == 0x01)));
         }
         case AC_AC_WRITE: {
             if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("IsTrailerAccessAllowed: AC_AC_WRITE");
             return ((keytype == AUTHKEYA && (AC == 0x01))
-                    || (keytype == AUTHKEYB && (AC == 0x03 || AC == 0x05)));
+                 || (keytype == AUTHKEYB && (AC == 0x03 || AC == 0x05)));
         }
         default:
             return false;
@@ -73,9 +73,9 @@ static bool IsDataAccessAllowed(uint8_t blockNo, uint8_t keytype, uint8_t action
 
     uint8_t sector_trailer[16];
     emlGetMem(sector_trailer, SectorTrailer(blockNo), 1);
-
+    
     uint8_t sector_block;
-    if (blockNo < MIFARE_2K_MAXBLOCK) {
+    if (blockNo <= MIFARE_2K_MAXBLOCK) {
         sector_block = blockNo & 0x03;
     } else {
         sector_block = (blockNo & 0x0f) / 5;
@@ -85,43 +85,43 @@ static bool IsDataAccessAllowed(uint8_t blockNo, uint8_t keytype, uint8_t action
     switch (sector_block) {
         case 0x00: {
             AC = ((sector_trailer[7] >> 2) & 0x04)
-                 | ((sector_trailer[8] << 1) & 0x02)
-                 | ((sector_trailer[8] >> 4) & 0x01);
-            if (MF_DBGLEVEL >= 2)	Dbprintf("IsDataAccessAllowed: case 0x00");
+               | ((sector_trailer[8] << 1) & 0x02)
+               | ((sector_trailer[8] >> 4) & 0x01);
+            if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("IsDataAccessAllowed: case 0x00 - %02x", AC);
             break;
         }
         case 0x01: {
             AC = ((sector_trailer[7] >> 3) & 0x04)
-                 | ((sector_trailer[8] >> 0) & 0x02)
-                 | ((sector_trailer[8] >> 5) & 0x01);
-            if (MF_DBGLEVEL >= 2)	Dbprintf("IsDataAccessAllowed: case 0x01");
+               | ((sector_trailer[8] >> 0) & 0x02)
+               | ((sector_trailer[8] >> 5) & 0x01);
+            if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("IsDataAccessAllowed: case 0x01 - %02x", AC);
             break;
         }
         case 0x02: {
             AC = ((sector_trailer[7] >> 4) & 0x04)
-                 | ((sector_trailer[8] >> 1) & 0x02)
-                 | ((sector_trailer[8] >> 6) & 0x01);
-            if (MF_DBGLEVEL >= 2)	Dbprintf("IsDataAccessAllowed: case 0x02");
+               | ((sector_trailer[8] >> 1) & 0x02)
+               | ((sector_trailer[8] >> 6) & 0x01);
+            if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("IsDataAccessAllowed: case 0x02  - %02x", AC);
             break;
         }
         default:
-            if (MF_DBGLEVEL >= 2)	Dbprintf("IsDataAccessAllowed: Error");
+            if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("IsDataAccessAllowed: Error");
             return false;
     }
 
     switch (action) {
         case AC_DATA_READ: {
-            if (MF_DBGLEVEL >= 2)	Dbprintf("AC_DATA_READ: OK");
+            if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("IsDataAccessAllowed - AC_DATA_READ: OK");
             return ((keytype == AUTHKEYA && !(AC == 0x03 || AC == 0x05 || AC == 0x07))
                     || (keytype == AUTHKEYB && !(AC == 0x07)));
         }
         case AC_DATA_WRITE: {
-            if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("AC_DATA_WRITE: OK");
+            if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("IsDataAccessAllowed - AC_DATA_WRITE: OK");
             return ((keytype == AUTHKEYA && (AC == 0x00))
                     || (keytype == AUTHKEYB && (AC == 0x00 || AC == 0x04 || AC == 0x06 || AC == 0x03)));
         }
         case AC_DATA_INC: {
-            if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("AC_DATA_WRITE: OK");
+            if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("IsDataAccessAllowed - AC_DATA_INC: OK");
             return ((keytype == AUTHKEYA && (AC == 0x00))
                     || (keytype == AUTHKEYB && (AC == 0x00 || AC == 0x06)));
         }
@@ -785,36 +785,45 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                     blockNo = receivedCmd_dec[1];
                     if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("Reader reading block %d (0x%02x)", blockNo, blockNo);
                     emlGetMem(response, blockNo, 1);
-                    if (MF_DBGLEVEL >= 2)  {
-                       Dbprintf("Data Block[%d]: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x", blockNo,
+                    if (MF_DBGLEVEL >= MF_DBG_EXTENDED)  {
+                       Dbprintf("[ISO14443A_CMD_READBLOCK] Data Block[%d]: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x", blockNo,
                        response[0], response[1], response[2], response[3],  response[4],  response[5],  response[6],
                        response[7], response[8], response[9], response[10], response[11], response[12], response[13],
                        response[14],response[15]);
                     }
 
-
                     if (IsSectorTrailer(blockNo)) {
-                        memset(response, 0x00, 6); 	// keyA can never be read
-                        if (MF_DBGLEVEL >= 2) Dbprintf("[IsSectorTrailer] keyA can never be read - block %d (0x%02x)", blockNo, blockNo);
+                      
+                        if (!IsAccessAllowed(blockNo, cardAUTHKEY, AC_KEYA_READ)) {
+                            memset(response, 0x00, 6); 	// keyA can never be read, Why ??? Need source ?
+                                                      // a0a1a2a3a4a561e789c1b0b1b2b3b4b5 => 00000000000061e789c1b0b1b2b3b4b5
+                            if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[IsSectorTrailer] keyA can never be read - block %d (0x%02x)", blockNo, blockNo);
+                        }
                         if (!IsAccessAllowed(blockNo, cardAUTHKEY, AC_KEYB_READ)) {
                             memset(response + 10, 0x00, 6); 	// keyB cannot be read
-                            if (MF_DBGLEVEL >= 2) Dbprintf("[IsSectorTrailer] keyB cannot be read - block %d (0x%02x)", blockNo, blockNo);
+                            if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[IsSectorTrailer] keyB cannot be read - block %d (0x%02x)", blockNo, blockNo);
                         }
                         if (!IsAccessAllowed(blockNo, cardAUTHKEY, AC_AC_READ)) {
                             memset(response + 6, 0x00, 4); 	// AC bits cannot be read
-                            if (MF_DBGLEVEL >= 2) Dbprintf("[IsAccessAllowed] AC bits cannot be read - block %d (0x%02x)", blockNo, blockNo);
+                            if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[IsAccessAllowed] AC bits cannot be read - block %d (0x%02x)", blockNo, blockNo);
                         }
                     } else {
                         if (!IsAccessAllowed(blockNo, cardAUTHKEY, AC_DATA_READ)) {
                             memset(response, 0x00, 16);		// datablock cannot be read
-                            if (MF_DBGLEVEL >= 2) Dbprintf("[IsAccessAllowed] Data block %d (0x%02x) cannot be read", blockNo, blockNo);
+                            if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[IsAccessAllowed] Data block %d (0x%02x) cannot be read", blockNo, blockNo);
                         }
                     }
                     AppendCrc14443a(response, 16);
                     mf_crypto1_encrypt(pcs, response, MAX_MIFARE_FRAME_SIZE, response_par);
                     EmSendCmdPar(response, MAX_MIFARE_FRAME_SIZE, response_par);
+                    if (MF_DBGLEVEL >= 2) {
+                      Dbprintf("[EmSendCmdPar] Data Block[%d]: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x", blockNo,
+                      response[0], response[1], response[2], response[3],  response[4],  response[5],  response[6],
+                      response[7], response[8], response[9], response[10], response[11], response[12], response[13],
+                      response[14],response[15]);
+                    }  
                     numReads++;
-                    if (MF_DBGLEVEL >= 2) Dbprintf("Num Read: %d",numReads);
+
                     if (exitAfterNReads > 0 && numReads == exitAfterNReads) {
                         Dbprintf("%d reads done, exiting", numReads);
                         finished = true;
