@@ -778,7 +778,7 @@ typedef struct _AT91S_EFC {
 #define AT91C_MC_LOCKS12      (0x1 << 28) // (EFC) Sector 12 Lock Status
 #define AT91C_MC_LOCKS13      (0x1 << 29) // (EFC) Sector 13 Lock Status
 #define AT91C_MC_LOCKS14      (0x1 << 30) // (EFC) Sector 14 Lock Status
-#define AT91C_MC_LOCKS15      (0x1 << 31) // (EFC) Sector 15 Lock Status
+#define AT91C_MC_LOCKS15      (0x1u << 31) // (EFC) Sector 15 Lock Status
 // -------- EFC_VR : (EFC Offset: 0xc) EFC version register --------
 #define AT91C_EFC_VERSION     (0xFFF <<  0) // (EFC) EFC version number
 #define AT91C_EFC_MFN         (0x7 << 16) // (EFC) EFC MFN
@@ -2198,7 +2198,7 @@ typedef struct _AT91S_UDP {
 #define AT91C_PIO_PA30       (1 << 30) // Pin Controlled by PA30
 #define AT91C_PA30_IRQ1     (AT91C_PIO_PA30) //  External Interrupt 1
 #define AT91C_PA30_NPCS2    (AT91C_PIO_PA30) //  SPI Peripheral Chip Select 2
-#define AT91C_PIO_PA31       (1 << 31) // Pin Controlled by PA31
+#define AT91C_PIO_PA31       (1u << 31) // Pin Controlled by PA31
 #define AT91C_PA31_NPCS1    (AT91C_PIO_PA31) //  SPI Peripheral Chip Select 1
 #define AT91C_PA31_PCK2     (AT91C_PIO_PA31) //  PMC Programmable Clock Output 2
 
