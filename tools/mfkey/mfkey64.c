@@ -2,6 +2,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include "crapto1/crapto1.h"
 #include "util_posix.h"
