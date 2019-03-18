@@ -261,6 +261,9 @@ int CmdFlashMemLoad(const char *Cmd) {
     }
 
     data = realloc(data, datalen);
+    if (!data) {
+        return 1;
+    }
 
     //Send to device
     uint32_t bytes_sent = 0;
