@@ -233,7 +233,7 @@ static char *getTagInfo_15(uint8_t *uid) {
     int i = 0, best = -1;
     memcpy(&myuid, uid, sizeof(uint64_t));
     while (uidmapping[i].mask > 0) {
-        mask = (~0LL) << (64 - uidmapping[i].mask);
+        mask = (~0ULL) << (64 - uidmapping[i].mask);
         if ((myuid & mask) == uidmapping[i].uid) {
             if (best == -1) {
                 best = i;
