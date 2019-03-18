@@ -190,7 +190,7 @@ extern uint8_t g_debugMode;
 
 extern int ukbhit(void);
 extern void AddLogLine(char *fn, char *data, char *c);
-extern void AddLogHex(char *fn, char *data, const uint8_t *data, const size_t len);
+extern void AddLogHex(char *fn, char *extData, const uint8_t *data, const size_t len);
 extern void AddLogUint64(char *fn, char *data, const uint64_t value);
 extern void AddLogCurrentDT(char *fn);
 extern void FillFileNameByUID(char *filenamePrefix, uint8_t *uid, const char *ext, int uidlen);
