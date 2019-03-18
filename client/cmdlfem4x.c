@@ -1244,7 +1244,7 @@ int CmdEM4x05Write(const char *Cmd) {
         PrintAndLogEx(NORMAL, "Writing address %d data %08X using password %08X", addr, data, pwd);
     }
 
-    uint16_t flag = (addr << 8) | usePwd;
+    uint16_t flag = (addr << 8) | (usePwd);
 
     UsbCommand c = {CMD_EM4X_WRITE_WORD, {flag, data, pwd}};
     clearCommandBuffer();
