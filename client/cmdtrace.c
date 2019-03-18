@@ -186,7 +186,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
     //2 Not crc-command
 
     //--- Draw the data column
-    char line[18][110];
+    char line[18][110] = {{0}};
 
     for (int j = 0; j < data_len && j / 18 < 18; j++) {
 
@@ -335,7 +335,7 @@ void printFelica(uint16_t traceLen, uint8_t *trace) {
         uint8_t cmd = trace[tracepos];
         uint8_t isResponse = cmd & 1;
 
-        char line[32][110];
+        char line[32][110] = {{0}};
         for (int j = 0; j < len + 1 && j / 8 < 32; j++) {
             snprintf(line[j / 8] + ((j % 8) * 4), 110, " %02x ", trace[tracepos + j]);
         }
