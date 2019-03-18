@@ -413,18 +413,22 @@ int main(int argc, char **argv) {
         infiles = calloc(1, sizeof(FILE *));
         if (argc != 4) {
             usage();
+            free(infiles);
             return (EXIT_FAILURE);
         }
         infiles[0] = fopen(argv[2], "rb");
         if (infiles[0] == NULL) {
             fprintf(stderr, "Error. Cannot open input file %s\n\n", argv[2]);
+            free(infiles);            
             return (EXIT_FAILURE);
         }
         outfile = fopen(argv[3], "wb");
         if (outfile == NULL) {
             fprintf(stderr, "Error. Cannot open output file %s\n\n", argv[3]);
+            free(infiles);            
             return (EXIT_FAILURE);
         }
+        
         return zlib_decompress(infiles[0], outfile);
 
     } else { // Compress or gemerate version info
@@ -453,6 +457,7 @@ int main(int argc, char **argv) {
             infiles[i] = fopen(infile_names[i], "rb");
             if (infiles[i] == NULL) {
                 fprintf(stderr, "Error. Cannot open input file %s\n\n", infile_names[i]);
+                free(infile_names);
                 return (EXIT_FAILURE);
             }
         }
