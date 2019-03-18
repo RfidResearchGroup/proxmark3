@@ -614,8 +614,7 @@ int CmdLegicRfWrite(const char *Cmd) {
         PrintAndLogEx(NORMAL, "############# DANGER ################");
         PrintAndLogEx(NORMAL, "# changing the DCF is irreversible  #");
         PrintAndLogEx(NORMAL, "#####################################");
-        char *answer = NULL;
-        answer = readline("do you really want to continue? y(es) n(o) : ");
+        char *answer = readline("do you really want to continue? y(es) n(o) : ");
         bool overwrite = (answer[0] == 'y' || answer[0] == 'Y');
         if (!overwrite) {
             PrintAndLogEx(NORMAL, "command cancelled");
@@ -1283,6 +1282,7 @@ int CmdLegicWipe(const char *Cmd) {
         }
     }
     PrintAndLogEx(SUCCESS, "ok\n");
+    free(data);    
     return 0;
 }
 
