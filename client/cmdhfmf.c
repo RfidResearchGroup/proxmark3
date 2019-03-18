@@ -3295,7 +3295,7 @@ int CmdHF14AMfAuth4(const char *Cmd) {
 }
 
 // https://www.nxp.com/docs/en/application-note/AN10787.pdf
-int CmdHF14AMfMAD(const char *cmd) {
+int CmdHF14AMfMAD(const char *Cmd) {
 
     CLIParserInit("hf mf mad",
                   "Checks and prints Mifare Application Directory (MAD)",
@@ -3310,7 +3310,7 @@ int CmdHF14AMfMAD(const char *cmd) {
         arg_lit0("bB",  "keyb",     "use key B for access printing sectors (by default: key A)"),
         arg_param_end
     };
-    CLIExecWithReturn(cmd, argtable, true);
+    CLIExecWithReturn(Cmd, argtable, true);
     bool verbose = arg_get_lit(1);
     uint8_t aid[2] = {0};
     int aidlen;
@@ -3385,7 +3385,7 @@ int CmdHF14AMfMAD(const char *cmd) {
     return 0;
 }
 
-int CmdHFMFNDEF(const char *cmd) {
+int CmdHFMFNDEF(const char *Cmd) {
 
     CLIParserInit("hf mf ndef",
                   "Prints NFC Data Exchange Format (NDEF)",
@@ -3400,7 +3400,7 @@ int CmdHFMFNDEF(const char *cmd) {
         arg_lit0("bB",  "keyb",     "use key B for access sectors (by default: key A)"),
         arg_param_end
     };
-    CLIExecWithReturn(cmd, argtable, true);
+    CLIExecWithReturn(Cmd, argtable, true);
 
     bool verbose = arg_get_lit(1);
     bool verbose2 = arg_get_lit(1) > 1;
