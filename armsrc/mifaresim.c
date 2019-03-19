@@ -268,7 +268,6 @@ static void MifareSimInit(uint16_t flags, uint8_t *datain, tag_response_info_t *
 
         // UID 10B
         case 10:
-
             switch (MifareCardType) {
                 case 1:
                     memcpy(rATQA, rATQA_1k_10B, sizeof rATQA_1k_10B);
@@ -512,7 +511,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
             case MFEMUL_HALTED:
                 if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("MFEMUL_HALTED");
             case MFEMUL_IDLE: {
-                // LogTrace(Uart.output, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);   Need to be convert ?
+                LogTrace(Uart.output, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
                 if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("MFEMUL_IDLE");
                 break;
             }
@@ -712,6 +711,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                     if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("All commands must have exactly 4 bytes: receivedCmd_len=%d", receivedCmd_len);
                     break;
                 }
+                
                 bool encrypted_data = (cardAUTHKEY != AUTHKEYNONE) ;
                 if (encrypted_data) {
                     // decrypt seqence
@@ -740,14 +740,15 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
 
                     // first authentication
                     if (!encrypted_data) {
-                        if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("Reader authenticating for block %d (0x%02x) with key %d", receivedCmd_dec[1], receivedCmd_dec[1], cardAUTHKEY);
                         crypto1_word(pcs, cuid ^ nonce, 0); //Update crypto state
                         num_to_bytes(nonce, 4, rAUTH_AT);   // Send nonce
+                        if (MF_DBGLEVEL >= 2) Dbprintf("Reader authenticating for block %d (0x%02x) with key %d - %s", receivedCmd_dec[1], receivedCmd_dec[1], cardAUTHKEY, emlGetKey(cardAUTHSC, cardAUTHKEY));
                     } else { // nested authentication
-                        if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("Reader doing nested authentication for block %d (0x%02x) with key %d", receivedCmd_dec[1], receivedCmd_dec[1], cardAUTHKEY);
+                        if (MF_DBGLEVEL >= 2) Dbprintf("Reader doing nested authentication for block %d (0x%02x) with key %d", receivedCmd_dec[1], receivedCmd_dec[1], cardAUTHKEY);
                         ans = nonce ^ crypto1_word(pcs, cuid ^ nonce, 0);
                         num_to_bytes(ans, 4, rAUTH_AT);
                     }
+                    
                     EmSendCmd(rAUTH_AT, sizeof(rAUTH_AT));
                     cardSTATE = MFEMUL_AUTH1;
                     if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
@@ -816,7 +817,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                     AppendCrc14443a(response, 16);
                     mf_crypto1_encrypt(pcs, response, MAX_MIFARE_FRAME_SIZE, response_par);
                     EmSendCmdPar(response, MAX_MIFARE_FRAME_SIZE, response_par);
-                    if (MF_DBGLEVEL >= 2) {
+                    if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
                       Dbprintf("[EmSendCmdPar] Data Block[%d]: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x", blockNo,
                       response[0], response[1], response[2], response[3],  response[4],  response[5],  response[6],
                       response[7], response[8], response[9], response[10], response[11], response[12], response[13],
@@ -829,7 +830,6 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                         finished = true;
                     }
 
-                    if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[ISO14443A_CMD_READBLOCK] Finish");
                     break;
                 }
 
@@ -911,7 +911,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
             case MFEMUL_AUTH1: {
                 if (receivedCmd_len != 8) {
                     cardSTATE_TO_IDLE();
-                    //LogTrace(Uart.output, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
+                    LogTrace(Uart.output, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
                     if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("MFEMUL_AUTH1: receivedCmd_len != 8 => cardSTATE_TO_IDLE())");
                     break;
                 }
@@ -1050,7 +1050,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                     }
                 } else {
                     cardSTATE_TO_IDLE();
-                    // LogTrace(Uart.output, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
+                    LogTrace(Uart.output, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
                 }
                 break;
             }
