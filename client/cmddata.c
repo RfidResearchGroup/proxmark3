@@ -458,7 +458,7 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
     uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
 
     sscanf(Cmd, "%i %i %i %i %c", &clk, &invert, &maxErr, &maxLen, &amp);
-
+    
     if (!maxLen) maxLen = BIGBUF_SIZE;
 
     if (invert != 0 && invert != 1) {
@@ -485,14 +485,13 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
     if (amp == 'a')
         askAmp(bits, BitLen);
 
-    bool st = false;
     size_t ststart = 0, stend = 0;
-    if (*stCheck)
-        st = DetectST(bits, &BitLen, &foundclk, &ststart, &stend);
-
+//    if (*stCheck)
+    bool st = DetectST(bits, &BitLen, &foundclk, &ststart, &stend);
+    clk = (clk == 0) ? foundclk : clk;
+    
     if (st) {
         *stCheck = st;
-        clk = (clk == 0) ? foundclk : clk;
         CursorCPos = ststart;
         CursorDPos = stend;
         if (verbose)
@@ -1607,8 +1606,7 @@ int CmdLoad(const char *Cmd) {
             break;
     }
 
-    if (f)
-        fclose(f);
+    fclose(f);
 
     PrintAndLogEx(SUCCESS, "loaded %d samples", GraphTraceLen);
 

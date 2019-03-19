@@ -611,13 +611,13 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
 #define R_READBLK_LEN  0x21
 //simulate NFC Tag3 card - for now only poll response works
 // second half (4 bytes)  of NDEF2 goes into nfcid2_0, first into nfcid2_1
-void felica_sim_lite(uint64_t nfcid) {
+void felica_sim_lite(uint64_t uid) {
 
     int i, curlen = 0;
     uint8_t *curresp = 0;
 
     uint8_t ndef[8];
-    num_to_bytes(nfcid, 8, ndef);
+    num_to_bytes(uid, 8, ndef);
 
     //prepare our 3 responses...
     uint8_t resp_poll0[R_POLL0_LEN] = { 0xb2, 0x4d, 0x12, FELICA_POLL_ACK, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf1, 0x00, 0x00, 0x00, 0x01, 0x43, 0x00, 0xb3, 0x7f};

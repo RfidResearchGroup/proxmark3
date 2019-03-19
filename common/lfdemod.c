@@ -480,12 +480,25 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
     size_t startwave;
     size_t i = 100;
     size_t minClk = 512;
-    int shortestWaveIdx = 0;
+    uint16_t shortestWaveIdx = 0;
 
     // get to first full low to prime loop and skip incomplete first pulse
     getNextHigh(dest, size, high, &i);
     getNextLow(dest, size, low, &i);
 
+    // clock, numoftimes, first idx
+    uint16_t tmpclk[9][3] = {
+        {8,   0, 0}, 
+        {16,  0, 0}, 
+        {32,  0, 0}, 
+        {40,  0, 0}, 
+        {50,  0, 0}, 
+        {64,  0, 0}, 
+        {128, 0, 0},
+        {256, 0, 0}, 
+        {384, 0, 0},
+      };
+    
     // loop through all samples (well, we don't want to go out-of-bounds)
     while (i < size - 512) {
         // measure from low to low
@@ -499,11 +512,38 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
             minClk = i - startwave;
             shortestWaveIdx = startwave;
         }
+        
+        int foo = getClosestClock(minClk);
+        if (foo > 0 ) {
+            for (uint8_t i = 0; i < 9; i++) {
+                if ( tmpclk[i][0] == foo ) {
+                    tmpclk[i][1]++;
+                    
+                    if ( tmpclk[i][2] == 0) {
+                        tmpclk[i][2] = shortestWaveIdx;
+                    }
+                    break;
+                }
+            }
+        }
     }
 
-    // set clock
-    if (g_debugMode == 2) prnt("DEBUG ASK: DetectStrongAskClock smallest wave: %d", minClk);
-    *clock = getClosestClock(minClk);
+    // find the clock with most hits and it the first index it was encountered.
+    int max = 0;
+    for (uint8_t i = 0; i < 9; i++) {
+        if (g_debugMode == 2) {
+            prnt("DEBUG, ASK,  clocks %u | hits %u | idx %u"
+                    , tmpclk[i][0]
+                    , tmpclk[i][1]
+                    , tmpclk[i][2]
+                    );
+        }
+        if ( max < tmpclk[i][1] ) {
+            *clock = tmpclk[i][0];
+            shortestWaveIdx = tmpclk[i][2];
+            max = tmpclk[i][1];
+        }
+    }    
 
     if (*clock == 0)
         return -1;
