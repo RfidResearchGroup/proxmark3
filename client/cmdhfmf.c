@@ -1352,7 +1352,7 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
         case 'r':
             fptr = GenerateFilename("hf-mf-", "-nonces.bin");
             if (fptr == NULL)
-                strncpy(filename, "nonces.bin", FILE_PATH_SIZE);
+                strncpy(filename, "nonces.bin", FILE_PATH_SIZE - 1);
             else
                 strncpy(filename, fptr, FILE_PATH_SIZE - 1);
 
@@ -1540,7 +1540,7 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
     char buf[13];
     char *fptr;
     uint8_t tempkey[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-    uint8_t *keyBlock = NULL, *p;
+    uint8_t *keyBlock, *p;
     uint8_t sectorsCnt = 1;
     int i, keycnt = 0;
     int clen = 0;
@@ -1788,7 +1788,7 @@ int CmdHF14AMfChk(const char *Cmd) {
     FILE *f;
     char filename[FILE_PATH_SIZE] = {0};
     char buf[13];
-    uint8_t *keyBlock = NULL, *p;
+    uint8_t *keyBlock, *p;
     sector_t *e_sector = NULL;
 
     uint8_t blockNo = 0;

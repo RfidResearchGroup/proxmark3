@@ -1363,7 +1363,7 @@ bool AquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password) {
     //  bit1 = page to read from
     // arg1: which block to read
     // arg2: password
-    uint8_t arg0 = ((page << 1) | pwdmode);
+    uint8_t arg0 = ( page << 1 | (pwdmode) );
     UsbCommand c = {CMD_T55XX_READ_BLOCK, {arg0, block, password}};
     clearCommandBuffer();
     SendCommand(&c);
@@ -1382,7 +1382,7 @@ char *GetBitRateStr(uint32_t id, bool xmode) {
 
     char *retStr = buf;
     if (xmode) { //xmode bitrate calc is same as em4x05 calc
-        snprintf(retStr, sizeof(buf), "%d - RF/%d", id, EM4x05_GET_BITRATE(id));
+        snprintf(retStr, sizeof(buf), "%u - RF/%d", id, EM4x05_GET_BITRATE(id));
     } else {
         switch (id) {
             case 0:

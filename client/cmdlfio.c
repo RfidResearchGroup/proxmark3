@@ -257,7 +257,7 @@ int CmdIOProxSim(const char *Cmd) {
     fc = param_get8(Cmd, 1);
     cn = param_get32ex(Cmd, 2, 0, 10);
 
-    if (!version | !fc || !cn) return usage_lf_io_sim();
+    if (!version || !fc || !cn) return usage_lf_io_sim();
 
     if ((cn & 0xFFFF) != cn) {
         cn &= 0xFFFF;
@@ -303,7 +303,7 @@ int CmdIOProxClone(const char *Cmd) {
     fc = param_get8(Cmd, 1);
     cn = param_get32ex(Cmd, 2, 0, 10);
 
-    if (!version | !fc || !cn) return usage_lf_io_clone();
+    if (!version || !fc || !cn) return usage_lf_io_clone();
 
     if ((cn & 0xFFFF) != cn) {
         cn &= 0xFFFF;
