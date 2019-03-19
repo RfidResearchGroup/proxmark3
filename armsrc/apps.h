@@ -231,7 +231,7 @@ void HfSniff(int, int);
 
 //felica.c
 extern void felica_sendraw(UsbCommand *c);
-extern void felica_sniff(uint32_t samples, uint32_t triggers);
+extern void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip);
 extern void felica_sim_lite(uint64_t uid);
 extern void felica_dump_lite_s();
 
