@@ -311,10 +311,10 @@ size_t findModStart(uint8_t *src, size_t size, uint8_t expWaveSize) {
 }
 
 int getClosestClock(int testclk) {
-    uint16_t clocks[] = {8, 16, 32, 40, 50, 64, 128, 256, 384};
-    uint8_t limit[]  = {1,  2,  4,  4,  5,  8,   8,   8,   8};
+    uint16_t clocks[] = {8, 16, 32, 40, 50, 64, 100, 128, 256, 384};
+    uint8_t limit[]  = {1,  2,  4,  4,  5,  8,   8,   8,   8,   8};
 
-    for (uint8_t i = 0; i < 9; i++)
+    for (uint8_t i = 0; i < 100; i++)
         if (testclk >= clocks[i] - limit[i] && testclk <= clocks[i] + limit[i])
             return clocks[i];
 
@@ -487,13 +487,14 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
     getNextLow(dest, size, low, &i);
 
     // clock, numoftimes, first idx
-    uint16_t tmpclk[9][3] = {
+    uint16_t tmpclk[10][3] = {
         {8,   0, 0}, 
         {16,  0, 0}, 
         {32,  0, 0}, 
         {40,  0, 0}, 
         {50,  0, 0}, 
         {64,  0, 0}, 
+        {100, 0, 0}, 
         {128, 0, 0},
         {256, 0, 0}, 
         {384, 0, 0},
@@ -515,7 +516,7 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
         
         int foo = getClosestClock(minClk);
         if (foo > 0 ) {
-            for (uint8_t i = 0; i < 9; i++) {
+            for (uint8_t i = 0; i < 10; i++) {
                 if ( tmpclk[i][0] == foo ) {
                     tmpclk[i][1]++;
                     
@@ -530,7 +531,7 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
 
     // find the clock with most hits and it the first index it was encountered.
     int max = 0;
-    for (uint8_t i = 0; i < 9; i++) {
+    for (uint8_t i = 0; i < 10; i++) {
         if (g_debugMode == 2) {
             prnt("DEBUG, ASK,  clocks %u | hits %u | idx %u"
                     , tmpclk[i][0]
