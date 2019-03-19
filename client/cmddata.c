@@ -482,13 +482,19 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
     int foundclk = 0;
 
     //amplify signal before ST check
-    if (amp == 'a')
+    if (amp == 'a') {
         askAmp(bits, BitLen);
-
+    }
+        
     size_t ststart = 0, stend = 0;
 //    if (*stCheck)
     bool st = DetectST(bits, &BitLen, &foundclk, &ststart, &stend);
-    clk = (clk == 0) ? foundclk : clk;
+
+    if ( clk == 0 ) {
+        if ( foundclk == 32 || foundclk == 64 ) {
+            clk = foundclk;
+        }
+    }
     
     if (st) {
         *stCheck = st;
