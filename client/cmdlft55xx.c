@@ -144,15 +144,15 @@ int usage_t55xx_wakup() {
 int usage_t55xx_chk() {
     PrintAndLogEx(NORMAL, "This command uses a dictionary attack");
     PrintAndLogEx(NORMAL, "press 'enter' to cancel the command");
-    PrintAndLogEx(NORMAL, "Usage: lf t55xx bruteforce [h] <m> [i <*.dic>]");
+    PrintAndLogEx(NORMAL, "Usage: lf t55xx chk [h] <m> [i <*.dic>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     h           - this help");
     PrintAndLogEx(NORMAL, "     m           - use dictionary from flashmemory\n");
     PrintAndLogEx(NORMAL, "     i <*.dic>   - loads a default keys dictionary file <*.dic>");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf t55xx bruteforce m");
-    PrintAndLogEx(NORMAL, "       lf t55xx bruteforce i default_pwd.dic");
+    PrintAndLogEx(NORMAL, "       lf t55xx chk m");
+    PrintAndLogEx(NORMAL, "       lf t55xx chk i default_pwd.dic");
     PrintAndLogEx(NORMAL, "");
     return 0;
 }
@@ -1770,11 +1770,15 @@ int CmdT55xxChkPwds(const char *Cmd) {
 
             PrintAndLogEx(INFO, "Testing %08X", testpwd);
 
+            AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, testpwd);
+            
+            /*
             if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, testpwd)) {
                 PrintAndLogEx(INFO, "Aquireing data from device failed. Quitting");
                 free(keyBlock);
                 return 0;
             }
+*/
 
             found = tryDetectModulation();
             if (found)
