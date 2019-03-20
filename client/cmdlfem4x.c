@@ -1486,8 +1486,8 @@ int CmdEM4x05Info(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",        CmdHelp,              1, "This help"},
     //{"410x_demod",  CmdEMdemodASK,        0, "Extract ID from EM410x tag on antenna)"},
-    {"410x_demod",  CmdEM410xDemod,       0, "demodulate a EM410x tag from the GraphBuffer"},
-    {"410x_read",   CmdEM410xRead,        1, "attempt to read and extract tag data"},
+    {"410x_demod",  CmdEM410xDemod,       1, "demodulate a EM410x tag from the GraphBuffer"},
+    {"410x_read",   CmdEM410xRead,        0, "attempt to read and extract tag data"},
     {"410x_sim",    CmdEM410xSim,         0, "simulate EM410x tag"},
     {"410x_brute",  CmdEM410xBrute,       0, "reader bruteforce attack by simulating EM410x tags"},
     {"410x_watch",  CmdEM410xWatch,       0, "watches for EM410x 125/134 kHz tags (option 'h' for 134)"},

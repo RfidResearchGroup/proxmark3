@@ -314,7 +314,7 @@ int getClosestClock(int testclk) {
     uint16_t clocks[] = {8, 16, 32, 40, 50, 64, 100, 128, 256, 384};
     uint8_t limit[]  = {1,  2,  4,  4,  5,  8,   8,   8,   8,   8};
 
-    for (uint8_t i = 0; i < 100; i++)
+    for (uint8_t i = 0; i < 10; i++)
         if (testclk >= clocks[i] - limit[i] && testclk <= clocks[i] + limit[i])
             return clocks[i];
 
@@ -486,6 +486,9 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
     getNextHigh(dest, size, high, &i);
     getNextLow(dest, size, low, &i);
 
+    if (i == size)
+        return -1;
+    
     // clock, numoftimes, first idx
     uint16_t tmpclk[10][3] = {
         {8,   0, 0}, 
@@ -1398,7 +1401,7 @@ int BiphaseRawDecode(uint8_t *bits, size_t *size, int *offset, int invert) {
 //by marshmellow
 //take 10 and 01 and manchester decode
 //run through 2 times and take least errCnt
-// "7" indicates 00 or 11 wrong bit
+// "," indicates 00 or 11 wrong bit
 int manrawdecode(uint8_t *bits, size_t *size, uint8_t invert, uint8_t *alignPos) {
 
     // sanity check
