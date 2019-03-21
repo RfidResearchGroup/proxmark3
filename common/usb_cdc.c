@@ -612,7 +612,7 @@ bool usb_poll_validate_length() {
 //* \fn    usb_read
 //* \brief Read available data from Endpoint 1 OUT (host to device)
 //*----------------------------------------------------------------------------
-uint32_t usb_read(byte_t *data, size_t len) {
+uint32_t usb_read(uint8_t *data, size_t len) {
 
     if (len == 0) return 0;
 
@@ -650,7 +650,7 @@ uint32_t usb_read(byte_t *data, size_t len) {
 //* \fn    usb_write
 //* \brief Send through endpoint 2 (device to host)
 //*----------------------------------------------------------------------------
-uint32_t usb_write(const byte_t *data, const size_t len) {
+uint32_t usb_write(const uint8_t *data, const size_t len) {
 
     if (!len) return 0;
     if (!usb_check()) return 0;
@@ -773,7 +773,7 @@ void AT91F_USB_SendStall(AT91PS_UDP pUdp) {
 //* 2. mixed with CDC ACM endpoint3 , interrupt, control endpoint
 //*----------------------------------------------------------------------------
 void AT91F_CDC_Enumerate() {
-    byte_t bmRequestType, bRequest;
+    uint8_t bmRequestType, bRequest;
     uint16_t wValue, wIndex, wLength, wStatus;
 
     if (!(pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_RXSETUP))
