@@ -1933,13 +1933,18 @@ void MifareCIdent() {
     uint8_t isGen = 0;
     uint8_t rec[1] = {0x00};
     uint8_t recpar[1] = {0x00};
-
+    uint8_t rats[4] = { ISO14443A_CMD_RATS, 0x80, 0x31, 0x73 };
+    uint8_t *par = BigBuf_malloc(MAX_PARITY_SIZE);
+    uint8_t *buf = BigBuf_malloc(USB_CMD_DATA_SIZE);
+    uint8_t *uid = BigBuf_malloc(10);
+    uint32_t cuid = 0;
+    
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
     // Generation 1 test
     ReaderTransmitBitsPar(wupC1, 7, NULL, NULL);
     if (!ReaderReceive(rec, recpar) || (rec[0] != 0x0a)) {
-        goto TEST2;
+        goto TEST2;         
     };
     isGen = GEN_1B;
 
@@ -1951,32 +1956,29 @@ void MifareCIdent() {
     goto OUT;
 
 TEST2:
-    ;
-    /*
-        // Generation 2 test
-
-        // halt previous.
-        mifare_classic_halt(NULL, 0);
-
-        //select
-        if (!iso14443a_select_card(NULL, NULL, NULL, true, 0, true)) {
-            goto OUT;
-        };
-
-        // MIFARE_CLASSIC_WRITEBLOCK 0xA0
-        // ACK 0x0a
-        uint16_t len = mifare_sendcmd_short(null, 1, 0xA0, 0, rec, recpar, NULL);
-        if ((len != 1) || (rec[0] != 0x0A)) {
+    // reset card
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    SpinDelay(100);
+    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+    
+    int res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
+    if ( res == 2 ) {
+        ReaderTransmit(rats, sizeof(rats), NULL);      
+        res = ReaderReceive(buf, par);
+        if (memcmp(buf, "\x09\x78\x00\x91\x02\xDA\xBC\x19\x10\xF0\x05", 11) == 0) {
             isGen = GEN_2;
-        };
-        */
+            goto OUT;
+        }
+        if (memcmp(buf, "\x0D\x78\x00\x71\x02\x88\x49\xA1\x30\x20\x15\x06\x08\x56\x3D", 15) == 0) {
+            isGen = GEN_2;
+        }
+    };
+    
 OUT:
-    ;
-    // removed the if,  since some magic tags misbehavies and send an answer to it.
-    mifare_classic_halt_ex(NULL);
     cmd_send(CMD_ACK, isGen, 0, 0, 0, 0);
     // turns off
     OnSuccessMagic();
+    BigBuf_free();
 }
 
 void OnSuccessMagic() {
