@@ -23,12 +23,12 @@
 // ISO 14443A
 //-----------------------------------------------------------------------------
 typedef struct {
-    byte_t uid[10];
-    byte_t uidlen;
-    byte_t atqa[2];
-    byte_t sak;
-    byte_t ats_len;
-    byte_t ats[256];
+    uint8_t uid[10];
+    uint8_t uidlen;
+    uint8_t atqa[2];
+    uint8_t sak;
+    uint8_t ats_len;
+    uint8_t ats[256];
 } __attribute__((__packed__)) iso14a_card_select_t;
 
 typedef enum ISO14A_COMMAND {
@@ -57,11 +57,11 @@ typedef struct {
 // ISO 14443B
 //-----------------------------------------------------------------------------
 typedef struct {
-    byte_t uid[10];
-    byte_t uidlen;
-    byte_t atqb[7];
-    byte_t chipid;
-    byte_t cid;
+    uint8_t uid[10];
+    uint8_t uidlen;
+    uint8_t atqb[7];
+    uint8_t chipid;
+    uint8_t cid;
 } __attribute__((__packed__)) iso14b_card_select_t;
 
 typedef enum ISO14B_COMMAND {

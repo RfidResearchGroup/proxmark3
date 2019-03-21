@@ -16,11 +16,11 @@ extern char _bootrom_start, _bootrom_end, _flash_start, _flash_end;
 extern uint32_t _osimage_entry;
 
 void DbpString(char *str) {
-    byte_t len = 0;
+    uint8_t len = 0;
     while (str[len] != 0x00)
         len++;
 
-    cmd_send(CMD_DEBUG_PRINT_STRING, len, 0, 0, (byte_t *)str, len);
+    cmd_send(CMD_DEBUG_PRINT_STRING, len, 0, 0, (uint8_t *)str, len);
 }
 
 static void ConfigClocks(void) {

@@ -384,7 +384,7 @@ int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
     uint16_t len = 0;
     uint32_t pos = 0;
     uint8_t par[3] = {0x00, 0x00, 0x00}; // enough for 18 Bytes to send
-    byte_t res = 0;
+    uint8_t res = 0;
 
     uint8_t d_block[18], d_block_enc[18];
     uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};

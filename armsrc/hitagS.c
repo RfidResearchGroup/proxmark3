@@ -19,7 +19,7 @@
 static bool bQuiet;
 static bool bSuccessful;
 static struct hitagS_tag tag;
-static byte_t page_to_be_written = 0;
+static uint8_t page_to_be_written = 0;
 static int block_data_left = 0;
 
 typedef enum modulation {
@@ -33,7 +33,7 @@ static MOD m = AC2K;               // used modulation
 static uint32_t temp_uid;
 static int temp2 = 0;
 static int sof_bits;               // number of start-of-frame bits
-static byte_t pwdh0, pwdl0, pwdl1; // password bytes
+static uint8_t pwdh0, pwdl0, pwdl1; // password bytes
 static uint32_t rnd = 0x74124485;  // randomnumber
 static int test = 0;
 size_t blocknr;

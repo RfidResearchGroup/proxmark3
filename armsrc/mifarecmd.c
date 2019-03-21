@@ -46,8 +46,8 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) 
     ui64Key = bytes_to_num(datain, 6);
 
     // variables
-    byte_t isOK = 0;
-    byte_t dataoutbuf[16] = {0x00};
+    uint8_t isOK = 0;
+    uint8_t dataoutbuf[16] = {0x00};
     uint8_t uid[10] = {0x00};
     uint32_t cuid = 0;
     struct Crypto1State mpcs = {0, 0};
@@ -137,7 +137,7 @@ void MifareUC_Auth(uint8_t arg0, uint8_t *keybytes) {
 // datain = PWD bytes,
 void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     uint8_t blockNo = arg0;
-    byte_t dataout[16] = {0x00};
+    uint8_t dataout[16] = {0x00};
     bool useKey = (arg1 == 1); //UL_C
     bool usePwd = (arg1 == 2); //UL_EV1/NTAG
 
@@ -206,8 +206,8 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
     ui64Key = bytes_to_num(datain, 6);
 
     // variables
-    byte_t isOK = 0;
-    byte_t dataoutbuf[16 * 16];
+    uint8_t isOK = 0;
+    uint8_t dataoutbuf[16 * 16];
     uint8_t uid[10] = {0x00};
     uint32_t cuid = 0;
     struct Crypto1State mpcs = {0, 0};
@@ -368,13 +368,13 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
     uint8_t blockNo = arg0;
     uint8_t keyType = arg1;
     uint64_t ui64Key = 0;
-    byte_t blockdata[16] = {0x00};
+    uint8_t blockdata[16] = {0x00};
 
     ui64Key = bytes_to_num(datain, 6);
     memcpy(blockdata, datain + 10, 16);
 
     // variables
-    byte_t isOK = 0;
+    uint8_t isOK = 0;
     uint8_t uid[10] = {0x00};
     uint32_t cuid = 0;
     struct Crypto1State mpcs = {0, 0};
@@ -430,7 +430,7 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 void MifareUWriteBlockCompat(uint8_t arg0, uint8_t *datain)
 {
     uint8_t blockNo = arg0;
-    byte_t blockdata[16] = {0x00};
+    uint8_t blockdata[16] = {0x00};
 
     memcpy(blockdata, datain, 16);
 
@@ -477,7 +477,7 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     uint8_t blockNo = arg0;
     bool useKey = (arg1 == 1); //UL_C
     bool usePwd = (arg1 == 2); //UL_EV1/NTAG
-    byte_t blockdata[4] = {0x00};
+    uint8_t blockdata[4] = {0x00};
 
     memcpy(blockdata, datain, 4);
 
@@ -539,7 +539,7 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
 void MifareUSetPwd(uint8_t arg0, uint8_t *datain) {
 
     uint8_t pwd[16] = {0x00};
-    byte_t blockdata[4] = {0x00};
+    uint8_t blockdata[4] = {0x00};
 
     memcpy(pwd, datain, 16);
 
@@ -1630,7 +1630,7 @@ void MifareEMemSet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
 
 void MifareEMemGet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-    byte_t buf[USB_CMD_DATA_SIZE] = {0x00};
+    uint8_t buf[USB_CMD_DATA_SIZE] = {0x00};
     emlGetMem(buf, arg0, arg1); // data, block num, blocks count (max 4)
 
     LED_B_ON();
@@ -1652,8 +1652,8 @@ void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
     pcs = &mpcs;
 
     // variables
-    byte_t dataoutbuf[16] = {0x00};
-    byte_t dataoutbuf2[16] = {0x00};
+    uint8_t dataoutbuf[16] = {0x00};
+    uint8_t dataoutbuf2[16] = {0x00};
     uint8_t uid[10] = {0x00};
 
     LED_A_ON();
@@ -2053,7 +2053,7 @@ void MifareSetMod(uint8_t mod, uint8_t *key) {
 // DESFIRE
 //
 void Mifare_DES_Auth1(uint8_t arg0, uint8_t *datain) {
-    byte_t dataout[12] = {0x00};
+    uint8_t dataout[12] = {0x00};
     uint8_t uid[10] = {0x00};
     uint32_t cuid = 0;
 
@@ -2081,8 +2081,8 @@ void Mifare_DES_Auth1(uint8_t arg0, uint8_t *datain) {
 void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain) {
     uint32_t cuid = arg0;
     uint8_t key[16] = {0x00};
-    byte_t dataout[12] = {0x00};
-    byte_t isOK = 0;
+    uint8_t dataout[12] = {0x00};
+    uint8_t isOK = 0;
 
     memcpy(key, datain, 16);
 

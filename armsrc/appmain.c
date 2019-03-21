@@ -769,16 +769,16 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             SniffHitag(c->arg[0]);
             break;
         case CMD_SIMULATE_HITAG: // Simulate Hitag tag, args = memory content
-            SimulateHitagTag((bool)c->arg[0], (byte_t *)c->d.asBytes);
+            SimulateHitagTag((bool)c->arg[0], c->d.asBytes);
             break;
         case CMD_READER_HITAG: // Reader for Hitag tags, args = type and function
             ReaderHitag((hitag_function)c->arg[0], (hitag_data *)c->d.asBytes);
             break;
         case CMD_SIMULATE_HITAG_S:// Simulate Hitag s tag, args = memory content
-            SimulateHitagSTag((bool)c->arg[0], (byte_t *)c->d.asBytes);
+            SimulateHitagSTag((bool)c->arg[0], c->d.asBytes);
             break;
         case CMD_TEST_HITAGS_TRACES:// Tests every challenge within the given file
-            check_challenges((bool)c->arg[0], (byte_t *)c->d.asBytes);
+            check_challenges((bool)c->arg[0], c->d.asBytes);
             break;
         case CMD_READ_HITAG_S: //Reader for only Hitag S tags, args = key or challenge
             ReadHitagS((hitag_function)c->arg[0], (hitag_data *)c->d.asBytes);

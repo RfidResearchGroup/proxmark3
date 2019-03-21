@@ -59,7 +59,7 @@ static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_
     uint8_t wipeC[] = {0x41};
 
     // variables
-    byte_t isOK = 0;
+    uint8_t isOK = 0;
     uint8_t d_block[18] = {0x00};
 
     uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
