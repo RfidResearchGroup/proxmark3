@@ -236,7 +236,7 @@ int CmdPyramidDemod(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(SUCCESS, "Checksum : 0x%02X - %02X - %s"
+    PrintAndLogEx(DEBUG, "DEBUG: Pyramid: checksum : 0x%02X - %02X - %s"
         , checksum
         , checkCS
         , (checksum == checkCS) ? _GREEN_("Passed") : _RED_("Failed")
