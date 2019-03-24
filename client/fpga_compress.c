@@ -429,9 +429,11 @@ int main(int argc, char **argv) {
             return (EXIT_FAILURE);
         }
         
-        return zlib_decompress(infiles[0], outfile);
+        int ret = zlib_decompress(infiles[0], outfile);
+        free(infiles);
+        return (ret);
 
-    } else { // Compress or gemerate version info
+    } else { // Compress or generate version info
 
         bool hardnested_mode = false;
         bool generate_version_file = false;
