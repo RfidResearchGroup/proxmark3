@@ -254,7 +254,7 @@ int CmdTIDemod(const char *Cmd) {
 
         //crc =  crc16_ccitt(message, sizeof(message);
 
-        char *crcStr = (crc == (shift2 & 0xFFFF)) ? "Passed" : "Failed";
+        char *crcStr = (crc == (shift2 & 0xFFFF)) ? _GREEN_("Passed") : _RED_("Failed");
 
         PrintAndLogEx(INFO, "Tag data = %08X%08X  [Crc %04X %s]", shift1, shift0, crc, crcStr);
 

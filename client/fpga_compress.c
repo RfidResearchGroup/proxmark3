@@ -167,7 +167,6 @@ int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, bool hardn
             fclose(infile[j]);
         }
         fclose(outfile);
-        free(infile);
         free(fpga_config);
         return (EXIT_FAILURE);
     }
@@ -182,7 +181,6 @@ int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, bool hardn
         fclose(infile[j]);
     }
     fclose(outfile);
-    free(infile);
     free(fpga_config);
 
     return (EXIT_SUCCESS);
@@ -429,9 +427,11 @@ int main(int argc, char **argv) {
             return (EXIT_FAILURE);
         }
         
-        return zlib_decompress(infiles[0], outfile);
+        int ret = zlib_decompress(infiles[0], outfile);
+        free(infiles);
+        return (ret);
 
-    } else { // Compress or gemerate version info
+    } else { // Compress or generate version info
 
         bool hardnested_mode = false;
         bool generate_version_file = false;
@@ -476,7 +476,10 @@ int main(int argc, char **argv) {
                 return (EXIT_FAILURE);
             }
         } else {
-            return zlib_compress(infiles, num_input_files, outfile, hardnested_mode);
+            int ret = zlib_compress(infiles, num_input_files, outfile, hardnested_mode);
+            free(infile_names);
+            free(infiles);
+            return (ret);
         }
     }
 }

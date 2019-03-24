@@ -55,7 +55,7 @@ int detectPyramid(uint8_t *dest, size_t *size, int *waveStartIdx) {
     if (getSignalProperties()->isnoise) return -2;
 
     // FSK demodulator RF/50 FSK 10,8
-    *size = fskdemod(dest, *size, 50, 0, 10, 8, waveStartIdx);  // pyramid fsk2
+    *size = fskdemod(dest, *size, 50, 1, 10, 8, waveStartIdx);  // pyramid fsk2
 
     //did we get a good demod?
     if (*size < 128) return -3;
@@ -235,11 +235,13 @@ int CmdPyramidDemod(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "Pyramid ID Found - BitLength: %d -unknown BitLength- (%d), Raw: %08x%08x%08x%08x", fmtLen, cardnum, rawHi3, rawHi2, rawHi, rawLo);
         }
     }
-    if (checksum == checkCS)
-        PrintAndLogEx(SUCCESS, "Checksum %02x passed", checksum);
-    else
-        PrintAndLogEx(FAILED, "Checksum %02x failed - should have been %02x", checksum, checkCS);
 
+    PrintAndLogEx(DEBUG, "DEBUG: Pyramid: checksum : 0x%02X - %02X - %s"
+        , checksum
+        , checkCS
+        , (checksum == checkCS) ? _GREEN_("Passed") : _RED_("Failed")
+        );
+        
     PrintAndLogEx(DEBUG, "DEBUG: Pyramid: idx: %d, Len: %d, Printing Demod Buffer:", idx, 128);
     if (g_debugMode)
         printDemodBuff();
