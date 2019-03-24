@@ -228,8 +228,8 @@ void num_to_wiegand_bits(uint64_t oem, uint64_t fc, uint64_t cn, uint8_t *dest, 
             break;
         case 50 :               // AWID 50 RBH
             fc &= 0xFFFF;       // 16bits
-            cn &= 0xFFFFFFFF    // 32bits
-                  value = fc << 32 | cn;
+            cn &= 0xFFFFFFFF;   // 32bits
+            value = fc << 32 | cn;
             num_to_bytebits(value, 48, temp);
             wiegand_add_parity(temp, dest, 48);  // verify!
             break;
