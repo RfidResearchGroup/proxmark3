@@ -524,7 +524,7 @@ int CmdHF14AInfo(const char *Cmd) {
                           (tb1 ? "" : " NOT"),
                           (tc1 ? "" : " NOT"),
                           fsci,
-                          fsci < sizeof(atsFSC) ? atsFSC[fsci] : -1
+                          fsci < sizeof(atsFSC)/sizeof(atsFSC[0]) ? atsFSC[fsci] : -1
                          );
         }
         pos = 2;
@@ -959,7 +959,7 @@ int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
         // get frame length from ATS in data field
         if (resp.arg[0] > 1) {
             uint8_t fsci = resp.d.asBytes[1] & 0x0f;
-            if (fsci < sizeof(atsFSC))
+            if (fsci < sizeof(atsFSC)/sizeof(atsFSC[0]))
                 frameLength = atsFSC[fsci];
         }
     } else {
@@ -967,7 +967,7 @@ int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
         iso14a_card_select_t *vcard = (iso14a_card_select_t *) resp.d.asBytes;
         if (vcard->ats_len > 1) {
             uint8_t fsci = vcard->ats[1] & 0x0f;
-            if (fsci < sizeof(atsFSC))
+            if (fsci < sizeof(atsFSC)/sizeof(atsFSC[0]))
                 frameLength = atsFSC[fsci];
         }
 
