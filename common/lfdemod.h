@@ -38,7 +38,7 @@ typedef struct {
 } signal_t;
 signal_t *getSignalProperties(void);
 
-void computeSignalProperties(uint8_t *bits, uint32_t size);
+void computeSignalProperties(uint8_t *samples, uint32_t size);
 void removeSignalOffset(uint8_t *samples, uint32_t size);
 void getNextLow(uint8_t *samples, size_t size, int low, size_t *i);
 void getNextHigh(uint8_t *samples, size_t size, int high, size_t *i);
@@ -61,7 +61,7 @@ extern int      DetectNRZClock(uint8_t *dest, size_t size, int clock, size_t *cl
 extern int      DetectPSKClock(uint8_t *dest, size_t size, int clock, size_t *firstPhaseShift, uint8_t *curPhase, uint8_t *fc);
 extern int      DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clock);
 extern bool     DetectST(uint8_t *buffer, size_t *size, int *foundclock, size_t *ststart, size_t *stend);
-extern size_t   fskdemod(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t invert, uint8_t fchigh, uint8_t fclow, int *startIdx);
+extern size_t   fskdemod(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t invert, uint8_t fchigh, uint8_t fclow, int *start_idx);
 //extern void     getHiLo(uint8_t *bits, size_t size, int *high, int *low, uint8_t fuzzHi, uint8_t fuzzLo);
 extern void     getHiLo(int *high, int *low, uint8_t fuzzHi, uint8_t fuzzLo);
 extern uint32_t manchesterEncode2Bytes(uint16_t datain);
