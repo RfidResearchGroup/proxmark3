@@ -58,8 +58,6 @@ APP_CFLAGS = $(PLATFORM_DEFS) \
 #			 -DWITH_HF_COLIN
 #			 -DWITH_HF_BOG
 
-
-SRC_LCD = fonts.c LCD.c
 SRC_LF = lfops.c hitag2_crypto.c hitag2.c hitagS.c lfsampling.c pcf7931.c lfdemod.c
 SRC_ISO15693 = iso15693.c iso15693tools.c
 #SRC_ISO14443a = iso14443a.c mifareutil.c mifarecmd.c epa.c mifaresim.c
@@ -89,6 +87,12 @@ ifneq (,$(findstring WITH_FPC,$(APP_CFLAGS)))
 	SRC_FPC = usart.c
 else
 	SRC_FPC =
+endif
+
+ifneq (,$(findstring WITH_LCD,$(APP_CLAGS)))
+    SRC_LCD = fonts.c LCD.c
+else
+    SRC_LCD =
 endif
 
 # Generic standalone Mode injection of source code
