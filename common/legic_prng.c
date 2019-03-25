@@ -46,10 +46,6 @@ void legic_prng_forward(int count) {
     }
 }
 
-uint32_t legic_prng_count() {
-    return lfsr.c;
-}
-
 uint8_t legic_prng_get_bit() {
     uint8_t idx = 7 - ((lfsr.a & 4) | (lfsr.a >> 2 & 2) | (lfsr.a >> 4 & 1));
     return lfsr.b >> idx & 1;
