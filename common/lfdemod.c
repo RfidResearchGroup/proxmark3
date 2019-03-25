@@ -57,7 +57,7 @@ extern void Dbprintf(const char *fmt, ...);
 #include "ui.h"
 # include "cmdparser.h"
 # include "cmddata.h"
-# define prnt PrintAndLog
+# define prnt(args...) PrintAndLogEx(DEBUG, ## args );
 #else
 uint8_t g_debugMode = 0;
 # define prnt Dbprintf
