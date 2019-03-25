@@ -256,12 +256,12 @@ char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t brea
             sprintf(tmp++, ".");
         else
             sprintf(tmp++, "%u", data[in_index]);
+        
         // check if a line break is needed and we have room to print it in our array
         if ((breaks > 0) && !((in_index + 1) % breaks) && (out_index + 1 != rowlen)) {
-            // increment and print line break
-            out_index++;
             sprintf(tmp++, "%s", "\n");
         }
+        
         in_index++;
     }
 
