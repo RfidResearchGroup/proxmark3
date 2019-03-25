@@ -262,7 +262,8 @@ bool preambleSearch(uint8_t *bits, uint8_t *preamble, size_t pLen, size_t *size,
 //(iceman) FINDONE,  only finds start index. NOT SIZE!.  I see Em410xDecode (lfdemod.c) uses SIZE to determine success
 bool preambleSearchEx(uint8_t *bits, uint8_t *preamble, size_t pLen, size_t *size, size_t *startIdx, bool findone) {
     // Sanity check.  If preamble length is bigger than bits length.
-    if (*size <= pLen) return false;
+    if (*size <= pLen)
+        return false;
 
     uint8_t foundCnt = 0;
     for (size_t idx = 0; idx < *size - pLen; idx++) {
@@ -967,11 +968,6 @@ int DetectPSKClock(uint8_t *dest, size_t size, int clock, size_t *firstPhaseShif
     uint8_t clk[] = {255, 16, 32, 40, 50, 64, 100, 128, 255}; //255 is not a valid clock
     uint16_t loopCnt = 4096;  //don't need to loop through entire array...
 
-    //if we already have a valid clock quit
-    size_t i = 1;
-    for (; i < 8; ++i)
-        if (clk[i] == clock) return clock;
-
     if (size < 160 + 20) return 0;
     // size must be larger than 20 here, and 160 later on.
     if (size < loopCnt) loopCnt = size - 20;
@@ -995,7 +991,7 @@ int DetectPSKClock(uint8_t *dest, size_t size, int clock, size_t *firstPhaseShif
     uint16_t peaksdet[] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 
     //find start of modulating data in trace
-    i = findModStart(dest, size, *fc);
+    size_t i = findModStart(dest, size, *fc);
 
     firstFullWave = pskFindFirstPhaseShift(dest, size, curPhase, i, *fc, &fullWaveLen);
     if (firstFullWave == 0) {
