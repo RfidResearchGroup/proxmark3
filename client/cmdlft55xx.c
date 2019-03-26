@@ -1791,11 +1791,15 @@ int CmdT55xxBruteForce(const char *Cmd) {
             return 0;
         }
 
+        AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, curr);
+        
+        /*
         if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, curr)) {
             PrintAndLogEx(WARNING, "Aquiring data from device failed. Quitting");
             return 0;
         }
-
+        */
+        
         found = tryDetectModulation();
 
         if (curr == end_password)
