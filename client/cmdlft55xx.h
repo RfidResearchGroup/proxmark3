@@ -162,7 +162,7 @@ extern bool tryDetectP1(bool getData);
 bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5);
 int special(const char *Cmd);
 bool AquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password);
-bool AquireDataEx(uint8_t page, uint8_t block, bool pwdmode, uint32_t password, uint32_t timing) ;
+//bool AquireDataEx(uint8_t page, uint8_t block, bool pwdmode, uint32_t password, uint32_t timing) ;
 
 bool detectPassword(int password);
 

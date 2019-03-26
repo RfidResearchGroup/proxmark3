@@ -366,7 +366,8 @@ int CmdSetDebugMode(const char *Cmd) {
 }
 
 //by marshmellow
-// max output to 512 bits if we have more - should be plenty
+// max output to 512 bits if we have more
+// doesn't take inconsideration where the demod offset or bitlen found.
 void printDemodBuff(void) {
     int len = DemodBufferLen;
     if (len < 1) {
@@ -530,7 +531,7 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
             PrintAndLogEx(DEBUG, "ASK/Manchester - Clock: %d - Decoded bitstream:", clk);
         else
             PrintAndLogEx(DEBUG, "ASK/Raw - Clock: %d - Decoded bitstream:", clk);
-        // Now output the bitstream to the scrollback by line of 16 bits
+
         printDemodBuff();
     }
     uint64_t lo = 0;

@@ -1555,7 +1555,7 @@ int askdemod_ext(uint8_t *bits, size_t *size, int *clk, int *invert, int maxErr,
             *startIdx += *clk / 2 * alignPos;
 
             if (g_debugMode)
-                prnt("DEBUG: (askdemod_ext) CLEAN: startIdx %i, alignPos %u", *startIdx, alignPos);
+                prnt("DEBUG: (askdemod_ext) CLEAN: startIdx %i, alignPos %u , bestError %u", *startIdx, alignPos, errCnt);
         }
         return errCnt;
     }

@@ -23,6 +23,7 @@
 #include "lfsampling.h"
 #include "BigBuf.h"
 #include "mifareutil.h"
+#include "hitag.h"
 
 #define DEBUG 1
 
@@ -707,7 +708,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             SimulateTagLowFrequencyBidir(c->arg[0], c->arg[1]);
             break;
         case CMD_INDALA_CLONE_TAG:
-            CopyIndala64toT55x7(c->arg[0], c->arg[1]);
+            CopyIndala64toT55x7(c->d.asDwords[0], c->d.asDwords[1]);
             break;
         case CMD_INDALA_CLONE_TAG_L:
             CopyIndala224toT55x7(
