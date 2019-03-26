@@ -238,10 +238,24 @@ int CmdIndalaDemod(const char *Cmd) {
         p1 |= DemodBuffer[32+21] << 2;
         p1 |= DemodBuffer[32+22] << 0;
         p1 |= DemodBuffer[32+24] << 9;
-        
+  
+/*  
+        uint16_t fc = 0;
+        fc |= DemodBuffer[32+ 1] << 0;
+        fc |= DemodBuffer[32+ 2] << 1;
+        fc |= DemodBuffer[32+ 4] << 2;
+        fc |= DemodBuffer[32+ 5] << 3;
+        fc |= DemodBuffer[32+ 7] << 4;
+        fc |= DemodBuffer[32+10] << 5;
+        fc |= DemodBuffer[32+14] << 6;
+        fc |= DemodBuffer[32+15] << 7;
+        fc |= DemodBuffer[32+17] << 8;
+*/
+       
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(SUCCESS, "Possible de-scramble patterns");
         PrintAndLogEx(SUCCESS, "\tPrinted     | __%04d__ [0x%X]", p1, p1);
+        //PrintAndLogEx(SUCCESS, "\tPrinted     | __%04d__ [0x%X]", fc, fc);
         PrintAndLogEx(SUCCESS, "\tInternal ID | %" PRIu64 , foo);
         
         
