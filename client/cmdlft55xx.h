@@ -165,7 +165,7 @@ bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5)
 int special(const char *Cmd);
 bool AquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password);
 
-bool detectPassword(int password);
+int tryOnePassword(uint32_t password);
 
 void printT55x7Trace(t55x7_tracedata_t data, uint8_t repeat);
 void printT5555Trace(t5555_tracedata_t data, uint8_t repeat);
