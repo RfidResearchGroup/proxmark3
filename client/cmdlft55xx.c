@@ -1625,17 +1625,14 @@ bool IsCancelled(void) {
     return false;
 }
 
+// load a default pwd file.
 int CmdT55xxChkPwds(const char *Cmd) {
-    // load a default pwd file.
-    char line[9];
+
     char filename[FILE_PATH_SIZE] = {0};
-    int keycnt = 0;
-    uint8_t stKeyBlock = 20;
-    uint8_t *keyBlock = NULL, *p = NULL;
+
     bool found = false;
     uint8_t timeout = 0;
-
-    memset(line, 0, sizeof(line));
+    uint8_t *keyBlock = NULL;
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_t55xx_chk();
@@ -1688,78 +1685,37 @@ int CmdT55xxChkPwds(const char *Cmd) {
         goto out;
     }
 
-    keyBlock = calloc(stKeyBlock, 4);
-    if (keyBlock == NULL) return 1;
-
     if (cmdp == 'i') {
-
+        
         int len = strlen(Cmd + 2);
         if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
         memcpy(filename, Cmd + 2, len);
-
-        FILE *f = fopen(filename, "r");
-        if (!f) {
-            PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
-            free(keyBlock);
+        
+        uint16_t keycount = 0;
+        size_t datalen = 0;
+       
+        // TODO, a way of reallocating memory if file was larger
+        keyBlock = calloc(4*200, sizeof(uint8_t));
+        if ( keyBlock == NULL ) {
+            PrintAndLogDevice(WARNING, "error, cannot allocate memory ");
             return 1;
         }
-
-        while (fgets(line, sizeof(line), f)) {
-            if (strlen(line) < 8 || line[7] == '\n') continue;
-
-            //goto next line
-            while (fgetc(f) != '\n' && !feof(f)) ;
-
-            //The line start with # is comment, skip
-            if (line[0] == '#') continue;
-
-            if (!isxdigit(line[0])) {
-                PrintAndLogEx(WARNING, "File content error. '%s' must include 8 HEX symbols", line);
-                continue;
-            }
-
-            line[8] = 0;
-
-            // realloc keyblock array size.
-            if (stKeyBlock - keycnt < 2) {
-                p = realloc(keyBlock, 4 * (stKeyBlock += 10));
-                if (!p) {
-                    PrintAndLogEx(WARNING, "Cannot allocate memory for defaultKeys");
-                    free(keyBlock);
-                    if (f)
-                        fclose(f);
-                    return 2;
-                }
-                keyBlock = p;
-            }
-            // clear mem
-            memset(keyBlock + 4 * keycnt, 0, 4);
-
-            num_to_bytes(strtoll(line, NULL, 16), 4, keyBlock + 4 * keycnt);
-
-// PrintAndLogEx(NORMAL, "chk custom pwd[%2d] %08X", keycnt, bytes_to_num(keyBlock + 4 * keycnt, 4) );
-            keycnt++;
-            memset(line, 0, sizeof(line));
-        }
-
-        if (f)
-            fclose(f);
-
-        if (keycnt == 0) {
+        
+        int res = loadFileDICTIONARY(filename, "dic", keyBlock, &datalen, 4, &keycount );
+        if (res || keycount == 0) {
             PrintAndLogEx(WARNING, "No keys found in file");
             free(keyBlock);
             return 1;
         }
-        PrintAndLogEx(SUCCESS, "Loaded %d keys", keycnt);
 
         // loop
         uint64_t testpwd = 0x00;
-        for (uint16_t c = 0; c < keycnt; ++c) {
+        for (uint16_t c = 0; c < keycount; ++c) {
 
             if (IsOffline()) {
                 PrintAndLogEx(WARNING, "Device offline\n");
                 free(keyBlock);
-                return  2;
+                return 2;
             }
 
             if (IsCancelled()) {
@@ -1780,7 +1736,6 @@ int CmdT55xxChkPwds(const char *Cmd) {
                 return 0;
             }
 */
-
             found = tryDetectModulation();
             if (found)
                 break;
