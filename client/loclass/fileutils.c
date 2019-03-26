@@ -539,7 +539,6 @@ int loadFileDICTIONARY(const char *preferredName, const char *suffix, void *data
         if (strlen(line) < keylen)
             continue;
 
-
         // The line start with # is comment, skip
         if (line[0] == '#')
             continue;
