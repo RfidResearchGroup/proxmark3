@@ -1053,6 +1053,7 @@ int CmdT55xxWriteBlock(const char *Cmd) {
         c.arg[2] = password;
         c.d.asBytes[0] |= 0x1;
     }
+    
     clearCommandBuffer();
     SendCommand(&c);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
