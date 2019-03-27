@@ -366,7 +366,8 @@ int CmdSetDebugMode(const char *Cmd) {
 }
 
 //by marshmellow
-// max output to 512 bits if we have more - should be plenty
+// max output to 512 bits if we have more
+// doesn't take inconsideration where the demod offset or bitlen found.
 void printDemodBuff(void) {
     int len = DemodBufferLen;
     if (len < 1) {
@@ -375,7 +376,7 @@ void printDemodBuff(void) {
     }
     if (len > 512) len = 512;
 
-    PrintAndLogEx(NORMAL, "%s", sprint_bin_break(DemodBuffer, len, 16));
+    PrintAndLogEx(NORMAL, "%s", sprint_bin_break(DemodBuffer, len, 32));
 }
 
 int CmdPrintDemodBuff(const char *Cmd) {
@@ -417,18 +418,16 @@ int CmdPrintDemodBuff(const char *Cmd) {
         return 0;
     }
     length = (length > (DemodBufferLen - offset)) ? DemodBufferLen - offset : length;
-    int numBits = (length) & 0x00FFC; //make sure we don't exceed our string
 
     if (hexMode) {
         char *buf = (char *)(DemodBuffer + offset);
-        numBits = (numBits > sizeof(hex)) ? sizeof(hex) : numBits;
-        numBits = binarraytohex(hex, buf, numBits);
+        int numBits = binarraytohex(hex, sizeof(hex), buf, length);
         if (numBits == 0) {
             return 0;
         }
         PrintAndLogEx(NORMAL, "DemodBuffer: %s", hex);
     } else {
-        PrintAndLogEx(NORMAL, "DemodBuffer:\n%s", sprint_bin_break(DemodBuffer + offset, numBits, 16));
+        PrintAndLogEx(NORMAL, "DemodBuffer:\n%s", sprint_bin_break(DemodBuffer + offset, length, 32));
     }
     return 1;
 }
@@ -460,7 +459,7 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
     uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
 
     sscanf(Cmd, "%i %i %i %i %c", &clk, &invert, &maxErr, &maxLen, &amp);
-
+    
     if (!maxLen) maxLen = BIGBUF_SIZE;
 
     if (invert != 0 && invert != 1) {
@@ -475,29 +474,35 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
 
     size_t BitLen = getFromGraphBuf(bits);
 
-    PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) Bitlen from grphbuff: %d", BitLen);
+    PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) #samples from graphbuff: %d", BitLen);
 
     if (BitLen < 255) return 0;
 
     if (maxLen < BitLen && maxLen != 0) BitLen = maxLen;
 
     int foundclk = 0;
-    //amp before ST check
-    if (amp == 'a')
+
+    //amplify signal before ST check
+    if (amp == 'a') {
         askAmp(bits, BitLen);
-
-    bool st = false;
+    }
+        
     size_t ststart = 0, stend = 0;
-    if (*stCheck)
-        st = DetectST(bits, &BitLen, &foundclk, &ststart, &stend);
+//    if (*stCheck)
+    bool st = DetectST(bits, &BitLen, &foundclk, &ststart, &stend);
 
+    if ( clk == 0 ) {
+        if ( foundclk == 32 || foundclk == 64 ) {
+            clk = foundclk;
+        }
+    }
+    
     if (st) {
         *stCheck = st;
-        clk = (clk == 0) ? foundclk : clk;
         CursorCPos = ststart;
         CursorDPos = stend;
-        if (verbose || g_debugMode)
-            PrintAndLogEx(NORMAL, "Found Sequence Terminator - First one is shown by orange and blue graph markers");
+        if (verbose)
+            PrintAndLogEx(DEBUG, "Found Sequence Terminator - First one is shown by orange / blue graph markers");
     }
 
     int startIdx = 0;
@@ -513,20 +518,20 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
         return 0;
     }
 
-    if (verbose || g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) Using clock:%d, invert:%d, bits found:%d", clk, invert, BitLen);
+    if (verbose) PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) Using clock:%d, invert:%d, bits found:%d", clk, invert, BitLen);
 
     //output
     setDemodBuf(bits, BitLen, 0);
     setClockGrid(clk, startIdx);
 
-    if (verbose || g_debugMode) {
+    if (verbose) {
         if (errCnt > 0)
-            PrintAndLogEx(NORMAL, "# Errors during Demoding (shown as 7 in bit stream): %d", errCnt);
+            PrintAndLogEx(DEBUG, "# Errors during Demoding (shown as 7 in bit stream): %d", errCnt);
         if (askType)
-            PrintAndLogEx(NORMAL, "ASK/Manchester - Clock: %d - Decoded bitstream:", clk);
+            PrintAndLogEx(DEBUG, "ASK/Manchester - Clock: %d - Decoded bitstream:", clk);
         else
-            PrintAndLogEx(NORMAL, "ASK/Raw - Clock: %d - Decoded bitstream:", clk);
-        // Now output the bitstream to the scrollback by line of 16 bits
+            PrintAndLogEx(DEBUG, "ASK/Raw - Clock: %d - Decoded bitstream:", clk);
+
         printDemodBuff();
     }
     uint64_t lo = 0;
@@ -595,7 +600,7 @@ int Cmdmandecoderaw(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "Manchester Decoded - # errors:%d - data:", errCnt);
-    PrintAndLogEx(NORMAL, "%s", sprint_bin_break(bits, size, 16));
+    PrintAndLogEx(NORMAL, "%s", sprint_bin_break(bits, size, 32));
 
     if (errCnt == 0) {
         uint64_t id = 0;
@@ -610,21 +615,24 @@ int Cmdmandecoderaw(const char *Cmd) {
     return 1;
 }
 
-//by marshmellow
-//biphase decode
-//take 01 or 10 = 0 and 11 or 00 = 1
-//takes 2 arguments "offset" default = 0 if 1 it will shift the decode by one bit
-// and "invert" default = 0 if 1 it will invert output
-//  the argument offset allows us to manually shift if the output is incorrect - [EDIT: now auto detects]
+/*
+ *  @author marshmellow
+ * biphase decode
+ * decodes 01 or 10 -> ZERO 
+ *         11 or 00 -> ONE
+ * param offset adjust start position
+ * param invert invert output
+ * param masxErr maximum tolerated errors 
+ */
 int CmdBiphaseDecodeRaw(const char *Cmd) {
     size_t size = 0;
     int offset = 0, invert = 0, maxErr = 20, errCnt = 0;
     char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) > 3 || cmdp == 'h') return usage_data_biphaserawdecode();
+    if (strlen(Cmd) > 5 || cmdp == 'h') return usage_data_biphaserawdecode();
 
     sscanf(Cmd, "%i %i %i", &offset, &invert, &maxErr);
     if (DemodBufferLen == 0) {
-        PrintAndLogEx(NORMAL, "DemodBuffer Empty - run 'data rawdemod ar' first");
+        PrintAndLogEx(WARNING, "DemodBuffer Empty - run " _YELLOW_("'data rawdemod ar'")" first");
         return 0;
     }
 
@@ -643,10 +651,10 @@ int CmdBiphaseDecodeRaw(const char *Cmd) {
     }
 
     if (errCnt > 0)
-        PrintAndLogEx(WARNING, "# Errors found during Demod (shown as 7 in bit stream): %d", errCnt);
+        PrintAndLogEx(WARNING, "# Errors found during Demod (shown as " _YELLOW_("7")" in bit stream): %d", errCnt);
 
     PrintAndLogEx(NORMAL, "Biphase Decoded using offset: %d - # invert:%d - data:", offset, invert);
-    PrintAndLogEx(NORMAL, "%s", sprint_bin_break(bits, size, 16));
+    PrintAndLogEx(NORMAL, "%s", sprint_bin_break(bits, size, 32));
 
     //remove first bit from raw demod
     if (offset)
@@ -660,7 +668,7 @@ int CmdBiphaseDecodeRaw(const char *Cmd) {
 // - ASK Demod then Biphase decode GraphBuffer samples
 int ASKbiphaseDemod(const char *Cmd, bool verbose) {
     //ask raw demod GraphBuffer first
-    int offset = 0, clk = 0, invert = 0, maxErr = 0;
+    int offset = 0, clk = 0, invert = 0, maxErr = 100;
     sscanf(Cmd, "%i %i %i %i", &offset, &clk, &invert, &maxErr);
 
     uint8_t BitStream[MAX_DEMOD_BUF_LEN];
@@ -716,7 +724,7 @@ int AutoCorrelate(const int *in, int *out, size_t len, int window, bool SaveGrph
     // sanity check
     if (window > len) window = len;
 
-    if (verbose) PrintAndLogEx(INFO, "performing %d correlations", GraphTraceLen - window);
+    if (verbose) PrintAndLogEx(INFO, "performing " _YELLOW_("%d")" correlations", GraphTraceLen - window);
 
     //test
     double autocv = 0.0;    // Autocovariance value
@@ -769,10 +777,11 @@ int AutoCorrelate(const int *in, int *out, size_t len, int window, bool SaveGrph
     }
 
     int foo = ABS(hi - hi_1);
-    int bar = (int)((int)((hi + hi_1) / 2) * 0.03);
+    int bar = (int)((int)((hi + hi_1) / 2) * 0.04);
+
     if (verbose && foo < bar) {
         distance = idx_1 - idx;
-        PrintAndLogEx(SUCCESS, "possible 3% visible correlation %4d samples", distance);
+        PrintAndLogEx(SUCCESS, "possible 4% visible correlation %4d samples", distance);
     } else if (verbose && (correlation > 1)) {
         PrintAndLogEx(SUCCESS, "possible correlation %4d samples", correlation);
     } else {
@@ -1069,7 +1078,7 @@ int FSKrawDemod(const char *Cmd, bool verbose) {
         }
         return 1;
     } else {
-        if (g_debugMode) PrintAndLogEx(NORMAL, "no FSK data found");
+        PrintAndLogEx(DEBUG, "no FSK data found");
     }
     return 0;
 }
@@ -1089,7 +1098,9 @@ int CmdFSKrawdemod(const char *Cmd) {
 //attempt to psk1 demod graph buffer
 int PSKDemod(const char *Cmd, bool verbose) {
     int invert = 0, clk = 0, maxErr = 100;
+    
     sscanf(Cmd, "%i %i %i", &clk, &invert, &maxErr);
+   
     if (clk == 1) {
         invert = 1;
         clk = 0;
@@ -1102,33 +1113,34 @@ int PSKDemod(const char *Cmd, bool verbose) {
     if (getSignalProperties()->isnoise)
         return 0;
 
-    uint8_t BitStream[MAX_GRAPH_TRACE_LEN] = {0};
-    size_t BitLen = getFromGraphBuf(BitStream);
-    if (BitLen == 0) return 0;
-    int errCnt = 0;
+    uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
+    size_t bitlen = getFromGraphBuf(bits);
+    if (bitlen == 0) 
+        return 0;
+    
     int startIdx = 0;
-    errCnt = pskRawDemod_ext(BitStream, &BitLen, &clk, &invert, &startIdx);
+    int errCnt = pskRawDemod_ext(bits, &bitlen, &clk, &invert, &startIdx);
     if (errCnt > maxErr) {
-        if (g_debugMode || verbose) PrintAndLogEx(DEBUG, "DEBUG: (PSKdemod) Too many errors found, clk: %d, invert: %d, numbits: %d, errCnt: %d", clk, invert, BitLen, errCnt);
+        if (g_debugMode || verbose) PrintAndLogEx(DEBUG, "DEBUG: (PSKdemod) Too many errors found, clk: %d, invert: %d, numbits: %d, errCnt: %d", clk, invert, bitlen, errCnt);
         return 0;
     }
-    if (errCnt < 0 || BitLen < 16) { //throw away static - allow 1 and -1 (in case of threshold command first)
-        if (g_debugMode || verbose) PrintAndLogEx(DEBUG, "DEBUG: (PSKdemod) no data found, clk: %d, invert: %d, numbits: %d, errCnt: %d", clk, invert, BitLen, errCnt);
+    if (errCnt < 0 || bitlen < 16) { //throw away static - allow 1 and -1 (in case of threshold command first)
+        if (g_debugMode || verbose) PrintAndLogEx(DEBUG, "DEBUG: (PSKdemod) no data found, clk: %d, invert: %d, numbits: %d, errCnt: %d", clk, invert, bitlen, errCnt);
         return 0;
     }
     if (verbose || g_debugMode) {
-        PrintAndLogEx(DEBUG, "DEBUG: (PSKdemod) Using Clock:%d, invert:%d, Bits Found:%d", clk, invert, BitLen);
+        PrintAndLogEx(DEBUG, "DEBUG: (PSKdemod) Using Clock:%d, invert:%d, Bits Found:%d", clk, invert, bitlen);
         if (errCnt > 0) {
             PrintAndLogEx(DEBUG, "DEBUG: (PSKdemod) errors during Demoding (shown as 7 in bit stream): %d", errCnt);
         }
     }
     //prime demod buffer for output
-    setDemodBuf(BitStream, BitLen, 0);
+    setDemodBuf(bits, bitlen, 0);
     setClockGrid(clk, startIdx);
     return 1;
 }
 
-int CmdPSKIdteck(const char *Cmd) {
+int CmdIdteckDemod(const char *Cmd) {
 
     if (!PSKDemod("", false)) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck PSKDemod failed");
@@ -1308,7 +1320,10 @@ int CmdRawDemod(const char *Cmd) {
 void setClockGrid(int clk, int offset) {
     g_DemodStartIdx = offset;
     g_DemodClock = clk;
-    PrintAndLogEx(DEBUG, "DEBUG: (setClockGrid) demodoffset %d, clk %d", offset, clk);
+    if ( clk == 0 && offset == 0) 
+        PrintAndLogEx(DEBUG, "DEBUG: (setClockGrid) clear settings");
+    else
+        PrintAndLogEx(DEBUG, "DEBUG: (setClockGrid) demodoffset %d, clk %d", offset, clk);
 
     if (offset > clk) offset %= clk;
     if (offset < 0) offset += clk;
@@ -1607,8 +1622,7 @@ int CmdLoad(const char *Cmd) {
             break;
     }
 
-    if (f)
-        fclose(f);
+    fclose(f);
 
     PrintAndLogEx(SUCCESS, "loaded %d samples", GraphTraceLen);
 
@@ -1865,11 +1879,9 @@ int Cmdhex2bin(const char *Cmd) {
         else
             continue;
 
-        //Uses printf instead of PrintAndLog since the latter
-        // adds linebreaks to each printout - this way was more convenient since we don't have to
-        // allocate a string and write to that first...
+        //Uses printf instead of PrintAndLog since the latter adds linebreaks to each printout
         for (int i = 0 ; i < 4 ; ++i)
-            PrintAndLogEx(NORMAL, "%d", (x >> (3 - i)) & 1);
+            printf("%d", (x >> (3 - i)) & 1);
     }
     PrintAndLogEx(NORMAL, "\n");
     return 0;

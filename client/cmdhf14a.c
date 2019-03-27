@@ -524,7 +524,7 @@ int CmdHF14AInfo(const char *Cmd) {
                           (tb1 ? "" : " NOT"),
                           (tc1 ? "" : " NOT"),
                           fsci,
-                          fsci < sizeof(atsFSC) ? atsFSC[fsci] : -1
+                          fsci < sizeof(atsFSC)/sizeof(atsFSC[0]) ? atsFSC[fsci] : -1
                          );
         }
         pos = 2;
@@ -541,7 +541,11 @@ int CmdHF14AInfo(const char *Cmd) {
             if (strlen(dr) != 0) dr[strlen(dr) - 2] = '\0';
             PrintAndLogEx(NORMAL, "       - TA1 : different divisors are%s supported, "
                           "DR: [%s], DS: [%s]",
-                          (card.ats[pos] & 0x80 ? " NOT" : ""), dr, ds);
+                          ((card.ats[pos] & 0x80) ? " NOT" : ""),
+                          dr,
+                          ds
+                  );
+                  
             pos++;
         }
         if (tb1) {
@@ -803,19 +807,19 @@ int CmdHF14ASniff(const char *Cmd) {
         if (ctmp == 'c') param |= 0x01;
         if (ctmp == 'r') param |= 0x02;
     }
-    UsbCommand c = {CMD_SNOOP_ISO_14443a, {param, 0, 0}};
+    UsbCommand c = {CMD_SNIFF_ISO_14443a, {param, 0, 0}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
 }
 
 int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
-    static bool responseNum = false;
+    static uint8_t responseNum = 0;
     uint16_t cmdc = 0;
     *dataoutlen = 0;
 
     if (activateField) {
-        responseNum = false;
+        responseNum = 1;
         UsbCommand resp;
 
         // Anticollision + SELECT card
@@ -848,7 +852,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
                 return 1;
             }
 
-            if (resp.arg[0] <= 0) { // ats_len
+            if (resp.arg[0] == 0) { // ats_len
                 PrintAndLogEx(ERR, "Can't get ATS.");
                 return 1;
             }
@@ -859,7 +863,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
         cmdc |= ISO14A_NO_DISCONNECT;
 
     UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_APPEND_CRC | cmdc, (datainlen & 0xFFFF) + 2, 0}};
-    uint8_t header[] = {0x0a | responseNum, 0x00};
+    uint8_t header[] = { 0x0a | responseNum, 0x00};
     responseNum ^= 1;
     memcpy(c.d.asBytes, header, 2);
     memcpy(&c.d.asBytes[2], datain, datainlen);
@@ -898,7 +902,6 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
             PrintAndLogEx(ERR, "ISO 14443A CRC error.");
             return 3;
         }
-
 
     } else {
         PrintAndLogEx(ERR, "Reply timeout.");
@@ -948,7 +951,7 @@ int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
             return 1;
         }
 
-        if (resp.arg[0] <= 0) { // ats_len
+        if (resp.arg[0] == 0) { // ats_len
             PrintAndLogEx(ERR, "Can't get ATS.");
             return 1;
         }
@@ -956,7 +959,7 @@ int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
         // get frame length from ATS in data field
         if (resp.arg[0] > 1) {
             uint8_t fsci = resp.d.asBytes[1] & 0x0f;
-            if (fsci < sizeof(atsFSC))
+            if (fsci < sizeof(atsFSC)/sizeof(atsFSC[0]))
                 frameLength = atsFSC[fsci];
         }
     } else {
@@ -964,7 +967,7 @@ int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
         iso14a_card_select_t *vcard = (iso14a_card_select_t *) resp.d.asBytes;
         if (vcard->ats_len > 1) {
             uint8_t fsci = vcard->ats[1] & 0x0f;
-            if (fsci < sizeof(atsFSC))
+            if (fsci < sizeof(atsFSC)/sizeof(atsFSC[0]))
                 frameLength = atsFSC[fsci];
         }
 
@@ -997,7 +1000,10 @@ int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool activa
     // here length USB_CMD_DATA_SIZE=512
     // timeout must be authomatically set by "get ATS"
     UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_APDU | ISO14A_NO_DISCONNECT | cmdc, (datainlen & 0xFFFF), 0}};
-    memcpy(c.d.asBytes, datain, datainlen);
+    
+    if ( datain )
+        memcpy(c.d.asBytes, datain, datainlen);
+    
     SendCommand(&c);
 
     uint8_t *recv;
@@ -1132,7 +1138,7 @@ int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool lea
 }
 
 // ISO14443-4. 7. Half-duplex block transmission protocol
-int CmdHF14AAPDU(const char *cmd) {
+int CmdHF14AAPDU(const char *Cmd) {
     uint8_t data[USB_CMD_DATA_SIZE];
     int datalen = 0;
     bool activateField = false;
@@ -1151,7 +1157,7 @@ int CmdHF14AAPDU(const char *cmd) {
         arg_strx1(NULL, NULL,      "<APDU (hex)>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(cmd, argtable, false);
+    CLIExecWithReturn(Cmd, argtable, false);
 
     activateField = arg_get_lit(1);
     leaveSignalON = arg_get_lit(2);
@@ -1179,7 +1185,7 @@ int CmdHF14AAPDU(const char *cmd) {
     return 0;
 }
 
-int CmdHF14ACmdRaw(const char *cmd) {
+int CmdHF14ACmdRaw(const char *Cmd) {
     UsbCommand c = {CMD_READER_ISO_14443a, {0, 0, 0}};
     bool reply = 1;
     bool crc = false;
@@ -1197,15 +1203,15 @@ int CmdHF14ACmdRaw(const char *cmd) {
     uint16_t datalen = 0;
     uint32_t temp;
 
-    if (strlen(cmd) < 2) return usage_hf_14a_raw();
+    if (strlen(Cmd) < 2) return usage_hf_14a_raw();
 
     // strip
-    while (*cmd == ' ' || *cmd == '\t') cmd++;
+    while (*Cmd == ' ' || *Cmd == '\t') Cmd++;
 
-    while (cmd[i] != '\0') {
-        if (cmd[i] == ' ' || cmd[i] == '\t') { i++; continue; }
-        if (cmd[i] == '-') {
-            switch (cmd[i + 1]) {
+    while (Cmd[i] != '\0') {
+        if (Cmd[i] == ' ' || Cmd[i] == '\t') { i++; continue; }
+        if (Cmd[i] == '-') {
+            switch (Cmd[i + 1]) {
                 case 'H':
                 case 'h':
                     return usage_hf_14a_raw();
@@ -1225,18 +1231,18 @@ int CmdHF14ACmdRaw(const char *cmd) {
                     active_select = true;
                     break;
                 case 'b':
-                    sscanf(cmd + i + 2, "%d", &temp);
+                    sscanf(Cmd + i + 2, "%d", &temp);
                     numbits = temp & 0xFFFF;
                     i += 3;
-                    while (cmd[i] != ' ' && cmd[i] != '\0') { i++; }
+                    while (Cmd[i] != ' ' && Cmd[i] != '\0') { i++; }
                     i -= 2;
                     break;
                 case 't':
                     bTimeout = true;
-                    sscanf(cmd + i + 2, "%d", &temp);
+                    sscanf(Cmd + i + 2, "%d", &temp);
                     timeout = temp;
                     i += 3;
-                    while (cmd[i] != ' ' && cmd[i] != '\0') { i++; }
+                    while (Cmd[i] != ' ' && Cmd[i] != '\0') { i++; }
                     i -= 2;
                     break;
                 case 'T':
@@ -1251,11 +1257,11 @@ int CmdHF14ACmdRaw(const char *cmd) {
             i += 2;
             continue;
         }
-        if ((cmd[i] >= '0' && cmd[i] <= '9') ||
-                (cmd[i] >= 'a' && cmd[i] <= 'f') ||
-                (cmd[i] >= 'A' && cmd[i] <= 'F')) {
+        if ((Cmd[i] >= '0' && Cmd[i] <= '9') ||
+                (Cmd[i] >= 'a' && Cmd[i] <= 'f') ||
+                (Cmd[i] >= 'A' && Cmd[i] <= 'F')) {
             buf[strlen(buf) + 1] = 0;
-            buf[strlen(buf)] = cmd[i];
+            buf[strlen(buf)] = Cmd[i];
             i++;
 
             if (strlen(buf) >= 2) {
@@ -1363,7 +1369,7 @@ static int waitCmd(uint8_t iSelect) {
     return 0;
 }
 
-int CmdHF14AAntiFuzz(const char *cmd) {
+int CmdHF14AAntiFuzz(const char *Cmd) {
 
     CLIParserInit("hf 14a antifuzz",
                   "Tries to fuzz the ISO14443a anticollision phase",
@@ -1377,7 +1383,7 @@ int CmdHF14AAntiFuzz(const char *cmd) {
         arg_lit0(NULL,  "10",  "10 byte uid"),
         arg_param_end
     };
-    CLIExecWithReturn(cmd, argtable, false);
+    CLIExecWithReturn(Cmd, argtable, false);
 
     uint8_t arg0 = FLAG_4B_UID_IN_DATA;
     if (arg_get_lit(2))
@@ -1392,7 +1398,7 @@ int CmdHF14AAntiFuzz(const char *cmd) {
     return 0;
 }
 
-int CmdHF14AChaining(const char *cmd) {
+int CmdHF14AChaining(const char *Cmd) {
 
     CLIParserInit("hf 14a chaining",
                   "Enable/Disable ISO14443a input chaining. Maximum input length goes from ATS.",
@@ -1405,7 +1411,7 @@ int CmdHF14AChaining(const char *cmd) {
         arg_str0(NULL, NULL,      "<enable/disable or 0/1>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(cmd, argtable, true);
+    CLIExecWithReturn(Cmd, argtable, true);
 
     struct arg_str *str = arg_get_str(1);
     int len = arg_get_str_len(1);

@@ -70,8 +70,8 @@ int usage_lf_config(void) {
     PrintAndLogEx(NORMAL, "                    a resolution of 4 bits per sample.");
     PrintAndLogEx(NORMAL, "      lf read");
     PrintAndLogEx(NORMAL, "                    Performs a read (active field)");
-    PrintAndLogEx(NORMAL, "      lf snoop");
-    PrintAndLogEx(NORMAL, "                    Performs a snoop (no active field)");
+    PrintAndLogEx(NORMAL, "      lf sniff");
+    PrintAndLogEx(NORMAL, "                    Performs a sniff (no active field)");
     return 0;
 }
 int usage_lf_simfsk(void) {
@@ -216,7 +216,7 @@ int CmdFlexdemod(const char *Cmd) {
     }
 
     if (start == size - LONG_WAIT) {
-		PrintAndLogEx(WARNING, "nothing to wait for");
+        PrintAndLogEx(WARNING, "nothing to wait for");
         return 0;
     }
 
@@ -389,7 +389,7 @@ int CmdLFSniff(const char *Cmd) {
     uint8_t cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_lf_sniff();
 
-    UsbCommand c = {CMD_LF_SNOOP_RAW_ADC_SAMPLES, {0, 0, 0}};
+    UsbCommand c = {CMD_LF_SNIFF_RAW_ADC_SAMPLES, {0, 0, 0}};
     clearCommandBuffer();
     SendCommand(&c);
     WaitForResponse(CMD_ACK, NULL);
@@ -471,7 +471,7 @@ int CmdLFfskSim(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 's':
-                separator = 1;
+                separator = true;
                 cmdp++;
                 break;
             case 'd':
@@ -519,7 +519,7 @@ int CmdLFfskSim(const char *Cmd) {
 
     uint16_t arg1, arg2;
     arg1 = fcHigh << 8 | fcLow;
-    arg2 = separator << 8 | clk;
+    arg2 = (separator << 8) | clk;
     size_t size = DemodBufferLen;
     if (size > USB_CMD_DATA_SIZE) {
         PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %d - max: %d", size, USB_CMD_DATA_SIZE);
@@ -707,7 +707,7 @@ int CmdLFpskSim(const char *Cmd) {
         setDemodBuf(data, dataLen, 0);
     }
 
-    if (clk <= 0) clk = 32;
+    if (clk == 0) clk = 32;
 
     if (carrier != 2 && carrier != 4 && carrier != 8)
         carrier = 2;
@@ -839,12 +839,12 @@ bool CheckChipType(bool getDeviceData) {
 
     //check for t55xx chip...
     if (tryDetectP1(true)) {
-        PrintAndLogEx(SUCCESS, "\nChipset detection : " _GREEN_("Atmel T55xx") " found");        
+        PrintAndLogEx(SUCCESS, "\nChipset detection : " _GREEN_("Atmel T55xx") " found");
         PrintAndLogEx(SUCCESS, "Try " _YELLOW_("`lf t55xx`")" commands");
         retval = true;
         goto out;
     }
-    
+
 out:
     save_restoreGB(GRAPH_RESTORE);
     save_restoreDB(GRAPH_RESTORE);
@@ -884,24 +884,24 @@ int CmdLFfind(const char *Cmd) {
         // The improved noise detection will find Cotag.
         if (getSignalProperties()->isnoise) {
 
-            PrintAndLogEx(INFO, "Signal looks just like noise. Looking for Hitag signal now.");
-
-            // 26 === RHT2F_UID_ONLY
             if (CmdLFHitagReader("26") == 0) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Hitag") " found!"); return 1;}
             if (CmdCOTAGRead("") > 0) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("COTAG ID") " found!"); return 1;}
 
-            PrintAndLogEx(FAILED, "\nNo data found! - maybe not an LF tag?");
+            PrintAndLogEx(FAILED, "\n" _YELLOW_("No data found!") " - Signal looks like noise. Maybe not an LF tag?");
             return 0;
         }
     }
 
     if (EM4x50Read("", false))  { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("EM4x50 ID") " found!"); return 1;}
+
+    if (CmdHIDDemod(""))        { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("HID Prox ID") " found!"); goto out;}
     if (CmdAWIDDemod(""))       { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("AWID ID") " found!"); goto out;}
+    if (CmdParadoxDemod(""))    { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Paradox ID") " found!"); goto out;}
+
     if (CmdEM410xDemod(""))     { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("EM410x ID") " found!"); goto out;}
     if (CmdFdxDemod(""))        { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("FDX-B ID") " found!"); goto out;}
     if (CmdGuardDemod(""))      { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Guardall G-Prox II ID") " found!"); goto out; }
-    if (CmdHIDDemod(""))        { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("HID Prox ID") " found!"); goto out;}
-    if (CmdPSKIdteck(""))       { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Idteck ID") " found!"); goto out;}
+    if (CmdIdteckDemod(""))     { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Idteck ID") " found!"); goto out;}
     if (CmdIndalaDemod(""))     { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Indala ID") " found!");  goto out;}
     if (CmdIOProxDemod(""))     { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("IO Prox ID") " found!"); goto out;}
     if (CmdJablotronDemod(""))  { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Jablotron ID") " found!"); goto out;}
@@ -910,7 +910,7 @@ int CmdLFfind(const char *Cmd) {
     if (CmdNoralsyDemod(""))    { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Noralsy ID") " found!"); goto out;}
     if (CmdKeriDemod(""))       { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("KERI ID") " found!"); goto out;}
     if (CmdPacDemod(""))        { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("PAC/Stanley ID") " found!"); goto out;}
-    if (CmdParadoxDemod(""))    { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Paradox ID") " found!"); goto out;}
+
     if (CmdPrescoDemod(""))     { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Presco ID") " found!"); goto out;}
     if (CmdPyramidDemod(""))    { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Pyramid ID") " found!"); goto out;}
     if (CmdSecurakeyDemod(""))  { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Securakey ID") " found!"); goto out;}
@@ -945,19 +945,19 @@ int CmdLFfind(const char *Cmd) {
         bool st = true;
         if (ASKDemod_ext("0 0 0", true, false, 1, &st)) {
             PrintAndLogEx(NORMAL, "\nUnknown ASK Modulated and Manchester encoded Tag found!");
-            PrintAndLogEx(NORMAL, "if it does not look right it could instead be ASK/Biphase - try " _YELLOW_("'data rawdemod ab'") );
+            PrintAndLogEx(NORMAL, "if it does not look right it could instead be ASK/Biphase - try " _YELLOW_("'data rawdemod ab'"));
             goto out;
         }
 
         if (CmdPSK1rawDemod("")) {
             PrintAndLogEx(NORMAL, "Possible unknown PSK1 Modulated Tag found above!");
-            PrintAndLogEx(NORMAL, "    Could also be PSK2 - try " _YELLOW_("'data rawdemod p2'") );
+            PrintAndLogEx(NORMAL, "    Could also be PSK2 - try " _YELLOW_("'data rawdemod p2'"));
             PrintAndLogEx(NORMAL, "    Could also be PSK3 - [currently not supported]");
-            PrintAndLogEx(NORMAL, "    Could also be  NRZ - try " _YELLOW_("'data rawdemod nr") );
+            PrintAndLogEx(NORMAL, "    Could also be  NRZ - try " _YELLOW_("'data rawdemod nr"));
             goto out;
         }
 
-        PrintAndLogEx(FAILED, _RED_("\nNo data found!") );
+        PrintAndLogEx(FAILED, _RED_("\nNo data found!"));
     }
 out:
     // identify chipset

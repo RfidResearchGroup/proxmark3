@@ -315,7 +315,7 @@ int exec_crypto_test(bool verbose) {
         unsigned int kl = keylengths[i];
         ret = test_genkey(kl, message, kl / 8, verbose);
         if (ret) {
-            fprintf(stderr, "Crypto generate key[%d] test: failed\n", kl);
+            fprintf(stderr, "Crypto generate key[%u] test: failed\n", kl);
             return ret;
         }
     }

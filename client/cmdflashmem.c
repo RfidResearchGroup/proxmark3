@@ -245,7 +245,7 @@ int CmdFlashMemLoad(const char *Cmd) {
             break;
         default:
 
-            res = loadFile(filename, "bin", data, &datalen);
+            res = loadFile(filename, "bin", data, FLASH_MEM_MAX_SIZE, &datalen);
             //int res = loadFileEML( filename, "eml", data, &datalen);
             if (res) {
                 free(data);
@@ -260,7 +260,13 @@ int CmdFlashMemLoad(const char *Cmd) {
             break;
     }
 
-    data = realloc(data, datalen);
+    uint8_t *newdata = realloc(data, datalen);
+    if (newdata == NULL) {
+        free(data);
+        return 1;
+    } else {
+        data = newdata;
+    }
 
     //Send to device
     uint32_t bytes_sent = 0;

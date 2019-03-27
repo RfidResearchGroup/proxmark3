@@ -56,21 +56,39 @@ recovery/%: FORCE
 	$(MAKE) -C recovery $(patsubst recovery/%,%,$@)
 FORCE: # Dummy target to force remake in the subdirectories, even if files exist (this Makefile doesn't know about the prerequisites)
 
-.PHONY: all clean help _test flash-bootrom flash-os flash-all style FORCE
+.PHONY: all clean help _test bootrom flash-bootrom os flash-os flash-all recovery client mfkey nounce2key style FORCE
 
 help:
-	@echo Multi-OS Makefile, you are running on $(DETECTED_OS)
-	@echo Possible targets:
-	@echo + all           - Make bootrom, armsrc and the OS-specific host directory
-	@echo + client        - Make only the OS-specific host directory
-	@echo + flash-bootrom - Make bootrom and flash it
-	@echo + flash-os      - Make armsrc and flash os \(includes fpga\)
-	@echo + flash-all     - Make bootrom and armsrc and flash bootrom and os image
-	@echo + mfkey         - Make tools/mfkey
-	@echo + nounce2key    - Make tools/nounce2key
-	@echo + clean         - Clean in bootrom, armsrc and the OS-specific host directory
+	@echo "Multi-OS Makefile"
+	@echo
+	@echo "Possible targets:"
+	@echo "+ all           - Make all targets: bootrom, armsrc and OS-specific host tools"
+	@echo "+ clean         - Clean in all targets"
+	@echo
+	@echo "+ bootrom       - Make bootrom"
+	@echo "+ os            - Make armsrc \(includes fpga\)"
+	@echo "+ flash-bootrom - Make bootrom and flash it"
+	@echo "+ flash-os      - Make armsrc and flash os image \(includes fpga\)"
+	@echo "+ flash-all     - Make bootrom and armsrc and flash bootrom and os image"
+	@echo "+ recovery      - Make bootrom and armsrc images for JTAG flashing"
+	@echo
+	@echo "+ client        - Make only the OS-specific host client"
+	@echo "+ mfkey         - Make tools/mfkey"
+	@echo "+ nounce2key    - Make tools/nounce2key"
+	@echo
+	@echo "Possible platforms: try \"make PLATFORM=\" for more info, default is PM3RDV4"
 
 client: client/all
+
+bootrom: bootrom/all
+
+os: armsrc/all
+
+recovery: recovery/all
+
+mfkey: mfkey/all
+
+nonce2key: nonce2key/all
 
 flash-bootrom: bootrom/obj/bootrom.elf $(FLASH_TOOL)
 	$(FLASH_TOOL) $(FLASH_PORT) -b $(subst /,$(PATHSEP),$<)
@@ -106,8 +124,14 @@ endif
 print-%: ; @echo $* = $($*)
 
 style:
+	# Make sure astyle is installed
 	@which astyle >/dev/null || ( echo "Please install 'astyle' package first" ; exit 1 )
-	find . \( -name "*.[ch]" -or -name "*.cpp" -or -name "*.lua" -or -name "Makefile" \) -exec perl -pi -e 's/[ \t\r]+$$//' {} \;
+	# Remove spaces & tabs at EOL, add LF at EOF if needed on *.c, *.h, *.cpp. *.lua, *.py, *.pl, Makefile
+	find . \( -name "*.[ch]" -or -name "*.cpp" -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "Makefile" \) \
+	    -exec perl -pi -e 's/[ \t\r]+$$//' {} \; \
+	    -exec sh -c "tail -c1 {} | xxd -p | tail -1 | grep -q -v 0a$$" \; \
+	    -exec sh -c "echo >> {}" \;
+	# Apply astyle on *.c, *.h, *.cpp
 	find . \( -name "*.[ch]" -or -name "*.cpp" \) -exec astyle --formatted --mode=c --suffix=none \
 	    --indent=spaces=4 --indent-switches --indent-preprocessor \
 	    --keep-one-line-blocks --max-instatement-indent=60 \

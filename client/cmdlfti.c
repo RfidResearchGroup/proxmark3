@@ -191,7 +191,7 @@ int CmdTIDemod(const char *Cmd) {
             bits[i] = '1';
             maxPos += highLen;
             // bitstream arrives lsb first so shift right
-            shift3 |= (1 << 31);
+            shift3 |= (1u << 31);
         } else {
             bits[i] = '.';
             maxPos += lowLen;
@@ -254,7 +254,7 @@ int CmdTIDemod(const char *Cmd) {
 
         //crc =  crc16_ccitt(message, sizeof(message);
 
-        char *crcStr = (crc == (shift2 & 0xFFFF)) ? "Passed" : "Failed";
+        char *crcStr = (crc == (shift2 & 0xFFFF)) ? _GREEN_("Passed") : _RED_("Failed");
 
         PrintAndLogEx(INFO, "Tag data = %08X%08X  [Crc %04X %s]", shift1, shift0, crc, crcStr);
 

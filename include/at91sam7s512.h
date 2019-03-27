@@ -375,7 +375,7 @@ typedef struct _AT91S_DBGU {
 #define AT91C_US_TXBUFE       (0x1 << 11) // (DBGU) TXBUFE Interrupt
 #define AT91C_US_RXBUFF       (0x1 << 12) // (DBGU) RXBUFF Interrupt
 #define AT91C_US_COMM_TX      (0x1 << 30) // (DBGU) COMM_TX Interrupt
-#define AT91C_US_COMM_RX      (0x1 << 31) // (DBGU) COMM_RX Interrupt
+#define AT91C_US_COMM_RX      (0x1u << 31) // (DBGU) COMM_RX Interrupt
 // -------- DBGU_IDR : (DBGU Offset: 0xc) Debug Unit Interrupt Disable Register --------
 // -------- DBGU_IMR : (DBGU Offset: 0x10) Debug Unit Interrupt Mask Register --------
 // -------- DBGU_CSR : (DBGU Offset: 0x14) Debug Unit Channel Status Register --------
@@ -778,7 +778,7 @@ typedef struct _AT91S_EFC {
 #define AT91C_MC_LOCKS12      (0x1 << 28) // (EFC) Sector 12 Lock Status
 #define AT91C_MC_LOCKS13      (0x1 << 29) // (EFC) Sector 13 Lock Status
 #define AT91C_MC_LOCKS14      (0x1 << 30) // (EFC) Sector 14 Lock Status
-#define AT91C_MC_LOCKS15      (0x1 << 31) // (EFC) Sector 15 Lock Status
+#define AT91C_MC_LOCKS15      (0x1u << 31) // (EFC) Sector 15 Lock Status
 // -------- EFC_VR : (EFC Offset: 0xc) EFC version register --------
 #define AT91C_EFC_VERSION     (0xFFF <<  0) // (EFC) EFC version number
 #define AT91C_EFC_MFN         (0x7 << 16) // (EFC) EFC MFN
@@ -2198,7 +2198,7 @@ typedef struct _AT91S_UDP {
 #define AT91C_PIO_PA30       (1 << 30) // Pin Controlled by PA30
 #define AT91C_PA30_IRQ1     (AT91C_PIO_PA30) //  External Interrupt 1
 #define AT91C_PA30_NPCS2    (AT91C_PIO_PA30) //  SPI Peripheral Chip Select 2
-#define AT91C_PIO_PA31       (1 << 31) // Pin Controlled by PA31
+#define AT91C_PIO_PA31       (1u << 31) // Pin Controlled by PA31
 #define AT91C_PA31_NPCS1    (AT91C_PIO_PA31) //  SPI Peripheral Chip Select 1
 #define AT91C_PA31_PCK2     (AT91C_PIO_PA31) //  PMC Programmable Clock Output 2
 

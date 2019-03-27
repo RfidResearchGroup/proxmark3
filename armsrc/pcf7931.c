@@ -12,24 +12,18 @@ size_t DemodPCF7931(uint8_t **outBlocks) {
     if (GraphTraceLen > 18000)
         GraphTraceLen = 18000;
 
-    int i, j, lastval, bitidx, half_switch;
+    int i = 2, j, lastval, bitidx, half_switch;
     int clock = 64;
     int tolerance = clock / 8;
     int pmc, block_done;
     int lc, warnings = 0;
     size_t num_blocks = 0;
-    int lmin = 128, lmax = 128;
+    int lmin = 64, lmax = 192;
     uint8_t dir;
-    //clear read buffer
-    BigBuf_Clear_keep_EM();
 
+    BigBuf_Clear_keep_EM();
     LFSetupFPGAForADC(95, true);
     DoAcquisition_default(0, true);
-
-    lmin = 64;
-    lmax = 192;
-
-    i = 2;
 
     /* Find first local max/min */
     if (dest[1] > dest[0]) {
@@ -142,10 +136,16 @@ bool IsBlock0PCF7931(uint8_t *block) {
 
 bool IsBlock1PCF7931(uint8_t *block) {
     // assuming all RFU bits are set to 0
-    if (block[10] == 0 && block[11] == 0 && block[12] == 0 && block[13] == 0)
-        if ((block[14] & 0x7f) <= 9 && block[15] <= 9)
-            return true;
-
+    if (block[10] == 0
+        && block[11] == 0 
+        && block[12] == 0 
+        && block[13] == 0) {
+        
+        if ( (block[14] & 0x7f) <= 9 
+              && block[15] <= 9) {
+                return true;
+            }
+        }
     return false;
 }
 
@@ -153,7 +153,6 @@ void ReadPCF7931() {
     int found_blocks = 0; // successfully read blocks
     int max_blocks = 8;   // readable blocks
     uint8_t memory_blocks[8][17]; // PCF content
-
     uint8_t single_blocks[8][17]; // PFC blocks with unknown position
     int single_blocks_cnt = 0;
 

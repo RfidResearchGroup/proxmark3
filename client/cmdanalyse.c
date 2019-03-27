@@ -876,15 +876,19 @@ int CmdAnalyseNuid(const char *Cmd) {
     /* selftest1  UID 040D681AB52281  -> NUID 8F430FEF */
     /* selftest2  UID 04183F09321B85  -> NUID 4F505D7D */
     if (cmdp == 't') {
-        memcpy(uid, "\x04\x0d\x68\x1a\xb5\x22\x81", 7);
+        uint8_t uid_test1[] = {0x04, 0x0d, 0x68, 0x1a, 0xb5, 0x22, 0x81};
+        uint8_t nuid_test1[] = {0x8f, 0x43, 0x0f, 0xef};
+        uint8_t uid_test2[] = {0x04, 0x18, 0x3f, 0x09, 0x32, 0x1b, 0x85};
+        uint8_t nuid_test2[] = {0x4f, 0x50, 0x5d, 0x7d};
+        memcpy(uid, uid_test1, sizeof(uid));
         generate4bNUID(uid, nuid);
 
-        bool test1 = (0 == memcmp(nuid, "\x8f\x43\x0f\xef", 4));
+        bool test1 = (0 == memcmp(nuid, nuid_test1, sizeof(nuid)));
         PrintAndLogEx(SUCCESS, "Selftest1 %s\n",  test1 ? _GREEN_("OK") : _RED_("Fail"));
 
-        memcpy(uid, "\x04\x18\x3f\x09\x32\x1b\x85", 7);
+        memcpy(uid, uid_test2, sizeof(uid));
         generate4bNUID(uid, nuid);
-        bool test2 = (0 == memcmp(nuid, "\x4f\x50\x5d\x7d", 4));
+        bool test2 = (0 == memcmp(nuid, nuid_test2, sizeof(nuid)));
         PrintAndLogEx(SUCCESS, "Selftest2 %s\n", test2 ? _GREEN_("OK") : _RED_("Fail"));
         return 0;
     }

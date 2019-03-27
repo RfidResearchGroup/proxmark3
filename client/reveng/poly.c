@@ -1,10 +1,10 @@
 /* poly.c
- * Greg Cook, 26/Jul/2018
+ * Greg Cook, 23/Feb/2019
  */
 
 /* CRC RevEng: arbitrary-precision CRC calculator and algorithm finder
- * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018
- * Gregory Cook
+ * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018,
+ * 2019  Gregory Cook
  *
  * This file is part of CRC RevEng.
  *
@@ -988,7 +988,10 @@ pcrc(const poly_t message, const poly_t divisor, const poly_t init, const poly_t
         /* 0 <= ofs <= BMP_BIT, location of the first bit of the result */
         pshift(&result, result, 0UL, ofs, (init.length > max + divisor.length ? init.length - max - divisor.length : 0UL) + divisor.length + ofs, 0UL);
     }
-    psum(&result, xorout, 0UL);
+    
+    if ( result.bitmap != NULL )
+        psum(&result, xorout, 0UL);
+    
     return (result);
 }
 
@@ -1204,7 +1207,7 @@ prhex(char **spp, bmp_t bits, int flags, int bperhx) {
      * Set P_UPPER in flags to write A-F in uppercase.
      */
     static const char hex[] = "0123456789abcdef0123456789ABCDEF";
-    const int upper = (flags & P_UPPER ? 0x10 : 0);
+    const int upper = ((flags & P_UPPER) ? 0x10 : 0);
     while (bperhx > 0) {
         bperhx -= ((bperhx + 3) & 3) + 1;
         *(*spp)++ = hex[(bits >> bperhx & BMP_C(0xf)) | upper];

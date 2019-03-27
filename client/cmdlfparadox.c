@@ -147,8 +147,8 @@ int CmdParadoxRead(const char *Cmd) {
 
 int CmdParadoxSim(const char *Cmd) {
 
-    char cmdp = param_getchar(Cmd, 0);
-    if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_paradox_sim();
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_paradox_sim();
 
     uint32_t facilitycode = 0, cardnumber = 0, fc = 0, cn = 0;
 

@@ -84,10 +84,15 @@ void transform_D(uint8_t *ru) {
     uint32_t v1 = ((ru[3] << 24) | (ru[2] << 16) | (ru[1] << 8) | ru[0]) + c_D[p++];
     uint32_t v2 = ((ru[7] << 24) | (ru[6] << 16) | (ru[5] << 8) | ru[4]) + c_D[p++];
     for (i = 0; i < 12; i += 2) {
-        uint32_t t1 = ROTL(v1 ^ v2, v2 & 0x1F) + c_D[p++];
-        uint32_t t2 = ROTL(v2 ^ t1, t1 & 0x1F) + c_D[p++];
-        v1 = ROTL(t1 ^ t2, t2 & 0x1F) + c_D[p++];
-        v2 = ROTL(t2 ^ v1, v1 & 0x1F) + c_D[p++];
+        
+        uint32_t xor1 = v1 ^ v2;
+        uint32_t t1 = ROTL(xor1, v2 & 0x1F) + c_D[p++];
+        uint32_t xor2 = v2 ^ t1;       
+        uint32_t t2 = ROTL(xor2, t1 & 0x1F) + c_D[p++];        
+        uint32_t xor3 = t1 ^ t2;
+        uint32_t xor4 = t2 ^ v1;
+        v1 = ROTL(xor3, t2 & 0x1F) + c_D[p++];
+        v2 = ROTL(xor4, v1 & 0x1F) + c_D[p++];
     }
 
     //Re-use ru
@@ -317,6 +322,9 @@ static int ul_read(uint8_t page, uint8_t *response, uint16_t responseLength) {
 
 static int ul_comp_write(uint8_t page, uint8_t *data, uint8_t datalen) {
 
+    if (data == NULL) 
+        return -1;
+    
     uint8_t cmd[18];
     memset(cmd, 0x00, sizeof(cmd));
     datalen = (datalen > 16) ? 16 : datalen;
@@ -325,7 +333,7 @@ static int ul_comp_write(uint8_t page, uint8_t *data, uint8_t datalen) {
     cmd[1] = page;
     memcpy(cmd + 2, data, datalen);
 
-    uint8_t response[1] = {0xff};
+    uint8_t response[1] = {0xFF};
     ul_send_cmd_raw(cmd, 2 + datalen, response, sizeof(response));
     // ACK
     if (response[0] == 0x0a) return 0;
@@ -943,7 +951,7 @@ int CmdHF14AMfUInfo(const char *Cmd) {
     uint8_t pwd[4] = {0, 0, 0, 0};
     uint8_t *key = pwd;
     uint8_t pack[4] = {0, 0, 0, 0};
-    int len = 0;
+    int len;
     char tempStr[50];
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {

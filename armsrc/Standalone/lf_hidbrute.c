@@ -164,7 +164,7 @@ void RunMod() {
 
                 Dbprintf("[=] Proxbrute - starting decrementing card number");
 
-                while (cardnum >= 0) {
+                while (cardnum > 0) {
 
                     // Needed for exiting from proxbrute when button is pressed
                     if (BUTTON_PRESS()) {

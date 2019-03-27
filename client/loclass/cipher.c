@@ -87,9 +87,7 @@ bool B(State state) {
     bool x2 = state.b & 0x20;
     bool x3 = state.b & 0x10;
     bool x7 = state.b & 0x01;
-
     return x1 ^ x2 ^ x3 ^ x7;
-
 }
 
 

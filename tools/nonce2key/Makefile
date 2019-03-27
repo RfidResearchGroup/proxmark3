@@ -1,20 +1,23 @@
 CC = gcc
-LD = gcc
-CFLAGS = -std=c99 -Wall -O3 -c
-LDFLAGS =
+CFLAGS = -std=c99 -Wall -O3 -I.
+LDFLAGS = -std=c99 -Wall
+SRC := $(wildcard *.c)
+OBJ := $(SRC:.c=.o)
+DEP := $(SRC:.c=.d)
+PROG := nonce2key
 
-OBJS = crypto1.o crapto1.o
-HEADERS = crapto1.h
-EXES = nonce2key
-WINEXES = $(patsubst %, %.exe, $(EXES))
+all: $(PROG)
 
-all: $(OBJS) $(EXES)
-
-%.o : %.c
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-% : %.c
-	$(LD) $(LDFLAGS) -o $@ $(OBJS) $<
+$(PROG): $(OBJ)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 clean:
-	rm -f $(OBJS) $(EXES) $(WINEXES)
+	@$(RM) $(DEP) $(OBJ) $(PROG)
+
+ifneq ($(filter clean,$(MAKECMDGOALS)),clean)
+-include $(DEP)
+endif
+
+%.d: %.c
+	$(info GEN $@)
+	@$(CC) -MM $(CFLAGS) $< | sed 's/\($*\)\.o[ :]*/\1.o $@ : /g' > $@

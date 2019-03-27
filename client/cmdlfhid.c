@@ -297,6 +297,8 @@ int CmdHIDClone(const char *Cmd) {
     SendCommand(&c);
     return 0;
 }
+
+/*
 // struct to handle wiegand
 typedef struct {
     uint8_t  FormatLen;
@@ -306,6 +308,7 @@ typedef struct {
     uint8_t *Wiegand;
     size_t   Wiegand_n;
 } wiegand_t;
+*/
 
 static void addHIDMarker(uint8_t fmtlen, uint8_t *out) {
     // temp array

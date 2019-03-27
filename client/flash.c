@@ -64,9 +64,9 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
         }
         fprintf(stdout, "%d: V 0x%08x P 0x%08x (0x%08x->0x%08x) [%c%c%c] @0x%x\n",
                 i, vaddr, paddr, filesz, memsz,
-                flags & PF_R ? 'R' : ' ',
-                flags & PF_W ? 'W' : ' ',
-                flags & PF_X ? 'X' : ' ',
+                (flags & PF_R) ? 'R' : ' ',
+                (flags & PF_W) ? 'W' : ' ',
+                (flags & PF_X) ? 'X' : ' ',
                 offset);
         if (filesz != memsz) {
             fprintf(stderr, "Error: PHDR file size does not equal memory size\n"
@@ -179,7 +179,7 @@ static int check_segs(flash_file_t *ctx, int can_write_bl) {
 
 // Load an ELF file and prepare it for flashing
 int flash_load(flash_file_t *ctx, const char *name, int can_write_bl) {
-    FILE *fd = NULL;
+    FILE *fd;
     Elf32_Ehdr ehdr;
     Elf32_Phdr *phdrs = NULL;
     uint16_t num_phdrs;
@@ -410,7 +410,7 @@ int flash_write(flash_file_t *ctx) {
         uint32_t blocks = (length + BLOCK_SIZE - 1) / BLOCK_SIZE;
         uint32_t end = seg->start + length;
 
-        fprintf(stdout, " 0x%08x..0x%08x [0x%x / %d blocks]", seg->start, end - 1, length, blocks);
+        fprintf(stdout, " 0x%08x..0x%08x [0x%x / %u blocks]", seg->start, end - 1, length, blocks);
         fflush(stdout);
         int block = 0;
         uint8_t *data = seg->data;
@@ -423,7 +423,7 @@ int flash_write(flash_file_t *ctx) {
 
             if (write_block(baddr, data, block_size) < 0) {
                 fprintf(stderr, " ERROR\n");
-                fprintf(stderr, "Error writing block %d of %d\n", block, blocks);
+                fprintf(stderr, "Error writing block %d of %u\n", block, blocks);
                 return -1;
             }
 

@@ -12,6 +12,12 @@
 
 static int CmdHelp(const char *Cmd);
 
+//large 224 bit indala formats (different preamble too...)
+static uint8_t preamble224[] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
+
+// standard 64 bit indala formats including 26 bit 40134 format
+static uint8_t preamble64[] =  {1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
+
 int usage_lf_indala_demod(void) {
     PrintAndLogEx(NORMAL, "Enables Indala compatible reader mode printing details of scanned tags.");
     PrintAndLogEx(NORMAL, "By default, values are printed and logged until the button is pressed or another USB command is issued.");
@@ -40,69 +46,129 @@ int usage_lf_indala_sim(void) {
 }
 
 int usage_lf_indala_clone(void) {
-    PrintAndLogEx(NORMAL, "Enables cloning of Indala card with specified uid onto T55x7.");
-    PrintAndLogEx(NORMAL, "The T55x7 must be on the antenna when issuing this command.  T55x7 blocks are calculated and printed in the process.");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf indala clone [h] <uid> [Q5]");
+        PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  lf indala clone [h]<l> <uid> [Q5]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "            h :  This help");
-    PrintAndLogEx(NORMAL, "        <uid> :  64/224 UID");
+    PrintAndLogEx(NORMAL, "            l :  long uid 64/224");
+    PrintAndLogEx(NORMAL, "        <uid> :  UID");
     PrintAndLogEx(NORMAL, "           Q5 :  optional - clone to Q5 (T5555) instead of T55x7 chip");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf indala clone 112233");
+    PrintAndLogEx(NORMAL, "       lf indala clone 112233      -- 64");
+    PrintAndLogEx(NORMAL, "       lf indala clone l 112233    -- long 224");
     return 0;
 }
 
 // redesigned by marshmellow adjusted from existing decode functions
 // indala id decoding
-int indala64decode(uint8_t *dest, size_t *size, uint8_t *invert) {
-    //standard 64 bit indala formats including 26 bit 40134 format
-    uint8_t   preamble64[] = {1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
-    uint8_t preamble64_i[] = {0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0};
-    size_t idx = 0;
-    size_t found_size = *size;
-    if (!preambleSearch(dest, preamble64, sizeof(preamble64), &found_size, &idx)) {
-        // if didn't find preamble try again inverting
-        if (!preambleSearch(dest, preamble64_i, sizeof(preamble64_i), &found_size, &idx)) return -1;
-        *invert ^= 1;
-    }
-    if (found_size != 64) return -2;
-
-    if (*invert == 1)
-        for (size_t i = idx; i < found_size + idx; i++)
-            dest[i] ^= 1;
-
-    // note: don't change *size until we are sure we got it...
-    *size = found_size;
-    return (int) idx;
-}
-
-int indala224decode(uint8_t *dest, size_t *size, uint8_t *invert) {
-    //large 224 bit indala formats (different preamble too...)
-    uint8_t   preamble224[] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
+int detectIndala(uint8_t *dest, size_t *size, uint8_t *invert) {
+   
+    uint8_t preamble64_i[]  = {0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0};    
     uint8_t preamble224_i[] = {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0};
+    
     size_t idx = 0;
     size_t found_size = *size;
-    if (!preambleSearch(dest, preamble224, sizeof(preamble224), &found_size, &idx)) {
-        // if didn't find preamble try again inverting
-        if (!preambleSearch(dest, preamble224_i, sizeof(preamble224_i), &found_size, &idx)) return -1;
-        *invert ^= 1;
+    
+    // PSK1 
+    bool res = preambleSearch(dest, preamble64, sizeof(preamble64), &found_size, &idx);
+    if ( res ) {
+        PrintAndLogEx(DEBUG, "DEBUG: detectindala PSK1 found 64");
+        goto out;
     }
-    if (found_size != 224) return -2;
+    idx = 0;
+    found_size = *size;
+    res = preambleSearch(dest, preamble64_i, sizeof(preamble64_i), &found_size, &idx);
+    if ( res ) {
+        PrintAndLogEx(DEBUG, "DEBUG: detectindala PSK1 found 64 inverted preamble");
+        goto inv;
+    }
+    
+    /*
+    idx = 0;
+    found_size = *size;
+    res = preambleSearch(dest, preamble224, sizeof(preamble224), &found_size, &idx);
+    if ( res ) {
+        PrintAndLogEx(DEBUG, "DEBUG: detectindala PSK1 found 224");
+        goto out;
+    }
+    
+    idx = 0;
+    found_size = *size;    
+    res = preambleSearch(dest, preamble224_i, sizeof(preamble224_i), &found_size, &idx);
+    if ( res ) {
+        PrintAndLogEx(DEBUG, "DEBUG: detectindala PSK1 found 224 inverted preamble");        
+        goto inv;
+    }
+    */
 
-    if (*invert == 1 && idx > 0)
-        for (size_t i = idx - 1; i < found_size + idx + 2; i++)
+    // PSK2
+    psk1TOpsk2(dest, *size);
+    PrintAndLogEx(DEBUG, "DEBUG: detectindala Converting PSK1 -> PSK2");
+    
+    idx = 0;
+    found_size = *size;    
+    res = preambleSearch(dest, preamble64, sizeof(preamble64), &found_size, &idx);
+    if ( res ) {
+        PrintAndLogEx(DEBUG, "DEBUG: detectindala PSK2 found 64 preamble");
+        goto out;
+    }
+    
+    idx = 0;
+    found_size = *size;
+    res = preambleSearch(dest, preamble224, sizeof(preamble224), &found_size, &idx);
+    if ( res ) {
+        PrintAndLogEx(DEBUG, "DEBUG: detectindala PSK2 found 224 preamble");
+        goto out;
+    }
+    
+    idx = 0;
+    found_size = *size;  
+    res = preambleSearch(dest, preamble64_i, sizeof(preamble64_i), &found_size, &idx);
+    if ( res ) {
+        PrintAndLogEx(DEBUG, "DEBUG: detectindala PSK2 found 64 inverted preamble");
+        goto inv;
+    }
+    
+    idx = 0;
+    found_size = *size;
+    res = preambleSearch(dest, preamble224_i, sizeof(preamble224_i), &found_size, &idx);
+    if ( res ) {
+        PrintAndLogEx(DEBUG, "DEBUG: detectindala PSK2 found 224 inverted preamble");
+        goto inv;
+    }
+    
+inv:
+    if ( res == 0 ) {
+        return -4;
+    }
+
+    *invert ^= 1;
+
+    if (*invert && idx > 0) {
+        for (size_t i = idx - 1; i < found_size + idx + 2; i++) {
             dest[i] ^= 1;
+        }
+    }
+
+    PrintAndLogEx(DEBUG, "DEBUG: Warning - Indala had to invert bits");
+
+out:
+
+    *size = found_size;
+    
+    //PrintAndLogEx(INFO, "DEBUG: detectindala RES = %d | %d | %d", res, found_size, idx);
+    
+    if (found_size != 224 && found_size != 64) {
+        PrintAndLogEx(INFO, "DEBUG: detectindala | %d", found_size);        
+        return -5;
+    }
 
     // 224 formats are typically PSK2 (afaik 2017 Marshmellow)
     // note loses 1 bit at beginning of transformation...
-    // don't need to verify array is big enough as to get here there has to be a full preamble after all of our data
-    psk1TOpsk2(dest + (idx - 1), found_size + 2);
-    idx++;
-
-    *size = found_size;
-    return (int) idx;
+    return (int) idx;    
+    
 }
 
 // this read is the "normal" read,  which download lf signal and tries to demod here.
@@ -117,9 +183,9 @@ int CmdIndalaRead(const char *Cmd) {
 int CmdIndalaDemod(const char *Cmd) {
     int ans;
     if (strlen(Cmd) > 0)
-        ans = PSKDemod(Cmd, 0);
-    else //default to RF/32
-        ans = PSKDemod("32", 0);
+        ans = PSKDemod(Cmd, true);
+    else
+        ans = PSKDemod("32", true);
 
     if (!ans) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Indala can't demod signal: %d", ans);
@@ -128,47 +194,91 @@ int CmdIndalaDemod(const char *Cmd) {
 
     uint8_t invert = 0;
     size_t size = DemodBufferLen;
-    int idx = indala64decode(DemodBuffer, &size, &invert);
-    if (idx < 0 || size != 64) {
-        // try 224 indala
-        invert = 0;
-        size = DemodBufferLen;
-        idx = indala224decode(DemodBuffer, &size, &invert);
-        if (idx < 0 || size != 224) {
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Indala wrong size, expected [64|224] got: %d (startindex %i)", size, idx);
-            return 0;
-        }
+    int idx = detectIndala(DemodBuffer, &size, &invert);
+    if (idx < 0) {
+        if (idx == -1)
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Indala: not enough samples");
+        else if (idx == -2)
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Indala: only noise found");
+        else if (idx == -4)
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Indala: preamble not found");
+        else if (idx == -5)
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Indala: size not correct: %d", size);
+        else
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Indala: error demoding psk idx: %d", idx);
+        return 0;
     }
-
-    setDemodBuf(DemodBuffer, size, (size_t)idx);
+    setDemodBuf(DemodBuffer, size, idx);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (idx * g_DemodClock));
-    if (invert) {
-        PrintAndLogEx(DEBUG, "DEBUG: Error - Indala had to invert bits");
-        for (size_t i = 0; i < size; i++)
-            DemodBuffer[i] ^= 1;
-    }
-
+    
     //convert UID to HEX
     uint32_t uid1, uid2, uid3, uid4, uid5, uid6, uid7;
     uid1 = bytebits_to_byte(DemodBuffer, 32);
     uid2 = bytebits_to_byte(DemodBuffer + 32, 32);
+    uint64_t foo = (((uint64_t)uid1 << 32) & 0x1FFFFFFF ) | (uid2 & 0x7FFFFFFF );
+
     if (DemodBufferLen == 64) {
-        PrintAndLogEx(SUCCESS, "Indala Found - bitlength %d, UID = (0x%x%08x)\n%s",
-                      DemodBufferLen, uid1, uid2, sprint_bin_break(DemodBuffer, DemodBufferLen, 32)
-                     );
+        PrintAndLogEx(
+            SUCCESS
+            , "Indala Found - bitlength %d, Raw %x%08x"
+            , DemodBufferLen
+            , uid1
+            , uid2
+        );
+        
+        uint16_t p1  = 0;
+        p1 |= DemodBuffer[32+ 3] << 8;
+        p1 |= DemodBuffer[32+ 6] << 5;
+        p1 |= DemodBuffer[32+ 8] << 4;
+        p1 |= DemodBuffer[32+ 9] << 3;
+        p1 |= DemodBuffer[32+11] << 1;
+        p1 |= DemodBuffer[32+16] << 6;
+        p1 |= DemodBuffer[32+19] << 7;
+        p1 |= DemodBuffer[32+20] << 10;
+        p1 |= DemodBuffer[32+21] << 2;
+        p1 |= DemodBuffer[32+22] << 0;
+        p1 |= DemodBuffer[32+24] << 9;
+  
+/*  
+        uint16_t fc = 0;
+        fc |= DemodBuffer[32+ 1] << 0;
+        fc |= DemodBuffer[32+ 2] << 1;
+        fc |= DemodBuffer[32+ 4] << 2;
+        fc |= DemodBuffer[32+ 5] << 3;
+        fc |= DemodBuffer[32+ 7] << 4;
+        fc |= DemodBuffer[32+10] << 5;
+        fc |= DemodBuffer[32+14] << 6;
+        fc |= DemodBuffer[32+15] << 7;
+        fc |= DemodBuffer[32+17] << 8;
+*/
+       
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(SUCCESS, "Possible de-scramble patterns");
+        PrintAndLogEx(SUCCESS, "\tPrinted     | __%04d__ [0x%X]", p1, p1);
+        //PrintAndLogEx(SUCCESS, "\tPrinted     | __%04d__ [0x%X]", fc, fc);
+        PrintAndLogEx(SUCCESS, "\tInternal ID | %" PRIu64 , foo);
+        
+        
     } else {
         uid3 = bytebits_to_byte(DemodBuffer + 64, 32);
         uid4 = bytebits_to_byte(DemodBuffer + 96, 32);
         uid5 = bytebits_to_byte(DemodBuffer + 128, 32);
         uid6 = bytebits_to_byte(DemodBuffer + 160, 32);
         uid7 = bytebits_to_byte(DemodBuffer + 192, 32);
-        PrintAndLogEx(SUCCESS, "Indala Found - bitlength %d, UID = (0x%x%08x%08x%08x%08x%08x%08x)\n%s",
-                      DemodBufferLen,
-                      uid1, uid2, uid3, uid4, uid5, uid6, uid7, sprint_bin_break(DemodBuffer, DemodBufferLen, 32)
-                     );
+        PrintAndLogEx(SUCCESS, "Indala Found - bitlength %d, UID = 0x%x%08x%08x%08x%08x%08x%08x"
+            , DemodBufferLen
+            , uid1
+            , uid2
+            , uid3
+            , uid4
+            , uid5
+            , uid6
+            , uid7
+            );
     }
+    
     if (g_debugMode) {
-        PrintAndLogEx(DEBUG, "DEBUG: Indala - printing demodbuffer:");
+        PrintAndLogEx(DEBUG, "DEBUG: Indala - printing demodbuffer");
         printDemodBuff();
     }
     return 1;
@@ -420,43 +530,50 @@ int CmdIndalaSim(const char *Cmd) {
 
 // iceman - needs refactoring
 int CmdIndalaClone(const char *Cmd) {
-    UsbCommand c = {0};
-    uint32_t uid1, uid2, uid3, uid4, uid5, uid6, uid7;
-    uid1 =  uid2 = uid3 = uid4 = uid5 = uid6 = uid7 = 0;
-    uint32_t n = 0, i = 0;
 
-    if (strchr(Cmd, 'l') != 0) {
+    bool isLongUid = false;
+    uint8_t data[7*4];
+    int datalen = 0;
+    
+    CLIParserInit("lf indala clone",
+                  "Enables cloning of Indala card with specified uid onto T55x7\n"
+                  "defaults to 64.\n",
+                  "\n"
+                  "Samples:\n"
+                  "\tlf indala clone a0000000a0002021\n"
+                  "\tlf indala clone -l 80000001b23523a6c2e31eba3cbee4afb3c6ad1fcf649393928c14e5");
 
-        while (sscanf(&Cmd[i++], "%1x", &n) == 1) {
-            uid1 = (uid1 << 4) | (uid2 >> 28);
-            uid2 = (uid2 << 4) | (uid3 >> 28);
-            uid3 = (uid3 << 4) | (uid4 >> 28);
-            uid4 = (uid4 << 4) | (uid5 >> 28);
-            uid5 = (uid5 << 4) | (uid6 >> 28);
-            uid6 = (uid6 << 4) | (uid7 >> 28);
-            uid7 = (uid7 << 4) | (n & 0xf);
-        }
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("lL",  "long",  "long UID 224 bits"),
+        arg_strx1(NULL, NULL,    "<uid (hex)>", NULL),
+        arg_param_end
+    };
+    CLIExecWithReturn(Cmd, argtable, false);
 
-        PrintAndLogEx(INFO, "Preparing to clone Indala 224bit tag with UID %x%08x%08x%08x%08x%08x%08x", uid1, uid2, uid3, uid4, uid5, uid6, uid7);
+    isLongUid = arg_get_lit(1);
+    CLIGetHexWithReturn(2, data, &datalen);
+    CLIParserFree();
+
+    UsbCommand c = {0, {0,0,0}};
+    
+    if (isLongUid) {
+        PrintAndLogEx(INFO, "Preparing to clone Indala 224bit tag with UID %s", sprint_hex(data, datalen));
         c.cmd = CMD_INDALA_CLONE_TAG_L;
-        c.d.asDwords[0] = uid1;
-        c.d.asDwords[1] = uid2;
-        c.d.asDwords[2] = uid3;
-        c.d.asDwords[3] = uid4;
-        c.d.asDwords[4] = uid5;
-        c.d.asDwords[5] = uid6;
-        c.d.asDwords[6] = uid7;
+        c.d.asDwords[0] = bytes_to_num(data, 4);
+        c.d.asDwords[1] = bytes_to_num(data +  4, 4);
+        c.d.asDwords[2] = bytes_to_num(data +  8, 4);
+        c.d.asDwords[3] = bytes_to_num(data + 12, 4);
+        c.d.asDwords[4] = bytes_to_num(data + 16, 4);
+        c.d.asDwords[5] = bytes_to_num(data + 20, 4);
+        c.d.asDwords[6] = bytes_to_num(data + 24, 4);
     } else {
-        while (sscanf(&Cmd[i++], "%1x", &n) == 1) {
-            uid1 = (uid1 << 4) | (uid2 >> 28);
-            uid2 = (uid2 << 4) | (n & 0xf);
-        }
-        PrintAndLogEx(INFO, "Preparing to clone Indala 64bit tag with UID %x%08x", uid1, uid2);
-        c.cmd = CMD_INDALA_CLONE_TAG;
-        c.arg[0] = uid1;
-        c.arg[1] = uid2;
+        PrintAndLogEx(INFO, "Preparing to clone Indala 64bit tag with UID %s", sprint_hex(data, datalen));
+        c.cmd = CMD_INDALA_CLONE_TAG;            
+        c.d.asDwords[0] = bytes_to_num(data, 4);
+        c.d.asDwords[1] = bytes_to_num(data + 4, 4);
     }
-
+    
     clearCommandBuffer();
     SendCommand(&c);
     return 0;

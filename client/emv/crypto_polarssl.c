@@ -177,7 +177,7 @@ static struct crypto_pk *crypto_pk_polarssl_genkey_rsa(va_list vl) {
 
     int res = mbedtls_rsa_gen_key(&cp->ctx, &myrand, NULL, nbits, exp);
     if (res) {
-        fprintf(stderr, "PolarSSL private key generation error res=%x exp=%d nbits=%d.\n", res * -1, exp, nbits);
+        fprintf(stderr, "PolarSSL private key generation error res=%x exp=%u nbits=%u.\n", res * -1, exp, nbits);
         free(cp);
         return NULL;
     }

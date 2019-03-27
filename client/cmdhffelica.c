@@ -218,7 +218,7 @@ int CmdHFFelicaSniff(const char *Cmd) {
     //Validations
     if (errors || cmdp == 0) return usage_hf_felica_sniff();
 
-    UsbCommand c = {CMD_FELICA_SNOOP, {samples2skip, triggers2skip, 0}};
+    UsbCommand c = {CMD_FELICA_SNIFF, {samples2skip, triggers2skip, 0}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
@@ -425,38 +425,37 @@ int CmdHFFelicaDumpLite(const char *Cmd) {
     }
 
     uint64_t tracelen = resp.arg[1];
+    if (tracelen == 0) 
+        return 1;   
+
     uint8_t *trace = calloc(tracelen, sizeof(uint8_t));
     if (trace == NULL) {
         PrintAndLogEx(WARNING, "Cannot allocate memory for trace");
         return 1;
     }
 
-    // only download data if there is any.
-    if (tracelen > 0) {
-
-        if (!GetFromDevice(BIG_BUF, trace, tracelen, 0, NULL, 2500, false)) {
-            PrintAndLogEx(WARNING, "command execution time out");
-            free(trace);
-            return 0;
-        }
-
-        PrintAndLogEx(SUCCESS, "Recorded Activity (trace len = %d bytes)", tracelen);
-
-        print_hex_break(trace, tracelen, 32);
-
-        printSep();
-        uint16_t tracepos = 0;
-        while (tracepos < tracelen)
-            tracepos = PrintFliteBlock(tracepos, trace, tracelen);
-
-        printSep();
+    if (!GetFromDevice(BIG_BUF, trace, tracelen, 0, NULL, 2500, false)) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        free(trace);
+        return 0;
     }
 
-    free(trace);
+    PrintAndLogEx(SUCCESS, "Recorded Activity (trace len = %d bytes)", tracelen);
+
+    print_hex_break(trace, tracelen, 32);
+    printSep();
+    
+    uint16_t tracepos = 0;
+    while (tracepos < tracelen)
+        tracepos = PrintFliteBlock(tracepos, trace, tracelen);
+
+    printSep();
+
+    free(trace);        
     return 0;
 }
 
-int CmdHFFelicaCmdRaw(const char *cmd) {
+int CmdHFFelicaCmdRaw(const char *Cmd) {
     UsbCommand c = {CMD_FELICA_COMMAND, {0, 0, 0}};
     bool reply = 1;
     bool crc = false;
@@ -470,15 +469,15 @@ int CmdHFFelicaCmdRaw(const char *cmd) {
     uint16_t datalen = 0;
     uint32_t temp;
 
-    if (strlen(cmd) < 2) return usage_hf_felica_raw();
+    if (strlen(Cmd) < 2) return usage_hf_felica_raw();
 
     // strip
-    while (*cmd == ' ' || *cmd == '\t') cmd++;
+    while (*Cmd == ' ' || *Cmd == '\t') Cmd++;
 
-    while (cmd[i] != '\0') {
-        if (cmd[i] == ' ' || cmd[i] == '\t') { i++; continue; }
-        if (cmd[i] == '-') {
-            switch (cmd[i + 1]) {
+    while (Cmd[i] != '\0') {
+        if (Cmd[i] == ' ' || Cmd[i] == '\t') { i++; continue; }
+        if (Cmd[i] == '-') {
+            switch (Cmd[i + 1]) {
                 case 'H':
                 case 'h':
                     return usage_hf_felica_raw();
@@ -498,10 +497,10 @@ int CmdHFFelicaCmdRaw(const char *cmd) {
                     active_select = true;
                     break;
                 case 'b':
-                    sscanf(cmd + i + 2, "%d", &temp);
+                    sscanf(Cmd + i + 2, "%d", &temp);
                     numbits = temp & 0xFFFF;
                     i += 3;
-                    while (cmd[i] != ' ' && cmd[i] != '\0') { i++; }
+                    while (Cmd[i] != ' ' && Cmd[i] != '\0') { i++; }
                     i -= 2;
                     break;
                 default:
@@ -510,11 +509,11 @@ int CmdHFFelicaCmdRaw(const char *cmd) {
             i += 2;
             continue;
         }
-        if ((cmd[i] >= '0' && cmd[i] <= '9') ||
-                (cmd[i] >= 'a' && cmd[i] <= 'f') ||
-                (cmd[i] >= 'A' && cmd[i] <= 'F')) {
+        if ((Cmd[i] >= '0' && Cmd[i] <= '9') ||
+                (Cmd[i] >= 'a' && Cmd[i] <= 'f') ||
+                (Cmd[i] >= 'A' && Cmd[i] <= 'F')) {
             buf[strlen(buf) + 1] = 0;
-            buf[strlen(buf)] = cmd[i];
+            buf[strlen(buf)] = Cmd[i];
             i++;
 
             if (strlen(buf) >= 2) {

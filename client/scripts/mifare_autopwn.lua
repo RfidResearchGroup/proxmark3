@@ -107,7 +107,7 @@ local function dump(uid, numsectors)
 
     if utils.confirm('Do you wish to create a memory dump of tag?') then
 
-        local dumpfile = 'hf-mf-'..uid..'-data.bin'
+        local dumpfile = 'hf-mf-'..uid..'-data'
 
         local dmp = ('hf mf dump %s f %s'):format(typ, dumpfile)
         core.console(dmp)
@@ -115,13 +115,9 @@ local function dump(uid, numsectors)
         -- Save the global args, those are *our* arguments
         local myargs = args
         -- Set the arguments for htmldump script
-        args =('-i %s -o %s.html'):format(dumpfile, uid)
+        args =('-i %s.bin -o %s.html'):format(dumpfile, dumpfile)
         -- call it
         require('htmldump')
-
-        -- dump to emulator
-        args =('-i %s -o %s.eml'):format(dumpfile, uid)
-        require('dumptoemul')
 
         -- Set back args. Not that it's used, just for the karma...
         args = myargs

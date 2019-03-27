@@ -808,21 +808,21 @@ int EM4x50Read(const char *Cmd, bool verbose) {
     low = sp->low;
 
     // get to first full low to prime loop and skip incomplete first pulse
-    while ((bits[i] < high) && (i < size))
+    while ((i < size) && (bits[i] < high))
         ++i;
-    while ((bits[i] > low) && (i < size))
+    while ((i < size) && (bits[i] > low))
         ++i;
     skip = i;
 
     // populate tmpbuff buffer with pulse lengths
     while (i < size) {
         // measure from low to low
-        while ((bits[i] > low) && (i < size))
+        while ((i < size) && (bits[i] > low))
             ++i;
         start = i;
-        while ((bits[i] < high) && (i < size))
+        while ((i < size) && (bits[i] < high))
             ++i;
-        while ((bits[i] > low) && (i < size))
+        while ((i < size) && (bits[i] > low))
             ++i;
         if (j >= (MAX_GRAPH_TRACE_LEN / 64)) {
             break;
@@ -1244,7 +1244,7 @@ int CmdEM4x05Write(const char *Cmd) {
         PrintAndLogEx(NORMAL, "Writing address %d data %08X using password %08X", addr, data, pwd);
     }
 
-    uint16_t flag = (addr << 8) | usePwd;
+    uint16_t flag = (addr << 8) | (usePwd);
 
     UsbCommand c = {CMD_EM4X_WRITE_WORD, {flag, data, pwd}};
     clearCommandBuffer();
@@ -1486,8 +1486,8 @@ int CmdEM4x05Info(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",        CmdHelp,              1, "This help"},
     //{"410x_demod",  CmdEMdemodASK,        0, "Extract ID from EM410x tag on antenna)"},
-    {"410x_demod",  CmdEM410xDemod,       0, "demodulate a EM410x tag from the GraphBuffer"},
-    {"410x_read",   CmdEM410xRead,        1, "attempt to read and extract tag data"},
+    {"410x_demod",  CmdEM410xDemod,       1, "demodulate a EM410x tag from the GraphBuffer"},
+    {"410x_read",   CmdEM410xRead,        0, "attempt to read and extract tag data"},
     {"410x_sim",    CmdEM410xSim,         0, "simulate EM410x tag"},
     {"410x_brute",  CmdEM410xBrute,       0, "reader bruteforce attack by simulating EM410x tags"},
     {"410x_watch",  CmdEM410xWatch,       0, "watches for EM410x 125/134 kHz tags (option 'h' for 134)"},

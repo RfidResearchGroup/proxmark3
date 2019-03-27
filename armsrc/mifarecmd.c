@@ -46,8 +46,8 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) 
     ui64Key = bytes_to_num(datain, 6);
 
     // variables
-    byte_t isOK = 0;
-    byte_t dataoutbuf[16] = {0x00};
+    uint8_t isOK = 0;
+    uint8_t dataoutbuf[16] = {0x00};
     uint8_t uid[10] = {0x00};
     uint32_t cuid = 0;
     struct Crypto1State mpcs = {0, 0};
@@ -137,7 +137,7 @@ void MifareUC_Auth(uint8_t arg0, uint8_t *keybytes) {
 // datain = PWD bytes,
 void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     uint8_t blockNo = arg0;
-    byte_t dataout[16] = {0x00};
+    uint8_t dataout[16] = {0x00};
     bool useKey = (arg1 == 1); //UL_C
     bool usePwd = (arg1 == 2); //UL_EV1/NTAG
 
@@ -206,8 +206,8 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
     ui64Key = bytes_to_num(datain, 6);
 
     // variables
-    byte_t isOK = 0;
-    byte_t dataoutbuf[16 * 16];
+    uint8_t isOK = 0;
+    uint8_t dataoutbuf[16 * 16];
     uint8_t uid[10] = {0x00};
     uint32_t cuid = 0;
     struct Crypto1State mpcs = {0, 0};
@@ -368,13 +368,13 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
     uint8_t blockNo = arg0;
     uint8_t keyType = arg1;
     uint64_t ui64Key = 0;
-    byte_t blockdata[16] = {0x00};
+    uint8_t blockdata[16] = {0x00};
 
     ui64Key = bytes_to_num(datain, 6);
     memcpy(blockdata, datain + 10, 16);
 
     // variables
-    byte_t isOK = 0;
+    uint8_t isOK = 0;
     uint8_t uid[10] = {0x00};
     uint32_t cuid = 0;
     struct Crypto1State mpcs = {0, 0};
@@ -430,7 +430,7 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 void MifareUWriteBlockCompat(uint8_t arg0, uint8_t *datain)
 {
     uint8_t blockNo = arg0;
-    byte_t blockdata[16] = {0x00};
+    uint8_t blockdata[16] = {0x00};
 
     memcpy(blockdata, datain, 16);
 
@@ -477,7 +477,7 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     uint8_t blockNo = arg0;
     bool useKey = (arg1 == 1); //UL_C
     bool usePwd = (arg1 == 2); //UL_EV1/NTAG
-    byte_t blockdata[4] = {0x00};
+    uint8_t blockdata[4] = {0x00};
 
     memcpy(blockdata, datain, 4);
 
@@ -539,7 +539,7 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
 void MifareUSetPwd(uint8_t arg0, uint8_t *datain) {
 
     uint8_t pwd[16] = {0x00};
-    byte_t blockdata[4] = {0x00};
+    uint8_t blockdata[4] = {0x00};
 
     memcpy(pwd, datain, 16);
 
@@ -1247,7 +1247,7 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 
         keyCount = size[1] << 8 | size[0];
 
-        if (keyCount == 0 && keyCount == 0xFFFF)
+        if (keyCount == 0 || keyCount == 0xFFFF)
             goto OUT;
 
         datain = BigBuf_malloc(keyCount * 6);
@@ -1630,7 +1630,7 @@ void MifareEMemSet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
 
 void MifareEMemGet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-    byte_t buf[USB_CMD_DATA_SIZE] = {0x00};
+    uint8_t buf[USB_CMD_DATA_SIZE] = {0x00};
     emlGetMem(buf, arg0, arg1); // data, block num, blocks count (max 4)
 
     LED_B_ON();
@@ -1652,8 +1652,8 @@ void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
     pcs = &mpcs;
 
     // variables
-    byte_t dataoutbuf[16] = {0x00};
-    byte_t dataoutbuf2[16] = {0x00};
+    uint8_t dataoutbuf[16] = {0x00};
+    uint8_t dataoutbuf2[16] = {0x00};
     uint8_t uid[10] = {0x00};
 
     LED_A_ON();
@@ -1933,13 +1933,18 @@ void MifareCIdent() {
     uint8_t isGen = 0;
     uint8_t rec[1] = {0x00};
     uint8_t recpar[1] = {0x00};
-
+    uint8_t rats[4] = { ISO14443A_CMD_RATS, 0x80, 0x31, 0x73 };
+    uint8_t *par = BigBuf_malloc(MAX_PARITY_SIZE);
+    uint8_t *buf = BigBuf_malloc(USB_CMD_DATA_SIZE);
+    uint8_t *uid = BigBuf_malloc(10);
+    uint32_t cuid = 0;
+    
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
     // Generation 1 test
     ReaderTransmitBitsPar(wupC1, 7, NULL, NULL);
     if (!ReaderReceive(rec, recpar) || (rec[0] != 0x0a)) {
-        goto TEST2;
+        goto TEST2;         
     };
     isGen = GEN_1B;
 
@@ -1951,32 +1956,29 @@ void MifareCIdent() {
     goto OUT;
 
 TEST2:
-    ;
-    /*
-        // Generation 2 test
-
-        // halt previous.
-        mifare_classic_halt(NULL, 0);
-
-        //select
-        if (!iso14443a_select_card(NULL, NULL, NULL, true, 0, true)) {
-            goto OUT;
-        };
-
-        // MIFARE_CLASSIC_WRITEBLOCK 0xA0
-        // ACK 0x0a
-        uint16_t len = mifare_sendcmd_short(null, 1, 0xA0, 0, rec, recpar, NULL);
-        if ((len != 1) || (rec[0] != 0x0A)) {
+    // reset card
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    SpinDelay(100);
+    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+    
+    int res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
+    if ( res == 2 ) {
+        ReaderTransmit(rats, sizeof(rats), NULL);      
+        res = ReaderReceive(buf, par);
+        if (memcmp(buf, "\x09\x78\x00\x91\x02\xDA\xBC\x19\x10\xF0\x05", 11) == 0) {
             isGen = GEN_2;
-        };
-        */
+            goto OUT;
+        }
+        if (memcmp(buf, "\x0D\x78\x00\x71\x02\x88\x49\xA1\x30\x20\x15\x06\x08\x56\x3D", 15) == 0) {
+            isGen = GEN_2;
+        }
+    };
+    
 OUT:
-    ;
-    // removed the if,  since some magic tags misbehavies and send an answer to it.
-    mifare_classic_halt_ex(NULL);
     cmd_send(CMD_ACK, isGen, 0, 0, 0, 0);
     // turns off
     OnSuccessMagic();
+    BigBuf_free();
 }
 
 void OnSuccessMagic() {
@@ -2051,7 +2053,7 @@ void MifareSetMod(uint8_t mod, uint8_t *key) {
 // DESFIRE
 //
 void Mifare_DES_Auth1(uint8_t arg0, uint8_t *datain) {
-    byte_t dataout[12] = {0x00};
+    uint8_t dataout[12] = {0x00};
     uint8_t uid[10] = {0x00};
     uint32_t cuid = 0;
 
@@ -2079,8 +2081,8 @@ void Mifare_DES_Auth1(uint8_t arg0, uint8_t *datain) {
 void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain) {
     uint32_t cuid = arg0;
     uint8_t key[16] = {0x00};
-    byte_t dataout[12] = {0x00};
-    byte_t isOK = 0;
+    uint8_t dataout[12] = {0x00};
+    uint8_t isOK = 0;
 
     memcpy(key, datain, 16);
 

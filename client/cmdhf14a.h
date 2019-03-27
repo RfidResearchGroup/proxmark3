@@ -47,7 +47,7 @@ extern int CmdHF14ASim(const char *Cmd);
 extern int CmdHF14ASniff(const char *Cmd);
 extern int CmdHF14ACmdRaw(const char *Cmd);
 extern int CmdHF14ACUIDs(const char *Cmd);
-extern int CmdHF14AAntiFuzz(const char *cmd);
+extern int CmdHF14AAntiFuzz(const char *Cmd);
 
 extern char *getTagInfo(uint8_t uid);
 extern int Hf14443_4aGetCardData(iso14a_card_select_t *card);

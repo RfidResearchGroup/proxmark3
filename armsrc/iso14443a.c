@@ -1138,8 +1138,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
             uint8_t index = receivedCmd[1];
             if (index > 2) {
                 // send NACK 0x0 == invalid argument
-                uint8_t nack[] = {0x00};
-                EmSendCmd(nack, sizeof(nack));
+                EmSend4bit(0x00);
             } else {
                 uint8_t cmd[] =  {0x00, 0x00, 0x00, 0x14, 0xa5};
                 num_to_bytes(counters[index], 3, cmd);
@@ -1151,8 +1150,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
             uint8_t index = receivedCmd[1];
             if (index > 2) {
                 // send NACK 0x0 == invalid argument
-                uint8_t nack[] = {0x00};
-                EmSendCmd(nack, sizeof(nack));
+                EmSend4bit(0x00);
             } else {
 
                 uint32_t val = bytes_to_num(receivedCmd + 2, 4);
@@ -1160,13 +1158,11 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
                 // if new value + old value is bigger 24bits,  fail
                 if (val + counters[index] > 0xFFFFFF) {
                     // send NACK 0x4 == counter overflow
-                    uint8_t nack[] = {0x04};
-                    EmSendCmd(nack, sizeof(nack));
+                    EmSend4bit(CARD_NACK_NA);
                 } else {
                     counters[index] = val;
                     // send ACK
-                    uint8_t ack[] = {0x0a};
-                    EmSendCmd(ack, sizeof(ack));
+                    EmSend4bit(CARD_ACK);
                 }
             }
             p_response = NULL;
@@ -1176,8 +1172,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
             uint8_t index = receivedCmd[1];
             if (index > 2) {
                 // send NACK 0x0 == invalid argument
-                uint8_t nack[] = {0x00};
-                EmSendCmd(nack, sizeof(nack));
+                EmSend4bit(0x00);
             } else {
                 emlGetMemBt(emdata, 10 + index, 1);
                 AddCrc14A(emdata, sizeof(emdata) - 2);
@@ -1983,7 +1978,7 @@ static int GetATQA(uint8_t *resp, uint8_t *resp_par) {
 // if anticollision is false, then the UID must be provided in uid_ptr[]
 // and num_cascades must be set (1: 4 Byte UID, 2: 7 Byte UID, 3: 10 Byte UID)
 // requests ATS unless no_rats is true
-int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats) {
+int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats) {
 
     uint8_t sel_all[]    = { ISO14443A_CMD_ANTICOLL_OR_SELECT, 0x20 };
     uint8_t sel_uid[]    = { ISO14443A_CMD_ANTICOLL_OR_SELECT, 0x70, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -2747,7 +2742,7 @@ void DetectNACKbug() {
     bool received_nack;
 
     // Mifare Classic's random generator repeats every 2^16 cycles (and so do the nonces).
-    uint32_t sync_cycles = PRNG_SEQUENCE_LENGTH;
+    int32_t sync_cycles = PRNG_SEQUENCE_LENGTH;
 
     BigBuf_free();
     BigBuf_Clear_ext(false);
@@ -3334,9 +3329,18 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
                     break;
                 }
 
+
+                /*
                 ans = prng_successor(nonce, 96) ^ crypto1_word(pcs, 0, 0);
                 num_to_bytes(ans, 4, rAUTH_AT);
                 EmSendCmd(rAUTH_AT, sizeof(rAUTH_AT));
+                */
+
+                ans = prng_successor(nonce, 96);
+                num_to_bytes(ans, 4, response);
+                mf_crypto1_encrypt(pcs, response, 4, response_par);
+                EmSendCmdPar(response, 4, response_par);
+                
                 LED_C_ON();
 
                 if (MF_DBGLEVEL >= 3) {

@@ -38,8 +38,8 @@ static void __attribute__((constructor)) fill_lut() {
 static inline void update_contribution(uint32_t *item, const uint32_t mask1, const uint32_t mask2) {
     uint32_t p = *item >> 25;
 
-    p = p << 1 | evenparity32(*item & mask1);
-    p = p << 1 | evenparity32(*item & mask2);
+    p = p << 1 | (evenparity32(*item & mask1));
+    p = p << 1 | (evenparity32(*item & mask2));
     *item = p << 24 | (*item & 0xffffff);
 }
 
@@ -90,10 +90,10 @@ recover(uint32_t *o_head, uint32_t *o_tail, uint32_t oks,
 
     if (rem == -1) {
         for (e = e_head; e <= e_tail; ++e) {
-            *e = *e << 1 ^ evenparity32(*e & LF_POLY_EVEN) ^ !!(in & 4);
+            *e = *e << 1 ^ (evenparity32(*e & LF_POLY_EVEN)) ^ !!(in & 4);
             for (o = o_head; o <= o_tail; ++o, ++sl) {
                 sl->even = *o;
-                sl->odd = *e ^ evenparity32(*o & LF_POLY_ODD);
+                sl->odd = *e ^ (evenparity32(*o & LF_POLY_ODD));
                 sl[1].odd = sl[1].even = 0;
             }
         }
@@ -252,7 +252,7 @@ struct Crypto1State *lfsr_recovery64(uint32_t ks2, uint32_t ks3) {
             continue;
 
         for (j = 0; j < 19; ++j)
-            low = low << 1 | evenparity32(i & S1[j]);
+            low = low << 1 | (evenparity32(i & S1[j]));
         for (j = 0; j < 32; ++j)
             hi[j] = evenparity32(i & T1[j]);
 
@@ -265,17 +265,17 @@ struct Crypto1State *lfsr_recovery64(uint32_t ks2, uint32_t ks3) {
             }
 
             for (j = 0; j < 19; ++j)
-                win = win << 1 | evenparity32(*tail & S2[j]);
+                win = win << 1 | (evenparity32(*tail & S2[j]));
 
             win ^= low;
             for (j = 0; j < 32; ++j) {
-                win = win << 1 ^ hi[j] ^ evenparity32(*tail & T2[j]);
+                win = win << 1 ^ hi[j] ^ (evenparity32(*tail & T2[j]));
                 if (filter(win) != eks[j])
                     goto continue2;
             }
 
-            *tail = *tail << 1 | evenparity32(LF_POLY_EVEN & *tail);
-            sl->odd = *tail ^ evenparity32(LF_POLY_ODD & win);
+            *tail = *tail << 1 | (evenparity32(LF_POLY_EVEN & *tail));
+            sl->odd = *tail ^ (evenparity32(LF_POLY_ODD & win));
             sl->even = win;
             ++sl;
             sl->odd = sl->even = 0;
@@ -303,7 +303,7 @@ uint8_t lfsr_rollback_bit(struct Crypto1State *s, uint32_t in, int fb) {
     out ^= !!in;
     out ^= (ret = filter(s->odd)) & !!fb;
 
-    s->even |= evenparity32(out) << 23;
+    s->even |= (evenparity32(out)) << 23;
     return ret;
 }
 /** lfsr_rollback_byte

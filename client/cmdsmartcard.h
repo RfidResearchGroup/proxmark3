@@ -25,6 +25,7 @@
 #include "emv/emvcore.h"        // decodeTVL
 #include "emv/apduinfo.h"       // APDUcode description
 #include "emv/dump.h"           // dump_buffer
+#include "crypto/libpcrypto.h"	// sha512hash
 
 extern int CmdSmartcard(const char *Cmd);
 

@@ -31,11 +31,11 @@ local function parse1443b(data)
     Based on this struct :
 
     typedef struct {
-        byte_t uid[10];
-        byte_t uidlen;
-        byte_t atqb[7];
-        byte_t chipid;
-        byte_t cid;
+        uint8_t uid[10];
+        uint8_t uidlen;
+        uint8_t atqb[7];
+        uint8_t chipid;
+        uint8_t cid;
     } __attribute__((__packed__)) iso14b_card_select_t;
 
     --]]

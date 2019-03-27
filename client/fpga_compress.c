@@ -167,7 +167,6 @@ int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, bool hardn
             fclose(infile[j]);
         }
         fclose(outfile);
-        free(infile);
         free(fpga_config);
         return (EXIT_FAILURE);
     }
@@ -182,7 +181,6 @@ int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, bool hardn
         fclose(infile[j]);
     }
     fclose(outfile);
-    free(infile);
     free(fpga_config);
 
     return (EXIT_SUCCESS);
@@ -322,42 +320,42 @@ static int FpgaGatherVersion(FILE *infile, char *infile_name, char *dst, int len
     }
 
     if (!memcmp("fpga_lf", basename(infile_name), 7))
-        strncat(dst, "LF", len - 1);
+        strncat(dst, "LF", len - strlen(dst) - 1);
     else if (!memcmp("fpga_hf", basename(infile_name), 7))
-        strncat(dst, "HF", len - 1);
+        strncat(dst, "HF", len - strlen(dst) - 1);
 
-    strncat(dst, " image built", len - 1);
+    strncat(dst, " image built", len - strlen(dst) - 1);
     if (bitparse_find_section(infile, 'b', &fpga_info_len)) {
-        strncat(dst, " for ", len - 1);
+        strncat(dst, " for ", len - strlen(dst) - 1);
         for (uint16_t i = 0; i < fpga_info_len; i++) {
             char c = (char)fgetc(infile);
             if (i < sizeof(tempstr)) {
                 tempstr[i] = c;
             }
         }
-        strncat(dst, tempstr, len - 1);
+        strncat(dst, tempstr, len - strlen(dst) - 1);
     }
 
     if (bitparse_find_section(infile, 'c', &fpga_info_len)) {
-        strncat(dst, " on ", len - 1);
+        strncat(dst, " on ", len - strlen(dst) - 1);
         for (uint16_t i = 0; i < fpga_info_len; i++) {
             char c = (char)fgetc(infile);
             if (i < sizeof(tempstr)) {
                 tempstr[i] = c;
             }
         }
-        strncat(dst, tempstr, len - 1);
+        strncat(dst, tempstr, len - strlen(dst) - 1);
     }
 
     if (bitparse_find_section(infile, 'd', &fpga_info_len)) {
-        strncat(dst, " at ", len - 1);
+        strncat(dst, " at ", len - strlen(dst) - 1);
         for (uint16_t i = 0; i < fpga_info_len; i++) {
             char c = (char)fgetc(infile);
             if (i < sizeof(tempstr)) {
                 tempstr[i] = c;
             }
         }
-        strncat(dst, tempstr, len - 1);
+        strncat(dst, tempstr, len - strlen(dst) - 1);
     }
     return 0;
 }
@@ -413,21 +411,27 @@ int main(int argc, char **argv) {
         infiles = calloc(1, sizeof(FILE *));
         if (argc != 4) {
             usage();
+            free(infiles);
             return (EXIT_FAILURE);
         }
         infiles[0] = fopen(argv[2], "rb");
         if (infiles[0] == NULL) {
             fprintf(stderr, "Error. Cannot open input file %s\n\n", argv[2]);
+            free(infiles);          
             return (EXIT_FAILURE);
         }
         outfile = fopen(argv[3], "wb");
         if (outfile == NULL) {
             fprintf(stderr, "Error. Cannot open output file %s\n\n", argv[3]);
+            free(infiles);            
             return (EXIT_FAILURE);
         }
-        return zlib_decompress(infiles[0], outfile);
+        
+        int ret = zlib_decompress(infiles[0], outfile);
+        free(infiles);
+        return (ret);
 
-    } else { // Compress or gemerate version info
+    } else { // Compress or generate version info
 
         bool hardnested_mode = false;
         bool generate_version_file = false;
@@ -453,20 +457,29 @@ int main(int argc, char **argv) {
             infiles[i] = fopen(infile_names[i], "rb");
             if (infiles[i] == NULL) {
                 fprintf(stderr, "Error. Cannot open input file %s\n\n", infile_names[i]);
+                free(infile_names);
+                free(infiles);
                 return (EXIT_FAILURE);
             }
         }
         outfile = fopen(argv[argc - 1], "wb");
         if (outfile == NULL) {
             fprintf(stderr, "Error. Cannot open output file %s\n\n", argv[argc - 1]);
+            free(infile_names);
+            free(infiles);          
             return (EXIT_FAILURE);
         }
         if (generate_version_file) {
             if (generate_fpga_version_info(infiles, infile_names, num_input_files, outfile)) {
+                free(infile_names);
+                free(infiles);                
                 return (EXIT_FAILURE);
             }
         } else {
-            return zlib_compress(infiles, num_input_files, outfile, hardnested_mode);
+            int ret = zlib_compress(infiles, num_input_files, outfile, hardnested_mode);
+            free(infile_names);
+            free(infiles);
+            return (ret);
         }
     }
 }

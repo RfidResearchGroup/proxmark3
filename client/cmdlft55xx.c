@@ -143,22 +143,26 @@ int usage_t55xx_wakup() {
 }
 int usage_t55xx_chk() {
     PrintAndLogEx(NORMAL, "This command uses a dictionary attack");
-    PrintAndLogEx(NORMAL, "press 'enter' to cancel the command");
-    PrintAndLogEx(NORMAL, "Usage: lf t55xx bruteforce [h] <m> [i <*.dic>]");
+    PrintAndLogEx(NORMAL, "press " _YELLOW_("'enter'") " to cancel the command");
+    PrintAndLogEx(NORMAL, "WARNING: this may brick non-password protected chips!");    
+    PrintAndLogEx(NORMAL, "Try to reading block 7 before\n");    
+    PrintAndLogEx(NORMAL, "Usage: lf t55xx chk [h] <m> [i <*.dic>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     h           - this help");
     PrintAndLogEx(NORMAL, "     m           - use dictionary from flashmemory\n");
     PrintAndLogEx(NORMAL, "     i <*.dic>   - loads a default keys dictionary file <*.dic>");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf t55xx bruteforce m");
-    PrintAndLogEx(NORMAL, "       lf t55xx bruteforce i default_pwd.dic");
+    PrintAndLogEx(NORMAL, "       lf t55xx chk m");
+    PrintAndLogEx(NORMAL, "       lf t55xx chk i default_pwd.dic");
     PrintAndLogEx(NORMAL, "");
     return 0;
 }
 int usage_t55xx_bruteforce() {
     PrintAndLogEx(NORMAL, "This command uses bruteforce to scan a number range");
-    PrintAndLogEx(NORMAL, "press 'enter' to cancel the command");
+    PrintAndLogEx(NORMAL, "press " _YELLOW_("'enter'") " to cancel the command");
+    PrintAndLogEx(NORMAL, "WARNING: this may brick non-password protected chips!");    
+    PrintAndLogEx(NORMAL, "Try to reading block 7 before\n");  
     PrintAndLogEx(NORMAL, "Usage: lf t55xx bruteforce [h] <start password> <end password>");
     PrintAndLogEx(NORMAL, "       password must be 4 bytes (8 hex symbols)");
     PrintAndLogEx(NORMAL, "Options:");
@@ -167,14 +171,15 @@ int usage_t55xx_bruteforce() {
     PrintAndLogEx(NORMAL, "     <end_pwd>   - 4 byte hex value to end pwd search at");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf t55xx bruteforce aaaaaaaa bbbbbbbb");
+    PrintAndLogEx(NORMAL, "       lf t55xx bruteforce aaaaaa77 aaaaaa99");
     PrintAndLogEx(NORMAL, "");
     return 0;
 }
 int usage_t55xx_recoverpw() {
     PrintAndLogEx(NORMAL, "This command uses a few tricks to try to recover mangled password");
-    PrintAndLogEx(NORMAL, "press 'enter' to cancel the command");
+    PrintAndLogEx(NORMAL, "press " _YELLOW_("'enter'") " to cancel the command");    
     PrintAndLogEx(NORMAL, "WARNING: this may brick non-password protected chips!");
+    PrintAndLogEx(NORMAL, "Try to reading block 7 before\n");     
     PrintAndLogEx(NORMAL, "Usage: lf t55xx recoverpw [password]");
     PrintAndLogEx(NORMAL, "       password must be 4 bytes (8 hex symbols)");
     PrintAndLogEx(NORMAL, "       default password is 51243648, used by many cloners");
@@ -1053,6 +1058,7 @@ int CmdT55xxWriteBlock(const char *Cmd) {
         c.arg[2] = password;
         c.d.asBytes[0] |= 0x1;
     }
+    
     clearCommandBuffer();
     SendCommand(&c);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
@@ -1363,7 +1369,7 @@ bool AquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password) {
     //  bit1 = page to read from
     // arg1: which block to read
     // arg2: password
-    uint8_t arg0 = (page << 1) | pwdmode;
+    uint8_t arg0 = ( page << 1 | (pwdmode) );
     UsbCommand c = {CMD_T55XX_READ_BLOCK, {arg0, block, password}};
     clearCommandBuffer();
     SendCommand(&c);
@@ -1382,35 +1388,35 @@ char *GetBitRateStr(uint32_t id, bool xmode) {
 
     char *retStr = buf;
     if (xmode) { //xmode bitrate calc is same as em4x05 calc
-        snprintf(retStr, sizeof(buf), "%d - RF/%d", id, EM4x05_GET_BITRATE(id));
+        snprintf(retStr, sizeof(buf), "%u - RF/%d", id, EM4x05_GET_BITRATE(id));
     } else {
         switch (id) {
             case 0:
-                snprintf(retStr, sizeof(buf), "%d - RF/8", id);
+                snprintf(retStr, sizeof(buf), "%u - RF/8", id);
                 break;
             case 1:
-                snprintf(retStr, sizeof(buf), "%d - RF/16", id);
+                snprintf(retStr, sizeof(buf), "%u - RF/16", id);
                 break;
             case 2:
-                snprintf(retStr, sizeof(buf), "%d - RF/32", id);
+                snprintf(retStr, sizeof(buf), "%u - RF/32", id);
                 break;
             case 3:
-                snprintf(retStr, sizeof(buf), "%d - RF/40", id);
+                snprintf(retStr, sizeof(buf), "%u - RF/40", id);
                 break;
             case 4:
-                snprintf(retStr, sizeof(buf), "%d - RF/50", id);
+                snprintf(retStr, sizeof(buf), "%u - RF/50", id);
                 break;
             case 5:
-                snprintf(retStr, sizeof(buf), "%d - RF/64", id);
+                snprintf(retStr, sizeof(buf), "%u - RF/64", id);
                 break;
             case 6:
-                snprintf(retStr, sizeof(buf), "%d - RF/100", id);
+                snprintf(retStr, sizeof(buf), "%u - RF/100", id);
                 break;
             case 7:
-                snprintf(retStr, sizeof(buf), "%d - RF/128", id);
+                snprintf(retStr, sizeof(buf), "%u - RF/128", id);
                 break;
             default:
-                snprintf(retStr, sizeof(buf), "%d - (Unknown)", id);
+                snprintf(retStr, sizeof(buf), "%u - (Unknown)", id);
                 break;
         }
     }
@@ -1421,12 +1427,12 @@ char *GetSaferStr(uint32_t id) {
     static char buf[40];
     char *retStr = buf;
 
-    snprintf(retStr, sizeof(buf), "%d", id);
+    snprintf(retStr, sizeof(buf), "%u", id);
     if (id == 6) {
-        snprintf(retStr, sizeof(buf), "%d - passwd", id);
+        snprintf(retStr, sizeof(buf), "%u - " _YELLOW_("passwd"), id);
     }
     if (id == 9) {
-        snprintf(retStr, sizeof(buf), "%d - testmode", id);
+        snprintf(retStr, sizeof(buf), "%u - " _YELLOW_("testmode"), id);
     }
 
     return buf;
@@ -1438,40 +1444,40 @@ char *GetModulationStr(uint32_t id) {
 
     switch (id) {
         case 0:
-            snprintf(retStr, sizeof(buf), "%d - DIRECT (ASK/NRZ)", id);
+            snprintf(retStr, sizeof(buf), "%u - DIRECT (ASK/NRZ)", id);
             break;
         case 1:
-            snprintf(retStr, sizeof(buf), "%d - PSK 1 phase change when input changes", id);
+            snprintf(retStr, sizeof(buf), "%u - PSK 1 phase change when input changes", id);
             break;
         case 2:
-            snprintf(retStr, sizeof(buf), "%d - PSK 2 phase change on bitclk if input high", id);
+            snprintf(retStr, sizeof(buf), "%u - PSK 2 phase change on bitclk if input high", id);
             break;
         case 3:
-            snprintf(retStr, sizeof(buf), "%d - PSK 3 phase change on rising edge of input", id);
+            snprintf(retStr, sizeof(buf), "%u - PSK 3 phase change on rising edge of input", id);
             break;
         case 4:
-            snprintf(retStr, sizeof(buf), "%d - FSK 1 RF/8  RF/5", id);
+            snprintf(retStr, sizeof(buf), "%u - FSK 1 RF/8  RF/5", id);
             break;
         case 5:
-            snprintf(retStr, sizeof(buf), "%d - FSK 2 RF/8  RF/10", id);
+            snprintf(retStr, sizeof(buf), "%u - FSK 2 RF/8  RF/10", id);
             break;
         case 6:
-            snprintf(retStr, sizeof(buf), "%d - FSK 1a RF/5  RF/8", id);
+            snprintf(retStr, sizeof(buf), "%u - FSK 1a RF/5  RF/8", id);
             break;
         case 7:
-            snprintf(retStr, sizeof(buf), "%d - FSK 2a RF/10  RF/8", id);
+            snprintf(retStr, sizeof(buf), "%u - FSK 2a RF/10  RF/8", id);
             break;
         case 8:
-            snprintf(retStr, sizeof(buf), "%d - Manchester", id);
+            snprintf(retStr, sizeof(buf), "%u - Manchester", id);
             break;
         case 16:
-            snprintf(retStr, sizeof(buf), "%d - Biphase", id);
+            snprintf(retStr, sizeof(buf), "%u - Biphase", id);
             break;
         case 0x18:
-            snprintf(retStr, sizeof(buf), "%d - Biphase a - AKA Conditional Dephase Encoding(CDP)", id);
+            snprintf(retStr, sizeof(buf), "%u - Biphase a - AKA Conditional Dephase Encoding(CDP)", id);
             break;
         case 17:
-            snprintf(retStr, sizeof(buf), "%d - Reserved", id);
+            snprintf(retStr, sizeof(buf), "%u - Reserved", id);
             break;
         default:
             snprintf(retStr, sizeof(buf), "0x%02X (Unknown)", id);
@@ -1624,23 +1630,20 @@ bool IsCancelled(void) {
     return false;
 }
 
+// load a default pwd file.
 int CmdT55xxChkPwds(const char *Cmd) {
-    // load a default pwd file.
-    char line[9];
+
     char filename[FILE_PATH_SIZE] = {0};
-    int keycnt = 0;
-    uint8_t stKeyBlock = 20;
-    uint8_t *keyBlock = NULL, *p = NULL;
     bool found = false;
     uint8_t timeout = 0;
-
-    memset(line, 0, sizeof(line));
-
+    uint8_t *keyBlock = NULL;
+    
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_t55xx_chk();
 
     /*
-    if ( T55xxReadBlock(7, 0, 0, 0, 0) ) {
+    // block 7,  page1 = false, usepwd = false, override = false, pwd = 00000000
+    if ( T55xxReadBlock(7, false, false, false, 0x00000000) ) {
 
         // now try to validate it..
         PrintAndLogEx(WARNING, "\n Block 7 was readable");
@@ -1667,98 +1670,54 @@ int CmdT55xxChkPwds(const char *Cmd) {
         }
 
         if (resp.arg[0]) {
-            PrintAndLogEx(SUCCESS, "\nFound a candidate [ %08X ]. Trying to validate", resp.arg[1]);
+            PrintAndLogEx(SUCCESS, "\nFound a candidate [ " _YELLOW_("%08X") " ]. Trying to validate", resp.arg[1]);
 
-            if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, resp.arg[1])) {
-                PrintAndLogEx(INFO, "Aquireing data from device failed. Quitting");
-                return 2;
-            }
+            AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, resp.arg[1]);
 
             found = tryDetectModulation();
             if (found) {
-                PrintAndLogEx(SUCCESS, "Found valid password: [ %08X ]", resp.arg[1]);
+                PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08") " ]", resp.arg[1]);        
             } else {
-                PrintAndLogEx(WARNING, "Password NOT found.");
+                PrintAndLogEx(WARNING, "Check pwd failed");
             }
         } else {
-            PrintAndLogEx(WARNING, "Password NOT found.");
+            PrintAndLogEx(WARNING, "Check pwd failed");
         }
 
         goto out;
     }
 
-    keyBlock = calloc(stKeyBlock, 4);
-    if (keyBlock == NULL) return 1;
-
     if (cmdp == 'i') {
-
+        
         int len = strlen(Cmd + 2);
         if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
         memcpy(filename, Cmd + 2, len);
-
-        FILE *f = fopen(filename, "r");
-        if (!f) {
-            PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
-            free(keyBlock);
+        
+        uint16_t keycount = 0;
+        size_t datalen = 0;
+       
+        // TODO, a way of reallocating memory if file was larger
+        keyBlock = calloc(4*200, sizeof(uint8_t));
+        if ( keyBlock == NULL ) {
+            PrintAndLogDevice(WARNING, "error, cannot allocate memory ");
             return 1;
         }
-
-        while (fgets(line, sizeof(line), f)) {
-            if (strlen(line) < 8 || line[7] == '\n') continue;
-
-            //goto next line
-            while (fgetc(f) != '\n' && !feof(f)) ;
-
-            //The line start with # is comment, skip
-            if (line[0] == '#') continue;
-
-            if (!isxdigit(line[0])) {
-                PrintAndLogEx(WARNING, "File content error. '%s' must include 8 HEX symbols", line);
-                continue;
-            }
-
-            line[8] = 0;
-
-            // realloc keyblock array size.
-            if (stKeyBlock - keycnt < 2) {
-                p = realloc(keyBlock, 4 * (stKeyBlock += 10));
-                if (!p) {
-                    PrintAndLogEx(WARNING, "Cannot allocate memory for defaultKeys");
-                    free(keyBlock);
-                    if (f)
-                        fclose(f);
-                    return 2;
-                }
-                keyBlock = p;
-            }
-            // clear mem
-            memset(keyBlock + 4 * keycnt, 0, 4);
-
-            num_to_bytes(strtoll(line, NULL, 16), 4, keyBlock + 4 * keycnt);
-
-// PrintAndLogEx(NORMAL, "chk custom pwd[%2d] %08X", keycnt, bytes_to_num(keyBlock + 4 * keycnt, 4) );
-            keycnt++;
-            memset(line, 0, sizeof(line));
-        }
-
-        if (f)
-            fclose(f);
-
-        if (keycnt == 0) {
+        
+        int res = loadFileDICTIONARY(filename, "dic", keyBlock, &datalen, 4, &keycount );
+        if (res || keycount == 0) {
             PrintAndLogEx(WARNING, "No keys found in file");
             free(keyBlock);
             return 1;
         }
-        PrintAndLogEx(SUCCESS, "Loaded %d keys", keycnt);
 
         // loop
-        uint64_t testpwd = 0x00;
-        for (uint16_t c = 0; c < keycnt; ++c) {
+        uint64_t curr_password = 0x00;
+        for (uint16_t c = 0; c < keycount; ++c) {
 
             if (IsOffline()) {
                 PrintAndLogEx(WARNING, "Device offline\n");
                 free(keyBlock);
-                return  2;
+                return 2;
             }
 
             if (IsCancelled()) {
@@ -1766,35 +1725,33 @@ int CmdT55xxChkPwds(const char *Cmd) {
                 return 0;
             }
 
-            testpwd = bytes_to_num(keyBlock + 4 * c, 4);
+            curr_password = bytes_to_num(keyBlock + 4 * c, 4);
 
-            PrintAndLogEx(INFO, "Testing %08X", testpwd);
-
-            if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, testpwd)) {
-                PrintAndLogEx(INFO, "Aquireing data from device failed. Quitting");
-                free(keyBlock);
-                return 0;
+            PrintAndLogEx(INFO, "Testing %08X", curr_password);
+            
+            if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, curr_password)) {
+                continue;
             }
 
             found = tryDetectModulation();
             if (found)
                 break;
-
         }
         if (found)
-            PrintAndLogEx(SUCCESS, "Found valid password: [ %08X ]", testpwd);
+            PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08X") " ]", curr_password);
         else
-            PrintAndLogEx(WARNING, "Password NOT found.");
+            PrintAndLogEx(WARNING, "Check pwd failed");
     }
 
     free(keyBlock);
 
 out:
     t1 = msclock() - t1;
-    PrintAndLogEx(SUCCESS, "\nTime in bruteforce: %.0f seconds\n", (float)t1 / 1000.0);
+    PrintAndLogEx(SUCCESS, "\nTime in check pwd: %.0f seconds\n", (float)t1 / 1000.0);
     return 0;
 }
 
+// Bruteforce - incremental password range search
 int CmdT55xxBruteForce(const char *Cmd) {
 
     uint32_t start_password = 0x00000000; //start password
@@ -1802,15 +1759,11 @@ int CmdT55xxBruteForce(const char *Cmd) {
     uint32_t curr = 0;
     bool found = false;
 
-
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_t55xx_bruteforce();
 
     uint64_t t1 = msclock();
 
-    // Try to read Block 7, first :)
-
-    // incremental pwd range search
     start_password = param_get32ex(Cmd, 0, 0, 16);
     end_password = param_get32ex(Cmd, 1, 0, 16);
 
@@ -1823,7 +1776,7 @@ int CmdT55xxBruteForce(const char *Cmd) {
     PrintAndLogEx(INFO, "Search password range [%08X -> %08X]", start_password, end_password);
 
     while (!found) {
-
+       
         printf(".");
         fflush(stdout);
 
@@ -1831,24 +1784,20 @@ int CmdT55xxBruteForce(const char *Cmd) {
             return 0;
         }
 
-        if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, curr)) {
-            PrintAndLogEx(WARNING, "Aquiring data from device failed. Quitting");
-            return 0;
-        }
-
-        found = tryDetectModulation();
+        found = tryOnePassword(curr);
 
         if (curr == end_password)
             break;
+        
         curr++;
     }
 
     PrintAndLogEx(NORMAL, "");
 
     if (found)
-        PrintAndLogEx(SUCCESS, "Found valid password: [ %08X ]", curr);
+        PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08X") " ]", curr);
     else
-        PrintAndLogEx(WARNING, "Password NOT found. Last tried: [ %08X ]", --curr);
+        PrintAndLogEx(WARNING, "Bruteforce failed, last tried: [ " _YELLOW_("%08X") " ]", --curr);
 
     t1 = msclock() - t1;
     PrintAndLogEx(SUCCESS, "\nTime in bruteforce: %.0f seconds\n", (float)t1 / 1000.0);
@@ -1856,12 +1805,13 @@ int CmdT55xxBruteForce(const char *Cmd) {
 }
 
 int tryOnePassword(uint32_t password) {
-    PrintAndLogEx(INFO, "Trying password %08x", password);
-    if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, password)) {
-        PrintAndLogEx(NORMAL, "Acquire data from device failed. Quitting");
-        return -1;
-    }
+    PrintAndLogEx(INFO, "Trying password %08X", password);
+    
+    AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, password);
 
+    if (getSignalProperties()->isnoise == false)
+        return 0;
+    
     if (tryDetectModulation())
         return 1;
     else
@@ -1882,12 +1832,15 @@ int CmdT55xxRecoverPW(const char *Cmd) {
 
     // first try fliping each bit in the expected password
     while (bit < 32) {
-        curr_password = orig_password ^ (1 << bit);
+        curr_password = orig_password ^ (1u << bit);
         found = tryOnePassword(curr_password);
-        if (found == -1) return 0;
+        if ( found == 1)
+            goto out;
+        
         bit++;
 
-        if (IsCancelled()) return 0;
+        if (IsCancelled()) 
+            return 0;
     }
 
     // now try to use partial original password, since block 7 should have been completely
@@ -1897,26 +1850,30 @@ int CmdT55xxRecoverPW(const char *Cmd) {
     // from low bit to high bit
     bit = 0;
     while (bit < 32) {
-        mask += (1 << bit);
+        mask += (1u << bit);
         curr_password = orig_password & mask;
         // if updated mask didn't change the password, don't try it again
         if (prev_password == curr_password) {
             bit++;
             continue;
         }
+        
         found = tryOnePassword(curr_password);
-        if (found == -1) return 0;
+        if ( found == 1 )
+            goto out;        
+        
         bit++;
         prev_password = curr_password;
 
-        if (IsCancelled()) return 0;
+        if (IsCancelled()) 
+            return 0;
     }
 
     // from high bit to low
     bit = 0;
     mask = 0xffffffff;
     while (bit < 32) {
-        mask -= (1 << bit);
+        mask -= (1u << bit);
         curr_password = orig_password & mask;
         // if updated mask didn't change the password, don't try it again
         if (prev_password == curr_password) {
@@ -1924,20 +1881,24 @@ int CmdT55xxRecoverPW(const char *Cmd) {
             continue;
         }
         found = tryOnePassword(curr_password);
-        if (found == -1)
-            return 0;
+        if ( found == 1 )
+            goto out;
+
         bit++;
         prev_password = curr_password;
 
-        if (IsCancelled()) return 0;
+        if (IsCancelled()) 
+            return 0;
     }
+
+out:
 
     PrintAndLogEx(NORMAL, "");
 
     if (found == 1)
-        PrintAndLogEx(SUCCESS, "Found valid password: [%08x]", curr_password);
+        PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08X") " ]", curr_password);
     else
-        PrintAndLogEx(WARNING, "Password NOT found.");
+        PrintAndLogEx(WARNING, "Recover pwd failed");
 
     return 0;
 }

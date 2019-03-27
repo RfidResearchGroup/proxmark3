@@ -93,9 +93,11 @@ int GetModels(char *Models[], int *count, uint8_t *width) {
                 PrintAndLogEx(WARNING, "out of memory?");
                 return 0;
             }
-            memcpy(tmp, model.name, size);
-            Models[mode] = tmp;
-            width[mode] = plen(model.spoly);
+            if ( model.name != NULL ) {
+                memcpy(tmp, model.name, size);
+                Models[mode] = tmp;
+                width[mode] = plen(model.spoly);
+            }
         }
         mfree(&model);
     } else { //reveng -s
@@ -401,7 +403,7 @@ char *SwapEndianStr(const char *inStr, const size_t len, const uint8_t blockSize
 // takes hex string in and searches for a matching result (hex string must include checksum)
 int CmdrevengSearch(const char *Cmd) {
 
-#define NMODELS 105
+#define NMODELS 106
 
     char inHexStr[100] = {0x00};
     int dataLen = param_getstr(Cmd, 0, inHexStr, sizeof(inHexStr));

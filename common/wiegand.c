@@ -36,22 +36,22 @@ uint8_t checkParity(uint32_t bits, uint8_t len, uint8_t type);
 // by marshmellow
 // takes a array of binary values, start position, length of bits per parity (includes parity bit),
 // Parity Type (1 for odd; 0 for even; 2 for Always 1's; 3 for Always 0's), and binary Length (length to run)
-size_t removeParity(uint8_t *bitstream, size_t startIdx, uint8_t pLen, uint8_t pType, size_t bLen) {
+size_t removeParity(uint8_t *bits, size_t startIdx, uint8_t pLen, uint8_t pType, size_t bLen) {
     uint32_t parityWd = 0;
     size_t j = 0, bitcount = 0;
     for (int word = 0; word < (bLen); word += pLen) {
         for (int bit = 0; bit < pLen; ++bit) {
-            parityWd = (parityWd << 1) | bitstream[startIdx + word + bit];
-            bitstream[j++] = (bitstream[startIdx + word + bit]);
+            parityWd = (parityWd << 1) | bits[startIdx + word + bit];
+            bits[j++] = (bits[startIdx + word + bit]);
         }
         j--; // overwrite parity with next data
         // if parity fails then return 0
         switch (pType) {
             case 3:
-                if (bitstream[j] == 1) return 0;
+                if (bits[j] == 1) return 0;
                 break; //should be 0 spacer bit
             case 2:
-                if (bitstream[j] == 0) return 0;
+                if (bits[j] == 0) return 0;
                 break; //should be 1 spacer bit
             default: //test parity
                 if (parityTest(parityWd, pLen, pType) == 0) return 0;
@@ -228,8 +228,8 @@ void num_to_wiegand_bits(uint64_t oem, uint64_t fc, uint64_t cn, uint8_t *dest, 
             break;
         case 50 :               // AWID 50 RBH
             fc &= 0xFFFF;       // 16bits
-            cn &= 0xFFFFFFFF    // 32bits
-                  value = fc << 32 | cn;
+            cn &= 0xFFFFFFFF;   // 32bits
+            value = fc << 32 | cn;
             num_to_bytebits(value, 48, temp);
             wiegand_add_parity(temp, dest, 48);  // verify!
             break;

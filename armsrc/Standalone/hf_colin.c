@@ -207,7 +207,7 @@ void RunMod() {
     cjcuid = 0;
     uint8_t sectorsCnt = (MF1KSZ / MF1KSZSIZE);
     uint64_t key64;           // Defines current key
-    uint8_t *keyBlock = NULL; // Where the keys will be held in memory.
+    uint8_t *keyBlock; // Where the keys will be held in memory.
 
     /* VIGIK EXPIRED DUMP FOR STUDY
     Sector 0
@@ -807,8 +807,8 @@ void e_MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *dat
     struct Crypto1State *pcs;
     pcs = &mpcs;
 
-    byte_t dataoutbuf[16];
-    byte_t dataoutbuf2[16];
+    uint8_t dataoutbuf[16];
+    uint8_t dataoutbuf2[16];
 
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
@@ -1006,7 +1006,7 @@ int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *data
     uint8_t wipeC[] = {0x41};
 
     // variables
-    byte_t isOK = 0;
+    uint8_t isOK = 0;
     uint8_t d_block[18] = {0x00};
 
     uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];

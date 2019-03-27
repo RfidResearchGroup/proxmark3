@@ -44,7 +44,7 @@ void ClearAuthData() {
 
 uint8_t iso14443A_CRC_check(bool isResponse, uint8_t *d, uint8_t n) {
     if (n < 3) return 2;
-    if (isResponse & (n < 6)) return 2;
+    if (isResponse && (n < 6)) return 2;
     return check_crc(CRC_14443_A, d, n);
 }
 
@@ -216,7 +216,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             break;
         case MIFARE_ULEV1_AUTH:
             if (cmdsize == 7)
-                snprintf(exp, size, "PWD-AUTH KEY: 0x%02x%02x%02x%02x", cmd[1], cmd[2], cmd[3], cmd[4]);
+                snprintf(exp, size, "PWD-AUTH KEY: " _YELLOW_("0x%02x%02x%02x%02x"), cmd[1], cmd[2], cmd[3], cmd[4]);
             else
                 snprintf(exp, size, "PWD-AUTH");
             break;

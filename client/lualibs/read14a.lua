@@ -54,12 +54,12 @@ local function parse14443a(data)
     Based on this struct :
 
     typedef struct {
-        byte_t uid[10];
-        byte_t uidlen;
-        byte_t atqa[2];
-        byte_t sak;
-        byte_t ats_len;
-        byte_t ats[256];
+        uint8_t uid[10];
+        uint8_t uidlen;
+        uint8_t atqa[2];
+        uint8_t sak;
+        uint8_t ats_len;
+        uint8_t ats[256];
     } __attribute__((__packed__)) iso14a_card_select_t;
 
     --]]
