@@ -615,17 +615,20 @@ int Cmdmandecoderaw(const char *Cmd) {
     return 1;
 }
 
-//by marshmellow
-//biphase decode
-//take 01 or 10 = 0 and 11 or 00 = 1
-//takes 2 arguments "offset" default = 0 if 1 it will shift the decode by one bit
-// and "invert" default = 0 if 1 it will invert output
-//  the argument offset allows us to manually shift if the output is incorrect - [EDIT: now auto detects]
+/*
+ *  @author marshmellow
+ * biphase decode
+ * decodes 01 or 10 -> ZERO 
+ *         11 or 00 -> ONE
+ * param offset adjust start position
+ * param invert invert output
+ * param masxErr maximum tolerated errors 
+ */
 int CmdBiphaseDecodeRaw(const char *Cmd) {
     size_t size = 0;
     int offset = 0, invert = 0, maxErr = 20, errCnt = 0;
     char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) > 3 || cmdp == 'h') return usage_data_biphaserawdecode();
+    if (strlen(Cmd) > 5 || cmdp == 'h') return usage_data_biphaserawdecode();
 
     sscanf(Cmd, "%i %i %i", &offset, &invert, &maxErr);
     if (DemodBufferLen == 0) {
@@ -665,7 +668,7 @@ int CmdBiphaseDecodeRaw(const char *Cmd) {
 // - ASK Demod then Biphase decode GraphBuffer samples
 int ASKbiphaseDemod(const char *Cmd, bool verbose) {
     //ask raw demod GraphBuffer first
-    int offset = 0, clk = 0, invert = 0, maxErr = 0;
+    int offset = 0, clk = 0, invert = 0, maxErr = 100;
     sscanf(Cmd, "%i %i %i %i", &offset, &clk, &invert, &maxErr);
 
     uint8_t BitStream[MAX_DEMOD_BUF_LEN];
