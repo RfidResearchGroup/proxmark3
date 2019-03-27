@@ -766,7 +766,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                     // cardAUTHKEY: 61 => Auth use Key B
                     cardAUTHKEY = receivedCmd_dec[0] & 0x01;
 
-                    if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] KEY: %02X%02X", emlGetKey(cardAUTHSC, cardAUTHKEY));
+                    if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] KEY %c: %02X%02X", (cardAUTHKEY == 0) ? 'A' : 'B', emlGetKey(cardAUTHSC, cardAUTHKEY));
 
                     // first authentication
                     crypto1_destroy(pcs);
@@ -780,12 +780,12 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                         crypto1_word(pcs, cuid ^ nonce, 0);
                         // prepare nonce
                         num_to_bytes(nonce, 4, rAUTH_AT);
-                        if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] Reader authenticating for block %d (0x%02x) with key %d - nonce: %02X - ciud: %02X", receivedCmd_dec[1], receivedCmd_dec[1], cardAUTHKEY, rAUTH_AT, cuid);
+                        if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] Reader authenticating for block %d (0x%02x) with key %c - nonce: %02X - ciud: %02X", receivedCmd_dec[1], receivedCmd_dec[1], (cardAUTHKEY == 0) ? 'A' : 'B', rAUTH_AT, cuid);
                     } else {
                         // nested authentication
                         ans = nonce ^ crypto1_word(pcs, cuid ^ nonce, 0);
                         num_to_bytes(ans, 4, rAUTH_AT);
-                        if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] Reader doing nested authentication for block %d (0x%02x) with key %d", receivedCmd_dec[1], receivedCmd_dec[1], cardAUTHKEY);
+                        if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] Reader doing nested authentication for block %d (0x%02x) with key %c", receivedCmd_dec[1], receivedCmd_dec[1], (cardAUTHKEY == 0) ? 'A' : 'B');
                     }
 
 
