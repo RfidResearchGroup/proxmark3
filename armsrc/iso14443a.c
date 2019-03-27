@@ -3329,9 +3329,18 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
                     break;
                 }
 
+
+                /*
                 ans = prng_successor(nonce, 96) ^ crypto1_word(pcs, 0, 0);
                 num_to_bytes(ans, 4, rAUTH_AT);
                 EmSendCmd(rAUTH_AT, sizeof(rAUTH_AT));
+                */
+
+                ans = prng_successor(nonce, 96);
+                num_to_bytes(ans, 4, response);
+                mf_crypto1_encrypt(pcs, response, 4, response_par);
+                EmSendCmdPar(response, 4, response_par);
+                
                 LED_C_ON();
 
                 if (MF_DBGLEVEL >= 3) {
