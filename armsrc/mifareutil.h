@@ -33,11 +33,6 @@
 #define AUTHENTICATION_TIMEOUT 848      // card times out 1ms after wrong authentication (according to NXP documentation)
 #define PRE_AUTHENTICATION_LEADTIME 400 // some (non standard) cards need a pause after select before they are ready for first authentication
 
-// mifare 4bit card answers
-#define CARD_ACK      0x0A  // 1010 - ACK
-#define CARD_NACK_NA  0x04  // 0100 - NACK, not allowed (command not allowed)
-#define CARD_NACK_TR  0x05  // 0101 - NACK, transmission error
-
 // reader voltage field detector
 #define MF_MINFIELDV      4000
 

@@ -17,21 +17,6 @@
 
 extern void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *datain);
 
-//mifare emulator states
-#define MFEMUL_NOFIELD      0
-#define MFEMUL_IDLE         1
-#define MFEMUL_SELECT1      2
-#define MFEMUL_SELECT2      3
-#define MFEMUL_SELECT3      4
-#define MFEMUL_AUTH1        5
-#define MFEMUL_AUTH2        6
-#define MFEMUL_WORK	        7
-#define MFEMUL_WRITEBL2     8
-#define MFEMUL_INTREG_INC   9
-#define MFEMUL_INTREG_DEC  10
-#define MFEMUL_INTREG_REST 11
-#define MFEMUL_HALTED      12
-
 #define AC_DATA_READ             0
 #define AC_DATA_WRITE            1
 #define AC_DATA_INC              2

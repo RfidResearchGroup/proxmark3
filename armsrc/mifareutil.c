@@ -592,7 +592,7 @@ void emlClearMem(void) {
     memset(emCARD, 0, CARD_MEMORY_SIZE);
 
     // fill sectors trailer data
-    for (uint16_t b = 3; b <= MIFARE_4K_MAXBLOCK; ((b <= MIFARE_2K_MAXBLOCK ) ? (b += 4) : (b += 16)))
+    for (uint16_t b = 3; b <= MIFARE_4K_MAXBLOCK; ((b <= MIFARE_2K_MAXBLOCK) ? (b += 4) : (b += 16)))
         emlSetMem((uint8_t *)trailer, b, 1);
 
     // uid
@@ -602,7 +602,7 @@ void emlClearMem(void) {
 
 uint8_t SectorTrailer(uint8_t blockNo) {
     if (blockNo <= MIFARE_2K_MAXBLOCK) {
-        if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("Sector Trailer for block %d : %d", blockNo, (blockNo | 0x03));  
+        if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("Sector Trailer for block %d : %d", blockNo, (blockNo | 0x03));
         return (blockNo | 0x03);
     } else {
         if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("Sector Trailer for block %d : %d", blockNo, (blockNo | 0x0f));
