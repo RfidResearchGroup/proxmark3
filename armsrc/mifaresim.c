@@ -359,7 +359,6 @@ static bool HasValidCRC(uint8_t *receivedCmd, uint16_t receivedCmd_len) {
 * FLAG_7B_UID_IN_DATA - means that there is a 7-byte UID in the data-section, we're expected to use that
 * FLAG_10B_UID_IN_DATA	- use 10-byte UID in the data-section not finished
 *	FLAG_NR_AR_ATTACK  - means we should collect NR_AR responses for bruteforcing later
-* FLAG_RANDOM_NONCE - means we should generate some pseudo-random nonce data (only allows moebius attack)
 *@param exitAfterNReads, exit simulation after n blocks have been read, 0 is infinite ...
 * (unless reader attack mode enabled then it runs util it gets enough nonces to recover all keys attmpted)
 */
@@ -402,7 +401,6 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
     uint8_t response[MAX_MIFARE_FRAME_SIZE] = {0x00};
     uint8_t response_par[MAX_MIFARE_PARITY_SIZE] = {0x00};
 
-    uint8_t rAUTH_NT[] = {0x01, 0x02, 0x03, 0x04};
     uint8_t rAUTH_AT[] = {0x00, 0x00, 0x00, 0x00};
 
     //Here, we collect UID,sector,keytype,NT,AR,NR,NT2,AR2,NR2
@@ -422,14 +420,8 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
     uint8_t	mM = 0; //moebius_modifier for collection storage
 
     // Authenticate response - nonce
-    uint32_t nonce;
-    if ((flags & FLAG_RANDOM_NONCE) == FLAG_RANDOM_NONCE) {
-        nonce = prand();
-    } else {
-        nonce = bytes_to_num(rAUTH_NT, 4);
-    }
-
-
+    uint32_t nonce = prng_successor(selTimer, 32) ;
+  
     if ((flags & FLAG_MF_MINI) == FLAG_MF_MINI) {
         MifareCardType = 0;
         Dbprintf("Mifare Mini");
@@ -500,10 +492,8 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
             // init crypto block
             crypto1_destroy(pcs);
             cardAUTHKEY = AUTHKEYNONE;
-            //nonce = bytes_to_num(rAUTH_NT, 4);
             nonce = prng_successor(selTimer, 32);
-            if ((flags & FLAG_RANDOM_NONCE) == FLAG_RANDOM_NONCE) nonce = prand();
-
+            
             LED_B_OFF();
             LED_C_OFF();
             cardSTATE = MFEMUL_SELECT1;
@@ -1029,11 +1019,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                                                 // switch to moebius collection
                                                 gettingMoebius = true;
                                                 mM = ATTACK_KEY_COUNT;
-                                                if ((flags & FLAG_RANDOM_NONCE) == FLAG_RANDOM_NONCE)  {
-                                                    nonce = prand();
-                                                } else {
-                                                    nonce = nonce * 7;
-                                                }
+                                                nonce = nonce * 7;
                                                 break;
                                             }
                                         } else {
@@ -1072,10 +1058,6 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                     cardSTATE_TO_IDLE();
                     break;
                 }
-
-                //ans = prng_successor(nonce, 96) ^ crypto1_word(pcs, 0, 0);
-                //num_to_bytes(ans, 4, rAUTH_AT);
-                //EmSendCmd(rAUTH_AT, sizeof(rAUTH_AT));
 
                 ans = prng_successor(nonce, 96);
                 num_to_bytes(ans, 4, rAUTH_AT);

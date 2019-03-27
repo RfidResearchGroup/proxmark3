@@ -61,7 +61,6 @@
 #define MFEMUL_SELECT2      3
 #define MFEMUL_SELECT3      4
 #define MFEMUL_AUTH1        5
-#define MFEMUL_AUTH2        6
 #define MFEMUL_WORK         7
 #define MFEMUL_WRITEBL2     8
 #define MFEMUL_INTREG_INC   9

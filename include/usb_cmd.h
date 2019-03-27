@@ -290,7 +290,6 @@ typedef struct {
 #define FLAG_10B_UID_IN_DATA    0x08
 #define FLAG_UID_IN_EMUL        0x10
 #define FLAG_NR_AR_ATTACK       0x20
-#define FLAG_RANDOM_NONCE       0x40
 #define FLAG_MF_MINI            0x80
 #define FLAG_MF_1K              0x100
 #define FLAG_MF_2K              0x200
