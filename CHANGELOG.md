@@ -3,6 +3,18 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Add - dictionary key file for MFU. (not in use at the moment) (@mazodude)
+ - Change 'lf fdx demod - better biphase maxerrors. (@MalteHillmann)
+ - Change 'hf mf sim' - now works better against android (@mceloff)
+ - Fix 'lf t55xx brute' - now works after aquiredata adaptations (@iceman)
+ - Fix 'lf t55xx chk' - now works after aquiredata adaptations (@iceman)
+ - Fix 'lf t55xx recoverpwd' - now works after aquiredata adaptations (@iceman)
+ - Fix 'data detect p' - reverted bad clock detection (@iceman)
+ - Change 'data detect a' - better clock detection (@iceman)
+ - Add 'hf 14a info' - now detects some magic card Gen2 (@iceman)
+ - Removed 'LCD' code in armsrc compilation (@iceman)
+ - Change - Generic fixes of codestyle (@doegox) (@iceman)
+ - Change 'lf indala demod' - refactoring (@iceman)
  - Change - handling fault bit markers (7) and partial nibbles in hex printing (@doegox)
  - Change - printing of fault bit markers (7) using a dot (@doegox)
  - Change 'sc upgrade' - firmware file integrity check (@piwi)
