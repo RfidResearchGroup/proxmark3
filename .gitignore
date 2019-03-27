@@ -20,6 +20,7 @@
 *.exe
 *.dsym
 version.c
+*.json
 
 !client/hardnested/*.bin
 !client/hardnested/tables/*.z
