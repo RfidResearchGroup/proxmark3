@@ -524,7 +524,7 @@ int CmdHF14AInfo(const char *Cmd) {
                           (tb1 ? "" : " NOT"),
                           (tc1 ? "" : " NOT"),
                           fsci,
-                          fsci < sizeof(atsFSC)/sizeof(atsFSC[0]) ? atsFSC[fsci] : -1
+                          fsci < sizeof(atsFSC) / sizeof(atsFSC[0]) ? atsFSC[fsci] : -1
                          );
         }
         pos = 2;
@@ -544,8 +544,8 @@ int CmdHF14AInfo(const char *Cmd) {
                           ((card.ats[pos] & 0x80) ? " NOT" : ""),
                           dr,
                           ds
-                  );
-                  
+                         );
+
             pos++;
         }
         if (tb1) {
@@ -959,7 +959,7 @@ int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
         // get frame length from ATS in data field
         if (resp.arg[0] > 1) {
             uint8_t fsci = resp.d.asBytes[1] & 0x0f;
-            if (fsci < sizeof(atsFSC)/sizeof(atsFSC[0]))
+            if (fsci < sizeof(atsFSC) / sizeof(atsFSC[0]))
                 frameLength = atsFSC[fsci];
         }
     } else {
@@ -967,7 +967,7 @@ int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
         iso14a_card_select_t *vcard = (iso14a_card_select_t *) resp.d.asBytes;
         if (vcard->ats_len > 1) {
             uint8_t fsci = vcard->ats[1] & 0x0f;
-            if (fsci < sizeof(atsFSC)/sizeof(atsFSC[0]))
+            if (fsci < sizeof(atsFSC) / sizeof(atsFSC[0]))
                 frameLength = atsFSC[fsci];
         }
 
@@ -1000,10 +1000,10 @@ int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool activa
     // here length USB_CMD_DATA_SIZE=512
     // timeout must be authomatically set by "get ATS"
     UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_APDU | ISO14A_NO_DISCONNECT | cmdc, (datainlen & 0xFFFF), 0}};
-    
-    if ( datain )
+
+    if (datain)
         memcpy(c.d.asBytes, datain, datainlen);
-    
+
     SendCommand(&c);
 
     uint8_t *recv;

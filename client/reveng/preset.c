@@ -379,98 +379,98 @@ static const bmp_t b32[] = {
                       BMP_C(0x94000000) << (BMP_BIT - 32),    /* 115 --  8,      94 */
                       BMP_C(0x97000000) << (BMP_BIT - 32),    /* 116 --  8,      97 */
                       BMP_C(0x98000000) << (BMP_BIT - 32),    /* 117 --  6,      26 */
-	BMP_C(0x99000000) << (BMP_BIT - 32),	/* 118 --  8,      99 */
-	BMP_C(0x9b000000) << (BMP_BIT - 32),	/* 119 --  8,      9b */
-	BMP_C(0x9c000000) << (BMP_BIT - 32),	/* 120 --  6,      27 */
-	BMP_C(0x9d5e4de2) << (BMP_BIT - 32),	/* 121 -- 31,4eaf26f1 */
-	BMP_C(0x9e000000) << (BMP_BIT - 32),	/* 122 --  7,      4f */
-	BMP_C(0x9ecf0000) << (BMP_BIT - 32),	/* 123 -- 16,    9ecf */
-	BMP_C(0xa0660000) << (BMP_BIT - 32),	/* 124 -- 16,    a066 */
-	BMP_C(0xa0970000) << (BMP_BIT - 32),	/* 125 -- 16,    a097 */
-	BMP_C(0xa1000000) << (BMP_BIT - 32),	/* 126 --  8,      a1 */
-	BMP_C(0xa3660000) << (BMP_BIT - 32),	/* 127 -- 16,    a366 */
-	BMP_C(0xa6000000) << (BMP_BIT - 32),	/* 128 --  7,      53 */
-	BMP_C(0xa7000000) << (BMP_BIT - 32),	/* 129 --  8,      a7 */
-	BMP_C(0xa8000000) << (BMP_BIT - 32),	/* 130 --  5,      15 */
-	BMP_C(0xa8190000) << (BMP_BIT - 32),	/* 131 -- 16,    a819 */
-	BMP_C(0xa833982b) << (BMP_BIT - 32),	/* 132 -- 32,a833982b */
-	BMP_C(0xabcdef00) << (BMP_BIT - 32),	/* 133 -- 24,  abcdef */
-	BMP_C(0xac000000) << (BMP_BIT - 32),	/* 134 --  8,      ac */
-	BMP_C(0xaee70000) << (BMP_BIT - 32),	/* 135 -- 16,    aee7 */
-	BMP_C(0xb0000000) << (BMP_BIT - 32),	/* 136 --  4,       b */
-	BMP_C(0xb0010000) << (BMP_BIT - 32),	/* 137 -- 16,    b001 */
-	BMP_C(0xb2aa0000) << (BMP_BIT - 32),	/* 138 -- 16,    b2aa */
-	BMP_C(0xb3400000) << (BMP_BIT - 32),	/* 139 -- 12,     b34 */
-	BMP_C(0xb42d8000) << (BMP_BIT - 32),	/* 140 -- 17,   1685b */
-	BMP_C(0xb4600000) << (BMP_BIT - 32),	/* 141 -- 11,     5a3 */
-	BMP_C(0xb4c80000) << (BMP_BIT - 32),	/* 142 -- 16,    b4c8 */
-	BMP_C(0xb4f3e600) << (BMP_BIT - 32),	/* 143 -- 24,  b4f3e6 */
-	BMP_C(0xb704ce00) << (BMP_BIT - 32),	/* 144 -- 24,  b704ce */
-	BMP_C(0xb798b438) << (BMP_BIT - 32),	/* 145 -- 32,b798b438 */
-	BMP_C(0xbb3d0000) << (BMP_BIT - 32),	/* 146 -- 16,    bb3d */
-	BMP_C(0xbc000000) << (BMP_BIT - 32),	/* 147 --  6,2f/ 8,bc */
-	BMP_C(0xbd0be338) << (BMP_BIT - 32),	/* 148 -- 32,bd0be338 */
-	BMP_C(0xbdf40000) << (BMP_BIT - 32),	/* 149 -- 16,    bdf4 */
-	BMP_C(0xbf050000) << (BMP_BIT - 32),	/* 150 -- 16,    bf05 */
-	BMP_C(0xc0000000) << (BMP_BIT - 32),	/* 151 --  3,       6 */
-	BMP_C(0xc2000000) << (BMP_BIT - 32),	/* 152 --  7,      61 */
-	BMP_C(0xc25a5600) << (BMP_BIT - 32),	/* 153 -- 24,  c25a56 */
-	BMP_C(0xc2b70000) << (BMP_BIT - 32),	/* 154 -- 16,    c2b7 */
-	BMP_C(0xc2b80000) << (BMP_BIT - 32),	/* 155 -- 14,    30ae */
-	BMP_C(0xc4000000) << (BMP_BIT - 32),	/* 156 --  8,      c4 */
-	BMP_C(0xc6c60000) << (BMP_BIT - 32),	/* 157 -- 16,    c6c6 */
-	BMP_C(0xc7000000) << (BMP_BIT - 32),	/* 158 --  8,      c7 */
-	BMP_C(0xc704dd7b) << (BMP_BIT - 32),	/* 159 -- 32,c704dd7b */
-	BMP_C(0xc8000000) << (BMP_BIT - 32),	/* 160 --  5,      19 */
-	BMP_C(0xc8670000) << (BMP_BIT - 32),	/* 161 -- 16,    c867 */
-	BMP_C(0xcbf43926) << (BMP_BIT - 32),	/* 162 -- 32,cbf43926 */
-	BMP_C(0xcde70300) << (BMP_BIT - 32),	/* 163 -- 24,  cde703 */
-	BMP_C(0xce3c0000) << (BMP_BIT - 32),	/* 164 -- 16,    ce3c */
-	BMP_C(0xd0000000) << (BMP_BIT - 32),	/* 165 --  8,      d0 */
-	BMP_C(0xd02a0000) << (BMP_BIT - 32),	/* 166 -- 15,    6815 */
-	BMP_C(0xd0db0000) << (BMP_BIT - 32),	/* 167 -- 16,    d0db */
-	BMP_C(0xd3100000) << (BMP_BIT - 32),	/* 168 -- 12,     d31 */
-	BMP_C(0xd3be9568) << (BMP_BIT - 32),	/* 169 -- 30,34efa55a */
-	BMP_C(0xd4d00000) << (BMP_BIT - 32),	/* 170 -- 12,     d4d */
-	BMP_C(0xd5000000) << (BMP_BIT - 32),	/* 171 --  8,      d5 */
-	BMP_C(0xd64e0000) << (BMP_BIT - 32),	/* 172 -- 16,    d64e */
-	BMP_C(0xda000000) << (BMP_BIT - 32),	/* 173 --  8,      da */
-	BMP_C(0xdaf00000) << (BMP_BIT - 32),	/* 174 -- 12,     daf */
-	BMP_C(0xdebb20e3) << (BMP_BIT - 32),	/* 175 -- 32,debb20e3 */
-	BMP_C(0xdf000000) << (BMP_BIT - 32),	/* 176 --  8,      df */
-	BMP_C(0xe0000000) << (BMP_BIT - 32),	/* 177 --  3,       7 */
-	BMP_C(0xe3069283) << (BMP_BIT - 32),	/* 178 -- 32,e3069283 */
-	BMP_C(0xe3940000) << (BMP_BIT - 32),	/* 179 -- 16,    e394 */
-	BMP_C(0xe5cc0000) << (BMP_BIT - 32),	/* 180 -- 16,    e5cc */
-	BMP_C(0xe7a80000) << (BMP_BIT - 32),	/* 181 -- 13,    1cf5 */
-	BMP_C(0xe8000000) << (BMP_BIT - 32),	/* 182 --  6,      3a */
-	BMP_C(0xea000000) << (BMP_BIT - 32),	/* 183 --  7,      75 */
-	BMP_C(0xea820000) << (BMP_BIT - 32),	/* 184 -- 16,    ea82 */
-	BMP_C(0xec000000) << (BMP_BIT - 32),	/* 185 --  6,      3b */
-	BMP_C(0xf0000000) << (BMP_BIT - 32),	/* 186 --  4,       f */
-	BMP_C(0xf0b80000) << (BMP_BIT - 32),	/* 187 -- 16,    f0b8 */
-	BMP_C(0xf1300000) << (BMP_BIT - 32),	/* 188 -- 12,     f13 */
-	BMP_C(0xf4000000) << (BMP_BIT - 32),	/* 189 --  8,      f4 */
-	BMP_C(0xf4acfb13) << (BMP_BIT - 32),	/* 190 -- 32,f4acfb13 */
-	BMP_C(0xf5b00000) << (BMP_BIT - 32),	/* 191 -- 12,     f5b */
-	BMP_C(0xf6400000) << (BMP_BIT - 32),	/* 192 -- 10,     3d9 */
-	BMP_C(0xf7000000) << (BMP_BIT - 32),	/* 193 --  8,      f7 */
-	BMP_C(0xf8000000) << (BMP_BIT - 32),	/* 194 --  5,      1f */
-	BMP_C(0xfc000000) << (BMP_BIT - 32),	/* 195 --  6,      3f */
-	BMP_C(0xfc891918) << (BMP_BIT - 32),	/* 196 -- 32,fc891918 */
-	BMP_C(0xfd000000) << (BMP_BIT - 32),	/* 197 --  8,      fd */
-	BMP_C(0xfe000000) << (BMP_BIT - 32),	/* 198 --  7,      7f */
-	BMP_C(0xfedcba00) << (BMP_BIT - 32),	/* 199 -- 24,  fedcba */
-	BMP_C(0xfee80000) << (BMP_BIT - 32),	/* 200 -- 16,    fee8 */
-	BMP_C(0xff000000) << (BMP_BIT - 32),	/* 201 --  8,      ff */
-	BMP_C(0xffc00000) << (BMP_BIT - 32),	/* 202 -- 10,     3ff */
-	BMP_C(0xfff00000) << (BMP_BIT - 32),	/* 203 -- 12,     fff */
-	BMP_C(0xfffc0000) << (BMP_BIT - 32),	/* 204 -- 14,    3fff */
-	BMP_C(0xffff0000) << (BMP_BIT - 32),	/* 205 -- 16,    ffff */
-	BMP_C(0xffffff00) << (BMP_BIT - 32),	/* 206 -- 24,  ffffff */
-	BMP_C(0xfffffffc) << (BMP_BIT - 32),	/* 207 -- 30,3fffffff */
-	BMP_C(0xfffffffe) << (BMP_BIT - 32),	/* 208 -- 31,7fffffff */
-	BMP_C(0xffffffff) << (BMP_BIT - 32),	/* 209 -- 32,ffffffff */
+                      BMP_C(0x99000000) << (BMP_BIT - 32),    /* 118 --  8,      99 */
+                      BMP_C(0x9b000000) << (BMP_BIT - 32),    /* 119 --  8,      9b */
+                      BMP_C(0x9c000000) << (BMP_BIT - 32),    /* 120 --  6,      27 */
+                      BMP_C(0x9d5e4de2) << (BMP_BIT - 32),    /* 121 -- 31,4eaf26f1 */
+                      BMP_C(0x9e000000) << (BMP_BIT - 32),    /* 122 --  7,      4f */
+                      BMP_C(0x9ecf0000) << (BMP_BIT - 32),    /* 123 -- 16,    9ecf */
+                      BMP_C(0xa0660000) << (BMP_BIT - 32),    /* 124 -- 16,    a066 */
+                      BMP_C(0xa0970000) << (BMP_BIT - 32),    /* 125 -- 16,    a097 */
+                      BMP_C(0xa1000000) << (BMP_BIT - 32),    /* 126 --  8,      a1 */
+                      BMP_C(0xa3660000) << (BMP_BIT - 32),    /* 127 -- 16,    a366 */
+                      BMP_C(0xa6000000) << (BMP_BIT - 32),    /* 128 --  7,      53 */
+                      BMP_C(0xa7000000) << (BMP_BIT - 32),    /* 129 --  8,      a7 */
+                      BMP_C(0xa8000000) << (BMP_BIT - 32),    /* 130 --  5,      15 */
+                      BMP_C(0xa8190000) << (BMP_BIT - 32),    /* 131 -- 16,    a819 */
+                      BMP_C(0xa833982b) << (BMP_BIT - 32),    /* 132 -- 32,a833982b */
+                      BMP_C(0xabcdef00) << (BMP_BIT - 32),    /* 133 -- 24,  abcdef */
+                      BMP_C(0xac000000) << (BMP_BIT - 32),    /* 134 --  8,      ac */
+                      BMP_C(0xaee70000) << (BMP_BIT - 32),    /* 135 -- 16,    aee7 */
+                      BMP_C(0xb0000000) << (BMP_BIT - 32),    /* 136 --  4,       b */
+                      BMP_C(0xb0010000) << (BMP_BIT - 32),    /* 137 -- 16,    b001 */
+                      BMP_C(0xb2aa0000) << (BMP_BIT - 32),    /* 138 -- 16,    b2aa */
+                      BMP_C(0xb3400000) << (BMP_BIT - 32),    /* 139 -- 12,     b34 */
+                      BMP_C(0xb42d8000) << (BMP_BIT - 32),    /* 140 -- 17,   1685b */
+                      BMP_C(0xb4600000) << (BMP_BIT - 32),    /* 141 -- 11,     5a3 */
+                      BMP_C(0xb4c80000) << (BMP_BIT - 32),    /* 142 -- 16,    b4c8 */
+                      BMP_C(0xb4f3e600) << (BMP_BIT - 32),    /* 143 -- 24,  b4f3e6 */
+                      BMP_C(0xb704ce00) << (BMP_BIT - 32),    /* 144 -- 24,  b704ce */
+                      BMP_C(0xb798b438) << (BMP_BIT - 32),    /* 145 -- 32,b798b438 */
+                      BMP_C(0xbb3d0000) << (BMP_BIT - 32),    /* 146 -- 16,    bb3d */
+                      BMP_C(0xbc000000) << (BMP_BIT - 32),    /* 147 --  6,2f/ 8,bc */
+                      BMP_C(0xbd0be338) << (BMP_BIT - 32),    /* 148 -- 32,bd0be338 */
+                      BMP_C(0xbdf40000) << (BMP_BIT - 32),    /* 149 -- 16,    bdf4 */
+                      BMP_C(0xbf050000) << (BMP_BIT - 32),    /* 150 -- 16,    bf05 */
+                      BMP_C(0xc0000000) << (BMP_BIT - 32),    /* 151 --  3,       6 */
+                      BMP_C(0xc2000000) << (BMP_BIT - 32),    /* 152 --  7,      61 */
+                      BMP_C(0xc25a5600) << (BMP_BIT - 32),    /* 153 -- 24,  c25a56 */
+                      BMP_C(0xc2b70000) << (BMP_BIT - 32),    /* 154 -- 16,    c2b7 */
+                      BMP_C(0xc2b80000) << (BMP_BIT - 32),    /* 155 -- 14,    30ae */
+                      BMP_C(0xc4000000) << (BMP_BIT - 32),    /* 156 --  8,      c4 */
+                      BMP_C(0xc6c60000) << (BMP_BIT - 32),    /* 157 -- 16,    c6c6 */
+                      BMP_C(0xc7000000) << (BMP_BIT - 32),    /* 158 --  8,      c7 */
+                      BMP_C(0xc704dd7b) << (BMP_BIT - 32),    /* 159 -- 32,c704dd7b */
+                      BMP_C(0xc8000000) << (BMP_BIT - 32),    /* 160 --  5,      19 */
+                      BMP_C(0xc8670000) << (BMP_BIT - 32),    /* 161 -- 16,    c867 */
+                      BMP_C(0xcbf43926) << (BMP_BIT - 32),    /* 162 -- 32,cbf43926 */
+                      BMP_C(0xcde70300) << (BMP_BIT - 32),    /* 163 -- 24,  cde703 */
+                      BMP_C(0xce3c0000) << (BMP_BIT - 32),    /* 164 -- 16,    ce3c */
+                      BMP_C(0xd0000000) << (BMP_BIT - 32),    /* 165 --  8,      d0 */
+                      BMP_C(0xd02a0000) << (BMP_BIT - 32),    /* 166 -- 15,    6815 */
+                      BMP_C(0xd0db0000) << (BMP_BIT - 32),    /* 167 -- 16,    d0db */
+                      BMP_C(0xd3100000) << (BMP_BIT - 32),    /* 168 -- 12,     d31 */
+                      BMP_C(0xd3be9568) << (BMP_BIT - 32),    /* 169 -- 30,34efa55a */
+                      BMP_C(0xd4d00000) << (BMP_BIT - 32),    /* 170 -- 12,     d4d */
+                      BMP_C(0xd5000000) << (BMP_BIT - 32),    /* 171 --  8,      d5 */
+                      BMP_C(0xd64e0000) << (BMP_BIT - 32),    /* 172 -- 16,    d64e */
+                      BMP_C(0xda000000) << (BMP_BIT - 32),    /* 173 --  8,      da */
+                      BMP_C(0xdaf00000) << (BMP_BIT - 32),    /* 174 -- 12,     daf */
+                      BMP_C(0xdebb20e3) << (BMP_BIT - 32),    /* 175 -- 32,debb20e3 */
+                      BMP_C(0xdf000000) << (BMP_BIT - 32),    /* 176 --  8,      df */
+                      BMP_C(0xe0000000) << (BMP_BIT - 32),    /* 177 --  3,       7 */
+                      BMP_C(0xe3069283) << (BMP_BIT - 32),    /* 178 -- 32,e3069283 */
+                      BMP_C(0xe3940000) << (BMP_BIT - 32),    /* 179 -- 16,    e394 */
+                      BMP_C(0xe5cc0000) << (BMP_BIT - 32),    /* 180 -- 16,    e5cc */
+                      BMP_C(0xe7a80000) << (BMP_BIT - 32),    /* 181 -- 13,    1cf5 */
+                      BMP_C(0xe8000000) << (BMP_BIT - 32),    /* 182 --  6,      3a */
+                      BMP_C(0xea000000) << (BMP_BIT - 32),    /* 183 --  7,      75 */
+                      BMP_C(0xea820000) << (BMP_BIT - 32),    /* 184 -- 16,    ea82 */
+                      BMP_C(0xec000000) << (BMP_BIT - 32),    /* 185 --  6,      3b */
+                      BMP_C(0xf0000000) << (BMP_BIT - 32),    /* 186 --  4,       f */
+                      BMP_C(0xf0b80000) << (BMP_BIT - 32),    /* 187 -- 16,    f0b8 */
+                      BMP_C(0xf1300000) << (BMP_BIT - 32),    /* 188 -- 12,     f13 */
+                      BMP_C(0xf4000000) << (BMP_BIT - 32),    /* 189 --  8,      f4 */
+                      BMP_C(0xf4acfb13) << (BMP_BIT - 32),    /* 190 -- 32,f4acfb13 */
+                      BMP_C(0xf5b00000) << (BMP_BIT - 32),    /* 191 -- 12,     f5b */
+                      BMP_C(0xf6400000) << (BMP_BIT - 32),    /* 192 -- 10,     3d9 */
+                      BMP_C(0xf7000000) << (BMP_BIT - 32),    /* 193 --  8,      f7 */
+                      BMP_C(0xf8000000) << (BMP_BIT - 32),    /* 194 --  5,      1f */
+                      BMP_C(0xfc000000) << (BMP_BIT - 32),    /* 195 --  6,      3f */
+                      BMP_C(0xfc891918) << (BMP_BIT - 32),    /* 196 -- 32,fc891918 */
+                      BMP_C(0xfd000000) << (BMP_BIT - 32),    /* 197 --  8,      fd */
+                      BMP_C(0xfe000000) << (BMP_BIT - 32),    /* 198 --  7,      7f */
+                      BMP_C(0xfedcba00) << (BMP_BIT - 32),    /* 199 -- 24,  fedcba */
+                      BMP_C(0xfee80000) << (BMP_BIT - 32),    /* 200 -- 16,    fee8 */
+                      BMP_C(0xff000000) << (BMP_BIT - 32),    /* 201 --  8,      ff */
+                      BMP_C(0xffc00000) << (BMP_BIT - 32),    /* 202 -- 10,     3ff */
+                      BMP_C(0xfff00000) << (BMP_BIT - 32),    /* 203 -- 12,     fff */
+                      BMP_C(0xfffc0000) << (BMP_BIT - 32),    /* 204 -- 14,    3fff */
+                      BMP_C(0xffff0000) << (BMP_BIT - 32),    /* 205 -- 16,    ffff */
+                      BMP_C(0xffffff00) << (BMP_BIT - 32),    /* 206 -- 24,  ffffff */
+                      BMP_C(0xfffffffc) << (BMP_BIT - 32),    /* 207 -- 30,3fffffff */
+                      BMP_C(0xfffffffe) << (BMP_BIT - 32),    /* 208 -- 31,7fffffff */
+                      BMP_C(0xffffffff) << (BMP_BIT - 32),    /* 209 -- 32,ffffffff */
 };
 
 static const struct malias aliases[];
@@ -479,297 +479,297 @@ static const struct malias aliases[];
  * Sorted by left-justified polynomial for bsearch().
  */
 static const struct mpreset models[] = {
-    {64UL, b64,     b64a,    P_LE   | P_CONFIR, b64a,    b64b,    b64c,    aliases + 130},  /*   0 */
-	{32UL, b32+  0, 0,       P_BE   | P_CONFIR, 0,       b32+148, 0,       aliases+107},	/*   1 */
-    {40UL, b40,     0,       P_BE   | P_ACADEM, b40a,    b40b,    b40c,    aliases + 115},  /*   2 */
-	{24UL, b32+  3, b32+ 76, P_LE   | P_ATTEST, 0,       b32+153, 0,       aliases+ 77},	/*   3 */
-	{32UL, b32+  8, 0,       P_BE   | P_ATTEST, b32+209, b32+ 92, b32+159, aliases+ 98},	/*   4 */
-	{32UL, b32+  8, b32+209, P_BE   | P_ATTEST, 0,       b32+  7, 0,       aliases+104},	/*   5 */
-	{32UL, b32+  8, b32+209, P_BE   | P_ATTEST, b32+209, b32+196, b32+159, aliases+ 96},	/*   6 */
-	{32UL, b32+  8, b32+209, P_LE   | P_CONFIR, 0,       b32+ 56, 0,       aliases+103},	/*   7 */
-	{32UL, b32+  8, b32+209, P_LE   | P_ATTEST, b32+209, b32+162, b32+175, aliases+102},	/*   8 */
-    {16UL, b32 +  9, 0,       P_BE   | P_ATTEST, 0,       b32 +  5, 0,       aliases + 36}, /*   9 */
-    {16UL, b32 +  9, 0,       P_BE   | P_ATTEST, b32 +  1, b32 +  4, b32 +  9, aliases + 35}, /*  10 */
-	{ 8UL, b32+ 10, 0,       P_BE   | P_ATTEST, 0,       b32+189, 0,       aliases+158},	/*  11 */
-	{ 8UL, b32+ 10, 0,       P_BE   | P_ACADEM, b32+ 75, b32+126, b32+134, aliases+147},	/*  12 */
-	{ 8UL, b32+ 10, b32+201, P_LE   | P_ACADEM, 0,       b32+165, 0,       aliases+156},	/*  13 */
-	{16UL, b32+ 11, b32+205, P_LE   | P_ATTEST, 0,       b32+124, 0,       aliases+ 58},	/*  14 */
-	{31UL, b32+ 12, b32+208, P_BE   | P_CONFIR, b32+208, b32+ 26, b32+121, aliases+ 88},	/*  15 */
-    { 6UL, b32 + 14, 0,       P_LE   | P_ACADEM, 0,       b32 + 25, 0,       aliases + 124}, /*  16 */
-	{82UL, b82,     0,       P_LE   | P_ATTEST, 0,       b82a,    0,       aliases+161},	/*  17 */
-    {16UL, b32 + 18, 0,       P_BE   | P_ATTEST, 0,       b32 + 53, 0,       aliases + 73}, /*  18 */
-	{16UL, b32+ 18, 0,       P_BE   | P_ACADEM, b32+205, b32+164, b32+ 29, aliases+ 42},	/*  19 */
-    {16UL, b32 + 18, 0,       P_LE   | P_ATTEST, 0,       b32 + 38, 0,       aliases + 50}, /*  20 */
-	{16UL, b32+ 18, b32+ 29, P_BE   | P_ATTEST, 0,       b32+180, 0,       aliases+ 63},	/*  21 */
-    {16UL, b32 + 18, b32 + 108, P_LE   | P_ATTEST, 0,       b32 + 43, 0,       aliases + 66}, /*  22 */
-	{16UL, b32+ 18, b32+138, P_LE   | P_THIRDP, 0,       b32+ 83, 0,       aliases+ 62},	/*  23 */
-	{16UL, b32+ 18, b32+157, P_LE   | P_ATTEST, 0,       b32+150, 0,       aliases+ 48},	/*  24 */
-	{16UL, b32+ 18, b32+205, P_BE   | P_ATTEST, 0,       b32+ 47, 0,       aliases+ 44},	/*  25 */
-	{16UL, b32+ 18, b32+205, P_BE   | P_ATTEST, b32+205, b32+172, b32+ 29, aliases+ 41},	/*  26 */
-	{16UL, b32+ 18, b32+205, P_LE   | P_ATTEST, 0,       b32+ 88, 0,       aliases+ 56},	/*  27 */
-	{16UL, b32+ 18, b32+205, P_LE   | P_ATTEST, b32+205, b32+114, b32+187, aliases+ 45},	/*  28 */
-	{ 7UL, b32+ 19, 0,       P_BE   | P_ACADEM, 0,       b32+183, 0,       aliases+134},	/*  29 */
-	{ 6UL, b32+ 27, b32+195, P_BE   | P_ACADEM, 0,       b32+185, 0,       aliases+122},	/*  30 */
-    { 8UL, b32 + 28, 0,       P_BE   | P_ACADEM, 0,       b32 + 57, 0,       aliases + 145}, /*  31 */
-	{ 8UL, b32+ 28, b32+158, P_BE   | P_ATTEST, 0,       b32+118, 0,       aliases+153},	/*  32 */
-	{ 8UL, b32+ 28, b32+197, P_BE   | P_ATTEST, 0,       b32+ 95, 0,       aliases+148},	/*  33 */
-	{ 8UL, b32+ 28, b32+201, P_BE   | P_ATTEST, b32+201, b32+ 70, b32+156, aliases+157},	/*  34 */
-	{ 8UL, b32+ 28, b32+201, P_LE   | P_ATTEST, 0,       b32+116, 0,       aliases+159},	/*  35 */
-	{16UL, b32+ 30, b32+205, P_BE   | P_ATTEST, b32+205, b32+131, b32+179, aliases+ 61},	/*  36 */
-	{32UL, b32+ 31, b32+209, P_LE   | P_ATTEST, b32+209, b32+178, b32+145, aliases+101},	/*  37 */
-	{14UL, b32+ 35, 0,       P_LE   | P_ATTEST, 0,       b32+ 36, 0,       aliases+ 17},	/*  38 */
-	{ 5UL, b32+ 46, b32+194, P_LE   | P_THIRDP, b32+194, b32+160, b32+ 49, aliases+120},	/*  39 */
-	{ 8UL, b32+ 48, 0,       P_BE   | P_ATTEST, 0,       b32+ 61, 0,       aliases+155},	/*  40 */
-	{ 8UL, b32+ 48, b32+201, P_BE   | P_ATTEST, b32+201, b32+176, b32+ 63, aliases+139},	/*  41 */
-	{ 4UL, b32+ 49, 0,       P_LE   | P_ACADEM, 0,       b32+ 89, 0,       aliases+112},	/*  42 */
-	{ 4UL, b32+ 49, b32+186, P_BE   | P_ACADEM, b32+186, b32+136, b32+ 33, aliases+113},	/*  43 */
-	{ 8UL, b32+ 51, 0,       P_LE   | P_ATTEST, 0,       b32+126, 0,       aliases+152},	/*  44 */
-	{ 8UL, b32+ 51, b32+201, P_BE   | P_ATTEST, 0,       b32+193, 0,       aliases+154},	/*  45 */
-	{24UL, b32+ 54, b32+206, P_BE   | P_ACADEM, b32+206, b32+143, b32+ 21, aliases+ 80},	/*  46 */
-	{ 8UL, b32+ 59, 0,       P_LE   | P_ATTEST, 0,       b32+ 22, 0,       aliases+142},	/*  47 */
-	{16UL, b32+ 60, 0,       P_BE   | P_CONFIR, b32+205, b32+154, b32+127, aliases+ 38},	/*  48 */
-	{16UL, b32+ 60, 0,       P_LE   | P_CONFIR, b32+205, b32+184, b32+ 86, aliases+ 37},	/*  49 */
-	{64UL, b64d,    0,       P_BE   | P_ACADEM, 0,       b64e,    0,       aliases+128},	/*  50 */
-	{64UL, b64d,    b64a,    P_BE   | P_CONFIR, b64a,    b64f,    b64g,    aliases+131},	/*  51 */
-	{64UL, b64d,    b64a,    P_LE   | P_ATTEST, b64a,    b64h,    b64i,    aliases+132},	/*  52 */
-	{ 5UL, b32+ 66, b32+ 66, P_BE   | P_ATTEST, 0,       0,       0,       aliases+117},	/*  53 */
-	{ 8UL, b32+ 67, 0,       P_BE   | P_ACADEM, b32+201, b32+115, b32+ 74, aliases+146},	/*  54 */
-	{16UL, b32+ 77, 0,       P_BE   | P_ATTEST, 0,       b32+ 78, 0,       aliases+ 59},	/*  55 */
-	{10UL, b32+ 79, 0,       P_BE   | P_ACADEM, b32+202, b32+ 68, b32+ 52, aliases+  6},	/*  56 */
-	{24UL, b32+ 80, b32+133, P_BE   | P_ATTEST, 0,       b32+ 32, 0,       aliases+ 79},	/*  57 */
-	{24UL, b32+ 80, b32+199, P_BE   | P_ATTEST, 0,       b32+ 94, 0,       aliases+ 78},	/*  58 */
-	{ 3UL, b32+ 81, 0,       P_BE   | P_ACADEM, b32+177, b32+ 96, b32+ 62, aliases+ 85},	/*  59 */
-	{ 3UL, b32+ 81, b32+177, P_LE   | P_ACADEM, 0,       b32+151, 0,       aliases+ 86},	/*  60 */
-	{11UL, b32+ 82, 0,       P_BE   | P_ACADEM, 0,       b32+ 15, 0,       aliases+ 10},	/*  61 */
-	{ 6UL, b32+ 84, 0,       P_LE   | P_ATTEST, 0,       b32+117, 0,       aliases+123},	/*  62 */
-	{16UL, b32+ 87, 0,       P_BE   | P_THIRDP, 0,       b32+149, 0,       aliases+ 52},	/*  63 */
-	{11UL, b32+ 90, b32+  6, P_BE   | P_ATTEST, 0,       b32+141, 0,       aliases+  9},	/*  64 */
-	{16UL, b32+ 91, 0,       P_BE   | P_ATTEST, 0,       b32+ 37, 0,       aliases+ 60},	/*  65 */
-	{24UL, b32+ 97, 0,       P_BE   | P_ACADEM, 0,       b32+ 40, 0,       aliases+ 82},	/*  66 */
-	{24UL, b32+ 97, b32+206, P_BE   | P_ATTEST, b32+206, b32+ 34, b32+100, aliases+ 84},	/*  67 */
-	{16UL, b32+ 98, 0,       P_BE   | P_ATTEST, 0,       b32+200, 0,       aliases+ 67},	/*  68 */
-	{16UL, b32+ 98, 0,       P_LE   | P_CONFIR, 0,       b32+146, 0,       aliases+ 24},	/*  69 */
-	{16UL, b32+ 98, 0,       P_LE   | P_ATTEST, b32+205, b32+ 64, b32+137, aliases+ 55},	/*  70 */
-	{16UL, b32+ 98, b32+ 99, P_BE   | P_ATTEST, 0,       b32+123, 0,       aliases+ 34},	/*  71 */
-	{16UL, b32+ 98, b32+205, P_BE   | P_THIRDP, 0,       b32+135, 0,       aliases+ 32},	/*  72 */
-	{16UL, b32+ 98, b32+205, P_LE   | P_ATTEST, 0,       b32+ 71, 0,       aliases+ 57},	/*  73 */
-	{16UL, b32+ 98, b32+205, P_LE   | P_THIRDP, b32+205, b32+142, b32+137, aliases+ 68},	/*  74 */
-	{14UL, b32+101, 0,       P_BE   | P_ACADEM, b32+204, b32+155, b32+ 16, aliases+ 18},	/*  75 */
-	{30UL, b32+102, b32+207, P_BE   | P_ACADEM, b32+207, b32+ 20, b32+169, aliases+ 87},	/*  76 */
-	{12UL, b32+103, 0,       P_BE   | P_ACADEM, 0,       b32+191, 0,       aliases+ 13},	/*  77 */
-	{12UL, b32+103, 0,       P_BELE | P_ACADEM, 0,       b32+174, 0,       aliases+ 15},	/*  78 */
-	{32UL, b32+104, 0,       P_BE   | P_ATTEST, 0,       b32+ 50, 0,       aliases+ 92},	/*  79 */
-	{21UL, b32+105, 0,       P_BE   | P_ACADEM, 0,       b32+ 93, 0,       aliases+ 75},	/*  80 */
-	{24UL, b32+106, 0,       P_BE   | P_ACADEM, 0,       b32+163, 0,       aliases+ 81},	/*  81 */
-	{24UL, b32+106, b32+144, P_BE   | P_ATTEST, 0,       b32+ 39, 0,       aliases+ 83},	/*  82 */
-	{ 7UL, b32+109, 0,       P_BE   | P_ACADEM, 0,       b32+152, 0,       aliases+136},	/*  83 */
-	{15UL, b32+110, 0,       P_BE   | P_ACADEM, 0,       b32+ 13, 0,       aliases+ 20},	/*  84 */
-	{16UL, b32+111, 0,       P_BE   | P_ATTEST, 0,       b32+167, 0,       aliases+ 64},	/*  85 */
-	{10UL, b32+112, 0,       P_BE   | P_ATTEST, 0,       b32+ 85, 0,       aliases+  4},	/*  86 */
-	{ 8UL, b32+119, 0,       P_BE   | P_ACADEM, 0,       b32+183, 0,       aliases+150},	/*  87 */
-	{ 8UL, b32+119, 0,       P_LE   | P_THIRDP, 0,       b32+ 41, 0,       aliases+160},	/*  88 */
-	{ 8UL, b32+119, b32+201, P_BE   | P_ACADEM, 0,       b32+173, 0,       aliases+141},	/*  89 */
-	{ 6UL, b32+120, b32+195, P_BE   | P_ATTEST, 0,       b32+ 55, 0,       aliases+121},	/*  90 */
-	{ 7UL, b32+122, b32+198, P_LE   | P_ACADEM, 0,       b32+128, 0,       aliases+135},	/*  91 */
-	{16UL, b32+125, 0,       P_BE   | P_CONFIR, 0,       b32+ 17, 0,       aliases+ 65},	/*  92 */
-	{ 8UL, b32+129, 0,       P_LE   | P_ATTEST, 0,       b32+ 42, 0,       aliases+140},	/*  93 */
-	{ 5UL, b32+130, 0,       P_LE   | P_ACADEM, 0,       b32+ 58, 0,       aliases+118},	/*  94 */
-	{32UL, b32+132, b32+209, P_LE   | P_CONFIR, b32+209, b32+107, b32+ 65, aliases+ 95},	/*  95 */
-	{17UL, b32+140, 0,       P_BE   | P_ACADEM, 0,       b32+ 44, 0,       aliases+ 74},	/*  96 */
-	{ 6UL, b32+147, 0,       P_BE   | P_ACADEM, b32+195, b32+ 72, b32+182, aliases+125},	/*  97 */
-	{16UL, b32+161, b32+205, P_BE   | P_ACADEM, 0,       b32+ 73, 0,       aliases+ 31},	/*  98 */
-	{15UL, b32+166, 0,       P_BE   | P_ATTEST, b32+  2, b32+ 69, b32+166, aliases+ 21},	/*  99 */
-	{12UL, b32+168, 0,       P_BE   | P_ACADEM, b32+203, b32+139, b32+ 24, aliases+ 14},	/* 100 */
-	{ 8UL, b32+171, 0,       P_BE   | P_ACADEM, 0,       b32+147, 0,       aliases+143},	/* 101 */
-	{13UL, b32+181, 0,       P_BE   | P_ATTEST, 0,       b32+ 45, 0,       aliases+ 16},	/* 102 */
-	{12UL, b32+188, b32+203, P_BE   | P_ACADEM, 0,       b32+170, 0,       aliases+ 12},	/* 103 */
-	{32UL, b32+190, b32+209, P_LE   | P_ATTEST, b32+209, b32+ 23, b32+113, aliases+ 93},	/* 104 */
-	{10UL, b32+192, b32+202, P_BE   | P_ACADEM, 0,       b32+112, 0,       aliases+  5},	/* 105 */
-    { 0UL, 0,       0,       P_BE   | P_UNDFCL, 0,       0,       0,       NULL       },    /* terminating entry */
+    {64UL, b64,       b64a,      P_LE   | P_CONFIR, b64a,      b64b,      b64c,      aliases + 130}, /*   0 */
+    {32UL, b32 +  0,  0,         P_BE   | P_CONFIR, 0,         b32 + 148, 0,         aliases + 107}, /*   1 */
+    {40UL, b40,       0,         P_BE   | P_ACADEM, b40a,      b40b,      b40c,      aliases + 115}, /*   2 */
+    {24UL, b32 +  3,  b32 + 76,  P_LE   | P_ATTEST, 0,         b32 + 153, 0,         aliases + 77},  /*   3 */
+    {32UL, b32 +  8,  0,         P_BE   | P_ATTEST, b32 + 209, b32 + 92,  b32 + 159, aliases + 98},  /*   4 */
+    {32UL, b32 +  8,  b32 + 209, P_BE   | P_ATTEST, 0,         b32 +  7,  0,         aliases + 104}, /*   5 */
+    {32UL, b32 +  8,  b32 + 209, P_BE   | P_ATTEST, b32 + 209, b32 + 196, b32 + 159, aliases + 96},  /*   6 */
+    {32UL, b32 +  8,  b32 + 209, P_LE   | P_CONFIR, 0,         b32 + 56,  0,         aliases + 103}, /*   7 */
+    {32UL, b32 +  8,  b32 + 209, P_LE   | P_ATTEST, b32 + 209, b32 + 162, b32 + 175, aliases + 102}, /*   8 */
+    {16UL, b32 +  9,  0,         P_BE   | P_ATTEST, 0,         b32 +  5,  0,         aliases + 36},  /*   9 */
+    {16UL, b32 +  9,  0,         P_BE   | P_ATTEST, b32 +  1,  b32 +  4,  b32 +  9,  aliases + 35},  /*  10 */
+    { 8UL, b32 + 10,  0,         P_BE   | P_ATTEST, 0,         b32 + 189, 0,         aliases + 158}, /*  11 */
+    { 8UL, b32 + 10,  0,         P_BE   | P_ACADEM, b32 + 75,  b32 + 126, b32 + 134, aliases + 147}, /*  12 */
+    { 8UL, b32 + 10,  b32 + 201, P_LE   | P_ACADEM, 0,         b32 + 165, 0,         aliases + 156}, /*  13 */
+    {16UL, b32 + 11,  b32 + 205, P_LE   | P_ATTEST, 0,         b32 + 124, 0,         aliases + 58},  /*  14 */
+    {31UL, b32 + 12,  b32 + 208, P_BE   | P_CONFIR, b32 + 208, b32 + 26,  b32 + 121, aliases + 88},  /*  15 */
+    { 6UL, b32 + 14,  0,         P_LE   | P_ACADEM, 0,         b32 + 25,  0,         aliases + 124}, /*  16 */
+    {82UL, b82,       0,         P_LE   | P_ATTEST, 0,         b82a,      0,         aliases + 161}, /*  17 */
+    {16UL, b32 + 18,  0,         P_BE   | P_ATTEST, 0,         b32 + 53,  0,         aliases + 73},  /*  18 */
+    {16UL, b32 + 18,  0,         P_BE   | P_ACADEM, b32 + 205, b32 + 164, b32 + 29,  aliases + 42},  /*  19 */
+    {16UL, b32 + 18,  0,         P_LE   | P_ATTEST, 0,         b32 + 38,  0,         aliases + 50},  /*  20 */
+    {16UL, b32 + 18,  b32 + 29,  P_BE   | P_ATTEST, 0,         b32 + 180, 0,         aliases + 63},  /*  21 */
+    {16UL, b32 + 18,  b32 + 108, P_LE   | P_ATTEST, 0,         b32 + 43,  0,         aliases + 66},  /*  22 */
+    {16UL, b32 + 18,  b32 + 138, P_LE   | P_THIRDP, 0,         b32 + 83,  0,         aliases + 62},  /*  23 */
+    {16UL, b32 + 18,  b32 + 157, P_LE   | P_ATTEST, 0,         b32 + 150, 0,         aliases + 48},  /*  24 */
+    {16UL, b32 + 18,  b32 + 205, P_BE   | P_ATTEST, 0,         b32 + 47,  0,         aliases + 44},  /*  25 */
+    {16UL, b32 + 18,  b32 + 205, P_BE   | P_ATTEST, b32 + 205, b32 + 172, b32 + 29,  aliases + 41},  /*  26 */
+    {16UL, b32 + 18,  b32 + 205, P_LE   | P_ATTEST, 0,         b32 + 88,  0,         aliases + 56},  /*  27 */
+    {16UL, b32 + 18,  b32 + 205, P_LE   | P_ATTEST, b32 + 205, b32 + 114, b32 + 187, aliases + 45},  /*  28 */
+    { 7UL, b32 + 19,  0,         P_BE   | P_ACADEM, 0,         b32 + 183, 0,         aliases + 134}, /*  29 */
+    { 6UL, b32 + 27,  b32 + 195, P_BE   | P_ACADEM, 0,         b32 + 185, 0,         aliases + 122}, /*  30 */
+    { 8UL, b32 + 28,  0,         P_BE   | P_ACADEM, 0,         b32 + 57,  0,         aliases + 145}, /*  31 */
+    { 8UL, b32 + 28,  b32 + 158, P_BE   | P_ATTEST, 0,         b32 + 118, 0,         aliases + 153}, /*  32 */
+    { 8UL, b32 + 28,  b32 + 197, P_BE   | P_ATTEST, 0,         b32 + 95,  0,         aliases + 148}, /*  33 */
+    { 8UL, b32 + 28,  b32 + 201, P_BE   | P_ATTEST, b32 + 201, b32 + 70,  b32 + 156, aliases + 157}, /*  34 */
+    { 8UL, b32 + 28,  b32 + 201, P_LE   | P_ATTEST, 0,         b32 + 116, 0,         aliases + 159}, /*  35 */
+    {16UL, b32 + 30,  b32 + 205, P_BE   | P_ATTEST, b32 + 205, b32 + 131, b32 + 179, aliases + 61},  /*  36 */
+    {32UL, b32 + 31,  b32 + 209, P_LE   | P_ATTEST, b32 + 209, b32 + 178, b32 + 145, aliases + 101}, /*  37 */
+    {14UL, b32 + 35,  0,         P_LE   | P_ATTEST, 0,         b32 + 36,  0,         aliases + 17},  /*  38 */
+    { 5UL, b32 + 46,  b32 + 194, P_LE   | P_THIRDP, b32 + 194, b32 + 160, b32 + 49,  aliases + 120}, /*  39 */
+    { 8UL, b32 + 48,  0,         P_BE   | P_ATTEST, 0,         b32 + 61,  0,         aliases + 155}, /*  40 */
+    { 8UL, b32 + 48,  b32 + 201, P_BE   | P_ATTEST, b32 + 201, b32 + 176, b32 + 63,  aliases + 139}, /*  41 */
+    { 4UL, b32 + 49,  0,         P_LE   | P_ACADEM, 0,         b32 + 89,  0,         aliases + 112}, /*  42 */
+    { 4UL, b32 + 49,  b32 + 186, P_BE   | P_ACADEM, b32 + 186, b32 + 136, b32 + 33,  aliases + 113}, /*  43 */
+    { 8UL, b32 + 51,  0,         P_LE   | P_ATTEST, 0,         b32 + 126, 0,         aliases + 152}, /*  44 */
+    { 8UL, b32 + 51,  b32 + 201, P_BE   | P_ATTEST, 0,         b32 + 193, 0,         aliases + 154}, /*  45 */
+    {24UL, b32 + 54,  b32 + 206, P_BE   | P_ACADEM, b32 + 206, b32 + 143, b32 + 21,  aliases + 80},  /*  46 */
+    { 8UL, b32 + 59,  0,         P_LE   | P_ATTEST, 0,         b32 + 22,  0,         aliases + 142}, /*  47 */
+    {16UL, b32 + 60,  0,         P_BE   | P_CONFIR, b32 + 205, b32 + 154, b32 + 127, aliases + 38},  /*  48 */
+    {16UL, b32 + 60,  0,         P_LE   | P_CONFIR, b32 + 205, b32 + 184, b32 + 86,  aliases + 37},  /*  49 */
+    {64UL, b64d,      0,         P_BE   | P_ACADEM, 0,         b64e,      0,         aliases + 128}, /*  50 */
+    {64UL, b64d,      b64a,      P_BE   | P_CONFIR, b64a,      b64f,      b64g,      aliases + 131}, /*  51 */
+    {64UL, b64d,      b64a,      P_LE   | P_ATTEST, b64a,      b64h,      b64i,      aliases + 132}, /*  52 */
+    { 5UL, b32 + 66,  b32 + 66,  P_BE   | P_ATTEST, 0,         0,         0,         aliases + 117}, /*  53 */
+    { 8UL, b32 + 67,  0,         P_BE   | P_ACADEM, b32 + 201, b32 + 115, b32 + 74,  aliases + 146}, /*  54 */
+    {16UL, b32 + 77,  0,         P_BE   | P_ATTEST, 0,         b32 + 78,  0,         aliases + 59},  /*  55 */
+    {10UL, b32 + 79,  0,         P_BE   | P_ACADEM, b32 + 202, b32 + 68,  b32 + 52,  aliases +  6},  /*  56 */
+    {24UL, b32 + 80,  b32 + 133, P_BE   | P_ATTEST, 0,         b32 + 32,  0,         aliases + 79},  /*  57 */
+    {24UL, b32 + 80,  b32 + 199, P_BE   | P_ATTEST, 0,         b32 + 94,  0,         aliases + 78},  /*  58 */
+    { 3UL, b32 + 81,  0,         P_BE   | P_ACADEM, b32 + 177, b32 + 96,  b32 + 62,  aliases + 85},  /*  59 */
+    { 3UL, b32 + 81,  b32 + 177, P_LE   | P_ACADEM, 0,         b32 + 151, 0,         aliases + 86},  /*  60 */
+    {11UL, b32 + 82,  0,         P_BE   | P_ACADEM, 0,         b32 + 15,  0,         aliases + 10},  /*  61 */
+    { 6UL, b32 + 84,  0,         P_LE   | P_ATTEST, 0,         b32 + 117, 0,         aliases + 123}, /*  62 */
+    {16UL, b32 + 87,  0,         P_BE   | P_THIRDP, 0,         b32 + 149, 0,         aliases + 52},  /*  63 */
+    {11UL, b32 + 90,  b32 +  6,  P_BE   | P_ATTEST, 0,         b32 + 141, 0,         aliases +  9},  /*  64 */
+    {16UL, b32 + 91,  0,         P_BE   | P_ATTEST, 0,         b32 + 37,  0,         aliases + 60},  /*  65 */
+    {24UL, b32 + 97,  0,         P_BE   | P_ACADEM, 0,         b32 + 40,  0,         aliases + 82},  /*  66 */
+    {24UL, b32 + 97,  b32 + 206, P_BE   | P_ATTEST, b32 + 206, b32 + 34,  b32 + 100, aliases + 84},  /*  67 */
+    {16UL, b32 + 98,  0,         P_BE   | P_ATTEST, 0,         b32 + 200, 0,         aliases + 67},  /*  68 */
+    {16UL, b32 + 98,  0,         P_LE   | P_CONFIR, 0,         b32 + 146, 0,         aliases + 24},  /*  69 */
+    {16UL, b32 + 98,  0,         P_LE   | P_ATTEST, b32 + 205, b32 + 64,  b32 + 137, aliases + 55},  /*  70 */
+    {16UL, b32 + 98,  b32 + 99,  P_BE   | P_ATTEST, 0,         b32 + 123, 0,         aliases + 34},  /*  71 */
+    {16UL, b32 + 98,  b32 + 205, P_BE   | P_THIRDP, 0,         b32 + 135, 0,         aliases + 32},  /*  72 */
+    {16UL, b32 + 98,  b32 + 205, P_LE   | P_ATTEST, 0,         b32 + 71,  0,         aliases + 57},  /*  73 */
+    {16UL, b32 + 98,  b32 + 205, P_LE   | P_THIRDP, b32 + 205, b32 + 142, b32 + 137, aliases + 68},  /*  74 */
+    {14UL, b32 + 101, 0,         P_BE   | P_ACADEM, b32 + 204, b32 + 155, b32 + 16,  aliases + 18},  /*  75 */
+    {30UL, b32 + 102, b32 + 207, P_BE   | P_ACADEM, b32 + 207, b32 + 20,  b32 + 169, aliases + 87},  /*  76 */
+    {12UL, b32 + 103, 0,         P_BE   | P_ACADEM, 0,         b32 + 191, 0,         aliases + 13},  /*  77 */
+    {12UL, b32 + 103, 0,         P_BELE | P_ACADEM, 0,         b32 + 174, 0,         aliases + 15},  /*  78 */
+    {32UL, b32 + 104, 0,         P_BE   | P_ATTEST, 0,         b32 + 50,  0,         aliases + 92},  /*  79 */
+    {21UL, b32 + 105, 0,         P_BE   | P_ACADEM, 0,         b32 + 93,  0,         aliases + 75},  /*  80 */
+    {24UL, b32 + 106, 0,         P_BE   | P_ACADEM, 0,         b32 + 163, 0,         aliases + 81},  /*  81 */
+    {24UL, b32 + 106, b32 + 144, P_BE   | P_ATTEST, 0,         b32 + 39,  0,         aliases + 83},  /*  82 */
+    { 7UL, b32 + 109, 0,         P_BE   | P_ACADEM, 0,         b32 + 152, 0,         aliases + 136}, /*  83 */
+    {15UL, b32 + 110, 0,         P_BE   | P_ACADEM, 0,         b32 + 13,  0,         aliases + 20},  /*  84 */
+    {16UL, b32 + 111, 0,         P_BE   | P_ATTEST, 0,         b32 + 167, 0,         aliases + 64},  /*  85 */
+    {10UL, b32 + 112, 0,         P_BE   | P_ATTEST, 0,         b32 + 85,  0,         aliases +  4},  /*  86 */
+    { 8UL, b32 + 119, 0,         P_BE   | P_ACADEM, 0,         b32 + 183, 0,         aliases + 150}, /*  87 */
+    { 8UL, b32 + 119, 0,         P_LE   | P_THIRDP, 0,         b32 + 41,  0,         aliases + 160}, /*  88 */
+    { 8UL, b32 + 119, b32 + 201, P_BE   | P_ACADEM, 0,         b32 + 173, 0,         aliases + 141}, /*  89 */
+    { 6UL, b32 + 120, b32 + 195, P_BE   | P_ATTEST, 0,         b32 + 55,  0,         aliases + 121}, /*  90 */
+    { 7UL, b32 + 122, b32 + 198, P_LE   | P_ACADEM, 0,         b32 + 128, 0,         aliases + 135}, /*  91 */
+    {16UL, b32 + 125, 0,         P_BE   | P_CONFIR, 0,         b32 + 17,  0,         aliases + 65},  /*  92 */
+    { 8UL, b32 + 129, 0,         P_LE   | P_ATTEST, 0,         b32 + 42,  0,         aliases + 140}, /*  93 */
+    { 5UL, b32 + 130, 0,         P_LE   | P_ACADEM, 0,         b32 + 58,  0,         aliases + 118}, /*  94 */
+    {32UL, b32 + 132, b32 + 209, P_LE   | P_CONFIR, b32 + 209, b32 + 107, b32 + 65,  aliases + 95},  /*  95 */
+    {17UL, b32 + 140, 0,         P_BE   | P_ACADEM, 0,         b32 + 44,  0,         aliases + 74},  /*  96 */
+    { 6UL, b32 + 147, 0,         P_BE   | P_ACADEM, b32 + 195, b32 + 72,  b32 + 182, aliases + 125}, /*  97 */
+    {16UL, b32 + 161, b32 + 205, P_BE   | P_ACADEM, 0,         b32 + 73,  0,         aliases + 31},  /*  98 */
+    {15UL, b32 + 166, 0,         P_BE   | P_ATTEST, b32 +  2,  b32 + 69,  b32 + 166, aliases + 21},  /*  99 */
+    {12UL, b32 + 168, 0,         P_BE   | P_ACADEM, b32 + 203, b32 + 139, b32 + 24,  aliases + 14},  /* 100 */
+    { 8UL, b32 + 171, 0,         P_BE   | P_ACADEM, 0,         b32 + 147, 0,         aliases + 143}, /* 101 */
+    {13UL, b32 + 181, 0,         P_BE   | P_ATTEST, 0,         b32 + 45,  0,         aliases + 16},  /* 102 */
+    {12UL, b32 + 188, b32 + 203, P_BE   | P_ACADEM, 0,         b32 + 170, 0,         aliases + 12},  /* 103 */
+    {32UL, b32 + 190, b32 + 209, P_LE   | P_ATTEST, b32 + 209, b32 + 23,  b32 + 113, aliases + 93},  /* 104 */
+    {10UL, b32 + 192, b32 + 202, P_BE   | P_ACADEM, 0,         b32 + 112, 0,         aliases +  5},  /* 105 */
+    { 0UL, 0,         0,         P_BE   | P_UNDFCL, 0,         0,         0,         NULL       },   /* terminating entry */
 };
 #    define NPRESETS 106
 
 /* List of names with pointers to models, pre-sorted for use with bsearch() */
 static const struct malias aliases[] = {
-	{"ARC",				models+ 69},	/*   0 */
-    {"B-CRC-32",            models +  6},   /*   1 */
-    {"CKSUM",               models +  4},   /*   2 */
-	{"CRC-10",			models+ 86},	/*   3 */
-	{"CRC-10/ATM",			models+ 86},	/*   4 */
-	{"CRC-10/CDMA2000",		models+105},	/*   5 */
-	{"CRC-10/GSM",			models+ 56},	/*   6 */
-	{"CRC-10/I-610",		models+ 86},	/*   7 */
-	{"CRC-11",			models+ 64},	/*   8 */
-	{"CRC-11/FLEXRAY",		models+ 64},	/*   9 */
-	{"CRC-11/UMTS",			models+ 61},	/*  10 */
-	{"CRC-12/3GPP",			models+ 78},	/*  11 */
-	{"CRC-12/CDMA2000",		models+103},	/*  12 */
-	{"CRC-12/DECT",			models+ 77},	/*  13 */
-	{"CRC-12/GSM",			models+100},	/*  14 */
-	{"CRC-12/UMTS",			models+ 78},	/*  15 */
-	{"CRC-13/BBC",			models+102},	/*  16 */
-	{"CRC-14/DARC",			models+ 38},	/*  17 */
-	{"CRC-14/GSM",			models+ 75},	/*  18 */
-	{"CRC-15",			models+ 84},	/*  19 */
-	{"CRC-15/CAN",			models+ 84},	/*  20 */
-	{"CRC-15/MPT1327",		models+ 99},	/*  21 */
-	{"CRC-16",			models+ 69},	/*  22 */
-    {"CRC-16/ACORN",        models + 18},   /*  23 */
-	{"CRC-16/ARC",			models+ 69},	/*  24 */
-    {"CRC-16/AUG-CCITT",    models + 21},   /*  25 */
-    {"CRC-16/AUTOSAR",      models + 25},   /*  26 */
-	{"CRC-16/BUYPASS",		models+ 68},	/*  27 */
-    {"CRC-16/CCITT",        models + 20},   /*  28 */
-    {"CRC-16/CCITT-FALSE",  models + 25},   /*  29 */
-    {"CRC-16/CCITT-TRUE",   models + 20},   /*  30 */
-	{"CRC-16/CDMA2000",		models+ 98},	/*  31 */
-	{"CRC-16/CMS",			models+ 72},	/*  32 */
-    {"CRC-16/DARC",         models + 26},   /*  33 */
-	{"CRC-16/DDS-110",		models+ 71},	/*  34 */
-    {"CRC-16/DECT-R",       models + 10},   /*  35 */
-    {"CRC-16/DECT-X",       models +  9},   /*  36 */
-	{"CRC-16/DNP",			models+ 49},	/*  37 */
-	{"CRC-16/EN-13757",		models+ 48},	/*  38 */
-    {"CRC-16/EPC",          models + 26},   /*  39 */
-    {"CRC-16/EPC-C1G2",     models + 26},   /*  40 */
-    {"CRC-16/GENIBUS",      models + 26},   /*  41 */
-    {"CRC-16/GSM",          models + 19},   /*  42 */
-    {"CRC-16/I-CODE",       models + 26},   /*  43 */
-    {"CRC-16/IBM-3740",     models + 25},   /*  44 */
-    {"CRC-16/IBM-SDLC",     models + 28},   /*  45 */
-	{"CRC-16/IEC-61158-2",		models+ 36},	/*  46 */
-    {"CRC-16/ISO-HDLC",     models + 28},   /*  47 */
-    {"CRC-16/ISO-IEC-14443-3-A",    models + 24},   /*  48 */
-    {"CRC-16/ISO-IEC-14443-3-B",    models + 28},   /*  49 */
-    {"CRC-16/KERMIT",       models + 20},   /*  50 */
-	{"CRC-16/LHA",			models+ 69},	/*  51 */
-	{"CRC-16/LJ1200",		models+ 63},	/*  52 */
-    {"CRC-16/LTE",          models + 18},   /*  53 */
-	{"CRC-16/MAXIM",		models+ 70},	/*  54 */
-	{"CRC-16/MAXIM-DOW",		models+ 70},	/*  55 */
-    {"CRC-16/MCRF4XX",      models + 27},   /*  56 */
-	{"CRC-16/MODBUS",		models+ 73},	/*  57 */
-    {"CRC-16/NRSC-5",       models + 14},   /*  58 */
-	{"CRC-16/OPENSAFETY-A",		models+ 55},	/*  59 */
-	{"CRC-16/OPENSAFETY-B",		models+ 65},	/*  60 */
-	{"CRC-16/PROFIBUS",		models+ 36},	/*  61 */
-    {"CRC-16/RIELLO",       models + 23},   /*  62 */
-    {"CRC-16/SPI-FUJITSU",  models + 21},   /*  63 */
-	{"CRC-16/T10-DIF",		models+ 85},	/*  64 */
-	{"CRC-16/TELEDISK",		models+ 92},	/*  65 */
-    {"CRC-16/TMS37157",     models + 22},   /*  66 */
-	{"CRC-16/UMTS",			models+ 68},	/*  67 */
-	{"CRC-16/USB",			models+ 74},	/*  68 */
-    {"CRC-16/V-41-LSB",     models + 20},   /*  69 */
-    {"CRC-16/V-41-MSB",     models + 18},   /*  70 */
-	{"CRC-16/VERIFONE",		models+ 68},	/*  71 */
-    {"CRC-16/X-25",         models + 28},   /*  72 */
-    {"CRC-16/XMODEM",       models + 18},   /*  73 */
-	{"CRC-17/CAN-FD",		models+ 96},	/*  74 */
-	{"CRC-21/CAN-FD",		models+ 80},	/*  75 */
-	{"CRC-24",			models+ 82},	/*  76 */
-    {"CRC-24/BLE",          models +  3},   /*  77 */
-	{"CRC-24/FLEXRAY-A",		models+ 58},	/*  78 */
-	{"CRC-24/FLEXRAY-B",		models+ 57},	/*  79 */
-	{"CRC-24/INTERLAKEN",		models+ 46},	/*  80 */
-	{"CRC-24/LTE-A",		models+ 81},	/*  81 */
-	{"CRC-24/LTE-B",		models+ 66},	/*  82 */
-	{"CRC-24/OPENPGP",		models+ 82},	/*  83 */
-	{"CRC-24/OS-9",			models+ 67},	/*  84 */
-	{"CRC-3/GSM",			models+ 59},	/*  85 */
-	{"CRC-3/ROHC",			models+ 60},	/*  86 */
-	{"CRC-30/CDMA",			models+ 76},	/*  87 */
-    {"CRC-31/PHILIPS",      models + 15},   /*  88 */
-    {"CRC-32",              models +  8},   /*  89 */
-    {"CRC-32/AAL5",         models +  6},   /*  90 */
-    {"CRC-32/ADCCP",        models +  8},   /*  91 */
-	{"CRC-32/AIXM",			models+ 79},	/*  92 */
-	{"CRC-32/AUTOSAR",		models+104},	/*  93 */
-	{"CRC-32/BASE91-C",		models+ 37},	/*  94 */
-	{"CRC-32/BASE91-D",		models+ 95},	/*  95 */
-    {"CRC-32/BZIP2",        models +  6},   /*  96 */
-	{"CRC-32/CASTAGNOLI",		models+ 37},	/*  97 */
-    {"CRC-32/CKSUM",        models +  4},   /*  98 */
-    {"CRC-32/DECT-B",       models +  6},   /*  99 */
-	{"CRC-32/INTERLAKEN",		models+ 37},	/* 100 */
-	{"CRC-32/ISCSI",		models+ 37},	/* 101 */
-    {"CRC-32/ISO-HDLC",     models +  8},   /* 102 */
-    {"CRC-32/JAMCRC",       models +  7},   /* 103 */
-    {"CRC-32/MPEG-2",       models +  5},   /* 104 */
-    {"CRC-32/POSIX",        models +  4},   /* 105 */
-    {"CRC-32/V-42",         models +  8},   /* 106 */
-    {"CRC-32/XFER",         models +  1},   /* 107 */
-    {"CRC-32/XZ",           models +  8},   /* 108 */
-	{"CRC-32C",			models+ 37},	/* 109 */
-	{"CRC-32D",			models+ 95},	/* 110 */
-	{"CRC-32Q",			models+ 79},	/* 111 */
-	{"CRC-4/G-704",			models+ 42},	/* 112 */
-	{"CRC-4/INTERLAKEN",		models+ 43},	/* 113 */
-	{"CRC-4/ITU",			models+ 42},	/* 114 */
-    {"CRC-40/GSM",          models +  2},   /* 115 */
-	{"CRC-5/EPC",			models+ 53},	/* 116 */
-	{"CRC-5/EPC-C1G2",		models+ 53},	/* 117 */
-	{"CRC-5/G-704",			models+ 94},	/* 118 */
-	{"CRC-5/ITU",			models+ 94},	/* 119 */
-	{"CRC-5/USB",			models+ 39},	/* 120 */
-	{"CRC-6/CDMA2000-A",		models+ 90},	/* 121 */
-    {"CRC-6/CDMA2000-B",    models + 30},   /* 122 */
-	{"CRC-6/DARC",			models+ 62},	/* 123 */
-    {"CRC-6/G-704",         models + 16},   /* 124 */
-	{"CRC-6/GSM",			models+ 97},	/* 125 */
-    {"CRC-6/ITU",           models + 16},   /* 126 */
-	{"CRC-64",			models+ 50},	/* 127 */
-	{"CRC-64/ECMA-182",		models+ 50},	/* 128 */
-	{"CRC-64/GO-ECMA",		models+ 52},	/* 129 */
-    {"CRC-64/GO-ISO",       models +  0},   /* 130 */
-	{"CRC-64/WE",			models+ 51},	/* 131 */
-	{"CRC-64/XZ",			models+ 52},	/* 132 */
-    {"CRC-7",               models + 29},   /* 133 */
-    {"CRC-7/MMC",           models + 29},   /* 134 */
-	{"CRC-7/ROHC",			models+ 91},	/* 135 */
-	{"CRC-7/UMTS",			models+ 83},	/* 136 */
-    {"CRC-8",               models + 11},   /* 137 */
-	{"CRC-8/AES",			models+ 35},	/* 138 */
-	{"CRC-8/AUTOSAR",		models+ 41},	/* 139 */
-	{"CRC-8/BLUETOOTH",		models+ 93},	/* 140 */
-	{"CRC-8/CDMA2000",		models+ 89},	/* 141 */
-	{"CRC-8/DARC",			models+ 47},	/* 142 */
-	{"CRC-8/DVB-S2",		models+101},	/* 143 */
-	{"CRC-8/EBU",			models+ 35},	/* 144 */
-    {"CRC-8/GSM-A",         models + 31},   /* 145 */
-	{"CRC-8/GSM-B",			models+ 54},	/* 146 */
-    {"CRC-8/I-432-1",       models + 12},   /* 147 */
-	{"CRC-8/I-CODE",		models+ 33},	/* 148 */
-    {"CRC-8/ITU",           models + 12},   /* 149 */
-	{"CRC-8/LTE",			models+ 87},	/* 150 */
-	{"CRC-8/MAXIM",			models+ 44},	/* 151 */
-	{"CRC-8/MAXIM-DOW",		models+ 44},	/* 152 */
-	{"CRC-8/MIFARE-MAD",		models+ 32},	/* 153 */
-	{"CRC-8/NRSC-5",		models+ 45},	/* 154 */
-	{"CRC-8/OPENSAFETY",		models+ 40},	/* 155 */
-	{"CRC-8/ROHC",			models+ 13},	/* 156 */
-	{"CRC-8/SAE-J1850",		models+ 34},	/* 157 */
-	{"CRC-8/SMBUS",			models+ 11},	/* 158 */
-	{"CRC-8/TECH-3250",		models+ 35},	/* 159 */
-	{"CRC-8/WCDMA",			models+ 88},	/* 160 */
-	{"CRC-82/DARC",			models+ 17},	/* 161 */
-	{"CRC-A",			models+ 24},	/* 162 */
-	{"CRC-B",			models+ 28},	/* 163 */
-	{"CRC-CCITT",			models+ 20},	/* 164 */
-	{"CRC-IBM",			models+ 69},	/* 165 */
-	{"DOW-CRC",			models+ 44},	/* 166 */
-	{"JAMCRC",			models+  7},	/* 167 */
-	{"KERMIT",			models+ 20},	/* 168 */
-	{"MODBUS",			models+ 73},	/* 169 */
-	{"PKZIP",			models+  8},	/* 170 */
-	{"R-CRC-16",			models+ 10},	/* 171 */
-	{"X-25",			models+ 28},	/* 172 */
-	{"X-CRC-12",			models+ 77},	/* 173 */
-	{"X-CRC-16",			models+  9},	/* 174 */
-	{"XFER",			models+  1},	/* 175 */
-	{"XMODEM",			models+ 18},	/* 176 */
-	{"ZMODEM",			models+ 18},	/* 177 */
-    {NULL,                  NULL      },    /* terminating entry */
+    {"ARC",                      models + 69},   /*   0 */
+    {"B-CRC-32",                 models +  6},   /*   1 */
+    {"CKSUM",                    models +  4},   /*   2 */
+    {"CRC-10",                   models + 86},   /*   3 */
+    {"CRC-10/ATM",               models + 86},   /*   4 */
+    {"CRC-10/CDMA2000",          models + 105},  /*   5 */
+    {"CRC-10/GSM",               models + 56},   /*   6 */
+    {"CRC-10/I-610",             models + 86},   /*   7 */
+    {"CRC-11",                   models + 64},   /*   8 */
+    {"CRC-11/FLEXRAY",           models + 64},   /*   9 */
+    {"CRC-11/UMTS",              models + 61},   /*  10 */
+    {"CRC-12/3GPP",              models + 78},   /*  11 */
+    {"CRC-12/CDMA2000",          models + 103},  /*  12 */
+    {"CRC-12/DECT",              models + 77},   /*  13 */
+    {"CRC-12/GSM",               models + 100},  /*  14 */
+    {"CRC-12/UMTS",              models + 78},   /*  15 */
+    {"CRC-13/BBC",               models + 102},  /*  16 */
+    {"CRC-14/DARC",              models + 38},   /*  17 */
+    {"CRC-14/GSM",               models + 75},   /*  18 */
+    {"CRC-15",                   models + 84},   /*  19 */
+    {"CRC-15/CAN",               models + 84},   /*  20 */
+    {"CRC-15/MPT1327",           models + 99},   /*  21 */
+    {"CRC-16",                   models + 69},   /*  22 */
+    {"CRC-16/ACORN",             models + 18},   /*  23 */
+    {"CRC-16/ARC",               models + 69},   /*  24 */
+    {"CRC-16/AUG-CCITT",         models + 21},   /*  25 */
+    {"CRC-16/AUTOSAR",           models + 25},   /*  26 */
+    {"CRC-16/BUYPASS",           models + 68},   /*  27 */
+    {"CRC-16/CCITT",             models + 20},   /*  28 */
+    {"CRC-16/CCITT-FALSE",       models + 25},   /*  29 */
+    {"CRC-16/CCITT-TRUE",        models + 20},   /*  30 */
+    {"CRC-16/CDMA2000",          models + 98},   /*  31 */
+    {"CRC-16/CMS",               models + 72},   /*  32 */
+    {"CRC-16/DARC",              models + 26},   /*  33 */
+    {"CRC-16/DDS-110",           models + 71},   /*  34 */
+    {"CRC-16/DECT-R",            models + 10},   /*  35 */
+    {"CRC-16/DECT-X",            models +  9},   /*  36 */
+    {"CRC-16/DNP",               models + 49},   /*  37 */
+    {"CRC-16/EN-13757",          models + 48},   /*  38 */
+    {"CRC-16/EPC",               models + 26},   /*  39 */
+    {"CRC-16/EPC-C1G2",          models + 26},   /*  40 */
+    {"CRC-16/GENIBUS",           models + 26},   /*  41 */
+    {"CRC-16/GSM",               models + 19},   /*  42 */
+    {"CRC-16/I-CODE",            models + 26},   /*  43 */
+    {"CRC-16/IBM-3740",          models + 25},   /*  44 */
+    {"CRC-16/IBM-SDLC",          models + 28},   /*  45 */
+    {"CRC-16/IEC-61158-2",       models + 36},   /*  46 */
+    {"CRC-16/ISO-HDLC",          models + 28},   /*  47 */
+    {"CRC-16/ISO-IEC-14443-3-A", models + 24},   /*  48 */
+    {"CRC-16/ISO-IEC-14443-3-B", models + 28},   /*  49 */
+    {"CRC-16/KERMIT",            models + 20},   /*  50 */
+    {"CRC-16/LHA",               models + 69},   /*  51 */
+    {"CRC-16/LJ1200",            models + 63},   /*  52 */
+    {"CRC-16/LTE",               models + 18},   /*  53 */
+    {"CRC-16/MAXIM",             models + 70},   /*  54 */
+    {"CRC-16/MAXIM-DOW",         models + 70},   /*  55 */
+    {"CRC-16/MCRF4XX",           models + 27},   /*  56 */
+    {"CRC-16/MODBUS",            models + 73},   /*  57 */
+    {"CRC-16/NRSC-5",            models + 14},   /*  58 */
+    {"CRC-16/OPENSAFETY-A",      models + 55},   /*  59 */
+    {"CRC-16/OPENSAFETY-B",      models + 65},   /*  60 */
+    {"CRC-16/PROFIBUS",          models + 36},   /*  61 */
+    {"CRC-16/RIELLO",            models + 23},   /*  62 */
+    {"CRC-16/SPI-FUJITSU",       models + 21},   /*  63 */
+    {"CRC-16/T10-DIF",           models + 85},   /*  64 */
+    {"CRC-16/TELEDISK",          models + 92},   /*  65 */
+    {"CRC-16/TMS37157",          models + 22},   /*  66 */
+    {"CRC-16/UMTS",              models + 68},   /*  67 */
+    {"CRC-16/USB",               models + 74},   /*  68 */
+    {"CRC-16/V-41-LSB",          models + 20},   /*  69 */
+    {"CRC-16/V-41-MSB",          models + 18},   /*  70 */
+    {"CRC-16/VERIFONE",          models + 68},   /*  71 */
+    {"CRC-16/X-25",              models + 28},   /*  72 */
+    {"CRC-16/XMODEM",            models + 18},   /*  73 */
+    {"CRC-17/CAN-FD",            models + 96},   /*  74 */
+    {"CRC-21/CAN-FD",            models + 80},   /*  75 */
+    {"CRC-24",                   models + 82},   /*  76 */
+    {"CRC-24/BLE",               models +  3},   /*  77 */
+    {"CRC-24/FLEXRAY-A",         models + 58},   /*  78 */
+    {"CRC-24/FLEXRAY-B",         models + 57},   /*  79 */
+    {"CRC-24/INTERLAKEN",        models + 46},   /*  80 */
+    {"CRC-24/LTE-A",             models + 81},   /*  81 */
+    {"CRC-24/LTE-B",             models + 66},   /*  82 */
+    {"CRC-24/OPENPGP",           models + 82},   /*  83 */
+    {"CRC-24/OS-9",              models + 67},   /*  84 */
+    {"CRC-3/GSM",                models + 59},   /*  85 */
+    {"CRC-3/ROHC",               models + 60},   /*  86 */
+    {"CRC-30/CDMA",              models + 76},   /*  87 */
+    {"CRC-31/PHILIPS",           models + 15},   /*  88 */
+    {"CRC-32",                   models +  8},   /*  89 */
+    {"CRC-32/AAL5",              models +  6},   /*  90 */
+    {"CRC-32/ADCCP",             models +  8},   /*  91 */
+    {"CRC-32/AIXM",              models + 79},   /*  92 */
+    {"CRC-32/AUTOSAR",           models + 104},  /*  93 */
+    {"CRC-32/BASE91-C",          models + 37},   /*  94 */
+    {"CRC-32/BASE91-D",          models + 95},   /*  95 */
+    {"CRC-32/BZIP2",             models +  6},   /*  96 */
+    {"CRC-32/CASTAGNOLI",        models + 37},   /*  97 */
+    {"CRC-32/CKSUM",             models +  4},   /*  98 */
+    {"CRC-32/DECT-B",            models +  6},   /*  99 */
+    {"CRC-32/INTERLAKEN",        models + 37},   /* 100 */
+    {"CRC-32/ISCSI",             models + 37},   /* 101 */
+    {"CRC-32/ISO-HDLC",          models +  8},   /* 102 */
+    {"CRC-32/JAMCRC",            models +  7},   /* 103 */
+    {"CRC-32/MPEG-2",            models +  5},   /* 104 */
+    {"CRC-32/POSIX",             models +  4},   /* 105 */
+    {"CRC-32/V-42",              models +  8},   /* 106 */
+    {"CRC-32/XFER",              models +  1},   /* 107 */
+    {"CRC-32/XZ",                models +  8},   /* 108 */
+    {"CRC-32C",                  models + 37},   /* 109 */
+    {"CRC-32D",                  models + 95},   /* 110 */
+    {"CRC-32Q",                  models + 79},   /* 111 */
+    {"CRC-4/G-704",              models + 42},   /* 112 */
+    {"CRC-4/INTERLAKEN",         models + 43},   /* 113 */
+    {"CRC-4/ITU",                models + 42},   /* 114 */
+    {"CRC-40/GSM",               models +  2},   /* 115 */
+    {"CRC-5/EPC",                models + 53},   /* 116 */
+    {"CRC-5/EPC-C1G2",           models + 53},   /* 117 */
+    {"CRC-5/G-704",              models + 94},   /* 118 */
+    {"CRC-5/ITU",                models + 94},   /* 119 */
+    {"CRC-5/USB",                models + 39},   /* 120 */
+    {"CRC-6/CDMA2000-A",         models + 90},   /* 121 */
+    {"CRC-6/CDMA2000-B",         models + 30},   /* 122 */
+    {"CRC-6/DARC",               models + 62},   /* 123 */
+    {"CRC-6/G-704",              models + 16},   /* 124 */
+    {"CRC-6/GSM",                models + 97},   /* 125 */
+    {"CRC-6/ITU",                models + 16},   /* 126 */
+    {"CRC-64",                   models + 50},   /* 127 */
+    {"CRC-64/ECMA-182",          models + 50},   /* 128 */
+    {"CRC-64/GO-ECMA",           models + 52},   /* 129 */
+    {"CRC-64/GO-ISO",            models +  0},   /* 130 */
+    {"CRC-64/WE",                models + 51},   /* 131 */
+    {"CRC-64/XZ",                models + 52},   /* 132 */
+    {"CRC-7",                    models + 29},   /* 133 */
+    {"CRC-7/MMC",                models + 29},   /* 134 */
+    {"CRC-7/ROHC",               models + 91},   /* 135 */
+    {"CRC-7/UMTS",               models + 83},   /* 136 */
+    {"CRC-8",                    models + 11},   /* 137 */
+    {"CRC-8/AES",                models + 35},   /* 138 */
+    {"CRC-8/AUTOSAR",            models + 41},   /* 139 */
+    {"CRC-8/BLUETOOTH",          models + 93},   /* 140 */
+    {"CRC-8/CDMA2000",           models + 89},   /* 141 */
+    {"CRC-8/DARC",               models + 47},   /* 142 */
+    {"CRC-8/DVB-S2",             models + 101},  /* 143 */
+    {"CRC-8/EBU",                models + 35},   /* 144 */
+    {"CRC-8/GSM-A",              models + 31},   /* 145 */
+    {"CRC-8/GSM-B",              models + 54},   /* 146 */
+    {"CRC-8/I-432-1",            models + 12},   /* 147 */
+    {"CRC-8/I-CODE",             models + 33},   /* 148 */
+    {"CRC-8/ITU",                models + 12},   /* 149 */
+    {"CRC-8/LTE",                models + 87},   /* 150 */
+    {"CRC-8/MAXIM",              models + 44},   /* 151 */
+    {"CRC-8/MAXIM-DOW",          models + 44},   /* 152 */
+    {"CRC-8/MIFARE-MAD",         models + 32},   /* 153 */
+    {"CRC-8/NRSC-5",             models + 45},   /* 154 */
+    {"CRC-8/OPENSAFETY",         models + 40},   /* 155 */
+    {"CRC-8/ROHC",               models + 13},   /* 156 */
+    {"CRC-8/SAE-J1850",          models + 34},   /* 157 */
+    {"CRC-8/SMBUS",              models + 11},   /* 158 */
+    {"CRC-8/TECH-3250",          models + 35},   /* 159 */
+    {"CRC-8/WCDMA",              models + 88},   /* 160 */
+    {"CRC-82/DARC",              models + 17},   /* 161 */
+    {"CRC-A",                    models + 24},   /* 162 */
+    {"CRC-B",                    models + 28},   /* 163 */
+    {"CRC-CCITT",                models + 20},   /* 164 */
+    {"CRC-IBM",                  models + 69},   /* 165 */
+    {"DOW-CRC",                  models + 44},   /* 166 */
+    {"JAMCRC",                   models +  7},   /* 167 */
+    {"KERMIT",                   models + 20},   /* 168 */
+    {"MODBUS",                   models + 73},   /* 169 */
+    {"PKZIP",                    models +  8},   /* 170 */
+    {"R-CRC-16",                 models + 10},   /* 171 */
+    {"X-25",                     models + 28},   /* 172 */
+    {"X-CRC-12",                 models + 77},   /* 173 */
+    {"X-CRC-16",                 models +  9},   /* 174 */
+    {"XFER",                     models +  1},   /* 175 */
+    {"XMODEM",                   models + 18},   /* 176 */
+    {"ZMODEM",                   models + 18},   /* 177 */
+    {NULL,                       NULL},          /* terminating entry */
 };
 #    define NALIASES 178
 

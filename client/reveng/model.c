@@ -242,9 +242,9 @@ void mrev(model_t *model) {
 
 void mnovel(model_t *model) {
     /* remove name and check string from modified model */
-	/* previous classification no longer applies */
+    /* previous classification no longer applies */
     model->name = NULL;
-	model->flags &= ~P_CLMASK;
+    model->flags &= ~P_CLMASK;
     pfree(&model->check);
     pfree(&model->magic);
 }

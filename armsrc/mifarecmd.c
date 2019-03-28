@@ -1938,13 +1938,13 @@ void MifareCIdent() {
     uint8_t *buf = BigBuf_malloc(USB_CMD_DATA_SIZE);
     uint8_t *uid = BigBuf_malloc(10);
     uint32_t cuid = 0;
-    
+
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
     // Generation 1 test
     ReaderTransmitBitsPar(wupC1, 7, NULL, NULL);
     if (!ReaderReceive(rec, recpar) || (rec[0] != 0x0a)) {
-        goto TEST2;         
+        goto TEST2;
     };
     isGen = GEN_1B;
 
@@ -1960,10 +1960,10 @@ TEST2:
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     SpinDelay(100);
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-    
+
     int res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
-    if ( res == 2 ) {
-        ReaderTransmit(rats, sizeof(rats), NULL);      
+    if (res == 2) {
+        ReaderTransmit(rats, sizeof(rats), NULL);
         res = ReaderReceive(buf, par);
         if (memcmp(buf, "\x09\x78\x00\x91\x02\xDA\xBC\x19\x10\xF0\x05", 11) == 0) {
             isGen = GEN_2;
@@ -1973,7 +1973,7 @@ TEST2:
             isGen = GEN_2;
         }
     };
-    
+
 OUT:
     cmd_send(CMD_ACK, isGen, 0, 0, 0, 0);
     // turns off

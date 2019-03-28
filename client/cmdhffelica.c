@@ -425,8 +425,8 @@ int CmdHFFelicaDumpLite(const char *Cmd) {
     }
 
     uint64_t tracelen = resp.arg[1];
-    if (tracelen == 0) 
-        return 1;   
+    if (tracelen == 0)
+        return 1;
 
     uint8_t *trace = calloc(tracelen, sizeof(uint8_t));
     if (trace == NULL) {
@@ -444,14 +444,14 @@ int CmdHFFelicaDumpLite(const char *Cmd) {
 
     print_hex_break(trace, tracelen, 32);
     printSep();
-    
+
     uint16_t tracepos = 0;
     while (tracepos < tracelen)
         tracepos = PrintFliteBlock(tracepos, trace, tracelen);
 
     printSep();
 
-    free(trace);        
+    free(trace);
     return 0;
 }
 

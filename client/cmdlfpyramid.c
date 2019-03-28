@@ -237,11 +237,11 @@ int CmdPyramidDemod(const char *Cmd) {
     }
 
     PrintAndLogEx(DEBUG, "DEBUG: Pyramid: checksum : 0x%02X - %02X - %s"
-        , checksum
-        , checkCS
-        , (checksum == checkCS) ? _GREEN_("Passed") : _RED_("Failed")
-        );
-        
+                  , checksum
+                  , checkCS
+                  , (checksum == checkCS) ? _GREEN_("Passed") : _RED_("Failed")
+                 );
+
     PrintAndLogEx(DEBUG, "DEBUG: Pyramid: idx: %d, Len: %d, Printing Demod Buffer:", idx, 128);
     if (g_debugMode)
         printDemodBuff();

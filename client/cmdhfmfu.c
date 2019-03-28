@@ -84,11 +84,11 @@ void transform_D(uint8_t *ru) {
     uint32_t v1 = ((ru[3] << 24) | (ru[2] << 16) | (ru[1] << 8) | ru[0]) + c_D[p++];
     uint32_t v2 = ((ru[7] << 24) | (ru[6] << 16) | (ru[5] << 8) | ru[4]) + c_D[p++];
     for (i = 0; i < 12; i += 2) {
-        
+
         uint32_t xor1 = v1 ^ v2;
         uint32_t t1 = ROTL(xor1, v2 & 0x1F) + c_D[p++];
-        uint32_t xor2 = v2 ^ t1;       
-        uint32_t t2 = ROTL(xor2, t1 & 0x1F) + c_D[p++];        
+        uint32_t xor2 = v2 ^ t1;
+        uint32_t t2 = ROTL(xor2, t1 & 0x1F) + c_D[p++];
         uint32_t xor3 = t1 ^ t2;
         uint32_t xor4 = t2 ^ v1;
         v1 = ROTL(xor3, t2 & 0x1F) + c_D[p++];
@@ -322,9 +322,9 @@ static int ul_read(uint8_t page, uint8_t *response, uint16_t responseLength) {
 
 static int ul_comp_write(uint8_t page, uint8_t *data, uint8_t datalen) {
 
-    if (data == NULL) 
+    if (data == NULL)
         return -1;
-    
+
     uint8_t cmd[18];
     memset(cmd, 0x00, sizeof(cmd));
     datalen = (datalen > 16) ? 16 : datalen;

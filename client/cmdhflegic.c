@@ -1282,7 +1282,7 @@ int CmdLegicWipe(const char *Cmd) {
         }
     }
     PrintAndLogEx(SUCCESS, "ok\n");
-    free(data);    
+    free(data);
     return 0;
 }
 

@@ -137,15 +137,15 @@ bool IsBlock0PCF7931(uint8_t *block) {
 bool IsBlock1PCF7931(uint8_t *block) {
     // assuming all RFU bits are set to 0
     if (block[10] == 0
-        && block[11] == 0 
-        && block[12] == 0 
-        && block[13] == 0) {
-        
-        if ( (block[14] & 0x7f) <= 9 
-              && block[15] <= 9) {
-                return true;
-            }
+            && block[11] == 0
+            && block[12] == 0
+            && block[13] == 0) {
+
+        if ((block[14] & 0x7f) <= 9
+                && block[15] <= 9) {
+            return true;
         }
+    }
     return false;
 }
 

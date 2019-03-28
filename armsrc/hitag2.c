@@ -138,7 +138,7 @@ static void hitag_send_bit(int bit) {
 
 static void hitag_send_frame(const uint8_t *frame, size_t frame_len) {
     // SOF - send start of frame
-        hitag_send_bit(1);
+    hitag_send_bit(1);
     hitag_send_bit(1);
     hitag_send_bit(1);
     hitag_send_bit(1);
@@ -399,10 +399,10 @@ static bool hitag2_write_page(uint8_t *rx, const size_t rxlen, uint8_t *tx, size
             break;
         case WRITE_STATE_PAGENUM_WRITTEN:
             // Check if page number was received correctly
-            if (   (rxlen == 10) 
-                && (rx[0] == (0x82 | (blocknr << 3) | ((blocknr ^ 7) >> 2)))
-                && (rx[1] == (((blocknr & 0x3) ^ 0x3) << 6))) {
-                    
+            if ((rxlen == 10)
+                    && (rx[0] == (0x82 | (blocknr << 3) | ((blocknr ^ 7) >> 2)))
+                    && (rx[1] == (((blocknr & 0x3) ^ 0x3) << 6))) {
+
                 *txlen = 32;
                 memset(tx, 0, HITAG_FRAME_LEN);
                 memcpy(tx, writedata, 4);
@@ -1280,7 +1280,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
 
         // Receive frame, watch for at most T0*EOF periods
         while (AT91C_BASE_TC1->TC_CV < T0 * HITAG_T_WAIT_MAX) {
-            
+
             // Check if falling edge in tag modulation is detected
             if (AT91C_BASE_TC1->TC_SR & AT91C_TC_LDRAS) {
                 // Retrieve the new timing values

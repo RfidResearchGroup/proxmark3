@@ -5,7 +5,7 @@ CFLAGS += -std=c99 -D_ISOC99_SOURCE -I../../include -I../../common -I../../clien
 LDFLAGS +=
 
 OBJS = crypto1.o crapto1.o parity.o util_posix.o bucketsort.o
-EXES = mfkey32 mfkey32v2 mfkey64 
+EXES = mfkey32 mfkey32v2 mfkey64
 WINEXES = $(patsubst %, %.exe, $(EXES))
 
 all: $(OBJS) $(EXES)

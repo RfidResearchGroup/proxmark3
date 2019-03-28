@@ -785,7 +785,7 @@ int CmdHFiClassDecrypt(const char *Cmd) {
 
     saveFile(outfilename, "bin", decrypted, fsize);
     printIclassDumpContents(decrypted, 1, (fsize / 8), fsize);
-    free(decrypted);    
+    free(decrypted);
     return 0;
 }
 
