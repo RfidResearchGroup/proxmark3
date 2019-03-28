@@ -201,6 +201,7 @@ static void MifareSimInit(uint16_t flags, uint8_t *datain, tag_response_info_t *
         memcpy(&rUIDBCC2[1], datain + 3, 3);
         memcpy(rUIDBCC3,    datain + 6, 4);
         *uid_len = 10;
+        if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("MifareSimInit - FLAG_10B_UID_IN_DATA => Get UID from datain: %02X - Flag: %02X - UIDBCC1: %02X", FLAG_10B_UID_IN_DATA, flags, rUIDBCC1);
     }
 
     switch (*uid_len) {
@@ -230,7 +231,7 @@ static void MifareSimInit(uint16_t flags, uint8_t *datain, tag_response_info_t *
             *cuid = bytes_to_num(rUIDBCC1, 4);
             // BCC
             rUIDBCC1[4] = rUIDBCC1[0] ^ rUIDBCC1[1] ^ rUIDBCC1[2] ^ rUIDBCC1[3];
-            if (MF_DBGLEVEL >= 1)	{
+            if (MF_DBGLEVEL >= MF_DBG_ALL)	{
                 Dbprintf("4B UID: %02x%02x%02x%02x", rUIDBCC1[0], rUIDBCC1[1], rUIDBCC1[2], rUIDBCC1[3]);
             }
             break;
@@ -260,7 +261,7 @@ static void MifareSimInit(uint16_t flags, uint8_t *datain, tag_response_info_t *
             // BCC
             rUIDBCC1[4] = rUIDBCC1[0] ^ rUIDBCC1[1] ^ rUIDBCC1[2] ^ rUIDBCC1[3];
             rUIDBCC2[4] = rUIDBCC2[0] ^ rUIDBCC2[1] ^ rUIDBCC2[2] ^ rUIDBCC2[3];
-            if (MF_DBGLEVEL >= 1)	{
+            if (MF_DBGLEVEL >= MF_DBG_ALL)	{
                 Dbprintf("7B UID: %02x %02x %02x %02x %02x %02x %02x",
                          rUIDBCC1[1], rUIDBCC1[2], rUIDBCC1[3], rUIDBCC2[0], rUIDBCC2[1], rUIDBCC2[2], rUIDBCC2[3]);
             }
@@ -293,7 +294,7 @@ static void MifareSimInit(uint16_t flags, uint8_t *datain, tag_response_info_t *
             rUIDBCC2[4] = rUIDBCC2[0] ^ rUIDBCC2[1] ^ rUIDBCC2[2] ^ rUIDBCC2[3];
             rUIDBCC3[4] = rUIDBCC3[0] ^ rUIDBCC3[1] ^ rUIDBCC3[2] ^ rUIDBCC3[3];
 
-            if (MF_DBGLEVEL >= 1)	{
+            if (MF_DBGLEVEL >= MF_DBG_ALL)	{
                 Dbprintf("10B UID: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
                          rUIDBCC1[1], rUIDBCC1[2], rUIDBCC1[3],
                          rUIDBCC2[1], rUIDBCC2[2], rUIDBCC2[3],
@@ -421,7 +422,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
 
     // Authenticate response - nonce
     uint32_t nonce = prng_successor(selTimer, 32) ;
-  
+
     if ((flags & FLAG_MF_MINI) == FLAG_MF_MINI) {
         MifareCardType = 0;
         Dbprintf("Mifare Mini");
@@ -493,7 +494,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
             crypto1_destroy(pcs);
             cardAUTHKEY = AUTHKEYNONE;
             nonce = prng_successor(selTimer, 32);
-            
+
             LED_B_OFF();
             LED_C_OFF();
             cardSTATE = MFEMUL_SELECT1;
@@ -642,21 +643,23 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                             }
                             cardSTATE = MFEMUL_WORK;
                             LED_B_ON();
-                            continue;
+                            break;
                         case 10:
                             // SAK => Need another select round
                             EmSendPrecompiledCmd(&responses[SAK1]);
                             cardSTATE = MFEMUL_SELECT3;
                             if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_SELECT2] cardSTATE = MFEMUL_SELECT3");
-                            break;
                         default:
                             break;
                     }
-                }
 
-                cardSTATE_TO_IDLE();
-                if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_SELECT2] cardSTATE = MFEMUL_IDLE");
-                break;
+                } else {
+                    // IDLE
+                    cardSTATE_TO_IDLE();
+                    if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_SELECT2] cardSTATE = MFEMUL_IDLE");
+                }
+                // Break Case MFEMUL_SELECT2
+                continue;
             }
 
 
@@ -703,9 +706,12 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                         Dbprintf("[MFEMUL_SELECT3] cardSTATE = MFEMUL_WORK");
                     }
                     continue;
+                } else {
+                    // IDLE
+                    cardSTATE_TO_IDLE();
+                    if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_SELECT3] cardSTATE = MFEMUL_IDLE");
                 }
-                cardSTATE_TO_IDLE();
-                if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_SELECT3] cardSTATE = MFEMUL_IDLE");
+                // Break Case MFEMUL_SELECT3
                 break;
             }
 
@@ -738,7 +744,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
 
                 if (!HasValidCRC(receivedCmd_dec, receivedCmd_len)) { // all commands must have a valid CRC
                     EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
-                    if (MF_DBGLEVEL >= 1) Dbprintf("[MFEMUL_WORK] All commands must have a valid CRC %02X (%d)", receivedCmd_dec, receivedCmd_len);
+                    if (MF_DBGLEVEL >= MF_DBG_ALL) Dbprintf("[MFEMUL_WORK] All commands must have a valid CRC %02X (%d)", receivedCmd_dec, receivedCmd_len);
                     break;
                 }
 
@@ -845,11 +851,25 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                                  response[14], response[15]);
                     }
 
+                    // Access permission managment:
+                    //
+                    // Sector Trailer:
+                    // - KEY A access
+                    // - KEY B access
+                    // - AC bits access
+                    //
+                    // Data block:
+                    // - Data access
+
+                    // If permission is not allowed, data is cleared (00) in emulator memeory.
+                    // ex: a0a1a2a3a4a561e789c1b0b1b2b3b4b5 => 00000000000061e789c1b0b1b2b3b4b5
+
+
+                    // Check if selected Block is a Sector Trailer
                     if (IsSectorTrailer(blockNo)) {
 
                         if (!IsAccessAllowed(blockNo, cardAUTHKEY, AC_KEYA_READ)) {
-                            memset(response, 0x00, 6); 	// keyA can never be read, Why ??? Need source ?
-                            // a0a1a2a3a4a561e789c1b0b1b2b3b4b5 => 00000000000061e789c1b0b1b2b3b4b5
+                            memset(response, 0x00, 6); 	// keyA can never be read
                             if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_WORK - IsSectorTrailer] keyA can never be read - block %d (0x%02x)", blockNo, blockNo);
                         }
                         if (!IsAccessAllowed(blockNo, cardAUTHKEY, AC_KEYB_READ)) {
@@ -954,7 +974,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                 // case MFEMUL_WORK => CMD RATS
                 if (receivedCmd[0] == ISO14443A_CMD_RATS) {
                     EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
-                    if (MF_DBGLEVEL >= 1)	Dbprintf("[MFEMUL_WORK] RCV RATS => NACK");
+                    if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("[MFEMUL_WORK] RCV RATS => NACK");
                     break;
                 }
 
