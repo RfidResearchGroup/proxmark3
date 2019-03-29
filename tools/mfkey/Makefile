@@ -6,7 +6,6 @@ LDFLAGS +=
 
 OBJS = crypto1.o crapto1.o parity.o util_posix.o bucketsort.o
 EXES = mfkey32 mfkey32v2 mfkey64
-WINEXES = $(patsubst %, %.exe, $(EXES))
 
 all: $(OBJS) $(EXES)
 
@@ -17,4 +16,4 @@ all: $(OBJS) $(EXES)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJS) $<
 
 clean:
-	rm -f $(OBJS) $(EXES) $(WINEXES)
+	rm -f $(OBJS) $(EXES)
