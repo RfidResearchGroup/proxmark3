@@ -1731,13 +1731,13 @@ void CopyIOtoT55x7(uint32_t hi, uint32_t lo) {
 // Clone Indala 64-bit tag by UID to T55x7
 void CopyIndala64toT55x7(uint32_t hi, uint32_t lo) {
     //Program the 2 data blocks for supplied 64bit UID
-    // and the Config for Indala 64 format (RF/32;PSK2 with RF/2;Maxblock=2)
-    uint32_t data[] = { T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK2 | (2 << T55x7_MAXBLOCK_SHIFT), hi, lo};
+    // and the Config for Indala 64 format (RF/32;PSK1 with RF/2;Maxblock=2)
+    uint32_t data[] = { T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK1 | (2 << T55x7_MAXBLOCK_SHIFT), hi, lo};
     //TODO add selection of chip for Q5 or T55x7
-    // data[0] = T5555_SET_BITRATE(32 | T5555_MODULATION_PSK2 | 2 << T5555_MAXBLOCK_SHIFT;
+    // data[0] = T5555_SET_BITRATE(32 | T5555_MODULATION_PSK1 | 2 << T5555_MAXBLOCK_SHIFT;
 
     WriteT55xx(data, 0, 3);
-    //Alternative config for Indala (Extended mode;RF/32;PSK2 with RF/2;Maxblock=2;Inverse data)
+    //Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=2;Inverse data)
     // T5567WriteBlock(0x603E1042,0);
 }
 // Clone Indala 224-bit tag by UID to T55x7
@@ -1750,7 +1750,7 @@ void CopyIndala224toT55x7(uint32_t uid1, uint32_t uid2, uint32_t uid3, uint32_t 
     //TODO add selection of chip for Q5 or T55x7
     // data[0] =  T5555_SET_BITRATE(32 | T5555_MODULATION_PSK2 | 7 << T5555_MAXBLOCK_SHIFT;
     WriteT55xx(data, 0, 8);
-    //Alternative config for Indala (Extended mode;RF/32;PSK2 with RF/2;Maxblock=7;Inverse data)
+    //Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=7;Inverse data)
     // T5567WriteBlock(0x603E10E2,0);
 }
 // clone viking tag to T55xx
