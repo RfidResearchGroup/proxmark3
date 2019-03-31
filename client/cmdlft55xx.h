@@ -149,8 +149,10 @@ extern int CmdT55xxDetect(const char *Cmd);
 extern int CmdResetRead(const char *Cmd);
 extern int CmdT55xxWipe(const char *Cmd);
 
+char *GetPskCfStr(uint32_t id, bool q5);
 char *GetBitRateStr(uint32_t id, bool xmode);
 char *GetSaferStr(uint32_t id);
+char *GetQ5ModulationStr(uint32_t id);
 char *GetModulationStr(uint32_t id);
 char *GetModelStrFromCID(uint32_t cid);
 char *GetSelectedModulationStr(uint8_t id);
