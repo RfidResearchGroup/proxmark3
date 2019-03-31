@@ -318,6 +318,8 @@ static int enter_bootloader(char *serial_port_name) {
         }
         msleep(100);
         CloseProxmark();
+        // Let time to OS to make the port disappear
+        msleep(1000);
 
         bool opened = OpenProxmark(serial_port_name, true, 60, true);
         if (opened) {
