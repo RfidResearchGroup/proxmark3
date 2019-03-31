@@ -1079,7 +1079,7 @@ int CmdT55xxReadTrace(const char *Cmd) {
         // sanity check.
         if (!SanityOfflineCheck(false)) return 1;
 
-        if (!AquireData(T55x7_PAGE1, REGULAR_READ_MODE_BLOCK, pwdmode, password))
+        if (!AquireData(T55x7_PAGE1, T55x7_TRACE_BLOCK1, pwdmode, password))
             return 1;
     }
 
@@ -1914,7 +1914,7 @@ bool tryDetectP1(bool getData) {
     bool st = true;
 
     if (getData) {
-        if (!AquireData(T55x7_PAGE1, 1, false, 0))
+        if (!AquireData(T55x7_PAGE1, T55x7_TRACE_BLOCK1, false, 0))
             return false;
     }
 
@@ -2043,7 +2043,7 @@ int CmdT55xxDetectPage1(const char *Cmd) {
     if (errors) return usage_t55xx_detectP1();
 
     if (!useGB) {
-        if (!AquireData(T55x7_PAGE1, 1, usepwd, password))
+        if (!AquireData(T55x7_PAGE1, T55x7_TRACE_BLOCK1, usepwd, password))
             return false;
     }
     bool success = tryDetectP1(false);
