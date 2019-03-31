@@ -1529,7 +1529,7 @@ void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
     // Turn field on to read the response
     // 137*8 seems to get to the start of data pretty well...
     // but we want to go past the start and let the repeating data settle in...
-    TurnReadLFOn(200 * 8);
+    TurnReadLFOn(150 * 8);
 
     // Acquisition
     // Now do the acquisition
