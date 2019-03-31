@@ -19,15 +19,15 @@ void Set_t55xx_Config(t55xx_conf_block_t conf) {
 }
 
 int usage_t55xx_config() {
-    PrintAndLogEx(NORMAL, "Usage: lf t55xx config [d <demodulation>] [i 1] [o <offset>] [Q5]");
+    PrintAndLogEx(NORMAL, "Usage: lf t55xx config [d <demodulation>] [i [0/1]] [o <offset>] [Q5 [0/1]] [ST [0/1]]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h                                - This help");
     PrintAndLogEx(NORMAL, "       b <8|16|32|40|50|64|100|128>     - Set bitrate");
     PrintAndLogEx(NORMAL, "       d <FSK|FSK1|FSK1a|FSK2|FSK2a|ASK|PSK1|PSK2|NRZ|BI|BIa>  - Set demodulation FSK / ASK / PSK / NRZ / Biphase / Biphase A");
-    PrintAndLogEx(NORMAL, "       i [1]                            - Invert data signal, defaults to normal");
+    PrintAndLogEx(NORMAL, "       i [0/1]                          - Set/reset data signal inversion");
     PrintAndLogEx(NORMAL, "       o [offset]                       - Set offset, where data should start decode in bitstream");
-    PrintAndLogEx(NORMAL, "       Q5                               - Set as Q5(T5555) chip instead of T55x7");
-    PrintAndLogEx(NORMAL, "       ST                               - Set Sequence Terminator on");
+    PrintAndLogEx(NORMAL, "       Q5 [0/1]                         - Set/reset as Q5(T5555) chip instead of T55x7");
+    PrintAndLogEx(NORMAL, "       ST [0/1]                         - Set/reset Sequence Terminator on");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf t55xx config d FSK          - FSK demodulation");
@@ -306,8 +306,13 @@ int CmdT55xxSetConfig(const char *Cmd) {
                 }
                 break;
             case 'i':
-                config.inverted = param_getchar(Cmd, cmdp + 1) == '1';
-                cmdp += 2;
+                if ((param_getchar(Cmd, cmdp + 1) == '0') || (param_getchar(Cmd, cmdp + 1) == '1')) {
+                    config.inverted = param_getchar(Cmd, cmdp + 1) == '1';
+                    cmdp += 2;
+                } else {
+                    config.inverted = true;
+                    cmdp += 1;
+                }
                 break;
             case 'o':
                 errors |= param_getdec(Cmd, cmdp + 1, &offset);
@@ -316,12 +321,22 @@ int CmdT55xxSetConfig(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 'q':
-                config.Q5 = true;
-                cmdp++;
+                if ((param_getchar(Cmd, cmdp + 1) == '0') || (param_getchar(Cmd, cmdp + 1) == '1')) {
+                    config.Q5 = param_getchar(Cmd, cmdp + 1) == '1';
+                    cmdp += 2;
+                } else {
+                    config.Q5 = true;
+                    cmdp += 1;
+                }
                 break;
             case 's':
-                config.ST = true;
-                cmdp++;
+                if ((param_getchar(Cmd, cmdp + 1) == '0') || (param_getchar(Cmd, cmdp + 1) == '1')) {
+                    config.ST = param_getchar(Cmd, cmdp + 1) == '1';
+                    cmdp += 2;
+                } else {
+                    config.ST = true;
+                    cmdp += 1;
+                }
                 break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
