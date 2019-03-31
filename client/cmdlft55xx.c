@@ -1386,7 +1386,7 @@ int CmdT55xxInfo(const char *Cmd) {
         PrintAndLogEx(NORMAL, " reserved                  : %d", resv);
         PrintAndLogEx(NORMAL, " Data bit rate             : %s", GetBitRateStr(dbr, extend));
         PrintAndLogEx(NORMAL, " eXtended mode             : %s", (extend) ? _YELLOW_("Yes - Warning") : "No");
-        PrintAndLogEx(NORMAL, " Modulation                : %s", GetModulationStr(datamod));
+        PrintAndLogEx(NORMAL, " Modulation                : %s", GetModulationStr(datamod, extend));
         PrintAndLogEx(NORMAL, " PSK clock frequency       : %s", GetPskCfStr(pskcf, 0));
         PrintAndLogEx(NORMAL, " AOR - Answer on Request   : %s", (aor) ? _GREEN_("Yes") : "No");
         PrintAndLogEx(NORMAL, " OTP - One Time Pad        : %s", (otp) ? ((extend) ? _YELLOW_("Yes - Warning") : _RED_("Yes - Warning")) : "No");
@@ -1533,7 +1533,7 @@ char *GetSaferStr(uint32_t id) {
     return buf;
 }
 
-char *GetModulationStr(uint32_t id) {
+char *GetModulationStr(uint32_t id, bool xmode) {
     static char buf[60];
     char *retStr = buf;
 
@@ -1557,10 +1557,10 @@ char *GetModulationStr(uint32_t id) {
             snprintf(retStr, sizeof(buf), "%u - FSK 2 RF/8  RF/10", id);
             break;
         case 6:
-            snprintf(retStr, sizeof(buf), "%u - FSK 1a RF/5  RF/8", id);
+            snprintf(retStr, sizeof(buf), "%u - %s RF/5  RF/8", id, (xmode) ? "FSK 1a" : _YELLOW_("FSK 1a"));
             break;
         case 7:
-            snprintf(retStr, sizeof(buf), "%u - FSK 2a RF/10  RF/8", id);
+            snprintf(retStr, sizeof(buf), "%u - %s RF/10  RF/8", id, (xmode) ? "FSK 2a" : _YELLOW_("FSK 2a"));
             break;
         case 8:
             snprintf(retStr, sizeof(buf), "%u - Manchester", id);
@@ -1568,11 +1568,8 @@ char *GetModulationStr(uint32_t id) {
         case 16:
             snprintf(retStr, sizeof(buf), "%u - Biphase", id);
             break;
-        case 0x18:
-            snprintf(retStr, sizeof(buf), "%u - Biphase a - AKA Conditional Dephase Encoding(CDP)", id);
-            break;
-        case 17:
-            snprintf(retStr, sizeof(buf), "%u - " _YELLOW_("Reserved"), id);
+        case 24:
+            snprintf(retStr, sizeof(buf), "%u - %s", id, (xmode) ? "Biphase a - AKA Conditional Dephase Encoding(CDP)" : _YELLOW_("Reserved"));
             break;
         default:
             snprintf(retStr, sizeof(buf), "0x%02X " _RED_("(Unknown)"), id);

@@ -153,7 +153,7 @@ char *GetPskCfStr(uint32_t id, bool q5);
 char *GetBitRateStr(uint32_t id, bool xmode);
 char *GetSaferStr(uint32_t id);
 char *GetQ5ModulationStr(uint32_t id);
-char *GetModulationStr(uint32_t id);
+char *GetModulationStr(uint32_t id, bool xmode);
 char *GetModelStrFromCID(uint32_t cid);
 char *GetSelectedModulationStr(uint8_t id);
 uint32_t PackBits(uint8_t start, uint8_t len, uint8_t *bitstream);
