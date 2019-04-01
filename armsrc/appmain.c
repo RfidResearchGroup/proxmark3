@@ -1105,30 +1105,32 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             */
 
 
-            char dest[USB_CMD_DATA_SIZE] = { '\0' };
-            static const char *welcome = "Proxmark3 Serial interface via FPC ready\n";
-            strncat(dest, welcome, sizeof(dest) - strlen(dest) - 1);
-            sprintf(dest + strlen(dest) - 1, "| bytes 0x%02x 0x%02x 0x%02x 0x%02x \n"
+            char dest[USB_CMD_DATA_SIZE]={'\0'};
+            sprintf(dest, usart_dataavailable() ? "DATA!\r\n" : "no data\r\n");
+            cmd_send(CMD_DEBUG_PRINT_STRING, strlen(dest), 0, 0, dest, strlen(dest));
+
+            static const char *welcome = "Proxmark3 Serial interface via FPC ready\r\n";
+            usart_writebuffer((uint8_t *)welcome, strlen(welcome));
+
+            sprintf(dest, "| bytes 0x%02x 0x%02x 0x%02x 0x%02x\r\n"
                     , c->d.asBytes[0]
                     , c->d.asBytes[1]
                     , c->d.asBytes[2]
                     , c->d.asBytes[3]
                    );
+            usart_writebuffer((uint8_t *)dest, strlen(dest));
 
-            UsbCommand txcmd = { CMD_DEBUG_PRINT_STRING, { strlen(dest), 0, 0 } };
-            memcpy(txcmd.d.asBytes, dest, sizeof(dest));
 
             LED_A_ON();
 
-            usart_init();
-            usart_writebuffer((uint8_t *)&txcmd, sizeof(UsbCommand));
 
             //usb
             cmd_send(CMD_DEBUG_PRINT_STRING, strlen(dest), 0, 0, dest, strlen(dest));
+
+            sprintf(dest, usart_dataavailable() ? "DATA!\r\n" : "no data\r\n");
+            cmd_send(CMD_DEBUG_PRINT_STRING, strlen(dest), 0, 0, dest, strlen(dest));
             LED_A_OFF();
-
-
-            /*
+/*
             uint8_t my_rx[sizeof(UsbCommand)];
             while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
                 LED_B_INV();
@@ -1136,13 +1138,12 @@ void UsbPacketReceived(uint8_t *packet, int len) {
                     //UsbPacketReceived(my_rx, sizeof(my_rx));
 
                     UsbCommand *my = (UsbCommand *)my_rx;
-                    if (mc->cmd > 0 ) {
+                    if (my->cmd > 0 ) {
                         Dbprintf("received command: 0x%04x and args: %d %d %d", my->cmd, my->arg[0], my->arg[1], my->arg[2]);
                     }
                 }
             }
-            */
-
+*/
             //cmd_send(CMD_DEBUG_PRINT_STRING, strlen(dest), 0, 0, dest, strlen(dest));
 
             cmd_send(CMD_ACK, 0, 0, 0, 0, 0);

@@ -66,27 +66,20 @@ inline int16_t usart_readbuffer(uint8_t *data, size_t len) {
     }
 }
 
+inline bool usart_dataavailable(void) {
+    return (pUS1->US_CSR & AT91C_US_RXRDY) != 0;
+}
 
 // transfer from device to client
 inline int16_t usart_writebuffer(uint8_t *data, size_t len) {
-
-    // Check if the first PDC bank is free
-    if (!(pUS1->US_TCR)) {
+    if (pUS1->US_TCR == 0) {
         memcpy(us_outbuf, data, len);
         pUS1->US_TPR = (uint32_t)us_outbuf;
-        pUS1->US_TCR = sizeof(us_outbuf);
+        pUS1->US_TCR = len;
 
         pUS1->US_PTCR = AT91C_PDC_TXTEN | AT91C_PDC_RXTDIS;
+        while((pUS1->US_CSR & AT91C_US_TXEMPTY) ==0) {};
         return 2;
-    }
-    // Check if the second PDC bank is free
-    else if (!(pUS1->US_TNCR)) {
-        memcpy(us_outbuf, data, len);
-        pUS1->US_TNPR = (uint32_t)us_outbuf;
-        pUS1->US_TNCR = sizeof(us_outbuf);
-
-        pUS1->US_PTCR = AT91C_PDC_TXTEN | AT91C_PDC_RXTDIS;
-        return 1;
     } else {
         return 0;
     }
@@ -130,7 +123,7 @@ void usart_init(void) {
     // 115200 * 16 == 1843200
     //
     //pUS1->US_BRGR = (48UL*1000*1000) / (9600*16);
-    pUS1->US_BRGR =  48054841 / (9600 << 4);
+    pUS1->US_BRGR =  48054841 / (115200 << 4);
 
     // Write the Timeguard Register
     pUS1->US_TTGR = 0;
