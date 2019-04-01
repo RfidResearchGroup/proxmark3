@@ -87,6 +87,9 @@ inline int16_t usart_writebuffer(uint8_t *data, size_t len) {
 
 void usart_init(void) {
 
+    // For a nice detailed sample, interrupt driven but still relevant.
+    // See https://www.sparkfun.com/datasheets/DevTools/SAM7/at91sam7%20serial%20communications.pdf
+
     // disable & reset receiver / transmitter for configuration
     pUS1->US_CR = (AT91C_US_RSTRX | AT91C_US_RSTTX | AT91C_US_RXDIS | AT91C_US_TXDIS);
 
@@ -106,6 +109,7 @@ void usart_init(void) {
     // set mode
     pUS1->US_MR = AT91C_US_USMODE_NORMAL |      // normal mode
                   AT91C_US_CLKS_CLOCK |            // MCK (48MHz)
+                  AT91C_US_OVER |                  // oversampling
                   AT91C_US_CHRL_8_BITS |           // 8 bits
                   AT91C_US_PAR_NONE |              // parity: none
                   AT91C_US_NBSTOP_1_BIT |          // 1 stop bit
@@ -114,16 +118,9 @@ void usart_init(void) {
     // all interrupts disabled
     pUS1->US_IDR = 0xFFFF;
 
-    // iceman,  setting 115200 doesn't work. Only speed I got to work is 9600.
-    // something fishy with the AT91SAM7S512 USART..  Or I missed something
-    // For a nice detailed sample, interrupt driven but still relevant.
-    // See https://www.sparkfun.com/datasheets/DevTools/SAM7/at91sam7%20serial%20communications.pdf
-
-    // set baudrate to 115200
-    // 115200 * 16 == 1843200
-    //
-    //pUS1->US_BRGR = (48UL*1000*1000) / (9600*16);
-    pUS1->US_BRGR =  48054841 / (115200 << 4);
+    pUS1->US_BRGR =  48054841 / (115200 << 3);
+    // Need speed?
+    //pUS1->US_BRGR =  48054841 / (460800 << 3);
 
     // Write the Timeguard Register
     pUS1->US_TTGR = 0;
