@@ -1398,7 +1398,7 @@ int CmdT55xxInfo(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "");
-    if (config.Q5 || (gotdata && dataasq5)) {
+    if (((!gotdata) && config.Q5) || (gotdata && dataasq5)) {
         uint32_t header   = (block0 >> (32 - 12)) & 0xFFF;
         uint32_t ps       = (block0 >> (32 - 13)) & 0x01;
         uint32_t fw       = (block0 >> (32 - 14)) & 0x01;
@@ -1469,7 +1469,8 @@ int CmdT55xxInfo(const char *Cmd) {
     else
         PrintAndLogEx(NORMAL, "     Block 0  : 0x%08X  %s", block0, sprint_bin(DemodBuffer + config.offset, 32));
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
-    printT5x7KnownBlock0(block0);
+    if (((!gotdata) && (!config.Q5)) || (gotdata && (!dataasq5)))
+        printT5x7KnownBlock0(block0);
     return 0;
 }
 
