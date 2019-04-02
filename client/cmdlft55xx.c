@@ -1332,7 +1332,7 @@ static void printT5x7KnownBlock0(uint32_t b0) {
     }
     
     if ( strlen(s) > 0 ) {
-        PrintAndLogEx(NORMAL, " Config block is usually found in T55x7 : " _YELLOW_("%s"), s);
+        PrintAndLogEx(NORMAL, " Known T55x7 Config block found : " _YELLOW_("%s"), s);
         PrintAndLogEx(NORMAL, "-------------------------------------------------------------"); 
     }    
 }
