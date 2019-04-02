@@ -277,7 +277,7 @@ int main(int argc, char *argv[]) {
 
     uint32_t i = 1;
     port = argv[i++];
-    for (i; i < argc; i++) {
+    for (; i < argc; i++) {
 
         // helptext
         if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "-help") == 0) {
