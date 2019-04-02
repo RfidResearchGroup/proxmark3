@@ -194,7 +194,7 @@ static void UsbCommandReceived(UsbCommand *c) {
 /*
 bool hookUpPM3() {
     bool ret = false;
-    sp = uart_open( comport );
+    sp = uart_open( comport, speed );
 
     if (sp == INVALID_SERIAL_PORT) {
         PrintAndLogEx(WARNING, "Reconnect failed, retrying...  (reason: invalid serial port)\n");
@@ -298,17 +298,17 @@ __attribute__((force_align_arg_pointer))
     return NULL;
 }
 
-bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode) {
+bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed) {
 
     char *portname = (char *)port;
     if (!wait_for_port) {
-        sp = uart_open(portname);
+        sp = uart_open(portname, speed);
     } else {
         PrintAndLogEx(SUCCESS, "Waiting for Proxmark to appear on " _YELLOW_("%s"), portname);
         fflush(stdout);
         int openCount = 0;
         do {
-            sp = uart_open(portname);
+            sp = uart_open(portname, speed);
             msleep(500);
             printf(".");
             fflush(stdout);

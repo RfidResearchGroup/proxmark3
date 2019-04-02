@@ -71,7 +71,7 @@ typedef void *serial_port;
  *
  * On errors, this method returns INVALID_SERIAL_PORT or CLAIMED_SERIAL_PORT.
  */
-serial_port uart_open(const char *pcPortName);
+serial_port uart_open(const char *pcPortName, uint32_t speed);
 
 /* Closes the given port.
  */

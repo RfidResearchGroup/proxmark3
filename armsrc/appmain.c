@@ -632,7 +632,6 @@ void ListenReaderField(int limit) {
 
 void UsbPacketReceived(uint8_t *packet, int len) {
     UsbCommand *c = (UsbCommand *)packet;
-
     //Dbprintf("received %d bytes, with command: 0x%04x and args: %d %d %d", len, c->cmd, c->arg[0], c->arg[1], c->arg[2]);
 
     switch (c->cmd) {
@@ -1106,8 +1105,12 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 
 
             char dest[USB_CMD_DATA_SIZE]={'\0'};
-            sprintf(dest, usart_dataavailable() ? "DATA!\r\n" : "no data\r\n");
-            cmd_send(CMD_DEBUG_PRINT_STRING, strlen(dest), 0, 0, dest, strlen(dest));
+            if (usart_dataavailable()) {
+                Dbprintf("RX DATA!");
+                uint16_t len = usart_readbuffer((uint8_t*)dest);
+                dest[len] = '\0';
+                Dbprintf("RX: %d | %02X %02X %02X %02X %02X %02X %02X %02X ", len,  dest[0], dest[1], dest[2], dest[3], dest[4], dest[5], dest[6], dest[7]);
+            }
 
             static const char *welcome = "Proxmark3 Serial interface via FPC ready\r\n";
             usart_writebuffer((uint8_t *)welcome, strlen(welcome));
@@ -1125,9 +1128,6 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 
 
             //usb
-            cmd_send(CMD_DEBUG_PRINT_STRING, strlen(dest), 0, 0, dest, strlen(dest));
-
-            sprintf(dest, usart_dataavailable() ? "DATA!\r\n" : "no data\r\n");
             cmd_send(CMD_DEBUG_PRINT_STRING, strlen(dest), 0, 0, dest, strlen(dest));
             LED_A_OFF();
 /*
@@ -1560,16 +1560,17 @@ void  __attribute__((noreturn)) AppMain(void) {
         // Check if there is a usb packet available
         if (usb_poll_validate_length()) {
             if (usb_read(rx, sizeof(rx)))
+#ifdef WITH_FPC_HOST
+                reply_via_fpc = 0;
+#endif
                 UsbPacketReceived(rx, sizeof(rx));
         }
-#ifdef WITH_FPC
-        // Check is there is FPC package available
-        /*
-        usart_init();
-        if (usart_readbuffer(rx, sizeof(rx)) )
-            UsbPacketReceived(rx, sizeof(rx) );
-        */
-
+#ifdef WITH_FPC_HOST
+        // Check if there is a FPC packet available
+        if (usart_readcommand(rx) > 0) {
+            reply_via_fpc = 1;
+            UsbPacketReceived(rx, sizeof(rx));
+        }
 #endif
 
         // Press button for one second to enter a possible standalone mode

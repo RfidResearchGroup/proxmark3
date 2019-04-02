@@ -54,7 +54,8 @@ void *uart_receiver(void *targ);
 void SendCommand(UsbCommand *c);
 void clearCommandBuffer();
 
-bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode);
+#define FLASHMODE_SPEED 460800
+bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed);
 void CloseProxmark(void);
 
 bool WaitForResponseTimeoutW(uint32_t cmd, UsbCommand *response, size_t ms_timeout, bool show_warning);

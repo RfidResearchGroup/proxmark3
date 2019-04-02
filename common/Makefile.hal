@@ -35,7 +35,7 @@ ifeq ($(PLATFORM),PM3RDV4)
   PLTNAME = Proxmark3 rdv4
 else ifeq ($(PLATFORM),PM3RDV4FPC)
   MCU = AT91SAM7S512
-  PLATFORM_DEFS = -DWITH_SMARTCARD -DWITH_FLASH -DWITH_FPC
+  PLATFORM_DEFS = -DWITH_SMARTCARD -DWITH_FLASH -DWITH_FPC_HOST
   PLTNAME = Proxmark3 rdv4
 else ifeq ($(PLATFORM),PM3EVO)
   MCU = AT91SAM7S512
@@ -54,6 +54,11 @@ else ifeq ($(PLATFORM),PM3OLD512)
   PLTNAME = Proxmark3 V1 with AT91SAM7S512
 else
   $(error Invalid or empty PLATFORM: $(PLATFORM). Known platforms: $(KNOWN_PLATFORMS))
+endif
+
+# Add flags dependencies
+ifneq (,$(findstring WITH_FPC_,$(PLATFORM_DEFS)))
+  PLATFORM_DEFS += -DWITH_FPC
 endif
 
 export PLATFORM

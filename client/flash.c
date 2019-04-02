@@ -321,7 +321,7 @@ static int enter_bootloader(char *serial_port_name) {
         // Let time to OS to make the port disappear
         msleep(1000);
 
-        bool opened = OpenProxmark(serial_port_name, true, 60, true);
+        bool opened = OpenProxmark(serial_port_name, true, 60, true, FLASHMODE_SPEED);
         if (opened) {
             fprintf(stdout, " " _GREEN_("Found") "\n");
             return 0;
