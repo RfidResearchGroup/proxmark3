@@ -1273,68 +1273,69 @@ void printT5555Trace(t5555_tracedata_t data, uint8_t repeat) {
 }
 
 static void printT5x7KnownBlock0(uint32_t b0) {
-    
+
     char s[40];
     memset(s, 0, sizeof(s));
-    
-    switch(b0) {
+
+    switch (b0) {
         case T55X7_DEFAULT_CONFIG_BLOCK:
-            snprintf(s, sizeof(s)-strlen(s), "T55x7 Default ");
+            snprintf(s, sizeof(s) - strlen(s), "T55x7 Default ");
             break;
         case T55X7_RAW_CONFIG_BLOCK:
-            snprintf(s + strlen(s), sizeof(s)-strlen(s), "T55x7 Raw ");
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "T55x7 Raw ");
             break;
         case T55X7_EM_UNIQUE_CONFIG_BLOCK:
-            snprintf(s + strlen(s), sizeof(s)-strlen(s), "EM Unique ");
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "EM Unique ");
             break;
-/*
+        /*
         case T55X7_EM_PAXTON_CONFIG_BLOCK:
             snprintf(s + strlen(s), sizeof(s)-strlen(s), "EM Paxton ");
             break;
-*/
+        */
         case T55X7_FDXB_CONFIG_BLOCK:
-            snprintf(s + strlen(s), sizeof(s)-strlen(s), "FDXB ");
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "FDXB ");
             break;
         case T55X7_HID_26_CONFIG_BLOCK:
-            snprintf(s + strlen(s), sizeof(s)-strlen(s), "HID 26b ");
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "HID 26b ");
             break;
         case T55X7_PYRAMID_CONFIG_BLOCK:
-            snprintf(s + strlen(s), sizeof(s)-strlen(s), "Pyramid ");
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "Pyramid ");
             break;
         case T55X7_INDALA_64_CONFIG_BLOCK:
-            snprintf(s + strlen(s), sizeof(s)-strlen(s), "Indala 64");
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "Indala 64");
             break;
         case T55X7_INDALA_224_CONFIG_BLOCK:
-            snprintf(s + strlen(s), sizeof(s)-strlen(s), "Indala 224 ");
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "Indala 224 ");
             break;
         case T55X7_GUARDPROXII_CONFIG_BLOCK:
-            snprintf(s + strlen(s), sizeof(s)-strlen(s), "Guard Prox II ");
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "Guard Prox II ");
             break;
         case T55X7_VIKING_CONFIG_BLOCK:
-            snprintf(s + strlen(s), sizeof(s)-strlen(s), "Viking ");
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "Viking ");
             break;
         case T55X7_NORALYS_CONFIG_BLOCK:
-            snprintf(s + strlen(s), sizeof(s)-strlen(s), "Noralys ");
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "Noralys ");
             break;
         case T55X7_IOPROX_CONFIG_BLOCK:
-            snprintf(s + strlen(s), sizeof(s)-strlen(s), "IO Prox ");
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "IO Prox ");
             break;
         case T55X7_PRESCO_CONFIG_BLOCK:
-            snprintf(s + strlen(s), sizeof(s)-strlen(s), "Presco ");
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "Presco ");
             break;
         case T55X7_NEDAP_64_CONFIG_BLOCK:
-            snprintf(s + strlen(s), sizeof(s)-strlen(s), "Nedap 64 ");
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "Nedap 64 ");
             break;
         case T55X7_NEDAP_128_CONFIG_BLOCK:
-            snprintf(s + strlen(s), sizeof(s)-strlen(s), "Nedap 128 ");
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "Nedap 128 ");
             break;
-        default: break;
+        default:
+            break;
     }
-    
-    if ( strlen(s) > 0 ) {
+
+    if (strlen(s) > 0) {
         PrintAndLogEx(NORMAL, " Known T55x7 Config block found : " _YELLOW_("%s"), s);
-        PrintAndLogEx(NORMAL, "-------------------------------------------------------------"); 
-    }    
+        PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
+    }
 }
 
 int CmdT55xxInfo(const char *Cmd) {

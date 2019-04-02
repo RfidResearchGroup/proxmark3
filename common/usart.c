@@ -83,7 +83,7 @@ inline int16_t usart_writebuffer(uint8_t *data, size_t len) {
         pUS1->US_TPR = (uint32_t)us_outbuf;
         pUS1->US_TCR = len;
         pUS1->US_PTCR = AT91C_PDC_TXTEN;
-        while(!(pUS1->US_CSR & AT91C_US_ENDTX)) {};
+        while (!(pUS1->US_CSR & AT91C_US_ENDTX)) {};
         pUS1->US_PTCR = AT91C_PDC_TXTDIS;
         return len;
     } else {

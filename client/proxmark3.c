@@ -301,9 +301,9 @@ int main(int argc, char *argv[]) {
 
         // set baudrate
         if (strcmp(argv[i], "-b") == 0 || strcmp(argv[i], "-baud") == 0) {
-            uint32_t tmpspeed = strtoul(argv[i+1], NULL, 10);
+            uint32_t tmpspeed = strtoul(argv[i + 1], NULL, 10);
             if ((tmpspeed == ULONG_MAX) || (tmpspeed == 0)) {
-                PrintAndLogEx(WARNING, "ERROR: invalid baudrate: %s %s\n", argv[i], argv[i+1]);
+                PrintAndLogEx(WARNING, "ERROR: invalid baudrate: %s %s\n", argv[i], argv[i + 1]);
                 return 1;
             }
             speed = tmpspeed;

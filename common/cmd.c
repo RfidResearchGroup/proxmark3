@@ -37,9 +37,9 @@ bool reply_via_fpc = 0;
 
 extern void Dbprintf(const char *fmt, ...);
 #define Dbprintf_usb(...) {\
-    reply_via_fpc = 0;\
-    Dbprintf(__VA_ARGS__);\
-    reply_via_fpc = 1;}
+        reply_via_fpc = 0;\
+        Dbprintf(__VA_ARGS__);\
+        reply_via_fpc = 1;}
 #endif
 
 uint8_t cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
@@ -67,7 +67,7 @@ uint8_t cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void
 
 #ifdef WITH_FPC_HOST
     if (reply_via_fpc) {
-        sendlen = usart_writebuffer( (uint8_t*)&txcmd, sizeof(UsbCommand) );
+        sendlen = usart_writebuffer((uint8_t *)&txcmd, sizeof(UsbCommand));
         Dbprintf_usb("Sent %i bytes over usart", len);
     } else {
         sendlen = usb_write((uint8_t *)&txcmd, sizeof(UsbCommand));

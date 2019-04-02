@@ -1104,10 +1104,10 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             */
 
 
-            char dest[USB_CMD_DATA_SIZE]={'\0'};
+            char dest[USB_CMD_DATA_SIZE] = {'\0'};
             if (usart_dataavailable()) {
                 Dbprintf("RX DATA!");
-                uint16_t len = usart_readbuffer((uint8_t*)dest);
+                uint16_t len = usart_readbuffer((uint8_t *)dest);
                 dest[len] = '\0';
                 Dbprintf("RX: %d | %02X %02X %02X %02X %02X %02X %02X %02X ", len,  dest[0], dest[1], dest[2], dest[3], dest[4], dest[5], dest[6], dest[7]);
             }
@@ -1130,7 +1130,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             //usb
             cmd_send(CMD_DEBUG_PRINT_STRING, strlen(dest), 0, 0, dest, strlen(dest));
             LED_A_OFF();
-/*
+            /*
             uint8_t my_rx[sizeof(UsbCommand)];
             while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
                 LED_B_INV();
@@ -1143,7 +1143,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
                     }
                 }
             }
-*/
+            */
             //cmd_send(CMD_DEBUG_PRINT_STRING, strlen(dest), 0, 0, dest, strlen(dest));
 
             cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
@@ -1563,7 +1563,7 @@ void  __attribute__((noreturn)) AppMain(void) {
 #ifdef WITH_FPC_HOST
                 reply_via_fpc = 0;
 #endif
-                UsbPacketReceived(rx, sizeof(rx));
+            UsbPacketReceived(rx, sizeof(rx));
         }
 #ifdef WITH_FPC_HOST
         // Check if there is a FPC packet available

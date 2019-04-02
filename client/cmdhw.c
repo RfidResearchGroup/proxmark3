@@ -434,11 +434,11 @@ int CmdVersion(const char *Cmd) {
         strncat(s, "smartcard; ", sizeof(s) - strlen(s) - 1);
 #endif
 #ifdef WITH_FPC
-  #ifdef WITH_FPC_HOST
+#ifdef WITH_FPC_HOST
         strncat(s, "fpc-host; ", sizeof(s) - strlen(s) - 1);
-  #else
+#else
         strncat(s, "fpc; ", sizeof(s) - strlen(s) - 1);
-  #endif
+#endif
 #endif
         PrintAndLogEx(NORMAL, "\n [ CLIENT ]");
         PrintAndLogEx(NORMAL, "  client: iceman %s \n", s);

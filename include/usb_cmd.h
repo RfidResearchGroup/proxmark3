@@ -36,8 +36,8 @@ typedef struct {
 } PACKED UsbCommand;
 
 #ifdef WITH_FPC_HOST
-    // "Session" flag, to tell via which interface next msgs should be sent: USB or FPC USART
-    extern bool reply_via_fpc;
+// "Session" flag, to tell via which interface next msgs should be sent: USB or FPC USART
+extern bool reply_via_fpc;
 #endif
 
 // A struct used to send sample-configs over USB
