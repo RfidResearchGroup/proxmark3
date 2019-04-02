@@ -1559,11 +1559,12 @@ void  __attribute__((noreturn)) AppMain(void) {
 
         // Check if there is a usb packet available
         if (usb_poll_validate_length()) {
-            if (usb_read(rx, sizeof(rx)))
+            if (usb_read(rx, sizeof(rx))) {
 #ifdef WITH_FPC_HOST
                 reply_via_fpc = 0;
 #endif
-            UsbPacketReceived(rx, sizeof(rx));
+                UsbPacketReceived(rx, sizeof(rx));
+            }
         }
 #ifdef WITH_FPC_HOST
         // Check if there is a FPC packet available
