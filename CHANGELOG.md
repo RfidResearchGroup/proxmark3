@@ -4,7 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
  - *WIP* Add FPC usart with pm3 client: WITH_FPC_HOST. (@doegox)
- - Add '-b baudrate' option to the client. (@doegox)
+ - Add '-b baudrate' option to the pm3 client. (@doegox)
  - Change 'lf t55xx info': tell if known configuration block0. (@iceman)
  - Fix/Add FPC usart: fix TX, bring RX, full speed. (@doegox)
  - Change 'lf t55xx config' options: allow to toggle on/off i/q5/st
@@ -12,7 +12,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Avoid race condition when flasher finds the not yet closed pm3 port. (@doegox)
  - Fix 'lf t55xx trace': read the proper block. (@doegox)
  - Fix Indala 64 on T55xx: use PSK1. (@doegox)
- - Force proper LF handling in ProxSpace. (@vratiskol)
+ - Force proper Linefeed (LF) handling in ProxSpace. (@vratiskol)
  - Fix Makefiles race conditions to allow parallel compilation, e.g. 'make -j8'. (@doegox)
  - Add - dictionary key file for MFU. (not in use at the moment) (@mazodude)
  - Change 'lf fdx demod - better biphase maxerrors. (@MalteHillmann)
