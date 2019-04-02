@@ -1529,7 +1529,7 @@ void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
     // Turn field on to read the response
     // 137*8 seems to get to the start of data pretty well...
     // but we want to go past the start and let the repeating data settle in...
-    TurnReadLFOn(200 * 8);
+    TurnReadLFOn(150 * 8);
 
     // Acquisition
     // Now do the acquisition
@@ -1731,14 +1731,15 @@ void CopyIOtoT55x7(uint32_t hi, uint32_t lo) {
 // Clone Indala 64-bit tag by UID to T55x7
 void CopyIndala64toT55x7(uint32_t hi, uint32_t lo) {
     //Program the 2 data blocks for supplied 64bit UID
-    // and the Config for Indala 64 format (RF/32;PSK2 with RF/2;Maxblock=2)
-    uint32_t data[] = { T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK2 | (2 << T55x7_MAXBLOCK_SHIFT), hi, lo};
+    // and the Config for Indala 64 format (RF/32;PSK1 with RF/2;Maxblock=2)
+    uint32_t data[] = { T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK1 | (2 << T55x7_MAXBLOCK_SHIFT), hi, lo};
     //TODO add selection of chip for Q5 or T55x7
-    // data[0] = T5555_SET_BITRATE(32 | T5555_MODULATION_PSK2 | 2 << T5555_MAXBLOCK_SHIFT;
-
+    // data[0] = T5555_SET_BITRATE(32 | T5555_MODULATION_PSK1 | 2 << T5555_MAXBLOCK_SHIFT;
+    LED_D_ON();
     WriteT55xx(data, 0, 3);
-    //Alternative config for Indala (Extended mode;RF/32;PSK2 with RF/2;Maxblock=2;Inverse data)
+    //Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=2;Inverse data)
     // T5567WriteBlock(0x603E1042,0);
+    LED_D_OFF();
 }
 // Clone Indala 224-bit tag by UID to T55x7
 void CopyIndala224toT55x7(uint32_t uid1, uint32_t uid2, uint32_t uid3, uint32_t uid4, uint32_t uid5, uint32_t uid6, uint32_t uid7) {
@@ -1749,9 +1750,11 @@ void CopyIndala224toT55x7(uint32_t uid1, uint32_t uid2, uint32_t uid3, uint32_t 
     data[0] = T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK2 | (7 << T55x7_MAXBLOCK_SHIFT);
     //TODO add selection of chip for Q5 or T55x7
     // data[0] =  T5555_SET_BITRATE(32 | T5555_MODULATION_PSK2 | 7 << T5555_MAXBLOCK_SHIFT;
+    LED_D_ON();
     WriteT55xx(data, 0, 8);
-    //Alternative config for Indala (Extended mode;RF/32;PSK2 with RF/2;Maxblock=7;Inverse data)
+    //Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=7;Inverse data)
     // T5567WriteBlock(0x603E10E2,0);
+    LED_D_OFF();
 }
 // clone viking tag to T55xx
 void CopyVikingtoT55xx(uint32_t block1, uint32_t block2, uint8_t Q5) {

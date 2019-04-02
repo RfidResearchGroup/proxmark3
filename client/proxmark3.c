@@ -259,6 +259,9 @@ int main(int argc, char *argv[]) {
     bool addLuaExec = false;
     char *script_cmds_file = NULL;
     char *script_cmd = NULL;
+    char *lastarg = NULL;
+    char *port = NULL;
+    uint32_t speed = 0;
 
     /* initialize history */
     using_history();
@@ -272,7 +275,9 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    for (int i = 1; i < argc; i++) {
+    uint32_t i = 1;
+    port = argv[i++];
+    for (; i < argc; i++) {
 
         // helptext
         if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "-help") == 0) {
@@ -291,29 +296,58 @@ int main(int argc, char *argv[]) {
         if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "-flush") == 0) {
             SetFlushAfterWrite(true);
             PrintAndLogEx(INFO, "Output will be flushed after every print.\n");
+            continue;
+        }
+
+        // set baudrate
+        if (strcmp(argv[i], "-b") == 0 || strcmp(argv[i], "-baud") == 0) {
+            uint32_t tmpspeed = strtoul(argv[i + 1], NULL, 10);
+            if ((tmpspeed == ULONG_MAX) || (tmpspeed == 0)) {
+                PrintAndLogEx(WARNING, "ERROR: invalid baudrate: %s %s\n", argv[i], argv[i + 1]);
+                return 1;
+            }
+            speed = tmpspeed;
+            i++;
+            continue;
         }
 
         // wait for comport
         if (strcmp(argv[i], "-w") == 0 || strcmp(argv[i], "-wait") == 0) {
             waitCOMPort = true;
+            continue;
         }
 
         // execute pm3 command
         if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "-command") == 0) {
             executeCommand = true;
+            continue;
         }
 
         // execute lua script
         if (strcmp(argv[i], "-l") == 0 || strcmp(argv[i], "-lua") == 0) {
             executeCommand = true;
             addLuaExec = true;
+            continue;
+        }
+
+        if (i < argc - 1) {
+            // We got an unknown parameter
+            PrintAndLogEx(WARNING, "WARNING: ignoring invalid parameter: %s\n", argv[i]);
+        }
+
+        if (i == argc - 1) {
+            // We got presumably a command or a filename
+            lastarg = argv[argc - 1];
         }
     }
 
+    if (speed == 0)
+        speed = 460800;
+
     // If the user passed the filename of the 'script' to execute, get it from last parameter
-    if (argc > 2 && argv[argc - 1] && argv[argc - 1][0] != '-') {
+    if (lastarg) {
         if (executeCommand) {
-            script_cmd = argv[argc - 1];
+            script_cmd = lastarg;
 
             while (script_cmd[strlen(script_cmd) - 1] == ' ')
                 script_cmd[strlen(script_cmd) - 1] = 0x00;
@@ -336,7 +370,7 @@ int main(int argc, char *argv[]) {
                 PrintAndLogEx(SUCCESS, "execute command from commandline: %s\n", script_cmd);
             }
         } else {
-            script_cmds_file = argv[argc - 1];
+            script_cmds_file = lastarg;
         }
     }
 
@@ -358,7 +392,7 @@ int main(int argc, char *argv[]) {
     set_my_executable_path();
 
     // try to open USB connection to Proxmark
-    usb_present = OpenProxmark(argv[1], waitCOMPort, 20, false);
+    usb_present = OpenProxmark(port, waitCOMPort, 20, false, speed);
 
 #ifdef HAVE_GUI
 

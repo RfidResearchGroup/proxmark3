@@ -679,14 +679,14 @@ int CmdSmartUpgrade(const char *Cmd) {
     if (fsize < 0)  {
         PrintAndLogEx(FAILED, "Could not determine size of SHA-512 file");
         fclose(f);
-        free(dump);        
+        free(dump);
         return 1;
     }
 
     if (fsize < 128) {
         PrintAndLogEx(FAILED, "SHA-512 file too short");
         fclose(f);
-        free(dump);        
+        free(dump);
         return 1;
     }
 
@@ -700,20 +700,20 @@ int CmdSmartUpgrade(const char *Cmd) {
     uint8_t hash1[64];
     if (bytes_read != 128 || param_gethex(hashstring, 0, hash1, 128)) {
         PrintAndLogEx(FAILED, "Couldn't read SHA-512 file");
-        free(dump);        
+        free(dump);
         return 1;
     }
 
     uint8_t hash2[64];
     if (sha512hash(dump, firmware_size, hash2)) {
         PrintAndLogEx(FAILED, "Couldn't calculate SHA-512 of firmware");
-        free(dump);        
+        free(dump);
         return 1;
     }
 
     if (memcmp(hash1, hash2, 64)) {
         PrintAndLogEx(FAILED, "Couldn't verify integrity of firmware file " _RED_("(wrong SHA-512 hash)"));
-        free(dump);        
+        free(dump);
         return 1;
     }
 

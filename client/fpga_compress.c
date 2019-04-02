@@ -417,16 +417,16 @@ int main(int argc, char **argv) {
         infiles[0] = fopen(argv[2], "rb");
         if (infiles[0] == NULL) {
             fprintf(stderr, "Error. Cannot open input file %s\n\n", argv[2]);
-            free(infiles);          
+            free(infiles);
             return (EXIT_FAILURE);
         }
         outfile = fopen(argv[3], "wb");
         if (outfile == NULL) {
             fprintf(stderr, "Error. Cannot open output file %s\n\n", argv[3]);
-            free(infiles);            
+            free(infiles);
             return (EXIT_FAILURE);
         }
-        
+
         int ret = zlib_decompress(infiles[0], outfile);
         free(infiles);
         return (ret);
@@ -466,13 +466,13 @@ int main(int argc, char **argv) {
         if (outfile == NULL) {
             fprintf(stderr, "Error. Cannot open output file %s\n\n", argv[argc - 1]);
             free(infile_names);
-            free(infiles);          
+            free(infiles);
             return (EXIT_FAILURE);
         }
         if (generate_version_file) {
             if (generate_fpga_version_info(infiles, infile_names, num_input_files, outfile)) {
                 free(infile_names);
-                free(infiles);                
+                free(infiles);
                 return (EXIT_FAILURE);
             }
         } else {

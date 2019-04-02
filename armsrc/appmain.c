@@ -632,7 +632,6 @@ void ListenReaderField(int limit) {
 
 void UsbPacketReceived(uint8_t *packet, int len) {
     UsbCommand *c = (UsbCommand *)packet;
-
     //Dbprintf("received %d bytes, with command: 0x%04x and args: %d %d %d", len, c->cmd, c->arg[0], c->arg[1], c->arg[2]);
 
     switch (c->cmd) {
@@ -1105,29 +1104,32 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             */
 
 
-            char dest[USB_CMD_DATA_SIZE] = { '\0' };
-            static const char *welcome = "Proxmark3 Serial interface via FPC ready\n";
-            strncat(dest, welcome, sizeof(dest) - strlen(dest) - 1);
-            sprintf(dest + strlen(dest) - 1, "| bytes 0x%02x 0x%02x 0x%02x 0x%02x \n"
+            char dest[USB_CMD_DATA_SIZE] = {'\0'};
+            if (usart_dataavailable()) {
+                Dbprintf("RX DATA!");
+                uint16_t len = usart_readbuffer((uint8_t *)dest);
+                dest[len] = '\0';
+                Dbprintf("RX: %d | %02X %02X %02X %02X %02X %02X %02X %02X ", len,  dest[0], dest[1], dest[2], dest[3], dest[4], dest[5], dest[6], dest[7]);
+            }
+
+            static const char *welcome = "Proxmark3 Serial interface via FPC ready\r\n";
+            usart_writebuffer((uint8_t *)welcome, strlen(welcome));
+
+            sprintf(dest, "| bytes 0x%02x 0x%02x 0x%02x 0x%02x\r\n"
                     , c->d.asBytes[0]
                     , c->d.asBytes[1]
                     , c->d.asBytes[2]
                     , c->d.asBytes[3]
                    );
+            usart_writebuffer((uint8_t *)dest, strlen(dest));
 
-            UsbCommand txcmd = { CMD_DEBUG_PRINT_STRING, { strlen(dest), 0, 0 } };
-            memcpy(txcmd.d.asBytes, dest, sizeof(dest));
 
             LED_A_ON();
 
-            usart_init();
-            usart_writebuffer((uint8_t *)&txcmd, sizeof(UsbCommand));
 
             //usb
             cmd_send(CMD_DEBUG_PRINT_STRING, strlen(dest), 0, 0, dest, strlen(dest));
             LED_A_OFF();
-
-
             /*
             uint8_t my_rx[sizeof(UsbCommand)];
             while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
@@ -1136,13 +1138,12 @@ void UsbPacketReceived(uint8_t *packet, int len) {
                     //UsbPacketReceived(my_rx, sizeof(my_rx));
 
                     UsbCommand *my = (UsbCommand *)my_rx;
-                    if (mc->cmd > 0 ) {
+                    if (my->cmd > 0 ) {
                         Dbprintf("received command: 0x%04x and args: %d %d %d", my->cmd, my->arg[0], my->arg[1], my->arg[2]);
                     }
                 }
             }
             */
-
             //cmd_send(CMD_DEBUG_PRINT_STRING, strlen(dest), 0, 0, dest, strlen(dest));
 
             cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
@@ -1558,17 +1559,19 @@ void  __attribute__((noreturn)) AppMain(void) {
 
         // Check if there is a usb packet available
         if (usb_poll_validate_length()) {
-            if (usb_read(rx, sizeof(rx)))
+            if (usb_read(rx, sizeof(rx))) {
+#ifdef WITH_FPC_HOST
+                reply_via_fpc = 0;
+#endif
                 UsbPacketReceived(rx, sizeof(rx));
+            }
         }
-#ifdef WITH_FPC
-        // Check is there is FPC package available
-        /*
-        usart_init();
-        if (usart_readbuffer(rx, sizeof(rx)) )
-            UsbPacketReceived(rx, sizeof(rx) );
-        */
-
+#ifdef WITH_FPC_HOST
+        // Check if there is a FPC packet available
+        if (usart_readcommand(rx) > 0) {
+            reply_via_fpc = 1;
+            UsbPacketReceived(rx, sizeof(rx));
+        }
 #endif
 
         // Press button for one second to enter a possible standalone mode

@@ -459,7 +459,7 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
     uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
 
     sscanf(Cmd, "%i %i %i %i %c", &clk, &invert, &maxErr, &maxLen, &amp);
-    
+
     if (!maxLen) maxLen = BIGBUF_SIZE;
 
     if (invert != 0 && invert != 1) {
@@ -486,17 +486,17 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
     if (amp == 'a') {
         askAmp(bits, BitLen);
     }
-        
+
     size_t ststart = 0, stend = 0;
 //    if (*stCheck)
     bool st = DetectST(bits, &BitLen, &foundclk, &ststart, &stend);
 
-    if ( clk == 0 ) {
-        if ( foundclk == 32 || foundclk == 64 ) {
+    if (clk == 0) {
+        if (foundclk == 32 || foundclk == 64) {
             clk = foundclk;
         }
     }
-    
+
     if (st) {
         *stCheck = st;
         CursorCPos = ststart;
@@ -615,12 +615,15 @@ int Cmdmandecoderaw(const char *Cmd) {
     return 1;
 }
 
-//by marshmellow
-//biphase decode
-//take 01 or 10 = 0 and 11 or 00 = 1
-//takes 2 arguments "offset" default = 0 if 1 it will shift the decode by one bit
-// and "invert" default = 0 if 1 it will invert output
-//  the argument offset allows us to manually shift if the output is incorrect - [EDIT: now auto detects]
+/*
+ *  @author marshmellow
+ * biphase decode
+ * decodes 01 or 10 -> ZERO
+ *         11 or 00 -> ONE
+ * param offset adjust start position
+ * param invert invert output
+ * param masxErr maximum tolerated errors
+ */
 int CmdBiphaseDecodeRaw(const char *Cmd) {
     size_t size = 0;
     int offset = 0, invert = 0, maxErr = 20, errCnt = 0;
@@ -1095,9 +1098,9 @@ int CmdFSKrawdemod(const char *Cmd) {
 //attempt to psk1 demod graph buffer
 int PSKDemod(const char *Cmd, bool verbose) {
     int invert = 0, clk = 0, maxErr = 100;
-    
+
     sscanf(Cmd, "%i %i %i", &clk, &invert, &maxErr);
-   
+
     if (clk == 1) {
         invert = 1;
         clk = 0;
@@ -1112,9 +1115,9 @@ int PSKDemod(const char *Cmd, bool verbose) {
 
     uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
     size_t bitlen = getFromGraphBuf(bits);
-    if (bitlen == 0) 
+    if (bitlen == 0)
         return 0;
-    
+
     int startIdx = 0;
     int errCnt = pskRawDemod_ext(bits, &bitlen, &clk, &invert, &startIdx);
     if (errCnt > maxErr) {
@@ -1317,7 +1320,7 @@ int CmdRawDemod(const char *Cmd) {
 void setClockGrid(int clk, int offset) {
     g_DemodStartIdx = offset;
     g_DemodClock = clk;
-    if ( clk == 0 && offset == 0) 
+    if (clk == 0 && offset == 0)
         PrintAndLogEx(DEBUG, "DEBUG: (setClockGrid) clear settings");
     else
         PrintAndLogEx(DEBUG, "DEBUG: (setClockGrid) demodoffset %d, clk %d", offset, clk);

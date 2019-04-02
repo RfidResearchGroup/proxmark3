@@ -1,6 +1,15 @@
 # .gitattributes
+
 # prevent binary files from CRLF handling, diff and merge:
 fpga/fpga.bit -crlf -diff
 *.bin -crlf -diff
 *.z -crlf -diff
- 
+
+# Force LF
+*.c text=auto eol=lf
+*.cpp text=auto eol=lf
+*.h text=auto eol=lf
+*.lua text=auto eol=lf
+*.py text=auto eol=lf
+*.pl text=auto eol=lf
+Makefile text=auto eol=lf

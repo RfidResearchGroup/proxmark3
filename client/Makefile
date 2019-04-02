@@ -282,8 +282,7 @@ ifeq "$(SUPPORTS_AVX512)" "True"
 endif
 
 BINS = proxmark3 flasher fpga_compress
-WINBINS = $(patsubst %, %.exe, $(BINS))
-CLEAN = $(BINS) $(WINBINS) $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(ZLIBOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(OBJDIR)/*.o *.moc.cpp ui/ui_overlays.h lualibs/usb_cmd.lua lualibs/mf_default_keys.lua
+CLEAN = $(BINS) $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(ZLIBOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(OBJDIR)/*.o *.moc.cpp ui/ui_overlays.h lualibs/usb_cmd.lua lualibs/mf_default_keys.lua
 
 # need to assign dependancies to build these first...
 all: lua_build jansson_build mbedtls_build cbor_build $(BINS)
@@ -347,28 +346,28 @@ cbor_build:
 print-%: ; @echo $* = $($*)
 
 $(OBJDIR)/%_NOSIMD.o : %.c $(OBJDIR)/%_NOSIMD.d
-	$(CC) $(DEPFLAGS) $(CFLAGS) $(HARD_SWITCH_NOSIMD) -c -o $@ $<
-	$(POSTCOMPILE:%.d=%_NOSIMD.d)
+	$(CC) $(DEPFLAGS:%.Td=%_NOSIMD.Td) $(CFLAGS) $(HARD_SWITCH_NOSIMD) -c -o $@ $<
+	$(MV) -f $(OBJDIR)/$*_NOSIMD.Td $(OBJDIR)/$*_NOSIMD.d
 
 $(OBJDIR)/%_MMX.o : %.c $(OBJDIR)/%_MMX.d
-	$(CC) $(DEPFLAGS) $(CFLAGS) $(HARD_SWITCH_MMX) -c -o $@ $<
-	$(POSTCOMPILE:%.d=%_MMX.d)
+	$(CC) $(DEPFLAGS:%.Td=%_MMX.Td) $(CFLAGS) $(HARD_SWITCH_MMX) -c -o $@ $<
+	$(MV) -f $(OBJDIR)/$*_MMX.Td $(OBJDIR)/$*_MMX.d
 
 $(OBJDIR)/%_SSE2.o : %.c $(OBJDIR)/%_SSE2.d
-	$(CC) $(DEPFLAGS) $(CFLAGS) $(HARD_SWITCH_SSE2) -c -o $@ $<
-	$(POSTCOMPILE:%.d=%_SSE2.d)
+	$(CC) $(DEPFLAGS:%.Td=%_SSE2.Td) $(CFLAGS) $(HARD_SWITCH_SSE2) -c -o $@ $<
+	$(MV) -f $(OBJDIR)/$*_SSE2.Td $(OBJDIR)/$*_SSE2.d
 
 $(OBJDIR)/%_AVX.o : %.c $(OBJDIR)/%_AVX.d
-	$(CC) $(DEPFLAGS) $(CFLAGS) $(HARD_SWITCH_AVX) -c -o $@ $<
-	$(POSTCOMPILE:%.d=%_AVX.d)
+	$(CC) $(DEPFLAGS:%.Td=%_AVX.Td) $(CFLAGS) $(HARD_SWITCH_AVX) -c -o $@ $<
+	$(MV) -f $(OBJDIR)/$*_AVX.Td $(OBJDIR)/$*_AVX.d
 
 $(OBJDIR)/%_AVX2.o : %.c $(OBJDIR)/%_AVX2.d
-	$(CC) $(DEPFLAGS) $(CFLAGS) $(HARD_SWITCH_AVX2) -c -o $@ $<
-	$(POSTCOMPILE:%.d=%_AVX2.d)
+	$(CC) $(DEPFLAGS:%.Td=%_AVX2.Td) $(CFLAGS) $(HARD_SWITCH_AVX2) -c -o $@ $<
+	$(MV) -f $(OBJDIR)/$*_AVX2.Td $(OBJDIR)/$*_AVX2.d
 
 $(OBJDIR)/%_AVX512.o : %.c $(OBJDIR)/%_AVX512.d
-	$(CC) $(DEPFLAGS) $(CFLAGS) $(HARD_SWITCH_AVX512) -c -o $@ $<
-	$(POSTCOMPILE:%.d=%_AVX512.d)
+	$(CC) $(DEPFLAGS:%.Td=%_AVX512.Td) $(CFLAGS) $(HARD_SWITCH_AVX512) -c -o $@ $<
+	$(MV) -f $(OBJDIR)/$*_AVX512.Td $(OBJDIR)/$*_AVX512.d
 
 %.o: %.c
 $(OBJDIR)/%.o : %.c $(OBJDIR)/%.d

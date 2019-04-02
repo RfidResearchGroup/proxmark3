@@ -839,7 +839,7 @@ bool CheckChipType(bool getDeviceData) {
 
     //check for t55xx chip...
     if (tryDetectP1(true)) {
-        PrintAndLogEx(SUCCESS, "\nChipset detection : " _GREEN_("Atmel T55xx") " found");
+        PrintAndLogEx(SUCCESS, "\nChipset detection : " _GREEN_("T55xx") " found");
         PrintAndLogEx(SUCCESS, "Try " _YELLOW_("`lf t55xx`")" commands");
         retval = true;
         goto out;

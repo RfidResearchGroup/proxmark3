@@ -5,6 +5,8 @@ define KNOWN_PLATFORMS
 +--------------------------------------------------------+
 | PM3RDV4 (def) | Proxmark3 rdv4      with AT91SAM7S512  |
 +--------------------------------------------------------+
+| PM3RDV4FPC    | Proxmark3 rdv4+FPC     (experimental)  |
++--------------------------------------------------------+
 | PM3EVO        | Proxmark3 EVO       with AT91SAM7S512  |
 +--------------------------------------------------------+
 | PM3EASY       | Proxmark3 rdv3 Easy with AT91SAM7S256  |
@@ -31,6 +33,10 @@ ifeq ($(PLATFORM),PM3RDV4)
   MCU = AT91SAM7S512
   PLATFORM_DEFS = -DWITH_SMARTCARD -DWITH_FLASH
   PLTNAME = Proxmark3 rdv4
+else ifeq ($(PLATFORM),PM3RDV4FPC)
+  MCU = AT91SAM7S512
+  PLATFORM_DEFS = -DWITH_SMARTCARD -DWITH_FLASH -DWITH_FPC_HOST
+  PLTNAME = Proxmark3 rdv4
 else ifeq ($(PLATFORM),PM3EVO)
   MCU = AT91SAM7S512
   PLTNAME = Proxmark3 EVO
@@ -48,6 +54,11 @@ else ifeq ($(PLATFORM),PM3OLD512)
   PLTNAME = Proxmark3 V1 with AT91SAM7S512
 else
   $(error Invalid or empty PLATFORM: $(PLATFORM). Known platforms: $(KNOWN_PLATFORMS))
+endif
+
+# Add flags dependencies
+ifneq (,$(findstring WITH_FPC_,$(PLATFORM_DEFS)))
+  PLATFORM_DEFS += -DWITH_FPC
 endif
 
 export PLATFORM

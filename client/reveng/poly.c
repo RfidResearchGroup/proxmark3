@@ -988,10 +988,10 @@ pcrc(const poly_t message, const poly_t divisor, const poly_t init, const poly_t
         /* 0 <= ofs <= BMP_BIT, location of the first bit of the result */
         pshift(&result, result, 0UL, ofs, (init.length > max + divisor.length ? init.length - max - divisor.length : 0UL) + divisor.length + ofs, 0UL);
     }
-    
-    if ( result.bitmap != NULL )
+
+    if (result.bitmap != NULL)
         psum(&result, xorout, 0UL);
-    
+
     return (result);
 }
 

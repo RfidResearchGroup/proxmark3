@@ -10,6 +10,7 @@
 //-----------------------------------------------------------------------------
 #include "usart.h"
 #include "string.h"
+#include "apps.h"  // for Dbprintf
 
 #define AT91_BAUD_RATE 115200
 
@@ -39,60 +40,62 @@ void usart_close(void) {
 }
 */
 
+static uint8_t us_inbuf[sizeof(UsbCommand)];
 static uint8_t us_outbuf[sizeof(UsbCommand)];
 
-/// Reads data from an USART peripheral
-/// \param data  Pointer to the buffer where the received data will be stored.
-/// \param len  Size of the data buffer (in bytes).
-inline int16_t usart_readbuffer(uint8_t *data, size_t len) {
-
-    // Check if the first PDC bank is free
-    if (!(pUS1->US_RCR)) {
-        pUS1->US_RPR = (uint32_t)data;
-        pUS1->US_RCR = len;
-
-        pUS1->US_PTCR = AT91C_PDC_RXTEN | AT91C_PDC_TXTDIS;
-        return 2;
-    }
-    // Check if the second PDC bank is free
-    else if (!(pUS1->US_RNCR)) {
-        pUS1->US_RNPR = (uint32_t)data;
-        pUS1->US_RNCR = len;
-
-        pUS1->US_PTCR = AT91C_PDC_RXTEN | AT91C_PDC_TXTDIS;
-        return 1;
+// transfer from client to device
+inline int16_t usart_readbuffer(uint8_t *data) {
+    uint32_t rcr = pUS1->US_RCR;
+    if (rcr < sizeof(us_inbuf)) {
+        pUS1->US_PTCR = AT91C_PDC_RXTDIS;
+        memcpy(data, us_inbuf, sizeof(us_inbuf) - rcr);
+        // Reset DMA buffer
+        pUS1->US_RPR = (uint32_t)us_inbuf;
+        pUS1->US_RCR = sizeof(us_inbuf);
+        pUS1->US_PTCR = AT91C_PDC_RXTEN;
+        return sizeof(us_inbuf) - rcr;
     } else {
         return 0;
     }
 }
 
+inline bool usart_dataavailable(void) {
+    return pUS1->US_RCR < sizeof(us_inbuf);
+}
+
+inline int16_t usart_readcommand(uint8_t *data) {
+    if (pUS1->US_RCR == 0)
+        return usart_readbuffer(data);
+    else
+        return 0;
+}
+
+inline bool usart_commandavailable(void) {
+    return pUS1->US_RCR == 0;
+}
 
 // transfer from device to client
 inline int16_t usart_writebuffer(uint8_t *data, size_t len) {
 
-    // Check if the first PDC bank is free
-    if (!(pUS1->US_TCR)) {
+
+    if (pUS1->US_CSR & AT91C_US_ENDTX) {
         memcpy(us_outbuf, data, len);
         pUS1->US_TPR = (uint32_t)us_outbuf;
-        pUS1->US_TCR = sizeof(us_outbuf);
-
-        pUS1->US_PTCR = AT91C_PDC_TXTEN | AT91C_PDC_RXTDIS;
-        return 2;
-    }
-    // Check if the second PDC bank is free
-    else if (!(pUS1->US_TNCR)) {
-        memcpy(us_outbuf, data, len);
-        pUS1->US_TNPR = (uint32_t)us_outbuf;
-        pUS1->US_TNCR = sizeof(us_outbuf);
-
-        pUS1->US_PTCR = AT91C_PDC_TXTEN | AT91C_PDC_RXTDIS;
-        return 1;
+        pUS1->US_TCR = len;
+        pUS1->US_PTCR = AT91C_PDC_TXTEN;
+        while (!(pUS1->US_CSR & AT91C_US_ENDTX)) {};
+        pUS1->US_PTCR = AT91C_PDC_TXTDIS;
+        return len;
     } else {
         return 0;
     }
 }
 
+
 void usart_init(void) {
+
+    // For a nice detailed sample, interrupt driven but still relevant.
+    // See https://www.sparkfun.com/datasheets/DevTools/SAM7/at91sam7%20serial%20communications.pdf
 
     // disable & reset receiver / transmitter for configuration
     pUS1->US_CR = (AT91C_US_RSTRX | AT91C_US_RSTTX | AT91C_US_RXDIS | AT91C_US_TXDIS);
@@ -113,6 +116,7 @@ void usart_init(void) {
     // set mode
     pUS1->US_MR = AT91C_US_USMODE_NORMAL |      // normal mode
                   AT91C_US_CLKS_CLOCK |            // MCK (48MHz)
+                  AT91C_US_OVER |                  // oversampling
                   AT91C_US_CHRL_8_BITS |           // 8 bits
                   AT91C_US_PAR_NONE |              // parity: none
                   AT91C_US_NBSTOP_1_BIT |          // 1 stop bit
@@ -121,16 +125,9 @@ void usart_init(void) {
     // all interrupts disabled
     pUS1->US_IDR = 0xFFFF;
 
-    // iceman,  setting 115200 doesn't work. Only speed I got to work is 9600.
-    // something fishy with the AT91SAM7S512 USART..  Or I missed something
-    // For a nice detailed sample, interrupt driven but still relevant.
-    // See https://www.sparkfun.com/datasheets/DevTools/SAM7/at91sam7%20serial%20communications.pdf
-
-    // set baudrate to 115200
-    // 115200 * 16 == 1843200
-    //
-    //pUS1->US_BRGR = (48UL*1000*1000) / (9600*16);
-    pUS1->US_BRGR =  48054841 / (9600 << 4);
+    pUS1->US_BRGR =  48054841 / (115200 << 3);
+    // Need speed?
+    //pUS1->US_BRGR =  48054841 / (460800 << 3);
 
     // Write the Timeguard Register
     pUS1->US_TTGR = 0;
@@ -138,6 +135,17 @@ void usart_init(void) {
     pUS1->US_FIDI = 0;
     pUS1->US_IF = 0;
 
+    // Disable double buffers for now
+    pUS1->US_TNPR = (uint32_t)0;
+    pUS1->US_TNCR = 0;
+    pUS1->US_RNPR = (uint32_t)0;
+    pUS1->US_RNCR = 0;
+
+
     // re-enable receiver / transmitter
     pUS1->US_CR = (AT91C_US_RXEN | AT91C_US_TXEN);
+    // ready to receive
+    pUS1->US_RPR = (uint32_t)us_inbuf;
+    pUS1->US_RCR = sizeof(us_inbuf);
+    pUS1->US_PTCR = AT91C_PDC_RXTEN;
 }

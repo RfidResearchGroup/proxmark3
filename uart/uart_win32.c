@@ -48,7 +48,7 @@ typedef struct {
     COMMTIMEOUTS ct;  // Serial port time-out configuration
 } serial_port_windows;
 
-serial_port uart_open(const char *pcPortName) {
+serial_port uart_open(const char *pcPortName, uint32_t speed) {
     char acPortName[255];
     serial_port_windows *sp = calloc(sizeof(serial_port_windows), sizeof(uint8_t));
 
@@ -87,6 +87,7 @@ serial_port uart_open(const char *pcPortName) {
     // all zero's configure: no timeout for read/write used.
     // took settings from libnfc/buses/uart.c
 #ifdef WITH_FPC
+    // Still relevant?
     sp->ct.ReadIntervalTimeout         = 1000;
     sp->ct.ReadTotalTimeoutMultiplier  = 0;
     sp->ct.ReadTotalTimeoutConstant    = 1500;
@@ -108,22 +109,19 @@ serial_port uart_open(const char *pcPortName) {
 
     PurgeComm(sp->hPort, PURGE_RXABORT | PURGE_RXCLEAR);
 
-#ifdef WITH_FPC
-    if (uart_set_speed(sp, 115200)) {
-        printf("[=] UART Setting serial baudrate 115200 [FPC enabled]\n");
-    } else {
-        uart_set_speed(sp, 9600);
-        printf("[=] UART Setting serial baudrate 9600 [FPC enabled]\n");
+    if (!uart_set_speed(sp, speed)) {
+        // trying some fallbacks automatically
+        speed = 115200;
+        if (!uart_set_speed(sp, speed)) {
+            speed = 9600;
+            if (!uart_set_speed(sp, speed)) {
+                uart_close(sp);
+                printf("[!] UART error while setting baudrate\n");
+                return INVALID_SERIAL_PORT;
+            }
+        }
     }
-#else
-    bool success = uart_set_speed(sp, 460800);
-    if (success) {
-        printf("[=] UART Setting serial baudrate 460800\n");
-    } else {
-        uart_set_speed(sp, 115200);
-        printf("[=] UART Setting serial baudrate 115200\n");
-    }
-#endif
+    printf("[=] UART Setting serial baudrate %i\n", speed);
     return sp;
 }
 

@@ -73,7 +73,7 @@ struct timeval timeout = {
     .tv_usec = 30000  // 30 000 micro seconds
 };
 
-serial_port uart_open(const char *pcPortName) {
+serial_port uart_open(const char *pcPortName, uint32_t speed) {
     serial_port_unix *sp = calloc(sizeof(serial_port_unix), sizeof(uint8_t));
     if (sp == 0) return INVALID_SERIAL_PORT;
 
@@ -194,23 +194,19 @@ serial_port uart_open(const char *pcPortName) {
     // Flush all lingering data that may exist
     tcflush(sp->fd, TCIOFLUSH);
 
-#ifdef WITH_FPC
-    if (uart_set_speed(sp, 115200)) {
-        printf("[=] UART Setting serial baudrate 115200 [FPC enabled]\n");
-    } else {
-        uart_set_speed(sp, 9600);
-        printf("[=] UART Setting serial baudrate 9600 [FPC enabled]\n");
+    if (!uart_set_speed(sp, speed)) {
+        // trying some fallbacks automatically
+        speed = 115200;
+        if (!uart_set_speed(sp, speed)) {
+            speed = 9600;
+            if (!uart_set_speed(sp, speed)) {
+                uart_close(sp);
+                printf("[!] UART error while setting baudrate\n");
+                return INVALID_SERIAL_PORT;
+            }
+        }
     }
-#else
-    // set speed, works for UBUNTU 14.04
-    bool success = uart_set_speed(sp, 460800);
-    if (success) {
-        printf("[=] UART Setting serial baudrate 460800\n");
-    } else {
-        uart_set_speed(sp, 115200);
-        printf("[=] UART Setting serial baudrate 115200\n");
-    }
-#endif
+    printf("[=] UART Setting serial baudrate %i\n", speed);
     return sp;
 }
 

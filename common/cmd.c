@@ -31,6 +31,17 @@
  */
 #include "cmd.h"
 
+#ifdef WITH_FPC_HOST
+// "Session" flag, to tell via which interface next msgs should be sent: USB or FPC USART
+bool reply_via_fpc = 0;
+
+extern void Dbprintf(const char *fmt, ...);
+#define Dbprintf_usb(...) {\
+        reply_via_fpc = 0;\
+        Dbprintf(__VA_ARGS__);\
+        reply_via_fpc = 1;}
+#endif
+
 uint8_t cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
     UsbCommand txcmd;
 
@@ -53,11 +64,16 @@ uint8_t cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void
 
     uint32_t sendlen = 0;
     // Send frame and make sure all bytes are transmitted
-    sendlen = usb_write((uint8_t *)&txcmd, sizeof(UsbCommand));
 
-#ifdef WITH_FPC
-// usart_init();
-// usart_writebuffer( (uint8_t*)&txcmd, sizeof(UsbCommand) );
+#ifdef WITH_FPC_HOST
+    if (reply_via_fpc) {
+        sendlen = usart_writebuffer((uint8_t *)&txcmd, sizeof(UsbCommand));
+        Dbprintf_usb("Sent %i bytes over usart", len);
+    } else {
+        sendlen = usb_write((uint8_t *)&txcmd, sizeof(UsbCommand));
+    }
+#else
+    sendlen = usb_write((uint8_t *)&txcmd, sizeof(UsbCommand));
 #endif
 
     return sendlen;

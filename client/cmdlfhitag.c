@@ -344,7 +344,7 @@ int CmdLFHitagSim(const char *Cmd) {
 }
 
 static void printHitagConfiguration(uint8_t config) {
-    
+
     char msg[100];
     memset(msg, 0, sizeof(msg));
 
@@ -357,10 +357,10 @@ static void printHitagConfiguration(uint8_t config) {
 
     PrintAndLogEx(INFO, "\n\nHitag2 tag information ");
     PrintAndLogEx(INFO, "------------------------------------");
-    
+
     //configuration byte
-    PrintAndLogEx(SUCCESS, "Config byte : 0x%02X [ %s ]", config, bits);    
-    
+    PrintAndLogEx(SUCCESS, "Config byte : 0x%02X [ %s ]", config, bits);
+
     // encoding
     strcat(msg, "Encoding    : ");
     if (config & 0x1) {
@@ -415,7 +415,7 @@ static void printHitagConfiguration(uint8_t config) {
     memset(msg, 0, sizeof(msg));
 
     // page access
-    strcat(msg, "Page 4,5    : ");    
+    strcat(msg, "Page 4,5    : ");
     if (config & 0x20) {
         strcat(msg + strlen(msg), "read only");
     } else  {
@@ -467,9 +467,9 @@ static bool getHitagUid(uint32_t *uid) {
         return false;
     }
 
-    if ( uid )
+    if (uid)
         *uid = bytes_to_num(resp.d.asBytes, 4);
-   
+
     return true;
 }
 
@@ -480,18 +480,18 @@ int CmdLFHitagInfo(const char *Cmd) {
 
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_hitag_info();
-    
+
     // pwd or key
 
     // read UID
     uint32_t uid = 0;
-    if ( getHitagUid( &uid ) == false ) 
+    if (getHitagUid(&uid) == false)
         return 1;
-    
+
     PrintAndLogEx(SUCCESS, "UID: %08X", uid);
-    
+
     // how to detemine Hitag types?
-    
+
     // read block3,  get configuration byte.
 
     // common configurations.
@@ -503,7 +503,7 @@ int CmdLFHitagInfo(const char *Cmd) {
     return 0;
 }
 
-// TODO: iceman 
+// TODO: iceman
 // Hitag2 reader,  problem is that this command mixes up stuff.  So 26 give uid.  21 etc will also give you a memory dump !?
 //
 int CmdLFHitagReader(const char *Cmd) {
@@ -568,8 +568,8 @@ int CmdLFHitagReader(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "Valid Hitag2 tag found - UID: %08x", id);
     if (htf != RHT2F_UID_ONLY) {
-        
-        PrintAndLogEx(SUCCESS, "Dumping tag memory..." );
+
+        PrintAndLogEx(SUCCESS, "Dumping tag memory...");
         uint8_t *data = resp.d.asBytes;
 
         char filename[FILE_PATH_SIZE];
@@ -580,9 +580,9 @@ int CmdLFHitagReader(const char *Cmd) {
         saveFile(filename, "bin", data, 48);
         saveFileEML(filename, "eml", data, 48, 4);
         saveFileJSON(filename, "json", jsfHitag, data, 48);
-        
+
         // block3, 1 byte
-        printHitagConfiguration(data[4*3] );
+        printHitagConfiguration(data[4 * 3]);
     }
     return 0;
 }

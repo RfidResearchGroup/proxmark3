@@ -169,7 +169,7 @@ int CmdLegicInfo(const char *Cmd) {
     int crc = 0, wrp = 0, wrc = 0;
     uint8_t stamp_len = 0;
     uint16_t datalen = 0;
-    char token_type[5] = {0, 0, 0, 0, 0};
+    char token_type[6] = {0, 0, 0, 0, 0, 0};
     int dcf = 0;
     int bIsSegmented = 0;
 
@@ -1282,7 +1282,7 @@ int CmdLegicWipe(const char *Cmd) {
         }
     }
     PrintAndLogEx(SUCCESS, "ok\n");
-    free(data);    
+    free(data);
     return 0;
 }
 

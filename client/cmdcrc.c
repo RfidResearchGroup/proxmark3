@@ -93,7 +93,7 @@ int GetModels(char *Models[], int *count, uint8_t *width) {
                 PrintAndLogEx(WARNING, "out of memory?");
                 return 0;
             }
-            if ( model.name != NULL ) {
+            if (model.name != NULL) {
                 memcpy(tmp, model.name, size);
                 Models[mode] = tmp;
                 width[mode] = plen(model.spoly);

@@ -489,21 +489,21 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
 
     if (i == size)
         return -1;
-    
+
     // clock, numoftimes, first idx
     uint16_t tmpclk[10][3] = {
-        {8,   0, 0}, 
-        {16,  0, 0}, 
-        {32,  0, 0}, 
-        {40,  0, 0}, 
-        {50,  0, 0}, 
-        {64,  0, 0}, 
-        {100, 0, 0}, 
+        {8,   0, 0},
+        {16,  0, 0},
+        {32,  0, 0},
+        {40,  0, 0},
+        {50,  0, 0},
+        {64,  0, 0},
+        {100, 0, 0},
         {128, 0, 0},
-        {256, 0, 0}, 
+        {256, 0, 0},
         {384, 0, 0},
-      };
-    
+    };
+
     // loop through all samples (well, we don't want to go out-of-bounds)
     while (i < size - 512) {
         // measure from low to low
@@ -517,14 +517,14 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
             minClk = i - startwave;
             shortestWaveIdx = startwave;
         }
-        
+
         int foo = getClosestClock(minClk);
-        if (foo > 0 ) {
+        if (foo > 0) {
             for (uint8_t i = 0; i < 10; i++) {
-                if ( tmpclk[i][0] == foo ) {
+                if (tmpclk[i][0] == foo) {
                     tmpclk[i][1]++;
-                    
-                    if ( tmpclk[i][2] == 0) {
+
+                    if (tmpclk[i][2] == 0) {
                         tmpclk[i][2] = shortestWaveIdx;
                     }
                     break;
@@ -538,17 +538,17 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
     for (uint8_t i = 0; i < 10; i++) {
         if (g_debugMode == 2) {
             prnt("DEBUG, ASK,  clocks %u | hits %u | idx %u"
-                    , tmpclk[i][0]
-                    , tmpclk[i][1]
-                    , tmpclk[i][2]
-                    );
+                 , tmpclk[i][0]
+                 , tmpclk[i][1]
+                 , tmpclk[i][2]
+                );
         }
-        if ( max < tmpclk[i][1] ) {
+        if (max < tmpclk[i][1]) {
             *clock = tmpclk[i][0];
             shortestWaveIdx = tmpclk[i][2];
             max = tmpclk[i][1];
         }
-    }    
+    }
 
     if (*clock == 0)
         return -1;
@@ -1517,10 +1517,10 @@ int askdemod_ext(uint8_t *bits, size_t *size, int *clk, int *invert, int maxErr,
         if (g_debugMode == 2) prnt("DEBUG (askdemod_ext) just noise detected - aborting");
         return -2;
     }
-    
+
     int start = DetectASKClock(bits, *size, clk, maxErr);
     if (*clk == 0 || start < 0) return -3;
-   
+
     if (*invert != 1) *invert = 0;
 
     // amplify signal data.

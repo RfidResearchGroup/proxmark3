@@ -81,7 +81,7 @@ int main(int argc, char **argv) {
 
     char *serial_port_name = argv[1];
 
-    if (!OpenProxmark(serial_port_name, true, 60, true)) {
+    if (!OpenProxmark(serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
         fprintf(stderr, "Could not find Proxmark on " _RED_("%s") ".\n\n", serial_port_name);
         return -1;
     } else {

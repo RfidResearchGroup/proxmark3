@@ -29,6 +29,8 @@
 
 
 #define T55x7_CONFIGURATION_BLOCK 0x00
+#define T55x7_TRACE_BLOCK1 0x01
+#define T55x7_TRACE_BLOCK2 0x02
 #define T55x7_PAGE0 0x00
 #define T55x7_PAGE1 0x01
 #define T55x7_PWD 0x00000010
@@ -147,9 +149,11 @@ extern int CmdT55xxDetect(const char *Cmd);
 extern int CmdResetRead(const char *Cmd);
 extern int CmdT55xxWipe(const char *Cmd);
 
+char *GetPskCfStr(uint32_t id, bool q5);
 char *GetBitRateStr(uint32_t id, bool xmode);
 char *GetSaferStr(uint32_t id);
-char *GetModulationStr(uint32_t id);
+char *GetQ5ModulationStr(uint32_t id);
+char *GetModulationStr(uint32_t id, bool xmode);
 char *GetModelStrFromCID(uint32_t cid);
 char *GetSelectedModulationStr(uint8_t id);
 uint32_t PackBits(uint8_t start, uint8_t len, uint8_t *bitstream);
