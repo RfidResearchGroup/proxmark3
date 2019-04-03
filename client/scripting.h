@@ -29,6 +29,7 @@
 #include "cmdhfmfhard.h"
 #include "cmdhfmfu.h"
 #include "protocols.h"
+#include "cmdlft55xx.h"  // read t55xx etc
 
 #define LUA_LIBRARIES_DIRECTORY "lualibs/"
 #define LUA_SCRIPTS_DIRECTORY   "scripts/"

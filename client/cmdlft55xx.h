@@ -156,19 +156,20 @@ char *GetQ5ModulationStr(uint32_t id);
 char *GetModulationStr(uint32_t id, bool xmode);
 char *GetModelStrFromCID(uint32_t cid);
 char *GetSelectedModulationStr(uint8_t id);
-uint32_t PackBits(uint8_t start, uint8_t len, uint8_t *bitstream);
 void printT5xxHeader(uint8_t page);
 void printT55xxBlock(const char *demodStr);
 int printConfiguration(t55xx_conf_block_t b);
 
+extern int T55xxReadBlock(uint8_t block, bool page1, bool usepwd, bool override, uint32_t password);
+bool GetT55xxBlockData(uint32_t *blockdata);
 bool DecodeT55xxBlock(void);
-bool tryDetectModulation(void);
+extern bool tryDetectModulation(void);
 bool testKnownConfigBlock(uint32_t block0);
+
 extern bool tryDetectP1(bool getData);
 bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5);
 int special(const char *Cmd);
-bool AquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password);
-
+extern bool AquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password);
 int tryOnePassword(uint32_t password);
 
 void printT55x7Trace(t55x7_tracedata_t data, uint8_t repeat);

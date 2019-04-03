@@ -1059,8 +1059,8 @@ int CmdHF14AMfRestore(const char *Cmd) {
             }
         }
     }
-
     fclose(fdump);
+    PrintAndLogEx(INFO, "Finish restore");    
     return 0;
 }
 

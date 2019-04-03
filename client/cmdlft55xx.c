@@ -431,7 +431,7 @@ int CmdT55xxReadBlock(const char *Cmd) {
     return T55xxReadBlock(block, page1, usepwd, override, password);
 }
 
-bool DecodeT55xxBlock() {
+bool DecodeT55xxBlock(void) {
 
     char buf[30] = {0x00};
     char *cmdStr = buf;
@@ -462,7 +462,7 @@ bool DecodeT55xxBlock() {
         case DEMOD_PSK1:
             // skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
             save_restoreGB(GRAPH_SAVE);
-            CmdLtrim("160");
+            CmdLtrim("150");
             snprintf(cmdStr, sizeof(buf), "%d %d 6", bitRate[config.bitrate], config.inverted);
             ans = PSKDemod(cmdStr, false);
             //undo trim samples
@@ -472,7 +472,7 @@ bool DecodeT55xxBlock() {
         case DEMOD_PSK3: //not fully implemented
             // skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
             save_restoreGB(GRAPH_SAVE);
-            CmdLtrim("160");
+            CmdLtrim("150");
             snprintf(cmdStr, sizeof(buf), "%d 0 6", bitRate[config.bitrate]);
             ans = PSKDemod(cmdStr, false);
             psk1TOpsk2(DemodBuffer, DemodBufferLen);
@@ -494,7 +494,7 @@ bool DecodeT55xxBlock() {
     return (bool) ans;
 }
 
-bool DecodeT5555TraceBlock() {
+bool DecodeT5555TraceBlock(void) {
     DemodBufferLen = 0x00;
 
     // According to datasheet. Always: RF/64, not inverted, Manchester
@@ -547,13 +547,13 @@ int CmdT55xxDetect(const char *Cmd) {
     }
 
     if (!tryDetectModulation())
-        PrintAndLogEx(WARNING, "Could not detect modulation automatically. Try setting it manually with \'lf t55xx config\'");
+        PrintAndLogEx(WARNING, "Could not detect modulation automatically. Try setting it manually with " _YELLOW_("\'lf t55xx config\'") );
 
     return 0;
 }
 
 // detect configuration?
-bool tryDetectModulation() {
+bool tryDetectModulation(void) {
 
     t55xx_conf_block_t tests[15];
     int bitRate = 0, clk = 0, firstClockEdge = 0;
@@ -754,9 +754,40 @@ bool testKnownConfigBlock(uint32_t block0) {
         case T55X7_NORALYS_CONFIG_BLOCK:
         case T55X7_IOPROX_CONFIG_BLOCK:
         case T55X7_PRESCO_CONFIG_BLOCK:
+        case T55X7_NEDAP_64_CONFIG_BLOCK:
+        case T55X7_NEDAP_128_CONFIG_BLOCK:
             return true;
     }
     return false;
+}
+
+bool GetT55xxBlockData(uint32_t *blockdata) {
+
+    if (DemodBufferLen == 0)
+        return false;
+
+    uint8_t idx = config.offset;
+        
+    if (idx + 32 > DemodBufferLen) {
+        PrintAndLogEx(WARNING, "The configured offset %d is too big. Possible offset: %d)", idx, DemodBufferLen - 32);
+        return false;
+    }
+
+    *blockdata = PackBits(0, 32, DemodBuffer + idx);
+    return true;
+}
+
+void printT55xxBlock(const char *blockNum) {
+
+    uint32_t blockData = 0;
+    uint8_t bytes[4] = {0};
+
+    if (GetT55xxBlockData(&blockData) == false)
+        return;
+
+    num_to_bytes(blockData, 4, bytes);
+
+    PrintAndLogEx(NORMAL, " %s | %08X | %s | %s", blockNum, blockData, sprint_bin(DemodBuffer + config.offset, 32), sprint_ascii(bytes, 4));
 }
 
 bool testModulation(uint8_t mode, uint8_t modread) {
@@ -930,30 +961,6 @@ bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5)
         return true;
     }
     return false;
-}
-
-void printT55xxBlock(const char *blockNum) {
-
-    uint8_t i = config.offset;
-    uint8_t endpos = 32 + i;
-    uint32_t blockData = 0;
-    uint8_t bits[64] = {0x00};
-
-    if (!DemodBufferLen) return;
-
-    if (endpos > DemodBufferLen) {
-        PrintAndLogEx(NORMAL, "The configured offset %d is too big. Possible offset: %d)", i, DemodBufferLen - 32);
-        return;
-    }
-
-    for (; i < endpos; ++i)
-        bits[i - config.offset] = DemodBuffer[i];
-
-    blockData = PackBits(0, 32, bits);
-    uint8_t bytes[4] = {0};
-    num_to_bytes(blockData, 4, bytes);
-
-    PrintAndLogEx(NORMAL, " %s | %08X | %s | %s", blockNum, blockData, sprint_bin(bits, 32), sprint_ascii(bytes, 4));
 }
 
 int special(const char *Cmd) {

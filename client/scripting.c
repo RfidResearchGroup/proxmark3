@@ -95,7 +95,7 @@ static int l_GetFromBigBuf(lua_State *L) {
     //Push it as a string
     lua_pushlstring(L, (const char *)data, len);
     free(data);
-    return 1;// return 1 to signal one return value
+    return 1; // return 1 to signal one return value
 }
 
 /**
@@ -561,7 +561,7 @@ static int l_reveng_models(lua_State *L) {
 // endian    ,char,  'B','b','L','l','t','r' describing if Big-Endian or Little-Endian should be used in different combinations.
 //
 // outputs:  string with hex representation of the CRC result
-static int l_reveng_RunModel(lua_State *L) {
+static int l_reveng_runmodel(lua_State *L) {
     //-c || -v
     //inModel = valid model name string - CRC-8
     //inHexStr = input hex string to calculate crc on
@@ -701,6 +701,145 @@ static int l_keygen_algoD(lua_State *L) {
     return 2;
 }
 
+/*
+Read T55Xx block. 
+param1 uint8_t block
+param2 bool page1
+param3 bool override
+param4 uint32_t password
+*/
+static int l_T55xx_readblock(lua_State *L) {
+    
+    //Check number of arguments
+    int n = lua_gettop(L);
+    if ( n != 4 ) {
+         return returnToLuaWithError(L, "Wrong number of arguments, got %d bytes, expected 4", n);
+    }
+    
+    uint32_t block, usepage1, override, password;
+    bool usepwd;
+    size_t size;
+    
+    const char *p_blockno = luaL_checklstring(L, 1, &size);
+    if (size < 1 || size > 2)  return returnToLuaWithError(L, "Wrong size of blockNo, got %d, expected 1 or 2", (int) size);
+    sscanf(p_blockno, "%x", &block);
+    
+    const char *p_usepage1 = luaL_checklstring(L, 2, &size);
+    if (size != 1)  return returnToLuaWithError(L, "Wrong size of usePage1, got %d, expected 1", (int) size);
+    sscanf(p_usepage1, "%x", &usepage1);
+       
+    const char *p_override = luaL_checklstring(L, 3, &size);
+    if (size != 1)  return returnToLuaWithError(L, "Wrong size of override, got %d, expected 1", (int) size);
+    sscanf(p_override, "%x", &override);
+    
+    const char *p_pwd = luaL_checklstring(L, 4, &size);
+    if ( size == 0 ) {
+        usepwd = false;
+    } else {
+
+        if (size != 8) return returnToLuaWithError(L, "Wrong size of pwd, got %d , expected 8", (int) size);
+        sscanf(p_pwd, "%08x", &password);
+        usepwd = true;
+    }  
+    
+    //Password mode
+    if (usepwd) {
+        // try reading the config block and verify that PWD bit is set before doing this!
+        if (!override) {
+
+            if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, false, 0)) {
+                return returnToLuaWithError(L, "Failed to read config block");
+            }
+
+            if (!tryDetectModulation()) {
+                PrintAndLogEx(NORMAL, "Safety Check: Could not detect if PWD bit is set in config block. Exits.");
+                return 0;
+            } else {
+                PrintAndLogEx(NORMAL, "Safety Check: PWD bit is NOT set in config block. Reading without password...");
+                usepwd = false;
+                usepage1 = false;
+            }
+        } else {
+            PrintAndLogEx(NORMAL, "Safety Check Overriden - proceeding despite risk");
+        }
+    }
+
+    if (!AquireData(usepage1, block, usepwd, password)) {
+        return returnToLuaWithError(L, "Failed to aquire data from card");
+    }
+    
+    if (!DecodeT55xxBlock()) {
+        return returnToLuaWithError(L, "Failed to decode signal");
+    }
+    
+    uint32_t blockData = 0;
+    if (GetT55xxBlockData(&blockData) == false) {
+        return returnToLuaWithError(L, "Failed to get actual data");
+    }
+       
+    lua_pushunsigned(L, blockData);
+    return 1;
+}
+
+// arg 1 = pwd
+// arg 2 = use GB
+static int l_T55xx_detect(lua_State *L) {
+    bool useGB = false, usepwd = false, isok;
+    uint32_t password;
+    uint32_t gb;
+    size_t size;
+    
+    //Check number of arguments
+    int n = lua_gettop(L);
+
+    switch (n) {
+        case 2: {
+            const char *p_gb = luaL_checklstring(L, 2, &size);
+            if (size != 1)  return returnToLuaWithError(L, "Wrong size of useGB, got %d , expected 1", (int) size);
+            sscanf(p_gb, "%u", &gb);
+            useGB = ( gb ) ? true : false;
+            printf("p_gb size  %u | %c \n", size, useGB ? 'Y':'N');
+        }
+        case 1: {
+            const char *p_pwd = luaL_checklstring(L, 1, &size);
+            if ( size == 0 ) {
+                usepwd = false;
+            } else {
+                
+                if (size != 8)  return returnToLuaWithError(L, "Wrong size of pwd, got %d , expected 8", (int) size);
+                sscanf(p_pwd, "%08x", &password);
+                usepwd = true;
+            }
+            break;
+        }
+        default :
+            break;
+    }
+   
+    if (!useGB) {
+    
+        isok = AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password);
+        if ( isok == false ) {
+            // signal error by returning Nil, errorstring
+            lua_pushnil(L);
+            lua_pushstring(L, "Failed to aquire LF signal data");
+            return 2;
+        }
+    }
+    
+    isok = tryDetectModulation();
+    if ( isok == false ) {
+        // signal error by returning Nil, errorstring
+        lua_pushnil(L);
+        lua_pushstring(L,  "Could not detect modulation automatically. Try setting it manually with \'lf t55xx config\'");
+        return 2;       
+    }
+
+    lua_pushinteger(L, isok);
+    lua_pushstring(L, "Success");
+    return 2;
+}
+
 /**
  * @brief Sets the lua path to include "./lualibs/?.lua", in order for a script to be
  * able to do "require('foobar')" if foobar.lua is within lualibs folder.
@@ -747,13 +886,15 @@ int set_pm3_libraries(lua_State *L) {
         {"crc64_ecma182",               l_crc64_ecma182},
         {"sha1",                        l_sha1},
         {"reveng_models",               l_reveng_models},
-        {"reveng_runmodel",             l_reveng_RunModel},
+        {"reveng_runmodel",             l_reveng_runmodel},
         {"hardnested",                  l_hardnested},
         {"detect_prng",                 l_detect_prng},
 //        {"keygen.algoA",                l_keygen_algoA},
 //        {"keygen.algoB",                l_keygen_algoB},
 //        {"keygen.algoC",                l_keygen_algoC},
         {"keygen_algo_d",               l_keygen_algoD},
+        {"t55xx_readblock",             l_T55xx_readblock},
+        {"t55xx_detect",                l_T55xx_detect},
         {NULL, NULL}
     };
 

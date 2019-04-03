@@ -2223,6 +2223,7 @@ int CmdHF14AMfURestore(const char *Cmd) {
 
     DropField();
     free(dump);
+    PrintAndLogEx(INFO, "Finish restore");    
     return 0;
 }
 //
