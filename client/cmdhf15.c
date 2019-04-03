@@ -876,11 +876,14 @@ int CmdHF15Restore(const char *Cmd) {
         snprintf(tmpCmd, sizeof(tmpCmd), "%s u %u %s", newCmdPrefix, i, hex);
         PrintAndLogEx(DEBUG, "Command to be sent| %s", tmpCmd);
 
-        for (tried = 0; tried < retries; tried++)
-            if (!(retval = CmdHF15Write(tmpCmd)))
+        for (tried = 0; tried < retries; tried++) {
+            if (!(retval = CmdHF15Write(tmpCmd))) {
                 break;
+            }
+        }
         if (tried >= retries) {
             fclose(f);
+            PrintAndLogEx(FAILED, "Restore failed. Too many retries.");
             return retval;
         }
 
