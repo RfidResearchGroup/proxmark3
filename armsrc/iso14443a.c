@@ -1126,6 +1126,24 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
             AddCrc14A(emdata, len);
             EmSendCmd(emdata, len + 2);
             p_response = NULL;
+		} else if ((receivedCmd[0] == MIFARE_ULC_WRITE || receivedCmd[0] == MIFARE_ULC_COMP_WRITE) && (tagType == 2 || tagType == 7)) {        // Received a WRITE
+			// cmd + block + 4/16 bytes data + 2 bytes crc
+			if (len == 8 || len == 20) {
+				bool isCrcCorrect = CheckCrc14A(receivedCmd, len);
+				if (isCrcCorrect) {
+					int block = receivedCmd[1] + 12; // first 12 blocks of emu are [getversion answer - check tearing - pack - 0x00 - signature]
+					emlSetMem_xt(&receivedCmd[2], block, 1, 4);
+					// send ACK
+					EmSend4bit(CARD_ACK);
+				} else {
+					// send NACK 0x1 == crc/parity error
+					EmSend4bit(CARD_NACK_PA);
+				}	
+			} else {
+	   			// send NACK 0x0 == invalid argument
+				EmSend4bit(CARD_NACK_IV);
+			}
+			p_response = NULL;
         } else if (receivedCmd[0] == MIFARE_ULEV1_READSIG && tagType == 7) {    // Received a READ SIGNATURE --
             // first 12 blocks of emu are [getversion answer - check tearing - pack - 0x00 - signature]
             uint16_t start = 4 * 4;
