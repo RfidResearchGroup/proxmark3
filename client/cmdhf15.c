@@ -847,6 +847,8 @@ int CmdHF15Restore(const char *Cmd) {
         return 3;
     }
 
+    PrintAndLogEx(INFO, "Restoring data blocks.");
+        
     while (1) {
         tried = 0;
         hex[0] = 0x00;
@@ -877,12 +879,16 @@ int CmdHF15Restore(const char *Cmd) {
         for (tried = 0; tried < retries; tried++)
             if (!(retval = CmdHF15Write(tmpCmd)))
                 break;
-        if (tried >= retries)
+        if (tried >= retries) {
+            fclose(f);
             return retval;
+        }
 
         i++;
     }
     fclose(f);
+    PrintAndLogEx(INFO, "Finish restore");
+    return 0;
 }
 
 int CmdHF15List(const char *Cmd) {
