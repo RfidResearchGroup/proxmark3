@@ -3263,7 +3263,6 @@ static const TRexChar *trex_matchnode(TRex *exp, TRexNode *node, const TRexChar 
                     return asd;
             }
             return NULL;
-            break;
         }
         case OP_EXPR:
         case OP_NOCAPEXPR: {
