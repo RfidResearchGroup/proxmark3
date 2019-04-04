@@ -344,7 +344,6 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
             case 0xfe: {
                 PrintAndLogEx(INFO, "-- NDEF Terminator. Done.");
                 return 0;
-                break;
             }
             default: {
                 PrintAndLogEx(ERR, "unknown tag 0x%02x", ndef[indx]);

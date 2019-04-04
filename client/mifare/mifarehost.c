@@ -960,7 +960,6 @@ int detect_classic_nackbug(bool verbose) {
             int gc = getchar();
             (void)gc;
             return -1;
-            break;
         }
 
         if (WaitForResponseTimeout(CMD_ACK, &resp, 500)) {
