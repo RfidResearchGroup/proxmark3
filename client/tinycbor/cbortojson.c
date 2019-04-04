@@ -284,8 +284,7 @@ static CborError add_value_metadata(FILE *out, CborType type, const ConversionSt
         type = flags & FinalTypeMask;
         flags &= ~(FinalTypeMask | TypeWasTagged);
 
-        if (fprintf(out, "\"tag\":\"%" PRIu64 "\"%s", status->lastTag,
-                    flags & ~TypeWasTagged ? "," : "") < 0)
+        if (fprintf(out, "\"tag\":\"%" PRIu64 "\"%s", status->lastTag, (flags & ~TypeWasTagged) ? "," : "") < 0)
             return CborErrorIO;
     }
 
@@ -300,11 +299,10 @@ static CborError add_value_metadata(FILE *out, CborType type, const ConversionSt
         if (fprintf(out, ",\"v\":\"nan\"") < 0)
             return CborErrorIO;
     if (flags & NumberWasInfinite)
-        if (fprintf(out, ",\"v\":\"%sinf\"", flags & NumberWasNegative ? "-" : "") < 0)
+        if (fprintf(out, ",\"v\":\"%sinf\"", (flags & NumberWasNegative) ? "-" : "") < 0)
             return CborErrorIO;
     if (flags & NumberPrecisionWasLost)
-        if (fprintf(out, ",\"v\":\"%c%" PRIx64 "\"", flags & NumberWasNegative ? '-' : '+',
-                    status->originalNumber) < 0)
+        if (fprintf(out, ",\"v\":\"%c%" PRIx64 "\"", (flags & NumberWasNegative) ? '-' : '+', status->originalNumber) < 0)
             return CborErrorIO;
     if (type == CborSimpleType)
         if (fprintf(out, ",\"v\":%d", (int)status->originalNumber) < 0)
