@@ -1614,16 +1614,14 @@ int askdemod(uint8_t *bits, size_t *size, int *clk, int *invert, int maxErr, uin
 // by marshmellow - demodulate NRZ wave - requires a read with strong signal
 // peaks invert bit (high=1 low=0) each clock cycle = 1 bit determined by last peak
 int nrzRawDemod(uint8_t *dest, size_t *size, int *clk, int *invert, int *startIdx) {
+
     if (signalprop.isnoise) return -1;
 
     size_t clkStartIdx = 0;
     *clk = DetectNRZClock(dest, *size, *clk, &clkStartIdx);
     if (*clk == 0) return -2;
 
-    size_t i, gLen = 4096;
-    if (gLen > *size)
-        gLen = *size - 20;
-
+    size_t i;
 
     // just noise - no super good detection. good enough
     if (signalprop.isnoise) {
@@ -1632,7 +1630,7 @@ int nrzRawDemod(uint8_t *dest, size_t *size, int *clk, int *invert, int *startId
     }
 
     int high, low;
-    //getHiLo(dest, gLen, &high, &low, 75, 75);
+
     getHiLo(&high, &low, 75, 75);
     getHiLo(&high, &low, 75, 75);
 
