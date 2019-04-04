@@ -2194,7 +2194,6 @@ int CmdHFiClassLookUp(const char *Cmd) {
                 }
                 cmdp += 2;
                 break;
-                break;
             case 'e':
                 use_elite = true;
                 cmdp++;
