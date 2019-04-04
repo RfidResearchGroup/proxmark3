@@ -615,7 +615,7 @@ int CmdAnalyseA(const char *Cmd) {
         }
 
         */
-    return 0;
+//    return 0;
 
     // 14443-A
     uint8_t u14_c[] = {0x09, 0x78, 0x00, 0x92, 0x02, 0x54, 0x13, 0x02, 0x04, 0x2d, 0xe8 }; // atqs w crc
