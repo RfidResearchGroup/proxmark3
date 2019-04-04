@@ -1915,7 +1915,14 @@ int pskRawDemod_ext(uint8_t *dest, size_t *size, int *clock, int *invert, int *s
                 waveLenCnt = waveEnd - waveStart;
                 if (waveLenCnt > fc) {
                     //this wave is a phase shift
-                    //prnt("DEBUG: phase shift at: %d, len: %d, nextClk: %d, i: %d, fc: %d",waveStart,waveLenCnt,lastClkBit+*clock-tol,i+1,fc);
+                    /*
+                   prnt("DEBUG: phase shift at: %d, len: %d, nextClk: %d, i: %d, fc: %d"
+                        , waveStart
+                        , waveLenCnt
+                        , lastClkBit + *clock - tol
+                        , i + 1
+                        , fc);
+                      */  
                     if (i + 1 >= lastClkBit + *clock - tol) { //should be a clock bit
                         curPhase ^= 1;
                         dest[numBits++] = curPhase;
