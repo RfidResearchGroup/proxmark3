@@ -93,6 +93,10 @@ typedef struct {
 # define AddCrc14B(data, len) compute_crc(CRC_14443_B, (data), (len), (data)+(len), (data)+(len)+1)
 #endif
 
+#ifndef CheckCrc14A
+# define	CheckCrc14A(data, len)	check_crc(CRC_14443_A, (data), (len))
+#endif 
+
 extern void GetParity(const uint8_t *pbtCmd, uint16_t len, uint8_t *par);
 
 extern tDemod *GetDemod(void);
