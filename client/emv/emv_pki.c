@@ -332,7 +332,7 @@ unsigned char *emv_pki_sdatl_fill(const struct tlvdb *db, size_t *sdatl_len) {
     *sdatl_len = 0;
 
     const struct tlv *sda_tl = tlvdb_get(db, 0x9f4a, NULL);
-    if (!sda_tl || sda_tl->len <= 0)
+    if (!sda_tl || sda_tl->len == 0)
         return NULL;
 
     for (int i = 0; i < sda_tl->len; i++) {
