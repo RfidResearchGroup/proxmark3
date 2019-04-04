@@ -248,7 +248,6 @@ static size_t crypto_pk_polarssl_get_nbits(const struct crypto_pk *_cp) {
     struct crypto_pk_polarssl *cp = (struct crypto_pk_polarssl *)_cp;
 
     return cp->ctx.len * 8;
-    return 0;
 }
 
 static unsigned char *crypto_pk_polarssl_get_parameter(const struct crypto_pk *_cp, unsigned param, size_t *plen) {
@@ -270,7 +269,7 @@ static unsigned char *crypto_pk_polarssl_get_parameter(const struct crypto_pk *_
             mbedtls_mpi_write_binary(&cp->ctx.E, result, *plen);
             break;
         default:
-            printf("Error get parameter. Param=%d", param);
+            printf("Error get parameter. Param = %u", param);
             break;
     }
 
