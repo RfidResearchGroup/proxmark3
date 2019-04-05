@@ -78,6 +78,7 @@ help:
 	@echo
 	@echo "+ style         - Apply some automated source code formatting rules"
 	@echo "+ checks        - Detect various encoding issues in source code"
+	@echo
 	@echo "Possible platforms: try \"make PLATFORM=\" for more info, default is PM3RDV4"
 
 client: client/all
