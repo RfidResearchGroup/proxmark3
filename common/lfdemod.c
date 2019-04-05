@@ -445,11 +445,11 @@ int ManchesterEncode(uint8_t *bits, size_t size) {
 
 // by marshmellow
 // to detect a wave that has heavily clipped (clean) samples
-// loop 512 samples,   if 250 of them is deemed maxed out,  we assume the wave is clipped.
+// loop 1024 samples,   if 250 of them is deemed maxed out,  we assume the wave is clipped.
 bool DetectCleanAskWave(uint8_t *dest, size_t size, uint8_t high, uint8_t low) {
     bool allArePeaks = true;
     uint16_t cntPeaks = 0;
-    size_t loopEnd = 512 + 160;
+    size_t loopEnd = 1024 + 160;
 
     // sanity check
     if (loopEnd > size) loopEnd = size;
@@ -463,7 +463,8 @@ bool DetectCleanAskWave(uint8_t *dest, size_t size, uint8_t high, uint8_t low) {
     }
 
     if (!allArePeaks) {
-        if (cntPeaks > 250) return true;
+        if (g_debugMode == 2) prnt("DEBUG DetectCleanAskWave: peaks (200) %u", cntPeaks);
+        if (cntPeaks > 200) return true;
     }
     return allArePeaks;
 }
