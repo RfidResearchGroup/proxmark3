@@ -23,9 +23,9 @@
 #define COTAG_BITS 264
 #endif
 
-extern int CmdLFCOTAG(const char *Cmd);
-extern int CmdCOTAGRead(const char *Cmd);
-extern int CmdCOTAGDemod(const char *Cmd);
+int CmdLFCOTAG(const char *Cmd);
+int CmdCOTAGRead(const char *Cmd);
+int CmdCOTAGDemod(const char *Cmd);
 
-extern int usage_lf_cotag_read(void);
+int usage_lf_cotag_read(void);
 #endif

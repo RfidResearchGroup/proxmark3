@@ -8,12 +8,12 @@
 //-----------------------------------------------------------------------------
 #ifndef CMDLFPARADOX_H__
 #define CMDLFPARADOX_H__
-extern int CmdLFParadox(const char *Cmd);
-extern int CmdParadoxDemod(const char *Cmd);
-extern int CmdParadoxRead(const char *Cmd);
+int CmdLFParadox(const char *Cmd);
+int CmdParadoxDemod(const char *Cmd);
+int CmdParadoxRead(const char *Cmd);
 
-//extern int CmdParadoxClone(const char *Cmd);
-extern int CmdParadoxSim(const char *Cmd);
+//int CmdParadoxClone(const char *Cmd);
+int CmdParadoxSim(const char *Cmd);
 
-extern int detectParadox(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo, int *waveStartIdx);
+int detectParadox(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo, int *waveStartIdx);
 #endif

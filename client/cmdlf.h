@@ -55,28 +55,28 @@
 
 int CmdLF(const char *Cmd);
 
-extern int CmdLFSetConfig(const char *Cmd);
+int CmdLFSetConfig(const char *Cmd);
 
-extern int CmdLFCommandRead(const char *Cmd);
-extern int CmdFlexdemod(const char *Cmd);
-extern int CmdLFRead(const char *Cmd);
-extern int CmdLFSim(const char *Cmd);
-extern int CmdLFaskSim(const char *Cmd);
-extern int CmdLFfskSim(const char *Cmd);
-extern int CmdLFpskSim(const char *Cmd);
-extern int CmdLFSimBidir(const char *Cmd);
-extern int CmdLFSniff(const char *Cmd);
-extern int CmdVchDemod(const char *Cmd);
-extern int CmdLFfind(const char *Cmd);
+int CmdLFCommandRead(const char *Cmd);
+int CmdFlexdemod(const char *Cmd);
+int CmdLFRead(const char *Cmd);
+int CmdLFSim(const char *Cmd);
+int CmdLFaskSim(const char *Cmd);
+int CmdLFfskSim(const char *Cmd);
+int CmdLFpskSim(const char *Cmd);
+int CmdLFSimBidir(const char *Cmd);
+int CmdLFSniff(const char *Cmd);
+int CmdVchDemod(const char *Cmd);
+int CmdLFfind(const char *Cmd);
 
-extern bool lf_read(bool silent, uint32_t samples);
+bool lf_read(bool silent, uint32_t samples);
 
 // usages helptext
-extern int usage_lf_cmdread(void);
-extern int usage_lf_read(void);
-extern int usage_lf_sniff(void);
-extern int usage_lf_config(void);
-extern int usage_lf_simfsk(void);
-extern int usage_lf_simask(void);
-extern int usage_lf_simpsk(void);
+int usage_lf_cmdread(void);
+int usage_lf_read(void);
+int usage_lf_sniff(void);
+int usage_lf_config(void);
+int usage_lf_simfsk(void);
+int usage_lf_simask(void);
+int usage_lf_simpsk(void);
 #endif

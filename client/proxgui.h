@@ -36,10 +36,10 @@ extern bool GridLocked;
 
 //Operations defined in data_operations
 //extern int autoCorr(const int* in, int *out, size_t len, int window);
-extern int AskEdgeDetect(const int *in, int *out, int len, int threshold);
-extern int AutoCorrelate(const int *in, int *out, size_t len, int window, bool SaveGrph, bool verbose);
-extern int directionalThreshold(const int *in, int *out, size_t len, int8_t up, int8_t down);
-extern void save_restoreGB(uint8_t saveOpt);
+int AskEdgeDetect(const int *in, int *out, int len, int threshold);
+int AutoCorrelate(const int *in, int *out, size_t len, int window, bool SaveGrph, bool verbose);
+int directionalThreshold(const int *in, int *out, size_t len, int8_t up, int8_t down);
+void save_restoreGB(uint8_t saveOpt);
 
 #define GRAPH_SAVE 1
 #define GRAPH_RESTORE 0

@@ -25,10 +25,10 @@
 #include "protocols.h"
 #include "cmdhf.h"
 
-extern int CmdHFTopaz(const char *Cmd);
-extern int CmdHFTopazReader(const char *Cmd);
-extern int CmdHFTopazSim(const char *Cmd);
-extern int CmdHFTopazCmdRaw(const char *Cmd);
-extern int CmdHFTopazList(const char *Cmd);
+int CmdHFTopaz(const char *Cmd);
+int CmdHFTopazReader(const char *Cmd);
+int CmdHFTopazSim(const char *Cmd);
+int CmdHFTopazCmdRaw(const char *Cmd);
+int CmdHFTopazList(const char *Cmd);
 
 #endif

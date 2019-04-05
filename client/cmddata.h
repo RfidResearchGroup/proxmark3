@@ -84,7 +84,7 @@ int NRZrawDemod(const char *Cmd, bool verbose);
 int getSamples(int n, bool silent);
 void setClockGrid(int clk, int offset);
 int directionalThreshold(const int *in, int *out, size_t len, int8_t up, int8_t down);
-extern int AskEdgeDetect(const int *in, int *out, int len, int threshold);
+int AskEdgeDetect(const int *in, int *out, int len, int threshold);
 
 int CmdDataIIR(const char *Cmd);
 

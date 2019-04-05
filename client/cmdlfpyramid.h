@@ -22,15 +22,15 @@
 #include "lfdemod.h"    // parityTest
 #include "crc.h"
 
-extern int CmdLFPyramid(const char *Cmd);
-extern int CmdPyramidDemod(const char *Cmd);
-extern int CmdPyramidRead(const char *Cmd);
-extern int CmdPyramidClone(const char *Cmd);
-extern int CmdPyramidSim(const char *Cmd);
+int CmdLFPyramid(const char *Cmd);
+int CmdPyramidDemod(const char *Cmd);
+int CmdPyramidRead(const char *Cmd);
+int CmdPyramidClone(const char *Cmd);
+int CmdPyramidSim(const char *Cmd);
 
-extern int detectPyramid(uint8_t *dest, size_t *size, int *waveStartIdx);
+int detectPyramid(uint8_t *dest, size_t *size, int *waveStartIdx);
 
-extern int usage_lf_pyramid_clone(void);
-extern int usage_lf_pyramid_sim(void);
+int usage_lf_pyramid_clone(void);
+int usage_lf_pyramid_sim(void);
 #endif
 
