@@ -743,7 +743,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                 }
 
                 if (!HasValidCRC(receivedCmd_dec, receivedCmd_len)) { // all commands must have a valid CRC
-                    EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
+                    EmSend4bit(encrypted_data ? mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA) : CARD_NACK_NA);
                     if (MF_DBGLEVEL >= MF_DBG_ALL) Dbprintf("[MFEMUL_WORK] All commands must have a valid CRC %02X (%d)", receivedCmd_dec, receivedCmd_len);
                     break;
                 }
@@ -804,13 +804,13 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                 // rule 13 of 7.5.3. in ISO 14443-4. chaining shall be continued
                 // BUT... ACK --> NACK
                 if (receivedCmd_len == 1 && receivedCmd_dec[0] == CARD_ACK) {
-                    EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
+                    EmSend4bit(encrypted_data ? mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA) : CARD_NACK_NA);
                     break;
                 }
 
                 // rule 12 of 7.5.3. in ISO 14443-4. R(NAK) --> R(ACK)
                 if (receivedCmd_len == 1 && receivedCmd_dec[0] == CARD_NACK_NA) {
-                    EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_ACK));
+                    EmSend4bit(encrypted_data ? mf_crypto1_encrypt4bit(pcs, CARD_ACK) : CARD_ACK);
                     break;
                 }
 
@@ -973,15 +973,15 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
 
                 // case MFEMUL_WORK => CMD RATS
                 if (receivedCmd[0] == ISO14443A_CMD_RATS) {
-                    EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
+                    EmSend4bit(encrypted_data ? mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA) : CARD_NACK_NA);
                     if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("[MFEMUL_WORK] RCV RATS => NACK");
                     break;
                 }
 
                 // case MFEMUL_WORK => command not allowed
-                // if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("Received command not allowed, nacking");
-                // EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
-                // break;
+                if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("Received command not allowed, nacking");
+                EmSend4bit(encrypted_data ? mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA) : CARD_NACK_NA);
+                break;
             }
 
             // AUTH1
@@ -1074,8 +1074,9 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                                 );
                     }
                     cardAUTHKEY = AUTHKEYNONE;	// not authenticated
-                    LogTrace(Uart.output, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
+                    // LogTrace(Uart.output, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
                     cardSTATE_TO_IDLE();
+                    EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
                     break;
                 }
 
