@@ -1107,7 +1107,7 @@ int CmdSmartBruteforceSFI(const char *Cmd) {
     //Validations
     if (errors) return usage_sm_brute();
 
-    const char *SELECT = "00a40400%02x%s";
+    const char *SELECT = "00a40400%02zu%s";
 
 //  uint8_t GENERATE_AC[] = {0x80, 0xAE};
 //  uint8_t GET_CHALLENGE[] = {0x00, 0x84, 0x00};
