@@ -413,7 +413,7 @@ int flash_write(flash_file_t *ctx) {
         uint32_t blocks = (length + BLOCK_SIZE - 1) / BLOCK_SIZE;
         uint32_t end = seg->start + length;
 
-        fprintf(stderr, " 0x%08x..0x%08x [0x%x / %d blocks]",
+        fprintf(stderr, " 0x%08x..0x%08x [0x%x / %u blocks]",
                 seg->start, end - 1, length, blocks);
 
         int block = 0;
@@ -427,7 +427,7 @@ int flash_write(flash_file_t *ctx) {
 
             if (write_block(baddr, data, block_size) < 0) {
                 fprintf(stderr, " ERROR\n");
-                fprintf(stderr, "Error writing block %d of %d\n", block, blocks);
+                fprintf(stderr, "Error writing block %d of %u\n", block, blocks);
                 return -1;
             }
 
