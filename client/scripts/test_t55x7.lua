@@ -194,7 +194,7 @@ local function GetConfigs( modulation )
                 [7] = '00183040',
                 [8] = '001c3040',
         }
-    return t[modulation]
+    return t[modulation:upper()]
 end
 ---
 -- lf t55xx wipe
@@ -243,6 +243,8 @@ local function test(modulation)
     
     process_block0_cmds = GetConfigs(modulation)
     
+    if process_block0_cmds == nil then return oops('Cant find modulation '..modulation) end
+    
     for _ = 1, #process_block0_cmds do
     
         local p_config_cmd = process_block0_cmds[_]
@@ -289,17 +291,14 @@ local function main(args)
     core.clearCommandBuffer()
     local res
     
-    res = WipeCard()
-    if res then test("ASK") end
-
---    res = WipeCard()
---    if res then test("FSK1") end
-
---    res = WipeCard()
---    if res then test("FSK2") end
-
---    res = WipeCard()
---    if res then test("PSK1") end    
+    -- Adjust this table to set which configurations should be tested
+    local test_modes = { 'ASK', 'PSK1' }
+    
+    for _ = 1, #test_modes do
+        res = WipeCard()
+        print (test_modes[_])
+        if res then test(test_modes[_]) end        
+    end
 
     exitMsg('Tests finished')
     
