@@ -52,18 +52,18 @@ THE SOFTWARE.
 
 #include <stdint.h>
 
-extern uint32_t *malloc_bitarray(uint32_t x);
-extern void free_bitarray(uint32_t *x);
-extern uint32_t bitcount(uint32_t a);
-extern uint32_t count_states(uint32_t *A);
-extern void bitarray_AND(uint32_t *A, uint32_t *B);
-extern void bitarray_low20_AND(uint32_t *A, uint32_t *B);
-extern uint32_t count_bitarray_AND(uint32_t *A, uint32_t *B);
-extern uint32_t count_bitarray_low20_AND(uint32_t *A, uint32_t *B);
-extern void bitarray_AND4(uint32_t *A, uint32_t *B, uint32_t *C, uint32_t *D);
-extern void bitarray_OR(uint32_t *A, uint32_t *B);
-extern uint32_t count_bitarray_AND2(uint32_t *A, uint32_t *B);
-extern uint32_t count_bitarray_AND3(uint32_t *A, uint32_t *B, uint32_t *C);
-extern uint32_t count_bitarray_AND4(uint32_t *A, uint32_t *B, uint32_t *C, uint32_t *D);
+uint32_t *malloc_bitarray(uint32_t x);
+void free_bitarray(uint32_t *x);
+uint32_t bitcount(uint32_t a);
+uint32_t count_states(uint32_t *A);
+void bitarray_AND(uint32_t *A, uint32_t *B);
+void bitarray_low20_AND(uint32_t *A, uint32_t *B);
+uint32_t count_bitarray_AND(uint32_t *A, uint32_t *B);
+uint32_t count_bitarray_low20_AND(uint32_t *A, uint32_t *B);
+void bitarray_AND4(uint32_t *A, uint32_t *B, uint32_t *C, uint32_t *D);
+void bitarray_OR(uint32_t *A, uint32_t *B);
+uint32_t count_bitarray_AND2(uint32_t *A, uint32_t *B);
+uint32_t count_bitarray_AND3(uint32_t *A, uint32_t *B, uint32_t *C);
+uint32_t count_bitarray_AND4(uint32_t *A, uint32_t *B, uint32_t *C, uint32_t *D);
 
 #endif

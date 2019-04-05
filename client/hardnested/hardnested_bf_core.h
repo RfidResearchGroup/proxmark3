@@ -61,10 +61,10 @@ typedef enum {
     SIMD_MMX,
     SIMD_NONE,
 } SIMDExecInstr;
-extern void SetSIMDInstr(SIMDExecInstr instr);
-extern SIMDExecInstr GetSIMDInstrAuto();
+void SetSIMDInstr(SIMDExecInstr instr);
+SIMDExecInstr GetSIMDInstrAuto();
 
-extern const uint64_t crack_states_bitsliced(uint32_t cuid, uint8_t *best_first_bytes, statelist_t *p, uint32_t *keys_found, uint64_t *num_keys_tested, uint32_t nonces_to_bruteforce, uint8_t *bf_test_nonces_2nd_byte, noncelist_t *nonces);
-extern void bitslice_test_nonces(uint32_t nonces_to_bruteforce, uint32_t *bf_test_nonces, uint8_t *bf_test_nonce_par);
+const uint64_t crack_states_bitsliced(uint32_t cuid, uint8_t *best_first_bytes, statelist_t *p, uint32_t *keys_found, uint64_t *num_keys_tested, uint32_t nonces_to_bruteforce, uint8_t *bf_test_nonces_2nd_byte, noncelist_t *nonces);
+void bitslice_test_nonces(uint32_t nonces_to_bruteforce, uint32_t *bf_test_nonces, uint8_t *bf_test_nonce_par);
 
 #endif

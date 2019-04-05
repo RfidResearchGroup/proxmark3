@@ -21,7 +21,7 @@
 
 #include <stddef.h>
 
-extern void PKISetStrictExecution(bool se);
+void PKISetStrictExecution(bool se);
 
 unsigned char *emv_pki_sdatl_fill(const struct tlvdb *db, size_t *sdatl_len);
 struct emv_pk *emv_pki_recover_issuer_cert(const struct emv_pk *pk, struct tlvdb *db);

@@ -69,35 +69,35 @@ typedef struct {
 
 extern char logHexFileName[FILE_PATH_SIZE];
 
-extern int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key);
-extern int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *resultKeys, bool calibrate);
-extern int mfCheckKeys(uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keycnt, uint8_t *keyBlock, uint64_t *key);
-extern int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk,
-                            uint8_t strategy, uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory);
-extern int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultkey);
+int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key);
+int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *resultKeys, bool calibrate);
+int mfCheckKeys(uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keycnt, uint8_t *keyBlock, uint64_t *key);
+int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk,
+                     uint8_t strategy, uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory);
+int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultkey);
 
-extern int mfReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data);
+int mfReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data);
 
-extern int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount);
-extern int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount);
-extern int mfEmlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth);
+int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount);
+int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount);
+int mfEmlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth);
 
-extern int mfCSetUID(uint8_t *uid, uint8_t *atqa, uint8_t *sak, uint8_t *oldUID, uint8_t wipecard);
-extern int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t params);
-extern int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params);
+int mfCSetUID(uint8_t *uid, uint8_t *atqa, uint8_t *sak, uint8_t *oldUID, uint8_t wipecard);
+int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t params);
+int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params);
 
-extern int mfTraceInit(uint8_t *tuid, uint8_t uidlen, uint8_t *atqa, uint8_t sak, bool wantSaveToEmlFile);
-extern int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile);
+int mfTraceInit(uint8_t *tuid, uint8_t uidlen, uint8_t *atqa, uint8_t sak, bool wantSaveToEmlFile);
+int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile);
 
-extern int isTraceCardEmpty(void);
-extern int isBlockEmpty(int blockN);
-extern int isBlockTrailer(int blockN);
-extern int loadTraceCard(uint8_t *tuid, uint8_t uidlen);
-extern int saveTraceCard(void);
-extern int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data, int len);
+int isTraceCardEmpty(void);
+int isBlockEmpty(int blockN);
+int isBlockTrailer(int blockN);
+int loadTraceCard(uint8_t *tuid, uint8_t uidlen);
+int saveTraceCard(void);
+int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data, int len);
 
-extern int detect_classic_prng(void);
-extern int detect_classic_nackbug(bool verbose);
-extern void detect_classic_magic(void);
-extern void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len, bool isEncrypted);
+int detect_classic_prng(void);
+int detect_classic_nackbug(bool verbose);
+void detect_classic_magic(void);
+void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len, bool isEncrypted);
 #endif

@@ -28,7 +28,7 @@ typedef struct {
     const char *Description;
 } APDUCode;
 
-extern const APDUCode *const GetAPDUCode(uint8_t sw1, uint8_t sw2);
-extern const char *GetAPDUCodeDescription(uint8_t sw1, uint8_t sw2);
+const APDUCode *const GetAPDUCode(uint8_t sw1, uint8_t sw2);
+const char *GetAPDUCodeDescription(uint8_t sw1, uint8_t sw2);
 
 #endif

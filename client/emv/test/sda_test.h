@@ -13,4 +13,4 @@
  * Lesser General Public License for more details.
  */
 
-extern int exec_sda_test(bool verbose);
+int exec_sda_test(bool verbose);
