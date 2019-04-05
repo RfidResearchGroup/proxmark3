@@ -21,6 +21,8 @@ bool showDemod = true;
 pthread_mutex_t print_lock = PTHREAD_MUTEX_INITIALIZER;
 static char *logfilename = "proxmark3.log";
 
+float complex cexpf(float complex Z);
+
 void PrintAndLogOptions(char *str[][2], size_t size, size_t space) {
     char buff[2000] = "Options:\n";
     char format[2000] = "";
@@ -53,7 +55,6 @@ void PrintAndLogEx(logLevel_t level, char *fmt, ...) {
     char buffer[MAX_PRINT_BUFFER] = {0};
     char buffer2[MAX_PRINT_BUFFER + 20] = {0};
     char *token = NULL;
-    int size = 0;
     //   {NORMAL, SUCCESS, INFO, FAILED, WARNING, ERR, DEBUG}
     static char *prefixes[7] = { "", "[+] ", "[=] ", "[-] ", "[!] ", "[!!] ", "[#] "};
 
@@ -101,7 +102,7 @@ void PrintAndLogEx(logLevel_t level, char *fmt, ...) {
 
         while (token != NULL) {
 
-            size = strlen(buffer2);
+            size_t size = strlen(buffer2);
 
             if (strlen(token))
                 snprintf(buffer2 + size, sizeof(buffer2) - size, "%s%s\n", prefix, token);
@@ -210,13 +211,11 @@ void iceIIR_Butterworth(int *data, const size_t len) {
     float b[3] = {0.003621681514929,  0.007243363029857, 0.003621681514929};
     float a[3] = {1.000000000000000, -1.822694925196308, 0.837181651256023};
 
-    float sample           = 0;      // input sample read from array
-    float complex x_prime  = 1.0f;   // save sample for estimating frequency
-    float complex x;
-
     for (i = 0; i < adjustedLen; ++i) {
 
-        sample = data[i];
+        float sample = data[i];          // input sample read from array
+        float complex x_prime  = 1.0f;   // save sample for estimating frequency
+        float complex x;
 
         // remove DC offset and mix to complex baseband
         x = (sample - 127.5f) * cexpf(_Complex_I * 2 * M_PI * fc * i);
@@ -251,18 +250,14 @@ void iceSimple_Filter(int *data, const size_t len, uint8_t k) {
 #define FILTER_SHIFT 4
 
     int32_t filter_reg = 0;
-    int16_t input, output;
     int8_t shift = (k <= 8) ? k : FILTER_SHIFT;
 
     for (int i = 0; i < len; ++i) {
-
-        input = data[i];
         // Update filter with current sample
-        filter_reg = filter_reg - (filter_reg >> shift) + input;
+        filter_reg = filter_reg - (filter_reg >> shift) + data[i];
 
         // Scale output for unity gain
-        output = filter_reg >> shift;
-        data[i] = output;
+        data[i] = filter_reg >> shift;
     }
 }
 

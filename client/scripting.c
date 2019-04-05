@@ -785,8 +785,7 @@ static int l_T55xx_readblock(lua_State *L) {
 // arg 2 = use GB
 static int l_T55xx_detect(lua_State *L) {
     bool useGB = false, usepwd = false, isok;
-    uint32_t password;
-    uint32_t gb;
+    uint32_t gb, password = 0;
     size_t size;
     
     //Check number of arguments
@@ -798,7 +797,7 @@ static int l_T55xx_detect(lua_State *L) {
             if (size != 1)  return returnToLuaWithError(L, "Wrong size of useGB, got %d , expected 1", (int) size);
             sscanf(p_gb, "%u", &gb);
             useGB = ( gb ) ? true : false;
-            printf("p_gb size  %u | %c \n", size, useGB ? 'Y':'N');
+            printf("p_gb size  %zu | %c \n", size, useGB ? 'Y':'N');
         }
         case 1: {
             const char *p_pwd = luaL_checklstring(L, 1, &size);

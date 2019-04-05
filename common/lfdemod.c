@@ -445,11 +445,11 @@ int ManchesterEncode(uint8_t *bits, size_t size) {
 
 // by marshmellow
 // to detect a wave that has heavily clipped (clean) samples
-// loop 512 samples,   if 250 of them is deemed maxed out,  we assume the wave is clipped.
+// loop 1024 samples,   if 250 of them is deemed maxed out,  we assume the wave is clipped.
 bool DetectCleanAskWave(uint8_t *dest, size_t size, uint8_t high, uint8_t low) {
     bool allArePeaks = true;
     uint16_t cntPeaks = 0;
-    size_t loopEnd = 512 + 160;
+    size_t loopEnd = 1024 + 160;
 
     // sanity check
     if (loopEnd > size) loopEnd = size;
@@ -463,7 +463,8 @@ bool DetectCleanAskWave(uint8_t *dest, size_t size, uint8_t high, uint8_t low) {
     }
 
     if (!allArePeaks) {
-        if (cntPeaks > 250) return true;
+        if (g_debugMode == 2) prnt("DEBUG DetectCleanAskWave: peaks (200) %u", cntPeaks);
+        if (cntPeaks > 200) return true;
     }
     return allArePeaks;
 }
@@ -520,12 +521,12 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
 
         int foo = getClosestClock(minClk);
         if (foo > 0) {
-            for (uint8_t i = 0; i < 10; i++) {
-                if (tmpclk[i][0] == foo) {
-                    tmpclk[i][1]++;
+            for (uint8_t j = 0; j < 10; j++) {
+                if (tmpclk[j][0] == foo) {
+                    tmpclk[j][1]++;
 
-                    if (tmpclk[i][2] == 0) {
-                        tmpclk[i][2] = shortestWaveIdx;
+                    if (tmpclk[j][2] == 0) {
+                        tmpclk[j][2] = shortestWaveIdx;
                     }
                     break;
                 }
@@ -535,18 +536,18 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
 
     // find the clock with most hits and it the first index it was encountered.
     int max = 0;
-    for (uint8_t i = 0; i < 10; i++) {
+    for (uint8_t j = 0; j < 10; j++) {
         if (g_debugMode == 2) {
             prnt("DEBUG, ASK,  clocks %u | hits %u | idx %u"
-                 , tmpclk[i][0]
-                 , tmpclk[i][1]
-                 , tmpclk[i][2]
+                 , tmpclk[j][0]
+                 , tmpclk[j][1]
+                 , tmpclk[j][2]
                 );
         }
-        if (max < tmpclk[i][1]) {
-            *clock = tmpclk[i][0];
-            shortestWaveIdx = tmpclk[i][2];
-            max = tmpclk[i][1];
+        if (max < tmpclk[j][1]) {
+            *clock = tmpclk[j][0];
+            shortestWaveIdx = tmpclk[j][2];
+            max = tmpclk[j][1];
         }
     }
 

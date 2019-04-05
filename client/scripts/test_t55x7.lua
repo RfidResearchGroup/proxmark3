@@ -40,7 +40,9 @@ Arguments:
 ]]
 
 local TIMEOUT = 2000 -- Shouldn't take longer than 2 seconds
-local DEBUG = true -- the debug flag
+local DEBUG = false -- the debug flag
+local total_tests = 0
+local total_pass = 0
 
 local data_blocks_cmds = {    
     [1] = '00000000',
@@ -89,23 +91,135 @@ local function exitMsg(msg)
     print(msg)
     print()
 end
+---
+-- ask/fsk/psk configuration blocks to test
+local function GetConfigs( modulation )
 
+    local t = {}
+    
+    t['PSK1'] = {
+                [1] = '00001040',
+                [2] = '00041040', 
+                [3] = '00081040',
+                [4] = '000c1040',
+                [5] = '00101040',
+                [6] = '00141040',
+                [7] = '00181040',
+                [8] = '001c1040',
+            }
+
+    t['PSK2'] = {
+                [1] = '00002040',
+                [2] = '00042040',
+                [3] = '00082040',
+                [4] = '000c2040',
+                [5] = '00102040',
+                [6] = '00142040',
+                [7] = '00182040',
+                [8] = '001c2040',
+            }
+            
+    t['PSK3'] = {
+                [1] = '00003040',
+                [2] = '00043040',
+                [3] = '00083040',
+                [4] = '000c3040',
+                [5] = '00103040',
+                [6] = '00143040',
+                [7] = '00183040',
+                [8] = '001c3040',
+            }
+
+    t['FSK1'] = {
+                [1] = '00004040',
+                [2] = '00004040',
+                [3] = '00044040',
+                [4] = '00084040',
+                [5] = '000c4040',
+                [6] = '00104040',
+                [7] = '00144040',
+                [8] = '00184040',
+                [9] = '001c4040',
+            }
+            
+    t['FSK2'] = {
+                [1] = '00005040',
+                [2] = '00045040',
+                [3] = '00085040',
+                [4] = '000c5040',
+                [5] = '00105040',
+                [6] = '00145040',
+                [7] = '00185040',
+                [8] = '001c5040',
+            }
+            
+    t['FSK1A'] = {
+                [1] = '00006040',
+                [2] = '00046040',
+                [3] = '00086040',
+                [4] = '000c6040',
+                [5] = '00106040',
+                [6] = '00146040',
+                [7] = '00186040',
+                [8] = '001c6040',
+            }
+            
+    t['FSK2A'] = {
+                [1] = '00007040',
+                [2] = '00047040',
+                [3] = '00087040',
+                [4] = '000c7040',
+                [5] = '00107040',
+                [6] = '00147040',
+                [7] = '00187040',
+                [8] = '001c7040',
+            }
+            
+    t['ASK'] = {
+                [1] = '00008040',
+                [2] = '00048040', 
+                [3] = '00088040',
+                [4] = '000c8040',
+                [5] = '00108040',
+                [6] = '00148040',
+                [7] = '00188040',
+                [8] = '001c8040',
+            }
+            
+    t['BI'] = {
+                [1] = '00010040',
+                [2] = '00050040',
+                [3] = '00090040',
+                [4] = '000d0040',
+                [5] = '00110040',
+                [6] = '00150040',
+                [7] = '00190040',
+                [8] = '001d0040',
+            }
+            
+    return t[modulation:upper()]
+end
+---
+-- lf t55xx wipe
 local function WipeCard()
 
-   local wipe_cmds = {
-        [1] = 'lf t55xx wipe',
-        [2] = 'lf t55xx detect',
-   }
-    for _ = 1, #wipe_cmds do
-        local c = wipe_cmds[_]
-        dbg(c);  core.console(c)
-    end
+    print('Wiping card')
+    core.console('lf t55xx wipe')
     
-    local wipe_data_cmd = "lf t55xx write b %s d %s"
-    for _ = 1, #data_blocks_cmds do
-        local val = data_blocks_cmds[_]
-        local c = string.format(wipe_data_cmd, _, val);
-        core.console(c)
+    print('Detecting card')
+    local res, msg = core.t55xx_detect()
+    if not res then 
+        oops("Can't detect modulation. Test failed.")
+        core.console("rem [ERR:DETECT:WIPED] Failed to detect after wipe")
+        return false
+    else
+        local wipe_data_cmd = "lf t55xx write b %s d %s"
+        for _ = 1, #data_blocks_cmds do
+            local val = data_blocks_cmds[_]
+            local c = string.format(wipe_data_cmd, _, val)
+            core.console(c)
+        end
+        return true
     end
 end
 ---
@@ -120,26 +234,23 @@ local function CheckReadBlock(block)
     return ('%08X'):format(data)
 end
 
-local function test()
+local function test(modulation)
     
-    -- PSK1 Modulations to test.  (2blocks)
-    local process_block0_cmds = {
-        [1] = '00001040',
-        [2] = '00041040', 
-        [3] = '00081040',
-        [4] = '000c1040',
-        [5] = '00101040',
-        [6] = '00141040',
-        [7] = '00181040',
-        [8] = '001c1040',
-    }
-
+    local process_block0_cmds = {}
     local y
     local block = "00"
-
+    
+    local s = ('Start test of %s'):format(modulation)
+    print(s)
+    
+    process_block0_cmds = GetConfigs(modulation)
+    
+    if process_block0_cmds == nil then return oops('Cant find modulation '..modulation) end
+    
     for _ = 1, #process_block0_cmds do
     
         local p_config_cmd = process_block0_cmds[_]
+        local errors = 0
         core.clearCommandBuffer()
 
         -- Write Config block
@@ -154,19 +265,30 @@ local function test()
         local res, msg = core.t55xx_detect()
         if not res then 
             print("can't detect modulation, skip to next config")
+            core.console(format("rem [ERR:DETECT:%s] Failed to detect modulation", p_config_cmd))
+            core.console(format('rem [SUMMARY:%s] FAIL detection', p_config_cmd))
+            total_tests = total_tests + #data_blocks_cmds
         else
             -- Loop block1-2
             for _ = 1, #data_blocks_cmds do
+                total_tests = total_tests + 1
                 local val = data_blocks_cmds[_]
                 local blockdata, msg = CheckReadBlock(_)
-                if blockdata ~= val then
+                if blockdata:lower() ~= val:lower() then
                     print( ('Test %s == %s Failed'):format(val, blockdata))
-                    core.console( format('rem -- block %d  value %s failed', _, val))
+                    core.console( format('rem [ERR:READ:%s:%d] block %d: read %s instead of %s', p_config_cmd, _, _, blockdata, val))
+                    errors = errors+1
                 else
                     print( ('Test %s == %s OK'):format(val, blockdata))
+                    total_pass = total_pass + 1
                 end
             end
-        end       
+            if errors >0 then
+                core.console( format('rem [SUMMARY:%s] FAIL %d test%s', p_config_cmd, errors, errors > 1 and "s" or ""))
+            else
+                core.console( format('rem [SUMMARY:%s] PASS all tests', p_config_cmd))
+            end
+        end
     end
 end
 
@@ -181,20 +303,25 @@ local function main(args)
     end
 
     core.clearCommandBuffer()
-
-    print('Starting test,  wiping card')
-    WipeCard()
-    print('Detecting card')
-    local res, msg = core.t55xx_detect()
-    if res then
-        print('Starting test')
-        test()
-    else
-        print("can't detect modulation. Test failed. Ending.")
-    end
+    local res
     
---    test()
+    -- Adjust this table to set which configurations should be tested
+--    local test_modes = { 'PSK1', 'PSK2', 'PSK3', 'FSK1', 'FSK2', 'FSK1A', 'FSK2A', 'ASK', 'BI' }
+    local test_modes = { 'ASK', 'PSK1' }
+    
+    for _ = 1, #test_modes do
+        res = WipeCard()
+        if res then
+            print (test_modes[_])
+            test(test_modes[_])
+        else
+            exitMsg('Abort!')
+            return
+        end
+    end
+
     exitMsg('Tests finished')
+    core.console( format('rem [SUMMARY] Success rate: %d/%d tests passed%s', total_pass, total_tests, total_pass < total_tests and ", help me improving that number!" or " \\o/"))
     
 end
 main(args)

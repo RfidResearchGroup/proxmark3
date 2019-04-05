@@ -323,7 +323,7 @@ bool asn1_tag_dump(const struct tlv *tlv, FILE *f, int level, bool *candump) {
     const struct asn1_tag *tag = asn1_get_tag(tlv);
 
     PRINT_INDENT(level);
-    fprintf(f, "--%2hx[%02zx] '%s':", tlv->tag, tlv->len, tag->name);
+    fprintf(f, "--%2x[%02zx] '%s':", tlv->tag, tlv->len, tag->name);
 
     switch (tag->type) {
         case ASN1_TAG_GENERIC:

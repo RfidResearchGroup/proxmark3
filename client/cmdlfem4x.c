@@ -1225,9 +1225,8 @@ int CmdEM4x05Write(const char *Cmd) {
     if (strlen(Cmd) == 0 || ctmp == 'h') return usage_lf_em4x05_write();
 
     bool usePwd = false;
-    uint8_t addr = 50; // default to invalid address
-    uint32_t data = 0; // default to blank data
-    uint32_t pwd = 1; // default to blank password
+    uint8_t addr;
+    uint32_t data, pwd;
 
     addr = param_get8ex(Cmd, 0, 50, 10);
     data = param_get32ex(Cmd, 1, 0, 16);

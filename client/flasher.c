@@ -22,12 +22,12 @@
 
 void cmd_debug(UsbCommand *c) {
     //  Debug
-    printf("UsbCommand length[len=%zd]\n", sizeof(UsbCommand));
-    printf("  cmd[len=%zd]: %016" PRIx64"\n", sizeof(c->cmd), c->cmd);
-    printf(" arg0[len=%zd]: %016" PRIx64"\n", sizeof(c->arg[0]), c->arg[0]);
-    printf(" arg1[len=%zd]: %016" PRIx64"\n", sizeof(c->arg[1]), c->arg[1]);
-    printf(" arg2[len=%zd]: %016" PRIx64"\n", sizeof(c->arg[2]), c->arg[2]);
-    printf(" data[len=%zd]: ", sizeof(c->d.asBytes));
+    printf("UsbCommand length[len=%zu]\n", sizeof(UsbCommand));
+    printf("  cmd[len=%zu]: %016" PRIx64"\n", sizeof(c->cmd), c->cmd);
+    printf(" arg0[len=%zu]: %016" PRIx64"\n", sizeof(c->arg[0]), c->arg[0]);
+    printf(" arg1[len=%zu]: %016" PRIx64"\n", sizeof(c->arg[1]), c->arg[1]);
+    printf(" arg2[len=%zu]: %016" PRIx64"\n", sizeof(c->arg[2]), c->arg[2]);
+    printf(" data[len=%zu]: ", sizeof(c->d.asBytes));
 
     for (size_t i = 0; i < 16; i++)
         printf("%02x", c->d.asBytes[i]);

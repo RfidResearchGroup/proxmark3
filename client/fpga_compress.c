@@ -98,12 +98,12 @@ int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, bool hardn
 #if __WORDSIZE == 64
                         "Input file too big (> %" PRIu64 " bytes). This is probably not a hardnested bitflip state table.\n"
 #else
-                        "Input file too big (> %lu bytes). This is probably not a hardnested bitflip state table.\n"
+                        "Input file too big (> %li bytes). This is probably not a hardnested bitflip state table.\n"
 #endif
                         , HARDNESTED_TABLE_SIZE);
 
             } else {
-                fprintf(stderr, "Input files too big (total > %lu bytes). These are probably not PM3 FPGA config files.\n", num_infiles * FPGA_CONFIG_SIZE);
+                fprintf(stderr, "Input files too big (total > %li bytes). These are probably not PM3 FPGA config files.\n", num_infiles * FPGA_CONFIG_SIZE);
             }
             for (uint16_t j = 0; j < num_infiles; j++) {
                 fclose(infile[j]);
