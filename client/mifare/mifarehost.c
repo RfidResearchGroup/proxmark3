@@ -15,8 +15,6 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
     uint32_t nt = 0, nr = 0, ar = 0;
     uint64_t par_list = 0, ks_list = 0;
     uint64_t *keylist = NULL, *last_keylist = NULL;
-    uint32_t keycount = 0;
-    int16_t isOK = 0;
 
     UsbCommand c = {CMD_READER_MIFARE, {true, blockno, key_type}};
 
@@ -49,7 +47,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 
             UsbCommand resp;
             if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-                isOK  = resp.arg[0];
+                int16_t isOK  = resp.arg[0];
                 if (isOK < 0)
                     return isOK;
 
@@ -69,7 +67,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
         }
         c.arg[0] = false;
 
-        keycount = nonce2key(uid, nt, nr, ar, par_list, ks_list, &keylist);
+        uint32_t keycount = nonce2key(uid, nt, nr, ar, par_list, ks_list, &keylist);
 
         if (keycount == 0) {
             PrintAndLogEx(FAILED, "key not found (lfsr_common_prefix list is null). Nt=%08x", nt);
@@ -502,14 +500,13 @@ int mfCSetUID(uint8_t *uid, uint8_t *atqa, uint8_t *sak, uint8_t *oldUID, uint8_
 
 int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t params) {
 
-    uint8_t isOK = 0;
     UsbCommand c = {CMD_MIFARE_CSETBLOCK, {params, blockNo, 0}};
     memcpy(c.d.asBytes, data, 16);
     clearCommandBuffer();
     SendCommand(&c);
     UsbCommand resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        isOK  = resp.arg[0] & 0xff;
+        uint8_t isOK  = resp.arg[0] & 0xff;
         if (uid != NULL)
             memcpy(uid, resp.d.asBytes, 4);
         if (!isOK)
@@ -522,13 +519,12 @@ int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t params) {
 }
 
 int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params) {
-    uint8_t isOK = 0;
     UsbCommand c = {CMD_MIFARE_CGETBLOCK, {params, blockNo, 0}};
     clearCommandBuffer();
     SendCommand(&c);
     UsbCommand resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        isOK  = resp.arg[0] & 0xff;
+        uint8_t isOK  = resp.arg[0] & 0xff;
         if (!isOK)
             return 2;
         memcpy(data, resp.d.asBytes, 16);
@@ -555,15 +551,8 @@ static uint8_t traceCurKey = 0;
 
 struct Crypto1State *traceCrypto1 = NULL;
 struct Crypto1State *revstate = NULL;
-uint64_t key = 0;
-uint32_t ks2 = 0;
-uint32_t ks3 = 0;
 
 uint32_t cuid = 0;    // uid part used for crypto1.
-uint32_t nt = 0;      // tag challenge
-uint32_t nr_enc = 0;  // encrypted reader challenge
-uint32_t ar_enc = 0;  // encrypted reader response
-uint32_t at_enc = 0;  // encrypted tag response
 
 int isTraceCardEmpty(void) {
     return ((traceCard[0] == 0) && (traceCard[1] == 0) && (traceCard[2] == 0) && (traceCard[3] == 0));
@@ -605,18 +594,14 @@ int loadTraceCard(uint8_t *tuid, uint8_t uidlen) {
         memset(buf, 0, sizeof(buf));
         if (fgets(buf, sizeof(buf), f) == NULL) {
             PrintAndLogEx(FAILED, "No trace file found or reading error.");
-            if (f) {
-                fclose(f);
-            }
+            fclose(f);
             return 2;
         }
 
         if (strlen(buf) < 32) {
             if (feof(f)) break;
             PrintAndLogEx(FAILED, "File content error. Block data must include 32 HEX symbols");
-            if (f) {
-                fclose(f);
-            }
+            fclose(f);
             return 2;
         }
         for (i = 0; i < 32; i += 2) {
@@ -628,9 +613,7 @@ int loadTraceCard(uint8_t *tuid, uint8_t uidlen) {
 
         blockNum++;
     }
-    if (f) {
-        fclose(f);
-    }
+    fclose(f);
     return 0;
 }
 
@@ -677,14 +660,11 @@ int mfTraceInit(uint8_t *tuid, uint8_t uidlen, uint8_t *atqa, uint8_t sak, bool 
 }
 
 void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len, bool isEncrypted) {
-    uint8_t bt = 0;
-    int i;
-
     if (len != 1) {
-        for (i = 0; i < len; i++)
+        for (int i = 0; i < len; i++)
             data[i] = crypto1_byte(pcs, 0x00, isEncrypted) ^ data[i];
     } else {
-        bt = 0;
+        uint8_t bt = 0;
         bt |= (crypto1_bit(pcs, 0, isEncrypted) ^ BIT(data[0], 0)) << 0;
         bt |= (crypto1_bit(pcs, 0, isEncrypted) ^ BIT(data[0], 1)) << 1;
         bt |= (crypto1_bit(pcs, 0, isEncrypted) ^ BIT(data[0], 2)) << 2;
@@ -694,7 +674,10 @@ void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len, bool i
 }
 
 int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
-
+    uint32_t nt = 0;      // tag challenge
+    uint32_t nr_enc = 0;  // encrypted reader challenge
+    uint32_t ar_enc = 0;  // encrypted reader response
+    uint32_t at_enc = 0;  // encrypted tag response
     if (traceState == TRACE_ERROR)
         return 1;
 
@@ -813,11 +796,13 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
         case TRACE_AUTH_OK:
             if (len == 4) {
                 traceState = TRACE_IDLE;
+                // encrypted tag response
                 at_enc = bytes_to_num(data, 4);
 
                 //  mfkey64 recover key.
-                ks2 = ar_enc ^ prng_successor(nt, 64);
-                ks3 = at_enc ^ prng_successor(nt, 96);
+                uint64_t key = 0;
+                uint32_t ks2 = ar_enc ^ prng_successor(nt, 64);
+                uint32_t ks3 = at_enc ^ prng_successor(nt, 96);
                 revstate = lfsr_recovery64(ks2, ks3);
                 lfsr_rollback_word(revstate, 0, 0);
                 lfsr_rollback_word(revstate, 0, 0);
@@ -865,8 +850,8 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data, int len) {
     PrintAndLogEx(SUCCESS, "\nencrypted data: [%s]", sprint_hex(data, len));
     struct Crypto1State *s;
-    ks2 = ar_enc ^ prng_successor(nt, 64);
-    ks3 = at_enc ^ prng_successor(nt, 96);
+    uint32_t ks2 = ar_enc ^ prng_successor(nt, 64);
+    uint32_t ks3 = at_enc ^ prng_successor(nt, 96);
     s = lfsr_recovery64(ks2, ks3);
     mf_crypto1_decrypt(s, data, len, false);
     PrintAndLogEx(SUCCESS, "decrypted data: [%s]", sprint_hex(data, len));
