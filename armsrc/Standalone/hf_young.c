@@ -158,7 +158,7 @@ void RunMod() {
                             Bytes 5-7 are reserved SAK and ATQA for mifare classic
                     -Use mfCSetBlock(0, block0, oldUID, wantWipe, MAGIC_SINGLE) to write it
             */
-            uint8_t oldBlock0[16] = {0}, newBlock0[16] = {0}, testBlock0[16] = {0};
+            uint8_t oldBlock0[16] = {0}, newBlock0[16], testBlock0[16] = {0};
             // arg0 = Flags, arg1=blockNo
             MifareCGetBlock(params, 0, oldBlock0);
             if (oldBlock0[0] == 0 && oldBlock0[0] == oldBlock0[1]  && oldBlock0[1] == oldBlock0[2] && oldBlock0[2] == oldBlock0[3]) {
