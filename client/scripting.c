@@ -785,8 +785,7 @@ static int l_T55xx_readblock(lua_State *L) {
 // arg 2 = use GB
 static int l_T55xx_detect(lua_State *L) {
     bool useGB = false, usepwd = false, isok;
-    uint32_t password;
-    uint32_t gb;
+    uint32_t gb, password = 0;
     size_t size;
     
     //Check number of arguments
