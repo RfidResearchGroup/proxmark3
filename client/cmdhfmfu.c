@@ -1134,8 +1134,6 @@ int CmdHF14AMfUInfo(const char *Cmd) {
         // hasAuthKey,  if we was called with key, skip test.
         if (!authlim && !hasAuthKey) {
             PrintAndLogEx(NORMAL, "\n--- Known EV1/NTAG passwords.");
-            len = 0;
-
             // test pwd gen A
             num_to_bytes(ul_ev1_pwdgenA(card.uid), 4, key);
             len = ulev1_requestAuthentication(key, pack, sizeof(pack));
