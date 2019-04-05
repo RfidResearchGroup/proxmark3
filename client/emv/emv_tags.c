@@ -490,7 +490,7 @@ static void emv_tag_dump_dol(const struct tlv *tlv, const struct emv_tag *tag, F
         doltag = emv_get_tag(&doltlv);
 
         PRINT_INDENT(level);
-        fprintf(f, "\tTag %4hx len %02zx ('%s')\n", doltlv.tag, doltlv.len, doltag->name);
+        fprintf(f, "\tTag %4x len %02zx ('%s')\n", doltlv.tag, doltlv.len, doltag->name);
     }
 }
 
@@ -773,7 +773,7 @@ bool emv_tag_dump(const struct tlv *tlv, FILE *f, int level) {
     const struct emv_tag *tag = emv_get_tag(tlv);
 
     PRINT_INDENT(level);
-    fprintf(f, "--%2hx[%02zx] '%s':", tlv->tag, tlv->len, tag->name);
+    fprintf(f, "--%2x[%02zx] '%s':", tlv->tag, tlv->len, tag->name);
 
     switch (tag->type) {
         case EMV_TAG_GENERIC:
