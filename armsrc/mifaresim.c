@@ -10,7 +10,7 @@
 // Mifare Classic Card Simulation
 //-----------------------------------------------------------------------------
 
-// Verbose Mode: 
+// Verbose Mode:
 // MF_DBG_NONE          0
 // MF_DBG_ERROR         1
 // MF_DBG_ALL           2
@@ -435,7 +435,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
     uint8_t	mM = 0; //moebius_modifier for collection storage
 
     // Authenticate response - nonce
-    uint32_t nonce = 0; 
+    uint32_t nonce = 0;
     // = prng_successor(selTimer, 32) ;
 
     if ((flags & FLAG_MF_MINI) == FLAG_MF_MINI) {
@@ -783,7 +783,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                     // Example: 6X  [00]
                     cardAUTHSC = receivedCmd_dec[1] / 4;
 
-                    // cardAUTHKEY: 60 => Auth use Key A 
+                    // cardAUTHKEY: 60 => Auth use Key A
                     // cardAUTHKEY: 61 => Auth use Key B
                     cardAUTHKEY = receivedCmd_dec[0] & 0x01;
 
@@ -1004,10 +1004,10 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                 if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("[MFEMUL_AUTH1] Enter case");
 
                 if (receivedCmd_len != 4) {
-                     cardSTATE_TO_IDLE();
-                     LogTrace(Uart.output, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
-                     if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("MFEMUL_AUTH1: receivedCmd_len != 8 (%d) => cardSTATE_TO_IDLE())", receivedCmd_len);
-                     break;
+                    cardSTATE_TO_IDLE();
+                    LogTrace(Uart.output, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
+                    if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("MFEMUL_AUTH1: receivedCmd_len != 8 (%d) => cardSTATE_TO_IDLE())", receivedCmd_len);
+                    break;
                 }
 
                 nr = bytes_to_num(receivedCmd, 4);
