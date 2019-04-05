@@ -166,7 +166,7 @@ usb_dev_handle *findProxmark(int verbose, unsigned int *iface) {
 
 usb_dev_handle *OpenProxmark(int verbose) {
     int ret;
-    usb_dev_handle *handle = NULL;
+    usb_dev_handle *handle;
     unsigned int iface;
 
     handle = findProxmark(verbose, &iface);

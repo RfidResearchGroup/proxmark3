@@ -180,7 +180,7 @@ static int check_segs(flash_file_t *ctx, int can_write_bl) {
 
 // Load an ELF file and prepare it for flashing
 int flash_load(flash_file_t *ctx, const char *name, int can_write_bl) {
-    FILE *fd = NULL;
+    FILE *fd;
     Elf32_Ehdr ehdr;
     Elf32_Phdr *phdrs = NULL;
     int num_phdrs;
