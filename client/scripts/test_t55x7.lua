@@ -265,7 +265,7 @@ local function test(modulation)
             for _ = 1, #data_blocks_cmds do
                 local val = data_blocks_cmds[_]
                 local blockdata, msg = CheckReadBlock(_)
-                if blockdata ~= val then
+                if blockdata:lower() ~= val:lower() then
                     print( ('Test %s == %s Failed'):format(val, blockdata))
                     core.console( format('rem -- block %d  value %s failed', _, val))
                 else
