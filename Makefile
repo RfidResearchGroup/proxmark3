@@ -56,7 +56,7 @@ recovery/%: FORCE
 	$(MAKE) -C recovery $(patsubst recovery/%,%,$@)
 FORCE: # Dummy target to force remake in the subdirectories, even if files exist (this Makefile doesn't know about the prerequisites)
 
-.PHONY: all clean help _test bootrom flash-bootrom os flash-os flash-all recovery client mfkey nounce2key style FORCE
+.PHONY: all clean help _test bootrom flash-bootrom os flash-os flash-all recovery client mfkey nounce2key style checks FORCE
 
 help:
 	@echo "Multi-OS Makefile"
@@ -76,6 +76,8 @@ help:
 	@echo "+ mfkey         - Make tools/mfkey"
 	@echo "+ nounce2key    - Make tools/nounce2key"
 	@echo
+	@echo "+ style         - Apply some automated source code formatting rules"
+	@echo "+ checks        - Detect various encoding issues in source code"
 	@echo "Possible platforms: try \"make PLATFORM=\" for more info, default is PM3RDV4"
 
 client: client/all
@@ -137,6 +139,11 @@ style:
 	    --keep-one-line-blocks --max-instatement-indent=60 \
 	    --style=google --pad-oper --unpad-paren --pad-header \
 	    --align-pointer=name {} \;
+
+# Detecting weird codepages.
+checks:
+	find . \( -name "*.[ch]" -or -name "*.cpp" -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "Makefile" \) \
+	      -exec sh -c "cat {} |recode utf8.. >/dev/null || echo {}" \;
 
 # Dummy target to test for GNU make availability
 _test:
