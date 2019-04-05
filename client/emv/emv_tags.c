@@ -537,7 +537,7 @@ static void emv_tag_dump_numeric(const struct tlv *tlv, const struct emv_tag *ta
 
 static void emv_tag_dump_yymmdd(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
     PRINT_INDENT(level);
-    fprintf(f, "\tDate: 20%02ld.%ld.%ld\n",
+    fprintf(f, "\tDate: 20%02lu.%lu.%lu\n",
             emv_value_numeric(tlv, 0, 2),
             emv_value_numeric(tlv, 2, 4),
             emv_value_numeric(tlv, 4, 6));
@@ -667,9 +667,9 @@ static void emv_tag_dump_cvm_list(const struct tlv *tlv, const struct emv_tag *t
     Y = emv_get_binary(tlv->value + 4);
 
     PRINT_INDENT(level);
-    fprintf(f, "\tX: %d\n", X);
+    fprintf(f, "\tX: %u\n", X);
     PRINT_INDENT(level);
-    fprintf(f, "\tY: %d\n", Y);
+    fprintf(f, "\tY: %u\n", Y);
 
     for (i = 8; i < tlv->len; i += 2) {
         const char *method;
