@@ -160,7 +160,7 @@ int getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t
 int CmdFDXBdemodBI(const char *Cmd) {
 
     int clk = 32;
-    int invert = 1, errCnt = 0, offset = 0, maxErr = 0;
+    int invert = 1, errCnt = 0, offset = 0, maxErr = 100;
     uint8_t bs[MAX_DEMOD_BUF_LEN];
     size_t size = getFromGraphBuf(bs);
 
@@ -236,7 +236,7 @@ int CmdFdxDemod(const char *Cmd) {
 
     //Differential Biphase / di-phase (inverted biphase)
     //get binary from ask wave
-    if (!ASKbiphaseDemod("0 32 1 0", false)) {
+    if (!ASKbiphaseDemod("0 32 1 100", false)) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B ASKbiphaseDemod failed");
         return 0;
     }
