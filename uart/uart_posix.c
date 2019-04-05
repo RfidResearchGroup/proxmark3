@@ -231,7 +231,6 @@ void uart_close(const serial_port sp) {
 }
 
 bool uart_receive(const serial_port sp, uint8_t *pbtRx, size_t pszMaxRxLen, size_t *pszRxLen) {
-    int res;
     int byteCount;
     fd_set rfds;
     struct timeval tv;
@@ -244,7 +243,7 @@ bool uart_receive(const serial_port sp, uint8_t *pbtRx, size_t pszMaxRxLen, size
         FD_ZERO(&rfds);
         FD_SET(((serial_port_unix *)sp)->fd, &rfds);
         tv = timeout;
-        res = select(((serial_port_unix *)sp)->fd + 1, &rfds, NULL, NULL, &tv);
+        int res = select(((serial_port_unix *)sp)->fd + 1, &rfds, NULL, NULL, &tv);
 
         // Read error
         if (res < 0) {
@@ -290,7 +289,6 @@ bool uart_receive(const serial_port sp, uint8_t *pbtRx, size_t pszMaxRxLen, size
 }
 
 bool uart_send(const serial_port sp, const uint8_t *pbtTx, const size_t len) {
-    int32_t res;
     size_t pos = 0;
     fd_set rfds;
     struct timeval tv;
@@ -300,7 +298,7 @@ bool uart_send(const serial_port sp, const uint8_t *pbtTx, const size_t len) {
         FD_ZERO(&rfds);
         FD_SET(((serial_port_unix *)sp)->fd, &rfds);
         tv = timeout;
-        res = select(((serial_port_unix *)sp)->fd + 1, NULL, &rfds, NULL, &tv);
+        int res = select(((serial_port_unix *)sp)->fd + 1, NULL, &rfds, NULL, &tv);
 
         // Write error
         if (res < 0) {
