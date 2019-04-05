@@ -206,7 +206,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
             }
         }
     }
-    printf("[=] UART Setting serial baudrate %i\n", speed);
+    printf("[=] UART Setting serial baudrate %u\n", speed);
     return sp;
 }
 
