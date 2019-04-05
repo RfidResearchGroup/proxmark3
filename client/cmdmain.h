@@ -41,7 +41,7 @@
 #include "cmdsmartcard.h" // rdv40 smart card ISO7816 commands
 #endif
 
-extern int CommandReceived(char *Cmd);
-extern command_t *getTopLevelCommandTable();
+int CommandReceived(char *Cmd);
+command_t *getTopLevelCommandTable();
 
 #endif

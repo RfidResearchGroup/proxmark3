@@ -22,17 +22,17 @@
 #include "protocols.h"  // for T55xx config register definitions
 #include "lfdemod.h"    // parityTest
 
-extern int CmdLFNoralsy(const char *Cmd);
-extern int CmdNoralsyDemod(const char *Cmd);
-extern int CmdNoralsyRead(const char *Cmd);
-extern int CmdNoralsyClone(const char *Cmd);
-extern int CmdNoralsySim(const char *Cmd);
+int CmdLFNoralsy(const char *Cmd);
+int CmdNoralsyDemod(const char *Cmd);
+int CmdNoralsyRead(const char *Cmd);
+int CmdNoralsyClone(const char *Cmd);
+int CmdNoralsySim(const char *Cmd);
 
 int getnoralsyBits(uint32_t id, uint16_t year, uint8_t *bits);
 
-extern int usage_lf_noralsy_clone(void);
-extern int usage_lf_noralsy_sim(void);
-//extern int usage_lf_noralsy_read(void);
-//extern int usage_lf_noralsy_demod(void);
+int usage_lf_noralsy_clone(void);
+int usage_lf_noralsy_sim(void);
+//int usage_lf_noralsy_read(void);
+//int usage_lf_noralsy_demod(void);
 #endif
 

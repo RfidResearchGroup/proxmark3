@@ -29,12 +29,12 @@
 
 int CmdEMV(const char *Cmd);
 
-extern int CmdEMVSelect(const char *cmd);
-extern int CmdEMVSearch(const char *cmd);
-extern int CmdEMVPPSE(const char *cmd);
-extern int CmdEMVExec(const char *cmd);
-extern int CmdEMVGetrng(const char *Cmd);
-extern int CmdEMVList(const char *Cmd);
-extern int CmdEMVRoca(const char *Cmd);
+int CmdEMVSelect(const char *cmd);
+int CmdEMVSearch(const char *cmd);
+int CmdEMVPPSE(const char *cmd);
+int CmdEMVExec(const char *cmd);
+int CmdEMVGetrng(const char *Cmd);
+int CmdEMVList(const char *Cmd);
+int CmdEMVRoca(const char *Cmd);
 
 #endif

@@ -75,7 +75,7 @@ int fileExists(const char *filename);
  * @param datalen the length of the data
  * @return 0 for ok, 1 for failz
  */
-extern int saveFile(const char *preferredName, const char *suffix, const void *data, size_t datalen);
+int saveFile(const char *preferredName, const char *suffix, const void *data, size_t datalen);
 
 /**
  * @brief Utility function to save data to a textfile (EML). This method takes a preferred name, but if that
@@ -89,7 +89,7 @@ extern int saveFile(const char *preferredName, const char *suffix, const void *d
  * @param blocksize the length of one row
  * @return 0 for ok, 1 for failz
 */
-extern int saveFileEML(const char *preferredName, const char *suffix, uint8_t *data, size_t datalen, size_t blocksize);
+int saveFileEML(const char *preferredName, const char *suffix, uint8_t *data, size_t datalen, size_t blocksize);
 
 /** STUB
  * @brief Utility function to save JSON data to a file. This method takes a preferred name, but if that
@@ -103,7 +103,7 @@ extern int saveFileEML(const char *preferredName, const char *suffix, uint8_t *d
  * @param datalen the length of the data
  * @return 0 for ok, 1 for failz
  */
-extern int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType ftype, uint8_t *data, size_t datalen);
+int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType ftype, uint8_t *data, size_t datalen);
 
 /** STUB
  * @brief Utility function to load data from a binary file. This method takes a preferred name.
@@ -116,7 +116,7 @@ extern int saveFileJSON(const char *preferredName, const char *suffix, JSONFileT
  * @param datalen the number of bytes loaded from file
  * @return 0 for ok, 1 for failz
 */
-extern int loadFile(const char *preferredName, const char *suffix, void *data, size_t maxdatalen, size_t *datalen);
+int loadFile(const char *preferredName, const char *suffix, void *data, size_t maxdatalen, size_t *datalen);
 
 /**
  * @brief  Utility function to load data from a textfile (EML). This method takes a preferred name.
@@ -128,7 +128,7 @@ extern int loadFile(const char *preferredName, const char *suffix, void *data, s
  * @param datalen the number of bytes loaded from file
  * @return 0 for ok, 1 for failz
 */
-extern int loadFileEML(const char *preferredName, const char *suffix, void *data, size_t *datalen);
+int loadFileEML(const char *preferredName, const char *suffix, void *data, size_t *datalen);
 
 /**
  * @brief  Utility function to load data from a JSON textfile. This method takes a preferred name.
@@ -141,7 +141,7 @@ extern int loadFileEML(const char *preferredName, const char *suffix, void *data
  * @param datalen the number of bytes loaded from file
  * @return 0 for ok, 1 for failz
 */
-extern int loadFileJSON(const char *preferredName, const char *suffix, void *data, size_t maxdatalen, size_t *datalen);
+int loadFileJSON(const char *preferredName, const char *suffix, void *data, size_t maxdatalen, size_t *datalen);
 
 
 /**
@@ -156,7 +156,7 @@ extern int loadFileJSON(const char *preferredName, const char *suffix, void *dat
  * @param keylen  the number of bytes a key per row is
  * @return 0 for ok, 1 for failz
 */
-extern int loadFileDICTIONARY(const char *preferredName, const char *suffix, void *data, size_t *datalen, uint8_t keylen, uint16_t *keycnt);
+int loadFileDICTIONARY(const char *preferredName, const char *suffix, void *data, size_t *datalen, uint8_t keylen, uint16_t *keycnt);
 
 #define PrintAndLogDevice(level, format, args...)  PrintAndLogEx(level, format , ## args)
 #else

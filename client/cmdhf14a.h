@@ -39,23 +39,23 @@ typedef struct {
     char *desc;
 } manufactureName;
 
-extern int CmdHF14A(const char *Cmd);
-extern int CmdHF14AList(const char *Cmd);
-extern int CmdHF14AReader(const char *Cmd);
-extern int CmdHF14AInfo(const char *Cmd);
-extern int CmdHF14ASim(const char *Cmd);
-extern int CmdHF14ASniff(const char *Cmd);
-extern int CmdHF14ACmdRaw(const char *Cmd);
-extern int CmdHF14ACUIDs(const char *Cmd);
-extern int CmdHF14AAntiFuzz(const char *Cmd);
+int CmdHF14A(const char *Cmd);
+int CmdHF14AList(const char *Cmd);
+int CmdHF14AReader(const char *Cmd);
+int CmdHF14AInfo(const char *Cmd);
+int CmdHF14ASim(const char *Cmd);
+int CmdHF14ASniff(const char *Cmd);
+int CmdHF14ACmdRaw(const char *Cmd);
+int CmdHF14ACUIDs(const char *Cmd);
+int CmdHF14AAntiFuzz(const char *Cmd);
 
-extern char *getTagInfo(uint8_t uid);
-extern int Hf14443_4aGetCardData(iso14a_card_select_t *card);
-extern int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);
-extern int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);
+char *getTagInfo(uint8_t uid);
+int Hf14443_4aGetCardData(iso14a_card_select_t *card);
+int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);
+int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);
 
-extern int usage_hf_14a_sim(void);
-extern int usage_hf_14a_sniff(void);
-extern int usage_hf_14a_raw(void);
-extern int usage_hf_14a_antifuzz(void);
+int usage_hf_14a_sim(void);
+int usage_hf_14a_sniff(void);
+int usage_hf_14a_raw(void);
+int usage_hf_14a_antifuzz(void);
 #endif

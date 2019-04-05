@@ -21,10 +21,10 @@
 #include "cmdlf.h"
 #include "lfdemod.h"    // preamble test
 
-extern int CmdLFPac(const char *Cmd);
-extern int CmdPacRead(const char *Cmd);
-extern int CmdPacDemod(const char *Cmd);
+int CmdLFPac(const char *Cmd);
+int CmdPacRead(const char *Cmd);
+int CmdPacDemod(const char *Cmd);
 
-extern int detectPac(uint8_t *dest, size_t *size);
+int detectPac(uint8_t *dest, size_t *size);
 #endif
 

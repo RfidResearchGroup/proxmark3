@@ -20,10 +20,10 @@ typedef struct {
     const char *Description;
 } madAIDDescr;
 
-extern int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2);
-extern int MADDecode(uint8_t *sector0, uint8_t *sector10, uint16_t *mad, size_t *madlen);
-extern int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2);
-extern int MAD2DecodeAndPrint(uint8_t *sector, bool verbose);
+int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2);
+int MADDecode(uint8_t *sector0, uint8_t *sector10, uint16_t *mad, size_t *madlen);
+int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2);
+int MAD2DecodeAndPrint(uint8_t *sector, bool verbose);
 
 
 #endif // _MAD_H_

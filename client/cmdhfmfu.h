@@ -25,40 +25,40 @@ typedef struct {
     uint8_t data[1024];
 } mfu_dump_t;
 
-extern int CmdHF14AMfUWrBl(const char *Cmd);
-extern int CmdHF14AMfURdBl(const char *Cmd);
+int CmdHF14AMfUWrBl(const char *Cmd);
+int CmdHF14AMfURdBl(const char *Cmd);
 
 //Crypto Cards
-extern int CmdHF14AMfucAuth(const char *Cmd);
-extern int CmdHF14AMfucSetPwd(const char *Cmd);
-extern int CmdHF14AMfucSetUid(const char *Cmd);
-extern int CmdHF14AMfuGenDiverseKeys(const char *Cmd);
-extern int CmdHF14AMfuPwdGen(const char *Cmd);
+int CmdHF14AMfucAuth(const char *Cmd);
+int CmdHF14AMfucSetPwd(const char *Cmd);
+int CmdHF14AMfucSetUid(const char *Cmd);
+int CmdHF14AMfuGenDiverseKeys(const char *Cmd);
+int CmdHF14AMfuPwdGen(const char *Cmd);
 
 //general stuff
-extern int CmdHF14AMfUDump(const char *Cmd);
-extern int CmdHF14AMfURestore(const char *Cmd);
-extern int CmdHF14AMfUInfo(const char *Cmd);
-extern int CmdHF14AMfUeLoad(const char *Cmd);
-extern int CmdHF14AMfUSim(const char *Cmd);
+int CmdHF14AMfUDump(const char *Cmd);
+int CmdHF14AMfURestore(const char *Cmd);
+int CmdHF14AMfUInfo(const char *Cmd);
+int CmdHF14AMfUeLoad(const char *Cmd);
+int CmdHF14AMfUSim(const char *Cmd);
 
-extern uint32_t GetHF14AMfU_Type(void);
-extern int ul_print_type(uint32_t tagtype, uint8_t spacer);
+uint32_t GetHF14AMfU_Type(void);
+int ul_print_type(uint32_t tagtype, uint8_t spacer);
 
 void printMFUdump(mfu_dump_t *card);
 void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage);
 
-extern int usage_hf_mfu_info(void);
-extern int usage_hf_mfu_dump(void);
-extern int usage_hf_mfu_rdbl(void);
-extern int usage_hf_mfu_wrbl(void);
-extern int usage_hf_mfu_eload(void);
-extern int usage_hf_mfu_sim(void);
-extern int usage_hf_mfu_ucauth(void);
-extern int usage_hf_mfu_ucsetpwd(void);
-extern int usage_hf_mfu_ucsetuid(void);
-extern int usage_hf_mfu_gendiverse(void);
-extern int usage_hf_mfu_pwdgen(void);
+int usage_hf_mfu_info(void);
+int usage_hf_mfu_dump(void);
+int usage_hf_mfu_rdbl(void);
+int usage_hf_mfu_wrbl(void);
+int usage_hf_mfu_eload(void);
+int usage_hf_mfu_sim(void);
+int usage_hf_mfu_ucauth(void);
+int usage_hf_mfu_ucsetpwd(void);
+int usage_hf_mfu_ucsetuid(void);
+int usage_hf_mfu_gendiverse(void);
+int usage_hf_mfu_pwdgen(void);
 
 int CmdHFMFUltra(const char *Cmd);
 

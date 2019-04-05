@@ -26,21 +26,21 @@
 #include "cmdhf.h"      // list cmd
 #include "mifare.h"     // felica_card_select_t struct
 
-extern int CmdHFFelica(const char *Cmd);
-extern int CmdHFFelicaList(const char *Cmd);
-extern int CmdHFFelicaReader(const char *Cmd);
-extern int CmdHFFelicaSim(const char *Cmd);
-extern int CmdHFFelicaSniff(const char *Cmd);
-extern int CmdHFFelicaCmdRaw(const char *Cmd);
+int CmdHFFelica(const char *Cmd);
+int CmdHFFelicaList(const char *Cmd);
+int CmdHFFelicaReader(const char *Cmd);
+int CmdHFFelicaSim(const char *Cmd);
+int CmdHFFelicaSniff(const char *Cmd);
+int CmdHFFelicaCmdRaw(const char *Cmd);
 
-extern int usage_hf_felica_sim(void);
-extern int usage_hf_felica_sniff(void);
-extern int usage_hf_fFelica_raw(void);
+int usage_hf_felica_sim(void);
+int usage_hf_felica_sniff(void);
+int usage_hf_fFelica_raw(void);
 
 void waitCmdFelica(uint8_t iSelect);
 
 //temp
-extern int CmdHFFelicaSimLite(const char *Cmd);
-extern int CmdHFFelicaDumpLite(const char *Cmd);
+int CmdHFFelicaSimLite(const char *Cmd);
+int CmdHFFelicaDumpLite(const char *Cmd);
 
 #endif

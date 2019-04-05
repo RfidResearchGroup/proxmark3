@@ -15,8 +15,8 @@
 #include <stdlib.h>
 
 #ifdef _WIN32
-extern int scandir(const char *dir, struct dirent ***namelist, int (*select)(const struct dirent *), int (*compar)(const struct dirent **, const struct dirent **));
-extern int alphasort(const struct dirent **a, const struct dirent **b);
+int scandir(const char *dir, struct dirent ***namelist, int (*select)(const struct dirent *), int (*compar)(const struct dirent **, const struct dirent **));
+int alphasort(const struct dirent **a, const struct dirent **b);
 #endif // _WIN32
 
 #endif // SCANDIR_H__

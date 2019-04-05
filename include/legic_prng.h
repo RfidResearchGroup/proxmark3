@@ -10,9 +10,9 @@
 #define __LEGIC_PRNG_H
 
 #include <stdint.h>
-extern void legic_prng_init(uint8_t iv);
-extern void legic_prng_forward(int count);
-extern uint8_t legic_prng_get_bit();
-extern uint32_t legic_prng_get_bits(uint8_t len);
+void legic_prng_init(uint8_t iv);
+void legic_prng_forward(int count);
+uint8_t legic_prng_get_bit();
+uint32_t legic_prng_get_bits(uint8_t len);
 #endif
 

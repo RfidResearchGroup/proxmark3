@@ -65,8 +65,8 @@ void ListenReaderField(int limit);
 extern int ToSendMax;
 extern uint8_t ToSend[];
 
-extern void StandAloneMode(void);
-extern void printStandAloneModes(void);
+void StandAloneMode(void);
+void printStandAloneModes(void);
 
 /// lfops.h
 extern uint8_t decimation;
@@ -230,10 +230,10 @@ uint8_t cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void
 void HfSniff(int, int);
 
 //felica.c
-extern void felica_sendraw(UsbCommand *c);
-extern void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip);
-extern void felica_sim_lite(uint64_t uid);
-extern void felica_dump_lite_s();
+void felica_sendraw(UsbCommand *c);
+void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip);
+void felica_sim_lite(uint64_t uid);
+void felica_dump_lite_s();
 
 
 #ifdef __cplusplus

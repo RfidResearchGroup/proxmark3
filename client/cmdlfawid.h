@@ -24,17 +24,17 @@
 #include "util_posix.h"
 
 
-extern int CmdLFAWID(const char *Cmd);
-extern int CmdAWIDDemod(const char *Cmd);
-extern int CmdAWIDRead(const char *Cmd);
-extern int CmdAWIDSim(const char *Cmd);
-extern int CmdAWIDClone(const char *Cmd);
-extern int CmdAWIDBrute(const char *Cmd);
-extern int getAWIDBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *bits);
+int CmdLFAWID(const char *Cmd);
+int CmdAWIDDemod(const char *Cmd);
+int CmdAWIDRead(const char *Cmd);
+int CmdAWIDSim(const char *Cmd);
+int CmdAWIDClone(const char *Cmd);
+int CmdAWIDBrute(const char *Cmd);
+int getAWIDBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *bits);
 
-extern int usage_lf_awid_read(void);
-extern int usage_lf_awid_sim(void);
-extern int usage_lf_awid_clone(void);
-extern int usage_lf_awid_brute(void);
+int usage_lf_awid_read(void);
+int usage_lf_awid_sim(void);
+int usage_lf_awid_clone(void);
+int usage_lf_awid_brute(void);
 
 #endif

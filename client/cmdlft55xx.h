@@ -137,17 +137,17 @@ typedef struct {
 t55xx_conf_block_t Get_t55xx_Config(void);
 void Set_t55xx_Config(t55xx_conf_block_t conf);
 
-extern int CmdLFT55XX(const char *Cmd);
-extern int CmdT55xxChk(const char *Cmd);
-extern int CmdT55xxBruteForce(const char *Cmd);
-extern int CmdT55xxSetConfig(const char *Cmd);
-extern int CmdT55xxReadBlock(const char *Cmd);
-extern int CmdT55xxWriteBlock(const char *Cmd);
-extern int CmdT55xxReadTrace(const char *Cmd);
-extern int CmdT55xxInfo(const char *Cmd);
-extern int CmdT55xxDetect(const char *Cmd);
-extern int CmdResetRead(const char *Cmd);
-extern int CmdT55xxWipe(const char *Cmd);
+int CmdLFT55XX(const char *Cmd);
+int CmdT55xxChk(const char *Cmd);
+int CmdT55xxBruteForce(const char *Cmd);
+int CmdT55xxSetConfig(const char *Cmd);
+int CmdT55xxReadBlock(const char *Cmd);
+int CmdT55xxWriteBlock(const char *Cmd);
+int CmdT55xxReadTrace(const char *Cmd);
+int CmdT55xxInfo(const char *Cmd);
+int CmdT55xxDetect(const char *Cmd);
+int CmdResetRead(const char *Cmd);
+int CmdT55xxWipe(const char *Cmd);
 
 char *GetPskCfStr(uint32_t id, bool q5);
 char *GetBitRateStr(uint32_t id, bool xmode);
@@ -160,16 +160,16 @@ void printT5xxHeader(uint8_t page);
 void printT55xxBlock(const char *demodStr);
 int printConfiguration(t55xx_conf_block_t b);
 
-extern int T55xxReadBlock(uint8_t block, bool page1, bool usepwd, bool override, uint32_t password);
+int T55xxReadBlock(uint8_t block, bool page1, bool usepwd, bool override, uint32_t password);
 bool GetT55xxBlockData(uint32_t *blockdata);
 bool DecodeT55xxBlock(void);
-extern bool tryDetectModulation(void);
+bool tryDetectModulation(void);
 bool testKnownConfigBlock(uint32_t block0);
 
-extern bool tryDetectP1(bool getData);
+bool tryDetectP1(bool getData);
 bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5);
 int special(const char *Cmd);
-extern bool AquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password);
+bool AquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password);
 int tryOnePassword(uint32_t password);
 
 void printT55x7Trace(t55x7_tracedata_t data, uint8_t repeat);

@@ -99,7 +99,7 @@
 typedef BMP_T bmp_t;
 
 extern int bmpbit, bmpsub;
-extern void setbmp(void);
+void setbmp(void);
 
 /* poly.c */
 #define P_REFIN      1
@@ -139,41 +139,41 @@ typedef struct {
     /* left-justified in each word */
 } poly_t;
 
-extern poly_t filtop(FILE *input, unsigned long length, int flags, int bperhx);
-extern poly_t strtop(const char *string, int flags, int bperhx);
-extern char *ptostr(const poly_t poly, int flags, int bperhx);
-extern char *pxsubs(const poly_t poly, int flags, int bperhx, unsigned long start, unsigned long end);
-extern poly_t pclone(const poly_t poly);
-extern void pcpy(poly_t *dest, const poly_t src);
-extern void pcanon(poly_t *poly);
-extern void pnorm(poly_t *poly);
-extern void psnorm(poly_t *poly);
-extern void pchop(poly_t *poly);
-extern void pkchop(poly_t *poly);
-extern unsigned long plen(const poly_t poly);
-extern int pcmp(const poly_t *a, const poly_t *b);
-extern int psncmp(const poly_t *a, const poly_t *b);
-extern int ptst(const poly_t poly);
-extern unsigned long pfirst(const poly_t poly);
-extern unsigned long plast(const poly_t poly);
-extern poly_t psubs(const poly_t src, unsigned long head, unsigned long start, unsigned long end, unsigned long tail);
-extern void pright(poly_t *poly, unsigned long length);
-extern void pshift(poly_t *dest, const poly_t src, unsigned long head, unsigned long start, unsigned long end, unsigned long tail);
-extern void ppaste(poly_t *dest, const poly_t src, unsigned long skip, unsigned long seek, unsigned long end, unsigned long fulllength);
-extern void pdiff(poly_t *dest, const poly_t src, unsigned long ofs);
-extern void psum(poly_t *dest, const poly_t src, unsigned long ofs);
-extern void prev(poly_t *poly);
-extern void prevch(poly_t *poly, int bperhx);
-extern void prcp(poly_t *poly);
-extern void pinv(poly_t *poly);
-extern poly_t pmod(const poly_t dividend, const poly_t divisor);
-extern poly_t pcrc(const poly_t message, const poly_t divisor, const poly_t init, const poly_t xorout, int flags);
-extern int piter(poly_t *poly);
-extern void palloc(poly_t *poly, unsigned long length);
-extern void pfree(poly_t *poly);
-extern void praloc(poly_t *poly, unsigned long length);
-extern int pmpar(const poly_t poly, const poly_t mask);
-extern int pident(const poly_t a, const poly_t b);
+poly_t filtop(FILE *input, unsigned long length, int flags, int bperhx);
+poly_t strtop(const char *string, int flags, int bperhx);
+char *ptostr(const poly_t poly, int flags, int bperhx);
+char *pxsubs(const poly_t poly, int flags, int bperhx, unsigned long start, unsigned long end);
+poly_t pclone(const poly_t poly);
+void pcpy(poly_t *dest, const poly_t src);
+void pcanon(poly_t *poly);
+void pnorm(poly_t *poly);
+void psnorm(poly_t *poly);
+void pchop(poly_t *poly);
+void pkchop(poly_t *poly);
+unsigned long plen(const poly_t poly);
+int pcmp(const poly_t *a, const poly_t *b);
+int psncmp(const poly_t *a, const poly_t *b);
+int ptst(const poly_t poly);
+unsigned long pfirst(const poly_t poly);
+unsigned long plast(const poly_t poly);
+poly_t psubs(const poly_t src, unsigned long head, unsigned long start, unsigned long end, unsigned long tail);
+void pright(poly_t *poly, unsigned long length);
+void pshift(poly_t *dest, const poly_t src, unsigned long head, unsigned long start, unsigned long end, unsigned long tail);
+void ppaste(poly_t *dest, const poly_t src, unsigned long skip, unsigned long seek, unsigned long end, unsigned long fulllength);
+void pdiff(poly_t *dest, const poly_t src, unsigned long ofs);
+void psum(poly_t *dest, const poly_t src, unsigned long ofs);
+void prev(poly_t *poly);
+void prevch(poly_t *poly, int bperhx);
+void prcp(poly_t *poly);
+void pinv(poly_t *poly);
+poly_t pmod(const poly_t dividend, const poly_t divisor);
+poly_t pcrc(const poly_t message, const poly_t divisor, const poly_t init, const poly_t xorout, int flags);
+int piter(poly_t *poly);
+void palloc(poly_t *poly, unsigned long length);
+void pfree(poly_t *poly);
+void praloc(poly_t *poly, unsigned long length);
+int pmpar(const poly_t poly, const poly_t mask);
+int pident(const poly_t a, const poly_t b);
 
 /* model.c */
 
@@ -190,23 +190,23 @@ typedef struct {
     const char *name;   /* optional canonical name of the model */
 } model_t;
 
-extern void mcpy(model_t *dest, const model_t *src);
-extern void mfree(model_t *model);
-extern int mcmp(const model_t *a, const model_t *b);
-extern char *mtostr(const model_t *model);
-extern void mcanon(model_t *model);
-extern void mcheck(model_t *model);
-extern void mrev(model_t *model);
-extern void mnovel(model_t *model);
+void mcpy(model_t *dest, const model_t *src);
+void mfree(model_t *model);
+int mcmp(const model_t *a, const model_t *b);
+char *mtostr(const model_t *model);
+void mcanon(model_t *model);
+void mcheck(model_t *model);
+void mrev(model_t *model);
+void mnovel(model_t *model);
 
 /* preset.c */
 #define M_OVERWR     1
 
-extern int mbynam(model_t *dest, const char *key);
-extern void mbynum(model_t *dest, int num);
-extern int mcount(void);
-extern char *mnames(void);
-extern void mmatch(model_t *model, int flags);
+int mbynam(model_t *dest, const char *key);
+void mbynum(model_t *dest, int num);
+int mcount(void);
+char *mnames(void);
+void mmatch(model_t *model, int flags);
 
 /* reveng.c */
 #define R_HAVEP      1
@@ -218,7 +218,7 @@ extern void mmatch(model_t *model, int flags);
 
 #define R_SPMASK 0x7FFFFFFUL
 
-extern model_t *reveng(const model_t *guess, const poly_t qpoly, int rflags, int args, const poly_t *argpolys);
+model_t *reveng(const model_t *guess, const poly_t qpoly, int rflags, int args, const poly_t *argpolys);
 
 /* cli.c */
 #define C_INFILE  1
@@ -228,9 +228,9 @@ extern model_t *reveng(const model_t *guess, const poly_t qpoly, int rflags, int
 
 #define BUFFER 32768
 
-extern int reveng_main(int argc, char *argv[]);
-extern void ufound(const model_t *model);
-extern void uerror(const char *msg);
-extern void uprog(const poly_t gpoly, int flags, unsigned long seq);
+int reveng_main(int argc, char *argv[]);
+void ufound(const model_t *model);
+void uerror(const char *msg);
+void uprog(const poly_t gpoly, int flags, unsigned long seq);
 
 #endif /* REVENG_H */

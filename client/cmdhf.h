@@ -33,11 +33,11 @@
 #include "cmdhffido.h"      // FIDO authenticators
 #include "cmdtrace.h"       // trace list
 
-extern int CmdHF(const char *Cmd);
-extern int CmdHFTune(const char *Cmd);
-extern int CmdHFSearch(const char *Cmd);
-extern int CmdHFSniff(const char *Cmd);
+int CmdHF(const char *Cmd);
+int CmdHFTune(const char *Cmd);
+int CmdHFSearch(const char *Cmd);
+int CmdHFSniff(const char *Cmd);
 
-extern int usage_hf_search();
-extern int usage_hf_sniff();
+int usage_hf_search();
+int usage_hf_sniff();
 #endif

@@ -84,9 +84,9 @@
 
 size_t nbytes(size_t nbits);
 
-extern uint32_t reflect(uint32_t v, int b); // used in crc.c ...
-extern uint8_t reflect8(uint8_t b);         // dedicated 8bit reversal
-extern uint16_t reflect16(uint16_t b);      // dedicated 16bit reversal
+uint32_t reflect(uint32_t v, int b); // used in crc.c ...
+uint8_t reflect8(uint8_t b);         // dedicated 8bit reversal
+uint16_t reflect16(uint16_t b);      // dedicated 16bit reversal
 
 void num_to_bytes(uint64_t n, size_t len, uint8_t *dest);
 uint64_t bytes_to_num(uint8_t *src, size_t len);
