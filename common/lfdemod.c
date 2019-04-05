@@ -1614,25 +1614,19 @@ int askdemod(uint8_t *bits, size_t *size, int *clk, int *invert, int maxErr, uin
 // by marshmellow - demodulate NRZ wave - requires a read with strong signal
 // peaks invert bit (high=1 low=0) each clock cycle = 1 bit determined by last peak
 int nrzRawDemod(uint8_t *dest, size_t *size, int *clk, int *invert, int *startIdx) {
-    if (signalprop.isnoise) return -1;
 
+    if (signalprop.isnoise) {
+        if (g_debugMode == 2) prnt("DEBUG nrzRawDemod: just noise detected - quitting");
+        return -1;
+    }
+    
     size_t clkStartIdx = 0;
     *clk = DetectNRZClock(dest, *size, *clk, &clkStartIdx);
     if (*clk == 0) return -2;
 
-    size_t i, gLen = 4096;
-    if (gLen > *size)
-        gLen = *size - 20;
-
-
-    // just noise - no super good detection. good enough
-    if (signalprop.isnoise) {
-        if (g_debugMode == 2) prnt("DEBUG nrzRawDemod: just noise detected - quitting");
-        return -3;
-    }
-
+    size_t i;
     int high, low;
-    //getHiLo(dest, gLen, &high, &low, 75, 75);
+
     getHiLo(&high, &low, 75, 75);
     getHiLo(&high, &low, 75, 75);
 
@@ -1675,7 +1669,7 @@ size_t fsk_wave_demod(uint8_t *dest, size_t size, uint8_t fchigh, uint8_t fclow,
     size_t LastSample = 0;
     size_t currSample = 0;
     size_t last_transition = 0;
-    size_t idx = 1;
+    size_t idx;
     size_t numBits = 0;
 
     //find start of modulating data in trace
@@ -1915,7 +1909,14 @@ int pskRawDemod_ext(uint8_t *dest, size_t *size, int *clock, int *invert, int *s
                 waveLenCnt = waveEnd - waveStart;
                 if (waveLenCnt > fc) {
                     //this wave is a phase shift
-                    //prnt("DEBUG: phase shift at: %d, len: %d, nextClk: %d, i: %d, fc: %d",waveStart,waveLenCnt,lastClkBit+*clock-tol,i+1,fc);
+                    /*
+                   prnt("DEBUG: phase shift at: %d, len: %d, nextClk: %d, i: %d, fc: %d"
+                        , waveStart
+                        , waveLenCnt
+                        , lastClkBit + *clock - tol
+                        , i + 1
+                        , fc);
+                      */  
                     if (i + 1 >= lastClkBit + *clock - tol) { //should be a clock bit
                         curPhase ^= 1;
                         dest[numBits++] = curPhase;

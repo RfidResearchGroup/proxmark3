@@ -1292,13 +1292,8 @@ static void printT5x7KnownBlock0(uint32_t b0) {
             snprintf(s + strlen(s), sizeof(s) - strlen(s), "T55x7 Raw ");
             break;
         case T55X7_EM_UNIQUE_CONFIG_BLOCK:
-            snprintf(s + strlen(s), sizeof(s) - strlen(s), "EM Unique ");
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "EM unique, Paxton ");
             break;
-        /*
-        case T55X7_EM_PAXTON_CONFIG_BLOCK:
-            snprintf(s + strlen(s), sizeof(s)-strlen(s), "EM Paxton ");
-            break;
-        */
         case T55X7_FDXB_CONFIG_BLOCK:
             snprintf(s + strlen(s), sizeof(s) - strlen(s), "FDXB ");
             break;
@@ -1339,10 +1334,8 @@ static void printT5x7KnownBlock0(uint32_t b0) {
             break;
     }
 
-    if (strlen(s) > 0) {
-        PrintAndLogEx(NORMAL, " Known T55x7 Config block found : " _YELLOW_("%s"), s);
-        PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
-    }
+    if (strlen(s) > 0)
+        PrintAndLogEx(NORMAL, "\n Config block match        : " _YELLOW_("%s"), s);
 }
 
 int CmdT55xxInfo(const char *Cmd) {
@@ -1476,9 +1469,12 @@ int CmdT55xxInfo(const char *Cmd) {
         PrintAndLogEx(NORMAL, "     Block 0  : 0x%08X", block0);
     else
         PrintAndLogEx(NORMAL, "     Block 0  : 0x%08X  %s", block0, sprint_bin(DemodBuffer + config.offset, 32));
-    PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
+
     if (((!gotdata) && (!config.Q5)) || (gotdata && (!dataasq5)))
         printT5x7KnownBlock0(block0);
+    
+    PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
+
     return 0;
 }
 

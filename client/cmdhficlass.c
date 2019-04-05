@@ -405,7 +405,7 @@ int CmdHFiClassSim(const char *Cmd) {
                 break;
 
             size_t datalen = NUM_CSNS * 24;
-            void *dump = calloc(datalen, sizeof(uint8_t));
+            uint8_t *dump = calloc(datalen, sizeof(uint8_t));
             if (!dump) {
                 PrintAndLogEx(WARNING, "Failed to allocate memory");
                 return 2;
@@ -458,7 +458,7 @@ int CmdHFiClassSim(const char *Cmd) {
                 break;
 
             size_t datalen = NUM_CSNS * 24;
-            void *dump = calloc(datalen, sizeof(uint8_t));
+            uint8_t *dump = calloc(datalen, sizeof(uint8_t));
             if (!dump) {
                 PrintAndLogEx(WARNING, "Failed to allocate memory");
                 return 2;
@@ -2193,7 +2193,6 @@ int CmdHFiClassLookUp(const char *Cmd) {
                     errors = true;
                 }
                 cmdp += 2;
-                break;
                 break;
             case 'e':
                 use_elite = true;

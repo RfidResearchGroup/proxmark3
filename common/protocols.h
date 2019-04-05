@@ -167,7 +167,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MIFARE_EV1_SETMODE          0x43
 
 #define MIFARE_ULC_WRITE            0xA2
-//#define MIFARE_ULC__COMP_WRITE      0xA0
+#define MIFARE_ULC_COMP_WRITE      0xA0
 #define MIFARE_ULC_AUTH_1           0x1A
 #define MIFARE_ULC_AUTH_2           0xAF
 

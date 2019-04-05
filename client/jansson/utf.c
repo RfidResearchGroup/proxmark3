@@ -122,7 +122,7 @@ const char *utf8_iterate(const char *buffer, size_t bufsize, int32_t *codepoint)
         return buffer;
 
     count = utf8_check_first(buffer[0]);
-    if (count <= 0)
+    if (count == 0)
         return NULL;
 
     if (count == 1)
