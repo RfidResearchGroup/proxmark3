@@ -521,12 +521,12 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
 
         int foo = getClosestClock(minClk);
         if (foo > 0) {
-            for (uint8_t i = 0; i < 10; i++) {
-                if (tmpclk[i][0] == foo) {
-                    tmpclk[i][1]++;
+            for (uint8_t j = 0; j < 10; j++) {
+                if (tmpclk[j][0] == foo) {
+                    tmpclk[j][1]++;
 
-                    if (tmpclk[i][2] == 0) {
-                        tmpclk[i][2] = shortestWaveIdx;
+                    if (tmpclk[j][2] == 0) {
+                        tmpclk[j][2] = shortestWaveIdx;
                     }
                     break;
                 }
@@ -536,18 +536,18 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
 
     // find the clock with most hits and it the first index it was encountered.
     int max = 0;
-    for (uint8_t i = 0; i < 10; i++) {
+    for (uint8_t j = 0; j < 10; j++) {
         if (g_debugMode == 2) {
             prnt("DEBUG, ASK,  clocks %u | hits %u | idx %u"
-                 , tmpclk[i][0]
-                 , tmpclk[i][1]
-                 , tmpclk[i][2]
+                 , tmpclk[j][0]
+                 , tmpclk[j][1]
+                 , tmpclk[j][2]
                 );
         }
-        if (max < tmpclk[i][1]) {
-            *clock = tmpclk[i][0];
-            shortestWaveIdx = tmpclk[i][2];
-            max = tmpclk[i][1];
+        if (max < tmpclk[j][1]) {
+            *clock = tmpclk[j][0];
+            shortestWaveIdx = tmpclk[j][2];
+            max = tmpclk[j][1];
         }
     }
 

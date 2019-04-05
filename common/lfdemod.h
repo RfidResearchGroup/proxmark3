@@ -79,7 +79,7 @@ extern size_t   removeParity(uint8_t *bits, size_t startIdx, uint8_t pLen, uint8
 
 //tag specific
 extern int detectAWID(uint8_t *dest, size_t *size, int *waveStartIdx);
-extern int Em410xDecode(uint8_t *dest, size_t *size, size_t *startIdx, uint32_t *hi, uint64_t *lo);
+extern int Em410xDecode(uint8_t *bits, size_t *size, size_t *start_idx, uint32_t *hi, uint64_t *lo);
 extern int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo, int *waveStartIdx);
 extern int detectIdteck(uint8_t *dest, size_t *size);
 extern int detectIOProx(uint8_t *dest, size_t *size, int *waveStartIdx);
