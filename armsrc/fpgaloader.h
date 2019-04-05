@@ -37,7 +37,7 @@ int FpgaGetCurrent(void);
 void SetAdcMuxFor(uint32_t whichGpio);
 
 // extern and generel turn off the antenna method
-extern void switch_off(void);
+void switch_off(void);
 
 // definitions for multiple FPGA config files support
 #define FPGA_BITSTREAM_LF 1

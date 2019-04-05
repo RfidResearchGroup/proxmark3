@@ -51,7 +51,7 @@
 //to allow debug print calls when used not on dev
 
 //void dummy(char *fmt, ...){}
-extern void Dbprintf(const char *fmt, ...);
+void Dbprintf(const char *fmt, ...);
 
 #ifndef ON_DEVICE
 #include "ui.h"

@@ -97,45 +97,45 @@ typedef struct {
 # define	CheckCrc14A(data, len)	check_crc(CRC_14443_A, (data), (len))
 #endif 
 
-extern void GetParity(const uint8_t *pbtCmd, uint16_t len, uint8_t *par);
+void GetParity(const uint8_t *pbtCmd, uint16_t len, uint8_t *par);
 
-extern tDemod *GetDemod(void);
-extern void DemodReset(void);
-extern void DemodInit(uint8_t *data, uint8_t *parity);
-extern tUart *GetUart(void);
-extern void UartReset(void);
-extern void UartInit(uint8_t *data, uint8_t *parity);
-extern RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time);
-extern RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_time);
+tDemod *GetDemod(void);
+void DemodReset(void);
+void DemodInit(uint8_t *data, uint8_t *parity);
+tUart *GetUart(void);
+void UartReset(void);
+void UartInit(uint8_t *data, uint8_t *parity);
+RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time);
+RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_time);
 
-extern void RAMFUNC SniffIso14443a(uint8_t param);
-extern void SimulateIso14443aTag(int tagType, int flags, uint8_t *data);
-extern void iso14443a_antifuzz(uint32_t flags);
-extern void ReaderIso14443a(UsbCommand *c);
-extern void ReaderTransmit(uint8_t *frame, uint16_t len, uint32_t *timing);
-extern void ReaderTransmitBitsPar(uint8_t *frame, uint16_t bits, uint8_t *par, uint32_t *timing);
-extern void ReaderTransmitPar(uint8_t *frame, uint16_t len, uint8_t *par, uint32_t *timing);
-extern int ReaderReceive(uint8_t *receivedAnswer, uint8_t *par);
+void RAMFUNC SniffIso14443a(uint8_t param);
+void SimulateIso14443aTag(int tagType, int flags, uint8_t *data);
+void iso14443a_antifuzz(uint32_t flags);
+void ReaderIso14443a(UsbCommand *c);
+void ReaderTransmit(uint8_t *frame, uint16_t len, uint32_t *timing);
+void ReaderTransmitBitsPar(uint8_t *frame, uint16_t bits, uint8_t *par, uint32_t *timing);
+void ReaderTransmitPar(uint8_t *frame, uint16_t len, uint8_t *par, uint32_t *timing);
+int ReaderReceive(uint8_t *receivedAnswer, uint8_t *par);
 
-extern void iso14443a_setup(uint8_t fpga_minor_mode);
-extern int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, uint8_t *res);
-extern int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *resp_data, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats);
-extern int iso14443a_fast_select_card(uint8_t *uid_ptr, uint8_t num_cascades);
-extern void iso14a_set_trigger(bool enable);
+void iso14443a_setup(uint8_t fpga_minor_mode);
+int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, uint8_t *res);
+int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *resp_data, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats);
+int iso14443a_fast_select_card(uint8_t *uid_ptr, uint8_t num_cascades);
+void iso14a_set_trigger(bool enable);
 
-extern int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen);
-extern int EmSend4bit(uint8_t resp);
-extern int EmSendCmd(uint8_t *resp, uint16_t respLen);
-extern int EmSendCmdEx(uint8_t *resp, uint16_t respLen, bool collision);
-extern int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *parity);
-extern int EmSendCmdPar(uint8_t *resp, uint16_t respLen, uint8_t *par);
-extern int EmSendCmdParEx(uint8_t *resp, uint16_t respLen, uint8_t *par, bool collision);
-extern int EmSendPrecompiledCmd(tag_response_info_t *response_info);
+int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen);
+int EmSend4bit(uint8_t resp);
+int EmSendCmd(uint8_t *resp, uint16_t respLen);
+int EmSendCmdEx(uint8_t *resp, uint16_t respLen, bool collision);
+int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *parity);
+int EmSendCmdPar(uint8_t *resp, uint16_t respLen, uint8_t *par);
+int EmSendCmdParEx(uint8_t *resp, uint16_t respLen, uint8_t *par, bool collision);
+int EmSendPrecompiledCmd(tag_response_info_t *response_info);
 
 bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_StartTime, uint32_t reader_EndTime, uint8_t *reader_Parity,
                 uint8_t *tag_data, uint16_t tag_len, uint32_t tag_StartTime, uint32_t tag_EndTime, uint8_t *tag_Parity);
 
-//extern bool prepare_allocated_tag_modulation(tag_response_info_t *response_info, uint8_t **buffer, size_t *buffer_size);
+//bool prepare_allocated_tag_modulation(tag_response_info_t *response_info, uint8_t **buffer, size_t *buffer_size);
 
 void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype);
 void DetectNACKbug();

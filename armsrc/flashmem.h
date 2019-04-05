@@ -115,7 +115,7 @@
 
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-extern void Dbprintf(const char *fmt, ...);
+void Dbprintf(const char *fmt, ...);
 
 void FlashmemSetSpiBaudrate(uint32_t baudrate);
 bool FlashInit();
