@@ -29,9 +29,9 @@
 
 int CmdSmartcard(const char *Cmd);
 
-int CmdSmartRaw(const char *cmd);
-int CmdSmartUpgrade(const char *cmd);
-int CmdSmartInfo(const char *cmd);
+int CmdSmartRaw(const char *Cmd);
+int CmdSmartUpgrade(const char *Cmd);
+int CmdSmartInfo(const char *Cmd);
 int CmdSmartReader(const char *Cmd);
 
 bool smart_select(bool silent, smart_card_atr_t *atr);
