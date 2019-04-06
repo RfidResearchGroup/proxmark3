@@ -1451,7 +1451,7 @@ void ReadHitagS(hitag_function htf, hitag_data *htd) {
  * Authenticates to the Tag with the given Key or Challenge.
  * Writes the given 32Bit data into page_
  */
-void WritePageHitagS(hitag_function htf, hitag_data *htd, int page_) {
+void WritePageHitagS(hitag_function htf, hitag_data *htd, int page) {
 
     StopTicks();
 
@@ -1467,7 +1467,6 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page_) {
     int tag_sof;
     int t_wait = HITAG_T_WAIT_MAX;
     bool bStop;
-    int page = page_;
     unsigned char crc;
     uint8_t data[4] = {0, 0, 0, 0};
 
@@ -1509,7 +1508,7 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page_) {
         }
     }
 
-    Dbprintf("Page: %d", page_);
+    Dbprintf("Page: %d", page);
     Dbprintf("DATA: %02X %02X %02X %02X", data[0], data[1], data[2], data[3]);
 
     tag.pstate = HT_READY;
@@ -1582,7 +1581,7 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page_) {
 
         if (rxlen == 0 && tag.tstate == HT_WRITING_PAGE_ACK) {
             //no write access on this page
-            Dbprintf("no write access on page %d", page_);
+            Dbprintf("no write access on page %d", page);
             bStop = !false;
         } else if (rxlen == 0 && tag.tstate != HT_WRITING_PAGE_DATA) {
             //start the authetication
