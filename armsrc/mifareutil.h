@@ -83,8 +83,8 @@ int mifare_classic_halt_ex(struct Crypto1State *pcs);
 int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData);
 
 // Ultralight/NTAG...
-int mifare_ul_ev1_auth(uint8_t *key, uint8_t *pack);
-int mifare_ultra_auth(uint8_t *key);
+int mifare_ul_ev1_auth(uint8_t *keybytes, uint8_t *pack);
+int mifare_ultra_auth(uint8_t *keybytes);
 int mifare_ultra_readblock(uint8_t blockNo, uint8_t *blockData);
 //int mifare_ultra_writeblock_compat(uint8_t blockNo, uint8_t *blockData);
 int mifare_ultra_writeblock(uint8_t blockNo, uint8_t *blockData);
@@ -97,7 +97,7 @@ int mifare_desfire_des_auth1(uint32_t uid, uint8_t *blockData);
 int mifare_desfire_des_auth2(uint32_t uid, uint8_t *key, uint8_t *blockData);
 
 // crypto functions
-void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *receivedCmd, int len);
+void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len);
 void mf_crypto1_decryptEx(struct Crypto1State *pcs, uint8_t *data_in, int len, uint8_t *data_out);
 void mf_crypto1_encrypt(struct Crypto1State *pcs, uint8_t *data, uint16_t len, uint8_t *par);
 uint8_t mf_crypto1_encrypt4bit(struct Crypto1State *pcs, uint8_t data);

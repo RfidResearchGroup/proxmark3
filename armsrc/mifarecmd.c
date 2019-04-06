@@ -100,7 +100,7 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) 
     LEDsoff();
 }
 
-void MifareUC_Auth(uint8_t arg0, uint8_t *keybytes) {
+void MifareUC_Auth(uint8_t arg0, uint8_t *datain) {
 
     bool turnOffField = (arg0 == 1);
 
@@ -119,7 +119,7 @@ void MifareUC_Auth(uint8_t arg0, uint8_t *keybytes) {
         return;
     };
 
-    if (!mifare_ultra_auth(keybytes)) {
+    if (!mifare_ultra_auth(datain)) {
         if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Authentication failed");
         OnError(1);
         return;
@@ -851,12 +851,13 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 // MIFARE nested authentication.
 //
 //-----------------------------------------------------------------------------
-void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *datain) {
+void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
     // params
     uint8_t blockNo = arg0 & 0xff;
     uint8_t keyType = (arg0 >> 8) & 0xff;
     uint8_t targetBlockNo = arg1 & 0xff;
     uint8_t targetKeyType = (arg1 >> 8) & 0xff;
+    // calibrate = arg2
     uint64_t ui64Key = 0;
 
     ui64Key = bytes_to_num(datain, 6);
@@ -888,14 +889,14 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
     BigBuf_free();
     BigBuf_Clear_ext(false);
 
-    if (calibrate) clear_trace();
+    if (arg2) clear_trace();
     set_tracing(true);
 
     // statistics on nonce distance
     int16_t isOK = 0;
 #define NESTED_MAX_TRIES 12
     uint16_t unsuccessfull_tries = 0;
-    if (calibrate) { // for first call only. Otherwise reuse previous calibration
+    if (arg2) { // calibrate: for first call only. Otherwise reuse previous calibration
         LED_B_ON();
         WDT_HIT();
 

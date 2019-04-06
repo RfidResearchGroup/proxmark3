@@ -15,7 +15,7 @@
 #include <stddef.h>
 #include "string.h"
 
-int kvsprintf(const char *format, void *arg, int radix, va_list ap) __attribute__((format(printf, 1, 0)));
+int kvsprintf(const char *fmt, void *arg, int radix, va_list ap) __attribute__((format(printf, 1, 0)));
 int vsprintf(char *dest, const char *fmt, va_list ap) __attribute__((format(printf, 2, 0)));
 int sprintf(char *dest, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 
