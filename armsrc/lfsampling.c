@@ -248,9 +248,9 @@ uint32_t ReadLF(bool activeField, bool silent, int sample_size) {
 * Initializes the FPGA for reader-mode (field on), and acquires the samples.
 * @return number of bits sampled
 **/
-uint32_t SampleLF(bool printCfg, int sample_size) {
+uint32_t SampleLF(bool silent, int sample_size) {
     BigBuf_Clear_ext(false);
-    return ReadLF(true, printCfg, sample_size);
+    return ReadLF(true, silent, sample_size);
 }
 /**
 * Initializes the FPGA for sniffer-mode (field off), and acquires the samples.

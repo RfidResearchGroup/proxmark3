@@ -621,8 +621,8 @@ void Iso15693InitReader(void) {
 
 // Encode (into the ToSend buffers) an identify request, which is the first
 // thing that you must send to a tag to get a response.
-// It expects "out" to be at least CMD_ID_RESP large
-static void BuildIdentifyRequest(uint8_t *out) {
+// It expects "cmdout" to be at least CMD_ID_RESP large
+static void BuildIdentifyRequest(uint8_t *cmdout) {
     uint8_t cmd[CMD_ID_RESP] = {0, ISO15_CMD_INVENTORY, 0, 0, 0};
     // flags
     cmd[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1;
@@ -632,7 +632,7 @@ static void BuildIdentifyRequest(uint8_t *out) {
     AddCrc(cmd, 3);
     // coding as high speed (1 out of 4)
     CodeIso15693AsReader(cmd, CMD_ID_RESP);
-    memcpy(out, cmd, CMD_ID_RESP);
+    memcpy(cmdout, cmd, CMD_ID_RESP);
 }
 
 // uid is in transmission order (which is reverse of display order)
@@ -666,7 +666,7 @@ static void BuildReadBlockRequest(uint8_t **out, uint8_t *uid, uint8_t blockNumb
 
 // Now the VICC>VCD responses when we are simulating a tag
 // It expects "out" to be at least CMD_INV_RESP large
-static void BuildInventoryResponse(uint8_t *out, uint8_t *uid) {
+static void BuildInventoryResponse(uint8_t *cmdout, uint8_t *uid) {
 
     uint8_t cmd[CMD_INV_RESP] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
@@ -687,7 +687,7 @@ static void BuildInventoryResponse(uint8_t *out, uint8_t *uid) {
     // CRC
     AddCrc(cmd, 10);
     CodeIso15693AsReader(cmd, CMD_INV_RESP);
-    memcpy(out, cmd, CMD_INV_RESP);
+    memcpy(cmdout, cmd, CMD_INV_RESP);
 }
 
 // Universal Method for sending to and recv bytes from a tag

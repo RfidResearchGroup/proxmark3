@@ -99,8 +99,8 @@ void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo);
 void CopyIndala64toT55x7(uint32_t hi, uint32_t lo); // Clone Indala 64-bit tag by UID to T55x7
 void CopyIndala224toT55x7(uint32_t uid1, uint32_t uid2, uint32_t uid3, uint32_t uid4, uint32_t uid5, uint32_t uid6, uint32_t uid7); // Clone Indala 224-bit tag by UID to T55x7
 void T55xxResetRead(void);
-void T55xxWriteBlock(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t PwdMode);
-void T55xxWriteBlockExt(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t PwdMode);
+void T55xxWriteBlock(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t arg);
+void T55xxWriteBlockExt(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t arg);
 void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd);
 void T55xxWakeUp(uint32_t Pwd);
 void T55xx_ChkPwds(void);
@@ -130,7 +130,7 @@ void ReaderIso14443a(UsbCommand *c);
 
 // Also used in iclass.c
 //bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t len, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool readerToTag);
-void GetParity(const uint8_t *pbtCmd, uint16_t len, uint8_t *parity);
+void GetParity(const uint8_t *pbtCmd, uint16_t len, uint8_t *par);
 void iso14a_set_trigger(bool enable);
 // also used in emv
 //bool prepare_allocated_tag_modulation(tag_response_info_t *response_info);
@@ -212,15 +212,15 @@ void Iso15693InitReader(void);
 void RAMFUNC SniffIClass(void);
 void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 void ReaderIClass(uint8_t arg0);
-void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC);
-void iClass_Authentication(uint8_t *MAC);
+void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac);
+void iClass_Authentication(uint8_t *mac);
 void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain);
-void iClass_WriteBlock(uint8_t blockNo, uint8_t *data);
-void iClass_ReadBlk(uint8_t blockNo);
-bool iClass_ReadBlock(uint8_t blockNo, uint8_t *data, uint8_t datalen);
+void iClass_WriteBlock(uint8_t blockno, uint8_t *data);
+void iClass_ReadBlk(uint8_t blockno);
+bool iClass_ReadBlock(uint8_t blockno, uint8_t *data, uint8_t len);
 void iClass_Dump(uint8_t blockno, uint8_t numblks);
 void iClass_Clone(uint8_t startblock, uint8_t endblock, uint8_t *data);
-void iClass_ReadCheck(uint8_t blockNo, uint8_t keyType);
+void iClass_ReadCheck(uint8_t blockno, uint8_t keytype);
 
 // cmd.h
 uint8_t cmd_receive(UsbCommand *cmd);

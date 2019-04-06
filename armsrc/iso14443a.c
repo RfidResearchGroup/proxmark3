@@ -121,12 +121,12 @@ uint32_t iso14a_get_timeout(void) {
 //-----------------------------------------------------------------------------
 // Generate the parity value for a byte sequence
 //-----------------------------------------------------------------------------
-void GetParity(const uint8_t *pbtCmd, uint16_t iLen, uint8_t *par) {
+void GetParity(const uint8_t *pbtCmd, uint16_t len, uint8_t *par) {
     uint16_t paritybit_cnt = 0;
     uint16_t paritybyte_cnt = 0;
     uint8_t parityBits = 0;
 
-    for (uint16_t i = 0; i < iLen; i++) {
+    for (uint16_t i = 0; i < len; i++) {
         // Generate the parity bits
         parityBits |= ((oddparity8(pbtCmd[i])) << (7 - paritybit_cnt));
         if (paritybit_cnt == 7) {
@@ -193,9 +193,9 @@ void UartReset(void) {
     Uart.syncBit = 9999;
 }
 
-void UartInit(uint8_t *data, uint8_t *parity) {
+void UartInit(uint8_t *data, uint8_t *par) {
     Uart.output = data;
-    Uart.parity = parity;
+    Uart.parity = par;
     UartReset();
 }
 
@@ -366,9 +366,9 @@ void DemodReset(void) {
     Demod.samples = 0;
 }
 
-void DemodInit(uint8_t *data, uint8_t *parity) {
+void DemodInit(uint8_t *data, uint8_t *par) {
     Demod.output = data;
-    Demod.parity = parity;
+    Demod.parity = par;
     DemodReset();
 }
 
@@ -636,7 +636,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 //-----------------------------------------------------------------------------
 // Prepare tag messages
 //-----------------------------------------------------------------------------
-static void CodeIso14443aAsTagPar(const uint8_t *cmd, uint16_t len, uint8_t *parity, bool collision) {
+static void CodeIso14443aAsTagPar(const uint8_t *cmd, uint16_t len, uint8_t *par, bool collision) {
 
     //uint8_t localCol = 0;
     ToSendReset();
@@ -679,7 +679,7 @@ static void CodeIso14443aAsTagPar(const uint8_t *cmd, uint16_t len, uint8_t *par
             LastProxToAirDuration = 8 * ToSendMax;
         } else {
             // Get the parity bit
-            if (parity[i >> 3] & (0x80 >> (i & 0x0007))) {
+            if (par[i >> 3] & (0x80 >> (i & 0x0007))) {
                 ToSend[++ToSendMax] = SEC_D;
                 LastProxToAirDuration = 8 * ToSendMax - 4;
             } else {
@@ -774,7 +774,7 @@ static void EmLogTraceTag(uint8_t *tag_data, uint16_t tag_len, uint8_t *tag_Pari
 // stop when button is pressed
 // or return TRUE when command is captured
 //-----------------------------------------------------------------------------
-static int GetIso14443aCommandFromReader(uint8_t *received, uint8_t *parity, int *len) {
+static int GetIso14443aCommandFromReader(uint8_t *received, uint8_t *par, int *len) {
     // Set FPGA mode to "simulated ISO 14443 tag", no modulation (listen
     // only, since we are receiving, not transmitting).
     // Signal field is off with the appropriate LED
@@ -782,7 +782,7 @@ static int GetIso14443aCommandFromReader(uint8_t *received, uint8_t *parity, int
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_LISTEN);
 
     // Now run a `software UART` on the stream of incoming samples.
-    UartInit(received, parity);
+    UartInit(received, par);
 
     // clear RXRDY:
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
@@ -1520,7 +1520,7 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
 //-----------------------------------------------------------------------------
 // Prepare reader command (in bits, support short frames) to send to FPGA
 //-----------------------------------------------------------------------------
-void CodeIso14443aBitsAsReaderPar(const uint8_t *cmd, uint16_t bits, const uint8_t *parity) {
+void CodeIso14443aBitsAsReaderPar(const uint8_t *cmd, uint16_t bits, const uint8_t *par) {
     int i, j;
     int last = 0;
     uint8_t b;
@@ -1559,9 +1559,9 @@ void CodeIso14443aBitsAsReaderPar(const uint8_t *cmd, uint16_t bits, const uint8
         }
 
         // Only transmit parity bit if we transmitted a complete byte
-        if (j == 8 && parity != NULL) {
+        if (j == 8 && par != NULL) {
             // Get the parity bit
-            if (parity[i >> 3] & (0x80 >> (i & 0x0007))) {
+            if (par[i >> 3] & (0x80 >> (i & 0x0007))) {
                 // Sequence X
                 ToSend[++ToSendMax] = SEC_X;
                 LastProxToAirDuration = 8 * (ToSendMax + 1) - 2;
@@ -1599,8 +1599,8 @@ void CodeIso14443aBitsAsReaderPar(const uint8_t *cmd, uint16_t bits, const uint8
 //-----------------------------------------------------------------------------
 // Prepare reader command to send to FPGA
 //-----------------------------------------------------------------------------
-void CodeIso14443aAsReaderPar(const uint8_t *cmd, uint16_t len, const uint8_t *parity) {
-    CodeIso14443aBitsAsReaderPar(cmd, len * 8, parity);
+void CodeIso14443aAsReaderPar(const uint8_t *cmd, uint16_t len, const uint8_t *par) {
+    CodeIso14443aBitsAsReaderPar(cmd, len * 8, par);
 }
 
 //-----------------------------------------------------------------------------
@@ -1608,7 +1608,7 @@ void CodeIso14443aAsReaderPar(const uint8_t *cmd, uint16_t len, const uint8_t *p
 // Stop when button is pressed (return 1) or field was gone (return 2)
 // Or return 0 when command is captured
 //-----------------------------------------------------------------------------
-int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *parity) {
+int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *par) {
     *len = 0;
 
     uint32_t timer = 0, vtime = 0;
@@ -1632,7 +1632,7 @@ int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *parity) {
     AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
 
     // Now run a 'software UART' on the stream of incoming samples.
-    UartInit(received, parity);
+    UartInit(received, par);
 
     // Clear RXRDY:
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
@@ -1884,17 +1884,17 @@ void ReaderTransmit(uint8_t *frame, uint16_t len, uint32_t *timing) {
     ReaderTransmitBitsPar(frame, len * 8, par, timing);
 }
 
-int ReaderReceiveOffset(uint8_t *receivedAnswer, uint16_t offset, uint8_t *parity) {
-    if (!GetIso14443aAnswerFromTag(receivedAnswer, parity, offset))
+int ReaderReceiveOffset(uint8_t *receivedAnswer, uint16_t offset, uint8_t *par) {
+    if (!GetIso14443aAnswerFromTag(receivedAnswer, par, offset))
         return false;
-    LogTrace(receivedAnswer, Demod.len, Demod.startTime * 16 - DELAY_AIR2ARM_AS_READER, Demod.endTime * 16 - DELAY_AIR2ARM_AS_READER, parity, false);
+    LogTrace(receivedAnswer, Demod.len, Demod.startTime * 16 - DELAY_AIR2ARM_AS_READER, Demod.endTime * 16 - DELAY_AIR2ARM_AS_READER, par, false);
     return Demod.len;
 }
 
-int ReaderReceive(uint8_t *receivedAnswer, uint8_t *parity) {
-    if (!GetIso14443aAnswerFromTag(receivedAnswer, parity, 0))
+int ReaderReceive(uint8_t *receivedAnswer, uint8_t *par) {
+    if (!GetIso14443aAnswerFromTag(receivedAnswer, par, 0))
         return false;
-    LogTrace(receivedAnswer, Demod.len, Demod.startTime * 16 - DELAY_AIR2ARM_AS_READER, Demod.endTime * 16 - DELAY_AIR2ARM_AS_READER, parity, false);
+    LogTrace(receivedAnswer, Demod.len, Demod.startTime * 16 - DELAY_AIR2ARM_AS_READER, Demod.endTime * 16 - DELAY_AIR2ARM_AS_READER, par, false);
     return Demod.len;
 }
 
@@ -2030,7 +2030,7 @@ static int GetATQA(uint8_t *resp, uint8_t *resp_par) {
 // if anticollision is false, then the UID must be provided in uid_ptr[]
 // and num_cascades must be set (1: 4 Byte UID, 2: 7 Byte UID, 3: 10 Byte UID)
 // requests ATS unless no_rats is true
-int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats) {
+int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *resp_data, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats) {
 
     uint8_t sel_all[]    = { ISO14443A_CMD_ANTICOLL_OR_SELECT, 0x20 };
     uint8_t sel_uid[]    = { ISO14443A_CMD_ANTICOLL_OR_SELECT, 0x70, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -2044,19 +2044,19 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
     int cascade_level = 0;
     int len;
 
-    if (p_card) {
-        p_card->uidlen = 0;
-        memset(p_card->uid, 0, 10);
-        p_card->ats_len = 0;
+    if (resp_data) {
+        resp_data->uidlen = 0;
+        memset(resp_data->uid, 0, 10);
+        resp_data->ats_len = 0;
     }
 
     if (!GetATQA(resp, resp_par)) {
         return 0;
     }
 
-    if (p_card) {
-        p_card->atqa[0] = resp[0];
-        p_card->atqa[1] = resp[1];
+    if (resp_data) {
+        resp_data->atqa[0] = resp[0];
+        resp_data->atqa[1] = resp[1];
     }
 
     if (anticollision) {
@@ -2151,14 +2151,14 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
         if (uid_ptr && anticollision)
             memcpy(uid_ptr + (cascade_level * 3), uid_resp, uid_resp_len);
 
-        if (p_card) {
-            memcpy(p_card->uid + (cascade_level * 3), uid_resp, uid_resp_len);
-            p_card->uidlen += uid_resp_len;
+        if (resp_data) {
+            memcpy(resp_data->uid + (cascade_level * 3), uid_resp, uid_resp_len);
+            resp_data->uidlen += uid_resp_len;
         }
     }
 
-    if (p_card) {
-        p_card->sak = sak;
+    if (resp_data) {
+        resp_data->sak = sak;
     }
 
     // PICC compilant with iso14443a-4 ---> (SAK & 0x20 != 0)
@@ -2173,9 +2173,9 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
 
         if (!len) return 0;
 
-        if (p_card) {
-            memcpy(p_card->ats, resp, sizeof(p_card->ats));
-            p_card->ats_len = len;
+        if (resp_data) {
+            memcpy(resp_data->ats, resp, sizeof(resp_data->ats));
+            resp_data->ats_len = len;
         }
 
         // reset the PCB block number

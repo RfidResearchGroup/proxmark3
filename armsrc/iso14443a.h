@@ -112,10 +112,10 @@ void GetParity(const uint8_t *pbtCmd, uint16_t len, uint8_t *par);
 
 tDemod *GetDemod(void);
 void DemodReset(void);
-void DemodInit(uint8_t *data, uint8_t *parity);
+void DemodInit(uint8_t *data, uint8_t *par);
 tUart *GetUart(void);
 void UartReset(void);
-void UartInit(uint8_t *data, uint8_t *parity);
+void UartInit(uint8_t *data, uint8_t *par);
 RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time);
 RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_time);
 
@@ -139,7 +139,7 @@ int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen);
 int EmSend4bit(uint8_t resp);
 int EmSendCmd(uint8_t *resp, uint16_t respLen);
 int EmSendCmdEx(uint8_t *resp, uint16_t respLen, bool collision);
-int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *parity);
+int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *par);
 int EmSendCmdPar(uint8_t *resp, uint16_t respLen, uint8_t *par);
 int EmSendCmdParEx(uint8_t *resp, uint16_t respLen, uint8_t *par, bool collision);
 int EmSendPrecompiledCmd(tag_response_info_t *response_info);

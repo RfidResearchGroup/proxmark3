@@ -2107,7 +2107,7 @@ void ReaderIClass(uint8_t arg0) {
 }
 
 // turn off afterwards
-void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
+void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
 
     uint8_t cardsize = 0;
     uint8_t mem = 0;
@@ -2134,7 +2134,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
         if (read_status < 2) continue;
 
         //for now replay captured auth (as cc not updated)
-        memcpy(check + 5, MAC, 4);
+        memcpy(check + 5, mac, 4);
 
         if (!sendCmdGetResponseWithRetries(check, sizeof(check), resp, 4, 5)) {
             DbpString("Error: Authentication Fail!");
@@ -2227,8 +2227,8 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 
 // not used. ?!? ( CMD_ICLASS_READCHECK)
 // turn off afterwards
-void iClass_ReadCheck(uint8_t blockNo, uint8_t keyType) {
-    uint8_t readcheck[] = { keyType, blockNo };
+void iClass_ReadCheck(uint8_t blockno, uint8_t keytype) {
+    uint8_t readcheck[] = { keytype, blockno };
     uint8_t resp[] = {0, 0, 0, 0, 0, 0, 0, 0};
     size_t isOK = 0;
     isOK = sendCmdGetResponseWithRetries(readcheck, sizeof(readcheck), resp, sizeof(resp), 6);
@@ -2348,9 +2348,9 @@ out:
 
 // Tries to read block.
 // retries 10times.
-bool iClass_ReadBlock(uint8_t blockNo, uint8_t *data, uint8_t len) {
+bool iClass_ReadBlock(uint8_t blockno, uint8_t *data, uint8_t len) {
     uint8_t resp[10];
-    uint8_t cmd[] = {ICLASS_CMD_READ_OR_IDENTIFY, blockNo, 0x00, 0x00};
+    uint8_t cmd[] = {ICLASS_CMD_READ_OR_IDENTIFY, blockno, 0x00, 0x00};
     AddCrc(cmd + 1, 1);
     // expect size 10,  retry 5times
     bool isOK = sendCmdGetResponseWithRetries(cmd, sizeof(cmd), resp, 10, 5);
@@ -2402,10 +2402,10 @@ void iClass_Dump(uint8_t blockno, uint8_t numblks) {
     BigBuf_free();
 }
 
-bool iClass_WriteBlock_ext(uint8_t blockNo, uint8_t *data) {
+bool iClass_WriteBlock_ext(uint8_t blockno, uint8_t *data) {
 
     uint8_t resp[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    uint8_t write[] = { ICLASS_CMD_UPDATE, blockNo, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    uint8_t write[] = { ICLASS_CMD_UPDATE, blockno, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     memcpy(write + 2, data, 12); // data + mac
     AddCrc(write + 1, 13);
 
@@ -2416,7 +2416,7 @@ bool iClass_WriteBlock_ext(uint8_t blockNo, uint8_t *data) {
         if (memcmp(write + 2, resp, 8)) {
 
             //if not programming key areas (note key blocks don't get programmed with actual key data it is xor data)
-            if (blockNo != 3 && blockNo != 4) {
+            if (blockno != 3 && blockno != 4) {
                 isOK = sendCmdGetResponseWithRetries(write, sizeof(write), resp, sizeof(resp), 5);
             }
         }
@@ -2425,8 +2425,8 @@ bool iClass_WriteBlock_ext(uint8_t blockNo, uint8_t *data) {
 }
 
 // turn off afterwards
-void iClass_WriteBlock(uint8_t blockNo, uint8_t *data) {
-    bool isOK = iClass_WriteBlock_ext(blockNo, data);
+void iClass_WriteBlock(uint8_t blockno, uint8_t *data) {
+    bool isOK = iClass_WriteBlock_ext(blockno, data);
     cmd_send(CMD_ACK, isOK, 0, 0, 0, 0);
     switch_off();
 }
