@@ -20,6 +20,6 @@ int CmdLFHitagInfo(const char *Cmd);
 int CmdLFHitagReader(const char *Cmd);
 int CmdLFHitagCheckChallenges(const char *Cmd);
 int CmdLFHitagWriter(const char *Cmd);
-int CmdLFHitagDump(const char *cmd);
+int CmdLFHitagDump(const char *Cmd);
 
 #endif

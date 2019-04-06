@@ -28,7 +28,7 @@ int CmdPrescoClone(const char *Cmd);
 int CmdPrescoSim(const char *Cmd);
 
 int detectPresco(uint8_t *dest, size_t *size);
-int GetWiegandFromPresco(const char *id, uint32_t *sitecode, uint32_t *usercode, uint32_t *fullcode, bool *Q5);
+int GetWiegandFromPresco(const char *Cmd, uint32_t *sitecode, uint32_t *usercode, uint32_t *fullcode, bool *Q5);
 
 int usage_lf_presco_clone(void);
 int usage_lf_presco_sim(void);

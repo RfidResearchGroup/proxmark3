@@ -15,7 +15,7 @@
 bool APDUInFramingEnable = true;
 
 static int CmdHelp(const char *Cmd);
-static int waitCmd(uint8_t iLen);
+static int waitCmd(uint8_t iSelect);
 
 static const manufactureName manufactureMapping[] = {
     // ID,  "Vendor Country"
