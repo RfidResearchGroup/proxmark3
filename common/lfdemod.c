@@ -1620,7 +1620,7 @@ int nrzRawDemod(uint8_t *dest, size_t *size, int *clk, int *invert, int *startId
         if (g_debugMode == 2) prnt("DEBUG nrzRawDemod: just noise detected - quitting");
         return -1;
     }
-    
+
     size_t clkStartIdx = 0;
     *clk = DetectNRZClock(dest, *size, *clk, &clkStartIdx);
     if (*clk == 0) return -2;
@@ -1911,13 +1911,13 @@ int pskRawDemod_ext(uint8_t *dest, size_t *size, int *clock, int *invert, int *s
                 if (waveLenCnt > fc) {
                     //this wave is a phase shift
                     /*
-                   prnt("DEBUG: phase shift at: %d, len: %d, nextClk: %d, i: %d, fc: %d"
+                    prnt("DEBUG: phase shift at: %d, len: %d, nextClk: %d, i: %d, fc: %d"
                         , waveStart
                         , waveLenCnt
                         , lastClkBit + *clock - tol
                         , i + 1
                         , fc);
-                      */  
+                      */
                     if (i + 1 >= lastClkBit + *clock - tol) { //should be a clock bit
                         curPhase ^= 1;
                         dest[numBits++] = curPhase;

@@ -200,8 +200,8 @@ int FillBuffer(uint8_t *data, size_t maxDataLength, size_t *dataLength, ...);
 
 bool CheckStringIsHEXValue(const char *value);
 void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex_len,
-                          const size_t hex_max_len, const size_t min_str_len, const size_t spaces_between,
-                          bool uppercase);
+                   const size_t hex_max_len, const size_t min_str_len, const size_t spaces_between,
+                   bool uppercase);
 
 void print_hex(const uint8_t *data, const size_t len);
 void print_hex_break(const uint8_t *data, const size_t len, const uint8_t breaks);

@@ -547,7 +547,7 @@ int CmdT55xxDetect(const char *Cmd) {
     }
 
     if (!tryDetectModulation())
-        PrintAndLogEx(WARNING, "Could not detect modulation automatically. Try setting it manually with " _YELLOW_("\'lf t55xx config\'") );
+        PrintAndLogEx(WARNING, "Could not detect modulation automatically. Try setting it manually with " _YELLOW_("\'lf t55xx config\'"));
 
     return 0;
 }
@@ -767,7 +767,7 @@ bool GetT55xxBlockData(uint32_t *blockdata) {
         return false;
 
     uint8_t idx = config.offset;
-        
+
     if (idx + 32 > DemodBufferLen) {
         PrintAndLogEx(WARNING, "The configured offset %d is too big. Possible offset: %d)", idx, DemodBufferLen - 32);
         return false;
@@ -1472,7 +1472,7 @@ int CmdT55xxInfo(const char *Cmd) {
 
     if (((!gotdata) && (!config.Q5)) || (gotdata && (!dataasq5)))
         printT5x7KnownBlock0(block0);
-    
+
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
 
     return 0;

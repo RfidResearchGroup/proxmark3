@@ -65,13 +65,13 @@ uint32_t CRC8Legic(uint8_t *buff, size_t size);
 /* Static initialization of a crc structure */
 #define CRC_INITIALIZER(_order, _polynom, _initial_value, _final_xor) { \
         .state = ((_initial_value) & ((1L<<(_order))-1)), \
-        .order = (_order), \
-        .polynom = (_polynom), \
-        .initial_value = (_initial_value), \
-        .final_xor = (_final_xor), \
-        .mask = ((1L<<(_order))-1) \
-        .refin = false, \
-        .refout = false \
+                 .order = (_order), \
+                          .polynom = (_polynom), \
+                                     .initial_value = (_initial_value), \
+                                                      .final_xor = (_final_xor), \
+                                                                   .mask = ((1L<<(_order))-1) \
+                                                                           .refin = false, \
+                                                                                   .refout = false \
     }
 
 #endif /* __CRC_H */

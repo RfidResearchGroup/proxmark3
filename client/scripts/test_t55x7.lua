@@ -44,7 +44,7 @@ local DEBUG = false -- the debug flag
 local total_tests = 0
 local total_pass = 0
 
-local data_blocks_cmds = {    
+local data_blocks_cmds = {
     [1] = '00000000',
     [2] = 'ffffffff',
     [3] = '80000000',
@@ -96,10 +96,10 @@ end
 local function GetConfigs( modulation )
 
     local t = {}
-    
+
     t['PSK1'] = {
                 [1] = '00001040',
-                [2] = '00041040', 
+                [2] = '00041040',
                 [3] = '00081040',
                 [4] = '000c1040',
                 [5] = '00101040',
@@ -118,7 +118,7 @@ local function GetConfigs( modulation )
                 [7] = '00182040',
                 [8] = '001c2040',
             }
-            
+
     t['PSK3'] = {
                 [1] = '00003040',
                 [2] = '00043040',
@@ -141,7 +141,7 @@ local function GetConfigs( modulation )
                 [8] = '00184040',
                 [9] = '001c4040',
             }
-            
+
     t['FSK2'] = {
                 [1] = '00005040',
                 [2] = '00045040',
@@ -152,7 +152,7 @@ local function GetConfigs( modulation )
                 [7] = '00185040',
                 [8] = '001c5040',
             }
-            
+
     t['FSK1A'] = {
                 [1] = '00006040',
                 [2] = '00046040',
@@ -163,7 +163,7 @@ local function GetConfigs( modulation )
                 [7] = '00186040',
                 [8] = '001c6040',
             }
-            
+
     t['FSK2A'] = {
                 [1] = '00007040',
                 [2] = '00047040',
@@ -174,10 +174,10 @@ local function GetConfigs( modulation )
                 [7] = '00187040',
                 [8] = '001c7040',
             }
-            
+
     t['ASK'] = {
                 [1] = '00008040',
-                [2] = '00048040', 
+                [2] = '00048040',
                 [3] = '00088040',
                 [4] = '000c8040',
                 [5] = '00108040',
@@ -185,7 +185,7 @@ local function GetConfigs( modulation )
                 [7] = '00188040',
                 [8] = '001c8040',
             }
-            
+
     t['BI'] = {
                 [1] = '00010040',
                 [2] = '00050040',
@@ -196,7 +196,7 @@ local function GetConfigs( modulation )
                 [7] = '00190040',
                 [8] = '001d0040',
             }
-            
+
     return t[modulation:upper()]
 end
 ---
@@ -205,10 +205,10 @@ local function WipeCard()
 
     print('Wiping card')
     core.console('lf t55xx wipe')
-    
+
     print('Detecting card')
     local res, msg = core.t55xx_detect()
-    if not res then 
+    if not res then
         oops("Can't detect modulation. Test failed.")
         core.console("rem [ERR:DETECT:WIPED] Failed to detect after wipe")
         return false
@@ -235,20 +235,20 @@ local function CheckReadBlock(block)
 end
 
 local function test(modulation)
-    
+
     local process_block0_cmds = {}
     local y
     local block = "00"
-    
+
     local s = ('Start test of %s'):format(modulation)
     print(s)
-    
+
     process_block0_cmds = GetConfigs(modulation)
-    
+
     if process_block0_cmds == nil then return oops('Cant find modulation '..modulation) end
-    
+
     for _ = 1, #process_block0_cmds do
-    
+
         local p_config_cmd = process_block0_cmds[_]
         local errors = 0
         core.clearCommandBuffer()
@@ -261,9 +261,9 @@ local function test(modulation)
         if err then return oops(err) end
         local response = core.WaitForResponseTimeout(cmds.CMD_ACK,TIMEOUT)
 
-        -- Detect 
+        -- Detect
         local res, msg = core.t55xx_detect()
-        if not res then 
+        if not res then
             print("can't detect modulation, skip to next config")
             core.console(format("rem [ERR:DETECT:%s] Failed to detect modulation", p_config_cmd))
             core.console(format('rem [SUMMARY:%s] FAIL detection', p_config_cmd))
@@ -304,11 +304,11 @@ local function main(args)
 
     core.clearCommandBuffer()
     local res
-    
+
     -- Adjust this table to set which configurations should be tested
 --    local test_modes = { 'PSK1', 'PSK2', 'PSK3', 'FSK1', 'FSK2', 'FSK1A', 'FSK2A', 'ASK', 'BI' }
     local test_modes = { 'ASK', 'PSK1' }
-    
+
     for _ = 1, #test_modes do
         res = WipeCard()
         if res then
@@ -322,6 +322,6 @@ local function main(args)
 
     exitMsg('Tests finished')
     core.console( format('rem [SUMMARY] Success rate: %d/%d tests passed%s', total_pass, total_tests, total_pass < total_tests and ", help me improving that number!" or " \\o/"))
-    
+
 end
 main(args)

@@ -540,7 +540,7 @@ size_t CreateAPDU(uint8_t *datain, size_t len, uint8_t *dataout) {
     uint8_t cmd[cmdlen];
     memset(cmd, 0, cmdlen);
 
-    cmd[0] = 0x0A;  //  0x0A = send cid,  0x02 = no cid. 
+    cmd[0] = 0x0A;  //  0x0A = send cid,  0x02 = no cid.
     cmd[0] |= pcb_blocknum; // OR the block number into the PCB
     cmd[1] = 0x00;  //  CID: 0x00 //TODO: allow multiple selected cards
 

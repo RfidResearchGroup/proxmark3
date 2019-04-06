@@ -848,7 +848,7 @@ int CmdHF15Restore(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "Restoring data blocks.");
-        
+
     while (1) {
         tried = 0;
         hex[0] = 0x00;
