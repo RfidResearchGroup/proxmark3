@@ -30,6 +30,17 @@ extern "C" {
 #include "random.h"
 #include "mifare.h"  // structs
 
+// When the PM acts as tag and is receiving it takes
+// 2 ticks delay in the RF part (for the first falling edge),
+// 3 ticks for the A/D conversion,
+// 8 ticks on average until the start of the SSC transfer,
+// 8 ticks until the SSC samples the first data
+// 7*16 ticks to complete the transfer from FPGA to ARM
+// 8 ticks until the next ssp_clk rising edge
+// 4*16 ticks until we measure the time
+// - 8*16 ticks because we measure the time of the previous transfer
+#define DELAY_AIR2ARM_AS_TAG (2 + 3 + 8 + 8 + 7*16 + 8 + 4*16 - 8*16)
+
 typedef struct {
     enum {
         DEMOD_UNSYNCD,
@@ -123,6 +134,7 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *resp_data, uin
 int iso14443a_fast_select_card(uint8_t *uid_ptr, uint8_t num_cascades);
 void iso14a_set_trigger(bool enable);
 
+int EmSendPrecompiledCmd(tag_response_info_t *response_info);
 int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen);
 int EmSend4bit(uint8_t resp);
 int EmSendCmd(uint8_t *resp, uint16_t respLen);
@@ -132,13 +144,17 @@ int EmSendCmdPar(uint8_t *resp, uint16_t respLen, uint8_t *par);
 int EmSendCmdParEx(uint8_t *resp, uint16_t respLen, uint8_t *par, bool collision);
 int EmSendPrecompiledCmd(tag_response_info_t *response_info);
 
+void EmLogTraceReader(void);
+
+bool prepare_allocated_tag_modulation(tag_response_info_t *response_info, uint8_t **buffer, size_t *max_buffer_size);
+
 bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_StartTime, uint32_t reader_EndTime, uint8_t *reader_Parity,
                 uint8_t *tag_data, uint16_t tag_len, uint32_t tag_StartTime, uint32_t tag_EndTime, uint8_t *tag_Parity);
 
-//bool prepare_allocated_tag_modulation(tag_response_info_t *response_info, uint8_t **buffer, size_t *buffer_size);
-
 void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype);
 void DetectNACKbug();
+
+void AppendCrc14443a(uint8_t *data, int len);
 
 #ifdef __cplusplus
 }
