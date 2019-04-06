@@ -144,7 +144,7 @@ int CmdPrescoDemod(const char *Cmd) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - Presco: ans: %d", ans);
         return 0;
     }
-    setDemodBuf(DemodBuffer, 128, ans);
+    setDemodBuff(DemodBuffer, 128, ans);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (ans * g_DemodClock));
 
     //got a good demod

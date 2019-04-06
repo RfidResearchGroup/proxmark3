@@ -131,7 +131,7 @@ int CmdPyramidDemod(const char *Cmd) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: error demoding fsk idx: %d", idx);
         return 0;
     }
-    setDemodBuf(bits, size, idx);
+    setDemodBuff(bits, size, idx);
     setClockGrid(50, waveIdx + (idx * 50));
 
     // Index map

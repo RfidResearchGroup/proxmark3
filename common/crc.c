@@ -107,12 +107,12 @@ uint32_t CRC8Mad(uint8_t *buff, size_t size) {
     return crc_finish(&crc);
 }
 // width=4  poly=0xC, reversed poly=0x7  init=0x5   refin=true  refout=true  xorout=0x0000  check=  name="CRC-4/LEGIC"
-uint32_t CRC4Legic(uint8_t *cmd, size_t size) {
+uint32_t CRC4Legic(uint8_t *buff, size_t size) {
     crc_t crc;
     crc_init_ref(&crc, 4, 0x19 >> 1, 0x5, 0, true, true);
     crc_update2(&crc, 1, 1); /* CMD_READ */
-    crc_update2(&crc, cmd[0], 8);
-    crc_update2(&crc, cmd[1], 8);
+    crc_update2(&crc, buff[0], 8);
+    crc_update2(&crc, buff[1], 8);
     return reflect(crc_finish(&crc), 4);
 }
 // width=8  poly=0x63, reversed poly=0x8D  init=0x55  refin=true  refout=true  xorout=0x0000  check=0xC6  name="CRC-8/LEGIC"

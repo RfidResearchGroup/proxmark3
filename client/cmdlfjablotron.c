@@ -117,7 +117,7 @@ int CmdJablotronDemod(const char *Cmd) {
         return 0;
     }
 
-    setDemodBuf(DemodBuffer, 64, ans);
+    setDemodBuff(DemodBuffer, 64, ans);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (ans * g_DemodClock));
 
     //got a good demod

@@ -40,7 +40,7 @@ int CmdCOTAGDemod(const char *Cmd) {
         return -1;
     }
 
-    setDemodBuf(bits, bitlen, 0);
+    setDemodBuff(bits, bitlen, 0);
 
     //got a good demod
     uint16_t cn = bytebits_to_byteLSBF(bits + 1, 16);

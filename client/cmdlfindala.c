@@ -208,7 +208,7 @@ int CmdIndalaDemod(const char *Cmd) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - Indala: error demoding psk idx: %d", idx);
         return 0;
     }
-    setDemodBuf(DemodBuffer, size, idx);
+    setDemodBuff(DemodBuffer, size, idx);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (idx * g_DemodClock));
 
     //convert UID to HEX

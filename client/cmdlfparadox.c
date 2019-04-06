@@ -108,7 +108,7 @@ int CmdParadoxDemod(const char *Cmd) {
         return 0;
     }
 
-    setDemodBuf(bits, size, idx);
+    setDemodBuff(bits, size, idx);
     setClockGrid(50, waveIdx + (idx * 50));
 
     if (hi2 == 0 && hi == 0 && lo == 0) {

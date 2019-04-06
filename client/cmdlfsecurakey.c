@@ -47,7 +47,7 @@ int CmdSecurakeyDemod(const char *Cmd) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - Securakey: ans: %d", ans);
         return 0;
     }
-    setDemodBuf(DemodBuffer, 96, ans);
+    setDemodBuff(DemodBuffer, 96, ans);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (ans * g_DemodClock));
 
     //got a good demod

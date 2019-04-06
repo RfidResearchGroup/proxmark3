@@ -356,7 +356,7 @@ int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo) {
     size_t idx = 0;
     uint8_t bits[512] = {0};
     size_t size = sizeof(bits);
-    if (!getDemodBuf(bits, &size)) {
+    if (!getDemodBuff(bits, &size)) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x problem during copy from ASK demod");
         return 0;
     }
@@ -381,7 +381,7 @@ int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo) {
     }
 
     //set GraphBuffer for clone or sim command
-    setDemodBuf(DemodBuffer, (size == 40) ? 64 : 128, idx + 1);
+    setDemodBuff(DemodBuffer, (size == 40) ? 64 : 128, idx + 1);
     setClockGrid(g_DemodClock, g_DemodStartIdx + ((idx + 1)*g_DemodClock));
 
     PrintAndLogEx(DEBUG, "DEBUG: Em410x idx: %d, Len: %d, Printing Demod Buffer:", idx, size);
@@ -1109,7 +1109,7 @@ bool setDemodBufferEM(uint32_t *word, size_t idx) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM, failed removing parity");
         return false;
     }
-    setDemodBuf(DemodBuffer, 32, 0);
+    setDemodBuff(DemodBuffer, 32, 0);
     *word = bytebits_to_byteLSBF(DemodBuffer, 32);
     return true;
 }

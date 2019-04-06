@@ -237,26 +237,26 @@ int usage_data_fsktonrz() {
 
 //set the demod buffer with given array of binary (one bit per byte)
 //by marshmellow
-void setDemodBuf(uint8_t *buf, size_t size, size_t start_idx) {
-    if (buf == NULL) return;
+void setDemodBuff(uint8_t *buff, size_t size, size_t start_idx) {
+    if (buff == NULL) return;
 
     if (size > MAX_DEMOD_BUF_LEN - start_idx)
         size = MAX_DEMOD_BUF_LEN - start_idx;
 
     for (size_t i = 0; i < size; i++)
-        DemodBuffer[i] = buf[start_idx++];
+        DemodBuffer[i] = buff[start_idx++];
 
     DemodBufferLen = size;
 }
 
-bool getDemodBuf(uint8_t *buf, size_t *size) {
-    if (buf == NULL) return false;
+bool getDemodBuff(uint8_t *buff, size_t *size) {
+    if (buff == NULL) return false;
     if (size == NULL) return false;
     if (*size == 0) return false;
 
     *size = (*size > DemodBufferLen) ? DemodBufferLen : *size;
 
-    memcpy(buf, DemodBuffer, *size);
+    memcpy(buff, DemodBuffer, *size);
     return true;
 }
 
@@ -521,7 +521,7 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
     if (verbose) PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) Using clock:%d, invert:%d, bits found:%d", clk, invert, BitLen);
 
     //output
-    setDemodBuf(bits, BitLen, 0);
+    setDemodBuff(bits, BitLen, 0);
     setClockGrid(clk, startIdx);
 
     if (verbose) {
@@ -608,7 +608,7 @@ int Cmdmandecoderaw(const char *Cmd) {
         size_t idx = 0;
         if (Em410xDecode(bits, &size, &idx, &hi, &id) == 1) {
             //need to adjust to set bitstream back to manchester encoded data
-            //setDemodBuf(bits, size, idx);
+            //setDemodBuff(bits, size, idx);
             printEM410x(hi, id);
         }
     }
@@ -638,7 +638,7 @@ int CmdBiphaseDecodeRaw(const char *Cmd) {
 
     uint8_t bits[MAX_DEMOD_BUF_LEN] = {0};
     size = sizeof(bits);
-    if (!getDemodBuf(bits, &size)) return 0;
+    if (!getDemodBuff(bits, &size)) return 0;
 
     errCnt = BiphaseRawDecode(bits, &size, &offset, invert);
     if (errCnt < 0) {
@@ -658,7 +658,7 @@ int CmdBiphaseDecodeRaw(const char *Cmd) {
 
     //remove first bit from raw demod
     if (offset)
-        setDemodBuf(DemodBuffer, DemodBufferLen - offset, offset);
+        setDemodBuff(DemodBuffer, DemodBufferLen - offset, offset);
 
     setClockGrid(g_DemodClock, g_DemodStartIdx + g_DemodClock * offset / 2);
     return 1;
@@ -696,7 +696,7 @@ int ASKbiphaseDemod(const char *Cmd, bool verbose) {
         return 0;
     }
     //success set DemodBuffer and return
-    setDemodBuf(BitStream, size, 0);
+    setDemodBuff(BitStream, size, 0);
     setClockGrid(clk, startIdx + clk * offset / 2);
     if (g_debugMode || verbose) {
         PrintAndLogEx(NORMAL, "Biphase Decoded using offset: %d - clock: %d - # errors:%d - data:", offset, clk, errCnt);
@@ -1067,7 +1067,7 @@ int FSKrawDemod(const char *Cmd, bool verbose) {
     int startIdx = 0;
     int size = fskdemod(bits, BitLen, rfLen, invert, fchigh, fclow, &startIdx);
     if (size > 0) {
-        setDemodBuf(bits, size, 0);
+        setDemodBuff(bits, size, 0);
         setClockGrid(rfLen, startIdx);
 
         // Now output the bitstream to the scrollback by line of 16 bits
@@ -1135,7 +1135,7 @@ int PSKDemod(const char *Cmd, bool verbose) {
         }
     }
     //prime demod buffer for output
-    setDemodBuf(bits, bitlen, 0);
+    setDemodBuff(bits, bitlen, 0);
     setClockGrid(clk, startIdx);
     return 1;
 }
@@ -1185,7 +1185,7 @@ int CmdIdteckDemod(const char *Cmd) {
             return 0;
         }
     }
-    setDemodBuf(DemodBuffer, 64, idx);
+    setDemodBuff(DemodBuffer, 64, idx);
 
     //got a good demod
     uint32_t id = 0;
@@ -1238,7 +1238,7 @@ int NRZrawDemod(const char *Cmd, bool verbose) {
     }
     if (verbose || g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: (NRZrawDemod) Tried NRZ Demod using Clock: %d - invert: %d - Bits Found: %d", clk, invert, BitLen);
     //prime demod buffer for output
-    setDemodBuf(bits, BitLen, 0);
+    setDemodBuff(bits, BitLen, 0);
     setClockGrid(clk, clkStartIdx);
 
 

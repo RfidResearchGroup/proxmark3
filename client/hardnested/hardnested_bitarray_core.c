@@ -593,8 +593,8 @@ uint32_t bitcount(uint32_t a) {
     return (*bitcount_function_p)(a);
 }
 
-uint32_t count_states(uint32_t *bitarray) {
-    return (*count_states_function_p)(bitarray);
+uint32_t count_states(uint32_t *A) {
+    return (*count_states_function_p)(A);
 }
 
 void bitarray_AND(uint32_t *A, uint32_t *B) {

@@ -32,9 +32,9 @@
 #define CLIGetStrWithReturn(paramnum, data, datalen) if (CLIParamStrToBuf(arg_get_str(paramnum), data, sizeof(data), datalen)) {CLIParserFree();return 1;}
 
 int CLIParserInit(char *vprogramName, char *vprogramHint, char *vprogramHelp);
-int CLIParserParseString(const char *str, void *argtable[], size_t vargtableLen, bool allowEmptyExec);
+int CLIParserParseString(const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec);
 int CLIParserParseStringEx(const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec, bool clueData);
-int CLIParserParseArg(int argc, char **argv, void *argtable[], size_t vargtableLen, bool allowEmptyExec);
+int CLIParserParseArg(int argc, char **argv, void *vargtable[], size_t vargtableLen, bool allowEmptyExec);
 void CLIParserFree();
 
 int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen);

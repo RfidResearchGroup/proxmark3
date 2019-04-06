@@ -36,8 +36,8 @@ command_t *CmdDataCommands();
 
 int CmdData(const char *Cmd);
 void printDemodBuff(void);
-void setDemodBuf(uint8_t *buff, size_t size, size_t startIdx);
-bool getDemodBuf(uint8_t *buff, size_t *size);
+void setDemodBuff(uint8_t *buff, size_t size, size_t start_idx);
+bool getDemodBuff(uint8_t *buff, size_t *size);
 void save_restoreDB(uint8_t saveOpt);// option '1' to save DemodBuffer any other to restore
 int CmdPrintDemodBuff(const char *Cmd);
 

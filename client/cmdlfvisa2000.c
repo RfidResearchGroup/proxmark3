@@ -122,7 +122,7 @@ int CmdVisa2kDemod(const char *Cmd) {
         save_restoreGB(GRAPH_RESTORE);
         return 0;
     }
-    setDemodBuf(DemodBuffer, 96, ans);
+    setDemodBuff(DemodBuffer, 96, ans);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (ans * g_DemodClock));
 
     //got a good demod

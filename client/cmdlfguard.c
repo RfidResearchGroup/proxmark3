@@ -220,7 +220,7 @@ int CmdGuardDemod(const char *Cmd) {
         PrintAndLogEx(DEBUG, "DEBUG: gProxII byte %u after xor: %02x", (unsigned int)idx, ByteStream[idx]);
     }
 
-    setDemodBuf(DemodBuffer, 96, preambleIndex);
+    setDemodBuff(DemodBuffer, 96, preambleIndex);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (preambleIndex * g_DemodClock));
 
     //ByteStream contains 8 Bytes (64 bits) of decrypted raw tag data
