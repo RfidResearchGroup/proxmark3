@@ -379,9 +379,7 @@ int T55xxReadBlock(uint8_t block, bool page1, bool usepwd, bool override, uint32
     if (!AquireData(page1, block, usepwd, password)) return 0;
     if (!DecodeT55xxBlock()) return 0;
 
-    char blk[10] = {0};
-    sprintf(blk, "%02d", block);
-    printT55xxBlock(blk);
+    printT55xxBlock(block);
     return 1;
 }
 
@@ -777,7 +775,7 @@ bool GetT55xxBlockData(uint32_t *blockdata) {
     return true;
 }
 
-void printT55xxBlock(const char *blockNum) {
+void printT55xxBlock(uint8_t blockNum) {
 
     uint32_t blockData = 0;
     uint8_t bytes[4] = {0};
@@ -787,7 +785,7 @@ void printT55xxBlock(const char *blockNum) {
 
     num_to_bytes(blockData, 4, bytes);
 
-    PrintAndLogEx(NORMAL, " %s | %08X | %s | %s", blockNum, blockData, sprint_bin(DemodBuffer + config.offset, 32), sprint_ascii(bytes, 4));
+    PrintAndLogEx(NORMAL, " %02d | %08X | %s | %s", blockNum, blockData, sprint_bin(DemodBuffer + config.offset, 32), sprint_ascii(bytes, 4));
 }
 
 bool testModulation(uint8_t mode, uint8_t modread) {

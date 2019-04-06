@@ -157,7 +157,7 @@ char *GetModulationStr(uint32_t id, bool xmode);
 char *GetModelStrFromCID(uint32_t cid);
 char *GetSelectedModulationStr(uint8_t id);
 void printT5xxHeader(uint8_t page);
-void printT55xxBlock(const char *demodStr);
+void printT55xxBlock(uint8_t blockNum);
 int printConfiguration(t55xx_conf_block_t b);
 
 int T55xxReadBlock(uint8_t block, bool page1, bool usepwd, bool override, uint32_t password);
