@@ -195,11 +195,11 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
     LED_B_OFF();
     LED_C_OFF();
 
-    // 3 olika sätt att authenticera.   AUTH (CRC16) , AUTH_ISO (CRC32) , AUTH_AES (CRC32)
-    // 4 olika crypto algo   DES, 3DES, 3K3DES, AES
-    // 3 olika kommunikations sätt,   PLAIN,MAC,CRYPTO
+    // 3 different way to authenticate   AUTH (CRC16) , AUTH_ISO (CRC32) , AUTH_AES (CRC32)
+    // 4 different crypto algo   DES, 3DES, 3K3DES, AES
+    // 3 different communication modes,  PLAIN,MAC,CRYPTO
 
-    // des, nyckel 0,
+    // des, key 0,
     switch (mode) {
         case 1: {
             uint8_t keybytes[16];
@@ -495,7 +495,7 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
     cmd_send(CMD_ACK, 1, len, 0, resp, len);
 }
 
-// 3 olika ISO sätt att skicka data till DESFIRE (direkt, inkapslat, inkapslat ISO)
+// 3 different ISO ways to send data to a DESFIRE (direct, capsuled, capsuled ISO)
 // cmd  =  cmd bytes to send
 // cmd_len = length of cmd
 // dataout = pointer to response data array
@@ -540,7 +540,7 @@ size_t CreateAPDU(uint8_t *datain, size_t len, uint8_t *dataout) {
     uint8_t cmd[cmdlen];
     memset(cmd, 0, cmdlen);
 
-    cmd[0] = 0x0A;  //  0x0A = skicka cid,  0x02 = ingen cid. Särskilda bitar //
+    cmd[0] = 0x0A;  //  0x0A = send cid,  0x02 = no cid. 
     cmd[0] |= pcb_blocknum; // OR the block number into the PCB
     cmd[1] = 0x00;  //  CID: 0x00 //TODO: allow multiple selected cards
 
