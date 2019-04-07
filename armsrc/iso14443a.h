@@ -27,7 +27,6 @@ extern "C" {
 #include "crapto1/crapto1.h"
 #include "mifareutil.h"
 #include "parity.h"
-#include "random.h"
 #include "mifare.h"  // structs
 
 // When the PM acts as tag and is receiving it takes
