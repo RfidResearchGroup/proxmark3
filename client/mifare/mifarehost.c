@@ -381,7 +381,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
     uint32_t max_keys = keycnt > (USB_CMD_DATA_SIZE / 6) ? (USB_CMD_DATA_SIZE / 6) : keycnt;
     uint8_t keyBlock[USB_CMD_DATA_SIZE] = {0x00};
 
-    for (i = 0; j < keycnt; i += max_keys) {
+    for (i = 0; i < keycnt; i += max_keys) {
 
         int size = keycnt - i > max_keys ? max_keys : keycnt - i;
 
