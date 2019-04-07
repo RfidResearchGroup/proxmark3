@@ -58,7 +58,7 @@ void Dbhexdump(int len, uint8_t *d, bool bAsci);
 uint16_t AvgAdc(int ch);
 
 void print_result(char *name, uint8_t *buf, size_t len);
-void PrintToSendBuffer(void);
+//void PrintToSendBuffer(void);
 void ToSendStuffBit(int b);
 void ToSendReset(void);
 void ListenReaderField(int limit);
@@ -154,7 +154,6 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 void MifareAcquireNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *datain);
 void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
 void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
-void Mifare1ksim(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
 void MifareSetDbgLvl(uint16_t arg0);
 void MifareEMemClr(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 void MifareEMemSet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
