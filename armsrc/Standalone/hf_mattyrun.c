@@ -295,17 +295,15 @@ void RunMod() {
     /*
         Iterates through each sector checking if there is a correct key.
     */
-    int key = -1;
-    int block = 0;
     bool err = 0;
     bool allKeysFound = true;
     uint32_t size = mfKeysCnt;
 
     for (int type = !keyType; type < 2 && !err; keyType == 2 ? (type++) : (type = 2)) {
-        block = blockNo;
+        int block = blockNo;
         for (int sec = 0; sec < sectorsCnt && !err; ++sec) {
             Dbprintf("\tCurrent sector:%3d, block:%3d, key type: %c, key count: %i ", sec, block, type ? 'B' : 'A', mfKeysCnt);
-            key = saMifareChkKeys(block, type, true, size, &keyBlock[0], &key64);
+            int key = saMifareChkKeys(block, type, true, size, &keyBlock[0], &key64);
             if (key == -1) {
                 LED(LED_RED, 50); //red
                 Dbprintf("\t✕ Key not found for this sector!");
@@ -393,12 +391,12 @@ void RunMod() {
                     Needs further testing.
                 */
                 if (fillFromEmulator) {
-                    uint8_t retry = 5, cnt;
+                    uint8_t retry = 5;
                     Dbprintf("\t Trying to dump into blank card.");
                     int flags = 0;
                     LED_A_ON(); //yellow
                     for (int blockNum = 0; blockNum < 16 * 4; blockNum += 1) {
-                        cnt = 0;
+                        uint8_t cnt = 0;
                         emlGetMem(mblock, blockNum, 1);
                         // switch on field and send magic sequence
                         if (blockNum == 0) flags = 0x08 + 0x02;
