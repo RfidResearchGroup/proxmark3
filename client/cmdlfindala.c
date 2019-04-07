@@ -446,9 +446,8 @@ int CmdIndalaDemodAlt(const char *Cmd) {
     }
 
     // Checking UID against next occurrences
-    int failed = 0;
     for (; i + uidlen <= rawbit;) {
-        failed = 0;
+        int failed = 0;
         for (bit = 0; bit < uidlen; bit++) {
             if (bits[bit] != rawbits[i++]) {
                 failed = 1;
@@ -468,14 +467,13 @@ int CmdIndalaDemodAlt(const char *Cmd) {
     // since this changes graphbuffer data.
     GraphTraceLen = 32 * uidlen;
     i = 0;
-    int phase = 0;
+    int phase;
     for (bit = 0; bit < uidlen; bit++) {
         if (bits[bit] == 0) {
             phase = 0;
         } else {
             phase = 1;
         }
-        int j;
         for (j = 0; j < 32; j++) {
             GraphBuffer[i++] = phase;
             phase = !phase;
