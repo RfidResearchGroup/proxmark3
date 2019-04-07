@@ -824,7 +824,7 @@ void CmdHIDsimTAG(uint32_t hi, uint32_t lo, int ledcontrol) {
 // prepare a waveform pattern in the buffer based on the ID given then
 // simulate a FSK tag until the button is pressed
 // arg1 contains fcHigh and fcLow, arg2 contains STT marker and clock
-void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream, int ledcontrol) {
+void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *bits, int ledcontrol) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
     // free eventually allocated BigBuf memory
@@ -846,7 +846,7 @@ void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream,
     }
 
     for (i = 0; i < size; i++) {
-        if (BitStream[i])
+        if (bits[i])
             fcAll(fcLow, &n, clk, &modCnt);
         else
             fcAll(fcHigh, &n, clk, &modCnt);
@@ -901,7 +901,7 @@ static void stAskSimBit(int *n, uint8_t clock) {
 }
 
 // args clock, ask/man or askraw, invert, transmission separator
-void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream, int ledcontrol) {
+void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *bits, int ledcontrol) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     set_tracing(false);
 
@@ -914,20 +914,20 @@ void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream,
     if (encoding == 2) { //biphase
         uint8_t phase = 0;
         for (i = 0; i < size; i++) {
-            biphaseSimBit(BitStream[i]^invert, &n, clk, &phase);
+            biphaseSimBit(bits[i]^invert, &n, clk, &phase);
         }
         if (phase == 1) { //run a second set inverted to keep phase in check
             for (i = 0; i < size; i++) {
-                biphaseSimBit(BitStream[i]^invert, &n, clk, &phase);
+                biphaseSimBit(bits[i]^invert, &n, clk, &phase);
             }
         }
     } else {  // ask/manchester || ask/raw
         for (i = 0; i < size; i++) {
-            askSimBit(BitStream[i]^invert, &n, clk, encoding);
+            askSimBit(bits[i]^invert, &n, clk, encoding);
         }
-        if (encoding == 0 && BitStream[0] == BitStream[size - 1]) { //run a second set inverted (for ask/raw || biphase phase)
+        if (encoding == 0 && bits[0] == bits[size - 1]) { //run a second set inverted (for ask/raw || biphase phase)
             for (i = 0; i < size; i++) {
-                askSimBit(BitStream[i]^invert ^ 1, &n, clk, encoding);
+                askSimBit(bits[i]^invert ^ 1, &n, clk, encoding);
             }
         }
     }
@@ -968,7 +968,7 @@ static void pskSimBit(uint8_t waveLen, int *n, uint8_t clk, uint8_t *curPhase, b
 }
 
 // args clock, carrier, invert,
-void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream, int ledcontrol) {
+void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *bits, int ledcontrol) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     set_tracing(false);
 
@@ -978,7 +978,7 @@ void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream,
     uint8_t invert = arg2 & 0xFF;
     uint8_t curPhase = 0;
     for (i = 0; i < size; i++) {
-        if (BitStream[i] == curPhase) {
+        if (bits[i] == curPhase) {
             pskSimBit(carrier, &n, clk, &curPhase, false);
         } else {
             pskSimBit(carrier, &n, clk, &curPhase, true);

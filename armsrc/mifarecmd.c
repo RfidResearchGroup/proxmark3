@@ -100,7 +100,7 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) 
     LEDsoff();
 }
 
-void MifareUC_Auth(uint8_t arg0, uint8_t *datain) {
+void MifareUC_Auth(uint8_t arg0, uint8_t *keybytes) {
 
     bool turnOffField = (arg0 == 1);
 
@@ -119,7 +119,7 @@ void MifareUC_Auth(uint8_t arg0, uint8_t *datain) {
         return;
     };
 
-    if (!mifare_ultra_auth(datain)) {
+    if (!mifare_ultra_auth(keybytes)) {
         if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Authentication failed");
         OnError(1);
         return;
