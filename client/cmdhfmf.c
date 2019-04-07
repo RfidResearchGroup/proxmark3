@@ -1683,7 +1683,7 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "Running strategy %u", strategy);
 
             // main keychunk loop
-            for (uint32_t i = 0; i < keycnt; i += chunksize) {
+            for (i = 0; i < keycnt; i += chunksize) {
 
                 if (ukbhit()) {
                     int gc = getchar();
@@ -1717,7 +1717,7 @@ out:
 
     // check..
     uint8_t found_keys = 0;
-    for (uint8_t i = 0; i < sectorsCnt; ++i) {
+    for (i = 0; i < sectorsCnt; ++i) {
 
         if (e_sector[i].foundKey[0])
             found_keys++;
@@ -1734,7 +1734,7 @@ out:
 
         if (transferToEml) {
             uint8_t block[16] = {0x00};
-            for (uint8_t i = 0; i < sectorsCnt; ++i) {
+            for ( i = 0; i < sectorsCnt; ++i) {
                 mfEmlGetMem(block, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1);
                 if (e_sector[i].foundKey[0])
                     num_to_bytes(e_sector[i].Key[0], 6, block);
@@ -1929,7 +1929,7 @@ int CmdHF14AMfChk(const char *Cmd) {
     }
 
     // empty e_sector
-    for (int i = 0; i < SectorsCnt; ++i) {
+    for (i = 0; i < SectorsCnt; ++i) {
         e_sector[i].Key[0] = 0xffffffffffff;
         e_sector[i].Key[1] = 0xffffffffffff;
         e_sector[i].foundKey[0] = false;
@@ -1948,7 +1948,7 @@ int CmdHF14AMfChk(const char *Cmd) {
     for (trgKeyType = (keyType == 2) ? 0 : keyType; trgKeyType < 2; (keyType == 2) ? (++trgKeyType) : (trgKeyType = 2)) {
 
         int b = blockNo;
-        for (int i = 0; i < SectorsCnt; ++i) {
+        for (i = 0; i < SectorsCnt; ++i) {
 
             // skip already found keys.
             if (e_sector[i].foundKey[trgKeyType]) continue;
@@ -2022,7 +2022,7 @@ out:
 
     if (transferToEml) {
         uint8_t block[16] = {0x00};
-        for (uint8_t i = 0; i < SectorsCnt; ++i) {
+        for (i = 0; i < SectorsCnt; ++i) {
             mfEmlGetMem(block, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1);
             if (e_sector[i].foundKey[0])
                 num_to_bytes(e_sector[i].Key[0], 6, block);
