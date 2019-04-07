@@ -385,7 +385,7 @@ int CmdHFMFPRdbl(const char *cmd) {
     }
 
     if (blocksCount > 1 && mfIsSectorTrailer(blockn)) {
-        PrintAndLog("WARNING: trailer!");
+        PrintAndLogEx(WARNING, "WARNING: trailer!");
     }
 
     uint8_t sectorNum = mfSectorNum(blockn & 0xff);

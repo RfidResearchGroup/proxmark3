@@ -238,30 +238,30 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
     uint64_t select_status = resp.arg[0]; // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
 
     if (select_status == 0) {
-        PrintAndLog("E->iso14443a card select failed");
+        PrintAndLogEx(ERR, "E->iso14443a card select failed");
         return 1;
     }
 
     if (select_status == 2) {
-        PrintAndLog("E->Card doesn't support iso14443-4 mode");
+        PrintAndLogEx(ERR, "E->Card doesn't support iso14443-4 mode");
         return 1;
     }
 
     if (select_status == 3) {
-        PrintAndLog("E->Card doesn't support standard iso14443-3 anticollision");
-        PrintAndLog("\tATQA : %02x %02x", card->atqa[1], card->atqa[0]);
+        PrintAndLogEx(NORMAL, "E->Card doesn't support standard iso14443-3 anticollision");
+        PrintAndLogEx(NORMAL, "\tATQA : %02x %02x", card->atqa[1], card->atqa[0]);
         return 1;
     }
 
-    PrintAndLog(" UID: %s", sprint_hex(card->uid, card->uidlen));
-    PrintAndLog("ATQA: %02x %02x", card->atqa[1], card->atqa[0]);
-    PrintAndLog(" SAK: %02x [%" PRIu64 "]", card->sak, resp.arg[0]);
+    PrintAndLogEx(NORMAL, " UID: %s", sprint_hex(card->uid, card->uidlen));
+    PrintAndLogEx(NORMAL, "ATQA: %02x %02x", card->atqa[1], card->atqa[0]);
+    PrintAndLogEx(NORMAL, " SAK: %02x [%" PRIu64 "]", card->sak, resp.arg[0]);
     if (card->ats_len < 3) { // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
-        PrintAndLog("E-> Error ATS length(%d) : %s", card->ats_len, sprint_hex(card->ats, card->ats_len));
+        PrintAndLogEx(NORMAL, "E-> Error ATS length(%d) : %s", card->ats_len, sprint_hex(card->ats, card->ats_len));
         return 1;
     }
-    PrintAndLog(" ATS: %s", sprint_hex(card->ats, card->ats_len));
-
+    
+    PrintAndLogEx(NORMAL, " ATS: %s", sprint_hex(card->ats, card->ats_len));
     return 0;
 }
 

@@ -405,13 +405,13 @@ int loadFileJSON(const char *preferredName, const char *suffix, void *data, size
 
     root = json_load_file(fileName, 0, &error);
     if (!root) {
-        PrintAndLog("ERROR: json " _YELLOW_("%s") " error on line %d: %s", fileName, error.line, error.text);
+        PrintAndLogEx(ERR, "ERROR: json " _YELLOW_("%s") " error on line %d: %s", fileName, error.line, error.text);
         retval = 2;
         goto out;
     }
 
     if (!json_is_object(root)) {
-        PrintAndLog("ERROR: Invalid json " _YELLOW_("%s") " format. root must be an object.", fileName);
+        PrintAndLogEx(ERR, "ERROR: Invalid json " _YELLOW_("%s") " format. root must be an object.", fileName);
         retval = 3;
         goto out;
     }

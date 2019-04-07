@@ -128,13 +128,13 @@ int FillBuffer(uint8_t *data, size_t maxDataLength, size_t *dataLength, ...) {
     va_start(valist, dataLength);
 
     uint8_t *vdata = NULL;
-    size_t vlength = 0;
+
     do {
         vdata = va_arg(valist, uint8_t *);
         if (!vdata)
             break;
 
-        vlength = va_arg(valist, size_t);
+        size_t vlength = va_arg(valist, size_t);
         if (*dataLength + vlength >  maxDataLength) {
             va_end(valist);
             return 1;
@@ -650,12 +650,10 @@ https://github.com/ApertureLabsLtd/RFIDler/blob/master/firmware/Pic32/RFIDler.X/
 int hextobinarray(char *target, char *source) {
     int length, i, count = 0;
     char *start = source;
-    char x;
-
     length = strlen(source);
     // process 4 bits (1 hex digit) at a time
     while (length--) {
-        x = *(source++);
+        char x = *(source++);
         // capitalize
         if (x >= 'a' && x <= 'f')
             x -= 32;

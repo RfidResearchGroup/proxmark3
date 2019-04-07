@@ -44,8 +44,6 @@ extern int PlotGridX, PlotGridY, PlotGridXdefault, PlotGridYdefault, CursorCPos,
 extern bool GridLocked;
 extern bool showDemod;
 
-//extern uint8_t g_debugMode;
-
 extern pthread_mutex_t print_lock;
 
 void iceIIR_Butterworth(int *data, const size_t len);
