@@ -191,7 +191,7 @@ void compute_crc(CrcType_t ct, const uint8_t *d, size_t n, uint8_t *first, uint8
     *first = (crc & 0xFF);
     *second = ((crc >> 8) & 0xFF);
 }
-uint16_t crc(CrcType_t ct, const uint8_t *d, size_t n) {
+uint16_t Crc(CrcType_t ct, const uint8_t *d, size_t n) {
 
     // can't calc a crc on less than 3 byte. (1byte + 2 crc bytes)
     if (n < 3) return 0;

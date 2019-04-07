@@ -34,7 +34,7 @@ uint16_t update_crc16_ex(uint16_t crc, uint8_t c, uint16_t polynomial);
 uint16_t update_crc16(uint16_t crc, uint8_t c);
 uint16_t crc16(uint8_t const *d, size_t length, uint16_t remainder, uint16_t polynomial, bool refin, bool refout);
 
-uint16_t crc(CrcType_t ct, const uint8_t *d, size_t n);
+uint16_t Crc(CrcType_t ct, const uint8_t *d, size_t n);
 void compute_crc(CrcType_t ct, const uint8_t *d, size_t n, uint8_t *first, uint8_t *second);
 bool check_crc(CrcType_t ct, const uint8_t *d, size_t n);
 
