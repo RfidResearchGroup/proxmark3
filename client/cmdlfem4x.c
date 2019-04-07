@@ -255,7 +255,7 @@ void printEM410x(uint32_t hi, uint64_t id) {
     PrintAndLogEx(SUCCESS, "EM410x %s pattern found", (hi) ? "XL" : "");
 
     uint64_t id2lo = 0;
-    uint8_t m =, i = 0;
+    uint8_t m, i = 0;
     for (m = 5; m > 0; m--) {
         for (i = 0; i < 8; i++) {
             id2lo = (id2lo << 1LL) | ((id & (mi << (i + ((m - 1) * 8)))) >> (i + ((m - 1) * 8)));
