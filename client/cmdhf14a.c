@@ -418,7 +418,6 @@ int CmdHF14AInfo(const char *Cmd) {
             c.arg[2] = 0;
             clearCommandBuffer();
             SendCommand(&c);
-            UsbCommand resp;
             WaitForResponse(CMD_ACK, &resp);
 
             memcpy(&card, (iso14a_card_select_t *)resp.d.asBytes, sizeof(iso14a_card_select_t));
