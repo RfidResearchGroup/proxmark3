@@ -21,7 +21,6 @@
 #include "iso14443a.h"
 #include "crapto1/crapto1.h"
 #include "des.h"
-#include "random.h" // fast_prand, prand
 
 // mifare authentication
 #define CRYPT_NONE    0
