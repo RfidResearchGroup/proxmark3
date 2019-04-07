@@ -21,7 +21,7 @@ alt="Yuotube" width="100%" height="auto" border="10" /></a>
 |[Why didn't you based it on offical PM3 Master?](#why-didnt-you-based-it-on-offical-pm3-master) |[ParrotOS Installation ](/Installation_Instructions/Parrot-OS-Proxmark3-RDV4-installation.md)|[PM3 GUI](#pm3-gui)
 |[Notices](#notices)|[Setup and build for Windows](/Installation_Instructions/Windows-Installation-Instructions.md)||
 |[Issues](#issues)|[Coverity Scan Config & Run](/Installation_Instructions/Coverity-Scan-Config-%26-Run.md)||
-|||
+||[Kali Linux Installation Instructions](/Installation_Instructions/Kali-Installation-Instructions.md)|
 
 ---
 ## Whats changed?
