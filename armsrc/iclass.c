@@ -855,7 +855,7 @@ void RAMFUNC SniffIClass(void) {
 
     //int datalen = 0;
     uint32_t previous_data = 0;
-    uint32_t time_0 = 0, time_start = 0, time_stop  = 0;
+    uint32_t time_0 = 0, time_start = 0, time_stop;
     uint32_t sniffCounter = 0;
     bool TagIsActive = false;
     bool ReaderIsActive = false;
@@ -1395,7 +1395,7 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
     // To control where we are in the protocol
     uint32_t time_0 = GetCountSspClk();
     uint32_t t2r_stime = 0, t2r_etime = 0;
-    uint32_t r2t_stime = 0, r2t_etime = 0;
+    uint32_t r2t_stime, r2t_etime = 0;
 
     LED_A_ON();
     bool buttonPressed = false;
@@ -1626,7 +1626,7 @@ send:
  */
 static int SendIClassAnswer(uint8_t *resp, int respLen, uint16_t delay) {
     int i = 0;
-    volatile uint8_t b = 0;
+    volatile uint8_t b;
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_424K_8BIT);
 
@@ -1720,7 +1720,6 @@ static void TransmitIClassCommand(const uint8_t *cmd, int len, int *samples, int
 //-----------------------------------------------------------------------------
 void CodeIClassCommand(const uint8_t *cmd, int len) {
     int i, j, k;
-    uint8_t b;
 
     ToSendReset();
 
@@ -1732,7 +1731,7 @@ void CodeIClassCommand(const uint8_t *cmd, int len) {
 
     // Modulate the bytes
     for (i = 0; i < len; i++) {
-        b = cmd[i];
+        uint8_t b = cmd[i];
         for (j = 0; j < 4; j++) {
             for (k = 0; k < 4; k++) {
 
@@ -1875,14 +1874,13 @@ void setupIclassReader() {
 }
 
 bool sendCmdGetResponseWithRetries(uint8_t *command, size_t cmdsize, uint8_t *resp, uint8_t expected_size, uint8_t retries) {
-    uint8_t got_n = 0;
     while (retries-- > 0) {
 
         ReaderTransmitIClass(command, cmdsize);
 
         //iceman - if received size is bigger than expected, we smash the stack here
         // since its called with fixed sized arrays
-        got_n = ReaderReceiveIClass(resp);
+        uint8_t got_n = ReaderReceiveIClass(resp);
 
         // 0xBB is the internal debug separator byte..
         if (expected_size != got_n || (resp[0] == 0xBB || resp[7] == 0xBB || resp[2] == 0xBB)) {
@@ -1983,9 +1981,7 @@ void ReaderIClass(uint8_t arg0) {
     //Read App Issuer Area block CRC(0x05) => 0xde  0x64
     uint8_t readAA[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x05, 0xde, 0x64};
 
-    int read_status = 0;
     uint16_t tryCnt = 0;
-    uint8_t result_status = 0;
 
     bool abort_after_read = arg0 & FLAG_ICLASS_READER_ONLY_ONCE;  // flag to read until one tag is found successfully
     bool try_once = arg0 & FLAG_ICLASS_READER_ONE_TRY;            // flag to not to loop continuously, looking for tag
@@ -2008,9 +2004,9 @@ void ReaderIClass(uint8_t arg0) {
         }
 
         tryCnt++;
-        result_status = 0;
+        uint8_t result_status = 0;
 
-        read_status = handshakeIclassTag_ext(card_data, use_credit_key);
+        int read_status = handshakeIclassTag_ext(card_data, use_credit_key);
 
         if (read_status == 0) continue;
         if (read_status == 1) result_status = FLAG_ICLASS_READER_CSN;
