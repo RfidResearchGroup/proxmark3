@@ -780,7 +780,7 @@ void DbdecodeIso15693Answer(int len, uint8_t *d) {
             strncat(status, "No error ", DBD15STATLEN - strlen(status));
         }
 
-        if (CheckCrc(d, len))
+        if (CheckCrc15(d, len))
             strncat(status, "[+] crc OK", DBD15STATLEN - strlen(status));
         else
             strncat(status, "[!] crc fail", DBD15STATLEN - strlen(status));
