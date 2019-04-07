@@ -1,6 +1,6 @@
 # Kali Installation
 Kali users usually must kill their modem manager in order for the proxmark3 to enumerate properly.
-''' sudo apt remove modemmanager '''
+```sh sudo apt remove modemmanager```
 
 # Video Installation guide
 [![Kali Installation tutorial](https://github.com/5w0rdfish/Proxmark3-RDV4-ParrotOS/blob/master/screenshot-www.youtube.com-2019.03.17-20-44-33.png)](https://youtu.be/Wl9AsrU4igo "ParrotOS Installation Tutorial")
@@ -38,14 +38,7 @@ cd proxmark3
 git pull
 ```
 
-### Make Udev
-Iceman has made the udev script which takes care of the blacklist rules. This should take care of the remove modem manager.
-The make udev command also create's an alias for the pm3 under /dev which you will use to connect to the proxmark. 
-
-```sh
-sudo make udev
-```
-if you have any issues:
+### Remove Modem Manager
 ```sh
 sudo apt remove modemmanager
 ```
