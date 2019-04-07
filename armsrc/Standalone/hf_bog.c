@@ -85,7 +85,7 @@ void RAMFUNC SniffAndStore(uint8_t param) {
     uint8_t *data = dmaBuf;
 
     uint8_t previous_data = 0;
-    int dataLen = 0;
+    int dataLen;
     bool TagIsActive = false;
     bool ReaderIsActive = false;
 
@@ -110,7 +110,7 @@ void RAMFUNC SniffAndStore(uint8_t param) {
     // triggered == false -- to wait first for card
     bool triggered = !(param & 0x03);
 
-    uint32_t rsamples = 0;
+    uint32_t my_rsamples = 0;
 
     // Current captured passwords counter
     uint8_t auth_attempts = 0;
@@ -151,11 +151,11 @@ void RAMFUNC SniffAndStore(uint8_t param) {
         LED_A_OFF();
 
         // Need two samples to feed Miller and Manchester-Decoder
-        if (rsamples & 0x01) {
+        if (my_rsamples & 0x01) {
 
             if (!TagIsActive) { // no need to try decoding reader data if the tag is sending
                 uint8_t readerdata = (previous_data & 0xF0) | (*data >> 4);
-                if (MillerDecoding(readerdata, (rsamples - 1) * 4)) {
+                if (MillerDecoding(readerdata, (my_rsamples - 1) * 4)) {
                     LED_C_ON();
 
                     // check - if there is a short 7bit request from reader
@@ -190,7 +190,7 @@ void RAMFUNC SniffAndStore(uint8_t param) {
             // no need to try decoding tag data if the reader is sending - and we cannot afford the time
             if (!ReaderIsActive) {
                 uint8_t tagdata = (previous_data << 4) | (*data & 0x0F);
-                if (ManchesterDecoding(tagdata, 0, (rsamples - 1) * 4)) {
+                if (ManchesterDecoding(tagdata, 0, (my_rsamples - 1) * 4)) {
                     LED_B_ON();
 
                     if (!LogTrace(receivedResp,
@@ -214,7 +214,7 @@ void RAMFUNC SniffAndStore(uint8_t param) {
         }
 
         previous_data = *data;
-        rsamples++;
+        my_rsamples++;
         data++;
         if (data == dmaBuf + DMA_BUFFER_SIZE) {
             data = dmaBuf;

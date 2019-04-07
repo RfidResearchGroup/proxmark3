@@ -6,10 +6,6 @@
 // StandAlone Mod
 //-----------------------------------------------------------------------------
 
-#ifndef FALSE
-#define FALSE 0
-#endif
-
 #ifndef __HF_BOG_H
 #define __HF_BOG_H
 
