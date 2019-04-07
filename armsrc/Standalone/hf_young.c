@@ -158,7 +158,7 @@ void RunMod() {
                             Bytes 5-7 are reserved SAK and ATQA for mifare classic
                     -Use mfCSetBlock(0, block0, oldUID, wantWipe, MAGIC_SINGLE) to write it
             */
-            uint8_t oldBlock0[16] = {0}, newBlock0[16], testBlock0[16] = {0};
+            uint8_t oldBlock0[16] = {0}, newBlock0[16] = {0}, testBlock0[16] = {0};
             // arg0 = Flags, arg1=blockNo
             MifareCGetBlock(params, 0, oldBlock0);
             if (oldBlock0[0] == 0 && oldBlock0[0] == oldBlock0[1]  && oldBlock0[1] == oldBlock0[2] && oldBlock0[2] == oldBlock0[3]) {
@@ -166,7 +166,7 @@ void RunMod() {
                 playing = 1;
             } else {
                 Dbprintf("UID from target tag: %02X%02X%02X%02X", oldBlock0[0], oldBlock0[1], oldBlock0[2], oldBlock0[3]);
-                memcpy(newBlock0, oldBlock0, 16);
+                memcpy(newBlock0 + 5, oldBlock0 + 5, 11);
 
                 // Copy uid for bank (2nd is for longer UIDs not supported if classic)
                 memcpy(newBlock0, uids[selected].uid, 4);
