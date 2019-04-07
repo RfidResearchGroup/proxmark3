@@ -300,7 +300,7 @@ int CmdAnalyseCRC(const char *Cmd) {
     // ISO14443 crc B
     compute_crc(CRC_14443_B, data, len, &b1, &b2);
     uint16_t crcBB_1 = b1 << 8 | b2;
-    uint16_t bbb = crc(CRC_14443_B, data, len);
+    uint16_t bbb = Crc(CRC_14443_B, data, len);
     PrintAndLogEx(NORMAL, "ISO14443 crc B  | %04x == %04x \n", crcBB_1, bbb);
 
 

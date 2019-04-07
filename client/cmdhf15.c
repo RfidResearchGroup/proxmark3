@@ -479,7 +479,7 @@ int CmdHF15Demod(const char *Cmd) {
     for (i = 0; i < k; i++)
         PrintAndLogEx(NORMAL, "# %2d: %02x ", i, outBuf[i]);
 
-    PrintAndLogEx(NORMAL, "CRC %04x", Crc(outBuf, k - 2));
+    PrintAndLogEx(NORMAL, "CRC %04x", Crc15(outBuf, k - 2));
     return 0;
 }
 
