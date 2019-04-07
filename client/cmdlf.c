@@ -228,7 +228,7 @@ int CmdFlexdemod(const char *Cmd) {
     i = start;
     for (bit = 0; bit < 64; bit++) {
         sum = 0;
-        for (int j = 0; j < 16; j++) {
+        for (j = 0; j < 16; j++) {
             sum += data[i++];
         }
         bits[bit] = (sum > 0) ? 1 : 0;
