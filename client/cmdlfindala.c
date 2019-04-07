@@ -265,7 +265,9 @@ int CmdIndalaDemod(const char *Cmd) {
         uid5 = bytebits_to_byte(DemodBuffer + 128, 32);
         uid6 = bytebits_to_byte(DemodBuffer + 160, 32);
         uid7 = bytebits_to_byte(DemodBuffer + 192, 32);
-        PrintAndLogEx(SUCCESS, "Indala Found - bitlength %d, UID = 0x%x%08x%08x%08x%08x%08x%08x"
+        PrintAndLogEx(
+            SUCCESS
+            , "Indala Found - bitlength %d, Raw 0x%x%08x%08x%08x%08x%08x%08x"
                       , DemodBufferLen
                       , uid1
                       , uid2
@@ -558,7 +560,7 @@ int CmdIndalaClone(const char *Cmd) {
     UsbCommand c = {0, {0, 0, 0}};
 
     if (isLongUid) {
-        PrintAndLogEx(INFO, "Preparing to clone Indala 224bit tag with UID %s", sprint_hex(data, datalen));
+        PrintAndLogEx(INFO, "Preparing to clone Indala 224bit tag with RawID %s", sprint_hex(data, datalen));
         c.cmd = CMD_INDALA_CLONE_TAG_L;
         c.d.asDwords[0] = bytes_to_num(data, 4);
         c.d.asDwords[1] = bytes_to_num(data +  4, 4);
@@ -568,7 +570,7 @@ int CmdIndalaClone(const char *Cmd) {
         c.d.asDwords[5] = bytes_to_num(data + 20, 4);
         c.d.asDwords[6] = bytes_to_num(data + 24, 4);
     } else {
-        PrintAndLogEx(INFO, "Preparing to clone Indala 64bit tag with UID %s", sprint_hex(data, datalen));
+        PrintAndLogEx(INFO, "Preparing to clone Indala 64bit tag with RawID %s", sprint_hex(data, datalen));
         c.cmd = CMD_INDALA_CLONE_TAG;
         c.d.asDwords[0] = bytes_to_num(data, 4);
         c.d.asDwords[1] = bytes_to_num(data + 4, 4);
