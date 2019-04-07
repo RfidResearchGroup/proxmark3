@@ -136,7 +136,7 @@ style:
 	    -exec sh -c "echo >> {}" \;
 	# Apply astyle on *.c, *.h, *.cpp
 	find . \( -name "*.[ch]" -or -name "*.cpp" \) -exec astyle --formatted --mode=c --suffix=none \
-	    --indent=spaces=4 --indent-switches --indent-preprocessor \
+	    --indent=spaces=4 --indent-switches \
 	    --keep-one-line-blocks --max-instatement-indent=60 \
 	    --style=google --pad-oper --unpad-paren --pad-header \
 	    --align-pointer=name {} \;

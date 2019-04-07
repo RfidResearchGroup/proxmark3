@@ -614,13 +614,13 @@ failtag:
                             for (uint16_t s = 0; s < sectorsCnt; s++) {
                                 num_to_bytes(key64, 6, foundKey[i][s]);
                                 sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x",
-                                    foundKey[i][s][0],
-                                    foundKey[i][s][1],
-                                    foundKey[i][s][2],
-                                    foundKey[i][s][3],
-                                    foundKey[i][s][4],
-                                    foundKey[i][s][5]
-                                    );
+                                        foundKey[i][s][0],
+                                        foundKey[i][s][1],
+                                        foundKey[i][s][2],
+                                        foundKey[i][s][3],
+                                        foundKey[i][s][4],
+                                        foundKey[i][s][5]
+                                       );
                                 cjSetCursRight();
                                 DbprintfEx(FLAG_NOLOG, "SEC: %02x ; KEY : %s ; TYP: %d", s, tosendkey, i);
                             }
@@ -653,26 +653,26 @@ failtag:
                         for (uint16_t s = 0; s < sectorsCnt; s++) {
                             num_to_bytes(0x414c41524f4e, 6, foundKey[t][s]);
                             sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x",
-                                foundKey[t][s][0],
-                                foundKey[t][s][1], 
-                                foundKey[t][s][2],
-                                foundKey[t][s][3],
-                                foundKey[t][s][4],
-                                foundKey[t][s][5]);
+                                    foundKey[t][s][0],
+                                    foundKey[t][s][1],
+                                    foundKey[t][s][2],
+                                    foundKey[t][s][3],
+                                    foundKey[t][s][4],
+                                    foundKey[t][s][5]);
                             cjSetCursRight();
                             DbprintfEx(FLAG_NOLOG, "SEC: %02x ; KEY : %s ; TYP: %d", s, tosendkey, t);
                         }
-                        
+
                         t = 1;
                         for (uint16_t s = 0; s < sectorsCnt; s++) {
                             num_to_bytes(0x424c41524f4e, 6, foundKey[t][s]);
                             sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x",
-                                foundKey[t][s][0],
-                                foundKey[t][s][1],
-                                foundKey[t][s][2],
-                                foundKey[t][s][3],
-                                foundKey[t][s][4],
-                                foundKey[t][s][5]);
+                                    foundKey[t][s][0],
+                                    foundKey[t][s][1],
+                                    foundKey[t][s][2],
+                                    foundKey[t][s][3],
+                                    foundKey[t][s][4],
+                                    foundKey[t][s][5]);
                             cjSetCursRight();
                             DbprintfEx(FLAG_NOLOG, "SEC: %02x ; KEY : %s ; TYP: %d", s, tosendkey, t);
                         }

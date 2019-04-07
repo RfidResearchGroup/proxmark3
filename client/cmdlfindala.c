@@ -268,15 +268,15 @@ int CmdIndalaDemod(const char *Cmd) {
         PrintAndLogEx(
             SUCCESS
             , "Indala Found - bitlength %d, Raw 0x%x%08x%08x%08x%08x%08x%08x"
-                      , DemodBufferLen
-                      , uid1
-                      , uid2
-                      , uid3
-                      , uid4
-                      , uid5
-                      , uid6
-                      , uid7
-                     );
+            , DemodBufferLen
+            , uid1
+            , uid2
+            , uid3
+            , uid4
+            , uid5
+            , uid6
+            , uid7
+        );
     }
 
     if (g_debugMode) {
