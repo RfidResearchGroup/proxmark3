@@ -645,7 +645,7 @@ int CmdSmartUpgrade(const char *Cmd) {
     long fsize = ftell(f);
     fseek(f, 0, SEEK_SET);
 
-    if (fsize < 0) {
+    if (fsize <= 0) {
         PrintAndLogEx(WARNING, "error, when getting filesize");
         fclose(f);
         return 1;
@@ -676,7 +676,7 @@ int CmdSmartUpgrade(const char *Cmd) {
     fsize = ftell(f);
     fseek(f, 0, SEEK_SET);
 
-    if (fsize < 0)  {
+    if (fsize < 0) {
         PrintAndLogEx(FAILED, "Could not determine size of SHA-512 file");
         fclose(f);
         free(dump);

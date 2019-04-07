@@ -636,7 +636,7 @@ int CmdHFiClassELoad(const char *Cmd) {
     long fsize = ftell(f);
     fseek(f, 0, SEEK_SET);
 
-    if (fsize < 0) {
+    if (fsize <= 0) {
         PrintAndLogDevice(WARNING, "error, when getting filesize");
         fclose(f);
         return 1;
@@ -729,7 +729,7 @@ int CmdHFiClassDecrypt(const char *Cmd) {
     long fsize = ftell(f);
     fseek(f, 0, SEEK_SET);
 
-    if (fsize < 0) {
+    if (fsize <= 0) {
         PrintAndLogEx(WARNING, "error, when getting filesize");
         fclose(f);
         return 2;
@@ -1609,7 +1609,7 @@ int CmdHFiClassReadTagFile(const char *Cmd) {
     long fsize = ftell(f);
     fseek(f, 0, SEEK_SET);
 
-    if (fsize < 0) {
+    if (fsize <= 0) {
         PrintAndLogEx(WARNING, "Error, when getting filesize");
         fclose(f);
         return 1;
@@ -1766,7 +1766,7 @@ static int loadKeys(char *filename) {
     long fsize = ftell(f);
     fseek(f, 0, SEEK_SET);
 
-    if (fsize < 0) {
+    if (fsize <= 0) {
         PrintAndLogEx(WARNING, "Error, when getting filesize");
         fclose(f);
         return 1;

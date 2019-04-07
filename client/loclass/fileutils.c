@@ -292,7 +292,7 @@ int loadFile(const char *preferredName, const char *suffix, void *data, size_t m
     long fsize = ftell(f);
     fseek(f, 0, SEEK_SET);
 
-    if (fsize < 0) {
+    if (fsize <= 0) {
         PrintAndLogDevice(FAILED, "error, when getting filesize");
         retval = 1;
         goto out;
