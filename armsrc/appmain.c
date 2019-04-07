@@ -23,6 +23,7 @@
 #include "lfsampling.h"
 #include "BigBuf.h"
 #include "mifareutil.h"
+#include "mifaresim.h"
 #include "hitag.h"
 
 #define DEBUG 1
