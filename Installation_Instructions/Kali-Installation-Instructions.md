@@ -1,6 +1,8 @@
 # Kali Installation
 Kali users usually must kill their modem manager in order for the proxmark3 to enumerate properly.
-```sh sudo apt remove modemmanager```
+```sh 
+sudo apt remove modemmanager
+```
 
 # Video Installation guide
 [![Kali Installation tutorial](https://github.com/5w0rdfish/Proxmark3-RDV4-ParrotOS/blob/master/screenshot-www.youtube.com-2019.03.17-20-44-33.png)](https://youtu.be/Wl9AsrU4igo "ParrotOS Installation Tutorial")
@@ -43,15 +45,6 @@ git pull
 sudo apt remove modemmanager
 ```
 
-> **Note**  If you have any issues connecting or during the flash, follow the steps listed [here](https://github.com/RfidResearchGroup/proxmark3/issues/35) and use the command sudo apt remove modemmanager 
-
-Log out and log back in again. And now we are all set to take the next step. 
-
-Enter the proxmark3 folder
-```sh
-cd proxmark3
-```
-
 ### Clean and Compile
 Clean and complete compilation 
 
@@ -75,16 +68,14 @@ It should show up as a CDC device:
  ```sh
  client/flasher /dev/ttyACM0 -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf
 ```
+> **Note**  If you have any issues connecting or during the flash, follow the steps listed [here](https://github.com/RfidResearchGroup/proxmark3/issues/35) and use the command sudo apt remove modemmanager 
+
+
 ### Change into the client folder
 
 ```sh
 cd client
 ```
-### Run the client
- ``` sh 
-./proxmark3 /dev/pm #press tab on the keyboard for it to detect the proxmark
-```
-or  
 
 ### Run the client 
  ```sh
