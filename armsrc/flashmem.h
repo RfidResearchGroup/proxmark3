@@ -101,9 +101,6 @@
 #define MAX_BLOCKS      4
 #define MAX_SECTORS     16
 
-
-
-
 #define MCK 48000000
 //#define FLASH_BAUD 24000000
 #define FLASH_MINFAST 24000000 //33000000
@@ -112,7 +109,6 @@
 #define FLASH_MINBAUD FLASH_FASTBAUD
 
 #define FASTFLASH (FLASHMEM_SPIBAUDRATE > FLASH_MINFAST)
-
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 void Dbprintf(const char *fmt, ...);
@@ -129,7 +125,6 @@ void Flash_TransferAdresse(uint32_t address);
 
 bool Flash_CheckBusy(uint32_t timeout);
 
-
 void Flash_WriteEnable();
 bool Flash_WipeMemoryPage(uint8_t page);
 bool Flash_WipeMemory();
@@ -137,18 +132,13 @@ bool Flash_Erase4k(uint8_t block, uint8_t sector);
 //bool Flash_Erase32k(uint32_t address);
 bool Flash_Erase64k(uint8_t block);
 
-
 void Flash_UniqueID(uint8_t *uid);
 uint8_t Flash_ReadID(void);
 uint16_t Flash_ReadData(uint32_t address, uint8_t *out, uint16_t len);
-
 uint16_t Flash_ReadDataCont(uint32_t address, uint8_t *out, uint16_t len);
-
 uint16_t Flash_Write(uint32_t address, uint8_t *in, uint16_t len);
 uint16_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len);
 uint16_t Flash_WriteDataCont(uint32_t address, uint8_t *in, uint16_t len);
 void Flashmem_print_status(void);
-
-
 
 #endif
