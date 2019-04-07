@@ -61,6 +61,8 @@ enum CardPSVendor {
     CV_AMERICANEXPRESS,
     CV_JCB,
     CV_CB,
+	CV_SWITCH,
+	CV_DINERS,
     CV_OTHER,
 };
 enum CardPSVendor GetCardPSVendor(uint8_t *AID, size_t AIDlen);
