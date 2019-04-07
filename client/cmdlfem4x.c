@@ -254,13 +254,11 @@ void printEM410x(uint32_t hi, uint64_t id) {
 
     PrintAndLogEx(SUCCESS, "EM410x %s pattern found", (hi) ? "XL" : "");
 
-    uint64_t iii = 1;
     uint64_t id2lo = 0;
-    uint32_t ii = 0;
-    uint32_t i = 0;
-    for (ii = 5; ii > 0; ii--) {
+    uint8_t m =, i = 0;
+    for (m = 5; m > 0; m--) {
         for (i = 0; i < 8; i++) {
-            id2lo = (id2lo << 1LL) | ((id & (iii << (i + ((ii - 1) * 8)))) >> (i + ((ii - 1) * 8)));
+            id2lo = (id2lo << 1LL) | ((id & (mi << (i + ((m - 1) * 8)))) >> (i + ((m - 1) * 8)));
         }
     }
 
@@ -299,10 +297,9 @@ void printEM410x(uint32_t hi, uint64_t id) {
 
         uint32_t p1id = (id & 0xFFFFFF);
         uint8_t arr[32] = {0x00};
-        int i = 0;
         int j = 23;
-        for (; i < 24; ++i, --j) {
-            arr[i] = (p1id >> i) & 1;
+        for (int k = 0 ; k < 24; ++k, --j) {
+            arr[k] = (p1id >> k) & 1;
         }
 
         uint32_t p1  = 0;

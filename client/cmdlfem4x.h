@@ -27,7 +27,6 @@
 
 int CmdLFEM4X(const char *Cmd);
 
-
 int CmdEM410xDemod(const char *Cmd);
 int CmdEM410xRead(const char *Cmd);
 int CmdEM410xSim(const char *Cmd);
