@@ -1284,7 +1284,6 @@ static void simulate_MFplus_RNG(uint32_t test_cuid, uint64_t test_key, uint32_t 
 
 }
 
-
 static void simulate_acquire_nonces() {
     time_t time1 = time(NULL);
     last_sample_clock = 0;
@@ -1292,7 +1291,7 @@ static void simulate_acquire_nonces() {
     hardnested_stage = CHECK_1ST_BYTES;
     bool acquisition_completed = false;
     uint32_t total_num_nonces = 0;
-    float brute_force;
+    float brute_force_depth;
     bool reported_suma8 = false;
 
     cuid = (rand() & 0xff) << 24 | (rand() & 0xff) << 16 | (rand() & 0xff) << 8 | (rand() & 0xff);
@@ -1331,19 +1330,19 @@ static void simulate_acquire_nonces() {
                 apply_sum_a0();
             }
             update_nonce_data(true);
-            acquisition_completed = shrink_key_space(&brute_force);
+            acquisition_completed = shrink_key_space(&brute_force_depth);
             if (!reported_suma8) {
                 char progress_string[80];
                 sprintf(progress_string, "Apply Sum property. Sum(a0) = %d", sums[first_byte_Sum]);
-                hardnested_print_progress(num_acquired_nonces, progress_string, brute_force, 0);
+                hardnested_print_progress(num_acquired_nonces, progress_string, brute_force_depth, 0);
                 reported_suma8 = true;
             } else {
-                hardnested_print_progress(num_acquired_nonces, "Apply bit flip properties", brute_force, 0);
+                hardnested_print_progress(num_acquired_nonces, "Apply bit flip properties", brute_force_depth, 0);
             }
         } else {
             update_nonce_data(true);
-            acquisition_completed = shrink_key_space(&brute_force);
-            hardnested_print_progress(num_acquired_nonces, "Apply bit flip properties", brute_force, 0);
+            acquisition_completed = shrink_key_space(&brute_force_depth);
+            hardnested_print_progress(num_acquired_nonces, "Apply bit flip properties", brute_force_depth, 0);
         }
     } while (!acquisition_completed);
 
@@ -1369,7 +1368,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
     uint32_t flags = 0;
     uint8_t write_buf[9];
     uint32_t total_num_nonces = 0;
-    float brute_force;
+    float brute_force_depth;
     bool reported_suma8 = false;
     char progress_text[80];
     FILE *fnonces = NULL;
@@ -1453,19 +1452,19 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
                     apply_sum_a0();
                 }
                 update_nonce_data(true);
-                acquisition_completed = shrink_key_space(&brute_force);
+                acquisition_completed = shrink_key_space(&brute_force_depth);
                 if (!reported_suma8) {
                     char progress_string[80];
                     sprintf(progress_string, "Apply Sum property. Sum(a0) = %d", sums[first_byte_Sum]);
-                    hardnested_print_progress(num_acquired_nonces, progress_string, brute_force, 0);
+                    hardnested_print_progress(num_acquired_nonces, progress_string, brute_force_depth, 0);
                     reported_suma8 = true;
                 } else {
-                    hardnested_print_progress(num_acquired_nonces, "Apply bit flip properties", brute_force, 0);
+                    hardnested_print_progress(num_acquired_nonces, "Apply bit flip properties", brute_force_depth, 0);
                 }
             } else {
                 update_nonce_data(true);
-                acquisition_completed = shrink_key_space(&brute_force);
-                hardnested_print_progress(num_acquired_nonces, "Apply bit flip properties", brute_force, 0);
+                acquisition_completed = shrink_key_space(&brute_force_depth);
+                hardnested_print_progress(num_acquired_nonces, "Apply bit flip properties", brute_force_depth, 0);
             }
         }
 
@@ -2293,8 +2292,8 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
             }
             hardnested_stage = CHECK_1ST_BYTES | CHECK_2ND_BYTES;
             update_nonce_data(false);
-            float brute_force;
-            shrink_key_space(&brute_force);
+            float brute_force_depth;
+            shrink_key_space(&brute_force_depth);
         } else { // acquire nonces.
             uint16_t is_OK = acquire_nonces(blockNo, keyType, key, trgBlockNo, trgKeyType, nonce_file_write, slow, filename);
             if (is_OK != 0) {
