@@ -67,7 +67,7 @@ SRC_CRAPTO1 = crypto1.c des.c aes.c desfire_key.c desfire_crypto.c mifaredesfire
 SRC_CRC = crc.c crc16.c crc32.c
 SRC_ICLASS = iclass.c optimized_cipher.c
 SRC_LEGIC = legicrf.c legicrfsim.c legic_prng.c
-SRC_BEE = bee.c
+#   SRC_BEE = bee.c
 
 # RDV40 related hardware support
 ifneq (,$(findstring WITH_FLASH,$(APP_CFLAGS)))
@@ -161,7 +161,6 @@ THUMBSRC = start.c \
 	string.c \
 	BigBuf.c \
 	ticks.c \
-	random.c \
 	hfsnoop.c
 
 
