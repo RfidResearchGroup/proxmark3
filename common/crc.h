@@ -12,7 +12,7 @@
 #include "common.h" //stdint, stddef, stdbool
 #include "util.h"   // reflect, bswap_16
 
-typedef struct crc {
+typedef struct crc_ctx {
     uint32_t state;
     int order;
     uint32_t polynom;
