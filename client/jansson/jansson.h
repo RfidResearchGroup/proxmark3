@@ -320,12 +320,12 @@ int json_path_set(json_t *json, const char *path, json_t *value, size_t flags, j
 
 typedef size_t (*json_load_callback_t)(void *buffer, size_t buflen, void *data);
 
-json_t *json_loads(const char *input, size_t flags, json_error_t *error) JANSSON_ATTRS(warn_unused_result);
+json_t *json_loads(const char *string, size_t flags, json_error_t *error) JANSSON_ATTRS(warn_unused_result);
 json_t *json_loadb(const char *buffer, size_t buflen, size_t flags, json_error_t *error) JANSSON_ATTRS(warn_unused_result);
 json_t *json_loadf(FILE *input, size_t flags, json_error_t *error) JANSSON_ATTRS(warn_unused_result);
 json_t *json_loadfd(int input, size_t flags, json_error_t *error) JANSSON_ATTRS(warn_unused_result);
 json_t *json_load_file(const char *path, size_t flags, json_error_t *error) JANSSON_ATTRS(warn_unused_result);
-json_t *json_load_callback(json_load_callback_t callback, void *data, size_t flags, json_error_t *error) JANSSON_ATTRS(warn_unused_result);
+json_t *json_load_callback(json_load_callback_t callback, void *arg, size_t flags, json_error_t *error) JANSSON_ATTRS(warn_unused_result);
 
 
 /* encoding */
