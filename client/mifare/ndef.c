@@ -115,7 +115,6 @@ int ndefDecodeHeader(uint8_t *data, size_t datalen, NDEFHeader_t *header) {
 
     if (header->IDLenPresent) {
         header->IDLen = (header->ShortRecordBit ? (data[3]) : (data[6]));
-        header->Payload = header->Type + header->TypeLen;
     } else {
         header->IDLen = 0;
     }
