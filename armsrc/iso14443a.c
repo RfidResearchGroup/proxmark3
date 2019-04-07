@@ -2029,7 +2029,7 @@ static int GetATQA(uint8_t *resp, uint8_t *resp_par) {
 // if anticollision is false, then the UID must be provided in uid_ptr[]
 // and num_cascades must be set (1: 4 Byte UID, 2: 7 Byte UID, 3: 10 Byte UID)
 // requests ATS unless no_rats is true
-int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *resp_data, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats) {
+int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats) {
 
     uint8_t sel_all[]    = { ISO14443A_CMD_ANTICOLL_OR_SELECT, 0x20 };
     uint8_t sel_uid[]    = { ISO14443A_CMD_ANTICOLL_OR_SELECT, 0x70, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -2043,19 +2043,19 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *resp_data, uin
     int cascade_level = 0;
     int len;
 
-    if (resp_data) {
-        resp_data->uidlen = 0;
-        memset(resp_data->uid, 0, 10);
-        resp_data->ats_len = 0;
+    if (p_card) {
+        p_card->uidlen = 0;
+        memset(p_card->uid, 0, 10);
+        p_card->ats_len = 0;
     }
 
     if (!GetATQA(resp, resp_par)) {
         return 0;
     }
 
-    if (resp_data) {
-        resp_data->atqa[0] = resp[0];
-        resp_data->atqa[1] = resp[1];
+    if (p_card) {
+        p_card->atqa[0] = resp[0];
+        p_card->atqa[1] = resp[1];
     }
 
     if (anticollision) {
@@ -2150,14 +2150,14 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *resp_data, uin
         if (uid_ptr && anticollision)
             memcpy(uid_ptr + (cascade_level * 3), uid_resp, uid_resp_len);
 
-        if (resp_data) {
-            memcpy(resp_data->uid + (cascade_level * 3), uid_resp, uid_resp_len);
-            resp_data->uidlen += uid_resp_len;
+        if (p_card) {
+            memcpy(p_card->uid + (cascade_level * 3), uid_resp, uid_resp_len);
+            p_card->uidlen += uid_resp_len;
         }
     }
 
-    if (resp_data) {
-        resp_data->sak = sak;
+    if (p_card) {
+        p_card->sak = sak;
     }
 
     // PICC compilant with iso14443a-4 ---> (SAK & 0x20 != 0)
@@ -2172,9 +2172,9 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *resp_data, uin
 
         if (!len) return 0;
 
-        if (resp_data) {
-            memcpy(resp_data->ats, resp, sizeof(resp_data->ats));
-            resp_data->ats_len = len;
+        if (p_card) {
+            memcpy(p_card->ats, resp, sizeof(p_card->ats));
+            p_card->ats_len = len;
         }
 
         // reset the PCB block number
