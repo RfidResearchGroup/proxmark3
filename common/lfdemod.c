@@ -984,10 +984,10 @@ int DetectPSKClock(uint8_t *dest, size_t size, int clock, size_t *firstPhaseShif
     if (*fc != 2 && *fc != 4 && *fc != 8) return 0;
 
 
-    size_t waveStart = 0, waveEnd = 0, firstFullWave = 0, lastClkBit = 0;
+    size_t waveStart, waveEnd, firstFullWave = 0, lastClkBit;
 
-    uint8_t clkCnt, tol = 1;
-    uint16_t peakcnt = 0, errCnt = 0, waveLenCnt = 0, fullWaveLen = 0;
+    uint8_t clkCnt, tol;
+    uint16_t peakcnt, errCnt, waveLenCnt, fullWaveLen = 0;
     uint16_t bestErr[] = {1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000};
     uint16_t peaksdet[] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 
@@ -1019,7 +1019,6 @@ int DetectPSKClock(uint8_t *dest, size_t size, int clock, size_t *firstPhaseShif
             if (dest[i] < dest[i + 1] && dest[i + 1] >= dest[i + 2]) {
                 if (waveStart == 0) {
                     waveStart = i + 1;
-                    waveLenCnt = 0;
                 } else { //waveEnd
                     waveEnd = i + 1;
                     waveLenCnt = waveEnd - waveStart;
@@ -1666,12 +1665,9 @@ size_t fsk_wave_demod(uint8_t *dest, size_t size, uint8_t fchigh, uint8_t fclow,
     if (fclow == 0) fclow = 8;
 
     //set the threshold close to 0 (graph) or 128 std to avoid static
-    size_t preLastSample = 0;
-    size_t LastSample = 0;
-    size_t currSample = 0;
-    size_t last_transition = 0;
-    size_t idx;
-    size_t numBits = 0;
+    size_t preLastSample, LastSample = 0;
+    size_t currSample = 0, last_transition = 0;
+    size_t idx, numBits = 0;
 
     //find start of modulating data in trace
     idx = findModStart(dest, size, fchigh);
@@ -1865,8 +1861,8 @@ int pskRawDemod_ext(uint8_t *dest, size_t *size, int *clock, int *invert, int *s
 
     uint8_t curPhase = *invert;
     uint8_t fc = 0;
-    size_t i = 0, numBits = 0, waveStart = 1, waveEnd = 0, firstFullWave = 0, lastClkBit = 0;
-    uint16_t fullWaveLen = 0, waveLenCnt = 0, avgWaveVal = 0;
+    size_t i = 0, numBits = 0, waveStart = 1, waveEnd, firstFullWave = 0, lastClkBit = 0;
+    uint16_t fullWaveLen = 0, waveLenCnt, avgWaveVal = 0;
     uint16_t errCnt = 0, errCnt2 = 0;
 
     *clock = DetectPSKClock(dest, *size, *clock, &firstFullWave, &curPhase, &fc);
@@ -1894,8 +1890,11 @@ int pskRawDemod_ext(uint8_t *dest, size_t *size, int *clock, int *invert, int *s
     *startIdx = firstFullWave - (*clock * numBits) + 2;
     //set start of wave as clock align
     lastClkBit = firstFullWave;
-    if (g_debugMode == 2) prnt("DEBUG PSK: firstFullWave: %u, waveLen: %u, startIdx %i", firstFullWave, fullWaveLen, *startIdx);
-    if (g_debugMode == 2) prnt("DEBUG PSK: clk: %d, lastClkBit: %u, fc: %u", *clock, lastClkBit, fc);
+    if (g_debugMode == 2) {
+        prnt("DEBUG PSK: firstFullWave: %u, waveLen: %u, startIdx %i", firstFullWave, fullWaveLen, *startIdx);
+        prnt("DEBUG PSK: clk: %d, lastClkBit: %u, fc: %u", *clock, lastClkBit, fc);
+    }
+    
     waveStart = 0;
     dest[numBits++] = curPhase; //set first read bit
     for (i = firstFullWave + fullWaveLen - 1; i < *size - 3; i++) {
@@ -1903,7 +1902,6 @@ int pskRawDemod_ext(uint8_t *dest, size_t *size, int *clock, int *invert, int *s
         if (dest[i] + fc < dest[i + 1] && dest[i + 1] >= dest[i + 2]) {
             if (waveStart == 0) {
                 waveStart = i + 1;
-                waveLenCnt = 0;
                 avgWaveVal = dest[i + 1];
             } else { //waveEnd
                 waveEnd = i + 1;
