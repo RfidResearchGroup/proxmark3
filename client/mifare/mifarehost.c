@@ -381,7 +381,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
     uint32_t max_keys = keycnt > (USB_CMD_DATA_SIZE / 6) ? (USB_CMD_DATA_SIZE / 6) : keycnt;
     uint8_t keyBlock[USB_CMD_DATA_SIZE] = {0x00};
 
-    for (int i = 0; i < keycnt; i += max_keys) {
+    for (i = 0; j < keycnt; i += max_keys) {
 
         int size = keycnt - i > max_keys ? max_keys : keycnt - i;
 
@@ -775,7 +775,7 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
         case TRACE_AUTH1:
             if (len == 4) {
                 traceState = TRACE_AUTH2;
-                nt = bytes_to_num(data, 4);
+                //nt = bytes_to_num(data, 4);
                 return 0;
             } else {
                 traceState = TRACE_ERROR;
@@ -785,8 +785,8 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
         case TRACE_AUTH2:
             if (len == 8) {
                 traceState = TRACE_AUTH_OK;
-                nr_enc = bytes_to_num(data, 4);
-                ar_enc = bytes_to_num(data + 4, 4);
+                //nr_enc = bytes_to_num(data, 4);
+                //ar_enc = bytes_to_num(data + 4, 4);
                 return 0;
             } else {
                 traceState = TRACE_ERROR;
@@ -835,7 +835,7 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 
             } else {
                 PrintAndLogEx(NORMAL, "[!] nested key recovery not implemented!\n");
-                at_enc = bytes_to_num(data, 4);
+                //at_enc = bytes_to_num(data, 4);
                 crypto1_destroy(traceCrypto1);
                 traceState = TRACE_ERROR;
             }
