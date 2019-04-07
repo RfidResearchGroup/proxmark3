@@ -1109,7 +1109,7 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
                 PrintAndLogEx(WARNING, "command execute timeout 2");
                 return 0;
             }
-            uint8_t isOK = resp.arg[0] & 0xff;
+            isOK = resp.arg[0] & 0xff;
             blocksRead = resp.arg[1];
             if (!isOK && !blocksRead) {
                 PrintAndLogEx(WARNING, "read block failed 2");
