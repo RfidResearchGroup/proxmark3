@@ -692,8 +692,8 @@ int CmdHF14ACUIDs(const char *Cmd) {
             PrintAndLogEx(WARNING, "card select failed.");
         } else {
             char uid_string[20];
-            for (uint16_t i = 0; i < card->uidlen; i++) {
-                sprintf(&uid_string[2 * i], "%02X", card->uid[i]);
+            for (uint16_t m = 0; m < card->uidlen; m++) {
+                sprintf(&uid_string[2 * m], "%02X", card->uid[m]);
             }
             PrintAndLogEx(NORMAL, "%s", uid_string);
         }
