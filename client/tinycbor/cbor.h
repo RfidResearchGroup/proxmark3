@@ -409,7 +409,7 @@ CBOR_PRIVATE_API CborError _cbor_value_copy_string(const CborValue *value, void 
 CBOR_PRIVATE_API CborError _cbor_value_dup_string(const CborValue *value, void **buffer,
                                                   size_t *buflen, CborValue *next);
 
-CBOR_API CborError cbor_value_calculate_string_length(const CborValue *value, size_t *length);
+CBOR_API CborError cbor_value_calculate_string_length(const CborValue *value, size_t *len);
 
 CBOR_INLINE_API CborError cbor_value_copy_text_string(const CborValue *value, char *buffer,
                                                       size_t *buflen, CborValue *next) {

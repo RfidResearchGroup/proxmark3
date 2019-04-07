@@ -208,7 +208,6 @@ static bool is_fixed_type(uint8_t type) {
 
 static CborError preparse_value(CborValue *it) {
     const CborParser *parser = it->parser;
-    it->type = CborInvalidType;
 
     /* are we at the end? */
     if (it->ptr == parser->end)
