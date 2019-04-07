@@ -287,11 +287,9 @@ int WAI_PREFIX(getModulePath)(char *out, int capacity, int *dirname_length) {
                         memcpy(out, resolved, length);
 
                         if (dirname_length) {
-                            int i;
-
-                            for (i = length - 1; i >= 0; --i) {
-                                if (out[i] == '/') {
-                                    *dirname_length = i;
+                            for (int j = length - 1; j >= 0; --j) {
+                                if (out[j] == '/') {
+                                    *dirname_length = j;
                                     break;
                                 }
                             }
