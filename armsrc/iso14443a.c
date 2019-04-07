@@ -500,8 +500,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
     uint8_t *data = dmaBuf;
 
     uint8_t previous_data = 0;
-    int maxDataLen = 0;
-    int dataLen = 0;
+    int maxDataLen = 0, dataLen;
     bool TagIsActive = false;
     bool ReaderIsActive = false;
 
@@ -1135,7 +1134,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
             uint8_t emdata[MAX_FRAME_SIZE];
             // first 12 blocks of emu are [getversion answer - check tearing - pack - 0x00 - signature]
             int start = (receivedCmd[1] + 12) * 4;
-            int len   = (receivedCmd[2] - receivedCmd[1] + 1) * 4;
+            len   = (receivedCmd[2] - receivedCmd[1] + 1) * 4;
             emlGetMemBt(emdata, start, len);
             AddCrc14A(emdata, len);
             EmSendCmd(emdata, len + 2);
