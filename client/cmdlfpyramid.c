@@ -210,9 +210,7 @@ int CmdPyramidDemod(const char *Cmd) {
     }
 
     uint8_t fmtLen = size - j - 8;
-    uint32_t fc = 0;
-    uint32_t cardnum = 0;
-    uint32_t code1 = 0;
+    uint32_t fc, cardnum, code1;
 
     if (fmtLen == 26) {
         fc = bytebits_to_byte(bits + 73, 8);
@@ -224,11 +222,13 @@ int CmdPyramidDemod(const char *Cmd) {
         fc = bytebits_to_byte(bits + 53, 10);
         cardnum = bytebits_to_byte(bits + 63, 32);
         PrintAndLogEx(SUCCESS, "Pyramid ID Found - BitLength: %d, FC: %d, Card: %d - Raw: %08x%08x%08x%08x", fmtLen, fc, cardnum, rawHi3, rawHi2, rawHi, rawLo);
+/*        
     } else if (fmtLen > 32) {
         cardnum = bytebits_to_byte(bits + 81, 16);
         //code1 = bytebits_to_byte(bits+(size-fmtLen),fmtLen-32);
         //code2 = bytebits_to_byte(bits+(size-32),32);
         PrintAndLogEx(SUCCESS, "Pyramid ID Found - BitLength: %d -unknown BitLength- (%d), Raw: %08x%08x%08x%08x", fmtLen, cardnum, rawHi3, rawHi2, rawHi, rawLo);
+        */
     } else {
         cardnum = bytebits_to_byte(bits + 81, 16);
         //code1 = bytebits_to_byte(bits+(size-fmtLen),fmtLen);
