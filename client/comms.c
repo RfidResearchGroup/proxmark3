@@ -225,7 +225,7 @@ __attribute__((force_align_arg_pointer))
 #endif
 #endif
 *uart_communication(void *targ) {
-    communication_arg_t *conn = (communication_arg_t *)targ;
+    communication_arg_t *connection = (communication_arg_t *)targ;
     size_t rxlen, totallen = 0;
     UsbCommand rx;
     UsbCommand *prx = &rx;
@@ -236,7 +236,7 @@ __attribute__((force_align_arg_pointer))
     disableAppNap("Proxmark3 polling UART");
 #endif
 
-    while (conn->run) {
+    while (connection->run) {
         rxlen = 0;
         bool ACK_received = false;
 
@@ -263,7 +263,7 @@ __attribute__((force_align_arg_pointer))
 
         pthread_mutex_lock(&txBufferMutex);
 
-        if (conn->block_after_ACK) {
+        if (connection->block_after_ACK) {
             // if we just received an ACK, wait here until a new command is to be transmitted
             if (ACK_received) {
                 while (!txBuffer_pending) {
