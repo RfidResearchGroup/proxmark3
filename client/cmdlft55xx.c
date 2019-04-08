@@ -1860,18 +1860,19 @@ int CmdT55xxChkPwds(const char *Cmd) {
         if (resp.arg[0]) {
             PrintAndLogEx(SUCCESS, "\nFound a candidate [ " _YELLOW_("%08X") " ]. Trying to validate", resp.arg[1]);
 
-            AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, resp.arg[1]);
-
-            found = tryDetectModulation();
-            if (found) {
-                PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08") " ]", resp.arg[1]);
+            if (AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, resp.arg[1])) {
+                found = tryDetectModulation();
+                if (found) {
+                    PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08") " ]", resp.arg[1]);
+                } else {
+                    PrintAndLogEx(WARNING, "Check pwd failed");
+                }
             } else {
                 PrintAndLogEx(WARNING, "Check pwd failed");
             }
         } else {
             PrintAndLogEx(WARNING, "Check pwd failed");
         }
-
         goto out;
     }
 
