@@ -223,7 +223,7 @@ static void MifareSimInit(uint16_t flags, uint8_t *datain, tag_response_info_t *
                     memcpy(rATQA, rATQA_1k_4B, sizeof rATQA_1k_4B);
                     if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("=> Using rATQA_1k_4B");
                     break;
-                case 2: // Mifare 2L
+                case 2: // Mifare 2K
                     memcpy(rATQA, rATQA_2k_4B, sizeof rATQA_2k_4B);
                     if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("=> Using rATQA_2k_4B");
                     break;
@@ -250,15 +250,15 @@ static void MifareSimInit(uint16_t flags, uint8_t *datain, tag_response_info_t *
                     memcpy(rATQA, rATQA_Mini_7B, sizeof rATQA_Mini_7B);
                     if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("=> Using rATQA_Mini_7B");
                     break;
-                case 1:
+                case 1: // Mifare 1K
                     memcpy(rATQA, rATQA_1k_7B, sizeof rATQA_1k_7B);
                     if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("=> Using rATQA_1k_7B");
                     break;
-                case 2:
+                case 2: // Mifare 2K
                     memcpy(rATQA, rATQA_2k_7B, sizeof rATQA_2k_7B);
                     if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("=> Using rATQA_2k_7B");
                     break;
-                case 4:
+                case 4: // Mifare 4K
                     memcpy(rATQA, rATQA_4k_7B, sizeof rATQA_4k_7B);
                     if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("=> Using rATQA_4k_4B");
                     break;
@@ -284,15 +284,15 @@ static void MifareSimInit(uint16_t flags, uint8_t *datain, tag_response_info_t *
                     memcpy(rATQA, rATQA_Mini_10B, sizeof rATQA_Mini_10B);
                     if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("=> Using rATQA_Mini_10B");
                     break;
-                case 1:
+                case 1: // Mifare 1K
                     memcpy(rATQA, rATQA_1k_10B, sizeof rATQA_1k_10B);
                     if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("=> Using rATQA_1k_10B");
                     break;
-                case 2:
+                case 2: // Mifare 2K
                     memcpy(rATQA, rATQA_2k_10B, sizeof rATQA_2k_10B);
                     if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("=> Using rATQA_2k_10B");
                     break;
-                case 4:
+                case 4: // Mifare 4K
                     memcpy(rATQA, rATQA_4k_10B, sizeof rATQA_4k_10B);
                     if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("=> Using rATQA_4k_10B");
                     break;
@@ -325,11 +325,11 @@ static void MifareSimInit(uint16_t flags, uint8_t *datain, tag_response_info_t *
         { .response = rUIDBCC1,  .response_n = sizeof(rUIDBCC1)  },	  	// Anticollision cascade1 - respond with first part of uid
         { .response = rUIDBCC2,  .response_n = sizeof(rUIDBCC2)  },		  // Anticollision cascade2 - respond with 2nd part of uid
         { .response = rUIDBCC3,  .response_n = sizeof(rUIDBCC3)  },		  // Anticollision cascade3 - respond with 3th part of uid
-        { .response = rSAK_mini, .response_n = sizeof(rSAK_mini) },     //
-        { .response = rSAK_1,    .response_n = sizeof(rSAK_1)    },	    //
-        { .response = rSAK_2,    .response_n = sizeof(rSAK_2)    },	    //
-        { .response = rSAK_4,    .response_n = sizeof(rSAK_4)    },	    //
-        { .response = rSAK1,     .response_n = sizeof(rSAK1)     }		  // Acknowledge select - New another cascades
+        { .response = rSAK_mini, .response_n = sizeof(rSAK_mini) },     // SAK Mifare Mini
+        { .response = rSAK_1,    .response_n = sizeof(rSAK_1)    },	    // SAK Mifare 1K
+        { .response = rSAK_2,    .response_n = sizeof(rSAK_2)    },	    // SAK Mifare 2K
+        { .response = rSAK_4,    .response_n = sizeof(rSAK_4)    },	    // SAK Mifare 4K
+        { .response = rSAK1,     .response_n = sizeof(rSAK1)     }		  // Acknowledge select - Need another cascades
     };
 
     // Prepare ("precompile") the responses of the anticollision phase. There will be not enough time to do this at the moment the reader sends its REQA or SELECT
@@ -436,7 +436,6 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
 
     // Authenticate response - nonce
     uint32_t nonce = 0;
-    // = prng_successor(selTimer, 32) ;
 
     if ((flags & FLAG_MF_MINI) == FLAG_MF_MINI) {
         MifareCardType = 0;
@@ -564,16 +563,16 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                     switch (uid_len) {
                         case 4:
                             switch (MifareCardType) {
-                                case 0:
+                                case 0: // Mifare Mini
                                     EmSendPrecompiledCmd(&responses[SAK_MINI]);
                                     break;
-                                case 1:
+                                case 1: // Mifare 1K
                                     EmSendPrecompiledCmd(&responses[SAK_1]);
                                     break;
-                                case 2:
+                                case 2: // Mifare 2K
                                     EmSendPrecompiledCmd(&responses[SAK_2]);
                                     break;
-                                case 4:
+                                case 4: // Mifare 4K
                                     EmSendPrecompiledCmd(&responses[SAK_4]);
                                     break;
                             }
@@ -643,16 +642,16 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                             if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_SELECT2] SELECT CL2 %02x%02x%02x%02x received", receivedCmd[2], receivedCmd[3], receivedCmd[4], receivedCmd[5]);
 
                             switch (MifareCardType) {
-                                case 0:
+                                case 0: // Mifare Mini
                                     EmSendPrecompiledCmd(&responses[SAK_MINI]);
-                                    break;
-                                case 1:
+                                    break; 
+                                case 1: // Mifare 1K
                                     EmSendPrecompiledCmd(&responses[SAK_1]);
                                     break;
-                                case 2:
+                                case 2: // Mifare 2K
                                     EmSendPrecompiledCmd(&responses[SAK_2]);
                                     break;
-                                case 4:
+                                case 4: // Mifare 4K
                                     EmSendPrecompiledCmd(&responses[SAK_4]);
                                     break;
                             }
@@ -700,16 +699,16 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                          memcmp(&receivedCmd[2], responses[UIDBCC3].response, 4) == 0)) {
 
                     switch (MifareCardType) {
-                        case 0:
+                        case 0: // Mifare Mini
                             EmSendPrecompiledCmd(&responses[SAK_MINI]);
                             break;
-                        case 1:
+                        case 1: // Mifare 1K
                             EmSendPrecompiledCmd(&responses[SAK_1]);
                             break;
-                        case 2:
+                        case 2: // Mifare 2K
                             EmSendPrecompiledCmd(&responses[SAK_2]);
                             break;
-                        case 4:
+                        case 4: // Mifare 4K
                             EmSendPrecompiledCmd(&responses[SAK_4]);
                             break;
                     }
@@ -733,7 +732,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
             // WORK
             case MFEMUL_WORK: {
 
-                if (MF_DBGLEVEL >= 1)	Dbprintf("[MFEMUL_WORK] Enter in case");
+                if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("[MFEMUL_WORK] Enter in case");
 
                 if (receivedCmd_len != 4) {
                     LogTrace(Uart.output, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
