@@ -69,15 +69,15 @@ int aes_cmac(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *mac, int length
 }
 
 int aes_cmac8(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *mac, int length) {
-    uint8_t cmac[16] = {0};
+    uint8_t cmac_tmp[16] = {0};
     memset(mac, 0x00, 8);
 
-    int res = aes_cmac(iv, key, input, cmac, length);
+    int res = aes_cmac(iv, key, input, cmac_tmp, length);
     if (res)
         return res;
 
     for (int i = 0; i < 8; i++)
-        mac[i] = cmac[i * 2 + 1];
+        mac[i] = cmac_tmp[i * 2 + 1];
 
     return 0;
 }
@@ -382,13 +382,13 @@ int ecdsa_nist_test(bool verbose) {
         res = 1;
         goto exit;
     }
-    if (verbose)
+    
+    if (verbose) {
         printf("passed\n");
-
-    // random ecdsa test
-    if (verbose)
         printf("  ECDSA binary signature create/check test: ");
-
+    }
+    
+    // random ecdsa test   
     uint8_t key_d[32] = {0};
     uint8_t key_xy[32 * 2 + 2] = {0};
     memset(signature, 0x00, sizeof(signature));
