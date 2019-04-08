@@ -916,7 +916,7 @@ int CmdUndec(const char *Cmd) {
 //by marshmellow
 //shift graph zero up or down based on input + or -
 int CmdGraphShiftZero(const char *Cmd) {
-    int shift = 0, shiftedVal = 0;
+    int shift = 0, shiftedVal;
     //set options from parameters entered with the command
     sscanf(Cmd, "%i", &shift);
 
@@ -1579,12 +1579,13 @@ int CmdTuneSamples(const char *Cmd) {
 
     // graph LF measurements
     // even here, these values has 3% error.
-    uint16_t test = 0;
+    uint16_t test1 = 0;
     for (int i = 0; i < 256; i++) {
         GraphBuffer[i] = resp.d.asBytes[i] - 128;
-        test += resp.d.asBytes[i];
+        test1 += resp.d.asBytes[i];
     }
-    if (test > 0) {
+    
+    if (test1 > 0) {
         PrintAndLogEx(SUCCESS, "\nDisplaying LF tuning graph. Divisor 89 is 134khz, 95 is 125khz.\n\n");
         GraphTraceLen = 256;
         ShowGraphWindow();
