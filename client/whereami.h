@@ -1,4 +1,6 @@
-// (‑●‑●)> released under the WTFPL v2 license, by Gregory Pakosz (@gpakosz)
+// (‑●‑●)> dual licensed under the WTFPL v2 and MIT licenses
+//   without any warranty.
+//   by Gregory Pakosz (@gpakosz)
 // https://github.com/gpakosz/whereami
 
 #ifndef WHEREAMI_H
