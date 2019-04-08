@@ -7,23 +7,7 @@
 //-----------------------------------------------------------------------------
 // High frequency MIFARE Desfire commands
 //-----------------------------------------------------------------------------
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include "des.h"
-#include "cmdmain.h"
-#include "proxmark3.h"
-#include "../include/common.h"
-#include "../include/mifare.h"
-#include "iso14443crc.h"
-#include "ui.h"
-#include "cmdparser.h"
-#include "util.h"
 #include "cmdhfmfdes.h"
-#include "cmdhf14a.h"
-
 
 uint8_t CMDPOS = 0;
 uint8_t LENPOS = 1;

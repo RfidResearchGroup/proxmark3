@@ -8,10 +8,7 @@
 // High frequency MIFARE commands
 //-----------------------------------------------------------------------------
 
-#include "cmdhfmf.h"
-#include "util.h"
-#include <openssl/des.h>
-#include <openssl/aes.h>
+#include "cmdhfmfdesfire.h"
 
 static int CmdHelp(const char *Cmd);
 
