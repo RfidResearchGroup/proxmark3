@@ -441,7 +441,7 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
             }
 
             do {
-                uint16_t crc16 = 0x00;
+                uint16_t crc_16 = 0x00;
                 uint32_t crc;
                 switch (DESFIRE(tag)->authentication_scheme) {
                     case AS_LEGACY:
@@ -450,7 +450,7 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
                         //
 
 
-                        crc = crc16;
+                        crc = crc_16;
                         break;
                     case AS_NEW:
                         end_crc_pos = crc_pos + 4;
