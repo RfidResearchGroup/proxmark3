@@ -84,8 +84,8 @@ static inline double decode_half(unsigned short half) {
     int exp1 = (half >> 10) & 0x1f;
     int mant = half & 0x3ff;
     double val;
-    if (exp1 == 0) val = ldexp1(mant, -24);
-    else if (exp1 != 31) val = ldexp1(mant + 1024, exp1 - 25);
+    if (exp1 == 0) val = ldexp(mant, -24);
+    else if (exp1 != 31) val = ldexp(mant + 1024, exp1 - 25);
     else val = mant == 0 ? INFINITY : NAN;
     return (half & 0x8000) ? -val : val;
 }
