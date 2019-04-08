@@ -970,26 +970,26 @@ int CmdDetectClockRate(const char *Cmd) {
     if (strlen(Cmd) > 6 || strlen(Cmd) == 0 || cmdp == 'h')
         return usage_data_detectclock();
 
-    int clock = 0;
+    int clock1 = 0;
     switch (cmdp) {
         case 'a' :
-            clock = GetAskClock(Cmd + 1, true);
+            clock1 = GetAskClock(Cmd + 1, true);
             break;
         case 'f' :
-            clock = GetFskClock("", true);
+            clock1 = GetFskClock("", true);
             break;
         case 'n' :
-            clock = GetNrzClock("", true);
+            clock1 = GetNrzClock("", true);
             break;
         case 'p' :
-            clock = GetPskClock("", true);
+            clock1 = GetPskClock("", true);
             break;
         default :
             PrintAndLogEx(NORMAL, "Please specify a valid modulation to detect the clock of - see option h for help");
             break;
     }
     RepaintGraphWindow();
-    return clock;
+    return clock1;
 }
 
 char *GetFSKType(uint8_t fchigh, uint8_t fclow, uint8_t invert) {
@@ -1047,9 +1047,8 @@ int FSKrawDemod(const char *Cmd, bool verbose) {
     if (BitLen == 0) return 0;
 
     //get field clock lengths
-    uint16_t fcs = 0;
     if (!fchigh || !fclow) {
-        fcs = countFC(bits, BitLen, true);
+        uint16_t fcs = countFC(bits, BitLen, true);
         if (!fcs) {
             fchigh = 10;
             fclow = 8;
