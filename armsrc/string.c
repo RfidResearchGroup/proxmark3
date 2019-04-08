@@ -49,12 +49,10 @@ void memxor(uint8_t *dest, uint8_t *src, size_t len) {
 }
 
 int strlen(const char *str) {
-    int l = 0;
-    while (*str) {
-        l++;
-        str++;
+    const char *p;
+    for (p = str; *p != '\0'; ++p) {
     }
-    return l;
+    return p-str;
 }
 
 char *strncat(char *dest, const char *src, unsigned int n) {
