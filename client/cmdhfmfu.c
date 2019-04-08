@@ -1413,10 +1413,10 @@ int CmdHF14AMfURdBl(const char *Cmd) {
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK = resp.arg[0] & 0xff;
         if (isOK) {
-            uint8_t *data = resp.d.asBytes;
+            uint8_t *d = resp.d.asBytes;
             PrintAndLogEx(NORMAL, "\nBlock#  | Data        | Ascii");
             PrintAndLogEx(NORMAL, "-----------------------------");
-            PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s\n", blockNo, blockNo, sprint_hex(data, 4), sprint_ascii(data, 4));
+            PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s\n", blockNo, blockNo, sprint_hex(d, 4), sprint_ascii(d, 4));
         } else {
             PrintAndLogEx(WARNING, "Failed reading block: (%02x)", isOK);
         }
@@ -1769,7 +1769,6 @@ int CmdHF14AMfUDump(const char *Cmd) {
     memset(data, 0x00, sizeof(data));
 
     bool hasAuthKey = false;
-    int i = 0;
     int pages = 16;
     uint8_t dataLen = 0;
     uint8_t cmdp = 0;
@@ -1864,8 +1863,9 @@ int CmdHF14AMfUDump(const char *Cmd) {
         PrintAndLogEx(WARNING, "Command execute time-out");
         return 1;
     }
+    
     if (resp.arg[0] != 1) {
-        PrintAndLogEx(WARNING, "Failed reading block: (%02x)", i);
+        PrintAndLogEx(WARNING, "Failed dumping card");
         return 1;
     }
 
@@ -1919,9 +1919,9 @@ int CmdHF14AMfUDump(const char *Cmd) {
             ul_select(&card);
 
         ulev1_getVersion(get_version, sizeof(get_version));
-        for (uint8_t i = 0; i < 3; ++i) {
-            ulev1_readTearing(i, get_tearing + i, 1);
-            ulev1_readCounter(i, get_counter, sizeof(get_counter));
+        for (uint8_t n = 0; n < 3; ++n) {
+            ulev1_readTearing(n, get_tearing + n, 1);
+            ulev1_readCounter(n, get_counter, sizeof(get_counter));
         }
 
         DropField();
