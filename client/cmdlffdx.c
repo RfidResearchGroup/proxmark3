@@ -202,7 +202,7 @@ int CmdFDXBdemodBI(const char *Cmd) {
     uint8_t dataBlockBit = bs[48];
     uint32_t reservedCode = bytebits_to_byteLSBF(bs + 49, 14);
     uint8_t animalBit = bs[63];
-    uint32_t crc16 = bytebits_to_byteLSBF(bs + 64, 16);
+    uint32_t crc_16 = bytebits_to_byteLSBF(bs + 64, 16);
     uint32_t extended = bytebits_to_byteLSBF(bs + 80, 24);
 
     uint64_t rawid = ((uint64_t)bytebits_to_byte(bs, 32) << 32) | bytebits_to_byte(bs + 32, 32);
@@ -219,7 +219,7 @@ int CmdFDXBdemodBI(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Reserved/RFU:      %u", reservedCode);
     PrintAndLogEx(SUCCESS, "Animal Tag:        %s", animalBit ? _YELLOW_("True") : "False");
     PrintAndLogEx(SUCCESS, "Has extended data: %s [0x%X]", dataBlockBit ? _YELLOW_("True") : "False", extended);
-    PrintAndLogEx(SUCCESS, "CRC:           0x%04X - [%04X] - %s", crc16, calcCrc, (calcCrc == crc16) ? _GREEN_("Passed") : "Failed");
+    PrintAndLogEx(SUCCESS, "CRC:           0x%04X - [%04X] - %s", crc_16, calcCrc, (calcCrc == crc_16) ? _GREEN_("Passed") : "Failed");
 
     if (g_debugMode) {
         PrintAndLogEx(DEBUG, "Start marker %d;   Size %d", preambleIndex, size);
@@ -271,7 +271,7 @@ int CmdFdxDemod(const char *Cmd) {
     uint8_t dataBlockBit = DemodBuffer[48];
     uint32_t reservedCode = bytebits_to_byteLSBF(DemodBuffer + 49, 14);
     uint8_t animalBit = DemodBuffer[63];
-    uint32_t crc16 = bytebits_to_byteLSBF(DemodBuffer + 64, 16);
+    uint32_t crc_16 = bytebits_to_byteLSBF(DemodBuffer + 64, 16);
     uint32_t extended = bytebits_to_byteLSBF(DemodBuffer + 80, 24);
     uint64_t rawid = (uint64_t)(bytebits_to_byte(DemodBuffer, 32)) << 32 | bytebits_to_byte(DemodBuffer + 32, 32);
     uint8_t raw[8];
@@ -287,7 +287,7 @@ int CmdFdxDemod(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Reserved/RFU       %u (0x04%X)", reservedCode,  reservedCode);
     PrintAndLogEx(SUCCESS, "Animal Tag         %s", animalBit ? _YELLOW_("True") : "False");
     PrintAndLogEx(SUCCESS, "Has extended data  %s [0x%X]", dataBlockBit ? _YELLOW_("True") : "False", extended);
-    PrintAndLogEx(SUCCESS, "CRC-16             0x%04X - 0x%04X [%s]", crc16, calcCrc, (calcCrc == crc16) ? _GREEN_("Ok") : "Failed");
+    PrintAndLogEx(SUCCESS, "CRC-16             0x%04X - 0x%04X [%s]", crc_16, calcCrc, (calcCrc == crc_16) ? _GREEN_("Ok") : "Failed");
 
     if (g_debugMode) {
         PrintAndLogEx(DEBUG, "Start marker %d;   Size %d", preambleIndex, size);
