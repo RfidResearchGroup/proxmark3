@@ -192,7 +192,7 @@ int flash_load(flash_file_t *ctx, const char *name, int can_write_bl) {
         goto fail;
     }
 
-    fprintf(stdout, _BLUE_("Loading ELF file") "%s\n", name);
+    fprintf(stdout, _BLUE_("Loading ELF file") _YELLOV_("%s") "\n", name);
 
     if (fread(&ehdr, sizeof(ehdr), 1, fd) != 1) {
         fprintf(stderr, "Error while reading ELF file header\n");
