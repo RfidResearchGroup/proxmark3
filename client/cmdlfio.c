@@ -112,7 +112,7 @@ int CmdIOProxDemod(const char *Cmd) {
         }
         return 0;
     }
-    setDemodBuf(bits, size, idx);
+    setDemodBuff(bits, size, idx);
     setClockGrid(64, waveIdx + (idx * 64));
 
     if (idx == 0) {

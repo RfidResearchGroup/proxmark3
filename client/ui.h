@@ -33,10 +33,10 @@ void ShowGui(void);
 void HideGraphWindow(void);
 void ShowGraphWindow(void);
 void RepaintGraphWindow(void);
-extern void PrintAndLog(char *fmt, ...);
+void PrintAndLog(char *fmt, ...);
 void PrintAndLogOptions(char *str[][2], size_t size, size_t space);
 void PrintAndLogEx(logLevel_t level, char *fmt, ...);
-extern void SetLogFilename(char *fn);
+void SetLogFilename(char *fn);
 void SetFlushAfterWrite(bool value);
 
 extern double CursorScaleFactor;
@@ -44,10 +44,8 @@ extern int PlotGridX, PlotGridY, PlotGridXdefault, PlotGridYdefault, CursorCPos,
 extern bool GridLocked;
 extern bool showDemod;
 
-//extern uint8_t g_debugMode;
-
 extern pthread_mutex_t print_lock;
 
-extern void iceIIR_Butterworth(int *data, const size_t len);
-extern void iceSimple_Filter(int *data, const size_t len, uint8_t k);
+void iceIIR_Butterworth(int *data, const size_t len);
+void iceSimple_Filter(int *data, const size_t len, uint8_t k);
 #endif

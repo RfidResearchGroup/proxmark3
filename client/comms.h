@@ -62,7 +62,7 @@ bool WaitForResponseTimeoutW(uint32_t cmd, UsbCommand *response, size_t ms_timeo
 bool WaitForResponseTimeout(uint32_t cmd, UsbCommand *response, size_t ms_timeout);
 bool WaitForResponse(uint32_t cmd, UsbCommand *response);
 
-extern bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning);
+bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning);
 
 #endif
 

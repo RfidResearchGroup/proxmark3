@@ -165,7 +165,7 @@ int CmdLFNedapDemod(const char *Cmd) {
     raw[1] = bytebits_to_byte(DemodBuffer + idx + 64, 32);
     raw[2] = bytebits_to_byte(DemodBuffer + idx + 32, 32);
     raw[3] = bytebits_to_byte(DemodBuffer + idx, 32);
-    setDemodBuf(DemodBuffer, 128, idx);
+    setDemodBuff(DemodBuffer, 128, idx);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (idx * g_DemodClock));
 
     uint8_t firstParity = GetParity(DemodBuffer, EVEN, 63);

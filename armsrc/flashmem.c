@@ -504,10 +504,12 @@ bool Flash_Erase64k(uint8_t block) {
     return true;
 }
 
+/*
 // Erase chip
 void Flash_EraseChip(void) {
     FlashSendLastByte(CHIPERASE);
 }
+*/
 
 void Flashmem_print_status(void) {
     DbpString("Flash memory");

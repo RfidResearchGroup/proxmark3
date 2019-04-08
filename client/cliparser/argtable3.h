@@ -271,7 +271,7 @@ struct arg_date *arg_daten(const char *shortopts,
                            int maxcount,
                            const char *glossary);
 
-struct arg_end *arg_end(int maxerrors);
+struct arg_end *arg_end(int maxcount);
 
 
 /**** other functions *******************************************/

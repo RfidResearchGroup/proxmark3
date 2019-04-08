@@ -26,7 +26,7 @@
 
 volatile unsigned long c;
 
-// Ö±½ÓÊ¹ÓÃÑ­»·À´ÑÓÊ±£¬Ò»¸öÑ­»· 6 ÌõÖ¸Áî£¬48M£¬ Delay=1 ´ó¸ÅÎª 200kbps
+// ç›´æ¥ä½¿ç”¨å¾ªç¯æ¥å»¶æ—¶ï¼Œä¸€ä¸ªå¾ªç¯ 6 æ¡æŒ‡ä»¤ï¼Œ48Mï¼Œ Delay=1 å¤§æ¦‚ä¸º 200kbps
 // timer.
 // I2CSpinDelayClk(4) = 12.31us
 // I2CSpinDelayClk(1) = 3.07us
@@ -467,8 +467,7 @@ int16_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t d
         *data = (uint8_t)tmp & 0xFF;
 
         len--;
-
-        // ¶ÁÈ¡µÄµÚÒ»¸ö×Ö½ÚÎªºóĞø³¤¶È
+        // è¯»å–çš„ç¬¬ä¸€ä¸ªå­—èŠ‚ä¸ºåç»­é•¿åº¦
         // The first byte in response is the message length
         if (!readcount && (len > *data)) {
             len = *data;

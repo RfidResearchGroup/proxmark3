@@ -467,7 +467,7 @@ static int l_crc16(lua_State *L) {
     size_t size;
     const char *p_str = luaL_checklstring(L, 1, &size);
 
-    uint16_t checksum = crc(CRC_CCITT, (uint8_t *) p_str, size);
+    uint16_t checksum = Crc(CRC_CCITT, (uint8_t *) p_str, size);
     lua_pushunsigned(L, checksum);
     return 1;
 }
@@ -702,46 +702,46 @@ static int l_keygen_algoD(lua_State *L) {
 }
 
 /*
-Read T55Xx block. 
+Read T55Xx block.
 param1 uint8_t block
 param2 bool page1
 param3 bool override
 param4 uint32_t password
 */
 static int l_T55xx_readblock(lua_State *L) {
-    
+
     //Check number of arguments
     int n = lua_gettop(L);
-    if ( n != 4 ) {
-         return returnToLuaWithError(L, "Wrong number of arguments, got %d bytes, expected 4", n);
+    if (n != 4) {
+        return returnToLuaWithError(L, "Wrong number of arguments, got %d bytes, expected 4", n);
     }
-    
+
     uint32_t block, usepage1, override, password;
     bool usepwd;
     size_t size;
-    
+
     const char *p_blockno = luaL_checklstring(L, 1, &size);
     if (size < 1 || size > 2)  return returnToLuaWithError(L, "Wrong size of blockNo, got %d, expected 1 or 2", (int) size);
     sscanf(p_blockno, "%x", &block);
-    
+
     const char *p_usepage1 = luaL_checklstring(L, 2, &size);
     if (size != 1)  return returnToLuaWithError(L, "Wrong size of usePage1, got %d, expected 1", (int) size);
     sscanf(p_usepage1, "%x", &usepage1);
-       
+
     const char *p_override = luaL_checklstring(L, 3, &size);
     if (size != 1)  return returnToLuaWithError(L, "Wrong size of override, got %d, expected 1", (int) size);
     sscanf(p_override, "%x", &override);
-    
+
     const char *p_pwd = luaL_checklstring(L, 4, &size);
-    if ( size == 0 ) {
+    if (size == 0) {
         usepwd = false;
     } else {
 
         if (size != 8) return returnToLuaWithError(L, "Wrong size of pwd, got %d , expected 8", (int) size);
         sscanf(p_pwd, "%08x", &password);
         usepwd = true;
-    }  
-    
+    }
+
     //Password mode
     if (usepwd) {
         // try reading the config block and verify that PWD bit is set before doing this!
@@ -767,16 +767,16 @@ static int l_T55xx_readblock(lua_State *L) {
     if (!AquireData(usepage1, block, usepwd, password)) {
         return returnToLuaWithError(L, "Failed to aquire data from card");
     }
-    
+
     if (!DecodeT55xxBlock()) {
         return returnToLuaWithError(L, "Failed to decode signal");
     }
-    
+
     uint32_t blockData = 0;
     if (GetT55xxBlockData(&blockData) == false) {
         return returnToLuaWithError(L, "Failed to get actual data");
     }
-       
+
     lua_pushunsigned(L, blockData);
     return 1;
 }
@@ -785,10 +785,9 @@ static int l_T55xx_readblock(lua_State *L) {
 // arg 2 = use GB
 static int l_T55xx_detect(lua_State *L) {
     bool useGB = false, usepwd = false, isok;
-    uint32_t password;
-    uint32_t gb;
+    uint32_t gb, password = 0;
     size_t size;
-    
+
     //Check number of arguments
     int n = lua_gettop(L);
 
@@ -797,15 +796,15 @@ static int l_T55xx_detect(lua_State *L) {
             const char *p_gb = luaL_checklstring(L, 2, &size);
             if (size != 1)  return returnToLuaWithError(L, "Wrong size of useGB, got %d , expected 1", (int) size);
             sscanf(p_gb, "%u", &gb);
-            useGB = ( gb ) ? true : false;
-            printf("p_gb size  %u | %c \n", size, useGB ? 'Y':'N');
+            useGB = (gb) ? true : false;
+            printf("p_gb size  %zu | %c \n", size, useGB ? 'Y' : 'N');
         }
         case 1: {
             const char *p_pwd = luaL_checklstring(L, 1, &size);
-            if ( size == 0 ) {
+            if (size == 0) {
                 usepwd = false;
             } else {
-                
+
                 if (size != 8)  return returnToLuaWithError(L, "Wrong size of pwd, got %d , expected 8", (int) size);
                 sscanf(p_pwd, "%08x", &password);
                 usepwd = true;
@@ -815,24 +814,24 @@ static int l_T55xx_detect(lua_State *L) {
         default :
             break;
     }
-   
+
     if (!useGB) {
-    
+
         isok = AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password);
-        if ( isok == false ) {
+        if (isok == false) {
             // signal error by returning Nil, errorstring
             lua_pushnil(L);
             lua_pushstring(L, "Failed to aquire LF signal data");
             return 2;
         }
     }
-    
+
     isok = tryDetectModulation();
-    if ( isok == false ) {
+    if (isok == false) {
         // signal error by returning Nil, errorstring
         lua_pushnil(L);
         lua_pushstring(L,  "Could not detect modulation automatically. Try setting it manually with \'lf t55xx config\'");
-        return 2;       
+        return 2;
     }
 
     lua_pushinteger(L, isok);

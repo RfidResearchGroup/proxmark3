@@ -26,7 +26,6 @@ int CLIParserInit(char *vprogramName, char *vprogramHint, char *vprogramHelp) {
     programHint = vprogramHint;
     programHelp = vprogramHelp;
     memset(buf, 0x00, 500);
-
     return 0;
 }
 
@@ -155,12 +154,12 @@ int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
     *datalen = 0;
 
     int ibuf = 0;
-    uint8_t buf[256] = {0};
-    int res = CLIParamStrToBuf(argstr, buf, maxdatalen * 2, &ibuf); // *2 because here HEX
+    uint8_t tmp_buf[256] = {0};
+    int res = CLIParamStrToBuf(argstr, tmp_buf, maxdatalen * 2, &ibuf); // *2 because here HEX
     if (res || !ibuf)
         return res;
 
-    switch (param_gethex_to_eol((char *)buf, 0, data, maxdatalen, datalen)) {
+    switch (param_gethex_to_eol((char *)tmp_buf, 0, data, maxdatalen, datalen)) {
         case 1:
             printf("Parameter error: Invalid HEX value.\n");
             return 1;
@@ -180,15 +179,15 @@ int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
     if (!argstr->count)
         return 0;
 
-    uint8_t buf[256] = {0};
+    uint8_t tmp_buf[256] = {0};
     int ibuf = 0;
 
     for (int i = 0; i < argstr->count; i++) {
         int len = strlen(argstr->sval[i]);
-        memcpy(&buf[ibuf], argstr->sval[i], len);
+        memcpy(&tmp_buf[ibuf], argstr->sval[i], len);
         ibuf += len;
     }
-    buf[ibuf] = 0;
+    tmp_buf[ibuf] = 0;
 
     if (!ibuf)
         return 0;
@@ -196,7 +195,7 @@ int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
     if (ibuf > maxdatalen)
         return 2;
 
-    memcpy(data, buf, ibuf);
+    memcpy(data, tmp_buf, ibuf);
     *datalen = ibuf;
 
     return 0;

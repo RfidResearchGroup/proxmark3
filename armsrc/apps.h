@@ -58,15 +58,15 @@ void Dbhexdump(int len, uint8_t *d, bool bAsci);
 uint16_t AvgAdc(int ch);
 
 void print_result(char *name, uint8_t *buf, size_t len);
-void PrintToSendBuffer(void);
+//void PrintToSendBuffer(void);
 void ToSendStuffBit(int b);
 void ToSendReset(void);
 void ListenReaderField(int limit);
 extern int ToSendMax;
 extern uint8_t ToSend[];
 
-extern void StandAloneMode(void);
-extern void printStandAloneModes(void);
+void StandAloneMode(void);
+void printStandAloneModes(void);
 
 /// lfops.h
 extern uint8_t decimation;
@@ -85,9 +85,9 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol);
 void SimulateTagLowFrequencyBidir(int divisor, int max_bitlen);
 void CmdHIDsimTAGEx(uint32_t hi, uint32_t lo, int ledcontrol, int numcycles);
 void CmdHIDsimTAG(uint32_t hi, uint32_t lo, int ledcontrol);
-void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream, int ledcontrol);
-void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream, int ledcontrol);
-void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream, int ledcontrol);
+void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *bits, int ledcontrol);
+void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *bits, int ledcontrol);
+void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *bits, int ledcontrol);
 void CmdHIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol);
 void CmdAWIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol); // Realtime demodulation mode for AWID26
 void CmdEM410xdemod(int findone, uint32_t *high, uint64_t *low, int ledcontrol);
@@ -99,8 +99,8 @@ void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo);
 void CopyIndala64toT55x7(uint32_t hi, uint32_t lo); // Clone Indala 64-bit tag by UID to T55x7
 void CopyIndala224toT55x7(uint32_t uid1, uint32_t uid2, uint32_t uid3, uint32_t uid4, uint32_t uid5, uint32_t uid6, uint32_t uid7); // Clone Indala 224-bit tag by UID to T55x7
 void T55xxResetRead(void);
-void T55xxWriteBlock(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t PwdMode);
-void T55xxWriteBlockExt(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t PwdMode);
+void T55xxWriteBlock(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t arg);
+void T55xxWriteBlockExt(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t arg);
 void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd);
 void T55xxWakeUp(uint32_t Pwd);
 void T55xx_ChkPwds(void);
@@ -130,20 +130,20 @@ void ReaderIso14443a(UsbCommand *c);
 
 // Also used in iclass.c
 //bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t len, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool readerToTag);
-void GetParity(const uint8_t *pbtCmd, uint16_t len, uint8_t *parity);
+void GetParity(const uint8_t *pbtCmd, uint16_t len, uint8_t *par);
 void iso14a_set_trigger(bool enable);
 // also used in emv
-bool prepare_allocated_tag_modulation(tag_response_info_t *response_info);
-int GetIso14443aCommandFromReader(uint8_t *received, uint8_t *parity, int *len);
+//bool prepare_allocated_tag_modulation(tag_response_info_t *response_info);
+//int GetIso14443aCommandFromReader(uint8_t *received, uint8_t *parity, int *len);
 
 // epa.h
 void EPA_PACE_Collect_Nonce(UsbCommand *c);
 void EPA_PACE_Replay(UsbCommand *c);
 
 // mifarecmd.h
-void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *data);
+void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
 void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain);
-void MifareUC_Auth(uint8_t arg0, uint8_t *datain);
+void MifareUC_Auth(uint8_t arg0, uint8_t *keybytes);
 void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain);
 void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
 void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
@@ -154,7 +154,6 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 void MifareAcquireNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *datain);
 void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
 void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
-void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
 void MifareSetDbgLvl(uint16_t arg0);
 void MifareEMemClr(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 void MifareEMemSet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
@@ -212,15 +211,15 @@ void Iso15693InitReader(void);
 void RAMFUNC SniffIClass(void);
 void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 void ReaderIClass(uint8_t arg0);
-void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC);
-void iClass_Authentication(uint8_t *MAC);
+void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac);
+void iClass_Authentication(uint8_t *mac);
 void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain);
-void iClass_WriteBlock(uint8_t blockNo, uint8_t *data);
-void iClass_ReadBlk(uint8_t blockNo);
-bool iClass_ReadBlock(uint8_t blockNo, uint8_t *data, uint8_t datalen);
+void iClass_WriteBlock(uint8_t blockno, uint8_t *data);
+void iClass_ReadBlk(uint8_t blockno);
+bool iClass_ReadBlock(uint8_t blockno, uint8_t *data, uint8_t len);
 void iClass_Dump(uint8_t blockno, uint8_t numblks);
 void iClass_Clone(uint8_t startblock, uint8_t endblock, uint8_t *data);
-void iClass_ReadCheck(uint8_t blockNo, uint8_t keyType);
+void iClass_ReadCheck(uint8_t blockno, uint8_t keytype);
 
 // cmd.h
 uint8_t cmd_receive(UsbCommand *cmd);
@@ -230,10 +229,10 @@ uint8_t cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void
 void HfSniff(int, int);
 
 //felica.c
-extern void felica_sendraw(UsbCommand *c);
-extern void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip);
-extern void felica_sim_lite(uint64_t uid);
-extern void felica_dump_lite_s();
+void felica_sendraw(UsbCommand *c);
+void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip);
+void felica_sim_lite(uint64_t uid);
+void felica_dump_lite_s();
 
 
 #ifdef __cplusplus

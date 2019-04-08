@@ -115,7 +115,6 @@ int ndefDecodeHeader(uint8_t *data, size_t datalen, NDEFHeader_t *header) {
 
     if (header->IDLenPresent) {
         header->IDLen = (header->ShortRecordBit ? (data[3]) : (data[6]));
-        header->Payload = header->Type + header->TypeLen;
     } else {
         header->IDLen = 0;
     }
@@ -344,7 +343,6 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
             case 0xfe: {
                 PrintAndLogEx(INFO, "-- NDEF Terminator. Done.");
                 return 0;
-                break;
             }
             default: {
                 PrintAndLogEx(ERR, "unknown tag 0x%02x", ndef[indx]);

@@ -84,7 +84,7 @@ int CmdKeriDemod(const char *Cmd) {
 
         return 0;
     }
-    setDemodBuf(DemodBuffer, size, idx);
+    setDemodBuff(DemodBuffer, size, idx);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (idx * g_DemodClock));
 
     //got a good demod

@@ -57,7 +57,7 @@ int CmdNexWatchDemod(const char *Cmd) {
         return 0;
     }
 
-    setDemodBuf(DemodBuffer, size, idx + 4);
+    setDemodBuff(DemodBuffer, size, idx + 4);
     setClockGrid(g_DemodClock, g_DemodStartIdx + ((idx + 4)*g_DemodClock));
 
     idx = 8 + 32; // 8 = preamble, 32 = reserved bits (always 0)

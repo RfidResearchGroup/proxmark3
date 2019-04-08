@@ -254,13 +254,12 @@ void printEM410x(uint32_t hi, uint64_t id) {
 
     PrintAndLogEx(SUCCESS, "EM410x %s pattern found", (hi) ? "XL" : "");
 
-    uint64_t iii = 1;
+    uint64_t n = 1;
     uint64_t id2lo = 0;
-    uint32_t ii = 0;
-    uint32_t i = 0;
-    for (ii = 5; ii > 0; ii--) {
+    uint8_t m, i = 0;
+    for (m = 5; m > 0; m--) {
         for (i = 0; i < 8; i++) {
-            id2lo = (id2lo << 1LL) | ((id & (iii << (i + ((ii - 1) * 8)))) >> (i + ((ii - 1) * 8)));
+            id2lo = (id2lo << 1LL) | ((id & (n << (i + ((m - 1) * 8)))) >> (i + ((m - 1) * 8)));
         }
     }
 
@@ -299,10 +298,9 @@ void printEM410x(uint32_t hi, uint64_t id) {
 
         uint32_t p1id = (id & 0xFFFFFF);
         uint8_t arr[32] = {0x00};
-        int i = 0;
         int j = 23;
-        for (; i < 24; ++i, --j) {
-            arr[i] = (p1id >> i) & 1;
+        for (int k = 0 ; k < 24; ++k, --j) {
+            arr[k] = (p1id >> k) & 1;
         }
 
         uint32_t p1  = 0;
@@ -356,7 +354,7 @@ int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo) {
     size_t idx = 0;
     uint8_t bits[512] = {0};
     size_t size = sizeof(bits);
-    if (!getDemodBuf(bits, &size)) {
+    if (!getDemodBuff(bits, &size)) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x problem during copy from ASK demod");
         return 0;
     }
@@ -381,7 +379,7 @@ int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo) {
     }
 
     //set GraphBuffer for clone or sim command
-    setDemodBuf(DemodBuffer, (size == 40) ? 64 : 128, idx + 1);
+    setDemodBuff(DemodBuffer, (size == 40) ? 64 : 128, idx + 1);
     setClockGrid(g_DemodClock, g_DemodStartIdx + ((idx + 1)*g_DemodClock));
 
     PrintAndLogEx(DEBUG, "DEBUG: Em410x idx: %d, Len: %d, Printing Demod Buffer:", idx, size);
@@ -1109,7 +1107,7 @@ bool setDemodBufferEM(uint32_t *word, size_t idx) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM, failed removing parity");
         return false;
     }
-    setDemodBuf(DemodBuffer, 32, 0);
+    setDemodBuff(DemodBuffer, 32, 0);
     *word = bytebits_to_byteLSBF(DemodBuffer, 32);
     return true;
 }
@@ -1225,9 +1223,8 @@ int CmdEM4x05Write(const char *Cmd) {
     if (strlen(Cmd) == 0 || ctmp == 'h') return usage_lf_em4x05_write();
 
     bool usePwd = false;
-    uint8_t addr = 50; // default to invalid address
-    uint32_t data = 0; // default to blank data
-    uint32_t pwd = 1; // default to blank password
+    uint8_t addr;
+    uint32_t data, pwd;
 
     addr = param_get8ex(Cmd, 0, 50, 10);
     data = param_get32ex(Cmd, 1, 0, 16);

@@ -23,6 +23,7 @@
 #include "lfsampling.h"
 #include "BigBuf.h"
 #include "mifareutil.h"
+#include "mifaresim.h"
 #include "hitag.h"
 
 #define DEBUG 1
@@ -78,10 +79,12 @@ void ToSendStuffBit(int b) {
     }
 }
 
+/* useful when debugging new protocol implementations like FeliCa
 void PrintToSendBuffer(void) {
     DbpString("Printing ToSendBuffer:");
     Dbhexdump(ToSendMax, ToSend, 0);
 }
+*/
 
 void print_result(char *name, uint8_t *buf, size_t len) {
 
@@ -159,18 +162,17 @@ void Dbprintf(const char *fmt, ...) {
 // prints HEX & ASCII
 void Dbhexdump(int len, uint8_t *d, bool bAsci) {
 #if DEBUG
-    int l = 0, i;
     char ascii[9];
 
     while (len > 0) {
 
-        l = (len > 8) ? 8 : len;
+        int l = (len > 8) ? 8 : len;
 
         memcpy(ascii, d, l);
         ascii[l] = 0;
 
         // filter safe ascii
-        for (i = 0; i < l; i++) {
+        for (int i = 0; i < l; i++) {
             if (ascii[i] < 32 || ascii[i] > 126) {
                 ascii[i] = '.';
             }
@@ -230,7 +232,7 @@ uint16_t AvgAdc(int ch) {
 void MeasureAntennaTuning(void) {
 
     uint8_t LF_Results[256];
-    uint32_t i, adcval = 0, peak = 0, peakv = 0, peakf = 0;
+    uint32_t i, peak = 0, peakv = 0, peakf = 0;
     uint32_t v_lf125 = 0, v_lf134 = 0, v_hf = 0; // in mV
 
     memset(LF_Results, 0, sizeof(LF_Results));
@@ -253,7 +255,7 @@ void MeasureAntennaTuning(void) {
         WDT_HIT();
         FpgaSendCommand(FPGA_CMD_SET_DIVISOR, i);
         SpinDelay(20);
-        adcval = ((MAX_ADC_LF_VOLTAGE * AvgAdc(ADC_CHAN_LF)) >> 10);
+        uint32_t adcval = ((MAX_ADC_LF_VOLTAGE * AvgAdc(ADC_CHAN_LF)) >> 10);
         if (i == 95)
             v_lf125 = adcval; // voltage at 125Khz
         if (i == 89)
@@ -1177,8 +1179,6 @@ void UsbPacketReceived(uint8_t *packet, int len) {
         case CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K: {
             LED_B_ON();
             uint8_t *mem = BigBuf_get_addr();
-            bool isok = false;
-            size_t len = 0;
             uint32_t startidx = c->arg[0];
             uint32_t numofbytes = c->arg[1];
             // arg0 = startindex
@@ -1187,8 +1187,8 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             //Dbprintf("transfer to client parameters: %" PRIu32 " | %" PRIu32 " | %" PRIu32, startidx, numofbytes, c->arg[2]);
 
             for (size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
-                len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
-                isok = cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, i, len, BigBuf_get_traceLen(), mem + startidx + i, len);
+                size_t len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
+                bool isok = cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, i, len, BigBuf_get_traceLen(), mem + startidx + i, len);
                 if (isok != 0)
                     Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d)", i, i + len, len);
             }
@@ -1251,7 +1251,6 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             break;
         case CMD_FLASHMEM_READ: {
             LED_B_ON();
-            uint16_t isok = 0;
             uint32_t startidx = c->arg[0];
             uint16_t len = c->arg[1];
 
@@ -1269,7 +1268,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
                 len = MIN((len - i), size);
 
                 Dbprintf("FlashMem reading  | %d | %d | %d |", startidx + i, i, len);
-                isok = Flash_ReadDataCont(startidx + i, mem, len);
+                uint16_t isok = Flash_ReadDataCont(startidx + i, mem, len);
                 if (isok == len) {
                     print_result("Chunk: ", mem, len);
                 } else {
@@ -1367,8 +1366,6 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 
             LED_B_ON();
             uint8_t *mem = BigBuf_malloc(USB_CMD_DATA_SIZE);
-            bool isok = false;
-            size_t len = 0;
             uint32_t startidx = c->arg[0];
             uint32_t numofbytes = c->arg[1];
             // arg0 = startindex
@@ -1380,9 +1377,9 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             }
 
             for (size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
-                len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
+                size_t len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
 
-                isok = Flash_ReadDataCont(startidx + i, mem, len);
+                bool isok = Flash_ReadDataCont(startidx + i, mem, len);
                 if (!isok)
                     Dbprintf("reading flash memory failed ::  | bytes between %d - %d", i, len);
 

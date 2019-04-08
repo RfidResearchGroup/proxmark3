@@ -167,8 +167,10 @@ void MifareDesfireGetInformation() {
     OnSuccess();
 }
 
-void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain) {
-
+void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain) {
+    // mode = arg0
+    // algo = arg1
+    // keyno = arg2
     int len = 0;
     //uint8_t PICC_MASTER_KEY8[8] = { 0x40,0x41,0x42,0x43,0x44,0x45,0x46,0x47};
     uint8_t PICC_MASTER_KEY16[16] = { 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f };
@@ -195,25 +197,25 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
     LED_B_OFF();
     LED_C_OFF();
 
-    // 3 olika sätt att authenticera.   AUTH (CRC16) , AUTH_ISO (CRC32) , AUTH_AES (CRC32)
-    // 4 olika crypto algo   DES, 3DES, 3K3DES, AES
-    // 3 olika kommunikations sätt,   PLAIN,MAC,CRYPTO
+    // 3 different way to authenticate   AUTH (CRC16) , AUTH_ISO (CRC32) , AUTH_AES (CRC32)
+    // 4 different crypto arg1   DES, 3DES, 3K3DES, AES
+    // 3 different communication modes,  PLAIN,MAC,CRYPTO
 
-    // des, nyckel 0,
-    switch (mode) {
+    // des, key 0,
+    switch (arg0) {
         case 1: {
             uint8_t keybytes[16];
             uint8_t RndA[8] = {0x00};
             uint8_t RndB[8] = {0x00};
 
-            if (algo == 2) {
+            if (arg1 == 2) {
                 if (datain[1] == 0xff) {
                     memcpy(keybytes, PICC_MASTER_KEY16, 16);
                 } else {
                     memcpy(keybytes, datain + 1, datalen);
                 }
             } else {
-                if (algo == 1) {
+                if (arg1 == 1) {
                     if (datain[1] == 0xff) {
                         memcpy(keybytes, null_key_data8, 8);
                     } else {
@@ -225,13 +227,13 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
             struct desfire_key defaultkey = {0};
             desfirekey_t key = &defaultkey;
 
-            if (algo == 2)
+            if (arg1 == 2)
                 Desfire_3des_key_new_with_version(keybytes, key);
-            else if (algo == 1)
+            else if (arg1 == 1)
                 Desfire_des_key_new(keybytes, key);
 
             cmd[0] = AUTHENTICATE;
-            cmd[1] = keyno;  //keynumber
+            cmd[1] = arg2;  //keynumber
             len = DesfireAPDU(cmd, 2, resp);
             if (!len) {
                 if (MF_DBGLEVEL >= MF_DBG_ERROR) {
@@ -249,9 +251,9 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
             }
 
             memcpy(encRndB, resp + 3, 8);
-            if (algo == 2)
+            if (arg1 == 2)
                 tdes_dec(&decRndB, &encRndB, key->data);
-            else if (algo == 1)
+            else if (arg1 == 1)
                 des_dec(&decRndB, &encRndB, key->data);
 
             memcpy(RndB, decRndB, 8);
@@ -262,9 +264,9 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
             memcpy(RndA, decRndA, 8);
             uint8_t encRndA[8] = {0x00};
 
-            if (algo == 2)
+            if (arg1 == 2)
                 tdes_dec(&encRndA, &decRndA, key->data);
-            else if (algo == 1)
+            else if (arg1 == 1)
                 des_dec(&encRndA, &decRndA, key->data);
 
             memcpy(both, encRndA, 8);
@@ -274,9 +276,9 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
 
             }
 
-            if (algo == 2)
+            if (arg1 == 2)
                 tdes_dec(&encRndB, &decRndB, key->data);
-            else if (algo == 1)
+            else if (arg1 == 1)
                 des_dec(&encRndB, &decRndB, key->data);
 
             memcpy(both + 8, encRndB, 8);
@@ -302,9 +304,9 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
 
                 memcpy(encRndA, resp + 3, 8);
 
-                if (algo == 2)
+                if (arg1 == 2)
                     tdes_dec(&encRndA, &encRndA, key->data);
-                else if (algo == 1)
+                else if (arg1 == 1)
                     des_dec(&encRndA, &encRndA, key->data);
 
                 rol(decRndA, 8);
@@ -320,9 +322,9 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
                 /*
 
                  // Current key is a 3DES key, change it to a DES key
-                 if (algo == 2) {
+                 if (arg1 == 2) {
                 cmd[0] = CHANGE_KEY;
-                cmd[1] = keyno;
+                cmd[1] = arg2;
 
                 uint8_t newKey[16] = {0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77};
 
@@ -362,9 +364,9 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
 
                  } else {
                     // Current key is a DES key, change it to a 3DES key
-                    if (algo == 1) {
+                    if (arg1 == 1) {
                         cmd[0] = CHANGE_KEY;
-                        cmd[1] = keyno;
+                        cmd[1] = arg2;
 
                         uint8_t newKey[16] = {0x40,0x41,0x42,0x43,0x44,0x45,0x46,0x47,0x48,0x49,0x4a,0x4b,0x4c,0x4d,0x4e,0x4f};
 
@@ -406,9 +408,9 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
                 */
 
                 OnSuccess();
-                if (algo == 2)
+                if (arg1 == 2)
                     cmd_send(CMD_ACK, 1, 0, 0, skey->data, 16);
-                else if (algo == 1)
+                else if (arg1 == 1)
                     cmd_send(CMD_ACK, 1, 0, 0, skey->data, 8);
             } else {
                 DbpString("Authentication failed.");
@@ -418,7 +420,7 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
         }
         break;
         case 2:
-            //SendDesfireCommand(AUTHENTICATE_ISO, &keyno, resp);
+            //SendDesfireCommand(AUTHENTICATE_ISO, &arg2, resp);
             break;
         case 3: {
 
@@ -495,7 +497,7 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
     cmd_send(CMD_ACK, 1, len, 0, resp, len);
 }
 
-// 3 olika ISO sätt att skicka data till DESFIRE (direkt, inkapslat, inkapslat ISO)
+// 3 different ISO ways to send data to a DESFIRE (direct, capsuled, capsuled ISO)
 // cmd  =  cmd bytes to send
 // cmd_len = length of cmd
 // dataout = pointer to response data array
@@ -540,7 +542,7 @@ size_t CreateAPDU(uint8_t *datain, size_t len, uint8_t *dataout) {
     uint8_t cmd[cmdlen];
     memset(cmd, 0, cmdlen);
 
-    cmd[0] = 0x0A;  //  0x0A = skicka cid,  0x02 = ingen cid. Särskilda bitar //
+    cmd[0] = 0x0A;  //  0x0A = send cid,  0x02 = no cid.
     cmd[0] |= pcb_blocknum; // OR the block number into the PCB
     cmd[1] = 0x00;  //  CID: 0x00 //TODO: allow multiple selected cards
 

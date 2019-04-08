@@ -679,8 +679,7 @@ static bool readKeyFile(uint8_t key[8]) {
     if (bytes_read == 8)
         retval = true;
 
-    if (f)
-        fclose(f);
+    fclose(f);
     return retval;
 }
 

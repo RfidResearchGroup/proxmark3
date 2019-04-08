@@ -41,23 +41,23 @@
 #include "proxmark3.h" // USB_CONNECT()
 #include "common.h"
 
-extern void usb_disable();
-extern void usb_enable();
-extern bool usb_check();
-extern bool usb_poll();
-extern bool usb_poll_validate_length();
-extern uint32_t usb_read(uint8_t *data, size_t len);
-extern uint32_t usb_write(const uint8_t *data, const size_t len);
+void usb_disable();
+void usb_enable();
+bool usb_check();
+bool usb_poll();
+bool usb_poll_validate_length();
+uint32_t usb_read(uint8_t *data, size_t len);
+uint32_t usb_write(const uint8_t *data, const size_t len);
 
-extern void SetUSBreconnect(int value);
-extern int GetUSBreconnect(void);
-extern void SetUSBconfigured(int value);
-extern int GetUSBconfigured(void);
+void SetUSBreconnect(int value);
+int GetUSBreconnect(void);
+void SetUSBconfigured(int value);
+int GetUSBconfigured(void);
 
-extern void AT91F_USB_SendData(AT91PS_UDP pUdp, const char *pData, uint32_t length);
-extern void AT91F_USB_SendZlp(AT91PS_UDP pUdp);
-extern void AT91F_USB_SendStall(AT91PS_UDP pUdp);
-extern void AT91F_CDC_Enumerate();
+void AT91F_USB_SendData(AT91PS_UDP pUdp, const char *pData, uint32_t length);
+void AT91F_USB_SendZlp(AT91PS_UDP pUdp);
+void AT91F_USB_SendStall(AT91PS_UDP pUdp);
+void AT91F_CDC_Enumerate();
 
 #endif // _USB_CDC_H_
 

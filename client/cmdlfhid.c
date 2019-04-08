@@ -155,7 +155,7 @@ int CmdHIDDemod(const char *Cmd) {
         return 0;
     }
 
-    setDemodBuf(bits, size, idx);
+    setDemodBuff(bits, size, idx);
     setClockGrid(50, waveIdx + (idx * 50));
 
     if (hi2 == 0 && hi == 0 && lo == 0) {
@@ -459,8 +459,8 @@ int CmdHIDWiegand(const char *Cmd) {
     uint8_t *bs = bits;
     memset(bs, 0, sizeof(bits));
 
-    uint8_t ctmp = param_getchar(Cmd, 0);
-    if (strlen(Cmd) == 0 || strlen(Cmd) < 3 || ctmp == 'H' || ctmp == 'h') return usage_lf_hid_wiegand();
+    uint8_t ctmp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) < 3 || ctmp == 'h') return usage_lf_hid_wiegand();
 
     oem = param_get8(Cmd, 0);
     fc = param_get32ex(Cmd, 1, 0, 10);

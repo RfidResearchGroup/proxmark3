@@ -243,7 +243,7 @@ int json_array_append_new(json_t *json, json_t *value);
 int json_array_insert_new(json_t *json, size_t index, json_t *value);
 int json_array_remove(json_t *json, size_t index);
 int json_array_clear(json_t *json);
-int json_array_extend(json_t *json, json_t *other);
+int json_array_extend(json_t *json, json_t *other_json);
 
 static JSON_INLINE
 int json_array_set(json_t *array, size_t ind, json_t *value) {
@@ -262,16 +262,16 @@ int json_array_insert(json_t *array, size_t ind, json_t *value) {
 
 const char *json_string_value(const json_t *json);
 size_t json_string_length(const json_t *json);
-json_int_t json_integer_value(const json_t *integer);
-double json_real_value(const json_t *real);
+json_int_t json_integer_value(const json_t *json);
+double json_real_value(const json_t *json);
 double json_number_value(const json_t *json);
 
 int json_string_set(json_t *json, const char *value);
 int json_string_setn(json_t *json, const char *value, size_t len);
 int json_string_set_nocheck(json_t *json, const char *value);
 int json_string_setn_nocheck(json_t *json, const char *value, size_t len);
-int json_integer_set(json_t *integer, json_int_t value);
-int json_real_set(json_t *real, double value);
+int json_integer_set(json_t *json, json_int_t value);
+int json_real_set(json_t *json, double value);
 
 /* pack, unpack */
 
@@ -294,13 +294,13 @@ json_t *json_vsprintf(const char *fmt, va_list ap) JANSSON_ATTRS(warn_unused_res
 
 /* equality */
 
-int json_equal(const json_t *value1, const json_t *value2);
+int json_equal(const json_t *json1, const json_t *json2);
 
 
 /* copying */
 
-json_t *json_copy(json_t *value) JANSSON_ATTRS(warn_unused_result);
-json_t *json_deep_copy(const json_t *value) JANSSON_ATTRS(warn_unused_result);
+json_t *json_copy(json_t *json) JANSSON_ATTRS(warn_unused_result);
+json_t *json_deep_copy(const json_t *json) JANSSON_ATTRS(warn_unused_result);
 
 json_t *json_path_get(const json_t *json, const char *path);
 int json_path_set_new(json_t *json, const char *path, json_t *value, size_t flags, json_error_t *error);
@@ -320,12 +320,12 @@ int json_path_set(json_t *json, const char *path, json_t *value, size_t flags, j
 
 typedef size_t (*json_load_callback_t)(void *buffer, size_t buflen, void *data);
 
-json_t *json_loads(const char *input, size_t flags, json_error_t *error) JANSSON_ATTRS(warn_unused_result);
+json_t *json_loads(const char *string, size_t flags, json_error_t *error) JANSSON_ATTRS(warn_unused_result);
 json_t *json_loadb(const char *buffer, size_t buflen, size_t flags, json_error_t *error) JANSSON_ATTRS(warn_unused_result);
 json_t *json_loadf(FILE *input, size_t flags, json_error_t *error) JANSSON_ATTRS(warn_unused_result);
 json_t *json_loadfd(int input, size_t flags, json_error_t *error) JANSSON_ATTRS(warn_unused_result);
 json_t *json_load_file(const char *path, size_t flags, json_error_t *error) JANSSON_ATTRS(warn_unused_result);
-json_t *json_load_callback(json_load_callback_t callback, void *data, size_t flags, json_error_t *error) JANSSON_ATTRS(warn_unused_result);
+json_t *json_load_callback(json_load_callback_t callback, void *arg, size_t flags, json_error_t *error) JANSSON_ATTRS(warn_unused_result);
 
 
 /* encoding */

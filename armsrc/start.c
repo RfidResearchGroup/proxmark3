@@ -48,7 +48,9 @@ static void uncompress_data_section(void) {
     data_section.opaque = NULL;
 
     // initialize zlib for inflate
-    inflateInit2(&data_section, 15);
+    int res = inflateInit2(&data_section, 15);
+    if ( res < 0 )
+        return;
 
     // uncompress data segment to RAM
     inflate(&data_section, Z_FINISH);

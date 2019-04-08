@@ -36,8 +36,8 @@ command_t *CmdDataCommands();
 
 int CmdData(const char *Cmd);
 void printDemodBuff(void);
-void setDemodBuf(uint8_t *buff, size_t size, size_t startIdx);
-bool getDemodBuf(uint8_t *buff, size_t *size);
+void setDemodBuff(uint8_t *buff, size_t size, size_t start_idx);
+bool getDemodBuff(uint8_t *buff, size_t *size);
 void save_restoreDB(uint8_t saveOpt);// option '1' to save DemodBuffer any other to restore
 int CmdPrintDemodBuff(const char *Cmd);
 
@@ -84,7 +84,7 @@ int NRZrawDemod(const char *Cmd, bool verbose);
 int getSamples(int n, bool silent);
 void setClockGrid(int clk, int offset);
 int directionalThreshold(const int *in, int *out, size_t len, int8_t up, int8_t down);
-extern int AskEdgeDetect(const int *in, int *out, int len, int threshold);
+int AskEdgeDetect(const int *in, int *out, int len, int threshold);
 
 int CmdDataIIR(const char *Cmd);
 

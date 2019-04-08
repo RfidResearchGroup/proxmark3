@@ -12,7 +12,7 @@
 
 #include "mifare/mifaredefault.h"
 
-extern int CmdHFMFP(const char *Cmd);
+int CmdHFMFP(const char *Cmd);
 
 
 #endif

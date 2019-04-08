@@ -81,9 +81,9 @@
 #define Logic1                Iso15693Logic1
 #define FrameEOF              Iso15693FrameEOF
 
-#define Crc(data, len)        crc(CRC_15693, (data), (len))
-#define CheckCrc(data, len)   check_crc(CRC_15693, (data), (len))
-#define AddCrc(data, len)     compute_crc(CRC_15693, (data), (len), (data)+(len), (data)+(len)+1)
+//#define Crc(data, len)        Crc(CRC_15693, (data), (len))
+#define CheckCrc15(data, len)   check_crc(CRC_15693, (data), (len))
+#define AddCrc15(data, len)     compute_crc(CRC_15693, (data), (len), (data)+(len), (data)+(len)+1)
 
 #define sprintUID(target,uid) Iso15693sprintUID((target), (uid))
 
@@ -621,18 +621,18 @@ void Iso15693InitReader(void) {
 
 // Encode (into the ToSend buffers) an identify request, which is the first
 // thing that you must send to a tag to get a response.
-// It expects "out" to be at least CMD_ID_RESP large
-static void BuildIdentifyRequest(uint8_t *out) {
+// It expects "cmdout" to be at least CMD_ID_RESP large
+static void BuildIdentifyRequest(uint8_t *cmdout) {
     uint8_t cmd[CMD_ID_RESP] = {0, ISO15_CMD_INVENTORY, 0, 0, 0};
     // flags
     cmd[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1;
     // no mask
     cmd[2] = 0x00;
     // CRC
-    AddCrc(cmd, 3);
+    AddCrc15(cmd, 3);
     // coding as high speed (1 out of 4)
     CodeIso15693AsReader(cmd, CMD_ID_RESP);
-    memcpy(out, cmd, CMD_ID_RESP);
+    memcpy(cmdout, cmd, CMD_ID_RESP);
 }
 
 // uid is in transmission order (which is reverse of display order)
@@ -658,7 +658,7 @@ static void BuildReadBlockRequest(uint8_t **out, uint8_t *uid, uint8_t blockNumb
     // Block number to read
     cmd[10] = blockNumber;//0x00;
     // CRC
-    AddCrc(cmd, 11);
+    AddCrc15(cmd, 11);
     CodeIso15693AsReader(cmd, CMD_READ_RESP);
     memcpy(out, cmd, CMD_ID_RESP);
 }
@@ -666,7 +666,7 @@ static void BuildReadBlockRequest(uint8_t **out, uint8_t *uid, uint8_t blockNumb
 
 // Now the VICC>VCD responses when we are simulating a tag
 // It expects "out" to be at least CMD_INV_RESP large
-static void BuildInventoryResponse(uint8_t *out, uint8_t *uid) {
+static void BuildInventoryResponse(uint8_t *cmdout, uint8_t *uid) {
 
     uint8_t cmd[CMD_INV_RESP] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
@@ -685,9 +685,9 @@ static void BuildInventoryResponse(uint8_t *out, uint8_t *uid) {
     cmd[8] = uid[1]; //0x05;
     cmd[9] = uid[0]; //0xe0;
     // CRC
-    AddCrc(cmd, 10);
+    AddCrc15(cmd, 10);
     CodeIso15693AsReader(cmd, CMD_INV_RESP);
-    memcpy(out, cmd, CMD_INV_RESP);
+    memcpy(cmdout, cmd, CMD_INV_RESP);
 }
 
 // Universal Method for sending to and recv bytes from a tag
@@ -780,7 +780,7 @@ void DbdecodeIso15693Answer(int len, uint8_t *d) {
             strncat(status, "No error ", DBD15STATLEN - strlen(status));
         }
 
-        if (CheckCrc(d, len))
+        if (CheckCrc15(d, len))
             strncat(status, "[+] crc OK", DBD15STATLEN - strlen(status));
         else
             strncat(status, "[!] crc fail", DBD15STATLEN - strlen(status));
@@ -932,7 +932,7 @@ void BruteforceIso15693Afi(uint32_t speed) {
     data[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1;
     data[1] = ISO15_CMD_INVENTORY;
     data[2] = 0; // mask length
-    AddCrc(data, 3);
+    AddCrc15(data, 3);
     datalen += 2;
 
     recvlen = SendDataTag(data, datalen, false, speed, buf);
@@ -951,7 +951,7 @@ void BruteforceIso15693Afi(uint32_t speed) {
 
     for (uint16_t i = 0; i < 256; i++) {
         data[2] = i & 0xFF;
-        AddCrc(data, 4);
+        AddCrc15(data, 4);
         datalen += 2;
         recvlen = SendDataTag(data, datalen, false, speed, buf);
         WDT_HIT();

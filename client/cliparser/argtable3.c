@@ -2960,10 +2960,19 @@ static int trex_class(TRex *exp) {
     while (*exp->_p != ']' && exp->_p != exp->_eol) {
         if (*exp->_p == '-' && first != -1) {
             int r, t;
-            if (*exp->_p++ == ']') trex_error(exp, _SC("unfinished range"));
+            if (*exp->_p++ == ']') {
+                trex_error(exp, _SC("unfinished range"));
+            }
+            
             r = trex_newnode(exp, OP_RANGE);
-            if (first > *exp->_p) trex_error(exp, _SC("invalid range"));
-            if (exp->_nodes[first].type == OP_CCLASS) trex_error(exp, _SC("cannot use character classes in ranges"));
+            if (first > *exp->_p) {
+                trex_error(exp, _SC("invalid range"));
+            }
+            
+            if (exp->_nodes[first].type == OP_CCLASS) {
+                trex_error(exp, _SC("cannot use character classes in ranges"));
+            }
+            
             exp->_nodes[r].left = exp->_nodes[first].type;
             t = trex_escapechar(exp);
             exp->_nodes[r].right = t;
@@ -2984,8 +2993,6 @@ static int trex_class(TRex *exp) {
     if (first != -1) {
         int c = first;
         exp->_nodes[chain].next = c;
-        chain = c;
-        first = -1;
     }
     /* hack? */
     exp->_nodes[ret].left = exp->_nodes[ret].next;
@@ -3263,7 +3270,6 @@ static const TRexChar *trex_matchnode(TRex *exp, TRexNode *node, const TRexChar 
                     return asd;
             }
             return NULL;
-            break;
         }
         case OP_EXPR:
         case OP_NOCAPEXPR: {
@@ -4542,8 +4548,9 @@ void arg_print_formatted(FILE *fp,
     const unsigned colwidth = (rmargin - lmargin) + 1;
 
     /* Someone doesn't like us... */
-    if (line_end < line_start)
-    { fprintf(fp, "%s\n", text); }
+    if (line_end == line_start) { 
+        fprintf(fp, "%s\n", text);
+    }
 
     while (line_end - 1 > line_start) {
         /* Eat leading whitespaces. This is essential because while

@@ -483,7 +483,7 @@ struct emv_pk *emv_pk_get_ca_pk(const unsigned char *rid, unsigned char idx) {
     if (!pk)
         return NULL;
 
-    printf("Verifying CA PK for %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx %zd bits...",
+    printf("Verifying CA PK for %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx %zu bits...",
            pk->rid[0],
            pk->rid[1],
            pk->rid[2],

@@ -22,13 +22,13 @@ struct hitag2_tag {
     uint8_t sectors[12][4];
 };
 
-extern uint32_t _f20(const uint64_t x);
-extern uint64_t _hitag2_init(const uint64_t key, const uint32_t serial, const uint32_t IV);
-extern uint64_t _hitag2_round(uint64_t *state);
-extern uint32_t _hitag2_byte(uint64_t *x);
-extern void hitag2_cipher_reset(struct hitag2_tag *tag, const uint8_t *iv);
-extern int hitag2_cipher_authenticate(uint64_t *cs, const uint8_t *authenticator_is);
-extern int hitag2_cipher_transcrypt(uint64_t *cs, uint8_t *data, uint16_t bytes, uint16_t bits) ;
+uint32_t _f20(const uint64_t x);
+uint64_t _hitag2_init(const uint64_t key, const uint32_t serial, const uint32_t IV);
+uint64_t _hitag2_round(uint64_t *state);
+uint32_t _hitag2_byte(uint64_t *x);
+void hitag2_cipher_reset(struct hitag2_tag *tag, const uint8_t *iv);
+int hitag2_cipher_authenticate(uint64_t *cs, const uint8_t *authenticator_is);
+int hitag2_cipher_transcrypt(uint64_t *cs, uint8_t *data, uint16_t bytes, uint16_t bits) ;
 #ifdef __cplusplus
 }
 #endif

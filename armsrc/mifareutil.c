@@ -596,7 +596,7 @@ void emlClearMem(void) {
     memset(emCARD, 0, CARD_MEMORY_SIZE);
 
     // fill sectors trailer data
-    for (uint16_t b = 3; b < 256; ((b < 127) ? (b += 4) : (b += 16)))
+    for (uint16_t b = 3; b <= MIFARE_4K_MAXBLOCK; ((b <= MIFARE_2K_MAXBLOCK) ? (b += 4) : (b += 16)))
         emlSetMem((uint8_t *)trailer, b, 1);
 
     // uid
@@ -604,6 +604,19 @@ void emlClearMem(void) {
     return;
 }
 
+uint8_t SectorTrailer(uint8_t blockNo) {
+    if (blockNo <= MIFARE_2K_MAXBLOCK) {
+        if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("Sector Trailer for block %d : %d", blockNo, (blockNo | 0x03));
+        return (blockNo | 0x03);
+    } else {
+        if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("Sector Trailer for block %d : %d", blockNo, (blockNo | 0x0f));
+        return (blockNo | 0x0f);
+    }
+}
+
+bool IsSectorTrailer(uint8_t blockNo) {
+    return (blockNo == SectorTrailer(blockNo));
+}
 
 // Mifare desfire commands
 int mifare_sendcmd_special(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t *data, uint8_t *answer, uint8_t *answer_parity, uint32_t *timing) {

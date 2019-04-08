@@ -300,7 +300,7 @@ int CmdAnalyseCRC(const char *Cmd) {
     // ISO14443 crc B
     compute_crc(CRC_14443_B, data, len, &b1, &b2);
     uint16_t crcBB_1 = b1 << 8 | b2;
-    uint16_t bbb = crc(CRC_14443_B, data, len);
+    uint16_t bbb = Crc(CRC_14443_B, data, len);
     PrintAndLogEx(NORMAL, "ISO14443 crc B  | %04x == %04x \n", crcBB_1, bbb);
 
 
@@ -321,40 +321,40 @@ int CmdAnalyseCRC(const char *Cmd) {
     PrintAndLogEx(NORMAL, "CRC16 based\n\n");
 
     // input from commandline
-    PrintAndLogEx(NORMAL, "CCITT  | %X (29B1 expected)", crc(CRC_CCITT, dataStr, sizeof(dataStr)));
+    PrintAndLogEx(NORMAL, "CCITT  | %X (29B1 expected)", Crc(CRC_CCITT, dataStr, sizeof(dataStr)));
 
     uint8_t poll[] = {0xb2, 0x4d, 0x12, 0x01, 0x01, 0x2e, 0x3d, 0x17, 0x26, 0x47, 0x80, 0x95, 0x00, 0xf1, 0x00, 0x00, 0x00, 0x01, 0x43, 0x00, 0xb3, 0x7f};
-    PrintAndLogEx(NORMAL, "FeliCa | %04X (B37F expected)", crc(CRC_FELICA, poll + 2, sizeof(poll) - 4));
-    PrintAndLogEx(NORMAL, "FeliCa | %04X (0000 expected)", crc(CRC_FELICA, poll + 2, sizeof(poll) - 2));
+    PrintAndLogEx(NORMAL, "FeliCa | %04X (B37F expected)", Crc(CRC_FELICA, poll + 2, sizeof(poll) - 4));
+    PrintAndLogEx(NORMAL, "FeliCa | %04X (0000 expected)", Crc(CRC_FELICA, poll + 2, sizeof(poll) - 2));
 
     uint8_t sel_corr[] = { 0x40, 0xe1, 0xe1, 0xff, 0xfe, 0x5f, 0x02, 0x3c, 0x43, 0x01};
-    PrintAndLogEx(NORMAL, "iCLASS | %04x (0143 expected)", crc(CRC_ICLASS, sel_corr, sizeof(sel_corr) - 2));
+    PrintAndLogEx(NORMAL, "iCLASS | %04x (0143 expected)", Crc(CRC_ICLASS, sel_corr, sizeof(sel_corr) - 2));
     PrintAndLogEx(NORMAL, "---------------------------------------------------------------\n\n\n");
 
     // ISO14443 crc A
     compute_crc(CRC_14443_A, dataStr, sizeof(dataStr), &b1, &b2);
     uint16_t crcAA = b1 << 8 | b2;
-    PrintAndLogEx(NORMAL, "ISO14443 crc A  | %04x or %04x (BF05 expected)\n", crcAA, crc(CRC_14443_A, dataStr, sizeof(dataStr)));
+    PrintAndLogEx(NORMAL, "ISO14443 crc A  | %04x or %04x (BF05 expected)\n", crcAA, Crc(CRC_14443_A, dataStr, sizeof(dataStr)));
 
     // ISO14443 crc B
     compute_crc(CRC_14443_B, dataStr, sizeof(dataStr), &b1, &b2);
     uint16_t crcBB = b1 << 8 | b2;
-    PrintAndLogEx(NORMAL, "ISO14443 crc B  | %04x or %04x (906E expected)\n", crcBB, crc(CRC_14443_B, dataStr, sizeof(dataStr)));
+    PrintAndLogEx(NORMAL, "ISO14443 crc B  | %04x or %04x (906E expected)\n", crcBB, Crc(CRC_14443_B, dataStr, sizeof(dataStr)));
 
     // ISO15693 crc  (x.25)
     compute_crc(CRC_15693, dataStr, sizeof(dataStr), &b1, &b2);
     uint16_t crcCC = b1 << 8 | b2;
-    PrintAndLogEx(NORMAL, "ISO15693 crc X25| %04x or %04x (906E expected)\n", crcCC, crc(CRC_15693, dataStr, sizeof(dataStr)));
+    PrintAndLogEx(NORMAL, "ISO15693 crc X25| %04x or %04x (906E expected)\n", crcCC, Crc(CRC_15693, dataStr, sizeof(dataStr)));
 
     // ICLASS
     compute_crc(CRC_ICLASS, dataStr, sizeof(dataStr), &b1, &b2);
     uint16_t crcDD = b1 << 8 | b2;
-    PrintAndLogEx(NORMAL, "ICLASS crc      | %04x or %04x\n", crcDD, crc(CRC_ICLASS, dataStr, sizeof(dataStr)));
+    PrintAndLogEx(NORMAL, "ICLASS crc      | %04x or %04x\n", crcDD, Crc(CRC_ICLASS, dataStr, sizeof(dataStr)));
 
     // FeliCa
     compute_crc(CRC_FELICA, dataStr, sizeof(dataStr), &b1, &b2);
     uint16_t crcEE = b1 << 8 | b2;
-    PrintAndLogEx(NORMAL, "FeliCa          | %04x or %04x (31C3 expected)\n", crcEE, crc(CRC_FELICA, dataStr, sizeof(dataStr)));
+    PrintAndLogEx(NORMAL, "FeliCa          | %04x or %04x (31C3 expected)\n", crcEE, Crc(CRC_FELICA, dataStr, sizeof(dataStr)));
 
     free(data);
     return 0;
@@ -615,7 +615,7 @@ int CmdAnalyseA(const char *Cmd) {
         }
 
         */
-    return 0;
+//    return 0;
 
     // 14443-A
     uint8_t u14_c[] = {0x09, 0x78, 0x00, 0x92, 0x02, 0x54, 0x13, 0x02, 0x04, 0x2d, 0xe8 }; // atqs w crc

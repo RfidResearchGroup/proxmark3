@@ -311,10 +311,9 @@ void BootROM(void) {
 
         common_area.magic = COMMON_AREA_MAGIC;
         common_area.version = 1;
-        common_area.flags.bootrom_present = 1;
     }
-
     common_area.flags.bootrom_present = 1;
+
     if (common_area.command == COMMON_AREA_COMMAND_ENTER_FLASH_MODE) {
         common_area.command = COMMON_AREA_COMMAND_NONE;
         flash_mode(1);

@@ -14,6 +14,6 @@
 
 #include "proxmark3.h"
 
-extern void LegicRfSimulate(uint8_t tagtype);
+void LegicRfSimulate(uint8_t tagtype);
 
 #endif /* __LEGICRFSIM_H */

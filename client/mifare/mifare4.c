@@ -164,7 +164,7 @@ int CalculateMAC(mf4Session *session, MACType_t mtype, uint8_t blockNum, uint8_t
     }
 
     if (verbose)
-        PrintAndLog("MAC data[%d]: %s", macdatalen, sprint_hex(macdata, macdatalen));
+        PrintAndLogEx(NORMAL, "MAC data[%d]: %s", macdatalen, sprint_hex(macdata, macdatalen));
 
     return aes_cmac8(NULL, session->Kmac, macdata, mac, macdatalen);
 }
@@ -285,7 +285,7 @@ int MifareAuth4(mf4Session *session, uint8_t *keyn, uint8_t *key, bool activateF
         DropField();
 
     if (verbose)
-        PrintAndLog("");
+        PrintAndLogEx(NORMAL, "");
 
     if (session) {
         session->Authenticated = true;

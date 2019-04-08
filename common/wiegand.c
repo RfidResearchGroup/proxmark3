@@ -72,20 +72,20 @@ size_t removeParity(uint8_t *bits, size_t startIdx, uint8_t pLen, uint8_t pType,
 // Make sure *dest is long enough to store original sourceLen + #_of_parities_to_be_added
 /*
 * @brief addParity
-* @param bits       pointer to the source bitstream of binary values
+* @param src        pointer to the source bitstream of binary values
 * @param dest       pointer to the destination where parities together with bits are added.
 * @param sourceLen  number of
 * @param pLen       length bits to be checked
 * @param pType      EVEN|ODD|2 (always 1's)|3 (always 0's)
 * @return
 */
-size_t addParity(uint8_t *bits, uint8_t *dest, uint8_t sourceLen, uint8_t pLen, uint8_t pType) {
+size_t addParity(uint8_t *src, uint8_t *dest, uint8_t sourceLen, uint8_t pLen, uint8_t pType) {
     uint32_t parityWd = 0;
     size_t j = 0, bitCnt = 0;
     for (int word = 0; word < sourceLen; word += pLen - 1) {
         for (int bit = 0; bit < pLen - 1; ++bit) {
-            parityWd = (parityWd << 1) | bits[word + bit];
-            dest[j++] = (bits[word + bit]);
+            parityWd = (parityWd << 1) | src[word + bit];
+            dest[j++] = (src[word + bit]);
         }
 
         // if parity fails then return 0

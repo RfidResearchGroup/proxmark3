@@ -31,11 +31,11 @@
 #define CLIGetHexWithReturn(paramnum, data, datalen) if (CLIParamHexToBuf(arg_get_str(paramnum), data, sizeof(data), datalen)) {CLIParserFree();return 1;}
 #define CLIGetStrWithReturn(paramnum, data, datalen) if (CLIParamStrToBuf(arg_get_str(paramnum), data, sizeof(data), datalen)) {CLIParserFree();return 1;}
 
-extern int CLIParserInit(char *vprogramName, char *vprogramHint, char *vprogramHelp);
-extern int CLIParserParseString(const char *str, void *argtable[], size_t vargtableLen, bool allowEmptyExec);
-extern int CLIParserParseStringEx(const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec, bool clueData);
-extern int CLIParserParseArg(int argc, char **argv, void *argtable[], size_t vargtableLen, bool allowEmptyExec);
-extern void CLIParserFree();
+int CLIParserInit(char *vprogramName, char *vprogramHint, char *vprogramHelp);
+int CLIParserParseString(const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec);
+int CLIParserParseStringEx(const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec, bool clueData);
+int CLIParserParseArg(int argc, char **argv, void *vargtable[], size_t vargtableLen, bool allowEmptyExec);
+void CLIParserFree();
 
-extern int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen);
-extern int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen);
+int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen);
+int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen);

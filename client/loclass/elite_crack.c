@@ -539,7 +539,7 @@ int bruteforceFile(const char *filename, uint16_t keytable[]) {
     long fsize = ftell(f);
     fseek(f, 0, SEEK_SET);
 
-    if (fsize < 0) {
+    if (fsize <= 0) {
         PrintAndLogDevice(WARNING, "Error, when getting filesize");
         fclose(f);
         return 1;

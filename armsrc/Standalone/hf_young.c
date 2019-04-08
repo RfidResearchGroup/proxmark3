@@ -166,7 +166,7 @@ void RunMod() {
                 playing = 1;
             } else {
                 Dbprintf("UID from target tag: %02X%02X%02X%02X", oldBlock0[0], oldBlock0[1], oldBlock0[2], oldBlock0[3]);
-                memcpy(newBlock0, oldBlock0, 16);
+                memcpy(newBlock0 + 5, oldBlock0 + 5, 11);
 
                 // Copy uid for bank (2nd is for longer UIDs not supported if classic)
                 memcpy(newBlock0, uids[selected].uid, 4);

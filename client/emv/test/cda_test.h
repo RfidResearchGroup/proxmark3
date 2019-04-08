@@ -15,4 +15,4 @@
 
 #include <stdbool.h>
 
-extern int exec_cda_test(bool verbose);
+int exec_cda_test(bool verbose);

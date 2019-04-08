@@ -29,9 +29,9 @@
 #define Logic1                  Iso15693Logic1
 #define FrameEOF                Iso15693FrameEOF
 
-#define Crc(data, len)          crc(CRC_15693, (data), (len))
-#define CheckCrc(data, len)     check_crc(CRC_15693, (data), (len))
-#define AddCrc(data, len)       compute_crc(CRC_15693, (data), (len), (data)+(len), (data)+(len)+1)
+#define Crc15(data, len)          Crc(CRC_15693, (data), (len))
+#define CheckCrc15(data, len)     check_crc(CRC_15693, (data), (len))
+#define AddCrc15(data, len)       compute_crc(CRC_15693, (data), (len), (data)+(len), (data)+(len)+1)
 
 #define sprintUID(target, uid)  Iso15693sprintUID((target), (uid))
 
@@ -198,7 +198,7 @@ int getUID(uint8_t *buf) {
     c.d.asBytes[1] = ISO15_CMD_INVENTORY;
     c.d.asBytes[2] = 0; // mask length
 
-    AddCrc(c.d.asBytes, 3);
+    AddCrc15(c.d.asBytes, 3);
     c.arg[0] = 5; // len
 
     uint8_t retry;
@@ -212,7 +212,7 @@ int getUID(uint8_t *buf) {
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
 
             uint8_t resplen = resp.arg[0];
-            if (resplen >= 12 && CheckCrc(resp.d.asBytes, 12)) {
+            if (resplen >= 12 && CheckCrc15(resp.d.asBytes, 12)) {
                 memcpy(buf, resp.d.asBytes + 2, 8);
                 return 1;
             }
@@ -479,7 +479,7 @@ int CmdHF15Demod(const char *Cmd) {
     for (i = 0; i < k; i++)
         PrintAndLogEx(NORMAL, "# %2d: %02x ", i, outBuf[i]);
 
-    PrintAndLogEx(NORMAL, "CRC %04x", Crc(outBuf, k - 2));
+    PrintAndLogEx(NORMAL, "CRC %04x", Crc15(outBuf, k - 2));
     return 0;
 }
 
@@ -519,7 +519,7 @@ int CmdHF15Info(const char *Cmd) {
     if (!prepareHF15Cmd(&cmd, &c, ISO15_CMD_SYSINFO))
         return 0;
 
-    AddCrc(req,  c.arg[0]);
+    AddCrc15(req,  c.arg[0]);
     c.arg[0] += 2;
 
     //PrintAndLogEx(NORMAL, "cmd %s", sprint_hex(c.d.asBytes, reqlen) );
@@ -721,7 +721,7 @@ int CmdHF15Dump(const char *Cmd) {
     for (int retry = 0; retry < 5; retry++) {
 
         req[10] = blocknum;
-        AddCrc(req, 11);
+        AddCrc15(req, 11);
         c.arg[0] = 13;
 
         clearCommandBuffer();
@@ -737,7 +737,7 @@ int CmdHF15Dump(const char *Cmd) {
 
             recv = resp.d.asBytes;
 
-            if (!CheckCrc(recv, len)) {
+            if (!CheckCrc15(recv, len)) {
                 PrintAndLogEx(FAILED, "crc fail");
                 continue;
             }
@@ -848,7 +848,7 @@ int CmdHF15Restore(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "Restoring data blocks.");
-        
+
     while (1) {
         tried = 0;
         hex[0] = 0x00;
@@ -958,7 +958,7 @@ int CmdHF15Raw(const char *Cmd) {
     }
 
     if (crc) {
-        AddCrc(data, datalen);
+        AddCrc15(data, datalen);
         datalen += 2;
     }
 
@@ -1099,7 +1099,7 @@ int CmdHF15Readmulti(const char *Cmd) {
 
     req[reqlen++] = pagenum;
     req[reqlen++] = pagecount;
-    AddCrc(req, reqlen);
+    AddCrc15(req, reqlen);
     c.arg[0] = reqlen + 2;
 
     clearCommandBuffer();
@@ -1118,7 +1118,7 @@ int CmdHF15Readmulti(const char *Cmd) {
 
     recv = resp.d.asBytes;
 
-    if (!CheckCrc(recv, status)) {
+    if (!CheckCrc15(recv, status)) {
         PrintAndLogEx(FAILED, "CRC failed");
         return 2;
     }
@@ -1178,7 +1178,7 @@ int CmdHF15Read(const char *Cmd) {
 
     req[reqlen++] = (uint8_t)blocknum;
 
-    AddCrc(req, reqlen);
+    AddCrc15(req, reqlen);
 
     c.arg[0] = reqlen + 2;
 
@@ -1198,7 +1198,7 @@ int CmdHF15Read(const char *Cmd) {
 
     recv = resp.d.asBytes;
 
-    if (!CheckCrc(recv, status)) {
+    if (!CheckCrc15(recv, status)) {
         PrintAndLogEx(NORMAL, "CRC failed");
         return 2;
     }
@@ -1261,7 +1261,7 @@ int CmdHF15Write(const char *Cmd) {
         req[reqlen++] = temp & 0xff;
         cmd2 += 2;
     }
-    AddCrc(req, reqlen);
+    AddCrc15(req, reqlen);
     c.arg[0] = reqlen + 2;
 
     PrintAndLogEx(NORMAL, "iso15693 writing to page %02d (0x%02X) | data ", pagenum, pagenum);
@@ -1282,7 +1282,7 @@ int CmdHF15Write(const char *Cmd) {
 
     recv = resp.d.asBytes;
 
-    if (!CheckCrc(recv, status)) {
+    if (!CheckCrc15(recv, status)) {
         PrintAndLogEx(FAILED, "CRC failed");
         return 2;
     }

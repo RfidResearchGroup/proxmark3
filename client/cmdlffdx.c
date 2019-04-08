@@ -186,7 +186,7 @@ int CmdFDXBdemodBI(const char *Cmd) {
         return 0;
     }
 
-    setDemodBuf(bs, 128, preambleIndex);
+    setDemodBuff(bs, 128, preambleIndex);
 
     // remove marker bits (1's every 9th digit after preamble) (pType = 2)
     size = removeParity(bs, preambleIndex + 11, 9, 2, 117);
@@ -256,7 +256,7 @@ int CmdFdxDemod(const char *Cmd) {
     }
 
     // set and leave DemodBuffer intact
-    setDemodBuf(DemodBuffer, 128, preambleIndex);
+    setDemodBuff(DemodBuffer, 128, preambleIndex);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (preambleIndex * g_DemodClock));
     // remove marker bits (1's every 9th digit after preamble) (pType = 2)
     size = removeParity(DemodBuffer, 11, 9, 2, 117);

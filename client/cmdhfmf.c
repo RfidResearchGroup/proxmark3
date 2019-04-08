@@ -69,6 +69,10 @@ int usage_hf14_mf1ksim(void) {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h    this help");
     PrintAndLogEx(NORMAL, "      u    (Optional) UID 4,7 or 10bytes. If not specified, the UID 4b from emulator memory will be used");
+    PrintAndLogEx(NORMAL, "      t    (Optional)   0 = MIFARE Mini");
+    PrintAndLogEx(NORMAL, "                        1 = MIFARE Classic 1k (Default)");
+    PrintAndLogEx(NORMAL, "                        1 = MIFARE Classic 2k");
+    PrintAndLogEx(NORMAL, "                        4 = MIFARE Classic 4k");
     PrintAndLogEx(NORMAL, "      n    (Optional) Automatically exit simulation after <numreads> blocks have been read by reader. 0 = infinite");
     PrintAndLogEx(NORMAL, "      i    (Optional) Interactive, means that console will not be returned until simulation finishes or is aborted");
     PrintAndLogEx(NORMAL, "      x    (Optional) Crack, performs the 'reader attack', nr/ar attack against a reader");
@@ -1056,7 +1060,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
         }
     }
     fclose(fdump);
-    PrintAndLogEx(INFO, "Finish restore");    
+    PrintAndLogEx(INFO, "Finish restore");
     return 0;
 }
 
@@ -1679,7 +1683,7 @@ int CmdHF14AMfChk_fast(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "Running strategy %u", strategy);
 
             // main keychunk loop
-            for (uint32_t i = 0; i < keycnt; i += chunksize) {
+            for (i = 0; i < keycnt; i += chunksize) {
 
                 if (ukbhit()) {
                     int gc = getchar();
@@ -1713,7 +1717,7 @@ out:
 
     // check..
     uint8_t found_keys = 0;
-    for (uint8_t i = 0; i < sectorsCnt; ++i) {
+    for (i = 0; i < sectorsCnt; ++i) {
 
         if (e_sector[i].foundKey[0])
             found_keys++;
@@ -1730,7 +1734,7 @@ out:
 
         if (transferToEml) {
             uint8_t block[16] = {0x00};
-            for (uint8_t i = 0; i < sectorsCnt; ++i) {
+            for ( i = 0; i < sectorsCnt; ++i) {
                 mfEmlGetMem(block, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1);
                 if (e_sector[i].foundKey[0])
                     num_to_bytes(e_sector[i].Key[0], 6, block);
@@ -1925,7 +1929,7 @@ int CmdHF14AMfChk(const char *Cmd) {
     }
 
     // empty e_sector
-    for (int i = 0; i < SectorsCnt; ++i) {
+    for (i = 0; i < SectorsCnt; ++i) {
         e_sector[i].Key[0] = 0xffffffffffff;
         e_sector[i].Key[1] = 0xffffffffffff;
         e_sector[i].foundKey[0] = false;
@@ -1944,7 +1948,7 @@ int CmdHF14AMfChk(const char *Cmd) {
     for (trgKeyType = (keyType == 2) ? 0 : keyType; trgKeyType < 2; (keyType == 2) ? (++trgKeyType) : (trgKeyType = 2)) {
 
         int b = blockNo;
-        for (int i = 0; i < SectorsCnt; ++i) {
+        for (i = 0; i < SectorsCnt; ++i) {
 
             // skip already found keys.
             if (e_sector[i].foundKey[trgKeyType]) continue;
@@ -2018,7 +2022,7 @@ out:
 
     if (transferToEml) {
         uint8_t block[16] = {0x00};
-        for (uint8_t i = 0; i < SectorsCnt; ++i) {
+        for (i = 0; i < SectorsCnt; ++i) {
             mfEmlGetMem(block, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1);
             if (e_sector[i].foundKey[0])
                 num_to_bytes(e_sector[i].Key[0], 6, block);
@@ -2132,7 +2136,7 @@ int CmdHF14AMf1kSim(const char *Cmd) {
 
     uint8_t uid[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     uint8_t exitAfterNReads = 0;
-    uint8_t flags = (FLAG_UID_IN_EMUL | FLAG_4B_UID_IN_DATA);
+    uint16_t flags = (FLAG_UID_IN_EMUL | FLAG_4B_UID_IN_DATA);
     int uidlen = 0;
     uint8_t cmdp = 0;
     bool errors = false, verbose = false, setEmulatorMem = false;
@@ -2152,6 +2156,31 @@ int CmdHF14AMf1kSim(const char *Cmd) {
                 break;
             case 'n':
                 exitAfterNReads = param_get8(Cmd, cmdp + 1);
+                cmdp += 2;
+                break;
+            case 't':
+                switch (param_get8(Cmd, cmdp + 1)) {
+                    case 0:
+                        // Mifare MINI
+                        flags |= FLAG_MF_MINI;
+                        break;
+                    case 1:
+                        // Mifare Classic 1k
+                        flags |= FLAG_MF_1K;
+                        break;
+                    case 2:
+                        // Mifare Classic 2k
+                        flags |= FLAG_MF_2K;
+                        break;
+                    case 4:
+                        // Mifare Classic 4k
+                        flags |= FLAG_MF_4K;
+                        break;
+                    default:
+                        // Mifare Classic 1k
+                        flags |= FLAG_MF_1K;
+                        break;
+                }
                 cmdp += 2;
                 break;
             case 'u':

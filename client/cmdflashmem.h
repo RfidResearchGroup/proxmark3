@@ -33,13 +33,13 @@ typedef enum {
     DICTIONARY_ICLASS
 } Dictionary_t;
 
-extern int CmdFlashMem(const char *Cmd);
+int CmdFlashMem(const char *Cmd);
 
-extern int CmdFlashMemRead(const char *Cmd);
-extern int CmdFlashMemLoad(const char *Cmd);
-extern int CmdFlashMemSave(const char *Cmd);
-extern int CmdFlashMemWipe(const char *Cmd);
-extern int CmdFlashMemInfo(const char *Cmd);
+int CmdFlashMemRead(const char *Cmd);
+int CmdFlashMemLoad(const char *Cmd);
+int CmdFlashMemSave(const char *Cmd);
+int CmdFlashMemWipe(const char *Cmd);
+int CmdFlashMemInfo(const char *Cmd);
 #endif
 
 #endif

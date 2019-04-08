@@ -51,7 +51,7 @@
 //to allow debug print calls when used not on dev
 
 //void dummy(char *fmt, ...){}
-extern void Dbprintf(const char *fmt, ...);
+void Dbprintf(const char *fmt, ...);
 
 #ifndef ON_DEVICE
 #include "ui.h"
@@ -445,11 +445,11 @@ int ManchesterEncode(uint8_t *bits, size_t size) {
 
 // by marshmellow
 // to detect a wave that has heavily clipped (clean) samples
-// loop 512 samples,   if 250 of them is deemed maxed out,  we assume the wave is clipped.
+// loop 1024 samples,   if 250 of them is deemed maxed out,  we assume the wave is clipped.
 bool DetectCleanAskWave(uint8_t *dest, size_t size, uint8_t high, uint8_t low) {
     bool allArePeaks = true;
     uint16_t cntPeaks = 0;
-    size_t loopEnd = 512 + 160;
+    size_t loopEnd = 1024 + 160;
 
     // sanity check
     if (loopEnd > size) loopEnd = size;
@@ -463,7 +463,8 @@ bool DetectCleanAskWave(uint8_t *dest, size_t size, uint8_t high, uint8_t low) {
     }
 
     if (!allArePeaks) {
-        if (cntPeaks > 250) return true;
+        if (g_debugMode == 2) prnt("DEBUG DetectCleanAskWave: peaks (200) %u", cntPeaks);
+        if (cntPeaks > 200) return true;
     }
     return allArePeaks;
 }
@@ -520,12 +521,12 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
 
         int foo = getClosestClock(minClk);
         if (foo > 0) {
-            for (uint8_t i = 0; i < 10; i++) {
-                if (tmpclk[i][0] == foo) {
-                    tmpclk[i][1]++;
+            for (uint8_t j = 0; j < 10; j++) {
+                if (tmpclk[j][0] == foo) {
+                    tmpclk[j][1]++;
 
-                    if (tmpclk[i][2] == 0) {
-                        tmpclk[i][2] = shortestWaveIdx;
+                    if (tmpclk[j][2] == 0) {
+                        tmpclk[j][2] = shortestWaveIdx;
                     }
                     break;
                 }
@@ -535,18 +536,18 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
 
     // find the clock with most hits and it the first index it was encountered.
     int max = 0;
-    for (uint8_t i = 0; i < 10; i++) {
+    for (uint8_t j = 0; j < 10; j++) {
         if (g_debugMode == 2) {
             prnt("DEBUG, ASK,  clocks %u | hits %u | idx %u"
-                 , tmpclk[i][0]
-                 , tmpclk[i][1]
-                 , tmpclk[i][2]
+                 , tmpclk[j][0]
+                 , tmpclk[j][1]
+                 , tmpclk[j][2]
                 );
         }
-        if (max < tmpclk[i][1]) {
-            *clock = tmpclk[i][0];
-            shortestWaveIdx = tmpclk[i][2];
-            max = tmpclk[i][1];
+        if (max < tmpclk[j][1]) {
+            *clock = tmpclk[j][0];
+            shortestWaveIdx = tmpclk[j][2];
+            max = tmpclk[j][1];
         }
     }
 
@@ -983,10 +984,10 @@ int DetectPSKClock(uint8_t *dest, size_t size, int clock, size_t *firstPhaseShif
     if (*fc != 2 && *fc != 4 && *fc != 8) return 0;
 
 
-    size_t waveStart = 0, waveEnd = 0, firstFullWave = 0, lastClkBit = 0;
+    size_t waveStart, waveEnd, firstFullWave = 0, lastClkBit;
 
-    uint8_t clkCnt, tol = 1;
-    uint16_t peakcnt = 0, errCnt = 0, waveLenCnt = 0, fullWaveLen = 0;
+    uint8_t clkCnt, tol;
+    uint16_t peakcnt, errCnt, waveLenCnt, fullWaveLen = 0;
     uint16_t bestErr[] = {1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000};
     uint16_t peaksdet[] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 
@@ -1018,7 +1019,6 @@ int DetectPSKClock(uint8_t *dest, size_t size, int clock, size_t *firstPhaseShif
             if (dest[i] < dest[i + 1] && dest[i + 1] >= dest[i + 2]) {
                 if (waveStart == 0) {
                     waveStart = i + 1;
-                    waveLenCnt = 0;
                 } else { //waveEnd
                     waveEnd = i + 1;
                     waveLenCnt = waveEnd - waveStart;
@@ -1614,25 +1614,19 @@ int askdemod(uint8_t *bits, size_t *size, int *clk, int *invert, int maxErr, uin
 // by marshmellow - demodulate NRZ wave - requires a read with strong signal
 // peaks invert bit (high=1 low=0) each clock cycle = 1 bit determined by last peak
 int nrzRawDemod(uint8_t *dest, size_t *size, int *clk, int *invert, int *startIdx) {
-    if (signalprop.isnoise) return -1;
+
+    if (signalprop.isnoise) {
+        if (g_debugMode == 2) prnt("DEBUG nrzRawDemod: just noise detected - quitting");
+        return -1;
+    }
 
     size_t clkStartIdx = 0;
     *clk = DetectNRZClock(dest, *size, *clk, &clkStartIdx);
     if (*clk == 0) return -2;
 
-    size_t i, gLen = 4096;
-    if (gLen > *size)
-        gLen = *size - 20;
-
-
-    // just noise - no super good detection. good enough
-    if (signalprop.isnoise) {
-        if (g_debugMode == 2) prnt("DEBUG nrzRawDemod: just noise detected - quitting");
-        return -3;
-    }
-
+    size_t i;
     int high, low;
-    //getHiLo(dest, gLen, &high, &low, 75, 75);
+
     getHiLo(&high, &low, 75, 75);
     getHiLo(&high, &low, 75, 75);
 
@@ -1671,12 +1665,9 @@ size_t fsk_wave_demod(uint8_t *dest, size_t size, uint8_t fchigh, uint8_t fclow,
     if (fclow == 0) fclow = 8;
 
     //set the threshold close to 0 (graph) or 128 std to avoid static
-    size_t preLastSample = 0;
-    size_t LastSample = 0;
-    size_t currSample = 0;
-    size_t last_transition = 0;
-    size_t idx = 1;
-    size_t numBits = 0;
+    size_t preLastSample, LastSample = 0;
+    size_t currSample = 0, last_transition = 0;
+    size_t idx, numBits = 0;
 
     //find start of modulating data in trace
     idx = findModStart(dest, size, fchigh);
@@ -1870,8 +1861,8 @@ int pskRawDemod_ext(uint8_t *dest, size_t *size, int *clock, int *invert, int *s
 
     uint8_t curPhase = *invert;
     uint8_t fc = 0;
-    size_t i = 0, numBits = 0, waveStart = 1, waveEnd = 0, firstFullWave = 0, lastClkBit = 0;
-    uint16_t fullWaveLen = 0, waveLenCnt = 0, avgWaveVal = 0;
+    size_t i = 0, numBits = 0, waveStart = 1, waveEnd, firstFullWave = 0, lastClkBit = 0;
+    uint16_t fullWaveLen = 0, waveLenCnt, avgWaveVal = 0;
     uint16_t errCnt = 0, errCnt2 = 0;
 
     *clock = DetectPSKClock(dest, *size, *clock, &firstFullWave, &curPhase, &fc);
@@ -1899,8 +1890,11 @@ int pskRawDemod_ext(uint8_t *dest, size_t *size, int *clock, int *invert, int *s
     *startIdx = firstFullWave - (*clock * numBits) + 2;
     //set start of wave as clock align
     lastClkBit = firstFullWave;
-    if (g_debugMode == 2) prnt("DEBUG PSK: firstFullWave: %u, waveLen: %u, startIdx %i", firstFullWave, fullWaveLen, *startIdx);
-    if (g_debugMode == 2) prnt("DEBUG PSK: clk: %d, lastClkBit: %u, fc: %u", *clock, lastClkBit, fc);
+    if (g_debugMode == 2) {
+        prnt("DEBUG PSK: firstFullWave: %u, waveLen: %u, startIdx %i", firstFullWave, fullWaveLen, *startIdx);
+        prnt("DEBUG PSK: clk: %d, lastClkBit: %u, fc: %u", *clock, lastClkBit, fc);
+    }
+    
     waveStart = 0;
     dest[numBits++] = curPhase; //set first read bit
     for (i = firstFullWave + fullWaveLen - 1; i < *size - 3; i++) {
@@ -1908,14 +1902,20 @@ int pskRawDemod_ext(uint8_t *dest, size_t *size, int *clock, int *invert, int *s
         if (dest[i] + fc < dest[i + 1] && dest[i + 1] >= dest[i + 2]) {
             if (waveStart == 0) {
                 waveStart = i + 1;
-                waveLenCnt = 0;
                 avgWaveVal = dest[i + 1];
             } else { //waveEnd
                 waveEnd = i + 1;
                 waveLenCnt = waveEnd - waveStart;
                 if (waveLenCnt > fc) {
                     //this wave is a phase shift
-                    //prnt("DEBUG: phase shift at: %d, len: %d, nextClk: %d, i: %d, fc: %d",waveStart,waveLenCnt,lastClkBit+*clock-tol,i+1,fc);
+                    /*
+                    prnt("DEBUG: phase shift at: %d, len: %d, nextClk: %d, i: %d, fc: %d"
+                        , waveStart
+                        , waveLenCnt
+                        , lastClkBit + *clock - tol
+                        , i + 1
+                        , fc);
+                      */
                     if (i + 1 >= lastClkBit + *clock - tol) { //should be a clock bit
                         curPhase ^= 1;
                         dest[numBits++] = curPhase;

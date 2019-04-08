@@ -405,7 +405,7 @@ int CmdHFiClassSim(const char *Cmd) {
                 break;
 
             size_t datalen = NUM_CSNS * 24;
-            void *dump = calloc(datalen, sizeof(uint8_t));
+            uint8_t *dump = calloc(datalen, sizeof(uint8_t));
             if (!dump) {
                 PrintAndLogEx(WARNING, "Failed to allocate memory");
                 return 2;
@@ -458,7 +458,7 @@ int CmdHFiClassSim(const char *Cmd) {
                 break;
 
             size_t datalen = NUM_CSNS * 24;
-            void *dump = calloc(datalen, sizeof(uint8_t));
+            uint8_t *dump = calloc(datalen, sizeof(uint8_t));
             if (!dump) {
                 PrintAndLogEx(WARNING, "Failed to allocate memory");
                 return 2;
@@ -636,7 +636,7 @@ int CmdHFiClassELoad(const char *Cmd) {
     long fsize = ftell(f);
     fseek(f, 0, SEEK_SET);
 
-    if (fsize < 0) {
+    if (fsize <= 0) {
         PrintAndLogDevice(WARNING, "error, when getting filesize");
         fclose(f);
         return 1;
@@ -729,7 +729,7 @@ int CmdHFiClassDecrypt(const char *Cmd) {
     long fsize = ftell(f);
     fseek(f, 0, SEEK_SET);
 
-    if (fsize < 0) {
+    if (fsize <= 0) {
         PrintAndLogEx(WARNING, "error, when getting filesize");
         fclose(f);
         return 2;
@@ -1109,7 +1109,7 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
                 PrintAndLogEx(WARNING, "command execute timeout 2");
                 return 0;
             }
-            uint8_t isOK = resp.arg[0] & 0xff;
+            isOK = resp.arg[0] & 0xff;
             blocksRead = resp.arg[1];
             if (!isOK && !blocksRead) {
                 PrintAndLogEx(WARNING, "read block failed 2");
@@ -1609,7 +1609,7 @@ int CmdHFiClassReadTagFile(const char *Cmd) {
     long fsize = ftell(f);
     fseek(f, 0, SEEK_SET);
 
-    if (fsize < 0) {
+    if (fsize <= 0) {
         PrintAndLogEx(WARNING, "Error, when getting filesize");
         fclose(f);
         return 1;
@@ -1766,7 +1766,7 @@ static int loadKeys(char *filename) {
     long fsize = ftell(f);
     fseek(f, 0, SEEK_SET);
 
-    if (fsize < 0) {
+    if (fsize <= 0) {
         PrintAndLogEx(WARNING, "Error, when getting filesize");
         fclose(f);
         return 1;
@@ -2193,7 +2193,6 @@ int CmdHFiClassLookUp(const char *Cmd) {
                     errors = true;
                 }
                 cmdp += 2;
-                break;
                 break;
             case 'e':
                 use_elite = true;

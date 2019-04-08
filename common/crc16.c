@@ -9,21 +9,21 @@
 
 static uint16_t crc_table[256];
 static bool crc_table_init = false;
-static CrcType_t crc_type = CRC_NONE;
+static CrcType_t current_crc_type = CRC_NONE;
 
-void init_table(CrcType_t ct) {
+void init_table(CrcType_t crctype) {
 
     // same crc algo, and initialised already
-    if (ct == crc_type && crc_table_init)
+    if (crctype == current_crc_type && crc_table_init)
         return;
 
     // not the same crc algo. reset table.
-    if (ct != crc_type)
+    if (crctype != current_crc_type)
         reset_table();
 
-    crc_type = ct;
+    current_crc_type = crctype;
 
-    switch (ct) {
+    switch (crctype) {
         case CRC_14443_A:
         case CRC_14443_B:
         case CRC_15693:
@@ -44,7 +44,7 @@ void init_table(CrcType_t ct) {
             break;
         default:
             crc_table_init = false;
-            crc_type = CRC_NONE;
+            current_crc_type = CRC_NONE;
             break;
     }
 }
@@ -80,7 +80,7 @@ void generate_table(uint16_t polynomial, bool refin) {
 void reset_table(void) {
     memset(crc_table, 0, sizeof(crc_table));
     crc_table_init = false;
-    crc_type = CRC_NONE;
+    current_crc_type = CRC_NONE;
 }
 
 // table lookup LUT solution
@@ -191,7 +191,7 @@ void compute_crc(CrcType_t ct, const uint8_t *d, size_t n, uint8_t *first, uint8
     *first = (crc & 0xFF);
     *second = ((crc >> 8) & 0xFF);
 }
-uint16_t crc(CrcType_t ct, const uint8_t *d, size_t n) {
+uint16_t Crc(CrcType_t ct, const uint8_t *d, size_t n) {
 
     // can't calc a crc on less than 3 byte. (1byte + 2 crc bytes)
     if (n < 3) return 0;

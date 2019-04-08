@@ -11,9 +11,9 @@
 #define __MFDESFIRE_H
 
 int CmdHFMFDes(const char *Cmd);
-int CmdHF14ADesAuth(const char *cmd);
-int CmdHF14ADesRb(const char *cmd);
-int CmdHF14ADesWb(const char *cmd);
+int CmdHF14ADesAuth(const char *Cmd);
+int CmdHF14ADesRb(const char *Cmd);
+int CmdHF14ADesWb(const char *Cmd);
 int CmdHF14ADesInfo(const char *Cmd);
 int CmdHF14ADesEnumApplications(const char *Cmd);
 

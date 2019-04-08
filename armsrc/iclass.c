@@ -855,7 +855,7 @@ void RAMFUNC SniffIClass(void) {
 
     //int datalen = 0;
     uint32_t previous_data = 0;
-    uint32_t time_0 = 0, time_start = 0, time_stop  = 0;
+    uint32_t time_0 = 0, time_start = 0, time_stop;
     uint32_t sniffCounter = 0;
     bool TagIsActive = false;
     bool ReaderIsActive = false;
@@ -1395,7 +1395,7 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
     // To control where we are in the protocol
     uint32_t time_0 = GetCountSspClk();
     uint32_t t2r_stime = 0, t2r_etime = 0;
-    uint32_t r2t_stime = 0, r2t_etime = 0;
+    uint32_t r2t_stime, r2t_etime = 0;
 
     LED_A_ON();
     bool buttonPressed = false;
@@ -1626,7 +1626,7 @@ send:
  */
 static int SendIClassAnswer(uint8_t *resp, int respLen, uint16_t delay) {
     int i = 0;
-    volatile uint8_t b = 0;
+    volatile uint8_t b;
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_424K_8BIT);
 
@@ -1720,7 +1720,6 @@ static void TransmitIClassCommand(const uint8_t *cmd, int len, int *samples, int
 //-----------------------------------------------------------------------------
 void CodeIClassCommand(const uint8_t *cmd, int len) {
     int i, j, k;
-    uint8_t b;
 
     ToSendReset();
 
@@ -1732,7 +1731,7 @@ void CodeIClassCommand(const uint8_t *cmd, int len) {
 
     // Modulate the bytes
     for (i = 0; i < len; i++) {
-        b = cmd[i];
+        uint8_t b = cmd[i];
         for (j = 0; j < 4; j++) {
             for (k = 0; k < 4; k++) {
 
@@ -1875,14 +1874,13 @@ void setupIclassReader() {
 }
 
 bool sendCmdGetResponseWithRetries(uint8_t *command, size_t cmdsize, uint8_t *resp, uint8_t expected_size, uint8_t retries) {
-    uint8_t got_n = 0;
     while (retries-- > 0) {
 
         ReaderTransmitIClass(command, cmdsize);
 
         //iceman - if received size is bigger than expected, we smash the stack here
         // since its called with fixed sized arrays
-        got_n = ReaderReceiveIClass(resp);
+        uint8_t got_n = ReaderReceiveIClass(resp);
 
         // 0xBB is the internal debug separator byte..
         if (expected_size != got_n || (resp[0] == 0xBB || resp[7] == 0xBB || resp[2] == 0xBB)) {
@@ -1983,9 +1981,7 @@ void ReaderIClass(uint8_t arg0) {
     //Read App Issuer Area block CRC(0x05) => 0xde  0x64
     uint8_t readAA[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x05, 0xde, 0x64};
 
-    int read_status = 0;
     uint16_t tryCnt = 0;
-    uint8_t result_status = 0;
 
     bool abort_after_read = arg0 & FLAG_ICLASS_READER_ONLY_ONCE;  // flag to read until one tag is found successfully
     bool try_once = arg0 & FLAG_ICLASS_READER_ONE_TRY;            // flag to not to loop continuously, looking for tag
@@ -2008,9 +2004,9 @@ void ReaderIClass(uint8_t arg0) {
         }
 
         tryCnt++;
-        result_status = 0;
+        uint8_t result_status = 0;
 
-        read_status = handshakeIclassTag_ext(card_data, use_credit_key);
+        int read_status = handshakeIclassTag_ext(card_data, use_credit_key);
 
         if (read_status == 0) continue;
         if (read_status == 1) result_status = FLAG_ICLASS_READER_CSN;
@@ -2107,7 +2103,7 @@ void ReaderIClass(uint8_t arg0) {
 }
 
 // turn off afterwards
-void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
+void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
 
     uint8_t cardsize = 0;
     uint8_t mem = 0;
@@ -2134,7 +2130,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
         if (read_status < 2) continue;
 
         //for now replay captured auth (as cc not updated)
-        memcpy(check + 5, MAC, 4);
+        memcpy(check + 5, mac, 4);
 
         if (!sendCmdGetResponseWithRetries(check, sizeof(check), resp, 4, 5)) {
             DbpString("Error: Authentication Fail!");
@@ -2227,8 +2223,8 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 
 // not used. ?!? ( CMD_ICLASS_READCHECK)
 // turn off afterwards
-void iClass_ReadCheck(uint8_t blockNo, uint8_t keyType) {
-    uint8_t readcheck[] = { keyType, blockNo };
+void iClass_ReadCheck(uint8_t blockno, uint8_t keytype) {
+    uint8_t readcheck[] = { keytype, blockno };
     uint8_t resp[] = {0, 0, 0, 0, 0, 0, 0, 0};
     size_t isOK = 0;
     isOK = sendCmdGetResponseWithRetries(readcheck, sizeof(readcheck), resp, sizeof(resp), 6);
@@ -2348,9 +2344,9 @@ out:
 
 // Tries to read block.
 // retries 10times.
-bool iClass_ReadBlock(uint8_t blockNo, uint8_t *data, uint8_t len) {
+bool iClass_ReadBlock(uint8_t blockno, uint8_t *data, uint8_t len) {
     uint8_t resp[10];
-    uint8_t cmd[] = {ICLASS_CMD_READ_OR_IDENTIFY, blockNo, 0x00, 0x00};
+    uint8_t cmd[] = {ICLASS_CMD_READ_OR_IDENTIFY, blockno, 0x00, 0x00};
     AddCrc(cmd + 1, 1);
     // expect size 10,  retry 5times
     bool isOK = sendCmdGetResponseWithRetries(cmd, sizeof(cmd), resp, 10, 5);
@@ -2402,10 +2398,10 @@ void iClass_Dump(uint8_t blockno, uint8_t numblks) {
     BigBuf_free();
 }
 
-bool iClass_WriteBlock_ext(uint8_t blockNo, uint8_t *data) {
+bool iClass_WriteBlock_ext(uint8_t blockno, uint8_t *data) {
 
     uint8_t resp[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    uint8_t write[] = { ICLASS_CMD_UPDATE, blockNo, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    uint8_t write[] = { ICLASS_CMD_UPDATE, blockno, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     memcpy(write + 2, data, 12); // data + mac
     AddCrc(write + 1, 13);
 
@@ -2416,7 +2412,7 @@ bool iClass_WriteBlock_ext(uint8_t blockNo, uint8_t *data) {
         if (memcmp(write + 2, resp, 8)) {
 
             //if not programming key areas (note key blocks don't get programmed with actual key data it is xor data)
-            if (blockNo != 3 && blockNo != 4) {
+            if (blockno != 3 && blockno != 4) {
                 isOK = sendCmdGetResponseWithRetries(write, sizeof(write), resp, sizeof(resp), 5);
             }
         }
@@ -2425,8 +2421,8 @@ bool iClass_WriteBlock_ext(uint8_t blockNo, uint8_t *data) {
 }
 
 // turn off afterwards
-void iClass_WriteBlock(uint8_t blockNo, uint8_t *data) {
-    bool isOK = iClass_WriteBlock_ext(blockNo, data);
+void iClass_WriteBlock(uint8_t blockno, uint8_t *data) {
+    bool isOK = iClass_WriteBlock_ext(blockno, data);
     cmd_send(CMD_ACK, isOK, 0, 0, 0, 0);
     switch_off();
 }

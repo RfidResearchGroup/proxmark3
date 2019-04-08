@@ -228,7 +228,7 @@ int CmdFlexdemod(const char *Cmd) {
     i = start;
     for (bit = 0; bit < 64; bit++) {
         sum = 0;
-        for (int j = 0; j < 16; j++) {
+        for (j = 0; j < 16; j++) {
             sum += data[i++];
         }
         bits[bit] = (sum > 0) ? 1 : 0;
@@ -509,7 +509,7 @@ int CmdLFfskSim(const char *Cmd) {
             }
         }
     } else {
-        setDemodBuf(data, dataLen, 0);
+        setDemodBuff(data, dataLen, 0);
     }
 
     //default if not found
@@ -603,7 +603,7 @@ int CmdLFaskSim(const char *Cmd) {
         if (clk == 0)
             clk = GetAskClock("0", false);
     } else {
-        setDemodBuf(data, dataLen, 0);
+        setDemodBuff(data, dataLen, 0);
     }
     if (clk == 0) clk = 64;
     if (encoding == 0) clk /= 2; //askraw needs to double the clock speed
@@ -704,7 +704,7 @@ int CmdLFpskSim(const char *Cmd) {
         PrintAndLogEx(NORMAL, "carrier: %d", carrier);
 
     } else {
-        setDemodBuf(data, dataLen, 0);
+        setDemodBuff(data, dataLen, 0);
     }
 
     if (clk == 0) clk = 32;

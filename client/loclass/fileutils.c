@@ -292,7 +292,7 @@ int loadFile(const char *preferredName, const char *suffix, void *data, size_t m
     long fsize = ftell(f);
     fseek(f, 0, SEEK_SET);
 
-    if (fsize < 0) {
+    if (fsize <= 0) {
         PrintAndLogDevice(FAILED, "error, when getting filesize");
         retval = 1;
         goto out;
@@ -405,13 +405,13 @@ int loadFileJSON(const char *preferredName, const char *suffix, void *data, size
 
     root = json_load_file(fileName, 0, &error);
     if (!root) {
-        PrintAndLog("ERROR: json " _YELLOW_("%s") " error on line %d: %s", fileName, error.line, error.text);
+        PrintAndLogEx(ERR, "ERROR: json " _YELLOW_("%s") " error on line %d: %s", fileName, error.line, error.text);
         retval = 2;
         goto out;
     }
 
     if (!json_is_object(root)) {
-        PrintAndLog("ERROR: Invalid json " _YELLOW_("%s") " format. root must be an object.", fileName);
+        PrintAndLogEx(ERR, "ERROR: Invalid json " _YELLOW_("%s") " format. root must be an object.", fileName);
         retval = 3;
         goto out;
     }

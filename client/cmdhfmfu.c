@@ -1134,8 +1134,6 @@ int CmdHF14AMfUInfo(const char *Cmd) {
         // hasAuthKey,  if we was called with key, skip test.
         if (!authlim && !hasAuthKey) {
             PrintAndLogEx(NORMAL, "\n--- Known EV1/NTAG passwords.");
-            len = 0;
-
             // test pwd gen A
             num_to_bytes(ul_ev1_pwdgenA(card.uid), 4, key);
             len = ulev1_requestAuthentication(key, pack, sizeof(pack));
@@ -2078,7 +2076,7 @@ int CmdHF14AMfURestore(const char *Cmd) {
     fseek(f, 0, SEEK_END);
     long fsize = ftell(f);
     fseek(f, 0, SEEK_SET);
-    if (fsize < 0) {
+    if (fsize <= 0) {
         PrintAndLogEx(WARNING, "Error, when getting filesize");
         fclose(f);
         return 1;
@@ -2223,7 +2221,7 @@ int CmdHF14AMfURestore(const char *Cmd) {
 
     DropField();
     free(dump);
-    PrintAndLogEx(INFO, "Finish restore");    
+    PrintAndLogEx(INFO, "Finish restore");
     return 0;
 }
 //

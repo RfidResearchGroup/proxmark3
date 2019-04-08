@@ -76,12 +76,14 @@ void cjSetCursLeft() {
 
 void cjTabulize() { DbprintfEx(FLAG_RAWPRINT, "\t\t\t"); }
 
+/*
 void cjPrintKey(uint64_t key, uint8_t *foundKey, uint16_t sectorNo, uint8_t type) {
     char tosendkey[13];
     sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[0], foundKey[1], foundKey[2], foundKey[3], foundKey[4], foundKey[5]);
     cjSetCursRight();
     DbprintfEx(FLAG_NOLOG, "SEC: %02x | KEY : %s | TYP: %d", sectorNo, tosendkey, type);
 }
+*/
 
 void ReadLastTagFromFlash() {
     SpinOff(0);
@@ -89,7 +91,6 @@ void ReadLastTagFromFlash() {
     LED_B_ON();
     LED_C_ON();
     LED_D_ON();
-    uint16_t isok = 0;
     uint32_t startidx = 0;
     uint16_t len = 1024;
 
@@ -109,7 +110,7 @@ void ReadLastTagFromFlash() {
 
     for (size_t i = 0; i < len; i += size) {
         len = MIN((len - i), size);
-        isok = Flash_ReadDataCont(startidx + i, mem, len);
+        uint16_t isok = Flash_ReadDataCont(startidx + i, mem, len);
         if (isok == len) {
             emlSetMem(mem, 0, 64);
         } else {
@@ -137,8 +138,6 @@ void WriteTagToFlash(uint8_t index, size_t size) {
     LED_C_ON();
     LED_D_ON();
 
-    uint8_t isok = 0;
-    uint16_t res = 0;
     uint32_t len = size;
     uint32_t bytes_sent = 0;
     uint32_t bytes_remaining = len;
@@ -168,10 +167,10 @@ void WriteTagToFlash(uint8_t index, size_t size) {
         memcpy(buff, data + bytes_sent, bytes_in_packet);
 
         bytes_remaining -= bytes_in_packet;
-        res = Flash_WriteDataCont(bytes_sent + (index * size), buff, bytes_in_packet);
+        uint16_t res = Flash_WriteDataCont(bytes_sent + (index * size), buff, bytes_in_packet);
         bytes_sent += bytes_in_packet;
 
-        isok = (res == bytes_in_packet) ? 1 : 0;
+        uint8_t isok = (res == bytes_in_packet) ? 1 : 0;
 
         if (!isok) {
             DbprintfEx(FLAG_NOLOG, "FlashMem write FAILEd [offset %u]", bytes_sent);
@@ -305,14 +304,14 @@ void RunMod() {
     //   and why not a simple memset abuse to 0xffize the whole space in one go ?
     // uint8_t foundKey[2][40][6]; //= [ {0xff} ]; /* C99 abusal 6.7.8.21
     uint8_t foundKey[2][40][6];
-    for (uint16_t t = 0; t < 2; t++) {
+    for (uint16_t i = 0; i < 2; i++) {
         for (uint16_t sectorNo = 0; sectorNo < sectorsCnt; sectorNo++) {
-            foundKey[t][sectorNo][0] = 0xFF;
-            foundKey[t][sectorNo][1] = 0xFF;
-            foundKey[t][sectorNo][2] = 0xFF;
-            foundKey[t][sectorNo][3] = 0xFF;
-            foundKey[t][sectorNo][4] = 0xFF;
-            foundKey[t][sectorNo][5] = 0xFF;
+            foundKey[i][sectorNo][0] = 0xFF;
+            foundKey[i][sectorNo][1] = 0xFF;
+            foundKey[i][sectorNo][2] = 0xFF;
+            foundKey[i][sectorNo][3] = 0xFF;
+            foundKey[i][sectorNo][4] = 0xFF;
+            foundKey[i][sectorNo][5] = 0xFF;
         }
     }
 
@@ -465,12 +464,12 @@ failtag:
                         ;
                         // Type 0 / A first
                         uint16_t t = 0;
-                        for (uint16_t sectorNo = 0; sectorNo < sectorsCnt; sectorNo++) {
-                            num_to_bytes(0x484558414354, 6, foundKey[t][sectorNo]);
-                            sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[t][sectorNo][0], foundKey[t][sectorNo][1], foundKey[t][sectorNo][2],
-                                    foundKey[t][sectorNo][3], foundKey[t][sectorNo][4], foundKey[t][sectorNo][5]);
+                        for (uint16_t s = 0; s < sectorsCnt; s++) {
+                            num_to_bytes(0x484558414354, 6, foundKey[t][s]);
+                            sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[t][s][0], foundKey[t][s][1], foundKey[t][s][2],
+                                    foundKey[t][s][3], foundKey[t][s][4], foundKey[t][s][5]);
                             cjSetCursRight();
-                            DbprintfEx(FLAG_NOLOG, "SEC: %02x ; KEY : %s ; TYP: %d", sectorNo, tosendkey, t);
+                            DbprintfEx(FLAG_NOLOG, "SEC: %02x ; KEY : %s ; TYP: %d", s, tosendkey, t);
                         }
                         t = 1;
                         uint16_t sectorNo = 0;
@@ -611,14 +610,19 @@ failtag:
 
                         // emlClearMem();
                         // A very weak one...
-                        for (uint16_t t = 0; t < 2; t++) {
-                            for (uint16_t sectorNo = 0; sectorNo < sectorsCnt; sectorNo++) {
-                                num_to_bytes(key64, 6, foundKey[t][sectorNo]);
-                                sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[t][sectorNo][0], foundKey[t][sectorNo][1], foundKey[t][sectorNo][2],
-                                        foundKey[t][sectorNo][3], foundKey[t][sectorNo][4], foundKey[t][sectorNo][5]);
+                        for (uint16_t i = 0; i < 2; i++) {
+                            for (uint16_t s = 0; s < sectorsCnt; s++) {
+                                num_to_bytes(key64, 6, foundKey[i][s]);
+                                sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x",
+                                        foundKey[i][s][0],
+                                        foundKey[i][s][1],
+                                        foundKey[i][s][2],
+                                        foundKey[i][s][3],
+                                        foundKey[i][s][4],
+                                        foundKey[i][s][5]
+                                       );
                                 cjSetCursRight();
-
-                                DbprintfEx(FLAG_NOLOG, "SEC: %02x ; KEY : %s ; TYP: %d", sectorNo, tosendkey, t);
+                                DbprintfEx(FLAG_NOLOG, "SEC: %02x ; KEY : %s ; TYP: %d", s, tosendkey, i);
                             }
                         }
                         trapped = 1;
@@ -644,25 +648,33 @@ failtag:
                         cjSetCursLeft();
 
                         DbprintfEx(FLAG_NOLOG, "%s>>>>>>>>>>>>!*DONE*!<<<<<<<<<<<<<<%s", _GREEN_, _WHITE_);
-                        ;
+
                         t = 0;
-                        for (uint16_t sectorNo = 0; sectorNo < sectorsCnt; sectorNo++) {
-                            num_to_bytes(0x414c41524f4e, 6, foundKey[t][sectorNo]);
-                            sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[t][sectorNo][0], foundKey[t][sectorNo][1], foundKey[t][sectorNo][2],
-                                    foundKey[t][sectorNo][3], foundKey[t][sectorNo][4], foundKey[t][sectorNo][5]);
+                        for (uint16_t s = 0; s < sectorsCnt; s++) {
+                            num_to_bytes(0x414c41524f4e, 6, foundKey[t][s]);
+                            sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x",
+                                    foundKey[t][s][0],
+                                    foundKey[t][s][1],
+                                    foundKey[t][s][2],
+                                    foundKey[t][s][3],
+                                    foundKey[t][s][4],
+                                    foundKey[t][s][5]);
                             cjSetCursRight();
-
-                            DbprintfEx(FLAG_NOLOG, "SEC: %02x ; KEY : %s ; TYP: %d", sectorNo, tosendkey, t);
-                            ;
+                            DbprintfEx(FLAG_NOLOG, "SEC: %02x ; KEY : %s ; TYP: %d", s, tosendkey, t);
                         }
-                        t = 1;
-                        for (uint16_t sectorNo = 0; sectorNo < sectorsCnt; sectorNo++) {
-                            num_to_bytes(0x424c41524f4e, 6, foundKey[t][sectorNo]);
-                            sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[t][sectorNo][0], foundKey[t][sectorNo][1], foundKey[t][sectorNo][2],
-                                    foundKey[t][sectorNo][3], foundKey[t][sectorNo][4], foundKey[t][sectorNo][5]);
-                            cjSetCursRight();
 
-                            DbprintfEx(FLAG_NOLOG, "SEC: %02x ; KEY : %s ; TYP: %d", sectorNo, tosendkey, t);
+                        t = 1;
+                        for (uint16_t s = 0; s < sectorsCnt; s++) {
+                            num_to_bytes(0x424c41524f4e, 6, foundKey[t][s]);
+                            sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x",
+                                    foundKey[t][s][0],
+                                    foundKey[t][s][1],
+                                    foundKey[t][s][2],
+                                    foundKey[t][s][3],
+                                    foundKey[t][s][4],
+                                    foundKey[t][s][5]);
+                            cjSetCursRight();
+                            DbprintfEx(FLAG_NOLOG, "SEC: %02x ; KEY : %s ; TYP: %d", s, tosendkey, t);
                         }
                         trapped = 1;
                         break;
@@ -801,7 +813,6 @@ void e_MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *dat
 
     uint8_t numSectors = arg0;
     uint8_t keyType = arg1;
-    uint64_t ui64Key = 0;
 
     struct Crypto1State mpcs = {0, 0};
     struct Crypto1State *pcs;
@@ -823,40 +834,40 @@ void e_MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *dat
             DbprintfEx(FLAG_RAWPRINT, "Can't select card");
     }
 
-    for (uint8_t sectorNo = 0; isOK && sectorNo < numSectors; sectorNo++) {
-        ui64Key = emlGetKey(sectorNo, keyType);
-        if (sectorNo == 0) {
-            if (isOK && mifare_classic_auth(pcs, cjcuid, FirstBlockOfSector(sectorNo), keyType, ui64Key, AUTH_FIRST)) {
+    for (uint8_t s = 0; isOK && s < numSectors; s++) {
+        uint64_t ui64Key = emlGetKey(s, keyType);
+        if (s == 0) {
+            if (isOK && mifare_classic_auth(pcs, cjcuid, FirstBlockOfSector(s), keyType, ui64Key, AUTH_FIRST)) {
                 isOK = false;
                 if (MF_DBGLEVEL >= 1)
-                    DbprintfEx(FLAG_NOLOG, "Sector[%2d]. Auth error", sectorNo);
+                    DbprintfEx(FLAG_NOLOG, "Sector[%2d]. Auth error", s);
                 break;
             }
         } else {
-            if (isOK && mifare_classic_auth(pcs, cjcuid, FirstBlockOfSector(sectorNo), keyType, ui64Key, AUTH_NESTED)) {
+            if (isOK && mifare_classic_auth(pcs, cjcuid, FirstBlockOfSector(s), keyType, ui64Key, AUTH_NESTED)) {
                 isOK = false;
                 if (MF_DBGLEVEL >= 1)
-                    DbprintfEx(FLAG_NOLOG, "Sector[%2d]. Auth nested error", sectorNo);
+                    DbprintfEx(FLAG_NOLOG, "Sector[%2d]. Auth nested error", s);
                 break;
             }
         }
 
-        for (uint8_t blockNo = 0; isOK && blockNo < NumBlocksPerSector(sectorNo); blockNo++) {
-            if (isOK && mifare_classic_readblock(pcs, cjcuid, FirstBlockOfSector(sectorNo) + blockNo, dataoutbuf)) {
+        for (uint8_t blockNo = 0; isOK && blockNo < NumBlocksPerSector(s); blockNo++) {
+            if (isOK && mifare_classic_readblock(pcs, cjcuid, FirstBlockOfSector(s) + blockNo, dataoutbuf)) {
                 isOK = false;
                 if (MF_DBGLEVEL >= 1)
-                    DbprintfEx(FLAG_NOLOG, "Error reading sector %2d block %2d", sectorNo, blockNo);
+                    DbprintfEx(FLAG_NOLOG, "Error reading sector %2d block %2d", s, blockNo);
                 break;
             };
             if (isOK) {
                 *datain = 1;
-                if (blockNo < NumBlocksPerSector(sectorNo) - 1) {
-                    emlSetMem(dataoutbuf, FirstBlockOfSector(sectorNo) + blockNo, 1);
+                if (blockNo < NumBlocksPerSector(s) - 1) {
+                    emlSetMem(dataoutbuf, FirstBlockOfSector(s) + blockNo, 1);
                 } else {
                     // sector trailer, keep the keys, set only the AC
-                    emlGetMem(dataoutbuf2, FirstBlockOfSector(sectorNo) + blockNo, 1);
+                    emlGetMem(dataoutbuf2, FirstBlockOfSector(s) + blockNo, 1);
                     memcpy(&dataoutbuf2[6], &dataoutbuf[6], 4);
-                    emlSetMem(dataoutbuf2, FirstBlockOfSector(sectorNo) + blockNo, 1);
+                    emlSetMem(dataoutbuf2, FirstBlockOfSector(s) + blockNo, 1);
                 }
             } else {
                 *datain = 0;

@@ -208,7 +208,7 @@ int CmdIndalaDemod(const char *Cmd) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - Indala: error demoding psk idx: %d", idx);
         return 0;
     }
-    setDemodBuf(DemodBuffer, size, idx);
+    setDemodBuff(DemodBuffer, size, idx);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (idx * g_DemodClock));
 
     //convert UID to HEX
@@ -265,16 +265,18 @@ int CmdIndalaDemod(const char *Cmd) {
         uid5 = bytebits_to_byte(DemodBuffer + 128, 32);
         uid6 = bytebits_to_byte(DemodBuffer + 160, 32);
         uid7 = bytebits_to_byte(DemodBuffer + 192, 32);
-        PrintAndLogEx(SUCCESS, "Indala Found - bitlength %d, UID = 0x%x%08x%08x%08x%08x%08x%08x"
-                      , DemodBufferLen
-                      , uid1
-                      , uid2
-                      , uid3
-                      , uid4
-                      , uid5
-                      , uid6
-                      , uid7
-                     );
+        PrintAndLogEx(
+            SUCCESS
+            , "Indala Found - bitlength %d, Raw 0x%x%08x%08x%08x%08x%08x%08x"
+            , DemodBufferLen
+            , uid1
+            , uid2
+            , uid3
+            , uid4
+            , uid5
+            , uid6
+            , uid7
+        );
     }
 
     if (g_debugMode) {
@@ -444,9 +446,8 @@ int CmdIndalaDemodAlt(const char *Cmd) {
     }
 
     // Checking UID against next occurrences
-    int failed = 0;
     for (; i + uidlen <= rawbit;) {
-        failed = 0;
+        int failed = 0;
         for (bit = 0; bit < uidlen; bit++) {
             if (bits[bit] != rawbits[i++]) {
                 failed = 1;
@@ -466,14 +467,13 @@ int CmdIndalaDemodAlt(const char *Cmd) {
     // since this changes graphbuffer data.
     GraphTraceLen = 32 * uidlen;
     i = 0;
-    int phase = 0;
+    int phase;
     for (bit = 0; bit < uidlen; bit++) {
         if (bits[bit] == 0) {
             phase = 0;
         } else {
             phase = 1;
         }
-        int j;
         for (j = 0; j < 32; j++) {
             GraphBuffer[i++] = phase;
             phase = !phase;
@@ -558,7 +558,7 @@ int CmdIndalaClone(const char *Cmd) {
     UsbCommand c = {0, {0, 0, 0}};
 
     if (isLongUid) {
-        PrintAndLogEx(INFO, "Preparing to clone Indala 224bit tag with UID %s", sprint_hex(data, datalen));
+        PrintAndLogEx(INFO, "Preparing to clone Indala 224bit tag with RawID %s", sprint_hex(data, datalen));
         c.cmd = CMD_INDALA_CLONE_TAG_L;
         c.d.asDwords[0] = bytes_to_num(data, 4);
         c.d.asDwords[1] = bytes_to_num(data +  4, 4);
@@ -568,7 +568,7 @@ int CmdIndalaClone(const char *Cmd) {
         c.d.asDwords[5] = bytes_to_num(data + 20, 4);
         c.d.asDwords[6] = bytes_to_num(data + 24, 4);
     } else {
-        PrintAndLogEx(INFO, "Preparing to clone Indala 64bit tag with UID %s", sprint_hex(data, datalen));
+        PrintAndLogEx(INFO, "Preparing to clone Indala 64bit tag with RawID %s", sprint_hex(data, datalen));
         c.cmd = CMD_INDALA_CLONE_TAG;
         c.d.asDwords[0] = bytes_to_num(data, 4);
         c.d.asDwords[1] = bytes_to_num(data + 4, 4);
