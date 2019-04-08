@@ -256,7 +256,7 @@ void printEM410x(uint32_t hi, uint64_t id) {
 
     uint64_t n = 1;
     uint64_t id2lo = 0;
-    uint8_t m, i = 0;
+    uint8_t m, i;
     for (m = 5; m > 0; m--) {
         for (i = 0; i < 8; i++) {
             id2lo = (id2lo << 1LL) | ((id & (n << (i + ((m - 1) * 8)))) >> (i + ((m - 1) * 8)));
@@ -611,9 +611,9 @@ int CmdEM410xWrite(const char *Cmd) {
 
     uint64_t id = 0xFFFFFFFFFFFFFFFF; // invalid id value
     int card = 0xFF; // invalid card value
-    uint32_t clock = 0; // invalid clock value
+    uint32_t clock1 = 0; // invalid clock value
 
-    sscanf(Cmd, "%" SCNx64 " %d %d", &id, &card, &clock);
+    sscanf(Cmd, "%" SCNx64 " %d %d", &id, &card, &clock1);
 
     // Check ID
     if (id == 0xFFFFFFFFFFFFFFFF) {
@@ -636,25 +636,25 @@ int CmdEM410xWrite(const char *Cmd) {
     }
 
     // Check Clock
-    if (clock == 0)
-        clock = 64;
+    if (clock1 == 0)
+        clock1 = 64;
 
     // Allowed clock rates: 16, 32, 40 and 64
-    if ((clock != 16) && (clock != 32) && (clock != 64) && (clock != 40)) {
-        PrintAndLogEx(WARNING, "Error! Clock rate %d not valid. Supported clock rates are 16, 32, 40 and 64.\n", clock);
+    if ((clock1 != 16) && (clock1 != 32) && (clock1 != 64) && (clock1 != 40)) {
+        PrintAndLogEx(WARNING, "Error! Clock rate %d not valid. Supported clock rates are 16, 32, 40 and 64.\n", clock1);
         return 0;
     }
 
     if (card == 1) {
-        PrintAndLogEx(SUCCESS, "Writing %s tag with UID 0x%010" PRIx64 " (clock rate: %d)", "T55x7", id, clock);
+        PrintAndLogEx(SUCCESS, "Writing %s tag with UID 0x%010" PRIx64 " (clock rate: %d)", "T55x7", id, clock1);
         // NOTE: We really should pass the clock in as a separate argument, but to
         //   provide for backwards-compatibility for older firmware, and to avoid
         //   having to add another argument to CMD_EM410X_WRITE_TAG, we just store
         //   the clock rate in bits 8-15 of the card value
-        card = (card & 0xFF) | ((clock << 8) & 0xFF00);
+        card = (card & 0xFF) | ((clock1 << 8) & 0xFF00);
     } else if (card == 0) {
-        PrintAndLogEx(SUCCESS, "Writing %s tag with UID 0x%010" PRIx64, "T5555", id, clock);
-        card = (card & 0xFF) | ((clock << 8) & 0xFF00);
+        PrintAndLogEx(SUCCESS, "Writing %s tag with UID 0x%010" PRIx64, "T5555", id, clock1);
+        card = (card & 0xFF) | ((clock1 << 8) & 0xFF00);
     } else {
         PrintAndLogEx(FAILED, "Error! Bad card type selected.\n");
         return 0;
