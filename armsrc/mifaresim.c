@@ -15,6 +15,10 @@
 // MF_DBG_ERROR         1
 // MF_DBG_ALL           2
 // MF_DBG_EXTENDED      4
+//
+//  /!\ Printing Debug message is disrupting emulation, 
+//  Only use with caution during debugging 
+
 
 #include "iso14443a.h"
 #include "mifaresim.h"
