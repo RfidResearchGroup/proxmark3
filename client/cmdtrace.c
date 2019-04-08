@@ -64,7 +64,7 @@ bool is_last_record(uint16_t tracepos, uint8_t *trace, uint16_t traceLen) {
 
 bool next_record_is_response(uint16_t tracepos, uint8_t *trace) {
     uint16_t next_records_datalen = *((uint16_t *)(trace + tracepos + sizeof(uint32_t) + sizeof(uint16_t)));
-    return (next_records_datalen & 0x8000);
+    return ((next_records_datalen & 0x8000) == 0x8000);
 }
 
 bool merge_topaz_reader_frames(uint32_t timestamp, uint32_t *duration, uint16_t *tracepos, uint16_t traceLen,
