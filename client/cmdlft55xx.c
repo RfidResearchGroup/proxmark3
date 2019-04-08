@@ -240,15 +240,13 @@ void printT5xxHeader(uint8_t page) {
 
 int CmdT55xxSetConfig(const char *Cmd) {
 
-    uint8_t offset = 0;
+    uint8_t offset = 0, bitRate = 0;
     char modulation[6] = {0x00};
-    char tmp = 0x00;
-    uint8_t bitRate = 0;
     uint8_t rates[9] = {8, 16, 32, 40, 50, 64, 100, 128, 0};
     uint8_t cmdp = 0;
     bool errors = false;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        tmp = tolower(param_getchar(Cmd, cmdp));
+        char tmp = tolower(param_getchar(Cmd, cmdp));
         switch (tmp) {
             case 'h':
                 return usage_t55xx_config();
@@ -861,9 +859,9 @@ int convertQ5bitRate(uint8_t bitRateRead) {
 bool testQ5(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk) {
 
     if (DemodBufferLen < 64) return false;
-    uint8_t si = 0;
+
     for (uint8_t idx = 28; idx < 64; idx++) {
-        si = idx;
+        uint8_t si = idx;
         if (PackBits(si, 28, DemodBuffer) == 0x00) continue;
 
         uint8_t safer     = PackBits(si, 4, DemodBuffer);
@@ -962,7 +960,7 @@ bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5)
 }
 
 int special(const char *Cmd) {
-    uint32_t blockData = 0;
+
     uint8_t bits[32] = {0x00};
 
     PrintAndLogEx(NORMAL, "OFFSET | DATA  | BINARY                              | ASCII");
@@ -973,7 +971,7 @@ int special(const char *Cmd) {
         for (i = 0; i < 32; ++i)
             bits[i] = DemodBuffer[j + i];
 
-        blockData = PackBits(0, 32, bits);
+        uint32_t blockData = PackBits(0, 32, bits);
 
         PrintAndLogEx(NORMAL, "%02d | 0x%08X | %s", j, blockData, sprint_bin(bits, 32));
     }
@@ -1098,13 +1096,12 @@ int CmdT55xxReadTrace(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) > 1 || cmdp == 'h') return usage_t55xx_trace();
 
-    bool pwdmode = false;
-    uint32_t password = 0;
-
     if (strlen(Cmd) == 0) {
         // sanity check.
         if (!SanityOfflineCheck(false)) return 1;
 
+        bool pwdmode = false;
+        uint32_t password = 0;
         if (!AquireData(T55x7_PAGE1, T55x7_TRACE_BLOCK1, pwdmode, password))
             return 1;
     }
@@ -1171,7 +1168,6 @@ int CmdT55xxReadTrace(const char *Cmd) {
         si += 5;
         data.dw    <<= 4;
         data.dw     |= PackBits(si, 4,  DemodBuffer);
-        si += 5;
 
         printT5555Trace(data, repeat);
 
@@ -1342,13 +1338,9 @@ int CmdT55xxInfo(const char *Cmd) {
         Normal mode
         Extended mode
     */
-    bool pwdmode = false;
-    bool frombuff = false;
-    bool gotdata = false;
-    bool dataasq5 = false;
-    uint32_t password = 0;
-    uint32_t block0 = 0;
+    bool frombuff = false, gotdata = false, dataasq5 = false;
     uint8_t cmdp = 0;
+    uint32_t block0 = 0;
 
     while (param_getchar(Cmd, cmdp) != 0x00) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -1383,6 +1375,8 @@ int CmdT55xxInfo(const char *Cmd) {
         // sanity check.
         if (!SanityOfflineCheck(false)) return 1;
 
+        bool pwdmode = false;
+        uint32_t password = 0;
         if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, pwdmode, password))
             return 1;
     }
@@ -2288,10 +2282,10 @@ int CmdT55xxSetDeviceConfig(const char *Cmd) {
     //Validations
     if (errors || cmdp == 0) return usage_lf_deviceconfig();
 
-    t55xx_config config = { startgap * 8, writegap * 8, write0 * 8, write1 * 8, readgap * 8 };
+    t55xx_config conf = { startgap * 8, writegap * 8, write0 * 8, write1 * 8, readgap * 8 };
 
     UsbCommand c = {CMD_SET_LF_T55XX_CONFIG, {shall_persist, 0, 0} };
-    memcpy(c.d.asBytes, &config, sizeof(t55xx_config));
+    memcpy(c.d.asBytes, &conf, sizeof(t55xx_config));
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
