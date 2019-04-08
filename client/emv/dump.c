@@ -19,7 +19,9 @@
 
 #include "dump.h"
 
-#define PRINT_INDENT(level) {for (int myi = 0; myi < (level); myi++) fprintf(f, "   ");}
+#ifndef PRINT_INDENT
+# define PRINT_INDENT(level) {for (int myi = 0; myi < (level); myi++) fprintf(f, "   ");}
+#endif
 
 void dump_buffer_simple(const unsigned char *ptr, size_t len, FILE *f) {
     int i;
