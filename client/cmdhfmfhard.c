@@ -1365,9 +1365,8 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
     bool field_off = false;
     hardnested_stage = CHECK_1ST_BYTES;
     bool acquisition_completed = false;
-    uint32_t flags = 0;
     uint8_t write_buf[9];
-    uint32_t total_num_nonces = 0;
+    //uint32_t total_num_nonces = 0;
     float brute_force_depth;
     bool reported_suma8 = false;
     char progress_text[80];
@@ -1379,7 +1378,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
     clearCommandBuffer();
 
     do {
-        flags = 0;
+        uint32_t flags = 0;
         flags |= initialize ? 0x0001 : 0;
         flags |= slow ? 0x0002 : 0;
         flags |= field_off ? 0x0004 : 0;
@@ -1394,9 +1393,9 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
         if (initialize) {
             if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
                 //strange second call (iceman)
-                UsbCommand c = {CMD_MIFARE_ACQUIRE_ENCRYPTED_NONCES, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, 4}};
+                UsbCommand c1 = {CMD_MIFARE_ACQUIRE_ENCRYPTED_NONCES, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, 4}};
                 clearCommandBuffer();
-                SendCommand(&c);
+                SendCommand(&c1);
                 return 1;
             }
             if (resp.arg[0]) return resp.arg[0];  // error during nested_hard
@@ -1438,7 +1437,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
                 }
                 bufp += 9;
             }
-            total_num_nonces += num_sampled_nonces;
+            //total_num_nonces += num_sampled_nonces;
 
             if (first_byte_num == 256) {
                 if (hardnested_stage == CHECK_1ST_BYTES) {
@@ -1651,7 +1650,8 @@ static uint_fast8_t reverse(uint_fast8_t b) {
 
 
 static bool all_bitflips_match(uint8_t byte, uint32_t state, odd_even_t odd_even) {
-    uint32_t masks[2][8] = {{0x00fffff0, 0x00fffff8, 0x00fffff8, 0x00fffffc, 0x00fffffc, 0x00fffffe, 0x00fffffe, 0x00ffffff},
+    uint32_t masks[2][8] = {
+        {0x00fffff0, 0x00fffff8, 0x00fffff8, 0x00fffffc, 0x00fffffc, 0x00fffffe, 0x00fffffe, 0x00ffffff},
         {0x00fffff0, 0x00fffff0, 0x00fffff8, 0x00fffff8, 0x00fffffc, 0x00fffffc, 0x00fffffe, 0x00fffffe}
     };
 
@@ -1663,6 +1663,7 @@ static bool all_bitflips_match(uint8_t byte, uint32_t state, odd_even_t odd_even
         bool found_match = false;
         for (uint8_t remaining_bits = 0; remaining_bits <= (~mask & 0xff); remaining_bits++) {
             if (remaining_bits_match(num_common, bytes_diff, state, (state & mask) | remaining_bits, odd_even)) {
+                
 #ifdef DEBUG_KEY_ELIMINATION
                 if (bitflips_match(byte2, (state & mask) | remaining_bits, odd_even, true)) {
 #else
@@ -1673,7 +1674,9 @@ static bool all_bitflips_match(uint8_t byte, uint32_t state, odd_even_t odd_even
                 }
             }
         }
+        
         if (!found_match) {
+            
 #ifdef DEBUG_KEY_ELIMINATION
             if (known_target_key != -1 && state == test_state[odd_even]) {
                 PrintAndLogEx(NORMAL, "all_bitflips_match() 1st Byte: %s test state (0x%06x): Eliminated. Bytes = %02x, %02x, Common Bits = %d\n",
@@ -1692,7 +1695,6 @@ static bool all_bitflips_match(uint8_t byte, uint32_t state, odd_even_t odd_even
     }
     return true;
 }
-
 
 static void bitarray_to_list(uint8_t byte, uint32_t *bitarray, uint32_t *state_list, uint32_t *len, odd_even_t odd_even) {
     uint32_t *p = state_list;
@@ -1715,7 +1717,7 @@ static void add_cached_states(statelist_t *candidates, uint16_t part_sum_a0, uin
 
 
 static void add_matching_states(statelist_t *candidates, uint8_t part_sum_a0, uint8_t part_sum_a8, odd_even_t odd_even) {
-    uint32_t worstcase_size = 1 << 20;
+    const uint32_t worstcase_size = 1 << 20;
     candidates->states[odd_even] = (uint32_t *)malloc(sizeof(uint32_t) * worstcase_size);
     if (candidates->states[odd_even] == NULL) {
         PrintAndLogEx(WARNING, "Out of memory error in add_matching_states() - statelist.\n");
@@ -1772,27 +1774,25 @@ static statelist_t *add_more_candidates(void) {
     return new_candidates;
 }
 
-
 static void add_bitflip_candidates(uint8_t byte) {
-    statelist_t *candidates = add_more_candidates();
+    statelist_t *candidates1 = add_more_candidates();
 
     for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
         uint32_t worstcase_size = nonces[byte].num_states_bitarray[odd_even] + 1;
-        candidates->states[odd_even] = (uint32_t *)malloc(sizeof(uint32_t) * worstcase_size);
-        if (candidates->states[odd_even] == NULL) {
+        candidates1->states[odd_even] = (uint32_t *)malloc(sizeof(uint32_t) * worstcase_size);
+        if (candidates1->states[odd_even] == NULL) {
             PrintAndLogEx(WARNING, "Out of memory error in add_bitflip_candidates().\n");
             exit(4);
         }
 
-        bitarray_to_list(byte, nonces[byte].states_bitarray[odd_even], candidates->states[odd_even], &(candidates->len[odd_even]), odd_even);
+        bitarray_to_list(byte, nonces[byte].states_bitarray[odd_even], candidates1->states[odd_even], &(candidates1->len[odd_even]), odd_even);
 
-        if (candidates->len[odd_even] + 1 < worstcase_size) {
-            candidates->states[odd_even] = realloc(candidates->states[odd_even], sizeof(uint32_t) * (candidates->len[odd_even] + 1));
+        if (candidates1->len[odd_even] + 1 < worstcase_size) {
+            candidates1->states[odd_even] = realloc(candidates1->states[odd_even], sizeof(uint32_t) * (candidates1->len[odd_even] + 1));
         }
     }
     return;
 }
-
 
 static bool TestIfKeyExists(uint64_t key) {
     struct Crypto1State *pcs;
@@ -1838,7 +1838,6 @@ static bool TestIfKeyExists(uint64_t key) {
     crypto1_destroy(pcs);
     return false;
 }
-
 
 static work_status_t book_of_work[NUM_PART_SUMS][NUM_PART_SUMS][NUM_PART_SUMS][NUM_PART_SUMS];
 
@@ -2013,12 +2012,12 @@ static void generate_candidates(uint8_t sum_a0_idx, uint8_t sum_a8_idx) {
     // create and run worker threads
     pthread_t thread_id[NUM_REDUCTION_WORKING_THREADS];
 
-    uint16_t sums[NUM_REDUCTION_WORKING_THREADS][3];
+    uint16_t sums1[NUM_REDUCTION_WORKING_THREADS][3];
     for (uint16_t i = 0; i < NUM_REDUCTION_WORKING_THREADS; i++) {
-        sums[i][0] = sum_a0_idx;
-        sums[i][1] = sum_a8_idx;
-        sums[i][2] = i + 1;
-        pthread_create(thread_id + i, NULL, generate_candidates_worker_thread, sums[i]);
+        sums1[i][0] = sum_a0_idx;
+        sums1[i][1] = sum_a8_idx;
+        sums1[i][2] = i + 1;
+        pthread_create(thread_id + i, NULL, generate_candidates_worker_thread, sums1[i]);
     }
 
     // wait for threads to terminate:
@@ -2045,7 +2044,6 @@ static void generate_candidates(uint8_t sum_a0_idx, uint8_t sum_a8_idx) {
     hardnested_print_progress(num_acquired_nonces, "Apply Sum(a8) and all bytes bitflip properties", nonces[best_first_bytes[0]].expected_num_brute_force, 0);
 }
 
-
 static void free_candidates_memory(statelist_t *sl) {
     if (sl == NULL)
         return;
@@ -2053,7 +2051,6 @@ static void free_candidates_memory(statelist_t *sl) {
     free_candidates_memory(sl->next);
     free(sl);
 }
-
 
 static void pre_XOR_nonces(void) {
     // prepare acquired nonces for faster brute forcing.
@@ -2085,55 +2082,50 @@ static uint16_t SumProperty(struct Crypto1State *s) {
     return (sum_odd * (16 - sum_even) + (16 - sum_odd) * sum_even);
 }
 
-
 static void Tests() {
-    if (known_target_key != -1) {
-        for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
-            uint32_t *bitset = nonces[best_first_bytes[0]].states_bitarray[odd_even];
-            if (!test_bit24(bitset, test_state[odd_even])) {
-                PrintAndLogEx(NORMAL, "\nBUG: known target key's %s state is not member of first nonce byte's (0x%02x) states_bitarray!\n",
-                              odd_even == EVEN_STATE ? "even" : "odd ",
-                              best_first_bytes[0]);
-            }
+    
+    if (known_target_key == -1)
+        return;
+    
+    for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
+        uint32_t *bitset = nonces[best_first_bytes[0]].states_bitarray[odd_even];
+        if (!test_bit24(bitset, test_state[odd_even])) {
+            PrintAndLogEx(NORMAL, "\nBUG: known target key's %s state is not member of first nonce byte's (0x%02x) states_bitarray!\n",
+                          odd_even == EVEN_STATE ? "even" : "odd ",
+                          best_first_bytes[0]);
         }
     }
-
-    if (known_target_key != -1) {
-        for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
-            uint32_t *bitset = all_bitflips_bitarray[odd_even];
-            if (!test_bit24(bitset, test_state[odd_even])) {
-                PrintAndLogEx(NORMAL, "\nBUG: known target key's %s state is not member of all_bitflips_bitarray!\n",
-                              odd_even == EVEN_STATE ? "even" : "odd ");
-            }
+    for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
+        uint32_t *bitset = all_bitflips_bitarray[odd_even];
+        if (!test_bit24(bitset, test_state[odd_even])) {
+            PrintAndLogEx(NORMAL, "\nBUG: known target key's %s state is not member of all_bitflips_bitarray!\n",
+                          odd_even == EVEN_STATE ? "even" : "odd ");
         }
     }
 }
-
 
 static void Tests2(void) {
-    if (known_target_key != -1) {
-        for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
-            uint32_t *bitset = nonces[best_first_byte_smallest_bitarray].states_bitarray[odd_even];
-            if (!test_bit24(bitset, test_state[odd_even])) {
-                PrintAndLogEx(NORMAL, "\nBUG: known target key's %s state is not member of first nonce byte's (0x%02x) states_bitarray!\n",
-                              odd_even == EVEN_STATE ? "even" : "odd ",
-                              best_first_byte_smallest_bitarray);
-            }
+    
+    if (known_target_key == -1)
+        return;
+    
+    for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
+        uint32_t *bitset = nonces[best_first_byte_smallest_bitarray].states_bitarray[odd_even];
+        if (!test_bit24(bitset, test_state[odd_even])) {
+            PrintAndLogEx(NORMAL, "\nBUG: known target key's %s state is not member of first nonce byte's (0x%02x) states_bitarray!\n",
+                          odd_even == EVEN_STATE ? "even" : "odd ",
+                          best_first_byte_smallest_bitarray);
         }
     }
-
-    if (known_target_key != -1) {
-        for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
-            uint32_t *bitset = all_bitflips_bitarray[odd_even];
-            if (!test_bit24(bitset, test_state[odd_even])) {
-                PrintAndLogEx(NORMAL, "\nBUG: known target key's %s state is not member of all_bitflips_bitarray!\n",
-                              odd_even == EVEN_STATE ? "even" : "odd ");
-            }
+    
+    for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
+        uint32_t *bitset = all_bitflips_bitarray[odd_even];
+        if (!test_bit24(bitset, test_state[odd_even])) {
+            PrintAndLogEx(NORMAL, "\nBUG: known target key's %s state is not member of all_bitflips_bitarray!\n",
+                          odd_even == EVEN_STATE ? "even" : "odd ");
         }
     }
-
 }
-
 
 static uint16_t real_sum_a8 = 0;
 
@@ -2146,7 +2138,6 @@ static void set_test_state(uint8_t byte) {
     real_sum_a8 = SumProperty(pcs);
     crypto1_destroy(pcs);
 }
-
 
 int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *trgkey, bool nonce_file_read, bool nonce_file_write, bool slow, int tests, uint64_t *foundkey, char *filename) {
     char progress_text[80];
@@ -2175,6 +2166,7 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
             hardnested_print_progress(0, progress_text, (float)(1LL << 47), 0);
             sprintf(progress_text, "Starting Test #%" PRIu32 " ...", i + 1);
             hardnested_print_progress(0, progress_text, (float)(1LL << 47), 0);
+            
             if (trgkey != NULL) {
                 known_target_key = bytes_to_num(trgkey, 6);
             } else {
@@ -2256,9 +2248,18 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
                 }
             }
 #ifdef DEBUG_KEY_ELIMINATION
-            fprintf(fstats, "%1.1f;%1.0f;%d;%s\n", log(num_keys_tested) / log(2.0), (float)num_keys_tested / brute_force_per_second, key_found, failstr);
+            fprintf(fstats, "%1.1f;%1.0f;%c;%s\n",
+                log(num_keys_tested) / log(2.0),
+                (float)num_keys_tested / brute_force_per_second,
+                key_found ? 'Y' : 'N',
+                failstr
+                );
 #else
-            fprintf(fstats, "%1.0f;%d\n", log(num_keys_tested) / log(2.0), (float)num_keys_tested / brute_force_per_second, key_found);
+            fprintf(fstats, "%1.0f;%d\n",
+                log(num_keys_tested) / log(2.0),
+                (float)num_keys_tested / brute_force_per_second,
+                key_found
+                );
 #endif
 
             free_nonces_memory();
@@ -2303,7 +2304,6 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
                 free_bitarray(all_bitflips_bitarray[EVEN_STATE]);
                 free_sum_bitarrays();
                 free_part_sum_bitarrays();
-
                 return is_OK;
             }
         }
@@ -2372,7 +2372,6 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
                     // and calculate new expected number of brute forces
                     update_expected_brute_force(best_first_bytes[0]);
                 }
-
             }
         }
 
@@ -2382,6 +2381,5 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
         free_sum_bitarrays();
         free_part_sum_bitarrays();
     }
-
     return 0;
 }
