@@ -2350,7 +2350,7 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
             *res = data_bytes[0];
 
         // crc check
-        if (len >= 3 && !check_crc(CRC_14443_A, data_bytes, len)) {
+        if (len >= 3 && !CheckCrc14A(data_bytes, len)) {
             return -1;
         }
 

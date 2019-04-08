@@ -35,13 +35,17 @@ void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len) {
 }
 
 void mf_crypto1_encrypt(struct Crypto1State *pcs, uint8_t *data, uint16_t len, uint8_t *par) {
+    mf_crypto1_encryptEx(pcs, data, NULL, data, len, par);
+}
+
+void mf_crypto1_encryptEx(struct Crypto1State *pcs, uint8_t *data_in, uint8_t *keystream, uint8_t *data_out, uint16_t len, uint8_t *par) {
     uint8_t bt = 0;
     int i;
     par[0] = 0;
 
     for (i = 0; i < len; i++) {
-        bt = data[i];
-        data[i] = crypto1_byte(pcs, 0x00, 0) ^ data[i];
+        bt = data_in[i];
+        data_out[i] = crypto1_byte(pcs, keystream ? keystream[i] : 0x00, 0) ^ data_in[i];
         if ((i & 0x0007) == 0)
             par[ i >> 3 ] = 0;
         par[ i >> 3 ] |= (((filter(pcs->odd) ^ oddparity8(bt)) & 0x01) << (7 - (i & 0x0007)));
