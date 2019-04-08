@@ -101,9 +101,9 @@ int GetAskClock(const char *str, bool printAns) {
     if (getSignalProperties()->isnoise)
         return false;
 
-    int clock = param_get32ex(str, 0, 0, 10);
-    if (clock > 0)
-        return clock;
+    int clock1 = param_get32ex(str, 0, 0, 10);
+    if (clock1 > 0)
+        return clock1;
 
     // Auto-detect clock
     uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
@@ -114,20 +114,20 @@ int GetAskClock(const char *str, bool printAns) {
     }
 
     size_t ststart = 0, stend = 0;
-    bool st = DetectST(bits, &size, &clock, &ststart, &stend);
+    bool st = DetectST(bits, &size, &clock1, &ststart, &stend);
     int idx = stend;
     if (st == false) {
-        idx = DetectASKClock(bits, size, &clock, 20);
+        idx = DetectASKClock(bits, size, &clock1, 20);
     }
 
-    if (clock > 0) {
-        setClockGrid(clock, idx);
+    if (clock1 > 0) {
+        setClockGrid(clock1, idx);
     }
     // Only print this message if we're not looping something
     if (printAns || g_debugMode)
-        PrintAndLogEx(SUCCESS, "Auto-detected clock rate: %d, Best Starting Position: %d", clock, idx);
+        PrintAndLogEx(SUCCESS, "Auto-detected clock rate: %d, Best Starting Position: %d", clock1, idx);
 
-    return clock;
+    return clock1;
 }
 
 uint8_t GetPskCarrier(const char *str, bool printAns) {
@@ -156,9 +156,9 @@ int GetPskClock(const char *str, bool printAns) {
     if (getSignalProperties()->isnoise)
         return -1;
 
-    int clock = param_get32ex(str, 0, 0, 10);
-    if (clock != 0)
-        return clock;
+    int clock1 = param_get32ex(str, 0, 0, 10);
+    if (clock1 != 0)
+        return clock1;
 
     // Auto-detect clock
     uint8_t grph[MAX_GRAPH_TRACE_LEN] = {0};
@@ -169,12 +169,13 @@ int GetPskClock(const char *str, bool printAns) {
     }
     size_t firstPhaseShiftLoc = 0;
     uint8_t curPhase = 0, fc = 0;
-    clock = DetectPSKClock(grph, size, 0, &firstPhaseShiftLoc, &curPhase, &fc);
-    setClockGrid(clock, firstPhaseShiftLoc);
+    clock1 = DetectPSKClock(grph, size, 0, &firstPhaseShiftLoc, &curPhase, &fc);
+    setClockGrid(clock1, firstPhaseShiftLoc);
     // Only print this message if we're not looping something
     if (printAns)
-        PrintAndLogEx(SUCCESS, "Auto-detected clock rate: %d", clock);
-    return clock;
+        PrintAndLogEx(SUCCESS, "Auto-detected clock rate: %d", clock1);
+    
+    return clock1;
 }
 
 int GetNrzClock(const char *str, bool printAns) {
@@ -182,9 +183,9 @@ int GetNrzClock(const char *str, bool printAns) {
     if (getSignalProperties()->isnoise)
         return -1;
 
-    int clock = param_get32ex(str, 0, 0, 10);
-    if (clock != 0)
-        return clock;
+    int clock1 = param_get32ex(str, 0, 0, 10);
+    if (clock1 != 0)
+        return clock1;
 
     // Auto-detect clock
     uint8_t grph[MAX_GRAPH_TRACE_LEN] = {0};
@@ -194,20 +195,21 @@ int GetNrzClock(const char *str, bool printAns) {
         return -1;
     }
     size_t clkStartIdx = 0;
-    clock = DetectNRZClock(grph, size, 0, &clkStartIdx);
-    setClockGrid(clock, clkStartIdx);
+    clock1 = DetectNRZClock(grph, size, 0, &clkStartIdx);
+    setClockGrid(clock1, clkStartIdx);
     // Only print this message if we're not looping something
     if (printAns)
-        PrintAndLogEx(SUCCESS, "Auto-detected clock rate: %d", clock);
-    return clock;
+        PrintAndLogEx(SUCCESS, "Auto-detected clock rate: %d", clock1);
+    
+    return clock1;
 }
 //by marshmellow
 //attempt to detect the field clock and bit clock for FSK
 int GetFskClock(const char *str, bool printAns) {
 
-    int clock = param_get32ex(str, 0, 0, 10);
-    if (clock != 0)
-        return clock;
+    int clock1 = param_get32ex(str, 0, 0, 10);
+    if (clock1 != 0)
+        return clock1;
 
     uint8_t fc1 = 0, fc2 = 0, rf1 = 0;
     int firstClockEdge = 0;
