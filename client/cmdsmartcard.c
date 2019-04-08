@@ -195,7 +195,7 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
 
     uint8_t T0 = atr[1];
     uint8_t K = T0 & 0x0F;
-    uint8_t TD1 = 0, T1len = 0, TD1len = 0, TDilen = 0;
+    uint8_t T1len = 0, TD1len = 0, TDilen = 0;
     bool protocol_T0_present = true;
     bool protocol_T15_present = false;
 
@@ -215,7 +215,7 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
     }
 
     if (T0 & 0x80) {
-        TD1 = atr[2 + T1len];
+        uint8_t TD1 = atr[2 + T1len];
         PrintAndLog("\t- TD1 (First offered transmission protocol, presence of TA2..TD2) [ 0x%02x ] Protocol T%d", TD1, TD1 & 0x0f);
         protocol_T0_present = false;
         if ((TD1 & 0x0f) == 0) {
@@ -659,9 +659,7 @@ int CmdSmartUpgrade(const char *Cmd) {
     }
 
     size_t firmware_size = fread(dump, 1, fsize, f);
-    if (f) {
-        fclose(f);
-    }
+    fclose(f);
 
     // load sha512 file
     f = fopen(sha512filename, "rb");
@@ -694,24 +692,23 @@ int CmdSmartUpgrade(const char *Cmd) {
     size_t bytes_read = fread(hashstring, 1, 128, f);
     hashstring[128] = '\0';
 
-    if (f)
-        fclose(f);
+    fclose(f);
 
-    uint8_t hash1[64];
-    if (bytes_read != 128 || param_gethex(hashstring, 0, hash1, 128)) {
+    uint8_t hash_1[64];
+    if (bytes_read != 128 || param_gethex(hashstring, 0, hash_1, 128)) {
         PrintAndLogEx(FAILED, "Couldn't read SHA-512 file");
         free(dump);
         return 1;
     }
 
-    uint8_t hash2[64];
-    if (sha512hash(dump, firmware_size, hash2)) {
+    uint8_t hash_2[64];
+    if (sha512hash(dump, firmware_size, hash_2)) {
         PrintAndLogEx(FAILED, "Couldn't calculate SHA-512 of firmware");
         free(dump);
         return 1;
     }
 
-    if (memcmp(hash1, hash2, 64)) {
+    if (memcmp(hash_1, hash_2, 64)) {
         PrintAndLogEx(FAILED, "Couldn't verify integrity of firmware file " _RED_("(wrong SHA-512 hash)"));
         free(dump);
         return 1;
@@ -951,7 +948,6 @@ static void smart_brute_prim() {
     if (!buf)
         return;
 
-    int len = 0;
     uint8_t get_card_data[] = {
         0x80, 0xCA, 0x9F, 0x13, 0x00,
         0x80, 0xCA, 0x9F, 0x17, 0x00,
@@ -959,9 +955,9 @@ static void smart_brute_prim() {
         0x80, 0xCA, 0x9F, 0x4f, 0x00
     };
 
-    UsbCommand c = {CMD_SMART_RAW, {SC_RAW_T0, 5, 0}};
-
     PrintAndLogEx(INFO, "Reading primitives");
+
+    UsbCommand c = {CMD_SMART_RAW, {SC_RAW_T0, 5, 0}};
 
     for (int i = 0; i < sizeof(get_card_data); i += 5) {
 
@@ -969,17 +965,15 @@ static void smart_brute_prim() {
         clearCommandBuffer();
         SendCommand(&c);
 
-        len = smart_responseEx(buf, true);
+        int len = smart_responseEx(buf, true);
 
         if (len > 2) {
-
             // if ( decodeTLV ) {
             // if (!TLVPrintFromBuffer(buf, len-2)) {
             PrintAndLogEx(SUCCESS, "\tHEX  %d |: %s", len, sprint_hex(buf, len));
             // }
             // }
         }
-        len = 0;
     }
     free(buf);
 }
@@ -990,7 +984,7 @@ static int smart_brute_sfi(bool decodeTLV) {
     if (!buf)
         return 1;
 
-    int len = 0;
+    int len;
     // READ RECORD
     uint8_t READ_RECORD[] = {0x00, 0xB2, 0x00, 0x00, 0x00};
     UsbCommand c = {CMD_SMART_RAW, {SC_RAW_T0, sizeof(READ_RECORD), 0}};
