@@ -877,7 +877,7 @@ void RAMFUNC SniffIClass(void) {
     // time ZERO, the point from which it all is calculated.
     time_0 = GetCountSspClk();
 
-    int div = 0;
+    int divi = 0;
     uint8_t tag_byte = 0, foo = 0;
     // loop and listen
     // every sample (1byte in data),
@@ -903,10 +903,10 @@ void RAMFUNC SniffIClass(void) {
         if (*data & 0xF) {
             //tag_byte <<= 1;
             tag_byte ^= (1 << 4);
-            foo ^= (1 << (3 - div));
+            foo ^= (1 << (3 - divi));
             Dbprintf(" %d|%x == %d|%x", tag_byte, tag_byte, foo, foo);
         }
-        div++;
+        divi++;
 
         // every odd sample
         if (sniffCounter & 0x01) {
@@ -961,7 +961,7 @@ void RAMFUNC SniffIClass(void) {
             }
             tag_byte = 0;
             foo = 0;
-            div = 0;
+            divi = 0;
         }
     } // end main loop
 
