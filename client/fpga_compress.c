@@ -206,7 +206,7 @@ int zlib_decompress(FILE *infile, FILE *outfile) {
     compressed_fpga_stream.opaque = Z_NULL;
 
     ret = inflateInit2(&compressed_fpga_stream, 0);
-    if ( res < 0 )
+    if ( ret < 0 )
         return (EXIT_FAILURE);
     
     do {
