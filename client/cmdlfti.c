@@ -138,7 +138,6 @@ int CmdTIDemod(const char *Cmd) {
     // look for 17 low bits followed by 6 highs (common pattern for ro and rw tags)
     int max = 0, maxPos = 0;
     for (i = 0; i < 6000; i++) {
-        int j;
         int dec = 0;
         // searching 17 consecutive lows
         for (j = 0; j < 17 * lowLen; j++) {
@@ -177,9 +176,7 @@ int CmdTIDemod(const char *Cmd) {
     uint32_t shift3 = 0x7e000000, shift2 = 0, shift1 = 0, shift0 = 0;
 
     for (i = 0; i < ARRAYLEN(bits) - 1; i++) {
-        int high = 0;
-        int low = 0;
-        int j;
+        int high = 0, low = 0;
         for (j = 0; j < lowLen; j++) {
             low -= GraphBuffer[maxPos + j];
         }
