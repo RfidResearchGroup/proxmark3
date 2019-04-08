@@ -438,19 +438,19 @@ int CmdEM410xSim(const char *Cmd) {
     uint8_t uid[5] = {0x00};
 
     /* clock is 64 in EM410x tags */
-    uint8_t clock = 64;
+    uint8_t clock1 = 64;
 
     if (param_gethex(Cmd, 0, uid, 10)) {
         PrintAndLogEx(FAILED, "UID must include 10 HEX symbols");
         return 0;
     }
 
-    param_getdec(Cmd, 1, &clock);
+    param_getdec(Cmd, 1, &clock1);
 
-    PrintAndLogEx(SUCCESS, "Starting simulating UID %02X%02X%02X%02X%02X  clock: %d", uid[0], uid[1], uid[2], uid[3], uid[4], clock);
+    PrintAndLogEx(SUCCESS, "Starting simulating UID %02X%02X%02X%02X%02X  clock: %d", uid[0], uid[1], uid[2], uid[3], uid[4], clock1);
     PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation");
 
-    ConstructEM410xEmulGraph(Cmd, clock);
+    ConstructEM410xEmulGraph(Cmd, clock1);
 
     CmdLFSim("0"); //240 start_gap.
     return 0;
@@ -465,7 +465,7 @@ int CmdEM410xBrute(const char *Cmd) {
     uint8_t *uidBlock = NULL, *p = NULL;
     uint8_t uid[5] = {0x00};
     /* clock is 64 in EM410x tags */
-    uint8_t clock = 64;
+    uint8_t clock1 = 64;
     /* default pause time: 1 second */
     uint32_t delay = 1000;
 
@@ -475,9 +475,9 @@ int CmdEM410xBrute(const char *Cmd) {
     cmdp = tolower(param_getchar(Cmd, 1));
     if (cmdp == 'd') {
         delay = param_get32ex(Cmd, 2, 1000, 10);
-        param_getdec(Cmd, 4, &clock);
+        param_getdec(Cmd, 4, &clock1);
     } else if (cmdp == 'c') {
-        param_getdec(Cmd, 2, &clock);
+        param_getdec(Cmd, 2, &clock1);
         delay = param_get32ex(Cmd, 4, 1000, 10);
     }
 
@@ -554,9 +554,9 @@ int CmdEM410xBrute(const char *Cmd) {
         }
 
         sprintf(testuid, "%010" PRIX64, bytes_to_num(uidBlock + 5 * c, 5));
-        PrintAndLogEx(NORMAL, "Bruteforce %d / %d: simulating UID  %s, clock %d", c + 1, uidcnt, testuid, clock);
+        PrintAndLogEx(NORMAL, "Bruteforce %d / %d: simulating UID  %s, clock %d", c + 1, uidcnt, testuid, clock1);
 
-        ConstructEM410xEmulGraph(testuid, clock);
+        ConstructEM410xEmulGraph(testuid, clock1);
 
         CmdLFSim("0"); //240 start_gap.
 

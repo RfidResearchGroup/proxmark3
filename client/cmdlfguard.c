@@ -312,7 +312,7 @@ int CmdGuardClone(const char *Cmd) {
 int CmdGuardSim(const char *Cmd) {
 
     // Guard uses:  clk: 64, invert: 0, encoding: 2 (ASK Biphase)
-    uint8_t clock = 64, encoding = 2, separator = 0, invert = 0;
+    uint8_t clock1 = 64, encoding = 2, separator = 0, invert = 0;
     uint32_t facilitycode = 0, cardnumber = 0, fc = 0, cn = 0, fmtlen = 0;
 
     char cmdp = param_getchar(Cmd, 0);
@@ -336,7 +336,7 @@ int CmdGuardSim(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Simulating Guardall - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber);
 
     uint64_t arg1, arg2;
-    arg1 = (clock << 8) | encoding;
+    arg1 = (clock1 << 8) | encoding;
     arg2 = (invert << 8) | separator;
 
     UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};

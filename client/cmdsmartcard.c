@@ -884,14 +884,14 @@ int CmdSmartReader(const char *Cmd) {
 int CmdSmartSetClock(const char *Cmd) {
     uint8_t cmdp = 0;
     bool errors = false;
-    uint8_t clock = 0;
+    uint8_t clock1 = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
                 return usage_sm_setclock();
             case 'c':
-                clock = param_get8ex(Cmd, cmdp + 1, 2, 10);
-                if (clock > 2)
+                clock1 = param_get8ex(Cmd, cmdp + 1, 2, 10);
+                if (clock1 > 2)
                     errors = true;
 
                 cmdp += 2;
@@ -906,7 +906,7 @@ int CmdSmartSetClock(const char *Cmd) {
     //Validations
     if (errors || cmdp == 0) return usage_sm_setclock();
 
-    UsbCommand c = {CMD_SMART_SETCLOCK, {clock, 0, 0}};
+    UsbCommand c = {CMD_SMART_SETCLOCK, {clock1, 0, 0}};
     clearCommandBuffer();
     SendCommand(&c);
     UsbCommand resp;
@@ -921,7 +921,7 @@ int CmdSmartSetClock(const char *Cmd) {
         return 1;
     }
 
-    switch (clock) {
+    switch (clock1) {
         case 0:
             PrintAndLogEx(SUCCESS, "Clock changed to 16mhz giving 10800 baudrate");
             break;
