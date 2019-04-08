@@ -153,8 +153,6 @@ bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_Start
 void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype);
 void DetectNACKbug();
 
-void AppendCrc14443a(uint8_t *data, int len);
-
 #ifdef __cplusplus
 }
 #endif

@@ -435,6 +435,8 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
     uint8_t	mM = 0; //moebius_modifier for collection storage
 
     // Authenticate response - nonce
+    uint8_t rAUTH_NT[4];
+    uint8_t rAUTH_NT_keystream[4];
     uint32_t nonce = 0;
     // = prng_successor(selTimer, 32) ;
 
@@ -509,6 +511,9 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
             crypto1_destroy(pcs);
             cardAUTHKEY = AUTHKEYNONE;
             nonce = prng_successor(selTimer, 32);
+            // prepare NT for nested authentication
+            num_to_bytes(nonce, 4, rAUTH_NT);
+            num_to_bytes(cuid ^ nonce, 4, rAUTH_NT_keystream);
 
             LED_B_OFF();
             LED_C_OFF();
@@ -781,7 +786,8 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
 
                     // received block num -> sector
                     // Example: 6X  [00]
-                    cardAUTHSC = receivedCmd_dec[1] / 4;
+                    // 4K tags have 16 blocks per sector 32..39
+                    cardAUTHSC = MifareBlockToSector(receivedCmd_dec[1]);
 
                     // cardAUTHKEY: 60 => Auth use Key A
                     // cardAUTHKEY: 61 => Auth use Key B
@@ -799,18 +805,22 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                         // Receive Cmd in clear txt
                         // Update crypto state (UID ^ NONCE)
                         crypto1_word(pcs, cuid ^ nonce, 0);
-                        // prepare nonce
-                        num_to_bytes(nonce, 4, rAUTH_AT);
+                        // rAUTH_NT contains prepared nonce for authenticate
+                        EmSendCmd(rAUTH_NT, sizeof(rAUTH_NT));
                         if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] Reader authenticating for block %d (0x%02x) with key %c - nonce: %02X - ciud: %02X", receivedCmd_dec[1], receivedCmd_dec[1], (cardAUTHKEY == 0) ? 'A' : 'B', rAUTH_AT, cuid);
                     } else {
                         // nested authentication
+                        /*
                         ans = nonce ^ crypto1_word(pcs, cuid ^ nonce, 0);
                         num_to_bytes(ans, 4, rAUTH_AT);
+                        */
+                        // rAUTH_NT, rAUTH_NT_keystream contains prepared nonce and keystream for nested authentication
+                        // we need calculate parity bits for non-encrypted sequence
+                        mf_crypto1_encryptEx(pcs, rAUTH_NT, rAUTH_NT_keystream, response, 4, response_par);
+                        EmSendCmdPar(response, 4, response_par);
                         if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] Reader doing nested authentication for block %d (0x%02x) with key %c", receivedCmd_dec[1], receivedCmd_dec[1], (cardAUTHKEY == 0) ? 'A' : 'B');
                     }
 
-
-                    EmSendCmd(rAUTH_AT, sizeof(rAUTH_AT));
                     cardSTATE = MFEMUL_AUTH1;
                     if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] cardSTATE = MFEMUL_AUTH1 - rAUTH_AT: %02X", rAUTH_AT);
                     continue;
@@ -901,7 +911,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                             if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_WORK - IsAccessAllowed] Data block %d (0x%02x) cannot be read", blockNo, blockNo);
                         }
                     }
-                    AppendCrc14443a(response, 16);
+                    AddCrc14A(response, 16);
                     mf_crypto1_encrypt(pcs, response, MAX_MIFARE_FRAME_SIZE, response_par);
                     EmSendCmdPar(response, MAX_MIFARE_FRAME_SIZE, response_par);
                     if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
