@@ -5,7 +5,7 @@ sudo apt remove modemmanager
 ```
 
 # Video Installation guide
-[![Kali Installation tutorial](https://github.com/5w0rdfish/Proxmark3-RDV4-ParrotOS/blob/master/screenshot-www.youtube.com-2019.03.17-20-44-33.png)](https://youtu.be/Wl9AsrU4igo "ParrotOS Installation Tutorial")
+[![Kali Installation tutorial](https://github.com/5w0rdfish/Proxmark3-RDV4-ParrotOS/blob/master/screenshot-www.youtube.com-2019.03.17-20-44-33.png)](https://youtu.be/t5eBPS6lV3E "Kali Linux Installation Tutorial")
 
 
 ---
@@ -44,9 +44,18 @@ git pull
 ```sh
 sudo apt remove modemmanager
 ```
+### Reboot Kali
+```sh
+ reboot
+```
+
+### Change directory back to proxmark3
+```sh
+cd proxmark3
+```
 
 ### Clean and Compile
-Clean and complete compilation 
+Clean and complete compile
 
 ```sh
  make clean && make all
