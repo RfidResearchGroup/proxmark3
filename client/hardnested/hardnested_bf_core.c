@@ -229,9 +229,9 @@ const uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, 
 #endif
 
     // constant ones/zeroes
-    bitslice_t bs_ones;
+//    bitslice_t bs_ones;
     memset(bs_ones.bytes, 0xff, VECTOR_SIZE);
-    bitslice_t bs_zeroes;
+//    bitslice_t bs_zeroes;
     memset(bs_zeroes.bytes, 0x00, VECTOR_SIZE);
 
     // bitslice all the even states
