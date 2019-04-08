@@ -154,7 +154,7 @@ struct Crypto1State *lfsr_recovery32(uint32_t ks2, uint32_t in) {
     // allocate memory for out of place bucket_sort
     bucket_array_t bucket;
 
-    for (uint32_t i = 0; i < 2; i++) {
+    for (i = 0; i < 2; i++) {
         for (uint32_t j = 0; j <= 0xff; j++) {
             bucket[i][j].head = malloc(sizeof(uint32_t) << 14);
             if (!bucket[i][j].head) {
@@ -184,7 +184,7 @@ struct Crypto1State *lfsr_recovery32(uint32_t ks2, uint32_t in) {
     recover(odd_head, odd_tail, oks, even_head, even_tail, eks, 11, statelist, in << 1, bucket);
 
 out:
-    for (uint32_t i = 0; i < 2; i++)
+    for (i = 0; i < 2; i++)
         for (uint32_t j = 0; j <= 0xff; j++)
             free(bucket[i][j].head);
     free(odd_head);
