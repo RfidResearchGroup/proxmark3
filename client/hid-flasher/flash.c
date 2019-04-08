@@ -47,7 +47,7 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
     ctx->num_segs = 0;
     seg = ctx->segments;
 
-    fprintf(stderr, "Loading usable ELF segments:\n");
+    fprintf(stdout, "Loading usable ELF segments:\n");
     for (int i = 0; i < num_phdrs; i++) {
         if (le32(phdr->p_type) != PT_LOAD) {
             phdr++;
@@ -63,11 +63,11 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
             phdr++;
             continue;
         }
-        fprintf(stderr, "%d: V 0x%08x P 0x%08x (0x%08x->0x%08x) [%c%c%c] @0x%x\n",
+        fprintf(stdout, "%d: V 0x%08x P 0x%08x (0x%08x->0x%08x) [%c%c%c] @0x%x\n",
                 i, vaddr, paddr, filesz, memsz,
-                flags & PF_R ? 'R' : ' ',
-                flags & PF_W ? 'W' : ' ',
-                flags & PF_X ? 'X' : ' ',
+                (flags & PF_R) ? 'R' : ' ',
+                (flags & PF_W) ? 'W' : ' ',
+                (flags & PF_X) ? 'X' : ' ',
                 offset);
         if (filesz != memsz) {
             fprintf(stderr, "Error: PHDR file size does not equal memory size\n"
@@ -91,7 +91,7 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
         // make extra space if we need to move the data forward
         data = calloc(filesz + BLOCK_SIZE, sizeof(uint8_t));
         if (!data) {
-            fprintf(stderr, "Out of memory\n");
+            fprintf(stderr, "Error: Out of memory\n");
             return -1;
         }
         if (fseek(fd, offset, SEEK_SET) < 0 || fread(data, 1, filesz, fd) != filesz) {
@@ -114,7 +114,7 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
                     uint32_t hole = this_offset - prev_seg->length;
                     uint8_t *new_data = calloc(new_length, sizeof(uint8_t));
                     if (!new_data) {
-                        fprintf(stderr, "Out of memory\n");
+                        fprintf(stderr, "Error: Out of memory\n");
                         free(data);
                         return -1;
                     }
@@ -405,7 +405,7 @@ static int write_block(uint32_t address, uint8_t *data, uint32_t length) {
 
 // Write a file's segments to Flash
 int flash_write(flash_file_t *ctx) {
-    fprintf(stderr, "Writing segments for file: %s\n", ctx->filename);
+    fprintf(stdout, "Writing segments for file: %s\n", ctx->filename);
     for (int i = 0; i < ctx->num_segs; i++) {
         flash_seg_t *seg = &ctx->segments[i];
 
@@ -413,9 +413,8 @@ int flash_write(flash_file_t *ctx) {
         uint32_t blocks = (length + BLOCK_SIZE - 1) / BLOCK_SIZE;
         uint32_t end = seg->start + length;
 
-        fprintf(stderr, " 0x%08x..0x%08x [0x%x / %u blocks]",
-                seg->start, end - 1, length, blocks);
-
+        fprintf(stdout, " 0x%08x..0x%08x [0x%x / %u blocks]", seg->start, end - 1, length, blocks);
+        fflush(stdout);
         int block = 0;
         uint8_t *data = seg->data;
         uint32_t baddr = seg->start;
@@ -435,10 +434,11 @@ int flash_write(flash_file_t *ctx) {
             baddr += block_size;
             length -= block_size;
             block++;
-            fprintf(stderr, ".");
+            fprintf(stdout, ".");
             fflush(stdout);
         }
         fprintf(stderr, " OK\n");
+        fflush(stdout);
     }
     return 0;
 }
@@ -460,5 +460,6 @@ void flash_free(flash_file_t *ctx) {
 int flash_stop_flashing(void) {
     UsbCommand c = {CMD_HARDWARE_RESET};
     SendCommand(&c);
+    msleep(100);
     return 0;
 }
