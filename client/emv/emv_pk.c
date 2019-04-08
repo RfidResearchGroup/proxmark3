@@ -43,7 +43,7 @@
 static ssize_t emv_pk_read_bin(char *buf, unsigned char *bin, size_t size, size_t *read) {
     size_t left = size;
     char *p = buf;
-    while (*p && *p == ' ')
+    while (*p != 0 && *p == ' ')
         p++;
 
     while (left > 0) {
@@ -70,7 +70,7 @@ static ssize_t emv_pk_read_bin(char *buf, unsigned char *bin, size_t size, size_
             return -(p - buf);
     }
 
-    while (*p && *p == ' ')
+    while (*p != 0 && *p == ' ')
         p++;
 
     p--;
@@ -85,7 +85,7 @@ static ssize_t emv_pk_read_ymv(char *buf, unsigned *ymv) {
 
     *ymv = 0;
 
-    while (*p && *p == ' ')
+    while (*p != 0 && *p == ' ')
         p++;
 
     for (i = 0; i < 3; i++) {
@@ -101,7 +101,7 @@ static ssize_t emv_pk_read_ymv(char *buf, unsigned *ymv) {
         temp[i] = (c1 * 16 + c2);
     }
 
-    while (*p && *p == ' ')
+    while (*p != 0 && *p == ' ')
         p++;
 
     p--;
@@ -116,7 +116,7 @@ static ssize_t emv_pk_read_ymv(char *buf, unsigned *ymv) {
 
 static ssize_t emv_pk_read_string(char *buf, char *str, size_t size) {
     char *p = buf;
-    while (*p && *p == ' ')
+    while (*p != 0 && *p == ' ')
         p++;
 
     while (size > 1) {
@@ -132,7 +132,7 @@ static ssize_t emv_pk_read_string(char *buf, char *str, size_t size) {
 
     *str = 0;
 
-    while (*p && *p == ' ')
+    while (*p != 0 && *p == ' ')
         p++;
 
     p--;
@@ -471,15 +471,14 @@ struct emv_pk *emv_pk_get_ca_pk(const unsigned char *rid, unsigned char idx) {
             }
         }
     */
-    if (!pk) {
-        const char *relfname = "emv/capk.txt";
+    const char *relfname = "emv/capk.txt";
 
-        char fname[strlen(get_my_executable_directory()) + strlen(relfname) + 1];
-        strcpy(fname, get_my_executable_directory());
-        strcat(fname, relfname);
+    char fname[strlen(get_my_executable_directory()) + strlen(relfname) + 1];
+    strcpy(fname, get_my_executable_directory());
+    strcat(fname, relfname);
 
-        pk = emv_pk_get_ca_pk_from_file(fname, rid, idx);
-    }
+    pk = emv_pk_get_ca_pk_from_file(fname, rid, idx);
+
     if (!pk)
         return NULL;
 
@@ -491,14 +490,13 @@ struct emv_pk *emv_pk_get_ca_pk(const unsigned char *rid, unsigned char idx) {
            pk->rid[4],
            pk->index,
            pk->mlen * 8);
+
     if (emv_pk_verify(pk)) {
         printf("OK\n");
-
         return pk;
     }
 
     printf("Failed!\n");
     emv_pk_free(pk);
-
     return NULL;
 }
