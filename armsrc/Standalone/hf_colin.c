@@ -838,7 +838,7 @@ void e_MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *dat
         uint64_t ui64Key = emlGetKey(s, keyType);
         if (s == 0) {
             if (isOK && mifare_classic_auth(pcs, cjcuid, FirstBlockOfSector(s), keyType, ui64Key, AUTH_FIRST)) {
-                isOK = false;
+
                 if (MF_DBGLEVEL >= 1)
                     DbprintfEx(FLAG_NOLOG, "Sector[%2d]. Auth error", s);
                 break;
@@ -880,7 +880,6 @@ void e_MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *dat
             DbprintfEx(FLAG_NOLOG, "Halt error");
     };
 
-    //  ----------------------------- crypto1 destroy
     crypto1_destroy(pcs);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
