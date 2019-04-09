@@ -1471,7 +1471,7 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
         cmdp++;
     }
 
-    if (!know_target_key) {
+    if (!know_target_key && nonce_file_read == false) {
         uint64_t key64 = 0;
         // check if we can authenticate to sector
         int res = mfCheckKeys(blockNo, keyType, true, 1, key, &key64);
