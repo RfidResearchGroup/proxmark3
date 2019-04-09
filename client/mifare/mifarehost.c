@@ -221,8 +221,9 @@ int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultk
 #define KEYS_IN_BLOCK 85
 #define KEYBLOCK_SIZE 510
 #define CANDIDATE_SIZE 0xFFFF * 6
+
+    uint64_t key64;
     uint8_t found = false;
-    uint64_t key64 = 0;
     uint8_t candidates[CANDIDATE_SIZE] = {0x00};
     uint8_t keyBlock[KEYBLOCK_SIZE] = {0x00};
 
