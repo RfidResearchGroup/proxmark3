@@ -367,9 +367,10 @@ static uint16_t PartialSumProperty(uint32_t state, odd_even_t odd_even) {
         uint32_t st = state;
         uint16_t part_sum = 0;
         if (odd_even == ODD_STATE) {
-            for (uint16_t i = 0; i < 5; i++) {
-                part_sum ^= filter(st);
+            part_sum ^= filter(st);
+            for (uint16_t i = 0; i < 4; i++) {
                 st = (st << 1) | ((j >> (3 - i)) & 0x01) ;
+                part_sum ^= filter(st);
             }
             part_sum ^= 1; // XOR 1 cancelled out for the other 8 bits
         } else {
