@@ -29,12 +29,19 @@
 #define Logic1                  Iso15693Logic1
 #define FrameEOF                Iso15693FrameEOF
 
-#define Crc15(data, len)          Crc(CRC_15693, (data), (len))
-#define CheckCrc15(data, len)     check_crc(CRC_15693, (data), (len))
-#define AddCrc15(data, len)       compute_crc(CRC_15693, (data), (len), (data)+(len), (data)+(len)+1)
+#ifndef Crc15
+# define Crc15(data, len)       Crc16ex(CRC_15693, (data), (len))
+#endif
+#ifndef CheckCrc15
+# define CheckCrc15(data, len)  check_crc(CRC_15693, (data), (len))
+#endif
+#ifndef AddCrc15
+#define AddCrc15(data, len)     compute_crc(CRC_15693, (data), (len), (data)+(len), (data)+(len)+1)
+#endif
 
-#define sprintUID(target, uid)  Iso15693sprintUID((target), (uid))
-
+#ifndef sprintUID
+# define sprintUID(target, uid)  Iso15693sprintUID((target), (uid))
+#endif
 // structure and database for uid -> tagtype lookups
 typedef struct {
     uint64_t uid;

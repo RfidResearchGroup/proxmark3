@@ -104,7 +104,7 @@ typedef struct {
 #endif
 
 #ifndef CheckCrc14A
-# define	CheckCrc14A(data, len)	check_crc(CRC_14443_A, (data), (len))
+# define CheckCrc14A(data, len)	check_crc(CRC_14443_A, (data), (len))
 #endif
 
 void GetParity(const uint8_t *pbtCmd, uint16_t len, uint8_t *par);

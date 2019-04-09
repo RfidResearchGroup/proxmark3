@@ -22,7 +22,6 @@
 
 #include "iso14443a.h"
 #include "mifaresim.h"
-#include "iso14443crc.h"
 #include "crapto1/crapto1.h"
 #include "BigBuf.h"
 #include "string.h"

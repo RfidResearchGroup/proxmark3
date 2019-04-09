@@ -129,7 +129,7 @@ uint16_t update_crc16(uint16_t crc, uint8_t c) {
 }
 
 // two ways.  msb or lsb loop.
-uint16_t crc16(uint8_t const *d, size_t length, uint16_t remainder, uint16_t polynomial, bool refin, bool refout) {
+uint16_t Crc16(uint8_t const *d, size_t length, uint16_t remainder, uint16_t polynomial, bool refin, bool refout) {
     if (length == 0)
         return (~remainder);
 
@@ -191,7 +191,7 @@ void compute_crc(CrcType_t ct, const uint8_t *d, size_t n, uint8_t *first, uint8
     *first = (crc & 0xFF);
     *second = ((crc >> 8) & 0xFF);
 }
-uint16_t Crc(CrcType_t ct, const uint8_t *d, size_t n) {
+uint16_t Crc16ex(CrcType_t ct, const uint8_t *d, size_t n) {
 
     // can't calc a crc on less than 3 byte. (1byte + 2 crc bytes)
     if (n < 3) return 0;

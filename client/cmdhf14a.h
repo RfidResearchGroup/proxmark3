@@ -24,7 +24,6 @@
 #include "util.h"
 #include "cmdparser.h"
 #include "cmdmain.h"
-#include "iso14443crc.h"
 #include "mifare.h"
 #include "cmdhfmf.h"
 #include "cmdhfmfu.h"

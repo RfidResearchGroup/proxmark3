@@ -18,7 +18,6 @@
 #include <time.h>
 #include <mbedtls/aes.h>
 #include "proxmark3.h"
-#include "iso14443crc.h"
 #include "ui.h"
 #include "cmdparser.h"
 #include "common.h"

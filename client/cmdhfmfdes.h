@@ -18,7 +18,6 @@
 #include "proxmark3.h"
 #include "../include/common.h"
 #include "../include/mifare.h"
-#include "iso14443crc.h"
 #include "ui.h"
 #include "cmdparser.h"
 #include "util.h"
