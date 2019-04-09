@@ -458,11 +458,14 @@ bool DetectCleanAskWave(uint8_t *dest, size_t size, uint8_t high, uint8_t low) {
 
         if (dest[i] > low && dest[i] < high)
             allArePeaks = false;
-        else
+        else {
             cntPeaks++;
+            //if (g_debugMode == 2) prnt("DEBUG DetectCleanAskWave: peaks (200) %u", cntPeaks);
+            if (cntPeaks > 200) return true;
+        }
     }
 
-    if (!allArePeaks) {
+    if (allArePeaks == false) {
         if (g_debugMode == 2) prnt("DEBUG DetectCleanAskWave: peaks (200) %u", cntPeaks);
         if (cntPeaks > 200) return true;
     }
@@ -1410,15 +1413,22 @@ int manrawdecode(uint8_t *bits, size_t *size, uint8_t invert, uint8_t *alignPos)
     //find correct start position [alignment]
     for (k = 0; k < 2; ++k) {
         for (i = k; i < *size - 1; i += 2) {
+          
             if (bits[i] == bits[i + 1])
                 errCnt++;
+            
+            if ( errCnt > 50) 
+                break;
         }
+        
         if (bestErr > errCnt) {
             bestErr = errCnt;
             bestRun = k;
+            if (g_debugMode == 2) prnt("DEBUG manrawdecode: bestErr %d | bestRun %u", bestErr, bestRun);
         }
         errCnt = 0;
     }
+    
     *alignPos = bestRun;
     //decode
     for (i = bestRun; i < *size - 1; i += 2) {
@@ -1456,8 +1466,10 @@ int cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int invert, int high,
         } else { //transition
             if ((bits[i] >= high && !waveHigh) || (bits[i] <= low && waveHigh)) {
 
-                // 32-8-1 = 23
-                // 32+8+1 = 41
+                // 8  ::   8-2-1 =  5   8+2+1 = 11
+                // 16 ::  16-4-1 = 11  16+4+1 = 21 
+                // 32 ::  32-8-1 = 23  32+8+1 = 41
+                
                 if (smplCnt > clk - cl_4 - 1) { //full clock
 
                     if (smplCnt > clk + cl_4 + 1) { //too many samples
@@ -1504,6 +1516,12 @@ int cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int invert, int high,
         }
     }
     *size = bitCnt;
+
+    if ( *startIdx < 0 )
+        *startIdx = 0;
+    
+    if (g_debugMode == 2) prnt("DEBUG ASK: cleanAskRawDemod Startidx %u ", *startIdx);
+   
     return errCnt;
 }
 
