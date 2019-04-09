@@ -1336,7 +1336,7 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
     uint8_t key[6] = {0, 0, 0, 0, 0, 0};
     uint8_t trgkey[6] = {0, 0, 0, 0, 0, 0};
     uint8_t cmdp = 0;
-    char filename[FILE_PATH_SIZE], *fptr;
+    char filename[FILE_PATH_SIZE] = {0}, *fptr;
     char szTemp[FILE_PATH_SIZE - 20];
     char ctmp;
 
