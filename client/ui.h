@@ -35,7 +35,7 @@ void ShowGraphWindow(void);
 void RepaintGraphWindow(void);
 void PrintAndLog(char *fmt, ...);
 void PrintAndLogOptions(char *str[][2], size_t size, size_t space);
-void PrintAndLogEx(logLevel_t level, char *fmt, ...);
+void PrintAndLogEx(logLevel_t level, const char *fmt, ...);
 void SetLogFilename(char *fn);
 void SetFlushAfterWrite(bool value);
 

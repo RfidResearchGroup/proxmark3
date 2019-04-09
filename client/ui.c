@@ -45,7 +45,7 @@ void PrintAndLogOptions(char *str[][2], size_t size, size_t space) {
     }
     PrintAndLogEx(NORMAL, "%s", buff);
 }
-void PrintAndLogEx(logLevel_t level, char *fmt, ...) {
+void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
 
     // skip debug messages if client debugging is turned off i.e. 'DATA SETDEBUG 0'
     if (g_debugMode == 0 && level == DEBUG)
