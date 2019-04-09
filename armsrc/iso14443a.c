@@ -19,7 +19,6 @@ int rsamples = 0;
 uint8_t trigger = 0;
 // the block number for the ISO14443-4 PCB
 static uint8_t iso14_pcb_blocknum = 0;
-static uint8_t *free_buffer_pointer;
 
 //
 // ISO14443 timing:
@@ -740,34 +739,6 @@ static void Code4bitAnswerAsTag(uint8_t cmd) {
     ToSendMax++;
 }
 
-static uint8_t *LastReaderTraceTime = NULL;
-
-void EmLogTraceReader(void) {
-    // remember last reader trace start to fix timing info later
-    LastReaderTraceTime = BigBuf_get_addr() + BigBuf_get_traceLen();
-    LogTrace(Uart.output, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
-}
-
-static void FixLastReaderTraceTime(uint32_t tag_StartTime) {
-    uint32_t reader_EndTime = Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG;
-    uint32_t reader_StartTime = Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG;
-    uint16_t reader_modlen = reader_EndTime - reader_StartTime;
-    uint16_t approx_fdt = tag_StartTime - reader_EndTime;
-    uint16_t exact_fdt = (approx_fdt - 20 + 32) / 64 * 64 + 20;
-    reader_StartTime = tag_StartTime - exact_fdt - reader_modlen;
-    LastReaderTraceTime[0] = (reader_StartTime >> 0) & 0xff;
-    LastReaderTraceTime[1] = (reader_StartTime >> 8) & 0xff;
-    LastReaderTraceTime[2] = (reader_StartTime >> 16) & 0xff;
-    LastReaderTraceTime[3] = (reader_StartTime >> 24) & 0xff;
-}
-
-static void EmLogTraceTag(uint8_t *tag_data, uint16_t tag_len, uint8_t *tag_Parity, uint32_t ProxToAirDuration) {
-    uint32_t tag_StartTime = LastTimeProxToAirStart * 16 + DELAY_ARM2AIR_AS_TAG;
-    uint32_t tag_EndTime = (LastTimeProxToAirStart + ProxToAirDuration) * 16 + DELAY_ARM2AIR_AS_TAG;
-    LogTrace(tag_data, tag_len, tag_StartTime, tag_EndTime, tag_Parity, false);
-    FixLastReaderTraceTime(tag_StartTime);
-}
-
 //-----------------------------------------------------------------------------
 // Wait for commands from reader
 // stop when button is pressed
@@ -793,7 +764,6 @@ static int GetIso14443aCommandFromReader(uint8_t *received, uint8_t *par, int *l
             b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
             if (MillerDecoding(b, 0)) {
                 *len = Uart.len;
-                EmLogTraceReader();
                 return true;
             }
         }
@@ -830,14 +800,6 @@ static bool prepare_tag_modulation(tag_response_info_t *response_info, size_t ma
     response_info->ProxToAirDuration = LastProxToAirDuration;
     return true;
 }
-
-// "precompile" responses. There are 7 predefined responses with a total of 28 bytes data to transmit.
-// Coded responses need one byte per bit to transfer (data, parity, start, stop, correction)
-// 28 * 8 data bits, 28 * 1 parity bits, 7 start bits, 7 stop bits, 7 correction bits
-// -> need 273 bytes buffer
-// 44 * 8 data bits, 44 * 1 parity bits, 9 start bits, 9 stop bits, 9 correction bits --370
-// 47 * 8 data bits, 47 * 1 parity bits, 10 start bits, 10 stop bits, 10 correction bits
-#define ALLOCATED_TAG_MODULATION_BUFFER_SIZE 453
 
 bool prepare_allocated_tag_modulation(tag_response_info_t *response_info, uint8_t **buffer, size_t *max_buffer_size) {
 
@@ -1013,7 +975,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
     // Prepare CHK_TEARING
     // uint8_t response9[] =  {0xBD,0x90,0x3f};
 
-#define TAG_RESPONSE_COUNT 10
+#define TAG_RESPONSE_COUNT 8
     tag_response_info_t responses[TAG_RESPONSE_COUNT] = {
         { .response = response1,  .response_n = sizeof(response1)  },  // Answer to request - respond with card type
         { .response = response2,  .response_n = sizeof(response2)  },  // Anticollision cascade1 - respond with uid
@@ -1028,6 +990,13 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
     // { .response = response7_NTAG, .response_n = sizeof(response7_NTAG)}, // EV1/NTAG GET_VERSION response
     // { .response = response9,      .response_n = sizeof(response9)     }  // EV1/NTAG CHK_TEAR response
 
+    // "precompile" responses. There are 8 predefined responses with a total of 32 bytes data to transmit.
+    // Coded responses need one byte per bit to transfer (data, parity, start, stop, correction)
+    // 32 * 8 data bits, 32 * 1 parity bits, 8 start bits, 8 stop bits, 8 correction bits
+    // -> need 312 bytes buffer
+    // 42 * 8 data bits, 42 * 1 parity bits, 9 start bits, 9 stop bits, 9 correction bits --405
+    // 45 * 8 data bits, 45 * 1 parity bits, 10 start bits, 10 stop bits, 10 correction bits --435
+#define ALLOCATED_TAG_MODULATION_BUFFER_SIZE 453
 
     // Allocate 512 bytes for the dynamic modulation, created when the reader queries for it
     // Such a response is less time critical, so we can prepare them on the fly
@@ -1042,23 +1011,29 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
         .modulation_n = 0
     };
 
-    // We need to listen to the high-frequency, peak-detected path.
-    iso14443a_setup(FPGA_HF_ISO14443A_TAGSIM_LISTEN);
-
+    // free eventually allocated BigBuf memory but keep Emulator Memory
     BigBuf_free_keep_EM();
-    clear_trace();
-    set_tracing(true);
 
     // allocate buffers:
     uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
     uint8_t *receivedCmdPar = BigBuf_malloc(MAX_PARITY_SIZE);
-    //free_buffer_pointer = BigBuf_malloc(ALLOCATED_TAG_MODULATION_BUFFER_SIZE);
+    uint8_t *free_buffer = BigBuf_malloc(ALLOCATED_TAG_MODULATION_BUFFER_SIZE);
+    // modulation buffer pointer and current buffer free space size
+    uint8_t *free_buffer_pointer = free_buffer;
     size_t free_buffer_size = ALLOCATED_TAG_MODULATION_BUFFER_SIZE;
 
     // Prepare the responses of the anticollision phase
     // there will be not enough time to do this at the moment the reader sends it REQA
-    for (size_t i = 0; i < TAG_RESPONSE_COUNT; i++)
-        prepare_allocated_tag_modulation(&responses[i], &free_buffer_pointer, &free_buffer_size);
+    for (size_t i = 0; i < TAG_RESPONSE_COUNT; i++) {
+        if (prepare_allocated_tag_modulation(&responses[i], &free_buffer_pointer, &free_buffer_size) == false) {
+            BigBuf_free_keep_EM();
+            Dbprintf("Not enough modulation buffer size, exit after %d elements", i);
+            return;
+        }
+    }
+
+    // We need to listen to the high-frequency, peak-detected path.
+    iso14443a_setup(FPGA_HF_ISO14443A_TAGSIM_LISTEN);
 
     int len = 0;
 
@@ -1072,6 +1047,8 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
     int cmdsRecvd = 0;
     tag_response_info_t *p_response;
 
+    clear_trace();
+    set_tracing(true);
     LED_A_ON();
     for (;;) {
         WDT_HIT();
@@ -1409,27 +1386,14 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
         cmdsRecvd++;
 
         if (p_response != NULL) {
-            EmSendCmd14443aRaw(p_response->modulation, p_response->modulation_n);
-            // do the tracing for the previous reader request and this tag answer:
-            uint8_t par[MAX_PARITY_SIZE] = {0x00};
-            GetParity(p_response->response, p_response->response_n, par);
-
-            EmLogTrace(Uart.output,
-                       Uart.len,
-                       Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG,
-                       Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG,
-                       Uart.parity,
-                       p_response->response,
-                       p_response->response_n,
-                       LastTimeProxToAirStart * 16 + DELAY_ARM2AIR_AS_TAG,
-                       (LastTimeProxToAirStart + p_response->ProxToAirDuration) * 16 + DELAY_ARM2AIR_AS_TAG,
-                       par);
+            EmSendPrecompiledCmd(p_response);
         }
     }
 
     cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
     switch_off();
 
+    set_tracing(false);
     BigBuf_free_keep_EM();
 
     if (MF_DBGLEVEL >= 4) {
@@ -1663,7 +1627,6 @@ int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *par) {
             b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
             if (MillerDecoding(b, 0)) {
                 *len = Uart.len;
-                EmLogTraceReader();
                 return 0;
             }
         }
@@ -1782,17 +1745,27 @@ int EmSendCmdEx(uint8_t *resp, uint16_t respLen, bool collision) {
     return EmSendCmdParEx(resp, respLen, par, collision);
 }
 
-int EmSendPrecompiledCmd(tag_response_info_t *response_info) {
-    int ret = EmSendCmd14443aRaw(response_info->modulation, response_info->modulation_n);
-
+int EmSendPrecompiledCmd(tag_response_info_t *p_response) {
+    int ret = EmSendCmd14443aRaw(p_response->modulation, p_response->modulation_n);
     // do the tracing for the previous reader request and this tag answer:
-    EmLogTraceTag(response_info->response, response_info->response_n,
-                  &(response_info->par), response_info->ProxToAirDuration);
+    uint8_t par[MAX_PARITY_SIZE] = {0x00};
+    GetParity(p_response->response, p_response->response_n, par);
+
+    EmLogTrace(Uart.output,
+               Uart.len,
+               Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG,
+               Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG,
+               Uart.parity,
+               p_response->response,
+               p_response->response_n,
+               LastTimeProxToAirStart * 16 + DELAY_ARM2AIR_AS_TAG,
+               (LastTimeProxToAirStart + p_response->ProxToAirDuration) * 16 + DELAY_ARM2AIR_AS_TAG,
+               par);
 
     if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
-        Dbprintf("response_info->response %02X", response_info->response);
-        Dbprintf("response_info->response_n %02X", response_info->response_n);
-        Dbprintf("response_info->par %02X", &(response_info->par));
+        Dbprintf("response_info->response %02X", p_response->response);
+        Dbprintf("response_info->response_n %02X", p_response->response_n);
+        Dbprintf("response_info->par %02X", &(p_response->par));
     }
 
     return ret;

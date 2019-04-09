@@ -36,13 +36,4 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
 #define AUTHKEYB                 1
 #define AUTHKEYNONE              0xff
 
-#define TAG_RESPONSE_COUNT 9								// number of precompiled responses
-
-// Prepare ("precompile") the responses of the anticollision phase.
-// There will be not enough time to do this at the moment the reader sends its REQA or SELECT
-// There are 7 predefined responses with a total of 18 bytes data to transmit.
-// Coded responses need one byte per bit to transfer (data, parity, start, stop, correction)
-// 18 * 8 data bits, 18 * 1 parity bits, 5 start bits, 5 stop bits, 5 correction bits  ->   need 177 bytes buffer
-#define ALLOCATED_TAG_MODULATION_BUFFER_SIZE 512	// number of bytes required for precompiled response
-
 #endif

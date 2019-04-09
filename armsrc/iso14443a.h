@@ -133,7 +133,6 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
 int iso14443a_fast_select_card(uint8_t *uid_ptr, uint8_t num_cascades);
 void iso14a_set_trigger(bool enable);
 
-int EmSendPrecompiledCmd(tag_response_info_t *response_info);
 int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen);
 int EmSend4bit(uint8_t resp);
 int EmSendCmd(uint8_t *resp, uint16_t respLen);
@@ -141,9 +140,7 @@ int EmSendCmdEx(uint8_t *resp, uint16_t respLen, bool collision);
 int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *par);
 int EmSendCmdPar(uint8_t *resp, uint16_t respLen, uint8_t *par);
 int EmSendCmdParEx(uint8_t *resp, uint16_t respLen, uint8_t *par, bool collision);
-int EmSendPrecompiledCmd(tag_response_info_t *response_info);
-
-void EmLogTraceReader(void);
+int EmSendPrecompiledCmd(tag_response_info_t *p_response);
 
 bool prepare_allocated_tag_modulation(tag_response_info_t *response_info, uint8_t **buffer, size_t *max_buffer_size);
 
