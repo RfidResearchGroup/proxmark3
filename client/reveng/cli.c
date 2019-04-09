@@ -536,7 +536,7 @@ static poly_t
 rdpoly(const char *name, int flags, int bperhx) {
     /* read poly from file in chunks and report errors */
 
-    poly_t apoly = PZERO, chunk = PZERO;
+    poly_t apoly = PZERO, chunk;
     FILE *input;
 
     input = oread(name);
