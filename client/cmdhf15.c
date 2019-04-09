@@ -781,7 +781,7 @@ int CmdHF15Restore(const char *Cmd) {
     char buff[255] = {0x00};
     size_t blocksize = 4;
     uint8_t cmdp = 0;
-    char newCmdPrefix[255] = {0x00}, tmpCmd[255] = {0x00};
+    char newCmdPrefix[FILE_PATH_SIZE + 1] = {0x00}, tmpCmd[FILE_PATH_SIZE + 262] = {0x00};
     char param[FILE_PATH_SIZE] = "";
     char hex[255] = "";
     uint8_t retries = 3, tried = 0, i = 0;
