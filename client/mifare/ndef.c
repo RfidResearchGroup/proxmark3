@@ -208,7 +208,6 @@ int ndefDecodeSig(uint8_t *sig, size_t siglen) {
         size_t inturilen = (sig[indx] << 8) + sig[indx + 1];
         indx += 2;
         PrintAndLogEx(NORMAL, "\tcertificate uri [%d]: %.*s", inturilen, inturilen, &sig[indx]);
-        indx += inturilen;
     }
 
     return 0;
