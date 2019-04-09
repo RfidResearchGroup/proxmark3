@@ -388,7 +388,7 @@ static int GetIso15693AnswerFromTag(uint8_t *received, int *elapsed) {
     uint32_t time_0 = GetCountSspClk();
     uint32_t time_stop = 0;
     bool getNext = false;
-    int counter = 0, ci = 0, cq = 0;
+    int counter = 0, ci, cq = 0;
     uint8_t *buf = BigBuf_malloc(SIGNAL_BUFF_SIZE);
 
     if (elapsed) *elapsed = 0;
@@ -438,7 +438,7 @@ static int GetIso15693AnswerFromTag(uint8_t *received, int *elapsed) {
 static int GetIso15693AnswerFromSniff(uint8_t *received, int *samples, int *elapsed) {
 
     bool getNext = false;
-    int counter = 0, ci = 0, cq = 0;
+    int counter = 0, ci, cq = 0;
     uint32_t time_0 = 0, time_stop = 0;
     uint8_t *buf = BigBuf_get_addr();
 
@@ -485,7 +485,7 @@ static int GetIso15693AnswerFromSniff(uint8_t *received, int *samples, int *elap
 //-----------------------------------------------------------------------------
 void AcquireRawAdcSamplesIso15693(void) {
     int c = 0, getNext = false;
-    int ci = 0, cq = 0;
+    int ci, cq = 0;
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
@@ -552,7 +552,7 @@ void AcquireRawAdcSamplesIso15693(void) {
 void RecordRawAdcSamplesIso15693(void) {
 
     int c = 0, getNext = false;
-    int ci = 0, cq = 0;
+    int ci, cq = 0;
 
     Iso15693InitReader();
 
@@ -875,8 +875,8 @@ void SimTagIso15693(uint32_t parameter, uint8_t *uid) {
 
     LED_A_ON();
 
-    uint32_t time_start = 0;
-    int ans = 0, samples = 0, tsamples = 0;
+    uint32_t time_start;
+    int samples = 0, tsamples = 0;
     int wait = 0, elapsed = 0;
 
     Dbprintf("ISO-15963 Simulating uid: %02X%02X%02X%02X%02X%02X%02X%02X", uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6], uid[7]);
@@ -895,7 +895,7 @@ void SimTagIso15693(uint32_t parameter, uint8_t *uid) {
         WDT_HIT();
 
         // Listen to reader
-        ans = GetIso15693AnswerFromSniff(buf, &samples, &elapsed) ;
+        int ans = GetIso15693AnswerFromSniff(buf, &samples, &elapsed) ;
 
         // we should do a better check than this
         if (ans >= 1) {
