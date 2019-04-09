@@ -759,9 +759,7 @@ void SmartCardUpgrade(uint64_t arg0) {
     I2C_Reset_EnterBootloader();
 
     bool isOK = true;
-    int16_t res = 0;
-    uint16_t length = arg0;
-    uint16_t pos = 0;
+    uint16_t length = arg0, pos = 0;
     uint8_t *fwdata = BigBuf_get_addr();
     uint8_t *verfiydata = BigBuf_malloc(I2C_BLOCK_SIZE);
 
@@ -775,7 +773,7 @@ void SmartCardUpgrade(uint64_t arg0) {
         size_t size = MIN(I2C_BLOCK_SIZE, length);
 
         // write
-        res = I2C_WriteFW(fwdata + pos, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT);
+        int16_t res = I2C_WriteFW(fwdata + pos, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT);
         if (!res) {
             DbpString("Writing failed");
             isOK = false;
