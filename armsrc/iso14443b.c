@@ -441,7 +441,7 @@ static int GetIso14443bCommandFromReader(uint8_t *received, uint16_t *len) {
 
     StartCountSspClk();
 
-    volatile uint8_t b = 0;
+    volatile uint8_t b;
 
     // clear receiving shift register and holding register
     // What does this loop do? Is it TR1?
@@ -945,8 +945,8 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
  *  quiet: set to 'TRUE' to disable debug output
  */
 static void GetTagSamplesFor14443bDemod() {
-    bool gotFrame = false, finished = false;
-    int lastRxCounter = ISO14443B_DMA_BUFFER_SIZE;
+    bool gotFrame, finished = false;
+//    int lastRxCounter = ISO14443B_DMA_BUFFER_SIZE;
     int ci = 0, cq = 0;
     uint32_t time_0 = 0, time_stop = 0;
 
@@ -981,12 +981,12 @@ static void GetTagSamplesFor14443bDemod() {
         ci = upTo[0];
         cq = upTo[1];
         upTo += 2;
-        lastRxCounter -= 2;
+//        lastRxCounter -= 2;
 
         // restart DMA buffer to receive again.
         if (upTo >= dmaBuf + ISO14443B_DMA_BUFFER_SIZE) {
             upTo = dmaBuf;
-            lastRxCounter = ISO14443B_DMA_BUFFER_SIZE;
+//            lastRxCounter = ISO14443B_DMA_BUFFER_SIZE;
             AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) upTo;
             AT91C_BASE_PDC_SSC->PDC_RNCR = ISO14443B_DMA_BUFFER_SIZE;
         }
@@ -1462,8 +1462,8 @@ static void iso1444b_setup_sniff(void) {
  */
 void RAMFUNC SniffIso14443b(void) {
 
-    uint32_t time_0 = 0, time_start = 0, time_stop = 0;
-    int ci = 0, cq = 0;
+    uint32_t time_0 = 0, time_start = 0, time_stop;
+    int ci, cq;
 
     // We won't start recording the frames that we acquire until we trigger;
     // a good trigger condition to get started is probably when we see a
@@ -1572,7 +1572,7 @@ void SendRawCommand14443B_Ex(UsbCommand *c) {
     size_t len = c->arg[1] & 0xffff;
     uint32_t timeout = c->arg[2];
     uint8_t *cmd = c->d.asBytes;
-    uint8_t status = 0;
+    uint8_t status;
     uint32_t sendlen = sizeof(iso14b_card_select_t);
     uint8_t buf[USB_CMD_DATA_SIZE] = {0x00};
 
