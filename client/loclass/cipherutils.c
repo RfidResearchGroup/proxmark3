@@ -150,7 +150,7 @@ void printarr(char *name, uint8_t *arr, int len) {
     for (i = 0; i < len; i++) {
         cx += snprintf(output + cx, outsize - cx, "0x%02x,", *(arr + i)); //5 bytes per byte
     }
-    cx += snprintf(output + cx, outsize - cx, "};");
+    snprintf(output + cx, outsize - cx, "};");
     PrintAndLogDevice(NORMAL, output);
     free(output);
 }
