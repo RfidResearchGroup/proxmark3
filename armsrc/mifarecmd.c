@@ -1644,10 +1644,10 @@ void MifareEMemGet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
 //
 //-----------------------------------------------------------------------------
 void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
+    uint64_t ui64Key;
+    uint32_t cuid = 0;
     uint8_t numSectors = arg0;
     uint8_t keyType = arg1;
-    uint64_t ui64Key = 0;
-    uint32_t cuid = 0;
     struct Crypto1State mpcs = {0, 0};
     struct Crypto1State *pcs;
     pcs = &mpcs;
@@ -1676,7 +1676,6 @@ void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
         ui64Key = emlGetKey(sectorNo, keyType);
         if (sectorNo == 0) {
             if (isOK && mifare_classic_auth(pcs, cuid, FirstBlockOfSector(sectorNo), keyType, ui64Key, AUTH_FIRST)) {
-                isOK = false;
                 if (MF_DBGLEVEL >= 1) Dbprintf("Sector[%2d]. Auth error", sectorNo);
                 break;
             }
@@ -2002,7 +2001,7 @@ void MifareSetMod(uint8_t mod, uint8_t *key) {
     uint32_t cuid = 0;
     struct Crypto1State mpcs = {0, 0};
     struct Crypto1State *pcs = &mpcs;
-    int respLen = 0;
+    int respLen;
     uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0};
     uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0};
 
