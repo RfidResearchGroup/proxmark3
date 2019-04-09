@@ -2994,7 +2994,3 @@ void DetectNACKbug() {
     LEDsoff();
     set_tracing(false);
 }
-
-void AppendCrc14443a(uint8_t *data, int len) {
-    compute_crc(CRC_14443_A, data, len, data + len, data + len + 1);
-}
