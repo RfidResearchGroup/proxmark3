@@ -19,9 +19,15 @@
 //
 //-----------------------------------------------------------------------------
 
+// To compile it:
+// gcc -I ../../common -o hardnested_tables hardnested_tables.c
+
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#ifndef __APPLE__
+#include <malloc.h>
+#endif
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
@@ -65,8 +71,23 @@ static uint16_t PartialSumProperty(uint32_t state, odd_even_t odd_even) {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // bitarray functions
 
-#define malloc_bitarray(x) __builtin_assume_aligned(_aligned_malloc(x, __BIGGEST_ALIGNMENT__), __BIGGEST_ALIGNMENT__)
+#if defined (_WIN32)
+#define malloc_bitarray(x) __builtin_assume_aligned(_aligned_malloc((x), __BIGGEST_ALIGNMENT__), __BIGGEST_ALIGNMENT__)
 #define free_bitarray(x) _aligned_free(x)
+#elif defined (__APPLE__)
+static void *malloc_bitarray(size_t x) {
+    char *allocated_memory;
+    if (posix_memalign((void **)&allocated_memory, __BIGGEST_ALIGNMENT__, x)) {
+        return NULL;
+    } else {
+        return __builtin_assume_aligned(allocated_memory, __BIGGEST_ALIGNMENT__);
+    }
+}
+#define free_bitarray(x) free(x)
+#else
+#define malloc_bitarray(x) memalign(__BIGGEST_ALIGNMENT__, (x))
+#define free_bitarray(x) free(x)
+#endif
 
 static inline void clear_bitarray24(uint32_t *bitarray) {
     memset(bitarray, 0x00, sizeof(uint32_t) * (1 << 19));
