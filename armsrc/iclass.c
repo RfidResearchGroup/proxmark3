@@ -655,7 +655,6 @@ static RAMFUNC int ManchesterDecoding_iclass(uint32_t v) {
                     return false;
                 }
             }
-            error = 0;
         }
         return false;
     }
