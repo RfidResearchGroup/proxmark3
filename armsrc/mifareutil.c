@@ -14,13 +14,11 @@ int MF_DBGLEVEL = MF_DBG_ERROR;
 
 // crypto1 helpers
 void mf_crypto1_decryptEx(struct Crypto1State *pcs, uint8_t *data_in, int len, uint8_t *data_out) {
-    uint8_t bt = 0;
-    int i;
-
     if (len != 1) {
-        for (i = 0; i < len; i++)
+        for (int i = 0; i < len; i++)
             data_out[i] = crypto1_byte(pcs, 0x00, 0) ^ data_in[i];
     } else {
+        uint8_t bt = 0;        
         bt |= (crypto1_bit(pcs, 0, 0) ^ BIT(data_in[0], 0)) << 0;
         bt |= (crypto1_bit(pcs, 0, 0) ^ BIT(data_in[0], 1)) << 1;
         bt |= (crypto1_bit(pcs, 0, 0) ^ BIT(data_in[0], 2)) << 2;
@@ -39,12 +37,11 @@ void mf_crypto1_encrypt(struct Crypto1State *pcs, uint8_t *data, uint16_t len, u
 }
 
 void mf_crypto1_encryptEx(struct Crypto1State *pcs, uint8_t *data_in, uint8_t *keystream, uint8_t *data_out, uint16_t len, uint8_t *par) {
-    uint8_t bt = 0;
     int i;
     par[0] = 0;
 
     for (i = 0; i < len; i++) {
-        bt = data_in[i];
+        uint8_t bt = data_in[i];
         data_out[i] = crypto1_byte(pcs, keystream ? keystream[i] : 0x00, 0) ^ data_in[i];
         if ((i & 0x0007) == 0)
             par[ i >> 3 ] = 0;
@@ -78,7 +75,7 @@ int mifare_sendcmd(uint8_t cmd, uint8_t *data, uint8_t data_size, uint8_t *answe
 
 // send 2 byte commands
 int mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t *answer, uint8_t *answer_parity, uint32_t *timing) {
-    uint16_t pos, res;
+    uint16_t pos;
     uint8_t dcmd[4] = {cmd, data, 0x00, 0x00};
     uint8_t ecmd[4] = {0x00, 0x00, 0x00, 0x00};
     uint8_t par[1] = {0x00}; // 1 Byte parity is enough here
@@ -102,7 +99,7 @@ int mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd,
 
     if (crypted == CRYPT_ALL) {
         if (len == 1) {
-            res = 0;
+            uint16_t res = 0;
             res |= (crypto1_bit(pcs, 0, 0) ^ BIT(answer[0], 0)) << 0;
             res |= (crypto1_bit(pcs, 0, 0) ^ BIT(answer[0], 1)) << 1;
             res |= (crypto1_bit(pcs, 0, 0) ^ BIT(answer[0], 2)) << 2;
