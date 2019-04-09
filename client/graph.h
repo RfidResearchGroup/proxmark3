@@ -30,7 +30,7 @@ bool fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, int *firstClockEdge);
 void setGraphBuf(uint8_t *buff, size_t size);
 void save_restoreGB(uint8_t saveOpt);
 
-bool HasGraphData();
+bool HasGraphData(void);
 
 // Max graph trace len: 40000 (bigbuf) * 8 (at 1 bit per sample)
 #ifndef MAX_GRAPH_TRACE_LEN

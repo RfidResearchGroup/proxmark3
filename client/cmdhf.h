@@ -38,6 +38,6 @@ int CmdHFTune(const char *Cmd);
 int CmdHFSearch(const char *Cmd);
 int CmdHFSniff(const char *Cmd);
 
-int usage_hf_search();
-int usage_hf_sniff();
+int usage_hf_search(void);
+int usage_hf_sniff(void);
 #endif

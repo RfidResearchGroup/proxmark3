@@ -60,7 +60,7 @@ void pushBit(BitstreamOut *stream, bool bit);
 int bitsLeft(BitstreamIn *stream);
 #ifndef ON_DEVICE
 int testCipherUtils(void);
-int testMAC();
+int testMAC(void);
 #endif
 void push6bits(BitstreamOut *stream, uint8_t bits);
 void EncryptDES(bool key[56], bool outBlk[64], bool inBlk[64], int verbose) ;

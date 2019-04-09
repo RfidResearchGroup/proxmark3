@@ -32,7 +32,7 @@
 #include "loclass/cipherutils.h" // for decimating samples in getsamples
 #include "cmdlfem4x.h" // askem410xdecode
 
-command_t *CmdDataCommands();
+command_t *CmdDataCommands(void);
 
 int CmdData(const char *Cmd);
 void printDemodBuff(void);

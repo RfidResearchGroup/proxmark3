@@ -124,7 +124,7 @@ int calculateMasterKey(uint8_t first16bytes[], uint64_t master_key[]);
  * @brief Test function
  * @return
  */
-int testElite();
+int testElite(void);
 
 /**
       Here are some pretty optimal values that can be used to recover necessary data in only

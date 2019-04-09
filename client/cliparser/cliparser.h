@@ -35,7 +35,7 @@ int CLIParserInit(char *vprogramName, char *vprogramHint, char *vprogramHelp);
 int CLIParserParseString(const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec);
 int CLIParserParseStringEx(const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec, bool clueData);
 int CLIParserParseArg(int argc, char **argv, void *vargtable[], size_t vargtableLen, bool allowEmptyExec);
-void CLIParserFree();
+void CLIParserFree(void);
 
 int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen);
 int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen);

@@ -19,12 +19,12 @@ struct pcf7931_config {
     int16_t OffsetPosition;
 };
 
-int pcf7931_resetConfig();
-int pcf7931_printConfig();
+int pcf7931_resetConfig(void);
+int pcf7931_printConfig(void);
 
-int usage_pcf7931_read();
-int usage_pcf7931_write();
-int usage_pcf7931_config();
+int usage_pcf7931_read(void);
+int usage_pcf7931_write(void);
+int usage_pcf7931_config(void);
 
 int CmdLFPCF7931(const char *Cmd);
 

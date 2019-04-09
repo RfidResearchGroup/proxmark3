@@ -48,11 +48,11 @@ typedef struct {
 bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd);
 
 void SetOffline(bool value);
-bool IsOffline();
+bool IsOffline(void);
 
 void *uart_receiver(void *targ);
 void SendCommand(UsbCommand *c);
-void clearCommandBuffer();
+void clearCommandBuffer(void);
 
 #define FLASHMODE_SPEED 460800
 bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed);

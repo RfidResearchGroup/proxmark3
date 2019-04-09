@@ -52,7 +52,7 @@ typedef struct {
     uint32_t ks3;       // at ^ at_enc
 } TAuthData;
 
-void ClearAuthData();
+void ClearAuthData(void);
 
 uint8_t iso14443A_CRC_check(bool isResponse, uint8_t *d, uint8_t n);
 uint8_t iso14443B_CRC_check(uint8_t *d, uint8_t n);

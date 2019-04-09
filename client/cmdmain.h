@@ -42,6 +42,6 @@
 #endif
 
 int CommandReceived(char *Cmd);
-command_t *getTopLevelCommandTable();
+command_t *getTopLevelCommandTable(void);
 
 #endif
