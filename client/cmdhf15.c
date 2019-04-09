@@ -519,7 +519,6 @@ int CmdHF15Info(const char *Cmd) {
     uint8_t *req = c.d.asBytes;
     char cmdbuf[100] = {0};
     char *cmd = cmdbuf;
-    memset(cmdbuf, 0, sizeof(cmdbuf));
 
     strncpy(cmd, Cmd, sizeof(cmdbuf) - 1);
 
