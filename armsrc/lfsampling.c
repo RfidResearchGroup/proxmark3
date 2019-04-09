@@ -129,7 +129,7 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
     // use a bit stream to handle the output
     BitstreamOut data = { dest, 0, 0};
     int sample_counter = 0;
-    uint8_t sample = 0;
+    uint8_t sample;
 
     // if we want to do averaging
     uint32_t sample_sum = 0 ;
@@ -277,7 +277,7 @@ void doT55x7Acquisition(size_t sample_size) {
     if (bufsize > sample_size)
         bufsize = sample_size;
 
-    uint8_t curSample = 0, lastSample = 0;
+    uint8_t curSample, lastSample = 0;
     uint16_t i = 0, skipCnt = 0;
     bool startFound = false;
     bool highFound = false;
@@ -344,7 +344,7 @@ void doCotagAcquisition(size_t sample_size) {
         bufsize = sample_size;
 
     dest[0] = 0;
-    uint8_t sample = 0, firsthigh = 0, firstlow = 0;
+    uint8_t sample, firsthigh = 0, firstlow = 0;
     uint16_t i = 0;
     uint16_t noise_counter = 0;
 
@@ -393,7 +393,7 @@ uint32_t doCotagAcquisitionManchester() {
         bufsize = COTAG_BITS;
 
     dest[0] = 0;
-    uint8_t sample = 0, firsthigh = 0, firstlow = 0;
+    uint8_t sample, firsthigh = 0, firstlow = 0;
     uint16_t sample_counter = 0, period = 0;
     uint8_t curr = 0, prev = 0;
     uint16_t noise_counter = 0;
