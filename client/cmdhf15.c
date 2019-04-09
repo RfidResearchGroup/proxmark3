@@ -1238,7 +1238,7 @@ int CmdHF15Write(const char *Cmd) {
     UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
     uint8_t *req = c.d.asBytes;
     int reqlen = 0, pagenum, temp;
-    char cmdbuf[100];
+    char cmdbuf[100] = {0};
     char *cmd = cmdbuf;
     char *cmd2;
 
