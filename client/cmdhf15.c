@@ -1242,7 +1242,7 @@ int CmdHF15Write(const char *Cmd) {
     char *cmd = cmdbuf;
     char *cmd2;
 
-    strncpy(cmd, Cmd, 99);
+    strncpy(cmd, Cmd, sizeof(cmdbuf) - 1);
 
     if (!prepareHF15Cmd(&cmd, &c, ISO15_CMD_WRITE))
         return 0;
