@@ -56,8 +56,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
     uint8_t *dmaBuf = BigBuf_malloc(DMA_BUFFER_SIZE);
     uint8_t *data = dmaBuf;
     uint8_t previous_data = 0;
-    int maxDataLen = 0;
-    int dataLen = 0;
+    int dataLen, maxDataLen = 0;
     bool ReaderIsActive = false;
     bool TagIsActive = false;
 
@@ -310,8 +309,7 @@ bool RAMFUNC MfSniffLogic(const uint8_t *data, uint16_t len, uint8_t *parity, ui
 */
 
 void RAMFUNC MfSniffSend() {
-    uint16_t tracelen = BigBuf_get_traceLen();
-    uint16_t chunksize = 0;
+    uint16_t chunksize, tracelen = BigBuf_get_traceLen();
     int packlen = tracelen; // total number of bytes to send
     uint8_t *data = BigBuf_get_addr();
 
