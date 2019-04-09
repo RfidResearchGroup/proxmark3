@@ -517,11 +517,11 @@ int CmdHF15Info(const char *Cmd) {
     uint8_t *recv;
     UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
     uint8_t *req = c.d.asBytes;
-    char cmdbuf[100];
+    char cmdbuf[100] = {0};
     char *cmd = cmdbuf;
     memset(cmdbuf, 0, sizeof(cmdbuf));
 
-    strncpy(cmd, Cmd, 99);
+    strncpy(cmd, Cmd, sizeof(cmdbuf) - 1);
 
     if (!prepareHF15Cmd(&cmd, &c, ISO15_CMD_SYSINFO))
         return 0;
@@ -1082,9 +1082,9 @@ int CmdHF15Readmulti(const char *Cmd) {
     uint8_t *req = c.d.asBytes;
     int reqlen = 0;
     uint8_t pagenum, pagecount;
-    char cmdbuf[100];
+    char cmdbuf[100] = {0};
     char *cmd = cmdbuf;
-    strncpy(cmd, Cmd, 99);
+    strncpy(cmd, Cmd, sizeof(cmdbuf) - 1);
 
     if (!prepareHF15Cmd(&cmd, &c, ISO15_CMD_READMULTI))
         return 0;
@@ -1169,9 +1169,9 @@ int CmdHF15Read(const char *Cmd) {
     UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}};
     uint8_t *req = c.d.asBytes;
     int reqlen = 0, blocknum;
-    char cmdbuf[100];
+    char cmdbuf[100] = {0};
     char *cmd = cmdbuf;
-    strncpy(cmd, Cmd, 99);
+    strncpy(cmd, Cmd, sizeof(cmdbuf) - 1);
 
     if (!prepareHF15Cmd(&cmd, &c, ISO15_CMD_READ))
         return 0;
