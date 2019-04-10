@@ -515,7 +515,7 @@ int CmdAnalyseA(const char *Cmd) {
     if (errors || cmdp == 0) return usage_analyse_a();
 
 
-    UsbCommand c = {CMD_FPC_SEND, {0, 0, 0}};
+    UsbCommand c = {CMD_FPC_SEND, {0, 0, 0}, {{0}}};
     memcpy(c.d.asBytes, data, USB_CMD_DATA_SIZE);
     clearCommandBuffer();
     SendCommand(&c);

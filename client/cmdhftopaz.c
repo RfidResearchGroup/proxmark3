@@ -31,18 +31,18 @@ static struct {
 } topaz_tag;
 
 static void topaz_switch_on_field(void) {
-    UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_SELECT | ISO14A_NO_DISCONNECT | ISO14A_TOPAZMODE | ISO14A_NO_RATS, 0, 0}};
+    UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_SELECT | ISO14A_NO_DISCONNECT | ISO14A_TOPAZMODE | ISO14A_NO_RATS, 0, 0}, {{0}}};
     SendCommand(&c);
 }
 
 static void topaz_switch_off_field(void) {
-    UsbCommand c = {CMD_READER_ISO_14443a, {0, 0, 0}};
+    UsbCommand c = {CMD_READER_ISO_14443a, {0, 0, 0}, {{0}}};
     SendCommand(&c);
 }
 
 // send a raw topaz command, returns the length of the response (0 in case of error)
 static int topaz_send_cmd_raw(uint8_t *cmd, uint8_t len, uint8_t *response) {
-    UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_TOPAZMODE | ISO14A_NO_RATS, len, 0}};
+    UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_TOPAZMODE | ISO14A_NO_RATS, len, 0}, {{0}}};
     memcpy(c.d.asBytes, cmd, len);
     SendCommand(&c);
 

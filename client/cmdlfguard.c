@@ -295,7 +295,7 @@ int CmdGuardClone(const char *Cmd) {
     print_blocks(blocks, 4);
 
     UsbCommand resp;
-    UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}};
+    UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}, {{0}}};
 
     for (i = 0; i < 4; ++i) {
         c.arg[0] = blocks[i];
@@ -340,7 +340,7 @@ int CmdGuardSim(const char *Cmd) {
     arg1 = (clock1 << 8) | encoding;
     arg2 = (invert << 8) | separator;
 
-    UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};
+    UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}, {{0}}};
     memcpy(c.d.asBytes, bs, size);
     clearCommandBuffer();
     SendCommand(&c);

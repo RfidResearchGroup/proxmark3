@@ -140,7 +140,7 @@ int CmdFlashMemRead(const char *Cmd) {
         return 1;
     }
 
-    UsbCommand c = {CMD_FLASHMEM_READ, {start_index, len, 0}};
+    UsbCommand c = {CMD_FLASHMEM_READ, {start_index, len, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
@@ -153,7 +153,7 @@ int CmdFlashmemSpiBaudrate(const char *Cmd) {
     uint32_t baudrate = param_get32ex(Cmd, 0, 0, 10);
     baudrate = baudrate * 1000000;
     if (baudrate != FLASH_BAUD && baudrate != FLASH_MINBAUD) return usage_flashmem_spibaud();
-    UsbCommand c = {CMD_FLASHMEM_SET_SPIBAUDRATE, {baudrate, 0, 0}};
+    UsbCommand c = {CMD_FLASHMEM_SET_SPIBAUDRATE, {baudrate, 0, 0}, {{0}}};
     SendCommand(&c);
     return 0;
 }
@@ -275,7 +275,7 @@ int CmdFlashMemLoad(const char *Cmd) {
     while (bytes_remaining > 0) {
         uint32_t bytes_in_packet = MIN(FLASH_MEM_BLOCK_SIZE, bytes_remaining);
 
-        UsbCommand c = {CMD_FLASHMEM_WRITE, {start_index + bytes_sent, bytes_in_packet, 0}};
+        UsbCommand c = {CMD_FLASHMEM_WRITE, {start_index + bytes_sent, bytes_in_packet, 0}, {{0}}};
 
         memcpy(c.d.asBytes, data + bytes_sent, bytes_in_packet);
         clearCommandBuffer();
@@ -390,7 +390,7 @@ int CmdFlashMemWipe(const char *Cmd) {
     //Validations
     if (errors || cmdp == 0) return usage_flashmem_wipe();
 
-    UsbCommand c = {CMD_FLASHMEM_WIPE, {page, initalwipe, 0}};
+    UsbCommand c = {CMD_FLASHMEM_WIPE, {page, initalwipe, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     UsbCommand resp;
@@ -436,7 +436,7 @@ int CmdFlashMemInfo(const char *Cmd) {
     //Validations
     if (errors) return usage_flashmem_info();
 
-    UsbCommand c = {CMD_FLASHMEM_INFO, {0, 0, 0}};
+    UsbCommand c = {CMD_FLASHMEM_INFO, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     UsbCommand resp;
@@ -565,7 +565,7 @@ int CmdFlashMemInfo(const char *Cmd) {
 
         if (shall_write) {
             // save to mem
-            c = (UsbCommand) {CMD_FLASHMEM_WRITE, {FLASH_MEM_SIGNATURE_OFFSET, FLASH_MEM_SIGNATURE_LEN, 0}};
+            c = (UsbCommand) {CMD_FLASHMEM_WRITE, {FLASH_MEM_SIGNATURE_OFFSET, FLASH_MEM_SIGNATURE_LEN, 0}, {{0}}};
             memcpy(c.d.asBytes, sign, sizeof(sign));
             clearCommandBuffer();
             SendCommand(&c);

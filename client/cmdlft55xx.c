@@ -1012,7 +1012,7 @@ int CmdT55xxWakeUp(const char *Cmd) {
     }
     if (errors) return usage_t55xx_wakup();
 
-    UsbCommand c = {CMD_T55XX_WAKEUP, {password, 0, 0}};
+    UsbCommand c = {CMD_T55XX_WAKEUP, {password, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     PrintAndLogEx(SUCCESS, "Wake up command sent. Try read now");
@@ -1068,7 +1068,7 @@ int CmdT55xxWriteBlock(const char *Cmd) {
         return 0;
     }
 
-    UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {data, block, 0}};
+    UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {data, block, 0}, {{0}}};
     UsbCommand resp;
     c.d.asBytes[0] = (page1) ? 0x2 : 0;
     c.d.asBytes[0] |= (testMode) ? 0x4 : 0;
@@ -1503,7 +1503,7 @@ bool AquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password) {
     // arg1: which block to read
     // arg2: password
     uint8_t arg0 = (page << 1 | (pwdmode));
-    UsbCommand c = {CMD_T55XX_READ_BLOCK, {arg0, block, password}};
+    UsbCommand c = {CMD_T55XX_READ_BLOCK, {arg0, block, password}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     if (!WaitForResponseTimeout(CMD_ACK, NULL, 2500)) {
@@ -1763,7 +1763,7 @@ void t55x7_create_config_block(int tagtype) {
 
 int CmdResetRead(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    UsbCommand c = {CMD_T55XX_RESET_READ, {0, 0, 0}};
+    UsbCommand c = {CMD_T55XX_RESET_READ, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     if (!WaitForResponseTimeout(CMD_ACK, NULL, 2500)) {

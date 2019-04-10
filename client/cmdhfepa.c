@@ -31,7 +31,7 @@ int CmdHFEPACollectPACENonces(const char *Cmd) {
     // repeat n times
     for (uint32_t i = 0; i < n; i++) {
         // execute PACE
-        UsbCommand c = {CMD_EPA_PACE_COLLECT_NONCE, {(int)m, 0, 0}};
+        UsbCommand c = {CMD_EPA_PACE_COLLECT_NONCE, {(int)m, 0, 0}, {{0}}};
         clearCommandBuffer();
         SendCommand(&c);
         UsbCommand resp;

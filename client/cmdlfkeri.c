@@ -172,7 +172,7 @@ int CmdKeriClone(const char *Cmd) {
 
 
     UsbCommand resp;
-    UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}};
+    UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}, {{0}}};
 
 
     for (uint8_t i = 0; i < 3; i++) {
@@ -214,7 +214,7 @@ int CmdKeriSim(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "Simulating KERI - Internal Id: %u", internalid);
 
-    UsbCommand c = {CMD_PSK_SIM_TAG, {arg1, arg2, size}};
+    UsbCommand c = {CMD_PSK_SIM_TAG, {arg1, arg2, size}, {{0}}};
     memcpy(c.d.asBytes, bits, size);
     clearCommandBuffer();
     SendCommand(&c);

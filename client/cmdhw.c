@@ -347,7 +347,7 @@ int CmdLCD(const char *Cmd) {
 }
 
 int CmdLCDReset(const char *Cmd) {
-    UsbCommand c = {CMD_LCD_RESET, {strtol(Cmd, NULL, 0), 0, 0}};
+    UsbCommand c = {CMD_LCD_RESET, {strtol(Cmd, NULL, 0), 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
@@ -355,7 +355,7 @@ int CmdLCDReset(const char *Cmd) {
 #endif
 
 int CmdReadmem(const char *Cmd) {
-    UsbCommand c = {CMD_READ_MEM, {strtol(Cmd, NULL, 0), 0, 0}};
+    UsbCommand c = {CMD_READ_MEM, {strtol(Cmd, NULL, 0), 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
@@ -374,7 +374,7 @@ int CmdReset(const char *Cmd) {
  * 600kHz.
  */
 int CmdSetDivisor(const char *Cmd) {
-    UsbCommand c = {CMD_SET_LF_DIVISOR, {strtol(Cmd, NULL, 0), 0, 0}};
+    UsbCommand c = {CMD_SET_LF_DIVISOR, {strtol(Cmd, NULL, 0), 0, 0}, {{0}}};
 
     if (c.arg[0] < 19 || c.arg[0] > 255) {
         PrintAndLogEx(NORMAL, "divisor must be between 19 and 255");
@@ -415,7 +415,7 @@ int CmdVersion(const char *Cmd) {
     if (silent)
         return 0;
 
-    UsbCommand c = {CMD_VERSION, {0, 0, 0}};
+    UsbCommand c = {CMD_VERSION, {0, 0, 0}, {{0}}};
     UsbCommand resp;
     clearCommandBuffer();
     SendCommand(&c);

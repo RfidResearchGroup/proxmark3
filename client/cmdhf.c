@@ -103,7 +103,7 @@ int CmdHFSniff(const char *Cmd) {
     int skippairs =  param_get32ex(Cmd, 0, 0, 10);
     int skiptriggers =  param_get32ex(Cmd, 1, 0, 10);
 
-    UsbCommand c = {CMD_HF_SNIFFER, {skippairs, skiptriggers, 0}};
+    UsbCommand c = {CMD_HF_SNIFFER, {skippairs, skiptriggers, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;

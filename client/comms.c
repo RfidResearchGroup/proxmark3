@@ -449,22 +449,22 @@ bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint3
 
     switch (memtype) {
         case BIG_BUF: {
-            UsbCommand c = {CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K, {start_index, bytes, 0}};
+            UsbCommand c = {CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K, {start_index, bytes, 0}, {{0}}};
             SendCommand(&c);
             return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K);
         }
         case BIG_BUF_EML: {
-            UsbCommand c = {CMD_DOWNLOAD_EML_BIGBUF, {start_index, bytes, 0}};
+            UsbCommand c = {CMD_DOWNLOAD_EML_BIGBUF, {start_index, bytes, 0}, {{0}}};
             SendCommand(&c);
             return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_EML_BIGBUF);
         }
         case FLASH_MEM: {
-            UsbCommand c = {CMD_FLASHMEM_DOWNLOAD, {start_index, bytes, 0}};
+            UsbCommand c = {CMD_FLASHMEM_DOWNLOAD, {start_index, bytes, 0}, {{0}}};
             SendCommand(&c);
             return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_FLASHMEM_DOWNLOADED);
         }
         case SIM_MEM: {
-            //UsbCommand c = {CMD_DOWNLOAD_SIM_MEM, {start_index, bytes, 0}};
+            //UsbCommand c = {CMD_DOWNLOAD_SIM_MEM, {start_index, bytes, 0}, {{0}}};
             //SendCommand(&c);
             //return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_SIMMEM);
             return false;

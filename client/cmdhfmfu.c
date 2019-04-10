@@ -458,13 +458,13 @@ char *getUlev1CardSizeStr(uint8_t fsize) {
 }
 
 static void ul_switch_on_field(void) {
-    UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 0, 0}};
+    UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
 }
 
 static int ul_send_cmd_raw(uint8_t *cmd, uint8_t cmdlen, uint8_t *response, uint16_t responseLength) {
-    UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_APPEND_CRC | ISO14A_NO_RATS, cmdlen, 0}};
+    UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_APPEND_CRC | ISO14A_NO_RATS, cmdlen, 0}, {{0}}};
     memcpy(c.d.asBytes, cmd, cmdlen);
     clearCommandBuffer();
     SendCommand(&c);
@@ -533,7 +533,7 @@ static int ulc_requestAuthentication(uint8_t *nonce, uint16_t nonceLength) {
 
 static int ulc_authentication(uint8_t *key, bool switch_off_field) {
 
-    UsbCommand c = {CMD_MIFAREUC_AUTH, {switch_off_field}};
+    UsbCommand c = {CMD_MIFAREUC_AUTH, {switch_off_field}, {{0}}};
     memcpy(c.d.asBytes, key, 16);
     clearCommandBuffer();
     SendCommand(&c);
@@ -621,7 +621,7 @@ static int ul_fudan_check(void) {
     if (!ul_select(&card))
         return UL_ERROR;
 
-    UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 4, 0}};
+    UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 4, 0}, {{0}}};
 
     uint8_t cmd[4] = {0x30, 0x00, 0x02, 0xa7}; //wrong crc on purpose  should be 0xa8
     memcpy(c.d.asBytes, cmd, 4);
@@ -1475,7 +1475,7 @@ int CmdHF14AMfUWrBl(const char *Cmd) {
         PrintAndLogEx(NORMAL, "Block: %0d (0x%02X) [ %s]", blockNo, blockNo, sprint_hex(blockdata, 4));
 
     //Send write Block
-    UsbCommand c = {CMD_MIFAREU_WRITEBL, {blockNo}};
+    UsbCommand c = {CMD_MIFAREU_WRITEBL, {blockNo}, {{0}}};
     memcpy(c.d.asBytes, blockdata, 4);
 
     if (hasAuthKey) {
@@ -1581,7 +1581,7 @@ int CmdHF14AMfURdBl(const char *Cmd) {
     if (swapEndian && hasPwdKey)  authKeyPtr = SwapEndian64(authenticationkey, 4, 4);
 
     //Read Block
-    UsbCommand c = {CMD_MIFAREU_READBL, {blockNo}};
+    UsbCommand c = {CMD_MIFAREU_READBL, {blockNo}, {{0}}};
     if (hasAuthKey) {
         c.arg[1] = 1;
         memcpy(c.d.asBytes, authKeyPtr, 16);
@@ -1846,7 +1846,7 @@ int CmdHF14AMfUDump(const char *Cmd) {
     }
     ul_print_type(tagtype, 0);
     PrintAndLogEx(SUCCESS, "Reading tag memory...");
-    UsbCommand c = {CMD_MIFAREU_READCARD, {startPage, pages}};
+    UsbCommand c = {CMD_MIFAREU_READCARD, {startPage, pages}, {{0}}};
     if (hasAuthKey) {
         if (tagtype & UL_C)
             c.arg[2] = 1; //UL_C auth
@@ -2010,7 +2010,7 @@ int CmdHF14AMfURestore(const char *Cmd) {
     bool read_key = false;
     size_t filelen = 0;
     FILE *f;
-    UsbCommand c = {CMD_MIFAREU_WRITEBL, {0, 0, 0}};
+    UsbCommand c = {CMD_MIFAREU_WRITEBL, {0, 0, 0}, {{0}}};
 
     memset(authkey, 0x00, sizeof(authkey));
 
@@ -2487,7 +2487,7 @@ int CmdHF14AMfuGenDiverseKeys(const char *Cmd) {
 
     if (cmdp == 'r') {
         // read uid from tag
-        UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0}};
+        UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0}, {{0}}};
         clearCommandBuffer();
         SendCommand(&c);
         UsbCommand resp;
@@ -2602,7 +2602,7 @@ int CmdHF14AMfuPwdGen(const char *Cmd) {
 
     if (cmdp == 'r') {
         // read uid from tag
-        UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0}};
+        UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0}, {{0}}};
         clearCommandBuffer();
         SendCommand(&c);
         UsbCommand resp;

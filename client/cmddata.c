@@ -869,7 +869,7 @@ int CmdBuffClear(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_data_buffclear();
 
-    UsbCommand c = {CMD_BUFF_CLEAR, {0, 0, 0}};
+    UsbCommand c = {CMD_BUFF_CLEAR, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     ClearGraph(true);
@@ -1521,7 +1521,7 @@ int CmdTuneSamples(const char *Cmd) {
     int timeout = 0;
     PrintAndLogEx(INFO, "\nmeasuring antenna characteristics, please wait...");
 
-    UsbCommand c = {CMD_MEASURE_ANTENNA_TUNING, {0, 0, 0}};
+    UsbCommand c = {CMD_MEASURE_ANTENNA_TUNING, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     UsbCommand resp;

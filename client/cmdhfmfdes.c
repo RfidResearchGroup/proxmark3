@@ -51,7 +51,7 @@ int CmdHF14ADesWb(const char *Cmd) {
         PrintAndLogEx(NORMAL, "--block no:%02x key type:%02x key:%s", blockNo, keyType, sprint_hex(key, 6));
         PrintAndLogEx(NORMAL, "--data: %s", sprint_hex(bldata, 16));
 
-      UsbCommand c = {CMD_MIFARE_WRITEBL, {blockNo, keyType, 0}};
+      UsbCommand c = {CMD_MIFARE_WRITEBL, {blockNo, keyType, 0}, {{0}}};
         memcpy(c.d.asBytes, key, 6);
         memcpy(c.d.asBytes + 10, bldata, 16);
       SendCommand(&c);
@@ -94,7 +94,7 @@ int CmdHF14ADesRb(const char *Cmd) {
     // }
     // PrintAndLogEx(NORMAL, "--block no:%02x key type:%02x key:%s ", blockNo, keyType, sprint_hex(key, 6));
 
-    // UsbCommand c = {CMD_MIFARE_READBL, {blockNo, keyType, 0}};
+    // UsbCommand c = {CMD_MIFARE_READBL, {blockNo, keyType, 0}, {{0}}};
     // memcpy(c.d.asBytes, key, 6);
     // SendCommand(&c);
 
@@ -428,7 +428,7 @@ int CmdHF14ADesEnumApplications(const char *Cmd) {
     uint8_t aid[3];
     uint32_t options = (INIT | DISCONNECT);
 
-    UsbCommand c = {CMD_MIFARE_DESFIRE, {options, 0x01 }};
+    UsbCommand c = {CMD_MIFARE_DESFIRE, {options, 0x01 }, {{0}}};
     c.d.asBytes[0] = GET_APPLICATION_IDS;  //0x6a
 
     SendCommand(&c);
@@ -612,7 +612,7 @@ int CmdHF14ADesAuth(const char *Cmd) {
         return 1;
     }
     // algo, nyckell�ngd,
-    UsbCommand c = {CMD_MIFARE_DESFIRE_AUTH1, { cmdAuthMode, cmdAuthAlgo, cmdKeyNo }};
+    UsbCommand c = {CMD_MIFARE_DESFIRE_AUTH1, { cmdAuthMode, cmdAuthAlgo, cmdKeyNo }, {{0}}};
 
     c.d.asBytes[0] = keylength;
     memcpy(c.d.asBytes + 1, key, keylength);

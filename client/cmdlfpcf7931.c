@@ -100,7 +100,7 @@ int CmdLFPCF7931Read(const char *Cmd) {
     if (ctmp == 'H' || ctmp == 'h') return usage_pcf7931_read();
 
     UsbCommand resp;
-    UsbCommand c = {CMD_PCF7931_READ, {0, 0, 0}};
+    UsbCommand c = {CMD_PCF7931_READ, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {

@@ -186,7 +186,7 @@ int CmdJablotronClone(const char *Cmd) {
     print_blocks(blocks, 3);
 
     UsbCommand resp;
-    UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}};
+    UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}, {{0}}};
 
     for (uint8_t i = 0; i < 3; i++) {
         c.arg[0] = blocks[i];
@@ -223,7 +223,7 @@ int CmdJablotronSim(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "Simulating Jablotron - FullCode: %"PRIx64, fullcode);
 
-    UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};
+    UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}, {{0}}};
     getJablotronBits(fullcode, c.d.asBytes);
     clearCommandBuffer();
     SendCommand(&c);

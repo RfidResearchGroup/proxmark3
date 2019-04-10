@@ -256,7 +256,7 @@ int CmdLFHitagSniff(const char *Cmd) {
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_hitag_sniff();
 
-    UsbCommand c = {CMD_SNIFF_HITAG, {0, 0, 0}};
+    UsbCommand c = {CMD_SNIFF_HITAG, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
@@ -273,7 +273,7 @@ int CmdLFHitagSim(const char *Cmd) {
     int res = 0;
     char filename[FILE_PATH_SIZE] = { 0x00 };
 
-    UsbCommand c = {CMD_SIMULATE_HITAG, {0, 0, 0}};
+    UsbCommand c = {CMD_SIMULATE_HITAG, {0, 0, 0}, {{0}}};
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -590,7 +590,7 @@ int CmdLFHitagReader(const char *Cmd) {
 
 int CmdLFHitagCheckChallenges(const char *Cmd) {
 
-    UsbCommand c = { CMD_TEST_HITAGS_TRACES, {0, 0, 0}};
+    UsbCommand c = { CMD_TEST_HITAGS_TRACES, {0, 0, 0}, {{0}}};
     char filename[FILE_PATH_SIZE] = { 0x00 };
     size_t datalen = 0;
     int res = 0;
@@ -639,7 +639,7 @@ int CmdLFHitagCheckChallenges(const char *Cmd) {
 }
 
 int CmdLFHitagWriter(const char *Cmd) {
-    UsbCommand c = { CMD_WR_HITAG_S, {0, 0, 0}};
+    UsbCommand c = { CMD_WR_HITAG_S, {0, 0, 0}, {{0}}};
     hitag_data *htd = (hitag_data *)c.d.asBytes;
     hitag_function htf = param_get32ex(Cmd, 0, 0, 10);
 

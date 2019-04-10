@@ -175,7 +175,7 @@ int CmdParadoxSim(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "Simulating Paradox - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber);
 
-    UsbCommand c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}};
+    UsbCommand c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}, {{0}}};
     memcpy(c.d.asBytes, bs, size);
     clearCommandBuffer();
     SendCommand(&c);

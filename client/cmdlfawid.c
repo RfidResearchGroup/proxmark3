@@ -87,7 +87,7 @@ static int usage_lf_awid_brute(void) {
 }
 
 static bool sendPing(void) {
-    UsbCommand ping = {CMD_PING, {1, 2, 3}};
+    UsbCommand ping = {CMD_PING, {1, 2, 3}, {{0}}};
     SendCommand(&ping);
     SendCommand(&ping);
     SendCommand(&ping);
@@ -112,7 +112,7 @@ static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, ui
     uint64_t arg1 = (high << 8) + low;
     uint64_t arg2 = (invert << 8) + clk;
 
-    UsbCommand c = {CMD_FSK_SIM_TAG, {arg1, arg2, bs_len}};
+    UsbCommand c = {CMD_FSK_SIM_TAG, {arg1, arg2, bs_len}, {{0}}};
     memcpy(c.d.asBytes, bits, bs_len);
     clearCommandBuffer();
     SendCommand(&c);
@@ -230,7 +230,7 @@ int CmdAWIDRead_device(const char *Cmd) {
 
     if (Cmd[0] == 'h' || Cmd[0] == 'H') return usage_lf_awid_read();
     uint8_t findone = (Cmd[0] == '1') ? 1 : 0;
-    UsbCommand c = {CMD_AWID_DEMOD_FSK, {findone, 0, 0}};
+    UsbCommand c = {CMD_AWID_DEMOD_FSK, {findone, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
@@ -403,7 +403,7 @@ int CmdAWIDSim(const char *Cmd) {
     // arg1 --- fcHigh<<8 + fcLow
     // arg2 --- Inversion and clk setting
     // 96   --- Bitstream length: 96-bits == 12 bytes
-    UsbCommand c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}};
+    UsbCommand c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}, {{0}}};
     memcpy(c.d.asBytes, bits, size);
     clearCommandBuffer();
     SendCommand(&c);
@@ -446,7 +446,7 @@ int CmdAWIDClone(const char *Cmd) {
     print_blocks(blocks, 4);
 
     UsbCommand resp;
-    UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}};
+    UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}, {{0}}};
 
     for (uint8_t i = 0; i < 4; i++) {
         c.arg[0] = blocks[i];

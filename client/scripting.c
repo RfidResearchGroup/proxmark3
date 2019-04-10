@@ -262,7 +262,7 @@ static int l_foobar(lua_State *L) {
     printf("Arguments discarded, stack now contains %d elements", lua_gettop(L));
 
     // todo: this is not used, where was it intended for?
-    // UsbCommand response =  {CMD_MIFARE_READBL, {1337, 1338, 1339}};
+    // UsbCommand response =  {CMD_MIFARE_READBL, {1337, 1338, 1339}, {{0}}};
 
     printf("Now returning a uint64_t as a string");
     uint64_t x = 0xDEADC0DE;

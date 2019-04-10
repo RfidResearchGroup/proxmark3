@@ -199,7 +199,7 @@ const productName uidmapping[] = {
 int getUID(uint8_t *buf) {
 
     UsbCommand resp;
-    UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
+    UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}, {{0}}}; // len,speed,recv?
 
     c.d.asBytes[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1;
     c.d.asBytes[1] = ISO15_CMD_INVENTORY;
@@ -496,7 +496,7 @@ int CmdHF15Samples(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_15_samples();
 
-    UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693, {0, 0, 0}};
+    UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
 
@@ -515,7 +515,7 @@ int CmdHF15Info(const char *Cmd) {
 
     UsbCommand resp;
     uint8_t *recv;
-    UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
+    UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}, {{0}}}; // len,speed,recv?
     uint8_t *req = c.d.asBytes;
     char cmdbuf[100] = {0};
     char *cmd = cmdbuf;
@@ -593,7 +593,7 @@ int CmdHF15Record(const char *Cmd) {
     char cmdp =  tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_15_record();
 
-    UsbCommand c = {CMD_RECORD_RAW_ADC_SAMPLES_ISO_15693, {0, 0, 0}};
+    UsbCommand c = {CMD_RECORD_RAW_ADC_SAMPLES_ISO_15693, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
@@ -635,7 +635,7 @@ int CmdHF15Sim(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "Starting simulating UID %s", sprint_hex(uid, sizeof(uid)));
 
-    UsbCommand c = {CMD_SIMTAG_ISO_15693, {0, 0, 0}};
+    UsbCommand c = {CMD_SIMTAG_ISO_15693, {0, 0, 0}, {{0}}};
     memcpy(c.d.asBytes, uid, 8);
     clearCommandBuffer();
     SendCommand(&c);
@@ -651,7 +651,7 @@ int CmdHF15Afi(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "press pm3-button to cancel");
 
-    UsbCommand c = {CMD_ISO_15693_FIND_AFI, {strtol(Cmd, NULL, 0), 0, 0}};
+    UsbCommand c = {CMD_ISO_15693_FIND_AFI, {strtol(Cmd, NULL, 0), 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
@@ -717,7 +717,7 @@ int CmdHF15Dump(const char *Cmd) {
     memset(data, 0, sizeof(data));
 
     UsbCommand resp;
-    UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
+    UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}, {{0}}}; // len,speed,recv?
     uint8_t *req = c.d.asBytes;
     req[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS;
     req[1] = ISO15_CMD_READ;
@@ -914,7 +914,7 @@ int CmdHF15Raw(const char *Cmd) {
     if (strlen(Cmd) < 3 || cmdp == 'h' || cmdp == 'H') return usage_15_raw();
 
     UsbCommand resp;
-    UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
+    UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}, {{0}}}; // len,speed,recv?
     int reply = 1, fast = 1, i = 0;
     bool crc = false;
     char buf[5] = "";
@@ -1079,7 +1079,7 @@ int CmdHF15Readmulti(const char *Cmd) {
 
     UsbCommand resp;
     uint8_t *recv;
-    UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
+    UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}, {{0}}}; // len,speed,recv?
     uint8_t *req = c.d.asBytes;
     int reqlen = 0;
     uint8_t pagenum, pagecount;
@@ -1167,7 +1167,7 @@ int CmdHF15Read(const char *Cmd) {
     // arg0 (datalen,  cmd len?  .arg0 == crc?)
     // arg1 (speed == 0 == 1 of 256,  == 1 == 1 of 4 )
     // arg2 (recv == 1 == expect a response)
-    UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}};
+    UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}, {{0}}};
     uint8_t *req = c.d.asBytes;
     int reqlen = 0, blocknum;
     char cmdbuf[100] = {0};
@@ -1236,7 +1236,7 @@ int CmdHF15Write(const char *Cmd) {
 
     UsbCommand resp;
     uint8_t *recv;
-    UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
+    UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}, {{0}}}; // len,speed,recv?
     uint8_t *req = c.d.asBytes;
     int reqlen = 0, pagenum, temp;
     char cmdbuf[100] = {0};

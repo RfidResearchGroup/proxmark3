@@ -409,7 +409,7 @@ static int usage_hf14_nack(void) {
 }
 
 int GetHFMF14AUID(uint8_t *uid, int *uidlen) {
-    UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT, 0, 0}};
+    UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     UsbCommand resp;
@@ -520,7 +520,7 @@ int CmdHF14AMfWrBl(const char *Cmd) {
     PrintAndLogEx(NORMAL, "--block no:%d, key type:%c, key:%s", blockNo, keyType ? 'B' : 'A', sprint_hex(key, 6));
     PrintAndLogEx(NORMAL, "--data: %s", sprint_hex(bldata, 16));
 
-    UsbCommand c = {CMD_MIFARE_WRITEBL, {blockNo, keyType, 0}};
+    UsbCommand c = {CMD_MIFARE_WRITEBL, {blockNo, keyType, 0}, {{0}}};
     memcpy(c.d.asBytes, key, 6);
     memcpy(c.d.asBytes + 10, bldata, 16);
     clearCommandBuffer();
@@ -566,7 +566,7 @@ int CmdHF14AMfRdBl(const char *Cmd) {
     }
     PrintAndLogEx(NORMAL, "--block no:%d, key type:%c, key:%s ", blockNo, keyType ? 'B' : 'A', sprint_hex(key, 6));
 
-    UsbCommand c = {CMD_MIFARE_READBL, {blockNo, keyType, 0}};
+    UsbCommand c = {CMD_MIFARE_READBL, {blockNo, keyType, 0}, {{0}}};
     memcpy(c.d.asBytes, key, 6);
     clearCommandBuffer();
     SendCommand(&c);
@@ -638,7 +638,7 @@ int CmdHF14AMfRdSc(const char *Cmd) {
     }
     PrintAndLogEx(NORMAL, "--sector no:%d key type:%c key:%s ", sectorNo, keyType ? 'B' : 'A', sprint_hex(key, 6));
 
-    UsbCommand c = {CMD_MIFARE_READSC, {sectorNo, keyType, 0}};
+    UsbCommand c = {CMD_MIFARE_READSC, {sectorNo, keyType, 0}, {{0}}};
     memcpy(c.d.asBytes, key, 6);
     clearCommandBuffer();
     SendCommand(&c);
@@ -803,7 +803,7 @@ int CmdHF14AMfDump(const char *Cmd) {
     for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
         for (tries = 0; tries < MIFARE_SECTOR_RETRY; tries++) {
 
-            UsbCommand c = {CMD_MIFARE_READBL, {FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 0, 0}};
+            UsbCommand c = {CMD_MIFARE_READBL, {FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 0, 0}, {{0}}};
             memcpy(c.d.asBytes, keyA[sectorNo], 6);
             clearCommandBuffer();
             SendCommand(&c);
@@ -840,7 +840,7 @@ int CmdHF14AMfDump(const char *Cmd) {
 
             for (tries = 0; tries < MIFARE_SECTOR_RETRY; tries++) {
                 if (blockNo == NumBlocksPerSector(sectorNo) - 1) { // sector trailer. At least the Access Conditions can always be read with key A.
-                    UsbCommand c = {CMD_MIFARE_READBL, {FirstBlockOfSector(sectorNo) + blockNo, 0, 0}};
+                    UsbCommand c = {CMD_MIFARE_READBL, {FirstBlockOfSector(sectorNo) + blockNo, 0, 0}, {{0}}};
                     memcpy(c.d.asBytes, keyA[sectorNo], 6);
                     clearCommandBuffer();
                     SendCommand(&c);
@@ -848,7 +848,7 @@ int CmdHF14AMfDump(const char *Cmd) {
                 } else {                                           // data block. Check if it can be read with key A or key B
                     uint8_t data_area = (sectorNo < 32) ? blockNo : blockNo / 5;
                     if ((rights[sectorNo][data_area] == 0x03) || (rights[sectorNo][data_area] == 0x05)) { // only key B would work
-                        UsbCommand c = {CMD_MIFARE_READBL, {FirstBlockOfSector(sectorNo) + blockNo, 1, 0}};
+                        UsbCommand c = {CMD_MIFARE_READBL, {FirstBlockOfSector(sectorNo) + blockNo, 1, 0}, {{0}}};
                         memcpy(c.d.asBytes, keyB[sectorNo], 6);
                         SendCommand(&c);
                         received = WaitForResponseTimeout(CMD_ACK, &resp, 1500);
@@ -857,7 +857,7 @@ int CmdHF14AMfDump(const char *Cmd) {
                         PrintAndLogEx(WARNING, "access rights do not allow reading of sector %2d block %3d", sectorNo, blockNo);
                         tries = MIFARE_SECTOR_RETRY;
                     } else {                                                                              // key A would work
-                        UsbCommand c = {CMD_MIFARE_READBL, {FirstBlockOfSector(sectorNo) + blockNo, 0, 0}};
+                        UsbCommand c = {CMD_MIFARE_READBL, {FirstBlockOfSector(sectorNo) + blockNo, 0, 0}, {{0}}};
                         memcpy(c.d.asBytes, keyA[sectorNo], 6);
                         clearCommandBuffer();
                         SendCommand(&c);
@@ -1019,7 +1019,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 
     for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
         for (blockNo = 0; blockNo < NumBlocksPerSector(sectorNo); blockNo++) {
-            UsbCommand c = {CMD_MIFARE_WRITEBL, {FirstBlockOfSector(sectorNo) + blockNo, keyType, 0}};
+            UsbCommand c = {CMD_MIFARE_WRITEBL, {FirstBlockOfSector(sectorNo) + blockNo, keyType, 0}, {{0}}};
             memcpy(c.d.asBytes, key, 6);
             bytes_read = fread(bldata, 1, 16, fdump);
             if (bytes_read != 16) {
@@ -1251,7 +1251,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 
                 PrintAndLogEx(SUCCESS, "reading block %d", sectrail);
 
-                UsbCommand c = {CMD_MIFARE_READBL, {sectrail, 0, 0}};
+                UsbCommand c = {CMD_MIFARE_READBL, {sectrail, 0, 0}, {{0}}};
                 num_to_bytes(e_sector[i].Key[0], 6, c.d.asBytes); // KEY A
                 clearCommandBuffer();
                 SendCommand(&c);
@@ -1993,7 +1993,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 
                 PrintAndLogEx(NORMAL, "Reading block %d", sectrail);
 
-                UsbCommand c = {CMD_MIFARE_READBL, {sectrail, 0, 0}};
+                UsbCommand c = {CMD_MIFARE_READBL, {sectrail, 0, 0}, {{0}}};
                 num_to_bytes(e_sector[i].Key[0], 6, c.d.asBytes); // KEY A
                 clearCommandBuffer();
                 SendCommand(&c);
@@ -2223,7 +2223,7 @@ int CmdHF14AMf1kSim(const char *Cmd) {
                   , flags
                   , flags);
 
-    UsbCommand c = {CMD_SIMULATE_MIFARE_CARD, {flags, exitAfterNReads, 0}};
+    UsbCommand c = {CMD_SIMULATE_MIFARE_CARD, {flags, exitAfterNReads, 0}, {{0}}};
     memcpy(c.d.asBytes, uid, sizeof(uid));
     clearCommandBuffer();
     SendCommand(&c);
@@ -2283,7 +2283,7 @@ int CmdHF14AMfSniff(const char *Cmd) {
     PrintAndLogEx(NORMAL, "Press the key on pc keyboard to abort the client.\n");
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------------------\n");
 
-    UsbCommand c = {CMD_MIFARE_SNIFFER, {0, 0, 0}};
+    UsbCommand c = {CMD_MIFARE_SNIFFER, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
 
@@ -2414,7 +2414,7 @@ int CmdHF14AMfDbg(const char *Cmd) {
     uint8_t dbgMode = param_get8ex(Cmd, 0, 0, 10);
     if (dbgMode > 4) return usage_hf14_dbg();
 
-    UsbCommand c = {CMD_MIFARE_SET_DBGMODE, {dbgMode, 0, 0}};
+    UsbCommand c = {CMD_MIFARE_SET_DBGMODE, {dbgMode, 0, 0}, {{0}}};
     SendCommand(&c);
     return 0;
 }
@@ -2500,7 +2500,7 @@ int CmdHF14AMfEClear(const char *Cmd) {
     char c = tolower(param_getchar(Cmd, 0));
     if (c == 'h') return usage_hf14_eclr();
 
-    UsbCommand cmd = {CMD_MIFARE_EML_MEMCLR, {0, 0, 0}};
+    UsbCommand cmd = {CMD_MIFARE_EML_MEMCLR, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&cmd);
     return 0;
@@ -2685,7 +2685,7 @@ int CmdHF14AMfECFill(const char *Cmd) {
     numSectors = NumOfSectors(c);
 
     PrintAndLogEx(NORMAL, "--params: numSectors: %d, keyType: %c\n", numSectors, (keyType == 0) ? 'A' : 'B');
-    UsbCommand cmd = {CMD_MIFARE_EML_CARDLOAD, {numSectors, keyType, 0}};
+    UsbCommand cmd = {CMD_MIFARE_EML_CARDLOAD, {numSectors, keyType, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&cmd);
     return 0;
@@ -3147,7 +3147,7 @@ int CmdHf14AMfSetMod(const char *Cmd) {
         return 1;
     }
 
-    UsbCommand c = {CMD_MIFARE_SETMOD, {mod, 0, 0}};
+    UsbCommand c = {CMD_MIFARE_SETMOD, {mod, 0, 0}, {{0}}};
     memcpy(c.d.asBytes, key, 6);
     clearCommandBuffer();
     SendCommand(&c);
@@ -3248,7 +3248,7 @@ int CmdHF14AMfice(const char *Cmd) {
         flags = 0;
         flags |= initialize ? 0x0001 : 0;
         flags |= slow ? 0x0002 : 0;
-        UsbCommand c = {CMD_MIFARE_ACQUIRE_NONCES, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, flags}};
+        UsbCommand c = {CMD_MIFARE_ACQUIRE_NONCES, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, flags}, {{0}}};
         clearCommandBuffer();
         SendCommand(&c);
 
@@ -3281,7 +3281,7 @@ out:
         fclose(fnonces);
     }
 
-    UsbCommand c = {CMD_MIFARE_ACQUIRE_NONCES, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, 4}};
+    UsbCommand c = {CMD_MIFARE_ACQUIRE_NONCES, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, 4}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;

@@ -395,7 +395,7 @@ int CmdEM410xRead(const char *Cmd) {
 int CmdEM410xRead_device(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     uint8_t findone = (cmdp == '1') ? 1 : 0;
-    UsbCommand c = {CMD_EM410X_DEMOD, {findone, 0, 0}};
+    UsbCommand c = {CMD_EM410X_DEMOD, {findone, 0, 0}, {{0}}};
     SendCommand(&c);
     return 0;
 }
@@ -648,7 +648,7 @@ int CmdEM410xWrite(const char *Cmd) {
         return 0;
     }
 
-    UsbCommand c = {CMD_EM410X_WRITE_TAG, {card, (uint32_t)(id >> 32), (uint32_t)id}};
+    UsbCommand c = {CMD_EM410X_WRITE_TAG, {card, (uint32_t)(id >> 32), (uint32_t)id}, {{0}}};
     SendCommand(&c);
     return 0;
 }
@@ -1128,7 +1128,7 @@ bool demodEM4x05resp(uint32_t *word) {
 
 //////////////// 4205 / 4305 commands
 int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word) {
-    UsbCommand c = {CMD_EM4X_READ_WORD, {addr, pwd, usePwd}};
+    UsbCommand c = {CMD_EM4X_READ_WORD, {addr, pwd, usePwd}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     UsbCommand resp;
@@ -1231,7 +1231,7 @@ int CmdEM4x05Write(const char *Cmd) {
 
     uint16_t flag = (addr << 8) | (usePwd);
 
-    UsbCommand c = {CMD_EM4X_WRITE_WORD, {flag, data, pwd}};
+    UsbCommand c = {CMD_EM4X_WRITE_WORD, {flag, data, pwd}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     UsbCommand resp;
