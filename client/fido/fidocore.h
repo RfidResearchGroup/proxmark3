@@ -45,8 +45,8 @@ int FIDO2GetAssertion(uint8_t *params, uint8_t paramslen, uint8_t *Result, size_
 
 int FIDOCheckDERAndGetKey(uint8_t *der, size_t derLen, bool verbose, uint8_t *publicKey, size_t publicKeyMaxLen);
 
-char *fido2GetCmdMemberDescription(uint8_t cmdCode, bool isResponse, int memberNum);
-char *fido2GetCmdErrorDescription(uint8_t errorCode);
+const char *fido2GetCmdMemberDescription(uint8_t cmdCode, bool isResponse, int memberNum);
+const char *fido2GetCmdErrorDescription(uint8_t errorCode);
 
 bool CheckrpIdHash(json_t *json, uint8_t *hash);
 int FIDO2CreateMakeCredentionalReq(json_t *root, uint8_t *data, size_t maxdatalen, size_t *datalen);

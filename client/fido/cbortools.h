@@ -32,7 +32,7 @@ CborError CborGetArrayStringValue(CborValue *elm, char *data, size_t maxdatalen,
 CborError CborGetStringValue(CborValue *elm, char *data, size_t maxdatalen, size_t *datalen);
 CborError CborGetStringValueBuf(CborValue *elm);
 
-int CBOREncodeElm(json_t *root, char *rootElmId, CborEncoder *encoder);
+int CBOREncodeElm(json_t *root, const char *rootElmId, CborEncoder *encoder);
 CborError CBOREncodeClientDataHash(json_t *root, CborEncoder *encoder);
 
 #endif /* __CBORTOOLS_H__ */

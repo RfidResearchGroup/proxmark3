@@ -90,7 +90,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         timeout.tv_usec = 300000;  // 300 000 micro seconds
 
         char *colon = strrchr(addrstr, ':');
-        char *portstr;
+        const char *portstr;
         if (colon) {
             portstr = colon + 1;
             *colon = '\0';

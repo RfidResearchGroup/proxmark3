@@ -58,7 +58,7 @@ int ukbhit(void) {
 // log files functions
 
 // open, appped and close logfile
-void AddLogLine(char *fn, char *data, char *c) {
+void AddLogLine(const char *fn, const char *data, const char *c) {
     FILE *f = NULL;
     char filename[FILE_PATH_SIZE] = {0x00};
     int len = 0;
@@ -80,18 +80,18 @@ void AddLogLine(char *fn, char *data, char *c) {
     fclose(f);
 }
 
-void AddLogHex(char *fn, char *extData, const uint8_t *data, const size_t len) {
+void AddLogHex(const char *fn, const char *extData, const uint8_t *data, const size_t len) {
     AddLogLine(fn, extData, sprint_hex(data, len));
 }
 
-void AddLogUint64(char *fn, char *data, const uint64_t value) {
+void AddLogUint64(const char *fn, const char *data, const uint64_t value) {
     char buf[20] = {0};
     memset(buf, 0x00, sizeof(buf));
     sprintf(buf, "%016" PRIx64 "", value);
     AddLogLine(fn, data, buf);
 }
 
-void AddLogCurrentDT(char *fn) {
+void AddLogCurrentDT(const char *fn) {
     char buf[20];
     memset(buf, 0x00, sizeof(buf));
     struct tm *curTime;
@@ -106,7 +106,7 @@ void AddLogCurrentDT(char *fn) {
 // param *uid  -  pointer to uid byte array
 // param *ext  -  ".log"
 // param uidlen - length of uid array.
-void FillFileNameByUID(char *filenamePrefix, uint8_t *uid, const char *ext, int uidlen) {
+void FillFileNameByUID(char *filenamePrefix, const uint8_t *uid, const char *ext, const int uidlen) {
     if (filenamePrefix == NULL || uid == NULL || ext == NULL) {
         printf("[!] error parameter is NULL\n");
         return;

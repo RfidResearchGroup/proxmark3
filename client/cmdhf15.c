@@ -46,7 +46,7 @@
 typedef struct {
     uint64_t uid;
     int mask; // how many MSB bits used
-    char *desc;
+    const char *desc;
 } productName;
 
 const productName uidmapping[] = {
@@ -235,7 +235,7 @@ int getUID(uint8_t *buf) {
 // get a product description based on the UID
 // uid[8] tag uid
 // returns description of the best match
-static char *getTagInfo_15(uint8_t *uid) {
+static const char *getTagInfo_15(uint8_t *uid) {
     uint64_t myuid, mask;
     int i = 0, best = -1;
     memcpy(&myuid, uid, sizeof(uint64_t));
@@ -259,7 +259,7 @@ static char *getTagInfo_15(uint8_t *uid) {
 }
 
 // return a clear-text message to an errorcode
-static char *TagErrorStr(uint8_t error) {
+static const char *TagErrorStr(uint8_t error) {
     switch (error) {
         case 0x01:
             return "The command is not supported";
@@ -350,7 +350,7 @@ int usage_15_dump(void) {
     return 0;
 }
 int usage_15_restore(void) {
-    char *options[][2] = {
+    const char *options[][2] = {
         {"h", "this help"},
         {"-2", "use slower '1 out of 256' mode"},
         {"-o", "set OPTION Flag (needed for TI)"},
@@ -364,7 +364,7 @@ int usage_15_restore(void) {
     return 0;
 }
 int usage_15_raw(void) {
-    char *options[][2] = {
+    const char *options[][2] = {
         {"-r", "do not read response" },
         {"-2", "use slower '1 out of 256' mode" },
         {"-c", "calculate and append CRC" },

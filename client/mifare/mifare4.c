@@ -72,7 +72,7 @@ AccessConditions_t MFAccessConditionsTrailer[] = {
     {0x07, "rdCbyAB"}
 };
 
-char *mfGetAccessConditionsDesc(uint8_t blockn, uint8_t *data) {
+const char *mfGetAccessConditionsDesc(uint8_t blockn, uint8_t *data) {
     static char StaticNone[] = "none";
 
     uint8_t data1 = ((data[1] >> 4) & 0x0f) >> blockn;

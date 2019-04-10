@@ -19,15 +19,15 @@ static const char COSEEmptyStr[] = "";
 
 typedef struct {
     int Value;
-    char *Name;
-    char *Description;
+    const char *Name;
+    const char *Description;
 } COSEValueNameDesc_t;
 
 typedef struct {
     int Value;
-    char *Type;
-    char *Name;
-    char *Description;
+    const char *Type;
+    const char *Name;
+    const char *Description;
 } COSEValueTypeNameDesc_t;
 
 // kty - Key Type Values

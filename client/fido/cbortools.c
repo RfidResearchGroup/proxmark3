@@ -161,7 +161,7 @@ static CborError dumprecursive(uint8_t cmdCode, bool isResponse, CborValue *it, 
                 if (cmdCode > 0 && nestingLevel == 1 && isMapType && !(elmCount % 2)) {
                     int64_t val;
                     cbor_value_get_int64(it, &val);
-                    char *desc = fido2GetCmdMemberDescription(cmdCode, isResponse, val);
+                    const char *desc = fido2GetCmdMemberDescription(cmdCode, isResponse, val);
                     if (desc)
                         printf(" (%s)", desc);
                 }
@@ -459,7 +459,7 @@ CborError CborGetStringValueBuf(CborValue *elm) {
     return CborGetStringValue(elm, stringBuf, sizeof(stringBuf), NULL);
 };
 
-int CBOREncodeElm(json_t *root, char *rootElmId, CborEncoder *encoder) {
+int CBOREncodeElm(json_t *root, const char *rootElmId, CborEncoder *encoder) {
     json_t *elm = NULL;
     if (rootElmId && strlen(rootElmId) && rootElmId[0] == '$')
         elm = json_path_get(root, rootElmId);

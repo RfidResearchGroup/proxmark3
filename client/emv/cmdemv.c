@@ -652,7 +652,7 @@ void InitTransactionParameters(struct tlvdb *tlvRoot, bool paramLoadJSON, enum T
     }
 
     //9F66:(Terminal Transaction Qualifiers (TTQ)) len:4
-    char *qVSDC = "\x26\x00\x00\x00";
+    const char *qVSDC = "\x26\x00\x00\x00";
     if (GenACGPO) {
         qVSDC = "\x26\x80\x00\x00";
     }

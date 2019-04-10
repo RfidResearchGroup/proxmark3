@@ -93,7 +93,7 @@ void dumpCommandsRecursive(const command_t cmds[], int markdown) {
     }
 
     while (cmds[i].Name) {
-        char *cmd_offline = "N";
+        const char *cmd_offline = "N";
         if (cmds[i].Help[0] == '{' && ++i) continue;
 
         if (cmds[i].Offline)

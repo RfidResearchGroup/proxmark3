@@ -142,7 +142,7 @@ void reverse_arraycopy(uint8_t *arr, uint8_t *dest, size_t len) {
     }
 }
 
-void printarr(char *name, uint8_t *arr, int len) {
+void printarr(const char *name, uint8_t *arr, int len) {
     int cx, i;
     size_t outsize = 40 + strlen(name) + len * 5;
     char *output = calloc(outsize, sizeof(char));
@@ -155,7 +155,7 @@ void printarr(char *name, uint8_t *arr, int len) {
     free(output);
 }
 
-void printvar(char *name, uint8_t *arr, int len) {
+void printvar(const char *name, uint8_t *arr, int len) {
     int cx, i;
     size_t outsize = 40 + strlen(name) + len * 2;
     char *output = calloc(outsize, sizeof(char));
@@ -168,7 +168,7 @@ void printvar(char *name, uint8_t *arr, int len) {
     free(output);
 }
 
-void printarr_human_readable(char *title, uint8_t *arr, int len) {
+void printarr_human_readable(const char *title, uint8_t *arr, int len) {
     int cx, i;
     size_t outsize = 100 + strlen(title) + len * 4;
     char *output = calloc(outsize, sizeof(char));

@@ -41,7 +41,7 @@ enum asn1_tag_t {
 
 struct asn1_tag {
     tlv_tag_t tag;
-    char *name;
+    const char *name;
     enum asn1_tag_t type;
     const void *data;
 };

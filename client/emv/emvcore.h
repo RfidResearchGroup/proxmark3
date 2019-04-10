@@ -43,7 +43,7 @@ enum TransactionType {
     TT_QVSDCMCHIP,
     TT_CDA,
 };
-extern char *TransactionTypeStr[];
+extern const char *TransactionTypeStr[];
 
 typedef struct {
     uint8_t CLA;

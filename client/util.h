@@ -189,11 +189,11 @@
 uint8_t g_debugMode;
 
 int ukbhit(void);
-void AddLogLine(char *fn, char *data, char *c);
-void AddLogHex(char *fn, char *extData, const uint8_t *data, const size_t len);
-void AddLogUint64(char *fn, char *data, const uint64_t value);
-void AddLogCurrentDT(char *fn);
-void FillFileNameByUID(char *filenamePrefix, uint8_t *uid, const char *ext, int uidlen);
+void AddLogLine(const char *fn, const char *data, const char *c);
+void AddLogHex(const char *fn, const char *extData, const uint8_t *data, const size_t len);
+void AddLogUint64(const char *fn, const char *data, const uint64_t value);
+void AddLogCurrentDT(const char *fn);
+void FillFileNameByUID(char *filenamePrefix, const uint8_t *uid, const char *ext, const int uidlen);
 
 // fill buffer from structure [{uint8_t data, size_t length},...]
 int FillBuffer(uint8_t *data, size_t maxDataLength, size_t *dataLength, ...);

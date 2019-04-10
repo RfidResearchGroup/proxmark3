@@ -221,7 +221,7 @@ void printbegin() {
     PrintAndLogDevice(NORMAL, "          | x| y|z0|z1|z2|z3|z4|z5|z6|z7|");
 }
 
-void printState(char *desc, uint64_t c) {
+void printState(const char *desc, uint64_t c) {
     if (debug_print < 2)
         return;
 
@@ -569,7 +569,7 @@ int testKeyDiversificationWithMasterkeyTestcases() {
     return error;
 }
 
-void print64bits(char *name, uint64_t val) {
+void print64bits(const char *name, uint64_t val) {
     printf("%s%08x%08x\n", name, (uint32_t)(val >> 32), (uint32_t)(val & 0xFFFFFFFF));
 }
 

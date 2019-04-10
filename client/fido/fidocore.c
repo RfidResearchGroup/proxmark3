@@ -25,8 +25,8 @@
 
 typedef struct {
     uint8_t ErrorCode;
-    char *ShortDescription;
-    char *Description;
+    const char *ShortDescription;
+    const char *Description;
 } fido2Error_t;
 
 fido2Error_t fido2Errors[] = {
@@ -84,7 +84,7 @@ typedef struct {
     fido2Commands Command;
     fido2PacketType PckType;
     int MemberNumber;
-    char *Description;
+    const char *Description;
 } fido2Desc_t;
 
 fido2Desc_t fido2CmdGetInfoRespDesc[] = {
@@ -149,7 +149,7 @@ fido2Desc_t fido2CmdGetInfoRespDesc[] = {
     {fido2COSEKey,              ptResponse,   -4, "d - private key"},
 };
 
-char *fido2GetCmdErrorDescription(uint8_t errorCode) {
+const char *fido2GetCmdErrorDescription(uint8_t errorCode) {
     for (int i = 0; i < sizeof(fido2Errors) / sizeof(fido2Error_t); i++)
         if (fido2Errors[i].ErrorCode == errorCode)
             return fido2Errors[i].Description;
@@ -157,7 +157,7 @@ char *fido2GetCmdErrorDescription(uint8_t errorCode) {
     return fido2Errors[0].Description;
 }
 
-char *fido2GetCmdMemberDescription(uint8_t cmdCode, bool isResponse, int memberNum) {
+const char *fido2GetCmdMemberDescription(uint8_t cmdCode, bool isResponse, int memberNum) {
     for (int i = 0; i < sizeof(fido2CmdGetInfoRespDesc) / sizeof(fido2Desc_t); i++)
         if (fido2CmdGetInfoRespDesc[i].Command == cmdCode &&
                 fido2CmdGetInfoRespDesc[i].PckType == (isResponse ? ptResponse : ptQuery) &&

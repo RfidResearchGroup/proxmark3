@@ -14,12 +14,12 @@
 
 void **argtable = NULL;
 size_t argtableLen = 0;
-char *programName = NULL;
-char *programHint = NULL;
-char *programHelp = NULL;
+const char *programName = NULL;
+const char *programHint = NULL;
+const char *programHelp = NULL;
 char buf[500] = {0};
 
-int CLIParserInit(char *vprogramName, char *vprogramHint, char *vprogramHelp) {
+int CLIParserInit(const char *vprogramName, const char *vprogramHint, const char *vprogramHelp) {
     argtable = NULL;
     argtableLen = 0;
     programName = vprogramName;

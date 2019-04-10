@@ -42,7 +42,7 @@ enum emv_tag_t {
 
 struct emv_tag {
     tlv_tag_t tag;
-    char *name;
+    const char *name;
     enum emv_tag_t type;
     const void *data;
 };
@@ -819,8 +819,8 @@ bool emv_tag_dump(const struct tlv *tlv, FILE *f, int level) {
     return true;
 }
 
-char *emv_get_tag_name(const struct tlv *tlv) {
-    static char *defstr = "";
+const char *emv_get_tag_name(const struct tlv *tlv) {
+    static const char *defstr = "";
 
     if (!tlv)
         return defstr;

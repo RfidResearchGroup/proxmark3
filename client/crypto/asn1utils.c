@@ -71,7 +71,7 @@ static bool print_cb(void *data, const struct tlv *tlv, int level, bool is_leaf)
     return true;
 }
 
-int asn1_print(uint8_t *asn1buf, size_t asn1buflen, char *indent) {
+int asn1_print(uint8_t *asn1buf, size_t asn1buflen, const char *indent) {
 
     struct tlvdb *t = tlvdb_parse_multi(asn1buf, asn1buflen);
     if (t) {

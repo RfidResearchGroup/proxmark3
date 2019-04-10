@@ -15,26 +15,26 @@
 
 typedef struct {
     tlv_tag_t Tag;
-    char *Name;
+    const char *Name;
 } ApplicationDataElm;
 
-char *GetApplicationDataName(tlv_tag_t tag);
+const char *GetApplicationDataName(tlv_tag_t tag);
 
-int JsonSaveJsonObject(json_t *root, char *path, json_t *value);
-int JsonSaveStr(json_t *root, char *path, char *value);
-int JsonSaveInt(json_t *root, char *path, int value);
-int JsonSaveBufAsHexCompact(json_t *elm, char *path, uint8_t *data, size_t datalen);
-int JsonSaveBufAsHex(json_t *elm, char *path, uint8_t *data, size_t datalen);
-int JsonSaveHex(json_t *elm, char *path, uint64_t data, int datalen);
+int JsonSaveJsonObject(json_t *root, const char *path, json_t *value);
+int JsonSaveStr(json_t *root, const char *path, const char *value);
+int JsonSaveInt(json_t *root, const char *path, int value);
+int JsonSaveBufAsHexCompact(json_t *elm, const char *path, uint8_t *data, size_t datalen);
+int JsonSaveBufAsHex(json_t *elm, const char *path, uint8_t *data, size_t datalen);
+int JsonSaveHex(json_t *elm, const char *path, uint64_t data, int datalen);
 
-int JsonSaveTLVValue(json_t *root, char *path, struct tlvdb *tlvdbelm);
-int JsonSaveTLVElm(json_t *elm, char *path, struct tlv *tlvelm, bool saveName, bool saveValue, bool saveAppDataLink);
-int JsonSaveTLVTreeElm(json_t *elm, char *path, struct tlvdb *tlvdbelm, bool saveName, bool saveValue, bool saveAppDataLink);
+int JsonSaveTLVValue(json_t *root, const char *path, struct tlvdb *tlvdbelm);
+int JsonSaveTLVElm(json_t *elm, const char *path, struct tlv *tlvelm, bool saveName, bool saveValue, bool saveAppDataLink);
+int JsonSaveTLVTreeElm(json_t *elm, const char *path, struct tlvdb *tlvdbelm, bool saveName, bool saveValue, bool saveAppDataLink);
 
-int JsonSaveTLVTree(json_t *root, json_t *elm, char *path, struct tlvdb *tlvdbelm);
+int JsonSaveTLVTree(json_t *root, json_t *elm, const char *path, struct tlvdb *tlvdbelm);
 
-int JsonLoadStr(json_t *root, char *path, char *value);
-int JsonLoadBufAsHex(json_t *elm, char *path, uint8_t *data, size_t maxbufferlen, size_t *datalen);
+int JsonLoadStr(json_t *root, const char *path, char *value);
+int JsonLoadBufAsHex(json_t *elm, const char *path, uint8_t *data, size_t maxbufferlen, size_t *datalen);
 
 bool ParamLoadFromJson(struct tlvdb *tlv);
 

@@ -136,7 +136,7 @@ static const manufactureName manufactureMapping[] = {
 // get a product description based on the UID
 //  uid[8] tag uid
 // returns description of the best match
-char *getTagInfo(uint8_t uid) {
+const char *getTagInfo(uint8_t uid) {
 
     int i;
     int len = sizeof(manufactureMapping) / sizeof(manufactureName);
@@ -566,7 +566,7 @@ int CmdHF14AInfo(const char *Cmd) {
             pos++;
         }
         if (card.ats[0] > pos && card.ats[0] <  card.ats_len - 2) {
-            char *tip = "";
+            const char *tip = "";
             if (card.ats[0] - pos >= 7) {
                 if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x01\xBC\xD6", 7) == 0) {
                     tip = "-> MIFARE Plus X 2K or 4K";

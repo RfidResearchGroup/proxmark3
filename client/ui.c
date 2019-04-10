@@ -19,11 +19,11 @@ bool GridLocked = false;
 bool showDemod = true;
 
 pthread_mutex_t print_lock = PTHREAD_MUTEX_INITIALIZER;
-static char *logfilename = "proxmark3.log";
+static const char *logfilename = "proxmark3.log";
 
 float complex cexpf(float complex Z);
 
-void PrintAndLogOptions(char *str[][2], size_t size, size_t space) {
+void PrintAndLogOptions(const char *str[][2], size_t size, size_t space) {
     char buff[2000] = "Options:\n";
     char format[2000] = "";
     size_t counts[2] = {0, 0};
@@ -56,7 +56,7 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
     char buffer2[MAX_PRINT_BUFFER + 20] = {0};
     char *token = NULL;
     //   {NORMAL, SUCCESS, INFO, FAILED, WARNING, ERR, DEBUG}
-    static char *prefixes[7] = { "", "[+] ", "[=] ", "[-] ", "[!] ", "[!!] ", "[#] "};
+    static const char *prefixes[7] = { "", "[+] ", "[=] ", "[-] ", "[!] ", "[!!] ", "[#] "};
 
     switch (level) {
         case ERR:
@@ -118,7 +118,7 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
     }
 }
 
-void PrintAndLog(char *fmt, ...) {
+void PrintAndLog(const char *fmt, ...) {
     char *saved_line;
     int saved_point;
     va_list argptr, argptr2;

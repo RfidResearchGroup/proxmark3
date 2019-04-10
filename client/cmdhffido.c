@@ -621,7 +621,7 @@ void CheckSlash(char *fileName) {
         strcat(fileName, "/");
 }
 
-int GetExistsFileNameJson(char *prefixDir, char *reqestedFileName, char *fileName) {
+int GetExistsFileNameJson(const char *prefixDir, const char *reqestedFileName, char *fileName) {
     fileName[0] = 0x00;
     strcpy(fileName, get_my_executable_directory());
     CheckSlash(fileName);

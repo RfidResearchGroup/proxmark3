@@ -69,7 +69,7 @@ uint64_t x_bytes_to_num(uint8_t *src, size_t len);
 uint8_t reversebytes(uint8_t b);
 void reverse_arraybytes(uint8_t *arr, size_t len);
 void reverse_arraycopy(uint8_t *arr, uint8_t *dest, size_t len);
-void printarr(char *name, uint8_t *arr, int len);
-void printvar(char *name, uint8_t *arr, int len);
-void printarr_human_readable(char *title, uint8_t *arr, int len);
+void printarr(const char *name, uint8_t *arr, int len);
+void printvar(const char *name, uint8_t *arr, int len);
+void printarr_human_readable(const char *title, uint8_t *arr, int len);
 #endif // CIPHERUTILS_H

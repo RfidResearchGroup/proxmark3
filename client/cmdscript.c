@@ -56,7 +56,7 @@ int str_ends_with(const char *str, const char *suffix) {
 /**
  * Utility to check the ending of a string (used to check file suffix)
  */
-bool endsWith(char *base, char *str) {
+bool endsWith(const char *base, const char *str) {
     int blen = strlen(base);
     int slen = strlen(str);
     return (blen >= slen) && (0 == strcmp(base + blen - slen, str));
@@ -125,7 +125,7 @@ int CmdScriptRun(const char *Cmd) {
     int arg_len = 0;
     sscanf(Cmd, "%127s%n %255[^\n\r]%n", script_name, &name_len, arguments, &arg_len);
 
-    char *suffix = "";
+    const char *suffix = "";
     if (!endsWith(script_name, ".lua")) {
         suffix = ".lua";
     }

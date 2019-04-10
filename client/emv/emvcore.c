@@ -20,7 +20,7 @@ static const char *PSElist [] = {
 };
 //static const size_t PSElistLen = sizeof(PSElist)/sizeof(char*);
 
-char *TransactionTypeStr[] = {
+const char *TransactionTypeStr[] = {
     "MSD",
     "VSDC",
     "qVCDCMCHIP",
@@ -434,7 +434,7 @@ int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
     int res;
     bool fileFound = false;
 
-    char *PSE_or_PPSE = PSENum == 1 ? "PSE" : "PPSE";
+    const char *PSE_or_PPSE = PSENum == 1 ? "PSE" : "PPSE";
 
     // select PPSE
     res = EMVSelectPSE(channel, ActivateField, true, PSENum, data, sizeof(data), &datalen, &sw);

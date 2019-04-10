@@ -236,7 +236,7 @@ int opterr = 1;         /* if error message should be printed */
 int optind = 1;         /* index into parent argv vector */
 int optopt = '?';       /* character checked for validity */
 int optreset;           /* reset getopt */
-char *optarg;           /* argument associated with option */
+const char *optarg;     /* argument associated with option */
 #endif
 
 #define PRINT_ERROR     ((opterr) && (*options != ':'))
@@ -259,7 +259,7 @@ static int parse_long_options(char *const *, const char *,
 static int gcd(int, int);
 static void permute_args(int, int, int, char *const *);
 
-static char *place = EMSG; /* option letter processing */
+static const char *place = EMSG; /* option letter processing */
 
 /* XXX: set optreset to 1 rather than these two */
 static int nonopt_start = -1; /* first non option argument (for permute) */
@@ -377,7 +377,7 @@ permute_args(int panonopt_start, int panonopt_end, int opt_end,
 static int
 parse_long_options(char *const *nargv, const char *options,
                    const struct option *long_options, int *idx, int short_too) {
-    char *current_argv, *has_equal;
+    const char *current_argv, *has_equal;
     size_t current_argv_len;
     int i, match;
 
@@ -4325,9 +4325,9 @@ void arg_print_option(FILE *fp,
 static
 void arg_print_gnuswitch(FILE *fp, struct arg_hdr * *table) {
     int tabindex;
-    char *format1 = " -%c";
-    char *format2 = " [-%c";
-    char *suffix = "";
+    const char *format1 = " -%c";
+    const char *format2 = " [-%c";
+    const char *suffix = "";
 
     /* print all mandatory switches that are without argument values */
     for (tabindex = 0;
