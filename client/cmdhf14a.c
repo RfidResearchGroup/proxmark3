@@ -170,6 +170,7 @@ static int usage_hf_14a_sim(void) {
     PrintAndLogEx(NORMAL, "            9 = FM11RF005SH Shanghai Metro");
 //  PrintAndLogEx(NORMAL, "    u     : 4, 7 or 10 byte UID");
     PrintAndLogEx(NORMAL, "    u     : 4, 7 byte UID");
+    PrintAndLogEx(NORMAL, "    i     : (Optional) Interactive, means that console will not be returned until simulation finished");
     PrintAndLogEx(NORMAL, "    x     : (Optional) Performs the 'reader attack', nr/ar attack against a reader");
     PrintAndLogEx(NORMAL, "    e     : (Optional) Fill simulator keys from found keys");
     PrintAndLogEx(NORMAL, "    v     : (Optional) Verbose");
@@ -720,6 +721,11 @@ int CmdHF14ASim(const char *Cmd) {
             case 'h':
             case 'H':
                 return usage_hf_14a_sim();
+            case 'i':
+            case 'I':
+                flags |= FLAG_INTERACTIVE;
+                cmdp++;
+                break;
             case 't':
             case 'T':
                 // Retrieve the tag type
@@ -784,17 +790,19 @@ int CmdHF14ASim(const char *Cmd) {
     SendCommand(&c);
     UsbCommand resp;
 
-    PrintAndLogEx(SUCCESS, "press pm3-button to abort simulation");
+    if (flags & FLAG_INTERACTIVE) {
+        PrintAndLogEx(INFO, "Press pm3-button or send another cmd to abort simulation");
+        while (!ukbhit()) {
+            if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) continue;
+            if (!(flags & FLAG_NR_AR_ATTACK)) break;
+            if ((resp.arg[0] & 0xffff) != CMD_SIMULATE_MIFARE_CARD) break;
 
-    while (!ukbhit()) {
-        if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) continue;
-        if (!(flags & FLAG_NR_AR_ATTACK)) break;
-        if ((resp.arg[0] & 0xffff) != CMD_SIMULATE_MIFARE_CARD) break;
-
-        memcpy(data, resp.d.asBytes, sizeof(data));
-        readerAttack(data[0], setEmulatorMem, verbose);
+            memcpy(data, resp.d.asBytes, sizeof(data));
+            readerAttack(data[0], setEmulatorMem, verbose);
+        }
+        showSectorTable();
     }
-    showSectorTable();
+
     return 0;
 }
 

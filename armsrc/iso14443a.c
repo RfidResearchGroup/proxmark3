@@ -822,9 +822,6 @@ bool prepare_allocated_tag_modulation(tag_response_info_t *response_info, uint8_
 // 'hf 14a sim'
 //-----------------------------------------------------------------------------
 void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
-
-#define ATTACK_KEY_COUNT 8 // keep same as define in cmdhfmf.c -> readerAttack()
-
     uint8_t sak = 0;
     uint32_t cuid = 0;
     uint32_t nonce = 0;
@@ -843,9 +840,12 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
     uint8_t cardAUTHKEY = 0xff;  // no authentication
     // allow collecting up to 8 sets of nonces to allow recovery of up to 8 keys
 
-    nonces_t ar_nr_nonces[ATTACK_KEY_COUNT]; // for attack types moebius
+#define ATTACK_KEY_COUNT 8 // keep same as define in cmdhfmf.c -> readerAttack()
+#define COLLECTED_NONCES_COUNT 32 // max array size for save completed nonces for NR/AR attack
+    nonces_t ar_nr_nonces[ATTACK_KEY_COUNT]; // for random sector access
     memset(ar_nr_nonces, 0x00, sizeof(ar_nr_nonces));
-    uint8_t    moebius_count = 0;
+    nonces_t ar_nr_collected[COLLECTED_NONCES_COUNT]; // completed nonces
+    uint8_t nonces_count = 0;
 
     switch (tagType) {
         case 1: { // MIFARE Classic 1k
@@ -1270,14 +1270,13 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
                         ar_nr_nonces[index].ar2 = ar;
                         ar_nr_nonces[index].state = SECOND;
 
-                        // send to client
-                        cmd_send(CMD_ACK, CMD_SIMULATE_MIFARE_CARD, 0, 0, &ar_nr_nonces[index], sizeof(nonces_t));
-
-                        ar_nr_nonces[index].state = EMPTY;
-                        ar_nr_nonces[index].sector = 0;
-                        ar_nr_nonces[index].keytype = 0;
-
-                        moebius_count++;
+                        // save nonce to completed collection
+                        if (nonces_count < COLLECTED_NONCES_COUNT) {
+                            memcpy(&ar_nr_collected[nonces_count++], &ar_nr_nonces[index], sizeof(nonces_t));
+                            ar_nr_nonces[index].state = EMPTY;
+                            ar_nr_nonces[index].sector = 0;
+                            ar_nr_nonces[index].keytype = 0;
+                        }
                         break;
                     }
                     default:
@@ -1390,7 +1389,31 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
         }
     }
 
-    cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
+    Dbprintf("Emulator stopped.  Trace length: %d ", BigBuf_get_traceLen());
+    
+    // print collected ar/nr nonces
+    for (uint8_t i = 0; i < nonces_count; i++) {
+        // for interactive call send collected nonces to client
+        if ((flags & FLAG_INTERACTIVE) == FLAG_INTERACTIVE)
+            cmd_send(CMD_ACK, CMD_SIMULATE_MIFARE_CARD, 0, 0, &ar_nr_collected[i], sizeof(nonces_t));
+        else {
+            // for non-interactive call print nonces
+            Dbprintf("%s, sector %2d: mfkey32v2 %08x %08x %08x %08x %08x %08x %08x",
+                     ar_nr_collected[i].keytype == 0 ? "keyA" : "keyB",
+                     ar_nr_collected[i].sector,
+                     ar_nr_collected[i].cuid,  //UID
+                     ar_nr_collected[i].nonce, //NT
+                     ar_nr_collected[i].nr,    //NR1
+                     ar_nr_collected[i].ar,    //AR1
+                     ar_nr_collected[i].nonce2,//NT2
+                     ar_nr_collected[i].nr2,   //NR2
+                     ar_nr_collected[i].ar2    //AR2
+                    );
+        }
+    }
+    // interrupt interactive client
+    if ((flags & FLAG_INTERACTIVE) == FLAG_INTERACTIVE)
+        cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
     switch_off();
 
     set_tracing(false);
@@ -1400,7 +1423,6 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
         Dbprintf("-[ Wake ups after halt  [%d]", happened);
         Dbprintf("-[ Messages after halt  [%d]", happened2);
         Dbprintf("-[ Num of received cmd  [%d]", cmdsRecvd);
-        Dbprintf("-[ Num of moebius tries [%d]", moebius_count);
     }
 }
 
