@@ -194,7 +194,7 @@ int CmdFlexdemod(const char *Cmd) {
 #ifndef LONG_WAIT
 #define LONG_WAIT 100
 #endif
-    int i, j, start, bit, sum, phase = 0;
+    int i, j, start, bit, sum;
 
     int data[GraphTraceLen];
     memcpy(data, GraphBuffer, GraphTraceLen);
@@ -252,7 +252,7 @@ int CmdFlexdemod(const char *Cmd) {
     i = 0;
     for (bit = 0; bit < 64; bit++) {
 
-        phase = (bits[bit] == 0) ? 0 : 1;
+        int phase = (bits[bit] == 0) ? 0 : 1;
 
         for (j = 0; j < 32; j++) {
             GraphBuffer[i++] = phase;
