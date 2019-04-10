@@ -453,11 +453,8 @@ void calcWiegand(uint8_t fmtlen, uint16_t fc, uint64_t cardno, uint8_t *bits) {
 int CmdHIDWiegand(const char *Cmd) {
     uint32_t oem = 0, fc = 0;
     uint64_t cardnum = 0;
-    uint64_t blocks = 0, wiegand = 0;
-
-    uint8_t bits[BITS];
+    uint8_t bits[BITS] = {0};
     uint8_t *bs = bits;
-    memset(bs, 0, sizeof(bits));
 
     uint8_t ctmp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) < 3 || ctmp == 'h') return usage_lf_hid_wiegand();
@@ -474,11 +471,11 @@ int CmdHIDWiegand(const char *Cmd) {
         memset(bits, 0x00, sizeof(bits));
         calcWiegand(fmtlen[i], fc, cardnum, bs);
         PrintAndLogEx(NORMAL, "ice:: %s \n", sprint_bin(bs, fmtlen[i]));
-        wiegand = (uint64_t)bytebits_to_byte(bs, 32) << 32 | bytebits_to_byte(bs + 32, 32);
+        uint64_t wiegand = (uint64_t)bytebits_to_byte(bs, 32) << 32 | bytebits_to_byte(bs + 32, 32);
 
         addHIDMarker(fmtlen[i], bs);
         PrintAndLogEx(NORMAL, "ice:: %s\n", sprint_bin(bs, BITS));
-        blocks = (uint64_t)bytebits_to_byte(bs + 32, 32) << 32 | bytebits_to_byte(bs + 64, 32);
+        uint64_t blocks = (uint64_t)bytebits_to_byte(bs + 32, 32) << 32 | bytebits_to_byte(bs + 64, 32);
         uint8_t shifts = 64 - fmtlen[i];
         wiegand >>= shifts;
 
