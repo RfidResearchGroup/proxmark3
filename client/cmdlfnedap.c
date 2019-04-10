@@ -53,7 +53,7 @@ int detectNedap(uint8_t *dest, size_t *size) {
     return (int) startIdx;
 }
 
-int GetNedapBits(uint32_t cn, uint8_t *nedapBits) {
+static int GetNedapBits(uint32_t cn, uint8_t *nedapBits) {
 
     uint8_t pre[128];
     memset(pre, 0x00, sizeof(pre));

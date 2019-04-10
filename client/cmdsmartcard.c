@@ -109,7 +109,7 @@ out:
     return retval;
 }
 
-uint8_t GetATRTA1(uint8_t *atr, size_t atrlen) {
+static uint8_t GetATRTA1(uint8_t *atr, size_t atrlen) {
     if (atrlen > 2) {
         uint8_t T0 = atr[1];
         if (T0 & 0x10)
@@ -176,17 +176,17 @@ float FArray[] = {
     0     // b1111 RFU
 };
 
-int GetATRDi(uint8_t *atr, size_t atrlen) {
+static int GetATRDi(uint8_t *atr, size_t atrlen) {
     uint8_t TA1 = GetATRTA1(atr, atrlen);
     return DiArray[TA1 & 0x0F];  // The 4 low-order bits of TA1 (4th MSbit to 1st LSbit) encode Di
 }
 
-int GetATRFi(uint8_t *atr, size_t atrlen) {
+static int GetATRFi(uint8_t *atr, size_t atrlen) {
     uint8_t TA1 = GetATRTA1(atr, atrlen);
     return FiArray[TA1 >> 4];  // The 4 high-order bits of TA1 (8th MSbit to 5th LSbit) encode fmax and Fi
 }
 
-float GetATRF(uint8_t *atr, size_t atrlen) {
+static float GetATRF(uint8_t *atr, size_t atrlen) {
     uint8_t TA1 = GetATRTA1(atr, atrlen);
     return FArray[TA1 >> 4];  // The 4 high-order bits of TA1 (8th MSbit to 5th LSbit) encode fmax and Fi
 }

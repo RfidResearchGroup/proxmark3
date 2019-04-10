@@ -25,9 +25,11 @@
 
 static int CmdHelp(const char *Cmd);
 
-size_t nbytes(size_t nbits) {
+/*
+static size_t nbytes(size_t nbits) {
     return (nbits / 8) + ((nbits % 8) > 0);
 }
+*/
 static int usage_hitag_sniff(void) {
     PrintAndLogEx(NORMAL, "Sniff traffic between Hitag reader and tag. Use " _YELLOW_("`lf hitag list`")" to view collected data.");
     PrintAndLogEx(NORMAL, "Usage:   lf hitag sniff [h] ");

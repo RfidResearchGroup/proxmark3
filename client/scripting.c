@@ -847,7 +847,7 @@ static int l_T55xx_detect(lua_State *L) {
  * @param path
  * @return
  */
-int setLuaPath(lua_State *L, const char *path) {
+static int setLuaPath(lua_State *L, const char *path) {
     lua_getglobal(L, "package");
     lua_getfield(L, -1, "path");   // get field "path" from table at top of stack (-1)
     const char *cur_path = lua_tostring(L, -1);   // grab path string from top of stack

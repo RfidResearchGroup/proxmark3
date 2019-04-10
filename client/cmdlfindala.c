@@ -52,7 +52,7 @@ static int usage_lf_indala_sim(void) {
 
 // redesigned by marshmellow adjusted from existing decode functions
 // indala id decoding
-int detectIndala(uint8_t *dest, size_t *size, uint8_t *invert) {
+static int detectIndala(uint8_t *dest, size_t *size, uint8_t *invert) {
 
     uint8_t preamble64_i[]  = {0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0};
     uint8_t preamble224_i[] = {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0};

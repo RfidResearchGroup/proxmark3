@@ -76,7 +76,7 @@ int getnoralsyBits(uint32_t id, uint16_t year, uint8_t *bits) {
 
 // by iceman
 // find Noralsy preamble in already demoded data
-int detectNoralsy(uint8_t *dest, size_t *size) {
+static int detectNoralsy(uint8_t *dest, size_t *size) {
     if (*size < 96) return -1; //make sure buffer has data
     size_t startIdx = 0;
     uint8_t preamble[] = {1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0};

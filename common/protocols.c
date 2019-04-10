@@ -28,15 +28,15 @@ uint32_t GetT55xxClockBit(uint32_t clock) {
 #include "ui.h"
 #define PrintAndLogDevice(level, format, args...)  PrintAndLogEx(level, format , ## args)
 
-uint8_t isset(uint8_t val, uint8_t mask) {
+static uint8_t isset(uint8_t val, uint8_t mask) {
     return (val & mask);
 }
 
-uint8_t notset(uint8_t val, uint8_t mask) {
+static uint8_t notset(uint8_t val, uint8_t mask) {
     return !(val & mask);
 }
 
-void fuse_config(const picopass_hdr *hdr) {
+static void fuse_config(const picopass_hdr *hdr) {
     uint8_t fuses = hdr->conf.fuses;
 
     if (isset(fuses, FUSE_FPERS))
@@ -100,7 +100,7 @@ void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *max_blk, uint8_t *
     }
 }
 
-void mem_app_config(const picopass_hdr *hdr) {
+static void mem_app_config(const picopass_hdr *hdr) {
     uint8_t mem = hdr->conf.mem_config;
     uint8_t chip = hdr->conf.chip_config;
     uint8_t applimit = hdr->conf.app_limit;
@@ -136,7 +136,7 @@ void mem_app_config(const picopass_hdr *hdr) {
         PrintAndLogDevice(NORMAL, "\tCredit - Kc");
     }
 }
-void print_picopass_info(const picopass_hdr *hdr) {
+static void print_picopass_info(const picopass_hdr *hdr) {
     fuse_config(hdr);
     mem_app_config(hdr);
 }

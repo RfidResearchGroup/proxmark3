@@ -72,7 +72,7 @@ int detectPyramid(uint8_t *dest, size_t *size, int *waveStartIdx) {
 }
 
 // Works for 26bits.
-int GetPyramidBits(uint32_t fc, uint32_t cn, uint8_t *pyramidBits) {
+static int GetPyramidBits(uint32_t fc, uint32_t cn, uint8_t *pyramidBits) {
 
     uint8_t pre[128];
     memset(pre, 0x00, sizeof(pre));

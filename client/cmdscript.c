@@ -39,7 +39,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int str_ends_with(const char *str, const char *suffix) {
+static int str_ends_with(const char *str, const char *suffix) {
 
     if (str == NULL || suffix == NULL)
         return 0;
@@ -56,7 +56,7 @@ int str_ends_with(const char *str, const char *suffix) {
 /**
  * Utility to check the ending of a string (used to check file suffix)
  */
-bool endsWith(const char *base, const char *str) {
+static bool endsWith(const char *base, const char *str) {
     int blen = strlen(base);
     int slen = strlen(str);
     return (blen >= slen) && (0 == strcmp(base + blen - slen, str));

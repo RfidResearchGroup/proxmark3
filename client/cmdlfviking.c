@@ -38,7 +38,7 @@ static int usage_lf_viking_sim(void) {
 }
 
 // calc checksum
-uint64_t getVikingBits(uint32_t id) {
+static uint64_t getVikingBits(uint32_t id) {
     uint8_t checksum = ((id >> 24) & 0xFF) ^ ((id >> 16) & 0xFF) ^ ((id >> 8) & 0xFF) ^ (id & 0xFF) ^ 0xF2 ^ 0xA8;
     uint64_t ret = (uint64_t)0xF2 << 56;
     ret |= (uint64_t)id << 8;

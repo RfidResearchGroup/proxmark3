@@ -555,7 +555,7 @@ void SetSIMDInstr(SIMDExecInstr instr) {
     bitslice_test_nonces_function_p = &bitslice_test_nonces_dispatch;
 }
 
-SIMDExecInstr GetSIMDInstr() {
+static SIMDExecInstr GetSIMDInstr() {
     SIMDExecInstr instr = SIMD_NONE;
 
 #if defined (__i386__) || defined (__x86_64__)

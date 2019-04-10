@@ -11,7 +11,7 @@
 
 #define MAX_ARGS 20
 
-int split(char *str, char *arr[MAX_ARGS]) {
+static int split(char *str, char *arr[MAX_ARGS]) {
     int beginIndex = 0;
     int endIndex;
     int maxWords = MAX_ARGS;
@@ -389,7 +389,7 @@ int CmdrevengTestC(const char *Cmd) {
 }
 
 //returns a calloced string (needs to be freed)
-char *SwapEndianStr(const char *inStr, const size_t len, const uint8_t blockSize) {
+static char *SwapEndianStr(const char *inStr, const size_t len, const uint8_t blockSize) {
     char *tmp = calloc(len + 1, sizeof(char));
     for (uint8_t block = 0; block < (uint8_t)(len / blockSize); block++) {
         for (size_t i = 0; i < blockSize; i += 2) {

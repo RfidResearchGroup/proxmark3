@@ -7,6 +7,7 @@
 #include <limits.h>
 
 #include "pm3_bit_limits.h"
+#include "pm3_bitlib.h"
 
 
 /* FIXME: Assumes lua_Integer is ptrdiff_t */
