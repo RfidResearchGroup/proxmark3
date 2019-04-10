@@ -11,7 +11,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_analyse_lcr(void) {
+static int usage_analyse_lcr(void) {
     PrintAndLogEx(NORMAL, "Specifying the bytes of a UID with a known LRC will find the last byte value");
     PrintAndLogEx(NORMAL, "needed to generate that LRC with a rolling XOR. All bytes should be specified in HEX.");
     PrintAndLogEx(NORMAL, "");
@@ -25,7 +25,7 @@ int usage_analyse_lcr(void) {
     PrintAndLogEx(NORMAL, "expected output: Target (BA) requires final LRC XOR byte value: 5A");
     return 0;
 }
-int usage_analyse_checksum(void) {
+static int usage_analyse_checksum(void) {
     PrintAndLogEx(NORMAL, "The bytes will be added with eachother and than limited with the applied mask");
     PrintAndLogEx(NORMAL, "Finally compute ones' complement of the least significant bytes");
     PrintAndLogEx(NORMAL, "");
@@ -41,7 +41,7 @@ int usage_analyse_checksum(void) {
     PrintAndLogEx(NORMAL, "expected output: 0x61");
     return 0;
 }
-int usage_analyse_crc(void) {
+static int usage_analyse_crc(void) {
     PrintAndLogEx(NORMAL, "A stub method to test different crc implementations inside the PM3 sourcecode. Just because you figured out the poly, doesn't mean you get the desired output");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  analyse crc [h] <bytes>");
@@ -53,7 +53,7 @@ int usage_analyse_crc(void) {
     PrintAndLogEx(NORMAL, "      analyse crc 137AF00A0A0D");
     return 0;
 }
-int usage_analyse_nuid(void) {
+static int usage_analyse_nuid(void) {
     PrintAndLogEx(NORMAL, "Generate 4byte NUID from 7byte UID");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  analyse hid [h] <bytes>");
@@ -65,7 +65,7 @@ int usage_analyse_nuid(void) {
     PrintAndLogEx(NORMAL, "      analyse nuid 11223344556677");
     return 0;
 }
-int usage_analyse_a(void) {
+static int usage_analyse_a(void) {
     PrintAndLogEx(NORMAL, "Iceman's personal garbage test command");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  analyse a [h] d <bytes>");

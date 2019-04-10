@@ -11,7 +11,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_keri_clone(void) {
+static int usage_lf_keri_clone(void) {
     PrintAndLogEx(NORMAL, "clone a KERI tag to a T55x7 tag.");
     PrintAndLogEx(NORMAL, "Usage: lf keri clone [h] <id> <Q5>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -24,7 +24,7 @@ int usage_lf_keri_clone(void) {
     return 0;
 }
 
-int usage_lf_keri_sim(void) {
+static int usage_lf_keri_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of KERI card with specified card number.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "");

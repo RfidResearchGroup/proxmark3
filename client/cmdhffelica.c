@@ -11,7 +11,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_hf_felica_sim(void) {
+static int usage_hf_felica_sim(void) {
     PrintAndLogEx(NORMAL, "\n Emulating ISO/18092 FeliCa tag \n");
     PrintAndLogEx(NORMAL, "Usage: hf felica sim [h] t <type> [v]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -23,7 +23,7 @@ int usage_hf_felica_sim(void) {
     PrintAndLogEx(NORMAL, "          hf felica sim t 1 ");
     return 0;
 }
-int usage_hf_felica_sniff(void) {
+static int usage_hf_felica_sniff(void) {
     PrintAndLogEx(NORMAL, "It get data from the field and saves it into command buffer.");
     PrintAndLogEx(NORMAL, "Buffer accessible from command 'hf list felica'");
     PrintAndLogEx(NORMAL, "Usage:  hf felica sniff <s > <t>");
@@ -33,7 +33,7 @@ int usage_hf_felica_sniff(void) {
     PrintAndLogEx(NORMAL, "          hf felica sniff s 1000");
     return 0;
 }
-int usage_hf_felica_simlite(void) {
+static int usage_hf_felica_simlite(void) {
     PrintAndLogEx(NORMAL, "\n Emulating ISO/18092 FeliCa Lite tag \n");
     PrintAndLogEx(NORMAL, "Usage: hf felica litesim [h] u <uid>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -43,7 +43,7 @@ int usage_hf_felica_simlite(void) {
     PrintAndLogEx(NORMAL, "          hf felica litesim 11223344556677");
     return 0;
 }
-int usage_hf_felica_dumplite(void) {
+static int usage_hf_felica_dumplite(void) {
     PrintAndLogEx(NORMAL, "\n Dump ISO/18092 FeliCa Lite tag \n");
     PrintAndLogEx(NORMAL, "press button to abort run, otherwise it will loop for 200sec.");
     PrintAndLogEx(NORMAL, "Usage: hf felica litedump [h]");
@@ -53,7 +53,7 @@ int usage_hf_felica_dumplite(void) {
     PrintAndLogEx(NORMAL, "          hf felica litedump");
     return 0;
 }
-int usage_hf_felica_raw(void) {
+static int usage_hf_felica_raw(void) {
     PrintAndLogEx(NORMAL, "Usage: hf felica raw [-h] [-r] [-c] [-p] [-a] <0A 0B 0C ... hex>");
     PrintAndLogEx(NORMAL, "       -h    this help");
     PrintAndLogEx(NORMAL, "       -r    do not read response");

@@ -21,7 +21,7 @@
 #include "lfdemod.h"
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_paradox_sim(void) {
+static int usage_lf_paradox_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of Paradox card with specified card number.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.");

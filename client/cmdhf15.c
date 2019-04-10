@@ -284,17 +284,17 @@ static const char *TagErrorStr(uint8_t error) {
     }
 }
 
-int usage_15_demod(void) {
+static int usage_15_demod(void) {
     PrintAndLogEx(NORMAL, "Tries to demodulate / decode ISO15693, from downloaded samples.\n"
                   "Gather samples with 'hf 15 read' / 'hf 15 record'");
     return 0;
 }
-int usage_15_samples(void) {
+static int usage_15_samples(void) {
     PrintAndLogEx(NORMAL, "Acquire samples as Reader (enables carrier, send inquiry\n"
                   "and download it to graphbuffer.  Try 'hf 15 demod'  to try to demodulate/decode signal");
     return 0;
 }
-int usage_15_info(void) {
+static int usage_15_info(void) {
     PrintAndLogEx(NORMAL, "Uses the optional command 'get_systeminfo' 0x2B to try and extract information\n"
                   "command may fail, depending on tag.\n"
                   "defaults to '1 out of 4' mode\n"
@@ -310,11 +310,11 @@ int usage_15_info(void) {
                   "\thf 15 info u");
     return 0;
 }
-int usage_15_record(void) {
+static int usage_15_record(void) {
     PrintAndLogEx(NORMAL, "Record activity without enableing carrier");
     return 0;
 }
-int usage_15_reader(void) {
+static int usage_15_reader(void) {
     PrintAndLogEx(NORMAL, "This command identifies a ISO 15693 tag\n"
                   "\n"
                   "Usage: hf 15 reader [h]\n"
@@ -325,18 +325,18 @@ int usage_15_reader(void) {
                   "\thf 15 reader");
     return 0;
 }
-int usage_15_sim(void) {
+static int usage_15_sim(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf 15 sim <UID>\n"
                   "\n"
                   "Example:\n"
                   "\thf 15 sim E016240000000000");
     return 0;
 }
-int usage_15_findafi(void) {
+static int usage_15_findafi(void) {
     PrintAndLogEx(NORMAL, "'hf 15 finafi' This command needs a helptext. Feel free to add one!");
     return 0;
 }
-int usage_15_dump(void) {
+static int usage_15_dump(void) {
     PrintAndLogEx(NORMAL, "This command dumps the contents of a ISO-15693 tag and save it to file\n"
                   "\n"
                   "Usage: hf 15 dump [h] <f filname> \n"
@@ -349,7 +349,7 @@ int usage_15_dump(void) {
                   "\thf 15 dump f mydump");
     return 0;
 }
-int usage_15_restore(void) {
+static int usage_15_restore(void) {
     const char *options[][2] = {
         {"h", "this help"},
         {"-2", "use slower '1 out of 256' mode"},
@@ -363,7 +363,7 @@ int usage_15_restore(void) {
     PrintAndLogOptions(options, 7, 3);
     return 0;
 }
-int usage_15_raw(void) {
+static int usage_15_raw(void) {
     const char *options[][2] = {
         {"-r", "do not read response" },
         {"-2", "use slower '1 out of 256' mode" },
@@ -374,7 +374,7 @@ int usage_15_raw(void) {
     PrintAndLogOptions(options, 4, 3);
     return 0;
 }
-int usage_15_read(void) {
+static int usage_15_read(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf 15 read    [options] <uid|s|u|*> <page#>\n"
                   "Options:\n"
                   "\t-2        use slower '1 out of 256' mode\n"
@@ -385,7 +385,7 @@ int usage_15_read(void) {
                   "\tpage#:        page number 0-255");
     return 0;
 }
-int usage_15_write(void) {
+static int usage_15_write(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf 15 write    [options] <uid|s|u|*> <page#> <hexdata>\n"
                   "Options:\n"
                   "\t-2        use slower '1 out of 256' mode\n"
@@ -398,7 +398,7 @@ int usage_15_write(void) {
                   "\thexdata:      data to be written eg AA BB CC DD");
     return 0;
 }
-int usage_15_readmulti(void) {
+static int usage_15_readmulti(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf 15 readmulti  [options] <uid|s|u|*> <start#> <count#>\n"
                   "Options:\n"
                   "\t-2        use slower '1 out of 256' mode\n"

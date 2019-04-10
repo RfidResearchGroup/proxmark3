@@ -12,7 +12,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_jablotron_clone(void) {
+static int usage_lf_jablotron_clone(void) {
     PrintAndLogEx(NORMAL, "clone a Jablotron tag to a T55x7 tag.");
     PrintAndLogEx(NORMAL, "Usage: lf jablotron clone [h] <card ID> <Q5>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -25,7 +25,7 @@ int usage_lf_jablotron_clone(void) {
     return 0;
 }
 
-int usage_lf_jablotron_sim(void) {
+static int usage_lf_jablotron_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of jablotron card with specified card number.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "");

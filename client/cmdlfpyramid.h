@@ -29,8 +29,5 @@ int CmdPyramidClone(const char *Cmd);
 int CmdPyramidSim(const char *Cmd);
 
 int detectPyramid(uint8_t *dest, size_t *size, int *waveStartIdx);
-
-int usage_lf_pyramid_clone(void);
-int usage_lf_pyramid_sim(void);
 #endif
 

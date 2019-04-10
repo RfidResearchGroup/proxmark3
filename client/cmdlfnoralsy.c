@@ -11,7 +11,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_noralsy_clone(void) {
+static int usage_lf_noralsy_clone(void) {
     PrintAndLogEx(NORMAL, "clone a Noralsy tag to a T55x7 tag.");
     PrintAndLogEx(NORMAL, "Usage: lf noralsy clone [h] <card id> <year> <Q5>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -25,7 +25,7 @@ int usage_lf_noralsy_clone(void) {
     return 0;
 }
 
-int usage_lf_noralsy_sim(void) {
+static int usage_lf_noralsy_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of Noralsy card with specified card number.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "");

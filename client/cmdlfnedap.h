@@ -31,8 +31,5 @@ int CmdLFNedapChk(const char *Cmd);
 
 int detectNedap(uint8_t *dest, size_t *size);
 
-int usage_lf_nedap_read(void);
-//int usage_lf_nedap_clone(void);
-int usage_lf_nedap_sim(void);
 #endif
 

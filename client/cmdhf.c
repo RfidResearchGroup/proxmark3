@@ -12,7 +12,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_hf_search() {
+static int usage_hf_search() {
     PrintAndLogEx(NORMAL, "Usage: hf search");
     PrintAndLogEx(NORMAL, "Will try to find a HF read out of the unknown tag. Stops when found.");
     PrintAndLogEx(NORMAL, "Options:");
@@ -20,7 +20,7 @@ int usage_hf_search() {
     PrintAndLogEx(NORMAL, "");
     return 0;
 }
-int usage_hf_sniff() {
+static int usage_hf_sniff() {
     PrintAndLogEx(NORMAL, "The high frequence sniffer will assign all available memory on device for sniffed data");
     PrintAndLogEx(NORMAL, "Use " _YELLOW_("'data samples'")" command to download from device,  and " _YELLOW_("'data plot'")" to look at it");
     PrintAndLogEx(NORMAL, "Press button to quit the sniffing.\n");

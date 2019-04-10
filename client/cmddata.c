@@ -17,7 +17,7 @@ int g_DemodClock = 0;
 
 static int CmdHelp(const char *Cmd);
 
-int usage_data_printdemodbuf(void) {
+static int usage_data_printdemodbuf(void) {
     PrintAndLogEx(NORMAL, "Usage: data printdemodbuffer x o <offset> l <length>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h          This help");
@@ -26,7 +26,7 @@ int usage_data_printdemodbuf(void) {
     PrintAndLogEx(NORMAL, "       l <length> enter length to print in # of bits or hex characters respectively");
     return 0;
 }
-int usage_data_manrawdecode(void) {
+static int usage_data_manrawdecode(void) {
     PrintAndLogEx(NORMAL, "Usage:  data manrawdecode [invert] [maxErr]");
     PrintAndLogEx(NORMAL, "     Takes 10 and 01 and converts to 0 and 1 respectively");
     PrintAndLogEx(NORMAL, "     --must have binary sequence in demodbuffer (run data askrawdemod first)");
@@ -36,7 +36,7 @@ int usage_data_manrawdecode(void) {
     PrintAndLogEx(NORMAL, "   Example: data manrawdecode   = decode manchester bitstream from the demodbuffer");
     return 0;
 }
-int usage_data_biphaserawdecode(void) {
+static int usage_data_biphaserawdecode(void) {
     PrintAndLogEx(NORMAL, "Usage:  data biphaserawdecode [offset] [invert] [maxErr]");
     PrintAndLogEx(NORMAL, "     Converts 10 or 01 to 1 and 11 or 00 to 0");
     PrintAndLogEx(NORMAL, "     --must have binary sequence in demodbuffer (run data askrawdemod first)");
@@ -50,7 +50,7 @@ int usage_data_biphaserawdecode(void) {
     PrintAndLogEx(NORMAL, "   Example: data biphaserawdecode 1 1 = decode biphase bitstream from the demodbuffer, set offset, and invert output");
     return 0;
 }
-int usage_data_rawdemod(void) {
+static int usage_data_rawdemod(void) {
     PrintAndLogEx(NORMAL, "Usage:  data rawdemod [modulation] <help>|<options>");
     PrintAndLogEx(NORMAL, "   [modulation] as 2 char, 'ab' for ask/biphase, 'am' for ask/manchester, 'ar' for ask/raw, 'fs' for fsk, ...");
     PrintAndLogEx(NORMAL, "         'nr' for nrz/direct, 'p1' for psk1, 'p2' for psk2");
@@ -67,7 +67,7 @@ int usage_data_rawdemod(void) {
     PrintAndLogEx(NORMAL, "          : data rawdemod p2           = demod GraphBuffer using: psk2 - autodetect");
     return 0;
 }
-int usage_data_rawdemod_am(void) {
+static int usage_data_rawdemod_am(void) {
     PrintAndLogEx(NORMAL, "Usage:  data rawdemod am <s> [clock] <invert> [maxError] [maxLen] [amplify]");
     PrintAndLogEx(NORMAL, "     ['s'] optional, check for Sequence Terminator");
     PrintAndLogEx(NORMAL, "     [set clock as integer] optional, if not set, autodetect");
@@ -83,7 +83,7 @@ int usage_data_rawdemod_am(void) {
     PrintAndLogEx(NORMAL, "          : data rawdemod am 64 1 0 = demod an ask/manchester tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
     return 0;
 }
-int usage_data_rawdemod_ab(void) {
+static int usage_data_rawdemod_ab(void) {
     PrintAndLogEx(NORMAL, "Usage:  data rawdemod ab [offset] [clock] <invert> [maxError] [maxLen] <amplify>");
     PrintAndLogEx(NORMAL, "     [offset], offset to begin biphase, default=0");
     PrintAndLogEx(NORMAL, "     [set clock as integer] optional, if not set, autodetect");
@@ -106,7 +106,7 @@ int usage_data_rawdemod_ab(void) {
     PrintAndLogEx(NORMAL, "          : data rawdemod ab 0 64 1 0 0 a = demod an ask/biph tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors, and amp");
     return 0;
 }
-int usage_data_rawdemod_ar(void) {
+static int usage_data_rawdemod_ar(void) {
     PrintAndLogEx(NORMAL, "Usage:  data rawdemod ar [clock] <invert> [maxError] [maxLen] [amplify]");
     PrintAndLogEx(NORMAL, "     [set clock as integer] optional, if not set, autodetect");
     PrintAndLogEx(NORMAL, "     <invert>, 1 to invert output");
@@ -123,7 +123,7 @@ int usage_data_rawdemod_ar(void) {
     PrintAndLogEx(NORMAL, "          : data rawdemod ar 64 1 0 0 a = demod an ask tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors, and amp");
     return 0;
 }
-int usage_data_rawdemod_fs(void) {
+static int usage_data_rawdemod_fs(void) {
     PrintAndLogEx(NORMAL, "Usage:  data rawdemod fs [clock] <invert> [fchigh] [fclow]");
     PrintAndLogEx(NORMAL, "     [set clock as integer] optional, omit for autodetect.");
     PrintAndLogEx(NORMAL, "     <invert>, 1 for invert output, can be used even if the clock is omitted");
@@ -139,7 +139,7 @@ int usage_data_rawdemod_fs(void) {
     PrintAndLogEx(NORMAL, "          : data rawdemod fs 50 1 10 8 = demod an fsk2a RF/50 tag from GraphBuffer");
     return 0;
 }
-int usage_data_rawdemod_nr(void) {
+static int usage_data_rawdemod_nr(void) {
     PrintAndLogEx(NORMAL, "Usage:  data rawdemod nr [clock] <0|1> [maxError]");
     PrintAndLogEx(NORMAL, "     [set clock as integer] optional, if not set, autodetect.");
     PrintAndLogEx(NORMAL, "     <invert>, 1 for invert output");
@@ -152,7 +152,7 @@ int usage_data_rawdemod_nr(void) {
     PrintAndLogEx(NORMAL, "          : data rawdemod nr 64 1 0 = demod a nrz/direct tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
     return 0;
 }
-int usage_data_rawdemod_p1(void) {
+static int usage_data_rawdemod_p1(void) {
     PrintAndLogEx(NORMAL, "Usage:  data rawdemod p1 [clock] <0|1> [maxError]");
     PrintAndLogEx(NORMAL, "     [set clock as integer] optional, if not set, autodetect.");
     PrintAndLogEx(NORMAL, "     <invert>, 1 for invert output");
@@ -165,7 +165,7 @@ int usage_data_rawdemod_p1(void) {
     PrintAndLogEx(NORMAL, "          : data rawdemod p1 64 1 0 = demod a psk1 tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
     return 0;
 }
-int usage_data_rawdemod_p2(void) {
+static int usage_data_rawdemod_p2(void) {
     PrintAndLogEx(NORMAL, "Usage:  data rawdemod p2 [clock] <0|1> [maxError]");
     PrintAndLogEx(NORMAL, "     [set clock as integer] optional, if not set, autodetect.");
     PrintAndLogEx(NORMAL, "     <invert>, 1 for invert output");
@@ -178,7 +178,7 @@ int usage_data_rawdemod_p2(void) {
     PrintAndLogEx(NORMAL, "          : data rawdemod p2 64 1 0  = demod a psk2 tag from GraphBuffer using a clock of RF/64, inverting output and allowing 0 demod errors");
     return 0;
 }
-int usage_data_autocorr(void) {
+static int usage_data_autocorr(void) {
     PrintAndLogEx(NORMAL, "Autocorrelate is used to detect repeating sequences. We use it as detection of length in bits a message inside the signal is");
     PrintAndLogEx(NORMAL, "Usage: data autocorr w <window> [g]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -187,7 +187,7 @@ int usage_data_autocorr(void) {
     PrintAndLogEx(NORMAL, "       g              save back to GraphBuffer (overwrite)");
     return 0;
 }
-int usage_data_undecimate(void) {
+static int usage_data_undecimate(void) {
     PrintAndLogEx(NORMAL, "Usage: data undec [factor]");
     PrintAndLogEx(NORMAL, "This function performs un-decimation, by repeating each sample N times");
     PrintAndLogEx(NORMAL, "Options:");
@@ -196,7 +196,7 @@ int usage_data_undecimate(void) {
     PrintAndLogEx(NORMAL, "Example: 'data undec 3'");
     return 0;
 }
-int usage_data_detectclock(void) {
+static int usage_data_detectclock(void) {
     PrintAndLogEx(NORMAL, "Usage:  data detectclock [modulation] <clock>");
     PrintAndLogEx(NORMAL, "     [modulation as char], specify the modulation type you want to detect the clock of");
     PrintAndLogEx(NORMAL, "     <clock>             , specify the clock (optional - to get best start position only)");
@@ -208,24 +208,24 @@ int usage_data_detectclock(void) {
     PrintAndLogEx(NORMAL, "            data detectclock n    = detect the clock of an nrz/direct modulated wave in the GraphBuffer");
     return 0;
 }
-int usage_data_hex2bin(void) {
+static int usage_data_hex2bin(void) {
     PrintAndLogEx(NORMAL, "Usage: data hex2bin <hex_digits>");
     PrintAndLogEx(NORMAL, "       This function will ignore all non-hexadecimal characters (but stop reading on whitespace)");
     return 0;
 }
-int usage_data_bin2hex(void) {
+static int usage_data_bin2hex(void) {
     PrintAndLogEx(NORMAL, "Usage: data bin2hex <binary_digits>");
     PrintAndLogEx(NORMAL, "       This function will ignore all characters not 1 or 0 (but stop reading on whitespace)");
     return 0;
 }
-int usage_data_buffclear(void) {
+static int usage_data_buffclear(void) {
     PrintAndLogEx(NORMAL, "This function clears the bigbuff on deviceside");
     PrintAndLogEx(NORMAL, "Usage: data buffclear [h]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h              This help");
     return 0;
 }
-int usage_data_fsktonrz() {
+static int usage_data_fsktonrz() {
     PrintAndLogEx(NORMAL, "Usage: data fsktonrz c <clock> l <fc_low> f <fc_high>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h            This help");

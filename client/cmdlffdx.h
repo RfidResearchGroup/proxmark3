@@ -27,9 +27,5 @@ int CmdFdxDemod(const char *Cmd);
 
 int getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t isextended, uint32_t extended, uint8_t *bits);
 
-int usage_lf_fdx_clone(void);
-int usage_lf_fdx_sim(void);
-int usage_lf_fdx_read(void);
-int usage_lf_fdx_demod(void);
 #endif
 

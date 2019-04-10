@@ -71,12 +71,4 @@ int CmdLFfind(const char *Cmd);
 
 bool lf_read(bool silent, uint32_t samples);
 
-// usages helptext
-int usage_lf_cmdread(void);
-int usage_lf_read(void);
-int usage_lf_sniff(void);
-int usage_lf_config(void);
-int usage_lf_simfsk(void);
-int usage_lf_simask(void);
-int usage_lf_simpsk(void);
 #endif

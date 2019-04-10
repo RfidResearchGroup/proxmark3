@@ -26,13 +26,6 @@
 #include "mifare/mfkey.h" // nonce2key
 #include "util_posix.h"   // msclock
 
-
-int usage_analyse_lcr(void);
-int usage_analyse_checksum(void);
-int usage_analyse_crc(void);
-int usage_analyse_hid(void);
-int usage_analyse_nuid(void);
-
 int CmdAnalyse(const char *Cmd);
 int CmdAnalyseLCR(const char *Cmd);
 int CmdAnalyseCHKSUM(const char *Cmd);

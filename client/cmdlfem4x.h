@@ -49,19 +49,4 @@ void printEM410x(uint32_t hi, uint64_t id);
 int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo);
 int AskEm410xDemod(const char *Cmd, uint32_t *hi, uint64_t *lo, bool verbose);
 
-int usage_lf_em410x_sim(void);
-int usage_lf_em410x_ws(void);
-int usage_lf_em410x_clone(void);
-int usage_lf_em410x_sim(void);
-int usage_lf_em410x_brute(void);
-
-int usage_lf_em4x50_dump(void);
-int usage_lf_em4x50_read(void);
-int usage_lf_em4x50_write(void);
-
-int usage_lf_em4x05_dump(void);
-int usage_lf_em4x05_read(void);
-int usage_lf_em4x05_write(void);
-int usage_lf_em4x05_info(void);
-
 #endif

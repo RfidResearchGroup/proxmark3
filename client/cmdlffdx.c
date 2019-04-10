@@ -31,7 +31,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_fdx_clone(void) {
+static int usage_lf_fdx_clone(void) {
     PrintAndLogEx(NORMAL, "Clone a FDX-B animal tag to a T55x7 tag.");
     PrintAndLogEx(NORMAL, "Usage: lf fdx clone [h] <country id> <animal id> <Q5>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -49,7 +49,7 @@ int usage_lf_fdx_clone(void) {
     return 0;
 }
 
-int usage_lf_fdx_sim(void) {
+static int usage_lf_fdx_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of FDX-B animal tag");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "");

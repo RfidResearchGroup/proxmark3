@@ -16,7 +16,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_hid_read(void) {
+static int usage_lf_hid_read(void) {
     PrintAndLogEx(NORMAL, "Enables HID compatible reader mode printing details.");
     PrintAndLogEx(NORMAL, "By default, values are printed and logged until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "If the [1] option is provided, reader mode is exited after reading a single HID card.");
@@ -31,7 +31,7 @@ int usage_lf_hid_read(void) {
     PrintAndLogEx(NORMAL, "       lf hid read 1");
     return 0;
 }
-int usage_lf_hid_wiegand(void) {
+static int usage_lf_hid_wiegand(void) {
     PrintAndLogEx(NORMAL, "This command converts facility code/card number to Wiegand code");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage: lf hid wiegand [h] [OEM] [FC] [CN]");
@@ -44,7 +44,7 @@ int usage_lf_hid_wiegand(void) {
     PrintAndLogEx(NORMAL, "      lf hid wiegand 0 101 2001");
     return 0;
 }
-int usage_lf_hid_sim(void) {
+static int usage_lf_hid_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of HID card with card number.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "");
@@ -56,7 +56,7 @@ int usage_lf_hid_sim(void) {
     PrintAndLogEx(NORMAL, "      lf hid sim 2006ec0c86");
     return 0;
 }
-int usage_lf_hid_clone(void) {
+static int usage_lf_hid_clone(void) {
     PrintAndLogEx(NORMAL, "Clone HID to T55x7.  Tag must be on antenna. ");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf hid clone [h] [ID] <L>");
@@ -69,7 +69,7 @@ int usage_lf_hid_clone(void) {
     PrintAndLogEx(NORMAL, "      lf hid clone 2006ec0c86 L");
     return 0;
 }
-int usage_lf_hid_brute(void) {
+static int usage_lf_hid_brute(void) {
     PrintAndLogEx(NORMAL, "Enables bruteforce of HID readers with specified facility code.");
     PrintAndLogEx(NORMAL, "This is a attack against reader. if cardnumber is given, it starts with it and goes up / down one step");
     PrintAndLogEx(NORMAL, "if cardnumber is not given, it starts with 1 and goes up to 65535");

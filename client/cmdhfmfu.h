@@ -48,18 +48,6 @@ int ul_print_type(uint32_t tagtype, uint8_t spaces);
 void printMFUdump(mfu_dump_t *card);
 void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage);
 
-int usage_hf_mfu_info(void);
-int usage_hf_mfu_dump(void);
-int usage_hf_mfu_rdbl(void);
-int usage_hf_mfu_wrbl(void);
-int usage_hf_mfu_eload(void);
-int usage_hf_mfu_sim(void);
-int usage_hf_mfu_ucauth(void);
-int usage_hf_mfu_ucsetpwd(void);
-int usage_hf_mfu_ucsetuid(void);
-int usage_hf_mfu_gendiverse(void);
-int usage_hf_mfu_pwdgen(void);
-
 int CmdHFMFUltra(const char *Cmd);
 
 uint32_t ul_ev1_pwdgenA(uint8_t *uid);

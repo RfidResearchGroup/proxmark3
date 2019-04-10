@@ -31,9 +31,5 @@ int CmdVisa2kSim(const char *Cmd);
 int getvisa2kBits(uint64_t fullcode, uint8_t *bits);
 int detectVisa2k(uint8_t *dest, size_t *size);
 
-int usage_lf_visa2k_clone(void);
-int usage_lf_visa2k_sim(void);
-//int usage_lf_visa2k_read(void);
-//int usage_lf_visa2k_demod(void);
 #endif
 

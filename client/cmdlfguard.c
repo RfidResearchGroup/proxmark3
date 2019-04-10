@@ -11,7 +11,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_guard_clone(void) {
+static int usage_lf_guard_clone(void) {
     PrintAndLogEx(NORMAL, "clone a Guardall tag to a T55x7 tag.");
     PrintAndLogEx(NORMAL, "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated. ");
     PrintAndLogEx(NORMAL, "Currently work only on 26bit");
@@ -27,7 +27,7 @@ int usage_lf_guard_clone(void) {
     return 0;
 }
 
-int usage_lf_guard_sim(void) {
+static int usage_lf_guard_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of Guardall card with specified card number.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.");

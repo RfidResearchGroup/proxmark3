@@ -12,7 +12,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_io_read(void) {
+static int usage_lf_io_read(void) {
     PrintAndLogEx(NORMAL, "Enables IOProx compatible reader mode printing details of scanned tags.");
     PrintAndLogEx(NORMAL, "By default, values are printed and logged until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "If the [1] option is provided, reader mode is exited after reading a single card.");
@@ -28,7 +28,7 @@ int usage_lf_io_read(void) {
     return 0;
 }
 
-int usage_lf_io_sim(void) {
+static int usage_lf_io_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of IOProx card with specified facility-code and card number.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "");
@@ -44,7 +44,7 @@ int usage_lf_io_sim(void) {
     return 0;
 }
 
-int usage_lf_io_clone(void) {
+static int usage_lf_io_clone(void) {
     PrintAndLogEx(NORMAL, "Enables cloning of IOProx card with specified facility-code and card number onto T55x7.");
     PrintAndLogEx(NORMAL, "The T55x7 must be on the antenna when issuing this command.  T55x7 blocks are calculated and printed in the process.");
     PrintAndLogEx(NORMAL, "");

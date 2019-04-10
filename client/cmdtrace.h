@@ -33,8 +33,4 @@ int CmdTraceList(const char *Cmd);
 int CmdTraceLoad(const char *Cmd);
 int CmdTraceSave(const char *Cmd);
 
-// usages helptext
-int usage_trace_list(void);
-int usage_trace_load(void);
-int usage_trace_save(void);
 #endif

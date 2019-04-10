@@ -30,7 +30,5 @@ int CmdVikingSim(const char *Cmd);
 
 int detectViking(uint8_t *dest, size_t *size);
 
-int usage_lf_viking_clone(void);
-int usage_lf_viking_sim(void);
 #endif
 

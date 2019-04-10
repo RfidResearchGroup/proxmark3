@@ -26,6 +26,189 @@
 
 static int CmdHelp(const char *Cmd);
 
+static int usage_hf_mfu_info(void) {
+    PrintAndLogEx(NORMAL, "It gathers information about the tag and tries to detect what kind it is.");
+    PrintAndLogEx(NORMAL, "Sometimes the tags are locked down, and you may need a key to be able to read the information");
+    PrintAndLogEx(NORMAL, "The following tags can be identified:\n");
+    PrintAndLogEx(NORMAL, "Ultralight, Ultralight-C, Ultralight EV1, NTAG 203, NTAG 210,");
+    PrintAndLogEx(NORMAL, "NTAG 212, NTAG 213, NTAG 215, NTAG 216, NTAG I2C 1K & 2K");
+    PrintAndLogEx(NORMAL, "my-d, my-d NFC, my-d move, my-d move NFC\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf mfu info k <key> l");
+    PrintAndLogEx(NORMAL, "  Options : ");
+    PrintAndLogEx(NORMAL, "  k <key> : (optional) key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
+    PrintAndLogEx(NORMAL, "  l       : (optional) swap entered key's endianness");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "       hf mfu info");
+    PrintAndLogEx(NORMAL, "       hf mfu info k 00112233445566778899AABBCCDDEEFF");
+    PrintAndLogEx(NORMAL, "       hf mfu info k AABBCCDD");
+    return 0;
+}
+
+static int usage_hf_mfu_dump(void) {
+    PrintAndLogEx(NORMAL, "Reads all pages from Ultralight, Ultralight-C, Ultralight EV1");
+    PrintAndLogEx(NORMAL, "NTAG 203, NTAG 210, NTAG 212, NTAG 213, NTAG 215, NTAG 216");
+    PrintAndLogEx(NORMAL, "and saves binary dump into the file `filename.bin` or `cardUID.bin`");
+    PrintAndLogEx(NORMAL, "It autodetects card type.\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf mfu dump k <key> l f <filename w/o .bin> p <page#> q <#pages>");
+    PrintAndLogEx(NORMAL, "  Options :");
+    PrintAndLogEx(NORMAL, "  k <key> : (optional) key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
+    PrintAndLogEx(NORMAL, "  l       : (optional) swap entered key's endianness");
+    PrintAndLogEx(NORMAL, "  f <FN > : filename w/o .bin to save the dump as");
+    PrintAndLogEx(NORMAL, "  p <Pg > : starting Page number to manually set a page to start the dump at");
+    PrintAndLogEx(NORMAL, "  q <qty> : number of Pages to manually set how many pages to dump");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "       hf mfu dump");
+    PrintAndLogEx(NORMAL, "       hf mfu dump n myfile");
+    PrintAndLogEx(NORMAL, "       hf mfu dump k 00112233445566778899AABBCCDDEEFF");
+    PrintAndLogEx(NORMAL, "       hf mfu dump k AABBCCDD\n");
+    return 0;
+}
+
+static int usage_hf_mfu_restore(void) {
+    PrintAndLogEx(NORMAL, "Restore dumpfile onto card.");
+    PrintAndLogEx(NORMAL, "Usage:  hf mfu restore [h] [l] [s] k <key> n <filename w/o .bin> ");
+    PrintAndLogEx(NORMAL, "  Options :");
+    PrintAndLogEx(NORMAL, "  k <key> : (optional) key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
+    PrintAndLogEx(NORMAL, "  l       : (optional) swap entered key's endianness");
+    PrintAndLogEx(NORMAL, "  s       : (optional) enable special write UID -MAGIC TAG ONLY-");
+    PrintAndLogEx(NORMAL, "  e       : (optional) enable special write version/signature -MAGIC NTAG 21* ONLY-");
+    PrintAndLogEx(NORMAL, "  r       : (optional) use the password found in dumpfile to configure tag. requires 'e' parameter to work");
+    PrintAndLogEx(NORMAL, "  f <FN>  : filename w/o .bin to restore");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "       hf mfu restore s f myfile");
+    PrintAndLogEx(NORMAL, "       hf mfu restore k AABBCCDD s f myfile\n");
+    PrintAndLogEx(NORMAL, "       hf mfu restore k AABBCCDD s e r f myfile\n");
+    return 0;
+}
+
+static int usage_hf_mfu_rdbl(void) {
+    PrintAndLogEx(NORMAL, "Read a block and print. It autodetects card type.\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf mfu rdbl b <block number> k <key> l\n");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "  b <no>  : block to read");
+    PrintAndLogEx(NORMAL, "  k <key> : (optional) key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
+    PrintAndLogEx(NORMAL, "  l       : (optional) swap entered key's endianness");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "       hf mfu rdbl b 0");
+    PrintAndLogEx(NORMAL, "       hf mfu rdbl b 0 k 00112233445566778899AABBCCDDEEFF");
+    PrintAndLogEx(NORMAL, "       hf mfu rdbl b 0 k AABBCCDD\n");
+    return 0;
+}
+
+static int usage_hf_mfu_wrbl(void) {
+    PrintAndLogEx(NORMAL, "Write a block. It autodetects card type.\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf mfu wrbl b <block number> d <data> k <key> l\n");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "  b <no>   : block to write");
+    PrintAndLogEx(NORMAL, "  d <data> : block data - (8 hex symbols)");
+    PrintAndLogEx(NORMAL, "  k <key>  : (optional) key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
+    PrintAndLogEx(NORMAL, "  l        : (optional) swap entered key's endianness");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "        hf mfu wrbl b 0 d 01234567");
+    PrintAndLogEx(NORMAL, "        hf mfu wrbl b 0 d 01234567 k AABBCCDD\n");
+    return 0;
+}
+
+static int usage_hf_mfu_eload(void) {
+    PrintAndLogEx(NORMAL, "It loads emul dump from the file `filename.eml`");
+    PrintAndLogEx(NORMAL, "Hint: See script dumptoemul-mfu.lua to convert the .bin to the eml");
+    PrintAndLogEx(NORMAL, "Usage:  hf mfu eload u <file name w/o `.eml`> [numblocks]");
+    PrintAndLogEx(NORMAL, "  Options:");
+    PrintAndLogEx(NORMAL, "    h          : this help");
+    PrintAndLogEx(NORMAL, "    u          : UL (required)");
+    PrintAndLogEx(NORMAL, "    [filename] : without `.eml` (required)");
+    PrintAndLogEx(NORMAL, "    numblocks  : number of blocks to load from eml file (optional)");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "  sample: hf mfu eload u filename");
+    PrintAndLogEx(NORMAL, "          hf mfu eload u filename 57");
+    return 0;
+}
+
+static int usage_hf_mfu_sim(void) {
+    PrintAndLogEx(NORMAL, "\nEmulating Ultralight tag from emulator memory\n");
+    PrintAndLogEx(NORMAL, "\nBe sure to load the emulator memory first!\n");
+    PrintAndLogEx(NORMAL, "Usage: hf mfu sim t 7 u <uid>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "    h       : this help");
+    PrintAndLogEx(NORMAL, "    t 7     : 7 = NTAG or Ultralight sim (required)");
+    PrintAndLogEx(NORMAL, "    u <uid> : 4 or 7 byte UID (optional)");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "        hf mfu sim t 7");
+    PrintAndLogEx(NORMAL, "        hf mfu sim t 7 u 1122344556677\n");
+
+    return 0;
+}
+
+static int usage_hf_mfu_ucauth(void) {
+    PrintAndLogEx(NORMAL, "Usage:  hf mfu cauth k <key number>");
+    PrintAndLogEx(NORMAL, "      0 (default): 3DES standard key");
+    PrintAndLogEx(NORMAL, "      1 : all 0x00 key");
+    PrintAndLogEx(NORMAL, "      2 : 0x00-0x0F key");
+    PrintAndLogEx(NORMAL, "      3 : nfc key");
+    PrintAndLogEx(NORMAL, "      4 : all 0x01 key");
+    PrintAndLogEx(NORMAL, "      5 : all 0xff key");
+    PrintAndLogEx(NORMAL, "      6 : 0x00-0xFF key");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "       hf mfu cauth k");
+    PrintAndLogEx(NORMAL, "       hf mfu cauth k 3");
+    return 0;
+}
+
+static int usage_hf_mfu_ucsetpwd(void) {
+    PrintAndLogEx(NORMAL, "Usage:  hf mfu setpwd <password (32 hex symbols)>");
+    PrintAndLogEx(NORMAL, "       [password] - (32 hex symbols)");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "         hf mfu setpwd 000102030405060708090a0b0c0d0e0f");
+    PrintAndLogEx(NORMAL, "");
+    return 0;
+}
+
+static int usage_hf_mfu_ucsetuid(void) {
+    PrintAndLogEx(NORMAL, "Usage:  hf mfu setuid <uid (14 hex symbols)>");
+    PrintAndLogEx(NORMAL, "       [uid] - (14 hex symbols)");
+    PrintAndLogEx(NORMAL, "\nThis only works for Magic Ultralight tags.");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "         hf mfu setuid 11223344556677");
+    PrintAndLogEx(NORMAL, "");
+    return 0;
+}
+
+static int usage_hf_mfu_gendiverse(void) {
+    PrintAndLogEx(NORMAL, "Usage:  hf mfu gen [h] [r] <uid (8 hex symbols)>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "    h       : this help");
+    PrintAndLogEx(NORMAL, "    r       : read uid from tag");
+    PrintAndLogEx(NORMAL, "    <uid>   : 4 byte UID (optional)");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "        hf mfu gen r");
+    PrintAndLogEx(NORMAL, "        hf mfu gen 11223344");
+    PrintAndLogEx(NORMAL, "");
+    return 0;
+}
+
+static int usage_hf_mfu_pwdgen(void) {
+    PrintAndLogEx(NORMAL, "Usage:  hf mfu pwdgen [h|t] [r] <uid (14 hex symbols)>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "    h       : this help");
+    PrintAndLogEx(NORMAL, "    t       : selftest");
+    PrintAndLogEx(NORMAL, "    r       : read uid from tag");
+    PrintAndLogEx(NORMAL, "    <uid>   : 7 byte UID (optional)");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "        hf mfu pwdgen r");
+    PrintAndLogEx(NORMAL, "        hf mfu pwdgen 11223344556677");
+    PrintAndLogEx(NORMAL, "        hf mfu pwdgen t");
+    PrintAndLogEx(NORMAL, "");
+    return 0;
+}
+
 #define PUBLIC_ECDA_KEYLEN 33
 uint8_t public_ecda_key[PUBLIC_ECDA_KEYLEN] = {
     0x04, 0x49, 0x4e, 0x1a, 0x38, 0x6d, 0x3d, 0x3c,
@@ -1423,189 +1606,6 @@ int CmdHF14AMfURdBl(const char *Cmd) {
     } else {
         PrintAndLogEx(WARNING, "Command execute time-out");
     }
-    return 0;
-}
-
-int usage_hf_mfu_info(void) {
-    PrintAndLogEx(NORMAL, "It gathers information about the tag and tries to detect what kind it is.");
-    PrintAndLogEx(NORMAL, "Sometimes the tags are locked down, and you may need a key to be able to read the information");
-    PrintAndLogEx(NORMAL, "The following tags can be identified:\n");
-    PrintAndLogEx(NORMAL, "Ultralight, Ultralight-C, Ultralight EV1, NTAG 203, NTAG 210,");
-    PrintAndLogEx(NORMAL, "NTAG 212, NTAG 213, NTAG 215, NTAG 216, NTAG I2C 1K & 2K");
-    PrintAndLogEx(NORMAL, "my-d, my-d NFC, my-d move, my-d move NFC\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf mfu info k <key> l");
-    PrintAndLogEx(NORMAL, "  Options : ");
-    PrintAndLogEx(NORMAL, "  k <key> : (optional) key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
-    PrintAndLogEx(NORMAL, "  l       : (optional) swap entered key's endianness");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       hf mfu info");
-    PrintAndLogEx(NORMAL, "       hf mfu info k 00112233445566778899AABBCCDDEEFF");
-    PrintAndLogEx(NORMAL, "       hf mfu info k AABBCCDD");
-    return 0;
-}
-
-int usage_hf_mfu_dump(void) {
-    PrintAndLogEx(NORMAL, "Reads all pages from Ultralight, Ultralight-C, Ultralight EV1");
-    PrintAndLogEx(NORMAL, "NTAG 203, NTAG 210, NTAG 212, NTAG 213, NTAG 215, NTAG 216");
-    PrintAndLogEx(NORMAL, "and saves binary dump into the file `filename.bin` or `cardUID.bin`");
-    PrintAndLogEx(NORMAL, "It autodetects card type.\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf mfu dump k <key> l f <filename w/o .bin> p <page#> q <#pages>");
-    PrintAndLogEx(NORMAL, "  Options :");
-    PrintAndLogEx(NORMAL, "  k <key> : (optional) key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
-    PrintAndLogEx(NORMAL, "  l       : (optional) swap entered key's endianness");
-    PrintAndLogEx(NORMAL, "  f <FN > : filename w/o .bin to save the dump as");
-    PrintAndLogEx(NORMAL, "  p <Pg > : starting Page number to manually set a page to start the dump at");
-    PrintAndLogEx(NORMAL, "  q <qty> : number of Pages to manually set how many pages to dump");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       hf mfu dump");
-    PrintAndLogEx(NORMAL, "       hf mfu dump n myfile");
-    PrintAndLogEx(NORMAL, "       hf mfu dump k 00112233445566778899AABBCCDDEEFF");
-    PrintAndLogEx(NORMAL, "       hf mfu dump k AABBCCDD\n");
-    return 0;
-}
-
-int usage_hf_mfu_restore(void) {
-    PrintAndLogEx(NORMAL, "Restore dumpfile onto card.");
-    PrintAndLogEx(NORMAL, "Usage:  hf mfu restore [h] [l] [s] k <key> n <filename w/o .bin> ");
-    PrintAndLogEx(NORMAL, "  Options :");
-    PrintAndLogEx(NORMAL, "  k <key> : (optional) key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
-    PrintAndLogEx(NORMAL, "  l       : (optional) swap entered key's endianness");
-    PrintAndLogEx(NORMAL, "  s       : (optional) enable special write UID -MAGIC TAG ONLY-");
-    PrintAndLogEx(NORMAL, "  e       : (optional) enable special write version/signature -MAGIC NTAG 21* ONLY-");
-    PrintAndLogEx(NORMAL, "  r       : (optional) use the password found in dumpfile to configure tag. requires 'e' parameter to work");
-    PrintAndLogEx(NORMAL, "  f <FN>  : filename w/o .bin to restore");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       hf mfu restore s f myfile");
-    PrintAndLogEx(NORMAL, "       hf mfu restore k AABBCCDD s f myfile\n");
-    PrintAndLogEx(NORMAL, "       hf mfu restore k AABBCCDD s e r f myfile\n");
-    return 0;
-}
-
-int usage_hf_mfu_rdbl(void) {
-    PrintAndLogEx(NORMAL, "Read a block and print. It autodetects card type.\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf mfu rdbl b <block number> k <key> l\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  b <no>  : block to read");
-    PrintAndLogEx(NORMAL, "  k <key> : (optional) key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
-    PrintAndLogEx(NORMAL, "  l       : (optional) swap entered key's endianness");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       hf mfu rdbl b 0");
-    PrintAndLogEx(NORMAL, "       hf mfu rdbl b 0 k 00112233445566778899AABBCCDDEEFF");
-    PrintAndLogEx(NORMAL, "       hf mfu rdbl b 0 k AABBCCDD\n");
-    return 0;
-}
-
-int usage_hf_mfu_wrbl(void) {
-    PrintAndLogEx(NORMAL, "Write a block. It autodetects card type.\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf mfu wrbl b <block number> d <data> k <key> l\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  b <no>   : block to write");
-    PrintAndLogEx(NORMAL, "  d <data> : block data - (8 hex symbols)");
-    PrintAndLogEx(NORMAL, "  k <key>  : (optional) key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
-    PrintAndLogEx(NORMAL, "  l        : (optional) swap entered key's endianness");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        hf mfu wrbl b 0 d 01234567");
-    PrintAndLogEx(NORMAL, "        hf mfu wrbl b 0 d 01234567 k AABBCCDD\n");
-    return 0;
-}
-
-int usage_hf_mfu_eload(void) {
-    PrintAndLogEx(NORMAL, "It loads emul dump from the file `filename.eml`");
-    PrintAndLogEx(NORMAL, "Hint: See script dumptoemul-mfu.lua to convert the .bin to the eml");
-    PrintAndLogEx(NORMAL, "Usage:  hf mfu eload u <file name w/o `.eml`> [numblocks]");
-    PrintAndLogEx(NORMAL, "  Options:");
-    PrintAndLogEx(NORMAL, "    h          : this help");
-    PrintAndLogEx(NORMAL, "    u          : UL (required)");
-    PrintAndLogEx(NORMAL, "    [filename] : without `.eml` (required)");
-    PrintAndLogEx(NORMAL, "    numblocks  : number of blocks to load from eml file (optional)");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "  sample: hf mfu eload u filename");
-    PrintAndLogEx(NORMAL, "          hf mfu eload u filename 57");
-    return 0;
-}
-
-int usage_hf_mfu_sim(void) {
-    PrintAndLogEx(NORMAL, "\nEmulating Ultralight tag from emulator memory\n");
-    PrintAndLogEx(NORMAL, "\nBe sure to load the emulator memory first!\n");
-    PrintAndLogEx(NORMAL, "Usage: hf mfu sim t 7 u <uid>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "    h       : this help");
-    PrintAndLogEx(NORMAL, "    t 7     : 7 = NTAG or Ultralight sim (required)");
-    PrintAndLogEx(NORMAL, "    u <uid> : 4 or 7 byte UID (optional)");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        hf mfu sim t 7");
-    PrintAndLogEx(NORMAL, "        hf mfu sim t 7 u 1122344556677\n");
-
-    return 0;
-}
-
-int usage_hf_mfu_ucauth(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf mfu cauth k <key number>");
-    PrintAndLogEx(NORMAL, "      0 (default): 3DES standard key");
-    PrintAndLogEx(NORMAL, "      1 : all 0x00 key");
-    PrintAndLogEx(NORMAL, "      2 : 0x00-0x0F key");
-    PrintAndLogEx(NORMAL, "      3 : nfc key");
-    PrintAndLogEx(NORMAL, "      4 : all 0x01 key");
-    PrintAndLogEx(NORMAL, "      5 : all 0xff key");
-    PrintAndLogEx(NORMAL, "      6 : 0x00-0xFF key");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       hf mfu cauth k");
-    PrintAndLogEx(NORMAL, "       hf mfu cauth k 3");
-    return 0;
-}
-
-int usage_hf_mfu_ucsetpwd(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf mfu setpwd <password (32 hex symbols)>");
-    PrintAndLogEx(NORMAL, "       [password] - (32 hex symbols)");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "         hf mfu setpwd 000102030405060708090a0b0c0d0e0f");
-    PrintAndLogEx(NORMAL, "");
-    return 0;
-}
-
-int usage_hf_mfu_ucsetuid(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf mfu setuid <uid (14 hex symbols)>");
-    PrintAndLogEx(NORMAL, "       [uid] - (14 hex symbols)");
-    PrintAndLogEx(NORMAL, "\nThis only works for Magic Ultralight tags.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "         hf mfu setuid 11223344556677");
-    PrintAndLogEx(NORMAL, "");
-    return 0;
-}
-
-int usage_hf_mfu_gendiverse(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf mfu gen [h] [r] <uid (8 hex symbols)>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "    h       : this help");
-    PrintAndLogEx(NORMAL, "    r       : read uid from tag");
-    PrintAndLogEx(NORMAL, "    <uid>   : 4 byte UID (optional)");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        hf mfu gen r");
-    PrintAndLogEx(NORMAL, "        hf mfu gen 11223344");
-    PrintAndLogEx(NORMAL, "");
-    return 0;
-}
-
-int usage_hf_mfu_pwdgen(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf mfu pwdgen [h|t] [r] <uid (14 hex symbols)>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "    h       : this help");
-    PrintAndLogEx(NORMAL, "    t       : selftest");
-    PrintAndLogEx(NORMAL, "    r       : read uid from tag");
-    PrintAndLogEx(NORMAL, "    <uid>   : 7 byte UID (optional)");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        hf mfu pwdgen r");
-    PrintAndLogEx(NORMAL, "        hf mfu pwdgen 11223344556677");
-    PrintAndLogEx(NORMAL, "        hf mfu pwdgen t");
-    PrintAndLogEx(NORMAL, "");
     return 0;
 }
 

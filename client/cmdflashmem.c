@@ -26,7 +26,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_flashmem_spibaud(void) {
+static int usage_flashmem_spibaud(void) {
     PrintAndLogEx(NORMAL, "Usage:  mem spibaud [h] <baudrate>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "           h    this help");
@@ -40,7 +40,7 @@ int usage_flashmem_spibaud(void) {
     return 0;
 }
 
-int usage_flashmem_read(void) {
+static int usage_flashmem_read(void) {
     PrintAndLogEx(NORMAL, "Read flash memory on device");
     PrintAndLogEx(NORMAL, "Usage:  mem read o <offset> l <len>");
     PrintAndLogEx(NORMAL, "  o <offset>    :      offset in memory");
@@ -51,7 +51,7 @@ int usage_flashmem_read(void) {
     PrintAndLogEx(NORMAL, "        mem read o 1024 l 10"); // read 10 bytes starting at offset 1024
     return 0;
 }
-int usage_flashmem_load(void) {
+static int usage_flashmem_load(void) {
     PrintAndLogEx(NORMAL, "Loads binary file into flash memory on device");
     PrintAndLogEx(NORMAL, "Usage:  mem load o <offset> f <file name> m t i");
     PrintAndLogEx(NORMAL, "  o <offset>    :      offset in memory");
@@ -68,7 +68,7 @@ int usage_flashmem_load(void) {
     PrintAndLogEx(NORMAL, "        mem load f default_iclass_keys i");
     return 0;
 }
-int usage_flashmem_save(void) {
+static int usage_flashmem_save(void) {
     PrintAndLogEx(NORMAL, "Saves flash memory on device into the file");
     PrintAndLogEx(NORMAL, " Usage:  mem save o <offset> l <length> f <file name>");
     PrintAndLogEx(NORMAL, "  o <offset>    :      offset in memory");
@@ -81,7 +81,7 @@ int usage_flashmem_save(void) {
     PrintAndLogEx(NORMAL, "        mem save f myfile o 1024 l 4096");   // downlowd 4096 bytes from offset 1024 to file myfile
     return 0;
 }
-int usage_flashmem_wipe(void) {
+static int usage_flashmem_wipe(void) {
 
     PrintAndLogEx(WARNING, "[OBS] use with caution.");
     PrintAndLogEx(NORMAL, "Wipe flash memory on device, which fills memory with 0xFF\n");
@@ -95,7 +95,7 @@ int usage_flashmem_wipe(void) {
     PrintAndLogEx(NORMAL, "        mem wipe p 0");  // wipes first page.
     return 0;
 }
-int usage_flashmem_info(void) {
+static int usage_flashmem_info(void) {
     PrintAndLogEx(NORMAL, "Collect signature and verify it from flash memory\n");
     PrintAndLogEx(NORMAL, " Usage:  mem info [h|s|w]");
     PrintAndLogEx(NORMAL, "  s    :      create a signature");

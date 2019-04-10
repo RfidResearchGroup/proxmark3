@@ -10,7 +10,7 @@
 #include "cmdlfnedap.h"
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_nedap_clone(void) {
+static int usage_lf_nedap_clone(void) {
     PrintAndLogEx(NORMAL, "clone a NEDAP tag to a T55x7 tag.");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage: lf nedap clone [h] <Card-Number>");
@@ -24,7 +24,7 @@ int usage_lf_nedap_clone(void) {
     return 0;
 }
 
-int usage_lf_nedap_sim(void) {
+static int usage_lf_nedap_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of NEDAP card with specified card number.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "");

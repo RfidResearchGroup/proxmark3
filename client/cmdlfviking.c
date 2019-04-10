@@ -11,7 +11,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_viking_clone(void) {
+static int usage_lf_viking_clone(void) {
     PrintAndLogEx(NORMAL, "clone a Viking AM tag to a T55x7 tag.");
     PrintAndLogEx(NORMAL, "Usage: lf viking clone <Card ID - 8 hex digits> <Q5>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -23,7 +23,7 @@ int usage_lf_viking_clone(void) {
     return 0;
 }
 
-int usage_lf_viking_sim(void) {
+static int usage_lf_viking_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of viking card with specified card number.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "Per viking format, the card number is 8 digit hex number.  Larger values are truncated.");

@@ -28,7 +28,7 @@ static int CmdHelp(const char *Cmd);
 size_t nbytes(size_t nbits) {
     return (nbits / 8) + ((nbits % 8) > 0);
 }
-int usage_hitag_sniff(void) {
+static int usage_hitag_sniff(void) {
     PrintAndLogEx(NORMAL, "Sniff traffic between Hitag reader and tag. Use " _YELLOW_("`lf hitag list`")" to view collected data.");
     PrintAndLogEx(NORMAL, "Usage:   lf hitag sniff [h] ");
     PrintAndLogEx(NORMAL, "Options:");
@@ -39,7 +39,7 @@ int usage_hitag_sniff(void) {
     PrintAndLogEx(NORMAL, "         lf hitag sniff");
     return 0;
 }
-int usage_hitag_sim(void) {
+static int usage_hitag_sim(void) {
     PrintAndLogEx(NORMAL, "Simulate " _YELLOW_("Hitag2 / HitagS")" transponder");
     PrintAndLogEx(NORMAL, "Usage:   lf hitag sim [h] [2|s] e|j|b <filename w/o extension>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -53,7 +53,7 @@ int usage_hitag_sim(void) {
     PrintAndLogEx(NORMAL, "         lf hitag sim 2 b lf-hitag-dump");
     return 0;
 }
-int usage_hitag_info(void) {
+static int usage_hitag_info(void) {
     PrintAndLogEx(NORMAL, "Usage:   lf hitag info [h] p <pwd>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h          This help");
@@ -62,7 +62,7 @@ int usage_hitag_info(void) {
     PrintAndLogEx(NORMAL, "         lf hitag info");
     return 0;
 }
-int usage_hitag_dump(void) {
+static int usage_hitag_dump(void) {
     PrintAndLogEx(NORMAL, "Usage:   lf hitag dump [h] p <pwd> f <name>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h          This help");
@@ -74,7 +74,7 @@ int usage_hitag_dump(void) {
     PrintAndLogEx(NORMAL, "         lf hitag dump p 4D494B52 f mydump");
     return 0;
 }
-int usage_hitag_reader(void) {
+static int usage_hitag_reader(void) {
     PrintAndLogEx(NORMAL, "Hitag reader functions");
     PrintAndLogEx(NORMAL, "Usage: lf hitag reader [h] <reader function #>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -91,7 +91,7 @@ int usage_hitag_reader(void) {
     PrintAndLogEx(NORMAL, "      26               Just read UID");
     return 0;
 }
-int usage_hitag_writer(void) {
+static int usage_hitag_writer(void) {
     PrintAndLogEx(NORMAL, "Hitag writer functions");
     PrintAndLogEx(NORMAL, "Usage: lf hitag write [h] <reader function #>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -104,7 +104,7 @@ int usage_hitag_writer(void) {
     PrintAndLogEx(NORMAL, "      24  <key> (set to 0 if no authentication is needed) <page> <byte0...byte3> write page on a Hitag2 tag");
     return 0;
 }
-int usage_hitag_checkchallenges(void) {
+static int usage_hitag_checkchallenges(void) {
     PrintAndLogEx(NORMAL, "Check challenges, load a file with save hitag crypto challenges and test them all.");
     PrintAndLogEx(NORMAL, "The file should be 8 * 60 bytes long,  the file extension defaults to " _YELLOW_("`.cc`"));
     PrintAndLogEx(NORMAL, "");

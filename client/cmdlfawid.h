@@ -32,9 +32,4 @@ int CmdAWIDClone(const char *Cmd);
 int CmdAWIDBrute(const char *Cmd);
 int getAWIDBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *bits);
 
-int usage_lf_awid_read(void);
-int usage_lf_awid_sim(void);
-int usage_lf_awid_clone(void);
-int usage_lf_awid_brute(void);
-
 #endif

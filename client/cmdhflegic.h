@@ -47,14 +47,4 @@ void legic_chk_iv(uint32_t *iv);
 void legic_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes);
 int legic_read_mem(uint32_t offset, uint32_t len, uint32_t iv, uint8_t *out, uint16_t *outlen);
 
-int usage_legic_calccrc(void);
-int usage_legic_load(void);
-int usage_legic_rdmem(void);
-int usage_legic_sim(void);
-int usage_legic_write(void);
-int usage_legic_reader(void);
-int usage_legic_info(void);
-int usage_legic_dump(void);
-int usage_legic_restore(void);
-int usage_legic_wipe(void);
 #endif

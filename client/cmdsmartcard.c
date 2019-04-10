@@ -12,7 +12,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_sm_raw(void) {
+static int usage_sm_raw(void) {
     PrintAndLogEx(NORMAL, "Usage: sc raw [h|r|c] d <0A 0B 0C ... hex>");
     PrintAndLogEx(NORMAL, "       h          :  this help");
     PrintAndLogEx(NORMAL, "       r          :  do not read response");
@@ -30,7 +30,7 @@ int usage_sm_raw(void) {
 
     return 0;
 }
-int usage_sm_reader(void) {
+static int usage_sm_reader(void) {
     PrintAndLogEx(NORMAL, "Usage: sc reader [h|s]");
     PrintAndLogEx(NORMAL, "       h          :  this help");
     PrintAndLogEx(NORMAL, "       s          :  silent (no messages)");
@@ -39,7 +39,7 @@ int usage_sm_reader(void) {
     PrintAndLogEx(NORMAL, "        sc reader");
     return 0;
 }
-int usage_sm_info(void) {
+static int usage_sm_info(void) {
     PrintAndLogEx(NORMAL, "Usage: s info [h|s]");
     PrintAndLogEx(NORMAL, "       h          :  this help");
     PrintAndLogEx(NORMAL, "       s          :  silent (no messages)");
@@ -48,7 +48,7 @@ int usage_sm_info(void) {
     PrintAndLogEx(NORMAL, "        sc info");
     return 0;
 }
-int usage_sm_upgrade(void) {
+static int usage_sm_upgrade(void) {
     PrintAndLogEx(NORMAL, "Upgrade RDV4.0 Sim module firmware");
     PrintAndLogEx(NORMAL, "Usage:  sc upgrade f <file name>");
     PrintAndLogEx(NORMAL, "       h               :  this help");
@@ -58,7 +58,7 @@ int usage_sm_upgrade(void) {
     PrintAndLogEx(NORMAL, "        sc upgrade f ../tools/simmodule/SIM011.BIN");
     return 0;
 }
-int usage_sm_setclock(void) {
+static int usage_sm_setclock(void) {
     PrintAndLogEx(NORMAL, "Usage: sc setclock [h] c <clockspeed>");
     PrintAndLogEx(NORMAL, "       h          :  this help");
     PrintAndLogEx(NORMAL, "       c <>       :  clockspeed (0 = 16mhz, 1=8mhz, 2=4mhz) ");
@@ -67,7 +67,7 @@ int usage_sm_setclock(void) {
     PrintAndLogEx(NORMAL, "        sc setclock c 2");
     return 0;
 }
-int usage_sm_brute(void) {
+static int usage_sm_brute(void) {
     PrintAndLogEx(NORMAL, "Tries to bruteforce SFI, using a known list of AID's ");
     PrintAndLogEx(NORMAL, "Usage: sc brute [h]");
     PrintAndLogEx(NORMAL, "       h          :  this help");

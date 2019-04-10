@@ -14,7 +14,7 @@
 #define TIMEOUT 2000
 static int CmdHelp(const char *Cmd);
 
-int usage_hf_14b_info(void) {
+static int usage_hf_14b_info(void) {
     PrintAndLogEx(NORMAL, "Usage: hf 14b info [h] [s]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h    this help");
@@ -23,7 +23,7 @@ int usage_hf_14b_info(void) {
     PrintAndLogEx(NORMAL, "       hf 14b info");
     return 0;
 }
-int usage_hf_14b_reader(void) {
+static int usage_hf_14b_reader(void) {
     PrintAndLogEx(NORMAL, "Usage: hf 14b reader [h] [s]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h    this help");
@@ -32,7 +32,7 @@ int usage_hf_14b_reader(void) {
     PrintAndLogEx(NORMAL, "       hf 14b reader");
     return 0;
 }
-int usage_hf_14b_raw(void) {
+static int usage_hf_14b_raw(void) {
     PrintAndLogEx(NORMAL, "Usage: hf 14b raw [-h] [-r] [-c] [-p] [-s / -ss] [-t] <0A 0B 0C ... hex>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       -h    this help");
@@ -46,7 +46,7 @@ int usage_hf_14b_raw(void) {
     PrintAndLogEx(NORMAL, "       hf 14b raw -s -c -p 0200a40400");
     return 0;
 }
-int usage_hf_14b_sniff(void) {
+static int usage_hf_14b_sniff(void) {
     PrintAndLogEx(NORMAL, "It get data from the field and saves it into command buffer.");
     PrintAndLogEx(NORMAL, "Buffer accessible from command 'hf list 14b'");
     PrintAndLogEx(NORMAL, "Usage: hf 14b sniff [h]");
@@ -56,7 +56,7 @@ int usage_hf_14b_sniff(void) {
     PrintAndLogEx(NORMAL, "       hf 14b sniff");
     return 0;
 }
-int usage_hf_14b_sim(void) {
+static int usage_hf_14b_sim(void) {
     PrintAndLogEx(NORMAL, "Emulating ISO/IEC 14443 type B tag with 4 UID / PUPI");
     PrintAndLogEx(NORMAL, "Usage: hf 14b sim [h] u <uid>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -67,7 +67,7 @@ int usage_hf_14b_sim(void) {
     PrintAndLogEx(NORMAL, "       hf 14b sim u 11223344");
     return 0;
 }
-int usage_hf_14b_read_srx(void) {
+static int usage_hf_14b_read_srx(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf 14b sriread [h] <1|2>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h        this help");
@@ -77,7 +77,7 @@ int usage_hf_14b_read_srx(void) {
     PrintAndLogEx(NORMAL, "       hf 14b sriread 2");
     return 0;
 }
-int usage_hf_14b_write_srx(void) {
+static int usage_hf_14b_write_srx(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf 14b [h] sriwrite <1|2> <BLOCK> <DATA>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h        this help");
@@ -91,7 +91,7 @@ int usage_hf_14b_write_srx(void) {
     PrintAndLogEx(NORMAL, "       hf 14b sriwrite 2 FF 11223344");
     return 0;
 }
-int usage_hf_14b_dump(void) {
+static int usage_hf_14b_dump(void) {
     PrintAndLogEx(NORMAL, "This command dumps the contents of a ISO-14443-B tag and save it to file\n"
                   "\n"
                   "Usage: hf 14b dump [h] [card memory] <f filname> \n"

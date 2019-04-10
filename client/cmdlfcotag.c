@@ -11,7 +11,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_cotag_read(void) {
+static int usage_lf_cotag_read(void) {
     PrintAndLogEx(NORMAL, "Usage: lf COTAG read [h] <signaldata>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h          : This help");

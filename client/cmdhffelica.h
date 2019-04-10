@@ -32,10 +32,6 @@ int CmdHFFelicaSim(const char *Cmd);
 int CmdHFFelicaSniff(const char *Cmd);
 int CmdHFFelicaCmdRaw(const char *Cmd);
 
-int usage_hf_felica_sim(void);
-int usage_hf_felica_sniff(void);
-int usage_hf_fFelica_raw(void);
-
 void waitCmdFelica(uint8_t iSelect);
 
 //temp

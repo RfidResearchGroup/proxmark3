@@ -153,7 +153,7 @@ const char *getTagInfo(uint8_t uid) {
 static uint16_t frameLength = 0;
 uint16_t atsFSC[] = {16, 24, 32, 40, 48, 64, 96, 128, 256};
 
-int usage_hf_14a_sim(void) {
+static int usage_hf_14a_sim(void) {
 //  PrintAndLogEx(NORMAL, "\n Emulating ISO/IEC 14443 type A tag with 4,7 or 10 byte UID\n");
     PrintAndLogEx(NORMAL, "\n Emulating ISO/IEC 14443 type A tag with 4,7 byte UID\n");
     PrintAndLogEx(NORMAL, "Usage: hf 14a sim [h] t <type> u <uid> [x] [e] [v]");
@@ -180,7 +180,7 @@ int usage_hf_14a_sim(void) {
 //  PrintAndLogEx(NORMAL, "          hf 14a sim t 1 u 11223445566778899AA\n");
     return 0;
 }
-int usage_hf_14a_sniff(void) {
+static int usage_hf_14a_sniff(void) {
     PrintAndLogEx(NORMAL, "It get data from the field and saves it into command buffer.");
     PrintAndLogEx(NORMAL, "Buffer accessible from command 'hf list 14a'");
     PrintAndLogEx(NORMAL, "Usage:  hf 14a sniff [c][r]");
@@ -190,7 +190,7 @@ int usage_hf_14a_sniff(void) {
     PrintAndLogEx(NORMAL, "        hf 14a sniff c r");
     return 0;
 }
-int usage_hf_14a_raw(void) {
+static int usage_hf_14a_raw(void) {
     PrintAndLogEx(NORMAL, "Usage: hf 14a raw [-h] [-r] [-c] [-p] [-a] [-T] [-t] <milliseconds> [-b] <number of bits>  <0A 0B 0C ... hex>");
     PrintAndLogEx(NORMAL, "       -h    this help");
     PrintAndLogEx(NORMAL, "       -r    do not read response");
@@ -204,7 +204,7 @@ int usage_hf_14a_raw(void) {
     PrintAndLogEx(NORMAL, "       -3    ISO14443-3 select only (skip RATS)");
     return 0;
 }
-int usage_hf_14a_reader(void) {
+static int usage_hf_14a_reader(void) {
     PrintAndLogEx(NORMAL, "Usage: hf 14a reader [k|s|x] [3]");
     PrintAndLogEx(NORMAL, "       k    keep the field active after command executed");
     PrintAndLogEx(NORMAL, "       s    silent (no messages)");
@@ -212,7 +212,7 @@ int usage_hf_14a_reader(void) {
     PrintAndLogEx(NORMAL, "       3    ISO14443-3 select only (skip RATS)");
     return 0;
 }
-int usage_hf_14a_info(void) {
+static int usage_hf_14a_info(void) {
     PrintAndLogEx(NORMAL, "This command makes more extensive tests against a ISO14443a tag in order to collect information");
     PrintAndLogEx(NORMAL, "Usage: hf 14a info [h|s]");
     PrintAndLogEx(NORMAL, "       s    silent (no messages)");

@@ -28,6 +28,4 @@ int CmdGuardRead(const char *Cmd);
 int CmdGuardClone(const char *Cmd);
 int CmdGuardSim(const char *Cmd);
 
-int usage_lf_guard_clone(void);
-int usage_lf_quard_sim(void);
 #endif

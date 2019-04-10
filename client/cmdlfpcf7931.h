@@ -22,10 +22,6 @@ struct pcf7931_config {
 int pcf7931_resetConfig(void);
 int pcf7931_printConfig(void);
 
-int usage_pcf7931_read(void);
-int usage_pcf7931_write(void);
-int usage_pcf7931_config(void);
-
 int CmdLFPCF7931(const char *Cmd);
 
 int CmdLFPCF7931Read(const char *Cmd);

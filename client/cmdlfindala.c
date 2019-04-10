@@ -18,7 +18,7 @@ static uint8_t preamble224[] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
 // standard 64 bit indala formats including 26 bit 40134 format
 static uint8_t preamble64[] =  {1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
 
-int usage_lf_indala_demod(void) {
+static int usage_lf_indala_demod(void) {
     PrintAndLogEx(NORMAL, "Enables Indala compatible reader mode printing details of scanned tags.");
     PrintAndLogEx(NORMAL, "By default, values are printed and logged until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "");
@@ -31,7 +31,7 @@ int usage_lf_indala_demod(void) {
     return 0;
 }
 
-int usage_lf_indala_sim(void) {
+static int usage_lf_indala_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of Indala card with specified uid.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "");
@@ -45,7 +45,7 @@ int usage_lf_indala_sim(void) {
     return 0;
 }
 
-int usage_lf_indala_clone(void) {
+static int usage_lf_indala_clone(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf indala clone [h]<l> <uid> [Q5]");

@@ -30,7 +30,5 @@ int CmdKeriSim(const char *Cmd);
 
 int detectKeri(uint8_t *dest, size_t *size, bool *invert);
 
-int usage_lf_keri_clone(void);
-int usage_lf_keri_sim(void);
 #endif
 

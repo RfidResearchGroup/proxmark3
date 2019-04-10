@@ -13,7 +13,7 @@ bool g_lf_threshold_set = false;
 
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_cmdread(void) {
+static int usage_lf_cmdread(void) {
     PrintAndLogEx(NORMAL, "Usage: lf cmdread d <delay period> z <zero period> o <one period> c <cmdbytes>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h             This help");
@@ -28,7 +28,7 @@ int usage_lf_cmdread(void) {
     PrintAndLogEx(NORMAL, "      lf cmdread d 80 z 100 o 200 c 11000");
     return 0;
 }
-int usage_lf_read(void) {
+static int usage_lf_read(void) {
     PrintAndLogEx(NORMAL, "Usage: lf read [h] [s] [d numofsamples]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h            This help");
@@ -41,7 +41,7 @@ int usage_lf_read(void) {
     PrintAndLogEx(NORMAL, "         lf read s");
     return 0;
 }
-int usage_lf_sniff(void) {
+static int usage_lf_sniff(void) {
     PrintAndLogEx(NORMAL, "Sniff low frequence signal.");
     PrintAndLogEx(NORMAL, "Use " _YELLOW_("'lf config'")" to set parameters.");
     PrintAndLogEx(NORMAL, "Use " _YELLOW_("'data samples'")" command to download from device,  and " _YELLOW_("'data plot'")" to look at it");
@@ -51,7 +51,7 @@ int usage_lf_sniff(void) {
     PrintAndLogEx(NORMAL, "      h         This help");
     return 0;
 }
-int usage_lf_config(void) {
+static int usage_lf_config(void) {
     PrintAndLogEx(NORMAL, "Usage: lf config [h] [H|<divisor>] [b <bps>] [d <decim>] [a 0|1]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h             This help");
@@ -74,7 +74,7 @@ int usage_lf_config(void) {
     PrintAndLogEx(NORMAL, "                    Performs a sniff (no active field)");
     return 0;
 }
-int usage_lf_simfsk(void) {
+static int usage_lf_simfsk(void) {
     PrintAndLogEx(NORMAL, "Usage: lf simfsk [h] [c <clock>] [H <fcHigh>] [L <fcLow>] [d <hexdata>]");
     PrintAndLogEx(NORMAL, "there are about four FSK modulations to know of.");
     PrintAndLogEx(NORMAL, "FSK1  -  where fc/8 = high  and fc/5 = low");
@@ -99,7 +99,7 @@ int usage_lf_simfsk(void) {
     PrintAndLogEx(NORMAL, "");
     return 0;
 }
-int usage_lf_simask(void) {
+static int usage_lf_simask(void) {
     PrintAndLogEx(NORMAL, "Usage: lf simask [c <clock>] [i] [b|m|r] [s] [d <raw hex to sim>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h              This help");
@@ -112,7 +112,7 @@ int usage_lf_simask(void) {
     PrintAndLogEx(NORMAL, "       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
     return 0;
 }
-int usage_lf_simpsk(void) {
+static int usage_lf_simpsk(void) {
     PrintAndLogEx(NORMAL, "Usage: lf simpsk [1|2|3] [c <clock>] [i] [r <carrier>] [d <raw hex to sim>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h              This help");
@@ -125,7 +125,7 @@ int usage_lf_simpsk(void) {
     PrintAndLogEx(NORMAL, "       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
     return 0;
 }
-int usage_lf_find(void) {
+static int usage_lf_find(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf search [h] <0|1> [u]");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Options:");

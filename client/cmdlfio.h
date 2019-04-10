@@ -24,7 +24,4 @@ int CmdIOProxClone(const char *Cmd);
 
 int getIOProxBits(uint8_t version, uint8_t fc, uint16_t cn, uint8_t *bits);
 
-int usage_lf_io_read(void);
-int usage_lf_io_clone(void);
-int usage_lf_io_sim(void);
 #endif

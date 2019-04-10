@@ -53,8 +53,4 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card);
 int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);
 int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);
 
-int usage_hf_14a_sim(void);
-int usage_hf_14a_sniff(void);
-int usage_hf_14a_raw(void);
-int usage_hf_14a_antifuzz(void);
 #endif

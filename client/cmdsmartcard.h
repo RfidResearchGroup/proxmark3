@@ -37,8 +37,4 @@ int CmdSmartReader(const char *Cmd);
 bool smart_select(bool silent, smart_card_atr_t *atr);
 int ExchangeAPDUSC(uint8_t *datain, int datainlen, bool activateCard, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);
 
-int usage_sm_raw(void);
-int usage_sm_reader(void);
-int usage_sm_info(void);
-int usage_sm_upgrade(void);
 #endif

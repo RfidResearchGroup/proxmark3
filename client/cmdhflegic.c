@@ -13,7 +13,7 @@ static int CmdHelp(const char *Cmd);
 
 #define MAX_LENGTH 1024
 
-int usage_legic_calccrc(void) {
+static int usage_legic_calccrc(void) {
     PrintAndLogEx(NORMAL, "Calculates the legic crc8/crc16 on the given data.");
     PrintAndLogEx(NORMAL, "There must be an even number of hexsymbols as input.");
     PrintAndLogEx(NORMAL, "Usage:  hf legic crc [h] d <data> u <uidcrc> c <8|16>");
@@ -28,7 +28,7 @@ int usage_legic_calccrc(void) {
     PrintAndLogEx(NORMAL, "      hf legic crc d deadbeef1122 u 9A c 16");
     return 0;
 }
-int usage_legic_rdmem(void) {
+static int usage_legic_rdmem(void) {
     PrintAndLogEx(NORMAL, "Read data from a legic tag.");
     PrintAndLogEx(NORMAL, "Usage:  hf legic rdmem [h] <offset> <length> <IV>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -43,7 +43,7 @@ int usage_legic_rdmem(void) {
     PrintAndLogEx(NORMAL, "      hf legic rdmem 0 100 55    - reads 0x100 bytes with IV 0x55");
     return 0;
 }
-int usage_legic_sim(void) {
+static int usage_legic_sim(void) {
     PrintAndLogEx(NORMAL, "Simulates a LEGIC Prime tag. MIM22, MIM256, MIM1024 types can be emulated");
     PrintAndLogEx(NORMAL, "Use ELOAD/ESAVE to upload a dump into emulator memory");
     PrintAndLogEx(NORMAL, "Usage:  hf legic sim [h] <tagtype>");
@@ -57,7 +57,7 @@ int usage_legic_sim(void) {
     PrintAndLogEx(NORMAL, "      hf legic sim 2");
     return 0;
 }
-int usage_legic_write(void) {
+static int usage_legic_write(void) {
     PrintAndLogEx(NORMAL, "Write data to a LEGIC Prime tag. It autodetects tagsize to make sure size");
     PrintAndLogEx(NORMAL, "Usage:  hf legic write [h] o <offset> d <data (hex symbols)>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -70,7 +70,7 @@ int usage_legic_write(void) {
     PrintAndLogEx(NORMAL, "      hf legic write o 10 d 11223344    - Write 0x11223344 starting from offset 0x10");
     return 0;
 }
-int usage_legic_reader(void) {
+static int usage_legic_reader(void) {
     PrintAndLogEx(NORMAL, "Read UID and type information from a legic tag.");
     PrintAndLogEx(NORMAL, "Usage:  hf legic reader [h]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -80,7 +80,7 @@ int usage_legic_reader(void) {
     PrintAndLogEx(NORMAL, "      hf legic reader");
     return 0;
 }
-int usage_legic_info(void) {
+static int usage_legic_info(void) {
     PrintAndLogEx(NORMAL, "Reads information from a legic prime tag.");
     PrintAndLogEx(NORMAL, "Shows systemarea, user areas etc");
     PrintAndLogEx(NORMAL, "Usage:  hf legic info [h]");
@@ -91,7 +91,7 @@ int usage_legic_info(void) {
     PrintAndLogEx(NORMAL, "      hf legic info");
     return 0;
 }
-int usage_legic_dump(void) {
+static int usage_legic_dump(void) {
     PrintAndLogEx(NORMAL, "Reads all pages from LEGIC Prime MIM22, MIM256, MIM1024");
     PrintAndLogEx(NORMAL, "and saves binary dump into the file `filename.bin` or `cardUID.bin`");
     PrintAndLogEx(NORMAL, "It autodetects card type.\n");
@@ -105,7 +105,7 @@ int usage_legic_dump(void) {
     PrintAndLogEx(NORMAL, "      hf legic dump o myfile");
     return 0;
 }
-int usage_legic_restore(void) {
+static int usage_legic_restore(void) {
     PrintAndLogEx(NORMAL, "Reads binary file and it autodetects card type and verifies that the file has the same size");
     PrintAndLogEx(NORMAL, "Then write the data back to card. All bytes except the first 7bytes [UID(4) MCC(1) DCF(2)]\n");
     PrintAndLogEx(NORMAL, "Usage:   hf legic restore [h] i <filename w/o .bin>");
@@ -117,7 +117,7 @@ int usage_legic_restore(void) {
     PrintAndLogEx(NORMAL, "      hf legic restore i myfile");
     return 0;
 }
-int usage_legic_eload(void) {
+static int usage_legic_eload(void) {
     PrintAndLogEx(NORMAL, "It loads binary dump from the file `filename.bin`");
     PrintAndLogEx(NORMAL, "Usage:  hf legic eload [h] [card memory] <file name w/o `.bin`>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -131,7 +131,7 @@ int usage_legic_eload(void) {
     PrintAndLogEx(NORMAL, "      hf legic eload 2 myfile");
     return 0;
 }
-int usage_legic_esave(void) {
+static int usage_legic_esave(void) {
     PrintAndLogEx(NORMAL, "It saves binary dump into the file `filename.bin` or `cardID.bin`");
     PrintAndLogEx(NORMAL, " Usage:  hf legic esave [h] [card memory] [file name w/o `.bin`]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -145,7 +145,7 @@ int usage_legic_esave(void) {
     PrintAndLogEx(NORMAL, "      hf legic esave 2 myfile");
     return 0;
 }
-int usage_legic_wipe(void) {
+static int usage_legic_wipe(void) {
     PrintAndLogEx(NORMAL, "Fills a legic tag memory with zeros. From byte7 and to the end.");
     PrintAndLogEx(NORMAL, " Usage:  hf legic wipe [h]");
     PrintAndLogEx(NORMAL, "Options:");

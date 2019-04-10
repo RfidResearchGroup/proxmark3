@@ -35,7 +35,4 @@ int detectIndala26(uint8_t *bitStream, size_t *size, uint8_t *invert);
 int detectIndala64(uint8_t *bitStream, size_t *size, uint8_t *invert);
 int detectIndala224(uint8_t *bitStream, size_t *size, uint8_t *invert);
 
-int usage_lf_indala_demod(void);
-int usage_lf_indala_clone(void);
-int usage_lf_indala_sim(void);
 #endif

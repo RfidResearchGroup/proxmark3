@@ -45,21 +45,5 @@ int CmdHF15Write(const char *Cmd);
 
 int CmdHF15Help(const char *Cmd);
 
-// usages
-int usage_15_demod(void);
-int usage_15_samples(void);
-int usage_15_info(void);
-int usage_15_record(void);
-int usage_15_reader(void);
-int usage_15_sim(void);
-int usage_15_findafi(void);
-int usage_15_dump(void);
-int usage_15_restore(void);
-int usage_15_raw(void);
-
-int usage_15_read(void);
-int usage_15_write(void);
-int usage_15_readmulti(void);
-
 int prepareHF15Cmd(char **cmd, UsbCommand *c, uint8_t iso15cmd);
 #endif

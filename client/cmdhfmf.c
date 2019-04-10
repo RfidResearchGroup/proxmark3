@@ -28,7 +28,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int usage_hf14_ice(void) {
+static int usage_hf14_ice(void) {
     PrintAndLogEx(NORMAL, "Usage:   hf mf ice [l] <limit> [f] <name>");
     PrintAndLogEx(NORMAL, "  h            this help");
     PrintAndLogEx(NORMAL, "  l <limit>    nonces to be collected");
@@ -40,7 +40,7 @@ int usage_hf14_ice(void) {
     return 0;
 }
 
-int usage_hf14_dump(void) {
+static int usage_hf14_dump(void) {
     PrintAndLogEx(NORMAL, "Usage:   hf mf dump [card memory] k <name> f <name>");
     PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
     PrintAndLogEx(NORMAL, "  k <name>     : key filename, if no <name> given, UID will be used as filename");
@@ -52,7 +52,7 @@ int usage_hf14_dump(void) {
     return 0;
 }
 
-int usage_hf14_mifare(void) {
+static int usage_hf14_mifare(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf mf darkside [h] <block number> <A|B>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h               this help");
@@ -64,7 +64,7 @@ int usage_hf14_mifare(void) {
     PrintAndLogEx(NORMAL, "           hf mf darkside 16 B");
     return 0;
 }
-int usage_hf14_mf1ksim(void) {
+static int usage_hf14_mf1ksim(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf mf sim [h] u <uid> n <numreads> [i] [x] [e] [v]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h    this help");
@@ -85,7 +85,7 @@ int usage_hf14_mf1ksim(void) {
     PrintAndLogEx(NORMAL, "           hf mf sim u 11223344 i x");
     return 0;
 }
-int usage_hf14_dbg(void) {
+static int usage_hf14_dbg(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf mf dbg [h] <debug level>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "           h    this help");
@@ -100,7 +100,7 @@ int usage_hf14_dbg(void) {
     PrintAndLogEx(NORMAL, "           hf mf dbg 3");
     return 0;
 }
-int usage_hf14_sniff(void) {
+static int usage_hf14_sniff(void) {
     PrintAndLogEx(NORMAL, "It continuously gets data from the field and saves it to: log, emulator, emulator file.");
     PrintAndLogEx(NORMAL, "Usage:  hf mf sniff [h] [l] [d] [f]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -113,7 +113,7 @@ int usage_hf14_sniff(void) {
     PrintAndLogEx(NORMAL, "           hf mf sniff l d f");
     return 0;
 }
-int usage_hf14_nested(void) {
+static int usage_hf14_nested(void) {
     PrintAndLogEx(NORMAL, "Usage:");
     PrintAndLogEx(NORMAL, " all sectors:  hf mf nested  <card memory> <block number> <key A/B> <key (12 hex symbols)> [t,d]");
     PrintAndLogEx(NORMAL, " one sector:   hf mf nested  o <block number> <key A/B> <key (12 hex symbols)>");
@@ -131,7 +131,7 @@ int usage_hf14_nested(void) {
     PrintAndLogEx(NORMAL, "      hf mf nested o 0 A FFFFFFFFFFFF 4 A");
     return 0;
 }
-int usage_hf14_hardnested(void) {
+static int usage_hf14_hardnested(void) {
     PrintAndLogEx(NORMAL, "Usage:");
     PrintAndLogEx(NORMAL, "      hf mf hardnested <block number> <key A|B> <key (12 hex symbols)>");
     PrintAndLogEx(NORMAL, "                       <target block number> <target key A|B> [known target key (12 hex symbols)] [w] [s]");
@@ -164,7 +164,7 @@ int usage_hf14_hardnested(void) {
     PrintAndLogEx(NORMAL, "      hf mf hardnested 0 A A0A1A2A3A4A5 4 A FFFFFFFFFFFF");
     return 0;
 }
-int usage_hf14_chk(void) {
+static int usage_hf14_chk(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf mf chk [h] <block number>|<*card memory> <key type (A/B/?)> [t|d] [<key (12 hex symbols)>] [<dic (*.dic)>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h    this help");
@@ -182,7 +182,7 @@ int usage_hf14_chk(void) {
     PrintAndLogEx(NORMAL, "      hf mf chk *1 ? d                        -- target all blocks, all keys, 1K, write to file");
     return 0;
 }
-int usage_hf14_chk_fast(void) {
+static int usage_hf14_chk_fast(void) {
     PrintAndLogEx(NORMAL, "This is a improved checkkeys method speedwise. It checks Mifare Classic tags sector keys against a dictionary file with keys");
     PrintAndLogEx(NORMAL, "Usage:  hf mf fchk [h] <card memory> [t|d|f] [<key (12 hex symbols)>] [<dic (*.dic)>]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -205,7 +205,7 @@ int usage_hf14_chk_fast(void) {
 #endif
     return 0;
 }
-int usage_hf14_keybrute(void) {
+static int usage_hf14_keybrute(void) {
     PrintAndLogEx(NORMAL, "J_Run's 2nd phase of multiple sector nested authentication key recovery");
     PrintAndLogEx(NORMAL, "You have a known 4 last bytes of a key recovered with mf_nonce_brute tool.");
     PrintAndLogEx(NORMAL, "First 2 bytes of key will be bruteforced");
@@ -222,7 +222,7 @@ int usage_hf14_keybrute(void) {
     PrintAndLogEx(NORMAL, "           hf mf keybrute 1 A 000011223344");
     return 0;
 }
-int usage_hf14_restore(void) {
+static int usage_hf14_restore(void) {
     PrintAndLogEx(NORMAL, "Usage:   hf mf restore [card memory] u <UID> k <name> f <name>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
@@ -237,7 +237,7 @@ int usage_hf14_restore(void) {
     PrintAndLogEx(NORMAL, "         hf mf restore 4                          -- read the UID from tag with 4K memory first, then restore from hf-mf-<UID>-key.bin and and hf-mf-<UID>-data.bin");
     return 0;
 }
-int usage_hf14_decryptbytes(void) {
+static int usage_hf14_decryptbytes(void) {
     PrintAndLogEx(NORMAL, "Decrypt Crypto-1 encrypted bytes given some known state of crypto. See tracelog to gather needed values\n");
     PrintAndLogEx(NORMAL, "Usage:   hf mf decrypt [h] <nt> <ar_enc> <at_enc> <data>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -252,24 +252,24 @@ int usage_hf14_decryptbytes(void) {
     return 0;
 }
 
-int usage_hf14_eget(void) {
+static int usage_hf14_eget(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf mf eget <block number>");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        hf mf eget 0 ");
     return 0;
 }
-int usage_hf14_eclr(void) {
+static int usage_hf14_eclr(void) {
     PrintAndLogEx(NORMAL, "It set card emulator memory to empty data blocks and key A/B FFFFFFFFFFFF \n");
     PrintAndLogEx(NORMAL, "Usage:  hf mf eclr");
     return 0;
 }
-int usage_hf14_eset(void) {
+static int usage_hf14_eset(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf mf eset <block number> <block data (32 hex symbols)>");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        hf mf eset 1 000102030405060708090a0b0c0d0e0f ");
     return 0;
 }
-int usage_hf14_eload(void) {
+static int usage_hf14_eload(void) {
     PrintAndLogEx(NORMAL, "It loads emul dump from the file `filename.eml`");
     PrintAndLogEx(NORMAL, "Usage:  hf mf eload [card memory] <file name w/o `.eml`> [numblocks]");
     PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K, u = UL");
@@ -279,7 +279,7 @@ int usage_hf14_eload(void) {
     PrintAndLogEx(NORMAL, "        hf mf eload 4 filename");
     return 0;
 }
-int usage_hf14_esave(void) {
+static int usage_hf14_esave(void) {
     PrintAndLogEx(NORMAL, "It saves emul dump into the file `filename.eml` or `cardID.eml`");
     PrintAndLogEx(NORMAL, " Usage:  hf mf esave [card memory] [file name w/o `.eml`]");
     PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
@@ -290,7 +290,7 @@ int usage_hf14_esave(void) {
     PrintAndLogEx(NORMAL, "        hf mf esave 4 filename");
     return 0;
 }
-int usage_hf14_ecfill(void) {
+static int usage_hf14_ecfill(void) {
     PrintAndLogEx(NORMAL, "Read card and transfer its data to emulator memory.");
     PrintAndLogEx(NORMAL, "Keys must be laid in the emulator memory. \n");
     PrintAndLogEx(NORMAL, "Usage:  hf mf ecfill <key A/B> [card memory]");
@@ -301,7 +301,7 @@ int usage_hf14_ecfill(void) {
     PrintAndLogEx(NORMAL, "        hf mf ecfill A 4");
     return 0;
 }
-int usage_hf14_ekeyprn(void) {
+static int usage_hf14_ekeyprn(void) {
     PrintAndLogEx(NORMAL, "It prints the keys loaded in the emulator memory");
     PrintAndLogEx(NORMAL, "Usage:  hf mf ekeyprn [card memory]");
     PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
@@ -311,7 +311,7 @@ int usage_hf14_ekeyprn(void) {
     return 0;
 }
 
-int usage_hf14_csetuid(void) {
+static int usage_hf14_csetuid(void) {
     PrintAndLogEx(NORMAL, "Set UID, ATQA, and SAK for magic Chinese card. Only works with magic cards");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  hf mf csetuid [h] <UID 8 hex symbols> [ATQA 4 hex symbols] [SAK 2 hex symbols] [w]");
@@ -326,7 +326,7 @@ int usage_hf14_csetuid(void) {
     PrintAndLogEx(NORMAL, "      hf mf csetuid 01020304 0004 08 w");
     return 0;
 }
-int usage_hf14_csetblk(void) {
+static int usage_hf14_csetblk(void) {
     PrintAndLogEx(NORMAL, "Set block data for magic Chinese card. Only works with magic cards");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  hf mf csetblk [h] <block number> <block data (32 hex symbols)> [w]");
@@ -340,7 +340,7 @@ int usage_hf14_csetblk(void) {
     PrintAndLogEx(NORMAL, "       hf mf csetblk 1 01020304050607080910111213141516 w");
     return 0;
 }
-int usage_hf14_cload(void) {
+static int usage_hf14_cload(void) {
     PrintAndLogEx(NORMAL, "It loads magic Chinese card from the file `filename.eml`");
     PrintAndLogEx(NORMAL, "or from emulator memory");
     PrintAndLogEx(NORMAL, "");
@@ -356,7 +356,7 @@ int usage_hf14_cload(void) {
     PrintAndLogEx(NORMAL, "       hf mf cload e");
     return 0;
 }
-int usage_hf14_cgetblk(void) {
+static int usage_hf14_cgetblk(void) {
     PrintAndLogEx(NORMAL, "Get block data from magic Chinese card. Only works with magic cards\n");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  hf mf cgetblk [h] <block number>");
@@ -367,7 +367,7 @@ int usage_hf14_cgetblk(void) {
     PrintAndLogEx(NORMAL, "      hf mf cgetblk 1");
     return 0;
 }
-int usage_hf14_cgetsc(void) {
+static int usage_hf14_cgetsc(void) {
     PrintAndLogEx(NORMAL, "Get sector data from magic Chinese card. Only works with magic cards\n");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  hf mf cgetsc [h] <sector number>");
@@ -378,7 +378,7 @@ int usage_hf14_cgetsc(void) {
     PrintAndLogEx(NORMAL, "      hf mf cgetsc 0");
     return 0;
 }
-int usage_hf14_csave(void) {
+static int usage_hf14_csave(void) {
     PrintAndLogEx(NORMAL, "It saves `magic Chinese` card dump into the file `filename.eml` or `cardID.eml`");
     PrintAndLogEx(NORMAL, "or into emulator memory");
     PrintAndLogEx(NORMAL, "");
@@ -396,7 +396,7 @@ int usage_hf14_csave(void) {
     PrintAndLogEx(NORMAL, "       hf mf csave 4 o filename");
     return 0;
 }
-int usage_hf14_nack(void) {
+static int usage_hf14_nack(void) {
     PrintAndLogEx(NORMAL, "Test a mifare classic based card for the NACK bug.");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  hf mf nack [h] [v]");

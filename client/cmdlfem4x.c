@@ -15,7 +15,7 @@ uint64_t g_em410xid = 0;
 static int CmdHelp(const char *Cmd);
 
 //////////////// 410x commands
-int usage_lf_em410x_demod(void) {
+static int usage_lf_em410x_demod(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf em 410x_demod [h] [clock] <0|1> [maxError]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     h                   - this help");
@@ -31,7 +31,7 @@ int usage_lf_em410x_demod(void) {
     PrintAndLogEx(NORMAL, "           lf em 410x_demod 64 1 0 = demod an EM410x Tag ID from GraphBuffer using a clock of RF/64 and inverting data and allowing 0 demod errors");
     return 0;
 }
-int usage_lf_em410x_write(void) {
+static int usage_lf_em410x_write(void) {
     PrintAndLogEx(NORMAL, "Writes EM410x ID to a T55x7 / T5555 (Q5) tag");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf em 410x_write [h] <id> <card> [clock]");
@@ -44,7 +44,7 @@ int usage_lf_em410x_write(void) {
     PrintAndLogEx(NORMAL, "      lf em 410x_write 0F0368568B 1       = write ID to t55x7 card");
     return 0;
 }
-int usage_lf_em410x_ws(void) {
+static int usage_lf_em410x_ws(void) {
     PrintAndLogEx(NORMAL, "Watch 'nd Spoof, activates reader, waits until a EM410x tag gets presented then it starts simulating the found UID");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf em 410x_spoof [h]");
@@ -54,7 +54,7 @@ int usage_lf_em410x_ws(void) {
     PrintAndLogEx(NORMAL, "      lf em 410x_spoof");
     return 0;
 }
-int usage_lf_em410x_clone(void) {
+static int usage_lf_em410x_clone(void) {
     PrintAndLogEx(NORMAL, "Simulating EM410x tag");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf em 410x_clone [h] <uid> <clock>");
@@ -67,7 +67,7 @@ int usage_lf_em410x_clone(void) {
     PrintAndLogEx(NORMAL, "      lf em 410x_clone 0F0368568B 32");
     return 0;
 }
-int usage_lf_em410x_sim(void) {
+static int usage_lf_em410x_sim(void) {
     PrintAndLogEx(NORMAL, "Simulating EM410x tag");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf em 410x_sim [h] <uid> <clock>");
@@ -80,7 +80,7 @@ int usage_lf_em410x_sim(void) {
     PrintAndLogEx(NORMAL, "      lf em 410x_sim 0F0368568B 32");
     return 0;
 }
-int usage_lf_em410x_brute(void) {
+static int usage_lf_em410x_brute(void) {
     PrintAndLogEx(NORMAL, "Bruteforcing by emulating EM410x tag");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf em 410x_brute [h] ids.txt [d 2000] [c clock]");
@@ -98,7 +98,7 @@ int usage_lf_em410x_brute(void) {
 }
 
 //////////////// 4050 / 4450 commands
-int usage_lf_em4x50_dump(void) {
+static int usage_lf_em4x50_dump(void) {
     PrintAndLogEx(NORMAL, "Dump EM4x50/EM4x69.  Tag must be on antenna. ");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_dump [h] <pwd>");
@@ -110,7 +110,7 @@ int usage_lf_em4x50_dump(void) {
     PrintAndLogEx(NORMAL, "      lf em 4x50_dump 11223344");
     return 0;
 }
-int usage_lf_em4x50_read(void) {
+static int usage_lf_em4x50_read(void) {
     PrintAndLogEx(NORMAL, "Read EM 4x50/EM4x69.  Tag must be on antenna. ");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_read [h] <address> <pwd>");
@@ -123,7 +123,7 @@ int usage_lf_em4x50_read(void) {
     PrintAndLogEx(NORMAL, "      lf em 4x50_read 1 11223344");
     return 0;
 }
-int usage_lf_em4x50_write(void) {
+static int usage_lf_em4x50_write(void) {
     PrintAndLogEx(NORMAL, "Write EM 4x50/4x69.  Tag must be on antenna. ");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_write [h] <address> <data> <pwd>");
@@ -139,7 +139,7 @@ int usage_lf_em4x50_write(void) {
 }
 
 //////////////// 4205 / 4305 commands
-int usage_lf_em4x05_dump(void) {
+static int usage_lf_em4x05_dump(void) {
     PrintAndLogEx(NORMAL, "Dump EM4x05/EM4x69.  Tag must be on antenna. ");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x05_dump [h] <pwd>");
@@ -151,7 +151,7 @@ int usage_lf_em4x05_dump(void) {
     PrintAndLogEx(NORMAL, "      lf em 4x05_dump 11223344");
     return 0;
 }
-int usage_lf_em4x05_read(void) {
+static int usage_lf_em4x05_read(void) {
     PrintAndLogEx(NORMAL, "Read EM4x05/EM4x69.  Tag must be on antenna. ");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x05_read [h] <address> <pwd>");
@@ -164,7 +164,7 @@ int usage_lf_em4x05_read(void) {
     PrintAndLogEx(NORMAL, "      lf em 4x05_read 1 11223344");
     return 0;
 }
-int usage_lf_em4x05_write(void) {
+static int usage_lf_em4x05_write(void) {
     PrintAndLogEx(NORMAL, "Write EM4x05/4x69.  Tag must be on antenna. ");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x05_write [h] <address> <data> <pwd>");
@@ -178,7 +178,7 @@ int usage_lf_em4x05_write(void) {
     PrintAndLogEx(NORMAL, "      lf em 4x05_write 1 deadc0de 11223344");
     return 0;
 }
-int usage_lf_em4x05_info(void) {
+static int usage_lf_em4x05_info(void) {
     PrintAndLogEx(NORMAL, "Tag information EM4205/4305/4469//4569 tags.  Tag must be on antenna.");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x05_info [h] <pwd>");

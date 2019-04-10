@@ -29,7 +29,7 @@ static uint8_t iClass_Key_Table[ICLASS_KEYS_MAX][8] = {
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
 };
 
-int usage_hf_iclass_sim(void) {
+static int usage_hf_iclass_sim(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf iclass sim <option> [CSN]");
     PrintAndLogEx(NORMAL, "        options");
     PrintAndLogEx(NORMAL, "                0 <CSN> simulate the given CSN");
@@ -45,14 +45,14 @@ int usage_hf_iclass_sim(void) {
     PrintAndLogEx(NORMAL, "        hf iclass sim 4");
     return 0;
 }
-int usage_hf_iclass_eload(void) {
+static int usage_hf_iclass_eload(void) {
     PrintAndLogEx(NORMAL, "Loads iclass tag-dump into emulator memory on device");
     PrintAndLogEx(NORMAL, "Usage:  hf iclass eload f <filename>");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        hf iclass eload f iclass_tagdump-aa162d30f8ff12f1.bin");
     return 0;
 }
-int usage_hf_iclass_decrypt(void) {
+static int usage_hf_iclass_decrypt(void) {
     PrintAndLogEx(NORMAL, "This is simple implementation, it tries to decrypt every block after block 6.");
     PrintAndLogEx(NORMAL, "Correct behaviour would be to decrypt only the application areas where the key is valid,");
     PrintAndLogEx(NORMAL, "which is defined by the configuration block.");
@@ -65,7 +65,7 @@ int usage_hf_iclass_decrypt(void) {
     PrintAndLogEx(NORMAL, "S       hf iclass decrypt f tagdump_12312342343.bin");
     return 0;
 }
-int usage_hf_iclass_encrypt(void) {
+static int usage_hf_iclass_encrypt(void) {
     PrintAndLogEx(NORMAL, "OBS! In order to use this function, the file 'iclass_decryptionkey.bin' must reside");
     PrintAndLogEx(NORMAL, "in the working directory. The file should be 16 bytes binary data");
     PrintAndLogEx(NORMAL, "");
@@ -76,7 +76,7 @@ int usage_hf_iclass_encrypt(void) {
     PrintAndLogEx(NORMAL, "");
     return 0;
 }
-int usage_hf_iclass_dump(void) {
+static int usage_hf_iclass_dump(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf iclass dump f <fileName> k <key> c <creditkey> [e|r|v]\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "  f <filename> : specify a filename to save dump to");
@@ -92,7 +92,7 @@ int usage_hf_iclass_dump(void) {
     PrintAndLogEx(NORMAL, "        hf iclass dump k AAAAAAAAAAAAAAAA e");
     return 0;
 }
-int usage_hf_iclass_clone(void) {
+static int usage_hf_iclass_clone(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf iclass clone f <tagfile.bin> b <first block> l <last block> k <KEY> c e|r");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "  f <filename>: specify a filename to clone from");
@@ -108,7 +108,7 @@ int usage_hf_iclass_clone(void) {
     PrintAndLogEx(NORMAL, "       hf iclass clone f iclass_tagdump-121345.bin b 06 l 19 k 0 e");
     return 0;
 }
-int usage_hf_iclass_writeblock(void) {
+static int usage_hf_iclass_writeblock(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf iclass writeblk b <block> d <data> k <key> [c|e|r|v]\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "  b <Block> : The block number as 2 hex symbols");
@@ -123,7 +123,7 @@ int usage_hf_iclass_writeblock(void) {
     PrintAndLogEx(NORMAL, "        hf iclass writeblk b 1B d AAAAAAAAAAAAAAAA k 001122334455667B c");
     return 0;
 }
-int usage_hf_iclass_readblock(void) {
+static int usage_hf_iclass_readblock(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf iclass readblk b <block> k <key> [c|e|r|v]\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "  b <block> : The block number as 2 hex symbols");
@@ -138,11 +138,11 @@ int usage_hf_iclass_readblock(void) {
     PrintAndLogEx(NORMAL, "        hf iclass readblk b 0A k 0");
     return 0;
 }
-int usage_hf_iclass_readtagfile() {
+static int usage_hf_iclass_readtagfile() {
     PrintAndLogEx(NORMAL, "Usage: hf iclass readtagfile <filename> [startblock] [endblock]");
     return 0;
 }
-int usage_hf_iclass_calc_newkey(void) {
+static int usage_hf_iclass_calc_newkey(void) {
     PrintAndLogEx(NORMAL, "Calculate new key for updating\n");
     PrintAndLogEx(NORMAL, "Usage:  hf iclass calc_newkey o <Old key> n <New key> s [csn] e");
     PrintAndLogEx(NORMAL, "Options:");
@@ -158,7 +158,7 @@ int usage_hf_iclass_calc_newkey(void) {
     PrintAndLogEx(NORMAL, "\nNOTE: * = required\n");
     return 0;
 }
-int usage_hf_iclass_managekeys(void) {
+static int usage_hf_iclass_managekeys(void) {
     PrintAndLogEx(NORMAL, "HELP :  Manage iClass Keys in client memory:\n");
     PrintAndLogEx(NORMAL, "Usage:  hf iclass managekeys n [keynbr] k [key] f [filename] s l p\n");
     PrintAndLogEx(NORMAL, "Options:");
@@ -175,7 +175,7 @@ int usage_hf_iclass_managekeys(void) {
     PrintAndLogEx(NORMAL, " print keys   : hf iclass managekeys p\n");
     return 0;
 }
-int usage_hf_iclass_reader(void) {
+static int usage_hf_iclass_reader(void) {
     PrintAndLogEx(NORMAL, "Act as a Iclass reader.  Look for iClass tags until a key or the pm3 button is pressed\n");
     PrintAndLogEx(NORMAL, "Usage:  hf iclass reader [h] [1]\n");
     PrintAndLogEx(NORMAL, "Options:");
@@ -185,7 +185,7 @@ int usage_hf_iclass_reader(void) {
     PrintAndLogEx(NORMAL, "        hf iclass reader 1");
     return 0;
 }
-int usage_hf_iclass_replay(void) {
+static int usage_hf_iclass_replay(void) {
     PrintAndLogEx(NORMAL, "Replay a collected mac message");
     PrintAndLogEx(NORMAL, "Usage:  hf iclass replay [h] <mac>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -195,14 +195,14 @@ int usage_hf_iclass_replay(void) {
     PrintAndLogEx(NORMAL, "        hf iclass replay 00112233");
     return 0;
 }
-int usage_hf_iclass_sniff(void) {
+static int usage_hf_iclass_sniff(void) {
     PrintAndLogEx(NORMAL, "Sniff the communication between reader and tag");
     PrintAndLogEx(NORMAL, "Usage:  hf iclass sniff [h]");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "         hf iclass sniff");
     return 0;
 }
-int usage_hf_iclass_loclass(void) {
+static int usage_hf_iclass_loclass(void) {
     PrintAndLogEx(NORMAL, "Usage: hf iclass loclass [options]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "h             Show this help");
@@ -217,7 +217,7 @@ int usage_hf_iclass_loclass(void) {
     PrintAndLogEx(NORMAL, "                  ... totalling N*24 bytes");
     return 0;
 }
-int usage_hf_iclass_chk(void) {
+static int usage_hf_iclass_chk(void) {
     PrintAndLogEx(NORMAL, "Checkkeys loads a dictionary text file with 8byte hex keys to test authenticating against a iClass tag");
     PrintAndLogEx(NORMAL, "Usage: hf iclass chk [h|e|r] [f  (*.dic)]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -231,7 +231,7 @@ int usage_hf_iclass_chk(void) {
     PrintAndLogEx(NORMAL, "         hf iclass chk f default_iclass_keys.dic e");
     return 0;
 }
-int usage_hf_iclass_lookup(void) {
+static int usage_hf_iclass_lookup(void) {
     PrintAndLogEx(NORMAL, "Lookup keys takes some sniffed trace data and tries to verify what key was used against a dictionary file");
     PrintAndLogEx(NORMAL, "Usage: hf iclass lookup [h|e|r] [f  (*.dic)] [u <csn>] [p <epurse>] [m <macs>]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -247,7 +247,7 @@ int usage_hf_iclass_lookup(void) {
     PrintAndLogEx(NORMAL, "        hf iclass lookup u 9655a400f8ff12e0 p f0ffffffffffffff m 0000000089cb984b f default_iclass_keys.dic e");
     return 0;
 }
-int usage_hf_iclass_permutekey(void) {
+static int usage_hf_iclass_permutekey(void) {
     PrintAndLogEx(NORMAL, "Permute function from 'heart of darkness' paper.");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  hf iclass permute [h] <r|f> <bytes>");

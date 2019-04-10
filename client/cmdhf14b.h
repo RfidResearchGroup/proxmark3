@@ -29,14 +29,6 @@
 #include "mifare.h"     // structs/enum for ISO14B
 #include "protocols.h"  // definitions of ISO14B protocol
 
-int usage_hf_14b_info(void);
-int usage_hf_14b_reader(void);
-int usage_hf_14b_raw(void);
-int usage_hf_14b_sniff(void);
-int usage_hf_14b_sim(void);
-int usage_hf_14b_read_srx(void);
-int usage_hf_14b_write_srx(void);
-
 int CmdHF14B(const char *Cmd);
 int CmdHF14BList(const char *Cmd);
 int CmdHF14BInfo(const char *Cmd);
