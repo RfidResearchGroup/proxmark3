@@ -66,7 +66,7 @@ static const TAIDList AIDlist [] = {
     { CV_MASTERCARD, "A0000000046000" },         // Cirrus
     { CV_MASTERCARD, "A0000000048002" },         // SecureCode Auth EMV-CAP
     { CV_MASTERCARD, "A0000000049999" },         // MasterCard PayPass
-	{ CV_MASTERCARD, "B012345678" },             // Maestro TEST Used for development
+    { CV_MASTERCARD, "B012345678" },             // Maestro TEST Used for development
     // American Express
     { CV_AMERICANEXPRESS, "A000000025" },
     { CV_AMERICANEXPRESS, "A0000000250000" },
@@ -83,41 +83,41 @@ static const TAIDList AIDlist [] = {
     // JCB CO., LTD.
     { CV_JCB, "A00000006510" },                  // JCB
     { CV_JCB, "A0000000651010" },                // JCB J Smart Credit
-	// Switch Card Services Ltd.
-	{ CV_SWITCH, "A0000000050001" },             // Maestro UK
-	{ CV_SWITCH, "A0000000050002" },             // Solo
-	// Diners Club International Ltd.
-	{ CV_DINERS, "A0000001523010" },             // Discover, Pulse D Pas Discover Card
-	{ CV_DINERS, "A0000001524010" },             // Discover, Discover Debit Common Card
+    // Switch Card Services Ltd.
+    { CV_SWITCH, "A0000000050001" },             // Maestro UK
+    { CV_SWITCH, "A0000000050002" },             // Solo
+    // Diners Club International Ltd.
+    { CV_DINERS, "A0000001523010" },             // Discover, Pulse D Pas Discover Card
+    { CV_DINERS, "A0000001524010" },             // Discover, Discover Debit Common Card
     // Other
-	{ CV_OTHER, "A00000002401" },                // Midland Bank Plc - Self Service
-	{ CV_OTHER, "A0000000291010" },              // LINK Interchange Network Ltd - Link / American Express
-	{ CV_OTHER, "A00000006900" },                // Société Européenne de Monnaie Electronique SEME - Moneo
-	{ CV_OTHER, "A000000077010000021000000000003B" },  // Oberthur Technologies France - Visa AEPN
-	{ CV_OTHER, "A0000001211010" },              // PBS Danmark A/S - Denmark - Dankort (VISA GEM Vision) - Danish domestic debit card
-	{ CV_OTHER, "A0000001410001" },              // Associazione Bancaria Italiana - Italy - PagoBANCOMAT - CoGeBan Consorzio BANCOMAT (Italian domestic debit card)
-	{ CV_OTHER, "A0000001544442" },              // Banricompras Debito - Banrisul - Banco do Estado do Rio Grande do SUL - S.A.
-	{ CV_OTHER, "A000000172950001" },            // Financial Information Service Co. Ltd. - Taiwan - BAROC Financial Application Taiwan- The Bankers Association of the Republic of China
-	{ CV_OTHER, "A0000001850002" },              // Post Office Limited - United Kingdom - UK Post Office Account card
-	{ CV_OTHER, "A0000002281010" },              // Saudi Arabian Monetary Agency (SAMA) - Kingdom of Saudi Arabia - SPAN (M/Chip) - SPAN2 (Saudi Payments Network) - Saudi Arabia domestic credit/debit card (Saudi Arabia Monetary Agency)
-	{ CV_OTHER, "A0000002282010" },              // Saudi Arabian Monetary Agency (SAMA) - Kingdom of Saudi Arabia - SPAN (VIS) - SPAN2 (Saudi Payments Network) - Saudi Arabia domestic credit/debit card (Saudi Arabia Monetary Agency)
-	{ CV_OTHER, "A0000002771010" },              // Interac Association - Canada - INTERAC - Canadian domestic credit/debit card
-	{ CV_OTHER, "A00000031510100528" },          // Currence Holding/PIN BV - The Netherlands- Currence PuC
-	{ CV_OTHER, "A0000003156020" },              // Currence Holding/PIN BV - The Netherlands - Chipknip
-	{ CV_OTHER, "A0000003591010028001" },        // Euro Alliance of Payment Schemes s.c.r.l. (EAPS) - Belgium - Girocard EAPS - ZKA (Germany)
-	{ CV_OTHER, "A0000003710001" },              // Verve - Nigeria - InterSwitch Verve Card - Nigerian local switch company
-	{ CV_OTHER, "A0000004540010" },              // eTranzact - Nigeria - Etranzact Genesis Card - Nigerian local switch company
-	{ CV_OTHER, "A0000004540011" },              // eTranzact - Nigeria - Etranzact Genesis Card 2 - Nigerian local switch company
-	{ CV_OTHER, "A0000004766C" },                // Google - United States - GOOGLE_PAYMENT_AID
-	{ CV_OTHER, "A0000005241010" },              // RuPay - India - RuPay - RuPay (India)
-	{ CV_OTHER, "A0000006723010" },              // TROY - Turkey - TROY chip credit card - Turkey's Payment Method
-	{ CV_OTHER, "A0000006723020" },              // TROY - Turkey - TROY chip debit card - Turkey's Payment Method
-	{ CV_OTHER, "A0000007705850" },              // Indian Oil Corporation Limited - India - XTRAPOWER Fleet Card Program - Indian Oil’s Pre Paid Program
-	{ CV_OTHER, "D27600002545500100" },          // ZKA - Germany - Girocard - ZKA Girocard (Geldkarte) (Germany)
-	{ CV_OTHER, "D4100000030001" },              // KS X 6923/6924 (T-Money, South Korea and Snapper+, Wellington, New Zealand)
-	{ CV_OTHER, "D5280050218002" },              // The Netherlands - ? - (Netherlands)
+    { CV_OTHER, "A00000002401" },                // Midland Bank Plc - Self Service
+    { CV_OTHER, "A0000000291010" },              // LINK Interchange Network Ltd - Link / American Express
+    { CV_OTHER, "A00000006900" },                // Société Européenne de Monnaie Electronique SEME - Moneo
+    { CV_OTHER, "A000000077010000021000000000003B" },  // Oberthur Technologies France - Visa AEPN
+    { CV_OTHER, "A0000001211010" },              // PBS Danmark A/S - Denmark - Dankort (VISA GEM Vision) - Danish domestic debit card
+    { CV_OTHER, "A0000001410001" },              // Associazione Bancaria Italiana - Italy - PagoBANCOMAT - CoGeBan Consorzio BANCOMAT (Italian domestic debit card)
+    { CV_OTHER, "A0000001544442" },              // Banricompras Debito - Banrisul - Banco do Estado do Rio Grande do SUL - S.A.
+    { CV_OTHER, "A000000172950001" },            // Financial Information Service Co. Ltd. - Taiwan - BAROC Financial Application Taiwan- The Bankers Association of the Republic of China
+    { CV_OTHER, "A0000001850002" },              // Post Office Limited - United Kingdom - UK Post Office Account card
+    { CV_OTHER, "A0000002281010" },              // Saudi Arabian Monetary Agency (SAMA) - Kingdom of Saudi Arabia - SPAN (M/Chip) - SPAN2 (Saudi Payments Network) - Saudi Arabia domestic credit/debit card (Saudi Arabia Monetary Agency)
+    { CV_OTHER, "A0000002282010" },              // Saudi Arabian Monetary Agency (SAMA) - Kingdom of Saudi Arabia - SPAN (VIS) - SPAN2 (Saudi Payments Network) - Saudi Arabia domestic credit/debit card (Saudi Arabia Monetary Agency)
+    { CV_OTHER, "A0000002771010" },              // Interac Association - Canada - INTERAC - Canadian domestic credit/debit card
+    { CV_OTHER, "A00000031510100528" },          // Currence Holding/PIN BV - The Netherlands- Currence PuC
+    { CV_OTHER, "A0000003156020" },              // Currence Holding/PIN BV - The Netherlands - Chipknip
+    { CV_OTHER, "A0000003591010028001" },        // Euro Alliance of Payment Schemes s.c.r.l. (EAPS) - Belgium - Girocard EAPS - ZKA (Germany)
+    { CV_OTHER, "A0000003710001" },              // Verve - Nigeria - InterSwitch Verve Card - Nigerian local switch company
+    { CV_OTHER, "A0000004540010" },              // eTranzact - Nigeria - Etranzact Genesis Card - Nigerian local switch company
+    { CV_OTHER, "A0000004540011" },              // eTranzact - Nigeria - Etranzact Genesis Card 2 - Nigerian local switch company
+    { CV_OTHER, "A0000004766C" },                // Google - United States - GOOGLE_PAYMENT_AID
+    { CV_OTHER, "A0000005241010" },              // RuPay - India - RuPay - RuPay (India)
+    { CV_OTHER, "A0000006723010" },              // TROY - Turkey - TROY chip credit card - Turkey's Payment Method
+    { CV_OTHER, "A0000006723020" },              // TROY - Turkey - TROY chip debit card - Turkey's Payment Method
+    { CV_OTHER, "A0000007705850" },              // Indian Oil Corporation Limited - India - XTRAPOWER Fleet Card Program - Indian Oil’s Pre Paid Program
+    { CV_OTHER, "D27600002545500100" },          // ZKA - Germany - Girocard - ZKA Girocard (Geldkarte) (Germany)
+    { CV_OTHER, "D4100000030001" },              // KS X 6923/6924 (T-Money, South Korea and Snapper+, Wellington, New Zealand)
+    { CV_OTHER, "D5280050218002" },              // The Netherlands - ? - (Netherlands)
     { CV_OTHER, "D5780000021010" },              // Bankaxept    Norway  Bankaxept   Norwegian domestic debit card
-	{ CV_OTHER, "F0000000030001" },              // BRADESCO - Brazilian Bank Banco Bradesco    
+    { CV_OTHER, "F0000000030001" },              // BRADESCO - Brazilian Bank Banco Bradesco
 };
 static const size_t AIDlistLen = sizeof(AIDlist) / sizeof(TAIDList);
 
@@ -434,8 +434,8 @@ int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
     int res;
     bool fileFound = false;
 
-	char *PSE_or_PPSE = PSENum == 1 ? "PSE" : "PPSE";
-	
+    char *PSE_or_PPSE = PSENum == 1 ? "PSE" : "PPSE";
+
     // select PPSE
     res = EMVSelectPSE(channel, ActivateField, true, PSENum, data, sizeof(data), &datalen, &sw);
 
@@ -485,7 +485,7 @@ int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
                         if (tsfi) {
                             struct tlvdb *tsfitmp = tlvdb_find_path(tsfi, (tlv_tag_t[]) {0x70, 0x61, 0x00});
                             if (!tsfitmp) {
-								PrintAndLogEx(FAILED, "SFI 0x%02d doesn't have any records.", sfidatalen[ui]);
+                                PrintAndLogEx(FAILED, "SFI 0x%02d doesn't have any records.", sfidatalen[ui]);
                                 continue;
                             }
                             res = EMVCheckAID(channel, decodeTLV, tsfitmp, tlv);
@@ -505,14 +505,14 @@ int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
             }
 
             if (!fileFound)
-				PrintAndLogEx(FAILED, "PPSE doesn't have any records.");
+                PrintAndLogEx(FAILED, "PPSE doesn't have any records.");
 
             tlvdb_free(t);
         } else {
-			PrintAndLogEx(WARNING, "%s ERROR: Can't get TLV from response.", PSE_or_PPSE);
+            PrintAndLogEx(WARNING, "%s ERROR: Can't get TLV from response.", PSE_or_PPSE);
         }
     } else {
-		PrintAndLogEx(WARNING, "%s ERROR: Can't select PPSE AID. Error: %d", PSE_or_PPSE, res);
+        PrintAndLogEx(WARNING, "%s ERROR: Can't select PPSE AID. Error: %d", PSE_or_PPSE, res);
     }
 
     if (!LeaveFieldON)
@@ -831,7 +831,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
             return 4;
         }
 
-		PrintAndLogEx(NORMAL, "\n* Calc DDOL");
+        PrintAndLogEx(NORMAL, "\n* Calc DDOL");
         const struct tlv *ddol_tlv = tlvdb_get(tlv, 0x9f49, NULL);
         if (!ddol_tlv) {
             ddol_tlv = &default_ddol_tlv;
@@ -849,7 +849,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
 
         PrintAndLogEx(NORMAL, "DDOL data[%d]: %s", ddol_data_tlv->len, sprint_hex(ddol_data_tlv->value, ddol_data_tlv->len));
 
-		PrintAndLogEx(NORMAL, "\n* Internal Authenticate");
+        PrintAndLogEx(NORMAL, "\n* Internal Authenticate");
         int res = EMVInternalAuthenticate(channel, true, (uint8_t *)ddol_data_tlv->value, ddol_data_tlv->len, buf, sizeof(buf), &len, &sw, NULL);
         if (res) {
             PrintAndLogEx(WARNING, "Internal Authenticate error(%d): %4x. Exit...", res, sw);
@@ -876,7 +876,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
                 tlvdb_free(t80);
 
                 if (decodeTLV) {
-					PrintAndLogEx(NORMAL, "* * Decode response format 1:");
+                    PrintAndLogEx(NORMAL, "* * Decode response format 1:");
                     TLVPrintFromTLV(dda_db);
                 }
             }
@@ -967,7 +967,7 @@ int trCDA(struct tlvdb *tlv, struct tlvdb *ac_tlv, struct tlv *pdol_data_tlv, st
 
     struct emv_pk *icc_pk = emv_pki_recover_icc_cert(issuer_pk, tlv, sda_tlv);
     if (!icc_pk) {
-		PrintAndLogEx(WARNING, "Error: ICC certificate not found. Exit.");
+        PrintAndLogEx(WARNING, "Error: ICC certificate not found. Exit.");
         emv_pk_free(pk);
         emv_pk_free(issuer_pk);
         return 2;
