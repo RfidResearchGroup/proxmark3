@@ -81,11 +81,11 @@ int CmdHFEPAPACEReplay(const char *Cmd) {
         while (Cmd[skip] != ' ' && Cmd[skip] != '\0') {
             // convert
             scan_return = sscanf(Cmd + skip,
-                                "%2X%n",
+                                 "%2X%n",
                                  (unsigned int *)(apdus[i] + apdu_lengths[i]),
                                  &skip_add
-                                 );
-                                 
+                                );
+
             if (scan_return < 1) {
                 PrintAndLogEx(NORMAL, (char *)usage_msg);
                 PrintAndLogEx(WARNING, "Not enough APDUs! Try again!");
