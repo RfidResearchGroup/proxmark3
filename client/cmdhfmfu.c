@@ -1863,7 +1863,7 @@ int CmdHF14AMfUDump(const char *Cmd) {
         PrintAndLogEx(WARNING, "Command execute time-out");
         return 1;
     }
-    
+
     if (resp.arg[0] != 1) {
         PrintAndLogEx(WARNING, "Failed dumping card");
         return 1;
