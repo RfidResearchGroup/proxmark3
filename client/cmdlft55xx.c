@@ -912,7 +912,7 @@ bool testBitRate(uint8_t readRate, uint8_t clk) {
 bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5) {
 
     if (DemodBufferLen < 64) return false;
-    uint8_t si = 0;
+    uint8_t si;
     for (uint8_t idx = 28; idx < 64; idx++) {
         si = idx;
         if (PackBits(si, 28, DemodBuffer) == 0x00) continue;
