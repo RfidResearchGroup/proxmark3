@@ -995,7 +995,7 @@ static bool GetIClassCommandFromReader(uint8_t *received, int *len, int maxLen) 
     // clear RXRDY:
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
     (void)b;
-            
+
     while (!BUTTON_PRESS()) {
         WDT_HIT();
 
@@ -1799,7 +1799,7 @@ static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *samples, 
     // clear RXRDY:
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
     (void)b;
-            
+
     while (!BUTTON_PRESS()) {
         WDT_HIT();
 

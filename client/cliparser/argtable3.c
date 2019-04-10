@@ -2963,16 +2963,16 @@ static int trex_class(TRex *exp) {
             if (*exp->_p++ == ']') {
                 trex_error(exp, _SC("unfinished range"));
             }
-            
+
             r = trex_newnode(exp, OP_RANGE);
             if (first > *exp->_p) {
                 trex_error(exp, _SC("invalid range"));
             }
-            
+
             if (exp->_nodes[first].type == OP_CCLASS) {
                 trex_error(exp, _SC("cannot use character classes in ranges"));
             }
-            
+
             exp->_nodes[r].left = exp->_nodes[first].type;
             t = trex_escapechar(exp);
             exp->_nodes[r].right = t;
@@ -4548,7 +4548,7 @@ void arg_print_formatted(FILE *fp,
     const unsigned colwidth = (rmargin - lmargin) + 1;
 
     /* Someone doesn't like us... */
-    if (line_end == line_start) { 
+    if (line_end == line_start) {
         fprintf(fp, "%s\n", text);
     }
 
