@@ -52,7 +52,7 @@ int strlen(const char *str) {
     const char *p;
     for (p = str; *p != '\0'; ++p) {
     }
-    return p-str;
+    return p - str;
 }
 
 char *strncat(char *dest, const char *src, unsigned int n) {
