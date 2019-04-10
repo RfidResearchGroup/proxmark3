@@ -145,7 +145,7 @@ int CmdLFPCF7931Write(const char *Cmd) {
     PrintAndLogEx(NORMAL, "          pos: %d", bytepos);
     PrintAndLogEx(NORMAL, "         data: 0x%02X", data);
 
-    UsbCommand c = {CMD_PCF7931_WRITE, { block, bytepos, data} };
+    UsbCommand c = {CMD_PCF7931_WRITE, { block, bytepos, data}, {{0}}};
     memcpy(c.d.asDwords, configPcf.Pwd, sizeof(configPcf.Pwd));
     c.d.asDwords[7] = (configPcf.OffsetWidth + 128);
     c.d.asDwords[8] = (configPcf.OffsetPosition + 128);

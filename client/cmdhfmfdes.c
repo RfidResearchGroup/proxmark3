@@ -117,7 +117,7 @@ int CmdHF14ADesRb(const char *Cmd) {
 int CmdHF14ADesInfo(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
 
-    UsbCommand c = {CMD_MIFARE_DESFIRE_INFO};
+    UsbCommand c = {CMD_MIFARE_DESFIRE_INFO, {0, 0, 0}, {{0}}};
     SendCommand(&c);
     UsbCommand resp;
 
@@ -257,7 +257,7 @@ void GetKeySettings(uint8_t *aid) {
     const char *str = messStr;
     uint8_t isOK = 0;
     uint32_t options;
-    UsbCommand c = {CMD_MIFARE_DESFIRE};
+    UsbCommand c = {CMD_MIFARE_DESFIRE, {0, 0, 0}, {{0}}};
     UsbCommand resp;
 
     //memset(messStr, 0x00, 512);

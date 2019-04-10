@@ -2387,7 +2387,7 @@ int CmdHF14AMfucSetPwd(const char *Cmd) {
         return 1;
     }
 
-    UsbCommand c = {CMD_MIFAREUC_SETPWD};
+    UsbCommand c = {CMD_MIFAREUC_SETPWD, {0, 0, 0}, {{0}}};
     memcpy(c.d.asBytes, pwd, 16);
     clearCommandBuffer();
     SendCommand(&c);
@@ -2412,7 +2412,7 @@ int CmdHF14AMfucSetPwd(const char *Cmd) {
 //
 int CmdHF14AMfucSetUid(const char *Cmd) {
 
-    UsbCommand c = {CMD_MIFAREU_READBL};
+    UsbCommand c = {CMD_MIFAREU_READBL, {0, 0, 0}, {{0}}};
     UsbCommand resp;
     uint8_t uid[7] = {0x00};
     char cmdp = tolower(param_getchar(Cmd, 0));

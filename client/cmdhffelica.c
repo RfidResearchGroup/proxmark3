@@ -233,7 +233,7 @@ int CmdHFFelicaSimLite(const char *Cmd) {
     if (!uid)
         return usage_hf_felica_simlite();
 
-    UsbCommand c = {CMD_FELICA_LITE_SIM, {uid, 0, 0} };
+    UsbCommand c = {CMD_FELICA_LITE_SIM, {uid, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;

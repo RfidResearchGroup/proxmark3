@@ -454,7 +454,7 @@ static void printHitagConfiguration(uint8_t config) {
 
 static bool getHitagUid(uint32_t *uid) {
 
-    UsbCommand c = {CMD_READER_HITAG, {RHT2F_UID_ONLY, 0, 0} };
+    UsbCommand c = {CMD_READER_HITAG, {RHT2F_UID_ONLY, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     UsbCommand resp;
@@ -509,7 +509,7 @@ int CmdLFHitagInfo(const char *Cmd) {
 //
 int CmdLFHitagReader(const char *Cmd) {
 
-    UsbCommand c = {CMD_READER_HITAG, {0, 0, 0} };
+    UsbCommand c = {CMD_READER_HITAG, {0, 0, 0}, {{0}}};
     hitag_data *htd = (hitag_data *)c.d.asBytes;
     hitag_function htf = param_get32ex(Cmd, 0, 0, 10);
 

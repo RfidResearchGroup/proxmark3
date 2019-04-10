@@ -280,7 +280,7 @@ int CmdHFiClassList(const char *Cmd) {
 int CmdHFiClassSniff(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_iclass_sniff();
-    UsbCommand c = {CMD_SNIFF_ICLASS};
+    UsbCommand c = {CMD_SNIFF_ICLASS, {0, 0, 0}, {{0}}};
     SendCommand(&c);
     return 0;
 }
@@ -380,7 +380,7 @@ int CmdHFiClassSim(const char *Cmd) {
             PrintAndLogEx(INFO, "Starting iCLASS sim 2 attack (elite mode)");
             PrintAndLogEx(INFO, "press keyboard to cancel");
             UsbCommand c = {CMD_SIMULATE_TAG_ICLASS, {simType, NUM_CSNS}, {{0}}};
-            UsbCommand resp = {0};
+            UsbCommand resp;
             memcpy(c.d.asBytes, csns, 8 * NUM_CSNS);
             clearCommandBuffer();
             SendCommand(&c);
@@ -433,7 +433,7 @@ int CmdHFiClassSim(const char *Cmd) {
             PrintAndLogEx(INFO, "Starting iCLASS sim 4 attack (elite mode, reader in key roll mode)");
             PrintAndLogEx(INFO, "press keyboard to cancel");
             UsbCommand c = {CMD_SIMULATE_TAG_ICLASS, {simType, NUM_CSNS}, {{0}}};
-            UsbCommand resp = {0};
+            UsbCommand resp;
             memcpy(c.d.asBytes, csns, 8 * NUM_CSNS);
             clearCommandBuffer();
             SendCommand(&c);

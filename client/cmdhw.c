@@ -308,7 +308,7 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
 }
 
 int CmdDetectReader(const char *Cmd) {
-    UsbCommand c = {CMD_LISTEN_READER_FIELD};
+    UsbCommand c = {CMD_LISTEN_READER_FIELD, {0, 0, 0}, {{0}}};
     // 'l' means LF - 125/134 kHz
     if (*Cmd == 'l') {
         c.arg[0] = 1;
@@ -326,7 +326,7 @@ int CmdDetectReader(const char *Cmd) {
 // ## FPGA Control
 int CmdFPGAOff(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    UsbCommand c = {CMD_FPGA_MAJOR_MODE_OFF};
+    UsbCommand c = {CMD_FPGA_MAJOR_MODE_OFF, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
@@ -336,7 +336,7 @@ int CmdFPGAOff(const char *Cmd) {
 int CmdLCD(const char *Cmd) {
     int i, j;
 
-    UsbCommand c = {CMD_LCD};
+    UsbCommand c = {CMD_LCD, {0, 0, 0}, {{0}}};
     sscanf(Cmd, "%x %d", &i, &j);
     while (j--) {
         c.arg[0] = i & 0x1ff;
@@ -363,7 +363,7 @@ int CmdReadmem(const char *Cmd) {
 
 int CmdReset(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    UsbCommand c = {CMD_HARDWARE_RESET};
+    UsbCommand c = {CMD_HARDWARE_RESET, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
@@ -394,7 +394,7 @@ int CmdSetMux(const char *Cmd) {
         return 1;
     }
 
-    UsbCommand c = {CMD_SET_ADC_MUX};
+    UsbCommand c = {CMD_SET_ADC_MUX, {0, 0, 0}, {{0}}};
 
     if (strcmp(Cmd, "lopkd") == 0)      c.arg[0] = 0;
     else if (strcmp(Cmd, "loraw") == 0) c.arg[0] = 1;
@@ -455,7 +455,7 @@ int CmdVersion(const char *Cmd) {
 int CmdStatus(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     clearCommandBuffer();
-    UsbCommand c = {CMD_STATUS};
+    UsbCommand c = {CMD_STATUS, {0, 0, 0}, {{0}}};
     SendCommand(&c);
     if (!WaitForResponseTimeout(CMD_ACK, &c, 1900))
         PrintAndLogEx(NORMAL, "Status command failed. USB Speed Test timed out");
@@ -466,7 +466,7 @@ int CmdPing(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     clearCommandBuffer();
     UsbCommand resp;
-    UsbCommand c = {CMD_PING};
+    UsbCommand c = {CMD_PING, {0, 0, 0}, {{0}}};
     SendCommand(&c);
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1000))
         PrintAndLogEx(NORMAL, "Ping successful");

@@ -90,7 +90,7 @@ int CmdHFSearch(const char *Cmd) {
 int CmdHFTune(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     PrintAndLogEx(SUCCESS, "Measuring HF antenna, press button to exit");
-    UsbCommand c = {CMD_MEASURE_ANTENNA_TUNING_HF};
+    UsbCommand c = {CMD_MEASURE_ANTENNA_TUNING_HF, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;

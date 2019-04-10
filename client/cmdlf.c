@@ -325,7 +325,7 @@ int CmdLFSetConfig(const char *Cmd) {
 
     sample_config config = { decimation, bps, averaging, divisor, trigger_threshold };
 
-    UsbCommand c = {CMD_SET_LF_SAMPLING_CONFIG, {0, 0, 0} };
+    UsbCommand c = {CMD_SET_LF_SAMPLING_CONFIG, {0, 0, 0}, {{0}}};
     memcpy(c.d.asBytes, &config, sizeof(sample_config));
     clearCommandBuffer();
     SendCommand(&c);

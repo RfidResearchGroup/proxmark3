@@ -1844,7 +1844,7 @@ int CmdT55xxChkPwds(const char *Cmd) {
     uint64_t t1 = msclock();
 
     if (cmdp == 'm') {
-        UsbCommand c = {CMD_T55XX_CHKPWDS, {0, 0, 0} };
+        UsbCommand c = {CMD_T55XX_CHKPWDS, {0, 0, 0}, {{0}}};
         clearCommandBuffer();
         SendCommand(&c);
         UsbCommand resp;
@@ -2287,7 +2287,7 @@ int CmdT55xxSetDeviceConfig(const char *Cmd) {
 
     t55xx_config conf = { startgap * 8, writegap * 8, write0 * 8, write1 * 8, readgap * 8 };
 
-    UsbCommand c = {CMD_SET_LF_T55XX_CONFIG, {shall_persist, 0, 0} };
+    UsbCommand c = {CMD_SET_LF_T55XX_CONFIG, {shall_persist, 0, 0}, {{0}}};
     memcpy(c.d.asBytes, &conf, sizeof(t55xx_config));
     clearCommandBuffer();
     SendCommand(&c);
