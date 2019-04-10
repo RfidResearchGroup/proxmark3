@@ -19,15 +19,20 @@ static uint8_t preamble224[] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
 static uint8_t preamble64[] =  {1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
 
 static int usage_lf_indala_demod(void) {
-    PrintAndLogEx(NORMAL, "Enables Indala compatible reader mode printing details of scanned tags.");
-    PrintAndLogEx(NORMAL, "By default, values are printed and logged until the button is pressed or another USB command is issued.");
+    PrintAndLogEx(NORMAL, "Tries to psk demodulate the graphbuffer as Indala ");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf indala demod [h]");
+    PrintAndLogEx(NORMAL, "Usage:  lf indala demod [h] <clock> <0|1> <maxerror>");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h :  This help");
+    PrintAndLogEx(NORMAL, "      h        :  This help");
+    PrintAndLogEx(NORMAL, "      clock    :  Set clock (as integer) optional, if not set, autodetect.");
+    PrintAndLogEx(NORMAL, "      invert   :  1 for invert output");
+    PrintAndLogEx(NORMAL, "      maxerror :  Set maximum allowed errors, default = 100.");   
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        lf indala demod");
+    PrintAndLogEx(NORMAL, "        lf indala demod 32       = demod a Indala tag from GraphBuffer using a clock of RF/32");
+    PrintAndLogEx(NORMAL, "        lf indala demod 32 1     = demod a Indala tag from GraphBuffer using a clock of RF/32 and inverting data");    
+    PrintAndLogEx(NORMAL, "        lf indala demod 64 1 0   = demod a Indala tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");    
     return 0;
 }
 
@@ -167,7 +172,7 @@ int CmdIndalaRead(const char *Cmd) {
 int CmdIndalaDemod(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_indala_demod();
+    if (cmdp == 'h') return usage_lf_indala_demod();
     
     int ans;
     if (strlen(Cmd) > 0)
