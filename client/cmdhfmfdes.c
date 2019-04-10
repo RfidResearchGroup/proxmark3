@@ -398,9 +398,9 @@ void GetKeySettings(uint8_t *aid) {
         int numOfKeys;
 
         isOK  = resp.arg[0] & 0xff;
-        if (!isOK) {
+        if (isOK == false) {
             PrintAndLogEx(WARNING, "   Can't read Application Master key version. Trying all keys");
-            numOfKeys = MAX_NUM_KEYS;
+            //numOfKeys = MAX_NUM_KEYS;
         } else {
             numOfKeys = resp.d.asBytes[4];
             PrintAndLogEx(NORMAL, "");
@@ -411,6 +411,7 @@ void GetKeySettings(uint8_t *aid) {
 
         // LOOP over numOfKeys that we got before.
         // From 0x01 to numOfKeys.  We already got 0x00. (AMK)
+        // TODO (iceman)
         for (int i = 0x01; i <= 0x0f; ++i) {
 
         }
