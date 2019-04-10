@@ -382,13 +382,13 @@ int ecdsa_nist_test(bool verbose) {
         res = 1;
         goto exit;
     }
-    
+
     if (verbose) {
         printf("passed\n");
         printf("  ECDSA binary signature create/check test: ");
     }
-    
-    // random ecdsa test   
+
+    // random ecdsa test
     uint8_t key_d[32] = {0};
     uint8_t key_xy[32 * 2 + 2] = {0};
     memset(signature, 0x00, sizeof(signature));

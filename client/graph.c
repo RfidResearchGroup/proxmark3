@@ -174,7 +174,7 @@ int GetPskClock(const char *str, bool printAns) {
     // Only print this message if we're not looping something
     if (printAns)
         PrintAndLogEx(SUCCESS, "Auto-detected clock rate: %d", clock1);
-    
+
     return clock1;
 }
 
@@ -200,7 +200,7 @@ int GetNrzClock(const char *str, bool printAns) {
     // Only print this message if we're not looping something
     if (printAns)
         PrintAndLogEx(SUCCESS, "Auto-detected clock rate: %d", clock1);
-    
+
     return clock1;
 }
 //by marshmellow
