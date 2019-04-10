@@ -54,19 +54,6 @@ static int usage_lf_em410x_ws(void) {
     PrintAndLogEx(NORMAL, "      lf em 410x_spoof");
     return 0;
 }
-static int usage_lf_em410x_clone(void) {
-    PrintAndLogEx(NORMAL, "Simulating EM410x tag");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf em 410x_clone [h] <uid> <clock>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h         - this help");
-    PrintAndLogEx(NORMAL, "       uid       - uid (10 HEX symbols)");
-    PrintAndLogEx(NORMAL, "       clock     - clock (32|64) (optional)");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      lf em 410x_clone 0F0368568B");
-    PrintAndLogEx(NORMAL, "      lf em 410x_clone 0F0368568B 32");
-    return 0;
-}
 static int usage_lf_em410x_sim(void) {
     PrintAndLogEx(NORMAL, "Simulating EM410x tag");
     PrintAndLogEx(NORMAL, "");
