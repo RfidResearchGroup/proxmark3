@@ -45,22 +45,6 @@ static int usage_lf_indala_sim(void) {
     return 0;
 }
 
-static int usage_lf_indala_clone(void) {
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf indala clone [h]<l> <uid> [Q5]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "            h :  This help");
-    PrintAndLogEx(NORMAL, "            l :  long uid 64/224");
-    PrintAndLogEx(NORMAL, "        <uid> :  UID");
-    PrintAndLogEx(NORMAL, "           Q5 :  optional - clone to Q5 (T5555) instead of T55x7 chip");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf indala clone 112233      -- 64");
-    PrintAndLogEx(NORMAL, "       lf indala clone l 112233    -- long 224");
-    return 0;
-}
-
 // redesigned by marshmellow adjusted from existing decode functions
 // indala id decoding
 int detectIndala(uint8_t *dest, size_t *size, uint8_t *invert) {
@@ -181,6 +165,10 @@ int CmdIndalaRead(const char *Cmd) {
 // by marshmellow
 // optional arguments - same as PSKDemod (clock & invert & maxerr)
 int CmdIndalaDemod(const char *Cmd) {
+
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_indala_demod();
+    
     int ans;
     if (strlen(Cmd) > 0)
         ans = PSKDemod(Cmd, true);
