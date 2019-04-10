@@ -216,7 +216,7 @@ int mifare_classic_readblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blo
     memcpy(bt, receivedAnswer + 16, 2);
     AddCrc14A(receivedAnswer, 16);
     if (bt[0] != receivedAnswer[16] || bt[1] != receivedAnswer[17]) {
-        if (MF_DBGLEVEL >= MF_DBG_ALL) Dbprintf("Cmd CRC response error.");
+        if (MF_DBGLEVEL >= MF_DBG_INFO) Dbprintf("Cmd CRC response error.");
         return 3;
     }
 

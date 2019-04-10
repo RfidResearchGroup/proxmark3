@@ -23,11 +23,11 @@ extern "C" {
 typedef unsigned char byte_t;
 
 // debug
-// 0 - no debug messages 1 - error messages 2 - all messages 4 - extended debug mode
-#define MF_DBG_NONE          0
-#define MF_DBG_ERROR         1
-#define MF_DBG_ALL           2
-#define MF_DBG_EXTENDED      4
+#define MF_DBG_NONE          0 // no messages 
+#define MF_DBG_ERROR         1 // errors only
+#define MF_DBG_INFO          2 // errors + info messages
+#define MF_DBG_DEBUG         3 // errors + info + debug messages
+#define MF_DBG_EXTENDED      4 // errors + info + debug + breaking debug messages
 extern int MF_DBGLEVEL;
 
 // Flashmem spi baudrate

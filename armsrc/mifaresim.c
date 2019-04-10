@@ -13,9 +13,10 @@
 // Verbose Mode:
 // MF_DBG_NONE          0
 // MF_DBG_ERROR         1
-// MF_DBG_ALL           2
+// MF_DBG_INFO          2
+// MF_DBG_DEBUG         3
 // MF_DBG_EXTENDED      4
-//
+
 //  /!\ Printing Debug message is disrupting emulation, 
 //  Only use with caution during debugging 
 

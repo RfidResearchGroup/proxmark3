@@ -34,13 +34,6 @@
 // reader voltage field detector
 #define MF_MINFIELDV      4000
 
-// debug
-// 0 - no debug messages 1 - error messages 2 - all messages 4 - extended debug mode
-#define MF_DBG_NONE          0
-#define MF_DBG_ERROR         1
-#define MF_DBG_ALL           2
-#define MF_DBG_EXTENDED      4
-
 // Mifare 4k/2k/1k/mini Max Block / Max Sector
 #define MIFARE_4K_MAXBLOCK 256
 #define MIFARE_2K_MAXBLOCK 128

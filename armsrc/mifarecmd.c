@@ -1809,7 +1809,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
             if (!is1b) {
                 ReaderTransmit(wupC2, sizeof(wupC2), NULL);
                 if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
-                    if (MF_DBGLEVEL >= MF_DBG_ALL) Dbprintf("Assuming Magic Gen 1B tag. [wupC2 failed]");
+                    if (MF_DBGLEVEL >= MF_DBG_INFO) Dbprintf("Assuming Magic Gen 1B tag. [wupC2 failed]");
                     is1b = true;
                     continue;
                 }
@@ -1887,7 +1887,7 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
             if (!is1b)  {
                 ReaderTransmit(wupC2, sizeof(wupC2), NULL);
                 if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
-                    if (MF_DBGLEVEL >= MF_DBG_ALL) Dbprintf("Assuming Magic Gen 1B tag. [wupC2 failed]");
+                    if (MF_DBGLEVEL >= MF_DBG_INFO) Dbprintf("Assuming Magic Gen 1B tag. [wupC2 failed]");
                     is1b = true;
                     continue;
                 }
