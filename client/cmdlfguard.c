@@ -173,6 +173,7 @@ int detectGProxII(uint8_t *bits, size_t *size) {
 // but will leave the GraphBuffer intact.
 //if successful it will push askraw data back to demod buffer ready for emulation
 int CmdGuardDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
 
     //Differential Biphase
     //get binary from ask wave
@@ -362,6 +363,7 @@ int CmdLFGuard(const char *Cmd) {
 }
 
 int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
 }

@@ -115,6 +115,7 @@ int CmdHF14ADesRb(const char *Cmd) {
 }
 
 int CmdHF14ADesInfo(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
 
     UsbCommand c = {CMD_MIFARE_DESFIRE_INFO};
     SendCommand(&c);
@@ -421,6 +422,7 @@ void GetKeySettings(uint8_t *aid) {
 }
 
 int CmdHF14ADesEnumApplications(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
 
     uint8_t isOK = 0x00;
     uint8_t aid[3];
@@ -657,6 +659,7 @@ int CmdHFMFDes(const char *Cmd) {
 }
 
 int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
 }

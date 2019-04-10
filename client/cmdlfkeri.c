@@ -64,6 +64,7 @@ int detectKeri(uint8_t *dest, size_t *size, bool *invert) {
 }
 
 int CmdKeriDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
 
     if (!PSKDemod("", false)) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - KERI: PSK1 Demod failed");
@@ -237,6 +238,7 @@ int CmdLFKeri(const char *Cmd) {
 }
 
 int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
 }

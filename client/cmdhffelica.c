@@ -65,6 +65,7 @@ int usage_hf_felica_raw(void) {
 }
 
 int CmdHFFelicaList(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     //PrintAndLogEx(NORMAL, "Deprecated command, use 'hf list felica' instead");
     CmdTraceList("felica");
     return 0;
@@ -606,6 +607,7 @@ int CmdHFFelica(const char *Cmd) {
 }
 
 int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
 }

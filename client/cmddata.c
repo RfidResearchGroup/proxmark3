@@ -843,6 +843,7 @@ int CmdAutoCorr(const char *Cmd) {
 }
 
 int CmdBitsamples(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     int cnt = 0;
     uint8_t got[12288];
 
@@ -876,6 +877,7 @@ int CmdBuffClear(const char *Cmd) {
 }
 
 int CmdDec(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     for (int i = 0; i < (GraphTraceLen / 2); ++i)
         GraphBuffer[i] = GraphBuffer[i * 2];
     GraphTraceLen /= 2;
@@ -1140,6 +1142,7 @@ int PSKDemod(const char *Cmd, bool verbose) {
 }
 
 int CmdIdteckDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
 
     if (!PSKDemod("", false)) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck PSKDemod failed");
@@ -1400,12 +1403,14 @@ int CmdHexsamples(const char *Cmd) {
 }
 
 int CmdHide(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     HideGraphWindow();
     return 0;
 }
 
 //zero mean GraphBuffer
 int CmdHpf(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     uint8_t bits[GraphTraceLen];
     size_t size = getFromGraphBuf(bits);
     removeSignalOffset(bits, size);
@@ -1499,6 +1504,7 @@ int CmdSamples(const char *Cmd) {
 }
 
 int CmdTuneSamples(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
 #define NON_VOLTAGE     1000
 #define LF_UNUSABLE_V   2000
 #define LF_MARGINAL_V   10000
@@ -1684,6 +1690,7 @@ int CmdMtrim(const char *Cmd) {
 }
 
 int CmdNorm(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     int i;
     int max = INT_MIN, min = INT_MAX;
 
@@ -1710,6 +1717,7 @@ int CmdNorm(const char *Cmd) {
 }
 
 int CmdPlot(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     ShowGraphWindow();
     return 0;
 }
@@ -1797,6 +1805,7 @@ int CmdDirectionalThreshold(const char *Cmd) {
 }
 
 int CmdZerocrossings(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     // Zero-crossings aren't meaningful unless the signal is zero-mean.
     CmdHpf("");
 
@@ -2129,6 +2138,7 @@ int CmdData(const char *Cmd) {
 }
 
 int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
 }

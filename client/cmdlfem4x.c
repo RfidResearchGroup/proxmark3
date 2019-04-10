@@ -579,6 +579,7 @@ int CmdEM410xBrute(const char *Cmd) {
  *  EDIT -- capture enough to get 2 complete preambles at the slowest data rate known to be used (rf/64) (64*64*2+9 = 8201) marshmellow
 */
 int CmdEM410xWatch(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     do {
         if (ukbhit()) {
             int gc = getchar();
@@ -1507,6 +1508,7 @@ int CmdLFEM4X(const char *Cmd) {
 }
 
 int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
 }

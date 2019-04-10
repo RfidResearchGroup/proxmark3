@@ -271,6 +271,7 @@ int xorbits_8(uint8_t val) {
 }
 
 int CmdHFiClassList(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     //PrintAndLogEx(NORMAL, "Deprecated command, use 'hf list iclass' instead");
     CmdTraceList("iclass");
     return 0;
@@ -510,6 +511,7 @@ int CmdHFiClassSim(const char *Cmd) {
 }
 
 int HFiClassReader(const char *Cmd, bool loop, bool verbose) {
+    (void)Cmd; // Cmd is not used so far
     bool tagFound = false;
 
     uint32_t flags = FLAG_ICLASS_READER_CSN | FLAG_ICLASS_READER_CC |  FLAG_ICLASS_READER_AIA |
@@ -2516,6 +2518,7 @@ int CmdHFiClass(const char *Cmd) {
 }
 
 int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
 }

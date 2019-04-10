@@ -221,6 +221,7 @@ int usage_hf_14a_info(void) {
 }
 
 int CmdHF14AList(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     //PrintAndLogEx(NORMAL, "Deprecated command, use 'hf list 14a' instead");
     CmdTraceList("14a");
     return 0;

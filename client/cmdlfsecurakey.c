@@ -26,6 +26,7 @@ int detectSecurakey(uint8_t *dest, size_t *size) {
 
 //see ASKDemod for what args are accepted
 int CmdSecurakeyDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
 
     //ASK / Manchester
     bool st = false;
@@ -127,6 +128,7 @@ int CmdLFSecurakey(const char *Cmd) {
 }
 
 int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
 }

@@ -22,6 +22,7 @@
 static int CmdHelp(const char *Cmd);
 
 int CmdTIDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     /* MATLAB as follows:
       f_s = 2000000;  % sampling frequency
       f_l = 123200;   % low FSK tone
@@ -273,6 +274,7 @@ out:
 
 // read a TI tag and return its ID
 int CmdTIRead(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     UsbCommand c = {CMD_READ_TI_TYPE};
     clearCommandBuffer();
     SendCommand(&c);
@@ -312,6 +314,7 @@ int CmdLFTI(const char *Cmd) {
 }
 
 int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
 }

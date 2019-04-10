@@ -488,16 +488,19 @@ int CmdHFTopazReader(const char *Cmd) {
 }
 
 int CmdHFTopazSim(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     PrintAndLogEx(NORMAL, "not yet implemented");
     return 0;
 }
 
 int CmdHFTopazCmdRaw(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     PrintAndLogEx(NORMAL, "not yet implemented. Use hf 14 raw with option -T.");
     return 0;
 }
 
 int CmdHFTopazList(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdTraceList("topaz");
     return 0;
 }
@@ -521,6 +524,7 @@ int CmdHFTopaz(const char *Cmd) {
 }
 
 static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
 }

@@ -158,6 +158,7 @@ int getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t
 -- sample: 985121004515220  [ 37FF65B88EF94 ]
 */
 int CmdFDXBdemodBI(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
 
     int clk = 32;
     int invert = 1, errCnt = 0, offset = 0, maxErr = 100;
@@ -233,6 +234,7 @@ int CmdFDXBdemodBI(const char *Cmd) {
 //see ASKDemod for what args are accepted
 //almost the same demod as cmddata.c/CmdFDXBdemodBI
 int CmdFdxDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
 
     //Differential Biphase / di-phase (inverted biphase)
     //get binary from ask wave
@@ -404,6 +406,7 @@ int CmdLFFdx(const char *Cmd) {
 }
 
 int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
 }

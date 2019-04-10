@@ -95,6 +95,7 @@ int detectVisa2k(uint8_t *dest, size_t *size) {
 **/
 //see ASKDemod for what args are accepted
 int CmdVisa2kDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
 
     save_restoreGB(GRAPH_SAVE);
 
@@ -238,6 +239,7 @@ int CmdLFVisa2k(const char *Cmd) {
 }
 
 int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
 }

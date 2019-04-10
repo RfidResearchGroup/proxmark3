@@ -68,6 +68,7 @@ bool endsWith(const char *base, const char *str) {
 * ending with .lua
 */
 int CmdScriptList(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
 
     char const *exedir = get_my_executable_directory();
     if (exedir == NULL)
@@ -191,6 +192,7 @@ int CmdScript(const char *Cmd) {
  * @return
  */
 int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     PrintAndLogEx(NORMAL, "This is a feature to run Lua-scripts. You can place lua-scripts within the scripts/-folder. ");
     return 0;
 }

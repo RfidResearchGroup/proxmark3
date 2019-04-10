@@ -187,6 +187,7 @@ int CmdLFCommandRead(const char *Cmd) {
 }
 
 int CmdFlexdemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
 
     if (GraphTraceLen < 0)
         return 0;
@@ -737,6 +738,7 @@ int CmdLFpskSim(const char *Cmd) {
 }
 
 int CmdLFSimBidir(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     // Set ADC to twice the carrier for a slight supersampling
     // HACK: not implemented in ARMSRC.
     PrintAndLogEx(INFO, "Not implemented yet.");
@@ -1013,6 +1015,7 @@ int CmdLF(const char *Cmd) {
 }
 
 int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
 }

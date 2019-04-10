@@ -81,6 +81,7 @@ int CmdIOProxRead_device(const char *Cmd) {
 //IO-Prox demod - FSK RF/64 with preamble of 000000001
 //print ioprox ID and some format details
 int CmdIOProxDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     int retval = 0;
     int idx = 0;
     uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
@@ -347,6 +348,7 @@ int CmdLFIO(const char *Cmd) {
 }
 
 int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
 }

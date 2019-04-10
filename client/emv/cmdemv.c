@@ -54,7 +54,7 @@ void PrintChannel(EMVCommandChannel channel) {
     }
 }
 
-int CmdEMVSelect(const char *cmd) {
+int CmdEMVSelect(const char *Cmd) {
     uint8_t data[APDU_AID_LEN] = {0};
     int datalen = 0;
 
@@ -72,7 +72,7 @@ int CmdEMVSelect(const char *cmd) {
         arg_strx0(NULL,  NULL,     "<HEX applet AID>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(cmd, argtable, true);
+    CLIExecWithReturn(Cmd, argtable, true);
 
     bool activateField = arg_get_lit(1);
     bool leaveSignalON = arg_get_lit(2);
@@ -105,7 +105,7 @@ int CmdEMVSelect(const char *cmd) {
     return 0;
 }
 
-int CmdEMVSearch(const char *cmd) {
+int CmdEMVSearch(const char *Cmd) {
 
     CLIParserInit("emv search",
                   "Tries to select all applets from applet list:\n",
@@ -120,7 +120,7 @@ int CmdEMVSearch(const char *cmd) {
         arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
         arg_param_end
     };
-    CLIExecWithReturn(cmd, argtable, true);
+    CLIExecWithReturn(Cmd, argtable, true);
 
     bool activateField = arg_get_lit(1);
     bool leaveSignalON = arg_get_lit(2);
@@ -155,7 +155,7 @@ int CmdEMVSearch(const char *cmd) {
     return 0;
 }
 
-int CmdEMVPPSE(const char *cmd) {
+int CmdEMVPPSE(const char *Cmd) {
 
     CLIParserInit("emv pse",
                   "Executes PSE/PPSE select command. It returns list of applet on the card:\n",
@@ -172,7 +172,7 @@ int CmdEMVPPSE(const char *cmd) {
         arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
         arg_param_end
     };
-    CLIExecWithReturn(cmd, argtable, true);
+    CLIExecWithReturn(Cmd, argtable, true);
 
     bool activateField = arg_get_lit(1);
     bool leaveSignalON = arg_get_lit(2);
@@ -210,7 +210,7 @@ int CmdEMVPPSE(const char *cmd) {
     return 0;
 }
 
-int CmdEMVGPO(const char *cmd) {
+int CmdEMVGPO(const char *Cmd) {
     uint8_t data[APDU_RES_LEN] = {0};
     int datalen = 0;
 
@@ -231,7 +231,7 @@ int CmdEMVGPO(const char *cmd) {
         arg_strx0(NULL,  NULL,     "<HEX PDOLdata/PDOL>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(cmd, argtable, true);
+    CLIExecWithReturn(Cmd, argtable, true);
 
     bool leaveSignalON = arg_get_lit(1);
     bool paramsLoadFromFile = arg_get_lit(2);
@@ -317,7 +317,7 @@ int CmdEMVGPO(const char *cmd) {
     return 0;
 }
 
-int CmdEMVReadRecord(const char *cmd) {
+int CmdEMVReadRecord(const char *Cmd) {
     uint8_t data[APDU_RES_LEN] = {0};
     int datalen = 0;
 
@@ -334,7 +334,7 @@ int CmdEMVReadRecord(const char *cmd) {
         arg_strx1(NULL,  NULL,     "<SFI 1byte HEX><SFIrecord 1byte HEX>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(cmd, argtable, true);
+    CLIExecWithReturn(Cmd, argtable, true);
 
     bool leaveSignalON = arg_get_lit(1);
     bool APDULogging = arg_get_lit(2);
@@ -372,7 +372,7 @@ int CmdEMVReadRecord(const char *cmd) {
     return 0;
 }
 
-int CmdEMVAC(const char *cmd) {
+int CmdEMVAC(const char *Cmd) {
     uint8_t data[APDU_RES_LEN] = {0};
     int datalen = 0;
 
@@ -396,7 +396,7 @@ int CmdEMVAC(const char *cmd) {
         arg_strx1(NULL,  NULL,      "<HEX CDOLdata/CDOL>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(cmd, argtable, false);
+    CLIExecWithReturn(Cmd, argtable, false);
 
     bool leaveSignalON = arg_get_lit(1);
     bool trTypeCDA = arg_get_lit(2);
@@ -493,7 +493,7 @@ int CmdEMVAC(const char *cmd) {
     return 0;
 }
 
-int CmdEMVGenerateChallenge(const char *cmd) {
+int CmdEMVGenerateChallenge(const char *Cmd) {
 
     CLIParserInit("emv challenge",
                   "Executes Generate Challenge command. It returns 4 or 8-byte random number from card.\nNeeds a EMV applet to be selected and GPO to be executed.",
@@ -506,7 +506,7 @@ int CmdEMVGenerateChallenge(const char *cmd) {
         arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
         arg_param_end
     };
-    CLIExecWithReturn(cmd, argtable, true);
+    CLIExecWithReturn(Cmd, argtable, true);
 
     bool leaveSignalON = arg_get_lit(1);
     bool APDULogging = arg_get_lit(2);
@@ -538,7 +538,7 @@ int CmdEMVGenerateChallenge(const char *cmd) {
     return 0;
 }
 
-int CmdEMVInternalAuthenticate(const char *cmd) {
+int CmdEMVInternalAuthenticate(const char *Cmd) {
     uint8_t data[APDU_RES_LEN] = {0};
     int datalen = 0;
 
@@ -562,7 +562,7 @@ int CmdEMVInternalAuthenticate(const char *cmd) {
         arg_strx1(NULL,  NULL,     "<HEX DDOLdata/DDOL>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(cmd, argtable, false);
+    CLIExecWithReturn(Cmd, argtable, false);
 
     bool leaveSignalON = arg_get_lit(1);
     bool paramsLoadFromFile = arg_get_lit(2);
@@ -749,7 +749,7 @@ void ProcessACResponseFormat1(struct tlvdb *tlvRoot, uint8_t *buf, size_t len, b
     }
 }
 
-int CmdEMVExec(const char *cmd) {
+int CmdEMVExec(const char *Cmd) {
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t len = 0;
     uint16_t sw = 0;
@@ -785,7 +785,7 @@ int CmdEMVExec(const char *cmd) {
         arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
         arg_param_end
     };
-    CLIExecWithReturn(cmd, argtable, true);
+    CLIExecWithReturn(Cmd, argtable, true);
 
     bool activateField = arg_get_lit(1);
     bool showAPDU = arg_get_lit(2);
@@ -1346,7 +1346,7 @@ int CmdEMVExec(const char *cmd) {
     return 0;
 }
 
-int CmdEMVScan(const char *cmd) {
+int CmdEMVScan(const char *Cmd) {
     uint8_t AID[APDU_AID_LEN] = {0};
     size_t AIDlen = 0;
     uint8_t buf[APDU_RES_LEN] = {0};
@@ -1378,7 +1378,7 @@ int CmdEMVScan(const char *cmd) {
         arg_str1(NULL,  NULL,       "output.json", "JSON output file name"),
         arg_param_end
     };
-    CLIExecWithReturn(cmd, argtable, true);
+    CLIExecWithReturn(Cmd, argtable, true);
 
     bool showAPDU = arg_get_lit(1);
     bool decodeTLV = arg_get_lit(2);
@@ -1701,14 +1701,16 @@ int CmdEMVScan(const char *cmd) {
 }
 
 int CmdEMVList(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     return CmdTraceList("7816");
 }
 
-int CmdEMVTest(const char *cmd) {
+int CmdEMVTest(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     return ExecuteCryptoTests(true);
 }
 
-int CmdEMVRoca(const char *cmd) {
+int CmdEMVRoca(const char *Cmd) {
     uint8_t AID[APDU_AID_LEN] = {0};
     size_t AIDlen = 0;
     uint8_t buf[APDU_RES_LEN] = {0};
@@ -1729,7 +1731,7 @@ int CmdEMVRoca(const char *cmd) {
         arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
         arg_param_end
     };
-    CLIExecWithReturn(cmd, argtable, true);
+    CLIExecWithReturn(Cmd, argtable, true);
 
     EMVCommandChannel channel = ECC_CONTACTLESS;
     if (arg_get_lit(1))

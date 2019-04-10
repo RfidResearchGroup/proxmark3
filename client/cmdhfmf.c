@@ -3519,6 +3519,7 @@ int CmdHFMFNDEF(const char *Cmd) {
 }
 
 int CmdHF14AMfList(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdTraceList("mf");
     return 0;
 }
@@ -3575,6 +3576,7 @@ int CmdHFMF(const char *Cmd) {
 }
 
 int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
 }

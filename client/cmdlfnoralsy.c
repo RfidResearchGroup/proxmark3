@@ -101,6 +101,7 @@ int detectNoralsy(uint8_t *dest, size_t *size) {
 
 //see ASKDemod for what args are accepted
 int CmdNoralsyDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
 
     //ASK / Manchester
     bool st = true;
@@ -272,6 +273,7 @@ int CmdLFNoralsy(const char *Cmd) {
 }
 
 int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
 }

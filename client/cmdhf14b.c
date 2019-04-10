@@ -122,6 +122,7 @@ static int switch_off_field_14b(void) {
 }
 
 int CmdHF14BList(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdTraceList("14b");
     return 0;
 }
@@ -1072,6 +1073,7 @@ uint32_t srix4kGetMagicbytes(uint64_t uid, uint32_t block6, uint32_t block18, ui
     return result;
 }
 int srix4kValid(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
 
     uint64_t uid = 0xD00202501A4532F9;
     uint32_t block6 = 0xFFFFFFFF;
@@ -1150,6 +1152,7 @@ int CmdHF14B(const char *Cmd) {
 }
 
 int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
 }

@@ -32,6 +32,7 @@ int detectNexWatch(uint8_t *dest, size_t *size, bool *invert) {
 }
 
 int CmdNexWatchDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
 
     if (!PSKDemod("", false)) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch can't demod signal");
@@ -106,6 +107,7 @@ int CmdLFNEXWATCH(const char *Cmd) {
 }
 
 int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
 }

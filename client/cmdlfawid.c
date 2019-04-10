@@ -240,6 +240,7 @@ int CmdAWIDRead_device(const char *Cmd) {
 //AWID Prox demod - FSK2a RF/50 with preamble of 00000001  (always a 96 bit data stream)
 //print full AWID Prox ID and some bit format details if found
 int CmdAWIDDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
     size_t size = getFromGraphBuf(bits);
     if (size == 0) {
@@ -573,6 +574,7 @@ int CmdLFAWID(const char *Cmd) {
 }
 
 int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
 }

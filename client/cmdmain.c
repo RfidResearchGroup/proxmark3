@@ -55,11 +55,13 @@ int CmdRem(const char *Cmd) {
 }
 
 int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
 }
 
 int CmdQuit(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     return 99;
 }
 

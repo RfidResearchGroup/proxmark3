@@ -426,6 +426,7 @@ int CmdAnalyseCHKSUM(const char *Cmd) {
 }
 
 int CmdAnalyseDates(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     // look for datestamps in a given array of bytes
     PrintAndLogEx(NORMAL, "To be implemented. Feel free to contribute!");
     return 0;
@@ -922,6 +923,7 @@ int CmdAnalyse(const char *Cmd) {
 }
 
 int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
 }

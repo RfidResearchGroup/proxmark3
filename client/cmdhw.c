@@ -325,6 +325,7 @@ int CmdDetectReader(const char *Cmd) {
 
 // ## FPGA Control
 int CmdFPGAOff(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     UsbCommand c = {CMD_FPGA_MAJOR_MODE_OFF};
     clearCommandBuffer();
     SendCommand(&c);
@@ -361,6 +362,7 @@ int CmdReadmem(const char *Cmd) {
 }
 
 int CmdReset(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     UsbCommand c = {CMD_HARDWARE_RESET};
     clearCommandBuffer();
     SendCommand(&c);
@@ -451,6 +453,7 @@ int CmdVersion(const char *Cmd) {
 }
 
 int CmdStatus(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     clearCommandBuffer();
     UsbCommand c = {CMD_STATUS};
     SendCommand(&c);
@@ -460,6 +463,7 @@ int CmdStatus(const char *Cmd) {
 }
 
 int CmdPing(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     clearCommandBuffer();
     UsbCommand resp;
     UsbCommand c = {CMD_PING};
@@ -497,6 +501,7 @@ int CmdHW(const char *Cmd) {
 }
 
 int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
 }

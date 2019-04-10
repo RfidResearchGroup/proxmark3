@@ -960,6 +960,7 @@ bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5)
 }
 
 int special(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
 
     uint8_t bits[32] = {0x00};
 
@@ -1761,6 +1762,7 @@ void t55x7_create_config_block(int tagtype) {
 }
 
 int CmdResetRead(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     UsbCommand c = {CMD_T55XX_RESET_READ, {0, 0, 0}};
     clearCommandBuffer();
     SendCommand(&c);
@@ -2320,6 +2322,7 @@ int CmdLFT55XX(const char *Cmd) {
 }
 
 int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
 }

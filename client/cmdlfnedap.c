@@ -113,6 +113,7 @@ int GetNedapBits(uint32_t cn, uint8_t *nedapBits) {
 //print NEDAP Prox ID, encoding, encrypted ID,
 
 int CmdLFNedapDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     //raw ask demod no start bit finding just get binary from wave
     if (!ASKbiphaseDemod("0 64 1 0", false)) {
         if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Nedap ASKbiphaseDemod failed");
@@ -388,6 +389,7 @@ int CmdLFNedap(const char *Cmd) {
 }
 
 int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
 }

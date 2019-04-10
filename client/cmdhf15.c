@@ -601,6 +601,7 @@ int CmdHF15Record(const char *Cmd) {
 
 // used with 'hf search'
 int HF15Reader(const char *Cmd, bool verbose) {
+    (void)Cmd; // Cmd is not used so far
     uint8_t uid[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     if (!getUID(uid)) {
         if (verbose) PrintAndLogEx(WARNING, "No tag found.");
@@ -901,6 +902,7 @@ int CmdHF15Restore(const char *Cmd) {
 }
 
 int CmdHF15List(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     //PrintAndLogEx(WARNING, "Deprecated command, use 'hf list 15' instead");
     CmdTraceList("15");
     return 0;
@@ -1328,6 +1330,7 @@ int CmdHF15(const char *Cmd) {
 }
 
 int CmdHF15Help(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable15);
     return 0;
 }

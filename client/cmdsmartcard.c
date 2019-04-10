@@ -938,6 +938,7 @@ int CmdSmartSetClock(const char *Cmd) {
 }
 
 int CmdSmartList(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdTraceList("7816");
     return 0;
 }
@@ -1235,6 +1236,7 @@ int CmdSmartcard(const char *Cmd) {
 }
 
 int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
 }

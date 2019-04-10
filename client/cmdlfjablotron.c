@@ -92,6 +92,7 @@ static uint64_t getJablontronCardId(uint64_t rawcode) {
 
 //see ASKDemod for what args are accepted
 int CmdJablotronDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
 
     //Differential Biphase / di-phase (inverted biphase)
     //get binary from ask wave
@@ -245,6 +246,7 @@ int CmdLFJablotron(const char *Cmd) {
 }
 
 int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
 }

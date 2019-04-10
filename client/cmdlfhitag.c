@@ -119,6 +119,7 @@ int usage_hitag_checkchallenges(void) {
 }
 
 int CmdLFHitagList(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdTraceList("hitag");
     return 0;
 
@@ -706,6 +707,7 @@ int CmdLFHitag(const char *Cmd) {
 }
 
 int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
 }

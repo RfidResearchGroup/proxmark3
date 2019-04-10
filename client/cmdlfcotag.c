@@ -28,6 +28,7 @@ int usage_lf_cotag_read(void) {
 // COTAG demod should be able to use GraphBuffer,
 // when data load samples
 int CmdCOTAGDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
 
     uint8_t bits[COTAG_BITS] = {0};
     size_t bitlen = COTAG_BITS;
@@ -116,6 +117,7 @@ int CmdLFCOTAG(const char *Cmd) {
 }
 
 int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
 }
