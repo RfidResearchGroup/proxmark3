@@ -456,7 +456,7 @@ int CmdLegicInfo(const char *Cmd) {
         PrintAndLogEx(NORMAL, "\nrow  | data");
         PrintAndLogEx(NORMAL, "-----+------------------------------------------------");
         print_hex_break(data + i, remain_seg_payload_len, 16);
-        i += remain_seg_payload_len;
+//        i += remain_seg_payload_len;
 
         PrintAndLogEx(NORMAL, "-----+------------------------------------------------\n");
     }
@@ -820,12 +820,11 @@ void legic_chk_iv(uint32_t *iv) {
     }
 }
 void legic_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
-    size_t len = 0;
 
     UsbCommand c = {CMD_LEGIC_ESET, {0, 0, 0}};
     for (size_t i = offset; i < numofbytes; i += USB_CMD_DATA_SIZE) {
 
-        len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
+        size_t len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
         c.arg[0] = i; // offset
         c.arg[1] = len; // number of bytes
         memcpy(c.d.asBytes, src + i, len);
@@ -1053,12 +1052,11 @@ int CmdLegicRestore(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Restoring to card");
 
     // transfer to device
-    size_t len = 0;
     UsbCommand c = {CMD_WRITER_LEGIC_RF, {0, 0, 0x55}};
     UsbCommand resp;
     for (size_t i = 7; i < numofbytes; i += USB_CMD_DATA_SIZE) {
 
-        len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
+        size_t len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
         c.arg[0] = i; // offset
         c.arg[1] = len; // number of bytes
         memcpy(c.d.asBytes, data + i, len);
@@ -1247,14 +1245,13 @@ int CmdLegicWipe(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Erasing");
 
     // transfer to device
-    size_t len = 0;
     UsbCommand c = {CMD_WRITER_LEGIC_RF, {0, 0, 0x55}};
     UsbCommand resp;
     for (size_t i = 7; i < card.cardsize; i += USB_CMD_DATA_SIZE) {
 
         printf(".");
         fflush(stdout);
-        len = MIN((card.cardsize - i), USB_CMD_DATA_SIZE);
+        size_t len = MIN((card.cardsize - i), USB_CMD_DATA_SIZE);
         c.arg[0] = i; // offset
         c.arg[1] = len; // number of bytes
         memcpy(c.d.asBytes, data + i, len);
