@@ -13,6 +13,9 @@
  * Lesser General Public License for more details.
  */
 
+#ifndef __CDA_TEST_H
+#define __CDA_TEST_H
 #include <stdbool.h>
 
 int exec_cda_test(bool verbose);
+#endif

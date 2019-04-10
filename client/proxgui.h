@@ -8,6 +8,9 @@
 // GUI functions
 //-----------------------------------------------------------------------------
 
+#ifndef __PROXGUI_H
+#define __PROXGUI_H
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -52,4 +55,5 @@ extern uint8_t g_debugMode;
 
 #ifdef __cplusplus
 }
+#endif
 #endif

@@ -34,6 +34,9 @@ on 1 byte), but shoehorning those bytes into integers efficiently is messy.
 -------------------------------------------------------------------------------
 */
 
+#ifndef LOOKUP3_H
+#define LOOKUP3_H
+
 #include <stdlib.h>
 
 #ifdef HAVE_CONFIG_H
@@ -454,3 +457,4 @@ static uint32_t hashlittle(const void *key, size_t length, uint32_t initval) {
     final(a, b, c);
     return c;
 }
+#endif

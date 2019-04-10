@@ -8,6 +8,8 @@
 // Command line parser core commands
 //-----------------------------------------------------------------------------
 
+#ifndef __CLIPARSER_H
+#define __CLIPARSER_H
 #include "argtable3.h"
 #include "util.h"
 #include <stdbool.h>
@@ -39,3 +41,4 @@ void CLIParserFree(void);
 
 int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen);
 int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen);
+#endif

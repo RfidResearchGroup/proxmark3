@@ -13,4 +13,7 @@
  * Lesser General Public License for more details.
  */
 
+#ifndef __SDA_TEST_H
+#define __SDA_TEST_H
 int exec_sda_test(bool verbose);
+#endif
