@@ -255,7 +255,7 @@ void GetKeySettings(uint8_t *aid) {
     char messStr[512] = {0x00};
     char *str = messStr;
     uint8_t isOK = 0;
-    uint32_t options = NONE;
+    uint32_t options;
     UsbCommand c = {CMD_MIFARE_DESFIRE};
     UsbCommand resp;
 
