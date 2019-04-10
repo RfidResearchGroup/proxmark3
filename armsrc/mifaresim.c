@@ -17,8 +17,8 @@
 // MF_DBG_DEBUG         3
 // MF_DBG_EXTENDED      4
 
-//  /!\ Printing Debug message is disrupting emulation, 
-//  Only use with caution during debugging 
+//  /!\ Printing Debug message is disrupting emulation,
+//  Only use with caution during debugging
 
 
 #include "iso14443a.h"
@@ -667,7 +667,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                             switch (MifareCardType) {
                                 case 0: // Mifare Mini
                                     EmSendPrecompiledCmd(&responses[SAK_MINI]);
-                                    break; 
+                                    break;
                                 case 1: // Mifare 1K
                                     EmSendPrecompiledCmd(&responses[SAK_1]);
                                     break;
@@ -851,11 +851,11 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
 
                 // case MFEMUL_WORK => if Cmd is Read, Write, Inc, Dec, Restore, Transfert
                 if (receivedCmd_len == 4 && (receivedCmd_dec[0] == ISO14443A_CMD_READBLOCK
-                        || receivedCmd_dec[0] == ISO14443A_CMD_WRITEBLOCK
-                        || receivedCmd_dec[0] == MIFARE_CMD_INC
-                        || receivedCmd_dec[0] == MIFARE_CMD_DEC
-                        || receivedCmd_dec[0] == MIFARE_CMD_RESTORE
-                        || receivedCmd_dec[0] == MIFARE_CMD_TRANSFER)) {
+                                             || receivedCmd_dec[0] == ISO14443A_CMD_WRITEBLOCK
+                                             || receivedCmd_dec[0] == MIFARE_CMD_INC
+                                             || receivedCmd_dec[0] == MIFARE_CMD_DEC
+                                             || receivedCmd_dec[0] == MIFARE_CMD_RESTORE
+                                             || receivedCmd_dec[0] == MIFARE_CMD_TRANSFER)) {
                     // all other commands must be encrypted (authenticated)
                     if (!encrypted_data) {
                         EmSend4bit(CARD_NACK_NA);
