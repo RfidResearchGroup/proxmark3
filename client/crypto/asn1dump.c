@@ -48,10 +48,10 @@ struct asn1_tag {
 
 static const struct asn1_tag asn1_tags[] = {
     // internal
-    { 0x00, "Unknown ???",       ASN1_TAG_GENERIC     },
+    { 0x00, "Unknown ???",       ASN1_TAG_GENERIC      },
 
     // ASN.1
-    { 0x01, "BOOLEAN",           ASN1_TAG_BOLEAN       },
+    { 0x01, "BOOLEAN",           ASN1_TAG_BOOLEAN      },
     { 0x02, "INTEGER",           ASN1_TAG_INTEGER      },
     { 0x03, "BIT STRING",        ASN1_TAG_GENERIC      },
     { 0x04, "OCTET STRING",      ASN1_TAG_OCTET_STRING },
