@@ -1584,7 +1584,7 @@ int CmdTuneSamples(const char *Cmd) {
         GraphBuffer[i] = resp.d.asBytes[i] - 128;
         test1 += resp.d.asBytes[i];
     }
-    
+
     if (test1 > 0) {
         PrintAndLogEx(SUCCESS, "\nDisplaying LF tuning graph. Divisor 89 is 134khz, 95 is 125khz.\n\n");
         GraphTraceLen = 256;
@@ -1979,7 +1979,7 @@ int FSKToNRZ(int *data, int *dataLen, int clk, int LowToneFC, int HighToneFC) {
     // currently only know fsk modulations with field clocks < 10 samples and > 4 samples. filter out to remove false positives (and possibly destroying ask/psk modulated waves...)
     if (ans == 0 || clk == 0 || LowToneFC == 0 || HighToneFC == 0 || LowToneFC > 10 || HighToneFC < 4) {
         if (g_debugMode > 1) {
-            PrintAndLogEx(NORMAL,"DEBUG FSKtoNRZ: no fsk clocks found");
+            PrintAndLogEx(NORMAL, "DEBUG FSKtoNRZ: no fsk clocks found");
         }
         return 0;
     }

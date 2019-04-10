@@ -1413,14 +1413,14 @@ int manrawdecode(uint8_t *bits, size_t *size, uint8_t invert, uint8_t *alignPos)
     //find correct start position [alignment]
     for (k = 0; k < 2; ++k) {
         for (i = k; i < *size - 1; i += 2) {
-          
+
             if (bits[i] == bits[i + 1])
                 errCnt++;
-            
-            if ( errCnt > 50) 
+
+            if (errCnt > 50)
                 break;
         }
-        
+
         if (bestErr > errCnt) {
             bestErr = errCnt;
             bestRun = k;
@@ -1428,7 +1428,7 @@ int manrawdecode(uint8_t *bits, size_t *size, uint8_t invert, uint8_t *alignPos)
         }
         errCnt = 0;
     }
-    
+
     *alignPos = bestRun;
     //decode
     for (i = bestRun; i < *size - 1; i += 2) {
@@ -1467,9 +1467,9 @@ int cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int invert, int high,
             if ((bits[i] >= high && !waveHigh) || (bits[i] <= low && waveHigh)) {
 
                 // 8  ::   8-2-1 =  5   8+2+1 = 11
-                // 16 ::  16-4-1 = 11  16+4+1 = 21 
+                // 16 ::  16-4-1 = 11  16+4+1 = 21
                 // 32 ::  32-8-1 = 23  32+8+1 = 41
-                
+
                 if (smplCnt > clk - cl_4 - 1) { //full clock
 
                     if (smplCnt > clk + cl_4 + 1) { //too many samples
@@ -1517,11 +1517,11 @@ int cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int invert, int high,
     }
     *size = bitCnt;
 
-    if ( *startIdx < 0 )
+    if (*startIdx < 0)
         *startIdx = 0;
-    
+
     if (g_debugMode == 2) prnt("DEBUG ASK: cleanAskRawDemod Startidx %u ", *startIdx);
-   
+
     return errCnt;
 }
 
@@ -1912,7 +1912,7 @@ int pskRawDemod_ext(uint8_t *dest, size_t *size, int *clock, int *invert, int *s
         prnt("DEBUG PSK: firstFullWave: %u, waveLen: %u, startIdx %i", firstFullWave, fullWaveLen, *startIdx);
         prnt("DEBUG PSK: clk: %d, lastClkBit: %u, fc: %u", *clock, lastClkBit, fc);
     }
-    
+
     waveStart = 0;
     dest[numBits++] = curPhase; //set first read bit
     for (i = firstFullWave + fullWaveLen - 1; i < *size - 3; i++) {

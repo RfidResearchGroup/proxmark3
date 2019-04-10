@@ -1734,7 +1734,7 @@ out:
 
         if (transferToEml) {
             uint8_t block[16] = {0x00};
-            for ( i = 0; i < sectorsCnt; ++i) {
+            for (i = 0; i < sectorsCnt; ++i) {
                 mfEmlGetMem(block, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1);
                 if (e_sector[i].foundKey[0])
                     num_to_bytes(e_sector[i].Key[0], 6, block);
