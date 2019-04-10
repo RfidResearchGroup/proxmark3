@@ -260,7 +260,7 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
         PrintAndLogEx(NORMAL, "E-> Error ATS length(%d) : %s", card->ats_len, sprint_hex(card->ats, card->ats_len));
         return 1;
     }
-    
+
     PrintAndLogEx(NORMAL, " ATS: %s", sprint_hex(card->ats, card->ats_len));
     return 0;
 }
