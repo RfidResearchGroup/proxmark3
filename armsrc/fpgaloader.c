@@ -230,9 +230,9 @@ static bool reset_fpga_stream(int bitstream_version, z_streamp compressed_fpga_s
     compressed_fpga_stream->zfree = &fpga_inflate_free;
 
     int res = inflateInit2(compressed_fpga_stream, 0);
-    if ( res < 0 )
+    if (res < 0)
         return false;
-    
+
     fpga_image_ptr = output_buffer;
 
     for (uint16_t i = 0; i < FPGA_BITSTREAM_FIXED_HEADER_SIZE; i++)
