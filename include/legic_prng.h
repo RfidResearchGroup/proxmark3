@@ -12,7 +12,7 @@
 #include <stdint.h>
 void legic_prng_init(uint8_t iv);
 void legic_prng_forward(int count);
-uint8_t legic_prng_get_bit();
+uint8_t legic_prng_get_bit(void);
 uint32_t legic_prng_get_bits(uint8_t len);
 #endif
 

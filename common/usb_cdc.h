@@ -41,11 +41,11 @@
 #include "proxmark3.h" // USB_CONNECT()
 #include "common.h"
 
-void usb_disable();
-void usb_enable();
-bool usb_check();
-bool usb_poll();
-bool usb_poll_validate_length();
+void usb_disable(void);
+void usb_enable(void);
+bool usb_check(void);
+bool usb_poll(void);
+bool usb_poll_validate_length(void);
 uint32_t usb_read(uint8_t *data, size_t len);
 uint32_t usb_write(const uint8_t *data, const size_t len);
 
@@ -57,7 +57,7 @@ int GetUSBconfigured(void);
 void AT91F_USB_SendData(AT91PS_UDP pUdp, const char *pData, uint32_t length);
 void AT91F_USB_SendZlp(AT91PS_UDP pUdp);
 void AT91F_USB_SendStall(AT91PS_UDP pUdp);
-void AT91F_CDC_Enumerate();
+void AT91F_CDC_Enumerate(void);
 
 #endif // _USB_CDC_H_
 
