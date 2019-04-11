@@ -245,6 +245,7 @@ int binarraytohex(char *target, const size_t targetlen, char *source, size_t src
 void binarraytobinstring(char *target,  char *source, int length);
 uint8_t GetParity(uint8_t *bits, uint8_t type, int length);
 void wiegand_add_parity(uint8_t *target, uint8_t *source, uint8_t length);
+void wiegand_add_parity_swapped(uint8_t *target, uint8_t *source, uint8_t length);
 
 void xor(unsigned char *dst, unsigned char *src, size_t len);
 int32_t le24toh(uint8_t data[3]);

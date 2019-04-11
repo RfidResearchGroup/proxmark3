@@ -33,5 +33,5 @@ int CmdHIDWiegand(const char *Cmd);
 int CmdHIDBrute(const char *Cmd);
 
 //void calc26(uint16_t fc, uint32_t cardno, uint8_t *out);
-void calcWiegand(uint8_t fmtlen, uint16_t fc, uint64_t cardno, uint8_t *bits);
+void calcWiegand(uint8_t fmtlen, uint16_t fc, uint64_t cardno, uint8_t *bits, uint8_t oem);
 #endif
