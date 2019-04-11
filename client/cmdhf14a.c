@@ -1431,7 +1431,7 @@ int CmdHF14AChaining(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",        CmdHelp,              1, "This help"},
-    {"list",        CmdHF14AList,         0, "[Deprecated] List ISO 14443-a history"},
+    {"list",        CmdHF14AList,         0, "List ISO 14443-a history"},
     {"info",        CmdHF14AInfo,         0, "Tag information"},
     {"reader",      CmdHF14AReader,       0, "Act like an ISO14443-a reader"},
     {"cuids",       CmdHF14ACUIDs,        0, "<n> Collect n>0 ISO14443-a UIDs in one go"},

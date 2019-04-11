@@ -1310,7 +1310,7 @@ static command_t CommandTable15[] = {
     {"dump",        CmdHF15Dump,        0, "Read all memory pages of an ISO15693 tag, save to file"},
     {"findafi",     CmdHF15Afi,         0, "Brute force AFI of an ISO15693 tag"},
     {"info",        CmdHF15Info,        0, "Tag information"},
-    {"list",        CmdHF15List,        0, "[Deprecated] List ISO15693 history"},
+    {"list",        CmdHF15List,        0, "List ISO15693 history"},
     {"raw",         CmdHF15Raw,         0, "Send raw hex data to tag"},
     {"reader",      CmdHF15Reader,      0, "Act like an ISO15693 reader"},
     {"record",      CmdHF15Record,      0, "Record Samples (ISO15693)"},

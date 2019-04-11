@@ -589,7 +589,7 @@ void waitCmdFelica(uint8_t iSelect) {
 
 static command_t CommandTable[] = {
     {"help",      CmdHelp,              1, "This help"},
-    {"list",      CmdHFFelicaList,      0, "[Deprecated] List ISO 18092/FeliCa history"},
+    {"list",      CmdHFFelicaList,      0, "List ISO 18092/FeliCa history"},
     {"reader",    CmdHFFelicaReader,    0, "Act like an ISO18092/FeliCa reader"},
     {"sim",       CmdHFFelicaSim,       0, "<UID> -- Simulate ISO 18092/FeliCa tag"},
     {"sniff",     CmdHFFelicaSniff,     0, "sniff ISO 18092/Felica traffic"},
