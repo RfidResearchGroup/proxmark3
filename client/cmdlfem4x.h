@@ -27,21 +27,7 @@
 
 int CmdLFEM4X(const char *Cmd);
 
-int CmdEM410xDemod(const char *Cmd);
-int CmdEM410xRead(const char *Cmd);
-int CmdEM410xSim(const char *Cmd);
-int CmdEM410xBrute(const char *Cmd);
-int CmdEM410xWatch(const char *Cmd);
-int CmdEM410xWatchnSpoof(const char *Cmd);
-int CmdEM410xWrite(const char *Cmd);
-int CmdEM4x05Dump(const char *Cmd);
-int CmdEM4x05Info(const char *Cmd);
-int CmdEM4x05Read(const char *Cmd);
-int CmdEM4x05Write(const char *Cmd);
-int CmdEM4x50Read(const char *Cmd);
-int CmdEM4x50Write(const char *Cmd);
-int CmdEM4x50Dump(const char *Cmd);
-
+int demodEM410x(void);
 int EM4x50Read(const char *Cmd, bool verbose);
 bool EM4x05IsBlock0(uint32_t *word);
 

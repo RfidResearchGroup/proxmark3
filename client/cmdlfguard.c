@@ -44,8 +44,241 @@ static int usage_lf_guard_sim(void) {
     return 0;
 }
 
+//by marshmellow
+//attempts to demodulate and identify a G_Prox_II verex/chubb card
+//WARNING: if it fails during some points it will destroy the DemodBuffer data
+// but will leave the GraphBuffer intact.
+//if successful it will push askraw data back to demod buffer ready for emulation
+static int CmdGuardDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+
+    //Differential Biphase
+    //get binary from ask wave
+    if (!ASKbiphaseDemod("0 64 0 0", false)) {
+        PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII ASKbiphaseDemod failed");
+        return 0;
+    }
+
+    size_t size = DemodBufferLen;
+
+    int preambleIndex = detectGProxII(DemodBuffer, &size);
+    if (preambleIndex < 0) {
+
+        if (preambleIndex == -1)
+            PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII too few bits found");
+        else if (preambleIndex == -2)
+            PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII preamble not found");
+        else if (preambleIndex == -3)
+            PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII size not correct: %d", size);
+        else if (preambleIndex == -5)
+            PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII wrong spacerbits");
+        else
+            PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII ans: %d", preambleIndex);
+        return 0;
+    }
+
+    //got a good demod of 96 bits
+    uint8_t ByteStream[8] = {0x00};
+    uint8_t xorKey = 0;
+    size_t startIdx = preambleIndex + 6; //start after 6 bit preamble
+
+    uint8_t bits_no_spacer[90];
+    //so as to not mess with raw DemodBuffer copy to a new sample array
+    memcpy(bits_no_spacer, DemodBuffer + startIdx, 90);
+    // remove the 18 (90/5=18) parity bits (down to 72 bits (96-6-18=72))
+    size_t len = removeParity(bits_no_spacer, 0, 5, 3, 90); //source, startloc, paritylen, ptype, length_to_run
+    if (len != 72) {
+        PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII spacer removal did not produce 72 bits: %u, start: %u", len, startIdx);
+        return 0;
+    }
+    // get key and then get all 8 bytes of payload decoded
+    xorKey = (uint8_t)bytebits_to_byteLSBF(bits_no_spacer, 8);
+    for (size_t idx = 0; idx < 8; idx++) {
+        ByteStream[idx] = ((uint8_t)bytebits_to_byteLSBF(bits_no_spacer + 8 + (idx * 8), 8)) ^ xorKey;
+        PrintAndLogEx(DEBUG, "DEBUG: gProxII byte %u after xor: %02x", (unsigned int)idx, ByteStream[idx]);
+    }
+
+    setDemodBuff(DemodBuffer, 96, preambleIndex);
+    setClockGrid(g_DemodClock, g_DemodStartIdx + (preambleIndex * g_DemodClock));
+
+    //ByteStream contains 8 Bytes (64 bits) of decrypted raw tag data
+    uint8_t fmtLen = ByteStream[0] >> 2;
+    uint32_t FC = 0;
+    uint32_t Card = 0;
+    //get raw 96 bits to print
+    uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
+    uint32_t raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
+    uint32_t raw3 = bytebits_to_byte(DemodBuffer + 64, 32);
+    bool unknown = false;
+    switch (fmtLen) {
+        case 36:
+            FC = ((ByteStream[3] & 0x7F) << 7) | (ByteStream[4] >> 1);
+            Card = ((ByteStream[4] & 1) << 19) | (ByteStream[5] << 11) | (ByteStream[6] << 3) | (ByteStream[7] >> 5);
+            break;
+        case 26:
+            FC = ((ByteStream[3] & 0x7F) << 1) | (ByteStream[4] >> 7);
+            Card = ((ByteStream[4] & 0x7F) << 9) | (ByteStream[5] << 1) | (ByteStream[6] >> 7);
+            break;
+        default :
+            unknown = true;
+            break;
+    }
+    if (!unknown)
+        PrintAndLogEx(SUCCESS, "G-Prox-II Found: Format Len: %ubit - FC: %u - Card: %u, Raw: %08x%08x%08x", fmtLen, FC, Card, raw1, raw2, raw3);
+    else
+        PrintAndLogEx(SUCCESS, "Unknown G-Prox-II Fmt Found: Format Len: %u, Raw: %08x%08x%08x", fmtLen, raw1, raw2, raw3);
+
+    return 1;
+}
+
+static int CmdGuardRead(const char *Cmd) {
+    lf_read(true, 10000);
+    return CmdGuardDemod(Cmd);
+}
+
+static int CmdGuardClone(const char *Cmd) {
+
+    char cmdp = param_getchar(Cmd, 0);
+    if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_guard_clone();
+
+    uint32_t facilitycode = 0, cardnumber = 0, fc = 0, cn = 0, fmtlen = 0;
+    uint8_t i;
+    uint8_t bs[96];
+    memset(bs, 0x00, sizeof(bs));
+
+    //GuardProxII - compat mode, ASK/Biphase,  data rate 64, 3 data blocks
+    uint32_t blocks[4] = {T55x7_MODULATION_BIPHASE | T55x7_BITRATE_RF_64 | 3 << T55x7_MAXBLOCK_SHIFT, 0, 0, 0};
+
+    if (sscanf(Cmd, "%u %u %u", &fmtlen, &fc, &cn) != 3) return usage_lf_guard_clone();
+
+    fmtlen &= 0x7f;
+    facilitycode = (fc & 0x000000FF);
+    cardnumber = (cn & 0x0000FFFF);
+
+    if (!getGuardBits(fmtlen, facilitycode, cardnumber, bs)) {
+        PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
+        return 1;
+    }
+
+    // Q5
+    if (param_getchar(Cmd, 3) == 'Q' || param_getchar(Cmd, 3) == 'q')
+        blocks[0] = T5555_MODULATION_FSK2 | T5555_SET_BITRATE(50) | 3 << T5555_MAXBLOCK_SHIFT;
+
+    blocks[1] = bytebits_to_byte(bs, 32);
+    blocks[2] = bytebits_to_byte(bs + 32, 32);
+    blocks[3] = bytebits_to_byte(bs + 64, 32);
+
+    PrintAndLogEx(INFO, "Preparing to clone Guardall to T55x7 with Facility Code: %u, Card Number: %u", facilitycode, cardnumber);
+    print_blocks(blocks, 4);
+
+    UsbCommand resp;
+    UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}, {{0}}};
+
+    for (i = 0; i < 4; ++i) {
+        c.arg[0] = blocks[i];
+        c.arg[1] = i;
+        clearCommandBuffer();
+        SendCommand(&c);
+        if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)) {
+            PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
+            return -1;
+        }
+    }
+    return 0;
+}
+
+static int CmdGuardSim(const char *Cmd) {
+
+    // Guard uses:  clk: 64, invert: 0, encoding: 2 (ASK Biphase)
+    uint8_t clock1 = 64, encoding = 2, separator = 0, invert = 0;
+    uint32_t facilitycode = 0, cardnumber = 0, fc = 0, cn = 0, fmtlen = 0;
+
+    char cmdp = param_getchar(Cmd, 0);
+    if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_guard_sim();
+
+    if (sscanf(Cmd, "%u %u %u", &fmtlen, &fc, &cn) != 3) return usage_lf_guard_sim();
+
+    uint8_t bs[96];
+    size_t size = sizeof(bs);
+    memset(bs, 0x00, size);
+
+    fmtlen &= 0x7F;
+    facilitycode = (fc & 0x000000FF);
+    cardnumber = (cn & 0x0000FFFF);
+
+    if (!getGuardBits(fmtlen, facilitycode, cardnumber, bs)) {
+        PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
+        return 1;
+    }
+
+    PrintAndLogEx(SUCCESS, "Simulating Guardall - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber);
+
+    uint64_t arg1, arg2;
+    arg1 = (clock1 << 8) | encoding;
+    arg2 = (invert << 8) | separator;
+
+    UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}, {{0}}};
+    memcpy(c.d.asBytes, bs, size);
+    clearCommandBuffer();
+    SendCommand(&c);
+    return 0;
+}
+
+static command_t CommandTable[] = {
+    {"help",    CmdHelp,        1, "this help"},
+    {"demod",   CmdGuardDemod,  1, "demodulate a G Prox II tag from the GraphBuffer"},
+    {"read",    CmdGuardRead,   0, "attempt to read and extract tag data from the antenna"},
+    {"clone",   CmdGuardClone,  0, "clone Guardall tag"},
+    {"sim",     CmdGuardSim,    0, "simulate Guardall tag"},
+    {NULL, NULL, 0, NULL}
+};
+
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
+    return 0;
+}
+
+int CmdLFGuard(const char *Cmd) {
+    clearCommandBuffer();
+    CmdsParse(CommandTable, Cmd);
+    return 0;
+}
+
+// by marshmellow
+// demod gProxIIDemod
+// error returns as -x
+// success returns start position in bitstream
+// Bitstream must contain previously askrawdemod and biphasedemoded data
+int detectGProxII(uint8_t *bits, size_t *size) {
+
+    size_t startIdx = 0;
+    uint8_t preamble[] = {1, 1, 1, 1, 1, 0};
+
+    // sanity check
+    if (*size < sizeof(preamble)) return -1;
+
+    if (!preambleSearch(bits, preamble, sizeof(preamble), size, &startIdx))
+        return -2; //preamble not found
+
+    //gProxII should be 96 bits
+    if (*size != 96) return -3;
+
+    //check first 6 spacer bits to verify format
+    if (!bits[startIdx + 5] && !bits[startIdx + 10] && !bits[startIdx + 15] && !bits[startIdx + 20] && !bits[startIdx + 25] && !bits[startIdx + 30]) {
+        //confirmed proper separator bits found
+        //return start position
+        return (int) startIdx;
+    }
+    return -5; //spacer bits not found - not a valid gproxII
+}
+
+int demodGuard(void) {
+    return CmdGuardDemod("");
+}
+
 // Works for 26bits.
-int GetGuardBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *guardBits) {
+int getGuardBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *guardBits) {
 
     uint8_t xorKey = 0x66;
     uint8_t i;
@@ -139,231 +372,3 @@ int GetGuardBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *guardBits) {
     return 1;
 }
 
-// by marshmellow
-// demod gProxIIDemod
-// error returns as -x
-// success returns start position in bitstream
-// Bitstream must contain previously askrawdemod and biphasedemoded data
-int detectGProxII(uint8_t *bits, size_t *size) {
-
-    size_t startIdx = 0;
-    uint8_t preamble[] = {1, 1, 1, 1, 1, 0};
-
-    // sanity check
-    if (*size < sizeof(preamble)) return -1;
-
-    if (!preambleSearch(bits, preamble, sizeof(preamble), size, &startIdx))
-        return -2; //preamble not found
-
-    //gProxII should be 96 bits
-    if (*size != 96) return -3;
-
-    //check first 6 spacer bits to verify format
-    if (!bits[startIdx + 5] && !bits[startIdx + 10] && !bits[startIdx + 15] && !bits[startIdx + 20] && !bits[startIdx + 25] && !bits[startIdx + 30]) {
-        //confirmed proper separator bits found
-        //return start position
-        return (int) startIdx;
-    }
-    return -5; //spacer bits not found - not a valid gproxII
-}
-
-//by marshmellow
-//attempts to demodulate and identify a G_Prox_II verex/chubb card
-//WARNING: if it fails during some points it will destroy the DemodBuffer data
-// but will leave the GraphBuffer intact.
-//if successful it will push askraw data back to demod buffer ready for emulation
-int CmdGuardDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-
-    //Differential Biphase
-    //get binary from ask wave
-    if (!ASKbiphaseDemod("0 64 0 0", false)) {
-        PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII ASKbiphaseDemod failed");
-        return 0;
-    }
-
-    size_t size = DemodBufferLen;
-
-    int preambleIndex = detectGProxII(DemodBuffer, &size);
-    if (preambleIndex < 0) {
-
-        if (preambleIndex == -1)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII too few bits found");
-        else if (preambleIndex == -2)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII preamble not found");
-        else if (preambleIndex == -3)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII size not correct: %d", size);
-        else if (preambleIndex == -5)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII wrong spacerbits");
-        else
-            PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII ans: %d", preambleIndex);
-        return 0;
-    }
-
-    //got a good demod of 96 bits
-    uint8_t ByteStream[8] = {0x00};
-    uint8_t xorKey = 0;
-    size_t startIdx = preambleIndex + 6; //start after 6 bit preamble
-
-    uint8_t bits_no_spacer[90];
-    //so as to not mess with raw DemodBuffer copy to a new sample array
-    memcpy(bits_no_spacer, DemodBuffer + startIdx, 90);
-    // remove the 18 (90/5=18) parity bits (down to 72 bits (96-6-18=72))
-    size_t len = removeParity(bits_no_spacer, 0, 5, 3, 90); //source, startloc, paritylen, ptype, length_to_run
-    if (len != 72) {
-        PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII spacer removal did not produce 72 bits: %u, start: %u", len, startIdx);
-        return 0;
-    }
-    // get key and then get all 8 bytes of payload decoded
-    xorKey = (uint8_t)bytebits_to_byteLSBF(bits_no_spacer, 8);
-    for (size_t idx = 0; idx < 8; idx++) {
-        ByteStream[idx] = ((uint8_t)bytebits_to_byteLSBF(bits_no_spacer + 8 + (idx * 8), 8)) ^ xorKey;
-        PrintAndLogEx(DEBUG, "DEBUG: gProxII byte %u after xor: %02x", (unsigned int)idx, ByteStream[idx]);
-    }
-
-    setDemodBuff(DemodBuffer, 96, preambleIndex);
-    setClockGrid(g_DemodClock, g_DemodStartIdx + (preambleIndex * g_DemodClock));
-
-    //ByteStream contains 8 Bytes (64 bits) of decrypted raw tag data
-    uint8_t fmtLen = ByteStream[0] >> 2;
-    uint32_t FC = 0;
-    uint32_t Card = 0;
-    //get raw 96 bits to print
-    uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
-    uint32_t raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
-    uint32_t raw3 = bytebits_to_byte(DemodBuffer + 64, 32);
-    bool unknown = false;
-    switch (fmtLen) {
-        case 36:
-            FC = ((ByteStream[3] & 0x7F) << 7) | (ByteStream[4] >> 1);
-            Card = ((ByteStream[4] & 1) << 19) | (ByteStream[5] << 11) | (ByteStream[6] << 3) | (ByteStream[7] >> 5);
-            break;
-        case 26:
-            FC = ((ByteStream[3] & 0x7F) << 1) | (ByteStream[4] >> 7);
-            Card = ((ByteStream[4] & 0x7F) << 9) | (ByteStream[5] << 1) | (ByteStream[6] >> 7);
-            break;
-        default :
-            unknown = true;
-            break;
-    }
-    if (!unknown)
-        PrintAndLogEx(SUCCESS, "G-Prox-II Found: Format Len: %ubit - FC: %u - Card: %u, Raw: %08x%08x%08x", fmtLen, FC, Card, raw1, raw2, raw3);
-    else
-        PrintAndLogEx(SUCCESS, "Unknown G-Prox-II Fmt Found: Format Len: %u, Raw: %08x%08x%08x", fmtLen, raw1, raw2, raw3);
-
-    return 1;
-}
-
-int CmdGuardRead(const char *Cmd) {
-    lf_read(true, 10000);
-    return CmdGuardDemod(Cmd);
-}
-
-int CmdGuardClone(const char *Cmd) {
-
-    char cmdp = param_getchar(Cmd, 0);
-    if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_guard_clone();
-
-    uint32_t facilitycode = 0, cardnumber = 0, fc = 0, cn = 0, fmtlen = 0;
-    uint8_t i;
-    uint8_t bs[96];
-    memset(bs, 0x00, sizeof(bs));
-
-    //GuardProxII - compat mode, ASK/Biphase,  data rate 64, 3 data blocks
-    uint32_t blocks[4] = {T55x7_MODULATION_BIPHASE | T55x7_BITRATE_RF_64 | 3 << T55x7_MAXBLOCK_SHIFT, 0, 0, 0};
-
-    if (sscanf(Cmd, "%u %u %u", &fmtlen, &fc, &cn) != 3) return usage_lf_guard_clone();
-
-    fmtlen &= 0x7f;
-    facilitycode = (fc & 0x000000FF);
-    cardnumber = (cn & 0x0000FFFF);
-
-    if (!GetGuardBits(fmtlen, facilitycode, cardnumber, bs)) {
-        PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
-        return 1;
-    }
-
-    // Q5
-    if (param_getchar(Cmd, 3) == 'Q' || param_getchar(Cmd, 3) == 'q')
-        blocks[0] = T5555_MODULATION_FSK2 | T5555_SET_BITRATE(50) | 3 << T5555_MAXBLOCK_SHIFT;
-
-    blocks[1] = bytebits_to_byte(bs, 32);
-    blocks[2] = bytebits_to_byte(bs + 32, 32);
-    blocks[3] = bytebits_to_byte(bs + 64, 32);
-
-    PrintAndLogEx(INFO, "Preparing to clone Guardall to T55x7 with Facility Code: %u, Card Number: %u", facilitycode, cardnumber);
-    print_blocks(blocks, 4);
-
-    UsbCommand resp;
-    UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}, {{0}}};
-
-    for (i = 0; i < 4; ++i) {
-        c.arg[0] = blocks[i];
-        c.arg[1] = i;
-        clearCommandBuffer();
-        SendCommand(&c);
-        if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)) {
-            PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
-            return -1;
-        }
-    }
-    return 0;
-}
-
-int CmdGuardSim(const char *Cmd) {
-
-    // Guard uses:  clk: 64, invert: 0, encoding: 2 (ASK Biphase)
-    uint8_t clock1 = 64, encoding = 2, separator = 0, invert = 0;
-    uint32_t facilitycode = 0, cardnumber = 0, fc = 0, cn = 0, fmtlen = 0;
-
-    char cmdp = param_getchar(Cmd, 0);
-    if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_guard_sim();
-
-    if (sscanf(Cmd, "%u %u %u", &fmtlen, &fc, &cn) != 3) return usage_lf_guard_sim();
-
-    uint8_t bs[96];
-    size_t size = sizeof(bs);
-    memset(bs, 0x00, size);
-
-    fmtlen &= 0x7F;
-    facilitycode = (fc & 0x000000FF);
-    cardnumber = (cn & 0x0000FFFF);
-
-    if (!GetGuardBits(fmtlen, facilitycode, cardnumber, bs)) {
-        PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
-        return 1;
-    }
-
-    PrintAndLogEx(SUCCESS, "Simulating Guardall - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber);
-
-    uint64_t arg1, arg2;
-    arg1 = (clock1 << 8) | encoding;
-    arg2 = (invert << 8) | separator;
-
-    UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}, {{0}}};
-    memcpy(c.d.asBytes, bs, size);
-    clearCommandBuffer();
-    SendCommand(&c);
-    return 0;
-}
-
-static command_t CommandTable[] = {
-    {"help",    CmdHelp,        1, "this help"},
-    {"demod",   CmdGuardDemod,  1, "demodulate a G Prox II tag from the GraphBuffer"},
-    {"read",    CmdGuardRead,   0, "attempt to read and extract tag data from the antenna"},
-    {"clone",   CmdGuardClone,  0, "clone Guardall tag"},
-    {"sim",     CmdGuardSim,    0, "simulate Guardall tag"},
-    {NULL, NULL, 0, NULL}
-};
-
-int CmdLFGuard(const char *Cmd) {
-    clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
-    return 0;
-}
-
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
-    return 0;
-}

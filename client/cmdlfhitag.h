@@ -13,13 +13,6 @@
 
 int CmdLFHitag(const char *Cmd);
 
-int CmdLFHitagList(const char *Cmd);
-int CmdLFHitagSniff(const char *Cmd);
-int CmdLFHitagSim(const char *Cmd);
-int CmdLFHitagInfo(const char *Cmd);
-int CmdLFHitagReader(const char *Cmd);
-int CmdLFHitagCheckChallenges(const char *Cmd);
-int CmdLFHitagWriter(const char *Cmd);
-int CmdLFHitagDump(const char *Cmd);
+int readHitagUid(void);
 
 #endif

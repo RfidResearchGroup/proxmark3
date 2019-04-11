@@ -25,14 +25,10 @@
 
 int CmdLFINDALA(const char *Cmd);
 
-int CmdIndalaDemod(const char *Cmd);
-int CmdIndalaDemodAlt(const char *Cmd);
-int CmdIndalaRead(const char *Cmd);
-int CmdIndalaClone(const char *Cmd);
-int CmdIndalaSim(const char *Cmd);
-
+int detectIndala(uint8_t *dest, size_t *size, uint8_t *invert);
 int detectIndala26(uint8_t *bitStream, size_t *size, uint8_t *invert);
 int detectIndala64(uint8_t *bitStream, size_t *size, uint8_t *invert);
 int detectIndala224(uint8_t *bitStream, size_t *size, uint8_t *invert);
+int demodIndala(void);
 
 #endif

@@ -1141,7 +1141,7 @@ int PSKDemod(const char *Cmd, bool verbose) {
     return 1;
 }
 
-int CmdIdteckDemod(const char *Cmd) {
+static int CmdIdteckDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
 
     if (!PSKDemod("", false)) {
@@ -1201,6 +1201,11 @@ int CmdIdteckDemod(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "IDTECK Tag Found: Card ID %u ,  Raw: %08X%08X", id, raw1, raw2);
     return 1;
 }
+
+int demodIdteck(void) {
+    return CmdIdteckDemod("");
+}
+
 
 // by marshmellow
 // takes 3 arguments - clock, invert, maxErr as integers

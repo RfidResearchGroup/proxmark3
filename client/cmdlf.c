@@ -886,8 +886,8 @@ int CmdLFfind(const char *Cmd) {
         // The improved noise detection will find Cotag.
         if (getSignalProperties()->isnoise) {
 
-            if (CmdLFHitagReader("26") == 0) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Hitag") " found!"); return 1;}
-            if (CmdCOTAGRead("") > 0) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("COTAG ID") " found!"); return 1;}
+            if (readHitagUid()) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Hitag") " found!"); return 1;}
+            if (readCOTAGUid()) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("COTAG ID") " found!"); return 1;}
 
             PrintAndLogEx(FAILED, "\n" _YELLOW_("No data found!") " - Signal looks like noise. Maybe not an LF tag?");
             return 0;
@@ -896,16 +896,16 @@ int CmdLFfind(const char *Cmd) {
 
     if (EM4x50Read("", false))  { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("EM4x50 ID") " found!"); return 1;}
 
-    if (CmdHIDDemod(""))        { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("HID Prox ID") " found!"); goto out;}
-    if (CmdAWIDDemod(""))       { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("AWID ID") " found!"); goto out;}
+    if (demodHID())             { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("HID Prox ID") " found!"); goto out;}
+    if (demodAWID())            { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("AWID ID") " found!"); goto out;}
     if (demodParadox())         { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Paradox ID") " found!"); goto out;}
 
-    if (CmdEM410xDemod(""))     { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("EM410x ID") " found!"); goto out;}
-    if (CmdFdxDemod(""))        { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("FDX-B ID") " found!"); goto out;}
-    if (CmdGuardDemod(""))      { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Guardall G-Prox II ID") " found!"); goto out; }
-    if (CmdIdteckDemod(""))     { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Idteck ID") " found!"); goto out;}
-    if (CmdIndalaDemod(""))     { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Indala ID") " found!");  goto out;}
-    if (CmdIOProxDemod(""))     { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("IO Prox ID") " found!"); goto out;}
+    if (demodEM410x())          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("EM410x ID") " found!"); goto out;}
+    if (demodFDX())             { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("FDX-B ID") " found!"); goto out;}
+    if (demodGuard())           { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Guardall G-Prox II ID") " found!"); goto out; }
+    if (demodIdteck())          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Idteck ID") " found!"); goto out;}
+    if (demodIndala())          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Indala ID") " found!");  goto out;}
+    if (demodIOProx())          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("IO Prox ID") " found!"); goto out;}
     if (demodJablotron())       { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Jablotron ID") " found!"); goto out;}
     if (demodNedap())           { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("NEDAP ID") " found!"); goto out;}
     if (demodNexWatch())        { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("NexWatch ID") " found!"); goto out;}

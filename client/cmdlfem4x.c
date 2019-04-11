@@ -188,7 +188,7 @@ static int usage_lf_em4x05_info(void) {
  */
 
 // Construct the graph for emulating an EM410X tag
-void ConstructEM410xEmulGraph(const char *uid, const  uint8_t clock) {
+static void ConstructEM410xEmulGraph(const char *uid, const  uint8_t clock) {
 
     int i, j, binary[4], parity[4];
     uint32_t n;
@@ -383,28 +383,22 @@ int AskEm410xDemod(const char *Cmd, uint32_t *hi, uint64_t *lo, bool verbose) {
     if (!ASKDemod_ext(Cmd, false, false, 1, &st)) return 0;
     return AskEm410xDecode(verbose, hi, lo);
 }
-
-// this read is the "normal" read,  which download lf signal and tries to demod here.
-int CmdEM410xRead(const char *Cmd) {
-    lf_read(true, 8192);
-    return CmdEM410xDemod(Cmd);
-}
-
+/*
 // this read loops on device side.
 // uses the demod in lfops.c
-int CmdEM410xRead_device(const char *Cmd) {
+static int CmdEM410xRead_device(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     uint8_t findone = (cmdp == '1') ? 1 : 0;
     UsbCommand c = {CMD_EM410X_DEMOD, {findone, 0, 0}, {{0}}};
     SendCommand(&c);
     return 0;
 }
-
+*/
 //by marshmellow
 //takes 3 arguments - clock, invert and maxErr as integers
 //attempts to demodulate ask while decoding manchester
 //prints binary found and saves in graphbuffer for further commands
-int CmdEM410xDemod(const char *Cmd) {
+static int CmdEM410xDemod(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) > 10 || cmdp == 'h') return usage_lf_em410x_demod();
 
@@ -417,8 +411,14 @@ int CmdEM410xDemod(const char *Cmd) {
     return 1;
 }
 
+// this read is the "normal" read,  which download lf signal and tries to demod here.
+static int CmdEM410xRead(const char *Cmd) {
+    lf_read(true, 8192);
+    return CmdEM410xDemod(Cmd);
+}
+
 // emulate an EM410X tag
-int CmdEM410xSim(const char *Cmd) {
+static int CmdEM410xSim(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_lf_em410x_sim();
 
@@ -443,7 +443,7 @@ int CmdEM410xSim(const char *Cmd) {
     return 0;
 }
 
-int CmdEM410xBrute(const char *Cmd) {
+static int CmdEM410xBrute(const char *Cmd) {
     char filename[FILE_PATH_SIZE] = {0};
     FILE *f = NULL;
     char buf[11];
@@ -565,7 +565,7 @@ int CmdEM410xBrute(const char *Cmd) {
  *
  *  EDIT -- capture enough to get 2 complete preambles at the slowest data rate known to be used (rf/64) (64*64*2+9 = 8201) marshmellow
 */
-int CmdEM410xWatch(const char *Cmd) {
+static int CmdEM410xWatch(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     do {
         if (ukbhit()) {
@@ -581,7 +581,7 @@ int CmdEM410xWatch(const char *Cmd) {
 }
 
 //currently only supports manchester modulations
-int CmdEM410xWatchnSpoof(const char *Cmd) {
+static int CmdEM410xWatchnSpoof(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_lf_em410x_ws();
@@ -593,7 +593,7 @@ int CmdEM410xWatchnSpoof(const char *Cmd) {
     return 0;
 }
 
-int CmdEM410xWrite(const char *Cmd) {
+static int CmdEM410xWrite(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 0x00 || cmdp == 'h') return usage_lf_em410x_write();
 
@@ -956,18 +956,18 @@ int EM4x50Read(const char *Cmd, bool verbose) {
     return (int)AllPTest;
 }
 
-int CmdEM4x50Read(const char *Cmd) {
+static int CmdEM4x50Read(const char *Cmd) {
     uint8_t ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_lf_em4x50_read();
     return EM4x50Read(Cmd, true);
 }
-int CmdEM4x50Write(const char *Cmd) {
+static int CmdEM4x50Write(const char *Cmd) {
     uint8_t ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_lf_em4x50_write();
     PrintAndLogEx(NORMAL, "no implemented yet");
     return 0;
 }
-int CmdEM4x50Dump(const char *Cmd) {
+static int CmdEM4x50Dump(const char *Cmd) {
     uint8_t ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_lf_em4x50_dump();
     PrintAndLogEx(NORMAL, "no implemented yet");
@@ -1143,7 +1143,7 @@ int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word) 
     return demodEM4x05resp(word);
 }
 
-int CmdEM4x05Dump(const char *Cmd) {
+static int CmdEM4x05Dump(const char *Cmd) {
     uint8_t addr = 0;
     uint32_t pwd = 0;
     bool usePwd = false;
@@ -1176,7 +1176,7 @@ int CmdEM4x05Dump(const char *Cmd) {
     return success;
 }
 
-int CmdEM4x05Read(const char *Cmd) {
+static int CmdEM4x05Read(const char *Cmd) {
     uint8_t addr;
     uint32_t pwd;
     bool usePwd = false;
@@ -1206,7 +1206,7 @@ int CmdEM4x05Read(const char *Cmd) {
     return isOk;
 }
 
-int CmdEM4x05Write(const char *Cmd) {
+static int CmdEM4x05Write(const char *Cmd) {
     uint8_t ctmp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || ctmp == 'h') return usage_lf_em4x05_write();
 
@@ -1419,7 +1419,7 @@ bool EM4x05IsBlock0(uint32_t *word) {
     return (res > 0) ? true : false;
 }
 
-int CmdEM4x05Info(const char *Cmd) {
+static int CmdEM4x05Info(const char *Cmd) {
 #define EM_SERIAL_BLOCK 1
 #define EM_CONFIG_BLOCK 4
 #define EM_PROT1_BLOCK 14
@@ -1488,14 +1488,18 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
+    return 0;
+}
+
 int CmdLFEM4X(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
-    return 0;
+int demodEM410x(void) {
+    return CmdEM410xDemod("");
 }

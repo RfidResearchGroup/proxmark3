@@ -25,13 +25,8 @@
 #include "lfdemod.h"
 
 int CmdLFHID(const char *Cmd);
-int CmdHIDDemod(const char *Cmd);
-int CmdHIDRead(const char *Cmd);
-int CmdHIDSim(const char *Cmd);
-int CmdHIDClone(const char *Cmd);
-int CmdHIDWiegand(const char *Cmd);
-int CmdHIDBrute(const char *Cmd);
 
+int demodHID(void);
 //void calc26(uint16_t fc, uint32_t cardno, uint8_t *out);
 void calcWiegand(uint8_t fmtlen, uint16_t fc, uint64_t cardno, uint8_t *bits, uint8_t oem);
 #endif

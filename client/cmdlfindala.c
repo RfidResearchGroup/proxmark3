@@ -50,126 +50,10 @@ static int usage_lf_indala_sim(void) {
     return 0;
 }
 
-// redesigned by marshmellow adjusted from existing decode functions
-// indala id decoding
-static int detectIndala(uint8_t *dest, size_t *size, uint8_t *invert) {
-
-    uint8_t preamble64_i[]  = {0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0};
-    uint8_t preamble224_i[] = {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0};
-
-    size_t idx = 0;
-    size_t found_size = *size;
-
-    // PSK1
-    bool res = preambleSearch(dest, preamble64, sizeof(preamble64), &found_size, &idx);
-    if (res) {
-        PrintAndLogEx(DEBUG, "DEBUG: detectindala PSK1 found 64");
-        goto out;
-    }
-    idx = 0;
-    found_size = *size;
-    res = preambleSearch(dest, preamble64_i, sizeof(preamble64_i), &found_size, &idx);
-    if (res) {
-        PrintAndLogEx(DEBUG, "DEBUG: detectindala PSK1 found 64 inverted preamble");
-        goto inv;
-    }
-
-    /*
-    idx = 0;
-    found_size = *size;
-    res = preambleSearch(dest, preamble224, sizeof(preamble224), &found_size, &idx);
-    if ( res ) {
-        PrintAndLogEx(DEBUG, "DEBUG: detectindala PSK1 found 224");
-        goto out;
-    }
-
-    idx = 0;
-    found_size = *size;
-    res = preambleSearch(dest, preamble224_i, sizeof(preamble224_i), &found_size, &idx);
-    if ( res ) {
-        PrintAndLogEx(DEBUG, "DEBUG: detectindala PSK1 found 224 inverted preamble");
-        goto inv;
-    }
-    */
-
-    // PSK2
-    psk1TOpsk2(dest, *size);
-    PrintAndLogEx(DEBUG, "DEBUG: detectindala Converting PSK1 -> PSK2");
-
-    idx = 0;
-    found_size = *size;
-    res = preambleSearch(dest, preamble64, sizeof(preamble64), &found_size, &idx);
-    if (res) {
-        PrintAndLogEx(DEBUG, "DEBUG: detectindala PSK2 found 64 preamble");
-        goto out;
-    }
-
-    idx = 0;
-    found_size = *size;
-    res = preambleSearch(dest, preamble224, sizeof(preamble224), &found_size, &idx);
-    if (res) {
-        PrintAndLogEx(DEBUG, "DEBUG: detectindala PSK2 found 224 preamble");
-        goto out;
-    }
-
-    idx = 0;
-    found_size = *size;
-    res = preambleSearch(dest, preamble64_i, sizeof(preamble64_i), &found_size, &idx);
-    if (res) {
-        PrintAndLogEx(DEBUG, "DEBUG: detectindala PSK2 found 64 inverted preamble");
-        goto inv;
-    }
-
-    idx = 0;
-    found_size = *size;
-    res = preambleSearch(dest, preamble224_i, sizeof(preamble224_i), &found_size, &idx);
-    if (res) {
-        PrintAndLogEx(DEBUG, "DEBUG: detectindala PSK2 found 224 inverted preamble");
-        goto inv;
-    }
-
-inv:
-    if (res == 0) {
-        return -4;
-    }
-
-    *invert ^= 1;
-
-    if (*invert && idx > 0) {
-        for (size_t i = idx - 1; i < found_size + idx + 2; i++) {
-            dest[i] ^= 1;
-        }
-    }
-
-    PrintAndLogEx(DEBUG, "DEBUG: Warning - Indala had to invert bits");
-
-out:
-
-    *size = found_size;
-
-    //PrintAndLogEx(INFO, "DEBUG: detectindala RES = %d | %d | %d", res, found_size, idx);
-
-    if (found_size != 224 && found_size != 64) {
-        PrintAndLogEx(INFO, "DEBUG: detectindala | %d", found_size);
-        return -5;
-    }
-
-    // 224 formats are typically PSK2 (afaik 2017 Marshmellow)
-    // note loses 1 bit at beginning of transformation...
-    return (int) idx;
-
-}
-
-// this read is the "normal" read,  which download lf signal and tries to demod here.
-int CmdIndalaRead(const char *Cmd) {
-    lf_read(true, 30000);
-    return CmdIndalaDemod(Cmd);
-}
-
 // Indala 26 bit decode
 // by marshmellow
 // optional arguments - same as PSKDemod (clock & invert & maxerr)
-int CmdIndalaDemod(const char *Cmd) {
+static int CmdIndalaDemod(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_lf_indala_demod();
@@ -283,7 +167,7 @@ int CmdIndalaDemod(const char *Cmd) {
 // returns false positives more often - but runs against more sets of samples
 // poor psk signal can be difficult to demod this approach might succeed when the other fails
 // but the other appears to currently be more accurate than this approach most of the time.
-int CmdIndalaDemodAlt(const char *Cmd) {
+static int CmdIndalaDemodAlt(const char *Cmd) {
     // Usage: recover 64bit UID by default, specify "224" as arg to recover a 224bit UID
     int state = -1;
     int count = 0;
@@ -477,7 +361,13 @@ int CmdIndalaDemodAlt(const char *Cmd) {
     return 1;
 }
 
-int CmdIndalaSim(const char *Cmd) {
+// this read is the "normal" read,  which download lf signal and tries to demod here.
+static int CmdIndalaRead(const char *Cmd) {
+    lf_read(true, 30000);
+    return CmdIndalaDemod(Cmd);
+}
+
+static int CmdIndalaSim(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_indala_sim();
@@ -522,7 +412,7 @@ int CmdIndalaSim(const char *Cmd) {
 }
 
 // iceman - needs refactoring
-int CmdIndalaClone(const char *Cmd) {
+static int CmdIndalaClone(const char *Cmd) {
 
     bool isLongUid = false;
     uint8_t data[7 * 4];
@@ -582,14 +472,128 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
+    return 0;
+}
+
 int CmdLFINDALA(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
-    return 0;
+// redesigned by marshmellow adjusted from existing decode functions
+// indala id decoding
+int detectIndala(uint8_t *dest, size_t *size, uint8_t *invert) {
+
+    uint8_t preamble64_i[]  = {0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0};
+    uint8_t preamble224_i[] = {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0};
+
+    size_t idx = 0;
+    size_t found_size = *size;
+
+    // PSK1
+    bool res = preambleSearch(dest, preamble64, sizeof(preamble64), &found_size, &idx);
+    if (res) {
+        PrintAndLogEx(DEBUG, "DEBUG: detectindala PSK1 found 64");
+        goto out;
+    }
+    idx = 0;
+    found_size = *size;
+    res = preambleSearch(dest, preamble64_i, sizeof(preamble64_i), &found_size, &idx);
+    if (res) {
+        PrintAndLogEx(DEBUG, "DEBUG: detectindala PSK1 found 64 inverted preamble");
+        goto inv;
+    }
+
+    /*
+    idx = 0;
+    found_size = *size;
+    res = preambleSearch(dest, preamble224, sizeof(preamble224), &found_size, &idx);
+    if ( res ) {
+        PrintAndLogEx(DEBUG, "DEBUG: detectindala PSK1 found 224");
+        goto out;
+    }
+
+    idx = 0;
+    found_size = *size;
+    res = preambleSearch(dest, preamble224_i, sizeof(preamble224_i), &found_size, &idx);
+    if ( res ) {
+        PrintAndLogEx(DEBUG, "DEBUG: detectindala PSK1 found 224 inverted preamble");
+        goto inv;
+    }
+    */
+
+    // PSK2
+    psk1TOpsk2(dest, *size);
+    PrintAndLogEx(DEBUG, "DEBUG: detectindala Converting PSK1 -> PSK2");
+
+    idx = 0;
+    found_size = *size;
+    res = preambleSearch(dest, preamble64, sizeof(preamble64), &found_size, &idx);
+    if (res) {
+        PrintAndLogEx(DEBUG, "DEBUG: detectindala PSK2 found 64 preamble");
+        goto out;
+    }
+
+    idx = 0;
+    found_size = *size;
+    res = preambleSearch(dest, preamble224, sizeof(preamble224), &found_size, &idx);
+    if (res) {
+        PrintAndLogEx(DEBUG, "DEBUG: detectindala PSK2 found 224 preamble");
+        goto out;
+    }
+
+    idx = 0;
+    found_size = *size;
+    res = preambleSearch(dest, preamble64_i, sizeof(preamble64_i), &found_size, &idx);
+    if (res) {
+        PrintAndLogEx(DEBUG, "DEBUG: detectindala PSK2 found 64 inverted preamble");
+        goto inv;
+    }
+
+    idx = 0;
+    found_size = *size;
+    res = preambleSearch(dest, preamble224_i, sizeof(preamble224_i), &found_size, &idx);
+    if (res) {
+        PrintAndLogEx(DEBUG, "DEBUG: detectindala PSK2 found 224 inverted preamble");
+        goto inv;
+    }
+
+inv:
+    if (res == 0) {
+        return -4;
+    }
+
+    *invert ^= 1;
+
+    if (*invert && idx > 0) {
+        for (size_t i = idx - 1; i < found_size + idx + 2; i++) {
+            dest[i] ^= 1;
+        }
+    }
+
+    PrintAndLogEx(DEBUG, "DEBUG: Warning - Indala had to invert bits");
+
+out:
+
+    *size = found_size;
+
+    //PrintAndLogEx(INFO, "DEBUG: detectindala RES = %d | %d | %d", res, found_size, idx);
+
+    if (found_size != 224 && found_size != 64) {
+        PrintAndLogEx(INFO, "DEBUG: detectindala | %d", found_size);
+        return -5;
+    }
+
+    // 224 formats are typically PSK2 (afaik 2017 Marshmellow)
+    // note loses 1 bit at beginning of transformation...
+    return (int) idx;
+
+}
+
+int demodIndala(void) {
+    return CmdIndalaDemod("");
 }

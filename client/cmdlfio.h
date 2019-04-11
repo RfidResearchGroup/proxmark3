@@ -17,11 +17,8 @@
 #include "cmddata.h"
 
 int CmdLFIO(const char *Cmd);
-int CmdIOProxDemod(const char *Cmd);
-int CmdIOProxRead(const char *Cmd);
-int CmdIOProxSim(const char *Cmd);
-int CmdIOProxClone(const char *Cmd);
 
+int demodIOProx(void);
 int getIOProxBits(uint8_t version, uint8_t fc, uint16_t cn, uint8_t *bits);
 
 #endif

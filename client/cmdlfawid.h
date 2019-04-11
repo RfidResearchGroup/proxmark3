@@ -25,11 +25,8 @@
 
 
 int CmdLFAWID(const char *Cmd);
-int CmdAWIDDemod(const char *Cmd);
-int CmdAWIDRead(const char *Cmd);
-int CmdAWIDSim(const char *Cmd);
-int CmdAWIDClone(const char *Cmd);
-int CmdAWIDBrute(const char *Cmd);
+
+int demodAWID(void);
 int getAWIDBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *bits);
 
 #endif

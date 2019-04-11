@@ -54,7 +54,6 @@ int CmdDetectClockRate(const char *Cmd);
 int CmdFSKrawdemod(const char *Cmd);
 int CmdPSK1rawDemod(const char *Cmd);
 int CmdPSK2rawDemod(const char *Cmd);
-int CmdIdteckDemod(const char *Cmd);
 int CmdGrid(const char *Cmd);
 int CmdGetBitStream(const char *Cmd);
 int CmdHexsamples(const char *Cmd);
@@ -87,6 +86,8 @@ int directionalThreshold(const int *in, int *out, size_t len, int8_t up, int8_t 
 int AskEdgeDetect(const int *in, int *out, int len, int threshold);
 
 int CmdDataIIR(const char *Cmd);
+
+int demodIdteck(void);
 
 #define MAX_DEMOD_BUF_LEN (1024*128)
 #define BIGBUF_SIZE 40000

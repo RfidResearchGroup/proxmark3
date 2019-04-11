@@ -20,11 +20,8 @@
 #include "lfdemod.h"    // parityTest
 
 int CmdLFFdx(const char *Cmd);
-int CmdFdxClone(const char *Cmd);
-int CmdFdxSim(const char *Cmd);
-int CmdFdxRead(const char *Cmd);
-int CmdFdxDemod(const char *Cmd);
-
+int detectFDXB(uint8_t *dest, size_t *size);
+int demodFDX(void);
 int getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t isextended, uint32_t extended, uint8_t *bits);
 
 #endif

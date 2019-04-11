@@ -27,7 +27,7 @@ static int usage_lf_cotag_read(void) {
 
 // COTAG demod should be able to use GraphBuffer,
 // when data load samples
-int CmdCOTAGDemod(const char *Cmd) {
+static int CmdCOTAGDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
 
     uint8_t bits[COTAG_BITS] = {0};
@@ -67,7 +67,7 @@ int CmdCOTAGDemod(const char *Cmd) {
 // 0 = HIGH/LOW signal - maxlength bigbuff
 // 1 = translation for HI/LO into bytes with manchester 0,1 - length 300
 // 2 = raw signal -  maxlength bigbuff
-int CmdCOTAGRead(const char *Cmd) {
+static int CmdCOTAGRead(const char *Cmd) {
 
     if (Cmd[0] == 'h' || Cmd[0] == 'H') return usage_lf_cotag_read();
 
@@ -110,14 +110,22 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
+    return 0;
+}
+
 int CmdLFCOTAG(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
-    return 0;
+int demodCOTAG(void) {
+    return CmdCOTAGDemod("");
+}
+
+int readCOTAGUid(void) {
+    return CmdCOTAGRead > 0;
 }

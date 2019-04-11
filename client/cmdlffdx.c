@@ -64,20 +64,6 @@ static int usage_lf_fdx_sim(void) {
     return 0;
 }
 
-// Ask/Biphase Demod then try to locate an ISO 11784/85 ID
-// BitStream must contain previously askrawdemod and biphasedemoded data
-int detectFDXB(uint8_t *dest, size_t *size) {
-    //make sure buffer has enough data
-    if (*size < 128 * 2) return -1;
-    size_t startIdx = 0;
-    uint8_t preamble[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
-    if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
-        return -2; //preamble not found
-    if (*size != 128) return -3; //wrong demoded size
-    //return start position
-    return (int)startIdx;
-}
-
 // clearing the topbit needed for the preambl detection.
 static void verify_values(uint32_t countryid, uint64_t animalid) {
     if ((animalid & 0x3FFFFFFFFF) != animalid) {
@@ -88,56 +74,6 @@ static void verify_values(uint32_t countryid, uint64_t animalid) {
         countryid &= 0x3ff;
         PrintAndLogEx(INFO, "Country ID Truncated to 10bits: %03d", countryid);
     }
-}
-
-int getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t isextended, uint32_t extended, uint8_t *bits) {
-
-    // add preamble ten 0x00 and one 0x01
-    memset(bits, 0x00, 10);
-    bits[10] = 1;
-
-    // 128bits
-    // every 9th bit is 0x01, but we can just fill the rest with 0x01 and overwrite
-    memset(bits, 0x01, 128);
-
-    // add preamble ten 0x00 and one 0x01
-    memset(bits, 0x00, 10);
-
-    // add reserved
-    num_to_bytebitsLSBF(0x00, 7, bits + 66);
-    num_to_bytebitsLSBF(0x00 >> 7, 7, bits + 74);
-
-    // add animal flag - OK
-    bits[65] = isanimal;
-
-    // add extended flag - OK
-    bits[81] = isextended;
-
-    // add national code 40bits - OK
-    num_to_bytebitsLSBF(national_id >> 0, 8, bits + 11);
-    num_to_bytebitsLSBF(national_id >> 8, 8, bits + 20);
-    num_to_bytebitsLSBF(national_id >> 16, 8, bits + 29);
-    num_to_bytebitsLSBF(national_id >> 24, 8, bits + 38);
-    num_to_bytebitsLSBF(national_id >> 32, 6, bits + 47);
-
-    // add country code - OK
-    num_to_bytebitsLSBF(country >> 0, 2, bits + 53);
-    num_to_bytebitsLSBF(country >> 2, 8, bits + 56);
-
-    // add crc-16 - OK
-    uint8_t raw[8];
-    for (uint8_t i = 0; i < 8; ++i)
-        raw[i] = bytebits_to_byte(bits + 11 + i * 9, 8);
-
-    uint16_t crc = crc16_kermit(raw, 8);
-    num_to_bytebitsLSBF(crc >> 0, 8, bits + 83);
-    num_to_bytebitsLSBF(crc >> 8, 8, bits + 92);
-
-    // extended data - OK
-    num_to_bytebitsLSBF(extended >> 0, 8, bits + 101);
-    num_to_bytebitsLSBF(extended >> 8, 8, bits + 110);
-    num_to_bytebitsLSBF(extended >> 16, 8, bits + 119);
-    return 1;
 }
 
 // FDX-B ISO11784/85 demod  (aka animal tag)  BIPHASE, inverted, rf/32,  with preamble of 00000000001 (128bits)
@@ -157,7 +93,8 @@ int getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t
 
 -- sample: 985121004515220  [ 37FF65B88EF94 ]
 */
-int CmdFDXBdemodBI(const char *Cmd) {
+/*
+static int CmdFDXBdemodBI(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
 
     int clk = 32;
@@ -229,11 +166,11 @@ int CmdFDXBdemodBI(const char *Cmd) {
     }
     return 1;
 }
-
+*/
 
 //see ASKDemod for what args are accepted
 //almost the same demod as cmddata.c/CmdFDXBdemodBI
-int CmdFdxDemod(const char *Cmd) {
+static int CmdFdxDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
 
     //Differential Biphase / di-phase (inverted biphase)
@@ -303,12 +240,12 @@ int CmdFdxDemod(const char *Cmd) {
     return 1;
 }
 
-int CmdFdxRead(const char *Cmd) {
+static int CmdFdxRead(const char *Cmd) {
     lf_read(true, 10000);
     return CmdFdxDemod(Cmd);
 }
 
-int CmdFdxClone(const char *Cmd) {
+static int CmdFdxClone(const char *Cmd) {
 
     uint32_t countryid = 0;
     uint64_t animalid = 0;
@@ -360,7 +297,7 @@ int CmdFdxClone(const char *Cmd) {
     return 0;
 }
 
-int CmdFdxSim(const char *Cmd) {
+static int CmdFdxSim(const char *Cmd) {
     uint32_t countryid = 0;
     uint64_t animalid = 0;
 
@@ -399,14 +336,83 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
+    return 0;
+}
+
 int CmdLFFdx(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
-    return 0;
+// Ask/Biphase Demod then try to locate an ISO 11784/85 ID
+// BitStream must contain previously askrawdemod and biphasedemoded data
+int detectFDXB(uint8_t *dest, size_t *size) {
+    //make sure buffer has enough data
+    if (*size < 128 * 2) return -1;
+    size_t startIdx = 0;
+    uint8_t preamble[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
+    if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
+        return -2; //preamble not found
+    if (*size != 128) return -3; //wrong demoded size
+    //return start position
+    return (int)startIdx;
 }
+
+int demodFDX(void) {
+    return CmdFdxDemod("");
+}
+
+int getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t isextended, uint32_t extended, uint8_t *bits) {
+
+    // add preamble ten 0x00 and one 0x01
+    memset(bits, 0x00, 10);
+    bits[10] = 1;
+
+    // 128bits
+    // every 9th bit is 0x01, but we can just fill the rest with 0x01 and overwrite
+    memset(bits, 0x01, 128);
+
+    // add preamble ten 0x00 and one 0x01
+    memset(bits, 0x00, 10);
+
+    // add reserved
+    num_to_bytebitsLSBF(0x00, 7, bits + 66);
+    num_to_bytebitsLSBF(0x00 >> 7, 7, bits + 74);
+
+    // add animal flag - OK
+    bits[65] = isanimal;
+
+    // add extended flag - OK
+    bits[81] = isextended;
+
+    // add national code 40bits - OK
+    num_to_bytebitsLSBF(national_id >> 0, 8, bits + 11);
+    num_to_bytebitsLSBF(national_id >> 8, 8, bits + 20);
+    num_to_bytebitsLSBF(national_id >> 16, 8, bits + 29);
+    num_to_bytebitsLSBF(national_id >> 24, 8, bits + 38);
+    num_to_bytebitsLSBF(national_id >> 32, 6, bits + 47);
+
+    // add country code - OK
+    num_to_bytebitsLSBF(country >> 0, 2, bits + 53);
+    num_to_bytebitsLSBF(country >> 2, 8, bits + 56);
+
+    // add crc-16 - OK
+    uint8_t raw[8];
+    for (uint8_t i = 0; i < 8; ++i)
+        raw[i] = bytebits_to_byte(bits + 11 + i * 9, 8);
+
+    uint16_t crc = crc16_kermit(raw, 8);
+    num_to_bytebitsLSBF(crc >> 0, 8, bits + 83);
+    num_to_bytebitsLSBF(crc >> 8, 8, bits + 92);
+
+    // extended data - OK
+    num_to_bytebitsLSBF(extended >> 0, 8, bits + 101);
+    num_to_bytebitsLSBF(extended >> 8, 8, bits + 110);
+    num_to_bytebitsLSBF(extended >> 16, 8, bits + 119);
+    return 1;
+}
+

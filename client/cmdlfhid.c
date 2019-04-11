@@ -15,7 +15,7 @@
 #endif
 
 static int CmdHelp(const char *Cmd);
-
+/*
 static int usage_lf_hid_read(void) {
     PrintAndLogEx(NORMAL, "Enables HID compatible reader mode printing details.");
     PrintAndLogEx(NORMAL, "By default, values are printed and logged until the button is pressed or another USB command is issued.");
@@ -31,6 +31,7 @@ static int usage_lf_hid_read(void) {
     PrintAndLogEx(NORMAL, "       lf hid read 1");
     return 0;
 }
+*/
 static int usage_lf_hid_wiegand(void) {
     PrintAndLogEx(NORMAL, "This command converts facility code/card number to Wiegand code");
     PrintAndLogEx(NORMAL, "");
@@ -124,7 +125,7 @@ static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, ui
 //by marshmellow (based on existing demod + holiman's refactor)
 //HID Prox demod - FSK RF/50 with preamble of 00011101 (then manchester encoded)
 //print full HID Prox ID and some bit format details if found
-int CmdHIDDemod(const char *Cmd) {
+static int CmdHIDDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     //raw fsk demod no manchester decoding no start bit finding just get binary from wave
     uint32_t hi2 = 0, hi = 0, lo = 0;
@@ -230,14 +231,14 @@ int CmdHIDDemod(const char *Cmd) {
 }
 
 // this read is the "normal" read,  which download lf signal and tries to demod here.
-int CmdHIDRead(const char *Cmd) {
+static int CmdHIDRead(const char *Cmd) {
     lf_read(true, 12000);
     return CmdHIDDemod(Cmd);
 }
-
+/*
 // this read loops on device side.
 // uses the demod in lfops.c
-int CmdHIDRead_device(const char *Cmd) {
+static int CmdHIDRead_device(const char *Cmd) {
 
     if (Cmd[0] == 'h' || Cmd[0] == 'H') return usage_lf_hid_read();
     uint8_t findone = (Cmd[0] == '1') ? 1 : 0;
@@ -246,8 +247,8 @@ int CmdHIDRead_device(const char *Cmd) {
     SendCommand(&c);
     return 0;
 }
-
-int CmdHIDSim(const char *Cmd) {
+*/
+static int CmdHIDSim(const char *Cmd) {
     uint32_t hi = 0, lo = 0;
     uint32_t n = 0, i = 0;
 
@@ -268,7 +269,7 @@ int CmdHIDSim(const char *Cmd) {
     return 0;
 }
 
-int CmdHIDClone(const char *Cmd) {
+static int CmdHIDClone(const char *Cmd) {
 
     uint32_t hi2 = 0, hi = 0, lo = 0;
     uint32_t n = 0, i = 0;
@@ -473,7 +474,7 @@ void calcWiegand(uint8_t fmtlen, uint16_t fc, uint64_t cardno, uint8_t *bits, ui
     }
 }
 
-int CmdHIDWiegand(const char *Cmd) {
+static int CmdHIDWiegand(const char *Cmd) {
     uint32_t oem = 0, fc = 0;
     uint64_t cardnum = 0;
     uint8_t bits[BITS] = {0};
@@ -515,7 +516,7 @@ int CmdHIDWiegand(const char *Cmd) {
     return 0;
 }
 
-int CmdHIDBrute(const char *Cmd) {
+static int CmdHIDBrute(const char *Cmd) {
 
     bool errors = false, verbose = false;
     uint32_t fc = 0, cn = 0, delay = 1000;
@@ -615,14 +616,18 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
+    return 0;
+}
+
 int CmdLFHID(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
-    return 0;
+int demodHID(void) {
+    return CmdHIDDemod("");
 }

@@ -11,7 +11,7 @@
 #include "cmdlfio.h"
 
 static int CmdHelp(const char *Cmd);
-
+/*
 static int usage_lf_io_read(void) {
     PrintAndLogEx(NORMAL, "Enables IOProx compatible reader mode printing details of scanned tags.");
     PrintAndLogEx(NORMAL, "By default, values are printed and logged until the button is pressed or another USB command is issued.");
@@ -27,7 +27,7 @@ static int usage_lf_io_read(void) {
     PrintAndLogEx(NORMAL, "        lf io read 1");
     return 0;
 }
-
+*/
 static int usage_lf_io_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of IOProx card with specified facility-code and card number.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
@@ -60,15 +60,10 @@ static int usage_lf_io_clone(void) {
     PrintAndLogEx(NORMAL, "       lf io clone 26 101 1337");
     return 0;
 }
-
-// this read is the "normal" read,  which download lf signal and tries to demod here.
-int CmdIOProxRead(const char *Cmd) {
-    lf_read(true, 12000);
-    return CmdIOProxDemod(Cmd);
-}
+/*
 // this read loops on device side.
 // uses the demod in lfops.c
-int CmdIOProxRead_device(const char *Cmd) {
+static int CmdIOProxRead_device(const char *Cmd) {
     if (Cmd[0] == 'h' || Cmd[0] == 'H') return usage_lf_io_read();
     int findone = (Cmd[0] == '1') ? 1 : 0;
     UsbCommand c = {CMD_IO_DEMOD_FSK, {findone, 0, 0}, {{0}}};
@@ -76,11 +71,11 @@ int CmdIOProxRead_device(const char *Cmd) {
     SendCommand(&c);
     return 0;
 }
-
+*/
 //by marshmellow
 //IO-Prox demod - FSK RF/64 with preamble of 000000001
 //print ioprox ID and some format details
-int CmdIOProxDemod(const char *Cmd) {
+static int CmdIOProxDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     int retval = 0;
     int idx = 0;
@@ -177,6 +172,124 @@ int CmdIOProxDemod(const char *Cmd) {
     return retval;
 }
 
+// this read is the "normal" read,  which download lf signal and tries to demod here.
+static int CmdIOProxRead(const char *Cmd) {
+    lf_read(true, 12000);
+    return CmdIOProxDemod(Cmd);
+}
+static int CmdIOProxSim(const char *Cmd) {
+    uint16_t cn = 0;
+    uint8_t version = 0, fc = 0;
+    uint8_t bits[64];
+    size_t size = sizeof(bits);
+    memset(bits, 0x00, size);
+
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_io_sim();
+
+    version = param_get8(Cmd, 0);
+    fc = param_get8(Cmd, 1);
+    cn = param_get32ex(Cmd, 2, 0, 10);
+
+    if (!version || !fc || !cn) return usage_lf_io_sim();
+
+    if ((cn & 0xFFFF) != cn) {
+        cn &= 0xFFFF;
+        PrintAndLogEx(INFO, "Card Number Truncated to 16-bits (IOProx): %u", cn);
+    }
+
+    // clock 64, FSK2a fcHIGH 10 | fcLOW 8
+    uint8_t clk = 64, invert = 1, high = 10, low = 8;
+    uint16_t arg1, arg2;
+    arg1 = high << 8 | low;
+    arg2 = invert << 8 | clk;
+
+    PrintAndLogEx(SUCCESS, "Simulating IOProx version: %u FC: %u; CN: %u\n", version, fc, cn);
+    PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or run another command");
+
+    if (!getIOProxBits(version, fc, cn, bits)) {
+        PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
+        return 1;
+    }
+    // IOProx uses: fcHigh: 10, fcLow: 8, clk: 64, invert: 1
+    // arg1 --- fcHigh<<8 + fcLow
+    // arg2 --- Invert and clk setting
+    // size --- 64 bits == 8 bytes
+    UsbCommand c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}, {{0}}};
+    memcpy(c.d.asBytes, bits, size);
+    clearCommandBuffer();
+    SendCommand(&c);
+    return 0;
+}
+
+static int CmdIOProxClone(const char *Cmd) {
+
+    uint32_t blocks[3] = {T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_64 | 2 << T55x7_MAXBLOCK_SHIFT, 0, 0};
+    uint16_t cn = 0;
+    uint8_t version = 0, fc = 0;
+    uint8_t bits[64];
+    memset(bits, 0, sizeof(bits));
+
+    char cmdp = param_getchar(Cmd, 0);
+    if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_io_clone();
+
+    version = param_get8(Cmd, 0);
+    fc = param_get8(Cmd, 1);
+    cn = param_get32ex(Cmd, 2, 0, 10);
+
+    if (!version || !fc || !cn) return usage_lf_io_clone();
+
+    if ((cn & 0xFFFF) != cn) {
+        cn &= 0xFFFF;
+        PrintAndLogEx(INFO, "Card Number Truncated to 16-bits (IOProx): %u", cn);
+    }
+
+    if (!getIOProxBits(version, fc, cn, bits)) {
+        PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
+        return 1;
+    }
+
+    if (param_getchar(Cmd, 3) == 'Q' || param_getchar(Cmd, 3) == 'q')
+        blocks[0] = T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(64) | 2 << T5555_MAXBLOCK_SHIFT;
+
+    blocks[1] = bytebits_to_byte(bits, 32);
+    blocks[2] = bytebits_to_byte(bits + 32, 32);
+
+    PrintAndLogEx(INFO, "Preparing to clone IOProx to T55x7 with Version: %u FC: %u, CN: %u", version, fc, cn);
+    print_blocks(blocks, 3);
+
+    //UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}, {{0}}};
+    UsbCommand c = {CMD_IO_CLONE_TAG, {blocks[1], blocks[2], 0}, {{0}}};
+    clearCommandBuffer();
+    SendCommand(&c);
+    return 0;
+}
+
+static command_t CommandTable[] = {
+    {"help",    CmdHelp,        1, "this help"},
+    {"demod",   CmdIOProxDemod, 1, "demodulate an IOProx tag from the GraphBuffer"},
+    {"read",    CmdIOProxRead,  1, "attempt to read and extract tag data"},
+    {"clone",   CmdIOProxClone, 0, "clone IOProx to T55x7"},
+    {"sim",     CmdIOProxSim,   0, "simulate IOProx tag"},
+    {NULL, NULL, 0, NULL}
+};
+
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
+    return 0;
+}
+
+int CmdLFIO(const char *Cmd) {
+    clearCommandBuffer();
+    CmdsParse(CommandTable, Cmd);
+    return 0;
+}
+
+int demodIOProx(void) {
+    return CmdIOProxDemod("");
+}
+
 //Index map
 //0           10          20          30          40          50          60
 //|           |           |           |           |           |           |
@@ -244,111 +357,3 @@ int getIOProxBits(uint8_t version, uint8_t fc, uint16_t cn, uint8_t *bits) {
     return 1;
 }
 
-int CmdIOProxSim(const char *Cmd) {
-    uint16_t cn = 0;
-    uint8_t version = 0, fc = 0;
-    uint8_t bits[64];
-    size_t size = sizeof(bits);
-    memset(bits, 0x00, size);
-
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_io_sim();
-
-    version = param_get8(Cmd, 0);
-    fc = param_get8(Cmd, 1);
-    cn = param_get32ex(Cmd, 2, 0, 10);
-
-    if (!version || !fc || !cn) return usage_lf_io_sim();
-
-    if ((cn & 0xFFFF) != cn) {
-        cn &= 0xFFFF;
-        PrintAndLogEx(INFO, "Card Number Truncated to 16-bits (IOProx): %u", cn);
-    }
-
-    // clock 64, FSK2a fcHIGH 10 | fcLOW 8
-    uint8_t clk = 64, invert = 1, high = 10, low = 8;
-    uint16_t arg1, arg2;
-    arg1 = high << 8 | low;
-    arg2 = invert << 8 | clk;
-
-    PrintAndLogEx(SUCCESS, "Simulating IOProx version: %u FC: %u; CN: %u\n", version, fc, cn);
-    PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or run another command");
-
-    if (!getIOProxBits(version, fc, cn, bits)) {
-        PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
-        return 1;
-    }
-    // IOProx uses: fcHigh: 10, fcLow: 8, clk: 64, invert: 1
-    // arg1 --- fcHigh<<8 + fcLow
-    // arg2 --- Invert and clk setting
-    // size --- 64 bits == 8 bytes
-    UsbCommand c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}, {{0}}};
-    memcpy(c.d.asBytes, bits, size);
-    clearCommandBuffer();
-    SendCommand(&c);
-    return 0;
-}
-
-int CmdIOProxClone(const char *Cmd) {
-
-    uint32_t blocks[3] = {T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_64 | 2 << T55x7_MAXBLOCK_SHIFT, 0, 0};
-    uint16_t cn = 0;
-    uint8_t version = 0, fc = 0;
-    uint8_t bits[64];
-    memset(bits, 0, sizeof(bits));
-
-    char cmdp = param_getchar(Cmd, 0);
-    if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_io_clone();
-
-    version = param_get8(Cmd, 0);
-    fc = param_get8(Cmd, 1);
-    cn = param_get32ex(Cmd, 2, 0, 10);
-
-    if (!version || !fc || !cn) return usage_lf_io_clone();
-
-    if ((cn & 0xFFFF) != cn) {
-        cn &= 0xFFFF;
-        PrintAndLogEx(INFO, "Card Number Truncated to 16-bits (IOProx): %u", cn);
-    }
-
-    if (!getIOProxBits(version, fc, cn, bits)) {
-        PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
-        return 1;
-    }
-
-    if (param_getchar(Cmd, 3) == 'Q' || param_getchar(Cmd, 3) == 'q')
-        blocks[0] = T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(64) | 2 << T5555_MAXBLOCK_SHIFT;
-
-    blocks[1] = bytebits_to_byte(bits, 32);
-    blocks[2] = bytebits_to_byte(bits + 32, 32);
-
-    PrintAndLogEx(INFO, "Preparing to clone IOProx to T55x7 with Version: %u FC: %u, CN: %u", version, fc, cn);
-    print_blocks(blocks, 3);
-
-    //UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}, {{0}}};
-    UsbCommand c = {CMD_IO_CLONE_TAG, {blocks[1], blocks[2], 0}, {{0}}};
-    clearCommandBuffer();
-    SendCommand(&c);
-    return 0;
-}
-
-static command_t CommandTable[] = {
-    {"help",    CmdHelp,        1, "this help"},
-    {"demod",   CmdIOProxDemod, 1, "demodulate an IOProx tag from the GraphBuffer"},
-    {"read",    CmdIOProxRead,  1, "attempt to read and extract tag data"},
-    {"clone",   CmdIOProxClone, 0, "clone IOProx to T55x7"},
-    {"sim",     CmdIOProxSim,   0, "simulate IOProx tag"},
-    {NULL, NULL, 0, NULL}
-};
-
-int CmdLFIO(const char *Cmd) {
-    clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
-    return 0;
-}
-
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
-    return 0;
-}

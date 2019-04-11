@@ -13,7 +13,7 @@
 #include "cmdlfawid.h"  // AWID function declarations
 
 static int CmdHelp(const char *Cmd);
-
+/*
 static int usage_lf_awid_read(void) {
     PrintAndLogEx(NORMAL, "Enables AWID compatible reader mode printing details of scanned AWID26 or AWID50 tags.");
     PrintAndLogEx(NORMAL, "By default, values are printed and logged until the button is pressed or another USB command is issued.");
@@ -29,7 +29,7 @@ static int usage_lf_awid_read(void) {
     PrintAndLogEx(NORMAL, "       lf awid read 1");
     return 0;
 }
-
+*/
 static int usage_lf_awid_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of AWID card with specified facility-code and card number.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
@@ -122,60 +122,6 @@ static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, ui
     return true;
 }
 
-//refactored by marshmellow
-int getAWIDBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *bits) {
-
-    // the return bits, preamble 0000 0001
-    bits[7] = 1;
-
-    uint8_t pre[66];
-    memset(pre, 0, sizeof(pre));
-
-    // add formatlength
-    num_to_bytebits(fmtlen, 8, pre);
-
-    // add facilitycode, cardnumber and wiegand parity bits
-    switch (fmtlen) {
-        case 26: {
-            uint8_t wiegand[24];
-            num_to_bytebits(fc, 8, wiegand);
-            num_to_bytebits(cn, 16, wiegand + 8);
-            wiegand_add_parity(pre + 8, wiegand,  sizeof(wiegand));
-            break;
-        }
-        case 34: {
-            uint8_t wiegand[32];
-            num_to_bytebits(fc, 8, wiegand);
-            num_to_bytebits(cn, 24, wiegand + 8);
-            wiegand_add_parity(pre + 8, wiegand,  sizeof(wiegand));
-            break;
-        }
-        case 37: {
-            uint8_t wiegand[31];
-            num_to_bytebits(fc, 13, wiegand);
-            num_to_bytebits(cn, 18, wiegand + 13);
-            wiegand_add_parity(pre + 8, wiegand,  sizeof(wiegand));
-            break;
-        }
-        case 50: {
-            uint8_t wiegand[48];
-            num_to_bytebits(fc, 16, wiegand);
-            num_to_bytebits(cn, 32, wiegand + 16);
-            wiegand_add_parity(pre + 8, wiegand, sizeof(wiegand));
-            break;
-        }
-    }
-
-    // add AWID 4bit parity
-    size_t bitLen = addParity(pre, bits + 8, 66, 4, 1);
-
-    if (bitLen != 88) return 0;
-
-    PrintAndLogEx(SUCCESS, "awid raw bits:\n %s \n", sprint_bin(bits, bitLen));
-
-    return 1;
-}
-
 static void verify_values(uint8_t *fmtlen, uint32_t *fc, uint32_t *cn) {
     switch (*fmtlen) {
         case 50:
@@ -218,15 +164,10 @@ static void verify_values(uint8_t *fmtlen, uint32_t *fc, uint32_t *cn) {
             break;
     }
 }
-
-// this read is the "normal" read,  which download lf signal and tries to demod here.
-int CmdAWIDRead(const char *Cmd) {
-    lf_read(true, 12000);
-    return CmdAWIDDemod(Cmd);
-}
+/*
 // this read loops on device side.
 // uses the demod in lfops.c
-int CmdAWIDRead_device(const char *Cmd) {
+static int CmdAWIDRead_device(const char *Cmd) {
 
     if (Cmd[0] == 'h' || Cmd[0] == 'H') return usage_lf_awid_read();
     uint8_t findone = (Cmd[0] == '1') ? 1 : 0;
@@ -235,11 +176,11 @@ int CmdAWIDRead_device(const char *Cmd) {
     SendCommand(&c);
     return 0;
 }
-
+*/
 //by marshmellow
 //AWID Prox demod - FSK2a RF/50 with preamble of 00000001  (always a 96 bit data stream)
 //print full AWID Prox ID and some bit format details if found
-int CmdAWIDDemod(const char *Cmd) {
+static int CmdAWIDDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
     size_t size = getFromGraphBuf(bits);
@@ -370,7 +311,13 @@ int CmdAWIDDemod(const char *Cmd) {
     return 1;
 }
 
-int CmdAWIDSim(const char *Cmd) {
+// this read is the "normal" read,  which download lf signal and tries to demod here.
+static int CmdAWIDRead(const char *Cmd) {
+    lf_read(true, 12000);
+    return CmdAWIDDemod(Cmd);
+}
+
+static int CmdAWIDSim(const char *Cmd) {
     uint32_t fc = 0, cn = 0;
     uint8_t fmtlen = 0;
     uint8_t bits[96];
@@ -410,7 +357,7 @@ int CmdAWIDSim(const char *Cmd) {
     return 0;
 }
 
-int CmdAWIDClone(const char *Cmd) {
+static int CmdAWIDClone(const char *Cmd) {
     uint32_t blocks[4] = {T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_50 | 3 << T55x7_MAXBLOCK_SHIFT, 0, 0, 0};
     uint32_t fc = 0, cn = 0;
     uint8_t fmtlen = 0;
@@ -461,7 +408,7 @@ int CmdAWIDClone(const char *Cmd) {
     return 0;
 }
 
-int CmdAWIDBrute(const char *Cmd) {
+static int CmdAWIDBrute(const char *Cmd) {
 
     bool errors = false, verbose = false;
     uint32_t fc = 0, cn = 0, delay = 1000;
@@ -567,14 +514,72 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
+    return 0;
+}
+
 int CmdLFAWID(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
-    return 0;
+//refactored by marshmellow
+int getAWIDBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *bits) {
+
+    // the return bits, preamble 0000 0001
+    bits[7] = 1;
+
+    uint8_t pre[66];
+    memset(pre, 0, sizeof(pre));
+
+    // add formatlength
+    num_to_bytebits(fmtlen, 8, pre);
+
+    // add facilitycode, cardnumber and wiegand parity bits
+    switch (fmtlen) {
+        case 26: {
+            uint8_t wiegand[24];
+            num_to_bytebits(fc, 8, wiegand);
+            num_to_bytebits(cn, 16, wiegand + 8);
+            wiegand_add_parity(pre + 8, wiegand,  sizeof(wiegand));
+            break;
+        }
+        case 34: {
+            uint8_t wiegand[32];
+            num_to_bytebits(fc, 8, wiegand);
+            num_to_bytebits(cn, 24, wiegand + 8);
+            wiegand_add_parity(pre + 8, wiegand,  sizeof(wiegand));
+            break;
+        }
+        case 37: {
+            uint8_t wiegand[31];
+            num_to_bytebits(fc, 13, wiegand);
+            num_to_bytebits(cn, 18, wiegand + 13);
+            wiegand_add_parity(pre + 8, wiegand,  sizeof(wiegand));
+            break;
+        }
+        case 50: {
+            uint8_t wiegand[48];
+            num_to_bytebits(fc, 16, wiegand);
+            num_to_bytebits(cn, 32, wiegand + 16);
+            wiegand_add_parity(pre + 8, wiegand, sizeof(wiegand));
+            break;
+        }
+    }
+
+    // add AWID 4bit parity
+    size_t bitLen = addParity(pre, bits + 8, 66, 4, 1);
+
+    if (bitLen != 88) return 0;
+
+    PrintAndLogEx(SUCCESS, "awid raw bits:\n %s \n", sprint_bin(bits, bitLen));
+
+    return 1;
+}
+
+int demodAWID(void) {
+    return CmdAWIDDemod("");
 }

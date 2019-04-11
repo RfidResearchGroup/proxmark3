@@ -24,7 +24,6 @@
 #endif
 
 int CmdLFCOTAG(const char *Cmd);
-int CmdCOTAGRead(const char *Cmd);
-int CmdCOTAGDemod(const char *Cmd);
-
+int demodCOTAG(void);
+int readCOTAGUid(void);
 #endif
