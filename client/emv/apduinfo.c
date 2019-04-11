@@ -277,7 +277,7 @@ int CodeCmp(const char *code1, const char *code2) {
     return -1;
 }
 
-const APDUCode * GetAPDUCode(uint8_t sw1, uint8_t sw2) {
+const APDUCode *GetAPDUCode(uint8_t sw1, uint8_t sw2) {
     char buf[6] = {0};
     int res;
     int mineq = APDUCodeTableLen;

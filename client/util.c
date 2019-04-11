@@ -752,12 +752,11 @@ void wiegand_add_parity(uint8_t *target, uint8_t *source, uint8_t length) {
 }
 
 // add HID parity to binary array: ODD prefix for 1st half of ID, EVEN suffix for 2nd half
-void wiegand_add_parity_swapped(uint8_t *target, uint8_t *source, uint8_t length)
-{
-    *(target++)= GetParity(source, ODD, length / 2);
+void wiegand_add_parity_swapped(uint8_t *target, uint8_t *source, uint8_t length) {
+    *(target++) = GetParity(source, ODD, length / 2);
     memcpy(target, source, length);
     target += length;
-    *(target)= GetParity(source + length / 2, EVEN, length / 2);
+    *(target) = GetParity(source + length / 2, EVEN, length / 2);
 }
 
 // xor two arrays together for len items.  The dst array contains the new xored values.

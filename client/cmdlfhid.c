@@ -200,7 +200,7 @@ int CmdHIDDemod(const char *Cmd) {
                 cardnum = (lo >> 1) & 0xFFFFF;
                 fc = ((hi & 1) << 11) | (lo >> 21);
             }
-            if(fmtLen==36){
+            if (fmtLen == 36) {
                 oem = (lo >> 1) & 0x3;
                 cardnum = (lo >> 3) & 0xFFFF;
                 fc = (hi & 0x7) << 13 | ((lo >> 19) & 0xFFFF);
@@ -218,7 +218,7 @@ int CmdHIDDemod(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "HID Prox TAG (Kastle format) ID: %08x (%u) - Format Len: 32bit - CC: %u - FC: %u - Card: %u", lo, (lo >> 1) & 0xFFFF, cc, fc, cardnum);
         } else {
             PrintAndLogEx(SUCCESS, "HID Prox TAG ID: %x%08x (%u) - Format Len: %ubit - OEM: %03u - FC: %u - Card: %u",
-                                  hi, lo, cardnum, fmtLen, oem, fc, cardnum);
+                          hi, lo, cardnum, fmtLen, oem, fc, cardnum);
         }
     }
 
@@ -405,7 +405,7 @@ static void calc34(uint16_t fc, uint32_t cardno, uint8_t *out) {
 // *lo = ((cardno & 0xFFFFF) << 1) | fc << 21;
 // *hi = (1 << 5) | ((fc >> 11) & 1);
 // }
-static void calc36(uint8_t oem, uint16_t fc, uint32_t cardno, uint8_t *out){
+static void calc36(uint8_t oem, uint16_t fc, uint32_t cardno, uint8_t *out) {
     // FC     1  - 16  - 16 bit
     // cardno 17 - 33  - 16 bit
     // oem    34 - 35  -  2 bit
