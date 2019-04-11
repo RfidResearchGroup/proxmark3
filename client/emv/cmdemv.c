@@ -1961,7 +1961,7 @@ static command_t CommandTable[] =  {
     {"sim",         CmdEmvSim,                      0, "simulate EMV tag"},
     {"clone",       CmdEmvClone,                    0, "clone an EMV tag"},
     */
-    {"list",        CmdEMVList,                     0, "[Deprecated] List ISO7816 history"},
+    {"list",        CmdEMVList,                     0, "List ISO7816 history"},
     {"roca",        CmdEMVRoca,                     0, "Extract public keys and run ROCA test"},
     {NULL, NULL, 0, NULL}
 };
