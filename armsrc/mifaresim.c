@@ -34,8 +34,6 @@
 #include "protocols.h"
 #include "apps.h"
 
-static tUart Uart;
-
 uint8_t MifareCardType;
 
 static bool IsTrailerAccessAllowed(uint8_t blockNo, uint8_t keytype, uint8_t action) {
@@ -372,12 +370,6 @@ static bool MifareSimInit(uint16_t flags, uint8_t *datain, tag_response_info_t *
     return true;
 }
 
-static bool HasValidCRC(uint8_t *receivedCmd, uint16_t receivedCmd_len) {
-    uint8_t CRC_byte_1, CRC_byte_2;
-    compute_crc(CRC_14443_A, receivedCmd, receivedCmd_len - 2, &CRC_byte_1, &CRC_byte_2);
-    return (receivedCmd[receivedCmd_len - 2] == CRC_byte_1 && receivedCmd[receivedCmd_len - 1] == CRC_byte_2);
-}
-
 
 /**
 *MIFARE 1K simulate.
@@ -452,6 +444,8 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
     uint8_t rAUTH_NT[4];
     uint8_t rAUTH_NT_keystream[4];
     uint32_t nonce = 0;
+
+    tUart *uart = GetUart(); 
 
     if ((flags & FLAG_MF_MINI) == FLAG_MF_MINI) {
         MifareCardType = 0;
@@ -544,7 +538,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
             case MFEMUL_HALTED:
                 if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("MFEMUL_HALTED");
             case MFEMUL_IDLE: {
-                LogTrace(Uart.output, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
+                LogTrace(uart->output, uart->len, uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->parity, true);
                 if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("MFEMUL_IDLE");
                 break;
             }
@@ -709,7 +703,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
 
             case MFEMUL_SELECT3: {
                 if (!uid_len) {
-                    LogTrace(Uart.output, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
+                    LogTrace(uart->output, uart->len, uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->parity, true);
                     break;
                 }
                 if (receivedCmd_len == 2 && (receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_3 && receivedCmd[1] == 0x20)) {
@@ -772,7 +766,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                     memcpy(receivedCmd_dec, receivedCmd, receivedCmd_len);
                 }
 
-                if (!HasValidCRC(receivedCmd_dec, receivedCmd_len)) { // all commands must have a valid CRC
+                if (!CheckCrc14A(receivedCmd_dec, receivedCmd_len)) { // all commands must have a valid CRC
                     EmSend4bit(encrypted_data ? mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA) : CARD_NACK_NA);
                     if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] All commands must have a valid CRC %02X (%d)", receivedCmd_dec, receivedCmd_len);
                     break;
@@ -999,7 +993,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
 
                 // case MFEMUL_WORK => CMD HALT
                 if (receivedCmd_len > 1 && receivedCmd_dec[0] == ISO14443A_CMD_HALT && receivedCmd_dec[1] == 0x00) {
-                    LogTrace(Uart.output, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
+                    LogTrace(uart->output, uart->len, uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->parity, true);
                     LED_B_OFF();
                     LED_C_OFF();
                     cardSTATE = MFEMUL_HALTED;
@@ -1027,7 +1021,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
 
                 if (receivedCmd_len != 8) {
                     cardSTATE_TO_IDLE();
-                    LogTrace(Uart.output, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
+                    LogTrace(uart->output, uart->len, uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->parity, true);
                     if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("MFEMUL_AUTH1: receivedCmd_len != 8 (%d) => cardSTATE_TO_IDLE())", receivedCmd_len);
                     break;
                 }
@@ -1138,7 +1132,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
             case MFEMUL_WRITEBL2: {
                 if (receivedCmd_len == MAX_MIFARE_FRAME_SIZE) {
                     mf_crypto1_decryptEx(pcs, receivedCmd, receivedCmd_len, receivedCmd_dec);
-                    if (HasValidCRC(receivedCmd_dec, receivedCmd_len)) {
+                    if (CheckCrc14A(receivedCmd_dec, receivedCmd_len)) {
                         if (IsSectorTrailer(cardWRBL)) {
                             emlGetMem(response, cardWRBL, 1);
                             if (!IsAccessAllowed(cardWRBL, cardAUTHKEY, AC_KEYA_WRITE)) {
@@ -1164,7 +1158,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                 }
                 cardSTATE_TO_IDLE();
                 if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_WRITEBL2] cardSTATE = MFEMUL_IDLE");
-                LogTrace(Uart.output, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
+                LogTrace(uart->output, uart->len, uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->parity, true);
                 break;
             }
 
@@ -1177,7 +1171,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                         cardSTATE_TO_IDLE();
                         break;
                     }
-                    LogTrace(Uart.output, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
+                    LogTrace(uart->output, uart->len, uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->parity, true);
                     cardINTREG = cardINTREG + ans;
 
                     cardSTATE = MFEMUL_WORK;
@@ -1197,7 +1191,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                         break;
                     }
                 }
-                LogTrace(Uart.output, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
+                LogTrace(uart->output, uart->len, uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->parity, true);
                 cardINTREG = cardINTREG - ans;
                 cardSTATE = MFEMUL_WORK;
                 if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_INTREG_DEC] cardSTATE = MFEMUL_WORK");
@@ -1212,7 +1206,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                     cardSTATE_TO_IDLE();
                     break;
                 }
-                LogTrace(Uart.output, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
+                LogTrace(uart->output, uart->len, uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->parity, true);
                 cardSTATE = MFEMUL_WORK;
                 if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_INTREG_REST] cardSTATE = MFEMUL_WORK");
                 break;
