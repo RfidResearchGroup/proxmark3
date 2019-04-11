@@ -23,13 +23,10 @@
 #include "crc.h"
 
 int CmdLFNedap(const char *Cmd);
-int CmdLFNedapDemod(const char *Cmd);
-int CmdLFNedapRead(const char *Cmd);
-//int CmdLFNedapClone(const char *Cmd);
-int CmdLFNedapSim(const char *Cmd);
-int CmdLFNedapChk(const char *Cmd);
 
+int demodNedap(void);
 int detectNedap(uint8_t *dest, size_t *size);
+int getNedapBits(uint32_t cn, uint8_t *nedapBits);
 
 #endif
 

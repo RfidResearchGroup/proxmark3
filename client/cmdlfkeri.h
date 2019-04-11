@@ -23,11 +23,8 @@
 #include "lfdemod.h"    // preamble test
 
 int CmdLFKeri(const char *Cmd);
-int CmdKeriRead(const char *Cmd);
-int CmdKeriDemod(const char *Cmd);
-int CmdKeriClone(const char *Cmd);
-int CmdKeriSim(const char *Cmd);
 
+int demodKeri(void);
 int detectKeri(uint8_t *dest, size_t *size, bool *invert);
 
 #endif

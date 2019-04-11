@@ -11,19 +11,6 @@
 
 static int CmdHelp(const char *Cmd);
 
-// by marshmellow
-// find Securakey preamble in already demoded data
-static int detectSecurakey(uint8_t *dest, size_t *size) {
-    if (*size < 96) return -1; //make sure buffer has data
-    size_t startIdx = 0;
-    uint8_t preamble[] = {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1};
-    if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
-        return -2; //preamble not found
-    if (*size != 96) return -3; //wrong demoded size
-    //return start position
-    return (int)startIdx;
-}
-
 //see ASKDemod for what args are accepted
 int CmdSecurakeyDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
@@ -132,3 +119,21 @@ int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }
+
+// by marshmellow
+// find Securakey preamble in already demoded data
+int detectSecurakey(uint8_t *dest, size_t *size) {
+    if (*size < 96) return -1; //make sure buffer has data
+    size_t startIdx = 0;
+    uint8_t preamble[] = {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1};
+    if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
+        return -2; //preamble not found
+    if (*size != 96) return -3; //wrong demoded size
+    //return start position
+    return (int)startIdx;
+}
+
+int demodSecurakey(void) {
+    return CmdSecurakeyDemod("");
+}
+

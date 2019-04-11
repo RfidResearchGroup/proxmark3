@@ -23,12 +23,8 @@
 #include "lfdemod.h"    // parityTest
 int CmdLFVisa2k(const char *Cmd);
 
-int CmdVisa2kDemod(const char *Cmd);
-int CmdVisa2kRead(const char *Cmd);
-int CmdVisa2kClone(const char *Cmd);
-int CmdVisa2kSim(const char *Cmd);
-
 int getvisa2kBits(uint64_t fullcode, uint8_t *bits);
+int demodVisa2k(void);
 int detectVisa2k(uint8_t *dest, size_t *size);
 
 #endif

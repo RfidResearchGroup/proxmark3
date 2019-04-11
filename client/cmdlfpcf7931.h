@@ -24,8 +24,4 @@ int pcf7931_printConfig(void);
 
 int CmdLFPCF7931(const char *Cmd);
 
-int CmdLFPCF7931Read(const char *Cmd);
-int CmdLFPCF7931Write(const char *Cmd);
-int CmdLFPCF7931Config(const char *Cmd);
-
 #endif

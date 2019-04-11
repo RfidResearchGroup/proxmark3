@@ -48,37 +48,6 @@ static uint8_t jablontron_chksum(uint8_t *bits) {
     return chksum;
 }
 
-int getJablotronBits(uint64_t fullcode, uint8_t *bits) {
-    //preamp
-    num_to_bytebits(0xFFFF, 16, bits);
-
-    //fullcode
-    num_to_bytebits(fullcode, 40, bits + 16);
-
-    //chksum byte
-    uint8_t chksum = jablontron_chksum(bits);
-    num_to_bytebits(chksum, 8, bits + 56);
-    return 1;
-}
-
-// ASK/Diphase fc/64 (inverted Biphase)
-// Note: this is not a demod, this is only a detection
-// the parameter *bits needs to be demoded before call
-// 0xFFFF preamble, 64bits
-int detectJablotron(uint8_t *bits, size_t *size) {
-    if (*size < 64 * 2) return -1; //make sure buffer has enough data
-    size_t startIdx = 0;
-    uint8_t preamble[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0};
-    if (preambleSearch(bits, preamble, sizeof(preamble), size, &startIdx) == 0)
-        return -2; //preamble not found
-    if (*size != 64) return -3; // wrong demoded size
-
-    uint8_t checkchksum = jablontron_chksum(bits + startIdx);
-    uint8_t crc = bytebits_to_byte(bits + startIdx + 56, 8);
-    if (checkchksum != crc) return -5;
-    return (int)startIdx;
-}
-
 static uint64_t getJablontronCardId(uint64_t rawcode) {
     uint64_t id = 0;
     uint8_t bytes[] = {0, 0, 0, 0, 0};
@@ -249,4 +218,39 @@ int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
+}
+
+int getJablotronBits(uint64_t fullcode, uint8_t *bits) {
+    //preamp
+    num_to_bytebits(0xFFFF, 16, bits);
+
+    //fullcode
+    num_to_bytebits(fullcode, 40, bits + 16);
+
+    //chksum byte
+    uint8_t chksum = jablontron_chksum(bits);
+    num_to_bytebits(chksum, 8, bits + 56);
+    return 1;
+}
+
+// ASK/Diphase fc/64 (inverted Biphase)
+// Note: this is not a demod, this is only a detection
+// the parameter *bits needs to be demoded before call
+// 0xFFFF preamble, 64bits
+int detectJablotron(uint8_t *bits, size_t *size) {
+    if (*size < 64 * 2) return -1; //make sure buffer has enough data
+    size_t startIdx = 0;
+    uint8_t preamble[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0};
+    if (preambleSearch(bits, preamble, sizeof(preamble), size, &startIdx) == 0)
+        return -2; //preamble not found
+    if (*size != 64) return -3; // wrong demoded size
+
+    uint8_t checkchksum = jablontron_chksum(bits + startIdx);
+    uint8_t crc = bytebits_to_byte(bits + startIdx + 56, 8);
+    if (checkchksum != crc) return -5;
+    return (int)startIdx;
+}
+
+int demodJablotron(void) {
+    return CmdJablotronDemod("");
 }

@@ -30,7 +30,6 @@
 
 int CmdCrc(const char *Cmd);
 
-int CmdrevengSearch(const char *Cmd);
 int GetModels(char *Models[], int *count, uint8_t *width);
 int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *result);
 #endif

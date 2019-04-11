@@ -23,11 +23,9 @@
 #include "lfdemod.h"    // parityTest
 
 int CmdLFNoralsy(const char *Cmd);
-int CmdNoralsyDemod(const char *Cmd);
-int CmdNoralsyRead(const char *Cmd);
-int CmdNoralsyClone(const char *Cmd);
-int CmdNoralsySim(const char *Cmd);
 
+int demodNoralsy(void);
+int detectNoralsy(uint8_t *dest, size_t *size);
 int getnoralsyBits(uint32_t id, uint16_t year, uint8_t *bits);
 
 #endif

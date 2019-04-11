@@ -39,25 +39,6 @@ static int split(char *str, char *arr[MAX_ARGS]) {
     return wordCnt;
 }
 
-int CmdCrc(const char *Cmd) {
-    char name[] = {"reveng "};
-    char Cmd2[100 + 7];
-    memcpy(Cmd2, name, 7);
-    memcpy(Cmd2 + 7, Cmd, 100);
-    char *argv[MAX_ARGS];
-    int argc = split(Cmd2, argv);
-
-    if (argc == 3 && memcmp(argv[1], "-g", 2) == 0) {
-        CmdrevengSearch(argv[2]);
-    } else {
-        reveng_main(argc, argv);
-    }
-    for (int i = 0; i < argc; ++i) {
-        free(argv[i]);
-    }
-    return 0;
-}
-
 //returns array of model names and the count of models returning
 //  as well as a width array for the width of each model
 int GetModels(char *Models[], int *count, uint8_t *width) {
@@ -364,9 +345,9 @@ int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *res
     pfree(&apoly);
     return 1;
 }
-
+/*
 //test call to RunModel
-int CmdrevengTestC(const char *Cmd) {
+static int CmdrevengTestC(const char *Cmd) {
     int cmdp = 0;
     char inModel[30] = {0x00};
     char inHexStr[30] = {0x00};
@@ -387,7 +368,7 @@ int CmdrevengTestC(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "result: %s", result);
     return 1;
 }
-
+*/
 //returns a calloced string (needs to be freed)
 static char *SwapEndianStr(const char *inStr, const size_t len, const uint8_t blockSize) {
     char *tmp = calloc(len + 1, sizeof(char));
@@ -401,7 +382,7 @@ static char *SwapEndianStr(const char *inStr, const size_t len, const uint8_t bl
 }
 
 // takes hex string in and searches for a matching result (hex string must include checksum)
-int CmdrevengSearch(const char *Cmd) {
+static int CmdrevengSearch(const char *Cmd) {
 
 #define NMODELS 106
 
@@ -486,3 +467,23 @@ int CmdrevengSearch(const char *Cmd) {
     if (!found) PrintAndLogEx(FAILED, "\nno matches found\n");
     return 1;
 }
+
+int CmdCrc(const char *Cmd) {
+    char name[] = {"reveng "};
+    char Cmd2[100 + 7];
+    memcpy(Cmd2, name, 7);
+    memcpy(Cmd2 + 7, Cmd, 100);
+    char *argv[MAX_ARGS];
+    int argc = split(Cmd2, argv);
+
+    if (argc == 3 && memcmp(argv[1], "-g", 2) == 0) {
+        CmdrevengSearch(argv[2]);
+    } else {
+        reveng_main(argc, argv);
+    }
+    for (int i = 0; i < argc; ++i) {
+        free(argv[i]);
+    }
+    return 0;
+}
+

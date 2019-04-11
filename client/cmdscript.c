@@ -67,7 +67,7 @@ static bool endsWith(const char *base, const char *str) {
 * generate a file listing of the script-directory for files
 * ending with .lua
 */
-int CmdScriptList(const char *Cmd) {
+static int CmdScriptList(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
 
     char const *exedir = get_my_executable_directory();
@@ -102,7 +102,7 @@ int CmdScriptList(const char *Cmd) {
  * @param argv
  * @return
  */
-int CmdScriptRun(const char *Cmd) {
+static int CmdScriptRun(const char *Cmd) {
     // create new Lua state
     lua_State *lua_state;
     lua_state = luaL_newstate();
@@ -174,6 +174,18 @@ static command_t CommandTable[] = {
 };
 
 /**
+ * Shows some basic help
+ * @brief CmdHelp
+ * @param Cmd
+ * @return
+ */
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    PrintAndLogEx(NORMAL, "This is a feature to run Lua-scripts. You can place lua-scripts within the scripts/-folder. ");
+    return 0;
+}
+
+/**
  * Finds a matching script-file
  * @brief CmdScript
  * @param Cmd
@@ -185,14 +197,3 @@ int CmdScript(const char *Cmd) {
     return 0;
 }
 
-/**
- * Shows some basic help
- * @brief CmdHelp
- * @param Cmd
- * @return
- */
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    PrintAndLogEx(NORMAL, "This is a feature to run Lua-scripts. You can place lua-scripts within the scripts/-folder. ");
-    return 0;
-}

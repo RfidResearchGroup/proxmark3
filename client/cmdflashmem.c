@@ -107,7 +107,7 @@ static int usage_flashmem_info(void) {
     return 0;
 }
 
-int CmdFlashMemRead(const char *Cmd) {
+static int CmdFlashMemRead(const char *Cmd) {
 
     uint8_t cmdp = 0;
     bool errors = false;
@@ -146,7 +146,7 @@ int CmdFlashMemRead(const char *Cmd) {
     return 0;
 }
 
-int CmdFlashmemSpiBaudrate(const char *Cmd) {
+static int CmdFlashmemSpiBaudrate(const char *Cmd) {
 
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) < 1 || ctmp == 'h') return usage_flashmem_spibaud();
@@ -158,7 +158,7 @@ int CmdFlashmemSpiBaudrate(const char *Cmd) {
     return 0;
 }
 
-int CmdFlashMemLoad(const char *Cmd) {
+static int CmdFlashMemLoad(const char *Cmd) {
 
     uint32_t start_index = 0;
     char filename[FILE_PATH_SIZE] = {0};
@@ -301,7 +301,7 @@ int CmdFlashMemLoad(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Wrote %u bytes to offset %u", datalen, start_index);
     return 0;
 }
-int CmdFlashMemSave(const char *Cmd) {
+static int CmdFlashMemSave(const char *Cmd) {
 
     char filename[FILE_PATH_SIZE] = {0};
     uint8_t cmdp = 0;
@@ -357,7 +357,7 @@ int CmdFlashMemSave(const char *Cmd) {
     free(dump);
     return 0;
 }
-int CmdFlashMemWipe(const char *Cmd) {
+static int CmdFlashMemWipe(const char *Cmd) {
 
     uint8_t cmdp = 0;
     bool errors = false;
@@ -406,7 +406,7 @@ int CmdFlashMemWipe(const char *Cmd) {
 
     return 0;
 }
-int CmdFlashMemInfo(const char *Cmd) {
+static int CmdFlashMemInfo(const char *Cmd) {
 
     uint8_t sha_hash[20] = {0};
     mbedtls_rsa_context rsa;
@@ -606,15 +606,15 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdFlashMem(const char *Cmd) {
-    clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
+int CmdFlashMem(const char *Cmd) {
+    clearCommandBuffer();
+    CmdsParse(CommandTable, Cmd);
     return 0;
 }
 

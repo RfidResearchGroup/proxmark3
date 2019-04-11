@@ -35,11 +35,6 @@ typedef enum {
 
 int CmdFlashMem(const char *Cmd);
 
-int CmdFlashMemRead(const char *Cmd);
-int CmdFlashMemLoad(const char *Cmd);
-int CmdFlashMemSave(const char *Cmd);
-int CmdFlashMemWipe(const char *Cmd);
-int CmdFlashMemInfo(const char *Cmd);
 #endif
 
 #endif

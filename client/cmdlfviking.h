@@ -23,12 +23,9 @@
 
 int CmdLFViking(const char *Cmd);
 
-int CmdVikingDemod(const char *Cmd);
-int CmdVikingRead(const char *Cmd);
-int CmdVikingClone(const char *Cmd);
-int CmdVikingSim(const char *Cmd);
-
+int demodViking(void);
 int detectViking(uint8_t *dest, size_t *size);
+uint64_t getVikingBits(uint32_t id);
 
 #endif
 

@@ -12,25 +12,6 @@
 
 static int CmdHelp(const char *Cmd);
 
-int detectNexWatch(uint8_t *dest, size_t *size, bool *invert) {
-
-    uint8_t preamble[28]   = {0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    uint8_t preamble_i[28] = {1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-    // sanity check.
-    if (*size < sizeof(preamble) + 100) return -1;
-
-    size_t startIdx = 0;
-
-    if (!preambleSearch(DemodBuffer, preamble, sizeof(preamble), size, &startIdx)) {
-        // if didn't find preamble try again inverting
-        if (!preambleSearch(DemodBuffer, preamble_i, sizeof(preamble_i), size, &startIdx)) return -4;
-        *invert ^= 1;
-    }
-
-    // size tests?
-    return (int) startIdx;
-}
-
 int CmdNexWatchDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
 
@@ -111,3 +92,27 @@ int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }
+
+int detectNexWatch(uint8_t *dest, size_t *size, bool *invert) {
+
+    uint8_t preamble[28]   = {0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    uint8_t preamble_i[28] = {1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+    // sanity check.
+    if (*size < sizeof(preamble) + 100) return -1;
+
+    size_t startIdx = 0;
+
+    if (!preambleSearch(DemodBuffer, preamble, sizeof(preamble), size, &startIdx)) {
+        // if didn't find preamble try again inverting
+        if (!preambleSearch(DemodBuffer, preamble_i, sizeof(preamble_i), size, &startIdx)) return -4;
+        *invert ^= 1;
+    }
+
+    // size tests?
+    return (int) startIdx;
+}
+
+int demodNexWatch(void) {
+    return CmdNexWatchDemod("");
+}
+

@@ -24,11 +24,7 @@
 
 int CmdLFJablotron(const char *Cmd);
 
-int CmdJablotronDemod(const char *Cmd);
-int CmdJablotronRead(const char *Cmd);
-int CmdJablotronClone(const char *Cmd);
-int CmdJablotronSim(const char *Cmd);
-
+int demodJablotron(void);
 int detectJablotron(uint8_t *bits, size_t *size);
 int getJablotronBits(uint64_t fullcode, uint8_t *bits);
 

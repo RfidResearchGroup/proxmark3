@@ -38,32 +38,7 @@ static int usage_lf_keri_sim(void) {
     return 0;
 }
 
-// find KERI preamble in already demoded data
-int detectKeri(uint8_t *dest, size_t *size, bool *invert) {
-
-    uint8_t preamble[] = {1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
-    uint8_t preamble_i[] = {0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0};
-
-    // sanity check.
-    if (*size < sizeof(preamble) + 100) return -1;
-
-    size_t startIdx = 0;
-
-    if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx)) {
-
-        // if didn't find preamble try again inverting
-        if (!preambleSearch(DemodBuffer, preamble_i, sizeof(preamble_i), size, &startIdx))
-            return -2;
-
-        *invert ^= 1;
-    }
-
-    if (*size != 64) return -3; //wrong demoded size
-
-    return (int)startIdx;
-}
-
-int CmdKeriDemod(const char *Cmd) {
+static int CmdKeriDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
 
     if (!PSKDemod("", false)) {
@@ -242,3 +217,33 @@ int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }
+
+// find KERI preamble in already demoded data
+int detectKeri(uint8_t *dest, size_t *size, bool *invert) {
+
+    uint8_t preamble[] = {1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
+    uint8_t preamble_i[] = {0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0};
+
+    // sanity check.
+    if (*size < sizeof(preamble) + 100) return -1;
+
+    size_t startIdx = 0;
+
+    if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx)) {
+
+        // if didn't find preamble try again inverting
+        if (!preambleSearch(DemodBuffer, preamble_i, sizeof(preamble_i), size, &startIdx))
+            return -2;
+
+        *invert ^= 1;
+    }
+
+    if (*size != 64) return -3; //wrong demoded size
+
+    return (int)startIdx;
+}
+
+int demodKeri(void) {
+    return CmdKeriDemod("");
+}
+

@@ -37,43 +37,6 @@ static int usage_lf_paradox_sim(void) {
     return 0;
 }
 
-// loop to get raw paradox waveform then FSK demodulate the TAG ID from it
-int detectParadox(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo, int *waveStartIdx) {
-    //make sure buffer has data
-    if (*size < 96 * 50) return -1;
-
-    if (getSignalProperties()->isnoise) return -2;
-
-    // FSK demodulator
-    *size = fskdemod(dest, *size, 50, 1, 10, 8, waveStartIdx); // paradox fsk2a
-
-    //did we get a good demod?
-    if (*size < 96) return -3;
-
-    // 00001111 bit pattern represent start of frame, 01 pattern represents a 0 and 10 represents a 1
-    size_t startIdx = 0;
-    uint8_t preamble[] = {0, 0, 0, 0, 1, 1, 1, 1};
-    if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
-        return -4; //preamble not found
-
-    size_t numStart = startIdx + sizeof(preamble);
-    // final loop, go over previously decoded FSK data and manchester decode into usable tag ID
-    for (size_t idx = numStart; (idx - numStart) < *size - sizeof(preamble); idx += 2) {
-        if (dest[idx] == dest[idx + 1])
-            return -5; //not manchester data
-
-        *hi2 = (*hi2 << 1) | (*hi >> 31);
-        *hi = (*hi << 1) | (*lo >> 31);
-        //Then, shift in a 0 or one into low
-        *lo <<= 1;
-        if (dest[idx] && !dest[idx + 1]) // 1 0
-            *lo |= 1;
-        else // 0 1
-            *lo |= 0;
-    }
-    return (int)startIdx;
-}
-
 //by marshmellow
 //Paradox Prox demod - FSK2a RF/50 with preamble of 00001111 (then manchester encoded)
 //print full Paradox Prox ID and some bit format details if found
@@ -204,3 +167,45 @@ int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }
+
+// loop to get raw paradox waveform then FSK demodulate the TAG ID from it
+int detectParadox(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo, int *waveStartIdx) {
+    //make sure buffer has data
+    if (*size < 96 * 50) return -1;
+
+    if (getSignalProperties()->isnoise) return -2;
+
+    // FSK demodulator
+    *size = fskdemod(dest, *size, 50, 1, 10, 8, waveStartIdx); // paradox fsk2a
+
+    //did we get a good demod?
+    if (*size < 96) return -3;
+
+    // 00001111 bit pattern represent start of frame, 01 pattern represents a 0 and 10 represents a 1
+    size_t startIdx = 0;
+    uint8_t preamble[] = {0, 0, 0, 0, 1, 1, 1, 1};
+    if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
+        return -4; //preamble not found
+
+    size_t numStart = startIdx + sizeof(preamble);
+    // final loop, go over previously decoded FSK data and manchester decode into usable tag ID
+    for (size_t idx = numStart; (idx - numStart) < *size - sizeof(preamble); idx += 2) {
+        if (dest[idx] == dest[idx + 1])
+            return -5; //not manchester data
+
+        *hi2 = (*hi2 << 1) | (*hi >> 31);
+        *hi = (*hi << 1) | (*lo >> 31);
+        //Then, shift in a 0 or one into low
+        *lo <<= 1;
+        if (dest[idx] && !dest[idx + 1]) // 1 0
+            *lo |= 1;
+        else // 0 1
+            *lo |= 0;
+    }
+    return (int)startIdx;
+}
+
+int demodParadox(void) {
+    return CmdParadoxDemod("");
+}
+

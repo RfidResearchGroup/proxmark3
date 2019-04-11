@@ -13,6 +13,4 @@
 
 int CmdScript(const char *Cmd);
 
-int CmdScriptList(const char *Cmd);
-int CmdScriptRun(const char *Cmd);
 #endif

@@ -308,37 +308,6 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
     return 0;
 }
 
-bool smart_select(bool silent, smart_card_atr_t *atr) {
-    if (atr)
-        memset(atr, 0, sizeof(smart_card_atr_t));
-
-    UsbCommand c = {CMD_SMART_ATR, {0, 0, 0}, {{0}}};
-    clearCommandBuffer();
-    SendCommand(&c);
-    UsbCommand resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
-        if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
-        return false;
-    }
-
-    uint8_t isok = resp.arg[0] & 0xFF;
-    if (!isok) {
-        if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
-        return false;
-    }
-
-    smart_card_atr_t card;
-    memcpy(&card, (smart_card_atr_t *)resp.d.asBytes, sizeof(smart_card_atr_t));
-
-    if (atr)
-        memcpy(atr, &card, sizeof(smart_card_atr_t));
-
-    if (!silent)
-        PrintAndLogEx(INFO, "ISO7816-3 ATR : %s", sprint_hex(card.atr, card.atr_len));
-
-    return true;
-}
-
 static int smart_wait(uint8_t *data, bool silent) {
     UsbCommand resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
@@ -420,7 +389,7 @@ static int smart_response(uint8_t *data) {
     return smart_responseEx(data, false);
 }
 
-int CmdSmartRaw(const char *Cmd) {
+static int CmdSmartRaw(const char *Cmd) {
 
     int hexlen = 0;
     bool active = false;
@@ -536,47 +505,7 @@ int CmdSmartRaw(const char *Cmd) {
     return 0;
 }
 
-int ExchangeAPDUSC(uint8_t *datain, int datainlen, bool activateCard, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
-    *dataoutlen = 0;
-
-    if (activateCard)
-        smart_select(false, NULL);
-
-    PrintAndLogEx(DEBUG, "APDU SC");
-
-    UsbCommand c = {CMD_SMART_RAW, {SC_RAW_T0, datainlen, 0}, {{0}}};
-    if (activateCard) {
-        c.arg[0] |= SC_SELECT | SC_CONNECT;
-    }
-    memcpy(c.d.asBytes, datain, datainlen);
-    clearCommandBuffer();
-    SendCommand(&c);
-
-    int len = smart_responseEx(dataout, true);
-
-    if (len < 0) {
-        return 1;
-    }
-
-    // retry
-    if (len > 1 && dataout[len - 2] == 0x6c && datainlen > 4) {
-        UsbCommand c2 = {CMD_SMART_RAW, {SC_RAW_T0, datainlen, 0}, {{0}}};
-        memcpy(c2.d.asBytes, datain, 5);
-
-        // transfer length via T=0
-        c2.d.asBytes[4] = dataout[len - 1];
-
-        clearCommandBuffer();
-        SendCommand(&c2);
-
-        len = smart_responseEx(dataout, true);
-    }
-
-    *dataoutlen = len;
-    return 0;
-}
-
-int CmdSmartUpgrade(const char *Cmd) {
+static int CmdSmartUpgrade(const char *Cmd) {
 
     PrintAndLogEx(WARNING, "WARNING - Sim module firmware upgrade.");
     PrintAndLogEx(WARNING, "A dangerous command, do wrong and you could brick the sim module");
@@ -763,7 +692,7 @@ int CmdSmartUpgrade(const char *Cmd) {
     return 0;
 }
 
-int CmdSmartInfo(const char *Cmd) {
+static int CmdSmartInfo(const char *Cmd) {
     uint8_t cmdp = 0;
     bool errors = false, silent = false;
 
@@ -838,7 +767,7 @@ int CmdSmartInfo(const char *Cmd) {
     return 0;
 }
 
-int CmdSmartReader(const char *Cmd) {
+static int CmdSmartReader(const char *Cmd) {
     uint8_t cmdp = 0;
     bool errors = false, silent = false;
 
@@ -881,7 +810,7 @@ int CmdSmartReader(const char *Cmd) {
     return 0;
 }
 
-int CmdSmartSetClock(const char *Cmd) {
+static int CmdSmartSetClock(const char *Cmd) {
     uint8_t cmdp = 0;
     bool errors = false;
     uint8_t clock1 = 0;
@@ -937,7 +866,7 @@ int CmdSmartSetClock(const char *Cmd) {
     return 0;
 }
 
-int CmdSmartList(const char *Cmd) {
+static int CmdSmartList(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdTraceList("7816");
     return 0;
@@ -1073,7 +1002,7 @@ static void smart_brute_options(bool decodeTLV) {
     free(buf);
 }
 
-int CmdSmartBruteforceSFI(const char *Cmd) {
+static int CmdSmartBruteforceSFI(const char *Cmd) {
 
     uint8_t cmdp = 0;
     bool errors = false, decodeTLV = false; //, useT0 = false;
@@ -1229,14 +1158,86 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
+    return 0;
+}
+
 int CmdSmartcard(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
+int ExchangeAPDUSC(uint8_t *datain, int datainlen, bool activateCard, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
+    *dataoutlen = 0;
+
+    if (activateCard)
+        smart_select(false, NULL);
+
+    PrintAndLogEx(DEBUG, "APDU SC");
+
+    UsbCommand c = {CMD_SMART_RAW, {SC_RAW_T0, datainlen, 0}, {{0}}};
+    if (activateCard) {
+        c.arg[0] |= SC_SELECT | SC_CONNECT;
+    }
+    memcpy(c.d.asBytes, datain, datainlen);
+    clearCommandBuffer();
+    SendCommand(&c);
+
+    int len = smart_responseEx(dataout, true);
+
+    if (len < 0) {
+        return 1;
+    }
+
+    // retry
+    if (len > 1 && dataout[len - 2] == 0x6c && datainlen > 4) {
+        UsbCommand c2 = {CMD_SMART_RAW, {SC_RAW_T0, datainlen, 0}, {{0}}};
+        memcpy(c2.d.asBytes, datain, 5);
+
+        // transfer length via T=0
+        c2.d.asBytes[4] = dataout[len - 1];
+
+        clearCommandBuffer();
+        SendCommand(&c2);
+
+        len = smart_responseEx(dataout, true);
+    }
+
+    *dataoutlen = len;
     return 0;
 }
+
+bool smart_select(bool silent, smart_card_atr_t *atr) {
+    if (atr)
+        memset(atr, 0, sizeof(smart_card_atr_t));
+
+    UsbCommand c = {CMD_SMART_ATR, {0, 0, 0}, {{0}}};
+    clearCommandBuffer();
+    SendCommand(&c);
+    UsbCommand resp;
+    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+        if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
+        return false;
+    }
+
+    uint8_t isok = resp.arg[0] & 0xFF;
+    if (!isok) {
+        if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
+        return false;
+    }
+
+    smart_card_atr_t card;
+    memcpy(&card, (smart_card_atr_t *)resp.d.asBytes, sizeof(smart_card_atr_t));
+
+    if (atr)
+        memcpy(atr, &card, sizeof(smart_card_atr_t));
+
+    if (!silent)
+        PrintAndLogEx(INFO, "ISO7816-3 ATR : %s", sprint_hex(card.atr, card.atr_len));
+
+    return true;
+}
+

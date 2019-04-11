@@ -220,7 +220,7 @@ static uint16_t calcBSDchecksum4(uint8_t *bytes, uint8_t len, uint32_t mask) {
 }
 
 // measuring LFSR maximum length
-int CmdAnalyseLfsr(const char *Cmd) {
+static int CmdAnalyseLfsr(const char *Cmd) {
 
     uint16_t start_state = 0;  /* Any nonzero start state will work. */
     uint16_t lfsr = start_state;
@@ -242,7 +242,7 @@ int CmdAnalyseLfsr(const char *Cmd) {
     }
     return 0;
 }
-int CmdAnalyseLCR(const char *Cmd) {
+static int CmdAnalyseLCR(const char *Cmd) {
     uint8_t data[50];
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_analyse_lcr();
@@ -263,7 +263,7 @@ int CmdAnalyseLCR(const char *Cmd) {
     PrintAndLogEx(NORMAL, "Target [%02X] requires final LRC XOR byte value: 0x%02X", data[len - 1], finalXor);
     return 0;
 }
-int CmdAnalyseCRC(const char *Cmd) {
+static int CmdAnalyseCRC(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_analyse_crc();
@@ -359,7 +359,7 @@ int CmdAnalyseCRC(const char *Cmd) {
     free(data);
     return 0;
 }
-int CmdAnalyseCHKSUM(const char *Cmd) {
+static int CmdAnalyseCHKSUM(const char *Cmd) {
 
     uint8_t data[50];
     uint8_t cmdp = 0;
@@ -425,13 +425,13 @@ int CmdAnalyseCHKSUM(const char *Cmd) {
     return 0;
 }
 
-int CmdAnalyseDates(const char *Cmd) {
+static int CmdAnalyseDates(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     // look for datestamps in a given array of bytes
     PrintAndLogEx(NORMAL, "To be implemented. Feel free to contribute!");
     return 0;
 }
-int CmdAnalyseTEASelfTest(const char *Cmd) {
+static int CmdAnalyseTEASelfTest(const char *Cmd) {
 
     uint8_t v[8], v_le[8];
     memset(v, 0x00, sizeof(v));
@@ -466,7 +466,7 @@ int CmdAnalyseTEASelfTest(const char *Cmd) {
     return 0;
 }
 
-char *pb(uint32_t b) {
+static char *pb(uint32_t b) {
     static char buf1[33] = {0};
     static char buf2[33] = {0};
     static char *s;
@@ -486,7 +486,7 @@ char *pb(uint32_t b) {
     return s;
 }
 
-int CmdAnalyseA(const char *Cmd) {
+static int CmdAnalyseA(const char *Cmd) {
 
     int hexlen = 0;
     uint8_t cmdp = 0;
@@ -852,7 +852,7 @@ int CmdAnalyseA(const char *Cmd) {
     return 0;
 }
 
-void generate4bNUID(uint8_t *uid, uint8_t *nuid) {
+static void generate4bNUID(uint8_t *uid, uint8_t *nuid) {
     uint16_t crc;
     uint8_t b1, b2;
 
@@ -866,7 +866,7 @@ void generate4bNUID(uint8_t *uid, uint8_t *nuid) {
     nuid[3] = crc & 0xFF;
 }
 
-int CmdAnalyseNuid(const char *Cmd) {
+static int CmdAnalyseNuid(const char *Cmd) {
     uint8_t nuid[4] = {0};
     uint8_t uid[7] = {0};
     int len = 0;
@@ -916,14 +916,14 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdAnalyse(const char *Cmd) {
-    clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
+int CmdAnalyse(const char *Cmd) {
+    clearCommandBuffer();
+    CmdsParse(CommandTable, Cmd);
     return 0;
 }

@@ -23,8 +23,7 @@
 #include "lfdemod.h"
 
 int CmdLFNEXWATCH(const char *Cmd);
-int CmdNexWatchDemod(const char *Cmd);
-int CmdNexWatchRead(const char *Cmd);
 
+int demodNexWatch(void);
 int detectNexWatch(uint8_t *dest, size_t *size, bool *invert);
 #endif

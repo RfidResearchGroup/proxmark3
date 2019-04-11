@@ -507,6 +507,89 @@ static int SanityOfflineCheck( bool useTraceBuffer ){
 }
 */
 
+static int CmdTraceLoad(const char *Cmd) {
+
+    FILE *f = NULL;
+    char filename[FILE_PATH_SIZE];
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) < 1 || cmdp == 'h') return usage_trace_load();
+
+    param_getstr(Cmd, 0, filename, sizeof(filename));
+
+    if ((f = fopen(filename, "rb")) == NULL) {
+        PrintAndLogEx(FAILED, "Could not open file %s", filename);
+        return 0;
+    }
+
+    // get filesize in order to malloc memory
+    fseek(f, 0, SEEK_END);
+    long fsize = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    if (fsize < 0) {
+        PrintAndLogEx(FAILED, "error, when getting filesize");
+        fclose(f);
+        return 3;
+    }
+    if (fsize < 4) {
+        PrintAndLogEx(FAILED, "error, file is too small");
+        fclose(f);
+        return 4;
+    }
+
+    if (trace)
+        free(trace);
+
+    trace = calloc(fsize, sizeof(uint8_t));
+    if (!trace) {
+        PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
+        fclose(f);
+        return 2;
+    }
+
+    size_t bytes_read = fread(trace, 1, fsize, f);
+    traceLen = bytes_read;
+    fclose(f);
+    PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = %d bytes) loaded from file %s", traceLen, filename);
+    return 0;
+}
+
+static int CmdTraceSave(const char *Cmd) {
+
+    if (traceLen == 0) {
+        PrintAndLogEx(WARNING, "trace is empty, nothing to save");
+        return 0;
+    }
+
+    char filename[FILE_PATH_SIZE];
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) < 1 || cmdp == 'h') return usage_trace_save();
+
+    param_getstr(Cmd, 0, filename, sizeof(filename));
+    saveFile(filename, "bin", trace, traceLen);
+    return 0;
+}
+
+static command_t CommandTable[] = {
+    {"help",    CmdHelp,          1, "This help"},
+    {"list",    CmdTraceList,     1, "List protocol data in trace buffer"},
+    {"load",    CmdTraceLoad,     1, "Load trace from file"},
+    {"save",    CmdTraceSave,     1, "Save trace buffer to file"},
+    {NULL, NULL, 0, NULL}
+};
+
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
+    return 0;
+}
+
+int CmdTrace(const char *Cmd) {
+    clearCommandBuffer();
+    CmdsParse(CommandTable, Cmd);
+    return 0;
+}
+
 int CmdTraceList(const char *Cmd) {
 
     clearCommandBuffer();
@@ -644,85 +727,3 @@ int CmdTraceList(const char *Cmd) {
     return 0;
 }
 
-int CmdTraceLoad(const char *Cmd) {
-
-    FILE *f = NULL;
-    char filename[FILE_PATH_SIZE];
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || cmdp == 'h') return usage_trace_load();
-
-    param_getstr(Cmd, 0, filename, sizeof(filename));
-
-    if ((f = fopen(filename, "rb")) == NULL) {
-        PrintAndLogEx(FAILED, "Could not open file %s", filename);
-        return 0;
-    }
-
-    // get filesize in order to malloc memory
-    fseek(f, 0, SEEK_END);
-    long fsize = ftell(f);
-    fseek(f, 0, SEEK_SET);
-
-    if (fsize < 0) {
-        PrintAndLogEx(FAILED, "error, when getting filesize");
-        fclose(f);
-        return 3;
-    }
-    if (fsize < 4) {
-        PrintAndLogEx(FAILED, "error, file is too small");
-        fclose(f);
-        return 4;
-    }
-
-    if (trace)
-        free(trace);
-
-    trace = calloc(fsize, sizeof(uint8_t));
-    if (!trace) {
-        PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
-        fclose(f);
-        return 2;
-    }
-
-    size_t bytes_read = fread(trace, 1, fsize, f);
-    traceLen = bytes_read;
-    fclose(f);
-    PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = %d bytes) loaded from file %s", traceLen, filename);
-    return 0;
-}
-
-int CmdTraceSave(const char *Cmd) {
-
-    if (traceLen == 0) {
-        PrintAndLogEx(WARNING, "trace is empty, nothing to save");
-        return 0;
-    }
-
-    char filename[FILE_PATH_SIZE];
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || cmdp == 'h') return usage_trace_save();
-
-    param_getstr(Cmd, 0, filename, sizeof(filename));
-    saveFile(filename, "bin", trace, traceLen);
-    return 0;
-}
-
-static command_t CommandTable[] = {
-    {"help",    CmdHelp,          1, "This help"},
-    {"list",    CmdTraceList,     1, "List protocol data in trace buffer"},
-    {"load",    CmdTraceLoad,     1, "Load trace from file"},
-    {"save",    CmdTraceSave,     1, "Save trace buffer to file"},
-    {NULL, NULL, 0, NULL}
-};
-
-int CmdTrace(const char *Cmd) {
-    clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
-    return 0;
-}
-
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
-    return 0;
-}

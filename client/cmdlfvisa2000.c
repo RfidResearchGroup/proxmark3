@@ -69,19 +69,6 @@ static uint8_t visa_parity(uint32_t id) {
     return par;
 }
 
-// by iceman
-// find Visa2000 preamble in already demoded data
-int detectVisa2k(uint8_t *dest, size_t *size) {
-    if (*size < 96) return -1; //make sure buffer has data
-    size_t startIdx = 0;
-    uint8_t preamble[] = {0, 1, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 0};
-    if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
-        return -2; //preamble not found
-    if (*size != 96) return -3; //wrong demoded size
-    //return start position
-    return (int)startIdx;
-}
-
 /**
 *
 * 56495332 00096ebd 00000077 —> tag id 618173
@@ -243,3 +230,21 @@ int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }
+
+// by iceman
+// find Visa2000 preamble in already demoded data
+int detectVisa2k(uint8_t *dest, size_t *size) {
+    if (*size < 96) return -1; //make sure buffer has data
+    size_t startIdx = 0;
+    uint8_t preamble[] = {0, 1, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 0};
+    if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
+        return -2; //preamble not found
+    if (*size != 96) return -3; //wrong demoded size
+    //return start position
+    return (int)startIdx;
+}
+
+int demodVisa2k(void) {
+    return CmdVisa2kDemod("");
+}
+

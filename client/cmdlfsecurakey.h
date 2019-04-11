@@ -25,10 +25,9 @@
 #include "parity.h"     // for wiegand parity test
 
 int CmdLFSecurakey(const char *Cmd);
-//int CmdSecurakeyClone(const char *Cmd);
-//int CmdSecurakeySim(const char *Cmd);
-int CmdSecurakeyRead(const char *Cmd);
-int CmdSecurakeyDemod(const char *Cmd);
+
+int demodSecurakey(void);
+int detectSecurakey(uint8_t *dest, size_t *size);
 
 #endif
 

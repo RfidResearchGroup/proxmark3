@@ -22,9 +22,8 @@
 #include "lfdemod.h"    // preamble test
 
 int CmdLFPac(const char *Cmd);
-int CmdPacRead(const char *Cmd);
-int CmdPacDemod(const char *Cmd);
 
+int demodPac(void);
 int detectPac(uint8_t *dest, size_t *size);
 #endif
 

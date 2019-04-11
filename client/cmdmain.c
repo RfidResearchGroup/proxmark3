@@ -11,9 +11,28 @@
 #include "cmdmain.h"
 
 static int CmdHelp(const char *Cmd);
-static int CmdQuit(const char *Cmd);
-static int CmdRev(const char *Cmd);
-static int CmdRem(const char *Cmd);
+
+static int CmdRem(const char *Cmd) {
+    char buf[22];
+
+    memset(buf, 0x00, sizeof(buf));
+    struct tm *curTime;
+    time_t now = time(0);
+    curTime = gmtime(&now);
+    strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", curTime);  // ISO8601
+    PrintAndLogEx(NORMAL, "%s remark: %s", buf, Cmd);
+    return 0;
+}
+
+static int CmdQuit(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    return 99;
+}
+
+static int CmdRev(const char *Cmd) {
+    CmdCrc(Cmd);
+    return 0;
+}
 
 static command_t CommandTable[] = {
     {"help",    CmdHelp,      1, "This help. Use '<command> help' for details of a particular command."},
@@ -38,35 +57,9 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-command_t *getTopLevelCommandTable() {
-    return CommandTable;
-}
-
-int CmdRem(const char *Cmd) {
-    char buf[22];
-
-    memset(buf, 0x00, sizeof(buf));
-    struct tm *curTime;
-    time_t now = time(0);
-    curTime = gmtime(&now);
-    strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", curTime);  // ISO8601
-    PrintAndLogEx(NORMAL, "%s remark: %s", buf, Cmd);
-    return 0;
-}
-
-int CmdHelp(const char *Cmd) {
+static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
-}
-
-int CmdQuit(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    return 99;
-}
-
-int CmdRev(const char *Cmd) {
-    CmdCrc(Cmd);
     return 0;
 }
 
@@ -77,3 +70,8 @@ int CmdRev(const char *Cmd) {
 int CommandReceived(char *Cmd) {
     return CmdsParse(CommandTable, Cmd);
 }
+
+command_t *getTopLevelCommandTable() {
+    return CommandTable;
+}
+

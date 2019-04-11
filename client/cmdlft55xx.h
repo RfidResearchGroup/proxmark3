@@ -139,17 +139,6 @@ void Set_t55xx_Config(t55xx_conf_block_t conf);
 
 int CmdLFT55XX(const char *Cmd);
 
-int CmdT55xxChk(const char *Cmd);
-int CmdT55xxBruteForce(const char *Cmd);
-int CmdT55xxSetConfig(const char *Cmd);
-int CmdT55xxReadBlock(const char *Cmd);
-int CmdT55xxWriteBlock(const char *Cmd);
-int CmdT55xxReadTrace(const char *Cmd);
-int CmdT55xxInfo(const char *Cmd);
-int CmdT55xxDetect(const char *Cmd);
-int CmdResetRead(const char *Cmd);
-int CmdT55xxWipe(const char *Cmd);
-
 char *GetPskCfStr(uint32_t id, bool q5);
 char *GetBitRateStr(uint32_t id, bool xmode);
 char *GetSaferStr(uint32_t id);

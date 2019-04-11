@@ -28,9 +28,6 @@
 #include "loclass/fileutils.h"  // for saveFile
 
 int CmdTrace(const char *Cmd);
-
 int CmdTraceList(const char *Cmd);
-int CmdTraceLoad(const char *Cmd);
-int CmdTraceSave(const char *Cmd);
 
 #endif

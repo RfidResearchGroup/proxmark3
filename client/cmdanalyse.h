@@ -27,12 +27,4 @@
 #include "util_posix.h"   // msclock
 
 int CmdAnalyse(const char *Cmd);
-int CmdAnalyseLCR(const char *Cmd);
-int CmdAnalyseCHKSUM(const char *Cmd);
-int CmdAnalyseDates(const char *Cmd);
-int CmdAnalyseCRC(const char *Cmd);
-int CmdAnalyseTEASelfTest(const char *Cmd);
-int CmdAnalyseLfsr(const char *Cmd);
-int CmdAnalyseHid(const char *Cmd);
-int CmdAnalyseNuid(const char *Cmd);
 #endif

@@ -22,13 +22,11 @@
 #include "lfdemod.h"    // parityTest
 
 int CmdLFPresco(const char *Cmd);
-int CmdPrescoRead(const char *Cmd);
-int CmdPrescoDemod(const char *Cmd);
-int CmdPrescoClone(const char *Cmd);
-int CmdPrescoSim(const char *Cmd);
 
+int demodPresco(void);
 int detectPresco(uint8_t *dest, size_t *size);
-int GetWiegandFromPresco(const char *Cmd, uint32_t *sitecode, uint32_t *usercode, uint32_t *fullcode, bool *Q5);
+int getPrescoBits(uint32_t fullcode, uint8_t *prescoBits);
+int getWiegandFromPresco(const char *Cmd, uint32_t *sitecode, uint32_t *usercode, uint32_t *fullcode, bool *Q5);
 
 #endif
 

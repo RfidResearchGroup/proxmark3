@@ -318,3 +318,8 @@ int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }
+
+int demodTI(void) {
+    return CmdTIDemod("");
+}
+

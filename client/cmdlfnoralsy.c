@@ -46,58 +46,6 @@ static uint8_t noralsy_chksum(uint8_t *bits, uint8_t len) {
         sum ^= bytebits_to_byte(bits + i, 4);
     return sum & 0x0F ;
 }
-int getnoralsyBits(uint32_t id, uint16_t year, uint8_t *bits) {
-    //preamp
-    num_to_bytebits(0xBB0214FF, 32, bits);  // --> Have seen 0xBB0214FF / 0xBB0314FF  UNKNOWN
-
-    //convert ID into BCD-format
-    id = DEC2BCD(id);
-    year = DEC2BCD(year);
-    year &= 0xFF;
-
-    uint16_t sub1 = (id & 0xFFF0000) >> 16;
-    uint8_t sub2 = (id & 0x000FF00) >> 8;
-    uint8_t sub3 = (id & 0x00000FF);
-
-    num_to_bytebits(sub1, 12, bits + 32);
-    num_to_bytebits(year, 8, bits + 44);
-    num_to_bytebits(0, 4, bits + 52); // --> UNKNOWN. Flag?
-
-    num_to_bytebits(sub2, 8, bits + 56);
-    num_to_bytebits(sub3, 8, bits + 64);
-
-    //chksum byte
-    uint8_t chksum = noralsy_chksum(bits + 32, 40);
-    num_to_bytebits(chksum, 4, bits + 72);
-    chksum = noralsy_chksum(bits, 76);
-    num_to_bytebits(chksum, 4, bits + 76);
-    return 1;
-}
-
-// by iceman
-// find Noralsy preamble in already demoded data
-static int detectNoralsy(uint8_t *dest, size_t *size) {
-    if (*size < 96) return -1; //make sure buffer has data
-    size_t startIdx = 0;
-    uint8_t preamble[] = {1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0};
-    if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
-        return -2; //preamble not found
-    if (*size != 96) return -3; //wrong demoded size
-    //return start position
-    return (int)startIdx;
-}
-/*
-*
-* 2520116 | BB0214FF2529900116360000 | 10111011 00000011 00010100 11111111 00100101 00101001 10010000 00000001 00010110 00110110 00000000 00000000
-*           aaa*aaaaiiiYY*iiiicc----                ****                   iiiiiiii iiiiYYYY YYYY**** iiiiiiii iiiiiiii cccccccc
-*
-* a = fixed value BB0*14FF
-* i = printed id, BCD-format
-* Y = year
-* c = checksum
-* * = unknown
-*
-**/
 
 //see ASKDemod for what args are accepted
 int CmdNoralsyDemod(const char *Cmd) {
@@ -276,4 +224,61 @@ int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
+}
+
+int getnoralsyBits(uint32_t id, uint16_t year, uint8_t *bits) {
+    //preamp
+    num_to_bytebits(0xBB0214FF, 32, bits);  // --> Have seen 0xBB0214FF / 0xBB0314FF  UNKNOWN
+
+    //convert ID into BCD-format
+    id = DEC2BCD(id);
+    year = DEC2BCD(year);
+    year &= 0xFF;
+
+    uint16_t sub1 = (id & 0xFFF0000) >> 16;
+    uint8_t sub2 = (id & 0x000FF00) >> 8;
+    uint8_t sub3 = (id & 0x00000FF);
+
+    num_to_bytebits(sub1, 12, bits + 32);
+    num_to_bytebits(year, 8, bits + 44);
+    num_to_bytebits(0, 4, bits + 52); // --> UNKNOWN. Flag?
+
+    num_to_bytebits(sub2, 8, bits + 56);
+    num_to_bytebits(sub3, 8, bits + 64);
+
+    //chksum byte
+    uint8_t chksum = noralsy_chksum(bits + 32, 40);
+    num_to_bytebits(chksum, 4, bits + 72);
+    chksum = noralsy_chksum(bits, 76);
+    num_to_bytebits(chksum, 4, bits + 76);
+    return 1;
+}
+
+// by iceman
+// find Noralsy preamble in already demoded data
+int detectNoralsy(uint8_t *dest, size_t *size) {
+    if (*size < 96) return -1; //make sure buffer has data
+    size_t startIdx = 0;
+    uint8_t preamble[] = {1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0};
+    if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
+        return -2; //preamble not found
+    if (*size != 96) return -3; //wrong demoded size
+    //return start position
+    return (int)startIdx;
+}
+/*
+*
+* 2520116 | BB0214FF2529900116360000 | 10111011 00000011 00010100 11111111 00100101 00101001 10010000 00000001 00010110 00110110 00000000 00000000
+*           aaa*aaaaiiiYY*iiiicc----                ****                   iiiiiiii iiiiYYYY YYYY**** iiiiiiii iiiiiiii cccccccc
+*
+* a = fixed value BB0*14FF
+* i = printed id, BCD-format
+* Y = year
+* c = checksum
+* * = unknown
+*
+**/
+
+int demodNoralsy(void) {
+    return CmdNoralsyDemod("");
 }

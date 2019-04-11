@@ -23,11 +23,9 @@
 #include "crc.h"
 
 int CmdLFPyramid(const char *Cmd);
-int CmdPyramidDemod(const char *Cmd);
-int CmdPyramidRead(const char *Cmd);
-int CmdPyramidClone(const char *Cmd);
-int CmdPyramidSim(const char *Cmd);
 
+int demodPyramid(void);
 int detectPyramid(uint8_t *dest, size_t *size, int *waveStartIdx);
+int getPyramidBits(uint32_t fc, uint32_t cn, uint8_t *pyramidBits);
 #endif
 

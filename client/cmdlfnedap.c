@@ -40,80 +40,8 @@ static int usage_lf_nedap_sim(void) {
     return 0;
 }
 
-// find nedap preamble in already demoded data
-int detectNedap(uint8_t *dest, size_t *size) {
-    //make sure buffer has data
-    if (*size < 128) return -3;
-
-    size_t startIdx = 0;
-    //uint8_t preamble[] = {1,1,1,1,1,1,1,1,1,0,0,0,1};
-    uint8_t preamble[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 0};
-    if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
-        return -4; //preamble not found
-    return (int) startIdx;
-}
-
-static int GetNedapBits(uint32_t cn, uint8_t *nedapBits) {
-
-    uint8_t pre[128];
-    memset(pre, 0x00, sizeof(pre));
-
-    // preamble  1111 1111 10 = 0xFF8
-    num_to_bytebits(0xFF8, 12, pre);
-
-    // fixed tagtype code?  0010 1101 = 0x2D
-    num_to_bytebits(0x2D, 8, pre + 10);
-
-    // 46 encrypted bits - UNKNOWN ALGO
-    //    -- 16 bits checksum. Should be 4x4 checksum,  based on UID and 2 constant values.
-    //    -- 30 bits undocumented?
-    //num_to_bytebits(cn, 46, pre+18);
-
-    //----from this part, the UID in clear text, with a 1bit ZERO as separator between bytes.
-    pre[64] = 0;
-    pre[73] = 0;
-    pre[82] = 0;
-    pre[91] = 0;
-    pre[100] = 0;
-    pre[109] = 0;
-    pre[118] = 0;
-
-    // cardnumber (uid)
-    num_to_bytebits((cn >>  0) & 0xFF, 8, pre + 65);
-    num_to_bytebits((cn >>  8) & 0xFF, 8, pre + 74);
-    num_to_bytebits((cn >> 16) & 0xFF, 8, pre + 83);
-
-    // two ?
-    num_to_bytebits(0, 8, pre + 92);
-    num_to_bytebits(0, 8, pre + 101);
-
-    // chksum
-    num_to_bytebits((0 >> 0) & 0xFF, 8, pre + 110);
-    num_to_bytebits((0 >> 8) & 0xFF, 8, pre + 119);
-
-
-    // add paritybits (bitsource, dest, sourcelen, paritylen, parityType (odd, even,)
-    addParity(pre, pre + 64, 64, 8, 1);
-    addParity(pre + 64, pre + 64, 64, 8, 1);
-
-    pre[63] = GetParity(DemodBuffer, EVEN, 63);
-    pre[127] = GetParity(DemodBuffer + 64, EVEN, 63);
-
-    memcpy(nedapBits, pre, 128);
-
-    // 1111111110001011010000010110100011001001000010110101001101011001000110011010010000000000100001110001001000000001000101011100111
-    return 1;
-}
-/*
- - UID: 001630
- - i: 4071
- - Checksum2 BE21
-*/
-//GetParity( uint8_t *bits, uint8_t type, int length)
-
 //NEDAP demod - ASK/Biphase (or Diphase),  RF/64 with preamble of 1111111110  (always a 128 bit data stream)
 //print NEDAP Prox ID, encoding, encrypted ID,
-
 int CmdLFNedapDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     //raw ask demod no start bit finding just get binary from wave
@@ -253,7 +181,7 @@ int CmdLFNedapClone(const char *Cmd) {
 
     cardnumber = (cn & 0x00FFFFFF);
 
-    if ( !GetNedapBits(cardnumber, bits)) {
+    if ( !getNedapBits(cardnumber, bits)) {
         PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
         return 1;
     }
@@ -312,7 +240,7 @@ int CmdLFNedapSim(const char *Cmd) {
     arg1 = clk << 8 | encoding;
     arg2 = invert << 8 | separator;
 
-    if (!GetNedapBits(cardnumber, bs)) {
+    if (!getNedapBits(cardnumber, bs)) {
         PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
         return 1;
     }
@@ -395,3 +323,79 @@ int CmdHelp(const char *Cmd) {
     CmdsHelp(CommandTable);
     return 0;
 }
+
+// find nedap preamble in already demoded data
+int detectNedap(uint8_t *dest, size_t *size) {
+    //make sure buffer has data
+    if (*size < 128) return -3;
+
+    size_t startIdx = 0;
+    //uint8_t preamble[] = {1,1,1,1,1,1,1,1,1,0,0,0,1};
+    uint8_t preamble[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 0};
+    if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
+        return -4; //preamble not found
+    return (int) startIdx;
+}
+
+int getNedapBits(uint32_t cn, uint8_t *nedapBits) {
+
+    uint8_t pre[128];
+    memset(pre, 0x00, sizeof(pre));
+
+    // preamble  1111 1111 10 = 0xFF8
+    num_to_bytebits(0xFF8, 12, pre);
+
+    // fixed tagtype code?  0010 1101 = 0x2D
+    num_to_bytebits(0x2D, 8, pre + 10);
+
+    // 46 encrypted bits - UNKNOWN ALGO
+    //    -- 16 bits checksum. Should be 4x4 checksum,  based on UID and 2 constant values.
+    //    -- 30 bits undocumented?
+    //num_to_bytebits(cn, 46, pre+18);
+
+    //----from this part, the UID in clear text, with a 1bit ZERO as separator between bytes.
+    pre[64] = 0;
+    pre[73] = 0;
+    pre[82] = 0;
+    pre[91] = 0;
+    pre[100] = 0;
+    pre[109] = 0;
+    pre[118] = 0;
+
+    // cardnumber (uid)
+    num_to_bytebits((cn >>  0) & 0xFF, 8, pre + 65);
+    num_to_bytebits((cn >>  8) & 0xFF, 8, pre + 74);
+    num_to_bytebits((cn >> 16) & 0xFF, 8, pre + 83);
+
+    // two ?
+    num_to_bytebits(0, 8, pre + 92);
+    num_to_bytebits(0, 8, pre + 101);
+
+    // chksum
+    num_to_bytebits((0 >> 0) & 0xFF, 8, pre + 110);
+    num_to_bytebits((0 >> 8) & 0xFF, 8, pre + 119);
+
+
+    // add paritybits (bitsource, dest, sourcelen, paritylen, parityType (odd, even,)
+    addParity(pre, pre + 64, 64, 8, 1);
+    addParity(pre + 64, pre + 64, 64, 8, 1);
+
+    pre[63] = GetParity(DemodBuffer, EVEN, 63);
+    pre[127] = GetParity(DemodBuffer + 64, EVEN, 63);
+
+    memcpy(nedapBits, pre, 128);
+
+    // 1111111110001011010000010110100011001001000010110101001101011001000110011010010000000000100001110001001000000001000101011100111
+    return 1;
+}
+/*
+ - UID: 001630
+ - i: 4071
+ - Checksum2 BE21
+*/
+//GetParity( uint8_t *bits, uint8_t type, int length)
+
+int demodNedap(void) {
+    return CmdLFNedapDemod("");
+}
+
