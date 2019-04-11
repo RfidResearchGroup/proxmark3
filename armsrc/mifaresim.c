@@ -370,12 +370,6 @@ static bool MifareSimInit(uint16_t flags, uint8_t *datain, tag_response_info_t *
     return true;
 }
 
-static bool HasValidCRC(uint8_t *receivedCmd, uint16_t receivedCmd_len) {
-    uint8_t CRC_byte_1, CRC_byte_2;
-    compute_crc(CRC_14443_A, receivedCmd, receivedCmd_len - 2, &CRC_byte_1, &CRC_byte_2);
-    return (receivedCmd[receivedCmd_len - 2] == CRC_byte_1 && receivedCmd[receivedCmd_len - 1] == CRC_byte_2);
-}
-
 
 /**
 *MIFARE 1K simulate.
@@ -772,7 +766,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
                     memcpy(receivedCmd_dec, receivedCmd, receivedCmd_len);
                 }
 
-                if (!HasValidCRC(receivedCmd_dec, receivedCmd_len)) { // all commands must have a valid CRC
+                if (!CheckCrc14A(receivedCmd_dec, receivedCmd_len)) { // all commands must have a valid CRC
                     EmSend4bit(encrypted_data ? mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA) : CARD_NACK_NA);
                     if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] All commands must have a valid CRC %02X (%d)", receivedCmd_dec, receivedCmd_len);
                     break;
@@ -1138,7 +1132,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
             case MFEMUL_WRITEBL2: {
                 if (receivedCmd_len == MAX_MIFARE_FRAME_SIZE) {
                     mf_crypto1_decryptEx(pcs, receivedCmd, receivedCmd_len, receivedCmd_dec);
-                    if (HasValidCRC(receivedCmd_dec, receivedCmd_len)) {
+                    if (CheckCrc14A(receivedCmd_dec, receivedCmd_len)) {
                         if (IsSectorTrailer(cardWRBL)) {
                             emlGetMem(response, cardWRBL, 1);
                             if (!IsAccessAllowed(cardWRBL, cardAUTHKEY, AC_KEYA_WRITE)) {
