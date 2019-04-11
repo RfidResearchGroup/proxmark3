@@ -108,7 +108,7 @@ static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, ui
     if (verbose)
         PrintAndLogEx(INFO, "Trying FC: %u; CN: %u", fc, cn);
 
-    calcWiegand(fmtlen, fc, cn, bits);
+    calcWiegand(fmtlen, fc, cn, bits, 0);
 
     uint64_t arg1 = bytebits_to_byte(bits, 32);
     uint64_t arg2 = bytebits_to_byte(bits + 32, 32);
@@ -171,6 +171,7 @@ int CmdHIDDemod(const char *Cmd) {
         uint32_t cc = 0;
         uint32_t fc = 0;
         uint32_t cardnum = 0;
+        uint8_t oem = 0;
         if (((hi >> 5) & 1) == 1) {//if bit 38 is set then < 37 bit format is used
             uint32_t lo2 = 0;
             lo2 = (((hi & 31) << 12) | (lo >> 20)); //get bits 21-37 to check for format len bit
@@ -199,6 +200,11 @@ int CmdHIDDemod(const char *Cmd) {
                 cardnum = (lo >> 1) & 0xFFFFF;
                 fc = ((hi & 1) << 11) | (lo >> 21);
             }
+            if(fmtLen==36){
+                oem = (lo >> 1) & 0x3;
+                cardnum = (lo >> 3) & 0xFFFF;
+                fc = (hi & 0x7) << 13 | ((lo >> 19) & 0xFFFF);
+            }
         } else { //if bit 38 is not set then 37 bit format is used
             fmtLen = 37;
             fc = 0;
@@ -211,7 +217,8 @@ int CmdHIDDemod(const char *Cmd) {
         if (fmtLen == 32 && (lo & 0x40000000)) { //if 32 bit and Kastle bit set
             PrintAndLogEx(SUCCESS, "HID Prox TAG (Kastle format) ID: %08x (%u) - Format Len: 32bit - CC: %u - FC: %u - Card: %u", lo, (lo >> 1) & 0xFFFF, cc, fc, cardnum);
         } else {
-            PrintAndLogEx(SUCCESS, "HID Prox TAG ID: %x%08x (%u) - Format Len: %ubit - FC: %u - Card: %u", hi, lo, (lo >> 1) & 0xFFFF, fmtLen, fc, cardnum);
+            PrintAndLogEx(NORMAL, "HID Prox TAG ID: %x%08x (%u) - Format Len: %ubit - OEM: %03u - FC: %u - Card: %u",
+                                  hi, lo, cardnum, fmtLen, oem, fc, cardnum);
         }
     }
 
@@ -398,6 +405,18 @@ static void calc34(uint16_t fc, uint32_t cardno, uint8_t *out) {
 // *lo = ((cardno & 0xFFFFF) << 1) | fc << 21;
 // *hi = (1 << 5) | ((fc >> 11) & 1);
 // }
+static void calc36(uint8_t oem, uint16_t fc, uint32_t cardno, uint8_t *out){
+    // FC     1  - 16  - 16 bit
+    // cardno 17 - 33  - 16 bit
+    // oem    34 - 35  -  2 bit
+    // Odd  Parity  0th bit  1-18
+    // Even Parity 36th bit 19-35
+    uint8_t wiegand[34];
+    num_to_bytebits(fc, 16, wiegand);
+    num_to_bytebits(cardno & 0xFFFF, 16, wiegand + 16);
+    num_to_bytebits(oem, 2, wiegand + 32);
+    wiegand_add_parity_swapped(out, wiegand, sizeof(wiegand));
+}
 static void calc37S(uint16_t fc, uint32_t cardno, uint8_t *out) {
     // FC 2 - 17   - 16 bit
     // cardno 18 - 36  - 19 bit
@@ -426,7 +445,7 @@ static void calc37H(uint64_t cardno, uint8_t *out) {
 // *hi = (cardno >> 31);
 // }
 
-void calcWiegand(uint8_t fmtlen, uint16_t fc, uint64_t cardno, uint8_t *bits) {
+void calcWiegand(uint8_t fmtlen, uint16_t fc, uint64_t cardno, uint8_t *bits, uint8_t oem) {
     uint32_t cn32 = (cardno & 0xFFFFFFFF);
     switch (fmtlen) {
         case 26:
@@ -437,6 +456,9 @@ void calcWiegand(uint8_t fmtlen, uint16_t fc, uint64_t cardno, uint8_t *bits) {
             calc34(fc, cn32, bits);
             break;
         // case 35 : calc35(fc, cn32, bits); break;
+        case 36:
+            calc36(oem, fc, cn32, bits);
+            break;
         case 37:
             calc37S(fc, cn32, bits);
             break;
@@ -464,13 +486,13 @@ int CmdHIDWiegand(const char *Cmd) {
     fc = param_get32ex(Cmd, 1, 0, 10);
     cardnum = param_get64ex(Cmd, 2, 0, 10);
 
-    uint8_t fmtlen[] = {26, 33, 34, 35, 37, 38, 40};
+    uint8_t fmtlen[] = {26, 33, 34, 35, 36, 37, 38, 40};
 
     PrintAndLogEx(NORMAL, "HID | OEM | FC   | CN      |  Wiegand  |  HID Formatted");
     PrintAndLogEx(NORMAL, "----+-----+------+---------+-----------+--------------------");
     for (uint8_t i = 0; i < sizeof(fmtlen); i++) {
         memset(bits, 0x00, sizeof(bits));
-        calcWiegand(fmtlen[i], fc, cardnum, bs);
+        calcWiegand(fmtlen[i], fc, cardnum, bs, oem);
         PrintAndLogEx(NORMAL, "ice:: %s \n", sprint_bin(bs, fmtlen[i]));
         uint64_t wiegand = (uint64_t)bytebits_to_byte(bs, 32) << 32 | bytebits_to_byte(bs + 32, 32);
 
