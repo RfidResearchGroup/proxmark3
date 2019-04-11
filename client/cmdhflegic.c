@@ -1301,7 +1301,7 @@ static command_t CommandTable[] =  {
     {"crc",     CmdLegicCalcCrc,  1, "Calculate Legic CRC over given bytes"},
     {"eload",   CmdLegicELoad,    1, "Load binary dump to emulator memory"},
     {"esave",   CmdLegicESave,    1, "Save emulator memory to binary file"},
-    {"list",    CmdLegicList,     1, "[Deprecated] List LEGIC history"},
+    {"list",    CmdLegicList,     1, "List LEGIC history"},
     {"wipe",    CmdLegicWipe,     1, "Wipe a LEGIC Prime tag"},
     {NULL, NULL, 0, NULL}
 };

@@ -3526,7 +3526,7 @@ int CmdHF14AMfList(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",        CmdHelp,                1, "This help"},
-    {"list",        CmdHF14AMfList,         0, "[Deprecated] List ISO 14443-a / Mifare history"},
+    {"list",        CmdHF14AMfList,         0, "List Mifare history"},
     {"darkside",    CmdHF14AMfDarkside,     0, "Darkside attack. read parity error messages."},
     {"nested",      CmdHF14AMfNested,       0, "Nested attack. Test nested authentication"},
     {"hardnested",  CmdHF14AMfNestedHard,   0, "Nested attack for hardened Mifare cards"},

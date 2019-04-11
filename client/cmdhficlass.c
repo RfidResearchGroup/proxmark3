@@ -2496,7 +2496,7 @@ static command_t CommandTable[] = {
     {"dump",        CmdHFiClassReader_Dump,     0, "[options..] Authenticate and Dump iClass tag's AA1"},
     {"eload",       CmdHFiClassELoad,           0, "[f <fname>] (experimental) Load data into iClass emulator memory"},
     {"encryptblk",  CmdHFiClassEncryptBlk,      1, "<BlockData> Encrypt given block data"},
-    {"list",        CmdHFiClassList,            0, "            (Deprecated) List iClass history"},
+    {"list",        CmdHFiClassList,            0, "            List iClass history"},
     {"loclass",     CmdHFiClass_loclass,        1, "[options..] Use loclass to perform bruteforce of reader attack dump"},
     {"lookup",      CmdHFiClassLookUp,          1, "[options..] Uses authentication trace to check for key in dictionary file"},
     {"managekeys",  CmdHFiClassManageKeys,      1, "[options..] Manage the keys to use with iClass"},
