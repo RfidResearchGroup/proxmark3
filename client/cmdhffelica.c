@@ -413,10 +413,9 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
 
 static void waitCmdFelica(uint8_t iSelect) {
     UsbCommand resp;
-    uint16_t len = 0;
 
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-        len = iSelect ? (resp.arg[1] & 0xffff) : (resp.arg[0]  & 0xffff);
+        uint16_t len = iSelect ? (resp.arg[1] & 0xffff) : (resp.arg[0]  & 0xffff);
         PrintAndLogEx(NORMAL, "received %i octets", len);
         if (!len)
             return;
