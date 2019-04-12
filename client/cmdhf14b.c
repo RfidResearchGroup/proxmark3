@@ -123,24 +123,20 @@ static int switch_off_field_14b(void) {
 
 static bool waitCmd14b(bool verbose) {
 
-    bool crc = false;
     uint8_t data[USB_CMD_DATA_SIZE] = {0x00};
-    uint8_t status = 0;
-    uint16_t len = 0;
     UsbCommand resp;
 
     if (WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
 
-        status = (resp.arg[0] & 0xFF);
-        if (status > 0) return false;
+        if ((resp.arg[0] & 0xFF) > 0) return false;
 
-        len = (resp.arg[1] & 0xFFFF);
+        uint16_t len = (resp.arg[1] & 0xFFFF);
 
         memcpy(data, resp.d.asBytes, len);
 
         if (verbose) {
             if (len >= 3) {
-                crc = check_crc(CRC_14443_B, data, len);
+                bool crc = check_crc(CRC_14443_B, data, len);
 
                 PrintAndLogEx(NORMAL, "[LEN %u] %s[%02X %02X] %s",
                               len,

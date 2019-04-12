@@ -1048,10 +1048,9 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
 
 static int waitCmd(uint8_t iSelect) {
     UsbCommand resp;
-    uint16_t len = 0;
 
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        len = (resp.arg[0] & 0xFFFF);
+        uint16_t len = (resp.arg[0] & 0xFFFF);
         if (iSelect) {
             len = (resp.arg[1] & 0xFFFF);
             if (len) {
