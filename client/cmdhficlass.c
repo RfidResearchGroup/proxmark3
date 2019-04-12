@@ -270,14 +270,14 @@ int xorbits_8(uint8_t val) {
     return res & 1;
 }
 
-int CmdHFiClassList(const char *Cmd) {
+static int CmdHFiClassList(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     //PrintAndLogEx(NORMAL, "Deprecated command, use 'hf list iclass' instead");
     CmdTraceList("iclass");
     return 0;
 }
 
-int CmdHFiClassSniff(const char *Cmd) {
+static int CmdHFiClassSniff(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_iclass_sniff();
     UsbCommand c = {CMD_SNIFF_ICLASS, {0, 0, 0}, {{0}}};
@@ -285,7 +285,7 @@ int CmdHFiClassSniff(const char *Cmd) {
     return 0;
 }
 
-int CmdHFiClassSim(const char *Cmd) {
+static int CmdHFiClassSim(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) < 1 || cmdp == 'h') return usage_hf_iclass_sim();
@@ -510,81 +510,14 @@ int CmdHFiClassSim(const char *Cmd) {
     return 0;
 }
 
-int HFiClassReader(const char *Cmd, bool loop, bool verbose) {
-    (void)Cmd; // Cmd is not used so far
-    bool tagFound = false;
-
-    uint32_t flags = FLAG_ICLASS_READER_CSN | FLAG_ICLASS_READER_CC |  FLAG_ICLASS_READER_AIA |
-                     FLAG_ICLASS_READER_CONF | FLAG_ICLASS_READER_ONLY_ONCE |
-                     FLAG_ICLASS_READER_ONE_TRY;
-
-    UsbCommand c = {CMD_READER_ICLASS, {flags, 0, 0}, {{0}}};
-    // loop in client not device - else on windows have a communication error
-    UsbCommand resp;
-    while (!ukbhit()) {
-
-        clearCommandBuffer();
-        SendCommand(&c);
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 4500)) {
-            uint8_t readStatus = resp.arg[0] & 0xff;
-            uint8_t *data = resp.d.asBytes;
-
-            if (verbose) PrintAndLogEx(NORMAL, "Readstatus:%02x", readStatus);
-            // no tag found or button pressed
-            if ((readStatus == 0 && !loop) || readStatus == 0xFF) {
-                // abort
-                if (verbose) {
-                    PrintAndLogEx(FAILED, "Quitting...");
-                    DropField();
-                    return 0;
-                }
-            }
-            if (readStatus & FLAG_ICLASS_READER_CSN) {
-                PrintAndLogEx(NORMAL, "   CSN: %s", sprint_hex(data, 8));
-                tagFound = true;
-            }
-            if (readStatus & FLAG_ICLASS_READER_CC) {
-                PrintAndLogEx(NORMAL, "    CC: %s", sprint_hex(data + 16, 8));
-            }
-            if (readStatus & FLAG_ICLASS_READER_CONF) {
-                printIclassDumpInfo(data);
-            }
-            if (readStatus & FLAG_ICLASS_READER_AIA) {
-                bool legacy = (memcmp((uint8_t *)(data + 8 * 5), "\xff\xff\xff\xff\xff\xff\xff\xff", 8) == 0);
-
-                bool se_enabled = (memcmp((uint8_t *)(data + 8 * 5), "\xff\xff\xff\x00\x06\xff\xff\xff", 8) == 0);
-
-                PrintAndLogEx(NORMAL, " App IA: %s", sprint_hex(data + 8 * 5, 8));
-                if (legacy)
-                    PrintAndLogEx(SUCCESS, "      : Possible iClass (legacy credential tag)");
-                else if (se_enabled)
-                    PrintAndLogEx(SUCCESS, "      : Possible iClass (SE credential tag)");
-                else
-                    PrintAndLogEx(WARNING, "      : Possible iClass (NOT legacy tag)");
-            }
-
-            if (tagFound && !loop) {
-                DropField();
-                return 1;
-            }
-        } else {
-            if (verbose)
-                PrintAndLogEx(WARNING, "command execute timeout");
-        }
-        if (!loop) break;
-    }
-    DropField();
-    return 0;
-}
-
-int CmdHFiClassReader(const char *Cmd) {
+static int CmdHFiClassReader(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_iclass_reader();
     bool findone = (cmdp == '1') ? false : true;
-    return HFiClassReader(Cmd, findone, true);
+    return readIclass(findone, true);
 }
 
-int CmdHFiClassReader_Replay(const char *Cmd) {
+static int CmdHFiClassReader_Replay(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) < 1 || cmdp == 'h') return usage_hf_iclass_replay();
@@ -612,7 +545,7 @@ int iclassEmlSetMem(uint8_t *data, int blockNum, int blocksCount) {
     return 0;
 }
 
-int CmdHFiClassELoad(const char *Cmd) {
+static int CmdHFiClassELoad(const char *Cmd) {
 
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) < 1 || ctmp == 'h') return usage_hf_iclass_eload();
@@ -704,7 +637,7 @@ static int readKeyfile(const char *filename, size_t len, uint8_t *buffer) {
     return 0;
 }
 
-int CmdHFiClassDecrypt(const char *Cmd) {
+static int CmdHFiClassDecrypt(const char *Cmd) {
 
     char opt = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) < 1 || opt == 'h') return usage_hf_iclass_decrypt();
@@ -808,7 +741,7 @@ static int iClassEncryptBlkData(uint8_t *blkData) {
     return 1;
 }
 
-int CmdHFiClassEncryptBlk(const char *Cmd) {
+static int CmdHFiClassEncryptBlk(const char *Cmd) {
     uint8_t blkData[8] = {0};
     char opt = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) < 1 || opt == 'h') return usage_hf_iclass_encrypt();
@@ -900,7 +833,7 @@ static bool select_and_auth(uint8_t *KEY, uint8_t *MAC, uint8_t *div_key, bool u
     return true;
 }
 
-int CmdHFiClassReader_Dump(const char *Cmd) {
+static int CmdHFiClassReader_Dump(const char *Cmd) {
 
     uint8_t MAC[4] = {0x00, 0x00, 0x00, 0x00};
     uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -1183,7 +1116,7 @@ static int WriteBlock(uint8_t blockno, uint8_t *bldata, uint8_t *KEY, bool use_c
     return isOK;
 }
 
-int CmdHFiClass_WriteBlock(const char *Cmd) {
+static int CmdHFiClass_WriteBlock(const char *Cmd) {
     uint8_t blockno = 0;
     uint8_t bldata[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     uint8_t KEY[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -1261,7 +1194,7 @@ int CmdHFiClass_WriteBlock(const char *Cmd) {
     return ans;
 }
 
-int CmdHFiClassCloneTag(const char *Cmd) {
+static int CmdHFiClassCloneTag(const char *Cmd) {
     char filename[FILE_PATH_SIZE] = { 0x00 };
     char tempStr[50] = {0};
     uint8_t KEY[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -1451,7 +1384,7 @@ static int ReadBlock(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite,
     return 1;
 }
 
-int CmdHFiClass_ReadBlock(const char *Cmd) {
+static int CmdHFiClass_ReadBlock(const char *Cmd) {
     uint8_t blockno = 0;
     uint8_t keyType = 0x88; //debit key
     uint8_t KEY[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -1523,7 +1456,7 @@ int CmdHFiClass_ReadBlock(const char *Cmd) {
     return ReadBlock(KEY, blockno, keyType, elite, rawkey, verbose, auth);
 }
 
-int CmdHFiClass_loclass(const char *Cmd) {
+static int CmdHFiClass_loclass(const char *Cmd) {
     char opt = tolower(param_getchar(Cmd, 0));
 
     if (strlen(Cmd) < 1 || opt == 'h')
@@ -1582,7 +1515,7 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
     PrintAndLogEx(NORMAL, "------+--+-------------------------+\n");
 }
 
-int CmdHFiClassReadTagFile(const char *Cmd) {
+static int CmdHFiClassReadTagFile(const char *Cmd) {
     int startblock = 0;
     int endblock = 0;
     char tempnum[5];
@@ -1674,7 +1607,7 @@ static void HFiClassCalcNewKey(uint8_t *CSN, uint8_t *OLDKEY, uint8_t *NEWKEY, u
     }
 }
 
-int CmdHFiClassCalcNewKey(const char *Cmd) {
+static int CmdHFiClassCalcNewKey(const char *Cmd) {
     uint8_t OLDKEY[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     uint8_t NEWKEY[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     uint8_t xor_div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -1821,7 +1754,7 @@ static int printKeys(void) {
     return 0;
 }
 
-int CmdHFiClassManageKeys(const char *Cmd) {
+static int CmdHFiClassManageKeys(const char *Cmd) {
     uint8_t keyNbr = 0;
     uint8_t dataLen = 0;
     uint8_t KEY[8] = {0};
@@ -1911,7 +1844,7 @@ int CmdHFiClassManageKeys(const char *Cmd) {
     return 0;
 }
 
-int CmdHFiClassCheckKeys(const char *Cmd) {
+static int CmdHFiClassCheckKeys(const char *Cmd) {
 
     // empty string
     if (strlen(Cmd) == 0) return usage_hf_iclass_chk();
@@ -2132,7 +2065,7 @@ static int cmp_uint32(const void *a, const void *b) {
 
 // this method tries to identify in which configuration mode a iClass / iClass SE reader is in.
 // Standard or Elite / HighSecurity mode.  It uses a default key dictionary list in order to work.
-int CmdHFiClassLookUp(const char *Cmd) {
+static int CmdHFiClassLookUp(const char *Cmd) {
 
     uint8_t CSN[8];
     uint8_t EPURSE[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -2455,7 +2388,7 @@ static void generate(uint8_t *data, uint8_t len) {
     free(pkey);
 }
 
-int CmdHFiClassPermuteKey(const char *Cmd) {
+static int CmdHFiClassPermuteKey(const char *Cmd) {
 
     uint8_t key[8] = {0};
     uint8_t key_std_format[8] = {0};
@@ -2511,14 +2444,81 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
+    return 0;
+}
+
 int CmdHFiClass(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
+int readIclass(bool loop, bool verbose) {
+    bool tagFound = false;
+
+    uint32_t flags = FLAG_ICLASS_READER_CSN | FLAG_ICLASS_READER_CC |  FLAG_ICLASS_READER_AIA |
+                     FLAG_ICLASS_READER_CONF | FLAG_ICLASS_READER_ONLY_ONCE |
+                     FLAG_ICLASS_READER_ONE_TRY;
+
+    UsbCommand c = {CMD_READER_ICLASS, {flags, 0, 0}, {{0}}};
+    // loop in client not device - else on windows have a communication error
+    UsbCommand resp;
+    while (!ukbhit()) {
+
+        clearCommandBuffer();
+        SendCommand(&c);
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 4500)) {
+            uint8_t readStatus = resp.arg[0] & 0xff;
+            uint8_t *data = resp.d.asBytes;
+
+            if (verbose) PrintAndLogEx(NORMAL, "Readstatus:%02x", readStatus);
+            // no tag found or button pressed
+            if ((readStatus == 0 && !loop) || readStatus == 0xFF) {
+                // abort
+                if (verbose) {
+                    PrintAndLogEx(FAILED, "Quitting...");
+                    DropField();
+                    return 0;
+                }
+            }
+            if (readStatus & FLAG_ICLASS_READER_CSN) {
+                PrintAndLogEx(NORMAL, "   CSN: %s", sprint_hex(data, 8));
+                tagFound = true;
+            }
+            if (readStatus & FLAG_ICLASS_READER_CC) {
+                PrintAndLogEx(NORMAL, "    CC: %s", sprint_hex(data + 16, 8));
+            }
+            if (readStatus & FLAG_ICLASS_READER_CONF) {
+                printIclassDumpInfo(data);
+            }
+            if (readStatus & FLAG_ICLASS_READER_AIA) {
+                bool legacy = (memcmp((uint8_t *)(data + 8 * 5), "\xff\xff\xff\xff\xff\xff\xff\xff", 8) == 0);
+
+                bool se_enabled = (memcmp((uint8_t *)(data + 8 * 5), "\xff\xff\xff\x00\x06\xff\xff\xff", 8) == 0);
+
+                PrintAndLogEx(NORMAL, " App IA: %s", sprint_hex(data + 8 * 5, 8));
+                if (legacy)
+                    PrintAndLogEx(SUCCESS, "      : Possible iClass (legacy credential tag)");
+                else if (se_enabled)
+                    PrintAndLogEx(SUCCESS, "      : Possible iClass (SE credential tag)");
+                else
+                    PrintAndLogEx(WARNING, "      : Possible iClass (NOT legacy tag)");
+            }
+
+            if (tagFound && !loop) {
+                DropField();
+                return 1;
+            }
+        } else {
+            if (verbose)
+                PrintAndLogEx(WARNING, "command execute timeout");
+        }
+        if (!loop) break;
+    }
+    DropField();
     return 0;
 }
+

@@ -26,16 +26,6 @@
 #include "mifare.h"     // felica_card_select_t struct
 
 int CmdHFFelica(const char *Cmd);
-int CmdHFFelicaList(const char *Cmd);
-int CmdHFFelicaReader(const char *Cmd);
-int CmdHFFelicaSim(const char *Cmd);
-int CmdHFFelicaSniff(const char *Cmd);
-int CmdHFFelicaCmdRaw(const char *Cmd);
 
-void waitCmdFelica(uint8_t iSelect);
-
-//temp
-int CmdHFFelicaSimLite(const char *Cmd);
-int CmdHFFelicaDumpLite(const char *Cmd);
-
+int readFelicaUid(bool verbose);
 #endif

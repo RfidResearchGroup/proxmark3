@@ -43,36 +43,30 @@ int CmdHFSearch(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Checking for known tags...\n");
 
-    int ans = CmdHF14AInfo("s");
-    if (ans > 0) {
+    if (infoHF14A(false, false) > 0) {
         PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-A tag") " found\n");
-        return ans;
+        return 1;
     }
-    ans = HF15Reader("", false);
-    if (ans) {
+    if (readHF15Uid(false) == 1) {
         PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO15693 tag") " found\n");
-        return ans;
+        return 1;
     }
-    ans = HFLegicReader("", false);
-    if (ans == 0) {
+    if (readLegicUid(false) == 0) {
         PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("LEGIC tag") " found\n");
         return 1;
     }
-    ans = CmdHFTopazReader("s");
-    if (ans == 0) {
+    if (readTopazUid() == 0) {
         PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Topaz tag") " found\n");
         return 1;
     }
     // 14b and iclass is the longest test (put last)
-    ans = HF14BReader(false); //CmdHF14BReader("s");
-    if (ans) {
+    if (readHF14B(false) == 1) {
         PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-B tag") " found\n");
-        return ans;
+        return 1;
     }
-    ans = HFiClassReader("", false, false);
-    if (ans) {
+    if (readIclass(false, false) == 1) {
         PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("iClass tag / PicoPass tag") " found\n");
-        return ans;
+        return 1;
     }
 
     /*

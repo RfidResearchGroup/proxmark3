@@ -26,21 +26,7 @@
 
 int CmdHFLegic(const char *Cmd);
 
-int CmdLegicInfo(const char *Cmd);
-int CmdLegicRdmem(const char *Cmd);
-int CmdLegicLoad(const char *Cmd);
-int CmdLegicRfSim(const char *Cmd);
-int CmdLegicRfWrite(const char *Cmd);
-int CmdLegicCalcCrc(const char *Cmd);
-int CmdLegicDump(const char *Cmd);
-int CmdLegicRestore(const char *Cmd);
-int CmdLegicReader(const char *Cmd);
-int CmdLegicELoad(const char *Cmd);
-int CmdLegicESave(const char *Cmd);
-int CmdLegicList(const char *Cmd);
-int CmdLegicWipe(const char *Cmd);
-
-int HFLegicReader(const char *Cmd, bool verbose);
+int readLegicUid(bool verbose);
 int legic_print_type(uint32_t tagtype, uint8_t spaces);
 int legic_get_type(legic_card_select_t *card);
 void legic_chk_iv(uint32_t *iv);

@@ -30,22 +30,7 @@
 #include "protocols.h"  // definitions of ISO14B protocol
 
 int CmdHF14B(const char *Cmd);
-int CmdHF14BList(const char *Cmd);
-int CmdHF14BInfo(const char *Cmd);
-int CmdHF14BSim(const char *Cmd);
-int CmdHF14BSniff(const char *Cmd);
-int CmdHF14BWrite(const char *cmd);
-int CmdHF14BReader(const char *Cmd);
 
-int CmdHF14BDump(const char *Cmd);
-
-bool HF14BInfo(bool verbose);
-bool HF14BReader(bool verbose);
-int CmdHF14BCmdRaw(const char *Cmd);
-
-// SRi  ST Microelectronics read/write
-int CmdHF14BReadSri(const char *Cmd);
-int CmdHF14BWriteSri(const char *Cmd);
-
-bool waitCmd14b(bool verbose);
+int infoHF14B(bool verbose);
+int readHF14B(bool verbose);
 #endif

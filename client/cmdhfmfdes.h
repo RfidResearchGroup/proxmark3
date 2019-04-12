@@ -25,16 +25,11 @@
 #include "mbedtls/des.h"
 
 int CmdHFMFDes(const char *Cmd);
-int CmdHF14ADesAuth(const char *Cmd);
-int CmdHF14ADesRb(const char *Cmd);
-int CmdHF14ADesWb(const char *Cmd);
-int CmdHF14ADesInfo(const char *Cmd);
-int CmdHF14ADesEnumApplications(const char *Cmd);
 
-char *GetCardSizeStr(uint8_t fsize);
-char *GetProtocolStr(uint8_t id);
-char *GetVersionStr(uint8_t major, uint8_t minor);
-void GetKeySettings(uint8_t *aid);
+char *getCardSizeStr(uint8_t fsize);
+char *getProtocolStr(uint8_t id);
+char *getVersionStr(uint8_t major, uint8_t minor);
+void getKeySettings(uint8_t *aid);
 
 // Command options for Desfire behavior.
 enum  {

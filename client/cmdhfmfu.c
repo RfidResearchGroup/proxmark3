@@ -1117,7 +1117,7 @@ uint32_t GetHF14AMfU_Type(void) {
 //
 //  extended tag information
 //
-int CmdHF14AMfUInfo(const char *Cmd) {
+static int CmdHF14AMfUInfo(const char *Cmd) {
 
     uint8_t authlim = 0xff;
     uint8_t data[16] = {0x00};
@@ -1223,7 +1223,7 @@ int CmdHF14AMfUInfo(const char *Cmd) {
             // if we called info with key, just return
             if (hasAuthKey) return 1;
 
-            // also try to diversify default keys..  look into CmdHF14AMfuGenDiverseKeys
+            // also try to diversify default keys..  look into CmdHF14AMfGenDiverseKeys
             PrintAndLogEx(INFO, "Trying some default 3des keys");
             for (uint8_t i = 0; i < KEYS_3DES_COUNT; ++i) {
                 key = default_3des_keys[i];
@@ -1380,7 +1380,7 @@ out:
 //
 //  Write Single Block
 //
-int CmdHF14AMfUWrBl(const char *Cmd) {
+static int CmdHF14AMfUWrBl(const char *Cmd) {
 
     int blockNo = -1;
     bool errors = false;
@@ -1501,7 +1501,7 @@ int CmdHF14AMfUWrBl(const char *Cmd) {
 //
 //  Read Single Block
 //
-int CmdHF14AMfURdBl(const char *Cmd) {
+static int CmdHF14AMfURdBl(const char *Cmd) {
 
     int blockNo = -1;
     bool errors = false;
@@ -1759,7 +1759,7 @@ void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage) {
 //
 //  Mifare Ultralight / Ultralight-C / Ultralight-EV1
 //  Read and Dump Card Contents,  using auto detection of tag size.
-int CmdHF14AMfUDump(const char *Cmd) {
+static int CmdHF14AMfUDump(const char *Cmd) {
 
     uint8_t fileNameLen = 0;
     char filename[FILE_PATH_SIZE] = {0x00};
@@ -1995,7 +1995,7 @@ static void wait4response(uint8_t b) {
 //
 //  Restore dump file onto tag
 //
-int CmdHF14AMfURestore(const char *Cmd) {
+static int CmdHF14AMfURestore(const char *Cmd) {
 
     char tempStr[50] = {0};
     char filename[FILE_PATH_SIZE] = {0};
@@ -2227,7 +2227,7 @@ int CmdHF14AMfURestore(const char *Cmd) {
 //
 //  Load emulator with dump file
 //
-int CmdHF14AMfUeLoad(const char *Cmd) {
+static int CmdHF14AMfUeLoad(const char *Cmd) {
     char c = tolower(param_getchar(Cmd, 0));
     if (c == 'h' || c == 0x00) return usage_hf_mfu_eload();
     return CmdHF14AMfELoad(Cmd);
@@ -2235,7 +2235,7 @@ int CmdHF14AMfUeLoad(const char *Cmd) {
 //
 //  Simulate tag
 //
-int CmdHF14AMfUSim(const char *Cmd) {
+static int CmdHF14AMfUSim(const char *Cmd) {
     char c = tolower(param_getchar(Cmd, 0));
     if (c == 'h' || c == 0x00) return usage_hf_mfu_sim();
     return CmdHF14ASim(Cmd);
@@ -2248,7 +2248,7 @@ int CmdHF14AMfUSim(const char *Cmd) {
 //
 // Ultralight C Authentication Demo {currently uses hard-coded key}
 //
-int CmdHF14AMfucAuth(const char *Cmd) {
+static int CmdHF14AMfUCAuth(const char *Cmd) {
 
     uint8_t keyNo = 3;
     bool errors = false;
@@ -2280,7 +2280,7 @@ A test function to validate that the polarssl-function works the same
 was as the openssl-implementation.
 Commented out, since it requires openssl
 
-int CmdTestDES(const char * cmd)
+static int CmdTestDES(const char * cmd)
 {
     uint8_t key[16] = {0x00};
 
@@ -2375,7 +2375,7 @@ int CmdTestDES(const char * cmd)
 //
 // Mifare Ultralight C - Set password
 //
-int CmdHF14AMfucSetPwd(const char *Cmd) {
+static int CmdHF14AMfUCSetPwd(const char *Cmd) {
 
     uint8_t pwd[16] = {0x00};
     char cmdp = tolower(param_getchar(Cmd, 0));
@@ -2410,7 +2410,7 @@ int CmdHF14AMfucSetPwd(const char *Cmd) {
 //
 // Magic UL / UL-C tags  - Set UID
 //
-int CmdHF14AMfucSetUid(const char *Cmd) {
+static int CmdHF14AMfUCSetUid(const char *Cmd) {
 
     UsbCommand c = {CMD_MIFAREU_READBL, {0, 0, 0}, {{0}}};
     UsbCommand resp;
@@ -2479,7 +2479,7 @@ int CmdHF14AMfucSetUid(const char *Cmd) {
     return 0;
 }
 
-int CmdHF14AMfuGenDiverseKeys(const char *Cmd) {
+static int CmdHF14AMfUGenDiverseKeys(const char *Cmd) {
 
     uint8_t uid[4];
     char cmdp = tolower(param_getchar(Cmd, 0));
@@ -2592,7 +2592,7 @@ int CmdHF14AMfuGenDiverseKeys(const char *Cmd) {
     return 0;
 }
 
-int CmdHF14AMfuPwdGen(const char *Cmd) {
+static int CmdHF14AMfUPwdGen(const char *Cmd) {
 
     uint8_t uid[7] = {0x00};
     char cmdp = tolower(param_getchar(Cmd, 0));
@@ -2654,14 +2654,20 @@ static command_t CommandTable[] = {
     {"eload",   CmdHF14AMfUeLoad,   0, "load Ultralight .eml dump file into emulator memory"},
     {"rdbl",    CmdHF14AMfURdBl,    0, "Read block"},
     {"wrbl",    CmdHF14AMfUWrBl,    0, "Write block"},
-    {"cauth",   CmdHF14AMfucAuth,   0, "Authentication    - Ultralight C"},
-    {"setpwd",  CmdHF14AMfucSetPwd, 0, "Set 3des password - Ultralight-C"},
-    {"setuid",  CmdHF14AMfucSetUid, 0, "Set UID - MAGIC tags only"},
+    {"cauth",   CmdHF14AMfUCAuth,   0, "Authentication    - Ultralight C"},
+    {"setpwd",  CmdHF14AMfUCSetPwd, 0, "Set 3des password - Ultralight-C"},
+    {"setuid",  CmdHF14AMfUCSetUid, 0, "Set UID - MAGIC tags only"},
     {"sim",     CmdHF14AMfUSim,     0, "Simulate Ultralight from emulator memory"},
-    {"gen",     CmdHF14AMfuGenDiverseKeys, 1, "Generate 3des mifare diversified keys"},
-    {"pwdgen",  CmdHF14AMfuPwdGen,  1, "Generate pwd from known algos"},
+    {"gen",     CmdHF14AMfUGenDiverseKeys, 1, "Generate 3des mifare diversified keys"},
+    {"pwdgen",  CmdHF14AMfUPwdGen,  1, "Generate pwd from known algos"},
     {NULL, NULL, 0, NULL}
 };
+
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
+    return 0;
+}
 
 int CmdHFMFUltra(const char *Cmd) {
     clearCommandBuffer();
@@ -2669,8 +2675,3 @@ int CmdHFMFUltra(const char *Cmd) {
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
-    return 0;
-}

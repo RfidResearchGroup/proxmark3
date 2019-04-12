@@ -12,7 +12,7 @@
 static int CmdHelp(const char *Cmd);
 
 // Perform (part of) the PACE protocol
-int CmdHFEPACollectPACENonces(const char *Cmd) {
+static int CmdHFEPACollectPACENonces(const char *Cmd) {
     // requested nonce size
     uint32_t m = 0;
     // requested number of Nonces
@@ -59,7 +59,7 @@ int CmdHFEPACollectPACENonces(const char *Cmd) {
 }
 
 // perform the PACE protocol by replaying APDUs
-int CmdHFEPAPACEReplay(const char *Cmd) {
+static int CmdHFEPAPACEReplay(const char *Cmd) {
     // the 4 APDUs which are replayed + their lengths
     uint8_t msesa_apdu[41] = {0}, gn_apdu[8] = {0}, map_apdu[75] = {0};
     uint8_t pka_apdu[75] = {0}, ma_apdu[18] = {0}, apdu_lengths[5] = {0};
@@ -170,7 +170,7 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdHelp(const char *Cmd) {
+static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;

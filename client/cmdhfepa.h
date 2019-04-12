@@ -26,7 +26,5 @@
 
 
 int CmdHFEPA(const char *Cmd);
-int CmdHFEPACollectPACENonces(const char *Cmd);
-int CmdHFEPAPACEReplay(const char *Cmd);
 
 #endif // CMDHFEPA_H__

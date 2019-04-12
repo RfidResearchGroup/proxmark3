@@ -19,7 +19,7 @@ uint8_t key_picc_data[16] = { 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x
 
 static int CmdHelp(const char *Cmd);
 
-int CmdHF14ADesWb(const char *Cmd) {
+static int CmdHF14ADesWb(const char *Cmd) {
     /*  uint8_t blockNo = 0;
         uint8_t keyType = 0;
         uint8_t key[6] = {0, 0, 0, 0, 0, 0};
@@ -67,7 +67,7 @@ int CmdHF14ADesWb(const char *Cmd) {
     return 0;
 }
 
-int CmdHF14ADesRb(const char *Cmd) {
+static int CmdHF14ADesRb(const char *Cmd) {
     // uint8_t blockNo = 0;
     // uint8_t keyType = 0;
     // uint8_t key[6] = {0, 0, 0, 0, 0, 0};
@@ -114,7 +114,7 @@ int CmdHF14ADesRb(const char *Cmd) {
     return 0;
 }
 
-int CmdHF14ADesInfo(const char *Cmd) {
+static int CmdHF14ADesInfo(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
 
     UsbCommand c = {CMD_MIFARE_DESFIRE_INFO, {0, 0, 0}, {{0}}};
@@ -152,21 +152,21 @@ int CmdHF14ADesInfo(const char *Cmd) {
     PrintAndLogEx(NORMAL, "      Vendor Id      : %s", getTagInfo(resp.d.asBytes[7]));
     PrintAndLogEx(NORMAL, "      Type           : 0x%02X", resp.d.asBytes[8]);
     PrintAndLogEx(NORMAL, "      Subtype        : 0x%02X", resp.d.asBytes[9]);
-    PrintAndLogEx(NORMAL, "      Version        : %s", GetVersionStr(resp.d.asBytes[10], resp.d.asBytes[11]));
-    PrintAndLogEx(NORMAL, "      Storage size   : %s", GetCardSizeStr(resp.d.asBytes[12]));
-    PrintAndLogEx(NORMAL, "      Protocol       : %s", GetProtocolStr(resp.d.asBytes[13]));
+    PrintAndLogEx(NORMAL, "      Version        : %s", getVersionStr(resp.d.asBytes[10], resp.d.asBytes[11]));
+    PrintAndLogEx(NORMAL, "      Storage size   : %s", getCardSizeStr(resp.d.asBytes[12]));
+    PrintAndLogEx(NORMAL, "      Protocol       : %s", getProtocolStr(resp.d.asBytes[13]));
     PrintAndLogEx(NORMAL, "  -----------------------------------------------------------");
     PrintAndLogEx(NORMAL, "  Software Information");
     PrintAndLogEx(NORMAL, "      Vendor Id      : %s", getTagInfo(resp.d.asBytes[14]));
     PrintAndLogEx(NORMAL, "      Type           : 0x%02X", resp.d.asBytes[15]);
     PrintAndLogEx(NORMAL, "      Subtype        : 0x%02X", resp.d.asBytes[16]);
     PrintAndLogEx(NORMAL, "      Version        : %d.%d", resp.d.asBytes[17], resp.d.asBytes[18]);
-    PrintAndLogEx(NORMAL, "      storage size   : %s", GetCardSizeStr(resp.d.asBytes[19]));
-    PrintAndLogEx(NORMAL, "      Protocol       : %s", GetProtocolStr(resp.d.asBytes[20]));
+    PrintAndLogEx(NORMAL, "      storage size   : %s", getCardSizeStr(resp.d.asBytes[19]));
+    PrintAndLogEx(NORMAL, "      Protocol       : %s", getProtocolStr(resp.d.asBytes[20]));
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
 
     // Master Key settings
-    GetKeySettings(NULL);
+    getKeySettings(NULL);
 
     // Free memory on card
     c.cmd = CMD_MIFARE_DESFIRE;
@@ -207,7 +207,7 @@ int CmdHF14ADesInfo(const char *Cmd) {
     and set to '1' if the storage size is between 2^n and 2^(n+1).
     For this version of DESFire the 7 MSBits are set to 0x0C (2^12 = 4096) and the LSBit is '0'.
 */
-char *GetCardSizeStr(uint8_t fsize) {
+char *getCardSizeStr(uint8_t fsize) {
 
     static char buf[30] = {0x00};
     char *retStr = buf;
@@ -223,7 +223,7 @@ char *GetCardSizeStr(uint8_t fsize) {
     return buf;
 }
 
-char *GetProtocolStr(uint8_t id) {
+char *getProtocolStr(uint8_t id) {
 
     static char buf[30] = {0x00};
     char *retStr = buf;
@@ -235,7 +235,7 @@ char *GetProtocolStr(uint8_t id) {
     return buf;
 }
 
-char *GetVersionStr(uint8_t major, uint8_t minor) {
+char *getVersionStr(uint8_t major, uint8_t minor) {
 
     static char buf[30] = {0x00};
     char *retStr = buf;
@@ -251,7 +251,7 @@ char *GetVersionStr(uint8_t major, uint8_t minor) {
     return buf;
 }
 
-void GetKeySettings(uint8_t *aid) {
+void getKeySettings(uint8_t *aid) {
 
     char messStr[512] = {0x00};
     const char *str = messStr;
@@ -421,7 +421,7 @@ void GetKeySettings(uint8_t *aid) {
     }
 }
 
-int CmdHF14ADesEnumApplications(const char *Cmd) {
+static int CmdHF14ADesEnumApplications(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
 
     uint8_t isOK = 0x00;
@@ -459,7 +459,7 @@ int CmdHF14ADesEnumApplications(const char *Cmd) {
         aid[0] = resp.d.asBytes[i];
         aid[1] = resp.d.asBytes[i + 1];
         aid[2] = resp.d.asBytes[i + 2];
-        GetKeySettings(aid);
+        getKeySettings(aid);
 
         // Select Application
         c.arg[CMDPOS] = INIT;
@@ -533,7 +533,7 @@ int CmdHF14ADesEnumApplications(const char *Cmd) {
 // MIAFRE DesFire Authentication
 //
 #define BUFSIZE 256
-int CmdHF14ADesAuth(const char *Cmd) {
+static int CmdHF14ADesAuth(const char *Cmd) {
 
     // NR  DESC     KEYLENGHT
     // ------------------------
@@ -651,17 +651,16 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
+    return 0;
+}
+
 int CmdHFMFDes(const char *Cmd) {
     // flush
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
-
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
-    return 0;
-}
-
 

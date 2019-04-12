@@ -42,7 +42,7 @@ static int usage_lf_nedap_sim(void) {
 
 //NEDAP demod - ASK/Biphase (or Diphase),  RF/64 with preamble of 1111111110  (always a 128 bit data stream)
 //print NEDAP Prox ID, encoding, encrypted ID,
-int CmdLFNedapDemod(const char *Cmd) {
+static int CmdLFNedapDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     //raw ask demod no start bit finding just get binary from wave
     if (!ASKbiphaseDemod("0 64 1 0", false)) {
@@ -162,12 +162,12 @@ lf t55xx wr b 4 d 4c0003ff
 
 */
 
-int CmdLFNedapRead(const char *Cmd) {
+static int CmdLFNedapRead(const char *Cmd) {
     lf_read(true, 12000);
     return CmdLFNedapDemod(Cmd);
 }
 /*
-int CmdLFNedapClone(const char *Cmd) {
+static int CmdLFNedapClone(const char *Cmd) {
 
     char cmdp = param_getchar(Cmd, 0);
     if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_nedap_clone();
@@ -219,7 +219,7 @@ int CmdLFNedapClone(const char *Cmd) {
 }
 */
 
-int CmdLFNedapSim(const char *Cmd) {
+static int CmdLFNedapSim(const char *Cmd) {
 
     uint32_t cardnumber = 0, cn = 0;
 
@@ -255,7 +255,7 @@ int CmdLFNedapSim(const char *Cmd) {
     return 0;
 }
 
-int CmdLFNedapChk(const char *Cmd) {
+static int CmdLFNedapChk(const char *Cmd) {
     //301600714021BE
     uint8_t data[256] = { 0x30, 0x16, 0x00, 0x71, 0x40, 0x21, 0xBE};
     int len = 0;
@@ -312,15 +312,15 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFNedap(const char *Cmd) {
-    clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
+int CmdLFNedap(const char *Cmd) {
+    clearCommandBuffer();
+    CmdsParse(CommandTable, Cmd);
     return 0;
 }
 

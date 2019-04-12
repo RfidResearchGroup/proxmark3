@@ -121,13 +121,52 @@ static int switch_off_field_14b(void) {
     return 0;
 }
 
-int CmdHF14BList(const char *Cmd) {
+static bool waitCmd14b(bool verbose) {
+
+    bool crc = false;
+    uint8_t data[USB_CMD_DATA_SIZE] = {0x00};
+    uint8_t status = 0;
+    uint16_t len = 0;
+    UsbCommand resp;
+
+    if (WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
+
+        status = (resp.arg[0] & 0xFF);
+        if (status > 0) return false;
+
+        len = (resp.arg[1] & 0xFFFF);
+
+        memcpy(data, resp.d.asBytes, len);
+
+        if (verbose) {
+            if (len >= 3) {
+                crc = check_crc(CRC_14443_B, data, len);
+
+                PrintAndLogEx(NORMAL, "[LEN %u] %s[%02X %02X] %s",
+                              len,
+                              sprint_hex(data, len - 2),
+                              data[len - 2],
+                              data[len - 1],
+                              (crc) ? "OK" : "FAIL"
+                             );
+            } else {
+                PrintAndLogEx(NORMAL, "[LEN %u] %s", len, sprint_hex(data, len));
+            }
+        }
+        return true;
+    } else {
+        PrintAndLogEx(WARNING, "command execution timeout");
+        return false;
+    }
+}
+
+static int CmdHF14BList(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdTraceList("14b");
     return 0;
 }
 
-int CmdHF14BSim(const char *Cmd) {
+static int CmdHF14BSim(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_14b_sim();
 
@@ -142,7 +181,7 @@ int CmdHF14BSim(const char *Cmd) {
     return 0;
 }
 
-int CmdHF14BSniff(const char *Cmd) {
+static int CmdHF14BSniff(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_14b_sniff();
@@ -153,7 +192,7 @@ int CmdHF14BSniff(const char *Cmd) {
     return 0;
 }
 
-int CmdHF14BCmdRaw(const char *Cmd) {
+static int CmdHF14BCmdRaw(const char *Cmd) {
     bool reply = true, power = false, select = false, hasTimeout = false;
     char buf[5] = "";
     int i = 0;
@@ -557,28 +596,13 @@ bool HF14B_ST_Info(bool verbose) {
     return true;
 }
 
-// get and print all info known about any known 14b tag
-bool HF14BInfo(bool verbose) {
-
-    // try std 14b (atqb)
-    if (HF14B_Std_Info(verbose)) return true;
-
-    // try ST 14b
-    if (HF14B_ST_Info(verbose)) return true;
-
-    // try unknown 14b read commands (to be identified later)
-    //   could be read of calypso, CEPAS, moneo, or pico pass.
-    if (verbose) PrintAndLogEx(FAILED, "no 14443-B tag found");
-    return false;
-}
-
 // menu command to get and print all info known about any known 14b tag
-int CmdHF14Binfo(const char *Cmd) {
+static int CmdHF14Binfo(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_14b_info();
 
     bool verbose = !(cmdp == 's');
-    return HF14BInfo(verbose);
+    return infoHF14B(verbose);
 }
 
 bool HF14B_ST_Reader(bool verbose) {
@@ -721,37 +745,20 @@ bool HF14B_Other_Reader() {
     return false;
 }
 
-// get and print general info about all known 14b chips
-bool HF14BReader(bool verbose) {
-
-    // try std 14b (atqb)
-    if (HF14B_Std_Reader(verbose)) return true;
-
-    // try ST Microelectronics 14b
-    if (HF14B_ST_Reader(verbose)) return true;
-
-    // try unknown 14b read commands (to be identified later)
-    // could be read of calypso, CEPAS, moneo, or pico pass.
-    if (HF14B_Other_Reader()) return true;
-
-    if (verbose) PrintAndLogEx(FAILED, "no 14443-B tag found");
-    return false;
-}
-
 // menu command to get and print general info about all known 14b chips
-int CmdHF14BReader(const char *Cmd) {
+static int CmdHF14BReader(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_14b_reader();
 
     bool verbose = !(cmdp == 's');
-    return HF14BReader(verbose);
+    return readHF14B(verbose);
 }
 
 /* New command to read the contents of a SRI512|SRIX4K tag
  * SRI* tags are ISO14443-B modulated memory tags,
  * this command just dumps the contents of the memory/
  */
-int CmdHF14BReadSri(const char *Cmd) {
+static int CmdHF14BReadSri(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) < 1 || cmdp == 'h') return usage_hf_14b_read_srx();
 
@@ -764,7 +771,7 @@ int CmdHF14BReadSri(const char *Cmd) {
     return 0;
 }
 // New command to write a SRI512/SRIX4K tag.
-int CmdHF14BWriteSri(const char *Cmd) {
+static int CmdHF14BWriteSri(const char *Cmd) {
     /*
      * For SRIX4K  blocks 00 - 7F
      * hf 14b raw -c -p 09 $srix4kwblock $srix4kwdata
@@ -831,7 +838,7 @@ int CmdHF14BWriteSri(const char *Cmd) {
 }
 
 // need to write to file
-int CmdHF14BDump(const char *Cmd) {
+static int CmdHF14BDump(const char *Cmd) {
 
     uint8_t fileNameLen = 0;
     char filename[FILE_PATH_SIZE] = {0};
@@ -1091,45 +1098,6 @@ int srix4kValid(const char *Cmd) {
     return 0;
 }
 
-bool waitCmd14b(bool verbose) {
-
-    bool crc = false;
-    uint8_t data[USB_CMD_DATA_SIZE] = {0x00};
-    uint8_t status = 0;
-    uint16_t len = 0;
-    UsbCommand resp;
-
-    if (WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
-
-        status = (resp.arg[0] & 0xFF);
-        if (status > 0) return false;
-
-        len = (resp.arg[1] & 0xFFFF);
-
-        memcpy(data, resp.d.asBytes, len);
-
-        if (verbose) {
-            if (len >= 3) {
-                crc = check_crc(CRC_14443_B, data, len);
-
-                PrintAndLogEx(NORMAL, "[LEN %u] %s[%02X %02X] %s",
-                              len,
-                              sprint_hex(data, len - 2),
-                              data[len - 2],
-                              data[len - 1],
-                              (crc) ? "OK" : "FAIL"
-                             );
-            } else {
-                PrintAndLogEx(NORMAL, "[LEN %u] %s", len, sprint_hex(data, len));
-            }
-        }
-        return true;
-    } else {
-        PrintAndLogEx(WARNING, "command execution timeout");
-        return false;
-    }
-}
-
 static command_t CommandTable[] = {
     {"help",        CmdHelp,        1, "This help"},
     {"dump",        CmdHF14BDump,   0, "Read all memory pages of an ISO14443-B tag, save to file"},
@@ -1145,14 +1113,47 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
+    return 0;
+}
+
 int CmdHF14B(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
+// get and print all info known about any known 14b tag
+int infoHF14B(bool verbose) {
+
+    // try std 14b (atqb)
+    if (HF14B_Std_Info(verbose)) return 1;
+
+    // try ST 14b
+    if (HF14B_ST_Info(verbose)) return 1;
+
+    // try unknown 14b read commands (to be identified later)
+    //   could be read of calypso, CEPAS, moneo, or pico pass.
+    if (verbose) PrintAndLogEx(FAILED, "no 14443-B tag found");
     return 0;
 }
+
+// get and print general info about all known 14b chips
+int readHF14B(bool verbose) {
+
+    // try std 14b (atqb)
+    if (HF14B_Std_Reader(verbose)) return 1;
+
+    // try ST Microelectronics 14b
+    if (HF14B_ST_Reader(verbose)) return 1;
+
+    // try unknown 14b read commands (to be identified later)
+    // could be read of calypso, CEPAS, moneo, or pico pass.
+    if (HF14B_Other_Reader()) return 1;
+
+    if (verbose) PrintAndLogEx(FAILED, "no 14443-B tag found");
+    return 0;
+}
+

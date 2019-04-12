@@ -160,7 +160,7 @@ static int usage_legic_wipe(void) {
  *  This is based on information given in the talk held
  *  by Henryk Ploetz and Karsten Nohl at 26c3
  */
-int CmdLegicInfo(const char *Cmd) {
+static int CmdLegicInfo(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_legic_info();
@@ -485,7 +485,7 @@ out:
 // params:
 // offset in data memory
 // number of bytes to read
-int CmdLegicRdmem(const char *Cmd) {
+static int CmdLegicRdmem(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_legic_rdmem();
@@ -519,7 +519,7 @@ int CmdLegicRdmem(const char *Cmd) {
     return status;
 }
 
-int CmdLegicRfSim(const char *Cmd) {
+static int CmdLegicRfSim(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_legic_sim();
@@ -531,7 +531,7 @@ int CmdLegicRfSim(const char *Cmd) {
     return 0;
 }
 
-int CmdLegicRfWrite(const char *Cmd) {
+static int CmdLegicRfWrite(const char *Cmd) {
 
     uint8_t *data = NULL;
     uint8_t cmdp = 0;
@@ -670,7 +670,7 @@ int CmdLegicRfWrite(const char *Cmd) {
     return 0;
 }
 
-int CmdLegicCalcCrc(const char *Cmd) {
+static int CmdLegicCalcCrc(const char *Cmd) {
 
     uint8_t *data = NULL;
     uint8_t cmdp = 0, uidcrc = 0, type = 0;
@@ -849,33 +849,14 @@ void legic_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
     }
 }
 
-int HFLegicReader(const char *Cmd, bool verbose) {
-
+static int CmdLegicReader(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_legic_reader();
 
-    legic_card_select_t card;
-    switch (legic_get_type(&card)) {
-        case 1:
-            return 2;
-        case 2:
-            if (verbose) PrintAndLogEx(WARNING, "command execution time out");
-            return 1;
-        case 3:
-            if (verbose) PrintAndLogEx(WARNING, "legic card select failed");
-            return 2;
-        default:
-            break;
-    }
-    PrintAndLogEx(SUCCESS, " UID : %s", sprint_hex(card.uid, sizeof(card.uid)));
-    legic_print_type(card.cardsize, 0);
-    return 0;
-}
-int CmdLegicReader(const char *Cmd) {
-    return HFLegicReader(Cmd, true);
+    return readLegicUid(true);
 }
 
-int CmdLegicDump(const char *Cmd) {
+static int CmdLegicDump(const char *Cmd) {
 
     FILE *f;
     char filename[FILE_PATH_SIZE] = {0x00};
@@ -980,7 +961,7 @@ int CmdLegicDump(const char *Cmd) {
     return 0;
 }
 
-int CmdLegicRestore(const char *Cmd) {
+static int CmdLegicRestore(const char *Cmd) {
 
     FILE *f;
     char filename[FILE_PATH_SIZE] = {0x00};
@@ -1106,7 +1087,7 @@ int CmdLegicRestore(const char *Cmd) {
     return 0;
 }
 
-int CmdLegicELoad(const char *Cmd) {
+static int CmdLegicELoad(const char *Cmd) {
     FILE *f;
     char filename[FILE_PATH_SIZE];
     char *fnameptr = filename;
@@ -1176,7 +1157,7 @@ int CmdLegicELoad(const char *Cmd) {
     return 0;
 }
 
-int CmdLegicESave(const char *Cmd) {
+static int CmdLegicESave(const char *Cmd) {
 
     char filename[FILE_PATH_SIZE];
     char *fnameptr = filename;
@@ -1236,7 +1217,7 @@ int CmdLegicESave(const char *Cmd) {
     return 0;
 }
 
-int CmdLegicWipe(const char *Cmd) {
+static int CmdLegicWipe(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
 
@@ -1299,7 +1280,7 @@ int CmdLegicWipe(const char *Cmd) {
     return 0;
 }
 
-int CmdLegicList(const char *Cmd) {
+static int CmdLegicList(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdTraceList("legic");
     return 0;
@@ -1322,14 +1303,34 @@ static command_t CommandTable[] =  {
     {NULL, NULL, 0, NULL}
 };
 
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
+    return 0;
+}
+
 int CmdHFLegic(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
+int readLegicUid(bool verbose) {
+
+    legic_card_select_t card;
+    switch (legic_get_type(&card)) {
+        case 1:
+            return 2;
+        case 2:
+            if (verbose) PrintAndLogEx(WARNING, "command execution time out");
+            return 1;
+        case 3:
+            if (verbose) PrintAndLogEx(WARNING, "legic card select failed");
+            return 2;
+        default:
+            break;
+    }
+    PrintAndLogEx(SUCCESS, " UID : %s", sprint_hex(card.uid, sizeof(card.uid)));
+    legic_print_type(card.cardsize, 0);
     return 0;
 }

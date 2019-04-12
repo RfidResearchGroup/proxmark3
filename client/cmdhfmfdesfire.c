@@ -26,7 +26,7 @@ static int CmdHelp(const char *Cmd);
 //n'r=rol(r5)
 //verify n'r=nr
 
-int CmdHF14AMfDESAuth(const char *Cmd) {
+static int CmdHF14AMfDESAuth(const char *Cmd) {
 
     uint8_t blockNo = 0;
     //keyNo=0;
@@ -119,7 +119,7 @@ int CmdHF14AMfDESAuth(const char *Cmd) {
 // Card 2 Reader : 02AF, 16 Bytes(b0), CRC1 CRC2
 // Reader 2 Card : 03AF, 16 Bytes(b1),16Bytes(b2) CRC1 CRC2
 // Card 2 Reader : 0300, 16 bytes(b3), CRC1 CRC2 ; success
-int CmdHF14AMfAESAuth(const char *Cmd) {
+static int CmdHF14AMfAESAuth(const char *Cmd) {
 
     uint8_t blockNo = 0;
     //keyNo=0;
@@ -233,14 +233,14 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
+static int CmdHelp(const char *Cmd) {
+    CmdsHelp(CommandTable);
+    return 0;
+}
+
 int CmdHFMFDesfire(const char *Cmd) {
     // flush
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
-    return 0;
-}
-
-int CmdHelp(const char *Cmd) {
-    CmdsHelp(CommandTable);
     return 0;
 }

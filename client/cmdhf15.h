@@ -28,22 +28,6 @@
 
 int CmdHF15(const char *Cmd);
 
-int HF15Reader(const char *Cmd, bool verbose);
+int readHF15Uid(bool verbose);
 
-int CmdHF15Demod(const char *Cmd);
-int CmdHF15Samples(const char *Cmd);
-int CmdHF15Info(const char *Cmd);
-int CmdHF15Record(const char *Cmd);
-int CmdHF15Reader(const char *Cmd);
-int CmdHF15Sim(const char *Cmd);
-int CmdHF15Afi(const char *Cmd);
-int CmdHF15Dump(const char *Cmd);
-int CmdHF15Raw(const char *Cmd);
-int CmdHF15Readmulti(const char *Cmd);
-int CmdHF15Read(const char *Cmd);
-int CmdHF15Write(const char *Cmd);
-
-int CmdHF15Help(const char *Cmd);
-
-int prepareHF15Cmd(char **cmd, UsbCommand *c, uint8_t iso15cmd);
 #endif

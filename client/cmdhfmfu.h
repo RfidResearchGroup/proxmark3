@@ -25,23 +25,6 @@ typedef struct {
     uint8_t data[1024];
 } mfu_dump_t;
 
-int CmdHF14AMfUWrBl(const char *Cmd);
-int CmdHF14AMfURdBl(const char *Cmd);
-
-//Crypto Cards
-int CmdHF14AMfucAuth(const char *Cmd);
-int CmdHF14AMfucSetPwd(const char *Cmd);
-int CmdHF14AMfucSetUid(const char *Cmd);
-int CmdHF14AMfuGenDiverseKeys(const char *Cmd);
-int CmdHF14AMfuPwdGen(const char *Cmd);
-
-//general stuff
-int CmdHF14AMfUDump(const char *Cmd);
-int CmdHF14AMfURestore(const char *Cmd);
-int CmdHF14AMfUInfo(const char *Cmd);
-int CmdHF14AMfUeLoad(const char *Cmd);
-int CmdHF14AMfUSim(const char *Cmd);
-
 uint32_t GetHF14AMfU_Type(void);
 int ul_print_type(uint32_t tagtype, uint8_t spaces);
 

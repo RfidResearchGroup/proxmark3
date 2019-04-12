@@ -29,12 +29,4 @@
 
 int CmdEMV(const char *Cmd);
 
-int CmdEMVSelect(const char *Cmd);
-int CmdEMVSearch(const char *Cmd);
-int CmdEMVPPSE(const char *Cmd);
-int CmdEMVExec(const char *Cmd);
-int CmdEMVGetrng(const char *Cmd);
-int CmdEMVList(const char *Cmd);
-int CmdEMVRoca(const char *Cmd);
-
 #endif

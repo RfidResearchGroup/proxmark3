@@ -371,7 +371,7 @@ static void topaz_print_NDEF(uint8_t *data) {
 }
 
 // read a Topaz tag and print some useful information
-int CmdHFTopazReader(const char *Cmd) {
+static int CmdHFTopazReader(const char *Cmd) {
     int status;
     uint8_t atqa[2];
     uint8_t rid_response[8];
@@ -487,19 +487,19 @@ int CmdHFTopazReader(const char *Cmd) {
     return 0;
 }
 
-int CmdHFTopazSim(const char *Cmd) {
+static int CmdHFTopazSim(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     PrintAndLogEx(NORMAL, "not yet implemented");
     return 0;
 }
 
-int CmdHFTopazCmdRaw(const char *Cmd) {
+static int CmdHFTopazCmdRaw(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     PrintAndLogEx(NORMAL, "not yet implemented. Use hf 14 raw with option -T.");
     return 0;
 }
 
-int CmdHFTopazList(const char *Cmd) {
+static int CmdHFTopazList(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdTraceList("topaz");
     return 0;
@@ -517,16 +517,18 @@ static command_t CommandTable[] = {
     {NULL,      NULL,               0, NULL}
 };
 
-int CmdHFTopaz(const char *Cmd) {
-    clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
-    return 0;
-}
-
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return 0;
 }
 
+int CmdHFTopaz(const char *Cmd) {
+    clearCommandBuffer();
+    CmdsParse(CommandTable, Cmd);
+    return 0;
+}
 
+int readTopazUid(void) {
+    return CmdHFTopazReader("s");
+}

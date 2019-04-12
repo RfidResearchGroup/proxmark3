@@ -100,7 +100,8 @@ static int usage_hf14_dbg(void) {
     PrintAndLogEx(NORMAL, "           hf mf dbg 3");
     return 0;
 }
-static int usage_hf14_sniff(void) {
+/*
+ * static int usage_hf14_sniff(void) {
     PrintAndLogEx(NORMAL, "It continuously gets data from the field and saves it to: log, emulator, emulator file.");
     PrintAndLogEx(NORMAL, "Usage:  hf mf sniff [h] [l] [d] [f]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -113,6 +114,7 @@ static int usage_hf14_sniff(void) {
     PrintAndLogEx(NORMAL, "           hf mf sniff l d f");
     return 0;
 }
+*/
 static int usage_hf14_nested(void) {
     PrintAndLogEx(NORMAL, "Usage:");
     PrintAndLogEx(NORMAL, " all sectors:  hf mf nested  <card memory> <block number> <key A/B> <key (12 hex symbols)> [t,d]");
@@ -443,7 +445,7 @@ char *GenerateFilename(const char *prefix, const char *suffix) {
     return fptr;
 }
 
-int CmdHF14AMfDarkside(const char *Cmd) {
+static int CmdHF14AMfDarkside(const char *Cmd) {
     uint8_t blockno = 0, key_type = MIFARE_AUTH_KEYA;
     uint64_t key = 0;
 
@@ -483,7 +485,7 @@ int CmdHF14AMfDarkside(const char *Cmd) {
     return 0;
 }
 
-int CmdHF14AMfWrBl(const char *Cmd) {
+static int CmdHF14AMfWrBl(const char *Cmd) {
     uint8_t blockNo = 0;
     uint8_t keyType = 0;
     uint8_t key[6] = {0, 0, 0, 0, 0, 0};
@@ -537,7 +539,7 @@ int CmdHF14AMfWrBl(const char *Cmd) {
     return 0;
 }
 
-int CmdHF14AMfRdBl(const char *Cmd) {
+static int CmdHF14AMfRdBl(const char *Cmd) {
     uint8_t blockNo = 0;
     uint8_t keyType = 0;
     uint8_t key[6] = {0, 0, 0, 0, 0, 0};
@@ -601,7 +603,7 @@ int CmdHF14AMfRdBl(const char *Cmd) {
     return 0;
 }
 
-int CmdHF14AMfRdSc(const char *Cmd) {
+static int CmdHF14AMfRdSc(const char *Cmd) {
     int i;
     uint8_t sectorNo = 0;
     uint8_t keyType = 0;
@@ -717,7 +719,7 @@ uint8_t NumBlocksPerSector(uint8_t sectorNo) {
     }
 }
 
-int CmdHF14AMfDump(const char *Cmd) {
+static int CmdHF14AMfDump(const char *Cmd) {
 
     uint8_t sectorNo, blockNo;
     uint8_t keyA[40][6];
@@ -923,7 +925,7 @@ int CmdHF14AMfDump(const char *Cmd) {
     return 0;
 }
 
-int CmdHF14AMfRestore(const char *Cmd) {
+static int CmdHF14AMfRestore(const char *Cmd) {
     uint8_t sectorNo, blockNo;
     uint8_t keyType = 0;
     uint8_t key[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
@@ -1064,7 +1066,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
     return 0;
 }
 
-int CmdHF14AMfNested(const char *Cmd) {
+static int CmdHF14AMfNested(const char *Cmd) {
     int i, res, iterations;
     sector_t *e_sector = NULL;
     uint8_t blockNo = 0;
@@ -1328,7 +1330,7 @@ int CmdHF14AMfNested(const char *Cmd) {
     return 0;
 }
 
-int CmdHF14AMfNestedHard(const char *Cmd) {
+static int CmdHF14AMfNestedHard(const char *Cmd) {
     uint8_t blockNo = 0;
     uint8_t keyType = 0;
     uint8_t trgBlockNo = 0;
@@ -1529,7 +1531,7 @@ void shuffle(uint8_t *array, uint16_t len) {
     }
 }
 
-int CmdHF14AMfChk_fast(const char *Cmd) {
+static int CmdHF14AMfChk_fast(const char *Cmd) {
 
     char ctmp = 0x00;
     ctmp = tolower(param_getchar(Cmd, 0));
@@ -1780,7 +1782,7 @@ out:
     return 0;
 }
 
-int CmdHF14AMfChk(const char *Cmd) {
+static int CmdHF14AMfChk(const char *Cmd) {
 
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) < 3 || ctmp == 'h') return usage_hf14_chk();
@@ -2132,7 +2134,7 @@ void readerAttack(nonces_t data, bool setEmulatorMem, bool verbose) {
     }
 }
 
-int CmdHF14AMf1kSim(const char *Cmd) {
+static int CmdHF14AMf1kSim(const char *Cmd) {
 
     uint8_t uid[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     uint8_t exitAfterNReads = 0;
@@ -2244,8 +2246,8 @@ int CmdHF14AMf1kSim(const char *Cmd) {
     }
     return 0;
 }
-
-int CmdHF14AMfSniff(const char *Cmd) {
+/*
+static int CmdHF14AMfSniff(const char *Cmd) {
     bool wantLogToFile = false;
     bool wantDecrypt = false;
     //bool wantSaveToEml = false; TODO
@@ -2405,7 +2407,7 @@ int CmdHF14AMfSniff(const char *Cmd) {
     free(buf);
     return 0;
 }
-
+*/
 int CmdHF14AMfDbg(const char *Cmd) {
 
     char ctmp = tolower(param_getchar(Cmd, 0));
@@ -2419,7 +2421,7 @@ int CmdHF14AMfDbg(const char *Cmd) {
     return 0;
 }
 
-int CmdHF14AMfKeyBrute(const char *Cmd) {
+static int CmdHF14AMfKeyBrute(const char *Cmd) {
 
     uint8_t blockNo = 0, keytype = 0;
     uint8_t key[6] = {0, 0, 0, 0, 0, 0};
@@ -2478,7 +2480,7 @@ void printKeyTable(uint8_t sectorscnt, sector_t *e_sector) {
 }
 
 // EMULATOR COMMANDS
-int CmdHF14AMfEGet(const char *Cmd) {
+static int CmdHF14AMfEGet(const char *Cmd) {
     uint8_t blockNo = 0;
     uint8_t data[16] = {0x00};
     char c = tolower(param_getchar(Cmd, 0));
@@ -2496,7 +2498,7 @@ int CmdHF14AMfEGet(const char *Cmd) {
     return 0;
 }
 
-int CmdHF14AMfEClear(const char *Cmd) {
+static int CmdHF14AMfEClear(const char *Cmd) {
     char c = tolower(param_getchar(Cmd, 0));
     if (c == 'h') return usage_hf14_eclr();
 
@@ -2506,7 +2508,7 @@ int CmdHF14AMfEClear(const char *Cmd) {
     return 0;
 }
 
-int CmdHF14AMfESet(const char *Cmd) {
+static int CmdHF14AMfESet(const char *Cmd) {
     char c = tolower(param_getchar(Cmd, 0));
     uint8_t memBlock[16];
     uint8_t blockNo = 0;
@@ -2620,7 +2622,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
     return 0;
 }
 
-int CmdHF14AMfESave(const char *Cmd) {
+static int CmdHF14AMfESave(const char *Cmd) {
 
     char filename[FILE_PATH_SIZE];
     char *fnameptr = filename;
@@ -2666,7 +2668,7 @@ int CmdHF14AMfESave(const char *Cmd) {
     return 0;
 }
 
-int CmdHF14AMfECFill(const char *Cmd) {
+static int CmdHF14AMfECFill(const char *Cmd) {
     uint8_t keyType = 0;
     uint8_t numSectors = 16;
     char c = tolower(param_getchar(Cmd, 0));
@@ -2691,7 +2693,7 @@ int CmdHF14AMfECFill(const char *Cmd) {
     return 0;
 }
 
-int CmdHF14AMfEKeyPrn(const char *Cmd) {
+static int CmdHF14AMfEKeyPrn(const char *Cmd) {
     int i;
     uint8_t numSectors;
     uint8_t data[16];
@@ -2720,7 +2722,7 @@ int CmdHF14AMfEKeyPrn(const char *Cmd) {
 }
 
 // CHINESE MAGIC COMMANDS
-int CmdHF14AMfCSetUID(const char *Cmd) {
+static int CmdHF14AMfCSetUID(const char *Cmd) {
     uint8_t wipeCard = 0;
     uint8_t uid[8] = {0x00};
     uint8_t oldUid[8] = {0x00};
@@ -2780,7 +2782,7 @@ int CmdHF14AMfCSetUID(const char *Cmd) {
     return 0;
 }
 
-int CmdHF14AMfCSetBlk(const char *Cmd) {
+static int CmdHF14AMfCSetBlk(const char *Cmd) {
     uint8_t block[16] = {0x00};
     uint8_t blockNo = 0;
     uint8_t params = MAGIC_SINGLE;
@@ -2807,7 +2809,7 @@ int CmdHF14AMfCSetBlk(const char *Cmd) {
     return 0;
 }
 
-int CmdHF14AMfCLoad(const char *Cmd) {
+static int CmdHF14AMfCLoad(const char *Cmd) {
 
     uint8_t buf8[16] = {0x00};
     uint8_t fillFromEmulator = 0;
@@ -2922,7 +2924,7 @@ int CmdHF14AMfCLoad(const char *Cmd) {
     return 0;
 }
 
-int CmdHF14AMfCGetBlk(const char *Cmd) {
+static int CmdHF14AMfCGetBlk(const char *Cmd) {
     uint8_t data[16] = {0};
     uint8_t blockNo = 0;
     int res;
@@ -2959,7 +2961,7 @@ int CmdHF14AMfCGetBlk(const char *Cmd) {
     return 0;
 }
 
-int CmdHF14AMfCGetSc(const char *Cmd) {
+static int CmdHF14AMfCGetSc(const char *Cmd) {
     uint8_t data[16] = {0};
     uint8_t sector = 0;
     int i, res, flags;
@@ -2998,7 +3000,7 @@ int CmdHF14AMfCGetSc(const char *Cmd) {
     return 0;
 }
 
-int CmdHF14AMfCSave(const char *Cmd) {
+static int CmdHF14AMfCSave(const char *Cmd) {
 
     char filename[FILE_PATH_SIZE];
     char *fnameptr = filename;
@@ -3101,7 +3103,7 @@ int CmdHF14AMfCSave(const char *Cmd) {
 }
 
 //needs nt, ar, at, Data to decrypt
-int CmdHf14AMfDecryptBytes(const char *Cmd) {
+static int CmdHf14AMfDecryptBytes(const char *Cmd) {
 
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) < 1 || ctmp == 'h') return usage_hf14_decryptbytes();
@@ -3128,7 +3130,7 @@ int CmdHf14AMfDecryptBytes(const char *Cmd) {
     return 0;
 }
 
-int CmdHf14AMfSetMod(const char *Cmd) {
+static int CmdHf14AMfSetMod(const char *Cmd) {
     uint8_t key[6] = {0, 0, 0, 0, 0, 0};
     uint8_t mod = 2;
 
@@ -3165,7 +3167,7 @@ int CmdHf14AMfSetMod(const char *Cmd) {
 }
 
 // Mifare NACK bug detection
-int CmdHf14AMfNack(const char *Cmd) {
+static int CmdHf14AMfNack(const char *Cmd) {
 
     bool verbose = false;
     char ctmp = tolower(param_getchar(Cmd, 0));
@@ -3179,7 +3181,7 @@ int CmdHf14AMfNack(const char *Cmd) {
     return 0;
 }
 
-int CmdHF14AMfice(const char *Cmd) {
+static int CmdHF14AMfice(const char *Cmd) {
 
     uint8_t blockNo = 0;
     uint8_t keyType = 0;
@@ -3287,7 +3289,7 @@ out:
     return 0;
 }
 
-int CmdHF14AMfAuth4(const char *Cmd) {
+static int CmdHF14AMfAuth4(const char *Cmd) {
     uint8_t keyn[20] = {0};
     int keynlen = 0;
     uint8_t key[16] = {0};
@@ -3324,7 +3326,7 @@ int CmdHF14AMfAuth4(const char *Cmd) {
 }
 
 // https://www.nxp.com/docs/en/application-note/AN10787.pdf
-int CmdHF14AMfMAD(const char *Cmd) {
+static int CmdHF14AMfMAD(const char *Cmd) {
 
     CLIParserInit("hf mf mad",
                   "Checks and prints Mifare Application Directory (MAD)",
@@ -3414,7 +3416,7 @@ int CmdHF14AMfMAD(const char *Cmd) {
     return 0;
 }
 
-int CmdHFMFNDEF(const char *Cmd) {
+static int CmdHFMFNDEF(const char *Cmd) {
 
     CLIParserInit("hf mf ndef",
                   "Prints NFC Data Exchange Format (NDEF)",
@@ -3518,7 +3520,7 @@ int CmdHFMFNDEF(const char *Cmd) {
     return 0;
 }
 
-int CmdHF14AMfList(const char *Cmd) {
+static int CmdHF14AMfList(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdTraceList("mf");
     return 0;
@@ -3569,14 +3571,15 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
+    return 0;
+}
+
 int CmdHFMF(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
-    return 0;
-}
