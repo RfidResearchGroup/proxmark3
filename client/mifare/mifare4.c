@@ -95,8 +95,8 @@ const char *mfGetAccessConditionsDesc(uint8_t blockn, uint8_t *data) {
 
     return StaticNone;
 };
-
-int CalculateEncIVCommand(mf4Session *session, uint8_t *iv, bool verbose) {
+/*
+static int CalculateEncIVCommand(mf4Session *session, uint8_t *iv, bool verbose) {
     memcpy(&iv[0], session->TI, 4);
     memcpy(&iv[4], &session->R_Ctr, 2);
     memcpy(&iv[6], &session->W_Ctr, 2);
@@ -108,7 +108,7 @@ int CalculateEncIVCommand(mf4Session *session, uint8_t *iv, bool verbose) {
     return 0;
 }
 
-int CalculateEncIVResponse(mf4Session *session, uint8_t *iv, bool verbose) {
+static int CalculateEncIVResponse(mf4Session *session, uint8_t *iv, bool verbose) {
     memcpy(&iv[0], &session->R_Ctr, 2);
     memcpy(&iv[2], &session->W_Ctr, 2);
     memcpy(&iv[4], &session->R_Ctr, 2);
@@ -119,7 +119,7 @@ int CalculateEncIVResponse(mf4Session *session, uint8_t *iv, bool verbose) {
 
     return 0;
 }
-
+*/
 
 int CalculateMAC(mf4Session *session, MACType_t mtype, uint8_t blockNum, uint8_t blockCount, uint8_t *data, int datalen, uint8_t *mac, bool verbose) {
     if (!session || !session->Authenticated || !mac || !data || !datalen || datalen < 1)
@@ -308,7 +308,7 @@ int MifareAuth4(mf4Session *session, uint8_t *keyn, uint8_t *key, bool activateF
     return 0;
 }
 
-int intExchangeRAW14aPlus(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
+static int intExchangeRAW14aPlus(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
     if (VerboseMode)
         PrintAndLogEx(INFO, ">>> %s", sprint_hex(datain, datainlen));
 

@@ -261,6 +261,7 @@ int num_CPUs(void); // number of logical CPUs
 
 void str_lower(char *s); // converts string to lower case
 bool str_startswith(const char *s,  const char *pre);  // check for prefix in string
+void clean_ascii(unsigned char *buf, size_t len);
 void strcleanrn(char *buf, size_t len);
 void strcreplace(char *buf, size_t len, char from, char to);
 char *strmcopy(char *buf);

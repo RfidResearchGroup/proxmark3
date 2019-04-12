@@ -20,7 +20,7 @@
 static int CmdHelp(const char *Cmd);
 
 #define TLV_ADD(tag, value)( tlvdb_change_or_add_node(tlvRoot, tag, sizeof(value) - 1, (const unsigned char *)value) )
-void ParamLoadDefaults(struct tlvdb *tlvRoot) {
+static void ParamLoadDefaults(struct tlvdb *tlvRoot) {
     //9F02:(Amount, authorized (Numeric)) len:6
     TLV_ADD(0x9F02, "\x00\x00\x00\x00\x01\x00");
     //9F1A:(Terminal Country Code) len:2
@@ -43,7 +43,7 @@ void ParamLoadDefaults(struct tlvdb *tlvRoot) {
     TLV_ADD(0x95,   "\x00\x00\x00\x00\x00");
 }
 
-void PrintChannel(EMVCommandChannel channel) {
+static void PrintChannel(EMVCommandChannel channel) {
     switch (channel) {
         case ECC_CONTACTLESS:
             PrintAndLogEx(INFO, "Channel: CONTACTLESS");
@@ -642,7 +642,7 @@ static int CmdEMVInternalAuthenticate(const char *Cmd) {
 
 #define dreturn(n) {free(pdol_data_tlv); tlvdb_free(tlvSelect); tlvdb_free(tlvRoot); DropFieldEx( channel ); return n;}
 
-void InitTransactionParameters(struct tlvdb *tlvRoot, bool paramLoadJSON, enum TransactionType TrType, bool GenACGPO) {
+static void InitTransactionParameters(struct tlvdb *tlvRoot, bool paramLoadJSON, enum TransactionType TrType, bool GenACGPO) {
 
     ParamLoadDefaults(tlvRoot);
 
@@ -675,7 +675,7 @@ void InitTransactionParameters(struct tlvdb *tlvRoot, bool paramLoadJSON, enum T
     }
 }
 
-void ProcessGPOResponseFormat1(struct tlvdb *tlvRoot, uint8_t *buf, size_t len, bool decodeTLV) {
+static void ProcessGPOResponseFormat1(struct tlvdb *tlvRoot, uint8_t *buf, size_t len, bool decodeTLV) {
     if (buf[0] == 0x80) {
         if (decodeTLV) {
             PrintAndLog("GPO response format1:");
@@ -705,7 +705,7 @@ void ProcessGPOResponseFormat1(struct tlvdb *tlvRoot, uint8_t *buf, size_t len, 
     }
 }
 
-void ProcessACResponseFormat1(struct tlvdb *tlvRoot, uint8_t *buf, size_t len, bool decodeTLV) {
+static void ProcessACResponseFormat1(struct tlvdb *tlvRoot, uint8_t *buf, size_t len, bool decodeTLV) {
     if (buf[0] == 0x80) {
         if (decodeTLV) {
             PrintAndLog("GPO response format1:");

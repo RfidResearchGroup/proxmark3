@@ -107,7 +107,7 @@ static const char *GetAIDDescription(uint16_t AID) {
     return unknownAID;
 }
 
-int madCRCCheck(uint8_t *sector, bool verbose, int MADver) {
+static int madCRCCheck(uint8_t *sector, bool verbose, int MADver) {
     if (MADver == 1) {
         uint8_t crc = CRC8Mad(&sector[16 + 1], 15 + 16);
         if (crc != sector[16]) {
@@ -125,7 +125,7 @@ int madCRCCheck(uint8_t *sector, bool verbose, int MADver) {
     return 0;
 }
 
-uint16_t madGetAID(uint8_t *sector, int MADver, int sectorNo) {
+static uint16_t madGetAID(uint8_t *sector, int MADver, int sectorNo) {
     if (MADver == 1)
         return (sector[16 + 2 + (sectorNo - 1) * 2] << 8) + (sector[16 + 2 + (sectorNo - 1) * 2 + 1]);
     else

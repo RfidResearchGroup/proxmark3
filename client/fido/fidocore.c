@@ -355,7 +355,7 @@ bool CheckrpIdHash(json_t *json, uint8_t *hash) {
 }
 
 // check ANSI X9.62 format ECDSA signature (on P-256)
-int FIDO2CheckSignature(json_t *root, uint8_t *publickey, uint8_t *sign, size_t signLen, uint8_t *authData, size_t authDataLen, bool verbose) {
+static int FIDO2CheckSignature(json_t *root, uint8_t *publickey, uint8_t *sign, size_t signLen, uint8_t *authData, size_t authDataLen, bool verbose) {
     int res;
     uint8_t rval[300] = {0};
     uint8_t sval[300] = {0};

@@ -184,7 +184,7 @@ static CborError dumprecursive(uint8_t cmdCode, bool isResponse, CborValue *it, 
     return CborNoError;
 }
 
-int TinyCborInit(uint8_t *data, size_t length, CborValue *cb) {
+static int TinyCborInit(uint8_t *data, size_t length, CborValue *cb) {
     CborParser parser;
     CborError err = cbor_parser_init(data, length, 0, &parser, cb);
     if (err)
@@ -216,7 +216,7 @@ int TinyCborPrintFIDOPackage(uint8_t cmdCode, bool isResponse, uint8_t *data, si
     return 0;
 }
 
-int JsonObjElmCount(json_t *elm) {
+static int JsonObjElmCount(json_t *elm) {
     int res = 0;
     const char *key;
     json_t *value;

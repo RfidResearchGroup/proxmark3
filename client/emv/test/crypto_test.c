@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
+#include "crypto_test.h"
 
 static int test_genkey(unsigned int keylength, unsigned char *msg, size_t msg_len, bool verbose) {
     int ret = 1;

@@ -104,10 +104,11 @@ int bitsLeft(BitstreamIn *stream) {
  * @param stream
  * @return Number of bits stored in stream
  */
-int numBits(BitstreamOut *stream) {
+/*
+static int numBits(BitstreamOut *stream) {
     return stream->numbits;
 }
-
+*/
 void x_num_to_bytes(uint64_t n, size_t len, uint8_t *dest) {
     while (len--) {
         dest[len] = (uint8_t) n;
@@ -187,7 +188,7 @@ void printarr_human_readable(const char *title, uint8_t *arr, int len) {
 //-----------------------------
 
 #ifndef ON_DEVICE
-int testBitStream() {
+static int testBitStream() {
     uint8_t input [] = {0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF};
     uint8_t output [] = {0, 0, 0, 0, 0, 0, 0, 0};
     BitstreamIn in = { input, sizeof(input) * 8, 0};
@@ -212,7 +213,7 @@ int testBitStream() {
     return 0;
 }
 
-int testReversedBitstream() {
+static int testReversedBitstream() {
     uint8_t input [] = {0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF};
     uint8_t reverse [] = {0, 0, 0, 0, 0, 0, 0, 0};
     uint8_t output [] = {0, 0, 0, 0, 0, 0, 0, 0};

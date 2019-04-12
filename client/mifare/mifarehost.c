@@ -263,14 +263,14 @@ int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultk
 }
 
 // Compare 16 Bits out of cryptostate
-int Compare16Bits(const void *a, const void *b) {
+static int Compare16Bits(const void *a, const void *b) {
     if ((*(uint64_t *)b & 0x00ff000000ff0000) == (*(uint64_t *)a & 0x00ff000000ff0000)) return 0;
     if ((*(uint64_t *)b & 0x00ff000000ff0000) > (*(uint64_t *)a & 0x00ff000000ff0000)) return 1;
     return -1;
 }
 
 // wrapper function for multi-threaded lfsr_recovery32
-void
+static void
 #ifdef __has_attribute
 #if __has_attribute(force_align_arg_pointer)
 __attribute__((force_align_arg_pointer))

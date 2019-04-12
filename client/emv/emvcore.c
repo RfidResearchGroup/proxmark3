@@ -263,7 +263,7 @@ struct tlvdb *GetdCVVRawFromTrack2(const struct tlv *track2) {
     return tlvdb_fixed(0x02, dCVVlen, dCVV);
 }
 
-int EMVExchangeEx(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, sAPDU apdu, bool IncludeLe, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
+static int EMVExchangeEx(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, sAPDU apdu, bool IncludeLe, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
     uint8_t data[APDU_RES_LEN] = {0};
 
     *ResultLen = 0;
@@ -366,7 +366,7 @@ int EMVSelectPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
     return res;
 }
 
-int EMVSelectWithRetry(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t *AID, size_t AIDLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
+static int EMVSelectWithRetry(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t *AID, size_t AIDLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
     int retrycnt = 0;
     int res = 0;
     do {
@@ -393,7 +393,7 @@ int EMVSelectWithRetry(EMVCommandChannel channel, bool ActivateField, bool Leave
     return res;
 }
 
-int EMVCheckAID(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlvdbelm, struct tlvdb *tlv) {
+static int EMVCheckAID(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlvdbelm, struct tlvdb *tlv) {
     uint8_t data[APDU_RES_LEN] = {0};
     size_t datalen = 0;
     int res = 0;

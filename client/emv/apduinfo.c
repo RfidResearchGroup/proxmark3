@@ -259,7 +259,7 @@ const APDUCode APDUCodeTable[] = {
 };
 const size_t APDUCodeTableLen = sizeof(APDUCodeTable) / sizeof(APDUCode);
 
-int CodeCmp(const char *code1, const char *code2) {
+static int CodeCmp(const char *code1, const char *code2) {
     int xsymb = 0;
     int cmp = 0;
     for (int i = 0; i < 4; i++) {

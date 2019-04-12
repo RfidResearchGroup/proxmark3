@@ -38,7 +38,7 @@ COSEValueNameDesc_t COSEKeyTypeValueDesc[] = {
     {4, "Symmetric", "Symmetric Key"},
 };
 
-COSEValueNameDesc_t *GetCOSEktyElm(int id) {
+static COSEValueNameDesc_t *GetCOSEktyElm(int id) {
     for (int i = 0; i < ARRAYLEN(COSEKeyTypeValueDesc); i++)
         if (COSEKeyTypeValueDesc[i].Value == id)
             return &COSEKeyTypeValueDesc[i];

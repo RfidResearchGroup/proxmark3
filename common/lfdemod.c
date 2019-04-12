@@ -286,7 +286,7 @@ bool preambleSearchEx(uint8_t *bits, uint8_t *preamble, size_t pLen, size_t *siz
 }
 
 // find start of modulating data (for fsk and psk) in case of beginning noise or slow chip startup.
-size_t findModStart(uint8_t *src, size_t size, uint8_t expWaveSize) {
+static size_t findModStart(uint8_t *src, size_t size, uint8_t expWaveSize) {
     size_t i = 0;
     size_t waveSizeCnt = 0;
     uint8_t thresholdCnt = 0;
@@ -311,7 +311,7 @@ size_t findModStart(uint8_t *src, size_t size, uint8_t expWaveSize) {
     return i;
 }
 
-int getClosestClock(int testclk) {
+static int getClosestClock(int testclk) {
     uint16_t clocks[] = {8, 16, 32, 40, 50, 64, 100, 128, 256, 384};
     uint8_t limit[]  = {1,  2,  4,  4,  5,  8,   8,   8,   8,   8};
 
@@ -1175,7 +1175,7 @@ uint8_t detectFSKClk(uint8_t *bits, size_t size, uint8_t fcHigh, uint8_t fcLow, 
 
 
 // look for Sequence Terminator - should be pulses of clk*(1 or 2), clk*2, clk*(1.5 or 2), by idx we mean graph position index...
-bool findST(int *stStopLoc, int *stStartIdx, int lowToLowWaveLen[], int highToLowWaveLen[], int clk, int tol, int buffSize, size_t *i) {
+static bool findST(int *stStopLoc, int *stStartIdx, int lowToLowWaveLen[], int highToLowWaveLen[], int clk, int tol, int buffSize, size_t *i) {
     if (buffSize < *i + 4) return false;
 
     for (; *i < buffSize - 4; *i += 1) {
@@ -1322,7 +1322,8 @@ bool DetectST(uint8_t *buffer, size_t *size, int *foundclock, size_t *ststart, s
 //check for phase errors - should never have half a 1 or 0 by itself and should never exceed 1111 or 0000 in a row
 //decodes miller encoded binary
 //NOTE  askrawdemod will NOT demod miller encoded ask unless the clock is manually set to 1/2 what it is detected as!
-int millerRawDecode(uint8_t *bits, size_t *size, int invert) {
+/*
+static int millerRawDecode(uint8_t *bits, size_t *size, int invert) {
     if (*size < 16) return -1;
 
     uint16_t MaxBits = 512, errCnt = 0;
@@ -1355,6 +1356,7 @@ int millerRawDecode(uint8_t *bits, size_t *size, int invert) {
     *size = bitCnt;
     return errCnt;
 }
+*/
 
 //by marshmellow
 //take 01 or 10 = 1 and 11 or 00 = 0
@@ -1448,7 +1450,7 @@ int manrawdecode(uint8_t *bits, size_t *size, uint8_t invert, uint8_t *alignPos)
 //by marshmellow
 //demodulates strong heavily clipped samples
 //RETURN: num of errors.  if 0, is ok.
-int cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int invert, int high, int low, int *startIdx) {
+static int cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int invert, int high, int low, int *startIdx) {
     *startIdx = 0;
     size_t bitCnt = 0, smplCnt = 1, errCnt = 0, pos = 0;
     uint8_t cl_4 = clk / 4;
@@ -1675,7 +1677,7 @@ int nrzRawDemod(uint8_t *dest, size_t *size, int *clk, int *invert, int *startId
 }
 
 //translate wave to 11111100000 (1 for each short wave [higher freq] 0 for each long wave [lower freq])
-size_t fsk_wave_demod(uint8_t *dest, size_t size, uint8_t fchigh, uint8_t fclow, int *startIdx) {
+static size_t fsk_wave_demod(uint8_t *dest, size_t size, uint8_t fchigh, uint8_t fclow, int *startIdx) {
 
     if (size < 1024) return 0;   // not enough samples
 
@@ -1770,7 +1772,7 @@ size_t fsk_wave_demod(uint8_t *dest, size_t size, uint8_t fchigh, uint8_t fclow,
 
 //translate 11111100000 to 10
 //rfLen = clock, fchigh = larger field clock, fclow = smaller field clock
-size_t aggregate_bits(uint8_t *dest, size_t size, uint8_t clk, uint8_t invert, uint8_t fchigh, uint8_t fclow, int *startIdx) {
+static size_t aggregate_bits(uint8_t *dest, size_t size, uint8_t clk, uint8_t invert, uint8_t fchigh, uint8_t fclow, int *startIdx) {
 
     uint8_t lastval = dest[0];
     size_t i = 0;

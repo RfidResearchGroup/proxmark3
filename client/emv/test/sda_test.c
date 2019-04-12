@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include "sda_test.h"
 
 struct emv_pk vsdc_01 = {
     .rid = { 0xa0, 0x00, 0x00, 0x00, 0x03, },

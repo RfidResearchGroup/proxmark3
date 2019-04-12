@@ -121,7 +121,7 @@ int sha512hash(uint8_t *input, int length, uint8_t *hash) {
     return 0;
 }
 
-int ecdsa_init_str(mbedtls_ecdsa_context *ctx, const char *key_d, const char *key_x, const char *key_y) {
+static int ecdsa_init_str(mbedtls_ecdsa_context *ctx, const char *key_d, const char *key_x, const char *key_y) {
     if (!ctx)
         return 1;
 
@@ -147,7 +147,7 @@ int ecdsa_init_str(mbedtls_ecdsa_context *ctx, const char *key_d, const char *ke
     return 0;
 }
 
-int ecdsa_init(mbedtls_ecdsa_context *ctx, uint8_t *key_d, uint8_t *key_xy) {
+static int ecdsa_init(mbedtls_ecdsa_context *ctx, uint8_t *key_d, uint8_t *key_xy) {
     if (!ctx)
         return 1;
 
@@ -279,7 +279,7 @@ exit:
     return res;
 }
 
-int ecdsa_signature_create_test(const char *key_d, const char *key_x, const char *key_y, const char *random, uint8_t *input, int length, uint8_t *signature, size_t *signaturelen) {
+static int ecdsa_signature_create_test(const char *key_d, const char *key_x, const char *key_y, const char *random, uint8_t *input, int length, uint8_t *signature, size_t *signaturelen) {
     int res;
     *signaturelen = 0;
 
@@ -299,7 +299,7 @@ int ecdsa_signature_create_test(const char *key_d, const char *key_x, const char
     return res;
 }
 
-int ecdsa_signature_verify_keystr(const char *key_x, const char *key_y, uint8_t *input, int length, uint8_t *signature, size_t signaturelen) {
+static int ecdsa_signature_verify_keystr(const char *key_x, const char *key_y, uint8_t *input, int length, uint8_t *signature, size_t signaturelen) {
     int res;
     uint8_t shahash[32] = {0};
     res = sha256hash(input, length, shahash);

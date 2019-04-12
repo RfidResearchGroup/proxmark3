@@ -218,7 +218,7 @@ bool hookUpPM3() {
 }
 */
 
-void
+static void
 #ifdef __has_attribute
 #if __has_attribute(force_align_arg_pointer)
 __attribute__((force_align_arg_pointer))

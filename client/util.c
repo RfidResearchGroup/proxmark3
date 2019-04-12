@@ -852,7 +852,7 @@ uint64_t HornerScheme(uint64_t num, uint64_t divider, uint64_t factor) {
 }
 
 // determine number of logical CPU cores (use for multithreaded functions)
-extern int num_CPUs(void) {
+int num_CPUs(void) {
 #if defined(_WIN32)
 #include <sysinfoapi.h>
     SYSTEM_INFO sysinfo;
@@ -866,16 +866,16 @@ extern int num_CPUs(void) {
 #endif
 }
 
-extern void str_lower(char *s) {
+void str_lower(char *s) {
     for (int i = 0; i < strlen(s); i++)
         s[i] = tolower(s[i]);
 }
-extern bool str_startswith(const char *s,  const char *pre) {
+bool str_startswith(const char *s,  const char *pre) {
     return strncmp(pre, s, strlen(pre)) == 0;
 }
 
 // Replace unprintable characters with a dot in char buffer
-extern void clean_ascii(unsigned char *buf, size_t len) {
+void clean_ascii(unsigned char *buf, size_t len) {
     for (size_t i = 0; i < len; i++) {
         if (!isprint(buf[i]))
             buf[i] = '.';
@@ -883,20 +883,20 @@ extern void clean_ascii(unsigned char *buf, size_t len) {
 }
 
 // replace \r \n to \0
-extern void strcleanrn(char *buf, size_t len) {
+void strcleanrn(char *buf, size_t len) {
     strcreplace(buf, len, '\n', '\0');
     strcreplace(buf, len, '\r', '\0');
 }
 
 // replace char in buffer
-extern void strcreplace(char *buf, size_t len, char from, char to) {
+void strcreplace(char *buf, size_t len, char from, char to) {
     for (size_t i = 0; i < len; i++) {
         if (buf[i] == from)
             buf[i] = to;
     }
 }
 
-extern char *strmcopy(char *buf) {
+char *strmcopy(char *buf) {
     char *str = (char *) calloc(strlen(buf) + 1, sizeof(uint8_t));
     if (str != NULL) {
         memset(str, 0, strlen(buf) + 1);

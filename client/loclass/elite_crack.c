@@ -162,7 +162,7 @@ Definition 14. Define the rotate key function rk : (F 82 ) 8 × N → (F 82 ) 8 
 rk(x [0] . . . x [7] , 0) = x [0] . . . x [7]
 rk(x [0] . . . x [7] , n + 1) = rk(rl(x [0] ) . . . rl(x [7] ), n)
 **/
-void rk(uint8_t *key, uint8_t n, uint8_t *outp_key) {
+static void rk(uint8_t *key, uint8_t n, uint8_t *outp_key) {
     memcpy(outp_key, key, 8);
     uint8_t j;
     while (n-- > 0) {
@@ -175,14 +175,14 @@ void rk(uint8_t *key, uint8_t n, uint8_t *outp_key) {
 static mbedtls_des_context ctx_enc;
 static mbedtls_des_context ctx_dec;
 
-void desdecrypt_iclass(uint8_t *iclass_key, uint8_t *input, uint8_t *output) {
+static void desdecrypt_iclass(uint8_t *iclass_key, uint8_t *input, uint8_t *output) {
     uint8_t key_std_format[8] = {0};
     permutekey_rev(iclass_key, key_std_format);
     mbedtls_des_setkey_dec(&ctx_dec, key_std_format);
     mbedtls_des_crypt_ecb(&ctx_dec, input, output);
 }
 
-void desencrypt_iclass(uint8_t *iclass_key, uint8_t *input, uint8_t *output) {
+static void desencrypt_iclass(uint8_t *iclass_key, uint8_t *input, uint8_t *output) {
     uint8_t key_std_format[8] = {0};
     permutekey_rev(iclass_key, key_std_format);
     mbedtls_des_setkey_enc(&ctx_enc, key_std_format);
@@ -266,7 +266,8 @@ void hash2(uint8_t *key64, uint8_t *outp_keytable) {
  * @param i the number to read. Should be less than 127, or something is wrong...
  * @return
  */
-int _readFromDump(uint8_t dump[], dumpdata *item, uint8_t i) {
+/*
+static int _readFromDump(uint8_t dump[], dumpdata *item, uint8_t i) {
     size_t itemsize = sizeof(dumpdata);
     memcpy(item, dump + i * itemsize, itemsize);
 
@@ -277,7 +278,7 @@ int _readFromDump(uint8_t dump[], dumpdata *item, uint8_t i) {
     }
     return 0;
 }
-
+*/
 //static uint32_t startvalue = 0;
 /**
  * @brief Performs brute force attack against a dump-data item, containing csn, cc_nr and mac.
@@ -580,7 +581,7 @@ int bruteforceFileNoKeys(const char *filename) {
 // ----------------------------------------------------------------------------
 // TEST CODE BELOW
 // ----------------------------------------------------------------------------
-int _testBruteforce() {
+static int _testBruteforce() {
     int errors = 0;
     if (true) {
         // First test
@@ -617,7 +618,7 @@ int _testBruteforce() {
     return errors;
 }
 
-int _test_iclass_key_permutation() {
+static int _test_iclass_key_permutation() {
     uint8_t testcase[8] = {0x6c, 0x8d, 0x44, 0xf9, 0x2a, 0x2d, 0x01, 0xbf};
     uint8_t testcase_output[8] = {0};
     uint8_t testcase_output_correct[8] = {0x8a, 0x0d, 0xb9, 0x88, 0xbb, 0xa7, 0x90, 0xea};
@@ -643,7 +644,7 @@ int _test_iclass_key_permutation() {
     return 0;
 }
 
-int _testHash1() {
+static int _testHash1() {
     uint8_t expected[8] = {0x7E, 0x72, 0x2F, 0x40, 0x2D, 0x02, 0x51, 0x42};
     uint8_t csn[8] = {0x01, 0x02, 0x03, 0x04, 0xF7, 0xFF, 0x12, 0xE0};
     uint8_t k[8] = {0};

@@ -239,7 +239,7 @@ int JsonSaveTLVTree(json_t *root, json_t *elm, const char *path, struct tlvdb *t
     return 0;
 }
 
-bool HexToBuffer(const char *errormsg, const char *hexvalue, uint8_t *buffer, size_t maxbufferlen, size_t *bufferlen) {
+static bool HexToBuffer(const char *errormsg, const char *hexvalue, uint8_t *buffer, size_t maxbufferlen, size_t *bufferlen) {
     int buflen = 0;
 
     switch (param_gethex_to_eol(hexvalue, 0, buffer, maxbufferlen, &buflen)) {
