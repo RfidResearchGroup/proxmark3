@@ -41,7 +41,7 @@ static int usage_lf_presco_sim(void) {
 }
 
 //see ASKDemod for what args are accepted
-int CmdPrescoDemod(const char *Cmd) {
+static int CmdPrescoDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     bool st = true;
     if (!ASKDemod_ext("32 0 0 0 0 a", false, false, 1, &st)) {
@@ -82,7 +82,7 @@ int CmdPrescoDemod(const char *Cmd) {
 }
 
 //see ASKDemod for what args are accepted
-int CmdPrescoRead(const char *Cmd) {
+static int CmdPrescoRead(const char *Cmd) {
     // Presco Number: 123456789 --> Sitecode 30 | usercode 8665
     lf_read(true, 12000);
     return CmdPrescoDemod(Cmd);
@@ -90,7 +90,7 @@ int CmdPrescoRead(const char *Cmd) {
 
 // takes base 12 ID converts to hex
 // Or takes 8 digit hex ID
-int CmdPrescoClone(const char *Cmd) {
+static int CmdPrescoClone(const char *Cmd) {
 
     bool Q5 = false;
     uint32_t sitecode = 0, usercode = 0, fullcode = 0;
@@ -138,7 +138,7 @@ int CmdPrescoClone(const char *Cmd) {
 
 // takes base 12 ID converts to hex
 // Or takes 8 digit hex ID
-int CmdPrescoSim(const char *Cmd) {
+static int CmdPrescoSim(const char *Cmd) {
     uint32_t sitecode = 0, usercode = 0, fullcode = 0;
     bool Q5 = false;
     // get wiegand from printed number.
@@ -167,15 +167,15 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFPresco(const char *Cmd) {
-    clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
+int CmdLFPresco(const char *Cmd) {
+    clearCommandBuffer();
+    CmdsParse(CommandTable, Cmd);
     return 0;
 }
 

@@ -94,7 +94,7 @@ static int usage_pcf7931_config() {
     return 0;
 }
 
-int CmdLFPCF7931Read(const char *Cmd) {
+static int CmdLFPCF7931Read(const char *Cmd) {
 
     uint8_t ctmp = param_getchar(Cmd, 0);
     if (ctmp == 'H' || ctmp == 'h') return usage_pcf7931_read();
@@ -110,7 +110,7 @@ int CmdLFPCF7931Read(const char *Cmd) {
     return 0;
 }
 
-int CmdLFPCF7931Config(const char *Cmd) {
+static int CmdLFPCF7931Config(const char *Cmd) {
 
     uint8_t ctmp = param_getchar(Cmd, 0);
     if (ctmp == 0) return pcf7931_printConfig();
@@ -127,7 +127,7 @@ int CmdLFPCF7931Config(const char *Cmd) {
     return 0;
 }
 
-int CmdLFPCF7931Write(const char *Cmd) {
+static int CmdLFPCF7931Write(const char *Cmd) {
 
     uint8_t ctmp = param_getchar(Cmd, 0);
     if (strlen(Cmd) < 1 || ctmp == 'h' || ctmp == 'H') return usage_pcf7931_write();
@@ -165,14 +165,15 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
+    return 0;
+}
+
 int CmdLFPCF7931(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
-    return 0;
-}

@@ -230,7 +230,7 @@ static int usage_lf_deviceconfig() {
     return 0;
 }
 
-int CmdHelp(const char *Cmd);
+static int CmdHelp(const char *Cmd);
 
 void printT5xxHeader(uint8_t page) {
     PrintAndLogEx(NORMAL, "Reading Page %d:", page);
@@ -238,7 +238,7 @@ void printT5xxHeader(uint8_t page) {
     PrintAndLogEx(NORMAL, "----+----------+----------------------------------+-------");
 }
 
-int CmdT55xxSetConfig(const char *Cmd) {
+static int CmdT55xxSetConfig(const char *Cmd) {
 
     uint8_t offset = 0, bitRate = 0;
     char modulation[6] = {0x00};
@@ -381,7 +381,7 @@ int T55xxReadBlock(uint8_t block, bool page1, bool usepwd, bool override, uint32
     return 1;
 }
 
-int CmdT55xxReadBlock(const char *Cmd) {
+static int CmdT55xxReadBlock(const char *Cmd) {
     uint8_t block = REGULAR_READ_MODE_BLOCK;
     uint32_t password = 0; //default to blank Block 7
     bool usepwd = false;
@@ -506,7 +506,7 @@ static int SanityOfflineCheck(bool useGraphBuffer) {
     return 1;
 }
 
-int CmdT55xxDetect(const char *Cmd) {
+static int CmdT55xxDetect(const char *Cmd) {
     bool errors = false;
     bool useGB = false, usepwd = false;
     uint32_t password = 0;
@@ -991,7 +991,7 @@ int printConfiguration(t55xx_conf_block_t b) {
     return 0;
 }
 
-int CmdT55xxWakeUp(const char *Cmd) {
+static int CmdT55xxWakeUp(const char *Cmd) {
     uint32_t password = 0;
     uint8_t cmdp = 0;
     bool errors = false;
@@ -1019,7 +1019,7 @@ int CmdT55xxWakeUp(const char *Cmd) {
     return 0;
 }
 
-int CmdT55xxWriteBlock(const char *Cmd) {
+static int CmdT55xxWriteBlock(const char *Cmd) {
     uint8_t block = 0xFF; //default to invalid block
     uint32_t data = 0; //default to blank Block
     uint32_t password = 0; //default to blank Block 7
@@ -1093,7 +1093,7 @@ int CmdT55xxWriteBlock(const char *Cmd) {
     return 1;
 }
 
-int CmdT55xxReadTrace(const char *Cmd) {
+static int CmdT55xxReadTrace(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) > 1 || cmdp == 'h') return usage_t55xx_trace();
 
@@ -1333,7 +1333,7 @@ static void printT5x7KnownBlock0(uint32_t b0) {
         PrintAndLogEx(NORMAL, "\n Config block match        : " _YELLOW_("%s"), s);
 }
 
-int CmdT55xxInfo(const char *Cmd) {
+static int CmdT55xxInfo(const char *Cmd) {
     /*
         Page 0 Block 0 Configuration data.
         Normal mode
@@ -1471,7 +1471,7 @@ int CmdT55xxInfo(const char *Cmd) {
     return 0;
 }
 
-int CmdT55xxDump(const char *Cmd) {
+static int CmdT55xxDump(const char *Cmd) {
 
     uint32_t password = 0;
     bool override = false;
@@ -1761,7 +1761,7 @@ void t55x7_create_config_block(int tagtype) {
     PrintAndLogEx(NORMAL, buf);
 }
 
-int CmdResetRead(const char *Cmd) {
+static int CmdResetRead(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     UsbCommand c = {CMD_T55XX_RESET_READ, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
@@ -1780,7 +1780,7 @@ int CmdResetRead(const char *Cmd) {
     return 1;
 }
 
-int CmdT55xxWipe(const char *Cmd) {
+static int CmdT55xxWipe(const char *Cmd) {
     char writeData[20] = {0};
     char *ptrData = writeData;
     char cmdp = tolower(param_getchar(Cmd, 0));
@@ -1821,7 +1821,7 @@ bool IsCancelled(void) {
 }
 
 // load a default pwd file.
-int CmdT55xxChkPwds(const char *Cmd) {
+static int CmdT55xxChkPwds(const char *Cmd) {
 
     char filename[FILE_PATH_SIZE] = {0};
     bool found = false;
@@ -1943,7 +1943,7 @@ out:
 }
 
 // Bruteforce - incremental password range search
-int CmdT55xxBruteForce(const char *Cmd) {
+static int CmdT55xxBruteForce(const char *Cmd) {
 
     uint32_t start_password = 0x00000000; //start password
     uint32_t end_password   = 0xFFFFFFFF; //end   password
@@ -2009,7 +2009,7 @@ int tryOnePassword(uint32_t password) {
         return 0;
 }
 
-int CmdT55xxRecoverPW(const char *Cmd) {
+static int CmdT55xxRecoverPW(const char *Cmd) {
     int bit = 0;
     uint32_t orig_password = 0x0;
     uint32_t curr_password = 0x0;
@@ -2204,7 +2204,7 @@ bool tryDetectP1(bool getData) {
     return false;
 }
 //  does this need to be a callable command?
-int CmdT55xxDetectPage1(const char *Cmd) {
+static int CmdT55xxDetectPage1(const char *Cmd) {
     bool errors = false;
     bool useGB = false;
     bool usepwd = false;
@@ -2242,7 +2242,7 @@ int CmdT55xxDetectPage1(const char *Cmd) {
     return success;
 }
 
-int CmdT55xxSetDeviceConfig(const char *Cmd) {
+static int CmdT55xxSetDeviceConfig(const char *Cmd) {
     uint8_t startgap = 0, writegap = 0;
     uint8_t write0 = 0, write1 = 0, readgap = 0;
     bool errors = false, shall_persist = false;
@@ -2315,14 +2315,15 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
+    return 0;
+}
+
 int CmdLFT55XX(const char *Cmd) {
     clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
-    return 0;
-}

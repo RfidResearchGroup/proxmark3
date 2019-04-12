@@ -12,7 +12,7 @@
 static int CmdHelp(const char *Cmd);
 
 //see ASKDemod for what args are accepted
-int CmdSecurakeyDemod(const char *Cmd) {
+static int CmdSecurakeyDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
 
     //ASK / Manchester
@@ -94,7 +94,7 @@ int CmdSecurakeyDemod(const char *Cmd) {
     return 1;
 }
 
-int CmdSecurakeyRead(const char *Cmd) {
+static int CmdSecurakeyRead(const char *Cmd) {
     lf_read(true, 8000);
     return CmdSecurakeyDemod(Cmd);
 }
@@ -108,15 +108,15 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFSecurakey(const char *Cmd) {
-    clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
+int CmdLFSecurakey(const char *Cmd) {
+    clearCommandBuffer();
+    CmdsParse(CommandTable, Cmd);
     return 0;
 }
 

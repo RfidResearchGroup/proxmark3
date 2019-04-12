@@ -21,7 +21,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int CmdTIDemod(const char *Cmd) {
+static int CmdTIDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     /* MATLAB as follows:
       f_s = 2000000;  % sampling frequency
@@ -273,7 +273,7 @@ out:
 }
 
 // read a TI tag and return its ID
-int CmdTIRead(const char *Cmd) {
+static int CmdTIRead(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     UsbCommand c = {CMD_READ_TI_TYPE};
     clearCommandBuffer();
@@ -282,7 +282,7 @@ int CmdTIRead(const char *Cmd) {
 }
 
 // write new data to a r/w TI tag
-int CmdTIWrite(const char *Cmd) {
+static int CmdTIWrite(const char *Cmd) {
     int res = 0;
     UsbCommand c = {CMD_WRITE_TI_TYPE};
     res = sscanf(Cmd, "%012" SCNx64 " %012" SCNx64 " %012" SCNx64 "", &c.arg[0], &c.arg[1], &c.arg[2]);
@@ -307,15 +307,15 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFTI(const char *Cmd) {
-    clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
+int CmdLFTI(const char *Cmd) {
+    clearCommandBuffer();
+    CmdsParse(CommandTable, Cmd);
     return 0;
 }
 

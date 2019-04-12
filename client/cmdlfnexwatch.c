@@ -12,7 +12,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int CmdNexWatchDemod(const char *Cmd) {
+static int CmdNexWatchDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
 
     if (!PSKDemod("", false)) {
@@ -69,7 +69,7 @@ int CmdNexWatchDemod(const char *Cmd) {
 
 //by marshmellow
 //see ASKDemod for what args are accepted
-int CmdNexWatchRead(const char *Cmd) {
+static int CmdNexWatchRead(const char *Cmd) {
     lf_read(true, 10000);
     return CmdNexWatchDemod(Cmd);
 }
@@ -81,15 +81,15 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFNEXWATCH(const char *Cmd) {
-    clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
+int CmdLFNEXWATCH(const char *Cmd) {
+    clearCommandBuffer();
+    CmdsParse(CommandTable, Cmd);
     return 0;
 }
 

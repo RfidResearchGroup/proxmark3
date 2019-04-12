@@ -98,12 +98,12 @@ static int CmdKeriDemod(const char *Cmd) {
     return 1;
 }
 
-int CmdKeriRead(const char *Cmd) {
+static int CmdKeriRead(const char *Cmd) {
     lf_read(true, 10000);
     return CmdKeriDemod(Cmd);
 }
 
-int CmdKeriClone(const char *Cmd) {
+static int CmdKeriClone(const char *Cmd) {
 
     uint32_t internalid = 0;
     uint32_t blocks[3] = {
@@ -164,7 +164,7 @@ int CmdKeriClone(const char *Cmd) {
     return 0;
 }
 
-int CmdKeriSim(const char *Cmd) {
+static int CmdKeriSim(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_keri_sim();
@@ -206,15 +206,15 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFKeri(const char *Cmd) {
-    clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
+int CmdLFKeri(const char *Cmd) {
+    clearCommandBuffer();
+    CmdsParse(CommandTable, Cmd);
     return 0;
 }
 

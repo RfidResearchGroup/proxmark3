@@ -60,7 +60,7 @@ static uint64_t getJablontronCardId(uint64_t rawcode) {
 }
 
 //see ASKDemod for what args are accepted
-int CmdJablotronDemod(const char *Cmd) {
+static int CmdJablotronDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
 
     //Differential Biphase / di-phase (inverted biphase)
@@ -115,12 +115,12 @@ int CmdJablotronDemod(const char *Cmd) {
     return 1;
 }
 
-int CmdJablotronRead(const char *Cmd) {
+static int CmdJablotronRead(const char *Cmd) {
     lf_read(true, 10000);
     return CmdJablotronDemod(Cmd);
 }
 
-int CmdJablotronClone(const char *Cmd) {
+static int CmdJablotronClone(const char *Cmd) {
 
     uint64_t fullcode = 0;
     uint32_t blocks[3] = {T55x7_MODULATION_DIPHASE | T55x7_BITRATE_RF_64 | 2 << T55x7_MAXBLOCK_SHIFT, 0, 0};
@@ -170,7 +170,7 @@ int CmdJablotronClone(const char *Cmd) {
     return 0;
 }
 
-int CmdJablotronSim(const char *Cmd) {
+static int CmdJablotronSim(const char *Cmd) {
     uint64_t fullcode = 0;
 
     char cmdp = tolower(param_getchar(Cmd, 0));
@@ -208,15 +208,15 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFJablotron(const char *Cmd) {
-    clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
+int CmdLFJablotron(const char *Cmd) {
+    clearCommandBuffer();
+    CmdsParse(CommandTable, Cmd);
     return 0;
 }
 

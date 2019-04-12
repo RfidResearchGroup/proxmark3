@@ -48,7 +48,7 @@ static uint8_t noralsy_chksum(uint8_t *bits, uint8_t len) {
 }
 
 //see ASKDemod for what args are accepted
-int CmdNoralsyDemod(const char *Cmd) {
+static int CmdNoralsyDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
 
     //ASK / Manchester
@@ -118,12 +118,12 @@ int CmdNoralsyDemod(const char *Cmd) {
     return 1;
 }
 
-int CmdNoralsyRead(const char *Cmd) {
+static int CmdNoralsyRead(const char *Cmd) {
     lf_read(true, 8000);
     return CmdNoralsyDemod(Cmd);
 }
 
-int CmdNoralsyClone(const char *Cmd) {
+static int CmdNoralsyClone(const char *Cmd) {
 
     uint16_t year = 0;
     uint32_t id = 0;
@@ -170,7 +170,7 @@ int CmdNoralsyClone(const char *Cmd) {
     return 0;
 }
 
-int CmdNoralsySim(const char *Cmd) {
+static int CmdNoralsySim(const char *Cmd) {
 
     uint8_t bits[96];
     uint8_t *bs = bits;
@@ -214,15 +214,15 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFNoralsy(const char *Cmd) {
-    clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
+int CmdLFNoralsy(const char *Cmd) {
+    clearCommandBuffer();
+    CmdsParse(CommandTable, Cmd);
     return 0;
 }
 

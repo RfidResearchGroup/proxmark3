@@ -40,7 +40,7 @@ static int usage_lf_paradox_sim(void) {
 //by marshmellow
 //Paradox Prox demod - FSK2a RF/50 with preamble of 00001111 (then manchester encoded)
 //print full Paradox Prox ID and some bit format details if found
-int CmdParadoxDemod(const char *Cmd) {
+static int CmdParadoxDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     //raw fsk demod no manchester decoding no start bit finding just get binary from wave
     uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
@@ -104,12 +104,12 @@ int CmdParadoxDemod(const char *Cmd) {
 }
 //by marshmellow
 //see ASKDemod for what args are accepted
-int CmdParadoxRead(const char *Cmd) {
+static int CmdParadoxRead(const char *Cmd) {
     lf_read(true, 10000);
     return CmdParadoxDemod(Cmd);
 }
 
-int CmdParadoxSim(const char *Cmd) {
+static int CmdParadoxSim(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_paradox_sim();
@@ -156,15 +156,15 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFParadox(const char *Cmd) {
-    clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
+int CmdLFParadox(const char *Cmd) {
+    clearCommandBuffer();
+    CmdsParse(CommandTable, Cmd);
     return 0;
 }
 

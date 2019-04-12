@@ -39,7 +39,7 @@ static int usage_lf_viking_sim(void) {
 
 //by marshmellow
 //see ASKDemod for what args are accepted
-int CmdVikingDemod(const char *Cmd) {
+static int CmdVikingDemod(const char *Cmd) {
     if (!ASKDemod(Cmd, false, false, 1)) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Viking ASKDemod failed");
         return 0;
@@ -65,12 +65,12 @@ int CmdVikingDemod(const char *Cmd) {
 
 //by marshmellow
 //see ASKDemod for what args are accepted
-int CmdVikingRead(const char *Cmd) {
+static int CmdVikingRead(const char *Cmd) {
     lf_read(true, 10000);
     return CmdVikingDemod(Cmd);
 }
 
-int CmdVikingClone(const char *Cmd) {
+static int CmdVikingClone(const char *Cmd) {
     uint32_t id = 0;
     uint64_t rawID = 0;
     bool Q5 = false;
@@ -99,7 +99,7 @@ int CmdVikingClone(const char *Cmd) {
     return 0;
 }
 
-int CmdVikingSim(const char *Cmd) {
+static int CmdVikingSim(const char *Cmd) {
     uint32_t id = 0;
     uint64_t rawID = 0;
     uint8_t clk = 32, encoding = 1, separator = 0, invert = 0;
@@ -135,15 +135,15 @@ static command_t CommandTable[] = {
     {NULL, NULL, 0, NULL}
 };
 
-int CmdLFViking(const char *Cmd) {
-    clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
     return 0;
 }
 
-int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
+int CmdLFViking(const char *Cmd) {
+    clearCommandBuffer();
+    CmdsParse(CommandTable, Cmd);
     return 0;
 }
 
