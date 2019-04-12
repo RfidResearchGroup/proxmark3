@@ -414,7 +414,7 @@ static void printHitagConfiguration(uint8_t config) {
     if (config & 0x10) {
         strcat(msg + strlen(msg), "read only");
     } else  {
-        strcat(msg + strlen(msg), _GREEN_("read write"));
+        strcat(msg + strlen(msg), _GREEN_("RW"));
     }
     PrintAndLogEx(SUCCESS, "%s", msg);
     memset(msg, 0, sizeof(msg));
@@ -424,7 +424,7 @@ static void printHitagConfiguration(uint8_t config) {
     if (config & 0x20) {
         strcat(msg + strlen(msg), "read only");
     } else  {
-        strcat(msg + strlen(msg), _GREEN_("read write"));
+        strcat(msg + strlen(msg), _GREEN_("RW"));
     }
     PrintAndLogEx(SUCCESS, "%s", msg);
     memset(msg, 0, sizeof(msg));
@@ -434,7 +434,7 @@ static void printHitagConfiguration(uint8_t config) {
     if (config & 0x40) {
         strcat(msg + strlen(msg), "read only. Configuration byte and password tag " _RED_("FIXED / IRREVERSIBLE"));
     } else  {
-        strcat(msg + strlen(msg), _GREEN_("read write"));
+        strcat(msg + strlen(msg), _GREEN_("RW"));
     }
     PrintAndLogEx(SUCCESS, "%s", msg);
     memset(msg, 0, sizeof(msg));
@@ -450,7 +450,7 @@ static void printHitagConfiguration(uint8_t config) {
             strcat(msg + strlen(msg), "read only");
         }
     } else  {
-        strcat(msg, "Page 1,2    : " _GREEN_("read write"));
+        strcat(msg, "Page 1,2    : " _GREEN_("RW"));
     }
     PrintAndLogEx(SUCCESS, "%s", msg);
     PrintAndLogEx(INFO, "------------------------------------");

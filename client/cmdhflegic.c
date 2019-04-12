@@ -252,7 +252,7 @@ int CmdLegicInfo(const char *Cmd) {
             stamp_len = 0xfc - data[6];
         }
 
-        PrintAndLogEx(NORMAL, "DCF: %d (%02x %02x), Token Type=%s (OLE=%01u), OL=%02u, FL=%02u",
+        PrintAndLogEx(NORMAL, "DCF: %d (%02x %02x), Token Type=" _YELLOW_("%s") " (OLE=%01u), OL=%02u, FL=%02u",
                       dcf,
                       data[5],
                       data[6],
@@ -468,7 +468,7 @@ int CmdLegicInfo(const char *Cmd) {
             }
         }
 
-        if ( i > 0 ) {
+        if ( remain_seg_payload_len > 0 ) {
             PrintAndLogEx(NORMAL, "Remaining segment payload:  (I %d | Remain LEN %d)", i, remain_seg_payload_len);
             PrintAndLogEx(NORMAL, "\nrow  | data");
             PrintAndLogEx(NORMAL, "-----+------------------------------------------------");

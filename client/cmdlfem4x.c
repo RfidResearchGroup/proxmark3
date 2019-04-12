@@ -745,7 +745,7 @@ uint32_t OutputEM4x50_Block(uint8_t *BitStream, size_t size, bool verbose, bool 
                          );
         }
 
-        PrintAndLogEx(SUCCESS, "Parity checks | %s", (pTest) ? _GREEN_("Passed") : _RED_("Failed"));
+        PrintAndLogEx(SUCCESS, "Parity checks | %s", (pTest) ? _GREEN_("Passed") : _RED_("Fail"));
     }
     return code;
 }
@@ -944,7 +944,7 @@ int EM4x50Read(const char *Cmd, bool verbose) {
             PrintAndLogEx(NORMAL, "Block %d: %08x", block, Code[block]);
         }
 
-        PrintAndLogEx(NORMAL, "Parities checks | %s", (AllPTest) ? _GREEN_("Passed") : _RED_("Failed"));
+        PrintAndLogEx(NORMAL, "Parities checks | %s", (AllPTest) ? _GREEN_("Passed") : _RED_("Fail"));
 
         if (AllPTest == 0) {
             PrintAndLogEx(NORMAL, "Try cleaning the read samples with " _YELLOW_("'data askedge'"));
@@ -1202,7 +1202,7 @@ static int CmdEM4x05Read(const char *Cmd) {
     if (isOk)
         PrintAndLogEx(NORMAL, "Address %02d | %08X - %s", addr, word, (addr > 13) ? "Lock" : "");
     else
-        PrintAndLogEx(NORMAL, "Read Address %02d | " _RED_("failed"), addr);
+        PrintAndLogEx(NORMAL, "Read Address %02d | " _RED_("Fail"), addr);
     return isOk;
 }
 
