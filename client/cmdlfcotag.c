@@ -127,5 +127,5 @@ int demodCOTAG(void) {
 }
 
 int readCOTAGUid(void) {
-    return CmdCOTAGRead > 0;
+    return CmdCOTAGRead == 1;
 }
