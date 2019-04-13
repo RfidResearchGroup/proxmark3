@@ -1205,10 +1205,10 @@ static int CmdT55xxReadTrace(const char *Cmd) {
         si += 5;
         data.dw      = PackBits(si, 15, DemodBuffer);
 
-        struct tm *t = NULL;
+        struct tm *tm = NULL;
         time_t now = time(NULL);        
-        localtime_r(&now, t);
-        if (data.year > t.tm_year - 110)
+        localtime_r(&now, tm);
+        if (data.year > tm->tm_year - 110)
             data.year += 2000;
         else
             data.year += 2010;
