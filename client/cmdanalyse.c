@@ -466,6 +466,7 @@ static int CmdAnalyseTEASelfTest(const char *Cmd) {
     return 0;
 }
 
+/*
 static char *pb(uint32_t b) {
     static char buf1[33] = {0};
     static char buf2[33] = {0};
@@ -485,6 +486,7 @@ static char *pb(uint32_t b) {
     }
     return s;
 }
+*/
 
 static int CmdAnalyseA(const char *Cmd) {
 
@@ -526,7 +528,7 @@ static int CmdAnalyseA(const char *Cmd) {
     }
     PrintAndLogEx(NORMAL, "got ack.  Status %d", resp.arg[0]);
     return 0;
-
+/*
     PrintAndLogEx(NORMAL, "-- " _BLUE_("its my message") "\n");
     PrintAndLogEx(NORMAL, "-- " _RED_("its my message") "\n");
     PrintAndLogEx(NORMAL, "-- " _YELLOW_("its my message") "\n");
@@ -555,13 +557,14 @@ static int CmdAnalyseA(const char *Cmd) {
     n1 = (n1 << 4) | (rev & (uint8_t)(~(0xFF << 4)));
 
     PrintAndLogEx(NORMAL, "rev %02X | %02X %s | %02X %s |\n", rev, n0, pb(n0), n1, pb(n1));
-
+*/
     /*
     hex(0xb24d shr 0) 0xB24D 0b1011001001001101
     hex(0xb24d shr 1) 0x5926
     hex(0xb24d shr 2) 0x2C93
     */
 
+/*    
     for (int i = 0; i < 16; i++) {
         PrintAndLogEx(NORMAL, " (shiftReg >> %d) & 0xFFFF ==  %08x ---", i, ((shiftReg >> i) & 0xFFFF));
 
@@ -585,12 +588,12 @@ static int CmdAnalyseA(const char *Cmd) {
     uint8_t p1 = (rev & (uint8_t)(~(0xFF << byte_offset)));
     PrintAndLogEx(NORMAL, "Offset  %u  | leftovers  %02x  %s \n", byte_offset, p1, pb(p1));
 
-
+*/
 
     /*
     pm3 --> da hex2bin 4db2     0100110110110010
     */
-    return 0;
+    //return 0;
     /*
         // split byte into two parts.
         uint8_t offset = 3, n0 = 0, n1 = 0;
@@ -618,6 +621,7 @@ static int CmdAnalyseA(const char *Cmd) {
         */
 //    return 0;
 
+/*
     // 14443-A
     uint8_t u14_c[] = {0x09, 0x78, 0x00, 0x92, 0x02, 0x54, 0x13, 0x02, 0x04, 0x2d, 0xe8 }; // atqs w crc
     uint8_t u14_w[] = {0x09, 0x78, 0x00, 0x92, 0x02, 0x54, 0x13, 0x02, 0x04, 0x2d, 0xe7 }; // atqs w crc
@@ -649,6 +653,7 @@ static int CmdAnalyseA(const char *Cmd) {
     PrintAndLogEx(NORMAL, "\n\n");
 
     return 0;
+    */
     /*
     bool term = !isatty(STDIN_FILENO);
     if (!term) {
@@ -692,6 +697,7 @@ static int CmdAnalyseA(const char *Cmd) {
     uid(3e172b29) nt(039b7bd2) ks(0c0e0f0505080800) nr(00000001)
     uid(3e172b29) nt(039b7bd2) ks(0e06090d03000b0f) nr(00000002)
     */
+/*    
     uint64_t *keylistA = NULL, *keylistB = NULL;
     uint32_t keycountA = 0, keycountB = 0;
 //  uint64_t d1[] = {0x3e172b29, 0x039b7bd2, 0x0000001, 0, 0x0c0e0f0505080800};
@@ -721,7 +727,7 @@ static int CmdAnalyseA(const char *Cmd) {
 
     free(keylistA);
     free(keylistB);
-
+*/
 //  qsort(keylist, keycount, sizeof(*keylist), compare_uint64);
 //  keycount = intersection(last_keylist, keylist);
 
@@ -849,7 +855,7 @@ static int CmdAnalyseA(const char *Cmd) {
         );
     }
     */
-    return 0;
+//    return 0;
 }
 
 static void generate4bNUID(uint8_t *uid, uint8_t *nuid) {
