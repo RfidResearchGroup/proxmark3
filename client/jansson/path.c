@@ -110,7 +110,7 @@ int json_path_set_new(json_t *json, const char *path, json_t *value, size_t flag
             if (expect == path_delims) {
                 break;
             } else {
-                jsonp_error_set(error, -1, -1, buf, json_error_invalid_format, "missing ']'?");
+                jsonp_error_set(error, -1, -1, last_peek - buf, json_error_invalid_format, "missing ']'?");
                 goto fail;
             }
         }
@@ -182,7 +182,7 @@ int json_path_set_new(json_t *json, const char *path, json_t *value, size_t flag
         json_array_set(parent, index_saved, value);
         cursor = json_array_get(parent, index_saved);
     } else {
-        jsonp_error_set(error, -1, -1, (peek) ? peek - buf : buf, json_error_item_not_found, "invalid path");
+        jsonp_error_set(error, -1, -1, last_peek - buf, json_error_item_not_found, "invalid path");
         goto fail;
     }
 
