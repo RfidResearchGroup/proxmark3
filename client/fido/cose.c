@@ -39,7 +39,7 @@ COSEValueNameDesc_t COSEKeyTypeValueDesc[] = {
 };
 
 static COSEValueNameDesc_t *GetCOSEktyElm(int id) {
-    for (int i = 0; i < ARRAYLEN(COSEKeyTypeValueDesc); i++)
+    for (size_t i = 0; i < ARRAYLEN(COSEKeyTypeValueDesc); i++)
         if (COSEKeyTypeValueDesc[i].Value == id)
             return &COSEKeyTypeValueDesc[i];
     return NULL;
@@ -64,7 +64,7 @@ COSEValueTypeNameDesc_t COSECurvesDesc[] = {
 };
 
 static COSEValueTypeNameDesc_t *GetCOSECurveElm(int id) {
-    for (int i = 0; i < ARRAYLEN(COSECurvesDesc); i++)
+    for (size_t i = 0; i < ARRAYLEN(COSECurvesDesc); i++)
         if (COSECurvesDesc[i].Value == id)
             return &COSECurvesDesc[i];
     return NULL;
@@ -136,7 +136,7 @@ COSEValueNameDesc_t COSEAlg[] = {
 };
 
 static COSEValueNameDesc_t *GetCOSEAlgElm(int id) {
-    for (int i = 0; i < ARRAYLEN(COSEAlg); i++)
+    for (size_t i = 0; i < ARRAYLEN(COSEAlg); i++)
         if (COSEAlg[i].Value == id)
             return &COSEAlg[i];
     return NULL;

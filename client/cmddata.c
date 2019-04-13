@@ -457,12 +457,12 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
     int invert = 0;
     int clk = 0;
     int maxErr = 100;
-    int maxLen = 0;
+    size_t maxLen = 0;
     uint8_t askamp = 0;
     char amp = tolower(param_getchar(Cmd, 0));
     uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
 
-    sscanf(Cmd, "%i %i %i %i %c", &clk, &invert, &maxErr, &maxLen, &amp);
+    sscanf(Cmd, "%i %i %i %zu %c", &clk, &invert, &maxErr, &maxLen, &amp);
 
     if (!maxLen) maxLen = BIGBUF_SIZE;
 
@@ -573,7 +573,8 @@ static int Cmdaskmandemod(const char *Cmd) {
 static int Cmdmandecoderaw(const char *Cmd) {
     size_t size = 0;
     int high = 0, low = 0;
-    int i = 0, errCnt = 0, invert = 0, maxErr = 20;
+    size_t i = 0;
+    int errCnt = 0, invert = 0, maxErr = 20;
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) > 5 || cmdp == 'h') return usage_data_manrawdecode();
 
@@ -724,7 +725,7 @@ static int Cmdaskrawdemod(const char *Cmd) {
     return ASKDemod(Cmd, true, false, 0);
 }
 
-int AutoCorrelate(const int *in, int *out, size_t len, int window, bool SaveGrph, bool verbose) {
+int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveGrph, bool verbose) {
     // sanity check
     if (window > len) window = len;
 
@@ -744,7 +745,7 @@ int AutoCorrelate(const int *in, int *out, size_t len, int window, bool SaveGrph
 
     static int CorrelBuffer[MAX_GRAPH_TRACE_LEN];
 
-    for (int i = 0; i < len - window; ++i) {
+    for (size_t i = 0; i < len - window; ++i) {
 
         for (size_t j = 0; j < (len - i); j++) {
             autocv += (in[j] - mean) * (in[j + i] - mean);
@@ -766,14 +767,14 @@ int AutoCorrelate(const int *in, int *out, size_t len, int window, bool SaveGrph
     //
     int hi = 0, idx = 0;
     int distance = 0, hi_1 = 0, idx_1 = 0;
-    for (int i = 0; i <= len; ++i) {
+    for (size_t i = 0; i <= len; ++i) {
         if (CorrelBuffer[i] > hi) {
             hi = CorrelBuffer[i];
             idx = i;
         }
     }
 
-    for (int i = idx + 1; i <= window; ++i) {
+    for (size_t i = idx + 1; i <= window; ++i) {
         if (CorrelBuffer[i] > hi_1) {
             hi_1 = CorrelBuffer[i];
             idx_1 = i;
@@ -856,8 +857,8 @@ static int CmdBitsamples(const char *Cmd) {
         return false;
     }
 
-    for (int j = 0; j < sizeof(got); j++) {
-        for (int k = 0; k < 8; k++) {
+    for (size_t j = 0; j < sizeof(got); j++) {
+        for (uint8_t k = 0; k < 8; k++) {
             if (got[j] & (1 << (7 - k)))
                 GraphBuffer[cnt++] = 1;
             else
@@ -882,7 +883,7 @@ static int CmdBuffClear(const char *Cmd) {
 
 static int CmdDec(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    for (int i = 0; i < (GraphTraceLen / 2); ++i)
+    for (size_t i = 0; i < (GraphTraceLen / 2); ++i)
         GraphBuffer[i] = GraphBuffer[i * 2];
     GraphTraceLen /= 2;
     PrintAndLogEx(NORMAL, "decimated by 2");
@@ -926,7 +927,7 @@ static int CmdGraphShiftZero(const char *Cmd) {
     //set options from parameters entered with the command
     sscanf(Cmd, "%i", &shift);
 
-    for (int i = 0; i < GraphTraceLen; i++) {
+    for (size_t i = 0; i < GraphTraceLen; i++) {
         if (i + shift >= GraphTraceLen)
             shiftedVal = GraphBuffer[i];
         else
