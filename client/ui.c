@@ -98,7 +98,7 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
         if (buffer[0] == '\n')
             PrintAndLog("");
 
-        token = strtok(buffer, delim);
+        token = strtok_r(buffer, delim);
 
         while (token != NULL) {
 
@@ -109,7 +109,7 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
             else
                 snprintf(buffer2 + size, sizeof(buffer2) - size, "\n");
 
-            token = strtok(NULL, delim);
+            token = strtok_r(NULL, delim);
         }
         PrintAndLog("%s", buffer2);
     } else {
