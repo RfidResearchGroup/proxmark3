@@ -55,6 +55,7 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
     char buffer[MAX_PRINT_BUFFER] = {0};
     char buffer2[MAX_PRINT_BUFFER + 20] = {0};
     char *token = NULL;
+    char *tmp_ptr = NULL;
     //   {NORMAL, SUCCESS, INFO, FAILED, WARNING, ERR, DEBUG}
     static const char *prefixes[7] = { "", "[+] ", "[=] ", "[-] ", "[!] ", "[!!] ", "[#] "};
 
@@ -98,7 +99,7 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
         if (buffer[0] == '\n')
             PrintAndLog("");
 
-        token = strtok_r(buffer, delim);
+        token = strtok_r(buffer, delim, &tmp_ptr);
 
         while (token != NULL) {
 
@@ -109,7 +110,7 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
             else
                 snprintf(buffer2 + size, sizeof(buffer2) - size, "\n");
 
-            token = strtok_r(NULL, delim);
+            token = strtok_r(NULL, delim, &tmp_ptr);
         }
         PrintAndLog("%s", buffer2);
     } else {
