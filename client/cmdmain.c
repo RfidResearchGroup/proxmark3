@@ -9,7 +9,6 @@
 // Main command parser entry point
 //-----------------------------------------------------------------------------
 
-
 /* Ensure gmtime_r is available even with -std=c99; must be included before
  */
 #if !defined(_WIN32)
@@ -24,7 +23,7 @@ static int CmdRem(const char *Cmd) {
 
     memset(buf, 0x00, sizeof(buf));
     struct tm *curTime = NULL;
-    time_t now = time(0);
+    time_t now = time(NULL);
     gmtime_r(&now, curTime);
     strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", curTime);  // ISO8601
     PrintAndLogEx(NORMAL, "%s remark: %s", buf, Cmd);

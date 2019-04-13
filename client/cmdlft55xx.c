@@ -6,6 +6,12 @@
 //-----------------------------------------------------------------------------
 // Low frequency T55xx commands
 //-----------------------------------------------------------------------------
+/* Ensure localtime_r is available even with -std=c99; must be included before
+ */
+#if !defined(_WIN32)
+#define _POSIX_C_SOURCE 200112L
+#endif
+
 #include "cmdlft55xx.h"
 
 // Default configuration
@@ -1199,9 +1205,10 @@ static int CmdT55xxReadTrace(const char *Cmd) {
         si += 5;
         data.dw      = PackBits(si, 15, DemodBuffer);
 
-        time_t t = time(NULL);
-        struct tm tm = *localtime(&t);
-        if (data.year > tm.tm_year - 110)
+        struct tm *t = NULL;
+        time_t now = time(NULL);        
+        localtime_r(&now, t);
+        if (data.year > t.tm_year - 110)
             data.year += 2000;
         else
             data.year += 2010;
