@@ -18,9 +18,9 @@ uint8_t key_defa_data[16] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x
 uint8_t key_picc_data[16] = { 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f };
 
 static int CmdHelp(const char *Cmd);
-
+/*
 static int CmdHF14ADesWb(const char *Cmd) {
-    /*  uint8_t blockNo = 0;
+        uint8_t blockNo = 0;
         uint8_t keyType = 0;
         uint8_t key[6] = {0, 0, 0, 0, 0, 0};
         uint8_t bldata[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -63,57 +63,56 @@ static int CmdHF14ADesWb(const char *Cmd) {
         } else {
             PrintAndLogEx(NORMAL, "Command execute timeout");
         }
-     */
     return 0;
 }
 
 static int CmdHF14ADesRb(const char *Cmd) {
-    // uint8_t blockNo = 0;
-    // uint8_t keyType = 0;
-    // uint8_t key[6] = {0, 0, 0, 0, 0, 0};
+    uint8_t blockNo = 0;
+    uint8_t keyType = 0;
+    uint8_t key[6] = {0, 0, 0, 0, 0, 0};
 
-    // char cmdp = 0x00;
+    char cmdp = 0x00;
 
 
-    // if (strlen(Cmd)<3) {
-    // PrintAndLogEx(NORMAL, "Usage:  hf mf rdbl    <block number> <key A/B> <key (12 hex symbols)>");
-    // PrintAndLogEx(NORMAL, "        sample: hf mf rdbl 0 A FFFFFFFFFFFF ");
-    // return 0;
-    // }
+    if (strlen(Cmd)<3) {
+    PrintAndLogEx(NORMAL, "Usage:  hf mf rdbl    <block number> <key A/B> <key (12 hex symbols)>");
+    PrintAndLogEx(NORMAL, "        sample: hf mf rdbl 0 A FFFFFFFFFFFF ");
+    return 0;
+    }
 
-    // blockNo = param_get8(Cmd, 0);
-    // cmdp = param_getchar(Cmd, 1);
-    // if (cmdp == 0x00) {
-    // PrintAndLogEx(NORMAL, "Key type must be A or B");
-    // return 1;
-    // }
-    // if (cmdp != 'A' && cmdp != 'a') keyType = 1;
-    // if (param_gethex(Cmd, 2, key, 12)) {
-    // PrintAndLogEx(NORMAL, "Key must include 12 HEX symbols");
-    // return 1;
-    // }
-    // PrintAndLogEx(NORMAL, "--block no:%02x key type:%02x key:%s ", blockNo, keyType, sprint_hex(key, 6));
+    blockNo = param_get8(Cmd, 0);
+    cmdp = param_getchar(Cmd, 1);
+    if (cmdp == 0x00) {
+    PrintAndLogEx(NORMAL, "Key type must be A or B");
+    return 1;
+    }
+    if (cmdp != 'A' && cmdp != 'a') keyType = 1;
+    if (param_gethex(Cmd, 2, key, 12)) {
+    PrintAndLogEx(NORMAL, "Key must include 12 HEX symbols");
+    return 1;
+    }
+    PrintAndLogEx(NORMAL, "--block no:%02x key type:%02x key:%s ", blockNo, keyType, sprint_hex(key, 6));
 
-    // UsbCommand c = {CMD_MIFARE_READBL, {blockNo, keyType, 0}, {{0}}};
-    // memcpy(c.d.asBytes, key, 6);
-    // SendCommand(&c);
+    UsbCommand c = {CMD_MIFARE_READBL, {blockNo, keyType, 0}, {{0}}};
+    memcpy(c.d.asBytes, key, 6);
+    SendCommand(&c);
 
-    // UsbCommand resp;
-    // if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-    // uint8_t                isOK  = resp.arg[0] & 0xff;
-    // uint8_t              * data  = resp.d.asBytes;
+    UsbCommand resp;
+    if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+    uint8_t                isOK  = resp.arg[0] & 0xff;
+    uint8_t              * data  = resp.d.asBytes;
 
-    // if (isOK)
-    // PrintAndLogEx(NORMAL, "isOk:%02x data:%s", isOK, sprint_hex(data, 16));
-    // else
-    // PrintAndLogEx(NORMAL, "isOk:%02x", isOK);
-    // } else {
-    // PrintAndLogEx(NORMAL, "Command execute timeout");
-    // }
+    if (isOK)
+    PrintAndLogEx(NORMAL, "isOk:%02x data:%s", isOK, sprint_hex(data, 16));
+    else
+    PrintAndLogEx(NORMAL, "isOk:%02x", isOK);
+    } else {
+    PrintAndLogEx(NORMAL, "Command execute timeout");
+    }
 
     return 0;
 }
-
+*/
 static int CmdHF14ADesInfo(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
 
@@ -646,8 +645,8 @@ static command_t CommandTable[] = {
     {"info",    CmdHF14ADesInfo,            0, "Tag information"},
     {"enum",    CmdHF14ADesEnumApplications, 0, "Tries enumerate all applications"},
     {"auth",    CmdHF14ADesAuth,            0, "Tries a MIFARE DesFire Authentication"},
-    {"rdbl",    CmdHF14ADesRb,              0, "Read MIFARE DesFire block"},
-    {"wrbl",    CmdHF14ADesWb,              0, "write MIFARE DesFire block"},
+//    {"rdbl",    CmdHF14ADesRb,              0, "Read MIFARE DesFire block"},
+//    {"wrbl",    CmdHF14ADesWb,              0, "write MIFARE DesFire block"},
     {NULL, NULL, 0, NULL}
 };
 
