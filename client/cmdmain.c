@@ -9,8 +9,7 @@
 // Main command parser entry point
 //-----------------------------------------------------------------------------
 
-/* Ensure gmtime_r is available even with -std=c99; must be included before
- */
+// ensure gmtime_r is available even with -std=c99; must be included before
 #if !defined(_WIN32)
 #define _POSIX_C_SOURCE 200112L
 #endif
@@ -19,13 +18,15 @@
 static int CmdHelp(const char *Cmd);
 
 static int CmdRem(const char *Cmd) {
-    char buf[22];
-
-    memset(buf, 0x00, sizeof(buf));
-    struct tm *curTime = NULL;
+    char buf[22] = {0};
+    struct tm *ct, tm_buf;
     time_t now = time(NULL);
-    gmtime_r(&now, curTime);
-    strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", curTime);  // ISO8601
+#if defined(_WIN32)
+    ct = gmtime_s(&tm_buf, &now) == 0 ? &tm_buf : NULL;
+#else
+    ct = gmtime_r(&now, &tm_buf);
+#endif
+    strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", ct);  // ISO8601
     PrintAndLogEx(NORMAL, "%s remark: %s", buf, Cmd);
     return 0;
 }

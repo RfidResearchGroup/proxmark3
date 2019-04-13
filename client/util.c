@@ -7,6 +7,12 @@
 //-----------------------------------------------------------------------------
 // utilities
 //-----------------------------------------------------------------------------
+
+// ensure gmtime_r is available even with -std=c99; must be included before
+ #if !defined(_WIN32)
+#define _POSIX_C_SOURCE 200112L
+#endif
+
 #include "util.h"
 
 #define UTIL_BUFFER_SIZE_SPRINT 4097
@@ -92,12 +98,15 @@ void AddLogUint64(const char *fn, const char *data, const uint64_t value) {
 }
 
 void AddLogCurrentDT(const char *fn) {
-    char buf[20];
-    memset(buf, 0x00, sizeof(buf));
-    struct tm *curTime;
-    time_t now = time(0);
-    curTime = gmtime(&now);
-    strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", curTime);
+    char buf[20] = {0};
+    struct tm *ct, tm_buf;
+    time_t now = time(NULL);
+#if defined(_WIN32)
+    ct = gmtime_s(&tm_buf, &now) == 0 ? &tm_buf : NULL;
+#else
+    ct = gmtime_r(&now, &tm_buf);
+#endif
+    strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", ct);
     AddLogLine(fn, "\nanticollision: ", buf);
 }
 
