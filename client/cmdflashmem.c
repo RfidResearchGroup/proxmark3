@@ -243,8 +243,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
             data[1] = (keycount >> 8) & 0xFF;
             datalen += 2;
             break;
-        default:
-
+        case DICTIONARY_NONE:
             res = loadFile(filename, "bin", data, FLASH_MEM_MAX_SIZE, &datalen);
             //int res = loadFileEML( filename, "eml", data, &datalen);
             if (res) {

@@ -550,9 +550,10 @@ static int CmdLFHitagReader(const char *Cmd) {
             // No additional parameters needed
             break;
         }
-        default: {
+        case WHTSF_CHALLENGE:
+        case WHTSF_KEY:
+        case WHT2F_CRYPTO:
             return usage_hitag_reader();
-        }
     }
 
     c.arg[0] = htf;
@@ -661,9 +662,14 @@ static int CmdLFHitagWriter(const char *Cmd) {
             num_to_bytes(param_get32ex(Cmd, 3, 0, 16), 4, htd->crypto.data);
             break;
         }
-        default: {
+        case RHTSF_CHALLENGE:
+        case RHTSF_KEY:
+        case RHT2F_PASSWORD:
+        case RHT2F_AUTHENTICATE:
+        case RHT2F_CRYPTO:
+        case RHT2F_TEST_AUTH_ATTEMPTS:
+        case RHT2F_UID_ONLY:
             return usage_hitag_writer();
-        }
     }
 
     c.arg[0] = htf;

@@ -42,7 +42,7 @@ void init_table(CrcType_t crctype) {
         case CRC_KERMIT:
             generate_table(CRC16_POLY_CCITT, true);
             break;
-        default:
+        case CRC_NONE:
             crc_table_init = false;
             current_crc_type = CRC_NONE;
             break;
@@ -178,15 +178,17 @@ void compute_crc(CrcType_t ct, const uint8_t *d, size_t n, uint8_t *first, uint8
         case CRC_FELICA:
             crc = crc16_xmodem(d, n);
             break;
-        //case CRC_LEGIC:
         case CRC_CCITT:
             crc = crc16_ccitt(d, n);
             break;
         case CRC_KERMIT:
             crc = crc16_kermit(d, n);
             break;
-        default:
-            break;
+        case CRC_LEGIC:
+            // TODO
+            return;
+        case CRC_NONE:
+            return;
     }
     *first = (crc & 0xFF);
     *second = ((crc >> 8) & 0xFF);
@@ -207,11 +209,13 @@ uint16_t Crc16ex(CrcType_t ct, const uint8_t *d, size_t n) {
             return crc16_iclass(d, n);
         case CRC_FELICA:
             return crc16_xmodem(d, n);
-        //case CRC_LEGIC:
         case CRC_CCITT:
             return crc16_ccitt(d, n);
         case CRC_KERMIT:
             return crc16_kermit(d, n);
+        case CRC_LEGIC:
+            // TODO
+            return 0;
         default:
             break;
     }
@@ -245,9 +249,11 @@ bool check_crc(CrcType_t ct, const uint8_t *d, size_t n) {
             return (crc16_iclass(d, n) == 0);
         case CRC_FELICA:
             return (crc16_xmodem(d, n) == 0);
-        //case CRC_LEGIC:
         case CRC_CCITT:
             return (crc16_ccitt(d, n) == 0);
+        case CRC_LEGIC:
+            // TODO
+            return false;
         default:
             break;
     }

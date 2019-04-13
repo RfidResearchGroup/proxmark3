@@ -53,9 +53,15 @@ uint8_t mifare_CRC_check(bool isResponse, uint8_t *data, uint8_t len) {
         case masNone:
         case masError:
             return iso14443A_CRC_check(isResponse, data, len);
-        default:
-            return 2;
+        case masNt:
+        case masNrAr:
+        case masAt:
+        case masAuthComplete:
+        case masFirstData:
+        case masData:
+            break;
     }
+    return 2;
 }
 
 /**
@@ -1024,7 +1030,11 @@ void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, uint8
                 MifareAuthState = masError;
             }
             break;
-        default:
+        case masNone:
+        case masError:
+        case masAuthComplete:
+        case masFirstData:
+        case masData:
             break;
     }
 

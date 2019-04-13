@@ -238,7 +238,11 @@ static int ndefDecodePayload(NDEFHeader_t *ndef) {
             PrintAndLogEx(NORMAL, "\ttype:    %.*s", ndef->TypeLen, ndef->Type);
             PrintAndLogEx(NORMAL, "\tpayload: %.*s", ndef->PayloadLen, ndef->Payload);
             break;
-        default:
+        case tnfEmptyRecord:
+        case tnfMIMEMediaRecord:
+        case tnfExternalRecord:
+        case tnfUnchangedRecord:
+        case tnfUnknownRecord:
             break;
     }
     return 0;

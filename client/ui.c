@@ -81,7 +81,8 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
         case WARNING:
             strncpy(prefix, _CYAN_("[!]"), sizeof(prefix) - 1);
             break;
-        default:
+        case NORMAL:
+        case INFO:
             strncpy(prefix, prefixes[level], sizeof(prefix) - 1);
             break;
     }
