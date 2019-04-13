@@ -8,6 +8,13 @@
 //-----------------------------------------------------------------------------
 // Main command parser entry point
 //-----------------------------------------------------------------------------
+
+
+/* Ensure gmtime_r is available even with -std=c99; must be included before
+ */
+#if !defined(_WIN32)
+#define _POSIX_C_SOURCE 200112L
+#endif
 #include "cmdmain.h"
 
 static int CmdHelp(const char *Cmd);
@@ -16,9 +23,9 @@ static int CmdRem(const char *Cmd) {
     char buf[22];
 
     memset(buf, 0x00, sizeof(buf));
-    struct tm *curTime;
+    struct tm *curTime = NULL;
     time_t now = time(0);
-    curTime = gmtime(&now);
+    gmtime_r(&now, curTime);
     strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", curTime);  // ISO8601
     PrintAndLogEx(NORMAL, "%s remark: %s", buf, Cmd);
     return 0;
