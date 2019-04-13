@@ -150,7 +150,7 @@ fido2Desc_t fido2CmdGetInfoRespDesc[] = {
 };
 
 const char *fido2GetCmdErrorDescription(uint8_t errorCode) {
-    for (int i = 0; i < sizeof(fido2Errors) / sizeof(fido2Error_t); i++)
+    for (size_t i = 0; i < sizeof(fido2Errors) / sizeof(fido2Error_t); i++)
         if (fido2Errors[i].ErrorCode == errorCode)
             return fido2Errors[i].Description;
 
@@ -158,7 +158,7 @@ const char *fido2GetCmdErrorDescription(uint8_t errorCode) {
 }
 
 const char *fido2GetCmdMemberDescription(uint8_t cmdCode, bool isResponse, int memberNum) {
-    for (int i = 0; i < sizeof(fido2CmdGetInfoRespDesc) / sizeof(fido2Desc_t); i++)
+    for (size_t i = 0; i < sizeof(fido2CmdGetInfoRespDesc) / sizeof(fido2Desc_t); i++)
         if (fido2CmdGetInfoRespDesc[i].Command == cmdCode &&
                 fido2CmdGetInfoRespDesc[i].PckType == (isResponse ? ptResponse : ptQuery) &&
                 fido2CmdGetInfoRespDesc[i].MemberNumber == memberNum)

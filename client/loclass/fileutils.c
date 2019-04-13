@@ -92,7 +92,6 @@ int saveFileEML(const char *preferredName, const char *suffix, uint8_t *data, si
     int retval = 0;
     int blocks = datalen / blocksize;
     uint16_t currblock = 1;
-    int i, j;
     int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
     char *fileName = calloc(size, sizeof(char));
     int num = 1;
@@ -112,7 +111,7 @@ int saveFileEML(const char *preferredName, const char *suffix, uint8_t *data, si
         goto out;
     }
 
-    for (i = 0; i < datalen; i++) {
+    for (size_t i = 0; i < datalen; i++) {
         fprintf(f, "%02X", data[i]);
 
         // no extra line in the end
@@ -124,7 +123,7 @@ int saveFileEML(const char *preferredName, const char *suffix, uint8_t *data, si
     // left overs
     if (datalen % blocksize != 0) {
         int index = blocks * blocksize;
-        for (j = 0; j < datalen % blocksize; j++) {
+        for (size_t j = 0; j < datalen % blocksize; j++) {
             fprintf(f, "%02X", data[index + j]);
         }
     }
@@ -162,9 +161,9 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
         }
         case jsfCardMemory: {
             JsonSaveStr(root, "FileType", "mfcard");
-            for (int i = 0; i < (datalen / 16); i++) {
+            for (size_t i = 0; i < (datalen / 16); i++) {
                 char path[PATH_MAX_LENGTH] = {0};
-                sprintf(path, "$.blocks.%d", i);
+                sprintf(path, "$.blocks.%zu", i);
                 JsonSaveBufAsHexCompact(root, path, &data[i * 16], 16);
 
                 if (i == 0) {
@@ -188,19 +187,19 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
                     JsonSaveBufAsHexCompact(root, path, &data[i * 16 + 6], 4);
 
                     memset(path, 0x00, sizeof(path));
-                    sprintf(path, "$.SectorKeys.%d.AccessConditionsText.block%d", mfSectorNum(i), i - 3);
+                    sprintf(path, "$.SectorKeys.%d.AccessConditionsText.block%zu", mfSectorNum(i), i - 3);
                     JsonSaveStr(root, path, mfGetAccessConditionsDesc(0, adata));
 
                     memset(path, 0x00, sizeof(path));
-                    sprintf(path, "$.SectorKeys.%d.AccessConditionsText.block%d", mfSectorNum(i), i - 2);
+                    sprintf(path, "$.SectorKeys.%d.AccessConditionsText.block%zu", mfSectorNum(i), i - 2);
                     JsonSaveStr(root, path, mfGetAccessConditionsDesc(1, adata));
 
                     memset(path, 0x00, sizeof(path));
-                    sprintf(path, "$.SectorKeys.%d.AccessConditionsText.block%d", mfSectorNum(i), i - 1);
+                    sprintf(path, "$.SectorKeys.%d.AccessConditionsText.block%zu", mfSectorNum(i), i - 1);
                     JsonSaveStr(root, path, mfGetAccessConditionsDesc(2, adata));
 
                     memset(path, 0x00, sizeof(path));
-                    sprintf(path, "$.SectorKeys.%d.AccessConditionsText.block%d", mfSectorNum(i), i);
+                    sprintf(path, "$.SectorKeys.%d.AccessConditionsText.block%zu", mfSectorNum(i), i);
                     JsonSaveStr(root, path, mfGetAccessConditionsDesc(3, adata));
 
                     memset(path, 0x00, sizeof(path));
@@ -231,9 +230,9 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
             // size of header 48b
             size_t len = (datalen - DUMP_PREFIX_LENGTH) / 4;
 
-            for (int i = 0; i < len; i++) {
+            for (size_t i = 0; i < len; i++) {
                 char path[PATH_MAX_LENGTH] = {0};
-                sprintf(path, "$.blocks.%d", i);
+                sprintf(path, "$.blocks.%zu", i);
                 JsonSaveBufAsHexCompact(root, path, tmp->data + (i * 4), 4);
             }
             break;
@@ -245,9 +244,9 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
 
             JsonSaveBufAsHexCompact(root, "$.Card.UID", uid, sizeof(uid));
 
-            for (int i = 0; i < (datalen / 4); i++) {
+            for (size_t i = 0; i < (datalen / 4); i++) {
                 char path[PATH_MAX_LENGTH] = {0};
-                sprintf(path, "$.blocks.%d", i);
+                sprintf(path, "$.blocks.%zu", i);
                 JsonSaveBufAsHexCompact(root, path, data + (i * 4), 4);
             }
             break;
@@ -470,14 +469,14 @@ int loadFileJSON(const char *preferredName, const char *suffix, void *data, size
 
     if (!strcmp(ctype, "hitag")) {
         size_t sptr = 0;
-        for (int i = 0; i < (maxdatalen / 4); i++) {
+        for (size_t i = 0; i < (maxdatalen / 4); i++) {
             if (sptr + 4 > maxdatalen) {
                 retval = 5;
                 goto out;
             }
 
             char path[30] = {0};
-            sprintf(path, "$.blocks.%d", i);
+            sprintf(path, "$.blocks.%zu", i);
 
             size_t len = 0;
             JsonLoadBufAsHex(root, path, &udata[sptr], 4, &len);

@@ -165,7 +165,7 @@ static void asn1_tag_dump_string(const struct tlv *tlv, const struct asn1_tag *t
 
 static void asn1_tag_dump_octet_string(const struct tlv *tlv, const struct asn1_tag *tag, FILE *f, int level, bool *needdump) {
     *needdump = false;
-    for (int i = 0; i < tlv->len; i++)
+    for (size_t i = 0; i < tlv->len; i++)
         if (!isspace(tlv->value[i]) && !isprint(tlv->value[i])) {
             *needdump = true;
             break;
@@ -181,7 +181,7 @@ static void asn1_tag_dump_octet_string(const struct tlv *tlv, const struct asn1_
 
 static unsigned long asn1_value_integer(const struct tlv *tlv, unsigned start, unsigned end) {
     unsigned long ret = 0;
-    int i;
+    unsigned i;
 
     if (end > tlv->len * 2)
         return ret;
@@ -222,7 +222,7 @@ static void asn1_tag_dump_integer(const struct tlv *tlv, const struct asn1_tag *
     PRINT_INDENT(level);
     if (tlv->len == 4) {
         int32_t val = 0;
-        for (int i = 0; i < tlv->len; i++)
+        for (size_t i = 0; i < tlv->len; i++)
             val = (val << 8) + tlv->value[i];
         fprintf(f, "\tvalue4b: %d\n", val);
         return;

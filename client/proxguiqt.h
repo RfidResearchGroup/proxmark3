@@ -31,17 +31,17 @@ class ProxWidget;
 class Plot: public QWidget {
   private:
     QWidget *master;
-    int GraphStart;
+    uint32_t GraphStart;
     double GraphPixelsPerPoint;
-    int CursorAPos;
-    int CursorBPos;
-    void PlotGraph(int *buffer, int len, QRect r, QRect r2, QPainter *painter, int graphNum);
-    void PlotDemod(uint8_t *buffer, size_t len, QRect r, QRect r2, QPainter *painter, int graphNum, int plotOffset);
+    uint32_t CursorAPos;
+    uint32_t CursorBPos;
+    void PlotGraph(int *buffer, size_t len, QRect r, QRect r2, QPainter *painter, int graphNum);
+    void PlotDemod(uint8_t *buffer, size_t len, QRect r, QRect r2, QPainter *painter, int graphNum, uint32_t plotOffset);
     void plotGridLines(QPainter *painter, QRect r);
     int xCoordOf(int i, QRect r);
     int yCoordOf(int v, QRect r, int maxVal);
     int valueOf_yCoord(int y, QRect r, int maxVal);
-    void setMaxAndStart(int *buffer, int len, QRect plotRect);
+    void setMaxAndStart(int *buffer, size_t len, QRect plotRect);
     QColor getColor(int graphNum);
 
   public:

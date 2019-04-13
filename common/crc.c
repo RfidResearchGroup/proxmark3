@@ -94,7 +94,7 @@ static void print_crc(crc_t *crc) {
 uint32_t CRC8Maxim(uint8_t *buff, size_t size) {
     crc_t crc;
     crc_init_ref(&crc, 8, 0x31, 0, 0, true, true);
-    for (int i = 0; i < size; ++i)
+    for (size_t i = 0; i < size; ++i)
         crc_update2(&crc, buff[i], 8);
     return crc_finish(&crc);
 }
@@ -102,7 +102,7 @@ uint32_t CRC8Maxim(uint8_t *buff, size_t size) {
 uint32_t CRC8Mad(uint8_t *buff, size_t size) {
     crc_t crc;
     crc_init_ref(&crc, 8, 0x1d, 0xc7, 0, false, false);
-    for (int i = 0; i < size; ++i)
+    for (size_t i = 0; i < size; ++i)
         crc_update2(&crc, buff[i], 8);
     return crc_finish(&crc);
 }
@@ -120,7 +120,7 @@ uint32_t CRC4Legic(uint8_t *buff, size_t size) {
 uint32_t CRC8Legic(uint8_t *buff, size_t size) {
     crc_t crc;
     crc_init_ref(&crc, 8, 0x63, 0x55, 0, true, true);
-    for (int i = 0; i < size; ++i)
+    for (size_t i = 0; i < size; ++i)
         crc_update2(&crc, buff[i], 8);
     return reflect8(crc_finish(&crc));
 }

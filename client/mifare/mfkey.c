@@ -27,7 +27,7 @@ uint32_t intersection(uint64_t *listA, uint64_t *listB) {
     p1 = p3 = listA;
     p2 = listB;
 
-    while (*p1 != -1 && *p2 != -1) {
+    while (*p1 != UINT64_C(-1) && *p2 != UINT64_C(-1)) {
         if (compare_uint64(p1, p2) == 0) {
             *p3++ = *p1++;
             p2++;
@@ -36,7 +36,7 @@ uint32_t intersection(uint64_t *listA, uint64_t *listB) {
             while (compare_uint64(p1, p2) > 0) ++p2;
         }
     }
-    *p3 = -1;
+    *p3 = UINT64_C(-1);
     return p3 - listA;
 }
 

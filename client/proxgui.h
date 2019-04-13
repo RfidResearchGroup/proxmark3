@@ -28,11 +28,12 @@ void ExitGraphics(void);
 #define MAX_GRAPH_TRACE_LEN (40000 * 8)
 #endif
 extern int GraphBuffer[MAX_GRAPH_TRACE_LEN];
-extern int GraphTraceLen;
+extern size_t GraphTraceLen;
 extern int s_Buff[MAX_GRAPH_TRACE_LEN];
 
 extern double CursorScaleFactor;
-extern int PlotGridX, PlotGridY, PlotGridXdefault, PlotGridYdefault, CursorCPos, CursorDPos, GridOffset;
+extern int PlotGridX, PlotGridY, PlotGridXdefault, PlotGridYdefault, GridOffset;
+extern uint32_t CursorCPos, CursorDPos;
 extern int CommandFinished;
 extern int offline;
 extern bool GridLocked;

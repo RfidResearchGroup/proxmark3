@@ -231,7 +231,7 @@ void uart_close(const serial_port sp) {
 }
 
 bool uart_receive(const serial_port sp, uint8_t *pbtRx, size_t pszMaxRxLen, size_t *pszRxLen) {
-    int byteCount;
+    size_t byteCount;
     fd_set rfds;
     struct timeval tv;
 

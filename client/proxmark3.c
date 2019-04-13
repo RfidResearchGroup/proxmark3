@@ -298,7 +298,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    uint32_t i = 1;
+    int i = 1;
     port = argv[i++];
     for (; i < argc; i++) {
 

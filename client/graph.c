@@ -10,7 +10,7 @@
 #include "graph.h"
 
 int GraphBuffer[MAX_GRAPH_TRACE_LEN];
-int GraphTraceLen;
+size_t GraphTraceLen;
 int s_Buff[MAX_GRAPH_TRACE_LEN];
 
 /* write a manchester bit to the graph
@@ -30,8 +30,8 @@ void AppendGraph(bool redraw, int clock, int bit) {
 }
 
 // clear out our graph window
-int ClearGraph(bool redraw) {
-    int gtl = GraphTraceLen;
+size_t ClearGraph(bool redraw) {
+    size_t gtl = GraphTraceLen;
     memset(GraphBuffer, 0x00, GraphTraceLen);
     GraphTraceLen = 0;
     if (redraw)
@@ -41,7 +41,7 @@ int ClearGraph(bool redraw) {
 // option '1' to save GraphBuffer any other to restore
 void save_restoreGB(uint8_t saveOpt) {
     static int SavedGB[MAX_GRAPH_TRACE_LEN];
-    static int SavedGBlen = 0;
+    static size_t SavedGBlen = 0;
     static bool GB_Saved = false;
     static int SavedGridOffsetAdj = 0;
 
@@ -67,7 +67,7 @@ void setGraphBuf(uint8_t *buff, size_t size) {
     if (size > MAX_GRAPH_TRACE_LEN)
         size = MAX_GRAPH_TRACE_LEN;
 
-    for (uint32_t i = 0; i < size; ++i)
+    for (size_t i = 0; i < size; ++i)
         GraphBuffer[i] = buff[i] - 128;
 
     GraphTraceLen = size;
@@ -77,7 +77,7 @@ void setGraphBuf(uint8_t *buff, size_t size) {
 
 size_t getFromGraphBuf(uint8_t *buff) {
     if (buff == NULL) return 0;
-    uint32_t i;
+    size_t i;
     for (i = 0; i < GraphTraceLen; ++i) {
         //trim
         if (GraphBuffer[i] > 127) GraphBuffer[i] = 127;
@@ -89,7 +89,7 @@ size_t getFromGraphBuf(uint8_t *buff) {
 
 // A simple test to see if there is any data inside Graphbuffer.
 bool HasGraphData() {
-    if (GraphTraceLen <= 0) {
+    if (GraphTraceLen == 0) {
         PrintAndLogEx(NORMAL, "No data available, try reading something first");
         return false;
     }

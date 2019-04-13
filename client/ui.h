@@ -41,7 +41,8 @@ void SetLogFilename(char *fn);
 void SetFlushAfterWrite(bool value);
 
 extern double CursorScaleFactor;
-extern int PlotGridX, PlotGridY, PlotGridXdefault, PlotGridYdefault, CursorCPos, CursorDPos, GridOffset;
+extern int PlotGridX, PlotGridY, PlotGridXdefault, PlotGridYdefault, GridOffset;
+extern uint32_t CursorCPos, CursorDPos;
 extern bool GridLocked;
 extern bool showDemod;
 

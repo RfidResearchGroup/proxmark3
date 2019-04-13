@@ -19,7 +19,7 @@
 #include "cmddata.h" //for g_debugmode
 
 void AppendGraph(bool redraw, int clock, int bit);
-int ClearGraph(bool redraw);
+size_t ClearGraph(bool redraw);
 size_t getFromGraphBuf(uint8_t *buff);
 int GetAskClock(const char *str, bool printAns);
 int GetPskClock(const char *str, bool printAns);
@@ -40,7 +40,7 @@ bool HasGraphData(void);
 #define GRAPH_RESTORE 0
 
 extern int GraphBuffer[MAX_GRAPH_TRACE_LEN];
-extern int GraphTraceLen;
+extern size_t GraphTraceLen;
 extern int s_Buff[MAX_GRAPH_TRACE_LEN];
 
 #endif

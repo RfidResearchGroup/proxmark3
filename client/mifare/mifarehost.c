@@ -89,13 +89,13 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 
         PrintAndLogEx(SUCCESS, "found %u candidate key%s\n", keycount, (keycount > 1) ? "s." : ".");
 
-        *key = -1;
+        *key = UINT64_C(-1);
         uint8_t keyBlock[USB_CMD_DATA_SIZE];
-        int max_keys = USB_CMD_DATA_SIZE / 6;
-        for (int i = 0; i < keycount; i += max_keys) {
+        uint32_t max_keys = USB_CMD_DATA_SIZE / 6;
+        for (uint32_t i = 0; i < keycount; i += max_keys) {
 
-            int size = keycount - i > max_keys ? max_keys : keycount - i;
-            for (int j = 0; j < size; j++) {
+            uint32_t size = keycount - i > max_keys ? max_keys : keycount - i;
+            for (uint32_t j = 0; j < size; j++) {
                 if (par_list == 0) {
                     num_to_bytes(last_keylist[i * max_keys + j], 6, keyBlock + (j * 6));
                 } else {
@@ -108,7 +108,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
             }
         }
 
-        if (*key != -1) {
+        if (*key != UINT64_C(-1)) {
             break;
         } else {
             PrintAndLogEx(FAILED, "all candidate keys failed. Restarting darkside attack");

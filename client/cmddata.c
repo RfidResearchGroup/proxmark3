@@ -1985,7 +1985,7 @@ static void GetHiLoTone(int *LowTone, int *HighTone, int clk, int LowToneFC, int
 
 //old CmdFSKdemod adapted by marshmellow
 //converts FSK to clear NRZ style wave.  (or demodulates)
-static int FSKToNRZ(int *data, int *dataLen, int clk, int LowToneFC, int HighToneFC) {
+static int FSKToNRZ(int *data, size_t *dataLen, int clk, int LowToneFC, int HighToneFC) {
     uint8_t ans = 0;
     if (clk == 0 || LowToneFC == 0 || HighToneFC == 0) {
         int firstClockEdge = 0;
@@ -2002,17 +2002,16 @@ static int FSKToNRZ(int *data, int *dataLen, int clk, int LowToneFC, int HighTon
         return 0;
     }
 
-    int i, j;
     int LowTone[clk];
     int HighTone[clk];
     GetHiLoTone(LowTone, HighTone, clk, LowToneFC, HighToneFC);
 
     // loop through ([all samples] - clk)
-    for (i = 0; i < *dataLen - clk; ++i) {
+    for (size_t i = 0; i < *dataLen - clk; ++i) {
         int lowSum = 0, highSum = 0;
 
         // sum all samples together starting from this sample for [clk] samples for each tone (multiply tone value with sample data)
-        for (j = 0; j < clk; ++j) {
+        for (size_t j = 0; j < clk; ++j) {
             lowSum += LowTone[j] * data[i + j];
             highSum += HighTone[j] * data[i + j];
         }
@@ -2026,14 +2025,14 @@ static int FSKToNRZ(int *data, int *dataLen, int clk, int LowToneFC, int HighTon
     // now we have the abs( [average sample value per clk] * 100 ) for each tone
     //   loop through again [all samples] - clk - 16
     //                  note why 16???  is 16 the largest FC? changed to LowToneFC as that should be the > fc
-    for (i = 0; i < *dataLen - clk - LowToneFC; ++i) {
+    for (size_t i = 0; i < *dataLen - clk - LowToneFC; ++i) {
         int lowTot = 0, highTot = 0;
 
         // sum a field clock width of abs( [average sample values per clk] * 100) for each tone
-        for (j = 0; j < LowToneFC; ++j) {  //10 for fsk2
+        for (size_t j = 0; j < LowToneFC; ++j) {  //10 for fsk2
             lowTot += (data[i + j] & 0xffff);
         }
-        for (j = 0; j < HighToneFC; j++) {  //8 for fsk2
+        for (size_t j = 0; j < HighToneFC; j++) {  //8 for fsk2
             highTot += (data[i + j] >> 16);
         }
 
