@@ -928,10 +928,7 @@ static int CmdGraphShiftZero(const char *Cmd) {
     sscanf(Cmd, "%i", &shift);
 
     for (size_t i = 0; i < GraphTraceLen; i++) {
-        if (i + shift >= GraphTraceLen)
-            shiftedVal = GraphBuffer[i];
-        else
-            shiftedVal = GraphBuffer[i] + shift;
+        shiftedVal = GraphBuffer[i] + shift;
 
         if (shiftedVal > 127)
             shiftedVal = 127;
