@@ -821,7 +821,7 @@ int CmdVchDemod(const char *Cmd) {
 }
 
 //by marshmellow
-bool CheckChipType(bool getDeviceData) {
+static bool CheckChipType(bool getDeviceData) {
 
     bool retval = false;
 

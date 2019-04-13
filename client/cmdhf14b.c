@@ -395,7 +395,7 @@ static void print_atqb_resp(uint8_t *data, uint8_t cid) {
 }
 
 // get SRx chip model (from UID) // from ST Microelectronics
-char *get_ST_Chip_Model(uint8_t data) {
+static char *get_ST_Chip_Model(uint8_t data) {
     static char model[20];
     char *retStr = model;
     memset(model, 0, sizeof(model));
@@ -430,51 +430,52 @@ char *get_ST_Chip_Model(uint8_t data) {
 }
 
 // REMAKE:
-int print_ST_Lock_info(uint8_t model) {
+/*
+static int print_ST_Lock_info(uint8_t model) {
 
-    // PrintAndLogEx(NORMAL, "Chip Write Protection Bits:");
-    // // now interpret the data
-    // switch (model){
-    // case 0x0: //fall through (SRIX4K special)
-    // case 0x3: //fall through (SRIx4K)
-    // case 0x7: //             (SRI4K)
-    // //only need data[3]
-    // blk1 = 9;
-    // PrintAndLogEx(NORMAL, "   raw: %s", sprint_bin(data+3, 1));
-    // PrintAndLogEx(NORMAL, " 07/08:%slocked", (data[3] & 1) ? " not " : " " );
-    // for (uint8_t i = 1; i<8; i++){
-    // PrintAndLogEx(NORMAL, "    %02u:%slocked", blk1, (data[3] & (1 << i)) ? " not " : " " );
-    // blk1++;
-    // }
-    // break;
-    // case 0x4: //fall through (SRIX512)
-    // case 0x6: //fall through (SRI512)
-    // case 0xC: //             (SRT512)
-    // //need data[2] and data[3]
-    // blk1 = 0;
-    // PrintAndLogEx(NORMAL, "   raw: %s", sprint_bin(data+2, 2));
-    // for (uint8_t b=2; b<4; b++){
-    // for (uint8_t i=0; i<8; i++){
-    // PrintAndLogEx(NORMAL, "    %02u:%slocked", blk1, (data[b] & (1 << i)) ? " not " : " " );
-    // blk1++;
-    // }
-    // }
-    // break;
-    // case 0x2: //             (SR176)
-    // //need data[2]
-    // blk1 = 0;
-    // PrintAndLogEx(NORMAL, "   raw: %s", sprint_bin(data+2, 1));
-    // for (uint8_t i = 0; i<8; i++){
-    // PrintAndLogEx(NORMAL, " %02u/%02u:%slocked", blk1, blk1+1, (data[2] & (1 << i)) ? " " : " not " );
-    // blk1+=2;
-    // }
-    // break;
-    // default:
-    // return rawClose();
-    // }
+    PrintAndLogEx(NORMAL, "Chip Write Protection Bits:");
+    // now interpret the data
+    switch (model){
+    case 0x0: //fall through (SRIX4K special)
+    case 0x3: //fall through (SRIx4K)
+    case 0x7: //             (SRI4K)
+    //only need data[3]
+    blk1 = 9;
+    PrintAndLogEx(NORMAL, "   raw: %s", sprint_bin(data+3, 1));
+    PrintAndLogEx(NORMAL, " 07/08:%slocked", (data[3] & 1) ? " not " : " " );
+    for (uint8_t i = 1; i<8; i++){
+    PrintAndLogEx(NORMAL, "    %02u:%slocked", blk1, (data[3] & (1 << i)) ? " not " : " " );
+    blk1++;
+    }
+    break;
+    case 0x4: //fall through (SRIX512)
+    case 0x6: //fall through (SRI512)
+    case 0xC: //             (SRT512)
+    //need data[2] and data[3]
+    blk1 = 0;
+    PrintAndLogEx(NORMAL, "   raw: %s", sprint_bin(data+2, 2));
+    for (uint8_t b=2; b<4; b++){
+    for (uint8_t i=0; i<8; i++){
+    PrintAndLogEx(NORMAL, "    %02u:%slocked", blk1, (data[b] & (1 << i)) ? " not " : " " );
+    blk1++;
+    }
+    }
+    break;
+    case 0x2: //             (SR176)
+    //need data[2]
+    blk1 = 0;
+    PrintAndLogEx(NORMAL, "   raw: %s", sprint_bin(data+2, 1));
+    for (uint8_t i = 0; i<8; i++){
+    PrintAndLogEx(NORMAL, " %02u/%02u:%slocked", blk1, blk1+1, (data[2] & (1 << i)) ? " " : " not " );
+    blk1+=2;
+    }
+    break;
+    default:
+    return rawClose();
+    }
     return 1;
 }
-
+*/
 // print UID info from SRx chips (ST Microelectronics)
 static void print_st_general_info(uint8_t *data, uint8_t len) {
     //uid = first 8 bytes in data
@@ -503,7 +504,7 @@ static void print_st_general_info(uint8_t *data, uint8_t len) {
 //a2 = ?  (resp 02 [6a d3])
 
 // 14b get and print Full Info (as much as we know)
-bool HF14B_Std_Info(bool verbose) {
+static bool HF14B_Std_Info(bool verbose) {
 
     bool isSuccess = false;
 
@@ -547,7 +548,7 @@ bool HF14B_Std_Info(bool verbose) {
 }
 
 // SRx get and print full info (needs more info...)
-bool HF14B_ST_Info(bool verbose) {
+static bool HF14B_ST_Info(bool verbose) {
 
     UsbCommand c = {CMD_ISO_14443B_COMMAND, {ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0}, {{0}}};
     clearCommandBuffer();
@@ -601,7 +602,7 @@ static int CmdHF14Binfo(const char *Cmd) {
     return infoHF14B(verbose);
 }
 
-bool HF14B_ST_Reader(bool verbose) {
+static bool HF14B_ST_Reader(bool verbose) {
 
     bool isSuccess = false;
 
@@ -641,7 +642,7 @@ bool HF14B_ST_Reader(bool verbose) {
     return isSuccess;
 }
 
-bool HF14B_Std_Reader(bool verbose) {
+static bool HF14B_Std_Reader(bool verbose) {
 
     bool isSuccess = false;
 
@@ -683,7 +684,7 @@ bool HF14B_Std_Reader(bool verbose) {
 }
 
 // test for other 14b type tags (mimic another reader - don't have tags to identify)
-bool HF14B_Other_Reader() {
+static bool HF14B_Other_Reader() {
 
     // uint8_t data[] = {0x00, 0x0b, 0x3f, 0x80};
     // uint8_t datalen = 4;
@@ -989,14 +990,13 @@ static int CmdHF14BDump(const char *Cmd) {
 out:
     return switch_off_field_14b();
 }
+/*
 
-uint32_t srix4kEncode(uint32_t value) {
-    /*
+static uint32_t srix4kEncode(uint32_t value) {
     // vv = value
     // pp = position
     //                vv vv vv pp
-    4 bytes         : 00 1A 20 01
-    */
+    // 4 bytes      : 00 1A 20 01
     // only the lower crumbs.
     uint8_t block = (value & 0xFF);
     uint8_t i = 0;
@@ -1046,7 +1046,8 @@ uint32_t srix4kEncode(uint32_t value) {
     PrintAndLogEx(NORMAL, "ICE encoded | %08X -> %08X", value, encvalue);
     return encvalue;
 }
-uint32_t srix4kDecode(uint32_t value) {
+
+static uint32_t srix4kDecode(uint32_t value) {
     switch (value) {
         case 0xC04F42C5:
             return 0x003139;
@@ -1057,13 +1058,14 @@ uint32_t srix4kDecode(uint32_t value) {
     }
     return 0;
 }
-uint32_t srix4kDecodeCounter(uint32_t num) {
+
+static uint32_t srix4kDecodeCounter(uint32_t num) {
     uint32_t value = ~num;
     ++value;
     return value;
 }
 
-uint32_t srix4kGetMagicbytes(uint64_t uid, uint32_t block6, uint32_t block18, uint32_t block19) {
+static uint32_t srix4kGetMagicbytes(uint64_t uid, uint32_t block6, uint32_t block18, uint32_t block19) {
 #define MASK 0xFFFFFFFF;
     uint32_t uid32 = uid & MASK;
     uint32_t counter = srix4kDecodeCounter(block6);
@@ -1075,7 +1077,8 @@ uint32_t srix4kGetMagicbytes(uint64_t uid, uint32_t block6, uint32_t block18, ui
     PrintAndLogEx(SUCCESS, "Magic bytes | %08X", result);
     return result;
 }
-int srix4kValid(const char *Cmd) {
+
+static int srix4kValid(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
 
     uint64_t uid = 0xD00202501A4532F9;
@@ -1093,7 +1096,7 @@ int srix4kValid(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "BLOCK 21 |  %08X -> %08X (no XOR)", block21, magic ^ block21);
     return 0;
 }
-
+*/
 static command_t CommandTable[] = {
     {"help",        CmdHelp,        1, "This help"},
     {"dump",        CmdHF14BDump,   0, "Read all memory pages of an ISO14443-B tag, save to file"},

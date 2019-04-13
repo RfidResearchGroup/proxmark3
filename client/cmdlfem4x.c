@@ -654,7 +654,7 @@ static int CmdEM410xWrite(const char *Cmd) {
 }
 
 //**************** Start of EM4x50 Code ************************
-bool EM_EndParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t cols, uint8_t pType) {
+static bool EM_EndParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t cols, uint8_t pType) {
     if (rows * cols > size) return false;
     uint8_t colP = 0;
     //assume last col is a parity and do not test
@@ -667,7 +667,7 @@ bool EM_EndParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t cols, uint
     return true;
 }
 
-bool EM_ByteParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t cols, uint8_t pType) {
+static bool EM_ByteParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t cols, uint8_t pType) {
     if (rows * cols > size) return false;
 
     uint8_t rowP = 0;
@@ -691,7 +691,7 @@ bool EM_ByteParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t cols, uin
 //c012345678| 0
 //            |- must be zero
 
-bool EMwordparitytest(uint8_t *bits) {
+static bool EMwordparitytest(uint8_t *bits) {
 
     // last row/col parity must be 0
     if (bits[44] != 0) return false;
@@ -720,7 +720,7 @@ bool EMwordparitytest(uint8_t *bits) {
 
 //////////////// 4050 / 4450 commands
 
-uint32_t OutputEM4x50_Block(uint8_t *BitStream, size_t size, bool verbose, bool pTest) {
+static uint32_t OutputEM4x50_Block(uint8_t *BitStream, size_t size, bool verbose, bool pTest) {
     if (size < 45) return 0;
 
     uint32_t code = bytebits_to_byte(BitStream, 8);
@@ -976,7 +976,7 @@ static int CmdEM4x50Dump(const char *Cmd) {
 
 #define EM_PREAMBLE_LEN 6
 // download samples from device and copy to Graphbuffer
-bool downloadSamplesEM() {
+static bool downloadSamplesEM() {
 
     // 8 bit preamble + 32 bit word response (max clock (128) * 40bits = 5120 samples)
     uint8_t got[6000];
@@ -997,7 +997,7 @@ bool downloadSamplesEM() {
 }
 
 // em_demod
-bool doPreambleSearch(size_t *startIdx) {
+static bool doPreambleSearch(size_t *startIdx) {
 
     // sanity check
     if (DemodBufferLen < EM_PREAMBLE_LEN) {
@@ -1018,7 +1018,7 @@ bool doPreambleSearch(size_t *startIdx) {
     return true;
 }
 
-bool detectFSK() {
+static bool detectFSK() {
     // detect fsk clock
     if (!GetFskClock("", false)) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM: FSK clock failed");
@@ -1033,7 +1033,7 @@ bool detectFSK() {
     return true;
 }
 // PSK clocks should be easy to detect ( but difficult to demod a non-repeating pattern... )
-bool detectPSK() {
+static bool detectPSK() {
     int ans = GetPskClock("", false);
     if (ans <= 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM: PSK clock failed");
@@ -1057,7 +1057,7 @@ bool detectPSK() {
     return true;
 }
 // try manchester - NOTE: ST only applies to T55x7 tags.
-bool detectASK_MAN() {
+static bool detectASK_MAN() {
     bool stcheck = false;
     if (!ASKDemod_ext("0 0 0", false, false, 1, &stcheck)) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM: ASK/Manchester Demod failed");
@@ -1065,7 +1065,8 @@ bool detectASK_MAN() {
     }
     return true;
 }
-bool detectASK_BI() {
+
+static bool detectASK_BI() {
     int ans = ASKbiphaseDemod("0 0 1", false);
     if (!ans) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM: ASK/biphase normal demod failed");
@@ -1080,7 +1081,7 @@ bool detectASK_BI() {
 }
 
 // param: idx - start index in demoded data.
-bool setDemodBufferEM(uint32_t *word, size_t idx) {
+static bool setDemodBufferEM(uint32_t *word, size_t idx) {
 
     //test for even parity bits.
     uint8_t parity[45] = {0};
@@ -1103,7 +1104,7 @@ bool setDemodBufferEM(uint32_t *word, size_t idx) {
 // FSK, PSK, ASK/MANCHESTER, ASK/BIPHASE, ASK/DIPHASE
 // should cover 90% of known used configs
 // the rest will need to be manually demoded for now...
-bool demodEM4x05resp(uint32_t *word) {
+static bool demodEM4x05resp(uint32_t *word) {
     size_t idx = 0;
     *word = 0;
     if (detectASK_MAN() && doPreambleSearch(&idx))
@@ -1127,7 +1128,7 @@ bool demodEM4x05resp(uint32_t *word) {
 }
 
 //////////////// 4205 / 4305 commands
-int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word) {
+static int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word) {
     UsbCommand c = {CMD_EM4X_READ_WORD, {addr, pwd, usePwd}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
@@ -1253,7 +1254,7 @@ static int CmdEM4x05Write(const char *Cmd) {
     return isOk;
 }
 
-void printEM4x05config(uint32_t wordData) {
+static void printEM4x05config(uint32_t wordData) {
     uint16_t datarate = (((wordData & 0x3F) + 1) * 2);
     uint8_t encoder = ((wordData >> 6) & 0xF);
     char enc[14];
@@ -1357,7 +1358,7 @@ void printEM4x05config(uint32_t wordData) {
     PrintAndLogEx(NORMAL, "    Pigeon:   %u | Pigeon Mode is %s\n", pigeon, pigeon ? "Enabled" : "Disabled");
 }
 
-void printEM4x05info(uint32_t block0, uint32_t serial) {
+static void printEM4x05info(uint32_t block0, uint32_t serial) {
 
     uint8_t chipType = (block0 >> 1) & 0xF;
     uint8_t cap = (block0 >> 5) & 3;
@@ -1405,7 +1406,7 @@ void printEM4x05info(uint32_t block0, uint32_t serial) {
         PrintAndLogEx(NORMAL, "\n  Serial #: %08X\n", serial);
 }
 
-void printEM4x05ProtectionBits(uint32_t word) {
+static void printEM4x05ProtectionBits(uint32_t word) {
     for (uint8_t i = 0; i < 15; i++) {
         PrintAndLogEx(NORMAL, "      Word:  %02u | %s", i, (((1 << i) & word) || i < 2) ? "Is Write Locked" : "Is Not Write Locked");
         if (i == 14)

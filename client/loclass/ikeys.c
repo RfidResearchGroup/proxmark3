@@ -600,7 +600,7 @@ static uint64_t testCryptedCSN(uint64_t crypted_csn, uint64_t expected) {
     return retval;
 }
 
-int testDES2(uint64_t csn, uint64_t expected) {
+static int testDES2(uint64_t csn, uint64_t expected) {
     uint8_t result[8] = {0};
     uint8_t input[8] = {0};
 

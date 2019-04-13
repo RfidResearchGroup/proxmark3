@@ -196,7 +196,7 @@ const productName uidmapping[] = {
 // fast method to just read the UID of a tag (collission detection not supported)
 //  *buf should be large enough to fit the 64bit uid
 // returns 1 if suceeded
-int getUID(uint8_t *buf) {
+static int getUID(uint8_t *buf) {
 
     UsbCommand resp;
     UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}, {{0}}}; // len,speed,recv?

@@ -80,7 +80,7 @@ static const char *URI_s[] = {
     "urn:nfc:"                    // 0x23
 };
 
-uint16_t ndefTLVGetLength(uint8_t *data, size_t *indx) {
+static uint16_t ndefTLVGetLength(uint8_t *data, size_t *indx) {
     uint16_t len = 0;
     if (data[0] == 0xff) {
         len = (data[1] << 8) + data[2];
@@ -93,7 +93,7 @@ uint16_t ndefTLVGetLength(uint8_t *data, size_t *indx) {
     return len;
 }
 
-int ndefDecodeHeader(uint8_t *data, size_t datalen, NDEFHeader_t *header) {
+static int ndefDecodeHeader(uint8_t *data, size_t datalen, NDEFHeader_t *header) {
     header->Type = NULL;
     header->Payload = NULL;
     header->ID = NULL;
@@ -129,7 +129,7 @@ int ndefDecodeHeader(uint8_t *data, size_t datalen, NDEFHeader_t *header) {
     return 0;
 }
 
-int ndefPrintHeader(NDEFHeader_t *header) {
+static int ndefPrintHeader(NDEFHeader_t *header) {
     PrintAndLogEx(INFO, "Header:");
 
     PrintAndLogEx(NORMAL, "\tMessage Begin:    %s", STRBOOL(header->MessageBegin));
@@ -148,7 +148,7 @@ int ndefPrintHeader(NDEFHeader_t *header) {
     return 0;
 }
 
-int ndefDecodeSig(uint8_t *sig, size_t siglen) {
+static int ndefDecodeSig(uint8_t *sig, size_t siglen) {
     size_t indx = 0;
     PrintAndLogEx(NORMAL, "\tsignature version: 0x%02x", sig[0]);
     if (sig[0] != 0x01) {
@@ -213,7 +213,7 @@ int ndefDecodeSig(uint8_t *sig, size_t siglen) {
     return 0;
 };
 
-int ndefDecodePayload(NDEFHeader_t *ndef) {
+static int ndefDecodePayload(NDEFHeader_t *ndef) {
 
     switch (ndef->TypeNameFormat) {
         case tnfWellKnownRecord:
@@ -244,7 +244,7 @@ int ndefDecodePayload(NDEFHeader_t *ndef) {
     return 0;
 }
 
-int ndefRecordDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
+static int ndefRecordDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
     NDEFHeader_t NDEFHeader = {0};
     int res = ndefDecodeHeader(ndefRecord, ndefRecordLen, &NDEFHeader);
     if (res)
@@ -270,7 +270,7 @@ int ndefRecordDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
     return 0;
 }
 
-int ndefRecordsDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
+static int ndefRecordsDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
     bool firstRec = true;
     size_t len = 0;
 

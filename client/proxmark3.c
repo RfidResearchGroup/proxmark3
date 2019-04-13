@@ -71,9 +71,9 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
         SetOffline(false);
         // cache Version information now:
         if (execCommand || script_cmds_file || stdinOnPipe)
-            CmdVersion("s");
+            pm3_version(false);
         else
-            CmdVersion("");
+            pm3_version(true);
     } else {
         SetOffline(true);
     }

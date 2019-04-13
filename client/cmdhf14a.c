@@ -616,7 +616,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
     return 0;
 }
 
-int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
+static int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
     UsbCommand resp;
 
     frameLength = 0;

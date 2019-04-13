@@ -1091,7 +1091,7 @@ static int read_nonce_file(char *filename) {
 }
 
 
-noncelistentry_t *SearchFor2ndByte(uint8_t b1, uint8_t b2) {
+static noncelistentry_t *SearchFor2ndByte(uint8_t b1, uint8_t b2) {
     noncelistentry_t *p = nonces[b1].first;
     while (p != NULL) {
         if ((p->nonce_enc >> 16 & 0xff) == b2) {

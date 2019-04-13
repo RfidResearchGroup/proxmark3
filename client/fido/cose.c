@@ -63,7 +63,7 @@ COSEValueTypeNameDesc_t COSECurvesDesc[] = {
     {7, "OKP", "Ed448",    "Ed448 for use w/ EdDSA only"},
 };
 
-COSEValueTypeNameDesc_t *GetCOSECurveElm(int id) {
+static COSEValueTypeNameDesc_t *GetCOSECurveElm(int id) {
     for (int i = 0; i < ARRAYLEN(COSECurvesDesc); i++)
         if (COSECurvesDesc[i].Value == id)
             return &COSECurvesDesc[i];
@@ -135,7 +135,7 @@ COSEValueNameDesc_t COSEAlg[] = {
     {33,        "AES-CCM-64-128-256",       "AES-CCM mode 256-bit key, 128-bit tag, 7-byte nonce"}
 };
 
-COSEValueNameDesc_t *GetCOSEAlgElm(int id) {
+static COSEValueNameDesc_t *GetCOSEAlgElm(int id) {
     for (int i = 0; i < ARRAYLEN(COSEAlg); i++)
         if (COSEAlg[i].Value == id)
             return &COSEAlg[i];

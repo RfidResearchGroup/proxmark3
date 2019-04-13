@@ -124,7 +124,7 @@ static int CmdHFFidoInfo(const char *cmd) {
     return 0;
 }
 
-json_t *OpenJson(int paramnum, char *fname, void *argtable[], bool *err) {
+static json_t *OpenJson(int paramnum, char *fname, void *argtable[], bool *err) {
     json_t *root = NULL;
     json_error_t error;
     *err = false;
@@ -615,13 +615,13 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
     return 0;
 };
 
-void CheckSlash(char *fileName) {
+static void CheckSlash(char *fileName) {
     if ((fileName[strlen(fileName) - 1] != '/') &&
             (fileName[strlen(fileName) - 1] != '\\'))
         strcat(fileName, "/");
 }
 
-int GetExistsFileNameJson(const char *prefixDir, const char *reqestedFileName, char *fileName) {
+static int GetExistsFileNameJson(const char *prefixDir, const char *reqestedFileName, char *fileName) {
     fileName[0] = 0x00;
     strcpy(fileName, get_my_executable_directory());
     CheckSlash(fileName);

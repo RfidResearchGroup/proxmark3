@@ -262,14 +262,15 @@ static int usage_hf_iclass_permutekey(void) {
     return 0;
 }
 
-int xorbits_8(uint8_t val) {
+/*
+static int xorbits_8(uint8_t val) {
     uint8_t res = val ^ (val >> 1); //1st pass
     res = res ^ (res >> 1);         // 2nd pass
     res = res ^ (res >> 2);         // 3rd pass
     res = res ^ (res >> 4);         // 4th pass
     return res & 1;
 }
-
+*/
 static int CmdHFiClassList(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     //PrintAndLogEx(NORMAL, "Deprecated command, use 'hf list iclass' instead");
@@ -537,14 +538,15 @@ static int CmdHFiClassReader_Replay(const char *Cmd) {
     return 0;
 }
 
-int iclassEmlSetMem(uint8_t *data, int blockNum, int blocksCount) {
+/*
+static int iclassEmlSetMem(uint8_t *data, int blockNum, int blocksCount) {
     UsbCommand c = {CMD_MIFARE_EML_MEMSET, {blockNum, blocksCount, 0}, {{0}}};
     memcpy(c.d.asBytes, data, blocksCount * 16);
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
 }
-
+*/
 static int CmdHFiClassELoad(const char *Cmd) {
 
     char ctmp = tolower(param_getchar(Cmd, 0));
@@ -757,7 +759,7 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
     return 1;
 }
 
-void Calc_wb_mac(uint8_t blockno, uint8_t *data, uint8_t *div_key, uint8_t MAC[4]) {
+static void Calc_wb_mac(uint8_t blockno, uint8_t *data, uint8_t *div_key, uint8_t MAC[4]) {
     uint8_t wb[9];
     wb[0] = blockno;
     memcpy(wb + 1, data, 8);

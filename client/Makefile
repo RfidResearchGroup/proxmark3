@@ -137,7 +137,6 @@ CMDSRCS =	crapto1/crapto1.c \
 			loclass/cipher.c \
 			loclass/cipherutils.c \
 			loclass/ikeys.c \
-			loclass/hash1_brute.c \
 			loclass/elite_crack.c \
 			loclass/fileutils.c \
 			whereami.c \

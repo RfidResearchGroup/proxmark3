@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include "cda_test.h"
 
 struct emv_pk c_mchip_05 = {
     .rid = { 0xa0, 0x00, 0x00, 0x00, 0x04, },

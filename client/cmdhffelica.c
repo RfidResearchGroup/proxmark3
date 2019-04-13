@@ -198,7 +198,7 @@ static void printSep() {
     PrintAndLogEx(NORMAL, "------------------------------------------------------------------------------------");
 }
 
-uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace, uint16_t tracelen) {
+static uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace, uint16_t tracelen) {
     if (tracepos + 19 >= tracelen)
         return tracelen;
 

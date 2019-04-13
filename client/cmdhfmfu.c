@@ -260,7 +260,7 @@ const uint32_t c_D[] = {
     0x5728B869, 0x30726D5A
 };
 
-void transform_D(uint8_t *ru) {
+static void transform_D(uint8_t *ru) {
     //Transform
     uint8_t i;
     uint8_t p = 0;
@@ -315,7 +315,7 @@ uint32_t ul_ev1_pwdgenA(uint8_t *uid) {
 }
 
 // Certain pwd generation algo nickname B. (very simple)
-uint32_t ul_ev1_pwdgenB(uint8_t *uid) {
+static uint32_t ul_ev1_pwdgenB(uint8_t *uid) {
 
     uint8_t pwd[] = {0x00, 0x00, 0x00, 0x00};
 
@@ -394,7 +394,7 @@ uint16_t ul_ev1_packgenD(uint8_t *uid) {
     return BSWAP_16(p & 0xFFFF);
 }
 
-int ul_ev1_pwdgen_selftest() {
+static int ul_ev1_pwdgen_selftest() {
 
     uint8_t uid1[] = {0x04, 0x11, 0x12, 0x11, 0x12, 0x11, 0x10};
     uint32_t pwd1 = ul_ev1_pwdgenA(uid1);
@@ -416,7 +416,7 @@ int ul_ev1_pwdgen_selftest() {
 
 //------------------------------------
 // get version nxp product type
-char *getProductTypeStr(uint8_t id) {
+static char *getProductTypeStr(uint8_t id) {
 
     static char buf[20];
     char *retStr = buf;
@@ -440,7 +440,7 @@ char *getProductTypeStr(uint8_t id) {
   the LSBit is set to '0' if the size is exactly 2^n
   and set to '1' if the storage size is between 2^n and 2^(n+1).
 */
-char *getUlev1CardSizeStr(uint8_t fsize) {
+static char *getUlev1CardSizeStr(uint8_t fsize) {
 
     static char buf[40];
     char *retStr = buf;

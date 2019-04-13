@@ -570,7 +570,7 @@ static int Cmdaskmandemod(const char *Cmd) {
 //by marshmellow
 //manchester decode
 //stricktly take 10 and 01 and convert to 0 and 1
-int Cmdmandecoderaw(const char *Cmd) {
+static int Cmdmandecoderaw(const char *Cmd) {
     size_t size = 0;
     int high = 0, low = 0;
     int i = 0, errCnt = 0, invert = 0, maxErr = 20;
@@ -628,7 +628,7 @@ int Cmdmandecoderaw(const char *Cmd) {
  * param invert invert output
  * param masxErr maximum tolerated errors
  */
-int CmdBiphaseDecodeRaw(const char *Cmd) {
+static int CmdBiphaseDecodeRaw(const char *Cmd) {
     size_t size = 0;
     int offset = 0, invert = 0, maxErr = 20, errCnt = 0;
     char cmdp = tolower(param_getchar(Cmd, 0));
@@ -811,7 +811,7 @@ int AutoCorrelate(const int *in, int *out, size_t len, int window, bool SaveGrph
     return retval;
 }
 
-int CmdAutoCorr(const char *Cmd) {
+static int CmdAutoCorr(const char *Cmd) {
 
     uint32_t window = 4000;
     uint8_t cmdp = 0;
@@ -846,7 +846,7 @@ int CmdAutoCorr(const char *Cmd) {
     return AutoCorrelate(GraphBuffer, GraphBuffer, GraphTraceLen, window, updateGrph, true);
 }
 
-int CmdBitsamples(const char *Cmd) {
+static int CmdBitsamples(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     int cnt = 0;
     uint8_t got[12288];
@@ -869,7 +869,7 @@ int CmdBitsamples(const char *Cmd) {
     return 0;
 }
 
-int CmdBuffClear(const char *Cmd) {
+static int CmdBuffClear(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_data_buffclear();
 
@@ -880,7 +880,7 @@ int CmdBuffClear(const char *Cmd) {
     return 0;
 }
 
-int CmdDec(const char *Cmd) {
+static int CmdDec(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     for (int i = 0; i < (GraphTraceLen / 2); ++i)
         GraphBuffer[i] = GraphBuffer[i * 2];
@@ -896,7 +896,7 @@ int CmdDec(const char *Cmd) {
  * @param Cmd
  * @return
  */
-int CmdUndec(const char *Cmd) {
+static int CmdUndec(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_data_undecimate();
 
@@ -921,7 +921,7 @@ int CmdUndec(const char *Cmd) {
 
 //by marshmellow
 //shift graph zero up or down based on input + or -
-int CmdGraphShiftZero(const char *Cmd) {
+static int CmdGraphShiftZero(const char *Cmd) {
     int shift = 0, shiftedVal;
     //set options from parameters entered with the command
     sscanf(Cmd, "%i", &shift);
@@ -1411,7 +1411,7 @@ static int CmdHexsamples(const char *Cmd) {
     return 0;
 }
 
-int CmdHide(const char *Cmd) {
+static int CmdHide(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     HideGraphWindow();
     return 0;
@@ -1432,13 +1432,13 @@ int CmdHpf(const char *Cmd) {
     return 0;
 }
 
-bool _headBit(BitstreamOut *stream) {
+static bool _headBit(BitstreamOut *stream) {
     int bytepos = stream->position >> 3; // divide by 8
     int bitpos = (stream->position++) & 7; // mask out 00000111
     return (*(stream->buffer + bytepos) >> (7 - bitpos)) & 1;
 }
 
-uint8_t getByte(uint8_t bits_per_sample, BitstreamOut *b) {
+static uint8_t getByte(uint8_t bits_per_sample, BitstreamOut *b) {
     uint8_t val = 0;
     for (int i = 0 ; i < bits_per_sample; i++)
         val |= (_headBit(b) << (7 - i));

@@ -60,6 +60,7 @@ uint8_t  detectFSKClk(uint8_t *bits, size_t size, uint8_t fcHigh, uint8_t fcLow,
 int      DetectNRZClock(uint8_t *dest, size_t size, int clock, size_t *clockStartIdx);
 int      DetectPSKClock(uint8_t *dest, size_t size, int clock, size_t *firstPhaseShift, uint8_t *curPhase, uint8_t *fc);
 int      DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clock);
+int      DetectStrongNRZClk(uint8_t *dest, size_t size, int peak, int low, bool *strong);
 bool     DetectST(uint8_t *buffer, size_t *size, int *foundclock, size_t *ststart, size_t *stend);
 size_t   fskdemod(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t invert, uint8_t fchigh, uint8_t fclow, int *start_idx);
 //void     getHiLo(uint8_t *bits, size_t size, int *high, int *low, uint8_t fuzzHi, uint8_t fuzzLo);

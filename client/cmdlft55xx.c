@@ -496,7 +496,7 @@ bool DecodeT55xxBlock(void) {
     return (bool) ans;
 }
 
-bool DecodeT5555TraceBlock(void) {
+static bool DecodeT5555TraceBlock(void) {
     DemodBufferLen = 0x00;
 
     // According to datasheet. Always: RF/64, not inverted, Manchester
@@ -792,7 +792,7 @@ void printT55xxBlock(uint8_t blockNum) {
     PrintAndLogEx(NORMAL, " %02d | %08X | %s | %s", blockNum, blockData, sprint_bin(DemodBuffer + config.offset, 32), sprint_ascii(bytes, 4));
 }
 
-bool testModulation(uint8_t mode, uint8_t modread) {
+static bool testModulation(uint8_t mode, uint8_t modread) {
     switch (mode) {
         case DEMOD_FSK:
             if (modread >= DEMOD_FSK1 && modread <= DEMOD_FSK2a) return true;
@@ -824,7 +824,7 @@ bool testModulation(uint8_t mode, uint8_t modread) {
     return false;
 }
 
-bool testQ5Modulation(uint8_t mode, uint8_t modread) {
+static bool testQ5Modulation(uint8_t mode, uint8_t modread) {
     switch (mode) {
         case DEMOD_FSK:
             if (modread >= 4 && modread <= 5) return true;
@@ -853,7 +853,7 @@ bool testQ5Modulation(uint8_t mode, uint8_t modread) {
     return false;
 }
 
-int convertQ5bitRate(uint8_t bitRateRead) {
+static int convertQ5bitRate(uint8_t bitRateRead) {
     uint8_t expected[] = {8, 16, 32, 40, 50, 64, 100, 128};
     for (int i = 0; i < 8; i++)
         if (expected[i] == bitRateRead)
@@ -862,7 +862,7 @@ int convertQ5bitRate(uint8_t bitRateRead) {
     return -1;
 }
 
-bool testQ5(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk) {
+static bool testQ5(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk) {
 
     if (DemodBufferLen < 64) return false;
 
@@ -907,7 +907,7 @@ bool testQ5(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk) {
     return false;
 }
 
-bool testBitRate(uint8_t readRate, uint8_t clk) {
+static bool testBitRate(uint8_t readRate, uint8_t clk) {
     uint8_t expected[] = {8, 16, 32, 40, 50, 64, 100, 128};
     if (expected[readRate] == clk)
         return true;
@@ -1746,14 +1746,13 @@ char *GetSelectedModulationStr(uint8_t id) {
     return buf;
 }
 
-void t55x7_create_config_block(int tagtype) {
+/*
+static void t55x7_create_config_block(int tagtype) {
 
-    /*
-     T55X7_DEFAULT_CONFIG_BLOCK, T55X7_RAW_CONFIG_BLOCK
-     T55X7_EM_UNIQUE_CONFIG_BLOCK, T55X7_FDXB_CONFIG_BLOCK,
-     T55X7_FDXB_CONFIG_BLOCK, T55X7_HID_26_CONFIG_BLOCK, T55X7_INDALA_64_CONFIG_BLOCK, T55X7_INDALA_224_CONFIG_BLOCK
-     T55X7_GUARDPROXII_CONFIG_BLOCK, T55X7_VIKING_CONFIG_BLOCK, T55X7_NORALYS_CONFIG_BLOCK, T55X7_IOPROX_CONFIG_BLOCK
-    */
+    // T55X7_DEFAULT_CONFIG_BLOCK, T55X7_RAW_CONFIG_BLOCK
+    // T55X7_EM_UNIQUE_CONFIG_BLOCK, T55X7_FDXB_CONFIG_BLOCK,
+    // T55X7_FDXB_CONFIG_BLOCK, T55X7_HID_26_CONFIG_BLOCK, T55X7_INDALA_64_CONFIG_BLOCK, T55X7_INDALA_224_CONFIG_BLOCK
+    // T55X7_GUARDPROXII_CONFIG_BLOCK, T55X7_VIKING_CONFIG_BLOCK, T55X7_NORALYS_CONFIG_BLOCK, T55X7_IOPROX_CONFIG_BLOCK
     static char buf[60];
     char *retStr = buf;
 
@@ -1772,6 +1771,7 @@ void t55x7_create_config_block(int tagtype) {
     }
     PrintAndLogEx(NORMAL, buf);
 }
+*/
 
 static int CmdResetRead(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
@@ -1822,7 +1822,7 @@ static int CmdT55xxWipe(const char *Cmd) {
     return 0;
 }
 
-bool IsCancelled(void) {
+static bool IsCancelled(void) {
     if (ukbhit()) {
         int gc = getchar();
         (void)gc;

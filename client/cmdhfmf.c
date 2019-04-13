@@ -410,7 +410,7 @@ static int usage_hf14_nack(void) {
     return 0;
 }
 
-int GetHFMF14AUID(uint8_t *uid, int *uidlen) {
+static int GetHFMF14AUID(uint8_t *uid, int *uidlen) {
     UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
@@ -428,7 +428,7 @@ int GetHFMF14AUID(uint8_t *uid, int *uidlen) {
     return 1;
 }
 
-char *GenerateFilename(const char *prefix, const char *suffix) {
+static char *GenerateFilename(const char *prefix, const char *suffix) {
     uint8_t uid[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     int uidlen = 0;
     char *fptr = calloc(sizeof(char) * (strlen(prefix) + strlen(suffix)) + sizeof(uid) * 2 + 1,  sizeof(uint8_t));
@@ -674,7 +674,7 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
     return 0;
 }
 
-uint16_t NumOfBlocks(char card) {
+static uint16_t NumOfBlocks(char card) {
     switch (card) {
         case '0' :
             return MIFARE_MINI_MAXBLOCK;
@@ -688,7 +688,8 @@ uint16_t NumOfBlocks(char card) {
             return MIFARE_1K_MAXBLOCK;
     }
 }
-uint8_t NumOfSectors(char card) {
+
+static uint8_t NumOfSectors(char card) {
     switch (card) {
         case '0' :
             return MIFARE_MINI_MAXSECTOR;
@@ -703,7 +704,7 @@ uint8_t NumOfSectors(char card) {
     }
 }
 
-uint8_t FirstBlockOfSector(uint8_t sectorNo) {
+static uint8_t FirstBlockOfSector(uint8_t sectorNo) {
     if (sectorNo < 32) {
         return sectorNo * 4;
     } else {
@@ -711,7 +712,7 @@ uint8_t FirstBlockOfSector(uint8_t sectorNo) {
     }
 }
 
-uint8_t NumBlocksPerSector(uint8_t sectorNo) {
+static uint8_t NumBlocksPerSector(uint8_t sectorNo) {
     if (sectorNo < 32) {
         return 4;
     } else {
@@ -1512,12 +1513,15 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
     return 0;
 }
 
-int randInRange(int min, int max) {
+/*
+static int randInRange(int min, int max) {
     return min + (int)(rand() / (double)(RAND_MAX) * (max - min + 1));
 }
+*/
 
 //Fisher–Yates shuffle
-void shuffle(uint8_t *array, uint16_t len) {
+/*
+static void shuffle(uint8_t *array, uint16_t len) {
     uint8_t tmp[6];
     uint16_t x;
     time_t t;
@@ -1530,6 +1534,7 @@ void shuffle(uint8_t *array, uint16_t len) {
         memcpy(array + len, tmp, 6);
     }
 }
+*/
 
 static int CmdHF14AMfChk_fast(const char *Cmd) {
 
