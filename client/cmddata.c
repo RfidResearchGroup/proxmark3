@@ -1326,7 +1326,7 @@ static int CmdRawDemod(const char *Cmd) {
     return ans;
 }
 
-void setClockGrid(int clk, int offset) {
+void setClockGrid(uint32_t clk, int offset) {
     g_DemodStartIdx = offset;
     g_DemodClock = clk;
     if (clk == 0 && offset == 0)
@@ -1368,12 +1368,13 @@ static int CmdSetGraphMarkers(const char *Cmd) {
 }
 
 static int CmdHexsamples(const char *Cmd) {
-    int i, j, requested = 0, offset = 0;
+    uint32_t requested = 0;
+    uint32_t offset = 0;
     char string_buf[25];
     char *string_ptr = string_buf;
     uint8_t got[BIGBUF_SIZE];
 
-    sscanf(Cmd, "%i %i", &requested, &offset);
+    sscanf(Cmd, "%u %u", &requested, &offset);
 
     /* if no args send something */
     if (requested == 0)
@@ -1389,8 +1390,8 @@ static int CmdHexsamples(const char *Cmd) {
         return false;
     }
 
-    i = 0;
-    for (j = 0; j < requested; j++) {
+    uint8_t i = 0;
+    for (uint32_t j = 0; j < requested; j++) {
         i++;
         string_ptr += sprintf(string_ptr, "%02x ", got[j]);
         if (i == 8) {
@@ -1444,7 +1445,7 @@ static uint8_t getByte(uint8_t bits_per_sample, BitstreamOut *b) {
     return val;
 }
 
-int getSamples(int n, bool silent) {
+int getSamples(uint32_t n, bool silent) {
     //If we get all but the last byte in bigbuf,
     // we don't have to worry about remaining trash
     // in the last byte in case the bits-per-sample
@@ -1654,11 +1655,13 @@ static int CmdLoad(const char *Cmd) {
 
 // trim graph from the end
 int CmdLtrim(const char *Cmd) {
-    // sanitycheck
-    if (GraphTraceLen <= 0) return 1;
 
-    int ds = atoi(Cmd);
-    for (int i = ds; i < GraphTraceLen; ++i)
+    uint32_t ds = strtoul(Cmd, NULL, 10);
+
+    // sanitycheck
+    if (GraphTraceLen <= ds) return 1;
+
+    for (uint32_t i = ds; i < GraphTraceLen; ++i)
         GraphBuffer[i - ds] = GraphBuffer[i];
 
     GraphTraceLen -= ds;
@@ -1669,7 +1672,7 @@ int CmdLtrim(const char *Cmd) {
 // trim graph from the beginning
 static int CmdRtrim(const char *Cmd) {
 
-    int ds = atoi(Cmd);
+    uint32_t ds = strtoul(Cmd, NULL, 10);
 
     // sanitycheck
     if (GraphTraceLen <= ds) return 1;
@@ -1681,8 +1684,8 @@ static int CmdRtrim(const char *Cmd) {
 
 // trim graph (middle) piece
 static int CmdMtrim(const char *Cmd) {
-    int start = 0, stop = 0;
-    sscanf(Cmd, "%i %i", &start, &stop);
+    uint32_t start = 0, stop = 0;
+    sscanf(Cmd, "%u %u", &start, &stop);
 
     if (start > GraphTraceLen || stop > GraphTraceLen || start > stop) return 1;
 
@@ -1690,7 +1693,7 @@ static int CmdMtrim(const char *Cmd) {
     start++;
 
     GraphTraceLen = stop - start;
-    for (int i = 0; i < GraphTraceLen; i++)
+    for (uint32_t i = 0; i < GraphTraceLen; i++)
         GraphBuffer[i] = GraphBuffer[start + i];
 
     return 0;
@@ -1698,17 +1701,16 @@ static int CmdMtrim(const char *Cmd) {
 
 int CmdNorm(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    int i;
     int max = INT_MIN, min = INT_MAX;
 
     // Find local min, max
-    for (i = 10; i < GraphTraceLen; ++i) {
+    for (uint32_t i = 10; i < GraphTraceLen; ++i) {
         if (GraphBuffer[i] > max) max = GraphBuffer[i];
         if (GraphBuffer[i] < min) min = GraphBuffer[i];
     }
 
     if (max != min) {
-        for (i = 0; i < GraphTraceLen; ++i) {
+        for (uint32_t i = 0; i < GraphTraceLen; ++i) {
             GraphBuffer[i] = ((long)(GraphBuffer[i] - ((max + min) / 2)) * 256) / (max - min);
             //marshmelow: adjusted *1000 to *256 to make +/- 128 so demod commands still work
         }
@@ -1744,7 +1746,7 @@ static int CmdSave(const char *Cmd) {
         return 0;
     }
 
-    for (int i = 0; i < GraphTraceLen; i++)
+    for (uint32_t i = 0; i < GraphTraceLen; i++)
         fprintf(f, "%d\n", GraphBuffer[i]);
 
     if (f)
@@ -1818,7 +1820,7 @@ static int CmdZerocrossings(const char *Cmd) {
 
     int sign = 1, zc = 0, lastZc = 0;
 
-    for (int i = 0; i < GraphTraceLen; ++i) {
+    for (uint32_t i = 0; i < GraphTraceLen; ++i) {
         if (GraphBuffer[i] * sign >= 0) {
             // No change in sign, reproduce the previous sample count.
             zc++;
@@ -1983,7 +1985,7 @@ static void GetHiLoTone(int *LowTone, int *HighTone, int clk, int LowToneFC, int
 
 //old CmdFSKdemod adapted by marshmellow
 //converts FSK to clear NRZ style wave.  (or demodulates)
-static int FSKToNRZ(int *data, size_t *dataLen, int clk, int LowToneFC, int HighToneFC) {
+static int FSKToNRZ(int *data, size_t *dataLen, uint8_t clk, uint8_t LowToneFC, uint8_t HighToneFC) {
     uint8_t ans = 0;
     if (clk == 0 || LowToneFC == 0 || HighToneFC == 0) {
         int firstClockEdge = 0;
