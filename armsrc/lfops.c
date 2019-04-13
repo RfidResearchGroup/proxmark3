@@ -165,7 +165,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
     // clear read buffer
     BigBuf_Clear_keep_EM();
 
-    LFSetupFPGAForADC(sc->divisor, 1);
+    LFSetupFPGAForADC(sc->divisor, true);
 
     // little more time for the tag to fully power up
     WaitMS(200);

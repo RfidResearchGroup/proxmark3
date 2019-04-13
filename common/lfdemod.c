@@ -376,7 +376,7 @@ bool loadWaveCounters(uint8_t *samples, size_t size, int lowToLowWaveLen[], int 
 size_t pskFindFirstPhaseShift(uint8_t *samples, size_t size, uint8_t *curPhase, size_t waveStart, uint16_t fc, uint16_t *fullWaveLen) {
     uint16_t loopCnt = (size + 3 < 4096) ? size : 4096; //don't need to loop through entire array...
 
-    uint16_t avgWaveVal = 0, lastAvgWaveVal = 0;
+    uint16_t avgWaveVal = 0, lastAvgWaveVal;
     size_t i = waveStart, waveEnd, waveLenCnt, firstFullWave;
     for (; i < loopCnt; i++) {
         // find peak // was "samples[i] + fc" but why?  must have been used to weed out some wave error... removed..
@@ -417,9 +417,8 @@ void askAmp(uint8_t *bits, size_t size) {
 // iceman, simplify this
 uint32_t manchesterEncode2Bytes(uint16_t datain) {
     uint32_t output = 0;
-    uint8_t curBit = 0;
     for (uint8_t i = 0; i < 16; i++) {
-        curBit = (datain >> (15 - i) & 1);
+        uint8_t curBit = (datain >> (15 - i) & 1);
         output |= (1 << (((15 - i) * 2) + curBit));
     }
     return output;
@@ -482,7 +481,6 @@ bool DetectCleanAskWave(uint8_t *dest, size_t size, uint8_t high, uint8_t low) {
 // to help detect clocks on heavily clipped samples
 // based on count of low to low
 int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clock) {
-    size_t startwave;
     size_t i = 100;
     size_t minClk = 512;
     uint16_t shortestWaveIdx = 0;
@@ -511,7 +509,7 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
     // loop through all samples (well, we don't want to go out-of-bounds)
     while (i < size - 512) {
         // measure from low to low
-        startwave = i;
+        size_t startwave = i;
 
         getNextHigh(dest, size, high, &i);
         getNextLow(dest, size, low, &i);
@@ -623,11 +621,11 @@ int DetectASKClock(uint8_t *dest, size_t size, int *clock, int maxErr) {
     if (*clock > 0)
         clk[0] = *clock;
 
-    uint8_t clkCnt, tol = 0;
+    uint8_t clkCnt, tol;
     size_t j = 0;
     uint16_t bestErr[] = {1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000};
     uint8_t bestStart[] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-    size_t errCnt = 0, arrLoc, loopEnd;
+    size_t errCnt, arrLoc, loopEnd;
 
     if (found_clk) {
         clkCnt = found_clk;
@@ -987,10 +985,10 @@ int DetectPSKClock(uint8_t *dest, size_t size, int clock, size_t *firstPhaseShif
     if (*fc != 2 && *fc != 4 && *fc != 8) return 0;
 
 
-    size_t waveStart, waveEnd, firstFullWave = 0, lastClkBit;
+    size_t waveEnd, firstFullWave = 0;
 
-    uint8_t clkCnt, tol;
-    uint16_t peakcnt, errCnt, waveLenCnt, fullWaveLen = 0;
+    uint8_t clkCnt;
+    uint16_t waveLenCnt, fullWaveLen = 0;
     uint16_t bestErr[] = {1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000};
     uint16_t peaksdet[] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 
@@ -1010,11 +1008,11 @@ int DetectPSKClock(uint8_t *dest, size_t size, int clock, size_t *firstPhaseShif
 
     //test each valid clock from greatest to smallest to see which lines up
     for (clkCnt = 7; clkCnt >= 1 ; clkCnt--) {
-        tol = *fc / 2;
-        lastClkBit = firstFullWave; //set end of wave as clock align
-        waveStart = 0;
-        errCnt = 0;
-        peakcnt = 0;
+        uint8_t tol = *fc / 2;
+        size_t lastClkBit = firstFullWave; //set end of wave as clock align
+        size_t waveStart = 0;
+        uint16_t errCnt = 0;
+        uint16_t peakcnt = 0;
         if (g_debugMode == 2) prnt("DEBUG PSK: clk: %d, lastClkBit: %d", clk[clkCnt], lastClkBit);
 
         for (i = firstFullWave + fullWaveLen - 1; i < loopCnt - 2; i++) {
@@ -1565,7 +1563,7 @@ int askdemod_ext(uint8_t *bits, size_t *size, int *clk, int *invert, int maxErr,
     // if clean clipped waves detected run alternate demod
     if (DetectCleanAskWave(bits, *size, high, low)) {
 
-        if (g_debugMode == 2) prnt("DEBUG ASK: Clean Wave Detected - using clean wave demod");
+        if (g_debugMode == 2) prnt("DEBUG: (askdemod_ext) Clean wave detected");
 
         errCnt = cleanAskRawDemod(bits, size, *clk, *invert, high, low, startIdx);
 
