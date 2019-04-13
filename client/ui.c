@@ -9,6 +9,12 @@
 // UI utilities
 //-----------------------------------------------------------------------------
 
+/* Ensure strtok_r is available even with -std=c99; must be included before
+ */
+#if !defined(_WIN32)
+#define _POSIX_C_SOURCE 200112L
+#endif
+
 #include "ui.h"
 
 double CursorScaleFactor = 1;
