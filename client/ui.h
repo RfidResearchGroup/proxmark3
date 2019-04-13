@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
 #include <readline/readline.h>
 #include <pthread.h>
 #include <math.h>
