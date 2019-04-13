@@ -28,21 +28,28 @@
 #include "whereami.h"
 #include "comms.h"
 
-#if defined(__linux__) || (__APPLE__)
 static void showBanner(void) {
     printf("\n\n");
+#if defined(__linux__) || (__APPLE__)
     printf("\e[34m██████╗ ███╗   ███╗ ████╗\e[0m     ...iceman fork\n");
     printf("\e[34m██╔══██╗████╗ ████║   ══█║\e[0m      ...dedicated to \e[34mRDV40\e[0m\n");
     printf("\e[34m██████╔╝██╔████╔██║ ████╔╝\e[0m\n");
     printf("\e[34m██╔═══╝ ██║╚██╔╝██║   ══█║\e[0m    iceman@icesql.net\n");
-    printf("\e[34m██║     ██║ ╚═╝ ██║ ████╔╝\e[0m  https://github.com/iceman1001/proxmark3\n");
-    printf("\e[34m╚═╝     ╚═╝     ╚═╝ ╚═══╝\e[0m pre v4.0\n");
-    printf("\nKeep iceman fork alive with a donation!           https://paypal.me/iceman1001/");
-    printf("\nMONERO: 43mNJLpgBVaTvyZmX9ajcohpvVkaRy1kbZPm8tqAb7itZgfuYecgkRF36rXrKFUkwEGeZedPsASRxgv4HPBHvJwyJdyvQuP");
+    printf("\e[34m██║     ██║ ╚═╝ ██║ ████╔╝\e[0m   https://github.com/rfidresearchgroup/proxmark3/\n");
+    printf("\e[34m╚═╝     ╚═╝     ╚═╝ ╚═══╝\e[0m pre-release v4.0\n");
+#else
+    printf("======. ===.   ===. ====.     ...iceman fork\n");
+    printf("==...==.====. ====.   ..=.      ...dedicated to RDV40\n");
+    printf("======..==.====.==. ====..\n");
+    printf("==..... ==..==..==.   ..=.    iceman@icesql.net\n");
+    printf("==.     ==. ... ==. ====..   https://github.com/rfidresearchgroup/proxmark3/\n");
+    printf("...     ...     ... .....  pre-release v4.0\n");
+#endif
+    printf("\nSupport iceman on patreon,   https://www.patreon.com/iceman1001/");
+//    printf("\nMonero: 43mNJLpgBVaTvyZmX9ajcohpvVkaRy1kbZPm8tqAb7itZgfuYecgkRF36rXrKFUkwEGeZedPsASRxgv4HPBHvJwyJdyvQuP");
     printf("\n\n\n");
     fflush(stdout);
 }
-#endif
 
 void
 #ifdef __has_attribute
@@ -216,37 +223,43 @@ const char *get_my_executable_directory(void) {
 
 static void set_my_executable_path(void) {
     int path_length = wai_getExecutablePath(NULL, 0, NULL);
-    if (path_length != -1) {
-        my_executable_path = (char *)calloc(path_length + 1, sizeof(uint8_t));
-        int dirname_length = 0;
-        if (wai_getExecutablePath(my_executable_path, path_length, &dirname_length) != -1) {
-            my_executable_path[path_length] = '\0';
-            my_executable_directory = (char *)calloc(dirname_length + 2, sizeof(uint8_t));
-            strncpy(my_executable_directory, my_executable_path, dirname_length + 1);
-            my_executable_directory[dirname_length + 1] = '\0';
-        }
+    if (path_length == -1) 
+        return;
+        
+    my_executable_path = (char *)calloc(path_length + 1, sizeof(uint8_t));
+    int dirname_length = 0;
+    if (wai_getExecutablePath(my_executable_path, path_length, &dirname_length) != -1) {
+        my_executable_path[path_length] = '\0';
+        my_executable_directory = (char *)calloc(dirname_length + 2, sizeof(uint8_t));
+        strncpy(my_executable_directory, my_executable_path, dirname_length + 1);
+        my_executable_directory[dirname_length + 1] = '\0';
     }
 }
 
 static void show_help(bool showFullHelp, char *command_line) {
-    PrintAndLogEx(NORMAL, "syntax: %s <port> [-h | -help | -m | -f | -flush | -w | -wait | -c | -command | -l | -lua] [cmd_script_file_name] [command][lua_script_name]\n", command_line);
-    PrintAndLogEx(NORMAL, "\texample:'%s "SERIAL_PORT_H"'\n\n", command_line);
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "syntax: %s <port> [ -h -m -f -w ] [-c <command>] [-l <lua_script_file>] [<cmd_script_file_name]\n", command_line);
 
     if (showFullHelp) {
-        PrintAndLogEx(NORMAL, "help: <-h|-help> Dump all interactive command's help at once.\n");
-        PrintAndLogEx(NORMAL, "\t%s  -h\n\n", command_line);
-        PrintAndLogEx(NORMAL, "markdown: <-m> Dump all interactive help at once in markdown syntax\n");
-        PrintAndLogEx(NORMAL, "\t%s -m\n\n", command_line);
-        PrintAndLogEx(NORMAL, "flush: <-f|-flush> Output will be flushed after every print.\n");
-        PrintAndLogEx(NORMAL, "\t%s -f\n\n", command_line);
-        PrintAndLogEx(NORMAL, "wait: <-w|-wait> 20sec waiting the serial port to appear in the OS\n");
-        PrintAndLogEx(NORMAL, "\t%s "SERIAL_PORT_H" -w\n\n", command_line);
-        PrintAndLogEx(NORMAL, "script: A script file with one proxmark3 command per line.\n\n");
-        PrintAndLogEx(NORMAL, "command: <-c|-command> Execute one proxmark3 command.\n");
-        PrintAndLogEx(NORMAL, "\t%s "SERIAL_PORT_H" -c \"hf mf chk 1* ?\"\n", command_line);
-        PrintAndLogEx(NORMAL, "\t%s "SERIAL_PORT_H" -command \"hf mf nested 1 *\"\n\n", command_line);
-        PrintAndLogEx(NORMAL, "lua: <-l|-lua> Execute lua script.\n");
-        PrintAndLogEx(NORMAL, "\t%s "SERIAL_PORT_H" -l hf_read\n\n", command_line);
+        PrintAndLogEx(NORMAL, "options:");
+        PrintAndLogEx(NORMAL, "      -h                    dump all interactive command's help at once");
+        PrintAndLogEx(NORMAL, "      -m                    dump all interactive help at once in markdown syntax");
+        PrintAndLogEx(NORMAL, "      -f                    output will be flushed after every print");
+        PrintAndLogEx(NORMAL, "      -w                    20sec waiting the serial port to appear in the OS");
+        PrintAndLogEx(NORMAL, "      -c <command>          execute one proxmark3 command.");
+        PrintAndLogEx(NORMAL, "      -l <lua script file>  execute lua script.");
+        PrintAndLogEx(NORMAL, "      <cmd_script_file>     script file with one proxmark3 command per line");
+        PrintAndLogEx(NORMAL, "\nsamples:");
+        PrintAndLogEx(NORMAL, "      %s -h\n", command_line);
+        PrintAndLogEx(NORMAL, "      %s -m\n", command_line);
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_H" -f             -- flush output everytime\n", command_line);
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_H" -w             -- wait for serial port\n", command_line);
+        PrintAndLogEx(NORMAL, "\n  how to run proxmark3 client\n");
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_H"                -- runs the pm3 client\n", command_line);
+        PrintAndLogEx(NORMAL, "\n  how to execute different commands from terminal\n");
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_H" -c \"hf mf chk 1* ?\"   -- execute cmd and quit client\n", command_line);
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_H" -l hf_read            -- execute lua script " _YELLOW_("`hf_read`")"and quit client\n", command_line);
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_H" mycmds.txt            -- execute each pm3 cmd in file and quit client\n", command_line);
     }
 }
 
@@ -271,7 +284,17 @@ int main(int argc, char *argv[]) {
 #endif
 
     if (argc < 2) {
+
+#if defined(_WIN32)
+        for (int m = strlen(argv[0]); m > 0; m--) {
+            if ( argv[0][m] == '\\' ) {
+                show_help(true, argv[0] + (++m) );
+                break;
+            }
+        }
+#else
         show_help(true, argv[0]);
+#endif
         return 1;
     }
 
@@ -380,13 +403,10 @@ int main(int argc, char *argv[]) {
         return 2;
     }
 
-#if defined(__linux__) || (__APPLE__)
-// ascii art doesn't work well on mingw :(
-
+    // ascii art
     bool stdinOnPipe = !isatty(STDIN_FILENO);
     if (!executeCommand && !script_cmds_file && !stdinOnPipe)
         showBanner();
-#endif
 
     // set global variables
     set_my_executable_path();
