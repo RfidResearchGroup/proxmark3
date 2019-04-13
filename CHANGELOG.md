@@ -3,8 +3,18 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
- - 'hf mf sim' - bugs fix, refactoring (@mceloff)
- - Mifare Ultralight/NTAG simulation. Add WRITE and COMPATIBLE_WRITE support (@mceloff)
+ - Fix 'data shiftgraphzero' corrupting end of GraphBuffer (@doegox)
+ - Fix 'hf legic info' - unsegmented card now uses card size to calc remaining length (@iceman)
+ - Add 36bit HID format, extend calcWiegand() to include oem bits ((@davidbeauchamp)
+ - Fix 'hf mf hardnested' - not verify key when reading nonce file (@iceman)
+ - Change optimizations for ask/bi (@iceman)
+ - Fix 'hf mf sim' - bugs fix, refactoring (@mceloff)
+ - Add WRITE and COMPATIBLE_WRITE support to Mifare Ultralight/NTAG simulation (@mceloff)
+ - Change installation instructions and add video links (@5w0rdfish)
+ - Change 'hf mf sim' to support more types (@vratiskol)
+ - Change better strong wave detection for biphase (@iceman)
+ - Add 'script run test_t55x7' (@iceman)
+ - Add new lua scripting support for some t55xx commands (@iceman)
  - *WIP* Add FPC usart with pm3 client: WITH_FPC_HOST. (@doegox)
  - Add '-b baudrate' option to the pm3 client. (@doegox)
  - Change 'lf t55xx info': tell if known configuration block0. (@iceman)
