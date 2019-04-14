@@ -74,7 +74,6 @@ struct timeval timeout = {
 };
 
 serial_port uart_open(const char *pcPortName, uint32_t speed) {
-    printf("[=] Using UART port %s.\n", pcPortName);
     serial_port_unix *sp = calloc(sizeof(serial_port_unix), sizeof(uint8_t));
     if (sp == 0) return INVALID_SERIAL_PORT;
 
