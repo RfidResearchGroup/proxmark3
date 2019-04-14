@@ -28,7 +28,15 @@ bool showDemod = true;
 pthread_mutex_t print_lock = PTHREAD_MUTEX_INITIALIZER;
 static const char *logfilename = "proxmark3.log";
 
-float complex cexpf(float complex Z);
+/*
+static float complex cexpf(float complex Z) {
+    float complex  Res;
+    double rho = exp(__real__ Z);
+    __real__ Res = rho * cosf(__imag__ Z);
+    __imag__ Res = rho * sinf(__imag__ Z);
+    return Res;
+}
+*/
 
 void PrintAndLogOptions(const char *str[][2], size_t size, size_t space) {
     char buff[2000] = "Options:\n";
@@ -268,10 +276,4 @@ void iceSimple_Filter(int *data, const size_t len, uint8_t k) {
     }
 }
 
-float complex cexpf(float complex Z) {
-    float complex  Res;
-    double rho = exp(__real__ Z);
-    __real__ Res = rho * cosf(__imag__ Z);
-    __imag__ Res = rho * sinf(__imag__ Z);
-    return Res;
-}
+
