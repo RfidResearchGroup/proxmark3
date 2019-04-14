@@ -318,12 +318,12 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
 
     // check result of uart opening
     if (sp == INVALID_SERIAL_PORT) {
-        PrintAndLogEx(WARNING, _RED_("ERROR:") "invalid serial port");
+        PrintAndLogEx(WARNING, _RED_("ERROR:") "invalid serial port " _YELLOW_("%s"), portname);
         sp = NULL;
         serial_port_name = NULL;
         return false;
     } else if (sp == CLAIMED_SERIAL_PORT) {
-        PrintAndLogEx(WARNING, _RED_("ERROR:") "serial port is claimed by another process");
+        PrintAndLogEx(WARNING, _RED_("ERROR:") "serial port " _YELLOW_("%s") " is claimed by another process", portname);
         sp = NULL;
         serial_port_name = NULL;
         return false;
