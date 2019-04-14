@@ -301,8 +301,8 @@ __attribute__((force_align_arg_pointer))
 bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed) {
 
     char *portname = (char *)port;
-    printf("[=] Using UART port %s.\n", portname);
     if (!wait_for_port) {
+        PrintAndLogEx(INFO, "Using UART port " _YELLOW_("%s"), portname);
         sp = uart_open(portname, speed);
     } else {
         PrintAndLogEx(SUCCESS, "Waiting for Proxmark to appear on " _YELLOW_("%s"), portname);
