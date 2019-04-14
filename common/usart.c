@@ -180,7 +180,7 @@ void usart_init(void) {
     // all interrupts disabled
     pUS1->US_IDR = 0xFFFF;
 
-    pUS1->US_BRGR =  48054841 / (115200 << 3);
+    pUS1->US_BRGR =  48054841 / (AT91_BAUD_RATE << 3);
     // Need speed?
     //pUS1->US_BRGR =  48054841 / (460800 << 3);
 

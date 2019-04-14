@@ -27,6 +27,7 @@
 #include "cmdhw.h"
 #include "whereami.h"
 #include "comms.h"
+#include "usart.h"
 
 static void showBanner(void) {
     printf("\n\n");
@@ -422,8 +423,9 @@ int main(int argc, char *argv[]) {
 
     // default speed for USB 460800,  USART(FPC serial) 115200 baud
     if (speed == 0)
-#ifdef WITH_FPC
-        speed = 115200;
+#ifdef WITH_FPC_HOST
+        // Let's assume we're talking by default to pm3 over usart in this mode
+        speed = AT91_BAUD_RATE;
 #else
         speed = 460800;
 #endif
