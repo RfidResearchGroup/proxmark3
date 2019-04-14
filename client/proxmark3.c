@@ -292,14 +292,14 @@ int main(int argc, char *argv[]) {
     char *exec_name = argv[0];
 #if defined(_WIN32)
     for (int m = strlen(exec_name); m > 0; m--) {
-        if ( exec_name[m] == '\\' ) {
+        if (exec_name[m] == '\\') {
             exec_name += (++m);
             break;
         }
     }
 #endif
 
-    for (int i=1; i < argc; i++) {
+    for (int i = 1; i < argc; i++) {
 
         if (argv[i][0] != '-') {
             // For backward compatibility we accept direct port
@@ -323,7 +323,7 @@ int main(int argc, char *argv[]) {
             }
             if (port != NULL) {
                 // We got already one
-                PrintAndLogEx(ERR, _RED_("ERROR:") "cannot parse command line. We got %s as port and now we got also: %s\n", port, argv[i+1]);
+                PrintAndLogEx(ERR, _RED_("ERROR:") "cannot parse command line. We got %s as port and now we got also: %s\n", port, argv[i + 1]);
                 show_help(false, exec_name);
                 return 1;
             }

@@ -445,7 +445,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
     uint8_t rAUTH_NT_keystream[4];
     uint32_t nonce = 0;
 
-    tUart *uart = GetUart(); 
+    tUart *uart = GetUart();
 
     if ((flags & FLAG_MF_MINI) == FLAG_MF_MINI) {
         MifareCardType = 0;

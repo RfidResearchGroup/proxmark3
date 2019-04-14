@@ -26,13 +26,13 @@ static int usage_lf_indala_demod(void) {
     PrintAndLogEx(NORMAL, "      h        :  This help");
     PrintAndLogEx(NORMAL, "      clock    :  Set clock (as integer) optional, if not set, autodetect.");
     PrintAndLogEx(NORMAL, "      invert   :  1 for invert output");
-    PrintAndLogEx(NORMAL, "      maxerror :  Set maximum allowed errors, default = 100.");   
+    PrintAndLogEx(NORMAL, "      maxerror :  Set maximum allowed errors, default = 100.");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        lf indala demod");
     PrintAndLogEx(NORMAL, "        lf indala demod 32       = demod a Indala tag from GraphBuffer using a clock of RF/32");
-    PrintAndLogEx(NORMAL, "        lf indala demod 32 1     = demod a Indala tag from GraphBuffer using a clock of RF/32 and inverting data");    
-    PrintAndLogEx(NORMAL, "        lf indala demod 64 1 0   = demod a Indala tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");    
+    PrintAndLogEx(NORMAL, "        lf indala demod 32 1     = demod a Indala tag from GraphBuffer using a clock of RF/32 and inverting data");
+    PrintAndLogEx(NORMAL, "        lf indala demod 64 1 0   = demod a Indala tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
     return 0;
 }
 
@@ -57,7 +57,7 @@ static int CmdIndalaDemod(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_lf_indala_demod();
-    
+
     int ans;
     if (strlen(Cmd) > 0)
         ans = PSKDemod(Cmd, true);

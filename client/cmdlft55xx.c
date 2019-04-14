@@ -1211,8 +1211,8 @@ static int CmdT55xxReadTrace(const char *Cmd) {
         ct = localtime_s(&tm_buf, &now) == 0 ? &tm_buf : NULL;
 #else
         ct = localtime_r(&now, &tm_buf);
-#endif        
-        
+#endif
+
         if (data.year > ct->tm_year - 110)
             data.year += 2000;
         else
