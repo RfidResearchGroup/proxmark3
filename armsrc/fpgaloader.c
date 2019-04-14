@@ -449,6 +449,9 @@ void FpgaWriteConfWord(uint8_t v) {
 // the samples from the ADC always flow through the FPGA.
 //-----------------------------------------------------------------------------
 void SetAdcMuxFor(uint32_t whichGpio) {
+
+#ifndef WITH_FPC
+    // When compiled without FPC support
     AT91C_BASE_PIOA->PIO_OER =
         GPIO_MUXSEL_HIPKD |
         GPIO_MUXSEL_LOPKD |
@@ -463,9 +466,15 @@ void SetAdcMuxFor(uint32_t whichGpio) {
 
     LOW(GPIO_MUXSEL_HIPKD);
     LOW(GPIO_MUXSEL_LOPKD);
-#ifndef WITH_FPC
     LOW(GPIO_MUXSEL_HIRAW);
     LOW(GPIO_MUXSEL_LORAW);
+        
+#else
+    // FPC serial uses HIRAW/LOWRAW pins, so they are excluded here.
+    AT91C_BASE_PIOA->PIO_OER = GPIO_MUXSEL_HIPKD | GPIO_MUXSEL_LOPKD;
+    AT91C_BASE_PIOA->PIO_PER = GPIO_MUXSEL_HIPKD | GPIO_MUXSEL_LOPKD;
+    LOW(GPIO_MUXSEL_HIPKD);
+    LOW(GPIO_MUXSEL_LOPKD);
 #endif
 
     HIGH(whichGpio);

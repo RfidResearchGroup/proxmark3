@@ -189,9 +189,6 @@ int CmdLFCommandRead(const char *Cmd) {
 int CmdFlexdemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
 
-    if (GraphTraceLen < 0)
-        return 0;
-
 #ifndef LONG_WAIT
 #define LONG_WAIT 100
 #endif
