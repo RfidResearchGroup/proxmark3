@@ -276,9 +276,11 @@ QColor Plot::getColor(int graphNum) {
 
 void Plot::setMaxAndStart(int *buffer, size_t len, QRect plotRect) {
     if (len == 0) return;
-    startMax = (len - (int)((plotRect.right() - plotRect.left() - 40) / GraphPixelsPerPoint));
-    if (startMax < 0) {
-        startMax = 0;
+    startMax = 0;
+    if (plotRect.right() >= plotRect.left() + 40) {
+        uint32_t t = (plotRect.right() - plotRect.left() - 40) / GraphPixelsPerPoint;
+        if (len >= t)
+            startMax = len - t;
     }
     if (GraphStart > startMax) {
         GraphStart = startMax;
@@ -469,9 +471,6 @@ void Plot::paintEvent(QPaintEvent *event) {
     QPen pen(QColor(100, 255, 100));
 
     painter.setFont(QFont("Courier New", 10));
-
-    if (GraphStart < 0)
-        GraphStart = 0;
 
     if (CursorAPos > GraphTraceLen)
         CursorAPos = 0;
