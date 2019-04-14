@@ -49,7 +49,7 @@ typedef struct {
 } serial_port_windows;
 
 serial_port uart_open(const char *pcPortName, uint32_t speed) {
-    char acPortName[255];
+    char acPortName[255] = {0};
     serial_port_windows *sp = calloc(sizeof(serial_port_windows), sizeof(uint8_t));
 
     if (sp == 0) {
