@@ -1136,7 +1136,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             uint8_t my_rx[sizeof(UsbCommand)];
             while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
                 LED_B_INV();
-                if (usart_readbuffer(my_rx, sizeof(UsbCommand)) ) {
+                if (usart_readbuffer(my_rx) ) {
                     //UsbPacketReceived(my_rx, sizeof(my_rx));
 
                     UsbCommand *my = (UsbCommand *)my_rx;
@@ -1565,10 +1565,11 @@ void  __attribute__((noreturn)) AppMain(void) {
         }
 #ifdef WITH_FPC_HOST
         // Check if there is a FPC packet available
-        if (usart_readcommand(rx) > 0) {
+        if (usart_readbuffer(rx)) {
             reply_via_fpc = 1;
             UsbPacketReceived(rx, sizeof(rx));
         }
+		usart_readcheck(rx, sizeof(rx));
 #endif
 
         // Press button for one second to enter a possible standalone mode
