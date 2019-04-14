@@ -528,67 +528,67 @@ static int CmdAnalyseA(const char *Cmd) {
     }
     PrintAndLogEx(NORMAL, "got ack.  Status %d", resp.arg[0]);
     return 0;
-/*
-    PrintAndLogEx(NORMAL, "-- " _BLUE_("its my message") "\n");
-    PrintAndLogEx(NORMAL, "-- " _RED_("its my message") "\n");
-    PrintAndLogEx(NORMAL, "-- " _YELLOW_("its my message") "\n");
-    PrintAndLogEx(NORMAL, "-- " _GREEN_("its my message") "\n");
+    /*
+        PrintAndLogEx(NORMAL, "-- " _BLUE_("its my message") "\n");
+        PrintAndLogEx(NORMAL, "-- " _RED_("its my message") "\n");
+        PrintAndLogEx(NORMAL, "-- " _YELLOW_("its my message") "\n");
+        PrintAndLogEx(NORMAL, "-- " _GREEN_("its my message") "\n");
 
-    //uint8_t syncBit = 99;
-    // The start bit is one ore more Sequence Y followed by a Sequence Z (... 11111111 00x11111). We need to distinguish from
-    // Sequence X followed by Sequence Y followed by Sequence Z     (111100x1 11111111 00x11111)
-    // we therefore look for a ...xx1111 11111111 00x11111xxxxxx... pattern
-    // (12 '1's followed by 2 '0's, eventually followed by another '0', followed by 5 '1's)
-# define SYNC_16BIT 0xB24D
-    uint32_t shiftReg = param_get32ex(Cmd, 0, 0xb24d, 16);
-    uint8_t bt = param_get8ex(Cmd, 1, 0xBB, 16);
-    uint8_t byte_offset = 99;
-    // reverse byte
-    uint8_t rev =  reflect8(bt);
-    PrintAndLogEx(NORMAL, "input  %02x | %02x \n", bt, rev);
-    // add byte to shift register
-    shiftReg = shiftReg << 8 | rev;
+        //uint8_t syncBit = 99;
+        // The start bit is one ore more Sequence Y followed by a Sequence Z (... 11111111 00x11111). We need to distinguish from
+        // Sequence X followed by Sequence Y followed by Sequence Z     (111100x1 11111111 00x11111)
+        // we therefore look for a ...xx1111 11111111 00x11111xxxxxx... pattern
+        // (12 '1's followed by 2 '0's, eventually followed by another '0', followed by 5 '1's)
+    # define SYNC_16BIT 0xB24D
+        uint32_t shiftReg = param_get32ex(Cmd, 0, 0xb24d, 16);
+        uint8_t bt = param_get8ex(Cmd, 1, 0xBB, 16);
+        uint8_t byte_offset = 99;
+        // reverse byte
+        uint8_t rev =  reflect8(bt);
+        PrintAndLogEx(NORMAL, "input  %02x | %02x \n", bt, rev);
+        // add byte to shift register
+        shiftReg = shiftReg << 8 | rev;
 
-    PrintAndLogEx(NORMAL, "shiftreg after %08x | pattern %08x \n", shiftReg, SYNC_16BIT);
+        PrintAndLogEx(NORMAL, "shiftreg after %08x | pattern %08x \n", shiftReg, SYNC_16BIT);
 
-    uint8_t n0 = 0, n1 = 0;
+        uint8_t n0 = 0, n1 = 0;
 
-    n0 = (rev & (uint8_t)(~(0xFF >> (8 - 4)))) >> 4;
-    n1 = (n1 << 4) | (rev & (uint8_t)(~(0xFF << 4)));
+        n0 = (rev & (uint8_t)(~(0xFF >> (8 - 4)))) >> 4;
+        n1 = (n1 << 4) | (rev & (uint8_t)(~(0xFF << 4)));
 
-    PrintAndLogEx(NORMAL, "rev %02X | %02X %s | %02X %s |\n", rev, n0, pb(n0), n1, pb(n1));
-*/
+        PrintAndLogEx(NORMAL, "rev %02X | %02X %s | %02X %s |\n", rev, n0, pb(n0), n1, pb(n1));
+    */
     /*
     hex(0xb24d shr 0) 0xB24D 0b1011001001001101
     hex(0xb24d shr 1) 0x5926
     hex(0xb24d shr 2) 0x2C93
     */
 
-/*    
-    for (int i = 0; i < 16; i++) {
-        PrintAndLogEx(NORMAL, " (shiftReg >> %d) & 0xFFFF ==  %08x ---", i, ((shiftReg >> i) & 0xFFFF));
+    /*
+        for (int i = 0; i < 16; i++) {
+            PrintAndLogEx(NORMAL, " (shiftReg >> %d) & 0xFFFF ==  %08x ---", i, ((shiftReg >> i) & 0xFFFF));
 
-        // kolla om SYNC_PATTERN finns.
-        if (((shiftReg >> 7) & 0xFFFF) == SYNC_16BIT) byte_offset = 7;
-        else if (((shiftReg >> 6) & 0xFFFF) == SYNC_16BIT) byte_offset = 6;
-        else if (((shiftReg >> 5) & 0xFFFF) == SYNC_16BIT) byte_offset = 5;
-        else if (((shiftReg >> 4) & 0xFFFF) == SYNC_16BIT) byte_offset = 4;
-        else if (((shiftReg >> 3) & 0xFFFF) == SYNC_16BIT) byte_offset = 3;
-        else if (((shiftReg >> 2) & 0xFFFF) == SYNC_16BIT) byte_offset = 2;
-        else if (((shiftReg >> 1) & 0xFFFF) == SYNC_16BIT) byte_offset = 1;
-        else if (((shiftReg >> 0) & 0xFFFF) == SYNC_16BIT) byte_offset = 0;
+            // kolla om SYNC_PATTERN finns.
+            if (((shiftReg >> 7) & 0xFFFF) == SYNC_16BIT) byte_offset = 7;
+            else if (((shiftReg >> 6) & 0xFFFF) == SYNC_16BIT) byte_offset = 6;
+            else if (((shiftReg >> 5) & 0xFFFF) == SYNC_16BIT) byte_offset = 5;
+            else if (((shiftReg >> 4) & 0xFFFF) == SYNC_16BIT) byte_offset = 4;
+            else if (((shiftReg >> 3) & 0xFFFF) == SYNC_16BIT) byte_offset = 3;
+            else if (((shiftReg >> 2) & 0xFFFF) == SYNC_16BIT) byte_offset = 2;
+            else if (((shiftReg >> 1) & 0xFFFF) == SYNC_16BIT) byte_offset = 1;
+            else if (((shiftReg >> 0) & 0xFFFF) == SYNC_16BIT) byte_offset = 0;
 
-        PrintAndLogEx(NORMAL, "Offset  %u \n", byte_offset);
-        if (byte_offset != 99)
-            break;
+            PrintAndLogEx(NORMAL, "Offset  %u \n", byte_offset);
+            if (byte_offset != 99)
+                break;
 
-        shiftReg >>= 1;
-    }
+            shiftReg >>= 1;
+        }
 
-    uint8_t p1 = (rev & (uint8_t)(~(0xFF << byte_offset)));
-    PrintAndLogEx(NORMAL, "Offset  %u  | leftovers  %02x  %s \n", byte_offset, p1, pb(p1));
+        uint8_t p1 = (rev & (uint8_t)(~(0xFF << byte_offset)));
+        PrintAndLogEx(NORMAL, "Offset  %u  | leftovers  %02x  %s \n", byte_offset, p1, pb(p1));
 
-*/
+    */
 
     /*
     pm3 --> da hex2bin 4db2     0100110110110010
@@ -621,39 +621,39 @@ static int CmdAnalyseA(const char *Cmd) {
         */
 //    return 0;
 
-/*
-    // 14443-A
-    uint8_t u14_c[] = {0x09, 0x78, 0x00, 0x92, 0x02, 0x54, 0x13, 0x02, 0x04, 0x2d, 0xe8 }; // atqs w crc
-    uint8_t u14_w[] = {0x09, 0x78, 0x00, 0x92, 0x02, 0x54, 0x13, 0x02, 0x04, 0x2d, 0xe7 }; // atqs w crc
-    PrintAndLogEx(FAILED, "14a check wrong crc      | %s\n", (check_crc(CRC_14443_A, u14_w, sizeof(u14_w))) ? "YES" : "NO");
-    PrintAndLogEx(SUCCESS, "14a check correct crc    | %s\n", (check_crc(CRC_14443_A, u14_c, sizeof(u14_c))) ? "YES" : "NO");
+    /*
+        // 14443-A
+        uint8_t u14_c[] = {0x09, 0x78, 0x00, 0x92, 0x02, 0x54, 0x13, 0x02, 0x04, 0x2d, 0xe8 }; // atqs w crc
+        uint8_t u14_w[] = {0x09, 0x78, 0x00, 0x92, 0x02, 0x54, 0x13, 0x02, 0x04, 0x2d, 0xe7 }; // atqs w crc
+        PrintAndLogEx(FAILED, "14a check wrong crc      | %s\n", (check_crc(CRC_14443_A, u14_w, sizeof(u14_w))) ? "YES" : "NO");
+        PrintAndLogEx(SUCCESS, "14a check correct crc    | %s\n", (check_crc(CRC_14443_A, u14_c, sizeof(u14_c))) ? "YES" : "NO");
 
-    // 14443-B
-    uint8_t u14b[] = {0x05, 0x00, 0x08, 0x39, 0x73};
-    PrintAndLogEx(NORMAL, "14b check crc            | %s\n", (check_crc(CRC_14443_B, u14b, sizeof(u14b))) ? "YES" : "NO");
+        // 14443-B
+        uint8_t u14b[] = {0x05, 0x00, 0x08, 0x39, 0x73};
+        PrintAndLogEx(NORMAL, "14b check crc            | %s\n", (check_crc(CRC_14443_B, u14b, sizeof(u14b))) ? "YES" : "NO");
 
-    // 15693 test
-    uint8_t u15_c[] = {0x05, 0x00, 0x08, 0x39, 0x73}; // correct
-    uint8_t u15_w[] = {0x05, 0x00, 0x08, 0x39, 0x72}; // wrong
-    PrintAndLogEx(FAILED, "15 check wrong crc       | %s\n", (check_crc(CRC_15693, u15_w, sizeof(u15_w))) ? "YES" : "NO");
-    PrintAndLogEx(SUCCESS, "15 check correct crc     | %s\n", (check_crc(CRC_15693, u15_c, sizeof(u15_c))) ? "YES" : "NO");
+        // 15693 test
+        uint8_t u15_c[] = {0x05, 0x00, 0x08, 0x39, 0x73}; // correct
+        uint8_t u15_w[] = {0x05, 0x00, 0x08, 0x39, 0x72}; // wrong
+        PrintAndLogEx(FAILED, "15 check wrong crc       | %s\n", (check_crc(CRC_15693, u15_w, sizeof(u15_w))) ? "YES" : "NO");
+        PrintAndLogEx(SUCCESS, "15 check correct crc     | %s\n", (check_crc(CRC_15693, u15_c, sizeof(u15_c))) ? "YES" : "NO");
 
-    // iCLASS test - wrong crc , swapped bytes.
-    uint8_t iclass_w[] = { 0x40, 0xe1, 0xe1, 0xff, 0xfe, 0x5f, 0x02, 0x3c, 0x01, 0x43};
-    uint8_t iclass_c[] = { 0x40, 0xe1, 0xe1, 0xff, 0xfe, 0x5f, 0x02, 0x3c, 0x43, 0x01};
-    PrintAndLogEx(FAILED, "iCLASS check wrong crc   | %s\n", (check_crc(CRC_ICLASS, iclass_w, sizeof(iclass_w))) ? "YES" : "NO");
-    PrintAndLogEx(SUCCESS, "iCLASS check correct crc | %s\n", (check_crc(CRC_ICLASS, iclass_c, sizeof(iclass_c))) ? "YES" : "NO");
+        // iCLASS test - wrong crc , swapped bytes.
+        uint8_t iclass_w[] = { 0x40, 0xe1, 0xe1, 0xff, 0xfe, 0x5f, 0x02, 0x3c, 0x01, 0x43};
+        uint8_t iclass_c[] = { 0x40, 0xe1, 0xe1, 0xff, 0xfe, 0x5f, 0x02, 0x3c, 0x43, 0x01};
+        PrintAndLogEx(FAILED, "iCLASS check wrong crc   | %s\n", (check_crc(CRC_ICLASS, iclass_w, sizeof(iclass_w))) ? "YES" : "NO");
+        PrintAndLogEx(SUCCESS, "iCLASS check correct crc | %s\n", (check_crc(CRC_ICLASS, iclass_c, sizeof(iclass_c))) ? "YES" : "NO");
 
-    // FeliCa test
-    uint8_t felica_w[] = {0x12, 0x01, 0x01, 0x2e, 0x3d, 0x17, 0x26, 0x47, 0x80, 0x95, 0x00, 0xf1, 0x00, 0x00, 0x00, 0x01, 0x43, 0x00, 0xb3, 0x7e};
-    uint8_t felica_c[] = {0x12, 0x01, 0x01, 0x2e, 0x3d, 0x17, 0x26, 0x47, 0x80, 0x95, 0x00, 0xf1, 0x00, 0x00, 0x00, 0x01, 0x43, 0x00, 0xb3, 0x7f};
-    PrintAndLogEx(FAILED, "FeliCa check wrong crc   | %s\n", (check_crc(CRC_FELICA, felica_w, sizeof(felica_w))) ? "YES" : "NO");
-    PrintAndLogEx(SUCCESS, "FeliCa check correct crc | %s\n", (check_crc(CRC_FELICA, felica_c, sizeof(felica_c))) ? "YES" : "NO");
+        // FeliCa test
+        uint8_t felica_w[] = {0x12, 0x01, 0x01, 0x2e, 0x3d, 0x17, 0x26, 0x47, 0x80, 0x95, 0x00, 0xf1, 0x00, 0x00, 0x00, 0x01, 0x43, 0x00, 0xb3, 0x7e};
+        uint8_t felica_c[] = {0x12, 0x01, 0x01, 0x2e, 0x3d, 0x17, 0x26, 0x47, 0x80, 0x95, 0x00, 0xf1, 0x00, 0x00, 0x00, 0x01, 0x43, 0x00, 0xb3, 0x7f};
+        PrintAndLogEx(FAILED, "FeliCa check wrong crc   | %s\n", (check_crc(CRC_FELICA, felica_w, sizeof(felica_w))) ? "YES" : "NO");
+        PrintAndLogEx(SUCCESS, "FeliCa check correct crc | %s\n", (check_crc(CRC_FELICA, felica_c, sizeof(felica_c))) ? "YES" : "NO");
 
-    PrintAndLogEx(NORMAL, "\n\n");
+        PrintAndLogEx(NORMAL, "\n\n");
 
-    return 0;
-    */
+        return 0;
+        */
     /*
     bool term = !isatty(STDIN_FILENO);
     if (!term) {
@@ -697,37 +697,37 @@ static int CmdAnalyseA(const char *Cmd) {
     uid(3e172b29) nt(039b7bd2) ks(0c0e0f0505080800) nr(00000001)
     uid(3e172b29) nt(039b7bd2) ks(0e06090d03000b0f) nr(00000002)
     */
-/*    
-    uint64_t *keylistA = NULL, *keylistB = NULL;
-    uint32_t keycountA = 0, keycountB = 0;
-//  uint64_t d1[] = {0x3e172b29, 0x039b7bd2, 0x0000001, 0, 0x0c0e0f0505080800};
-//  uint64_t d2[] = {0x3e172b29, 0x039b7bd2, 0x0000002, 0, 0x0e06090d03000b0f};
-    uint64_t d1[] = {0x6e442129, 0x8f699195, 0x0000001, 0, 0x090d0b0305020f02};
-    uint64_t d2[] = {0x6e442129, 0x8f699195, 0x0000004, 0, 0x00040f0f0305030e};
+    /*
+        uint64_t *keylistA = NULL, *keylistB = NULL;
+        uint32_t keycountA = 0, keycountB = 0;
+    //  uint64_t d1[] = {0x3e172b29, 0x039b7bd2, 0x0000001, 0, 0x0c0e0f0505080800};
+    //  uint64_t d2[] = {0x3e172b29, 0x039b7bd2, 0x0000002, 0, 0x0e06090d03000b0f};
+        uint64_t d1[] = {0x6e442129, 0x8f699195, 0x0000001, 0, 0x090d0b0305020f02};
+        uint64_t d2[] = {0x6e442129, 0x8f699195, 0x0000004, 0, 0x00040f0f0305030e};
 
-    keycountA = nonce2key(d1[0], d1[1], d1[2], 0, d1[3], d1[4], &keylistA);
-    keycountB = nonce2key(d2[0], d2[1], d2[2], 0, d2[3], d2[4], &keylistB);
+        keycountA = nonce2key(d1[0], d1[1], d1[2], 0, d1[3], d1[4], &keylistA);
+        keycountB = nonce2key(d2[0], d2[1], d2[2], 0, d2[3], d2[4], &keylistB);
 
-    switch (keycountA) {
-        case 0:
-            PrintAndLogEx(FAILED, "Key test A failed\n");
-            break;
-        case 1:
-            PrintAndLogEx(SUCCESS, "KEY A | %012" PRIX64 " ", keylistA[0]);
-            break;
-    }
-    switch (keycountB) {
-        case 0:
-            PrintAndLogEx(FAILED, "Key test B failed\n");
-            break;
-        case 1:
-            PrintAndLogEx(SUCCESS, "KEY B | %012" PRIX64 " ", keylistB[0]);
-            break;
-    }
+        switch (keycountA) {
+            case 0:
+                PrintAndLogEx(FAILED, "Key test A failed\n");
+                break;
+            case 1:
+                PrintAndLogEx(SUCCESS, "KEY A | %012" PRIX64 " ", keylistA[0]);
+                break;
+        }
+        switch (keycountB) {
+            case 0:
+                PrintAndLogEx(FAILED, "Key test B failed\n");
+                break;
+            case 1:
+                PrintAndLogEx(SUCCESS, "KEY B | %012" PRIX64 " ", keylistB[0]);
+                break;
+        }
 
-    free(keylistA);
-    free(keylistB);
-*/
+        free(keylistA);
+        free(keylistB);
+    */
 //  qsort(keylist, keycount, sizeof(*keylist), compare_uint64);
 //  keycount = intersection(last_keylist, keylist);
 

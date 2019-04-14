@@ -223,9 +223,9 @@ const char *get_my_executable_directory(void) {
 
 static void set_my_executable_path(void) {
     int path_length = wai_getExecutablePath(NULL, 0, NULL);
-    if (path_length == -1) 
+    if (path_length == -1)
         return;
-        
+
     my_executable_path = (char *)calloc(path_length + 1, sizeof(uint8_t));
     int dirname_length = 0;
     if (wai_getExecutablePath(my_executable_path, path_length, &dirname_length) != -1) {
@@ -287,8 +287,8 @@ int main(int argc, char *argv[]) {
 
 #if defined(_WIN32)
         for (int m = strlen(argv[0]); m > 0; m--) {
-            if ( argv[0][m] == '\\' ) {
-                show_help(true, argv[0] + (++m) );
+            if (argv[0][m] == '\\') {
+                show_help(true, argv[0] + (++m));
                 break;
             }
         }

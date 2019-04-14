@@ -62,33 +62,33 @@ inline int16_t usart_readbuffer(uint8_t *data) {
 
 uint8_t check = 0;
 inline int16_t usart_readbuffer(uint8_t *data) {
-	// Check if the first PDC bank is free
+    // Check if the first PDC bank is free
     if (pUS1->US_RCR == 0) {
         pUS1->US_RPR = (uint32_t)data;
         pUS1->US_RCR = sizeof(UsbCommand);
-		pUS1->US_PTCR = AT91C_PDC_RXTEN | AT91C_PDC_TXTEN;
-		check = 0;
+        pUS1->US_PTCR = AT91C_PDC_RXTEN | AT91C_PDC_TXTEN;
+        check = 0;
         return 2;
     } else {
         return 0;
     }
 }
 
-void usart_readcheck(uint8_t *data,size_t len) {
-	if (pUS1->US_RCR<len){
-		if (check == 0){
-			StartCountUS();
-			check = 1;
-		}
-		//300ms
-		if (GetCountUS() > 300000){ 
-			pUS1->US_RPR = (uint32_t)data;
-        	pUS1->US_RCR = len;
-			check = 0;
-		}
-	} else {
-		check = 0;
-	}
+void usart_readcheck(uint8_t *data, size_t len) {
+    if (pUS1->US_RCR < len) {
+        if (check == 0) {
+            StartCountUS();
+            check = 1;
+        }
+        //300ms
+        if (GetCountUS() > 300000) {
+            pUS1->US_RPR = (uint32_t)data;
+            pUS1->US_RCR = len;
+            check = 0;
+        }
+    } else {
+        check = 0;
+    }
 }
 
 inline bool usart_dataavailable(void) {
@@ -99,7 +99,7 @@ inline int16_t usart_readcommand(uint8_t *data) {
     if (pUS1->US_RCR == 0)
         return usart_readbuffer(data);
 
-        return 0;
+    return 0;
 }
 
 inline bool usart_commandavailable(void) {
@@ -126,26 +126,26 @@ inline int16_t usart_writebuffer(uint8_t *data, size_t len) {
 
 // transfer from device to client
 inline int16_t usart_writebuffer(uint8_t *data, size_t len) {
-	
-	while (pUS1->US_TCR && pUS1->US_TNCR) {};
-    
+
+    while (pUS1->US_TCR && pUS1->US_TNCR) {};
+
     // Check if the first PDC bank is free
     if (pUS1->US_TCR == 0) {
-		memcpy(us_outbuf, data, len);
-		pUS1->US_TPR = (uint32_t)us_outbuf;
+        memcpy(us_outbuf, data, len);
+        pUS1->US_TPR = (uint32_t)us_outbuf;
         pUS1->US_TCR = sizeof(us_outbuf);
-		pUS1->US_PTCR = AT91C_PDC_TXTEN | AT91C_PDC_RXTEN;
+        pUS1->US_PTCR = AT91C_PDC_TXTEN | AT91C_PDC_RXTEN;
     }
     // Check if the second PDC bank is free
     else if (pUS1->US_TNCR == 0) {
-		memcpy(us_outbuf, data, len);
+        memcpy(us_outbuf, data, len);
         pUS1->US_TNPR = (uint32_t)us_outbuf;
         pUS1->US_TNCR = sizeof(us_outbuf);
-		pUS1->US_PTCR = AT91C_PDC_TXTEN | AT91C_PDC_RXTEN;
-    } 
-	//wait until finishing transfer 
-	while (pUS1->US_TCR && pUS1->US_TNCR) {};
-	return 0;
+        pUS1->US_PTCR = AT91C_PDC_TXTEN | AT91C_PDC_RXTEN;
+    }
+    //wait until finishing transfer
+    while (pUS1->US_TCR && pUS1->US_TNCR) {};
+    return 0;
 }
 
 
@@ -200,10 +200,10 @@ void usart_init(void) {
 
     // re-enable receiver / transmitter
     pUS1->US_CR = (AT91C_US_RXEN | AT91C_US_TXEN);
-    
+
     // ready to receive
     pUS1->US_RPR = (uint32_t)us_inbuf;
-	pUS1->US_RCR = 0;
-	pUS1->US_RNCR = 0;
+    pUS1->US_RCR = 0;
+    pUS1->US_RNCR = 0;
     pUS1->US_PTCR = AT91C_PDC_RXTEN;
 }

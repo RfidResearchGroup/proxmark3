@@ -1569,7 +1569,7 @@ void  __attribute__((noreturn)) AppMain(void) {
             reply_via_fpc = 1;
             UsbPacketReceived(rx, sizeof(rx));
         }
-		usart_readcheck(rx, sizeof(rx));
+        usart_readcheck(rx, sizeof(rx));
 #endif
 
         // Press button for one second to enter a possible standalone mode

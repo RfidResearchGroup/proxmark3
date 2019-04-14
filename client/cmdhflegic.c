@@ -200,7 +200,7 @@ static int CmdLegicInfo(const char *Cmd) {
     crc = data[4];
     uint32_t calc_crc =  CRC8Legic(data, 4);
 
-    PrintAndLogEx(NORMAL, _YELLOW_("CDF: System Area") );
+    PrintAndLogEx(NORMAL, _YELLOW_("CDF: System Area"));
     PrintAndLogEx(NORMAL, "------------------------------------------------------");
     PrintAndLogEx(NORMAL, "MCD: %02x, MSN: %02x %02x %02x, MCC: %02x %s",
                   data[0],
@@ -304,7 +304,7 @@ static int CmdLegicInfo(const char *Cmd) {
         }
     }
     PrintAndLogEx(NORMAL, "------------------------------------------------------");
-        
+
     uint8_t segCrcBytes[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     uint32_t segCalcCRC = 0;
     uint32_t segCRC = 0;
@@ -313,7 +313,7 @@ static int CmdLegicInfo(const char *Cmd) {
     if (dcf > 60000)
         goto out;
 
-    PrintAndLogEx(NORMAL, _YELLOW_("\nADF: User Area") );
+    PrintAndLogEx(NORMAL, _YELLOW_("\nADF: User Area"));
     PrintAndLogEx(NORMAL, "------------------------------------------------------");
 
     if (bIsSegmented) {
@@ -348,24 +348,24 @@ static int CmdLegicInfo(const char *Cmd) {
 
             PrintAndLogEx(NORMAL, "Segment     | %02u ", segmentNum);
             PrintAndLogEx(NORMAL, "raw header  | 0x%02X 0x%02X 0x%02X 0x%02X",
-                    data[i] ^ crc,
-                    data[i + 1] ^ crc,
-                    data[i + 2] ^ crc,
-                    data[i + 3] ^ crc
-                    );
+                          data[i] ^ crc,
+                          data[i + 1] ^ crc,
+                          data[i + 2] ^ crc,
+                          data[i + 3] ^ crc
+                         );
             PrintAndLogEx(NORMAL, "Segment len | %u,  Flag: 0x%X (valid:%01u, last:%01u)",
-                    segment_len,
-                    segment_flag,
-                    (segment_flag & 0x4) >> 2,
-                    (segment_flag & 0x8) >> 3
-                    );
+                          segment_len,
+                          segment_flag,
+                          (segment_flag & 0x4) >> 2,
+                          (segment_flag & 0x8) >> 3
+                         );
             PrintAndLogEx(NORMAL, "            | WRP: %02u, WRC: %02u, RD: %01u, CRC: 0x%02X (%s)",
-                    wrp,
-                    wrc,
-                    ((data[i + 3] ^ crc) & 0x80) >> 7,
-                    segCRC,
-                    (segCRC == segCalcCRC) ? _GREEN_("OK") : _RED_("Fail")
-                    );
+                          wrp,
+                          wrc,
+                          ((data[i + 3] ^ crc) & 0x80) >> 7,
+                          segCRC,
+                          (segCRC == segCalcCRC) ? _GREEN_("OK") : _RED_("Fail")
+                         );
 
             i += 5;
 
@@ -397,13 +397,13 @@ static int CmdLegicInfo(const char *Cmd) {
                 // does this one work? (Answer: Only if KGH/BGH is used with BCD encoded card number! So maybe this will show just garbage...)
                 if (wrp_len == 8) {
                     PrintAndLogEx(NORMAL, "Card ID: " _YELLOW_("%2X%02X%02X"),
-                        data[i - 4] ^ crc,
-                        data[i - 3] ^ crc,
-                        data[i - 2] ^ crc
-                        );
+                                  data[i - 4] ^ crc,
+                                  data[i - 3] ^ crc,
+                                  data[i - 2] ^ crc
+                                 );
                 }
             }
-            if (remain_seg_payload_len > 0 ) {
+            if (remain_seg_payload_len > 0) {
                 PrintAndLogEx(NORMAL, "Remaining segment payload:  (I %d | K %d | Remain LEN %d)", i, k, remain_seg_payload_len);
                 PrintAndLogEx(NORMAL, "\nrow  | data");
                 PrintAndLogEx(NORMAL, "-----+------------------------------------------------");
@@ -445,7 +445,7 @@ static int CmdLegicInfo(const char *Cmd) {
             PrintAndLogEx(NORMAL, "\nrow  | data");
             PrintAndLogEx(NORMAL, "-----+------------------------------------------------");
             print_hex_break(data + i, wrc, 16);
-            PrintAndLogEx(NORMAL, "-----+------------------------------------------------\n");            
+            PrintAndLogEx(NORMAL, "-----+------------------------------------------------\n");
             i += wrc;
         }
 
@@ -461,19 +461,19 @@ static int CmdLegicInfo(const char *Cmd) {
             // A: Only if KGH/BGH is used with BCD encoded card number. Maybe this will show just garbage
             if (wrp_len == 8) {
                 PrintAndLogEx(NORMAL, "Card ID: " _YELLOW_("%2X%02X%02X"),
-                    data[i - 4],
-                    data[i - 3],
-                    data[i - 2]
-                    );
+                              data[i - 4],
+                              data[i - 3],
+                              data[i - 2]
+                             );
             }
         }
 
-        if ( remain_seg_payload_len > 0 ) {
+        if (remain_seg_payload_len > 0) {
             PrintAndLogEx(NORMAL, "Remaining segment payload:  (I %d | Remain LEN %d)", i, remain_seg_payload_len);
             PrintAndLogEx(NORMAL, "\nrow  | data");
             PrintAndLogEx(NORMAL, "-----+------------------------------------------------");
             print_hex_break(data + i, remain_seg_payload_len, 16);
-            PrintAndLogEx(NORMAL, "-----+------------------------------------------------\n");            
+            PrintAndLogEx(NORMAL, "-----+------------------------------------------------\n");
         }
     }
 
