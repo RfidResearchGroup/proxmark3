@@ -1443,7 +1443,11 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             SendStatus();
             break;
         case CMD_PING:
+#ifdef WITH_FPC_HOST
+            cmd_send(CMD_ACK, reply_via_fpc, 0, 0, 0, 0);
+#else
             cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
+#endif
             break;
 #ifdef WITH_LCD
         case CMD_LCD_RESET:

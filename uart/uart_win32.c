@@ -49,6 +49,7 @@ typedef struct {
 } serial_port_windows;
 
 serial_port uart_open(const char *pcPortName, uint32_t speed) {
+    printf("[=] Using UART port %s.\n", pcPortName);
     char acPortName[255];
     serial_port_windows *sp = calloc(sizeof(serial_port_windows), sizeof(uint8_t));
 

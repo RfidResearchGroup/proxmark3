@@ -311,7 +311,6 @@ int main(int argc, char *argv[]) {
                 return 1;
             }
             port = argv[i];
-            PrintAndLogEx(INFO, "Using UART port %s.\n", port);
             continue;
         }
 
@@ -467,8 +466,10 @@ int main(int argc, char *argv[]) {
     if (port != NULL)
         usb_present = OpenProxmark(port, waitCOMPort, 20, false, speed);
 
+    if (TestProxmark() == 0)
+       usb_present = false;
     if (!usb_present)
-        PrintAndLogEx(NORMAL, "Running in " _YELLOW_("OFFLINE") "mode. Check \"%s -h\" if it's not what you want.\n", exec_name);
+        PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") "mode. Check \"%s -h\" if it's not what you want.\n", exec_name);
 
 #ifdef HAVE_GUI
 

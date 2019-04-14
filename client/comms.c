@@ -334,11 +334,25 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
         conn.block_after_ACK = flash_mode;
         pthread_create(&USB_communication_thread, NULL, &uart_communication, &conn);
         //pthread_create(&FPC_communication_thread, NULL, &uart_communication, &conn);
-
         fflush(stdout);
         // create a mutex to avoid interlacing print commands from our different threads
         //pthread_mutex_init(&print_lock, NULL);
         return true;
+    }
+}
+
+int TestProxmark(void) {
+    // check if we can communicate with Pm3
+    clearCommandBuffer();
+    UsbCommand resp;
+    UsbCommand c = {CMD_PING, {0, 0, 0}, {{0}}};
+    SendCommand(&c);
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
+        PrintAndLogEx(INFO, "Ping successful, communicating with PM3 over %s.", resp.arg[0] == 1 ? "FPC" : "USB");
+        return 1;
+    } else {
+        PrintAndLogEx(WARNING, _RED_("Ping failed"));
+        return 0;
     }
 }
 
