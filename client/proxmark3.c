@@ -85,7 +85,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
         if (sf)
             PrintAndLogEx(SUCCESS, "executing commands from file: %s\n", script_cmds_file);
         else
-            PrintAndLogEx(ERR, "could not open %s...", script_cmds_file);
+            PrintAndLogEx(ERR, "could not open " _YELLOW_("%s") "...", script_cmds_file);
     }
 
     read_history(".history");
@@ -306,7 +306,7 @@ int main(int argc, char *argv[]) {
             // For backward compatibility we accept direct port
             if (port != NULL) {
                 // We got already one
-                PrintAndLogEx(ERR, _RED_("ERROR:") "cannot parse command line. We got %s as port and now we got also: %s\n", port, argv[i]);
+                PrintAndLogEx(ERR, _RED_("ERROR:") "cannot parse command line. We got " _YELLOW_("%s") " as port and now we got also: " _YELLOW_("%s") "\n", port, argv[i]);
                 show_help(false, exec_name);
                 return 1;
             }
@@ -323,7 +323,7 @@ int main(int argc, char *argv[]) {
             }
             if (port != NULL) {
                 // We got already one
-                PrintAndLogEx(ERR, _RED_("ERROR:") "cannot parse command line. We got %s as port and now we got also: %s\n", port, argv[i + 1]);
+                PrintAndLogEx(ERR, _RED_("ERROR:") "cannot parse command line. We got " _YELLOW_("%s") " as port and now we got also: " _YELLOW_("%s") "\n", port, argv[i + 1]);
                 show_help(false, exec_name);
                 return 1;
             }
@@ -366,7 +366,7 @@ int main(int argc, char *argv[]) {
             }
             uint32_t tmpspeed = strtoul(argv[i + 1], NULL, 10);
             if ((tmpspeed == ULONG_MAX) || (tmpspeed == 0)) {
-                PrintAndLogEx(ERR, _RED_("ERROR:") "invalid baudrate: %s %s\n", argv[i], argv[i + 1]);
+                PrintAndLogEx(ERR, _RED_("ERROR:") "invalid baudrate: -b " _YELLOW_("%s") "\n", argv[i + 1]);
                 return 1;
             }
             speed = tmpspeed;
@@ -415,7 +415,7 @@ int main(int argc, char *argv[]) {
         }
 
         // We got an unknown parameter
-        PrintAndLogEx(ERR, _RED_("ERROR:") "invalid parameter: %s\n", argv[i]);
+        PrintAndLogEx(ERR, _RED_("ERROR:") "invalid parameter: " _YELLOW_("%s") "\n", argv[i]);
         show_help(false, exec_name);
         return 1;
     }
