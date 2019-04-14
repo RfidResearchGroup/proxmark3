@@ -3,7 +3,6 @@
 
 #include <stddef.h>
 #include "proxmark3.h"
-#include "../armsrc/ticks.h"  // startcountus
 
 #define AT91_BAUD_RATE 115200
 

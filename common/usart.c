@@ -10,7 +10,7 @@
 //-----------------------------------------------------------------------------
 #include "usart.h"
 #include "string.h"
-#include "apps.h"  // for Dbprintf
+#include "../armsrc/ticks.h"  // startcountus
 
 #define AT91_BAUD_RATE 115200
 
