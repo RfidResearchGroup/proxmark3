@@ -12,8 +12,6 @@
 #include "string.h"
 #include "../armsrc/ticks.h"  // startcountus
 
-#define AT91_BAUD_RATE 115200
-
 volatile AT91PS_USART pUS1 = AT91C_BASE_US1;
 volatile AT91PS_PIO pPIO   = AT91C_BASE_PIOA;
 volatile AT91PS_PDC pPDC   = AT91C_BASE_PDC_US1;
