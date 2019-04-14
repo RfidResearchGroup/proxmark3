@@ -238,11 +238,11 @@ static void set_my_executable_path(void) {
     }
 }
 
-static void show_help(bool showFullHelp, char *command_line) {
+static void show_help(bool showFullHelp, char *exec_name) {
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "syntax: %s [-h|-t|-m]\n", command_line);
-    PrintAndLogEx(NORMAL, "        %s [[-p] <port>] [-b] [-w] [-f] [-c <command>]|[-l <lua_script_file>]|[-s <cmd_script_file>]\n", command_line);
+    PrintAndLogEx(NORMAL, "syntax: %s [-h|-t|-m]\n", exec_name);
+    PrintAndLogEx(NORMAL, "        %s [[-p] <port>] [-b] [-w] [-f] [-c <command>]|[-l <lua_script_file>]|[-s <cmd_script_file>]\n", exec_name);
 
     if (showFullHelp) {
         PrintAndLogEx(NORMAL, "options:");
@@ -257,17 +257,17 @@ static void show_help(bool showFullHelp, char *command_line) {
         PrintAndLogEx(NORMAL, "      -l/--lua <lua script file>          execute lua script.");
         PrintAndLogEx(NORMAL, "      -s/--script-file <cmd_script_file>  script file with one proxmark3 command per line");
         PrintAndLogEx(NORMAL, "\nsamples:");
-        PrintAndLogEx(NORMAL, "      %s -h\n", command_line);
-        PrintAndLogEx(NORMAL, "      %s -m\n", command_line);
-        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_H" -f             -- flush output everytime\n", command_line);
-        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_H" -w             -- wait for serial port\n", command_line);
+        PrintAndLogEx(NORMAL, "      %s -h\n", exec_name);
+        PrintAndLogEx(NORMAL, "      %s -m\n", exec_name);
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_H" -f             -- flush output everytime\n", exec_name);
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_H" -w             -- wait for serial port\n", exec_name);
         PrintAndLogEx(NORMAL, "\n  how to run proxmark3 client\n");
-        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_H"                -- runs the pm3 client\n", command_line);
-        PrintAndLogEx(NORMAL, "      %s                             -- runs the pm3 client in OFFLINE mode\n", command_line);
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_H"                -- runs the pm3 client\n", exec_name);
+        PrintAndLogEx(NORMAL, "      %s                             -- runs the pm3 client in OFFLINE mode\n", exec_name);
         PrintAndLogEx(NORMAL, "\n  how to execute different commands from terminal\n");
-        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_H" -c \"hf mf chk 1* ?\"   -- execute cmd and quit client\n", command_line);
-        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_H" -l hf_read            -- execute lua script " _YELLOW_("`hf_read`")"and quit client\n", command_line);
-        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_H" -s mycmds.txt         -- execute each pm3 cmd in file and quit client\n", command_line);
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_H" -c \"hf mf chk 1* ?\"   -- execute cmd and quit client\n", exec_name);
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_H" -l hf_read            -- execute lua script " _YELLOW_("`hf_read`")"and quit client\n", exec_name);
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_H" -s mycmds.txt         -- execute each pm3 cmd in file and quit client\n", exec_name);
     }
 }
 
@@ -289,11 +289,11 @@ int main(int argc, char *argv[]) {
     rl_extend_line_buffer(1024);
 #endif
 
-    char *command_line = argv[0];
+    char *exec_name = argv[0];
 #if defined(_WIN32)
-    for (int m = strlen(command_line); m > 0; m--) {
-        if ( command_line[m] == '\\' ) {
-            command_line += (++m);
+    for (int m = strlen(exec_name); m > 0; m--) {
+        if ( exec_name[m] == '\\' ) {
+            exec_name += (++m);
             break;
         }
     }
@@ -306,7 +306,7 @@ int main(int argc, char *argv[]) {
             if (port != NULL) {
                 // We got already one
                 PrintAndLogEx(ERR, _RED_("ERROR:") "cannot parse command line. We got %s as port and now we got also: %s\n", port, argv[i]);
-                show_help(false, argv[0]);
+                show_help(false, exec_name);
                 return 1;
             }
             port = argv[i];
@@ -318,13 +318,13 @@ int main(int argc, char *argv[]) {
         if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--port") == 0) {
             if (i + 1 == argc) {
                 PrintAndLogEx(ERR, _RED_("ERROR:") "missing port specification after -p\n");
-                show_help(false, argv[0]);
+                show_help(false, exec_name);
                 return 1;
             }
             if (port != NULL) {
                 // We got already one
                 PrintAndLogEx(ERR, _RED_("ERROR:") "cannot parse command line. We got %s as port and now we got also: %s\n", port, argv[i+1]);
-                show_help(false, argv[0]);
+                show_help(false, exec_name);
                 return 1;
             }
             port = argv[++i];
@@ -333,13 +333,13 @@ int main(int argc, char *argv[]) {
 
         // short help
         if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
-            show_help(true, argv[0]);
+            show_help(true, exec_name);
             return 0;
         }
 
         // dump help
         if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--text") == 0) {
-            show_help(false, argv[0]);
+            show_help(false, exec_name);
             dumpAllHelp(0);
             return 0;
         }
@@ -361,7 +361,7 @@ int main(int argc, char *argv[]) {
         if (strcmp(argv[i], "-b") == 0 || strcmp(argv[i], "--baud") == 0) {
             if (i + 1 == argc) {
                 PrintAndLogEx(ERR, _RED_("ERROR:") "missing baud specification after -b\n");
-                show_help(false, argv[0]);
+                show_help(false, exec_name);
                 return 1;
             }
             uint32_t tmpspeed = strtoul(argv[i + 1], NULL, 10);
@@ -384,7 +384,7 @@ int main(int argc, char *argv[]) {
         if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--command") == 0) {
             if (i + 1 == argc) {
                 PrintAndLogEx(ERR, _RED_("ERROR:") "missing command specification after -c\n");
-                show_help(false, argv[0]);
+                show_help(false, exec_name);
                 return 1;
             }
             script_cmd = argv[++i];
@@ -395,7 +395,7 @@ int main(int argc, char *argv[]) {
         if (strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--script-file") == 0) {
             if (i + 1 == argc) {
                 PrintAndLogEx(ERR, _RED_("ERROR:") "missing script file specification after -s\n");
-                show_help(false, argv[0]);
+                show_help(false, exec_name);
                 return 1;
             }
             script_cmds_file = argv[++i];
@@ -407,7 +407,7 @@ int main(int argc, char *argv[]) {
             addLuaExec = true;
             if (i + 1 == argc) {
                 PrintAndLogEx(ERR, _RED_("ERROR:") "missing lua script specification after -l\n");
-                show_help(false, argv[0]);
+                show_help(false, exec_name);
                 return 1;
             }
             script_cmd = argv[++i];
@@ -416,7 +416,7 @@ int main(int argc, char *argv[]) {
 
         // We got an unknown parameter
         PrintAndLogEx(ERR, _RED_("ERROR:") "invalid parameter: %s\n", argv[i]);
-        show_help(false, argv[0]);
+        show_help(false, exec_name);
         return 1;
     }
 
@@ -466,7 +466,7 @@ int main(int argc, char *argv[]) {
         usb_present = OpenProxmark(port, waitCOMPort, 20, false, speed);
 
     if (!usb_present)
-        PrintAndLogEx(NORMAL, "Running in " _YELLOW_("OFFLINE") "mode. Check \"%s -h\" if it's not what you want.\n", command_line);
+        PrintAndLogEx(NORMAL, "Running in " _YELLOW_("OFFLINE") "mode. Check \"%s -h\" if it's not what you want.\n", exec_name);
 
 #ifdef HAVE_GUI
 
