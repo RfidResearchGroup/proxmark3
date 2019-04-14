@@ -364,8 +364,13 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    // default speed for USB 460800,  USART(FPC serial) 115200 baud
     if (speed == 0)
+#ifdef WITH_FPC
+        speed = 115200;
+#else
         speed = 460800;
+#endif
 
     // If the user passed the filename of the 'script' to execute, get it from last parameter
     if (lastarg) {
