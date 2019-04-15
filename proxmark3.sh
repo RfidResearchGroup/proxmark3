@@ -26,7 +26,7 @@ function wait4proxmark_macOS {
 # start proxmark with first detected interface
 
 if [[ $(uname | awk '{print toupper($0)}') == "LINUX" ]]; then
-    client/proxmark3 $(wait4proxmark_Linux) $*
+    client/proxmark3 $(wait4proxmark_Linux) "$@"
 elif [[ $(uname | awk '{print toupper($0)}') == "DARWIN" ]]; then
-    client/proxmark3 $(wait4proxmark_macOS) $*
+    client/proxmark3 $(wait4proxmark_macOS) "$@"
 fi
