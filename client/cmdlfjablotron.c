@@ -94,7 +94,8 @@ static int CmdJablotronDemod(const char *Cmd) {
     uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
     uint32_t raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
 
-    uint64_t rawid = bytebits_to_byte(DemodBuffer + 16, 40);
+    // bytebits_to_byte - uint32_t
+    uint64_t rawid = ((uint64_t)(bytebits_to_byte(DemodBuffer + 16, 8) & 0xff) << 32) | bytebits_to_byte(DemodBuffer + 24, 32);
     uint64_t id = getJablontronCardId(rawid);
 
     PrintAndLogEx(SUCCESS, "Jablotron Tag Found: Card ID: %"PRIx64" :: Raw: %08X%08X", id, raw1, raw2);
