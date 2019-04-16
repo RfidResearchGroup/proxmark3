@@ -299,14 +299,14 @@ test_script:
     ExecTest "proxmark help text hardnested" "proxmark3 -t" {bash -lc 'cd ~/client;./proxmark3 -t 2>&1 | grep -q hardnested && echo Passed || echo Failed'}
 
 
-    ExecTest "hf mf offline text" "hf mf" {bash -lc "cd ~/client;./proxmark3 comx -c 'hf mf'"} "at_enc"
+    ExecTest "hf mf offline text" "hf mf" {bash -lc "cd ~/client;./proxmark3 -c 'hf mf'"} "at_enc"
 
-    ExecTest "hf mf hardnested" "hf mf hardnested" {bash -lc "cd ~/client;./proxmark3 comx -c 'hf mf hardnested t 1 000000000000'"} "found:"
+    ExecTest "hf mf hardnested" "hf mf hardnested" {bash -lc "cd ~/client;./proxmark3 -c 'hf mf hardnested t 1 000000000000'"} "found:"
 
 
     #proxmark crypto tests
 
-    ExecTest "emv test" "emv test" {bash -lc "cd ~/client;./proxmark3 comx -c 'emv test'"} "Test?s? ? OK"
+    ExecTest "emv test" "emv test" {bash -lc "cd ~/client;./proxmark3 -c 'emv test'"} "Test?s? ? OK"
 
 
     if ($global:TestsPassed) {
