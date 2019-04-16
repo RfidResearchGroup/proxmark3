@@ -21,7 +21,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
     // message
     PrintAndLogEx(NORMAL, "--------------------------------------------------------------------------------\n");
     PrintAndLogEx(NORMAL, "executing Darkside attack. Expected execution time: 25sec on average");
-    PrintAndLogEx(NORMAL, "press pm3-button on the proxmark3 device to abort both proxmark3 and client.");
+    PrintAndLogEx(NORMAL, "press pm3-button on the Proxmark3 device to abort both Proxmark3 and client.");
     PrintAndLogEx(NORMAL, "--------------------------------------------------------------------------------\n");
 
     while (true) {
@@ -159,7 +159,7 @@ int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, 
         // s70 with 40*2 keys to check, 80*85 = 6800 auth.
         // takes about 97s, still some margin before abort
         if (timeout > 180) {
-            PrintAndLogEx(WARNING, "\nno response from Proxmark. Aborting...");
+            PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
             return 2;
         }
     }
@@ -919,7 +919,7 @@ int detect_classic_nackbug(bool verbose) {
     UsbCommand resp;
 
     if (verbose)
-        PrintAndLogEx(SUCCESS, "press pm3-button on the proxmark3 device to abort both proxmark3 and client.\n");
+        PrintAndLogEx(SUCCESS, "press pm3-button on the Proxmark3 device to abort both Proxmark3 and client.\n");
 
     // for nice animation
     bool term = !isatty(STDIN_FILENO);

@@ -506,7 +506,7 @@ static bool DecodeT5555TraceBlock(void) {
 // sanity check. Don't use proxmark if it is offline and you didn't specify useGraphbuf
 static int SanityOfflineCheck(bool useGraphBuffer) {
     if (!useGraphBuffer && IsOffline()) {
-        PrintAndLogEx(NORMAL, "Your proxmark3 device is offline. Specify [1] to use graphbuffer data instead");
+        PrintAndLogEx(WARNING, "Your proxmark3 device is offline. Specify [1] to use graphbuffer data instead");
         return 0;
     }
     return 1;
@@ -1866,7 +1866,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
             printf(".");
             fflush(stdout);
             if (timeout > 180) {
-                PrintAndLogEx(WARNING, "\nno response from Proxmark. Aborting...");
+                PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
                 return 2;
             }
         }

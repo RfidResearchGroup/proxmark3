@@ -1994,7 +1994,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
             printf(".");
             fflush(stdout);
             if (timeout > 120) {
-                PrintAndLogEx(WARNING, "\nNo response from Proxmark. Aborting...");
+                PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
                 goto out;
             }
         }

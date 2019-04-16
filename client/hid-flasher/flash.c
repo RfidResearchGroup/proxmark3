@@ -281,7 +281,7 @@ static int get_proxmark_state(uint32_t *state) {
             *state = resp.arg[0];
             break;
         default:
-            fprintf(stderr, "Error: Couldn't get proxmark state, bad response type: 0x%04x\n", resp.cmd);
+            fprintf(stderr, "Error: Couldn't get Proxmark3 state, bad response type: 0x%04x\n", resp.cmd);
             return -1;
             break;
     }
@@ -319,7 +319,7 @@ static int enter_bootloader(void) {
             SendCommand(&c);
             fprintf(stderr, "Press and hold down button NOW if your bootloader requires it.\n");
         }
-        fprintf(stderr, "Waiting for Proxmark to reappear on USB...");
+        fprintf(stderr, "Waiting for Proxmark3 to reappear on USB...");
 
         CloseProxmark();
         msleep(1000);
@@ -333,7 +333,7 @@ static int enter_bootloader(void) {
         return 0;
     }
 
-    fprintf(stderr, "Error: Unknown Proxmark mode\n");
+    fprintf(stderr, "Error: Unknown Proxmark3 mode\n");
     return -1;
 }
 

@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
 
     usb_init();
 
-    fprintf(stderr, "Waiting for Proxmark to appear on USB...");
+    fprintf(stderr, "Waiting for Proxmark3 to appear on USB...");
     while (!OpenProxmark(1)) {
         msleep(1000);
         fprintf(stderr, ".");

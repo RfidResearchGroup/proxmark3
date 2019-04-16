@@ -781,7 +781,7 @@ static int CmdHFFido2GetAssertion(const char *cmd) {
     char fname[300] = {0};
 
     CLIParserInit("hf fido assert",
-                  "Execute a FIDO2 Get Assertion command. Needs json file with parameters. Sample file `fido2.json`. File can be placed in proxmark directory or in `proxmark/fido` directory.",
+                  "Execute a FIDO2 Get Assertion command. Needs json file with parameters. Sample file " _YELLOW_("`fido2.json`") ". File can be placed in proxmark directory or in `proxmark/fido` directory.",
                   "Usage:\n\thf fido assert -> execute command default parameters file `fido2.json`\n"
                   "\thf fido assert test.json -l -> execute command with parameters file `text.json` and add to request CredentialId");
 

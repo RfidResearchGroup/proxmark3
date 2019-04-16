@@ -1137,7 +1137,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
         int16_t isOK = mfnested(blockNo, keyType, key, trgBlockNo, trgKeyType, keyBlock, true);
         switch (isOK) {
             case -1 :
-                PrintAndLogEx(WARNING, "Error: No response from Proxmark.\n");
+                PrintAndLogEx(WARNING, "Error: No response from Proxmark3.\n");
                 break;
             case -2 :
                 PrintAndLogEx(WARNING, "Button pressed. Aborted.\n");
@@ -1207,7 +1207,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
                     int16_t isOK = mfnested(blockNo, keyType, key, FirstBlockOfSector(sectorNo), trgKeyType, keyBlock, calibrate);
                     switch (isOK) {
                         case -1 :
-                            PrintAndLogEx(WARNING, "error: No response from Proxmark.\n");
+                            PrintAndLogEx(WARNING, "error: No response from Proxmark3.\n");
                             break;
                         case -2 :
                             PrintAndLogEx(WARNING, "button pressed. Aborted.\n");
@@ -1497,7 +1497,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
     if (isOK) {
         switch (isOK) {
             case 1 :
-                PrintAndLogEx(WARNING, "Error: No response from Proxmark.\n");
+                PrintAndLogEx(WARNING, "Error: No response from Proxmark3.\n");
                 break;
             case 2 :
                 PrintAndLogEx(NORMAL, "Button pressed. Aborted.\n");
@@ -2283,7 +2283,7 @@ static int CmdHF14AMfSniff(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------------------\n");
     PrintAndLogEx(NORMAL, "Executing mifare sniffing command. \n");
-    PrintAndLogEx(NORMAL, "Press the key on the proxmark3 device to abort both proxmark3 and client.\n");
+    PrintAndLogEx(NORMAL, "Press the key on the Proxmark3 device to abort both Proxmark3 and client.\n");
     PrintAndLogEx(NORMAL, "Press the key on pc keyboard to abort the client.\n");
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------------------\n");
 

@@ -40,8 +40,8 @@ static void usage(char *argv0) {
     fprintf(stdout, "\t-b\tEnable flashing of bootloader area (DANGEROUS)\n\n");
     fprintf(stdout, "\nExample:\n\n\t %s "SERIAL_PORT_H" armsrc/obj/fullimage.elf\n", argv0);
 #ifdef __linux__
-    fprintf(stdout, "\nNote (Linux): if the flasher gets stuck in 'Waiting for Proxmark to reappear on <DEVICE>',\n");
-    fprintf(stdout, "              you need to blacklist proxmark for modem-manager - see wiki for more details:\n\n");
+    fprintf(stdout, "\nNote (Linux): if the flasher gets stuck in 'Waiting for Proxmark3 to reappear on <DEVICE>',\n");
+    fprintf(stdout, "              you need to blacklist Proxmark3 for modem-manager - see wiki for more details:\n\n");
     fprintf(stdout, "              https://github.com/Proxmark/proxmark3/wiki/Gentoo Linux\n\n");
     fprintf(stdout, "              https://github.com/Proxmark/proxmark3/wiki/Ubuntu Linux\n\n");
     fprintf(stdout, "              https://github.com/Proxmark/proxmark3/wiki/OSX\n\n");
@@ -82,7 +82,7 @@ int main(int argc, char **argv) {
     char *serial_port_name = argv[1];
 
     if (!OpenProxmark(serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
-        fprintf(stderr, "Could not find Proxmark on " _RED_("%s") ".\n\n", serial_port_name);
+        fprintf(stderr, "Could not find Proxmark3 on " _RED_("%s") ".\n\n", serial_port_name);
         return -1;
     } else {
         fprintf(stderr, _GREEN_("Found") "\n");

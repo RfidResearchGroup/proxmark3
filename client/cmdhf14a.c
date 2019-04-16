@@ -531,7 +531,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
         UsbCommand ca = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}, {{0}}};
         SendCommand(&ca);
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-            PrintAndLogEx(ERR, "Proxmark connection timeout.");
+            PrintAndLogEx(ERR, "Proxmark3 connection timeout.");
             return 1;
         }
 
@@ -553,7 +553,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
             memcpy(cr.d.asBytes, rats, 2);
             SendCommand(&cr);
             if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-                PrintAndLogEx(ERR, "Proxmark connection timeout.");
+                PrintAndLogEx(ERR, "Proxmark3 connection timeout.");
                 return 1;
             }
 
@@ -630,7 +630,7 @@ static int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
     UsbCommand ca = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}, {{0}}};
     SendCommand(&ca);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        PrintAndLogEx(ERR, "Proxmark connection timeout.");
+        PrintAndLogEx(ERR, "Proxmark3 connection timeout.");
         return 1;
     }
 
@@ -652,7 +652,7 @@ static int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
         memcpy(cr.d.asBytes, rats, 2);
         SendCommand(&cr);
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-            PrintAndLogEx(ERR, "Proxmark connection timeout.");
+            PrintAndLogEx(ERR, "Proxmark3 connection timeout.");
             return 1;
         }
 

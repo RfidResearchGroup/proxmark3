@@ -280,7 +280,7 @@ static int get_proxmark_state(uint32_t *state) {
             *state = resp.arg[0];
             break;
         default:
-            fprintf(stderr, _RED_("Error:") "Couldn't get proxmark state, bad response type: 0x%04" PRIx64 "\n", resp.cmd);
+            fprintf(stderr, _RED_("Error:") "Couldn't get Proxmark3 state, bad response type: 0x%04" PRIx64 "\n", resp.cmd);
             return -1;
             break;
     }
@@ -326,12 +326,12 @@ static int enter_bootloader(char *serial_port_name) {
             fprintf(stdout, " " _GREEN_("Found") "\n");
             return 0;
         } else {
-            fprintf(stdout, _RED_("Error:") "Proxmark not found.\n");
+            fprintf(stdout, _RED_("Error:") "Proxmark3 not found.\n");
             return -1;
         }
     }
 
-    fprintf(stderr, _RED_("Error:") "Unknown Proxmark mode\n");
+    fprintf(stderr, _RED_("Error:") "Unknown Proxmark3 mode\n");
     return -1;
 }
 
