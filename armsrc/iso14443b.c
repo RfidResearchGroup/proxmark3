@@ -947,7 +947,6 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 static void GetTagSamplesFor14443bDemod() {
     bool gotFrame, finished = false;
 //    int lastRxCounter = ISO14443B_DMA_BUFFER_SIZE;
-    int ci = 0, cq = 0;
     uint32_t time_0 = 0, time_stop = 0;
 
     BigBuf_free();
@@ -978,8 +977,8 @@ static void GetTagSamplesFor14443bDemod() {
         WDT_HIT();
 
         // LSB is a fpga signal bit.
-        ci = upTo[0];
-        cq = upTo[1];
+        int ci = upTo[0];
+        int cq = upTo[1];
         upTo += 2;
 //        lastRxCounter -= 2;
 
