@@ -119,6 +119,7 @@ CORESRCS =  uart_posix.c \
 			util.c \
 			util_posix.c \
 			scandir.c \
+			crc16.c \
 			comms.c
 
 CMDSRCS =	crapto1/crapto1.c \
@@ -143,7 +144,6 @@ CMDSRCS =	crapto1/crapto1.c \
 			mifare/mifarehost.c \
 			parity.c \
 			crc.c \
-			crc16.c \
 			crc64.c \
 			legic_prng.c \
 			iso15693tools.c \

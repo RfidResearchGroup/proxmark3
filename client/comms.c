@@ -10,6 +10,7 @@
 //-----------------------------------------------------------------------------
 
 #include "comms.h"
+#include "crc16.h"
 
 // Serial port that we are communicating with the PM3 on.
 static serial_port sp = NULL;
@@ -25,7 +26,7 @@ static pthread_t USB_communication_thread;
 
 // Transmit buffer.
 static UsbCommand txBuffer;
-static uint8_t txBufferNG[sizeof(UsbCommandNGPreamble) + sizeof(UsbCommand) + sizeof(UsbCommandNGPostamble)];
+static uint8_t txBufferNG[USB_PACKET_NG_MAXLEN];
 size_t txBufferNGLen;
 static bool txBuffer_pending = false;
 static pthread_mutex_t txBufferMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -86,10 +87,10 @@ void SendCommand(UsbCommand *c) {
 //__atomic_test_and_set(&txcmd_pending, __ATOMIC_SEQ_CST);
 }
 
-void SendCommandNG(UsbCommand *c, size_t len) {
+void SendCommandNG(uint16_t cmd, uint8_t* data, size_t len) {
 
 #ifdef COMMS_DEBUG
-    PrintAndLogEx(NORMAL, "Sending %d bytes of payload | cmd %04x\n", len, c->cmd);
+    PrintAndLogEx(NORMAL, "Sending %d bytes of payload | cmd %04x\n", len, cmd);
 #endif
 
     if (offline) {
@@ -102,7 +103,7 @@ void SendCommandNG(UsbCommand *c, size_t len) {
     }
 
     UsbCommandNGPreamble *tx_pre = (UsbCommandNGPreamble *)txBufferNG;
-    UsbCommandNGPostamble *tx_post = (UsbCommandNGPostamble *)(txBufferNG + sizeof(UsbCommandNGPreamble) + sizeof(UsbCommandNG) + len);
+    UsbCommandNGPostamble *tx_post = (UsbCommandNGPostamble *)(txBufferNG + sizeof(UsbCommandNGPreamble) + len);
 
     pthread_mutex_lock(&txBufferMutex);
     /**
@@ -116,10 +117,12 @@ void SendCommandNG(UsbCommand *c, size_t len) {
 
     tx_pre->magic = USB_PREAMBLE_MAGIC;
     tx_pre->length = len;
-    memcpy(txBufferNG + sizeof(UsbCommandNGPreamble), c, sizeof(UsbCommandNG) + len);
-    // TODO CRC
-    tx_post->magic = USB_POSTAMBLE_MAGIC;
-    txBufferNGLen = sizeof(UsbCommandNGPreamble) + sizeof(UsbCommandNG) + len + sizeof(UsbCommandNGPostamble);
+    tx_pre->cmd = cmd;
+    memcpy(txBufferNG + sizeof(UsbCommandNGPreamble), data, len);
+    uint8_t first, second;
+    compute_crc(CRC_14443_A, txBufferNG, sizeof(UsbCommandNGPreamble) + len, &first, &second);
+    tx_post->crc = (first << 8) + second;
+    txBufferNGLen = sizeof(UsbCommandNGPreamble) + len + sizeof(UsbCommandNGPostamble);
     txBuffer_pending = true;
 
     // tell communication thread that a new command can be send

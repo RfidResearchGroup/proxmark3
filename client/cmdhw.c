@@ -445,12 +445,13 @@ static int CmdPingNG(const char *Cmd) {
     PrintAndLogEx(NORMAL, "Pinging with payload len=%d", len);
     clearCommandBuffer();
     UsbCommand resp;
-    UsbCommand c = {CMD_PING, {len, 0, 0}, {{0}}};
+    uint8_t data[USB_CMD_DATA_SIZE] = {0};
+    uint16_t cmd = CMD_PING;
     if (len >= 4)
-        c.d.asDwords[0] = 0xAABBCCDD;
+        ((uint32_t *)data)[0]=0xAABBCCDD;
     if (len >= 8)
-    c.d.asDwords[(len-1)/4] = 0xDDCCBBAA;
-    SendCommandNG(&c, len);
+        ((uint32_t *)data)[(len-1)/4] = 0xDDCCBBAA;
+    SendCommandNG(cmd, data, len);
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
         PrintAndLogEx(NORMAL, "PingNG successful");
         if (len >= 4)

@@ -37,24 +37,20 @@ typedef struct {
 
 typedef struct {
     uint32_t magic;
-    uint32_t length;  // length of the variable part, 0 if none.
+    uint16_t length;  // length of the variable part, 0 if none.
+    uint16_t cmd;
 } PACKED UsbCommandNGPreamble;
 
 #define USB_PREAMBLE_MAGIC 0xAA5500FF
 
 typedef struct {
-    uint64_t cmd;
-    uint64_t arg[3];
-} PACKED UsbCommandNG;
-
-typedef struct {
     uint32_t crc;
-    uint32_t magic;
 } PACKED UsbCommandNGPostamble;
 
 #define USB_POSTAMBLE_MAGIC 0xFF0055AA
 
-extern bool use_cmd_ng;
+#define USB_PACKET_NG_MINLEN (sizeof(UsbCommandNGPreamble) + sizeof(UsbCommandNGPostamble))
+#define USB_PACKET_NG_MAXLEN (sizeof(UsbCommandNGPreamble) + USB_CMD_DATA_SIZE + sizeof(UsbCommandNGPostamble))
 
 #ifdef WITH_FPC_HOST
 // "Session" flag, to tell via which interface next msgs should be sent: USB or FPC USART

@@ -31,7 +31,6 @@
  */
 #include "cmd.h"
 
-bool use_cmd_ng = false;
 #ifdef WITH_FPC_HOST
 // "Session" flag, to tell via which interface next msgs should be sent: USB or FPC USART
 bool reply_via_fpc = false;
