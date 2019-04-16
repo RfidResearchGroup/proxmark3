@@ -292,9 +292,11 @@ test_script:
 
     #proxmark logic tests
 
-    ExecTest "proxmark help" "proxmark3 -h" {bash -lc 'cd ~/client;./proxmark3 -h | grep -q Execute && echo Passed || echo Failed'}
+    ExecTest "proxmark help" "proxmark3 -h" {bash -lc 'cd ~/client;./proxmark3 -h | grep -q wait && echo Passed || echo Failed'}
 
-    ExecTest "proxmark help hardnested" "proxmark3 -h" {bash -lc 'cd ~/client;./proxmark3 -h | grep -q hardnested && echo Passed || echo Failed'}
+    ExecTest "proxmark help text ISO7816" "proxmark3 -t" {bash -lc 'cd ~/client;./proxmark3 -h | grep -q ISO7816 && echo Passed || echo Failed'}
+
+    ExecTest "proxmark help text hardnested" "proxmark3 -h" {bash -lc 'cd ~/client;./proxmark3 -t | grep -q hardnested && echo Passed || echo Failed'}
 
 
     ExecTest "hf mf offline text" "hf mf" {bash -lc "cd ~/client;./proxmark3 comx -c 'hf mf'"} "at_enc"
@@ -304,7 +306,7 @@ test_script:
 
     #proxmark crypto tests
 
-    ExecTest "emv test" "emv test" {bash -lc "cd ~/client;./proxmark3 comx -c 'emv test'"} "Test(s) [ OK"
+    ExecTest "emv test" "emv test" {bash -lc "cd ~/client;./proxmark3 comx -c 'emv test'"} "Test?s? ? OK"
 
 
     if ($global:TestsPassed) {
