@@ -42,7 +42,7 @@
 #define COMPRESS_MAX_NICE_LENGTH  258
 #define COMPRESS_MAX_CHAIN        8192
 
-#define HARDNESTED_TABLE_SIZE (sizeof(uint32_t) * ((1L<<19)+1))
+#define HARDNESTED_TABLE_SIZE (uint32_t)(sizeof(uint32_t) * ((1L<<19)+1))
 
 static void usage(void) {
     fprintf(stdout, "Usage: fpga_compress <infile1> <infile2> ... <infile_n> <outfile>\n");
@@ -95,15 +95,13 @@ int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, bool hardn
         if (i >= num_infiles * (hardnested_mode ? HARDNESTED_TABLE_SIZE : FPGA_CONFIG_SIZE)) {
             if (hardnested_mode) {
                 fprintf(stderr,
-#if __WORDSIZE == 64
-                        "Input file too big (> %" PRIu64 " bytes). This is probably not a hardnested bitflip state table.\n"
-#else
-                        "Input file too big (> %li bytes). This is probably not a hardnested bitflip state table.\n"
-#endif
+                        "Input file too big (> %" PRIu32 " bytes). This is probably not a hardnested bitflip state table.\n"
                         , HARDNESTED_TABLE_SIZE);
 
             } else {
-                fprintf(stderr, "Input files too big (total > %li bytes). These are probably not PM3 FPGA config files.\n", num_infiles * FPGA_CONFIG_SIZE);
+                fprintf(stderr,
+                    "Input files too big (total > %li bytes). These are probably not PM3 FPGA config files.\n"
+                    , num_infiles * FPGA_CONFIG_SIZE);
             }
             for (uint16_t j = 0; j < num_infiles; j++) {
                 fclose(infile[j]);
