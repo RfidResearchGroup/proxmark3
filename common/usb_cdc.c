@@ -647,8 +647,8 @@ uint32_t usb_read(uint8_t *data, size_t len) {
 }
 
 static uint8_t usb_read_ng_buffer[64];
-static size_t usb_read_ng_bufoff=0;
-static size_t usb_read_ng_buflen=0;
+static size_t usb_read_ng_bufoff = 0;
+static size_t usb_read_ng_buflen = 0;
 
 uint32_t usb_read_ng(uint8_t *data, size_t len) {
 
@@ -659,7 +659,7 @@ uint32_t usb_read_ng(uint8_t *data, size_t len) {
     uint32_t time_out = 0;
 
     // take first from local buffer
-    if ( len <= usb_read_ng_buflen ) {
+    if (len <= usb_read_ng_buflen) {
         for (uint32_t i = 0; i < len; i++)
             data[nbBytesRcv++] = usb_read_ng_buffer[usb_read_ng_bufoff + i];
         usb_read_ng_buflen -= len;

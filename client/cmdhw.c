@@ -448,9 +448,9 @@ static int CmdPingNG(const char *Cmd) {
     uint8_t data[USB_CMD_DATA_SIZE] = {0};
     uint16_t cmd = CMD_PING;
     if (len >= 4)
-        ((uint32_t *)data)[0]=0xAABBCCDD;
+        ((uint32_t *)data)[0] = 0xAABBCCDD;
     if (len >= 8)
-        ((uint32_t *)data)[(len-1)/4] = 0xDDCCBBAA;
+        ((uint32_t *)data)[(len - 1) / 4] = 0xDDCCBBAA;
     SendCommandNG(cmd, data, len);
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
         PrintAndLogEx(NORMAL, "PingNG successful");
@@ -458,8 +458,7 @@ static int CmdPingNG(const char *Cmd) {
             PrintAndLogEx(NORMAL, "%08x -> %08x", 0xAABBCCDD, resp.arg[1]);
         if (len >= 8)
             PrintAndLogEx(NORMAL, "%08x -> %08x", 0xDDCCBBAA, resp.arg[2]);
-    }
-    else
+    } else
         PrintAndLogEx(NORMAL, "PingNG failed");
     return 0;
 }

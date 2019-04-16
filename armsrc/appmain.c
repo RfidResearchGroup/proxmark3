@@ -1457,17 +1457,17 @@ static void UsbPacketReceived(bool cmd_ng, uint8_t *packet) {
         case CMD_PING:
             if (cmd_ng) {
 #ifdef WITH_FPC_HOST
-            cmd_send(CMD_ACK, reply_via_fpc, ((uint32_t *)data_ng)[0], ((uint32_t *)data_ng)[(datalen_ng-1)/4], 0, 0);
+                cmd_send(CMD_ACK, reply_via_fpc, ((uint32_t *)data_ng)[0], ((uint32_t *)data_ng)[(datalen_ng - 1) / 4], 0, 0);
 #else
-            cmd_send(CMD_ACK, 0, ((uint32_t *)data_ng)[0], ((uint32_t *)data_ng)[(c->arg[0]-1)/4], 0, 0);
+                cmd_send(CMD_ACK, 0, ((uint32_t *)data_ng)[0], ((uint32_t *)data_ng)[(c->arg[0] - 1) / 4], 0, 0);
 #endif
             } else {
 #ifdef WITH_FPC_HOST
-            cmd_send(CMD_ACK, reply_via_fpc, 0, 0, 0, 0);
+                cmd_send(CMD_ACK, reply_via_fpc, 0, 0, 0, 0);
 #else
-            cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
+                cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
 #endif
-        }
+            }
             break;
 #ifdef WITH_LCD
         case CMD_LCD_RESET:
@@ -1611,10 +1611,10 @@ void  __attribute__((noreturn)) AppMain(void) {
                         }
                     }
                     if (!error) {
-            #ifdef WITH_FPC_HOST
-                            reply_via_fpc = false;
-            #endif
-                            UsbPacketReceived(true, rx);
+#ifdef WITH_FPC_HOST
+                        reply_via_fpc = false;
+#endif
+                        UsbPacketReceived(true, rx);
                     }
                 } else {                               // Old style command
                     bytes = usb_read_ng(rx + sizeof(UsbCommandNGPreamble), sizeof(UsbCommand) - sizeof(UsbCommandNGPreamble));
@@ -1623,10 +1623,10 @@ void  __attribute__((noreturn)) AppMain(void) {
                         error = true;
                     }
                     if (!error) {
-            #ifdef WITH_FPC_HOST
-                            reply_via_fpc = false;
-            #endif
-                            UsbPacketReceived(false, rx);
+#ifdef WITH_FPC_HOST
+                        reply_via_fpc = false;
+#endif
+                        UsbPacketReceived(false, rx);
                     }
                 }
             } else {

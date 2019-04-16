@@ -31,7 +31,7 @@ size_t txBufferNGLen;
 static bool txBuffer_pending = false;
 static pthread_mutex_t txBufferMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t txBufferSig = PTHREAD_COND_INITIALIZER;
- 
+
 // Used by UsbReceiveCommand as a ring buffer for messages that are yet to be
 // processed by a command handler (WaitForResponse{,Timeout})
 static UsbCommand rxBuffer[CMD_BUFFER_SIZE];
@@ -87,7 +87,7 @@ void SendCommand(UsbCommand *c) {
 //__atomic_test_and_set(&txcmd_pending, __ATOMIC_SEQ_CST);
 }
 
-void SendCommandNG(uint16_t cmd, uint8_t* data, size_t len) {
+void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len) {
 
 #ifdef COMMS_DEBUG
     PrintAndLogEx(NORMAL, "Sending %d bytes of payload | cmd %04x\n", len, cmd);
