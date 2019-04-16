@@ -25,6 +25,7 @@ typedef BYTE uint8_t;
 #endif
 
 #define USB_CMD_DATA_SIZE 512
+#define USB_DATANG_SIZE 512
 
 typedef struct {
     uint64_t cmd;
@@ -41,14 +42,30 @@ typedef struct {
     uint16_t cmd;
 } PACKED UsbCommandNGPreamble;
 
-#define USB_PREAMBLE_MAGIC 0x61334d50 // PM3a
+#define USB_COMMANDNG_PREAMBLE_MAGIC 0x61334d50 // PM3a
 
 typedef struct {
     uint16_t crc;
 } PACKED UsbCommandNGPostamble;
 
-#define USB_PACKET_NG_MINLEN (sizeof(UsbCommandNGPreamble) + sizeof(UsbCommandNGPostamble))
-#define USB_PACKET_NG_MAXLEN (sizeof(UsbCommandNGPreamble) + USB_CMD_DATA_SIZE + sizeof(UsbCommandNGPostamble))
+#define USB_COMMANDNG_MINLEN (sizeof(UsbCommandNGPreamble) + sizeof(UsbCommandNGPostamble))
+#define USB_COMMANDNG_MAXLEN (sizeof(UsbCommandNGPreamble) + USB_DATANG_SIZE + sizeof(UsbCommandNGPostamble))
+
+typedef struct {
+    uint32_t magic;
+    uint16_t length;  // length of the variable part, 0 if none.
+    uint16_t cmd;
+    int16_t  status;
+} PACKED UsbReplyNGPreamble;
+
+#define USB_REPLYNG_PREAMBLE_MAGIC 0x62334d50 // PM3b
+
+typedef struct {
+    uint16_t crc;
+} PACKED UsbReplyNGPostamble;
+
+#define USB_REPLYNG_MINLEN (sizeof(UsbReplyNGPreamble) + sizeof(UsbReplyNGPostamble))
+#define USB_REPLYNG_MAXLEN (sizeof(UsbReplyNGPreamble) + USB_DATANG_SIZE + sizeof(UsbReplyNGPostamble))
 
 #ifdef WITH_FPC_HOST
 // "Session" flag, to tell via which interface next msgs should be sent: USB or FPC USART
@@ -331,6 +348,31 @@ typedef struct {
 #define FLAG_NOLOG       0x0001
 #define FLAG_NONEWLINE   0x0010
 #define FLAG_NOPROMPT    0x0100
+
+// Error codes
+
+// Success (no error)
+#define PM3_SUCCESS             0
+// Undefined error
+#define PM3_EUNDEF             -1
+// Invalid argument(s)
+#define PM3_EINVARG            -2
+// Operation not supported by device
+#define PM3_EDEVNOTSUPP        -3
+// Operation timed out
+#define PM3_ETIMEOUT           -4
+// Operation aborted (by user)
+#define PM3_EOPABORTED         -5
+// Not (yet) implemented
+#define PM3_ENOTIMPL           -6
+// Error while RF transmission
+#define PM3_ERFTRANS           -7
+// Input / output error
+#define PM3_EIO                -8
+// Buffer overflow
+#define PM3_EOVFLOW            -9
+// Software error
+#define PM3_ESOFT             -10
 
 
 // CMD_DEVICE_INFO response packet has flags in arg[0], flag definitions:

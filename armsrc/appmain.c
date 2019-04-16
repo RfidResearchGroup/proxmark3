@@ -1457,11 +1457,7 @@ static void UsbPacketReceived(bool cmd_ng, uint8_t *packet) {
             break;
         case CMD_PING:
             if (cmd_ng) {
-#ifdef WITH_FPC_HOST
-                cmd_send(CMD_ACK, reply_via_fpc, ((uint32_t *)data_ng)[0], ((uint32_t *)data_ng)[(datalen_ng - 1) / 4], 0, 0);
-#else
-                cmd_send(CMD_ACK, 0, ((uint32_t *)data_ng)[0], ((uint32_t *)data_ng)[(c->arg[0] - 1) / 4], 0, 0);
-#endif
+                reply_ng(CMD_PING, PM3_SUCCESS, data_ng, datalen_ng);
             } else {
 #ifdef WITH_FPC_HOST
                 cmd_send(CMD_ACK, reply_via_fpc, 0, 0, 0, 0);
@@ -1574,9 +1570,9 @@ void  __attribute__((noreturn)) AppMain(void) {
     usb_disable();
     usb_enable();
 
-    uint8_t rx[USB_PACKET_NG_MAXLEN];
+    uint8_t rx[USB_COMMANDNG_MAXLEN];
     UsbCommandNGPreamble *pre = (UsbCommandNGPreamble *)rx;
-    UsbCommandNGPostamble *post = (UsbCommandNGPostamble *)(rx + sizeof(UsbCommandNGPreamble) + USB_CMD_DATA_SIZE);
+    UsbCommandNGPostamble *post = (UsbCommandNGPostamble *)(rx + sizeof(UsbCommandNGPreamble) + USB_DATANG_SIZE);
 
     for (;;) {
         WDT_HIT();
@@ -1586,8 +1582,8 @@ void  __attribute__((noreturn)) AppMain(void) {
             bool error = false;
             size_t bytes = usb_read_ng(rx, sizeof(UsbCommandNGPreamble));
             if (bytes == sizeof(UsbCommandNGPreamble)) {
-                if (pre->magic == USB_PREAMBLE_MAGIC) { // New style NG command
-                    if (pre->length > USB_CMD_DATA_SIZE) {
+                if (pre->magic == USB_COMMANDNG_PREAMBLE_MAGIC) { // New style NG command
+                    if (pre->length > USB_DATANG_SIZE) {
                         Dbprintf("Packet frame with incompatible length: 0x%04x", pre->length);
                         error = true;
                     }
@@ -1599,7 +1595,7 @@ void  __attribute__((noreturn)) AppMain(void) {
                         }
                     }
                     if (!error) {                        // Get the postamble
-                        bytes = usb_read_ng(rx + sizeof(UsbCommandNGPreamble) + USB_CMD_DATA_SIZE, sizeof(UsbCommandNGPostamble));
+                        bytes = usb_read_ng(rx + sizeof(UsbCommandNGPreamble) + USB_DATANG_SIZE, sizeof(UsbCommandNGPostamble));
                         if (bytes != sizeof(UsbCommandNGPostamble)) {
                             Dbprintf("Packet frame error fetching postamble");
                             error = true;

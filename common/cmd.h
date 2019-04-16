@@ -40,6 +40,7 @@
 #include "proxmark3.h"
 
 uint8_t cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
+uint8_t reply_ng(uint16_t cmd, int16_t status, uint8_t *data, size_t len);
 
 #endif // _PROXMARK_CMD_H_
 

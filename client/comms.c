@@ -26,7 +26,7 @@ static pthread_t USB_communication_thread;
 
 // Transmit buffer.
 static UsbCommand txBuffer;
-static uint8_t txBufferNG[USB_PACKET_NG_MAXLEN];
+static uint8_t txBufferNG[USB_COMMANDNG_MAXLEN];
 size_t txBufferNGLen;
 static bool txBuffer_pending = false;
 static pthread_mutex_t txBufferMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -97,7 +97,7 @@ void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len) {
         PrintAndLogEx(NORMAL, "Sending bytes to proxmark failed - offline");
         return;
     }
-    if (len > USB_CMD_DATA_SIZE) {
+    if (len > USB_DATANG_SIZE) {
         PrintAndLogEx(WARNING, "Sending %d bytes of payload is too much, abort", len);
         return;
     }
@@ -115,7 +115,7 @@ void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len) {
         pthread_cond_wait(&txBufferSig, &txBufferMutex);
     }
 
-    tx_pre->magic = USB_PREAMBLE_MAGIC;
+    tx_pre->magic = USB_COMMANDNG_PREAMBLE_MAGIC;
     tx_pre->length = len;
     tx_pre->cmd = cmd;
     memcpy(txBufferNG + sizeof(UsbCommandNGPreamble), data, len);
