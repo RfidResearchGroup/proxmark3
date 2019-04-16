@@ -420,6 +420,12 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    // ascii art
+    bool stdinOnPipe = !isatty(STDIN_FILENO);
+    if (!script_cmds_file && !stdinOnPipe)
+        showBanner();
+
+
     // default speed for USB 460800,  USART(FPC serial) 115200 baud
     if (speed == 0)
 #ifdef WITH_FPC_HOST
@@ -453,11 +459,6 @@ int main(int argc, char *argv[]) {
             PrintAndLogEx(SUCCESS, "execute command from commandline: %s\n", script_cmd);
         }
     }
-
-    // ascii art
-    bool stdinOnPipe = !isatty(STDIN_FILENO);
-    if (!script_cmds_file && !stdinOnPipe)
-        showBanner();
 
     // set global variables
     set_my_executable_path();
