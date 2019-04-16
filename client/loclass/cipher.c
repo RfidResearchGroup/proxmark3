@@ -118,7 +118,7 @@ static uint8_t _select(bool x, bool y, uint8_t r) {
     uint8_t retval = 0;
     retval |= (z0 << 2) & 4;
     retval |= (z1 << 1) & 2;
-    retval |= z2 & 1;
+    retval |= (z2) & 1;
 
     // Return value 0 <= retval <= 7
     return retval;
