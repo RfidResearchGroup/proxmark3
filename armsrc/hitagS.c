@@ -647,7 +647,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
 static int hitagS_handle_tag_auth(hitag_function htf, uint64_t key, uint64_t NrAr, uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *txlen) {
     uint8_t rx_air[HITAG_FRAME_LEN];
     int response_bit[200];
-    int i, j, z, k;
+    int i, j, z;
     unsigned char mask = 1;
     unsigned char uid[32];
     uint8_t uid1 = 0x00, uid2 = 0x00, uid3 = 0x00, uid4 = 0x00;
@@ -673,7 +673,7 @@ static int hitagS_handle_tag_auth(hitag_function htf, uint64_t key, uint64_t NrA
                 z++;
             }
         }
-        k = 0;
+        uint16_t k = 0;
         for (i = 5; i < z; i += 2) {
             uid[k] = response_bit[i];
             k++;
@@ -1749,22 +1749,17 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page) {
  */
 void check_challenges(bool file_given, uint8_t *data) {
     int i, j, z, k;
-    uint8_t uid_byte[4];
     int frame_count = 0, response = 0;
+    uint8_t uid_byte[4];
     uint8_t rx[HITAG_FRAME_LEN];
     uint8_t unlocker[60][8];
     int u1 = 0;
-    size_t rxlen = 0;
+    size_t rxlen = 0, txlen = 0;
     uint8_t txbuf[HITAG_FRAME_LEN];
-    uint8_t *tx = txbuf;
-    size_t txlen = 0;
-    int lastbit;
-    bool bSkip;
-    int reset_sof;
-    int tag_sof;
+    uint8_t *tx;
     int t_wait = HITAG_T_WAIT_MAX;
-    int STATE = 0;
-    bool bStop;
+    int lastbit, reset_sof, tag_sof, STATE = 0;;
+    bool bSkip, bStop;
     int response_bit[200];
     unsigned char mask = 1;
     unsigned char uid[32];
