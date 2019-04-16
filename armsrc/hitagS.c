@@ -650,7 +650,7 @@ static int hitagS_handle_tag_auth(hitag_function htf, uint64_t key, uint64_t NrA
     int i, j, z;
     unsigned char mask = 1;
     unsigned char uid[32];
-    uint8_t uid1 = 0x00, uid2 = 0x00, uid3 = 0x00, uid4 = 0x00;
+    uint8_t uid1, uid2, uid3, uid4;
     unsigned char crc;
     uint64_t state;
     uint8_t auth_ks[4];
