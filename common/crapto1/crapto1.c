@@ -89,7 +89,7 @@ recover(uint32_t *o_head, uint32_t *o_tail, uint32_t oks,
 
     if (rem == -1) {
         for (uint32_t *e = e_head; e <= e_tail; ++e) {
-            *e = *e << 1 ^ (evenparity32(*e & LF_POLY_EVEN)) ^ !!(in & 4);
+            *e = *e << 1 ^ (evenparity32(*e & LF_POLY_EVEN)) ^ (!!(in & 4));
             for (uint32_t *o = o_head; o <= o_tail; ++o, ++sl) {
                 sl->even = *o;
                 sl->odd = *e ^ (evenparity32(*o & LF_POLY_ODD));
