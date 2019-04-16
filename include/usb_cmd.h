@@ -41,13 +41,11 @@ typedef struct {
     uint16_t cmd;
 } PACKED UsbCommandNGPreamble;
 
-#define USB_PREAMBLE_MAGIC 0xAA5500FF
+#define USB_PREAMBLE_MAGIC 0x61334d50 // PM3a
 
 typedef struct {
-    uint32_t crc;
+    uint16_t crc;
 } PACKED UsbCommandNGPostamble;
-
-#define USB_POSTAMBLE_MAGIC 0xFF0055AA
 
 #define USB_PACKET_NG_MINLEN (sizeof(UsbCommandNGPreamble) + sizeof(UsbCommandNGPostamble))
 #define USB_PACKET_NG_MAXLEN (sizeof(UsbCommandNGPreamble) + USB_CMD_DATA_SIZE + sizeof(UsbCommandNGPostamble))
