@@ -85,13 +85,12 @@ static struct Crypto1State *
 recover(uint32_t *o_head, uint32_t *o_tail, uint32_t oks,
         uint32_t *e_head, uint32_t *e_tail, uint32_t eks, int rem,
         struct Crypto1State *sl, uint32_t in, bucket_array_t bucket) {
-    uint32_t *o, *e;
     bucket_info_t bucket_info;
 
     if (rem == -1) {
-        for (e = e_head; e <= e_tail; ++e) {
+        for (uint32_t *e = e_head; e <= e_tail; ++e) {
             *e = *e << 1 ^ (evenparity32(*e & LF_POLY_EVEN)) ^ !!(in & 4);
-            for (o = o_head; o <= o_tail; ++o, ++sl) {
+            for (uint32_t *o = o_head; o <= o_tail; ++o, ++sl) {
                 sl->even = *o;
                 sl->odd = *e ^ (evenparity32(*o & LF_POLY_ODD));
                 sl[1].odd = sl[1].even = 0;
@@ -301,7 +300,7 @@ uint8_t lfsr_rollback_bit(struct Crypto1State *s, uint32_t in, int fb) {
     out ^= LF_POLY_EVEN & (s->even >>= 1);
     out ^= LF_POLY_ODD & s->odd;
     out ^= !!in;
-    out ^= (ret = filter(s->odd)) & !!fb;
+    out ^= (ret = filter(s->odd)) & (!!fb);
 
     s->even |= (evenparity32(out)) << 23;
     return ret;

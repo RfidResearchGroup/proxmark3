@@ -368,12 +368,6 @@ uint8_t lfsr_rollback_bit(struct Crypto1State *s, uint32_t in, int fb) {
  * Rollback the shift register in order to get previous states
  */
 uint8_t lfsr_rollback_byte(struct Crypto1State *s, uint32_t in, int fb) {
-    /*
-    int i, ret = 0;
-    for (i = 7; i >= 0; --i)
-        ret |= lfsr_rollback_bit(s, BIT(in, i), fb) << i;
-    */
-// unfold loop 20160112
     uint8_t ret = 0;
     ret |= lfsr_rollback_bit(s, BIT(in, 7), fb) << 7;
     ret |= lfsr_rollback_bit(s, BIT(in, 6), fb) << 6;
@@ -389,13 +383,7 @@ uint8_t lfsr_rollback_byte(struct Crypto1State *s, uint32_t in, int fb) {
  * Rollback the shift register in order to get previous states
  */
 uint32_t lfsr_rollback_word(struct Crypto1State *s, uint32_t in, int fb) {
-    /*
-    int i;
-    uint32_t ret = 0;
-    for (i = 31; i >= 0; --i)
-        ret |= lfsr_rollback_bit(s, BEBIT(in, i), fb) << (i ^ 24);
-    */
-// unfold loop 20160112
+
     uint32_t ret = 0;
     ret |= lfsr_rollback_bit(s, BEBIT(in, 31), fb) << (31 ^ 24);
     ret |= lfsr_rollback_bit(s, BEBIT(in, 30), fb) << (30 ^ 24);
@@ -442,7 +430,7 @@ static uint16_t *dist = 0;
 int nonce_distance(uint32_t from, uint32_t to) {
     uint16_t x, i;
     if (!dist) {
-        dist = malloc(2 << 16);
+        dist = calloc(2 << 16,  sizeof(uint8_t));
         if (!dist)
             return -1;
         for (x = i = 1; i; ++i) {
@@ -470,7 +458,7 @@ static uint32_t fastfwd[2][8] = {
  * only correct iff [NR_3] ^ NR_3 does not depend on Nr_3
  */
 uint32_t *lfsr_prefix_ks(uint8_t ks[8], int isodd) {
-    uint32_t *candidates = malloc(4 << 10);
+    uint32_t *candidates = calloc(4 << 10, sizeof(uint8_t));
     if (!candidates) return 0;
 
     uint32_t c,  entry;
@@ -538,7 +526,7 @@ struct Crypto1State *lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8]
     odd = lfsr_prefix_ks(ks, 1);
     even = lfsr_prefix_ks(ks, 0);
 
-    s = statelist = malloc((sizeof * statelist) << 20);
+    s = statelist = malloc((sizeof * statelist) << 24); // was << 20. Need more for no_par special attack. Enough???
     if (!s || !odd || !even) {
         free(statelist);
         statelist = 0;
