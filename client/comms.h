@@ -52,6 +52,7 @@ bool IsOffline(void);
 
 void *uart_receiver(void *targ);
 void SendCommand(UsbCommand *c);
+void SendCommandNG(UsbCommand *c, size_t len);
 void clearCommandBuffer(void);
 
 #define FLASHMODE_SPEED 460800

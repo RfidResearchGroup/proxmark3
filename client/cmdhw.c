@@ -438,6 +438,31 @@ static int CmdPing(const char *Cmd) {
     return 0;
 }
 
+static int CmdPingNG(const char *Cmd) {
+    uint32_t len = strtol(Cmd, NULL, 0);
+    if (len > USB_CMD_DATA_SIZE)
+        len = USB_CMD_DATA_SIZE;
+    PrintAndLogEx(NORMAL, "Pinging with payload len=%d", len);
+    clearCommandBuffer();
+    UsbCommand resp;
+    UsbCommand c = {CMD_PING, {len, 0, 0}, {{0}}};
+    if (len >= 4)
+        c.d.asDwords[0] = 0xAABBCCDD;
+    if (len >= 8)
+    c.d.asDwords[(len-1)/4] = 0xDDCCBBAA;
+    SendCommandNG(&c, len);
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
+        PrintAndLogEx(NORMAL, "PingNG successful");
+        if (len >= 4)
+            PrintAndLogEx(NORMAL, "%08x -> %08x", 0xAABBCCDD, resp.arg[1]);
+        if (len >= 8)
+            PrintAndLogEx(NORMAL, "%08x -> %08x", 0xDDCCBBAA, resp.arg[2]);
+    }
+    else
+        PrintAndLogEx(NORMAL, "PingNG failed");
+    return 0;
+}
+
 static command_t CommandTable[] = {
     {"help",          CmdHelp,        1, "This help"},
     {"detectreader",  CmdDetectReader, 0, "['l'|'h'] -- Detect external reader field (option 'l' or 'h' to limit to LF or HF)"},
@@ -454,6 +479,7 @@ static command_t CommandTable[] = {
     {"version",       CmdVersion,     0, "Show version information about the connected Proxmark"},
     {"status",        CmdStatus,      0, "Show runtime status information about the connected Proxmark"},
     {"ping",          CmdPing,        0, "Test if the pm3 is responsive"},
+    {"pingng",          CmdPingNG,        0, "Test if the pm3 is responsive"},
     {NULL, NULL, 0, NULL}
 };
 

@@ -25,10 +25,12 @@ static pthread_t USB_communication_thread;
 
 // Transmit buffer.
 static UsbCommand txBuffer;
+static uint8_t txBufferNG[sizeof(UsbCommandNGPreamble) + sizeof(UsbCommand) + sizeof(UsbCommandNGPostamble)];
+size_t txBufferNGLen;
 static bool txBuffer_pending = false;
 static pthread_mutex_t txBufferMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t txBufferSig = PTHREAD_COND_INITIALIZER;
-
+ 
 // Used by UsbReceiveCommand as a ring buffer for messages that are yet to be
 // processed by a command handler (WaitForResponse{,Timeout})
 static UsbCommand rxBuffer[CMD_BUFFER_SIZE];
@@ -74,6 +76,50 @@ void SendCommand(UsbCommand *c) {
     }
 
     txBuffer = *c;
+    txBuffer_pending = true;
+
+    // tell communication thread that a new command can be send
+    pthread_cond_signal(&txBufferSig);
+
+    pthread_mutex_unlock(&txBufferMutex);
+
+//__atomic_test_and_set(&txcmd_pending, __ATOMIC_SEQ_CST);
+}
+
+void SendCommandNG(UsbCommand *c, size_t len) {
+
+#ifdef COMMS_DEBUG
+    PrintAndLogEx(NORMAL, "Sending %d bytes of payload | cmd %04x\n", len, c->cmd);
+#endif
+
+    if (offline) {
+        PrintAndLogEx(NORMAL, "Sending bytes to proxmark failed - offline");
+        return;
+    }
+    if (len > USB_CMD_DATA_SIZE) {
+        PrintAndLogEx(WARNING, "Sending %d bytes of payload is too much, abort", len);
+        return;
+    }
+
+    UsbCommandNGPreamble *tx_pre = (UsbCommandNGPreamble *)txBufferNG;
+    UsbCommandNGPostamble *tx_post = (UsbCommandNGPostamble *)(txBufferNG + sizeof(UsbCommandNGPreamble) + sizeof(UsbCommandNG) + len);
+
+    pthread_mutex_lock(&txBufferMutex);
+    /**
+    This causes hangups at times, when the pm3 unit is unresponsive or disconnected. The main console thread is alive,
+    but comm thread just spins here. Not good.../holiman
+    **/
+    while (txBuffer_pending) {
+        // wait for communication thread to complete sending a previous commmand
+        pthread_cond_wait(&txBufferSig, &txBufferMutex);
+    }
+
+    tx_pre->magic = USB_PREAMBLE_MAGIC;
+    tx_pre->length = len;
+    memcpy(txBufferNG + sizeof(UsbCommandNGPreamble), c, sizeof(UsbCommandNG) + len);
+    // TODO CRC
+    tx_post->magic = USB_POSTAMBLE_MAGIC;
+    txBufferNGLen = sizeof(UsbCommandNGPreamble) + sizeof(UsbCommandNG) + len + sizeof(UsbCommandNGPostamble);
     txBuffer_pending = true;
 
     // tell communication thread that a new command can be send
@@ -273,9 +319,17 @@ __attribute__((force_align_arg_pointer))
         }
 
         if (txBuffer_pending) {
-            if (!uart_send(sp, (uint8_t *) &txBuffer, sizeof(UsbCommand))) {
-                //counter_to_offline++;
-                PrintAndLogEx(WARNING, "sending bytes to proxmark failed");
+            if (txBufferNGLen) { // NG packet
+                if (!uart_send(sp, (uint8_t *) &txBufferNG, txBufferNGLen)) {
+                    //counter_to_offline++;
+                    PrintAndLogEx(WARNING, "sending bytes to proxmark failed");
+                }
+                txBufferNGLen = 0;
+            } else {
+                if (!uart_send(sp, (uint8_t *) &txBuffer, sizeof(UsbCommand))) {
+                    //counter_to_offline++;
+                    PrintAndLogEx(WARNING, "sending bytes to proxmark failed");
+                }
             }
             txBuffer_pending = false;
 

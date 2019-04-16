@@ -1444,9 +1444,9 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             break;
         case CMD_PING:
 #ifdef WITH_FPC_HOST
-            cmd_send(CMD_ACK, reply_via_fpc, 0, 0, 0, 0);
+            cmd_send(CMD_ACK, reply_via_fpc, c->d.asDwords[0], c->d.asDwords[(c->arg[0]-1)/4], 0, 0);
 #else
-            cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
+            cmd_send(CMD_ACK, 0, c->d.asDwords[0], c->d.asDwords[(c->arg[0]-1)/4], 0, 0);
 #endif
             break;
 #ifdef WITH_LCD
@@ -1553,24 +1553,73 @@ void  __attribute__((noreturn)) AppMain(void) {
     usb_disable();
     usb_enable();
 
-    uint8_t rx[sizeof(UsbCommand)];
+    // Worst case: Command as large as the old one but encapsulated in NG style
+    uint8_t rx[sizeof(UsbCommandNGPreamble) + sizeof(UsbCommand) + sizeof(UsbCommandNGPostamble)];
+    UsbCommandNGPreamble *pre = (UsbCommandNGPreamble *)rx;
+    UsbCommandNGPostamble *post = (UsbCommandNGPostamble *)(rx + sizeof(UsbCommandNGPreamble) + sizeof(UsbCommand));
 
     for (;;) {
         WDT_HIT();
 
         // Check if there is a usb packet available
         if (usb_poll_validate_length()) {
-            if (usb_read(rx, sizeof(rx))) {
-#ifdef WITH_FPC_HOST
-                reply_via_fpc = 0;
-#endif
-                UsbPacketReceived(rx, sizeof(rx));
+            bool error = false;
+            size_t bytes = usb_read_ng(rx, sizeof(UsbCommandNGPreamble) + sizeof(UsbCommandNG));
+            if (bytes == sizeof(UsbCommandNGPreamble) + sizeof(UsbCommandNG)) {
+                if (pre->magic == USB_PREAMBLE_MAGIC) { // New style NG command
+//                    Dbprintf("Packet frame NG incoming!");
+                    use_cmd_ng = true;
+                    if (pre->length > USB_CMD_DATA_SIZE) {
+                        Dbprintf("Packet frame with incompatible length: 0x%04x", pre->length);
+                        error = true;
+                    }
+                    if ((!error) && (pre->length > 0)) { // Get the variable length payload
+                        bytes = usb_read_ng(rx + sizeof(UsbCommandNGPreamble) + sizeof(UsbCommandNG), pre->length);
+                        if (bytes != pre->length) {
+                            Dbprintf("Packet frame error variable part too short? %d/%d", bytes, pre->length);
+                            error = true;
+                        }
+                    }
+                    if (!error) {                        // Get the postamble
+                        bytes = usb_read_ng(rx + sizeof(UsbCommandNGPreamble) + sizeof(UsbCommand), sizeof(UsbCommandNGPostamble));
+                        if ((bytes != sizeof(UsbCommandNGPostamble)) || (post->magic != USB_POSTAMBLE_MAGIC)) {
+                            Dbprintf("Packet frame error no postamble magic found");
+                            error = true;
+                        }
+                        // TODO check also CRC...
+                    }
+                    if (!error) {
+//                            Dbprintf("Packet frame NG fully received");
+            #ifdef WITH_FPC_HOST
+                            reply_via_fpc = false;
+            #endif
+                            UsbPacketReceived(rx + sizeof(UsbCommandNGPreamble), sizeof(UsbCommand));
+                    }
+
+                } else {                               // Old style command
+                    bytes = usb_read_ng(rx + sizeof(UsbCommandNGPreamble) + sizeof(UsbCommandNG), sizeof(UsbCommand) - sizeof(UsbCommandNGPreamble) - sizeof(UsbCommandNG));
+
+                    if (bytes != sizeof(UsbCommand) - sizeof(UsbCommandNGPreamble) - sizeof(UsbCommandNG)) {
+                        Dbprintf("Packet frame error var part too short? %d/%d", bytes, sizeof(UsbCommand) - sizeof(UsbCommandNGPreamble) - sizeof(UsbCommandNG));
+                        error = true;
+                    }
+                    if (!error) {
+                            use_cmd_ng = false;
+            #ifdef WITH_FPC_HOST
+                            reply_via_fpc = false;
+            #endif
+                            UsbPacketReceived(rx, sizeof(UsbCommand));
+                    }
+                }
+            } else {
+                error = true;
             }
+            // TODO if error, shall we resync ?
         }
 #ifdef WITH_FPC_HOST
         // Check if there is a FPC packet available
         if (usart_readbuffer(rx)) {
-            reply_via_fpc = 1;
+            reply_via_fpc = true;
             UsbPacketReceived(rx, sizeof(rx));
         }
         usart_readcheck(rx, sizeof(rx));

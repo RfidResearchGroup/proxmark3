@@ -31,15 +31,16 @@
  */
 #include "cmd.h"
 
+bool use_cmd_ng = false;
 #ifdef WITH_FPC_HOST
 // "Session" flag, to tell via which interface next msgs should be sent: USB or FPC USART
-bool reply_via_fpc = 0;
+bool reply_via_fpc = false;
 
 extern void Dbprintf(const char *fmt, ...);
 #define Dbprintf_usb(...) {\
-        reply_via_fpc = 0;\
+        reply_via_fpc = false;\
         Dbprintf(__VA_ARGS__);\
-        reply_via_fpc = 1;}
+        reply_via_fpc = true;}
 #endif
 
 uint8_t cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
