@@ -375,17 +375,28 @@ void printUSBSpeed(void) {
     uint32_t start_time = end_time = GetTickCount();
     uint32_t bytes_transferred = 0;
 
+    uint32_t counter = 0, good = 0, res;
     LED_B_ON();
     while (end_time < start_time + USB_SPEED_TEST_MIN_TIME) {
-        cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, 0, USB_CMD_DATA_SIZE, 0, test_data, USB_CMD_DATA_SIZE);
+        res = cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, 0, USB_CMD_DATA_SIZE, 0, test_data, USB_CMD_DATA_SIZE);
         end_time = GetTickCount();
         bytes_transferred += USB_CMD_DATA_SIZE;
+        if (res == 0)
+            counter++;
+        else
+            good++;
     }
     LED_B_OFF();
 
     Dbprintf("  Time elapsed............%dms", end_time - start_time);
     Dbprintf("  Bytes transferred.......%d", bytes_transferred);
     Dbprintf("  USB Transfer Speed PM3 -> Client = %d Bytes/s", 1000 * bytes_transferred / (end_time - start_time));
+    if (counter > 0)
+        Dbprintf("  Number of errors %u", counter);
+    if (good > 0) {
+        bytes_transferred = USB_CMD_DATA_SIZE * good;
+        Dbprintf("  Number of good %u / bytes %u, true Speed PM3 -> Client = %d Bytes/s", good, bytes_transferred, 1000 * bytes_transferred / (end_time - start_time));
+    }
 }
 
 /**

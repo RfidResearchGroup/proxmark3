@@ -100,8 +100,8 @@ int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, bool hardn
 
             } else {
                 fprintf(stderr,
-                    "Input files too big (total > %li bytes). These are probably not PM3 FPGA config files.\n"
-                    , num_infiles * FPGA_CONFIG_SIZE);
+                        "Input files too big (total > %li bytes). These are probably not PM3 FPGA config files.\n"
+                        , num_infiles * FPGA_CONFIG_SIZE);
             }
             for (uint16_t j = 0; j < num_infiles; j++) {
                 fclose(infile[j]);

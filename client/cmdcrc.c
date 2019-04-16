@@ -99,7 +99,7 @@ int GetModels(char *Models[], int *count, uint8_t *width) {
             rflags &= ~R_HAVEQ;
 
         int pass;
-        
+
         /* if endianness not specified, try
          * little-endian then big-endian.
          * NB: crossed-endian algorithms will not be
@@ -262,7 +262,7 @@ int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *res
     switch (endian) {
         case 'b': /* b  big-endian (RefIn = false, RefOut = false ) */
             model.flags &= ~P_REFIN;
-            //rflags |= R_HAVERI;
+        //rflags |= R_HAVERI;
         /* fall through: */
         case 'B': /* B  big-endian output (RefOut = false) */
             model.flags &= ~P_REFOUT;
@@ -274,7 +274,7 @@ int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *res
             break;
         case 'l': /* l  little-endian input and output */
             model.flags |= P_REFIN;
-            //rflags |= R_HAVERI;
+        //rflags |= R_HAVERI;
         /* fall through: */
         case 'L': /* L  little-endian output */
             model.flags |= P_REFOUT;

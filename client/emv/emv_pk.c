@@ -42,9 +42,9 @@
 
 static ssize_t emv_pk_read_bin(char *buf, unsigned char *bin, size_t size, size_t *read) {
 
-    if ( buf == NULL )
+    if (buf == NULL)
         return 0;
-    
+
     size_t left = size;
     char *p = buf;
     while (*p == ' ')
@@ -84,9 +84,9 @@ static ssize_t emv_pk_read_bin(char *buf, unsigned char *bin, size_t size, size_
 
 static ssize_t emv_pk_read_ymv(char *buf, unsigned *ymv) {
 
-    if ( buf == NULL )
+    if (buf == NULL)
         return 0;
-    
+
     int i;
     unsigned char temp[3];
     char *p = buf;
@@ -124,9 +124,9 @@ static ssize_t emv_pk_read_ymv(char *buf, unsigned *ymv) {
 
 static ssize_t emv_pk_read_string(char *buf, char *str, size_t size) {
 
-    if ( buf == NULL )
+    if (buf == NULL)
         return 0;
-    
+
     char *p = buf;
     while (*p == ' ')
         p++;

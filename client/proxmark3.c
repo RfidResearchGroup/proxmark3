@@ -467,7 +467,7 @@ int main(int argc, char *argv[]) {
         usb_present = OpenProxmark(port, waitCOMPort, 20, false, speed);
 
     if (TestProxmark() == 0)
-       usb_present = false;
+        usb_present = false;
     if (!usb_present)
         PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") "mode. Check \"%s -h\" if it's not what you want.\n", exec_name);
 
