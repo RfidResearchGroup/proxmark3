@@ -21,4 +21,4 @@ Make a tarball
 tar czvf proxmark3.tgz cov-int
 ```
 
-Upload it to coverity.com
+Upload it to scan.coverity.com
