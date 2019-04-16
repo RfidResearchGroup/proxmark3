@@ -62,13 +62,6 @@ uint8_t crypto1_bit(struct Crypto1State *s, uint8_t in, int is_encrypted) {
     return ret;
 }
 uint8_t crypto1_byte(struct Crypto1State *s, uint8_t in, int is_encrypted) {
-    /*
-    uint8_t i, ret = 0;
-
-    for (i = 0; i < 8; ++i)
-        ret |= crypto1_bit(s, BIT(in, i), is_encrypted) << i;
-    */
-// unfold loop 20161012
     uint8_t ret = 0;
     ret |= crypto1_bit(s, BIT(in, 0), is_encrypted) << 0;
     ret |= crypto1_bit(s, BIT(in, 1), is_encrypted) << 1;
@@ -81,13 +74,6 @@ uint8_t crypto1_byte(struct Crypto1State *s, uint8_t in, int is_encrypted) {
     return ret;
 }
 uint32_t crypto1_word(struct Crypto1State *s, uint32_t in, int is_encrypted) {
-    /*
-    uint32_t i, ret = 0;
-
-    for (i = 0; i < 32; ++i)
-        ret |= crypto1_bit(s, BEBIT(in, i), is_encrypted) << (i ^ 24);
-    */
-//unfold loop 2016012
     uint32_t ret = 0;
     ret |= crypto1_bit(s, BEBIT(in, 0), is_encrypted) << (0 ^ 24);
     ret |= crypto1_bit(s, BEBIT(in, 1), is_encrypted) << (1 ^ 24);
