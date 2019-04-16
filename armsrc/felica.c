@@ -391,6 +391,7 @@ bool WaitForFelicaReply(uint16_t maxbytes) {
 
     // clear RXRDY:
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+    (void)b;
 
     uint32_t timeout = iso18092_get_timeout();
     for (;;) {
@@ -481,7 +482,7 @@ void felica_sendraw(UsbCommand *c) {
     felica_command_t param = c->arg[0];
     size_t len = c->arg[1] & 0xffff;
     uint8_t *cmd = c->d.asBytes;
-    uint32_t arg0 = 0;
+    uint32_t arg0;
 
     felica_card_select_t card;
 
@@ -519,7 +520,6 @@ void felica_sendraw(UsbCommand *c) {
             // Don't append crc on empty bytearray...
             if (len > 0) {
                 AddCrc(buf, len);
-                len += 2;
             }
         }
 
