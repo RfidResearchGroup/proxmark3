@@ -296,7 +296,7 @@ test_script:
 
     ExecTest "proxmark help text ISO7816" "proxmark3 -t" {bash -lc 'cd ~/client;./proxmark3 -h | grep -q ISO7816 && echo Passed || echo Failed'}
 
-    ExecTest "proxmark help text hardnested" "proxmark3 -h" {bash -lc 'cd ~/client;./proxmark3 -t | grep -q hardnested && echo Passed || echo Failed'}
+    ExecTest "proxmark help text hardnested" "proxmark3 -t" {bash -lc 'cd ~/client;./proxmark3 -t | grep -q hardnested && echo Passed || echo Failed'}
 
 
     ExecTest "hf mf offline text" "hf mf" {bash -lc "cd ~/client;./proxmark3 comx -c 'hf mf'"} "at_enc"
