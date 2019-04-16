@@ -441,7 +441,7 @@ int main(int argc, char *argv[]) {
 
         if (strlen(script_cmd) == 0) {
             script_cmd = NULL;
-            PrintAndLogEx(WARNING, "ERROR: execute command: command not found.\n");
+            PrintAndLogEx(ERR, _RED_("ERROR:") "execute command: " _YELLOW_("command not found") ".\n");
             return 2;
         } else {
             if (addLuaExec) {
@@ -456,7 +456,7 @@ int main(int argc, char *argv[]) {
                 }
             }
 
-            PrintAndLogEx(SUCCESS, "execute command from commandline: %s\n", script_cmd);
+            PrintAndLogEx(SUCCESS, "execute command from commandline: " _YELLOW_("%s") "\n", script_cmd);
         }
     }
 
