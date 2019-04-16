@@ -151,6 +151,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO14443A_CMD_WRITEBLOCK    0xA0
 #define ISO14443A_CMD_HALT          0x50
 #define ISO14443A_CMD_RATS          0xE0
+#define ISO14443A_CMD_NXP_DESELECT  0xC2
 
 #define MIFARE_SELECT_CT            0x88
 #define MIFARE_AUTH_KEYA            0x60
@@ -167,7 +168,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MIFARE_EV1_SETMODE          0x43
 
 #define MIFARE_ULC_WRITE            0xA2
-#define MIFARE_ULC_COMP_WRITE      0xA0
+#define MIFARE_ULC_COMP_WRITE       0xA0
 #define MIFARE_ULC_AUTH_1           0x1A
 #define MIFARE_ULC_AUTH_2           0xAF
 
