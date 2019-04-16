@@ -605,10 +605,8 @@ static int CmdHF14AMfRdBl(const char *Cmd) {
 
 static int CmdHF14AMfRdSc(const char *Cmd) {
     int i;
-    uint8_t sectorNo = 0;
-    uint8_t keyType = 0;
+    uint8_t isOK, sectorNo = 0, keyType = 0;
     uint8_t key[6] = {0, 0, 0, 0, 0, 0};
-    uint8_t isOK  = 0;
     uint8_t *data  = NULL;
     char cmdp = 0x00;
 
@@ -799,10 +797,9 @@ static int CmdHF14AMfDump(const char *Cmd) {
 
     fclose(f);
 
-
     PrintAndLogEx(INFO, "Reading sector access bits...");
 
-    uint8_t tries = 0;
+    uint8_t tries;
     for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
         for (tries = 0; tries < MIFARE_SECTOR_RETRY; tries++) {
 
@@ -1140,7 +1137,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
         int16_t isOK = mfnested(blockNo, keyType, key, trgBlockNo, trgKeyType, keyBlock, true);
         switch (isOK) {
             case -1 :
-                PrintAndLogEx(WARNING, "Error: No response from Proxmark.\n");
+                PrintAndLogEx(WARNING, "Error: No response from Proxmark3.\n");
                 break;
             case -2 :
                 PrintAndLogEx(WARNING, "Button pressed. Aborted.\n");
@@ -1210,7 +1207,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
                     int16_t isOK = mfnested(blockNo, keyType, key, FirstBlockOfSector(sectorNo), trgKeyType, keyBlock, calibrate);
                     switch (isOK) {
                         case -1 :
-                            PrintAndLogEx(WARNING, "error: No response from Proxmark.\n");
+                            PrintAndLogEx(WARNING, "error: No response from Proxmark3.\n");
                             break;
                         case -2 :
                             PrintAndLogEx(WARNING, "button pressed. Aborted.\n");
@@ -1500,7 +1497,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
     if (isOK) {
         switch (isOK) {
             case 1 :
-                PrintAndLogEx(WARNING, "Error: No response from Proxmark.\n");
+                PrintAndLogEx(WARNING, "Error: No response from Proxmark3.\n");
                 break;
             case 2 :
                 PrintAndLogEx(NORMAL, "Button pressed. Aborted.\n");
@@ -2286,7 +2283,7 @@ static int CmdHF14AMfSniff(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------------------\n");
     PrintAndLogEx(NORMAL, "Executing mifare sniffing command. \n");
-    PrintAndLogEx(NORMAL, "Press the key on the proxmark3 device to abort both proxmark3 and client.\n");
+    PrintAndLogEx(NORMAL, "Press the key on the Proxmark3 device to abort both Proxmark3 and client.\n");
     PrintAndLogEx(NORMAL, "Press the key on pc keyboard to abort the client.\n");
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------------------\n");
 
@@ -3542,7 +3539,7 @@ static command_t CommandTable[] = {
     {"chk",         CmdHF14AMfChk,          0, "Check keys"},
     {"fchk",        CmdHF14AMfChk_fast,     0, "Check keys fast, targets all keys on card"},
     {"decrypt",     CmdHf14AMfDecryptBytes, 1, "[nt] [ar_enc] [at_enc] [data] - to decrypt sniff or trace"},
-    {"-----------", CmdHelp,                1, ""},
+    {"-----------", CmdHelp,                0, ""},
     {"dbg",         CmdHF14AMfDbg,          0, "Set default debug mode"},
     {"rdbl",        CmdHF14AMfRdBl,         0, "Read MIFARE classic block"},
     {"rdsc",        CmdHF14AMfRdSc,         0, "Read MIFARE classic sector"},
@@ -3552,7 +3549,7 @@ static command_t CommandTable[] = {
     {"setmod",      CmdHf14AMfSetMod,       0, "Set MIFARE Classic EV1 load modulation strength"},
     {"auth4",       CmdHF14AMfAuth4,        0, "ISO14443-4 AES authentication"},
 //    {"sniff",       CmdHF14AMfSniff,        0, "Sniff card-reader communication"},
-    {"-----------", CmdHelp,                1, ""},
+    {"-----------", CmdHelp,                0, ""},
     {"sim",         CmdHF14AMf1kSim,        0, "Simulate MIFARE card"},
     {"eclr",        CmdHF14AMfEClear,       0, "Clear simulator memory block"},
     {"eget",        CmdHF14AMfEGet,         0, "Get simulator memory block"},
@@ -3561,14 +3558,14 @@ static command_t CommandTable[] = {
     {"esave",       CmdHF14AMfESave,        0, "Save to file emul dump"},
     {"ecfill",      CmdHF14AMfECFill,       0, "Fill simulator memory with help of keys from simulator"},
     {"ekeyprn",     CmdHF14AMfEKeyPrn,      0, "Print keys from simulator memory"},
-    {"-----------", CmdHelp,                1, ""},
+    {"-----------", CmdHelp,                0, ""},
     {"csetuid",     CmdHF14AMfCSetUID,      0, "Set UID for magic Chinese card"},
     {"csetblk",     CmdHF14AMfCSetBlk,      0, "Write block - Magic Chinese card"},
     {"cgetblk",     CmdHF14AMfCGetBlk,      0, "Read block - Magic Chinese card"},
     {"cgetsc",      CmdHF14AMfCGetSc,       0, "Read sector - Magic Chinese card"},
     {"cload",       CmdHF14AMfCLoad,        0, "Load dump into magic Chinese card"},
     {"csave",       CmdHF14AMfCSave,        0, "Save dump from magic Chinese card into file or emulator"},
-    {"-----------", CmdHelp,                1, ""},
+    {"-----------", CmdHelp,                0, ""},
     {"mad",         CmdHF14AMfMAD,          0, "Checks and prints MAD"},
     {"ndef",        CmdHFMFNDEF,            0, "Prints NDEF records from card"},
 

@@ -57,8 +57,6 @@ int GetModels(char *Models[], int *count, uint8_t *width) {
 
     SETBMP();
 
-    int args = 0, psets, pass;
-    int Cnt = 0;
     if (width[0] == 0) { //reveng -D
         *count = mcount();
         if (!*count) {
@@ -100,6 +98,8 @@ int GetModels(char *Models[], int *count, uint8_t *width) {
         if (!ptst(qpoly))
             rflags &= ~R_HAVEQ;
 
+        int pass;
+
         /* if endianness not specified, try
          * little-endian then big-endian.
          * NB: crossed-endian algorithms will not be
@@ -108,7 +108,7 @@ int GetModels(char *Models[], int *count, uint8_t *width) {
         /* scan against preset models */
         if (~uflags & C_NOPCK) {
             pass = 0;
-            Cnt = 0;
+            int Cnt = 0, psets;
             do {
                 psets = mcount();
 
@@ -190,6 +190,7 @@ int GetModels(char *Models[], int *count, uint8_t *width) {
             return 0;
         }
         pass = 0;
+        int args = 0;
         do {
             mptr = candmods = reveng(&model, qpoly, rflags, args, apolys);
             if (mptr && plen(mptr->spoly)) {
@@ -233,7 +234,7 @@ int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *res
     static model_t model = MZERO;
 
     int ibperhx = 8, obperhx = 8;
-    int rflags = 0; // search flags
+//    int rflags = 0; // search flags
     int c;
     poly_t apoly, crc;
 
@@ -255,17 +256,17 @@ int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *res
         PrintAndLogEx(WARNING, "no preset models available");
         return 0;
     }
-    rflags |= R_HAVEP | R_HAVEI | R_HAVERI | R_HAVERO | R_HAVEX;
+//    rflags |= R_HAVEP | R_HAVEI | R_HAVERI | R_HAVERO | R_HAVEX;
 
     //set flags
     switch (endian) {
         case 'b': /* b  big-endian (RefIn = false, RefOut = false ) */
             model.flags &= ~P_REFIN;
-            rflags |= R_HAVERI;
+        //rflags |= R_HAVERI;
         /* fall through: */
         case 'B': /* B  big-endian output (RefOut = false) */
             model.flags &= ~P_REFOUT;
-            rflags |= R_HAVERO;
+            //rflags |= R_HAVERO;
             mnovel(&model);
         /* fall through: */
         case 'r': /* r  right-justified */
@@ -273,11 +274,11 @@ int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *res
             break;
         case 'l': /* l  little-endian input and output */
             model.flags |= P_REFIN;
-            rflags |= R_HAVERI;
+        //rflags |= R_HAVERI;
         /* fall through: */
         case 'L': /* L  little-endian output */
             model.flags |= P_REFOUT;
-            rflags |= R_HAVERO;
+            //rflags |= R_HAVERO;
             mnovel(&model);
         /* fall through: */
         case 't': /* t  left-justified */

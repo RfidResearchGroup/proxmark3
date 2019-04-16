@@ -1527,7 +1527,7 @@ int CmdTuneSamples(const char *Cmd) {
 
 
     int timeout = 0;
-    PrintAndLogEx(INFO, "\nmeasuring antenna characteristics, please wait...");
+    PrintAndLogEx(INFO, "\nMeasuring antenna characteristics, please wait...");
 
     UsbCommand c = {CMD_MEASURE_ANTENNA_TUNING, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
@@ -1538,7 +1538,7 @@ int CmdTuneSamples(const char *Cmd) {
         printf(".");
         fflush(stdout);
         if (timeout > 7) {
-            PrintAndLogEx(WARNING, "\nno response from Proxmark. Aborting...");
+            PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
             return 1;
         }
     }

@@ -521,7 +521,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
     // triggered == false -- to wait first for card
     bool triggered = !(param & 0x03);
 
-    uint32_t rsamples = 0;
+    uint32_t rx_samples = 0;
 
     DbpString("Starting to sniff");
 
@@ -562,11 +562,11 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
         LED_A_OFF();
 
         // Need two samples to feed Miller and Manchester-Decoder
-        if (rsamples & 0x01) {
+        if (rx_samples & 0x01) {
 
             if (!TagIsActive) {        // no need to try decoding reader data if the tag is sending
                 uint8_t readerdata = (previous_data & 0xF0) | (*data >> 4);
-                if (MillerDecoding(readerdata, (rsamples - 1) * 4)) {
+                if (MillerDecoding(readerdata, (rx_samples - 1) * 4)) {
                     LED_C_ON();
 
                     // check - if there is a short 7bit request from reader
@@ -593,7 +593,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
             // no need to try decoding tag data if the reader is sending - and we cannot afford the time
             if (!ReaderIsActive) {
                 uint8_t tagdata = (previous_data << 4) | (*data & 0x0F);
-                if (ManchesterDecoding(tagdata, 0, (rsamples - 1) * 4)) {
+                if (ManchesterDecoding(tagdata, 0, (rx_samples - 1) * 4)) {
                     LED_B_ON();
 
                     if (!LogTrace(receivedResp,
@@ -617,7 +617,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
         }
 
         previous_data = *data;
-        rsamples++;
+        rx_samples++;
         data++;
         if (data == dmaBuf + DMA_BUFFER_SIZE) {
             data = dmaBuf;

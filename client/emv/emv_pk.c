@@ -41,9 +41,13 @@
 #define TOHEX(v) ((v) < 10 ? (v) + '0' : (v) - 10 + 'a')
 
 static ssize_t emv_pk_read_bin(char *buf, unsigned char *bin, size_t size, size_t *read) {
+
+    if (buf == NULL)
+        return 0;
+
     size_t left = size;
     char *p = buf;
-    while (*p != 0 && *p == ' ')
+    while (*p == ' ')
         p++;
 
     while (left > 0) {
@@ -70,7 +74,7 @@ static ssize_t emv_pk_read_bin(char *buf, unsigned char *bin, size_t size, size_
             return -(p - buf);
     }
 
-    while (*p != 0 && *p == ' ')
+    while (*p == ' ')
         p++;
 
     p--;
@@ -79,13 +83,17 @@ static ssize_t emv_pk_read_bin(char *buf, unsigned char *bin, size_t size, size_
 }
 
 static ssize_t emv_pk_read_ymv(char *buf, unsigned *ymv) {
+
+    if (buf == NULL)
+        return 0;
+
     int i;
     unsigned char temp[3];
     char *p = buf;
 
     *ymv = 0;
 
-    while (*p != 0 && *p == ' ')
+    while (*p == ' ')
         p++;
 
     for (i = 0; i < 3; i++) {
@@ -101,7 +109,7 @@ static ssize_t emv_pk_read_ymv(char *buf, unsigned *ymv) {
         temp[i] = (c1 * 16 + c2);
     }
 
-    while (*p != 0 && *p == ' ')
+    while (*p == ' ')
         p++;
 
     p--;
@@ -115,8 +123,12 @@ static ssize_t emv_pk_read_ymv(char *buf, unsigned *ymv) {
 }
 
 static ssize_t emv_pk_read_string(char *buf, char *str, size_t size) {
+
+    if (buf == NULL)
+        return 0;
+
     char *p = buf;
-    while (*p != 0 && *p == ' ')
+    while (*p == ' ')
         p++;
 
     while (size > 1) {
@@ -132,7 +144,7 @@ static ssize_t emv_pk_read_string(char *buf, char *str, size_t size) {
 
     *str = 0;
 
-    while (*p != 0 && *p == ' ')
+    while (*p == ' ')
         p++;
 
     p--;

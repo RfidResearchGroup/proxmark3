@@ -504,8 +504,8 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[]) {
         errors += bruteforceItem(*attack, keytable);
     }
     free(attack);
-
-    PrintAndLogDevice(SUCCESS, "time: %" PRIu64 " seconds", (msclock() - t1) / 1000);
+    t1 = msclock() - t1;
+    PrintAndLogDevice(SUCCESS, "time: %" PRIu64 " seconds", t1 / 1000);
 
     // Pick out the first 16 bytes of the keytable.
     // The keytable is now in 16-bit ints, where the upper 8 bits

@@ -476,10 +476,10 @@ static command_t CommandTable[] = {
     {"setlfdivisor",  CmdSetDivisor,  0, "<19 - 255> -- Drive LF antenna at 12Mhz/(divisor+1)"},
     {"setmux",        CmdSetMux,      0, "<loraw|hiraw|lopkd|hipkd> -- Set the ADC mux to a specific value"},
     {"tune",          CmdTune,        0, "Measure antenna tuning"},
-    {"version",       CmdVersion,     0, "Show version information about the connected Proxmark"},
-    {"status",        CmdStatus,      0, "Show runtime status information about the connected Proxmark"},
-    {"ping",          CmdPing,        0, "Test if the pm3 is responsive"},
-    {"pingng",          CmdPingNG,        0, "Test if the pm3 is responsive"},
+    {"version",       CmdVersion,     0, "Show version information about the connected Proxmark3"},
+    {"status",        CmdStatus,      0, "Show runtime status information about the connected Proxmark3"},
+    {"ping",          CmdPing,        0, "Test if the Proxmark3 is responding"},
+    {"pingng",        CmdPingNG,      0, "Test if the Proxmark3 is responsive, using new frame format (experimental)"},
     {NULL, NULL, 0, NULL}
 };
 

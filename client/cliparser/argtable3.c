@@ -2552,7 +2552,7 @@ static int arg_rex_scanfn(struct arg_rex *parent, const char *argval) {
     int errorcode = 0;
     const TRexChar *error = NULL;
     TRex *rex = NULL;
-    TRexBool is_match = TRex_False;
+    TRexBool is_match;
 
     if (parent->count == parent->hdr.maxcount) {
         /* maximum number of arguments exceeded */

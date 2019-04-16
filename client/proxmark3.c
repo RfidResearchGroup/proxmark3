@@ -206,7 +206,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 
 static void dumpAllHelp(int markdown) {
     PrintAndLogEx(NORMAL, "\n%sProxmark3 command dump%s\n\n", markdown ? "# " : "", markdown ? "" : "\n======================");
-    PrintAndLogEx(NORMAL, "Some commands are available only if a Proxmark is actually connected.%s\n", markdown ? "  " : "");
+    PrintAndLogEx(NORMAL, "Some commands are available only if a Proxmark3 is actually connected.%s\n", markdown ? "  " : "");
     PrintAndLogEx(NORMAL, "Check column \"offline\" for their availability.\n");
     PrintAndLogEx(NORMAL, "\n");
     command_t *cmds = getTopLevelCommandTable();
@@ -262,7 +262,7 @@ static void show_help(bool showFullHelp, char *exec_name) {
         PrintAndLogEx(NORMAL, "      %s -m\n", exec_name);
         PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_H" -f             -- flush output everytime\n", exec_name);
         PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_H" -w             -- wait for serial port\n", exec_name);
-        PrintAndLogEx(NORMAL, "\n  how to run proxmark3 client\n");
+        PrintAndLogEx(NORMAL, "\n  how to run Proxmark3 client\n");
         PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_H"                -- runs the pm3 client\n", exec_name);
         PrintAndLogEx(NORMAL, "      %s                             -- runs the pm3 client in OFFLINE mode\n", exec_name);
         PrintAndLogEx(NORMAL, "\n  how to execute different commands from terminal\n");
@@ -420,6 +420,12 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    // ascii art
+    bool stdinOnPipe = !isatty(STDIN_FILENO);
+    if (!script_cmds_file && !stdinOnPipe)
+        showBanner();
+
+
     // default speed for USB 460800,  USART(FPC serial) 115200 baud
     if (speed == 0)
 #ifdef WITH_FPC_HOST
@@ -435,7 +441,7 @@ int main(int argc, char *argv[]) {
 
         if (strlen(script_cmd) == 0) {
             script_cmd = NULL;
-            PrintAndLogEx(WARNING, "ERROR: execute command: command not found.\n");
+            PrintAndLogEx(ERR, _RED_("ERROR:") "execute command: " _YELLOW_("command not found") ".\n");
             return 2;
         } else {
             if (addLuaExec) {
@@ -450,14 +456,9 @@ int main(int argc, char *argv[]) {
                 }
             }
 
-            PrintAndLogEx(SUCCESS, "execute command from commandline: %s\n", script_cmd);
+            PrintAndLogEx(SUCCESS, "execute command from commandline: " _YELLOW_("%s") "\n", script_cmd);
         }
     }
-
-    // ascii art
-    bool stdinOnPipe = !isatty(STDIN_FILENO);
-    if (!script_cmds_file && !stdinOnPipe)
-        showBanner();
 
     // set global variables
     set_my_executable_path();
