@@ -378,9 +378,9 @@ void printUSBSpeed(void) {
     LED_B_ON();
     
     while (end_time < start_time + USB_SPEED_TEST_MIN_TIME) {
-        cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, 0, USB_CMD_DATA_SIZE, 0, test_data, USB_CMD_DATA_SIZE);
+        reply_ng(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, PM3_SUCCESS, test_data, USB_DATANG_SIZE);
         end_time = GetTickCount();
-        bytes_transferred += USB_CMD_DATA_SIZE;
+        bytes_transferred += USB_DATANG_SIZE;
     }
     LED_B_OFF();
 
@@ -634,7 +634,7 @@ void ListenReaderField(int limit) {
 }
 
 static void UsbPacketReceived(bool cmd_ng, uint8_t *packet) {
-    uint64_t cmd; // To accomodate old cmd, can be reduced to uint16_t once all old cmds are gone.
+    uint64_t cmd; // To accommodate old cmd, can be reduced to uint16_t once all old cmds are gone.
     UsbCommandNGPreamble *pre_ng = (UsbCommandNGPreamble *)packet;
     uint8_t *data_ng = packet + sizeof(UsbCommandNGPreamble);
     uint16_t datalen_ng = pre_ng->length;

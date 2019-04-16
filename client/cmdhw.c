@@ -444,19 +444,21 @@ static int CmdPingNG(const char *Cmd) {
         len = USB_DATANG_SIZE;
     PrintAndLogEx(NORMAL, "Pinging with payload len=%d", len);
     clearCommandBuffer();
-    UsbCommand resp;
+    uint8_t resp[USB_REPLYNG_MAXLEN];
     uint8_t data[USB_DATANG_SIZE] = {0};
     uint16_t cmd = CMD_PING;
     if (len)
     for (uint16_t i=0; i<len; i++)
         data[i] = i & 0xFF;
     SendCommandNG(cmd, data, len);
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
+    if (WaitForResponseNGTimeout(CMD_PING, resp, 1000)) {
         PrintAndLogEx(NORMAL, "PingNG successful");
+        UsbReplyNGPreamble *pre = (UsbReplyNGPreamble *)resp;
+        uint8_t *respdata = resp + sizeof(UsbReplyNGPreamble);
         if (len >= 4)
-            PrintAndLogEx(NORMAL, "%08x -> %08x", 0xAABBCCDD, resp.arg[1]);
-        if (len >= 8)
-            PrintAndLogEx(NORMAL, "%08x -> %08x", 0xDDCCBBAA, resp.arg[2]);
+            PrintAndLogEx(NORMAL, "%02x%02x%02x%02x ... %02x%02x%02x%02x",
+                respdata[0], respdata[1], respdata[2], respdata[3],
+                respdata[pre->length-4], respdata[pre->length-3], respdata[pre->length-2], respdata[pre->length-1]);
     } else
         PrintAndLogEx(NORMAL, "PingNG failed");
     return 0;

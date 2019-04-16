@@ -34,7 +34,7 @@ static pthread_cond_t txBufferSig = PTHREAD_COND_INITIALIZER;
 
 // Used by UsbReceiveCommand as a ring buffer for messages that are yet to be
 // processed by a command handler (WaitForResponse{,Timeout})
-static UsbCommand rxBuffer[CMD_BUFFER_SIZE];
+static uint8_t rxBuffer[CMD_BUFFER_SIZE][USB_REPLYNG_MAXLEN];
 
 // Points to the next empty position to write to
 static int cmd_head = 0;
@@ -149,8 +149,7 @@ void clearCommandBuffer() {
  * @brief storeCommand stores a USB command in a circular buffer
  * @param UC
  */
-static void storeCommand(UsbCommand *command) {
-
+static void storeReply(uint8_t *packet) {
     pthread_mutex_lock(&rxBufferMutex);
     if ((cmd_head + 1) % CMD_BUFFER_SIZE == cmd_tail) {
         //If these two are equal, we're about to overwrite in the
@@ -159,8 +158,8 @@ static void storeCommand(UsbCommand *command) {
         fflush(stdout);
     }
     //Store the command at the 'head' location
-    UsbCommand *destination = &rxBuffer[cmd_head];
-    memcpy(destination, command, sizeof(UsbCommand));
+    uint8_t *destination = rxBuffer[cmd_head];
+    memcpy(destination, packet, USB_REPLYNG_MAXLEN);
 
     //increment head and wrap
     cmd_head = (cmd_head + 1) % CMD_BUFFER_SIZE;
@@ -171,7 +170,7 @@ static void storeCommand(UsbCommand *command) {
  * @param response location to write command
  * @return 1 if response was returned, 0 if nothing has been received
  */
-static int getCommand(UsbCommand *response) {
+static int getReply(uint8_t *response) {
     pthread_mutex_lock(&rxBufferMutex);
     //If head == tail, there's nothing to read, or if we just got initialized
     if (cmd_head == cmd_tail)  {
@@ -180,8 +179,8 @@ static int getCommand(UsbCommand *response) {
     }
 
     //Pick out the next unread command
-    UsbCommand *last_unread = &rxBuffer[cmd_tail];
-    memcpy(response, last_unread, sizeof(UsbCommand));
+    uint8_t *last_unread = rxBuffer[cmd_tail];
+    memcpy(response, last_unread, USB_REPLYNG_MAXLEN);
 
     //Increment tail - this is a circular buffer, so modulo buffer size
     cmd_tail = (cmd_tail + 1) % CMD_BUFFER_SIZE;
@@ -194,9 +193,20 @@ static int getCommand(UsbCommand *response) {
 // Entry point into our code: called whenever we received a packet over USB
 // that we weren't necessarily expecting, for example a debug print.
 //-----------------------------------------------------------------------------
-static void UsbCommandReceived(UsbCommand *c) {
+static void UsbReplyReceived(bool reply_ng, uint8_t *packet) {
 
-    switch (c->cmd) {
+    uint64_t cmd; // To accommodate old cmd, can be reduced to uint16_t once all old cmds are gone.
+    UsbReplyNGPreamble *pre_ng = (UsbReplyNGPreamble *)packet;
+
+    // For cmd handlers still using old cmd format:
+    UsbCommand *c = (UsbCommand *)packet;
+    if (reply_ng) {
+        cmd = pre_ng->cmd;
+    } else {
+        cmd = c->cmd;
+    }
+
+    switch (cmd) {
         // First check if we are handling a debug message
         case CMD_DEBUG_PRINT_STRING: {
 
@@ -234,7 +244,7 @@ static void UsbCommandReceived(UsbCommand *c) {
         // CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K packages which is not dealt with. I wonder if simply ignoring them will
         // work. lets try it.
         default: {
-            storeCommand(c);
+            storeReply(packet);
             break;
         }
     }
@@ -275,10 +285,11 @@ __attribute__((force_align_arg_pointer))
 #endif
 *uart_communication(void *targ) {
     communication_arg_t *connection = (communication_arg_t *)targ;
-    size_t rxlen, totallen = 0;
-    UsbCommand rx;
-    UsbCommand *prx = &rx;
+    size_t rxlen;
 
+    uint8_t rx[USB_REPLYNG_MAXLEN];
+    UsbReplyNGPreamble *pre = (UsbReplyNGPreamble *)rx;
+    UsbReplyNGPostamble *post = (UsbReplyNGPostamble *)(rx + sizeof(UsbReplyNGPreamble) + USB_DATANG_SIZE);
     //int counter_to_offline = 0;
 
 #if defined(__MACH__) && defined(__APPLE__)
@@ -288,27 +299,59 @@ __attribute__((force_align_arg_pointer))
     while (connection->run) {
         rxlen = 0;
         bool ACK_received = false;
+        bool error = false;
+        if (uart_receive(sp, rx, sizeof(UsbReplyNGPreamble), &rxlen) && (rxlen == sizeof(UsbReplyNGPreamble))) {
+            if (pre->magic == USB_REPLYNG_PREAMBLE_MAGIC) { // New style NG reply
+                if (pre->length > USB_DATANG_SIZE) {
+                    PrintAndLogEx(WARNING, "Received packet frame with incompatible length: 0x%04x", pre->length);
+                    error = true;
+                }
+                if ((!error) && (pre->length > 0)) { // Get the variable length payload
+                    if ((!uart_receive(sp, rx + sizeof(UsbReplyNGPreamble), pre->length, &rxlen)) || (rxlen != pre->length)) {
+                        PrintAndLogEx(WARNING, "Received packet frame error variable part too short? %d/%d", rxlen, pre->length);
+                        error = true;
+                    }
+                }
+                if (!error) {                        // Get the postamble
+                    if ((!uart_receive(sp, rx + sizeof(UsbReplyNGPreamble) + USB_DATANG_SIZE, sizeof(UsbReplyNGPostamble), &rxlen)) || (rxlen != sizeof(UsbReplyNGPostamble))) {
+                        PrintAndLogEx(WARNING, "Received packet frame error fetching postamble");
+                        error = true;
+                    }
+                    uint8_t first, second;
+                    compute_crc(CRC_14443_A, rx, sizeof(UsbReplyNGPreamble) + pre->length, &first, &second);
+                    if ((first << 8) + second != post->crc) {
+                        PrintAndLogEx(WARNING, "Received packet frame CRC error %02X%02X <> %04X", first, second, post->crc);
+                        error = true;
+                    }
+                }
+                if (!error) {
+//                    PrintAndLogEx(NORMAL, "Received reply NG full !!");
+                    UsbReplyReceived(true, rx);
+//TODO NG don't send ACK anymore but reply with the corresponding cmd, still things seem to work fine...
+                    if (pre->cmd == CMD_ACK) {
+                        ACK_received = true;
+                    }
+                }
+            } else {                               // Old style reply
 
-        if (uart_receive(sp, (uint8_t *)prx, sizeof(UsbCommand) - (prx - &rx), &rxlen) && rxlen) {
-            prx += rxlen;
-            totallen += rxlen;
-
-            if (totallen < sizeof(UsbCommand)) {
-
-                // iceman: this looping is no working as expected at all. The reassemble of package is nonfunctional.
-                // solved so far with increasing the timeouts of the serial port configuration.
-                PrintAndLogEx(NORMAL, "Foo %d | %d (loop)", prx - &rx, rxlen);
-                continue;
+                if ((!uart_receive(sp, rx + sizeof(UsbReplyNGPreamble), sizeof(UsbCommand) - sizeof(UsbReplyNGPreamble), &rxlen)) || (rxlen != sizeof(UsbCommand) - sizeof(UsbReplyNGPreamble))) {
+                    PrintAndLogEx(WARNING, "Received packet frame error var part too short? %d/%d", rxlen, sizeof(UsbCommand) - sizeof(UsbReplyNGPreamble));
+                    error = true;
+                }
+                if (!error) {
+                    UsbReplyReceived(false, rx);
+                    if (((UsbCommand *)rx)->cmd == CMD_ACK) {
+                        ACK_received = true;
+                    }
+                }
             }
-
-            totallen = 0;
-            UsbCommandReceived(&rx);
-            if (rx.cmd == CMD_ACK) {
-                ACK_received = true;
+        } else {
+            if (rxlen > 0) {
+                PrintAndLogEx(WARNING, "Received packet frame preamble too short: %d/%d", rxlen, sizeof(UsbReplyNGPreamble));
+                error = true;
             }
         }
-
-        prx = &rx;
+        // TODO if error, shall we resync ?
 
         pthread_mutex_lock(&txBufferMutex);
 
@@ -466,7 +509,7 @@ bool WaitForResponseTimeoutW(uint32_t cmd, UsbCommand *response, size_t ms_timeo
     // Wait until the command is received
     while (true) {
 
-        while (getCommand(response)) {
+        while (getReply((uint8_t *)response)) {
             if (cmd == CMD_UNKNOWN || response->cmd == cmd)
                 return true;
         }
@@ -490,6 +533,54 @@ bool WaitForResponseTimeout(uint32_t cmd, UsbCommand *response, size_t ms_timeou
 
 bool WaitForResponse(uint32_t cmd, UsbCommand *response) {
     return WaitForResponseTimeoutW(cmd, response, -1, true);
+}
+
+/**
+ * @brief Waits for a certain response type. This method waits for a maximum of
+ * ms_timeout milliseconds for a specified response command.
+
+ * @param cmd command to wait for, or CMD_UNKNOWN to take any command.
+ * @param response struct to copy received command into.
+ * @param ms_timeout display message after 3 seconds
+ * @param show_warning display message after 3 seconds
+ * @return true if command was returned, otherwise false
+ */
+bool WaitForResponseNGTimeoutW(uint32_t cmd, uint8_t *response, size_t ms_timeout, bool show_warning) {
+
+    uint8_t resp[USB_REPLYNG_MAXLEN];
+    if (response == NULL)
+        response = resp;
+    UsbCommandNGPreamble *pre_ng = (UsbCommandNGPreamble *)response;
+
+    uint64_t start_time = msclock();
+
+    // Wait until the command is received
+    while (true) {
+
+        while (getReply(response)) {
+            if (cmd == CMD_UNKNOWN || pre_ng->cmd == cmd)
+                return true;
+        }
+
+        if (msclock() - start_time > ms_timeout)
+            break;
+
+        if (msclock() - start_time > 3000 && show_warning) {
+            // 3 seconds elapsed (but this doesn't mean the timeout was exceeded)
+            PrintAndLogEx(INFO, "Waiting for a response from the proxmark3...");
+            PrintAndLogEx(INFO, "You can cancel this operation by pressing the pm3 button");
+            show_warning = false;
+        }
+    }
+    return false;
+}
+
+bool WaitForResponseNGTimeout(uint32_t cmd, uint8_t *response, size_t ms_timeout) {
+    return WaitForResponseNGTimeoutW(cmd, response, ms_timeout, true);
+}
+
+bool WaitForResponseNG(uint32_t cmd, uint8_t *response) {
+    return WaitForResponseNGTimeoutW(cmd, response, -1, true);
 }
 
 /**
@@ -550,7 +641,7 @@ bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *resp
 
     while (true) {
 
-        if (getCommand(response)) {
+        if (getReply((uint8_t *)response)) {
 
             // sample_buf is a array pointer, located in data.c
             // arg0 = offset in transfer. Startindex of this chunk
