@@ -10,7 +10,9 @@
 
 #include <stdint.h>
 #include <stdio.h>
-#include "util.h"
+#include <stdbool.h>
+#include <string.h>
+#include "commonutil.h"
 
 #define CRC16_POLY_CCITT  0x1021
 #define CRC16_POLY_LEGIC  0xc6c6 //0x6363

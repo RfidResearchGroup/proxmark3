@@ -14,7 +14,6 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include <string.h>
-#include "util.h"
 #include "ui.h"
 #include "proxmark3.h"
 #include "emv_tags.h"

@@ -40,20 +40,6 @@
 #define BUTTON_DOUBLE_CLICK -2
 #define BUTTON_ERROR -99
 
-#ifndef BSWAP_16
-# define BSWAP_16(x) ((( ((x) & 0xFF00 ) >> 8))| ( (((x) & 0x00FF) << 8)))
-#endif
-#ifndef BITMASK
-# define BITMASK(X) (1 << (X))
-#endif
-#ifndef ARRAYLEN
-# define ARRAYLEN(x) (sizeof(x)/sizeof((x)[0]))
-#endif
-
-#ifndef NTIME
-# define NTIME(n) for (int _index = 0; _index < n; _index++)
-#endif
-
 #ifndef REV8
 #define REV8(x) ((((x)>>7)&1)+((((x)>>6)&1)<<1)+((((x)>>5)&1)<<2)+((((x)>>4)&1)<<3)+((((x)>>3)&1)<<4)+((((x)>>2)&1)<<5)+((((x)>>1)&1)<<6)+(((x)&1)<<7))
 #endif
@@ -84,15 +70,6 @@
 
 size_t nbytes(size_t nbits);
 
-uint32_t reflect(uint32_t v, int b); // used in crc.c ...
-uint8_t reflect8(uint8_t b);         // dedicated 8bit reversal
-uint16_t reflect16(uint16_t b);      // dedicated 16bit reversal
-
-void num_to_bytes(uint64_t n, size_t len, uint8_t *dest);
-uint64_t bytes_to_num(uint8_t *src, size_t len);
-void rol(uint8_t *data, const size_t len);
-void lsl(uint8_t *data, size_t len);
-int32_t le24toh(uint8_t data[3]);
 uint8_t hex2int(char hexchar);
 
 void LED(int led, int ms);

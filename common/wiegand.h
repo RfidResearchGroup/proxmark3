@@ -10,7 +10,6 @@
 #define __WIEGAND_H
 
 #include "common.h"
-#include "util.h"
 
 uint8_t getParity(uint8_t *bits, uint8_t len, uint8_t type);
 uint8_t checkParity(uint32_t bits, uint8_t len, uint8_t type);

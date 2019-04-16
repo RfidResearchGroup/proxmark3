@@ -116,6 +116,7 @@ POSTCOMPILE = $(MV) -f $(OBJDIR)/$*.Td $(OBJDIR)/$*.d
 CORESRCS =  uart_posix.c \
 			uart_win32.c \
 			ui.c \
+			commonutil.c \
 			util.c \
 			util_posix.c \
 			scandir.c \

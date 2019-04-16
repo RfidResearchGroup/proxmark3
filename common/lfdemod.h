@@ -19,7 +19,6 @@
 #include <stdlib.h>  // for
 #include <stdbool.h> // for bool
 #include "parity.h"  // for parity test
-#include "util.h"    // for ARRAYLEN
 
 //might not be high enough for noisy environments
 #define NOISE_AMPLITUDE_THRESHOLD 15

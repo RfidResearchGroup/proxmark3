@@ -4,7 +4,6 @@
 #include <stddef.h>
 #include "proxmark3.h"
 #include "apps.h"
-#include "util.h"
 #include "BigBuf.h"
 #include "mifare.h"
 

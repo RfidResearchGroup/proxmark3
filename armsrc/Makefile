@@ -157,6 +157,7 @@ THUMBSRC = start.c \
 	$(SRC_FPC) \
 	appmain.c \
 	printf.c \
+	commonutil.c \
 	util.c \
 	string.c \
 	BigBuf.c \

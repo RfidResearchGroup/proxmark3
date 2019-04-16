@@ -372,22 +372,6 @@ void print_blocks(uint32_t *data, size_t len) {
     }
 }
 
-void num_to_bytes(uint64_t n, size_t len, uint8_t *dest) {
-    while (len--) {
-        dest[len] = n & 0xFF;
-        n >>= 8;
-    }
-}
-
-uint64_t bytes_to_num(uint8_t *src, size_t len) {
-    uint64_t num = 0;
-    while (len--) {
-        num = (num << 8) | (*src);
-        src++;
-    }
-    return num;
-}
-
 // takes a number (uint64_t) and creates a binarray in dest.
 void num_to_bytebits(uint64_t n, size_t len, uint8_t *dest) {
     while (len--) {
@@ -773,9 +757,6 @@ void xor(unsigned char *dst, unsigned char *src, size_t len) {
         *dst ^= *src;
 }
 
-int32_t le24toh(uint8_t data[3]) {
-    return (data[2] << 16) | (data[1] << 8) | data[0];
-}
 // Pack a bitarray into a uint32_t.
 uint32_t PackBits(uint8_t start, uint8_t len, uint8_t *bits) {
 
@@ -791,16 +772,6 @@ uint32_t PackBits(uint8_t start, uint8_t len, uint8_t *bits) {
     return tmp;
 }
 
-// RotateLeft - Ultralight, Desfire, works on byte level
-// 00-01-02  >> 01-02-00
-void rol(uint8_t *data, const size_t len) {
-    uint8_t first = data[0];
-    for (size_t i = 0; i < len - 1; i++) {
-        data[i] = data[i + 1];
-    }
-    data[len - 1] = first;
-}
-
 /*
 uint8_t pw_rev_A(uint8_t b) {
     b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
@@ -809,46 +780,6 @@ uint8_t pw_rev_A(uint8_t b) {
     return b;
 }
 */
-uint8_t reflect8(uint8_t b) {
-    return ((b * 0x80200802ULL) & 0x0884422110ULL) * 0x0101010101ULL >> 32;
-}
-uint16_t reflect16(uint16_t b) {
-    uint16_t v = 0;
-    v |= (b & 0x8000) >> 15;
-    v |= (b & 0x4000) >> 13;
-    v |= (b & 0x2000) >> 11;
-    v |= (b & 0x1000) >> 9;
-    v |= (b & 0x0800) >> 7;
-    v |= (b & 0x0400) >> 5;
-    v |= (b & 0x0200) >> 3;
-    v |= (b & 0x0100) >> 1;
-
-    v |= (b & 0x0080) << 1;
-    v |= (b & 0x0040) << 3;
-    v |= (b & 0x0020) << 5;
-    v |= (b & 0x0010) << 7;
-    v |= (b & 0x0008) << 9;
-    v |= (b & 0x0004) << 11;
-    v |= (b & 0x0002) << 13;
-    v |= (b & 0x0001) << 15;
-    return v;
-}
-/*
- ref  http://www.csm.ornl.gov/~dunigan/crc.html
- Returns the value v with the bottom b [0,32] bits reflected.
- Example: reflect(0x3e23L,3) == 0x3e26
-*/
-uint32_t reflect(uint32_t v, int b) {
-    uint32_t t = v;
-    for (int i = 0; i < b; ++i) {
-        if (t & 1)
-            v |=  BITMASK((b - 1) - i);
-        else
-            v &= ~BITMASK((b - 1) - i);
-        t >>= 1;
-    }
-    return v;
-}
 
 uint64_t HornerScheme(uint64_t num, uint64_t divider, uint64_t factor) {
     uint64_t remaind = 0, quotient = 0, result = 0;

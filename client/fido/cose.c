@@ -13,7 +13,6 @@
 #include "cose.h"
 #include <cbor.h>
 #include "cbortools.h"
-#include "util.h"
 
 static const char COSEEmptyStr[] = "";
 

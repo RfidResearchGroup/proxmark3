@@ -10,7 +10,7 @@
 #define __CRC_H
 
 #include "common.h" //stdint, stddef, stdbool
-#include "util.h"   // reflect, bswap_16
+#include "commonutil.h"   // reflect, bswap_16
 
 typedef struct crc_ctx {
     uint32_t state;

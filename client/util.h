@@ -24,9 +24,6 @@
 #include <endian.h>
 #endif
 
-#ifndef BITMASK
-# define BITMASK(X) (1 << (X))
-#endif
 #ifndef ROTR
 # define ROTR(x,n) (((uintmax_t)(x) >> (n)) | ((uintmax_t)(x) << ((sizeof(x) * 8) - (n))))
 #endif
@@ -85,23 +82,6 @@
 #endif
 #endif
 
-// endian change for 16bit
-#ifdef __GNUC__
-#ifndef BSWAP_16
-#define BSWAP_16(x) __builtin_bswap16(x)
-#endif
-#else
-#ifdef _MSC_VER
-#ifndef BSWAP_16
-#define BSWAP_16(x) _byteswap_ushort(x)
-#endif
-#else
-#ifndef BSWAP_16
-# define BSWAP_16(x) ((( ((x) & 0xFF00 ) >> 8))| ( (((x) & 0x00FF) << 8)))
-#endif
-#endif
-#endif
-
 #define EVEN                        0
 #define ODD                         1
 
@@ -130,10 +110,6 @@
 // used for save/load files
 #ifndef FILE_PATH_SIZE
 # define FILE_PATH_SIZE 1000
-#endif
-
-#ifndef ARRAYLEN
-# define ARRAYLEN(x) (sizeof(x)/sizeof((x)[0]))
 #endif
 
 #if defined(__linux__) || (__APPLE__)
@@ -217,8 +193,6 @@ char *sprint_ascii_ex(const uint8_t *data, const size_t len, const size_t min_st
 
 void print_blocks(uint32_t *data, size_t len);
 
-void num_to_bytes(uint64_t n, size_t len, uint8_t *dest);
-uint64_t bytes_to_num(uint8_t *src, size_t len);
 void num_to_bytebits(uint64_t n, size_t len, uint8_t *dest);
 void num_to_bytebitsLSBF(uint64_t n, size_t len, uint8_t *dest);
 uint8_t *SwapEndian64(const uint8_t *src, const size_t len, const uint8_t blockSize);
@@ -251,10 +225,6 @@ void xor(unsigned char *dst, unsigned char *src, size_t len);
 int32_t le24toh(uint8_t data[3]);
 
 uint32_t PackBits(uint8_t start, uint8_t len, uint8_t *bits);
-void rol(uint8_t *data, const size_t len);
-uint32_t reflect(uint32_t v, int b);
-uint8_t reflect8(uint8_t b); // dedicated 8bit reversal
-uint16_t reflect16(uint16_t b); // dedicated 16bit reversal
 uint64_t HornerScheme(uint64_t num, uint64_t divider, uint64_t factor);
 
 int num_CPUs(void); // number of logical CPUs
