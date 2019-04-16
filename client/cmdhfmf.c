@@ -605,10 +605,8 @@ static int CmdHF14AMfRdBl(const char *Cmd) {
 
 static int CmdHF14AMfRdSc(const char *Cmd) {
     int i;
-    uint8_t sectorNo = 0;
-    uint8_t keyType = 0;
+    uint8_t isOK, sectorNo = 0, keyType = 0;
     uint8_t key[6] = {0, 0, 0, 0, 0, 0};
-    uint8_t isOK  = 0;
     uint8_t *data  = NULL;
     char cmdp = 0x00;
 
@@ -799,10 +797,9 @@ static int CmdHF14AMfDump(const char *Cmd) {
 
     fclose(f);
 
-
     PrintAndLogEx(INFO, "Reading sector access bits...");
 
-    uint8_t tries = 0;
+    uint8_t tries;
     for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
         for (tries = 0; tries < MIFARE_SECTOR_RETRY; tries++) {
 
