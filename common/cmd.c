@@ -127,3 +127,55 @@ uint8_t reply_ng(uint16_t cmd, int16_t status, uint8_t *data, size_t len) {
 
     return sendlen;
 }
+
+int16_t receive_ng(UsbCommandNG *rx) {
+    UsbCommandNGRaw rx_raw;
+    size_t bytes = usb_read_ng((uint8_t *)&rx_raw.pre, sizeof(UsbCommandNGPreamble));
+    if (bytes != sizeof(UsbCommandNGPreamble))
+        return PM3_EIO;
+    rx->magic = rx_raw.pre.magic;
+    rx->length = rx_raw.pre.length;
+    rx->cmd = rx_raw.pre.cmd;
+    if (rx->magic == USB_COMMANDNG_PREAMBLE_MAGIC) { // New style NG command
+        if (rx->length > USB_CMD_DATA_SIZE)
+            return PM3_EOVFLOW;
+        // Get the core and variable length payload
+        bytes = usb_read_ng((uint8_t *)&rx_raw.data, rx->length);
+        if (bytes != rx->length)
+            return PM3_EIO;
+        memcpy(rx->data.asBytes, rx_raw.data, rx->length);
+        // Get the postamble
+        bytes = usb_read_ng((uint8_t *)&rx_raw.foopost, sizeof(UsbCommandNGPostamble));
+        if (bytes != sizeof(UsbCommandNGPostamble))
+            return PM3_EIO;
+        // Check CRC
+        rx->crc = rx_raw.foopost.crc;
+        uint8_t first, second;
+        compute_crc(CRC_14443_A, (uint8_t *)&rx_raw, sizeof(UsbCommandNGPreamble) + rx->length, &first, &second);
+        if ((first << 8) + second != rx->crc)
+            return PM3_EIO;
+#ifdef WITH_FPC_HOST
+        reply_via_fpc = false;
+#endif
+        rx->ng = true;
+    } else {                               // Old style command
+        UsbCommandOLD rx_old;
+        memcpy(&rx_old, &rx_raw.pre, sizeof(UsbCommandNGPreamble));
+        bytes = usb_read_ng(((uint8_t *)&rx_old) + sizeof(UsbCommandNGPreamble), sizeof(UsbCommandOLD) - sizeof(UsbCommandNGPreamble));
+        if (bytes != sizeof(UsbCommandOLD) - sizeof(UsbCommandNGPreamble))
+            return PM3_EIO;
+#ifdef WITH_FPC_HOST
+        reply_via_fpc = false;
+#endif
+        rx->ng = false;
+        rx->magic = 0;
+        rx->crc = 0;
+        rx->cmd = rx_old.cmd;
+        rx->oldarg[0] = rx_old.arg[0];
+        rx->oldarg[1] = rx_old.arg[1];
+        rx->oldarg[2] = rx_old.arg[2];
+        rx->length = USB_CMD_DATA_SIZE;
+        memcpy(&rx->data, &rx_old.d.asBytes, rx->length);
+    }
+    return PM3_SUCCESS;
+}

@@ -1563,90 +1563,23 @@ void  __attribute__((noreturn)) AppMain(void) {
     usb_disable();
     usb_enable();
 
-    UsbCommandNG rx;
-    UsbCommandNGRaw rx_raw;
-
     for (;;) {
         WDT_HIT();
 
         // Check if there is a usb packet available
         if (usb_poll_validate_length()) {
-            bool error = false;
-            size_t bytes = usb_read_ng((uint8_t *)&rx_raw.pre, sizeof(UsbCommandNGPreamble));
-            if (bytes == sizeof(UsbCommandNGPreamble)) {
-                rx.magic = rx_raw.pre.magic;
-                rx.length = rx_raw.pre.length;
-                rx.cmd = rx_raw.pre.cmd;
-                if (rx.magic == USB_COMMANDNG_PREAMBLE_MAGIC) { // New style NG command
-                    if (rx.length > USB_CMD_DATA_SIZE) {
-                        Dbprintf("Packet frame with incompatible length: 0x%04x", rx.length);
-                        error = true;
-                    }
-                    if (!error) { // Get the core and variable length payload
-                        bytes = usb_read_ng(((uint8_t *)&rx_raw.data), rx.length);
-                        if (bytes != rx.length) {
-                            Dbprintf("Packet frame error variable part too short? %d/%d", bytes, rx.length);
-                            error = true;
-                        } else {
-                            memcpy(&rx.data, &rx_raw.data, rx.length);
-                        }
-                    }
-                    if (!error) {                        // Get the postamble
-                        bytes = usb_read_ng(((uint8_t *)&rx_raw.foopost), sizeof(UsbCommandNGPostamble));
-                        if (bytes != sizeof(UsbCommandNGPostamble)) {
-                            Dbprintf("Packet frame error fetching postamble");
-                            error = true;
-                        }
-                    }
-                    if (!error) {                        // Check CRC
-                        rx.crc = rx_raw.foopost.crc;
-                        uint8_t first, second;
-                        compute_crc(CRC_14443_A, (uint8_t *)&rx_raw, sizeof(UsbCommandNGPreamble) + rx.length, &first, &second);
-                        if ((first << 8) + second != rx.crc) {
-                            Dbprintf("Packet frame CRC error %02X%02X <> %04X", first, second, rx.crc);
-                            error = true;
-                        }
-                    }
-                    if (!error) {
-#ifdef WITH_FPC_HOST
-                        reply_via_fpc = false;
-#endif
-                        rx.ng = true;
-                        UsbPacketReceived(&rx);
-                    }
-                } else {                               // Old style command
-                    UsbCommandOLD rx_old;
-                    memcpy(&rx_old, &rx_raw.pre, sizeof(UsbCommandNGPreamble));
-                    bytes = usb_read_ng(((uint8_t *)&rx_old) + sizeof(UsbCommandNGPreamble), sizeof(UsbCommandOLD) - sizeof(UsbCommandNGPreamble));
-                    if (bytes != sizeof(UsbCommandOLD) - sizeof(UsbCommandNGPreamble)) {
-                        Dbprintf("Packet frame error var part too short? %d/%d", bytes, sizeof(UsbCommandOLD) - sizeof(UsbCommandNGPreamble));
-                        error = true;
-                    }
-                    if (!error) {
-#ifdef WITH_FPC_HOST
-                        reply_via_fpc = false;
-#endif
-                        rx.ng = false;
-                        rx.magic = 0;
-                        rx.crc = 0;
-                        rx.cmd = rx_old.cmd;
-                        rx.oldarg[0] = rx_old.arg[0];
-                        rx.oldarg[1] = rx_old.arg[1];
-                        rx.oldarg[2] = rx_old.arg[2];
-                        rx.length = USB_CMD_DATA_SIZE;
-                        memcpy(&rx.data, &rx_old.d, rx.length);
-                        UsbPacketReceived(&rx);
-                    }
-                }
+            UsbCommandNG rx;
+            if (receive_ng(&rx) == 0) {
+                UsbPacketReceived(&rx);
             } else {
-                Dbprintf("Packet frame preamble too short: %d/%d", bytes, sizeof(UsbCommandNGPreamble));
-                error = true;
+                Dbprintf("Error in frame reception");
+                // TODO DOEGOX if error, shall we resync ?
             }
-            // TODO DOEGOX if error, shall we resync ?
         }
 #ifdef WITH_FPC_HOST
         // Check if there is a FPC packet available
 // TODO DOEGOX NG packets support here too
+        UsbCommandNG rx;
         if (usart_readbuffer((uint8_t *)&rx)) {
             reply_via_fpc = true;
             rx.ng = false;
