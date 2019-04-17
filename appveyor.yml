@@ -177,6 +177,8 @@ build_script:
 
     Copy-Item C:\ProxSpace\msys2\mingw32\bin\libreadline6.dll C:\ProxSpace\Release
 
+    Copy-Item C:\ProxSpace\msys2\mingw32\bin\libtermcap-0.dll C:\ProxSpace\Release
+
     Write-Host "[ OK ]" -ForegroundColor Green
 
 
