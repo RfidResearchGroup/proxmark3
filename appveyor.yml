@@ -274,8 +274,8 @@ test_script:
     #--- end Job
 
       [bool]$res=$false
-      # Wait 120 sec timeout for Job
-      if(Wait-Job $Job -Timeout 150){
+      # Wait 180 sec timeout for Job
+      if(Wait-Job $Job -Timeout 180){
         $Results = $Job | Receive-Job
         if($Results -like "true"){
           $res=$true
