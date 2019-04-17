@@ -2140,7 +2140,7 @@ static int CmdHF14AMf1kSim(const char *Cmd) {
 
     uint8_t uid[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     uint8_t exitAfterNReads = 0;
-    uint16_t flags = (FLAG_UID_IN_EMUL | FLAG_4B_UID_IN_DATA);
+    uint16_t flags = 0;
     int uidlen = 0;
     uint8_t cmdp = 0;
     bool errors = false, verbose = false, setEmulatorMem = false;
@@ -2191,13 +2191,13 @@ static int CmdHF14AMf1kSim(const char *Cmd) {
                 param_gethex_ex(Cmd, cmdp + 1, uid, &uidlen);
                 switch (uidlen) {
                     case 20:
-                        flags = FLAG_10B_UID_IN_DATA;
+                        flags |= FLAG_10B_UID_IN_DATA;
                         break;
                     case 14:
-                        flags = FLAG_7B_UID_IN_DATA;
+                        flags |= FLAG_7B_UID_IN_DATA;
                         break;
                     case  8:
-                        flags = FLAG_4B_UID_IN_DATA;
+                        flags |= FLAG_4B_UID_IN_DATA;
                         break;
                     default:
                         return usage_hf14_mf1ksim();
@@ -2220,6 +2220,10 @@ static int CmdHF14AMf1kSim(const char *Cmd) {
     }
     //Validations
     if (errors) return usage_hf14_mf1ksim();
+
+    // Use UID, SAK, ATQA from EMUL, if uid not defined
+    if ((flags & (FLAG_4B_UID_IN_DATA | FLAG_7B_UID_IN_DATA | FLAG_10B_UID_IN_DATA)) == 0)
+        flags |= FLAG_UID_IN_EMUL;
 
     PrintAndLogEx(NORMAL, " uid:%s, numreads:%d, flags:%d (0x%02x) "
                   , (uidlen == 0) ? "N/A" : sprint_hex(uid, uidlen >> 1)
