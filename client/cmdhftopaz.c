@@ -46,14 +46,14 @@ static int topaz_send_cmd_raw(uint8_t *cmd, uint8_t len, uint8_t *response) {
     memcpy(c.d.asBytes, cmd, len);
     SendCommand(&c);
 
-    UsbCommand resp;
+    UsbReplyNG resp;
     WaitForResponse(CMD_ACK, &resp);
 
-    if (resp.arg[0] > 0) {
-        memcpy(response, resp.d.asBytes, resp.arg[0]);
+    if (resp.core.old.arg[0] > 0) {
+        memcpy(response, resp.core.old.d.asBytes, resp.core.old.arg[0]);
     }
 
-    return resp.arg[0];
+    return resp.core.old.arg[0];
 }
 
 

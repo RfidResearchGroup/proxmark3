@@ -2350,12 +2350,12 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
 //             low  ::  len of commandbytes
 // arg2         timeout
 // d.asBytes command bytes to send
-void ReaderIso14443a(UsbCommand *c) {
-    iso14a_command_t param = c->arg[0];
-    size_t len = c->arg[1] & 0xffff;
-    size_t lenbits = c->arg[1] >> 16;
-    uint32_t timeout = c->arg[2];
-    uint8_t *cmd = c->d.asBytes;
+void ReaderIso14443a(UsbCommandNG *c) {
+    iso14a_command_t param = c->core.old.arg[0];
+    size_t len = c->core.old.arg[1] & 0xffff;
+    size_t lenbits = c->core.old.arg[1] >> 16;
+    uint32_t timeout = c->core.old.arg[2];
+    uint8_t *cmd = c->core.old.d.asBytes;
     uint32_t arg0;
     uint8_t buf[USB_CMD_DATA_SIZE] = {0x00};
     uint8_t par[MAX_PARITY_SIZE] = {0x00};

@@ -475,13 +475,13 @@ static void iso18092_setup(uint8_t fpga_minor_mode) {
 // arg0 FeliCa flags
 // arg1 len of commandbytes
 // d.asBytes command bytes to send
-void felica_sendraw(UsbCommand *c) {
+void felica_sendraw(UsbCommandNG *c) {
 
     if (MF_DBGLEVEL > 3) Dbprintf("FeliCa_sendraw Enter");
 
-    felica_command_t param = c->arg[0];
-    size_t len = c->arg[1] & 0xffff;
-    uint8_t *cmd = c->d.asBytes;
+    felica_command_t param = c->core.old.arg[0];
+    size_t len = c->core.old.arg[1] & 0xffff;
+    uint8_t *cmd = c->core.old.d.asBytes;
     uint32_t arg0;
 
     felica_card_select_t card;

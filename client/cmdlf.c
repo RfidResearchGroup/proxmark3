@@ -335,7 +335,7 @@ bool lf_read(bool silent, uint32_t samples) {
     clearCommandBuffer();
     SendCommand(&c);
 
-    UsbCommand resp;
+    UsbReplyNG resp;
     if (g_lf_threshold_set) {
         WaitForResponse(CMD_ACK, &resp);
     } else {
@@ -344,8 +344,8 @@ bool lf_read(bool silent, uint32_t samples) {
             return false;
         }
     }
-    // resp.arg[0] is bits read not bytes read.
-    getSamples(resp.arg[0] / 8, silent);
+    // resp.core.old.arg[0] is bits read not bytes read.
+    getSamples(resp.core.old.arg[0] / 8, silent);
 
     return true;
 }

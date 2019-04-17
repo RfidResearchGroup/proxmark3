@@ -281,7 +281,7 @@ static int CmdFdxClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone FDX-B to T55x7 with animal ID: %04u-%"PRIu64, countryid, animalid);
     print_blocks(blocks, 5);
 
-    UsbCommand resp;
+    UsbReplyNG resp;
     UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}, {{0}}};
 
     for (int i = 4; i >= 0; --i) {

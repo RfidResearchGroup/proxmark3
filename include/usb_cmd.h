@@ -37,9 +37,13 @@ typedef struct {
 } PACKED UsbCommand;
 
 typedef struct {
+    uint16_t cmd;
+    uint8_t data[USB_DATANG_SIZE];
+} PACKED UsbPacketNGCore;
+
+typedef struct {
     uint32_t magic;
     uint16_t length;  // length of the variable part, 0 if none.
-    uint16_t cmd;
 } PACKED UsbCommandNGPreamble;
 
 #define USB_COMMANDNG_PREAMBLE_MAGIC 0x61334d50 // PM3a
@@ -48,13 +52,20 @@ typedef struct {
     uint16_t crc;
 } PACKED UsbCommandNGPostamble;
 
-#define USB_COMMANDNG_MINLEN (sizeof(UsbCommandNGPreamble) + sizeof(UsbCommandNGPostamble))
-#define USB_COMMANDNG_MAXLEN (sizeof(UsbCommandNGPreamble) + USB_DATANG_SIZE + sizeof(UsbCommandNGPostamble))
+typedef struct {
+    uint32_t magic;
+    uint16_t length;  // length of the variable part, 0 if none.
+    union {           // we can simplify it once we get rid of old format compatibility
+        UsbPacketNGCore ng;
+        UsbCommand old;
+    } core;
+    uint16_t crc;
+    bool ng;
+} PACKED UsbCommandNG;
 
 typedef struct {
     uint32_t magic;
     uint16_t length;  // length of the variable part, 0 if none.
-    uint16_t cmd;
     int16_t  status;
 } PACKED UsbReplyNGPreamble;
 
@@ -64,8 +75,17 @@ typedef struct {
     uint16_t crc;
 } PACKED UsbReplyNGPostamble;
 
-#define USB_REPLYNG_MINLEN (sizeof(UsbReplyNGPreamble) + sizeof(UsbReplyNGPostamble))
-#define USB_REPLYNG_MAXLEN (sizeof(UsbReplyNGPreamble) + USB_DATANG_SIZE + sizeof(UsbReplyNGPostamble))
+typedef struct {
+    uint32_t magic;  //  \                  //
+    uint16_t length; //     Preamble        //
+    int16_t  status; //  /                  //
+    union {           // we can simplify it once we get rid of old format compatibility
+        UsbPacketNGCore ng;
+        UsbCommand old;
+    } core;
+    uint16_t crc;    //  -- Postamble       //
+    bool ng;
+} PACKED UsbReplyNG;
 
 #ifdef WITH_FPC_HOST
 // "Session" flag, to tell via which interface next msgs should be sent: USB or FPC USART

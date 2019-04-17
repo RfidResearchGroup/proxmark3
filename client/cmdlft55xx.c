@@ -1075,7 +1075,7 @@ static int CmdT55xxWriteBlock(const char *Cmd) {
     }
 
     UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {data, block, 0}, {{0}}};
-    UsbCommand resp;
+    UsbReplyNG resp;
     c.d.asBytes[0] = (page1) ? 0x2 : 0;
     c.d.asBytes[0] |= (testMode) ? 0x4 : 0;
 
@@ -1859,7 +1859,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
         UsbCommand c = {CMD_T55XX_CHKPWDS, {0, 0, 0}, {{0}}};
         clearCommandBuffer();
         SendCommand(&c);
-        UsbCommand resp;
+        UsbReplyNG resp;
 
         while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
             timeout++;
@@ -1871,13 +1871,13 @@ static int CmdT55xxChkPwds(const char *Cmd) {
             }
         }
 
-        if (resp.arg[0]) {
-            PrintAndLogEx(SUCCESS, "\nFound a candidate [ " _YELLOW_("%08X") " ]. Trying to validate", resp.arg[1]);
+        if (resp.core.old.arg[0]) {
+            PrintAndLogEx(SUCCESS, "\nFound a candidate [ " _YELLOW_("%08X") " ]. Trying to validate", resp.core.old.arg[1]);
 
-            if (AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, resp.arg[1])) {
+            if (AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, resp.core.old.arg[1])) {
                 found = tryDetectModulation();
                 if (found) {
-                    PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08") " ]", resp.arg[1]);
+                    PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08") " ]", resp.core.old.arg[1]);
                 } else {
                     PrintAndLogEx(WARNING, "Check pwd failed");
                 }

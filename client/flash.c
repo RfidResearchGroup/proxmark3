@@ -261,7 +261,7 @@ fail:
 static int get_proxmark_state(uint32_t *state) {
     UsbCommand c = {CMD_DEVICE_INFO};
     SendCommand(&c);
-    UsbCommand resp;
+    UsbReplyNG resp;
     WaitForResponse(CMD_UNKNOWN, &resp);  // wait for any response. No timeout.
 
     // Three outcomes:
@@ -269,7 +269,7 @@ static int get_proxmark_state(uint32_t *state) {
     // 2. The old os code will respond with CMD_DEBUG_PRINT_STRING and "unknown command"
     // 3. The new bootrom and os codes will respond with CMD_DEVICE_INFO and flags
 
-    switch (resp.cmd) {
+    switch (resp.core.old.cmd) {
         case CMD_ACK:
             *state = DEVICE_INFO_FLAG_CURRENT_MODE_BOOTROM;
             break;
@@ -277,10 +277,10 @@ static int get_proxmark_state(uint32_t *state) {
             *state = DEVICE_INFO_FLAG_CURRENT_MODE_OS;
             break;
         case CMD_DEVICE_INFO:
-            *state = resp.arg[0];
+            *state = resp.core.old.arg[0];
             break;
         default:
-            fprintf(stderr, _RED_("Error:") "Couldn't get Proxmark3 state, bad response type: 0x%04" PRIx64 "\n", resp.cmd);
+            fprintf(stderr, _RED_("Error:") "Couldn't get Proxmark3 state, bad response type: 0x%04" PRIx64 "\n", resp.core.old.cmd);
             return -1;
             break;
     }
@@ -335,13 +335,13 @@ static int enter_bootloader(char *serial_port_name) {
     return -1;
 }
 
-static int wait_for_ack(UsbCommand *ack) {
+static int wait_for_ack(UsbReplyNG *ack) {
     WaitForResponse(CMD_UNKNOWN, ack);
 
-    if (ack->cmd != CMD_ACK) {
+    if (ack->core.old.cmd != CMD_ACK) {
         printf("Error: Unexpected reply 0x%04" PRIx64 " %s (expected ACK)\n",
-               ack->cmd,
-               (ack->cmd == CMD_NACK) ? "NACK" : ""
+               ack->core.old.cmd,
+               (ack->core.old.cmd == CMD_NACK) ? "NACK" : ""
               );
         return -1;
     }
@@ -362,6 +362,7 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name) {
         // This command is stupid. Why the heck does it care which area we're
         // flashing, as long as it's not the bootloader area? The mind boggles.
         UsbCommand c = {CMD_START_FLASH};
+        UsbReplyNG resp;
 
         if (enable_bl_writes) {
             c.arg[0] = FLASH_START;
@@ -373,7 +374,7 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name) {
             c.arg[2] = 0;
         }
         SendCommand(&c);
-        return wait_for_ack(&c);
+        return wait_for_ack(&resp);
     } else {
         fprintf(stderr, _RED_("Note: Your bootloader does not understand the new START_FLASH command") "\n");
         fprintf(stderr, _RED_("It is recommended that you update your bootloader") "\n\n");
@@ -386,14 +387,15 @@ static int write_block(uint32_t address, uint8_t *data, uint32_t length) {
     memset(block_buf, 0xFF, BLOCK_SIZE);
     memcpy(block_buf, data, length);
     UsbCommand c = {CMD_FINISH_WRITE, {address, 0, 0}};
+    UsbReplyNG resp;
     memcpy(c.d.asBytes, block_buf, length);
     SendCommand(&c);
-    int ret = wait_for_ack(&c);
-    if (ret && c.arg[0]) {
-        uint32_t lock_bits = c.arg[0] >> 16;
-        bool lock_error = c.arg[0] & AT91C_MC_LOCKE;
-        bool prog_error = c.arg[0] & AT91C_MC_PROGE;
-        bool security_bit = c.arg[0] & AT91C_MC_SECURITY;
+    int ret = wait_for_ack(&resp);
+    if (ret && resp.core.old.arg[0]) {
+        uint32_t lock_bits = resp.core.old.arg[0] >> 16;
+        bool lock_error = resp.core.old.arg[0] & AT91C_MC_LOCKE;
+        bool prog_error = resp.core.old.arg[0] & AT91C_MC_PROGE;
+        bool security_bit = resp.core.old.arg[0] & AT91C_MC_SECURITY;
         printf("%s", lock_error ? "       Lock Error\n" : "");
         printf("%s", prog_error ? "       Invalid Command or bad Keyword\n" : "");
         printf("%s", security_bit ? "       Security Bit is set!\n" : "");

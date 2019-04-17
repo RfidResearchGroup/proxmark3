@@ -414,7 +414,7 @@ static int GetHFMF14AUID(uint8_t *uid, int *uidlen) {
     UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbCommand resp;
+    UsbReplyNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "iso14443a card select failed");
         DropField();
@@ -422,7 +422,7 @@ static int GetHFMF14AUID(uint8_t *uid, int *uidlen) {
     }
 
     iso14a_card_select_t card;
-    memcpy(&card, (iso14a_card_select_t *)resp.d.asBytes, sizeof(iso14a_card_select_t));
+    memcpy(&card, (iso14a_card_select_t *)resp.core.old.d.asBytes, sizeof(iso14a_card_select_t));
     memcpy(uid, card.uid, card.uidlen * sizeof(uint8_t));
     *uidlen = card.uidlen;
     return 1;
@@ -528,9 +528,9 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
     clearCommandBuffer();
     SendCommand(&c);
 
-    UsbCommand resp;
+    UsbReplyNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        uint8_t isOK  = resp.arg[0] & 0xff;
+        uint8_t isOK  = resp.core.old.arg[0] & 0xff;
         PrintAndLogEx(NORMAL, "isOk:%02x", isOK);
     } else {
         PrintAndLogEx(NORMAL, "Command execute timeout");
@@ -573,10 +573,10 @@ static int CmdHF14AMfRdBl(const char *Cmd) {
     clearCommandBuffer();
     SendCommand(&c);
 
-    UsbCommand resp;
+    UsbReplyNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        uint8_t isOK  = resp.arg[0] & 0xff;
-        uint8_t *data = resp.d.asBytes;
+        uint8_t isOK  = resp.core.old.arg[0] & 0xff;
+        uint8_t *data = resp.core.old.d.asBytes;
 
         if (isOK) {
             PrintAndLogEx(NORMAL, "isOk:%02x data:%s", isOK, sprint_hex(data, 16));
@@ -644,10 +644,10 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
     SendCommand(&c);
     PrintAndLogEx(NORMAL, "");
 
-    UsbCommand resp;
+    UsbReplyNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        isOK  = resp.arg[0] & 0xff;
-        data  = resp.d.asBytes;
+        isOK  = resp.core.old.arg[0] & 0xff;
+        data  = resp.core.old.d.asBytes;
 
         PrintAndLogEx(NORMAL, "isOk:%02x", isOK);
         if (isOK) {
@@ -736,7 +736,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
     memset(dataFilename, 0, sizeof(dataFilename));
 
     FILE *f;
-    UsbCommand resp;
+    UsbReplyNG resp;
 
     while (param_getchar(Cmd, cmdp) != 0x00) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -809,8 +809,8 @@ static int CmdHF14AMfDump(const char *Cmd) {
             SendCommand(&c);
 
             if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-                uint8_t isOK = resp.arg[0] & 0xff;
-                uint8_t *data = resp.d.asBytes;
+                uint8_t isOK = resp.core.old.arg[0] & 0xff;
+                uint8_t *data = resp.core.old.d.asBytes;
                 if (isOK) {
                     rights[sectorNo][0] = ((data[7] & 0x10) >> 2) | ((data[8] & 0x1) << 1) | ((data[8] & 0x10) >> 4); // C1C2C3 for data area 0
                     rights[sectorNo][1] = ((data[7] & 0x20) >> 3) | ((data[8] & 0x2) << 0) | ((data[8] & 0x20) >> 5); // C1C2C3 for data area 1
@@ -865,14 +865,14 @@ static int CmdHF14AMfDump(const char *Cmd) {
                     }
                 }
                 if (received) {
-                    isOK  = resp.arg[0] & 0xff;
+                    isOK  = resp.core.old.arg[0] & 0xff;
                     if (isOK) break;
                 }
             }
 
             if (received) {
-                isOK  = resp.arg[0] & 0xff;
-                uint8_t *data  = resp.d.asBytes;
+                isOK  = resp.core.old.arg[0] & 0xff;
+                uint8_t *data  = resp.core.old.d.asBytes;
                 if (blockNo == NumBlocksPerSector(sectorNo) - 1) { // sector trailer. Fill in the keys.
                     data[0]  = (keyA[sectorNo][0]);
                     data[1]  = (keyA[sectorNo][1]);
@@ -1050,9 +1050,9 @@ static int CmdHF14AMfRestore(const char *Cmd) {
             clearCommandBuffer();
             SendCommand(&c);
 
-            UsbCommand resp;
+            UsbReplyNG resp;
             if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-                uint8_t isOK  = resp.arg[0] & 0xff;
+                uint8_t isOK  = resp.core.old.arg[0] & 0xff;
                 PrintAndLogEx(SUCCESS, "isOk:%02x", isOK);
             } else {
                 PrintAndLogEx(WARNING, "Command execute timeout");
@@ -1256,13 +1256,13 @@ static int CmdHF14AMfNested(const char *Cmd) {
                 clearCommandBuffer();
                 SendCommand(&c);
 
-                UsbCommand resp;
+                UsbReplyNG resp;
                 if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) continue;
 
-                uint8_t isOK  = resp.arg[0] & 0xff;
+                uint8_t isOK  = resp.core.old.arg[0] & 0xff;
                 if (!isOK) continue;
 
-                uint8_t *data = resp.d.asBytes;
+                uint8_t *data = resp.core.old.d.asBytes;
                 key64 = bytes_to_num(data + 10, 6);
                 if (key64) {
                     PrintAndLogEx(SUCCESS, "data: %s", sprint_hex(data + 10, 6));
@@ -2002,13 +2002,13 @@ static int CmdHF14AMfChk(const char *Cmd) {
                 clearCommandBuffer();
                 SendCommand(&c);
 
-                UsbCommand resp;
+                UsbReplyNG resp;
                 if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) continue;
 
-                uint8_t isOK  = resp.arg[0] & 0xff;
+                uint8_t isOK  = resp.core.old.arg[0] & 0xff;
                 if (!isOK) continue;
 
-                uint8_t *data = resp.d.asBytes;
+                uint8_t *data = resp.core.old.d.asBytes;
                 key64 = bytes_to_num(data + 10, 6);
                 if (key64) {
                     PrintAndLogEx(NORMAL, "Data:%s", sprint_hex(data + 10, 6));
@@ -2231,7 +2231,7 @@ static int CmdHF14AMf1kSim(const char *Cmd) {
     memcpy(c.d.asBytes, uid, sizeof(uid));
     clearCommandBuffer();
     SendCommand(&c);
-    UsbCommand resp;
+    UsbReplyNG resp;
 
     if (flags & FLAG_INTERACTIVE) {
         PrintAndLogEx(INFO, "Press pm3-button or send another cmd to abort simulation");
@@ -2239,9 +2239,9 @@ static int CmdHF14AMf1kSim(const char *Cmd) {
         while (!ukbhit()) {
             if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) continue;
             if (!(flags & FLAG_NR_AR_ATTACK)) break;
-            if ((resp.arg[0] & 0xffff) != CMD_SIMULATE_MIFARE_CARD) break;
+            if ((resp.core.old.arg[0] & 0xffff) != CMD_SIMULATE_MIFARE_CARD) break;
 
-            memcpy(data, resp.d.asBytes, sizeof(data));
+            memcpy(data, resp.core.old.d.asBytes, sizeof(data));
             readerAttack(data[0], setEmulatorMem, verbose);
         }
         showSectorTable();
@@ -2291,7 +2291,7 @@ static int CmdHF14AMfSniff(const char *Cmd) {
     clearCommandBuffer();
     SendCommand(&c);
 
-    UsbCommand resp;
+    UsbReplyNG resp;
 
     // wait cycle
     while (true) {
@@ -2308,9 +2308,9 @@ static int CmdHF14AMfSniff(const char *Cmd) {
             continue;
         }
 
-        res = resp.arg[0] & 0xff;
-        traceLen = resp.arg[1];
-        len = resp.arg[2];
+        res = resp.core.old.arg[0] & 0xff;
+        traceLen = resp.core.old.arg[1];
+        len = resp.core.old.arg[2];
 
         if (res == 0) {
             PrintAndLogEx(SUCCESS, "hf mifare sniff finished");
@@ -2340,7 +2340,7 @@ static int CmdHF14AMfSniff(const char *Cmd) {
             }
 
             // what happens if LEN is bigger then TRACELEN --iceman
-            memcpy(bufPtr, resp.d.asBytes, len);
+            memcpy(bufPtr, resp.core.old.d.asBytes, len);
             bufPtr += len;
             pckNum++;
         }
@@ -3156,9 +3156,9 @@ static int CmdHf14AMfSetMod(const char *Cmd) {
     clearCommandBuffer();
     SendCommand(&c);
 
-    UsbCommand resp;
+    UsbReplyNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        uint8_t ok = resp.arg[0] & 0xff;
+        uint8_t ok = resp.core.old.arg[0] & 0xff;
         PrintAndLogEx(SUCCESS, "isOk:%02x", ok);
         if (!ok)
             PrintAndLogEx(FAILED, "Failed.");
@@ -3198,7 +3198,7 @@ static int CmdHF14AMfice(const char *Cmd) {
     char ctmp;
     char filename[FILE_PATH_SIZE], *fptr;
     FILE *fnonces = NULL;
-    UsbCommand resp;
+    UsbReplyNG resp;
 
     uint32_t part_limit = 3000;
     uint32_t limit = 50000;
@@ -3257,11 +3257,11 @@ static int CmdHF14AMfice(const char *Cmd) {
         SendCommand(&c);
 
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) goto out;
-        if (resp.arg[0])  goto out;
+        if (resp.core.old.arg[0])  goto out;
 
-        uint32_t items = resp.arg[2];
+        uint32_t items = resp.core.old.arg[2];
         if (fnonces) {
-            fwrite(resp.d.asBytes, 1, items * 4, fnonces);
+            fwrite(resp.core.old.d.asBytes, 1, items * 4, fnonces);
             fflush(fnonces);
         }
 

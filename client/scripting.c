@@ -184,10 +184,10 @@ static int l_WaitForResponseTimeout(lua_State *L) {
         ms_timeout = luaL_checkunsigned(L, 2);
     }
 
-    UsbCommand response;
-    if (WaitForResponseTimeout(cmd, &response, ms_timeout)) {
+    UsbReplyNG resp;
+    if (WaitForResponseTimeout(cmd, &resp, ms_timeout)) {
         //Push it as a string
-        lua_pushlstring(L, (const char *)&response, sizeof(UsbCommand));
+        lua_pushlstring(L, (const char *)&resp, sizeof(UsbReplyNG));
         return 1;
     } else {
         //signal error by returning Nil, errorstring

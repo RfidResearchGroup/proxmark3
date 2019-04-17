@@ -56,9 +56,9 @@ static int CmdHF14ADesWb(const char *Cmd) {
         memcpy(c.d.asBytes + 10, bldata, 16);
       SendCommand(&c);
 
-        UsbCommand resp;
+        UsbReplyNG resp;
         if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-            uint8_t isOK  = resp.arg[0] & 0xff;
+            uint8_t isOK  = resp.core.old.arg[0] & 0xff;
             PrintAndLogEx(NORMAL, "isOk:%02x", isOK);
         } else {
             PrintAndLogEx(NORMAL, "Command execute timeout");
@@ -97,10 +97,10 @@ static int CmdHF14ADesRb(const char *Cmd) {
     memcpy(c.d.asBytes, key, 6);
     SendCommand(&c);
 
-    UsbCommand resp;
+    UsbReplyNG resp;
     if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-    uint8_t                isOK  = resp.arg[0] & 0xff;
-    uint8_t              * data  = resp.d.asBytes;
+    uint8_t                isOK  = resp.core.old.arg[0] & 0xff;
+    uint8_t              * data  = resp.core.old.d.asBytes;
 
     if (isOK)
     PrintAndLogEx(NORMAL, "isOk:%02x data:%s", isOK, sprint_hex(data, 16));
@@ -118,15 +118,15 @@ static int CmdHF14ADesInfo(const char *Cmd) {
 
     UsbCommand c = {CMD_MIFARE_DESFIRE_INFO, {0, 0, 0}, {{0}}};
     SendCommand(&c);
-    UsbCommand resp;
+    UsbReplyNG resp;
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         return 0;
     }
-    uint8_t isOK  = resp.arg[0] & 0xff;
+    uint8_t isOK  = resp.core.old.arg[0] & 0xff;
     if (!isOK) {
-        switch (resp.arg[1]) {
+        switch (resp.core.old.arg[1]) {
             case 1:
                 PrintAndLogEx(WARNING, "Can't select card");
                 break;
@@ -143,25 +143,25 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "-- Desfire Information --------------------------------------");
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
-    PrintAndLogEx(NORMAL, "  UID                : %s", sprint_hex(resp.d.asBytes, 7));
-    PrintAndLogEx(NORMAL, "  Batch number       : %s", sprint_hex(resp.d.asBytes + 28, 5));
-    PrintAndLogEx(NORMAL, "  Production date    : week %02x, 20%02x", resp.d.asBytes[33], resp.d.asBytes[34]);
+    PrintAndLogEx(NORMAL, "  UID                : %s", sprint_hex(resp.core.old.d.asBytes, 7));
+    PrintAndLogEx(NORMAL, "  Batch number       : %s", sprint_hex(resp.core.old.d.asBytes + 28, 5));
+    PrintAndLogEx(NORMAL, "  Production date    : week %02x, 20%02x", resp.core.old.d.asBytes[33], resp.core.old.d.asBytes[34]);
     PrintAndLogEx(NORMAL, "  -----------------------------------------------------------");
     PrintAndLogEx(NORMAL, "  Hardware Information");
-    PrintAndLogEx(NORMAL, "      Vendor Id      : %s", getTagInfo(resp.d.asBytes[7]));
-    PrintAndLogEx(NORMAL, "      Type           : 0x%02X", resp.d.asBytes[8]);
-    PrintAndLogEx(NORMAL, "      Subtype        : 0x%02X", resp.d.asBytes[9]);
-    PrintAndLogEx(NORMAL, "      Version        : %s", getVersionStr(resp.d.asBytes[10], resp.d.asBytes[11]));
-    PrintAndLogEx(NORMAL, "      Storage size   : %s", getCardSizeStr(resp.d.asBytes[12]));
-    PrintAndLogEx(NORMAL, "      Protocol       : %s", getProtocolStr(resp.d.asBytes[13]));
+    PrintAndLogEx(NORMAL, "      Vendor Id      : %s", getTagInfo(resp.core.old.d.asBytes[7]));
+    PrintAndLogEx(NORMAL, "      Type           : 0x%02X", resp.core.old.d.asBytes[8]);
+    PrintAndLogEx(NORMAL, "      Subtype        : 0x%02X", resp.core.old.d.asBytes[9]);
+    PrintAndLogEx(NORMAL, "      Version        : %s", getVersionStr(resp.core.old.d.asBytes[10], resp.core.old.d.asBytes[11]));
+    PrintAndLogEx(NORMAL, "      Storage size   : %s", getCardSizeStr(resp.core.old.d.asBytes[12]));
+    PrintAndLogEx(NORMAL, "      Protocol       : %s", getProtocolStr(resp.core.old.d.asBytes[13]));
     PrintAndLogEx(NORMAL, "  -----------------------------------------------------------");
     PrintAndLogEx(NORMAL, "  Software Information");
-    PrintAndLogEx(NORMAL, "      Vendor Id      : %s", getTagInfo(resp.d.asBytes[14]));
-    PrintAndLogEx(NORMAL, "      Type           : 0x%02X", resp.d.asBytes[15]);
-    PrintAndLogEx(NORMAL, "      Subtype        : 0x%02X", resp.d.asBytes[16]);
-    PrintAndLogEx(NORMAL, "      Version        : %d.%d", resp.d.asBytes[17], resp.d.asBytes[18]);
-    PrintAndLogEx(NORMAL, "      storage size   : %s", getCardSizeStr(resp.d.asBytes[19]));
-    PrintAndLogEx(NORMAL, "      Protocol       : %s", getProtocolStr(resp.d.asBytes[20]));
+    PrintAndLogEx(NORMAL, "      Vendor Id      : %s", getTagInfo(resp.core.old.d.asBytes[14]));
+    PrintAndLogEx(NORMAL, "      Type           : 0x%02X", resp.core.old.d.asBytes[15]);
+    PrintAndLogEx(NORMAL, "      Subtype        : 0x%02X", resp.core.old.d.asBytes[16]);
+    PrintAndLogEx(NORMAL, "      Version        : %d.%d", resp.core.old.d.asBytes[17], resp.core.old.d.asBytes[18]);
+    PrintAndLogEx(NORMAL, "      storage size   : %s", getCardSizeStr(resp.core.old.d.asBytes[19]));
+    PrintAndLogEx(NORMAL, "      Protocol       : %s", getProtocolStr(resp.core.old.d.asBytes[20]));
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
 
     // Master Key settings
@@ -177,7 +177,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         return 0;
 
     uint8_t tmp[3];
-    memcpy(tmp, resp.d.asBytes + 3, 3);
+    memcpy(tmp, resp.core.old.d.asBytes + 3, 3);
 
     PrintAndLogEx(NORMAL, "   Available free memory on card       : %d bytes", le24toh(tmp));
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
@@ -257,7 +257,7 @@ void getKeySettings(uint8_t *aid) {
     uint8_t isOK = 0;
     uint32_t options;
     UsbCommand c = {CMD_MIFARE_DESFIRE, {0, 0, 0}, {{0}}};
-    UsbCommand resp;
+    UsbReplyNG resp;
 
     //memset(messStr, 0x00, 512);
 
@@ -269,19 +269,19 @@ void getKeySettings(uint8_t *aid) {
         c.d.asBytes[0] = GET_KEY_SETTINGS;  // 0x45
         SendCommand(&c);
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {return;}
-        isOK  = resp.arg[0] & 0xff;
+        isOK  = resp.core.old.arg[0] & 0xff;
         if (!isOK) {
             PrintAndLogEx(WARNING, "   Can't select master application");
             return;
         }
 
-        str = (resp.d.asBytes[3] & (1 << 3)) ? "YES" : "NO";
+        str = (resp.core.old.d.asBytes[3] & (1 << 3)) ? "YES" : "NO";
         PrintAndLogEx(NORMAL, "   [0x08] Configuration changeable       : %s", str);
-        str = (resp.d.asBytes[3] & (1 << 2)) ? "NO" : "YES";
+        str = (resp.core.old.d.asBytes[3] & (1 << 2)) ? "NO" : "YES";
         PrintAndLogEx(NORMAL, "   [0x04] CMK required for create/delete : %s", str);
-        str = (resp.d.asBytes[3] & (1 << 1)) ? "NO" : "YES";
+        str = (resp.core.old.d.asBytes[3] & (1 << 1)) ? "NO" : "YES";
         PrintAndLogEx(NORMAL, "   [0x02] Directory list access with CMK : %s", str);
-        str = (resp.d.asBytes[3] & (1 << 0)) ? "YES" : "NO";
+        str = (resp.core.old.d.asBytes[3] & (1 << 0)) ? "YES" : "NO";
         PrintAndLogEx(NORMAL, "   [0x01] CMK is changeable              : %s", str);
 
         c.arg[LENPOS] = 0x02; //LEN
@@ -289,14 +289,14 @@ void getKeySettings(uint8_t *aid) {
         c.d.asBytes[1] = 0x00;
         SendCommand(&c);
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) { return; }
-        isOK  = resp.arg[0] & 0xff;
+        isOK  = resp.core.old.arg[0] & 0xff;
         if (!isOK) {
             PrintAndLogEx(WARNING, "   Can't read key-version");
             return;
         }
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(NORMAL, "   Max number of keys       : %d", resp.d.asBytes[4]);
-        PrintAndLogEx(NORMAL, "   Master key Version       : %d (0x%02x)", resp.d.asBytes[3], resp.d.asBytes[3]);
+        PrintAndLogEx(NORMAL, "   Max number of keys       : %d", resp.core.old.d.asBytes[4]);
+        PrintAndLogEx(NORMAL, "   Master key Version       : %d (0x%02x)", resp.core.old.d.asBytes[3], resp.core.old.d.asBytes[3]);
         PrintAndLogEx(NORMAL, "   ----------------------------------------------------------");
 
         c.arg[LENPOS] = 0x02; //LEN
@@ -304,19 +304,19 @@ void getKeySettings(uint8_t *aid) {
         c.d.asBytes[1] = 0x00; // KEY 0
         SendCommand(&c);
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {return;}
-        isOK  = resp.d.asBytes[2] & 0xff;
+        isOK  = resp.core.old.d.asBytes[2] & 0xff;
         PrintAndLogEx(NORMAL, "   [0x0A] Authenticate      : %s", (isOK == 0xAE) ? "NO" : "YES");
 
         c.d.asBytes[0] = AUTHENTICATE_ISO; //0x1A
         SendCommand(&c);
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {return;}
-        isOK  = resp.d.asBytes[2] & 0xff;
+        isOK  = resp.core.old.d.asBytes[2] & 0xff;
         PrintAndLogEx(NORMAL, "   [0x1A] Authenticate ISO  : %s", (isOK == 0xAE) ? "NO" : "YES");
 
         c.d.asBytes[0] = AUTHENTICATE_AES; //0xAA
         SendCommand(&c);
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {return;}
-        isOK  = resp.d.asBytes[2] & 0xff;
+        isOK  = resp.core.old.d.asBytes[2] & 0xff;
         PrintAndLogEx(NORMAL, "   [0xAA] Authenticate AES  : %s", (isOK == 0xAE) ? "NO" : "YES");
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(NORMAL, "   ----------------------------------------------------------");
@@ -335,7 +335,7 @@ void getKeySettings(uint8_t *aid) {
             PrintAndLogEx(WARNING, "   Timed-out");
             return;
         }
-        isOK  = resp.arg[0] & 0xff;
+        isOK  = resp.core.old.arg[0] & 0xff;
         if (!isOK) {
             PrintAndLogEx(WARNING, "   Can't select AID: %s", sprint_hex(aid, 3));
             return;
@@ -350,12 +350,12 @@ void getKeySettings(uint8_t *aid) {
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
             return;
         }
-        isOK  = resp.arg[0] & 0xff;
+        isOK  = resp.core.old.arg[0] & 0xff;
         if (!isOK) {
             PrintAndLogEx(WARNING, "   Can't read Application Master key settings");
         } else {
             // Access rights.
-            uint8_t rights = (resp.d.asBytes[3] >> 4 & 0xff);
+            uint8_t rights = (resp.core.old.d.asBytes[3] >> 4 & 0xff);
             switch (rights) {
                 case 0x00:
                     str = "AMK authentication is necessary to change any key (default)";
@@ -374,13 +374,13 @@ void getKeySettings(uint8_t *aid) {
             PrintAndLogEx(NORMAL, "-- %s", str);
             PrintAndLogEx(NORMAL, "");
             // same as CMK
-            str = (resp.d.asBytes[3] & (1 << 3)) ? "YES" : "NO";
+            str = (resp.core.old.d.asBytes[3] & (1 << 3)) ? "YES" : "NO";
             PrintAndLogEx(NORMAL, "   0x08 Configuration changeable       : %s", str);
-            str = (resp.d.asBytes[3] & (1 << 2)) ? "NO" : "YES";
+            str = (resp.core.old.d.asBytes[3] & (1 << 2)) ? "NO" : "YES";
             PrintAndLogEx(NORMAL, "   0x04 AMK required for create/delete : %s", str);
-            str = (resp.d.asBytes[3] & (1 << 1)) ? "NO" : "YES";
+            str = (resp.core.old.d.asBytes[3] & (1 << 1)) ? "NO" : "YES";
             PrintAndLogEx(NORMAL, "   0x02 Directory list access with AMK : %s", str);
-            str = (resp.d.asBytes[3] & (1 << 0)) ? "YES" : "NO";
+            str = (resp.core.old.d.asBytes[3] & (1 << 0)) ? "YES" : "NO";
             PrintAndLogEx(NORMAL, "   0x01 AMK is changeable              : %s", str);
         }
 
@@ -397,15 +397,15 @@ void getKeySettings(uint8_t *aid) {
 
         int numOfKeys;
 
-        isOK  = resp.arg[0] & 0xff;
+        isOK  = resp.core.old.arg[0] & 0xff;
         if (isOK == false) {
             PrintAndLogEx(WARNING, "   Can't read Application Master key version. Trying all keys");
             //numOfKeys = MAX_NUM_KEYS;
         } else {
-            numOfKeys = resp.d.asBytes[4];
+            numOfKeys = resp.core.old.d.asBytes[4];
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(NORMAL, "     Max number of keys  : %d", numOfKeys);
-            PrintAndLogEx(NORMAL, "     Application Master key Version  : %d (0x%02x)", resp.d.asBytes[3], resp.d.asBytes[3]);
+            PrintAndLogEx(NORMAL, "     Application Master key Version  : %d (0x%02x)", resp.core.old.d.asBytes[3], resp.core.old.d.asBytes[3]);
             PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
         }
 
@@ -431,12 +431,12 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
     c.d.asBytes[0] = GET_APPLICATION_IDS;  //0x6a
 
     SendCommand(&c);
-    UsbCommand resp;
+    UsbReplyNG resp;
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         return 0;
     }
-    isOK  = resp.arg[0] & 0xff;
+    isOK  = resp.core.old.arg[0] & 0xff;
     if (!isOK) {
         PrintAndLogEx(NORMAL, "Command unsuccessful");
         return 0;
@@ -445,37 +445,37 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
     PrintAndLogEx(NORMAL, "-- Desfire Enumerate Applications ---------------------------");
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
 
-    UsbCommand respAid;
-    UsbCommand respFiles;
+    UsbReplyNG respAid;
+    UsbReplyNG respFiles;
 
     uint8_t num = 0;
-    int max = resp.arg[1] - 3 - 2;
+    int max = resp.core.old.arg[1] - 3 - 2;
 
     for (int i = 3; i <= max; i += 3) {
-        PrintAndLogEx(NORMAL, " Aid %d : %02X %02X %02X ", num, resp.d.asBytes[i], resp.d.asBytes[i + 1], resp.d.asBytes[i + 2]);
+        PrintAndLogEx(NORMAL, " Aid %d : %02X %02X %02X ", num, resp.core.old.d.asBytes[i], resp.core.old.d.asBytes[i + 1], resp.core.old.d.asBytes[i + 2]);
         num++;
 
-        aid[0] = resp.d.asBytes[i];
-        aid[1] = resp.d.asBytes[i + 1];
-        aid[2] = resp.d.asBytes[i + 2];
+        aid[0] = resp.core.old.d.asBytes[i];
+        aid[1] = resp.core.old.d.asBytes[i + 1];
+        aid[2] = resp.core.old.d.asBytes[i + 2];
         getKeySettings(aid);
 
         // Select Application
         c.arg[CMDPOS] = INIT;
         c.arg[LENPOS] = 0x04;
         c.d.asBytes[0] = SELECT_APPLICATION;  // 0x5a
-        c.d.asBytes[1] = resp.d.asBytes[i];
-        c.d.asBytes[2] = resp.d.asBytes[i + 1];
-        c.d.asBytes[3] = resp.d.asBytes[i + 2];
+        c.d.asBytes[1] = resp.core.old.d.asBytes[i];
+        c.d.asBytes[2] = resp.core.old.d.asBytes[i + 1];
+        c.d.asBytes[3] = resp.core.old.d.asBytes[i + 2];
         SendCommand(&c);
 
         if (!WaitForResponseTimeout(CMD_ACK, &respAid, 1500)) {
             PrintAndLogEx(WARNING, "   Timed-out");
             continue;
         }
-        isOK  = respAid.d.asBytes[2] & 0xff;
+        isOK  = respAid.core.old.d.asBytes[2] & 0xff;
         if (isOK != 0x00) {
-            PrintAndLogEx(WARNING, "   Can't select AID: %s", sprint_hex(resp.d.asBytes + i, 3));
+            PrintAndLogEx(WARNING, "   Can't select AID: %s", sprint_hex(resp.core.old.d.asBytes + i, 3));
             continue;
         }
 
@@ -489,13 +489,13 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
             PrintAndLogEx(WARNING, "   Timed-out");
             continue;
         } else {
-            isOK  = respFiles.d.asBytes[2] & 0xff;
+            isOK  = respFiles.core.old.d.asBytes[2] & 0xff;
             if (!isOK) {
                 PrintAndLogEx(WARNING, "   Can't get file ids ");
             } else {
-                int respfileLen = resp.arg[1] - 3 - 2;
+                int respfileLen = resp.core.old.arg[1] - 3 - 2;
                 for (int j = 0; j < respfileLen; ++j) {
-                    PrintAndLogEx(NORMAL, "   Fileid %d :", resp.d.asBytes[j + 3]);
+                    PrintAndLogEx(NORMAL, "   Fileid %d :", resp.core.old.d.asBytes[j + 3]);
                 }
             }
         }
@@ -510,13 +510,13 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
             PrintAndLogEx(WARNING, "   Timed-out");
             continue;
         } else {
-            isOK  = respFiles.d.asBytes[2] & 0xff;
+            isOK  = respFiles.core.old.d.asBytes[2] & 0xff;
             if (!isOK) {
                 PrintAndLogEx(WARNING, "   Can't get ISO file ids ");
             } else {
-                int respfileLen = resp.arg[1] - 3 - 2;
+                int respfileLen = resp.core.old.arg[1] - 3 - 2;
                 for (int j = 0; j < respfileLen; ++j) {
-                    PrintAndLogEx(NORMAL, " ISO  Fileid %d :", resp.d.asBytes[j + 3]);
+                    PrintAndLogEx(NORMAL, " ISO  Fileid %d :", resp.core.old.d.asBytes[j + 3]);
                 }
             }
         }
@@ -617,16 +617,16 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     memcpy(c.d.asBytes + 1, key, keylength);
     clearCommandBuffer();
     SendCommand(&c);
-    UsbCommand resp;
+    UsbReplyNG resp;
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
         PrintAndLogEx(WARNING, "Client command execute timeout");
         return 0;
     }
 
-    uint8_t isOK  = resp.arg[0] & 0xff;
+    uint8_t isOK  = resp.core.old.arg[0] & 0xff;
     if (isOK) {
-        uint8_t *data = resp.d.asBytes;
+        uint8_t *data = resp.core.old.d.asBytes;
 
         PrintAndLogEx(NORMAL, "  Key        :%s", sprint_hex(key, keylength));
         PrintAndLogEx(NORMAL, "  SESSION    :%s", sprint_hex(data, keylength));

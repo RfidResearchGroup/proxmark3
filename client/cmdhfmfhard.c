@@ -1372,7 +1372,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
     bool reported_suma8 = false;
     char progress_text[80];
     FILE *fnonces = NULL;
-    UsbCommand resp;
+    UsbReplyNG resp;
 
     num_acquired_nonces = 0;
 
@@ -1399,9 +1399,9 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
                 SendCommand(&c1);
                 return 1;
             }
-            if (resp.arg[0]) return resp.arg[0];  // error during nested_hard
+            if (resp.core.old.arg[0]) return resp.core.old.arg[0];  // error during nested_hard
 
-            cuid = resp.arg[1];
+            cuid = resp.core.old.arg[1];
             if (nonce_file_write && fnonces == NULL) {
                 if ((fnonces = fopen(filename, "wb")) == NULL) {
                     PrintAndLogEx(WARNING, "Could not create file %s", filename);
@@ -1420,8 +1420,8 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
         if (!initialize) {
             uint32_t nt_enc1, nt_enc2;
             uint8_t par_enc;
-            uint16_t num_sampled_nonces = resp.arg[2];
-            uint8_t *bufp = resp.d.asBytes;
+            uint16_t num_sampled_nonces = resp.core.old.arg[2];
+            uint8_t *bufp = resp.core.old.d.asBytes;
             for (uint16_t i = 0; i < num_sampled_nonces; i += 2) {
                 nt_enc1 = bytes_to_num(bufp, 4);
                 nt_enc2 = bytes_to_num(bufp + 4, 4);
@@ -1479,11 +1479,11 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
                 }
                 return 1;
             }
-            if (resp.arg[0]) {
+            if (resp.core.old.arg[0]) {
                 if (nonce_file_write) {
                     fclose(fnonces);
                 }
-                return resp.arg[0];  // error during nested_hard
+                return resp.core.old.arg[0];  // error during nested_hard
             }
         }
 

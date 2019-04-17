@@ -1132,7 +1132,7 @@ static int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t 
     UsbCommand c = {CMD_EM4X_READ_WORD, {addr, pwd, usePwd}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbCommand resp;
+    UsbReplyNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(DEBUG, "timeout while waiting for reply.");
         return -1;
@@ -1235,7 +1235,7 @@ static int CmdEM4x05Write(const char *Cmd) {
     UsbCommand c = {CMD_EM4X_WRITE_WORD, {flag, data, pwd}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbCommand resp;
+    UsbReplyNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
         PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
         return -1;

@@ -283,14 +283,14 @@ static int CmdFlashMemLoad(const char *Cmd) {
         bytes_remaining -= bytes_in_packet;
         bytes_sent += bytes_in_packet;
 
-        UsbCommand resp;
+        UsbReplyNG resp;
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply.");
             free(data);
             return 1;
         }
 
-        uint8_t isok  = resp.arg[0] & 0xFF;
+        uint8_t isok  = resp.core.old.arg[0] & 0xFF;
         if (!isok)
             PrintAndLogEx(FAILED, "Flash write fail [offset %u]", bytes_sent);
 
@@ -392,12 +392,12 @@ static int CmdFlashMemWipe(const char *Cmd) {
     UsbCommand c = {CMD_FLASHMEM_WIPE, {page, initalwipe, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbCommand resp;
+    UsbReplyNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 8000)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return 1;
     }
-    uint8_t isok  = resp.arg[0] & 0xFF;
+    uint8_t isok  = resp.core.old.arg[0] & 0xFF;
     if (isok)
         PrintAndLogEx(SUCCESS, "Flash WIPE ok");
     else
@@ -438,13 +438,13 @@ static int CmdFlashMemInfo(const char *Cmd) {
     UsbCommand c = {CMD_FLASHMEM_INFO, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbCommand resp;
+    UsbReplyNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return 1;
     }
 
-    uint8_t isok = resp.arg[0] & 0xFF;
+    uint8_t isok = resp.core.old.arg[0] & 0xFF;
     if (!isok) {
         PrintAndLogEx(FAILED, "failed");
         return 1;
@@ -452,7 +452,7 @@ static int CmdFlashMemInfo(const char *Cmd) {
 
     // validate signature here
     rdv40_validation_t mem;
-    memcpy(&mem, (rdv40_validation_t *)resp.d.asBytes, sizeof(rdv40_validation_t));
+    memcpy(&mem, (rdv40_validation_t *)resp.core.old.d.asBytes, sizeof(rdv40_validation_t));
 
     // Flash ID hash (sha1)
     mbedtls_sha1(mem.flashid, sizeof(mem.flashid), sha_hash);
@@ -572,7 +572,7 @@ static int CmdFlashMemInfo(const char *Cmd) {
                 PrintAndLogEx(WARNING, "timeout while waiting for reply.");
             } else {
 
-                if (!resp.arg[0])
+                if (!resp.core.old.arg[0])
                     PrintAndLogEx(FAILED, "Writing signature failed");
                 else
                     PrintAndLogEx(SUCCESS, "Writing signature ok [offset: %u]", FLASH_MEM_SIGNATURE_OFFSET);

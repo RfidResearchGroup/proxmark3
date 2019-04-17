@@ -132,7 +132,7 @@ static int CmdHFFelicaSim(const char *Cmd) {
     memcpy(c.d.asBytes, uid, uidlen >> 1);
     clearCommandBuffer();
     SendCommand(&c);
-    UsbCommand resp;
+    UsbReplyNG resp;
 
     if (verbose)
         PrintAndLogEx(NORMAL, "Press pm3-button to abort simulation");
@@ -355,7 +355,7 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
     UsbCommand c = {CMD_FELICA_LITE_DUMP, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbCommand resp;
+    UsbReplyNG resp;
 
     uint8_t timeout = 0;
     while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
@@ -375,12 +375,12 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
             return 1;
         }
     }
-    if (resp.arg[0] == 0) {
+    if (resp.core.old.arg[0] == 0) {
         PrintAndLogEx(WARNING, "\nButton pressed. Aborted.");
         return 1;
     }
 
-    uint64_t tracelen = resp.arg[1];
+    uint64_t tracelen = resp.core.old.arg[1];
     if (tracelen == 0)
         return 1;
 
@@ -412,14 +412,14 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
 }
 
 static void waitCmdFelica(uint8_t iSelect) {
-    UsbCommand resp;
+    UsbReplyNG resp;
 
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-        uint16_t len = iSelect ? (resp.arg[1] & 0xffff) : (resp.arg[0]  & 0xffff);
+        uint16_t len = iSelect ? (resp.core.old.arg[1] & 0xffff) : (resp.core.old.arg[0]  & 0xffff);
         PrintAndLogEx(NORMAL, "received %i octets", len);
         if (!len)
             return;
-        PrintAndLogEx(NORMAL, "%s", sprint_hex(resp.d.asBytes, len));
+        PrintAndLogEx(NORMAL, "%s", sprint_hex(resp.core.old.d.asBytes, len));
     } else {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
     }
@@ -572,7 +572,7 @@ int readFelicaUid(bool verbose) {
     UsbCommand c = {CMD_FELICA_COMMAND, {FELICA_CONNECT, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbCommand resp;
+    UsbReplyNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         if (verbose) PrintAndLogEx(WARNING, "FeliCa card select failed");
         //SendCommand(&cDisconnect);
@@ -580,8 +580,8 @@ int readFelicaUid(bool verbose) {
     }
 
     felica_card_select_t card;
-    memcpy(&card, (felica_card_select_t *)resp.d.asBytes, sizeof(felica_card_select_t));
-    uint64_t status = resp.arg[0];
+    memcpy(&card, (felica_card_select_t *)resp.core.old.d.asBytes, sizeof(felica_card_select_t));
+    uint64_t status = resp.core.old.arg[0];
 
     switch (status) {
         case 1: {

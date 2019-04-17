@@ -81,50 +81,47 @@ uint8_t cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void
 }
 
 uint8_t reply_ng(uint16_t cmd, int16_t status, uint8_t *data, size_t len) {
-    uint8_t txBufferNG[USB_REPLYNG_MAXLEN];
+    UsbReplyNG txBufferNG;
     size_t txBufferNGLen;
 //    for (size_t i = 0; i < sizeof(txBufferNG); i++)
 //        ((uint8_t *)&txBufferNG)[i] = 0x00;
 
     // Compose the outgoing command frame
-    UsbReplyNGPreamble *tx_pre = (UsbReplyNGPreamble *)txBufferNG;
-    tx_pre->magic = USB_REPLYNG_PREAMBLE_MAGIC;
-    tx_pre->cmd = cmd;
-    tx_pre->status = status;
+    txBufferNG.magic = USB_REPLYNG_PREAMBLE_MAGIC;
+    txBufferNG.core.ng.cmd = cmd;
+    txBufferNG.status = status;
     if (len > USB_DATANG_SIZE) {
         len = USB_DATANG_SIZE;
         // overwrite status
-        tx_pre->status = PM3_EOVFLOW;
+        txBufferNG.status = PM3_EOVFLOW;
     }
-    tx_pre->length = len;
-    uint8_t *tx_data = txBufferNG + sizeof(UsbReplyNGPreamble);
-    UsbReplyNGPostamble *tx_post = (UsbReplyNGPostamble *)(txBufferNG + sizeof(UsbReplyNGPreamble) + len);
+    txBufferNG.length = len;
+    UsbReplyNGPostamble *tx_post = (UsbReplyNGPostamble *)((uint8_t *)&txBufferNG + sizeof(UsbReplyNGPreamble) + sizeof(UsbPacketNGCore) - USB_DATANG_SIZE + len);
 
     // Add the (optional) content to the frame, with a maximum size of USB_DATANG_SIZE
     if (data && len) {
         for (size_t i = 0; i < len; i++) {
-            tx_data[i] = data[i];
+            txBufferNG.core.ng.data[i] = data[i];
         }
     }
 
     uint8_t first, second;
-    compute_crc(CRC_14443_A, txBufferNG, sizeof(UsbReplyNGPreamble) + len, &first, &second);
+    compute_crc(CRC_14443_A, (uint8_t *)&txBufferNG, sizeof(UsbReplyNGPreamble) + sizeof(UsbPacketNGCore) - USB_DATANG_SIZE + len, &first, &second);
     tx_post->crc = (first << 8) + second;
-    txBufferNGLen = sizeof(UsbReplyNGPreamble) + len + sizeof(UsbReplyNGPostamble);
-
+    txBufferNGLen = sizeof(UsbReplyNGPreamble) + sizeof(UsbPacketNGCore) - USB_DATANG_SIZE + len + sizeof(UsbReplyNGPostamble);
 
     uint32_t sendlen = 0;
     // Send frame and make sure all bytes are transmitted
 
 #ifdef WITH_FPC_HOST
     if (reply_via_fpc) {
-        sendlen = usart_writebuffer(txBufferNG, txBufferNGLen);
+        sendlen = usart_writebuffer((uint8_t *)&txBufferNG, txBufferNGLen);
 //        Dbprintf_usb("Sent %i bytes over usart", len);
     } else {
-        sendlen = usb_write(txBufferNG, txBufferNGLen);
+        sendlen = usb_write((uint8_t *)&txBufferNG, txBufferNGLen);
     }
 #else
-    sendlen = usb_write(txBufferNG, txBufferNGLen);
+    sendlen = usb_write((uint8_t *)&txBufferNG, txBufferNGLen);
 #endif
 
     return sendlen;

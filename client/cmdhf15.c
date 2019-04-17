@@ -198,7 +198,7 @@ const productName uidmapping[] = {
 // returns 1 if suceeded
 static int getUID(uint8_t *buf) {
 
-    UsbCommand resp;
+    UsbReplyNG resp;
     UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}, {{0}}}; // len,speed,recv?
 
     c.d.asBytes[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1;
@@ -218,9 +218,9 @@ static int getUID(uint8_t *buf) {
 
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
 
-            uint8_t resplen = resp.arg[0];
-            if (resplen >= 12 && CheckCrc15(resp.d.asBytes, 12)) {
-                memcpy(buf, resp.d.asBytes + 2, 8);
+            uint8_t resplen = resp.core.old.arg[0];
+            if (resplen >= 12 && CheckCrc15(resp.core.old.d.asBytes, 12)) {
+                memcpy(buf, resp.core.old.d.asBytes + 2, 8);
                 return 1;
             }
         }
@@ -594,7 +594,7 @@ static int CmdHF15Info(const char *Cmd) {
     char cmdp = param_getchar(Cmd, 0);
     if (strlen(Cmd) < 1 || cmdp == 'h' || cmdp == 'H') return usage_15_info();
 
-    UsbCommand resp;
+    UsbReplyNG resp;
     uint8_t *recv;
     UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}, {{0}}}; // len,speed,recv?
     uint8_t *req = c.d.asBytes;
@@ -619,14 +619,14 @@ static int CmdHF15Info(const char *Cmd) {
         return 1;
     }
 
-    uint32_t status = resp.arg[0];
+    uint32_t status = resp.core.old.arg[0];
 
     if (status < 2) {
         PrintAndLogEx(WARNING, "iso15693 card doesn't answer to systeminfo command");
         return 1;
     }
 
-    recv = resp.d.asBytes;
+    recv = resp.core.old.d.asBytes;
 
     if (recv[0] & ISO15_RES_ERROR) {
         PrintAndLogEx(WARNING, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
@@ -783,7 +783,7 @@ static int CmdHF15Dump(const char *Cmd) {
     uint8_t data[256 * 4] = {0};
     memset(data, 0, sizeof(data));
 
-    UsbCommand resp;
+    UsbReplyNG resp;
     UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}, {{0}}}; // len,speed,recv?
     uint8_t *req = c.d.asBytes;
     req[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS;
@@ -803,13 +803,13 @@ static int CmdHF15Dump(const char *Cmd) {
 
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
 
-            uint8_t len = resp.arg[0];
+            uint8_t len = resp.core.old.arg[0];
             if (len < 2) {
                 PrintAndLogEx(FAILED, "iso15693 card select failed");
                 continue;
             }
 
-            recv = resp.d.asBytes;
+            recv = resp.core.old.d.asBytes;
 
             if (!CheckCrc15(recv, len)) {
                 PrintAndLogEx(FAILED, "crc fail");
@@ -821,9 +821,9 @@ static int CmdHF15Dump(const char *Cmd) {
                 break;
             }
 
-            mem[blocknum].lock = resp.d.asBytes[0];
-            memcpy(mem[blocknum].block, resp.d.asBytes + 1, 4);
-            memcpy(data + (blocknum * 4), resp.d.asBytes + 1, 4);
+            mem[blocknum].lock = resp.core.old.d.asBytes[0];
+            memcpy(mem[blocknum].block, resp.core.old.d.asBytes + 1, 4);
+            memcpy(data + (blocknum * 4), resp.core.old.d.asBytes + 1, 4);
 
             retry = 0;
             blocknum++;
@@ -859,7 +859,7 @@ static int CmdHF15Raw(const char *Cmd) {
     char cmdp = param_getchar(Cmd, 0);
     if (strlen(Cmd) < 3 || cmdp == 'h' || cmdp == 'H') return usage_15_raw();
 
-    UsbCommand resp;
+    UsbReplyNG resp;
     UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}, {{0}}}; // len,speed,recv?
     int reply = 1, fast = 1, i = 0;
     bool crc = false;
@@ -926,9 +926,9 @@ static int CmdHF15Raw(const char *Cmd) {
 
     if (reply) {
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-            uint8_t len = resp.arg[0];
+            uint8_t len = resp.core.old.arg[0];
             PrintAndLogEx(NORMAL, "received %i octets", len);
-            PrintAndLogEx(NORMAL, "%s", sprint_hex(resp.d.asBytes, len));
+            PrintAndLogEx(NORMAL, "%s", sprint_hex(resp.core.old.d.asBytes, len));
         } else {
             PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         }
@@ -945,7 +945,7 @@ static int CmdHF15Readmulti(const char *Cmd) {
     char cmdp = param_getchar(Cmd, 0);
     if (strlen(Cmd) < 3 || cmdp == 'h' || cmdp == 'H') return usage_15_readmulti();
 
-    UsbCommand resp;
+    UsbReplyNG resp;
     uint8_t *recv;
     UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}, {{0}}}; // len,speed,recv?
     uint8_t *req = c.d.asBytes;
@@ -986,13 +986,13 @@ static int CmdHF15Readmulti(const char *Cmd) {
         return 1;
     }
 
-    uint32_t status = resp.arg[0];
+    uint32_t status = resp.core.old.arg[0];
     if (status < 2) {
         PrintAndLogEx(FAILED, "iso15693 card select failed");
         return 1;
     }
 
-    recv = resp.d.asBytes;
+    recv = resp.core.old.d.asBytes;
 
     if (!CheckCrc15(recv, status)) {
         PrintAndLogEx(FAILED, "CRC failed");
@@ -1028,7 +1028,7 @@ static int CmdHF15Read(const char *Cmd) {
     char cmdp = param_getchar(Cmd, 0);
     if (strlen(Cmd) < 3 || cmdp == 'h' || cmdp == 'H')  return usage_15_read();
 
-    UsbCommand resp;
+    UsbReplyNG resp;
     uint8_t *recv;
 
     // UsbCommand arg: len, speed, recv?
@@ -1066,13 +1066,13 @@ static int CmdHF15Read(const char *Cmd) {
         return 1;
     }
 
-    uint32_t status = resp.arg[0];
+    uint32_t status = resp.core.old.arg[0];
     if (status < 2) {
         PrintAndLogEx(NORMAL, "iso15693 card select failed");
         return 1;
     }
 
-    recv = resp.d.asBytes;
+    recv = resp.core.old.d.asBytes;
 
     if (!CheckCrc15(recv, status)) {
         PrintAndLogEx(NORMAL, "CRC failed");
@@ -1102,7 +1102,7 @@ static int CmdHF15Write(const char *Cmd) {
     char cmdp = param_getchar(Cmd, 0);
     if (strlen(Cmd) < 3 || cmdp == 'h' || cmdp == 'H') return usage_15_write();
 
-    UsbCommand resp;
+    UsbReplyNG resp;
     uint8_t *recv;
     UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}, {{0}}}; // len,speed,recv?
     uint8_t *req = c.d.asBytes;
@@ -1150,13 +1150,13 @@ static int CmdHF15Write(const char *Cmd) {
         return 1;
     }
 
-    uint32_t status = resp.arg[0];
+    uint32_t status = resp.core.old.arg[0];
     if (status < 2) {
         PrintAndLogEx(FAILED, "iso15693 card select failed");
         return 1;
     }
 
-    recv = resp.d.asBytes;
+    recv = resp.core.old.d.asBytes;
 
     if (!CheckCrc15(recv, status)) {
         PrintAndLogEx(FAILED, "CRC failed");

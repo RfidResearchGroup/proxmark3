@@ -120,13 +120,13 @@ void AcquireRawAdcSamplesIso14443b(uint32_t parameter);
 void ReadSTMemoryIso14443b(uint8_t numofblocks);
 void RAMFUNC SniffIso14443b(void);
 void SendRawCommand14443B(uint32_t, uint32_t, uint8_t, uint8_t[]);
-void SendRawCommand14443B_Ex(UsbCommand *c);
+void SendRawCommand14443B_Ex(UsbCommandNG *c);
 void ClearFpgaShiftingRegisters(void);
 
 // iso14443a.h
 void RAMFUNC SniffIso14443a(uint8_t param);
 void SimulateIso14443aTag(int tagType, int flags, uint8_t *data);
-void ReaderIso14443a(UsbCommand *c);
+void ReaderIso14443a(UsbCommandNG *c);
 
 // Also used in iclass.c
 //bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t len, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool readerToTag);
@@ -137,8 +137,8 @@ void iso14a_set_trigger(bool enable);
 //int GetIso14443aCommandFromReader(uint8_t *received, uint8_t *parity, int *len);
 
 // epa.h
-void EPA_PACE_Collect_Nonce(UsbCommand *c);
-void EPA_PACE_Replay(UsbCommand *c);
+void EPA_PACE_Collect_Nonce(UsbCommandNG *c);
+void EPA_PACE_Replay(UsbCommandNG *c);
 
 // mifarecmd.h
 void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
@@ -229,7 +229,7 @@ uint8_t cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void
 void HfSniff(int, int);
 
 //felica.c
-void felica_sendraw(UsbCommand *c);
+void felica_sendraw(UsbCommandNG *c);
 void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip);
 void felica_sim_lite(uint64_t uid);
 void felica_dump_lite_s();

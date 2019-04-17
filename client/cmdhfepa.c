@@ -34,17 +34,17 @@ static int CmdHFEPACollectPACENonces(const char *Cmd) {
         UsbCommand c = {CMD_EPA_PACE_COLLECT_NONCE, {(int)m, 0, 0}, {{0}}};
         clearCommandBuffer();
         SendCommand(&c);
-        UsbCommand resp;
+        UsbReplyNG resp;
         WaitForResponse(CMD_ACK, &resp);
 
         // check if command failed
-        if (resp.arg[0] != 0) {
-            PrintAndLogEx(FAILED, "Error in step %d, Return code: %d", resp.arg[0], (int)resp.arg[1]);
+        if (resp.core.old.arg[0] != 0) {
+            PrintAndLogEx(FAILED, "Error in step %d, Return code: %d", resp.core.old.arg[0], (int)resp.core.old.arg[1]);
         } else {
-            size_t nonce_length = resp.arg[1];
+            size_t nonce_length = resp.core.old.arg[1];
             char *nonce = (char *) calloc(2 * nonce_length + 1, sizeof(uint8_t));
             for (int j = 0; j < nonce_length; j++) {
-                sprintf(nonce + (2 * j), "%02X", resp.d.asBytes[j]);
+                sprintf(nonce + (2 * j), "%02X", resp.core.old.d.asBytes[j]);
             }
             // print nonce
             PrintAndLogEx(NORMAL, "Length: %d, Nonce: %s", nonce_length, nonce);
@@ -72,7 +72,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
         "Example:\n preplay 0022C1A4 1068000000 1086000002 1234ABCDEF 1A2B3C4D";
 
     // Proxmark response
-    UsbCommand resp;
+    UsbReplyNG resp;
 
     int skip = 0, skip_add = 0, scan_return;
     // for each APDU
@@ -132,7 +132,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
             clearCommandBuffer();
             SendCommand(&usb_cmd);
             WaitForResponse(CMD_ACK, &resp);
-            if (resp.arg[0] != 0) {
+            if (resp.core.old.arg[0] != 0) {
                 PrintAndLogEx(WARNING, "Transfer of APDU #%d Part %d failed!", i, j);
                 return 0;
             }
@@ -144,21 +144,21 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
     clearCommandBuffer();
     SendCommand(&usb_cmd);
     WaitForResponse(CMD_ACK, &resp);
-    if (resp.arg[0] != 0) {
-        PrintAndLogEx(NORMAL, "\nPACE replay failed in step %u!", (uint32_t)resp.arg[0]);
+    if (resp.core.old.arg[0] != 0) {
+        PrintAndLogEx(NORMAL, "\nPACE replay failed in step %u!", (uint32_t)resp.core.old.arg[0]);
         PrintAndLogEx(NORMAL, "Measured times:");
-        PrintAndLogEx(NORMAL, "MSE Set AT: %u us", resp.d.asDwords[0]);
-        PrintAndLogEx(NORMAL, "GA Get Nonce: %u us", resp.d.asDwords[1]);
-        PrintAndLogEx(NORMAL, "GA Map Nonce: %u us", resp.d.asDwords[2]);
-        PrintAndLogEx(NORMAL, "GA Perform Key Agreement: %u us", resp.d.asDwords[3]);
-        PrintAndLogEx(NORMAL, "GA Mutual Authenticate: %u us", resp.d.asDwords[4]);
+        PrintAndLogEx(NORMAL, "MSE Set AT: %u us", resp.core.old.d.asDwords[0]);
+        PrintAndLogEx(NORMAL, "GA Get Nonce: %u us", resp.core.old.d.asDwords[1]);
+        PrintAndLogEx(NORMAL, "GA Map Nonce: %u us", resp.core.old.d.asDwords[2]);
+        PrintAndLogEx(NORMAL, "GA Perform Key Agreement: %u us", resp.core.old.d.asDwords[3]);
+        PrintAndLogEx(NORMAL, "GA Mutual Authenticate: %u us", resp.core.old.d.asDwords[4]);
     } else {
         PrintAndLogEx(NORMAL, "PACE replay successfull!");
-        PrintAndLogEx(NORMAL, "MSE Set AT: %u us", resp.d.asDwords[0]);
-        PrintAndLogEx(NORMAL, "GA Get Nonce: %u us", resp.d.asDwords[1]);
-        PrintAndLogEx(NORMAL, "GA Map Nonce: %u us", resp.d.asDwords[2]);
-        PrintAndLogEx(NORMAL, "GA Perform Key Agreement: %u us", resp.d.asDwords[3]);
-        PrintAndLogEx(NORMAL, "GA Mutual Authenticate: %u us", resp.d.asDwords[4]);
+        PrintAndLogEx(NORMAL, "MSE Set AT: %u us", resp.core.old.d.asDwords[0]);
+        PrintAndLogEx(NORMAL, "GA Get Nonce: %u us", resp.core.old.d.asDwords[1]);
+        PrintAndLogEx(NORMAL, "GA Map Nonce: %u us", resp.core.old.d.asDwords[2]);
+        PrintAndLogEx(NORMAL, "GA Perform Key Agreement: %u us", resp.core.old.d.asDwords[3]);
+        PrintAndLogEx(NORMAL, "GA Mutual Authenticate: %u us", resp.core.old.d.asDwords[4]);
     }
     return 1;
 }

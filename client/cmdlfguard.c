@@ -171,7 +171,7 @@ static int CmdGuardClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone Guardall to T55x7 with Facility Code: %u, Card Number: %u", facilitycode, cardnumber);
     print_blocks(blocks, 4);
 
-    UsbCommand resp;
+    UsbReplyNG resp;
     UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}, {{0}}};
 
     for (i = 0; i < 4; ++i) {

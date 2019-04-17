@@ -60,11 +60,11 @@ static int CmdHF14AMfDESAuth(const char *Cmd) {
     //Auth1
     UsbCommand c = {CMD_MIFARE_DES_AUTH1, {blockNo}};
     SendCommand(&c);
-    UsbCommand resp;
+    UsbReplyNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        uint8_t isOK  = resp.arg[0] & 0xff;
-        cuid  = resp.arg[1];
-        uint8_t *data = resp.d.asBytes;
+        uint8_t isOK  = resp.core.old.arg[0] & 0xff;
+        cuid  = resp.core.old.arg[1];
+        uint8_t *data = resp.core.old.d.asBytes;
 
         if (isOK) {
             PrintAndLogEx(NORMAL, "enc(nc)/b0:%s", sprint_hex(data + 2, 8));
@@ -100,7 +100,7 @@ static int CmdHF14AMfDESAuth(const char *Cmd) {
     memcpy(d.d.asBytes, reply, 16);
     SendCommand(&d);
 
-    UsbCommand respb;
+    UsbReplyNG respb;
     if (WaitForResponseTimeout(CMD_ACK, &respb, 1500)) {
         uint8_t  isOK  = respb.arg[0] & 0xff;
         uint8_t *data2 = respb.d.asBytes;
@@ -160,11 +160,11 @@ static int CmdHF14AMfAESAuth(const char *Cmd) {
     //Auth1
     UsbCommand c = {CMD_MIFARE_DES_AUTH1, {blockNo}};
     SendCommand(&c);
-    UsbCommand resp;
+    UsbReplyNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        uint8_t isOK  = resp.arg[0] & 0xff;
-        cuid  = resp.arg[1];
-        uint8_t *data = resp.d.asBytes;
+        uint8_t isOK  = resp.core.old.arg[0] & 0xff;
+        cuid  = resp.core.old.arg[1];
+        uint8_t *data = resp.core.old.d.asBytes;
 
         if (isOK) {
             PrintAndLogEx(NORMAL, "enc(nc)/b0:%s", sprint_hex(data + 2, 16));
@@ -207,7 +207,7 @@ static int CmdHF14AMfAESAuth(const char *Cmd) {
     memcpy(d.d.asBytes, reply, 32);
     SendCommand(&d);
 
-    UsbCommand respb;
+    UsbReplyNG respb;
     if (WaitForResponseTimeout(CMD_ACK, &respb, 1500)) {
         uint8_t  isOK  = respb.arg[0] & 0xff;
         uint8_t *data2 = respb.d.asBytes;

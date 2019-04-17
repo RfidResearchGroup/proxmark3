@@ -124,15 +124,15 @@ static int switch_off_field_14b(void) {
 static bool waitCmd14b(bool verbose) {
 
     uint8_t data[USB_CMD_DATA_SIZE] = {0x00};
-    UsbCommand resp;
+    UsbReplyNG resp;
 
     if (WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
 
-        if ((resp.arg[0] & 0xFF) > 0) return false;
+        if ((resp.core.old.arg[0] & 0xFF) > 0) return false;
 
-        uint16_t len = (resp.arg[1] & 0xFFFF);
+        uint16_t len = (resp.core.old.arg[1] & 0xFFFF);
 
-        memcpy(data, resp.d.asBytes, len);
+        memcpy(data, resp.core.old.d.asBytes, len);
 
         if (verbose) {
             if (len >= 3) {
@@ -301,7 +301,7 @@ static bool get_14b_UID(iso14b_card_select_t *card) {
         return false;
 
     int8_t retry = 3;
-    UsbCommand resp;
+    UsbReplyNG resp;
     UsbCommand c = {CMD_ISO_14443B_COMMAND, {ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0}, {{0}}};
 
     // test for 14b SR
@@ -311,9 +311,9 @@ static bool get_14b_UID(iso14b_card_select_t *card) {
         SendCommand(&c);
         if (WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
 
-            uint8_t status = resp.arg[0];
+            uint8_t status = resp.core.old.arg[0];
             if (status == 0) {
-                memcpy(card, (iso14b_card_select_t *)resp.d.asBytes, sizeof(iso14b_card_select_t));
+                memcpy(card, (iso14b_card_select_t *)resp.core.old.d.asBytes, sizeof(iso14b_card_select_t));
                 return true;
             }
         }
@@ -329,9 +329,9 @@ static bool get_14b_UID(iso14b_card_select_t *card) {
         SendCommand(&c);
         if (WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
 
-            uint8_t status = resp.arg[0];
+            uint8_t status = resp.core.old.arg[0];
             if (status == 0) {
-                memcpy(card, (iso14b_card_select_t *)resp.d.asBytes, sizeof(iso14b_card_select_t));
+                memcpy(card, (iso14b_card_select_t *)resp.core.old.d.asBytes, sizeof(iso14b_card_select_t));
                 return true;
             }
         }
@@ -512,7 +512,7 @@ static bool HF14B_Std_Info(bool verbose) {
     UsbCommand c = {CMD_ISO_14443B_COMMAND, {ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbCommand resp;
+    UsbReplyNG resp;
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
         if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
@@ -521,9 +521,9 @@ static bool HF14B_Std_Info(bool verbose) {
     }
 
     iso14b_card_select_t card;
-    memcpy(&card, (iso14b_card_select_t *)resp.d.asBytes, sizeof(iso14b_card_select_t));
+    memcpy(&card, (iso14b_card_select_t *)resp.core.old.d.asBytes, sizeof(iso14b_card_select_t));
 
-    uint64_t status = resp.arg[0];
+    uint64_t status = resp.core.old.arg[0];
 
     switch (status) {
         case 0:
@@ -553,7 +553,7 @@ static bool HF14B_ST_Info(bool verbose) {
     UsbCommand c = {CMD_ISO_14443B_COMMAND, {ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbCommand resp;
+    UsbReplyNG resp;
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
         if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
@@ -561,9 +561,9 @@ static bool HF14B_ST_Info(bool verbose) {
     }
 
     iso14b_card_select_t card;
-    memcpy(&card, (iso14b_card_select_t *)resp.d.asBytes, sizeof(iso14b_card_select_t));
+    memcpy(&card, (iso14b_card_select_t *)resp.core.old.d.asBytes, sizeof(iso14b_card_select_t));
 
-    uint64_t status = resp.arg[0];
+    uint64_t status = resp.core.old.arg[0];
     if (status > 0)
         return false;
 
@@ -610,16 +610,16 @@ static bool HF14B_ST_Reader(bool verbose) {
     UsbCommand c = {CMD_ISO_14443B_COMMAND, {ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbCommand resp;
+    UsbReplyNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
         if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
         return false;
     }
 
     iso14b_card_select_t card;
-    memcpy(&card, (iso14b_card_select_t *)resp.d.asBytes, sizeof(iso14b_card_select_t));
+    memcpy(&card, (iso14b_card_select_t *)resp.core.old.d.asBytes, sizeof(iso14b_card_select_t));
 
-    uint64_t status = resp.arg[0];
+    uint64_t status = resp.core.old.arg[0];
 
     switch (status) {
         case 0:
@@ -650,7 +650,7 @@ static bool HF14B_Std_Reader(bool verbose) {
     UsbCommand c = {CMD_ISO_14443B_COMMAND, {ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbCommand resp;
+    UsbReplyNG resp;
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
         if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
@@ -658,9 +658,9 @@ static bool HF14B_Std_Reader(bool verbose) {
     }
 
     iso14b_card_select_t card;
-    memcpy(&card, (iso14b_card_select_t *)resp.d.asBytes, sizeof(iso14b_card_select_t));
+    memcpy(&card, (iso14b_card_select_t *)resp.core.old.d.asBytes, sizeof(iso14b_card_select_t));
 
-    uint64_t status = resp.arg[0];
+    uint64_t status = resp.core.old.arg[0];
 
     switch (status) {
         case 0:
@@ -697,7 +697,7 @@ static bool HF14B_Other_Reader() {
 
     // clearCommandBuffer();
     // SendCommand(&c);
-    // UsbCommand resp;
+    // UsbReplyNG resp;
     // WaitForResponse(CMD_ACK,&resp);
 
     // if (datalen > 2 ) {
@@ -712,7 +712,7 @@ static bool HF14B_Other_Reader() {
     // c.d.asBytes[0] = ISO14443B_AUTHENTICATE;
     // clearCommandBuffer();
     // SendCommand(&c);
-    // UsbCommand resp;
+    // UsbReplyNG resp;
     // WaitForResponse(CMD_ACK, &resp);
 
     // if (datalen > 0) {
@@ -727,7 +727,7 @@ static bool HF14B_Other_Reader() {
     // c.d.asBytes[0] = ISO14443B_RESET;
     // clearCommandBuffer();
     // SendCommand(&c);
-    // UsbCommand resp;
+    // UsbReplyNG resp;
     // WaitForResponse(CMD_ACK, &resp);
 
     // if (datalen > 0) {
@@ -901,15 +901,15 @@ static int CmdHF14BDump(const char *Cmd) {
     int blocknum = 0;
     uint8_t *recv = NULL;
 
-    UsbCommand resp;
+    UsbReplyNG resp;
     UsbCommand c = {CMD_ISO_14443B_COMMAND, { ISO14B_CONNECT | ISO14B_SELECT_SR, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
 
     //select
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-        if (resp.arg[0]) {
-            PrintAndLogEx(INFO, "failed to select %d | %d", resp.arg[0], resp.arg[1]);
+        if (resp.core.old.arg[0]) {
+            PrintAndLogEx(INFO, "failed to select %d | %d", resp.core.old.arg[0], resp.core.old.arg[1]);
             goto out;
         }
     }
@@ -929,20 +929,20 @@ static int CmdHF14BDump(const char *Cmd) {
 
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
 
-            uint8_t status = resp.arg[0] & 0xFF;
+            uint8_t status = resp.core.old.arg[0] & 0xFF;
             if (status > 0) {
                 continue;
             }
 
-            uint16_t len = (resp.arg[1] & 0xFFFF);
-            recv = resp.d.asBytes;
+            uint16_t len = (resp.core.old.arg[1] & 0xFFFF);
+            recv = resp.core.old.d.asBytes;
 
             if (!check_crc(CRC_14443_B, recv, len)) {
                 PrintAndLogEx(FAILED, "crc fail, retrying one more time");
                 continue;
             }
 
-            memcpy(data + (blocknum * 4), resp.d.asBytes, 4);
+            memcpy(data + (blocknum * 4), resp.core.old.d.asBytes, 4);
 
             if (blocknum == 0xFF) {
                 //last read.

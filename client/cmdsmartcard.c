@@ -309,18 +309,18 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
 }
 
 static int smart_wait(uint8_t *data, bool silent) {
-    UsbCommand resp;
+    UsbReplyNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         if (!silent) PrintAndLogEx(WARNING, "smart card response timeout");
         return -1;
     }
 
-    uint32_t len = resp.arg[0];
+    uint32_t len = resp.core.old.arg[0];
     if (!len) {
         if (!silent) PrintAndLogEx(WARNING, "smart card response failed");
         return -2;
     }
-    memcpy(data, resp.d.asBytes, len);
+    memcpy(data, resp.core.old.d.asBytes, len);
     if (len >= 2) {
         if (!silent) PrintAndLogEx(SUCCESS, "%02X%02X | %s", data[len - 2], data[len - 1], GetAPDUCodeDescription(data[len - 2], data[len - 1]));
     } else {
@@ -678,12 +678,12 @@ static int CmdSmartUpgrade(const char *Cmd) {
     UsbCommand c = {CMD_SMART_UPGRADE, {firmware_size, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbCommand resp;
+    UsbReplyNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return 1;
     }
-    if ((resp.arg[0] & 0xFF)) {
+    if ((resp.core.old.arg[0] & 0xFF)) {
         PrintAndLogEx(SUCCESS, "Sim module firmware upgrade " _GREEN_("successful"));
         PrintAndLogEx(SUCCESS, "\n run " _YELLOW_("`hw status`") " to validate the fw version ");
     } else {
@@ -717,20 +717,20 @@ static int CmdSmartInfo(const char *Cmd) {
     UsbCommand c = {CMD_SMART_ATR, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbCommand resp;
+    UsbReplyNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
         return 1;
     }
 
-    uint8_t isok = resp.arg[0] & 0xFF;
+    uint8_t isok = resp.core.old.arg[0] & 0xFF;
     if (!isok) {
         if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
         return 1;
     }
 
     smart_card_atr_t card;
-    memcpy(&card, (smart_card_atr_t *)resp.d.asBytes, sizeof(smart_card_atr_t));
+    memcpy(&card, (smart_card_atr_t *)resp.core.old.d.asBytes, sizeof(smart_card_atr_t));
 
     // print header
     PrintAndLogEx(INFO, "--- Smartcard Information ---------");
@@ -792,19 +792,19 @@ static int CmdSmartReader(const char *Cmd) {
     UsbCommand c = {CMD_SMART_ATR, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbCommand resp;
+    UsbReplyNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
         return 1;
     }
 
-    uint8_t isok = resp.arg[0] & 0xFF;
+    uint8_t isok = resp.core.old.arg[0] & 0xFF;
     if (!isok) {
         if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
         return 1;
     }
     smart_card_atr_t card;
-    memcpy(&card, (smart_card_atr_t *)resp.d.asBytes, sizeof(smart_card_atr_t));
+    memcpy(&card, (smart_card_atr_t *)resp.core.old.d.asBytes, sizeof(smart_card_atr_t));
 
     PrintAndLogEx(INFO, "ISO7816-3 ATR : %s", sprint_hex(card.atr, card.atr_len));
     return 0;
@@ -838,13 +838,13 @@ static int CmdSmartSetClock(const char *Cmd) {
     UsbCommand c = {CMD_SMART_SETCLOCK, {clock1, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbCommand resp;
+    UsbReplyNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "smart card select failed");
         return 1;
     }
 
-    uint8_t isok = resp.arg[0] & 0xFF;
+    uint8_t isok = resp.core.old.arg[0] & 0xFF;
     if (!isok) {
         PrintAndLogEx(WARNING, "smart card set clock failed");
         return 1;
@@ -1217,20 +1217,20 @@ bool smart_select(bool silent, smart_card_atr_t *atr) {
     UsbCommand c = {CMD_SMART_ATR, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbCommand resp;
+    UsbReplyNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
         return false;
     }
 
-    uint8_t isok = resp.arg[0] & 0xFF;
+    uint8_t isok = resp.core.old.arg[0] & 0xFF;
     if (!isok) {
         if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
         return false;
     }
 
     smart_card_atr_t card;
-    memcpy(&card, (smart_card_atr_t *)resp.d.asBytes, sizeof(smart_card_atr_t));
+    memcpy(&card, (smart_card_atr_t *)resp.core.old.d.asBytes, sizeof(smart_card_atr_t));
 
     if (atr)
         memcpy(atr, &card, sizeof(smart_card_atr_t));

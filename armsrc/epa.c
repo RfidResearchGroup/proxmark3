@@ -259,7 +259,7 @@ static void EPA_PACE_Collect_Nonce_Abort(uint8_t step, int func_return) {
 //-----------------------------------------------------------------------------
 // Acquire one encrypted PACE nonce
 //-----------------------------------------------------------------------------
-void EPA_PACE_Collect_Nonce(UsbCommand *c) {
+void EPA_PACE_Collect_Nonce(UsbCommandNG *c) {
     /*
      * ack layout:
      *   arg:
@@ -313,7 +313,7 @@ void EPA_PACE_Collect_Nonce(UsbCommand *c) {
 
     // now get the nonce
     uint8_t nonce[256] = {0};
-    uint8_t requested_size = (uint8_t)c->arg[0];
+    uint8_t requested_size = (uint8_t)c->core.old.arg[0];
     func_return = EPA_PACE_Get_Nonce(requested_size, nonce);
     // check if the command succeeded
     if (func_return < 0) {
@@ -430,23 +430,23 @@ int EPA_PACE_MSE_Set_AT(pace_version_info_t pace_version_info, uint8_t password)
 //-----------------------------------------------------------------------------
 // Perform the PACE protocol by replaying given APDUs
 //-----------------------------------------------------------------------------
-void EPA_PACE_Replay(UsbCommand *c) {
+void EPA_PACE_Replay(UsbCommandNG *c) {
     uint32_t timings[sizeof(apdu_lengths_replay) / sizeof(apdu_lengths_replay[0])] = {0};
 
     // if an APDU has been passed, save it
-    if (c->arg[0] != 0) {
+    if (c->core.old.arg[0] != 0) {
         // make sure it's not too big
-        if (c->arg[2] > apdus_replay[c->arg[0] - 1].len) {
+        if (c->core.old.arg[2] > apdus_replay[c->core.old.arg[0] - 1].len) {
             cmd_send(CMD_ACK, 1, 0, 0, NULL, 0);
         }
-        memcpy(apdus_replay[c->arg[0] - 1].data + c->arg[1],
-               c->d.asBytes,
-               c->arg[2]);
+        memcpy(apdus_replay[c->core.old.arg[0] - 1].data + c->core.old.arg[1],
+               c->core.old.d.asBytes,
+               c->core.old.arg[2]);
         // save/update APDU length
-        if (c->arg[1] == 0) {
-            apdu_lengths_replay[c->arg[0] - 1] = c->arg[2];
+        if (c->core.old.arg[1] == 0) {
+            apdu_lengths_replay[c->core.old.arg[0] - 1] = c->core.old.arg[2];
         } else {
-            apdu_lengths_replay[c->arg[0] - 1] += c->arg[2];
+            apdu_lengths_replay[c->core.old.arg[0] - 1] += c->core.old.arg[2];
         }
         cmd_send(CMD_ACK, 0, 0, 0, NULL, 0);
         return;

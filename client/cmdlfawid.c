@@ -92,7 +92,7 @@ static bool sendPing(void) {
     SendCommand(&ping);
     SendCommand(&ping);
     clearCommandBuffer();
-    UsbCommand resp;
+    UsbReplyNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000))
         return false;
     return true;
@@ -392,7 +392,7 @@ static int CmdAWIDClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone AWID %u to T55x7 with FC: %u, CN: %u", fmtlen, fc, cn);
     print_blocks(blocks, 4);
 
-    UsbCommand resp;
+    UsbReplyNG resp;
     UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}, {{0}}};
 
     for (uint8_t i = 0; i < 4; i++) {

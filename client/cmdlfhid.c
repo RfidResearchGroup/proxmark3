@@ -98,7 +98,7 @@ static bool sendPing(void) {
     SendCommand(&ping);
     SendCommand(&ping);
     clearCommandBuffer();
-    UsbCommand resp;
+    UsbReplyNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000))
         return false;
     return true;

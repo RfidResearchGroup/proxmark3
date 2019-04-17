@@ -91,7 +91,7 @@ static int CmdVikingClone(const char *Cmd) {
     UsbCommand c = {CMD_VIKING_CLONE_TAG, {rawID >> 32, rawID & 0xFFFFFFFF, Q5}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbCommand resp;
+    UsbReplyNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)) {
         PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
         return -1;

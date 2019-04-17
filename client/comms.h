@@ -45,8 +45,6 @@ typedef struct {
 } communication_arg_t;
 
 
-bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd);
-
 void SetOffline(bool value);
 bool IsOffline(void);
 
@@ -60,14 +58,11 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
 int TestProxmark(void);
 void CloseProxmark(void);
 
-bool WaitForResponseTimeoutW(uint32_t cmd, UsbCommand *response, size_t ms_timeout, bool show_warning);
-bool WaitForResponseTimeout(uint32_t cmd, UsbCommand *response, size_t ms_timeout);
-bool WaitForResponse(uint32_t cmd, UsbCommand *response);
-bool WaitForResponseNGTimeoutW(uint32_t cmd, uint8_t *response, size_t ms_timeout, bool show_warning);
-bool WaitForResponseNGTimeout(uint32_t cmd, uint8_t *response, size_t ms_timeout);
-bool WaitForResponseNG(uint32_t cmd, uint8_t *response);
+bool WaitForResponseTimeoutW(uint32_t cmd, UsbReplyNG *response, size_t ms_timeout, bool show_warning);
+bool WaitForResponseTimeout(uint32_t cmd, UsbReplyNG *response, size_t ms_timeout);
+bool WaitForResponse(uint32_t cmd, UsbReplyNG *response);
 
-bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning);
+bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbReplyNG *response, size_t ms_timeout, bool show_warning);
 
 #endif
 

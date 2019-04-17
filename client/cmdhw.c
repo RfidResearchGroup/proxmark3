@@ -418,9 +418,10 @@ static int CmdVersion(const char *Cmd) {
 static int CmdStatus(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     clearCommandBuffer();
+    UsbReplyNG resp;
     UsbCommand c = {CMD_STATUS, {0, 0, 0}, {{0}}};
     SendCommand(&c);
-    if (!WaitForResponseTimeout(CMD_ACK, &c, 1900))
+    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1900))
         PrintAndLogEx(NORMAL, "Status command failed. USB Speed Test timed out");
     return 0;
 }
@@ -428,7 +429,7 @@ static int CmdStatus(const char *Cmd) {
 static int CmdPing(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     clearCommandBuffer();
-    UsbCommand resp;
+    UsbReplyNG resp;
     UsbCommand c = {CMD_PING, {0, 0, 0}, {{0}}};
     SendCommand(&c);
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1000))
@@ -442,25 +443,21 @@ static int CmdPingNG(const char *Cmd) {
     uint32_t len = strtol(Cmd, NULL, 0);
     if (len > USB_DATANG_SIZE)
         len = USB_DATANG_SIZE;
-    PrintAndLogEx(NORMAL, "Pinging with payload len=%d", len);
+    PrintAndLogEx(NORMAL, "PingNG sent with payload len=%d", len);
     clearCommandBuffer();
-    uint8_t resp[USB_REPLYNG_MAXLEN];
+    UsbReplyNG resp;
     uint8_t data[USB_DATANG_SIZE] = {0};
     uint16_t cmd = CMD_PING;
-    if (len)
     for (uint16_t i=0; i<len; i++)
         data[i] = i & 0xFF;
     SendCommandNG(cmd, data, len);
-    if (WaitForResponseNGTimeout(CMD_PING, resp, 1000)) {
-        PrintAndLogEx(NORMAL, "PingNG successful");
-        UsbReplyNGPreamble *pre = (UsbReplyNGPreamble *)resp;
-        uint8_t *respdata = resp + sizeof(UsbReplyNGPreamble);
-        if (len >= 4)
-            PrintAndLogEx(NORMAL, "%02x%02x%02x%02x ... %02x%02x%02x%02x",
-                respdata[0], respdata[1], respdata[2], respdata[3],
-                respdata[pre->length-4], respdata[pre->length-3], respdata[pre->length-2], respdata[pre->length-1]);
+    if (WaitForResponseTimeout(CMD_PING, &resp, 1000)) {
+        bool error = false;
+        if (len)
+            error = memcmp(data, resp.core.ng.data, len) != 0;
+        PrintAndLogEx(NORMAL, "PingNG response received, content is %s", error ? _RED_("NOT ok") : _GREEN_("ok"));
     } else
-        PrintAndLogEx(NORMAL, "PingNG failed");
+        PrintAndLogEx(NORMAL, "PingNG response " _RED_("timeout"));
     return 0;
 }
 
@@ -500,7 +497,7 @@ void pm3_version(bool verbose) {
     if (!verbose)
         return;
     UsbCommand c = {CMD_VERSION, {0, 0, 0}, {{0}}};
-    UsbCommand resp;
+    UsbReplyNG resp;
     clearCommandBuffer();
     SendCommand(&c);
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
@@ -529,8 +526,8 @@ void pm3_version(bool verbose) {
         PrintAndLogEx(NORMAL, "\n [ CLIENT ]");
         PrintAndLogEx(NORMAL, "  client: iceman %s \n", s);
 
-        PrintAndLogEx(NORMAL, (char *)resp.d.asBytes);
-        lookupChipID(resp.arg[0], resp.arg[1]);
+        PrintAndLogEx(NORMAL, (char *)resp.core.old.d.asBytes);
+        lookupChipID(resp.core.old.arg[0], resp.core.old.arg[1]);
     }
     PrintAndLogEx(NORMAL, "\n");
 }

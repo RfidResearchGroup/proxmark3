@@ -120,7 +120,7 @@ static int CmdPrescoClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone Presco to T55x7 with SiteCode: %u, UserCode: %u, FullCode: %08x", sitecode, usercode, fullcode);
     print_blocks(blocks, 5);
 
-    UsbCommand resp;
+    UsbReplyNG resp;
     UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}, {{0}}};
 
     for (uint8_t i = 0; i < 5; i++) {

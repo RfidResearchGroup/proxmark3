@@ -1457,7 +1457,7 @@ int getSamples(uint32_t n, bool silent) {
 
     if (!silent) PrintAndLogEx(NORMAL, "Reading %d bytes from device memory\n", n);
 
-    UsbCommand response;
+    UsbReplyNG response;
     if (!GetFromDevice(BIG_BUF, got, n, 0, &response, 10000, true)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return 1;
@@ -1468,8 +1468,8 @@ int getSamples(uint32_t n, bool silent) {
     uint8_t bits_per_sample = 8;
 
     //Old devices without this feature would send 0 at arg[0]
-    if (response.arg[0] > 0) {
-        sample_config *sc = (sample_config *) response.d.asBytes;
+    if (response.core.old.arg[0] > 0) {
+        sample_config *sc = (sample_config *) response.core.old.d.asBytes;
         if (!silent) PrintAndLogEx(NORMAL, "Samples @ %d bits/smpl, decimation 1:%d ", sc->bits_per_sample, sc->decimation);
         bits_per_sample = sc->bits_per_sample;
     }
@@ -1532,7 +1532,7 @@ int CmdTuneSamples(const char *Cmd) {
     UsbCommand c = {CMD_MEASURE_ANTENNA_TUNING, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbCommand resp;
+    UsbReplyNG resp;
     while (!WaitForResponseTimeout(CMD_MEASURED_ANTENNA_TUNING, &resp, 2000)) {
         timeout++;
         printf(".");
@@ -1544,12 +1544,12 @@ int CmdTuneSamples(const char *Cmd) {
     }
     PrintAndLogEx(NORMAL, "\n");
 
-    uint32_t v_lf125 = resp.arg[0];
-    uint32_t v_lf134 = resp.arg[0] >> 32;
+    uint32_t v_lf125 = resp.core.old.arg[0];
+    uint32_t v_lf134 = resp.core.old.arg[0] >> 32;
 
-    uint32_t v_hf = resp.arg[1];
-    uint32_t peakf = resp.arg[2];
-    uint32_t peakv = resp.arg[2] >> 32;
+    uint32_t v_hf = resp.core.old.arg[1];
+    uint32_t peakf = resp.core.old.arg[2];
+    uint32_t peakv = resp.core.old.arg[2] >> 32;
 
     if (v_lf125 > NON_VOLTAGE)
         PrintAndLogEx(SUCCESS, "LF antenna: %5.2f V - 125.00 kHz", (v_lf125 * ANTENNA_ERROR) / 1000.0);
@@ -1595,8 +1595,8 @@ int CmdTuneSamples(const char *Cmd) {
     // even here, these values has 3% error.
     uint16_t test1 = 0;
     for (int i = 0; i < 256; i++) {
-        GraphBuffer[i] = resp.d.asBytes[i] - 128;
-        test1 += resp.d.asBytes[i];
+        GraphBuffer[i] = resp.core.old.d.asBytes[i] - 128;
+        test1 += resp.core.old.d.asBytes[i];
     }
 
     if (test1 > 0) {

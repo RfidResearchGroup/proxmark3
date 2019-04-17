@@ -135,7 +135,7 @@ static int CmdLFHitagList(const char *Cmd) {
     }
 
     // Query for the actual size of the trace
-    UsbCommand response;
+    UsbReplyNG response;
     if (!GetFromDevice(BIG_BUF, got, USB_CMD_DATA_SIZE, 0, &response, 2500, false)) {
         PrintAndLogEx(WARNING, "command execution time out");
         free(got);
@@ -461,19 +461,19 @@ static bool getHitagUid(uint32_t *uid) {
     UsbCommand c = {CMD_READER_HITAG, {RHT2F_UID_ONLY, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbCommand resp;
+    UsbReplyNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return false;
     }
 
-    if (resp.arg[0] == false) {
+    if (resp.core.old.arg[0] == false) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - failed getting UID");
         return false;
     }
 
     if (uid)
-        *uid = bytes_to_num(resp.d.asBytes, 4);
+        *uid = bytes_to_num(resp.core.old.d.asBytes, 4);
 
     return true;
 }
@@ -559,24 +559,24 @@ static int CmdLFHitagReader(const char *Cmd) {
     c.arg[0] = htf;
     clearCommandBuffer();
     SendCommand(&c);
-    UsbCommand resp;
+    UsbReplyNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 4000)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return 1;
     }
 
-    if (resp.arg[0] == false) {
+    if (resp.core.old.arg[0] == false) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - hitag failed");
         return 1;
     }
 
-    uint32_t id = bytes_to_num(resp.d.asBytes, 4);
+    uint32_t id = bytes_to_num(resp.core.old.d.asBytes, 4);
 
     PrintAndLogEx(SUCCESS, "Valid Hitag2 tag found - UID: %08x", id);
     if (htf != RHT2F_UID_ONLY) {
 
         PrintAndLogEx(SUCCESS, "Dumping tag memory...");
-        uint8_t *data = resp.d.asBytes;
+        uint8_t *data = resp.core.old.d.asBytes;
 
         char filename[FILE_PATH_SIZE];
         char *fnameptr = filename;
@@ -676,13 +676,13 @@ static int CmdLFHitagWriter(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommand(&c);
-    UsbCommand resp;
+    UsbReplyNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 4000)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return 1;
     }
 
-    if (resp.arg[0] == false) {
+    if (resp.core.old.arg[0] == false) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - hitag write failed");
         return 1;
     }

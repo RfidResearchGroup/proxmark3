@@ -517,11 +517,11 @@ static int CmdAnalyseA(const char *Cmd) {
     clearCommandBuffer();
     SendCommand(&c);
 
-    UsbCommand resp;
+    UsbReplyNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         return 1;
     }
-    PrintAndLogEx(NORMAL, "got ack.  Status %d", resp.arg[0]);
+    PrintAndLogEx(NORMAL, "got ack.  Status %d", resp.core.old.arg[0]);
     return 0;
     /*
         PrintAndLogEx(NORMAL, "-- " _BLUE_("its my message") "\n");

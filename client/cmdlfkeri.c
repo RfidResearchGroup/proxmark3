@@ -146,7 +146,7 @@ static int CmdKeriClone(const char *Cmd) {
     print_blocks(blocks, 3);
 
 
-    UsbCommand resp;
+    UsbReplyNG resp;
     UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}, {{0}}};
 
 

@@ -99,7 +99,7 @@ static int CmdLFPCF7931Read(const char *Cmd) {
     uint8_t ctmp = param_getchar(Cmd, 0);
     if (ctmp == 'H' || ctmp == 'h') return usage_pcf7931_read();
 
-    UsbCommand resp;
+    UsbReplyNG resp;
     UsbCommand c = {CMD_PCF7931_READ, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);

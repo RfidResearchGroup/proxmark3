@@ -84,16 +84,15 @@ static void Fatal(void) {
     for (;;) {};
 }
 
-void UsbPacketReceived(uint8_t *packet, int len) {
+void UsbPacketReceived(UsbCommandNG *packet) {
     int i, dont_ack = 0;
-    UsbCommand *c = (UsbCommand *)packet;
     volatile uint32_t *p;
 
     //if ( len != sizeof(UsbCommand)) Fatal();
 
-    uint32_t arg0 = (uint32_t)c->arg[0];
+    uint32_t arg0 = (uint32_t)packet->core.old.arg[0];
 
-    switch (c->cmd) {
+    switch (packet->core.old.cmd) {
         case CMD_DEVICE_INFO: {
             dont_ack = 1;
             arg0 = DEVICE_INFO_FLAG_BOOTROM_PRESENT | DEVICE_INFO_FLAG_CURRENT_MODE_BOOTROM |
@@ -111,7 +110,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             */
             p = (volatile uint32_t *)&_flash_start;
             for (i = 0; i < 12; i++)
-                p[i + arg0] = c->d.asDwords[i];
+                p[i + arg0] = packet->core.old.d.asDwords[i];
         }
         break;
 
@@ -119,7 +118,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             uint32_t *flash_mem = (uint32_t *)(&_flash_start);
             for (int j = 0; j < 2; j++) {
                 for (i = 0 + (64 * j); i < 64 + (64 * j); i++) {
-                    flash_mem[i] = c->d.asDwords[i];
+                    flash_mem[i] = packet->core.old.d.asDwords[i];
                 }
 
                 uint32_t flash_address = arg0 + (0x100 * j);
@@ -155,7 +154,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
         break;
 
         case CMD_START_FLASH: {
-            if (c->arg[2] == START_FLASH_MAGIC)
+            if (packet->core.old.arg[2] == START_FLASH_MAGIC)
                 bootrom_unlocked = 1;
             else
                 bootrom_unlocked = 0;
@@ -164,8 +163,8 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             int prot_end = (int)&_bootrom_end;
             int allow_start = (int)&_flash_start;
             int allow_end = (int)&_flash_end;
-            int cmd_start = c->arg[0];
-            int cmd_end = c->arg[1];
+            int cmd_start = packet->core.old.arg[0];
+            int cmd_end = packet->core.old.arg[1];
 
             /* Only allow command if the bootrom is unlocked, or the parameters are outside of the protected
             * bootrom area. In any case they must be within the flash area.
@@ -197,7 +196,7 @@ static void flash_mode(int externally_entered) {
     start_addr = 0;
     end_addr = 0;
     bootrom_unlocked = 0;
-    uint8_t rx[sizeof(UsbCommand)];
+    UsbCommandNG rx;
 
     usb_enable();
 
@@ -209,8 +208,9 @@ static void flash_mode(int externally_entered) {
 
         // Check if there is a usb packet available
         if (usb_poll_validate_length()) {
-            if (usb_read(rx, sizeof(rx)))
-                UsbPacketReceived(rx, sizeof(rx));
+// TODO DOEGOX
+            if (usb_read((uint8_t *)&rx, sizeof(rx)))
+                UsbPacketReceived(&rx);
         }
 
         if (!externally_entered && !BUTTON_PRESS()) {
