@@ -200,23 +200,23 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
     bool protocol_T15_present = false;
 
     if (T0 & 0x10) {
-        PrintAndLog("\t- TA1 (Maximum clock frequency, proposed bit duration) [ 0x%02x ]", atr[2 + T1len]);
+        PrintAndLogEx(NORMAL, "\t- TA1 (Maximum clock frequency, proposed bit duration) [ 0x%02x ]", atr[2 + T1len]);
         T1len++;
     }
 
     if (T0 & 0x20) {
-        PrintAndLog("\t- TB1 (Deprecated: VPP requirements) [ 0x%02x ]", atr[2 + T1len]);
+        PrintAndLogEx(NORMAL, "\t- TB1 (Deprecated: VPP requirements) [ 0x%02x ]", atr[2 + T1len]);
         T1len++;
     }
 
     if (T0 & 0x40) {
-        PrintAndLog("\t- TC1 (Extra delay between bytes required by card) [ 0x%02x ]", atr[2 + T1len]);
+        PrintAndLogEx(NORMAL, "\t- TC1 (Extra delay between bytes required by card) [ 0x%02x ]", atr[2 + T1len]);
         T1len++;
     }
 
     if (T0 & 0x80) {
         uint8_t TD1 = atr[2 + T1len];
-        PrintAndLog("\t- TD1 (First offered transmission protocol, presence of TA2..TD2) [ 0x%02x ] Protocol T%d", TD1, TD1 & 0x0f);
+        PrintAndLogEx(NORMAL, "\t- TD1 (First offered transmission protocol, presence of TA2..TD2) [ 0x%02x ] Protocol T%d", TD1, TD1 & 0x0f);
         protocol_T0_present = false;
         if ((TD1 & 0x0f) == 0) {
             protocol_T0_present = true;
@@ -228,20 +228,20 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
         T1len++;
 
         if (TD1 & 0x10) {
-            PrintAndLog("\t- TA2 (Specific protocol and parameters to be used after the ATR) [ 0x%02x ]", atr[2 + T1len + TD1len]);
+            PrintAndLogEx(NORMAL, "\t- TA2 (Specific protocol and parameters to be used after the ATR) [ 0x%02x ]", atr[2 + T1len + TD1len]);
             TD1len++;
         }
         if (TD1 & 0x20) {
-            PrintAndLog("\t- TB2 (Deprecated: VPP precise voltage requirement) [ 0x%02x ]", atr[2 + T1len + TD1len]);
+            PrintAndLogEx(NORMAL, "\t- TB2 (Deprecated: VPP precise voltage requirement) [ 0x%02x ]", atr[2 + T1len + TD1len]);
             TD1len++;
         }
         if (TD1 & 0x40) {
-            PrintAndLog("\t- TC2 (Maximum waiting time for protocol T=0) [ 0x%02x ]", atr[2 + T1len + TD1len]);
+            PrintAndLogEx(NORMAL, "\t- TC2 (Maximum waiting time for protocol T=0) [ 0x%02x ]", atr[2 + T1len + TD1len]);
             TD1len++;
         }
         if (TD1 & 0x80) {
             uint8_t TDi = atr[2 + T1len + TD1len];
-            PrintAndLog("\t- TD2 (A supported protocol or more global parameters, presence of TA3..TD3) [ 0x%02x ] Protocol T%d", TDi, TDi & 0x0f);
+            PrintAndLogEx(NORMAL, "\t- TD2 (A supported protocol or more global parameters, presence of TA3..TD3) [ 0x%02x ] Protocol T%d", TDi, TDi & 0x0f);
             if ((TDi & 0x0f) == 0) {
                 protocol_T0_present = true;
             }
@@ -255,20 +255,20 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
             while (nextCycle) {
                 nextCycle = false;
                 if (TDi & 0x10) {
-                    PrintAndLog("\t- TA%d: 0x%02x", vi, atr[2 + T1len + TD1len + TDilen]);
+                    PrintAndLogEx(NORMAL, "\t- TA%d: 0x%02x", vi, atr[2 + T1len + TD1len + TDilen]);
                     TDilen++;
                 }
                 if (TDi & 0x20) {
-                    PrintAndLog("\t- TB%d: 0x%02x", vi, atr[2 + T1len + TD1len + TDilen]);
+                    PrintAndLogEx(NORMAL, "\t- TB%d: 0x%02x", vi, atr[2 + T1len + TD1len + TDilen]);
                     TDilen++;
                 }
                 if (TDi & 0x40) {
-                    PrintAndLog("\t- TC%d: 0x%02x", vi, atr[2 + T1len + TD1len + TDilen]);
+                    PrintAndLogEx(NORMAL, "\t- TC%d: 0x%02x", vi, atr[2 + T1len + TD1len + TDilen]);
                     TDilen++;
                 }
                 if (TDi & 0x80) {
                     TDi = atr[2 + T1len + TD1len + TDilen];
-                    PrintAndLog("\t- TD%d [ 0x%02x ] Protocol T%d", vi, TDi, TDi & 0x0f);
+                    PrintAndLogEx(NORMAL, "\t- TD%d [ 0x%02x ] Protocol T%d", vi, TDi, TDi & 0x0f);
                     TDilen++;
 
                     nextCycle = true;
