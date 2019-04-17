@@ -175,7 +175,7 @@ build_script:
 
     Copy-Item C:\ProxSpace\msys2\mingw32\bin\Qt5Widgets.dll C:\ProxSpace\Release
 
-    Copy-Item C:\ProxSpace\msys2\mingw32\bin\libreadline6.dll C:\ProxSpace\Release
+    Copy-Item C:\ProxSpace\msys2\mingw32\bin\libreadline*.dll C:\ProxSpace\Release
 
     Copy-Item C:\ProxSpace\msys2\mingw32\bin\libtermcap-0.dll C:\ProxSpace\Release
 
