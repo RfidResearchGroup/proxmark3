@@ -376,7 +376,7 @@ void printUSBSpeed(void) {
     uint32_t bytes_transferred = 0;
 
     LED_B_ON();
-    
+
     while (end_time < start_time + USB_SPEED_TEST_MIN_TIME) {
         reply_ng(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, PM3_SUCCESS, test_data, USB_DATANG_SIZE);
         end_time = GetTickCount();

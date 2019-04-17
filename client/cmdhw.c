@@ -448,7 +448,7 @@ static int CmdPingNG(const char *Cmd) {
     UsbReplyNG resp;
     uint8_t data[USB_DATANG_SIZE] = {0};
     uint16_t cmd = CMD_PING;
-    for (uint16_t i=0; i<len; i++)
+    for (uint16_t i = 0; i < len; i++)
         data[i] = i & 0xFF;
     SendCommandNG(cmd, data, len);
     if (WaitForResponseTimeout(CMD_PING, &resp, 1000)) {
