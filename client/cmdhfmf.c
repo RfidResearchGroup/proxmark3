@@ -64,14 +64,14 @@ static int usage_hf14_mifare(void) {
     PrintAndLogEx(NORMAL, "           hf mf darkside 16 B");
     return 0;
 }
-static int usage_hf14_mf1ksim(void) {
+static int usage_hf14_mfsim(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf mf sim [h] u <uid> n <numreads> [i] [x] [e] [v]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h    this help");
     PrintAndLogEx(NORMAL, "      u    (Optional) UID 4,7 or 10bytes. If not specified, the UID 4b from emulator memory will be used");
     PrintAndLogEx(NORMAL, "      t    (Optional)   0 = MIFARE Mini");
     PrintAndLogEx(NORMAL, "                        1 = MIFARE Classic 1k (Default)");
-    PrintAndLogEx(NORMAL, "                        1 = MIFARE Classic 2k");
+    PrintAndLogEx(NORMAL, "                        1 = MIFARE Classic 2k plus in SL0 mode");
     PrintAndLogEx(NORMAL, "                        4 = MIFARE Classic 4k");
     PrintAndLogEx(NORMAL, "      n    (Optional) Automatically exit simulation after <numreads> blocks have been read by reader. 0 = infinite");
     PrintAndLogEx(NORMAL, "      i    (Optional) Interactive, means that console will not be returned until simulation finishes or is aborted");
@@ -2136,7 +2136,7 @@ void readerAttack(nonces_t data, bool setEmulatorMem, bool verbose) {
     }
 }
 
-static int CmdHF14AMf1kSim(const char *Cmd) {
+static int CmdHF14AMfSim(const char *Cmd) {
 
     uint8_t uid[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     uint8_t exitAfterNReads = 0;
@@ -2153,7 +2153,7 @@ static int CmdHF14AMf1kSim(const char *Cmd) {
                 cmdp++;
                 break;
             case 'h':
-                return usage_hf14_mf1ksim();
+                return usage_hf14_mfsim();
             case 'i':
                 flags |= FLAG_INTERACTIVE;
                 cmdp++;
@@ -2200,7 +2200,7 @@ static int CmdHF14AMf1kSim(const char *Cmd) {
                         flags |= FLAG_4B_UID_IN_DATA;
                         break;
                     default:
-                        return usage_hf14_mf1ksim();
+                        return usage_hf14_mfsim();
                 }
                 cmdp += 2;
                 break;
@@ -2219,7 +2219,7 @@ static int CmdHF14AMf1kSim(const char *Cmd) {
         }
     }
     //Validations
-    if (errors) return usage_hf14_mf1ksim();
+    if (errors) return usage_hf14_mfsim();
 
     // Use UID, SAK, ATQA from EMUL, if uid not defined
     if ((flags & (FLAG_4B_UID_IN_DATA | FLAG_7B_UID_IN_DATA | FLAG_10B_UID_IN_DATA)) == 0)
@@ -3554,7 +3554,7 @@ static command_t CommandTable[] = {
     {"auth4",       CmdHF14AMfAuth4,        0, "ISO14443-4 AES authentication"},
 //    {"sniff",       CmdHF14AMfSniff,        0, "Sniff card-reader communication"},
     {"-----------", CmdHelp,                0, ""},
-    {"sim",         CmdHF14AMf1kSim,        0, "Simulate MIFARE card"},
+    {"sim",         CmdHF14AMfSim,        0, "Simulate MIFARE card"},
     {"eclr",        CmdHF14AMfEClear,       0, "Clear simulator memory block"},
     {"eget",        CmdHF14AMfEGet,         0, "Get simulator memory block"},
     {"eset",        CmdHF14AMfESet,         0, "Set simulator memory block"},
