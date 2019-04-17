@@ -66,8 +66,10 @@ static RetType write_to_buffer(void *cookie, const char *data, LenType len) {
         // make room
         size_t newalloc = newsize + newsize / 2 + 1;    // give 50% more room
         ptr = realloc(ptr, newalloc);
-        if (ptr == NULL)
+        if (ptr == NULL) {
+            free(ptr);
             return -1;
+        )
         b->alloc = newalloc;
         *b->ptr = ptr;
     }
