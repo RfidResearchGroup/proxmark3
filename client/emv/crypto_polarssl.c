@@ -261,7 +261,7 @@ static unsigned char *crypto_pk_polarssl_get_parameter(const struct crypto_pk *_
             result = malloc(*plen);
             memset(result, 0x00, *plen);
             res = mbedtls_mpi_write_binary(&cp->ctx.N, result, *plen);
-            if (res == 0) {
+            if (res < 0) {
                 printf("Error write_binary.");
                 result = 0;
             }
@@ -272,7 +272,7 @@ static unsigned char *crypto_pk_polarssl_get_parameter(const struct crypto_pk *_
             result = malloc(*plen);
             memset(result, 0x00, *plen);
             res = mbedtls_mpi_write_binary(&cp->ctx.E, result, *plen);
-            if (res == 0) {
+            if (res < 0) {
                 printf("Error write_binary.");
                 result = 0;
             }
