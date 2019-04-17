@@ -287,8 +287,8 @@ static int CmdEMVGPO(const char *Cmd) {
         PrintAndLogEx(ERR, "Can't create PDOL data.");
         tlvdb_free(tmp_ext);
         tlvdb_free(tlvRoot);
-        if ( pdol_data_tlv != &data_tlv);
-            free(pdol_data_tlv);
+        if (pdol_data_tlv != &data_tlv);
+        free(pdol_data_tlv);
         return 4;
     }
     PrintAndLogEx(INFO, "PDOL data[%d]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
@@ -1278,9 +1278,9 @@ static int CmdEMVExec(const char *Cmd) {
         // authorization response code from acquirer
         const char HostResponse[] = "00"; // 0x3030
         size_t HostResponseLen = sizeof(HostResponse) - 1;
-        
+
         PrintAndLogEx(NORMAL, "Host Response: `%s`", HostResponse);
-        
+
         tlvdb_change_or_add_node(tlvRoot, 0x8a, HostResponseLen, (const unsigned char *)HostResponse);
 
         if (CryptoVersion == 10) {

@@ -59,7 +59,7 @@ void SendCommand(UsbCommand *c) {
 #endif
 
     if (offline) {
-        PrintAndLogEx(WARNING, "Sending bytes to Proxmark3 failed." _YELLOW_("offline") );
+        PrintAndLogEx(WARNING, "Sending bytes to Proxmark3 failed." _YELLOW_("offline"));
         return;
     }
 
@@ -275,7 +275,7 @@ __attribute__((force_align_arg_pointer))
         if (txBuffer_pending) {
             if (!uart_send(sp, (uint8_t *) &txBuffer, sizeof(UsbCommand))) {
                 //counter_to_offline++;
-                PrintAndLogEx(WARNING, "sending bytes to Proxmark3 device" _RED_("failed") );
+                PrintAndLogEx(WARNING, "sending bytes to Proxmark3 device" _RED_("failed"));
             }
             txBuffer_pending = false;
 
