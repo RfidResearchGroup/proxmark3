@@ -163,16 +163,16 @@ int COSEGetECDSAKey(uint8_t *data, size_t datalen, bool verbose, uint8_t *public
     size_t len;
 
     if (verbose)
-        PrintAndLog("----------- CBOR decode ----------------");
+        PrintAndLogEx(NORMAL, "----------- CBOR decode ----------------");
 
     // kty
     int res = CborMapGetKeyById(&parser, &map, data, datalen, 1);
     if (!res) {
         cbor_value_get_int64(&map, &i64);
         if (verbose)
-            PrintAndLog("kty [%lld] %s", (long long)i64, GetCOSEktyDescription(i64));
+            PrintAndLogEx(SUCCESS, "kty [%lld] %s", (long long)i64, GetCOSEktyDescription(i64));
         if (i64 != 2)
-            PrintAndLog("ERROR: kty must be 2.");
+            PrintAndLogEx(ERR, "ERROR: kty must be 2.");
     }
 
     // algorithm
@@ -180,9 +180,9 @@ int COSEGetECDSAKey(uint8_t *data, size_t datalen, bool verbose, uint8_t *public
     if (!res) {
         cbor_value_get_int64(&map, &i64);
         if (verbose)
-            PrintAndLog("algorithm [%lld] %s", (long long)i64, GetCOSEAlgDescription(i64));
+            PrintAndLogEx(SUCCESS, "algorithm [%lld] %s", (long long)i64, GetCOSEAlgDescription(i64));
         if (i64 != -7)
-            PrintAndLog("ERROR: algorithm must be -7.");
+            PrintAndLogEx(ERR, "ERROR: algorithm must be -7.");
     }
 
     // curve
@@ -190,9 +190,9 @@ int COSEGetECDSAKey(uint8_t *data, size_t datalen, bool verbose, uint8_t *public
     if (!res) {
         cbor_value_get_int64(&map, &i64);
         if (verbose)
-            PrintAndLog("curve [%lld] %s", (long long)i64, GetCOSECurveDescription(i64));
+            PrintAndLogEx(SUCCESS, "curve [%lld] %s", (long long)i64, GetCOSECurveDescription(i64));
         if (i64 != 1)
-            PrintAndLog("ERROR: curve must be 1.");
+            PrintAndLogEx(ERR, "ERROR: curve must be 1.");
     }
 
     // plain key
@@ -204,9 +204,9 @@ int COSEGetECDSAKey(uint8_t *data, size_t datalen, bool verbose, uint8_t *public
         res = CborGetBinStringValue(&map, &public_key[1], 32, &len);
         cbor_check(res);
         if (verbose)
-            PrintAndLog("x - coordinate [%d]: %s", len, sprint_hex(&public_key[1], 32));
+            PrintAndLogEx(SUCCESS, "x - coordinate [%d]: %s", len, sprint_hex(&public_key[1], 32));
         if (len != 32)
-            PrintAndLog("ERROR: x - coordinate length must be 32.");
+            PrintAndLogEx(ERR, "ERROR: x - coordinate length must be 32.");
     }
 
     // y - coordinate
@@ -215,9 +215,9 @@ int COSEGetECDSAKey(uint8_t *data, size_t datalen, bool verbose, uint8_t *public
         res = CborGetBinStringValue(&map, &public_key[33], 32, &len);
         cbor_check(res);
         if (verbose)
-            PrintAndLog("y - coordinate [%d]: %s", len, sprint_hex(&public_key[33], 32));
+            PrintAndLogEx(SUCCESS, "y - coordinate [%d]: %s", len, sprint_hex(&public_key[33], 32));
         if (len != 32)
-            PrintAndLog("ERROR: y - coordinate length must be 32.");
+            PrintAndLogEx(ERR, "ERROR: y - coordinate length must be 32.");
     }
 
     // d - private key
@@ -227,11 +227,11 @@ int COSEGetECDSAKey(uint8_t *data, size_t datalen, bool verbose, uint8_t *public
         res = CborGetBinStringValue(&map, private_key, sizeof(private_key), &len);
         cbor_check(res);
         if (verbose)
-            PrintAndLog("d - private key [%d]: %s", len, sprint_hex(private_key, len));
+            PrintAndLogEx(SUCCESS, "d - private key [%d]: %s", len, sprint_hex(private_key, len));
     }
 
     if (verbose)
-        PrintAndLog("----------- CBOR decode ----------------");
+        PrintAndLogEx(NORMAL, "----------- CBOR decode ----------------");
 
     return 0;
 }
