@@ -396,7 +396,7 @@ static int CmdrevengSearch(const char *Cmd) {
     uint8_t width[NMODELS] = {0};
     int count = 0;
 
-    uint8_t crcChars = 0;
+    uint8_t crcChars;
     char result[30];
     char revResult[30];
     int ans = GetModels(Models, &count, width);
