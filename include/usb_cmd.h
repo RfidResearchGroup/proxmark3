@@ -25,7 +25,6 @@ typedef BYTE uint8_t;
 #endif
 
 #define USB_CMD_DATA_SIZE 512
-#define USB_DATANG_SIZE 512
 
 typedef struct {
     uint64_t cmd;
@@ -34,11 +33,11 @@ typedef struct {
         uint8_t  asBytes[USB_CMD_DATA_SIZE];
         uint32_t asDwords[USB_CMD_DATA_SIZE / 4];
     } d;
-} PACKED UsbCommand;
+} PACKED UsbCommandOLD;
 
 typedef struct {
     uint16_t cmd;
-    uint8_t data[USB_DATANG_SIZE];
+    uint8_t data[USB_CMD_DATA_SIZE];
 } PACKED UsbPacketNGCore;
 
 typedef struct {
@@ -57,7 +56,7 @@ typedef struct {
     uint16_t length;  // length of the variable part, 0 if none.
     union {           // we can simplify it once we get rid of old format compatibility
         UsbPacketNGCore ng;
-        UsbCommand old;
+        UsbCommandOLD old;
     } core;
     uint16_t crc;
     bool ng;
@@ -67,6 +66,7 @@ typedef struct {
     uint32_t magic;
     uint16_t length;  // length of the variable part, 0 if none.
     int16_t  status;
+    uint16_t cmd;
 } PACKED UsbReplyNGPreamble;
 
 #define USB_REPLYNG_PREAMBLE_MAGIC 0x62334d50 // PM3b
@@ -75,17 +75,27 @@ typedef struct {
     uint16_t crc;
 } PACKED UsbReplyNGPostamble;
 
+// For internal usage
 typedef struct {
-    uint32_t magic;  //  \                  //
-    uint16_t length; //     Preamble        //
-    int16_t  status; //  /                  //
-    union {           // we can simplify it once we get rid of old format compatibility
-        UsbPacketNGCore ng;
-        UsbCommand old;
-    } core;
-    uint16_t crc;    //  -- Postamble       //
-    bool ng;
+    uint16_t cmd;
+    uint16_t length;
+    uint32_t magic;      //  NG
+    int16_t  status;     //  NG
+    uint16_t crc;        //  NG
+    uint64_t oldarg[3];  //  OLD
+    union {
+        uint8_t  asBytes[USB_CMD_DATA_SIZE];
+        uint32_t asDwords[USB_CMD_DATA_SIZE / 4];
+    } data;
+    bool ng;             // does it store NG data or OLD data?
 } PACKED UsbReplyNG;
+
+// For reception and CRC check
+typedef struct {
+    UsbReplyNGPreamble pre;
+    uint8_t data[USB_CMD_DATA_SIZE];
+    UsbReplyNGPostamble post;
+} PACKED UsbReplyNGRaw;
 
 #ifdef WITH_FPC_HOST
 // "Session" flag, to tell via which interface next msgs should be sent: USB or FPC USART

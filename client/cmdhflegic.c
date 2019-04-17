@@ -524,7 +524,7 @@ static int CmdLegicRfSim(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_legic_sim();
 
-    UsbCommand c = {CMD_SIMULATE_TAG_LEGIC_RF, {1}, {{0}}};
+    UsbCommandOLD c = {CMD_SIMULATE_TAG_LEGIC_RF, {1}, {{0}}};
     sscanf(Cmd, " %" SCNi64, &c.arg[0]);
     clearCommandBuffer();
     SendCommand(&c);
@@ -642,7 +642,7 @@ static int CmdLegicRfWrite(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "Writing to tag");
 
-    UsbCommand c = {CMD_WRITER_LEGIC_RF, {offset, len, IV}, {{0}}};
+    UsbCommandOLD c = {CMD_WRITER_LEGIC_RF, {offset, len, IV}, {{0}}};
     memcpy(c.d.asBytes, data, len);
     UsbReplyNG resp;
     clearCommandBuffer();
@@ -661,7 +661,7 @@ static int CmdLegicRfWrite(const char *Cmd) {
     }
     PrintAndLogEx(NORMAL, "\n");
 
-    uint8_t isOK = resp.core.old.arg[0] & 0xFF;
+    uint8_t isOK = resp.oldarg[0] & 0xFF;
     if (!isOK) {
         PrintAndLogEx(WARNING, "Failed writing tag");
         return 1;
@@ -756,7 +756,7 @@ int legic_read_mem(uint32_t offset, uint32_t len, uint32_t iv, uint8_t *out, uin
 
     legic_chk_iv(&iv);
 
-    UsbCommand c = {CMD_READER_LEGIC_RF, {offset, len, iv}, {{0}}};
+    UsbCommandOLD c = {CMD_READER_LEGIC_RF, {offset, len, iv}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     UsbReplyNG resp;
@@ -773,8 +773,8 @@ int legic_read_mem(uint32_t offset, uint32_t len, uint32_t iv, uint8_t *out, uin
     }
     PrintAndLogEx(NORMAL, "\n");
 
-    uint8_t isOK = resp.core.old.arg[0] & 0xFF;
-    *outlen = resp.core.old.arg[1];
+    uint8_t isOK = resp.oldarg[0] & 0xFF;
+    *outlen = resp.oldarg[1];
     if (!isOK) {
         PrintAndLogEx(WARNING, "Failed reading tag");
         return 2;
@@ -810,18 +810,18 @@ int legic_get_type(legic_card_select_t *card) {
 
     if (card == NULL) return 1;
 
-    UsbCommand c = {CMD_LEGIC_INFO, {0, 0, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_LEGIC_INFO, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     UsbReplyNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500))
         return 2;
 
-    uint8_t isOK = resp.core.old.arg[0] & 0xFF;
+    uint8_t isOK = resp.oldarg[0] & 0xFF;
     if (!isOK)
         return 3;
 
-    memcpy(card, (legic_card_select_t *)resp.core.old.d.asBytes, sizeof(legic_card_select_t));
+    memcpy(card, (legic_card_select_t *)resp.data.asBytes, sizeof(legic_card_select_t));
     return 0;
 }
 void legic_chk_iv(uint32_t *iv) {
@@ -837,7 +837,7 @@ void legic_chk_iv(uint32_t *iv) {
 }
 void legic_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
 
-    UsbCommand c = {CMD_LEGIC_ESET, {0, 0, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_LEGIC_ESET, {0, 0, 0}, {{0}}};
     for (size_t i = offset; i < numofbytes; i += USB_CMD_DATA_SIZE) {
 
         size_t len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
@@ -900,7 +900,7 @@ static int CmdLegicDump(const char *Cmd) {
     legic_print_type(dumplen, 0);
     PrintAndLogEx(SUCCESS, "Reading tag memory %d b...", dumplen);
 
-    UsbCommand c = {CMD_READER_LEGIC_RF, {0x00, dumplen, 0x55}, {{0}}};
+    UsbCommandOLD c = {CMD_READER_LEGIC_RF, {0x00, dumplen, 0x55}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     UsbReplyNG resp;
@@ -917,13 +917,13 @@ static int CmdLegicDump(const char *Cmd) {
     }
     PrintAndLogEx(NORMAL, "\n");
 
-    uint8_t isOK = resp.core.old.arg[0] & 0xFF;
+    uint8_t isOK = resp.oldarg[0] & 0xFF;
     if (!isOK) {
         PrintAndLogEx(WARNING, "Failed dumping tag data");
         return 2;
     }
 
-    uint16_t readlen = resp.core.old.arg[1];
+    uint16_t readlen = resp.oldarg[1];
     uint8_t *data = calloc(readlen, sizeof(uint8_t));
     if (!data) {
         PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
@@ -1049,7 +1049,7 @@ static int CmdLegicRestore(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Restoring to card");
 
     // transfer to device
-    UsbCommand c = {CMD_WRITER_LEGIC_RF, {0, 0, 0x55}, {{0}}};
+    UsbCommandOLD c = {CMD_WRITER_LEGIC_RF, {0, 0, 0x55}, {{0}}};
     UsbReplyNG resp;
     for (size_t i = 7; i < numofbytes; i += USB_CMD_DATA_SIZE) {
 
@@ -1073,9 +1073,9 @@ static int CmdLegicRestore(const char *Cmd) {
         }
         PrintAndLogEx(NORMAL, "\n");
 
-        uint8_t isOK = resp.core.old.arg[0] & 0xFF;
+        uint8_t isOK = resp.oldarg[0] & 0xFF;
         if (!isOK) {
-            PrintAndLogEx(WARNING, "Failed writing tag [msg = %u]", resp.core.old.arg[1] & 0xFF);
+            PrintAndLogEx(WARNING, "Failed writing tag [msg = %u]", resp.oldarg[1] & 0xFF);
             free(data);
             return 1;
         }
@@ -1242,7 +1242,7 @@ static int CmdLegicWipe(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Erasing");
 
     // transfer to device
-    UsbCommand c = {CMD_WRITER_LEGIC_RF, {0, 0, 0x55}, {{0}}};
+    UsbCommandOLD c = {CMD_WRITER_LEGIC_RF, {0, 0, 0x55}, {{0}}};
     UsbReplyNG resp;
     for (size_t i = 7; i < card.cardsize; i += USB_CMD_DATA_SIZE) {
 
@@ -1268,9 +1268,9 @@ static int CmdLegicWipe(const char *Cmd) {
         }
         PrintAndLogEx(NORMAL, "\n");
 
-        uint8_t isOK = resp.core.old.arg[0] & 0xFF;
+        uint8_t isOK = resp.oldarg[0] & 0xFF;
         if (!isOK) {
-            PrintAndLogEx(WARNING, "Failed writing tag [msg = %u]", resp.core.old.arg[1] & 0xFF);
+            PrintAndLogEx(WARNING, "Failed writing tag [msg = %u]", resp.oldarg[1] & 0xFF);
             free(data);
             return 4;
         }

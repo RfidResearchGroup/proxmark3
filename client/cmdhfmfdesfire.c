@@ -58,13 +58,13 @@ static int CmdHF14AMfDESAuth(const char *Cmd) {
     //DES_set_key((DES_cblock *)key2,&ks2);
 
     //Auth1
-    UsbCommand c = {CMD_MIFARE_DES_AUTH1, {blockNo}};
+    UsbCommandOLD c = {CMD_MIFARE_DES_AUTH1, {blockNo}};
     SendCommand(&c);
     UsbReplyNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        uint8_t isOK  = resp.core.old.arg[0] & 0xff;
-        cuid  = resp.core.old.arg[1];
-        uint8_t *data = resp.core.old.d.asBytes;
+        uint8_t isOK  = resp.oldarg[0] & 0xff;
+        cuid  = resp.oldarg[1];
+        uint8_t *data = resp.data.asBytes;
 
         if (isOK) {
             PrintAndLogEx(NORMAL, "enc(nc)/b0:%s", sprint_hex(data + 2, 8));
@@ -94,7 +94,7 @@ static int CmdHF14AMfDESAuth(const char *Cmd) {
     PrintAndLogEx(NORMAL, "b2:%s", sprint_hex(b2, 8));
 
     //Auth2
-    UsbCommand d = {CMD_MIFARE_DES_AUTH2, {cuid}};
+    UsbCommandOLD d = {CMD_MIFARE_DES_AUTH2, {cuid}};
     memcpy(reply, b1, 8);
     memcpy(reply + 8, b2, 8);
     memcpy(d.d.asBytes, reply, 16);
@@ -158,13 +158,13 @@ static int CmdHF14AMfAESAuth(const char *Cmd) {
     AES_set_decrypt_key(key, 128, &key_d);
 
     //Auth1
-    UsbCommand c = {CMD_MIFARE_DES_AUTH1, {blockNo}};
+    UsbCommandOLD c = {CMD_MIFARE_DES_AUTH1, {blockNo}};
     SendCommand(&c);
     UsbReplyNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        uint8_t isOK  = resp.core.old.arg[0] & 0xff;
-        cuid  = resp.core.old.arg[1];
-        uint8_t *data = resp.core.old.d.asBytes;
+        uint8_t isOK  = resp.oldarg[0] & 0xff;
+        cuid  = resp.oldarg[1];
+        uint8_t *data = resp.data.asBytes;
 
         if (isOK) {
             PrintAndLogEx(NORMAL, "enc(nc)/b0:%s", sprint_hex(data + 2, 16));
@@ -201,7 +201,7 @@ static int CmdHF14AMfAESAuth(const char *Cmd) {
     PrintAndLogEx(NORMAL, "b2:%s", sprint_hex(b2, 16));
 
     //Auth2
-    UsbCommand d = {CMD_MIFARE_DES_AUTH2, {cuid}};
+    UsbCommandOLD d = {CMD_MIFARE_DES_AUTH2, {cuid}};
     memcpy(reply, b1, 16);
     memcpy(reply + 16, b2, 16);
     memcpy(d.d.asBytes, reply, 32);

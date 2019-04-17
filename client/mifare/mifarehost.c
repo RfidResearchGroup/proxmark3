@@ -16,7 +16,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
     uint64_t par_list = 0, ks_list = 0;
     uint64_t *keylist = NULL, *last_keylist = NULL;
 
-    UsbCommand c = {CMD_READER_MIFARE, {true, blockno, key_type}, {{0}}};
+    UsbCommandOLD c = {CMD_READER_MIFARE, {true, blockno, key_type}, {{0}}};
 
     // message
     PrintAndLogEx(NORMAL, "--------------------------------------------------------------------------------\n");
@@ -47,16 +47,16 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 
             UsbReplyNG resp;
             if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-                int16_t isOK  = resp.core.old.arg[0];
+                int16_t isOK  = resp.oldarg[0];
                 if (isOK < 0)
                     return isOK;
 
-                uid = (uint32_t)bytes_to_num(resp.core.old.d.asBytes +  0, 4);
-                nt = (uint32_t)bytes_to_num(resp.core.old.d.asBytes +  4, 4);
-                par_list = bytes_to_num(resp.core.old.d.asBytes +  8, 8);
-                ks_list = bytes_to_num(resp.core.old.d.asBytes +  16, 8);
-                nr = (uint32_t)bytes_to_num(resp.core.old.d.asBytes + 24, 4);
-                ar = (uint32_t)bytes_to_num(resp.core.old.d.asBytes + 28, 4);
+                uid = (uint32_t)bytes_to_num(resp.data.asBytes +  0, 4);
+                nt = (uint32_t)bytes_to_num(resp.data.asBytes +  4, 4);
+                par_list = bytes_to_num(resp.data.asBytes +  8, 8);
+                ks_list = bytes_to_num(resp.data.asBytes +  16, 8);
+                nr = (uint32_t)bytes_to_num(resp.data.asBytes + 24, 4);
+                ar = (uint32_t)bytes_to_num(resp.data.asBytes + 28, 4);
                 break;
             }
         }
@@ -123,14 +123,14 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 }
 int mfCheckKeys(uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keycnt, uint8_t *keyBlock, uint64_t *key) {
     *key = -1;
-    UsbCommand c = {CMD_MIFARE_CHKKEYS, { (blockNo | (keyType << 8)), clear_trace, keycnt}, {{0}}};
+    UsbCommandOLD c = {CMD_MIFARE_CHKKEYS, { (blockNo | (keyType << 8)), clear_trace, keycnt}, {{0}}};
     memcpy(c.d.asBytes, keyBlock, 6 * keycnt);
     clearCommandBuffer();
     SendCommand(&c);
     UsbReplyNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) return 1;
-    if ((resp.core.old.arg[0] & 0xff) != 0x01) return 2;
-    *key = bytes_to_num(resp.core.old.d.asBytes, 6);
+    if ((resp.oldarg[0] & 0xff) != 0x01) return 2;
+    *key = bytes_to_num(resp.data.asBytes, 6);
     return 0;
 }
 
@@ -145,7 +145,7 @@ int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, 
     uint32_t timeout = 0;
 
     // send keychunk
-    UsbCommand c = {CMD_MIFARE_CHKKEYS_FAST, { (sectorsCnt | (firstChunk << 8) | (lastChunk << 12)), ((use_flashmemory << 8) | strategy), size}, {{0}}};
+    UsbCommandOLD c = {CMD_MIFARE_CHKKEYS_FAST, { (sectorsCnt | (firstChunk << 8) | (lastChunk << 12)), ((use_flashmemory << 8) | strategy), size}, {{0}}};
     memcpy(c.d.asBytes, keyBlock, 6 * size);
     clearCommandBuffer();
     SendCommand(&c);
@@ -166,7 +166,7 @@ int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, 
     t2 = msclock() - t2;
 
     // time to convert the returned data.
-    uint8_t curr_keys = resp.core.old.arg[0];
+    uint8_t curr_keys = resp.oldarg[0];
 
     PrintAndLogEx(SUCCESS, "\nChunk: %.1fs | found %u/%u keys (%u)", (float)(t2 / 1000.0), curr_keys, (sectorsCnt << 1), size);
 
@@ -177,8 +177,8 @@ int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, 
         uint8_t arr[80];
         uint64_t foo = 0;
         uint16_t bar = 0;
-        foo = bytes_to_num(resp.core.old.d.asBytes + 480, 8);
-        bar = (resp.core.old.d.asBytes[489]  << 8 | resp.core.old.d.asBytes[488]);
+        foo = bytes_to_num(resp.data.asBytes + 480, 8);
+        bar = (resp.data.asBytes[489]  << 8 | resp.data.asBytes[488]);
 
         for (uint8_t i = 0; i < 64; i++)
             arr[i] = (foo >> i) & 0x1;
@@ -190,7 +190,7 @@ int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, 
         icesector_t *tmp = calloc(sectorsCnt, sizeof(icesector_t));
         if (tmp == NULL)
             return 1;
-        memcpy(tmp, resp.core.old.d.asBytes, sectorsCnt * sizeof(icesector_t));
+        memcpy(tmp, resp.data.asBytes, sectorsCnt * sizeof(icesector_t));
 
         for (int i = 0; i < sectorsCnt; i++) {
             // key A
@@ -297,23 +297,23 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
     StateList_t statelists[2];
     struct Crypto1State *p1, *p2, *p3, *p4;
 
-    UsbCommand c = {CMD_MIFARE_NESTED, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, calibrate}, {{0}}};
+    UsbCommandOLD c = {CMD_MIFARE_NESTED, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, calibrate}, {{0}}};
     memcpy(c.d.asBytes, key, 6);
     clearCommandBuffer();
     SendCommand(&c);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return -1;
 
     // error during nested
-    if (resp.core.old.arg[0]) return resp.core.old.arg[0];
+    if (resp.oldarg[0]) return resp.oldarg[0];
 
-    memcpy(&uid, resp.core.old.d.asBytes, 4);
+    memcpy(&uid, resp.data.asBytes, 4);
 
     for (i = 0; i < 2; i++) {
-        statelists[i].blockNo = resp.core.old.arg[2] & 0xff;
-        statelists[i].keyType = (resp.core.old.arg[2] >> 8) & 0xff;
+        statelists[i].blockNo = resp.oldarg[2] & 0xff;
+        statelists[i].keyType = (resp.oldarg[2] >> 8) & 0xff;
         statelists[i].uid = uid;
-        memcpy(&statelists[i].nt, (void *)(resp.core.old.d.asBytes + 4 + i * 8 + 0), 4);
-        memcpy(&statelists[i].ks1, (void *)(resp.core.old.d.asBytes + 4 + i * 8 + 4), 4);
+        memcpy(&statelists[i].nt, (void *)(resp.data.asBytes + 4 + i * 8 + 0), 4);
+        memcpy(&statelists[i].ks1, (void *)(resp.data.asBytes + 4 + i * 8 + 4), 4);
     }
 
     // calc keys
@@ -397,8 +397,8 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
             num_to_bytes(key64, 6, resultKey);
 
             PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [%012" PRIx64 "]",
-                          (uint16_t)resp.core.old.arg[2] & 0xff,
-                          (resp.core.old.arg[2] >> 8) ? 'B' : 'A',
+                          (uint16_t)resp.oldarg[2] & 0xff,
+                          (resp.oldarg[2] >> 8) ? 'B' : 'A',
                           key64
                          );
             return -5;
@@ -407,8 +407,8 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
 
 out:
     PrintAndLogEx(SUCCESS, "target block:%3u key type: %c",
-                  (uint16_t)resp.core.old.arg[2] & 0xff,
-                  (resp.core.old.arg[2] >> 8) ? 'B' : 'A'
+                  (uint16_t)resp.oldarg[2] & 0xff,
+                  (resp.oldarg[2] >> 8) ? 'B' : 'A'
                  );
 
     free(statelists[0].head.slhead);
@@ -419,17 +419,17 @@ out:
 // MIFARE
 int mfReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data) {
 
-    UsbCommand c = {CMD_MIFARE_READSC, {sectorNo, keyType, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_MIFARE_READSC, {sectorNo, keyType, 0}, {{0}}};
     memcpy(c.d.asBytes, key, 6);
     clearCommandBuffer();
     SendCommand(&c);
 
     UsbReplyNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        uint8_t isOK  = resp.core.old.arg[0] & 0xff;
+        uint8_t isOK  = resp.oldarg[0] & 0xff;
 
         if (isOK) {
-            memcpy(data, resp.core.old.d.asBytes, mfNumBlocksPerSector(sectorNo) * 16);
+            memcpy(data, resp.data.asBytes, mfNumBlocksPerSector(sectorNo) * 16);
             return 0;
         } else {
             return 1;
@@ -444,12 +444,12 @@ int mfReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data)
 
 // EMULATOR
 int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount) {
-    UsbCommand c = {CMD_MIFARE_EML_MEMGET, {blockNum, blocksCount, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_MIFARE_EML_MEMGET, {blockNum, blocksCount, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     UsbReplyNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return 1;
-    memcpy(data, resp.core.old.d.asBytes, blocksCount * 16);
+    memcpy(data, resp.data.asBytes, blocksCount * 16);
     return 0;
 }
 
@@ -458,7 +458,7 @@ int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount) {
 }
 
 int mfEmlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth) {
-    UsbCommand c = {CMD_MIFARE_EML_MEMSET, {blockNum, blocksCount, blockBtWidth}, {{0}}};
+    UsbCommandOLD c = {CMD_MIFARE_EML_MEMSET, {blockNum, blocksCount, blockBtWidth}, {{0}}};
     memcpy(c.d.asBytes, data, blocksCount * blockBtWidth);
     clearCommandBuffer();
     SendCommand(&c);
@@ -501,15 +501,15 @@ int mfCSetUID(uint8_t *uid, uint8_t *atqa, uint8_t *sak, uint8_t *oldUID, uint8_
 
 int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t params) {
 
-    UsbCommand c = {CMD_MIFARE_CSETBLOCK, {params, blockNo, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_MIFARE_CSETBLOCK, {params, blockNo, 0}, {{0}}};
     memcpy(c.d.asBytes, data, 16);
     clearCommandBuffer();
     SendCommand(&c);
     UsbReplyNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        uint8_t isOK  = resp.core.old.arg[0] & 0xff;
+        uint8_t isOK  = resp.oldarg[0] & 0xff;
         if (uid != NULL)
-            memcpy(uid, resp.core.old.d.asBytes, 4);
+            memcpy(uid, resp.data.asBytes, 4);
         if (!isOK)
             return 2;
     } else {
@@ -520,15 +520,15 @@ int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t params) {
 }
 
 int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params) {
-    UsbCommand c = {CMD_MIFARE_CGETBLOCK, {params, blockNo, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_MIFARE_CGETBLOCK, {params, blockNo, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     UsbReplyNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        uint8_t isOK  = resp.core.old.arg[0] & 0xff;
+        uint8_t isOK  = resp.oldarg[0] & 0xff;
         if (!isOK)
             return 2;
-        memcpy(data, resp.core.old.d.asBytes, 16);
+        memcpy(data, resp.data.asBytes, 16);
     } else {
         PrintAndLogEx(WARNING, "command execute timeout");
         return 1;
@@ -873,7 +873,7 @@ int detect_classic_prng(void) {
     uint8_t cmd[] = {MIFARE_AUTH_KEYA, 0x00};
     uint32_t flags = ISO14A_CONNECT | ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_RATS;
 
-    UsbCommand c = {CMD_READER_ISO_14443a, {flags, sizeof(cmd), 0}, {{0}}};
+    UsbCommandOLD c = {CMD_READER_ISO_14443a, {flags, sizeof(cmd), 0}, {{0}}};
     memcpy(c.d.asBytes, cmd, sizeof(cmd));
 
     clearCommandBuffer();
@@ -885,7 +885,7 @@ int detect_classic_prng(void) {
     }
 
     // if select tag failed.
-    if (resp.core.old.arg[0] == 0) {
+    if (resp.oldarg[0] == 0) {
         PrintAndLogEx(WARNING, "error:  selecting tag failed,  can't detect prng\n");
         return -2;
     }
@@ -895,12 +895,12 @@ int detect_classic_prng(void) {
     }
 
     // check respA
-    if (respA.core.old.arg[0] != 4) {
-        PrintAndLogEx(WARNING, "PRNG data error: Wrong length: %d", respA.core.old.arg[0]);
+    if (respA.oldarg[0] != 4) {
+        PrintAndLogEx(WARNING, "PRNG data error: Wrong length: %d", respA.oldarg[0]);
         return -4;
     }
 
-    uint32_t nonce = bytes_to_num(respA.core.old.d.asBytes, respA.core.old.arg[0]);
+    uint32_t nonce = bytes_to_num(respA.data.asBytes, respA.oldarg[0]);
     return validate_prng_nonce(nonce);
 }
 /* Detect Mifare Classic NACK bug
@@ -913,7 +913,7 @@ returns:
 */
 int detect_classic_nackbug(bool verbose) {
 
-    UsbCommand c = {CMD_MIFARE_NACK_DETECT, {0, 0, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_MIFARE_NACK_DETECT, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     UsbReplyNG resp;
@@ -949,9 +949,9 @@ int detect_classic_nackbug(bool verbose) {
         }
 
         if (WaitForResponseTimeout(CMD_ACK, &resp, 500)) {
-            int32_t ok = resp.core.old.arg[0];
-            uint32_t nacks = resp.core.old.arg[1];
-            uint32_t auths = resp.core.old.arg[2];
+            int32_t ok = resp.oldarg[0];
+            uint32_t nacks = resp.oldarg[1];
+            uint32_t auths = resp.oldarg[2];
             PrintAndLogEx(NORMAL, "");
 
             if (verbose) {
@@ -999,11 +999,11 @@ void detect_classic_magic(void) {
 
     uint8_t isGeneration = 0;
     UsbReplyNG resp;
-    UsbCommand c = {CMD_MIFARE_CIDENT, {0, 0, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_MIFARE_CIDENT, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500))
-        isGeneration = resp.core.old.arg[0] & 0xff;
+        isGeneration = resp.oldarg[0] & 0xff;
 
     switch (isGeneration) {
         case 1:

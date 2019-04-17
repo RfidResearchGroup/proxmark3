@@ -100,7 +100,7 @@ static int CmdLFPCF7931Read(const char *Cmd) {
     if (ctmp == 'H' || ctmp == 'h') return usage_pcf7931_read();
 
     UsbReplyNG resp;
-    UsbCommand c = {CMD_PCF7931_READ, {0, 0, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_PCF7931_READ, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
@@ -145,7 +145,7 @@ static int CmdLFPCF7931Write(const char *Cmd) {
     PrintAndLogEx(NORMAL, "          pos: %d", bytepos);
     PrintAndLogEx(NORMAL, "         data: 0x%02X", data);
 
-    UsbCommand c = {CMD_PCF7931_WRITE, { block, bytepos, data}, {{0}}};
+    UsbCommandOLD c = {CMD_PCF7931_WRITE, { block, bytepos, data}, {{0}}};
     memcpy(c.d.asDwords, configPcf.Pwd, sizeof(configPcf.Pwd));
     c.d.asDwords[7] = (configPcf.OffsetWidth + 128);
     c.d.asDwords[8] = (configPcf.OffsetPosition + 128);

@@ -49,7 +49,7 @@ void SetOffline(bool value);
 bool IsOffline(void);
 
 void *uart_receiver(void *targ);
-void SendCommand(UsbCommand *c);
+void SendCommand(UsbCommandOLD *c);
 void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len);
 void clearCommandBuffer(void);
 

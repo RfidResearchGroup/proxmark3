@@ -74,7 +74,7 @@ static int CmdCOTAGRead(const char *Cmd) {
     uint32_t rawsignal = 1;
     sscanf(Cmd, "%u", &rawsignal);
 
-    UsbCommand c = {CMD_COTAG, {rawsignal, 0, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_COTAG, {rawsignal, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     if (!WaitForResponseTimeout(CMD_ACK, NULL, 7000)) {

@@ -203,7 +203,7 @@ static int CmdLFNedapClone(const char *Cmd) {
     print_blocks(blocks, 5);
 
     UsbReplyNG resp;
-    UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}, {{0}}};
+    UsbCommandOLD c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}, {{0}}};
 
     for (uint8_t i = 0; i<5; ++i ) {
         c.arg[0] = blocks[i];
@@ -248,7 +248,7 @@ static int CmdLFNedapSim(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "bin  %s", sprint_bin_break(bs, 128, 32));
     PrintAndLogEx(SUCCESS, "Simulating Nedap - CardNumber: %u", cardnumber);
 
-    UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}, {{0}}};
+    UsbCommandOLD c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}, {{0}}};
     memcpy(c.d.asBytes, bs, size);
     clearCommandBuffer();
     SendCommand(&c);

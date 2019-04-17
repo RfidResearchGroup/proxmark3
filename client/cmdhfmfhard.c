@@ -1383,7 +1383,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
         flags |= initialize ? 0x0001 : 0;
         flags |= slow ? 0x0002 : 0;
         flags |= field_off ? 0x0004 : 0;
-        UsbCommand c = {CMD_MIFARE_ACQUIRE_ENCRYPTED_NONCES, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, flags}, {{0}}};
+        UsbCommandOLD c = {CMD_MIFARE_ACQUIRE_ENCRYPTED_NONCES, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, flags}, {{0}}};
         memcpy(c.d.asBytes, key, 6);
 
         clearCommandBuffer();
@@ -1394,14 +1394,14 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
         if (initialize) {
             if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
                 //strange second call (iceman)
-                UsbCommand c1 = {CMD_MIFARE_ACQUIRE_ENCRYPTED_NONCES, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, 4}, {{0}}};
+                UsbCommandOLD c1 = {CMD_MIFARE_ACQUIRE_ENCRYPTED_NONCES, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, 4}, {{0}}};
                 clearCommandBuffer();
                 SendCommand(&c1);
                 return 1;
             }
-            if (resp.core.old.arg[0]) return resp.core.old.arg[0];  // error during nested_hard
+            if (resp.oldarg[0]) return resp.oldarg[0];  // error during nested_hard
 
-            cuid = resp.core.old.arg[1];
+            cuid = resp.oldarg[1];
             if (nonce_file_write && fnonces == NULL) {
                 if ((fnonces = fopen(filename, "wb")) == NULL) {
                     PrintAndLogEx(WARNING, "Could not create file %s", filename);
@@ -1420,8 +1420,8 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
         if (!initialize) {
             uint32_t nt_enc1, nt_enc2;
             uint8_t par_enc;
-            uint16_t num_sampled_nonces = resp.core.old.arg[2];
-            uint8_t *bufp = resp.core.old.d.asBytes;
+            uint16_t num_sampled_nonces = resp.oldarg[2];
+            uint8_t *bufp = resp.data.asBytes;
             for (uint16_t i = 0; i < num_sampled_nonces; i += 2) {
                 nt_enc1 = bytes_to_num(bufp, 4);
                 nt_enc2 = bytes_to_num(bufp + 4, 4);
@@ -1479,11 +1479,11 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
                 }
                 return 1;
             }
-            if (resp.core.old.arg[0]) {
+            if (resp.oldarg[0]) {
                 if (nonce_file_write) {
                     fclose(fnonces);
                 }
-                return resp.core.old.arg[0];  // error during nested_hard
+                return resp.oldarg[0];  // error during nested_hard
             }
         }
 

@@ -260,7 +260,7 @@ static int CmdLFHitagSniff(const char *Cmd) {
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_hitag_sniff();
 
-    UsbCommand c = {CMD_SNIFF_HITAG, {0, 0, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_SNIFF_HITAG, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
@@ -277,7 +277,7 @@ static int CmdLFHitagSim(const char *Cmd) {
     int res = 0;
     char filename[FILE_PATH_SIZE] = { 0x00 };
 
-    UsbCommand c = {CMD_SIMULATE_HITAG, {0, 0, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_SIMULATE_HITAG, {0, 0, 0}, {{0}}};
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -458,7 +458,7 @@ static void printHitagConfiguration(uint8_t config) {
 
 static bool getHitagUid(uint32_t *uid) {
 
-    UsbCommand c = {CMD_READER_HITAG, {RHT2F_UID_ONLY, 0, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_READER_HITAG, {RHT2F_UID_ONLY, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     UsbReplyNG resp;
@@ -467,13 +467,13 @@ static bool getHitagUid(uint32_t *uid) {
         return false;
     }
 
-    if (resp.core.old.arg[0] == false) {
+    if (resp.oldarg[0] == false) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - failed getting UID");
         return false;
     }
 
     if (uid)
-        *uid = bytes_to_num(resp.core.old.d.asBytes, 4);
+        *uid = bytes_to_num(resp.data.asBytes, 4);
 
     return true;
 }
@@ -513,7 +513,7 @@ static int CmdLFHitagInfo(const char *Cmd) {
 //
 static int CmdLFHitagReader(const char *Cmd) {
 
-    UsbCommand c = {CMD_READER_HITAG, {0, 0, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_READER_HITAG, {0, 0, 0}, {{0}}};
     hitag_data *htd = (hitag_data *)c.d.asBytes;
     hitag_function htf = param_get32ex(Cmd, 0, 0, 10);
 
@@ -565,18 +565,18 @@ static int CmdLFHitagReader(const char *Cmd) {
         return 1;
     }
 
-    if (resp.core.old.arg[0] == false) {
+    if (resp.oldarg[0] == false) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - hitag failed");
         return 1;
     }
 
-    uint32_t id = bytes_to_num(resp.core.old.d.asBytes, 4);
+    uint32_t id = bytes_to_num(resp.data.asBytes, 4);
 
     PrintAndLogEx(SUCCESS, "Valid Hitag2 tag found - UID: %08x", id);
     if (htf != RHT2F_UID_ONLY) {
 
         PrintAndLogEx(SUCCESS, "Dumping tag memory...");
-        uint8_t *data = resp.core.old.d.asBytes;
+        uint8_t *data = resp.data.asBytes;
 
         char filename[FILE_PATH_SIZE];
         char *fnameptr = filename;
@@ -595,7 +595,7 @@ static int CmdLFHitagReader(const char *Cmd) {
 
 static int CmdLFHitagCheckChallenges(const char *Cmd) {
 
-    UsbCommand c = { CMD_TEST_HITAGS_TRACES, {0, 0, 0}, {{0}}};
+    UsbCommandOLD c = { CMD_TEST_HITAGS_TRACES, {0, 0, 0}, {{0}}};
     char filename[FILE_PATH_SIZE] = { 0x00 };
     size_t datalen = 0;
     int res = 0;
@@ -644,7 +644,7 @@ static int CmdLFHitagCheckChallenges(const char *Cmd) {
 }
 
 static int CmdLFHitagWriter(const char *Cmd) {
-    UsbCommand c = { CMD_WR_HITAG_S, {0, 0, 0}, {{0}}};
+    UsbCommandOLD c = { CMD_WR_HITAG_S, {0, 0, 0}, {{0}}};
     hitag_data *htd = (hitag_data *)c.d.asBytes;
     hitag_function htf = param_get32ex(Cmd, 0, 0, 10);
 
@@ -682,7 +682,7 @@ static int CmdLFHitagWriter(const char *Cmd) {
         return 1;
     }
 
-    if (resp.core.old.arg[0] == false) {
+    if (resp.oldarg[0] == false) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - hitag write failed");
         return 1;
     }

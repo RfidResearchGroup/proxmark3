@@ -25,7 +25,7 @@ static pthread_t USB_communication_thread;
 //static pthread_t FPC_communication_thread;
 
 // Transmit buffer.
-static UsbCommand txBuffer;
+static UsbCommandOLD txBuffer;
 static UsbCommandNG txBufferNG;
 size_t txBufferNGLen;
 static bool txBuffer_pending = false;
@@ -57,7 +57,7 @@ bool IsOffline() {
     return offline;
 }
 
-void SendCommand(UsbCommand *c) {
+void SendCommand(UsbCommandOLD *c) {
 
 #ifdef COMMS_DEBUG
     PrintAndLogEx(NORMAL, "Sending %d bytes | cmd %04x\n", sizeof(UsbCommand), c->cmd);
@@ -99,12 +99,12 @@ void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len) {
         PrintAndLogEx(NORMAL, "Sending bytes to proxmark failed - offline");
         return;
     }
-    if (len > USB_DATANG_SIZE) {
+    if (len > USB_CMD_DATA_SIZE) {
         PrintAndLogEx(WARNING, "Sending %d bytes of payload is too much, abort", len);
         return;
     }
 
-    UsbCommandNGPostamble *tx_post = (UsbCommandNGPostamble *)((uint8_t *)&txBufferNG + sizeof(UsbCommandNGPreamble) + sizeof(UsbPacketNGCore) - USB_DATANG_SIZE + len);
+    UsbCommandNGPostamble *tx_post = (UsbCommandNGPostamble *)((uint8_t *)&txBufferNG + sizeof(UsbCommandNGPreamble) + sizeof(UsbPacketNGCore) - USB_CMD_DATA_SIZE + len);
 
     pthread_mutex_lock(&txBufferMutex);
     /**
@@ -121,9 +121,9 @@ void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len) {
     txBufferNG.core.ng.cmd = cmd;
     memcpy(&txBufferNG.core.ng.data, data, len);
     uint8_t first, second;
-    compute_crc(CRC_14443_A, (uint8_t *)&txBufferNG, sizeof(UsbCommandNGPreamble) + sizeof(UsbPacketNGCore) - USB_DATANG_SIZE + len, &first, &second);
+    compute_crc(CRC_14443_A, (uint8_t *)&txBufferNG, sizeof(UsbCommandNGPreamble) + sizeof(UsbPacketNGCore) - USB_CMD_DATA_SIZE + len, &first, &second);
     tx_post->crc = (first << 8) + second;
-    txBufferNGLen = sizeof(UsbCommandNGPreamble) + sizeof(UsbPacketNGCore) - USB_DATANG_SIZE + len + sizeof(UsbCommandNGPostamble);
+    txBufferNGLen = sizeof(UsbCommandNGPreamble) + sizeof(UsbPacketNGCore) - USB_CMD_DATA_SIZE + len + sizeof(UsbCommandNGPostamble);
     txBuffer_pending = true;
 
     // tell communication thread that a new command can be send
@@ -195,35 +195,19 @@ static int getReply(UsbReplyNG *packet) {
 //-----------------------------------------------------------------------------
 static void UsbReplyReceived(UsbReplyNG *packet) {
 
-    uint64_t cmd; // To accommodate old cmd, can be reduced to uint16_t once all old cmds are gone.
+//DOEGOX
+//PrintAndLogEx(NORMAL, "RECV %s magic %08x length %04x status %04x crc %04x cmd %04x",
+//              packet->ng ? "NG" : "OLD", packet->magic, packet->length, packet->status, packet->crc, packet->cmd);
 
-
-    if (packet->ng) {
-//        PrintAndLogEx(NORMAL, "RECV NG magic %08x length %04x status %04x crc %04x cmd %04x", packet->magic, packet->length, packet->status, packet->crc, packet->core.ng.cmd);
-        cmd = packet->core.ng.cmd;
-    } else {
-//        PrintAndLogEx(NORMAL, "RECV OLD magic %08x length %04x status %04x crc %04x cmd %04x", packet->magic, packet->length, packet->status, packet->crc, packet->core.old.cmd);
-        cmd = packet->core.old.cmd;
-    }
-
-
-
-    // For cmd handlers still using old cmd format:
-    if (packet->ng) {
-        cmd = packet->core.ng.cmd;
-    } else {
-        cmd = packet->core.old.cmd;
-    }
-
-    switch (cmd) {
+    switch (packet->cmd) {
         // First check if we are handling a debug message
         case CMD_DEBUG_PRINT_STRING: {
 
             char s[USB_CMD_DATA_SIZE + 1];
             memset(s, 0x00, sizeof(s));
-            size_t len = MIN(packet->core.old.arg[0], USB_CMD_DATA_SIZE);
-            memcpy(s, packet->core.old.d.asBytes, len);
-            uint64_t flag = packet->core.old.arg[1];
+            size_t len = MIN(packet->oldarg[0], USB_CMD_DATA_SIZE);
+            memcpy(s, packet->data.asBytes, len);
+            uint64_t flag = packet->oldarg[1];
 
             switch (flag) {
                 case FLAG_RAWPRINT:
@@ -246,7 +230,7 @@ static void UsbReplyReceived(UsbReplyNG *packet) {
             break;
         }
         case CMD_DEBUG_PRINT_INTEGERS: {
-            PrintAndLogEx(NORMAL, "#db# %" PRIx64 ", %" PRIx64 ", %" PRIx64 "", packet->core.old.arg[0], packet->core.old.arg[1], packet->core.old.arg[2]);
+            PrintAndLogEx(NORMAL, "#db# %" PRIx64 ", %" PRIx64 ", %" PRIx64 "", packet->oldarg[0], packet->oldarg[1], packet->oldarg[2]);
             break;
         }
         // iceman:  hw status - down the path on device, runs printusbspeed which starts sending a lot of
@@ -297,6 +281,7 @@ __attribute__((force_align_arg_pointer))
     size_t rxlen;
 
     UsbReplyNG rx;
+    UsbReplyNGRaw rx_raw;
     //int counter_to_offline = 0;
 
 #if defined(__MACH__) && defined(__APPLE__)
@@ -307,25 +292,34 @@ __attribute__((force_align_arg_pointer))
         rxlen = 0;
         bool ACK_received = false;
         bool error = false;
-        if (uart_receive(sp, (uint8_t *)&rx, sizeof(UsbReplyNGPreamble), &rxlen) && (rxlen == sizeof(UsbReplyNGPreamble))) {
+        if (uart_receive(sp, (uint8_t *)&rx_raw.pre, sizeof(UsbReplyNGPreamble), &rxlen) && (rxlen == sizeof(UsbReplyNGPreamble))) {
+            rx.magic = rx_raw.pre.magic;
+            rx.length = rx_raw.pre.length;
+            rx.status = rx_raw.pre.status;
+            rx.cmd = rx_raw.pre.cmd;
             if (rx.magic == USB_REPLYNG_PREAMBLE_MAGIC) { // New style NG reply
-                if (rx.length > USB_DATANG_SIZE) {
+                if (rx.length > USB_CMD_DATA_SIZE) {
                     PrintAndLogEx(WARNING, "Received packet frame with incompatible length: 0x%04x", rx.length);
                     error = true;
                 }
-                if (!error) { // Get the core and variable length payload
-                    if ((!uart_receive(sp, (uint8_t *)&rx.core, sizeof(UsbPacketNGCore) - USB_DATANG_SIZE + rx.length, &rxlen)) || (rxlen != sizeof(UsbPacketNGCore) - USB_DATANG_SIZE + rx.length)) {
+                if ((!error) && (rx.length > 0)) { // Get the variable length payload
+                    if ((!uart_receive(sp, (uint8_t *)&rx_raw.data, rx.length, &rxlen)) || (rxlen != rx.length)) {
                         PrintAndLogEx(WARNING, "Received packet frame error variable part too short? %d/%d", rxlen, rx.length);
                         error = true;
+                    } else {
+                        memcpy(&rx.data, &rx_raw.data, rx.length);
                     }
                 }
                 if (!error) {                        // Get the postamble
-                    if ((!uart_receive(sp, (uint8_t *)&rx.crc, sizeof(UsbReplyNGPostamble), &rxlen)) || (rxlen != sizeof(UsbReplyNGPostamble))) {
+                    if ((!uart_receive(sp, (uint8_t *)&rx_raw.post, sizeof(UsbReplyNGPostamble), &rxlen)) || (rxlen != sizeof(UsbReplyNGPostamble))) {
                         PrintAndLogEx(WARNING, "Received packet frame error fetching postamble");
                         error = true;
                     }
+                }
+                if (!error) {                        // Check CRC
+                    rx.crc = rx_raw.post.crc;
                     uint8_t first, second;
-                    compute_crc(CRC_14443_A, (uint8_t *)&rx, sizeof(UsbReplyNGPreamble) + sizeof(UsbPacketNGCore) - USB_DATANG_SIZE + rx.length, &first, &second);
+                    compute_crc(CRC_14443_A, (uint8_t *)&rx_raw, sizeof(UsbReplyNGPreamble) + rx.length, &first, &second);
                     if ((first << 8) + second != rx.crc) {
                         PrintAndLogEx(WARNING, "Received packet frame CRC error %02X%02X <> %04X", first, second, rx.crc);
                         error = true;
@@ -336,27 +330,31 @@ __attribute__((force_align_arg_pointer))
                     rx.ng = true;
                     UsbReplyReceived(&rx);
 //TODO DOEGOX NG don't send ACK anymore but reply with the corresponding cmd, still things seem to work fine...
-                    if (rx.core.ng.cmd == CMD_ACK) {
+                    if (rx.cmd == CMD_ACK) {
                         ACK_received = true;
                     }
                 }
             } else {                               // Old style reply
-                uint8_t tmp[sizeof(UsbReplyNGPreamble)];
-                memcpy(tmp, &rx, sizeof(UsbReplyNGPreamble));
-                memcpy(&rx.core.old, tmp, sizeof(UsbReplyNGPreamble));
-                if ((!uart_receive(sp, ((uint8_t *)&rx.core.old) + sizeof(UsbReplyNGPreamble), sizeof(UsbCommand) - sizeof(UsbReplyNGPreamble), &rxlen)) || (rxlen != sizeof(UsbCommand) - sizeof(UsbReplyNGPreamble))) {
-                    PrintAndLogEx(WARNING, "Received packet frame error var part too short? %d/%d", rxlen, sizeof(UsbCommand) - sizeof(UsbReplyNGPreamble));
+                UsbCommandOLD rx_old;
+                memcpy(&rx_old, &rx_raw.pre, sizeof(UsbReplyNGPreamble));
+                if ((!uart_receive(sp, ((uint8_t *)&rx_old) + sizeof(UsbReplyNGPreamble), sizeof(UsbCommandOLD) - sizeof(UsbReplyNGPreamble), &rxlen)) || (rxlen != sizeof(UsbCommandOLD) - sizeof(UsbReplyNGPreamble))) {
+                    PrintAndLogEx(WARNING, "Received packet frame error var part too short? %d/%d", rxlen, sizeof(UsbCommandOLD) - sizeof(UsbReplyNGPreamble));
                     error = true;
                 }
                 if (!error) {
 //                    PrintAndLogEx(NORMAL, "Received reply old full !!");
                     rx.ng = false;
                     rx.magic = 0;
-                    rx.length = USB_CMD_DATA_SIZE;
                     rx.status = 0;
                     rx.crc = 0;
+                    rx.cmd = rx_old.cmd;
+                    rx.oldarg[0] = rx_old.arg[0];
+                    rx.oldarg[1] = rx_old.arg[1];
+                    rx.oldarg[2] = rx_old.arg[2];
+                    rx.length = USB_CMD_DATA_SIZE;
+                    memcpy(&rx.data, &rx_old.d, rx.length);
                     UsbReplyReceived(&rx);
-                    if (rx.core.old.cmd == CMD_ACK) {
+                    if (rx.cmd == CMD_ACK) {
                         ACK_received = true;
                     }
                 }
@@ -388,7 +386,7 @@ __attribute__((force_align_arg_pointer))
                 }
                 txBufferNGLen = 0;
             } else {
-                if (!uart_send(sp, (uint8_t *) &txBuffer, sizeof(UsbCommand))) {
+                if (!uart_send(sp, (uint8_t *) &txBuffer, sizeof(UsbCommandOLD))) {
                     //counter_to_offline++;
                     PrintAndLogEx(WARNING, "sending bytes to Proxmark3 device" _RED_("failed"));
                 }
@@ -462,10 +460,10 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
 int TestProxmark(void) {
     clearCommandBuffer();
     UsbReplyNG resp;
-    UsbCommand c = {CMD_PING, {0, 0, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_PING, {0, 0, 0}, {{0}}};
     SendCommand(&c);
     if (WaitForResponseTimeout(CMD_ACK, &resp, 5000)) {
-        PrintAndLogEx(INFO, "Communicating with PM3 over %s.", resp.core.old.arg[0] == 1 ? "FPC" : "USB");
+        PrintAndLogEx(INFO, "Communicating with PM3 over %s.", resp.oldarg[0] == 1 ? "FPC" : "USB");
         return 1;
     } else {
         return 0;
@@ -526,9 +524,7 @@ bool WaitForResponseTimeoutW(uint32_t cmd, UsbReplyNG *response, size_t ms_timeo
     while (true) {
 
         while (getReply(response)) {
-            if (cmd == CMD_UNKNOWN || (response->ng && response->core.ng.cmd == cmd))
-                return true;
-            if (cmd == CMD_UNKNOWN || ((!response->ng) && response->core.old.cmd == cmd))
+            if (cmd == CMD_UNKNOWN || response->cmd == cmd)
                 return true;
         }
 
@@ -580,22 +576,22 @@ bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint3
 
     switch (memtype) {
         case BIG_BUF: {
-            UsbCommand c = {CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K, {start_index, bytes, 0}, {{0}}};
+            UsbCommandOLD c = {CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K, {start_index, bytes, 0}, {{0}}};
             SendCommand(&c);
             return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K);
         }
         case BIG_BUF_EML: {
-            UsbCommand c = {CMD_DOWNLOAD_EML_BIGBUF, {start_index, bytes, 0}, {{0}}};
+            UsbCommandOLD c = {CMD_DOWNLOAD_EML_BIGBUF, {start_index, bytes, 0}, {{0}}};
             SendCommand(&c);
             return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_EML_BIGBUF);
         }
         case FLASH_MEM: {
-            UsbCommand c = {CMD_FLASHMEM_DOWNLOAD, {start_index, bytes, 0}, {{0}}};
+            UsbCommandOLD c = {CMD_FLASHMEM_DOWNLOAD, {start_index, bytes, 0}, {{0}}};
             SendCommand(&c);
             return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_FLASHMEM_DOWNLOADED);
         }
         case SIM_MEM: {
-            //UsbCommand c = {CMD_DOWNLOAD_SIM_MEM, {start_index, bytes, 0}, {{0}}};
+            //UsbCommandOLD c = {CMD_DOWNLOAD_SIM_MEM, {start_index, bytes, 0}, {{0}}};
             //SendCommand(&c);
             //return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_SIMMEM);
             return false;
@@ -617,11 +613,11 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbReplyN
             // arg0 = offset in transfer. Startindex of this chunk
             // arg1 = length bytes to transfer
             // arg2 = bigbuff tracelength (?)
-            if (response->core.old.cmd == rec_cmd) {
+            if (response->cmd == rec_cmd) {
 
-                uint32_t offset = response->core.old.arg[0];
-                uint32_t copy_bytes = MIN(bytes - bytes_completed, response->core.old.arg[1]);
-                //uint32_t tracelen = response->core.old.arg[2];
+                uint32_t offset = response->oldarg[0];
+                uint32_t copy_bytes = MIN(bytes - bytes_completed, response->oldarg[1]);
+                //uint32_t tracelen = response->oldarg[2];
 
                 // extended bounds check1.  upper limit is USB_CMD_DATA_SIZE
                 // shouldn't happen
@@ -633,9 +629,9 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbReplyN
                     break;
                 }
 
-                memcpy(dest + offset, response->core.old.d.asBytes, copy_bytes);
+                memcpy(dest + offset, response->data.asBytes, copy_bytes);
                 bytes_completed += copy_bytes;
-            } else if (response->core.old.cmd == CMD_ACK) {
+            } else if (response->cmd == CMD_ACK) {
                 return true;
             }
         }

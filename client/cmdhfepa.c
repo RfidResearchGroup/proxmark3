@@ -31,20 +31,20 @@ static int CmdHFEPACollectPACENonces(const char *Cmd) {
     // repeat n times
     for (uint32_t i = 0; i < n; i++) {
         // execute PACE
-        UsbCommand c = {CMD_EPA_PACE_COLLECT_NONCE, {(int)m, 0, 0}, {{0}}};
+        UsbCommandOLD c = {CMD_EPA_PACE_COLLECT_NONCE, {(int)m, 0, 0}, {{0}}};
         clearCommandBuffer();
         SendCommand(&c);
         UsbReplyNG resp;
         WaitForResponse(CMD_ACK, &resp);
 
         // check if command failed
-        if (resp.core.old.arg[0] != 0) {
-            PrintAndLogEx(FAILED, "Error in step %d, Return code: %d", resp.core.old.arg[0], (int)resp.core.old.arg[1]);
+        if (resp.oldarg[0] != 0) {
+            PrintAndLogEx(FAILED, "Error in step %d, Return code: %d", resp.oldarg[0], (int)resp.oldarg[1]);
         } else {
-            size_t nonce_length = resp.core.old.arg[1];
+            size_t nonce_length = resp.oldarg[1];
             char *nonce = (char *) calloc(2 * nonce_length + 1, sizeof(uint8_t));
             for (int j = 0; j < nonce_length; j++) {
-                sprintf(nonce + (2 * j), "%02X", resp.core.old.d.asBytes[j]);
+                sprintf(nonce + (2 * j), "%02X", resp.data.asBytes[j]);
             }
             // print nonce
             PrintAndLogEx(NORMAL, "Length: %d, Nonce: %s", nonce_length, nonce);
@@ -109,7 +109,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
     }
 
     // transfer the APDUs to the Proxmark
-    UsbCommand usb_cmd;
+    UsbCommandOLD usb_cmd;
     usb_cmd.cmd = CMD_EPA_PACE_REPLAY;
     for (int i = 0; i < sizeof(apdu_lengths); i++) {
         // APDU number
@@ -132,7 +132,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
             clearCommandBuffer();
             SendCommand(&usb_cmd);
             WaitForResponse(CMD_ACK, &resp);
-            if (resp.core.old.arg[0] != 0) {
+            if (resp.oldarg[0] != 0) {
                 PrintAndLogEx(WARNING, "Transfer of APDU #%d Part %d failed!", i, j);
                 return 0;
             }
@@ -144,21 +144,21 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
     clearCommandBuffer();
     SendCommand(&usb_cmd);
     WaitForResponse(CMD_ACK, &resp);
-    if (resp.core.old.arg[0] != 0) {
-        PrintAndLogEx(NORMAL, "\nPACE replay failed in step %u!", (uint32_t)resp.core.old.arg[0]);
+    if (resp.oldarg[0] != 0) {
+        PrintAndLogEx(NORMAL, "\nPACE replay failed in step %u!", (uint32_t)resp.oldarg[0]);
         PrintAndLogEx(NORMAL, "Measured times:");
-        PrintAndLogEx(NORMAL, "MSE Set AT: %u us", resp.core.old.d.asDwords[0]);
-        PrintAndLogEx(NORMAL, "GA Get Nonce: %u us", resp.core.old.d.asDwords[1]);
-        PrintAndLogEx(NORMAL, "GA Map Nonce: %u us", resp.core.old.d.asDwords[2]);
-        PrintAndLogEx(NORMAL, "GA Perform Key Agreement: %u us", resp.core.old.d.asDwords[3]);
-        PrintAndLogEx(NORMAL, "GA Mutual Authenticate: %u us", resp.core.old.d.asDwords[4]);
+        PrintAndLogEx(NORMAL, "MSE Set AT: %u us", resp.data.asDwords[0]);
+        PrintAndLogEx(NORMAL, "GA Get Nonce: %u us", resp.data.asDwords[1]);
+        PrintAndLogEx(NORMAL, "GA Map Nonce: %u us", resp.data.asDwords[2]);
+        PrintAndLogEx(NORMAL, "GA Perform Key Agreement: %u us", resp.data.asDwords[3]);
+        PrintAndLogEx(NORMAL, "GA Mutual Authenticate: %u us", resp.data.asDwords[4]);
     } else {
         PrintAndLogEx(NORMAL, "PACE replay successfull!");
-        PrintAndLogEx(NORMAL, "MSE Set AT: %u us", resp.core.old.d.asDwords[0]);
-        PrintAndLogEx(NORMAL, "GA Get Nonce: %u us", resp.core.old.d.asDwords[1]);
-        PrintAndLogEx(NORMAL, "GA Map Nonce: %u us", resp.core.old.d.asDwords[2]);
-        PrintAndLogEx(NORMAL, "GA Perform Key Agreement: %u us", resp.core.old.d.asDwords[3]);
-        PrintAndLogEx(NORMAL, "GA Mutual Authenticate: %u us", resp.core.old.d.asDwords[4]);
+        PrintAndLogEx(NORMAL, "MSE Set AT: %u us", resp.data.asDwords[0]);
+        PrintAndLogEx(NORMAL, "GA Get Nonce: %u us", resp.data.asDwords[1]);
+        PrintAndLogEx(NORMAL, "GA Map Nonce: %u us", resp.data.asDwords[2]);
+        PrintAndLogEx(NORMAL, "GA Perform Key Agreement: %u us", resp.data.asDwords[3]);
+        PrintAndLogEx(NORMAL, "GA Mutual Authenticate: %u us", resp.data.asDwords[4]);
     }
     return 1;
 }

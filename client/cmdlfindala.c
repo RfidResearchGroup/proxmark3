@@ -404,7 +404,7 @@ static int CmdIndalaSim(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Simulating Indala UID: %s",  sprint_hex(hexuid, len));
     PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or run another command");
 
-    UsbCommand c = {CMD_PSK_SIM_TAG, {arg1, arg2, size}, {{0}}};
+    UsbCommandOLD c = {CMD_PSK_SIM_TAG, {arg1, arg2, size}, {{0}}};
     memcpy(c.d.asBytes, bits, size);
     clearCommandBuffer();
     SendCommand(&c);
@@ -438,7 +438,7 @@ static int CmdIndalaClone(const char *Cmd) {
     CLIGetHexWithReturn(2, data, &datalen);
     CLIParserFree();
 
-    UsbCommand c = {0, {0, 0, 0}, {{0}}};
+    UsbCommandOLD c = {0, {0, 0, 0}, {{0}}};
 
     if (isLongUid) {
         PrintAndLogEx(INFO, "Preparing to clone Indala 224bit tag with RawID %s", sprint_hex(data, datalen));

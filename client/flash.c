@@ -259,7 +259,7 @@ fail:
 
 // Get the state of the proxmark, backwards compatible
 static int get_proxmark_state(uint32_t *state) {
-    UsbCommand c = {CMD_DEVICE_INFO};
+    UsbCommandOLD c = {CMD_DEVICE_INFO};
     SendCommand(&c);
     UsbReplyNG resp;
     WaitForResponse(CMD_UNKNOWN, &resp);  // wait for any response. No timeout.
@@ -269,7 +269,7 @@ static int get_proxmark_state(uint32_t *state) {
     // 2. The old os code will respond with CMD_DEBUG_PRINT_STRING and "unknown command"
     // 3. The new bootrom and os codes will respond with CMD_DEVICE_INFO and flags
 
-    switch (resp.core.old.cmd) {
+    switch (resp.cmd) {
         case CMD_ACK:
             *state = DEVICE_INFO_FLAG_CURRENT_MODE_BOOTROM;
             break;
@@ -277,10 +277,10 @@ static int get_proxmark_state(uint32_t *state) {
             *state = DEVICE_INFO_FLAG_CURRENT_MODE_OS;
             break;
         case CMD_DEVICE_INFO:
-            *state = resp.core.old.arg[0];
+            *state = resp.oldarg[0];
             break;
         default:
-            fprintf(stderr, _RED_("Error:") "Couldn't get Proxmark3 state, bad response type: 0x%04" PRIx64 "\n", resp.core.old.cmd);
+            fprintf(stderr, _RED_("Error:") "Couldn't get Proxmark3 state, bad response type: 0x%04x\n", resp.cmd);
             return -1;
             break;
     }
@@ -300,7 +300,7 @@ static int enter_bootloader(char *serial_port_name) {
 
     if (state & DEVICE_INFO_FLAG_CURRENT_MODE_OS) {
         fprintf(stdout, _BLUE_("Entering bootloader...") "\n");
-        UsbCommand c;
+        UsbCommandOLD c;
         memset(&c, 0, sizeof(c));
 
         if ((state & DEVICE_INFO_FLAG_BOOTROM_PRESENT)
@@ -338,10 +338,10 @@ static int enter_bootloader(char *serial_port_name) {
 static int wait_for_ack(UsbReplyNG *ack) {
     WaitForResponse(CMD_UNKNOWN, ack);
 
-    if (ack->core.old.cmd != CMD_ACK) {
-        printf("Error: Unexpected reply 0x%04" PRIx64 " %s (expected ACK)\n",
-               ack->core.old.cmd,
-               (ack->core.old.cmd == CMD_NACK) ? "NACK" : ""
+    if (ack->cmd != CMD_ACK) {
+        printf("Error: Unexpected reply 0x%04x %s (expected ACK)\n",
+               ack->cmd,
+               (ack->cmd == CMD_NACK) ? "NACK" : ""
               );
         return -1;
     }
@@ -361,7 +361,7 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name) {
     if (state & DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH) {
         // This command is stupid. Why the heck does it care which area we're
         // flashing, as long as it's not the bootloader area? The mind boggles.
-        UsbCommand c = {CMD_START_FLASH};
+        UsbCommandOLD c = {CMD_START_FLASH};
         UsbReplyNG resp;
 
         if (enable_bl_writes) {
@@ -386,16 +386,16 @@ static int write_block(uint32_t address, uint8_t *data, uint32_t length) {
     uint8_t block_buf[BLOCK_SIZE];
     memset(block_buf, 0xFF, BLOCK_SIZE);
     memcpy(block_buf, data, length);
-    UsbCommand c = {CMD_FINISH_WRITE, {address, 0, 0}};
+    UsbCommandOLD c = {CMD_FINISH_WRITE, {address, 0, 0}};
     UsbReplyNG resp;
     memcpy(c.d.asBytes, block_buf, length);
     SendCommand(&c);
     int ret = wait_for_ack(&resp);
-    if (ret && resp.core.old.arg[0]) {
-        uint32_t lock_bits = resp.core.old.arg[0] >> 16;
-        bool lock_error = resp.core.old.arg[0] & AT91C_MC_LOCKE;
-        bool prog_error = resp.core.old.arg[0] & AT91C_MC_PROGE;
-        bool security_bit = resp.core.old.arg[0] & AT91C_MC_SECURITY;
+    if (ret && resp.oldarg[0]) {
+        uint32_t lock_bits = resp.oldarg[0] >> 16;
+        bool lock_error = resp.oldarg[0] & AT91C_MC_LOCKE;
+        bool prog_error = resp.oldarg[0] & AT91C_MC_PROGE;
+        bool security_bit = resp.oldarg[0] & AT91C_MC_SECURITY;
         printf("%s", lock_error ? "       Lock Error\n" : "");
         printf("%s", prog_error ? "       Invalid Command or bad Keyword\n" : "");
         printf("%s", security_bit ? "       Security Bit is set!\n" : "");
@@ -459,7 +459,7 @@ void flash_free(flash_file_t *ctx) {
 
 // just reset the unit
 int flash_stop_flashing(void) {
-    UsbCommand c = {CMD_HARDWARE_RESET};
+    UsbCommandOLD c = {CMD_HARDWARE_RESET};
     SendCommand(&c);
     msleep(100);
     return 0;

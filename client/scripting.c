@@ -12,7 +12,7 @@
 
 /**
  * The following params expected:
- *  UsbCommand c
+ *  UsbCommandOLD c
  *@brief l_SendCommand
  * @param L
  * @return
@@ -29,19 +29,19 @@ static int l_SendCommand(lua_State *L) {
         uint8_t  asBytes[USB_CMD_DATA_SIZE]; // 1 byte * 512 = 512 bytes (OR)
         uint32_t asDwords[USB_CMD_DATA_SIZE/4]; // 4 byte * 128 = 512 bytes
       } d;
-    } PACKED UsbCommand;
+    } PACKED UsbCommandOLD;
 
     ==> A 544 byte buffer will do.
     **/
     size_t size;
     const char *data = luaL_checklstring(L, 1, &size);
-    if (size != sizeof(UsbCommand)) {
-        printf("Got data size %d, expected %d", (int) size, (int) sizeof(UsbCommand));
+    if (size != sizeof(UsbCommandOLD)) {
+        printf("Got data size %d, expected %d", (int) size, (int) sizeof(UsbCommandOLD));
         lua_pushstring(L, "Wrong data size");
         return 1;
     }
 
-    SendCommand((UsbCommand *)data);
+    SendCommand((UsbCommandOLD *)data);
     return 0; // no return values
 }
 
@@ -262,7 +262,7 @@ static int l_foobar(lua_State *L) {
     printf("Arguments discarded, stack now contains %d elements", lua_gettop(L));
 
     // todo: this is not used, where was it intended for?
-    // UsbCommand response =  {CMD_MIFARE_READBL, {1337, 1338, 1339}, {{0}}};
+    // UsbCommandOLD response =  {CMD_MIFARE_READBL, {1337, 1338, 1339}, {{0}}};
 
     printf("Now returning a uint64_t as a string");
     uint64_t x = 0xDEADC0DE;

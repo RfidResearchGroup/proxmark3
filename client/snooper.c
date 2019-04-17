@@ -26,7 +26,7 @@ int main() {
     while (1) {
         while (!OpenProxmark()) { sleep(1); }
         while (1) {
-            UsbCommand cmdbuf;
+            UsbCommandOLD cmdbuf;
             CommandReceived("hf 14a sniff");
             HANDLE_ERROR;
             ReceiveCommand(&cmdbuf);

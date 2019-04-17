@@ -874,7 +874,7 @@ static int CmdBuffClear(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_data_buffclear();
 
-    UsbCommand c = {CMD_BUFF_CLEAR, {0, 0, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_BUFF_CLEAR, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     ClearGraph(true);
@@ -1468,8 +1468,8 @@ int getSamples(uint32_t n, bool silent) {
     uint8_t bits_per_sample = 8;
 
     //Old devices without this feature would send 0 at arg[0]
-    if (response.core.old.arg[0] > 0) {
-        sample_config *sc = (sample_config *) response.core.old.d.asBytes;
+    if (response.oldarg[0] > 0) {
+        sample_config *sc = (sample_config *) response.data.asBytes;
         if (!silent) PrintAndLogEx(NORMAL, "Samples @ %d bits/smpl, decimation 1:%d ", sc->bits_per_sample, sc->decimation);
         bits_per_sample = sc->bits_per_sample;
     }
@@ -1529,7 +1529,7 @@ int CmdTuneSamples(const char *Cmd) {
     int timeout = 0;
     PrintAndLogEx(INFO, "\nMeasuring antenna characteristics, please wait...");
 
-    UsbCommand c = {CMD_MEASURE_ANTENNA_TUNING, {0, 0, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_MEASURE_ANTENNA_TUNING, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     UsbReplyNG resp;
@@ -1544,12 +1544,12 @@ int CmdTuneSamples(const char *Cmd) {
     }
     PrintAndLogEx(NORMAL, "\n");
 
-    uint32_t v_lf125 = resp.core.old.arg[0];
-    uint32_t v_lf134 = resp.core.old.arg[0] >> 32;
+    uint32_t v_lf125 = resp.oldarg[0];
+    uint32_t v_lf134 = resp.oldarg[0] >> 32;
 
-    uint32_t v_hf = resp.core.old.arg[1];
-    uint32_t peakf = resp.core.old.arg[2];
-    uint32_t peakv = resp.core.old.arg[2] >> 32;
+    uint32_t v_hf = resp.oldarg[1];
+    uint32_t peakf = resp.oldarg[2];
+    uint32_t peakv = resp.oldarg[2] >> 32;
 
     if (v_lf125 > NON_VOLTAGE)
         PrintAndLogEx(SUCCESS, "LF antenna: %5.2f V - 125.00 kHz", (v_lf125 * ANTENNA_ERROR) / 1000.0);
@@ -1595,8 +1595,8 @@ int CmdTuneSamples(const char *Cmd) {
     // even here, these values has 3% error.
     uint16_t test1 = 0;
     for (int i = 0; i < 256; i++) {
-        GraphBuffer[i] = resp.core.old.d.asBytes[i] - 128;
-        test1 += resp.core.old.d.asBytes[i];
+        GraphBuffer[i] = resp.data.asBytes[i] - 128;
+        test1 += resp.data.asBytes[i];
     }
 
     if (test1 > 0) {

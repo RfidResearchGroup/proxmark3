@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
     while (1) {
         while (!OpenProxmark()) { sleep(1); }
         while (1) {
-            UsbCommand cmdbuf;
+            UsbCommandOLD cmdbuf;
             CommandReceived(argv[1]);
             HANDLE_ERROR;
             ReceiveCommand(&cmdbuf);

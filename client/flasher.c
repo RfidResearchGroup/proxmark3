@@ -20,9 +20,9 @@
 
 #define MAX_FILES 4
 
-void cmd_debug(UsbCommand *c) {
+void cmd_debug(UsbCommandOLD *c) {
     //  Debug
-    printf("UsbCommand length[len=%zu]\n", sizeof(UsbCommand));
+    printf("UsbCommandOLD length[len=%zu]\n", sizeof(UsbCommandOLD));
     printf("  cmd[len=%zu]: %016" PRIx64"\n", sizeof(c->cmd), c->cmd);
     printf(" arg0[len=%zu]: %016" PRIx64"\n", sizeof(c->arg[0]), c->arg[0]);
     printf(" arg1[len=%zu]: %016" PRIx64"\n", sizeof(c->arg[1]), c->arg[1]);

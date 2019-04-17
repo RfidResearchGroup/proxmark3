@@ -363,7 +363,7 @@ void SendVersion(void) {
 }
 
 // measure the USB Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
-// Note: this mimics GetFromBigbuf(), i.e. we have the overhead of the UsbCommand structure included.
+// Note: this mimics GetFromBigbuf(), i.e. we have the overhead of the UsbCommandOLD structure included.
 void printUSBSpeed(void) {
     Dbprintf("USB Speed");
     Dbprintf("  Sending USB packets to client...");
@@ -378,9 +378,9 @@ void printUSBSpeed(void) {
     LED_B_ON();
 
     while (end_time < start_time + USB_SPEED_TEST_MIN_TIME) {
-        reply_ng(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, PM3_SUCCESS, test_data, USB_DATANG_SIZE);
+        reply_ng(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, PM3_SUCCESS, test_data, USB_CMD_DATA_SIZE);
         end_time = GetTickCount();
-        bytes_transferred += USB_DATANG_SIZE;
+        bytes_transferred += USB_CMD_DATA_SIZE;
     }
     LED_B_OFF();
 
@@ -1142,13 +1142,13 @@ static void UsbPacketReceived(UsbCommandNG *packet) {
             cmd_send(CMD_DEBUG_PRINT_STRING, strlen(dest), 0, 0, dest, strlen(dest));
             LED_A_OFF();
             /*
-            uint8_t my_rx[sizeof(UsbCommand)];
+            uint8_t my_rx[sizeof(UsbCommandOLD)];
             while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
                 LED_B_INV();
                 if (usart_readbuffer(my_rx) ) {
                     //UsbPacketReceived(my_rx, sizeof(my_rx));
 
-                    UsbCommand *my = (UsbCommand *)my_rx;
+                    UsbCommandOLD *my = (UsbCommandOLD *)my_rx;
                     if (my->cmd > 0 ) {
                         Dbprintf("received command: 0x%04x and args: %d %d %d", my->cmd, my->arg[0], my->arg[1], my->arg[2]);
                     }
@@ -1577,13 +1577,13 @@ void  __attribute__((noreturn)) AppMain(void) {
             size_t bytes = usb_read_ng((uint8_t *)&rx, sizeof(UsbCommandNGPreamble));
             if (bytes == sizeof(UsbCommandNGPreamble)) {
                 if (rx.magic == USB_COMMANDNG_PREAMBLE_MAGIC) { // New style NG command
-                    if (rx.length > USB_DATANG_SIZE) {
+                    if (rx.length > USB_CMD_DATA_SIZE) {
                         Dbprintf("Packet frame with incompatible length: 0x%04x", rx.length);
                         error = true;
                     }
                     if (!error) { // Get the core and variable length payload
-                        bytes = usb_read_ng(((uint8_t *)&rx.core), sizeof(UsbPacketNGCore) - USB_DATANG_SIZE + rx.length);
-                        if (bytes != sizeof(UsbPacketNGCore) - USB_DATANG_SIZE + rx.length) {
+                        bytes = usb_read_ng(((uint8_t *)&rx.core), sizeof(UsbPacketNGCore) - USB_CMD_DATA_SIZE + rx.length);
+                        if (bytes != sizeof(UsbPacketNGCore) - USB_CMD_DATA_SIZE + rx.length) {
                             Dbprintf("Packet frame error variable part too short? %d/%d", bytes, rx.length);
                             error = true;
                         }
@@ -1595,7 +1595,7 @@ void  __attribute__((noreturn)) AppMain(void) {
                             error = true;
                         }
                         uint8_t first, second;
-                        compute_crc(CRC_14443_A, (uint8_t *)&rx, sizeof(UsbCommandNGPreamble) + sizeof(UsbPacketNGCore) - USB_DATANG_SIZE + rx.length, &first, &second);
+                        compute_crc(CRC_14443_A, (uint8_t *)&rx, sizeof(UsbCommandNGPreamble) + sizeof(UsbPacketNGCore) - USB_CMD_DATA_SIZE + rx.length, &first, &second);
                         if ((first << 8) + second != rx.crc) {
                             Dbprintf("Packet frame CRC error %02X%02X <> %04X", first, second, rx.crc);
                             error = true;
@@ -1615,9 +1615,9 @@ void  __attribute__((noreturn)) AppMain(void) {
 
 
 
-                    bytes = usb_read_ng(((uint8_t *)&rx.core.old) + sizeof(UsbCommandNGPreamble), sizeof(UsbCommand) - sizeof(UsbCommandNGPreamble));
-                    if (bytes != sizeof(UsbCommand) - sizeof(UsbCommandNGPreamble)) {
-                        Dbprintf("Packet frame error var part too short? %d/%d", bytes, sizeof(UsbCommand) - sizeof(UsbCommandNGPreamble));
+                    bytes = usb_read_ng(((uint8_t *)&rx.core.old) + sizeof(UsbCommandNGPreamble), sizeof(UsbCommandOLD) - sizeof(UsbCommandNGPreamble));
+                    if (bytes != sizeof(UsbCommandOLD) - sizeof(UsbCommandNGPreamble)) {
+                        Dbprintf("Packet frame error var part too short? %d/%d", bytes, sizeof(UsbCommandOLD) - sizeof(UsbCommandNGPreamble));
                         error = true;
                     }
                     if (!error) {

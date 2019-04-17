@@ -678,7 +678,7 @@ int CmdTraceList(const char *Cmd) {
             return 1;
         }
 
-        traceLen = response.core.old.arg[2];
+        traceLen = response.oldarg[2];
         if (traceLen > USB_CMD_DATA_SIZE) {
             uint8_t *p = realloc(trace, traceLen);
             if (p == NULL) {

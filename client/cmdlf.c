@@ -144,7 +144,7 @@ static int usage_lf_find(void) {
 /* send a LF command before reading */
 int CmdLFCommandRead(const char *Cmd) {
 
-    UsbCommand c = {CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K, {0, 0, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K, {0, 0, 0}, {{0}}};
     bool errors = false;
 
     uint8_t cmdp = 0;
@@ -322,7 +322,7 @@ int CmdLFSetConfig(const char *Cmd) {
 
     sample_config config = { decimation, bps, averaging, divisor, trigger_threshold };
 
-    UsbCommand c = {CMD_SET_LF_SAMPLING_CONFIG, {0, 0, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_SET_LF_SAMPLING_CONFIG, {0, 0, 0}, {{0}}};
     memcpy(c.d.asBytes, &config, sizeof(sample_config));
     clearCommandBuffer();
     SendCommand(&c);
@@ -331,7 +331,7 @@ int CmdLFSetConfig(const char *Cmd) {
 
 bool lf_read(bool silent, uint32_t samples) {
     if (IsOffline()) return false;
-    UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_125K, {silent, samples, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_125K, {silent, samples, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
 
@@ -344,8 +344,8 @@ bool lf_read(bool silent, uint32_t samples) {
             return false;
         }
     }
-    // resp.core.old.arg[0] is bits read not bytes read.
-    getSamples(resp.core.old.arg[0] / 8, silent);
+    // resp.oldarg[0] is bits read not bytes read.
+    getSamples(resp.oldarg[0] / 8, silent);
 
     return true;
 }
@@ -387,7 +387,7 @@ int CmdLFSniff(const char *Cmd) {
     uint8_t cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_lf_sniff();
 
-    UsbCommand c = {CMD_LF_SNIFF_RAW_ADC_SAMPLES, {0, 0, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_LF_SNIFF_RAW_ADC_SAMPLES, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     WaitForResponse(CMD_ACK, NULL);
@@ -420,7 +420,7 @@ int CmdLFSim(const char *Cmd) {
 
     //can send only 512 bits at a time (1 byte sent per bit...)
     for (uint16_t i = 0; i < GraphTraceLen; i += USB_CMD_DATA_SIZE) {
-        UsbCommand c = {CMD_UPLOAD_SIM_SAMPLES_125K, {i, FPGA_LF, 0}, {{0}}};
+        UsbCommandOLD c = {CMD_UPLOAD_SIM_SAMPLES_125K, {i, FPGA_LF, 0}, {{0}}};
 
         for (uint16_t j = 0; j < USB_CMD_DATA_SIZE; j++)
             c.d.asBytes[j] = GraphBuffer[i + j];
@@ -434,7 +434,7 @@ int CmdLFSim(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "Simulating");
 
-    UsbCommand c = {CMD_SIMULATE_TAG_125K, {GraphTraceLen, gap, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_SIMULATE_TAG_125K, {GraphTraceLen, gap, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
@@ -523,7 +523,7 @@ int CmdLFfskSim(const char *Cmd) {
         PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %d - max: %d", size, USB_CMD_DATA_SIZE);
         size = USB_CMD_DATA_SIZE;
     }
-    UsbCommand c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}, {{0}}};
+    UsbCommandOLD c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}, {{0}}};
 
     memcpy(c.d.asBytes, DemodBuffer, size);
     clearCommandBuffer();
@@ -619,7 +619,7 @@ int CmdLFaskSim(const char *Cmd) {
     arg1 = clk << 8 | encoding;
     arg2 = invert << 8 | separator;
 
-    UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}, {{0}}};
+    UsbCommandOLD c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}, {{0}}};
     memcpy(c.d.asBytes, DemodBuffer, size);
     clearCommandBuffer();
     SendCommand(&c);
@@ -726,7 +726,7 @@ int CmdLFpskSim(const char *Cmd) {
         PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %d - max: %d", size, USB_CMD_DATA_SIZE);
         size = USB_CMD_DATA_SIZE;
     }
-    UsbCommand c = {CMD_PSK_SIM_TAG, {arg1, arg2, size}, {{0}}};
+    UsbCommandOLD c = {CMD_PSK_SIM_TAG, {arg1, arg2, size}, {{0}}};
     PrintAndLogEx(DEBUG, "DEBUG: Sending DemodBuffer Length: %d", size);
     memcpy(c.d.asBytes, DemodBuffer, size);
     clearCommandBuffer();
@@ -739,7 +739,7 @@ int CmdLFSimBidir(const char *Cmd) {
     // Set ADC to twice the carrier for a slight supersampling
     // HACK: not implemented in ARMSRC.
     PrintAndLogEx(INFO, "Not implemented yet.");
-    UsbCommand c = {CMD_LF_SIMULATE_BIDIR, {47, 384, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_LF_SIMULATE_BIDIR, {47, 384, 0}, {{0}}};
     SendCommand(&c);
     return 0;
 }

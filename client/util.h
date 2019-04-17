@@ -150,7 +150,7 @@
 
 #ifndef DropField
 #define DropField() { \
-        UsbCommand c_drop = {CMD_READER_ISO_14443a, {0,0,0}, {{0}}}; clearCommandBuffer(); SendCommand(&c_drop); \
+        UsbCommandOLD c_drop = {CMD_READER_ISO_14443a, {0,0,0}, {{0}}}; clearCommandBuffer(); SendCommand(&c_drop); \
     }
 #endif
 

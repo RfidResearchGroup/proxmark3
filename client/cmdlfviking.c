@@ -88,7 +88,7 @@ static int CmdVikingClone(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Preparing to clone Viking tag - ID: %08X, Raw: %08X%08X", id, (uint32_t)(rawID >> 32), (uint32_t)(rawID & 0xFFFFFFFF));
 
-    UsbCommand c = {CMD_VIKING_CLONE_TAG, {rawID >> 32, rawID & 0xFFFFFFFF, Q5}, {{0}}};
+    UsbCommandOLD c = {CMD_VIKING_CLONE_TAG, {rawID >> 32, rawID & 0xFFFFFFFF, Q5}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     UsbReplyNG resp;
@@ -119,7 +119,7 @@ static int CmdVikingSim(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "Simulating Viking - ID: %08X, Raw: %08X%08X", id, (uint32_t)(rawID >> 32), (uint32_t)(rawID & 0xFFFFFFFF));
 
-    UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}, {{0}}};
+    UsbCommandOLD c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}, {{0}}};
     num_to_bytebits(rawID, size, c.d.asBytes);
     clearCommandBuffer();
     SendCommand(&c);

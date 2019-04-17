@@ -1018,7 +1018,7 @@ static int CmdT55xxWakeUp(const char *Cmd) {
     }
     if (errors) return usage_t55xx_wakup();
 
-    UsbCommand c = {CMD_T55XX_WAKEUP, {password, 0, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_T55XX_WAKEUP, {password, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     PrintAndLogEx(SUCCESS, "Wake up command sent. Try read now");
@@ -1074,7 +1074,7 @@ static int CmdT55xxWriteBlock(const char *Cmd) {
         return 0;
     }
 
-    UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {data, block, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_T55XX_WRITE_BLOCK, {data, block, 0}, {{0}}};
     UsbReplyNG resp;
     c.d.asBytes[0] = (page1) ? 0x2 : 0;
     c.d.asBytes[0] |= (testMode) ? 0x4 : 0;
@@ -1515,7 +1515,7 @@ bool AquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password) {
     // arg1: which block to read
     // arg2: password
     uint8_t arg0 = (page << 1 | (pwdmode));
-    UsbCommand c = {CMD_T55XX_READ_BLOCK, {arg0, block, password}, {{0}}};
+    UsbCommandOLD c = {CMD_T55XX_READ_BLOCK, {arg0, block, password}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     if (!WaitForResponseTimeout(CMD_ACK, NULL, 2500)) {
@@ -1775,7 +1775,7 @@ static void t55x7_create_config_block(int tagtype) {
 
 static int CmdResetRead(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    UsbCommand c = {CMD_T55XX_RESET_READ, {0, 0, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_T55XX_RESET_READ, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     if (!WaitForResponseTimeout(CMD_ACK, NULL, 2500)) {
@@ -1856,7 +1856,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
     uint64_t t1 = msclock();
 
     if (cmdp == 'm') {
-        UsbCommand c = {CMD_T55XX_CHKPWDS, {0, 0, 0}, {{0}}};
+        UsbCommandOLD c = {CMD_T55XX_CHKPWDS, {0, 0, 0}, {{0}}};
         clearCommandBuffer();
         SendCommand(&c);
         UsbReplyNG resp;
@@ -1871,13 +1871,13 @@ static int CmdT55xxChkPwds(const char *Cmd) {
             }
         }
 
-        if (resp.core.old.arg[0]) {
-            PrintAndLogEx(SUCCESS, "\nFound a candidate [ " _YELLOW_("%08X") " ]. Trying to validate", resp.core.old.arg[1]);
+        if (resp.oldarg[0]) {
+            PrintAndLogEx(SUCCESS, "\nFound a candidate [ " _YELLOW_("%08X") " ]. Trying to validate", resp.oldarg[1]);
 
-            if (AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, resp.core.old.arg[1])) {
+            if (AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, resp.oldarg[1])) {
                 found = tryDetectModulation();
                 if (found) {
-                    PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08") " ]", resp.core.old.arg[1]);
+                    PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08") " ]", resp.oldarg[1]);
                 } else {
                     PrintAndLogEx(WARNING, "Check pwd failed");
                 }
@@ -2299,7 +2299,7 @@ static int CmdT55xxSetDeviceConfig(const char *Cmd) {
 
     t55xx_config conf = { startgap * 8, writegap * 8, write0 * 8, write1 * 8, readgap * 8 };
 
-    UsbCommand c = {CMD_SET_LF_T55XX_CONFIG, {shall_persist, 0, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_SET_LF_T55XX_CONFIG, {shall_persist, 0, 0}, {{0}}};
     memcpy(c.d.asBytes, &conf, sizeof(t55xx_config));
     clearCommandBuffer();
     SendCommand(&c);

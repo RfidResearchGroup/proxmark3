@@ -308,7 +308,7 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
 }
 
 static int CmdDetectReader(const char *Cmd) {
-    UsbCommand c = {CMD_LISTEN_READER_FIELD, {0, 0, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_LISTEN_READER_FIELD, {0, 0, 0}, {{0}}};
     // 'l' means LF - 125/134 kHz
     if (*Cmd == 'l') {
         c.arg[0] = 1;
@@ -326,7 +326,7 @@ static int CmdDetectReader(const char *Cmd) {
 // ## FPGA Control
 static int CmdFPGAOff(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    UsbCommand c = {CMD_FPGA_MAJOR_MODE_OFF, {0, 0, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_FPGA_MAJOR_MODE_OFF, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
@@ -336,7 +336,7 @@ static int CmdFPGAOff(const char *Cmd) {
 static int CmdLCD(const char *Cmd) {
     int i, j;
 
-    UsbCommand c = {CMD_LCD, {0, 0, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_LCD, {0, 0, 0}, {{0}}};
     sscanf(Cmd, "%x %d", &i, &j);
     while (j--) {
         c.arg[0] = i & 0x1ff;
@@ -347,7 +347,7 @@ static int CmdLCD(const char *Cmd) {
 }
 
 static int CmdLCDReset(const char *Cmd) {
-    UsbCommand c = {CMD_LCD_RESET, {strtol(Cmd, NULL, 0), 0, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_LCD_RESET, {strtol(Cmd, NULL, 0), 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
@@ -355,7 +355,7 @@ static int CmdLCDReset(const char *Cmd) {
 #endif
 
 static int CmdReadmem(const char *Cmd) {
-    UsbCommand c = {CMD_READ_MEM, {strtol(Cmd, NULL, 0), 0, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_READ_MEM, {strtol(Cmd, NULL, 0), 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
@@ -363,7 +363,7 @@ static int CmdReadmem(const char *Cmd) {
 
 static int CmdReset(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    UsbCommand c = {CMD_HARDWARE_RESET, {0, 0, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_HARDWARE_RESET, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
@@ -374,7 +374,7 @@ static int CmdReset(const char *Cmd) {
  * 600kHz.
  */
 static int CmdSetDivisor(const char *Cmd) {
-    UsbCommand c = {CMD_SET_LF_DIVISOR, {strtol(Cmd, NULL, 0), 0, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_SET_LF_DIVISOR, {strtol(Cmd, NULL, 0), 0, 0}, {{0}}};
 
     if (c.arg[0] < 19 || c.arg[0] > 255) {
         PrintAndLogEx(NORMAL, "divisor must be between 19 and 255");
@@ -394,7 +394,7 @@ static int CmdSetMux(const char *Cmd) {
         return 1;
     }
 
-    UsbCommand c = {CMD_SET_ADC_MUX, {0, 0, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_SET_ADC_MUX, {0, 0, 0}, {{0}}};
 
     if (strcmp(Cmd, "lopkd") == 0)      c.arg[0] = 0;
     else if (strcmp(Cmd, "loraw") == 0) c.arg[0] = 1;
@@ -419,7 +419,7 @@ static int CmdStatus(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     clearCommandBuffer();
     UsbReplyNG resp;
-    UsbCommand c = {CMD_STATUS, {0, 0, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_STATUS, {0, 0, 0}, {{0}}};
     SendCommand(&c);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1900))
         PrintAndLogEx(NORMAL, "Status command failed. USB Speed Test timed out");
@@ -430,7 +430,7 @@ static int CmdPing(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     clearCommandBuffer();
     UsbReplyNG resp;
-    UsbCommand c = {CMD_PING, {0, 0, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_PING, {0, 0, 0}, {{0}}};
     SendCommand(&c);
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1000))
         PrintAndLogEx(NORMAL, "Ping successful");
@@ -441,12 +441,12 @@ static int CmdPing(const char *Cmd) {
 
 static int CmdPingNG(const char *Cmd) {
     uint32_t len = strtol(Cmd, NULL, 0);
-    if (len > USB_DATANG_SIZE)
-        len = USB_DATANG_SIZE;
+    if (len > USB_CMD_DATA_SIZE)
+        len = USB_CMD_DATA_SIZE;
     PrintAndLogEx(NORMAL, "PingNG sent with payload len=%d", len);
     clearCommandBuffer();
     UsbReplyNG resp;
-    uint8_t data[USB_DATANG_SIZE] = {0};
+    uint8_t data[USB_CMD_DATA_SIZE] = {0};
     uint16_t cmd = CMD_PING;
     for (uint16_t i = 0; i < len; i++)
         data[i] = i & 0xFF;
@@ -454,7 +454,7 @@ static int CmdPingNG(const char *Cmd) {
     if (WaitForResponseTimeout(CMD_PING, &resp, 1000)) {
         bool error = false;
         if (len)
-            error = memcmp(data, resp.core.ng.data, len) != 0;
+            error = memcmp(data, resp.data.asBytes, len) != 0;
         PrintAndLogEx(NORMAL, "PingNG response received, content is %s", error ? _RED_("NOT ok") : _GREEN_("ok"));
     } else
         PrintAndLogEx(NORMAL, "PingNG response " _RED_("timeout"));
@@ -496,7 +496,7 @@ int CmdHW(const char *Cmd) {
 void pm3_version(bool verbose) {
     if (!verbose)
         return;
-    UsbCommand c = {CMD_VERSION, {0, 0, 0}, {{0}}};
+    UsbCommandOLD c = {CMD_VERSION, {0, 0, 0}, {{0}}};
     UsbReplyNG resp;
     clearCommandBuffer();
     SendCommand(&c);
@@ -526,8 +526,8 @@ void pm3_version(bool verbose) {
         PrintAndLogEx(NORMAL, "\n [ CLIENT ]");
         PrintAndLogEx(NORMAL, "  client: iceman %s \n", s);
 
-        PrintAndLogEx(NORMAL, (char *)resp.core.old.d.asBytes);
-        lookupChipID(resp.core.old.arg[0], resp.core.old.arg[1]);
+        PrintAndLogEx(NORMAL, (char *)resp.data.asBytes);
+        lookupChipID(resp.oldarg[0], resp.oldarg[1]);
     }
     PrintAndLogEx(NORMAL, "\n");
 }
