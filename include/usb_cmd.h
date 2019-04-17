@@ -36,13 +36,9 @@ typedef struct {
 } PACKED UsbCommandOLD;
 
 typedef struct {
-    uint16_t cmd;
-    uint8_t data[USB_CMD_DATA_SIZE];
-} PACKED UsbPacketNGCore;
-
-typedef struct {
     uint32_t magic;
     uint16_t length;  // length of the variable part, 0 if none.
+    uint16_t cmd;
 } PACKED UsbCommandNGPreamble;
 
 #define USB_COMMANDNG_PREAMBLE_MAGIC 0x61334d50 // PM3a
@@ -51,16 +47,26 @@ typedef struct {
     uint16_t crc;
 } PACKED UsbCommandNGPostamble;
 
+// For internal usage
 typedef struct {
-    uint32_t magic;
-    uint16_t length;  // length of the variable part, 0 if none.
-    union {           // we can simplify it once we get rid of old format compatibility
-        UsbPacketNGCore ng;
-        UsbCommandOLD old;
-    } core;
-    uint16_t crc;
-    bool ng;
+    uint16_t cmd;
+    uint16_t length;
+    uint32_t magic;      //  NG
+    uint16_t crc;        //  NG
+    uint64_t oldarg[3];  //  OLD
+    union {
+        uint8_t  asBytes[USB_CMD_DATA_SIZE];
+        uint32_t asDwords[USB_CMD_DATA_SIZE / 4];
+    } data;
+    bool ng;             // does it store NG data or OLD data?
 } PACKED UsbCommandNG;
+
+// For reception and CRC check
+typedef struct {
+    UsbCommandNGPreamble pre;
+    uint8_t data[USB_CMD_DATA_SIZE];
+    UsbCommandNGPostamble foopost; // Probably not at that offset!
+} PACKED UsbCommandNGRaw;
 
 typedef struct {
     uint32_t magic;
@@ -94,7 +100,7 @@ typedef struct {
 typedef struct {
     UsbReplyNGPreamble pre;
     uint8_t data[USB_CMD_DATA_SIZE];
-    UsbReplyNGPostamble post;
+    UsbReplyNGPostamble foopost; // Probably not at that offset!
 } PACKED UsbReplyNGRaw;
 
 #ifdef WITH_FPC_HOST

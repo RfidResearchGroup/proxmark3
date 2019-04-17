@@ -479,9 +479,9 @@ void felica_sendraw(UsbCommandNG *c) {
 
     if (MF_DBGLEVEL > 3) Dbprintf("FeliCa_sendraw Enter");
 
-    felica_command_t param = c->core.old.arg[0];
-    size_t len = c->core.old.arg[1] & 0xffff;
-    uint8_t *cmd = c->core.old.d.asBytes;
+    felica_command_t param = c->oldarg[0];
+    size_t len = c->oldarg[1] & 0xffff;
+    uint8_t *cmd = c->data.asBytes;
     uint32_t arg0;
 
     felica_card_select_t card;

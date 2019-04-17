@@ -313,7 +313,7 @@ void EPA_PACE_Collect_Nonce(UsbCommandNG *c) {
 
     // now get the nonce
     uint8_t nonce[256] = {0};
-    uint8_t requested_size = (uint8_t)c->core.old.arg[0];
+    uint8_t requested_size = (uint8_t)c->oldarg[0];
     func_return = EPA_PACE_Get_Nonce(requested_size, nonce);
     // check if the command succeeded
     if (func_return < 0) {
@@ -434,19 +434,19 @@ void EPA_PACE_Replay(UsbCommandNG *c) {
     uint32_t timings[sizeof(apdu_lengths_replay) / sizeof(apdu_lengths_replay[0])] = {0};
 
     // if an APDU has been passed, save it
-    if (c->core.old.arg[0] != 0) {
+    if (c->oldarg[0] != 0) {
         // make sure it's not too big
-        if (c->core.old.arg[2] > apdus_replay[c->core.old.arg[0] - 1].len) {
+        if (c->oldarg[2] > apdus_replay[c->oldarg[0] - 1].len) {
             cmd_send(CMD_ACK, 1, 0, 0, NULL, 0);
         }
-        memcpy(apdus_replay[c->core.old.arg[0] - 1].data + c->core.old.arg[1],
-               c->core.old.d.asBytes,
-               c->core.old.arg[2]);
+        memcpy(apdus_replay[c->oldarg[0] - 1].data + c->oldarg[1],
+               c->data.asBytes,
+               c->oldarg[2]);
         // save/update APDU length
-        if (c->core.old.arg[1] == 0) {
-            apdu_lengths_replay[c->core.old.arg[0] - 1] = c->core.old.arg[2];
+        if (c->oldarg[1] == 0) {
+            apdu_lengths_replay[c->oldarg[0] - 1] = c->oldarg[2];
         } else {
-            apdu_lengths_replay[c->core.old.arg[0] - 1] += c->core.old.arg[2];
+            apdu_lengths_replay[c->oldarg[0] - 1] += c->oldarg[2];
         }
         cmd_send(CMD_ACK, 0, 0, 0, NULL, 0);
         return;

@@ -90,9 +90,9 @@ void UsbPacketReceived(UsbCommandNG *packet) {
 
     //if ( len != sizeof(UsbCommand)) Fatal();
 
-    uint32_t arg0 = (uint32_t)packet->core.old.arg[0];
+    uint32_t arg0 = (uint32_t)packet->oldarg[0];
 
-    switch (packet->core.old.cmd) {
+    switch (packet->cmd) {
         case CMD_DEVICE_INFO: {
             dont_ack = 1;
             arg0 = DEVICE_INFO_FLAG_BOOTROM_PRESENT | DEVICE_INFO_FLAG_CURRENT_MODE_BOOTROM |
@@ -110,7 +110,7 @@ void UsbPacketReceived(UsbCommandNG *packet) {
             */
             p = (volatile uint32_t *)&_flash_start;
             for (i = 0; i < 12; i++)
-                p[i + arg0] = packet->core.old.d.asDwords[i];
+                p[i + arg0] = packet->data.asDwords[i];
         }
         break;
 
@@ -118,7 +118,7 @@ void UsbPacketReceived(UsbCommandNG *packet) {
             uint32_t *flash_mem = (uint32_t *)(&_flash_start);
             for (int j = 0; j < 2; j++) {
                 for (i = 0 + (64 * j); i < 64 + (64 * j); i++) {
-                    flash_mem[i] = packet->core.old.d.asDwords[i];
+                    flash_mem[i] = packet->data.asDwords[i];
                 }
 
                 uint32_t flash_address = arg0 + (0x100 * j);
@@ -154,7 +154,7 @@ void UsbPacketReceived(UsbCommandNG *packet) {
         break;
 
         case CMD_START_FLASH: {
-            if (packet->core.old.arg[2] == START_FLASH_MAGIC)
+            if (packet->oldarg[2] == START_FLASH_MAGIC)
                 bootrom_unlocked = 1;
             else
                 bootrom_unlocked = 0;
@@ -163,8 +163,8 @@ void UsbPacketReceived(UsbCommandNG *packet) {
             int prot_end = (int)&_bootrom_end;
             int allow_start = (int)&_flash_start;
             int allow_end = (int)&_flash_end;
-            int cmd_start = packet->core.old.arg[0];
-            int cmd_end = packet->core.old.arg[1];
+            int cmd_start = packet->oldarg[0];
+            int cmd_end = packet->oldarg[1];
 
             /* Only allow command if the bootrom is unlocked, or the parameters are outside of the protected
             * bootrom area. In any case they must be within the flash area.

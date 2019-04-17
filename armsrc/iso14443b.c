@@ -1567,10 +1567,10 @@ void iso14b_set_trigger(bool enable) {
  *
  */
 void SendRawCommand14443B_Ex(UsbCommandNG *c) {
-    iso14b_command_t param = c->core.old.arg[0];
-    size_t len = c->core.old.arg[1] & 0xffff;
-    uint32_t timeout = c->core.old.arg[2];
-    uint8_t *cmd = c->core.old.d.asBytes;
+    iso14b_command_t param = c->oldarg[0];
+    size_t len = c->oldarg[1] & 0xffff;
+    uint32_t timeout = c->oldarg[2];
+    uint8_t *cmd = c->data.asBytes;
     uint8_t status;
     uint32_t sendlen = sizeof(iso14b_card_select_t);
     uint8_t buf[USB_CMD_DATA_SIZE] = {0x00};

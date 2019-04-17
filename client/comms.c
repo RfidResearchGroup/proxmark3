@@ -26,7 +26,7 @@ static pthread_t USB_communication_thread;
 
 // Transmit buffer.
 static UsbCommandOLD txBuffer;
-static UsbCommandNG txBufferNG;
+static UsbCommandNGRaw txBufferNG;
 size_t txBufferNGLen;
 static bool txBuffer_pending = false;
 static pthread_mutex_t txBufferMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -104,7 +104,7 @@ void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len) {
         return;
     }
 
-    UsbCommandNGPostamble *tx_post = (UsbCommandNGPostamble *)((uint8_t *)&txBufferNG + sizeof(UsbCommandNGPreamble) + sizeof(UsbPacketNGCore) - USB_CMD_DATA_SIZE + len);
+    UsbCommandNGPostamble *tx_post = (UsbCommandNGPostamble *)((uint8_t *)&txBufferNG + sizeof(UsbCommandNGPreamble) + len);
 
     pthread_mutex_lock(&txBufferMutex);
     /**
@@ -116,14 +116,14 @@ void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len) {
         pthread_cond_wait(&txBufferSig, &txBufferMutex);
     }
 
-    txBufferNG.magic = USB_COMMANDNG_PREAMBLE_MAGIC;
-    txBufferNG.length = len;
-    txBufferNG.core.ng.cmd = cmd;
-    memcpy(&txBufferNG.core.ng.data, data, len);
+    txBufferNG.pre.magic = USB_COMMANDNG_PREAMBLE_MAGIC;
+    txBufferNG.pre.length = len;
+    txBufferNG.pre.cmd = cmd;
+    memcpy(&txBufferNG.data, data, len);
     uint8_t first, second;
-    compute_crc(CRC_14443_A, (uint8_t *)&txBufferNG, sizeof(UsbCommandNGPreamble) + sizeof(UsbPacketNGCore) - USB_CMD_DATA_SIZE + len, &first, &second);
+    compute_crc(CRC_14443_A, (uint8_t *)&txBufferNG, sizeof(UsbCommandNGPreamble) + len, &first, &second);
     tx_post->crc = (first << 8) + second;
-    txBufferNGLen = sizeof(UsbCommandNGPreamble) + sizeof(UsbPacketNGCore) - USB_CMD_DATA_SIZE + len + sizeof(UsbCommandNGPostamble);
+    txBufferNGLen = sizeof(UsbCommandNGPreamble) + len + sizeof(UsbCommandNGPostamble);
     txBuffer_pending = true;
 
     // tell communication thread that a new command can be send
@@ -311,13 +311,13 @@ __attribute__((force_align_arg_pointer))
                     }
                 }
                 if (!error) {                        // Get the postamble
-                    if ((!uart_receive(sp, (uint8_t *)&rx_raw.post, sizeof(UsbReplyNGPostamble), &rxlen)) || (rxlen != sizeof(UsbReplyNGPostamble))) {
+                    if ((!uart_receive(sp, (uint8_t *)&rx_raw.foopost, sizeof(UsbReplyNGPostamble), &rxlen)) || (rxlen != sizeof(UsbReplyNGPostamble))) {
                         PrintAndLogEx(WARNING, "Received packet frame error fetching postamble");
                         error = true;
                     }
                 }
                 if (!error) {                        // Check CRC
-                    rx.crc = rx_raw.post.crc;
+                    rx.crc = rx_raw.foopost.crc;
                     uint8_t first, second;
                     compute_crc(CRC_14443_A, (uint8_t *)&rx_raw, sizeof(UsbReplyNGPreamble) + rx.length, &first, &second);
                     if ((first << 8) + second != rx.crc) {
