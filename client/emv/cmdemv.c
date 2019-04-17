@@ -46,7 +46,7 @@ static void ParamLoadDefaults(struct tlvdb *tlvRoot) {
 static void PrintChannel(EMVCommandChannel channel) {
     switch (channel) {
         case ECC_CONTACTLESS:
-            PrintAndLogEx(INFO, "Channel: CONTACTLESS (RFID)");
+            PrintAndLogEx(INFO, "Channel: CONTACTLESS (T=CL)");
             break;
         case ECC_CONTACT:
             PrintAndLogEx(INFO, "Channel: CONTACT");
