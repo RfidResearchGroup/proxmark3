@@ -162,6 +162,7 @@ build_script:
     Copy-Item C:\ProxSpace\pm3\client\hardnested\tables\*.bin.z C:\ProxSpace\Release\hardnested\tables
     
     # dll files
+
     Copy-Item C:\ProxSpace\msys2\mingw32\bin\libgcc_s_dw2-1.dll C:\ProxSpace\Release
 
     Copy-Item C:\ProxSpace\msys2\mingw32\bin\libstdc++-6.dll C:\ProxSpace\Release
@@ -174,7 +175,9 @@ build_script:
 
     Copy-Item C:\ProxSpace\msys2\mingw32\bin\Qt5Widgets.dll C:\ProxSpace\Release
 
-    #Copy-Item C:\ProxSpace\msys2\mingw32\bin\readline6.dll C:\ProxSpace\Release
+    Copy-Item C:\ProxSpace\msys2\mingw32\bin\libreadline*.dll C:\ProxSpace\Release
+
+    Copy-Item C:\ProxSpace\msys2\mingw32\bin\libtermcap-0.dll C:\ProxSpace\Release
 
     Write-Host "[ OK ]" -ForegroundColor Green
 
@@ -271,8 +274,8 @@ test_script:
     #--- end Job
 
       [bool]$res=$false
-      # Wait 120 sec timeout for Job
-      if(Wait-Job $Job -Timeout 150){
+      # Wait 180 sec timeout for Job
+      if(Wait-Job $Job -Timeout 180){
         $Results = $Job | Receive-Job
         if($Results -like "true"){
           $res=$true
@@ -335,4 +338,4 @@ on_success:
 on_failure:
 - ps: Write-Host "Build error." -ForegroundColor Red
 on_finish:
-- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+- ps: $blockRdp = $false; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
