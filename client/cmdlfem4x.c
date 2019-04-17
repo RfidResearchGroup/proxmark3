@@ -856,9 +856,7 @@ int EM4x50Read(const char *Cmd, bool verbose) {
         phaseoff = 0;
 
     // now do it again to find the end
-    end = skip;
     for (i += 3; i < j - 4 ; ++i) {
-        end += tmpbuff[i];
         if (tmpbuff[i] >= clk * 3 - tol && tmpbuff[i] <= clk * 3 + tol)  //3 clocks
             if (tmpbuff[i + 1] >= clk * 2 - tol && tmpbuff[i + 1] <= clk * 2 + tol) //2 clocks
                 if (tmpbuff[i + 2] >= clk * 3 - tol && tmpbuff[i + 2] <= clk * 3 + tol) //3 clocks

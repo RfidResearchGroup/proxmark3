@@ -253,20 +253,29 @@ static size_t crypto_pk_polarssl_get_nbits(const struct crypto_pk *_cp) {
 static unsigned char *crypto_pk_polarssl_get_parameter(const struct crypto_pk *_cp, unsigned param, size_t *plen) {
     struct crypto_pk_polarssl *cp = (struct crypto_pk_polarssl *)_cp;
     unsigned char *result = NULL;
+    int res;
     switch (param) {
         // mod
         case 0:
             *plen = mbedtls_mpi_size(&cp->ctx.N);
             result = malloc(*plen);
             memset(result, 0x00, *plen);
-            mbedtls_mpi_write_binary(&cp->ctx.N, result, *plen);
+            res = mbedtls_mpi_write_binary(&cp->ctx.N, result, *plen);
+            if (res < 0) {
+                printf("Error write_binary.");
+                result = 0;
+            }
             break;
         // exp
         case 1:
             *plen = mbedtls_mpi_size(&cp->ctx.E);
             result = malloc(*plen);
             memset(result, 0x00, *plen);
-            mbedtls_mpi_write_binary(&cp->ctx.E, result, *plen);
+            res = mbedtls_mpi_write_binary(&cp->ctx.E, result, *plen);
+            if (res < 0) {
+                printf("Error write_binary.");
+                result = 0;
+            }
             break;
         default:
             printf("Error get parameter. Param = %u", param);

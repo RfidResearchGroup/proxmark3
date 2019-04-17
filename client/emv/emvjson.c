@@ -75,7 +75,7 @@ int JsonSaveJsonObject(json_t *root, const char *path, json_t *value) {
 
     if (path[0] == '$') {
         if (json_path_set(root, path, value, 0, &error)) {
-            PrintAndLog("ERROR: can't set json path: ", error.text);
+            PrintAndLogEx(ERR, "ERROR: can't set json path: ", error.text);
             return 2;
         } else {
             return 0;
@@ -151,12 +151,12 @@ int JsonSaveTLVElm(json_t *elm, const char *path, struct tlv *tlvelm, bool saveN
 
             if (json_is_array(elm)) {
                 if (json_array_append_new(elm, obj)) {
-                    PrintAndLog("ERROR: can't append array: %s", path);
+                    PrintAndLogEx(ERR, "ERROR: can't append array: %s", path);
                     return 2;
                 }
             } else {
                 if (json_path_set(elm, path, obj, 0, &error)) {
-                    PrintAndLog("ERROR: can't set json path: ", error.text);
+                    PrintAndLogEx(ERR, "ERROR: can't set json path: ", error.text);
                     return 2;
                 }
             }
@@ -225,7 +225,7 @@ int JsonSaveTLVTree(json_t *root, json_t *elm, const char *path, struct tlvdb *t
 
             // check
             if (!json_is_array(chjson)) {
-                PrintAndLog("E->Internal logic error. `$.Childs` is not an array.");
+                PrintAndLogEx(ERR, "E->Internal logic error. `$.Childs` is not an array.");
                 break;
             }
 
@@ -243,18 +243,18 @@ static bool HexToBuffer(const char *errormsg, const char *hexvalue, uint8_t *buf
 
     switch (param_gethex_to_eol(hexvalue, 0, buffer, maxbufferlen, &buflen)) {
         case 1:
-            PrintAndLog("%s Invalid HEX value.", errormsg);
+            PrintAndLogEx(ERR, "%s Invalid HEX value.", errormsg);
             return false;
         case 2:
-            PrintAndLog("%s Hex value too large.", errormsg);
+            PrintAndLogEx(ERR, "%s Hex value too large.", errormsg);
             return false;
         case 3:
-            PrintAndLog("%s Hex value must have even number of digits.", errormsg);
+            PrintAndLogEx(ERR, "%s Hex value must have even number of digits.", errormsg);
             return false;
     }
 
     if (buflen > maxbufferlen) {
-        PrintAndLog("%s HEX length (%d) more than %d", errormsg, (bufferlen) ? *bufferlen : -1, maxbufferlen);
+        PrintAndLogEx(ERR, "%s HEX length (%d) more than %d", errormsg, (bufferlen) ? *bufferlen : -1, maxbufferlen);
         return false;
     }
 
@@ -300,7 +300,7 @@ bool ParamLoadFromJson(struct tlvdb *tlv) {
     json_error_t error;
 
     if (!tlv) {
-        PrintAndLog("ERROR load params: tlv tree is NULL.");
+        PrintAndLogEx(ERR, "ERROR load params: tlv tree is NULL.");
         return false;
     }
 
@@ -312,30 +312,30 @@ bool ParamLoadFromJson(struct tlvdb *tlv) {
 
     root = json_load_file(fname, 0, &error);
     if (!root) {
-        PrintAndLog("Load params: json error on line %d: %s", error.line, error.text);
+        PrintAndLogEx(ERR, "Load params: json error on line " _YELLOW_("%d") ": %s", error.line, error.text);
         return false;
     }
 
     if (!json_is_array(root)) {
-        PrintAndLog("Load params: Invalid json format. root must be array.");
+        PrintAndLogEx(ERR, "Load params: Invalid json format. root must be array.");
         return false;
     }
 
-    PrintAndLog("Load params: json(%d) OK", json_array_size(root));
+    PrintAndLogEx(SUCCESS, "Load params: json(%d) " _GREEN_("OK"), json_array_size(root));
 
     for (int i = 0; i < json_array_size(root); i++) {
         json_t *data, *jtag, *jlength, *jvalue;
 
         data = json_array_get(root, i);
         if (!json_is_object(data)) {
-            PrintAndLog("Load params: data [%d] is not an object", i + 1);
+            PrintAndLogEx(ERR, "Load params: data [%d] is not an object", i + 1);
             json_decref(root);
             return false;
         }
 
         jtag = json_object_get(data, "tag");
         if (!json_is_string(jtag)) {
-            PrintAndLog("Load params: data [%d] tag is not a string", i + 1);
+            PrintAndLogEx(ERR, "Load params: data [%d] tag is not a string", i + 1);
             json_decref(root);
             return false;
         }
@@ -343,7 +343,7 @@ bool ParamLoadFromJson(struct tlvdb *tlv) {
 
         jvalue = json_object_get(data, "value");
         if (!json_is_string(jvalue)) {
-            PrintAndLog("Load params: data [%d] value is not a string", i + 1);
+            PrintAndLogEx(ERR, "Load params: data [%d] value is not a string", i + 1);
             json_decref(root);
             return false;
         }
@@ -351,19 +351,19 @@ bool ParamLoadFromJson(struct tlvdb *tlv) {
 
         jlength = json_object_get(data, "length");
         if (!json_is_number(jlength)) {
-            PrintAndLog("Load params: data [%d] length is not a number", i + 1);
+            PrintAndLogEx(ERR, "Load params: data [%d] length is not a number", i + 1);
             json_decref(root);
             return false;
         }
 
         int tlvLength = json_integer_value(jlength);
         if (tlvLength > 250) {
-            PrintAndLog("Load params: data [%d] length more than 250", i + 1);
+            PrintAndLogEx(ERR, "Load params: data [%d] length more than 250", i + 1);
             json_decref(root);
             return false;
         }
 
-        PrintAndLog("TLV param: %s[%d]=%s", tlvTag, tlvLength, tlvValue);
+        PrintAndLogEx(SUCCESS, "TLV param: %s[%d]=%s", tlvTag, tlvLength, tlvValue);
         uint8_t buf[251] = {0};
         size_t buflen = 0;
 
@@ -382,7 +382,7 @@ bool ParamLoadFromJson(struct tlvdb *tlv) {
         }
 
         if (buflen != tlvLength) {
-            PrintAndLog("Load params: data [%d] length of HEX must(%d) be identical to length in TLV param(%d)", i + 1, buflen, tlvLength);
+            PrintAndLogEx(ERR, "Load params: data [%d] length of HEX must(%d) be identical to length in TLV param(%d)", i + 1, buflen, tlvLength);
             json_decref(root);
             return false;
         }

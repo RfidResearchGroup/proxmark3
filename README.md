@@ -2,6 +2,7 @@ Proxmark3 RDV4.0 Dedicated Github
 ===============
 This repo is based on iceman fork for proxmark3. It is dedicated to bringing the most out of the new features for proxmark3 RDV4.0 new hardware and design.
 
+[![Build status](https://ci.appveyor.com/api/projects/status/ct5blik2wa96bv0x/branch/master?svg=true)](https://ci.appveyor.com/project/iceman1001/proxmark3-ji4wj/branch/master)
 [![Latest release](https://img.shields.io/github/release/RfidResearchGroup/proxmark3.svg)](https://github.com/RfidResearchGroup/proxmark3/releases/latest)
 
 <a href="http://www.youtube.com/watch?feature=player_embedded&v=uyJ-y0kSWfc
