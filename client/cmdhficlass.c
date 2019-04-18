@@ -2439,7 +2439,7 @@ static command_t CommandTable[] = {
     {"readblk",     CmdHFiClass_ReadBlock,      0, "[options..] Authenticate and Read iClass block"},
     {"reader",      CmdHFiClassReader,          0, "            Act like an iClass reader"},
     {"readtagfile", CmdHFiClassReadTagFile,     1, "[options..] Display Content from tagfile"},
-    {"replay",      CmdHFiClassReader_Replay,   0, "<mac>       Read an iClass tag via Reply Attack"},
+    {"replay",      CmdHFiClassReader_Replay,   0, "<mac>       Read an iClass tag via Replay Attack"},
     {"sim",         CmdHFiClassSim,             0, "[options..] Simulate iClass tag"},
     {"sniff",       CmdHFiClassSniff,           0, "            Eavesdrop iClass communication"},
     {"writeblk",    CmdHFiClass_WriteBlock,     0, "[options..] Authenticate and Write iClass block"},
