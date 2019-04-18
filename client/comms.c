@@ -125,7 +125,7 @@ void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len) {
     txBufferNG.pre.length = len;
     txBufferNG.pre.cmd = cmd;
     memcpy(&txBufferNG.data, data, len);
-    
+
     if ((send_via_fpc && send_with_crc_on_fpc) || ((!send_via_fpc) && send_with_crc_on_usb)) {
         uint8_t first, second;
         compute_crc(CRC_14443_A, (uint8_t *)&txBufferNG, sizeof(PacketCommandNGPreamble) + len, &first, &second);

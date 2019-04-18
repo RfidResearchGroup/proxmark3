@@ -634,13 +634,13 @@ void ListenReaderField(int limit) {
 }
 
 static void PacketReceived(PacketCommandNG *packet) {
-/*
+    /*
     if (packet->ng) {
         Dbprintf("received NG frame with %d bytes payload, with command: 0x%04x", packet->length, cmd);
     } else {
         Dbprintf("received OLD frame of %d bytes, with command: 0x%04x and args: %d %d %d", packet->length, packet->cmd, packet->oldarg[0], packet->oldarg[1], packet->oldarg[2]);
     }
-*/
+    */
 
     switch (packet->cmd) {
 #ifdef WITH_LF

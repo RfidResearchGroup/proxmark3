@@ -2181,12 +2181,12 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
                 if (stored_data_length + 8 > USB_CMD_DATA_SIZE) {
                     //Time to send this off and start afresh
                     reply_old(CMD_ACK,
-                             stored_data_length,//data length
-                             failedRead,//Failed blocks?
-                             0,//Not used ATM
-                             card_data,
-                             stored_data_length
-                            );
+                              stored_data_length,//data length
+                              failedRead,//Failed blocks?
+                              0,//Not used ATM
+                              card_data,
+                              stored_data_length
+                             );
                     //reset
                     stored_data_length = 0;
                     failedRead = 0;
@@ -2201,24 +2201,24 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
         //Send off any remaining data
         if (stored_data_length > 0) {
             reply_old(CMD_ACK,
-                     stored_data_length,//data length
-                     failedRead,//Failed blocks?
-                     0,//Not used ATM
-                     card_data,
-                     stored_data_length
-                    );
+                      stored_data_length,//data length
+                      failedRead,//Failed blocks?
+                      0,//Not used ATM
+                      card_data,
+                      stored_data_length
+                     );
         }
         //If we got here, let's break
         break;
     }
     //Signal end of transmission
     reply_old(CMD_ACK,
-             0,//data length
-             0,//Failed blocks?
-             0,//Not used ATM
-             card_data,
-             0
-            );
+              0,//data length
+              0,//Failed blocks?
+              0,//Not used ATM
+              card_data,
+              0
+             );
     switch_off();
 }
 
