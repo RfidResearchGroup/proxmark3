@@ -132,9 +132,7 @@ void RunMod() {
             SpinDelay(500);
             // Begin clone function here:
             /* Example from client/mifarehost.c for commanding a block write for "magic Chinese" cards:
-                    PacketCommandOLD c = {CMD_MIFARE_CSETBLOCK, {params & (0xFE | (uid == NULL ? 0:1)), blockNo, 0}};
-                    memcpy(c.d.asBytes, data, 16);
-                    SendCommand(&c);
+                    SendCommandOLD(CMD_MIFARE_CSETBLOCK, params & (0xFE | (uid == NULL ? 0:1)), blockNo, 0, data, 16);
 
                 Block read is similar:
                     PacketCommandOLD c = {CMD_MIFARE_CGETBLOCK, {params, blockNo, 0}};
