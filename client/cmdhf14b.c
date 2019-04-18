@@ -1120,8 +1120,7 @@ static int CmdHelp(const char *Cmd) {
 
 int CmdHF14B(const char *Cmd) {
     clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
-    return 0;
+    return CmdsParse(CommandTable, Cmd);
 }
 
 // get and print all info known about any known 14b tag

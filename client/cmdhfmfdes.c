@@ -659,7 +659,6 @@ static int CmdHelp(const char *Cmd) {
 int CmdHFMFDes(const char *Cmd) {
     // flush
     clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
-    return 0;
+    return CmdsParse(CommandTable, Cmd);
 }
 

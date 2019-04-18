@@ -127,8 +127,7 @@ static command_t CommandTable[] = {
 
 int CmdHF(const char *Cmd) {
     clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
-    return 0;
+    return CmdsParse(CommandTable, Cmd);
 }
 
 int CmdHelp(const char *Cmd) {

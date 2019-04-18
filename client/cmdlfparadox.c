@@ -164,8 +164,7 @@ static int CmdHelp(const char *Cmd) {
 
 int CmdLFParadox(const char *Cmd) {
     clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
-    return 0;
+    return CmdsParse(CommandTable, Cmd);
 }
 
 // loop to get raw paradox waveform then FSK demodulate the TAG ID from it

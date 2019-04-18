@@ -89,8 +89,7 @@ static int CmdHelp(const char *Cmd) {
 
 int CmdLFNEXWATCH(const char *Cmd) {
     clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
-    return 0;
+    return CmdsParse(CommandTable, Cmd);
 }
 
 int detectNexWatch(uint8_t *dest, size_t *size, bool *invert) {

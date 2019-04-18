@@ -315,8 +315,7 @@ static int CmdHelp(const char *Cmd) {
 
 int CmdLFTI(const char *Cmd) {
     clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
-    return 0;
+    return CmdsParse(CommandTable, Cmd);
 }
 
 int demodTI(void) {

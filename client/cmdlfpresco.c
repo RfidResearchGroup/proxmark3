@@ -175,8 +175,7 @@ static int CmdHelp(const char *Cmd) {
 
 int CmdLFPresco(const char *Cmd) {
     clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
-    return 0;
+    return CmdsParse(CommandTable, Cmd);
 }
 
 // find presco preamble 0x10D in already demoded data

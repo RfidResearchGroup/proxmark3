@@ -173,7 +173,6 @@ static int CmdHelp(const char *Cmd) {
 
 int CmdLFPCF7931(const char *Cmd) {
     clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
-    return 0;
+    return CmdsParse(CommandTable, Cmd);
 }
 

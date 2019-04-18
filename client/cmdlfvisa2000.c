@@ -227,8 +227,7 @@ static int CmdHelp(const char *Cmd) {
 
 int CmdLFVisa2k(const char *Cmd) {
     clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
-    return 0;
+    return CmdsParse(CommandTable, Cmd);
 }
 
 // by iceman

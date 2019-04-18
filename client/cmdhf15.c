@@ -1293,7 +1293,7 @@ static int CmdHF15Restore(const char *Cmd) {
     return 0;
 }
 
-static command_t CommandTable15[] = {
+static command_t CommandTable[] = {
     {"help",        CmdHF15Help,        1, "This help"},
     {"demod",       CmdHF15Demod,       1, "Demodulate ISO15693 from tag"},
     {"dump",        CmdHF15Dump,        0, "Read all memory pages of an ISO15693 tag, save to file"},
@@ -1320,8 +1320,7 @@ static int CmdHF15Help(const char *Cmd) {
 
 int CmdHF15(const char *Cmd) {
     clearCommandBuffer();
-    CmdsParse(CommandTable15, Cmd);
-    return 0;
+    return CmdsParse(CommandTable, Cmd);
 }
 
 // used with 'hf search'

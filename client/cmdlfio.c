@@ -282,8 +282,7 @@ static int CmdHelp(const char *Cmd) {
 
 int CmdLFIO(const char *Cmd) {
     clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
-    return 0;
+    return CmdsParse(CommandTable, Cmd);
 }
 
 int demodIOProx(void) {

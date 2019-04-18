@@ -241,8 +241,7 @@ static int CmdHelp(const char *Cmd) {
 
 int CmdLFGuard(const char *Cmd) {
     clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
-    return 0;
+    return CmdsParse(CommandTable, Cmd);
 }
 
 // by marshmellow

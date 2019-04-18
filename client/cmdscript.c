@@ -193,7 +193,6 @@ static int CmdHelp(const char *Cmd) {
  */
 int CmdScript(const char *Cmd) {
     clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
-    return 0;
+    return CmdsParse(CommandTable, Cmd);
 }
 

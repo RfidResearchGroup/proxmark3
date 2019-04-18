@@ -1156,8 +1156,7 @@ static int CmdHelp(const char *Cmd) {
 
 int CmdHF14A(const char *Cmd) {
     clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
-    return 0;
+    return CmdsParse(CommandTable, Cmd);
 }
 
 int infoHF14A(bool verbose, bool do_nack_test) {

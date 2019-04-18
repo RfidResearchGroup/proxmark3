@@ -222,8 +222,7 @@ static int CmdHelp(const char *Cmd) {
 
 int CmdLFNoralsy(const char *Cmd) {
     clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
-    return 0;
+    return CmdsParse(CommandTable, Cmd);
 }
 
 int getnoralsyBits(uint32_t id, uint16_t year, uint8_t *bits) {

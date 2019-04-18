@@ -214,8 +214,7 @@ static int CmdHelp(const char *Cmd) {
 
 int CmdLFKeri(const char *Cmd) {
     clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
-    return 0;
+    return CmdsParse(CommandTable, Cmd);
 }
 
 // find KERI preamble in already demoded data

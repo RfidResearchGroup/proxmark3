@@ -720,8 +720,7 @@ static int CmdHelp(const char *Cmd) {
 
 int CmdLFHitag(const char *Cmd) {
     clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
-    return 0;
+    return CmdsParse(CommandTable, Cmd);
 }
 
 int readHitagUid(void) {

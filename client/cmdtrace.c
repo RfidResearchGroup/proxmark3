@@ -586,8 +586,7 @@ static int CmdHelp(const char *Cmd) {
 
 int CmdTrace(const char *Cmd) {
     clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
-    return 0;
+    return CmdsParse(CommandTable, Cmd);
 }
 
 int CmdTraceList(const char *Cmd) {

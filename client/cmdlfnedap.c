@@ -320,8 +320,7 @@ static int CmdHelp(const char *Cmd) {
 
 int CmdLFNedap(const char *Cmd) {
     clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
-    return 0;
+    return CmdsParse(CommandTable, Cmd);
 }
 
 // find nedap preamble in already demoded data

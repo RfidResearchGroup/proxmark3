@@ -344,8 +344,7 @@ static int CmdHelp(const char *Cmd) {
 
 int CmdLFFdx(const char *Cmd) {
     clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
-    return 0;
+    return CmdsParse(CommandTable, Cmd);
 }
 
 // Ask/Biphase Demod then try to locate an ISO 11784/85 ID

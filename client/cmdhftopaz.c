@@ -525,8 +525,7 @@ static int CmdHelp(const char *Cmd) {
 
 int CmdHFTopaz(const char *Cmd) {
     clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
-    return 0;
+    return CmdsParse(CommandTable, Cmd);
 }
 
 int readTopazUid(void) {

@@ -480,8 +480,7 @@ static int CmdHelp(const char *Cmd) {
 
 int CmdLFINDALA(const char *Cmd) {
     clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
-    return 0;
+    return CmdsParse(CommandTable, Cmd);
 }
 
 // redesigned by marshmellow adjusted from existing decode functions

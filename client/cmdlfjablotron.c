@@ -217,8 +217,7 @@ static int CmdHelp(const char *Cmd) {
 
 int CmdLFJablotron(const char *Cmd) {
     clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
-    return 0;
+    return CmdsParse(CommandTable, Cmd);
 }
 
 int getJablotronBits(uint64_t fullcode, uint8_t *bits) {
