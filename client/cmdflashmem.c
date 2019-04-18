@@ -631,8 +631,7 @@ static int CmdHelp(const char *Cmd) {
 
 int CmdFlashMem(const char *Cmd) {
     clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
-    return PM3_SUCCESS;
+    return CmdsParse(CommandTable, Cmd);
 }
 
 #endif

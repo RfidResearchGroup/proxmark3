@@ -28,17 +28,17 @@ static int CmdRem(const char *Cmd) {
 #endif
     strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", ct);  // ISO8601
     PrintAndLogEx(NORMAL, "%s remark: %s", buf, Cmd);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdQuit(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    return 99;
+    return PM3_EFATAL;
 }
 
 static int CmdRev(const char *Cmd) {
     CmdCrc(Cmd);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
@@ -67,7 +67,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 //-----------------------------------------------------------------------------

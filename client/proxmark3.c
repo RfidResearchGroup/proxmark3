@@ -181,8 +181,9 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
                 if ((!entry) || (strcmp(entry->line, cmd) != 0))
                     add_history(cmd);
 
+//                PrintAndLogEx(NORMAL, "RETVAL: %d\n", ret);
                 // exit or quit
-                if (ret == 99)
+                if (ret == PM3_EFATAL)
                     break;
             }
             free(cmd);

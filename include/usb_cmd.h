@@ -421,6 +421,8 @@ typedef struct {
 #define PM3_EMALLOC           -12
 // File error
 #define PM3_EFILE             -13
+// Quit program
+#define PM3_EFATAL            -99
 
 
 // CMD_DEVICE_INFO response packet has flags in arg[0], flag definitions:
