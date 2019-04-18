@@ -71,7 +71,7 @@ static int usage_hf14_mfsim(void) {
     PrintAndLogEx(NORMAL, "      u    (Optional) UID 4,7 or 10bytes. If not specified, the UID 4b from emulator memory will be used");
     PrintAndLogEx(NORMAL, "      t    (Optional)   0 = MIFARE Mini");
     PrintAndLogEx(NORMAL, "                        1 = MIFARE Classic 1k (Default)");
-    PrintAndLogEx(NORMAL, "                        1 = MIFARE Classic 2k plus in SL0 mode");
+    PrintAndLogEx(NORMAL, "                        2 = MIFARE Classic 2k plus in SL0 mode");
     PrintAndLogEx(NORMAL, "                        4 = MIFARE Classic 4k");
     PrintAndLogEx(NORMAL, "      n    (Optional) Automatically exit simulation after <numreads> blocks have been read by reader. 0 = infinite");
     PrintAndLogEx(NORMAL, "      i    (Optional) Interactive, means that console will not be returned until simulation finishes or is aborted");

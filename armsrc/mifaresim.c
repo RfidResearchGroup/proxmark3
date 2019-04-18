@@ -164,9 +164,21 @@ static bool MifareSimInit(uint16_t flags, uint8_t *datain, tag_response_info_t *
     static uint8_t rSAK_2k   = 0x08;	// mifare 2k with RATS support
     static uint8_t rSAK_4k   = 0x18;	// mifare 4k
 
-    static uint8_t rUIDBCC1[]  = {0x00, 0x00, 0x00, 0x00, 0x00};	// UID 1st cascade level
-    static uint8_t rUIDBCC2[]  = {0x00, 0x00, 0x00, 0x00, 0x00};	// UID 2nd cascade level
-    static uint8_t rUIDBCC3[]  = {0x00, 0x00, 0x00, 0x00, 0x00};	// UID 3nd cascade level
+    static uint8_t rUIDBCC1[]   = {0x00, 0x00, 0x00, 0x00, 0x00};	// UID 1st cascade level
+    static uint8_t rUIDBCC1b4[] = {0x00, 0x00, 0x00, 0x00};	        // UID 1st cascade level, last 4 bytes
+    static uint8_t rUIDBCC1b3[] = {0x00, 0x00, 0x00};	            // UID 1st cascade level, last 3 bytes
+    static uint8_t rUIDBCC1b2[] = {0x00, 0x00};	                    // UID 1st cascade level, last 2 bytes
+    static uint8_t rUIDBCC1b1[] = {0x00};	                        // UID 1st cascade level, last byte
+    static uint8_t rUIDBCC2[]   = {0x00, 0x00, 0x00, 0x00, 0x00};	// UID 2nd cascade level
+    static uint8_t rUIDBCC2b4[] = {0x00, 0x00, 0x00, 0x00};	        // UID 2st cascade level, last 4 bytes
+    static uint8_t rUIDBCC2b3[] = {0x00, 0x00, 0x00};	            // UID 2st cascade level, last 3 bytes
+    static uint8_t rUIDBCC2b2[] = {0x00, 0x00};	                    // UID 2st cascade level, last 2 bytes
+    static uint8_t rUIDBCC2b1[] = {0x00};	                        // UID 2st cascade level, last byte
+    static uint8_t rUIDBCC3[]   = {0x00, 0x00, 0x00, 0x00, 0x00};	// UID 3nd cascade level
+    static uint8_t rUIDBCC3b4[] = {0x00, 0x00, 0x00, 0x00};	        // UID 3st cascade level, last 4 bytes
+    static uint8_t rUIDBCC3b3[] = {0x00, 0x00, 0x00};	            // UID 3st cascade level, last 3 bytes
+    static uint8_t rUIDBCC3b2[] = {0x00, 0x00};	                    // UID 3st cascade level, last 2 bytes
+    static uint8_t rUIDBCC3b1[] = {0x00};	                        // UID 3st cascade level, last byte
 
     static uint8_t rATQA[]     = {0x00, 0x00};             // Current ATQA
     static uint8_t rSAK[]      = {0x00, 0x00, 0x00};       // Current SAK, CRC
@@ -312,25 +324,58 @@ static bool MifareSimInit(uint16_t flags, uint8_t *datain, tag_response_info_t *
         return false;
     }
 
+    // clone UIDs for byte-frame anti-collision multiple tag selection procedure
+    memcpy(rUIDBCC1b4, &rUIDBCC1[1], 4);
+    memcpy(rUIDBCC1b3, &rUIDBCC1[2], 3);
+    memcpy(rUIDBCC1b2, &rUIDBCC1[3], 2);
+    memcpy(rUIDBCC1b1, &rUIDBCC1[4], 1);
+    if (*uid_len >= 7) {
+        memcpy(rUIDBCC2b4, &rUIDBCC2[1], 4);
+        memcpy(rUIDBCC2b3, &rUIDBCC2[2], 3);
+        memcpy(rUIDBCC2b2, &rUIDBCC2[3], 2);
+        memcpy(rUIDBCC2b1, &rUIDBCC2[4], 1);
+    }
+    if (*uid_len == 10) {
+        memcpy(rUIDBCC3b4, &rUIDBCC3[1], 4);
+        memcpy(rUIDBCC3b3, &rUIDBCC3[2], 3);
+        memcpy(rUIDBCC3b2, &rUIDBCC3[3], 2);
+        memcpy(rUIDBCC3b1, &rUIDBCC3[4], 1);
+    }
+
     // Calculate actual CRC
     AddCrc14A(rSAK, sizeof(rSAK) - 2);
 
-#define TAG_RESPONSE_COUNT 6
+#define TAG_RESPONSE_COUNT 18
     static tag_response_info_t responses_init[TAG_RESPONSE_COUNT] = {
         { .response = rATQA,     .response_n = sizeof(rATQA)     },		// Answer to request - respond with card type
-        { .response = rUIDBCC1,  .response_n = sizeof(rUIDBCC1)  },	  	// Anticollision cascade1 - respond with first part of uid
-        { .response = rUIDBCC2,  .response_n = sizeof(rUIDBCC2)  },		// Anticollision cascade2 - respond with 2nd part of uid
-        { .response = rUIDBCC3,  .response_n = sizeof(rUIDBCC3)  },		// Anticollision cascade3 - respond with 3th part of uid
         { .response = rSAK,      .response_n = sizeof(rSAK)      },     //
-        { .response = rSAKuid,   .response_n = sizeof(rSAKuid)   }	    //
+        { .response = rSAKuid,   .response_n = sizeof(rSAKuid)   },	    //
+        // Do not reorder. Block used via relative index of rUIDBCC1
+        { .response = rUIDBCC1,  .response_n = sizeof(rUIDBCC1)  },	  	// Anticollision cascade1 - respond with first part of uid
+        { .response = rUIDBCC1b4, .response_n = sizeof(rUIDBCC1b4)},
+        { .response = rUIDBCC1b3, .response_n = sizeof(rUIDBCC1b3)},
+        { .response = rUIDBCC1b2, .response_n = sizeof(rUIDBCC1b2)},
+        { .response = rUIDBCC1b1, .response_n = sizeof(rUIDBCC1b1)},
+        // Do not reorder. Block used via relative index of rUIDBCC2
+        { .response = rUIDBCC2,  .response_n = sizeof(rUIDBCC2)  },		// Anticollision cascade2 - respond with 2nd part of uid
+        { .response = rUIDBCC2b4, .response_n = sizeof(rUIDBCC2b4)},
+        { .response = rUIDBCC2b3, .response_n = sizeof(rUIDBCC2b3)},
+        { .response = rUIDBCC2b2, .response_n = sizeof(rUIDBCC2b2)},
+        { .response = rUIDBCC2b1, .response_n = sizeof(rUIDBCC2b1)},
+        // Do not reorder. Block used via relative index of rUIDBCC3
+        { .response = rUIDBCC3,  .response_n = sizeof(rUIDBCC3)  },		// Anticollision cascade3 - respond with 3th part of uid
+        { .response = rUIDBCC3b4, .response_n = sizeof(rUIDBCC3b4)},
+        { .response = rUIDBCC3b3, .response_n = sizeof(rUIDBCC3b3)},
+        { .response = rUIDBCC3b2, .response_n = sizeof(rUIDBCC3b2)},
+        { .response = rUIDBCC3b1, .response_n = sizeof(rUIDBCC3b1)}
     };
 
     // Prepare ("precompile") the responses of the anticollision phase.
     // There will be not enough time to do this at the moment the reader sends its REQA or SELECT
-    // There are 6 predefined responses with a total of 23 bytes data to transmit.
+    // There are 18 predefined responses with a total of 53 bytes data to transmit.
     // Coded responses need one byte per bit to transfer (data, parity, start, stop, correction)
-    // 23 * 8 data bits, 23 * 1 parity bits, 6 start bits, 6 stop bits, 6 correction bits  ->   need 225 bytes buffer
-#define ALLOCATED_TAG_MODULATION_BUFFER_SIZE 225
+    // 53 * 8 data bits, 53 * 1 parity bits, 18 start bits, 18 stop bits, 18 correction bits  ->   need 571 bytes buffer
+#define ALLOCATED_TAG_MODULATION_BUFFER_SIZE 571
 
     uint8_t *free_buffer = BigBuf_malloc(ALLOCATED_TAG_MODULATION_BUFFER_SIZE);
     // modulation buffer pointer and current buffer free space size
@@ -348,11 +393,11 @@ static bool MifareSimInit(uint16_t flags, uint8_t *datain, tag_response_info_t *
 
     // indices into responses array:
 #define ATQA     0
-#define UIDBCC1  1
-#define UIDBCC2  2
-#define UIDBCC3  3
-#define SAK      4
-#define SAKuid   5
+#define SAK      1
+#define SAKuid   2
+#define UIDBCC1  3
+#define UIDBCC2  8
+#define UIDBCC3  13
 
     return true;
 }
@@ -501,7 +546,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
 
             LED_B_OFF();
             LED_C_OFF();
-            cardSTATE = MFEMUL_SELECT1;
+            cardSTATE = MFEMUL_SELECT;
             continue;
         }
 
@@ -519,163 +564,86 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t 
             // The anti-collision sequence, which is a mandatory part of the card activation sequence.
             // It auto with 4-byte UID (= Single Size UID),
             // 7 -byte UID (= Double Size UID) or 10-byte UID (= Triple Size UID).
-
-            // Cascade Level 1
+            // For details see chapter 2 of AN10927.pdf
             //
-            // In the Cascade Level 1, the card send the anti-collision command CL1 (0x93) and the PICC returns
-            // either the 4-byte UID (UID0...UID4) and one-byte BCC
-            // or a Cascade Tag (CT) followed by the first 3 byte of the UID (UID0...UID2) and onebyte BCC.
-            //
-            // The CT (0x88) indicates that the UID is not yet complete, and another Cascade Level is needed
-            //
-            // The UID0 byte of a 4-byte UID must not be 0x88.
-            // The CL1 then must be selected, using the Select command CL1 (0x93). The PICC returns its SAK CL1, which indicates
-            // whether the UID is complete or not, and (if so),
-            // the type of card and whether the card supports T=CL.
-
-            case MFEMUL_SELECT1: {
-                // select all - 0x93 0x20 (Anti Collision CL1)
-                if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("cardSTATE = MFEMUL_SELECT1 - receivedCmd_len: %d - receivedCmd[0]: %02x - receivedCmd[1]: %02x", receivedCmd_len, receivedCmd[0], receivedCmd[1]);
-                if (receivedCmd_len == 2 && (receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && receivedCmd[1] == 0x20)) {
-                    if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("SELECT ALL CL1 received - EmSendPrecompiledCmd(%02x)", &responses[UIDBCC1]);
-                    EmSendPrecompiledCmd(&responses[UIDBCC1]);
-                    break;
-                }
-
-                // select card - 0x93 0x70 (Select CL1)
-                if (receivedCmd_len == 9 &&
-                        (receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT &&
-                         receivedCmd[1] == 0x70 &&
-                         memcmp(&receivedCmd[2], responses[UIDBCC1].response, 4) == 0)) {
-                    if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("SELECT CL1 %02x%02x%02x%02x received", receivedCmd[2], receivedCmd[3], receivedCmd[4], receivedCmd[5]);
-
-                    // Send SAK according UID len
-                    switch (uid_len) {
-                        case 4:
-                            // UID completed
-                            EmSendPrecompiledCmd(&responses[SAK]);
-                            LED_B_ON();
-                            cardSTATE = MFEMUL_WORK;
-                            if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_SELECT1] cardSTATE = MFEMUL_WORK");
+            // This case is used for all Cascade Levels, because:
+            // 1) Any devices (under Android for example) after full select procedure completed,
+            //    when UID is known, uses "fast-selection" method. In this case reader ignores
+            //    first cascades and tries to select tag by last bytes of UID of last cascade
+            // 2) Any readers (like ACR122U) uses bit oriented anti-collision frames during selectin,
+            //    same as multiple tags. For details see chapter 6.1.5.3 of ISO/IEC 14443-3
+            case MFEMUL_SELECT: {
+                int uid_index = -1;
+                // Extract cascade level
+                if (receivedCmd_len >= 2) {
+                    switch (receivedCmd[0]) {
+                        case ISO14443A_CMD_ANTICOLL_OR_SELECT:
+                            uid_index = UIDBCC1;
                             break;
-                        case 7:
-                            // SAK => Need another select round
-                            EmSendPrecompiledCmd(&responses[SAKuid]);
-                            cardSTATE	= MFEMUL_SELECT2;
-                            if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_SELECT1] cardSTATE = MFEMUL_SELECT2");
+                        case ISO14443A_CMD_ANTICOLL_OR_SELECT_2:
+                            uid_index = UIDBCC2;
                             break;
-                        case 10:
-                            // SAK => Need another select round
-                            EmSendPrecompiledCmd(&responses[SAKuid]);
-                            cardSTATE	= MFEMUL_SELECT2;
-                            if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_SELECT1] cardSTATE = MFEMUL_SELECT2");
-                            break;
-                        default:
-                            break;
-                    } // End Switch (uid_len)
-
-                } else {
-                    // IDLE
-                    cardSTATE_TO_IDLE();
-                    if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_SELECT1] cardSTATE = MFEMUL_IDLE");
-                }
-                // Break Case MFEMUL_SELECT1
-                break;
-            }
-
-
-            // Cascade Level 2
-            //
-            // If the UID is not yet complete, the PCD continues with an anti-collision CL2 command (0x95),
-            // and the PICC returns
-            // • either the last 4 bytes of the Double Size UID (UID3...UID6) and one-byte BCC,
-            // • or a Cascade Tag (CT) followed by the next 3 bytes of the Triple Size UID (UID3...UID5) and one-byte BCC.
-            // The CT (0x88) indicates that the UID is not yet complete, and another Cascade Level  has to follow.
-            //
-            // The UID3 byte of a 7 byte or 10-byte UID must not be 0x88
-            // The CL2 then must be selected, using the Select command CL2 (0x95).
-            // The PICC returns its SAK CL2, which indicates
-            // whether the UID is complete or not, and (if so),
-            // the type of card and whether the card supports T=CL.
-
-            // select all cl2 - 0x95 0x20
-
-            case MFEMUL_SELECT2: {
-                if (receivedCmd_len == 2 &&
-                        (receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2 && receivedCmd[1] == 0x20)) {
-                    if (MF_DBGLEVEL >= MF_DBG_EXTENDED)	Dbprintf("[MFEMUL_SELECT2] SELECT ALL CL2 received");
-                    EmSendPrecompiledCmd(&responses[UIDBCC2]);
-                    break;
-                }
-
-                // select cl2 card - 0x95 0x70 xxxxxxxxxxxx
-                if (receivedCmd_len == 9 &&
-                        (receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2 &&
-                         receivedCmd[1] == 0x70 &&
-                         memcmp(&receivedCmd[2], responses[UIDBCC2].response, 4) == 0)) {
-
-                    switch (uid_len) {
-                        case 7:
-                            if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_SELECT2] SELECT CL2 %02x%02x%02x%02x received", receivedCmd[2], receivedCmd[3], receivedCmd[4], receivedCmd[5]);
-                            // UID completed
-                            EmSendPrecompiledCmd(&responses[SAK]);
-                            cardSTATE = MFEMUL_WORK;
-                            LED_B_ON();
-                            break;
-                        case 10:
-                            // SAK => Need another select round
-                            EmSendPrecompiledCmd(&responses[SAKuid]);
-                            cardSTATE = MFEMUL_SELECT3;
-                            if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_SELECT2] cardSTATE = MFEMUL_SELECT3");
-                        default:
+                        case ISO14443A_CMD_ANTICOLL_OR_SELECT_3:
+                            uid_index = UIDBCC3;
                             break;
                     }
-
-                } else {
-                    // IDLE
-                    cardSTATE_TO_IDLE();
-                    if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_SELECT2] cardSTATE = MFEMUL_IDLE");
                 }
-                // Break Case MFEMUL_SELECT2
-                break;
-            }
-
-
-            // Cascade Level 3
-            // Select command CL3 (0x97)
-            //
-            // If the UID is not yet complete, the PCD continues with an anti-collision CL3 command (0x97)
-            // and the PICC returns the last 4 bytes of the Triple Size UID (UID6...UID9) and one-byte BCC.
-            // The PICC returns its SAK CL3, which indicates the type of card and whether the card supports T=CL
-
-            case MFEMUL_SELECT3: {
-                if (!uid_len) {
+                if (uid_index < 0) {
                     LogTrace(uart->output, uart->len, uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->parity, true);
-                    break;
-                }
-                if (receivedCmd_len == 2 && (receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_3 && receivedCmd[1] == 0x20)) {
-                    EmSendPrecompiledCmd(&responses[UIDBCC3]);
-                    break;
-                }
-                if (receivedCmd_len == 9 &&
-                        (receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_3 &&
-                         receivedCmd[1] == 0x70 &&
-                         memcmp(&receivedCmd[2], responses[UIDBCC3].response, 4) == 0)) {
-                    // UID completed
-                    EmSendPrecompiledCmd(&responses[SAK]);
-                    cardSTATE = MFEMUL_WORK;
-                    LED_B_ON();
-                    if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
-                        Dbprintf("[MFEMUL_SELECT3] --> WORK. anticol3 time: %d", GetTickCount() - selTimer);
-                        Dbprintf("[MFEMUL_SELECT3] cardSTATE = MFEMUL_WORK");
-                    }
-                    continue;
-                } else {
-                    // IDLE
                     cardSTATE_TO_IDLE();
-                    if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_SELECT3] cardSTATE = MFEMUL_IDLE");
+                    if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_SELECT] Incorrect cascade level received");
+                    break;
                 }
-                // Break Case MFEMUL_SELECT3
+
+                // Incoming SELECT ALL for any cascade level
+                if (receivedCmd_len == 2 && receivedCmd[1] == 0x20) {
+                    EmSendPrecompiledCmd(&responses[uid_index]);
+                    if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("SELECT ALL - EmSendPrecompiledCmd(%02x)", &responses[uid_index]);
+                    break;
+                }
+
+                // Incoming SELECT CLx for any cascade level
+                if (receivedCmd_len == 9 && receivedCmd[1] == 0x70) {
+                    if (memcmp(&receivedCmd[2], responses[uid_index].response, 4) == 0) {
+                        bool finished = (uid_len == 4  && uid_index == UIDBCC1) ||
+                                        (uid_len == 7  && uid_index == UIDBCC2) ||
+                                        (uid_len == 10 && uid_index == UIDBCC3);
+                        EmSendPrecompiledCmd(&responses[finished ? SAK : SAKuid]);
+                        if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("SELECT CLx %02x%02x%02x%02x received", receivedCmd[2], receivedCmd[3], receivedCmd[4], receivedCmd[5]);
+                        if (finished) {
+                            LED_B_ON();
+                            cardSTATE = MFEMUL_WORK;
+                            if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_SELECT] cardSTATE = MFEMUL_WORK");
+                        }
+                    } else {
+                        // IDLE, not our UID
+                        LogTrace(uart->output, uart->len, uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->parity, true);
+                        cardSTATE_TO_IDLE();
+                        if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_SELECT] cardSTATE = MFEMUL_IDLE");
+                    }
+                    break;
+                }
+
+                // Incoming anti-collision frame
+                if (receivedCmd_len >= 2 && receivedCmd_len <= 6 && receivedCmd[1] == 0x50) {
+                    // we can process only full-byte frame anti-collision procedure
+                    if (memcmp(&receivedCmd[2], responses[uid_index].response, receivedCmd_len - 2) == 0) {
+                        // response missing part of UID via relative array index
+                        EmSendPrecompiledCmd(&responses[uid_index + receivedCmd_len - 2]);
+                        if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("SELECT ANTICOLLISION - EmSendPrecompiledCmd(%02x)", &responses[uid_index]);
+                    } else {
+                        // IDLE, not our UID or split-byte frame anti-collision (not supports)
+                        LogTrace(uart->output, uart->len, uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->parity, true);
+                        cardSTATE_TO_IDLE();
+                        if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_SELECT] cardSTATE = MFEMUL_IDLE");
+                    }
+                    break;
+                }
+
+                // Unknown selection procedure
+                LogTrace(uart->output, uart->len, uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->parity, true);
+                cardSTATE_TO_IDLE();
+                if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("[MFEMUL_SELECT] Unknown selection procedure");
                 break;
             }
 

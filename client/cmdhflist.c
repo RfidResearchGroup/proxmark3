@@ -45,6 +45,10 @@ void ClearAuthData() {
 uint8_t iso14443A_CRC_check(bool isResponse, uint8_t *d, uint8_t n) {
     if (n < 3) return 2;
     if (isResponse && (n < 6)) return 2;
+    if (n > 2 && d[1] == 0x50 &&
+            d[0] >= ISO14443A_CMD_ANTICOLL_OR_SELECT &&
+            d[0] <= ISO14443A_CMD_ANTICOLL_OR_SELECT_3)
+        return 2;
     return check_crc(CRC_14443_A, d, n);
 }
 
@@ -143,20 +147,38 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             break;
         case ISO14443A_CMD_ANTICOLL_OR_SELECT: {
             // 93 20 = Anticollision (usage: 9320 - answer: 4bytes UID+1byte UID-bytes-xor)
-            // 93 70 = Select (usage: 9370+5bytes 9320 answer - answer: 1byte SAK)
+            // 93 50 = Bit oriented anti-collision (usage: 9350+ up to 5bytes, 9350 answer - up to 5bytes UID+BCC)
+            // 93 70 = Select (usage: 9370+5bytes 9370 answer - answer: 1byte SAK)
             if (cmd[1] == 0x70)
                 snprintf(exp, size, "SELECT_UID");
-            else
+            else if (cmd[1] == 0x20 || cmd[1] == 0x50)
                 snprintf(exp, size, "ANTICOLL");
+            else
+                snprintf(exp, size, "SELECT_XXX");
             break;
         }
         case ISO14443A_CMD_ANTICOLL_OR_SELECT_2: {
             //95 20 = Anticollision of cascade level2
+            //95 50 = Bit oriented anti-collision level2
             //95 70 = Select of cascade level2
-            if (cmd[2] == 0x70)
+            if (cmd[1] == 0x70)
                 snprintf(exp, size, "SELECT_UID-2");
-            else
+            else if (cmd[1] == 0x20 || cmd[1] == 0x50)
                 snprintf(exp, size, "ANTICOLL-2");
+            else
+                snprintf(exp, size, "SELECT_XXX-2");
+            break;
+        }
+        case ISO14443A_CMD_ANTICOLL_OR_SELECT_3: {
+            //97 20 = Anticollision of cascade level3
+            //97 50 = Bit oriented anti-collision level3
+            //97 70 = Select of cascade level3
+            if (cmd[1] == 0x70)
+                snprintf(exp, size, "SELECT_UID-2");
+            else if (cmd[1] == 0x20 || cmd[1] == 0x50)
+                snprintf(exp, size, "ANTICOLL-3");
+            else
+                snprintf(exp, size, "SELECT_XXX-3");
             break;
         }
         case ISO14443A_CMD_REQA:
