@@ -1,4 +1,4 @@
-include ../common/Makefile.common
+include ../common/Makefile.common      # for $(DETECTED_OS)
 
 all: fpga_lf.bit fpga_hf.bit
 clean:
