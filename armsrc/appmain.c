@@ -117,7 +117,7 @@ void print_result(char *name, uint8_t *buf, size_t len) {
 void DbpStringEx(char *str, uint32_t cmd) {
 #if DEBUG
     uint8_t len = strlen(str);
-    cmd_send(CMD_DEBUG_PRINT_STRING, len, cmd, 0, (uint8_t *)str, len);
+    reply_old(CMD_DEBUG_PRINT_STRING, len, cmd, 0, (uint8_t *)str, len);
 #endif
 }
 
@@ -129,7 +129,7 @@ void DbpString(char *str) {
 
 #if 0
 void DbpIntegers(int x1, int x2, int x3) {
-    cmd_send(CMD_DEBUG_PRINT_INTEGERS, x1, x2, x3, 0, 0);
+    reply_old(CMD_DEBUG_PRINT_INTEGERS, x1, x2, x3, 0, 0);
 }
 #endif
 void DbprintfEx(uint32_t cmd, const char *fmt, ...) {
@@ -289,7 +289,7 @@ void MeasureAntennaTuning(void) {
     arg2 <<= 32;
     arg2 |= peakf;
 
-    cmd_send(CMD_MEASURED_ANTENNA_TUNING, arg0, v_hf, arg2, LF_Results, 256);
+    reply_old(CMD_MEASURED_ANTENNA_TUNING, arg0, v_hf, arg2, LF_Results, 256);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
 }
@@ -359,11 +359,11 @@ void SendVersion(void) {
     // Send Chip ID and used flash memory
     uint32_t text_and_rodata_section_size = (uint32_t)&__data_src_start__ - (uint32_t)&_flash_start;
     uint32_t compressed_data_section_size = common_area.arg1;
-    cmd_send(CMD_ACK, *(AT91C_DBGU_CIDR), text_and_rodata_section_size + compressed_data_section_size, 0, VersionString, strlen(VersionString));
+    reply_old(CMD_ACK, *(AT91C_DBGU_CIDR), text_and_rodata_section_size + compressed_data_section_size, 0, VersionString, strlen(VersionString));
 }
 
 // measure the USB Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
-// Note: this mimics GetFromBigbuf(), i.e. we have the overhead of the UsbCommandOLD structure included.
+// Note: this mimics GetFromBigbuf(), i.e. we have the overhead of the PacketCommandOLD structure included.
 void printUSBSpeed(void) {
     Dbprintf("USB Speed");
     Dbprintf("  Sending USB packets to client...");
@@ -412,7 +412,7 @@ void SendStatus(void) {
     Dbprintf("  ToSendBit...............%d", ToSendBit);
     Dbprintf("  ToSend BUFFERSIZE.......%d", TOSEND_BUFFER_SIZE);
     printStandAloneModes();
-    cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
+    reply_old(CMD_ACK, 1, 0, 0, 0, 0);
 }
 
 // Show some leds in a pattern to identify StandAlone mod is running
@@ -633,7 +633,7 @@ void ListenReaderField(int limit) {
     }
 }
 
-static void UsbPacketReceived(UsbCommandNG *packet) {
+static void PacketReceived(PacketCommandNG *packet) {
 /*
     if (packet->ng) {
         Dbprintf("received NG frame with %d bytes payload, with command: 0x%04x", packet->length, cmd);
@@ -652,7 +652,7 @@ static void UsbPacketReceived(UsbCommandNG *packet) {
             break;
         case CMD_ACQUIRE_RAW_ADC_SAMPLES_125K: {
             uint32_t bits = SampleLF(packet->oldarg[0], packet->oldarg[1]);
-            cmd_send(CMD_ACK, bits, 0, 0, 0, 0);
+            reply_old(CMD_ACK, bits, 0, 0, 0, 0);
             break;
         }
         case CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K:
@@ -660,7 +660,7 @@ static void UsbPacketReceived(UsbCommandNG *packet) {
             break;
         case CMD_LF_SNIFF_RAW_ADC_SAMPLES: {
             uint32_t bits = SniffLF();
-            cmd_send(CMD_ACK, bits, 0, 0, 0, 0);
+            reply_old(CMD_ACK, bits, 0, 0, 0, 0);
             break;
         }
         case CMD_HID_DEMOD_FSK: {
@@ -1078,7 +1078,7 @@ static void UsbPacketReceived(UsbCommandNG *packet) {
             // upload file from client
             uint8_t *mem = BigBuf_get_addr();
             memcpy(mem + packet->oldarg[0], packet->data.asBytes, USB_CMD_DATA_SIZE);
-            cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
+            reply_old(CMD_ACK, 1, 0, 0, 0, 0);
             break;
         }
         case CMD_SMART_UPGRADE: {
@@ -1136,25 +1136,25 @@ static void UsbPacketReceived(UsbCommandNG *packet) {
 
 
             //usb
-            cmd_send(CMD_DEBUG_PRINT_STRING, strlen(dest), 0, 0, dest, strlen(dest));
+            reply_old(CMD_DEBUG_PRINT_STRING, strlen(dest), 0, 0, dest, strlen(dest));
             LED_A_OFF();
             /*
-            uint8_t my_rx[sizeof(UsbCommandOLD)];
+            uint8_t my_rx[sizeof(PacketCommandOLD)];
             while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
                 LED_B_INV();
                 if (usart_readbuffer(my_rx) ) {
-                    //UsbPacketReceived(my_rx, sizeof(my_rx));
+                    //PacketReceived(my_rx, sizeof(my_rx));
 
-                    UsbCommandOLD *my = (UsbCommandOLD *)my_rx;
+                    PacketCommandOLD *my = (PacketCommandOLD *)my_rx;
                     if (my->cmd > 0 ) {
                         Dbprintf("received command: 0x%04x and args: %d %d %d", my->cmd, my->arg[0], my->arg[1], my->arg[2]);
                     }
                 }
             }
             */
-            //cmd_send(CMD_DEBUG_PRINT_STRING, strlen(dest), 0, 0, dest, strlen(dest));
+            //reply_old(CMD_DEBUG_PRINT_STRING, strlen(dest), 0, 0, dest, strlen(dest));
 
-            cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
+            reply_old(CMD_ACK, 0, 0, 0, 0, 0);
             StopTicks();
             break;
         }
@@ -1194,7 +1194,7 @@ static void UsbPacketReceived(UsbCommandNG *packet) {
 
             for (size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
                 size_t len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
-                bool isok = cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, i, len, BigBuf_get_traceLen(), mem + startidx + i, len);
+                bool isok = reply_old(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, i, len, BigBuf_get_traceLen(), mem + startidx + i, len);
                 if (isok != 0)
                     Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d)", i, i + len, len);
             }
@@ -1204,7 +1204,7 @@ static void UsbPacketReceived(UsbCommandNG *packet) {
             // arg1 = RFU
             // arg2 = tracelen?
             // asbytes = samplingconfig array
-            cmd_send(CMD_ACK, 1, 0, BigBuf_get_traceLen(), getSamplingConfig(), sizeof(sample_config));
+            reply_old(CMD_ACK, 1, 0, BigBuf_get_traceLen(), getSamplingConfig(), sizeof(sample_config));
             LED_B_OFF();
             break;
         }
@@ -1222,7 +1222,7 @@ static void UsbPacketReceived(UsbCommandNG *packet) {
 
             uint8_t *mem = BigBuf_get_addr();
             memcpy(mem + packet->oldarg[0], packet->data.asBytes, USB_CMD_DATA_SIZE);
-            cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
+            reply_old(CMD_ACK, 1, 0, 0, 0, 0);
             break;
         }
         case CMD_DOWNLOAD_EML_BIGBUF: {
@@ -1239,12 +1239,12 @@ static void UsbPacketReceived(UsbCommandNG *packet) {
 
             for (size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
                 len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
-                isok = cmd_send(CMD_DOWNLOADED_EML_BIGBUF, i, len, 0, mem + startidx + i, len);
+                isok = reply_old(CMD_DOWNLOADED_EML_BIGBUF, i, len, 0, mem + startidx + i, len);
                 if (isok != 0)
                     Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d)", i, i + len, len);
             }
             // Trigger a finish downloading signal with an ACK frame
-            cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
+            reply_old(CMD_ACK, 1, 0, 0, 0, 0);
             LED_B_OFF();
             break;
         }
@@ -1346,7 +1346,7 @@ static void UsbPacketReceived(UsbCommandNG *packet) {
             }
             FlashStop();
 
-            cmd_send(CMD_ACK, isok, 0, 0, 0, 0);
+            reply_old(CMD_ACK, isok, 0, 0, 0, 0);
             LED_B_OFF();
             break;
         }
@@ -1357,14 +1357,14 @@ static void UsbPacketReceived(UsbCommandNG *packet) {
             bool isok = false;
             if (initalwipe) {
                 isok = Flash_WipeMemory();
-                cmd_send(CMD_ACK, isok, 0, 0, 0, 0);
+                reply_old(CMD_ACK, isok, 0, 0, 0, 0);
                 LED_B_OFF();
                 break;
             }
             if (page < 3)
                 isok = Flash_WipeMemoryPage(page);
 
-            cmd_send(CMD_ACK, isok, 0, 0, 0, 0);
+            reply_old(CMD_ACK, isok, 0, 0, 0, 0);
             LED_B_OFF();
             break;
         }
@@ -1389,13 +1389,13 @@ static void UsbPacketReceived(UsbCommandNG *packet) {
                 if (!isok)
                     Dbprintf("reading flash memory failed ::  | bytes between %d - %d", i, len);
 
-                isok = cmd_send(CMD_FLASHMEM_DOWNLOADED, i, len, 0, mem, len);
+                isok = reply_old(CMD_FLASHMEM_DOWNLOADED, i, len, 0, mem, len);
                 if (isok != 0)
                     Dbprintf("transfer to client failed ::  | bytes between %d - %d", i, len);
             }
             FlashStop();
 
-            cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
+            reply_old(CMD_ACK, 1, 0, 0, 0, 0);
             BigBuf_free();
             LED_B_OFF();
             break;
@@ -1411,7 +1411,7 @@ static void UsbPacketReceived(UsbCommandNG *packet) {
                 Flash_UniqueID(info->flashid);
                 FlashStop();
             }
-            cmd_send(CMD_ACK, isok, 0, 0, info, sizeof(rdv40_validation_t));
+            reply_old(CMD_ACK, isok, 0, 0, info, sizeof(rdv40_validation_t));
             BigBuf_free();
 
             LED_B_OFF();
@@ -1453,9 +1453,9 @@ static void UsbPacketReceived(UsbCommandNG *packet) {
                 reply_ng(CMD_PING, PM3_SUCCESS, packet->data.asBytes, packet->length);
             } else {
 #ifdef WITH_FPC_HOST
-                cmd_send(CMD_ACK, reply_via_fpc, 0, 0, 0, 0);
+                reply_old(CMD_ACK, reply_via_fpc, 0, 0, 0, 0);
 #else
-                cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
+                reply_old(CMD_ACK, 0, 0, 0, 0, 0);
 #endif
             }
             break;
@@ -1494,7 +1494,7 @@ static void UsbPacketReceived(UsbCommandNG *packet) {
             if (common_area.flags.bootrom_present) {
                 dev_info |= DEVICE_INFO_FLAG_BOOTROM_PRESENT;
             }
-            cmd_send(CMD_DEVICE_INFO, dev_info, 0, 0, 0, 0);
+            reply_old(CMD_DEVICE_INFO, dev_info, 0, 0, 0, 0);
             break;
         }
         default:
@@ -1568,9 +1568,9 @@ void  __attribute__((noreturn)) AppMain(void) {
 
         // Check if there is a usb packet available
         if (usb_poll_validate_length()) {
-            UsbCommandNG rx;
+            PacketCommandNG rx;
             if (receive_ng(&rx) == PM3_SUCCESS) {
-                UsbPacketReceived(&rx);
+                PacketReceived(&rx);
             } else {
                 Dbprintf("Error in frame reception");
                 // TODO DOEGOX if error, shall we resync ?
@@ -1579,14 +1579,14 @@ void  __attribute__((noreturn)) AppMain(void) {
 #ifdef WITH_FPC_HOST
         // Check if there is a FPC packet available
 // TODO DOEGOX NG packets support here too
-        UsbCommandNG rx;
+        PacketCommandNG rx;
         if (usart_readbuffer((uint8_t *)&rx)) {
             reply_via_fpc = true;
             rx.ng = false;
             rx.magic = 0;
             rx.length = USB_CMD_DATA_SIZE;
             rx.crc = 0;
-            UsbPacketReceived(&rx);
+            PacketReceived(&rx);
         }
         usart_readcheck((uint8_t *)&rx, sizeof(rx));
 #endif

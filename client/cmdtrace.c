@@ -672,7 +672,7 @@ int CmdTraceList(const char *Cmd) {
 
     if (isOnline) {
         // Query for the size of the trace,  downloading USB_CMD_DATA_SIZE
-        UsbReplyNG response;
+        PacketResponseNG response;
         if (!GetFromDevice(BIG_BUF, trace, USB_CMD_DATA_SIZE, 0, &response, 4000, true)) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply.");
             return 1;

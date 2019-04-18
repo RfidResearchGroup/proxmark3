@@ -253,13 +253,13 @@ static void EPA_PACE_Collect_Nonce_Abort(uint8_t step, int func_return) {
     EPA_Finish();
 
     // send the USB packet
-    cmd_send(CMD_ACK, step, func_return, 0, 0, 0);
+    reply_old(CMD_ACK, step, func_return, 0, 0, 0);
 }
 
 //-----------------------------------------------------------------------------
 // Acquire one encrypted PACE nonce
 //-----------------------------------------------------------------------------
-void EPA_PACE_Collect_Nonce(UsbCommandNG *c) {
+void EPA_PACE_Collect_Nonce(PacketCommandNG *c) {
     /*
      * ack layout:
      *   arg:
@@ -325,7 +325,7 @@ void EPA_PACE_Collect_Nonce(UsbCommandNG *c) {
     EPA_Finish();
 
     // save received information
-    cmd_send(CMD_ACK, 0, func_return, 0, nonce, func_return);
+    reply_old(CMD_ACK, 0, func_return, 0, nonce, func_return);
 }
 
 //-----------------------------------------------------------------------------
@@ -430,14 +430,14 @@ int EPA_PACE_MSE_Set_AT(pace_version_info_t pace_version_info, uint8_t password)
 //-----------------------------------------------------------------------------
 // Perform the PACE protocol by replaying given APDUs
 //-----------------------------------------------------------------------------
-void EPA_PACE_Replay(UsbCommandNG *c) {
+void EPA_PACE_Replay(PacketCommandNG *c) {
     uint32_t timings[sizeof(apdu_lengths_replay) / sizeof(apdu_lengths_replay[0])] = {0};
 
     // if an APDU has been passed, save it
     if (c->oldarg[0] != 0) {
         // make sure it's not too big
         if (c->oldarg[2] > apdus_replay[c->oldarg[0] - 1].len) {
-            cmd_send(CMD_ACK, 1, 0, 0, NULL, 0);
+            reply_old(CMD_ACK, 1, 0, 0, NULL, 0);
         }
         memcpy(apdus_replay[c->oldarg[0] - 1].data + c->oldarg[1],
                c->data.asBytes,
@@ -448,7 +448,7 @@ void EPA_PACE_Replay(UsbCommandNG *c) {
         } else {
             apdu_lengths_replay[c->oldarg[0] - 1] += c->oldarg[2];
         }
-        cmd_send(CMD_ACK, 0, 0, 0, NULL, 0);
+        reply_old(CMD_ACK, 0, 0, 0, NULL, 0);
         return;
     }
 
@@ -459,7 +459,7 @@ void EPA_PACE_Replay(UsbCommandNG *c) {
     func_return = EPA_Setup();
     if (func_return != 0) {
         EPA_Finish();
-        cmd_send(CMD_ACK, 2, func_return, 0, NULL, 0);
+        reply_old(CMD_ACK, 2, func_return, 0, NULL, 0);
         return;
     }
 
@@ -482,12 +482,12 @@ void EPA_PACE_Replay(UsbCommandNG *c) {
                     || response_apdu[func_return - 4] != 0x90
                     || response_apdu[func_return - 3] != 0x00)) {
             EPA_Finish();
-            cmd_send(CMD_ACK, 3 + i, func_return, 0, timings, 20);
+            reply_old(CMD_ACK, 3 + i, func_return, 0, timings, 20);
             return;
         }
     }
     EPA_Finish();
-    cmd_send(CMD_ACK, 0, 0, 0, timings, 20);
+    reply_old(CMD_ACK, 0, 0, 0, timings, 20);
     return;
 }
 

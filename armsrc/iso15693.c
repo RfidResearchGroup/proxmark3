@@ -849,7 +849,7 @@ void ReaderIso15693(uint32_t parameter) {
         // arg1 = len of response (12 bytes)
         // arg2 = rtf
         // asbytes = uid.
-        cmd_send(CMD_ACK, 1, sizeof(uid), 0, uid, sizeof(uid));
+        reply_old(CMD_ACK, 1, sizeof(uid), 0, uid, sizeof(uid));
     }
 
     if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
@@ -989,7 +989,7 @@ void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint
         buflen = (buflen > ISO15_MAX_FRAME) ? ISO15_MAX_FRAME : buflen;
 
         LED_B_ON();
-        cmd_send(CMD_ACK, buflen, 0, 0, buf, buflen);
+        reply_old(CMD_ACK, buflen, 0, 0, buf, buflen);
         LED_B_OFF();
 
         if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
@@ -998,6 +998,6 @@ void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint
             Dbhexdump(buflen, buf, true);
         }
     } else {
-        cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
+        reply_old(CMD_ACK, 1, 0, 0, 0, 0);
     }
 }

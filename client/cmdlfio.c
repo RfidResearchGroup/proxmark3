@@ -66,7 +66,7 @@ static int usage_lf_io_clone(void) {
 static int CmdIOProxRead_device(const char *Cmd) {
     if (Cmd[0] == 'h' || Cmd[0] == 'H') return usage_lf_io_read();
     int findone = (Cmd[0] == '1') ? 1 : 0;
-    UsbCommandOLD c = {CMD_IO_DEMOD_FSK, {findone, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_IO_DEMOD_FSK, {findone, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
@@ -215,7 +215,7 @@ static int CmdIOProxSim(const char *Cmd) {
     // arg1 --- fcHigh<<8 + fcLow
     // arg2 --- Invert and clk setting
     // size --- 64 bits == 8 bytes
-    UsbCommandOLD c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}, {{0}}};
+    PacketCommandOLD c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}, {{0}}};
     memcpy(c.d.asBytes, bits, size);
     clearCommandBuffer();
     SendCommand(&c);
@@ -258,8 +258,8 @@ static int CmdIOProxClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone IOProx to T55x7 with Version: %u FC: %u, CN: %u", version, fc, cn);
     print_blocks(blocks, 3);
 
-    //UsbCommandOLD c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}, {{0}}};
-    UsbCommandOLD c = {CMD_IO_CLONE_TAG, {blocks[1], blocks[2], 0}, {{0}}};
+    //PacketCommandOLD c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}, {{0}}};
+    PacketCommandOLD c = {CMD_IO_CLONE_TAG, {blocks[1], blocks[2], 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;

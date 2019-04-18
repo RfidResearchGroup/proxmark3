@@ -475,7 +475,7 @@ static void iso18092_setup(uint8_t fpga_minor_mode) {
 // arg0 FeliCa flags
 // arg1 len of commandbytes
 // d.asBytes command bytes to send
-void felica_sendraw(UsbCommandNG *c) {
+void felica_sendraw(PacketCommandNG *c) {
 
     if (MF_DBGLEVEL > 3) Dbprintf("FeliCa_sendraw Enter");
 
@@ -498,7 +498,7 @@ void felica_sendraw(UsbCommandNG *c) {
         // if failed selecting, turn off antenna and quite.
         if (!(param & FELICA_NO_SELECT)) {
             arg0 = felica_select_card(&card);
-            cmd_send(CMD_ACK, arg0, sizeof(card.uid), 0, &card, sizeof(felica_card_select_t));
+            reply_old(CMD_ACK, arg0, sizeof(card.uid), 0, &card, sizeof(felica_card_select_t));
             if (arg0 > 0)
                 goto OUT;
         }
@@ -525,7 +525,7 @@ void felica_sendraw(UsbCommandNG *c) {
 
         TransmitFor18092_AsReader(buf, buf[2] + 4, NULL, 1, 0);
         arg0 = !WaitForFelicaReply(1024);
-        cmd_send(CMD_ACK, arg0, 0, 0, FelicaFrame.framebytes + 2, FelicaFrame.len - 2);
+        reply_old(CMD_ACK, arg0, 0, 0, FelicaFrame.framebytes + 2, FelicaFrame.len - 2);
     }
 
     if ((param & FELICA_NO_DISCONNECT))
@@ -603,7 +603,7 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
     set_tracelen(numbts);
 
     Dbprintf("Felica sniffing done, tracelen: %i, use hf list felica for annotations", BigBuf_get_traceLen());
-    cmd_send(CMD_ACK, 1, numbts, 0, 0, 0);
+    reply_old(CMD_ACK, 1, numbts, 0, 0, 0);
 }
 
 #define R_POLL0_LEN    0x16
@@ -794,5 +794,5 @@ void felica_dump_lite_s() {
 
     //setting tracelen - important!  it was set by buffer overflow before
     set_tracelen(cnt);
-    cmd_send(CMD_ACK, isOK, cnt, 0, 0, 0);
+    reply_old(CMD_ACK, isOK, cnt, 0, 0, 0);
 }

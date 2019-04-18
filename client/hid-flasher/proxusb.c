@@ -20,14 +20,14 @@ static unsigned int claimed_iface = 0;
 unsigned char return_on_error = 0;
 unsigned char error_occured = 0;
 
-void SendCommand(UsbCommand *c) {
+void SendCommand(PacketCommandOLD *c) {
     int ret;
 
 #if 0
-    printf("Sending %d bytes\n", sizeof(UsbCommand));
+    printf("Sending %d bytes\n", sizeof(PacketCommandOLD));
 #endif
 
-    ret = usb_bulk_write(devh, 0x01, (char *)c, sizeof(UsbCommand), 1000);
+    ret = usb_bulk_write(devh, 0x01, (char *)c, sizeof(PacketCommandOLD), 1000);
     if (ret < 0) {
         error_occured = 1;
         if (return_on_error)
@@ -48,11 +48,11 @@ void SendCommand(UsbCommand *c) {
     }
 }
 
-bool ReceiveCommandPoll(UsbCommand *c) {
+bool ReceiveCommandPoll(PacketResponseOLD *c) {
     int ret;
 
-    memset(c, 0, sizeof(UsbCommand));
-    ret = usb_bulk_read(devh, 0x82, (char *)c, sizeof(UsbCommand), 500);
+    memset(c, 0, sizeof(PacketResponseOLD));
+    ret = usb_bulk_read(devh, 0x82, (char *)c, sizeof(PacketResponseOLD), 500);
     if (ret < 0) {
         if (ret != -ETIMEDOUT) {
             error_occured = 1;
@@ -73,16 +73,16 @@ bool ReceiveCommandPoll(UsbCommand *c) {
             return false;
         }
     } else {
-        if (ret && (ret < sizeof(UsbCommand))) {
+        if (ret && (ret < sizeof(PacketResponseOLD))) {
             fprintf(stderr, "Read only %d instead of requested %d bytes!\n",
-                    ret, (int)sizeof(UsbCommand));
+                    ret, (int)sizeof(PacketResponseOLD));
         }
     }
 
     return ret > 0;
 }
 
-void ReceiveCommand(UsbCommand *c) {
+void ReceiveCommand(PacketResponseOLD *c) {
 //  printf("%s()\n", __FUNCTION__);
     int retval = 0;
     do {

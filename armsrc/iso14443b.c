@@ -1566,7 +1566,7 @@ void iso14b_set_trigger(bool enable) {
  * none
  *
  */
-void SendRawCommand14443B_Ex(UsbCommandNG *c) {
+void SendRawCommand14443B_Ex(PacketCommandNG *c) {
     iso14b_command_t param = c->oldarg[0];
     size_t len = c->oldarg[1] & 0xffff;
     uint32_t timeout = c->oldarg[2];
@@ -1594,7 +1594,7 @@ void SendRawCommand14443B_Ex(UsbCommandNG *c) {
     if ((param & ISO14B_SELECT_STD) == ISO14B_SELECT_STD) {
         iso14b_card_select_t *card = (iso14b_card_select_t *)buf;
         status = iso14443b_select_card(card);
-        cmd_send(CMD_ACK, status, sendlen, 0, buf, sendlen);
+        reply_old(CMD_ACK, status, sendlen, 0, buf, sendlen);
         // 0: OK 2: attrib fail, 3:crc fail,
         if (status > 0) goto out;
     }
@@ -1602,14 +1602,14 @@ void SendRawCommand14443B_Ex(UsbCommandNG *c) {
     if ((param & ISO14B_SELECT_SR) == ISO14B_SELECT_SR) {
         iso14b_card_select_t *card = (iso14b_card_select_t *)buf;
         status = iso14443b_select_srx_card(card);
-        cmd_send(CMD_ACK, status, sendlen, 0, buf, sendlen);
+        reply_old(CMD_ACK, status, sendlen, 0, buf, sendlen);
         // 0: OK 2: demod fail, 3:crc fail,
         if (status > 0) goto out;
     }
 
     if ((param & ISO14B_APDU) == ISO14B_APDU) {
         status = iso14443b_apdu(cmd, len, buf);
-        cmd_send(CMD_ACK, status, status, 0, buf, status);
+        reply_old(CMD_ACK, status, status, 0, buf, status);
     }
 
     if ((param & ISO14B_RAW) == ISO14B_RAW) {
@@ -1623,7 +1623,7 @@ void SendRawCommand14443B_Ex(UsbCommandNG *c) {
 
         sendlen = MIN(Demod.len, USB_CMD_DATA_SIZE);
         status = (Demod.len > 0) ? 0 : 1;
-        cmd_send(CMD_ACK, status, sendlen, 0, Demod.output, sendlen);
+        reply_old(CMD_ACK, status, sendlen, 0, Demod.output, sendlen);
     }
 
 out:

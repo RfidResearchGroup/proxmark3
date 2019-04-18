@@ -295,7 +295,7 @@ end:
 
         Dbprintf("-----------------------------------------");
     }
-    cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
+    reply_old(CMD_ACK, 0, 0, 0, 0, 0);
 }
 
 static void RealWritePCF7931(uint8_t *pass, uint16_t init_delay, int32_t l, int32_t p, uint8_t address, uint8_t byte, uint8_t data) {

@@ -51,12 +51,12 @@ static int CmdHF14ADesWb(const char *Cmd) {
         PrintAndLogEx(NORMAL, "--block no:%02x key type:%02x key:%s", blockNo, keyType, sprint_hex(key, 6));
         PrintAndLogEx(NORMAL, "--data: %s", sprint_hex(bldata, 16));
 
-      UsbCommandOLD c = {CMD_MIFARE_WRITEBL, {blockNo, keyType, 0}, {{0}}};
+      PacketCommandOLD c = {CMD_MIFARE_WRITEBL, {blockNo, keyType, 0}, {{0}}};
         memcpy(c.d.asBytes, key, 6);
         memcpy(c.d.asBytes + 10, bldata, 16);
       SendCommand(&c);
 
-        UsbReplyNG resp;
+        PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
             uint8_t isOK  = resp.oldarg[0] & 0xff;
             PrintAndLogEx(NORMAL, "isOk:%02x", isOK);
@@ -93,11 +93,11 @@ static int CmdHF14ADesRb(const char *Cmd) {
     }
     PrintAndLogEx(NORMAL, "--block no:%02x key type:%02x key:%s ", blockNo, keyType, sprint_hex(key, 6));
 
-    UsbCommandOLD c = {CMD_MIFARE_READBL, {blockNo, keyType, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_MIFARE_READBL, {blockNo, keyType, 0}, {{0}}};
     memcpy(c.d.asBytes, key, 6);
     SendCommand(&c);
 
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
     uint8_t                isOK  = resp.oldarg[0] & 0xff;
     uint8_t              * data  = resp.data.asBytes;
@@ -116,9 +116,9 @@ static int CmdHF14ADesRb(const char *Cmd) {
 static int CmdHF14ADesInfo(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
 
-    UsbCommandOLD c = {CMD_MIFARE_DESFIRE_INFO, {0, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_MIFARE_DESFIRE_INFO, {0, 0, 0}, {{0}}};
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         PrintAndLogEx(WARNING, "Command execute timeout");
@@ -256,8 +256,8 @@ void getKeySettings(uint8_t *aid) {
     const char *str = messStr;
     uint8_t isOK = 0;
     uint32_t options;
-    UsbCommandOLD c = {CMD_MIFARE_DESFIRE, {0, 0, 0}, {{0}}};
-    UsbReplyNG resp;
+    PacketCommandOLD c = {CMD_MIFARE_DESFIRE, {0, 0, 0}, {{0}}};
+    PacketResponseNG resp;
 
     //memset(messStr, 0x00, 512);
 
@@ -427,11 +427,11 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
     uint8_t aid[3];
     uint32_t options = (INIT | DISCONNECT);
 
-    UsbCommandOLD c = {CMD_MIFARE_DESFIRE, {options, 0x01 }, {{0}}};
+    PacketCommandOLD c = {CMD_MIFARE_DESFIRE, {options, 0x01 }, {{0}}};
     c.d.asBytes[0] = GET_APPLICATION_IDS;  //0x6a
 
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         return 0;
@@ -445,8 +445,8 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
     PrintAndLogEx(NORMAL, "-- Desfire Enumerate Applications ---------------------------");
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
 
-    UsbReplyNG respAid;
-    UsbReplyNG respFiles;
+    PacketResponseNG respAid;
+    PacketResponseNG respFiles;
 
     uint8_t num = 0;
     int max = resp.oldarg[1] - 3 - 2;
@@ -611,13 +611,13 @@ static int CmdHF14ADesAuth(const char *Cmd) {
         return 1;
     }
     // algo, nyckell�ngd,
-    UsbCommandOLD c = {CMD_MIFARE_DESFIRE_AUTH1, { cmdAuthMode, cmdAuthAlgo, cmdKeyNo }, {{0}}};
+    PacketCommandOLD c = {CMD_MIFARE_DESFIRE_AUTH1, { cmdAuthMode, cmdAuthAlgo, cmdKeyNo }, {{0}}};
 
     c.d.asBytes[0] = keylength;
     memcpy(c.d.asBytes + 1, key, keylength);
     clearCommandBuffer();
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
         PrintAndLogEx(WARNING, "Client command execute timeout");

@@ -166,8 +166,8 @@ static int CmdVisa2kClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone Visa2000 to T55x7 with CardId: %u", id);
     print_blocks(blocks, 4);
 
-    UsbReplyNG resp;
-    UsbCommandOLD c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}, {{0}}};
+    PacketResponseNG resp;
+    PacketCommandOLD c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}, {{0}}};
 
     for (uint8_t i = 0; i < 4; i++) {
         c.arg[0] = blocks[i];
@@ -198,7 +198,7 @@ static int CmdVisa2kSim(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "Simulating Visa2000 - CardId: %u", id);
 
-    UsbCommandOLD c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}, {{0}}};
+    PacketCommandOLD c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}, {{0}}};
 
     uint32_t blocks[3] = { BL0CK1, id, (visa_parity(id) << 4) | visa_chksum(id) };
 

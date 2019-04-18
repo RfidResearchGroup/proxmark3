@@ -93,12 +93,12 @@ static int usage_lf_hid_brute(void) {
 
 // sending three times.  Didn't seem to break the previous sim?
 static bool sendPing(void) {
-    UsbCommandOLD ping = {CMD_PING, {1, 2, 3}, {{0}}};
+    PacketCommandOLD ping = {CMD_PING, {1, 2, 3}, {{0}}};
     SendCommand(&ping);
     SendCommand(&ping);
     SendCommand(&ping);
     clearCommandBuffer();
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000))
         return false;
     return true;
@@ -113,7 +113,7 @@ static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, ui
 
     uint64_t arg1 = bytebits_to_byte(bits, 32);
     uint64_t arg2 = bytebits_to_byte(bits + 32, 32);
-    UsbCommandOLD c = {CMD_HID_SIM_TAG, {arg1, arg2, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_HID_SIM_TAG, {arg1, arg2, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
 
@@ -242,7 +242,7 @@ static int CmdHIDRead_device(const char *Cmd) {
 
     if (Cmd[0] == 'h' || Cmd[0] == 'H') return usage_lf_hid_read();
     uint8_t findone = (Cmd[0] == '1') ? 1 : 0;
-    UsbCommandOLD c = {CMD_HID_DEMOD_FSK, {findone, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_HID_DEMOD_FSK, {findone, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
@@ -263,7 +263,7 @@ static int CmdHIDSim(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Simulating HID tag with ID %x%08x", hi, lo);
     PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation");
 
-    UsbCommandOLD c = {CMD_HID_SIM_TAG, {hi, lo, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_HID_SIM_TAG, {hi, lo, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
@@ -273,7 +273,7 @@ static int CmdHIDClone(const char *Cmd) {
 
     uint32_t hi2 = 0, hi = 0, lo = 0;
     uint32_t n = 0, i = 0;
-    UsbCommandOLD c = {CMD_HID_CLONE_TAG, {0, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_HID_CLONE_TAG, {0, 0, 0}, {{0}}};
 
     uint8_t ctmp = param_getchar(Cmd, 0);
     if (strlen(Cmd) == 0 || ctmp == 'H' || ctmp == 'h') return usage_lf_hid_clone();

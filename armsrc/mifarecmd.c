@@ -93,7 +93,7 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) 
     if (MF_DBGLEVEL >= 2) DbpString("READ BLOCK FINISHED");
 
     LED_B_ON();
-    cmd_send(CMD_ACK, isOK, 0, 0, dataoutbuf, 16);
+    reply_old(CMD_ACK, isOK, 0, 0, dataoutbuf, 16);
     LED_B_OFF();
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -129,7 +129,7 @@ void MifareUC_Auth(uint8_t arg0, uint8_t *keybytes) {
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
         LEDsoff();
     }
-    cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
+    reply_old(CMD_ACK, 1, 0, 0, 0, 0);
 }
 
 // Arg0 = BlockNo,
@@ -189,7 +189,7 @@ void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
         return;
     }
 
-    cmd_send(CMD_ACK, 1, 0, 0, dataout, 16);
+    reply_old(CMD_ACK, 1, 0, 0, dataout, 16);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
 }
@@ -252,7 +252,7 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
     crypto1_destroy(pcs);
 
     LED_B_ON();
-    cmd_send(CMD_ACK, isOK, 0, 0, dataoutbuf, 16 * NumBlocksPerSector(sectorNo));
+    reply_old(CMD_ACK, isOK, 0, 0, dataoutbuf, 16 * NumBlocksPerSector(sectorNo));
     LED_B_OFF();
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -352,7 +352,7 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
 
     countblocks *= 4;
 
-    cmd_send(CMD_ACK, 1, countblocks, BigBuf_max_traceLen(), 0, 0);
+    reply_old(CMD_ACK, 1, countblocks, BigBuf_max_traceLen(), 0, 0);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
     BigBuf_free();
@@ -419,7 +419,7 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 
     if (MF_DBGLEVEL >= 2) DbpString("WRITE BLOCK FINISHED");
 
-    cmd_send(CMD_ACK, isOK, 0, 0, 0, 0);
+    reply_old(CMD_ACK, isOK, 0, 0, 0, 0);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
@@ -461,7 +461,7 @@ void MifareUWriteBlockCompat(uint8_t arg0, uint8_t *datain)
 
     if (MF_DBGLEVEL >= 2)   DbpString("WRITE BLOCK FINISHED");
 
-    cmd_send(CMD_ACK,1,0,0,0,0);
+    reply_old(CMD_ACK,1,0,0,0,0);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
 }
@@ -530,7 +530,7 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
 
     if (MF_DBGLEVEL >= 2) DbpString("WRITE BLOCK FINISHED");
 
-    cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
+    reply_old(CMD_ACK, 1, 0, 0, 0, 0);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
     set_tracing(false);
@@ -603,7 +603,7 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain) {
         return;
     };
 
-    cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
+    reply_old(CMD_ACK, 1, 0, 0, 0, 0);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
     set_tracing(false);
@@ -706,7 +706,7 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *
 
     LED_C_OFF();
     LED_B_ON();
-    cmd_send(CMD_ACK, isOK, cuid, num_nonces - 1, buf, sizeof(buf));
+    reply_old(CMD_ACK, isOK, cuid, num_nonces - 1, buf, sizeof(buf));
     LED_B_OFF();
 
     if (MF_DBGLEVEL >= 3) DbpString("AcquireNonces finished");
@@ -834,7 +834,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
     LED_C_OFF();
     crypto1_destroy(pcs);
     LED_B_ON();
-    cmd_send(CMD_ACK, isOK, cuid, num_nonces, buf, sizeof(buf));
+    reply_old(CMD_ACK, isOK, cuid, num_nonces, buf, sizeof(buf));
     LED_B_OFF();
 
     if (MF_DBGLEVEL >= 3) DbpString("AcquireEncryptedNonces finished");
@@ -1054,7 +1054,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) 
     memcpy(buf + 16, &target_ks[1], 4);
 
     LED_B_ON();
-    cmd_send(CMD_ACK, isOK, 0, targetBlockNo + (targetKeyType * 0x100), buf, sizeof(buf));
+    reply_old(CMD_ACK, isOK, 0, targetBlockNo + (targetKeyType * 0x100), buf, sizeof(buf));
     LED_B_OFF();
 
     if (MF_DBGLEVEL >= 3) DbpString("NESTED FINISHED");
@@ -1504,7 +1504,7 @@ OUT:
         tmp[488] = bar & 0xFF;
         tmp[489] = bar >> 8 & 0xFF;
 
-        cmd_send(CMD_ACK, foundkeys, 0, 0, tmp, 480 + 10);
+        reply_old(CMD_ACK, foundkeys, 0, 0, tmp, 480 + 10);
 
         set_tracing(false);
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -1512,7 +1512,7 @@ OUT:
         BigBuf_Clear_ext(false);
     } else {
         // partial/none keys found
-        cmd_send(CMD_ACK, foundkeys, 0, 0, 0, 0);
+        reply_old(CMD_ACK, foundkeys, 0, 0, 0, 0);
     }
 }
 
@@ -1592,7 +1592,7 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
     }
 
     LED_B_ON();
-    cmd_send(CMD_ACK, isOK, 0, 0, datain + i * 6, 6);
+    reply_old(CMD_ACK, isOK, 0, 0, datain + i * 6, 6);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
@@ -1635,7 +1635,7 @@ void MifareEMemGet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
     emlGetMem(buf, arg0, arg1); // data, block num, blocks count (max 4)
 
     LED_B_ON();
-    cmd_send(CMD_ACK, arg0, arg1, 0, buf, USB_CMD_DATA_SIZE);
+    reply_old(CMD_ACK, arg0, arg1, 0, buf, USB_CMD_DATA_SIZE);
     LED_B_OFF();
 }
 
@@ -1841,7 +1841,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
     } // end while
 
     if (isOK)
-        cmd_send(CMD_ACK, 1, 0, 0, uid, sizeof(uid));
+        reply_old(CMD_ACK, 1, 0, 0, uid, sizeof(uid));
     else
         OnErrorMagic(errormsg);
 
@@ -1916,7 +1916,7 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
             memcpy(datain, data, sizeof(data));
     } else {
         if (isOK)
-            cmd_send(CMD_ACK, 1, 0, 0, data, sizeof(data));
+            reply_old(CMD_ACK, 1, 0, 0, data, sizeof(data));
         else
             OnErrorMagic(errormsg);
     }
@@ -1975,7 +1975,7 @@ TEST2:
     };
 
 OUT:
-    cmd_send(CMD_ACK, isGen, 0, 0, 0, 0);
+    reply_old(CMD_ACK, isGen, 0, 0, 0, 0);
     // turns off
     OnSuccessMagic();
     BigBuf_free();
@@ -1988,7 +1988,7 @@ void OnSuccessMagic() {
 }
 void OnErrorMagic(uint8_t reason) {
     //          ACK, ISOK, reason,0,0,0
-    cmd_send(CMD_ACK, 0, reason, 0, 0, 0);
+    reply_old(CMD_ACK, 0, reason, 0, 0, 0);
     OnSuccessMagic();
 }
 
@@ -2042,7 +2042,7 @@ void MifareSetMod(uint8_t mod, uint8_t *key) {
     crypto1_destroy(pcs);
 
     LED_B_ON();
-    cmd_send(CMD_ACK, isOK, 0, 0, 0, 0);
+    reply_old(CMD_ACK, isOK, 0, 0, 0, 0);
     LED_B_OFF();
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -2075,7 +2075,7 @@ void Mifare_DES_Auth1(uint8_t arg0, uint8_t *datain) {
     }
 
     if (MF_DBGLEVEL >= MF_DBG_EXTENDED) DbpString("AUTH 1 FINISHED");
-    cmd_send(CMD_ACK, 1, cuid, 0, dataout, sizeof(dataout));
+    reply_old(CMD_ACK, 1, cuid, 0, dataout, sizeof(dataout));
 }
 
 void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain) {
@@ -2096,7 +2096,7 @@ void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain) {
 
     if (MF_DBGLEVEL >= MF_DBG_EXTENDED) DbpString("AUTH 2 FINISHED");
 
-    cmd_send(CMD_ACK, isOK, 0, 0, dataout, sizeof(dataout));
+    reply_old(CMD_ACK, isOK, 0, 0, dataout, sizeof(dataout));
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
     set_tracing(false);

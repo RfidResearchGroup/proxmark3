@@ -81,7 +81,7 @@ void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     if (flags & DISCONNECT)
         OnSuccess();
 
-    cmd_send(CMD_ACK, 1, len, 0, resp, len);
+    reply_old(CMD_ACK, 1, len, 0, resp, len);
 }
 
 void MifareDesfireGetInformation() {
@@ -160,7 +160,7 @@ void MifareDesfireGetInformation() {
 
     memcpy(dataout + 7 + 7 + 7, resp + 3, 14);
 
-    cmd_send(CMD_ACK, 1, 0, 0, dataout, sizeof(dataout));
+    reply_old(CMD_ACK, 1, 0, 0, dataout, sizeof(dataout));
 
     // reset the pcb_blocknum,
     pcb_blocknum = 0;
@@ -409,9 +409,9 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
 
                 OnSuccess();
                 if (arg1 == 2)
-                    cmd_send(CMD_ACK, 1, 0, 0, skey->data, 16);
+                    reply_old(CMD_ACK, 1, 0, 0, skey->data, 16);
                 else if (arg1 == 1)
-                    cmd_send(CMD_ACK, 1, 0, 0, skey->data, 8);
+                    reply_old(CMD_ACK, 1, 0, 0, skey->data, 8);
             } else {
                 DbpString("Authentication failed.");
                 OnError(6);
@@ -494,7 +494,7 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
     }
 
     OnSuccess();
-    cmd_send(CMD_ACK, 1, len, 0, resp, len);
+    reply_old(CMD_ACK, 1, len, 0, resp, len);
 }
 
 // 3 different ISO ways to send data to a DESFIRE (direct, capsuled, capsuled ISO)
@@ -567,6 +567,6 @@ void OnSuccess() {
 }
 
 void OnError(uint8_t reason) {
-    cmd_send(CMD_ACK, 0, reason, 0, 0, 0);
+    reply_old(CMD_ACK, 0, reason, 0, 0, 0);
     OnSuccess();
 }

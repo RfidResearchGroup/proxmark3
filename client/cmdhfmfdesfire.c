@@ -58,9 +58,9 @@ static int CmdHF14AMfDESAuth(const char *Cmd) {
     //DES_set_key((DES_cblock *)key2,&ks2);
 
     //Auth1
-    UsbCommandOLD c = {CMD_MIFARE_DES_AUTH1, {blockNo}};
+    PacketCommandOLD c = {CMD_MIFARE_DES_AUTH1, {blockNo}};
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;
         cuid  = resp.oldarg[1];
@@ -94,13 +94,13 @@ static int CmdHF14AMfDESAuth(const char *Cmd) {
     PrintAndLogEx(NORMAL, "b2:%s", sprint_hex(b2, 8));
 
     //Auth2
-    UsbCommandOLD d = {CMD_MIFARE_DES_AUTH2, {cuid}};
+    PacketCommandOLD d = {CMD_MIFARE_DES_AUTH2, {cuid}};
     memcpy(reply, b1, 8);
     memcpy(reply + 8, b2, 8);
     memcpy(d.d.asBytes, reply, 16);
     SendCommand(&d);
 
-    UsbReplyNG respb;
+    PacketResponseNG respb;
     if (WaitForResponseTimeout(CMD_ACK, &respb, 1500)) {
         uint8_t  isOK  = respb.arg[0] & 0xff;
         uint8_t *data2 = respb.d.asBytes;
@@ -158,9 +158,9 @@ static int CmdHF14AMfAESAuth(const char *Cmd) {
     AES_set_decrypt_key(key, 128, &key_d);
 
     //Auth1
-    UsbCommandOLD c = {CMD_MIFARE_DES_AUTH1, {blockNo}};
+    PacketCommandOLD c = {CMD_MIFARE_DES_AUTH1, {blockNo}};
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;
         cuid  = resp.oldarg[1];
@@ -201,13 +201,13 @@ static int CmdHF14AMfAESAuth(const char *Cmd) {
     PrintAndLogEx(NORMAL, "b2:%s", sprint_hex(b2, 16));
 
     //Auth2
-    UsbCommandOLD d = {CMD_MIFARE_DES_AUTH2, {cuid}};
+    PacketCommandOLD d = {CMD_MIFARE_DES_AUTH2, {cuid}};
     memcpy(reply, b1, 16);
     memcpy(reply + 16, b2, 16);
     memcpy(d.d.asBytes, reply, 32);
     SendCommand(&d);
 
-    UsbReplyNG respb;
+    PacketResponseNG respb;
     if (WaitForResponseTimeout(CMD_ACK, &respb, 1500)) {
         uint8_t  isOK  = respb.arg[0] & 0xff;
         uint8_t *data2 = respb.d.asBytes;

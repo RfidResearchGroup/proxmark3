@@ -146,8 +146,8 @@ static int CmdKeriClone(const char *Cmd) {
     print_blocks(blocks, 3);
 
 
-    UsbReplyNG resp;
-    UsbCommandOLD c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}, {{0}}};
+    PacketResponseNG resp;
+    PacketCommandOLD c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}, {{0}}};
 
 
     for (uint8_t i = 0; i < 3; i++) {
@@ -189,7 +189,7 @@ static int CmdKeriSim(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "Simulating KERI - Internal Id: %u", internalid);
 
-    UsbCommandOLD c = {CMD_PSK_SIM_TAG, {arg1, arg2, size}, {{0}}};
+    PacketCommandOLD c = {CMD_PSK_SIM_TAG, {arg1, arg2, size}, {{0}}};
     memcpy(c.d.asBytes, bits, size);
     clearCommandBuffer();
     SendCommand(&c);

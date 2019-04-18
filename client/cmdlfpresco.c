@@ -120,8 +120,8 @@ static int CmdPrescoClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone Presco to T55x7 with SiteCode: %u, UserCode: %u, FullCode: %08x", sitecode, usercode, fullcode);
     print_blocks(blocks, 5);
 
-    UsbReplyNG resp;
-    UsbCommandOLD c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}, {{0}}};
+    PacketResponseNG resp;
+    PacketCommandOLD c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}, {{0}}};
 
     for (uint8_t i = 0; i < 5; i++) {
         c.arg[0] = blocks[i];
@@ -152,7 +152,7 @@ static int CmdPrescoSim(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "Simulating Presco - SiteCode: %u, UserCode: %u, FullCode: %08X", sitecode, usercode, fullcode);
 
-    UsbCommandOLD c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}, {{0}}};
+    PacketCommandOLD c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}, {{0}}};
     getPrescoBits(fullcode, c.d.asBytes);
     clearCommandBuffer();
     SendCommand(&c);

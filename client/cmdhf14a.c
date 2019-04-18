@@ -228,10 +228,10 @@ static int CmdHF14AList(const char *Cmd) {
 }
 
 int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
-    UsbCommandOLD c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT, 0, 0}, {{0}}};
     SendCommand(&c);
 
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     WaitForResponse(CMD_ACK, &resp);
 
     memcpy(card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
@@ -298,12 +298,12 @@ static int CmdHF14AReader(const char *Cmd) {
     if (!disconnectAfter)
         cm |= ISO14A_NO_DISCONNECT;
 
-    UsbCommandOLD c = {CMD_READER_ISO_14443a, {cm, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_READER_ISO_14443a, {cm, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
 
     if (ISO14A_CONNECT & cm) {
-        UsbReplyNG resp;
+        PacketResponseNG resp;
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
             if (!silent) PrintAndLogEx(WARNING, "iso14443a card select failed");
             DropField();
@@ -385,10 +385,10 @@ static int CmdHF14ACUIDs(const char *Cmd) {
         }
 
         // execute anticollision procedure
-        UsbCommandOLD c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0}, {{0}}};
+        PacketCommandOLD c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0}, {{0}}};
         SendCommand(&c);
 
-        UsbReplyNG resp;
+        PacketResponseNG resp;
         WaitForResponse(CMD_ACK, &resp);
 
         iso14a_card_select_t *card = (iso14a_card_select_t *) resp.data.asBytes;
@@ -483,11 +483,11 @@ int CmdHF14ASim(const char *Cmd) {
     if (useUIDfromEML)
         flags |= FLAG_UID_IN_EMUL;
 
-    UsbCommandOLD c = {CMD_SIMULATE_TAG_ISO_14443a, { tagtype, flags, 0 }, {{0}}};
+    PacketCommandOLD c = {CMD_SIMULATE_TAG_ISO_14443a, { tagtype, flags, 0 }, {{0}}};
     memcpy(c.d.asBytes, uid, uidlen >> 1);
     clearCommandBuffer();
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
 
     PrintAndLogEx(SUCCESS, "press pm3-button to abort simulation");
 
@@ -512,7 +512,7 @@ int CmdHF14ASniff(const char *Cmd) {
         if (ctmp == 'c') param |= 0x01;
         if (ctmp == 'r') param |= 0x02;
     }
-    UsbCommandOLD c = {CMD_SNIFF_ISO_14443a, {param, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_SNIFF_ISO_14443a, {param, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
@@ -525,10 +525,10 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
 
     if (activateField) {
         responseNum = 1;
-        UsbReplyNG resp;
+        PacketResponseNG resp;
 
         // Anticollision + SELECT card
-        UsbCommandOLD ca = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}, {{0}}};
+        PacketCommandOLD ca = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}, {{0}}};
         SendCommand(&ca);
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
             PrintAndLogEx(ERR, "Proxmark3 connection timeout.");
@@ -548,7 +548,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
 
         if (resp.oldarg[0] == 2) { // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
             // get ATS
-            UsbCommandOLD cr = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0}, {{0}}};
+            PacketCommandOLD cr = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0}, {{0}}};
             uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
             memcpy(cr.d.asBytes, rats, 2);
             SendCommand(&cr);
@@ -567,7 +567,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
     if (leaveSignalON)
         cmdc |= ISO14A_NO_DISCONNECT;
 
-    UsbCommandOLD c = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_APPEND_CRC | cmdc, (datainlen & 0xFFFF) + 2, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_APPEND_CRC | cmdc, (datainlen & 0xFFFF) + 2, 0}, {{0}}};
     uint8_t header[] = { 0x0a | responseNum, 0x00};
     responseNum ^= 1;
     memcpy(c.d.asBytes, header, 2);
@@ -575,7 +575,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
     SendCommand(&c);
 
     uint8_t *recv;
-    UsbReplyNG resp;
+    PacketResponseNG resp;
 
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         recv = resp.data.asBytes;
@@ -617,7 +617,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
 }
 
 static int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
-    UsbReplyNG resp;
+    PacketResponseNG resp;
 
     frameLength = 0;
 
@@ -627,7 +627,7 @@ static int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
     DropField();
 
     // Anticollision + SELECT card
-    UsbCommandOLD ca = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}, {{0}}};
+    PacketCommandOLD ca = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}, {{0}}};
     SendCommand(&ca);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         PrintAndLogEx(ERR, "Proxmark3 connection timeout.");
@@ -647,7 +647,7 @@ static int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
 
     if (resp.oldarg[0] == 2) { // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
         // get ATS
-        UsbCommandOLD cr = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0}, {{0}}};
+        PacketCommandOLD cr = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0}, {{0}}};
         uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
         memcpy(cr.d.asBytes, rats, 2);
         SendCommand(&cr);
@@ -704,7 +704,7 @@ static int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool
     // https://stackoverflow.com/questions/32994936/safe-max-java-card-apdu-data-command-and-respond-size
     // here length USB_CMD_DATA_SIZE=512
     // timeout must be authomatically set by "get ATS"
-    UsbCommandOLD c = {CMD_READER_ISO_14443a, {ISO14A_APDU | ISO14A_NO_DISCONNECT | cmdc, (datainlen & 0xFFFF), 0}, {{0}}};
+    PacketCommandOLD c = {CMD_READER_ISO_14443a, {ISO14A_APDU | ISO14A_NO_DISCONNECT | cmdc, (datainlen & 0xFFFF), 0}, {{0}}};
 
     if (datain)
         memcpy(c.d.asBytes, datain, datainlen);
@@ -712,7 +712,7 @@ static int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool
     SendCommand(&c);
 
     uint8_t *recv;
-    UsbReplyNG resp;
+    PacketResponseNG resp;
 
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         recv = resp.data.asBytes;
@@ -891,7 +891,7 @@ static int CmdHF14AAPDU(const char *Cmd) {
 }
 
 static int CmdHF14ACmdRaw(const char *Cmd) {
-    UsbCommandOLD c = {CMD_READER_ISO_14443a, {0, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_READER_ISO_14443a, {0, 0, 0}, {{0}}};
     bool reply = 1;
     bool crc = false;
     bool power = false;
@@ -1047,7 +1047,7 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
 }
 
 static int waitCmd(uint8_t iSelect) {
-    UsbReplyNG resp;
+    PacketResponseNG resp;
 
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint16_t len = (resp.oldarg[0] & 0xFFFF);
@@ -1096,7 +1096,7 @@ static int CmdHF14AAntiFuzz(const char *Cmd) {
         arg0 = FLAG_10B_UID_IN_DATA;
 
     CLIParserFree();
-    UsbCommandOLD c = {CMD_ANTIFUZZ_ISO_14443a, {arg0, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_ANTIFUZZ_ISO_14443a, {arg0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
@@ -1161,10 +1161,10 @@ int CmdHF14A(const char *Cmd) {
 }
 
 int infoHF14A(bool verbose, bool do_nack_test) {
-    UsbCommandOLD c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         if (verbose) PrintAndLogEx(WARNING, "iso14443a card select failed");
         DropField();

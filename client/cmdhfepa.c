@@ -31,10 +31,10 @@ static int CmdHFEPACollectPACENonces(const char *Cmd) {
     // repeat n times
     for (uint32_t i = 0; i < n; i++) {
         // execute PACE
-        UsbCommandOLD c = {CMD_EPA_PACE_COLLECT_NONCE, {(int)m, 0, 0}, {{0}}};
+        PacketCommandOLD c = {CMD_EPA_PACE_COLLECT_NONCE, {(int)m, 0, 0}, {{0}}};
         clearCommandBuffer();
         SendCommand(&c);
-        UsbReplyNG resp;
+        PacketResponseNG resp;
         WaitForResponse(CMD_ACK, &resp);
 
         // check if command failed
@@ -72,7 +72,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
         "Example:\n preplay 0022C1A4 1068000000 1086000002 1234ABCDEF 1A2B3C4D";
 
     // Proxmark response
-    UsbReplyNG resp;
+    PacketResponseNG resp;
 
     int skip = 0, skip_add = 0, scan_return;
     // for each APDU
@@ -109,7 +109,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
     }
 
     // transfer the APDUs to the Proxmark
-    UsbCommandOLD usb_cmd;
+    PacketCommandOLD usb_cmd;
     usb_cmd.cmd = CMD_EPA_PACE_REPLAY;
     for (int i = 0; i < sizeof(apdu_lengths); i++) {
         // APDU number

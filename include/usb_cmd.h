@@ -33,19 +33,19 @@ typedef struct {
         uint8_t  asBytes[USB_CMD_DATA_SIZE];
         uint32_t asDwords[USB_CMD_DATA_SIZE / 4];
     } d;
-} PACKED UsbCommandOLD;
+} PACKED PacketCommandOLD;
 
 typedef struct {
     uint32_t magic;
     uint16_t length;  // length of the variable part, 0 if none.
     uint16_t cmd;
-} PACKED UsbCommandNGPreamble;
+} PACKED PacketCommandNGPreamble;
 
 #define USB_COMMANDNG_PREAMBLE_MAGIC 0x61334d50 // PM3a
 
 typedef struct {
     uint16_t crc;
-} PACKED UsbCommandNGPostamble;
+} PACKED PacketCommandNGPostamble;
 
 // For internal usage
 typedef struct {
@@ -59,27 +59,36 @@ typedef struct {
         uint32_t asDwords[USB_CMD_DATA_SIZE / 4];
     } data;
     bool ng;             // does it store NG data or OLD data?
-} PACKED UsbCommandNG;
+} PACKED PacketCommandNG;
 
 // For reception and CRC check
 typedef struct {
-    UsbCommandNGPreamble pre;
+    PacketCommandNGPreamble pre;
     uint8_t data[USB_CMD_DATA_SIZE];
-    UsbCommandNGPostamble foopost; // Probably not at that offset!
-} PACKED UsbCommandNGRaw;
+    PacketCommandNGPostamble foopost; // Probably not at that offset!
+} PACKED PacketCommandNGRaw;
+
+typedef struct {
+    uint64_t cmd;
+    uint64_t arg[3];
+    union {
+        uint8_t  asBytes[USB_CMD_DATA_SIZE];
+        uint32_t asDwords[USB_CMD_DATA_SIZE / 4];
+    } d;
+} PACKED PacketResponseOLD;
 
 typedef struct {
     uint32_t magic;
     uint16_t length;  // length of the variable part, 0 if none.
     int16_t  status;
     uint16_t cmd;
-} PACKED UsbReplyNGPreamble;
+} PACKED PacketResponseNGPreamble;
 
 #define USB_REPLYNG_PREAMBLE_MAGIC 0x62334d50 // PM3b
 
 typedef struct {
     uint16_t crc;
-} PACKED UsbReplyNGPostamble;
+} PACKED PacketResponseNGPostamble;
 
 // For internal usage
 typedef struct {
@@ -94,14 +103,14 @@ typedef struct {
         uint32_t asDwords[USB_CMD_DATA_SIZE / 4];
     } data;
     bool ng;             // does it store NG data or OLD data?
-} PACKED UsbReplyNG;
+} PACKED PacketResponseNG;
 
 // For reception and CRC check
 typedef struct {
-    UsbReplyNGPreamble pre;
+    PacketResponseNGPreamble pre;
     uint8_t data[USB_CMD_DATA_SIZE];
-    UsbReplyNGPostamble foopost; // Probably not at that offset!
-} PACKED UsbReplyNGRaw;
+    PacketResponseNGPostamble foopost; // Probably not at that offset!
+} PACKED PacketResponseNGRaw;
 
 #ifdef WITH_FPC_HOST
 // "Session" flag, to tell via which interface next msgs should be sent: USB or FPC USART

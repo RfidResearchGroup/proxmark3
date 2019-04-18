@@ -20,7 +20,7 @@ void DbpString(char *str) {
     while (str[len] != 0x00)
         len++;
 
-    cmd_send(CMD_DEBUG_PRINT_STRING, len, 0, 0, (uint8_t *)str, len);
+    reply_old(CMD_DEBUG_PRINT_STRING, len, 0, 0, (uint8_t *)str, len);
 }
 
 static void ConfigClocks(void) {
@@ -84,11 +84,9 @@ static void Fatal(void) {
     for (;;) {};
 }
 
-void UsbPacketReceived(UsbCommandNG *packet) {
+void PacketReceived(PacketCommandNG *packet) {
     int i, dont_ack = 0;
     volatile uint32_t *p;
-
-    //if ( len != sizeof(UsbCommand)) Fatal();
 
     uint32_t arg0 = (uint32_t)packet->oldarg[0];
 
@@ -100,7 +98,7 @@ void UsbPacketReceived(UsbCommandNG *packet) {
             if (common_area.flags.osimage_present)
                 arg0 |= DEVICE_INFO_FLAG_OSIMAGE_PRESENT;
 
-            cmd_send(CMD_DEVICE_INFO, arg0, 1, 2, 0, 0);
+            reply_old(CMD_DEVICE_INFO, arg0, 1, 2, 0, 0);
         }
         break;
 
@@ -127,7 +125,7 @@ void UsbPacketReceived(UsbCommandNG *packet) {
                 if (((flash_address + AT91C_IFLASH_PAGE_SIZE - 1) >= end_addr) || (flash_address < start_addr)) {
                     /* Disallow write */
                     dont_ack = 1;
-                    cmd_send(CMD_NACK, 0, 0, 0, 0, 0);
+                    reply_old(CMD_NACK, 0, 0, 0, 0, 0);
                 } else {
                     uint32_t page_n = (flash_address - ((uint32_t)flash_mem)) / AT91C_IFLASH_PAGE_SIZE;
                     /* Translate address to flash page and do flash, update here for the 512k part */
@@ -141,7 +139,7 @@ void UsbPacketReceived(UsbCommandNG *packet) {
                 while (!((sr = AT91C_BASE_EFC0->EFC_FSR) & AT91C_MC_FRDY));
                 if (sr & (AT91C_MC_LOCKE | AT91C_MC_PROGE)) {
                     dont_ack = 1;
-                    cmd_send(CMD_NACK, sr, 0, 0, 0, 0);
+                    reply_old(CMD_NACK, sr, 0, 0, 0, 0);
                 }
             }
         }
@@ -177,7 +175,7 @@ void UsbPacketReceived(UsbCommandNG *packet) {
             } else {
                 start_addr = end_addr = 0;
                 dont_ack = 1;
-                cmd_send(CMD_NACK, 0, 0, 0, 0, 0);
+                reply_old(CMD_NACK, 0, 0, 0, 0, 0);
             }
         }
         break;
@@ -189,14 +187,14 @@ void UsbPacketReceived(UsbCommandNG *packet) {
     }
 
     if (!dont_ack)
-        cmd_send(CMD_ACK, arg0, 0, 0, 0, 0);
+        reply_old(CMD_ACK, arg0, 0, 0, 0, 0);
 }
 
 static void flash_mode(int externally_entered) {
     start_addr = 0;
     end_addr = 0;
     bootrom_unlocked = 0;
-    UsbCommandNG rx;
+    PacketCommandNG rx;
 
     usb_enable();
 
@@ -210,7 +208,7 @@ static void flash_mode(int externally_entered) {
         if (usb_poll_validate_length()) {
 // TODO DOEGOX
             if (usb_read((uint8_t *)&rx, sizeof(rx)))
-                UsbPacketReceived(&rx);
+                PacketReceived(&rx);
         }
 
         if (!externally_entered && !BUTTON_PRESS()) {

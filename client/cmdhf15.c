@@ -198,8 +198,8 @@ const productName uidmapping[] = {
 // returns 1 if suceeded
 static int getUID(uint8_t *buf) {
 
-    UsbReplyNG resp;
-    UsbCommandOLD c = {CMD_ISO_15693_COMMAND, {0, 1, 1}, {{0}}}; // len,speed,recv?
+    PacketResponseNG resp;
+    PacketCommandOLD c = {CMD_ISO_15693_COMMAND, {0, 1, 1}, {{0}}}; // len,speed,recv?
 
     c.d.asBytes[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1;
     c.d.asBytes[1] = ISO15_CMD_INVENTORY;
@@ -418,7 +418,7 @@ static int usage_15_readmulti(void) {
  * Parameters:
  *  **cmd   command line
  */
-static int prepareHF15Cmd(char **cmd, UsbCommandOLD *c, uint8_t iso15cmd) {
+static int prepareHF15Cmd(char **cmd, PacketCommandOLD *c, uint8_t iso15cmd) {
     int temp;
     uint8_t *req = c->d.asBytes;
     uint8_t uid[8] = {0x00};
@@ -577,7 +577,7 @@ static int CmdHF15Samples(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_15_samples();
 
-    UsbCommandOLD c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693, {0, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
 
@@ -594,9 +594,9 @@ static int CmdHF15Info(const char *Cmd) {
     char cmdp = param_getchar(Cmd, 0);
     if (strlen(Cmd) < 1 || cmdp == 'h' || cmdp == 'H') return usage_15_info();
 
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     uint8_t *recv;
-    UsbCommandOLD c = {CMD_ISO_15693_COMMAND, {0, 1, 1}, {{0}}}; // len,speed,recv?
+    PacketCommandOLD c = {CMD_ISO_15693_COMMAND, {0, 1, 1}, {{0}}}; // len,speed,recv?
     uint8_t *req = c.d.asBytes;
     char cmdbuf[100] = {0};
     char *cmd = cmdbuf;
@@ -674,7 +674,7 @@ static int CmdHF15Record(const char *Cmd) {
     char cmdp =  tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_15_record();
 
-    UsbCommandOLD c = {CMD_RECORD_RAW_ADC_SAMPLES_ISO_15693, {0, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_RECORD_RAW_ADC_SAMPLES_ISO_15693, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
@@ -702,7 +702,7 @@ static int CmdHF15Sim(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "Starting simulating UID %s", sprint_hex(uid, sizeof(uid)));
 
-    UsbCommandOLD c = {CMD_SIMTAG_ISO_15693, {0, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_SIMTAG_ISO_15693, {0, 0, 0}, {{0}}};
     memcpy(c.d.asBytes, uid, 8);
     clearCommandBuffer();
     SendCommand(&c);
@@ -718,7 +718,7 @@ static int CmdHF15Afi(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "press pm3-button to cancel");
 
-    UsbCommandOLD c = {CMD_ISO_15693_FIND_AFI, {strtol(Cmd, NULL, 0), 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_ISO_15693_FIND_AFI, {strtol(Cmd, NULL, 0), 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
@@ -783,8 +783,8 @@ static int CmdHF15Dump(const char *Cmd) {
     uint8_t data[256 * 4] = {0};
     memset(data, 0, sizeof(data));
 
-    UsbReplyNG resp;
-    UsbCommandOLD c = {CMD_ISO_15693_COMMAND, {0, 1, 1}, {{0}}}; // len,speed,recv?
+    PacketResponseNG resp;
+    PacketCommandOLD c = {CMD_ISO_15693_COMMAND, {0, 1, 1}, {{0}}}; // len,speed,recv?
     uint8_t *req = c.d.asBytes;
     req[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS;
     req[1] = ISO15_CMD_READ;
@@ -859,8 +859,8 @@ static int CmdHF15Raw(const char *Cmd) {
     char cmdp = param_getchar(Cmd, 0);
     if (strlen(Cmd) < 3 || cmdp == 'h' || cmdp == 'H') return usage_15_raw();
 
-    UsbReplyNG resp;
-    UsbCommandOLD c = {CMD_ISO_15693_COMMAND, {0, 1, 1}, {{0}}}; // len,speed,recv?
+    PacketResponseNG resp;
+    PacketCommandOLD c = {CMD_ISO_15693_COMMAND, {0, 1, 1}, {{0}}}; // len,speed,recv?
     int reply = 1, fast = 1, i = 0;
     bool crc = false;
     char buf[5] = "";
@@ -945,9 +945,9 @@ static int CmdHF15Readmulti(const char *Cmd) {
     char cmdp = param_getchar(Cmd, 0);
     if (strlen(Cmd) < 3 || cmdp == 'h' || cmdp == 'H') return usage_15_readmulti();
 
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     uint8_t *recv;
-    UsbCommandOLD c = {CMD_ISO_15693_COMMAND, {0, 1, 1}, {{0}}}; // len,speed,recv?
+    PacketCommandOLD c = {CMD_ISO_15693_COMMAND, {0, 1, 1}, {{0}}}; // len,speed,recv?
     uint8_t *req = c.d.asBytes;
     int reqlen = 0;
     uint8_t pagenum, pagecount;
@@ -1028,14 +1028,14 @@ static int CmdHF15Read(const char *Cmd) {
     char cmdp = param_getchar(Cmd, 0);
     if (strlen(Cmd) < 3 || cmdp == 'h' || cmdp == 'H')  return usage_15_read();
 
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     uint8_t *recv;
 
-    // UsbCommandOLD arg: len, speed, recv?
+    // PacketCommandOLD arg: len, speed, recv?
     // arg0 (datalen,  cmd len?  .arg0 == crc?)
     // arg1 (speed == 0 == 1 of 256,  == 1 == 1 of 4 )
     // arg2 (recv == 1 == expect a response)
-    UsbCommandOLD c = {CMD_ISO_15693_COMMAND, {0, 1, 1}, {{0}}};
+    PacketCommandOLD c = {CMD_ISO_15693_COMMAND, {0, 1, 1}, {{0}}};
     uint8_t *req = c.d.asBytes;
     int reqlen = 0, blocknum;
     char cmdbuf[100] = {0};
@@ -1102,9 +1102,9 @@ static int CmdHF15Write(const char *Cmd) {
     char cmdp = param_getchar(Cmd, 0);
     if (strlen(Cmd) < 3 || cmdp == 'h' || cmdp == 'H') return usage_15_write();
 
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     uint8_t *recv;
-    UsbCommandOLD c = {CMD_ISO_15693_COMMAND, {0, 1, 1}, {{0}}}; // len,speed,recv?
+    PacketCommandOLD c = {CMD_ISO_15693_COMMAND, {0, 1, 1}, {{0}}}; // len,speed,recv?
     uint8_t *req = c.d.asBytes;
     int reqlen = 0, pagenum, temp;
     char cmdbuf[100] = {0};

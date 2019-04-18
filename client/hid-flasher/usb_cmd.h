@@ -30,7 +30,16 @@ typedef struct {
         uint8_t     asBytes[48];
         uint32_t    asDwords[12];
     } d;
-} PACKED UsbCommand;
+} PACKED PacketCommandOLD;
+
+typedef struct {
+    uint32_t    cmd;
+    uint32_t    arg[3];
+    union {
+        uint8_t     asBytes[48];
+        uint32_t    asDwords[12];
+    } d;
+} PACKED PacketResponseOLD;
 
 // For the bootloader
 #define CMD_DEVICE_INFO                                                   0x0000

@@ -874,7 +874,7 @@ static int CmdBuffClear(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_data_buffclear();
 
-    UsbCommandOLD c = {CMD_BUFF_CLEAR, {0, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_BUFF_CLEAR, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     ClearGraph(true);
@@ -1457,7 +1457,7 @@ int getSamples(uint32_t n, bool silent) {
 
     if (!silent) PrintAndLogEx(NORMAL, "Reading %d bytes from device memory\n", n);
 
-    UsbReplyNG response;
+    PacketResponseNG response;
     if (!GetFromDevice(BIG_BUF, got, n, 0, &response, 10000, true)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return 1;
@@ -1529,10 +1529,10 @@ int CmdTuneSamples(const char *Cmd) {
     int timeout = 0;
     PrintAndLogEx(INFO, "\nMeasuring antenna characteristics, please wait...");
 
-    UsbCommandOLD c = {CMD_MEASURE_ANTENNA_TUNING, {0, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_MEASURE_ANTENNA_TUNING, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     while (!WaitForResponseTimeout(CMD_MEASURED_ANTENNA_TUNING, &resp, 2000)) {
         timeout++;
         printf(".");

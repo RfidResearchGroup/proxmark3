@@ -259,9 +259,9 @@ fail:
 
 // Get the state of the proxmark, backwards compatible
 static int get_proxmark_state(uint32_t *state) {
-    UsbCommandOLD c = {CMD_DEVICE_INFO};
+    PacketCommandOLD c = {CMD_DEVICE_INFO};
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     WaitForResponse(CMD_UNKNOWN, &resp);  // wait for any response. No timeout.
 
     // Three outcomes:
@@ -300,7 +300,7 @@ static int enter_bootloader(char *serial_port_name) {
 
     if (state & DEVICE_INFO_FLAG_CURRENT_MODE_OS) {
         fprintf(stdout, _BLUE_("Entering bootloader...") "\n");
-        UsbCommandOLD c;
+        PacketCommandOLD c;
         memset(&c, 0, sizeof(c));
 
         if ((state & DEVICE_INFO_FLAG_BOOTROM_PRESENT)
@@ -335,7 +335,7 @@ static int enter_bootloader(char *serial_port_name) {
     return -1;
 }
 
-static int wait_for_ack(UsbReplyNG *ack) {
+static int wait_for_ack(PacketResponseNG *ack) {
     WaitForResponse(CMD_UNKNOWN, ack);
 
     if (ack->cmd != CMD_ACK) {
@@ -361,8 +361,8 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name) {
     if (state & DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH) {
         // This command is stupid. Why the heck does it care which area we're
         // flashing, as long as it's not the bootloader area? The mind boggles.
-        UsbCommandOLD c = {CMD_START_FLASH};
-        UsbReplyNG resp;
+        PacketCommandOLD c = {CMD_START_FLASH};
+        PacketResponseNG resp;
 
         if (enable_bl_writes) {
             c.arg[0] = FLASH_START;
@@ -386,8 +386,8 @@ static int write_block(uint32_t address, uint8_t *data, uint32_t length) {
     uint8_t block_buf[BLOCK_SIZE];
     memset(block_buf, 0xFF, BLOCK_SIZE);
     memcpy(block_buf, data, length);
-    UsbCommandOLD c = {CMD_FINISH_WRITE, {address, 0, 0}};
-    UsbReplyNG resp;
+    PacketCommandOLD c = {CMD_FINISH_WRITE, {address, 0, 0}};
+    PacketResponseNG resp;
     memcpy(c.d.asBytes, block_buf, length);
     SendCommand(&c);
     int ret = wait_for_ack(&resp);
@@ -459,7 +459,7 @@ void flash_free(flash_file_t *ctx) {
 
 // just reset the unit
 int flash_stop_flashing(void) {
-    UsbCommandOLD c = {CMD_HARDWARE_RESET};
+    PacketCommandOLD c = {CMD_HARDWARE_RESET};
     SendCommand(&c);
     msleep(100);
     return 0;

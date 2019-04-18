@@ -16,7 +16,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
     uint64_t par_list = 0, ks_list = 0;
     uint64_t *keylist = NULL, *last_keylist = NULL;
 
-    UsbCommandOLD c = {CMD_READER_MIFARE, {true, blockno, key_type}, {{0}}};
+    PacketCommandOLD c = {CMD_READER_MIFARE, {true, blockno, key_type}, {{0}}};
 
     // message
     PrintAndLogEx(NORMAL, "--------------------------------------------------------------------------------\n");
@@ -45,7 +45,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
                 return -5;
             }
 
-            UsbReplyNG resp;
+            PacketResponseNG resp;
             if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
                 int16_t isOK  = resp.oldarg[0];
                 if (isOK < 0)
@@ -123,11 +123,11 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 }
 int mfCheckKeys(uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keycnt, uint8_t *keyBlock, uint64_t *key) {
     *key = -1;
-    UsbCommandOLD c = {CMD_MIFARE_CHKKEYS, { (blockNo | (keyType << 8)), clear_trace, keycnt}, {{0}}};
+    PacketCommandOLD c = {CMD_MIFARE_CHKKEYS, { (blockNo | (keyType << 8)), clear_trace, keycnt}, {{0}}};
     memcpy(c.d.asBytes, keyBlock, 6 * keycnt);
     clearCommandBuffer();
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) return 1;
     if ((resp.oldarg[0] & 0xff) != 0x01) return 2;
     *key = bytes_to_num(resp.data.asBytes, 6);
@@ -145,11 +145,11 @@ int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, 
     uint32_t timeout = 0;
 
     // send keychunk
-    UsbCommandOLD c = {CMD_MIFARE_CHKKEYS_FAST, { (sectorsCnt | (firstChunk << 8) | (lastChunk << 12)), ((use_flashmemory << 8) | strategy), size}, {{0}}};
+    PacketCommandOLD c = {CMD_MIFARE_CHKKEYS_FAST, { (sectorsCnt | (firstChunk << 8) | (lastChunk << 12)), ((use_flashmemory << 8) | strategy), size}, {{0}}};
     memcpy(c.d.asBytes, keyBlock, 6 * size);
     clearCommandBuffer();
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
 
     while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
         timeout++;
@@ -293,11 +293,11 @@ __attribute__((force_align_arg_pointer))
 int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *resultKey, bool calibrate) {
     uint16_t i;
     uint32_t uid;
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     StateList_t statelists[2];
     struct Crypto1State *p1, *p2, *p3, *p4;
 
-    UsbCommandOLD c = {CMD_MIFARE_NESTED, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, calibrate}, {{0}}};
+    PacketCommandOLD c = {CMD_MIFARE_NESTED, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, calibrate}, {{0}}};
     memcpy(c.d.asBytes, key, 6);
     clearCommandBuffer();
     SendCommand(&c);
@@ -419,12 +419,12 @@ out:
 // MIFARE
 int mfReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data) {
 
-    UsbCommandOLD c = {CMD_MIFARE_READSC, {sectorNo, keyType, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_MIFARE_READSC, {sectorNo, keyType, 0}, {{0}}};
     memcpy(c.d.asBytes, key, 6);
     clearCommandBuffer();
     SendCommand(&c);
 
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;
 
@@ -444,10 +444,10 @@ int mfReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data)
 
 // EMULATOR
 int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount) {
-    UsbCommandOLD c = {CMD_MIFARE_EML_MEMGET, {blockNum, blocksCount, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_MIFARE_EML_MEMGET, {blockNum, blocksCount, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return 1;
     memcpy(data, resp.data.asBytes, blocksCount * 16);
     return 0;
@@ -458,7 +458,7 @@ int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount) {
 }
 
 int mfEmlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth) {
-    UsbCommandOLD c = {CMD_MIFARE_EML_MEMSET, {blockNum, blocksCount, blockBtWidth}, {{0}}};
+    PacketCommandOLD c = {CMD_MIFARE_EML_MEMSET, {blockNum, blocksCount, blockBtWidth}, {{0}}};
     memcpy(c.d.asBytes, data, blocksCount * blockBtWidth);
     clearCommandBuffer();
     SendCommand(&c);
@@ -501,11 +501,11 @@ int mfCSetUID(uint8_t *uid, uint8_t *atqa, uint8_t *sak, uint8_t *oldUID, uint8_
 
 int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t params) {
 
-    UsbCommandOLD c = {CMD_MIFARE_CSETBLOCK, {params, blockNo, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_MIFARE_CSETBLOCK, {params, blockNo, 0}, {{0}}};
     memcpy(c.d.asBytes, data, 16);
     clearCommandBuffer();
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;
         if (uid != NULL)
@@ -520,10 +520,10 @@ int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t params) {
 }
 
 int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params) {
-    UsbCommandOLD c = {CMD_MIFARE_CGETBLOCK, {params, blockNo, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_MIFARE_CGETBLOCK, {params, blockNo, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;
         if (!isOK)
@@ -869,11 +869,11 @@ int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data,
 */
 int detect_classic_prng(void) {
 
-    UsbReplyNG resp, respA;
+    PacketResponseNG resp, respA;
     uint8_t cmd[] = {MIFARE_AUTH_KEYA, 0x00};
     uint32_t flags = ISO14A_CONNECT | ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_RATS;
 
-    UsbCommandOLD c = {CMD_READER_ISO_14443a, {flags, sizeof(cmd), 0}, {{0}}};
+    PacketCommandOLD c = {CMD_READER_ISO_14443a, {flags, sizeof(cmd), 0}, {{0}}};
     memcpy(c.d.asBytes, cmd, sizeof(cmd));
 
     clearCommandBuffer();
@@ -913,10 +913,10 @@ returns:
 */
 int detect_classic_nackbug(bool verbose) {
 
-    UsbCommandOLD c = {CMD_MIFARE_NACK_DETECT, {0, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_MIFARE_NACK_DETECT, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
 
     if (verbose)
         PrintAndLogEx(SUCCESS, "press pm3-button on the Proxmark3 device to abort both Proxmark3 and client.\n");
@@ -998,8 +998,8 @@ int detect_classic_nackbug(bool verbose) {
 void detect_classic_magic(void) {
 
     uint8_t isGeneration = 0;
-    UsbReplyNG resp;
-    UsbCommandOLD c = {CMD_MIFARE_CIDENT, {0, 0, 0}, {{0}}};
+    PacketResponseNG resp;
+    PacketCommandOLD c = {CMD_MIFARE_CIDENT, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500))

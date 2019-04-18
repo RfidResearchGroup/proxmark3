@@ -691,7 +691,7 @@ void SmartCardAtr(void) {
     set_tracing(true);
     I2C_Reset_EnterMainProgram();
     bool isOK = GetATR(&card);
-    cmd_send(CMD_ACK, isOK, sizeof(smart_card_atr_t), 0, &card, sizeof(smart_card_atr_t));
+    reply_old(CMD_ACK, isOK, sizeof(smart_card_atr_t), 0, &card, sizeof(smart_card_atr_t));
     set_tracing(false);
     LEDsoff();
 }
@@ -716,7 +716,7 @@ void SmartCardRaw(uint64_t arg0, uint64_t arg1, uint8_t *data) {
         if ((flags & SC_SELECT)) {
             smart_card_atr_t card;
             bool gotATR = GetATR(&card);
-            //cmd_send(CMD_ACK, gotATR, sizeof(smart_card_atr_t), 0, &card, sizeof(smart_card_atr_t));
+            //reply_old(CMD_ACK, gotATR, sizeof(smart_card_atr_t), 0, &card, sizeof(smart_card_atr_t));
             if (!gotATR)
                 goto OUT;
         }
@@ -742,7 +742,7 @@ void SmartCardRaw(uint64_t arg0, uint64_t arg1, uint8_t *data) {
         }
     }
 OUT:
-    cmd_send(CMD_ACK, len, 0, 0, resp, len);
+    reply_old(CMD_ACK, len, 0, 0, resp, len);
     BigBuf_free();
     set_tracing(false);
     LEDsoff();
@@ -801,7 +801,7 @@ void SmartCardUpgrade(uint64_t arg0) {
         length -= size;
         pos += size;
     }
-    cmd_send(CMD_ACK, isOK, pos, 0, 0, 0);
+    reply_old(CMD_ACK, isOK, pos, 0, 0, 0);
     LED_C_OFF();
     BigBuf_free();
 }
@@ -818,7 +818,7 @@ void SmartCardSetClock(uint64_t arg0) {
     // start [C0 05 xx] stop
     I2C_WriteByte(arg0, I2C_DEVICE_CMD_SIM_CLC, I2C_DEVICE_ADDRESS_MAIN);
 
-    cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
+    reply_old(CMD_ACK, 1, 0, 0, 0, 0);
     set_tracing(false);
     LEDsoff();
 }

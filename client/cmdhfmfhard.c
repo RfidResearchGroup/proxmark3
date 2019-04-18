@@ -1372,7 +1372,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
     bool reported_suma8 = false;
     char progress_text[80];
     FILE *fnonces = NULL;
-    UsbReplyNG resp;
+    PacketResponseNG resp;
 
     num_acquired_nonces = 0;
 
@@ -1383,7 +1383,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
         flags |= initialize ? 0x0001 : 0;
         flags |= slow ? 0x0002 : 0;
         flags |= field_off ? 0x0004 : 0;
-        UsbCommandOLD c = {CMD_MIFARE_ACQUIRE_ENCRYPTED_NONCES, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, flags}, {{0}}};
+        PacketCommandOLD c = {CMD_MIFARE_ACQUIRE_ENCRYPTED_NONCES, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, flags}, {{0}}};
         memcpy(c.d.asBytes, key, 6);
 
         clearCommandBuffer();
@@ -1394,7 +1394,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
         if (initialize) {
             if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
                 //strange second call (iceman)
-                UsbCommandOLD c1 = {CMD_MIFARE_ACQUIRE_ENCRYPTED_NONCES, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, 4}, {{0}}};
+                PacketCommandOLD c1 = {CMD_MIFARE_ACQUIRE_ENCRYPTED_NONCES, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, 4}, {{0}}};
                 clearCommandBuffer();
                 SendCommand(&c1);
                 return 1;

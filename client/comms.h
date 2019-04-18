@@ -49,7 +49,7 @@ void SetOffline(bool value);
 bool IsOffline(void);
 
 void *uart_receiver(void *targ);
-void SendCommand(UsbCommandOLD *c);
+void SendCommand(PacketCommandOLD *c);
 void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len);
 void clearCommandBuffer(void);
 
@@ -58,11 +58,11 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
 int TestProxmark(void);
 void CloseProxmark(void);
 
-bool WaitForResponseTimeoutW(uint32_t cmd, UsbReplyNG *response, size_t ms_timeout, bool show_warning);
-bool WaitForResponseTimeout(uint32_t cmd, UsbReplyNG *response, size_t ms_timeout);
-bool WaitForResponse(uint32_t cmd, UsbReplyNG *response);
+bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms_timeout, bool show_warning);
+bool WaitForResponseTimeout(uint32_t cmd, PacketResponseNG *response, size_t ms_timeout);
+bool WaitForResponse(uint32_t cmd, PacketResponseNG *response);
 
-bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbReplyNG *response, size_t ms_timeout, bool show_warning);
+bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketResponseNG *response, size_t ms_timeout, bool show_warning);
 
 #endif
 

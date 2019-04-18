@@ -121,7 +121,7 @@ RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_t
 void RAMFUNC SniffIso14443a(uint8_t param);
 void SimulateIso14443aTag(int tagType, int flags, uint8_t *data);
 void iso14443a_antifuzz(uint32_t flags);
-void ReaderIso14443a(UsbCommandNG *c);
+void ReaderIso14443a(PacketCommandNG *c);
 void ReaderTransmit(uint8_t *frame, uint16_t len, uint32_t *timing);
 void ReaderTransmitBitsPar(uint8_t *frame, uint16_t bits, uint8_t *par, uint32_t *timing);
 void ReaderTransmitPar(uint8_t *frame, uint16_t len, uint8_t *par, uint32_t *timing);

@@ -135,7 +135,7 @@ static int CmdLFHitagList(const char *Cmd) {
     }
 
     // Query for the actual size of the trace
-    UsbReplyNG response;
+    PacketResponseNG response;
     if (!GetFromDevice(BIG_BUF, got, USB_CMD_DATA_SIZE, 0, &response, 2500, false)) {
         PrintAndLogEx(WARNING, "command execution time out");
         free(got);
@@ -260,7 +260,7 @@ static int CmdLFHitagSniff(const char *Cmd) {
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_hitag_sniff();
 
-    UsbCommandOLD c = {CMD_SNIFF_HITAG, {0, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_SNIFF_HITAG, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
@@ -277,7 +277,7 @@ static int CmdLFHitagSim(const char *Cmd) {
     int res = 0;
     char filename[FILE_PATH_SIZE] = { 0x00 };
 
-    UsbCommandOLD c = {CMD_SIMULATE_HITAG, {0, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_SIMULATE_HITAG, {0, 0, 0}, {{0}}};
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -458,10 +458,10 @@ static void printHitagConfiguration(uint8_t config) {
 
 static bool getHitagUid(uint32_t *uid) {
 
-    UsbCommandOLD c = {CMD_READER_HITAG, {RHT2F_UID_ONLY, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_READER_HITAG, {RHT2F_UID_ONLY, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return false;
@@ -513,7 +513,7 @@ static int CmdLFHitagInfo(const char *Cmd) {
 //
 static int CmdLFHitagReader(const char *Cmd) {
 
-    UsbCommandOLD c = {CMD_READER_HITAG, {0, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_READER_HITAG, {0, 0, 0}, {{0}}};
     hitag_data *htd = (hitag_data *)c.d.asBytes;
     hitag_function htf = param_get32ex(Cmd, 0, 0, 10);
 
@@ -559,7 +559,7 @@ static int CmdLFHitagReader(const char *Cmd) {
     c.arg[0] = htf;
     clearCommandBuffer();
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 4000)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return 1;
@@ -595,7 +595,7 @@ static int CmdLFHitagReader(const char *Cmd) {
 
 static int CmdLFHitagCheckChallenges(const char *Cmd) {
 
-    UsbCommandOLD c = { CMD_TEST_HITAGS_TRACES, {0, 0, 0}, {{0}}};
+    PacketCommandOLD c = { CMD_TEST_HITAGS_TRACES, {0, 0, 0}, {{0}}};
     char filename[FILE_PATH_SIZE] = { 0x00 };
     size_t datalen = 0;
     int res = 0;
@@ -644,7 +644,7 @@ static int CmdLFHitagCheckChallenges(const char *Cmd) {
 }
 
 static int CmdLFHitagWriter(const char *Cmd) {
-    UsbCommandOLD c = { CMD_WR_HITAG_S, {0, 0, 0}, {{0}}};
+    PacketCommandOLD c = { CMD_WR_HITAG_S, {0, 0, 0}, {{0}}};
     hitag_data *htd = (hitag_data *)c.d.asBytes;
     hitag_function htf = param_get32ex(Cmd, 0, 0, 10);
 
@@ -676,7 +676,7 @@ static int CmdLFHitagWriter(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 4000)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return 1;

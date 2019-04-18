@@ -1273,7 +1273,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
                         ar_nr_nonces[index].state = SECOND;
 
                         // send to client
-                        cmd_send(CMD_ACK, CMD_SIMULATE_MIFARE_CARD, 0, 0, &ar_nr_nonces[index], sizeof(nonces_t));
+                        reply_old(CMD_ACK, CMD_SIMULATE_MIFARE_CARD, 0, 0, &ar_nr_nonces[index], sizeof(nonces_t));
 
                         ar_nr_nonces[index].state = EMPTY;
                         ar_nr_nonces[index].sector = 0;
@@ -1392,7 +1392,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
         }
     }
 
-    cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
+    reply_old(CMD_ACK, 1, 0, 0, 0, 0);
     switch_off();
 
     set_tracing(false);
@@ -1943,7 +1943,7 @@ void iso14443a_antifuzz(uint32_t flags) {
         }
     }
 
-    cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
+    reply_old(CMD_ACK, 1, 0, 0, 0, 0);
     switch_off();
     BigBuf_free_keep_EM();
 }
@@ -2350,7 +2350,7 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
 //             low  ::  len of commandbytes
 // arg2         timeout
 // d.asBytes command bytes to send
-void ReaderIso14443a(UsbCommandNG *c) {
+void ReaderIso14443a(PacketCommandNG *c) {
     iso14a_command_t param = c->oldarg[0];
     size_t len = c->oldarg[1] & 0xffff;
     size_t lenbits = c->oldarg[1] >> 16;
@@ -2376,7 +2376,7 @@ void ReaderIso14443a(UsbCommandNG *c) {
         if (!(param & ISO14A_NO_SELECT)) {
             iso14a_card_select_t *card = (iso14a_card_select_t *)buf;
             arg0 = iso14443a_select_card(NULL, card, NULL, true, 0, param & ISO14A_NO_RATS);
-            cmd_send(CMD_ACK, arg0, card->uidlen, 0, buf, sizeof(iso14a_card_select_t));
+            reply_old(CMD_ACK, arg0, card->uidlen, 0, buf, sizeof(iso14a_card_select_t));
             if (arg0 == 0)
                 goto OUT;
         }
@@ -2388,7 +2388,7 @@ void ReaderIso14443a(UsbCommandNG *c) {
     if ((param & ISO14A_APDU)) {
         uint8_t res;
         arg0 = iso14_apdu(cmd, len, (param & ISO14A_SEND_CHAINING), buf, &res);
-        cmd_send(CMD_ACK, arg0, res, 0, buf, sizeof(buf));
+        reply_old(CMD_ACK, arg0, res, 0, buf, sizeof(buf));
     }
 
     if ((param & ISO14A_RAW)) {
@@ -2432,7 +2432,7 @@ void ReaderIso14443a(UsbCommandNG *c) {
             }
         }
         arg0 = ReaderReceive(buf, par);
-        cmd_send(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
+        reply_old(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
     }
 
     if ((param & ISO14A_REQUEST_TRIGGER))
@@ -2737,7 +2737,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
     memcpy(buf + 16, ks_list, 8);
     memcpy(buf + 24, mf_nr_ar, 8);
 
-    cmd_send(CMD_ACK, isOK, 0, 0, buf, sizeof(buf));
+    reply_old(CMD_ACK, isOK, 0, 0, buf, sizeof(buf));
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
@@ -2963,7 +2963,7 @@ void DetectNACKbug() {
 
     // num_nacks = number of nacks recieved. should be only 1. if not its a clone card which always sends NACK (parity == 0) ?
     // i  =  number of authentications sent.  Not always 256, since we are trying to sync but close to it.
-    cmd_send(CMD_ACK, isOK, num_nacks, i, 0, 0);
+    reply_old(CMD_ACK, isOK, num_nacks, i, 0, 0);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();

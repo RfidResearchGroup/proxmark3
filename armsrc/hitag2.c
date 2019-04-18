@@ -1350,9 +1350,9 @@ out:
     StartTicks();
 
     if (bSuccessful)
-        cmd_send(CMD_ACK, bSuccessful, 0, 0, (uint8_t *)tag.sectors, 48);
+        reply_old(CMD_ACK, bSuccessful, 0, 0, (uint8_t *)tag.sectors, 48);
     else
-        cmd_send(CMD_ACK, bSuccessful, 0, 0, 0, 0);
+        reply_old(CMD_ACK, bSuccessful, 0, 0, 0, 0);
 }
 
 void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
@@ -1613,5 +1613,5 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
 
     StartTicks();
 
-    cmd_send(CMD_ACK, bSuccessful, 0, 0, (uint8_t *)tag.sectors, 48);
+    reply_old(CMD_ACK, bSuccessful, 0, 0, (uint8_t *)tag.sectors, 48);
 }

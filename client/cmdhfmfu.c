@@ -458,17 +458,17 @@ static char *getUlev1CardSizeStr(uint8_t fsize) {
 }
 
 static void ul_switch_on_field(void) {
-    UsbCommandOLD c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
 }
 
 static int ul_send_cmd_raw(uint8_t *cmd, uint8_t cmdlen, uint8_t *response, uint16_t responseLength) {
-    UsbCommandOLD c = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_APPEND_CRC | ISO14A_NO_RATS, cmdlen, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_APPEND_CRC | ISO14A_NO_RATS, cmdlen, 0}, {{0}}};
     memcpy(c.d.asBytes, cmd, cmdlen);
     clearCommandBuffer();
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return -1;
     if (!resp.oldarg[0] && responseLength) return -1;
 
@@ -481,7 +481,7 @@ static int ul_select(iso14a_card_select_t *card) {
 
     ul_switch_on_field();
 
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     bool ans = false;
     ans = WaitForResponseTimeout(CMD_ACK, &resp, 1500);
 
@@ -533,11 +533,11 @@ static int ulc_requestAuthentication(uint8_t *nonce, uint16_t nonceLength) {
 
 static int ulc_authentication(uint8_t *key, bool switch_off_field) {
 
-    UsbCommandOLD c = {CMD_MIFAREUC_AUTH, {switch_off_field}, {{0}}};
+    PacketCommandOLD c = {CMD_MIFAREUC_AUTH, {switch_off_field}, {{0}}};
     memcpy(c.d.asBytes, key, 16);
     clearCommandBuffer();
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return 0;
     if (resp.oldarg[0] == 1) return 1;
 
@@ -621,13 +621,13 @@ static int ul_fudan_check(void) {
     if (!ul_select(&card))
         return UL_ERROR;
 
-    UsbCommandOLD c = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 4, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 4, 0}, {{0}}};
 
     uint8_t cmd[4] = {0x30, 0x00, 0x02, 0xa7}; //wrong crc on purpose  should be 0xa8
     memcpy(c.d.asBytes, cmd, 4);
     clearCommandBuffer();
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return UL_ERROR;
     if (resp.oldarg[0] != 1) return UL_ERROR;
 
@@ -1475,7 +1475,7 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
         PrintAndLogEx(NORMAL, "Block: %0d (0x%02X) [ %s]", blockNo, blockNo, sprint_hex(blockdata, 4));
 
     //Send write Block
-    UsbCommandOLD c = {CMD_MIFAREU_WRITEBL, {blockNo}, {{0}}};
+    PacketCommandOLD c = {CMD_MIFAREU_WRITEBL, {blockNo}, {{0}}};
     memcpy(c.d.asBytes, blockdata, 4);
 
     if (hasAuthKey) {
@@ -1488,7 +1488,7 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;
         PrintAndLogEx(SUCCESS, "isOk:%02x", isOK);
@@ -1581,7 +1581,7 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
     if (swapEndian && hasPwdKey)  authKeyPtr = SwapEndian64(authenticationkey, 4, 4);
 
     //Read Block
-    UsbCommandOLD c = {CMD_MIFAREU_READBL, {blockNo}, {{0}}};
+    PacketCommandOLD c = {CMD_MIFAREU_READBL, {blockNo}, {{0}}};
     if (hasAuthKey) {
         c.arg[1] = 1;
         memcpy(c.d.asBytes, authKeyPtr, 16);
@@ -1592,7 +1592,7 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK = resp.oldarg[0] & 0xff;
         if (isOK) {
@@ -1846,7 +1846,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     }
     ul_print_type(tagtype, 0);
     PrintAndLogEx(SUCCESS, "Reading tag memory...");
-    UsbCommandOLD c = {CMD_MIFAREU_READCARD, {startPage, pages}, {{0}}};
+    PacketCommandOLD c = {CMD_MIFAREU_READCARD, {startPage, pages}, {{0}}};
     if (hasAuthKey) {
         if (tagtype & UL_C)
             c.arg[2] = 1; //UL_C auth
@@ -1858,7 +1858,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "Command execute time-out");
         return 1;
@@ -1982,7 +1982,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
 }
 
 static void wait4response(uint8_t b) {
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;
         if (!isOK)
@@ -2010,7 +2010,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     bool read_key = false;
     size_t filelen = 0;
     FILE *f;
-    UsbCommandOLD c = {CMD_MIFAREU_WRITEBL, {0, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_MIFAREU_WRITEBL, {0, 0, 0}, {{0}}};
 
     memset(authkey, 0x00, sizeof(authkey));
 
@@ -2387,12 +2387,12 @@ static int CmdHF14AMfUCSetPwd(const char *Cmd) {
         return 1;
     }
 
-    UsbCommandOLD c = {CMD_MIFAREUC_SETPWD, {0, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_MIFAREUC_SETPWD, {0, 0, 0}, {{0}}};
     memcpy(c.d.asBytes, pwd, 16);
     clearCommandBuffer();
     SendCommand(&c);
 
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         if ((resp.oldarg[0] & 0xff) == 1) {
             PrintAndLogEx(INFO, "Ultralight-C new password: %s", sprint_hex(pwd, 16));
@@ -2412,8 +2412,8 @@ static int CmdHF14AMfUCSetPwd(const char *Cmd) {
 //
 static int CmdHF14AMfUCSetUid(const char *Cmd) {
 
-    UsbCommandOLD c = {CMD_MIFAREU_READBL, {0, 0, 0}, {{0}}};
-    UsbReplyNG resp;
+    PacketCommandOLD c = {CMD_MIFAREU_READBL, {0, 0, 0}, {{0}}};
+    PacketResponseNG resp;
     uint8_t uid[7] = {0x00};
     char cmdp = tolower(param_getchar(Cmd, 0));
 
@@ -2487,10 +2487,10 @@ static int CmdHF14AMfUGenDiverseKeys(const char *Cmd) {
 
     if (cmdp == 'r') {
         // read uid from tag
-        UsbCommandOLD c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0}, {{0}}};
+        PacketCommandOLD c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0}, {{0}}};
         clearCommandBuffer();
         SendCommand(&c);
-        UsbReplyNG resp;
+        PacketResponseNG resp;
         WaitForResponse(CMD_ACK, &resp);
         iso14a_card_select_t card;
         memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
@@ -2602,10 +2602,10 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
 
     if (cmdp == 'r') {
         // read uid from tag
-        UsbCommandOLD c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0}, {{0}}};
+        PacketCommandOLD c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0}, {{0}}};
         clearCommandBuffer();
         SendCommand(&c);
-        UsbReplyNG resp;
+        PacketResponseNG resp;
         WaitForResponse(CMD_ACK, &resp);
         iso14a_card_select_t card;
         memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));

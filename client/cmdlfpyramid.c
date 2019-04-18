@@ -232,8 +232,8 @@ static int CmdPyramidClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone Farpointe/Pyramid to T55x7 with Facility Code: %u, Card Number: %u", facilitycode, cardnumber);
     print_blocks(blocks, 5);
 
-    UsbReplyNG resp;
-    UsbCommandOLD c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}, {{0}}};
+    PacketResponseNG resp;
+    PacketCommandOLD c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}, {{0}}};
 
     for (uint8_t i = 0; i < 5; ++i) {
         c.arg[0] = blocks[i];
@@ -277,7 +277,7 @@ static int CmdPyramidSim(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "Simulating Farpointe/Pyramid - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber);
 
-    UsbCommandOLD c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}, {{0}}};
+    PacketCommandOLD c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}, {{0}}};
     memcpy(c.d.asBytes, bs, size);
     clearCommandBuffer();
     SendCommand(&c);

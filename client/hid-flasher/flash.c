@@ -260,9 +260,9 @@ fail:
 
 // Get the state of the proxmark, backwards compatible
 static int get_proxmark_state(uint32_t *state) {
-    UsbCommand c = {CMD_DEVICE_INFO};
+    PacketCommandOLD c = {CMD_DEVICE_INFO};
     SendCommand(&c);
-    UsbCommand resp;
+    PacketResponseOLD resp;
     ReceiveCommand(&resp);
 
     // Three outcomes:
@@ -303,7 +303,7 @@ static int enter_bootloader(void) {
 
     if (state & DEVICE_INFO_FLAG_CURRENT_MODE_OS) {
         fprintf(stderr, "Entering bootloader...\n");
-        UsbCommand c;
+        PacketCommandOLD c;
         memset(&c, 0, sizeof(c));
 
         if ((state & DEVICE_INFO_FLAG_BOOTROM_PRESENT)
@@ -338,7 +338,7 @@ static int enter_bootloader(void) {
 }
 
 static int wait_for_ack(void) {
-    UsbCommand ack;
+    PacketResponseOLD ack;
     ReceiveCommand(&ack);
     if (ack.cmd != CMD_ACK) {
         printf("Error: Unexpected reply 0x%04x (expected ACK)\n", ack.cmd);
@@ -360,7 +360,7 @@ int flash_start_flashing(int enable_bl_writes) {
     if (state & DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH) {
         // This command is stupid. Why the heck does it care which area we're
         // flashing, as long as it's not the bootloader area? The mind boggles.
-        UsbCommand c = {CMD_START_FLASH};
+        PacketCommandOLD c = {CMD_START_FLASH};
 
         if (enable_bl_writes) {
             c.arg[0] = FLASH_START;
@@ -387,7 +387,7 @@ static int write_block(uint32_t address, uint8_t *data, uint32_t length) {
     memset(block_buf, 0xFF, BLOCK_SIZE);
     memcpy(block_buf, data, length);
 
-    UsbCommand c = {CMD_SETUP_WRITE};
+    PacketCommandOLD c = {CMD_SETUP_WRITE};
     for (int i = 0; i < 240; i += 48) {
         memcpy(c.d.asBytes, block_buf + i, 48);
         c.arg[0] = i / 4;
@@ -458,7 +458,7 @@ void flash_free(flash_file_t *ctx) {
 
 // just reset the unit
 int flash_stop_flashing(void) {
-    UsbCommand c = {CMD_HARDWARE_RESET};
+    PacketCommandOLD c = {CMD_HARDWARE_RESET};
     SendCommand(&c);
     msleep(100);
     return 0;

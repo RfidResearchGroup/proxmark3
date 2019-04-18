@@ -38,8 +38,8 @@ void usart_close(void) {
 }
 */
 
-static uint8_t us_inbuf[sizeof(UsbCommandOLD)];
-static uint8_t us_outbuf[sizeof(UsbCommandOLD)];
+static uint8_t us_inbuf[sizeof(PacketCommandOLD)];
+static uint8_t us_outbuf[sizeof(PacketResponseOLD)];
 /*
 // transfer from client to device
 inline int16_t usart_readbuffer(uint8_t *data) {
@@ -63,7 +63,7 @@ inline int16_t usart_readbuffer(uint8_t *data) {
     // Check if the first PDC bank is free
     if (pUS1->US_RCR == 0) {
         pUS1->US_RPR = (uint32_t)data;
-        pUS1->US_RCR = sizeof(UsbCommandOLD);
+        pUS1->US_RCR = sizeof(PacketCommandOLD);
         pUS1->US_PTCR = AT91C_PDC_RXTEN | AT91C_PDC_TXTEN;
         check = 0;
         return 2;

@@ -1195,11 +1195,11 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 
             if (doIClassSimulation(MODE_EXIT_AFTER_MAC, mac_responses + i * EPURSE_MAC_SIZE)) {
                 // Button pressed
-                cmd_send(CMD_ACK, CMD_SIMULATE_TAG_ICLASS, i, 0, mac_responses, i * EPURSE_MAC_SIZE);
+                reply_old(CMD_ACK, CMD_SIMULATE_TAG_ICLASS, i, 0, mac_responses, i * EPURSE_MAC_SIZE);
                 goto out;
             }
         }
-        cmd_send(CMD_ACK, CMD_SIMULATE_TAG_ICLASS, i, 0, mac_responses, i * EPURSE_MAC_SIZE);
+        reply_old(CMD_ACK, CMD_SIMULATE_TAG_ICLASS, i, 0, mac_responses, i * EPURSE_MAC_SIZE);
 
     } else if (simType == 3) {
         //This is 'full sim' mode, where we use the emulator storage for data.
@@ -1226,20 +1226,20 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 
             // keyroll 1
             if (doIClassSimulation(MODE_EXIT_AFTER_MAC, mac_responses + i * EPURSE_MAC_SIZE)) {
-                cmd_send(CMD_ACK, CMD_SIMULATE_TAG_ICLASS, i * 2, 0, mac_responses, i * EPURSE_MAC_SIZE * 2);
+                reply_old(CMD_ACK, CMD_SIMULATE_TAG_ICLASS, i * 2, 0, mac_responses, i * EPURSE_MAC_SIZE * 2);
                 // Button pressed
                 goto out;
             }
 
             // keyroll 2
             if (doIClassSimulation(MODE_EXIT_AFTER_MAC, mac_responses + (i + numberOfCSNS) * EPURSE_MAC_SIZE)) {
-                cmd_send(CMD_ACK, CMD_SIMULATE_TAG_ICLASS, i * 2, 0, mac_responses, i * EPURSE_MAC_SIZE * 2);
+                reply_old(CMD_ACK, CMD_SIMULATE_TAG_ICLASS, i * 2, 0, mac_responses, i * EPURSE_MAC_SIZE * 2);
                 // Button pressed
                 goto out;
             }
         }
         // double the amount of collected data.
-        cmd_send(CMD_ACK, CMD_SIMULATE_TAG_ICLASS, i * 2, 0, mac_responses, i * EPURSE_MAC_SIZE * 2);
+        reply_old(CMD_ACK, CMD_SIMULATE_TAG_ICLASS, i * 2, 0, mac_responses, i * EPURSE_MAC_SIZE * 2);
 
     } else {
         // We may want a mode here where we hardcode the csns to use (from proxclone).
@@ -2082,7 +2082,7 @@ void ReaderIClass(uint8_t arg0) {
             if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("SEND %c",  send ? 'y' : 'n');
 
             if (send) {
-                cmd_send(CMD_ACK, result_status, 0, 0, card_data, sizeof(card_data));
+                reply_old(CMD_ACK, result_status, 0, 0, card_data, sizeof(card_data));
                 if (abort_after_read) {
                     LED_B_OFF();
                     return;
@@ -2096,10 +2096,10 @@ void ReaderIClass(uint8_t arg0) {
     }
 
     if (userCancelled) {
-        cmd_send(CMD_ACK, 0xFF, 0, 0, card_data, 0);
+        reply_old(CMD_ACK, 0xFF, 0, 0, card_data, 0);
         switch_off();
     } else {
-        cmd_send(CMD_ACK, 0, 0, 0, card_data, 0);
+        reply_old(CMD_ACK, 0, 0, 0, card_data, 0);
     }
 }
 
@@ -2180,7 +2180,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
                 stored_data_length += 8;
                 if (stored_data_length + 8 > USB_CMD_DATA_SIZE) {
                     //Time to send this off and start afresh
-                    cmd_send(CMD_ACK,
+                    reply_old(CMD_ACK,
                              stored_data_length,//data length
                              failedRead,//Failed blocks?
                              0,//Not used ATM
@@ -2200,7 +2200,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
 
         //Send off any remaining data
         if (stored_data_length > 0) {
-            cmd_send(CMD_ACK,
+            reply_old(CMD_ACK,
                      stored_data_length,//data length
                      failedRead,//Failed blocks?
                      0,//Not used ATM
@@ -2212,7 +2212,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
         break;
     }
     //Signal end of transmission
-    cmd_send(CMD_ACK,
+    reply_old(CMD_ACK,
              0,//data length
              0,//Failed blocks?
              0,//Not used ATM
@@ -2229,7 +2229,7 @@ void iClass_ReadCheck(uint8_t blockno, uint8_t keytype) {
     uint8_t resp[] = {0, 0, 0, 0, 0, 0, 0, 0};
     size_t isOK = 0;
     isOK = sendCmdGetResponseWithRetries(readcheck, sizeof(readcheck), resp, sizeof(resp), 6);
-    cmd_send(CMD_ACK, isOK, 0, 0, 0, 0);
+    reply_old(CMD_ACK, isOK, 0, 0, 0, 0);
     switch_off();
 }
 
@@ -2248,7 +2248,7 @@ void iClass_Authentication(uint8_t *mac) {
 
     // 6 retries
     bool isOK = sendCmdGetResponseWithRetries(check, sizeof(check), resp, 4, 6);
-    cmd_send(CMD_ACK, isOK, 0, 0, 0, 0);
+    reply_old(CMD_ACK, isOK, 0, 0, 0, 0);
 }
 
 typedef struct iclass_premac {
@@ -2332,7 +2332,7 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
 
 out:
     // send keyindex.
-    cmd_send(CMD_ACK, isOK, i, 0, 0, 0);
+    reply_old(CMD_ACK, isOK, i, 0, 0, 0);
 
     if (isOK >= 1 || lastChunk) {
         switch_off();
@@ -2360,7 +2360,7 @@ bool iClass_ReadBlock(uint8_t blockno, uint8_t *data, uint8_t len) {
 void iClass_ReadBlk(uint8_t blockno) {
     uint8_t data[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     bool isOK = iClass_ReadBlock(blockno, data, sizeof(data));
-    cmd_send(CMD_ACK, isOK, 0, 0, data, sizeof(data));
+    reply_old(CMD_ACK, isOK, 0, 0, data, sizeof(data));
     switch_off();
 }
 
@@ -2394,7 +2394,7 @@ void iClass_Dump(uint8_t blockno, uint8_t numblks) {
         memcpy(dataout + (blkCnt * 8), blockdata, 8);
     }
     //return pointer to dump memory in arg3
-    cmd_send(CMD_ACK, isOK, blkCnt, BigBuf_max_traceLen(), 0, 0);
+    reply_old(CMD_ACK, isOK, blkCnt, BigBuf_max_traceLen(), 0, 0);
     switch_off();
     BigBuf_free();
 }
@@ -2424,7 +2424,7 @@ bool iClass_WriteBlock_ext(uint8_t blockno, uint8_t *data) {
 // turn off afterwards
 void iClass_WriteBlock(uint8_t blockno, uint8_t *data) {
     bool isOK = iClass_WriteBlock_ext(blockno, data);
-    cmd_send(CMD_ACK, isOK, 0, 0, 0, 0);
+    reply_old(CMD_ACK, isOK, 0, 0, 0, 0);
     switch_off();
 }
 
@@ -2451,6 +2451,6 @@ void iClass_Clone(uint8_t startblock, uint8_t endblock, uint8_t *data) {
     else
         DbpString("Clone incomplete");
 
-    cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
+    reply_old(CMD_ACK, 1, 0, 0, 0, 0);
     switch_off();
 }

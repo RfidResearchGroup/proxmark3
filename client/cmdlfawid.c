@@ -87,12 +87,12 @@ static int usage_lf_awid_brute(void) {
 }
 
 static bool sendPing(void) {
-    UsbCommandOLD ping = {CMD_PING, {1, 2, 3}, {{0}}};
+    PacketCommandOLD ping = {CMD_PING, {1, 2, 3}, {{0}}};
     SendCommand(&ping);
     SendCommand(&ping);
     SendCommand(&ping);
     clearCommandBuffer();
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000))
         return false;
     return true;
@@ -112,7 +112,7 @@ static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, ui
     uint64_t arg1 = (high << 8) + low;
     uint64_t arg2 = (invert << 8) + clk;
 
-    UsbCommandOLD c = {CMD_FSK_SIM_TAG, {arg1, arg2, bs_len}, {{0}}};
+    PacketCommandOLD c = {CMD_FSK_SIM_TAG, {arg1, arg2, bs_len}, {{0}}};
     memcpy(c.d.asBytes, bits, bs_len);
     clearCommandBuffer();
     SendCommand(&c);
@@ -171,7 +171,7 @@ static int CmdAWIDRead_device(const char *Cmd) {
 
     if (Cmd[0] == 'h' || Cmd[0] == 'H') return usage_lf_awid_read();
     uint8_t findone = (Cmd[0] == '1') ? 1 : 0;
-    UsbCommandOLD c = {CMD_AWID_DEMOD_FSK, {findone, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_AWID_DEMOD_FSK, {findone, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
@@ -350,7 +350,7 @@ static int CmdAWIDSim(const char *Cmd) {
     // arg1 --- fcHigh<<8 + fcLow
     // arg2 --- Inversion and clk setting
     // 96   --- Bitstream length: 96-bits == 12 bytes
-    UsbCommandOLD c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}, {{0}}};
+    PacketCommandOLD c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}, {{0}}};
     memcpy(c.d.asBytes, bits, size);
     clearCommandBuffer();
     SendCommand(&c);
@@ -392,8 +392,8 @@ static int CmdAWIDClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone AWID %u to T55x7 with FC: %u, CN: %u", fmtlen, fc, cn);
     print_blocks(blocks, 4);
 
-    UsbReplyNG resp;
-    UsbCommandOLD c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}, {{0}}};
+    PacketResponseNG resp;
+    PacketCommandOLD c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}, {{0}}};
 
     for (uint8_t i = 0; i < 4; i++) {
         c.arg[0] = blocks[i];

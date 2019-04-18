@@ -524,7 +524,7 @@ static int CmdLegicRfSim(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_legic_sim();
 
-    UsbCommandOLD c = {CMD_SIMULATE_TAG_LEGIC_RF, {1}, {{0}}};
+    PacketCommandOLD c = {CMD_SIMULATE_TAG_LEGIC_RF, {1}, {{0}}};
     sscanf(Cmd, " %" SCNi64, &c.arg[0]);
     clearCommandBuffer();
     SendCommand(&c);
@@ -642,9 +642,9 @@ static int CmdLegicRfWrite(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "Writing to tag");
 
-    UsbCommandOLD c = {CMD_WRITER_LEGIC_RF, {offset, len, IV}, {{0}}};
+    PacketCommandOLD c = {CMD_WRITER_LEGIC_RF, {offset, len, IV}, {{0}}};
     memcpy(c.d.asBytes, data, len);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     clearCommandBuffer();
     SendCommand(&c);
 
@@ -756,10 +756,10 @@ int legic_read_mem(uint32_t offset, uint32_t len, uint32_t iv, uint8_t *out, uin
 
     legic_chk_iv(&iv);
 
-    UsbCommandOLD c = {CMD_READER_LEGIC_RF, {offset, len, iv}, {{0}}};
+    PacketCommandOLD c = {CMD_READER_LEGIC_RF, {offset, len, iv}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
 
     uint8_t timeout = 0;
     while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
@@ -810,10 +810,10 @@ int legic_get_type(legic_card_select_t *card) {
 
     if (card == NULL) return 1;
 
-    UsbCommandOLD c = {CMD_LEGIC_INFO, {0, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_LEGIC_INFO, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500))
         return 2;
 
@@ -837,7 +837,7 @@ void legic_chk_iv(uint32_t *iv) {
 }
 void legic_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
 
-    UsbCommandOLD c = {CMD_LEGIC_ESET, {0, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_LEGIC_ESET, {0, 0, 0}, {{0}}};
     for (size_t i = offset; i < numofbytes; i += USB_CMD_DATA_SIZE) {
 
         size_t len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
@@ -900,10 +900,10 @@ static int CmdLegicDump(const char *Cmd) {
     legic_print_type(dumplen, 0);
     PrintAndLogEx(SUCCESS, "Reading tag memory %d b...", dumplen);
 
-    UsbCommandOLD c = {CMD_READER_LEGIC_RF, {0x00, dumplen, 0x55}, {{0}}};
+    PacketCommandOLD c = {CMD_READER_LEGIC_RF, {0x00, dumplen, 0x55}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
 
     uint8_t timeout = 0;
     while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
@@ -1049,8 +1049,8 @@ static int CmdLegicRestore(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Restoring to card");
 
     // transfer to device
-    UsbCommandOLD c = {CMD_WRITER_LEGIC_RF, {0, 0, 0x55}, {{0}}};
-    UsbReplyNG resp;
+    PacketCommandOLD c = {CMD_WRITER_LEGIC_RF, {0, 0, 0x55}, {{0}}};
+    PacketResponseNG resp;
     for (size_t i = 7; i < numofbytes; i += USB_CMD_DATA_SIZE) {
 
         size_t len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
@@ -1242,8 +1242,8 @@ static int CmdLegicWipe(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Erasing");
 
     // transfer to device
-    UsbCommandOLD c = {CMD_WRITER_LEGIC_RF, {0, 0, 0x55}, {{0}}};
-    UsbReplyNG resp;
+    PacketCommandOLD c = {CMD_WRITER_LEGIC_RF, {0, 0, 0x55}, {{0}}};
+    PacketResponseNG resp;
     for (size_t i = 7; i < card.cardsize; i += USB_CMD_DATA_SIZE) {
 
         printf(".");

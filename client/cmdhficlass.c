@@ -281,7 +281,7 @@ static int CmdHFiClassList(const char *Cmd) {
 static int CmdHFiClassSniff(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_iclass_sniff();
-    UsbCommandOLD c = {CMD_SNIFF_ICLASS, {0, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_SNIFF_ICLASS, {0, 0, 0}, {{0}}};
     SendCommand(&c);
     return 0;
 }
@@ -380,8 +380,8 @@ static int CmdHFiClassSim(const char *Cmd) {
         case 2: {
             PrintAndLogEx(INFO, "Starting iCLASS sim 2 attack (elite mode)");
             PrintAndLogEx(INFO, "press keyboard to cancel");
-            UsbCommandOLD c = {CMD_SIMULATE_TAG_ICLASS, {simType, NUM_CSNS}, {{0}}};
-            UsbReplyNG resp;
+            PacketCommandOLD c = {CMD_SIMULATE_TAG_ICLASS, {simType, NUM_CSNS}, {{0}}};
+            PacketResponseNG resp;
             memcpy(c.d.asBytes, csns, 8 * NUM_CSNS);
             clearCommandBuffer();
             SendCommand(&c);
@@ -433,8 +433,8 @@ static int CmdHFiClassSim(const char *Cmd) {
             // reader in key roll mode,  when it has two keys it alternates when trying to verify.
             PrintAndLogEx(INFO, "Starting iCLASS sim 4 attack (elite mode, reader in key roll mode)");
             PrintAndLogEx(INFO, "press keyboard to cancel");
-            UsbCommandOLD c = {CMD_SIMULATE_TAG_ICLASS, {simType, NUM_CSNS}, {{0}}};
-            UsbReplyNG resp;
+            PacketCommandOLD c = {CMD_SIMULATE_TAG_ICLASS, {simType, NUM_CSNS}, {{0}}};
+            PacketResponseNG resp;
             memcpy(c.d.asBytes, csns, 8 * NUM_CSNS);
             clearCommandBuffer();
             SendCommand(&c);
@@ -501,7 +501,7 @@ static int CmdHFiClassSim(const char *Cmd) {
         case 1:
         case 3:
         default: {
-            UsbCommandOLD c = {CMD_SIMULATE_TAG_ICLASS, {simType, numberOfCSNs}, {{0}}};
+            PacketCommandOLD c = {CMD_SIMULATE_TAG_ICLASS, {simType, numberOfCSNs}, {{0}}};
             memcpy(c.d.asBytes, CSN, 8);
             clearCommandBuffer();
             SendCommand(&c);
@@ -531,7 +531,7 @@ static int CmdHFiClassReader_Replay(const char *Cmd) {
         return 1;
     }
 
-    UsbCommandOLD c = {CMD_READER_ICLASS_REPLAY, {readerType}, {{0}}};
+    PacketCommandOLD c = {CMD_READER_ICLASS_REPLAY, {readerType}, {{0}}};
     memcpy(c.d.asBytes, MAC, 4);
     clearCommandBuffer();
     SendCommand(&c);
@@ -540,7 +540,7 @@ static int CmdHFiClassReader_Replay(const char *Cmd) {
 
 /*
 static int iclassEmlSetMem(uint8_t *data, int blockNum, int blocksCount) {
-    UsbCommandOLD c = {CMD_MIFARE_EML_MEMSET, {blockNum, blocksCount, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_MIFARE_EML_MEMSET, {blockNum, blocksCount, 0}, {{0}}};
     memcpy(c.d.asBytes, data, blocksCount * 16);
     clearCommandBuffer();
     SendCommand(&c);
@@ -603,7 +603,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
 
     while (bytes_remaining > 0) {
         uint32_t bytes_in_packet = MIN(USB_CMD_DATA_SIZE, bytes_remaining);
-        UsbCommandOLD c = {CMD_ICLASS_EML_MEMSET, {bytes_sent, bytes_in_packet, 0}, {{0}}};
+        PacketCommandOLD c = {CMD_ICLASS_EML_MEMSET, {bytes_sent, bytes_in_packet, 0}, {{0}}};
         memcpy(c.d.asBytes, dump + bytes_sent, bytes_in_packet);
         clearCommandBuffer();
         SendCommand(&c);
@@ -767,8 +767,8 @@ static void Calc_wb_mac(uint8_t blockno, uint8_t *data, uint8_t *div_key, uint8_
 }
 
 static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool use_credit_key, bool verbose) {
-    UsbReplyNG resp;
-    UsbCommandOLD c = {CMD_READER_ICLASS, {0}, {{0}}};
+    PacketResponseNG resp;
+    PacketCommandOLD c = {CMD_READER_ICLASS, {0}, {{0}}};
     c.arg[0] = FLAG_ICLASS_READER_ONLY_ONCE | FLAG_ICLASS_READER_CC | FLAG_ICLASS_READER_ONE_TRY;
 
     if (use_credit_key)
@@ -818,8 +818,8 @@ static bool select_and_auth(uint8_t *KEY, uint8_t *MAC, uint8_t *div_key, bool u
     if (verbose) PrintAndLogEx(SUCCESS, "authing with %s: %s", rawkey ? "raw key" : "diversified key", sprint_hex(div_key, 8));
 
     doMAC(CCNR, div_key, MAC);
-    UsbReplyNG resp;
-    UsbCommandOLD d = {CMD_ICLASS_AUTHENTICATION, {0, 0, 0}, {{0}}};
+    PacketResponseNG resp;
+    PacketCommandOLD d = {CMD_ICLASS_AUTHENTICATION, {0, 0, 0}, {{0}}};
     memcpy(d.d.asBytes, MAC, 4);
     clearCommandBuffer();
     SendCommand(&d);
@@ -939,8 +939,8 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
                      FLAG_ICLASS_READER_ONE_TRY;
 
     //get config and first 3 blocks
-    UsbCommandOLD c = {CMD_READER_ICLASS, {flags, 0, 0}, {{0}}};
-    UsbReplyNG resp;
+    PacketCommandOLD c = {CMD_READER_ICLASS, {flags, 0, 0}, {{0}}};
+    PacketResponseNG resp;
     uint8_t tag_data[255 * 8];
 
     clearCommandBuffer();
@@ -981,7 +981,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
     }
 
     // begin dump
-    UsbCommandOLD w = {CMD_ICLASS_DUMP, {blockno, numblks - blockno + 1}, {{0}}};
+    PacketCommandOLD w = {CMD_ICLASS_DUMP, {blockno, numblks - blockno + 1}, {{0}}};
     clearCommandBuffer();
     SendCommand(&w);
     while (true) {
@@ -1097,10 +1097,10 @@ static int WriteBlock(uint8_t blockno, uint8_t *bldata, uint8_t *KEY, bool use_c
     if (!select_and_auth(KEY, MAC, div_key, use_credit_key, elite, rawkey, verbose))
         return 0;
 
-    UsbReplyNG resp;
+    PacketResponseNG resp;
 
     Calc_wb_mac(blockno, bldata, div_key, MAC);
-    UsbCommandOLD w = {CMD_ICLASS_WRITEBLOCK, {blockno}, {{0}}};
+    PacketCommandOLD w = {CMD_ICLASS_WRITEBLOCK, {blockno}, {{0}}};
     memcpy(w.d.asBytes, bldata, 8);
     memcpy(w.d.asBytes + 8, MAC, 4);
 
@@ -1321,7 +1321,7 @@ static int CmdHFiClassCloneTag(const char *Cmd) {
         return 0;
     }
 
-    UsbCommandOLD w = {CMD_ICLASS_CLONE, {startblock, endblock}, {{0}}};
+    PacketCommandOLD w = {CMD_ICLASS_CLONE, {startblock, endblock}, {{0}}};
     uint8_t *ptr;
     // calculate all mac for every the block we will write
     for (i = startblock; i <= endblock; i++) {
@@ -1342,7 +1342,7 @@ static int CmdHFiClassCloneTag(const char *Cmd) {
         PrintAndLogEx(NORMAL, " MAC |%02x%02x%02x%02x|\n", p[8], p[9], p[10], p[11]);
     }
 
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     clearCommandBuffer();
     SendCommand(&w);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 4500)) {
@@ -1367,8 +1367,8 @@ static int ReadBlock(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite,
             return 0;
     }
 
-    UsbReplyNG resp;
-    UsbCommandOLD c = {CMD_ICLASS_READBLOCK, {blockno}, {{0}}};
+    PacketResponseNG resp;
+    PacketCommandOLD c = {CMD_ICLASS_READBLOCK, {blockno}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 4500)) {
@@ -1977,7 +1977,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         if (keys == keycnt - i)
             lastChunk = true;
 
-        UsbCommandOLD c = {CMD_ICLASS_CHECK_KEYS, { (lastChunk << 8), keys, 0}, {{0}}};
+        PacketCommandOLD c = {CMD_ICLASS_CHECK_KEYS, { (lastChunk << 8), keys, 0}, {{0}}};
 
         // bit 16
         //   - 1 indicates credit key
@@ -1987,7 +1987,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         memcpy(c.d.asBytes, pre + i, 4 * keys);
         clearCommandBuffer();
         SendCommand(&c);
-        UsbReplyNG resp;
+        PacketResponseNG resp;
 
         while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
             timeout++;
@@ -2465,9 +2465,9 @@ int readIclass(bool loop, bool verbose) {
                      FLAG_ICLASS_READER_CONF | FLAG_ICLASS_READER_ONLY_ONCE |
                      FLAG_ICLASS_READER_ONE_TRY;
 
-    UsbCommandOLD c = {CMD_READER_ICLASS, {flags, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_READER_ICLASS, {flags, 0, 0}, {{0}}};
     // loop in client not device - else on windows have a communication error
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     while (!ukbhit()) {
 
         clearCommandBuffer();

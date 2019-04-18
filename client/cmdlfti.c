@@ -275,7 +275,7 @@ out:
 // read a TI tag and return its ID
 static int CmdTIRead(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    UsbCommandOLD c = {CMD_READ_TI_TYPE};
+    PacketCommandOLD c = {CMD_READ_TI_TYPE};
     clearCommandBuffer();
     SendCommand(&c);
     return 0;
@@ -284,7 +284,7 @@ static int CmdTIRead(const char *Cmd) {
 // write new data to a r/w TI tag
 static int CmdTIWrite(const char *Cmd) {
     int res = 0;
-    UsbCommandOLD c = {CMD_WRITE_TI_TYPE};
+    PacketCommandOLD c = {CMD_WRITE_TI_TYPE};
     res = sscanf(Cmd, "%012" SCNx64 " %012" SCNx64 " %012" SCNx64 "", &c.arg[0], &c.arg[1], &c.arg[2]);
 
     if (res == 2)

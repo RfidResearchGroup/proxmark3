@@ -42,10 +42,10 @@ static int CmdHFMFPInfo(const char *cmd) {
     infoHF14A(false, false);
 
     // Mifare Plus info
-    UsbCommandOLD c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}, {{0}}};
     SendCommand(&c);
 
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     WaitForResponse(CMD_ACK, &resp);
 
     iso14a_card_select_t card;

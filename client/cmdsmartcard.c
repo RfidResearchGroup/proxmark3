@@ -309,7 +309,7 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
 }
 
 static int smart_wait(uint8_t *data, bool silent) {
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         if (!silent) PrintAndLogEx(WARNING, "smart card response timeout");
         return -1;
@@ -347,7 +347,7 @@ static int smart_responseEx(uint8_t *data, bool silent) {
         int len = data[datalen - 1];
         if (!silent) PrintAndLogEx(INFO, "Requesting 0x%02X bytes response", len);
         uint8_t getstatus[] = {0x00, ISO7816_GET_RESPONSE, 0x00, 0x00, len};
-        UsbCommandOLD cStatus = {CMD_SMART_RAW, {SC_RAW, sizeof(getstatus), 0}, {{0}}};
+        PacketCommandOLD cStatus = {CMD_SMART_RAW, {SC_RAW, sizeof(getstatus), 0}, {{0}}};
         memcpy(cStatus.d.asBytes, getstatus, sizeof(getstatus));
         clearCommandBuffer();
         SendCommand(&cStatus);
@@ -454,7 +454,7 @@ static int CmdSmartRaw(const char *Cmd) {
 
     // arg0 = RFU flags
     // arg1 = length
-    UsbCommandOLD c = {CMD_SMART_RAW, {0, hexlen, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_SMART_RAW, {0, hexlen, 0}, {{0}}};
 
     if (active || active_select) {
         c.arg[0] |= SC_CONNECT;
@@ -652,7 +652,7 @@ static int CmdSmartUpgrade(const char *Cmd) {
 
     while (bytes_remaining > 0) {
         uint32_t bytes_in_packet = MIN(USB_CMD_DATA_SIZE, bytes_remaining);
-        UsbCommandOLD c = {CMD_SMART_UPLOAD, {index + bytes_sent, bytes_in_packet, 0}, {{0}}};
+        PacketCommandOLD c = {CMD_SMART_UPLOAD, {index + bytes_sent, bytes_in_packet, 0}, {{0}}};
 
         // Fill usb bytes with 0xFF
         memset(c.d.asBytes, 0xFF, USB_CMD_DATA_SIZE);
@@ -675,10 +675,10 @@ static int CmdSmartUpgrade(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Sim module firmware updating,  don\'t turn off your PM3!");
 
     // trigger the firmware upgrade
-    UsbCommandOLD c = {CMD_SMART_UPGRADE, {firmware_size, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_SMART_UPGRADE, {firmware_size, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return 1;
@@ -714,10 +714,10 @@ static int CmdSmartInfo(const char *Cmd) {
     //Validations
     if (errors) return usage_sm_info();
 
-    UsbCommandOLD c = {CMD_SMART_ATR, {0, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_SMART_ATR, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
         return 1;
@@ -789,10 +789,10 @@ static int CmdSmartReader(const char *Cmd) {
     //Validations
     if (errors) return usage_sm_reader();
 
-    UsbCommandOLD c = {CMD_SMART_ATR, {0, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_SMART_ATR, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
         return 1;
@@ -835,10 +835,10 @@ static int CmdSmartSetClock(const char *Cmd) {
     //Validations
     if (errors || cmdp == 0) return usage_sm_setclock();
 
-    UsbCommandOLD c = {CMD_SMART_SETCLOCK, {clock1, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_SMART_SETCLOCK, {clock1, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "smart card select failed");
         return 1;
@@ -887,7 +887,7 @@ static void smart_brute_prim() {
 
     PrintAndLogEx(INFO, "Reading primitives");
 
-    UsbCommandOLD c = {CMD_SMART_RAW, {SC_RAW_T0, 5, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_SMART_RAW, {SC_RAW_T0, 5, 0}, {{0}}};
 
     for (int i = 0; i < sizeof(get_card_data); i += 5) {
 
@@ -917,7 +917,7 @@ static int smart_brute_sfi(bool decodeTLV) {
     int len;
     // READ RECORD
     uint8_t READ_RECORD[] = {0x00, 0xB2, 0x00, 0x00, 0x00};
-    UsbCommandOLD c = {CMD_SMART_RAW, {SC_RAW_T0, sizeof(READ_RECORD), 0}, {{0}}};
+    PacketCommandOLD c = {CMD_SMART_RAW, {SC_RAW_T0, sizeof(READ_RECORD), 0}, {{0}}};
 
     PrintAndLogEx(INFO, "Start SFI brute forcing");
 
@@ -984,7 +984,7 @@ static void smart_brute_options(bool decodeTLV) {
     uint8_t GET_PROCESSING_OPTIONS[] = {0x80, 0xA8, 0x00, 0x00, 0x02, 0x83, 0x00, 0x00};
 
     // Get processing options command
-    UsbCommandOLD c = {CMD_SMART_RAW, {SC_RAW_T0, sizeof(GET_PROCESSING_OPTIONS), 0}, {{0}}};
+    PacketCommandOLD c = {CMD_SMART_RAW, {SC_RAW_T0, sizeof(GET_PROCESSING_OPTIONS), 0}, {{0}}};
     memcpy(c.d.asBytes, GET_PROCESSING_OPTIONS, sizeof(GET_PROCESSING_OPTIONS));
     clearCommandBuffer();
     SendCommand(&c);
@@ -1041,7 +1041,7 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
 //  uint8_t VERIFY[] = {0x00, 0x20, 0x00, 0x80};
 
     // Select AID command
-    UsbCommandOLD cAid = {CMD_SMART_RAW, {SC_RAW_T0, 0, 0}, {{0}}};
+    PacketCommandOLD cAid = {CMD_SMART_RAW, {SC_RAW_T0, 0, 0}, {{0}}};
 
     PrintAndLogEx(INFO, "Importing AID list");
     json_t *root = NULL;
@@ -1178,7 +1178,7 @@ int ExchangeAPDUSC(uint8_t *datain, int datainlen, bool activateCard, bool leave
 
     PrintAndLogEx(DEBUG, "APDU SC");
 
-    UsbCommandOLD c = {CMD_SMART_RAW, {SC_RAW_T0, datainlen, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_SMART_RAW, {SC_RAW_T0, datainlen, 0}, {{0}}};
     if (activateCard) {
         c.arg[0] |= SC_SELECT | SC_CONNECT;
     }
@@ -1194,7 +1194,7 @@ int ExchangeAPDUSC(uint8_t *datain, int datainlen, bool activateCard, bool leave
 
     // retry
     if (len > 1 && dataout[len - 2] == 0x6c && datainlen > 4) {
-        UsbCommandOLD c2 = {CMD_SMART_RAW, {SC_RAW_T0, datainlen, 0}, {{0}}};
+        PacketCommandOLD c2 = {CMD_SMART_RAW, {SC_RAW_T0, datainlen, 0}, {{0}}};
         memcpy(c2.d.asBytes, datain, 5);
 
         // transfer length via T=0
@@ -1214,10 +1214,10 @@ bool smart_select(bool silent, smart_card_atr_t *atr) {
     if (atr)
         memset(atr, 0, sizeof(smart_card_atr_t));
 
-    UsbCommandOLD c = {CMD_SMART_ATR, {0, 0, 0}, {{0}}};
+    PacketCommandOLD c = {CMD_SMART_ATR, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
     SendCommand(&c);
-    UsbReplyNG resp;
+    PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
         return false;

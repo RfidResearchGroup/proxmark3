@@ -43,10 +43,10 @@ extern void Dbprintf(const char *fmt, ...);
         reply_via_fpc = true;}
 #endif
 
-uint8_t cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
-    UsbCommandOLD txcmd;
+uint8_t reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
+    PacketResponseOLD txcmd;
 
-    for (size_t i = 0; i < sizeof(UsbCommandOLD); i++)
+    for (size_t i = 0; i < sizeof(PacketResponseOLD); i++)
         ((uint8_t *)&txcmd)[i] = 0x00;
 
     // Compose the outgoing command frame
@@ -68,20 +68,20 @@ uint8_t cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void
 
 #ifdef WITH_FPC_HOST
     if (reply_via_fpc) {
-        sendlen = usart_writebuffer((uint8_t *)&txcmd, sizeof(UsbCommandOLD));
+        sendlen = usart_writebuffer((uint8_t *)&txcmd, sizeof(PacketResponseOLD));
 //        Dbprintf_usb("Sent %i bytes over usart", len);
     } else {
-        sendlen = usb_write((uint8_t *)&txcmd, sizeof(UsbCommandOLD));
+        sendlen = usb_write((uint8_t *)&txcmd, sizeof(PacketResponseOLD));
     }
 #else
-    sendlen = usb_write((uint8_t *)&txcmd, sizeof(UsbCommandOLD));
+    sendlen = usb_write((uint8_t *)&txcmd, sizeof(PacketResponseOLD));
 #endif
 
     return sendlen;
 }
 
 uint8_t reply_ng(uint16_t cmd, int16_t status, uint8_t *data, size_t len) {
-    UsbReplyNGRaw txBufferNG;
+    PacketResponseNGRaw txBufferNG;
     size_t txBufferNGLen;
 //    for (size_t i = 0; i < sizeof(txBufferNG); i++)
 //        ((uint8_t *)&txBufferNG)[i] = 0x00;
@@ -105,11 +105,11 @@ uint8_t reply_ng(uint16_t cmd, int16_t status, uint8_t *data, size_t len) {
     }
 
     uint8_t first, second;
-    compute_crc(CRC_14443_A, (uint8_t *)&txBufferNG, sizeof(UsbReplyNGPreamble) + len, &first, &second);
+    compute_crc(CRC_14443_A, (uint8_t *)&txBufferNG, sizeof(PacketResponseNGPreamble) + len, &first, &second);
 
-    UsbReplyNGPostamble *tx_post = (UsbReplyNGPostamble *)((uint8_t *)&txBufferNG + sizeof(UsbReplyNGPreamble) + len);
+    PacketResponseNGPostamble *tx_post = (PacketResponseNGPostamble *)((uint8_t *)&txBufferNG + sizeof(PacketResponseNGPreamble) + len);
     tx_post->crc = (first << 8) + second;
-    txBufferNGLen = sizeof(UsbReplyNGPreamble) + len + sizeof(UsbReplyNGPostamble);
+    txBufferNGLen = sizeof(PacketResponseNGPreamble) + len + sizeof(PacketResponseNGPostamble);
 
     uint32_t sendlen = 0;
     // Send frame and make sure all bytes are transmitted
@@ -128,10 +128,10 @@ uint8_t reply_ng(uint16_t cmd, int16_t status, uint8_t *data, size_t len) {
     return sendlen;
 }
 
-int16_t receive_ng(UsbCommandNG *rx) {
-    UsbCommandNGRaw rx_raw;
-    size_t bytes = usb_read_ng((uint8_t *)&rx_raw.pre, sizeof(UsbCommandNGPreamble));
-    if (bytes != sizeof(UsbCommandNGPreamble))
+int16_t receive_ng(PacketCommandNG *rx) {
+    PacketCommandNGRaw rx_raw;
+    size_t bytes = usb_read_ng((uint8_t *)&rx_raw.pre, sizeof(PacketCommandNGPreamble));
+    if (bytes != sizeof(PacketCommandNGPreamble))
         return PM3_EIO;
     rx->magic = rx_raw.pre.magic;
     rx->length = rx_raw.pre.length;
@@ -145,13 +145,13 @@ int16_t receive_ng(UsbCommandNG *rx) {
             return PM3_EIO;
         memcpy(rx->data.asBytes, rx_raw.data, rx->length);
         // Get the postamble
-        bytes = usb_read_ng((uint8_t *)&rx_raw.foopost, sizeof(UsbCommandNGPostamble));
-        if (bytes != sizeof(UsbCommandNGPostamble))
+        bytes = usb_read_ng((uint8_t *)&rx_raw.foopost, sizeof(PacketCommandNGPostamble));
+        if (bytes != sizeof(PacketCommandNGPostamble))
             return PM3_EIO;
         // Check CRC
         rx->crc = rx_raw.foopost.crc;
         uint8_t first, second;
-        compute_crc(CRC_14443_A, (uint8_t *)&rx_raw, sizeof(UsbCommandNGPreamble) + rx->length, &first, &second);
+        compute_crc(CRC_14443_A, (uint8_t *)&rx_raw, sizeof(PacketCommandNGPreamble) + rx->length, &first, &second);
         if ((first << 8) + second != rx->crc)
             return PM3_EIO;
 #ifdef WITH_FPC_HOST
@@ -159,10 +159,10 @@ int16_t receive_ng(UsbCommandNG *rx) {
 #endif
         rx->ng = true;
     } else {                               // Old style command
-        UsbCommandOLD rx_old;
-        memcpy(&rx_old, &rx_raw.pre, sizeof(UsbCommandNGPreamble));
-        bytes = usb_read_ng(((uint8_t *)&rx_old) + sizeof(UsbCommandNGPreamble), sizeof(UsbCommandOLD) - sizeof(UsbCommandNGPreamble));
-        if (bytes != sizeof(UsbCommandOLD) - sizeof(UsbCommandNGPreamble))
+        PacketCommandOLD rx_old;
+        memcpy(&rx_old, &rx_raw.pre, sizeof(PacketCommandNGPreamble));
+        bytes = usb_read_ng(((uint8_t *)&rx_old) + sizeof(PacketCommandNGPreamble), sizeof(PacketCommandOLD) - sizeof(PacketCommandNGPreamble));
+        if (bytes != sizeof(PacketCommandOLD) - sizeof(PacketCommandNGPreamble))
             return PM3_EIO;
 #ifdef WITH_FPC_HOST
         reply_via_fpc = false;

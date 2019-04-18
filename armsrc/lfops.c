@@ -242,7 +242,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
     // Turn off antenna
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     // tell client we are done
-    cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
+    reply_old(CMD_ACK, 0, 0, 0, 0, 0);
 }
 
 /* blank r/w tag data stream
@@ -1388,7 +1388,7 @@ void T55xxResetRead(void) {
 
     // Turn the field off
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
-    cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
+    reply_old(CMD_ACK, 0, 0, 0, 0, 0);
     LED_A_OFF();
 }
 
@@ -1467,7 +1467,7 @@ void T55xxWriteBlockExt(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t arg)
 // Write one card block in page 0, no lock
 void T55xxWriteBlock(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t arg) {
     T55xxWriteBlockExt(Data, Block, Pwd, arg);
-    cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
+    reply_old(CMD_ACK, 0, 0, 0, 0, 0);
 }
 
 // Read one card block in page [page]
@@ -1532,7 +1532,7 @@ void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
     // Turn the field off
     if (!brute_mem) {
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-        cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
+        reply_old(CMD_ACK, 0, 0, 0, 0, 0);
         LED_A_OFF();
     }
 }
@@ -1629,7 +1629,7 @@ void T55xx_ChkPwds() {
 
 OUT:
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    cmd_send(CMD_ACK, ret, candidate, 0, 0, 0);
+    reply_old(CMD_ACK, ret, candidate, 0, 0, 0);
     LEDsoff();
 }
 
@@ -1757,7 +1757,7 @@ void CopyVikingtoT55xx(uint32_t block1, uint32_t block2, uint8_t Q5) {
     // Program the data blocks for supplied ID and the block 0 config
     WriteT55xx(data, 0, 3);
     LED_D_OFF();
-    cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
+    reply_old(CMD_ACK, 0, 0, 0, 0, 0);
 }
 
 // Define 9bit header for EM410x tags
@@ -2028,7 +2028,7 @@ void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd) {
     DoPartialAcquisition(20, true, 6000, 1000);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
+    reply_old(CMD_ACK, 0, 0, 0, 0, 0);
     LED_A_OFF();
 }
 
@@ -2064,7 +2064,7 @@ void EM4xWriteWord(uint32_t flag, uint32_t data, uint32_t pwd) {
     DoPartialAcquisition(20, true, 6000, 1000);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
+    reply_old(CMD_ACK, 0, 0, 0, 0, 0);
     LED_A_OFF();
 }
 
@@ -2118,7 +2118,7 @@ void Cotag(uint32_t arg0) {
 
     // Turn the field off
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
-    cmd_send(CMD_ACK, 0, 0, 0, 0, 0);
+    reply_old(CMD_ACK, 0, 0, 0, 0, 0);
     LEDsoff();
 }
 
