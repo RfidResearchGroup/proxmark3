@@ -415,6 +415,12 @@ typedef struct {
 #define PM3_EOVFLOW            -9
 // Software error
 #define PM3_ESOFT             -10
+// Flash error
+#define PM3_EFLASH            -11
+// Memory allocation error
+#define PM3_EMALLOC           -12
+// File error
+#define PM3_EFILE             -13
 
 
 // CMD_DEVICE_INFO response packet has flags in arg[0], flag definitions:

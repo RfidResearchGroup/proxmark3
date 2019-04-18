@@ -31,12 +31,12 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
     // Help dump children
     if (strcmp(Cmd, "XX_internal_command_dump_XX") == 0) {
         dumpCommandsRecursive(Commands, 0);
-        return 0;
+        return PM3_SUCCESS;
     }
     // Markdown help dump children
     if (strcmp(Cmd, "XX_internal_command_dump_markdown_XX") == 0) {
         dumpCommandsRecursive(Commands, 1);
-        return 0;
+        return PM3_SUCCESS;
     }
     char cmd_name[128];
     int len = 0;
@@ -70,7 +70,7 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
         CmdsHelp(Commands);
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 char pparent[512] = {0};
