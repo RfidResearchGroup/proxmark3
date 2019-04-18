@@ -102,7 +102,7 @@ static int CmdEMVSelect(const char *Cmd) {
     if (decodeTLV)
         TLVPrintFromBuffer(buf, len);
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdEMVSearch(const char *Cmd) {
@@ -140,7 +140,7 @@ static int CmdEMVSearch(const char *Cmd) {
 
     if (EMVSearch(channel, activateField, leaveSignalON, decodeTLV, t)) {
         tlvdb_free(t);
-        return 2;
+        return PM3_ERFTRANS;
     }
 
     PrintAndLogEx(SUCCESS, "Search completed.");
@@ -152,7 +152,7 @@ static int CmdEMVSearch(const char *Cmd) {
 
     tlvdb_free(t);
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdEMVPPSE(const char *Cmd) {
@@ -206,7 +206,7 @@ static int CmdEMVPPSE(const char *Cmd) {
     if (decodeTLV)
         TLVPrintFromBuffer(buf, len);
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdEMVGPO(const char *Cmd) {
@@ -272,7 +272,7 @@ static int CmdEMVGPO(const char *Cmd) {
             PrintAndLogEx(ERR, "Can't create PDOL TLV.");
             tlvdb_free(tmp_ext);
             tlvdb_free(tlvRoot);
-            return 4;
+            return PM3_ESOFT;
         }
     } else {
         if (paramsLoadFromFile) {
@@ -289,7 +289,7 @@ static int CmdEMVGPO(const char *Cmd) {
         tlvdb_free(tlvRoot);
         if (pdol_data_tlv != &data_tlv);
         free(pdol_data_tlv);
-        return 4;
+        return PM3_ESOFT;
     }
     PrintAndLogEx(INFO, "PDOL data[%d]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
 
@@ -314,7 +314,7 @@ static int CmdEMVGPO(const char *Cmd) {
     if (decodeTLV)
         TLVPrintFromBuffer(buf, len);
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdEMVReadRecord(const char *Cmd) {
@@ -348,7 +348,7 @@ static int CmdEMVReadRecord(const char *Cmd) {
 
     if (datalen != 2) {
         PrintAndLogEx(ERR, "Command needs to have 2 bytes of data");
-        return 1;
+        return PM3_EINVARG;
     }
 
     SetAPDULogging(APDULogging);
@@ -369,7 +369,7 @@ static int CmdEMVReadRecord(const char *Cmd) {
     if (decodeTLV)
         TLVPrintFromBuffer(buf, len);
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdEMVAC(const char *Cmd) {
@@ -411,7 +411,7 @@ static int CmdEMVAC(const char *Cmd) {
 
         if (termDecision == 0xff) {
             PrintAndLogEx(ERR, "ERROR: can't find terminal decision '%s'", arg_get_str(3)->sval[0]);
-            return 1;
+            return PM3_EINVARG;
         }
     } else {
         termDecision = EMVAC_TC;
@@ -458,7 +458,7 @@ static int CmdEMVAC(const char *Cmd) {
             PrintAndLogEx(ERR, "Can't create CDOL TLV.");
             tlvdb_free(tmp_ext);
             tlvdb_free(tlvRoot);
-            return 4;
+            return PM3_ESOFT;
         }
     } else {
         if (paramsLoadFromFile) {
@@ -490,7 +490,7 @@ static int CmdEMVAC(const char *Cmd) {
     if (decodeTLV)
         TLVPrintFromBuffer(buf, len);
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdEMVGenerateChallenge(const char *Cmd) {
@@ -535,7 +535,7 @@ static int CmdEMVGenerateChallenge(const char *Cmd) {
     if (len != 4 && len != 8)
         PrintAndLogEx(WARNING, "Length of challenge must be 4 or 8, but it %d", len);
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdEMVInternalAuthenticate(const char *Cmd) {
@@ -605,7 +605,7 @@ static int CmdEMVInternalAuthenticate(const char *Cmd) {
             PrintAndLogEx(ERR, "Can't create DDOL TLV.");
             tlvdb_free(tmp_ext);
             tlvdb_free(tlvRoot);
-            return 4;
+            return PM3_ESOFT;
         }
     } else {
         if (paramsLoadFromFile) {
@@ -637,7 +637,7 @@ static int CmdEMVInternalAuthenticate(const char *Cmd) {
     if (decodeTLV)
         TLVPrintFromBuffer(buf, len);
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 #define dreturn(n) {free(pdol_data_tlv); tlvdb_free(tlvSelect); tlvdb_free(tlvRoot); DropFieldEx( channel ); return n;}
@@ -813,7 +813,7 @@ static int CmdEMVExec(const char *Cmd) {
     // not compiled with smartcard functionality,  we need to exit
     if (channel == ECC_CONTACT) {
         PrintAndLogEx(WARNING, "PM3 Client is not compiled with support for SMARTCARD. Exiting.");
-        return 0;
+        return PM3_EDEVNOTSUPP;
     }
 #endif
 
@@ -843,7 +843,7 @@ static int CmdEMVExec(const char *Cmd) {
         PrintAndLogEx(NORMAL, "\n* Search AID in list.");
         SetAPDULogging(false);
         if (EMVSearch(channel, activateField, true, decodeTLV, tlvSelect)) {
-            dreturn(2);
+            dreturn(PM3_ERFTRANS);
         }
 
         // check search and select application id
@@ -858,7 +858,7 @@ static int CmdEMVExec(const char *Cmd) {
     // check if we found EMV application on card
     if (!AIDlen) {
         PrintAndLogEx(WARNING, "Can't select AID. EMV AID not found");
-        dreturn(2);
+        dreturn(PM3_ERFTRANS);
     }
 
     // Select
@@ -868,7 +868,7 @@ static int CmdEMVExec(const char *Cmd) {
 
     if (res) {
         PrintAndLogEx(WARNING, "Can't select AID (%d). Exit...", res);
-        dreturn(3);
+        dreturn(PM3_ERFTRANS);
     }
 
     if (decodeTLV)
@@ -883,14 +883,14 @@ static int CmdEMVExec(const char *Cmd) {
     pdol_data_tlv = dol_process(tlvdb_get(tlvRoot, 0x9f38, NULL), tlvRoot, 0x83);
     if (!pdol_data_tlv) {
         PrintAndLogEx(ERR, "Error: can't create PDOL TLV.");
-        dreturn(4);
+        dreturn(PM3_ESOFT);
     }
 
     size_t pdol_data_tlv_data_len;
     unsigned char *pdol_data_tlv_data = tlv_encode(pdol_data_tlv, &pdol_data_tlv_data_len);
     if (!pdol_data_tlv_data) {
         PrintAndLogEx(ERR, "Error: can't create PDOL data.");
-        dreturn(4);
+        dreturn(PM3_ESOFT);
     }
     PrintAndLogEx(NORMAL, "PDOL data[%d]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
 
@@ -902,7 +902,7 @@ static int CmdEMVExec(const char *Cmd) {
 
     if (res) {
         PrintAndLogEx(ERR, "GPO error(%d): %4x. Exit...", res, sw);
-        dreturn(5);
+        dreturn(PM3_ERFTRANS);
     }
 
     // process response template format 1 [id:80  2b AIP + x4b AFL] and format 2 [id:77 TLV]
@@ -1067,11 +1067,11 @@ static int CmdEMVExec(const char *Cmd) {
             res = EMVGenerateChallenge(channel, true, buf, sizeof(buf), &len, &sw, tlvRoot);
             if (res) {
                 PrintAndLogEx(ERR, "Error GetChallenge. APDU error %4x", sw);
-                dreturn(6);
+                dreturn(PM3_ERFTRANS);
             }
             if (len < 4) {
                 PrintAndLogEx(ERR, "Error GetChallenge. Wrong challenge length %d", len);
-                dreturn(6);
+                dreturn(PM3_ESOFT);
             }
 
             // ICC Dynamic Number
@@ -1086,7 +1086,7 @@ static int CmdEMVExec(const char *Cmd) {
             struct tlv *cdol_data_tlv = dol_process(tlvdb_get(tlvRoot, 0x8c, NULL), tlvRoot, 0x01); // 0x01 - dummy tag
             if (!cdol_data_tlv) {
                 PrintAndLogEx(ERR, "Error: can't create CDOL1 TLV.");
-                dreturn(6);
+                dreturn(PM3_ESOFT);
             }
 
             PrintAndLogEx(NORMAL, "CDOL1 data[%d]: %s", cdol_data_tlv->len, sprint_hex(cdol_data_tlv->value, cdol_data_tlv->len));
@@ -1097,7 +1097,7 @@ static int CmdEMVExec(const char *Cmd) {
 
             if (res) {
                 PrintAndLogEx(ERR, "AC1 error(%d): %4x. Exit...", res, sw);
-                dreturn(7);
+                dreturn(PM3_ERFTRANS);
             }
 
             if (decodeTLV)
@@ -1176,7 +1176,7 @@ static int CmdEMVExec(const char *Cmd) {
                 struct tlv *udol_data_tlv = dol_process(UDOL ? UDOL : &defUDOL, tlvRoot, 0x01); // 0x01 - dummy tag
                 if (!udol_data_tlv) {
                     PrintAndLogEx(ERR, "Error: can't create UDOL TLV.");
-                    dreturn(8);
+                    dreturn(PM3_ESOFT);
                 }
 
                 PrintAndLogEx(NORMAL, "UDOL data[%d]: %s", udol_data_tlv->len, sprint_hex(udol_data_tlv->value, udol_data_tlv->len));
@@ -1187,7 +1187,7 @@ static int CmdEMVExec(const char *Cmd) {
                 if (res) {
                     PrintAndLogEx(ERR, "Error Compute Crypto Checksum. APDU error %4x", sw);
                     free(udol_data_tlv);
-                    dreturn(9);
+                    dreturn(PM3_ESOFT);
                 }
 
                 // Mastercard compute cryptographic checksum result
@@ -1210,7 +1210,7 @@ static int CmdEMVExec(const char *Cmd) {
         struct tlv *cdol1_data_tlv = dol_process(tlvdb_get(tlvRoot, 0x8c, NULL), tlvRoot, 0x01); // 0x01 - dummy tag
         if (!cdol1_data_tlv) {
             PrintAndLogEx(ERR, "Error: can't create CDOL1 TLV.");
-            dreturn(6);
+            dreturn(PM3_ESOFT);
         }
 
         PrintAndLogEx(NORMAL, "CDOL1 data[%d]: %s", cdol1_data_tlv->len, sprint_hex(cdol1_data_tlv->value, cdol1_data_tlv->len));
@@ -1222,7 +1222,7 @@ static int CmdEMVExec(const char *Cmd) {
         if (res) {
             PrintAndLogEx(ERR, "AC1 error(%d): %4x. Exit...", res, sw);
             free(cdol1_data_tlv);
-            dreturn(7);
+            dreturn(PM3_ERFTRANS);
         }
 
         // process Format1 (0x80) and print Format2 (0x77)
@@ -1313,7 +1313,7 @@ static int CmdEMVExec(const char *Cmd) {
             struct tlv *cdol2_data_tlv = dol_process(tlvdb_get(tlvRoot, 0x8d, NULL), tlvRoot, 0x01); // 0x01 - dummy tag
             if (!cdol2_data_tlv) {
                 PrintAndLogEx(ERR, "Error: can't create CDOL2 TLV.");
-                dreturn(6);
+                dreturn(PM3_ESOFT);
             }
 
             PrintAndLogEx(NORMAL, "CDOL2 data[%d]: %s", cdol2_data_tlv->len, sprint_hex(cdol2_data_tlv->value, cdol2_data_tlv->len));
@@ -1337,7 +1337,7 @@ static int CmdEMVExec(const char *Cmd) {
     tlvdb_free(tlvRoot);
 
     PrintAndLogEx(NORMAL, "\n* Transaction completed.");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdEMVScan(const char *Cmd) {
@@ -1404,7 +1404,7 @@ static int CmdEMVScan(const char *Cmd) {
     // not compiled with smartcard functionality,  we need to exit
     if (channel == ECC_CONTACT) {
         PrintAndLogEx(ERR, "PM3 Client is not compiled with support for SMARTCARD. Exiting.");
-        return 0;
+        return PM3_EDEVNOTSUPP;
     }
 #endif
 
@@ -1421,12 +1421,12 @@ static int CmdEMVScan(const char *Cmd) {
         root = json_load_file(fname, 0, &error);
         if (!root) {
             PrintAndLogEx(ERR, "Json error on line %d: %s", error.line, error.text);
-            return 1;
+            return PM3_EFILE;
         }
 
         if (!json_is_object(root)) {
             PrintAndLogEx(ERR, "Invalid json format. root must be an object.");
-            return 1;
+            return PM3_EFILE;
         }
     } else {
         root = json_object();
@@ -1443,7 +1443,7 @@ static int CmdEMVScan(const char *Cmd) {
 
         iso14a_card_select_t card;
         if (Hf14443_4aGetCardData(&card)) {
-            return 2;
+            return PM3_ERFTRANS;
         }
 
         JsonSaveStr(root, "$.Card.Contactless.Communication", "iso14443-4a");
@@ -1458,7 +1458,7 @@ static int CmdEMVScan(const char *Cmd) {
         smart_select(true, &card);
         if (!card.atr_len) {
             PrintAndLogEx(ERR, "Can't get ATR from a smart card.");
-            return 1;
+            return PM3_ERFTRANS;
         }
 
         JsonSaveStr(root, "$.Card.Contact.Communication", "iso7816");
@@ -1501,7 +1501,7 @@ static int CmdEMVScan(const char *Cmd) {
             PrintAndLogEx(ERR, "Can't found any of EMV AID. Exit...");
             tlvdb_free(tlvSelect);
             DropFieldEx(channel);
-            return 3;
+            return PM3_ERFTRANS;
         }
 
         // check search and select application id
@@ -1517,7 +1517,7 @@ static int CmdEMVScan(const char *Cmd) {
     if (!AIDlen) {
         PrintAndLogEx(INFO, "Can't select AID. EMV AID not found. Exit...");
         DropFieldEx(channel);
-        return 4;
+        return PM3_ERFTRANS;
     }
 
     JsonSaveBufAsHex(root, "$.Application.AID", AID, AIDlen);
@@ -1536,7 +1536,7 @@ static int CmdEMVScan(const char *Cmd) {
         PrintAndLogEx(ERR, "Can't select AID (%d). Exit...", res);
         tlvdb_free(tlvRoot);
         DropFieldEx(channel);
-        return 5;
+        return PM3_ERFTRANS;
     }
 
     if (decodeTLV)
@@ -1564,7 +1564,7 @@ static int CmdEMVScan(const char *Cmd) {
         PrintAndLogEx(ERR, "Can't create PDOL TLV.");
         tlvdb_free(tlvRoot);
         DropFieldEx(channel);
-        return 6;
+        return PM3_ESOFT;
     }
 
     size_t pdol_data_tlv_data_len;
@@ -1574,7 +1574,7 @@ static int CmdEMVScan(const char *Cmd) {
         tlvdb_free(tlvRoot);
         free(pdol_data_tlv);
         DropFieldEx(channel);
-        return 6;
+        return PM3_ESOFT;
     }
     PrintAndLogEx(INFO, "PDOL data[%d]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
 
@@ -1588,7 +1588,7 @@ static int CmdEMVScan(const char *Cmd) {
         PrintAndLogEx(ERR, "GPO error(%d): %4x. Exit...", res, sw);
         tlvdb_free(tlvRoot);
         DropFieldEx(channel);
-        return 7;
+        return PM3_ERFTRANS;
     }
     ProcessGPOResponseFormat1(tlvRoot, buf, len, decodeTLV);
 
@@ -1684,14 +1684,14 @@ static int CmdEMVScan(const char *Cmd) {
     res = json_dump_file(root, fname, JSON_INDENT(2));
     if (res) {
         PrintAndLogEx(ERR, "Can't save the file: %s", fname);
-        return 200;
+        return PM3_EFILE;
     }
     PrintAndLogEx(SUCCESS, "File " _YELLOW_("`%s`") " saved.", fname);
 
     // free json object
     json_decref(root);
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdEMVList(const char *Cmd) {
@@ -1740,7 +1740,7 @@ static int CmdEMVRoca(const char *Cmd) {
     // not compiled with smartcard functionality,  we need to exit
     if (channel == ECC_CONTACT) {
         PrintAndLogEx(WARNING, "PM3 Client is not compiled with support for SMARTCARD. Exiting.");
-        return 0;
+        return PM3_EDEVNOTSUPP;
     }
 #endif
 
@@ -1767,7 +1767,7 @@ static int CmdEMVRoca(const char *Cmd) {
             PrintAndLogEx(ERR, "Can't found any of EMV AID. Exit...");
             tlvdb_free(tlvSelect);
             DropFieldEx(channel);
-            return 3;
+            return PM3_ERFTRANS;
         }
 
         // check search and select application id
@@ -1783,7 +1783,7 @@ static int CmdEMVRoca(const char *Cmd) {
     if (!AIDlen) {
         PrintAndLogEx(INFO, "Can't select AID. EMV AID not found. Exit...");
         DropFieldEx(channel);
-        return 4;
+        return PM3_ERFTRANS;
     }
 
     // Init TLV tree
@@ -1798,7 +1798,7 @@ static int CmdEMVRoca(const char *Cmd) {
         PrintAndLogEx(ERR, "Can't select AID (%d). Exit...", res);
         tlvdb_free(tlvRoot);
         DropFieldEx(channel);
-        return 5;
+        return PM3_ERFTRANS;
     }
 
     PrintAndLogEx(NORMAL, "\n* Init transaction parameters.");
@@ -1810,7 +1810,7 @@ static int CmdEMVRoca(const char *Cmd) {
         PrintAndLogEx(ERR, "Can't create PDOL TLV.");
         tlvdb_free(tlvRoot);
         DropFieldEx(channel);
-        return 6;
+        return PM3_ESOFT;
     }
 
     size_t pdol_data_tlv_data_len;
@@ -1820,7 +1820,7 @@ static int CmdEMVRoca(const char *Cmd) {
         tlvdb_free(tlvRoot);
         DropFieldEx(channel);
         free(pdol_data_tlv);
-        return 6;
+        return PM3_ESOFT;
     }
     PrintAndLogEx(INFO, "PDOL data[%d]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
 
@@ -1834,7 +1834,7 @@ static int CmdEMVRoca(const char *Cmd) {
         PrintAndLogEx(ERR, "GPO error(%d): %4x. Exit...", res, sw);
         tlvdb_free(tlvRoot);
         DropFieldEx(channel);
-        return 7;
+        return PM3_ERFTRANS;
     }
     ProcessGPOResponseFormat1(tlvRoot, buf, len, false);
 
@@ -1874,6 +1874,7 @@ static int CmdEMVRoca(const char *Cmd) {
     }
 
     // getting certificates
+    int ret = PM3_SUCCESS;
     if (tlvdb_get(tlvRoot, 0x90, NULL)) {
         PrintAndLogEx(INFO, "-->Recovering certificates.");
         PKISetStrictExecution(false);
@@ -1881,6 +1882,7 @@ static int CmdEMVRoca(const char *Cmd) {
         struct emv_pk *pk = get_ca_pk(tlvRoot);
         if (!pk) {
             PrintAndLogEx(ERR, "ERROR: Key not found. Exit.");
+            ret = PM3_ESOFT;
             goto out;
         }
 
@@ -1888,6 +1890,7 @@ static int CmdEMVRoca(const char *Cmd) {
         if (!issuer_pk) {
             emv_pk_free(pk);
             PrintAndLogEx(WARNING, "WARNING: Issuer certificate not found. Exit.");
+            ret = PM3_ESOFT;
             goto out;
         }
 
@@ -1903,6 +1906,7 @@ static int CmdEMVRoca(const char *Cmd) {
             emv_pk_free(pk);
             emv_pk_free(issuer_pk);
             PrintAndLogEx(WARNING, "WARNING: ICC certificate not found. Exit.");
+            ret = PM3_ESOFT;
             goto out;
         }
         PrintAndLogEx(SUCCESS, "ICC PK recovered. RID %s IDX %02hhx CSN %s\n",
@@ -1932,7 +1936,7 @@ out:
     tlvdb_free(tlvRoot);
 
     DropFieldEx(channel);
-    return 0;
+    return ret;
 }
 
 static command_t CommandTable[] =  {
@@ -1963,7 +1967,7 @@ static command_t CommandTable[] =  {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdEMV(const char *Cmd) {
