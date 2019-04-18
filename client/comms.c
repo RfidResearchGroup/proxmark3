@@ -18,6 +18,11 @@ static char *serial_port_name = NULL;
 
 // If TRUE, then there is no active connection to the PM3, and we will drop commands sent.
 static bool offline;
+// Flags to tell where to add CRC on sent replies
+bool send_with_crc_on_usb = false;
+bool send_with_crc_on_fpc = true;
+// "Session" flag, to tell via which interface next msgs should be sent: USB or FPC USART
+bool send_via_fpc = false;
 
 static communication_arg_t conn;
 
@@ -120,9 +125,16 @@ void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len) {
     txBufferNG.pre.length = len;
     txBufferNG.pre.cmd = cmd;
     memcpy(&txBufferNG.data, data, len);
-    uint8_t first, second;
-    compute_crc(CRC_14443_A, (uint8_t *)&txBufferNG, sizeof(PacketCommandNGPreamble) + len, &first, &second);
-    tx_post->crc = (first << 8) + second;
+    
+    if ((send_via_fpc && send_with_crc_on_fpc) || ((!send_via_fpc) && send_with_crc_on_usb)) {
+        uint8_t first, second;
+        compute_crc(CRC_14443_A, (uint8_t *)&txBufferNG, sizeof(PacketCommandNGPreamble) + len, &first, &second);
+        tx_post->crc = (first << 8) + second;
+    } else {
+        tx_post->crc = USB_COMMANDNG_POSTAMBLE_MAGIC;
+    }
+
+
     txBufferNGLen = sizeof(PacketCommandNGPreamble) + len + sizeof(PacketCommandNGPostamble);
     txBuffer_pending = true;
 
@@ -316,13 +328,15 @@ __attribute__((force_align_arg_pointer))
                         error = true;
                     }
                 }
-                if (!error) {                        // Check CRC
+                if (!error) {                        // Check CRC, accept MAGIC as placeholder
                     rx.crc = rx_raw.foopost.crc;
-                    uint8_t first, second;
-                    compute_crc(CRC_14443_A, (uint8_t *)&rx_raw, sizeof(PacketResponseNGPreamble) + rx.length, &first, &second);
-                    if ((first << 8) + second != rx.crc) {
-                        PrintAndLogEx(WARNING, "Received packet frame CRC error %02X%02X <> %04X", first, second, rx.crc);
-                        error = true;
+                    if (rx.crc != USB_REPLYNG_POSTAMBLE_MAGIC) {
+                        uint8_t first, second;
+                        compute_crc(CRC_14443_A, (uint8_t *)&rx_raw, sizeof(PacketResponseNGPreamble) + rx.length, &first, &second);
+                        if ((first << 8) + second != rx.crc) {
+                            PrintAndLogEx(WARNING, "Received packet frame CRC error %02X%02X <> %04X", first, second, rx.crc);
+                            error = true;
+                        }
                     }
                 }
                 if (!error) {
@@ -463,7 +477,8 @@ int TestProxmark(void) {
     PacketCommandOLD c = {CMD_PING, {0, 0, 0}, {{0}}};
     SendCommand(&c);
     if (WaitForResponseTimeout(CMD_ACK, &resp, 5000)) {
-        PrintAndLogEx(INFO, "Communicating with PM3 over %s.", resp.oldarg[0] == 1 ? "FPC" : "USB");
+        send_via_fpc = resp.oldarg[0] == 1;
+        PrintAndLogEx(INFO, "Communicating with PM3 over %s.", send_via_fpc ? "FPC" : "USB");
         return 1;
     } else {
         return 0;

@@ -39,9 +39,15 @@
 #include "usart.h"
 #include "proxmark3.h"
 
-uint8_t reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
-uint8_t reply_ng(uint16_t cmd, int16_t status, uint8_t *data, size_t len);
+int16_t reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
+int16_t reply_ng(uint16_t cmd, int16_t status, uint8_t *data, size_t len);
 int16_t receive_ng(PacketCommandNG *rx);
+
+// Flags to tell where to add CRC on sent replies
+extern bool reply_with_crc_on_usb;
+extern bool reply_with_crc_on_fpc;
+// "Session" flag, to tell via which interface next msgs should be sent: USB or FPC USART
+extern bool reply_via_fpc;
 
 #endif // _PROXMARK_CMD_H_
 

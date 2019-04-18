@@ -41,7 +41,8 @@ typedef struct {
     uint16_t cmd;
 } PACKED PacketCommandNGPreamble;
 
-#define USB_COMMANDNG_PREAMBLE_MAGIC 0x61334d50 // PM3a
+#define USB_COMMANDNG_PREAMBLE_MAGIC  0x61334d50 // PM3a
+#define USB_COMMANDNG_POSTAMBLE_MAGIC 0x3361     // a3
 
 typedef struct {
     uint16_t crc;
@@ -84,7 +85,8 @@ typedef struct {
     uint16_t cmd;
 } PACKED PacketResponseNGPreamble;
 
-#define USB_REPLYNG_PREAMBLE_MAGIC 0x62334d50 // PM3b
+#define USB_REPLYNG_PREAMBLE_MAGIC  0x62334d50 // PM3b
+#define USB_REPLYNG_POSTAMBLE_MAGIC 0x3362     // b3
 
 typedef struct {
     uint16_t crc;
@@ -111,11 +113,6 @@ typedef struct {
     uint8_t data[USB_CMD_DATA_SIZE];
     PacketResponseNGPostamble foopost; // Probably not at that offset!
 } PACKED PacketResponseNGRaw;
-
-#ifdef WITH_FPC_HOST
-// "Session" flag, to tell via which interface next msgs should be sent: USB or FPC USART
-extern bool reply_via_fpc;
-#endif
 
 // A struct used to send sample-configs over USB
 typedef struct {
