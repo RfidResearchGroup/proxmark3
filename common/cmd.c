@@ -91,7 +91,7 @@ int16_t reply_ng(uint16_t cmd, int16_t status, uint8_t *data, size_t len) {
 //        ((uint8_t *)&txBufferNG)[i] = 0x00;
 
     // Compose the outgoing command frame
-    txBufferNG.pre.magic = USB_REPLYNG_PREAMBLE_MAGIC;
+    txBufferNG.pre.magic = RESPONSENG_PREAMBLE_MAGIC;
     txBufferNG.pre.cmd = cmd;
     txBufferNG.pre.status = status;
     if (len > USB_CMD_DATA_SIZE) {
@@ -114,7 +114,7 @@ int16_t reply_ng(uint16_t cmd, int16_t status, uint8_t *data, size_t len) {
         compute_crc(CRC_14443_A, (uint8_t *)&txBufferNG, sizeof(PacketResponseNGPreamble) + len, &first, &second);
         tx_post->crc = (first << 8) + second;
     } else {
-        tx_post->crc = USB_REPLYNG_POSTAMBLE_MAGIC;
+        tx_post->crc = RESPONSENG_POSTAMBLE_MAGIC;
     }
     txBufferNGLen = sizeof(PacketResponseNGPreamble) + len + sizeof(PacketResponseNGPostamble);
 
@@ -143,7 +143,7 @@ int16_t receive_ng(PacketCommandNG *rx) {
     rx->magic = rx_raw.pre.magic;
     rx->length = rx_raw.pre.length;
     rx->cmd = rx_raw.pre.cmd;
-    if (rx->magic == USB_COMMANDNG_PREAMBLE_MAGIC) { // New style NG command
+    if (rx->magic == COMMANDNG_PREAMBLE_MAGIC) { // New style NG command
         if (rx->length > USB_CMD_DATA_SIZE)
             return PM3_EOVFLOW;
         // Get the core and variable length payload
@@ -157,7 +157,7 @@ int16_t receive_ng(PacketCommandNG *rx) {
             return PM3_EIO;
         // Check CRC, accept MAGIC as placeholder
         rx->crc = rx_raw.foopost.crc;
-        if (rx->crc != USB_COMMANDNG_POSTAMBLE_MAGIC) {
+        if (rx->crc != COMMANDNG_POSTAMBLE_MAGIC) {
             uint8_t first, second;
             compute_crc(CRC_14443_A, (uint8_t *)&rx_raw, sizeof(PacketCommandNGPreamble) + rx->length, &first, &second);
             if ((first << 8) + second != rx->crc)

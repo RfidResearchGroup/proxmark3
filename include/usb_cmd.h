@@ -41,8 +41,8 @@ typedef struct {
     uint16_t cmd;
 } PACKED PacketCommandNGPreamble;
 
-#define USB_COMMANDNG_PREAMBLE_MAGIC  0x61334d50 // PM3a
-#define USB_COMMANDNG_POSTAMBLE_MAGIC 0x3361     // a3
+#define COMMANDNG_PREAMBLE_MAGIC  0x61334d50 // PM3a
+#define COMMANDNG_POSTAMBLE_MAGIC 0x3361     // a3
 
 typedef struct {
     uint16_t crc;
@@ -85,8 +85,8 @@ typedef struct {
     uint16_t cmd;
 } PACKED PacketResponseNGPreamble;
 
-#define USB_REPLYNG_PREAMBLE_MAGIC  0x62334d50 // PM3b
-#define USB_REPLYNG_POSTAMBLE_MAGIC 0x3362     // b3
+#define RESPONSENG_PREAMBLE_MAGIC  0x62334d50 // PM3b
+#define RESPONSENG_POSTAMBLE_MAGIC 0x3362     // b3
 
 typedef struct {
     uint16_t crc;

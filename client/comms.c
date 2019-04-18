@@ -121,7 +121,7 @@ void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len) {
         pthread_cond_wait(&txBufferSig, &txBufferMutex);
     }
 
-    txBufferNG.pre.magic = USB_COMMANDNG_PREAMBLE_MAGIC;
+    txBufferNG.pre.magic = COMMANDNG_PREAMBLE_MAGIC;
     txBufferNG.pre.length = len;
     txBufferNG.pre.cmd = cmd;
     memcpy(&txBufferNG.data, data, len);
@@ -131,7 +131,7 @@ void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len) {
         compute_crc(CRC_14443_A, (uint8_t *)&txBufferNG, sizeof(PacketCommandNGPreamble) + len, &first, &second);
         tx_post->crc = (first << 8) + second;
     } else {
-        tx_post->crc = USB_COMMANDNG_POSTAMBLE_MAGIC;
+        tx_post->crc = COMMANDNG_POSTAMBLE_MAGIC;
     }
 
 
@@ -309,7 +309,7 @@ __attribute__((force_align_arg_pointer))
             rx.length = rx_raw.pre.length;
             rx.status = rx_raw.pre.status;
             rx.cmd = rx_raw.pre.cmd;
-            if (rx.magic == USB_REPLYNG_PREAMBLE_MAGIC) { // New style NG reply
+            if (rx.magic == RESPONSENG_PREAMBLE_MAGIC) { // New style NG reply
                 if (rx.length > USB_CMD_DATA_SIZE) {
                     PrintAndLogEx(WARNING, "Received packet frame with incompatible length: 0x%04x", rx.length);
                     error = true;
@@ -330,7 +330,7 @@ __attribute__((force_align_arg_pointer))
                 }
                 if (!error) {                        // Check CRC, accept MAGIC as placeholder
                     rx.crc = rx_raw.foopost.crc;
-                    if (rx.crc != USB_REPLYNG_POSTAMBLE_MAGIC) {
+                    if (rx.crc != RESPONSENG_POSTAMBLE_MAGIC) {
                         uint8_t first, second;
                         compute_crc(CRC_14443_A, (uint8_t *)&rx_raw, sizeof(PacketResponseNGPreamble) + rx.length, &first, &second);
                         if ((first << 8) + second != rx.crc) {
