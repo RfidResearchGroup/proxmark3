@@ -142,6 +142,7 @@ cleanup:
 int roca_self_test(void) {
     int ret = 0;
 
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "ROCA check vulnerability tests");
 
     // positive
