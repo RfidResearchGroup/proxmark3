@@ -419,8 +419,7 @@ static int CmdStatus(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     clearCommandBuffer();
     PacketResponseNG resp;
-    PacketCommandOLD c = {CMD_STATUS, {0, 0, 0}, {{0}}};
-    SendCommand(&c);
+    SendCommandOLD(CMD_STATUS, 0, 0, 0, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1900))
         PrintAndLogEx(NORMAL, "Status command failed. USB Speed Test timed out");
     return 0;
@@ -430,12 +429,11 @@ static int CmdPing(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     clearCommandBuffer();
     PacketResponseNG resp;
-    PacketCommandOLD c = {CMD_PING, {0, 0, 0}, {{0}}};
-    SendCommand(&c);
+    SendCommandOLD(CMD_PING, 0, 0, 0, NULL, 0);
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1000))
-        PrintAndLogEx(NORMAL, "Ping successful");
+        PrintAndLogEx(NORMAL, "Ping " _GREEN_("successful"));
     else
-        PrintAndLogEx(NORMAL, "Ping failed");
+        PrintAndLogEx(NORMAL, "Ping " _RED_("failed"));
     return 0;
 }
 
@@ -447,10 +445,9 @@ static int CmdPingNG(const char *Cmd) {
     clearCommandBuffer();
     PacketResponseNG resp;
     uint8_t data[USB_CMD_DATA_SIZE] = {0};
-    uint16_t cmd = CMD_PING;
     for (uint16_t i = 0; i < len; i++)
         data[i] = i & 0xFF;
-    SendCommandNG(cmd, data, len);
+    SendCommandNG(CMD_PING, data, len);
     if (WaitForResponseTimeout(CMD_PING, &resp, 1000)) {
         bool error = false;
         if (len)

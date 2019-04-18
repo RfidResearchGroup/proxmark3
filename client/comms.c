@@ -94,6 +94,18 @@ void SendCommand(PacketCommandOLD *c) {
 //__atomic_test_and_set(&txcmd_pending, __ATOMIC_SEQ_CST);
 }
 
+// Let's move slowly to an API closer to SendCommandNG
+void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
+    PacketCommandOLD c = {CMD_UNKNOWN, {0, 0, 0}, {{0}}};
+    c.cmd = cmd;
+    c.arg[0] = arg0;
+    c.arg[1] = arg1;
+    c.arg[2] = arg2;
+    if (len && data)
+        memcpy(&c.d, data, len);
+    SendCommand(&c);
+}
+
 void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len) {
 
 #ifdef COMMS_DEBUG
