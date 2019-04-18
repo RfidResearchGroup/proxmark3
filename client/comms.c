@@ -408,13 +408,13 @@ __attribute__((force_align_arg_pointer))
             if (txBufferNGLen) { // NG packet
                 if (!uart_send(sp, (uint8_t *) &txBufferNG, txBufferNGLen)) {
                     //counter_to_offline++;
-                    PrintAndLogEx(WARNING, "sending bytes to Proxmark3 device" _RED_("failed"));
+                    PrintAndLogEx(WARNING, "sending bytes to Proxmark3 device " _RED_("failed"));
                 }
                 txBufferNGLen = 0;
             } else {
                 if (!uart_send(sp, (uint8_t *) &txBuffer, sizeof(PacketCommandOLD))) {
                     //counter_to_offline++;
-                    PrintAndLogEx(WARNING, "sending bytes to Proxmark3 device" _RED_("failed"));
+                    PrintAndLogEx(WARNING, "sending bytes to Proxmark3 device " _RED_("failed"));
                 }
             }
             txBuffer_pending = false;

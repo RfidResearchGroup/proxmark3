@@ -308,65 +308,58 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
 }
 
 static int CmdDetectReader(const char *Cmd) {
-    PacketCommandOLD c = {CMD_LISTEN_READER_FIELD, {0, 0, 0}, {{0}}};
+    uint16_t arg = 0;
     // 'l' means LF - 125/134 kHz
     if (*Cmd == 'l') {
-        c.arg[0] = 1;
+        arg = 1;
     } else if (*Cmd == 'h') {
-        c.arg[0] = 2;
+        arg = 2;
     } else if (*Cmd != '\0') {
         PrintAndLogEx(NORMAL, "use 'detectreader' or 'detectreader l' or 'detectreader h'");
-        return 0;
+        return PM3_EINVARG;
     }
     clearCommandBuffer();
-    SendCommand(&c);
-    return 0;
+    SendCommandOLD(CMD_LISTEN_READER_FIELD, arg, 0, 0, NULL, 0);
+    return PM3_SUCCESS;
 }
 
 // ## FPGA Control
 static int CmdFPGAOff(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    PacketCommandOLD c = {CMD_FPGA_MAJOR_MODE_OFF, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
-    SendCommand(&c);
-    return 0;
+    SendCommandOLD(CMD_FPGA_MAJOR_MODE_OFF, 0, 0, 0, NULL, 0);
+    return PM3_SUCCESS;
 }
 
 #ifdef WITH_LCD
 static int CmdLCD(const char *Cmd) {
     int i, j;
-
-    PacketCommandOLD c = {CMD_LCD, {0, 0, 0}, {{0}}};
     sscanf(Cmd, "%x %d", &i, &j);
     while (j--) {
-        c.arg[0] = i & 0x1ff;
         clearCommandBuffer();
-        SendCommand(&c);
+        SendCommandOLD(CMD_LCD, i & 0x1ff, 0, 0, NULL, 0);
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdLCDReset(const char *Cmd) {
-    PacketCommandOLD c = {CMD_LCD_RESET, {strtol(Cmd, NULL, 0), 0, 0}, {{0}}};
     clearCommandBuffer();
-    SendCommand(&c);
-    return 0;
+    SendCommandOLD(CMD_LCD_RESET, strtol(Cmd, NULL, 0), 0, 0, NULL, 0);
+    return PM3_SUCCESS;
 }
 #endif
 
 static int CmdReadmem(const char *Cmd) {
-    PacketCommandOLD c = {CMD_READ_MEM, {strtol(Cmd, NULL, 0), 0, 0}, {{0}}};
     clearCommandBuffer();
-    SendCommand(&c);
-    return 0;
+    SendCommandOLD(CMD_READ_MEM, strtol(Cmd, NULL, 0), 0, 0, NULL, 0);
+    return PM3_SUCCESS;
 }
 
 static int CmdReset(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    PacketCommandOLD c = {CMD_HARDWARE_RESET, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
-    SendCommand(&c);
-    return 0;
+    SendCommandOLD(CMD_HARDWARE_RESET, 0, 0, 0, NULL, 0);
+    return PM3_SUCCESS;
 }
 
 /*
@@ -374,35 +367,38 @@ static int CmdReset(const char *Cmd) {
  * 600kHz.
  */
 static int CmdSetDivisor(const char *Cmd) {
-    PacketCommandOLD c = {CMD_SET_LF_DIVISOR, {strtol(Cmd, NULL, 0), 0, 0}, {{0}}};
+    uint16_t arg = strtol(Cmd, NULL, 0);
 
-    if (c.arg[0] < 19 || c.arg[0] > 255) {
+    if (arg < 19 || arg > 255) {
         PrintAndLogEx(NORMAL, "divisor must be between 19 and 255");
-        return 1;
+        return PM3_EINVARG;
     }
     // 12 000 000 (12Mhz)
     clearCommandBuffer();
-    SendCommand(&c);
-    PrintAndLogEx(NORMAL, "Divisor set, expected %.1f KHz", ((double)12000 / (c.arg[0] + 1)));
-    return 0;
+    SendCommandOLD(CMD_SET_LF_DIVISOR, arg, 0, 0, NULL, 0);
+    PrintAndLogEx(NORMAL, "Divisor set, expected %.1f KHz", ((double)12000 / (arg + 1)));
+    return PM3_SUCCESS;
 }
 
 static int CmdSetMux(const char *Cmd) {
 
     if (strlen(Cmd) < 5) {
         PrintAndLogEx(NORMAL, "expected:  lopkd | loraw | hipkd | hiraw");
-        return 1;
+        return PM3_EINVARG;
     }
 
-    PacketCommandOLD c = {CMD_SET_ADC_MUX, {0, 0, 0}, {{0}}};
-
-    if (strcmp(Cmd, "lopkd") == 0)      c.arg[0] = 0;
-    else if (strcmp(Cmd, "loraw") == 0) c.arg[0] = 1;
-    else if (strcmp(Cmd, "hipkd") == 0) c.arg[0] = 2;
-    else if (strcmp(Cmd, "hiraw") == 0) c.arg[0] = 3;
+    uint16_t arg = 0;
+    if (strcmp(Cmd, "lopkd") == 0)      arg = 0;
+    else if (strcmp(Cmd, "loraw") == 0) arg = 1;
+    else if (strcmp(Cmd, "hipkd") == 0) arg = 2;
+    else if (strcmp(Cmd, "hiraw") == 0) arg = 3;
+    else {
+        PrintAndLogEx(NORMAL, "expected:  lopkd | loraw | hipkd | hiraw");
+        return PM3_EINVARG;
+    }
     clearCommandBuffer();
-    SendCommand(&c);
-    return 0;
+    SendCommandOLD(CMD_SET_ADC_MUX, arg, 0, 0, NULL, 0);
+    return PM3_SUCCESS;
 }
 
 static int CmdTune(const char *Cmd) {
@@ -412,7 +408,7 @@ static int CmdTune(const char *Cmd) {
 static int CmdVersion(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     pm3_version(true);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdStatus(const char *Cmd) {
@@ -422,7 +418,7 @@ static int CmdStatus(const char *Cmd) {
     SendCommandOLD(CMD_STATUS, 0, 0, 0, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1900))
         PrintAndLogEx(NORMAL, "Status command failed. USB Speed Test timed out");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdPing(const char *Cmd) {
@@ -434,7 +430,7 @@ static int CmdPing(const char *Cmd) {
         PrintAndLogEx(NORMAL, "Ping " _GREEN_("successful"));
     else
         PrintAndLogEx(NORMAL, "Ping " _RED_("failed"));
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdPingNG(const char *Cmd) {
@@ -455,7 +451,7 @@ static int CmdPingNG(const char *Cmd) {
         PrintAndLogEx(NORMAL, "PingNG response received, content is %s", error ? _RED_("NOT ok") : _GREEN_("ok"));
     } else
         PrintAndLogEx(NORMAL, "PingNG response " _RED_("timeout"));
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
@@ -481,22 +477,20 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdHW(const char *Cmd) {
     clearCommandBuffer();
-    CmdsParse(CommandTable, Cmd);
-    return 0;
+    return CmdsParse(CommandTable, Cmd);
 }
 
 void pm3_version(bool verbose) {
     if (!verbose)
         return;
-    PacketCommandOLD c = {CMD_VERSION, {0, 0, 0}, {{0}}};
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_VERSION, 0, 0, 0, NULL, 0);
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
 #ifdef __WIN32
         PrintAndLogEx(NORMAL, "\n [ Proxmark3 RFID instrument ]\n");
