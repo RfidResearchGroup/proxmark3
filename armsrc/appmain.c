@@ -1569,7 +1569,7 @@ void  __attribute__((noreturn)) AppMain(void) {
         // Check if there is a usb packet available
         if (usb_poll_validate_length()) {
             UsbCommandNG rx;
-            if (receive_ng(&rx) == 0) {
+            if (receive_ng(&rx) == PM3_SUCCESS) {
                 UsbPacketReceived(&rx);
             } else {
                 Dbprintf("Error in frame reception");
