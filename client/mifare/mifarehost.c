@@ -15,8 +15,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
     uint32_t nt = 0, nr = 0, ar = 0;
     uint64_t par_list = 0, ks_list = 0;
     uint64_t *keylist = NULL, *last_keylist = NULL;
-
-    PacketCommandOLD c = {CMD_READER_MIFARE, {true, blockno, key_type}, {{0}}};
+    bool arg0 = true;
 
     // message
     PrintAndLogEx(NORMAL, "--------------------------------------------------------------------------------\n");
@@ -26,13 +25,13 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 
     while (true) {
         clearCommandBuffer();
-        SendCommand(&c);
+        SendCommandOLD(CMD_READER_MIFARE, arg0, blockno, key_type, NULL, 0);
 
         //flush queue
         while (ukbhit()) {
             int gc = getchar();
             (void)gc;
-            return -5;
+            return PM3_EOPABORTED;
         }
 
         // wait cycle
@@ -42,7 +41,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
             if (ukbhit()) {
                 int gc = getchar();
                 (void)gc;
-                return -5;
+                return PM3_EOPABORTED;
             }
 
             PacketResponseNG resp;
@@ -62,10 +61,10 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
         }
         PrintAndLogEx(NORMAL, "\n");
 
-        if (par_list == 0 && c.arg[0] == true) {
+        if (par_list == 0 && arg0 == true) {
             PrintAndLogEx(SUCCESS, "Parity is all zero. Most likely this card sends NACK on every authentication.");
         }
-        c.arg[0] = false;
+        arg0 = false;
 
         uint32_t keycount = nonce2key(uid, nt, nr, ar, par_list, ks_list, &keylist);
 
@@ -114,24 +113,22 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
             PrintAndLogEx(FAILED, "all candidate keys failed. Restarting darkside attack");
             free(last_keylist);
             last_keylist = keylist;
-            c.arg[0] = true;
+            arg0 = true;
         }
     }
     free(last_keylist);
     free(keylist);
-    return 0;
+    return PM3_SUCCESS;
 }
 int mfCheckKeys(uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keycnt, uint8_t *keyBlock, uint64_t *key) {
     *key = -1;
-    PacketCommandOLD c = {CMD_MIFARE_CHKKEYS, { (blockNo | (keyType << 8)), clear_trace, keycnt}, {{0}}};
-    memcpy(c.d.asBytes, keyBlock, 6 * keycnt);
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_MIFARE_CHKKEYS, (blockNo | (keyType << 8)), clear_trace, keycnt, keyBlock, 6 * keycnt);
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) return 1;
-    if ((resp.oldarg[0] & 0xff) != 0x01) return 2;
+    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) return PM3_ETIMEOUT;
+    if ((resp.oldarg[0] & 0xff) != 0x01) return PM3_EUNDEF;
     *key = bytes_to_num(resp.data.asBytes, 6);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // Sends chunks of keys to device.
@@ -145,10 +142,8 @@ int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, 
     uint32_t timeout = 0;
 
     // send keychunk
-    PacketCommandOLD c = {CMD_MIFARE_CHKKEYS_FAST, { (sectorsCnt | (firstChunk << 8) | (lastChunk << 12)), ((use_flashmemory << 8) | strategy), size}, {{0}}};
-    memcpy(c.d.asBytes, keyBlock, 6 * size);
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_MIFARE_CHKKEYS_FAST, (sectorsCnt | (firstChunk << 8) | (lastChunk << 12)), ((use_flashmemory << 8) | strategy), size, keyBlock, 6 * size);
     PacketResponseNG resp;
 
     while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
@@ -160,7 +155,7 @@ int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, 
         // takes about 97s, still some margin before abort
         if (timeout > 180) {
             PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
-            return 2;
+            return PM3_ETIMEOUT;
         }
     }
     t2 = msclock() - t2;
@@ -297,11 +292,9 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
     StateList_t statelists[2];
     struct Crypto1State *p1, *p2, *p3, *p4;
 
-    PacketCommandOLD c = {CMD_MIFARE_NESTED, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, calibrate}, {{0}}};
-    memcpy(c.d.asBytes, key, 6);
     clearCommandBuffer();
-    SendCommand(&c);
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return -1;
+    SendCommandOLD(CMD_MIFARE_NESTED, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, calibrate, key, 6);
+    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return PM3_ETIMEOUT;
 
     // error during nested
     if (resp.oldarg[0]) return resp.oldarg[0];
@@ -419,10 +412,8 @@ out:
 // MIFARE
 int mfReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data) {
 
-    PacketCommandOLD c = {CMD_MIFARE_READSC, {sectorNo, keyType, 0}, {{0}}};
-    memcpy(c.d.asBytes, key, 6);
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_MIFARE_READSC, sectorNo, keyType, 0, key, 6);
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
@@ -430,27 +421,26 @@ int mfReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data)
 
         if (isOK) {
             memcpy(data, resp.data.asBytes, mfNumBlocksPerSector(sectorNo) * 16);
-            return 0;
+            return PM3_SUCCESS;
         } else {
-            return 1;
+            return PM3_EUNDEF;
         }
     } else {
         PrintAndLogEx(ERR, "Command execute timeout");
-        return 2;
+        return PM3_ETIMEOUT;
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // EMULATOR
 int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount) {
-    PacketCommandOLD c = {CMD_MIFARE_EML_MEMGET, {blockNum, blocksCount, 0}, {{0}}};
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_MIFARE_EML_MEMGET, blockNum, blocksCount, 0, NULL, 0);
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return 1;
+    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return PM3_ETIMEOUT;
     memcpy(data, resp.data.asBytes, blocksCount * 16);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount) {
@@ -458,11 +448,9 @@ int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount) {
 }
 
 int mfEmlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth) {
-    PacketCommandOLD c = {CMD_MIFARE_EML_MEMSET, {blockNum, blocksCount, blockBtWidth}, {{0}}};
-    memcpy(c.d.asBytes, data, blocksCount * blockBtWidth);
     clearCommandBuffer();
-    SendCommand(&c);
-    return 0;
+    SendCommandOLD(CMD_MIFARE_EML_MEMSET, blockNum, blocksCount, blockBtWidth, data, blocksCount * blockBtWidth);
+    return PM3_SUCCESS;
 }
 
 // "MAGIC" CARD
@@ -501,39 +489,36 @@ int mfCSetUID(uint8_t *uid, uint8_t *atqa, uint8_t *sak, uint8_t *oldUID, uint8_
 
 int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t params) {
 
-    PacketCommandOLD c = {CMD_MIFARE_CSETBLOCK, {params, blockNo, 0}, {{0}}};
-    memcpy(c.d.asBytes, data, 16);
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_MIFARE_CSETBLOCK, params, blockNo, 0, data, 16);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;
         if (uid != NULL)
             memcpy(uid, resp.data.asBytes, 4);
         if (!isOK)
-            return 2;
+            return PM3_EUNDEF;
     } else {
         PrintAndLogEx(WARNING, "command execute timeout");
-        return 1;
+        return PM3_ETIMEOUT;
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params) {
-    PacketCommandOLD c = {CMD_MIFARE_CGETBLOCK, {params, blockNo, 0}, {{0}}};
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_MIFARE_CGETBLOCK, params, blockNo, 0, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;
         if (!isOK)
-            return 2;
+            return PM3_EUNDEF;
         memcpy(data, resp.data.asBytes, 16);
     } else {
         PrintAndLogEx(WARNING, "command execute timeout");
-        return 1;
+        return PM3_ETIMEOUT;
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // SNIFFER
@@ -586,7 +571,7 @@ int loadTraceCard(uint8_t *tuid, uint8_t uidlen) {
     FillFileNameByUID(traceFileName, tuid, ".eml", uidlen);
 
     f = fopen(traceFileName, "r");
-    if (!f) return 1;
+    if (!f) return PM3_EFILE;
 
     blockNum = 0;
 
@@ -596,14 +581,14 @@ int loadTraceCard(uint8_t *tuid, uint8_t uidlen) {
         if (fgets(buf, sizeof(buf), f) == NULL) {
             PrintAndLogEx(FAILED, "No trace file found or reading error.");
             fclose(f);
-            return 2;
+            return PM3_EFILE;
         }
 
         if (strlen(buf) < 32) {
             if (feof(f)) break;
             PrintAndLogEx(FAILED, "File content error. Block data must include 32 HEX symbols");
             fclose(f);
-            return 2;
+            return PM3_EFILE;
         }
         for (i = 0; i < 32; i += 2) {
             sscanf(&buf[i], "%02X", &tmp);
@@ -615,16 +600,16 @@ int loadTraceCard(uint8_t *tuid, uint8_t uidlen) {
         blockNum++;
     }
     fclose(f);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int saveTraceCard(void) {
 
-    if ((!strlen(traceFileName)) || (isTraceCardEmpty())) return 0;
+    if ((!strlen(traceFileName)) || (isTraceCardEmpty())) return PM3_ESOFT;
 
     FILE *f;
     f = fopen(traceFileName, "w+");
-    if (!f) return 1;
+    if (!f) return PM3_EFILE;
 
     // given 4096 tracecard size,  these loop will only match a 1024, 1kb card memory
     // 4086/16 == 256blocks.
@@ -638,7 +623,7 @@ int saveTraceCard(void) {
     }
     fflush(f);
     fclose(f);
-    return 0;
+    return PM3_SUCCESS;
 }
 //
 int mfTraceInit(uint8_t *tuid, uint8_t uidlen, uint8_t *atqa, uint8_t sak, bool wantSaveToEmlFile) {
@@ -657,7 +642,7 @@ int mfTraceInit(uint8_t *tuid, uint8_t uidlen, uint8_t *atqa, uint8_t sak, bool 
     traceCurBlock = 0;
     cuid = bytes_to_num(tuid + (uidlen - 4), 4);
     traceState = TRACE_IDLE;
-    return 0;
+    return PM3_SUCCESS;
 }
 
 void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len, bool isEncrypted) {
@@ -680,11 +665,11 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
     uint32_t ar_enc = 0;  // encrypted reader response
     uint32_t at_enc = 0;  // encrypted tag response
     if (traceState == TRACE_ERROR)
-        return 1;
+        return PM3_ESOFT;
 
     if (len > 255) {
         traceState = TRACE_ERROR;
-        return 1;
+        return PM3_ESOFT;
     }
 
     uint8_t data[255];
@@ -705,7 +690,7 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
                 PrintAndLogEx(NORMAL, "DEC| CRC ERROR!!!");
                 AddLogLine(logHexFileName, "DEC| ", "CRC ERROR!!!");
                 traceState = TRACE_ERROR;  // do not decrypt the next commands
-                return 1;
+                return PM3_ESOFT;
             }
 
             // AUTHENTICATION
@@ -713,29 +698,29 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
                 traceState = TRACE_AUTH1;
                 traceCurBlock = data[1];
                 traceCurKey = data[0] == 60 ? 1 : 0;
-                return 0;
+                return PM3_SUCCESS;
             }
 
             // READ
             if ((len == 4) && ((data[0] == ISO14443A_CMD_READBLOCK))) {
                 traceState = TRACE_READ_DATA;
                 traceCurBlock = data[1];
-                return 0;
+                return PM3_SUCCESS;
             }
 
             // WRITE
             if ((len == 4) && ((data[0] == ISO14443A_CMD_WRITEBLOCK))) {
                 traceState = TRACE_WRITE_OK;
                 traceCurBlock = data[1];
-                return 0;
+                return PM3_SUCCESS;
             }
 
             // HALT
             if ((len == 4) && ((data[0] == ISO14443A_CMD_HALT) && (data[1] == 0x00))) {
                 traceState = TRACE_ERROR;  // do not decrypt the next commands
-                return 0;
+                return PM3_SUCCESS;
             }
-            return 0;
+            return PM3_SUCCESS;
 
         case TRACE_READ_DATA:
             if (len == 18) {
@@ -747,19 +732,19 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
                     memcpy(traceCard + traceCurBlock * 16, data, 16);
                 }
                 if (wantSaveToEmlFile) saveTraceCard();
-                return 0;
+                return PM3_SUCCESS;
             } else {
                 traceState = TRACE_ERROR;
-                return 1;
+                return PM3_ESOFT;
             }
             break;
         case TRACE_WRITE_OK:
             if ((len == 1) && (data[0] == 0x0a)) {
                 traceState = TRACE_WRITE_DATA;
-                return 0;
+                return PM3_SUCCESS;
             } else {
                 traceState = TRACE_ERROR;
-                return 1;
+                return PM3_ESOFT;
             }
             break;
         case TRACE_WRITE_DATA:
@@ -767,20 +752,20 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
                 traceState = TRACE_IDLE;
                 memcpy(traceCard + traceCurBlock * 16, data, 16);
                 if (wantSaveToEmlFile) saveTraceCard();
-                return 0;
+                return PM3_SUCCESS;
             } else {
                 traceState = TRACE_ERROR;
-                return 1;
+                return PM3_ESOFT;
             }
             break;
         case TRACE_AUTH1:
             if (len == 4) {
                 traceState = TRACE_AUTH2;
                 //nt = bytes_to_num(data, 4);
-                return 0;
+                return PM3_SUCCESS;
             } else {
                 traceState = TRACE_ERROR;
-                return 1;
+                return PM3_ESOFT;
             }
             break;
         case TRACE_AUTH2:
@@ -788,10 +773,10 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
                 traceState = TRACE_AUTH_OK;
                 //nr_enc = bytes_to_num(data, 4);
                 //ar_enc = bytes_to_num(data + 4, 4);
-                return 0;
+                return PM3_SUCCESS;
             } else {
                 traceState = TRACE_ERROR;
-                return 1;
+                return PM3_ESOFT;
             }
             break;
         case TRACE_AUTH_OK:
@@ -843,9 +828,9 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
             break;
         default:
             traceState = TRACE_ERROR;
-            return 1;
+            return PM3_ESOFT;
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data, int len) {
@@ -857,7 +842,7 @@ int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data,
     mf_crypto1_decrypt(s, data, len, false);
     PrintAndLogEx(SUCCESS, "decrypted data: [%s]", sprint_hex(data, len));
     crypto1_destroy(s);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 /* Detect Tag Prng,
@@ -873,31 +858,28 @@ int detect_classic_prng(void) {
     uint8_t cmd[] = {MIFARE_AUTH_KEYA, 0x00};
     uint32_t flags = ISO14A_CONNECT | ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_RATS;
 
-    PacketCommandOLD c = {CMD_READER_ISO_14443a, {flags, sizeof(cmd), 0}, {{0}}};
-    memcpy(c.d.asBytes, cmd, sizeof(cmd));
-
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_READER_ISO_14443a, flags, sizeof(cmd), 0, cmd, sizeof(cmd));
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
         PrintAndLogEx(WARNING, "PRNG UID: Reply timeout.");
-        return -1;
+        return PM3_ETIMEOUT;
     }
 
     // if select tag failed.
     if (resp.oldarg[0] == 0) {
         PrintAndLogEx(WARNING, "error:  selecting tag failed,  can't detect prng\n");
-        return -2;
+        return PM3_ERFTRANS;
     }
     if (!WaitForResponseTimeout(CMD_ACK, &respA, 2500)) {
         PrintAndLogEx(WARNING, "PRNG data: Reply timeout.");
-        return -3;
+        return PM3_ETIMEOUT;
     }
 
     // check respA
     if (respA.oldarg[0] != 4) {
         PrintAndLogEx(WARNING, "PRNG data error: Wrong length: %d", respA.oldarg[0]);
-        return -4;
+        return PM3_ESOFT;
     }
 
     uint32_t nonce = bytes_to_num(respA.data.asBytes, respA.oldarg[0]);
@@ -913,9 +895,8 @@ returns:
 */
 int detect_classic_nackbug(bool verbose) {
 
-    PacketCommandOLD c = {CMD_MIFARE_NACK_DETECT, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_MIFARE_NACK_DETECT, 0, 0, 0, NULL, 0);
     PacketResponseNG resp;
 
     if (verbose)
@@ -945,7 +926,7 @@ int detect_classic_nackbug(bool verbose) {
         if (ukbhit()) {
             int gc = getchar();
             (void)gc;
-            return -1;
+            return PM3_EOPABORTED;
         }
 
         if (WaitForResponseTimeout(CMD_ACK, &resp, 500)) {
@@ -961,47 +942,46 @@ int detect_classic_nackbug(bool verbose) {
             switch (ok) {
                 case 99 :
                     PrintAndLogEx(WARNING, "button pressed. Aborted.");
-                    return 0;
+                    return PM3_EOPABORTED;
                 case 96 :
                 case 98 : {
                     if (verbose)
                         PrintAndLogEx(FAILED, "card random number generator is not predictable.");
                     PrintAndLogEx(WARNING, "detection failed");
-                    return 2;
+                    return PM3_SUCCESS;
                 }
                 case 97 : {
                     if (verbose) {
                         PrintAndLogEx(FAILED, "card random number generator seems to be based on the well-known generating polynomial");
                         PrintAndLogEx(NORMAL, "[- ]with 16 effective bits only, but shows unexpected behavior, try again.");
                     }
-                    return 2;
+                    return PM3_SUCCESS;
                 }
                 case  2 :
                     PrintAndLogEx(SUCCESS, _GREEN_("always leak NACK detected"));
-                    return 3;
+                    return PM3_SUCCESS;
                 case  1 :
                     PrintAndLogEx(SUCCESS, _GREEN_("NACK bug detected"));
-                    return 1;
+                    return PM3_SUCCESS;
                 case  0 :
                     PrintAndLogEx(SUCCESS, "No NACK bug detected");
-                    return 2;
+                    return PM3_SUCCESS;
                 default :
                     PrintAndLogEx(WARNING, "errorcode from device [%i]", ok);
-                    return 0;
+                    return PM3_EUNDEF;
             }
             break;
         }
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 /* try to see if card responses to "chinese magic backdoor" commands. */
 void detect_classic_magic(void) {
 
     uint8_t isGeneration = 0;
     PacketResponseNG resp;
-    PacketCommandOLD c = {CMD_MIFARE_CIDENT, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_MIFARE_CIDENT, 0, 0, 0, NULL, 0);
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500))
         isGeneration = resp.oldarg[0] & 0xff;
 
