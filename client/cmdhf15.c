@@ -1314,7 +1314,7 @@ static command_t CommandTable[] = {
 
 static int CmdHF15Help(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable15);
+    CmdsHelp(CommandTable);
     return 0;
 }
 
