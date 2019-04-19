@@ -135,9 +135,11 @@ int16_t reply_ng(uint16_t cmd, int16_t status, uint8_t *data, size_t len) {
     return sendlen;
 }
 
-int16_t receive_ng(PacketCommandNG *rx) {
+static int16_t receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *data, size_t len), bool fpc) {
     PacketCommandNGRaw rx_raw;
-    size_t bytes = usb_read_ng((uint8_t *)&rx_raw.pre, sizeof(PacketCommandNGPreamble));
+    size_t bytes = read_ng((uint8_t *)&rx_raw.pre, sizeof(PacketCommandNGPreamble));
+    if (bytes == 0)
+        return PM3_NODATA;
     if (bytes != sizeof(PacketCommandNGPreamble))
         return PM3_EIO;
     rx->magic = rx_raw.pre.magic;
@@ -147,12 +149,12 @@ int16_t receive_ng(PacketCommandNG *rx) {
         if (rx->length > USB_CMD_DATA_SIZE)
             return PM3_EOVFLOW;
         // Get the core and variable length payload
-        bytes = usb_read_ng((uint8_t *)&rx_raw.data, rx->length);
+        bytes = read_ng((uint8_t *)&rx_raw.data, rx->length);
         if (bytes != rx->length)
             return PM3_EIO;
         memcpy(rx->data.asBytes, rx_raw.data, rx->length);
         // Get the postamble
-        bytes = usb_read_ng((uint8_t *)&rx_raw.foopost, sizeof(PacketCommandNGPostamble));
+        bytes = read_ng((uint8_t *)&rx_raw.foopost, sizeof(PacketCommandNGPostamble));
         if (bytes != sizeof(PacketCommandNGPostamble))
             return PM3_EIO;
         // Check CRC, accept MAGIC as placeholder
@@ -163,15 +165,15 @@ int16_t receive_ng(PacketCommandNG *rx) {
             if ((first << 8) + second != rx->crc)
                 return PM3_EIO;
         }
-        reply_via_fpc = false;
+        reply_via_fpc = fpc;
         rx->ng = true;
     } else {                               // Old style command
         PacketCommandOLD rx_old;
         memcpy(&rx_old, &rx_raw.pre, sizeof(PacketCommandNGPreamble));
-        bytes = usb_read_ng(((uint8_t *)&rx_old) + sizeof(PacketCommandNGPreamble), sizeof(PacketCommandOLD) - sizeof(PacketCommandNGPreamble));
+        bytes = read_ng(((uint8_t *)&rx_old) + sizeof(PacketCommandNGPreamble), sizeof(PacketCommandOLD) - sizeof(PacketCommandNGPreamble));
         if (bytes != sizeof(PacketCommandOLD) - sizeof(PacketCommandNGPreamble))
             return PM3_EIO;
-        reply_via_fpc = false;
+        reply_via_fpc = fpc;
         rx->ng = false;
         rx->magic = 0;
         rx->crc = 0;
@@ -183,4 +185,18 @@ int16_t receive_ng(PacketCommandNG *rx) {
         memcpy(&rx->data, &rx_old.d.asBytes, rx->length);
     }
     return PM3_SUCCESS;
+}
+
+int16_t receive_ng(PacketCommandNG *rx) {
+
+    // Check if there is a packet available
+    if (usb_poll_validate_length())
+        return receive_ng_internal(rx, usb_read_ng, false);
+
+#ifdef WITH_FPC_HOST
+    // Check if there is a FPC packet available
+    return receive_ng_internal(rx, usart_read_ng, true);
+#else
+    return PM3_NODATA;
+#endif
 }

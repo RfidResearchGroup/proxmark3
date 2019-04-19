@@ -421,6 +421,8 @@ typedef struct {
 #define PM3_EMALLOC           -12
 // File error
 #define PM3_EFILE             -13
+// No data
+#define PM3_NODATA            -98
 // Quit program
 #define PM3_EFATAL            -99
 

@@ -1562,30 +1562,15 @@ void  __attribute__((noreturn)) AppMain(void) {
     for (;;) {
         WDT_HIT();
 
-        // Check if there is a usb packet available
-        if (usb_poll_validate_length()) {
-            PacketCommandNG rx;
-            if (receive_ng(&rx) == PM3_SUCCESS) {
-                PacketReceived(&rx);
-            } else {
-                Dbprintf("Error in frame reception");
-                // TODO DOEGOX if error, shall we resync ?
-            }
-        }
-#ifdef WITH_FPC_HOST
-        // Check if there is a FPC packet available
-// TODO DOEGOX NG packets support here too
+        // Check if there is a packet available
         PacketCommandNG rx;
-        if (usart_readbuffer((uint8_t *)&rx)) {
-            reply_via_fpc = true;
-            rx.ng = false;
-            rx.magic = 0;
-            rx.length = USB_CMD_DATA_SIZE;
-            rx.crc = 0;
+        int16_t ret = receive_ng(&rx);
+        if (ret == PM3_SUCCESS) {
             PacketReceived(&rx);
+        } else if (ret != PM3_NODATA) {
+            Dbprintf("Error in frame reception");
+            // TODO DOEGOX if error, shall we resync ?
         }
-        usart_readcheck((uint8_t *)&rx, sizeof(rx));
-#endif
 
         // Press button for one second to enter a possible standalone mode
         if (BUTTON_HELD(1000) > 0) {

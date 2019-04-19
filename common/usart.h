@@ -14,6 +14,7 @@ int16_t usart_writebuffer(uint8_t *data, size_t len);
 bool usart_dataavailable(void);
 int16_t usart_readcommand(uint8_t *data);
 void usart_readcheck(uint8_t *data, size_t len);
+uint32_t usart_read_ng(uint8_t *data, size_t len);
 
 bool usart_commandavailable(void);
 #endif

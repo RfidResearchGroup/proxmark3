@@ -100,6 +100,11 @@ inline int16_t usart_readcommand(uint8_t *data) {
     return 0;
 }
 
+uint32_t usart_read_ng(uint8_t *data, size_t len) {
+    // TODO DOEGOX
+    return 0;
+}
+
 inline bool usart_commandavailable(void) {
     return (pUS1->US_RCR == 0);
 }
