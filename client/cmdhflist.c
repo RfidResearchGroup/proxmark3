@@ -174,7 +174,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             //97 50 = Bit oriented anti-collision level3
             //97 70 = Select of cascade level3
             if (cmd[1] == 0x70)
-                snprintf(exp, size, "SELECT_UID-2");
+                snprintf(exp, size, "SELECT_UID-3");
             else if (cmd[1] == 0x20 || cmd[1] == 0x50)
                 snprintf(exp, size, "ANTICOLL-3");
             else
