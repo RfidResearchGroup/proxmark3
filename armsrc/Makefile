@@ -31,7 +31,6 @@ APP_CFLAGS = $(PLATFORM_DEFS) \
 			 -DWITH_CRC \
 			 -DON_DEVICE \
 			 -DWITH_LF \
-			 -DWITH_HITAG \
  			 -DWITH_ISO15693 \
 			 -DWITH_LEGICRF \
 			 -DWITH_ISO14443b \
@@ -43,6 +42,7 @@ APP_CFLAGS = $(PLATFORM_DEFS) \
 			 -fno-strict-aliasing -ffunction-sections -fdata-sections
 
 ### IMPORTANT -  move the commented variable below this line
+#			 -DWITH_HITAG \
 #			 -DWITH_FPC \
 #			 -DWITH_LCD \
 #			 -DWITH_EMV \
@@ -54,11 +54,11 @@ APP_CFLAGS = $(PLATFORM_DEFS) \
 #			 -DWITH_LF_PROXBRUTE
 #			 -DWITH_LF_HIDBRUTE
 #			 -DWITH_HF_YOUNG
-#			 -DWITH_HF_MATTYRUN -
+#			 -DWITH_HF_MATTYRUN
 #			 -DWITH_HF_COLIN
 #			 -DWITH_HF_BOG
 
-SRC_LF = lfops.c hitag2_crypto.c hitag2.c hitagS.c lfsampling.c pcf7931.c lfdemod.c
+SRC_LF = lfops.c lfsampling.c pcf7931.c lfdemod.c
 SRC_ISO15693 = iso15693.c iso15693tools.c
 SRC_ISO14443a = iso14443a.c mifareutil.c mifarecmd.c epa.c mifaresim.c
 SRC_ISO14443b = iso14443b.c
@@ -86,6 +86,12 @@ ifneq (,$(findstring WITH_FPC,$(APP_CFLAGS)))
 	SRC_FPC = usart.c
 else
 	SRC_FPC =
+endif
+
+ifneq (,$(findstring WITH_HITAG,$(APP_CLAGS)))
+    SRC_HITAG = hitag2_crypto.c hitag2.c hitagS.c
+else
+    SRC_HITAG =
 endif
 
 ifneq (,$(findstring WITH_LCD,$(APP_CLAGS)))
@@ -155,6 +161,7 @@ THUMBSRC = start.c \
 	$(SRC_FLASH) \
 	$(SRC_SMARTCARD) \
 	$(SRC_FPC) \
+    $(SRC_HITAG) \
 	appmain.c \
 	printf.c \
 	commonutil.c \

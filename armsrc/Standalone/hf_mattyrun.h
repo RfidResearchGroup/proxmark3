@@ -12,11 +12,12 @@
 #ifndef __HF_MATTYRUN_H
 #define __HF_MATTYRUN_H
 
-//#include <stdbool.h> // for bool
 #include "standalone.h" // standalone definitions
 #include "apps.h"       // debugstatements, lfops?
 #include "usb_cmd.h"    // mifare1ksim flags
+#include "mifaresim.h"  // mifare1ksim
 #include "mifareutil.h"
+#include "mifaresim.h"
 
 #define OPTS 2
 

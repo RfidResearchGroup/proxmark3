@@ -81,7 +81,7 @@ APP_CFLAGS = -DWITH_CRC \
              -DWITH_FLASH \
              -DWITH_SMARTCARD \
              -DWITH_HFSNOOP \
-             -DWITH_HF_COLIN\
+             -DWITH_HF_COLIN \
              -DWITH_FPC \
              -fno-strict-aliasing -ffunction-sections -fdata-sections
 

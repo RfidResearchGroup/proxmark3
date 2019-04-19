@@ -328,7 +328,7 @@ void RunMod() {
 
     /*
         TODO:
-        - Get UID from tag and set accordingly in emulator memory and call mifare1ksim with right flags (iceman)
+        - Get UID from tag and set accordingly in emulator memory and call mifaresim with right flags (iceman)
     */
     if (!allKeysFound && keyFound) {
         Dbprintf("\t✕ There's currently no nested attack in MattyRun, sorry!");
